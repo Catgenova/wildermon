@@ -76,7 +76,7 @@ declare w uuid; a uuid := '11111111-1111-1111-1111-111111111111'; b uuid := '222
         v_crate bigint; c creature;
 begin
   select id into w from world where name = 'Bigness';
-  update player set x = 100.5, y = 100.5, away = false, seen_at = now(), act = null where world_id = w and uid = a;
+  update player set body_at = now(), x = 100.5, y = 100.5, away = false, seen_at = now(), act = null where world_id = w and uid = a;
   delete from creature where world_id = w and keeper in (a, b);
   insert into placed (world_id, kind, x, y, cx, cy, ql, made_by)
     values (w, 'post', 100, 101, 100.375, 101.375, 40, a) returning id into v_post;

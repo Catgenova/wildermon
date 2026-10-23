@@ -63,7 +63,7 @@ begin
   select p.uid into u from player p where p.world_id = w order by p.uid limit 1;
   delete from deed where world_id = w;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
-  update player set x = 8.5, y = 8.5, act = null, act_queue = '[]', favour = 120, favour_at = now()
+  update player set body_at = now(), x = 8.5, y = 8.5, act = null, act_queue = '[]', favour = 120, favour_at = now()
     where world_id = w and uid = u;
   insert into skill (world_id, uid, id, value) values (w, u, faith_skill(), 90), (w, u, 'restoration', 100), (w, u, 'repair', 50)
     on conflict (world_id, uid, id) do update set value = excluded.value;

@@ -155,9 +155,9 @@ const given = ledger();
 check('a thing given by a job of the test is written under that job', given.get('log|give') === '200|0' && given.get('coin|give') === '40|0',
   [...given].join(' '));
 psql(`${go(ANNA, 'make_planks', LOG)}
-update player set x = 9.5, y = 9.5 where world_id = ${W_} and uid = '${ANNA}';
+update player set body_at = now(), x = 9.5, y = 9.5 where world_id = ${W_} and uid = '${ANNA}';
 ${go(ANNA, 'forage', `'{"kind":"tile","x":9,"y":9}'`)}
-update player set x = 5.5, y = 5.5 where world_id = ${W_} and uid = '${ANNA}';`);
+update player set body_at = now(), x = 5.5, y = 5.5 where world_id = ${W_} and uid = '${ANNA}';`);
 const made = ledger();
 const planks = Number(psql(`select coalesce(sum(count), 0) from item where world_id = ${W_} and def = 'plank';`));
 check('a craft: the log it took is gone and the planks it made are made, under the action',
@@ -213,7 +213,7 @@ begin
     elsif p_what = 'forage' then
       k := nextval('pg_temp.spot');
       tx := 10 + k % 20; ty := 10 + (k / 20) % 20;
-      update player set x = tx + 0.5, y = ty + 0.5 where world_id = w and uid = u;
+      update player set body_at = now(), x = tx + 0.5, y = ty + 0.5 where world_id = w and uid = u;
       t0 := clock_timestamp();
       perform rpc_act(w, 'forage', jsonb_build_object('kind', 'tile', 'x', tx, 'y', ty), 1);
       v_ms := v_ms + extract(epoch from clock_timestamp() - t0);
@@ -273,9 +273,9 @@ check('the first count is only written down', flags('stock').length === 0
   && Number(psql(`select count(*) from private.watch_stock where world_id = ${W_};`)) > 0);
 // A normal day: crafting, foraging, a deal for silver, a parcel, a drop picked up, and a bag thrown away full.
 psql(`${go(ANNA, 'make_planks', LOG)}
-update player set x = 12.5, y = 12.5 where world_id = ${W_} and uid = '${ANNA}';
+update player set body_at = now(), x = 12.5, y = 12.5 where world_id = ${W_} and uid = '${ANNA}';
 ${go(ANNA, 'forage', `'{"kind":"tile","x":12,"y":12}'`)}
-update player set x = 5.5, y = 5.5 where world_id = ${W_} and uid = '${ANNA}';
+update player set body_at = now(), x = 5.5, y = 5.5 where world_id = ${W_} and uid = '${ANNA}';
 select set_config('request.jwt.claims', '${JSON.stringify({ sub: ANNA })}', false) \\g /dev/null
 delete from caller where uid = '${ANNA}';
 select rpc_deal(${W_}, '${BRAM}', array[(select id from item where world_id = ${W_} and holder_uid = '${ANNA}' and def = 'plank' limit 1)], 7, 0) \\g /dev/null

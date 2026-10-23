@@ -86,7 +86,7 @@ declare w uuid; u uuid; s record;
 begin
   select id into w from world where name = 'Hoarding';
   select uid into u from player where world_id = w and name = 'Dane';
-  update player set x = ${TX}.5, y = ${TY}.5, level_h = null where world_id = w and uid = u;
+  update player set body_at = now(), x = ${TX}.5, y = ${TY}.5, level_h = null where world_id = w and uid = u;
   insert into skill (world_id, uid, id, value) values (w, u, 'masonry', 99)
     on conflict (world_id, uid, id) do update set value = 99;
   delete from foundation f where f.world_id = w;
@@ -225,7 +225,7 @@ declare w uuid; u uuid; v_at jsonb := jsonb_build_object('kind', 'tile', 'x', ${
 begin
   select id into w from world where name = 'Hoarding';
   select uid into u from player where world_id = w and name = 'Dane';
-  update player set x = ${TX}.5, y = ${TY}.5, level_h = null where world_id = w and uid = u;
+  update player set body_at = now(), x = ${TX}.5, y = ${TY}.5, level_h = null where world_id = w and uid = u;
   insert into skill (world_id, uid, id, value) values (w, u, 'masonry', 99)
     on conflict (world_id, uid, id) do update set value = 99;
   delete from foundation f where f.world_id = w;

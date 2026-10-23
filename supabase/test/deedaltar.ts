@@ -88,7 +88,7 @@ begin
   insert into said select 'FLAGGED|' || coalesce(string_agg(id, ',' order by id), '') from recipe where deed;
 
   -- Out in the country.
-  update player set x = 6.5, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 6.5, y = 8.5 where world_id = w and uid = u;
   insert into said select 'WILD|' || coalesce(craft_refusal(w, u, 'make_altar', null), 'null');
   insert into said select 'WILDACT|' || coalesce(act_refusal(w, u, 'make_altar', '{}'::jsonb), 'null');
   -- Something without the flag is refused for what it lacks, never for the ground.
@@ -105,18 +105,18 @@ begin
   insert into said select 'OWNACT|' || coalesce(act_refusal(w, u, 'make_altar', '{}'::jsonb), 'null');
   insert into said select 'PUTOWN|' || coalesce(act_refusal(w, u, 'place_furniture',
     jsonb_build_object('itemUid', alt, 'x', 7, 'y', 8, 'sx', 0, 'sy', 0)), 'null');
-  update player set x = 9.5, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 9.5, y = 8.5 where world_id = w and uid = u;
   insert into said select 'PUTPAST|' || coalesce(act_refusal(w, u, 'place_furniture',
     jsonb_build_object('itemUid', alt, 'x', 10, 'y', 8, 'sx', 0, 'sy', 0)), 'null');
-  update player set x = 9.9, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 9.9, y = 8.5 where world_id = w and uid = u;
   insert into said select 'EDGE|' || coalesce(craft_refusal(w, u, 'make_altar', null), 'null');
-  update player set x = 10.1, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 10.1, y = 8.5 where world_id = w and uid = u;
   insert into said select 'PAST|' || coalesce(craft_refusal(w, u, 'make_altar', null), 'null');
 
   -- One altar to a settlement: with Home's standing, no second is built or set down on it.
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'furniture', 'altar', 4, 8, 0, 0, 4.5, 8.5, 50, u);
-  update player set x = 6.5, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 6.5, y = 8.5 where world_id = w and uid = u;
   insert into said select 'SECONDMAKE|' || coalesce(craft_refusal(w, u, 'make_altar', null), 'null');
   insert into said select 'SECONDACT|' || coalesce(act_refusal(w, u, 'make_altar', '{}'::jsonb), 'null');
   insert into said select 'SECONDPUT|' || coalesce(act_refusal(w, u, 'place_furniture',
@@ -126,7 +126,7 @@ begin
 
   -- A neighbour's settlement is not theirs to raise one on...
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Next door', 13, 8, 1, 1, other);
-  update player set x = 13.5, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 13.5, y = 8.5 where world_id = w and uid = u;
   insert into said select 'STRANGER|' || coalesce(craft_refusal(w, u, 'make_altar', null), 'null');
   insert into said select 'PUTSTRANGER|' || coalesce(act_refusal(w, u, 'place_furniture',
     jsonb_build_object('itemUid', alt, 'x', 13, 'y', 9, 'sx', 0, 'sy', 0)), 'null');

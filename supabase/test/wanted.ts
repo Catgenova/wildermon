@@ -156,9 +156,9 @@ begin
   delete from caller where uid = dane;
   insert into said values ('DANE', folk_name(w, dane));
   insert into said values ('TILE', tx || ',' || ty);
-  update player set x = ox where world_id = w and uid = dane;
+  update player set body_at = now(), x = ox where world_id = w and uid = dane;
   insert into said values ('NOBOARD', rpc_order(w, 'iron_ore', 5, 3, 30)->>'why');
-  update player set x = ax where world_id = w and uid = dane;
+  update player set body_at = now(), x = ax where world_id = w and uid = dane;
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, made_by)
     values (w, 'furniture', 'mailbox', tx, ty, 2, 2, tx + 0.75, ty + 0.75, dane);
   insert into said values ('COIN', rpc_order(w, 'coin', 5, 3, 0)->>'why');
@@ -189,16 +189,16 @@ begin
         from jsonb_array_elements(v_got->'orders') o where (o->>'n')::bigint = a));
   insert into said values ('KEYS', (select string_agg(k, ',' order by k)
     from jsonb_array_elements(v_got->'orders') o, jsonb_object_keys(o) k where (o->>'n')::bigint = a));
-  update player set x = ox where world_id = w and uid = cato;
+  update player set body_at = now(), x = ox where world_id = w and uid = cato;
   v_got := rpc_orders(w);
   insert into said values ('AWAY', (v_got->>'board') || '|' || jsonb_array_length(v_got->'orders')
     || '|' || coalesce(rpc_order_fill(w, a, 1)->>'why', 'filled'));
-  update player set x = ax where world_id = w and uid = cato;
+  update player set body_at = now(), x = ax where world_id = w and uid = cato;
   perform set_config('request.jwt.claims', json_build_object('sub', dane)::text, true);
-  update player set x = ox where world_id = w and uid = dane;
+  update player set body_at = now(), x = ox where world_id = w and uid = dane;
   v_got := rpc_orders(w);
   insert into said values ('MINE', (v_got->>'board') || '|' || (select string_agg(o->>'mine', ',') from jsonb_array_elements(v_got->'orders') o));
-  update player set x = ax where world_id = w and uid = dane;
+  update player set body_at = now(), x = ax where world_id = w and uid = dane;
 
   -- Nothing Cato has will do: too poor, the wrong ore, and a good stack he has put by.
   perform set_config('request.jwt.claims', json_build_object('sub', cato)::text, true);

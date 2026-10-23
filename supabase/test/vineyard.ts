@@ -271,7 +271,7 @@ begin
   perform set_config('search_path', '"$user", public', true);
 end $f$;
 create function pg_temp.stand(p_w uuid, p_u uuid, p_x int, p_y int, p_lv int) returns void language sql as $f$
-  update player set x = p_x + 0.5, y = p_y + 0.5, level = p_lv where world_id = p_w and uid = p_u
+  update player set body_at = now(), x = p_x + 0.5, y = p_y + 0.5, level = p_lv where world_id = p_w and uid = p_u
 $f$;
 create or replace function perk_rare(p_chance double precision) returns text language sql as 'select null::text';
 create or replace function rarity_roll() returns text language sql as 'select null::text';
@@ -336,9 +336,9 @@ begin
   ${askIsle('P:none', PICK_GRAPES, T('v_tr'))}
   ${askIsle('P:sand', PLANT_VINE, T('v_tr2'))}
   ${askIsle('P:gone', PLANT_VINE, T('987654'))}
-  update player set x = 20.5, y = 20.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 20.5 where world_id = w and uid = u;
   ${askIsle('P:far', PLANT_VINE, T('v_tr'))}
-  update player set x = 10.5, y = 10.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 10.5, y = 10.5 where world_id = w and uid = u;
   ${askIsle('P:ok', PLANT_VINE, T('v_tr'))}
   perform act_perform(w, u, '${PLANT_VINE}', ${T('v_tr')});
   insert into said select 'P:planted', pl.vine_at::text || '|' || ${count(GRAPE_CUTTING)} || '|' || ${lastSaid} from placed pl where pl.id = v_tr;

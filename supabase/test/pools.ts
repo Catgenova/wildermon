@@ -115,7 +115,7 @@ begin
   select id into w from world where name = 'Hoarding';
   select uid into me from player where world_id = w and name = 'Crowd2';
   perform set_config('request.jwt.claims', json_build_object('sub', me)::text, true);
-  update player set x = 9.5, y = 40.5, act = null, act_queue = '[]'::jsonb, level = 0 where world_id = w and uid = me;
+  update player set body_at = now(), x = 9.5, y = 40.5, act = null, act_queue = '[]'::jsonb, level = 0 where world_id = w and uid = me;
   delete from spring where world_id = w;
   delete from foundation where world_id = w;
   perform land_set_height(w, x, y, 30) from generate_series(0, 20) x, generate_series(34, 46) y;
@@ -133,18 +133,18 @@ begin
   insert into said values ('water', has_water(w, 10, 40)::text || ' ' || water_surface(w, 10, 40) || ' ' || water_depth(w, 10, 40)
     || ' ' || has_water(w, 12, 40)::text);
   insert into said values ('again', coalesce(act_refusal(w, me, 'dig_pool', '{"kind":"tile","x":10,"y":40}'), 'none'));
-  update player set x = 10.5, y = 40.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 10.5, y = 40.5 where world_id = w and uid = me;
   insert into said values ('swim', in_deep_water(w, me)::text);
-  update player set x = 9.5, y = 40.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 9.5, y = 40.5 where world_id = w and uid = me;
   insert into said values ('ground', (select jsonb_agg(f) from jsonb_array_elements(rpc_ground(w, 20)->'foundations') f)::text);
 
   insert into said values ('spring', coalesce(act_refusal(w, me, 'dig_spring', '{"kind":"tile","x":10,"y":40}'), 'none'));
   perform act_perform(w, me, 'dig_spring', '{"kind":"tile","x":10,"y":40}');
   insert into said values ('chain', (select chain::text from spring where world_id = w));
   insert into said values ('told', (select text from event where world_id = w and uid = me order by n desc limit 1));
-  update player set x = 11.5, y = 41.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 11.5, y = 41.5 where world_id = w and uid = me;
   insert into said values ('second', coalesce(act_refusal(w, me, 'dig_spring', '{"kind":"tile","x":11,"y":40}'), 'none'));
-  update player set x = 9.5, y = 40.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 9.5, y = 40.5 where world_id = w and uid = me;
 
   insert into said values ('noconcrete', coalesce(act_refusal(w, me, 'fill_pool', '{"kind":"tile","x":10,"y":40}'), 'none'));
   insert into item (world_id, def, holder, holder_uid, ql, count) values (w, 'concrete', 'player', me, 40, ${POOL_FILL});

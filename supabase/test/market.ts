@@ -94,10 +94,10 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', b)::text, true);
   insert into said values ('NOTYOURS|' || coalesce(rpc_price(w, v_shaft, 9)->>'why', 'priced'));
   -- Away from the mailbox and any token, no board.
-  update player set x = ax + 60 where world_id = w and uid = b;
+  update player set body_at = now(), x = ax + 60 where world_id = w and uid = b;
   v_got := rpc_market(w);
   insert into said values ('AWAY|' || (v_got->>'board') || ',' || jsonb_array_length(v_got->'stalls'));
-  update player set x = ax + 1 where world_id = w and uid = b;
+  update player set body_at = now(), x = ax + 1 where world_id = w and uid = b;
   v_got := rpc_market(w);
   insert into said values ('BOARD|' || (v_got->>'board') || ',' || ((v_got->'stalls'->0->>'owner') = folk_name(w, a))
     || ',' || jsonb_array_length(v_got->'stalls'->0->'goods') || ',' || (v_got->'stalls'->0->'goods'->0->>'price')

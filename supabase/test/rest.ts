@@ -72,7 +72,7 @@ begin
   perform land_set_tile(w, x, y, tile_id('Grass')) from generate_series(0, 39) x, generate_series(0, 39) y;
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
-  update player set x = ${T} + 0.5, y = ${T} + 0.5, seen_at = now() where world_id = w and uid = u;
+  update player set body_at = now(), x = ${T} + 0.5, y = ${T} + 0.5, seen_at = now() where world_id = w and uid = u;
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Reststead', ${T}, ${T}, 10, 5, u);
   insert into crate (world_id, id, kind, x, y, sx, sy, deed, made_by) values (w, 1, 'plank', ${T + 1}, ${T}, 0, 0, true, u);
   insert into said values ('NUMS', tire_goes() || ',' || rest_for() || ',' || bed_rest() || ',' || den_health_1() || ',' || den_health_2());

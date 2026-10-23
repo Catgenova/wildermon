@@ -285,10 +285,10 @@ begin
   update creature set mode = 'wild', keeper = null where world_id = w and id = v_second;
   insert into said values ('CRATEOK|' || coalesce(act_refusal(w, me, 'crate_creature', jsonb_build_object('kind', 'creature', 'id', v_first)), 'allowed'));
   perform act_perform(w, me, 'crate_creature', jsonb_build_object('kind', 'creature', 'id', v_first));
-  update player set x = v_x + 150, y = v_y + 150 where world_id = w and uid = me;
+  update player set body_at = now(), x = v_x + 150, y = v_y + 150 where world_id = w and uid = me;
   insert into said values ('FAR|' || coalesce((select e->>'mode' from jsonb_array_elements(rpc_creatures(w, 40)) e
                                                where (e->>'id')::int = v_first), 'not sent'));
-  update player set x = v_x, y = v_y where world_id = w and uid = me;
+  update player set body_at = now(), x = v_x, y = v_y where world_id = w and uid = me;
   -- Out of its crate by any road, and the crate forgets it.
   update creature set mode = 'wild', keeper = null where world_id = w and id = v_first;
   insert into said values ('LEFT|' || ((select creature from item where id = v_crate) is null));

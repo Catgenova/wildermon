@@ -355,8 +355,8 @@ const ended = (what: string, spoil: string, mend: string, key: 'apart' | 'left' 
     && (key === 'left' || lastLine(HILD) === barterSaid(key, { who: whoFor(HILD) })), `${lastLine(IVAR)} / ${lastLine(HILD)}`);
   psql(mend);
 };
-ended(`walking more than ${BARTER_REACH} tiles apart`, `update player set x = ${12.5 + BARTER_REACH} where world_id = '${W}' and uid = '${HILD}';`,
-  `update player set x = 12.5 where world_id = '${W}' and uid = '${HILD}';`, 'apart', () => nIvar);
+ended(`walking more than ${BARTER_REACH} tiles apart`, `update player set body_at = now(), x = ${12.5 + BARTER_REACH} where world_id = '${W}' and uid = '${HILD}';`,
+  `update player set body_at = now(), x = 12.5 where world_id = '${W}' and uid = '${HILD}';`, 'apart', () => nIvar);
 ended('Hild going away', `update player set away = true where world_id = '${W}' and uid = '${HILD}';`,
   `update player set away = false where world_id = '${W}' and uid = '${HILD}';`, 'left', () => nIvar);
 ended(`${BARTER_IDLE} seconds with no change`, `update barter set at = now() - interval '${BARTER_IDLE + 1} seconds' where world_id = '${W}' and n = {n};`,

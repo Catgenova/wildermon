@@ -69,7 +69,7 @@ begin
     values (w, 1, 'plank', 30, 30, 0, 0, false, u, 'pine');
   insert into item (world_id, holder, crate, def, ql, count)
     select w, 'crate', 1, 'rock_shards', 20, crate_capacity(c) - ${ROOM} from crate c where c.world_id = w and c.id = 1;
-  update player set x = 30.1, y = 30.1 where world_id = w and uid = u;
+  update player set body_at = now(), x = 30.1, y = 30.1 where world_id = w and uid = u;
   delete from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def = 'iron_ore';
   insert into item (world_id, holder, holder_uid, def, ql, count) values (w, 'player', u, 'iron_ore', 40, 48);
 end $$;`);

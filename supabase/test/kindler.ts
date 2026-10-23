@@ -135,7 +135,7 @@ begin
                  || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0, 'hurtSettled', now())
    where world_id = w.world_id and uid = w.uid;
   -- Everybody else on the island well away.
-  update player set x = v_px - 60 where world_id = w.world_id and uid <> w.uid;
+  update player set body_at = now(), x = v_px - 60 where world_id = w.world_id and uid <> w.uid;
   insert into skill (world_id, uid, id, value)
     select w.world_id, w.uid, s, v from
       (values ('kindling', ${KINDLING}::double precision), ('fighting', 100), ('body_control', 1)) sv(s, v)

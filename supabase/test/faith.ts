@@ -146,8 +146,8 @@ begin
   -- What a spell is cast on: yourself, somebody else, creatures, things and the ground.
   select uid into o from player where world_id = w.world_id and uid <> w.uid order by uid limit 1;
   v_px := w.spawn_x + 0.5; v_py := w.spawn_y + 0.5;
-  update player set x = v_px, y = v_py, away = false where world_id = w.world_id and uid = w.uid;
-  update player set x = v_px + 3, y = v_py, away = false where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px, y = v_py, away = false where world_id = w.world_id and uid = w.uid;
+  update player set body_at = now(), x = v_px + 3, y = v_py, away = false where world_id = w.world_id and uid = o;
   insert into said values ('T:SELF', spell_target(w.world_id, w.uid, 'blessing_test_e', '{}'::jsonb)->>'kind');
   insert into said values ('T:YOU', spell_target(w.world_id, w.uid, 'blessing_test_e', jsonb_build_object('kind', 'player', 'uid', w.uid))->>'kind');
   r := spell_target(w.world_id, w.uid, 'blessing_test_e', jsonb_build_object('kind', 'player', 'uid', o));

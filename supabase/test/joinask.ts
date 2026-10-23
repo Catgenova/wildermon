@@ -68,8 +68,8 @@ begin
     insert into deed_member (world_id, founder, uid) values (w, f[5 + i], full_);
   end loop;
   -- Where each stands: three on the land, one a tile past its edge.
-  update player set x = d.x + 0.5, y = d.y + d.radius + 0.5 where world_id = w and uid in (nu, full_);
-  update player set x = d.x + d.radius + 1.5, y = d.y + 0.5 where world_id = w and uid = far;
+  update player set body_at = now(), x = d.x + 0.5, y = d.y + d.radius + 0.5 where world_id = w and uid in (nu, full_);
+  update player set body_at = now(), x = d.x + d.radius + 1.5, y = d.y + 0.5 where world_id = w and uid = far;
   insert into said values ('DEED|' || d.name), ('X|' || d.x), ('Y|' || d.y), ('R|' || d.radius),
     ('N_NU|' || folk_name(w, nu)), ('N_FULL|' || folk_name(w, full_)), ('JOINED_FULL|' || deeds_joined_by(w, full_)),
     ('FAR_AT|' || (select floor(x)::int || ',' || floor(y)::int from player where world_id = w and uid = far));

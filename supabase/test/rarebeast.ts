@@ -189,7 +189,7 @@ begin
 
   -- What the island says of them, to somebody standing by.
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
-  update player set x = 12.5, y = 13 where world_id = w and uid = u;
+  update player set body_at = now(), x = 12.5, y = 13 where world_id = w and uid = u;
   delete from caller where uid = u;
   insert into said select 'SENT|' || (r->>'species') || '|' || (r->>'id'), coalesce(r->>'rare', 'none')
     from jsonb_array_elements(rpc_creatures(w, 6)) r where (r->>'species') in ('roxxen');

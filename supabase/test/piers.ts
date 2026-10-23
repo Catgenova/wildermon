@@ -173,7 +173,7 @@ const ISLAND_SCENE = `
     returning id into v_spring;
   perform settle_spring(w, v_spring);
   insert into water_plant (world_id, x, y, kind, planted_at) values (w, ${LILY_AT[0]}, ${LILY_AT[1]}, 'lily', now() - interval '3 days');
-  update player set x = 28.5, y = 44.5, level = 0, level_h = null, act = null, act_queue = '[]'::jsonb, aboard = null
+  update player set body_at = now(), x = 28.5, y = 44.5, level = 0, level_h = null, act = null, act_queue = '[]'::jsonb, aboard = null
     where world_id = w and uid = me;
   delete from item where world_id = w and holder = 'player' and holder_uid = me;
   ${TOOLS.map((t) => `perform give(w, me, ${q(t)}, 1, 50);`).join(' ')}
@@ -392,9 +392,9 @@ begin
   insert into item (world_id, holder, gx, gy, def, ql, count) values (w, 'ground', 25, 58, 'shaft', 20, 1);
   insert into said values ('upItem', coalesce(build_refusal(w, me, 'remove_floor', ${jt(25, 58)}), 'OK'));
   delete from item where world_id = w and holder = 'ground' and gx = 25 and gy = 58;
-  update player set x = 25.5, y = 58.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 25.5, y = 58.5 where world_id = w and uid = me;
   insert into said values ('upOn', coalesce(build_refusal(w, me, 'remove_floor', ${jt(25, 58)}), 'OK'));
-  update player set x = 26.5, y = 58.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 26.5, y = 58.5 where world_id = w and uid = me;
   insert into said values ('upBeside', coalesce(build_refusal(w, me, 'remove_floor', ${jt(25, 58)}), 'OK'));
 end $b$;
 select string_agg(k || '=' || coalesce(v, 'null'), E'\\n~~\\n' order by k) from said;
@@ -493,9 +493,9 @@ begin
   insert into said values ('W${i}', (walk_share(w, me, 0, ${a[0]}.5, ${a[1]}.5, ${c[0]}.5, ${c[1]}.5) >= 1)
     || ' ' || coalesce(array_length(walk_climbs(w, ${a[0]}.5, ${a[1]}.5, ${c[0]}.5, ${c[1]}.5), 1), 0));`).join('')}
   ${DEEP.map(([, [x, y]], i) => `
-  update player set x = ${x}, y = ${y}, level = 0 where world_id = w and uid = me;
+  update player set body_at = now(), x = ${x}, y = ${y}, level = 0 where world_id = w and uid = me;
   insert into said values ('S${i}', in_deep_water(w, me)::text);`).join('')}
-  update player set x = 8.5, y = 44.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 8.5, y = 44.5 where world_id = w and uid = me;
   -- A cart on the reins, onto the jetty and along the shore.
   insert into placed (world_id, kind, sub, x, y, cx, cy, ql, made_by, driver)
     values (w, 'furniture', 'large_cart', 8, 44, 8.5, 44.5, 30, me, me) returning id into v_cart;
@@ -594,10 +594,10 @@ begin
   perform perform_building(w, me, 'add_to_building', ${jt(28, 58)});
   perform perform_building(w, me, 'add_to_building', ${jt(27, 58)});
   perform perform_building(w, me, 'add_to_building', ${jt(26, 58)});
-  ${LEFT.map(([, id, , target, [px, py]], i) => `update player set x = ${px}, y = ${py} where world_id = w and uid = me;
+  ${LEFT.map(([, id, , target, [px, py]], i) => `update player set body_at = now(), x = ${px}, y = ${py} where world_id = w and uid = me;
   insert into said values ('L${i}', coalesce(act_refusal(w, me, ${q(id)}, ${target}), 'OK'));`).join('\n  ')}
   -- Dirt dropped at your feet, standing on the jetty's deck.
-  update player set x = 4.3, y = 44.3 where world_id = w and uid = me;
+  update player set body_at = now(), x = 4.3, y = 44.3 where world_id = w and uid = me;
   insert into said values ('dropHere', coalesce(act_refusal(w, me, 'drop_dirt_here', jsonb_build_object('kind', 'item', 'uid',
     (select it.id from item it where it.world_id = w and it.holder = 'player' and it.holder_uid = me and it.def = 'dirt' limit 1))), 'OK'));
   -- A crate on the jetty's deck over the sea, and on its last deck, not built.
@@ -610,7 +610,7 @@ begin
   insert into said values ('xBare', examine_tile_text(w, 2, 44, me));
   insert into said values ('xBank', examine_tile_text(w, 27, 58, me));
   -- And the ground read, from the jetty.
-  update player set x = 5.5, y = 44.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 5.5, y = 44.5 where world_id = w and uid = me;
   v_ground := rpc_ground(w, 40, true);
   insert into said select 'read', string_agg(b->>'name' || ' ' || coalesce(b->>'deck', '-') || ' ' || coalesce((b->'piers')::text, '-'), '; ' order by b->>'name')
     from jsonb_array_elements(v_ground->'buildings'->'list') b where (b->>'name') in ('Jetty', 'Bank house', 'Hut');
@@ -722,12 +722,12 @@ begin
     from (values ${TILES.map(([x, y]) => `(${x}, ${y})`).join(', ')}) v(x, y);
   ${LINES.map(([, [x0, y0, x1, y1]], i) => `insert into said values ('line${i}', line_clear(w, ${x0}, ${y0}, ${x1}, ${y1})::text);`).join('\n  ')}
   -- Its keeper out on the jetty: the companion keeps to the shore.
-  update player set x = 4.5, y = 44.5, level = 0 where world_id = w and uid = me;
+  update player set body_at = now(), x = 4.5, y = 44.5, level = 0 where world_id = w and uid = me;
   v_comp := creature_spawn(w, 'woola', 8.5, 44.5, 'active', now() - interval '400 days', me);
   perform companion_settle(w, v_comp);
   insert into said select 'heelOn', floor(to_x)::int || ',' || floor(to_y)::int from creature where world_id = w and id = v_comp;
   -- And back on the shore, at heel again.
-  update player set x = 9.5, y = 43.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 9.5, y = 43.5 where world_id = w and uid = me;
   update creature set until = now() - interval '1 second' where world_id = w and id = v_comp;
   perform companion_settle(w, v_comp);
   insert into said select 'heelOff', floor(to_x)::int || ',' || floor(to_y)::int from creature where world_id = w and id = v_comp;
@@ -831,11 +831,11 @@ begin
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level) values (w, 'wood', 27, 34, 30, 34, 40, me, 0) returning id into v_br;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total) values
     (w, v_br, 0, 28, 34, '{"plank": 0}', '{"plank": 10}'), (w, v_br, 1, 29, 34, '{"plank": 0}', '{"plank": 10}');
-  update player set x = 27.5, y = 34.5, level = 0 where world_id = w and uid = me;
+  update player set body_at = now(), x = 27.5, y = 34.5, level = 0 where world_id = w and uid = me;
   insert into said values ('walkOn', (walk_share(w, me, 0, 27.5, 34.5, 28.5, 34.5) >= 1)::text);
-  update player set x = 29.5, y = 34.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 29.5, y = 34.5 where world_id = w and uid = me;
   insert into said values ('walkOff', (walk_share(w, me, 0, 29.5, 34.5, 30.5, 34.5) >= 1)::text);
-  update player set x = 25.5, y = 34.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 25.5, y = 34.5 where world_id = w and uid = me;
   insert into said values ('upUnder', coalesce(build_refusal(w, me, 'remove_floor', ${jt(27, 34)}), 'OK'));
   -- And a bridge thrown from slope to slope across row 35: its end is not then taken onto piers.
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level) values (w, 'wood', 27, 35, 30, 35, 25, me, 0) returning id into v_br;
@@ -930,13 +930,13 @@ begin
   insert into placed (world_id, kind, sub, x, y, cx, cy, ql, made_by)
     values (w, 'furniture', 'large_cart', 26, 57, 26.5, 57.5, 30, me) returning id into v_cart;
   insert into said values ('cart', coalesce(build_refusal(w, me, 'plan_building', ${jt(26, 57, { name: 'Shed' })}), 'OK'));
-  update player set x = 27.5, y = 57.5, level = 0 where world_id = w and uid = me;
+  update player set body_at = now(), x = 27.5, y = 57.5, level = 0 where world_id = w and uid = me;
   insert into said values ('me', coalesce(build_refusal(w, me, 'plan_building', ${jt(27, 57, { name: 'Shed' })}), 'OK'));
-  update player set x = 28.5, y = 57.5, level = 0 where world_id = w and uid = v_other;
+  update player set body_at = now(), x = 28.5, y = 57.5, level = 0 where world_id = w and uid = v_other;
   insert into said values ('other', coalesce(build_refusal(w, me, 'plan_building', ${jt(28, 57, { name: 'Shed' })}), 'OK'));
   -- Crowd5 out on the jetty while its deck is taken up.
-  update player set x = 9.5, y = 44.5 where world_id = w and uid = me;
-  update player set x = 5.5, y = 44.5, level = 0 where world_id = w and uid = v_other;
+  update player set body_at = now(), x = 9.5, y = 44.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 5.5, y = 44.5, level = 0 where world_id = w and uid = v_other;
   insert into said values ('upOther', coalesce(build_refusal(w, me, 'remove_floor', ${jt(5, 44)}), 'OK'));
   -- And the jetty's deck let down to 3, the sea at 0 standing within ${PIER_CLEAR} of it.
   update building set deck = 3 where world_id = w and id = building_at(w, 7, 44);

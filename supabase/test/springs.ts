@@ -193,7 +193,7 @@ begin
   select uid into me from player where world_id = w and name = 'Crowd2';
   select uid into them from player where world_id = w and name = 'Crowd3';
   perform set_config('request.jwt.claims', json_build_object('sub', me)::text, true);
-  update player set x = 48.5, y = 12.5, act = null, act_queue = '[]'::jsonb, level = 0 where world_id = w and uid in (me, them);
+  update player set body_at = now(), x = 48.5, y = 12.5, act = null, act_queue = '[]'::jsonb, level = 0 where world_id = w and uid in (me, them);
   delete from spring where world_id = w;
   insert into item (world_id, def, holder, holder_uid, ql, count) select w, 'shovel', 'player', u, 40, 1 from unnest(array[me, them]) u;
   -- The plateau, and the bowl in it: its middle corner 2 m down, the ring round it 1 m down.
@@ -212,9 +212,9 @@ begin
   insert into said values ('again', coalesce(act_refusal(w, me, 'dig_spring', '{"kind":"tile","x":49,"y":11}'), 'none'));
   insert into said values ('told', (select text from event where world_id = w and uid = me order by n desc limit 1));
   -- Standing in it, out of your depth.
-  update player set x = 49.5, y = 11.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 49.5, y = 11.5 where world_id = w and uid = me;
   insert into said values ('swim', in_deep_water(w, me)::text);
-  update player set x = 48.5, y = 12.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 48.5, y = 12.5 where world_id = w and uid = me;
   -- What a browser is sent, and not sent again once it has it.
   r := rpc_springs(w, 40, '{}'::jsonb);
   insert into said values ('sent', (r->'near')::text || ' ' || jsonb_array_length(r->'chains'));

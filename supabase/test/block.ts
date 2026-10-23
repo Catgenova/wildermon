@@ -84,7 +84,7 @@ begin
     end loop;
   end loop;
   -- Nobody near to take a blow on their own shield, and nothing on this one from a trade, a faith or a ward.
-  update player set x = v_px - 60 where world_id = w.world_id and uid <> w.uid and (x - v_px) ^ 2 + (y - v_py) ^ 2 < 60 ^ 2;
+  update player set body_at = now(), x = v_px - 60 where world_id = w.world_id and uid <> w.uid and (x - v_px) ^ 2 + (y - v_py) ^ 2 < 60 ^ 2;
   update player set act = null, act_target = null, act_ends = null, act_left = null, act_goes = null,
          act_queue = '[]'::jsonb, equipped = '{}'::jsonb, fight_stance = 'balanced', fight_back = false,
          moved_at = now() - interval '1 minute', x = v_px, y = v_py, level = 0, wounds = '[]'::jsonb, away = false,

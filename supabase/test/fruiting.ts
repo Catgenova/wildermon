@@ -150,7 +150,7 @@ for (const season of SEASONS) {
       `select land_set_tile(${W}, ${x}, ${ROW}, ${tileId(s.tile)}); select land_set_data(${W}, ${x}, ${ROW}, ${s.data});`,
       `select land_set_tile(${W}, ${x}, ${ROW + 1}, tile_id('Grass')); select land_set_data(${W}, ${x}, ${ROW + 1}, 0);`,
       `delete from foraged where world_id = ${W} and x = ${x} and y = ${ROW};`,
-      `update player set x = ${x + 0.5}, y = ${ROW + 1.5}, level = 0 where world_id = ${W} and uid = ${IVAR};`,
+      `update player set body_at = now(), x = ${x + 0.5}, y = ${ROW + 1.5}, level = 0 where world_id = ${W} and uid = ${IVAR};`,
       `delete from item where world_id = ${W} and holder = 'player' and holder_uid = ${IVAR} and def = ${q(s.item)};`,
       `select 'REFUSED${k}|' || coalesce(act_refusal_rules(${W}, ${IVAR}, ${q(s.action)}, ${target(x, ROW)}), '-');`,
       `select 'LOOK${k}|' || examine_tile_text(${W}, ${x}, ${ROW}, ${IVAR});`,
@@ -230,7 +230,7 @@ select set_config('wurm.season', ${q(season)}, true);
 insert into skill (world_id, uid, id, value) values (${W}, ${IVAR}, 'foraging', 90) on conflict (world_id, uid, id) do update set value = 90;
 delete from building_tile where world_id = ${W} and x = ${x} and y = ${y};
 select land_set_tile(${W}, ${x}, ${y}, tile_id('Grass')); select land_set_data(${W}, ${x}, ${y}, 0);
-update player set x = ${x + 0.5}, y = ${y + 0.5}, level = 0 where world_id = ${W} and uid = ${IVAR};
+update player set body_at = now(), x = ${x + 0.5}, y = ${y + 0.5}, level = 0 where world_id = ${W} and uid = ${IVAR};
 delete from item where world_id = ${W} and holder = 'player' and holder_uid = ${IVAR} and def in (${FORAGE_TABLE.map(([i]) => q(i)).join(', ')});
 do $$
 declare k int;

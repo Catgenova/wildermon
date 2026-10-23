@@ -184,7 +184,7 @@ begin
 
   /* ---- by Telestone ---- */
   it := give(w, u, 'telestone', 1, 100);
-  update player set x = 5.5, y = 5.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 5.5, y = 5.5 where world_id = w and uid = u;
   j := jsonb_build_object('kind', 'item', 'uid', it, 'stone', 'sunreach');
   insert into said values ('TELE_ASK', coalesce(act_refusal(w, u, 'travel_runestone', j), 'none'));
   perform act_perform(w, u, 'travel_runestone', j);
@@ -218,7 +218,7 @@ begin
   perform land_set_tile(w, 60, 60, 4);
   perform land_set_rock(w, 60, 60, v_rock);
   perform give(w, u, 'pickaxe', 1, 100);
-  update player set x = 59.5, y = 60.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 59.5, y = 60.5 where world_id = w and uid = u;
   i := 0;
   while coalesce((select (tally->>'ore:copper_ore')::int from player where world_id = w and uid = u), 0) = 0 and i < 50 loop
     i := i + 1;
@@ -313,7 +313,7 @@ begin
   insert into said select 'NOT_BLEEDING', coalesce(tally->>'staunched', 'none') from player where world_id = w and uid = u;
 
   /* ---- a rare thing at an altar ---- */
-  update player set x = 500.5, y = 500.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 500.5, y = 500.5 where world_id = w and uid = u;
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'furniture', 'altar', 501, 500, 0, 0, 501.5, 500.5, 50, u) returning id into alt;
   it := give(w, u, 'hatchet', 1, 40, null, 'rare');
@@ -333,7 +333,7 @@ begin
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'furniture', 'stall', 600, 600, 0, 0, 601, 601, 50, u) returning id into st;
   insert into item (world_id, holder, def, ql, count, placed, price) values (w, 'furniture', 'plank', 30, 1, st, 3) returning id into it;
-  update player set x = 600.5, y = 601.5 where world_id = w and uid = v;
+  update player set body_at = now(), x = 600.5, y = 601.5 where world_id = w and uid = v;
   perform give_coins(w, v, 50);
   perform set_config('request.jwt.claims', json_build_object('sub', v)::text, true);
   delete from caller where uid = v;
@@ -344,7 +344,7 @@ begin
 
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, made_by)
     values (w, 'furniture', 'mailbox', 610, 610, 2, 2, 610.75, 610.75, u) returning id into mb;
-  update player set x = 610.5, y = 611.5 where world_id = w and uid in (u, v);
+  update player set body_at = now(), x = 610.5, y = 611.5 where world_id = w and uid in (u, v);
   perform give_coins(w, u, 50);
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   delete from caller where uid = u;
@@ -380,7 +380,7 @@ begin
 
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'furniture', 'bell', 701, 700, 0, 0, 701.5, 700.5, 50, u) returning id into it;
-  update player set x = 700.5, y = 700.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 700.5, y = 700.5 where world_id = w and uid = u;
   perform perform_last(w, u, 'ring_bell', jsonb_build_object('kind', 'furniture', 'id', it));
   insert into said select 'BELL', coalesce(tally->>'rang', 'none') from player where world_id = w and uid = u;
 

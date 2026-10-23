@@ -151,10 +151,10 @@ begin
          stats = (coalesce(stats, '{}'::jsonb) - 'hurtAt' - 'hurtBy' - 'aegisBy')
                  || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0, 'hurtSettled', now())
    where world_id = w.world_id and uid in (w.uid, o, q);
-  update player set x = v_px + 2 where world_id = w.world_id and uid = o;
-  update player set x = v_px + 5 where world_id = w.world_id and uid = q;
+  update player set body_at = now(), x = v_px + 2 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + 5 where world_id = w.world_id and uid = q;
   -- Everybody else on the island well away.
-  update player set x = v_px - 60 where world_id = w.world_id and uid not in (w.uid, o, q);
+  update player set body_at = now(), x = v_px - 60 where world_id = w.world_id and uid not in (w.uid, o, q);
   insert into skill (world_id, uid, id, value)
     select w.world_id, pp.uid, sv.s, sv.v
       from (values ('warding', ${WARDING}::double precision), ('fighting', 100), ('body_control', 1)) sv(s, v)
@@ -221,7 +221,7 @@ begin
   ${AT_NOW}
   r := class_spell_cast(w.world_id, w.uid, 'warder_greater_ward_other', ${ON('q')});
   insert into said select 'OTHER:GREATER', (${SKIN('q')} / v_skin) || '|' || coalesce(r->>'said', r->>'why');
-  update player set x = v_px + 7 where world_id = w.world_id and uid = q;
+  update player set body_at = now(), x = v_px + 7 where world_id = w.world_id and uid = q;
   insert into said values ('OTHER:FAR', coalesce(class_spell_cast(w.world_id, w.uid, 'warder_ward_other', ${ON('q')})->>'why', 'cast'));
 
   /* ---- Sanctuary: over you and everybody within its reach, and nobody beyond ---- */
@@ -230,7 +230,7 @@ begin
   r := class_spell_cast(w.world_id, w.uid, 'warder_sanctuary', ${ON_ME});
   insert into said select 'SANCTUARY', (${SKIN('w.uid')} / v_skin) || '|' || (${SKIN('o')} / v_skin) || '|' || ${SKIN('q')} || '|'
       || coalesce(r->>'said', r->>'why');
-  update player set x = v_px + 5 where world_id = w.world_id and uid = q;
+  update player set body_at = now(), x = v_px + 5 where world_id = w.world_id and uid = q;
 
   /* ---- Thicken: the next skin the larger, and spent by it ---- */
   ${BARE('w.uid')}

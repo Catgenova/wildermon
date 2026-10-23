@@ -250,7 +250,7 @@ begin
 
   /* ---- 5. Wader: digging and flattening in deeper water. ---- */
   for tx in 1..4 loop for ty in 3..6 loop perform land_set_height(w, tx, ty, -12); end loop; end loop;
-  update player set x = 2.5, y = 4.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 2.5, y = 4.5 where world_id = w and uid = u;
   perform pg_temp.hold(w, u, '{}');
   insert into said values ('DEEP',
     coalesce(act_refusal(w, u, 'dig', jsonb_build_object('kind', 'tile', 'x', 2, 'y', 4, 'cx', 3, 'cy', 5)), 'ALLOWED')
@@ -265,7 +265,7 @@ begin
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'furniture', 'rowing_boat', 2, 9, 0, 0, 2.5, 9.5, 50, u) returning id into v_boat;
   update placed set driver = u where id = v_boat;
-  update player set x = 2.5, y = 9.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 2.5, y = 9.5 where world_id = w and uid = u;
   perform pg_temp.hold(w, u, '{}');
   insert into said values ('DREDGE', coalesce(act_refusal(w, u, 'dredge',
     jsonb_build_object('kind', 'tile', 'x', 2, 'y', 9, 'cx', 3, 'cy', 10)), 'ALLOWED'));
@@ -273,7 +273,7 @@ begin
   insert into said values ('DREDGED', coalesce(act_refusal(w, u, 'dredge',
     jsonb_build_object('kind', 'tile', 'x', 2, 'y', 9, 'cx', 3, 'cy', 10)), 'ALLOWED'));
   update placed set driver = null where id = v_boat;
-  update player set x = 8.5, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 8.5, y = 8.5 where world_id = w and uid = u;
 
   /* ---- 7. Steep Cut: the slope a spade may leave. ---- */
   update skill set value = 50 where world_id = w and uid = u and id = 'digging';

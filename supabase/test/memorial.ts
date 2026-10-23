@@ -181,9 +181,9 @@ begin
   ${refusal('R:gone', 'u', '987654', 'x')}
   ${refusal('R:chisel', 'u', 'v_pl', LINE)}
   perform give(w, u, 'chisel', 1, 50);
-  update player set x = 20.5, y = 20.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 20.5 where world_id = w and uid = u;
   ${refusal('R:far', 'u', 'v_pl', LINE)}
-  update player set x = 10.5, y = 10.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 10.5, y = 10.5 where world_id = w and uid = u;
   ${refusal('R:unasked', 'u', 'v_pl')}
   ${refusal('R:blank', 'u', 'v_pl', '  \n\t  ')}
   ${refusal('R:none', 'u', 'v_pl', LINE)}

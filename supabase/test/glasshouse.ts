@@ -353,7 +353,7 @@ begin
   delete from crop where world_id = w;
   delete from crop_last where world_id = w;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
-  update player set x = 20.5, y = 26.5, level = 0, act = null, act_target = null, act_started = null, act_ends = null,
+  update player set body_at = now(), x = 20.5, y = 26.5, level = 0, act = null, act_target = null, act_started = null, act_ends = null,
          act_left = null, act_goes = null, act_queue = '[]', craft_class = 'farmer', class_mul = null, way = null,
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('hunger', 1, 'thirst', 1, 'health', 1, 'stamina', 1)
    where world_id = w and uid = u;
@@ -383,18 +383,18 @@ begin
 
   -- Glass is refused on a wall, a fence, a floor and a flat roof, and the ground until the last pane is in.
   insert into said values ('WALL', coalesce(act_refusal(w, u, 'plan_wall', ${tileT(20, 26, { side: 'n', wallType: 'solid', material: 'glass' })}), 'ALLOWED'));
-  update player set x = 24.5, y = 25.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 24.5, y = 25.5 where world_id = w and uid = u;
   insert into said values ('FENCE', coalesce(act_refusal(w, u, 'plan_fence', ${tileT(24, 25, { side: 'n', wallType: 'fence', material: 'glass' })}), 'ALLOWED'));
-  update player set x = ${FLAT[0] + 0.5}, y = ${FLAT[1] + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${FLAT[0] + 0.5}, y = ${FLAT[1] + 0.5} where world_id = w and uid = u;
   insert into said values ('FLAT', coalesce(act_refusal(w, u, 'plan_floor', ${tileT(FLAT[0], FLAT[1], { material: 'glass', floorKind: 'roof' })}), 'ALLOWED'));
-  update player set x = 20.5, y = 26.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 26.5 where world_id = w and uid = u;
   insert into said values ('FLOOR', coalesce(act_refusal(w, u, 'plan_floor', ${tileT(20, 26, { material: 'glass', floorKind: 'floor' })}), 'ALLOWED'));
   insert into said values ('NOTYET', coalesce(act_refusal(w, u, 'till', ${tileT(20, 26)}), 'ALLOWED') || '|' || glasshouse(w, 1));
 
   -- The last of the glass, through the door, a pane or a timber a go.
   perform give(w, u, 'glass', 12, 40);
   perform give(w, u, 'timber', 4, 40);
-  update player set x = ${LAST[0] + 0.5}, y = ${LAST[1] + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${LAST[0] + 0.5}, y = ${LAST[1] + 0.5} where world_id = w and uid = u;
   insert into said values ('BUILDASK', coalesce(act_refusal(w, u, 'build_floor', ${tileT(LAST[0], LAST[1], { floorKind: 'roof' })}), 'ALLOWED'));
   v_n := 0;
   while not bill_done((select f.needed from floor_tile f where f.world_id = w and f.level = 1 and f.x = ${LAST[0]} and f.y = ${LAST[1]})) and v_n < 40 loop
@@ -404,7 +404,7 @@ begin
   insert into said values ('ROOFED', v_n || '|' || glasshouse(w, 1) || '|' || coalesce(pg_temp.said(w, u, 'Built: %'), 'unsaid'));
 
   -- Tilled, and not where a floor is planned; and no floor over a field.
-  update player set x = 20.5, y = 26.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 26.5 where world_id = w and uid = u;
   insert into said values ('TILLASK', coalesce(act_refusal(w, u, 'till', ${tileT(20, 26)}), 'ALLOWED'));
   perform act_perform(w, u, 'till', ${tileT(20, 26)});
   perform act_perform(w, u, 'till', ${tileT(20, 27)});
@@ -412,10 +412,10 @@ begin
   insert into said values ('AGAIN', coalesce(act_refusal(w, u, 'till', ${tileT(20, 26)}), 'ALLOWED'));
   insert into said values ('FIELDFLOOR', coalesce(act_refusal(w, u, 'plan_floor', ${tileT(20, 26, { material: 'plank', floorKind: 'floor' })}), 'ALLOWED'));
   insert into floor_tile (world_id, level, x, y, building, material, kind, needed, total) values (w, 0, 21, 26, 1, 'plank', 'floor', '{"plank":0}', '{"plank":12}');
-  update player set x = 21.5, y = 26.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 21.5, y = 26.5 where world_id = w and uid = u;
   insert into said values ('FLOORED', coalesce(act_refusal(w, u, 'till', ${tileT(21, 26)}), 'ALLOWED'));
   delete from floor_tile where world_id = w and level = 0 and x = 21 and y = 26;
-  update player set x = 20.5, y = 26.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 26.5 where world_id = w and uid = u;
 
   -- Sown under glass, and tended.
   perform give(w, u, 'wheat_seed', 5, 50);
@@ -441,7 +441,7 @@ begin
 
   -- A roof tile taken off: onto the field clock, as far into its stage as it had grown; laid again: back.
   update crop set stage_at = now() - interval '100 seconds' where world_id = w and x = 20 and y = 26;
-  update player set x = ${LAST[0] + 0.5}, y = ${LAST[1] + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${LAST[0] + 0.5}, y = ${LAST[1] + 0.5} where world_id = w and uid = u;
   perform act_perform(w, u, 'remove_floor', ${tileT(LAST[0], LAST[1], { floorKind: 'roof' })});
   insert into said select 'OFF', glasshouse(w, 1) || ':' || c.glass || ':' || round((field_clock(now()) - field_clock(c.stage_at))::numeric, 4)
     from crop c where c.world_id = w and c.x = 20 and c.y = 26;
@@ -464,7 +464,7 @@ begin
     from crop c where c.world_id = w and c.x = 20 and c.y = 26;
 
   -- A wall taken down: open to the weather, onto the field clock as far along, and no Till; built back up a unit a go, onto the glass clock again.
-  update player set x = 20.5, y = 26.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 26.5 where world_id = w and uid = u;
   perform act_perform(w, u, 'remove_wall', ${tileT(20, 26, { side: 'n' })});
   insert into said select 'WALLOFF', glasshouse(w, 1) || ':' || c.glass || ':' || round((field_clock(now()) - field_clock(c.stage_at))::numeric, 4)
     from crop c where c.world_id = w and c.x = 20 and c.y = 26;
@@ -539,7 +539,7 @@ begin
   perform pg_temp.hold(w, u, '{}');
 
   -- And through the whole door: asked of \`rpc_act\` as a browser asks it, and finished by the clock in \`settle\`.
-  update player set x = 21.5, y = 26.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 21.5, y = 26.5 where world_id = w and uid = u;
   perform act_perform(w, u, 'till', ${tileT(21, 26)});
   perform give(w, u, 'wheat_seed', 1, 50);
   delete from caller where uid = u;
@@ -557,23 +557,23 @@ begin
   -- A poured slab under a tile of it is not earth: Till refused in the browser's words.
   insert into foundation (world_id, id, x, y, top, needed, total)
     values (w, (select coalesce(max(id), 0) + 1 from foundation), ${LAST[0]}, ${LAST[1]}, 40, '{}'::jsonb, '{}'::jsonb);
-  update player set x = ${LAST[0] + 0.5}, y = ${LAST[1] + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${LAST[0] + 0.5}, y = ${LAST[1] + 0.5} where world_id = w and uid = u;
   insert into said values ('SLAB', glasshouse(w, 1) || '|' || coalesce(act_refusal(w, u, 'till', ${tileT(LAST[0], LAST[1])}), 'ALLOWED'));
   delete from foundation where world_id = w and x = ${LAST[0]} and y = ${LAST[1]};
-  update player set x = 20.5, y = 26.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 26.5 where world_id = w and uid = u;
 
   -- What Examine says of it, and of the shed beside it.
   insert into said values ('EXAMINE', examine_tile_text(w, 20, 26, u));
   insert into said values ('EXAMINESHED', examine_tile_text(w, ${FLAT[0]}, ${FLAT[1]}, u));
 
   -- A roof tile off: with fields in it, only glass goes back on, and no storey goes over it.
-  update player set x = ${LAST[0] + 0.5}, y = ${LAST[1] + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${LAST[0] + 0.5}, y = ${LAST[1] + 0.5} where world_id = w and uid = u;
   perform act_perform(w, u, 'remove_floor', ${tileT(LAST[0], LAST[1], { floorKind: 'roof' })});
   insert into said values ('SLATE', coalesce(act_refusal(w, u, 'plan_floor', ${tileT(LAST[0], LAST[1], { material: 'slate', floorKind: 'roof' })}), 'ALLOWED'));
   insert into said values ('GLASSAGAIN', coalesce(act_refusal(w, u, 'plan_floor', ${tileT(LAST[0], LAST[1], { material: 'glass', floorKind: 'roof' })}), 'ALLOWED'));
   insert into said values ('STOREY', coalesce(act_refusal(w, u, 'add_floor', ${tileT(LAST[0], LAST[1])}), 'ALLOWED'));
   -- The fields cleared, as the refusals say, and then the roof is anybody's to choose.
-  update player set x = 20.5, y = 26.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 26.5 where world_id = w and uid = u;
   insert into said values ('CLEARASK', coalesce(act_refusal(w, u, 'clear_field', ${tileT(20, 26)}), 'ALLOWED'));
   perform act_perform(w, u, 'clear_field', ${tileT(20, 26)});
   insert into said values ('CLEARSAID', coalesce(pg_temp.said(w, u, 'Cleared%'), 'unsaid'));
@@ -582,7 +582,7 @@ begin
   insert into said values ('CLEARED', (select count(*) from building_tile bt where bt.world_id = w and bt.building = 1 and land_tile(w, bt.x, bt.y) = tile_id('Field'))
       || ':' || (select count(*) from crop c where c.world_id = w and c.x between 20 and 21 and c.y between 26 and 27)
       || ':' || (land_tile(w, 20, 26) = tile_id('Packed dirt')));
-  update player set x = ${LAST[0] + 0.5}, y = ${LAST[1] + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${LAST[0] + 0.5}, y = ${LAST[1] + 0.5} where world_id = w and uid = u;
   insert into said values ('SLATECLEAR', coalesce(act_refusal(w, u, 'plan_floor', ${tileT(LAST[0], LAST[1], { material: 'slate', floorKind: 'roof' })}), 'ALLOWED'));
   insert into said values ('STOREYCLEAR', coalesce(act_refusal(w, u, 'add_floor', ${tileT(LAST[0], LAST[1])}), 'ALLOWED'));
 end $$;

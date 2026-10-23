@@ -210,7 +210,7 @@ begin
     perform land_set_height(w, tx, ty, 40); perform land_set_tile(w, tx, ty, tile_id('Dirt'));
   end loop; end loop;
   delete from item where world_id = w and holder = 'player' and holder_uid in (u, other);
-  update player set x = 8.5, y = 8.5, act = null, act_queue = '[]', stats = full_stats where world_id = w and uid in (u, other);
+  update player set body_at = now(), x = 8.5, y = 8.5, act = null, act_queue = '[]', stats = full_stats where world_id = w and uid in (u, other);
 
   /* What the trowel turns up. */
   perform give(w, u, 'trowel', 1, 90);
@@ -280,13 +280,13 @@ begin
 
   b := give(w, u, 'bauble_minor', 1, 40, 'stonecutting: 3.4% less time');
   insert into said values ('NOTALTAR', coalesce(act_refusal(w, u, 'set_bauble', jsonb_build_object('kind', 'furniture', 'id', box, 'itemUid', b)), 'null'));
-  update player set x = 11.5, y = 11.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 11.5, y = 11.5 where world_id = w and uid = u;
   insert into said values ('REACH', coalesce(act_refusal(w, u, 'set_bauble', jsonb_build_object('kind', 'furniture', 'id', alt, 'itemUid', b)), 'null'));
-  update player set x = 13.5, y = 9.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 13.5, y = 9.5 where world_id = w and uid = u;
   insert into said values ('OFFDEED', coalesce(act_refusal(w, u, 'set_bauble', jsonb_build_object('kind', 'furniture', 'id', far, 'itemUid', b)), 'null'));
-  update player set x = 2.5, y = 12.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 2.5, y = 12.5 where world_id = w and uid = u;
   insert into said values ('STRANGER', coalesce(act_refusal(w, u, 'set_bauble', jsonb_build_object('kind', 'furniture', 'id', next_alt, 'itemUid', b)), 'null'));
-  update player set x = 8.5, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 8.5, y = 8.5 where world_id = w and uid = u;
   j := jsonb_build_object('kind', 'furniture', 'id', alt, 'itemUid', b);
   insert into said values ('SET', coalesce(act_refusal(w, u, 'set_bauble', j), 'null'));
   perform act_perform(w, u, 'set_bauble', j);
@@ -353,9 +353,9 @@ begin
   insert into said values ('BUILDERPACE', bauble_pace(w, other, 'stonecutting')::text);
   update deed_member set role = 'guest' where world_id = w and founder = u and uid = other;
   insert into said values ('GUESTPACE', bauble_pace(w, other, 'stonecutting') || '|' || bauble_learn(w, other, 'cooking'));
-  update player set x = 13.5, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 13.5, y = 8.5 where world_id = w and uid = u;
   insert into said values ('OFFPACE', bauble_pace(w, u, 'stonecutting') || '|' || bauble_learn(w, u, 'cooking'));
-  update player set x = 8.5, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 8.5, y = 8.5 where world_id = w and uid = u;
 
   -- What a go yields: nothing outside one; inside one, the job's own and then, the go it comes up, twice as many.
   update player set act = 'cut_down' where world_id = w and uid = u;

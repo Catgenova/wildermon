@@ -126,8 +126,8 @@ begin
          stats = (coalesce(stats, '{}'::jsonb) - 'hurtAt' - 'hurtBy' - 'aegisBy')
                  || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0, 'hurtSettled', now())
    where world_id = w.world_id and uid in (w.uid, o);
-  update player set x = v_px + 2 where world_id = w.world_id and uid = o;
-  update player set x = v_px - 60 where world_id = w.world_id and uid not in (w.uid, o);
+  update player set body_at = now(), x = v_px + 2 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px - 60 where world_id = w.world_id and uid not in (w.uid, o);
   insert into skill (world_id, uid, id, value)
     select w.world_id, pp.uid, sv.s, sv.v
       from (values ('kindling', 60::double precision), ('warding', 60), ('fighting', 100), ('mauls', 100), ('axes', 100),

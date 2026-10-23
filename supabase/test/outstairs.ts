@@ -114,7 +114,7 @@ begin
   else
     insert into deed (world_id, name, x, y, radius, founded_by) values (w, 'Latecomer', 21, 26, 5, u);
   end if;
-  update player set x = 20.5, y = 27.5, level = 0 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 27.5, level = 0 where world_id = w and uid = u;
 end $$;`);
 
 /* ---- building on both sides at once ---------------------------------------- */
@@ -419,7 +419,7 @@ same('and too heavy a material for its walls refused as before', 'plan_floor', {
     delete from item where world_id = w and holder = 'player' and holder_uid = u and def in ('plank', 'timber');
     ${heights.map(([x, y, h]) => `perform land_set_height(w, ${x}, ${y}, ${h});`).join('\n')}
     ${tiles.map(([x, y, t, d]) => `perform land_set_tile(w, ${x}, ${y}, ${t}); perform land_set_data(w, ${x}, ${y}, ${d});`).join('\n')}
-    update player set x = ${px}, y = ${py}, level = ${pl} where world_id = w and uid = u;
+    update player set body_at = now(), x = ${px}, y = ${py}, level = ${pl} where world_id = w and uid = u;
     ${deedWas ? `update deed set x = ${deedWas.split(',')[0]}, y = ${deedWas.split(',')[1]}, radius = ${deedWas.split(',')[2]}, level = ${deedWas.split(',')[3]}
       where world_id = w and founded_by = u;` : 'delete from deed where world_id = w and founded_by = u;'}`);
 }

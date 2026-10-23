@@ -56,7 +56,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
-  update player set x = 10.5, y = 10.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb where world_id = w and uid = u;
+  update player set body_at = now(), x = 10.5, y = 10.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb where world_id = w and uid = u;
   for i in 1..${shovels} loop perform give(w, u, 'shovel', 1, ${QL}); end loop;
   -- A shoulder of soil on the east side of the tile beside you, six high.
   perform land_set_height(w, 12, 10, land_height(w, 12, 10) + 6);

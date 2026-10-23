@@ -220,7 +220,7 @@ begin
   /* ---- Long Cast: from five tiles off, water is too far and none is within the box a cast spans; with it, both reach. ---- */
   perform pg_temp.hold(w, u, '{}');
   perform give(w, u, 'fishing_rod', 1, ${ROD_QL});
-  update player set x = ${WX - 5 + 0.5}, y = ${WY + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${WX - 5 + 0.5}, y = ${WY + 0.5} where world_id = w and uid = u;
   v_t := ${refused('fish', WX, WY)} || '#' || ${refused('fish', WX - 4, WY)};
   ${hold('Long Cast')};
   v_t := v_t || '#' || ${refused('fish', WX, WY)} || '#' || ${refused('fish', WX - 4, WY)};
@@ -230,13 +230,13 @@ begin
   /* ---- Wide Net: from three tiles off, the same for a net. ---- */
   perform pg_temp.hold(w, u, '{}');
   perform give(w, u, 'fishing_net', 1, ${NET_QL});
-  update player set x = ${WX - 3 + 0.5}, y = ${WY + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${WX - 3 + 0.5}, y = ${WY + 0.5} where world_id = w and uid = u;
   v_t := ${refused('drag_net', WX, WY)} || '#' || ${refused('drag_net', WX - 3, WY - 1)};
   ${hold('Wide Net')};
   v_t := v_t || '#' || ${refused('drag_net', WX, WY)} || '#' || ${refused('drag_net', WX - 3, WY - 1)};
   insert into said values ('NET', v_t);
   ${clearAll};
-  update player set x = 9.5, y = 9.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 9.5, y = 9.5 where world_id = w and uid = u;
 
   /* ---- Quick Cast and Quick Net: a go of each started with their share of the time. ---- */
   perform pg_temp.hold(w, u, '{}');

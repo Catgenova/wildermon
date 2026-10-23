@@ -71,7 +71,7 @@ begin
   insert into said values ('LIST', (select string_agg(e->>'id', ',' order by (e->>'id')::int) from jsonb_array_elements(rpc_creatures(w, 40)) e
      where (e->>'id')::int = v_id));
   insert into said values ('ME', v_id::text);
-  update player set x = ${TOKEN[0] + FAR} + 0.5, y = ${TOKEN[1]} + 0.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = ${TOKEN[0] + FAR} + 0.5, y = ${TOKEN[1]} + 0.5 where world_id = w and uid = u;
   -- And the rest of the way, as the ticks would find it, a few minutes at a time.
   for i in 1..8 loop
     update creature set until = now() - interval '120 seconds', leg_at = now() - interval '121 seconds', leg_ends = now() - interval '120 seconds',

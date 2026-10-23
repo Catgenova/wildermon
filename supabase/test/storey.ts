@@ -98,7 +98,7 @@ begin
   insert into building_tile (world_id, building, x, y) values (w, 1, 40, 40);
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total) values
     ${SIDES.map((s) => wallRow(40, 40, s, 0, 'solid', 'log')).join(',\n    ')};
-  update player set x = 40.5, y = 40.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 40.5, y = 40.5 where world_id = w and uid = u;
 end $$;`);
 
 const theirSay = (action: string, target: string): string =>

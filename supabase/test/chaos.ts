@@ -60,7 +60,7 @@ begin
          fight_stance = 'balanced', blessings = '{}'::jsonb, used_at = '{}'::jsonb, body_at = now(), favour = 0, favour_at = now(),
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0)
    where world_id = w.world_id and uid in (w.uid, o);
-  update player set x = v_px + 40 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + 40 where world_id = w.world_id and uid = o;
   insert into skill (world_id, uid, id, value) values (w.world_id, w.uid, 'body_control', 1), (w.world_id, w.uid, faith_skill(), 50)
     on conflict (world_id, uid, id) do update set value = excluded.value;
   delete from creature where world_id = w.world_id and to_x between v_px - 40 and v_px + 40 and to_y between v_py - 40 and v_py + 40;

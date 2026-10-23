@@ -381,9 +381,9 @@ begin
 
   -- Refused: with no seed, and from across the island.
   insert into said values ('NOSEED', coalesce(act_refusal(w, u, 'plant_seed', t), 'ALLOWED'));
-  update player set x = 15.5, y = 15.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 15.5, y = 15.5 where world_id = w and uid = u;
   insert into said values ('FAR', coalesce(act_refusal(w, u, 'plant_seed', t), 'ALLOWED'));
-  update player set x = 9.5, y = 9.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 9.5, y = 9.5 where world_id = w and uid = u;
 
   -- Sown, through the doors.
   perform give(w, u, 'wheat_seed', 5, 50);

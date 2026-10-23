@@ -292,7 +292,7 @@ begin
   insert into said values ('SHORE', (select x || ',' || y from player where world_id = w and uid = '${ANNA}'));
 
   -- What each of them is shown of it.
-  update player set x = 8.5, y = 46.0 where world_id = w and uid = '${ANNA}';
+  update player set body_at = now(), x = 8.5, y = 46.0 where world_id = w and uid = '${ANNA}';
   perform set_config('request.jwt.claims', json_build_object('sub', '${ANNA}')::text, true);
   v_row := rpc_ground(w, 40, true);
   insert into said values ('HERS', (select (e->>'mine') || ',' || jsonb_array_length(e->'things') || ',' || (e->'grave'->>'name')
@@ -301,11 +301,11 @@ begin
   insert into said values ('LISTED', (select string_agg((g->>'id') || '@' || (g->>'x') || ',' || (g->>'y'), ' ')
     from jsonb_array_elements(v_row->'graves') g) || '|' || v_g || '@8,44');
   -- Out of reach of what is in it, and still told how much there is.
-  update player set x = 8.5, y = 52.0 where world_id = w and uid = '${ANNA}';
+  update player set body_at = now(), x = 8.5, y = 52.0 where world_id = w and uid = '${ANNA}';
   v_row := rpc_ground(w, 40, false);
   insert into said values ('FAR', (select jsonb_array_length(e->'things') || ',' || (e->'grave'->>'units')
     from jsonb_array_elements(v_row->'placed') e where (e->>'id')::bigint = v_g));
-  update player set x = 8.5, y = 46.0 where world_id = w and uid = '${ANNA}';
+  update player set body_at = now(), x = 8.5, y = 46.0 where world_id = w and uid = '${ANNA}';
   perform set_config('request.jwt.claims', json_build_object('sub', '${BRAN}')::text, true);
   v_row := rpc_ground(w, 40, true);
   insert into said values ('HIS', (select (e->>'mine') || ',' || jsonb_array_length(e->'things') || ',' || (e->'grave'->>'name')
@@ -341,26 +341,26 @@ begin
   -- A second death on the same tile, then one carrying nothing but what is worn.
   delete from item where world_id = w and holder = 'player' and holder_uid = '${ANNA}' and id not in (v_cap, v_ring);
   perform give(w, '${ANNA}', 'plank', 2, 30);
-  update player set x = 8.3, y = 44.6 where world_id = w and uid = '${ANNA}';
+  update player set body_at = now(), x = 8.3, y = 44.6 where world_id = w and uid = '${ANNA}';
   update player set equipped = jsonb_build_object('head', v_cap, 'jewel', v_ring) where world_id = w and uid = '${ANNA}';
   perform player_die(w, '${ANNA}');
   select id into v_g2 from placed where world_id = w and made_by = '${ANNA}' and crumbles_at is not null and id <> v_g;
   insert into said values ('TWO', (select a.x || ',' || a.y || ':' || a.sx || ',' || a.sy || ' ' || b.x || ',' || b.y || ':'
     || b.sx || ',' || b.sy from placed a, placed b where a.id = v_g and b.id = v_g2));
-  update player set x = 5.5, y = 47.5 where world_id = w and uid = '${ANNA}';
+  update player set body_at = now(), x = 5.5, y = 47.5 where world_id = w and uid = '${ANNA}';
   perform player_die(w, '${ANNA}');
   insert into said values ('BARE', (select count(*) from placed where world_id = w and made_by = '${ANNA}' and crumbles_at is not null)
     || '|' || (select text from event where world_id = w and uid = '${ANNA}' order by n desc limit 1));
 
   -- Deep water, with land in reach and without.
   perform give(w, '${ANNA}', 'hatchet', 1, 30);
-  update player set x = 15.5, y = 44.5 where world_id = w and uid = '${ANNA}';
+  update player set body_at = now(), x = 15.5, y = 44.5 where world_id = w and uid = '${ANNA}';
   perform player_die(w, '${ANNA}');
   insert into said values ('DRY', (select x || ',' || y || ',' || has_water(w, x, y) from placed
       where world_id = w and made_by = '${ANNA}' and crumbles_at is not null order by id desc limit 1)
     || '|' || (select text from event where world_id = w and uid = '${ANNA}' order by n desc limit 1));
   perform give(w, '${ANNA}', 'sword', 1, 30);
-  update player set x = 25.5, y = 44.5 where world_id = w and uid = '${ANNA}';
+  update player set body_at = now(), x = 25.5, y = 44.5 where world_id = w and uid = '${ANNA}';
   perform player_die(w, '${ANNA}');
   insert into said values ('WET', (select x || ',' || y from placed
       where world_id = w and made_by = '${ANNA}' and crumbles_at is not null order by id desc limit 1)

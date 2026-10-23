@@ -247,13 +247,13 @@ begin
   insert into player (world_id, uid, name, x, y) values
     (w, '${ANNA}', 'Anna', 48.5, 58.5), (w, '${BRAN}', 'Bran', 48.5, 58.5),
     (w, '${COLL}', 'Coll', 48.5, 58.5), (w, '${DUNN}', 'Dunn', 48.5, 58.5);
-  update player set x = 48.5, y = 58.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb
+  update player set body_at = now(), x = 48.5, y = 58.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb
     where world_id = w and uid = dane;
 
   insert into said values ('FAR', coalesce(act_refusal(w, '${ANNA}', 'board_passenger',
     jsonb_build_object('kind', 'furniture', 'id', v_ship)), 'ALLOWED'));
-  update player set x = 53.6, y = 58.5 where world_id = w and uid in ('${ANNA}', '${BRAN}', '${COLL}', '${DUNN}');
-  update player set x = 53.6, y = 58.5 where world_id = w and uid = dane;
+  update player set body_at = now(), x = 53.6, y = 58.5 where world_id = w and uid in ('${ANNA}', '${BRAN}', '${COLL}', '${DUNN}');
+  update player set body_at = now(), x = 53.6, y = 58.5 where world_id = w and uid = dane;
   -- A padlock on her: nobody without its key takes her helm, comes aboard or lifts her.
   update placed set lock = 424242 where id = v_ship;
   insert into said values ('LOCKED', coalesce(act_refusal(w, '${ANNA}', 'board_vehicle', t), 'ALLOWED') || '|'
@@ -295,7 +295,7 @@ begin
   insert into said values ('OVER', (select coalesce(aboard::text, 'none') || ',' || in_deep_water(w, '${BRAN}')
     from player where world_id = w and uid = '${BRAN}') || '|'
     || (select text from event where world_id = w and uid = '${BRAN}' order by n desc limit 1));
-  update player set x = 59.0, y = 58.5 where world_id = w and uid = '${BRAN}';
+  update player set body_at = now(), x = 59.0, y = 58.5 where world_id = w and uid = '${BRAN}';
   insert into said values ('SWUM', in_deep_water(w, '${BRAN}') || '|' || coalesce(act_refusal(w, '${BRAN}', 'board_passenger', t), 'ALLOWED'));
   perform act_perform(w, '${BRAN}', 'board_passenger', t);
   insert into said values ('BACK', (select coalesce(aboard = v_ship, false) || ',' || seat from player where world_id = w and uid = '${BRAN}'));
@@ -323,7 +323,7 @@ begin
   perform act_perform(w, '${ANNA}', 'leave_vehicle', t);
   insert into said values ('HELM-OVER', (select coalesce(driver::text, 'none') || ',' || cx from placed where id = v_ship) || ','
     || in_deep_water(w, '${ANNA}') || '|' || (select text from event where world_id = w and uid = '${ANNA}' order by n desc limit 1));
-  update player set x = 59.0, y = 58.5 where world_id = w and uid = '${ANNA}';
+  update player set body_at = now(), x = 59.0, y = 58.5 where world_id = w and uid = '${ANNA}';
   insert into said values ('HELM-BACK', coalesce(act_refusal(w, '${ANNA}', 'board_vehicle', t), 'ALLOWED'));
   perform act_perform(w, '${ANNA}', 'board_vehicle', t);
   insert into said values ('HELM-HELD', (select (driver = '${ANNA}')::text from placed where id = v_ship));

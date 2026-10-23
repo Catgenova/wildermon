@@ -78,7 +78,7 @@ begin
   end loop; end loop;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
   delete from player_node where world_id = w and uid = u;
-  update player set x = 8.5, y = 8.5, act = null, act_queue = '[]', craft_class = null, combat_class = null
+  update player set body_at = now(), x = 8.5, y = 8.5, act = null, act_queue = '[]', craft_class = null, combat_class = null
    where world_id = w and uid = u;
 
   /* What the trowel turns up, many times over, at the real share. */

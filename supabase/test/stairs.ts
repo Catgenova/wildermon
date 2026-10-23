@@ -110,7 +110,7 @@ const ISLAND_SCENE = `
   end loop; end loop;
   insert into building (world_id, id, name, levels, work_level, planned_by) values (w, ${HOUSE.id}, ${q(HOUSE.name)}, 2, 1, me);
   insert into building_tile (world_id, building, x, y) values ${HOUSE.tiles.map(([x, y]) => `(w, ${HOUSE.id}, ${x}, ${y})`).join(', ')};
-  update player set x = 45.5, y = 12.5, level = 0, level_h = null, act = null, act_queue = '[]'::jsonb, aboard = null,
+  update player set body_at = now(), x = 45.5, y = 12.5, level = 0, level_h = null, act = null, act_queue = '[]'::jsonb, aboard = null,
          stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1'::jsonb)
    where world_id = w and uid = me;
   delete from item where world_id = w and holder = 'player' and holder_uid = me;
@@ -292,7 +292,7 @@ begin
   ${ISLAND_SCENE}
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, level)
     values (w, 'furniture', 'wagon', 45, 12, 0, 0, ${wcx}, ${wcy}, 50, me, 1) returning id into v_id;
-  update player set x = ${wcx + 0.5}, y = ${wcy}, level = 0 where world_id = w and uid = me;
+  update player set body_at = now(), x = ${wcx + 0.5}, y = ${wcy}, level = 0 where world_id = w and uid = me;
   insert into said values ('boardBelow', coalesce(ride_refusal(w, me, 'board_vehicle', jsonb_build_object('kind', 'furniture', 'id', v_id)), 'ALLOWED'));
   update player set level = 1 where world_id = w and uid = me;
   insert into said values ('unhitchUp', coalesce(ride_refusal(w, me, 'unhitch_team', jsonb_build_object('kind', 'furniture', 'id', v_id)), 'ALLOWED'));

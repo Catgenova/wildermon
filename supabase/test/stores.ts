@@ -99,7 +99,7 @@ begin
   select id into r_builder from deed_rank_def where world_id = w and founder = boss and name = 'Builder';
   insert into deed_member (world_id, founder, uid, rank_id) values (w, boss, keeper, r_keep), (w, boss, porter, r_porter),
     (w, boss, plain, r_builder);
-  update player set x = dx + 1.5, y = dy + 0.5, level = 0 where world_id = w and uid in (boss, keeper, porter, plain, stranger);
+  update player set body_at = now(), x = dx + 1.5, y = dy + 0.5, level = 0 where world_id = w and uid in (boss, keeper, porter, plain, stranger);
   insert into said values ('DEED|' || dname), ('BOSS|' || boss), ('X|' || dx), ('Y|' || dy),
     ('N_PORTER|' || folk_name(w, porter)), ('N_BOSS|' || folk_name(w, boss));
 

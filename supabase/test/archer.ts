@@ -111,7 +111,7 @@ begin
          spell_bar = (select jsonb_agg('null'::jsonb) from spell_slot),
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0)
    where world_id = w.world_id and uid in (w.uid, o);
-  update player set x = v_px - 30 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px - 30 where world_id = w.world_id and uid = o;
   insert into skill (world_id, uid, id, value)
     select w.world_id, w.uid, s, v from
       (values ('archery', 100::double precision), ('swords', 100), ('fighting', 100), ('body_control', 1), ('shields', 1)) sv(s, v)

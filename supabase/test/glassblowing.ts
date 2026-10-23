@@ -102,7 +102,7 @@ begin
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
   delete from player_node where world_id = w and uid = u;
   delete from placed where world_id = w and x between 6 and 15 and y between 6 and 13;
-  update player set x = 9.5, y = 9.5, act = null, act_target = null, act_queue = '[]', craft_from_stores = false,
+  update player set body_at = now(), x = 9.5, y = 9.5, act = null, act_target = null, act_queue = '[]', craft_from_stores = false,
          craft_spare_rare = false, stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('hunger', 1, 'thirst', 1, 'health', 1, 'stamina', 1)
    where world_id = w and uid = u;
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);

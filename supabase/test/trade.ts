@@ -128,7 +128,7 @@ begin
   select uid into b from player where world_id = w and uid <> a order by uid limit 1;
   select x, y into ax, ay from player where world_id = w and uid = a;
   -- Stand them together, because a deal is a handshake.
-  update player set x = ax, y = ay where world_id = w and uid = b;
+  update player set body_at = now(), x = ax, y = ay where world_id = w and uid = b;
   delete from item where world_id = w and holder in ('player', 'post')
     and holder_uid in (a, b) and def in ('coin', 'plank', 'hatchet', 'shaft');
 
@@ -199,7 +199,7 @@ begin
   insert into said select 'EMPTIED|' || (select count(*)::text from item
     where world_id = w and holder = 'post' and holder_uid = b);
   -- And a body nowhere near a box is not at one.
-  update player set x = ax + 60, y = ay + 60 where world_id = w and uid = b;
+  update player set body_at = now(), x = ax + 60, y = ay + 60 where world_id = w and uid = b;
   insert into said select 'AWAY|' || ((mailbox_at(w, b)).id is not null)::text;
 end $$;
 select k from said;

@@ -122,9 +122,9 @@ begin
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0,
                                                                     'hurtSettled', now())
    where world_id = w.world_id and uid in (w.uid, o);
-  update player set x = v_px + 1.5 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + 1.5 where world_id = w.world_id and uid = o;
   -- Everybody else on the island well away, so the circle has two in it.
-  update player set x = v_px - 60 where world_id = w.world_id and uid not in (w.uid, o);
+  update player set body_at = now(), x = v_px - 60 where world_id = w.world_id and uid not in (w.uid, o);
   insert into skill (world_id, uid, id, value)
     select w.world_id, w.uid, s, v from
       (values ('chirurgy', 100::double precision), ('knives', 100), ('fighting', 100), ('first_aid', 100)) sv(s, v)
@@ -159,9 +159,9 @@ begin
     from player pl where pl.world_id = w.world_id and pl.uid = o;
   update player set wounds = '[]'::jsonb, stats = jsonb_set(stats, '{health}', '1') where world_id = w.world_id and uid = o;
   insert into said values ('FIELD:WHOLE', class_spell_cast(w.world_id, w.uid, 'chirurgeon_field_dressing', ${ON_O})->>'why');
-  update player set x = v_px + ${fx('field_dressing', 'reach')} + 1, stats = jsonb_set(stats, '{health}', '0.5') where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + ${fx('field_dressing', 'reach')} + 1, stats = jsonb_set(stats, '{health}', '0.5') where world_id = w.world_id and uid = o;
   insert into said values ('FIELD:FAR', class_spell_cast(w.world_id, w.uid, 'chirurgeon_field_dressing', ${ON_O})->>'why');
-  update player set x = v_px + 1.5, stats = jsonb_set(stats, '{health}', '1') where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + 1.5, stats = jsonb_set(stats, '{health}', '1') where world_id = w.world_id and uid = o;
 
   /* ---- Quick Stitch: the worst wound by its share, and nothing else ---- */
   update player set wounds = ${WOUNDS} where world_id = w.world_id and uid = o;

@@ -86,7 +86,7 @@ begin
   insert into building_tile (world_id, building, x, y) values ${TILES.map(([x, y]) => `(w, 1, ${x}, ${y})`).join(', ')};
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total) values
     ${WALLS.map(([x, y, s, t]) => row(x, y, s, 0, t)).join(',\n    ')};
-  update player set x = 50.5, y = 50.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 50.5, y = 50.5 where world_id = w and uid = u;
 end $$;`);
 
 const theirRoom = (x: number, y: number): number =>

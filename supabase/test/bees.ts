@@ -208,9 +208,9 @@ begin
   update placed set state = state || jsonb_build_object('skep_at', extract(epoch from now())::double precision - ${YEAR_DAYS * DAY_SECONDS}) where id = v_pl;
   insert into said select 'FULL', skep_made(w, pl)::text from placed pl where pl.id = v_pl;
   ${refusal('R:none', 'u', TAKE_HONEY)}
-  update player set x = ${R.x + 10.5}, y = ${R.y + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${R.x + 10.5}, y = ${R.y + 0.5} where world_id = w and uid = u;
   ${refusal('R:far', 'u', TAKE_HONEY)}
-  update player set x = ${R.x + 0.5}, y = ${R.y + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${R.x + 0.5}, y = ${R.y + 0.5} where world_id = w and uid = u;
   insert into said values ('R:gone', coalesce(act_refusal(w, u, '${TAKE_HONEY}', ${T('987654')}), 'none'));
   ${refusal('R:other', 'o', TAKE_HONEY)}
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Hivesend', ${R.x}, ${R.y}, 3, 1, u);

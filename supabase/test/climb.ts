@@ -112,7 +112,7 @@ const worth = (c: number): number | null => (c > MAX_STEP * CLIMB_LEARN_FROM ? C
  */
 const climbing = (): number => Number(psql(`select skill_of(${W}, ${IVAR}, 'climbing')`));
 const walkIsland = (x0: number, y0: number, x1: number, y1: number, level = 0): { was: number; now: number; at: string } => {
-  psql(`update player set x = ${x0}, y = ${y0}, level = ${level}, away = false where world_id = ${W} and uid = ${IVAR};`);
+  psql(`update player set body_at = now(), x = ${x0}, y = ${y0}, level = ${level}, away = false where world_id = ${W} and uid = ${IVAR};`);
   const was = climbing();
   const words = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (BASE_SPEED * 10 * 1.6));
   let went = { x: x0, y: y0 };

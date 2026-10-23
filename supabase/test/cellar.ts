@@ -189,7 +189,7 @@ island(`
     (w, 'player', u, 'shovel', 50, 1), (w, 'player', u, 'pickaxe', 50, 1), (w, 'player', u, 'mallet', 50, 1);
   insert into skill (world_id, uid, id, value) values (w, u, 'digging', 90), (w, u, 'mining', 90)
     on conflict (world_id, uid, id) do update set value = excluded.value;
-  update player set x = 20.5, y = 44.5, level = 0, aboard = null, act = null, act_queue = '[]'::jsonb,
+  update player set body_at = now(), x = 20.5, y = 44.5, level = 0, aboard = null, act = null, act_queue = '[]'::jsonb,
          stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1'::jsonb)
    where world_id = w and uid = u;
 `);
@@ -205,7 +205,7 @@ const put = (x: number, y: number, level: number): void => {
   game.player.x = x + 0.5;
   game.player.y = y + 0.5;
   game.player.level = level;
-  psql(`update player set x = ${x + 0.5}, y = ${y + 0.5}, level = ${level} where world_id = ${W} and uid = ${DANE};`);
+  psql(`update player set body_at = now(), x = ${x + 0.5}, y = ${y + 0.5}, level = ${level} where world_id = ${W} and uid = ${DANE};`);
 };
 const tile = (x: number, y: number, extra: Record<string, unknown> = {}): Record<string, unknown> =>
   ({ kind: 'tile', x, y, cx: x, cy: y, ...extra });
@@ -607,7 +607,7 @@ const crowdWas = val(`(select x || ', y = ' || y || ', level = ' || level from p
 put(19, 44, 0);
 game.roster.saw({ id: 9001, name: 'Crowd1', x: 21.5, y: 44.5, dirX: 1, dirY: 0, level: CELLAR_LEVEL,
   moving: false, swimming: false, working: false } as never);
-psql(`update player set x = 21.5, y = 44.5, level = -1 where world_id = ${W} and name = 'Crowd1';`);
+psql(`update player set body_at = now(), x = 21.5, y = 44.5, level = -1 where world_id = ${W} and name = 'Crowd1';`);
 same('nobody takes the way up out from over somebody down there', 'remove_floor',
   tile(20, 44, { floorKind: 'stairs', down: true }), 'Someone is in the cellar: this is its way out.');
 
@@ -619,10 +619,10 @@ psql(`delete from placed where world_id = ${W} and sub = 'chest' and x = 22 and 
 put(21, 44, 0);
 game.roster.saw({ id: 9001, name: 'Crowd1', x: 22.5, y: 44.5, dirX: 1, dirY: 0, level: CELLAR_LEVEL,
   moving: false, swimming: false, working: false } as never);
-psql(`update player set x = 22.5, y = 44.5, level = -1 where world_id = ${W} and name = 'Crowd1';`);
+psql(`update player set body_at = now(), x = 22.5, y = 44.5, level = -1 where world_id = ${W} and name = 'Crowd1';`);
 same('nor is a tile filled in over somebody standing on it down there', 'fill_cellar', tile(22, 44), 'Somebody is standing down there.');
 game.roster.sawAll([]);
-psql(`update player set x = ${crowdWas} where world_id = ${W} and name = 'Crowd1';`);
+psql(`update player set body_at = now(), x = ${crowdWas} where world_id = ${W} and name = 'Crowd1';`);
 // Ten more dirt than the soil gave back: the rock dug out of a tile is not put back as rock.
 game.inventory.add('dirt', { ql: 20, count: 10 });
 island(`insert into item (world_id, holder, holder_uid, def, ql, count) values (w, 'player', u, 'dirt', 20, 10);`);

@@ -256,7 +256,7 @@ begin
   -- Nothing left over from the goes before, and the miner off every settlement:
   -- a map is never buried on one, and a map with nowhere to point is no map.
   ${clear('gem', 'treasure_map')};
-  update player set x = 12.5, y = 7.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 12.5, y = 7.5 where world_id = w and uid = u;
   perform pg_temp.hold(w, u, '{}');
   ${until(mine, `${count('rock_shards')} > 0`)}
   v_t := ${count('gem')} || ',' || ${count('treasure_map')};
@@ -267,7 +267,7 @@ begin
   ${until(mine, `${count('rock_shards')} > 0`)}
   insert into said values ('FINDS2', v_t || '|' || ${count('gem')} || ',' || ${count('treasure_map')});
   ${clear('rock_shards', 'gem', 'treasure_map')};
-  update player set x = 3.5, y = 3.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 3.5, y = 3.5 where world_id = w and uid = u;
 
   /* ---- Ore Cart: a chest of the miner's four tiles off. ---- */
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, material, made_by)
@@ -315,7 +315,7 @@ begin
   ${clear('rock_shards')};
 
   /* ---- The trowel, at no skill with the worst trowel. ---- */
-  update player set x = 8.5, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 8.5, y = 8.5 where world_id = w and uid = u;
   insert into skill (world_id, uid, id, value) values (w, u, 'archaeology', 0)
     on conflict (world_id, uid, id) do update set value = 0;
   perform give(w, u, 'trowel', 1, 1);

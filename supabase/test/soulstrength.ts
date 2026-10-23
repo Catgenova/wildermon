@@ -142,7 +142,7 @@ begin
   perform land_blank(w, 64);
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Ash');
-  update player set x = v_px, y = v_py, act = null, act_queue = '[]', equipped = '{}'::jsonb, struck_at = null,
+  update player set body_at = now(), x = v_px, y = v_py, act = null, act_queue = '[]', equipped = '{}'::jsonb, struck_at = null,
          stats = coalesce(stats, '{}'::jsonb) || '{"health": 1, "hunger": 1, "thirst": 1, "stamina": 1}'::jsonb
    where world_id = w and uid = u;
   insert into skill (world_id, uid, id, value)

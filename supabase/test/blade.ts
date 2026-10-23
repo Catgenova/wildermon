@@ -115,7 +115,7 @@ begin
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0)
    where world_id = w.world_id and uid in (w.uid, o);
   -- The other person well out of the way until a Guardian is wanted.
-  update player set x = v_px - 30 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px - 30 where world_id = w.world_id and uid = o;
   insert into skill (world_id, uid, id, value)
     select w.world_id, u, s, v from (values (w.uid), (o)) us(u),
       (values ('swords', 55::double precision), ('shields', 50), ('fighting', 10), ('body_control', 1), ('axes', 30)) sv(s, v)
@@ -254,7 +254,7 @@ begin
     || '|' || ((r->'put'->>'y')::double precision - v_py) || '|' || (pl.x - v_px) || '|' || (pl.y - v_py)
     || '|' || melee_reach(w.world_id, w.uid) || '|' || (creature_x(c2) - v_px) || '|' || (creature_y(c2) - v_py)
     from player pl, creature c2 where pl.world_id = w.world_id and pl.uid = w.uid and c2.world_id = w.world_id and c2.id = a;
-  update player set x = v_px, y = v_py, used_at = '{}'::jsonb where world_id = w.world_id and uid = w.uid;
+  update player set body_at = now(), x = v_px, y = v_py, used_at = '{}'::jsonb where world_id = w.world_id and uid = w.uid;
   update creature set from_x = v_px + 5, to_x = v_px + 5, from_y = v_py, to_y = v_py, hunting = null, enemy = null, settled_at = now()
     where world_id = w.world_id and id = a;
   insert into said values ('LUNGE:FAR', rpc_cast_spell(w.world_id, ${FIRST_CLASS_SLOT + 1}, jsonb_build_object('kind', 'creature', 'id', a))->>'why');
@@ -286,7 +286,7 @@ begin
   insert into said select 'BREATH2:FULL', stats->>'stamina' from player where world_id = w.world_id and uid = w.uid;
 
   /* ---- Challenge and Guardian's Call: turned on you ---- */
-  update player set x = v_px - 3, y = v_py where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px - 3, y = v_py where world_id = w.world_id and uid = o;
   update creature set hunting = o, health = max_health(creature) where world_id = w.world_id and id = a;
   r := class_spell_cast(w.world_id, w.uid, 'blade_challenge', jsonb_build_object('kind', 'enemy', 'id', a));
   insert into said select 'CHALLENGE', (hunting = w.uid)::text || '|' || extract(epoch from threat_at - now()) || '|' || coalesce(r->>'said', r->>'why')
@@ -445,7 +445,7 @@ begin
   /* ---- Guardian: another person's blow on your shield ---- */
   select name into v_name from player where world_id = w.world_id and uid = w.uid;
   update player set equipped = jsonb_build_object('weapon', v_sword, 'offhand', v_shield) where world_id = w.world_id and uid = w.uid;
-  update player set x = v_px + 1, y = v_py, equipped = '{}'::jsonb, wounds = '[]'::jsonb, act = null, act_target = null,
+  update player set body_at = now(), x = v_px + 1, y = v_py, equipped = '{}'::jsonb, wounds = '[]'::jsonb, act = null, act_target = null,
          stats = jsonb_set(stats, '{hurtBy}', to_jsonb(a)) where world_id = w.world_id and uid = o;
   delete from event where uid = o;
   perform setseed(0.3);
@@ -458,14 +458,14 @@ begin
   insert into said values ('GUARDIAN', t || '|' || coalesce((select e.text from event e where e.world_id = w.world_id and e.uid = o
     and e.text like v_name || ' takes%' order by e.n desc limit 1), 'never said'));
   -- Beyond its reach, and without a shield, nobody's.
-  update player set x = v_px + ${GUARDIAN_REACH} + 0.5 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + ${GUARDIAN_REACH} + 0.5 where world_id = w.world_id and uid = o;
   t := 0;
   for n in 1..60 loop
     update player set stats = jsonb_set(stats, '{health}', '1'), wounds = '[]'::jsonb where world_id = w.world_id and uid = o;
     perform hurt_player(w.world_id, o, 0.05, 'A test blow', 'cut');
     if (select (stats->>'health')::double precision from player where world_id = w.world_id and uid = o) = 1 then t := t + 1; end if;
   end loop;
-  update player set x = v_px + 1 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + 1 where world_id = w.world_id and uid = o;
   update player set equipped = jsonb_build_object('weapon', v_sword) where world_id = w.world_id and uid = w.uid;
   k := 0;
   for n in 1..60 loop

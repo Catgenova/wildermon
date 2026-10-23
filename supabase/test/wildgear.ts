@@ -163,7 +163,7 @@ begin
   insert into said select 'HWEAR', coalesce(gear->'harness'->>'dmg', '-') from creature where world_id = w and id = r;
   insert into said select 'MOVED', (floor(x) - floor(px))::text from player where world_id = w and uid = u;
   -- Taken off: in the pack at its QL and damage, and repaired as anything is.
-  update player set x = px + ${TILES}, y = py where world_id = w and uid = u;
+  update player set body_at = now(), x = px + ${TILES}, y = py where world_id = w and uid = u;
   update creature set from_x = px + ${TILES} + 1, to_x = px + ${TILES} + 1, from_y = py, to_y = py where world_id = w and id = r;
   perform act_perform(w, u, 'remove_gear_harness', jsonb_build_object('kind', 'creature', 'id', r));
   select id into v_it from item where world_id = w and holder = 'player' and holder_uid = u and def = gear_id('harness', cls);
@@ -174,7 +174,7 @@ begin
   insert into said select 'REPAIRED', (dmg < (${TILES} * wear_per_use(${QL.harness})))::text from item where id = v_it;
 
   -- Released: the pack back to you.
-  update player set x = px, y = py where world_id = w and uid = u;
+  update player set body_at = now(), x = px, y = py where world_id = w and uid = u;
   perform act_perform(w, u, 'release_creature', ash);
   insert into said select 'RELEASED', count(*)::text || '|' || coalesce((select gear::text from creature where world_id = w and id = a), '-')
     from item where world_id = w and holder = 'player' and holder_uid = u and def = gear_id('pack', cls);

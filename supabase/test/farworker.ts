@@ -59,7 +59,7 @@ begin
   j := rpc_act(w, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', v_far));
   insert into said values ('ASSIGN', coalesce(j->>'done', 'null'));
   -- And one set to work at home.
-  update player set x = ${TOKEN[0]} + 0.5, y = ${TOKEN[1]} + 1.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = ${TOKEN[0]} + 0.5, y = ${TOKEN[1]} + 1.5 where world_id = w and uid = u;
   v_home := creature_spawn(w, 'tinka', ${TOKEN[0]} + 1.5, ${TOKEN[1]} + 0.5, 'active', now() - interval '30 days', u);
   j := rpc_act(w, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', v_home));
   -- Its keeper is home now, and both are due.

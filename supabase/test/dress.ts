@@ -235,7 +235,7 @@ declare me player;
 begin
   ${SET_DANE([], pack)}
   select * into me from player where world_id = ${W} and uid = ${DANE};
-  update player set x = me.x + 1, y = me.y where world_id = ${W} and uid = ${OTHER};
+  update player set body_at = now(), x = me.x + 1, y = me.y where world_id = ${W} and uid = ${OTHER};
   ${SET_WOUNDS(OTHER, wounds)}
   drop table if exists dress_said;
   create temp table dress_said as

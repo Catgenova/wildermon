@@ -183,7 +183,7 @@ begin
   -- ---- stores: the founder's crate on the settlement
   insert into crate (world_id, id, kind, x, y, sx, sy, made_by) values (w, 9300, 'log', dx + 1, dy, 0, 0, boss);
   insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 9300, 'log', 30, 1);
-  update player set x = dx + 1.5, y = dy + 0.5 where world_id = w and uid in (bld, gst);
+  update player set body_at = now(), x = dx + 1.5, y = dy + 0.5 where world_id = w and uid in (bld, gst);
   j := jsonb_build_object('kind', 'crate', 'id', 9300);
   insert into said values ('CRATE_ON|' || crate_yours(w, bld, 9300) || '|' || coalesce(crate_refusal(w, bld, 'crate_take_all', j), 'ALLOWED'));
   insert into said values ('CRATE_GUEST|' || crate_yours(w, gst, 9300));

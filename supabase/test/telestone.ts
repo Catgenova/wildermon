@@ -242,7 +242,7 @@ const GROUND_JOBS: Array<{ id: string; on: Record<string, unknown>; off: Record<
 const jobSql = (on: 'on' | 'off'): string => GROUND_JOBS.map((j) => `
     ${j.id === 'drop_dirt_here' ? `update player set y = ${on === 'on' ? BESIDE[1] - 0.4 : BESIDE[1] + 0.6} where world_id = w and uid = u;` : ''}
     insert into said values ('${on.toUpperCase()}:${j.id}', coalesce(act_refusal(w, u, '${j.id}', '${JSON.stringify(on === 'on' ? j.on : j.off)}'::jsonb), 'none'));
-    update player set x = ${BESIDE[0]}, y = ${BESIDE[1]} where world_id = w and uid = u;`).join('');
+    update player set body_at = now(), x = ${BESIDE[0]}, y = ${BESIDE[1]} where world_id = w and uid = u;`).join('');
 const travel = (stone: string, uidVar = 'ts'): string => `jsonb_build_object('kind', 'item', 'uid', ${uidVar}, 'stone', '${stone}')`;
 
 const out = psql(`
@@ -319,14 +319,14 @@ begin
   -- 6. The wait over: allowed again. At QL 1 from inside its reach of the Crownstone, and at QL 100 to the Wardenfall.
   update telestone_journey set until = now() - interval '1 second' where world_id = w and uid = u;
   update item set ql = 1 where id = ts;
-  update player set x = ${crown.x + 0.5}, y = ${crown.y - 200 + 0.5} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${crown.x + 0.5}, y = ${crown.y - 200 + 0.5} where world_id = w and uid = u;
   insert into said values ('ASK1', coalesce(act_refusal(w, u, 'travel_runestone', ${travel('crownstone')}), 'none'));
   perform act_perform(w, u, 'travel_runestone', ${travel('crownstone')});
   insert into said select 'WENT1', p.x || ',' || p.y || '|' || (select extract(epoch from t.until - t.used_at) from telestone_journey t where t.world_id = w and t.uid = u)
     from player p where p.world_id = w and p.uid = u;
   update telestone_journey set until = now() - interval '1 second' where world_id = w and uid = u;
   update item set ql = 100 where id = ts;
-  update player set x = 5.5, y = 5.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 5.5, y = 5.5 where world_id = w and uid = u;
   insert into said values ('ASK100', coalesce(act_refusal(w, u, 'travel_runestone', ${travel('wardenfall')}), 'none'));
   perform act_perform(w, u, 'travel_runestone', ${travel('wardenfall')});
   insert into said select 'WENT100', p.x || ',' || p.y || '|' || (select extract(epoch from t.until - t.used_at) from telestone_journey t where t.world_id = w and t.uid = u)
@@ -334,7 +334,7 @@ begin
   update telestone_journey set until = now() - interval '1 second' where world_id = w and uid = u;
 
   -- 7. Each refusal on its own, from 5, 5 with a QL 100 Telestone and no wait.
-  update player set x = 5.5, y = 5.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 5.5, y = 5.5 where world_id = w and uid = u;
   insert into said values ('R:tile', coalesce(act_refusal(w, u, 'travel_runestone', '{"kind":"tile","x":5,"y":5,"cx":5,"cy":5,"stone":"crownstone"}'::jsonb), 'none'));
   insert into said values ('R:mote', coalesce(act_refusal(w, u, 'travel_runestone', ${travel('crownstone', 'v_mote')}), 'none'));
   insert into said values ('R:stone', coalesce(act_refusal(w, u, 'travel_runestone', ${travel('atlantis')}), 'none'));
@@ -361,9 +361,9 @@ begin
   update creature set rider = null, mode = 'active', name = 'Bramble' where world_id = w and id = 9002;
   insert into said values ('R:pet', coalesce(act_refusal(w, u, 'travel_runestone', ${travel('crownstone')}), 'none'));
   delete from creature where world_id = w and id = 9002;
-  update player set x = 1010.5, y = 5.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 1010.5, y = 5.5 where world_id = w and uid = u;
   insert into said values ('R:swim', coalesce(act_refusal(w, u, 'travel_runestone', ${travel('crownstone')}), 'none'));
-  update player set x = 5.5, y = 5.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 5.5, y = 5.5 where world_id = w and uid = u;
   perform give(w, u, 'stone_brick', 400, 30);
   insert into said values ('R:heavy', coalesce(act_refusal(w, u, 'travel_runestone', ${travel('crownstone')}), 'none'));
   delete from item where world_id = w and holder_uid = u and def = 'stone_brick';
@@ -383,7 +383,7 @@ begin
   insert into said select 'LAND', l.x || ',' || l.y from telestone_landing(w, 'harrowmark') l;
 
   -- 9. The Crownstone's ground, from beside it: the jobs on the stone, and the same beside it.
-  update player set x = ${BESIDE[0]}, y = ${BESIDE[1]} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${BESIDE[0]}, y = ${BESIDE[1]} where world_id = w and uid = u;
   ${jobSql('on')}
   ${jobSql('off')}
   insert into said values ('WALK', walk_share(w, u, 0, ${BESIDE[0]}, ${BESIDE[1]}, ${BESIDE[0]}, ${crown.y - 3.5})::text
@@ -486,8 +486,8 @@ begin
   perform land_announce(w, ${crown.x + 1}, ${crown.y});
   perform land_announce(w, ${crown.x}, ${crown.y});
   -- Tobin on it, Mira upstairs beside it, a vola walking onto it, and a settlement whose token is on it.
-  update player set x = ${crown.x + 0.5}, y = ${crown.y + 0.5}, level = 0 where world_id = w and uid = v;
-  update player set x = ${OFF[0] + 0.5}, y = ${OFF[1] + 0.5}, level = 1 where world_id = w and uid = u;
+  update player set body_at = now(), x = ${crown.x + 0.5}, y = ${crown.y + 0.5}, level = 0 where world_id = w and uid = v;
+  update player set body_at = now(), x = ${OFF[0] + 0.5}, y = ${OFF[1] + 0.5}, level = 1 where world_id = w and uid = u;
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
     values (w, 9003, 'vola', 'Strider', 'wild', ${crown.x - 0.5}, ${crown.y + 0.5}, ${crown.x - 0.5}, ${crown.y + 1.5}, 10, 'male');
   insert into deed (world_id, name, x, y, radius, founded_by) values (w, 'Stoneholm', ${crown.x + 1}, ${crown.y - 1}, 5, v);

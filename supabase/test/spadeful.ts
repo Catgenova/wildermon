@@ -70,10 +70,10 @@ begin
    where not exists (select 1 from deed d where d.world_id = w
                       and abs(d.x - gx) <= d.radius + 14 and abs(d.y - gy) <= d.radius + 8)
    order by gx, gy limit 1;
-  update player set x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb,
+  update player set body_at = now(), x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb,
       away = false, seen_at = now(), stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1')
    where world_id = w and uid = me;
-  update player set x = v_x + 10.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb,
+  update player set body_at = now(), x = v_x + 10.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb,
       away = false, seen_at = now(), stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1')
    where world_id = w and uid = other;
   delete from item i where i.world_id = w and i.holder = 'player' and i.holder_uid in (me, other)

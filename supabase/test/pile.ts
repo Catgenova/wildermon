@@ -142,7 +142,7 @@ begin
   insert into item (world_id, holder, holder_uid, crate, def, ql, count)
   select w.world_id, 'crate', null, v_c, 'peat', q.ql, 2 from (values (10.0),(20.0),(30.0),(40.0),(50.0)) q(ql);
   select count(*) into v_before from item i where i.world_id = w.world_id and i.holder_uid = w.uid and i.def = 'peat';
-  update player set x = (select x from crate where world_id = w.world_id and id = v_c) + 0.5,
+  update player set body_at = now(), x = (select x from crate where world_id = w.world_id and id = v_c) + 0.5,
                     y = (select y from crate where world_id = w.world_id and id = v_c) + 0.5
     where world_id = w.world_id and uid = w.uid;
   perform perform_crate(w.world_id, w.uid, 'crate_take_all',

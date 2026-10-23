@@ -99,8 +99,8 @@ begin
          stats = (coalesce(stats, '{}'::jsonb) - 'hurtAt' - 'hurtBy' - 'aegisBy')
                  || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0, 'hurtSettled', now())
    where world_id = w.world_id and uid in (w.uid, o);
-  update player set x = v_px + 2 where world_id = w.world_id and uid = o;
-  update player set x = v_px - 60 where world_id = w.world_id and uid not in (w.uid, o);
+  update player set body_at = now(), x = v_px + 2 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px - 60 where world_id = w.world_id and uid not in (w.uid, o);
   insert into skill (world_id, uid, id, value)
     select w.world_id, pp.uid, 'warding', 60 from (select unnest(array[w.uid, o]) as uid) pp
     on conflict (world_id, uid, id) do update set value = excluded.value;

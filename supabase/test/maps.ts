@@ -132,7 +132,7 @@ begin
   update player set x = 10.5, y = 10.5, body_at = now(), swim_at = now(), equipped = '{}'::jsonb, craft_from_stores = false,
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('hunger', 1, 'thirst', 1, 'health', 1, 'stamina', 1)
    where world_id = w;
-  update player set x = 40.5, y = 30.5 where world_id = w and uid = o;
+  update player set body_at = now(), x = 40.5, y = 30.5 where world_id = w and uid = o;
   insert into skill (world_id, uid, id, value) values (w, u, '${CHART_SKILL}', ${SKILL}), (w, o, '${CHART_SKILL}', ${SKILL})
     on conflict (world_id, uid, id) do update set value = excluded.value;
 

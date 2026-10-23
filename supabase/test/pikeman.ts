@@ -109,7 +109,7 @@ begin
          spell_bar = (select jsonb_agg('null'::jsonb) from spell_slot),
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0)
    where world_id = w.world_id and uid in (w.uid, o);
-  update player set x = v_px - 30 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px - 30 where world_id = w.world_id and uid = o;
   insert into skill (world_id, uid, id, value)
     select w.world_id, w.uid, s, v from
       (values ('polearms', 100::double precision), ('swords', 100), ('fighting', 100), ('body_control', 1), ('shields', 1)) sv(s, v)
@@ -280,16 +280,16 @@ begin
   delete from creature where world_id = w.world_id and id in (a, b, t, k);
 
   /* ---- Rally the Line: stamina back for everybody near, you among them, and nobody further ---- */
-  update player set x = v_px + ${fx('rally_the_line', 'reach')} - 1, stats = jsonb_set(stats, '{stamina}', '0.5') where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + ${fx('rally_the_line', 'reach')} - 1, stats = jsonb_set(stats, '{stamina}', '0.5') where world_id = w.world_id and uid = o;
   update player set stats = jsonb_set(stats, '{stamina}', '0.5') where world_id = w.world_id and uid = w.uid;
   r := class_spell_cast(w.world_id, w.uid, 'pikeman_rally_the_line', jsonb_build_object('kind', 'self'));
   insert into said select 'RALLY', string_agg(stats->>'stamina', ',' order by uid = w.uid desc) || '|' || coalesce(r->>'said', r->>'why')
     from player where world_id = w.world_id and uid in (w.uid, o);
-  update player set x = v_px + ${fx('rally_the_line', 'reach')} + 1, stats = jsonb_set(stats, '{stamina}', '0.5') where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + ${fx('rally_the_line', 'reach')} + 1, stats = jsonb_set(stats, '{stamina}', '0.5') where world_id = w.world_id and uid = o;
   perform class_spell_cast(w.world_id, w.uid, 'pikeman_rally_the_line', jsonb_build_object('kind', 'self'));
   insert into said select 'RALLY:FAR', stats->>'stamina' from player where world_id = w.world_id and uid = o;
-  update player set x = v_px - 30, stats = jsonb_set(stats, '{stamina}', '1') where world_id = w.world_id and uid in (o, w.uid);
-  update player set x = v_px where world_id = w.world_id and uid = w.uid;
+  update player set body_at = now(), x = v_px - 30, stats = jsonb_set(stats, '{stamina}', '1') where world_id = w.world_id and uid in (o, w.uid);
+  update player set body_at = now(), x = v_px where world_id = w.world_id and uid = w.uid;
 
   /* ---- Keep Away: every blow that lands pushes it its share further off, swing or spell ---- */
   a := creature_spawn(w.world_id, 'ogre', v_px + 2, v_py, 'wild', now() - interval '2 hours', null);

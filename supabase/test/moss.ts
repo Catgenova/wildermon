@@ -66,7 +66,7 @@ const SUNK = -5;
 /* ---- the island ------------------------------------------------------------ */
 const tileT = (at: readonly [number, number]): string => `jsonb_build_object('kind', 'tile', 'x', ${at[0]}, 'y', ${at[1]}, 'cx', ${at[0]}, 'cy', ${at[1]})`;
 const stand = (at: readonly [number, number]): string =>
-  `update player set x = ${at[0]} + 0.5, y = ${at[1]} + 0.5 where world_id = w and uid = u;`;
+  `update player set body_at = now(), x = ${at[0]} + 0.5, y = ${at[1]} + 0.5 where world_id = w and uid = u;`;
 const count = (def: string): string =>
   `(select coalesce(sum(i.count), 0) from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def = '${def}')`;
 const refused = (a: string, at: readonly [number, number]): string => `coalesce(act_refusal(w, u, '${a}', ${tileT(at)}), 'ALLOWED')`;

@@ -102,7 +102,7 @@ begin
   insert into building_tile (world_id, building, x, y) values (w, 4, 30, 30);
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total)
     values (w, 0, 'h', 30, 30, 4, 'solid', 'log', '{"log": 0}', '{"log": 4}');
-  update player set x = 30.5, y = 30.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 30.5, y = 30.5 where world_id = w and uid = u;
 end $$;`);
 
 const target = { kind: 'tile' as const, x: 30, y: 30, cx: 30, cy: 30, side: 'n' as Side };

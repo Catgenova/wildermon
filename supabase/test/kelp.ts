@@ -54,13 +54,13 @@ begin
   perform land_set_tile(w, 10, 10, ${TileType.Kelp});
   perform land_set_tile(w, 13, 10, ${TileType.Kelp});
   insert into said values ('WET', has_water(w, 10, 10)::text || ',' || has_water(w, 13, 10)::text);
-  update player set x = 10.5, y = 10.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb where world_id = w and uid = u;
+  update player set body_at = now(), x = 10.5, y = 10.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb where world_id = w and uid = u;
   perform give(w, u, 'dirt', 2, 20);
   -- At your feet.
   perform perform_terrain(w, u, 'drop_dirt_here', jsonb_build_object('kind', 'item', 'uid', null));
   insert into said values ('FEET', land_tile(w, 10, 10)::text);
   -- And on a corner of the other, from beside it.
-  update player set x = 12.5, y = 10.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 12.5, y = 10.5 where world_id = w and uid = u;
   insert into said values ('ASK', coalesce(act_refusal(w, u, 'drop_dirt', jsonb_build_object('kind', 'tile', 'x', 13, 'y', 10, 'cx', 13, 'cy', 10)), 'none'));
   perform act_perform(w, u, 'drop_dirt', jsonb_build_object('kind', 'tile', 'x', 13, 'y', 10, 'cx', 13, 'cy', 10));
   insert into said values ('CORNER', land_tile(w, 13, 10)::text);

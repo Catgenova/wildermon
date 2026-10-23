@@ -191,14 +191,14 @@ const pickAt = (pinned: 'summer' | 'spring' | null): void => {
   const islandSays = psql(`
 begin;
 ${pinned === null ? '' : `create or replace function season_at(p_at timestamptz default now()) returns text language sql stable as $pin$ select '${pinned}'::text $pin$;`}
-update player set x = ${bare.x + 0.5}, y = ${bare.y + 1.5}, level = 0 where world_id = ${W} and uid = ${IVAR};
+update player set body_at = now(), x = ${bare.x + 0.5}, y = ${bare.y + 1.5}, level = 0 where world_id = ${W} and uid = ${IVAR};
 select land_set_tile(${W}, ${FX}, ${FY}, tile_id('Grass')); select land_set_data(${W}, ${FX}, ${FY}, 0);
 select land_set_tile(${W}, ${bare.x}, ${bare.y}, tile_id('Grass')); select land_set_data(${W}, ${bare.x}, ${bare.y}, 0);
 delete from building_tile where world_id = ${W} and ((x = ${FX} and y = ${FY}) or (x = ${bare.x} and y = ${bare.y}));
 delete from item where world_id = ${W} and holder = 'player' and holder_uid = ${IVAR} and def = 'wildflowers';
 delete from tile_change where world_id = ${W};
 select 'BARE|' || coalesce(act_refusal_rules(${W}, ${IVAR}, 'pick_flowers', ${target(bare.x, bare.y)}), '-');
-update player set x = ${FX + 0.5}, y = ${FY + 1.5} where world_id = ${W} and uid = ${IVAR};
+update player set body_at = now(), x = ${FX + 0.5}, y = ${FY + 1.5} where world_id = ${W} and uid = ${IVAR};
 select 'BLOOM|' || flowers_on(${W}, ${FX}, ${FY});
 select 'FIRST|' || coalesce(act_refusal_rules(${W}, ${IVAR}, 'pick_flowers', ${target(FX, FY)}), '-');
 select act_perform(${W}, ${IVAR}, 'pick_flowers', ${target(FX, FY)});

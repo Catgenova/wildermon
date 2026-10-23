@@ -220,7 +220,7 @@ begin
 
   -- Deep water, carved off to one side: what ten seconds of it cost, plain, for Hard Breath, in a Deep Lungs and in an Unbroken.
   for i in tx + 14 .. tx + 17 loop for j in ty + 14 .. ty + 17 loop perform land_set_height(w, i, j, -40); end loop; end loop;
-  update player set x = tx + 15.5, y = ty + 15.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = tx + 15.5, y = ty + 15.5 where world_id = w and uid = u;
   perform pg_temp.hold(w, u, '{}');
   v_t := in_deep_water(w, u)::text || '|' || pg_temp.swim(w, u);
   perform pg_temp.hold(w, u, array[${T('hard_breath')}]);
@@ -234,7 +234,7 @@ begin
   v_t := v_t || '|' || pg_temp.cast(w, u, ${T('unbroken')}) || '|' || pg_temp.swim(w, u);
   insert into said values ('WATER', v_t);
   -- And Unbroken on a go of work, and on a fighting trade's spell refused for want of wind.
-  update player set x = tx + 0.5, y = ty + 0.5, stats = stats || '{"stamina": 1}'::jsonb where world_id = w and uid = u;
+  update player set body_at = now(), x = tx + 0.5, y = ty + 0.5, stats = stats || '{"stamina": 1}'::jsonb where world_id = w and uid = u;
   perform spend_wind(w, u, 'mine');
   v_a := (select (stats->>'stamina')::double precision from player where world_id = w and uid = u);
   update player set blessings = '{}'::jsonb, stats = stats || '{"stamina": 1}'::jsonb where world_id = w and uid = u;

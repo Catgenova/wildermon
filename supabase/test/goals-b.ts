@@ -142,7 +142,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Bea');
   delete from item where world_id = w and holder = 'player';
-  update player set x = 10.5, y = 10.5, tally = '{}'::jsonb, equipped = '{}'::jsonb, craft_from_stores = false,
+  update player set body_at = now(), x = 10.5, y = 10.5, tally = '{}'::jsonb, equipped = '{}'::jsonb, craft_from_stores = false,
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('hunger', 1, 'thirst', 1, 'health', 1, 'stamina', 1)
    where world_id = w;
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Beaholt', 10, 10, 5, 1, u);

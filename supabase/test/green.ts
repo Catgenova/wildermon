@@ -368,10 +368,10 @@ const DAYS_SQL: Array<[string, string]> = [
 ];
 const daysSql = (prefix: string): string => DAYS_SQL.map(([k, e]) => `insert into said values ('${prefix}_${k}', ${e});`).join('\n  ');
 const askSql = (a: Ask, prefix = 'R'): string =>
-  `update player set x = ${a.at[0]}, y = ${a.at[1]} where world_id = w and uid = '${WHO[a.who]}';
+  `update player set body_at = now(), x = ${a.at[0]}, y = ${a.at[1]} where world_id = w and uid = '${WHO[a.who]}';
   insert into said values ('${prefix}_${a.key}', coalesce(act_refusal(w, '${WHO[a.who]}', '${a.act}', ${targetSql(a.t)}), 'ALLOWED'));`;
 const groundSql = (key: string, who: string, slow = true): string =>
-  `update player set x = 48.5, y = 48.5 where world_id = w and uid = '${WHO[who]}';
+  `update player set body_at = now(), x = 48.5, y = 48.5 where world_id = w and uid = '${WHO[who]}';
   perform set_config('request.jwt.claims', json_build_object('sub', '${WHO[who]}')::text, true);
   insert into said values ('${key}', rpc_ground(w, 40, ${slow})::text);`;
 const interval = (ago: string | null): string => (ago === null ? 'null' : `now() - interval '${ago}'`);
@@ -448,12 +448,12 @@ begin
   ${groundSql('FAST_ivy', 'ivy', false)}
 
   -- Ivy clears it all, and is told so; then there is nothing yet to clear.
-  ${DOES.map((a) => `update player set x = ${a.at[0]}, y = ${a.at[1]} where world_id = w and uid = '${IVY}';
+  ${DOES.map((a) => `update player set body_at = now(), x = ${a.at[0]}, y = ${a.at[1]} where world_id = w and uid = '${IVY}';
   perform act_perform(w, '${IVY}', '${a.act}', ${targetSql(a.t)});
   insert into said values ('DID_${a.key}', (select text from event where world_id = w and uid = '${IVY}' order by n desc limit 1));
   ${askSql(a, 'AFTER')}`).join('\n  ')}
   -- Rook tries on Ivy's land and nothing happens.
-  update player set x = 52.5, y = 44.5 where world_id = w and uid = '${ROOK}';
+  update player set body_at = now(), x = 52.5, y = 44.5 where world_id = w and uid = '${ROOK}';
   perform act_perform(w, '${ROOK}', 'clear_ivy', ${targetSql('old')});
   insert into said values ('ROOK_DID', coalesce((select text from event where world_id = w and uid = '${ROOK}' order by n desc limit 1), 'nothing')
     || '|' || (select count(*) from green_since where world_id = w and thing = 'wall' and x = 52 and y = 44));

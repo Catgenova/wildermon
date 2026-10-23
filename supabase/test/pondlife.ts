@@ -197,7 +197,7 @@ const ISLAND_SCENE = `
     returning id into v_spring;
   perform settle_spring(w, v_spring);
   insert into water_plant (world_id, x, y, kind, planted_at) values (w, ${LILY_AT[0]}, ${LILY_AT[1]}, 'lily', now() - interval '3 days');
-  update player set x = 8.5, y = 44.5, level = 0, act = null, act_queue = '[]'::jsonb, aboard = null where world_id = w and uid = me;
+  update player set body_at = now(), x = 8.5, y = 44.5, level = 0, act = null, act_queue = '[]'::jsonb, aboard = null where world_id = w and uid = me;
   delete from item where world_id = w and holder = 'player' and holder_uid = me;
 `;
 
@@ -285,13 +285,13 @@ begin
   ${ISLAND_SCENE}
   perform give(w, me, 'trowel', 1, 50);
   insert into said values ('far', coalesce(act_refusal(w, me, 'lay_stones', '{"kind":"tile","x":3,"y":44}'), 'none'));
-  update player set x = 4.5, y = 44.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 4.5, y = 44.5 where world_id = w and uid = me;
   insert into said values ('noslab', coalesce(act_refusal(w, me, 'lay_stones', '{"kind":"tile","x":3,"y":44}'), 'none'));
   perform give(w, me, 'marble_slab', 3, 40);
   select id into v_slab from item where world_id = w and holder_uid = me and def = 'marble_slab';
-  update player set x = 3.5, y = 44.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 3.5, y = 44.5 where world_id = w and uid = me;
   insert into said values ('deep', coalesce(act_refusal(w, me, 'lay_stones', '{"kind":"tile","x":2,"y":44}'), 'none'));
-  update player set x = 4.5, y = 44.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 4.5, y = 44.5 where world_id = w and uid = me;
   insert into said values ('ok', coalesce(act_refusal(w, me, 'lay_stones', '{"kind":"tile","x":3,"y":44}'), 'none'));
   -- Every go comes off, for the length of this.
   create or replace function skill_check(p_skill double precision, p_difficulty double precision,
@@ -302,10 +302,10 @@ begin
                                    || ',' || (select count(*) from tile_change where world_id = w and x = 3 and y = 44));
   insert into said values ('again', coalesce(act_refusal(w, me, 'lay_stones', '{"kind":"tile","x":3,"y":44}'), 'none'));
   perform act_perform(w, me, 'lay_stones', '{"kind":"tile","x":3,"y":45}');
-  update player set x = 4.5, y = 45.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 4.5, y = 45.5 where world_id = w and uid = me;
   perform act_perform(w, me, 'lay_stones', '{"kind":"tile","x":3,"y":46}');
   -- Out of your depth beside the stones, and dry on them.
-  update player set x = 2.5, y = 45.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 2.5, y = 45.5 where world_id = w and uid = me;
   v_deep := v_deep || 'beside:' || in_deep_water(w, me)::text;
   update player set x = 3.5, y = 44.5, moved_at = now() - interval '1 second' where world_id = w and uid = me;
   v_deep := v_deep || ' on:' || in_deep_water(w, me)::text;
@@ -318,7 +318,7 @@ begin
   end loop;
   insert into said values ('walk', v_moves);
   insert into said values ('wet', v_deep);
-  update player set x = 4.5, y = 44.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 4.5, y = 44.5 where world_id = w and uid = me;
   insert into said values ('lift', coalesce(act_refusal(w, me, 'lift_stones', '{"kind":"tile","x":3,"y":44}'), 'none'));
   perform act_perform(w, me, 'lift_stones', '{"kind":"tile","x":3,"y":44}');
   insert into said values ('lifted', land_tile(w, 3, 44) || ',' || land_data(w, 3, 44) || ',' || pack_count(w, me, 'marble_slab'));
@@ -433,7 +433,7 @@ begin
   delete from water_plant where world_id = w;
   ${PLANTS.map((q) => `insert into water_plant (world_id, x, y, kind, planted_at, picked_at) values (w, ${q.at[0]}, ${q.at[1]}, '${q.kind}',
       now() - interval '${q.planted} seconds', ${q.picked === null ? 'null' : `now() - interval '${q.picked} seconds'`});`).join('\n  ')}
-  update player set x = 17.5, y = 48.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 17.5, y = 48.5 where world_id = w and uid = me;
   ${PLANTS.map((q, i) => `
   insert into said values ('pick${i}', coalesce(act_refusal(w, me, 'pick_water_plant', '{"kind":"tile","x":${q.at[0]},"y":${q.at[1]}}'), 'none'));
   if act_refusal(w, me, 'pick_water_plant', '{"kind":"tile","x":${q.at[0]},"y":${q.at[1]}}') is null then
@@ -502,7 +502,7 @@ do $b$
 declare w uuid; me uuid; v_spring bigint;
 begin
   ${ISLAND_SCENE}
-  update player set x = 17.5, y = 49.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 17.5, y = 49.5 where world_id = w and uid = me;
   insert into said values ('noroot', coalesce(act_refusal(w, me, 'plant_lotus', '{"kind":"tile","x":18,"y":47}'), 'none'));
   perform give(w, me, 'lotus_seed', 2, 30);
   insert into said values ('dry', coalesce(act_refusal(w, me, 'plant_lotus', '{"kind":"tile","x":18,"y":51}'), 'none'));
@@ -568,7 +568,7 @@ do $b$
 declare w uuid; me uuid; v_spring bigint; v_f bigint; v_bucket bigint; f placed;
 begin
   ${ISLAND_SCENE}
-  update player set x = 12.5, y = 38.5, stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{thirst}', '0.3') where world_id = w and uid = me;
+  update player set body_at = now(), x = 12.5, y = 38.5, stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{thirst}', '0.3') where world_id = w and uid = me;
   perform give(w, me, 'bucket', 1, 50);
   select id into v_bucket from item where world_id = w and holder_uid = me and def = 'bucket';
   insert into said values ('before', coalesce(act_refusal(w, me, 'fill_bucket', jsonb_build_object('kind', 'item', 'uid', v_bucket)), 'none'));

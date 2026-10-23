@@ -206,7 +206,7 @@ begin
                       and d.y + d.radius >= gy - 3 and d.y - d.radius <= gy + 20)
    order by gx, gy limit 1;
   if v_x is null then raise exception 'no open ground for the goals'; end if;
-  update player set x = v_x + 0.5, y = v_y + 0.5, level = 0, act = null, act_queue = '[]'::jsonb, tally = '{}'::jsonb,
+  update player set body_at = now(), x = v_x + 0.5, y = v_y + 0.5, level = 0, act = null, act_queue = '[]'::jsonb, tally = '{}'::jsonb,
       stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1')
    where world_id = w and uid in (me, them);
   delete from guide where world_id = w and uid in (me, them);
@@ -348,7 +348,7 @@ begin
   delete from deed_member where world_id = w and uid = them;
   insert into deed_member (world_id, founder, uid, role) values (w, me, them, 'builder');
   perform place_deed_crate(w, me);
-  update player set x = v_dx + 0.5, y = v_dy + 0.5 where world_id = w and uid = them;
+  update player set body_at = now(), x = v_dx + 0.5, y = v_dy + 0.5 where world_id = w and uid = them;
   insert into deed_work (world_id, founder, def, want, set_by) values (w, me, 'iron_lump', 5, me) returning id into v_work;
   perform give(w, them, 'iron_lump', 1, 30);
   perform set_config('request.jwt.claims', json_build_object('sub', them)::text, true);

@@ -179,31 +179,31 @@ begin
   insert into said values ('GROUND|' || coalesce(v_row::text, '{}'));
 
   -- Buying: from inside, from beside the house, from across the road, short of coins, and then as it should be.
-  update player set x = ${X} + 1.5, y = ${Y} + 0.5 where world_id = w and uid = b;
+  update player set body_at = now(), x = ${X} + 1.5, y = ${Y} + 0.5 where world_id = w and uid = b;
   insert into said values ('BUY_INSIDE|' || coalesce(rpc_buy(w, v_plank)->>'why', 'bought'));
-  update player set x = ${X} - 1.5, y = ${Y} + 0.5 where world_id = w and uid = b;
+  update player set body_at = now(), x = ${X} - 1.5, y = ${Y} + 0.5 where world_id = w and uid = b;
   insert into said values ('BUY_BESIDE|' || coalesce(rpc_buy(w, v_plank)->>'why', 'bought'));
-  update player set x = ${X} + 0.5, y = ${Y} - 4.5 where world_id = w and uid = b;
+  update player set body_at = now(), x = ${X} + 0.5, y = ${Y} - 4.5 where world_id = w and uid = b;
   insert into said values ('BUY_FAR|' || coalesce(rpc_buy(w, v_plank)->>'why', 'bought'));
-  update player set x = ${X} + 0.5, y = ${Y} - 0.5 where world_id = w and uid = b;
+  update player set body_at = now(), x = ${X} + 0.5, y = ${Y} - 0.5 where world_id = w and uid = b;
   insert into said values ('BUY_BROKE|' || coalesce(rpc_buy(w, v_plank)->>'why', 'bought'));
   -- A wing of the same house reaching round into the street: on the street side of the wall's line, and indoors.
   insert into building_tile (world_id, building, x, y) values (w, 91, ${X + 1}, ${Y - 1});
-  update player set x = ${X} + 1.5, y = ${Y} - 0.5 where world_id = w and uid = b;
+  update player set body_at = now(), x = ${X} + 1.5, y = ${Y} - 0.5 where world_id = w and uid = b;
   insert into said values ('BUY_WING|' || coalesce(rpc_buy(w, v_plank)->>'why', 'bought'));
   delete from building_tile where world_id = w and building = 91 and x = ${X + 1} and y = ${Y - 1};
   -- From further off than it is seen, what is on it is not sent; just short of that, it is.
-  update player set x = ${X} + 0.5, y = ${Y} - ${COUNTER_SEEN} - 0.5 where world_id = w and uid = b;
+  update player set body_at = now(), x = ${X} + 0.5, y = ${Y} - ${COUNTER_SEEN} - 0.5 where world_id = w and uid = b;
   select r into v_row from jsonb_array_elements(rpc_ground(w, 40, false)->'placed') r where r->>'kind' = 'counter' and (r->>'id')::bigint = v_c.id;
   insert into said values ('SEEN_FAR|' || jsonb_array_length(v_row->'goods') || ',' || (v_row->>'units'));
-  update player set x = ${X} + 0.5, y = ${Y} - ${COUNTER_SEEN} + 0.5 where world_id = w and uid = b;
+  update player set body_at = now(), x = ${X} + 0.5, y = ${Y} - ${COUNTER_SEEN} + 0.5 where world_id = w and uid = b;
   select r into v_row from jsonb_array_elements(rpc_ground(w, 40, false)->'placed') r where r->>'kind' = 'counter' and (r->>'id')::bigint = v_c.id;
   insert into said values ('SEEN_NEAR|' || jsonb_array_length(v_row->'goods') || ',' || (v_row->>'units'));
-  update player set x = ${X} + 0.5, y = ${Y} - 0.5 where world_id = w and uid = b;
+  update player set body_at = now(), x = ${X} + 0.5, y = ${Y} - 0.5 where world_id = w and uid = b;
   perform set_config('request.jwt.claims', json_build_object('sub', a)::text, true);
-  update player set x = ${X} + 0.5, y = ${Y} - 0.5 where world_id = w and uid = a;
+  update player set body_at = now(), x = ${X} + 0.5, y = ${Y} - 0.5 where world_id = w and uid = a;
   insert into said values ('BUY_OWN|' || coalesce(rpc_buy(w, v_plank)->>'why', 'bought'));
-  update player set x = ${X} + 0.5, y = ${Y} + 0.5 where world_id = w and uid = a;
+  update player set body_at = now(), x = ${X} + 0.5, y = ${Y} + 0.5 where world_id = w and uid = a;
   perform set_config('request.jwt.claims', json_build_object('sub', b)::text, true);
   perform give_coins(w, b, 20);
   v_got := rpc_buy(w, v_plank);

@@ -135,7 +135,7 @@ const shape = (g: Game): void => {
 };
 /** What the island tells somebody standing at (x, y), as `rpc_ground` says it. */
 const groundFor = (who: Who, x = 50.5, y = 54.5): IslandGround => JSON.parse(psql(`
-update player set x = ${x}, y = ${y}, level = 0 where world_id = ${W} and uid = '${WHO[who]}';
+update player set body_at = now(), x = ${x}, y = ${y}, level = 0 where world_id = ${W} and uid = '${WHO[who]}';
 select set_config('request.jwt.claims', json_build_object('sub', '${WHO[who]}')::text, false) \\g /dev/null
 select rpc_ground(${W}, 40, true)::text;`).split('\n').pop() as string) as IslandGround;
 /** A browser in somebody's shoes: the same ground, the island's word about it, a trowel. */
@@ -154,7 +154,7 @@ const tileT = (x: number, y: number, side: Side, wallType: string, material: str
   ({ kind: 'tile', x, y, cx: x, cy: y, side, wallType, material } as unknown as Target);
 const tj = (t: Target): string => JSON.stringify(t).replace(/'/g, "''");
 const islandSays = (who: Who, action: string, t: Target, x = 50.5, y = 52.5): string => psql(`
-update player set x = ${x}, y = ${y}, level = 0 where world_id = ${W} and uid = '${WHO[who]}';
+update player set body_at = now(), x = ${x}, y = ${y}, level = 0 where world_id = ${W} and uid = '${WHO[who]}';
 select coalesce(act_refusal(${W}, '${WHO[who]}', '${action}', '${tj(t)}'::jsonb), 'ALLOWED');`).split('\n').pop() as string;
 
 /* ---- 1. what it is and what it costs ------------------------------------------- */
@@ -215,7 +215,7 @@ planBoth('while a half wall is still laid in marble', tileT(GATE.x, GATE.y, GATE
   PLAN_FENCE?.perform(t, g);
   const mine = g.log.map((l) => l.text).pop() ?? 'NOTHING SAID';
   const theirs = psql(`
-update player set x = 50.5, y = 52.5, level = 0 where world_id = ${W} and uid = '${WHO.ida}';
+update player set body_at = now(), x = 50.5, y = 52.5, level = 0 where world_id = ${W} and uid = '${WHO.ida}';
 delete from event where world_id = ${W} and uid = '${WHO.ida}';
 select act_perform(${W}, '${WHO.ida}', 'plan_fence', '${tj(t)}'::jsonb) \\g /dev/null
 select coalesce((select text from event where world_id = ${W} and uid = '${WHO.ida}' order by n desc limit 1), 'NOTHING SAID');`).split('\n').pop() as string;

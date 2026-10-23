@@ -83,7 +83,7 @@ declare w uuid; u uuid; v_it bigint; v_id bigint; v_row jsonb; v_set double prec
 begin
   select id into w from world where name = 'Hoarding';
   select uid into u from player where world_id = w and name = 'Dane';
-  update player set x = ${X}.5, y = ${Y}.5, level = 0 where world_id = w and uid = u;
+  update player set body_at = now(), x = ${X}.5, y = ${Y}.5, level = 0 where world_id = w and uid = u;
   delete from placed where world_id = w and x between ${X - 1} and ${X + 3} and y between ${Y - 1} and ${Y + 1};
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   foreach v_kind in array array['flagpole', 'banner'] loop

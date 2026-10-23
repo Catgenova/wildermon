@@ -74,7 +74,7 @@ begin
   perform land_set_tile(w, x2, y2, tile_id('Grass')) from generate_series(0, 39) x2, generate_series(0, 39) y2;
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
-  update player set x = ${T} + 0.5, y = ${T} + 0.5, seen_at = now() where world_id = w and uid = u;
+  update player set body_at = now(), x = ${T} + 0.5, y = ${T} + 0.5, seen_at = now() where world_id = w and uid = u;
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Sparstead', ${T}, ${T}, 10, 5, u);
   insert into said values ('NUMS', spar_reach() || '|' || guard_learn() || '|' || (select pace from learn_pace_def where id = 'guard')
     || '|' || learns_gain_bout() || '|' || (select pace from learn_pace_def where id = 'bout'));

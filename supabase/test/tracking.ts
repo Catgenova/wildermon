@@ -115,7 +115,7 @@ begin
   perform land_set_tile(w, x, y, tile_id('Grass')) from generate_series(0, 63) x, generate_series(0, 63) y;
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Tracker');
-  update player set x = ${P.x}, y = ${P.y} where world_id = w and uid = u;
+  update player set body_at = now(), x = ${P.x}, y = ${P.y} where world_id = w and uid = u;
 
   insert into said select 'SKILL', name || '|' || start from skill_def where id = tracking_skill();
   insert into said select 'ACTION', label || '|' || verb || '|' || coalesce(skill, '-') || '|' || act_ported('${TRACK}') from action_def where id = '${TRACK}';

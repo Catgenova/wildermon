@@ -73,7 +73,7 @@ begin
   select id into w from world where name = 'Stonehaven';
   select p.uid into u from player p where p.world_id = w order by p.uid limit 1;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
-  update player set x = 8.5, y = 8.5, act = null, act_queue = '[]', equipped = '{}'::jsonb,
+  update player set body_at = now(), x = 8.5, y = 8.5, act = null, act_queue = '[]', equipped = '{}'::jsonb,
          nutrition = '{"starch": 0.2, "flesh": 0.1, "fat": 0, "greens": 0.5}'::jsonb
    where world_id = w and uid = u;
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
@@ -94,9 +94,9 @@ begin
 
   -- What is refused.
   insert into said values ('NOTALTAR', coalesce(act_refusal(w, u, 'sacrifice', jsonb_build_object('kind', 'furniture', 'id', box, 'itemUid', axe)), 'null'));
-  update player set x = 12.5, y = 12.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 12.5, y = 12.5 where world_id = w and uid = u;
   insert into said values ('REACH', coalesce(act_refusal(w, u, 'sacrifice', jsonb_build_object('kind', 'furniture', 'id', alt, 'itemUid', axe)), 'null'));
-  update player set x = 8.5, y = 8.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 8.5, y = 8.5 where world_id = w and uid = u;
   insert into said values ('PICK', coalesce(act_refusal(w, u, 'sacrifice', jsonb_build_object('kind', 'furniture', 'id', alt)), 'null'));
   insert into said values ('SOUL_GIVEN', coalesce(act_refusal(w, u, 'sacrifice', jsonb_build_object('kind', 'furniture', 'id', alt, 'itemUid', soul)), 'null'));
   insert into said values ('PLAIN', coalesce(act_refusal(w, u, 'sacrifice', jsonb_build_object('kind', 'furniture', 'id', alt, 'itemUid', plain)), 'null'));
@@ -362,7 +362,7 @@ begin
   select id into w from world where name = 'Stonehaven';
   select p.uid into u from player p where p.world_id = w order by p.uid limit 1;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
-  update player set x = 8.5, y = 8.5, act = null, act_queue = '[]', equipped = '{}'::jsonb where world_id = w and uid = u;
+  update player set body_at = now(), x = 8.5, y = 8.5, act = null, act_queue = '[]', equipped = '{}'::jsonb where world_id = w and uid = u;
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'furniture', 'altar', 9, 8, 0, 0, 9.5, 8.5, 50, u) returning id into alt;
   it := give(w, u, 'plank', ${M}, 40, null, 'rare');

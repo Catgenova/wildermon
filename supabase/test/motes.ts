@@ -222,7 +222,7 @@ begin
   foreach lvl in array array[${BANDS.join(', ')}]::double precision[] loop
     delete from mote_swirl where world_id = w;
     insert into mote_swirl (world_id, x, y, element, region) values (w, 61, 60, 'fire', region_of(61, 60)) returning id into v_id;
-    update player set x = 60.5, y = 60.5, level = 0 where world_id = w and uid = u;
+    update player set body_at = now(), x = 60.5, y = 60.5, level = 0 where world_id = w and uid = u;
     insert into skill (world_id, uid, id, value) values (w, u, 'elementalism', lvl)
       on conflict (world_id, uid, id) do update set value = excluded.value;
     v_before := coalesce((select sum(count) from item where world_id = w and holder_uid = u and def = 'fire_mote'), 0);
@@ -244,15 +244,15 @@ begin
 
   -- 6. Out of reach, off the map, and not the ground.
   insert into mote_swirl (world_id, x, y, element, region) values (w, 61, 60, 'fire', region_of(61, 60)) returning id into v_id;
-  update player set x = 70.5, y = 60.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 70.5, y = 60.5 where world_id = w and uid = u;
   insert into said values ('FAR', coalesce(act_refusal(w, u, 'collect_motes', tgt), 'none'));
   insert into said values ('OFF', coalesce(act_refusal(w, u, 'collect_motes', '{"kind":"tile","x":999,"y":5,"cx":999,"cy":5}'::jsonb), 'none'));
   insert into said values ('ITEM', coalesce(act_refusal(w, u, 'collect_motes', '{"kind":"item","uid":1}'::jsonb), 'none'));
   insert into said values ('LOOK', ground_says(w, 61, 60));
 
   -- 7. Two at one swirl: both may start, the first to finish has it, the second is told it is gone and given nothing.
-  update player set x = 60.5, y = 60.5 where world_id = w and uid = u;
-  update player set x = 62.5, y = 60.5 where world_id = w and uid = v;
+  update player set body_at = now(), x = 60.5, y = 60.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 62.5, y = 60.5 where world_id = w and uid = v;
   insert into skill (world_id, uid, id, value) values (w, v, 'elementalism', 50)
     on conflict (world_id, uid, id) do update set value = excluded.value;
   update skill set value = 1 where world_id = w and uid = u and id = 'elementalism';
@@ -269,7 +269,7 @@ begin
 
   -- 8. On the water: a water swirl at 130, 60, collected swimming beside it.
   insert into mote_swirl (world_id, x, y, element, region) values (w, 130, 60, 'water', region_of(130, 60));
-  update player set x = 129.5, y = 60.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 129.5, y = 60.5 where world_id = w and uid = u;
   perform act_perform(w, u, 'collect_motes', '{"kind":"tile","x":130,"y":60,"cx":130,"cy":60}'::jsonb);
   insert into said values ('WATER', coalesce((select sum(count) from item where world_id = w and holder_uid = u and def = 'water_mote'), 0)::text);
 end $t$;

@@ -195,7 +195,7 @@ const shape = (g: Game): void => {
 
 /** What the island tells somebody standing at (x, y), as `rpc_ground` says it. */
 const groundFor = (who: Who, x = 10.5, y = 12.5): IslandGround => JSON.parse(psql(`
-update player set x = ${x}, y = ${y}, level = 0 where world_id = ${W} and uid = '${WHO[who]}';
+update player set body_at = now(), x = ${x}, y = ${y}, level = 0 where world_id = ${W} and uid = '${WHO[who]}';
 select set_config('request.jwt.claims', json_build_object('sub', '${WHO[who]}')::text, false) \\g /dev/null
 select rpc_ground(${W}, 40, true)::text;`).split('\n').pop() as string) as IslandGround;
 
@@ -372,7 +372,7 @@ const PT = tileT(PORTCULLIS.x, PORTCULLIS.y, PORTCULLIS.side);
 const BT: Target = { kind: 'bridge', id: BID };
 const tj = (t: Target): string => JSON.stringify(t).replace(/'/g, "''");
 const islandSays = (who: Who, action: string, t: Target, x = 10.5, y = 12.5): string => psql(`
-update player set x = ${x}, y = ${y}, level = 0 where world_id = ${W} and uid = '${WHO[who]}';
+update player set body_at = now(), x = ${x}, y = ${y}, level = 0 where world_id = ${W} and uid = '${WHO[who]}';
 select coalesce(act_refusal(${W}, '${WHO[who]}', '${action}', '${tj(t)}'::jsonb), 'ALLOWED');`).split('\n').pop() as string;
 const browserSays = (who: Who, action: string, t: Target, x = 10.5, y = 12.5): string =>
   ACTION_BY_ID.get(action)?.check?.(t, browserFor(who, x, y)) ?? 'ALLOWED';
@@ -426,7 +426,7 @@ const doBoth = (who: Who, action: string, t: Target, at: [number, number] = [10.
   ACTION_BY_ID.get(action)?.perform(t, g);
   const mine = g.log.map((l) => l.text).pop() ?? 'NOTHING SAID';
   const theirs = psql(`
-update player set x = ${at[0]}, y = ${at[1]}, level = 0 where world_id = ${W} and uid = '${WHO[who]}';
+update player set body_at = now(), x = ${at[0]}, y = ${at[1]}, level = 0 where world_id = ${W} and uid = '${WHO[who]}';
 delete from event where world_id = ${W} and uid = '${WHO[who]}';
 select act_perform(${W}, '${WHO[who]}', '${action}', '${tj(t)}'::jsonb) \\g /dev/null
 select coalesce((select text from event where world_id = ${W} and uid = '${WHO[who]}' order by n desc limit 1), 'NOTHING SAID');`).split('\n').pop() as string;
@@ -498,7 +498,7 @@ delete from crate where world_id = ${W} and id = 7771;
 insert into crate (world_id, id, kind, x, y, sx, sy, made_by) values (${W}, 7771, 'plank', 8, 12, 0, 0, '${WHO.gil}');
 delete from item where world_id = ${W} and holder_uid = '${WHO.gil}' and def = 'padlock';
 insert into item (world_id, holder, holder_uid, def, ql, count) values (${W}, 'player', '${WHO.gil}', 'padlock', 63, 1);
-update player set x = 8.5, y = 11.5, level = 0 where world_id = ${W} and uid = '${WHO.gil}';`);
+update player set body_at = now(), x = 8.5, y = 11.5, level = 0 where world_id = ${W} and uid = '${WHO.gil}';`);
   const CT: Target = { kind: 'crate', id: 7771 };
   const padlockRow = psql(`select id from item where world_id = ${W} and holder_uid = '${WHO.gil}' and def = 'padlock'`);
   const c0 = psql(COUNTERS);
@@ -572,9 +572,9 @@ ${pack([[80, true]])}`);
     `crate: browser "${crateWhy[0]}", island "${crateWhy[1]}"; portcullis: browser "${portWhy[0]}", island "${portWhy[1]}"`);
   // And with all three: the crate takes the 50, and the portcullis then the 65; the locked 80 stays a locked padlock.
   psql(`${pack([[50, false], [80, true], [65, false]])}
-update player set x = 8.5, y = 11.5, level = 0 where world_id = ${W} and uid = '${WHO.gil}';
+update player set body_at = now(), x = 8.5, y = 11.5, level = 0 where world_id = ${W} and uid = '${WHO.gil}';
 select act_perform(${W}, '${WHO.gil}', 'fit_lock', '${tj(CT)}'::jsonb) \\g /dev/null
-update player set x = 10.5, y = 12.5, level = 0 where world_id = ${W} and uid = '${WHO.gil}';
+update player set body_at = now(), x = 10.5, y = 12.5, level = 0 where world_id = ${W} and uid = '${WHO.gil}';
 select act_perform(${W}, '${WHO.gil}', 'fit_lock', '${tj(PT)}'::jsonb) \\g /dev/null`);
   const island = psql(`select format('crate %s, portcullis %s; left: %s',
   (select i.def || ' ' || i.ql from crate c join item i on i.id = c.lock where c.world_id = ${W} and c.id = 7772),
@@ -614,7 +614,7 @@ both('nor may Kay, whose keys are to other locks', 'kay', 'raise_drawbridge', BT
 const walk = (x0: number, y0: number, x1: number, y1: number): number =>
   Number(psql(`select walk_share(${W}, '${WHO.sim}', 0, ${x0}, ${y0}, ${x1}, ${y1})`));
 const deep = (): string => psql(`
-update player set x = 10.5, y = 13.5, level = 0 where world_id = ${W} and uid = '${WHO.sim}';
+update player set body_at = now(), x = 10.5, y = 13.5, level = 0 where world_id = ${W} and uid = '${WHO.sim}';
 select in_deep_water(${W}, '${WHO.sim}');`).split('\n').pop() as string;
 {
   const upAcross = walk(10.5, 12.5, 10.5, 15.5);
@@ -687,7 +687,7 @@ begin
   select id into w from world where name = 'Hoarding';
   delete from wall where world_id = w and level = 0 and dir = 'h' and x = 11 and y = 9;
   delete from private.hidden_door_plan where world_id = w;
-  update player set x = 11.5, y = 9.5 where world_id = w and uid in ('${WHO.gil}', '${WHO.ben}');
+  update player set body_at = now(), x = 11.5, y = 9.5 where world_id = w and uid in ('${WHO.gil}', '${WHO.ben}');
   delete from item where world_id = w and holder_uid in ('${WHO.gil}', '${WHO.ben}') and def in ('padlock', 'hinge', 'mallet', 'key');
   insert into item (world_id, holder, holder_uid, def, ql, count) values
     (w, 'player', '${WHO.gil}', 'mallet', 40, 1), (w, 'player', '${WHO.ben}', 'mallet', 40, 1);
@@ -755,7 +755,7 @@ ${hinges ? `insert into item (world_id, holder, holder_uid, def, ql, count) valu
  * kept or dropped by the island's own rules, and that is what is tested.
  */
 const fresh = (body = '', who: Who = 'gil', at: [number, number] = [11.5, 9.5]): string => `
-update player set x = ${at[0]}, y = ${at[1]}, level = 0, act = null, act_target = null, act_started = null, act_ends = null,
+update player set body_at = now(), x = ${at[0]}, y = ${at[1]}, level = 0, act = null, act_target = null, act_started = null, act_ends = null,
        act_left = null, act_goes = null, act_queue = '[]', stats = stats || '{"stamina": 1}'::jsonb
  where world_id = ${W} and uid = '${WHO[who]}';
 ${body ? `update player set ${body} where world_id = ${W} and uid = '${WHO[who]}';` : ''}
@@ -1647,7 +1647,7 @@ sameBridge('nor is set out from one, which is a storey and not the ground under 
   planHiddenDoor(gh, PLAN_WALL, ht);
   const toldB = finish(gh);
   const w = gh.buildings.wall(1, 23, 11, 'n');
-  const [wall, told] = psql(`update player set x = 23.5, y = 10.5, level = 0, act = null, act_target = null, act_queue = '[]',
+  const [wall, told] = psql(`update player set body_at = now(), x = 23.5, y = 10.5, level = 0, act = null, act_target = null, act_queue = '[]',
        stats = stats || '{"stamina": 1}'::jsonb where world_id = ${W} and uid = '${WHO.kay}';
 delete from item where world_id = ${W} and holder_uid = '${WHO.kay}' and def in ('padlock', 'hinge');
 insert into item (world_id, holder, holder_uid, def, ql, count) values
@@ -1692,7 +1692,7 @@ select coalesce(string_agg(text, '~' order by n), '') from event where world_id 
   g.player.level = -1;
   const says = (action: string, t: Target): [string, string] => {
     const def = ACTION_BY_ID.get(action) as ActionDef;
-    const theirs = psql(`update player set x = 10.5, y = 12.5, level = -1 where world_id = ${W} and uid = '${WHO.gil}';
+    const theirs = psql(`update player set body_at = now(), x = 10.5, y = 12.5, level = -1 where world_id = ${W} and uid = '${WHO.gil}';
 select coalesce(act_refusal(${W}, '${WHO.gil}', '${action}', '${tj(t)}'::jsonb), '${ALLOWED}');
 update player set level = 0 where world_id = ${W} and uid = '${WHO.gil}';`).split('\n')[0];
     return [cellarGate(g, action, t) ?? def.check?.(t, g) ?? ALLOWED, theirs];

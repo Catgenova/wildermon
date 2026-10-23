@@ -152,13 +152,13 @@ begin
   insert into said values ('PLACED', coalesce(v_pl.x || ',' || v_pl.y || ',' || v_pl.cx || ',' || v_pl.cy, 'none') || '|' || ${count(ENCHANTERS_PLINTH)});
 
   -- 4. Its reach: just inside, and just outside, from its middle along the row.
-  update player set x = v_pl.cx + ${INSIDE}, y = v_pl.cy where world_id = w and uid = u;
+  update player set body_at = now(), x = v_pl.cx + ${INSIDE}, y = v_pl.cy where world_id = w and uid = u;
   insert into said values ('INSIDE', coalesce(act_refusal(w, u, 'enchant', ${T('v_sw', 'v_s')}), 'none'));
-  update player set x = v_pl.cx - ${OUTSIDE}, y = v_pl.cy where world_id = w and uid = u;
+  update player set body_at = now(), x = v_pl.cx - ${OUTSIDE}, y = v_pl.cy where world_id = w and uid = u;
   insert into said values ('OUTSIDE', coalesce(act_refusal(w, u, 'enchant', ${T('v_sw', 'v_s')}), 'none'));
 
   -- 5. At it, the job.
-  update player set x = v_pl.cx + 1, y = v_pl.cy + 0.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = v_pl.cx + 1, y = v_pl.cy + 0.5 where world_id = w and uid = u;
   perform pg_temp.dice('0.01');
   perform act_perform(w, u, 'enchant', ${T('v_sw', 'v_s')});
   perform pg_temp.nodice();

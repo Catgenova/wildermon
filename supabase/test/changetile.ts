@@ -50,7 +50,7 @@ begin
   perform rpc_join(w, 'Oda');
   for i in 4..28 loop for j in 4..20 loop perform land_set_height(w, i, j, 20); perform land_set_tile(w, i, j, ${TileType.Dirt}); end loop; end loop;
   perform land_set_tile(w, 20, 10, ${TileType.Clay});
-  update player set x = 10.5, y = 10.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb where world_id = w and uid = u;
+  update player set body_at = now(), x = 10.5, y = 10.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb where world_id = w and uid = u;
   perform give(w, u, 'dirt', 2, 20);
   perform give(w, u, 'clay', 2, 20);
   perform give(w, u, 'sand', 2, 20);
@@ -62,12 +62,12 @@ begin
   perform perform_terrain(w, u, 'drop_dirt_here', jsonb_build_object('kind', 'item', 'uid', clay));
   insert into said values ('FEET', land_tile(w, 10, 10)::text);
   -- Sand on a corner of dirt.
-  update player set x = 14.5, y = 10.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 14.5, y = 10.5 where world_id = w and uid = u;
   insert into said values ('SAND_ASK', coalesce(act_refusal(w, u, 'drop_dirt', jsonb_build_object('kind', 'tile', 'x', 15, 'y', 10, 'cx', 15, 'cy', 10, 'itemUid', sand)), 'none'));
   perform act_perform(w, u, 'drop_dirt', jsonb_build_object('kind', 'tile', 'x', 15, 'y', 10, 'cx', 15, 'cy', 10, 'itemUid', sand));
   insert into said values ('SAND', land_tile(w, 15, 10)::text);
   -- Dirt on a corner of clay.
-  update player set x = 19.5, y = 10.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 19.5, y = 10.5 where world_id = w and uid = u;
   perform act_perform(w, u, 'drop_dirt', jsonb_build_object('kind', 'tile', 'x', 20, 'y', 10, 'cx', 20, 'cy', 10,
     'itemUid', (select id from item where world_id = w and holder_uid = u and def = 'dirt' limit 1)));
   insert into said values ('DIRT', land_tile(w, 20, 10)::text);

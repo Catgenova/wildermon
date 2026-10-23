@@ -73,7 +73,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
-  update player set x = 10.5, y = 10.5, wounds = v_ws, stats = '{"health":0.6,"stamina":1,"hunger":1,"thirst":1}'::jsonb
+  update player set body_at = now(), x = 10.5, y = 10.5, wounds = v_ws, stats = '{"health":0.6,"stamina":1,"hunger":1,"thirst":1}'::jsonb
     where world_id = w and uid = u;
   v_arm := wound_key(v_ws->0);
   v_leg := wound_key(v_ws->1);

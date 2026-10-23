@@ -323,7 +323,7 @@ begin
   ${clear('short_bow', 'arrow', 'shaft', 'bow_string')};
 
   /* ---- Fence Builder: a plank fence planned for half, and a go of Build wall on it. ---- */
-  update player set x = 13.5, y = 13.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 13.5, y = 13.5 where world_id = w and uid = u;
   perform pg_temp.hold(w, u, '{}');
   perform perform_building(w, u, 'plan_fence', ${PLAN_FENCE});
   v_t := (wall_at(w, 13, 13, 'n')).needed::text;
@@ -340,7 +340,7 @@ begin
   ${clear('plank', 'timber')};
 
   /* ---- Timber Salvage: a finished plank wall taken down, and what comes back. ---- */
-  update player set x = 9.5, y = 9.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 9.5, y = 9.5 where world_id = w and uid = u;
   select coalesce(max(id), 0) + 1 into v_b from building where world_id = w;
   insert into building (world_id, id, name, planned_by) values (w, v_b, 'Barn', u);
   insert into building_tile (world_id, building, x, y) values (w, v_b, 9, 9), (w, v_b, 10, 9);

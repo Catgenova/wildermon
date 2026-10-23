@@ -118,7 +118,7 @@ begin
   end loop; end loop;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
   delete from player_node where world_id = w and uid = u;
-  update player set x = 9.5, y = 9.5, act = null, act_target = null, act_started = null, act_ends = null,
+  update player set body_at = now(), x = 9.5, y = 9.5, act = null, act_target = null, act_started = null, act_ends = null,
          act_left = null, act_goes = null, act_queue = '[]', craft_class = null, combat_class = null,
          class_mul = null, craft_from_stores = false, craft_spare_rare = false,
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('hunger', 1, 'thirst', 1, 'health', 1, 'stamina', 1)

@@ -44,7 +44,7 @@ begin
   perform land_blank(w, 64);
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
-  update player set x = 20.3, y = 20.4 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.3, y = 20.4 where world_id = w and uid = u;
   perform give(w, u, 'dirt', 1, 20);
   h0 := land_height(w, 20, 20);
   delete from tile_change where world_id = w;

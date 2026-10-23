@@ -108,7 +108,7 @@ begin
   -- suite's other fixtures afoot would spend the round's one block on whoever
   -- happened to be furthest west.
   update player set away = true where world_id = w and uid <> u;
-  update player set x = sx + 0.5, y = sy + 0.5, away = false, seen_at = now(),
+  update player set body_at = now(), x = sx + 0.5, y = sy + 0.5, away = false, seen_at = now(),
          act = null, act_ends = null, act_queue = '[]'::jsonb
     where world_id = w and uid = u;
   delete from caller where uid = u;

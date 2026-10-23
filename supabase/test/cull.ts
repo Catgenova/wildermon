@@ -191,7 +191,7 @@ begin
   update creature set name = 'Nubbin', settled_at = now(), until = now(),
       from_x = 31.5, from_y = 30.5, to_x = 31.5, to_y = 30.5, leg_at = now(), leg_ends = now()
     where world_id = w and keeper = u and species = 'rabba';
-  update player set x = 31.5, y = 30.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 31.5, y = 30.5 where world_id = w and uid = u;
 end $$;`);
 const PET = `(select c.id from creature c where c.world_id = ${W} and c.keeper = ${DANE} and c.species = 'rabba' order by c.id desc limit 1)`;
 const petTarget = `jsonb_build_object('kind', 'creature', 'id', ${PET})`;
@@ -205,10 +205,10 @@ check('the island refuses nobody nothing when it is yours and you are beside it'
  * question.
  */
 const away = psql(`
-  update player set x = 60, y = 60 where world_id = ${W} and uid = ${DANE};
+  update player set body_at = now(), x = 60, y = 60 where world_id = ${W} and uid = ${DANE};
   select coalesce(creature_refusal(${W}, ${DANE}, 'cull_creature',
     jsonb_build_object('kind', 'creature', 'id', ${HAND_ID})), 'nothing');
-  update player set x = 31.5, y = 30.5 where world_id = ${W} and uid = ${DANE};`).trim();
+  update player set body_at = now(), x = 31.5, y = 30.5 where world_id = ${W} and uid = ${DANE};`).trim();
 check('and will not have it done from across the island', away.includes('Stand next to'), away);
 
 psql(`select perform_creature(${W}, ${DANE}, 'cull_creature', ${petTarget})`);

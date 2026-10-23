@@ -243,7 +243,7 @@ create function pg_temp.walk(p_mul double precision, p_gaps double precision[], 
 declare v0 double precision; v double precision; s double precision; i int; t double precision := 0; a jsonb;
         pulls int := 0; old int := 0; x0 double precision := 10.5; claim double precision; was double precision := 10.5;
 begin
-  update player set x = x0, y = 100.5, level = 0, walk_ahead = null where world_id = '${W}' and uid = '${U}';
+  update player set body_at = now(), x = x0, y = 100.5, level = 0, walk_ahead = null where world_id = '${W}' and uid = '${U}';
   -- The pace: travel_speed, on the ground's own pace (1 on grass).
   v0 := travel_speed('${W}', '${U}');
   v := v0 * walk_ground('${W}', x0, 100.5);
@@ -386,12 +386,12 @@ const replay = (walks: Array<{ every: number; words: Word[] }>): Array<{ short: 
   const out = psql(`
 begin;
 ${flat(rowsOf())}
-update player set x = ${X0 + 2.5}, y = ${Y0 + 2.5}, level = 0 where world_id = '${W}' and uid = '${U}';
+update player set body_at = now(), x = ${X0 + 2.5}, y = ${Y0 + 2.5}, level = 0 where world_id = '${W}' and uid = '${U}';
 create temp table said (n int, v text);
 create function pg_temp.walk(p_every double precision, p_words jsonb) returns text language plpgsql as $f$
 declare w jsonb; a jsonb; short int := 0; blocked int := 0; behind double precision := 0; back int := 0; i int := 0; d double precision;
 begin
-  update player set x = ${X0 + 2.5}, y = ${Y0 + 2.5}, level = 0, walk_ahead = null where world_id = '${W}' and uid = '${U}';
+  update player set body_at = now(), x = ${X0 + 2.5}, y = ${Y0 + 2.5}, level = 0, walk_ahead = null where world_id = '${W}' and uid = '${U}';
   for w in select * from jsonb_array_elements(p_words) loop
     i := i + 1;
     update player set moved_at = now() - make_interval(secs => p_every) where world_id = '${W}' and uid = '${U}';

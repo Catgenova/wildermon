@@ -240,7 +240,7 @@ begin
   insert into said values ('WORLD', w::text);
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
-  update player set x = 30.5, y = 30.5, level = 0 where world_id = w and uid = u;
+  update player set body_at = now(), x = 30.5, y = 30.5, level = 0 where world_id = w and uid = u;
 
   -- 1. A boil of each dyestuff.
   for d in select * from dyestuff_def order by recipe loop

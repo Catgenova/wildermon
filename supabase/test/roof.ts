@@ -93,7 +93,7 @@ begin
   insert into building_tile (world_id, building, x, y) values (w, 1, 30, 30), (w, 1, 31, 30);
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total) values
     ${walls};
-  update player set x = 30.5, y = 30.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 30.5, y = 30.5 where world_id = w and uid = u;
 end $$;`);
 
 /* ---- closed in by a door, a window and a bay ---- */

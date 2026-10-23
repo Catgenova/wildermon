@@ -126,7 +126,7 @@ begin
   perform guide_mark(w, u, '${KIND}', 'seen');
   insert into skill (world_id, uid, id, value) values (w, u, tracking_skill(), ${TRACKING_AT})
     on conflict (world_id, uid, id) do update set value = excluded.value;
-  update player set x = 80.5, y = 80.5, level = 0 where world_id = w and uid = u;
+  update player set body_at = now(), x = 80.5, y = 80.5, level = 0 where world_id = w and uid = u;
 
   foreach L in array array[${LEVELS.join(', ')}]::double precision[] loop
     insert into skill (world_id, uid, id, value) values (w, u, 'awareness', L)

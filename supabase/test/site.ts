@@ -73,7 +73,7 @@ begin
     values (w, 0, 'h', 20, 20, 1, 'solid', 'log', wall_bill('log', 'solid'), wall_bill('log', 'solid'));
   insert into crate (world_id, id, kind, x, y, sx, sy) values (w, 1, 'log', 20, 20, 1, 1);
   insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 1, 'log', 40, ${LOGS + 4});
-  update player set x = 20.5, y = 20.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 20.5 where world_id = w and uid = u;
 end $$;`);
 
 const mineSay = (id: string, t: Record<string, unknown>): string =>

@@ -105,7 +105,7 @@ begin
   perform place_deed_crate(w, boss);
   cr := deed_crate(w, boss);
   delete from item where world_id = w and holder = 'crate' and crate = cr.id;
-  update player set x = dx + 0.5, y = dy + 0.5, equipped = '{}'::jsonb where world_id = w and uid in (boss, may, bld, gst, stranger);
+  update player set body_at = now(), x = dx + 0.5, y = dy + 0.5, equipped = '{}'::jsonb where world_id = w and uid in (boss, may, bld, gst, stranger);
   delete from item where world_id = w and holder = 'player' and holder_uid in (boss, may, bld, gst, stranger)
     and def in ('${LUMP}', '${HATCHET}');
   insert into said values ('DEED|' || dname), ('X|' || dx), ('Y|' || dy), ('N_BLD|' || folk_name(w, bld)),
@@ -147,9 +147,9 @@ begin
 
   -- The builder delivers: refused too far, then too poor, then a stack and a split one toward A.
   perform set_config('request.jwt.claims', json_build_object('sub', bld)::text, true);
-  update player set x = dx + 0.5 + deliver_reach() + 1 where world_id = w and uid = bld;
+  update player set body_at = now(), x = dx + 0.5 + deliver_reach() + 1 where world_id = w and uid = bld;
   insert into said values ('FAR|' || coalesce(rpc_work_deliver(w, boss, v_a)->>'why', 'ALLOWED'));
-  update player set x = dx + 0.5 + deliver_reach() where world_id = w and uid = bld;
+  update player set body_at = now(), x = dx + 0.5 + deliver_reach() where world_id = w and uid = bld;
   insert into said values ('POOR|' || coalesce(rpc_work_deliver(w, boss, v_b)->>'why', 'ALLOWED'));
   insert into said values ('BOARD_BEFORE|' || rpc_settlement(w, boss)::text);
   insert into said values ('GIVE_A|' || rpc_work_deliver(w, boss, v_a)::text);

@@ -174,7 +174,7 @@ declare w uuid; u uuid; gx int; gy int;
 begin
   select id into w from world where name = 'Hoarding';
   select uid into u from player where world_id = w and name = 'Dane';
-  update player set x = ${X}.5, y = ${Y}.5, level = 0 where world_id = w and uid = u;
+  update player set body_at = now(), x = ${X}.5, y = ${Y}.5, level = 0 where world_id = w and uid = u;
   ${doorSql}
 end $$;
 select k from said;
@@ -221,7 +221,7 @@ declare w uuid; u uuid; gx int; gy int;
 begin
   select id into w from world where name = 'Hoarding';
   select uid into u from player where world_id = w and name = 'Dane';
-  update player set x = ${X}.5, y = ${Y + 1}.5, level = 0 where world_id = w and uid = u;
+  update player set body_at = now(), x = ${X}.5, y = ${Y + 1}.5, level = 0 where world_id = w and uid = u;
   ${ground(40, TileType.PackedDirt).sql}
   ${packSql(pack)}
   perform act_perform(w, u, ${q(action)}, jsonb_build_object('kind', 'tile', 'x', ${X}, 'y', ${Y}, 'cx', ${X}, 'cy', ${Y}));

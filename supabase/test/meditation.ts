@@ -317,10 +317,10 @@ begin
     from player where world_id = w.world_id and uid = u;
   select * into s from sitting_worth(w.world_id, u);
   insert into said values ('STALE', s.place::text);
-  update player set x = tx + 0.5 + ${SIT_WORTH.staleReach + 1} where world_id = w.world_id and uid = u;
+  update player set body_at = now(), x = tx + 0.5 + ${SIT_WORTH.staleReach + 1} where world_id = w.world_id and uid = u;
   select * into s from sitting_worth(w.world_id, u);
   insert into said values ('AWAY', s.place::text);
-  update player set x = tx + 0.5, sat_dawn = tree_last_dawn() - interval '1 day' where world_id = w.world_id and uid = u;
+  update player set body_at = now(), x = tx + 0.5, sat_dawn = tree_last_dawn() - interval '1 day' where world_id = w.world_id and uid = u;
   select * into s from sitting_worth(w.world_id, u);
   insert into said values ('TURNED', s.place::text);
   insert into mote_swirl (world_id, x, y, element, region) values (w.world_id, tx + ${SIT_WORTH.swirlReach}, ty, 'fire', region_of(tx + ${SIT_WORTH.swirlReach}, ty));
@@ -328,13 +328,13 @@ begin
   insert into said values ('SWIRL', s.place || '|' || s.said);
   delete from mote_swirl where world_id = w.world_id;
   -- Beside the Crownstone, ${SIT_WORTH.stoneReach} tiles south of its nearest tile, and one further.
-  update player set x = ${STONE_X} + 0.5, y = ${STONE_Y} + ${STONE_HALF + SIT_WORTH.stoneReach} + 0.5, sat_spots = '[]'::jsonb where world_id = w.world_id and uid = u;
+  update player set body_at = now(), x = ${STONE_X} + 0.5, y = ${STONE_Y} + ${STONE_HALF + SIT_WORTH.stoneReach} + 0.5, sat_spots = '[]'::jsonb where world_id = w.world_id and uid = u;
   select * into s from sitting_worth(w.world_id, u);
   insert into said values ('STONE', s.place || '|' || s.said);
   update player set y = y + 1 where world_id = w.world_id and uid = u;
   select * into s from sitting_worth(w.world_id, u);
   insert into said values ('STONEOFF', s.place || '|' || s.said);
-  update player set x = tx + 0.5, y = ty + 0.5 where world_id = w.world_id and uid = u;
+  update player set body_at = now(), x = tx + 0.5, y = ty + 0.5 where world_id = w.world_id and uid = u;
   update player set calm = player_calm_cap(w.world_id, u) - 1, sat_spots = '[]'::jsonb where world_id = w.world_id and uid = u;
   perform perform_faith(w.world_id, u, 'meditate', jsonb_build_object('kind', 'tile', 'x', tx, 'y', ty));
   insert into said select 'CAPPED', calm || '|' || player_calm_cap(w.world_id, u) from player where world_id = w.world_id and uid = u;

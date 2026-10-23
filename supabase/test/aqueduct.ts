@@ -149,7 +149,7 @@ const ISLAND_SCENE = `
   -- No trees or bushes on it, on either side: the browser's island grew its own.
   perform land_set_tile(w, x, y, 0) from generate_series(0, 63) x, generate_series(0, 63) y where land_tile(w, x, y) in (16, 17);
   insert into foundation (world_id, id, x, y, top, needed, total, pool) values ${slabRows.join(', ')};
-  update player set x = 22.5, y = 40.5, level = 0, act = null, act_queue = '[]'::jsonb, aboard = null where world_id = w and uid in (me, them);
+  update player set body_at = now(), x = 22.5, y = 40.5, level = 0, act = null, act_queue = '[]'::jsonb, aboard = null where world_id = w and uid in (me, them);
   delete from item where world_id = w and holder = 'player' and holder_uid = me;
   insert into item (world_id, def, holder, holder_uid, ql, count) values (w, 'trowel', 'player', me, 40, 1), (w, 'shovel', 'player', me, 40, 1);
 `;
@@ -426,7 +426,7 @@ begin
       'wants', (select span_wants(sp.needed) from bridge_span sp where sp.world_id = w and sp.bridge = v_b and sp.n = 1))::text
     from bridge where id = v_b));
   insert into said values ('thrown', coalesce(act_refusal(w, me, 'plan_bridge', '{"kind":"tile","x":24,"y":40,"cx":24,"cy":40,"material":"aqueduct"}'), 'none'));
-  update player set x = 16.5, y = 40.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 16.5, y = 40.5 where world_id = w and uid = me;
   insert into said values ('empty', coalesce(act_refusal(w, me, 'build_aqueduct', v_t), 'none'));
   insert into said values ('asbridge', coalesce(act_refusal(w, me, 'build_bridge', v_t), 'none'));
   insert into item (world_id, def, holder, holder_uid, ql, count) values (w, 'mortar', 'player', me, 40, 1);
@@ -436,14 +436,14 @@ begin
   -- Every span laid but the last unit of the last.
   update bridge_span set needed = case when n = 8 then '{"mortar":1}'::jsonb else '{}'::jsonb end where world_id = w and bridge = v_b;
   insert into item (world_id, def, holder, holder_uid, ql, count) values (w, 'mortar', 'player', me, 40, 1);
-  update player set x = 22.5, y = 40.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 22.5, y = 40.5 where world_id = w and uid = me;
   perform act_perform(w, me, 'build_aqueduct', v_t);
   insert into said values ('finished', (select text from event where world_id = w and uid = me order by n desc limit 1));
   -- Its stone starts greening from bare as it is finished, and there is nothing to scrub yet.
-  update player set x = 16.5, y = 40.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 16.5, y = 40.5 where world_id = w and uid = me;
   insert into item (world_id, def, holder, holder_uid, ql, count) values (w, 'brush', 'player', me, 40, 1);
   insert into said values ('scrub', coalesce(act_refusal(w, me, 'scrub_moss', v_t), 'none'));
-  update player set x = 22.5, y = 40.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 22.5, y = 40.5 where world_id = w and uid = me;
   select chain into v_chain from spring where id = v_spring;
   insert into said values ('after', v_chain::text);
   insert into said values ('water', has_water(w, ${CATCH[0]}, ${CATCH[1]})::text || ' ' || has_water(w, ${FOOT[0]}, ${FOOT[1]})::text
@@ -453,7 +453,7 @@ begin
   insert into said values ('fill', extract(epoch from ((v_chain->'ponds'->1->>'since')::timestamptz - now())) || ' '
     || (v_chain->'ponds'->1->>'from') || ' ' || (v_chain->'ponds'->1->>'volume'));
   -- The source runs low: the spring stopped up, and the channel dry.
-  update player set x = 13.5, y = 42.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 13.5, y = 42.5 where world_id = w and uid = me;
   perform act_perform(w, me, 'stop_spring', '{"kind":"tile","x":${BOWL[0]},"y":${BOWL[1]},"cx":${BOWL[0]},"cy":${BOWL[1]}}');
   insert into said values ('stopped', (select count(*) from aqueduct_feed f where f.world_id = w) || ' ' || has_water(w, ${FOOT[0]}, ${FOOT[1]})::text);
   insert into spring (world_id, x, y, cx, cy, made_by) values (w, ${BOWL[0]}, ${BOWL[1]}, ${sx}, ${sy}, me) returning id into v_spring;
@@ -463,7 +463,7 @@ begin
   insert into said values ('lost', (select chain::text from spring where id = v_spring));
   perform land_set_height(w, x, y, case when x = ${FOOT[0]} and y = ${FOOT[1]} then 40 else 46 end) from generate_series(23, 25) x, generate_series(39, 41) y;
   -- Pulled down.
-  update player set x = 22.5, y = 40.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 22.5, y = 40.5 where world_id = w and uid = me;
   insert into said values ('downok', coalesce(act_refusal(w, me, 'demolish_aqueduct', v_t), 'none'));
   perform act_perform(w, me, 'demolish_aqueduct', v_t);
   insert into said values ('down', (select text from event where world_id = w and uid = me and text like 'You take the aqueduct down%' order by n desc limit 1));
@@ -602,7 +602,7 @@ begin
   insert into said values ('spilt', (select (chain->'ponds'->0 ? 'spill')::text from spring where id = v_spring) || ' ' || water_runs(w, ${POOL[0]}, ${POOL[1]})::text);
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'fountain', ${FOUNT[0]}, ${FOUNT[1]}, 0, 0, ${FOUNT[0]} + 0.375, ${FOUNT[1]} + 0.375, 80)
     returning id into v_f;
-  update player set x = ${FOUNT[0] + 1}.5, y = ${FOUNT[1] + 1}.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = ${FOUNT[0] + 1}.5, y = ${FOUNT[1] + 1}.5 where world_id = w and uid = me;
   insert into said values ('ok', coalesce(act_refusal(w, me, 'plan_aqueduct', '${FAT}'), 'none'));
   perform act_perform(w, me, 'plan_aqueduct', '${FAT}');
   select id into v_b from bridge where world_id = w and kind = 'aqueduct';
@@ -688,7 +688,7 @@ begin
   perform settle_spring(w, v_spring);
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'fountain', ${FOUNT[0]}, ${FOUNT[1]}, 0, 0, ${FOUNT[0]} + 0.375, ${FOUNT[1]} + 0.375, 80)
     returning id into v_f;
-  update player set x = ${FOUNT[0] + 1}.5, y = ${FOUNT[1] + 1}.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = ${FOUNT[0] + 1}.5, y = ${FOUNT[1] + 1}.5 where world_id = w and uid = me;
   perform act_perform(w, me, 'plan_aqueduct', '${FAT}');
   select id into v_b from bridge where world_id = w and kind = 'aqueduct';
   v_t := jsonb_build_object('kind', 'bridge', 'id', v_b);
@@ -821,7 +821,7 @@ begin
   insert into said values ('along', walk_share(w, me, 0, 34.5, 52.5, 35.5, 52.5)::text);
   insert into said values ('across', walk_share(w, me, 0, 34.5, 51.5, 34.5, 53.5)::text);
   insert into said values ('end', walk_share(w, me, 0, 31.5, 52.5, 32.5, 52.5)::text || ' ' || walk_share(w, me, 0, 32.5, 52.5, 33.5, 52.5)::text);
-  update player set x = 33.5, y = 51.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 33.5, y = 51.5 where world_id = w and uid = me;
   insert into item (world_id, def, holder, holder_uid, ql, count, extra) values (w, 'sprout', 'player', me, 40, 1, 'Oak');
   insert into said values ('plant', coalesce(act_refusal(w, me, 'plant', '{"kind":"tile","x":34,"y":52,"cx":34,"cy":52}'), 'none'));
   insert into said values ('beside', coalesce(act_refusal(w, me, 'plant', '{"kind":"tile","x":34,"y":51,"cx":34,"cy":51}'), 'none'));
@@ -895,7 +895,7 @@ begin
   insert into bridge (world_id, kind, ax, ay, bx, by, height) values (w, 'aqueduct', ${POOL[0]}, ${POOL[1]}, ${TO[0]}, ${TO[1]}, 68) returning id into v_b;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
     select w, v_b, t.n, t.x, t.y, '{}'::jsonb, '{"mortar":1}'::jsonb from span_tiles(${POOL[0]}, ${POOL[1]}, ${TO[0]}, ${TO[1]}) t;
-  update player set x = ${POOL[0] + 1}.5, y = ${POOL[1] + 1}.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = ${POOL[0] + 1}.5, y = ${POOL[1] + 1}.5 where world_id = w and uid = me;
   perform act_perform(w, me, 'dig_spring', '${DIG}');
   insert into said values ('dug', (select text from event where world_id = w and uid = me order by n desc limit 1));
   delete from spring where world_id = w;
@@ -907,7 +907,7 @@ begin
   perform settle_spring(w, v_s);
   insert into spring (world_id, x, y, cx, cy, made_by) values (w, ${BOWL[0]}, ${BOWL[1]}, ${bx}, ${by}, me) returning id into v_s;
   perform settle_spring(w, v_s);
-  update player set x = 22.5, y = 40.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = 22.5, y = 40.5 where world_id = w and uid = me;
   perform act_perform(w, me, 'plan_aqueduct', '${AT}');
   select id into v_b from bridge where world_id = w and kind = 'aqueduct';
   v_t := jsonb_build_object('kind', 'bridge', 'id', v_b);
@@ -970,7 +970,7 @@ begin
     returning id into v_b;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
     select w, v_b, t.n, t.x, t.y, '{}'::jsonb, '{}'::jsonb from span_tiles(${CATCH[0]}, ${CATCH[1] - 3}, ${CATCH[0]}, ${CATCH[1] + 3}) t;
-  update player set x = ${CATCH[0]}.5, y = ${CATCH[1]}.5 where world_id = w and uid = me;
+  update player set body_at = now(), x = ${CATCH[0]}.5, y = ${CATCH[1]}.5 where world_id = w and uid = me;
   insert into said values ('aqueduct', in_deep_water(w, me)::text);
   update bridge set kind = 'rope' where id = v_b;
   insert into said values ('rope', in_deep_water(w, me)::text);

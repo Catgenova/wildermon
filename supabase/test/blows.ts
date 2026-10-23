@@ -113,12 +113,12 @@ begin
   update creature set windup_at = now() - interval '1 second', until = now() - interval '1 second',
       settled_at = now() - interval '1 second'
     where world_id = w.world_id and id = v_ogre;
-  update player set x = v_px - 2.3 where world_id = w.world_id and uid = w.uid;
+  update player set body_at = now(), x = v_px - 2.3 where world_id = w.world_id and uid = w.uid;
   delete from event where uid = w.uid;
   perform creature_settle(w.world_id, v_ogre);
   insert into said values ('SHORT', (select count(*) from event where uid = w.uid and text like '%heavy blow: missed%')::text
     || '|' || (select count(*) from event where uid = w.uid and text like '%heavy blow lands%')::text);
-  update player set x = v_px where world_id = w.world_id and uid = w.uid;
+  update player set body_at = now(), x = v_px where world_id = w.world_id and uid = w.uid;
 
   -- A maul knocks it off its stroke; a knife opens it up.
   update creature set windup_at = now() + interval '1 second', until = now() + interval '1 second'

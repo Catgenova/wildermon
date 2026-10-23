@@ -251,8 +251,8 @@ declare w uuid; a uuid := '11111111-1111-1111-1111-111111111111'; b uuid := '222
 begin
   select id into w from world where name = 'Bigness';
   -- Ivar on his own settlement, Hild a stranger on it.
-  update player set x = 2041.5, y = 2040.5, away = false, seen_at = now() where world_id = w and uid = a;
-  update player set x = 2042.5, y = 2041.5, away = false, seen_at = now() where world_id = w and uid = b;
+  update player set body_at = now(), x = 2041.5, y = 2040.5, away = false, seen_at = now() where world_id = w and uid = a;
+  update player set body_at = now(), x = 2042.5, y = 2041.5, away = false, seen_at = now() where world_id = w and uid = b;
   delete from creature where world_id = w and keeper in (a, b);
 
   perform give(w, a, 'large_cart', 1, 50, 'Pine');
@@ -299,7 +299,7 @@ begin
   select hunger into h_hand from creature where world_id = w and id = v_hand;
   select hunger into h_free from creature where world_id = w and id = v_free;
   update creature set settled_at = now() - interval '1 hour' where world_id = w and id in (v_pet, v_hand, v_free);
-  update player set x = 2045.5, y = 2044.5 where world_id = w and uid = a;
+  update player set body_at = now(), x = 2045.5, y = 2044.5 where world_id = w and uid = a;
   perform creature_settle(w, v_pet);
   perform creature_settle(w, v_hand);
   perform creature_settle(w, v_free);
@@ -318,9 +318,9 @@ begin
   insert into said values ('release', coalesce(act_refusal(w, a, 'release_creature', jsonb_build_object('kind', 'creature', 'id', v_pet)), 'none'));
   insert into said values ('assign', coalesce(act_refusal(w, a, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', v_pet)), 'none'));
   -- The knife wants him beside it, so he walks back for that one.
-  update player set x = 2041.5, y = 2040.5 where world_id = w and uid = a;
+  update player set body_at = now(), x = 2041.5, y = 2040.5 where world_id = w and uid = a;
   insert into said values ('cull', coalesce(act_refusal(w, a, 'cull_creature', jsonb_build_object('kind', 'creature', 'id', v_pet)), 'none'));
-  update player set x = 2045.5, y = 2044.5 where world_id = w and uid = a;
+  update player set body_at = now(), x = 2045.5, y = 2044.5 where world_id = w and uid = a;
   insert into placed (world_id, kind, x, y, cx, cy, ql, made_by)
     values (w, 'post', 2044, 2043, 2044.3, 2043.3, 40, a) returning id into v_post;
   insert into said values ('post', coalesce(act_refusal(w, a, 'assign_post',
@@ -345,7 +345,7 @@ begin
   update creature set stance = 'aggressive', name = 'Hild''s', settled_at = now(), until = now(),
       leg_at = now(), leg_ends = now(), from_x = to_x, from_y = to_y
     where world_id = w and id = v_rival;
-  update player set x = 2042.5, y = 2040.9 where world_id = w and uid = b;
+  update player set body_at = now(), x = 2042.5, y = 2040.9 where world_id = w and uid = b;
   select * into c from creature where world_id = w and id = v_rival;
   v_q := companion_target(w, c, (select pl from player pl where pl.world_id = w and pl.uid = b));
   insert into said values ('companion', coalesce(v_q.id::text, 'none') || '|' || v_pet);

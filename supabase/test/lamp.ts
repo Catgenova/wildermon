@@ -193,9 +193,9 @@ begin
   update placed set lock = null where id = v_post;
 
   -- Too far off to work it.
-  update player set x = ${X} + 4.5 where world_id = w and uid = a;
+  update player set body_at = now(), x = ${X} + 4.5 where world_id = w and uid = a;
   insert into said values ('FAR|' || coalesce(act_refusal(w, a, 'douse_lamp', v_t), 'ALLOWED'));
-  update player set x = ${X} + 0.5 where world_id = w and uid = a;
+  update player set body_at = now(), x = ${X} + 0.5 where world_id = w and uid = a;
 
   -- What a ground read sends of it: its lantern, its candle and whether it burns.
   perform set_config('request.jwt.claims', json_build_object('sub', a)::text, true);
@@ -244,7 +244,7 @@ begin
   insert into building_tile (world_id, building, x, y) values (w, 94, ${LX}, ${Y - 1});
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by)
     values (w, 0, 'h', ${LX}, ${Y}, 94, 'solid', 'plank', '{"plank":0}', '{"plank":24}', a);
-  update player set x = ${LX} + 0.5, y = ${Y} + 0.5 where world_id = w and uid = a;
+  update player set body_at = now(), x = ${LX} + 0.5, y = ${Y} + 0.5 where world_id = w and uid = a;
   v_item := give(w, a, 'lamp_post', 1, 40);
   insert into said values ('PLACE|' || (select string_agg(coalesce(act_refusal(w, a, 'place_furniture', jsonb_build_object('kind', 'item', 'uid', v_item,
       'x', ${LX}, 'y', ${Y}, 'sx', sx, 'sy', sy, 'facing', f)), 'ALLOWED'), ';' order by n)

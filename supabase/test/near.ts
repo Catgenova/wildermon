@@ -223,7 +223,7 @@ begin
    where not exists (select 1 from deed d where d.world_id = w
                       and abs(d.x - gx) <= d.radius + 6 and abs(d.y - gy) <= d.radius + 6)
    order by gx, gy limit 1;
-  update player set x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb
+  update player set body_at = now(), x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb
    where world_id = w and uid = me;
   delete from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = me
     and (i.def in ('log', 'plank', 'saw', 'key') or is_bag(i.def));

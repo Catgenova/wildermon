@@ -413,7 +413,7 @@ begin
   update skill set value = current_setting('wurm.first_aid')::double precision where world_id = w and uid = u and id = 'first_aid';
   perform act_perform(w, u, 'bind_wound', ${person});
   v_t := v_t || '#' || v_u || '|' || ((select (stats->>'health')::double precision from player where world_id = w and uid = v_other) - 0.5);
-  update player set x = 15.5, y = 15.5 where world_id = w and uid = v_other;
+  update player set body_at = now(), x = 15.5, y = 15.5 where world_id = w and uid = v_other;
   insert into said values ('MEDIC', v_t || '#' || coalesce(act_refusal(w, u, 'bind_wound', ${person}), 'ALLOWED'));
   update player set wounds = '[]'::jsonb where world_id = w and uid = v_other;
   ${clearAll};

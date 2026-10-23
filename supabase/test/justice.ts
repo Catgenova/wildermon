@@ -61,7 +61,7 @@ begin
          fight_stance = 'balanced', blessings = '{}'::jsonb, used_at = '{}'::jsonb, body_at = now(),
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0)
    where world_id = w.world_id and uid in (w.uid, o);
-  update player set x = v_px + 2 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + 2 where world_id = w.world_id and uid = o;
   insert into skill (world_id, uid, id, value) values (w.world_id, w.uid, 'body_control', 1)
     on conflict (world_id, uid, id) do update set value = excluded.value;
   delete from event where uid in (w.uid, o);
@@ -178,7 +178,7 @@ begin
   perform hurt_creature(w.world_id, a, 10, w.uid);
   insert into said select 'TRUCE', (stats->>'health') || '|' || round((h0 - (select health from creature where world_id = w.world_id and id = a))::numeric, 4)
     from player where world_id = w.world_id and uid = w.uid;
-  update player set x = v_px + 40 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + 40 where world_id = w.world_id and uid = o;
   h1 := creature_spawn(w.world_id, 'rowl', v_px + 40, v_py + 1, 'wild', now() - interval '2 hours');
   update creature set traits = '{}', settled_at = now() where world_id = w.world_id and id = h1;
   update creature set health = max_health(creature) where world_id = w.world_id and id = h1;
@@ -186,7 +186,7 @@ begin
   perform hurt_creature(w.world_id, h1, 10, o);
   insert into said select 'TRUCE:OUT', (round((h0 - health)::numeric, 4) > 0)::text from creature where world_id = w.world_id and id = h1;
   delete from faith_zone where world_id = w.world_id;
-  update player set x = v_px + 2 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px + 2 where world_id = w.world_id and uid = o;
 
   -- Restitution: the grave's contents come home and the grave is gone; no grave, refused.
   insert into said values ('REST:NONE', faith_spell_cast(w.world_id, w.uid, 'justice_restitution',

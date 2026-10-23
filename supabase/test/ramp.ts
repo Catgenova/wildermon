@@ -190,7 +190,7 @@ check('which are the numbers', rampRefusal(0, TOP, CLIMB, NEED - 1)
 game.player.x = FOOT[0] + 0.5;
 game.player.y = FOOT[1] + 0.5;
 game.player.level = 0;
-sql(`update player set x = ${FOOT[0] + 0.5}, y = ${FOOT[1] + 0.5}, level = 0 where world_id = w and uid = u;`);
+sql(`update player set body_at = now(), x = ${FOOT[0] + 0.5}, y = ${FOOT[1] + 0.5}, level = 0 where world_id = w and uid = u;`);
 const TARGET = { kind: 'tile', x: TOWER[0], y: TOWER[1], cx: TOWER[0], cy: TOWER[1], material: 'wood' };
 game.log.length = 0;
 ACTION_BY_ID.get('plan_bridge')!.perform(TARGET as never, game);
@@ -300,7 +300,7 @@ const move = (x0: number, y0: number, l0: number, x1: number, y1: number, level:
     delete from bridge where world_id = w;
     ${heights.map(([x, y, h]) => `perform land_set_height(w, ${x}, ${y}, ${h});`).join('\n')}
     ${tiles.map(([x, y, t, d]) => `perform land_set_tile(w, ${x}, ${y}, ${t}); perform land_set_data(w, ${x}, ${y}, ${d});`).join('\n')}
-    update player set x = ${px}, y = ${py}, level = ${pl} where world_id = w and uid = u;`);
+    update player set body_at = now(), x = ${px}, y = ${py}, level = ${pl} where world_id = w and uid = u;`);
 }
 
 for (const line of [...ok, ...bad]) console.log(line);

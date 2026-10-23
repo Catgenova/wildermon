@@ -240,9 +240,9 @@ begin
   v_s := give(w, u, 'ember_heart_scroll', 1, 90);
   insert into said values ('R:embanvil', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'anvil', 'id', v_anv, 'scroll', v_s)), 'none'));
   insert into said values ('R:embsm', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'smelter', 'id', v_sm, 'scroll', v_s)), 'none'));
-  update player set x = 46.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 46.5 where world_id = w and uid = u;
   insert into said values ('R:far', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'smelter', 'id', v_sm, 'scroll', v_s)), 'none'));
-  update player set x = 40.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 40.5 where world_id = w and uid = u;
   -- Taken, through the job: enchanting 100, a QL 90 scroll, a QL 60 smelter -- held to the smelter.
   perform pg_temp.dice('0.01,0.5');
   perform act_perform(w, u, 'enchant', jsonb_build_object('kind', 'smelter', 'id', v_sm, 'scroll', v_s));
@@ -296,13 +296,13 @@ begin
   insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'furniture', 'barrel', 36, 30, 36.5, 30.5, 50) returning id into v_barrel;
   insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'furniture', 'cart', 36, 33, 36.5, 33.5, 50) returning id into v_cart;
   v_bag := give(w, u, 'satchel', 1, 50);
-  update player set x = 30.5, y = 31.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 30.5, y = 31.5 where world_id = w and uid = u;
   v_s := give(w, u, 'fair_wind_scroll', 1, 90);
   insert into said values ('R:windrow', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_boat, 'scroll', v_s)), 'none'));
   insert into said values ('R:windship', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_ship, 'scroll', v_s)), 'none'));
   v_s := give(w, u, 'deep_hold_scroll', 1, 90);
   insert into said values ('R:deeprow', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_boat, 'scroll', v_s)), 'none'));
-  update player set x = 33.5, y = 31.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 33.5, y = 31.5 where world_id = w and uid = u;
   insert into said values ('R:deepwagon', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_wagon, 'scroll', v_s)), 'none'));
   v_s := give(w, u, 'true_axle_scroll', 1, 90);
   insert into said values ('R:axlewagon', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_wagon, 'scroll', v_s)), 'none'));
@@ -311,7 +311,7 @@ begin
   insert into said values ('R:bagchest', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_chestp, 'scroll', v_s)), 'none'));
   insert into said values ('R:bagsatchel', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_bag, 'scroll', v_s)), 'none'));
   update placed set enchant = '{"id": "deep_hold", "ql": 60}'::jsonb where id = v_boat;
-  update player set x = 30.5, y = 31.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 30.5, y = 31.5 where world_id = w and uid = u;
   insert into said values ('R:bagheld', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_boat, 'scroll', v_s)), 'none'));
   update placed set enchant = null where id = v_boat;
   -- Plain, then at QL 50 and 100.
@@ -332,7 +332,7 @@ begin
   -- A crate: enchanted where it stands, what it holds, and up into the pack and down again.
   select coalesce(max(id), 0) + 1 into v_crate from crate where world_id = w;
   insert into crate (world_id, id, kind, x, y, sx, sy, made_by, ql) values (w, v_crate, 'plank', 30, 36, 1, 1, u, 50);
-  update player set x = 30.5, y = 35.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 30.5, y = 35.5 where world_id = w and uid = u;
   insert into said select 'CRATE0', crate_capacity(c)::text from crate c where world_id = w and id = v_crate;
   v_s := give(w, u, 'bag_of_holding_scroll', 1, 90);
   perform pg_temp.dice('0.01,0.5');
@@ -350,7 +350,7 @@ begin
   insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'furniture', 'bed', 21, 20, 21.5, 20.5, 50) returning id into v_bed;
   v_net := give(w, u, 'fishing_net', 1, 50);
   v_rod := give(w, u, 'fishing_rod', 1, 50);
-  update player set x = 20.5, y = 21.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 20.5, y = 21.5 where world_id = w and uid = u;
   v_s := give(w, u, 'snarecraft_scroll', 1, 90);
   insert into said values ('R:snaretrap', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'trap', 'id', v_trap, 'scroll', v_s)), 'none'));
   insert into said values ('R:snarebed', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_bed, 'scroll', v_s)), 'none'));

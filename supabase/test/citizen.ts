@@ -117,7 +117,7 @@ begin
                       and abs(d.y - gy) <= d.radius + deed_radius(1) + 1)
      and not has_water(w, gx, gy) and passable(w, gx, gy)
    order by gx, gy limit 1;
-  update player set x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb
+  update player set body_at = now(), x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb
    where world_id = w and uid = cit;
   delete from item where world_id = w and holder = 'player' and holder_uid = cit and def = 'deed_stake';
   perform give(w, cit, 'deed_stake', 1, 50);

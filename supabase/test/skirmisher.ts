@@ -103,7 +103,7 @@ begin
          spell_bar = (select jsonb_agg('null'::jsonb) from spell_slot),
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('health', 1, 'hunger', 1, 'thirst', 1, 'stamina', 1, 'aegis', 0)
    where world_id = w.world_id and uid in (w.uid, o);
-  update player set x = v_px - 30 where world_id = w.world_id and uid = o;
+  update player set body_at = now(), x = v_px - 30 where world_id = w.world_id and uid = o;
   insert into skill (world_id, uid, id, value)
     select w.world_id, w.uid, s, v from
       (values ('throwing', 100::double precision), ('knives', 100), ('fighting', 100), ('swords', 100), ('body_control', 1), ('shields', 1)) sv(s, v)
@@ -164,7 +164,7 @@ begin
   ${th.slug === 'hit_and_run' ? `
   insert into said select 'RUN', extract(epoch from (pl.blessings->'hit_and_run'->>'until')::timestamptz - now()) || '|' || (pl.blessings->'hit_and_run'->>'pace')
     from player pl where pl.world_id = w.world_id and pl.uid = w.uid;` : ''}
-  update player set x = v_px, y = v_py, blessings = '{}'::jsonb where world_id = w.world_id and uid = w.uid;
+  update player set body_at = now(), x = v_px, y = v_py, blessings = '{}'::jsonb where world_id = w.world_id and uid = w.uid;
   delete from creature where world_id = w.world_id and id in (a, b);`).join('')}
 
   /* ---- Heavy Throw: a heavy blow knocked off its stroke, and its next blow put back ---- */

@@ -100,7 +100,7 @@ begin
     values (w, ${n + 1}, 'plank', ${X}, ${Y}, ${deck[n][0]}, ${deck[n][1]}, false, ${n === THEIRS ? 'them' : 'u'}, 'pine');
   insert into item (world_id, holder, crate, def, ql, count)
     select w, 'crate', ${n + 1}, 'rock_shards', 20, crate_capacity(c) - ${ROOM[n]} from crate c where c.world_id = w and c.id = ${n + 1};`).join('')}
-  update player set x = ${STAND[0]}, y = ${STAND[1]}, level = 0 where world_id = w and uid = u;
+  update player set body_at = now(), x = ${STAND[0]}, y = ${STAND[1]}, level = 0 where world_id = w and uid = u;
   delete from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def in ('iron_ore', 'crate_plank');
   insert into item (world_id, holder, holder_uid, def, ql, count) values (w, 'player', u, 'iron_ore', 40, 60);
 end $$;`);
@@ -192,7 +192,7 @@ refused('a crate does not go in the crates on a rack',
 
 game.player.x = X + 5.5;
 game.player.y = Y + 0.5;
-psql(`update player set x = ${X + 5.5}, y = ${Y + 0.5} where world_id = ${W} and uid = ${DANE};`);
+psql(`update player set body_at = now(), x = ${X + 5.5}, y = ${Y + 0.5} where world_id = ${W} and uid = ${DANE};`);
 refused('a rack out of reach is walked to rather than loaded from across the yard',
   ask({ kind: 'item', uid: ore.uid, count: 32, into: rack.id }), theirRefusal('iron_ore', 32, RACK),
   `Stand next to the ${rackName}.`);
@@ -222,7 +222,7 @@ psql(`
   delete from crate where world_id = ${W};
   delete from placed where world_id = ${W} and kind = 'furniture' and sub = 'crate_shelf';
   delete from item i where i.world_id = ${W} and i.holder = 'player' and i.holder_uid = ${DANE} and i.def in ('iron_ore', 'crate_plank');
-  update player set x = ${WAS.split(',')[0]}, y = ${WAS.split(',')[1]} where world_id = ${W} and uid = ${DANE};`);
+  update player set body_at = now(), x = ${WAS.split(',')[0]}, y = ${WAS.split(',')[1]} where world_id = ${W} and uid = ${DANE};`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

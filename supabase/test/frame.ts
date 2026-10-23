@@ -107,7 +107,7 @@ begin
   else
     insert into deed (world_id, name, x, y, radius, founded_by) values (w, 'Latecomer', 21, 26, 5, u);
   end if;
-  update player set x = 18.5, y = 23.5, level = 1 where world_id = w and uid = u;
+  update player set body_at = now(), x = 18.5, y = 23.5, level = 1 where world_id = w and uid = u;
 end $$;`);
 
 /* ---- building on both sides at once ---------------------------------------- */
@@ -192,7 +192,7 @@ const stand = (x: number, y: number, level: number): void => {
   game.player.x = x;
   game.player.y = y;
   game.player.level = level;
-  sql(`update player set x = ${x}, y = ${y}, level = ${level} where world_id = w and uid = u;`);
+  sql(`update player set body_at = now(), x = ${x}, y = ${y}, level = ${level} where world_id = w and uid = u;`);
 };
 
 /** What each side says to a job: the browser's check, and the island's `build_refusal`. */
@@ -1118,7 +1118,7 @@ sql(`delete from cellar_tile where world_id = w;`);
     delete from building where world_id = w;
     ${heights.map(([x, y, h]) => `perform land_set_height(w, ${x}, ${y}, ${h});`).join('\n')}
     ${tiles.map(([x, y, t, d]) => `perform land_set_tile(w, ${x}, ${y}, ${t}); perform land_set_data(w, ${x}, ${y}, ${d});`).join('\n')}
-    update player set x = ${px}, y = ${py}, level = ${pl} where world_id = w and uid = u;
+    update player set body_at = now(), x = ${px}, y = ${py}, level = ${pl} where world_id = w and uid = u;
     ${deedWas ? `update deed set x = ${deedWas.split(',')[0]}, y = ${deedWas.split(',')[1]}, radius = ${deedWas.split(',')[2]}, level = ${deedWas.split(',')[3]}
       where world_id = w and founded_by = u;` : 'delete from deed where world_id = w and founded_by = u;'}`);
 }

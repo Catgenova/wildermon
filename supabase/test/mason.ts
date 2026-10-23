@@ -247,7 +247,7 @@ begin
   ${clear('stone_brick')};
 
   /* ---- A building of the Mason's at 9,9 and 10,9, on their own Lambfold. ---- */
-  update player set x = 9.5, y = 9.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 9.5, y = 9.5 where world_id = w and uid = u;
   select coalesce(max(id), 0) + 1 into v_b from building where world_id = w;
   insert into building (world_id, id, name, planned_by) values (w, v_b, 'Tower', u);
   insert into building_tile (world_id, building, x, y) values (w, v_b, 9, 9), (w, v_b, 10, 9);
@@ -333,7 +333,7 @@ begin
   delete from wall where world_id = w and building = v_b;
   delete from building_tile where world_id = w and building = v_b;
   delete from building where world_id = w and id = v_b;
-  update player set x = 4.5, y = 4.5 where world_id = w and uid = u;
+  update player set body_at = now(), x = 4.5, y = 4.5 where world_id = w and uid = u;
 
   /* ---- Bridge Mason: the time of a go on a stone arch and a wooden bridge, and the span. ---- */
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level)
