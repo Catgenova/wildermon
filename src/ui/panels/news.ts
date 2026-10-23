@@ -3565,6 +3565,13 @@ export const NEWS: News[] = [
       'Fixed: other players saw a mounted rider on foot, the wildermon trailing behind. Now drawn in the saddle, the wildermon moving with them.',
     ],
   },
+  {
+    n: 292,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: market stalls. Anybody, settlement member or not: prices shown, Buy in the stall\'s menu and window. Owner: Set prices in the stall\'s menu.',
+    ],
+  },
 ];
 
 /**

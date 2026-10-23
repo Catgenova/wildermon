@@ -33,6 +33,9 @@
  * rolled back.
  */
 import { execFileSync } from 'node:child_process';
+import { COUNTER_REACH, sellsTooFar, stallBuyRefusal } from '../../src/game/counters';
+import type { PlacedFurniture } from '../../src/game/furniture';
+import { Game, storedThing } from '../../src/game/game';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -93,6 +96,9 @@ begin
 
   perform set_config('request.jwt.claims', json_build_object('sub', b)::text, true);
   insert into said values ('NOTYOURS|' || coalesce(rpc_price(w, v_shaft, 9)->>'why', 'priced'));
+  -- What is on it, and at what price, with the ground, for a buyer's screen to buy it by.
+  insert into said values ('SEEN|' || coalesce((select t->>'price' from jsonb_array_elements(rpc_ground(w, 40, false)->'placed') pl,
+    jsonb_array_elements(pl->'things') t where (t->>'id')::bigint = v_plank), 'unsent'));
   -- Away from the mailbox and any token, no board.
   update player set body_at = now(), x = ax + 60 where world_id = w and uid = b;
   v_got := rpc_market(w);
@@ -189,6 +195,7 @@ check('a price goes on your own stall', said('PRICE').includes('"priced": 5'), s
 check('a mailbox is found at your feet', said('ATBOX') === 'true', said('ATBOX'));
 check('your own stall comes back to you with its till and everything on it', said('MINE') === 'true,0,2', said('MINE'));
 check('a price is not somebody else\'s to set', said('NOTYOURS') === 'That is not your stall.', said('NOTYOURS'));
+check('a buyer near a stall is sent each thing on it with its price (rpc_ground)', said('SEEN') === '5', said('SEEN'));
 check('away from a mailbox and a token there is no board', said('AWAY') === 'false,0', said('AWAY'));
 check('at a mailbox the board lists the stall under its owner\'s name, what is for sale on it, and no till',
   said('BOARD') === 'true,true,1,5,no till', said('BOARD'));
@@ -215,6 +222,23 @@ check('while it is on the stall what is in it is not let go',
   said('STALLLETGO') === 'Pip\'s crate is on offer, on a stall or in the post: take it back first.', said('STALLLETGO'));
 check('the board names the wildermon on the stall', said('BOARDPIP') === 'Pip', said('BOARDPIP'));
 check('bought, the wildermon is the buyer\'s', said('BOUGHT') === 'bought,true,player:true', said('BOUGHT'));
+
+/* ---- the browser: a stall's goods bought, not taken ----------------------- */
+{
+  const g = Game.create(5252);
+  const plank = storedThing({ id: 1, def: 'plank', ql: 30, dmg: 0, count: 1, extra: null, price: 5 });
+  check('a stall\'s thing keeps its price', plank.price === 5, String(plank.price));
+  const at = { x: Math.floor(g.player.x), y: Math.floor(g.player.y) };
+  const stall = { id: 9, kind: 'stall', x: at.x, y: at.y, sx: 0, sy: 0, items: [plank], mine: false } as unknown as PlacedFurniture;
+  g.inventory.add('coin', { count: 10, extra: 'Silver' });
+  check('somebody else\'s, at it, with the silver: bought', stallBuyRefusal(g, stall, plank) === null, String(stallBuyRefusal(g, stall, plank)));
+  check('your own: taken back off, not bought', stallBuyRefusal(g, { ...stall, mine: true }, plank) === 'Your own stall: take it back off instead.');
+  check(`more than ${COUNTER_REACH} tiles off: refused in the island's words`,
+    stallBuyRefusal(g, { ...stall, x: at.x + COUNTER_REACH + 2 }, plank) === sellsTooFar('stall'));
+  check('more than is carried: refused', stallBuyRefusal(g, stall, { ...plank, price: 50 }) === 'Cannot afford: 50 silver.');
+  check('a thing not on it, or with no price: not for sale', stallBuyRefusal(g, stall, { ...plank, uid: 2 }) === 'Not for sale.'
+    && stallBuyRefusal(g, stall, { ...plank, price: undefined }) === 'Not for sale.');
+}
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

@@ -16,6 +16,7 @@ import { occupantOf } from '../../game/creaturecrate';
 import { priceWords } from '../../game/money';
 import { POWER } from '../../game/ranks';
 import { counterStore } from '../counterMenu';
+import { stallBuyRefusal } from '../../game/counters';
 import { deedAt, isSettlementStore, storeMarkable, storeMarkedLine, storeMarkRefusal, storeUse, type Keepable } from '../../game/stores';
 
 /** A crate or a piece of storage furniture, seen through the same window. */
@@ -344,6 +345,14 @@ export class CratePanel {
         refuses: (item) => furnitureRefuses(piece, item) ?? (furnitureRoom(piece, item) <= 0 ? `The ${furnitureName(piece).toLowerCase()} is full.` : null),
         fits: (item) => (furnitureRefuses(piece, item) ? 0 : Math.min(item.count, furnitureRoom(piece, item))),
         add: (item) => this.game.furnitureAdd(piece, item),
+        // A market stall: each thing's price, and somebody else's bought at it rather than taken (`rpc_buy`).
+        ...(furnitureDef(piece.kind).stall ? {
+          priced: true,
+          ...(piece.mine === false && this.buyer ? {
+            take: () => null,
+            sell: { why: (item: Item) => stallBuyRefusal(this.game, piece, item), go: this.buyer },
+          } : {}),
+        } : {}),
       };
     }
     return undefined;

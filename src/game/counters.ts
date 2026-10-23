@@ -2,7 +2,7 @@ import type { ActionDef, Target } from './actions';
 import type { Enchant } from './enchant';
 import { borderOf, isDone, type Border, type Building, type Side, type Wall } from './building';
 import { STORE_REACH } from './crates';
-import { furnitureDef, isFurniture } from './furniture';
+import { furnitureDef, isFurniture, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
 import { foldInto, itemName, rarityStep, sameStack, type Item } from './items';
 import { purse } from './money';
@@ -244,6 +244,18 @@ export function buyRefusal(g: Game, c: Counter, good: Item): string | null {
   if (keeps(c)) return 'Your own counter: take it back off instead.';
   const far = counterReach(g, c, g.player.x, g.player.y, true);
   if (far) return far;
+  if (purse(g.inventory.items) < good.price) return `Cannot afford: ${good.price} silver.`;
+  return null;
+}
+
+/**
+ * Why a thing on a market stall will not be bought, or null, in the island's words (`rpc_buy`): its seller's own, out
+ * of reach of its tile's middle by `COUNTER_REACH` either way, or more than is carried.
+ */
+export function stallBuyRefusal(g: Game, f: PlacedFurniture, good: Item): string | null {
+  if (!f.items.some((it) => it.uid === good.uid) || good.price === undefined) return 'Not for sale.';
+  if (f.mine !== false) return 'Your own stall: take it back off instead.';
+  if (Math.max(Math.abs(f.x + 0.5 - g.player.x), Math.abs(f.y + 0.5 - g.player.y)) > COUNTER_REACH) return sellsTooFar('stall');
   if (purse(g.inventory.items) < good.price) return `Cannot afford: ${good.price} silver.`;
   return null;
 }

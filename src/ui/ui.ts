@@ -83,7 +83,8 @@ import { CratePanel } from './panels/crate';
 import { counterEntries, counterTip, dropOnCounter, type CounterWays } from './counterMenu';
 import { lampEntries } from './lampMenu';
 import { isLampPiece, lampState } from '../game/lamps';
-import { boughtLine } from '../game/counters';
+import { boughtLine, COUNTER_SEEN, COUNTER_TOO_FAR_TO_SEE, stallBuyRefusal } from '../game/counters';
+import { priceWords } from '../game/money';
 import { TilePanel } from './panels/tile';
 import type { DragPayload } from './dragdrop';
 import { WildermonPanel } from './panels/wildermon';
@@ -2391,6 +2392,7 @@ export class UI {
       const note = heft ? `${furnitureKg(f).toFixed(0)} / ${heft} kg` : `${furnitureUnits(f)} / ${furnitureCapacity(f)} things`;
       entries.push({ label: 'Open', note, onSelect: () => this.cratePanel.openFurniture(f.id) });
     }
+    if (def.stall && this.island) entries.push(...this.stallEntries(f));
     /*
      * A rack, and the crates standing on it.
      *
@@ -3175,6 +3177,29 @@ export class UI {
         prices: () => this.market.openStall(),
       } : {}),
     };
+  }
+
+  /**
+   * A market stall's own entries. Reported: "Market stalls on a deed can't be accessed by non-members to buy wares. No
+   * way to set prices or buy items." Its keeper: the Market window's Stall tab, where its goods are priced. Anybody
+   * else: each priced thing on it, bought at its price (`rpc_buy`), deed or no deed.
+   */
+  private stallEntries(f: PlacedFurniture): MenuItem[] {
+    if (f.mine !== false) return [{ label: 'Set prices', note: 'Market window, Stall tab', onSelect: () => this.market.openStall() }];
+    const p = this.game.player;
+    if (Math.max(Math.abs(f.x + 0.5 - p.x), Math.abs(f.y + 0.5 - p.y)) > COUNTER_SEEN) return [{ label: 'Buy', hint: COUNTER_TOO_FAR_TO_SEE, disabled: true }];
+    const priced = f.items.filter((it) => it.price !== undefined);
+    if (!priced.length) return [{ label: 'Buy', hint: f.items.length ? 'No prices set.' : 'Empty.', disabled: true }];
+    return [{
+      label: 'Buy',
+      children: priced.map((it) => {
+        const why = stallBuyRefusal(this.game, f, it);
+        return {
+          label: `${itemName(it)}${it.count > 1 ? ` (${it.count})` : ''} — ${priceWords(it.price ?? 0)}`,
+          hint: why ?? undefined, disabled: !!why, onSelect: () => void this.buyOffCounter(it),
+        };
+      }),
+    }];
   }
 
   /** Buy one thing off somebody's counter on the island, and say what came of it. */

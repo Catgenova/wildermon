@@ -10336,6 +10336,8 @@ export interface StoredThing {
   /** For a wildermon crate, the wildermon in it and its name; absent from older islands. */
   creature?: number | null;
   occupant?: string | null;
+  /** Its price in silver, on a market stall: what anybody at it sees and buys it for. */
+  price?: number | null;
 }
 
 /** A stored thing as this side holds one: the same fields `packed` reads off a pack's row. */
@@ -10347,6 +10349,7 @@ export const storedThing = (it: StoredThing): Item => ({
   enchant: it.enchant ?? undefined,
   ...(typeof it.creature === 'number' ? { creature: it.creature } : {}),
   ...(it.occupant ? { occupant: it.occupant } : {}),
+  ...(typeof it.price === 'number' ? { price: it.price } : {}),
 });
 
 /**
