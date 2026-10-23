@@ -1,12 +1,15 @@
 import type { KitPiece } from './core';
 import { BARREL, LARGE_BARREL, SMALL_BARREL } from './barrel';
+import { BED, COT, TENT } from './beds';
 import { BULK_BIN, CRAFT_BIN, SEED_BIN, SPROUT_BIN } from './bins';
 import { CHAIR } from './chair';
 import { CHEST } from './chest';
+import { BUTTER_CHURN, LOOM, PAPER_PRESS, POTTERS_WHEEL, SPINDLE } from './crafts';
 import { FIREWOOD_RACK } from './firewood';
 import { PLANTER } from './planter';
 import { BENCH, STOOL } from './seating';
 import { GREAT_SIGN, SIGN } from './signs';
+import { STALL } from './stall';
 import { COAT_RACK, LECTERN } from './stands';
 import { DESK, LONG_TABLE, TABLE } from './tables';
 import { TRASH_CRATE } from './trash';
@@ -39,4 +42,13 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   trash_crate: TRASH_CRATE,
   firewood_rack: FIREWOOD_RACK,
   planter: PLANTER,
+  bed: BED,
+  cot: COT,
+  tent: TENT,
+  potters_wheel: POTTERS_WHEEL,
+  spindle: SPINDLE,
+  loom: LOOM,
+  paper_press: PAPER_PRESS,
+  butter_churn: BUTTER_CHURN,
+  stall: STALL,
 };
