@@ -30,8 +30,9 @@ interface KitPiece {
   live?: (ctx, sx, sy, zoom, view, night, t, air?) => void; // drawn over the bake every frame
   holes?: (sx, sy, zoom, view, t) => { x, y, r, a }[];      // where it takes the night off itself
   wind?: boolean;             // `live` wants the wind (`clothInWind`)
+  flicker?: number;           // lit, its fire baked in this many flickers (`KitLook.frame`), one every 150 ms
 }
-interface KitLook { lit: boolean; tint?: Tint; trim?: number; material?: string }
+interface KitLook { lit: boolean; tint?: Tint; trim?: number; material?: string; frame?: number }
 interface KitModel { parts: KitPart[]; shade?: V3[] | null }   // shade: footprint for the soft floor shadow
 interface KitPart {
   faces?: Face[];                     // a solid, inked round as one
@@ -66,7 +67,10 @@ interface KitPart {
 - **Live.** `drawFurnitureLive` calls `KitPiece.live` with the kind, view, night and
   air only. It does not receive lit, trim or material, because the renderer does not
   pass them. A flame that depends on `lit` has to stay in the bake, or be drawn by
-  the renderer (as `drawLampBloom` is).
+  the renderer (as `drawLampBloom` is). To make a baked flame flicker, set
+  `flicker` (the oven, brazier and lanterns use 4): when lit, `drawKit` passes
+  `look.frame` (0 to `flicker` - 1, a step every 150 ms, as the old models' fires)
+  and keys the bake by it. Unlit, or without `flicker`, there is one bake.
 
 ### What stays on the old path
 

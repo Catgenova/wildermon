@@ -83,7 +83,7 @@ function plinthFront(g: Ctx, k: PaintCtx, s: Side): void {
 }
 
 /** The porch's front: coursed stone, soot up over the mouth, the voussoirs and keystone, and the mouth -- dark, or full of fire. */
-function porchFront(lit: boolean) {
+function porchFront(lit: boolean, frame: number) {
   return (g: Ctx, k: PaintCtx, s: Side): void => {
     const fill = k.fill, cx = s.w / 2;
     speckle(g, fill, s.w, s.h, 11);
@@ -156,7 +156,7 @@ function porchFront(lit: boolean) {
       g.beginPath();
       g.ellipse(cx, MOUTH_FOOT, MOUTH_R * 0.9, 0.6, 0, 0, TAU);
       g.fill();
-      flame(g, cx, MOUTH_FOOT + 0.2, MOUTH_R * 0.75, -(MOUTH_SPRING + MOUTH_R * 0.6), 4);
+      flame(g, cx, MOUTH_FOOT + 0.2, MOUTH_R * 0.75, -(MOUTH_SPRING + MOUTH_R * 0.6), 4, frame);
       g.restore();
       // Its light on the voussoirs and the stone round the mouth.
       g.save();
@@ -254,7 +254,7 @@ function ovenOf(look: KitLook): KitModel {
   // The porch at its front, and the mouth in it.
   add(slab(-PORCH_X, PORCH_X, PORCH_Y0, PORCH_Y1, PZ, PORCH_Z, STONE, {
     corner: 0.2, bevel: 0.32,
-    paint: { front: porchFront(look.lit), left: coursedSide(61, 1.2), right: coursedSide(63, 1.2), top: paved(65) },
+    paint: { front: porchFront(look.lit, look.frame ?? 0), left: coursedSide(61, 1.2), right: coursedSide(63, 1.2), top: paved(65) },
   }), { edges: true });
 
   return { parts, shade: [[-PX, -PY, 0], [PX, -PY, 0], [PX, PY, 0], [-PX, PY, 0]] };
@@ -263,4 +263,5 @@ function ovenOf(look: KitLook): KitModel {
 export const OVEN: KitPiece = {
   model: (look) => ovenOf(look),
   uses: { lit: true },
+  flicker: 4,
 };

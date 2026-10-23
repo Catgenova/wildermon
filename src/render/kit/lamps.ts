@@ -18,8 +18,8 @@ import {
  * its middle `LAMP_ARM` out and `LAMP_HANG.arm` up, or standing in the
  * collar, `LAMP_HANG.top` up -- where the renderer blooms its light from
  * (`drawLampBloom`). Lit, its panes are the candle's colour with the flame
- * a bright drop low in them and a halo round the whole, baked: what moves
- * live over a piece is never told whether it is alight.
+ * a bright drop low in them and a halo round the whole, baked in four
+ * flickers (`KitPiece.flicker`).
  */
 
 /* ---- the lantern -------------------------------------------------------------------- */
@@ -32,12 +32,14 @@ const PANE_DARK: Tone = toneOf('#b4c8d0', '#6f7c94');
 const lanternTop = (k: number): number => 1.7 * k + 1.7 * k + 1 * k;
 
 /** A pane in its iron frame: the frame round it, a bar up its middle and one across, and lit, the candle low behind it. */
-function pane(lit: boolean, k: number) {
+function pane(lit: boolean, k: number, frame: number) {
   return (g: Ctx, kk: PaintCtx, s: Side): void => {
     const iron = faceColour(IRON, kk.L);
     if (lit) {
       // The candle's light, brightest round its flame.
-      const fx = s.w / 2, fy = s.h * 0.34;
+      // The flame leans and stretches with the flicker it is at, as the old lantern's did.
+      const lean = [0, 0.12, -0.08, 0.05][frame % 4] * k, tall = [1, 1.12, 0.94, 1.05][frame % 4];
+      const fx = s.w / 2 + lean, fy = s.h * 0.34;
       const gr = g.createRadialGradient(fx, fy, 0, fx, fy, s.h * 0.7);
       gr.addColorStop(0, 'rgba(255, 252, 232, 0.95)');
       gr.addColorStop(0.35, 'rgba(255, 236, 170, 0.55)');
@@ -46,9 +48,9 @@ function pane(lit: boolean, k: number) {
       g.fillRect(0, 0, s.w, s.h);
       // The candle under its flame.
       g.fillStyle = css(mix(hex('#fff4dc'), [240, 200, 150], 0.3));
-      g.fillRect(fx - 0.22 * k, 0.15 * k, 0.44 * k, fy - 0.45 * k);
+      g.fillRect(s.w / 2 - 0.22 * k, 0.15 * k, 0.44 * k, fy - 0.45 * k);
       g.beginPath();
-      g.ellipse(fx, fy, 0.22 * k, 0.42 * k, 0, 0, TAU);
+      g.ellipse(fx, fy + 0.05 * k, 0.22 * k, 0.42 * k * tall, lean * 0.4, 0, TAU);
       g.fillStyle = '#fffbe6';
       g.fill();
     } else {
@@ -78,7 +80,7 @@ function pane(lit: boolean, k: number) {
  * over them overhanging a little, and a ring on its top to hang it by; lit,
  * a halo round the whole, laid before it.
  */
-function lantern(parts: KitPart[], at: V3, k: number, lit: boolean): void {
+function lantern(parts: KitPart[], at: V3, k: number, lit: boolean, frame = 0): void {
   const [cx, cy, cz] = at;
   const r = 1.2 * k, h = 3.4 * k, z0 = cz - h / 2, z1 = cz + h / 2;
   const capTop = z1 + 1.7 * k, o = r + 0.35 * k;
@@ -96,7 +98,7 @@ function lantern(parts: KitPart[], at: V3, k: number, lit: boolean): void {
     after.push(halo);
   }
   const plate: KitPart = { faces: slab(cx - r - 0.2, cx + r + 0.2, cy - r - 0.2, cy + r + 0.2, z0 - 0.4 * k, z0, IRON, { corner: 0.12 }), after: after.slice() };
-  const paint = pane(lit, k);
+  const paint = pane(lit, k, frame);
   const glass: KitPart = {
     faces: slab(cx - r, cx + r, cy - r, cy + r, z0, z1, lit ? PANE_LIT : PANE_DARK, { crease: 0.3, paint: { front: paint, back: paint, left: paint, right: paint } }),
     after: [...after, plate],
@@ -148,7 +150,7 @@ function postOf(look: KitLook): KitModel {
   add(slab(-0.32, 0.32, OUT - 0.1, OUT + 0.45, ARM_Z - 0.42, ARM_Z + 0.42, deeper(IRON, 0.1), { corner: 0.1 }));
   add(extrude([0, 0, 0], [0, 1, 0], [0, 0, 1], [1, 0, 0], [[POST, ARM_Z - 3.9], [POST, ARM_Z - 3.1], [4.0, ARM_Z - 0.32], [3.1, ARM_Z - 0.32]], -0.2, 0.2, IRON, 0.05));
   add(slab(-0.18, 0.18, LAMP_ARM - 0.18, LAMP_ARM + 0.18, RING_TOP, ARM_Z - 0.32, IRON));
-  if (Math.round(look.trim ?? 0) === 1) lantern(parts, [0, LAMP_ARM, LAMP_HANG.arm], LAMP_GLASS, look.lit);
+  if (Math.round(look.trim ?? 0) === 1) lantern(parts, [0, LAMP_ARM, LAMP_HANG.arm], LAMP_GLASS, look.lit, look.frame);
   return { parts, shade: [[-1.9, -1.9, 0], [1.9, -1.9, 0], [1.9, 1.9, 0], [-1.9, 1.9, 0]] };
 }
 
@@ -183,7 +185,7 @@ function pillarOf(look: KitLook): KitModel {
     corner: 0.2,
     paint: { ...allSides((i) => ironSide(61 + i)), top: (g) => { g.fillStyle = 'rgba(40, 36, 52, 0.45)'; g.fillRect(-1, -1, 2, 2); } },
   }), { edges: true });
-  if (Math.round(look.trim ?? 0) === 1) lantern(parts, [0, 0, LAMP_HANG.top], PILLAR_K, look.lit);
+  if (Math.round(look.trim ?? 0) === 1) lantern(parts, [0, 0, LAMP_HANG.top], PILLAR_K, look.lit, look.frame);
   return { parts, shade: [[-2.7, -2.7, 0], [2.7, -2.7, 0], [2.7, 2.7, 0], [-2.7, 2.7, 0]] };
 }
 
@@ -193,11 +195,13 @@ export const LAMP_POST: KitPiece = {
   model: (look) => postOf(look),
   uses: { lit: true, trim: true, material: true },
   states: STATES,
+  flicker: 4,
 };
 
 export const LAMP_PILLAR: KitPiece = {
   model: (look) => pillarOf(look),
   uses: { lit: true, trim: true },
   states: STATES,
+  flicker: 4,
 };
 

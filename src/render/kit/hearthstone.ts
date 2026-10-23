@@ -139,11 +139,12 @@ export function glow(g: Ctx, x: number, y: number, r: number, a: number, colour 
 /**
  * A fire's tongues standing up off (x, y), `w` across and `h` high, in
  * whatever units the context is in: five licks, the outer ones the deep
- * orange and the middle ones paler up to a white heart, each with a soft
- * darker edge so it holds on pale stone.
+ * orange and the middle ones paler up to a white heart, the outer two over a
+ * deep red rim so it holds on pale stone. `frame` is which flicker it is at
+ * (`KitLook.frame`): each tongue rises and falls on its own beat, so the
+ * flickers are different fires rather than one breathing.
  */
-export function flame(g: Ctx, x: number, y: number, w: number, h: number, seed = 1): void {
-  const T = rand(seed);
+export function flame(g: Ctx, x: number, y: number, w: number, h: number, seed = 1, frame = 0): void {
   const tongue = (dx: number, hw: number, hh: number, lean: number, fill: string): void => {
     const bx = x + dx * w;
     g.beginPath();
@@ -154,19 +155,20 @@ export function flame(g: Ctx, x: number, y: number, w: number, h: number, seed =
     g.fillStyle = fill;
     g.fill();
   };
-  const j = (): number => 0.85 + 0.3 * T();
+  // Each tongue's height at this flicker (`Scene.fire` in furniture.ts), and the middle one's lean swung by it.
+  const lick = (i: number): number => 0.8 + 0.2 * Math.sin(frame * 1.9 + i * 2.3 + seed);
+  const sway = frame % 2 ? 0.08 : -0.06;
   g.save();
   g.lineJoin = 'round';
-  // The deep red rim of the whole of it, under the licks.
   g.globalAlpha = 0.9;
-  tongue(-0.4, 0.46, 0.7 * j(), -0.2, '#c9503c');
-  tongue(0.38, 0.46, 0.78 * j(), 0.16, '#c9503c');
+  tongue(-0.4, 0.46, 0.76 * lick(0), -0.2, '#c9503c');
+  tongue(0.38, 0.46, 0.84 * lick(1), 0.16, '#c9503c');
   g.globalAlpha = 1;
-  tongue(-0.4, 0.4, 0.66 * j(), -0.2, '#ee7f3a');
-  tongue(0.38, 0.4, 0.74 * j(), 0.16, '#ee7f3a');
-  tongue(0, 0.58, 0.98, -0.04, '#f6a44a');
-  tongue(-0.05, 0.36, 0.64, 0.06, '#ffd27e');
-  tongue(0.02, 0.18, 0.34, 0, '#fff2cc');
+  tongue(-0.4, 0.4, 0.72 * lick(0), -0.2, '#ee7f3a');
+  tongue(0.38, 0.4, 0.8 * lick(1), 0.16, '#ee7f3a');
+  tongue(0, 0.58, lick(2), sway, '#f6a44a');
+  tongue(-0.05, 0.36, 0.62 * lick(3), 0.06, '#ffd27e');
+  tongue(0.02, 0.18, 0.34 * lick(4), 0, '#fff2cc');
   g.restore();
 }
 

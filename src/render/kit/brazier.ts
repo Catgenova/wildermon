@@ -98,7 +98,7 @@ function brazierOf(look: KitLook): KitModel {
         const [x, y] = proj(e, [0, 0, RIM]);
         const W = FIRE_W * Math.hypot(e.ux, e.vx) * 0.5, H = FIRE_H * HEIGHT_SCALE;
         glow(g, x, y - H * 0.3, W * 2.4, 0.4);
-        flame(g, x, y + 0.5, W, H, 5);
+        flame(g, x, y + 0.5, W, H, 5, look.frame ?? 0);
       },
     });
   }
@@ -108,4 +108,5 @@ function brazierOf(look: KitLook): KitModel {
 export const BRAZIER: KitPiece = {
   model: (look) => brazierOf(look),
   uses: { lit: true },
+  flicker: 4,
 };

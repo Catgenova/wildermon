@@ -47,7 +47,9 @@ const sizeOf = (kind: string): { hw: number; hd: number } => {
 function lookKey(piece: KitPiece, look: KitLook): string {
   const u = piece.uses ?? { lit: true, tint: true, trim: true, material: true };
   const trim = piece.layers || !u.trim || look.trim === undefined ? '' : Number.isInteger(look.trim) ? look.trim : Math.round(look.trim * 20) / 20;
-  return `${u.lit && look.lit ? 1 : 0}|${u.tint ? look.tint?.colour ?? '' : ''}|${trim}|${u.material ? (look.material ?? '').toLowerCase() : ''}`;
+  const key = `${u.lit && look.lit ? 1 : 0}|${u.tint ? look.tint?.colour ?? '' : ''}|${trim}|${u.material ? (look.material ?? '').toLowerCase() : ''}`;
+  // A burning piece's flicker, only when it is lit and flickers: every other look keeps the one key it always had.
+  return look.frame === undefined ? key : `${key}|f${look.frame}`;
 }
 
 const models = new Map<string, KitModel>();
@@ -380,14 +382,23 @@ const lay = (ctx: Ctx, s: Sheet, sx: number, sy: number, zoom: number): void => 
  * box it is clicked by, left, top, right and bottom in screen pixels from
  * (sx, sy), as `drawFurniture` does.
  */
-export function drawKit(ctx: Ctx, sx: number, sy: number, zoom: number, kind: string, look: KitLook, view: KitView, live = true, night = 0, air?: KitAir): [number, number, number, number] {
+export function drawKit(ctx: Ctx, sx: number, sy: number, zoom: number, kind: string, look0: KitLook, view: KitView, live = true, night = 0, air?: KitAir): [number, number, number, number] {
   const piece = KIT_PIECES[kind];
+  const look = flickering(piece, look0);
   const b = soon(kind, look, view, zoom);
   const layer = piece.layers && look.trim !== undefined ? Math.max(0, Math.min(piece.layers - 1, Math.round(look.trim))) : -1;
   lay(ctx, layer < 0 ? b.whole : b.sheets[layer], sx, sy, zoom);
   if (live && (layer < 0 || layer === (piece.layers ?? 1) - 1)) drawKitLive(ctx, sx, sy, zoom, kind, view, night, air);
   const [l, t, r, bt] = layer < 0 ? b.hit : b.hits[layer][2] > b.hits[layer][0] + 2 ? b.hits[layer] : b.hit;
   return [l * zoom, t * zoom, r * zoom, bt * zoom];
+}
+
+/** How long a burning piece holds each flicker of its fire, in milliseconds: the old models' (`bakedFor` in furniture.ts). */
+const FLICKER_MS = 150;
+/** A look with the flicker its fire is at now, when it is lit and flickers (`KitPiece.flicker`); any other look as it is. */
+function flickering(piece: KitPiece, look: KitLook): KitLook {
+  if (!piece.flicker || !look.lit) return look.frame === undefined ? look : { ...look, frame: undefined };
+  return { ...look, frame: Math.floor(performance.now() / FLICKER_MS) % piece.flicker };
 }
 
 /** What moves on a kit piece, over its bake: whatever the piece draws live (`KitPiece.live`). */
@@ -404,6 +415,6 @@ export const kitGlows = (kind: string): boolean => isKit(kind) && !!KIT_PIECES[k
 
 /** What a kit piece covers and what it is clicked by, from its floor contact in pixels at zoom one: for a harness. */
 export function kitBoxes(kind: string, look: KitLook, view: KitView, zoom = 1): { bounds: Box; hit: Box } {
-  const b = soon(kind, look, view, zoom);
+  const b = soon(kind, flickering(KIT_PIECES[kind], look), view, zoom);
   return { bounds: b.bounds, hit: b.hit };
 }

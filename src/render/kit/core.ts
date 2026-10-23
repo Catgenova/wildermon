@@ -33,6 +33,8 @@ export interface KitLook {
   trim?: number;
   /** The wood it was sawn from ("Oak", "cherry") or the metal it was cast in, as the item names it. */
   material?: string;
+  /** Which of a burning piece's flickers it is at (`KitPiece.flicker`): set only when it is lit, by the clock, never by the caller. */
+  frame?: number;
 }
 
 /** One thing in a model. */
@@ -92,6 +94,8 @@ export interface KitPiece {
   holes?: (sx: number, sy: number, zoom: number, view: KitView, t: number) => Array<{ x: number; y: number; r: number; a: number }>;
   /** Its live drawing wants the wind (`clothInWind`). */
   wind?: boolean;
+  /** Lit, how many flickers its fire is baked in (`KitLook.frame`), one every `FLICKER_MS` round and round, as the old models' fires were. Unlit, or unsaid, one bake. */
+  flicker?: number;
 }
 
 /** A piece's turn on the screen (`PieceView`). */
