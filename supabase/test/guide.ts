@@ -46,10 +46,10 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import {
-  HERD_REACH, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
+  EVOLVE_AT, HERD_REACH, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
 } from '../../src/game/creatures';
 import {
-  countsLine, FieldGuide, guideCounts, guideEntries, guideEntry, guidePage, guidePages, seenLine, stageKey, whereItLives, wildShare,
+  countsLine, FieldGuide, guideCounts, guideEntries, guideEntry, guideMarks, guidePage, guidePages, seenLine, stageKey, whereItLives, wildShare,
 } from '../../src/game/guide';
 import { GUIDE_BATCH, MOBS_RANGE, PEACE_REACH } from '../../src/game/keep';
 import { packLand, packWorld, unpack } from '../../src/game/save';
@@ -233,6 +233,15 @@ game.log.length = 0;
 game.update(1.1);
 check('one at its second stage in view marks its stage\'s page seen, and says so as its stage', game.guide.seen.has('woola:1')
   && game.log.some((l) => l.text === seenLine(guideEntry('woola:1')!, game.guide)), game.log.map((l) => l.text).join(' | '));
+// Tamed at its second stage: its stage's page tamed as well (asked for: "a monster that evolved from a tamed monster should
+// be considered tamed"). Bred stays its kind's.
+const hadTamed = [...game.guide.tamed];
+game.guideMarkKind(cloudram, 'tamed');
+check('one tamed at its second stage marks its stage\'s page tamed, and a stage\'s page takes seen and tamed, not bred',
+  game.guide.tamed.has('woola:1') && guideMarks('woola:1').join() === 'seen,tamed' && guideMarks('woola').join() === 'seen,tamed,bred',
+  `${sorted(game.guide.tamed)} ${guideMarks('woola:1')}`);
+game.guide.tamed.clear();
+for (const k of hadTamed) game.guide.tamed.add(k);
 game.creatures.remove(cloudram.id);
 
 // A save, and back.
@@ -368,6 +377,21 @@ begin
   insert into said values ('BRED', (select string_agg(species || ':' || tamed || ':' || bred, ',' order by species)
     from guide where world_id = w and uid = dane));
 
+  -- One of his evolving: each stage it reaches tamed in his book; a wild one evolving, nothing; bred never on a stage's page.
+  v_id := creature_spawn(w, 'woola', v_x + 1, v_y, 'active', now() - interval '3 hours', dane);
+  update creature set skills = '{"foraging": ${EVOLVE_AT[0]}}'::jsonb where world_id = w and id = v_id;
+  insert into said values ('EVOLVED1', coalesce((select string_agg(species || ':' || tamed, ',' order by species) from guide
+    where world_id = w and uid = dane and species like 'woola:%'), 'none'));
+  update creature set skills = '{"foraging": ${EVOLVE_AT[1]}}'::jsonb where world_id = w and id = v_id;
+  delete from creature where world_id = w and id = v_id;
+  v_id := creature_spawn(w, 'sedra', v_x - 1, v_y, 'wild', now() - interval '3 hours');
+  update creature set skills = '{"foraging": ${EVOLVE_AT[1]}}'::jsonb where world_id = w and id = v_id;
+  delete from creature where world_id = w and id = v_id;
+  perform guide_mark(w, dane, 'cudda:1', 'bred');
+  insert into said values ('EVOLVED', coalesce((select string_agg(species || ':' || tamed || ':' || bred, ',' order by species) from guide
+    where world_id = w and uid = dane and species like '%:%'), 'none'));
+  delete from guide where world_id = w and uid = dane and species like '%:%';
+
   -- Somebody else's book, on the same island, which is theirs to read and nobody else's.
   select uid into them from player where world_id = w and uid <> dane order by uid limit 1;
   delete from guide where world_id = w and uid = them;
@@ -410,6 +434,8 @@ check('a catch got out of a trap on the island marks the kind tamed', answer('TR
 check('an offering that takes on the island marks the kind tamed', answer('TAMED') === 'active|true', answer('TAMED'));
 check('a birth to a dam he keeps marks the kind bred; to a wild dam or one of his turned loose, nothing',
   answer('BRED') === 'cudda:false:true,rabba:true:false,vola:true:false,woola:false:false', answer('BRED'));
+check('one of his reaching its second stage marks that stage\'s page tamed, and its third the third\'s; a wild one evolving marks nothing, and bred is never a stage\'s',
+  answer('EVOLVED1') === 'woola:1:true' && answer('EVOLVED') === 'woola:1:true:false,woola:2:true:false', `${answer('EVOLVED1')} / ${answer('EVOLVED')}`);
 const book = JSON.parse(answer('BOOK')) as { seen: string[]; tamed: string[]; bred: string[] };
 check('rpc_guide hands back exactly the book', answer('BOOK') === '{"bred": ["cudda"], "seen": ["cudda", "rabba", "vola", "woola"], "tamed": ["rabba", "vola"]}',
   answer('BOOK'));

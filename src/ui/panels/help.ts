@@ -2332,7 +2332,7 @@ export function helpText(): string {
     </ul>
     <h3>The field guide</h3>
     <ul>
-      <li>Journal, <b>Field guide</b> tab (<kbd>F4</kbd>): a page for each of ${guidePages().length} creature kinds, and one for each of their ${guideEntries().length - guidePages().length} evolution stages after its kind's; marks <b>seen</b>, <b>tamed</b>, <b>bred</b>.</li>
+      <li>Journal, <b>Field guide</b> tab (<kbd>F4</kbd>): a page for each of ${guidePages().length} creature kinds, and one for each of their ${guideEntries().length - guidePages().length} evolution stages after its kind's; marks <b>seen</b>, <b>tamed</b>, <b>bred</b>. A stage's page: seen; tamed when one of yours reaches that stage or is tamed at it.</li>
       <li>A stage's page: seen once one at that stage stood in your sight; its model, level it comes in at, stat multipliers, wild odds and taming, habitat, its combat figures. Tamed and bred are its kind's.</li>
       <li>Seen: one stood out of a crate within your sight (your wildermon's and settlement's sight count). Tamed: an offering took, or one taken from a trap.
       Bred: a young born to a dam you keep. Taming or breeding also marks seen; the first sighting is logged.</li>

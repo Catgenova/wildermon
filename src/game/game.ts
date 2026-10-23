@@ -817,7 +817,7 @@ export class Game {
    * guest's, and it is not written into the host's book.
    */
   guideMark(species: string, what: GuideMark): void {
-    // A kind's page, or a stage's (`species:stage`), which is only ever marked seen, or a wild form's (`species/form`), seen and tamed.
+    // A kind's page, or a stage's (`species:stage`), seen and tamed, or a wild form's (`species/form`), seen and tamed.
     if (this.acting !== this.local || !guideMarks(species).includes(what)) return;
     const fresh = this.guide.mark(species, what);
     if (!fresh.length) return;
@@ -831,9 +831,10 @@ export class Game {
     return entry ? seenLine(entry, this.guide) : formSeenLine(guideName(key) ?? key);
   }
 
-  /** A creature's kind marked, and each wild form it is in (`formKey`), as the island's taming marks them. */
-  guideMarkKind(c: Pick<Creature, 'species' | 'formColour' | 'formSize'>, what: GuideMark): void {
+  /** A creature's kind marked, its stage's page where it is tamed past its first, and each wild form it is in (`formKey`), as the island's taming marks them. */
+  guideMarkKind(c: Pick<Creature, 'species' | 'formColour' | 'formSize' | 'skills'>, what: GuideMark): void {
     this.guideMark(c.species, what);
+    if (what === 'tamed' && stageOf(c) > 0) this.guideMark(stageKey(c.species, stageOf(c)), what);
     for (const f of formsOf(c)) this.guideMark(formKey(c.species, f), what);
   }
 

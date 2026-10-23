@@ -3386,6 +3386,13 @@ export const NEWS: News[] = [
       'Fixed: a column at a wall corner washed grey as remembered ground when the tile in front of it is remembered; now in full colour when any tile round its corner is in sight.',
     ],
   },
+  {
+    n: 270,
+    day: '2026-10-23',
+    lines: () => [
+      'Changed: Field guide stage pages marked tamed when one of yours reaches that stage, or is tamed at it; was seen only. Your evolved wildermon count already.',
+    ],
+  },
 ];
 
 /** The kinds that butchered into dragon scales until What's new 268. */

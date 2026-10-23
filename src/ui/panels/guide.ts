@@ -1,5 +1,5 @@
 import type { Game } from '../../game/game';
-import { countsLine, guideEntries, guideEntry, GUIDE_MARKS, guidePage, keepable, MARK_NAMES, type GuideEntry, type GuideMark } from '../../game/guide';
+import { countsLine, guideEntries, guideEntry, GUIDE_MARKS, guideMarks, guidePage, keepable, MARK_NAMES, type GuideEntry, type GuideMark } from '../../game/guide';
 import type { Island } from '../../net/island';
 import { recordSaid, RECORD_STATS, type BredRecord } from '../../game/boards';
 import { ACTION_BY_ID } from '../../game/actions';
@@ -140,7 +140,7 @@ export class GuidePanel {
       const tags = document.createElement('span');
       tags.className = 'guide-tags';
       for (const m of ['tamed', 'bred'] as const) {
-        if (entry.stage || !g.has(def.id, m)) continue;
+        if (!keepable(def) || !guideMarks(entry.key).includes(m) || !g.has(entry.key, m)) continue;
         const tag = document.createElement('span');
         tag.className = 'guide-tag';
         tag.textContent = MARK_NAMES[m].toLowerCase();
@@ -194,9 +194,9 @@ export class GuidePanel {
     if (seen) {
       const marks = document.createElement('div');
       marks.className = 'guide-marks';
-      // A stage's page is marked seen and nothing else: taming and breeding are its kind's.
+      // A stage's page is marked seen and tamed: breeding is its kind's.
       for (const m of GUIDE_MARKS) {
-        if (m !== 'seen' && (!keepable(def) || entry.stage)) continue;
+        if (m !== 'seen' && (!keepable(def) || !guideMarks(entry.key).includes(m))) continue;
         const chip = document.createElement('span');
         const has = this.game.guide.has(entry.key, m);
         chip.className = `guide-mark${has ? ' guide-mark-on' : ''}`;
@@ -257,7 +257,7 @@ export class GuidePanel {
 
   /** "seen, tamed, not bred yet", for a card's hover. */
   private marksSaid(entry: GuideEntry): string {
-    const marks: GuideMark[] = keepable(entry.def) && !entry.stage ? GUIDE_MARKS : ['seen'];
+    const marks: GuideMark[] = keepable(entry.def) ? guideMarks(entry.key) : ['seen'];
     return marks.map((m) => (this.game.guide.has(entry.key, m) ? MARK_NAMES[m].toLowerCase() : `not ${MARK_NAMES[m].toLowerCase()} yet`)).join(', ');
   }
 

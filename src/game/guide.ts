@@ -11,7 +11,8 @@
  *          crate, on a tile in sight now, which is what the drawing means by
  *          it (`Vision.isWatched`) and so what decides whether it is drawn;
  *   tamed  you won one over, by hand or out of a trap, which is the other
- *          door to keeping one and asks the same taming;
+ *          door to keeping one and asks the same taming; on a stage's page,
+ *          one kept by you reached that stage, or was tamed at it;
  *   bred   a young one was born to a dam you keep.
  *
  * A kind tamed or bred has been seen, so either mark sets `seen` as well: no
@@ -81,8 +82,9 @@ export const keepable = (def: SpeciesDef): boolean => !def.monster;
  *
  * Asked for: "Add entries to the Field Guide for each evolution stage, so that every wildermon is shown". A stage has
  * a page of its own after its kind's, under its own key, `species:stage` (`stageKey`), and is marked seen when one at
- * that stage is in sight (`stageOf`); taming and breeding are the kind's, and stay on the kind's page. The island's
- * `guide_kind`.
+ * that stage is in sight (`stageOf`), and tamed when one kept by you reaches that stage or is tamed at it (asked for: "a
+ * monster that evolved from a tamed monster should be considered tamed"); breeding is the kind's, and stays on the
+ * kind's page. The island's `guide_kind` and `guide_evolved`.
  */
 export interface GuideEntry {
   key: string;
@@ -107,7 +109,8 @@ export const guideEntries = (): GuideEntry[] =>
   guidePages().flatMap((def) => [0, ...(def.stages ?? []).map((_, i) => i + 1)].map((st) => guideEntry(stageKey(def.id, st))!));
 
 /**
- * The marks a key in the book may carry: all three on a kind's page, seen on a stage's, and seen and tamed on a wild
+ * The marks a key in the book may carry: all three on a kind's page, seen and tamed on a stage's of a kind that can be
+ * kept (seen alone on a monster's), and seen and tamed on a wild
  * form of a kind (`formKey`, `species/form`), which is marked on its kind's page rather than having one of its own.
  * None for a key there is no such thing as. The island's `guide_kind` and `guide_mark`.
  */
@@ -115,7 +118,7 @@ export function guideMarks(key: string): GuideMark[] {
   const form = formOfKey(key);
   if (form) return SPECIES[form.species] && keepable(SPECIES[form.species]) ? ['seen', 'tamed'] : [];
   const entry = guideEntry(key);
-  return !entry ? [] : entry.stage ? ['seen'] : GUIDE_MARKS;
+  return !entry ? [] : entry.stage ? (keepable(entry.def) ? ['seen', 'tamed'] : ['seen']) : GUIDE_MARKS;
 }
 
 /** What a key is called in the log: a kind's name, a stage's, or a form's and its kind's ("Pale form rabba"). */
