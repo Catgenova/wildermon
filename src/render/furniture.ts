@@ -17,7 +17,7 @@ import { LAMP_ARM, LAMP_GLASS, LAMP_HANG } from '../game/lamps';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
 import { drawPlinth, drawPlinthRunes } from './plinth';
 import { drawDen, isDen } from './dens';
-import { drawKit, drawKitLive, isKit, kitGlows, kitHeight, kitHoles, kitWind } from './kitpieces';
+import { drawKit, drawKitLive, isKit, kitFrame, kitGlows, kitHeight, kitHoles, kitWind } from './kitpieces';
 import { BRASS_PAINT, IRON_PAINT, LINEN_PAINT, WOOD_TONE } from './materials';
 import {
   band as kitBand, boards as kitBoards, BRASS as KIT_BRASS, clothTone, CREASE_INK, deeper, grain as kitGrain, IRON as KIT_IRON, KIT_INK, KIT_INK_W, paler, seam as kitSeam, woodTone,
@@ -5477,6 +5477,7 @@ const lastBake = new Map<string, string>();
 /** Once a frame from the renderer: whether the zoom has settled, so that pieces may be baked again for it. */
 export function piecesFrame(settled: boolean): void {
   bakesLeft = settled ? PIECE_BAKES_A_FRAME : 0;
+  kitFrame(settled);
 }
 
 /** A piece's bake for this zoom, turn and trim, from the ones kept or new. */

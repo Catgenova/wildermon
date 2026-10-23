@@ -52,16 +52,23 @@ function lookKey(piece: KitPiece, look: KitLook): string {
   return look.frame === undefined ? key : `${key}|f${look.frame}`;
 }
 
+/**
+ * Models built, by kind and look, the least lately wanted let go past
+ * `MODELS_KEPT`: one is shared by every view and scale it is baked at, but
+ * the looks a settlement can ask for -- every crate mask, rose day, flicker,
+ * dye and wood -- are without end.
+ */
+const MODELS_KEPT = 600;
 const models = new Map<string, KitModel>();
 function modelOf(kind: string, look: KitLook): KitModel {
   const piece = KIT_PIECES[kind];
   const key = `${kind}|${lookKey(piece, look)}`;
   let m = models.get(key);
-  if (!m) {
-    // What it is built for: a layered piece's trim is the layer, never the model's.
-    m = piece.model(piece.layers ? { ...look, trim: undefined } : look, sizeOf(kind));
-    models.set(key, m);
-  }
+  if (m) { models.delete(key); models.set(key, m); return m; }
+  // What it is built for: a layered piece's trim is the layer, never the model's.
+  m = piece.model(piece.layers ? { ...look, trim: undefined } : look, sizeOf(kind));
+  models.set(key, m);
+  if (models.size > MODELS_KEPT) models.delete(models.keys().next().value as string);
   return m;
 }
 
@@ -162,9 +169,9 @@ type Box = [number, number, number, number];
 
 interface KitBake {
   scale: number;
-  /** One for each layer, and all of them as one. */
-  sheets: Sheet[];
-  whole: Sheet;
+  /** Its picture: layer `L`, or all of it for less than nought (made when first wanted); and whether it is made. */
+  sheet: (L: number) => Sheet;
+  has: (L: number) => boolean;
   /** What it covers and what it is clicked by, from the footprint's middle in pixels at zoom one: all of it, and each layer's. */
   bounds: Box;
   hit: Box;
@@ -230,76 +237,169 @@ function bake(kind: string, look: KitLook, view: KitView, scale: number): KitBak
   }
   const pad = 3 + KIT_INK_W * 2;
   const footPts = foot ? foot.map((q) => [q[0] * 1.14, q[1] * 1.14, 0] as V3) : [];
-  const sheets: Sheet[] = [];
   const hits: Box[] = [];
+  const boxes: Box[] = [];
   const all: V3[] = [...footPts];
   const solidAll: V3[] = [];
-  for (let L = 0; L < layers; L++) {
-    const mine = order.filter((p) => !(layers > 1 && p.wholeOnly) && layerOf(p) === L);
-    const pts = mine.flatMap(ptsOf);
+  const mine = Array.from({ length: layers }, (_, L) => order.filter((p) => !(layers > 1 && p.wholeOnly) && layerOf(p) === L));
+  mine.forEach((ps, L) => {
+    const pts = ps.flatMap(ptsOf);
     all.push(...pts);
     const box = screenBox(e, L === 0 ? [...pts, ...footPts] : pts, pad);
     // The shade's offset toward the bottom right, and room for it.
     if (L === 0 && foot) { box[2] += 3; box[3] += 2; }
-    const [sh, g] = sheetOf(box, scale);
-    if (L === 0 && foot) floorShade(g, e, foot);
-    for (const p of mine) layPart(g, e, p, order.indexOf(p) * 31 + 5);
-    sheets.push(sh);
-    const solid = mine.filter((p) => p.solid ?? !!p.faces).flatMap(ptsOf);
+    boxes.push(box);
+    const solid = ps.filter((p) => p.solid ?? !!p.faces).flatMap(ptsOf);
     solidAll.push(...solid);
     hits.push(screenBox(e, solid, 1));
-  }
+  });
+  for (const p of order) if (layers > 1 && p.wholeOnly) all.push(...ptsOf(p));
   const bounds = screenBox(e, all, pad);
   bounds[2] += 3; bounds[3] += 2;
-  let whole = sheets[0];
-  if (layers > 1) {
-    // Drawn whole: every part in its order, with what is shown only whole (still water), over its shade.
-    for (const p of order) if (p.wholeOnly) all.push(...ptsOf(p));
-    const wb = screenBox(e, all, pad);
-    wb[2] += 3; wb[3] += 2;
-    bounds.splice(0, 4, ...wb);
-    const [w, gw] = sheetOf(bounds, scale);
-    if (foot) floorShade(gw, e, foot);
-    order.forEach((p, i) => layPart(gw, e, p, i * 31 + 5));
-    whole = w;
-  }
-  const px = (s: Sheet): number => s.canvas.width * s.canvas.height;
-  return { scale, sheets, whole, bounds, hit: screenBox(e, solidAll, 1), hits, area: sheets.reduce((n, s) => n + px(s), 0) + (layers > 1 ? px(whole) : 0) };
+  /*
+   * Each picture made the first time it is wanted: a piece drawn in layers
+   * (a fountain, a crate with a wildermon in it) is drawn by its layers and
+   * seldom whole, one drawn whole never by its layers.
+   */
+  const made: Array<Sheet | undefined> = [];
+  const sheet = (L: number): Sheet => {
+    const at = L < 0 ? layers : L;
+    let sh = made[at];
+    if (sh) return sh;
+    const whole = L < 0;
+    const [s2, g] = sheetOf(whole ? bounds : boxes[L], scale);
+    if ((whole || L === 0) && foot) floorShade(g, e, foot);
+    for (const p of whole ? order : mine[L]) layPart(g, e, p, order.indexOf(p) * 31 + 5);
+    made[at] = sh = s2;
+    const px = s2.canvas.width * s2.canvas.height;
+    out.area += px;
+    grew(out, px);
+    return sh;
+  };
+  const one = (L: number): number => (layers > 1 ? L : 0);
+  const out: KitBake = { scale, sheet: (L) => sheet(one(L)), has: (L) => !!made[one(L) < 0 ? layers : one(L)], bounds, hit: screenBox(e, solidAll, 1), hits, area: 0 };
+  return out;
 }
 
 /* ---- keeping them --------------------------------------------------------------------- */
 
-/** Pixels of bakes kept before the least lately drawn is let go. */
-const BUDGET = 10e6;
-const kept = new Map<string, KitBake>();
-let keptArea = 0;
-function keep(key: string, make: () => KitBake): KitBake {
-  let b = kept.get(key);
-  if (b) { kept.delete(key); kept.set(key, b); return b; }
-  b = make();
-  kept.set(key, b);
-  keptArea += b.area;
-  for (const [k, old] of kept) {
-    if (keptArea <= BUDGET || k === key) break;
-    kept.delete(k);
-    keptArea -= old.area;
+/*
+ * A bake is cheap to make and dear to draw: its model, order and boxes are
+ * worked out at once (`bake`), and each of its pictures is drawn the first
+ * time it is wanted (`KitBake.sheet`). What is kept is counted by the pixels
+ * of the pictures made.
+ */
+
+/**
+ * Pixels of pictures kept before the least lately drawn is let go: the old
+ * models' sixteen million, more on a big screen, which shows more pieces at
+ * once (never past forty).
+ */
+let budget = 0;
+function BUDGET(): number {
+  if (!budget) {
+    const w = globalThis as unknown as { innerWidth?: number; innerHeight?: number; devicePixelRatio?: number };
+    const screen = (w.innerWidth ?? 1600) * (w.innerHeight ?? 1000) * (w.devicePixelRatio ?? 1) ** 2;
+    budget = Math.min(40e6, Math.max(16e6, screen * 8));
   }
-  return b;
+  return budget;
+}
+/** A bake kept, and the frame it was last drawn in (never, for one made ahead). */
+interface Kept { b: KitBake; used: number }
+const kept = new Map<string, Kept>();
+const keptBakes = new WeakSet<KitBake>();
+let keptArea = 0;
+/** The frame it is (`kitFrame`); whether the zoom has settled; and the milliseconds spent in it drawing new pictures. */
+let frame = 0;
+let settled = true;
+let frameMs = 0;
+/**
+ * Milliseconds a frame may spend drawing new pictures of pieces once the
+ * zoom has settled, and while it moves for a piece with no other picture of
+ * itself to stand in: past that a piece is drawn by another picture of
+ * itself, or waits for the browser to be idle. The old models baked every
+ * piece new to the screen in the frame it came on: a settlement's worth was
+ * one frame of a second.
+ */
+const FRAME_MS = 10;
+const MOVING_MS = 4;
+/** Once a frame, from `piecesFrame`: whether the zoom has settled. */
+export function kitFrame(still: boolean): void {
+  frame++;
+  settled = still;
+  frameMs = 0;
+}
+/** Whether a bake drawn in frame `used` is still on the screen: drawn in this frame or the last. */
+const onScreen = (used: number): boolean => used >= frame - 1;
+
+/**
+ * Let go of the bakes least lately drawn till the rest fit the budget, what
+ * was made ahead and never drawn first -- but never one drawn in this frame
+ * or the last, which would only be drawn again in the next: when what is on
+ * the screen is more than the budget, the budget is let run over rather than
+ * draw the same pieces anew every frame.
+ */
+function trim(): void {
+  for (const ahead of [true, false]) for (const [k, old] of kept) {
+    if (keptArea <= BUDGET()) return;
+    if (onScreen(old.used) || (ahead && old.used !== -Infinity)) continue;
+    kept.delete(k);
+    keptBakes.delete(old.b);
+    keptArea -= old.b.area;
+  }
+}
+/** A picture of a bake has been drawn: counted, if the bake is kept, and the least lately drawn let go past the budget. */
+function grew(b: KitBake, px: number): void {
+  if (!keptBakes.has(b)) return;
+  keptArea += px;
+  trim();
 }
 
 const viewKey = (v: KitView): string => `${v.ux.toFixed(3)},${v.uy.toFixed(3)},${v.vx.toFixed(3)},${v.vy.toFixed(3)}`;
 const pieceKey = (kind: string, look: KitLook, view: KitView): string => `${kind}|${lookKey(KIT_PIECES[kind], look)}|${viewKey(view)}`;
 
-function baked(kind: string, look: KitLook, view: KitView, scale: number): KitBake {
-  return keep(`${pieceKey(kind, look, view)}|${scale}`, () => bake(kind, look, view, scale));
+/** The bake of a piece at a scale, kept or made: drawn in this frame unless it is wanted `ahead`. */
+function baked(kind: string, look: KitLook, view: KitView, scale: number, ahead = false): KitBake {
+  const key = `${pieceKey(kind, look, view)}|${scale}`;
+  const k = kept.get(key);
+  if (k) {
+    kept.delete(key);
+    kept.set(key, k);
+    if (!ahead) k.used = frame;
+    return k.b;
+  }
+  const t0 = performance.now();
+  const b = bake(kind, look, view, scale);
+  if (!ahead) frameMs += performance.now() - t0;
+  keptBakes.add(b);
+  kept.set(key, { b, used: ahead ? -Infinity : frame });
+  return b;
+}
+/**
+ * A kept bake of the piece whose picture `L` is drawn, to stand in for this
+ * one: at another scale, the nearest first and the smaller before the
+ * bigger; or, for a fire, another flicker of it at any scale (`flickers`).
+ */
+function standIn(piece: string, scale: number, L: number, flickers: readonly string[] = []): KitBake | undefined {
+  for (const p of [piece, ...flickers]) for (const s2 of BAKE_STEPS.slice().sort((a, c) => Math.abs(a - scale) - Math.abs(c - scale) || a - c)) {
+    if (p === piece && s2 === scale) continue;
+    const k = kept.get(`${p}|${s2}`);
+    if (k?.b.has(L)) { k.used = frame; return k.b; }
+  }
+  return undefined;
+}
+/** A burning piece's other flickers, as pieces (`pieceKey`): what can stand in for the one it is at. */
+function otherFlickers(kind: string, look: KitLook, view: KitView): string[] {
+  const n = KIT_PIECES[kind].flicker ?? 0;
+  if (look.frame === undefined || n < 2) return [];
+  return Array.from({ length: n - 1 }, (_, i) => pieceKey(kind, { ...look, frame: (look.frame! + 1 + i) % n }, view));
 }
 
 /*
- * Bakes made ahead while the browser is idle (`prewarmDen` in dens.ts): a
- * piece seen from one way is baked for the camera's turns either side of it,
- * and a bake wanted at a scale not yet made is made there while a smaller
- * one stands in, so turning the camera or zooming in never costs a frame a
- * big bake.
+ * Pictures drawn while the browser is idle (`prewarmDen` in dens.ts): first
+ * the ones a frame had no time for, and then, while there is room in the
+ * budget, a piece seen from one way for the camera's turns either side of
+ * it, so turning the camera finds them drawn.
  */
 const ahead: Array<() => void> = [];
 const queued = new Set<string>();
@@ -318,14 +418,14 @@ function idle(): void {
   else setTimeout(() => { const t0 = performance.now(); run(() => 24 - (performance.now() - t0), true); }, 60);
 }
 function later(key: string, make: () => void, now = false): void {
-  if (kept.has(key) || queued.has(key)) return;
+  if (queued.has(key)) return;
   queued.add(key);
   const job = (): void => { queued.delete(key); make(); };
   if (now) ahead.unshift(job); else ahead.push(job);
   idle();
 }
 
-/** The turns of a piece standing the way a view says, for baking the camera's turns either side ahead: by facing and turn. */
+/** The turns of a piece standing the way a view says, for drawing the camera's turns either side ahead: by facing and turn. */
 const ACROSS: Record<Side, [number, number]> = { s: [1, 0], e: [0, -1], n: [-1, 0], w: [0, 1] };
 const FRONT: Record<Side, [number, number]> = { s: [0, 1], e: [1, 0], n: [0, -1], w: [-1, 0] };
 function viewOf(facing: Side, rotation: number): KitView {
@@ -348,24 +448,54 @@ function neighbours(view: KitView): KitView[] {
   return at ? [viewOf(at[0], at[1] + 1), viewOf(at[0], at[1] - 1)] : [];
 }
 
+/** How full the budget may be for a turn either side to be drawn ahead: never so full that drawing ahead lets go of what is on the screen. */
+const AHEAD_FILL = 0.7;
+
+/** Picture `L` of a bake, its drawing counted against the frame's share. */
+function drawn(b: KitBake, L: number): Sheet {
+  if (b.has(L)) return b.sheet(L);
+  const t0 = performance.now();
+  const sh = b.sheet(L);
+  frameMs += performance.now() - t0;
+  return sh;
+}
+
 /**
- * The bake to draw a piece by this frame: the one at its scale if it is made;
- * else, while that one is made when the browser is next idle, the nearest
- * smaller one of the same view drawn up to size, or failing any the smallest,
- * made now. Either way the turns either side are baked ahead.
+ * The picture to draw a piece by this frame, and the bake it belongs to: its
+ * own if it is drawn, or if this frame has time left to draw it
+ * (`FRAME_MS`); else, while it is drawn when the browser is next idle,
+ * another picture of the piece at another scale drawn to size; else, if the
+ * frame has a little time left, its own after all; else none this frame.
  */
-function soon(kind: string, look: KitLook, view: KitView, zoom: number): KitBake {
+function pictureOf(kind: string, look: KitLook, view: KitView, zoom: number, L: number): { b: KitBake | null; sh: Sheet | null } {
   const scale = scaleFor(zoom), piece = pieceKey(kind, look, view);
-  const key = `${piece}|${scale}`;
-  let b: KitBake | undefined;
-  if (sync || kept.has(key) || scale === BAKE_STEPS[0]) b = baked(kind, look, view, scale);
-  else {
-    later(key, () => baked(kind, look, view, scale), true);
-    for (let i = BAKE_STEPS.indexOf(scale) - 1; i > 0 && !b; i--) if (kept.has(`${piece}|${BAKE_STEPS[i]}`)) b = baked(kind, look, view, BAKE_STEPS[i]);
-    b ??= baked(kind, look, view, BAKE_STEPS[0]);
+  // A piece new to the screen when the frame's share is spent: not even its model this frame, unless another picture of it stands in.
+  if (!sync && !kept.has(`${piece}|${scale}`) && frameMs >= (settled ? FRAME_MS : MOVING_MS)) {
+    const other = standIn(piece, scale, L, otherFlickers(kind, look, view));
+    later(`${piece}|${scale}|${L}`, () => baked(kind, look, view, scale).sheet(L), true);
+    return { b: other ?? null, sh: other ? other.sheet(L) : null };
   }
-  if (!sync) for (const v of neighbours(view)) later(`${pieceKey(kind, look, v)}|${scale}`, () => baked(kind, look, v, scale));
-  return b;
+  const b = baked(kind, look, view, scale);
+  let sh: Sheet | null = null;
+  if (b.has(L) || sync || frameMs < (settled ? FRAME_MS : 0)) sh = drawn(b, L);
+  else {
+    const other = standIn(piece, scale, L, otherFlickers(kind, look, view));
+    if (other) sh = other.sheet(L);
+    else if (frameMs < MOVING_MS) sh = drawn(b, L);
+    if (!sh || other) later(`${piece}|${scale}|${L}`, () => { if (kept.get(`${piece}|${scale}`)?.b === b) b.sheet(L); }, true);
+  }
+  // The turns either side, drawn ahead while there is room for them.
+  if (!sync && sh) {
+    const px = b.area || sh.canvas.width * sh.canvas.height;
+    if (keptArea + 2 * px < BUDGET() * AHEAD_FILL) {
+      for (const v of neighbours(view)) {
+        const vk = `${pieceKey(kind, look, v)}|${scale}`;
+        if (kept.get(vk)?.b.has(L)) continue;
+        later(`${vk}|${L}`, () => { if (keptArea + px < BUDGET() * AHEAD_FILL) baked(kind, look, v, scale, true).sheet(L); });
+      }
+    }
+  }
+  return { b, sh };
 }
 
 /* ---- drawing ---------------------------------------------------------------------------- */
@@ -373,6 +503,8 @@ function soon(kind: string, look: KitLook, view: KitView, zoom: number): KitBake
 const lay = (ctx: Ctx, s: Sheet, sx: number, sy: number, zoom: number): void => {
   ctx.drawImage(s.canvas, sx + s.x * zoom, sy + s.y * zoom, s.w * zoom, s.h * zoom);
 };
+/** Pictures laid already: a canvas is drawn for good the first time it is laid, which is when its frame pays for it. */
+const laidOnce = new WeakSet<HTMLCanvasElement>();
 
 /**
  * Draw a kit piece of `kind` whose floor contact is at (sx, sy), turned as
@@ -380,15 +512,26 @@ const lay = (ctx: Ctx, s: Sheet, sx: number, sy: number, zoom: number): void => 
  * in layers the layer `look.trim` names (all of them when it names none).
  * Unless `live` is false, what moves on it is drawn over it too. Returns the
  * box it is clicked by, left, top, right and bottom in screen pixels from
- * (sx, sy), as `drawFurniture` does.
+ * (sx, sy), as `drawFurniture` does: the same whether or not its picture
+ * has been drawn yet.
  */
 export function drawKit(ctx: Ctx, sx: number, sy: number, zoom: number, kind: string, look0: KitLook, view: KitView, live = true, night = 0, air?: KitAir): [number, number, number, number] {
   const piece = KIT_PIECES[kind];
   const look = flickering(piece, look0);
-  const b = soon(kind, look, view, zoom);
   const layer = piece.layers && look.trim !== undefined ? Math.max(0, Math.min(piece.layers - 1, Math.round(look.trim))) : -1;
-  lay(ctx, layer < 0 ? b.whole : b.sheets[layer], sx, sy, zoom);
+  const { b, sh } = pictureOf(kind, look, view, zoom, layer);
+  if (sh) {
+    if (laidOnce.has(sh.canvas)) lay(ctx, sh, sx, sy, zoom);
+    else {
+      const t0 = performance.now();
+      lay(ctx, sh, sx, sy, zoom);
+      laidOnce.add(sh.canvas);
+      frameMs += performance.now() - t0;
+    }
+  }
   if (live && (layer < 0 || layer === (piece.layers ?? 1) - 1)) drawKitLive(ctx, sx, sy, zoom, kind, view, night, air);
+  // Not drawn yet, its model not yet built: no box of its own, and the renderer clicks it by its footprint.
+  if (!b) return [0, 0, 0, 0];
   const [l, t, r, bt] = layer < 0 ? b.hit : b.hits[layer][2] > b.hits[layer][0] + 2 ? b.hits[layer] : b.hit;
   return [l * zoom, t * zoom, r * zoom, bt * zoom];
 }
@@ -415,6 +558,6 @@ export const kitGlows = (kind: string): boolean => isKit(kind) && !!KIT_PIECES[k
 
 /** What a kit piece covers and what it is clicked by, from its floor contact in pixels at zoom one: for a harness. */
 export function kitBoxes(kind: string, look: KitLook, view: KitView, zoom = 1): { bounds: Box; hit: Box } {
-  const b = soon(kind, flickering(KIT_PIECES[kind], look), view, zoom);
+  const b = baked(kind, flickering(KIT_PIECES[kind], look), view, scaleFor(zoom));
   return { bounds: b.bounds, hit: b.hit };
 }
