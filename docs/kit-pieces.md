@@ -73,6 +73,15 @@ interface KitPart {
 - **Wheeled pieces** (`WHEELS`: `large_cart`, `wagon`). Their wheels are baked in
   sheets round each wheel and turned per frame (`bakeRound`, `wheelsFor`). The kit has
   no wheel stage. Restyle these in the `Scene` builder: kit palette, softer ink.
+  The small `cart` stays with them: its wheels do not turn, but they are the same
+  `Scene.wheel` as theirs, and the kit has no part for a spoked wheel seen through.
+- **How they are restyled.** `vehicleKit(sc, material)` in furniture.ts gives the kit's
+  wood as a `Paint` with a `tone` and sets the kit's ink width. Every `Scene` drawing
+  (`drawBox`, `drawLathe`, `drawRod`, `drawPanel`, `drawWheel`, `hull`, `sailCloth`) fills
+  a toned paint through `shadeOf` (`kitShade`: lit toward mauve, as `faceColour`), and a
+  toned box is drawn as the kit draws a solid (`drawKitBox`: ruled round once, creased,
+  lit top edges). `kitDeco` runs a kit painter (`boards`, `grain`, `band`) on a box face.
+  A paint without a `tone` draws exactly as before.
 - **Boats with a crew** (`sailing_boat`, `caravel`, rowing boats: `crewOf`). They are
   baked in layers round the people on deck (`Crew`, `crewOrder`, `seeThrough` for the
   helmsman), with sway, tiller and oars as trims. Keep them on `MODELS`. A kit kind

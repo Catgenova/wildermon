@@ -17,6 +17,10 @@ import { drawPlinth, drawPlinthRunes } from './plinth';
 import { drawDen, isDen } from './dens';
 import { drawKit, drawKitLive, isKit, kitGlows, kitHeight, kitHoles, kitWind } from './kitpieces';
 import { BRASS_PAINT, IRON_PAINT, LINEN_PAINT, WOOD_TONE } from './materials';
+import {
+  band as kitBand, boards as kitBoards, BRASS as KIT_BRASS, clothTone, CREASE_INK, deeper, grain as kitGrain, IRON as KIT_IRON, KIT_INK, KIT_INK_W, paler, seam as kitSeam, woodTone,
+  type PaintCtx, type Tone,
+} from './kit/core';
 
 /**
  * Furniture, built rather than drawn.
@@ -167,7 +171,29 @@ const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] 
 interface Paint {
   body: RGB;
   ink: RGB;
+  /**
+   * Toned as the rune kit tones a material (`kit/core.ts`): its colour in the light and in the shade, a face going from
+   * the one toward the other as it turns from the light rather than darkening, and its arrises creased rather than inked.
+   * The vehicles and the boats, which keep their own builders here, are drawn in it.
+   */
+  tone?: Tone;
 }
+
+/** The colour of a kit tone on a face catching `k` of the light (`faceColour` in the kit), paler past full light and deeper past full shade. */
+function kitShade(t: Tone, k: number): RGB {
+  if (k > 1) return mix(t.lit, [255, 250, 240], Math.min(0.6, (k - 1) * 2.2));
+  const d = (1 - k) / 0.31;
+  if (d <= 1) return mix(t.lit, t.shade, d * 0.92);
+  return mix(mix(t.lit, t.shade, 0.92), [62, 48, 64], Math.min(0.55, (d - 1) * 0.45));
+}
+/** What a paint is on a face catching `k` of the light: its body lit as it always was, or its kit tone. */
+const shadeOf = (p: Paint, k = 1, a = 1): string => (p.tone ? rgb(kitShade(p.tone, k), 1, a) : rgb(p.body, k, a));
+/** A kit tone as a paint, ruled round in the kit's ink. */
+const kitPaint = (t: Tone): Paint => ({ body: t.lit, ink: KIT_INK, tone: t });
+const KIT_IRON_PAINT = kitPaint(KIT_IRON);
+const KIT_BRASS_PAINT = kitPaint(KIT_BRASS);
+/** Rope in the kit: hemp, a step toward its ink so a stay reads against the sky and the sail. */
+const KIT_ROPE: RGB = mix(KIT_INK, hex('#c9ae7c'), 0.3);
 
 const INK_WARM: RGB = [46, 32, 28];
 /** A material from its colour, inked in a darker warm shade of itself. */
@@ -257,8 +283,8 @@ interface LatheOpts {
 
 class Scene {
   readonly parts: Part[] = [];
-  /** How wide the ink is, in the scaled space the piece is drawn in. */
-  readonly ink: number;
+  /** How wide the ink is, in the scaled space the piece is drawn in: the kit's, a hair finer, for a piece toned in it (`vehicleKit`). */
+  ink: number;
   /**
    * The way toward you, in the piece's frame: the one direction the
    * projection flattens to a point. A face is seen when it is turned toward
@@ -270,6 +296,9 @@ class Scene {
   shadows?: Array<[number, number, number, number]>;
   /** How many wheels have been put in so far. */
   wheels = 0;
+  /** The light on the face of a box being decorated, and its colour, for a kit painter (`kitDeco`). */
+  faceL = 1;
+  faceFill: RGB = [0, 0, 0];
 
   /** `g` is set late when the piece is baked, since how big a canvas it needs is known only once it is built. */
   constructor(public g: CanvasRenderingContext2D, readonly v: PieceView, zoom: number) {
@@ -393,6 +422,7 @@ class Scene {
 
   drawBox(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, p: Paint, deco?: Deco): void {
     const P = (x: number, y: number, z: number): Pt => this.P(x, y, z);
+    if (p.tone) { this.drawKitBox(x0, x1, y0, y1, z0, z1, p, p.tone, deco); return; }
     const face = (name: FaceName, pts: Pt[], n: V3, F: FaceAt, w: number, h: number): void => {
       this.fillInk(pts, rgb(p.body, this.light(n[0], n[1], n[2])), p.ink);
       const d = deco?.[name];
@@ -413,6 +443,64 @@ class Scene {
     if (this.sees(1, 0)) face('right', [P(x1, y1, z0), P(x1, y0, z0), P(x1, y0, z1), P(x1, y1, z1)], [1, 0, 0], (s, t) => P(x1, y1 - s, z0 + t), y1 - y0, z1 - z0);
     if (this.sees(-1, 0)) face('left', [P(x0, y0, z0), P(x0, y1, z0), P(x0, y1, z1), P(x0, y0, z1)], [-1, 0, 0], (s, t) => P(x0, y0 + s, z0 + t), y1 - y0, z1 - z0);
     face('top', [P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1)], [0, 0, 1], (s, t) => P(x0 + s, y0 + t, z1), x1 - x0, y1 - y0);
+  }
+
+  /**
+   * A box toned in the kit, as the kit draws a solid: ruled round once in its ink, each face filled in its tone, decorated
+   * and creased where it meets the next, and a hair of light along the near edges of its top.
+   */
+  drawKitBox(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, p: Paint, t: Tone, deco?: Deco): void {
+    const g = this.g;
+    const P = (x: number, y: number, z: number): Pt => this.P(x, y, z);
+    const faces: Array<{ name: FaceName; pts: Pt[]; n: V3; F: FaceAt; w: number; h: number }> = [];
+    if (this.sees(0, 1)) faces.push({ name: 'front', pts: [P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1)], n: [0, 1, 0], F: (s, u) => P(x0 + s, y1, z0 + u), w: x1 - x0, h: z1 - z0 });
+    if (this.sees(0, -1)) faces.push({ name: 'back', pts: [P(x1, y0, z0), P(x0, y0, z0), P(x0, y0, z1), P(x1, y0, z1)], n: [0, -1, 0], F: (s, u) => P(x1 - s, y0, z0 + u), w: x1 - x0, h: z1 - z0 });
+    if (this.sees(1, 0)) faces.push({ name: 'right', pts: [P(x1, y1, z0), P(x1, y0, z0), P(x1, y0, z1), P(x1, y1, z1)], n: [1, 0, 0], F: (s, u) => P(x1, y1 - s, z0 + u), w: y1 - y0, h: z1 - z0 });
+    if (this.sees(-1, 0)) faces.push({ name: 'left', pts: [P(x0, y0, z0), P(x0, y1, z0), P(x0, y1, z1), P(x0, y0, z1)], n: [-1, 0, 0], F: (s, u) => P(x0, y0 + s, z0 + u), w: y1 - y0, h: z1 - z0 });
+    faces.push({ name: 'top', pts: [P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1)], n: [0, 0, 1], F: (s, u) => P(x0 + s, y0 + u, z1), w: x1 - x0, h: y1 - y0 });
+    g.lineJoin = 'round';
+    // The ink round the whole: every face stroked twice as wide as the ink, then filled over, so only its rim is left.
+    g.strokeStyle = rgb(p.ink);
+    g.lineWidth = this.ink * 2;
+    for (const f of faces) { this.poly(f.pts); g.stroke(); }
+    for (const f of faces) {
+      const k = this.light(f.n[0], f.n[1], f.n[2]), fill = kitShade(t, k);
+      this.poly(f.pts);
+      g.fillStyle = rgb(fill);
+      g.fill();
+      g.strokeStyle = rgb(fill);
+      g.lineWidth = 0.5;
+      g.stroke();
+      const d = deco?.[f.name];
+      if (d) {
+        g.save();
+        this.poly(f.pts);
+        g.clip();
+        this.faceL = k;
+        this.faceFill = fill;
+        d(f.F, f.w, f.h);
+        g.restore();
+      }
+      this.poly(f.pts);
+      g.strokeStyle = rgb(mix(fill, CREASE_INK, 0.6), 1, 0.4);
+      g.lineWidth = 0.55;
+      g.stroke();
+    }
+    // The light caught along the near edges of its top.
+    const top = faces[faces.length - 1].pts, mid = (top[0][1] + top[1][1] + top[2][1] + top[3][1]) / 4;
+    g.strokeStyle = 'rgba(255, 246, 228, 0.5)';
+    g.lineWidth = 0.6;
+    g.lineCap = 'round';
+    for (let i = 0; i < 4; i++) {
+      const a = top[i], b = top[(i + 1) % 4];
+      if ((a[1] + b[1]) / 2 <= mid + 0.05 || Math.hypot(b[0] - a[0], b[1] - a[1]) < 1.2) continue;
+      // A hair in from the edge, on the top.
+      g.beginPath();
+      g.moveTo(a[0] + (b[0] - a[0]) * 0.08, a[1] + (b[1] - a[1]) * 0.08 - 0.45);
+      g.lineTo(a[0] + (b[0] - a[0]) * 0.92, a[1] + (b[1] - a[1]) * 0.92 - 0.45);
+      g.stroke();
+    }
+    g.lineCap = 'butt';
   }
 
   /**
@@ -448,9 +536,9 @@ class Scene {
       quads.sort((q, r) => q.d - r.d);
       for (const q of quads) {
         this.poly(q.pts);
-        g.fillStyle = rgb(p.body, q.k);
+        g.fillStyle = shadeOf(p, q.k);
         g.fill();
-        g.strokeStyle = rgb(p.body, q.k);
+        g.strokeStyle = shadeOf(p, q.k);
         g.lineWidth = 0.6;
         g.stroke();
       }
@@ -512,7 +600,7 @@ class Scene {
       const cap = opts.cap ?? p;
       const ring: Pt[] = [];
       for (let j = 0; j < 32; j++) ring.push(at((j / 32) * TAU, rt, zt));
-      this.fillInk(ring, rgb(cap.body, 1.02), cap.ink);
+      this.fillInk(ring, shadeOf(cap, 1.02), cap.ink);
       opts.lid?.((a, r) => at(a, r, zt));
     }
   }
@@ -542,7 +630,7 @@ class Scene {
       bot.push(this.P(cx + Math.cos(a) * r, cy + Math.sin(a) * r, z - w / 2));
     }
     this.poly([...top, ...bot.reverse()]);
-    g.fillStyle = rgb(p.body, 0.95);
+    g.fillStyle = shadeOf(p, 0.95);
     g.fill();
     g.strokeStyle = rgb(p.ink);
     g.lineWidth = this.ink * 0.8;
@@ -614,13 +702,13 @@ class Scene {
     };
     this.line(A, B, rgb(p.ink), w + this.ink * 2);
     end(w / 2 + this.ink, rgb(p.ink));
-    this.line(A, B, rgb(p.body, 0.92), w);
-    end(w / 2, rgb(p.body, 0.92));
+    this.line(A, B, shadeOf(p, 0.92), w);
+    end(w / 2, shadeOf(p, 0.92));
     if (w > 1.6) {
       const dx = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dx, dy) || 1;
       const ox = (-dy / l) * w * 0.22, oy = (dx / l) * w * 0.22;
       const s = ox > 0 ? -1 : 1;
-      this.line([A[0] + ox * s, A[1] + oy * s], [B[0] + ox * s, B[1] + oy * s], rgb(p.body, 1.1), Math.max(0.6, w * 0.3));
+      this.line([A[0] + ox * s, A[1] + oy * s], [B[0] + ox * s, B[1] + oy * s], shadeOf(p, 1.1), Math.max(0.6, w * 0.3));
     }
     g.lineCap = 'butt';
   }
@@ -645,7 +733,7 @@ class Scene {
     if (nz < 0 || (Math.abs(nz) < 1e-6 && nx * this.v.uy + ny * this.v.vy < 0)) { nx = -nx; ny = -ny; nz = -nz; }
     const S = pts.map((q) => this.P(q[0], q[1], q[2]));
     const k = this.light(nx, ny, nz);
-    this.fillInk(S, rgb(p.body, k), p.ink);
+    this.fillInk(S, shadeOf(p, k), p.ink);
     if (deco) {
       this.g.save();
       this.poly(S);
@@ -746,7 +834,7 @@ class Scene {
       this.P(cx + u[0] * Math.cos(a) * rr + n[0] * off, cy + u[1] * Math.cos(a) * rr + n[1] * off, cz + Math.sin(a) * rr);
     const N = 28, near = (side * thick) / 2, far = -near, rin = r * 0.8;
     const ring = (rr: number, off: number): Pt[] => Array.from({ length: N }, (_, j) => at((j / N) * TAU, rr, off));
-    const tread = { body: IRON.body, ink: IRON.ink };
+    const tread = p.tone ? KIT_IRON_PAINT : { body: IRON.body, ink: IRON.ink };
     // The back of the rim, seen through the spokes.
     if (does('under')) {
       const back = ring(r, far), backIn = ring(rin, far);
@@ -755,7 +843,7 @@ class Scene {
       g.closePath();
       backIn.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
       g.closePath();
-      g.fillStyle = rgb(p.body, 0.62);
+      g.fillStyle = shadeOf(p, 0.62);
       g.fill('evenodd');
       // The inside of the felloe, where it faces up at you through the hole.
       for (let j = 0; j < N; j++) {
@@ -763,7 +851,7 @@ class Scene {
         const nx = -u[0] * Math.cos(am), ny = -u[1] * Math.cos(am), nz = -Math.sin(am);
         if (!this.faces(nx, ny, nz)) continue;
         this.poly([at(a0, rin, far), at(a1, rin, far), at(a1, rin, near), at(a0, rin, near)]);
-        g.fillStyle = rgb(p.body, this.light(nx, ny, nz) * 0.8);
+        g.fillStyle = shadeOf(p, this.light(nx, ny, nz) * 0.8);
         g.fill();
       }
     }
@@ -774,7 +862,7 @@ class Scene {
         g.beginPath();
         disc.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
         g.closePath();
-        g.fillStyle = rgb(p.body, 0.78, 0.25 * blur);
+        g.fillStyle = shadeOf(p, 0.78, 0.25 * blur);
         g.fill();
       }
       g.lineCap = 'round';
@@ -784,7 +872,7 @@ class Scene {
         g.strokeStyle = rgb(p.ink);
         g.lineWidth = spokeW + this.ink * 1.4;
         g.stroke();
-        g.strokeStyle = rgb(p.body, 0.92);
+        g.strokeStyle = shadeOf(p, 0.92);
         g.lineWidth = spokeW;
         g.stroke();
       };
@@ -823,9 +911,9 @@ class Scene {
         if (!this.faces(nx, ny, nz + 0.03)) continue;
         const q = [at(a0, r, far), at(a1, r, far), at(a1, r, near), at(a0, r, near)];
         this.poly(q);
-        g.fillStyle = rgb(tread.body, this.light(nx, ny, nz));
+        g.fillStyle = shadeOf(tread, this.light(nx, ny, nz));
         g.fill();
-        g.strokeStyle = rgb(tread.body, this.light(nx, ny, nz));
+        g.strokeStyle = shadeOf(tread, this.light(nx, ny, nz));
         g.lineWidth = 0.5;
         g.stroke();
       }
@@ -836,14 +924,14 @@ class Scene {
       g.closePath();
       frontIn.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
       g.closePath();
-      g.fillStyle = rgb(p.body, k);
+      g.fillStyle = shadeOf(p, k);
       g.fill('evenodd');
       g.beginPath();
       front.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
       g.closePath();
       tyre.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
       g.closePath();
-      g.fillStyle = rgb(tread.body, k * 1.05);
+      g.fillStyle = shadeOf(tread, k * 1.05);
       g.fill('evenodd');
       g.strokeStyle = rgb(p.ink);
       g.lineWidth = this.ink;
@@ -857,12 +945,12 @@ class Scene {
       const strake: Pt[] = [];
       for (let j = 0; j <= 4; j++) strake.push(at(a0 - span / 2 + (span * j) / 4, r * 0.95, near + side * 0.05));
       for (let j = 4; j >= 0; j--) strake.push(at(a0 - span / 2 + (span * j) / 4, rin * 0.97, near + side * 0.05));
-      this.fillInk(strake, rgb(IRON.body, k * 0.62), IRON.ink);
+      this.fillInk(strake, shadeOf(tread, k * 0.62), tread.ink);
     }
     if (!does('hub')) return;
     const hub = ring(r * 0.2, near + side * 0.25);
-    this.fillInk(hub, rgb(p.body, k * 1.02), p.ink);
-    this.fillInk(ring(r * 0.08, near + side * 0.3), rgb(tread.body, 1.1), tread.ink);
+    this.fillInk(hub, shadeOf(p, k * 1.02), p.ink);
+    this.fillInk(ring(r * 0.08, near + side * 0.3), shadeOf(tread, 1.1), tread.ink);
   }
 
   /**
@@ -1248,6 +1336,44 @@ const circleOn = (F: FaceAt, s: number, t: number, r: number, n = 12): Pt[] =>
   Array.from({ length: n }, (_, i) => F(s + Math.cos((i / n) * TAU) * r, t + Math.sin((i / n) * TAU) * r));
 
 const ROPE = paintOf(hex('#c9ae7c'));
+
+/* ---- the vehicles and boats in the rune kit ------------------------------------ */
+
+/**
+ * A kit painter (`kit/core.ts`: boards, grain, bands) on a face of a box toned in the kit (`Scene.drawKitBox`), in the
+ * face's own frame: `x` across it from its left, `y` up it (on a top, from its back toward its front), in units.
+ */
+const kitDeco = (sc: Scene, paint: (g: CanvasRenderingContext2D, k: PaintCtx, w: number, h: number) => void) => (F: FaceAt, w: number, h: number): void => {
+  const g = sc.g, o = F(0, 0), a = F(1, 0), b = F(0, 1);
+  g.save();
+  g.transform(a[0] - o[0], a[1] - o[1], b[0] - o[0], b[1] - o[1], o[0], o[1]);
+  paint(g, { L: sc.faceL, fill: sc.faceFill } as unknown as PaintCtx, w, h);
+  g.restore();
+};
+
+/**
+ * What a vehicle or a boat is drawn in, which keep their own builders here (their wheels turn, and the boats are baked
+ * round their crew) but are toned as the rune kit tones a piece: its wood (`woodTone`) a step creamier in the light and
+ * mauve in the shade, a step paler on its tops and deeper underneath, the kit's iron and brass, and the kit's finer ink.
+ */
+function vehicleKit(sc: Scene, material?: string): { wood: Paint; top: Paint; deep: Paint; tone: Tone } {
+  // The kit's ink against the old 0.9, kept as much thicker zoomed out as the old was, so it never goes under a pixel.
+  sc.ink *= KIT_INK_W / 0.9;
+  const tone = woodTone(material);
+  return { wood: kitPaint(tone), top: kitPaint(paler(tone, 0.1)), deep: kitPaint(deeper(tone, 0.16)), tone };
+}
+
+/** A stake up a boarded side, standing proud of the boards: a step deeper, a lit edge up its left and a seam each side. */
+function kitStake(g: CanvasRenderingContext2D, k: PaintCtx, x0: number, x1: number, h: number): void {
+  const fill = mix(k.fill, hex('#5a4458'), 0.16);
+  g.fillStyle = rgb(fill);
+  g.fillRect(x0, 0, x1 - x0, h);
+  kitGrain(g, [fill[0], fill[1], fill[2]], x1 - x0, h, Math.round(x0 * 7 + 3), 'y', 0.5);
+  kitSeam(g, k.fill, x0, 0, x0, h, 0.14);
+  kitSeam(g, k.fill, x1, 0, x1, h, 0.14);
+  g.fillStyle = rgb(mix(fill, [255, 248, 232], 0.4), 1, 0.6);
+  g.fillRect(x0 + 0.08, 0, 0.12, h);
+}
 const SHINGLE = (wood: Paint): Paint => paintOf(mix(wood.body, [120, 104, 98], 0.3));
 
 /**
@@ -2067,69 +2193,79 @@ function hull(sc: Scene, wood: Paint, xs: number, xb: number, B: number, S: numb
     const fill = (f: Face, k: number): Pt[] => {
       const P = f.q.map(S2);
       sc.poly(P);
-      g.fillStyle = rgb(wood.body, k);
+      g.fillStyle = shadeOf(wood, k);
       g.fill();
-      g.strokeStyle = rgb(wood.body, k);
+      g.strokeStyle = shadeOf(wood, k);
       g.lineWidth = 0.5;
       g.stroke();
       return P;
+    };
+    // The colour of her planking on a face catching `k` of the light, and her sheer strake, painted a step deeper.
+    const plank = (k: number): RGB => (wood.tone ? kitShade(wood.tone, k) : wood.body);
+    const strake = wood.tone ? deeper(wood.tone, 0.3) : null;
+    /** A lap between two strakes, from `a` to `b` on the screen: a groove a step toward mauve, and the lip of the strake over it catching the light. */
+    const lap = (a: Pt, b: Pt, k: number): void => {
+      const c = plank(k);
+      sc.line(a, b, rgb(mix(c, hex('#4a3640'), 0.5), 1, 0.75), sc.ink * 0.6);
+      sc.line([a[0], a[1] - sc.ink * 0.55], [b[0], b[1] - sc.ink * 0.55], rgb(mix(c, [255, 248, 232], 0.45), 1, 0.5), sc.ink * 0.4);
     };
     // The far side from inside, darker, with its gunwale along the top.
     for (const f of inner) {
       const P = fill(f, sc.light(f.n[0], f.n[1], f.n[2]) * 0.8);
       sc.line(P[3], P[2], rgb(wood.ink), sc.ink * 2.2);
-      sc.line(P[3], P[2], rgb(wood.body, 1.12), sc.ink * 1.1);
+      sc.line(P[3], P[2], shadeOf(wood, 1.12), sc.ink * 1.1);
       if (f.end) for (const [a, b] of [[0, 3], [1, 2]]) sc.line(P[a], P[b], rgb(wood.ink, 1, 0.6), sc.ink * 0.8);
     }
-    // Her floor, boarded fore and aft.
-    const fl = HULL_FLOOR, span = st.slice(1, N - 1);
+    // Her floor, boarded fore and aft, from her transom to her stem: started a station in and ended two short, it left open water showing in the corners.
+    const fl = HULL_FLOOR, span = st.slice(0, N);
     const floor: Pt[] = [...span.map((q) => sc.P(q.xw + 0.3, -q.w * 0.8, fl)), ...[...span].reverse().map((q) => sc.P(q.xw + 0.3, q.w * 0.8, fl))];
-    sc.fillInk(floor, rgb(wood.body, 0.92), wood.ink, 0.6);
+    sc.fillInk(floor, shadeOf(wood, 0.82), wood.ink, 0.6);
     g.save();
     sc.poly(floor);
     g.clip();
-    g.strokeStyle = rgb(wood.ink, 1, 0.3);
-    g.lineWidth = sc.ink * 0.6;
-    for (const yy of [-0.5, 0.5]) { const a = sc.P(xs, yy * B * 0.5, fl), b = sc.P(xb, yy * B * 0.5, fl); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+    for (const yy of [-0.75, -0.25, 0.25, 0.75]) lap(sc.P(xs, yy * B * 0.5, fl), sc.P(xb, yy * B * 0.5, fl), 0.82);
     g.restore();
     inside(
       (x, z, w) => {
         const q = at(x), half = q.w + (q.b - q.w) * (z / q.s) - 0.25;
-        sc.drawBox(x - w / 2, x + w / 2, -half, half, z - 0.4, z, wood, { top: grain(sc, wood, 1) });
+        sc.drawBox(x - w / 2, x + w / 2, -half, half, z - 0.4, z, wood, { top: kitDeco(sc, (gg, k, ww, hh) => kitGrain(gg, k.fill, ww, hh, Math.round(x * 5 + 40), 'y', 0.8)) });
       },
       (from) => {
         const fore = st.filter((q) => q.t >= from);
         const deck = [...fore.map((q) => sc.P(q.x, -q.b, q.s)), ...[...fore].reverse().map((q) => sc.P(q.x, q.b, q.s))];
-        sc.fillInk(deck, rgb(wood.body, 1.02), wood.ink);
+        sc.fillInk(deck, shadeOf(wood, 1.02), wood.ink);
         g.save();
         sc.poly(deck);
         g.clip();
-        g.strokeStyle = rgb(wood.ink, 1, 0.35);
-        g.lineWidth = sc.ink * 0.6;
-        for (const yy of [-0.6, -0.2, 0.2, 0.6]) { const a = sc.P(fore[0].x, yy * B, fore[0].s), b = sc.P(xb, yy * B * 0.2, st[N].s); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+        for (const yy of [-0.6, -0.2, 0.2, 0.6]) lap(sc.P(fore[0].x, yy * B, fore[0].s), sc.P(xb, yy * B * 0.2, st[N].s), 1.02);
         g.restore();
       },
     );
-    // Her near side: the strakes lapped up it, dark where it is wet, and inked only along her waterline and her sheer.
+    // Her near side: the strakes lapped up it, her sheer strake painted, dark where it is wet, and inked only along her waterline and her sheer.
     for (const f of outer) {
-      const P = fill(f, sc.light(f.n[0], f.n[1], f.n[2]));
-      g.strokeStyle = rgb(wood.ink, 1, 0.45);
-      g.lineWidth = sc.ink * 0.6;
-      g.beginPath();
-      for (const k of f.end ? [0.33, 0.66] : [0.3, 0.55, 0.78]) {
-        const [a, b] = f.end ? [S2(lerp(f.q[0], f.q[1], k)), S2(lerp(f.q[3], f.q[2], k))] : [S2(lerp(f.q[0], f.q[3], k)), S2(lerp(f.q[1], f.q[2], k))];
-        g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
+      const k = sc.light(f.n[0], f.n[1], f.n[2]);
+      const P = fill(f, k);
+      if (strake && !f.end) {
+        sc.poly([S2(lerp(f.q[0], f.q[3], 0.78)), S2(lerp(f.q[1], f.q[2], 0.78)), P[2], P[3]]);
+        g.fillStyle = rgb(kitShade(strake, k));
+        g.fill();
+        g.strokeStyle = rgb(kitShade(strake, k));
+        g.lineWidth = 0.5;
+        g.stroke();
       }
-      g.stroke();
+      for (const t of f.end ? [0.33, 0.66] : [0.3, 0.55, 0.78]) {
+        const [a, b] = f.end ? [S2(lerp(f.q[0], f.q[1], t)), S2(lerp(f.q[3], f.q[2], t))] : [S2(lerp(f.q[0], f.q[3], t)), S2(lerp(f.q[1], f.q[2], t))];
+        lap(a, b, k);
+      }
       sc.poly([P[0], P[1], S2(lerp(f.q[1], f.q[2], 0.1)), S2(lerp(f.q[0], f.q[3], 0.1))]);
-      g.fillStyle = 'rgba(40, 60, 70, 0.3)';
+      g.fillStyle = 'rgba(78, 66, 104, 0.32)';
       g.fill();
     }
     for (const f of outer) {
       const P = f.q.map(S2);
       sc.line(P[0], P[1], rgb(wood.ink), sc.ink);
       sc.line(P[3], P[2], rgb(wood.ink), sc.ink * 2.2);
-      sc.line(P[3], P[2], rgb(wood.body, 1.14), sc.ink * 1.1);
+      sc.line(P[3], P[2], shadeOf(wood, 1.14), sc.ink * 1.1);
       if (f.end) for (const [a, b] of [[0, 3], [1, 2]]) sc.line(P[a], P[b], rgb(wood.ink), sc.ink);
     }
     if (bowNear) stem();
@@ -2174,13 +2310,15 @@ function sailCloth(sc: Scene, grid: V3[][], p: Paint): RigItem[] {
       out.push({ d: sc.depth((q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4), draw: () => {
         const g = sc.g, P = q.map(S);
         sc.poly(P);
-        g.fillStyle = rgb(p.body, k);
+        g.fillStyle = shadeOf(p, k);
         g.fill();
-        g.strokeStyle = rgb(p.body, k);
+        g.strokeStyle = shadeOf(p, k);
         g.lineWidth = 0.5;
         g.stroke();
-        if (j > 0) sc.line(P[0], P[3], rgb(p.ink, 1, 0.28), sc.ink * 0.6);
-        if (j < cols - 1) sc.line(P[1], P[2], rgb(p.ink, 1, 0.28), sc.ink * 0.6);
+        // The seams between its cloths: a crease of the cloth's own colour.
+        const seamInk = p.tone ? rgb(mix(kitShade(p.tone, k), CREASE_INK, 0.6), 1, 0.5) : rgb(p.ink, 1, 0.28);
+        if (j > 0) sc.line(P[0], P[3], seamInk, sc.ink * 0.6);
+        if (j < cols - 1) sc.line(P[1], P[2], seamInk, sc.ink * 0.6);
         g.lineCap = 'round';
         if (i === 0) sc.line(P[0], P[1], rgb(p.ink), sc.ink);
         if (i === rows - 1) sc.line(P[3], P[2], rgb(p.ink), sc.ink);
@@ -2838,6 +2976,8 @@ function streetLantern(sc: Scene, at: V3, k: number, lit: boolean, frame: number
 interface Build {
   sc: Scene;
   wood: Paint;
+  /** The wood it was built of, as the item names it, for a piece toned in the kit (`vehicleKit`). */
+  material?: string;
   /** Half its footprint each way, in units. */
   hw: number;
   hd: number;
@@ -4453,85 +4593,97 @@ const MODELS: Record<string, Model> = {
    * wagon is a long bed on four wheels, smaller at the front, staked and
    * banded, a bench across the middle and two pairs of yokes on its pole.
    */
-  cart: ({ sc, wood, hw, hd }) => {
+  cart: ({ sc, hw, hd, material }) => {
+    const { wood, top, deep } = vehicleKit(sc, material);
     const L0 = -hw + 1.2, L1 = hw - 5.2, W = hd - 1.6, z0 = 3.6, zb = 4.2, zt = 7, t = 0.5;
     const r = 3.3, ax = -2.4, wy = W + 0.9;
     sc.shadows = [[L0, L1, -W - 1, W + 1]];
-    sc.rod([ax, -W + 0.2, r], [ax, W - 0.2, r], 0.35, IRON);
+    sc.rod([ax, -W + 0.2, r], [ax, W - 0.2, r], 0.35, KIT_IRON_PAINT);
     for (const s of [-1, 1]) sc.wheel([ax, s * wy, r], 'y', r, 0.6, 8, wood);
-    sc.box(L0, L1, -W, W, z0, zb, wood);
-    const side = (F: FaceAt, w: number, h: number): void => { boardsOn(sc, wood, 3, false)(F, w, h); for (const s of [0.6, w - 1.2]) rectOn(sc, F, s, 0, s + 0.6, h, rgb(IRON.body), IRON.ink); };
-    sc.box(L0, L1, -W, -W + t, zb, zt, wood, { front: side, back: side });
-    sc.box(L0, L1, W - t, W, zb, zt, wood, { front: side, back: side });
-    sc.box(L0, L0 + t, -W + t, W - t, zb, zt, wood, { left: side, right: side });
-    sc.box(L1 - t, L1, -W + t, W - t, zb, zt, wood, { left: side, right: side });
-    for (const s of [-1, 1]) sc.rod([L1 + 0.4, s * (W - 0.6), z0], [hw - 0.4, s * (W - 1.1), 2], 0.35, wood);
-    sc.rod([hw - 0.5, -W + 0.9, 2.05], [hw - 0.5, W - 0.9, 2.05], 0.3, wood);
+    sc.box(L0, L1, -W, W, z0, zb, deep, { top: kitDeco(sc, (g, k, w, h) => kitBoards(g, k.fill, w, h, 3, 7)) });
+    // Its sides boarded, an iron strap up each end of each.
+    const side = (seed: number) => kitDeco(sc, (g, k, w, h) => {
+      kitBoards(g, k.fill, w, h, 2, seed);
+      kitBand(g, k, 0.5, 1.1, 0, h, 2, true);
+      kitBand(g, k, w - 1.1, w - 0.5, 0, h, 2, true);
+    });
+    sc.box(L0, L1, -W, -W + t, zb, zt, wood, { front: side(11), back: side(12) });
+    sc.box(L0, L1, W - t, W, zb, zt, wood, { front: side(13), back: side(14) });
+    sc.box(L0, L0 + t, -W + t, W - t, zb, zt, wood, { left: side(15), right: side(16) });
+    sc.box(L1 - t, L1, -W + t, W - t, zb, zt, wood, { left: side(17), right: side(18) });
+    for (const s of [-1, 1]) sc.rod([L1 + 0.4, s * (W - 0.6), z0], [hw - 0.4, s * (W - 1.1), 2], 0.35, top);
+    sc.rod([hw - 0.5, -W + 0.9, 2.05], [hw - 0.5, W - 0.9, 2.05], 0.3, top);
   },
-  large_cart: ({ sc, wood, hw, hd, trim }) => {
-    const { L0, L1, W, floor, top, bench } = boxOf('large_cart', hw, hd), t = BOX_BOARD.large_cart;
+  large_cart: ({ sc, hw, hd, trim, material }) => {
+    const { wood, top, deep } = vehicleKit(sc, material);
+    const { L0, L1, W, floor, top: rim, bench } = boxOf('large_cart', hw, hd), t = BOX_BOARD.large_cart;
     const { r, spokes } = WHEELS.large_cart!, ax = -2, wy = W + 1;
     sc.shadows = [[L0, L1, -W - 1.4, W + 1.4]];
-    sc.rod([ax, -W + 0.4, r], [ax, W - 0.4, r], 0.45, IRON);
+    sc.rod([ax, -W + 0.4, r], [ax, W - 0.4, r], 0.45, KIT_IRON_PAINT);
     const { turn, blur } = wheelsOf('large_cart', trim);
     for (const s of [-1, 1]) sc.wheel([ax, s * wy, r], 'y', r, 0.9, spokes, wood, turn, blur, true);
-    for (const s of [-1, 1]) sc.box(L0 + 1, L1 - 1, s * (W - 1.8) - 0.5, s * (W - 1.8) + 0.5, floor - 1.8, floor - 0.8, wood);
-    sc.box(L0, L1, -W, W, floor - 0.8, floor, wood, { front: grain(sc, wood, 1), back: grain(sc, wood, 1) });
-    const staked = (F: FaceAt, w: number, h: number): void => {
-      boardsOn(sc, wood, 3, false)(F, w, h);
-      for (let s = 0.4; s < w - 0.5; s += Math.max(3.2, (w - 1) / Math.round((w - 1) / 3.6))) rectOn(sc, F, s, 0, s + 0.7, h, rgb(wood.body, 0.9), wood.ink);
-      rectOn(sc, F, 0, h - 0.7, w, h - 0.2, rgb(IRON.body), IRON.ink);
-    };
-    sc.box(L0, L1, -W, -W + t, floor, top, wood, { front: staked, back: staked });
-    sc.box(L0, L1, W - t, W, floor, top, wood, { front: staked, back: staked });
-    sc.box(L0, L0 + t, -W + t, W - t, floor, top, wood, { left: staked, right: staked });
-    sc.box(L1 - t, L1, -W + t, W - t, floor, top, wood, { left: staked, right: staked });
-    for (const s of [-1, 1]) sc.box(-0.6, 0.6, s * (W - 1.6) - 0.5, s * (W - 1.6) + 0.5, floor, bench - 0.6, wood);
-    sc.box(-1.2, 1.2, -W + t, W - t, bench - 0.6, bench, wood, { top: grain(sc, wood, 2) });
+    for (const s of [-1, 1]) sc.box(L0 + 1, L1 - 1, s * (W - 1.8) - 0.5, s * (W - 1.8) + 0.5, floor - 1.8, floor - 0.8, deep);
+    const along = (seed: number) => kitDeco(sc, (g, k, w, h) => kitGrain(g, k.fill, w, h, seed, 'x', 0.8));
+    sc.box(L0, L1, -W, W, floor - 0.8, floor, deep, { front: along(21), back: along(22), left: along(23), right: along(24), top: kitDeco(sc, (g, k, w, h) => kitBoards(g, k.fill, w, h, 5, 25)) });
+    // Its sides: three boards, a stake up them every few units, and an iron band round under the rim.
+    const staked = (seed: number) => kitDeco(sc, (g, k, w, h) => {
+      kitBoards(g, k.fill, w, h, 3, seed);
+      for (let s = 0.4; s < w - 0.5; s += Math.max(3.2, (w - 1) / Math.round((w - 1) / 3.6))) kitStake(g, k, s, s + 0.7, h);
+      kitBand(g, k, 0, w, h - 0.7, h - 0.2, Math.max(2, Math.round(w / 3)), false);
+    });
+    sc.box(L0, L1, -W, -W + t, floor, rim, wood, { front: staked(31), back: staked(32) });
+    sc.box(L0, L1, W - t, W, floor, rim, wood, { front: staked(33), back: staked(34) });
+    sc.box(L0, L0 + t, -W + t, W - t, floor, rim, wood, { left: staked(35), right: staked(36) });
+    sc.box(L1 - t, L1, -W + t, W - t, floor, rim, wood, { left: staked(37), right: staked(38) });
+    for (const s of [-1, 1]) sc.box(-0.6, 0.6, s * (W - 1.6) - 0.5, s * (W - 1.6) + 0.5, floor, bench - 0.6, deep);
+    sc.box(-1.2, 1.2, -W + t, W - t, bench - 0.6, bench, top, { top: kitDeco(sc, (g, k, w, h) => kitBoards(g, k.fill, w, h, 2, 41, 'y')) });
     sc.rod([L1 + 0.2, 0, floor - 1.3], [hw - 0.6, 0, 4.4], 0.5, wood);
-    sc.box(hw - 1.6, hw - 0.6, -6.4, 6.4, 4.1, 5, wood);
+    sc.box(hw - 1.6, hw - 0.6, -6.4, 6.4, 4.1, 5, top, { left: along(43), right: along(44) });
     for (const s of [-1, 1]) sc.part(hw - 1.4, hw - 0.8, s * 3.6 - 1.6, s * 3.6 + 1.6, 1.8, 4.1, () => {
       const pts: Pt[] = [];
       for (let i = 0; i <= 10; i++) { const a = (i / 10) * Math.PI; pts.push(sc.P(hw - 1.1, s * 3.6 + Math.cos(a) * 1.5, 4.1 - Math.sin(a) * 2.2)); }
       sc.g.lineCap = 'round';
       sc.poly(pts); sc.g.strokeStyle = rgb(wood.ink); sc.g.lineWidth = 1.2 + sc.ink * 2; sc.g.stroke();
-      sc.g.strokeStyle = rgb(wood.body, 0.9); sc.g.lineWidth = 1.2; sc.g.stroke();
+      sc.g.strokeStyle = shadeOf(wood, 0.9); sc.g.lineWidth = 1.2; sc.g.stroke();
       sc.g.lineCap = 'butt';
     });
   },
-  wagon: ({ sc, wood, hw, hd, trim }) => {
-    const { L0, L1, W, floor, top, bench } = boxOf('wagon', hw, hd), t = BOX_BOARD.wagon;
+  wagon: ({ sc, hw, hd, trim, material }) => {
+    const { wood, top, deep } = vehicleKit(sc, material);
+    const { L0, L1, W, floor, top: rim, bench } = boxOf('wagon', hw, hd), t = BOX_BOARD.wagon;
     const { r: big, spokes, front: more } = WHEELS.wagon!, { turn, front: ahead, blur } = wheelsOf('wagon', trim);
     const wy = W + 1.2, rear = [-12, big, turn] as const, front = [6, big / more!, ahead] as const;
     sc.shadows = [[L0, L1, -W - 1.6, W + 1.6]];
     for (const [ax, r, t] of [rear, front]) {
-      sc.rod([ax, -W + 0.4, r], [ax, W - 0.4, r], 0.5, IRON);
+      sc.rod([ax, -W + 0.4, r], [ax, W - 0.4, r], 0.5, KIT_IRON_PAINT);
       for (const s of [-1, 1]) sc.wheel([ax, s * wy, r], 'y', r, 1, spokes, wood, t, blur, r === big);
     }
-    sc.box(L0 + 2, L1 - 2, -0.6, 0.6, 4.6, 5.8, wood);
-    for (const s of [-1, 1]) sc.box(L0 + 1, L1 - 1, s * (W - 2.2) - 0.6, s * (W - 2.2) + 0.6, floor - 2, floor - 0.9, wood);
-    sc.box(L0, L1, -W, W, floor - 0.9, floor, wood, { front: grain(sc, wood, 1), back: grain(sc, wood, 1) });
-    const staked = (F: FaceAt, w: number, h: number): void => {
-      boardsOn(sc, wood, 3, false)(F, w, h);
+    sc.box(L0 + 2, L1 - 2, -0.6, 0.6, 4.6, 5.8, deep);
+    for (const s of [-1, 1]) sc.box(L0 + 1, L1 - 1, s * (W - 2.2) - 0.6, s * (W - 2.2) + 0.6, floor - 2, floor - 0.9, deep);
+    const along = (seed: number) => kitDeco(sc, (g, k, w, h) => kitGrain(g, k.fill, w, h, seed, 'x', 0.8));
+    sc.box(L0, L1, -W, W, floor - 0.9, floor, deep, { front: along(21), back: along(22), left: along(23), right: along(24), top: kitDeco(sc, (g, k, w, h) => kitBoards(g, k.fill, w, h, 6, 25)) });
+    // Its sides: three boards, staked, and banded in iron along the foot and under the rim.
+    const staked = (seed: number) => kitDeco(sc, (g, k, w, h) => {
+      kitBoards(g, k.fill, w, h, 3, seed);
       const n = Math.max(2, Math.round((w - 1) / 4.2));
-      for (let i = 0; i <= n; i++) { const s = 0.3 + (i * (w - 1.3)) / n; rectOn(sc, F, s, 0, s + 0.7, h, rgb(wood.body, 0.9), wood.ink); }
-      for (const tt of [0.5, h - 0.9]) rectOn(sc, F, 0, tt, w, tt + 0.5, rgb(IRON.body), IRON.ink);
-    };
-    sc.box(L0, L1, -W, -W + t, floor, top, wood, { front: staked, back: staked });
-    sc.box(L0, L1, W - t, W, floor, top, wood, { front: staked, back: staked });
-    sc.box(L0, L0 + t, -W + t, W - t, floor, top, wood, { left: staked, right: staked });
-    sc.box(L1 - t, L1, -W + t, W - t, floor, top, wood, { left: staked, right: staked });
-    for (const s of [-1, 1]) sc.box(-0.7, 0.7, s * (W - 2) - 0.6, s * (W - 2) + 0.6, floor, bench - 0.6, wood);
-    sc.box(-1.4, 1.4, -W + t, W - t, bench - 0.6, bench, wood, { top: grain(sc, wood, 2) });
+      for (let i = 0; i <= n; i++) { const s = 0.3 + (i * (w - 1.3)) / n; kitStake(g, k, s, s + 0.7, h); }
+      for (const tt of [0.5, h - 0.9]) kitBand(g, k, 0, w, tt, tt + 0.5, Math.max(2, n), false);
+    });
+    sc.box(L0, L1, -W, -W + t, floor, rim, wood, { front: staked(31), back: staked(32) });
+    sc.box(L0, L1, W - t, W, floor, rim, wood, { front: staked(33), back: staked(34) });
+    sc.box(L0, L0 + t, -W + t, W - t, floor, rim, wood, { left: staked(35), right: staked(36) });
+    sc.box(L1 - t, L1, -W + t, W - t, floor, rim, wood, { left: staked(37), right: staked(38) });
+    for (const s of [-1, 1]) sc.box(-0.7, 0.7, s * (W - 2) - 0.6, s * (W - 2) + 0.6, floor, bench - 0.6, deep);
+    sc.box(-1.4, 1.4, -W + t, W - t, bench - 0.6, bench, top, { top: kitDeco(sc, (g, k, w, h) => kitBoards(g, k.fill, w, h, 2, 41, 'y')) });
     sc.rod([L1 + 0.2, 0, 5.2], [hw - 0.4, 0, 4.6], 0.55, wood);
     for (const yx of [L1 + 3.2, hw - 1.2]) {
-      sc.box(yx - 0.5, yx + 0.5, -6.6, 6.6, 4.4, 5.3, wood);
+      sc.box(yx - 0.5, yx + 0.5, -6.6, 6.6, 4.4, 5.3, top, { left: along(43), right: along(44) });
       for (const s of [-1, 1]) sc.part(yx - 0.3, yx + 0.3, s * 3.6 - 1.6, s * 3.6 + 1.6, 2.2, 4.4, () => {
         const pts: Pt[] = [];
         for (let i = 0; i <= 10; i++) { const a = (i / 10) * Math.PI; pts.push(sc.P(yx, s * 3.6 + Math.cos(a) * 1.5, 4.4 - Math.sin(a) * 2.1)); }
         sc.g.lineCap = 'round';
         sc.poly(pts); sc.g.strokeStyle = rgb(wood.ink); sc.g.lineWidth = 1.2 + sc.ink * 2; sc.g.stroke();
-        sc.g.strokeStyle = rgb(wood.body, 0.9); sc.g.lineWidth = 1.2; sc.g.stroke();
+        sc.g.strokeStyle = shadeOf(wood, 0.9); sc.g.lineWidth = 1.2; sc.g.stroke();
         sc.g.lineCap = 'butt';
       });
     }
@@ -4546,9 +4698,10 @@ const MODELS: Record<string, Model> = {
    * the sail swings out to leeward and fills as far as `trim` says, which is
    * the wind's side and how hard it is drawing.
    */
-  rowing_boat: ({ sc, wood, hw, hd, trim }) => {
+  rowing_boat: ({ sc, hw, hd, trim, material }) => {
+    const { wood, tone } = vehicleKit(sc, material);
     sc.shadows = [];
-    const OAR = paintOf(mix(wood.body, [255, 250, 240], 0.2));
+    const OAR = kitPaint(paler(tone, 0.25));
     const { xs, xb, B, S, thwarts, thwart } = HULLS.rowing_boat(hw, hd);
     hull(sc, wood, xs, xb, B, S, (seat) => {
       for (const tx of thwarts) seat(tx, thwart, 0.6);
@@ -4559,7 +4712,8 @@ const MODELS: Record<string, Model> = {
       }
     });
   },
-  sailing_boat: ({ sc, wood, hw, hd, trim, tint, manned }) => {
+  sailing_boat: ({ sc, hw, hd, trim, tint, manned, material }) => {
+    const { wood, tone } = vehicleKit(sc, material);
     sc.shadows = [];
     const { xs, xb, B, S, thwarts, thwart, tiller, rudder } = HULLS.sailing_boat(hw, hd);
     const sheer = sheerOf(S);
@@ -4571,7 +4725,9 @@ const MODELS: Record<string, Model> = {
     const aft = (len: number, z: number, turn = 1): V3 => [xm - Math.cos(swing * turn) * len, side * Math.sin(swing * turn) * len, z];
     const tack: V3 = [xm, 0, zb], clew = aft(boom, zb), throat: V3 = [xm, 0, zb + luff], peak = aft(gaff, zb + luff + gaff * 0.55, 0.9);
     const lee: V3 = [Math.sin(swing), side * Math.cos(swing), 0];
-    const SAIL = tint ? paintOf(hex(tint.colour), 0.55) : paintOf(hex('#f1e8d2'));
+    // Her sail is cloth: linen, or the dye whole. Her spars a step paler than her hull.
+    const SAIL = kitPaint(clothTone(tint));
+    const SPAR = kitPaint(paler(tone, 0.12));
     const lerp = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
     // What the mast, the spars and the sail stand in: from the after end of the boom and the gaff to the stem the stays run to, and
     // across from the mast out to where the sail's belly reaches on her lee side. The helmsman sits aft of all of it.
@@ -4582,29 +4738,27 @@ const MODELS: Record<string, Model> = {
     hull(sc, wood, xs, xb, B, S, (seat, deck) => {
       for (const tx of thwarts) seat(tx, thwart, 0.7);
       deck(0.72);
-      sc.drawRod([xm, 0, 0.8], [xm, 0, S + 0.6], 0.45, wood);
+      sc.drawRod([xm, 0, 0.8], [xm, 0, S + 0.6], 0.45, SPAR);
       // The tiller, from the rudder's head forward over the stern sheets to the helmsman's hand; in her while it is in nobody's.
-      if (!manned) sc.drawRod(rudder, tiller, 0.3, wood);
+      if (!manned) sc.drawRod(rudder, tiller, 0.3, SPAR);
     }, { reach: boom + belly + 1, top: zt + 1, box: rigBox(), draw: () => {
       // The forestay from the masthead to the stem, then the mast and the sail in the order they stand.
-      sc.line(sc.P(xm, 0, zt - 0.6), sc.P(xb - 0.4, 0, sheer(1)), rgb(ROPE.ink, 1, 0.55), sc.ink * 0.5);
+      sc.line(sc.P(xm, 0, zt - 0.6), sc.P(xb - 0.4, 0, sheer(1)), rgb(KIT_ROPE, 1, 0.6), sc.ink * 0.6);
       const n = 6;
       const pt = (u: number, v: number): V3 => {
         const p = lerp(lerp(tack, clew, u), lerp(throat, peak, u), v);
         const o = belly * 4 * u * (1 - u) * (1 - 0.35 * v);
         return [p[0] + lee[0] * o, p[1] + lee[1] * o, p[2]];
       };
-      const strips = Array.from({ length: n }, (_, i) => {
-        const q: V3[] = [pt(i / n, 0), pt((i + 1) / n, 0), pt((i + 1) / n, 1), pt(i / n, 1)];
-        return { q, d: sc.depth((q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2) };
-      });
-      const mast = (): void => sc.drawRod([xm, 0, S + 0.6], [xm, 0, zt], 0.45, wood);
-      const behind = strips.reduce((a, s) => a + s.d, 0) / n > sc.depth(xm, 0);
+      // Its cloths, head to foot and luff to leech: seamed between the cloths and ruled round once (`sailCloth`).
+      const cloth = sailCloth(sc, Array.from({ length: 4 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => pt(j / n, 1 - i / 3))), SAIL);
+      const mast = (): void => sc.drawRod([xm, 0, S + 0.6], [xm, 0, zt], 0.45, SPAR);
+      const behind = cloth.reduce((a, s) => a + s.d, 0) / cloth.length > sc.depth(xm, 0);
       if (behind) mast();
-      strips.sort((a, b) => a.d - b.d);
-      for (const s of strips) sc.drawPanel(s.q, SAIL);
-      sc.drawRod(tack, clew, 0.32, wood);
-      sc.drawRod(throat, peak, 0.28, wood);
+      cloth.sort((a, b) => a.d - b.d);
+      for (const c of cloth) c.draw();
+      sc.drawRod(tack, clew, 0.32, SPAR);
+      sc.drawRod(throat, peak, 0.28, SPAR);
       if (!behind) mast();
     } });
     /*
@@ -4622,13 +4776,14 @@ const MODELS: Record<string, Model> = {
       for (let i = 0; i < n; i++) {
         const p = lerp(a, b, i / n), q = lerp(a, b, (i + 1) / n);
         const z0 = Math.max(sheerTop, Math.min(p[2], q[2]));
-        sc.part(p[0], q[0], p[1], q[1], z0, Math.max(z0 + 0.1, p[2], q[2]), () => sc.line(sc.P(p[0], p[1], p[2]), sc.P(q[0], q[1], q[2]), rgb(ROPE.ink, 1, alpha), width));
+        sc.part(p[0], q[0], p[1], q[1], z0, Math.max(z0 + 0.1, p[2], q[2]), () => sc.line(sc.P(p[0], p[1], p[2]), sc.P(q[0], q[1], q[2]), rgb(KIT_ROPE, 1, alpha), width));
       }
     };
-    for (const sg of [-1, 1]) rope([xm, 0, zt - 0.6], [xm - 2, sg * B * 0.85, S], 0.55, sc.ink * 0.5, 4);
-    rope(clew, [xs + 1.2, 0, sheer(0) + 0.4], 0.8, sc.ink * 0.6, 4);
-    // The rudder, hung off the transom.
-    sc.box(xs - 0.9, xs - 0.3, -0.35, 0.35, 0, sheer(0) + 0.8, wood);
+    for (const sg of [-1, 1]) rope([xm, 0, zt - 0.6], [xm - 2, sg * B * 0.85, S], 0.6, sc.ink * 0.6, 4);
+    rope(clew, [xs + 1.2, 0, sheer(0) + 0.4], 0.85, sc.ink * 0.7, 4);
+    // The rudder, hung off the transom, strapped in iron.
+    const straps = kitDeco(sc, (g, k, w, h) => { for (const t of [h * 0.35, h * 0.75]) kitBand(g, k, -0.1, w + 0.1, t - 0.3, t + 0.3, 1, false); });
+    sc.box(xs - 0.9, xs - 0.3, -0.35, 0.35, 0, sheer(0) + 0.8, wood, { left: straps, right: straps });
   },
 
   /*
@@ -4648,7 +4803,14 @@ const MODELS: Record<string, Model> = {
    * says, as the sailing boat's does: the square yards are braced round, the
    * lee arm aft, and the lateen is swung out over the lee quarter.
    */
-  caravel: ({ sc, wood, trim, tint }) => {
+  caravel: ({ sc, trim, tint, material }) => {
+    const { wood, tone } = vehicleKit(sc, material);
+    /** The groove between two planks, on a face catching `k` of the light. */
+    const seamOf = (k: number, a: number): string => rgb(mix(kitShade(tone, k), hex('#4a3640'), 0.5), 1, a);
+    /** Her upperworks, over the wale: painted a step deeper than her bottom. */
+    const UPPER = kitPaint(deeper(tone, 0.28));
+    /** Her masts and spars, a step paler than her hull. */
+    const SPAR = kitPaint(paler(tone, 0.12));
     sc.shadows = [];
     // Her lines, which are her own rather than her footprint's: transom and stem, half her beam, and how far her sides lean in for each unit they rise above the wale.
     const xs = -31, xb = 33, L = xb - xs, B = 14, LEAN = 0.015;
@@ -4721,17 +4883,17 @@ const MODELS: Record<string, Model> = {
         if (o.transom && !transomNear) inner.push(face([on(s0, -1, dz), on(s0, 1, dz), on(s0, 1, s0.top), on(s0, -1, s0.top)], [1, 0, 0], true, -1, 0));
         inner.sort((p, q) => p.d - q.d);
         outer.sort((p, q) => p.d - q.d);
-        const fill = (P: Pt[], k: number): void => {
+        const fill = (P: Pt[], k: number, p: Paint = wood): void => {
           sc.poly(P);
-          g.fillStyle = rgb(wood.body, k);
+          g.fillStyle = shadeOf(p, k);
           g.fill();
-          g.strokeStyle = rgb(wood.body, k);
+          g.strokeStyle = shadeOf(p, k);
           g.lineWidth = 0.5;
           g.stroke();
         };
         const rail = (a: Pt, b: Pt): void => {
           sc.line(a, b, rgb(wood.ink), sc.ink * 2.2);
-          sc.line(a, b, rgb(wood.body, 1.14), sc.ink * 1.1);
+          sc.line(a, b, shadeOf(wood, 1.14), sc.ink * 1.1);
         };
         const stemLine = (): void => {
           const s = st[n];
@@ -4742,11 +4904,12 @@ const MODELS: Record<string, Model> = {
         // The inside of her far side, darker, with its rail along the top.
         for (const f of inner) {
           const P = f.q.map(S);
-          fill(P, sc.light(f.n[0], f.n[1], f.n[2]) * 0.8);
-          g.strokeStyle = rgb(wood.ink, 1, 0.3);
+          const k = sc.light(f.n[0], f.n[1], f.n[2]) * 0.8;
+          fill(P, k);
+          g.strokeStyle = seamOf(k, 0.6);
           g.lineWidth = sc.ink * 0.6;
           g.beginPath();
-          for (const k of [0.35, 0.7]) { const [a, b] = [S(lerp(f.q[0], f.q[3], k)), S(lerp(f.q[1], f.q[2], k))]; g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
+          for (const t of [0.35, 0.7]) { const [a, b] = [S(lerp(f.q[0], f.q[3], t)), S(lerp(f.q[1], f.q[2], t))]; g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
           g.stroke();
           rail(P[3], P[2]);
           if (f.i === o.step || f.i + 1 === o.step) sc.line(f.i === o.step ? P[0] : P[1], f.i === o.step ? P[3] : P[2], rgb(wood.ink), sc.ink);
@@ -4754,11 +4917,11 @@ const MODELS: Record<string, Model> = {
         // The deck, planked fore and aft.
         const edge = (sg: number): V3[] => st.map((s) => { const p = on(s, sg, dz); return [p[0], sg * Math.max(0, Math.abs(p[1]) - 0.25), dz]; });
         const deck = [...edge(-1), ...edge(1).reverse()].map(S);
-        sc.fillInk(deck, rgb(wood.body, 1.02), wood.ink);
+        sc.fillInk(deck, shadeOf(wood, 1.02), wood.ink);
         g.save();
         sc.poly(deck);
         g.clip();
-        g.strokeStyle = rgb(wood.ink, 1, 0.3);
+        g.strokeStyle = seamOf(1.02, 0.6);
         g.lineWidth = sc.ink * 0.6;
         g.beginPath();
         for (let y = -B + 1.8; y < B; y += 1.8) { const a = sc.P(st[0].x, y, dz), b = sc.P(x1, y, dz); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
@@ -4768,12 +4931,12 @@ const MODELS: Record<string, Model> = {
         if (o.bulkhead !== undefined && sc.faces(o.bulkhead, 0, 0)) {
           const s = o.bulkhead > 0 ? st[n] : st[0];
           sc.drawPanel([on(s, -1, D), on(s, 1, D), on(s, 1, dz), on(s, -1, dz)], wood, (F, k) => {
-            g.strokeStyle = rgb(wood.ink, 1, 0.4);
+            g.strokeStyle = seamOf(k, 0.7);
             g.lineWidth = sc.ink * 0.6;
             g.beginPath();
             for (let i = 1; i < 9; i++) { const [a, b] = [F(i / 9, 0), F(i / 9, 1)]; g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
             g.stroke();
-            sc.fillInk([F(0.42, 0), F(0.58, 0), F(0.58, 0.8), F(0.42, 0.8)], rgb(wood.body, k * 0.72), wood.ink);
+            sc.fillInk([F(0.42, 0), F(0.58, 0), F(0.58, 0.8), F(0.42, 0.8)], shadeOf(UPPER, k * 0.85), wood.ink);
           });
         }
         if (!bowNear) o.sprit?.();
@@ -4781,8 +4944,9 @@ const MODELS: Record<string, Model> = {
         // Her near side: planked, dark where it is wet, the wale along the knuckle and the rail on top.
         for (const f of outer) {
           const P = f.q.map(S);
-          fill(P, sc.light(f.n[0], f.n[1], f.n[2]));
-          g.strokeStyle = rgb(wood.ink, 1, 0.42);
+          const k = sc.light(f.n[0], f.n[1], f.n[2]);
+          fill(P, k, f.high ? UPPER : wood);
+          g.strokeStyle = seamOf(f.high ? k - 0.25 : k, 0.75);
           g.lineWidth = sc.ink * 0.6;
           g.beginPath();
           if (f.high) {
@@ -4792,19 +4956,19 @@ const MODELS: Record<string, Model> = {
               g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]);
             }
           } else {
-            for (const k of [0.3, 0.55, 0.78]) { const [p, q] = [S(lerp(f.q[0], f.q[3], k)), S(lerp(f.q[1], f.q[2], k))]; g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+            for (const t of [0.3, 0.55, 0.78]) { const [p, q] = [S(lerp(f.q[0], f.q[3], t)), S(lerp(f.q[1], f.q[2], t))]; g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
           }
           g.stroke();
           if (!f.high) {
             sc.poly([P[0], P[1], S(lerp(f.q[1], f.q[2], 0.1)), S(lerp(f.q[0], f.q[3], 0.1))]);
-            g.fillStyle = 'rgba(40, 60, 70, 0.3)';
+            g.fillStyle = 'rgba(78, 66, 104, 0.32)';
             g.fill();
           }
         }
         if (transomNear) {
           const P = [on(s0, -1, 0), on(s0, 1, 0), on(s0, 1, s0.zw), on(s0, 1, s0.top), on(s0, -1, s0.top), on(s0, -1, s0.zw)];
-          sc.fillInk(P.map(S), rgb(wood.body, sc.light(-1, 0, 0)), wood.ink);
-          g.strokeStyle = rgb(wood.ink, 1, 0.42);
+          sc.fillInk(P.map(S), shadeOf(UPPER, sc.light(-1, 0, 0)), wood.ink);
+          g.strokeStyle = seamOf(sc.light(-1, 0, 0) - 0.25, 0.75);
           g.lineWidth = sc.ink * 0.6;
           g.beginPath();
           for (let z = 1.7; z < s0.top - 0.6; z += 1.7) { const [a, b] = [S(on(s0, -1, z)), S(on(s0, 1, z))]; g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
@@ -4813,9 +4977,10 @@ const MODELS: Record<string, Model> = {
           for (const y of [-0.3, 0.3]) {
             const [a, b] = [on(s0, 1, Dc - 3.4), on(s0, 1, Dc - 1.2)];
             const w = a[1] * y, v = b[1] * y;
-            sc.fillInk([S([xs, w - 1, a[2]]), S([xs, w + 1, a[2]]), S([xs, v + 1, b[2]]), S([xs, v - 1, b[2]])], rgb(hex('#5a4a44')), wood.ink);
+            sc.fillInk([S([xs, w - 1, a[2]]), S([xs, w + 1, a[2]]), S([xs, v + 1, b[2]]), S([xs, v - 1, b[2]])], rgb(kitShade(deeper(tone, 0.6), 0.75)), wood.ink);
           }
-          sc.line(S(on(s0, -1, s0.zw)), S(on(s0, 1, s0.zw)), rgb(wood.ink), sc.ink * 2.6);
+          sc.line(S(on(s0, -1, s0.zw)), S(on(s0, 1, s0.zw)), rgb(wood.ink), sc.ink * 2.8);
+          sc.line(S(on(s0, -1, s0.zw)), S(on(s0, 1, s0.zw)), shadeOf(wood, 1.08), sc.ink * 1.1);
           rail(S(on(s0, -1, s0.top)), S(on(s0, 1, s0.top)));
         }
         for (const f of outer) {
@@ -4823,7 +4988,7 @@ const MODELS: Record<string, Model> = {
           if (f.high) {
             // The wale, and the rail.
             sc.line(P[0], P[1], rgb(wood.ink), sc.ink * 2.8);
-            sc.line(P[0], P[1], rgb(wood.body, 0.72), sc.ink * 1.1);
+            sc.line(P[0], P[1], shadeOf(wood, 1.08), sc.ink * 1.1);
             rail(P[3], P[2]);
             if (f.i === o.step || f.i + 1 === o.step) {
               const s = st[f.i === o.step ? f.i : f.i + 1];
@@ -4852,10 +5017,10 @@ const MODELS: Record<string, Model> = {
       sc.drawRod([x, -r, z], [x, r, z], 0.32, wood);
     };
     // The foot of a mast, from its deck to the top of the length it stands in, where the rest of it goes on up from.
-    const mastFoot = (x: number, dz: number, z: number, r: number): Thing => ({ at: [x, 0, dz], draw: () => sc.drawRod([x, 0, dz], [x, 0, z], r, wood) });
+    const mastFoot = (x: number, dz: number, z: number, r: number): Thing => ({ at: [x, 0, dz], draw: () => sc.drawRod([x, 0, dz], [x, 0, z], r, SPAR) });
     const grating = (F: FaceAt, w: number, h: number): void => {
-      rectOn(sc, F, 0.4, 0.4, w - 0.4, h - 0.4, rgb(wood.body, 0.5), wood.ink, 0.6);
-      sc.g.strokeStyle = rgb(wood.body, 0.95);
+      rectOn(sc, F, 0.4, 0.4, w - 0.4, h - 0.4, shadeOf(wood, 0.5), wood.ink, 0.6);
+      sc.g.strokeStyle = shadeOf(wood, 1.04);
       sc.g.lineWidth = sc.ink * 0.9;
       sc.g.beginPath();
       for (let s = 1.1; s < w - 0.5; s += 0.9) { const [a, b] = [F(s, 0.4), F(s, h - 0.4)]; sc.g.moveTo(a[0], a[1]); sc.g.lineTo(b[0], b[1]); }
@@ -4866,7 +5031,7 @@ const MODELS: Record<string, Model> = {
     length(0, tc, 6, Dc, castleRail, xc, aftTop, [
       mastFoot(xz, Dc, aftTop, rz),
       { at: [xc - 0.35, 0, Dc], draw: balustrade(tc, castleRail, Dc, xc - 0.35) },
-      { at: [xh, 0, Dc], draw: () => { sc.drawRod([xh, 0, Dc], [xh - 0.3, 0, Dc + 3.2], 0.26, wood); sc.drawLathe(xh - 0.3, 0, [[Dc + 3.1, 0.2], [Dc + 3.3, 0.42], [Dc + 3.7, 0.1]], BRASS, 10, {}); } },
+      { at: [xh, 0, Dc], draw: () => { sc.drawRod([xh, 0, Dc], [xh - 0.3, 0, Dc + 3.2], 0.26, wood); sc.drawLathe(xh - 0.3, 0, [[Dc + 3.1, 0.2], [Dc + 3.3, 0.42], [Dc + 3.7, 0.1]], KIT_BRASS_PAINT, 10, {}); } },
     ], { transom: true, bulkhead: 1, step: 6 });
     length(tc, tf, 12, D, waistRail, xf, waistTop, [
       mastFoot(xm, D, waistTop, rm),
@@ -4875,10 +5040,10 @@ const MODELS: Record<string, Model> = {
     length(tf, 1, 8, Df, foreRail, tip[0] + 0.6, foreTop, [
       mastFoot(xfm, Df, foreTop, rf),
       { at: [xf + 0.35, 0, Df], draw: balustrade(tf, foreRail, Df, xf + 0.35) },
-    ], { bulkhead: -1, step: 0, stem: true, sprit: () => sc.drawRod(heel, tip, 0.55, wood) });
+    ], { bulkhead: -1, step: 0, stem: true, sprit: () => sc.drawRod(heel, tip, 0.55, SPAR) });
 
     // The rudder, hung on the sternpost, iron-strapped.
-    const straps = (F: FaceAt, w: number, h: number): void => { for (const t of [h * 0.3, h * 0.72]) rectOn(sc, F, 0, t - 0.3, w, t + 0.3, rgb(IRON.body), IRON.ink, 0.8); };
+    const straps = kitDeco(sc, (gg, k, w, h) => { for (const t of [h * 0.3, h * 0.72]) kitBand(gg, k, -0.1, w + 0.1, t - 0.3, t + 0.3, 1, false); });
     sc.box(xs - 3, xs - 0.1, -0.45, 0.45, 0, 5.5, wood, { left: straps, right: straps });
     sc.box(xs - 1.3, xs - 0.1, -0.45, 0.45, 5.5, 12, wood, { left: straps, right: straps });
 
@@ -4900,7 +5065,7 @@ const MODELS: Record<string, Model> = {
     const set = trim ?? 0.25;
     const lee = set < 0 ? 1 : -1;
     const pull = Math.abs(set);
-    const SAIL = tint ? paintOf(hex(tint.colour), 0.55) : paintOf(hex('#f1e8d2'));
+    const SAIL = kitPaint(clothTone(tint));
     const brace = 0.15 + pull * 0.45;
     const ax = Math.sin(brace), ay = -lee * Math.cos(brace), nx = Math.cos(brace), ny = lee * Math.sin(brace);
     /** A square sail on the mast at `x`, its head on the yard at `zh` and `off` forward of the mast, `yh` each way at the head and `yf` at the foot. */
@@ -4914,11 +5079,11 @@ const MODELS: Record<string, Model> = {
       });
     const onYard = (x: number, off: number, z: number, s: number): V3 => [x + s * ax + off * nx, s * ay + off * ny, z];
     /** A mast from the top of the stump drawn in the hull under it, squared off at the foot so it runs on out of it. */
-    const mast = (x: number, z0: number, z1: number, r: number): RigItem => ({ d: sc.depth(x, 0), draw: () => sc.drawRod([x, 0, z0], [x, 0, z1], r, wood, true) });
+    const mast = (x: number, z0: number, z1: number, r: number): RigItem => ({ d: sc.depth(x, 0), draw: () => sc.drawRod([x, 0, z0], [x, 0, z1], r, SPAR, true) });
     /** A spar, laid over the cloth bent to it and otherwise as near as it is where it crosses its mast, `at`. */
-    const spar = (a: V3, b: V3, r: number, cloth: RigItem[], at: V3 = lerp(a, b, 0.5)): RigItem => ({ d: Math.max(sc.depth(at[0], at[1]), ...cloth.map((c) => c.d)) + 1e-3, draw: () => sc.drawRod(a, b, r, wood) });
+    const spar = (a: V3, b: V3, r: number, cloth: RigItem[], at: V3 = lerp(a, b, 0.5)): RigItem => ({ d: Math.max(sc.depth(at[0], at[1]), ...cloth.map((c) => c.d)) + 1e-3, draw: () => sc.drawRod(a, b, r, SPAR) });
     /** A rope from `a` to `b`, as fine as the sailing boat's stays. */
-    const rope = (a: V3, b: V3, alpha = 0.55) => (): void => sc.line(S(a), S(b), rgb(ROPE.ink, 1, alpha), sc.ink * 0.5);
+    const rope = (a: V3, b: V3, alpha = 0.55) => (): void => sc.line(S(a), S(b), rgb(KIT_ROPE, 1, Math.min(1, alpha + 0.05)), sc.ink * 0.6);
     /** A short rope from one corner of the rig to another, laid among the cloth and spars by where it is. */
     const tie = (a: V3, b: V3): RigItem => ({ d: sc.depth((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), draw: rope(a, b, 0.7) });
     /** Where a shroud or a sheet comes down to her rail, at `x` on side `sg`. */
@@ -5244,7 +5409,7 @@ function build(sc: Scene, kind: string, lit: boolean, tint: Tint | undefined, tr
   const def = furnitureDef(kind);
   const hw = def.w * 5, hd = def.h * 5;
   const model = MODELS[kind];
-  if (model) model({ sc, wood: woodOf(material), hw, hd, lit, tint, trim, frame, manned });
+  if (model) model({ sc, wood: woodOf(material), material, hw, hd, lit, tint, trim, frame, manned });
   else sc.box(-hw * 0.7, hw * 0.7, -hd * 0.7, hd * 0.7, 0, 5, woodOf(material));
   // The floor it shades: what the model said, or its footprint drawn in a little.
   sc.shadows ??= [[-hw * 0.78, hw * 0.78, -hd * 0.78, hd * 0.78]];
