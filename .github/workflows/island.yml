@@ -3363,6 +3363,19 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/roxxendrive.mjs --log-level=error
           node node_modules/.cache/roxxendrive.mjs
 
+      - name: Riding and pulling teach climbing
+        if: matrix.shard == 4
+        run: |
+          # Asked for: "fix it so riding and pulling teach climbing". Every tile
+          # gone into on the ground is a go of climbing at `haul_learn_of` its
+          # rise, the browser's `haulLearn`, to the mount under its rider and to
+          # every beast in a pulled cart's traces that keeps climbing there; a
+          # Cartling learns its driving and no climbing. Nothing standing,
+          # nothing at heel, more up a slope than on the flat.
+          npx esbuild supabase/test/haulclimb.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/haulclimb.mjs --log-level=error
+          node node_modules/.cache/haulclimb.mjs
+
       - name: The Bauble of Regret, and a trade undone
         if: matrix.shard == 5
         run: |

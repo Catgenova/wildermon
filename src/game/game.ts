@@ -35,7 +35,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { glassResync, underGlass } from './glasshouse';
-import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, MAX_MOUNT_SPEED, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
+import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -8139,8 +8139,9 @@ export class Game {
    */
   workClimb(c: Creature, moved: number): void {
     if (moved <= 0) return;
-    const grade = Math.abs(this.world.heightAt(c.x, c.y) - this.world.heightAt(c.x - this.player.dirX * 0.5, c.y - this.player.dirY * 0.5));
-    this.creatures.gainSkill(this, c, HAUL_SKILL, moved * (0.05 + Math.min(0.5, grade / 12)));
+    // The rise over the last half tile, as a tile's (`haulLearn`).
+    const rise = 2 * (this.world.heightAt(c.x, c.y) - this.world.heightAt(c.x - this.player.dirX * 0.5, c.y - this.player.dirY * 0.5));
+    this.creatures.gainSkill(this, c, HAUL_SKILL, moved * haulLearn(rise));
   }
 
   /**
@@ -8240,7 +8241,8 @@ export class Game {
         c.walkPhase += dt * 12;
         // Hauling teaches the hills. It costs no hunger: nothing in the traces
         // gets hungry, which is what a team was asked to be.
-        if (c.skills[HAUL_SKILL] !== undefined) this.workClimb(c, moved);
+        // Climbing, for a kind that keeps climbing in the traces; one that learns its own skill by pulling is paid that by the island (`beast_learns` 'pull').
+        if (tracesSkill(this.creatures.species(c)) === HAUL_SKILL) this.workClimb(c, moved);
       }
       c.enemy = null;
       c.state = 'idle';

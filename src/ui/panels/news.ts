@@ -58,6 +58,7 @@ import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
+import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
 import { ENCHANT_HEAD, HOARD_HEAD, MIND_GAIN, PROSPECT_HEAD, SOUL_GAIN, TAME_HEAD } from '../../game/learn';
 import { BARTER_IDLE, BARTER_REACH } from '../../game/barter';
@@ -3548,6 +3549,13 @@ export const NEWS: News[] = [
     day: '2026-10-23',
     lines: () => [
       'Fixed: frame rate walking or driving with fog on: grass edges on remembered ground redrawn only where the memory changed, not every step. Driving a cart: frame 52 → 18 ms, worst 289 → 92 ms.',
+    ],
+  },
+  {
+    n: 290,
+    day: '2026-10-23',
+    lines: () => [
+      `Fixed: riding and pulling teach climbing on the island: Thistlekit, Gorral, Shaggan and every mount. Base climbing gain per tile: ${HAUL_LEARN_290} on the flat, rising with slope to ${HAUL_LEARN_290 + HAUL_LEARN_STEEP_290} at a rise of ${HAUL_LEARN_STEEP_290 * HAUL_LEARN_RISE_290} or more.`,
     ],
   },
 ];

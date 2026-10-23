@@ -4708,6 +4708,15 @@ export function mutationSaid(from: Record<string, TraitSource> | undefined): str
 /** What a draught beast trains by pulling, and a mount by being ridden. */
 export const HAUL_SKILL = 'climbing';
 /**
+ * Climbing a tile ridden or pulled teaches a beast: `HAUL_LEARN` on the flat, and one more for every `HAUL_LEARN_RISE`
+ * of height between the tile's centre and the last's, to `HAUL_LEARN_STEEP` more. The island's `haul_learn`,
+ * `haul_learn_steep`, `haul_learn_rise` and `haul_learn_of`.
+ */
+export const HAUL_LEARN = 0.05;
+export const HAUL_LEARN_STEEP = 0.5;
+export const HAUL_LEARN_RISE = 24;
+export const haulLearn = (rise: number): number => HAUL_LEARN + Math.min(HAUL_LEARN_STEEP, Math.abs(rise) / HAUL_LEARN_RISE);
+/**
  * The skill a draught beast keeps in the traces, which a team's pace and the steepest step its wheels take read
  * (`Game.teamClimb`): climbing, but for a kind that learns its own skill by pulling, whose own skill stands in it. The
  * island's `beast_climb`.

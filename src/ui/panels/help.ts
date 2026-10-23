@@ -55,6 +55,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { BARDING_CUT, gearBill, gearSays, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZE_BILL, GEAR_SIZES, GEAR_SLOTS, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
+import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP } from '../../game/creatures';
 import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
@@ -2182,7 +2183,8 @@ export function helpText(): string {
       <li>Pace (speed multiplier): the team's speed and number, and hunger (a hungry one is slower).</li>
       <li><b>Driving</b> (the driver): team pace +${percent(drivingPace(TRAVEL_TOP_AT / 2) - 1)} at ${TRAVEL_TOP_AT / 2}, +${percent(DRIVING_TOP)} at ${TRAVEL_TOP_AT}; trained per tile entered
       on the seat. A ${SPECIES.seavic.name} pair outruns walking; ${WAGON.vehicle?.needs ?? 0} ${SPECIES.quarra.name}s do not, but shift ${WAGON.capacity ?? 0} bricks.</li>
-      <li>Draught wildermon train <b>climbing</b> hauling over rough ground; the team's skill sets wheel speed and the steepest step taken.</li>
+      <li>Draught wildermon and mounts train <b>climbing</b>, per tile pulled or ridden: ${HAUL_LEARN} base gain on the flat, to ${HAUL_LEARN + HAUL_LEARN_STEEP} at a rise
+      of ${HAUL_LEARN_STEEP * HAUL_LEARN_RISE} or more. The team's climbing sets wheel speed and the steepest step taken.</li>
       <li><b>${SPECIES.roxxen.name}</b>: learns <b>driving</b> instead, ${LEARNS_SAYS.pull} (${percent((PULL_LEARN * LEARN_PACE.pull) / KNACK_GO)} of an action); its driving counts where
       another wildermon's climbing does. Standing still, in or out of the traces: no learning.</li>
       <li>Open ground only: no fords, garden steps or steep ground. Indoors through an <b>arch</b>, <b>double door</b> or <b>gate</b>, never a plain door.</li>
