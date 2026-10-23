@@ -15,6 +15,7 @@ import { LAMP_ARM, LAMP_GLASS, LAMP_HANG } from '../game/lamps';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
 import { drawPlinth, drawPlinthRunes } from './plinth';
 import { drawDen, isDen } from './dens';
+import { drawKit, drawKitLive, isKit, kitGlows, kitHeight, kitHoles, kitWind } from './kitpieces';
 import { BRASS_PAINT, IRON_PAINT, LINEN_PAINT, WOOD_TONE } from './materials';
 
 /**
@@ -2650,16 +2651,17 @@ export function drawLampBloom(ctx: CanvasRenderingContext2D, sx: number, sy: num
  * is, 0 to 1.
  */
 export function drawFurnitureLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, kind: string, view: PieceView, night = 0, air: Air = STILL): void {
+  if (isKit(kind)) { drawKitLive(ctx, sx, sy, zoom, kind, view, night, air); return; }
   LIVE[kind]?.(ctx, sx, sy, zoom, view, performance.now() / 1000, night);
   // And cloth, as the wind has it this frame.
   CLOTH[kind]?.(ctx, sx, sy, zoom, view, air);
 }
 
 /** Whether a piece has cloth on it that moves in the wind, drawn each frame (`drawFurnitureLive`). */
-export const clothInWind = (kind: string): boolean => kind in CLOTH;
+export const clothInWind = (kind: string): boolean => (isKit(kind) ? kitWind(kind) : kind in CLOTH);
 
 /** Whether a piece takes the night back off itself (`furnitureHoles`). */
-export const glowsAtNight = (kind: string): boolean => kind in HOLES;
+export const glowsAtNight = (kind: string): boolean => (isKit(kind) ? kitGlows(kind) : kind in HOLES);
 
 /**
  * Where a piece standing at (sx, sy) takes the night back off itself, this
@@ -2668,6 +2670,7 @@ export const glowsAtNight = (kind: string): boolean => kind in HOLES;
  * front of it.
  */
 export function furnitureHoles(sx: number, sy: number, zoom: number, kind: string, view: PieceView): Array<{ x: number; y: number; r: number; a: number }> {
+  if (isKit(kind)) return kitHoles(sx, sy, zoom, kind, view);
   return HOLES[kind]?.(sx, sy, zoom, view, performance.now() / 1000) ?? [];
 }
 
@@ -5253,6 +5256,7 @@ function build(sc: Scene, kind: string, lit: boolean, tint: Tint | undefined, tr
  * written down, so a piece is as tall as it is drawn.
  */
 export const FURNITURE_HEIGHT: Record<string, number> = Object.fromEntries(FURNITURE.map((f) => {
+  if (isKit(f.id)) return [f.id, kitHeight(f.id)];
   const sc = new Scene(null as unknown as CanvasRenderingContext2D, pieceView('s', 0), 1);
   build(sc, f.id, false, undefined, undefined, undefined, 0);
   return [f.id, Math.ceil(Math.max(0, ...sc.parts.map((p) => p.z1)) * HEIGHT_SCALE)];
@@ -5600,6 +5604,8 @@ export function drawFurniture(ctx: CanvasRenderingContext2D, sx: number, sy: num
   }
   // A wildermon bed, built of the same kit (`dens.ts`), empty: one that somebody sleeps in is drawn by the renderer, who knows who.
   if (isDen(kind)) return drawDen(ctx, sx, sy, zoom, kind, view, {}, undefined, live);
+  // Redrawn in the same kit, whatever the piece (`kitpieces.ts`): its model there, not in `MODELS`. A layered one lays the layer `trim` names.
+  if (isKit(kind)) return drawKit(ctx, sx, sy, zoom, kind, { lit, tint, trim, material }, view, live, 0, tint ? { ...STILL, tint } : undefined);
   const rolling = !crew && !!WHEELS[kind];
   const b = bakedFor(zoom, kind, lit, tint, rolling ? undefined : trim, view, material, crew, manned, rolling);
   const k = zoom / b.scale;
