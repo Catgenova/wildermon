@@ -1,6 +1,10 @@
 import type { KitPiece } from './core';
 import { CHAIR } from './chair';
 import { CHEST } from './chest';
+import { BENCH, STOOL } from './seating';
+import { GREAT_SIGN, SIGN } from './signs';
+import { COAT_RACK, LECTERN } from './stands';
+import { DESK, LONG_TABLE, TABLE } from './tables';
 
 /**
  * Every piece of furniture drawn in the kit, by its kind (`FurnitureDef.id`).
@@ -11,4 +15,13 @@ import { CHEST } from './chest';
 export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   chair: CHAIR,
   chest: CHEST,
+  stool: STOOL,
+  bench: BENCH,
+  table: TABLE,
+  long_table: LONG_TABLE,
+  desk: DESK,
+  lectern: LECTERN,
+  coat_rack: COAT_RACK,
+  sign: SIGN,
+  great_sign: GREAT_SIGN,
 };
