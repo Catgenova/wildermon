@@ -23,4 +23,16 @@ create or replace function evo_mul(c creature, p_channel text) returns double pr
   end::double precision
 $fn$;
 
+/*
+ * Its stage's loads, its line's own third-stage loads, and a pack on it (`stageLoads`): the third-stage skill's
+ * `stage_loads` came after the gear's and left out its pack (`pack_loads_of`), which `wildgear` caught.
+ */
+create or replace function stage_loads(c creature) returns int language plpgsql stable as $fn$
+declare v_stage int := stage_of(c); v_n double precision;
+begin
+  select sd.perk_n into v_n from species_def sd where sd.id = c.species and sd.perk = 'loads';
+  return stage_loads_at(v_stage) + case when v_n is not null and v_stage >= perk_stage() then v_n::int else 0 end
+       + case when c.gear is null then 0 else pack_loads_of(c) end;
+end $fn$;
+
 select private.lock_doors();
