@@ -1,5 +1,5 @@
 import { HEIGHT_SCALE } from './iso';
-import { star } from './shine';
+import { star } from './star';
 
 /**
  * The stars over an altar, drawn over its bake every frame and taken off the
