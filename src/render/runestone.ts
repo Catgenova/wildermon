@@ -3077,6 +3077,9 @@ export class RunestoneNight {
   }
   /** A stone's shapes onto `g` in the context's units moved by (dx, dy): the soft light round its runes, then the runes. */
   private shapes(g: CanvasRenderingContext2D, s: Lit, dx: number, dy: number): void {
+    // Each soft light from one picture of it (`holeSprite`), at its strength: an altar's stars were a hundred gradients made afresh every frame.
+    const sprite = holeSprite();
+    const alpha = g.globalAlpha;
     for (const hole of s.holes(dx, dy)) {
       const flat = hole.ry !== undefined && hole.ry !== hole.r;
       const x = flat ? 0 : hole.x, y = flat ? 0 : hole.y;
@@ -3085,16 +3088,10 @@ export class RunestoneNight {
         g.translate(hole.x, hole.y);
         g.scale(1, (hole.ry as number) / hole.r);
       }
-      const grad = g.createRadialGradient(x, y, 0, x, y, hole.r);
-      grad.addColorStop(0, `rgba(0,0,0,${hole.a.toFixed(2)})`);
-      grad.addColorStop(0.5, `rgba(0,0,0,${(hole.a * 0.45).toFixed(2)})`);
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = grad;
-      g.beginPath();
-      g.arc(x, y, hole.r, 0, TAU);
-      g.fill();
+      softHole(g, x, y, hole.r, hole.a, sprite, alpha);
       if (flat) g.restore();
     }
+    g.globalAlpha = alpha;
     for (const mk of s.masks(dx, dy)) {
       g.globalAlpha = mk.a;
       g.drawImage(mk.canvas, mk.x, mk.y, mk.w, mk.h);
@@ -3103,13 +3100,51 @@ export class RunestoneNight {
   }
 }
 
+/** The pixels across the picture of a stone's soft light (`holeSprite`): its largest light drawn on screen is about this. */
+const HOLE_SPRITE = 128;
+let holePicture: HTMLCanvasElement | null = null;
+/**
+ * A stone's soft light round its runes, taken out of the night: full at its
+ * middle, 0.45 of that halfway out and nothing at its edge, in black, on a
+ * `HOLE_SPRITE` square, drawn once.
+ */
+function holeSprite(): HTMLCanvasElement {
+  if (holePicture) return holePicture;
+  const c = document.createElement('canvas');
+  c.width = c.height = HOLE_SPRITE;
+  const g = c.getContext('2d') as CanvasRenderingContext2D;
+  const r = HOLE_SPRITE / 2;
+  const grad = g.createRadialGradient(r, r, 0, r, r, r);
+  grad.addColorStop(0, 'rgba(0,0,0,1)');
+  grad.addColorStop(0.5, 'rgba(0,0,0,0.45)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grad;
+  g.beginPath();
+  g.arc(r, r, r, 0, TAU);
+  g.fill();
+  holePicture = c;
+  return c;
+}
+
+/**
+ * A soft light `r` across at (x, y), `a` strong at its middle, taken out of
+ * whatever `g` is laying it on (`destination-out`) or laid on it: one picture
+ * (`holeSprite`) put down at its strength, for the gradient made afresh for
+ * every light every frame that it stands in for.
+ */
+export function softHole(g: CanvasRenderingContext2D, x: number, y: number, r: number, a: number, sprite = holeSprite(), alpha = g.globalAlpha): void {
+  g.globalAlpha = (alpha * Math.round(a * 100)) / 100;
+  g.drawImage(sprite, x - r, y - r, r * 2, r * 2);
+  g.globalAlpha = alpha;
+}
+
 /** A box in a context's units, under transform `m`, as the whole canvas pixels it covers: left, top, right, bottom. */
 function devBox(m: DOMMatrix, x: number, y: number, w: number, h: number): [number, number, number, number] {
-  let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity;
-  for (const [px, py] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]) {
-    const X = m.a * px + m.c * py + m.e, Y = m.b * px + m.d * py + m.f;
-    L = Math.min(L, X); T = Math.min(T, Y); R = Math.max(R, X); B = Math.max(B, Y);
-  }
+  // The four corners worked out in place: it is asked of everything drawn after dark, and four arrays a call were most of what it cost.
+  const ax = m.a * x, aw = m.a * (x + w), cy = m.c * y, ch = m.c * (y + h);
+  const bx = m.b * x, bw = m.b * (x + w), dy = m.d * y, dh = m.d * (y + h);
+  const L = Math.min(ax + cy, aw + cy, ax + ch, aw + ch) + m.e, R = Math.max(ax + cy, aw + cy, ax + ch, aw + ch) + m.e;
+  const T = Math.min(bx + dy, bw + dy, bx + dh, bw + dh) + m.f, B = Math.max(bx + dy, bw + dy, bx + dh, bw + dh) + m.f;
   return [Math.floor(L) - 1, Math.floor(T) - 1, Math.ceil(R) + 1, Math.ceil(B) + 1];
 }
 

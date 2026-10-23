@@ -6997,9 +6997,14 @@ button.goal-row:focus-visible {
   z-index: -2;
 }
 
-/* The painted slab stands in for the plate drawn in CSS. */
-[data-ui='runecut'] :has(> .rc-plate)::before {
+/* The painted slab stands in for the plate drawn in CSS: its image, or the copy of its canvas shown until the image is made (src/ui/runecut-dress.ts, `Shown`). */
+[data-ui='runecut'] :has(> :is(img.rc-plate[src], canvas.rc-plate))::before {
   display: none;
+}
+
+/* An image with no picture in it yet: nothing shown. */
+img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
+  visibility: hidden;
 }
 
 /* Under everything in the interface: first in it, at its bottom layer. */
@@ -7396,9 +7401,10 @@ button.goal-row:focus-visible {
 
 /*
  * A lamp's light on a frame (`frameLamps`, src/ui/runecut-dress.ts): a warm
- * glow, swelling and fading over 4 s with a quicker flutter of the flame in
- * it, laid twice -- over the window's edge, inside it, and under it for the
- * part past the window -- both kept in step on the page's clock (`--lamp-t`).
+ * glow with a brighter heart, laid twice -- over the window's edge, inside it,
+ * and under it for the part past the window. Still: swelling and fluttering
+ * without end, each glow was a layer of its own put together through its
+ * blend on every frame, some two milliseconds of one.
  */
 .rc-lamp {
   display: none;
@@ -7412,7 +7418,7 @@ button.goal-row:focus-visible {
   border-radius: 50%;
   mix-blend-mode: screen;
   background: radial-gradient(closest-side, rgba(255, 200, 110, 0.7), rgba(255, 178, 86, 0.28) 45%, rgba(255, 170, 80, 0) 100%);
-  animation: rc-lamp-swell 4s ease-in-out var(--lamp-t, 0ms) infinite;
+  opacity: 0.8;
 }
 
 [data-ui='runecut'] #ui > .rc-lamp {
@@ -7425,40 +7431,11 @@ button.goal-row:focus-visible {
   inset: 30%;
   border-radius: 50%;
   background: radial-gradient(closest-side, rgba(255, 236, 170, 0.55), rgba(255, 236, 170, 0));
-  animation: rc-lamp-flutter 1.3s ease-in-out var(--lamp-t, 0ms) infinite alternate;
+  opacity: 0.8;
 }
 
 [data-ui='runecut'] .rc-lamp-night {
   background: radial-gradient(closest-side, rgba(255, 200, 110, 0.9), rgba(255, 178, 86, 0.42) 45%, rgba(255, 170, 80, 0) 100%);
-}
-
-@keyframes rc-lamp-swell {
-  0%,
-  100% {
-    opacity: 0.35;
-    transform: scale(0.82);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.04);
-  }
-}
-
-@keyframes rc-lamp-flutter {
-  from {
-    opacity: 0.55;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-ui='runecut'] .rc-lamp,
-  [data-ui='runecut'] .rc-lamp::after {
-    animation: none;
-    opacity: 0.8;
-  }
 }
 
 /*

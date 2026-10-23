@@ -41,7 +41,7 @@ import {
 import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
-import { drawRunestone, runestoneHit, RunestoneNight, type NightHole, type OccluderClip } from './runestone';
+import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -129,8 +129,6 @@ import { css, HAZE_REACH, rgba, skyAt, unknownInk, type Sky } from './sky';
 const HAZE_STEPS = 6;
 /** The share of the screen's pixels the swell's gradients are worked out at, across and down (`drawSwell`). */
 const SWELL_RES = 0.5;
-/** The most bands of a tree's picture its sway is laid on in (`drawTree`); a gale on a tall tree puts a pixel and a bit between them. */
-const TREE_BANDS = 24;
 /** Device pixels of tree pictures kept between frames (`drawTree`): about forty-eight megabytes. */
 const TREE_PIXELS = 12_000_000;
 /**
@@ -172,9 +170,8 @@ interface TreePicture {
   /** The colour it was mixed toward, which moves with the hour; and what it is kept under. */
   ink: string;
   key: string;
-  /** How tall the whole tree is in it, and how many of its rows were empty over the top and left off (`treePicture`). */
+  /** How tall the whole tree is in it, its empty rows over the top included (`treePicture`). */
   tall: number;
-  cropTop: number;
 }
 /**
  * The twelve borders whose walls can throw their shade on a tile
@@ -301,7 +298,6 @@ import { SKILL_BY_ID } from '../game/skills';
 import { PUFFS, PUFF_DRIFT, PUFF_RISE, puffAge, puffOf } from './smoke';
 import { CROWD, DROWNS, hemOf, ruffle, strew, strewLook, WADES, WADE_DEPTH, type Lobe } from './meadow';
 import { SEAM_FROM, seam, seamWash } from './seams';
-import { SWAY_MAX, swayAt } from './sway';
 import { Timings } from './timings';
 import { ColourPages, MarkPages } from './pages';
 import { trailMask, trailShape, type TrailShape } from './trails';
@@ -5978,9 +5974,10 @@ export class Renderer {
    * are the two dearest things a picture can be put down with: a straight
    * copy of the same picture measured a seventh of the rescaled one and a
    * fifteenth of the sheared one, and a close view of a wood was spending
-   * half its frame on nineteen trees. The wind is laid on over the top as a
-   * few bands of the picture, each a straight copy shifted along by the lean
-   * at its height -- the shear, a whole pixel at a time.
+   * half its frame on nineteen trees. It does not sway: the wind's sway was
+   * laid on as up to 24 bands of the picture, each a copy of its own, and a
+   * wood in a breeze was three or four copies a tree every frame. Now it is
+   * one.
    */
   private drawTree(ctx: CanvasRenderingContext2D, ent: Entity, spr: Sprite, zoom: number, grew: number): void {
     const dw = spr.w * zoom * grew;
@@ -6002,14 +5999,10 @@ export class Renderer {
      * needed it most.
      */
     const far = Math.max(0, Math.min(1, 1 - (ent.sy + dh * 0.5) / (this.canvas.height * 0.82)));
-    // Rooted at the foot, leaning at the head: the shear is taken about
-    // the trunk, so the tree bends rather than slides. A lean that moves
-    // the crown less than half a pixel is not worth a transform to draw.
-    const bend = (swayAt(ent.x, ent.y, this.time, this.lean.force) * SWAY_MAX * (ent.kind === 'bush' ? 0.6 : 1)) / 2;
     /*
-     * The lean this one grew with, as against the one the wind is putting
-     * on it this instant. Both are the same shear about the foot, so they
-     * add, and neither costs a second sprite.
+     * The lean this one grew with: a shear about the foot, baked into its
+     * picture (`treePicture`). There is no sway in the wind on top of it: a
+     * tree stands still, and its picture is put down whole, in one copy.
      *
      * Nothing had one. Every tree on the island stood dead upright, which
      * is the single thing that made a wood read as one stamp printed a
@@ -6039,7 +6032,6 @@ export class Renderer {
     // trees of a species carry quite the same weight of colour.
     const own = 0.06 * hash2(Math.round(ent.x), Math.round(ent.y), 4231);
     const step = Math.min(HAZE_STEPS, Math.round((far * 0.94 + own) * HAZE_STEPS));
-    const sway = -this.lean.x * bend;
     const t = ctx.getTransform();
     if (t.b === 0 && t.c === 0 && t.a === t.d) {
       const wDev = Math.round(dw * t.a);
@@ -6053,68 +6045,18 @@ export class Renderer {
         const x = Math.round(t.a * ent.sx + t.e - pic.footX * k);
         const yf = t.d * ent.sy + t.f - pic.footY * k;
         const y = Math.round(yf);
-        /** Rows `y0` to `y1` of its picture, `off` pixels along, onto the screen's own pixels; a stretched one with its rows' ends put on whole pixels, so no seam opens between two. */
-        const put = (g: CanvasRenderingContext2D, y0: number, y1: number, off: number): void => {
-          if (k === 1) {
-            g.drawImage(cv, 0, y0, cv.width, y1 - y0, x + off, y + y0, cv.width, y1 - y0);
-            return;
-          }
-          const d0 = Math.round(yf + y0 * k), d1 = Math.round(yf + y1 * k);
-          if (d1 > d0) g.drawImage(cv, 0, y0, cv.width, y1 - y0, x + off, d0, W, d1 - d0);
-        };
-        /** Its picture onto `g`, whose transform is the screen's own pixels: whole, or in bands each shifted by the wind at its height. */
-        const lay = (g: CanvasRenderingContext2D): void => {
-          const H = cv.height;
-          // The whole tree's rows, counted from the top of what is kept of it: the cuts are where they always were, empty rows or not.
-          const head = -pic.cropTop, tail = pic.tall - pic.cropTop;
-          if (Math.abs(sway) * hDev < 0.5) {
-            if (k === 1) g.drawImage(cv, x, y);
-            else put(g, 0, H, 0);
-            return;
-          }
-          /*
-           * Cut at the same heights whatever the wind is doing, counted up
-           * from the foot, so a band moves only when its own lean crosses a
-           * whole pixel. Cut where the lean put a pixel between bands, the
-           * cuts moved every frame the wind changed and the seams ran up and
-           * down the tree: it shook. Short enough that a full gale puts no
-           * more than a pixel between one band and the next, and never more
-           * than `TREE_BANDS` of them.
-           *
-           * Bands next to each other that the wind has put the same whole
-           * number of pixels over are one copy rather than several. It is the
-           * same picture to the pixel -- each band was a straight copy, and
-           * two straight copies shifted alike are one -- but a band was a call
-           * apiece, about eleven a tree, and the calls rather than the pixels
-           * were most of what a wood cost: a breeze leans the crown of a tree
-           * at zoom one two or three pixels, which is three or four copies.
-           */
-          const band = Math.max(Math.ceil(2 / SWAY_MAX), Math.ceil(pic.tall / TREE_BANDS));
-          // The run being gathered, bottom up: its rows, and how far over it goes.
-          let top = H, bottom = H, at = NaN;
-          const cut = (y0: number, y1: number): void => {
-            const off = Math.round(sway * k * ((y0 + y1) / 2 - pic.footY));
-            const a = Math.max(0, y0), b = Math.min(H, y1);
-            if (b <= a) return;
-            if (off !== at) {
-              if (bottom > top) put(g, top, bottom, at);
-              at = off;
-              bottom = b;
-            }
-            top = a;
-          };
-          const foot = Math.max(head, Math.min(tail, Math.round(pic.footY)));
-          cut(foot, tail);
-          for (let y1 = foot; y1 > Math.max(head, 0); y1 -= band) cut(Math.max(head, y1 - band), y1);
-          if (bottom > top) put(g, top, bottom, at);
-        };
+        // A stretched one with its foot and head put on whole pixels.
+        const d1 = Math.round(yf + cv.height * k);
         ctx.save();
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        lay(ctx);
-        // In front of a runestone's runes after dark: the same picture, leaned and banded as it was laid, kept off them (`RunestoneNight`).
+        if (k === 1) ctx.drawImage(cv, x, y);
+        else if (d1 > y) ctx.drawImage(cv, x, y, W, d1 - y);
+        // In front of a runestone's runes after dark: the same picture, kept off them (`RunestoneNight`).
         if (this.runeNight.active) {
-          const reach = Math.ceil(Math.abs(sway) * hDev) + 1;
-          this.runeNight.occludeDraw(ctx, x - reach, y, Math.ceil(W) + 2 * reach, Math.ceil(cv.height * k), lay, this.occClips);
+          this.runeNight.occludeDraw(ctx, x - 1, y, Math.ceil(W) + 2, Math.ceil(cv.height * k), (g) => {
+            if (k === 1) g.drawImage(cv, x, y);
+            else if (d1 > y) g.drawImage(cv, x, y, W, d1 - y);
+          }, this.occClips);
         }
         ctx.restore();
         return;
@@ -6122,15 +6064,14 @@ export class Renderer {
     }
     const ready = this.atSize(spr.canvas, dw, dh);
     const shown = step > 0 ? this.hazed(ready, step) : ready;
-    const shear = stand + sway;
-    if (Math.abs(shear) * dh < 1.5) {
+    if (Math.abs(stand) * dh < 1.5) {
       ctx.drawImage(shown, left, top, dw, dh);
       if (this.runeNight.active) this.runeNight.occlude(ctx, shown, left, top, dw, dh, this.occClips);
       return;
     }
     ctx.save();
     ctx.translate(ent.sx, ent.sy);
-    ctx.transform(1, 0, shear, 1, 0, 0);
+    ctx.transform(1, 0, stand, 1, 0, 0);
     ctx.drawImage(shown, left - ent.sx, top - ent.sy, dw, dh);
     // Under the same shear: what is kept off a runestone's runes is the tree as it leans.
     if (this.runeNight.active) this.runeNight.occlude(ctx, shown, left - ent.sx, top - ent.sy, dw, dh, this.occClips);
@@ -6268,7 +6209,7 @@ export class Renderer {
       g.fillStyle = this.hazeInk;
       g.fillRect(0, 0, cw, ch);
     }
-    const pic: TreePicture = { cv, footX: ox + fx - x0, footY: fy - y0, used: this.frameNo, own, haze, ink: this.hazeInk, key, tall: h, cropTop: y0 };
+    const pic: TreePicture = { cv, footX: ox + fx - x0, footY: fy - y0, used: this.frameNo, own, haze, ink: this.hazeInk, key, tall: h };
     this.treePics.set(key, pic);
     this.treePixels += cw * ch;
     let list = this.treeOwn.get(own);
@@ -13041,8 +12982,18 @@ export class Renderer {
     const near = this.game.buildings.buildingAt(border.x, border.y)
       ? { x: border.x, y: border.y }
       : border.dir === 'h' ? { x: border.x, y: border.y - 1 } : { x: border.x - 1, y: border.y };
+    // Each room's light is found once a frame, for every wall of it: the room is a flood fill, and it was one a wall.
+    if (this.roomLitFrame !== this.frameNo) {
+      this.roomLitFrame = this.frameNo;
+      this.roomLit.clear();
+    }
+    const known = this.roomLit.get(`${wall.level}|${near.x},${near.y}`);
+    if (known !== undefined) return known * dark;
     const room = this.game.buildings.room(wall.level, near.x, near.y);
-    if (!room) return 0;
+    if (!room) {
+      this.roomLit.set(`${wall.level}|${near.x},${near.y}`, 0);
+      return 0;
+    }
     const inside = new Set(room.tiles);
     let most = 0;
     // The frame's own (`lightsNow`): gathered once a frame, not once a wall.
@@ -13050,8 +13001,13 @@ export class Renderer {
       if (!inside.has(`${Math.floor(l.x)},${Math.floor(l.y)}`)) continue;
       most = Math.max(most, l.strength);
     }
+    for (const t of room.tiles) this.roomLit.set(`${wall.level}|${t}`, most);
     return most * dark;
   }
+
+  /** The light in each room this frame (`lampBehind`), by storey and tile, and the frame it is for. */
+  private roomLit = new Map<string, number>();
+  private roomLitFrame = -1;
 
   /**
    * A pane, and a window with something burning behind it.
@@ -14621,16 +14577,7 @@ export class Renderer {
         nc.globalCompositeOperation = 'destination-out';
         // And off whatever has a light of its own, where it was drawn this frame.
         for (const n of this.glows) {
-          for (const h of furnitureHoles(n.sx, n.sy, zoom, n.kind, n.view)) {
-            const grad = nc.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.r);
-            grad.addColorStop(0, `rgba(0,0,0,${h.a.toFixed(2)})`);
-            grad.addColorStop(0.5, `rgba(0,0,0,${(h.a * 0.45).toFixed(2)})`);
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
-            nc.fillStyle = grad;
-            nc.beginPath();
-            nc.arc(h.x, h.y, h.r, 0, Math.PI * 2);
-            nc.fill();
-          }
+          for (const h of furnitureHoles(n.sx, n.sy, zoom, n.kind, n.view)) softHole(nc, h.x, h.y, h.r, h.a);
         }
         // And off the runestones' runes, in their own shapes, less whatever stands in front of them.
         if (!patch) this.runeNight.cut(nc);

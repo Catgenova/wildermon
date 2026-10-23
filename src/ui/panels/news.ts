@@ -3443,6 +3443,15 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 277,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: Runecut frame rate: window stone, frames and badges shown as still images, not 4 canvases a window; one small canvas per seam, not one the size of the screen; frame lamp glow still, no swell.',
+      'Changed: trees and bushes drawn still; no wind sway. Frame rate.',
+      'Changed: after dark, light behind a window worked out once per room per frame, not once per wall; altar and runestone light from one cached picture. Frame rate.',
+    ],
+  },
+  {
     n: 278,
     day: '2026-10-23',
     lines: () => [

@@ -1334,7 +1334,7 @@ function lanternBody(x: number, y: number, F: number): { cx: number; top: number
 
 /**
  * The lights a frame carries, in its own px from its top left, each with the
- * reach of its light: the window lays a glow over each that breathes
+ * reach of its light: the window lays a glow over each
  * (src/ui/runecut-dress.ts). Crafting's lantern is the one.
  */
 /**
@@ -1372,7 +1372,7 @@ export function frameLamps(kind: string, w: number, h: number, F: number): Array
  * bolted to the beam with a scrolled brace under it, a ring and two links of
  * chain, a hood with a ring on its top, two corner posts and a middle bar
  * over glass lit from a candle inside, and a tray with a drop under it. Its
- * light on the beam is painted faintly here; the glow that breathes over it
+ * light on the beam is painted faintly here; the glow over it
  * is the window's.
  */
 function lantern(g: Ctx, x: number, y: number, F: number): void {
