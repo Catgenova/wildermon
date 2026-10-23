@@ -1,8 +1,10 @@
 # The island, checked three ways.
 #
 # `rules` needs nothing and runs on every push: a Postgres of its own, built
-# from the migrations in this repo, with the whole suite over it. That is the
-# one that catches things, and it costs no secrets and no project.
+# from the migrations in this repo, with the whole suite over it, in six shards
+# side by side. That is the one that catches things, and it costs no secrets
+# and no project. A live run skips it when the same code has passed it already
+# (`already`).
 #
 # `migrate` and `smoke` touch the real project and so need credentials. They
 # exist because there are things no local database can tell you: whether
@@ -59,8 +61,41 @@ permissions:
   contents: read
 
 jobs:
+  # Asked for: a live run that does not test again what has passed already. A live run looks for a run of this
+  # workflow over the same code (the commit's tree but for the built site, which `build-site.yml` makes from it):
+  # waits for one still going, and when one has passed, the rules are not run again and the migrations go straight
+  # out. Otherwise, or on any doubt, the rules run here as on a push (`scripts/ci-tested.sh`).
+  already:
+    name: Whether this code has passed already
+    if: github.event_name == 'workflow_dispatch' && inputs.live
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      tested: ${{ steps.look.outputs.tested }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 200
+      - name: Look for a run over the same code
+        id: look
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/ci-tested.sh
+
+  # Asked for: the suite in a quarter of the time. It runs as six shards side by side, each with a Postgres of its
+  # own built the same way (`run.sh`), and each step after that runs on the one shard its `if` names: in order, in
+  # runs of about the same length (by the steps' times in run 1507). A new step names a shard; one that names none
+  # runs on all six.
   rules:
-    name: The rules, against a Postgres of our own
+    name: The rules, against a Postgres of our own (${{ matrix.shard }} of 6)
+    needs: already
+    if: ${{ !cancelled() && needs.already.outputs.tested != 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -88,6 +123,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: The built page starts
+        if: matrix.shard == 1
         env:
           # A check that cannot open a browser here fails rather than passes.
           BOOT_CHECK_STRICT: '1'
@@ -101,6 +137,7 @@ jobs:
           # on its own and the landing page, and fails on anything thrown.
           node scripts/boot-check.mjs
       - name: Every HTML sink in src has been looked at
+        if: matrix.shard == 1
         run: |
           # innerHTML and its kin run whatever markup they are handed, so a
           # player's name or a line of chat that reaches one unescaped runs in
@@ -110,6 +147,7 @@ jobs:
           # in as textContent, and then onto the list.
           node scripts/html-sinks.mjs
       - name: No migration has been deleted or renamed
+        if: matrix.shard == 1
         run: |
           # A migration the project has already run is a fact about its
           # history, and the CLI refuses to push when the remote holds a
@@ -124,6 +162,7 @@ jobs:
           fi
           echo "no migrations removed"
       - name: No migration has been added out of order
+        if: matrix.shard == 1
         run: |
           # Append-only is not only about editing: a migration added *before*
           # one the project has already run is one the CLI will refuse to push
@@ -148,6 +187,7 @@ jobs:
           fi
           echo "nothing added out of order (latest before this commit: ${last:-none})"
       - name: No migration alters or empties a table without a lock timeout
+        if: matrix.shard == 1
         run: |
           # `alter table` wants ACCESS EXCLUSIVE, and the moment it starts
           # waiting for one, every query behind it waits too -- so an ALTER on
@@ -198,6 +238,7 @@ jobs:
       # let a brand new definitions migration through without noticing. Asking
       # `git status` about the whole directory catches both.
       - name: The definitions are still what the TypeScript says
+        if: matrix.shard == 1
         run: |
           # The bundle of every migration (`npm run db:bundle`) is past the
           # hundred megabytes GitHub keeps in one file, so it is written on
@@ -214,15 +255,18 @@ jobs:
       # inside the live job — after the migrations had been pushed to the real
       # project. A duplicate variable took a run down three minutes in.
       - name: The tests and tools that run outside a browser still compile
+        if: matrix.shard == 1
         run: npx tsc --noEmit -p tsconfig.node.json
       - name: Joining, refusing, digging, settling and who may write what
         run: supabase/test/run.sh
       - name: An island out through the wire format and back, corner by corner
+        if: matrix.shard == 1
         run: |
           npx esbuild supabase/test/landtrip.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/landtrip.mjs --log-level=error
           node node_modules/.cache/landtrip.mjs
       - name: The island's history lays onto land worked out as it goes
+        if: matrix.shard == 1
         run: |
           # The load-bearing half of a join, and the one the client cannot be
           # made to do without a network: replaying `tile_change` over a world
@@ -232,6 +276,7 @@ jobs:
             --outfile=node_modules/.cache/replay.mjs --log-level=error
           node node_modules/.cache/replay.mjs
       - name: Where somebody has been survives the trip, and costs nothing to bring back
+        if: matrix.shard == 1
         run: |
           # The fog of war lived in `localStorage` and nowhere else, so a
           # refresh put a body in the middle of a black 4096 island. It is the
@@ -241,6 +286,7 @@ jobs:
             --outfile=node_modules/.cache/fog.mjs --log-level=error
           node node_modules/.cache/fog.mjs
       - name: The island handed over is the island come back to
+        if: matrix.shard == 1
         run: |
           # Founding uploads what was rolled; joining works the ground out from
           # the seed and never downloads it. Two generators that disagreed
@@ -250,6 +296,7 @@ jobs:
             --outfile=node_modules/.cache/agree.mjs --log-level=error
           node node_modules/.cache/agree.mjs
       - name: The ground a seed makes is the ground it made before
+        if: matrix.shard == 1
         run: |
           # The land travelled once, at founding, and Postgres has held that
           # copy ever since while every browser works the same ground out from
@@ -263,6 +310,7 @@ jobs:
             --outfile=node_modules/.cache/ground.mjs --log-level=error
           node node_modules/.cache/ground.mjs
       - name: A bare face shows the rock it is made of
+        if: matrix.shard == 1
         run: |
           # Reported: ore and seams that break the surface drew as plain grey
           # rock. A tile dug bare gets the kind written into its data byte, on
@@ -274,6 +322,7 @@ jobs:
             --outfile=node_modules/.cache/face.mjs --log-level=error
           node node_modules/.cache/face.mjs
       - name: The wild mix is the mix the weights ask for
+        if: matrix.shard == 1
         run: |
           # Reported as never having seen a mola. The stocker picked a tile,
           # rolled what stood up on it, and threw the roll away when the ground
@@ -285,6 +334,7 @@ jobs:
             --outfile=node_modules/.cache/wild.mjs --log-level=error
           node node_modules/.cache/wild.mjs
       - name: The Wildermon window lists your own wildermon
+        if: matrix.shard == 1
         run: |
           # Reported as a new player seeing everybody's wildermon in their
           # Wildermon window before taming anything. The island sends every
@@ -295,6 +345,7 @@ jobs:
             --outfile=node_modules/.cache/yours.mjs --log-level=error
           node node_modules/.cache/yours.mjs
       - name: A wildermon can come into the world rare
+        if: matrix.shard == 1
         run: |
           # Asked for: a wildermon rolls rarity at a made thing's odds, and a
           # rare one is 1.5x the size with 1.2x the stats and better odds of
@@ -306,6 +357,7 @@ jobs:
             --outfile=node_modules/.cache/rarebeast.mjs --log-level=error
           node node_modules/.cache/rarebeast.mjs
       - name: A spring fills its hollow and spills down to the next
+        if: matrix.shard == 1
         run: |
           # Asked for: player-made ponds, streams and waterfalls above the
           # sea. A spring dug at the bottom of a hollow fills it to the lowest
@@ -317,6 +369,7 @@ jobs:
             --outfile=node_modules/.cache/springs.mjs --log-level=error
           node node_modules/.cache/springs.mjs
       - name: A pool dug in a foundation is water, and a spring in it spills over its edge
+        if: matrix.shard == 1
         run: |
           # Asked for: "Allow pools to be dug in foundations". A poured slab
           # takes a pool broken out of it, water to every rule; one dug beside
@@ -328,6 +381,7 @@ jobs:
             --outfile=node_modules/.cache/pools.mjs --log-level=error
           node node_modules/.cache/pools.mjs
       - name: Stones across the water, a fountain that is a well, and lilies that keep the year
+        if: matrix.shard == 1
         run: |
           # Asked for: a water garden -- stepping stones, a tiered fountain,
           # water lilies and lotus. Stones go down where the water is no
@@ -341,6 +395,7 @@ jobs:
             --outfile=node_modules/.cache/pondlife.mjs --log-level=error
           node node_modules/.cache/pondlife.mjs
       - name: A building stands on piers over a slope and over the water, the same on both sides
+        if: matrix.shard == 1
         run: |
           # Asked for: a building may take in tiles that slope or lie under
           # shallow water by standing its ground floor on piers, walked at
@@ -356,6 +411,7 @@ jobs:
             --outfile=node_modules/.cache/piers.mjs --log-level=error
           node node_modules/.cache/piers.mjs
       - name: An aqueduct carries a spring's water over a valley into its basin
+        if: matrix.shard == 1
         run: |
           # Asked for: aqueducts -- a stone bridge whose deck is a channel,
           # from a pond or a pool to a basin no higher. Both sides refuse the
@@ -370,6 +426,7 @@ jobs:
             --outfile=node_modules/.cache/aqueduct.mjs --log-level=error
           node node_modules/.cache/aqueduct.mjs
       - name: Nobody on the move is pulled back for going as fast as they can
+        if: matrix.shard == 1
         run: |
           # Reported as players rubberbanding when they move quickly. The
           # island held a ship to her build's pace while the browser sails her
@@ -381,6 +438,7 @@ jobs:
             --outfile=node_modules/.cache/pace.mjs --log-level=error
           node node_modules/.cache/pace.mjs
       - name: A rack takes eight crates and says which spots are full
+        if: matrix.shard == 1
         run: |
           # Reported as no way to add crates to a crate shelf. The rules knew
           # about racks; the only way to reach the placing was the tile menu,
@@ -391,6 +449,7 @@ jobs:
             --outfile=node_modules/.cache/rack.mjs --log-level=error
           node node_modules/.cache/rack.mjs
       - name: A plan is marked out round its outline
+        if: matrix.shard == 1
         run: |
           # Reported as "there's currently nothing at all to show it's a plan".
           # Everything drawn for a building hangs off a wall or a floor, and a
@@ -401,6 +460,7 @@ jobs:
             --outfile=node_modules/.cache/plan.mjs --log-level=error
           node node_modules/.cache/plan.mjs
       - name: The ground is the one on the chart
+        if: matrix.shard == 1
         run: |
           # And that the ground both generators agree on is the ground that was
           # drawn. They would agree just as contentedly on relief nobody asked
@@ -411,6 +471,7 @@ jobs:
             --outfile=node_modules/.cache/relief.mjs --log-level=error
           node node_modules/.cache/relief.mjs
       - name: A thing in your hands crosses from the island whole
+        if: matrix.shard == 1
         run: |
           # Reported as "players cannot drink from water skins or fill them".
           # Both sides of that were right and the seam between them was not:
@@ -421,6 +482,7 @@ jobs:
             --outfile=node_modules/.cache/pack.mjs --log-level=error
           node node_modules/.cache/pack.mjs
       - name: What the island's answers say has happened to you
+        if: matrix.shard == 1
         run: |
           # Reported as "floating text only shows for climbing". The renderer
           # draws a floater off a skill gain or a hit, both of which come out
@@ -431,6 +493,7 @@ jobs:
             --outfile=node_modules/.cache/felt.mjs --log-level=error
           node node_modules/.cache/felt.mjs
       - name: What a rare thing is, and what a pass can turn one into
+        if: matrix.shard == 1
         run: |
           # Every rarity number is crossed from `RARITIES` into `rarity_def`,
           # so the two sides agree by construction — right up until somebody
@@ -443,6 +506,7 @@ jobs:
             --outfile=node_modules/.cache/rare.mjs --log-level=error
           node node_modules/.cache/rare.mjs
       - name: Every goal the journal counts is a note the island writes
+        if: matrix.shard == 1
         run: |
           # Forty-six of the journal's eighty-five goals count things done, and
           # every one of those counts was written by a browser performer — so on
@@ -454,6 +518,7 @@ jobs:
             --outfile=node_modules/.cache/writ.mjs --log-level=error
           node node_modules/.cache/writ.mjs
       - name: Where the water starts, and where a pick stops
+        if: matrix.shard == 1
         run: |
           # Reported as a copper vein that would not be mined, with "You cannot
           # mine below the water level" and no water drawn on it. The island's
@@ -465,6 +530,7 @@ jobs:
             --outfile=node_modules/.cache/tide.mjs --log-level=error
           node node_modules/.cache/tide.mjs
       - name: The land read is the same island as the history replayed
+        if: matrix.shard == 1
         run: |
           # Two roads to one place, which is the thing this island has been
           # bitten by more than any other. A join used to work the island out
@@ -480,6 +546,7 @@ jobs:
             --outfile=node_modules/.cache/window.mjs --log-level=error
           node node_modules/.cache/window.mjs
       - name: What a ground read is allowed to forget
+        if: matrix.shard == 1
         run: |
           # `rpc_ground` answers in two halves and `sawGround` has two kinds of
           # key: ones the answer always carries, which may be cleared and
@@ -495,6 +562,7 @@ jobs:
           node node_modules/.cache/field.mjs
 
       - name: What is lying on the ground reaches a browser
+        if: matrix.shard == 1
         run: |
           # The ground answer never carried a thing lying on the grass, and the
           # browser's map of the ground was only its own rules' to write, which
@@ -506,6 +574,7 @@ jobs:
           node node_modules/.cache/lying.mjs
 
       - name: Concrete goes on plain rock, never on a seam
+        if: matrix.shard == 1
         run: |
           # A corner holds up four tiles, and a vein under any of them raised
           # with concrete would be ore for ever. The browser's door, asked about
@@ -515,6 +584,7 @@ jobs:
           node node_modules/.cache/seam.mjs
 
       - name: You turn on whatever bites you
+        if: matrix.shard == 1
         run: |
           # A bite used to mark you and hurt you and that was all. Bitten in a
           # game of its own, a body swings at the thing with what it had been
@@ -525,6 +595,7 @@ jobs:
           node node_modules/.cache/turn.mjs
 
       - name: A window that draws the trades, and the answers it is drawn from
+        if: matrix.shard == 1
         run: |
           # Five doors existed for a day with nothing drawing them. The trades
           # window draws them now and works out none of it for itself, which
@@ -540,6 +611,7 @@ jobs:
           node node_modules/.cache/trades.mjs
 
       - name: Five stores that take one sort of thing
+        if: matrix.shard == 1
         run: |
           # Ore, logs, dirt, shards and wool go in the raw bin; a plank, a
           # brick, a lump, a hatchet and wheat are refused in the island's
@@ -563,6 +635,7 @@ jobs:
           node node_modules/.cache/bins.mjs
 
       - name: An anvil off the island keeps its metal
+        if: matrix.shard == 1
         run: |
           # The island hands an anvil's metal in `sub`, as its own rules read
           # it. A copper anvil set down on an island came to a browser as an
@@ -572,6 +645,7 @@ jobs:
           node node_modules/.cache/anvil.mjs
 
       - name: What the ground says about a cut it will not take
+        if: matrix.shard == 1
         run: |
           # A slope refusal carries its numbers on both sides, ground inside
           # somebody else's stake is refused, flattening steps round a corner
@@ -582,6 +656,7 @@ jobs:
           node node_modules/.cache/cut.mjs
 
       - name: What a go teaches the body, and what it does not
+        if: matrix.shard == 1
         run: |
           # Eating, drinking and carrying things about are not work: both sides
           # name the same twenty-five jobs that teach the body nothing, and a
@@ -590,6 +665,7 @@ jobs:
             --outfile=node_modules/.cache/body.mjs --log-level=error
           node node_modules/.cache/body.mjs
       - name: Nothing walks under half again what it can carry
+        if: matrix.shard == 1
         run: |
           # Asked for: "when inventory is above 150% cap, movement speed
           # becomes 0". What a body carries was the browser's own business, and
@@ -600,6 +676,7 @@ jobs:
             --outfile=node_modules/.cache/load.mjs --log-level=error
           node node_modules/.cache/load.mjs
       - name: A field gets sown, and a load goes where there is room for it
+        if: matrix.shard == 1
         run: |
           # Reported: "seavic isn't planting seeds that are in crates on deed,
           # and rabba are just overdelivering to the full deed crate instead of
@@ -610,6 +687,7 @@ jobs:
             --outfile=node_modules/.cache/sow.mjs --log-level=error
           node node_modules/.cache/sow.mjs
       - name: The store you aimed at is the store it goes in
+        if: matrix.shard == 1
         run: |
           # Reported off a crate rack: "trying to place any items in any of the
           # pine crates gives an error that the maple crate is full". Putting a
@@ -619,6 +697,7 @@ jobs:
             --outfile=node_modules/.cache/into.mjs --log-level=error
           node node_modules/.cache/into.mjs
       - name: What fits goes in, and the rest stays in your pack
+        if: matrix.shard == 1
         run: |
           # Asked for: "when trying to put 48 items in a container that has
           # room for 13, deposit 13 and reject the 35." It was all or nothing,
@@ -628,6 +707,7 @@ jobs:
             --outfile=node_modules/.cache/part.mjs --log-level=error
           node node_modules/.cache/part.mjs
       - name: Which storey, which side, and how many to go
+        if: matrix.shard == 1
         run: |
           # Reported: "cant plan roof on when conditions are met. make sure
           # that doors and window walls etc count as elligible walls if
@@ -637,6 +717,7 @@ jobs:
             --outfile=node_modules/.cache/roof.mjs --log-level=error
           node node_modules/.cache/roof.mjs
       - name: A wall is a box, and the face you see is the one you are standing on
+        if: matrix.shard == 1
         run: |
           # Reported: "walls are paper thin and have no character." A wall is a
           # box now rather than a curtain, and which of its two faces is drawn
@@ -646,6 +727,7 @@ jobs:
             --outfile=node_modules/.cache/thick.mjs --log-level=error
           node node_modules/.cache/thick.mjs
       - name: An archway, in each material
+        if: matrix.shard == 1
         run: |
           # Asked for: "add a new doorway type, Arch, in each material." A type
           # is offered in every material by construction, so what is worth
@@ -655,6 +737,7 @@ jobs:
             --outfile=node_modules/.cache/arch.mjs --log-level=error
           node node_modules/.cache/arch.mjs
       - name: A go that missed still teaches you, and says so
+        if: matrix.shard == 1
         run: |
           # Reported: "i'm not getting any smelting experience for failed
           # smelting." The experience was there; nobody was saying so. The line
@@ -666,6 +749,7 @@ jobs:
             --outfile=node_modules/.cache/taught.mjs --log-level=error
           node node_modules/.cache/taught.mjs
       - name: Head work raises mind logic
+        if: matrix.shard == 1
         run: |
           # Mind logic rose from crafts, restoring and books and nothing else,
           # so its knacks came to crafters alone. A go of prospecting, an
@@ -675,6 +759,7 @@ jobs:
             --outfile=node_modules/.cache/head.mjs --log-level=error
           node node_modules/.cache/head.mjs
       - name: Knacks on the move roll at the share of a go they teach
+        if: matrix.shard == 1
         run: |
           # Asked for: less knack gain for driving, swimming and the like,
           # because they are raised a tick at a time -- a second, a tile, a
@@ -684,6 +769,7 @@ jobs:
             --outfile=node_modules/.cache/knacks.mjs --log-level=error
           node node_modules/.cache/knacks.mjs
       - name: The last job asked for, asked for again
+        if: matrix.shard == 1
         run: |
           # Asked for: a repeat-last-action key for the tedious jobs, casting
           # nails among them. The browser asks again through the same door
@@ -692,6 +778,7 @@ jobs:
             --outfile=node_modules/.cache/repeat.mjs --log-level=error
           node node_modules/.cache/repeat.mjs
       - name: A foundation is the same slab on both sides
+        if: matrix.shard == 1
         run: |
           # Concrete foundations: level ground poured into a slope, leaving the
           # slope alone. Two numbers decide everything about one — what it
@@ -703,6 +790,7 @@ jobs:
             --outfile=node_modules/.cache/slab.mjs --log-level=error
           node node_modules/.cache/slab.mjs
       - name: Every tool can be made a second time
+        if: matrix.shard == 1
         run: |
           # Reported: "there does not seem to be a way to make a chisel / mould
           # for chisel." Four of the ten tools you come ashore with could never
@@ -716,6 +804,7 @@ jobs:
             --outfile=node_modules/.cache/tools.mjs --log-level=error
           node node_modules/.cache/tools.mjs
       - name: What the bench gives back, and what a click is worth
+        if: matrix.shard == 1
         run: |
           # Three reports in one message, all about the moment a go ends.
           # "free body control gains from examining as well as keeping/putting
@@ -734,6 +823,7 @@ jobs:
             --outfile=node_modules/.cache/bench.mjs --log-level=error
           node node_modules/.cache/bench.mjs
       - name: A storey stands on what is under it
+        if: matrix.shard == 1
         run: |
           # A building could be ten storeys of logs: nothing anywhere asked
           # what the stuff would stand, so twelve materials differed only in
@@ -747,6 +837,7 @@ jobs:
             --outfile=node_modules/.cache/storey.mjs --log-level=error
           node node_modules/.cache/storey.mjs
       - name: A room with walls round it and a roof over it
+        if: matrix.shard == 1
         run: |
           # A roof cost half a wall, took the same work, and did nothing at
           # all: what you left on the floor of a finished house rotted at the
@@ -762,6 +853,7 @@ jobs:
             --outfile=node_modules/.cache/indoors.mjs --log-level=error
           node node_modules/.cache/indoors.mjs
       - name: A cellar under the ground floor
+        if: matrix.shard == 1
         run: |
           # Nothing went under a building: the ground floor was the bottom of
           # it, and the coolest place to keep food was a room, at a tenth of
@@ -783,6 +875,7 @@ jobs:
             --outfile=node_modules/.cache/cellar.mjs --log-level=error
           node node_modules/.cache/cellar.mjs
       - name: Where the body is, told to the island in order
+        if: matrix.shard == 1
         run: |
           # The island takes a change of storey only from the tile it heard of
           # last: down from a flight's head onto its foot, up from the foot
@@ -805,6 +898,7 @@ jobs:
             --outfile=node_modules/.cache/told.mjs --log-level=error
           node node_modules/.cache/told.mjs
       - name: A jetty out over the street, a railing round the roof, a hall on columns
+        if: matrix.shard == 1
         run: |
           # A storey stopped at the edge of the ground floor, a flat roof you
           # could walk out on had nothing round it, and the only thing that
@@ -828,6 +922,7 @@ jobs:
             --outfile=node_modules/.cache/frame.mjs --log-level=error
           node node_modules/.cache/frame.mjs
       - name: Glass in the window, and a colour on the wall
+        if: matrix.shard == 1
         run: |
           # Every window on the island has had glass in it since the first day
           # and the glass was never made, never paid for and never once lit: a
@@ -840,6 +935,7 @@ jobs:
             --outfile=node_modules/.cache/glazed.mjs --log-level=error
           node node_modules/.cache/glazed.mjs
       - name: The pile on the site, and a bridge to a storey
+        if: matrix.shard == 1
         run: |
           # A builder carried everything — twenty-four logs for six walls, at
           # what a log weighs — while the crate they were tipped into stood on
@@ -850,6 +946,7 @@ jobs:
             --outfile=node_modules/.cache/site.mjs --log-level=error
           node node_modules/.cache/site.mjs
       - name: A ramp bridge, from one storey up to another
+        if: matrix.shard == 1
         run: |
           # Asked: "Is it possible to plan a bridge stretching up from 1st to
           # 3rd floor?" A bridge's ends had to be within END_SLOP of each
@@ -863,6 +960,7 @@ jobs:
             --outfile=node_modules/.cache/ramp.mjs --log-level=error
           node node_modules/.cache/ramp.mjs
       - name: Eight ways round, not two
+        if: matrix.shard == 1
         run: |
           # Reported: "when changing camera angles models just twist in
           # place." Every animal is drawn in profile and the only thing the
@@ -885,6 +983,7 @@ jobs:
             --outfile=node_modules/.cache/turned.mjs --log-level=error
           node node_modules/.cache/turned.mjs
       - name: A settlement full of wildermon draws them once, not every sixth of a second
+        if: matrix.shard == 1
         env:
           # A check that cannot open a browser here fails rather than passes.
           CROWD_STRICT: '1'
@@ -899,6 +998,7 @@ jobs:
             --outfile=node_modules/.cache/crowd.mjs --log-level=error
           node node_modules/.cache/crowd.mjs
       - name: The island heard from where the camera is standing
+        if: matrix.shard == 1
         run: |
           # There was no sound in this game at all — no AudioContext anywhere
           # in the source — so a pickaxe in marble and a needle in linen were
@@ -917,6 +1017,7 @@ jobs:
             --outfile=node_modules/.cache/heard.mjs --log-level=error
           node node_modules/.cache/heard.mjs
       - name: A walk puts the work down, and a piece can be asked for a quality
+        if: matrix.shard == 1
         run: |
           # Walking anywhere used to throw the whole queue away — moveTo
           # cancelled, rpc_cancel emptied act_queue — so a builder with four
@@ -935,6 +1036,7 @@ jobs:
             --outfile=node_modules/.cache/hands.mjs --log-level=error
           node node_modules/.cache/hands.mjs
       - name: A run is not a fast walk, and a wall knows whose room it is in
+        if: matrix.shard == 1
         run: |
           # walkPhase advances quicker when you move quicker, so a horse at a
           # gallop took a body's steps — more of them a second, the same reach,
@@ -954,6 +1056,7 @@ jobs:
             --outfile=node_modules/.cache/paced.mjs --log-level=error
           node node_modules/.cache/paced.mjs
       - name: Somebody coming ashore is told what to do and what decides it
+        if: matrix.shard == 1
         run: |
           # There is no tutorial on this island and never has been. The
           # journal is eighty-five goals all on screen at once, which is a
@@ -971,6 +1074,7 @@ jobs:
             --outfile=node_modules/.cache/ashore.mjs --log-level=error
           node node_modules/.cache/ashore.mjs
       - name: A herd keeps together, and a hunter keeps to its country
+        if: matrix.shard == 1
         run: |
           # Nothing kept a wild animal anywhere: a wander target was drawn a
           # tile and a half from wherever it last got to, for ever, so an
@@ -990,6 +1094,7 @@ jobs:
             --outfile=node_modules/.cache/range.mjs --log-level=error
           node node_modules/.cache/range.mjs
       - name: What you are on a settlement, and what opens for you
+        if: matrix.shard == 1
         run: |
           # `deed_member` was a flat list: in or out, and everybody in it
           # could dig up the gardens, empty the stores and pull the walls
@@ -1010,6 +1115,7 @@ jobs:
             --outfile=node_modules/.cache/ranks.mjs --log-level=error
           node node_modules/.cache/ranks.mjs
       - name: Coins that buy something, three ways
+        if: matrix.shard == 1
         run: |
           # Coins have existed since there was an anvil to strike them on and
           # have never bought anything, because there was nothing to buy them
@@ -1028,6 +1134,7 @@ jobs:
             --outfile=node_modules/.cache/trade.mjs --log-level=error
           node node_modules/.cache/trade.mjs
       - name: A trade window between two people
+        if: matrix.shard == 1
         run: |
           # Two people standing together ask, say yes, put things and silver
           # on their sides and both accept; then everything changes hands in
@@ -1040,6 +1147,7 @@ jobs:
             --outfile=node_modules/.cache/tradewindow.mjs --log-level=error
           node node_modules/.cache/tradewindow.mjs
       - name: Everybody you may write to, each of them once
+        if: matrix.shard == 1
         run: |
           # Friends, the people off your own land, and anybody who has written
           # to you are three questions with the same answers in them, and the
@@ -1052,6 +1160,7 @@ jobs:
             --outfile=node_modules/.cache/letters.mjs --log-level=error
           node node_modules/.cache/letters.mjs
       - name: What Look says is coming for a tree, the same on both sides
+        if: matrix.shard == 1
         run: |
           # "The woods turn over in 9 hours, and it will be shrivelled. Prune
           # it to keep it." is one sentence written twice, once a side. A solo
@@ -1063,6 +1172,7 @@ jobs:
             --outfile=node_modules/.cache/outlook.mjs --log-level=error
           node node_modules/.cache/outlook.mjs
       - name: A furnace off the island reads the way one you built yourself does
+        if: matrix.shard == 1
         run: |
           # The island writes a finished piece as {def, ql, count, extra} and a
           # job as {makes, left, total, ql}; the browser's item has an id and
@@ -1075,6 +1185,7 @@ jobs:
             --outfile=node_modules/.cache/furnace.mjs --log-level=error
           node node_modules/.cache/furnace.mjs
       - name: A slope you can stand on is the same slope on both sides
+        if: matrix.shard == 1
         run: |
           # The standing cap is written twice — `standsOn` and `standSlope` in
           # the browser, `walk_share` and `creature_tile_ok` on the island —
@@ -1087,6 +1198,7 @@ jobs:
             --outfile=node_modules/.cache/stand.mjs --log-level=error
           node node_modules/.cache/stand.mjs
       - name: A flight of garden steps is the same flight on both sides
+        if: matrix.shard == 1
         run: |
           # Laid, walked and taken up by the browser's rules in a solo world and
           # by the island's on an island, so the same ground is put to both:
@@ -1099,6 +1211,7 @@ jobs:
             --outfile=node_modules/.cache/steps.mjs --log-level=error
           node node_modules/.cache/steps.mjs
       - name: A flag flies its colour and an arch its roses, the same on both sides
+        if: matrix.shard == 1
         run: |
           # A piece set down on an island dropped its dye, so a banner dyed in
           # the pack stood undyed and a sail went up white. So a dyed flagpole
@@ -1112,6 +1225,7 @@ jobs:
           node node_modules/.cache/pieces.mjs
 
       - name: The crafting window offers a choice of wood
+        if: matrix.shard == 1
         run: |
           # Asked for: a pack with oak and pine in it, and a row that lets you
           # say which the piece is to be made of. `materialChoices` lists the
@@ -1122,6 +1236,7 @@ jobs:
             --outfile=node_modules/.cache/wood.mjs --log-level=error
           node node_modules/.cache/wood.mjs
       - name: A craft reaches into the stores around you
+        if: matrix.shard == 1
         run: |
           # Asked for: "When crafting, allow the ingredients to be used from any
           # container within 3 tiles." A pack, a satchel and a spread of stores
@@ -1134,6 +1249,7 @@ jobs:
           node node_modules/.cache/near.mjs
 
       - name: Eight more trees that bear, held to their islands
+        if: matrix.shard == 1
         run: |
           # The species of a tree is the low nibble and the top bit of its tile
           # byte now, and every byte from before has to read as it did; the
@@ -1144,6 +1260,7 @@ jobs:
           node node_modules/.cache/orchard.mjs
 
       - name: Thirty traits for a fight, each in four grades
+        if: matrix.shard == 1
         run: |
           # Fighting blood is a name and a grade rolled for it: thirty names in
           # all four tiers, a share of the wild's rolls, never two grades of one
@@ -1153,6 +1270,7 @@ jobs:
           node node_modules/.cache/blood.mjs
 
       - name: A quarter of the cycle dark, on both sides
+        if: matrix.shard == 1
         run: |
           # "On the full day cycle, it shouldn't be half night half day, it
           # should be 3/4 day and 1/4 night." It was forty-two per cent dark,
@@ -1169,6 +1287,7 @@ jobs:
           node node_modules/.cache/dark.mjs
 
       - name: Seed in the crate, and one you keep put down in one action
+        if: matrix.shard == 1
         run: |
           # "Seavics also move seeds to storage if not using them when working
           # deed": the seed from a harvest went into the browser's `pouch`,
@@ -1185,6 +1304,7 @@ jobs:
           node node_modules/.cache/cull.mjs
 
       - name: A shore face is work and the sea floor is not
+        if: matrix.shard == 1
         run: |
           # "Allow mola to mine ore, seams and rock at up to -10 water level
           # just like players." Three rules were in the way and only one of
@@ -1203,6 +1323,7 @@ jobs:
           node node_modules/.cache/shore.mjs
 
       - name: Who pays for the wildlife
+        if: matrix.shard == 1
         run: |
           # "Something is severely delaying server responses." It was this: a
           # block of country is stocked the first time anybody walks into it,
@@ -1227,6 +1348,7 @@ jobs:
           node node_modules/.cache/stock.mjs
 
       - name: A spadeful you could not put down
+        if: matrix.shard == 1
         run: |
           # "Allow dropping dirt on the ground as a pile." Dirt was the one
           # thing in the game a person could pick up and then not put back
@@ -1238,6 +1360,7 @@ jobs:
           node node_modules/.cache/heap.mjs
 
       - name: A function the planner could not see into
+        if: matrix.shard == 1
         run: |
           # Postgres folds a `language sql` scalar function into its caller
           # and refuses when the body holds a sublink. `max_health` held one,
@@ -1250,6 +1373,7 @@ jobs:
           node node_modules/.cache/folded.mjs
 
       - name: The woods turn over once, at dawn, and finish
+        if: matrix.shard == 1
         run: |
           # `tree-tick` was wound at ten-minute intervals against a job with
           # one day's work in it, and the one go a day with work to do was
@@ -1273,6 +1397,7 @@ jobs:
           node node_modules/.cache/dawn.mjs
 
       - name: The island's year is the same year on both sides
+        if: matrix.shard == 1
         run: |
           # Four seasons of seven days, turning with the woods. The browser
           # works the season out for itself and so does the island; asked
@@ -1283,6 +1408,7 @@ jobs:
           node node_modules/.cache/year.mjs
 
       - name: Feet wear the same trails on both sides
+        if: matrix.shard == 2
         run: |
           # Grass, lawn, steppe, tundra and moss wear where people walk: a
           # step on your own feet is a point of wear, and at the threshold the
@@ -1299,6 +1425,7 @@ jobs:
           node node_modules/.cache/trails.mjs
 
       - name: Wildflowers bloom in the same places on both sides
+        if: matrix.shard == 2
         run: |
           # Where grass flowers and how thick is worked out from where it is,
           # by the page that draws it and by the island that lets it be
@@ -1312,6 +1439,7 @@ jobs:
           node node_modules/.cache/flowers.mjs
 
       - name: Stone greens on the same clock on both sides, and clears the same
+        if: matrix.shard == 2
         run: |
           # Asked for off a picture of a grey castle: ivy up the walls and moss
           # on the paving, the statues, the slabs and the stone bridges, bare
@@ -1329,6 +1457,7 @@ jobs:
           node node_modules/.cache/green.mjs
 
       - name: Crops grow through the year, and planters grow them indoors, the same on both sides
+        if: matrix.shard == 2
         run: |
           # Asked for: "outdoor seasonal growths for crops, with planters that
           # can be grown indoors regardless of season at a much slower rate."
@@ -1345,6 +1474,7 @@ jobs:
           node node_modules/.cache/seasons.mjs
 
       - name: Fruit, bushes and forage keep their seasons, the same on both sides
+        if: matrix.shard == 2
         run: |
           # Every fruit tree, every bush a sickle cuts and the seasonal wild
           # forage has its seasons in one table (`src/game/fruiting.ts`), which
@@ -1362,6 +1492,7 @@ jobs:
           node node_modules/.cache/fruiting.mjs
 
       - name: A glasshouse grows its crops the year round, the same on both sides
+        if: matrix.shard == 2
         run: |
           # A roof laid in glass, on a pitched roof and nowhere else; a building
           # of one storey under nothing but finished glass is a glasshouse,
@@ -1383,6 +1514,7 @@ jobs:
           node node_modules/.cache/glasshouse.mjs
 
       - name: A team stays in the traces until it is taken out
+        if: matrix.shard == 2
         run: |
           # "hitching wildermon to the wagon doesn't seem to be working". On an
           # island the hitch was written and nothing read it: the settle every
@@ -1398,6 +1530,7 @@ jobs:
           node node_modules/.cache/traces.mjs
 
       - name: The wagon beside the furnace
+        if: matrix.shard == 2
         run: |
           # "pouring a mould, as an action that requires ingredients, should be
           # pulling the iron from the adjacent wagon as it is within 3 tiles".
@@ -1413,6 +1546,7 @@ jobs:
           node node_modules/.cache/beside.mjs
 
       - name: What a craft may take is the player's to say
+        if: matrix.shard == 2
         run: |
           # "add a toggle in settings for allowing or disallowing crafting from
           # nearby containers. add another setting that disallows the automatic
@@ -1428,6 +1562,7 @@ jobs:
           node node_modules/.cache/spare.mjs
 
       - name: What you gather goes in the cart
+        if: matrix.shard == 2
         run: |
           # "When doing actions from the cart, all gathered materials should go
           # right to the cart." With the reins of a cart or wagon, or a small
@@ -1441,6 +1576,7 @@ jobs:
           node node_modules/.cache/laden.mjs
 
       - name: Let go over a container
+        if: matrix.shard == 2
         run: |
           # "Allow drag and drop from the player inventory directly to a
           # container by dragging the item to the asset model and releasing."
@@ -1455,6 +1591,7 @@ jobs:
           node node_modules/.cache/drop.mjs
 
       - name: Seeing into a house, and out of one
+        if: matrix.shard == 2
         run: |
           # "i can see through the doors, but only one tile deep", and not to
           # the night's radius either. The line of sight took every tile a
@@ -1470,6 +1607,7 @@ jobs:
           node node_modules/.cache/sight.mjs
 
       - name: The last spadeful, and one fault one job
+        if: matrix.shard == 2
         run: |
           # "something just broke, no actions are working". `take_spoil` and
           # `site_take` set the last one of a stack to a count of 0, which the
@@ -1486,6 +1624,7 @@ jobs:
           node node_modules/.cache/spadeful.mjs
 
       - name: A citizen of somebody else's settlement may found their own
+        if: matrix.shard == 2
         run: |
           # "i disbanded my settlement so i could make a new one but it's still
           # telling me i can't because i already have a deed ... i think it
@@ -1508,6 +1647,7 @@ jobs:
           node node_modules/.cache/citizen.mjs
 
       - name: Mayors invite, and ranks are set
+        if: matrix.shard == 2
         run: |
           # `deed_member.role` held mayor, builder or guest and nothing ever
           # wrote it, so nobody could be made a mayor, and inviting and sending
@@ -1525,6 +1665,7 @@ jobs:
           node node_modules/.cache/mayors.mjs
 
       - name: The Skills window's sliders, off the rules
+        if: matrix.shard == 2
         run: |
           # Asked for: a slider in the Skills window for everything a skill
           # changes, every skill, each track from the skill's own starting
@@ -1537,6 +1678,7 @@ jobs:
           node node_modules/.cache/skilleffects.mjs
 
       - name: Ask to join a settlement at its token
+        if: matrix.shard == 2
         run: |
           # Asked for: "Allow players to request to join a settlement at the
           # totem." A stranger standing on a settlement asks at its token; its
@@ -1551,6 +1693,7 @@ jobs:
           node node_modules/.cache/joinask.mjs
 
       - name: A work post takes a wildermon as Hitch does, in the same words on both sides
+        if: matrix.shard == 2
         run: |
           # "Bug: workposts aren't working. Make it work almost like a Hitch,
           # able to select the wildermon following or held in crates in
@@ -1563,6 +1706,7 @@ jobs:
           node node_modules/.cache/workpost.mjs
 
       - name: Logged on and off, said to everybody, in the words the browser reads
+        if: matrix.shard == 2
         run: |
           # "Add a banner like when entering a deed when a player logs on or
           # off. Add a text line in Talk when a player logs on or off." Washing
@@ -1573,6 +1717,7 @@ jobs:
           node node_modules/.cache/presence.mjs
 
       - name: Accounts - addresses noted, new bodies per connection, keeper doors want the code
+        if: matrix.shard == 2
         run: |
           # The join and the beat note the caller's address (once per 10 min
           # when known), the clock forgets one unseen 90 days; one connection
@@ -1584,6 +1729,7 @@ jobs:
           node node_modules/.cache/accounts.mjs
 
       - name: Six more relics put to use, the same on both sides
+        if: matrix.shard == 2
         run: |
           # "Old collar, old bridle, seed jar, old whetstone, makers stamp,
           # rune tablet." Each restores into a thing of its own; the collar
@@ -1595,6 +1741,7 @@ jobs:
           node node_modules/.cache/sixrelics.mjs
 
       - name: A bronze mirror copies a parent's best trait to its young, the same on both sides
+        if: matrix.shard == 2
         run: |
           # "Copy a trait to a newborn: at breeding, the newborn gets the
           # parent's best trait at that parent's value instead of rolling it.
@@ -1605,6 +1752,7 @@ jobs:
           node node_modules/.cache/bronzemirror.mjs
 
       - name: An ancient brace, a post worker's meal and scarcer seed, the same on both sides
+        if: matrix.shard == 2
         run: |
           # "Ancient Brace ... action speed by 1% per, up to 50 uses",
           # "wildermon on a workpost will feed themselves ... from containers
@@ -1614,6 +1762,7 @@ jobs:
           node node_modules/.cache/bracefeedseed.mjs
 
       - name: Wildermon gear, a pack, a harness and barding, the same on both sides
+        if: matrix.shard == 2
         run: |
           # "wildermon gear (#17)": fitted and removed from its menu, its size
           # only; a pack's load a trip, a harness's team pace and barding's
@@ -1623,6 +1772,7 @@ jobs:
           node node_modules/.cache/wildgear.mjs
 
       - name: Body stamina grows the stamina bar, the same on both sides
+        if: matrix.shard == 2
         run: |
           # "Body stamina should also increase the bar. 2x at 100". The bar is
           # 1 at the starting mark and 2 at a hundred; a dig and a second of
@@ -1632,6 +1782,7 @@ jobs:
           node node_modules/.cache/staminabar.mjs
 
       - name: Awareness, more uses, more sources and a start at 20, the same on both sides
+        if: matrix.shard == 2
         run: |
           # "1 add those [uses], 2 add those [sources], 3 start at 20, 4 keep [the curve], 5 add both".
           # Notice range, track reach, hit chance in the dark and the husbandry a trait needs at 20, 60
@@ -1641,6 +1792,7 @@ jobs:
           node node_modules/.cache/awareness.mjs
 
       - name: Soul strength, its uses and its sources, the same on both sides
+        if: matrix.shard == 2
         run: |
           # "1. Add to those other uses. 2. Add those sources as well. 3. Keep
           # small. 4. Fix text." At soul strength 20, 60 and 100: the same tame
@@ -1652,6 +1804,7 @@ jobs:
           node node_modules/.cache/soulstrength.mjs
 
       - name: Ranks of your own, the founder's to make, in the same words on both sides
+        if: matrix.shard == 2
         run: |
           # "Allow the founder to establish ranks and advanced permissions for
           # all citizen ranks." Every settlement has its own ranks now, up to
@@ -1673,6 +1826,7 @@ jobs:
           node node_modules/.cache/customranks.mjs
 
       - name: A settlement's notices, posted by a rank that may and read by its citizens alone
+        if: matrix.shard == 2
         run: |
           # "Citizens holding a rank power can post short notices to their
           # settlement, and every citizen sees new ones when they come
@@ -1693,6 +1847,7 @@ jobs:
           node node_modules/.cache/notices.mjs
 
       - name: Work a settlement wants, delivered at its token, and its ledger
+        if: matrix.shard == 2
         run: |
           # "The founder, or a rank with Set work, lists work wanted; citizens
           # deliver toward it, credited in a settlement ledger." This asks
@@ -1711,6 +1866,7 @@ jobs:
           node node_modules/.cache/settlework.mjs
 
       - name: Shared settlement stores
+        if: matrix.shard == 2
         run: |
           # A crate or a piece of storage furniture on a settlement, marked one
           # of its stores by its founder or a rank holding Keep the stores,
@@ -1734,6 +1890,7 @@ jobs:
           node node_modules/.cache/stores.mjs
 
       - name: Leaving a settlement you were asked onto
+        if: matrix.shard == 2
         run: |
           # "add a leave settlement option so citizens can quit oceanport".
           # The island has had `rpc_leave_deed`; the settlement's own menu gave
@@ -1751,6 +1908,7 @@ jobs:
           node node_modules/.cache/leave.mjs
 
       - name: Butchering is learnt by butchering, and decides what comes off
+        if: matrix.shard == 2
         run: |
           # "Add the Butchering skill that gains experience from the matching
           # option. Butchering skill determines ql of Butchering output". On
@@ -1765,6 +1923,7 @@ jobs:
             --outfile=node_modules/.cache/butchery.mjs --log-level=error
           node node_modules/.cache/butchery.mjs
       - name: Every tool wears with its action
+        if: matrix.shard == 2
         run: |
           # "Butchering knife should take dmg from butchering", then "sweep other
           # tools for missing actions". The browser wears every action's tool; on
@@ -1775,6 +1934,7 @@ jobs:
             --outfile=node_modules/.cache/toolwear.mjs --log-level=error
           node node_modules/.cache/toolwear.mjs
       - name: A wildermon nobody has named is called what it is
+        if: matrix.shard == 2
         run: |
           # Reported: old names after the visual overhauls, and stages not named
           # for what they evolved into once tamed. One that goes only by one of
@@ -1784,6 +1944,7 @@ jobs:
             --outfile=node_modules/.cache/kindname.mjs --log-level=error
           node node_modules/.cache/kindname.mjs
       - name: A harder tame teaches more taming
+        if: matrix.shard == 2
         run: |
           # Asked for: "Taming attempts on harder to tame wildermon should grant
           # more experience". An offering, a trap's catch taken out and the Call
@@ -1793,6 +1954,7 @@ jobs:
             --outfile=node_modules/.cache/tamelearn.mjs --log-level=error
           node node_modules/.cache/tamelearn.mjs
       - name: A stored wildermon crate says who is in it
+        if: matrix.shard == 2
         run: |
           # Asked for: "Add wildermon names to wildermon crates when in all
           # storage spots like stalls". A piece's things, a crate's things and
@@ -1802,6 +1964,7 @@ jobs:
             --outfile=node_modules/.cache/crateoccupant.mjs --log-level=error
           node node_modules/.cache/crateoccupant.mjs
       - name: A wildermon past the first goes into a creature crate, and out of it again
+        if: matrix.shard == 2
         run: |
           # Asked for: "Wildermon can be tamed to be set to active if currently
           # no active wildermon, but any additional wildermon cannot be tamed
@@ -1821,6 +1984,7 @@ jobs:
           node node_modules/.cache/crates.mjs
 
       - name: A new look, worn on an island
+        if: matrix.shard == 2
         run: |
           # "allow players to change their appearance back through the
           # customizer in Settings". The window is the account page's creator;
@@ -1834,6 +1998,7 @@ jobs:
           node node_modules/.cache/mirror.mjs
 
       - name: One pile and not six
+        if: matrix.shard == 2
         run: |
           # Reported off a screenshot of a pack holding six separate piles of
           # cotton seeds. `give` had always folded a harvest into a matching
@@ -1846,6 +2011,7 @@ jobs:
           node node_modules/.cache/pile.mjs
 
       - name: A worker that can reach the larder
+        if: matrix.shard == 2
         run: |
           # `worker_feed` looked in crates and nowhere else, so a wildermon
           # could stand beside a larder holding a hundred and fifty of exactly
@@ -1858,6 +2024,7 @@ jobs:
           node node_modules/.cache/larder.mjs
 
       - name: Fourteen trades, and one of them yours
+        if: matrix.shard == 2
         run: |
           # Sixty-one skills and no way of saying what you *are*. A class is
           # that: fourteen craft trades, one locked in, opening at fifty in any
@@ -1870,6 +2037,7 @@ jobs:
           node node_modules/.cache/craft.mjs
 
       - name: Nine nodes to a trade
+        if: matrix.shard == 2
         run: |
           # Three columns of three per trade, two points at fifty and twelve at
           # a hundred — so twelve buys two whole columns and two over, never
@@ -1883,6 +2051,7 @@ jobs:
           node node_modules/.cache/tree.mjs
 
       - name: Seven ways to fight, and a rite for each
+        if: matrix.shard == 2
         run: |
           # Three melee, two ranged, a healer and one that fights with what
           # fights beside it. Five new channels, every one of them a line that
@@ -1897,6 +2066,7 @@ jobs:
           node node_modules/.cache/fight.mjs
 
       - name: A fight on its own clock
+        if: matrix.shard == 2
         run: |
           # A swing at the weapon's own pace and for its own wind, slower on
           # tired arms; three stances; a struck beast that comes after you and
@@ -1909,6 +2079,7 @@ jobs:
           node node_modules/.cache/clock.mjs
 
       - name: A swing takes the seconds its weapon says
+        if: matrix.shard == 2
         run: |
           # A short sword at fighting 1, 20, 47 and 70 swings every two seconds
           # less skill, never under the floor, timed by `settle` as the browser
@@ -1924,6 +2095,7 @@ jobs:
           node node_modules/.cache/swing.mjs
 
       - name: Heavy blows, hides and wounds
+        if: matrix.shard == 2
         run: |
           # A kind that hits heavy draws back and lands it on you standing
           # there, and falls short once you have stepped out of its reach; a
@@ -1936,6 +2108,7 @@ jobs:
           node node_modules/.cache/blows.mjs
 
       - name: Packs, throwers and orders
+        if: matrix.shard == 2
         run: |
           # One of a pack comes when another of its kind is on you, follows the
           # first, and goes round to its own side of you; a thrower throws
@@ -1948,6 +2121,7 @@ jobs:
           node node_modules/.cache/packs.mjs
 
       - name: Dodges, criticals, arrow heads, venom and threat
+        if: matrix.shard == 2
         run: |
           # A blow on you is first rolled against your dodge, body control less
           # the armour you wear; a blow or shot that lands can be critical, a
@@ -1961,6 +2135,7 @@ jobs:
           node node_modules/.cache/dodge.mjs
 
       - name: A shield blocks
+        if: matrix.shard == 2
         run: |
           # Each shield's chance, off its own share, its quality and the
           # shields skill, the same on both sides; a blocked blow takes nothing,
@@ -1971,6 +2146,7 @@ jobs:
           node node_modules/.cache/block.mjs
 
       - name: A weapon reaches as far as its family
+        if: matrix.shard == 2
         run: |
           # Every weapon's reach the same on both sides, a polearm a tile past
           # a sword; a goblin out of a sword's reach refused in the same words
@@ -1981,6 +2157,7 @@ jobs:
           node node_modules/.cache/reach.mjs
 
       - name: Patrons, faith spells and the spell bar
+        if: matrix.shard == 2
         run: |
           # A patron is refused below its faith, taken at it and never twice; a
           # spell is refused at a shut tier and from another patron, taken onto
@@ -1993,6 +2170,7 @@ jobs:
           node node_modules/.cache/faith.mjs
 
       - name: Meditation's tiers, Calm, and the Knowledge path
+        if: matrix.shard == 2
         run: |
           # A path is chosen at twenty and kept by whoever chose before; a moved
           # path's pick is refused in the browser's words and taken one a tier,
@@ -2006,6 +2184,7 @@ jobs:
           node node_modules/.cache/meditation.mjs
 
       - name: The Love path on its tiers
+        if: matrix.shard == 2
         run: |
           # Every one of Love's fifteen picks, on the island and in the browser:
           # an old walker keeps the path and none of its steps; each technique
@@ -2018,6 +2197,7 @@ jobs:
           node node_modules/.cache/love.mjs
 
       - name: The Power path on its tiers
+        if: matrix.shard == 2
         run: |
           # Every one of Power's fifteen picks, on the island and in the
           # browser: wind, deep water, wounds, a walk and a load, a step up and
@@ -2028,6 +2208,7 @@ jobs:
           node node_modules/.cache/power.mjs
 
       - name: The Blessing's spells
+        if: matrix.shard == 2
         run: |
           # Every one of the fifteen pointed and cast as the door does it, and
           # what it did read back: health, wounds, a hunt dropped, a boon kept,
@@ -2040,6 +2221,7 @@ jobs:
           node node_modules/.cache/blessing.mjs
 
       - name: Justice's spells
+        if: matrix.shard == 2
         run: |
           # Every one of the fifteen pointed and cast as the door does it: a mark
           # through every blow, a Retribution owed and paid at the striker's
@@ -2052,6 +2234,7 @@ jobs:
           node node_modules/.cache/justice.mjs
 
       - name: Chaos's spells
+        if: matrix.shard == 2
         run: |
           # Every one of the fifteen pointed and cast as the door does it: a
           # creature bleeding, running, cowering, struck or dead; health spent
@@ -2064,6 +2247,7 @@ jobs:
           node node_modules/.cache/chaos.mjs
 
       - name: The Sworn Blade's spells and passives
+        if: matrix.shard == 2
         run: |
           # The first fighting trade on spells and passives: twelve spells and
           # six passives in six tiers that open on the trade's own level. Both
@@ -2077,6 +2261,7 @@ jobs:
           node node_modules/.cache/blade.mjs
 
       - name: The Berserker's spells and passives
+        if: matrix.shard == 2
         run: |
           # The second fighting trade on spells and passives. Both sides hold
           # the same rows, what each spell wants in your hands included; every
@@ -2090,6 +2275,7 @@ jobs:
           node node_modules/.cache/berserker.mjs
 
       - name: The Pikeman's spells and passives
+        if: matrix.shard == 2
         run: |
           # The third fighting trade on spells and passives. Both sides hold
           # the same rows; every blow measured at its share of a swing's, the
@@ -2103,6 +2289,7 @@ jobs:
           node node_modules/.cache/pikeman.mjs
 
       - name: The Archer's spells and passives
+        if: matrix.shard == 3
         run: |
           # The fourth fighting trade on spells and passives. Both sides hold
           # the same rows; every shot measured at its share of a draw's, the
@@ -2117,6 +2304,7 @@ jobs:
           node node_modules/.cache/archer.mjs
 
       - name: The Skirmisher's spells and passives
+        if: matrix.shard == 3
         run: |
           # The fifth fighting trade on spells and passives. Both sides hold
           # the same rows; every throw measured at its share of a swing's, the
@@ -2133,6 +2321,7 @@ jobs:
           node node_modules/.cache/skirmisher.mjs
 
       - name: The Chirurgeon's spells and passives
+        if: matrix.shard == 3
         run: |
           # The sixth fighting trade on spells and passives. Both sides hold
           # the same rows; every heal its share back on you or on somebody
@@ -2148,6 +2337,7 @@ jobs:
           node node_modules/.cache/chirurgeon.mjs
 
       - name: A dressing goes past a wound gone bad
+        if: matrix.shard == 3
         run: |
           # Reported: "Bandages don't seem to want to dress a wound if any of
           # your wounds have gone bad." A dressing went on the worst wound, and
@@ -2161,6 +2351,7 @@ jobs:
           node node_modules/.cache/dress.mjs
 
       - name: The Beastmaster's spells and passives
+        if: matrix.shard == 3
         run: |
           # The seventh fighting trade on spells and passives. Both sides hold
           # the same rows; every blow a spell has your companion strike its own
@@ -2177,6 +2368,7 @@ jobs:
           node node_modules/.cache/beastmaster.mjs
 
       - name: The Kindler's spells and passives
+        if: matrix.shard == 3
         run: |
           # The eighth fighting trade on spells and passives, and the first of
           # the arcane. Both sides hold the same rows; every spell wants a
@@ -2195,6 +2387,7 @@ jobs:
           node node_modules/.cache/kindler.mjs
 
       - name: The Binder's spells and passives
+        if: matrix.shard == 3
         run: |
           # The ninth fighting trade on spells and passives, and the second of
           # the arcane. Both sides hold the same rows; every spell wants a
@@ -2216,6 +2409,7 @@ jobs:
           node node_modules/.cache/binder.mjs
 
       - name: The Warder's spells and passives
+        if: matrix.shard == 3
         run: |
           # The tenth and last fighting trade on spells and passives, and the
           # third of the arcane. Both sides hold the same rows; every spell
@@ -2235,6 +2429,7 @@ jobs:
           node node_modules/.cache/warder.mjs
 
       - name: A cast says what it did
+        if: matrix.shard == 3
         run: |
           # The browser drew an area spell on everything in its ring, a hold
           # for its full seconds on a monster that is held for half of them, a
@@ -2251,6 +2446,7 @@ jobs:
           node node_modules/.cache/did.mjs
 
       - name: Spell timers and the skin over you survive a reload
+        if: matrix.shard == 3
         run: |
           # What spells leave on you is kept on your row and was only heard at
           # the cast, so a reload emptied the effects row. A Thicken, a Ward
@@ -2265,6 +2461,7 @@ jobs:
           node node_modules/.cache/blessings.mjs
 
       - name: The single staircase, and wagons up wide ones
+        if: matrix.shard == 3
         run: |
           # The second model of every flight, half the tile wide, up the half
           # on your left or your right as you climb. Its bill in every material
@@ -2283,6 +2480,7 @@ jobs:
           node node_modules/.cache/stairs.mjs
 
       - name: The outside staircase
+        if: matrix.shard == 3
         run: |
           # "Allow building a staircase adjacent to a building to allow stairs
           # going directly to the floor above from outside a building". A
@@ -2298,6 +2496,7 @@ jobs:
           node node_modules/.cache/outstairs.mjs
 
       - name: Glassblowing, glass panels, bottles and the stained glass wall
+        if: matrix.shard == 3
         run: |
           # The Artisan's fourth trade, at a hot smelter: sand melted into
           # lumps, a lump blown into the panel every window, bay and glasshouse
@@ -2310,6 +2509,7 @@ jobs:
           node node_modules/.cache/glassblowing.mjs
 
       - name: A stone, and what you can get out of it
+        if: matrix.shard == 3
         run: |
           # The arcane, which has no mana in it. A focus is a cut gem in a
           # silver claw and every number the system needs was already on the
@@ -2324,6 +2524,7 @@ jobs:
           node node_modules/.cache/arcane.mjs
 
       - name: What is lying about, going off where it lies
+        if: matrix.shard == 3
         run: |
           # ground_sweep rewrote every thing on an island's ground once a
           # second — 95 microseconds a row, whether anything had changed or
@@ -2337,6 +2538,7 @@ jobs:
             --outfile=node_modules/.cache/rot.mjs --log-level=error
           node node_modules/.cache/rot.mjs
       - name: The island saying that it cannot save
+        if: matrix.shard == 3
         run: |
           # On 09-25 the database filled and went read-only, and a refused
           # action did nothing on the screen at all. The banner comes on at the
@@ -2346,6 +2548,7 @@ jobs:
             --outfile=node_modules/.cache/saving.mjs --log-level=error
           node node_modules/.cache/saving.mjs
       - name: Islands that go
+        if: matrix.shard == 3
         run: |
           # Seven islands the live test founded between 09-17 and 09-20 were
           # still on the project, and islands nobody played were kept a month.
@@ -2356,6 +2559,7 @@ jobs:
             --outfile=node_modules/.cache/reap.mjs --log-level=error
           node node_modules/.cache/reap.mjs
       - name: A cheaper stir
+        if: matrix.shard == 3
         run: |
           # The stir was 94% of a round on the live island: every round walked
           # whatever was heading within 104 tiles of a body, against the 40 a
@@ -2367,6 +2571,7 @@ jobs:
           node node_modules/.cache/stir.mjs
 
       - name: A queue put in order
+        if: matrix.shard == 3
         run: |
           # Asked for: the jobs queued listed in the crafting window, dragged
           # into another order and taken out with a cross. The jobs waiting go
@@ -2380,6 +2585,7 @@ jobs:
           node node_modules/.cache/queue.mjs
 
       - name: Goods that change hands
+        if: matrix.shard == 3
         run: |
           # The stalls had never sold anything: a price and a mailbox were
           # looked up by a kind no builder leaves. This builds the pieces the
@@ -2392,6 +2598,7 @@ jobs:
           node node_modules/.cache/market.mjs
 
       - name: A shop counter, on both sides
+        if: matrix.shard == 3
         run: |
           # Asked for: a wall with a counter in it, the shop's goods on the
           # inside and its customers in the street. Planned only in a ground
@@ -2407,6 +2614,7 @@ jobs:
           node node_modules/.cache/counter.mjs
 
       - name: A lantern post, on both sides
+        if: matrix.shard == 3
         run: |
           # Asked for: a timber post with a lantern on an iron arm and a stone
           # pillar with one in its top, each taking a fitted lantern and its
@@ -2422,6 +2630,7 @@ jobs:
           node node_modules/.cache/lamp.mjs
 
       - name: While you were away
+        if: matrix.shard == 3
         run: |
           # The island counts, for somebody who has gone, the loads their
           # workers put away, the young born to their wildermon, what their
@@ -2434,6 +2643,7 @@ jobs:
           node node_modules/.cache/away.mjs
 
       - name: Island leaderboards
+        if: matrix.shard == 3
         run: |
           # Top skills, best-bred wildermon and biggest settlements, from one
           # door. An island of three is ranked place by place: wild ones left
@@ -2445,6 +2655,7 @@ jobs:
           node node_modules/.cache/boards.mjs
 
       - name: Bred records, per kind, the best ever bred
+        if: matrix.shard == 3
         run: |
           # Each base stat at birth and the trait total, with the young one's
           # name, breeder and day, written at a birth only where it beats what
@@ -2455,6 +2666,7 @@ jobs:
           node node_modules/.cache/linerecords.mjs
 
       - name: A young one knows its dam, its sire and where each trait came from
+        if: matrix.shard == 3
         run: |
           # "A pedigree on the creature window. Show the dam, the sire and
           # which traits came from which, so breeding can be planned." Both
@@ -2474,6 +2686,7 @@ jobs:
           node node_modules/.cache/pedigree.mjs
 
       - name: A pairing says what it would throw before it is made
+        if: matrix.shard == 3
         run: |
           # "Before a pairing is confirmed, show for that pair: each trait
           # either parent carries, with the chance the foal inherits it; the
@@ -2489,6 +2702,7 @@ jobs:
           node node_modules/.cache/breedpreview.mjs
 
       - name: One young in two hundred is born with a mutation
+        if: matrix.shard == 3
         run: |
           # A trait neither parent carries, a tier above the best of theirs,
           # in the young one's lowest-tier slot, said at the birth. Both sides,
@@ -2498,6 +2712,7 @@ jobs:
           node node_modules/.cache/mutation.mjs
 
       - name: A wild one now and then comes in a pale or dark form, or large or small
+        if: matrix.shard == 3
         run: |
           # A colour form at one wild spawn in five hundred, a fifth palette per
           # kind, and a size form at one in two hundred, large or small, each off
@@ -2512,6 +2727,7 @@ jobs:
           node node_modules/.cache/wildforms.mjs
 
       - name: Live updates over Broadcast
+        if: matrix.shard == 3
         run: |
           # The island sends land, lines and packs itself, once a statement,
           # with realtime.send (kept locally by the shim), and no longer
@@ -2525,6 +2741,7 @@ jobs:
           node node_modules/.cache/sent.mjs
 
       - name: A caravel, and the people she carries
+        if: matrix.shard == 4
         run: |
           # Her bill against the sailing boat's, her hold and her three places,
           # on both sides; then in a harbour cut for it, a passenger comes
@@ -2538,12 +2755,14 @@ jobs:
           node node_modules/.cache/aboard.mjs
 
       - name: What goes wrong in a browser is written down on the island
+        if: matrix.shard == 4
         run: |
           npx esbuild supabase/test/errors.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/errors.mjs --log-level=error
           node node_modules/.cache/errors.mjs
 
       - name: Buy orders on the board
+        if: matrix.shard == 4
         run: |
           # What somebody wants, with the whole price held against it, filled
           # out of anybody else's pack and sent by the post. Through the doors
@@ -2559,6 +2778,7 @@ jobs:
           node node_modules/.cache/wanted.mjs
 
       - name: A field guide of the wildermon
+        if: matrix.shard == 4
         run: |
           # A page for every kind, marking whether you have seen, tamed and
           # bred it, and where it lives. Each page's lines are its kind's own
@@ -2575,6 +2795,7 @@ jobs:
           node node_modules/.cache/guide.mjs
 
       - name: One purse, two payments at once
+        if: matrix.shard == 4
         run: |
           # Two payments out of one purse at the same moment: the first pays,
           # the second waits for it, counts what is left and is refused.
@@ -2583,6 +2804,7 @@ jobs:
           node node_modules/.cache/purse.mjs
 
       - name: A grave where you fell
+        if: matrix.shard == 4
         run: |
           # On both sides, on dry ground with deep water off it: a death buries
           # the pack, the hands, the toolbelt and every bag with what is in it
@@ -2600,6 +2822,7 @@ jobs:
           node node_modules/.cache/graves.mjs
 
       - name: An island's keepers, and the four things only they may do
+        if: matrix.shard == 4
         run: |
           # Who keeps an island: whoever founded it, and anybody the deploy's own
           # SQL (supabase/owner.sql, run here against a test address) made an
@@ -2613,6 +2836,7 @@ jobs:
           node node_modules/.cache/keeper.mjs
 
       - name: A keeper kicks and bars, and anybody reports
+        if: matrix.shard == 4
         run: |
           # Only keepers kick, unbar, read the open reports and mark them
           # handled. A kick logs the body off as the idle log-out does and sends
@@ -2627,6 +2851,7 @@ jobs:
           node node_modules/.cache/kick.mjs
 
       - name: What everybody on an island has on
+        if: matrix.shard == 4
         run: |
           # A body is drawn in its gear, and somebody else's pack is not yours to
           # read: the island says what each body has on, a slot at a time, as
@@ -2638,6 +2863,7 @@ jobs:
           node node_modules/.cache/worn.mjs
 
       - name: Climbing that stays climbed
+        if: matrix.shard == 4
         run: |
           # Reported: "climbing seems to level up then resets to 1". The browser
           # raised it for itself and the island never did, so the book the
@@ -2651,6 +2877,7 @@ jobs:
           node node_modules/.cache/climb.mjs
 
       - name: Driving and sailing
+        if: matrix.shard == 4
         run: |
           # Two skills of the reins and the helm: each makes what it steers go
           # faster by the same sum on both sides, the island lets the faster
@@ -2661,6 +2888,7 @@ jobs:
           node node_modules/.cache/travel.mjs
 
       - name: Mote swirls turn over with the woods, and Elementalism collects them
+        if: matrix.shard == 4
         run: |
           # Every dawn the day's swirls go and five hundred new ones are put
           # down: water on water, and on land the island of the chart's own
@@ -2674,6 +2902,7 @@ jobs:
           node node_modules/.cache/motes.mjs
 
       - name: Dye is boiled red, yellow or blue and mixed by pouring, the same on both sides
+        if: matrix.shard == 4
         run: |
           # A boil of each dyestuff leaves a bucket of its one primary; dye
           # poured into dye mixes by the litres of each, and goes in with
@@ -2686,6 +2915,7 @@ jobs:
             --outfile=node_modules/.cache/dyes.mjs --log-level=error
           node node_modules/.cache/dyes.mjs
       - name: Five Runestones stand on the shore, and a Telestone takes you to them
+        if: matrix.shard == 4
         run: |
           # The stones stand on the shore of the island's inner bay, on its
           # generated ground, laid over a test's smaller world by scale, and
@@ -2702,6 +2932,7 @@ jobs:
             --outfile=node_modules/.cache/telestone.mjs --log-level=error
           node node_modules/.cache/telestone.mjs
       - name: Enchanting, the paper press and three melee enchantments, the same on both sides
+        if: matrix.shard == 4
         run: |
           # Papyrus is pressed at a paper press, built with carpentry and set
           # down, and refused without one. A scroll is written from papyrus and
@@ -2721,6 +2952,7 @@ jobs:
           node node_modules/.cache/enchant.mjs
 
       - name: Enchanting, part two
+        if: matrix.shard == 4
         run: |
           # The enchantments after the first three, on both sides: each scroll's
           # motes (Leeching's a life and a dark), what Examine says each does at
@@ -2738,6 +2970,7 @@ jobs:
           node node_modules/.cache/enchant2.mjs
 
       - name: Enchanting, part three
+        if: matrix.shard == 4
         run: |
           # The enchantments on new kinds of thing, on both sides: the scrolls,
           # Examine's words, the refusals by kind, and what each does -- the
@@ -2748,6 +2981,7 @@ jobs:
           node node_modules/.cache/enchant3.mjs
 
       - name: The enchanter's plinth, the same on both sides
+        if: matrix.shard == 4
         run: |
           # Enchant, putting a scroll into a thing, is done standing at an
           # enchanter's plinth and nowhere else, as papyrus is pressed at a
@@ -2763,6 +2997,7 @@ jobs:
           node node_modules/.cache/plinth.mjs
 
       - name: A rune lantern post, on both sides
+        if: matrix.shard == 4
         run: |
           # Asked for: a squat carved stone pillar with a band of runes round
           # it, built with masonry from stone bricks and light motes and set
@@ -2778,6 +3013,7 @@ jobs:
           node node_modules/.cache/runelantern.mjs
 
       - name: An altar goes up on your own ground
+        if: matrix.shard == 4
         run: |
           # Asked for: "Make the altar only craftable within deed perimeter".
           # The same recipes carry the flag on both sides, and both refuse an
@@ -2789,6 +3025,7 @@ jobs:
           node node_modules/.cache/deedaltar.mjs
 
       - name: Baubles, found, restored and set into the altar
+        if: matrix.shard == 4
         run: |
           # Asked for: a share of archaeology's finds are baubles, restored like
           # relics and set into a settlement's altar for bonuses to its citizens
@@ -2800,6 +3037,7 @@ jobs:
           node node_modules/.cache/baubles.mjs
 
       - name: Dirt is collected, moss cut, and moss and grass planted on dirt, the same on both sides
+        if: matrix.shard == 4
         run: |
           # Asked for: collect dirt on its tile, as clay and sand are collected;
           # moss cut off a moss tile as grass is cut, giving moss; and ten moss
@@ -2816,6 +3054,7 @@ jobs:
           node node_modules/.cache/moss.mjs
 
       - name: A find nobody has restored takes no repair
+        if: matrix.shard == 4
         run: |
           # Asked for: an artifact that has not been restored cannot be repaired,
           # and one that breaks before it is restored is gone. Repair, a repair
@@ -2828,6 +3067,7 @@ jobs:
           node node_modules/.cache/unrestored.mjs
 
       - name: A sacrifice at the altar, and the souls it leaves
+        if: matrix.shard == 4
         run: |
           # Asked for: rare, supreme and fantastic things given up at the
           # altar fill every nutrient; one in a hundred leaves a soul of the
@@ -2838,6 +3078,7 @@ jobs:
           node node_modules/.cache/sacrifice.mjs
 
       - name: The dragon keeps to Volcano Isle, and wildermon go by their kinds' names
+        if: matrix.shard == 4
         run: |
           # Asked about: a dragon stood up on the Crescent, and tamed wildermon
           # were still called Rabba and the like. The dragon stands up on Volcano
@@ -2849,6 +3090,7 @@ jobs:
           node node_modules/.cache/dragonisle.mjs
 
       - name: A hod carrier brings a wall what the stores hold
+        if: matrix.shard == 4
         run: |
           # Asked about: a level 1 cobbe did not bring marble brick and mortar to
           # a planned marble wall seven tiles off. It now takes the nearest wall
@@ -2859,6 +3101,7 @@ jobs:
           node node_modules/.cache/hod.mjs
 
       - name: A worker off its ground walks back to it
+        if: matrix.shard == 4
         run: |
           # Reported: a Tinka sent home from 300 tiles away did not move and
           # could not be selected. A worker past its ground walks back first, a
@@ -2869,6 +3112,7 @@ jobs:
           node node_modules/.cache/errandhome.mjs
 
       - name: A settlement's stores are read off the settlement
+        if: matrix.shard == 4
         run: |
           # The world clock timed out every round inside a hod carrier's choice
           # of wall: every piece of furniture on the island was reckoned, once a
@@ -2879,6 +3123,7 @@ jobs:
           node node_modules/.cache/storesread.mjs
 
       - name: Restored relics are used on a wildermon
+        if: matrix.shard == 4
         run: |
           # Asked for: a restored bone comb takes a stage off a wildermon's age,
           # an old file makes it a step rarer one time in twenty, an old pot
@@ -2891,6 +3136,7 @@ jobs:
           node node_modules/.cache/relicuse.mjs
 
       - name: An ancient lamp rekindles a trait
+        if: matrix.shard == 4
         run: |
           # Asked for: the old lamp restores into an ancient lamp, which used on
           # a wildermon of yours rerolls its lowest-tier trait at that tier or
@@ -2903,6 +3149,7 @@ jobs:
           node node_modules/.cache/ancientlamp.mjs
 
       - name: Tracking reads the way to the nearest wild one
+        if: matrix.shard == 4
         run: |
           # Asked for: a tracking skill, and a Track button in the field guide
           # that points to the nearest wild one of a kind you have seen, more
@@ -2916,6 +3163,7 @@ jobs:
           node node_modules/.cache/tracking.mjs
 
       - name: Rare ingredients make rare work more likely
+        if: matrix.shard == 4
         run: |
           # Asked for: a rare+ ingredient raises the chance a craft comes out
           # that rare by its share of the ingredients: two, one supreme, is
@@ -2928,6 +3176,7 @@ jobs:
           node node_modules/.cache/rareinput.mjs
 
       - name: A stack dropped on a crate rack fills its crates one by one
+        if: matrix.shard == 4
         run: |
           # Asked for: "Allow dragging inventory to a Crate shelf, where the
           # crates on it will fill one by one according to available space."
@@ -2942,6 +3191,7 @@ jobs:
           node node_modules/.cache/rackput.mjs
 
       - name: A settlement's places count its own workers
+        if: matrix.shard == 4
         run: |
           # Reported: two wildermon at work and a third refused as the fifth of
           # five. The browser counted a neighbour's workers within sight against
@@ -2951,6 +3201,7 @@ jobs:
           node node_modules/.cache/workercount.mjs
 
       - name: A hod carrier works on everything built off a bill
+        if: matrix.shard == 4
         run: |
           # Asked for: the Brickling works on floors and the rest of a deed's
           # building, not only ground-floor walls. Walls on any storey, floors,
@@ -2962,6 +3213,7 @@ jobs:
           node node_modules/.cache/hodwork.mjs
 
       - name: A worker far from anybody still walks home
+        if: matrix.shard == 4
         run: |
           # Reported: a Tinka sent home from far away stood where its keeper
           # left it, out of reach of the sweeps round the players. The clock
@@ -2971,6 +3223,7 @@ jobs:
           node node_modules/.cache/farworker.mjs
 
       - name: A worker says why it is idle
+        if: matrix.shard == 4
         run: |
           # Asked: a worker on a settlement often stands idle and nothing says
           # why. Each cause is kept as a code and a number and said on its card
@@ -2982,6 +3235,7 @@ jobs:
           node node_modules/.cache/idlewhy.mjs
 
       - name: A worker keeps a ledger of the last island day
+        if: matrix.shard == 4
         run: |
           # Asked: per deed worker, what it did over the last island day, in
           # two buckets keyed by the island day so it stays bounded. Counted
@@ -2992,6 +3246,7 @@ jobs:
           node node_modules/.cache/ledger.mjs
 
       - name: A wildermon keeps its lifetime at work
+        if: matrix.shard == 4
         run: |
           # Off the day's ledger as it is written: what it handled by the thing,
           # its cycles and skill, its best island day, and its time working, idle
@@ -3003,6 +3258,7 @@ jobs:
           node node_modules/.cache/workstats.mjs
 
       - name: A magga sorts the bins
+        if: matrix.shard == 4
         run: |
           # Asked: the Magga "now also sorts raw material bins and craft
           # material bins". With nothing lying about it takes a stack out of a
@@ -3013,6 +3269,7 @@ jobs:
           node node_modules/.cache/magsort.mjs
 
       - name: A wild thing goes after its span and the stretch is stocked afresh
+        if: matrix.shard == 4
         run: |
           # Asked: "I havent seen a single one of the new 60 wildermon." Country
           # was put out once and only topped up for what was killed, so 52 new
@@ -3028,6 +3285,7 @@ jobs:
           node node_modules/.cache/turnover.mjs
 
       - name: A Roxxen learns driving in the traces
+        if: matrix.shard == 4
         run: |
           # Asked for: "Roxxen need to have the Driving trade and gain
           # experience in it when pulling a large cart or wagon". Its one skill,
@@ -3042,6 +3300,7 @@ jobs:
           node node_modules/.cache/roxxendrive.mjs
 
       - name: The Bauble of Regret, and a trade undone
+        if: matrix.shard == 5
         run: |
           # Asked for: a 3% chance of a Bauble of Regret in archaeology, which
           # undoes a trade. Both sides turn one up as often, off the same roll
@@ -3053,6 +3312,7 @@ jobs:
           node node_modules/.cache/regret.mjs
 
       - name: Perks, six tiers of three, and what each one does
+        if: matrix.shard == 5
         run: |
           # Asked for: every class has six tiers, at 50 and then 60 to 100 in
           # its main skill, and at each one choice of three. Both sides hold
@@ -3066,6 +3326,7 @@ jobs:
           node node_modules/.cache/perks.mjs
 
       - name: The Miner's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Miner's eighteen measured on the island with the dice
           # taken out where they can be: the face and what it asks, Chip
@@ -3076,6 +3337,7 @@ jobs:
           node node_modules/.cache/miner.mjs
 
       - name: The Mason's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Mason's eighteen measured on the island with the dice
           # taken out where they can be: the chisel, the trowel, Repoint and
@@ -3086,6 +3348,7 @@ jobs:
           node node_modules/.cache/mason.mjs
 
       - name: The Carpenter's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Carpenter's eighteen measured on the island with the
           # dice taken out where they can be: the saw and the bench, the maker's
@@ -3097,6 +3360,7 @@ jobs:
           node node_modules/.cache/carpenter.mjs
 
       - name: The Smith's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Smith's eighteen measured on the island with the dice
           # taken out where they can be: the smelter's glass, mix, melt, mould
@@ -3110,6 +3374,7 @@ jobs:
           node node_modules/.cache/smith.mjs
 
       - name: The Forester's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Forester's eighteen measured on the island with the dice
           # taken out where they can be: Cut down's time, strokes, stroke that
@@ -3122,6 +3387,7 @@ jobs:
           node node_modules/.cache/forester.mjs
 
       - name: The Farmer's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Farmer's eighteen measured on the island with the dice
           # taken out where they can be: the seed kept, the pace a crop is sown
@@ -3134,6 +3400,7 @@ jobs:
           node node_modules/.cache/farmer.mjs
 
       - name: The Cook's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Cook's eighteen measured on the island with the dice
           # taken out where they can be: the pot's quality, one more and
@@ -3148,6 +3415,7 @@ jobs:
           node node_modules/.cache/cook.mjs
 
       - name: The Tailor's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Tailor's eighteen measured on the island, the dice put
           # either side of a perk's number where it is a chance: the shears'
@@ -3162,6 +3430,7 @@ jobs:
           node node_modules/.cache/tailor.mjs
 
       - name: The Herdsman's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Herdsman's eighteen measured on the island, the dice put
           # either side of a perk's number where it is a chance: a wild one's
@@ -3176,6 +3445,7 @@ jobs:
           node node_modules/.cache/herdsman.mjs
 
       - name: The Naturalist's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Naturalist's eighteen measured on the island, the dice
           # put either side of a perk's number where it is a chance: a look over
@@ -3189,6 +3459,7 @@ jobs:
           node node_modules/.cache/naturalist.mjs
 
       - name: The Fisher's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Fisher's eighteen measured on the island, the dice put
           # either side of a perk's number where it is a chance: a line's and a
@@ -3202,6 +3473,7 @@ jobs:
           node node_modules/.cache/fisher.mjs
 
       - name: The Mender's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Mender's eighteen measured on the island, the dice put
           # either side of a perk's number where it is a chance: a go of Repair
@@ -3215,6 +3487,7 @@ jobs:
           node node_modules/.cache/mender.mjs
 
       - name: The Artisan's perks, each where its rule is
+        if: matrix.shard == 5
         run: |
           # Each of the Artisan's eighteen measured on the island, the dice put
           # either side of a perk's number where it is a chance: a stone set
@@ -3229,6 +3502,7 @@ jobs:
           node node_modules/.cache/artisan.mjs
 
       - name: A portcullis, a drawbridge and a hidden door, the same on both sides
+        if: matrix.shard == 5
         run: |
           # Asked for: a portcullis raised and lowered that stops everything but
           # the eye when it is down; a drawbridge worked from its winch that
@@ -3253,6 +3527,7 @@ jobs:
           node node_modules/.cache/gates.mjs
 
       - name: A rune gate is laid, passed and lit the same on both sides
+        if: matrix.shard == 5
         run: |
           # Two rune pillars under a lintel on a border of their own, in stone
           # brick and nothing else with a light mote in each pillar, that shut
@@ -3269,6 +3544,7 @@ jobs:
           node node_modules/.cache/runegate.mjs
 
       - name: A memorial stone, engraved with somebody's own words, the same on both sides
+        if: matrix.shard == 5
         run: |
           # Built with masonry and a trowel and set down like any piece. A
           # stone chisel cuts a line of up to 72 characters into it, cleaned
@@ -3283,6 +3559,7 @@ jobs:
           node node_modules/.cache/memorial.mjs
 
       - name: Vineyards and wine that ages, the same on both sides
+        if: matrix.shard == 5
         run: |
           # A cutting off a thorn bush with a sickle, planted on a trellis on
           # soil and refused off it; the vine too young, then picked in autumn
@@ -3297,6 +3574,7 @@ jobs:
           node node_modules/.cache/vineyard.mjs
 
       - name: A bucket keeps its brew's QL, and mead ages, the same on both sides
+        if: matrix.shard == 5
         run: |
           # Each brew's rate and cap the same on both sides; a bucket drawn off
           # grape wine kept thirteen days at the barrel's aged QL, off the top
@@ -3312,6 +3590,7 @@ jobs:
           node node_modules/.cache/aged.mjs
 
       - name: Maps drawn, studied and copied, the same on both sides
+        if: matrix.shard == 5
         run: |
           # Draw a map on a sheet of papyrus: the square round the tile you
           # stand on, as far each way as its QL reaches, written on the map.
@@ -3324,6 +3603,7 @@ jobs:
           node node_modules/.cache/maps.mjs
 
       - name: Milk, butter and cheese, the same on both sides
+        if: matrix.shard == 5
         run: |
           # A butter churn built with carpentry and set down; a bucket of milk
           # churned at it into the pats of butter the browser says, the bucket
@@ -3337,6 +3617,7 @@ jobs:
           node node_modules/.cache/dairy.mjs
 
       - name: Whey from cheese, fed to a creature, the same on both sides
+        if: matrix.shard == 5
         run: |
           # Cheese pressed hands the bucket back full of whey, and a failure
           # hands it back empty. A bucket of whey is fed to a kept creature of
@@ -3348,6 +3629,7 @@ jobs:
           node node_modules/.cache/whey.mjs
 
       - name: A skep, filling with honey and beeswax off the wildflowers in reach, the same on both sides
+        if: matrix.shard == 5
         run: |
           # Woven by ropemaking with a carving knife and set down like any
           # piece. What it has made is worked out from the moment it was set
@@ -3360,6 +3642,7 @@ jobs:
           node node_modules/.cache/bees.mjs
 
       - name: A masterwork signed by its maker, once, the same on both sides
+        if: matrix.shard == 5
         run: |
           # One thing made at the signing QL or better carries its maker's
           # name, and one made under it does not: a mallet carved at the bench
@@ -3374,6 +3657,7 @@ jobs:
           node node_modules/.cache/signed.mjs
 
       - name: Dyed glass, and a window the colour of its panes, the same on both sides
+        if: matrix.shard == 5
         run: |
           # A glass panel takes a dye at its own litres; one of a pile is dyed
           # and the rest stay clear, in the same words. A window glazed with
@@ -3385,6 +3669,7 @@ jobs:
           node node_modules/.cache/dyedglass.mjs
 
       - name: A tame woola is sheared from its menu, the same on both sides
+        if: matrix.shard == 5
         run: |
           # Shear was never on a creature's menu, and the island never sent a
           # keeper how much fleece had grown back. This asks that it sends it,
@@ -3396,6 +3681,7 @@ jobs:
           node node_modules/.cache/shear.mjs
 
       - name: Your favour is the island's, on coming ashore and on every beat
+        if: matrix.shard == 5
         run: |
           # The island kept favour and never sent it, so a reload showed the
           # browser's own nought. This asks that coming ashore hands it over,
@@ -3406,6 +3692,7 @@ jobs:
           node node_modules/.cache/favour.mjs
 
       - name: A corner the island moves is said to the browsers watching
+        if: matrix.shard == 5
         run: |
           # A slab breaking away while mining, a chipped corner and dirt dropped
           # at your feet moved a corner and told nobody until a refresh. This
@@ -3415,6 +3702,7 @@ jobs:
           node node_modules/.cache/corner.mjs
 
       - name: A team is not your companion, and is put together out of its crates
+        if: matrix.shard == 5
         run: |
           # Reported: once a mon is hitched it still counts as following you, so
           # the next cannot come out of its crate. This asks, on both sides and
@@ -3426,6 +3714,7 @@ jobs:
           node node_modules/.cache/team.mjs
 
       - name: A name as you write it
+        if: matrix.shard == 5
         run: |
           # Asked: names were all lowercase, because the name was read back out
           # of the sign-in address. This asks that the capitals written are the
@@ -3437,6 +3726,7 @@ jobs:
           node node_modules/.cache/names.mjs
 
       - name: Dirt dropped on a kelp bed makes a dirt floor
+        if: matrix.shard == 5
         run: |
           # Asked: dropping dirt on a kelp tile should make it dirt. Kelp was
           # not on the list of ground a spadeful buries. This asks, on both
@@ -3446,6 +3736,7 @@ jobs:
           node node_modules/.cache/kelp.mjs
 
       - name: Change tile lays what was dropped
+        if: matrix.shard == 5
         run: |
           # Reported: clay or sand dropped on dirt left dirt. Both sides: clay,
           # sand and dirt lay their own tile, at a corner and at your feet.
@@ -3454,6 +3745,7 @@ jobs:
           node node_modules/.cache/changetile.mjs
 
       - name: Every vessel holds litres, and a liquid is used by the litre
+        if: matrix.shard == 5
         run: |
           # Asked for: a bucket of 5 L of water down a litre a dough, lye by the
           # litre, L for what a vessel holds. Both sides: litres out of a bucket,
@@ -3464,6 +3756,7 @@ jobs:
           node node_modules/.cache/litres.mjs
 
       - name: A mould is the smith's, formed and poured by blacksmithing
+        if: matrix.shard == 5
         run: |
           # Asked: pouring moulds should give blacksmithing experience, and a
           # mould's QL when formed should be the smith's and not the sand's. A
@@ -3475,6 +3768,7 @@ jobs:
           node node_modules/.cache/moulds.mjs
 
       - name: A vesp tends the hives, as its trade
+        if: matrix.shard == 5
         run: |
           # Asked: vesp should work beehives as their trade. A vesp had none,
           # so it could not be set to work a deed. This asks that it can, that
@@ -3485,6 +3779,7 @@ jobs:
           node node_modules/.cache/vesp.mjs
 
       - name: Things of one kind keep one place in a list
+        if: matrix.shard == 5
         run: |
           # Three nail moulds came out in whatever order the pack was last
           # rearranged in, and every pour rearranged it. Every tie is broken
@@ -3495,6 +3790,7 @@ jobs:
           node node_modules/.cache/order.mjs
 
       - name: Flattening wears the shovel, and every job on the ground its tool
+        if: matrix.shard == 5
         run: |
           # Reported: flattening with two shovels damaged neither. On an island
           # flattening wore no shovel at all, and four more jobs on the ground
@@ -3506,6 +3802,7 @@ jobs:
           node node_modules/.cache/flatten.mjs
 
       - name: Hostile creatures are marked over the trees
+        if: matrix.shard == 5
         run: |
           # Asked: threats are hard to see in a mess of trees. Every wild
           # creature of a kind that hunts on sight, and anything hunting you,
@@ -3516,6 +3813,7 @@ jobs:
           node node_modules/.cache/threats.mjs
 
       - name: A wound you point at, and the Health window
+        if: matrix.shard == 5
         run: |
           # Asked: a Health window where a wound is clicked to be bandaged or
           # treated, clear about what has to be carried. A dressing, the lye
@@ -3529,6 +3827,7 @@ jobs:
           node node_modules/.cache/health.mjs
 
       - name: Building draws on the stores within reach
+        if: matrix.shard == 5
         run: |
           # Asked: "building a wall or other building actions should also be
           # able to draw materials from wagon or nearby storage within 3 tiles".
@@ -3540,6 +3839,7 @@ jobs:
           node node_modules/.cache/buildstores.mjs
 
       - name: A wall or a floor is built a number of goes at a time
+        if: matrix.shard == 5
         run: |
           # Asked: "Allow bulk actions when building structures like walls and
           # floors, e.g. build 5 10 25 50". A log wall's row offers its counts;
@@ -3549,6 +3849,7 @@ jobs:
           node node_modules/.cache/buildcount.mjs
 
       - name: The Equipment window's numbers are the fight's own
+        if: matrix.shard == 5
         run: |
           # Asked: an Equipment window to drag things on and off a figure of
           # you, with every combat number and the skills behind them. Each
@@ -3561,6 +3862,7 @@ jobs:
           node node_modules/.cache/equipment.mjs
 
       - name: The journal counts only your own work
+        if: matrix.shard == 5
         run: |
           # Reported: goals ticked off by another player's work, and some that
           # never tick at all. On an island only the island's counts reach the
@@ -3572,6 +3874,7 @@ jobs:
           node node_modules/.cache/journal.mjs
 
       - name: Goals done show as done
+        if: matrix.shard == 5
         run: |
           # Reported: goals done never show, not after a refresh either. The
           # island's record comes on the first beat, after the journal has
@@ -3583,6 +3886,7 @@ jobs:
           node node_modules/.cache/goals.mjs
 
       - name: Goals of the wildermon and of a settlement count on the island
+        if: matrix.shard == 5
         run: |
           # Thirty-eight goals: bred, evolved, geared and worked wildermon, the
           # Field guide, and what a settlement is built into. Each count is
@@ -3593,6 +3897,7 @@ jobs:
           node node_modules/.cache/goals-a.mjs
 
       - name: Thirty-six goals in the crafts, the land and the water
+        if: matrix.shard == 6
         run: |
           # Each count a new goal reads is noted on the island for whoever does
           # the thing, where it is done (a walk's through journal_move), and for
@@ -3603,6 +3908,7 @@ jobs:
           node node_modules/.cache/goals-b.mjs
 
       - name: The island's goals, fighting and faith, people and trade
+        if: matrix.shard == 6
         run: |
           # Each of the journal's goals for the island, for fighting and faith
           # and for people and trade: the thing done on the island counts for
@@ -3613,6 +3919,7 @@ jobs:
           node node_modules/.cache/goals-c.mjs
 
       - name: Ten conveniences hold to what they say
+        if: matrix.shard == 6
         run: |
           # Put away into the stores within reach that hold the like of it,
           # rot times on the ground, eating by yourself, the shopping list's
@@ -3623,6 +3930,7 @@ jobs:
           node node_modules/.cache/qol.mjs
 
       - name: Ten more hands on a settlement
+        if: matrix.shard == 6
         run: |
           # A kemma brushes the herd, a sheela milks and shears it, a salva
           # dresses its hurts, a carra butchers and a tanna tans what is in the
@@ -3634,6 +3942,7 @@ jobs:
           node node_modules/.cache/tenhands.mjs
 
       - name: Twelve more hands on a settlement
+        if: matrix.shard == 6
         run: |
           # A forga and a potta empty and charge the smelters and the kilns, a
           # cindra rakes ashes and leaches lye, a hoppa brews, a simma cooks, a
@@ -3645,6 +3954,7 @@ jobs:
           node node_modules/.cache/twelvehands.mjs
 
       - name: Eight more hands on a settlement
+        if: matrix.shard == 6
         run: |
           # A rippa saws planks, a chissa chisels stone brick, a mudda shapes
           # clay brick, a cordra lays up rope and a flecha fletches arrows at
@@ -3656,6 +3966,7 @@ jobs:
           node node_modules/.cache/eighthands.mjs
 
       - name: Seven that fight
+        if: matrix.shard == 6
         run: |
           # A testa draws what is after you onto itself, a skulka strikes
           # harder at what is fighting something else, a gasha bleeds, a
@@ -3666,6 +3977,7 @@ jobs:
           node node_modules/.cache/fightstyles.mjs
 
       - name: A Sparra on a settlement spars with your guards
+        if: matrix.shard == 6
         run: |
           # A Sparra set to a settlement picks a guard of yours there, the
           # one that sparred longest ago first, and the guard walks to it and
@@ -3679,6 +3991,7 @@ jobs:
           node node_modules/.cache/deedspar.mjs
 
       - name: Abilities on a cooldown
+        if: matrix.shard == 6
         run: |
           # Seventeen wildermon each use a fighting trade's spell, or a frost
           # breath, instead of a blow, then rest for the spell's rest: the
@@ -3688,6 +4001,7 @@ jobs:
           node node_modules/.cache/abilities.mjs
 
       - name: The Whispet, out only from 15 October to 15 November
+        if: matrix.shard == 6
         run: |
           # A wild one is put down only after dark and only in its season, by
           # the calendar in UTC, and the spawner takes the wild ones off once
@@ -3698,6 +4012,7 @@ jobs:
           node node_modules/.cache/whispet.mjs
 
       - name: A skill for every wildermon, and its level is that skill
+        if: matrix.shard == 6
         run: |
           # A kind with no trade and no traces learns one of its own by what
           # it does -- sheared, plucked or milked, sparred with, out with you,
@@ -3707,6 +4022,7 @@ jobs:
           node node_modules/.cache/ownskill.mjs
 
       - name: Wildermon evolve at 25 and 50
+        if: matrix.shard == 6
         run: |
           # A kind that evolves is its second stage from the first level and
           # its third from the second, each multiplying its health, blow,
@@ -3717,6 +4033,7 @@ jobs:
           node node_modules/.cache/evolve.mjs
 
       - name: Evolved wildermon in the wild, rarely
+        if: matrix.shard == 6
         run: |
           # One put out in the wild of a kind that evolves comes in at its
           # second stage one time in WILD_STAGE_ODDS[0] and its third one time
@@ -3728,6 +4045,7 @@ jobs:
           node node_modules/.cache/wildstage.mjs
 
       - name: Food quality matters
+        if: matrix.shard == 6
         run: |
           # A meal of quality q puts FED_LEARN × q/100 on a tame one's learning
           # for FED_FOR, twice for its favourite, the larger of two and never
@@ -3738,6 +4056,7 @@ jobs:
           node node_modules/.cache/fedwell.mjs
 
       - name: Every trade takes about as long to evolve
+        if: matrix.shard == 6
         run: |
           # Asked for: "Even out the time to evolve across trades". Each
           # trade's gains at its level skill are multiplied by LEARN_PACE,
@@ -3752,6 +4071,7 @@ jobs:
           node node_modules/.cache/learnrate.mjs
 
       - name: Each stage lets a deed worker do more at once
+        if: matrix.shard == 6
         run: |
           # Asked for: "Each stage unlocks something, not just bigger
           # numbers". STAGE_LOADS (1, 2, 3) the same on both sides, and the
@@ -3765,6 +4085,7 @@ jobs:
           node node_modules/.cache/stagework.mjs
 
       - name: A skill of each line's own at its third stage, and a trait slot more at each stage
+        if: matrix.shard == 6
         run: |
           # Asked for: "every evolving line gains one perk of its own at its
           # third stage", and "reaching stage 2 opens one more trait slot, and
@@ -3778,6 +4099,7 @@ jobs:
           node node_modules/.cache/stagethree.mjs
 
       - name: Deed workers tire, rest, and sleep in a bed of their size
+        if: matrix.shard == 6
         run: |
           # TIRE_GOES goes and no more, REST_FOR where it stands, BED_REST of it
           # in a free bed of its class on the settlement (its stage, or its
@@ -3789,6 +4111,7 @@ jobs:
           node node_modules/.cache/rest.mjs
 
       - name: A worker a day without a meal works at half its pace
+        if: matrix.shard == 6
         run: |
           # Its seconds at work since it last ate, counted only while it
           # works and put back by any meal; at UPKEEP_FOR (the island day) a
@@ -3798,6 +4121,7 @@ jobs:
           node node_modules/.cache/upkeep.mjs
 
       - name: Three of a trade on a settlement make it a specialty
+        if: matrix.shard == 6
         run: |
           # Deed workers of a trade on a settlement, a citizen's among them;
           # at SPECIALTY_AT a go's work time is divided by 1 + SPECIALTY_BONUS.
@@ -3807,6 +4131,7 @@ jobs:
           node node_modules/.cache/specialty.mjs
 
       - name: The browser's errands and the island's reed cutter agree
+        if: matrix.shard == 6
         run: |
           # A mender, a water carrier, a hod carrier, a planter, a stoker and a
           # prospector in the browser take a go's work time, and wait after a
@@ -3818,6 +4143,7 @@ jobs:
           node node_modules/.cache/agree2.mjs
 
       - name: Skills go on past a hundred, for the boards
+        if: matrix.shard == 6
         run: |
           # A go is worth what it was up to SKILL_TOP and is divided by
           # PAST_TOP for every point past it; a skill raised at the top goes
@@ -3828,6 +4154,7 @@ jobs:
           node node_modules/.cache/pasttop.mjs
 
       - name: The island's watch keeps its ledger and raises its flags
+        if: matrix.shard == 6
         run: |
           # Every thing made or unmade is counted per day, item and door; the
           # night holds the count against the ledger and flags a forged
@@ -3840,6 +4167,7 @@ jobs:
           node node_modules/.cache/watch.mjs
 
       - name: Every door paced, and a walk held to its pace
+        if: matrix.shard == 6
         run: |
           # A per-player rate limit on every rpc_* door, by class, with budgets
           # three times what the browser itself sends; a class's burst and then
@@ -3857,6 +4185,7 @@ jobs:
           node node_modules/.cache/ratelimit.mjs
 
       - name: The game's clock against the wall's, and a walk's turns
+        if: matrix.shard == 6
         run: |
           # A frame's whole wall time walked in tenths (clockSteps), up to two
           # seconds; the island's go on the action bar runs off the wall clock,
@@ -3869,6 +4198,7 @@ jobs:
           node node_modules/.cache/frames.mjs
 
       - name: The exact benefit, and where its number comes from
+        if: matrix.shard == 6
         run: |
           # Text the player reads says what changes and by how much, and where
           # the rule has the number the text takes it from the rule (CLAUDE.md).
@@ -3881,6 +4211,7 @@ jobs:
           node node_modules/.cache/benefit.mjs
 
       - name: The doors, as the security advisors read them
+        if: matrix.shard == 6
         run: |
           # Every table in public has row level security; every SECURITY
           # DEFINER function a fixed search_path; anon and authenticated hold
@@ -3895,8 +4226,9 @@ jobs:
 
   migrate:
     name: Push the migrations to the project
-    if: github.event_name == 'workflow_dispatch' && inputs.live
-    needs: rules
+    # On the rules having passed here, or over the same code already (`already`).
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.live && (needs.already.outputs.tested == 'true' || needs.rules.result == 'success') }}
+    needs: [already, rules]
     runs-on: ubuntu-latest
     environment: AI
     steps:
@@ -4423,7 +4755,7 @@ jobs:
 
   found:
     name: Found an island on the project
-    if: github.event_name == 'workflow_dispatch' && inputs.found
+    if: ${{ !cancelled() && needs.migrate.result == 'success' && github.event_name == 'workflow_dispatch' && inputs.found }}
     needs: migrate
     runs-on: ubuntu-latest
     environment: AI
@@ -4458,7 +4790,7 @@ jobs:
 
   reconcile:
     name: Put the island and the browsers back on the same ground
-    if: github.event_name == 'workflow_dispatch' && inputs.live && inputs.reconcile != 'off'
+    if: ${{ !cancelled() && needs.migrate.result == 'success' && github.event_name == 'workflow_dispatch' && inputs.live && inputs.reconcile != 'off' }}
     needs: migrate
     runs-on: ubuntu-latest
     environment: AI
@@ -4495,7 +4827,7 @@ jobs:
 
   smoke:
     name: Play on the real island
-    if: github.event_name == 'workflow_dispatch' && inputs.live
+    if: ${{ !cancelled() && needs.migrate.result == 'success' && github.event_name == 'workflow_dispatch' && inputs.live }}
     needs: migrate
     runs-on: ubuntu-latest
     environment: AI
