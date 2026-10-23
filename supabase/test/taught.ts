@@ -295,9 +295,10 @@ check(`every gain is ${GAIN_RATE} of the curve, floor and all, the same on both 
   `rate ${there[0]}; one go at level 1 ${gains[GRID.findIndex(([v, b, r]) => v === 1 && b === 1 && r === 1)]} on the island, ${skillGain(1, 1, 1)} in the browser`);
 const fn = psql(`select string_agg(p.proname, ',' order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public' and p.prokind = 'f' and p.prosrc ilike '%skill_gain_of(%'`);
-// And a fighting trade's own level, which climbs the same curve on purpose (`talents.ts`).
+// And a fighting trade's own level, which climbs the same curve on purpose (`talents.ts`). A worker learns at a factor
+// (`worker_learn_paced`); `worker_learn` is it at its own trade's factor.
 check('and a body learns by it, a worker learns by it and a fighting trade\'s level climbs it, and nothing on the island learns any other way',
-  fn === 'class_learn,skill_raise,worker_learn', fn);
+  fn === 'class_learn,skill_raise,worker_learn_paced', fn);
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {
