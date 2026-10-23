@@ -1898,11 +1898,8 @@ export class Renderer {
           this.trailShapes.delete(yy * w.w + xx);
           this.flowerMarks.forget(xx, yy);
           this.faces.delete(yy * w.w + xx);
-          for (const m of [this.hemCache, this.hemMemCache]) {
-            const h = m.get(yy * w.w + xx);
-            if (h?.cv) this.hemPixels -= h.cv.width * h.cv.height;
-            m.delete(yy * w.w + xx);
-          }
+          this.forgetHem(this.hemCache, yy * w.w + xx);
+          this.forgetHem(this.hemMemCache, yy * w.w + xx);
         }
       }
     }
@@ -2729,6 +2726,14 @@ export class Renderer {
     if (lit !== true) this.hemMemCache.clear();
     this.hemPixels = 0;
     for (const m of [this.hemCache, this.hemMemCache]) for (const h of m.values()) this.hemPixels += h.cv ? h.cv.width * h.cv.height : 0;
+  }
+
+  /** One tile's edges, out of one of the two caches. */
+  private forgetHem(cache: Map<number, HemPicture>, key: number): void {
+    const h = cache.get(key);
+    if (!h) return;
+    if (h.cv) this.hemPixels -= h.cv.width * h.cv.height;
+    cache.delete(key);
   }
 
   /** `swardEdges`, from the tile's picture when it has one that fits, making one when it may. */
@@ -3669,8 +3674,28 @@ export class Renderer {
         this.memColors.forgetBox(Math.max(0, box.x0), Math.max(0, box.y0),
           Math.min(world.w - 1, box.x1), Math.min(world.h - 1, box.y1));
       } else this.memColors.clear();
+    }
+    /*
+     * And the edges and path marks of remembered ground, for the tiles
+     * remembered afresh and the eight round each, which they read. They were
+     * all dropped whenever the sight moved, which on the move is every tile:
+     * ~170 edge pictures made again a frame, a frame of up to a second.
+     */
+    const fresh = world.takeRemembered();
+    if (!fresh) {
       this.forgetHems(false);
       this.trailMemMarks.clear();
+    } else {
+      for (const i of fresh) {
+        const x = i % world.w, y = (i - x) / world.w;
+        for (let ny = y - 1; ny <= y + 1; ny++) {
+          for (let nx = x - 1; nx <= x + 1; nx++) {
+            if (!world.inBounds(nx, ny)) continue;
+            this.forgetHem(this.hemMemCache, ny * world.w + nx);
+            this.trailMemMarks.forget(nx, ny);
+          }
+        }
+      }
     }
     // The sun moves through the day, so the ground has to be shaded again as it
     // goes. It is cut into steps rather than recomputed every frame: a repaint

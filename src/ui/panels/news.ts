@@ -3543,6 +3543,13 @@ export const NEWS: News[] = [
       'Fixed: Mount said "Mounted" and left you on foot beside the wildermon.',
     ],
   },
+  {
+    n: 289,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: frame rate walking or driving with fog on: grass edges on remembered ground redrawn only where the memory changed, not every step. Driving a cart: frame 52 → 18 ms, worst 289 → 92 ms.',
+    ],
+  },
 ];
 
 /**

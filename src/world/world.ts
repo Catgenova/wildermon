@@ -5,6 +5,8 @@ export type WorldListener = (x: number, y: number) => void;
 
 /** The square the ground is worked out in. The same one the cost analysis measured. */
 export const CHUNK = 64;
+/** Tiles listed as remembered afresh before the list gives up and says all of them (`World.takeRemembered`). */
+const REMEMBERED_MOST = 20_000;
 
 /** One square of land, exactly the shape `generateAtlasWindow` returns. */
 export interface LandWindow {
@@ -63,6 +65,12 @@ export class World {
    */
   groundTouched = true;
   fogTouched = true;
+  /**
+   * Tiles whose remembered picture has changed since the renderer last took
+   * them (`takeRemembered`), by `y * w + x`; null when too many or too much
+   * at once to list: all of them.
+   */
+  private remembered: number[] | null = [];
   /**
    * Tiles something fixed stands on that nobody can stand on, by
    * `y * w + x`, whatever the ground under them is: the Runestones'
@@ -578,7 +586,18 @@ export class World {
     this.mem[i] = t;
     this.memData[i] = d;
     this.fogTouched = true;
+    if (this.remembered) {
+      if (this.remembered.length < REMEMBERED_MOST) this.remembered.push(i);
+      else this.remembered = null;
+    }
     return true;
+  }
+
+  /** The tiles remembered afresh since the last time this was asked, or null for all of them. */
+  takeRemembered(): number[] | null {
+    const r = this.remembered;
+    this.remembered = [];
+    return r;
   }
 
   /**
@@ -595,6 +614,7 @@ export class World {
     if (this.seen[i] === 1) return;
     this.seen[i] = 1;
     this.fogTouched = true;
+    this.remembered = null;
     const b = this.knownBox;
     if (b.x1 < 0) {
       b.x0 = x;
@@ -662,6 +682,7 @@ export class World {
   rememberAll(): void {
     if (this.ready) return;
     this.fogTouched = true;
+    this.remembered = null;
     this.knownBox.x0 = 0;
     this.knownBox.y0 = 0;
     this.knownBox.x1 = this.w - 1;
