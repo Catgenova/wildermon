@@ -51,12 +51,12 @@ export const FRUITING: Record<string, readonly Season[]> = {
   rose_petals: ['spring', 'summer'],
   lavender: ['spring', 'summer'],
   // Foraging.
-  strawberry: ['summer'],
-  raspberry: ['summer'],
-  blueberry: ['summer', 'autumn'],
-  lingonberry: ['autumn'],
-  acorn: ['autumn'],
-  nuts: ['autumn'],
+  strawberry: ['spring', 'summer'],
+  raspberry: ['spring', 'summer'],
+  blueberry: ['spring', 'summer', 'autumn'],
+  lingonberry: ['spring', 'autumn'],
+  acorn: ['spring', 'autumn'],
+  nuts: ['spring', 'autumn'],
   // Botanizing.
   basil: ['summer'],
   sage: ['spring', 'summer', 'autumn'],

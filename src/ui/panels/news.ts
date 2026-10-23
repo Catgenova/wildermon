@@ -3472,6 +3472,13 @@ export const NEWS: News[] = [
       `Added: ${itemDef('creature_crate').name.toLowerCase()}s on a stall, a counter or a rack listed with their wildermon's name.`,
     ],
   },
+  {
+    n: 281,
+    day: '2026-10-23',
+    lines: () => [
+      `Changed: foraging finds ${listed(['strawberry', 'raspberry', 'blueberry', 'lingonberry', 'acorn', 'nuts'].filter((id) => FRUITING[id]?.includes('spring')).map((id) => itemDef(id).name.toLowerCase()))} in spring too.`,
+    ],
+  },
 ];
 
 /** The kinds that butchered into dragon scales until What's new 268. */
