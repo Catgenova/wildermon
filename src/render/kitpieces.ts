@@ -70,7 +70,7 @@ export function kitHeight(kind: string): number {
   const piece = KIT_PIECES[kind];
   const m = piece.model({ lit: false }, sizeOf(kind));
   let z = 0;
-  for (const p of m.parts) if (p.solid ?? !!p.faces) for (const f of p.faces ?? []) for (const q of f.pts) z = Math.max(z, q[2]);
+  for (const p of m.parts) if (p.solid ?? !!p.faces) for (const q of [...(p.faces ?? []).flatMap((f) => f.pts), ...(p.reach ?? [])]) z = Math.max(z, q[2]);
   return Math.ceil(z * HEIGHT_SCALE);
 }
 
