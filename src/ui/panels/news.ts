@@ -3587,6 +3587,13 @@ export const NEWS: News[] = [
       'Fixed: settlement workers left idle beside their keeper ("nobody awake within 104 tiles"). The island\'s clock settles everybody\'s own wildermon first, every round; each player\'s area then gets a share of the rest.',
     ],
   },
+  {
+    n: 295,
+    day: '2026-10-23',
+    lines: () => [
+      'Changed: furniture art: every piece redrawn in the style of the smelter, anvil and wildermon beds. Carts, wagons and boats recoloured to match. Bells coloured by their metal.',
+    ],
+  },
 ];
 
 /**
