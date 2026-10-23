@@ -1,8 +1,10 @@
 import type { KitPiece } from './core';
 import { ALTAR } from './altar';
+import { HIVE, SKEP } from './apiary';
 import { BANNER, FLAGPOLE } from './banners';
 import { BARREL, LARGE_BARREL, SMALL_BARREL } from './barrel';
 import { BED, COT, TENT } from './beds';
+import { BELL } from './bell';
 import { BULK_BIN, CRAFT_BIN, SEED_BIN, SPROUT_BIN } from './bins';
 import { BRAZIER } from './brazier';
 import { CHAIR } from './chair';
@@ -10,15 +12,21 @@ import { CHEST } from './chest';
 import { BUTTER_CHURN, LOOM, PAPER_PRESS, POTTERS_WHEEL, SPINDLE } from './crafts';
 import { FIREWOOD_RACK } from './firewood';
 import { FOUNTAIN } from './fountain';
+import { GRAVE } from './grave';
 import { LAMP_PILLAR, LAMP_POST } from './lamps';
 import { OVEN } from './oven';
 import { PLANTER } from './planter';
+import { FISH_POND } from './pond';
+import { ROSE_ARCH, STONE_ROSE_ARCH } from './rosearch';
 import { BENCH, STOOL } from './seating';
 import { GREAT_SIGN, SIGN } from './signs';
 import { STALL } from './stall';
 import { COAT_RACK, LECTERN } from './stands';
+import { STATUE } from './statue';
 import { DESK, LONG_TABLE, TABLE } from './tables';
 import { TRASH_CRATE } from './trash';
+import { TRELLIS } from './trellis';
+import { WELL } from './well';
 
 /**
  * Every piece of furniture drawn in the kit, by its kind (`FurnitureDef.id`).
@@ -65,4 +73,14 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   banner: BANNER,
   flagpole: FLAGPOLE,
   fountain: FOUNTAIN,
+  hive: HIVE,
+  skep: SKEP,
+  fish_pond: FISH_POND,
+  well: WELL,
+  bell: BELL,
+  statue: STATUE,
+  grave: GRAVE,
+  trellis: TRELLIS,
+  rose_arch: ROSE_ARCH,
+  stone_rose_arch: STONE_ROSE_ARCH,
 };
