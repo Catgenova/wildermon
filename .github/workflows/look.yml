@@ -176,6 +176,31 @@ jobs:
               end;
               raise exception 'GROUND deed=%, deeds=%', j->'deed', jsonb_array_length(coalesce(j->'deeds', '[]'::jsonb));
             end \$\$"
+          # Asked about: "Mortarbacks still not working when I log in", their card saying nobody awake is near. A worker's
+          # card says that when its turn is half a minute overdue and its keeper is in: the clock is not settling it.
+          ask "Solara's keeper's deed workers: turn, phase, job, bed, post" "select c.id, c.species, c.name, c.phase, c.job,
+                 round(extract(epoch from now() - c.until)::numeric) as overdue_s, c.bed, c.post, c.hunger,
+                 round(creature_x(c)::numeric, 1) as x, round(creature_y(c)::numeric, 1) as y, c.to_x, c.to_y,
+                 left(c.skills::text, 60) as skills
+            from creature c join deed d on d.founded_by = c.keeper and d.world_id = c.world_id
+           where d.name = 'Solara' and c.mode = 'deed' order by c.id"
+          ask "and their keeper, as the clock reads who is awake" "select p.name, p.away, round(extract(epoch from now() - p.seen_at)::numeric) as seen_s_ago,
+                 idle_logout() as logout_s, p.x, p.y from player p join deed d on d.founded_by = p.uid and d.world_id = p.world_id where d.name = 'Solara'"
+          ask "one settle of each, rolled back: what it did" "do \$\$
+            declare r record; v_before timestamptz; v_after timestamptz; v_phase text; v_ok boolean; out text := '';
+            begin
+              for r in select c.id, c.world_id, c.until from creature c join deed d on d.founded_by = c.keeper and d.world_id = c.world_id
+                        where d.name = 'Solara' and c.mode = 'deed' order by c.id loop
+                begin
+                  v_ok := creature_settle(r.world_id, r.id);
+                  select until, phase into v_after, v_phase from creature where world_id = r.world_id and id = r.id;
+                  out := out || format(' | %s settled=%s until %s -> %s phase %s', r.id, v_ok, to_char(r.until, 'HH24:MI:SS'), to_char(v_after, 'HH24:MI:SS'), v_phase);
+                exception when others then
+                  out := out || format(' | %s ERROR %s (%s)', r.id, sqlerrm, sqlstate);
+                end;
+              end loop;
+              raise exception 'SETTLE%', out;
+            end \$\$"
           ask "Solara's altar baubles as rpc_ground reads them" "select deed_baubles_json(d.world_id, d.founded_by) from deed d where d.name = 'Solara'"
           ask "the watch: open flags, newest first" "select to_char(f.at, 'MM-DD HH24:MI') as at, w.name as island, f.kind,
                  coalesce(folk_name(f.world_id, f.uid), '') as who, left((f.detail - 'key')::text, 200) as detail
