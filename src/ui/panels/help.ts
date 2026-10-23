@@ -2880,9 +2880,9 @@ export function helpText(): string {
       <tr><td><b>${SPECIES.quarra.name}</b> (was Quarra)</td><td>On bare rock; eats clay. Cuts rock, slate, marble and sandstone shards. Evolves: ${evolves('quarra')}.</td></tr>
       <tr><td><b>${SPECIES.embra.name}</b> (was Embra)</td><td>Marsh peat and tar; eats cooked food only. Keeps every fire, smelter and kiln on the settlement fuelled and lit from the crate.
       Evolves: ${evolves('embra')}.</td></tr>
-      <tr><td><b>Magga</b></td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range, sorts: a stack a load
+      <tr><td><b>${SPECIES.magga.name}</b> (was Magga)</td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range, sorts: a stack a load
       from a settlement crate, chest or other store into the raw or craft material bin that takes it, up to the bin's room; not from bins, padlocked or marked stores or locked items,
-      and not off a work post. Card when idle: &ldquo;${idleSays({ why: 'range', n: SPECIES.magga.workRange }, 'fetch')}&rdquo; Wild ones steal items left near their trees.</td></tr>
+      and not off a work post. Card when idle: &ldquo;${idleSays({ why: 'range', n: SPECIES.magga.workRange }, 'fetch')}&rdquo; Wild ones steal items left near their trees. Evolves: ${evolves('magga')}.</td></tr>
       <tr><td><b>${SPECIES.woola.name}</b> (was Woola)</td><td>No task. <b>Shear</b> with a knife for <b>wool</b> once grown; regrows in ${dur(1 / (SPECIES.woola.fleece ?? 1))}.
       Evolves: ${evolves('woola')}.</td></tr>
       <tr><td><b>Ulva</b></td><td>Hunts by scent from ${SPECIES.ulva.notice ?? HUNT_SIGHT} tiles, until you are well away or it is badly hurt. Taming ${SPECIES.ulva.tameLevel}.
@@ -2937,7 +2937,7 @@ export function helpText(): string {
       <li><b>${SPECIES.cobbe.name}</b> (was Cobbe): <b>hod</b>: carries what a planned wall (any storey), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
       still needs from your settlement stores, crates and furniture, and fits it, one piece a trip. Evolves: ${evolves('cobbe')}.</li>
       <li><b>${SPECIES.tinka.name}</b> (was Tinka): <b>mends</b> damaged gear in your settlement stores, most damaged first. Evolves: ${evolves('tinka')}.</li>
-      <li><b>Middun</b>: turns rotting things on the ground into <b>compost</b>.</li>
+      <li><b>${SPECIES.middun.name}</b> (was Middun): turns rotting things on the ground into <b>compost</b>. Evolves: ${evolves('middun')}.</li>
       <li><b>${SPECIES.snout.name}</b>: finds <b>buried relics</b> and marks where to dig. Taming ${SPECIES.snout.tameLevel}.</li>
       <li><b>Bura</b>: no task; panniers hold <b>${SPECIES.bura.pannier} things</b> (open from its menu).</li>
       <li><b>Gorral</b>: saddle mount; climbs ground ${article(SPECIES.orse.name)} ${SPECIES.orse.name} refuses.</li>

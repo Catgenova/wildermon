@@ -3252,21 +3252,11 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 259,
+    n: 253,
     day: '2026-10-22',
     lines: () => [
-      `Added: ${SPECIES.magga.name} sorts bins: with nothing dropped in range, a stack a load from a settlement crate, chest or other store into the `
-        + `${itemDef('bulk_bin').name.toLowerCase()} or ${itemDef('craft_bin').name.toLowerCase()} that takes it, up to the bin's room. `
-        + 'Not from bins, padlocked or marked stores, or off a work post.',
-    ],
-  },
-  {
-    n: 258,
-    day: '2026-10-22',
-    lines: () => [
-      `Added: ${SPECIES.sparra.name} on a settlement (takes a worker place): ${sparTaskSays().replace(/^Settlement task: /, '')}`,
-      `Changed: learning factor for guarding ${percent(PACE_258.guard)} on ${GATHER_SKILL.guard.replace(/_/g, ' ')}, from wild creatures and from spars.`,
-      'Added: card: "Sparring with" its partner; stamina for guards and the Sparra; idle when no guard is free, or yielded.',
+      `Changed: bronze mirror (relic, ${MIRROR.parts} pieces, archaeology ${MIRROR.difficulty}), was treasure only: use on your wildermon; its next covering's young get its best trait`
+        + ' (highest rarity; first listed on a tie) at that rarity, in place of a draw. One mark at a time, used up at that covering. Shown on its card and in the pairing preview.',
     ],
   },
   {
@@ -3277,14 +3267,6 @@ export const NEWS: News[] = [
         + `${Object.keys(STAGE_PERKS).filter((id) => SPECIES[id]?.stages).map((id) => `${SPECIES[id].stages![PERK_STAGE - 1].name} ${perkSays(id)}`).join('; ')}.`,
       `Added: trait slots by evolution stage: ${stageSlots(0)}, ${stageSlots(1)}, ${stageSlots(2)}. Evolving: +${SLOTS_PER_STAGE} trait, a fresh draw by its keeper's husbandry, `
         + `1 in ${MUTATION_ODDS} a mutation. Wild ones at a later stage: their stage's slots. Evolved ones on the island given their missing slots.`,
-    ],
-  },
-  {
-    n: 253,
-    day: '2026-10-22',
-    lines: () => [
-      `Changed: bronze mirror (relic, ${MIRROR.parts} pieces, archaeology ${MIRROR.difficulty}), was treasure only: use on your wildermon; its next covering's young get its best trait`
-        + ' (highest rarity; first listed on a tie) at that rarity, in place of a draw. One mark at a time, used up at that covering. Shown on its card and in the pairing preview.',
     ],
   },
   {
@@ -3318,6 +3300,24 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 258,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: ${SPECIES.sparra.name} on a settlement (takes a worker place): ${sparTaskSays().replace(/^Settlement task: /, '')}`,
+      `Changed: learning factor for guarding ${percent(PACE_258.guard)} on ${GATHER_SKILL.guard.replace(/_/g, ' ')}, from wild creatures and from spars.`,
+      'Added: card: "Sparring with" its partner; stamina for guards and the Sparra; idle when no guard is free, or yielded.',
+    ],
+  },
+  {
+    n: 259,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: ${SPECIES.magga.name} sorts bins: with nothing dropped in range, a stack a load from a settlement crate, chest or other store into the `
+        + `${itemDef('bulk_bin').name.toLowerCase()} or ${itemDef('craft_bin').name.toLowerCase()} that takes it, up to the bin's room. `
+        + 'Not from bins, padlocked or marked stores, or off a work post.',
+    ],
+  },
+  {
     n: 260,
     day: '2026-10-23',
     lines: () => [
@@ -3335,10 +3335,26 @@ export const NEWS: News[] = [
       'Fixed: goals ticked during a refused heartbeat now kept for the next one.',
     ],
   },
+  {
+    n: 262,
+    day: '2026-10-23',
+    lines: () => [
+      ...SEVEN_LINES.map((id) => {
+        const d = SPECIES[id];
+        const [one, two] = d.stages!;
+        return `Replaced: ${d.was![0]} with ${d.name}; evolves to ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats.`;
+      }),
+      `Each stage: own model, animations and voice. Stage 2: ${stageSays(1)}; stage 3: ${stageSays(2)}.`,
+      `Changed: butchered, ${SPECIES.magga.name} and ${SPECIES.mudda.name} lines give scales; ${SPECIES.wurla.name} line feathers; ${SPECIES.grazza.name}, ${SPECIES.grubba.name} and ${SPECIES.middun.name} lines no fur.`,
+    ],
+  },
 ];
 
 /** The nine kinds What's new 251 gives new lines. */
 const NINE_LINES = ['sappa', 'sprigga', 'rowl', 'snout', 'wicka', 'thumpa', 'stona', 'lungra', 'bogga'];
+
+/** The seven kinds What's new 262 gives new lines. */
+const SEVEN_LINES = ['magga', 'grazza', 'grubba', 'wurla', 'mudda', 'dippa', 'middun'];
 
 /** The bronze mirror, as What's new 253 gives it. */
 const MIRROR = RELICS.find((r) => r.result === 'bronze_mirror') ?? { parts: 0, difficulty: 0 };

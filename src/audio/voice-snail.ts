@@ -4,7 +4,7 @@ import { burst, ring } from './kit';
 import type { Voice } from './voices';
 
 /**
- * The Leaflet Snail's voice, and its stages' (the species is `middun`): a
+ * The Snaileaf's voice, and its stages' (the species is `middun`): a
  * small wet bloop, a hollow two-note burble, and a deep woody groan with
  * leaves rustling over it, over the compost they turn -- something rotting
  * slurped up in gulps, soil and leaves tumbling as the shell rocks, and a
@@ -43,7 +43,7 @@ function bloop(ctx: BaseAudioContext, dest: AudioNode, at: number, f: number, du
 }
 
 /**
- * Its own call, by stage. The Leaflet Snail's: two quick bloops, the second higher, round 600 Hz. The Midden Snail's: a hollow
+ * Its own call, by stage. The Snaileaf's: two quick bloops, the second higher, round 600 Hz. The Middunsnail's: a hollow
  * burble, two lower bubbles over a short earthy rumble. The Hearthsnail's: a long low groan round 110 Hz through a wooden
  * resonance, leaves rustling over it.
  */

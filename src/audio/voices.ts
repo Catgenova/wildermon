@@ -116,6 +116,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   mudda: CLAYROLL_VOICE,
   // The Pailbara, the Caskybara and the Reservara.
   dippa: CAPY_VOICE,
-  // The Leaflet Snail, the Midden Snail and the Hearthsnail.
+  // The Snaileaf, the Middunsnail and the Hearthsnail.
   middun: SNAIL_VOICE,
 };

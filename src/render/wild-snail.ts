@@ -6,10 +6,10 @@ import { cut } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
- * The compost snail line: the Leaflet Snail, a small round snail whose
+ * The compost snail line: the Snaileaf, a small round snail whose
  * caramel spiral shell is heaped with fallen leaves, green and autumn orange,
  * a sprig standing up out of the top and dark compost showing between; the
- * Midden Snail, bigger and greener, its shell become a compost bin: the
+ * Middunsnail, bigger and greener, its shell become a compost bin: the
  * spiral a wheel on each side with a cream mushroom on its hub, a slatted
  * crate over it full of dark soil, mushrooms and leaves; and the Hearthsnail,
  * large and old and mossy green, a huge moss-grown shell crowned with a small
@@ -57,8 +57,8 @@ interface Snail {
   size: number;
 }
 
-/** A Leaflet Snail: small and round, a modest shell heaped with leaves, short eyestalks, big eyes. */
-const LEAFLET_LOOK: Snail = {
+/** A Snaileaf: small and round, a modest shell heaped with leaves, short eyestalks, big eyes. */
+const SNAILEAF_LOOK: Snail = {
   stage: 0,
   foot: { tail: 2.0, w: 0.62, h: 0.44 },
   neck: { y: 0.95, tall: 1.38, w: [0.74, 0.52], d: [0.7, 0.5], lean: 0.42 },
@@ -71,8 +71,8 @@ const LEAFLET_LOOK: Snail = {
   size: 1.8,
 };
 
-/** A Midden Snail: bigger and greener, its shell a wheel under a crate of soil, mushrooms and leaves; longer eyestalks. */
-const MIDDEN_LOOK: Snail = {
+/** A Middunsnail: bigger and greener, its shell a wheel under a crate of soil, mushrooms and leaves; longer eyestalks. */
+const MIDDUNSNAIL_LOOK: Snail = {
   stage: 1,
   foot: { tail: 2.7, w: 0.84, h: 0.56 },
   neck: { y: 1.3, tall: 2.15, w: [0.88, 0.56], d: [0.82, 0.54], lean: 0.42 },
@@ -533,7 +533,7 @@ function sprig(at: V3, h: number, lean: V3): Mesh {
   return merge(...parts);
 }
 
-/** The Leaflet Snail's heap: dark compost over the top of the shell, leaves lying over it, a sprig standing up out of the top. */
+/** The Snaileaf's heap: dark compost over the top of the shell, leaves lying over it, a sprig standing up out of the top. */
 function leafletHeap(s: Snail, lod: number): Mesh {
   const { R, X } = s.shell;
   const D: Dome = { c: [0, -0.06, R * 0.22], r: [X * 1.04, R * 1.02, R * 0.92] };
@@ -561,7 +561,7 @@ function leafletHeap(s: Snail, lod: number): Mesh {
 }
 
 /**
- * The Midden Snail's bin: a slatted crate over the top of the shell, its corner posts dark, its slats pale, dark soil heaped up out
+ * The Middunsnail's bin: a slatted crate over the top of the shell, its corner posts dark, its slats pale, dark soil heaped up out
  * of it and spilling between its slats, mushrooms and leaves growing out of the soil, and a cream mushroom on each hub.
  */
 function middenHeap(s: Snail, lod: number): Mesh {
@@ -984,7 +984,7 @@ const SOIL_LIT: RGB = [116, 84, 60];
 const ROT: RGB = [150, 128, 64];
 const ROT_DARK: RGB = [98, 80, 44];
 const LEAF_BITS: readonly RGB[] = [[132, 178, 84], [226, 132, 52], [236, 178, 70], [92, 142, 70]];
-/** How big a stage's crumbs, bits and things are drawn, against the Leaflet Snail's. */
+/** How big a stage's crumbs, bits and things are drawn, against the Snaileaf's. */
 const bigness = (s: Snail): number => [1, 1.25, 1.6][s.stage];
 /** Whether a point is on the viewer's side of a body whose middle is at `c`. */
 const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
@@ -1227,6 +1227,6 @@ function snailKind(s: Snail): Kind {
   };
 }
 
-export const LEAFLET_SNAIL = snailKind(LEAFLET_LOOK);
-export const MIDDEN_SNAIL = snailKind(MIDDEN_LOOK);
+export const SNAILEAF = snailKind(SNAILEAF_LOOK);
+export const MIDDUNSNAIL = snailKind(MIDDUNSNAIL_LOOK);
 export const HEARTHSNAIL = snailKind(HEARTH_LOOK);

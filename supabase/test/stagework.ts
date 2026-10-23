@@ -79,7 +79,7 @@ begin
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Stagework', ${T}, ${T}, 10, 1, u);
   insert into crate (world_id, id, kind, x, y, sx, sy, deed, made_by) values (w, 1, 'plank', ${T + 1}, ${T}, 0, 0, true, u);
   update species_def set stages = array['Rillpup', 'Rillhound'] where id = 'holla';
-  update species_def set stages = array['Mudpat', 'Mudmason'] where id = 'mudda';
+  update species_def set stages = array['Wheelmote', 'Rollterra'] where id = 'mudda';
 
   -- The rule, at each level asked about, and which trades it carries for and which it handles for.
   ${LEVELS.map(([sp, skill, lv], n) => `

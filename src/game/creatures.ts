@@ -37,7 +37,7 @@ import { chartRegion } from '../world/chart';
 import { lairOf, REGIONS } from '../world/regions';
 import { DIGGABLE, findChance, relicsWithin } from './archaeology';
 import { fishable, fishHere, waterDepth } from './fishing';
-import { describeWith, itemDef, litresOf, markOf, TAN_LYE, RARITIES, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
+import { describeFrom, describeWith, itemDef, litresOf, markOf, TAN_LYE, RARITIES, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
 import { drainVessel } from './placeables';
 import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { CLASS_SPELL_BY_ID } from './talents';
@@ -650,6 +650,13 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   lungra: { kind: 'rest', n: 0.2 },
   stona: { kind: 'rest', n: 0.2 },
   whispet: { kind: 'rest', n: 0.2 },
+  magga: { kind: 'loads', n: 1, what: 'items per trip' },
+  grazza: { kind: 'more', n: 1, what: 'grass or moss per cut' },
+  grubba: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  wurla: { kind: 'more', n: 1, what: 'worms per dig' },
+  mudda: { kind: 'loads', n: 1, what: 'bricks per cycle' },
+  dippa: { kind: 'loads', n: 1, what: 'buckets per trip' },
+  middun: { kind: 'loads', n: 1, what: 'items per trip' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -1603,7 +1610,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#a87444', '#86994a'],
       ['#7a5a48', '#5d7f6e'],
     ],
-    butcher: { meat: 1, leather: 1, bone: 1, gland: 1, feather: 6 },
+    butcher: { meat: 1, leather: 1, bone: 1, gland: 1, scale: 2 },
     nearTrees: true,
   },
   mola: {
@@ -1968,7 +1975,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#64785a', '#ea8eb6'],
       ['#706258', '#cfa4e0'],
     ],
-    butcher: { meat: 4, fur: 2, leather: 3, bone: 3, gland: 1 },
+    butcher: { meat: 4, leather: 3, bone: 3, gland: 1 },
     nearTrees: true,
   },
   plucka: {
@@ -2056,12 +2063,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   middun: {
     id: 'middun',
-    name: 'Leaflet Snail',
+    name: 'Snaileaf',
     was: ['Middun'],
-    // Leaflet Snail, Midden Snail, Hearthsnail.
+    // Snaileaf, Middunsnail, Hearthsnail.
     description: 'Settlement task: turn rotting items on the settlement into compost.',
     stages: [
-      { name: 'Midden Snail', description: '' },
+      { name: 'Middunsnail', description: '' },
       { name: 'Hearthsnail', description: '' },
     ],
     health: 24,
@@ -2081,7 +2088,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#f6ecdc', '#7e5434'],
       ['#e4d2b2', '#b46a3c'],
     ],
-    butcher: { meat: 3, fur: 3, leather: 2, bone: 3, gland: 1 },
+    butcher: { meat: 3, leather: 2, bone: 3, gland: 1 },
   },
   // ---- The settlement's own hands. ----
   // Each says what it does on a settlement in the game's own terms; the numbers are the trades' (`TEND_JOBS`, `GATHER_DO`).
@@ -2302,7 +2309,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#b6c870', '#ee9ac8'],
       ['#c0c890', '#f0b0a0'],
     ],
-    butcher: { meat: 4, fur: 3, leather: 3, bone: 3 },
+    butcher: { meat: 4, leather: 3, bone: 3 },
   },
   siffa: {
     id: 'siffa',
@@ -2512,7 +2519,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6e6456', '#e6e2d6'],
       ['#94784c', '#f4e8cc'],
     ],
-    butcher: { meat: 2, fur: 2, leather: 1, bone: 1 },
+    butcher: { meat: 2, feather: 2, leather: 1, bone: 1 },
     nearWater: true,
   },
   sprigga: {
@@ -2682,7 +2689,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8aa0bc', '#d8946a'],
       ['#7484a8', '#b46848'],
     ],
-    butcher: { meat: 3, fur: 2, leather: 2, bone: 2 },
+    butcher: { meat: 3, scale: 2, leather: 2, bone: 2 },
   },
   cordra: {
     id: 'cordra',
@@ -4230,6 +4237,10 @@ sayLine('snout', `Settlement task: find buried relics and mark dig sites ${reach
 sayLine('thumpa', `Tamed: ${STYLE_SAYS.stun}.`, GUARD_LEVEL);
 sayLine('lungra', `Tamed, ${abilityName('beastmaster_pounce')}: ${abilitySays('beastmaster_pounce')}.`, GUARD_LEVEL);
 sayLine('stona', `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('warder_stoneskin')}.`, GUARD_LEVEL);
+// The seven lines asked for on 22–23 October: each one's words as its kind already says them, at every stage.
+for (const [id, level] of [['magga', 'foraging'], ['grazza', 'foraging'], ['grubba', 'digging'], ['wurla', 'digging'],
+  ['mudda', 'pottery'], ['dippa', 'carrying'], ['middun', 'farming']] as const) sayLine(id, SPECIES[id].description, `Level: ${level}.`);
+describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });
 // And the Sparra, which does not evolve: how it fights, its settlement task, and its level (`sparTaskSays`).
 SPECIES.sparra.description = `Tamed: ${STYLE_SAYS.spar}. ${sparTaskSays()} Level: fighting, learned ${LEARNS_SAYS.spar}.`;
 

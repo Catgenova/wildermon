@@ -361,7 +361,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   lantern: { name: 'Lantern', category: 'tool', weight: 1.4, decay: 3, description: 'Holds a candle; light it at a fire. Light: {light.lanternNear} tiles at lowest QL, {light.lanternFar} at best. A candle lasts {light.candleShort:time} at lowest QL, {light.candleLong:time} at best.' },
   torch: { name: 'Torch', category: 'tool', weight: 0.8, decay: 4, description: 'Light at a fire. Burns {light.torchShort:time} to {light.torchLong:time} and lights {light.torchNear} to {light.torchFar} tiles, by QL.' },
   candle: { name: 'Candle', category: 'misc', weight: 0.2, stackable: true, decay: 2, description: 'Burns in a lantern.' },
-  compost: { name: 'Compost', category: 'material', weight: 1.2, stackable: true, raw: true, decay: 2, description: 'From a Middun. Spread on tilled ground.' },
+  compost: { name: 'Compost', category: 'material', weight: 1.2, stackable: true, raw: true, decay: 2, description: 'From {compostMaker}. Spread on tilled ground.' },
   saddle: { name: 'Saddle', category: 'material', weight: 7, stackable: true, decay: 8, description: 'Fit to a Thistlekit to ride it.' },
   bridle: { name: 'Bridle', category: 'material', weight: 2, stackable: true, decay: 8, description: 'Needed to steer a mount.' },
   thatch: { name: 'Thatch', category: 'material', weight: 0.5, stackable: true, decay: 60 },
