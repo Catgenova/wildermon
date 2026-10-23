@@ -200,3 +200,16 @@ jobs:
           ask "Solara: things on the ground" "$S select count(*) as items, count(distinct (i.gx, i.gy)) as tiles, coalesce(sum(i.count), 0) as units
             from item i, d where i.world_id = d.world_id and i.gx is not null
              and abs(i.gx - d.x) <= d.r and abs(i.gy - d.y) <= d.r"
+          # Asked: a Whispet and a Sparra on a settlement not sparring. Each Sparra line kept on a settlement, and each of
+          # its keeper's guards there: what `spar_may` asks of the guard, and its answer.
+          ask "Sparring: each Sparra line on a settlement, and its keeper's guards there" "select s.id as sparra, s.name, s.phase, s.idle_why,
+              s.spar_with, s.post, s.carrying is not null as carrying, s.worn as s_worn, round(s.health) as s_health,
+              g.id as guard, g.species, g.name as g_name, g.job, g.phase as g_phase, g.post as g_post, g.worn as g_worn,
+              g.enemy, g.spar_with as g_spar_with, g.idle_why as g_idle, g.carrying is not null as g_carrying, spar_yielded(g) as g_yielded,
+              round(work_range(g)::numeric, 1) as g_range,
+              (select round(greatest(abs(ws.x + 0.5 - creature_x(s)), abs(ws.y + 0.5 - creature_y(s)))::numeric, 1) from work_site(s.world_id, s) ws) as s_from_site,
+              (select spar_may(s.world_id, g, s, ws.x, ws.y) from work_site(s.world_id, s) ws) as may
+             from creature s join species_def sd on sd.id = s.species and sd.style = 'spar'
+             left join creature g on g.world_id = s.world_id and g.keeper = s.keeper and g.mode = 'deed' and g.id <> s.id
+              and coalesce(g.job, (select x.gathers from species_def x where x.id = g.species)) = 'guard'
+            where s.mode = 'deed' order by s.id, g.id"
