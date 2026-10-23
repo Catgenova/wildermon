@@ -141,7 +141,11 @@ for (const kind of cfg.kinds) {
     row(`zoom ${z} · night`, (s) => cfg.views.map((v) => base(s, v, z, { night: true }, `${s} ${viewName(v)} night`)));
     if (!ref) row(`zoom ${z} · dyed ${cfg.dye}`, (s) => cfg.views.slice(0, 3).map((v) => base(s, v, z, { tint: cfg.dye }, `${s} ${viewName(v)} dyed`)));
     if (!ref) row(`zoom ${z} · woods`, (s) => cfg.woods.map((m) => base(s, cfg.views[0], z, { material: m }, `${s} ${m}`)));
-    if (cfg.lit || kit?.uses?.lit || ref) row(`zoom ${z} · lit`, (s) => [false, true].flatMap((n) => cfg.views.slice(0, 2).map((v) => base(s, v, z, { lit: true, night: n }, `${s} ${viewName(v)} lit${n ? ' night' : ''}`))));
+    if (cfg.lit || kit?.uses?.lit || ref) {
+      // Lit in its last state, where a piece has states: a lantern post lit with its lantern in it.
+      const st = kit?.states?.[kit.states.length - 1];
+      row(`zoom ${z} · lit${st ? ` · ${st.label}` : ''}`, (s) => [false, true].flatMap((n) => cfg.views.slice(0, 2).map((v) => base(s, v, z, { lit: true, night: n, trim: st?.trim }, `${s} ${viewName(v)} lit${n ? ' night' : ''}`))));
+    }
     for (const st of kit?.states ?? []) row(`zoom ${z} · ${st.label}`, (s) => cfg.views.map((v) => base(s, v, z, { trim: st.trim }, `${s} ${viewName(v)} ${st.label}`)));
     if (kit?.layers) row(`zoom ${z} · layers`, (s) => Array.from({ length: kit.layers! }, (_, i) => base(s, cfg.views[0], z, { trim: i }, `${s} layer ${i}`)));
   }
