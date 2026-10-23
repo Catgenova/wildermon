@@ -241,7 +241,7 @@ begin
     from jsonb_array_elements(v_got->'stalls') s where (s->>'id')::bigint = v_c.id), 'NOT LISTED'));
 
   -- A wildermon in its crate goes on a counter as it goes on a stall, and nowhere else it did not before.
-  v_pip := creature_spawn(w, 'rabba', ${X} + 0.5, ${Y} + 0.5, 'stored', now() - interval '3 hours', a);
+  v_pip := creature_spawn(w, 'rabba', ${X} + 0.5, ${Y} + 0.5, 'stored', now() - interval '9 hours', a);
   v_crate := give(w, a, 'creature_crate', 1, 30);
   update item set creature = v_pip where id = v_crate;
   insert into said values ('CRATE_CHECK|' || coalesce(act_refusal(w, a, 'set_out_goods',

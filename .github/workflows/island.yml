@@ -2007,6 +2007,16 @@ jobs:
           npx esbuild supabase/test/tamelearn.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/tamelearn.mjs --log-level=error
           node node_modules/.cache/tamelearn.mjs
+      - name: Life stages on the seasons' scale, and death of old age
+        if: matrix.shard == 6
+        run: |
+          # Asked for: "Scale life stages to match the 90-day seasons. 90d days
+          # at old and the wildermon dies of old age." young_for, old_at and
+          # old_for the same on both sides; one past its old age dies, leaves
+          # its carcass and its keeper is told; one still in it lives.
+          npx esbuild supabase/test/oldage.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/oldage.mjs --log-level=error
+          node node_modules/.cache/oldage.mjs
       - name: A stored wildermon crate says who is in it
         if: matrix.shard == 2
         run: |

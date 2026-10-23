@@ -277,22 +277,22 @@ begin
   update creature set mode = 'wild', keeper = null where world_id = w and keeper = dane and mode in ('active', 'stored', 'deed');
 
   -- Put out through the stocking's door, the rolls forced either side of the lines.
-  v_id := wild_form_put(w, creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '3 hours'), 0.0001, 0.001);
+  v_id := wild_form_put(w, creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '9 hours'), 0.0001, 0.001);
   select * into c from creature where world_id = w and id = v_id;
   insert into said values ('PUTF', c.form_colour || '/' || coalesce(c.form_size, '-'));
   v_h := max_health(c);
   insert into said values ('PUTH', (c.health = v_h)::text);
   c.form_size := null;
   insert into said values ('PUT', 'true/large/' || (select v from said where k = 'PUTH') || '/' || (v_h > max_health(c)));
-  v_id := wild_form_put(w, creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '3 hours'), 0.5, 0.004);
+  v_id := wild_form_put(w, creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '9 hours'), 0.5, 0.004);
   select * into c from creature where world_id = w and id = v_id;
   insert into said values ('PUT2', c.form_colour || '/' || coalesce(c.form_size, '-'));
-  v_id := wild_form_put(w, creature_spawn(w, 'goblin', v_x + 30, v_y + 30, 'wild', now() - interval '3 hours'), 0, 0);
+  v_id := wild_form_put(w, creature_spawn(w, 'goblin', v_x + 30, v_y + 30, 'wild', now() - interval '9 hours'), 0, 0);
   insert into said select 'MONSTER', form_colour || '/' || coalesce(form_size, '-') from creature where world_id = w and id = v_id;
   -- And at the island's own dice, many times.
   v_n := 0;
   for v_i in 1..20000 loop
-    v_id := wild_form_put(w, creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '3 hours'));
+    v_id := wild_form_put(w, creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '9 hours'));
     select * into c from creature where world_id = w and id = v_id;
     insert into said select 'STOCKED', c.form_colour || '/' || coalesce(c.form_size, '-') where c.form_colour or c.form_size is not null;
     delete from creature where world_id = w and id = v_id;
@@ -302,7 +302,7 @@ begin
     where p.proname in ('creature_stock', 'creature_stock_block', 'wild_turnover') and pg_get_functiondef(p.oid) like '%wild_form_put(%'));
 
   -- Its blood.
-  v_id := creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '3 hours');
+  v_id := creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '9 hours');
   select * into c from creature where world_id = w and id = v_id;
   v_h := beast_mul(c, 'hardy'); v_s := beast_mul(c, 'speed');
   c.form_size := 'large';
@@ -311,7 +311,7 @@ begin
   insert into said values ('SMALL', (beast_mul(c, 'hardy') / v_h) || '|' || (beast_mul(c, 'speed') / v_s));
 
   -- Seen: one in its forms near, and a form nothing near is in.
-  v_id := creature_spawn(w, 'rabba', v_x + 0.6, v_y, 'wild', now() - interval '3 hours');
+  v_id := creature_spawn(w, 'rabba', v_x + 0.6, v_y, 'wild', now() - interval '9 hours');
   update creature set form_colour = true, form_size = 'large' where world_id = w and id = v_id;
   insert into said values ('SEEN', rpc_guide_seen(w, array['rabba', 'rabba/colour', 'rabba/large', 'rabba/small', 'rabba/nosuch'])::text);
   insert into said select 'SENT', (e->>'formColour') || '/' || coalesce(e->>'formSize', '-')
@@ -328,7 +328,7 @@ begin
 
   -- Out of a trap: kept, and marked.
   insert into skill (world_id, uid, id, value) values (w, dane, 'taming', 60) on conflict (world_id, uid, id) do update set value = 60;
-  v_id := creature_spawn(w, 'vola', v_x + 0.6, v_y, 'wild', now() - interval '3 hours');
+  v_id := creature_spawn(w, 'vola', v_x + 0.6, v_y, 'wild', now() - interval '9 hours');
   update creature set form_size = 'small' where world_id = w and id = v_id;
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, caught)
     values (w, 'trap', 'snare', floor(v_x)::int, floor(v_y)::int, 0, 0, floor(v_x) + 0.5, floor(v_y) + 0.5, 60, dane, v_id)
@@ -345,8 +345,8 @@ begin
 
   -- Young ones: the covering settles them off the parents', and the birth gives them.
   insert into skill (world_id, uid, id, value) values (w, dane, 'animal_husbandry', 50) on conflict (world_id, uid, id) do update set value = 50;
-  v_dam := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'deed', now() - interval '3 hours', dane);
-  v_sire := creature_spawn(w, 'rabba', v_x - 0.3, v_y, 'deed', now() - interval '3 hours', dane);
+  v_dam := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'deed', now() - interval '9 hours', dane);
+  v_sire := creature_spawn(w, 'rabba', v_x - 0.3, v_y, 'deed', now() - interval '9 hours', dane);
   update creature set sex = 'female', form_colour = true, form_size = 'large', hunger = 1 where world_id = w and id = v_dam;
   update creature set sex = 'male', form_colour = true, form_size = null, hunger = 1 where world_id = w and id = v_sire;
   for v_i in 1..${COVERINGS} loop

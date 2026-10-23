@@ -67,7 +67,7 @@ begin
   delete from item where world_id = w and holder = 'player';
   update player set x = 10.5, y = 10.5, body_at = now(), swim_at = now(), equipped = '{}'::jsonb
    where world_id = w;
-  select creature_spawn(w, 'woola', 10.5, 9.5, 'active', now() - interval '3 hours', u) into v_w;
+  select creature_spawn(w, 'woola', 10.5, 9.5, 'active', now() - interval '9 hours', u) into v_w;
   update creature set mode = 'active', keeper = u, traits = '{}', fleece = 0.2, leg_at = now(), leg_ends = now(),
          from_x = 10.5, from_y = 9.5, to_x = 10.5, to_y = 9.5, until = now() + interval '1 hour', settled_at = now()
    where world_id = w and id = v_w;

@@ -196,7 +196,7 @@ begin
 
   -- A young one: rolled for as anything coming into the world is, and its parents' traits kept.
   create or replace function rarity_roll() returns text language sql as 'select ''supreme''::text';
-  v_dam := creature_spawn(w, 'rabba', 20.5, 20.5, 'active', now() - interval '3 hours', u);
+  v_dam := creature_spawn(w, 'rabba', 20.5, 20.5, 'active', now() - interval '9 hours', u);
   update creature set sex = 'female', unborn = jsonb_build_object('traits', jsonb_build_array('swift'), 'sex', 'male',
       'sire', jsonb_build_object('id', 0, 'name', 'Nobody'), 'from', '{}'::jsonb), due = now() - interval '1 second'
     where world_id = w and id = v_dam;

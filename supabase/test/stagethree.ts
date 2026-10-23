@@ -163,7 +163,7 @@ begin
   -- A Cloudlet, just below its third stage and at it, sheared full.
   perform give(w, u, 'carving_knife', 1, 40);
   for i in 0..1 loop
-    a := creature_spawn(w, 'woola', ${T} + 0.5, ${T - 1} + 0.5, 'active', now() - interval '3 hours', u);
+    a := creature_spawn(w, 'woola', ${T} + 0.5, ${T - 1} + 0.5, 'active', now() - interval '9 hours', u);
     update creature set mode = 'active', keeper = u, traits = '{}', rare = null, fleece = 1, leg_at = now(), leg_ends = now(),
            from_x = ${T} + 0.5, from_y = ${T - 1} + 0.5, to_x = ${T} + 0.5, to_y = ${T - 1} + 0.5, until = now() + interval '1 hour', settled_at = now(),
            skills = jsonb_build_object('animal_husbandry', case i when 0 then ${LEVELS[0]} else ${LEVELS[1]} end)
@@ -214,7 +214,7 @@ begin
   insert into said values ('DRAWS', v_mut || '|' || v_bad || '|' || v_common || '|' || v_common100);
 
   -- One put out in the wild at a later stage, and a young one.
-  a := creature_spawn(w, 'rabba', ${T + 5} + 0.5, ${T + 5} + 0.5, 'wild', now() - interval '5 hours', null);
+  a := creature_spawn(w, 'rabba', ${T + 5} + 0.5, ${T + 5} + 0.5, 'wild', now() - interval '15 hours', null);
   v_n := 0;
   for i in 1..3000 loop
     update creature set skills = jsonb_build_object('foraging', 1), traits = array[${COMMONS.map((id) => `'${id}'`).join(', ')}] where world_id = w and id = a;

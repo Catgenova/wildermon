@@ -57,6 +57,7 @@ import { LIGHT_RES, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/rend
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
+import { AGE_SCALE as AGE_SCALE_287, OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
 import { ENCHANT_HEAD, HOARD_HEAD, MIND_GAIN, PROSPECT_HEAD, SOUL_GAIN, TAME_HEAD } from '../../game/learn';
 import { BARTER_IDLE, BARTER_REACH } from '../../game/barter';
@@ -3526,6 +3527,13 @@ export const NEWS: News[] = [
     lines: () => [
       'Added: Wildermon tab in the event log: taming, crates, posts, tack, gear, relics used, breeding, births, evolving, sightings. Moved there from Talk and Work; refusals stay in Trouble, blows in Combat.',
       `Added: Wildermon tab line to the keeper for each settlement worker's finished work: ${workDoneLine(SPECIES.bevere.name, { stored: { log: 12 } })} Stored: into settlement storage or a hive. Handled: used on an errand.`,
+    ],
+  },
+  {
+    n: 287,
+    day: '2026-10-23',
+    lines: () => [
+      `Changed: wildermon life stages ×${AGE_SCALE_287}, with the seasons: grown after ${dur(YOUNG_FOR_287)}, old after ${dur(OLD_AT_287)}. Dies of old age ${dur(OLD_FOR_287)} after turning old. Every old wildermon set back to grown.`,
     ],
   },
 ];

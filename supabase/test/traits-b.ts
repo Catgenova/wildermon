@@ -144,8 +144,8 @@ begin
     ['KEEPPLAIN', [], [], KEEP_AT],
     ['TRUE', ['true_breeding'], [], KEEP_AT],
   ].map(([k, dam, sire, dice]) => `
-  v_dam := creature_spawn(w, 'rabba', ${T} + 0.5, ${T} + 1.5, 'active', now() - interval '3 hours', u);
-  v_sire := creature_spawn(w, 'rabba', ${T} + 1.5, ${T} + 1.5, 'deed', now() - interval '3 hours', u);
+  v_dam := creature_spawn(w, 'rabba', ${T} + 0.5, ${T} + 1.5, 'active', now() - interval '9 hours', u);
+  v_sire := creature_spawn(w, 'rabba', ${T} + 1.5, ${T} + 1.5, 'deed', now() - interval '9 hours', u);
   update creature set sex = 'female', care = 0, rare = null, pedigree = null, boosts = null, form_size = null, form_colour = false,
          traits = ${arr([...(dam as string[]), ...DAM].slice(0, 3))} where world_id = w and id = v_dam;
   update creature set sex = 'male', care = 0, rare = null, pedigree = null, boosts = null, form_size = null, form_colour = false,
@@ -163,7 +163,7 @@ begin
 
   -- A brushing wearing off, and a meal of a middling quality, plain and with the trait.
   ${[['PLAIN', [] as string[]], ['LONG', ['long_memoried']], ['IRON', ['iron_stomached']]].map(([k, traits]) => `
-  a := creature_spawn(w, 'rabba', ${T + 8} + 0.5, ${T + 8} + 0.5, 'wild', now() - interval '3 hours', null);
+  a := creature_spawn(w, 'rabba', ${T + 8} + 0.5, ${T + 8} + 0.5, 'wild', now() - interval '9 hours', null);
   update creature set traits = ${arr(traits as string[])}, rare = null, care = 0.9, hunger = 1, kept = null, boosts = null, form_size = null,
          settled_at = now() - make_interval(secs => ${CARE_SECS}) where world_id = w and id = a;
   perform creature_settle(w, a);

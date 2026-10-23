@@ -1,7 +1,7 @@
 import { clockLeft } from '../../game/boons';
 import { gearTags } from '../../game/wildgearActions';
 import { DAY_SECONDS } from '../../game/game';
-import { perkLine, stagePerk } from '../../game/creatures';
+import { OLD_FOR, perkLine, stagePerk } from '../../game/creatures';
 import { ageDef, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
 import { CHANNELS, figSays, isGain, mirrorTrait, pct, TIER_CSS, TRAIT_SOURCES, traitAdd, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
 import { readsTrait, TIER_LEVEL, traitReadNeeds } from '../../game/husbandry';
@@ -519,7 +519,7 @@ export class WildermonPanel {
       // Only the young are growing: what was walking about before the clock started is grown however the sum comes out.
       const growing = age === 'young' ? growsAt(c, this.game.time) : 0;
       set(level, `${age === 'grown' ? '' : `${age} · `}Lv ${creatureLevel(c)}`,
-        growing > 0 ? `Grown in ${clockLeft(growing)}` : age === 'old' ? 'Old: slower, bigger carcass' : 'Grown');
+        growing > 0 ? `Grown in ${clockLeft(growing)}` : age === 'old' ? `Old: slower, bigger carcass; dies of old age ${clockLeft(OLD_FOR)} after turning old` : 'Grown');
       // Which one it is, not just that one of them is: the card is marked and
       // the reason is written beside the name.
       const wants: string[] = [];

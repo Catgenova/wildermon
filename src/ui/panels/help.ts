@@ -87,6 +87,7 @@ import { SOUL_CHANCE } from '../../game/sacrifice';
 import { HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
 import { groomGain } from '../../game/husbandry';
 import { ARTIFACT_FOR, SHEAR_FEATHERS, SHEAR_WOOL } from '../../game/creatureActions';
+import { OLD_FOR } from '../../game/creatures';
 import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
 import { butcherYield } from '../../game/butcher';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
@@ -2926,7 +2927,7 @@ export function helpText(): string {
     <ul>
       <li><b>Young</b>: ${percent(AGES.young.scale)} size, ${percent(AGES.young.speed)} pace, no fleece or milk, cannot be harnessed or ridden; ${mul(AGES.young.tame)} as easy to tame.</li>
       <li><b>Grown</b> after ${dur(YOUNG_FOR)} (all other figures assume grown). <b>Old</b> after ${dur(OLD_AT)}: ${percent(AGES.old.speed)} pace, ${percent(AGES.old.pull)} pull,
-      ${percent(AGES.old.growth)} fleece regrowth; heavier; carcass +${percent(AGES.old.yield - 1)}.</li>
+      ${percent(AGES.old.growth)} fleece regrowth; heavier; carcass +${percent(AGES.old.yield - 1)}. <b>Dies of old age</b> ${dur(OLD_FOR)} after turning old.</li>
       <li>The Wildermon window shows its age and a yearling's time to grow. Wildermon present when the island was raised count as grown.
       ${capital(article(itemDef(ARTIFACT_FOR.use_ancient_comb).name.toLowerCase()))} <b>${itemDef(ARTIFACT_FOR.use_ancient_comb).name.toLowerCase()}</b> takes one age off (see <b>Digging up the past</b>).</li>
       <li><b>Base stats</b> (card): its ${BASE_STATS.length} base stats as the rules read them: ${listed(BASE_STATS.map((st) => `<b>${st.name}</b>, ${st.says}`))}; each a multiplier on its kind's.

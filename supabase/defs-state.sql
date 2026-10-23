@@ -5489,8 +5489,9 @@ create or replace function mining_weight() returns double precision language sql
 create or replace function world_pace() returns double precision language sql immutable as $fn$ select 2.5::double precision $fn$;
 create or replace function cotton_seconds() returns double precision language sql immutable as $fn$ select 300::double precision $fn$;
 create or replace function cotton_weight() returns double precision language sql immutable as $fn$ select 120::double precision $fn$;
-create or replace function young_for() returns double precision language sql immutable as $fn$ select 9000::double precision $fn$;
-create or replace function old_at() returns double precision language sql immutable as $fn$ select 54000::double precision $fn$;
+create or replace function young_for() returns double precision language sql immutable as $fn$ select 27000::double precision $fn$;
+create or replace function old_at() returns double precision language sql immutable as $fn$ select 162000::double precision $fn$;
+create or replace function old_for() returns double precision language sql immutable as $fn$ select 324000::double precision $fn$;
 create or replace function coax_lapse() returns double precision language sql immutable as $fn$ select 225::double precision $fn$;
 create or replace function coax_step() returns double precision language sql immutable as $fn$ select 0.03::double precision $fn$;
 create or replace function hunt_leash() returns double precision language sql immutable as $fn$ select 30::double precision $fn$;
@@ -6823,7 +6824,7 @@ insert into class_perk values ('herdsman_well_kept', 'herdsman', 5, 14, 'Well Ke
 insert into class_perk values ('herdsman_twins', 'herdsman', 5, 24, 'Twins', 'Twins chance: 1 in 5 pairings. The second young is bred separately from the pair.', '{"breed:twins":0.2}');
 insert into class_perk values ('herdsman_choose_the_sex', 'herdsman', 5, 28, 'Choose the Sex', 'Pairing: choose male or female young, twins included (base: even odds).', '{"breed:sex":1}');
 insert into class_perk values ('herdsman_any_bait', 'herdsman', 6, 10, 'Any Offering', 'Taming: any food is accepted as an offering, any kind (base: only its own foods). Feeding a kept one still needs its own food.', '{"bait:any":1}');
-insert into class_perk values ('herdsman_long_lived', 'herdsman', 6, 18, 'Long-lived', 'Old age at 25 h, wildermon you keep (base 15 h).', '{"kept:old_at":90000}');
+insert into class_perk values ('herdsman_long_lived', 'herdsman', 6, 18, 'Long-lived', 'Old age at 75 h, wildermon you keep (base 45 h).', '{"kept:old_at":270000}');
 insert into class_perk values ('herdsman_bred_up', 'herdsman', 6, 26, 'Bred Up', 'Chance each of a young''s traits comes out one rarity higher: +10 percentage points (base +0.22 percentage points per husbandry level, up to +8 percentage points for care, max 30%).', '{"breed:upgrade":0.1}');
 insert into class_perk values ('naturalist_keen_eye', 'naturalist', 1, 2, 'Keen Eye', 'Foraging and botanizing looks per action +1 (base one, one more per 20 skill).', '{"passes:forage":1,"passes:botanize":1}');
 insert into class_perk values ('naturalist_quick_lye', 'naturalist', 1, 13, 'Quick Lye', 'Making lye time −40% (base 12 s).', '{"time:make_lye":0.6}');

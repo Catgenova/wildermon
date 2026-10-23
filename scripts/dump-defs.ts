@@ -30,7 +30,7 @@ import { cellarOutdoor } from '../src/game/cellar';
 import { REPOINT_BACK } from '../src/game/buildActions';
 import { CONCRETE_PER_STEP } from '../src/game/foundations';
 import { PIER_CLEAR, PIER_DROP, PIER_SHOO, PIER_WALL_DROP, PIER_WATER } from '../src/game/piers';
-import { COAX_LAPSE, COAX_STEP, HERD_REACH, WILD_STAY, HUNT_HOME, HUNT_LEASH, HUNT_REST, OLD_AT, YOUNG_FOR, SITE_LOOKS, WILD_RANGE, WILD_REACH, WILD_REST, WILD_REST_SPREAD, SHOE_DAYS, SHOE_PACE, SHOE_STEP, SHOES_PER_MOUNT,
+import { COAX_LAPSE, COAX_STEP, HERD_REACH, WILD_STAY, HUNT_HOME, HUNT_LEASH, HUNT_REST, OLD_AT, OLD_FOR, YOUNG_FOR, SITE_LOOKS, WILD_RANGE, WILD_REACH, WILD_REST, WILD_REST_SPREAD, SHOE_DAYS, SHOE_PACE, SHOE_STEP, SHOES_PER_MOUNT,
          COMPANION_SIGHT, COMPANION_LEASH, COMPANION_REACH, COMPANION_BLOW, COMPANION_PACE, BLOW_MEMORY, FIGHT_BACK_GOES } from '../src/game/creatures';
 import { FAMILY_OF, KNACK_BONUS, KNACK_BY_LEARNING, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLES } from '../src/game/titles';
 import { KEPT_BEST, NUTRIENT_DECAY, TABLE_BEST } from '../src/game/nutrition';
@@ -1580,7 +1580,7 @@ for (const [fn, v] of [
    * a beast grown at two and a half hours while the database still called it
    * young. Generated now, like everything else that is a number.
    */
-  ['young_for', YOUNG_FOR], ['old_at', OLD_AT], ['coax_lapse', COAX_LAPSE],
+  ['young_for', YOUNG_FOR], ['old_at', OLD_AT], ['old_for', OLD_FOR], ['coax_lapse', COAX_LAPSE],
   /* What one offering is worth to the next one. There is no ceiling on the run
      any more, so this is the whole of the rule and belongs in one place. */
   ['coax_step', COAX_STEP],

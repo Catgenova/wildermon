@@ -335,8 +335,8 @@ begin
   delete from placed where world_id = w and sub = 'creature_crate' and made_by = me;
   insert into skill (world_id, uid, id, value) values (w, me, 'animal_husbandry', ${HUSBANDRY})
     on conflict (world_id, uid, id) do update set value = ${HUSBANDRY};
-  v_dam := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'deed', now() - interval '3 hours', me);
-  v_sire := creature_spawn(w, 'rabba', v_x - 0.3, v_y, 'deed', now() - interval '3 hours', me);
+  v_dam := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'deed', now() - interval '9 hours', me);
+  v_sire := creature_spawn(w, 'rabba', v_x - 0.3, v_y, 'deed', now() - interval '9 hours', me);
   update creature set sex = 'female', name = '${DAM.name}', traits = ${sqlArray(DAM.traits)}, hunger = 1, care = ${CARE},
       from_x = to_x, from_y = to_y, leg_at = now(), leg_ends = now(), settled_at = now()
     where world_id = w and id = v_dam;
@@ -355,10 +355,10 @@ begin
       || '/' || line_mul(${sqlArray(DAM.traits)}, ('{"dam":{"id":1,"name":"A"},"sire":{"id":2,"name":"B"},"from":{}}'::jsonb)->'line', ch.id), ',' order by ch.id) from channel_def ch));
 
   -- Down one line, as in the browser: the last one born, put to one out of the wild carrying willing alone.
-  v_line := creature_spawn(w, 'rabba', v_x + 0.6, v_y, 'deed', now() - interval '3 hours', me);
+  v_line := creature_spawn(w, 'rabba', v_x + 0.6, v_y, 'deed', now() - interval '9 hours', me);
   update creature set sex = 'female', name = 'Root', traits = '{willing}', hunger = 1, care = ${CARE} where world_id = w and id = v_line;
   for v_gen in 1..${CHAIN} loop
-    v_mate := creature_spawn(w, 'rabba', v_x - 0.6, v_y, 'deed', now() - interval '3 hours', me);
+    v_mate := creature_spawn(w, 'rabba', v_x - 0.6, v_y, 'deed', now() - interval '9 hours', me);
     update creature set sex = 'male', name = 'Wild' || v_gen, traits = '{willing}', hunger = 1, care = ${CARE} where world_id = w and id = v_mate;
     v_born := null;
     for v_k in 1..60 loop

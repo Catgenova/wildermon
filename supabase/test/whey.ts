@@ -131,7 +131,7 @@ begin
   delete from item where world_id = w and holder_uid = u and def in ('cheese', '${WHEY_BUCKET}', 'clay_bowl');
 
   -- 3. A kept ${BEAST}, hungry.
-  select creature_spawn(w, '${BEAST}', 10.5, 9.5, 'deed', now() - interval '3 hours', u) into v_c;
+  select creature_spawn(w, '${BEAST}', 10.5, 9.5, 'deed', now() - interval '9 hours', u) into v_c;
   update creature set mode = 'deed', keeper = u, leg_at = now(), leg_ends = now(), until = now() + interval '1 hour', settled_at = now(),
          from_x = 10.5, from_y = 9.5, to_x = 10.5, to_y = 9.5, hunger = ${HUNGER}
    where world_id = w and id = v_c;

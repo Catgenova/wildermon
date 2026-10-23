@@ -201,7 +201,7 @@ begin
   -- Bond: none near; one hurt within reach; whole.
   update player set calm = ${CALM}, used_at = '{}'::jsonb where world_id = w and uid = u;
   insert into said values ('BONDNONE', pg_temp.cast(w, u, ${TECH('bond')}));
-  c1 := creature_spawn(w, 'rabba', tx + 3.5, ty + 0.5, 'active', now() - interval '1 day', u);
+  c1 := creature_spawn(w, 'rabba', tx + 3.5, ty + 0.5, 'active', now() - interval '3 days', u);
   update creature set health = max_health(creature) / 2, name = 'Bun' where world_id = w and id = c1;
   update player set calm = ${CALM}, used_at = '{}'::jsonb where world_id = w and uid = u;
   v_a := (select health from creature where world_id = w and id = c1);
@@ -218,8 +218,8 @@ begin
 
   -- Gather: the companion and a worker within reach, round you; a worker beyond it stays.
   update creature set from_x = tx + 12.5, to_x = tx + 12.5, from_y = ty + 0.5, to_y = ty + 0.5 where world_id = w and id = c1;
-  c2 := creature_spawn(w, 'rabba', tx + 0.5, ty + 20.5, 'deed', now() - interval '1 day', u);
-  c3 := creature_spawn(w, 'rabba', tx + 0.5, ty + ${P('gather').fx.reach + 5}.5, 'deed', now() - interval '1 day', u);
+  c2 := creature_spawn(w, 'rabba', tx + 0.5, ty + 20.5, 'deed', now() - interval '3 days', u);
+  c3 := creature_spawn(w, 'rabba', tx + 0.5, ty + ${P('gather').fx.reach + 5}.5, 'deed', now() - interval '3 days', u);
   update player set calm = ${CALM}, used_at = '{}'::jsonb where world_id = w and uid = u;
   -- Cast first and read after: a statement reads the rows as they stood when it began.
   v_t := pg_temp.cast(w, u, ${TECH('gather')});
@@ -233,8 +233,8 @@ begin
   update creature set from_x = tx + 3.5, to_x = tx + 3.5 where world_id = w and id = c1;
 
   -- Lull: one hunting you within reach stops and holds off; one beyond it hunts on.
-  h1 := creature_spawn(w, 'rabba', tx + 4.5, ty + 0.5, 'wild', now() - interval '1 day');
-  h2 := creature_spawn(w, 'rabba', tx + ${P('lull').fx.reach + 4}.5, ty + 0.5, 'wild', now() - interval '1 day');
+  h1 := creature_spawn(w, 'rabba', tx + 4.5, ty + 0.5, 'wild', now() - interval '3 days');
+  h2 := creature_spawn(w, 'rabba', tx + ${P('lull').fx.reach + 4}.5, ty + 0.5, 'wild', now() - interval '3 days');
   update creature set hunting = u where world_id = w and id in (h1, h2);
   update player set calm = ${CALM}, used_at = '{}'::jsonb where world_id = w and uid = u;
   -- Cast first and read after: a statement reads the rows as they stood when it began.
@@ -277,7 +277,7 @@ begin
 
   -- Gentle Hand and Old Friend: a tame's chance.
   insert into skill (world_id, uid, id, value) values (w, u, 'taming', 1) on conflict (world_id, uid, id) do update set value = 1;
-  h1 := creature_spawn(w, 'rabba', tx + 1.5, ty + 0.5, 'wild', now() - interval '1 day');
+  h1 := creature_spawn(w, 'rabba', tx + 1.5, ty + 0.5, 'wild', now() - interval '3 days');
   perform pg_temp.hold(w, u, '{}');
   v_a := tame_chance(w, u, (select c from creature c where c.world_id = w and c.id = h1));
   perform pg_temp.hold(w, u, array[${q(P('gentle_hand').id)}]);
@@ -313,7 +313,7 @@ begin
     || '|' || (select (age_row(born, old_of(c), age_pace(c))).id from creature c where c.world_id = w and c.id = c1));
   update creature set born = now() - make_interval(secs => old_at() * 1.1) where world_id = w and id = c1;
   insert into said values ('KINOLD', (select age_of(born, old_of(c)) || ':' || age_of(born, old_of(c), age_pace(c)) from creature c where c.world_id = w and c.id = c1));
-  update creature set born = now() - interval '1 day', kept = null where world_id = w and id = c1;
+  update creature set born = now() - interval '3 days', kept = null where world_id = w and id = c1;
 
   -- Abundance: a harvest tended at every stage, and fruit off a tree.
   insert into skill (world_id, uid, id, value) values (w, u, 'farming', 50), (w, u, 'forestry', 50)
@@ -351,7 +351,7 @@ begin
   perform land_set_tile(w, tx + 1, ty, tile_id('Grass')); perform land_set_data(w, tx + 1, ty, 0);
 
   -- Steady Herd: a fight far past the leash, given up without it and kept with it.
-  h1 := creature_spawn(w, 'rabba', tx + 25.5, ty + 0.5, 'wild', now() - interval '1 day');
+  h1 := creature_spawn(w, 'rabba', tx + 25.5, ty + 0.5, 'wild', now() - interval '3 days');
   update creature set enemy = h1, stance = 'defensive', heel_until = null where world_id = w and id = c1;
   perform pg_temp.hold(w, u, '{}');
   v_t := coalesce((companion_target(w, (select c from creature c where c.world_id = w and c.id = c1),
@@ -389,8 +389,8 @@ begin
   end loop;
   insert into said values ('STOCKUP', v_n || '|' || v_d);
   -- And a pairing through the island's own door, read off the pick: the young one is carried.
-  c2 := creature_spawn(w, 'rabba', tx + 1.3, ty + 0.5, 'deed', now() - interval '3 hours', u);
-  c3 := creature_spawn(w, 'rabba', tx + 0.7, ty + 0.5, 'deed', now() - interval '3 hours', u);
+  c2 := creature_spawn(w, 'rabba', tx + 1.3, ty + 0.5, 'deed', now() - interval '9 hours', u);
+  c3 := creature_spawn(w, 'rabba', tx + 0.7, ty + 0.5, 'deed', now() - interval '9 hours', u);
   update creature set sex = 'female' where world_id = w and id = c2;
   update creature set sex = 'male' where world_id = w and id = c3;
   perform pair_them(w, c2, c3, 50, u);

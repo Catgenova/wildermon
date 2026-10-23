@@ -21,7 +21,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
-import { BLOW_MEMORY, COAX_LAPSE, OLD_AT, SPECIES, WILD_SPECIES, WILD_STAY, wildStayOf } from '../../src/game/creatures';
+import { BLOW_MEMORY, COAX_LAPSE, SPECIES, WILD_SPECIES, WILD_BORN_BACK, WILD_STAY, wildStayOf } from '../../src/game/creatures';
 import { TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -57,7 +57,7 @@ check(`between once and twice the span, spread across it: ${Math.round(Math.min(
   Math.min(...spans) >= WILD_STAY && Math.max(...spans) < 2 * WILD_STAY
     && spans.filter((s) => s < 1.5 * WILD_STAY).length > 450 && spans.filter((s) => s < 1.5 * WILD_STAY).length < 550);
 check('and no shorter than the furthest back either side dates a new one\'s birth, so nothing new is gone on the next pass',
-  WILD_STAY >= OLD_AT * 1.6 && WILD_STAY >= 6 * 3600 * 1.6, `${WILD_STAY} against ${OLD_AT * 1.6} and ${6 * 3600 * 1.6}`);
+  WILD_STAY >= WILD_BORN_BACK, `${WILD_STAY} against ${WILD_BORN_BACK}`);
 
 /* ---- on the island -------------------------------------------------------------------- */
 

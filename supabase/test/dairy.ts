@@ -145,8 +145,8 @@ begin
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Dairyholt', 10, 10, 5, 1, u);
 
   -- 1. A Cudda fills a bucket.
-  select creature_spawn(w, 'cudda', 10.5, 9.5, 'deed', now() - interval '3 hours', u) into v_cudda;
-  select creature_spawn(w, 'gorral', 11.5, 10.5, 'deed', now() - interval '3 hours', u) into v_gorral;
+  select creature_spawn(w, 'cudda', 10.5, 9.5, 'deed', now() - interval '9 hours', u) into v_cudda;
+  select creature_spawn(w, 'gorral', 11.5, 10.5, 'deed', now() - interval '9 hours', u) into v_gorral;
   update creature set sex = 'female', traits = '{}', mode = 'deed', keeper = u, leg_at = now(), leg_ends = now(),
          until = now() + interval '1 hour', settled_at = now()
    where world_id = w and id in (v_cudda, v_gorral);

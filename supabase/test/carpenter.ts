@@ -292,7 +292,7 @@ begin
   select class_mul into v_mul from player where world_id = w and uid = u;
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, mark)
     values (w, 'furniture', 'large_cart', 5, 15, 0, 0, 5.5, 15.5, 40, u, made_mark(v_mul, 'large_cart')) returning id into v_cart;
-  v_orse := creature_spawn(w, 'orse', 5.6, 15.4, 'deed', now() - interval '1 day', u);
+  v_orse := creature_spawn(w, 'orse', 5.6, 15.4, 'deed', now() - interval '3 days', u);
   update creature set hitched_to = v_cart, hunger = 1 where world_id = w and id = v_orse;
   v_a := vehicle_speed(w, v_cart);
   update placed set mark = null where id = v_cart;
@@ -314,7 +314,7 @@ begin
   v_t := v_t || '|' || (v_a / v_c);
   update player set equipped = jsonb_build_object('weapon', v_bow), x = 9.5, y = 9.5 where world_id = w and uid = u;
   perform give(w, u, 'arrow', 5, 30);
-  v_beast := creature_spawn(w, 'bevere', 9.5 + 6.3, 9.5, 'wild', now() - interval '1 day', null);
+  v_beast := creature_spawn(w, 'bevere', 9.5 + 6.3, 9.5, 'wild', now() - interval '3 days', null);
   v_u := ${refused('shoot_creature', "jsonb_build_object('kind', 'creature', 'id', v_beast)")};
   update item set mark = '{"range": 1.1}'::jsonb where id = v_bow;
   insert into said values ('BOW', v_t || '|' || v_u || '|' || ${refused('shoot_creature', "jsonb_build_object('kind', 'creature', 'id', v_beast)")});

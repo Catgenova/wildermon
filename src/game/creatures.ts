@@ -29,7 +29,7 @@ import { BUSH_DEFS, bushSpecies, FLOWERS_PICKED, mownDays, MOWN_TODAY } from '..
 import { besideWater, CUT_GRASS, PAN_ORES, RESIN_TREE, RICH_WORMS, tappable, WORMY } from './actions';
 import { flowersHere } from './wildflowers';
 import { SKEP, SKEP_CLUMP_HOURS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY, skepFlowers, VESP_REST, vespHoney, vespTrip } from './bees';
-import { seasonAt } from '../world/calendar';
+import { SEASON_DAYS, SHORT_SEASON_DAYS, seasonAt } from '../world/calendar';
 import { greenNow, greenOnTile, scrubTile } from './greening';
 import { GRASS_PER_CUT, MOSS_PER_CUT, QL_TOP } from './limits';
 import { PIER_SHOO } from './piers';
@@ -4358,9 +4358,15 @@ export function carriedSkills(species: SpeciesDef, saved: Record<string, number>
  * down and put on weight, which is bad for a cart and good for a butcher.
  */
 export type Age = 'young' | 'grown' | 'old';
-/** Seconds of real time spent young, and the hour it turns old. */
-export const YOUNG_FOR = world(60 * 60);
-export const OLD_AT = world(6 * 60 * 60);
+/**
+ * Seconds of real time spent young, and the hour it turns old: scaled with the seasons when they were lengthened
+ * (`SEASON_DAYS` over `SHORT_SEASON_DAYS`). Asked for: "Scale life stages to match the 90-day seasons".
+ */
+export const AGE_SCALE = SEASON_DAYS / SHORT_SEASON_DAYS;
+export const YOUNG_FOR = world(60 * 60) * AGE_SCALE;
+export const OLD_AT = world(6 * 60 * 60) * AGE_SCALE;
+/** How long it lives once old, and then it dies of old age: ninety island days. The island's `old_for` and `old_age_sweep`. */
+export const OLD_FOR = 90 * DAY_SECONDS;
 /** How long a dam carries: half an island day. */
 export const GESTATION = world(12 * 60);
 /** How long after a covering either parent will look at another. */
@@ -5320,12 +5326,14 @@ export const wildTargetFor = (w: number, h: number): number =>
  *
  * A day, because the oldest goes at two, so the whole mix is the current weights within two days of a change, and a
  * stretch of country you walk every evening holds a different set every few evenings rather than every hour. It is
- * also as long as the most either side dates a new one's birth back (`OLD_AT` × 1.6 in here, 9.6 hours on the island)
+ * also as long as the most either side dates a new one's birth back (`WILD_BORN_BACK`, the island's `creature_stock_block`)
  * so nothing stood up is old enough to go on the pass after it is put out.
  *
  * The island's `wild_stay()`, emitted from here.
  */
 export const WILD_STAY = 24 * 60 * 60;
+/** The most a new wild one's birth is dated back, so the wild holds every age: the island's `creature_stock_block`. */
+export const WILD_BORN_BACK = 6 * 60 * 60 * 1.6;
 /** The step the share of a second span a wild one gets goes up by from one id to the next: the golden ratio's, so neighbours land far apart. The island's `wild_stay_of`. */
 const WILD_SPREAD = (Math.sqrt(5) - 1) / 2;
 /** How old a wild one is when it goes, by its id: `WILD_STAY` and up to as much again. The island's `wild_stay_of`. */
@@ -6098,7 +6106,7 @@ export class Creatures {
    * evolved does. The island's `wild_stage_put`.
    */
   standWild(game: Game, id: string, x: number, y: number): Creature {
-    const c = this.spawn(id, x, y, 'wild', game.rand, game.time - game.rand() * OLD_AT * 1.6);
+    const c = this.spawn(id, x, y, 'wild', game.rand, game.time - game.rand() * WILD_BORN_BACK);
     const def = this.species(c);
     const stage = def.stages ? wildStageRoll(def, game.rand()) : 0;
     const skill = levelSkill(def);

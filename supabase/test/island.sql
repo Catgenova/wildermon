@@ -946,7 +946,7 @@ select '138. and once it shines: ' || coalesce(act_refusal(:'world2', :'ivar', '
 select '139. a rabba carries no fleece: ' || coalesce(act_refusal(:'world2', :'ivar', 'shear', ('{"kind":"creature","id":' || :'cid' || '}')::jsonb), 'allowed');
 
 -- Something with a coat on it, and something with milk in it.
-select creature_spawn(:'world2', 'woola', 6.6, 7.6, 'deed', now() - interval '3 hours', :'ivar') as woola \gset
+select creature_spawn(:'world2', 'woola', 6.6, 7.6, 'deed', now() - interval '9 hours', :'ivar') as woola \gset
 update creature set fleece = 1, sex = 'female' where id = :'woola';
 delete from event where uid = :'ivar';
 select '140. shearing with bare hands: ' || coalesce(act_refusal(:'world2', :'ivar', 'shear', ('{"kind":"creature","id":' || :'woola' || '}')::jsonb), 'allowed');
@@ -1249,9 +1249,9 @@ update player set x = 5.5, y = 7.5 where uid = :'ivar';
 select '193. the crate the token came with: '
      || coalesce((select 'a ' || kind || ' crate at ' || x || ',' || y || ', holding ' || crate_units(:'world2', id)
                   || ' of ' || crate_capacity(c) from crate c where world_id = :'world2' and deed), 'none');
-select creature_spawn(:'world2', 'rabba', 5.5, 8.5, 'stored', now() - interval '3 hours', :'ivar') as forager \gset
-select creature_spawn(:'world2', 'ulva', 5.5, 6.5, 'stored', now() - interval '3 hours', :'ivar') as guard \gset
-select creature_spawn(:'world2', 'bevere', 4.5, 8.5, 'stored', now() - interval '3 hours', :'ivar') as feller \gset
+select creature_spawn(:'world2', 'rabba', 5.5, 8.5, 'stored', now() - interval '9 hours', :'ivar') as forager \gset
+select creature_spawn(:'world2', 'ulva', 5.5, 6.5, 'stored', now() - interval '9 hours', :'ivar') as guard \gset
+select creature_spawn(:'world2', 'bevere', 4.5, 8.5, 'stored', now() - interval '9 hours', :'ivar') as feller \gset
 select '194. a rabba forages, an ulva keeps watch, a bevere fells trees — and of the three this island knows '
      || (select count(*) from (values ('forage'), ('guard'), ('woodcut')) v(k) where worker_job_ported(v.k)) || ' trades';
 select '195. setting the ulva to watch: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed', ('{"kind":"creature","id":' || :'guard' || '}')::jsonb), 'allowed');
@@ -1461,7 +1461,7 @@ select '226. ' || (select text from event where uid = :'ivar' order by n desc li
 update player set stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1'), body_at = now() \g /dev/null
 \echo '--- and a magga, which tidies up'
 select '227. logs lying at the stumps: ' || coalesce((select sum(count)::text from item where world_id = :'world2' and holder = 'ground' and def = 'log'), '0');
-select creature_spawn(:'world2', 'magga', 5.5, 8.5, 'stored', now() - interval '3 hours', :'ivar') as tidier \gset
+select creature_spawn(:'world2', 'magga', 5.5, 8.5, 'stored', now() - interval '9 hours', :'ivar') as tidier \gset
 select '228. a magga clears up: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed', ('{"kind":"creature","id":' || :'tidier' || '}')::jsonb), 'allowed');
 select act_perform(:'world2', :'ivar', 'assign_deed', ('{"kind":"creature","id":' || :'tidier' || '}')::jsonb) \g /dev/null
 -- Room in the settlement's crate for what it brings in.
@@ -1802,7 +1802,7 @@ select '281. of the eight errands this island now knows ' ||
                   from (values ('water'), ('prospect'), ('seek')) v(k) where not worker_job_ported(v.k)),
                  'there is no rest');
 select '282. setting a holla to carry water: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed',
-       ('{"kind":"creature","id":' || (select creature_spawn(:'world2', 'holla', 5.5, 6.5, 'stored', now() - interval '3 hours', :'ivar')) || '}')::jsonb), 'allowed');
+       ('{"kind":"creature","id":' || (select creature_spawn(:'world2', 'holla', 5.5, 6.5, 'stored', now() - interval '9 hours', :'ivar')) || '}')::jsonb), 'allowed');
 
 -- Everything the errands draw on comes out of the settlement's own crate.
 delete from item where world_id = :'world2' and holder = 'crate';
@@ -1826,7 +1826,7 @@ update placed set fuel = 0, ash = 0, lit = false, since = now()
   where world_id = :'world2' and kind in ('campfire', 'kiln', 'smelter');
 select '284. hearths burning low: ' || (select count(*) from placed where world_id = :'world2'
        and kind in ('campfire', 'smelter', 'kiln') and placed_fuel(placed) < hearth_full());
-select creature_spawn(:'world2', 'embra', 5.5, 8.5, 'deed', now() - interval '3 hours', :'ivar') as stoker \gset
+select creature_spawn(:'world2', 'embra', 5.5, 8.5, 'deed', now() - interval '9 hours', :'ivar') as stoker \gset
 update creature set job = 'stoke', phase = 'idle', until = now() - interval '600 seconds',
     leg_at = now() - interval '600 seconds', leg_ends = now() - interval '600 seconds',
     settled_at = now() - interval '600 seconds' where id = :'stoker';
@@ -1849,7 +1849,7 @@ insert into wall (world_id, level, dir, x, y, building, type, material, needed, 
 values (:'world2', 0, 'h', 7, 6, 0, 'solid', 'log', '{"log": 4}'::jsonb, '{"log": 4}'::jsonb)
 on conflict (world_id, level, dir, x, y) do update set needed = '{"log": 4}'::jsonb;
 select '286. a wall on the deed owing ' || (select bill_text('log', needed) from wall where world_id = :'world2' and dir = 'h' and x = 7 and y = 6);
-select creature_spawn(:'world2', 'cobbe', 5.5, 8.5, 'deed', now() - interval '3 hours', :'ivar') as hodder \gset
+select creature_spawn(:'world2', 'cobbe', 5.5, 8.5, 'deed', now() - interval '9 hours', :'ivar') as hodder \gset
 update creature set job = 'hod', phase = 'idle', until = now() - interval '600 seconds',
     leg_at = now() - interval '600 seconds', leg_ends = now() - interval '600 seconds',
     settled_at = now() - interval '600 seconds' where id = :'hodder';
@@ -1868,7 +1868,7 @@ update player set stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '
 select '288. the worst thing in the stores: a shovel at ' ||
        (select round(dmg::numeric, 1) from item where world_id = :'world2' and holder = 'crate' and def = 'shovel')
      || ' damage, QL ' || (select round(ql::numeric, 1) from item where world_id = :'world2' and holder = 'crate' and def = 'shovel');
-select creature_spawn(:'world2', 'tinka', 5.5, 8.5, 'deed', now() - interval '3 hours', :'ivar') as mender \gset
+select creature_spawn(:'world2', 'tinka', 5.5, 8.5, 'deed', now() - interval '9 hours', :'ivar') as mender \gset
 update creature set job = 'mend', phase = 'idle', until = now() - interval '600 seconds',
     leg_at = now() - interval '600 seconds', leg_ends = now() - interval '600 seconds',
     settled_at = now() - interval '600 seconds' where id = :'mender';
@@ -1880,7 +1880,7 @@ select '289. ten minutes of mending: ' || :'mended' || ' goes at it, and the sho
 
 select '290. trees standing on the deed: ' || (select count(*) from generate_series(0,15) gx, generate_series(0,15) gy
        where land_tile(:'world2', gx, gy) = tile_id('Tree') and on_deed(:'world2', gx, gy));
-select creature_spawn(:'world2', 'sappa', 5.5, 8.5, 'deed', now() - interval '3 hours', :'ivar') as planter \gset
+select creature_spawn(:'world2', 'sappa', 5.5, 8.5, 'deed', now() - interval '9 hours', :'ivar') as planter \gset
 update creature set job = 'plant', phase = 'idle', until = now() - interval '900 seconds',
     leg_at = now() - interval '900 seconds', leg_ends = now() - interval '900 seconds',
     settled_at = now() - interval '900 seconds' where id = :'planter';
@@ -1908,7 +1908,7 @@ begin
 end $$;
 select '292. carcasses lying about the deed: ' || (select count(*) from item where world_id = :'world2' and holder = 'ground' and def = 'corpse')
      || ', at ' || (select string_agg(gx || ',' || gy, ' and ') from item where world_id = :'world2' and holder = 'ground' and def = 'corpse');
-select creature_spawn(:'world2', 'middun', 5.5, 8.5, 'deed', now() - interval '3 hours', :'ivar') as tidy \gset
+select creature_spawn(:'world2', 'middun', 5.5, 8.5, 'deed', now() - interval '9 hours', :'ivar') as tidy \gset
 update creature set job = 'compost', phase = 'idle', until = now() - interval '600 seconds',
     leg_at = now() - interval '600 seconds', leg_ends = now() - interval '600 seconds',
     settled_at = now() - interval '600 seconds' where id = :'tidy';
@@ -1943,8 +1943,8 @@ update player set x = 2.5, y = 9.5, wounds = '[]'::jsonb,
   where world_id = :'world2' and uid = :'ivar';
 
 -- Stood still at a measured distance rather than wherever the walk took it.
-select creature_spawn(:'world2', 'ulva', 10.5, 9.5, 'wild', now() - interval '3 hours') as stalker \gset
-select creature_spawn(:'world2', 'goblin', 10.5, 9.5, 'wild', now() - interval '3 hours') as gob \gset
+select creature_spawn(:'world2', 'ulva', 10.5, 9.5, 'wild', now() - interval '9 hours') as stalker \gset
+select creature_spawn(:'world2', 'goblin', 10.5, 9.5, 'wild', now() - interval '9 hours') as gob \gset
 -- And with no traits: three are rolled at random for anything spawned wild,
 -- and a hard-biting or snappish ulva can kill him inside the ten seconds of 297.
 update creature set from_x = to_x, from_y = to_y, leg_at = now(), leg_ends = now(),
@@ -2012,7 +2012,7 @@ update player set act = null, act_target = null, act_started = null, act_ends = 
 
 -- Far enough away and it thinks better of it — and a monster does not.
 update player set x = 1.5, y = 9.5 where world_id = :'world2' and uid = :'ivar';
-select creature_spawn(:'world2', 'goblin', 15.5, 9.5, 'wild', now() - interval '3 hours') as gob2 \gset
+select creature_spawn(:'world2', 'goblin', 15.5, 9.5, 'wild', now() - interval '9 hours') as gob2 \gset
 update creature set hunting = :'ivar', from_x = 15.5, from_y = 9.5, to_x = 15.5, to_y = 9.5,
     leg_at = now(), leg_ends = now(), until = now() + interval '1 hour', settled_at = now() - interval '1 second',
     traits = '{}'
@@ -2040,7 +2040,7 @@ select '300. of the twenty-two trades a wildermon may be set to, this island now
      || ' — and nothing wild is left standing on the deed: '
      || (select count(*) from creature where world_id = :'world2' and mode = 'wild');
 
-select creature_spawn(:'world2', 'ulva', 5.5, 7.5, 'deed', now() - interval '3 hours', :'ivar') as warden \gset
+select creature_spawn(:'world2', 'ulva', 5.5, 7.5, 'deed', now() - interval '9 hours', :'ivar') as warden \gset
 select creature_spawn(:'world2', 'rabba', 9.5, 7.5, 'wild', now() - interval '2 hours') as trespass \gset
 update creature set from_x = to_x, from_y = to_y, leg_at = now(), leg_ends = now(),
     until = now() + interval '1 hour', settled_at = now() - interval '1 second'
@@ -2061,7 +2061,7 @@ delete from creature where world_id = :'world2' and mode = 'wild';
 delete from item where world_id = :'world2' and holder = 'ground' and def = 'corpse';
 delete from creature where world_id = :'world2' and id = :'warden';
 delete from item where world_id = :'world2' and holder = 'crate' and def = 'corpse';
-select creature_spawn(:'world2', 'rowl', 5.5, 7.5, 'deed', now() - interval '3 hours', :'ivar') as hunter \gset
+select creature_spawn(:'world2', 'rowl', 5.5, 7.5, 'deed', now() - interval '9 hours', :'ivar') as hunter \gset
 select creature_spawn(:'world2', 'rabba', 11.5, 7.5, 'wild', now() - interval '2 hours') as quarry \gset
 select creature_spawn(:'world2', 'rabba', 3.5, 11.5, 'wild', now() - interval '2 hours') as quarry2 \gset
 update creature set from_x = to_x, from_y = to_y, leg_at = now(), leg_ends = now(),
@@ -2086,7 +2086,7 @@ select '305. and what it learned by it: fighting ' || (select round((skills->>'f
 -- struck at seconds ago, and a defensive worker answers for its keeper too.
 delete from creature where world_id = :'world2' and mode = 'wild';
 update player set stats = stats - 'hurtBy' - 'hurtAt' where world_id = :'world2';
-select creature_spawn(:'world2', 'holla', 5.5, 7.5, 'deed', now() - interval '3 hours', :'ivar') as digger \gset
+select creature_spawn(:'world2', 'holla', 5.5, 7.5, 'deed', now() - interval '9 hours', :'ivar') as digger \gset
 select creature_spawn(:'world2', 'rabba', 6.5, 7.5, 'wild', now() - interval '2 hours') as company \gset
 update creature set from_x = to_x, from_y = to_y, leg_at = now(), leg_ends = now(),
     until = now() + interval '1 hour', settled_at = now() - interval '1 second'
@@ -2112,8 +2112,8 @@ select '310. aggressive, which needs no reason at all: ' ||
 -- the last ten sections, so it is paid off first.
 delete from creature where world_id = :'world2' and mode = 'deed';
 update player set x = 5.5, y = 7.5 where world_id = :'world2' and uid = :'ivar';
-select creature_spawn(:'world2', 'ulva', 5.5, 6.5, 'stored', now() - interval '3 hours', :'ivar') as recruit \gset
-select creature_spawn(:'world2', 'rowl', 5.5, 6.5, 'stored', now() - interval '3 hours', :'ivar') as tracker \gset
+select creature_spawn(:'world2', 'ulva', 5.5, 6.5, 'stored', now() - interval '9 hours', :'ivar') as recruit \gset
+select creature_spawn(:'world2', 'rowl', 5.5, 6.5, 'stored', now() - interval '9 hours', :'ivar') as tracker \gset
 select '311. setting an ulva to keep watch: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed',
        ('{"kind":"creature","id":' || :'recruit' || '}')::jsonb), 'allowed')
      || ' | and a rowl to hunt: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed',
@@ -2522,11 +2522,11 @@ update player set stats = jsonb_set(stats, '{prospected}', 'null'::jsonb)
 select '346. lit for Ivar before anybody looks: '
      || (select count(*) from generate_series(0, 15) x cross join generate_series(0, 15) y
          where is_prospected(:'world2', :'ivar', x, y)) || ' tiles';
-select creature_spawn(:'world2', 'dowse', 5.5, 7.5, 'deed', now() - interval '3 hours', :'ivar') as reader \gset
+select creature_spawn(:'world2', 'dowse', 5.5, 7.5, 'deed', now() - interval '9 hours', :'ivar') as reader \gset
 select '347. a dowse set to read the ground, ranging ' || work_range((select c from creature c where c.id = :'reader'))
      || ' tiles — and setting one on through the front door is now: '
      || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed',
-        ('{"kind":"creature","id":' || (select creature_spawn(:'world2', 'dowse', 5.5, 6.5, 'stored', now() - interval '3 hours', :'ivar')) || '}')::jsonb), 'allowed');
+        ('{"kind":"creature","id":' || (select creature_spawn(:'world2', 'dowse', 5.5, 6.5, 'stored', now() - interval '9 hours', :'ivar')) || '}')::jsonb), 'allowed');
 update creature set phase = 'idle', until = now() - interval '900 seconds',
     leg_at = now() - interval '900 seconds', leg_ends = now() - interval '900 seconds',
     settled_at = now() - interval '900 seconds' where id = :'reader';
@@ -2764,7 +2764,7 @@ update player set stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '
 \echo '--- and a holla, which carries the shore to your barrels'
 delete from creature where world_id = :'world2' and mode in ('deed', 'wild');
 update placed set litres = 0, liquid = null, since = now() where id = :'barrel';
-select creature_spawn(:'world2', 'holla', 5.5, 7.5, 'deed', now() - interval '3 hours', :'ivar') as carrier \gset
+select creature_spawn(:'world2', 'holla', 5.5, 7.5, 'deed', now() - interval '9 hours', :'ivar') as carrier \gset
 select '376. a holla set to carry water, ranging ' || work_range((select c from creature c where c.id = :'carrier'))
      || ' tiles — the barrel at 5,8 is empty and the well at 6,8 has '
      || round(placed_litres((select p from placed p where p.id = :'well'))::numeric, 1) || ' in it';
@@ -3159,7 +3159,7 @@ update player set x = 9.5, y = 7.5 where world_id = :'world2' and uid = :'ivar';
 -- Something for it to clear away, out by the post rather than by the token.
 select drop_on_ground(:'world2', 9, 8, 'corpse', 30, 'Rabba'),
        drop_on_ground(:'world2', 10, 7, 'corpse', 30, 'Rabba') \g /dev/null
-select creature_spawn(:'world2', 'middun', 5.5, 6.5, 'stored', now() - interval '3 hours', :'ivar') as posted \gset
+select creature_spawn(:'world2', 'middun', 5.5, 6.5, 'stored', now() - interval '9 hours', :'ivar') as posted \gset
 delete from event where uid = :'ivar';
 select act_perform(:'world2', :'ivar', 'assign_post',
   ('{"kind":"post","id":' || :'post' || ',"creature":' || :'posted' || '}')::jsonb) \g /dev/null
@@ -3378,7 +3378,7 @@ begin
   end loop; end loop;
   delete from foraged f where f.world_id = w and f.kind = 'dig';
 end $$;
-select creature_spawn(:'world2', 'snout', 8.5, 11.5, 'deed', now() - interval '3 hours', :'ivar') as nose \gset
+select creature_spawn(:'world2', 'snout', 8.5, 11.5, 'deed', now() - interval '9 hours', :'ivar') as nose \gset
 update creature set phase = 'idle', until = now() - interval '900 seconds',
     leg_at = now() - interval '900 seconds', leg_ends = now() - interval '900 seconds',
     settled_at = now() - interval '900 seconds' where id = :'nose';
@@ -3513,7 +3513,7 @@ select '457. what carries and what pulls: '
          || ', pull ' || coalesce(pull, 0.25) || ')', ', ' order by id)
          from species_def where mount is not null or draught)
      || ' — and the tack is ' || (select string_agg(item, ' and ' order by ord) from tack_def);
-select creature_spawn(:'world2', 'orse', 5.6, 7.6, 'active', now() - interval '1 day') as horse \gset
+select creature_spawn(:'world2', 'orse', 5.6, 7.6, 'active', now() - interval '3 days') as horse \gset
 update creature set keeper = :'ivar', hunger = 1, from_x = to_x, from_y = to_y,
     leg_at = now(), leg_ends = now(), settled_at = now(), name = 'Greyfell' where id = :'horse';
 select '458. with nothing in the pack: ' || coalesce(act_refusal(:'world2', :'ivar', 'tack_creature',
@@ -3606,7 +3606,7 @@ delete from event where uid = :'ivar';
 select act_perform(:'world2', :'ivar', 'hitch_creature',
   ('{"kind":"creature","id":' || :'horse' || '}')::jsonb) \g /dev/null
 select '470. ' || (select text from event where uid = :'ivar' and kind = 'event' order by n desc limit 1);
-select creature_spawn(:'world2', 'orse', 9.7, 12.7, 'active', now() - interval '1 day') as horse2 \gset
+select creature_spawn(:'world2', 'orse', 9.7, 12.7, 'active', now() - interval '3 days') as horse2 \gset
 update creature set keeper = :'ivar', hunger = 1, from_x = to_x, from_y = to_y,
     leg_at = now(), leg_ends = now(), settled_at = now(), name = 'Dunn',
     skills = jsonb_set(skills, '{climbing}', '20') where id = :'horse2';
@@ -3862,7 +3862,7 @@ select set_config('request.jwt.claims', :'claims_was', false) \g /dev/null
  * And what a path is worth where the island already does the arithmetic: a
  * discipline taken, read where its rule is (Gentle Hand on a tame).
  */
-select creature_spawn(:'world2', 'rabba', 5.7, 7.7, 'wild', now() - interval '1 day') as bun \gset
+select creature_spawn(:'world2', 'rabba', 5.7, 7.7, 'wild', now() - interval '3 days') as bun \gset
 insert into skill (world_id, uid, id, value) values (:'world2', :'ivar', 'meditation', 25)
   on conflict (world_id, uid, id) do update set value = 25;
 select round((tame_chance(:'world2', :'ivar', (select c from creature c where c.id = :'bun')) * 100)::numeric)
@@ -4025,8 +4025,8 @@ select '519. ' || (select text from event where uid = :'ivar' order by n desc li
 -- A herd. Two of them, put together, and what comes of it twelve minutes later.
 insert into skill (world_id, uid, id, value) values (:'world2', :'ivar', 'animal_husbandry', 70)
   on conflict (world_id, uid, id) do update set value = 70;
-select creature_spawn(:'world2', 'shaggan', 5.6, 7.6, 'deed', now() - interval '3 hours') as ewe \gset
-select creature_spawn(:'world2', 'shaggan', 5.7, 7.7, 'deed', now() - interval '3 hours') as ram \gset
+select creature_spawn(:'world2', 'shaggan', 5.6, 7.6, 'deed', now() - interval '9 hours') as ewe \gset
+select creature_spawn(:'world2', 'shaggan', 5.7, 7.7, 'deed', now() - interval '9 hours') as ram \gset
 update creature set sex = 'female', keeper = :'ivar', hunger = 1, care = 0.8,
     traits = array['biddable', 'bright'], from_x = to_x, from_y = to_y,
     leg_at = now(), leg_ends = now(), settled_at = now(), name = 'Snow' where id = :'ewe';
@@ -5717,7 +5717,7 @@ select '712c. sella gives hers up, four hundred tiles from anybody: '
 -- she founded second, so the row a bare `select * from deed` hands back first
 -- is ivar's — thirty tiles from where she is standing.
 select set_config('request.jwt.claims', json_build_object('sub', :'hild')::text, false) \g /dev/null
-select creature_spawn(:'big', 'rabba', 2070.5, 2071.5, 'stored', now() - interval '3 hours', :'hild') as hers \gset
+select creature_spawn(:'big', 'rabba', 2070.5, 2071.5, 'stored', now() - interval '9 hours', :'hild') as hers \gset
 select act_perform(:'big', :'hild', 'assign_deed', ('{"kind":"creature","id":' || :'hers' || '}')::jsonb) \g /dev/null
 select '712d. hild sets a rabba to work and it stands at '
      || (select round(from_x::numeric, 1) || ', ' || round(from_y::numeric, 1)
@@ -5836,7 +5836,7 @@ update player set x = 2040.5, y = 2040.5 where world_id = :'big' and uid = :'iva
 -- state a keeper is left in by disbanding, and the state an old wildermon is
 -- in when its keeper is not who it thinks.
 \set nolands '44444444-4444-4444-4444-444444444444'
-select creature_spawn(:'big', 'rabba', 2040.5, 2041.5, 'deed', now() - interval '3 hours', :'nolands') as orphan \gset
+select creature_spawn(:'big', 'rabba', 2040.5, 2041.5, 'deed', now() - interval '9 hours', :'nolands') as orphan \gset
 select '723. a forager on the books of somebody with no settlement: work_site says '
      || coalesce((select x || ',' || y from work_site(:'big',
           (select c from creature c where c.world_id = :'big' and c.id = :'orphan'))), 'nothing');
@@ -5863,7 +5863,7 @@ select '725. functions on this island that ask a worker to do its day: '
            and p.prosrc like '%worker_settle(%' and p.proname <> 'worker_settle'),
          'NOBODY, which was the bug');
 select set_config('request.jwt.claims', json_build_object('sub', :'ivar')::text, false) \g /dev/null
-select creature_spawn(:'big', 'rabba', 2040.5, 2041.5, 'stored', now() - interval '3 hours', :'ivar') as hand \gset
+select creature_spawn(:'big', 'rabba', 2040.5, 2041.5, 'stored', now() - interval '9 hours', :'ivar') as hand \gset
 select act_perform(:'big', :'ivar', 'assign_deed', ('{"kind":"creature","id":' || :'hand' || '}')::jsonb) \g /dev/null
 -- Starving and a quarter of an hour owed, which is how the reported one stood.
 update creature set hunger = 0, until = now() - interval '900 seconds',
@@ -7132,8 +7132,8 @@ from (
 ) q;
 
 -- Two workers on one deed, one of them worth standing next to.
-select creature_spawn(:'world3', 'rabba', 20.5, 20.5, 'deed', now() - interval '3 hours', :'dane') as plain \gset
-select creature_spawn(:'world3', 'rabba', 21.5, 20.5, 'deed', now() - interval '3 hours', :'dane') as boss \gset
+select creature_spawn(:'world3', 'rabba', 20.5, 20.5, 'deed', now() - interval '9 hours', :'dane') as plain \gset
+select creature_spawn(:'world3', 'rabba', 21.5, 20.5, 'deed', now() - interval '9 hours', :'dane') as boss \gset
 update creature set traits = '{willing}', care = 0, skills = '{}'::jsonb where world_id = :'world3' and id = :'plain';
 update creature set traits = '{lead_beast}', care = 0, skills = '{}'::jsonb where world_id = :'world3' and id = :'boss';
 select '827. a plain worker with a lead beast on the same deed: work ×'
@@ -7924,9 +7924,9 @@ update player set x = 5.5, y = 8.5, favour = 60, favour_at = now()
 insert into skill (world_id, uid, id, value)
 values (:'world2', :'hild', 'prayer', 45), (:'world2', :'alice', 'prayer', 45)
   on conflict (world_id, uid, id) do update set value = 45 \g /dev/null
-select creature_spawn(:'world2', 'bevere', 5.5, 8.5, 'active', now() - interval '3 hours', :'hild') as cit_doe \gset
-select creature_spawn(:'world2', 'bevere', 5.6, 8.6, 'active', now() - interval '3 hours', :'hild') as cit_buck \gset
-select creature_spawn(:'world2', 'bevere', 5.4, 8.4, 'active', now() - interval '3 hours', :'alice') as out_doe \gset
+select creature_spawn(:'world2', 'bevere', 5.5, 8.5, 'active', now() - interval '9 hours', :'hild') as cit_doe \gset
+select creature_spawn(:'world2', 'bevere', 5.6, 8.6, 'active', now() - interval '9 hours', :'hild') as cit_buck \gset
+select creature_spawn(:'world2', 'bevere', 5.4, 8.4, 'active', now() - interval '9 hours', :'alice') as out_doe \gset
 -- Sexes by hand: what is being measured is the settlement, not the coin the
 -- spawner tosses, and breeding wants one of each standing there.
 update creature set sex = 'female', until = now() + interval '1 hour'
@@ -8812,9 +8812,9 @@ select '928. the two new wildermon: ' || (select string_agg(name || ' gathers ' 
 -- grubba and a bevere kept at the token.
 update creature set mode = 'stored', job = null where world_id = :'world2' and keeper = :'ivar' and mode = 'deed' \g /dev/null
 select x as tok_x, y as tok_y from deed where world_id = :'world2' and founded_by = :'ivar' \gset
-select creature_spawn(:'world2', 'snedda', :tok_x + 0.5, :tok_y + 1.5, 'stored', now() - interval '3 hours', :'ivar') as pruner \gset
-select creature_spawn(:'world2', 'grubba', :tok_x + 0.5, :tok_y + 1.5, 'stored', now() - interval '3 hours', :'ivar') as stumper \gset
-select creature_spawn(:'world2', 'bevere', :tok_x + 0.5, :tok_y + 1.5, 'stored', now() - interval '3 hours', :'ivar') as feller2 \gset
+select creature_spawn(:'world2', 'snedda', :tok_x + 0.5, :tok_y + 1.5, 'stored', now() - interval '9 hours', :'ivar') as pruner \gset
+select creature_spawn(:'world2', 'grubba', :tok_x + 0.5, :tok_y + 1.5, 'stored', now() - interval '9 hours', :'ivar') as stumper \gset
+select creature_spawn(:'world2', 'bevere', :tok_x + 0.5, :tok_y + 1.5, 'stored', now() - interval '9 hours', :'ivar') as feller2 \gset
 select '929. setting the snedda to farm: "'
      || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed', ('{"kind":"creature","id":' || :'pruner' || ',"job":"farm"}')::jsonb), 'ALLOWED')
      || '", to prune: "'
@@ -9411,7 +9411,7 @@ select '971. off the table: a ' || (select name from mould_def where id = 'horse
      || ' days, at ' || shoe_pace() || ' the pace on paved ground — ' || (select string_agg(name, ', ' order by id) from tile_def where paved) || ' — and ' || shoe_step()
      || ' more of step; ported ' || act_ported('shoe_creature');
 -- A horse of Ivar's for the shoes, since the suite's first horse was cleared with its island long ago: grown, standing beside him, and a grubba that is no mount.
-select creature_spawn(:'world2', 'orse', 14.6, 12.6, 'active', now() - interval '1 day') as shodhorse \gset
+select creature_spawn(:'world2', 'orse', 14.6, 12.6, 'active', now() - interval '3 days') as shodhorse \gset
 update creature set from_x = 14.6, from_y = 12.6, to_x = 14.6, to_y = 12.6, leg_at = now(), leg_ends = now(), settled_at = now(),
     rider = null, shod_at = null where world_id = :'world2' and id = :'shodhorse' \g /dev/null
 update player set x = 14.5, y = 12.5 where world_id = :'world2' and uid = :'ivar' \g /dev/null
@@ -9878,7 +9878,7 @@ select land_set_data(:'world2', :tok_x + 4, :tok_y, tree_pack((select id from tr
 select land_set_tile(:'world2', :tok_x + 3, :tok_y + 2, tile_id('Grass')) \g /dev/null
 delete from foraged where world_id = :'world2' and y = :tok_y and x in (:tok_x + 3, :tok_x + 4) \g /dev/null
 delete from item where world_id = :'world2' and holder = 'crate' and crate = (deed_crate(:'world2', :'ivar')).id and def in ('pear', 'fig') \g /dev/null
-select creature_spawn(:'world2', 'plucka', :tok_x + 0.5, :tok_y + 1.5, 'stored', now() - interval '3 hours', :'ivar') as picker \gset
+select creature_spawn(:'world2', 'plucka', :tok_x + 0.5, :tok_y + 1.5, 'stored', now() - interval '9 hours', :'ivar') as picker \gset
 select coalesce(act_refusal(:'world2', :'ivar', 'assign_deed', ('{"kind":"creature","id":' || :'picker' || ',"job":"fruit"}')::jsonb), 'ALLOWED') as pick_door \gset
 select 'a pear ' || lower((select name from tree_age_def where id = tree_age(land_data(:'world2', :tok_x + 3, :tok_y)))) || ' and a fig ' || lower((select name from tree_age_def where id = tree_age(land_data(:'world2', :tok_x + 4, :tok_y)))) as stand \gset
 select worker_gatherable(:'world2', :tok_x + 3, :tok_y, 'fruit', (select c from creature c where c.world_id = :'world2' and c.id = :'picker')) as pear_ok \gset
@@ -9973,7 +9973,7 @@ delete from item where world_id = :'world2' and holder = 'ground' and def = 'cor
 update player set x = 6.5, y = 6.5, act = null, act_queue = '[]'::jsonb, equipped = '{}'::jsonb,
     stats = jsonb_set(jsonb_set(stats - 'hurtBy' - 'hurtAt', '{health}', '1'), '{stamina}', '1')
   where world_id = :'world2' and uid = :'ivar' \g /dev/null
-select creature_spawn(:'world2', 'ulva', 6.5, 6.5, 'active', now() - interval '1 day', :'ivar') as heel \gset
+select creature_spawn(:'world2', 'ulva', 6.5, 6.5, 'active', now() - interval '3 days', :'ivar') as heel \gset
 update creature set name = 'Fang', stance = 'defensive' where world_id = :'world2' and id = :'heel' \g /dev/null
 -- A rabba three tiles off, stood still, so the fight is measured against a thing that stays put.
 select creature_spawn(:'world2', 'rabba', 9.5, 6.5, 'wild', now() - interval '2 hours') as prey \gset
@@ -10036,7 +10036,7 @@ update player set x = 6.5, stats = jsonb_set(stats - 'hurtBy' - 'hurtAt', '{heal
 delete from creature where world_id = :'world2' and id = :'prey2' \g /dev/null
 update creature set stance = 'defensive' where world_id = :'world2' and id = :'heel' \g /dev/null
 select creature_settle(:'world2', :'heel') \g /dev/null
-select creature_spawn(:'world2', 'orse', 7.5, 6.5, 'wild', now() - interval '1 day') as kicker \gset
+select creature_spawn(:'world2', 'orse', 7.5, 6.5, 'wild', now() - interval '3 days') as kicker \gset
 update creature set until = now() + interval '1 hour' where world_id = :'world2' and id = :'kicker' \g /dev/null
 delete from event where uid = :'ivar' \g /dev/null
 select coalesce(act_refusal(:'world2', :'ivar', 'attack_creature', ('{"kind":"creature","id":' || :'kicker' || '}')::jsonb), 'ALLOWED') as swing_door \gset
@@ -10151,7 +10151,7 @@ delete from creature where world_id = :'world2' and mode in ('wild', 'active') \
 update player set x = 6.5, y = 6.5, act = null, act_queue = '[]'::jsonb, equipped = '{}'::jsonb,
     stats = jsonb_set(jsonb_set(stats - 'hurtBy' - 'hurtAt', '{health}', '1'), '{stamina}', '1')
   where world_id = :'world2' and uid = :'ivar' \g /dev/null
-select creature_spawn(:'world2', 'orse', 7.5, 6.5, 'wild', now() - interval '1 day') as kicker2 \gset
+select creature_spawn(:'world2', 'orse', 7.5, 6.5, 'wild', now() - interval '3 days') as kicker2 \gset
 update creature set until = now() + interval '1 hour' where world_id = :'world2' and id = :'kicker2' \g /dev/null
 delete from event where uid = :'ivar' \g /dev/null
 select act_perform(:'world2', :'ivar', 'attack_creature', ('{"kind":"creature","id":' || :'kicker2' || '}')::jsonb) \g /dev/null
@@ -10295,7 +10295,7 @@ select '1012. ' || (select count(*) from generate_series(3,6) gx, generate_serie
      || (select count(*) from crop where world_id = :'world2') || ' growing, and '
      || (select sum(count) from item where world_id = :'world2' and holder = 'crate' and def = 'wheat_seed')
      || ' of wheat seed in the settlement crate';
-select creature_spawn(:'world2', 'seavic', 5.5, 7.5, 'deed', now() - interval '3 hours', :'ivar') as sower \gset
+select creature_spawn(:'world2', 'seavic', 5.5, 7.5, 'deed', now() - interval '9 hours', :'ivar') as sower \gset
 update creature set job = 'farm', phase = 'idle', until = now() - interval '600 seconds',
     leg_at = now() - interval '600 seconds', leg_ends = now() - interval '600 seconds',
     settled_at = now() - interval '600 seconds' where world_id = :'world2' and id = :'sower';
@@ -10329,7 +10329,7 @@ select '1013. the settlement crate is ' || crate_units(:'world2', (deed_crate(:'
      || '/' || crate_capacity((deed_crate(:'world2', :'ivar'))) || ' and the crate beside it '
      || crate_units(:'world2', :'spare') || '/'
      || crate_capacity((select c from crate c where c.world_id = :'world2' and c.id = :'spare'));
-select creature_spawn(:'world2', 'rabba', 5.5, 7.5, 'deed', now() - interval '3 hours', :'ivar') as carrier \gset
+select creature_spawn(:'world2', 'rabba', 5.5, 7.5, 'deed', now() - interval '9 hours', :'ivar') as carrier \gset
 update creature set job = 'forage', phase = 'idle', until = now() - interval '600 seconds',
     leg_at = now() - interval '600 seconds', leg_ends = now() - interval '600 seconds',
     settled_at = now() - interval '600 seconds' where world_id = :'world2' and id = :'carrier';
