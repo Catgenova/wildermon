@@ -109,6 +109,8 @@ function planterOf(look: KitLook): KitModel {
     const tall = 3 + has.stage * 2.2;
     parts.push({
       reach: at.flatMap(([x, y, z]) => [[x - 1.4, y - 1.4, z], [x + 1.4, y + 1.4, z + tall]] as V3[]),
+      // Clicked by too: the box it is clicked by grows with what grows in it.
+      solid: true,
       draw: (g, e) => {
         const order = at.map((p, i) => ({ p, i, d: p[0] * e.toward[0] + p[1] * e.toward[1] })).sort((a, b) => a.d - b.d);
         for (const { p, i } of order) {
