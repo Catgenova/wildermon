@@ -243,6 +243,54 @@ const POND_SHORE = `rgba(${SPRING_EDGE.join(',')},0.6)`;
 const CRATE_FLOOR = 0.7 * HEIGHT_SCALE;
 /** How big a wildermon is drawn in a crate against out in the world, so a grown one stands inside it. */
 const CRATE_SCALE = 0.8;
+
+/**
+ * A wildermon shut in a crate is drawn still: one picture of it for each look,
+ * facing and size, kept and laid down every frame, rather than its model posed
+ * afresh. Asked for: "Do not animate wildermon in crates when placed in the
+ * world, leave them still. Having many out hinders fps immensely." Sizes go in
+ * quarter-octave steps, so zooming makes a few pictures rather than one a frame.
+ */
+const STILLS = new Map<string, { canvas: HTMLCanvasElement; ax: number; ay: number; k: number }>();
+/** Pictures kept before the lot is let go and drawn again as they are wanted. */
+const STILLS_MOST = 256;
+function drawStill(g: CanvasRenderingContext2D, px: number, py: number, zoom: number, pose: CreaturePose): void {
+  const t = g.getTransform();
+  const dev = Math.hypot(t.a, t.b) || 1;
+  const k = 2 ** (Math.round(Math.log2(zoom * dev) * 4) / 4);
+  const key = `${pose.species}|${pose.stage ?? 0}|${pose.colors.join(',')}|${pose.facing}|${pose.rare ?? 0}|${pose.fleece}|${pose.scale ?? 1}|${k}`;
+  let still = STILLS.get(key);
+  if (!still) {
+    if (STILLS.size >= STILLS_MOST) STILLS.clear();
+    // Drawn on a pad wide enough for the biggest, then cut to what it covers.
+    const side = Math.min(2048, Math.ceil(260 * k * (pose.scale ?? 1)));
+    const pad = document.createElement('canvas');
+    pad.width = side;
+    pad.height = side;
+    const p = pad.getContext('2d') as CanvasRenderingContext2D;
+    const fx = side / 2, fy = side * 0.8;
+    drawCreature(p, fx, fy, k, { ...pose, id: undefined });
+    const d = p.getImageData(0, 0, side, side).data;
+    let x0 = side, y0 = side, x1 = -1, y1 = -1;
+    for (let y = 0; y < side; y++) {
+      for (let x = 0; x < side; x++) {
+        if (d[(y * side + x) * 4 + 3] === 0) continue;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, x1 - x0 + 1);
+    canvas.height = Math.max(1, y1 - y0 + 1);
+    if (x1 >= 0) (canvas.getContext('2d') as CanvasRenderingContext2D).drawImage(pad, -x0, -y0);
+    still = { canvas, ax: fx - x0, ay: fy - y0, k };
+    STILLS.set(key, still);
+  }
+  const m = zoom / still.k;
+  g.drawImage(still.canvas, px - still.ax * m, py - still.ay * m, still.canvas.width * m, still.canvas.height * m);
+}
 import { FLOAT_COLOURS, Floaters } from './floaters';
 import { inkOr, WORLD_INK } from './inks';
 import { drawSpeech } from './bubble';
@@ -257,7 +305,7 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, topEdges, type Face } from './outcrops';
-import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
   drawChains, drawDrawbridgeSpan, drawGallows, drawGatewayDressing, drawGrille, drawGrooves, drawHiddenMark, drawHingeCrib, drawLandingCrib,
@@ -5455,7 +5503,7 @@ export class Renderer {
           const tint = dyeOf(piece) ?? undefined;
           this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
             drawFurniture(g, px, py, zoom, piece.kind, false, tint, 0, view, piece.material);
-            drawCreature(g, px, py - CRATE_FLOOR * zoom, zoom, {
+            drawStill(g, px, py - CRATE_FLOOR * zoom, zoom, {
               species: def.id,
               facing: turned,
               phase: 0,
@@ -5466,6 +5514,7 @@ export class Renderer {
               scale: ageDef(inside, this.game.time).scale * CRATE_SCALE,
               id: inside.id,
               rare: inside.rare,
+              stage: stageOf(inside),
             });
             drawFurniture(g, px, py, zoom, piece.kind, false, tint, 1, view, piece.material);
           }, undefined, pieceBox);

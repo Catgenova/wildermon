@@ -3252,6 +3252,14 @@ export const NEWS: News[] = [
       'Fixed: goals ticked during a refused heartbeat now kept for the next one.',
     ],
   },
+  {
+    n: 265,
+    day: '2026-10-23',
+    lines: () => [
+      'Changed: a wildermon in a crate set down drawn still, not animated: frame rate with many crates out.',
+      'Fixed: a wildermon in a crate drawn at its own stage, not its first.',
+    ],
+  },
 ];
 
 /** The nine kinds What's new 251 gives new lines. */
