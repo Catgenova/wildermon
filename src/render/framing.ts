@@ -249,7 +249,13 @@ function railPosts(r: Run, material: string, pal: Palette, post: [boolean, boole
  * projection is linear. So it is painted once and laid down after that, the
  * oldest let go past `BODIES` of them, as the roofs' patterns are.
  */
-interface Body { c: HTMLCanvasElement; x: number; y: number; w: number; h: number; key?: string }
+export interface Body { c: HTMLCanvasElement; x: number; y: number; w: number; h: number; key?: string }
+/**
+ * Where `drawColumn` laid a finished column: its picture, as laid on the
+ * screen; from far off, a block this far either side of its corner; or null,
+ * a plan or a block with walls cut out of it.
+ */
+export type Laid = Body | number | null;
 const bodies = new Map<string, Body>();
 const BODIES = 64;
 
@@ -545,10 +551,11 @@ function drum(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: number
  * underside of what it carries at `h1`, faded to `alpha`. Planned and not yet
  * built it is its outline, filling as the materials go in (`done`). Engaged
  * in walls of half thickness `engaged` it is a pilaster, drawn with `cuts`,
- * whatever stands in front of it or over it, left out.
+ * whatever stands in front of it or over it, left out. Says where it laid
+ * it (`Laid`), for the wash over remembered ground to be taken off it.
  */
 export function drawColumn(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: number, h0: number, h1: number,
-  material: string, done: number, alpha: number, planInk: string, paint?: RGB, dpr = 1, grounded = true, engaged = 0, cuts: readonly Cut[] = []): void {
+  material: string, done: number, alpha: number, planInk: string, paint?: RGB, dpr = 1, grounded = true, engaged = 0, cuts: readonly Cut[] = []): Laid {
   const zoom = cam.zoom;
   const pal = palette(material, paint);
   const r = engaged > 0 ? engaged + PILASTER_PROUD : 0.05;
@@ -560,9 +567,10 @@ export function drawColumn(ctx: CanvasRenderingContext2D, cam: Camera, cx: numbe
   if (done >= 1 && zoom >= FRAME_DETAIL) {
     const pic = pictureOf(cam, material, pal, paint, h1 - h0, dpr, grounded, engaged);
     const laid = cuts.length ? cutPictureOf(cam, pic, cuts, cx, cy, h0, dpr) : pic;
-    ctx.drawImage(laid.c, snap(cam.worldToScreenX(cx, cy) + pic.x, dpr), snap(cam.worldToScreenY(cx, cy, h0) + pic.y, dpr), pic.w, pic.h);
+    const at: Body = { c: laid.c, x: snap(cam.worldToScreenX(cx, cy) + pic.x, dpr), y: snap(cam.worldToScreenY(cx, cy, h0) + pic.y, dpr), w: pic.w, h: pic.h };
+    ctx.drawImage(at.c, at.x, at.y, at.w, at.h);
     ctx.restore();
-    return;
+    return at;
   }
   if (cuts.length) clipOut(ctx, cam, cuts, columnBox(cam, cx, cy, h0, h1));
   if (done < 1) {
@@ -579,11 +587,13 @@ export function drawColumn(ctx: CanvasRenderingContext2D, cam: Camera, cx: numbe
     }
     ctx.setLineDash([]);
     ctx.restore();
-    return;
+    return null;
   }
   // From far off: a block.
-  block(ctx, cam, cx, cy, engaged > 0 ? r : stony(material) ? 0.065 : 0.05, h0, h1, pal.body, pal.hi, pal.line, zoom);
+  const far = engaged > 0 ? r : stony(material) ? 0.065 : 0.05;
+  block(ctx, cam, cx, cy, far, h0, h1, pal.body, pal.hi, pal.line, zoom);
   ctx.restore();
+  return cuts.length ? null : far;
 }
 
 /** The light down a squared post's two arrises nearest the camera, where its chamfers catch it. */

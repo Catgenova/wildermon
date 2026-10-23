@@ -58,7 +58,7 @@ import { GLASS } from '../game/glasshouse';
 import type { LightSource } from '../game/light';
 import { FLOOR_PPT, FLOOR_TILES, concrete, flooring, slabbing } from './flooring';
 import { LADDER, stairStyle } from './stairing';
-import { BEAM_DEEP, drawBeam, drawColumn, drawJettySupports, drawRailing, JOIST_DEEP, PILASTER_PROUD, type Cut, type RailEnds } from './framing';
+import { BEAM_DEEP, drawBeam, drawColumn, drawJettySupports, drawRailing, JOIST_DEEP, PILASTER_PROUD, type Body, type Cut, type RailEnds } from './framing';
 import { jettyBase, outsideStairBase } from '../game/frame';
 import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
@@ -1957,6 +1957,10 @@ export class Renderer {
   private readonly colY = new Float64Array(3);
   /** The path a wall drawn now takes the wash off with, while it is drawn for a tile in sight (`liftWall`). */
   private wallLift: Path2D | null = null;
+  /** The path a column drawn now takes the wash off with, if one of the tiles round its corner is in sight (`liftColumn`). */
+  private columnLift: Path2D | null = null;
+  /** The columns' pictures waiting to take the wash off, as they were laid, with `liftPath` (`liftColumn`). */
+  private readonly liftPics: Body[] = [];
   /** Where the first of the wash's columns is across the screen this frame, and how wide a column is. */
   private washX0 = 0;
   private washHw = 1;
@@ -2190,7 +2194,9 @@ export class Renderer {
     if (lift) {
       fc.globalCompositeOperation = 'destination-out';
       fc.fill(lift);
+      for (const p of this.liftPics) fc.drawImage(p.c, p.x, p.y, p.w, p.h);
     }
+    this.liftPics.length = 0;
   }
 
   /**
@@ -3530,6 +3536,7 @@ export class Renderer {
     // What the spells drew this frame, sorted into the lines it goes down with.
     this.spells.layout(ctx, V, dLo, dHi);
     this.linePilasters.length = 0;
+    this.liftPics.length = 0;
     this.frameCuts.clear();
     this.jettyCuts.clear();
     const grid = this.game.settings.grid && zoom >= 0.7;
@@ -3552,6 +3559,7 @@ export class Renderer {
      */
     const raising = fogged && (this.game.buildings.pierTiles.size > 0 || this.game.foundations.size > 0);
     const walled = fogged && this.game.buildings.walls.size > 0;
+    const columned = fogged && this.game.buildings.columns.size > 0;
     const washAt = fogged ? 1 - eMin + this.washColumns(V, eMax - eMin + 4) : 0;
     const drawnAt = ctx.getTransform();
     let wash: HTMLCanvasElement | null = null;
@@ -3872,6 +3880,8 @@ export class Renderer {
         if (stoneLit) this.occludeGround(ctx, pts, minY, maxY);
         // Remembered ground's wash comes this far down the screen; ground in sight that comes up past it takes it off what it covers.
         this.wallLift = null;
+        // A column in sight takes it off as well, whichever tile round its corner puts it up (`liftColumn`).
+        this.columnLift = columned ? liftPath : null;
         if (!lit) {
           if (fogged) {
             lineAny = true;
@@ -9522,13 +9532,21 @@ export class Renderer {
       // Looking into a cellar, a building over it goes, its columns with it.
       if (!c || (viewLevel !== null && level > viewLevel) || this.cut.has(c.building)) continue;
       const engaged = this.engagedIn(level, cx, cy);
+      // In sight from any tile round its corner, it takes the wash off remembered ground behind it (`liftColumn`).
+      const lift = this.columnLift && this.cornerSeen(cx, cy) ? this.columnLift : null;
       if (engaged > 0) {
         this.linePilasters.push(() => {
           this.overHeads(level, cx, cy, V, engaged);
-          this.columnOn(c, level, cx, cy, V, engaged);
+          this.columnOn(c, level, cx, cy, V, engaged, lift);
         });
-      } else this.columnOn(c, level, cx, cy, V, engaged);
+      } else this.columnOn(c, level, cx, cy, V, engaged, lift);
     }
+  }
+
+  /** Whether any of the four tiles round corner `cx, cy` is in sight. */
+  private cornerSeen(cx: number, cy: number): boolean {
+    const v = this.game.vision;
+    return v.state(cx - 1, cy - 1) === VISIBLE || v.state(cx, cy - 1) === VISIBLE || v.state(cx - 1, cy) === VISIBLE || v.state(cx, cy) === VISIBLE;
   }
 
   /**
@@ -9538,7 +9556,7 @@ export class Renderer {
    * that puts it up is, a pilaster as the last tile round its corner is, which
    * draws the walls coming toward the camera from it.
    */
-  private columnOn(c: Column, level: number, cx: number, cy: number, V: View, engaged: number): void {
+  private columnOn(c: Column, level: number, cx: number, cy: number, V: View, engaged: number, lift: Path2D | null): void {
     const base = this.buildingBase(c.building);
     const [h0, h1] = this.columnSpan(level, cx, cy, base);
     const alpha = this.columnAlpha(level, cx, cy, V, engaged);
@@ -9550,7 +9568,40 @@ export class Renderer {
       cuts = this.frameCuts.get(key);
       if (!cuts) this.frameCuts.set(key, (cuts = this.pilasterCuts(level, cx, cy, base, h1, engaged + PILASTER_PROUD, V)));
     }
-    drawColumn(this.canvas.ctx, this.camera, cx, cy, h0, h1, c.material, progressOf(c), alpha, PLAN_COLOR, paint, this.canvas.dpr, level === 0, engaged, cuts);
+    const laid = drawColumn(this.canvas.ctx, this.camera, cx, cy, h0, h1, c.material, progressOf(c), alpha, PLAN_COLOR, paint, this.canvas.dpr, level === 0, engaged, cuts);
+    if (lift && alpha >= 1 && laid !== null) this.liftColumn(lift, laid, cx, cy, h0, h1);
+  }
+
+  /**
+   * Take the wash off a column in sight, where it comes up
+   * the screen past the wash gathered behind it, as `liftWall` does a wall's:
+   * its picture as it was laid (`liftPics`), or from far off its block, onto
+   * `lift`. A column stands on a corner of the lattice, between two of the
+   * wash's columns.
+   */
+  private liftColumn(lift: Path2D, laid: Body | number, cx: number, cy: number, h0: number, h1: number): void {
+    const cam = this.camera;
+    const e = Math.round((cam.worldToScreenX(cx, cy) - this.washX0) / this.washHw);
+    const f = this.washFloor;
+    const i = e * 2 - 1;
+    if (i < 0 || i + 1 >= f.length) return;
+    const top = typeof laid === 'number' ? cam.worldToScreenY(cx, cy, h1) - laid * this.washHw : laid.y;
+    if (!(top < Math.max(f[i], f[i + 1]) - 0.5)) return;
+    if (typeof laid === 'number') {
+      const xs: number[] = [];
+      const ys: number[] = [];
+      for (const u of [-laid, laid]) for (const v of [-laid, laid]) for (const h of [h0, h1]) {
+        xs.push(cam.worldToScreenX(cx + u, cy + v));
+        ys.push(cam.worldToScreenY(cx + u, cy + v, h));
+      }
+      windOn(lift, xs, ys, convexHull(xs, ys));
+    } else this.liftPics.push(laid);
+    // Its foot, either side of its corner, is as far down the screen as it comes.
+    const foot = typeof laid === 'number' ? cam.worldToScreenY(cx, cy, h0) + laid * this.washHw : laid.y + laid.h;
+    const lf = this.liftFloor;
+    lf[i] = Math.max(lf[i], foot);
+    lf[i + 1] = Math.max(lf[i + 1], foot);
+    this.lifted = true;
   }
 
   /** How far a column is let go to be seen through, as `columnOn` lays it. */
@@ -9593,7 +9644,7 @@ export class Renderer {
     }
     ctx.closePath();
     ctx.clip();
-    this.columnOn(c, level, cx, cy, V, engaged);
+    this.columnOn(c, level, cx, cy, V, engaged, null);
     ctx.restore();
   }
 
@@ -9743,7 +9794,7 @@ export class Renderer {
       this.drawWall(d.wall, b, d.base, d.alpha);
       const up = this.game.buildings.column(level + 1, cx, cy);
       const viewLevel = this.seenLevel();
-      if (up && (viewLevel === null || level + 1 <= viewLevel) && !this.engagedIn(level + 1, cx, cy)) this.columnOn(up, level + 1, cx, cy, V, 0);
+      if (up && (viewLevel === null || level + 1 <= viewLevel) && !this.engagedIn(level + 1, cx, cy)) this.columnOn(up, level + 1, cx, cy, V, 0, null);
       ctx.restore();
     }
   }

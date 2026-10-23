@@ -3379,6 +3379,13 @@ export const NEWS: News[] = [
       `Changed: dragon scales from a dragon only; none from ${listed(UNSCALED.map((id) => SPECIES[id].name))}.`,
     ],
   },
+  {
+    n: 269,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: a column at a wall corner washed grey as remembered ground when the tile in front of it is remembered; now in full colour when any tile round its corner is in sight.',
+    ],
+  },
 ];
 
 /** The kinds that butchered into dragon scales until What's new 268. */
