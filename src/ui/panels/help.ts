@@ -62,7 +62,7 @@ import {
   BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
-import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
+import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
 import { IDLE_STALE, WORK_ITEMS, WORK_SHOWN } from '../../game/workstats';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, PALE_AT, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -1012,6 +1012,7 @@ export function helpText(): string {
       <tr><td>All</td><td>Everything</td></tr>
       <tr><td>Work</td><td>Your actions</td></tr>
       <tr><td>Combat</td><td>Blows given and taken, what has your scent, kills</td></tr>
+      <tr><td>Wildermon</td><td>Taming, crates, posts, tack, gear, relics used, breeding, births, evolving, sightings. Each settlement worker's finished work: <i>${workDoneLine(SPECIES.bevere.name, { stored: { log: 12 } })}</i> (stored: into settlement storage or a hive; handled: used on an errand)</td></tr>
       <tr><td>Skills</td><td>Skill gains</td></tr>
       <tr><td>Talk</td><td>Chat</td></tr>
       <tr><td>Trouble</td><td>Failures and refusals, with the reason</td></tr>

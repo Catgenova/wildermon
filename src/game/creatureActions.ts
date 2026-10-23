@@ -334,46 +334,46 @@ function artifactAction(id: string, label: string, verb: string): ActionDef {
         g.logMsg(was === 'old'
           ? `${capital(name)} used on ${c.name}: now just grown, full pace and pull.`
           : `${capital(name)} used on ${c.name}: now newborn; cannot be worked, ridden or put in the traces until grown.`,
-        'event');
+        'wildermon');
       } else if (id === 'use_ancient_file') {
         // One time in `FILE_RARITY_ODDS`, a step and no more.
         if (g.rand() < 1 / FILE_RARITY_ODDS) {
           c.rare = Math.min(RARITIES.length - 1, c.rare + 1);
-          g.logMsg(`${capital(name)} used on ${c.name}: now ${rarityOf(c).name}, blood figures ${pct(rarityOf(c).blood)}.`, 'event');
+          g.logMsg(`${capital(name)} used on ${c.name}: now ${rarityOf(c).name}, blood figures ${pct(rarityOf(c).blood)}.`, 'wildermon');
         } else {
-          g.logMsg(`${capital(name)} used on ${c.name}: no change. Rarity-up chance: ${percent(1 / FILE_RARITY_ODDS)}.`, 'event');
+          g.logMsg(`${capital(name)} used on ${c.name}: no change. Rarity-up chance: ${percent(1 / FILE_RARITY_ODDS)}.`, 'wildermon');
         }
       } else if (id === 'use_bronze_mirror') {
         // The mark, used up at its next covering (`Creatures.pair`).
         c.boosts = { ...c.boosts, mirror: 1 };
         const best = mirrorTrait(c.traits);
-        g.logMsg(`${capital(name)} used on ${c.name}: ${best ? mirrorNames(best) : 'nothing'} to its next young.`, 'event');
+        g.logMsg(`${capital(name)} used on ${c.name}: ${best ? mirrorNames(best) : 'nothing'} to its next young.`, 'wildermon');
       } else if (id === 'use_ancient_brace') {
         // One more use, `BRACE_STEP` more action speed, up to `BRACE_MOST`.
         const n = bracePoints(c) + 1;
         c.boosts = { ...c.boosts, brace: n };
-        g.logMsg(`${capital(name)} used on ${c.name}: action speed +${percent(BRACE_STEP * n)} (${n}/${BRACE_MOST}).`, 'event');
+        g.logMsg(`${capital(name)} used on ${c.name}: action speed +${percent(BRACE_STEP * n)} (${n}/${BRACE_MOST}).`, 'wildermon');
       } else if (id === 'use_ancient_collar' || id === 'use_ancient_bridle') {
         // Fitted once and for good, beside the pot points (`fitted`).
         const collar = id === 'use_ancient_collar';
         c.boosts = { ...c.boosts, [collar ? 'collar' : 'bridle']: 1 };
         g.logMsg(collar
           ? `${capital(name)} fitted on ${c.name}: upkeep −${percent(COLLAR_CUT)}.`
-          : `${capital(name)} fitted on ${c.name}: speed ridden and in a team +${percent(BRIDLE_PACE)}.`, 'event');
+          : `${capital(name)} fitted on ${c.name}: speed ridden and in a team +${percent(BRIDLE_PACE)}.`, 'wildermon');
       } else if (id === 'use_ancient_lamp') {
         // Its lowest-tier trait, or an empty slot, at that tier or one time in `LAMP_TIER_ODDS` the tier above.
         const lit = rekindle(c.traits, g.rand);
         if (lit) c.traits = lit.traits;
         // A trait rekindled, for the journal (the island's `perform_artifact` the same).
         if (lit) g.note('rekindled');
-        g.logMsg(lit ? lampSays(c, name, lit.did) : `${capital(name)} used on ${c.name}: nothing kindled.`, 'event');
+        g.logMsg(lit ? lampSays(c, name, lit.did) : `${capital(name)} used on ${c.name}: nothing kindled.`, 'wildermon');
       } else {
         // A stat not yet at the most it takes, any of them as likely as another.
         const room = potRoom(c);
         const stat = room[Math.floor(g.rand() * room.length)];
         const points = potPoints(c, stat) + 1;
         c.boosts = { ...c.boosts, [stat]: points };
-        g.logMsg(`${capital(name)} used on ${c.name}: ${BASE_STATS.find((s) => s.id === stat)?.name.toLowerCase()} ${potSays(stat, points)}.`, 'event');
+        g.logMsg(`${capital(name)} used on ${c.name}: ${BASE_STATS.find((s) => s.id === stat)?.name.toLowerCase()} ${potSays(stat, points)}.`, 'wildermon');
       }
       g.events.emit('creature');
     },
@@ -400,14 +400,14 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         }
         const warm = coaxBonus(c, g.time, coaxStep(g));
         const used = warm > 0 ? ` Offerings taken: ${c.coaxed}, next +${(warm * 100).toFixed(0)}% chance.` : '';
-        g.logMsg(`Wild ${c.rare ? `${rarityOf(c).name} ` : ''}${def.name.toLowerCase()}: ${def.description ? `${def.description} ` : ''}Eats: ${dietText(c)}.${used}${raritySays(c)}`, 'event');
+        g.logMsg(`Wild ${c.rare ? `${rarityOf(c).name} ` : ''}${def.name.toLowerCase()}: ${def.description ? `${def.description} ` : ''}Eats: ${dietText(c)}.${used}${raritySays(c)}`, 'wildermon');
         return;
       }
       const mood = c.hunger < 0.3 ? 'Hungry.' : c.hunger < 0.6 ? 'Peckish.' : 'Fed.';
       const skills = Object.entries(c.skills).map(([id, v]) => `${id} ${v.toFixed(1)}`).join(', ');
       const range = c.mode === 'deed' && def.gathers ? ` Range: ${workRangeOf(c, def)} tiles from the totem.` : '';
       const desc = kindDescription(c);
-      g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${g.creatures.describe(c)}): ${desc ? `${desc} ` : ''}Level ${creatureLevel(c)}: ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. Care: ${careWord(c.care)}. Traits: ${traitList(c.traits)}.${raritySays(c)}${range} ${mood} Eats: ${dietText(c)}.${studBook(g, c)}`, 'event');
+      g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${g.creatures.describe(c)}): ${desc ? `${desc} ` : ''}Level ${creatureLevel(c)}: ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. Care: ${careWord(c.care)}. Traits: ${traitList(c.traits)}.${raritySays(c)}${range} ${mood} Eats: ${dietText(c)}.${studBook(g, c)}`, 'wildermon');
     },
   },
   {
@@ -436,7 +436,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c || c.mode !== 'wild') return;
       const def = SPECIES[c.species];
       if (!nearPlayer(g, c)) {
-        g.logMsg(`${def.name} moved out of reach.`, 'event');
+        g.logMsg(`${def.name} moved out of reach.`, 'wildermon');
         return;
       }
       const food = offering(g, c);
@@ -463,10 +463,10 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         const crate = g.creatures.active() ? emptyCrate(g) : undefined;
         if (crate) {
           shutIn(g, c, crate);
-          g.logMsg(`Tamed: ${c.name}. In the wildermon crate in your pack.`, 'system');
+          g.logMsg(`Tamed: ${c.name}. In the wildermon crate in your pack.`, 'wildermon');
         } else {
           c.mode = 'active';
-          g.logMsg(`Tamed: ${c.name}. Follows you.`, 'system');
+          g.logMsg(`Tamed: ${c.name}. Follows you.`, 'wildermon');
         }
         forgetCoaxing(c);
         g.note('tamed');
@@ -481,7 +481,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         c.coaxedAt = g.time;
         const won = coaxBonus(c, g.time, coaxStep(g));
         const warming = won > 0 ? ` Next offering +${(won * 100).toFixed(0)}% chance.` : '';
-        g.logMsg(`Taming failed.${warming}`, 'event');
+        g.logMsg(`Taming failed.${warming}`, 'wildermon');
         g.gainSkill('taming', tryGain(false, TAME_GAIN * tameLearn(c)));
         g.gainSkill('soul_strength', tryGain(false, TAME_NERVE));
         g.gainSkill('mind_logic', tryGain(false, TAME_HEAD));
@@ -519,7 +519,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c || c.fleece < SHEAR_FROM) return;
       if (!nearPlayer(g, c)) {
-        g.logMsg(`${c.name} moved out of reach.`, 'event');
+        g.logMsg(`${c.name} moved out of reach.`, 'wildermon');
         return;
       }
       // A full fleece is three, a half-grown one is one, and quality follows the fleece.
@@ -534,7 +534,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       g.creatures.learnBy(g, c, 'tended');
       g.gainSkill('tailoring', 0.4);
       g.gainSkill('taming', 0.1);
-      g.logMsg(`${yields === 'wool' ? 'Sheared' : 'Plucked'} ${c.name}: ${n} ${itemDef(yields).name.toLowerCase()}, QL ${wool.ql.toFixed(1)}.`, 'event');
+      g.logMsg(`${yields === 'wool' ? 'Sheared' : 'Plucked'} ${c.name}: ${n} ${itemDef(yields).name.toLowerCase()}, QL ${wool.ql.toFixed(1)}.`, 'wildermon');
     },
   },
   {
@@ -572,7 +572,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         g.inventory.remove(food.uid, 1);
       }
       c.hunger = Math.min(1, c.hunger + fill);
-      g.logMsg(said, 'event');
+      g.logMsg(said, 'wildermon');
     },
   },
   {
@@ -590,7 +590,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c || !isCreature(t) || !t.stance) return;
       c.stance = t.stance;
       c.enemy = null;
-      g.logMsg(`${c.name} stance: ${STANCE_NAMES[t.stance].toLowerCase()}.`, 'info');
+      g.logMsg(`${c.name} stance: ${STANCE_NAMES[t.stance].toLowerCase()}.`, 'wildermon');
     },
   },
   /*
@@ -642,7 +642,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c) return;
       c.enemy = null;
       c.heelUntil = g.time + FALL_BACK;
-      g.logMsg(`${c.name} falls back: no new fights for ${FALL_BACK} seconds.`, 'info');
+      g.logMsg(`${c.name} falls back: no new fights for ${FALL_BACK} seconds.`, 'wildermon');
     },
   },
   {
@@ -688,7 +688,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       c.enemy = null;
       c.state = 'idle';
       c.until = g.time;
-      g.logMsg(`${c.name} assigned: ${deedJobLine(c)}.`, 'system');
+      g.logMsg(`${c.name} assigned: ${deedJobLine(c)}.`, 'wildermon');
     },
   },
   {
@@ -721,7 +721,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       c.enemy = null;
       c.state = 'idle';
       c.until = g.time;
-      g.logMsg(`${c.name} follows you.`, 'system');
+      g.logMsg(`${c.name} follows you.`, 'wildermon');
       // The one that was following you takes its place, on the deed or in a crate.
       if (swap && swap.to === 'deed') {
         const was = swap.current;
@@ -730,12 +730,12 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         was.enemy = null;
         was.state = 'idle';
         was.until = g.time;
-        g.logMsg(`${was.name} assigned in its place: ${deedJobLine(was)}.`, 'info');
+        g.logMsg(`${was.name} assigned in its place: ${deedJobLine(was)}.`, 'wildermon');
       } else if (swap) {
         const into = emptyCrate(g);
         if (into) {
           shutIn(g, swap.current, into);
-          g.logMsg(`${swap.current.name}: into the wildermon crate in your pack.`, 'info');
+          g.logMsg(`${swap.current.name}: into the wildermon crate in your pack.`, 'wildermon');
         }
       }
     },
@@ -940,7 +940,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const name = ((t as { name?: string }).name ?? '').trim();
       if (!name) return;
       c.name = name.slice(0, 24);
-      g.logMsg(`Renamed: ${c.name}.`, 'info');
+      g.logMsg(`Renamed: ${c.name}.`, 'wildermon');
     },
   },
   {
@@ -995,7 +995,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         g.note(`milked:${c.species}`);
         g.creatures.learnBy(g, c, 'tended');
         g.gainSkill('farming', 0.3);
-        g.logMsg(milkedSays(c.name, now, made), 'event');
+        g.logMsg(milkedSays(c.name, now, made), 'wildermon');
         return;
       }
       const bucket = g.inventory.find('bucket');
@@ -1012,7 +1012,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       g.note(`milked:${c.species}`);
       g.creatures.learnBy(g, c, 'tended');
       g.gainSkill('farming', 0.3);
-      g.logMsg(milkedSays(c.name, litres, ql, !!spare), 'event');
+      g.logMsg(milkedSays(c.name, litres, ql, !!spare), 'wildermon');
     },
   },
   // ---- The saddle: tack fitted, and a rider up. ----
@@ -1055,7 +1055,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       else delete c.tack;
       if (Object.keys(enchants).length) c.tackEnchant = enchants;
       else delete c.tackEnchant;
-      g.logMsg(`Saddled and bridled: ${c.name}.`, 'event');
+      g.logMsg(`Saddled and bridled: ${c.name}.`, 'wildermon');
     },
   },
   {
@@ -1083,7 +1083,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const shoes = g.inventory.find('horseshoe');
       if (!shoes || !g.inventory.remove(shoes.uid, SHOES_PER_MOUNT)) return;
       c.shodAt = g.time;
-      g.logMsg(`Shod: ${c.name}, ${SHOE_DAYS} days. Faster on stone, climbs steeper.`, 'event');
+      g.logMsg(`Shod: ${c.name}, ${SHOE_DAYS} days. Faster on stone, climbs steeper.`, 'wildermon');
     },
   },
   {
@@ -1108,7 +1108,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       for (const id of TACK) g.inventory.add(id, { ql: 40, ...(c.tack?.[id] ? { mark: c.tack[id] } : {}), ...(c.tackEnchant?.[id] ? { enchant: c.tackEnchant[id] } : {}) });
       delete c.tack;
       delete c.tackEnchant;
-      g.logMsg(`Tack removed: ${c.name}.`, 'event');
+      g.logMsg(`Tack removed: ${c.name}.`, 'wildermon');
     },
   },
   {
@@ -1136,7 +1136,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c || !g.mount(c)) return;
       g.note('mounted');
-      g.logMsg(`Mounted: ${c.name}.`, 'event');
+      g.logMsg(`Mounted: ${c.name}.`, 'wildermon');
     },
   },
   {
@@ -1151,7 +1151,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c) return;
       g.dismount();
-      g.logMsg(`Dismounted: ${c.name}.`, 'event');
+      g.logMsg(`Dismounted: ${c.name}.`, 'wildermon');
     },
   },
   // ---- The traces: a wildermon put to a cart or a wagon. ----
@@ -1208,7 +1208,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       g.note('hitched');
       // A whole team in it, for the journal's cart and wagon (the island's `perform_ride` the same).
       if (v && filled >= v.needs) g.note(`team:${f.kind}`);
-      g.logMsg(`Hitched${crated ? ' from the crate' : ''}: ${c.name} to the ${furnitureName(f).toLowerCase()}, ${filled}/${v?.yokes ?? 0} yokes.${short}`, 'event');
+      g.logMsg(`Hitched${crated ? ' from the crate' : ''}: ${c.name} to the ${furnitureName(f).toLowerCase()}, ${filled}/${v?.yokes ?? 0} yokes.${short}`, 'wildermon');
     },
   },
   {
@@ -1230,7 +1230,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const f = g.vehicleOfCreature(c);
       const out = teamOut(g, [c]);
       g.unhitch(c);
-      g.logMsg(`Unhitched: ${c.name} from the ${f ? furnitureName(f).toLowerCase() : 'traces'}.${crateTheRest(g, out)}`, 'event');
+      g.logMsg(`Unhitched: ${c.name} from the ${f ? furnitureName(f).toLowerCase() : 'traces'}.${crateTheRest(g, out)}`, 'wildermon');
     },
   },
   {
@@ -1319,7 +1319,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       c.enemy = null;
       const was = c.name;
       c.name = SPECIES[c.species].name;
-      g.logMsg(`Released: ${was}.`, 'system');
+      g.logMsg(`Released: ${was}.`, 'wildermon');
     },
   },
   artifactAction('use_bronze_mirror', 'Mirror it with the bronze mirror', 'mirroring it'),

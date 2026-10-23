@@ -278,7 +278,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       g.gainSkill(HUSBANDRY, 0.4);
       g.note('groom');
       if (c.care >= 0.995) g.note('groomfull');
-      g.logMsg(`Brushed ${c.name}: ${careWord(c.care)}.`, 'event');
+      g.logMsg(`Brushed ${c.name}: ${careWord(c.care)}.`, 'wildermon');
       g.events.emit('creature');
     },
   },

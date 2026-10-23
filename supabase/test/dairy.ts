@@ -108,7 +108,7 @@ const charges = (def: string): string =>
   `coalesce((select string_agg(coalesce(charges::int::text, '-'), ',' order by id) from item where world_id = w and holder_uid = u and def = '${def}'), '-')`;
 const ql = (def: string): string =>
   `coalesce((select string_agg(round(ql::numeric, 2)::text, ',' order by id) from item where world_id = w and holder_uid = u and def = '${def}'), '-')`;
-const lastSaid = "(select e.text from event e where e.world_id = w and e.uid = u and e.kind = 'event' and e.text like 'Milked %' order by e.n desc limit 1)";
+const lastSaid = "(select e.text from event e where e.world_id = w and e.uid = u and e.kind = 'wildermon' and e.text like 'Milked %' order by e.n desc limit 1)";
 const milkAt = (v: string): string => `jsonb_build_object('kind', 'creature', 'id', ${v})`;
 const refusal = (v: string): string => `coalesce(act_refusal(w, u, 'milk_creature', ${milkAt(v)}), 'none')`;
 const feed = (v: string, fleece: number, hunger: number): string =>

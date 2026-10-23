@@ -830,7 +830,7 @@ export class Game {
     if (this.acting !== this.local || !guideMarks(species).includes(what)) return;
     const fresh = this.guide.mark(species, what);
     if (!fresh.length) return;
-    if (fresh.includes('seen')) this.logMsg(this.guideSeenLine(species), 'event');
+    if (fresh.includes('seen')) this.logMsg(this.guideSeenLine(species), 'wildermon');
     this.events.emit('guide');
   }
 
@@ -858,7 +858,7 @@ export class Game {
     for (const id of added) {
       if (!guideMarks(id).length || !this.guide.mark(id, 'seen').length) continue;
       changed = true;
-      this.logMsg(this.guideSeenLine(id), 'event');
+      this.logMsg(this.guideSeenLine(id), 'wildermon');
     }
     if (changed) this.events.emit('guide');
   }
@@ -889,7 +889,7 @@ export class Game {
       // A wild one that is rare or in a wild form, said once as it comes into view.
       if (c.mode === 'wild' && (c.rare || formsOf(c).length) && !this.sighted.has(c.id) && this.vision.isWatched(c.x, c.y)) {
         this.sighted.add(c.id);
-        this.logMsg(sightedLine(c, this.player.x, this.player.y), 'event');
+        this.logMsg(sightedLine(c, this.player.x, this.player.y), 'wildermon');
       }
       // Its kind's page, and its stage's where it is past its first (`stageKey`).
       // And each wild form it is in (`formKey`).
@@ -2539,7 +2539,7 @@ export class Game {
       c.enemy = null;
       n++;
     }
-    this.logMsg(`${this.deed.name} wildermon stance: ${stance}${n ? ` (${n} changed)` : ''}.`, 'system');
+    this.logMsg(`${this.deed.name} wildermon stance: ${stance}${n ? ` (${n} changed)` : ''}.`, 'wildermon');
     this.events.emit('creature');
   }
 
@@ -6780,14 +6780,14 @@ export class Game {
     const into = emptyCrate(this);
     if (!this.creatures.active()) {
       c.mode = 'active';
-      this.logMsg(`Post ${why}: ${c.name} returns to you.`, 'system');
+      this.logMsg(`Post ${why}: ${c.name} returns to you.`, 'wildermon');
     } else if (this.deed) {
       // Back to the settlement it came from, as the island has it.
       c.mode = 'deed';
-      this.logMsg(`Post ${why}: ${c.name} back to work at ${this.deed.name}.`, 'system');
+      this.logMsg(`Post ${why}: ${c.name} back to work at ${this.deed.name}.`, 'wildermon');
     } else if (into) {
       shutIn(this, c, into);
-      this.logMsg(`Post ${why}: ${c.name} into the wildermon crate in your pack.`, 'system');
+      this.logMsg(`Post ${why}: ${c.name} into the wildermon crate in your pack.`, 'wildermon');
     } else {
       c.mode = 'wild';
       this.logMsg(`Post ${why}: no settlement, no empty wildermon crate, active slot taken. ${c.name} went wild.`, 'error');
@@ -8030,7 +8030,7 @@ export class Game {
     this.markProspected(found);
     if (this.time - by.noRoomAt < 30) return;
     by.noRoomAt = this.time;
-    this.logMsg(`${by.name} found ore: ${[...names].join(', ')}.`, 'event');
+    this.logMsg(`${by.name} found ore: ${[...names].join(', ')}.`, 'wildermon');
   }
 
   /**

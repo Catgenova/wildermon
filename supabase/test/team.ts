@@ -55,7 +55,7 @@ const crate = (v: string): string => `jsonb_build_object('kind', 'item', 'uid', 
 const wagon = "jsonb_build_object('kind', 'furniture', 'id', v_wagon)";
 const said = (k: string, v: string): string => `insert into said values ('${k}', coalesce((${v})::text, 'none'));`;
 const told = (k: string): string =>
-  `insert into said select '${k}', coalesce(string_agg(text, ' / ' order by n), 'nothing') from event where world_id = w and uid = u and kind in ('event', 'error', 'system'); delete from event where world_id = w and uid = u;`;
+  `insert into said select '${k}', coalesce(string_agg(text, ' / ' order by n), 'nothing') from event where world_id = w and uid = u and kind in ('event', 'error', 'system', 'wildermon'); delete from event where world_id = w and uid = u;`;
 
 const out = psql(`
 discard temp;

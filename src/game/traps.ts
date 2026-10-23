@@ -355,10 +355,10 @@ export const TRAP_ACTIONS: ActionDef[] = [
       const crate = g.creatures.active() ? emptyCrate(g) : undefined;
       if (crate) {
         shutIn(g, c, crate);
-        g.logMsg(`Taken: ${s?.name.toLowerCase() ?? 'catch'}, into the wildermon crate in your pack.`, 'event');
+        g.logMsg(`Taken: ${s?.name.toLowerCase() ?? 'catch'}, into the wildermon crate in your pack.`, 'wildermon');
       } else {
         c.mode = 'active';
-        g.logMsg(`Taken: ${s?.name.toLowerCase() ?? 'catch'}. Follows you.`, 'event');
+        g.logMsg(`Taken: ${s?.name.toLowerCase() ?? 'catch'}. Follows you.`, 'wildermon');
       }
       g.note('trapped');
       // Won over as surely as by hand, and by the same taming: the field guide

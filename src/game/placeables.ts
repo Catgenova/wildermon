@@ -696,7 +696,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f || g.teamOutRefusal(f)) return;
       const { n, said } = g.teamOut(f);
-      g.logMsg(`Unhitched: ${n} from the ${furnitureName(f).toLowerCase()}.${said}`, 'event');
+      g.logMsg(`Unhitched: ${n} from the ${furnitureName(f).toLowerCase()}.${said}`, 'wildermon');
     },
   },
   // ---- Wells and barrels. ----

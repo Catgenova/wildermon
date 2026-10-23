@@ -8503,7 +8503,7 @@ export class Creatures {
       const now = Math.min(FIRE_CAPACITY, fuel + per);
       set(now, lit || now > 0);
       this.gainSkill(game, c, GATHER_SKILL.stoke, 0.2);
-      if (!lit) game.logMsg(`${c.name} relit the ${what}.`, 'event');
+      if (!lit) game.logMsg(`${c.name} relit the ${what}.`, 'wildermon');
     };
     if (c.job === 'campfire') {
       const f = [...game.campfires.values()].find((k) => Math.floor(fireCentre(k)[0]) === c.workX && Math.floor(fireCentre(k)[1]) === c.workY);
@@ -8766,7 +8766,7 @@ export class Creatures {
       c.boosts = Object.keys(rest).length ? rest : undefined;
       const id = mirrorTrait(c.traits);
       if (id) {
-        game.logMsg(`Bronze mirror: ${mirrorNames(id)} from ${c.name} to the young. Mark used up.`, 'event');
+        game.logMsg(`Bronze mirror: ${mirrorNames(id)} from ${c.name} to the young. Mark used up.`, 'wildermon');
         // A mirror used on a pairing, for the journal (the island's `pair_them` the same).
         game.note('mirrored');
       }
@@ -8834,7 +8834,7 @@ export class Creatures {
     c.care = 0.5;
     c.health = maxHealth(c, def);
     if (crate) shutIn(game, c, crate);
-    game.logMsg(`Born to ${dam.name}: ${SEX_NAMES[c.sex]} ${def.name.toLowerCase()}, ${traitList(c.traits)}.${mutationSaid(coming.from)}${where}`, 'event');
+    game.logMsg(`Born to ${dam.name}: ${SEX_NAMES[c.sex]} ${def.name.toLowerCase()}, ${traitList(c.traits)}.${mutationSaid(coming.from)}${where}`, 'wildermon');
     game.note('bred');
     // A page of the field guide, for a young one born to a dam somebody keeps:
     // one let go before her hour drops hers in the wild, and it is nobody's.
@@ -9002,7 +9002,7 @@ export class Creatures {
     c.xp += gain;
     // What a worker learns at work is counted to its ledger (`worker_learn`).
     if (c.mode === 'deed' && c.skills[id] > v) this.toLedger(game, c, { skill: c.skills[id] - v });
-    if (creatureLevel(c) > before) game.logMsg(`${c.name}: level ${creatureLevel(c)}.`, 'skill');
+    if (creatureLevel(c) > before) game.logMsg(`${c.name}: level ${creatureLevel(c)}.`, 'wildermon');
     // And evolves, at a level a stage begins at: what it can take grows with it, as full as it was (`EVOLVE_AT`).
     const stage = stageOf(c);
     const was = stageOf({ species: c.species, skills: { ...c.skills, [id]: v } });
@@ -9010,7 +9010,7 @@ export class Creatures {
       c.health *= STAGE_MUL.hardy ?? 1;
       // And a trait for each slot the stage opens (`stageSlots`), by its keeper's husbandry: you, for one of yours.
       openSlots(c, was, stage, c.mode === 'wild' ? 0 : game.skills.get('animal_husbandry'), game.rand);
-      if (c.mode !== 'wild') game.logMsg(`${c.name} evolved: ${kindName(c)}.`, 'skill');
+      if (c.mode !== 'wild') game.logMsg(`${c.name} evolved: ${kindName(c)}.`, 'wildermon');
       // Each stage reached by one of yours, for the journal (the island's `worker_learn_paced` the same).
       if (c.mode !== 'wild' && c.mine !== false) for (let st = was + 1; st <= stage; st++) game.note(`evolved:${st}`);
       // And one nobody has named is called what it has become (`kindNamed`).
@@ -9020,7 +9020,7 @@ export class Creatures {
     }
     const def = this.species(c);
     if (c.mode === 'deed' && id === workSkill(def) && rangeSteps(c.skills[id]) > beforeSteps) {
-      game.logMsg(`${c.name}: work range ${workRangeOf(c, def)} tiles.`, 'skill');
+      game.logMsg(`${c.name}: work range ${workRangeOf(c, def)} tiles.`, 'wildermon');
     }
     return gain;
   }
@@ -9822,7 +9822,7 @@ export class Creatures {
             if (it.count <= 0) larder.items.splice(idx, 1);
             larder.changed();
             c.hunger = Math.min(1, c.hunger + 0.5);
-            game.logMsg(`${c.name} ate ${itemDef(it.id).name.toLowerCase()} from the ${larder.name.toLowerCase()}.`, 'event');
+            game.logMsg(`${c.name} ate ${itemDef(it.id).name.toLowerCase()} from the ${larder.name.toLowerCase()}.`, 'wildermon');
           }
         } else this.stepToward(game, c, lx, ly, dt);
         return;
@@ -10364,7 +10364,7 @@ export class Creatures {
   /** A use's wear on the wildermon gear in a slot (`wearGear`), said to its keeper when it falls apart. The island's `gear_wear`. */
   wearGear(game: Game, c: Creature, slot: GearSlot): void {
     const it = c.gear?.[slot];
-    if (it && wearGear(c, slot) && c.mine !== false) game.logMsg(gearGoneSays(c, it), 'event');
+    if (it && wearGear(c, slot) && c.mine !== false) game.logMsg(gearGoneSays(c, it), 'wildermon');
   }
 
   /** Deal damage from a creature or the player; timid wild creatures bolt, and a kill leaves a corpse. */

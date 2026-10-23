@@ -178,7 +178,7 @@ export const POST_ACTIONS: ActionDef[] = [
       const reach = Math.min(workRangeOf(c, def), postRadius(p.ql));
       const job = def.gathers ? `${GATHER_DO[def.gathers]} within ${reach} tiles of the post` : 'keep to the post';
       g.note('posted');
-      g.logMsg(`${c.name} will ${job} while it stands. (${postState(p, postKeep(g))})`, 'system');
+      g.logMsg(`${c.name} will ${job} while it stands. (${postState(p, postKeep(g))})`, 'wildermon');
       g.events.emit('creature');
     },
   },

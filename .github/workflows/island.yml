@@ -4264,6 +4264,19 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/benefit.mjs --log-level=error
           node node_modules/.cache/benefit.mjs
 
+      - name: A Wildermon tab, and a line there for each worker's finished work
+        if: matrix.shard == 6
+        run: |
+          # The log has a Wildermon tab keeping kind wildermon; a tame, a crate
+          # shut and opened, a load put away, an evolution and a birth each tell
+          # the keeper as wildermon on the island, a refusal stays an error; a
+          # load put away says what was stored in the browser's words
+          # (work_done_line, workDoneLine); and the functions about wildermon
+          # alone say nothing by plain tell.
+          npx esbuild supabase/test/wildermontab.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/wildermontab.mjs --log-level=error
+          node node_modules/.cache/wildermontab.mjs
+
       - name: The doors, as the security advisors read them
         if: matrix.shard == 6
         run: |

@@ -26,11 +26,12 @@ function stamp(t: number): string {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** The tabs along the top of the log, and which kinds of line each keeps. */
-const TABS: Array<{ id: string; label: string; title: string; kinds: LogKind[] | null }> = [
+/** The tabs along the top of the log, and which kinds of line each keeps. Exported for `supabase/test/wildermontab.ts`. */
+export const TABS: Array<{ id: string; label: string; title: string; kinds: LogKind[] | null }> = [
   { id: 'all', label: 'All', title: 'All messages', kinds: null },
   { id: 'event', label: 'Work', title: 'Work results', kinds: ['event', 'info'] },
   { id: 'fight', label: 'Combat', title: 'Combat: blows dealt and taken, threats', kinds: ['fight'] },
+  { id: 'wildermon', label: 'Wildermon', title: 'Wildermon: taming, crates, posts, tack, gear, breeding, evolving, settlement work, sightings', kinds: ['wildermon'] },
   { id: 'skill', label: 'Skills', title: 'Skill gains', kinds: ['skill'] },
   { id: 'chat', label: 'Talk', title: 'Chat and system messages', kinds: ['chat', 'system'] },
   { id: 'error', label: 'Trouble', title: 'Errors and refusals', kinds: ['error'] },

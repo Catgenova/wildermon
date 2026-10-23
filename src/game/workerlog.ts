@@ -268,3 +268,29 @@ export function ledgerLines(l: WorkLedger | null | undefined, day: number, skill
   const { today, last } = ledgerDays(l, day);
   return [ledgerSays('This island day', today, skill), ledgerSays('Last island day', last, skill)].filter((s) => !!s);
 }
+
+/* ---- Work done, in the log --------------------------------------------------- */
+
+/**
+ * What one worker finished in one settling of its work, by the item and its count: `stored` is what it put into
+ * the settlement's stores (a load put away, honey and beeswax into its hive), `handled` what an errand took from its
+ * arms. The same counts as its ledger (`ledger_add`).
+ */
+export interface WorkDone {
+  stored?: Record<string, number>;
+  handled?: Record<string, number>;
+}
+
+/** Things by the item, in item-id order: "12 × log, 3 × stone". */
+const doneList = (things: Record<string, number> | undefined): string =>
+  Object.entries(things ?? {}).filter(([, n]) => n > 0).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .map(([id, n]) => `${n} × ${itemDef(id).name.toLowerCase()}`).join(', ');
+
+/**
+ * The Wildermon tab's line for a worker's finished work, to its keeper: "Snack: stored 12 × log; handled 4 × brick."
+ * Empty for nothing done. The island's `work_done_line`, word for word.
+ */
+export function workDoneLine(name: string, did: WorkDone): string {
+  const parts = [['stored', doneList(did.stored)], ['handled', doneList(did.handled)]].filter(([, s]) => s);
+  return parts.length ? `${name}: ${parts.map(([k, s]) => `${k} ${s}`).join('; ')}.` : '';
+}

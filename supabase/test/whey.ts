@@ -86,7 +86,7 @@ const DIET = SPECIES[BEAST].diet[0];
 const count = (def: string): string => `coalesce((select sum(count) from item where world_id = w and holder_uid = u and def = '${def}'), 0)`;
 const qlOf = (def: string): string =>
   `coalesce((select string_agg(round(ql::numeric, 2)::text, ',' order by id) from item where world_id = w and holder_uid = u and def = '${def}'), '-')`;
-const lastSaid = "(select e.text from event e where e.world_id = w and e.uid = u and e.kind = 'event' order by e.n desc limit 1)";
+const lastSaid = "(select e.text from event e where e.world_id = w and e.uid = u and e.kind in ('event', 'wildermon') order by e.n desc limit 1)";
 const at = "jsonb_build_object('kind', 'creature', 'id', v_c)";
 const hunger = "(select round(hunger::numeric, 6)::text from creature where world_id = w and id = v_c)";
 const packSql = `${count('bucket')} || '|' || ${count(WHEY_BUCKET)} || '|' || ${count(DIET)}`;

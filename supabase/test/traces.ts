@@ -285,7 +285,7 @@ begin
   update player set act_ends = now() - interval '1 second' where world_id = w and uid = a and act is not null;
   perform settle(w, a);
   insert into said select 'told', coalesce(string_agg(text, ' / ' order by n), 'nothing')
-    from event where world_id = w and uid = a and kind in ('info', 'event', 'error');
+    from event where world_id = w and uid = a and kind in ('info', 'event', 'error', 'wildermon');
   perform act_perform(w, a, 'hitch_creature', jsonb_build_object('kind', 'creature', 'id', v_hand));
   -- And a hitch that cannot happen by the time it is done says why.
   delete from event where world_id = w and uid = a;

@@ -290,7 +290,7 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
       const crate = emptyCrate(g);
       if (!c || !crate || (c.mode !== 'active' && c.mode !== 'deed')) return;
       shutIn(g, c, crate);
-      g.logMsg(`${c.name}: into the wildermon crate.`, 'system');
+      g.logMsg(`${c.name}: into the wildermon crate.`, 'wildermon');
     },
   },
   {
@@ -321,9 +321,9 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
       c.enemy = null;
       if (current && current !== c) {
         shutIn(g, current, at.crate);
-        g.logMsg(`${c.name} out of the crate, follows you. ${current.name} into the crate in its place.`, 'system');
+        g.logMsg(`${c.name} out of the crate, follows you. ${current.name} into the crate in its place.`, 'wildermon');
       } else {
-        g.logMsg(`${c.name} out of the crate, follows you.`, 'system');
+        g.logMsg(`${c.name} out of the crate, follows you.`, 'wildermon');
       }
     },
   },
@@ -360,7 +360,7 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
       c.mode = 'deed';
       c.trade = null;
       c.enemy = null;
-      g.logMsg(`${c.name} out of the crate, assigned: ${deedJobLine(c)}.`, 'system');
+      g.logMsg(`${c.name} out of the crate, assigned: ${deedJobLine(c)}.`, 'wildermon');
     },
   },
 ];

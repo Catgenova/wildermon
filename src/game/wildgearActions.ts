@@ -90,7 +90,7 @@ function fitAction(slot: GearSlot): ActionDef {
       if (!it || !g.inventory.remove(it.uid, 1)) return;
       const on: Item = { ...it, count: 1 };
       c.gear = { ...c.gear, [slot]: on };
-      g.logMsg(fittedSays(c, slot, on), 'event');
+      g.logMsg(fittedSays(c, slot, on), 'wildermon');
       g.events.emit('creature');
       g.events.emit('inventory');
     },
@@ -113,7 +113,7 @@ function unfit(g: Game, c: Creature, slot: GearSlot): Item | undefined {
 export function takeGear(g: Game, c: Creature): void {
   for (const slot of GEAR_SLOTS) {
     const it = unfit(g, c, slot);
-    if (it) g.logMsg(removedSays(c, it), 'event');
+    if (it) g.logMsg(removedSays(c, it), 'wildermon');
   }
 }
 
@@ -134,7 +134,7 @@ function removeAction(slot: GearSlot): ActionDef {
       if (!c || removeRefusal(g, c, slot)) return;
       const it = unfit(g, c, slot);
       if (!it) return;
-      g.logMsg(removedSays(c, it), 'event');
+      g.logMsg(removedSays(c, it), 'wildermon');
       g.events.emit('creature');
       g.events.emit('inventory');
     },

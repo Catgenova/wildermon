@@ -147,7 +147,7 @@ import { DARK_WALK, DARK_WORK, NIGHT_EYES_FROM, TRACK_AWARE } from '../../game/l
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
-import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
+import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
 import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
 import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
@@ -3518,6 +3518,14 @@ export const NEWS: News[] = [
     day: '2026-10-23',
     lines: () => [
       'Fixed: Mount refused "no saddle and bridle" on a saddled and bridled wildermon.',
+    ],
+  },
+  {
+    n: 286,
+    day: '2026-10-23',
+    lines: () => [
+      'Added: Wildermon tab in the event log: taming, crates, posts, tack, gear, relics used, breeding, births, evolving, sightings. Moved there from Talk and Work; refusals stay in Trouble, blows in Combat.',
+      `Added: Wildermon tab line to the keeper for each settlement worker's finished work: ${workDoneLine(SPECIES.bevere.name, { stored: { log: 12 } })} Stored: into settlement storage or a hive. Handled: used on an errand.`,
     ],
   },
 ];

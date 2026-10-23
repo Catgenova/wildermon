@@ -2,8 +2,11 @@
  * What sort of line it is, which is the tab of the log it lands on. `fight`
  * is every blow given and taken, what is coming for you, and what went down:
  * asked for as a combat log, and the island files its own lines the same way.
+ * `wildermon` is everything about wildermon short of a refusal or a blow:
+ * taming, crates, posts, work done on a settlement, gear, breeding, evolving,
+ * sightings (the island's `wtell`).
  */
-export type LogKind = 'info' | 'event' | 'skill' | 'error' | 'chat' | 'system' | 'fight';
+export type LogKind = 'info' | 'event' | 'skill' | 'error' | 'chat' | 'system' | 'fight' | 'wildermon';
 
 /** What a wildermon did, for its moves, its light and its voice. */
 export type BeastAct = 'strike' | 'work' | 'cast' | 'evolve';
