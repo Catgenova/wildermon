@@ -50,7 +50,7 @@ import { BANDAGE_GAIN, CLEAN_GAIN, DRESS_CHECK } from '../src/game/firstaid';
 import { SHOT_ARCHERY, SHOT_FIGHT, SWING_ARM, SWING_BODY, SWING_FIGHT, TAME_GAIN, TAME_NERVE } from '../src/game/creatureActions';
 import { BAIT_PULL, BAIT_SHY, HOOK_BAIT, HOOK_BASE, HOOK_MOST, NET_GAIN, NET_HAUL, NET_LEAST, ROD_GAIN } from '../src/game/fishing';
 import { BREED_GAIN } from '../src/game/husbandry';
-import { WEAPONS, ARMOUR, ARMOUR_CLASSES, SHIELDS, HIT_LOCATIONS } from '../src/game/gear';
+import { BAG_CARRY, WEAPONS, ARMOUR, ARMOUR_CLASSES, SHIELDS, HIT_LOCATIONS } from '../src/game/gear';
 import { WOUND_BY_WEAPON, WOUND_KINDS } from '../src/game/wounds';
 import { BUTCHER_PARTS, HOARD_METALS } from '../src/game/butcher';
 import { CRATE_DEFS } from '../src/game/crates';
@@ -1660,6 +1660,8 @@ for (const [fn, v] of [
   ['wild_stage_tame', WILD_STAGE_TAME], ['tame_hard', TAME_HARD], ['wild_stage_chance', WILD_STAGE_CHANCE], ['wild_stage_span', WILD_STAGE_SPAN],
   /* Climbing a tile ridden or pulled teaches a beast, on the flat, at most more on a slope, and the rise a point more takes. */
   ['haul_learn', HAUL_LEARN], ['haul_learn_steep', HAUL_LEARN_STEEP], ['haul_learn_rise', HAUL_LEARN_RISE],
+  /* A backpack on the back and a sack at the side: the share each adds to the carry limit at QL 100. */
+  ['bag_carry_backpack', BAG_CARRY.backpack], ['bag_carry_sack', BAG_CARRY.sack],
   /* Restored relics on a wildermon: the seconds into the younger stage an ancient comb leaves one, the odds of an ancient
      file's step of rarity, and what each ancient pot's point in a base stat is worth and how many a stat takes. */
   ['comb_into', COMB_INTO], ['file_rarity_odds', FILE_RARITY_ODDS], ['pot_step', POT_STEP], ['pot_most', POT_MOST],

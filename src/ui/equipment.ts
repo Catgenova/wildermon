@@ -134,7 +134,7 @@ export interface EquipReport {
 export const EMPTY_SAYS: Record<Slot, string> = {
   head: 'Empty', chest: 'Empty', arms: 'Empty', legs: 'Empty',
   feet: 'Empty', weapon: 'Fists', offhand: 'Empty', belt: 'No belt: 0 action loops',
-  jewel: 'Empty',
+  jewel: 'Empty', back: 'No backpack: carry limit ×1', side: 'No sack: carry limit ×1',
 };
 
 /** The game asked with one skill at another level: every rule that reads it reads that, everything else as it is. */

@@ -563,9 +563,9 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   quince: { name: 'Quince', category: 'food', weight: 0.25, stackable: true, food: 0.1, decay: 1.2, description: 'Grows on the Crescent.', feeds: { greens: 0.05 } },
   olive_oil: { name: 'Olive oil', category: 'food', weight: 0.4, stackable: true, food: 0.3, decay: 0.6, description: 'Barely rots.', feeds: { fat: 0.18 } },
   apple_pie: { name: 'Apple pie', category: 'food', weight: 0.9, stackable: true, food: 0.62, decay: 3, feeds: { starch: 0.22, greens: 0.2, fat: 0.1 } },
-  sack: { name: 'Sack', category: 'misc', weight: 0.4, decay: 8, holds: 40, shelter: 0.8, description: 'Holds {holds} things. Left on the ground: contents rot at {shelter:pct} of the rate.' },
+  sack: { name: 'Sack', category: 'misc', weight: 0.4, decay: 8, holds: 40, shelter: 0.8, description: 'Holds {holds} things. Worn (side): carry limit +{carry:pct} × QL%. Left on the ground: contents rot at {shelter:pct} of the rate.' },
   satchel: { name: 'Satchel', category: 'misc', weight: 1.2, decay: 4, holds: 25, shelter: 0.5, description: 'Holds {holds} things. Left on the ground: contents rot at {shelter:pct} of the rate.' },
-  backpack: { name: 'Backpack', category: 'misc', weight: 2.4, decay: 4, holds: 60, shelter: 0.4, description: 'Holds {holds} things. Left on the ground: contents rot at {shelter:pct} of the rate. A full one dropped at a work post keeps.' },
+  backpack: { name: 'Backpack', category: 'misc', weight: 2.4, decay: 4, holds: 60, shelter: 0.4, description: 'Holds {holds} things. Worn (back): carry limit +{carry:pct} × QL%. Left on the ground: contents rot at {shelter:pct} of the rate. A full one dropped at a work post keeps.' },
   work_post: { name: 'Work post', category: 'misc', weight: 5, decay: 4, description: 'Drive into open ground off your settlement. Stands {post.shortest:time} to {post.longest:time} by QL. One wildermon works from it as from a settlement; returns to you when it falls.' },
   fish_pond: { name: 'Fish pond', category: 'misc', weight: 60, decay: 2, description: 'Set on your settlement: stocks one fish per {every:time}, up to {pond}.' },
   // An Artisan's Potter's Wheel.

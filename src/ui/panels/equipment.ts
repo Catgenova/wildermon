@@ -50,6 +50,8 @@ const SLOT_BONE: Record<Slot, [string, V3]> = {
   offhand: ['wrist0', [0, 0, -0.6]],
   belt: ['chest', [0, 0, -2.6]],
   jewel: ['neck', [0, 0, 0]],
+  back: ['chest', [0, 0, 0.2]],
+  side: ['chest', [0, 0, -2.2]],
 };
 /** Which side each socket stands on: the places a blow lands on down the left, the rest (hands, belt, jewel) down the right. */
 const LEFT: Slot[] = ['head', 'chest', 'arms', 'legs', 'feet'];

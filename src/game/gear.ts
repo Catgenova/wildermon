@@ -10,9 +10,9 @@ import { matOf } from './materials';
  * and every kind of both trains a subskill of its own, by being used or by
  * being hit.
  */
-export type Slot = 'head' | 'chest' | 'arms' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel';
+export type Slot = 'head' | 'chest' | 'arms' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel' | 'back' | 'side';
 
-export const SLOTS: Slot[] = ['head', 'chest', 'arms', 'legs', 'feet', 'weapon', 'offhand', 'belt', 'jewel'];
+export const SLOTS: Slot[] = ['head', 'chest', 'arms', 'legs', 'feet', 'weapon', 'offhand', 'belt', 'jewel', 'back', 'side'];
 export const SLOT_NAMES: Record<Slot, string> = {
   head: 'Head',
   chest: 'Chest',
@@ -23,7 +23,17 @@ export const SLOT_NAMES: Record<Slot, string> = {
   offhand: 'Off hand',
   belt: 'Belt',
   jewel: 'Jewel',
+  back: 'Back',
+  side: 'Side',
 };
+
+/**
+ * A bag worn, and what it adds to the carry limit: a backpack on the back, a sack at the side, each its share here
+ * at QL 100 and that share times QL / 100 below it. Both may be worn. The island's `bag_carry`.
+ */
+export const BAG_CARRY: Record<string, number> = { backpack: 0.5, sack: 0.25 };
+export const bagCarry = (item: Pick<Item, 'id' | 'ql'> | undefined): number => (item ? (BAG_CARRY[item.id] ?? 0) * Math.min(100, item.ql) / 100 : 0);
+for (const [id, carry] of Object.entries(BAG_CARRY)) describeFrom(id, { carry });
 
 /** Where a blow lands, and how likely each is. */
 export const HIT_LOCATIONS: Array<[Slot, number]> = [
@@ -215,6 +225,8 @@ export function slotOf(id: string): Slot | null {
   if (isWeapon(id)) return 'weapon';
   if (isShield(id)) return 'offhand';
   if (id === 'toolbelt') return 'belt';
+  if (id === 'backpack') return 'back';
+  if (id === 'sack') return 'side';
   if (JEWEL_PIECES.includes(id)) return 'jewel';
   // An Artisan's circlet, in place of a helm.
   if (id === CIRCLET) return 'head';

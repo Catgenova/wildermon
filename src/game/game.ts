@@ -48,7 +48,7 @@ import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STE
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
 import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS, world } from './pace';
-import { ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_LOCATIONS, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
+import { ARMOUR_BY_ID, ARMOUR_CLASSES, bagCarry, HIT_LOCATIONS, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
 import { boonOf, boonTime, BOON_BONUS, clockLeft, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
 import { cleanSaid } from './chat';
 import { ALL_GOALS } from './journal';
@@ -2949,8 +2949,9 @@ export class Game {
     // And whatever a trade's perks add to it: a Terraformer's Strong Back.
     // And Power's Pack Mule.
     // And a Packmule on each pack carried (`pack_mule`).
-    return CARRY_BASE + this.skills.get('body_strength') * CARRY_PER_STRENGTH + this.perk('carry', 0) + this.pathFx('mule', 0)
-      + this.inventory.items.reduce((n, it) => n + swingEnchant(it, 'mule'), 0);
+    // And all of it by a backpack on the back and a sack at the side, by their QL (`bagCarry`).
+    return (CARRY_BASE + this.skills.get('body_strength') * CARRY_PER_STRENGTH + this.perk('carry', 0) + this.pathFx('mule', 0)
+      + this.inventory.items.reduce((n, it) => n + swingEnchant(it, 'mule'), 0)) * (1 + bagCarry(this.worn('back')) + bagCarry(this.worn('side')));
   }
 
   /** How far past the limit you are, 0 when you are inside it. */

@@ -40,6 +40,8 @@ export function gearFrom(raw: unknown): GearLook | undefined {
   const out: GearLook = {};
   let any = false;
   for (const slot of SLOTS) {
+    // A bag on the back or at the side is not drawn on the figure.
+    if (slot === 'back' || slot === 'side') continue;
     const v = (raw as Record<string, unknown>)[slot];
     if (!Array.isArray(v) || typeof v[0] !== 'string' || slotOf(v[0]) !== slot) continue;
     const rare = typeof v[1] === 'number' && Number.isInteger(v[1]) ? Math.max(0, Math.min(3, v[1])) : 0;

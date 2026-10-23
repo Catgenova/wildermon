@@ -3376,6 +3376,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/haulclimb.mjs --log-level=error
           node node_modules/.cache/haulclimb.mjs
 
+      - name: A bag worn carries more
+        if: matrix.shard == 4
+        run: |
+          # Asked for: "Equipping a backpack increases weight held by up to 50%,
+          # a sack 25%. Both can be equipped and QL determines what % bonus they
+          # apply." Back and Side slots on both sides, the carry limit times one
+          # and each worn bag's share times its QL / 100, and nothing for one
+          # carried and not worn.
+          npx esbuild supabase/test/bagcarry.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/bagcarry.mjs --log-level=error
+          node node_modules/.cache/bagcarry.mjs
+
       - name: The Bauble of Regret, and a trade undone
         if: matrix.shard == 5
         run: |

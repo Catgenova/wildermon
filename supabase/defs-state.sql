@@ -5588,6 +5588,8 @@ create or replace function wild_stage_span() returns double precision language s
 create or replace function haul_learn() returns double precision language sql immutable as $fn$ select 0.05::double precision $fn$;
 create or replace function haul_learn_steep() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
 create or replace function haul_learn_rise() returns double precision language sql immutable as $fn$ select 24::double precision $fn$;
+create or replace function bag_carry_backpack() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
+create or replace function bag_carry_sack() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
 create or replace function comb_into() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
 create or replace function file_rarity_odds() returns double precision language sql immutable as $fn$ select 20::double precision $fn$;
 create or replace function pot_step() returns double precision language sql immutable as $fn$ select 0.03::double precision $fn$;

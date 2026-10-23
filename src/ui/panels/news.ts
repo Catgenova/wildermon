@@ -57,6 +57,7 @@ import { LIGHT_RES, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/rend
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
+import { BAG_CARRY as BAG_CARRY_293 } from '../../game/gear';
 import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
@@ -3570,6 +3571,13 @@ export const NEWS: News[] = [
     day: '2026-10-23',
     lines: () => [
       'Fixed: market stalls. Anybody, settlement member or not: prices shown, Buy in the stall\'s menu and window. Owner: Set prices in the stall\'s menu.',
+    ],
+  },
+  {
+    n: 293,
+    day: '2026-10-23',
+    lines: () => [
+      `Added: Back and Side slots. Backpack worn on the back: carry limit +${percent(BAG_CARRY_293.backpack)}; sack at the side: +${percent(BAG_CARRY_293.sack)}. Each × QL%; both at once.`,
     ],
   },
 ];

@@ -1,3 +1,4 @@
+import { BAG_CARRY } from '../../game/gear';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { CELL, CLEAR_CELLS } from '../snapgrid';
 import { UPDATE_CHECK_MS } from '../update';
@@ -2465,6 +2466,7 @@ export function helpText(): string {
     <ul>
       <li>Carry limit: <b>${CARRY_BASE} kilos</b> + <b>${CARRY_PER_STRENGTH} kilos</b> per point of <b>body strength</b>
       (${CARRY_BASE + CHAR_START * CARRY_PER_STRENGTH} at the start, ${CARRY_BASE + TOP_SKILL * CARRY_PER_STRENGTH} at ${TOP_SKILL}).</li>
+      <li>Worn bags, the whole limit: <b>backpack</b> (Back) +${percent(BAG_CARRY.backpack)}, <b>sack</b> (Side) +${percent(BAG_CARRY.sack)}, each × QL%; both at once.</li>
       <li>Over it: slower, and more wind per action, rising with the excess, as armour does. ${OVER_EXAMPLE} kilos over a starting limit drags like about
       ${Math.round(overDrag(OVER_EXAMPLE, CARRY_BASE + CHAR_START * CARRY_PER_STRENGTH) / PLATE_SUIT)} full suits of iron plate.</li>
       <li>Past <b>${mul(CARRY_STOP)}</b> the limit: <b>${frac(CARRY_CRAWL)} pace (speed multiplier)</b>. Any amount over: every swing or draw <b>${percent(OVERBURDEN_SWING)} longer</b>.</li>
