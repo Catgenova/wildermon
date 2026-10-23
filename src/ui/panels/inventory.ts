@@ -241,7 +241,7 @@ export class InventoryPanel {
     const row = document.createElement('div');
     this.order.push(item.uid);
     row.className = 'inv-row' + (item.uid === this.selected ? ' selected' : '') + (this.picking.uids.has(item.uid) ? ' picked' : '');
-    const name = nameCell(item, { worn: this.game.isEquipped(item.uid), occupant: occupantOf(this.game, item) });
+    const name = nameCell(item, { worn: this.game.isEquipped(item.uid), occupant: item.occupant ? undefined : occupantOf(this.game, item) });
     const ql = qualityCell(this.game, item);
     const dmg = damageCell(item);
     const wt = document.createElement('span');

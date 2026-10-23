@@ -686,7 +686,7 @@ export class CratePanel {
        * one list you go to when you are looking for a particular thing was
        * the one list that told you least about what was in it.
        */
-      const name = nameCell(item, { worn: this.game.isEquipped(item.uid), occupant: occupantOf(this.game, item) });
+      const name = nameCell(item, { worn: this.game.isEquipped(item.uid), occupant: item.occupant ? undefined : occupantOf(this.game, item) });
       if (store.priced) name.textContent += ` — ${item.price !== undefined ? priceWords(item.price) : 'not for sale'}`;
       const ql = qualityCell(this.game, item);
       const dmg = damageCell(item);

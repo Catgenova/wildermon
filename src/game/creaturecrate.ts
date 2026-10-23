@@ -27,8 +27,8 @@ import type { Item } from './items';
 export const CREATURE_CRATE = 'creature_crate';
 
 /** The name of the wildermon in a crate, carried or standing, for the lists that show one; undefined when it is empty. */
-export const occupantOf = (g: Game, crate: { creature?: number }): string | undefined =>
-  crate.creature === undefined ? undefined : (g.creatures.get(crate.creature)?.name ?? 'A wildermon');
+export const occupantOf = (g: Game, crate: { creature?: number; occupant?: string }): string | undefined =>
+  crate.creature === undefined ? undefined : (g.creatures.get(crate.creature)?.name ?? crate.occupant ?? 'A wildermon');
 
 /** What a standing crate says after its quality: who is in it, or that it is empty. */
 export function crateLine(g: Game, crate: { creature?: number }): string {

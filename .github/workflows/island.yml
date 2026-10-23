@@ -1792,6 +1792,15 @@ jobs:
           npx esbuild supabase/test/tamelearn.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/tamelearn.mjs --log-level=error
           node node_modules/.cache/tamelearn.mjs
+      - name: A stored wildermon crate says who is in it
+        run: |
+          # Asked for: "Add wildermon names to wildermon crates when in all
+          # storage spots like stalls". A piece's things, a crate's things and
+          # a counter's goods carry the crate's wildermon and its name, and the
+          # browser names the crate by it.
+          npx esbuild supabase/test/crateoccupant.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/crateoccupant.mjs --log-level=error
+          node node_modules/.cache/crateoccupant.mjs
       - name: A wildermon past the first goes into a creature crate, and out of it again
         run: |
           # Asked for: "Wildermon can be tamed to be set to active if currently

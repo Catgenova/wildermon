@@ -2259,7 +2259,8 @@ export function helpText(): string {
       <li><b>A parcel</b> (neither present): letters (${LETTER_MAX} characters) carry things, posted at a <b>mailbox</b>, collected at any other. Both ends need a box;
       without one, words only. The recipient owns it once posted.</li>
       <li><b>A wildermon</b> changes hands in its wildermon crate: in a deal, on a stall (no other store) and in the post. The new owner keeps it.
-      While on offer, on a stall or in the post the crate cannot be opened and its occupant cannot be released or culled.</li>
+      While on offer, on a stall or in the post the crate cannot be opened and its occupant cannot be released or culled.
+      On a stall, a counter or a rack, the crate is listed with its wildermon's name.</li>
     </ul>
     <h3>Barter</h3>
     <ul>

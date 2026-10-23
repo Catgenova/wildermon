@@ -852,6 +852,11 @@ export interface Item {
    * keeps the same column.
    */
   creature?: number;
+  /**
+   * The name of the wildermon in it, as the island tells it for a crate in a store, on a counter or on a rack, where
+   * the wildermon may be somebody else's (`storedThing`). Shown after the crate's name.
+   */
+  occupant?: string;
   /** What its maker's perks put into it as it was made (`Mark`), which stays with it. */
   mark?: Mark;
   /**
@@ -1503,6 +1508,8 @@ export function itemName(item: Item): string {
   else if (def.charges || def.fills) name += ` (${litresOf(item)} L)`;
   // And the goes an ancient stamp has left in it (`relicuse.ts`): an Ancient stamp (3 goes).
   else if (item.id === 'ancient_stamp') name += ` (${Math.max(0, item.charges ?? STAMP_GOES_NAMED)} goes)`;
+  // And who is in it, for a wildermon crate in a store: a Wildermon crate (Biscuit).
+  if (item.occupant) name += ` (${item.occupant})`;
   // And what is enchanted into it: a Sword (iron) (Emberbrand).
   return name + enchantMarker(item.enchant);
 }

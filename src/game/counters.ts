@@ -370,6 +370,7 @@ export class Counters {
         ...(it.rare ? { rare: rarityStep(it.rare) } : {}),
         ...(typeof it.price === 'number' ? { price: it.price } : {}),
         ...(typeof it.creature === 'number' ? { creature: it.creature } : {}),
+        ...(it.occupant ? { occupant: it.occupant } : {}),
         ...(it.enchant ? { enchant: it.enchant } : {}),
       })),
     });
@@ -387,7 +388,7 @@ export interface CounterWire {
   till?: number | null;
   units?: number | null;
   wares?: string[] | null;
-  goods?: Array<{ id: number; def: string; ql: number; dmg: number; count: number; extra: string | null; rare?: string | null; price?: number | null; creature?: number | null; enchant?: Enchant | null }> | null;
+  goods?: Array<{ id: number; def: string; ql: number; dmg: number; count: number; extra: string | null; rare?: string | null; price?: number | null; creature?: number | null; occupant?: string | null; enchant?: Enchant | null }> | null;
 }
 
 /** What a counter holds, said as a count, off what this browser has been told. */

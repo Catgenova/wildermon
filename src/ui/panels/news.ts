@@ -3465,6 +3465,13 @@ export const NEWS: News[] = [
       `Changed: taming gained per attempt ×(1 + taming needed / ${TAME_HARD}): offering (taken or refused), taking a catch out of a trap, Call of the Wild. ${['rabba', 'lume'].map((id) => `${SPECIES[id].name} ${mult(tameLearn({ species: id, skills: {} }))}`).join(', ')}.`,
     ],
   },
+  {
+    n: 280,
+    day: '2026-10-23',
+    lines: () => [
+      `Added: ${itemDef('creature_crate').name.toLowerCase()}s on a stall, a counter or a rack listed with their wildermon's name.`,
+    ],
+  },
 ];
 
 /** The kinds that butchered into dragon scales until What's new 268. */

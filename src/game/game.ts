@@ -10323,6 +10323,9 @@ export interface StoredThing {
   dye?: string | null;
   /** What is enchanted into it from a scroll (`enchant.ts`). */
   enchant?: Enchant | null;
+  /** For a wildermon crate, the wildermon in it and its name; absent from older islands. */
+  creature?: number | null;
+  occupant?: string | null;
 }
 
 /** A stored thing as this side holds one: the same fields `packed` reads off a pack's row. */
@@ -10332,6 +10335,8 @@ export const storedThing = (it: StoredThing): Item => ({
   rare: rarityStep(it.rare),
   dye: it.dye ?? undefined,
   enchant: it.enchant ?? undefined,
+  ...(typeof it.creature === 'number' ? { creature: it.creature } : {}),
+  ...(it.occupant ? { occupant: it.occupant } : {}),
 });
 
 /**
