@@ -1,3 +1,4 @@
+import { standIn } from './settle';
 import { KILN_GLOW, KILN_GLOW_FIRING, KILN_VENT_BACK, KILN_VENT_UP } from '../game/kiln';
 import { SMELTER_STACK_BACK, SMELTER_STACK_UP } from '../game/smelter';
 import { UNITS_PER_TILE } from './iso';
@@ -408,13 +409,18 @@ const BAKED_BUDGET = 8e6;
 class Bakes<B extends { canvas: HTMLCanvasElement; area: number }> {
   private kept = new Map<string, B>();
   private area = 0;
-  get(key: string, make: () => B): B {
+  /** The last bake made of each piece less its size, to stand in at another while the zoom moves (`standIn`). */
+  private last = new Map<string, string>();
+  /** The bake by `key`, `piece` being the key less the size it is baked at. */
+  get(key: string, piece: string, make: () => B): B {
     let b = this.kept.get(key);
     if (b) {
       this.kept.delete(key);
       this.kept.set(key, b);
       return b;
     }
+    const other = standIn(this.kept, this.last, piece, key);
+    if (other) return other;
     b = make();
     this.kept.set(key, b);
     this.area += b.area;
@@ -1149,7 +1155,7 @@ function bakeSmelter(rotation: number, scale: number): SmelterBake {
 function smelterBaked(rotation: number, zoom: number): SmelterBake {
   const scale = scaleFor(zoom);
   const rot = ((rotation % 8) + 8) % 8;
-  return smelterBakes.get(`${rot}|${scale}`, () => bakeSmelter(rot, scale));
+  return smelterBakes.get(`${rot}|${scale}`, `${rot}`, () => bakeSmelter(rot, scale));
 }
 
 /** How hot it is drawn: nothing cold, more working a charge than banked and burning. */
@@ -2561,7 +2567,7 @@ function kilnHitOf(parts: readonly Part[], e: Eye): [number, number, number, num
 function kilnBaked(rotation: number, zoom: number): KilnBake {
   const scale = scaleFor(zoom);
   const rot = ((rotation % 8) + 8) % 8;
-  return kilnBakes.get(`${rot}|${scale}`, () => bakeKiln(rot, scale));
+  return kilnBakes.get(`${rot}|${scale}`, `${rot}`, () => bakeKiln(rot, scale));
 }
 
 /** How hot it is drawn: nothing cold, more firing a load than only lit. */
@@ -3057,7 +3063,7 @@ function bakeAnvil(face: string, shade: string, variant: number, rotation: numbe
 function anvilBaked(face: string, shade: string, variant: number, rotation: number, zoom: number): AnvilBake {
   const scale = scaleFor(zoom);
   const rot = ((rotation % 8) + 8) % 8, v = ((variant % ANVIL_VARIANTS) + ANVIL_VARIANTS) % ANVIL_VARIANTS;
-  return anvilBakes.get(`${face}|${shade}|${v}|${rot}|${scale}`, () => bakeAnvil(face, shade, v, rot, scale));
+  return anvilBakes.get(`${face}|${shade}|${v}|${rot}|${scale}`, `${face}|${shade}|${v}|${rot}`, () => bakeAnvil(face, shade, v, rot, scale));
 }
 
 /**

@@ -54,7 +54,7 @@ import { REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
 import { LIGHT_RES, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
-import { STAND_FPS } from '../../render/beasts';
+import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
@@ -3491,6 +3491,15 @@ export const NEWS: News[] = [
     day: '2026-10-23',
     lines: () => [
       'Added: log line when a rare or wild-form wild wildermon comes into view: kind, rarity and forms, distance, direction. Once each.',
+    ],
+  },
+  {
+    n: 284,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: frame rate zooming over a settlement: crated wildermon, pieces, token, kilns, smelters, anvils, walls, floors and roofs stretched from their last size until the zoom stops. Worst frame of a 1 s zoom over Solara 453 → 174 ms (814 → 237 ms on a 2× screen).',
+      'Fixed: shade at wall feet drawn from a kept image per tile, not clipped to each tile every frame; floors kept as images after dark too. All of Solara in view: 87 floors and 186 shaded tiles drawn a frame → under 1.',
+      `Fixed: frame rate with 14 wildermon of 10 kinds standing about close in on a 2× screen: pictures kept ${num(BEAST_BUDGET / 1e6)} million pixels (was 14 million), loops in view never dropped for new ones. 322 → 33 ms a frame.`,
     ],
   },
 ];

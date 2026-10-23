@@ -87,7 +87,8 @@ import { dyeOf, dyeTint } from '../game/dyestuffs';
 import { sailTrim } from '../game/wind';
 import { FURNITURE_BY_ID, isPlanter, rackDeck, rackSpots } from '../game/furniture';
 import { isLampPiece, lampBurning } from '../game/lamps';
-import { drawLampBloom } from './furniture';
+import { drawLampBloom, piecesFrame } from './furniture';
+import { zoomHeld } from './settle';
 import { drawMemorial, memorialNight } from './memorial';
 import { denHit, denPools, drawDen, drawDenLive, isDen, prewarmDen, type DenLook } from './dens';
 import { MEMORIAL } from '../game/memorial';
@@ -203,6 +204,20 @@ const BAKE_LIFE = 0.5;
 const BAKE_PIXELS = 32_000_000;
 /** No one picture is bigger than this; a thing that would be is drawn as it always was. */
 const BAKE_MOST = 4_000_000;
+/**
+ * What a picture made by `baked` reads besides what is in its key: whether it
+ * is kept off a runestone's runes drawn behind it (`occludes`), and whether it
+ * is drawn in the sun's light, and so made again when that moves on (`lit`).
+ */
+interface BakeAs { occludes?: boolean; lit?: boolean }
+/** Pictures made again in a frame for the zoom alone once it has settled, while the last one stands in (`baked`). */
+const BAKES_A_FRAME = 12;
+/** And while the zoom moves, for things with no picture near enough this size to stand in. */
+const BAKES_MOVING = 6;
+/** A floor reads no light: its boards are the colour they are at any hour. Nothing is kept off it, as nothing was when it was drawn afresh after dark. */
+const FLOOR_BAKE: BakeAs = { occludes: false, lit: false };
+/** The shade on a tile is one ink at any hour, and laid on the ground, which nothing is kept off. */
+const SHADE_BAKE: BakeAs = { occludes: false, lit: false };
 /** How dark it is when a lamp inside starts to show through a wall or a roof (`lampBehind`), and pictures stop being kept. */
 const LAMP_DARK = 0.2;
 /** A wall's or a roof's picture, where it was made, where its corner went, when, and how long it is kept. */
@@ -220,6 +235,9 @@ interface Baked {
   ver: number;
   epoch: number;
   light: number;
+  /** The view it was made in less the zoom (`bakeShape`), and the zoom: at another zoom in the same view it stands in, stretched (`baked`). */
+  shape: number;
+  zoom: number;
 }
 /** How many device pixels of tile edge pictures are kept before the lot go (`hems`): about sixty-four megabytes. */
 const HEM_PIXELS = 16_000_000;
@@ -249,44 +267,74 @@ const CRATE_SCALE = 0.8;
  * facing and size, kept and laid down every frame, rather than its model posed
  * afresh. Asked for: "Do not animate wildermon in crates when placed in the
  * world, leave them still. Having many out hinders fps immensely." Sizes go in
- * quarter-octave steps, so zooming makes a few pictures rather than one a frame.
+ * quarter-octave steps.
+ *
+ * A picture costs a posed model, a read of its pad and a crop, some ten
+ * milliseconds, and a settlement keeps thirty crates in a row: every quarter
+ * octave of a zoom made all thirty in one frame, a third of a second each
+ * time. So the picture it had at another size
+ * stands in, stretched, while the zoom moves (`stand`), and once it has
+ * settled no more than `STILLS_A_FRAME` are made in a frame while one stands in.
+ * The longest unused goes first past `STILLS_MOST`.
  */
 const STILLS = new Map<string, { canvas: HTMLCanvasElement; ax: number; ay: number; k: number }>();
-/** Pictures kept before the lot is let go and drawn again as they are wanted. */
+/** The last size made of each look, by its key less the size: what stands in for it at another. */
+const STILL_LAST = new Map<string, string>();
+/** Pictures kept before the longest unused is let go. */
 const STILLS_MOST = 256;
-function drawStill(g: CanvasRenderingContext2D, px: number, py: number, zoom: number, pose: CreaturePose): void {
+/** Pictures made in a frame, once the zoom has settled, while another size stands in for each. */
+const STILLS_A_FRAME = 3;
+/** How far a picture is stretched to stand in: no more than four times or a quarter its size. */
+const STILL_STAND_MOST = 4;
+/**
+ * `stand` is how many more may be made this frame where one at another size
+ * could stand in: none while the zoom moves. Made, it comes off the count.
+ */
+function drawStill(g: CanvasRenderingContext2D, px: number, py: number, zoom: number, pose: CreaturePose, stand: { left: number }): void {
   const t = g.getTransform();
   const dev = Math.hypot(t.a, t.b) || 1;
   const k = 2 ** (Math.round(Math.log2(zoom * dev) * 4) / 4);
-  const key = `${pose.species}|${pose.stage ?? 0}|${pose.colors.join(',')}|${pose.facing}|${pose.rare ?? 0}|${pose.fleece}|${pose.scale ?? 1}|${k}`;
+  const look = `${pose.species}|${pose.stage ?? 0}|${pose.colors.join(',')}|${pose.facing}|${pose.rare ?? 0}|${pose.fleece}|${pose.scale ?? 1}`;
+  const key = `${look}|${k}`;
   let still = STILLS.get(key);
-  if (!still) {
-    if (STILLS.size >= STILLS_MOST) STILLS.clear();
-    // Drawn on a pad wide enough for the biggest, then cut to what it covers.
-    const side = Math.min(2048, Math.ceil(260 * k * (pose.scale ?? 1)));
-    const pad = document.createElement('canvas');
-    pad.width = side;
-    pad.height = side;
-    const p = pad.getContext('2d') as CanvasRenderingContext2D;
-    const fx = side / 2, fy = side * 0.8;
-    drawCreature(p, fx, fy, k, { ...pose, id: undefined });
-    const d = p.getImageData(0, 0, side, side).data;
-    let x0 = side, y0 = side, x1 = -1, y1 = -1;
-    for (let y = 0; y < side; y++) {
-      for (let x = 0; x < side; x++) {
-        if (d[(y * side + x) * 4 + 3] === 0) continue;
-        if (x < x0) x0 = x;
-        if (x > x1) x1 = x;
-        if (y < y0) y0 = y;
-        if (y > y1) y1 = y;
-      }
-    }
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, x1 - x0 + 1);
-    canvas.height = Math.max(1, y1 - y0 + 1);
-    if (x1 >= 0) (canvas.getContext('2d') as CanvasRenderingContext2D).drawImage(pad, -x0, -y0);
-    still = { canvas, ax: fx - x0, ay: fy - y0, k };
+  if (still) {
+    STILLS.delete(key);
     STILLS.set(key, still);
+  } else {
+    const was = STILL_LAST.get(look);
+    const other = was === undefined ? undefined : STILLS.get(was);
+    if (other && stand.left <= 0 && other.k * STILL_STAND_MOST >= k && k * STILL_STAND_MOST >= other.k) {
+      still = other;
+    } else {
+      if (other) stand.left--;
+      while (STILLS.size >= STILLS_MOST) STILLS.delete(STILLS.keys().next().value as string);
+      // Drawn on a pad wide enough for the biggest, then cut to what it covers.
+      const side = Math.min(2048, Math.ceil(260 * k * (pose.scale ?? 1)));
+      const pad = document.createElement('canvas');
+      pad.width = side;
+      pad.height = side;
+      const p = pad.getContext('2d') as CanvasRenderingContext2D;
+      const fx = side / 2, fy = side * 0.8;
+      drawCreature(p, fx, fy, k, { ...pose, id: undefined });
+      const d = p.getImageData(0, 0, side, side).data;
+      let x0 = side, y0 = side, x1 = -1, y1 = -1;
+      for (let y = 0; y < side; y++) {
+        for (let x = 0; x < side; x++) {
+          if (d[(y * side + x) * 4 + 3] === 0) continue;
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, x1 - x0 + 1);
+      canvas.height = Math.max(1, y1 - y0 + 1);
+      if (x1 >= 0) (canvas.getContext('2d') as CanvasRenderingContext2D).drawImage(pad, -x0, -y0);
+      still = { canvas, ax: fx - x0, ay: fy - y0, k };
+      STILLS.set(key, still);
+      STILL_LAST.set(look, key);
+    }
   }
   const m = zoom / still.k;
   g.drawImage(still.canvas, px - still.ax * m, py - still.ay * m, still.canvas.width * m, still.canvas.height * m);
@@ -1543,6 +1591,8 @@ export class Renderer {
    * (`shadeFor`, `structuresFrame`).
    */
   private shades = new Map<number, Float64Array | null>();
+  /** Whether any of those reaches a tile, by its storey and the tile as one number: kept and dropped with them. */
+  private shaded = new Map<number, boolean>();
   private shadeFor = '';
   private readonly shadeAsk: Border = { dir: 'h', x: 0, y: 0 };
   /** What has changed about the buildings, and where (`structwatch.ts`): looked over once a frame. */
@@ -2669,6 +2719,8 @@ export class Renderer {
   /** When the zoom last moved (`performance.now`), and whether it has held still for `ZOOM_SETTLE` since. */
   private zoomMovedAt = -Infinity;
   private zoomSettled = true;
+  /** Crated wildermon's pictures still to be made this frame where another size could stand in (`drawStill`). */
+  private readonly stillsLeft = { left: 0 };
   /** Tiles' edge pictures made this frame while the zoom moves (`HEM_MOVING_MOST`). */
   private hemsMoving = 0;
 
@@ -3411,6 +3463,9 @@ export class Renderer {
     if (!this.hemSteady) this.zoomMovedAt = now;
     this.hemZoomWas = cam.zoom;
     this.zoomSettled = now - this.zoomMovedAt >= ZOOM_SETTLE;
+    this.stillsLeft.left = this.zoomSettled ? STILLS_A_FRAME : 0;
+    piecesFrame(this.zoomSettled);
+    zoomHeld.left = this.zoomSettled ? 1 : 0;
     this.hemsMoving = 0;
     if (fit !== this.hemFor) {
       this.hemFor = fit;
@@ -5524,7 +5579,7 @@ export class Renderer {
               id: inside.id,
               rare: inside.rare,
               stage: stageOf(inside),
-            });
+            }, this.stillsLeft);
             drawFurniture(g, px, py, zoom, piece.kind, false, tint, 1, view, piece.material);
           }, undefined, pieceBox);
           if (zoom >= 0.6) {
@@ -7231,6 +7286,44 @@ export class Renderer {
    * covered it.
    */
   private groundShade(x: number, y: number, level: number, V: View): void {
+    /*
+     * From a picture of it (`baked`): the path and the clip cut to the tile,
+     * every frame for every tile round every building, were over half of what a
+     * settlement's buildings cost a frame from far out. Whether any shade
+     * reaches the tile at all is kept beside the shades, so a tile with none
+     * asks nothing.
+     */
+    const at = (level * 65536 + x) * 65536 + y;
+    let any = this.shaded.get(at);
+    if (any === undefined) {
+      any = false;
+      const b = this.shadeAsk;
+      for (let i = 0; i < SHADE_BORDERS.length && !any; i += 3) {
+        b.dir = SHADE_BORDERS[i] ? 'v' : 'h';
+        b.x = x + SHADE_BORDERS[i + 1];
+        b.y = y + SHADE_BORDERS[i + 2];
+        any = this.shadeOf(level, b, V) !== null;
+      }
+      this.shaded.set(at, any);
+    }
+    if (!any) return;
+    const cam = this.camera;
+    const world = this.game.world;
+    const rise = level * WALL_HEIGHT;
+    const deck = this.game.buildings.buildingAt(x, y)?.deck;
+    const h0 = deck ?? world.getHeight(x, y), h1 = deck ?? world.getHeight(x + 1, y);
+    const h2 = deck ?? world.getHeight(x + 1, y + 1), h3 = deck ?? world.getHeight(x, y + 1);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [u, v, h] of [[0, 0, h0], [1, 0, h1], [1, 1, h2], [0, 1, h3]]) {
+      const sx = cam.worldToScreenX(x + u, y + v), sy = cam.worldToScreenY(x + u, y + v, h + rise);
+      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+    }
+    this.baked(`s|${level}|${x},${y}|${h0},${h1},${h2},${h3}`, cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h0 + rise), [x0 - 2, y0 - 2, x1 + 2, y1 + 2],
+      () => this.groundShadeNow(x, y, level, V), this.structs.version(x, y, x, y), SHADE_BAKE);
+  }
+
+  /** `groundShade`, drawn. */
+  private groundShadeNow(x: number, y: number, level: number, V: View): void {
     const cam = this.camera;
     const world = this.game.world;
     const ctx = this.canvas.ctx;
@@ -10035,8 +10128,13 @@ export class Renderer {
    * well a flight comes up through. A ladder's hatch cuts its own.
    */
   private drawFloor(floor: FloorTile, x: number, y: number, base: number, alpha: number): void {
-    // Seen through, or after dark, when a lamp in the room may be falling on it: as it always was. Otherwise a picture (`baked`).
-    if (alpha < 1 || this.game.darkness() >= LAMP_DARK) {
+    /*
+     * Seen through: as it always was. Otherwise a picture (`baked`), after dark
+     * as well: nothing in a floor's drawing reads the light (a lamp's pool is
+     * the night's, `lightLayers`), and every floor of a settlement was drawn
+     * afresh every frame of every night for it.
+     */
+    if (alpha < 1) {
       this.drawFloorNow(floor, x, y, base, alpha);
       return;
     }
@@ -10051,7 +10149,7 @@ export class Renderer {
     }
     const key = `f|${floor.level}|${x},${y}|${floor.material}|${floor.kind ?? ''}|${floor.dye ?? ''}|${isDone(floor) ? 1 : 0}|${base}`;
     this.baked(key, cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h), [x0, y0, x1, y1], () => this.drawFloorNow(floor, x, y, base, alpha),
-      this.structs.version(x, y, x, y));
+      this.structs.version(x, y, x, y), FLOOR_BAKE);
   }
 
   private drawFloorNow(floor: FloorTile, x: number, y: number, base: number, alpha: number): void {
@@ -10338,6 +10436,13 @@ export class Renderer {
   /** The view the pictures are for, as a count that goes up when it changes, and what it was (`structuresFrame`). */
   private bakeEpoch = 0;
   private bakeView = '';
+  /** And the view less the zoom, the same way: a picture made at another zoom in it can stand in while the zoom moves. */
+  private bakeShape = 0;
+  private bakeShapeWas = '';
+  /** Pictures still to be made again this frame for the zoom alone, where the last one could stand in (`BAKES_A_FRAME`). */
+  private bakesLeft = 0;
+  /** And while it moves, where none can (`BAKES_MOVING`). */
+  private bakesMoving = 0;
   /** The light they are for, the same way, and when it last moved on. */
   private bakeLight = 0;
   private bakeLit = '';
@@ -10354,11 +10459,18 @@ export class Renderer {
     const settings = this.game.settings;
     this.structs.update(this.game.buildings);
     const cut = this.cut.size ? [...this.cut].join(',') : '';
-    const view = `${cam.zoom}|${cam.rotation}|${this.canvas.dpr}|${settings.viewLevel}|${settings.cutaway}|${cut}`;
+    const shape = `${cam.rotation}|${this.canvas.dpr}|${settings.viewLevel}|${settings.cutaway}|${cut}`;
+    const view = `${cam.zoom}|${shape}`;
     if (view !== this.bakeView) {
       this.bakeView = view;
       this.bakeEpoch++;
     }
+    if (shape !== this.bakeShapeWas) {
+      this.bakeShapeWas = shape;
+      this.bakeShape++;
+    }
+    this.bakesLeft = this.zoomSettled ? BAKES_A_FRAME : 0;
+    this.bakesMoving = BAKES_MOVING;
     const lit = `${Math.floor((this.game.hourOfDay() / 24) * SUN_STEPS)}|${Math.round(this.game.darkness() * 20)}|${this.bloom}`;
     if (lit !== this.bakeLit) {
       this.bakeLit = lit;
@@ -10370,36 +10482,56 @@ export class Renderer {
     if (shade !== this.shadeFor || this.shades.size > 200_000) {
       this.shadeFor = shade;
       this.shades.clear();
+      this.shaded.clear();
     }
   }
 
-  private baked(key: string, ax: number, ay: number, box: [number, number, number, number], draw: () => void, ver: number): void {
-    if (!this.hemSteady) {
-      draw();
-      this.occludeLine(box, draw);
-      return;
-    }
+  private baked(key: string, ax: number, ay: number, box: [number, number, number, number], draw: () => void, ver: number,
+    { occludes = true, lit = true }: BakeAs = {}): void {
     const ctx = this.canvas.ctx;
     const dpr = this.canvas.dpr;
+    const zoom = this.camera.zoom;
     const had = this.bakes.get(key);
     if (had && had.ver === ver && had.epoch === this.bakeEpoch && this.time - had.at < had.life && this.time >= had.at
-      && (had.light === this.bakeLight || this.time - this.bakeLightAt < had.wait)) {
+      && (!lit || had.light === this.bakeLight || this.time - this.bakeLightAt < had.wait)) {
       const dx = (ax - had.ax) * dpr, dy = (ay - had.ay) * dpr;
       const rx = Math.round(dx), ry = Math.round(dy);
       if (Math.abs(dx - rx) < 0.02 && Math.abs(dy - ry) < 0.02) {
         ctx.drawImage(had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
         // In front of a runestone's runes after dark: the same picture kept off them (`RunestoneNight`).
-        if (this.runeNight.active) this.runeNight.occlude(ctx, had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
+        if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
         return;
       }
     }
+    /*
+     * While the zoom moves, and for as long after it as the pictures it left
+     * behind take to be made again `BAKES_A_FRAME` at a time, the picture of
+     * the same thing in the same view at the zoom it was made at stands in,
+     * stretched about the point it hangs on, as the ground's edges and the
+     * trees do. Every wall in sight was drawn afresh every frame of a zoom,
+     * and every one of them made again in the frame it stopped.
+     */
+    const r = had && had.ver === ver && had.shape === this.bakeShape && had.zoom !== zoom ? zoom / had.zoom : 0;
+    if (had && r && r <= STAND_IN_MOST && r * STAND_IN_MOST >= 1 && (!this.hemSteady || this.bakesLeft <= 0)) {
+      const x = ax + (had.bx - had.ax) * r, y = ay + (had.by - had.ay) * r, w = (had.cv.width / dpr) * r, h = (had.cv.height / dpr) * r;
+      ctx.drawImage(had.cv, x, y, w, h);
+      if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, had.cv, x, y, w, h);
+      return;
+    }
+    // One too far from this size to stretch, or none: a few a frame are made at this size, to stand in from the next.
+    if (!this.hemSteady && this.bakesMoving-- <= 0) {
+      draw();
+      if (occludes) this.occludeLine(box, draw);
+      return;
+    }
+    if (r) this.bakesLeft--;
     const bx = Math.floor(box[0] * dpr) - 2, by = Math.floor(box[1] * dpr) - 2;
     const w = Math.ceil(box[2] * dpr) + 2 - bx, h = Math.ceil(box[3] * dpr) + 2 - by;
     // Off the screen altogether, or too big to be worth keeping: drawn as it always was.
     const W = this.canvas.el.width, H = this.canvas.el.height;
     if (w <= 0 || h <= 0 || w * h > BAKE_MOST || bx > W || by > H || bx + w < 0 || by + h < 0) {
       draw();
-      this.occludeLine(box, draw);
+      if (occludes) this.occludeLine(box, draw);
       return;
     }
     let cv = had?.cv;
@@ -10456,11 +10588,11 @@ export class Renderer {
     const turn = (spread % 1000) / 1000;
     this.bakes.set(key, {
       cv, ax, ay, bx: bx / dpr, by: by / dpr, at: this.time, life: BAKE_KEEP * (0.75 + turn / 2), wait: BAKE_LIFE * turn,
-      ver, epoch: this.bakeEpoch, light: this.bakeLight,
+      ver, epoch: this.bakeEpoch, light: this.bakeLight, shape: this.bakeShape, zoom,
     });
     this.bakePixels += w * h;
     ctx.drawImage(cv, bx / dpr, by / dpr, w / dpr, h / dpr);
-    if (this.runeNight.active) this.runeNight.occlude(ctx, cv, bx / dpr, by / dpr, w / dpr, h / dpr);
+    if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, cv, bx / dpr, by / dpr, w / dpr, h / dpr);
   }
 
   private bearsJoists(id: number, border: Border): boolean {

@@ -1302,22 +1302,50 @@ function drawingAllowed(): boolean {
   return spent < ALLOWANCE;
 }
 
-/** How many pixels of pictures are kept, all told, before the ones longest unused go. */
-const BUDGET = 14_000_000;
+/**
+ * How many pixels of pictures are kept, all told: about eighty megabytes. The
+ * loops of fourteen bodies of ten kinds standing about a settlement, close in
+ * on a screen of two pixels to the point, came to more than the fourteen
+ * million it was.
+ */
+export const BUDGET = 20_000_000;
 
-interface Frame { canvas: HTMLCanvasElement; ox: number; oy: number; k: number; px: number }
+/**
+ * A body's pictures at one way round and one size are its set, and one of
+ * them is put down every frame it is in view: a set none of whose pictures
+ * has been put down for `STALE` seconds is a body gone from view, turned, or
+ * seen at another zoom.
+ */
+const STALE = 0.5;
+interface Frame { canvas: HTMLCanvasElement; ox: number; oy: number; k: number; px: number; set: string }
 const frames = new Map<string, Frame>();
 let framePixels = 0;
+/** When each set last had a picture put down. */
+const setUsed = new Map<string, number>();
 
-function keep(key: string, f: Frame): void {
+/**
+ * Keep a new picture. Past `BUDGET`, the sets no longer in use go first,
+ * oldest first; and if what is in use still comes to more than that, the new
+ * one is not kept. They used to go longest unused first, and a loop's pictures
+ * are used once a loop: with ten kinds standing about, close in on a screen of
+ * two pixels to the point, the ones that went were the next ones wanted, and
+ * every body drew every picture of its loop afresh. Now as many loops as fit
+ * are kept whole and only the rest are drawn as they come.
+ */
+function keep(key: string, f: Frame, now: number): void {
   frames.set(key, f);
   framePixels += f.px;
+  if (framePixels <= BUDGET) return;
+  for (const [k2, v] of frames) {
+    if (now - (setUsed.get(v.set) ?? -Infinity) <= STALE) continue;
+    frames.delete(k2);
+    framePixels -= v.px;
+    if (framePixels < BUDGET * 0.8) break;
+  }
+  for (const set of setUsed.keys()) if (now - (setUsed.get(set) as number) > STALE) setUsed.delete(set);
   if (framePixels > BUDGET) {
-    for (const [k2, v] of frames) {
-      frames.delete(k2);
-      framePixels -= v.px;
-      if (framePixels < BUDGET * 0.8) break;
-    }
+    frames.delete(key);
+    framePixels -= f.px;
   }
 }
 
@@ -1349,7 +1377,7 @@ function drawPad(w: number, h: number): CanvasRenderingContext2D {
  * before they were wanted again, and every body drew a new picture every
  * sixth of a second for as long as it was in view.
  */
-function cropped(g: CanvasRenderingContext2D, w: number, h: number, ox: number, oy: number, k: number): Frame {
+function cropped(g: CanvasRenderingContext2D, w: number, h: number, ox: number, oy: number, k: number, set: string): Frame {
   const px = new Uint32Array(g.getImageData(0, 0, w, h).data.buffer);
   let x0 = w, y0 = h, x1 = -1, y1 = -1;
   for (let y = 0; y < h; y++) {
@@ -1373,7 +1401,7 @@ function cropped(g: CanvasRenderingContext2D, w: number, h: number, ox: number, 
   canvas.width = x1 - x0 + 1;
   canvas.height = y1 - y0 + 1;
   (canvas.getContext('2d') as CanvasRenderingContext2D).drawImage(g.canvas, -x0, -y0);
-  return { canvas, ox: ox - x0, oy: oy - y0, k, px: canvas.width * canvas.height };
+  return { canvas, ox: ox - x0, oy: oy - y0, k, px: canvas.width * canvas.height, set };
 }
 
 /** A body standing or grazing at the `i`th sixth of a second of its loop, as that sixth's picture is drawn. */
@@ -1710,6 +1738,7 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     }
   }
   let made = 0;
+  setUsed.set(base, now);
   if (f) {
     frames.delete(fkey);
     frames.set(fkey, f);
@@ -1723,8 +1752,8 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     const g = drawPad(w, hh);
     g.setTransform(k, 0, 0, k, ox, oy);
     drawKind(g, kind, kit, pal, facing, a, inkAt(step, kind.size), 1 / step);
-    f = cropped(g, w, hh, ox, oy, k);
-    keep(key, f);
+    f = cropped(g, w, hh, ox, oy, k, base);
+    keep(key, f, now);
     if (h) h.waiting = undefined;
   }
   const [ax, ay] = go > 0 ? ahead(a.u) : [0, 0];

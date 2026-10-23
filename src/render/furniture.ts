@@ -5757,6 +5757,26 @@ export function crewOrder(zoom: number, kind: string, lit: boolean, tint: Tint |
   return bakedFor(zoom, kind, lit, tint, trim, view, material, crew, manned).order ?? [];
 }
 
+/**
+ * Bakes still to be made this frame where the piece's bake at another size
+ * could stand in: none while the zoom moves, and `PIECE_BAKES_A_FRAME` once it
+ * has settled (`piecesFrame`). Under zoom one a piece is baked again every
+ * twentieth of a zoom, so a wheel out over a settlement made a bake of every
+ * kind of piece in it, thirty-odd, in every frame of it.
+ */
+let bakesLeft = Infinity;
+/** Bakes made in a frame, once the zoom has settled, while another size stands in for each. */
+const PIECE_BAKES_A_FRAME = 4;
+/** How far apart in size a bake may be from the one wanted and stand in for it. */
+const PIECE_STAND_MOST = 2;
+/** The key of the last bake made of each piece less its size, for one to stand in. */
+const lastBake = new Map<string, string>();
+
+/** Once a frame from the renderer: whether the zoom has settled, so that pieces may be baked again for it. */
+export function piecesFrame(settled: boolean): void {
+  bakesLeft = settled ? PIECE_BAKES_A_FRAME : 0;
+}
+
 /** A piece's bake for this zoom, turn and trim, from the ones kept or new. */
 function bakedFor(zoom: number, kind: string, lit: boolean, tint: Tint | undefined, trim: number | undefined, view: PieceView, material: string | undefined, crew?: Crew, manned = false, rolling = false): Baked {
   const scale = BAKE_STEPS.find((s) => s >= zoom - 1e-3) ?? zoom;
@@ -5765,14 +5785,20 @@ function bakedFor(zoom: number, kind: string, lit: boolean, tint: Tint | undefin
   const frame = lit ? Math.floor(performance.now() / 150) % 4 : 0;
   const set = trim === undefined || Number.isInteger(trim) ? trim : Math.round(trim * 20) / 20;
   const aboard = (crew ? `|${crew.tall}:${crew.at.map((a) => a.join(',')).join(';')}` : '') + (manned ? '|manned' : '') + (rolling ? '|rolling' : '');
-  const key = `${kind}|${material ?? ''}|${lit ? frame : '-'}|${tint?.colour ?? ''}|${set ?? ''}|${view.ux.toFixed(3)},${view.uy.toFixed(3)},${view.vx.toFixed(3)},${view.vy.toFixed(3)}|${scale}|${inkZoom}${aboard}`;
+  const piece = `${kind}|${material ?? ''}|${lit ? frame : '-'}|${tint?.colour ?? ''}|${set ?? ''}|${view.ux.toFixed(3)},${view.uy.toFixed(3)},${view.vx.toFixed(3)},${view.vy.toFixed(3)}${aboard}`;
+  const key = `${piece}|${scale}|${inkZoom}`;
   let b = baked.get(key);
   if (b) {
     baked.delete(key);
     baked.set(key, b);
   } else {
+    const was = lastBake.get(piece);
+    const other = was === undefined ? undefined : baked.get(was);
+    if (other && bakesLeft <= 0 && other.scale * PIECE_STAND_MOST >= scale && scale * PIECE_STAND_MOST >= other.scale) return other;
+    if (other) bakesLeft--;
     b = bake(kind, lit, tint, set, view, material, frame, scale, inkZoom, crew, manned, rolling);
     baked.set(key, b);
+    lastBake.set(piece, key);
     bakedArea += areaOf(b);
     letGo(b);
   }

@@ -1,3 +1,4 @@
+import { standIn } from './settle';
 import { MAX_DEED_LEVEL } from '../game/game';
 import { hashOf, PPM, rand, STAGES, strandPic } from './ivy';
 import {
@@ -1096,6 +1097,8 @@ interface Baked {
 const BAKED_BUDGET = 8e6;
 const baked = new Map<string, Baked>();
 let bakedArea = 0;
+/** The last bake made of each token less its size. */
+const lastBake = new Map<string, string>();
 
 /** Its shade on the ground: where it lies from its foot and how big, in pixels at zoom one, longer the taller it stands. */
 const shadeOf = (top: number): { x: number; y: number; rx: number; ry: number } => {
@@ -1403,13 +1406,17 @@ function bakedFor(look: DeedTotemLook, rotation: number, zoom: number): Baked {
   const scale = scaleFor(zoom);
   const level = deedTotemStage(look.level);
   const turn = ((rotation % 8) + 8) % 8;
-  const key = `${level}|${turn}|${look.variant}|${scale}`;
+  const piece = `${level}|${turn}|${look.variant}`;
+  const key = `${piece}|${scale}`;
   let b = baked.get(key);
   if (b) {
     baked.delete(key);
     baked.set(key, b);
     return b;
   }
+  // While the zoom moves, the bake at the last size stands in (`standIn`): a token's is a tenth of a second.
+  const other = standIn(baked, lastBake, piece, key);
+  if (other) return other;
   b = bake(level, turn, look.variant, scale);
   baked.set(key, b);
   bakedArea += b.canvas.width * b.canvas.height;
