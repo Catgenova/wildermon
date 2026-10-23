@@ -1,5 +1,5 @@
-import { CROP_LIST, CROP_STAGES, type CropDef } from '../../game/farming';
 import { cropPlant } from '../crops';
+import { planterHolds as holds, planterTrim as trimOf } from '../plantertrim';
 import { rand } from '../ivy';
 import {
   boards, css, deeper, grain, hex, mix, nail, paler, proj, slab, TAU, toneOf, woodTone,
@@ -14,10 +14,9 @@ import {
  * along it at its stage, the field's own plants at the box's size
  * (`cropPlant`), as the old model drew them. Dyed, its boards are painted.
  *
- * Its `trim` is what it holds (`planterTrim` in furniture.ts): nought for
+ * Its `trim` is what it holds (`planterTrim`, plantertrim.ts): nought for
  * bare earth, otherwise one more than the crop's place in `CROP_LIST` times
- * `CROP_STAGES`, plus the stage. Read back here exactly as `planterHolds`
- * reads it there.
+ * `CROP_STAGES`, plus the stage. Read back with `planterHolds`.
  */
 
 /** How big a crop's plant is drawn in a planter, against one in a field (`PLANTER_PLANT`). */
@@ -25,14 +24,6 @@ const PLANT = 0.85;
 /** How many plants along the row. */
 const ROW = 5;
 
-/** What a planter holds, from its trim: as `planterHolds` (furniture.ts). */
-const holds = (trim: number | undefined): { crop: CropDef; stage: number } | null => {
-  if (!trim || trim < 1 || !Number.isInteger(trim)) return null;
-  const crop = CROP_LIST[Math.floor((trim - 1) / CROP_STAGES)];
-  return crop ? { crop, stage: (trim - 1) % CROP_STAGES } : null;
-};
-/** And the trim of a crop at a stage, for the sheet: as `planterTrim` (furniture.ts). */
-const trimOf = (id: string, stage: number): number => 1 + CROP_LIST.findIndex((c) => c.id === id) * CROP_STAGES + stage;
 
 /** The earth: a warm brown, its shade toward the kit's mauve. */
 const EARTH = toneOf('#866650', '#4a3844');
