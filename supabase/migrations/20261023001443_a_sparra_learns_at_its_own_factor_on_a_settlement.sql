@@ -41,7 +41,7 @@ end $do$;
 -- A gain at its own trade's factor.
 create or replace function worker_learn(p_world uuid, p_id integer, p_skill text, p_base double precision)
 returns double precision language sql
-set search_path to 'public', 'extensions' as $fn$
+as $fn$
   select worker_learn_paced(p_world, p_id, p_skill, p_base, null)
 $fn$;
 

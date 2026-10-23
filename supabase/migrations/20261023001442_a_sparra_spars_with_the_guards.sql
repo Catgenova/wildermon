@@ -29,19 +29,19 @@ create index if not exists creature_spar_with on creature (world_id, spar_with) 
 
 -- Whether one of yours has yielded a spar: within `spar_slack` of `spar_yield` of its health (`yielded`).
 create or replace function spar_yielded(c creature) returns boolean language sql stable
-set search_path = public, extensions as $fn$
+as $fn$
   select c.health <= max_health(c) * spar_yield() + spar_slack()
 $fn$;
 
 -- The health a yielded one has its breath back above, whole (`sparBack`).
 create or replace function spar_back(c creature) returns int language sql stable
-set search_path = public, extensions as $fn$
+as $fn$
   select ceil(max_health(c) * spar_yield() + spar_slack())::int
 $fn$;
 
 -- One blow in a spar, as one of yours strikes, and nothing besides: no style, no ability, no wound (`sparBlow`).
 create or replace function spar_blow(c creature) returns double precision language sql volatile
-set search_path = public, extensions as $fn$
+as $fn$
   select attack_of(c) * (1 + coalesce((c.skills->>'fighting')::double precision, 0) / 200) * (0.7 + random() * 0.6)
 $fn$;
 
@@ -51,7 +51,7 @@ $fn$;
  * range are worth working out only for a guard free to spar (measured: 6.4 ms for a pick among three asked all at once).
  */
 create or replace function spar_may(p_world uuid, g creature, s creature, p_x int, p_y int) returns boolean language plpgsql stable
-set search_path = public, extensions as $fn$
+as $fn$
 begin
   if g.world_id <> p_world or g.id = s.id or g.mode <> 'deed' or g.post is not null or g.keeper is distinct from s.keeper
      or g.enemy is not null or g.phase in ('rest', 'bed') or g.worn >= tire_goes()
@@ -70,7 +70,7 @@ end $fn$;
  * Sparra's in between is not undone.
  */
 create or replace function spar_go(p_world uuid, p_guard int, p_sparra int, p_at timestamptz) returns void language plpgsql
-set search_path = public, extensions as $fn$
+as $fn$
 declare g creature; s creature; v_day int := island_day(p_world); v_to_s double precision; v_to_g double precision;
 begin
   select * into g from creature where world_id = p_world and id = p_guard;
@@ -311,7 +311,7 @@ end $do$;
 
 -- What a Sparra set to the settlement is told it does (`deedJobLine`).
 create or replace function deed_job_line(c creature) returns text language sql stable
-set search_path to 'public', 'extensions' as $fn$
+as $fn$
   select coalesce((select g.plain || ' within ' || work_range(c) || ' tiles of the totem'
                           || case when g.id in ('hive', 'scrub') or tend_job(g.id) then '' else '; output to the crate' end
                      from gather_def g
