@@ -224,3 +224,15 @@ jobs:
             where g.mode = 'deed' and g.enemy is not null
               and exists (select 1 from creature s join species_def sd on sd.id = s.species and sd.style = 'spar'
                            where s.world_id = g.world_id and s.keeper = g.keeper and s.mode = 'deed')"
+          ask "Sparring: what stands between such a guard and what it is after" "select g.id as guard, w.x, w.y, w.dir, w.type, w.material, w.level, w.building
+             from creature g join creature e on e.world_id = g.world_id and e.id = g.enemy
+             join wall w on w.world_id = g.world_id and w.x between floor(least(creature_x(g), creature_x(e)))::int - 1 and floor(greatest(creature_x(g), creature_x(e)))::int + 2
+                        and w.y between floor(least(creature_y(g), creature_y(e)))::int - 1 and floor(greatest(creature_y(g), creature_y(e)))::int + 2
+            where g.mode = 'deed' and g.enemy is not null and e.mode = 'wild' order by g.id, w.x, w.y"
+          ask "Sparring: line clear between such a guard and what it is after, and each way round" "select g.id as guard,
+              line_clear(g.world_id, creature_x(g), creature_y(g), creature_x(e), creature_y(e)) as straight,
+              line_clear(g.world_id, creature_x(g), creature_y(g), creature_x(e), creature_y(g)) as along_x,
+              line_clear(g.world_id, creature_x(g), creature_y(g), creature_x(g), creature_y(e)) as along_y,
+              creature_tile_ok(g.world_id, floor(creature_x(e))::int, floor(creature_y(e))::int) as e_tile_ok,
+              (select p.kind || ':' || coalesce(p.sub, '') from placed p where p.world_id = g.world_id and p.x = floor(creature_x(e))::int and p.y = floor(creature_y(e))::int limit 1) as e_on
+             from creature g join creature e on e.world_id = g.world_id and e.id = g.enemy where g.mode = 'deed' and e.mode = 'wild'"
