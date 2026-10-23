@@ -55,8 +55,8 @@ declare w uuid; me uuid; v_old int; v_spent int; v_gone int;
 begin
   select id into w from world where name = 'Hoarding';
   select uid into me from player where world_id = w and name = 'Dane';
-  v_old := creature_spawn(w, 'sparra', 10.5, 10.5, 'active', now() - interval '3 days');
-  v_spent := creature_spawn(w, 'sparra', 12.5, 10.5, 'active', now() - interval '3 days');
+  v_old := creature_spawn(w, 'sparra', 10.5, 10.5, 'active', now() - interval '60 days');
+  v_spent := creature_spawn(w, 'sparra', 12.5, 10.5, 'active', now() - interval '60 days');
   update creature set keeper = me, name = 'Elder' where world_id = w and id = v_old;
   update creature set keeper = me, name = 'Spent' where world_id = w and id = v_spent;
   update creature cr set born = now() - make_interval(secs => (old_of(cr) + 60) / age_pace(cr)) where world_id = w and id = v_old;

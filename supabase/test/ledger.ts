@@ -96,7 +96,7 @@ begin
   perform rpc_join(w, 'Keeper');
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Ledgerstead', ${T}, ${T}, 10, 5, u);
   insert into crate (world_id, id, kind, x, y, sx, sy, deed) values (w, v_crate, 'plank', ${T} + 1, ${T}, 0, 0, true);
-  v_sedra := creature_spawn(w, 'sedra', ${T} + 1.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  v_sedra := creature_spawn(w, 'sedra', ${T} + 1.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   v_day := island_day(w);
   insert into said values ('DAY', v_day::text || '|' || floor(world_time(w) / day_seconds())::text);
   -- A load of reed home at the crate.

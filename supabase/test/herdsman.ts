@@ -159,7 +159,7 @@ begin
   insert into said values ('DEED', coalesce((my_deed(w, u)).name, 'none'));
 
   /* ---- Taming: a wild rabba, grown and young, and what each perk makes of the chance. ---- */
-  v_c := creature_spawn(w, 'rabba', 10.4, 9.5, 'wild', now() - interval '9 hours', null);
+  v_c := creature_spawn(w, 'rabba', 10.4, 9.5, 'wild', now() - interval '10 days', null);
   ${still('v_c', ', coaxed = 0, coaxed_at = null')};
   v_y := creature_spawn(w, 'rabba', 10.4, 9.8, 'wild', now() - interval '1 minute', null);
   ${still('v_y', ', coaxed = 0, coaxed_at = null')};
@@ -228,7 +228,7 @@ begin
   update creature set kept = null where world_id = w and id = v_c;
   v_t := v_t || '#' || age_of((select born from creature where world_id = w and id = v_c), old_of(${row('v_c')}));
   insert into said values ('KEPT', v_t);
-  update creature set born = now() - interval '9 hours' where world_id = w and id = v_c;
+  update creature set born = now() - interval '10 days' where world_id = w and id = v_c;
 
   /* ---- The brush: a brushing's care and its healing, with the perks and without. ---- */
   -- Each stroke told with the brush and the hand as they were when it was made: the brush wears and the hand learns.
@@ -247,8 +247,8 @@ begin
   delete from creature where world_id = w and id = v_c;
 
   /* ---- The pairing: a pair of rabbas, put together with the dice under the odds. ---- */
-  v_dam := creature_spawn(w, 'rabba', 10.1, 9.5, 'active', now() - interval '9 hours', u);
-  v_sire := creature_spawn(w, 'rabba', 10.6, 9.5, 'deed', now() - interval '9 hours', u);
+  v_dam := creature_spawn(w, 'rabba', 10.1, 9.5, 'active', now() - interval '10 days', u);
+  v_sire := creature_spawn(w, 'rabba', 10.6, 9.5, 'deed', now() - interval '10 days', u);
   ${still('v_dam', ", sex = 'female', name = 'Snow', care = 0.5, traits = " + arr(DAM))};
   ${still('v_sire', ", sex = 'male', name = 'Horn', care = 0.5, traits = " + arr(SIRE))};
   -- Stud Book, before they are put together.

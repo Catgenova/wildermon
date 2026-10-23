@@ -127,11 +127,11 @@ begin
     from (select n, l, track_reading(l, b, d, r) as rd from grid) g;
   insert into said select 'NOSIGN', track_said('${DEF.name}', 140, null, null, null, null);
 
-  v_kept := creature_spawn(w, '${KIND}', ${at('kept')}, 'active', now() - interval '30 days', u);
-  v_other := creature_spawn(w, '${OTHER}', ${at('other')}, 'wild', now() - interval '30 days', null);
-  v_a := creature_spawn(w, '${KIND}', ${at('A')}, 'wild', now() - interval '30 days', null);
-  v_b := creature_spawn(w, '${KIND}', ${at('B')}, 'wild', now() - interval '30 days', null);
-  v_c := creature_spawn(w, '${KIND}', ${at('C')}, 'wild', now() - interval '30 days', null);
+  v_kept := creature_spawn(w, '${KIND}', ${at('kept')}, 'active', now() - interval '60 days', u);
+  v_other := creature_spawn(w, '${OTHER}', ${at('other')}, 'wild', now() - interval '60 days', null);
+  v_a := creature_spawn(w, '${KIND}', ${at('A')}, 'wild', now() - interval '60 days', null);
+  v_b := creature_spawn(w, '${KIND}', ${at('B')}, 'wild', now() - interval '60 days', null);
+  v_c := creature_spawn(w, '${KIND}', ${at('C')}, 'wild', now() - interval '60 days', null);
 
   -- Refused: a kind not seen, a monster, and no kind at all; then seen.
   insert into said values ('UNSEEN', coalesce(track_refusal(w, u, '${TRACK}', jsonb_build_object('kind', 'tile', 'species', '${KIND}')), '-'));

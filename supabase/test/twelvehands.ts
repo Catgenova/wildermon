@@ -75,7 +75,7 @@ begin
 
   insert into said select 'TRADE:' || s.id, coalesce(s.gathers, '-') || '|' || worker_job_ported(coalesce(s.gathers, '-'))
     from species_def s where s.id in (${HANDS.map(([id]) => `'${id}'`).join(', ')});
-  insert into hand select s, creature_spawn(w, s, 16.6, 16.6, 'active', now() - interval '30 days', u)
+  insert into hand select s, creature_spawn(w, s, 16.6, 16.6, 'active', now() - interval '60 days', u)
     from unnest(array[${HANDS.map(([id]) => `'${id}'`).join(', ')}]) s;
   insert into said select 'ASK:' || h.species, coalesce(act_refusal(w, u, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', h.id)), 'none') from hand h;
   update creature set mode = 'deed', stance = 'passive', hunger = 1, settled_at = now(), until = now(), leg_at = now(), leg_ends = now(),

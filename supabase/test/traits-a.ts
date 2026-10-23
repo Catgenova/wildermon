@@ -95,8 +95,8 @@ begin
     where r = any(${arr(NEW_IDS)}) group by r;
 
   -- Two at work on one settlement, the one beside it hearth-bred; then the same with nothing communal beside it.
-  a := creature_spawn(w, 'roxxen', px + 0.5, py, 'deed', now() - interval '30 days', u);
-  b := creature_spawn(w, 'roxxen', px - 0.5, py, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, 'roxxen', px + 0.5, py, 'deed', now() - interval '60 days', u);
+  b := creature_spawn(w, 'roxxen', px - 0.5, py, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, post = null, hunger = 1, care = 0 where world_id = w and id in (a, b);
   update creature set traits = array['hearth_bred'] where world_id = w and id = b;
   insert into said select 'HERD', round(deed_aura(c, 'mend')::numeric, 4)::float8::text from creature c where c.world_id = w and c.id = a;

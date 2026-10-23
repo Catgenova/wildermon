@@ -4358,15 +4358,19 @@ export function carriedSkills(species: SpeciesDef, saved: Record<string, number>
  * down and put on weight, which is bad for a cart and good for a butcher.
  */
 export type Age = 'young' | 'grown' | 'old';
+/** A day of the wall clock, in seconds: what life stages are counted in. */
+export const REAL_DAY = 24 * 60 * 60;
 /**
- * Seconds of real time spent young, and the hour it turns old: scaled with the seasons when they were lengthened
- * (`SEASON_DAYS` over `SHORT_SEASON_DAYS`). Asked for: "Scale life stages to match the 90-day seasons".
+ * Seconds spent young, and the second it turns old. The days of each were scaled with the seasons when they were
+ * lengthened (`SEASON_DAYS` over `SHORT_SEASON_DAYS`, asked for: "Scale life stages to match the 90-day seasons"), and
+ * are counted in days of the wall clock rather than of the island's (asked for: "Change the age transitions of wildermon
+ * to be real life days").
  */
 export const AGE_SCALE = SEASON_DAYS / SHORT_SEASON_DAYS;
-export const YOUNG_FOR = world(60 * 60) * AGE_SCALE;
-export const OLD_AT = world(6 * 60 * 60) * AGE_SCALE;
-/** How long it lives once old, and then it dies of old age: ninety island days. The island's `old_for` and `old_age_sweep`. */
-export const OLD_FOR = 90 * DAY_SECONDS;
+export const YOUNG_FOR = ((world(60 * 60) * AGE_SCALE) / DAY_SECONDS) * REAL_DAY;
+export const OLD_AT = ((world(6 * 60 * 60) * AGE_SCALE) / DAY_SECONDS) * REAL_DAY;
+/** How long it lives once old, and then it dies of old age: ninety days. The island's `old_for` and `old_age_sweep`. */
+export const OLD_FOR = 90 * REAL_DAY;
 /** How long a dam carries: half an island day. */
 export const GESTATION = world(12 * 60);
 /** How long after a covering either parent will look at another. */
@@ -5094,6 +5098,8 @@ export interface Creature {
   ridden: boolean;
   /** The hour it was born, which is all that age is. */
   born: number;
+  /** When a wild one was put out, which its stay in the wild is counted from (`WILD_STAY`); its birth where it is not kept. */
+  putAt?: number;
   /** The trap holding it, if it has walked into one. It does nothing at all while it is held. */
   trapped: number | null;
   /**
@@ -5334,8 +5340,11 @@ export const wildTargetFor = (w: number, h: number): number =>
  * The island's `wild_stay()`, emitted from here.
  */
 export const WILD_STAY = 24 * 60 * 60;
-/** The most a new wild one's birth is dated back, so the wild holds every age: the island's `creature_stock_block`. */
-export const WILD_BORN_BACK = 6 * 60 * 60 * 1.6;
+/**
+ * The most a new wild one's birth is dated back, so the wild holds every age: the island's `creature_stock_block`. Its
+ * stay is counted from when it was put out (`putAt`, the island's `put_at`), not from its birth.
+ */
+export const WILD_BORN_BACK = OLD_AT * 1.6;
 /** The step the share of a second span a wild one gets goes up by from one id to the next: the golden ratio's, so neighbours land far apart. The island's `wild_stay_of`. */
 const WILD_SPREAD = (Math.sqrt(5) - 1) / 2;
 /** How old a wild one is when it goes, by its id: `WILD_STAY` and up to as much again. The island's `wild_stay_of`. */
@@ -6112,6 +6121,7 @@ export class Creatures {
    */
   standWild(game: Game, id: string, x: number, y: number): Creature {
     const c = this.spawn(id, x, y, 'wild', game.rand, game.time - game.rand() * WILD_BORN_BACK);
+    c.putAt = game.time;
     const def = this.species(c);
     const stage = def.stages ? wildStageRoll(def, game.rand()) : 0;
     const skill = levelSkill(def);
@@ -6400,7 +6410,7 @@ export class Creatures {
     for (const c of [...this.list.values()]) {
       if (c.mode !== 'wild' || c.trapped !== null) continue;
       if (!wildInSeason(this.species(c), now)
-        || (game.time - c.born > wildStayOf(c.id) && this.wildUntouched(game, c, held))) {
+        || (game.time - (c.putAt ?? c.born) > wildStayOf(c.id) && this.wildUntouched(game, c, held))) {
         const r = this.region(c.x, c.y);
         this.banked.set(r, (this.banked.get(r) ?? 0) + 1);
         this.list.delete(c.id);

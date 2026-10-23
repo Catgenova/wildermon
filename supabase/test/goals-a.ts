@@ -213,7 +213,7 @@ begin
   select id into v_trait from trait_def order by id limit 1;
 
   -- Evolving: to its second stage, then its third.
-  c1 := creature_spawn(w, 'rabba', v_x + 1.5, v_y + 0.5, 'active', now() - interval '30 days', me);
+  c1 := creature_spawn(w, 'rabba', v_x + 1.5, v_y + 0.5, 'active', now() - interval '60 days', me);
   update creature set skills = jsonb_build_object(level_skill('rabba'), 24.999), sex = 'female' where world_id = w and id = c1;
   perform worker_learn(w, c1, level_skill('rabba'), 50);
   update creature set skills = jsonb_build_object(level_skill('rabba'), 49.999) where world_id = w and id = c1;
@@ -234,7 +234,7 @@ begin
   perform perform_track(w, me, 'track', jsonb_build_object('kind', 'tile', 'x', v_x, 'y', v_y, 'species', 'rabba'));
 
   -- A covering with a mirrored sire.
-  c2 := creature_spawn(w, 'rabba', v_x + 0.5, v_y + 1.5, 'active', now() - interval '30 days', me);
+  c2 := creature_spawn(w, 'rabba', v_x + 0.5, v_y + 1.5, 'active', now() - interval '60 days', me);
   update creature set boosts = '{"mirror": 1}'::jsonb, traits = array[v_trait], sex = 'male' where world_id = w and id = c2;
   perform pair_them(w, c1, c2, 10, me);
 
@@ -244,7 +244,7 @@ begin
   perform perform_artifact(w, me, 'use_ancient_lamp', (select c from creature c where c.world_id = w and c.id = c2));
 
   -- A worker on Dane's settlement lying down in a bed Dane built.
-  c3 := creature_spawn(w, 'rabba', v_dx + 1.5, v_dy + 1.5, 'active', now() - interval '30 days', me);
+  c3 := creature_spawn(w, 'rabba', v_dx + 1.5, v_dy + 1.5, 'active', now() - interval '60 days', me);
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'furniture', 'den_small', v_dx + 1, v_dy + 1, 0, 0, v_dx + 1.5, v_dy + 1.5, 30, me) returning id into v_pl;
   update creature set mode = 'deed', phase = 'bed', bed = v_pl, until = now() - interval '1 second',
@@ -254,7 +254,7 @@ begin
   insert into said values ('SAY_the worker is in the bed', case when (select sleeper from placed where id = v_pl) = c3 then 'ok' else 'not' end);
 
   -- A spar: a Sparra of Dane's and a guard.
-  c2 := creature_spawn(w, 'sparra', v_dx + 2.5, v_dy + 1.5, 'active', now() - interval '30 days', me);
+  c2 := creature_spawn(w, 'sparra', v_dx + 2.5, v_dy + 1.5, 'active', now() - interval '60 days', me);
   perform spar_go(w, c3, c2, now());
 
   -- A building of three storeys on piers, with a rune gate, a portcullis and a hidden door each a log short.

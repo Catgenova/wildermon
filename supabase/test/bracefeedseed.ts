@@ -68,7 +68,7 @@ begin
   insert into said values ('NUMBERS', brace_step() || '|' || brace_most() || '|' || seed_chance() || '|' || seed_says());
 
   -- The brace, to the most it takes and once more.
-  a := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, name = 'Ash', kept = null, boosts = null, care = 0 where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
   v_work := beast_mul(c, 'work');

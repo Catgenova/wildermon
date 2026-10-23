@@ -42,7 +42,7 @@ do $$
 declare w uuid; c int;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Occupants', 183, 20, 10, 10, true) returning id into w;
-  c := creature_spawn(w, 'sparra', 5.5, 5.5, 'wild', now() - interval '30 days');
+  c := creature_spawn(w, 'sparra', 5.5, 5.5, 'wild', now() - interval '60 days');
   update creature set name = 'Biscuit' where world_id = w and id = c;
   insert into said values ('NAME', occupant_name(w, c)), ('NONE', coalesce(occupant_name(w, -1), 'null'));
 end $$;

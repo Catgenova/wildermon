@@ -129,7 +129,7 @@ begin
   perform rpc_join(w, 'Keeper');
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Workstead', ${T}, ${T}, 10, 5, u);
   insert into crate (world_id, id, kind, x, y, sx, sy, deed) values (w, v_crate, 'plank', ${T} + 1, ${T}, 0, 0, true);
-  v_sedra := creature_spawn(w, 'sedra', ${T} + 1.5, ${T} + 0.5, 'active', now() - interval '30 days', u);
+  v_sedra := creature_spawn(w, 'sedra', ${T} + 1.5, ${T} + 0.5, 'active', now() - interval '60 days', u);
   -- Set to work: its record starts as it comes onto the settlement.
   update creature set mode = 'deed', traits = '{}', keeper = u, settled_at = now() - interval '100 seconds' where world_id = w and id = v_sedra;
   insert into said select 'START', coalesce(work_stats::text, 'null') from creature where world_id = w and id = v_sedra;

@@ -295,14 +295,14 @@ begin
   update creature set mode = 'wild', keeper = null where world_id = w and keeper = dane and mode in ('active', 'stored');
 
   -- Sightings.
-  perform creature_spawn(w, 'woola', v_x + 3, v_y, 'wild', now() - interval '9 hours');
-  perform creature_spawn(w, 'lume', v_x + ${MOBS_RANGE} + 10, v_y, 'wild', now() - interval '9 hours');
-  v_id := creature_spawn(w, 'quill', v_x, v_y, 'active', now() - interval '9 hours', dane);
+  perform creature_spawn(w, 'woola', v_x + 3, v_y, 'wild', now() - interval '10 days');
+  perform creature_spawn(w, 'lume', v_x + ${MOBS_RANGE} + 10, v_y, 'wild', now() - interval '10 days');
+  v_id := creature_spawn(w, 'quill', v_x, v_y, 'active', now() - interval '10 days', dane);
   update creature set mode = 'stored' where world_id = w and id = v_id;
   insert into said values ('FIRST', rpc_guide_seen(w, array['woola', 'woola', 'lume', 'quill', 'nosuch'])::text);
   insert into said values ('AGAIN', rpc_guide_seen(w, array['woola'])::text);
   -- A stage's page: taken while one at that stage stands near; then put back as it was.
-  v_id := creature_spawn(w, 'woola', v_x + 2, v_y, 'wild', now() - interval '9 hours');
+  v_id := creature_spawn(w, 'woola', v_x + 2, v_y, 'wild', now() - interval '10 days');
   update creature set skills = '{"foraging": 30}'::jsonb where world_id = w and id = v_id;
   insert into said values ('STAGE', rpc_guide_seen(w, array['woola:1', 'woola:2', 'woola:9'])::text);
   delete from guide where world_id = w and uid = dane and species = 'woola:1';
@@ -336,7 +336,7 @@ begin
   -- A catch got out of the noose.
   insert into skill (world_id, uid, id, value) values (w, dane, 'taming', 60)
     on conflict (world_id, uid, id) do update set value = 60;
-  v_id := creature_spawn(w, 'vola', v_x + 0.6, v_y, 'wild', now() - interval '9 hours');
+  v_id := creature_spawn(w, 'vola', v_x + 0.6, v_y, 'wild', now() - interval '10 days');
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, caught)
     values (w, 'trap', 'snare', floor(v_x)::int, floor(v_y)::int, 0, 0, floor(v_x) + 0.5, floor(v_y) + 0.5, 60, dane, v_id)
     returning id into v_trap;
@@ -352,7 +352,7 @@ begin
 
   -- An offering that takes.
   perform give(w, dane, 'blueberry', 40, 40);
-  v_id := creature_spawn(w, 'rabba', v_x + 0.6, v_y, 'wild', now() - interval '9 hours');
+  v_id := creature_spawn(w, 'rabba', v_x + 0.6, v_y, 'wild', now() - interval '10 days');
   for v_i in 1..40 loop
     exit when (select mode from creature where world_id = w and id = v_id) <> 'wild';
     perform act_perform(w, dane, 'tame', jsonb_build_object('kind', 'creature', 'id', v_id));
@@ -362,15 +362,15 @@ begin
   update creature set mode = 'wild', keeper = null where world_id = w and keeper = dane and mode in ('active', 'stored');
 
   -- Births: to a dam he keeps, to one that is nobody's, and to one of his turned loose.
-  v_id := creature_spawn(w, 'cudda', v_x + 1, v_y + 1, 'deed', now() - interval '9 hours', dane);
+  v_id := creature_spawn(w, 'cudda', v_x + 1, v_y + 1, 'deed', now() - interval '10 days', dane);
   update creature set sex = 'female', unborn = '{"traits": [], "sex": "female"}'::jsonb, due = now() - interval '1 second'
     where world_id = w and id = v_id;
   perform give_birth(w, v_id);
-  v_id := creature_spawn(w, 'sedra', v_x + 1, v_y - 1, 'wild', now() - interval '9 hours');
+  v_id := creature_spawn(w, 'sedra', v_x + 1, v_y - 1, 'wild', now() - interval '10 days');
   update creature set sex = 'female', unborn = '{"traits": [], "sex": "female"}'::jsonb, due = now() - interval '1 second'
     where world_id = w and id = v_id;
   perform give_birth(w, v_id);
-  v_id := creature_spawn(w, 'holla', v_x - 1, v_y + 1, 'wild', now() - interval '9 hours', dane);
+  v_id := creature_spawn(w, 'holla', v_x - 1, v_y + 1, 'wild', now() - interval '10 days', dane);
   update creature set sex = 'female', unborn = '{"traits": [], "sex": "female"}'::jsonb, due = now() - interval '1 second'
     where world_id = w and id = v_id;
   perform give_birth(w, v_id);
@@ -378,13 +378,13 @@ begin
     from guide where world_id = w and uid = dane));
 
   -- One of his evolving: each stage it reaches tamed in his book; a wild one evolving, nothing; bred never on a stage's page.
-  v_id := creature_spawn(w, 'woola', v_x + 1, v_y, 'active', now() - interval '9 hours', dane);
+  v_id := creature_spawn(w, 'woola', v_x + 1, v_y, 'active', now() - interval '10 days', dane);
   update creature set skills = '{"foraging": ${EVOLVE_AT[0]}}'::jsonb where world_id = w and id = v_id;
   insert into said values ('EVOLVED1', coalesce((select string_agg(species || ':' || tamed, ',' order by species) from guide
     where world_id = w and uid = dane and species like 'woola:%'), 'none'));
   update creature set skills = '{"foraging": ${EVOLVE_AT[1]}}'::jsonb where world_id = w and id = v_id;
   delete from creature where world_id = w and id = v_id;
-  v_id := creature_spawn(w, 'sedra', v_x - 1, v_y, 'wild', now() - interval '9 hours');
+  v_id := creature_spawn(w, 'sedra', v_x - 1, v_y, 'wild', now() - interval '10 days');
   update creature set skills = '{"foraging": ${EVOLVE_AT[1]}}'::jsonb where world_id = w and id = v_id;
   delete from creature where world_id = w and id = v_id;
   perform guide_mark(w, dane, 'cudda:1', 'bred');

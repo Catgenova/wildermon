@@ -41,8 +41,7 @@ end $do$;
 
 -- Every keeper's numbers stamped afresh, its old age among them, now that the base it is a share of has moved.
 update creature set kept = kept_of(world_id, keeper) where keeper is not null and kept is distinct from kept_of(world_id, keeper);
--- And every one old now, grown again: the start of grown and `comb_into` into it, as an ancient comb puts it.
-update creature cr set born = now() - make_interval(secs => (young_for() + comb_into()) / age_pace(cr))
- where cr.born is not null and age_of(cr.born, old_of(cr), age_pace(cr)) = 'old';
+-- Every one old now is set back to grown by `20261023180001_life_stages_in_days_of_the_wall_clock`, once the stages
+-- are counted in days of the wall clock.
 
 select private.lock_doors();

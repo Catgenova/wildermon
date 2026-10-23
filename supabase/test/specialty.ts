@@ -71,12 +71,12 @@ begin
 
   -- Two reed cutters of yours, and the ones that do not count: a water carrier of yours, a reed cutter following you, one
   -- in a crate, a wild one.
-  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '30 days', u);
-  b := creature_spawn(w, 'sedra', ${T} + 1.5, ${T + 3} + 0.5, 'deed', now() - interval '30 days', u);
-  perform creature_spawn(w, 'holla', ${T} + 2.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
-  perform creature_spawn(w, 'sedra', ${T} + 3.5, ${T} + 0.5, 'active', now() - interval '30 days', u);
-  perform creature_spawn(w, 'sedra', ${T} + 4.5, ${T} + 0.5, 'stored', now() - interval '30 days', u);
-  perform creature_spawn(w, 'sedra', ${T} + 5.5, ${T} + 0.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '60 days', u);
+  b := creature_spawn(w, 'sedra', ${T} + 1.5, ${T + 3} + 0.5, 'deed', now() - interval '60 days', u);
+  perform creature_spawn(w, 'holla', ${T} + 2.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
+  perform creature_spawn(w, 'sedra', ${T} + 3.5, ${T} + 0.5, 'active', now() - interval '60 days', u);
+  perform creature_spawn(w, 'sedra', ${T} + 4.5, ${T} + 0.5, 'stored', now() - interval '60 days', u);
+  perform creature_spawn(w, 'sedra', ${T} + 5.5, ${T} + 0.5, 'wild', now() - interval '60 days', null);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', carrying = null,
          skills = jsonb_build_object('foraging', 10) where world_id = w and species = 'sedra';
   insert into said values ('TWO', deed_trade_workers(w, u, 'reed')::text);
@@ -88,7 +88,7 @@ begin
   select * into c from creature where world_id = w and id = a;
   insert into said values ('GO2', c.phase || ',' || extract(epoch from c.until - c.leg_at) || ',' || (work_duration(task_skill(c)) / beast_mul(c, 'work')));
   -- A citizen's makes three.
-  d := creature_spawn(w, 'sedra', ${T} + 2.5, ${T + 3} + 0.5, 'deed', now() - interval '30 days', v);
+  d := creature_spawn(w, 'sedra', ${T} + 2.5, ${T + 3} + 0.5, 'deed', now() - interval '60 days', v);
   update creature set traits = '{}', rare = null, care = 0, skills = jsonb_build_object('foraging', 10) where world_id = w and id = d;
   insert into said values ('THREE', deed_trade_workers(w, u, 'reed') || ',' || deed_trade_workers(w, v, 'reed'));
   select * into c from creature where world_id = w and id = a;
@@ -109,8 +109,8 @@ begin
 
   -- And how long the count takes, asked once a go, on an island with a crowd on it: a thousand wild ones, and twenty-odd
   -- workers of yours and your citizen's.
-  perform creature_spawn(w, 'rabba', 5 + (g.k % 180), 5 + (g.k / 180), 'wild', now() - interval '30 days', null) from generate_series(1, 1000) g(k);
-  perform creature_spawn(w, case when g.k % 3 = 0 then 'holla' else 'sedra' end, ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days',
+  perform creature_spawn(w, 'rabba', 5 + (g.k % 180), 5 + (g.k / 180), 'wild', now() - interval '60 days', null) from generate_series(1, 1000) g(k);
+  perform creature_spawn(w, case when g.k % 3 = 0 then 'holla' else 'sedra' end, ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days',
                          case when g.k % 2 = 0 then u else v end) from generate_series(1, 20) g(k);
   analyze creature;
   t0 := clock_timestamp();

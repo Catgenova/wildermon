@@ -345,7 +345,7 @@ begin
 
   /* ---- Milkmaid: its time, and a second bucket with its chance put at one. ---- */
   perform pg_temp.hold(w, u, '{}');
-  select creature_spawn(w, 'cudda', 10.5, 9.5, 'deed', now() - interval '9 hours', u) into v_c;
+  select creature_spawn(w, 'cudda', 10.5, 9.5, 'deed', now() - interval '10 days', u) into v_c;
   update creature set sex = 'female', fleece = 1, hunger = 1, traits = '{}', mode = 'deed', keeper = u,
          from_x = 10.5, from_y = 9.5, to_x = 10.5, to_y = 9.5, leg_at = now(), leg_ends = now(),
          until = now() + interval '1 hour', settled_at = now()

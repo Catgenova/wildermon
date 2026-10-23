@@ -65,14 +65,14 @@ begin
   insert into said values ('NUMS', upkeep_for() || ',' || unfed_pace() || ',' || day_seconds());
 
   -- A worker, not hungry, a hundred seconds since it was last settled: those are a hundred seconds unfed.
-  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', carrying = null, unfed = 0,
          skills = jsonb_build_object('foraging', 10), phase = 'idle', until = now() + interval '60 seconds',
          settled_at = now() - interval '100 seconds' where world_id = w and id = a;
   perform creature_settle(w, a);
   insert into said select 'COUNTED', round(unfed::numeric, 3)::text from creature where world_id = w and id = a;
   -- One following you counts nothing.
-  b := creature_spawn(w, 'sedra', ${T} + 2.5, ${T} + 0.5, 'active', now() - interval '30 days', u);
+  b := creature_spawn(w, 'sedra', ${T} + 2.5, ${T} + 0.5, 'active', now() - interval '60 days', u);
   update creature set hunger = 1, unfed = 0, settled_at = now() - interval '100 seconds' where world_id = w and id = b;
   perform creature_settle(w, b);
   insert into said select 'COMPANION', round(unfed::numeric, 3)::text from creature where world_id = w and id = b;

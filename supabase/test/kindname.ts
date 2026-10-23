@@ -39,14 +39,14 @@ declare w uuid; c int;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Names', 181, 20, 10, 10, true) returning id into w;
   -- Called by its kind's old name: called its kind's name now, on any change to it.
-  c := creature_spawn(w, 'sparra', 5.5, 5.5, 'wild', now() - interval '30 days');
+  c := creature_spawn(w, 'sparra', 5.5, 5.5, 'wild', now() - interval '60 days');
   update creature set name = '${sparra.was![0]}' where world_id = w and id = c;
   insert into said select 'OLD', name from creature where world_id = w and id = c;
   -- Evolved by a skill that is not its trade's: its stage's name.
   update creature set skills = jsonb_build_object('fighting', ${EVOLVE_AT[1]}) where world_id = w and id = c;
   insert into said select 'EVOLVED', name from creature where world_id = w and id = c;
   -- Tamed already evolved, called by its first stage's name as it was: its stage's name.
-  c := creature_spawn(w, 'sparra', 6.5, 6.5, 'wild', now() - interval '30 days');
+  c := creature_spawn(w, 'sparra', 6.5, 6.5, 'wild', now() - interval '60 days');
   update creature set name = '${sparra.name}', skills = jsonb_build_object('fighting', ${EVOLVE_AT[0]}), mode = 'active' where world_id = w and id = c;
   insert into said select 'MADE', name from creature where world_id = w and id = c;
   -- Named by its keeper: kept, however it evolves.

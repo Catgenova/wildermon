@@ -79,7 +79,7 @@ begin
     from unnest(array['use_ancient_collar', 'use_ancient_bridle', 'hone_whetstone', 'open_seed_jar', 'read_rune_tablet']) as t(act);
 
   -- The collar and the bridle.
-  a := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, name = 'Ash', kept = null, boosts = null where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
   v_appetite := beast_mul(c, 'appetite'); v_tack := tack_speed(c);

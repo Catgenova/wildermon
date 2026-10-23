@@ -115,9 +115,9 @@ begin
   perform set_config('search_path', '"$user", public', true);
 
   -- The mirror on a wildermon.
-  v_snow := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '30 days', u);
-  v_horn := creature_spawn(w, 'rabba', px - 0.5, py, 'active', now() - interval '30 days', u);
-  v_ash := creature_spawn(w, 'rabba', px, py + 0.5, 'active', now() - interval '30 days', u);
+  v_snow := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '60 days', u);
+  v_horn := creature_spawn(w, 'rabba', px - 0.5, py, 'active', now() - interval '60 days', u);
+  v_ash := creature_spawn(w, 'rabba', px, py + 0.5, 'active', now() - interval '60 days', u);
   update creature set sex = 'female', name = 'Snow', traits = ${arr(SNOW)}, rare = null, boosts = null, care = 0, hunger = 1 where world_id = w and id = v_snow;
   update creature set sex = 'male', name = 'Horn', traits = ${arr(HORN)}, rare = null, boosts = null, care = 0, hunger = 1 where world_id = w and id = v_horn;
   update creature set name = 'Ash', traits = '{}', rare = null, boosts = null where world_id = w and id = v_ash;

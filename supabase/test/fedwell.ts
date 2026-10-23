@@ -102,7 +102,7 @@ begin
   insert into said values ('NUMBERS', fed_learn() || '|' || fed_for() || '|' || fed_favourite() || '|' || fed_care() || '|'
     || (select favourite from species_def where id = '${KIND}'));
 
-  a := creature_spawn(w, '${KIND}', px + 0.5, py, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, '${KIND}', px + 0.5, py, 'active', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 0.5 where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
   v_base := beast_mul(c, 'learn');
@@ -118,7 +118,7 @@ begin
   insert into said values ('ROW', v_got::text);
 
   -- Something else of its diet: half; a lesser one leaves the greater be, and its time.
-  b := creature_spawn(w, '${KIND}', px - 0.5, py, 'active', now() - interval '30 days', u);
+  b := creature_spawn(w, '${KIND}', px - 0.5, py, 'active', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, mode = 'deed' where world_id = w and id = b;
   v_other := give(w, u, '${OTHER}', 1, ${Q});
   perform perform_creature(w, u, 'feed', jsonb_build_object('kind', 'creature', 'id', b, 'itemUid', v_other));
@@ -151,7 +151,7 @@ begin
   update creature set fed_bonus = null, fed_until = null, care = 0.25 where world_id = w and id = a;
   perform beast_fed(w, a, '${FAV}', 0);
   insert into said select 'NOUGHT', coalesce(fed_bonus::text, '-') || '|' || care from creature where world_id = w and id = a;
-  g := creature_spawn(w, '${KIND}', px + 5, py + 5, 'wild', now() - interval '30 days', null);
+  g := creature_spawn(w, '${KIND}', px + 5, py + 5, 'wild', now() - interval '60 days', null);
   perform beast_fed(w, g, '${FAV}', ${Q});
   update creature set hunger = 0.1, until = now() - interval '1 minute', settled_at = now() - interval '1 minute' where world_id = w and id = g;
   perform creature_settle(w, g);
@@ -159,7 +159,7 @@ begin
 
   -- A deed worker out of the stores, its care where the settle wore it to.
   insert into deed (world_id, name, x, y, radius, founded_by) values (w, 'Larder', floor(px)::int, floor(py)::int, 5, u);
-  k := creature_spawn(w, '${KIND}', floor(px) + 1.5, floor(py) + 0.5, 'deed', now() - interval '30 days', u);
+  k := creature_spawn(w, '${KIND}', floor(px) + 1.5, floor(py) + 0.5, 'deed', now() - interval '60 days', u);
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, made_by)
     values (w, 'furniture', 'larder', floor(px)::int + 1, floor(py)::int, 0, 0, floor(px) + 1.5, floor(py) + 0.5, u)
     returning id into v_larder;

@@ -154,7 +154,7 @@ begin
     values (w, 'furniture', 'shelves', ${SHELF[0]}, ${SHELF[1]}, 0, 0, ${centre(shelf)}, 50, u) returning id into v_shelf;
   insert into item (world_id, holder, placed, def, ql, count, locked) values (w, 'furniture', v_shelf, 'log', 30, 4, true);
   perform drop_on_ground(w, ${HATCHET[0]}, ${HATCHET[1]}, 'hatchet', 30, null, 1);
-  m := creature_spawn(w, 'magga', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  m := creature_spawn(w, 'magga', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', keeper = u, phase = 'idle', carrying = null, job = null, post = null, hunger = 1,
          from_x = ${T} + 0.5, from_y = ${T} + 0.5, to_x = ${T} + 0.5, to_y = ${T} + 0.5
    where world_id = w and id = m;

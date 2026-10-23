@@ -92,7 +92,7 @@ begin
   insert into skill (world_id, uid, id, value) values (w, me, 'taming', 90)
     on conflict (world_id, uid, id) do update set value = 90;
   perform give(w, me, 'potato', 5, 30);
-  v_c := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'wild', now() - interval '9 hours');
+  v_c := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'wild', now() - interval '10 days');
   perform act_perform(w, me, 'tame', jsonb_build_object('kind', 'creature', 'id', v_c));
   insert into said values ('TAME', skill_of(w, me, 'mind_logic')::text);
 

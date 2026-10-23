@@ -97,7 +97,7 @@ begin
   insert into item (world_id, holder, gx, gy, def, ql, count)
     values (w, 'ground', 29, 29, 'wheat_seed', 40, 6);
   delete from creature where world_id = w and keeper = u and species = 'seavic';
-  perform creature_spawn(w, 'seavic', 30.5, 30.5, 'deed', now() - interval '9 hours', u);
+  perform creature_spawn(w, 'seavic', 30.5, 30.5, 'deed', now() - interval '10 days', u);
   update creature set job = 'farm', mode = 'deed', phase = 'idle',
       until = now() - interval '200 seconds', leg_at = now() - interval '200 seconds',
       leg_ends = now() - interval '200 seconds', settled_at = now() - interval '200 seconds'

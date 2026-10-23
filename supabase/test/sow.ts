@@ -92,7 +92,7 @@ begin
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Hoarding', 30, 30, 5, 1, u);
   insert into crate (world_id, id, kind, x, y, sx, sy, deed, made_by) values (w, 1, 'plank', 32, 30, 1, 1, true, u);
   delete from creature where world_id = w and keeper = u and species = 'seavic';
-  perform creature_spawn(w, 'seavic', 30.5, 30.5, 'deed', now() - interval '9 hours', u);
+  perform creature_spawn(w, 'seavic', 30.5, 30.5, 'deed', now() - interval '10 days', u);
   -- Ten minutes owed, so that one settle is ten minutes of work rather than none.
   update creature set job = 'farm', mode = 'deed', phase = 'idle',
       until = now() - interval '600 seconds', leg_at = now() - interval '600 seconds',

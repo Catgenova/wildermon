@@ -76,9 +76,9 @@ begin
   perform act_perform(w, u, 'place_furniture', jsonb_build_object('kind', 'item', 'uid', v_it, 'x', 21, 'y', 20, 'sx', 0, 'sy', 0));
   select id into v_wagon from placed where world_id = w and sub = 'wagon';
 
-  v_ash := creature_spawn(w, 'orse', 20.8, 21.2, 'active', now() - interval '3 days', u);
-  v_bea := creature_spawn(w, 'orse', 20.5, 20.5, 'active', now() - interval '3 days', u);
-  v_cob := creature_spawn(w, 'orse', 20.5, 20.5, 'active', now() - interval '3 days', u);
+  v_ash := creature_spawn(w, 'orse', 20.8, 21.2, 'active', now() - interval '60 days', u);
+  v_bea := creature_spawn(w, 'orse', 20.5, 20.5, 'active', now() - interval '60 days', u);
+  v_cob := creature_spawn(w, 'orse', 20.5, 20.5, 'active', now() - interval '60 days', u);
   update creature set hunger = 0.9, name = case id when v_ash then 'Ash' when v_bea then 'Bea' else 'Cob' end,
       settled_at = now(), until = now(), leg_at = now(), leg_ends = now(), from_x = to_x, from_y = to_y
     where world_id = w and id in (v_ash, v_bea, v_cob);

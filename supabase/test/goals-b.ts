@@ -149,11 +149,11 @@ begin
   perform give(w, u, 'carving_knife', 1, 50);
 
   -- A shearing, and a milking of a Cudda.
-  select creature_spawn(w, '${FLEECED.id}', 10.5, 9.5, 'deed', now() - interval '9 hours', u) into v_c;
+  select creature_spawn(w, '${FLEECED.id}', 10.5, 9.5, 'deed', now() - interval '10 days', u) into v_c;
   update creature set fleece = 1, mode = 'deed', keeper = u, from_x = 10.5, from_y = 9.5, to_x = 10.5, to_y = 9.5
    where world_id = w and id = v_c;
   perform perform_creature(w, u, 'shear', jsonb_build_object('kind', 'creature', 'id', v_c));
-  select creature_spawn(w, 'cudda', 11.5, 10.5, 'deed', now() - interval '9 hours', u) into v_c;
+  select creature_spawn(w, 'cudda', 11.5, 10.5, 'deed', now() - interval '10 days', u) into v_c;
   update creature set sex = 'female', fleece = 1, hunger = 1, mode = 'deed', keeper = u,
          from_x = 11.5, from_y = 10.5, to_x = 11.5, to_y = 10.5 where world_id = w and id = v_c;
   perform give(w, u, 'bucket', 1, 30);

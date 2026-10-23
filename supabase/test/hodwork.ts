@@ -261,7 +261,7 @@ begin
     values (w, 0, ${FLOOR[0]}, ${FLOOR[1]}, 1, 'stone_brick', 'floor', ${j(floor2.needed)}, ${j(floor2.total)}, u);
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by)
     values (w, 1, '${wall2.dir}', ${wall2.x}, ${wall2.y}, 1, 'solid', 'stone_brick', ${j(wall2.needed)}, ${j(wall2.total)}, u);
-  v_id := creature_spawn(w, 'cobbe', ${T} + 0.6, ${T} + 0.6, 'active', now() - interval '30 days', u);
+  v_id := creature_spawn(w, 'cobbe', ${T} + 0.6, ${T} + 0.6, 'active', now() - interval '60 days', u);
   update creature set mode = 'deed', stance = 'passive', hunger = 1, phase = 'idle', from_x = to_x, from_y = to_y,
          until = now() - interval '3600 seconds', settled_at = now() - interval '3600 seconds', leg_at = now() - interval '3600 seconds',
          leg_ends = now() - interval '3600 seconds'

@@ -68,7 +68,7 @@ begin
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by) values
     (w, 0, 'h', ${MARBLE[0]}, ${MARBLE[1]}, 1, 'solid', 'marble', wall_bill('marble', 'solid'), wall_bill('marble', 'solid'), u),
     (w, 0, 'h', ${LOGS[0]}, ${LOGS[1]}, 2, 'solid', 'log', wall_bill('log', 'solid'), wall_bill('log', 'solid'), u);
-  v_id := creature_spawn(w, 'cobbe', ${TOKEN[0]} + 0.6, ${TOKEN[1]} + 0.6, 'active', now() - interval '30 days', u);
+  v_id := creature_spawn(w, 'cobbe', ${TOKEN[0]} + 0.6, ${TOKEN[1]} + 0.6, 'active', now() - interval '60 days', u);
   insert into said select 'LEVEL', creature_level(c.skills) || '|' || work_range(c) from creature c where c.world_id = w and c.id = v_id;
   -- An hour of it, played back.
   update creature set mode = 'deed', stance = 'passive', hunger = 1, phase = 'idle', from_x = to_x, from_y = to_y,

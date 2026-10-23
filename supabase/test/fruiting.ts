@@ -266,7 +266,7 @@ select land_set_tile(${W}, ${x}, ${ROW}, ${TileType.Tree}); select land_set_data
 select land_set_tile(${W}, ${x}, ${ROW + 1}, tile_id('Grass')); select land_set_data(${W}, ${x}, ${ROW + 1}, 0);
 delete from building_tile where world_id = ${W} and x = ${x} and y between ${ROW} and ${ROW + 1};
 delete from foraged where world_id = ${W} and x = ${x} and y = ${ROW};
-select creature_spawn(${W}, 'plucka', ${x + 0.5}, ${ROW + 1.5}, 'stored', now() - interval '9 hours', ${IVAR}) as picker \\gset
+select creature_spawn(${W}, 'plucka', ${x + 0.5}, ${ROW + 1.5}, 'stored', now() - interval '10 days', ${IVAR}) as picker \\gset
 ${SEASONS.map((s) => `select set_config('wurm.season', ${q(s)}, true);
 select '${s}|' || worker_gatherable(${W}, ${x}, ${ROW}, 'fruit', (select c from creature c where c.world_id = ${W} and c.id = :'picker'));`).join('\n')}
 rollback;`));

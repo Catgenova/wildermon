@@ -92,7 +92,7 @@ begin
     array['fleet', 'lucky_finder'], '{"speed": 4, "find": 4}')::text;
 
   -- night: its blood on it, as a kept one.
-  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'active', now() - interval '60 days', u);
   update creature set traits = array['night_eyed'], rare = null where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
   insert into said values ('NIGHT', beast_mul(c, 'night')::text);
@@ -104,7 +104,7 @@ begin
   -- loads: a reed cutter at its first stage, with and without, cuts once.
   perform land_set_tile(w, x, ${T + 4}, tile_id('Reed')) from generate_series(${T - 2}, ${T + 2}) x;
   for i in 0..1 loop
-    a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '30 days', u);
+    a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '60 days', u);
     update creature set traits = case i when 0 then '{}'::text[] else array['deep_pocketed'] end, rare = null, care = 0,
            carrying = null, hunger = 1, stance = 'passive', skills = jsonb_build_object('foraging', 10),
            phase = 'work', work_x = ${T}, work_y = ${T + 4}, from_x = ${T} + 0.5, from_y = ${T + 3} + 0.5,
@@ -120,7 +120,7 @@ begin
 
   -- find: a rare seeker at a hundred archaeology, with and without.
   for i in 0..1 loop
-    a := creature_spawn(w, 'snout', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+    a := creature_spawn(w, 'snout', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
     update creature set traits = case i when 0 then '{}'::text[] else array['lucky_finder'] end, rare = 'rare', care = 0,
            skills = jsonb_build_object('archaeology', 100), work_x = ${T + 2}, work_y = ${T + 2}
      where world_id = w and id = a;
@@ -136,8 +136,8 @@ begin
   end loop;
 
   -- idle: reed cutters with no reeds anywhere, one a settler, and then one on its own.
-  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
-  b := creature_spawn(w, 'sedra', ${T} + 1.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
+  b := creature_spawn(w, 'sedra', ${T} + 1.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = case when id = a then array['settler'] else '{}'::text[] end, rare = null, care = 0,
          carrying = null, hunger = 1, stance = 'passive', skills = jsonb_build_object('foraging', 10), idle_since = null,
          phase = 'idle', work_x = null, work_y = null, until = now() - interval '0.3 seconds', leg_at = now(), leg_ends = now(),

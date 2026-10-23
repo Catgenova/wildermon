@@ -82,7 +82,7 @@ begin
   insert into said select 'GUARDWORDS', description from species_def where id = 'thumpa';
 
   -- A Sparra alone on the settlement: nobody to spar with.
-  s := creature_spawn(w, 'sparra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  s := creature_spawn(w, 'sparra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', worn = 0, carrying = null,
          skills = jsonb_build_object('fighting', ${LEVEL}), phase = 'idle',
          from_x = ${T} + 0.5, from_y = ${T} + 0.5, to_x = ${T} + 0.5, to_y = ${T} + 0.5,
@@ -92,7 +92,7 @@ begin
   insert into said select 'ALONE', coalesce(idle_why, '-') || '|' || coalesce(spar_with::text, '-') from creature where world_id = w and id = s;
 
   -- A guard: the Sparra picks it, and it walks over.
-  a := creature_spawn(w, '${GUARD}', ${T} + 4.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, '${GUARD}', ${T} + 4.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', worn = 0, carrying = null,
          skills = jsonb_build_object('${SKILL}', ${LEVEL}), phase = 'idle',
          from_x = ${T} + 4.5, from_y = ${T} + 0.5, to_x = ${T} + 4.5, to_y = ${T} + 0.5,
@@ -153,7 +153,7 @@ begin
     exit when (select phase from creature where world_id = w and id = a) = 'spar';
   end loop;
   insert into said select 'MIDGO', phase from creature where world_id = w and id = a;
-  x := creature_spawn(w, 'ulva', ${T} + 6.5, ${T} + 2.5, 'wild', now() - interval '30 days', null);
+  x := creature_spawn(w, 'ulva', ${T} + 6.5, ${T} + 2.5, 'wild', now() - interval '60 days', null);
   update creature set until = now() - interval '0.3 seconds' where world_id = w and id = a;
   perform worker_settle(w, a);
   insert into said select 'INTRUDER', phase || '|' || coalesce(spar_with::text, '-') || '|' || (enemy = x)::text from creature where world_id = w and id = a;
@@ -181,7 +181,7 @@ begin
   update creature set enemy = null, phase = 'idle', spar_at = now() - interval '30 minutes', health = max_health(creature) where world_id = w and id in (s, a);
 
   -- Two guards: turns, the one that sparred longest ago first.
-  b := creature_spawn(w, '${OTHER}', ${T} - 3.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  b := creature_spawn(w, '${OTHER}', ${T} - 3.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', worn = 0, carrying = null,
          skills = jsonb_build_object('${SKILL}', ${LEVEL}), phase = 'idle',
          from_x = ${T} - 3.5, from_y = ${T} + 0.5, to_x = ${T} - 3.5, to_y = ${T} + 0.5
@@ -208,7 +208,7 @@ begin
 
   -- A Sparra takes a worker place: with the settlement full, one more is refused.
   update deed set level = 1 where world_id = w;
-  x := creature_spawn(w, 'sparra', ${T} + 1.5, ${T} + 1.5, 'active', now() - interval '30 days', u);
+  x := creature_spawn(w, 'sparra', ${T} + 1.5, ${T} + 1.5, 'active', now() - interval '60 days', u);
   insert into said values ('FULL', coalesce(act_refusal(w, u, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', x)), 'none')
     || '|' || (select count(*) from creature where world_id = w and keeper = u and mode = 'deed'));
 end $t$;

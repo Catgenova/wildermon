@@ -83,16 +83,16 @@ begin
   insert into placed (world_id, kind, x, y, cx, cy, ql, made_by)
     values (w, 'post', 101, 100, 101.375, 100.375, 40, a) returning id into v_post2;
 
-  v_pet := creature_spawn(w, 'ambra', 100.5, 101, 'active', now() - interval '3 days', a);
-  v_crated := creature_spawn(w, 'ambra', 100.5, 100.5, 'stored', now() - interval '3 days', a);
+  v_pet := creature_spawn(w, 'ambra', 100.5, 101, 'active', now() - interval '60 days', a);
+  v_crated := creature_spawn(w, 'ambra', 100.5, 100.5, 'stored', now() - interval '60 days', a);
   perform give(w, a, 'creature_crate', 1, 40, null);
   select id into v_crate from item where world_id = w and holder = 'player' and holder_uid = a and def = 'creature_crate'
     order by id desc limit 1;
   update item set creature = v_crated where id = v_crate;
-  v_theirs := creature_spawn(w, 'ambra', 100.5, 101, 'active', now() - interval '3 days', b);
-  v_worker := creature_spawn(w, 'ambra', 100.5, 101, 'deed', now() - interval '3 days', a);
-  v_far := creature_spawn(w, 'ambra', 100.5 + ${POST_FOLLOW_REACH + 1}, 100.5, 'active', now() - interval '3 days', a);
-  v_lost := creature_spawn(w, 'ambra', 100.5, 100.5, 'stored', now() - interval '3 days', a);
+  v_theirs := creature_spawn(w, 'ambra', 100.5, 101, 'active', now() - interval '60 days', b);
+  v_worker := creature_spawn(w, 'ambra', 100.5, 101, 'deed', now() - interval '60 days', a);
+  v_far := creature_spawn(w, 'ambra', 100.5 + ${POST_FOLLOW_REACH + 1}, 100.5, 'active', now() - interval '60 days', a);
+  v_lost := creature_spawn(w, 'ambra', 100.5, 100.5, 'stored', now() - interval '60 days', a);
   update creature set name = 'Pip' where world_id = w and id in (v_pet, v_crated, v_theirs, v_worker, v_far, v_lost);
 
   insert into said values ('stranger', coalesce(act_refusal(w, a, 'assign_post', jsonb_build_object('kind', 'post', 'id', v_post, 'creature', v_theirs)), 'none'));

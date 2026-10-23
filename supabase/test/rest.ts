@@ -79,7 +79,7 @@ begin
 
   -- Every kind's bed class at a level of each stage.
   ${KINDS.map((sp) => `
-  a := creature_spawn(w, '${sp}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, '${sp}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   ${LEVELS.map((lv) => `
   update creature set skills = (select jsonb_object_agg(k, ${lv}) from jsonb_object_keys(coalesce(nullif(skills, '{}'::jsonb), '{"foraging": 1}'::jsonb)) k) where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
@@ -89,7 +89,7 @@ begin
   -- A mender at the crate, its goes at the island's own pace: no more than TIRE_GOES before it rests.
   insert into item (world_id, holder, crate, gx, gy, def, ql, dmg, count)
     select w, 'crate', 1, ${T + 1}, ${T}, 'hatchet', 90, 99, 1 from generate_series(1, 6);
-  a := creature_spawn(w, 'tinka', ${T + 1} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, 'tinka', ${T + 1} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', carrying = null, worn = 0,
          skills = jsonb_build_object('repair', 10), work_x = ${T + 1}, work_y = ${T},
          from_x = ${T + 1} + 0.5, from_y = ${T} + 0.5, to_x = ${T + 1} + 0.5, to_y = ${T} + 0.5
@@ -129,7 +129,7 @@ begin
     values (w, 'furniture', 'den_small', ${T + 15}, ${T}, 0, 0, ${T + 15} + 0.5, ${T} + 0.5, 40, u) returning id into v_other;
 
   -- A tired Reedpup at its first stage, idle and empty-handed: to the small bed, into it, and up out of it.
-  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', carrying = null, worn = ${TIRE_GOES},
          skills = jsonb_build_object('foraging', 10), phase = 'idle',
          from_x = ${T} + 0.5, from_y = ${T} + 0.5, to_x = ${T} + 0.5, to_y = ${T} + 0.5,
@@ -151,7 +151,7 @@ begin
   insert into said select 'SENTBED', coalesce(e->>'idleWhy', '') || '|' || coalesce(e->>'idleBed', '') || '|' || round((e->>'idleN')::numeric)
     from jsonb_array_elements(r) e where (e->>'id')::int = a;
   -- A second tired one of its class: the one bed of its size is taken, so it rests where it stands.
-  b := creature_spawn(w, 'sedra', ${T - 2} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  b := creature_spawn(w, 'sedra', ${T - 2} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', carrying = null, worn = ${TIRE_GOES},
          skills = jsonb_build_object('foraging', 12), phase = 'idle',
          from_x = ${T - 2} + 0.5, from_y = ${T} + 0.5, to_x = ${T - 2} + 0.5, to_y = ${T} + 0.5,
@@ -175,7 +175,7 @@ begin
   ${['heel', 'crate', 'kill', 'move'].map((how) => `
   update placed set sleeper = null, x = ${T - 4}, cx = ${T - 4} + 0.5 where id = v_small;
   if not exists (select 1 from creature where world_id = w and id = a) then
-    a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+    a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   end if;
   update creature set mode = 'deed', traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', carrying = null,
          worn = ${TIRE_GOES}, skills = jsonb_build_object('foraging', 10), phase = 'bed', bed = v_small,
@@ -193,7 +193,7 @@ begin
 
   -- At its second stage the small bed is not its size and the medium one is: it walks to the medium.
   if not exists (select 1 from creature where world_id = w and id = a) then
-    a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+    a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   end if;
   update placed set sleeper = null where world_id = w;
   update creature set mode = 'deed', traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', carrying = null, bed = null,
@@ -212,7 +212,7 @@ begin
 
   -- A kind that does not evolve sleeps by its health: a Carra in the medium bed, a Papra in the small one.
   ${[['carra', 'MEDIUM'], ['papra', 'SMALL']].map(([sp, k]) => `
-  a := creature_spawn(w, '${sp}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, '${sp}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', carrying = null, worn = ${TIRE_GOES},
          phase = 'idle', from_x = ${T} + 0.5, from_y = ${T} + 0.5, to_x = ${T} + 0.5, to_y = ${T} + 0.5,
          until = now() - interval '0.3 seconds', leg_at = now() - interval '1 second', leg_ends = now() - interval '1 second'

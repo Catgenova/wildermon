@@ -71,7 +71,7 @@ begin
   insert into said values ('ERRAND', worker_errand('compost')::text || ',' || worker_errand('mend')::text);
 
   -- Reeds a cut, at each level.
-  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '60 days', u);
   ${REED_AT.map((lv) => `
   update creature set traits = '{}', rare = null, care = 0, skills = jsonb_build_object('foraging', ${lv}), work_x = ${T}, work_y = ${T + 4}
    where world_id = w and id = a;
@@ -83,7 +83,7 @@ begin
   -- A stoker's go at a cold campfire, with a log in its arms.
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, fuel, lit)
     values (w, 'campfire', null, ${T + 3}, ${T}, 0, 0, ${T + 3} + 0.5, ${T} + 0.5, 40, u, 0, false) returning id into v_fire;
-  a := creature_spawn(w, 'embra', ${T + 3} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, 'embra', ${T + 3} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, skills = jsonb_build_object('smelting', 10), work_x = ${T + 3}, work_y = ${T},
          carrying = '{"def": "log", "count": 1, "ql": 30}'::jsonb where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
@@ -98,7 +98,7 @@ begin
   -- A fetcher's and a clearer's go at something lying on the deed.
   ${(['fetch', 'compost'] as const).map((k) => `
   insert into item (world_id, holder, gx, gy, def, ql, dmg, count) values (w, 'ground', ${T + 2}, ${T + 2}, 'log', 30, 60, 1);
-  a := creature_spawn(w, '${k === 'fetch' ? 'magga' : 'middun'}', ${T + 2} + 0.5, ${T + 2} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, '${k === 'fetch' ? 'magga' : 'middun'}', ${T + 2} + 0.5, ${T + 2} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, skills = jsonb_build_object('${GATHER_SKILL[k]}', 10), work_x = ${T + 2}, work_y = ${T + 2}
    where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;

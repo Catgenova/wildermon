@@ -237,7 +237,7 @@ begin
   ${checks(true)};
 
   /* ---- Full Fleece: a woola shorn without it and with it. ---- */
-  v_c := creature_spawn(w, 'woola', 10.5, 9.5, 'deed', now() - interval '9 hours', u);
+  v_c := creature_spawn(w, 'woola', 10.5, 9.5, 'deed', now() - interval '10 days', u);
   update creature set fleece = 1, hunger = 1, keeper = u, from_x = 10.5, from_y = 9.5, to_x = 10.5, to_y = 9.5,
          leg_at = now(), leg_ends = now(), settled_at = now() where world_id = w and id = v_c;
   perform give(w, u, 'carving_knife', 1, 40);
@@ -386,7 +386,7 @@ ${SURE.map(([name, recipe, makes], i) => `
   v_t := ${markOfRow(newest('saddle'))};
   ${clear('leather', 'plank', 'ribbon', 'nail')};
   perform give(w, u, 'bridle', 1, 40);
-  v_c := creature_spawn(w, 'orse', 10.5, 9.5, 'active', now() - interval '3 days', u);
+  v_c := creature_spawn(w, 'orse', 10.5, 9.5, 'active', now() - interval '60 days', u);
   update creature set keeper = u, hunger = 1, from_x = 10.5, from_y = 9.5, to_x = 10.5, to_y = 9.5,
          leg_at = now(), leg_ends = now(), settled_at = now(), name = 'Greyfell' where world_id = w and id = v_c;
   perform pg_temp.hold(w, u, '{}');

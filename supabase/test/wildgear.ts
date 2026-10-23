@@ -92,8 +92,8 @@ begin
     || '|' || gear_says('barding', '{"ql": 90, "dmg": 50}'));
 
   -- Ash, yours; Bo, somebody else's; both beside you.
-  a := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '30 days', u);
-  b := creature_spawn(w, 'rabba', px, py + 0.5, 'active', now() - interval '30 days', v);
+  a := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '60 days', u);
+  b := creature_spawn(w, 'rabba', px, py + 0.5, 'active', now() - interval '60 days', v);
   update creature set traits = '{}', rare = null, name = 'Ash', kept = null, boosts = null, gear = null, hunger = 1 where world_id = w and id = a;
   update creature set traits = '{}', rare = null, name = 'Bo', kept = null, boosts = null, gear = null where world_id = w and id = b;
   ash := jsonb_build_object('kind', 'creature', 'id', a);
@@ -152,7 +152,7 @@ begin
   -- The harness: a cart's pace with it and without, and a tile's wear for each tile driven.
   insert into placed (world_id, kind, sub, x, y, cx, cy, ql, driver)
     values (w, 'furniture', 'large_cart', floor(px)::int, floor(py)::int, floor(px) + 0.5, floor(py) + 0.5, 50, u) returning id into v_cart;
-  r := creature_spawn(w, 'rabba', px + 1, py, 'active', now() - interval '30 days', u);
+  r := creature_spawn(w, 'rabba', px + 1, py, 'active', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, name = 'Rue', kept = null, boosts = null, gear = null, hunger = 1, skills = '{}',
          hitched_to = v_cart where world_id = w and id = r;
   v_s0 := vehicle_speed(w, v_cart);

@@ -117,7 +117,7 @@ begin
     where world_id = w and holder = 'player' and holder_uid = a and def = 'shaft' order by id desc limit 1), 'null'));
 
   -- A wildermon of A's, in a crate in A's pack.
-  v_pip := creature_spawn(w, 'rabba', ax, ay, 'stored', now() - interval '9 hours', a);
+  v_pip := creature_spawn(w, 'rabba', ax, ay, 'stored', now() - interval '10 days', a);
   update creature set name = 'Pip' where world_id = w and id = v_pip;
   v_crate := give(w, a, 'creature_crate', 1, 30);
   update item set creature = v_pip where id = v_crate;

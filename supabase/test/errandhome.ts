@@ -54,8 +54,8 @@ begin
   perform rpc_join(w, 'Herder');
   update player set x = ${TOKEN[0] + FAR} + 0.5, y = ${TOKEN[1]} + 0.5, body_at = now(), swim_at = now() where world_id = w and uid = u;
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Farstead', ${TOKEN[0]}, ${TOKEN[1]}, 10, 3, u);
-  v_id := creature_spawn(w, 'tinka', ${TOKEN[0] + FAR} + 1.5, ${TOKEN[1]} + 0.5, 'active', now() - interval '30 days', u);
-  v_other := creature_spawn(w, 'rabba', ${TOKEN[0] + FAR} + 2.5, ${TOKEN[1]} + 1.5, 'wild', now() - interval '30 days', null);
+  v_id := creature_spawn(w, 'tinka', ${TOKEN[0] + FAR} + 1.5, ${TOKEN[1]} + 0.5, 'active', now() - interval '60 days', u);
+  v_other := creature_spawn(w, 'rabba', ${TOKEN[0] + FAR} + 2.5, ${TOKEN[1]} + 1.5, 'wild', now() - interval '60 days', null);
   j := rpc_act(w, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', v_id));
   insert into said values ('ASSIGN', coalesce(j->>'done', 'null'));
   insert into said values ('RULE', home_leg() || '|' || home_slack());

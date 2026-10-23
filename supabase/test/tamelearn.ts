@@ -55,7 +55,7 @@ do $$
 declare w uuid; c int;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Tamelearn', 182, 20, 10, 10, true) returning id into w;
-${AT.map((a, i) => `  c := creature_spawn(w, '${a.species}', 5.5, 5.5, 'wild', now() - interval '30 days');
+${AT.map((a, i) => `  c := creature_spawn(w, '${a.species}', 5.5, 5.5, 'wild', now() - interval '60 days');
   update creature set skills = '${JSON.stringify(a.skills)}'::jsonb where world_id = w and id = c;
   insert into said select 'L${i}', tame_learn(cc)::text from creature cc where world_id = w and id = c;`).join('\n')}
 end $$;

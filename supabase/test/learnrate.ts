@@ -332,7 +332,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
   ${CASES.map(([sp, skill], i) => `
-  a := creature_spawn(w, '${sp}', 9, 8.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, '${sp}', 9, 8.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, skills = skills || jsonb_build_object('${skill}', 10) where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
   perform setseed(0.25);

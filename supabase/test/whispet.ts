@@ -111,7 +111,7 @@ ${MOMENTS.map(([m], i) => `  insert into said select 'HOLDS:${i}', season_holds(
   -- The spawner: a wild one, a tamed one and a wild ulva, looked at in season and then out of it. The wild ones born
   -- an hour ago, inside their span (wild_stay), so that only their season takes them off.
   ww := creature_spawn(w, 'whispet', 30.5, 30.5, 'wild', now() - interval '1 hour', null);
-  tame := creature_spawn(w, 'whispet', 31.5, 30.5, 'deed', now() - interval '30 days', u);
+  tame := creature_spawn(w, 'whispet', 31.5, 30.5, 'deed', now() - interval '60 days', u);
   ul := creature_spawn(w, 'ulva', 32.5, 30.5, 'wild', now() - interval '1 hour', null);
   ${pin(IN)}
   perform creature_stock_block(w, 0, 0);
@@ -131,8 +131,8 @@ ${MOMENTS.map(([m], i) => `  insert into said select 'HOLDS:${i}', season_holds(
   ${pin(IN)}
 
   -- A Fear: one of yours beside a wild ulva with health to spare.
-  a := creature_spawn(w, 'whispet', 16.5, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'whispet', 16.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '60 days', null);
   update creature set health = 5000, brawl = a, threat_at = now() - interval '1 hour' where world_id = w and id = t;
   -- No blood and no rarity, which would lift the Fear and its rest (\`fear\`, \`cooldown\`).
   update creature set traits = '{}', rare = null where world_id = w and id in (a, t);
@@ -165,8 +165,8 @@ ${MOMENTS.map(([m], i) => `  insert into said select 'HOLDS:${i}', season_holds(
   delete from creature where world_id = w; delete from class_mark where world_id = w;
 
   -- A monster is not frightened: struck instead, and the rest not spent.
-  a := creature_spawn(w, 'whispet', 16.5, 16.5, 'active', now() - interval '30 days', u);
-  g := creature_spawn(w, 'goblin', 17.5, 16.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'whispet', 16.5, 16.5, 'active', now() - interval '60 days', u);
+  g := creature_spawn(w, 'goblin', 17.5, 16.5, 'wild', now() - interval '60 days', null);
   update creature set health = 5000 where world_id = w and id = g;
   perform creature_attack(w, a, g);
   insert into said select 'MONSTER', (health < 5000)::text || '|' || (until <= now() + interval '1 second')::text from creature where world_id = w and id = g;
@@ -175,8 +175,8 @@ ${MOMENTS.map(([m], i) => `  insert into said select 'HOLDS:${i}', season_holds(
   delete from creature where world_id = w; delete from class_mark where world_id = w;
 
   -- A wild one fights as any other does.
-  a := creature_spawn(w, 'whispet', 16.5, 16.5, 'wild', now() - interval '30 days', null);
-  t := creature_spawn(w, 'gasha', 17.5, 16.5, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'whispet', 16.5, 16.5, 'wild', now() - interval '60 days', null);
+  t := creature_spawn(w, 'gasha', 17.5, 16.5, 'active', now() - interval '60 days', u);
   update creature set health = 5000 where world_id = w and id = t;
   perform creature_attack(w, a, t);
   insert into said select 'WILD', (health < 5000)::text from creature where world_id = w and id = t;

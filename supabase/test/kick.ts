@@ -176,7 +176,7 @@ update player set act = 'dig', act_target = '{"kind":"tile","x":3,"y":28}'::json
        act_queue = '[{"action":"dig","target":{"kind":"tile","x":3,"y":28},"goes":1}]'::jsonb
  where world_id = '${KEEP}' and uid = '${STIG}';
 do $$
-declare c int := creature_spawn('${KEEP}', 'rabba', 3.5, 28.5, 'active', now() - interval '3 days', '${STIG}');
+declare c int := creature_spawn('${KEEP}', 'rabba', 3.5, 28.5, 'active', now() - interval '60 days', '${STIG}');
 begin
   update creature set rider = '${STIG}', name = 'Bess' where world_id = '${KEEP}' and id = c;
 end $$;`);

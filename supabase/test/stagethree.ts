@@ -98,7 +98,7 @@ begin
 
   -- Every line, just below its third stage and at it: what each kind of skill comes to, its blood by stage, its loads.
   ${LINES.flatMap((id) => LEVELS.map((lv, n) => `
-  a := creature_spawn(w, '${id}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, '${id}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, skills = jsonb_build_object(level_skill('${id}'), ${lv}) where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
   insert into said values ('N:${id}:${n}', ${KINDS.map((k) => `perk_n(c, '${k}')`).join(" || ',' || ")}
@@ -108,7 +108,7 @@ begin
   -- A reed cutter, just below its third stage and at it: its first cut.
   perform land_set_tile(w, x, ${T + 4}, tile_id('Reed')) from generate_series(${T - 2}, ${T + 2}) x;
   for i in 0..1 loop
-    a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '30 days', u);
+    a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '60 days', u);
     update creature set traits = '{}', rare = null, care = 0, carrying = null, hunger = 1, stance = 'passive',
            skills = jsonb_build_object('foraging', case i when 0 then ${LEVELS[0]} else ${LEVELS[1]} end),
            phase = 'work', work_x = ${T}, work_y = ${T + 4}, from_x = ${T} + 0.5, from_y = ${T + 3} + 0.5,
@@ -125,7 +125,7 @@ begin
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, litres)
     values (w, 'furniture', 'barrel', ${T - 3}, ${T}, 0, 0, ${T - 3} + 0.5, ${T} + 0.5, 40, u, 0);
   for i in 0..1 loop
-    a := creature_spawn(w, 'holla', ${T + 3} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '30 days', u);
+    a := creature_spawn(w, 'holla', ${T + 3} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '60 days', u);
     update creature set traits = '{}', rare = null, care = 0, carrying = null, work_x = ${T + 3}, work_y = ${T + 3},
            skills = jsonb_build_object('carrying', case i when 0 then ${LEVELS[0]} else ${LEVELS[1]} end)
      where world_id = w and id = a;
@@ -137,23 +137,23 @@ begin
 
   -- A Zephlet's Stoneskin, and a Pebbletooth's stun, a Snarepup's blow, just below the third stage and at it.
   for i in 0..1 loop
-    a := creature_spawn(w, 'stona', 16.5, 16.5, 'active', now() - interval '30 days', u);
+    a := creature_spawn(w, 'stona', 16.5, 16.5, 'active', now() - interval '60 days', u);
     update creature set traits = '{}', rare = null, skills = jsonb_build_object(level_skill('stona'), case i when 0 then ${LEVELS[0]} else ${LEVELS[1]} end) where world_id = w and id = a;
-    t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '30 days', null);
+    t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '60 days', null);
     update creature set health = 5000 where world_id = w and id = t;
     perform creature_attack(w, a, t);
     insert into said select 'REST' || i, coalesce(round(extract(epoch from until - now())::numeric, 1)::text, '-') from class_mark where world_id = w and creature_id = a and kind = 'ability';
     delete from creature where world_id = w; delete from class_mark where world_id = w;
 
-    a := creature_spawn(w, 'thumpa', 16.5, 16.5, 'active', now() - interval '30 days', u);
+    a := creature_spawn(w, 'thumpa', 16.5, 16.5, 'active', now() - interval '60 days', u);
     update creature set traits = '{}', rare = null, skills = jsonb_build_object(level_skill('thumpa'), case i when 0 then ${LEVELS[0]} else ${LEVELS[1]} end) where world_id = w and id = a;
-    t := creature_spawn(w, 'ulva', 17, 16.5, 'wild', now() - interval '30 days', null);
+    t := creature_spawn(w, 'ulva', 17, 16.5, 'wild', now() - interval '60 days', null);
     update creature set health = 5000 where world_id = w and id = t;
     for j in 1..${HEAVY_EVERY} loop perform creature_attack(w, a, t); end loop;
     insert into said select 'STUN' || i, coalesce(round(extract(epoch from max(until) - now())::numeric, 1)::text, '-') from class_mark where world_id = w and creature_id = t and kind = 'stun' and until > now();
     delete from creature where world_id = w; delete from class_mark where world_id = w;
 
-    a := creature_spawn(w, 'rowl', 16.5, 16.5, 'active', now() - interval '30 days', u);
+    a := creature_spawn(w, 'rowl', 16.5, 16.5, 'active', now() - interval '60 days', u);
     update creature set traits = '{}', rare = null, skills = jsonb_build_object(level_skill('rowl'), case i when 0 then ${LEVELS[0]} else ${LEVELS[1]} end) where world_id = w and id = a;
     select * into c from creature where world_id = w and id = a;
     insert into said values ('BLOW' || i, round(attack_of(c)::numeric, 6)::text);
@@ -163,7 +163,7 @@ begin
   -- A Cloudlet, just below its third stage and at it, sheared full.
   perform give(w, u, 'carving_knife', 1, 40);
   for i in 0..1 loop
-    a := creature_spawn(w, 'woola', ${T} + 0.5, ${T - 1} + 0.5, 'active', now() - interval '9 hours', u);
+    a := creature_spawn(w, 'woola', ${T} + 0.5, ${T - 1} + 0.5, 'active', now() - interval '10 days', u);
     update creature set mode = 'active', keeper = u, traits = '{}', rare = null, fleece = 1, leg_at = now(), leg_ends = now(),
            from_x = ${T} + 0.5, from_y = ${T - 1} + 0.5, to_x = ${T} + 0.5, to_y = ${T - 1} + 0.5, until = now() + interval '1 hour', settled_at = now(),
            skills = jsonb_build_object('animal_husbandry', case i when 0 then ${LEVELS[0]} else ${LEVELS[1]} end)
@@ -177,7 +177,7 @@ begin
   /* ---- slots ---- */
 
   -- Evolving into each stage: a trait more each time, by its keeper's husbandry, its pedigree saying where it came from.
-  a := creature_spawn(w, 'rabba', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, 'rabba', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = array[${COMMONS.map((id) => `'${id}'`).join(', ')}], rare = null, pedigree = '{"from": {}}'::jsonb,
          skills = jsonb_build_object('foraging', ${AT1} - 0.0001) where world_id = w and id = a;
   insert into said select 'BEFORE', array_length(traits, 1)::text from creature where world_id = w and id = a;
@@ -214,7 +214,7 @@ begin
   insert into said values ('DRAWS', v_mut || '|' || v_bad || '|' || v_common || '|' || v_common100);
 
   -- One put out in the wild at a later stage, and a young one.
-  a := creature_spawn(w, 'rabba', ${T + 5} + 0.5, ${T + 5} + 0.5, 'wild', now() - interval '15 hours', null);
+  a := creature_spawn(w, 'rabba', ${T + 5} + 0.5, ${T + 5} + 0.5, 'wild', now() - interval '10 days', null);
   v_n := 0;
   for i in 1..3000 loop
     update creature set skills = jsonb_build_object('foraging', 1), traits = array[${COMMONS.map((id) => `'${id}'`).join(', ')}] where world_id = w and id = a;
@@ -234,7 +234,7 @@ begin
   -- The once-over: evolved ones short of their slots given them, by the same draw; the rest left as they are.
   v_ids := '{}';
   foreach v_lv in array array[10, ${AT1}, ${AT2}, ${AT2}]::double precision[] loop
-    a := creature_spawn(w, 'rabba', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+    a := creature_spawn(w, 'rabba', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
     update creature set traits = array[${COMMONS.map((id) => `'${id}'`).join(', ')}], rare = null, skills = jsonb_build_object('foraging', v_lv)
      where world_id = w and id = a;
     v_ids := v_ids || a;

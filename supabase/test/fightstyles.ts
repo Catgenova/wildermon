@@ -69,8 +69,8 @@ begin
   insert into said values ('NUMBERS', spar_yield() || '|' || spar_slack());
 
   -- Gasha: a bite on a wild rabba of no hide.
-  a := creature_spawn(w, 'gasha', 18.5, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'ulva', 19, 16.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'gasha', 18.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'ulva', 19, 16.5, 'wild', now() - interval '60 days', null);
   update creature set health = 500 where world_id = w and id = t;
   perform creature_attack(w, a, t);
   insert into said select 'BLEED', (coalesce(bleed_rate, 0) > 0)::text || '|' || round(extract(epoch from bleed_until - now())::numeric) from creature where world_id = w and id = t;
@@ -82,8 +82,8 @@ begin
   delete from creature where world_id = w and id in (a, t);
 
   -- Spitta: venom, a share of its health a second.
-  a := creature_spawn(w, 'spitta', 18.5, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'ulva', 19, 16.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'spitta', 18.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'ulva', 19, 16.5, 'wild', now() - interval '60 days', null);
   -- No blood and no rarity, which would lift the venom it takes (\`venom\`).
   update creature set health = 500, traits = '{}', rare = null where world_id = w and id = t;
   update creature set traits = '{}', rare = null where world_id = w and id = a;
@@ -93,8 +93,8 @@ begin
   delete from creature where world_id = w and id in (a, t);
 
   -- Thumpa: stunned on the last of every few blows, and not before.
-  a := creature_spawn(w, 'thumpa', 18.5, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'ulva', 19, 16.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'thumpa', 18.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'ulva', 19, 16.5, 'wild', now() - interval '60 days', null);
   update creature set health = 5000 where world_id = w and id = t;
   for v_n in 1..${HEAVY_EVERY - 1} loop perform creature_attack(w, a, t); end loop;
   insert into said select 'STUNBEFORE', count(*)::text from class_mark where world_id = w and creature_id = t and kind = 'stun' and until > now();
@@ -103,12 +103,12 @@ begin
   delete from creature where world_id = w and id in (a, t);
 
   -- Awla and skulka: what their blows are multiplied by.
-  a := creature_spawn(w, 'awla', 18.5, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'bura', 19, 16.5, 'wild', now() - interval '30 days', null);
-  t2 := creature_spawn(w, 'rabba', 19, 17.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'awla', 18.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'bura', 19, 16.5, 'wild', now() - interval '60 days', null);
+  t2 := creature_spawn(w, 'rabba', 19, 17.5, 'wild', now() - interval '60 days', null);
   insert into said select 'BORE', (select hide from species_def where id = 'bura') || '|' || style_dealt(a2, h) || '|' || style_dealt(a2, s)
     from creature a2, creature h, creature s where a2.world_id = w and a2.id = a and h.world_id = w and h.id = t and s.world_id = w and s.id = t2;
-  a := creature_spawn(w, 'skulka', 18.5, 17.5, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'skulka', 18.5, 17.5, 'active', now() - interval '60 days', u);
   update creature set hunting = u where world_id = w and id = t;
   update creature set brawl = a where world_id = w and id = t2;
   insert into said select 'FLANK', style_dealt(a2, h) || '|' || style_dealt(a2, s)
@@ -116,18 +116,18 @@ begin
   delete from creature where world_id = w and id in (a, t, t2) or world_id = w and species = 'awla';
 
   -- Testa: two hunters after you beside it, and one too far off.
-  a := creature_spawn(w, 'testa', 17.5, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'ulva', 18.5, 16.5, 'wild', now() - interval '30 days', null);
-  t2 := creature_spawn(w, 'ulva', 17.5, 18.5, 'wild', now() - interval '30 days', null);
-  t3 := creature_spawn(w, 'ulva', 17.5 + ${GUARD_RANGE} + 3, 16.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'testa', 17.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'ulva', 18.5, 16.5, 'wild', now() - interval '60 days', null);
+  t2 := creature_spawn(w, 'ulva', 17.5, 18.5, 'wild', now() - interval '60 days', null);
+  t3 := creature_spawn(w, 'ulva', 17.5 + ${GUARD_RANGE} + 3, 16.5, 'wild', now() - interval '60 days', null);
   update creature set hunting = u, health = 500 where world_id = w and id in (t, t2, t3);
   perform creature_attack(w, a, t);
   insert into said select 'SHIELD', string_agg(case when brawl = a then 'on' else 'off' end, ',' order by id) from creature where world_id = w and id in (t, t2, t3);
   delete from creature where world_id = w and id in (a, t, t2, t3);
 
   -- Dummicub (was Sparra): yours may be sparred with, down to where it yields and no further; another tame thing may not.
-  a := creature_spawn(w, 'sparra', 17.2, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'gasha', 16.5, 17.2, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'sparra', 17.2, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'gasha', 16.5, 17.2, 'active', now() - interval '60 days', u);
   insert into said select 'SPARASK', coalesce(act_refusal(w, u, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', a)), 'none')
     || '|' || coalesce(act_refusal(w, u, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', t)), 'none');
   v_fight := skill_of(w, u, 'fighting');

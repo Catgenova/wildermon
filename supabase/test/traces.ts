@@ -262,9 +262,9 @@ begin
     jsonb_build_object('kind', 'item', 'uid', v_item, 'x', 2042, 'y', 2040, 'sx', 0, 'sy', 0));
   select * into v_cart from placed where world_id = w and sub = 'large_cart' and made_by = a order by id desc limit 1;
 
-  v_pet := creature_spawn(w, 'orse', 2042.4, 2040.6, 'active', now() - interval '3 days', a);
-  v_hand := creature_spawn(w, 'orse', 2042.6, 2040.4, 'deed', now() - interval '3 days', a);
-  v_free := creature_spawn(w, 'orse', 2041.6, 2041.4, 'deed', now() - interval '3 days', a);
+  v_pet := creature_spawn(w, 'orse', 2042.4, 2040.6, 'active', now() - interval '60 days', a);
+  v_hand := creature_spawn(w, 'orse', 2042.6, 2040.4, 'deed', now() - interval '60 days', a);
+  v_free := creature_spawn(w, 'orse', 2041.6, 2041.4, 'deed', now() - interval '60 days', a);
   update creature set hunger = 0.9, name = case id when v_pet then 'Greyfell' when v_hand then 'Dunn' else 'Loose' end,
       settled_at = now(), until = now(), leg_at = now(), leg_ends = now(), from_x = to_x, from_y = to_y
     where world_id = w and id in (v_pet, v_hand, v_free);
@@ -341,7 +341,7 @@ begin
   update creature set mode = 'wild' where world_id = w and id = v_pet;
   v_q := wild_quarry(w, v_cart.cx, v_cart.cy, 1.5, v_cart.cx, v_cart.cy);
   insert into said values ('quarry', coalesce(v_q.id::text, 'none') || '|' || v_pet);
-  v_rival := creature_spawn(w, 'orse', 2042.5, 2041.2, 'active', now() - interval '3 days', b);
+  v_rival := creature_spawn(w, 'orse', 2042.5, 2041.2, 'active', now() - interval '60 days', b);
   update creature set stance = 'aggressive', name = 'Hild''s', settled_at = now(), until = now(),
       leg_at = now(), leg_ends = now(), from_x = to_x, from_y = to_y
     where world_id = w and id = v_rival;

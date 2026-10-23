@@ -51,8 +51,8 @@ const f = abilityFx;
 const MIRA = '7e5b0000-0000-4000-8000-0000000000e7';
 // One of yours of a kind, beside a wild ulva with health to spare.
 const pair = (kind: string, dx = 1): string => `
-  a := creature_spawn(w, '${kind}', 16.5, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'ulva', 16.5 + ${dx}, 16.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, '${kind}', 16.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'ulva', 16.5 + ${dx}, 16.5, 'wild', now() - interval '60 days', null);
   -- No blood and no rarity, which would lift its rest and what it does (\`cooldown\`, \`fear\`).
   update creature set traits = '{}', rare = null where world_id = w and id in (a, t);
   update creature set health = 5000 where world_id = w and id = t;`;
@@ -126,8 +126,8 @@ begin
 
   -- Whirla: two beside it, one further off.
   ${pair('whirla')}
-  t2 := creature_spawn(w, 'ulva', 16.5, 17.5, 'wild', now() - interval '30 days', null);
-  t3 := creature_spawn(w, 'ulva', 16.5 + ${f('berserker_whirlwind', 'reach')} + 2, 16.5, 'wild', now() - interval '30 days', null);
+  t2 := creature_spawn(w, 'ulva', 16.5, 17.5, 'wild', now() - interval '60 days', null);
+  t3 := creature_spawn(w, 'ulva', 16.5 + ${f('berserker_whirlwind', 'reach')} + 2, 16.5, 'wild', now() - interval '60 days', null);
   update creature set health = 5000 where world_id = w and id in (t2, t3);
   perform creature_attack(w, a, t);
   insert into said select 'WHIRL', string_agg((health < 5000)::text, ',' order by id) from creature where world_id = w and id in (t, t2, t3);
@@ -169,7 +169,7 @@ ${(['rootle:root', 'dulla:dull', 'brittla:brittle', 'marka:marked'] as const).ma
 
   -- Howla: two after you near it turn on it, and stay on it.
   ${pair('howla')}
-  t2 := creature_spawn(w, 'ulva', 16.5, 18, 'wild', now() - interval '30 days', null);
+  t2 := creature_spawn(w, 'ulva', 16.5, 18, 'wild', now() - interval '60 days', null);
   update creature set hunting = u where world_id = w and id in (t, t2);
   perform creature_attack(w, a, t);
   insert into said select 'CALL', string_agg((brawl = a)::text || ':' || round(extract(epoch from threat_at - now())::numeric), ',' order by id) from creature where world_id = w and id in (t, t2);
@@ -197,8 +197,8 @@ ${(['rootle:root', 'dulla:dull', 'brittla:brittle', 'marka:marked'] as const).ma
   ${tidy}
 
   -- A wild hamma does nothing of the kind.
-  a := creature_spawn(w, 'hamma', 16.5, 16.5, 'wild', now() - interval '30 days', null);
-  t := creature_spawn(w, 'gasha', 17.5, 16.5, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'hamma', 16.5, 16.5, 'wild', now() - interval '60 days', null);
+  t := creature_spawn(w, 'gasha', 17.5, 16.5, 'active', now() - interval '60 days', u);
   update creature set health = 5000 where world_id = w and id = t;
   perform creature_attack(w, a, t);
   insert into said select 'WILD', coalesce(slow::text, '-') from creature where world_id = w and id = t;

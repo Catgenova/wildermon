@@ -394,14 +394,14 @@ begin
   update item set enchant = '{"id": "tamers_bridle", "ql": 100}'::jsonb where id = v_bri;
   perform give(w, u, 'saddle', 1, 40);
   insert into said select 'PILES', count(*)::text from item where world_id = w and holder = 'player' and holder_uid = u and def = 'saddle';
-  v_wild := creature_spawn(w, 'orse', 22.5, 21.5, 'wild', now() - interval '3 days', null);
+  v_wild := creature_spawn(w, 'orse', 22.5, 21.5, 'wild', now() - interval '60 days', null);
   select * into v_w from creature where world_id = w and id = v_wild;
   insert into said select 'TAME', tame_chance(w, u, v_w)::text;
   update item set enchant = null where id = v_bri;
   insert into said select 'TAME0', tame_chance(w, u, v_w)::text;
   update item set enchant = '{"id": "tamers_bridle", "ql": 100}'::jsonb where id = v_bri;
   delete from creature where world_id = w and id = v_wild;
-  v_mount := creature_spawn(w, 'orse', 20.5, 20.5, 'active', now() - interval '3 days', u);
+  v_mount := creature_spawn(w, 'orse', 20.5, 20.5, 'active', now() - interval '60 days', u);
   update creature set keeper = u, hunger = 1, from_x = 20.5, from_y = 20.5, to_x = 20.5, to_y = 20.5,
          leg_at = now(), leg_ends = now(), settled_at = now(), name = 'Greyfell' where world_id = w and id = v_mount;
   perform act_perform(w, u, 'tack_creature', jsonb_build_object('kind', 'creature', 'id', v_mount));

@@ -276,7 +276,7 @@ check('and its browser is sent the spot', sent === '{"x": 20.5, "y": 22.5, "leve
 
 psql(`
 do $$
-declare c int := creature_spawn('${KEEP}', 'rabba', 30.2, 1.7, 'active', now() - interval '3 days', '${DRIFTER}');
+declare c int := creature_spawn('${KEEP}', 'rabba', 30.2, 1.7, 'active', now() - interval '60 days', '${DRIFTER}');
 begin
   update creature set rider = '${DRIFTER}', name = 'Bess' where world_id = '${KEEP}' and id = c;
 end $$;

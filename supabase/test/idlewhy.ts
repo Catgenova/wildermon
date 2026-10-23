@@ -65,10 +65,10 @@ begin
   -- Its keeper well off, out of the reach of the sweep \`rpc_creatures\` runs round them on a bare postgres.
   update player set x = ${T + 180} + 0.5, y = ${T} + 0.5, body_at = now(), swim_at = now(), seen_at = now()
    where world_id = w and uid = u;
-  v_holla := creature_spawn(w, 'holla', ${T} + 1.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
-  v_sedra := creature_spawn(w, 'sedra', ${T} - 1.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
-  v_tinka := creature_spawn(w, 'tinka', ${T} + 0.5, ${T} + 1.5, 'deed', now() - interval '30 days', u);
-  v_far := creature_spawn(w, 'tinka', ${T + FAR} + 1.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  v_holla := creature_spawn(w, 'holla', ${T} + 1.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
+  v_sedra := creature_spawn(w, 'sedra', ${T} - 1.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
+  v_tinka := creature_spawn(w, 'tinka', ${T} + 0.5, ${T} + 1.5, 'deed', now() - interval '60 days', u);
+  v_far := creature_spawn(w, 'tinka', ${T + FAR} + 1.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', keeper = u, phase = 'idle', carrying = null, job = null, post = null,
          until = now() - interval '60 seconds', leg_at = now() - interval '60 seconds', leg_ends = now() - interval '60 seconds'
    where world_id = w and id in (v_holla, v_sedra, v_tinka, v_far);

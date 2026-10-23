@@ -139,7 +139,7 @@ begin
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Hivesend', ${TOK.x}, ${TOK.y}, 10, 3, u);
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'furniture', 'hive', ${R.x}, ${R.y}, ${hive.sx}, ${hive.sy}, ${HX}, ${HY}, 50, u) returning id into v_hive;
-  v_vesp := creature_spawn(w, 'vesp', ${HX}, ${HY}, 'active', now() - interval '30 days', u);
+  v_vesp := creature_spawn(w, 'vesp', ${HX}, ${HY}, 'active', now() - interval '60 days', u);
   update creature set hunger = 1, settled_at = now(), until = now(), leg_at = now(), leg_ends = now(), from_x = to_x, from_y = to_y,
          traits = '{}', rare = null, stance = 'passive', worn = 0
     where world_id = w and id = v_vesp;

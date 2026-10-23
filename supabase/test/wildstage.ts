@@ -126,7 +126,7 @@ begin
 
   -- The dice forced: each makes the stage and the level it says.
 ${DICE.map(([d], k) => `
-  a := creature_spawn(w, '${KIND}', px + 3, py + 3, 'wild', now() - interval '15 hours', null);
+  a := creature_spawn(w, '${KIND}', px + 3, py + 3, 'wild', now() - interval '10 days', null);
   update creature set traits = '{}', rare = null where world_id = w and id = a returning * into c;
   update creature set health = max_health(c) where world_id = w and id = a;
   perform set_config('wurm.dice', '${d}', true); perform set_config('search_path', 'dice, public, pg_catalog', true);
@@ -136,10 +136,10 @@ ${DICE.map(([d], k) => `
   insert into said values ('DICE:${k}', stage_of(c) || '|' || (c.skills->>'${SKILL}') || '|' || c.name || '|' || kind_name_at(c) || '|' || (c.health = max_health(c))
     || '|' || (tame_needs(c)).level || '|' || (tame_needs(c)).chance);`).join('')}
   -- Never a kind that does not evolve, nor one that is somebody's.
-  a := creature_spawn(w, '${STILL}', px + 3, py + 4, 'wild', now() - interval '15 hours', null);
+  a := creature_spawn(w, '${STILL}', px + 3, py + 4, 'wild', now() - interval '10 days', null);
   perform set_config('wurm.dice', '0.001', true); perform set_config('search_path', 'dice, public, pg_catalog', true);
   perform wild_stage_put(w, a);
-  s := creature_spawn(w, '${KIND}', px + 4, py + 4, 'active', now() - interval '15 hours', u);
+  s := creature_spawn(w, '${KIND}', px + 4, py + 4, 'active', now() - interval '10 days', u);
   perform wild_stage_put(w, s);
   perform set_config('search_path', '"$user", public', true);
   insert into said select 'STILL', string_agg(cr.species || ':' || creature_level(cr.skills) || ':' || cr.name, ',' order by cr.id) from creature cr where cr.world_id = w and cr.id in (a, s);
@@ -147,7 +147,7 @@ ${DICE.map(([d], k) => `
 
   -- In numbers, at the island's own dice.
   perform setseed(0.222);
-  a := creature_spawn(w, '${KIND}', px + 5, py + 5, 'wild', now() - interval '15 hours', null);
+  a := creature_spawn(w, '${KIND}', px + 5, py + 5, 'wild', now() - interval '10 days', null);
   for i in 1..${N} loop
     update creature set skills = jsonb_build_object('${SKILL}', 1), name = '${def.name}' where world_id = w and id = a;
     perform wild_stage_put(w, a);
@@ -164,7 +164,7 @@ ${DICE.map(([d], k) => `
   insert into skill (world_id, uid, id, value) values (w, u, 'taming', ${TAMING})
     on conflict (world_id, uid, id) do update set value = excluded.value;
   for i in 0..2 loop
-    a := creature_spawn(w, '${KIND}', px + 1, py, 'wild', now() - interval '15 hours', null);
+    a := creature_spawn(w, '${KIND}', px + 1, py, 'wild', now() - interval '10 days', null);
     update creature set traits = '{}', rare = null, hunger = 0.9,
         skills = jsonb_build_object('${SKILL}', case i when 0 then 1 when 1 then ${EVOLVE_AT[0]} else ${EVOLVE_AT[1]} end)
       where world_id = w and id = a returning * into c;
@@ -193,7 +193,7 @@ ${DICE.map(([d], k) => `
 
   -- And a browser is told a wild one's skills.
   delete from creature where world_id = w;
-  a := creature_spawn(w, '${KIND}', px + 2, py, 'wild', now() - interval '15 hours', null);
+  a := creature_spawn(w, '${KIND}', px + 2, py, 'wild', now() - interval '10 days', null);
   perform set_config('wurm.dice', '0.03', true); perform set_config('search_path', 'dice, public, pg_catalog', true);
   perform wild_stage_put(w, a);
   perform set_config('search_path', '"$user", public', true);

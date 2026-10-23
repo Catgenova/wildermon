@@ -124,10 +124,10 @@ begin
     + (select count(*) from deed_store_log where def = 'old_lamp') + (select count(*) from deed_work where def = 'old_lamp')
     + (select count(*) from player where ledger ? 'old_lamp') + (select count(*) from creature where carrying->>'def' = 'old_lamp'))::text);
 
-  a := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '60 days', u);
   update creature set name = 'Ash' where world_id = w and id = a;
-  v_wild := creature_spawn(w, 'rabba', px - 0.5, py, 'wild', now() - interval '30 days', null);
-  v_theirs := creature_spawn(w, 'rabba', px, py + 0.5, 'active', now() - interval '30 days', '${OTHER}');
+  v_wild := creature_spawn(w, 'rabba', px - 0.5, py, 'wild', now() - interval '60 days', null);
+  v_theirs := creature_spawn(w, 'rabba', px, py + 0.5, 'active', now() - interval '60 days', '${OTHER}');
   update creature set name = 'Birch' where world_id = w and id = v_theirs;
 
   -- Nothing in the pack; then a wild one, and somebody else's, which keep the lamp and their blood.

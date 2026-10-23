@@ -130,7 +130,7 @@ begin
     and def = 'creature_crate' and creature is null;
   delete from placed where world_id = w and kind = 'furniture' and sub = 'creature_crate'
     and creature is null and made_by = a;
-  v_dam := creature_spawn(w, 'rabba', ax, ay, 'stored', now() - interval '9 hours', a);
+  v_dam := creature_spawn(w, 'rabba', ax, ay, 'stored', now() - interval '10 days', a);
   update creature set sex = 'female', unborn = '{"traits": [], "sex": "male"}'::jsonb, due = now() - interval '1 second'
     where world_id = w and id = v_dam;
   insert into said values ('BORN1|' || give_birth(w, v_dam));

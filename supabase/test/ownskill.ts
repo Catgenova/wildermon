@@ -67,36 +67,36 @@ begin
   insert into said values ('LEVELS', creature_level('{"foraging": 24.99}') || '|' || creature_level('{"foraging": 25}') || '|' || creature_level('{}'));
 
   -- A woola, born knowing a little, sheared.
-  a := creature_spawn(w, 'woola', 17, 16.5, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'woola', 17, 16.5, 'active', now() - interval '60 days', u);
   insert into said select 'BORN', skills::text from creature where world_id = w and id = a;
   update creature set fleece = 1 where world_id = w and id = a;
   perform perform_creature(w, u, 'shear', jsonb_build_object('kind', 'creature', 'id', a));
   insert into said select 'SHORN', ((skills->>'animal_husbandry')::double precision > 1)::text from creature where world_id = w and id = a;
   -- A cudda milked, with a bucket in the pack.
-  a := creature_spawn(w, 'cudda', 17, 17, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'cudda', 17, 17, 'active', now() - interval '60 days', u);
   update creature set fleece = 1, sex = 'female' where world_id = w and id = a;
   perform gather(w, u, 'bucket', 1, 30);
   perform perform_creature(w, u, 'milk_creature', jsonb_build_object('kind', 'creature', 'id', a));
   insert into said select 'MILKED', ((skills->>'animal_husbandry')::double precision > 1)::text from creature where world_id = w and id = a;
 
   -- A warda out at your heel for ten minutes, and a wild one.
-  a := creature_spawn(w, 'warda', 17, 16, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'warda', 17, 16, 'active', now() - interval '60 days', u);
   update creature set settled_at = now() - interval '10 minutes' where world_id = w and id = a;
   perform creature_settle(w, a);
   insert into said select 'WATCHED', ((skills->>'awareness')::double precision > 1)::text from creature where world_id = w and id = a;
-  a := creature_spawn(w, 'warda', 20, 16, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'warda', 20, 16, 'wild', now() - interval '60 days', null);
   update creature set settled_at = now() - interval '10 minutes' where world_id = w and id = a;
   perform creature_settle(w, a);
   insert into said select 'WILDWATCH', coalesce(skills->>'awareness', '-') from creature where world_id = w and id = a;
 
   -- A lume out for ten minutes: it learns only if it is dark.
-  a := creature_spawn(w, 'lume', 17, 15, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'lume', 17, 15, 'active', now() - interval '60 days', u);
   update creature set settled_at = now() - interval '10 minutes' where world_id = w and id = a;
   perform creature_settle(w, a);
   insert into said select 'LUME', is_night(w)::text || '|' || ((skills->>'awareness')::double precision > 1) from creature where world_id = w and id = a;
 
   -- A sparra sparred with.
-  a := creature_spawn(w, 'sparra', 16.9, 16.5, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'sparra', 16.9, 16.5, 'active', now() - interval '60 days', u);
   for i in 1..60 loop perform perform_fight(w, u, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', a)); end loop;
   insert into said select 'SPARRED', ((skills->>'fighting')::double precision > 1)::text from creature where world_id = w and id = a;
 end $t$;

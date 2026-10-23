@@ -82,9 +82,9 @@ begin
   insert into said select 'STATS', string_agg(s || ':' || base_stat_name(s) || ':' || base_stat_says(s), '|' order by o)
     from unnest(base_stats()) with ordinality as t(s, o);
 
-  a := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '30 days', u);
+  a := creature_spawn(w, 'rabba', px + 0.5, py, 'active', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, name = 'Ash', kept = null where world_id = w and id = a;
-  v_wild := creature_spawn(w, 'rabba', px - 0.5, py, 'wild', now() - interval '30 days', null);
+  v_wild := creature_spawn(w, 'rabba', px - 0.5, py, 'wild', now() - interval '60 days', null);
 
   -- Nothing in the pack, and a wild one.
   insert into said values ('NONE', coalesce(creature_refusal(w, u, 'use_ancient_comb', jsonb_build_object('kind', 'creature', 'id', a)), '-'));
@@ -104,12 +104,12 @@ begin
   end loop;
   insert into said select 'COMBTOLD', string_agg(text, ' / ' order by n) from event where world_id = w and uid = u and text like 'Ancient comb used on%';
   -- At half the pace, for a keeper whose Kin ages it slower: twice as long ago, so its keeper's sum lands in the same place.
-  update creature set born = now() - interval '30 days', kept = '{"kept:age": 0.5}' where world_id = w and id = a;
+  update creature set born = now() - interval '60 days', kept = '{"kept:age": 0.5}' where world_id = w and id = a;
   perform give(w, u, 'ancient_comb', 1, 30);
   perform perform_creature(w, u, 'use_ancient_comb', jsonb_build_object('kind', 'creature', 'id', a));
   select * into c from creature where world_id = w and id = a;
   insert into said values ('COMBKIN', age_of(c.born, old_of(c), age_pace(c)) || '|' || round(extract(epoch from now() - c.born)::numeric, 3));
-  update creature set kept = null, born = now() - interval '30 days' where world_id = w and id = a;
+  update creature set kept = null, born = now() - interval '60 days' where world_id = w and id = a;
 
   -- The file, ${FILES} goes at it, put back to ordinary each time it comes up rarer.
   perform give(w, u, 'ancient_file', ${FILES}, 30);

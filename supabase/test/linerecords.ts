@@ -97,8 +97,8 @@ begin
   select x, y into px, py from player where world_id = w and uid = u;
   insert into said values ('EMPTY', ${recordsSql});
 
-  v_dam := creature_spawn(w, 'rabba', px + 0.5, py, 'deed', now() - interval '9 hours', u);
-  v_sire := creature_spawn(w, 'rabba', px - 0.5, py, 'deed', now() - interval '9 hours', u);
+  v_dam := creature_spawn(w, 'rabba', px + 0.5, py, 'deed', now() - interval '10 days', u);
+  v_sire := creature_spawn(w, 'rabba', px - 0.5, py, 'deed', now() - interval '10 days', u);
   update creature set sex = 'female', name = 'Snow', traits = ${arr(DAM)}, hunger = 1 where world_id = w and id = v_dam;
   update creature set sex = 'male', name = 'Horn', traits = ${arr(SIRE)}, hunger = 1 where world_id = w and id = v_sire;
   for i in 1..${BIRTHS} loop

@@ -69,8 +69,8 @@ const MIRA = '7e5b0000-0000-4000-8000-0000000000d4';
 // Blows of an active ulva carrying a trait at a wild ulva with health to spare, no fighting skill on it so every blow is
 // alike: what each took off, and whether it was left bleeding (cleared after each).
 const blows = (key: string, trait: string): string => `
-  a := creature_spawn(w, 'ulva', 16.5, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'ulva', 16.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '60 days', null);
   update creature set traits = ${arr([trait])}, skills = '{}'::jsonb, rare = null where world_id = w and id = a;
   update creature set traits = '{}', rare = null, health = 1000000, bleed_rate = null, bleed_until = null where world_id = w and id = t;
   select * into c from creature where world_id = w and id = a;
@@ -114,7 +114,7 @@ begin
    where r.id = any(${arr(IDS)}) group by r.id;
 
   -- Venom: a bite's venom on a wild ulva, venom-proof and not.
-  t := creature_spawn(w, 'ulva', 20.5, 20.5, 'wild', now() - interval '30 days', null);
+  t := creature_spawn(w, 'ulva', 20.5, 20.5, 'wild', now() - interval '60 days', null);
   update creature set traits = '{}', rare = null where world_id = w and id = t;
   perform enchant_venom(w, t);
   select * into q from creature where world_id = w and id = t;
@@ -126,7 +126,7 @@ begin
   delete from creature where world_id = w;
 
   -- A bleed: two seconds of 5 a second, on each grade of quick-clotting and on none.
-${['', ...TIERS.map((tier) => gradeId('quick_clotting', tier))].map((id) => `  t := creature_spawn(w, 'ulva', 20.5, 20.5, 'wild', now() - interval '30 days', null);
+${['', ...TIERS.map((tier) => gradeId('quick_clotting', tier))].map((id) => `  t := creature_spawn(w, 'ulva', 20.5, 20.5, 'wild', now() - interval '60 days', null);
   update creature set traits = ${arr(id ? [id] : [])}, rare = null, bleed_rate = 5, bleed_until = now() + interval '60 seconds',
       settled_at = now() - interval '2 seconds', hurt_at = now() - interval '2 seconds' where world_id = w and id = t;
   update creature set health = max_health(creature) / 2 where world_id = w and id = t;
@@ -136,8 +136,8 @@ ${['', ...TIERS.map((tier) => gradeId('quick_clotting', tier))].map((id) => `  t
   delete from creature where world_id = w;`).join('\n')}
 
   -- A Fear: a Whispet of yours on a wild ulva, fearless and not; and the Whispet's rest, quick-recovering and not.
-${(['plain', 'fearless'] as const).map((k) => `  a := creature_spawn(w, 'whispet', 16.5, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '30 days', null);
+${(['plain', 'fearless'] as const).map((k) => `  a := creature_spawn(w, 'whispet', 16.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '60 days', null);
   update creature set traits = ${arr(k === 'fearless' ? ['quick_recovering'] : [])}, rare = null where world_id = w and id = a;
   update creature set traits = ${arr(k === 'fearless' ? ['fearless'] : [])}, rare = null, health = 5000 where world_id = w and id = t;
   perform creature_attack(w, a, t);
@@ -148,8 +148,8 @@ ${(['plain', 'fearless'] as const).map((k) => `  a := creature_spawn(w, 'whispet
   delete from creature where world_id = w; delete from class_mark where world_id = w;`).join('\n')}
 
   -- A Whispet's rest when it is quick-recovering: a Fear on an ulva that can be frightened.
-  a := creature_spawn(w, 'whispet', 16.5, 16.5, 'active', now() - interval '30 days', u);
-  t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '30 days', null);
+  a := creature_spawn(w, 'whispet', 16.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '60 days', null);
   update creature set traits = ${arr(['quick_recovering'])}, rare = null where world_id = w and id = a;
   update creature set traits = '{}', rare = null, health = 5000 where world_id = w and id = t;
   perform creature_attack(w, a, t);

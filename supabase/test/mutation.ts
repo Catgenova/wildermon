@@ -197,8 +197,8 @@ ${Object.entries(PAIRS).map(([name, pair]) => `
   insert into said values ('MUTATED:${name}', breed_traits(${arr(pair.sire)}, ${arr(pair.dam)}, 0, 0)::text);`).join('\n')}
 
   -- A birth that mutated, through the covering and the hour.
-  v_dam := creature_spawn(w, 'rabba', px + 0.5, py, 'deed', now() - interval '9 hours', u);
-  v_sire := creature_spawn(w, 'rabba', px - 0.5, py, 'deed', now() - interval '9 hours', u);
+  v_dam := creature_spawn(w, 'rabba', px + 0.5, py, 'deed', now() - interval '10 days', u);
+  v_sire := creature_spawn(w, 'rabba', px - 0.5, py, 'deed', now() - interval '10 days', u);
   update creature set sex = 'female', name = 'Snow', traits = ${arr(PAIRS.supreme.dam)}, hunger = 1 where world_id = w and id = v_dam;
   update creature set sex = 'male', name = 'Horn', traits = ${arr(PAIRS.supreme.sire)}, hunger = 1 where world_id = w and id = v_sire;
   perform set_config('wurm.dice', '${UNDER}', true);

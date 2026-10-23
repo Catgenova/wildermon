@@ -217,8 +217,8 @@ begin
   perform give(w, me, 'potato', 80, 30);
   insert into skill (world_id, uid, id, value) values (w, me, 'taming', 90)
     on conflict (world_id, uid, id) do update set value = 90;
-  v_first := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'wild', now() - interval '9 hours');
-  v_second := creature_spawn(w, 'rabba', v_x - 0.3, v_y, 'wild', now() - interval '9 hours');
+  v_first := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'wild', now() - interval '10 days');
+  v_second := creature_spawn(w, 'rabba', v_x - 0.3, v_y, 'wild', now() - interval '10 days');
 
   for v_tries in 1..60 loop
     exit when (select mode from creature where world_id = w and id = v_first) <> 'wild';
@@ -274,7 +274,7 @@ begin
   insert into said values ('STORE|' || coalesce(act_refusal(w, me, 'store_creature', jsonb_build_object('kind', 'creature', 'id', v_second)), 'allowed'));
 
   -- A third following him, and the worker taken off the deed.
-  v_third := creature_spawn(w, 'rabba', v_x, v_y + 0.3, 'active', now() - interval '9 hours', me);
+  v_third := creature_spawn(w, 'rabba', v_x, v_y + 0.3, 'active', now() - interval '10 days', me);
   update creature set mode = 'stored' where world_id = w and id = v_second;
   insert into said values ('TAKEOK|' || coalesce(act_refusal(w, me, 'take_creature', jsonb_build_object('kind', 'creature', 'id', v_first)), 'allowed'));
   perform act_perform(w, me, 'take_creature', jsonb_build_object('kind', 'creature', 'id', v_first));

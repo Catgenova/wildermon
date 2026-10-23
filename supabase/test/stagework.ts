@@ -83,7 +83,7 @@ begin
 
   -- The rule, at each level asked about, and which trades it carries for and which it handles for.
   ${LEVELS.map(([sp, skill, lv], n) => `
-  a := creature_spawn(w, '${sp}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, '${sp}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   -- No blood: a deep-pocketed one carries a load more (\`trait_add\`).
   update creature set skills = jsonb_build_object('${skill}', ${lv}), traits = '{}' where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
@@ -99,7 +99,7 @@ begin
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, litres)
     values (w, 'furniture', 'barrel', ${T - 3}, ${T}, 0, 0, ${T - 3} + 0.5, ${T} + 0.5, 40, u, 0) returning id into v_barrel;
   for i in 0..1 loop
-    a := creature_spawn(w, 'holla', ${T + 3} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '30 days', u);
+    a := creature_spawn(w, 'holla', ${T + 3} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '60 days', u);
     update creature set traits = '{}', rare = null, care = 0, carrying = null, work_x = ${T + 3}, work_y = ${T + 3},
            skills = jsonb_build_object('carrying', case i when 0 then 10 else ${AT1} end)
      where world_id = w and id = a;
@@ -127,7 +127,7 @@ begin
     insert into item (world_id, holder, crate, gx, gy, def, ql, dmg, count) values
       (w, 'crate', 1, ${T + 1}, ${T}, 'hatchet', 50, 50, 1), (w, 'crate', 1, ${T + 1}, ${T}, 'saw', 50, 40, 1),
       (w, 'crate', 1, ${T + 1}, ${T}, 'carving_knife', 50, 30, 1);
-    a := creature_spawn(w, 'tinka', ${T + 1} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+    a := creature_spawn(w, 'tinka', ${T + 1} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
     update creature set traits = '{}', rare = null, care = 0, work_x = ${T + 1}, work_y = ${T},
            skills = jsonb_build_object('repair', case i when 1 then ${AT1} else ${AT2} end)
      where world_id = w and id = a;
@@ -145,7 +145,7 @@ begin
   -- A brick-maker at its second stage, with five clay in the crate.
   delete from item where world_id = w and holder = 'crate';
   insert into item (world_id, holder, crate, gx, gy, def, ql, count) values (w, 'crate', 1, ${T + 1}, ${T}, 'clay', 40, 5);
-  a := creature_spawn(w, 'mudda', ${T + 1} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, 'mudda', ${T + 1} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, work_x = ${T + 1}, work_y = ${T},
          skills = jsonb_build_object('pottery', ${AT1}) where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
@@ -163,7 +163,7 @@ begin
   -- A reed cutter at each of its first two stages: a cut, and then what it does next.
   perform land_set_tile(w, x, ${T + 4}, tile_id('Reed')) from generate_series(${T - 2}, ${T + 2}) x;
   for i in 0..1 loop
-    a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '30 days', u);
+    a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T + 3} + 0.5, 'deed', now() - interval '60 days', u);
     update creature set traits = '{}', rare = null, care = 0, carrying = null, hunger = 1, stance = 'passive',
            skills = jsonb_build_object('foraging', case i when 0 then 10 else ${AT1} end),
            phase = 'work', work_x = ${T}, work_y = ${T + 4}, from_x = ${T} + 0.5, from_y = ${T + 3} + 0.5,
@@ -194,7 +194,7 @@ begin
   end loop;
 
   -- Shut in a crate with two loads in its arms: both go down.
-  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
+  a := creature_spawn(w, 'sedra', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set carrying = load_join(jsonb_build_object('def', 'reed', 'count', 1, 'ql', 30), jsonb_build_object('def', 'reed', 'count', 2, 'ql', 30))
    where world_id = w and id = a;
   perform crate_shut_in(w, a, 0, null);

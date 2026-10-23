@@ -56,8 +56,14 @@ const spans = Array.from({ length: 1000 }, (_, i) => wildStayOf(i + 1));
 check(`between once and twice the span, spread across it: ${Math.round(Math.min(...spans) / 3600)} to ${Math.round(Math.max(...spans) / 3600)} hours`,
   Math.min(...spans) >= WILD_STAY && Math.max(...spans) < 2 * WILD_STAY
     && spans.filter((s) => s < 1.5 * WILD_STAY).length > 450 && spans.filter((s) => s < 1.5 * WILD_STAY).length < 550);
-check('and no shorter than the furthest back either side dates a new one\'s birth, so nothing new is gone on the next pass',
-  WILD_STAY >= WILD_BORN_BACK, `${WILD_STAY} against ${WILD_BORN_BACK}`);
+{
+  // Its stay is counted from when it was put out (put_at), not its birth, which is dated back across the ages.
+  const turn = psql(`select pg_get_functiondef('wild_turnover'::regproc)`);
+  const stock = psql(`select pg_get_functiondef('creature_stock_block'::regproc)`);
+  check('a wild one\'s stay is counted from when it was put out, not its birth, which is dated back across the ages on both sides',
+    turn.includes('c.put_at <= now() - make_interval(secs => wild_stay_of(c.id))') && stock.includes('random() * old_at() * 1.6')
+      && Number(psql('select old_at() * 1.6')) === WILD_BORN_BACK, psql('select old_at() * 1.6'));
+}
 
 /* ---- on the island -------------------------------------------------------------------- */
 
@@ -87,27 +93,29 @@ begin
   update deed set x = -100000, y = -100000 where world_id = w;
 
   -- Every one old enough to go but for what holds it, and three that are about their span.
-  v_old := creature_spawn(w, 'ulva', 30.5, 30.5, 'wild', now() - interval '3 days', null);
+  v_old := creature_spawn(w, 'ulva', 30.5, 30.5, 'wild', now() - interval '60 days', null);
   v_young := creature_spawn(w, 'ulva', 31.5, 30.5, 'wild', now() - interval '1 hour', null);
   v_out := creature_spawn(w, 'ulva', 32.5, 30.5, 'wild', now(), null);
   update creature set born = now() - make_interval(secs => wild_stay_of(v_out) + 120) where world_id = w and id = v_out;
   v_in := creature_spawn(w, 'ulva', 33.5, 30.5, 'wild', now(), null);
   update creature set born = now() - make_interval(secs => wild_stay_of(v_in) - 120) where world_id = w and id = v_in;
-  v_tame := creature_spawn(w, 'ulva', 34.5, 30.5, 'deed', now() - interval '3 days', u);
-  v_fight := creature_spawn(w, 'ulva', 35.5, 30.5, 'wild', now() - interval '3 days', null);
+  v_tame := creature_spawn(w, 'ulva', 34.5, 30.5, 'deed', now() - interval '60 days', u);
+  v_fight := creature_spawn(w, 'ulva', 35.5, 30.5, 'wild', now() - interval '60 days', null);
   update creature set enemy = v_tame, brawl = v_tame where world_id = w and id = v_fight;
-  v_fought := creature_spawn(w, 'ulva', 36.5, 30.5, 'wild', now() - interval '3 days', null);
+  v_fought := creature_spawn(w, 'ulva', 36.5, 30.5, 'wild', now() - interval '60 days', null);
   update creature set enemy = v_fought where world_id = w and id = v_tame;
-  v_trap := creature_spawn(w, 'ulva', 37.5, 30.5, 'wild', now() - interval '3 days', null);
+  v_trap := creature_spawn(w, 'ulva', 37.5, 30.5, 'wild', now() - interval '60 days', null);
   update creature set trapped = 424242 where world_id = w and id = v_trap;
-  v_monster := creature_spawn(w, 'goblin', 38.5, 30.5, 'wild', now() - interval '3 days', null);
-  v_marked := creature_spawn(w, 'ulva', 39.5, 30.5, 'wild', now() - interval '3 days', null);
+  v_monster := creature_spawn(w, 'goblin', 38.5, 30.5, 'wild', now() - interval '60 days', null);
+  v_marked := creature_spawn(w, 'ulva', 39.5, 30.5, 'wild', now() - interval '60 days', null);
   insert into class_mark (world_id, creature_id, kind, val, until) values (w, v_marked, 'root', 1, now() + interval '1 minute');
-  v_coaxed := creature_spawn(w, 'ulva', 40.5, 30.5, 'wild', now() - interval '3 days', null);
+  v_coaxed := creature_spawn(w, 'ulva', 40.5, 30.5, 'wild', now() - interval '60 days', null);
   update creature set coaxed = 2, coaxed_at = now() where world_id = w and id = v_coaxed;
-  v_acted := creature_spawn(w, 'ulva', 41.5, 30.5, 'wild', now() - interval '3 days', null);
+  v_acted := creature_spawn(w, 'ulva', 41.5, 30.5, 'wild', now() - interval '60 days', null);
   update player set act = 'tame', act_target = jsonb_build_object('kind', 'creature', 'id', v_acted), act_ends = now() + interval '1 minute'
    where world_id = w and uid = u;
+  -- Each put out when it was born, so its stay is counted from there (put_at).
+  update creature set put_at = coalesce(born, now()) where world_id = w;
   -- A mark run out on the old one, which goes with it.
   insert into class_mark (world_id, creature_id, kind, val, until) values (w, v_old, 'root', 1, now() - interval '1 hour');
   v_stays := array[v_young, v_in, v_tame, v_fight, v_fought, v_trap, v_monster, v_marked, v_coaxed, v_acted];
@@ -124,7 +132,7 @@ begin
   insert into said select 'OLDMARK', count(*)::text from class_mark where world_id = w and creature_id = v_old;
   insert into said select 'TOPPED', count(*) filter (where id > v_top) || '|' || count(*) || '|' || greatest(wild_floor(), 4)
     from creature where world_id = w and mode = 'wild';
-  insert into said select 'FRESH', bool_and(born > now() - make_interval(secs => 6 * 3600 * 1.6 + 60))::text
+  insert into said select 'FRESH', bool_and(born > now() - make_interval(secs => old_at() * 1.6 + 60))::text
     from creature where world_id = w and mode = 'wild' and id > v_top;
   -- Straight after, nothing more goes: the new ones are inside their span.
   update world_stocked set at = now() - make_interval(secs => restock_every() + 1) where world_id = w;

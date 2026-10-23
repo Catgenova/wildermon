@@ -198,7 +198,7 @@ declare w uuid; u uuid; c int;
 begin
   select id into w from world where name = 'Faraway';
   select uid into u from player where world_id = w and name = 'Ivar';
-  c := creature_spawn(w, 'rabba', ${X0 - 0.5}, ${Y.grass + 0.5}, 'active', now() - interval '3 days', u);
+  c := creature_spawn(w, 'rabba', ${X0 - 0.5}, ${Y.grass + 0.5}, 'active', now() - interval '60 days', u);
   update creature set rider = u where world_id = w and id = c;
 end $$;`);
 psql(passIsland(Y.grass));

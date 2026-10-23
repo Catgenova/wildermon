@@ -107,8 +107,8 @@ begin
   select coalesce(max(n), 0) into v_n from event where world_id = w;
 
   -- A tame.
-  v_first := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'wild', now() - interval '9 hours');
-  v_second := creature_spawn(w, 'rabba', v_x - 0.3, v_y, 'wild', now() - interval '9 hours');
+  v_first := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'wild', now() - interval '10 days');
+  v_second := creature_spawn(w, 'rabba', v_x - 0.3, v_y, 'wild', now() - interval '10 days');
   for v_tries in 1..60 loop
     exit when (select mode from creature where world_id = w and id = v_first) <> 'wild';
     perform act_perform(w, me, 'tame', jsonb_build_object('kind', 'creature', 'id', v_first));
@@ -161,7 +161,7 @@ begin
     order by n desc limit 1;
 
   -- A birth.
-  v_dam := creature_spawn(w, 'rabba', v_x, v_y + 0.3, 'stored', now() - interval '9 hours', me);
+  v_dam := creature_spawn(w, 'rabba', v_x, v_y + 0.3, 'stored', now() - interval '10 days', me);
   update creature set sex = 'female', unborn = jsonb_build_object('traits', '[]'::jsonb, 'sex', 'male'), due = now() - interval '1 second'
     where world_id = w and id = v_dam;
   select coalesce(max(n), 0) into v_n from event where world_id = w;

@@ -78,7 +78,7 @@ begin
 
   -- A worker of each, its own row to read the line off.
   create temp table hand (species text, id int);
-  insert into hand select s, creature_spawn(w, s, 16.6, 16.6, 'active', now() - interval '30 days', u)
+  insert into hand select s, creature_spawn(w, s, 16.6, 16.6, 'active', now() - interval '60 days', u)
     from unnest(array['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa']) s;
   insert into said select 'ASK:' || h.species, coalesce(act_refusal(w, u, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', h.id)), 'none') from hand h;
   update creature set mode = 'deed', stance = 'passive', hunger = 1, settled_at = now(), until = now(), leg_at = now(), leg_ends = now(),
@@ -90,7 +90,7 @@ begin
 
   -- A worker's afternoon, ten minutes of it.
   -- Kemma: a woola of yours wanting a brush.
-  v_o := creature_spawn(w, 'woola', 17.5, 17.5, 'active', now() - interval '30 days', u);
+  v_o := creature_spawn(w, 'woola', 17.5, 17.5, 'active', now() - interval '60 days', u);
   update creature set care = 0, health = 1 where world_id = w and id = v_o;
   select id into v_id from hand where species = 'kemma';
   update creature set mode = 'deed', until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle'
@@ -100,7 +100,7 @@ begin
   update creature set mode = 'stored' where world_id = w and id = v_id;
 
   -- Sheela: that woola's fleece, and a cudda with a bucket in the crate for her.
-  v_o2 := creature_spawn(w, 'cudda', 15.5, 17.5, 'active', now() - interval '30 days', u);
+  v_o2 := creature_spawn(w, 'cudda', 15.5, 17.5, 'active', now() - interval '60 days', u);
   update creature set fleece = 1, hunger = 1, sex = 'female' where world_id = w and id in (v_o, v_o2);
   insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7101, 'bucket', 30, 1);
   select id into v_id from hand where species = 'sheela';
