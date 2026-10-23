@@ -45,6 +45,12 @@ jobs:
           door "auth health" -H "apikey: $PUBLIC_KEY" "$base/auth/v1/health"
           door "auth settings (public)" -H "apikey: $PUBLIC_KEY" "$base/auth/v1/settings"
           door "the API's root" -H "apikey: $PUBLIC_KEY" "$base/rest/v1/"
+          # Past the gateway into PostgREST itself: a table read and a function call as nobody. Refused (401/403/404) is
+          # healthy; 503 with PGRST002 is the API without its schema cache, which is what players were shown.
+          door "a table through the API, as nobody" -H "apikey: $PUBLIC_KEY" "$base/rest/v1/world?select=id&limit=1"
+          door "a function through the API, as nobody" -X POST -H "apikey: $PUBLIC_KEY" -H "Content-Type: application/json" \
+            "$base/rest/v1/rpc/rpc_unported" -d '{}'
+          door "realtime's door" -H "apikey: $PUBLIC_KEY" "$base/realtime/v1/api/tenants/realtime-dev/health"
           door "an anonymous sign-in's door, refused or not (no body: nothing is made)" -X POST -H "apikey: $PUBLIC_KEY" \
             -H "Content-Type: application/json" "$base/auth/v1/token?grant_type=refresh_token" -d '{"refresh_token":"none"}'
           logs() {
