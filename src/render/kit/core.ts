@@ -341,16 +341,22 @@ export function grain(g: Ctx, fill: RGB, w: number, h: number, seed: number, alo
   if (along === 'y') g.transform(0, 1, 1, 0, 0, 0);
   g.lineCap = 'round';
   const n = Math.max(1, Math.round(H * 0.9 * k));
+  // The streaks a step deeper and a step paler, each laid as one stroke: a face's grain is two calls, not a dozen.
+  const dark = new Path2D(), light = new Path2D();
   for (let i = 0; i < n; i++) {
     const y = ((i + 0.3 + T() * 0.4) / n) * H;
     const x0 = T() * L * 0.3, x1 = L - T() * L * 0.3;
-    g.beginPath();
-    g.moveTo(x0, y);
-    g.bezierCurveTo(x0 + (x1 - x0) * 0.3, y + (T() - 0.5) * 0.35, x0 + (x1 - x0) * 0.7, y + (T() - 0.5) * 0.35, x1, y + (T() - 0.5) * 0.2);
-    g.strokeStyle = T() < 0.55 ? css(mix(fill, hex('#5c4048'), 0.3), 0.32) : css(mix(fill, [255, 246, 228], 0.4), 0.38);
-    g.lineWidth = 0.1 + T() * 0.08;
-    g.stroke();
+    const c1 = y + (T() - 0.5) * 0.35, c2 = y + (T() - 0.5) * 0.35, y1 = y + (T() - 0.5) * 0.2;
+    const P = T() < 0.55 ? dark : light;
+    T();
+    P.moveTo(x0, y);
+    P.bezierCurveTo(x0 + (x1 - x0) * 0.3, c1, x0 + (x1 - x0) * 0.7, c2, x1, y1);
   }
+  g.lineWidth = 0.14;
+  g.strokeStyle = css(mix(fill, hex('#5c4048'), 0.3), 0.32);
+  g.stroke(dark);
+  g.strokeStyle = css(mix(fill, [255, 246, 228], 0.4), 0.38);
+  g.stroke(light);
   if (L * H > 18 && T() < 0.7 * k) {
     const x = L * (0.2 + 0.6 * T()), y = H * (0.25 + 0.5 * T());
     g.beginPath();
@@ -487,25 +493,32 @@ export function litEdges(g: Ctx, e: Eye, faces: readonly Face[], seed: number, c
     if (f.n[2] < 0.75 || dot(f.n, e.toward) <= 1e-6 || f.pts.length < 3) continue;
     const m0 = dot(centre(f.pts), e.toward);
     const scr = f.pts.map((q) => proj(e, q));
+    // A top under a dozen pixels on its bake: the light along it would be a smudge, and its clip and stroke are dear.
+    const tr = g.getTransform();
+    let a = 0;
+    for (let i = 0; i < scr.length; i++) { const p = scr[i], q = scr[(i + 1) % scr.length]; a += p[0] * q[1] - q[0] * p[1]; }
+    if (Math.abs(a) * 0.5 * Math.abs(tr.a * tr.d - tr.b * tr.c) < 12) continue;
     g.save();
     g.beginPath();
     scr.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
     g.closePath();
     g.clip();
+    // Its near arrises broken into dashes, all of them one stroke.
+    const dashes = new Path2D();
     for (let i = 0; i < f.pts.length; i++) {
       const j = (i + 1) % f.pts.length;
       if (dot(mul(add(f.pts[i], f.pts[j]), 0.5), e.toward) <= m0 + 0.05) continue;
       const [ax, ay] = scr[i], [bx, by] = scr[j];
       for (let u = T() * 0.1; u < 1;) {
         const v = Math.min(1, u + 0.25 + 0.4 * T());
-        g.lineWidth = 0.6 + 0.4 * T();
-        g.beginPath();
-        g.moveTo(ax + (bx - ax) * u, ay + (by - ay) * u);
-        g.lineTo(ax + (bx - ax) * v, ay + (by - ay) * v);
-        g.stroke();
+        T();
+        dashes.moveTo(ax + (bx - ax) * u, ay + (by - ay) * u);
+        dashes.lineTo(ax + (bx - ax) * v, ay + (by - ay) * v);
         u = v + 0.05 + 0.12 * T();
       }
     }
+    g.lineWidth = 0.8;
+    g.stroke(dashes);
     g.restore();
   }
   g.restore();

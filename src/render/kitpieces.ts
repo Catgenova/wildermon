@@ -2,7 +2,7 @@ import { FACINGS, furnitureDef } from '../game/furniture';
 import type { Side } from '../game/building';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { VIEWS } from './view';
-import { BAKE_STEPS, canvasOf, drawFaces, eyeOfView, proj, scaleFor, type Ctx, type Eye, type V3 } from './runestone';
+import { aboveGround, BAKE_STEPS, canvasOf, CREASE_INK, css, dot, eyeOfView, faceColour, lightOf, mix, proj, scaleFor, type Ctx, type Eye, type Face, type PaintCtx, type Pt, type RGB, type V3 } from './runestone';
 import { centre, KIT_INK, KIT_INK_W, litEdges, type KitAir, type KitLook, type KitModel, type KitPart, type KitPiece, type KitView } from './kit/core';
 import { KIT_PIECES } from './kit/index';
 
@@ -213,9 +213,118 @@ function floorShade(g: Ctx, e: Eye, foot: readonly V3[]): void {
   }
 }
 
+/** A face smaller than this on its bake, in its pixels, is filled and ruled but not painted: nothing painted on it would be seen. */
+const PAINT_LEAST = 6;
+/** And a face smaller than this, in pixels of its bake, is not drawn at all: a sliver of a chamfer seen edge on, a facet of a knob at zoom one. */
+const FACE_LEAST = 0.5;
+/** How far past its edges a face is filled, in pixels of its bake; and how big a face must be there to be creased. */
+const GROW = 0.3;
+const CREASE_LEAST = 12;
+/** An outline on the screen pushed out by `d` all round (in for less than nought, as it winds), its corners mitred and never more than twice `d` out. */
+function grown(pts: readonly Pt[], d: number): Pt[] {
+  const n = pts.length;
+  return pts.map((p, i) => {
+    const a = pts[(i + n - 1) % n], b = pts[(i + 1) % n];
+    const l1 = Math.hypot(p[0] - a[0], p[1] - a[1]) || 1, l2 = Math.hypot(b[0] - p[0], b[1] - p[1]) || 1;
+    const n1x = (p[1] - a[1]) / l1, n1y = -(p[0] - a[0]) / l1, n2x = (b[1] - p[1]) / l2, n2y = -(b[0] - p[0]) / l2;
+    let mx = n1x + n2x, my = n1y + n2y;
+    const ml = Math.hypot(mx, my);
+    if (ml < 1e-6) return [p[0], p[1]] as Pt;
+    mx /= ml; my /= ml;
+    const k = Math.min(2, 1 / Math.max(0.5, mx * n1x + my * n1y));
+    return [p[0] - mx * d * k, p[1] - my * d * k] as Pt;
+  });
+}
+
+/**
+ * A solid's faces, back to front, each lit, painted and creased, ruled round
+ * in ink (`drawFaces` in runestone.ts, which this is drawn as), in fewer
+ * calls: the ink round all of it one stroke, each face's own colour and its
+ * crease one stroke, and a face too small to show what is painted on it left
+ * unpainted. A bake is a hundred-odd faces, and every call on the canvas is
+ * paid twice, once to record and once to lay down.
+ */
+function kitFaces(g: Ctx, e: Eye, faces0: readonly Face[], ink: number, inkColour: RGB): void {
+  const base = g.getTransform();
+  const px2 = Math.abs(base.a * base.d - base.b * base.c);
+  const seen: Array<{ f: Face; pts: V3[]; d: number }> = [];
+  for (const f of faces0) {
+    if (dot(f.n, e.toward) <= 1e-6) continue;
+    // What stands under the floor is not drawn.
+    const pts = aboveGround(f.pts);
+    if (pts.length < 3) continue;
+    let cx = 0, cy = 0, cz = 0;
+    for (const q of pts) { cx += q[0]; cy += q[1]; cz += q[2]; }
+    seen.push({ f, pts, d: (cx * e.toward[0] + cy * e.toward[1] + cz * e.toward[2]) / pts.length });
+  }
+  seen.sort((a, b) => a.d - b.d);
+  const scr = seen.map(({ pts }) => pts.map((q) => proj(e, q)));
+  const trace = (P: Path2D | Ctx, pts: readonly Pt[]): void => {
+    pts.forEach(([x, y], i) => (i ? P.lineTo(x, y) : P.moveTo(x, y)));
+    P.closePath();
+  };
+  g.lineJoin = 'round';
+  // The ink round the whole solid: every face it shows stroked twice the ink wide, the faces filled over so only its rim is left.
+  const rim = new Path2D();
+  for (const pts of scr) trace(rim, pts);
+  g.strokeStyle = css(inkColour);
+  g.lineWidth = ink * 2 + 2 * GROW / Math.sqrt(px2);
+  g.stroke(rim);
+  // Each face filled a hair past its edges, so two faces of it meet with no seam of the ink under them, and only its larger faces creased.
+  const grow = GROW / Math.sqrt(px2);
+  const overs: Array<() => void> = [];
+  seen.forEach(({ f }, i) => {
+    const pts = scr[i];
+    let a = 0;
+    for (let j = 0; j < pts.length; j++) { const p = pts[j], q = pts[(j + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; }
+    const area = Math.abs(a) * 0.5 * px2;
+    // A face edge on, or too small to be a pixel on its bake: the ink round it is all that would be seen of it.
+    if (area < FACE_LEAST && !f.over) return;
+    const L = lightOf(e, f.n);
+    const fill = faceColour(f.tone, L);
+    g.beginPath();
+    trace(g, grown(pts, a > 0 ? grow : -grow));
+    g.fillStyle = css(fill);
+    g.fill();
+    const frame = f.frame;
+    const k: PaintCtx = { e, L, fill, base };
+    if (f.paint && frame) {
+      if (area >= PAINT_LEAST) {
+        g.save();
+        g.clip();
+        const [ox, oy] = proj(e, frame.o), [ax, ay] = proj(e, frame.a), [bx, by] = proj(e, frame.b);
+        g.transform(ax, ay, bx, by, ox, oy);
+        f.paint(g, k);
+        g.restore();
+        g.beginPath();
+        trace(g, pts);
+      }
+    }
+    if (f.over && frame) {
+      const over = f.over;
+      overs.push(() => {
+        g.save();
+        const [ox, oy] = proj(e, frame.o), [ax, ay] = proj(e, frame.a), [bx, by] = proj(e, frame.b);
+        g.transform(ax, ay, bx, by, ox, oy);
+        over(g, k);
+        g.restore();
+      });
+    }
+    // Its edge in its own colour taken toward the crease ink as far as it says, where it is big enough for a crease to be seen.
+    if (area >= CREASE_LEAST) {
+      if (!f.paint || !frame || area < PAINT_LEAST) { g.beginPath(); trace(g, pts); }
+      else { g.beginPath(); trace(g, pts); }
+      g.strokeStyle = css(mix(fill, CREASE_INK, 0.6 * (f.crease ?? 0.35)));
+      g.lineWidth = 0.55;
+      g.stroke();
+    }
+  });
+  for (const o of overs) o();
+}
+
 function layPart(g: Ctx, e: Eye, p: KitPart, salt: number): void {
   if (p.faces) {
-    drawFaces(g, e, p.faces, p.ink ?? KIT_INK_W, p.inkColour ?? KIT_INK);
+    kitFaces(g, e, p.faces, p.ink ?? KIT_INK_W, p.inkColour ?? KIT_INK);
     if (p.edges) litEdges(g, e, p.faces, salt);
   }
   p.draw?.(g, e);
