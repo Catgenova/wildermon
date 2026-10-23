@@ -27,7 +27,7 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
-import { bloodMul, Creatures, maxHealth, SPECIES, type Creature, type IslandCreature } from '../../src/game/creatures';
+import { bloodMul, Creatures, maxHealth, SPECIES, type IslandCreature } from '../../src/game/creatures';
 import { FieldGuide, formLines, guidePage } from '../../src/game/guide';
 import {
   bredForm, coatOf, COLOUR_FORM_ODDS, FORM_PASS, formCoat, formKey, formLabels, formMul, formName, formScale, LARGE_HEALTH, LARGE_SIZE, paleKind,
