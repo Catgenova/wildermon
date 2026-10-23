@@ -1233,7 +1233,7 @@ export function animOf(kind: Kind, p: BeastPose, now: number, go: number, graze:
  * show (`SNAP_BELOW`).
  */
 const STRIDE_FRAMES = 12;
-const STAND_FPS = 6;
+export const STAND_FPS = 6;
 /** Pictures to a second of an act played standing (`ACT_SECS`): a strike is eight of them, a go at a task seventeen. */
 const ACT_FPS = 15;
 /**
@@ -1319,6 +1319,61 @@ function keep(key: string, f: Frame): void {
       if (framePixels < BUDGET * 0.8) break;
     }
   }
+}
+
+/**
+ * The pad a picture is drawn on before it is kept: as big as the kind can reach
+ * at any facing and in any pose (`reachOf`), cleared, and kept for the next.
+ */
+let pad: HTMLCanvasElement | null = null;
+let padCtx: CanvasRenderingContext2D | null = null;
+function drawPad(w: number, h: number): CanvasRenderingContext2D {
+  if (!pad || !padCtx || pad.width < w || pad.height < h) {
+    pad = document.createElement('canvas');
+    pad.width = Math.max(w, pad?.width ?? 0);
+    pad.height = Math.max(h, pad?.height ?? 0);
+    padCtx = pad.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+  }
+  padCtx.setTransform(1, 0, 0, 1, 0, 0);
+  padCtx.clearRect(0, 0, w, h);
+  return padCtx;
+}
+
+/**
+ * A picture kept as what was drawn on the pad and a pixel clear round it, not
+ * the whole of the pad. The pad is the box the kind reaches at every facing
+ * and in every pose, with room to spare, and one pose at one facing covers
+ * about a fifth of it. Kept whole, the pictures of fifteen wildermon standing
+ * about a settlement came to nearly five times `BUDGET` at twice the zoom on
+ * a screen of two pixels to the point: the ones longest unused went just
+ * before they were wanted again, and every body drew a new picture every
+ * sixth of a second for as long as it was in view.
+ */
+function cropped(g: CanvasRenderingContext2D, w: number, h: number, ox: number, oy: number, k: number): Frame {
+  const px = new Uint32Array(g.getImageData(0, 0, w, h).data.buffer);
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    for (let x = 0; x < w; x++) {
+      // Any byte order: an empty pixel is all nought.
+      if (px[row + x] === 0) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      y1 = y;
+    }
+  }
+  // A pixel clear on every side, so a picture put down stretched blends out at its edge as the whole pad did.
+  if (x1 < 0) x0 = y0 = x1 = y1 = 0;
+  x0 = Math.max(0, x0 - 1);
+  y0 = Math.max(0, y0 - 1);
+  x1 = Math.min(w - 1, x1 + 1);
+  y1 = Math.min(h - 1, y1 + 1);
+  const canvas = document.createElement('canvas');
+  canvas.width = x1 - x0 + 1;
+  canvas.height = y1 - y0 + 1;
+  (canvas.getContext('2d') as CanvasRenderingContext2D).drawImage(g.canvas, -x0, -y0);
+  return { canvas, ox: ox - x0, oy: oy - y0, k, px: canvas.width * canvas.height };
 }
 
 /** A body standing or grazing at the `i`th sixth of a second of its loop, as that sixth's picture is drawn. */
@@ -1664,13 +1719,11 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     const box = reachOf(species, kind, kit);
     const k = step * dev;
     const w = Math.max(1, Math.ceil((box.right - box.left) * k)), hh = Math.max(1, Math.ceil((box.bottom - box.top) * k));
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = hh;
-    const g = canvas.getContext('2d') as CanvasRenderingContext2D;
-    f = { canvas, ox: Math.round(-box.left * k), oy: Math.round(-box.top * k), k, px: w * hh };
-    g.setTransform(k, 0, 0, k, f.ox, f.oy);
+    const ox = Math.round(-box.left * k), oy = Math.round(-box.top * k);
+    const g = drawPad(w, hh);
+    g.setTransform(k, 0, 0, k, ox, oy);
     drawKind(g, kind, kit, pal, facing, a, inkAt(step, kind.size), 1 / step);
+    f = cropped(g, w, hh, ox, oy, k);
     keep(key, f);
     if (h) h.waiting = undefined;
   }

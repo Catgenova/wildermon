@@ -41,7 +41,7 @@ import {
 import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
-import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
+import { drawRunestone, runestoneHit, RunestoneNight, type NightHole, type OccluderClip } from './runestone';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -886,7 +886,7 @@ const ROOF_CAP = 2.5;
 /** What nothing that grows on a wall goes over on a shop counter's face: its opening, the board under it and the awning over it. */
 const COUNTER_KEEP = { t0: BAY.t0 - 0.06, t1: BAY.t1 + 0.06, k0: BAY.k0 - 0.2, k1: BAY.k1 + 0.14 } as const;
 /** The share of the screen's size the lights' holes in the night and their casts are worked out at: soft enough not to show it. */
-const LIGHT_RES = 0.5;
+export const LIGHT_RES = 0.5;
 /** A rectangle: x, y, width, height. */
 type Box = [number, number, number, number];
 /** How far the eaves hang out past the wall's line, and the verge past a gable end, in tiles. */
@@ -5638,7 +5638,22 @@ export class Renderer {
           }
           // Not indoors: a roof or a wall stands in front of it there, and the night cut away at its stars would be cut out of that.
           if (glowsAtNight(piece.kind) && !this.game.buildings.buildingAt(Math.floor(piece.x), Math.floor(piece.y))) {
-            this.glows.push({ sx: ent.sx, sy: ent.sy, kind: piece.kind, view });
+            /*
+             * After dark, cut out of a copy of their own box at the screen's
+             * pixels as the night goes down, as a runestone's runes are
+             * (`RunestoneNight.lay`), and over whatever stands in front of
+             * them, as they always were. An altar in view used to have the
+             * whole night mixed at the screen's full size for the sake of its
+             * stars: four times the pixels, every frame, at any zoom.
+             */
+            const holes = furnitureHoles(ent.sx, ent.sy, zoom, piece.kind, view);
+            let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity;
+            for (const h of holes) {
+              L = Math.min(L, h.x - h.r); T = Math.min(T, h.y - h.r);
+              R = Math.max(R, h.x + h.r); B = Math.max(B, h.y + h.r);
+            }
+            const moved = (dx: number, dy: number): NightHole[] => holes.map((h) => ({ x: h.x + dx, y: h.y + dy, r: h.r, a: h.a }));
+            if (!this.runeNight.glowing(ctx, L, T, R, B, moved, () => [], false)) this.glows.push({ sx: ent.sx, sy: ent.sy, kind: piece.kind, view });
           }
         }
         // A sign is a board made to be read, so what is written on it stands

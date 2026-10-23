@@ -51,7 +51,8 @@ import { ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS
 import { REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
-import { THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
+import { LIGHT_RES, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
+import { STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { SEASON_DAYS, seasonLine, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
@@ -3258,6 +3259,14 @@ export const NEWS: News[] = [
     lines: () => [
       'Changed: a wildermon in a crate set down drawn still, not animated: frame rate with many crates out.',
       'Fixed: a wildermon in a crate drawn at its own stage, not its first.',
+    ],
+  },
+  {
+    n: 266,
+    day: '2026-10-23',
+    lines: () => [
+      `Fixed: frame rate with wildermon standing about in view, close in or on a sharp screen: each kept picture cut to what is drawn, so it stays kept, not drawn again ${STAND_FPS} times a second.`,
+      `Fixed: frame rate after dark with an altar in view: night mixed at ${Math.round(LIGHT_RES * LIGHT_RES * 100)}% of the screen's pixels, as without one (was 100%).`,
     ],
   },
 ];
