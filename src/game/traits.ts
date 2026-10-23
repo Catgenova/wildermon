@@ -699,6 +699,12 @@ export const lineSaid = (traits: string[] | undefined, line: Line | undefined): 
 
 // ---- What a pairing would throw ----
 
+/** A repeatable stream of rolls from a seed (Lehmer), for a draw that must come out the same each time. */
+export const seededRand = (seed: number): (() => number) => {
+  let s = seed % 2147483647 || 1;
+  return () => (s = (s * 48271) % 2147483647) / 2147483647;
+};
+
 /** What a pairing throws, as shares of the young it would have. */
 export interface BreedOdds {
   /** For each trait either parent carries, the share of young born carrying that very trait. */
