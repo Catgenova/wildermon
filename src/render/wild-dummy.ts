@@ -63,7 +63,7 @@ interface Dummy {
   /** Pink cloth wrapped round its forearms and shins, and a pink patch on its left knee. */
   wraps: boolean;
   knee: boolean;
-  /** Rope: none; a band across its chest from its left shoulder; or a harness down both its sides. */
+  /** Rope: none; round its neck and over its right shoulder; or round its neck and over both shoulders. */
   rope: 0 | 1 | 2;
   /** The collar of leaves round its neck: how many, how long, how wide. */
   collar: { count: number; len: number; w: number };
@@ -75,70 +75,70 @@ interface Dummy {
 /** A Dummicub: small and round, a big head on a round body, up on short legs with both paws raised and a grin. */
 const DUMMICUB_LOOK: Dummy = {
   stage: 0,
-  leg: { at: [0.36, 0.02, -0.06], len: [0.16, 0.12, 0.14], rest: [6, -12], w: [0.34, 0.3], foot: 0.5 },
+  leg: { at: [0.42, 0.02, -0.06], len: [0.14, 0.1, 0.15], rest: [6, -12], w: [0.4, 0.36], foot: 0.58 },
   stance: { split: 6, bend: 0 },
-  hips: [0.6, 0.52, 0.4],
+  hips: [0.68, 0.58, 0.42],
   chest: { at: [0, 0, 0.08], lean: -4 },
-  torso: { c: [0, 0.04, 0.44], r: [0.72, 0.64, 0.66], pear: 0.12 },
+  torso: { c: [0, 0.04, 0.46], r: [0.88, 0.76, 0.7], pear: 0.15 },
   target: 0.86,
-  neck: { at: [0, 0.02, 0.98], len: 0.04 },
-  arm: { at: [0.62, 0.04, 0.76], len: [0.4, 0.28], w: [0.21, 0.22], paw: 0.27 },
+  neck: { at: [0, 0.08, 1.0], len: 0.04 },
+  arm: { at: [0.74, 0.04, 0.8], len: [0.36, 0.26], w: [0.26, 0.27], paw: 0.31 },
   hold: [[10, 100, 62, 90], [10, 100, 62, 90]],
-  head: { c: [0, 0.04, 0.6], r: [0.74, 0.66, 0.64], pitch: 12, eye: 0.13, ear: 0.25, open: true },
+  head: { c: [0, 0.06, 0.7], r: [0.98, 0.74, 0.8], pitch: 12, eye: 0.24, ear: 0.3, open: true },
   mantle: [],
   skirt: [],
   wraps: false,
   knee: false,
   rope: 0,
-  collar: { count: 9, len: 0.3, w: 0.13 },
+  collar: { count: 9, len: 0.36, w: 0.16 },
   gait: { swing: [30, 40], waddle: 7, armSwing: 14, bounce: 0.35 },
-  size: 1.6,
+  size: 3.0,
 };
 
 /** A Dummibear: up in a boxer's stance, its left paw out ahead and its right up by its chin, straw thatch on its shoulders. */
 const DUMMIBEAR_LOOK: Dummy = {
   stage: 1,
-  leg: { at: [0.54, 0.0, -0.12], len: [0.44, 0.4, 0.17], rest: [8, -16], w: [0.42, 0.36], foot: 0.64 },
-  stance: { split: 22, bend: 0.42 },
-  hips: [0.82, 0.66, 0.55],
+  leg: { at: [0.62, 0.0, -0.12], len: [0.36, 0.32, 0.18], rest: [8, -16], w: [0.52, 0.46], foot: 0.72 },
+  stance: { split: 20, bend: 0.36 },
+  hips: [0.98, 0.66, 0.54],
   chest: { at: [0, 0, 0.12], lean: 6 },
-  torso: { c: [0, 0.08, 0.72], r: [0.98, 0.84, 0.96], pear: 0.32 },
-  target: 0.72,
-  neck: { at: [0, 0.18, 1.48], len: 0.06 },
-  arm: { at: [0.86, 0.2, 1.26], len: [0.5, 0.48], w: [0.25, 0.32], paw: 0.33 },
+  torso: { c: [0, 0.08, 0.72], r: [1.3, 1.04, 0.96], pear: 0.24 },
+  target: 0.78,
+  neck: { at: [0, 0.2, 1.56], len: 0.06 },
+  arm: { at: [1.16, 0.22, 1.24], len: [0.48, 0.46], w: [0.34, 0.41], paw: 0.43 },
   hold: [[72, 8, 40, 0], [30, 22, 124, 0]],
-  head: { c: [0, 0.06, 0.58], r: [0.66, 0.6, 0.58], pitch: 0, eye: 0.085, ear: 0.24, open: false },
-  mantle: [[22, 0.44, 0.4, 1.54, 0.78], [18, 0.38, 0.7, 1.3, 0.6]],
+  head: { c: [0, 0.08, 0.7], r: [0.92, 0.72, 0.8], pitch: 8, eye: 0.19, ear: 0.31, open: false },
+  mantle: [[24, 0.42, 0.45, 1.5, 0.82], [18, 0.36, 0.68, 1.3, 0.62]],
   skirt: [],
   wraps: true,
   knee: true,
   rope: 1,
-  collar: { count: 9, len: 0.38, w: 0.17 },
+  collar: { count: 9, len: 0.44, w: 0.2 },
   gait: { swing: [24, 34], waddle: 6, armSwing: 6, bounce: 0.45 },
-  size: 1.6,
+  size: 3.4,
 };
 
 /** A Dummititan: big and heavy, both paws raised, a thick straw mantle, a straw skirt with leaves at its waist, a rope harness. */
 const DUMMITITAN_LOOK: Dummy = {
   stage: 2,
-  leg: { at: [0.7, 0.0, -0.16], len: [0.6, 0.54, 0.22], rest: [4, -8], w: [0.54, 0.45], foot: 0.82 },
+  leg: { at: [0.98, 0.0, -0.16], len: [0.46, 0.42, 0.22], rest: [4, -8], w: [0.72, 0.64], foot: 1.02 },
   stance: { split: 4, bend: 0.12 },
-  hips: [1.1, 0.88, 0.7],
+  hips: [1.5, 0.88, 0.7],
   chest: { at: [0, 0, 0.16], lean: 2 },
-  torso: { c: [0, 0.12, 0.98], r: [1.24, 1.06, 1.24], pear: 0.36 },
-  target: 0.7,
-  neck: { at: [0, 0.26, 2.02], len: 0.08 },
-  arm: { at: [1.18, 0.02, 1.68], len: [0.56, 0.5], w: [0.31, 0.34], paw: 0.36 },
+  torso: { c: [0, 0.12, 0.96], r: [1.84, 1.4, 1.24], pear: 0.26 },
+  target: 0.76,
+  neck: { at: [0, 0.3, 2.1], len: 0.08 },
+  arm: { at: [1.74, 0.04, 1.66], len: [0.58, 0.52], w: [0.46, 0.52], paw: 0.54 },
   hold: [[34, 58, 92, 90], [34, 58, 92, 90]],
-  head: { c: [0, 0.08, 0.64], r: [0.76, 0.68, 0.66], pitch: 2, eye: 0.085, ear: 0.27, open: false },
-  mantle: [[28, 0.62, 0.34, 2.06, 0.72], [26, 0.66, 0.52, 1.82, 0.64], [24, 0.6, 0.7, 1.58, 0.54]],
-  skirt: [[26, 0.5, 0.86, 0.32, 1], [24, 0.52, 0.9, 0.08, 1]],
+  head: { c: [0, 0.1, 0.82], r: [1.08, 0.84, 0.94], pitch: 8, eye: 0.2, ear: 0.37, open: false },
+  mantle: [[30, 0.56, 0.42, 1.98, 0.84], [26, 0.56, 0.62, 1.74, 0.68]],
+  skirt: [[26, 0.42, 0.86, 0.36, 1], [24, 0.42, 0.9, 0.14, 1]],
   wraps: true,
   knee: false,
   rope: 2,
-  collar: { count: 11, len: 0.48, w: 0.21 },
+  collar: { count: 11, len: 0.56, w: 0.25 },
   gait: { swing: [18, 26], waddle: 5, armSwing: 5, bounce: 0.4 },
-  size: 1.6,
+  size: 4.0,
 };
 
 /** A number of its own for each strand or leaf, nought to one, so a fringe is not a pattern. */
@@ -207,6 +207,10 @@ function dummyPose(s: Dummy, p: BipedPose, a: Anim, arms: Arms): void {
   const stride = p.legs.map((l) => [...l] as [number, number, number]);
   arms[0] = [...s.hold[0]];
   arms[1] = [...s.hold[1]];
+  // Its head a little turned to its right and tipped, as a toy is set on a shelf to look out at the room: its face reads at three
+  // quarters.
+  p.head[1] -= 16;
+  p.head[2] += 5;
   // Its stance, standing: the left foot ahead, the right behind, the knees bent; let go of as it walks.
   const st = 1 - g;
   p.legs[0][0] += s.stance.split * st;
@@ -232,7 +236,8 @@ function dummyPose(s: Dummy, p: BipedPose, a: Anim, arms: Arms): void {
     // Standing. The Dummicub bounces on its toes, now and then a little hop and a wave; the Dummibear bobs in its stance and
     // now and then throws a feint; the Dummititan breathes slow and heavy and rolls its shoulders.
     const look = drift(t);
-    p.head[1] += 10 * look;
+    // Only a little of the body on two legs' look about: its face is kept toward what is in front of it.
+    p.head[1] -= 13 * look;
     if (s.stage === 0) {
       const hop = beat(t, [2.4, 9.6, 16.8], 0.5) * (1 - a.graze);
       p.lift += 0.12 * hop;
@@ -266,8 +271,8 @@ function dummyPose(s: Dummy, p: BipedPose, a: Anim, arms: Arms): void {
     const k = act.t, up = ramp(k, 0.1, 0.45) * (1 - ramp(k, 0.62, 0.86));
     p.chest[0] -= 10 * up;
     p.head[0] += 14 * up;
-    arms[0] = toward(arms[0], [150, 30, 12, 0], up);
-    arms[1] = toward(arms[1], [150, 30, 12, 0], up);
+    arms[0] = toward(arms[0], [16, 150, 30, 0], up);
+    arms[1] = toward(arms[1], [16, 150, 30, 0], up);
     crouch(s, p, -0.1 * up);
   }
   // Every blow jars it: a squashy wobble through its body, its head nodding the other way a beat behind.
@@ -486,9 +491,9 @@ function crossStitch(c: V3, n: V3, r: number, m: Mat): Disc[] {
 function headOf(s: Dummy, n: number, k: number, shut: boolean): Mesh {
   const H = s.head, c = H.c, r = H.r;
   const skull = orb(c, r, n + 2, k + 1, 'coat');
-  const mc = add(c, [0, r[1] * 0.72, -r[2] * 0.2]), mr: V3 = [r[0] * 0.44, r[1] * 0.36, r[2] * 0.34];
+  const mc = add(c, [0, r[1] * 0.7, -r[2] * 0.28]), mr: V3 = [r[0] * 0.52, r[1] * 0.32, r[2] * 0.4];
   const muzzle = orbAlong(mc, [0, 1, -0.1], mr, n, k, 'muzzle');
-  const nose = orbAlong(add(c, [0, r[1] * 1.06, -r[2] * 0.02]), [0, 1, 0.3], [r[0] * 0.15, r[1] * 0.1, r[2] * 0.1], 7, 3, 'nose');
+  const nose = orbAlong(add(c, [0, r[1] * 1.0, -r[2] * 0.06]), [0, 1, 0.3], [r[0] * 0.17, r[1] * 0.11, r[2] * 0.12], 7, 3, 'nose');
   const mouth = H.open
     ? paint([
       disc(add(c, [0, r[1] * 1.03, -r[2] * 0.3]), [0, 1, -0.3], r[0] * 0.15, r[2] * 0.13, 9, 'lid', { spin: 0.18 }),
@@ -502,7 +507,7 @@ function headOf(s: Dummy, n: number, k: number, shut: boolean): Mesh {
     shaped(c, r, [[-0.07, 0.52], [-0.11, 0.8], [-0.08, 1.12], [0, 1.2], [0.08, 1.12], [0.11, 0.8], [0.07, 0.52], [0, 0.48]], 'bark', 0.02),
     ...[-1, 1].flatMap((sd) => [0.64, 0.92].map((pt) => shaped(c, r, [[sd * 0.27 - 0.02, pt - 0.04], [sd * 0.27 + 0.02, pt - 0.04], [sd * 0.27 + 0.02, pt + 0.04], [sd * 0.27 - 0.02, pt + 0.04]], 'claw', 0.025))),
   ]);
-  const look = eyes(c, r, [0.38, 0.84, 0.3], H.eye, { tall: 1.2, shut, glint: 0.42 });
+  const look = eyes(c, r, [0.44, 0.8, 0.32], H.eye, { tall: 1.2, shut, glint: 0.42 });
   return merge(skull, muzzle, nose, mouth, cheeks, blaze, look);
 }
 
@@ -573,7 +578,7 @@ function ropeLoop(s: Dummy, a: V3, b: V3, w: number, steps: number, from = 0, to
 
 /** Where round the base of its neck, on the egg of the body a little under where the head sits on it, `yaw` round from the front: the collar of leaves and the rope under it. */
 function neckAt(s: Dummy): (yaw: number, lift: number) => { p: V3; n: V3 } {
-  const T = s.torso, elev = Math.asin(clamp((s.neck.at[2] - 0.06 * (1 + s.stage) - T.c[2]) / T.r[2], -0.99, 0.99));
+  const T = s.torso, elev = Math.asin(clamp((s.neck.at[2] - 0.1 * (1 + s.stage) - T.c[2]) / T.r[2], -0.99, 0.99));
   return (yaw, lift) => {
     const e = onEgg(T.c, T.r, [Math.sin(yaw) * Math.cos(elev), Math.cos(yaw) * Math.cos(elev), Math.sin(elev)]);
     return { p: add(e.p, scale(e.n, lift)), n: e.n };
@@ -581,15 +586,17 @@ function neckAt(s: Dummy): (yaw: number, lift: number) => { p: V3; n: V3 } {
 }
 
 /**
- * The rope: round its neck under the leaves, and across its chest from its left shoulder to its right side (the Dummibear) or
- * down both its sides over its shoulders (the Dummititan).
+ * The rope: round its neck under the leaves, and over its right shoulder and down its side (the Dummibear) or over both
+ * (the Dummititan), clear of the target.
  */
 function ropeOf(s: Dummy): Mesh | null {
   if (!s.rope) return null;
   const w = 0.05 + 0.02 * s.stage, at = neckAt(s);
   const neck = rope(Array.from({ length: 19 }, (_, q) => at((q / 18) * TAU, w * 0.6).p), w);
-  if (s.rope === 1) return merge(neck, ropeLoop(s, [-0.62, 0, 0.78], [0.18, 1, 0.1], w, 22));
-  return merge(neck, ...[-1, 1].map((sd) => ropeLoop(s, [sd * 0.18, 0, 1], [sd * 0.72, 0.7, 0], w, 22)));
+  // Over the shoulder and down its side, clear of the target on its belly.
+  // From its back over the shoulder and down its front at the side to its waist, where it is tucked in.
+  const side = (sd: number): Mesh => ropeLoop(s, [sd * 0.2, 0, 1], [sd * 0.92, 0.38, 0], w, 18, -0.45 * Math.PI, 0.62 * Math.PI);
+  return s.rope === 1 ? merge(neck, side(1)) : merge(neck, side(-1), side(1));
 }
 
 /** A strand of straw: a narrow blade from `root` along `dir`, `len` long, its face toward `face`. */
@@ -597,7 +604,7 @@ function straw(root: V3, dir: V3, face: V3, len: number, wide: number, i: number
   const D = unit(dir), bend: V3 = [0, 0, -0.18 * len];
   const pts: V3[] = [root, add(add(root, scale(D, len * 0.5)), scale(bend, 0.3)), add(add(root, scale(D, len)), bend)];
   const pale = jitter(i * 5 + 2) < 0.3;
-  return blade(pts, [wide, wide * 0.85, wide * 0.25], face, { mat: pale ? 'shell' : 'feather', rib: 'featherDark', thick: 0.02, fold: 0.15 });
+  return blade(pts, [wide, wide * 0.85, wide * 0.3], face, { mat: pale ? 'shell' : 'feather', rib: 'shell', thick: 0.02, fold: 0.15 });
 }
 
 /** A leaf: a blade from `root` along `dir`, green with a darker rib, or pink. */
@@ -621,7 +628,7 @@ function mantleOf(s: Dummy, K: number): Mesh {
       const e = onEgg(T.c, scale(T.r, 1.02), dir);
       const n = e.n, hang = unit(add(scale(n, 1 - droop), [0, 0, -droop * 1.2]));
       const L = len * (0.82 + 0.36 * jitter(i + 3));
-      out.push(straw(e.p, hang, n, L, [0.075, 0.1, 0.14][s.stage], i));
+      out.push(straw(e.p, hang, n, L, [0.08, 0.13, 0.17][s.stage], i));
     }
   });
   void K;
@@ -639,7 +646,7 @@ function skirtOf(s: Dummy): Mesh {
       const out2: V3 = [Math.sin(yaw), Math.cos(yaw), 0];
       const root: V3 = [out2[0] * R[0], out2[1] * R[1], z];
       const hang = unit(add(scale(out2, 1 - droop), [0, 0, -droop * 1.3]));
-      out.push(straw(root, hang, out2, len * (0.85 + 0.3 * jitter(i + 1)), 0.09, i));
+      out.push(straw(root, hang, out2, len * (0.85 + 0.3 * jitter(i + 1)), 0.15, i));
     }
   });
   // Leaves along the top of it.
@@ -756,7 +763,8 @@ function limbs(s: Dummy, n: number): Piece[] {
 function dummyBuild(s: Dummy, lod: number): Piece[] {
   const n = cut(lod, 8, 11), k = cut(lod, 5, 6), K = lod ? 7 : 4;
   const T = s.torso, H = s.head;
-  const torsoSolid = { c: T.c, r: scale(T.r, 0.94) };
+  // Drawn in toward its top as the body is (`peared`), so what stands on its shoulders is not hidden inside it.
+  const torsoSolid = { c: T.c, r: [T.r[0] * 0.94 * (1 - T.pear * 0.6), T.r[1] * 0.94 * (1 - T.pear * 0.6), T.r[2] * 0.94] as V3 };
   const headSolid = { c: H.c, r: scale(H.r, 0.72) };
   const ear = earOf(H.ear, n);
   const ears = [-1, 1].map((sd) => moved(ear, add(H.c, [sd * H.r[0] * 0.66, -H.r[1] * 0.1, H.r[2] * 0.74]), -sd * 18, 0, sd * 24));
@@ -766,14 +774,14 @@ function dummyBuild(s: Dummy, lod: number): Piece[] {
     { key: 'head', mesh: headOf(s, n, k, false), shut: headOf(s, n, k, true), bone: 'head', bias: 0.2, hide: [headSolid] },
     { key: 'ear0', mesh: ears[0], bone: 'head', bias: 0.19, hide: [headSolid] },
     { key: 'ear1', mesh: ears[1], bone: 'head', bias: 0.19, hide: [headSolid] },
-    { key: 'collar', mesh: peared(s, collarOf(s)), bone: 'chest', bias: 0.09, after: ['body', 'mantle', 'rope'], hide: [torsoSolid], thin: true, bent: squashed(s) },
+    { key: 'collar', mesh: peared(s, collarOf(s)), bone: 'chest', bias: 0.09, after: ['body', 'mantle', 'rope'], hide: [torsoSolid], thin: true, lines: false, bent: squashed(s) },
     { key: 'tail0', mesh: orb([0, -s.hips[1] * 0.92, -s.hips[2] * 0.1], s.hips[0] * 0.24, n, 4, 'coatLight'), bone: 'body', bias: -0.02 },
     ...limbs(s, n),
   ];
   const r = ropeOf(s);
   if (r) pieces.push({ key: 'rope', mesh: peared(s, r), bone: 'chest', bias: 0.07, after: ['body'], hide: [torsoSolid], bent: squashed(s) });
-  if (s.mantle.length) pieces.push({ key: 'mantle', mesh: peared(s, mantleOf(s, K)), bone: 'chest', bias: 0.08, after: ['body', 'arm0', 'arm1', 'rope'], hide: [torsoSolid], thin: true, bent: squashed(s) });
-  if (s.skirt.length) pieces.push({ key: 'skirt', mesh: skirtOf(s), bone: 'body', bias: 0.06, after: ['hips', 'body', 'll0', 'lr0', 'tail0'], hide: [{ c: [0, 0, 0] as V3, r: scale(s.hips, 0.95) }], thin: true });
+  if (s.mantle.length) pieces.push({ key: 'mantle', mesh: peared(s, mantleOf(s, K)), bone: 'chest', bias: 0.08, after: ['body', 'arm0', 'arm1', 'rope'], hide: [torsoSolid], thin: true, lines: false, bent: squashed(s) });
+  if (s.skirt.length) pieces.push({ key: 'skirt', mesh: skirtOf(s), bone: 'body', bias: 0.06, after: ['hips', 'body', 'll0', 'lr0', 'tail0'], hide: [{ c: [0, 0, 0] as V3, r: scale(s.hips, 0.95) }, { c: add(s.chest.at, T.c), r: torsoSolid.r }], thin: true, lines: false });
   return pieces;
 }
 
@@ -853,13 +861,13 @@ function dummyKind(s: Dummy): Kind {
         tongue: [232, 120, 128],
         bark: [128, 86, 60],
         claw: mix(fur, [80, 52, 40], 0.55),
-        feather: mix(fur, [240, 206, 128], 0.55),
-        featherDark: mix(fur, [176, 128, 70], 0.5),
-        shell: mix(fur, [250, 226, 160], 0.6),
+        feather: mix(fur, [242, 214, 146], 0.75),
+        featherDark: mix(fur, [214, 176, 108], 0.6),
+        shell: mix(fur, [252, 236, 186], 0.8),
         string: [214, 184, 128],
         lace: [170, 136, 88],
-        leaf: [132, 176, 100],
-        leafDark: [98, 138, 76],
+        leaf: [150, 194, 112],
+        leafDark: [120, 164, 90],
         petal: mix([236, 140, 150], pink, 0.3),
         bloom: darker(mix([236, 140, 150], pink, 0.3), 0.15),
       }, 30);
