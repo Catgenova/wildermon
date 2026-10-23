@@ -213,3 +213,14 @@ jobs:
              left join creature g on g.world_id = s.world_id and g.keeper = s.keeper and g.mode = 'deed' and g.id <> s.id
               and coalesce(g.job, (select x.gathers from species_def x where x.id = g.species)) = 'guard'
             where s.mode = 'deed' order by s.id, g.id"
+          ask "Sparring: what each such guard is after, and where" "select g.id as guard, g.species, round(creature_x(g)::numeric, 1) as gx, round(creature_y(g)::numeric, 1) as gy,
+              g.until - now() as until_in, g.settled_at, g.hurt_at, g.hurt_by,
+              e.id as enemy, e.species as e_species, e.mode as e_mode, e.hitched_to, round(creature_x(e)::numeric, 1) as ex, round(creature_y(e)::numeric, 1) as ey,
+              round(e.health) as e_health, e.phase as e_phase, e.until - now() as e_until_in,
+              (select round(greatest(abs(creature_x(e) - ws.x), abs(creature_y(e) - ws.y))::numeric, 1) from work_site(g.world_id, g) ws) as e_from_site,
+              (select d.radius from my_deed(g.world_id, g.keeper) d) as deed_radius,
+              (select fight_target(g.world_id, g.id)).id as target_now
+             from creature g left join creature e on e.world_id = g.world_id and e.id = g.enemy
+            where g.mode = 'deed' and g.enemy is not null
+              and exists (select 1 from creature s join species_def sd on sd.id = s.species and sd.style = 'spar'
+                           where s.world_id = g.world_id and s.keeper = g.keeper and s.mode = 'deed')"
