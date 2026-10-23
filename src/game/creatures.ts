@@ -2056,8 +2056,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   middun: {
     id: 'middun',
-    name: 'Middun',
+    name: 'Leaflet Snail',
+    was: ['Middun'],
+    // Leaflet Snail, Midden Snail, Hearthsnail.
     description: 'Settlement task: turn rotting items on the settlement into compost.',
+    stages: [
+      { name: 'Midden Snail', description: '' },
+      { name: 'Hearthsnail', description: '' },
+    ],
     health: 24,
     attack: 3,
     speed: 1.5,
@@ -2068,11 +2074,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'compost',
     workRange: 10,
+    // Its body and its spots: cream with brown, tan with caramel, ivory with umber, sand with cinnamon.
     variants: [
-      ['#5a4a38', '#9f8a6e'],
-      ['#41382e', '#7d7062'],
-      ['#6d5a44', '#b39a78'],
-      ['#332e2a', '#665f57'],
+      ['#f2e2c4', '#a8703e'],
+      ['#e8cfa4', '#c88a4a'],
+      ['#f6ecdc', '#7e5434'],
+      ['#e4d2b2', '#b46a3c'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 3, gland: 1 },
   },

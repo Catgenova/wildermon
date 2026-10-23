@@ -1,14 +1,14 @@
 import {
-  add, beat, coatPalette, cross, curve, cyc, darker, disc, lighter, merge, moved, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, step, taper, TAU, tube, unit,
+  add, beat, coatPalette, cross, curve, cyc, disc, merge, moved, orb, orbAlong, paint, quadBonesOf, scale, smile, step, taper, TAU, tube, unit,
   type Kind, type MatOf, type Piece, type QuadSpec,
 } from './beasts';
-import { blade, cut, earMesh, pawMesh, quadPieces, under } from './beastkit';
+import { blade, cut, pawMesh, quadPieces } from './beastkit';
 import { mesh, onScreen, place, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
- * The kinds of the brooks, the bogs and the hedges: the embra, the bevere,
- * the wadd, the plucka and the middun.
+ * The kinds of the brooks, the bogs and the hedges: the wadd and the
+ * plucka.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -67,17 +67,6 @@ function flankLights(g: CanvasRenderingContext2D, view: View, list: ReadonlyArra
     g.fillRect(x - l.r, y - l.r, l.r * 2, l.r * 2);
   }
   g.restore();
-}
-
-/* ---- what the middun's pond weed flowers with ------------------------------------- */
-
-/** A water lily at `at`: five petals opening upward and out, a cup round a yellow heart. */
-function waterLily(at: V3, len: number): Mesh {
-  const petals = [0, 1, 2, 3, 4].map((q) => {
-    const a = (q / 5) * TAU + 0.3, d: V3 = [Math.cos(a), Math.sin(a), 0];
-    return blade(curve(add(at, scale(d, len * 0.1)), add(add(at, scale(d, len * 0.55)), [0, 0, len * 0.2]), add(add(at, scale(d, len)), [0, 0, len * 0.72]), 3), [len * 0.12, len * 0.34, len * 0.36, len * 0.1], [-d[0] * 0.6, -d[1] * 0.6, 1], { fold: 0.3, mat: 'petal', thick: 0.03 });
-  });
-  return merge(...petals, orb(add(at, [0, 0, len * 0.3]), [len * 0.36, len * 0.36, len * 0.26], 6, 3, 'bloom'));
 }
 
 /* ---- the wadd ------------------------------------------------------------------------ */
@@ -292,81 +281,4 @@ export const PLUCKA: Kind = {
   shadow: [1.6, 1.1],
   stride: 1.2,
   size: 1.75,
-};
-
-/* ---- the middun ---------------------------------------------------------------------- */
-
-/**
- * A middun: a low, patient scavenger in a round, banded shell like a
- * woodlouse's, which eats what everything else has given up on; what comes
- * out the other end is the best thing that ever happened to a field, and
- * flowers grow out of its shell to prove it.
- */
-const MIDDUN_SPEC: QuadSpec = { ...pawed({ high: 1.1, len: 2.6, legs: 0.6, neck: 0.45, lean: 70, swing: [22, 34], ears: [60, 20], tail: [0.25, 0, 0] }), nose: 11 };
-const MIDDUN_HEAD = { c: [0, 0.35, 0.05] as V3, r: [1.0, 0.95, 0.85] as V3 };
-/** When in the loop, standing, it chews on something, and for how long. */
-const MIDDUN_MUNCH = [2.6, 8.9, 14.7, 20.3];
-
-function middunBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = MIDDUN_HEAD;
-  // The shell: plates from the tail forward, each one's back edge flared and lapped over the front of the one behind it, as a
-  // woodlouse's are, so its outline is scalloped and a dark lap shows between every plate.
-  const segs = lod ? 7 : 6, y0 = -1.6, y1 = 1.25, mid = (y0 + y1) / 2, half = (y1 - y0) / 2 + 0.1;
-  const dome = (y: number): number => Math.sqrt(Math.max(0.06, 1 - ((y - mid) / half) ** 2));
-  const rings: V3[] = [], rw: number[] = [], rh: number[] = [];
-  for (let q = 0; q < segs; q++) {
-    const a = y0 + ((y1 - y0) * q) / segs, b = y0 + ((y1 - y0) * (q + 1)) / segs;
-    for (const [y, k] of [[a + 0.001, 1.06], [b - 0.06, 0.88]] as Array<[number, number]>) {
-      rings.push([0, y, 0.12 + 0.1 * dome(y)]);
-      rw.push(1.32 * dome(y) * k);
-      rh.push(0.98 * dome(y) * k);
-    }
-  }
-  const shell = tube(rings, rw, rh, lod ? 12 : 10, (ring, j) => (under(lod ? 12 : 10, j, 1.1) ? 'coatDark' : ring % 2 ? 'shellDark' : (ring >> 1) % 2 ? 'shell' : 'coatLight'));
-  // Three flowers where the dome is highest, each a cup of petals round a yellow heart on a stalk leaning out, so they show from
-  // the side as well as from above.
-  const top = (x: number, y: number): number => 0.12 + 0.1 * dome(y) + 0.98 * dome(y) * Math.sqrt(Math.max(0, 1 - (x / (1.32 * dome(y))) ** 2));
-  const flowers = merge(...([[0.42, -0.62], [-0.4, 0.05], [0.3, 0.62]] as Array<[number, number]>).map(([x, y]) => {
-    const c: V3 = [x, y, top(x, y) - 0.05];
-    const lean: V3 = [Math.sign(x) * 0.34, 0, 0.94];
-    const head = add(c, scale(lean, 0.34));
-    return merge(tube([c, head], 0.07, 0.07, 5, 'stem', { seam: 'start' }), waterLily(head, 0.3));
-  }));
-  // A pig's snout: a round muzzle with a flat pink end, two nostrils in it, and a small mouth under.
-  const face = merge(
-    orbAlong([0, 1.12, -0.1], [0, 1, -0.15], [0.44, 0.38, 0.42], n, k, 'muzzle'),
-    paint([disc([0, 1.53, -0.16], [0, 1, -0.15], 0.27, 0.21, 10, 'inner'), disc([0.08, 1.55, -0.15], [0, 1, -0.15], 0.045, 0.06, 5, 'nose'), disc([-0.08, 1.55, -0.15], [0, 1, -0.15], 0.045, 0.06, 5, 'nose')]),
-    smile([0, 1.36, -0.42], [0, 1, -0.6], 0.2),
-  );
-  return quadPieces({
-    n, k,
-    body: { y: [-1.5, -1.25, -0.6, 0, 0.6, 1.15, 1.4], z: [0.05, 0.08, 0.1, 0.1, 0.1, 0.1, 0.1], w: [0.25, 0.95, 1.1, 1.15, 1.1, 0.95, 0.3], h: [0.2, 0.5, 0.56, 0.58, 0.56, 0.5, 0.2] },
-    neck: { w: 0.62, h: 0.58, len: 0.45 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.76, 0.48, 0.38], size: 0.28, rim: 0.12 }, blush: [[0.86, 0.38, -0.3], 0.17] },
-    ear: earMesh(0.3, 0.24, n),
-    fore: { upper: [0.25, -0.32, 0.22, 0.2], lower: [0, -0.28, 0.2, 0.18], foot: pawMesh(0.2, n, k, 'coatDark') },
-    hind: { upper: [0.25, -0.35, 0.24, 0.2], lower: [0, -0.32, 0.2, 0.18], foot: pawMesh(0.2, n, k, 'coatDark') },
-    extras: [
-      { key: 'shell', mesh: shell, bone: 'trunk', bias: 0.04, after: ['body', 'fl0', 'fr0', 'hl0', 'hr0'] },
-      { key: 'flowers', mesh: flowers, bone: 'trunk', bias: 0.06, after: ['body', 'shell'], thin: true, airy: true },
-    ],
-  });
-}
-
-export const MIDDUN: Kind = {
-  bones: quadBonesOf(MIDDUN_SPEC, (p, a) => {
-    trot(p, a);
-    // Many small steps under the shell, which bobs; standing, now and then a satisfied munch.
-    p.lift += a.go * 0.06 * Math.abs(Math.sin((a.u % 1) * TAU * 2));
-    if (a.go <= 0) p.head[0] += 3 * Math.sin(a.t * Math.PI * 4) * Math.min(1, 3 * beat(a.t, MIDDUN_MUNCH, 1.5)) * (1 - a.graze);
-  }),
-  build: middunBuild,
-  palette: (coat, mark) => {
-    const m = pastel(mark, 34);
-    return coatPalette(coat, mark, { shell: lighter(m, 0.1), shellDark: darker(m, 0.3), coatLight: lighter(m, 0.24), stem: [140, 190, 100], petal: [244, 168, 204], bloom: [250, 214, 110], inner: [238, 170, 180] }, 34);
-  },
-  shadow: [1.9, 1.4],
-  stride: 1.5,
-  size: 1.85,
 };

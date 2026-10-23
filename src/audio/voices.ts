@@ -29,6 +29,7 @@ import { PIP_VOICE } from './voice-pip';
 import { REED_VOICE } from './voice-reed';
 import { SAND_VOICE } from './voice-sand';
 import { SKY_VOICE } from './voice-sky';
+import { SNAIL_VOICE } from './voice-snail';
 import { SNUFF_VOICE } from './voice-snuff';
 import { SPORE_VOICE } from './voice-spore';
 import { ZEPHYR_VOICE } from './voice-zephyr';
@@ -115,4 +116,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   mudda: CLAYROLL_VOICE,
   // The Pailbara, the Caskybara and the Reservara.
   dippa: CAPY_VOICE,
+  // The Leaflet Snail, the Midden Snail and the Hearthsnail.
+  middun: SNAIL_VOICE,
 };
