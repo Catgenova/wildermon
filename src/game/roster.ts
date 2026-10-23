@@ -133,6 +133,12 @@ export class Roster {
     return this.peers.get(id);
   }
 
+  /** Somebody by the uid the island knows them by. */
+  byUid(uid: string): Peer | undefined {
+    for (const p of this.peers.values()) if (p.uid === uid) return p;
+    return undefined;
+  }
+
   /**
    * Everyone standing on a given tile, for the renderer, which asks per tile.
    *

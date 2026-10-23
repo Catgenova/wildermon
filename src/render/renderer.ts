@@ -3763,6 +3763,8 @@ export class Renderer {
       if (f.helm) this.seated.add(f.helm);
       for (const r of f.riders ?? []) this.seated.add(r.who);
     }
+    // And everybody up on a wildermon, who is drawn on its saddle with it (`peerOnMount`).
+    for (const c of this.game.creatures.list.values()) if (c.riderUid && !c.ridden && this.riderOf(c)) this.seated.add(c.riderUid);
     // A hull with a deck of her own whose helm I have: I am drawn among her crew, by `takeAboard`, rather than on my own.
     const mine = this.game.driving();
     this.helming = mine && crewOf(mine.kind) ? mine : null;
@@ -4300,8 +4302,16 @@ export class Renderer {
             if (cr.mode === 'stored') continue;
             // One in the traces of a wagon a storey up is up there with it (`driveStorey`).
             const up = cr.hitchedTo !== null ? this.game.furniture.get(cr.hitchedTo)?.level ?? 0 : 0;
-            this.take('creature', x, y, cam.worldToScreenX(cr.x, cr.y),
-              cam.worldToScreenY(cr.x, cr.y, up > 0 ? this.footOn(cr.x, cr.y, up) + up * WALL_HEIGHT : deckHere ?? this.footAt(cr.x, cr.y)), null).creature = cr;
+            const ce = this.take('creature', x, y, cam.worldToScreenX(cr.x, cr.y),
+              cam.worldToScreenY(cr.x, cr.y, up > 0 ? this.footOn(cr.x, cr.y, up) + up * WALL_HEIGHT : deckHere ?? this.footAt(cr.x, cr.y)), null);
+            ce.creature = cr;
+            // Somebody else up on it: on its saddle, a hair in front of it, as I am on mine.
+            const rider = cr.riderUid && !cr.ridden ? this.riderOf(cr) : undefined;
+            if (rider) {
+              const pe = this.take('peer', x, y, ce.sx, ce.sy + 0.01, null);
+              pe.peer = rider;
+              pe.lift = this.saddleSeat(cr) * zoom;
+            }
           }
         }
         if (this.game.foundations.size) this.drawFoundation(x, y, lit);
@@ -4985,9 +4995,18 @@ export class Renderer {
     const f = this.game.driving();
     if (f) return furnitureDef(f.kind).vehicle?.seat ?? furnitureDef(f.kind).boat?.seat ?? 0;
     const up = this.game.mounted();
-    if (!up) return 0;
-    // On its saddle: where its model has it at the stage it has come to, drawn up as the mount is by its age and rarity.
+    return up ? this.saddleSeat(up) : 0;
+  }
+
+  /** A mount's saddle: where its model has it at the stage it has come to, drawn up as the mount is by its age and rarity. */
+  private saddleSeat(up: Creature): number {
     return (wildermonSeat(up.species, stageOf(up)) ?? SPECIES[up.species]?.mount ?? 0) * ageDef(up, this.game.time).scale * bodySize(up);
+  }
+
+  /** Somebody else up on a wildermon, on the ground, when they are here to be drawn on it. */
+  private riderOf(c: Creature): Peer | undefined {
+    const p = c.riderUid ? this.game.roster.byUid(c.riderUid) : undefined;
+    return p && p.level === 0 ? p : undefined;
   }
 
   /**

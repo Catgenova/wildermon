@@ -3558,6 +3558,13 @@ export const NEWS: News[] = [
       `Fixed: riding and pulling teach climbing on the island: Thistlekit, Gorral, Shaggan and every mount. Base climbing gain per tile: ${HAUL_LEARN_290} on the flat, rising with slope to ${HAUL_LEARN_290 + HAUL_LEARN_STEEP_290} at a rise of ${HAUL_LEARN_STEEP_290 * HAUL_LEARN_RISE_290} or more.`,
     ],
   },
+  {
+    n: 291,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: other players saw a mounted rider on foot, the wildermon trailing behind. Now drawn in the saddle, the wildermon moving with them.',
+    ],
+  },
 ];
 
 /**

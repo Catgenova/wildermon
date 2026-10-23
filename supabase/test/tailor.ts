@@ -400,6 +400,9 @@ ${SURE.map(([name, recipe, makes], i) => `
   -- And the browser is told it is up on it, which is what rides it there.
   insert into said values ('RIDDENSENT', coalesce((select x->>'ridden' from jsonb_array_elements(rpc_creatures(w, 20)) x
     where (x->>'id')::int = v_c), 'unsent'));
+  -- And who is up on it, for everybody else's screen to draw on it.
+  insert into said values ('RIDERSENT', coalesce((select (x->>'rider' = u::text)::text from jsonb_array_elements(rpc_creatures(w, 20)) x
+    where (x->>'id')::int = v_c), 'unsent'));
   v_t := v_t || '|' || travel_speed(w, u) || ':' || (select tack_speed(c) from creature c where c.world_id = w and c.id = v_c)
     || '|' || coalesce((select (x->'tack')::text from jsonb_array_elements(rpc_creatures(w, 20)) x where (x->>'id')::int = v_c), 'unsent');
   ${beast('dismount_creature')};
@@ -675,6 +678,7 @@ check(`${P('Lye Saver').name}: with the dice under ${LYE}, the lye is still in t
 
 check('a saddled and bridled one is sent saddled and bridled (rpc_creatures tacked), which Mount asks', say('TACKEDSENT') === 'true', say('TACKEDSENT'));
 check('mounted, the browser is told its rider is up (rpc_creatures ridden), which is what rides it', say('RIDDENSENT') === 'true', say('RIDDENSENT'));
+check('and who rides it (rpc_creatures rider), which everybody else draws on it', say('RIDERSENT') === 'true', say('RIDERSENT'));
 const saddle = say('SADDLE').split('|');
 /** Tack as the island keeps it: each piece's mark, by the piece. */
 const tackJson = (s: string | undefined): Record<string, Record<string, number>> | null => (!s || s === 'none' || s === 'unsent' ? null : JSON.parse(s));
@@ -803,6 +807,27 @@ game.setPerks({});
 game.rand = () => 0.99;
 const surePlain = game.sureCheck('make_sack', 'tailoring', sack.difficulty);
 check('the browser\'s failed check stands or falls on the same dice as the island\'s', sureAt && !sureUnder && !surePlain, `${sureAt} ${sureUnder} ${surePlain}`);
+
+{
+  // Somebody else up on a wildermon: drawn on it, so it goes where they are drawn, not on the wildlife's slower beat.
+  const g = Game.create(5151);
+  g.creatures.fromIsland = true;
+  g.roster.saw({ id: 7, name: 'Ivar', uid: 'u-ivar', x: g.player.x + 3, y: g.player.y + 2, dirX: 1, dirY: 0, level: 0, moving: true,
+    swimming: false, working: false } as unknown as Parameters<typeof g.roster.saw>[0]);
+  const row = { id: 900, species: 'orse', name: 'Burr', variant: 0, mode: 'active', stance: 'passive', health: 1, max: 1, mine: false,
+    sex: 'male', traits: [], skills: {}, tacked: true, ridden: false };
+  g.creatures.sawAll([{ ...row, x: g.player.x - 5, y: g.player.y - 5, rider: 'u-ivar' }] as unknown as Parameters<typeof g.creatures.sawAll>[0], g.time);
+  g.creatures.update(0.1, g);
+  const ivar = g.roster.byUid('u-ivar')!;
+  const [ix, iy] = g.roster.drawnAt(ivar);
+  const burr = g.creatures.get(900)!;
+  check('in the browser a wildermon somebody else rides stands where they are drawn',
+    Math.abs(burr.x - ix) < 1e-9 && Math.abs(burr.y - iy) < 1e-9 && burr.riderUid === 'u-ivar', `${burr.x}, ${burr.y} vs ${ix}, ${iy}`);
+  g.creatures.sawAll([{ ...row, x: g.player.x - 5, y: g.player.y - 5, rider: null }] as unknown as Parameters<typeof g.creatures.sawAll>[0], g.time);
+  g.creatures.update(0.1, g);
+  check('and its own place once they are off it', Math.abs(g.creatures.get(900)!.x - (g.player.x - 5)) < 1e-9 && !g.creatures.get(900)!.riderUid,
+    `${g.creatures.get(900)!.x}`);
+}
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

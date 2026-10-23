@@ -4806,6 +4806,8 @@ export interface IslandCreature {
   tacked?: boolean | null;
   /** Whether the one asking is up on it, by the island's word: what rides it (`Game.mounted`). */
   ridden?: boolean;
+  /** Who is up on it, by their uid, whoever they are: somebody else's is drawn on it and it goes where they go. */
+  rider?: string | null;
   /** What the tack on it carries of its makers' marks, when anything (a Tailor's Saddler). */
   tack?: Record<string, Mark> | null;
   /** The enchantments in the tack on it, by the piece, when any (Fleetfoot, Tamer's Bridle). */
@@ -5105,6 +5107,8 @@ export interface Creature {
   pannier: Item[];
   /** Set while the player is up on its back. */
   ridden: boolean;
+  /** Who is up on its back by the island's word, by their uid, whoever they are. */
+  riderUid?: string;
   /** The hour it was born, which is all that age is. */
   born: number;
   /** When a wild one was put out, which its stay in the wild is counted from (`WILD_STAY`); its birth where it is not kept. */
@@ -5708,6 +5712,8 @@ export class Creatures {
       // And whether you are up on it. Reported: "Mounting a wildermon doesnt actually mount it": the island seated the
       // rider and never said so, so this side never read the body as mounted.
       if (r.ridden !== undefined) c.ridden = r.ridden;
+      // And who, which anybody else's screen draws on it (`walkLegs`, `Renderer`).
+      if (r.rider !== undefined) c.riderUid = r.rider ?? undefined;
       if (r.tack !== undefined) {
         if (r.tack) c.tack = r.tack;
         else delete c.tack;
@@ -5808,9 +5814,29 @@ export class Creatures {
    * word arrives, which is a body standing still rather than a body in the
    * wrong place.
    */
-  private walkLegs(): void {
+  private walkLegs(game: Game): void {
     const now = Date.now();
     for (const c of this.list.values()) {
+      /*
+       * Under somebody else: where they are drawn, going as they go. Reported: "Other players dont see me mounted, just
+       * zipping around with a wildermon in tow": the rider came on every beat of their body and the mount on the
+       * slower one of the wildlife, behind them.
+       */
+      const rider = c.riderUid && !c.ridden ? game.roster.byUid(c.riderUid) : undefined;
+      if (rider && rider.level === 0) {
+        const [nx, ny] = game.roster.drawnAt(rider);
+        const gone = Math.hypot(nx - c.x, ny - c.y);
+        c.moving = rider.moving && gone > 0.002;
+        if (c.moving) {
+          c.dirX = nx - c.x;
+          c.dirY = ny - c.y;
+          c.walkPhase += gone * 6;
+        }
+        c.x = nx;
+        c.y = ny;
+        this.place(c);
+        continue;
+      }
       if (!c.legAt || c.legEnds <= c.legAt) {
         /*
          * A leg of no length is a thing standing still, and it still has to be
@@ -6230,7 +6256,7 @@ export class Creatures {
   update(dt: number, game: Game): void {
     this.clearTiles();
     if (this.fromIsland) {
-      this.walkLegs();
+      this.walkLegs(game);
       // A heavy blow the island said one is drawing back for runs down here between answers, for the tell.
       for (const c of this.list.values()) if (c.windup > 0) c.windup = Math.max(0, c.windup - dt);
       return;
