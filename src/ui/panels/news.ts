@@ -3393,6 +3393,13 @@ export const NEWS: News[] = [
       'Changed: Field guide stage pages marked tamed when one of yours reaches that stage, or is tamed at it; was seen only. Your evolved wildermon count already.',
     ],
   },
+  {
+    n: 271,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: a guard after something wild stopping at the edge of its reach, never striking, never letting go; with it, a Sparra on the settlement idle, no guard free to spar. Its chase now ends half its reach off.',
+    ],
+  },
 ];
 
 /** The kinds that butchered into dragon scales until What's new 268. */

@@ -160,6 +160,23 @@ begin
   update creature set until = now() - interval '0.3 seconds' where world_id = w and id = s;
   perform worker_settle(w, s);
   insert into said select 'LEFT', coalesce(spar_with::text, '-') || '|' || coalesce(idle_why, '-') from creature where world_id = w and id = s;
+  -- And it closes on it and strikes: a tile and a tenth off it, the guard's chase ends inside its reach, not a hair outside it.
+  update creature set to_x = creature_x(g.*) + 1, to_y = creature_y(g.*) + 0.1, from_x = creature_x(g.*) + 1, from_y = creature_y(g.*) + 0.1,
+         leg_at = now(), leg_ends = now(), until = now() + interval '1 hour'
+    from creature g where creature.world_id = w and creature.id = x and g.world_id = w and g.id = a;
+  update creature set from_x = to_x, from_y = to_y, until = now() - interval '0.3 seconds', leg_ends = now() - interval '0.3 seconds' where world_id = w and id = a;
+  perform worker_settle(w, a);
+  insert into said select 'CHASE', round(sqrt((g.to_x - creature_x(e.*)) ^ 2 + (g.to_y - creature_y(e.*)) ^ 2)::numeric, 3)::text
+    from creature g, creature e where g.world_id = w and g.id = a and e.world_id = w and e.id = x;
+  v_picks := '';
+  for i in 1..6 loop
+    update creature set from_x = to_x, from_y = to_y, until = now() - interval '0.3 seconds', leg_ends = now() - interval '0.3 seconds' where world_id = w and id = a;
+    perform worker_settle(w, a);
+    v_picks := (select phase from creature where world_id = w and id = a);
+    exit when v_picks = 'strike';
+  end loop;
+  insert into said values ('CLOSES', v_picks);
+  v_picks := '';
   delete from creature where world_id = w and id = x;
   update creature set enemy = null, phase = 'idle', spar_at = now() - interval '30 minutes', health = max_health(creature) where world_id = w and id in (s, a);
 
@@ -250,6 +267,8 @@ check('with its breath back it spars again', at('BREATH') === 'true|-', at('BREA
 check('mid-spar', at('MIDGO') === 'spar', at('MIDGO'));
 check('something wild on the settlement and the guard drops the spar at once, and goes for it', at('INTRUDER').split('|')[1] === '-' && at('INTRUDER').endsWith('|true') && !at('INTRUDER').startsWith('spar'), at('INTRUDER'));
 check('and the Sparra, its guard gone after it, has nobody to spar with', at('LEFT') === '-|nospar', at('LEFT'));
+check('and the guard closes on it and strikes, its chase ending half its reach off it, not at the edge of it',
+  at('CLOSES') === 'strike' && Number(at('CHASE')) === 0.5, `${at('CHASE')} off, then ${at('CLOSES')}`);
 check('two guards take turns, the one that sparred longest ago first', at('TURNS') === 'bab', at('TURNS'));
 
 /* ---- in the browser ---------------------------------------------------------------------------------------------- */
