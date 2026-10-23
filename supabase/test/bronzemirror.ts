@@ -92,7 +92,7 @@ begin
   insert into said select 'RELIC', name || ':' || parts || ':' || difficulty || ':' || result from relic_def where result = 'bronze_mirror';
   insert into said values ('PORTED', act_ported('use_bronze_mirror') || ':' || exists (select 1 from action_def d where d.id = 'use_bronze_mirror'));
   insert into said values ('BEST', ${BEST.map(([set]) => `coalesce(mirror_trait(${arr(set)}), '-')`).join(` || ',' || `)});
-  insert into said select 'NAMES', string_agg(d.id || '=' || mirror_names(d.id), '|' order by d.id) from trait_def d;
+  insert into said select 'NAMES', string_agg(d.id || '=' || mirror_names(d.id), '|' order by d.id collate "C") from trait_def d;
 
   -- The draw with copies, the rolls pinned: kept to the pair, and just under a mutation.
   perform set_config('search_path', 'dice, public, pg_catalog', true);
