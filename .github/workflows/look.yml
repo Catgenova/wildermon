@@ -313,3 +313,13 @@ jobs:
           ask "stuck: walls near" "select w.level, w.dir, w.x, w.y, w.type from wall w join player p on p.world_id = w.world_id and p.name = 'catgenova'
             where w.x between floor(p.x)::int - 7 and floor(p.x)::int + 8 and w.y between floor(p.y)::int - 7 and floor(p.y)::int + 8 and w.level <= 2
             order by w.level, w.y, w.x, w.dir"
+          # Asked about: "my mortarbacks are idle and not working on the floors above them". The keeper's hod
+          # carriers, what they say about being idle, and what the island finds for them to do. Reads only.
+          ask "hods: the keeper's carriers" "select c.id, c.species, c.mode, c.job, c.idle_why, c.idle_n, c.idle_since, c.carrying,
+                 round(creature_x(c)::numeric, 1) as cx, round(creature_y(c)::numeric, 1) as cy, c.work_x, c.work_y
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+            where c.keeper = p.uid and c.mode = 'deed' and c.species = 'cobbe' order by c.id"
+          ask "hods: what wants hod work near the manor" "select * from hod_needing((select world_id from player where name = 'catgenova'), 2585, 3025, 30, null) limit 10"
+          ask "hods: the unfinished storey-2 floors" "select f.level, f.x, f.y, f.kind, f.material, f.needed from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova'
+            where f.level >= 1 and f.x between 2575 and 2595 and f.y between 3015 and 3035
+              and exists (select 1 from jsonb_each(f.needed) e where (e.value)::numeric > 0) order by f.level, f.y, f.x"
