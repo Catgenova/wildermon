@@ -273,7 +273,7 @@ function grown(pts: readonly Pt[], d: number): Pt[] {
     if (ml < 1e-6) return [p[0], p[1]] as Pt;
     mx /= ml; my /= ml;
     const k = Math.min(2, 1 / Math.max(0.5, mx * n1x + my * n1y));
-    return [p[0] - mx * d * k, p[1] - my * d * k] as Pt;
+    return [p[0] + mx * d * k, p[1] + my * d * k] as Pt;
   });
 }
 
