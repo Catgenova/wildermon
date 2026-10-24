@@ -3108,8 +3108,8 @@ export class Island {
           && (Math.hypot(went.x - x, went.y - y) > SNAP_GAP || there !== level)) {
         this.putGen += 1;
         this.walked.length = 0;
-        // Held to its pace and nothing else, on the same storey: the walk goes on from there, to where it was going.
-        this.hooks.moved?.(went.x, went.y, there, false, went.pulled === true && went.blocked !== true && there === level);
+        // Held to its pace and nothing else, short of a change of storey too: the walk goes on from there, to where it was going.
+        this.hooks.moved?.(went.x, went.y, there, false, went.pulled === true && went.blocked !== true);
         this.lastSaid = '';
         this.lastLevel = there;
         this.lastTile = `${Math.floor(went.x)},${Math.floor(went.y)},${there}`;

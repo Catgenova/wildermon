@@ -1436,6 +1436,25 @@ export class Game {
     return true;
   }
 
+  /**
+   * The storey a body at a tile a storey up stands on: its own where there is
+   * something under it there, a floor or a bridge's deck or end at that storey,
+   * and otherwise the highest under it that has, the ground at the least. The
+   * island lets a body down by the same rule (`storey_footing`).
+   */
+  footing(x: number, y: number, level: number): number {
+    for (let l = level; l > 0; l--) if (this.standsUp(x, y, l)) return l;
+    return Math.min(level, 0);
+  }
+
+  /** Whether there is something to stand on at a tile a storey up: a finished floor, or a bridge's deck or end at that storey (`frame_stands`). */
+  private standsUp(x: number, y: number, level: number): boolean {
+    const f = this.buildings.floor(level, x, y);
+    if (f && isDone(f) && (walkableKind(floorKind(f)) || roofShapeDef(this.buildings.list.get(f.building)).walkable)) return true;
+    if (!this.bridges.size) return false;
+    return [this.bridgeAt(x, y), this.bridgeEndAt(x, y)].some((b) => !!b && bridgeLevels(b).includes(level));
+  }
+
   /** A finished staircase or ladder occupying a tile's floor slot at a storey. */
   private connector(x: number, y: number, level: number): boolean {
     const f = this.buildings.floor(level, x, y);
@@ -4559,6 +4578,8 @@ export class Game {
       p.level = 0;
       [p.x, p.y] = this.passengerSpot(ship, p.seat);
     } else {
+      // Nothing under it on its storey: let down onto the highest one under it that has (`footing`).
+      if (p.level > 0) p.level = this.footing(p.tileX, p.tileY, p.level);
       const { rule } = this.movement();
       const [fx, fy] = [p.tileX, p.tileY];
       // A deck on piers is walked dry and level, whatever is under it (`piers.ts`).

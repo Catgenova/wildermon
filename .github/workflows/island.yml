@@ -2572,6 +2572,18 @@ jobs:
             --outfile=node_modules/.cache/mountstairs.mjs --log-level=error
           node node_modules/.cache/mountstairs.mjs
 
+      - name: Nothing under a storey
+        if: matrix.shard == 3
+        run: |
+          # A rider driving a wagon stored a storey up at a wide staircase's
+          # foot, with no floor there, is let down onto the ground on both
+          # sides (`Game.footing`, `storey_footing`), wagon, team and mount with
+          # it; a word up the flight pulled back to its pace onto the foot stays
+          # on the ground, and none down off it leaves storey 2 on the foot.
+          npx esbuild supabase/test/unstuck.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/unstuck.mjs --log-level=error
+          node node_modules/.cache/unstuck.mjs
+
       - name: The outside staircase
         if: matrix.shard == 3
         run: |
