@@ -320,6 +320,14 @@ export function buildSlice(plan: Plan, sl: Slice, e: Eye, A2: [number, number], 
     if (dot(n, dir(o)) < 0) n = mul(n, -1);
     if (!cur[part]) solid(part);
     const ink = pts.map((p, k) => !onCut(p, pts[(k + 1) % pts.length]));
+    /*
+     * A wall's frame on the low edge runs backwards along the bridge
+     * (`wallFrame`), so its run is told to the painter as it paints it,
+     * negative; a run a style has told so already is left as it is.
+     */
+    if (info && frame && frame.o[0] === 0 && frame.a[0] < 0 && frame.a[1] === 0 && frame.a[2] === 0 && Math.min(info.x0, info.x1) >= 0 && Math.max(info.x0, info.x1) > 0) {
+      info = { ...info, x0: -Math.max(info.x0, info.x1), x1: -Math.min(info.x0, info.x1) };
+    }
     cur[part]!.faces.push({ pts: mp, n, tone, ink, info, frame: frame ? { o: m(frame.o), a: dir(frame.a), b: dir(frame.b) } : undefined });
   };
   const loose = (part: Part3, draw: (g: Ctx, e: Eye) => void, reach: L[], order?: number): void => {
