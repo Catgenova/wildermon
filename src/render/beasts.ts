@@ -1146,7 +1146,9 @@ function settle(id: string, p: BeastPose, now: number): { facing: number; go: nu
   const goal = ((Math.round(p.facing) % 8) + 8) % 8;
   let h = held.get(id);
   if (!h || now - h.seen > 0.5) {
-    h = { facing: goal, goal, turnFrom: goal, turnSince: -1, go: p.moving ? 1 : 0, graze: p.graze && !p.moving ? 1 : 0, seen: now };
+    // Gone from view, or frames apart by more than that: settled afresh, but still waiting for the picture it was waiting for,
+    // and with the one it had (`drawBeast`).
+    h = { facing: goal, goal, turnFrom: goal, turnSince: -1, go: p.moving ? 1 : 0, graze: p.graze && !p.moving ? 1 : 0, seen: now, waiting: h?.waiting, shown: h?.shown };
     held.set(id, h);
     if (held.size > 512) for (const [k, v] of held) if (now - v.seen > 5) held.delete(k);
   }
