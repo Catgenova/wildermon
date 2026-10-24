@@ -323,7 +323,10 @@ function clumpLight(job: Job, c: Clump): number {
  * spray and the spray's place in the crown give it: the tops toward the sun
  * lit, the undersides in shade.
  */
-function paintClump(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; front: number }): void {
+/** A spray as it is drawn: its underside's outline, and its leaves gathered by the tone each is filled in. */
+interface Spray { back: Path2D; base: string; groups: Array<[string, Path2D]> }
+
+function sprayOf(job: Job, s: Shown, sun: { sx: number; sy: number; front: number }): Spray {
   const { c } = s;
   const e = job.e;
   const L = clumpLight(job, c);
@@ -349,17 +352,31 @@ function paintClump(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; f
     leafAt(p, x, y, sz * lf.s, a, 0.72);
   }
   const base = Math.max(0, Math.min(top - 1, Math.round(L * (top - 0.4)) - 1));
-  // Ruled round in the kit's ink first, so all that shows of it is a rim round the spray.
-  g.strokeStyle = rgb(KIT_INK, 0.9);
-  g.lineWidth = KIT_INK_W * 1.5;
+  return {
+    back, base: s.under[base],
+    groups: [...groups.keys()].sort((p, q) => p - q).map((key) => {
+      const which = key % 3;
+      return [(which === 0 ? s.under : which === 2 ? s.over : s.ramp)[(key - which) / 3], groups.get(key)!];
+    }),
+  };
+}
+
+/**
+ * A spray, laid from its underside up: all its leaves a step deeper and a
+ * little lower -- the shade it throws on itself -- edged in a crease's ink,
+ * then each leaf in the tone its place on the spray and the spray's place in
+ * the crown give it: the tops toward the sun lit, the undersides in shade.
+ */
+function paintClump(g: Ctx, sp: Spray, rim: string): void {
+  g.strokeStyle = rim;
+  g.lineWidth = KIT_INK_W * 1.2;
   g.lineJoin = 'round';
-  g.stroke(back);
-  g.fillStyle = s.under[base];
-  g.fill(back);
-  for (const key of [...groups.keys()].sort((p, q) => p - q)) {
-    const which = key % 3;
-    g.fillStyle = (which === 0 ? s.under : which === 2 ? s.over : s.ramp)[(key - which) / 3];
-    g.fill(groups.get(key)!);
+  g.stroke(sp.back);
+  g.fillStyle = sp.base;
+  g.fill(sp.back);
+  for (const [col, path] of sp.groups) {
+    g.fillStyle = col;
+    g.fill(path);
   }
 }
 
@@ -513,8 +530,38 @@ export function paintTree3d(g: Ctx, job: Job): void {
   const sun = sunOnScreen(job);
   const items: Item[] = [];
   const leafy = shown.length > 0 && dress.full >= 0.6;
+  const chains = chainsOf(job, leafy);
+  const sprays = shown.map((s) => sprayOf(job, s, sun));
+  /*
+   * The ink round the whole tree, laid first under everything: every spray's
+   * outline and every limb's stroked one ink's width out in the kit's ink.
+   * Whatever is laid after covers it wherever two of them meet, so what is
+   * left of it is the tree's own outline -- against the sky, and through
+   * every gap in the crown.
+   */
+  g.strokeStyle = rgb(KIT_INK);
+  g.lineJoin = 'round';
+  g.lineCap = 'round';
+  g.lineWidth = KIT_INK_W * 2;
+  for (const sp of sprays) g.stroke(sp.back);
+  for (const c of chains) {
+    if (c.thin) {
+      g.lineWidth = c.r[0] + c.r[c.r.length - 1] + KIT_INK_W * 2;
+      g.beginPath();
+      c.q.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
+      g.stroke();
+    } else {
+      g.lineWidth = KIT_INK_W * 2;
+      g.stroke(bandPath(c, 0, c.q.length - 1, -1, 1));
+      const [x, y] = c.q[c.q.length - 1];
+      g.beginPath();
+      g.arc(x, y, c.r[c.r.length - 1] + KIT_INK_W, 0, TAU);
+      g.fillStyle = rgb(KIT_INK);
+      g.fill();
+    }
+  }
   // The wood, a few pieces of a limb at a time, so each run is laid in its own place among the leaf.
-  for (const c of chainsOf(job, leafy)) {
+  for (const c of chains) {
     const per = c.order <= 0 ? 8 : 2;
     for (let j0 = 0; j0 < c.q.length - 1; j0 += per) {
       const j1 = Math.min(c.q.length - 1, j0 + per);
@@ -525,11 +572,12 @@ export function paintTree3d(g: Ctx, job: Job): void {
   }
   const sizeOfKey = sk.crown.r * 0.12;
   const keyed = spec.keys && dress.keys && ((dress.season === 'spring' && dress.step >= 3) || dress.season === 'summer');
-  for (const s of shown) {
+  shown.forEach((s, i) => {
+    const rim = rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.6), 0.75);
     items.push({
       d: near(s.c.c),
       draw: () => {
-        paintClump(g, job, s, sun);
+        paintClump(g, sprays[i], rim);
         if (keyed && s.c.up < 0.5 && s.c.k < 0.3) {
           const [x, y] = proj(e, s.c.c);
           const col = dress.season === 'summer' ? mixRgbHex(spec.keys!.colour, spec.keys!.ripe, 0.2) : spec.keys!.colour;
@@ -537,7 +585,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
         }
       },
     });
-  }
+  });
   // Red buds on every tip, the first days of spring, before the leaf is out.
   if (spec.buds && dress.season === 'spring' && dress.full < 1) {
     for (const L of sk.limbs) {

@@ -4164,6 +4164,13 @@ export class Renderer {
     const hw = stepW * zoom;
     const hh = stepH * zoom;
     const hs = HEIGHT_SCALE * zoom;
+    /*
+     * Where a tree drawn as a solid stands on its tile: everything else
+     * standing up is put down where the lattice has the tile, which at the
+     * diagonal turns is a corner of it, and the next line's ground cut its
+     * root flare off flat. A solid tree stands in the middle of its tile.
+     */
+    const solidX = V.staggered ? 0 : hw / 2, solidY = V.staggered ? 0 : -hh / 2;
     // Where the first of the wash's columns is across the screen, for a wall to find its own by (`liftWall`).
     this.washX0 = (eMin - 1) * hw - cam.cx * zoom + W / 2;
     this.washHw = hw;
@@ -4501,7 +4508,7 @@ export class Renderer {
             const data = world.viewData(x, y, false);
             const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day) : stumpSprite(treeSpecies(data));
             const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
-            this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX, baseY + hh - avg * hs, spr);
+            this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid ? solidX : 0), baseY + hh - avg * hs + (spr.solid ? solidY : 0), spr);
           }
           if (this.structs.nearAny(x, y)) this.drawStructures(x, y, V, d > playerDepth);
           if (!aloft && this.hingeTiles.has(x * 65536 + y)) this.drawGateAt(x, y, V);
@@ -4518,7 +4525,7 @@ export class Renderer {
           const data = world.getData(x, y);
           const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day) : stumpSprite(treeSpecies(data));
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
-          this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX, baseY + hh - avg * hs, spr);
+          this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid ? solidX : 0), baseY + hh - avg * hs + (spr.solid ? solidY : 0), spr);
         }
         if (!cutHere && !aloft && this.game.ground.size && this.game.groundAt(x, y).length) {
           const avg = (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(x, y) : null) ?? (c[0] + c[1] + c[2] + c[3]) / 4;

@@ -102,7 +102,7 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
       outward[2] *= 0.3;
       d = unit(add(d, mul(unit(outward), 0.5)));
       // Twigs turn up at their ends; the boughs they grow on are what spread and hang.
-      d[2] = order >= 3 ? Math.abs(d[2]) * 0.6 + 0.25 : d[2] * 0.7;
+      d[2] = order >= 3 ? Math.abs(d[2]) * 0.6 + 0.25 : d[2] * 0.45;
       d = unit(d);
       const reach = env.r * (order === 2 ? 0.5 : order === 3 ? 0.3 : 0.16) * (0.75 + 0.45 * R()) * (1 - 0.3 * t) * (dead ? 0.6 : 1);
       const end = add(a, mul(d, reach));
@@ -126,8 +126,8 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
     const B = trunkAt(f);
     const az = a0 + (i / n) * TAU + (R() - 0.5) * (TAU / n) * 0.55;
     const dead = b.bare || deadOnes.has(i);
-    const reach = 0.78 + 0.2 * R();
-    const rise = -0.3 + 0.6 * R();
+    const reach = 0.72 + 0.34 * R();
+    const rise = -0.5 + 0.55 * R();
     let T: V3 = [env.c[0] + Math.cos(az) * env.r * reach, env.c[1] + Math.sin(az) * env.r * reach, env.c[2] + rise * rz];
     if (b.bare) T = lerp(B, T, 0.7);
     const L = len(sub(T, B));
@@ -135,7 +135,7 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
     const side: V3 = [-out[1], out[0], 0];
     const wob = (R() - 0.5) * 2 * (0.3 + b.gnarl) * 0.3 * L;
     // Up out of the split first, then out across the crown, bending as it goes.
-    const C1 = add(B, add(mul(out, 0.12 * L), [side[0] * wob, side[1] * wob, 0.42 * L]));
+    const C1 = add(B, add(mul(out, 0.16 * L), [side[0] * wob, side[1] * wob, 0.34 * L]));
     const C2 = add(T, add(mul(out, -0.38 * L), [-side[0] * wob * 0.6, -side[1] * wob * 0.6, 0.06 * L]));
     T[2] -= L * b.droop * 0.12;
     const pts = [0, 0.17, 0.34, 0.5, 0.67, 0.83, 1].map((t) => bezier(B, C1, C2, T, t));
@@ -163,7 +163,7 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
       const ts = L.tip ? [0.72] : l > size * 1.6 ? [0.35, 0.85] : [0.7];
       for (const t of ts) {
         const p = lerp(L.a, L.b, t);
-        const r = size * k * (0.8 + 0.4 * R());
+        const r = size * k * (0.62 + 0.76 * R() * R() + 0.1 * R());
         spots.push({ c: [p[0], p[1], p[2] + r * 0.18], r, limb: i, along, pri: 0.4 * outOf(env, p) + (L.tip ? 0.15 : 0) + R() });
       }
     }
