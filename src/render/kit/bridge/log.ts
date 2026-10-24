@@ -20,26 +20,36 @@ const LOG = {
   roundel: tone('#9a7660', '#4e3c4c'),
 };
 
-/** Split poles across the deck: each its own round, lit along one side and shaded along the other. */
+/**
+ * Split poles across the deck, flat side down: each its own width, rounded
+ * -- a dark gap, its shaded flank, its lit crown, its other flank -- with a
+ * knot here and there and the bark left on its edges.
+ */
 const polesPaint: BridgePainter = (g, k, f) => {
-  const w = 2.6;
   const y0 = Math.min(f.y0, f.y1) - 1, y1 = Math.max(f.y0, f.y1) + 1, h = y1 - y0;
-  const mid = new Path2D(), lite = new Path2D(), dark = new Path2D(), knots = new Path2D();
-  let i = 0;
-  for (let x = Math.floor(Math.min(f.x0, f.x1) / w) * w; x < Math.max(f.x0, f.x1); x += w, i++) {
-    mid.rect(x + w * 0.62, y0, w * 0.38, h);
-    lite.rect(x + w * 0.12, y0, w * 0.22, h);
-    dark.moveTo(x, y0); dark.lineTo(x, y1);
-    if ((i * 7 + f.seed) % 5 === 0) { const ky = y0 + h * (((i * 37 + f.seed) % 10) / 10); knots.moveTo(x + w * 0.5 + 0.4, ky); knots.ellipse(x + w * 0.5, ky, 0.4, 0.25, 0, 0, TAU); }
+  const gap = new Path2D(), flank = new Path2D(), crown = new Path2D(), bark = new Path2D(), knots = new Path2D();
+  // Widths off where the pole is along the bridge, so the run carries on from slice to slice.
+  const W = (i: number): number => 3.2 + ((i * 2654435761) % 7) * 0.3;
+  let x = Math.floor(Math.min(f.x0, f.x1) / 40) * 40, i = Math.round(x / 40) * 16;
+  for (; x < Math.max(f.x0, f.x1); i++) {
+    const w = W(i & 1023);
+    gap.rect(x, y0, 0.45, h);
+    flank.rect(x + 0.45, y0, w * 0.22, h);
+    flank.rect(x + w * 0.78, y0, w * 0.22, h);
+    crown.rect(x + w * 0.36, y0, w * 0.2, h);
+    // Bark left along a pole's edge in patches.
+    for (let y = y0 + ((i * 37) % 11); y < y1; y += 13 + (i % 5) * 3) bark.rect(x + 0.45, y, w * 0.14, 3 + (i % 3));
+    if ((i * 7) % 5 === 0) { const ky = y0 + h * (((i * 37) % 10) / 10); knots.moveTo(x + w * 0.5 + 0.45, ky); knots.ellipse(x + w * 0.5, ky, 0.45, 0.3, 0, 0, TAU); }
+    x += w;
   }
-  g.fillStyle = css(mix(k.fill, hex('#6e5060'), 0.16), 0.5);
-  g.fill(mid);
-  g.fillStyle = css(mix(k.fill, [255, 248, 230], 0.28), 0.7);
-  g.fill(lite);
-  g.strokeStyle = css(mix(k.fill, hex('#4a3640'), 0.5), 0.85);
-  g.lineWidth = 0.24;
-  g.stroke(dark);
-  g.fillStyle = g.strokeStyle;
+  g.fillStyle = css(mix(k.fill, hex('#6e5060'), 0.22), 0.6);
+  g.fill(flank);
+  g.fillStyle = css(mix(k.fill, [255, 248, 230], 0.35), 0.75);
+  g.fill(crown);
+  g.fillStyle = css(mix(k.fill, hex('#5a4450'), 0.45), 0.6);
+  g.fill(bark);
+  g.fillStyle = css(mix(k.fill, hex('#3e2c38'), 0.6), 0.9);
+  g.fill(gap);
   g.fill(knots);
 };
 
@@ -65,8 +75,27 @@ const poleEndsPaint: BridgePainter = (g, k, f) => {
   g.stroke(rings);
 };
 
-/** Bark: long streaks down a log, and a knot now and then. */
-const barkPaint: BridgePainter = (g, k, f, st) => grainPaint(g, k, f, st);
+/** Bark: deep fissures down a log, plates between them a step paler, and the grain. */
+const barkPaint: BridgePainter = (g, k, f, st) => {
+  grainPaint(g, k, f, st);
+  const len = Math.abs(f.x1 - f.x0), h = Math.abs(f.y1 - f.y0);
+  const x0 = Math.min(f.x0, f.x1);
+  const fis = new Path2D(), plate = new Path2D();
+  let q = f.seed * 13;
+  for (let y = 0.4; y < h; y += 1.1) {
+    for (let x = x0 + ((q * 7) % 5); x < x0 + len; x += 4 + (q % 4)) {
+      q = (q * 1103515245 + 12345) & 0x7fffffff;
+      const l = 2 + (q % 5);
+      fis.moveTo(x, y); fis.lineTo(x + l, y + ((q >> 4) % 3 - 1) * 0.15);
+      if (q % 3 === 0) plate.rect(x + 0.3, y + 0.2, l * 0.7, 0.5);
+    }
+  }
+  g.fillStyle = css(mix(k.fill, [255, 246, 232], 0.25), 0.4);
+  g.fill(plate);
+  g.strokeStyle = css(mix(k.fill, hex('#3e2c38'), 0.5), 0.6);
+  g.lineWidth = 0.22;
+  g.stroke(fis);
+};
 
 /** The ropes hung between posts: each span from one post to the next, sagging, lashed round the post at each end; all of them one drawing. */
 function ropes(k: Kit, part: Part3, spans: Array<[L, L]>, zs: number[], sag: number): void {
@@ -100,9 +129,9 @@ function ropes(k: Kit, part: Part3, spans: Array<[L, L]>, zs: number[], sag: num
 const logRail: RailSpec = {
   H: 8.5,
   spacing: 0.5,
-  inset: 0.045,
+  inset: 0.1,
   // A round post, its top cut to a blunt point.
-  post: (s, t, z) => [...bar([s, t, z], [s, t, z + 8.4], rnd(1.4, 6), LOG.post), ...cone(s, t, z + 8.4, 1.4, 1.3, 6, LOG.post)],
+  post: (s, t, z) => [...bar([s, t, z], [s, t, z + 8.4], rnd(1.5, 7), LOG.post), ...cone(s, t, z + 8.4, 1.5, 1.4, 7, LOG.post)],
   run: (k, part, _order, a, b, posts) => {
     const spans: Array<[L, L]> = [];
     for (let i = 0; i + 1 < posts.length; i++) {
@@ -110,13 +139,14 @@ const logRail: RailSpec = {
       if (ownNear(k, Math.min(pa[0], pb[0]), Math.max(pa[0], pb[0]))) spans.push([pa, pb]);
     }
     ropes(k, part, spans, [7.6, 4.3], 1.5);
-    // The glow runs along the upper rope, as straight as the eye allows at night.
-    const { sl } = k;
-    const lo = Math.max(Math.min(a[0], b[0]), sl.s0), hi = Math.min(Math.max(a[0], b[0]), sl.s1);
-    if (Math.abs(b[0] - a[0]) < 1e-6) { if (a[0] >= sl.s0 && a[0] <= sl.s1) k.glow.lines.push([k.m([a[0], a[1], a[2] + 7.2]), k.m([b[0], b[1], b[2] + 7.2])]); }
-    else if (hi > lo) {
-      const at = (s: number): L => { const f = (s - a[0]) / (b[0] - a[0]); return [s, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f + 7.0]; };
-      k.glow.lines.push([k.m(at(lo)), k.m(at(hi))]);
+    // The glow runs along both ropes, sagging with them.
+    for (const [pa, pb] of spans) for (const zo of [7.6, 4.3]) {
+      const line: ReturnType<Kit['m']>[] = [];
+      for (let q = 0; q <= 6; q++) {
+        const f = q / 6;
+        line.push(k.m([pa[0] + (pb[0] - pa[0]) * f, pa[1] + (pb[1] - pa[1]) * f, pa[2] + (pb[2] - pa[2]) * f + zo - 1.5 * 4 * f * (1 - f)]));
+      }
+      k.glow.lines.push(line);
     }
   },
 };
@@ -149,11 +179,12 @@ function roundel(k: Kit, part: Part3, order: number, s: number, t: number, z: nu
 
 const logCarpentry: Carpentry = {
   round: true,
-  post: 2.1,
-  stringer: 2.6,
-  stringerW: 2.6,
-  cap: 2.2,
-  brace: 1.0,
+  post: 2.6,
+  stringer: 2.9,
+  stringerW: 2.9,
+  cap: 2.6,
+  brace: 1.5,
+  braces: 'a',
   postTone: () => LOG.bark,
   beamTone: () => LOG.beam,
   endTone: LOG.end,
@@ -171,6 +202,10 @@ const logCarpentry: Carpentry = {
     const z0 = (s: number): number => top(s) - plan.thick, z1 = top;
     lay(k, 'front', 1, [{ pts: [[sl.s0, to, z0(sl.s0)], [sl.s1, to, z0(sl.s1)], [sl.s1, to, z1(sl.s1)], [sl.s0, to, z1(sl.s0)]], out: [0, edge, 0], tone: LOG.deck,
       info: finfo('cornice', sl.s0 * U, sl.s0 * U + len, 0, plan.thick, sl.i), frame: { o: [sl.s0, to, z0(sl.s0)], a: [1 / U, 0, 0], b: [0, 0, 1] } }], '');
+    // A curb log along the edge on the poles, the rope posts lashed inside it, its cut ends at the bridge's.
+    const r = 1.9, tc = te - edge * (r / U + 0.004);
+    lay(k, edge === sl.near ? 'rail' : 'front', 1.2, bar([sl.s0, tc, top(sl.s0) + r * 0.85], [sl.s1, tc, top(sl.s1) + r * 0.85], rnd(r, 8), LOG.bark,
+      { caps: [sl.s0 <= 1e-6, sl.s1 >= plan.n - 1e-6], paint: 'beam', capTone: LOG.end, capPaint: 'plinth', seed: sl.i * 3 + edge }), '');
   },
   banner: (k, part, s, t, z) => pennant(k, part, s, t, z, LOG.bark, tone('#cfe0b4', '#6f7f74'), tone('#ffe7a4', '#e9b468')),
 };

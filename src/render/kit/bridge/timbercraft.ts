@@ -196,6 +196,21 @@ const fasciaPaint: BridgePainter = (g, k, f) => {
   for (let x = Math.ceil(f.x0 / 10) * 10; x < f.x1; x += 10) nail(g, hex('#f6dc98'), x, h * 0.3, 0.3);
 };
 
+/** The border boards: two laid along, painted, a gold line inlaid along the inner edge and a gold stud every half tile. */
+const borderPaint: BridgePainter = (g, k, f) => {
+  const x0 = Math.min(f.x0, f.x1), x1 = Math.max(f.x0, f.x1), h = Math.max(Math.abs(f.y0), Math.abs(f.y1));
+  g.strokeStyle = css(mix(k.fill, hex('#4a3048'), 0.45), 0.8);
+  g.lineWidth = 0.22;
+  g.beginPath(); g.moveTo(x0 - 1, h * 0.45); g.lineTo(x1 + 1, h * 0.45); g.stroke();
+  g.strokeStyle = css(mix(k.fill, [255, 248, 236], 0.4), 0.55);
+  g.lineWidth = 0.3;
+  g.beginPath(); g.moveTo(x0 - 1, h * 0.2); g.lineTo(x1 + 1, h * 0.2); g.stroke();
+  g.strokeStyle = RUNE_GOLD;
+  g.lineWidth = 0.42;
+  g.beginPath(); g.moveTo(x0 - 1, h - 0.6); g.lineTo(x1 + 1, h - 0.6); g.stroke();
+  for (let x = Math.ceil((x0 - 10) / 20) * 20 + 10; x < x1; x += 20) nail(g, hex('#f6dc98'), x, h * 0.72, 0.42);
+};
+
 const tcCarpentry: Carpentry = {
   round: false,
   post: 1.7,
@@ -205,6 +220,8 @@ const tcCarpentry: Carpentry = {
   brace: 1.1,
   noKnees: true,
   splay: 0,
+  braces: 'lower',
+  border: { w: 0.14, tone: tone('#c87e78', '#7a4a62'), role: 'plinth' },
   postTone: () => TC.post,
   beamTone: () => TC.beam,
   rail: tcRail,
@@ -236,6 +253,7 @@ export const timbercraft = timberBase('timbercraft', {
     rail: paintedPaint,
     ring: ribPaint,
     cornice: fasciaPaint,
+    plinth: borderPaint,
     key: plaquePaint('ingwaz', 3.4, 4.4),
     lamp: clothPaint('ingwaz'),
   }),
