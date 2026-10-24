@@ -479,6 +479,14 @@ export function kitFrame(still: boolean): void {
   settled = still;
   frameMs = 0;
 }
+/**
+ * The frame's share as another baker spends it (`bridgekit.ts`): whether
+ * this frame may still draw a new picture, what one took, and whether every
+ * bake is made the moment it is wanted, as a harness asks.
+ */
+export const kitMayBake = (): boolean => frameMs < (settled ? FRAME_MS : MOVING_MS);
+export const kitBaked = (ms: number): void => { frameMs += ms; };
+export const kitIsSync = (): boolean => sync;
 /** Whether a bake drawn in frame `used` is still on the screen: drawn in this frame or the last. */
 const onScreen = (used: number): boolean => used >= frame - 1;
 

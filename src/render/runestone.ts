@@ -2820,6 +2820,11 @@ export class RunestoneNight {
     this.lit.length = 0;
   }
 
+  /** Whether it is dark enough this frame for anything to take the night off itself (`begin`). */
+  get isOpen(): boolean {
+    return this.open;
+  }
+
   /** Whether any stone this frame has its night shapes to lay: false by day, and before the first stone is drawn. */
   get active(): boolean {
     return this.lit.length > 0;

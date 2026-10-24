@@ -362,6 +362,7 @@ import {
 } from './gates';
 import { hingeKey, hingeOf, isDrawbridge, landingOf } from '../game/gates';
 import { bridgeDone, bridgeLevels, deckHeight, type Bridge } from '../game/bridges';
+import { bridgeNight, deckKey, drawBridgePiece, kitBridge, piecesAt, ropeKey, type BridgeFrame, type BridgePieceAt } from './bridgekit';
 import { SmallLife, type Mote } from './life';
 import { personBody, SpellStage, type Aim, type Told, type Who } from './spells/stage';
 import { guessTold, type Standing } from './spells/guess';
@@ -497,6 +498,14 @@ interface Entity {
   post?: PlacedPost;
   trap?: PlacedTrap;
   deck?: { kind: string; done: boolean; drop: number; id: number; shape?: DeckShape; green?: number; span?: number };
+  /** A piece of a material bridge: a slice of its deck, its back, its front or its near parapet (`bridgekit.ts`). */
+  bp?: BridgePieceAt;
+  /**
+   * What it sorts by among its line, where not where it stands on the screen:
+   * a bridge's pieces round whoever is under or on its deck (`BridgePieceAt.key`,
+   * `deckKey`).
+   */
+  key?: number;
   /** A lotus standing up off the water: its raised leaves, flowers and seed heads, sorted among what else stands there. */
   plant?: WaterPlant;
   /** A mote swirl turning over the tile (`./swirls`). */
@@ -1242,6 +1251,8 @@ export class Renderer {
     e.mote = undefined;
     e.fx = undefined;
     e.aq = undefined;
+    e.bp = undefined;
+    e.key = undefined;
     e.clip = undefined;
     this.ents.push(e);
     return e;
@@ -3442,6 +3453,21 @@ export class Renderer {
 
   /** The wall clock, in real seconds, for what greens (`greening.ts`): read once a frame. */
   private greenAt = 0;
+  /** What a material bridge's pieces are worked out from this frame: the camera and the ground (`bridgekit.ts`). */
+  private bFrame: BridgeFrame | null = null;
+  private bridgeFrame(): BridgeFrame {
+    if (!this.bFrame) {
+      const cam = this.camera, world = this.game.world;
+      this.bFrame = {
+        rotation: cam.rotation,
+        sx: (wx, wy) => cam.worldToScreenX(wx, wy),
+        sy: (wx, wy, h) => cam.worldToScreenY(wx, wy, h),
+        heightAt: (wx, wy) => world.heightAt(wx, wy),
+        greenStage: (b) => Math.round(greenShows(bridgeGreen(this.game, b, this.greenAt) ?? 0, 0, 0) * 4),
+      };
+    }
+    return this.bFrame;
+  }
   /** Whether the ivy is in flower: in spring and summer (`seasonAt`). */
   private bloom = false;
 
@@ -3514,6 +3540,7 @@ export class Renderer {
     this.frameDt = dt;
     this.poolRuns.clear();
     this.greenAt = greenNow();
+    this.bFrame = null;
     const season = seasonAt(this.greenAt).season;
     this.bloom = season === 'spring' || season === 'summer';
     // Whether the fields are waiting out a winter, which they are drawn doing: asked once a frame, not once a tile.
@@ -4208,6 +4235,13 @@ export class Renderer {
               this.take('deck', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, bridge.height), null).deck =
                 { kind: 'draw', done: Object.values(bridge.spans[i].needed).every((n) => n <= 0), drop: 0, id: bridge.id, span: i };
             }
+          } else if (bridge && kitBridge(bridge)) {
+            // A material bridge in its pieces, each sorted round whoever is under or on the deck (`bridgekit.ts`).
+            for (const p of piecesAt(bridge, x, y, this.bridgeFrame())) {
+              const be = this.take('deck', x, y, p.sx, p.sy, null);
+              be.bp = p;
+              be.key = p.key;
+            }
           } else if (bridge && bridge.kind !== 'aqueduct') {
             const span = bridge.spans.find((sp) => sp.x === x && sp.y === y);
             const wx = x + 0.5;
@@ -4218,7 +4252,10 @@ export class Renderer {
             // The tile it spans, corner by corner at the deck's height there, so it is that tile at every turn of the view.
             const q = ([[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]] as Array<[number, number]>)
               .map(([a, b]): [number, number] => [(cam.worldToScreenX(a, b) - dx) / zoom, (cam.worldToScreenY(a, b, deckHeight(bridge, a, b)) - dy) / zoom]);
-            this.take('deck', x, y, dx, dy, null).deck =
+            const re = this.take('deck', x, y, dx, dy, null);
+            // In front of anybody under it, behind anybody on it (`ropeKey`).
+            re.key = ropeKey(this.bridgeFrame(), x, y);
+            re.deck =
               { kind: bridge.kind, done: !!span && Object.values(span.needed).every((n) => n <= 0), drop: mid - world.centerHeight(x, y), id: bridge.id,
                 shape: { q, along: bridge.ay === bridge.by ? 'x' : 'y' },
                 // How far the moss on a stone arch has got (`greening.ts`): over water, always by it.
@@ -4261,6 +4298,8 @@ export class Renderer {
             fe.piece = fu;
             fe.view = this.viewOf(fu);
             if (fu.rare) fe.rare = fu.rare;
+            // On a bridge's deck, among its pieces (`deckKey`): a stall on an outer lane, a wagon crossing.
+            if (!furnitureDef(fu.kind).boat) this.onBridgeDeck(fe, wx, wy);
             if (fu.helm || fu.riders?.length || player.aboard === fu.id || this.helming === fu) this.takeAboard(fu, fe, x, y, zoom);
             // A cart on the move rocks and bumps on the track under her driver, and her driver with her (`cartSwayOf`).
             if (reinsTo(fu.kind)) fe.sway = this.cartSwayOf(fu, fe.sx, fe.sy, zoom);
@@ -4308,6 +4347,7 @@ export class Renderer {
               cam.worldToScreenY(px, py, flight ? flight.h : this.peerDeck(px, py, peer.level)
                 ?? (this.game.deckBase(Math.floor(px), Math.floor(py), peer.level) ?? this.footOn(px, py, peer.level)) + peer.level * WALL_HEIGHT), null);
             pe.peer = peer;
+            if (this.peerDeck(px, py, peer.level) !== null) this.onBridgeDeck(pe, px, py);
             if (flight) pe.clip = flight.clip;
           }
         }
@@ -4327,6 +4367,7 @@ export class Renderer {
             const ce = this.take('creature', x, y, cam.worldToScreenX(cr.x, cr.y),
               cam.worldToScreenY(cr.x, cr.y, lift > 0 ? this.footOn(cr.x, cr.y, up) + lift * WALL_HEIGHT : deckHere ?? this.footAt(cr.x, cr.y)), null);
             ce.creature = cr;
+            if (deckHere !== null && lift <= 0) this.onBridgeDeck(ce, cr.x, cr.y);
             // Somebody else up on it: on its saddle, a hair in front of it, as I am on mine.
             const rider = cr.riderUid && !cr.ridden ? this.riderOf(cr) : undefined;
             if (rider) {
@@ -4349,7 +4390,7 @@ export class Renderer {
         // On the deck unless you are in a hull passing under it.
         // In a building on piers, on its deck and the storeys over it (`piers.ts`).
         const piered = this.game.afloat() ? null : this.game.deckBase(player.tileX, player.tileY, player.level);
-        const deck = this.game.afloat() || piered !== null ? null : this.game.laidOver(player.tileX, player.tileY, player);
+        const deck = this.game.afloat() || piered !== null || this.game.underDeck ? null : this.game.laidOver(player.tileX, player.tileY, player);
         // A driver is drawn on the seat, which is a lift in screen pixels
         // rather than in world height: the cart is under them, not the ground.
         const drivenBy = this.game.driving();
@@ -4370,6 +4411,8 @@ export class Renderer {
         const sy = drivenBy || up ? cam.worldToScreenY(vx, vy, seatBase) + 0.01 : cam.worldToScreenY(player.x, player.y, ph);
         const pe = this.take('player', player.tileX, player.tileY, cam.worldToScreenX(vx, vy), sy, null);
         pe.lift = this.driverSeat() * zoom;
+        // On a bridge's deck: after its deck and before its near parapet, not under it (`deckKey`).
+        if ((deck !== null || drivenBy) && !this.game.underDeck) this.onBridgeDeck(pe, vx, vy);
         if (flight) pe.clip = flight.clip;
         // At a helm on a deck of its own the driver stands there, not in her middle.
         if (drivenBy && furnitureDef(drivenBy.kind).boat?.helm) this.onDeck(pe, drivenBy, this.game.helmSpot(drivenBy), pe.lift, true);
@@ -5005,9 +5048,18 @@ export class Renderer {
   /** Whether a tile stands on piers, for the pond painter (`WaterFrame.decked`). */
   private readonly pierOver = (x: number, y: number): boolean => this.game.buildings.onPiers(x, y);
 
-  /** How high a thing set down at a point stands: on the finished deck of a tile on piers, or on the ground. */
+  /** How high a thing set down at a point stands: on the finished deck of a tile on piers or of a bridge, or on the ground. */
   private standTop(wx: number, wy: number): number {
-    return (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(Math.floor(wx), Math.floor(wy)) : null) ?? this.game.world.heightAt(wx, wy);
+    return (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(Math.floor(wx), Math.floor(wy)) : null)
+      ?? (this.game.bridges.size ? this.game.deckHeightAt(wx, wy) : null) ?? this.game.world.heightAt(wx, wy);
+  }
+
+  /** Something standing at a point on a bridge's walked deck sorts among the bridge's pieces as standing on it (`deckKey`). */
+  private onBridgeDeck(ent: Entity, wx: number, wy: number): void {
+    if (!this.game.bridges.size) return;
+    const x = Math.floor(wx), y = Math.floor(wy);
+    if (!this.game.onWalkedDeck(x, y) || this.game.deckHeightAt(wx, wy) === null) return;
+    ent.key = deckKey(this.bridgeFrame(), x, y);
   }
 
   /**
@@ -5363,7 +5415,7 @@ export class Renderer {
   private drawEntities(ctx: CanvasRenderingContext2D, zoom: number): void {
     const ents = this.ents;
     // Within a diagonal, whatever stands lower on screen is nearer the viewer.
-    if (ents.length > 1) ents.sort((a, b) => a.sy - b.sy || a.sx - b.sx || (a.lift ?? 0) - (b.lift ?? 0));
+    if (ents.length > 1) ents.sort((a, b) => (a.key ?? a.sy) - (b.key ?? b.sy) || a.sx - b.sx || (a.lift ?? 0) - (b.lift ?? 0));
     const player = this.game.player;
     this.playerFacing = this.facingOnScreen(player.dirX, player.dirY, this.playerFacing);
     /*
@@ -5987,6 +6039,20 @@ export class Renderer {
         // An aqueduct's bays are laid in pieces round what stands under them: in front of a runestone's runes, its box is kept off them.
         if (box && this.runeNight.active) this.runeNight.occludeRect(ctx, box.left, box.top, box.w, box.h, this.occClips);
         if (box) this.deckHits.push({ x: ent.x, y: ent.y, left: box.left, top: box.top, w: box.w, h: box.h, bridge: ent.aq.b.id, aq: box.shape });
+        continue;
+      }
+      if (ent.kind === 'deck' && ent.bp) {
+        const bp = ent.bp;
+        const rot = this.camera.rotation;
+        let hit: [number, number, number, number] | null = null;
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g) => { hit = drawBridgePiece(g, bp, zoom, rot) ?? hit; });
+        const box = hit as [number, number, number, number] | null;
+        if (box) {
+          this.deckHits.push({ x: ent.x, y: ent.y, left: box[0], top: box[1], w: box[2] - box[0], h: box[3] - box[1], bridge: bp.b.id });
+          // After dark, the night taken off its rune line, its runes and its lamps (`bridgeNight`).
+          const night = this.runeNight.isOpen ? bridgeNight(bp, zoom, rot) : null;
+          if (night) this.runeNight.glowing(ctx, night.box[0], night.box[1], night.box[2], night.box[3], night.holes, night.masks, true);
+        }
         continue;
       }
       if (ent.kind === 'deck' && ent.deck?.kind === 'draw') {

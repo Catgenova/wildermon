@@ -2140,6 +2140,24 @@ export class Game {
     return { rule: this.stepRule, levels: TOP_LEVELS, below: this.buildings.cellars.size ? -CELLAR_LEVEL : 0 };
   }
 
+  /**
+   * Whether the player is on the ground under a bridge's deck rather than on
+   * it: walked in under it from beside it, and still under it. A body on a
+   * tile of deck is on the deck unless it came in under it (`walksUnder`).
+   * What is drawn and where the feet are, nothing more: a walk is the same
+   * either way.
+   */
+  underDeck = false;
+
+  /** Whether a step from one tile to the next leaves the player under a bridge's deck. */
+  walksUnder(x0: number, y0: number, x1: number, y1: number): boolean {
+    if (!this.onWalkedDeck(x1, y1)) return false;
+    const b = this.bridgeAt(x1, y1);
+    // From a tile of the same deck, as it was; from one of its ends, onto it; from anywhere else, in under it.
+    if (b && this.bridgeAt(x0, y0) === b) return this.underDeck;
+    return !(b && this.onBridge(b, x0, y0));
+  }
+
   /** Height of the player's feet, storeys included: in a building on piers, from its deck. */
   playerHeight(): number {
     // Out on a jetty the floor is the building's, whatever the ground under it does (`jettyBase`).
@@ -2147,7 +2165,7 @@ export class Game {
     const jetty = p.level > 0 && this.buildings.jettyAt(p.tileX, p.tileY);
     const base = jetty ? jettyBase(this, jetty, p.tileX, p.tileY) : this.deckBase(p.tileX, p.tileY, p.level);
     // On a bridge's deck, at its height there, up a ramp's slope too, as the body is drawn (`deckHeightAt`).
-    const deck = base === null && this.bridges.size && !this.afloat() ? this.deckHeightAt(p.x, p.y) : null;
+    const deck = base === null && this.bridges.size && !this.afloat() && !this.underDeck ? this.deckHeightAt(p.x, p.y) : null;
     if (deck !== null) return deck;
     return (base ?? this.world.heightAt(p.x, p.y)) + p.visualLevel * 30;
   }
@@ -4488,8 +4506,10 @@ export class Game {
       [p.x, p.y] = this.passengerSpot(ship, p.seat);
     } else {
       const { rule } = this.movement();
+      const [fx, fy] = [p.tileX, p.tileY];
       // A deck on piers is walked dry and level, whatever is under it (`piers.ts`).
       moved = p.update(dt, this.world, rule, this.buildings.pierTiles.size ? this.onPierDeck : undefined);
+      if (this.bridges.size && (fx !== p.tileX || fy !== p.tileY)) this.underDeck = this.walksUnder(fx, fy, p.tileX, p.tileY);
     }
     this.acting.stepped = moved;
     /*
@@ -8990,6 +9010,8 @@ export class Game {
     this.player.y = y;
     this.player.level = level;
     this.player.visualLevel = level;
+    // Put somewhere, on a deck rather than under it.
+    this.underDeck = false;
     if (goal) {
       const { rule, levels, below } = this.movement();
       this.player.walkTo(this.world, goal.x, goal.y, rule, levels, below, goal.level);
