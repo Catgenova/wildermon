@@ -25,21 +25,38 @@ export const SPIRAL_WALK = 0.27;
 /** A storey up or down one, in tiles of walking: the turn round the post a body walks (`Player.climb`), and what the search counts it as (`LIFT_COST`). */
 export const SPIRAL_CLIMB = LIFT_COST;
 
-/** The angle round the post a share `t` of the way up a storey, a body standing on the middle of the tread under it. */
-export function spiralAngle(t: number): number {
-  return SPIRAL_START + SPIRAL_WIND * Math.PI * 2 * (t - 0.5 / SPIRAL_TREADS);
+/**
+ * The angle round the post a share `t` of the way up a storey, a body standing
+ * on the middle of the tread under it; the whole stair turned `turn` round
+ * from `SPIRAL_START` (`spiralTurn`).
+ */
+export function spiralAngle(t: number, turn = 0): number {
+  return SPIRAL_START + turn + SPIRAL_WIND * Math.PI * 2 * (t - 0.5 / SPIRAL_TREADS);
 }
 
 /** Where a body `t` of the way up a storey stands, from the middle of the tile, in tiles. */
-export function spiralSpot(t: number): [number, number] {
-  const a = spiralAngle(t);
+export function spiralSpot(t: number, turn = 0): [number, number] {
+  const a = spiralAngle(t, turn);
   return [Math.cos(a) * SPIRAL_WALK, Math.sin(a) * SPIRAL_WALK];
 }
 
 /** The way a body faces going round, up (`up`) or down, `t` of the way up. */
-export function spiralHeading(t: number, up: boolean): [number, number] {
-  const a = spiralAngle(t), k = SPIRAL_WIND * (up ? 1 : -1);
+export function spiralHeading(t: number, up: boolean, turn = 0): [number, number] {
+  const a = spiralAngle(t, turn), k = SPIRAL_WIND * (up ? 1 : -1);
   return [-Math.sin(a) * k, Math.cos(a) * k];
+}
+
+/**
+ * How far round from `SPIRAL_START` a spiral staircase is turned, drawn:
+ * none in a building's footprint, where every one on a tile is wound the
+ * same so a stack is one stair; and an outside one turned so its head lands
+ * on the side of the building beside it (`dx`, `dy` toward it), its top
+ * tread's middle facing it.
+ */
+export function spiralTurn(toward: [number, number] | null): number {
+  if (!toward) return 0;
+  const want = Math.atan2(toward[1], toward[0]);
+  return want - spiralAngle(1);
 }
 
 /** How high a body `t` of the way up a storey stands, as a share of the storey: on the tread under it, the floor at the foot. */

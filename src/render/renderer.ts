@@ -60,8 +60,8 @@ import { FLOOR_PPT, FLOOR_TILES, concrete, flooring, slabbing } from './flooring
 import { LADDER, stairStyle } from './stairing';
 import { BEAM_DEEP, drawBeam, drawColumn, drawJettySupports, drawRailing, JOIST_DEEP, PILASTER_PROUD, type Body, type Cut, type RailEnds } from './framing';
 import { jettyBase, outsideStairBase, spiralBase } from '../game/frame';
-import { drawSpiralPiece, drawSpiralWhole, spiralKey, spiralOutline, spiralPieces, type SpiralFlight, type SpiralFrame, type SpiralPieceAt } from './spiralkit';
-import { spiralRise, spiralSpot, SPIRAL_TREADS } from '../game/spiral';
+import { drawSpiralPiece, drawSpiralWhole, spiralCapGlow, spiralKey, spiralOutline, spiralPieces, type SpiralFlight, type SpiralFrame, type SpiralPieceAt } from './spiralkit';
+import { spiralHeading, spiralRise, spiralSpot, spiralTurn, SPIRAL_TREADS } from '../game/spiral';
 import { storeyHeight, storeyTileAt } from '../game/storeyview';
 import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
@@ -4775,6 +4775,7 @@ export class Renderer {
         const up = this.game.mounted();
         // Up a spiral staircase, round its post on the tread under you (`spiralBody`).
         const spiral = !drivenBy && !up ? this.spiralBody(player.x, player.y, player.visualLevel) : null;
+        this.spiralLift = spiral;
         // On the head of a way down, in the hole on its tread.
         const flight = !spiral && piered === null && deck === null && player.level === 0 && !drivenBy && !up ? this.onFlight(player.x, player.y) : null;
         // Afloat in deep water, at the top of it: the sea's surface, or a pond's; on stepping stones, on their tops.
@@ -5691,6 +5692,8 @@ export class Renderer {
   private readonly seated = new Set<string>();
   /** The hull with a deck of her own that I have the helm of, this frame. */
   private helming: PlacedFurniture | null = null;
+  /** Where the player is drawn on a spiral staircase this frame, and how far up its storey, for the way the body faces climbing it (`spiralBody`). */
+  private spiralLift: { turn: number; t: number } | null = null;
   private takeAboard(f: PlacedFurniture, fe: Entity, x: number, y: number, zoom: number): void {
     const boat = furnitureDef(f.kind).boat;
     if (!boat) {
@@ -6356,7 +6359,10 @@ export class Renderer {
     // Within a diagonal, whatever stands lower on screen is nearer the viewer.
     if (ents.length > 1) ents.sort((a, b) => (a.key ?? a.sy) - (b.key ?? b.sy) || a.sx - b.sx || (a.lift ?? 0) - (b.lift ?? 0));
     const player = this.game.player;
-    this.playerFacing = this.facingOnScreen(player.dirX, player.dirY, this.playerFacing);
+    // Round a spiral staircase's post, the way the climb goes round it, the stair turned as it is drawn (`spiralBody`).
+    const lifting = player.lifting && this.spiralLift;
+    const [fdx, fdy] = lifting ? spiralHeading(this.spiralLift!.t, player.lifting!.to > player.lifting!.from, this.spiralLift!.turn) : [player.dirX, player.dirY];
+    this.playerFacing = this.facingOnScreen(fdx, fdy, this.playerFacing);
     /*
      * What stands still on the ground under a jetty is behind the jetty's
      * floor (`underJetty`), cut out of it until the next thing is drawn.
@@ -6985,6 +6991,13 @@ export class Renderer {
         if (a < 1) { ctx.save(); ctx.globalAlpha *= a; }
         drawSpiralPiece(ctx, ent.sp, zoom, this.camera.rotation);
         if (a < 1) ctx.restore();
+        // After dark, the night taken off round the runes cut in its cap.
+        const glow = this.runeNight.isOpen && a >= 1 ? spiralCapGlow(ent.sp, zoom, this.camera.rotation) : null;
+        if (glow) {
+          const r = glow.r * 2;
+          this.runeNight.glowing(ctx, glow.x - r, glow.y - r, glow.x + r, glow.y + r,
+            (dx, dy) => [{ x: glow.x + dx, y: glow.y + dy, r: glow.r, a: 0.55 }], () => [], true);
+        }
         continue;
       }
       if (ent.kind === 'deck' && ent.bp) {
@@ -8598,8 +8611,19 @@ export class Renderer {
     const bld = this.game.buildings;
     return {
       material: floor.material, dye: floor.dye, x, y, level: floor.level, foot: base + (floor.level - 1) * WALL_HEIGHT,
-      stack: { below: isSpiral(bld.floor(floor.level - 1, x, y)), above: isSpiral(bld.floor(floor.level + 1, x, y)) }, headOnly,
+      stack: { below: isSpiral(bld.floor(floor.level - 1, x, y)), above: isSpiral(bld.floor(floor.level + 1, x, y)) },
+      turn: this.spiralTurnAt(x, y, floor.building), headOnly,
     };
+  }
+
+  /** How a spiral staircase on a tile is turned (`spiralTurn`): out past a footprint, its head toward the building's tile beside it. */
+  private spiralTurnAt(x: number, y: number, building: number): number {
+    const bld = this.game.buildings;
+    if (bld.tileIndex.has(`${x},${y}`)) return 0;
+    for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]] as Array<[number, number]>) {
+      if (bld.tileIndex.get(`${x + dx},${y + dy}`) === building) return spiralTurn([dx, dy]);
+    }
+    return 0;
   }
 
   /**
@@ -8642,7 +8666,7 @@ export class Renderer {
    * and what it sorts by among the stair's pieces (`spiralKey`): after the
    * tread it stands on, before the ones over its head. Null off one.
    */
-  private spiralBody(px: number, py: number, v: number): { x: number; y: number; h: number; key: number } | null {
+  private spiralBody(px: number, py: number, v: number): { x: number; y: number; h: number; key: number; turn: number; t: number } | null {
     const bld = this.game.buildings;
     if (!bld.list.size || v < 0) return null;
     const tx = Math.floor(px), ty = Math.floor(py);
@@ -8663,17 +8687,18 @@ export class Renderer {
     const jetty = building ? undefined : bld.jettyAt(tx, ty);
     const base = building?.deck ?? (jetty ? jettyBase(this.game, jetty, tx, ty) : null) ?? this.game.world.getHeight(tx, ty);
     const cx = tx + 0.5, cy = ty + 0.5;
+    const turn = this.spiralTurnAt(tx, ty, bld.floor(flight, tx, ty)?.building ?? -1);
     // On the tread under it, and sorted by that tread's middle: the one the climb has reached.
-    const [sx, sy] = spiralSpot(t);
+    const [sx, sy] = spiralSpot(t, turn);
     const tread = Math.max(-1, Math.min(SPIRAL_TREADS - 1, Math.floor(t * SPIRAL_TREADS - 0.5)));
-    const [kx, ky] = spiralSpot((tread + 1) / SPIRAL_TREADS);
+    const [kx, ky] = spiralSpot((tread + 1) / SPIRAL_TREADS, turn);
     // Onto its spot from the edge of the tile it stepped on across.
     const w = 1 - Math.min(1, Math.hypot(px - cx, py - cy) / 0.5);
     const x = px + (cx + sx - px) * w, y = py + (cy + sy - py) * w;
     const h = base + (flight - 1 + spiralRise(t)) * WALL_HEIGHT;
     const on = t <= 0 ? flight - 1 : flight;
     const key = spiralKey(this.spiralFrame(), px + (cx + kx - px) * w, py + (cy + ky - py) * w, base, on + 0.5);
-    return { x, y, h, key };
+    return { x, y, h, key, turn, t };
   }
 
   /**

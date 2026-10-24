@@ -4,10 +4,10 @@ import { dyeTint } from '../game/dyestuffs';
 import { kitEyeOfTurn } from './bridgekit';
 import { UNITS_PER_TILE } from './iso';
 import { kitBaked, kitIsSync, kitMayBake } from './kitpieces';
-import { lathe, prism, seam, slab, type Side } from './kit/core';
+import { centre, lathe, prism, seam, slab, type Side } from './kit/core';
 import { stairStyle } from './stairing';
 import {
-  BAKE_STEPS, canvasOf, css, cut, drawFaces, glyphPath, hex, mix, mul, proj, RUNE_GOLD, RUNE_WHITE, scaleFor, STONE_INK, sub, unit,
+  BAKE_STEPS, canvasOf, css, cut, dot, drawFaces, newell, glyphPath, hex, mix, mul, proj, RUNE_GOLD, RUNE_WHITE, scaleFor, STONE_INK, sub, unit,
   type Ctx, type Eye, type Face, type PaintCtx, type RGB, type Tone, type V3,
 } from './runestone';
 
@@ -55,8 +55,8 @@ const POST_UP = 9;
 const CAP_W = 3.4;
 const CAP_H = 3.6;
 
-/** The angle at a share of a storey round the stair (`spiral.ts`). */
-const angleAt = (share: number): number => SPIRAL_START + SPIRAL_WIND * Math.PI * 2 * share;
+/** The angle at a share of a storey round the stair (`spiral.ts`), the stair turned `turn` from `SPIRAL_START`. */
+const angleAt = (share: number, turn: number): number => SPIRAL_START + turn + SPIRAL_WIND * Math.PI * 2 * share;
 const polar = (r: number, a: number, z: number): V3 => [Math.cos(a) * r, Math.sin(a) * r, z];
 /** The rail's height over the flight's foot at a share of the storey round, rising with the nosings. */
 const railZ = (share: number): number => RAIL_H + RISE + H * share;
@@ -139,8 +139,8 @@ function treadPaint(look: Look, r0: number, r1: number, w: number): (g: Ctx, k: 
 }
 
 /** Tread `i`: a wedge from the post to its outer end, its top `i + 1` risers up, a nosing proud; stone thick enough to rest on the one under it. */
-function treadFaces(look: Look, i: number): Face[] {
-  const a0 = angleAt(i / N), a1 = angleAt((i + 1) / N);
+function treadFaces(look: Look, i: number, turn: number): Face[] {
+  const a0 = angleAt(i / N, turn), a1 = angleAt((i + 1) / N, turn);
   const z1 = (i + 1) * RISE;
   const zb = z1 - (look.family === 'stone' ? RISE * 1.7 : 1.4);
   const ARC = 3;
@@ -161,22 +161,25 @@ function treadFaces(look: Look, i: number): Face[] {
 }
 
 /** A stretch of the rail from `s0` to `s1` of the storey round, a section `RAIL_W` by `RAIL_T` swept along the helix; its end at `s1` capped where the rail ends there. */
-function railFaces(look: Look, s0: number, s1: number, ends: boolean): Face[] {
+function railFaces(look: Look, s0: number, s1: number, ends: boolean, turn: number): Face[] {
   const STEPS = 3;
   const rings: V3[][] = [];
   for (let k = 0; k <= STEPS; k++) {
-    const s = s0 + ((s1 - s0) * k) / STEPS, a = angleAt(s), z = railZ(s);
+    const s = s0 + ((s1 - s0) * k) / STEPS, a = angleAt(s, turn), z = railZ(s);
     rings.push([polar(RAIL_R - RAIL_W / 2, a, z - RAIL_T), polar(RAIL_R + RAIL_W / 2, a, z - RAIL_T), polar(RAIL_R + RAIL_W / 2, a, z), polar(RAIL_R - RAIL_W / 2, a, z)]);
   }
   const faces = prism(rings, look.rail, () => ({ crease: 0.25 }));
-  // `prism` caps the last ring: the end of the run. A run that goes on into the next tread's has no end there.
-  if (!ends) return faces.slice(0, faces.length - 1);
+  // `prism` caps the last ring; the first is capped too, so a stretch seen end on, where the rail turns toward the eye, is solid.
+  const first = rings[0];
+  let n = newell(first);
+  if (dot(n, sub(centre(first), centre(rings[1]))) < 0) n = mul(n, -1);
+  faces.push({ pts: first.slice(), n, tone: look.rail, crease: ends ? 0.3 : 0 });
   return faces;
 }
 
 /** A baluster up from tread `i`'s outer end to the rail; a newel post at an end of the rail, from the tread to over the rail. */
-function balusterFaces(look: Look, share: number, z0: number, post: boolean): Face[] {
-  const a = angleAt(share), c = polar(RAIL_R, a, 0);
+function balusterFaces(look: Look, share: number, z0: number, post: boolean, turn: number): Face[] {
+  const a = angleAt(share, turn), c = polar(RAIL_R, a, 0);
   const top = railZ(share) - RAIL_T * 0.5;
   if (post) {
     const r = 1.25;
@@ -226,15 +229,15 @@ function capFaces(look: Look): Face[] {
   ];
 }
 
-const modelKey = (look: Look, part: SpiralPart, i: number, s: SpiralStack): string =>
-  `${look.key}|${part}|${i}|${part === 'tread' || part === 'cap' ? '' : `${s.below ? 1 : 0}${s.above ? 1 : 0}`}`;
+const modelKey = (look: Look, part: SpiralPart, i: number, s: SpiralStack, turn: number): string =>
+  `${look.key}|${part}|${i}|${part === 'tread' || part === 'cap' ? '' : `${s.below ? 1 : 0}${s.above ? 1 : 0}`}|${turn.toFixed(3)}`;
 
 const models = new Map<string, Face[]>();
-function modelOf(look: Look, part: SpiralPart, i: number, s: SpiralStack): Face[] {
-  const key = modelKey(look, part, i, s);
+function modelOf(look: Look, part: SpiralPart, i: number, s: SpiralStack, turn: number): Face[] {
+  const key = modelKey(look, part, i, s, turn);
   let m = models.get(key);
   if (m) return m;
-  if (part === 'tread') m = treadFaces(look, i);
+  if (part === 'tread') m = treadFaces(look, i, turn);
   else if (part === 'post') m = postFaces(look, s);
   else if (part === 'cap') m = capFaces(look);
   else {
@@ -243,8 +246,8 @@ function modelOf(look: Look, part: SpiralPart, i: number, s: SpiralStack): Face[
     if (railed(i, s)) {
       // Over its own tread; a run starts and ends on a post at the middle of its first and last.
       const first = !s.below && i === OPEN, last = !s.above && i === N - 1 - OPEN;
-      m.push(...railFaces(look, (i + (first ? 0.5 : 0)) / N, (i + (last ? 0.5 : 1)) / N, last));
-      m.push(...balusterFaces(look, (i + 0.5) / N, z0, first || last));
+      m.push(...railFaces(look, (i + (first ? 0.5 : 0)) / N, (i + (last ? 0.5 : 1)) / N, last, turn));
+      m.push(...balusterFaces(look, (i + 0.5) / N, z0, first || last, turn));
     }
   }
   if (models.size > 4000) models.clear();
@@ -265,6 +268,8 @@ export interface SpiralFlight {
   /** The height of its foot: the floor of the storey under it. */
   foot: number;
   stack: SpiralStack;
+  /** How far round it is turned from `SPIRAL_START` (`spiralTurn`). */
+  turn: number;
   /** Only its head: the treads under the floor of the storey it climbs to (a storey pinned over it). */
   headOnly?: boolean;
 }
@@ -301,9 +306,9 @@ export function spiralKey(f: SpiralFrame, wx: number, wy: number, h: number, lev
 }
 
 /** Where a piece's middle is, round the tile, in tiles from its middle. */
-function pieceSpot(part: SpiralPart, i: number): [number, number] {
+function pieceSpot(part: SpiralPart, i: number, turn: number): [number, number] {
   if (part === 'post' || part === 'cap') return [0, 0];
-  const a = angleAt((i + 0.5) / N);
+  const a = angleAt((i + 0.5) / N, turn);
   const r = part === 'rail' ? RAIL_R / U : SPIRAL_WALK;
   return [Math.cos(a) * r, Math.sin(a) * r];
 }
@@ -314,7 +319,7 @@ export function spiralPieces(fl: SpiralFlight, f: SpiralFrame, h: number): Spira
   const sx = f.sx(cx, cy), sy = f.sy(cx, cy, fl.foot);
   const out: SpiralPieceAt[] = [];
   const add2 = (part: SpiralPart, i: number, after = 0): void => {
-    const [dx, dy] = pieceSpot(part, i);
+    const [dx, dy] = pieceSpot(part, i, fl.turn);
     out.push({ fl, part, i, sx, sy, key: spiralKey(f, cx + dx, cy + dy, h, fl.level) + after });
   };
   const from = fl.headOnly ? N - 4 : 0;
@@ -371,13 +376,13 @@ export function drawSpiralPiece(ctx: CanvasRenderingContext2D, p: SpiralPieceAt,
   const look = spiralLook(p.fl.material, p.fl.dye);
   const { e, key: vk } = kitEyeOfTurn(rotation);
   const scale = scaleFor(zoom);
-  const base = `${modelKey(look, p.part, p.i, p.fl.stack)}|${vk}`;
+  const base = `${modelKey(look, p.part, p.i, p.fl.stack, p.fl.turn)}|${vk}`;
   const key = `${base}|${scale}`;
   let sh = kept.get(key);
   if (sh) { kept.delete(key); kept.set(key, sh); }
   else if (kitIsSync() || kitMayBake()) {
     const t0 = performance.now();
-    sh = bake(modelOf(look, p.part, p.i, p.fl.stack), e, scale, look.family === 'timber' ? INK_TIMBER : INK_STONE);
+    sh = bake(modelOf(look, p.part, p.i, p.fl.stack, p.fl.turn), e, scale, look.family === 'timber' ? INK_TIMBER : INK_STONE);
     keep(key, sh);
     const ms = performance.now() - t0;
     spiralBakes.count++;
@@ -389,11 +394,19 @@ export function drawSpiralPiece(ctx: CanvasRenderingContext2D, p: SpiralPieceAt,
       if (other) { sh = other; break; }
     }
     if (!sh) {
-      sh = bake(modelOf(look, p.part, p.i, p.fl.stack), e, scale, look.family === 'timber' ? INK_TIMBER : INK_STONE);
+      sh = bake(modelOf(look, p.part, p.i, p.fl.stack, p.fl.turn), e, scale, look.family === 'timber' ? INK_TIMBER : INK_STONE);
       keep(key, sh);
     }
   }
   ctx.drawImage(sh.canvas, p.sx + sh.x * zoom, p.sy + sh.y * zoom, sh.w * zoom, sh.h * zoom);
+}
+
+/** Where the cap's runes are on the screen, for their light at night: the middle of the cap, and how big it is drawn. */
+export function spiralCapGlow(p: SpiralPieceAt, zoom: number, rotation: number): { x: number; y: number; r: number } | null {
+  if (p.part !== 'cap') return null;
+  const { e } = kitEyeOfTurn(rotation);
+  const [x, y] = proj(e, [0, 0, H + POST_UP + CAP_H / 2]);
+  return { x: p.sx + x * zoom, y: p.sy + y * zoom, r: CAP_W * 2.6 * zoom };
 }
 
 /** A whole flight at once, its pieces in their order: where nothing stands among them (a ghost, a way down seen from up top). */

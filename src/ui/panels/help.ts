@@ -1714,7 +1714,7 @@ export function helpText(): string {
       <li>On an upper storey, plan a <b>staircase</b> or <b>ladder</b> instead of a floor. Walk onto it from below: up. Step off it toward the ground: down.</li>
       <li>Every flight material comes in both widths: wide (full tile), ${percent(STAIRS_SHARE)} of a solid wall's materials; <b>${SINGLE_STAIRS_NAME}</b> (half the tile),
       ${percent(SINGLE_STAIRS_SHARE)}. The ${SINGLE_STAIRS_NAME} runs up the left or right half; the other half is the stairwell.</li>
-      <li><b>${capital(SPIRAL_STAIRS_NAME)}</b>: ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials; 1 tile, ${SPIRAL_TREADS} treads round a post; no climbing side, no Q/E.
+      <li><b>${capital(SPIRAL_STAIRS_NAME)}</b>: ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials; a tile a storey, ${SPIRAL_TREADS} treads round a post; no climbing side, no Q/E.
       On from the storey below, off on the storey above, any side. Stacks storey on storey on one tile, down to a cellar too; on spirals only. Inside, outside staircase or down to a cellar. On foot only.</li>
       <li><b>Outside staircase</b>: ground to storey ${OUTSIDE_STAIR_LEVEL + 1}. On open ground sharing a side with a building of ${OUTSIDE_STAIR_LEVEL + 1} storeys or more:
       <b>Plan outside staircase</b> or <b>Plan outside ${SINGLE_STAIRS_NAME}</b>, same materials as inside. Q and E turn it; head against the building.</li>

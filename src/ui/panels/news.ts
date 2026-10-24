@@ -3643,7 +3643,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 302,
+    n: 303,
     day: '2026-10-24',
     lines: () => [
       `Changed: idle ${SPECIES.cobbe.name}, work in range wanting only what your settlement stores lack: "${idleSays({ why: 'stock', n: 2, what: ['marble_brick', 'glass'] }, 'hod')}" (up to ${IDLE_WANTS} named), `
