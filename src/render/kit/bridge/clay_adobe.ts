@@ -19,6 +19,8 @@ import { arcade, cface, fi, lampPost, roundOut, runsOf, tilePaint, wallFrame, ru
 const COAT: Tone = { lit: hex('#e4cdab'), shade: hex('#a99282') };
 const PALE: Tone = { lit: hex('#eedfc4'), shade: hex('#b6a394') };
 const TILE: Tone = { lit: hex('#e5a585'), shade: hex('#b27e70') };
+/** The deck's tiles: the houses' terracotta, worn and dusted toward the coat. */
+const FLOOR: Tone = { lit: hex('#e2b89a'), shade: hex('#ad8d7e') };
 /** A glazed tile set over each crown, the pale blue of the houses' glass. */
 const GLAZE: Tone = { lit: hex('#b3dcd8'), shade: hex('#6f9099') };
 const VIGA: Tone = { lit: hex('#ab8a6c'), shade: hex('#6a5650') };
@@ -240,7 +242,7 @@ export const clay_adobe = stoneBase('clay_adobe', {
   stone: COAT,
   ring: PALE,
   trim: PALE,
-  deck: TILE,
+  deck: FLOOR,
   parapet: 'curved',
   // The crown set lower than the band is deep, for the viga ends over it.
   ringDepth: 7,
@@ -250,11 +252,11 @@ export const clay_adobe = stoneBase('clay_adobe', {
     key: runeKey('sowilo', 0.56, true),
     cap: runeLine('sowilo'),
     beam: vigaEnd,
-    deck: tilePaint(6.6, '#dccab3'),
+    deck: tilePaint(8, '#d6b89d', undefined, 0.6),
     tread: tilePaint(40 / 3, '#cdb89c', PALE),
   }),
   build: {
-    arches: arcade({ ringD: 2.8, proud: 0.01, ring: 'soft', key: 'plaque', keyTone: () => GLAZE, pier: 'round' }),
+    arches: arcade({ ringD: 2.8, proud: 0.01, ring: 'soft', key: 'plaque', keyTone: () => GLAZE, pier: 'round', inner: (st) => ({ lit: mix(st.stone.shade, st.stone.lit, 0.25), shade: mix(st.stone.shade, hex('#5a4e5e'), 0.25) }) }),
     deck,
     parapet,
     ends,
