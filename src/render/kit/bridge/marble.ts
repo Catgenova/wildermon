@@ -1,7 +1,7 @@
 import { css, dot, faceColour, hex, mix, proj, sub, TAU, type Ctx, type RGB, type Tone } from '../core';
 import { cut, glyphPath, lightOf, RUNE_GOLD, RUNE_WHITE, type Eye } from '../../runestone';
 import {
-  BRIDGE_INK, U, bayAt, box, ownerOf, samples,
+  BRIDGE_INK, U, bayAt, box, ownerOf, refugeGaps, refugeOutline, samples,
   type BridgePainter, type BridgeStyle, type FaceInfo, type Kit, type L, type Part3, type Plan, type Role,
 } from './core';
 
@@ -641,9 +641,9 @@ function layoutOf(plan: Plan): { posts: Array<[number, number]>; gaps: Array<[nu
   if (got) return got;
   const stops: Array<[number, number]> = [[-1, 2 * NEWEL], [plan.n - 2 * NEWEL, plan.n + 1]];
   const posts: Array<[number, number]> = [];
-  const refuges = refugeSpans(plan);
+  const refuges = refugeGaps(plan);
   // A refuge's corner posts end the runs either side of it.
-  for (const [g0, g1] of refuges) stops.push([g0, g1]);
+  for (const [g0, g1] of refuges) stops.push([g0 - POST, g1 + POST]);
   for (let i = 0; i < plan.n; i++) {
     const s = i + 0.5;
     const near = [...stops, ...posts].some(([a, b]) => s + POST > a - 0.22 && s - POST < b + 0.22);
@@ -772,18 +772,10 @@ function postAt(k: Kit, cfg: Classical, part: Part3, p0: number, p1: number, t0:
     [[sp - 0.05, tc, capZ], [sp + 0.05, tc, capZ + 1.3 + 3.2 * sc]], order + 1.7);
 }
 
-/** A refuge over each pier of a bridge two lanes wide or more: how far either side of the pier's middle it runs, and how far out it steps. */
-const REFUGE_OUT = 0.27;
-const refugeHalf = (p: { half: number }): number => p.half + 0.17;
-function refugeSpans(plan: Plan): Array<[number, number]> {
-  if (plan.width < 2) return [];
-  return plan.piers.filter((p) => !p.end).map((p) => [p.s - refugeHalf(p), p.s + refugeHalf(p)]);
-}
-
 /** The runs of a slice's parapet: the slice less the refuges' gaps. */
 function runsOf(plan: Plan, s0: number, s1: number): Run[] {
   let runs: Run[] = [{ sa: s0, sb: s1 }];
-  for (const [g0, g1] of refugeSpans(plan)) {
+  for (const [g0, g1] of refugeGaps(plan)) {
     runs = runs.flatMap((r): Run[] => {
       if (g1 <= r.sa || g0 >= r.sb) return [r];
       const out: Run[] = [];
@@ -828,69 +820,151 @@ function lampAt(k: Kit, part: Part3, s: number, t: number, z: number): void {
   k.glow.lamps.push(k.m([s, t, z + H - 3.3]));
 }
 
+/** A polygon of the frame cut to the run `s0`..`s1` along the bridge. */
+function clipRun(pts: L[], s0: number, s1: number): L[] {
+  let out = pts;
+  for (const [lim, lo] of [[s0, true], [s1, false]] as Array<[number, boolean]>) {
+    const inp = out;
+    out = [];
+    const keep = (q: L): boolean => (lo ? q[0] >= lim - 1e-6 : q[0] <= lim + 1e-6);
+    for (let i = 0; i < inp.length; i++) {
+      const a = inp[i], b = inp[(i + 1) % inp.length];
+      const ia = keep(a), ib = keep(b);
+      if (ia) out.push(a);
+      if (ia !== ib) {
+        const u = (lim - a[0]) / (b[0] - a[0]);
+        out.push([lim, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]);
+      }
+    }
+    if (out.length < 3) return [];
+  }
+  return out;
+}
+
+/** An upright face's frame along a segment of the plan from `a` to `b`: `x` a unit along it, `y` up. */
+const segF = (a: [number, number], b: [number, number]): { o: L; a: L; b: L } => {
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  return { o: [a[0], a[1], 0], a: [(b[0] - a[0]) / len / U, (b[1] - a[1]) / len / U, 0], b: [0, 0, 1] };
+};
+
 /**
- * Over each pier of a bridge two lanes wide or more, a refuge: the deck
- * stepped out over the cutwater on a corbel, its cornice run round it, and
- * the parapet turned out round its three sides between a post at each
- * corner; a lamp in it at three lanes.
+ * Over each pier of a bridge two lanes wide or more, a refuge on the core's
+ * outline (`refugeOutline`, a half-hexagon over the cutwater): the deck
+ * carried out on a corbel, the cornice run round its edge, and the parapet
+ * turned out round it, a post at each corner, balusters (or the wall) along
+ * each side; a lamp in it at three lanes.
  */
 function refugesOf(k: Kit, cfg: Classical): void {
   const { plan, sl, st } = k;
   const T = 0.1;
+  const H = cfg.parapetHeight, lift = stepOf(plan);
   for (const p of plan.piers) {
     if (p.end) continue;
-    const w = refugeHalf(p);
-    if (p.s + w < sl.s0 - 1e-6 || p.s - w > sl.s1 + 1e-6) continue;
     for (const edge of sl.edges) {
+      const tOut = edge > 0 ? sl.t1 : sl.t0;
+      const line = refugeOutline(plan, p, edge, tOut);
+      const g0 = line[0][0], g1 = line[line.length - 1][0];
+      if (g1 < sl.s0 - 1e-6 || g0 > sl.s1 + 1e-6) continue;
       const part: Part3 = edge === sl.near ? 'rail' : 'front';
-      const tOut = edge > 0 ? sl.t1 : sl.t0, tF = tOut + edge * REFUGE_OUT;
-      const [ta, tb] = edge > 0 ? [tOut, tF] : [tF, tOut];
-      const k2: Kit = { ...k, sl: { ...sl, t0: Math.min(sl.t0, ta) - 0.05, t1: Math.max(sl.t1, tb) + 0.05 } };
-      const sa = Math.max(sl.s0, p.s - w), sb = Math.min(sl.s1, p.s + w);
-      const z = plan.deck, lo = (s: number): number => z(s) - plan.thick - 1.4;
-      // The platform, the deck's flags carried out; its edge the cornice's, round its front and its ends.
-      if (sb - sa > 1e-4) {
-        k.solid('front', 1.2);
-        k.face('front', [[sa, ta, z(sa)], [sb, ta, z(sb)], [sb, tb, z(sb)], [sa, tb, z(sa)]], [0, 0, 1], st.deck,
-          { role: 'deck', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i, along: true }, { o: [0, 0, z(0)], a: [1 / U, 0, (z(1) - z(0)) / U], b: [0, 1 / U, 0] });
-        k.face('front', [[sa, tF, lo(sa)], [sb, tF, lo(sb)], [sb, tF, z(sb)], [sa, tF, z(sa)]], [0, edge, 0], st.trim,
-          { role: 'cornice', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i }, wallF(tF, edge));
-        for (const [s, dirn] of [[p.s - w, -1], [p.s + w, 1]] as Array<[number, number]>) {
-          if (s < sl.s0 - 1e-6 || s > sl.s1 + 1e-6) continue;
-          k.face('front', [[s, ta, lo(s)], [s, tb, lo(s)], [s, tb, z(s)], [s, ta, z(s)]], [dirn, 0, 0], st.trim,
-            { role: 'cornice', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i }, { o: [s, 0, 0], a: [0, dirn * edge / U, 0], b: [0, 0, 1] });
-        }
+      const k2: Kit = { ...k, sl: { ...sl, t0: sl.t0 - 0.4, t1: sl.t1 + 0.4 } };
+      const z = plan.deck(p.s), under = z - plan.thick - 1.4;
+      const face = (q: Part3, pts: L[], out: L, tone: Tone, inf?: FaceInfo, fr?: { o: L; a: L; b: L }): void => {
+        const c = clipRun(pts, sl.s0, sl.s1);
+        if (c.length >= 3) k2.face(q, c, out, tone, inf, fr);
+      };
+      const segs = line.slice(0, -1).map((a, q) => {
+        const b = line[q + 1];
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+        // Its outward normal, across the plan: away from the bridge.
+        const n: [number, number] = [(-(b[1] - a[1]) / len) * edge, ((b[0] - a[0]) / len) * edge];
+        return { a, b, n, len };
+      });
+      const inward = (pt: [number, number], n: [number, number], d: number): [number, number] => [pt[0] - n[0] * d, pt[1] - n[1] * d];
+      // The outline moved in by `d`, mitred at its corners: so the parapet turns round them in one piece, no post wanted.
+      const mitred = (d: number): Array<[number, number]> => line.map((pt, q) => {
+        if (q === 0 || q === line.length - 1) return inward(pt, segs[q === 0 ? 0 : segs.length - 1].n, d * 0) as [number, number];
+        const nA = segs[q - 1].n, nB = segs[q].n;
+        const m: [number, number] = [nA[0] + nB[0], nA[1] + nB[1]];
+        const ml = Math.hypot(m[0], m[1]) || 1;
+        const k1 = d / Math.max(0.3, (m[0] * nA[0] + m[1] * nA[1]) / ml);
+        return [pt[0] - (m[0] / ml) * k1, pt[1] - (m[1] / ml) * k1];
+      });
+      // Its ends lie along the bridge's edge, moved in across it.
+      const offLine = (d: number): Array<[number, number]> => { const o = mitred(d); o[0] = [o[0][0], o[0][1] - edge * d]; o[o.length - 1] = [o[o.length - 1][0], o[o.length - 1][1] - edge * d]; return o; };
+      const lnIn = offLine(T), lnOut = offLine(-0.014), lnCap = offLine(T + 0.014), lnGlow = offLine(-0.02);
+      // The platform, the deck's flags carried out; its edge the cornice's; under it a corbel onto the cutwater.
+      k2.solid('front', 1.2);
+      face('front', line.map(([s0, t0]) => [s0, t0, z] as L), [0, 0, 1], st.deck,
+        { role: 'deck', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(p.s * 10), along: true }, { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
+      for (const { a, b, n } of segs) {
+        face('front', [[a[0], a[1], under], [b[0], b[1], under], [b[0], b[1], z], [a[0], a[1], z]], [n[0], n[1], 0], st.trim,
+          { role: 'cornice', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(p.s * 10) }, segF(a, b));
       }
-      // The corbel it stands on, over the cutwater.
-      box(k2, 'front', p.s - w * 0.62, p.s + w * 0.62, Math.min(tOut, tF - edge * 0.06), Math.max(tOut, tF - edge * 0.06), lo(p.s) - 9, lo(p.s), st.stone, 'pier', k.ord(edge, 1.1));
-      // Its parapet: along its front between its outer corner posts, and back along each end to a post on the bridge's line.
-      const H = cfg.parapetHeight, lift = stepOf(plan);
-      const front: Array<[number, number]> = [[p.s - w, p.s - w + 2 * POST], [p.s + w - 2 * POST, p.s + w]];
-      parapetLine(k2, cfg, part, edge, tF, [{ sa, sb }], front, [[p.s - w + 2 * POST, p.s + w - 2 * POST]], 2);
-      for (const [p0, p1] of front) {
-        const sc = (p0 + p1) / 2;
-        if (sc < sl.s0 - 1e-6 || sc >= sl.s1 - 1e-6) continue;
-        const [l0, l1] = edge > 0 ? [tOut - T, tOut] : [tOut, tOut + T];
-        postAt(k2, cfg, part, p0, p1, l0, l1, 2);
-        // The end: a short run out from the bridge's line to the front.
-        const [u0, u1] = edge > 0 ? [tOut, tF - T] : [tF + T, tOut];
-        const zf = treadAt(plan, sc), rail = z(sc) + lift + H - COPING;
-        const r0 = sc - T / 2, r1 = sc + T / 2;
+      k2.solid('front', k.ord(edge, 1.1));
+      const inset = line.map(([s0, t0]): [number, number] => [p.s + (s0 - p.s) * 0.7, tOut + (t0 - tOut) * 0.35]);
+      for (let q = 0; q < segs.length; q++) {
+        const { a, b, n } = segs[q], [ai, bi] = [inset[q], inset[q + 1]];
+        face('front', [[ai[0], ai[1], under - 5], [bi[0], bi[1], under - 5], [b[0], b[1], under], [a[0], a[1], under]], [n[0], n[1], -0.6], st.stone,
+          { role: 'pier', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(p.s * 10) + q }, segF(ai, bi));
+      }
+      // Its parapet round it: each side a plinth (or the wall), a coping, balusters between the corner posts.
+      const railLow = z + lift + H - COPING, topP = z + lift + (cfg.parapet === 'solid' ? H - COPING : 2.2);
+      for (let q = 0; q < segs.length; q++) {
+        const { a, b, n, len } = segs[q];
+        const [ai, bi] = [lnIn[q], lnIn[q + 1]];
+        k2.solid(part, 2);
+        const wallTone = cfg.parapet === 'solid' ? st.stone : st.trim, role: Role = cfg.parapet === 'solid' ? 'parapet' : 'plinth';
+        face(part, [[a[0], a[1], z - 0.6], [b[0], b[1], z - 0.6], [b[0], b[1], topP], [a[0], a[1], topP]], [n[0], n[1], 0], wallTone,
+          { role, x0: 0, x1: 1, y0: 0, y1: 1, seed: 3 }, segF(a, b));
+        face(part, [[ai[0], ai[1], z], [bi[0], bi[1], z], [bi[0], bi[1], topP], [ai[0], ai[1], topP]], [-n[0], -n[1], 0], wallTone,
+          { role, x0: 0, x1: 1, y0: 0, y1: 1, seed: 4 }, segF(bi, ai));
+        face(part, [[a[0], a[1], topP], [b[0], b[1], topP], [bi[0], bi[1], topP], [ai[0], ai[1], topP]], [0, 0, 1], st.trim);
+        // The coping, a hair over either face.
+        const [ao, bo, aj, bj] = [lnOut[q], lnOut[q + 1], lnCap[q], lnCap[q + 1]];
+        k2.solid(part, 3);
+        face(part, [[ao[0], ao[1], railLow + COPING], [bo[0], bo[1], railLow + COPING], [bj[0], bj[1], railLow + COPING], [aj[0], aj[1], railLow + COPING]], [0, 0, 1], st.trim,
+          { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 5 }, { o: [0, 0, railLow + COPING], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
+        face(part, [[ao[0], ao[1], railLow], [bo[0], bo[1], railLow], [bo[0], bo[1], railLow + COPING], [ao[0], ao[1], railLow + COPING]], [n[0], n[1], 0], st.trim,
+          { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 6 }, segF(ao, bo));
+        face(part, [[aj[0], aj[1], railLow], [bj[0], bj[1], railLow], [bj[0], bj[1], railLow + COPING], [aj[0], aj[1], railLow + COPING]], [-n[0], -n[1], 0], st.trim,
+          { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 7 }, segF(bj, aj));
+        const mo = lnGlow[q], mb = lnGlow[q + 1];
+        const ca = clipRun([[mo[0], mo[1], 0], [mb[0], mb[1], 0], [mb[0], mb[1], 1]], sl.s0, sl.s1);
+        if (ca.length >= 3) {
+          const xs = ca.map((q) => q[0]), lo = Math.min(...xs), hi = Math.max(...xs);
+          const at = (s: number): [number, number] => { const u = Math.abs(mb[0] - mo[0]) > 1e-6 ? (s - mo[0]) / (mb[0] - mo[0]) : 0; return [s, mo[1] + (mb[1] - mo[1]) * u]; };
+          if (hi - lo > 1e-4) {
+            const [pa, pb] = [at(lo), at(hi)];
+            k.glow.lines.push([k.m([pa[0], pa[1], railLow + COPING * 0.5]), k.m([pb[0], pb[1], railLow + COPING * 0.5])]);
+            k.glow.lines.push([k.m([pa[0], pa[1] - n[1] * 0.05, railLow + COPING]), k.m([pb[0], pb[1] - n[1] * 0.05, railLow + COPING])]);
+          }
+        }
+        // Balusters along it, between the posts at its ends, each laid by the slice it stands in.
         if (cfg.parapet === 'balustrade') {
-          box(k2, part, r0, r1, u0, u1, zf, z(sc) + lift + 2.2, st.trim, 'plinth', 2);
-          const n = Math.max(1, Math.round((u1 - u0) / 0.088));
-          const ts = Array.from({ length: n }, (_, j) => u0 + ((u1 - u0) * (j + 0.5)) / n);
-          if (dot(k.P, k.e.toward) * 1 < 0) ts.reverse();
-          const zb = z(sc) + lift + 2.2, h = rail - zb;
-          k.loose(part, (g, e) => { for (const t of ts) lathe(g, e, k, [sc, t, zb], BALUSTER.map(([y, r]) => [y * h, r * 1.25]), st.stone, 0.4); },
-            [[sc, u0, zb], [sc, u1, rail]], 2.5);
-        } else {
-          box(k2, part, r0, r1, u0, u1, zf, rail, st.stone, 'parapet', 2);
+          // Clear of the post at the bridge's end of a side, and of the corner at the other.
+          const e0 = q === 0 ? POST * 1.4 : 0.03, e1 = q === segs.length - 1 ? POST * 1.4 : 0.03;
+          const m = Math.max(1, Math.round((len - e0 - e1) / 0.088));
+          const pts: Array<[number, number]> = [];
+          for (let j = 0; j < m; j++) {
+            const u = (e0 + ((len - e0 - e1) * (j + 0.5)) / m) / len;
+            const c = inward([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u], n, T / 2);
+            if (c[0] >= sl.s0 - 1e-6 && c[0] < sl.s1 - 1e-6) pts.push(c);
+          }
+          if (pts.length) {
+            pts.sort((q, r) => dot(k.m([q[0], q[1], 0]), k.e.toward) - dot(k.m([r[0], r[1], 0]), k.e.toward));
+            const zb = z + lift + 2.2, h = railLow - zb;
+            k.loose(part, (g, e) => { for (const [s0, t0] of pts) lathe(g, e, k, [s0, t0, zb], BALUSTER.map(([y, r]) => [y * h, r * 1.25]), st.stone, 0.4); },
+              pts.map(([s0, t0]) => [s0, t0, zb] as L).concat(pts.map(([s0, t0]) => [s0, t0, railLow] as L)), 2.5);
+          }
         }
-        box(k2, part, r0 - 0.014, r1 + 0.014, u0, u1, rail, rail + COPING, st.trim, 'cap', 3);
-        k.glow.lines.push([k.m([sc, u0, rail + COPING]), k.m([sc, u1, rail + COPING])]);
       }
-      if (plan.width >= 3 && ownerOf(k2, p.s - 0.05, p.s + 0.05) !== null) lampAt(k2, part, p.s, (ta + tb) / 2 + (edge > 0 ? -0.02 : 0.02), z(p.s));
+      // A post where it leaves the bridge's parapet and where it comes back.
+      for (const q of [0, line.length - 1]) {
+        const c: [number, number] = [line[q][0], line[q][1] - edge * T / 2];
+        if (c[0] < sl.s0 - 1e-6 || c[0] >= sl.s1 - 1e-6) continue;
+        postAt(k2, cfg, part, c[0] - POST, c[0] + POST, c[1] - T / 2, c[1] + T / 2, 3);
+      }
+      if (plan.width >= 3 && ownerOf(k2, p.s - 0.05, p.s + 0.05) !== null) lampAt(k2, part, p.s, tOut + edge * 0.11, z);
     }
   }
 }
