@@ -191,9 +191,9 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     const normal = (s: number): V3 => unit(add(mul(P, s), mul(Vp, Math.sqrt(Math.max(0, 1 - s * s)))));
     const cols = CHAIN_BANDS.map(([, , s]) => barkAt(job, mid, normal(s), false));
     let snow: [number, number] | null = null;
-    if (snowy && Math.abs(D[2]) < 0.6) {
+    if (snowy && Math.abs(D[2]) < 0.5) {
       const on: number[] = [];
-      for (let s = -0.95; s <= 0.951; s += 0.1) if (normal(s)[2] > 0.62) on.push(s);
+      for (let s = -0.95; s <= 0.951; s += 0.1) if (normal(s)[2] > 0.68) on.push(s);
       if (on.length) snow = [Math.max(-1, on[0] - 0.05), Math.min(1, on[on.length - 1] + 0.05)];
     }
     const par = first.parent >= 0 && first.order > 0 ? limbs[first.parent] : null;
@@ -445,7 +445,7 @@ function paintFalling(g: Ctx, job: Job, n: number): void {
     const [x, y] = proj(job.e, p);
     g.fillStyle = spec.leaf.autumn[Math.floor(R() * 3)][4];
     g.beginPath();
-    leafAt(g, x, y, 1.2, R() * TAU, 0.45 + 0.5 * R());
+    leafAt(g, x, y, 1.1, R() * TAU, 0.75 + 0.25 * R());
     g.fill();
     g.strokeStyle = rgb(KIT_INK, 0.6);
     g.lineWidth = 0.3;

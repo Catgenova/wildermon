@@ -50,11 +50,11 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
   const rootA = R() * TAU;
   for (let i = 0; i < roots; i++) {
     const a = rootA + (i / roots) * TAU + (R() - 0.5) * 0.7;
-    const reach = r0 * b.flare * (0.85 + 0.3 * R());
+    const reach = r0 * b.flare * (0.7 + 0.25 * R());
     limbs.push({
-      a: [Math.cos(a) * r0 * 0.45, Math.sin(a) * r0 * 0.45, r0 * (1.3 + 0.6 * R())],
-      b: [Math.cos(a) * reach, Math.sin(a) * reach, r0 * 0.05],
-      ra: r0 * 0.62, rb: r0 * 0.22, order: -1, parent: 0, bough: -1,
+      a: [Math.cos(a) * r0 * 0.5, Math.sin(a) * r0 * 0.5, r0 * (1.1 + 0.4 * R())],
+      b: [Math.cos(a) * reach, Math.sin(a) * reach, r0 * 0.08],
+      ra: r0 * 0.55, rb: r0 * 0.3, order: -1, parent: 0, bough: -1,
     });
   }
 

@@ -1233,7 +1233,7 @@ export class Renderer {
   /*
    * The trees drawn as solids (`./trees3d`): the hour and darkness they are
    * baked for this frame, whether the wind moves them, and the ones drawn
-   * last frame, for the shade they throw on the ground this one (`solidShadeFor`).
+   * last frame, for the shade they throw on the ground this one (`solidFrame`).
    */
   private solidHour = 12;
   private solidDark = 0;
@@ -7300,7 +7300,7 @@ export class Renderer {
     const dh = spr.h * zoom * grew;
     const left = ent.sx - spr.ax * zoom * grew;
     const top = ent.sy - spr.ay * zoom * grew;
-    // A tree drawn as a solid throws its own shade, laid with the ground (`solidShadeFor`).
+    // A tree drawn as a solid throws its own shade, laid with the ground (`solidFrame`).
     if (spr.solid) this.noteSolid(ent, zoom, grew);
     else if (this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
     /*
