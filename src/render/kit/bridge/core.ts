@@ -1222,7 +1222,7 @@ function grown(pts: ReadonlyArray<[number, number]>, d: number): Array<[number, 
     if (ml < 1e-6) return [p[0], p[1]];
     mx /= ml; my /= ml;
     const k = Math.min(2, 1 / Math.max(0.5, mx * n1x + my * n1y));
-    return [p[0] - sgn * mx * d * k, p[1] - sgn * my * d * k];
+    return [p[0] + sgn * mx * d * k, p[1] + sgn * my * d * k];
   });
 }
 
