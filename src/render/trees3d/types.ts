@@ -36,6 +36,8 @@ export interface Limb {
  * leaves. A crown is a handful of them, touching and overlapping.
  */
 export interface Clump {
+  /** A conifer's bough (`Whorls`): its shape, where the mass is its middle. */
+  pad?: Pad;
   c: V3;
   r: number;
   /** The limb it grows on, which it moves with in the wind. */
@@ -68,6 +70,8 @@ export interface Skeleton {
 
 /** The tree's proportions at one age, in model units. */
 export interface Build {
+  /** A conifer: whorls of hanging boughs up one leader in place of limbs and masses. */
+  whorls?: Whorls;
   /** Height of the whole tree at size 1 (`TREE_DEFS` size times the age's). */
   height: number;
   /** Clear stem below the crown, as a share of the height. */
@@ -142,4 +146,60 @@ export interface Species3D {
   keys?: { colour: string; ripe: string };
   /** The buds on the bare twigs at the start of spring. */
   buds?: string;
+  /** Keeps its leaf all year: its winter leaf, and its new tips in spring (`leaf.spring`). */
+  evergreen?: { winter: Ramp };
+}
+
+/**
+ * A conifer's habit: whorls of boughs round a straight leader, widest at
+ * the bottom and narrowing up it, each bough a pad lying out from the
+ * leader and falling to a hem of hanging fingers. The build's `stem` is the
+ * bare trunk under the lowest whorl, `spread` the lowest whorl's reach and
+ * `droop` how far a bough falls for its reach.
+ */
+export interface Whorls {
+  /** Whorls up the leader. */
+  tiers: number;
+  /** Boughs in the lowest whorl; the top ones have fewer. */
+  pads: number;
+  /** A bough's half-width at its widest, against its reach. */
+  width: number;
+  /** How far its fingers hang under it, against the rise from one whorl to the next. */
+  hang: number;
+  /** Fingers round a bough's end. */
+  fingers: number;
+  /** How unevenly the boughs reach, 0 to 1. */
+  ragged: number;
+  /** The top whorl's reach against the lowest's. */
+  taper: number;
+  /** Where the live crown stops, as a share of the height: the leader above it dead (1: alive to the top). */
+  deadTop: number;
+  /** The dead leader snapped and bent over. */
+  broken: boolean;
+  /** Dead stubs of boughs on the bare trunk. */
+  stubs: number;
+  /** Share of the boughs gone from the whorls. */
+  gaps: number;
+  /** A pointed tuft on the leader over the top whorl. */
+  spire: boolean;
+  /** How low the lowest boughs hang, as a share of the height. */
+  hem: number;
+}
+
+/** One bough of a conifer, round its mass's middle. */
+export interface Pad {
+  /** From the mass's middle to where it leaves the leader. */
+  root: V3;
+  /** Its way out along the ground, a unit vector. */
+  d: V3;
+  reach: number;
+  /** Half-width at its widest. */
+  w: number;
+  /** How far its end falls below where it leaves the leader; for the tuft, how tall it stands. */
+  drop: number;
+  /** How far the needles hang under it at its end. */
+  hang: number;
+  fingers: number;
+  /** The tuft on the leader's top rather than a bough. */
+  spire?: boolean;
 }

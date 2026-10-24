@@ -8,10 +8,10 @@
  */
 import { HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from '../iso';
 import { KIT_INK, KIT_INK_W } from '../kit/core';
-import { cut, glyphPath, proj, type Eye } from '../runestone';
+import { cut, glyphPath, proj, RUNE_EDGE, RUNE_GOLD, RUNE_WHITE, type Eye } from '../runestone';
 import { mulberry32 } from '../../world/noise';
 import type { Light } from './light';
-import type { Clump, Dress, Limb, Ramp, RGB, Skeleton, Species3D, V3 } from './types';
+import type { Clump, Dress, Limb, Pad, Ramp, RGB, Skeleton, Species3D, V3 } from './types';
 import { add, cross, dot, hex, len, lerp, mixRgb, mul, rgb, sub, unit } from './vec';
 
 type Ctx = CanvasRenderingContext2D;
@@ -63,6 +63,7 @@ const turnOrder = (c: Clump): number => 0.55 * (1 - c.up) + 0.25 * (1 - c.out) +
 
 export function shownOf(job: Job): Shown[] {
   const { sk, spec, dress } = job;
+  if (spec.evergreen) return keptOf(job);
   const out: Shown[] = [];
   if (dress.full <= 0) return out;
   const one = (r: Ramp): Pick<Shown, 'ramp' | 'under' | 'over'> => ({ ramp: r, under: r, over: r });
@@ -543,6 +544,7 @@ type Item = { d: number; draw: () => void };
 
 export function paintTree3d(g: Ctx, job: Job): void {
   const { sk, e, dress, spec } = job;
+  if (spec.build.whorls) return paintWhorls(g, job);
   const near = (p: V3): number => dot(p, e.toward as V3);
   paintLitter(g, job, mulberry32(job.seed + 5));
   const shown = shownOf(job);
@@ -649,6 +651,7 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
   };
   for (const L of sk.limbs) { take(L.a, L.ra); take(L.b, L.rb); }
   for (const c of sk.clumps) take(c.c, c.r * 1.45);
+  for (const c of sk.clumps) if (c.pad) take(add(c.c, add(c.pad.root, [0, 0, -c.pad.drop - c.pad.hang * 1.6])), c.r * 0.5);
   // The litter round its foot.
   const reach = Math.min(16, sk.crown.r * 0.55) + 2;
   for (const a of [0, 1, 2, 3]) take([Math.cos(a * Math.PI / 2) * reach, Math.sin(a * Math.PI / 2) * reach, 0], 1);
@@ -672,4 +675,324 @@ export function footShade(g: Ctx, sk: Skeleton): void {
   g.ellipse(0, 0.5, r, r * 0.5, 0, 0, TAU);
   g.fill();
   g.restore();
+}
+
+/* ---- a conifer's whorls (`growWhorls`) ------------------------------------------------ */
+
+/** An evergreen's boughs as a day shows them: winter's darker leaf, summer's the rest of the year. */
+function keptOf(job: Job): Shown[] {
+  const { sk, spec, dress } = job;
+  const r = dress.season === 'winter' && spec.evergreen ? spec.evergreen.winter : spec.leaf.summer;
+  return sk.clumps.map((c) => ({ c, ramp: r, under: r, over: r, grown: 1 }));
+}
+
+/** A closed outline through `p`, rounded: a curve through each edge's middle bent by its corner, as the flat conifers' boughs are cut. */
+function roundPath(path: Path2D, p: Pt[]): void {
+  const n = p.length;
+  if (n < 3) return;
+  path.moveTo((p[0][0] + p[1][0]) / 2, (p[0][1] + p[1][1]) / 2);
+  for (let i = 1; i <= n; i++) {
+    const a = p[i % n], b = p[(i + 1) % n];
+    path.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+  }
+  path.closePath();
+}
+
+/**
+ * What a ring of points on the screen covers with something hanging `h`
+ * under each: along its top from its leftmost point to its rightmost, then
+ * back along its underside with each point let down; `under` marks which
+ * of the points are on the underside.
+ */
+function hung(q: Pt[], h: number[], under?: boolean[]): Pt[] {
+  const n = q.length;
+  let iL = 0, iR = 0;
+  for (let i = 1; i < n; i++) {
+    if (q[i][0] < q[iL][0]) iL = i;
+    if (q[i][0] > q[iR][0]) iR = i;
+  }
+  const chain = (from: number, to: number): number[] => {
+    const out = [from];
+    for (let i = from; i !== to;) {
+      i = (i + 1) % n;
+      out.push(i);
+    }
+    return out;
+  };
+  const A = chain(iL, iR), B = chain(iR, iL);
+  const avg = (c: number[]): number => c.reduce((s, i) => s + q[i][1], 0) / c.length;
+  const [top, low] = avg(A) <= avg(B) ? [A, B] : [B, A];
+  const out: Pt[] = top.map((i) => q[i]);
+  for (const i of low) out.push([q[i][0], q[i][1] + h[i]]);
+  if (under) {
+    under.length = n;
+    under.fill(false);
+    for (const i of low) under[i] = true;
+  }
+  return out;
+}
+
+/** A point round a bough's outline, in its own frame: `x` out from the leader, `y` across, `dz` under its top, `h` the needles hanging under it. */
+interface Rim { x: number; y: number; dz: number; h: number; finger: boolean }
+
+/**
+ * A bough's outline: narrow where it leaves the leader, widest past its
+ * middle, its end cut into fingers that hang lower than the rest, the
+ * needles under them hanging longest.
+ */
+function rimOf(p: Pad, R: () => number): Rim[] {
+  const L = p.reach, W = p.w, H = p.hang;
+  const wAt = (t: number): number => W * (0.22 + 0.78 * Math.sin(Math.PI * Math.min(1, t) * 0.8));
+  const out: Rim[] = [];
+  for (const t of [0, 0.2, 0.38]) out.push({ x: t * L, y: -wAt(t), dz: 0, h: H * (0.15 + 0.4 * t), finger: false });
+  const xc = 0.55 * L, rx = 0.45 * L + W * 0.08, ry = wAt(0.55);
+  const F = p.fingers;
+  const at = (a: number, k: number, dz: number, h: number, finger: boolean): void => {
+    out.push({ x: xc + Math.cos(a) * rx * k, y: Math.sin(a) * ry * k, dz, h, finger });
+  };
+  for (let j = 0; j <= F; j++) {
+    const a = -Math.PI / 2 + (Math.PI * j) / F;
+    const notch = 0.8 - 0.1 * R();
+    at(a, notch, 0, H * 0.18, false);
+    at(a, notch, 0, H * 0.18, false);
+    if (j === F) break;
+    const m = a + Math.PI / (2 * F), half = (Math.PI / (2 * F)) * 0.32;
+    const k = 1.08 + 0.14 * R();
+    const end = 0.3 + 0.7 * Math.cos(m);
+    const dz = -H * (0.2 + 0.25 * R()) * end;
+    const h = H * (0.9 + 0.6 * R()) * (0.55 + 0.45 * end);
+    at(m - half, k, dz, h, true);
+    at(m + half, k, dz, h * (0.9 + 0.2 * R()), true);
+  }
+  for (const t of [0.38, 0.2, 0]) out.push({ x: t * L, y: wAt(t), dz: 0, h: H * (0.15 + 0.4 * t), finger: false });
+  return out;
+}
+
+/** A bough or the top's tuft, ready to lay: its outline with the needles under it, its planes, and its ink. */
+interface Bough { d: number; out: Path2D; planes: Array<[Path2D, string]>; rim: string }
+
+/** How lit a face turned `n` is, as a mass is (`clumpLight`): wrapped round, the lower whorls in the upper ones' shade. */
+function faceLight(job: Job, n: V3, up: number): number {
+  const wrap = clamp01((dot(n, job.light.sun) + 0.3) / 1.3);
+  return (job.light.ambient + job.light.direct * wrap) * (0.7 + 0.3 * up);
+}
+
+function boughOf(job: Job, s: Shown, all: Path2D): Bough {
+  const { e, light, dress, spec } = job;
+  const c = s.c;
+  const p = c.pad as Pad;
+  const R = mulberry32(job.seed * 977 + Math.round(c.k * 1e6));
+  const root = add(c.c, p.root);
+  const top = s.ramp.length - 1;
+  const rimCol = rgb(mixRgb(hex(s.ramp[0]), KIT_INK, 0.7), 0.9);
+  const out = new Path2D();
+  const planes: Array<[Path2D, string]> = [];
+  const winter = dress.season === 'winter';
+  const snow = (l: number): string => rgb(mixRgb(hex('#c4d0e4'), hex('#fbfcff'), clamp01(l)));
+  if (p.spire) {
+    // The top: a narrow cone of needles on the leader, its hem hanging in fingers.
+    const apex = add(root, [0, 0, p.drop * 0.72]);
+    const K = 12;
+    const ring: Pt[] = [], h: number[] = [];
+    for (let k = 0; k < K; k++) {
+      const a = (k / K) * TAU + c.k * 3;
+      const r = p.reach * (k % 2 ? 0.8 : 1.05);
+      ring.push(proj(e, add(root, [Math.cos(a) * r, Math.sin(a) * r, k % 2 ? 0 : -p.hang * 0.3])));
+      h.push(p.hang * HEIGHT_SCALE * (k % 2 ? 0.25 : 0.7 + 0.4 * R()));
+    }
+    const q = proj(e, apex);
+    // Its underside: from the ring's leftmost point round the front to its rightmost, each point let down.
+    let iL = 0, iR = 0;
+    ring.forEach((pt, i) => { if (pt[0] < ring[iL][0]) iL = i; if (pt[0] > ring[iR][0]) iR = i; });
+    const run = (from: number, to: number): number[] => {
+      const o = [from];
+      for (let i = from; i !== to;) { i = (i + 1) % K; o.push(i); }
+      return o;
+    };
+    const A = run(iL, iR), B = run(iR, iL).reverse();
+    const avg = (c: number[]): number => c.reduce((t, i) => t + ring[i][1], 0) / c.length;
+    const under = (avg(A) >= avg(B) ? A : B).map((i): Pt => [ring[i][0], ring[i][1] + h[i]]);
+    const pts: Pt[] = [q, q, ...under];
+    roundPath(out, pts);
+    roundPath(all, pts);
+    const L = faceLight(job, [0, 0, 1], 1);
+    const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
+    planes.push([out, s.ramp[b]]);
+    const sun = sunOnScreen(job);
+    const lit = new Path2D();
+    const side = sun.sx >= 0 ? 1 : -1;
+    // The sunward half of it lit: the far half drawn in to the middle.
+    roundPath(lit, [q, q, ...under.map((pt): Pt => {
+      const dx = pt[0] - q[0];
+      return [q[0] + dx * (dx * side > 0 ? 0.88 : 0.12), q[1] + (pt[1] - q[1]) * 0.88];
+    })]);
+    if (!light.night || L > 0.6) planes.push([lit, winter ? snow(L) : s.ramp[b + 2]]);
+    return { d: dot(c.c, e.toward as V3), out, planes, rim: rimCol };
+  }
+  const d = p.d;
+  const side: V3 = [-d[1], d[0], 0];
+  const L = p.reach, W = p.w;
+  const at = (x: number, y: number, dz: number): V3 => {
+    const t = x / L;
+    const z = -p.drop * Math.pow(Math.max(0, t), 1.5) + L * 0.05 * Math.sin(Math.PI * t) - 0.3 * (y * y) / W + dz;
+    return [root[0] + d[0] * x + side[0] * y, root[1] + d[1] * x + side[1] * y, root[2] + z];
+  };
+  const rim = rimOf(p, R);
+  const q = rim.map((r) => proj(e, at(r.x, r.y, r.dz)));
+  const hs = rim.map((r) => r.h * HEIGHT_SCALE);
+  const under: boolean[] = [];
+  const outline = hung(q, hs, under);
+  roundPath(out, outline);
+  roundPath(all, outline);
+  // The light on its top, sloping out and down, and on the needles hanging off its end.
+  const slope = p.drop / L;
+  const nTop = unit([d[0] * slope, d[1] * slope, 1]);
+  const lt = faceLight(job, nTop, c.up);
+  const lh = faceLight(job, d, c.up);
+  const bt = Math.max(1, Math.min(top - 2, Math.round(lt * (top - 1.2))));
+  const bh = Math.max(0, Math.min(top - 3, Math.round(lh * (top - 1.2)) - 1));
+  planes.push([out, s.ramp[bh]]);
+  const face = new Path2D();
+  roundPath(face, q);
+  planes.push([face, s.ramp[bt + 1]]);
+  // The inner part of its top in the shade of the whorl over it.
+  if (c.up < 0.95) {
+    const inner = new Path2D();
+    const pts: Pt[] = [];
+    for (const r of rim) pts.push(proj(e, at(r.x * 0.48, r.y * 0.85, 0)));
+    roundPath(inner, pts);
+    planes.push([inner, s.ramp[Math.max(1, bt - 1)]]);
+  }
+  // The lit part of its top: toward the sun, out past the whorl over it.
+  const sx = light.sun[0], sy = light.sun[1];
+  const sl = Math.hypot(sx, sy) || 1;
+  const fx = (d[0] * sx + d[1] * sy) / sl, fy = (side[0] * sx + side[1] * sy) / sl;
+  const cx = L * (0.62 + 0.12 * fx), cy = W * 0.38 * fy;
+  const patch = (k: number, ky: number, lift: number, keep: (r: Rim) => boolean): Path2D => {
+    const pp = new Path2D();
+    const pts: Pt[] = [];
+    for (const r of rim) if (keep(r)) pts.push(proj(e, at(cx + (r.x - cx) * k, cy + (r.y - cy) * ky, r.dz * k + lift)));
+    roundPath(pp, pts);
+    return pp;
+  };
+  if (winter) {
+    planes.push([patch(0.78, 0.7, 0.25, () => true), snow(lt * 0.9)]);
+    if (!light.night) planes.push([patch(0.5, 0.45, 0.3, () => true), snow(lt * 1.25)]);
+  } else if (!light.night || lt > 0.6) {
+    planes.push([patch(0.74, 0.66, 0.05, () => true), s.ramp[Math.min(top, bt + 2)]]);
+    if (dot(nTop, light.sun) > 0.35 && !light.night) planes.push([patch(0.4, 0.38, 0.1, () => true), s.ramp[top]]);
+  }
+  // New growth on the ends of the fingers through the spring: along their tops, and where they hang in sight.
+  if (dress.season === 'spring') {
+    const tips = new Path2D();
+    const k = dress.step === 0 ? 0.88 : 0.74;
+    const pts: Pt[] = [];
+    const end = rim.filter((r) => r.finger);
+    for (const r of end) pts.push(proj(e, at(r.x, r.y, r.dz)));
+    for (let i = end.length - 1; i >= 0; i--) {
+      const r = end[i];
+      pts.push(proj(e, at(L * 0.55 + (r.x - L * 0.55) * k, r.y * k, r.dz * k)));
+    }
+    roundPath(tips, pts);
+    const f = dress.step === 0 ? 0.25 : 0.42;
+    for (let i = 0; i + 1 < rim.length; i++) {
+      if (!rim[i].finger || !rim[i + 1].finger || !under[i] || !under[i + 1]) continue;
+      const [a, b] = [q[i], q[i + 1]];
+      const [ha, hb] = [hs[i], hs[i + 1]];
+      roundPath(tips, [[a[0], a[1] + ha * (1 - f)], [a[0], a[1] + ha * 0.97], [b[0], b[1] + hb * 0.97], [b[0], b[1] + hb * (1 - f)]]);
+      i++;
+    }
+    planes.push([tips, spec.leaf.spring[Math.min(top, bt + 3)]]);
+  }
+  return { d: dot(c.c, e.toward as V3), out, planes, rim: rimCol };
+}
+
+/** A rune cut in the bark lit from inside at night, as the island's runes are. */
+function runeGlow(g: Ctx, job: Job): void {
+  const { sk, e } = job;
+  if (sk.rune === null || !job.light.night) return;
+  const at = onTrunk(job, sk.height * 0.12, sk.rune);
+  if (!at || at.seen <= 0.3) return;
+  const [x, y] = proj(e, at.p);
+  const tan: V3 = [-at.n[1], at.n[0], 0];
+  const [tx, ty] = projVec(e, tan);
+  const s = at.r * 0.5;
+  g.save();
+  g.transform(tx * s, ty * s, 0, -HEIGHT_SCALE * s, x, y);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  const stroke = (col: string, w: number): void => {
+    g.beginPath();
+    glyphPath(g, 'algiz', 0, 0, 1);
+    g.strokeStyle = col;
+    g.lineWidth = w;
+    g.stroke();
+  };
+  for (const [k, al] of [[2.2, 0.06], [1.6, 0.1], [1.15, 0.16], [0.8, 0.24]] as Array<[number, number]>) stroke(`rgba(255, 172, 72, ${al})`, k);
+  stroke(RUNE_EDGE, 0.36);
+  stroke(RUNE_GOLD, 0.25);
+  stroke(RUNE_WHITE, 0.12);
+  g.restore();
+}
+
+/**
+ * A conifer: its trunk a piece between each two whorls, and its boughs,
+ * laid back to front among them, so the boughs behind the leader go under
+ * it, those in front over it, and each whorl hangs over the one under it;
+ * the whole ruled round in ink first, as the broadleaves are.
+ */
+function paintWhorls(g: Ctx, job: Job): void {
+  const { sk, e } = job;
+  const near = (p: V3): number => dot(p, e.toward as V3);
+  const chains = chainsOf(job, false);
+  const all = new Path2D();
+  const boughs = keptOf(job).map((s) => boughOf(job, s, all));
+  g.strokeStyle = rgb(KIT_INK);
+  g.lineJoin = 'round';
+  g.lineCap = 'round';
+  g.lineWidth = KIT_INK_W * 2;
+  g.stroke(all);
+  for (const c of chains) {
+    if (c.thin) {
+      g.lineWidth = c.r[0] + c.r[c.r.length - 1] + KIT_INK_W * 2;
+      g.beginPath();
+      c.q.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
+      g.stroke();
+    } else {
+      g.lineWidth = KIT_INK_W * 2;
+      g.stroke(bandPath(c, 0, c.q.length - 1, -1, 1));
+      const [x, y] = c.q[c.q.length - 1];
+      g.beginPath();
+      g.arc(x, y, c.r[c.r.length - 1] + KIT_INK_W, 0, TAU);
+      g.fillStyle = rgb(KIT_INK);
+      g.fill();
+    }
+  }
+  const items: Item[] = [];
+  for (const c of chains) {
+    for (let j0 = 0; j0 < c.q.length - 1; j0++) {
+      const L = sk.limbs[c.pieces[j0]];
+      const R = mulberry32(job.seed + c.pieces[j0] * 13);
+      items.push({ d: near(lerp(L.a, L.b, 0.5)) - (c.order <= 0 ? 0.5 : 0), draw: () => paintChain(g, job, c, j0, j0 + 1, R) });
+    }
+  }
+  for (const b of boughs) {
+    items.push({
+      d: b.d,
+      draw: () => {
+        for (const [p, col] of b.planes) {
+          g.fillStyle = col;
+          g.fill(p);
+        }
+        g.strokeStyle = b.rim;
+        g.lineWidth = KIT_INK_W;
+        g.lineJoin = 'round';
+        g.stroke(b.out);
+      },
+    });
+  }
+  items.sort((a, b) => a.d - b.d);
+  for (const it of items) it.draw();
+  paintCarving(g, job);
+  runeGlow(g, job);
 }
