@@ -2151,10 +2151,15 @@ export class Game {
 
   /** Whether a step from one tile to the next leaves the player under a bridge's deck. */
   walksUnder(x0: number, y0: number, x1: number, y1: number): boolean {
+    return this.underAfter(x0, y0, x1, y1, this.underDeck);
+  }
+
+  /** Whether a step from one tile to the next leaves a body under a bridge's deck, it having been under one before it (`was`) or not. */
+  underAfter(x0: number, y0: number, x1: number, y1: number, was: boolean): boolean {
     if (!this.onWalkedDeck(x1, y1)) return false;
     const b = this.bridgeAt(x1, y1);
     // From a tile of the same deck, as it was; from one of its ends, onto it; from anywhere else, in under it.
-    if (b && this.bridgeAt(x0, y0) === b) return this.underDeck;
+    if (b && this.bridgeAt(x0, y0) === b) return was;
     return !(b && this.onBridge(b, x0, y0));
   }
 
