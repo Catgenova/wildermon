@@ -1290,8 +1290,10 @@ const STEPS = Array.from({ length: 21 }, (_, q) => 0.5 * 2 ** (q / 4));
  * pictures in the same moment; past this, a body waiting for its next one
  * keeps the nearest one before it that is drawn, and the pictures fill in over
  * the next few frames rather than all in one. None waits longer than `WAIT`
- * seconds, so a body kept waiting in a crowd still moves, if less often,
- * rather than standing frozen while others are drawn.
+ * seconds while there is a second allowance left (`WAITED`), so a body kept
+ * waiting in a crowd still moves, if less often, rather than standing frozen
+ * while others are drawn; past that, the longest waiting are drawn first in the
+ * next frame, as each has waited since it last had one.
  *
  * Counted by the frame (`beastFrame`), not by the sixtieth of a second: by
  * the clock, a frame slowed by new pictures was given a fresh allowance every
@@ -1300,19 +1302,37 @@ const STEPS = Array.from({ length: 21 }, (_, q) => 0.5 * 2 ** (q / 4));
  */
 const ALLOWANCE = 4;
 const WAIT = 0.4;
+/** How many allowances a frame may spend on bodies waited past `WAIT`: without a bound, a crowd of them slowed every frame past it, and every body in it waited past it again. */
+const WAITED = 2;
 let spent = 0, since = 0, framed = false;
+/**
+ * Since when the longest waiting body kept waiting past `WAIT` last frame has
+ * waited, and the bar this frame: only a body waiting since about then may go
+ * past the allowance, so that the bodies drawn first in a frame are not always
+ * the ones drawn.
+ */
+let deniedSince = Infinity, waitBar = Infinity;
 /** Once a frame, from the renderer: a new allowance for new pictures. */
 export function beastFrame(): void {
   framed = true;
   spent = 0;
+  waitBar = deniedSince + WAIT / 4;
+  deniedSince = Infinity;
 }
-function drawingAllowed(): boolean {
+/** Whether a body waiting since `waiting` may have its new picture drawn past this frame's allowance. */
+function waitedOut(waiting: number | undefined, now: number): boolean {
+  if (waiting === undefined || now - waiting <= WAIT) return false;
+  if (waiting <= waitBar && drawingAllowed(WAITED)) return true;
+  deniedSince = Math.min(deniedSince, waiting);
+  return false;
+}
+function drawingAllowed(allowances = 1): boolean {
   // Drawn with no renderer counting frames (`beastFrame`): by the clock, a sixtieth of a second as a frame.
   if (!framed) {
     const now = performance.now();
     if (now - since > 16) { since = now; spent = 0; }
   }
-  return spent < ALLOWANCE;
+  return spent < ALLOWANCE * allowances;
 }
 
 /**
@@ -1733,7 +1753,7 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   // Over this moment's allowance for new pictures, the nearest one before it that is already drawn does, for now; or, a zoom
   // under way, the same one drawn at a scale near this, stretched to it. But not for longer than `WAIT`.
   const h = id ? held.get(id) : undefined;
-  if (!f && !drawingAllowed() && !(h?.waiting !== undefined && now - h.waiting > WAIT)) {
+  if (!f && !drawingAllowed() && !waitedOut(h?.waiting, now)) {
     for (let back = 1, last = i; back < count && !f; back++) {
       const j = before(back);
       if (j === last) continue;
