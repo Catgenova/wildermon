@@ -29,8 +29,8 @@ export const sandstone = classical({
   newelFinial: 'ball',
   roundels: true,
   paint: {
-    wall: roundelPaint(slabPaint({ courses: [4.6, 3.2], len: 9, vary: 0.4, tint: 0.07, beds: BEDS, iron: IRON }), ROSE.lit),
-    pier: slabPaint({ courses: [4.6, 3.2], len: 8, vary: 0.4, tint: 0.07, beds: BEDS, iron: IRON, salt: 5 }),
+    wall: roundelPaint(slabPaint({ courses: [4.6, 3.2], len: 9, vary: 0.4, tint: 0.1, beds: BEDS, iron: IRON }), ROSE.lit),
+    pier: slabPaint({ courses: [4.6, 3.2], len: 8, vary: 0.4, tint: 0.1, beds: BEDS, iron: IRON, salt: 5 }),
     parapet: slabPaint({ courses: [3.4, 2.6], len: 8, vary: 0.4, tint: 0.07, beds: BEDS, salt: 9 }),
     ring: ringPaint(HONEY.lit, 0.55),
     key: keystonePaint('sunDot'),

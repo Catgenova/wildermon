@@ -137,85 +137,82 @@ export interface SlabOpts {
   salt?: number;
 }
 
-/** Ashlar of blocks laid in courses, each block its own hair of tone, veined or bedded. */
+/** Ashlar of blocks laid in courses, each block its own hair of tone, veined or bedded: each kind of mark one path, laid at once. */
 export function slabPaint(o: SlabOpts): BridgePainter {
   const period = o.courses.reduce((a, b) => a + b, 0);
   return (g, k, f) => {
-    const dark = css(mix(k.fill, DUSK, o.joint ?? 0.36), 0.85);
-    const lite = css(mix(k.fill, CREAM, 0.7), 0.7);
     const x0 = f.x0, x1 = f.x1;
     const salt = o.salt ?? 0;
     const tint = o.tint ?? 0.07;
-    const lift = css(mix(k.fill, CREAM, 0.6), 1);
-    const sink = css(mix(k.fill, DUSK, 0.5), 1);
+    // A block a step paler or deeper, in two strengths each.
+    const tints = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
+    const joints = new Path2D(), beds = new Path2D(), veins = new Path2D(), iron = new Path2D(), lites = new Path2D();
     let y = Math.floor(f.y0 / period) * period, row = Math.floor(f.y0 / period) * o.courses.length;
-    g.lineCap = 'round';
     while (y < f.y1) {
       const ch = o.courses[((row % o.courses.length) + o.courses.length) % o.courses.length];
       // The joints of this course: a block every `len`, each wandering by `vary`, a half block over the course below.
       const off = (row & 1) * o.len * 0.5;
       const c0 = Math.floor((x0 - off) / o.len) - 1, c1 = Math.ceil((x1 - off) / o.len) + 1;
       const jx = (c: number): number => c * o.len + off + (o.vary ? (hash(c, row, salt) - 0.5) * o.len * o.vary : 0);
-      for (let c = c0; c < c1; c++) {
-        const a = jx(c), b = jx(c + 1);
-        if (b < x0 || a > x1) continue;
-        const v = hash(c, row, salt + 7);
-        const tn = (v - 0.5) * 2 * tint;
-        g.fillStyle = tn > 0 ? lift : sink;
-        g.globalAlpha = Math.min(1, Math.abs(tn) * 2.2);
-        g.fillRect(a, y, b - a, ch);
-        g.globalAlpha = 1;
-        if (o.iron && v > 0.93) {
-          g.fillStyle = css(mix(k.fill, o.iron, 0.3), 0.8);
-          g.fillRect(a, y + ch * 0.35, b - a, ch * 0.3);
-        }
-        if (o.beds) {
-          g.strokeStyle = css(mix(k.fill, o.beds, 0.22), 0.7);
-          g.lineWidth = 0.14;
-          const nb = 2 + Math.floor(hash(c, row, salt + 3) * 2);
-          for (let q = 1; q <= nb; q++) {
-            const yy = y + (ch * q) / (nb + 1) + (hash(c, row * 7 + q, salt) - 0.5) * 0.4;
-            g.beginPath();
-            g.moveTo(a + 0.4, yy);
-            g.quadraticCurveTo((a + b) / 2, yy + (hash(q, c, row) - 0.5) * 0.8, b - 0.4, yy + (hash(c, q, row) - 0.5) * 0.4);
-            g.stroke();
+      if (y + ch > f.y0) {
+        for (let c = c0; c < c1; c++) {
+          const a = jx(c), b = jx(c + 1);
+          if (b < x0 || a > x1) continue;
+          const v = hash(c, row, salt + 7);
+          const tn = (v - 0.5) * 2;
+          if (Math.abs(tn) > 0.3) tints[(tn > 0 ? 0 : 2) + (Math.abs(tn) > 0.7 ? 1 : 0)].rect(a, y, b - a, ch);
+          if (o.iron && v > 0.93) iron.rect(a, y + ch * 0.35, b - a, ch * 0.3);
+          if (o.beds) {
+            const nb = 2 + Math.floor(hash(c, row, salt + 3) * 2);
+            for (let q = 1; q <= nb; q++) {
+              const yy = y + (ch * q) / (nb + 1) + (hash(c, row * 7 + q, salt) - 0.5) * 0.4;
+              beds.moveTo(a + 0.4, yy);
+              beds.quadraticCurveTo((a + b) / 2, yy + (hash(q, c, row) - 0.5) * 0.8, b - 0.4, yy + (hash(c, q, row) - 0.5) * 0.4);
+            }
           }
-        }
-        if (o.vein && v < (o.veined ?? 0.45)) {
-          // A vein: a thread that crinkles across the block, a lesser one off it.
-          const T = (i: number): number => hash(c * 13 + i, row * 7 + i, salt + 11);
-          let px = a + (b - a) * T(1), py = y + ch * T(2);
-          let ang = (T(3) - 0.5) * 1.6 + (T(4) < 0.5 ? 0 : Math.PI);
-          const step = (b - a) / 4.5;
-          g.beginPath();
-          g.moveTo(px, py);
-          for (let i = 0; i < 6; i++) {
-            ang += (T(10 + i) - 0.5) * 1.1;
-            px += Math.cos(ang) * step;
-            py += Math.sin(ang) * step * 0.45;
-            g.lineTo(px, py);
+          if (o.vein && v < (o.veined ?? 0.45)) {
+            // A vein: a thread that crinkles across the block.
+            const T = (i: number): number => hash(c * 13 + i, row * 7 + i, salt + 11);
+            let px = a + (b - a) * T(1), py = y + ch * T(2);
+            let ang = (T(3) - 0.5) * 1.6 + (T(4) < 0.5 ? 0 : Math.PI);
+            const step = (b - a) / 4.5;
+            veins.moveTo(px, py);
+            for (let i = 0; i < 6; i++) {
+              ang += (T(10 + i) - 0.5) * 1.1;
+              px += Math.cos(ang) * step;
+              py += Math.sin(ang) * step * 0.45;
+              veins.lineTo(px, py);
+            }
           }
-          g.strokeStyle = css(mix(k.fill, o.vein, 0.55), 0.75);
-          g.lineWidth = 0.26;
-          g.stroke();
-          g.strokeStyle = css(mix(k.fill, o.vein, 0.25), 0.45);
-          g.lineWidth = 0.7;
-          g.stroke();
+          joints.moveTo(a, y); joints.lineTo(a, y + ch);
         }
-        // The upright joint.
-        g.strokeStyle = dark;
-        g.lineWidth = 0.3;
-        g.beginPath(); g.moveTo(a, y); g.lineTo(a, y + ch); g.stroke();
       }
-      g.strokeStyle = dark;
-      g.lineWidth = 0.22;
-      g.beginPath(); g.moveTo(x0 - 1, y); g.lineTo(x1 + 1, y); g.stroke();
-      g.strokeStyle = lite;
-      g.lineWidth = 0.18;
-      g.beginPath(); g.moveTo(x0 - 1, y - 0.3); g.lineTo(x1 + 1, y - 0.3); g.stroke();
+      joints.moveTo(x0 - 1, y); joints.lineTo(x1 + 1, y);
+      lites.moveTo(x0 - 1, y - 0.3); lites.lineTo(x1 + 1, y - 0.3);
       y += ch;
       row++;
     }
+    const strengths = [tint * 1.1, tint * 2.2];
+    g.fillStyle = css(mix(k.fill, CREAM, 0.6));
+    g.globalAlpha = strengths[0]; g.fill(tints[0]);
+    g.globalAlpha = strengths[1]; g.fill(tints[1]);
+    g.fillStyle = css(mix(k.fill, DUSK, 0.5));
+    g.globalAlpha = strengths[0]; g.fill(tints[2]);
+    g.globalAlpha = strengths[1]; g.fill(tints[3]);
+    g.globalAlpha = 1;
+    if (o.iron) { g.fillStyle = css(mix(k.fill, o.iron, 0.3), 0.8); g.fill(iron); }
+    g.lineCap = 'round';
+    if (o.beds) { g.strokeStyle = css(mix(k.fill, o.beds, 0.22), 0.7); g.lineWidth = 0.14; g.stroke(beds); }
+    if (o.vein) {
+      g.strokeStyle = css(mix(k.fill, o.vein, 0.25), 0.45); g.lineWidth = 0.7; g.stroke(veins);
+      g.strokeStyle = css(mix(k.fill, o.vein, 0.55), 0.75); g.lineWidth = 0.26; g.stroke(veins);
+    }
+    g.strokeStyle = css(mix(k.fill, DUSK, o.joint ?? 0.36), 0.85);
+    g.lineWidth = 0.26;
+    g.stroke(joints);
+    g.strokeStyle = css(mix(k.fill, CREAM, 0.7), 0.7);
+    g.lineWidth = 0.18;
+    g.stroke(lites);
   };
 }
 
@@ -347,23 +344,27 @@ export const panelPaint: BridgePainter = (g, k, f) => {
 export function flagPaint(along: number, across: number, tint = 0.06): BridgePainter {
   return (g, k, f) => {
     const inf = f as Info;
-    const dark = css(mix(k.fill, DUSK, 0.28), 0.6);
     const r0 = Math.floor(f.y0 / across), r1 = Math.ceil(f.y1 / across);
-    g.lineWidth = 0.18;
+    const pale = new Path2D(), deep = new Path2D(), joints = new Path2D();
     for (let r = r0; r < r1; r++) {
       const y = r * across;
       const off = (r & 1) * along * 0.5;
       for (let c = Math.floor((f.x0 - off) / along); c * along + off < f.x1; c++) {
         const x = c * along + off;
         const v = hash(c, r, 5) - 0.5;
-        g.fillStyle = css(v > 0 ? mix(k.fill, CREAM, 0.5) : mix(k.fill, DUSK, 0.3), Math.abs(v) * tint * 6);
-        g.fillRect(x, y, along, across);
-        g.strokeStyle = dark;
-        g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + across); g.stroke();
+        if (v > 0.15) pale.rect(x, y, along, across);
+        else if (v < -0.15) deep.rect(x, y, along, across);
+        joints.moveTo(x, y); joints.lineTo(x, y + across);
       }
-      g.strokeStyle = dark;
-      g.beginPath(); g.moveTo(f.x0 - 1, y); g.lineTo(f.x1 + 1, y); g.stroke();
+      joints.moveTo(f.x0 - 1, y); joints.lineTo(f.x1 + 1, y);
     }
+    g.fillStyle = css(mix(k.fill, CREAM, 0.5), tint * 2.5);
+    g.fill(pale);
+    g.fillStyle = css(mix(k.fill, DUSK, 0.3), tint * 2.5);
+    g.fill(deep);
+    g.strokeStyle = css(mix(k.fill, DUSK, 0.28), 0.6);
+    g.lineWidth = 0.18;
+    g.stroke(joints);
     if (f.role === 'tread' && inf.up !== undefined) {
       const front = inf.up ? f.x0 : f.x1, back = inf.up ? f.x1 : f.x0, d = inf.up ? 1 : -1;
       g.fillStyle = css(mix(k.fill, CREAM, 0.7), 0.9);
@@ -618,10 +619,8 @@ function layoutOf(plan: Plan): { posts: Array<[number, number]>; gaps: Array<[nu
   const stops: Array<[number, number]> = [[-1, 2 * NEWEL], [plan.n - 2 * NEWEL, plan.n + 1]];
   const posts: Array<[number, number]> = [];
   const refuges = refugeGaps(plan);
-  for (const [g0, g1] of refuges) {
-    stops.push([g0, g1]);
-    posts.push([g0 - 2 * POST, g0], [g1, g1 + 2 * POST]);
-  }
+  // A refuge's side walls end the runs either side of it.
+  for (const [g0, g1] of refuges) stops.push([g0, g1]);
   for (let i = 0; i < plan.n; i++) {
     const s = i + 0.5;
     const near = [...stops, ...posts].some(([a, b]) => s + POST > a - 0.22 && s - POST < b + 0.22);
@@ -696,16 +695,18 @@ function parapetLine(k: Kit, cfg: Classical, part: Part3, edge: number, tOut: nu
     }
     k.glow.lines.push([k.m([sa, lt, railLow(sa) + coping * 0.5]), k.m([sb, lt, railLow(sb) + coping * 0.5])]);
   }
-  // Posts (dies on a solid parapet), each with a cap over the coping and its finial.
+  // Posts (dies on a solid parapet), each with a cap over the coping and its finial: proud of the parapet's
+  // faces, so laid in the slice widened to take them in.
+  const kw: Kit = { ...k, sl: { ...sl, t0: sl.t0 - 0.1, t1: sl.t1 + 0.1 } };
   const inRuns = (s: number): boolean => runs.some((r) => s >= r.sa - 1e-6 && s <= r.sb + 1e-6);
   for (const [p0, p1] of posts) {
     const sp = (p0 + p1) / 2;
     if (sp < sl.s0 - 1e-6 || sp >= sl.s1 - 1e-6 || !inRuns(sp)) continue;
     const solid = cfg.parapet === 'solid';
     const dt = solid ? 0.02 : 0.01;
-    box(k, part, p0, p1, t0 - dt, t1 + dt, treadAt(plan, sp), railLow(sp) + (solid ? coping : 0), cfg.posts === 'trim' ? st.trim : st.stone, 'post', order + 0.5);
+    box(kw, part, p0, p1, t0 - dt, t1 + dt, treadAt(plan, sp), railLow(sp) + (solid ? coping : 0), cfg.posts === 'trim' ? st.trim : st.stone, 'post', order + 0.5);
     const capZ = railLow(sp) + coping;
-    box(k, part, p0 - 0.012, p1 + 0.012, t0 - dt - 0.012, t1 + dt + 0.012, capZ, capZ + 1.3, st.trim, 'cap', order + 1.6);
+    box(kw, part, p0 - 0.012, p1 + 0.012, t0 - dt - 0.012, t1 + dt + 0.012, capZ, capZ + 1.3, st.trim, 'cap', order + 1.6);
     const tc = (t0 + t1) / 2;
     const fin = cfg.finial === 'urn' ? URN : BALL;
     const sc = cfg.finial === 'urn' ? 0.55 : 0.8;
@@ -810,7 +811,7 @@ function refugesOf(k: Kit, cfg: Classical): void {
       parapetLine(k2, cfg, part, edge, tFront, runs, posts, [[p.s - w + 2 * POST, p.s + w - 2 * POST]], 2);
       const H = cfg.parapetHeight;
       for (const s0 of [p.s - w, p.s + w - 2 * POST]) {
-        const [u0, u1] = edge > 0 ? [t, tFront - 0.1] : [tFront + 0.1, t];
+        const [u0, u1] = edge > 0 ? [t - 0.1, tFront - 0.1] : [tFront + 0.1, t + 0.1];
         box(k2, part, s0, s0 + 2 * POST, u0, u1, z, z + H - 1.7, st.stone, 'parapet', 2);
         box(k2, part, s0 - 0.012, s0 + 2 * POST + 0.012, u0, u1, z + H - 1.7, z + H, st.trim, 'cap', 2.1);
       }
