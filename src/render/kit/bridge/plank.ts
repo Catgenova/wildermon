@@ -800,6 +800,7 @@ const plankCarpentry: Carpentry = {
   stringerW: 1.7,
   stringerRole: 'plinth',
   tallX: true,
+  noGirts: true,
   cap: 1.5,
   brace: 1.7,
   postTone: () => P.post,

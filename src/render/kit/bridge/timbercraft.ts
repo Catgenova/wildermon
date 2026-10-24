@@ -230,8 +230,8 @@ const herringbone: BridgePainter = (g, k, f) => {
   g.strokeStyle = css(mix(k.fill, [255, 250, 240], 0.4), 0.35);
   g.lineWidth = 1.6;
   g.stroke(gloss);
-  g.strokeStyle = css(mix(k.fill, hex('#5a3a48'), 0.35), 0.6);
-  g.lineWidth = 0.16;
+  g.strokeStyle = css(mix(k.fill, hex('#5a3a48'), 0.45), 0.85);
+  g.lineWidth = 0.24;
   g.stroke(slant);
   g.strokeStyle = css(mix(k.fill, hex('#4a3040'), 0.5), 0.85);
   g.lineWidth = 0.3;
