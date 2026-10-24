@@ -1,7 +1,7 @@
 import { css, hex, mix, type Tone } from '../core';
 import { box, BUILDERS, byRole, ownerOf, REFUGE_OUT, refugeHalf, refugeOutline, runeLine, turned, U, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
 import { stoneBase } from './base';
-import { arcade, brickPaint, cface, fi, herringbonePaint, lampPost, ringPaint, runeKey, seen, tilePaint, vaultPaint } from './clay';
+import { arcade, brickPaint, cface, fi, herringbonePaint, lampPost, refuged, ringPaint, runeKey, seen, whole, tilePaint, vaultPaint } from './clay';
 
 /**
  * Clay bricks: the brick of the island's brick houses (`BRICK` in
@@ -43,7 +43,7 @@ function parapet(k0: Kit, edge: number, part: Part3): void {
   const k: Kit = { ...k0, st: { ...k0.st, stone: DEEP } };
   BUILDERS.parapet(k, edge, part);
   const { plan, sl, st } = k;
-  if (plan.width >= 2) return;
+  if (plan.width >= 2 || plan.ramp) return;
   const H = st.parapetHeight ?? 10;
   const tOut = edge > 0 ? sl.t1 : sl.t0;
   const ta = tOut + edge * 0.024, tb = tOut - edge * 0.112;
@@ -82,13 +82,15 @@ const toward = (line: ST[], c: ST, fs: number, ft: number): ST[] => line.map(([s
  * cornice's, and round it a wall of the parapet's brick under the dark
  * coping, the parapet's rune line along it; at three lanes a lamp in it.
  */
-function refuges(k: Kit): void {
-  const { plan, sl, st } = k;
+function refuges(k0: Kit): void {
+  const { plan, sl, st } = k0;
+  if (!refuged(plan)) return;
   const H = st.parapetHeight ?? 10, T = 0.09, cop = 1.6;
   for (const p of plan.piers) {
     if (p.end) continue;
     const half = refugeHalf(p);
-    if (p.s + half < sl.s0 - 0.02 || p.s - half > sl.s1 + 0.02) continue;
+    const k = whole(k0, p.s - half, p.s + half);
+    if (!k) continue;
     const z = plan.deck(p.s), zb = z - plan.thick - 1.4;
     for (const edge of sl.edges) {
       const t = edge > 0 ? sl.t1 : sl.t0;
@@ -115,18 +117,20 @@ function refuges(k: Kit): void {
         const ends = i === 0 || i === line.length - 1;
         return ends ? [s0 + (i === 0 ? T : -T) * 1.2, t0 - edge * T] : [s0 + (s0 < p.s ? T : -T) * 0.6, t0 - edge * T];
       });
-      k.solid(part, 2);
-      upright(k, part, line, z, z + H - cop, DEEP, c, 'parapet', 3);
-      upright(k, part, inner, z, z + H - cop, DEEP, [c[0], c[1] + edge * 2], 'parapet', 5);
+      // Each run of it a solid of its own, its coping over it: they are seen past one another round the bay.
       const zc = z + H;
-      k.solid(part, 2.1);
+      const grow = (pt: ST, from: ST, d: number): ST => { const l = Math.hypot(pt[0] - from[0], pt[1] - from[1]) || 1; return [pt[0] + ((pt[0] - from[0]) / l) * d, pt[1] + ((pt[1] - from[1]) / l) * d]; };
       for (let q = 0; q + 1 < line.length; q++) {
         const o0 = line[q], o1 = line[q + 1], i0 = inner[q], i1 = inner[q + 1];
-        const grow = (pt: ST, from: ST, d: number): ST => { const l = Math.hypot(pt[0] - from[0], pt[1] - from[1]) || 1; return [pt[0] + ((pt[0] - from[0]) / l) * d, pt[1] + ((pt[1] - from[1]) / l) * d]; };
+        k.solid(part, 2);
+        upright(k, part, [o0, o1], z, zc - cop, DEEP, c, 'parapet', 3 + q);
+        upright(k, part, [i0, i1], z, zc - cop, DEEP, [c[0], c[1] + edge * 2], 'parapet', 7 + q);
         const [O0, O1] = [grow(o0, i0, 0.012), grow(o1, i1, 0.012)], [I0, I1] = [grow(i0, o0, 0.012), grow(i1, o1, 0.012)];
+        k.solid(part, 2.1);
         cface(k, part, [[O0[0], O0[1], zc], [O1[0], O1[1], zc], [I1[0], I1[1], zc], [I0[0], I0[1], zc]], [0, 0, 1], st.trim);
         upright(k, part, [O0, O1], zc - cop, zc, st.trim, c, 'cap', q);
-        const a = Math.max(Math.min(o0[0], o1[0]), sl.s0), b = Math.min(Math.max(o0[0], o1[0]), sl.s1);
+        upright(k, part, [I0, I1], zc - cop, zc, st.trim, [c[0], c[1] + edge * 2], null, q);
+        const a = Math.min(o0[0], o1[0]), b = Math.max(o0[0], o1[0]);
         if (b > a + 1e-4) {
           const tAt = (s0: number): number => o0[1] + ((o1[1] - o0[1]) * (s0 - o0[0])) / ((o1[0] - o0[0]) || 1e-6);
           k.glow.lines.push([k.m([a, tAt(a) + edge * 0.004, zc - cop * 0.5]), k.m([b, tAt(b) + edge * 0.004, zc - cop * 0.5])]);

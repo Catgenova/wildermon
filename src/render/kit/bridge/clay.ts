@@ -66,8 +66,23 @@ export function groundLine(k: Kit, t: number): (p: L) => number {
   return (p) => p[2] - (g0 + ((g1 - g0) * (p[0] - sl.s0)) / Math.max(1e-6, sl.s1 - sl.s0));
 }
 
+/** Whether a bridge has refuges over its piers: two lanes or more, and not a ramp (`refugeGaps`). */
+export const refuged = (plan: Plan): boolean => refugeGaps(plan).length > 0;
+
 /** Whether an outer edge is the one toward the eye: what stands out from the far one, under the deck, is hidden by the bridge. */
 export const seen = (k: Kit, edge: number): boolean => k.sl.near === edge;
+
+/**
+ * The kit for something drawn whole from `a` to `b` along the bridge by the
+ * one slice that owns it (`ownerOf`, the nearer the eye where it straddles a
+ * cut, which is laid after the other): its run widened to take it in, or
+ * null in the slice that does not own it. A refuge over a pier on a cut is
+ * then never half under the next slice's vault.
+ */
+export function whole(k: Kit, a: number, b: number): Kit | null {
+  if (ownerOf(k, a, b) === null) return null;
+  return { ...k, sl: { ...k.sl, s0: Math.min(k.sl.s0, a - 0.05), s1: Math.max(k.sl.s1, b + 0.05) } };
+}
 
 /** A face cut to the slice. */
 export function cface(k: Kit, part: Part3, pts: L[], out: L, tone: Tone, info?: FaceInfo, frame?: { o: L; a: L; b: L }): void {
@@ -262,7 +277,7 @@ export function arcade(look: ArcadeLook): (k: Kit) => void {
         keystone(k, edge, t, arc, D, look);
       }
       if (look.quoins) quoins(k, edge, t, look.quoins(st), D);
-      if (look.pier === 'cutwater') { if (!(look.refugePier && plan.width >= 2)) cutwaters(k, edge, t, D); }
+      if (look.pier === 'cutwater') { if (!(look.refugePier && refuged(plan))) cutwaters(k, edge, t, D); }
       else buttresses(k, edge, t, D);
     }
     // Across the lane: the lower tier's top in the vault's shade, the vault under each arch, and the pier sides facing into the bay.
@@ -310,8 +325,12 @@ export function arcade(look: ArcadeLook): (k: Kit) => void {
         for (const [z0, z0b, z1] of tops) {
           if (z1 - Math.max(z0, z0b) < 0.1) continue;
           k.solid('back', -1);
-          k.face('back', [[s, sl.t0, z0], [s, sl.t1, z0b], [s, sl.t1, z1], [s, sl.t0, z1]], [dirn, 0, 0], st.stone,
-            fi('pier', sl.t0 * U, sl.t1 * U, Math.min(z0, z0b), z1, Math.round(s * 10)), { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+          // Under a ramp the arcade is two walls along the outer edges, the deck vaulted between: a pier's side only as deep as its wall.
+          for (const [ta, tb] of plan.ramp ? rampReturns(plan, sl) : [[sl.t0, sl.t1]]) {
+            const za = ta === sl.t0 ? z0 : z0b, zb = tb === sl.t1 ? z0b : z0;
+            k.face('back', [[s, ta, za], [s, tb, zb], [s, tb, z1], [s, ta, z1]], [dirn, 0, 0], st.stone,
+              fi('pier', ta * U, tb * U, Math.min(za, zb), z1, Math.round(s * 10)), { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+          }
         }
       }
       // Two tiers: the lower arch's sides, from the ground to its springing, where the pier is the thicker under the course.
@@ -327,7 +346,39 @@ export function arcade(look: ArcadeLook): (k: Kit) => void {
         }
       }
     }
+    // Under a ramp, each wall's inner face over its arches and down its piers, and the wall's underside over each arch.
+    if (plan.ramp) {
+      for (const edge of sl.edges) {
+        const ti = edge > 0 ? sl.t1 - RAMP_WALL : sl.t0 + RAMP_WALL;
+        k.solid('back', -0.8);
+        const bot: L[] = [], topl: L[] = [];
+        for (let j = 0; j + 1 < xs.length; j++) {
+          const a = xs[j], b = xs[j + 1], mid = (a + b) / 2;
+          const open = inOpening(plan, mid), sh = shapeOf(plan, bayAt(plan, mid), D);
+          const z = (s: number): number => (open ? sh.arch(s) : plan.ground(s, ti) - 0.5);
+          bot.push([a, ti, z(a)], [b, ti, z(b)]);
+          topl.push([a, ti, deckBottom(a)], [b, ti, deckBottom(b)]);
+          if (open) {
+            const [t0, t1] = edge > 0 ? [ti, sl.t1] : [sl.t0, ti];
+            k.face('back', [[a, t0, z(a)], [b, t0, z(b)], [b, t1, z(b)], [a, t1, z(a)]], [0, 0, -1], st.stone);
+          }
+        }
+        const wall = [...bot, ...topl.reverse()];
+        const zs = wall.map((q) => q[2]);
+        k.face('back', wall, [0, -edge, 0], st.stone, fi('wall', sl.s0 * U, sl.s1 * U, Math.min(...zs), Math.max(...zs), sl.i), wallFrame(ti, -edge));
+      }
+    }
   };
+}
+
+/** How deep each of a ramp's two arcaded walls is, across the bridge, in tiles (as the core's). */
+const RAMP_WALL = 0.2;
+/** The runs across a slice a ramp's pier side stands in: within its walls' depth of each outer edge it has. */
+function rampReturns(plan: Plan, sl: Kit['sl']): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  if (sl.t0 <= plan.tLo + EPS) out.push([sl.t0, Math.min(sl.t1, sl.t0 + RAMP_WALL)]);
+  if (sl.t1 >= plan.tHi - EPS) out.push([Math.max(sl.t0, sl.t1 - RAMP_WALL), sl.t1]);
+  return out;
 }
 
 /** A ring of voussoirs proud of the wall, as deep at its springing as at its crown: its face, the top of it and, on the near face, its soffit. */
@@ -503,7 +554,9 @@ function cutwaters(k: Kit, edge: number, t: number, D: number): void {
     if (p.s < sl.s0 - p.half - EPS || p.s > sl.s1 + p.half + EPS) continue;
     const bay = bayAt(plan, p.s - 0.01);
     const sh = shapeOf(plan, bay, D);
-    const top = plan.width >= 2 ? plan.deck(p.s) - plan.thick - 1.4 : springOf(sh.lower ?? sh.upper) + 1;
+    const spring = springOf(sh.lower ?? sh.upper);
+    // Up to the refuge it carries, or over the springing; under a ramp's run of arches a short one at the foot.
+    const top = refuged(plan) ? plan.deck(p.s) - plan.thick - 1.4 : plan.ramp ? Math.min(p.foot + 7.5, spring) : spring + 1;
     const nose = 0.2;
     // Not where the arches spring from the ground: a cutwater there is a stub.
     if (top - (plan.ground(p.s, t) - 0.5) < 6) continue;
@@ -515,7 +568,7 @@ function cutwaters(k: Kit, edge: number, t: number, D: number): void {
       k.solid('front', k.ord(edge, 0.2));
       k.face('front', [[sb, t, fb], [sa, tip, fa], [sa, tip, top], [sb, t, top]], [side * 0.5, edge, 0], st.stone,
         fi('pier', 0, Math.hypot(p.half, nose) * U, Math.min(fa, fb), top, Math.round(p.s * 10)), { o: [sb, t, 0], a: [(sa - sb) / Math.hypot(sa - sb, nose) / U, (edge * nose) / Math.hypot(sa - sb, nose) / U, 0], b: [0, 0, 1] });
-      if (plan.width < 2) {
+      if (!refuged(plan)) {
         const capTop = top + nose * U * 0.45;
         k.face('front', [[sb, t, top], [sa, tip, top], [sa, t, capTop]], [side * 0.3, edge * 0.6, 1], st.trim);
       }
@@ -526,7 +579,7 @@ function cutwaters(k: Kit, edge: number, t: number, D: number): void {
 /* ---- round things ------------------------------------------------------------------------ */
 
 /** How far out a round pier stands from the wall, in tiles: under a refuge, as far as the refuge it carries (the parapet's gap, `refugeHalf`). */
-export const roundOut = (p: Pier, width: number): number => (width >= 2 ? refugeHalf(p) : (p.half + 0.08) * 0.85);
+export const roundOut = (p: Pier, plan: Plan): number => (refuged(plan) ? refugeHalf(p) : (p.half + 0.08) * 0.85);
 
 /**
  * A round buttress on each pier's outer face, battered out to its foot:
@@ -538,19 +591,19 @@ function buttresses(k: Kit, edge: number, t: number, D: number): void {
   const n = 8;
   for (const p of plan.piers) {
     if (p.end) continue;
-    const R0 = roundOut(p, plan.width), R1 = R0 * 1.18;
+    const R0 = roundOut(p, plan), R1 = R0 * 1.18;
     if (p.s + R1 < sl.s0 - EPS || p.s - R1 > sl.s1 + EPS) continue;
     const bay = bayAt(plan, p.s - 0.01), bay2 = bayAt(plan, p.s + 0.01);
     const deckBottom = plan.deck(p.s) - plan.thick - 1.4;
     const domeH = R0 * U * 0.55;
-    const top = plan.width >= 2 ? deckBottom : Math.min(deckBottom - domeH - 0.5, Math.max(...[bay, bay2].map((b) => { const sh = shapeOf(plan, b, D); return springOf(sh.lower ?? sh.upper); })) + 4);
+    const top = refuged(plan) ? deckBottom : Math.min(deckBottom - domeH - 0.5, Math.max(...[bay, bay2].map((b) => { const sh = shapeOf(plan, b, D); return springOf(sh.lower ?? sh.upper); })) + 4);
     const at = (phi: number, R: number, z: number): L => [p.s + R * Math.sin(phi), t + edge * R * Math.cos(phi), z];
     k.solid('front', k.ord(edge, 0.2));
     for (let i = 0; i < n; i++) {
       const f0 = -Math.PI / 2 + (Math.PI * i) / n, f1 = -Math.PI / 2 + (Math.PI * (i + 1)) / n, fm = (f0 + f1) / 2;
       const g0 = plan.ground(at(f0, R1, 0)[0], at(f0, R1, 0)[1]) - 0.5, g1 = plan.ground(at(f1, R1, 0)[0], at(f1, R1, 0)[1]) - 0.5;
       cface(k, 'front', [at(f0, R1, g0), at(f1, R1, g1), at(f1, R0, top), at(f0, R0, top)], [Math.sin(fm), edge * Math.cos(fm), 0.1], st.stone);
-      if (plan.width >= 2) continue;
+      if (refuged(plan)) continue;
       // The dome over it.
       const rings = 2;
       for (let q = 0; q < rings; q++) {

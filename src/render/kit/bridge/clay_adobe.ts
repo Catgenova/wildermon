@@ -3,7 +3,7 @@ import { proj, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, faceColour, hex, mix, type Tone } from '../core';
 import { bayAt, BUILDERS, byRole, ownerOf, refugeGaps, runeLine, samples, turned, U, type BridgePainter, type Kit, type L, type Part3 } from './core';
 import { plasterPaint, stoneBase } from './base';
-import { arcade, cface, fi, lampPost, roundOut, runsOf, tilePaint, wallFrame, runeKey, seen } from './clay';
+import { arcade, cface, fi, lampPost, roundOut, runsOf, tilePaint, wallFrame, refuged, runeKey, seen, whole } from './clay';
 
 /**
  * Clay adobe: the coat of the island's adobe houses (`ADOBE` in
@@ -181,13 +181,15 @@ function ends(k: Kit): void {
  * round wall about it with a round post where it meets the parapet; at three
  * lanes a lamp in it.
  */
-function refuges(k: Kit): void {
-  const { plan, sl, st } = k;
+function refuges(k0: Kit): void {
+  const { plan, sl, st } = k0;
   const n = 10, T = T_WALL, rz = (T * U) / 2;
+  if (!refuged(plan)) return;
   for (const p of plan.piers) {
     if (p.end) continue;
-    const R = roundOut(p, plan.width);
-    if (p.s + R < sl.s0 - 1e-6 || p.s - R > sl.s1 + 1e-6) continue;
+    const R = roundOut(p, plan);
+    const k = whole(k0, p.s - R - 0.02, p.s + R + 0.02);
+    if (!k) continue;
     const z = plan.deck(p.s);
     const zb = z - plan.thick - 1.4;
     const zt = z + H_WALL + 1.8;
