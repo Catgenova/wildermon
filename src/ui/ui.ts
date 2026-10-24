@@ -3362,7 +3362,7 @@ export class UI {
     // A pinned storey's own menu, on its roof's level: the roof, its railing and a storey more, and nothing else.
     if (storey !== undefined && storey >= b.levels) {
       base.level = b.levels - 1;
-      entries.push(...this.roofEntries(b, base, act, item, build));
+      entries.push(...roofEntries(g, b, base, act, item, build));
       entries.push(...frameRoofEntries(g, pick, b));
       entries.push(item(act('add_floor'), base));
       entries.push(item(act('rename_building'), base));
@@ -3512,11 +3512,12 @@ export class UI {
       }
     }
     // Pinned on a storey, the way up to the next from its floor: a flight or a ladder on the floor slot over it.
-    if (pinned !== null && level + 1 < b.levels && !bld.floor(level + 1, x, y)) entries.push(...this.stairsUpEntries(base, level + 1, side));
+    if (pinned !== null && level + 1 < b.levels && !bld.floor(level + 1, x, y)) entries.push(...stairsUpEntries(g, base, level + 1, side,
+      (at, lv, material, kind, sd, hand) => this.startPlacingStairs(at, lv, material, kind, sd, false, hand)));
     if (storey === undefined) entries.push(...cellarEntries(g, base, side, (material, kind, hand) => this.startPlacingStairs(base, 0, material, kind, side, true, hand)));
     // Pinned, the roof and the storeys are the top storey's work.
     if (pinned === null || level === b.levels - 1) {
-      entries.push(...this.roofEntries(b, base, act, item, build));
+      entries.push(...roofEntries(g, b, base, act, item, build));
       entries.push(item(act('add_floor'), base));
       if (b.levels > 1) entries.push(item(act('remove_storey'), base));
     }
@@ -3524,103 +3525,102 @@ export class UI {
     entries.push(item(act('rename_building'), base));
     return entries;
   }
+}
 
-  /**
-   * The rows for a flight or a ladder on the floor slot of storey `level`, up to it from the storey under it: planned
-   * on the tile, Q and E turning the side it is climbed from (`startPlacingStairs`).
-   */
-  private stairsUpEntries(base: Extract<Target, { kind: 'tile' }>, level: number, side: Side): MenuItem[] {
-    const g = this.game;
-    const plan = BUILD_ACTION_BY_ID.get('plan_floor');
-    if (!plan) return [];
-    const at: Extract<Target, { kind: 'tile' }> = { ...base, level };
-    const storey = `storey ${level + 1}`;
-    const why = cellarReason(g, plan, { ...at, side, material: 'log', floorKind: 'stairs' });
-    if (why) return [{ label: `Plan staircase up (${storey})`, hint: why, disabled: true }];
-    return [
-      {
-        label: `Plan staircase up (${storey})`,
-        children: MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' })).map((m) => ({
-          label: m.name,
-          note: `${describeNeeds(floorBill(m.id, 'stairs'), materialName)} · Q/E: side`,
-          onSelect: () => this.startPlacingStairs(at, level, m.id, 'stairs', side),
-        })),
-      },
-      {
-        label: `Plan ${SINGLE_STAIRS_NAME} up (${storey})`,
-        children: MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' })).map((m) => ({
-          label: m.name,
-          note: `${describeNeeds(floorBill(m.id, 'stairs', undefined, 'l'), materialName)} · ${SINGLE_TURNS}`,
-          onSelect: () => this.startPlacingStairs(at, level, m.id, 'stairs', side, false, 'l'),
-        })),
-      },
-      {
-        label: `Plan ladder up (${storey})`,
-        note: `${describeNeeds(floorBill('plank', 'ladder'), materialName)} · Q/E: side`,
-        onSelect: () => this.startPlacingStairs(at, level, 'plank', 'ladder', side),
-      },
-    ];
-  }
+/**
+ * The rows for a flight or a ladder on the floor slot of storey `level`, up to it from the storey under it: planned
+ * on the tile, Q and E turning the side it is climbed from (`startPlacingStairs`).
+ */
+function stairsUpEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, level: number, side: Side,
+  place: (at: Target, level: number, material: string, kind: 'stairs' | 'ladder', side: Side, hand?: StairHand) => void): MenuItem[] {
+  const plan = BUILD_ACTION_BY_ID.get('plan_floor');
+  if (!plan) return [];
+  const at: Extract<Target, { kind: 'tile' }> = { ...base, level };
+  const storey = `storey ${level + 1}`;
+  const why = cellarReason(g, plan, { ...at, side, material: 'log', floorKind: 'stairs' });
+  if (why) return [{ label: `Plan staircase up (${storey})`, hint: why, disabled: true }];
+  return [
+    {
+      label: `Plan staircase up (${storey})`,
+      children: MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' })).map((m) => ({
+        label: m.name,
+        note: `${describeNeeds(floorBill(m.id, 'stairs'), materialName)} · Q/E: side`,
+        onSelect: () => place(at, level, m.id, 'stairs', side),
+      })),
+    },
+    {
+      label: `Plan ${SINGLE_STAIRS_NAME} up (${storey})`,
+      children: MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' })).map((m) => ({
+        label: m.name,
+        note: `${describeNeeds(floorBill(m.id, 'stairs', undefined, 'l'), materialName)} · ${SINGLE_TURNS}`,
+        onSelect: () => place(at, level, m.id, 'stairs', side, 'l'),
+      })),
+    },
+    {
+      label: `Plan ladder up (${storey})`,
+      note: `${describeNeeds(floorBill('plank', 'ladder'), materialName)} · Q/E: side`,
+      onSelect: () => place(at, level, 'plank', 'ladder', side),
+    },
+  ];
+}
 
-  /** The roof's rows for a tile of a building: building or taking out the one there, or planning one. */
-  private roofEntries(b: Building, base: Extract<Target, { kind: 'tile' }>, act: (id: string) => ActionDef,
-    item: (def: ActionDef, target: Target, label?: string) => MenuItem,
-    build: (def: ActionDef, target: Target, label: string, bill: Bill) => MenuItem): MenuItem[] {
-    const g = this.game;
-    const bld = g.buildings;
-    const { x, y } = base;
-    const entries: MenuItem[] = [];
-    const plan = act('plan_floor');
-    const roof = bld.floor(b.levels, x, y);
-    const roofTarget: Target = { ...base, floorKind: 'roof' };
-    if (roof) {
-      if (!isDone(roof)) entries.push(build(act('build_floor'), roofTarget, `Build roof · needs ${describeNeeds(roof, materialName)}`, roof));
-      entries.push(item(act('remove_floor'), roofTarget, 'Remove roof'));
-    } else {
-      const probe = cellarReason(g, plan, { ...roofTarget, material: 'log' });
-      // And glass, which roofs and does nothing else: panes on timber bars, and a glasshouse when all of a one-storey roof is glass.
-      const glassTarget: Target = { ...roofTarget, material: GLASS_ROOF.id };
-      const glassWhy = cellarReason(g, plan, glassTarget);
-      // Over a field it is the one roof there is (`glasshouse.ts`): the rest are offered, and say why not.
-      const glassOnly = probe === FIELD_GLASS_ONLY;
-      if (probe && (!glassOnly || glassWhy)) entries.push({ label: 'Plan roof', hint: (glassOnly ? glassWhy : probe) ?? undefined, disabled: true });
-      else {
-        /** A roof's materials, glass among them, in a shape the first tile chooses, or in the building's. */
-        const roofRows = (shape?: RoofShape): MenuItem[] => {
-          const t: Target = shape ? { ...roofTarget, roofShape: shape } : roofTarget;
-          const glassAt: Target = { ...t, material: GLASS_ROOF.id };
-          const glassNo = shape ? cellarReason(g, plan, glassAt) : glassWhy;
-          return [
-            ...MATERIALS.filter((m) => takesAs(m, { floor: 'roof' })).map((m) => ({
-              label: m.name,
-              note: describeNeeds(floorBill(m.id, 'roof', shape ?? roofShapeOf(b)), materialName),
-              hint: glassOnly ? FIELD_GLASS_ONLY : undefined,
-              disabled: glassOnly,
-              onSelect: () => g.requestAction(plan, { ...t, material: m.id }),
-            })),
-            {
-              label: GLASS_ROOF.name,
-              note: describeNeeds(floorBill(GLASS_ROOF.id, 'roof', shape ?? roofShapeOf(b)), materialName),
-              hint: glassNo ?? undefined,
-              disabled: !!glassNo,
-              onSelect: () => g.requestAction(plan, glassAt),
-            },
-            // What glass is for, in full, where it is chosen: a note is cut to its slot, a line is not.
-            { label: 'Glasshouse: 1 storey, full-height walls all round, all-glass roof', disabled: true },
-            { label: `Crop growth speed ×${GLASSHOUSE_GROWTH}, every season`, disabled: true },
-          ];
-        };
-        entries.push({
-          label: 'Plan roof',
-          /*
-           * The first tile of a roof chooses its shape as well: gabled, hipped,
-           * or flat, which is a terrace, and which glass is not. After that the
-           * shape is the building's.
-           */
-          children: b.roof ? roofRows() : ROOF_SHAPES.map((r) => ({ label: r.name, note: r.note, children: roofRows(r.id as RoofShape) })),
-        });
-      }
+/** The roof's rows for a tile of a building: building or taking out the one there, or planning one. */
+function roofEntries(g: Game, b: Building, base: Extract<Target, { kind: 'tile' }>, act: (id: string) => ActionDef,
+  item: (def: ActionDef, target: Target, label?: string) => MenuItem,
+  build: (def: ActionDef, target: Target, label: string, bill: Bill) => MenuItem): MenuItem[] {
+  const bld = g.buildings;
+  const { x, y } = base;
+  const entries: MenuItem[] = [];
+  const plan = act('plan_floor');
+  const roof = bld.floor(b.levels, x, y);
+  const roofTarget: Target = { ...base, floorKind: 'roof' };
+  if (roof) {
+    if (!isDone(roof)) entries.push(build(act('build_floor'), roofTarget, `Build roof · needs ${describeNeeds(roof, materialName)}`, roof));
+    entries.push(item(act('remove_floor'), roofTarget, 'Remove roof'));
+  } else {
+    const probe = cellarReason(g, plan, { ...roofTarget, material: 'log' });
+    // And glass, which roofs and does nothing else: panes on timber bars, and a glasshouse when all of a one-storey roof is glass.
+    const glassTarget: Target = { ...roofTarget, material: GLASS_ROOF.id };
+    const glassWhy = cellarReason(g, plan, glassTarget);
+    // Over a field it is the one roof there is (`glasshouse.ts`): the rest are offered, and say why not.
+    const glassOnly = probe === FIELD_GLASS_ONLY;
+    if (probe && (!glassOnly || glassWhy)) entries.push({ label: 'Plan roof', hint: (glassOnly ? glassWhy : probe) ?? undefined, disabled: true });
+    else {
+      /** A roof's materials, glass among them, in a shape the first tile chooses, or in the building's. */
+      const roofRows = (shape?: RoofShape): MenuItem[] => {
+        const t: Target = shape ? { ...roofTarget, roofShape: shape } : roofTarget;
+        const glassAt: Target = { ...t, material: GLASS_ROOF.id };
+        const glassNo = shape ? cellarReason(g, plan, glassAt) : glassWhy;
+        return [
+          ...MATERIALS.filter((m) => takesAs(m, { floor: 'roof' })).map((m) => ({
+            label: m.name,
+            note: describeNeeds(floorBill(m.id, 'roof', shape ?? roofShapeOf(b)), materialName),
+            hint: glassOnly ? FIELD_GLASS_ONLY : undefined,
+            disabled: glassOnly,
+            onSelect: () => g.requestAction(plan, { ...t, material: m.id }),
+          })),
+          {
+            label: GLASS_ROOF.name,
+            note: describeNeeds(floorBill(GLASS_ROOF.id, 'roof', shape ?? roofShapeOf(b)), materialName),
+            hint: glassNo ?? undefined,
+            disabled: !!glassNo,
+            onSelect: () => g.requestAction(plan, glassAt),
+          },
+          // What glass is for, in full, where it is chosen: a note is cut to its slot, a line is not.
+          { label: 'Glasshouse: 1 storey, full-height walls all round, all-glass roof', disabled: true },
+          { label: `Crop growth speed ×${GLASSHOUSE_GROWTH}, every season`, disabled: true },
+        ];
+      };
+      entries.push({
+        label: 'Plan roof',
+        /*
+         * The first tile of a roof chooses its shape as well: gabled, hipped,
+         * or flat, which is a terrace, and which glass is not. After that the
+         * shape is the building's.
+         */
+        children: b.roof ? roofRows() : ROOF_SHAPES.map((r) => ({ label: r.name, note: r.note, children: roofRows(r.id as RoofShape) })),
+      });
     }
-    return entries;
   }
+  return entries;
 }
