@@ -3670,6 +3670,7 @@ export const NEWS: News[] = [
       'Changed: into the pack (made, gathered, picked up), same as a kept pile but for the keeping: onto the kept pile, kept. Was: a pile of its own.',
       'Changed: count boxes for a craft (shopping list, make until you hold): button Select Quantity.',
       'Fixed: part of a row of a thing that does not stack (needles) into a crate: the count asked for, as far as there is room. Was: the whole row.',
+      'Fixed: mounted and at a wagon\'s reins at once: drawn twice, name and speech bubble twice, to everyone else. Take the reins while mounted: refused, "Dismount first."',
     ],
   },
 ];
