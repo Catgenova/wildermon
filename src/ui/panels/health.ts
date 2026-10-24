@@ -169,6 +169,11 @@ export class HealthPanel {
   private motes: Mote[] = [];
   /** Where each wound's pin is on the stage, CSS px, as last drawn. */
   private pinAt = new Map<string, [number, number]>();
+  /** "More below" is measured by a ResizeObserver, not after each refresh. */
+  private measured = false;
+  /** The stage's size in CSS px, as its ResizeObserver last saw it (0 before). */
+  private stageW = 0;
+  private stageH = 0;
   private readonly still = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   constructor(private readonly win: UIWindow, private readonly game: Game, private readonly spells: SpellsOnYou) {
@@ -320,6 +325,15 @@ export class HealthPanel {
         tall();
       }).observe(root);
       new ResizeObserver(tall).observe(side);
+      // Measured after layout, when what scrolls or the window changes size, not after every write.
+      const measure = new ResizeObserver(() => this.moreBelow());
+      measure.observe(root);
+      measure.observe(win.body);
+      new ResizeObserver(() => {
+        this.stageW = this.stage.clientWidth;
+        this.stageH = this.stage.clientHeight;
+      }).observe(this.stage);
+      this.measured = true;
     }
     this.show('wounds');
 
@@ -392,7 +406,7 @@ export class HealthPanel {
     set('wounds', r.wounds.length, r.wounds.some((v) => v.state === 'bad' || v.state === 'bleeding' || v.state === 'venom'));
     set('conditions', r.against.length, r.against.length > 0);
     set('food', r.hungry ? '!' : 0, r.hungry);
-    this.moreBelow();
+    if (!this.measured) this.moreBelow();
   }
 
   /** The hint at the foot while there is more of the window under it than shows. */
@@ -496,11 +510,19 @@ export class HealthPanel {
     this.frame = requestAnimationFrame(step);
   }
 
+  private stageWide(): number {
+    return this.stageW || this.stage.clientWidth;
+  }
+
+  private stageTall(): number {
+    return this.stageH || this.stage.clientHeight;
+  }
+
   private drawStage(t: number): void {
     const dpr = Math.min(3, window.devicePixelRatio || 1);
     const c = this.canvas;
     // The stage is as big as the window's layout makes it (`.hp-stage`); the canvas follows it.
-    const W = this.stage.clientWidth || 160, H = this.stage.clientHeight || 236;
+    const W = this.stageWide() || 160, H = this.stageTall() || 236;
     if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) {
       c.width = Math.round(W * dpr);
       c.height = Math.round(H * dpr);
@@ -663,7 +685,7 @@ export class HealthPanel {
         this.pins.append(b);
       }
       have.delete(v.key);
-      const [x, y] = this.pinAt.get(v.key) ?? [this.stage.clientWidth / 2, this.stage.clientHeight / 2];
+      const [x, y] = this.pinAt.get(v.key) ?? [this.stageWide() / 2, this.stageTall() / 2];
       b.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
       b.className = `hp-pin hp-pin-${v.state}${v.key === this.picked ? ' hp-pin-picked' : ''}`;
       if (b.dataset.state !== v.state) {
