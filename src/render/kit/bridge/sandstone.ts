@@ -21,7 +21,7 @@ export const sandstone = classical({
   deck: { lit: hex('#e2c7a2'), shade: hex('#a08683') },
   rune: 'sunDot',
   glow: '#ffe2b0',
-  ringDepth: 4.2,
+  ringDepth: 6,
   parapetHeight: 10,
   parapet: 'solid',
   finial: 'ball',
