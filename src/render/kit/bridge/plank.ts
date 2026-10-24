@@ -217,6 +217,8 @@ export interface Carpentry {
   /** What the stringers are painted as (`beam` else; nothing for null), and their tone (the beams' else). */
   stringerRole?: Role | null;
   stringerTone?: Tone;
+  /** A rune band painted along the outer stringers that glows at night. */
+  stringerGlow?: boolean;
   /** The ramp's stringer along each outer edge, done this carpentry's way (`stairStringer` else). */
   rampStringer?: (k: Kit, edge: number, te: number) => void;
   /** Border boards along each outer edge of a level deck: how wide, in tiles, their tone and what they are painted as. */
@@ -278,8 +280,8 @@ function bents(k: Kit, c: Carpentry): void {
   const postSec = c.round ? rnd(c.post, 8) : sq(c.post);
   const braceSec = c.round ? rnd(c.brace, 6) : sq(c.brace * 0.45, c.brace);
   const bs = plan.piers.map((p) => bentOf(k, c, p));
-  for (const b of bs) {
-    if (b.capB - b.foot < 2) continue;
+  for (const [bi, b] of bs.entries()) {
+    if (b.capB - b.foot < 2 || landed(b)) continue;
     if (!ownFar(k, b.s - w * 1.5, b.s + w * 1.5)) continue;
     // The posts, their feet on stone pads.
     const pads: Fc[] = [];
@@ -303,6 +305,13 @@ function bents(k: Kit, c: Carpentry): void {
     const kind = c.braces ?? 'x';
     const braced = kind === 'none' ? [] : kind === 'lower' && tiers.length === 2 ? tiers.slice(0, 1) : c.tallX && tiers.length === 2 ? [[tiers[0][0], tiers[1][1]] as [number, number]] : tiers;
     const tm = (p0.t + p1.t) / 2;
+    // Over a deep drop one long brace across the bent, corner to corner, turned one way at one pier and the other at the next.
+    if (b.form === 'tiers' && kind !== 'none') {
+      const [z0, z1] = [tiers[0][0], tiers[tiers.length - 1][1]];
+      const [pa, pb] = (bi + Math.round(k.sl.o * 2)) % 2 ? [p0, p1] : [p1, p0];
+      lay(k, 'front', -1.9, bar([sb, postT(b, pa, z0), z0], [sb, postT(b, pb, z1), z1], c.round ? rnd(c.brace * 1.15, 6) : sq(c.brace * 0.55, c.brace * 1.2), beam), '');
+      continue;
+    }
     lay(k, 'front', -1.9, braced.flatMap(([z0, z1]) => kind === 'a'
       ? [
         ...bar([sb, tm, z1 + 0.5], [sb, postT(b, p0, z0), z0], braceSec, beam),
@@ -320,7 +329,7 @@ function bents(k: Kit, c: Carpentry): void {
     const knees: Fc[] = [], girts: Fc[] = [];
     for (let i = 0; i < bs.length; i++) {
       const b = bs[i];
-      if (b.capB - b.foot < 6 || c.noKnees || b.s < sl.s0 - 0.4 || b.s > sl.s1 + 0.4) continue;
+      if (b.capB - b.foot < 6 || landed(b) || c.noKnees || b.s < sl.s0 - 0.4 || b.s > sl.s1 + 0.4) continue;
       const drop = Math.min(9, (b.capB - b.foot) * 0.5);
       for (const dir of [-1, 1]) {
         if ((dir < 0 && i === 0) || (dir > 0 && i === bs.length - 1)) continue;
@@ -345,6 +354,9 @@ function bents(k: Kit, c: Carpentry): void {
   }
 }
 
+/** An end bent standing tall: the bridge lands there on what it meets (a wall, a cliff), so none is built. */
+export const landed = (b: Bent): boolean => b.end && b.capB - b.foot > 24;
+
 /** The stone pads the posts stand on. */
 const PAD: Tone = { lit: hex('#e2dad6'), shade: hex('#857d96') };
 
@@ -356,6 +368,10 @@ function stringers(k: Kit, c: Carpentry): void {
   const z = (s: number): number => plan.deck(s) - plan.thick - c.stringer;
   // Over the outer posts only: the deck's own thickness spans the rest, out of sight under it.
   for (const p of postsOf(k, c).filter((q) => q.out !== 0)) {
+    if (c.stringerGlow && p.out * (k.P[0] * k.e.toward[0] + k.P[1] * k.e.toward[1]) > 0) {
+      const tg = p.t + p.out * (c.stringerW / U + 0.003);
+      k.glow.lines.push([k.m([sl.s0, tg, z(sl.s0)]), k.m([sl.s1, tg, z(sl.s1)])]);
+    }
     lay(k, 'front', -1.5, bar([sl.s0, p.t, z(sl.s0)], [sl.s1, p.t, z(sl.s1)], sec, beam,
       { caps: [sl.s0 <= EPS, sl.s1 >= plan.n - EPS], paint: c.stringerRole === null ? undefined : c.stringerRole ?? 'beam', capTone: c.endTone, capPaint: c.round ? 'plinth' : undefined, seed: sl.i * 5 + Math.round(p.t * 9) }), '');
   }
@@ -766,6 +782,11 @@ const laminated: BridgePainter = (g, k, f) => {
   g.strokeStyle = css(mix(k.fill, hex('#4a3640'), 0.35), 0.45);
   g.lineWidth = 0.14;
   g.stroke(lam);
+  // A painted band along its middle, a rune on it between each pair of plates.
+  const yb = h * 0.5;
+  g.fillStyle = css(mix(k.fill, hex('#f2dcb0'), 0.55), 0.9);
+  g.fillRect(x0 - 1, yb - 1.9, x1 - x0 + 2, 3.8);
+  for (let x = Math.ceil(x0 / 20) * 20; x < x1 + 3; x += 20) inlay(g, k.fill, 'kenaz', x, yb, 1.6, 0.34);
   const iron = faceColour(IRON_PLATE, k.L);
   for (let x = Math.ceil((x0 - 10) / 20) * 20 + 10; x < x1 + 3; x += 20) {
     g.fillStyle = css(iron);
@@ -799,6 +820,7 @@ const plankCarpentry: Carpentry = {
   stringerW: 1.7,
   stringerRole: 'plinth',
   stringerTone: P.tar,
+  stringerGlow: true,
   tallX: true,
   noGirts: true,
   cap: 1.5,

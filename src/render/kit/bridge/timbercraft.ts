@@ -2,7 +2,7 @@ import { RUNE_GOLD } from '../../runestone';
 import { css, faceColour, hex, mix, nail, proj } from '../core';
 import { BRIDGE_INK, U, byRole, type BridgePainter, type Kit, type L, type Part3 } from './core';
 import { timberBase, grainPaint } from './base';
-import { bar, bars, bentOf, carpentry, clothPaint, fascia, finfo, lay, ownNear, pennant, plankPlaque, plaquePaint, sq, tone, type Carpentry, type Fc, type RailSpec } from './plank';
+import { bar, bars, bentOf, carpentry, landed, clothPaint, fascia, finfo, lay, ownNear, pennant, plankPlaque, plaquePaint, sq, tone, type Carpentry, type Fc, type RailSpec } from './plank';
 
 /**
  * Timbercraft: a moon bridge's carving -- over each bay a laminated arch of
@@ -101,7 +101,9 @@ function arches(k: Kit, c: Carpentry): void {
   for (const bay of plan.bays) {
     if (bay.s1 < sl.s0 - 0.01 || bay.s0 > sl.s1 + 0.01) continue;
     const p0 = plan.piers.find((p) => Math.abs(p.s - bay.s0) < 1e-6)!, p1 = plan.piers.find((p) => Math.abs(p.s - bay.s1) < 1e-6)!;
-    const sA = bentOf(k, c, p0).s + w, sB = bentOf(k, c, p1).s - w;
+    // From the bents' inner faces, or where the bridge lands on what it meets, from that.
+    const b0 = bentOf(k, c, p0), b1 = bentOf(k, c, p1);
+    const sA = landed(b0) ? p0.s + 0.01 : b0.s + w, sB = landed(b1) ? p1.s - 0.01 : b1.s - w;
     const cA = (sA + sB) / 2, A = ((sB - sA) / 2) * U;
     const base = (s: number): number => plan.deck(s) - plan.thick - 2 * c.stringer - 0.2;
     for (const edge of sl.edges) {
