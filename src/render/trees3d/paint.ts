@@ -573,12 +573,13 @@ export function paintTree3d(g: Ctx, job: Job): void {
   g.lineCap = 'round';
   g.lineWidth = KIT_INK_W * 2;
   for (const m of masses) g.stroke(m.path);
+  // The branches' ink in one stroke, as thick as the thickest of them.
+  const twigs = new Path2D();
+  let tw = 0;
   for (const c of chains) {
     if (c.thin) {
-      g.lineWidth = c.r[0] + c.r[c.r.length - 1] + KIT_INK_W * 2;
-      g.beginPath();
-      c.q.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
-      g.stroke();
+      c.q.forEach(([x, y], j) => (j ? twigs.lineTo(x, y) : twigs.moveTo(x, y)));
+      tw = Math.max(tw, c.r[0] + c.r[c.r.length - 1]);
     } else {
       g.lineWidth = KIT_INK_W * 2;
       g.stroke(bandPath(c, 0, c.q.length - 1, -1, 1));
@@ -736,14 +737,14 @@ function hung(q: Pt[], h: number[], under?: boolean[]): Pt[] {
 interface Rim { x: number; y: number; dz: number; h: number; finger: boolean }
 
 /**
- * A bough's outline: narrow where it leaves the leader, broad past its
+ * A spray's outline: narrow where it leaves its branch, broad past its
  * middle, its end cut into a few blunt fingers between sharp notches, the
  * fingers hanging lower than the rest and the needles under them longest.
  */
 function rimOf(p: Pad, R: () => number): Rim[] {
   const L = p.reach, W = p.w, H = p.hang;
-  // A fan: a narrow heel on the leader, opening out to a broad, fingered end.
-  const wAt = (t: number): number => W * (0.35 + 0.65 * Math.min(1, t * 1.6));
+  // A spray: a narrow heel on its branch, widening to a fingered end.
+  const wAt = (t: number): number => W * (0.3 + 0.7 * Math.min(1, t * 1.7));
   const out: Rim[] = [];
   for (const t of [0, 0.3]) out.push({ x: t * L, y: -wAt(t), dz: 0, h: H * (0.2 + 0.3 * t), finger: false });
   const xc = 0.62 * L, rx = 0.38 * L, ry = wAt(0.62);
@@ -754,15 +755,15 @@ function rimOf(p: Pad, R: () => number): Rim[] {
   for (let j = 0; j <= F; j++) {
     const a = -Math.PI / 2 + (Math.PI * j) / F;
     // A sharp notch, cut deep between two fingers.
-    const notch = j === 0 || j === F ? 0.97 : 0.7 + 0.14 * R();
+    const notch = j === 0 || j === F ? 0.97 : 0.58 + 0.14 * R();
     at(a, notch, 0, H * 0.22, false);
     at(a, notch, 0, H * 0.22, false);
     if (j === F) break;
     // A blunt finger, the ones round the end longest.
     const m = a + Math.PI / (2 * F) + (R() - 0.5) * (Math.PI / (4 * F));
-    const half = (Math.PI / (2 * F)) * 0.22;
+    const half = (Math.PI / (2 * F)) * 0.16;
     const end = 0.55 + 0.45 * Math.cos(m);
-    const k = 1.08 + 0.2 * R();
+    const k = 1.12 + 0.3 * R();
     const dz = -H * (0.25 + 0.3 * R()) * end;
     const h = H * (0.6 + 1.0 * R()) * (0.5 + 0.5 * end);
     at(m - half, k, dz, h, true);
@@ -773,7 +774,7 @@ function rimOf(p: Pad, R: () => number): Rim[] {
 }
 
 /** A bough or the top's tuft, ready to lay: its outline with the needles under it, its planes, and its ink. */
-interface Bough { d: number; out: Path2D; planes: Array<[Path2D, string]>; rim: string }
+interface Bough { d: number; out: Path2D; planes: Array<[Path2D, string]>; rim: string | null }
 
 /** How lit a face turned `n` is, as a mass is (`clumpLight`): wrapped round, the lower whorls in the upper ones' shade. */
 function faceLight(job: Job, n: V3, up: number): number {
@@ -781,37 +782,52 @@ function faceLight(job: Job, n: V3, up: number): number {
   return (job.light.ambient + job.light.direct * wrap) * (0.7 + 0.3 * up);
 }
 
-function boughOf(job: Job, s: Shown, all: Path2D): Bough {
+/**
+ * How far round a spray, and its branch, is turned aside from pointing at
+ * the eye: the whorls part up the front so the trunk shows between them, as
+ * the flat conifers hang a pair either side of the trunk.
+ */
+function partOf(e: Eye, d: V3): number {
+  const ex = e.toward[0], ey = e.toward[1];
+  const el = Math.hypot(ex, ey) || 1;
+  const phi = Math.atan2((ex * d[1] - ey * d[0]) / el, (ex * d[0] + ey * d[1]) / el);
+  if (Math.abs(phi) >= PART) return 0;
+  return (phi < 0 ? -1 : 1) * (PART + Math.abs(phi) * 0.3) - phi;
+}
+/** `p` turned `a` about the upright through `o`. */
+function spin(p: V3, o: V3, a: number): V3 {
+  if (!a) return p;
+  const c = Math.cos(a), s = Math.sin(a), x = p[0] - o[0], y = p[1] - o[1];
+  return [o[0] + x * c - y * s, o[1] + x * s + y * c, p[2]];
+}
+
+/**
+ * A spray laid on its branch: its outline with the needles hanging under it
+ * filled in its underside's tone, its top in the top's, and a smooth lit
+ * band along the top toward the sun -- three flat planes -- with a thin rim
+ * of ink, the heavy ink being the tree's own outline (`paintWhorls`).
+ */
+function boughOf(job: Job, s: Shown, all: Path2D[], turnBy: number): Bough {
   const { e, light, dress, spec } = job;
   const c = s.c;
   const p = c.pad as Pad;
   const R = mulberry32(job.seed * 977 + Math.round(c.k * 1e6));
-  const root = add(c.c, p.root);
+  const base = add(c.c, p.base);
+  const root = spin(add(c.c, p.root), base, turnBy);
   const top = s.ramp.length - 1;
-  const rimCol = rgb(mixRgb(hex(s.ramp[0]), KIT_INK, 0.7), 0.9);
+  const rimCol = rgb(mixRgb(hex(s.ramp[0]), KIT_INK, 0.55), 0.85);
   const out = new Path2D();
   const planes: Array<[Path2D, string]> = [];
   const winter = dress.season === 'winter';
   const snow = (l: number): string => rgb(mixRgb(hex('#c4d0e4'), hex('#fbfcff'), clamp01(l)));
-  /*
-   * Parted in front: a bough pointing at the eye is turned aside, so the
-   * whorls part up the middle and the trunk shows between them, as the flat
-   * conifers hang a pair either side of the trunk.
-   */
-  let d = p.d;
-  const ex = e.toward[0], ey = e.toward[1];
-  const el = Math.hypot(ex, ey) || 1;
-  const phi = Math.atan2((ex * d[1] - ey * d[0]) / el, (ex * d[0] + ey * d[1]) / el);
-  if (Math.abs(phi) < PART) {
-    const to = (phi < 0 ? -1 : 1) * (PART + Math.abs(phi) * 0.3);
-    d = [(Math.cos(to) * ex - Math.sin(to) * ey) / el, (Math.sin(to) * ex + Math.cos(to) * ey) / el, 0];
-  }
+  const d = spin(p.d, [0, 0, 0], turnBy);
   const centre = add(root, [d[0] * p.reach * 0.5, d[1] * p.reach * 0.5, -(root[2] - c.c[2])]);
   const side: V3 = [-d[1], d[0], 0];
   const L = p.reach, W = p.w;
+  // Out nearly level, falling only over its outer part.
   const at = (x: number, y: number, dz: number): V3 => {
-    const t = x / L;
-    const z = -p.drop * Math.pow(Math.max(0, t), 1.5) + L * 0.05 * Math.sin(Math.PI * t) - 0.12 * (y * y) / W + dz;
+    const t = Math.max(0, x / L);
+    const z = -p.drop * Math.pow(t, 2.4) + L * 0.05 * Math.sin(Math.PI * t) - 0.1 * (y * y) / W + dz;
     return [root[0] + d[0] * x + side[0] * y, root[1] + d[1] * x + side[1] * y, root[2] + z];
   };
   const rim = rimOf(p, R);
@@ -820,7 +836,7 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
   const under: boolean[] = [];
   const outline = hung(q, hs, under);
   roundPath(out, outline);
-  roundPath(all, outline);
+  all.push(out);
   // The light on its top, sloping out and down, and on the needles hanging off its end.
   const slope = p.drop / L;
   const nTop = unit([d[0] * slope, d[1] * slope, 1]);
@@ -828,39 +844,35 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
   const lh = faceLight(job, d, c.up);
   const bt = Math.max(1, Math.min(top - 2, Math.round(lt * (top - 1.2))));
   const bh = Math.max(0, Math.min(top - 3, Math.round(lh * (top - 1.2)) - 2));
+  // Behind the leader: the sprays in front hide all of it but its edge, which is in one tone between its top's and its underside's.
+  const tw = Math.hypot(e.toward[0], e.toward[1]) || 1;
+  if ((d[0] * e.toward[0] + d[1] * e.toward[1]) / tw < -0.55) {
+    planes.push([out, s.ramp[Math.max(1, Math.round((bt + bh) / 2))]]);
+    return { d: dot(centre, e.toward as V3), out, planes, rim: null };
+  }
   planes.push([out, s.ramp[bh]]);
   const face = new Path2D();
   roundPath(face, q);
-  planes.push([face, s.ramp[Math.max(1, bt - 1)]]);
-  // Behind the leader, or small: the whorls over it hide all but its outline and its top.
-  const tw = Math.hypot(e.toward[0], e.toward[1]) || 1;
-  const fine = (d[0] * e.toward[0] + d[1] * e.toward[1]) / tw > -0.5 && L * ACROSS > 4;
-  // The inner part of its top in the shade of the whorl over it.
-  if (c.up < 0.95 && fine) {
-    const inner = new Path2D();
-    const pts: Pt[] = [];
-    for (const r of rim) pts.push(proj(e, at(r.x * 0.48, r.y * 0.85, 0)));
-    roundPath(inner, pts);
-    planes.push([inner, s.ramp[Math.max(1, bt - 1)]]);
-  }
-  // The lit part of its top: toward the sun, out past the whorl over it.
+  planes.push([face, s.ramp[bt]]);
+  // The lit band: along its top from near its heel to short of its fingers, toward the sun's side.
   const sx = light.sun[0], sy = light.sun[1];
   const sl = Math.hypot(sx, sy) || 1;
-  const fx = (d[0] * sx + d[1] * sy) / sl, fy = (side[0] * sx + side[1] * sy) / sl;
-  const cx = L * (0.62 + 0.12 * fx), cy = W * 0.38 * fy;
-  const patch = (k: number, ky: number, lift: number): Path2D => {
+  const toSun = (d[0] * sx + d[1] * sy) / sl, across = (side[0] * sx + side[1] * sy) / sl;
+  const band = (x0: number, x1: number, ky: number, lift: number): Path2D => {
     const pp = new Path2D();
     const pts: Pt[] = [];
-    for (const r of rim) pts.push(proj(e, at(cx + (r.x - cx) * k, cy + (r.y - cy) * ky, r.dz * k + lift)));
+    for (const r of rim) {
+      if (r.finger) continue;
+      const t = r.x / L;
+      pts.push(proj(e, at(L * (x0 + (x1 - x0) * t), (r.y * ky) + W * 0.25 * across, lift)));
+    }
     roundPath(pp, pts);
     return pp;
   };
   if (winter) {
-    planes.push([patch(0.78, 0.7, 0.25), snow(lt * 0.9)]);
-    if (!light.night && fine) planes.push([patch(0.5, 0.45, 0.3), snow(lt * 1.25)]);
-  } else if (!light.night || lt > 0.6) {
-    planes.push([patch(0.62, 0.56, 0.05), s.ramp[Math.min(top, bt + 1)]]);
-    if (dot(nTop, light.sun) > 0.35 && !light.night && fine) planes.push([patch(0.36, 0.34, 0.1), s.ramp[Math.min(top, bt + 2)]]);
+    planes.push([band(0.08, 0.86, 0.66, 0.25), snow(lt * 1.1)]);
+  } else if ((!light.night || lt > 0.6) && toSun > -0.6) {
+    planes.push([band(0.08, 0.84, 0.68, 0.08), s.ramp[Math.min(top, bt + (toSun > 0.2 ? 2 : 1))]]);
   }
   // New growth on the ends of the fingers through the spring: the tip of each, where it hangs in sight or lies on the top.
   if (dress.season === 'spring') {
@@ -877,8 +889,8 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
   }
   return { d: dot(centre, e.toward as V3), out, planes, rim: rimCol };
 }
-/** How far round from the eye a bough is turned aside, at the least, in radians. */
-const PART = 0.7;
+/** How far round from the eye a spray is turned aside, at the least, in radians. */
+const PART = 0.28;
 
 /** A rune cut in the bark lit from inside at night, as the island's runes are. */
 function runeGlow(g: Ctx, job: Job): void {
@@ -915,22 +927,40 @@ function runeGlow(g: Ctx, job: Job): void {
  * the whole ruled round in ink first, as the broadleaves are.
  */
 function paintWhorls(g: Ctx, job: Job): void {
-  const { sk, e } = job;
+  const { e } = job;
   const near = (p: V3): number => dot(p, e.toward as V3);
-  const chains = chainsOf(job, false);
-  const all = new Path2D();
-  const boughs = keptOf(job).map((s) => boughOf(job, s, all));
+  // Each spray's turn aside from the eye, and its branch turned with it.
+  const turns = job.sk.clumps.map((c) => (c.pad ? partOf(e, c.pad.d) : 0));
+  const limbs = job.sk.limbs.map((L) => {
+    const a = L.pad !== undefined ? turns[L.pad] : 0;
+    if (!a) return L;
+    const c = job.sk.clumps[L.pad as number];
+    const o = add(c.c, (c.pad as Pad).base);
+    return { ...L, a: spin(L.a, o, a), b: spin(L.b, o, a) };
+  });
+  const sk = { ...job.sk, limbs };
+  // The branches behind the leader are hidden by the boughs in front of it.
+  const el = Math.hypot(e.toward[0], e.toward[1]) || 1;
+  const behind = (L: Limb): boolean => {
+    if (L.pad === undefined) return false;
+    const d = spin((job.sk.clumps[L.pad].pad as Pad).d, [0, 0, 0], turns[L.pad]);
+    return (d[0] * e.toward[0] + d[1] * e.toward[1]) / el < -0.55;
+  };
+  const chains = chainsOf({ ...job, sk }, false).filter((c) => !behind(sk.limbs[c.pieces[0]]));
+  const all: Path2D[] = [];
+  const boughs = keptOf(job).map((s, i) => boughOf(job, s, all, turns[i]));
   g.strokeStyle = rgb(KIT_INK);
   g.lineJoin = 'round';
   g.lineCap = 'round';
   g.lineWidth = KIT_INK_W * 2;
-  g.stroke(all);
+  for (const p of all) g.stroke(p);
+  // The branches' ink in one stroke, as thick as the thickest of them.
+  const twigs = new Path2D();
+  let tw = 0;
   for (const c of chains) {
     if (c.thin) {
-      g.lineWidth = c.r[0] + c.r[c.r.length - 1] + KIT_INK_W * 2;
-      g.beginPath();
-      c.q.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
-      g.stroke();
+      c.q.forEach(([x, y], j) => (j ? twigs.lineTo(x, y) : twigs.moveTo(x, y)));
+      tw = Math.max(tw, c.r[0] + c.r[c.r.length - 1]);
     } else {
       g.lineWidth = KIT_INK_W * 2;
       g.stroke(bandPath(c, 0, c.q.length - 1, -1, 1));
@@ -941,8 +971,22 @@ function paintWhorls(g: Ctx, job: Job): void {
       g.fill();
     }
   }
+  g.lineWidth = tw + KIT_INK_W * 2;
+  g.stroke(twigs);
   const items: Item[] = [];
   for (const c of chains) {
+    // The leader is laid whole, where the leader stands: everything is laid by how near it is along the ground.
+    if (c.order === 0) {
+      const L = sk.limbs[c.pieces[0]];
+      items.push({ d: near(L.a) - 0.5, draw: () => paintChain(g, job, c, 0, c.q.length - 1, mulberry32(job.seed + c.pieces[0] * 13)) });
+      continue;
+    }
+    // A branch is laid whole, where its middle is.
+    if (c.thin) {
+      const L = sk.limbs[c.pieces[Math.floor(c.pieces.length / 2)]];
+      items.push({ d: near(L.a), draw: () => paintChain(g, job, c, 0, c.q.length - 1, mulberry32(job.seed + c.pieces[0] * 13)) });
+      continue;
+    }
     for (let j0 = 0; j0 < c.q.length - 1; j0++) {
       const L = sk.limbs[c.pieces[j0]];
       const R = mulberry32(job.seed + c.pieces[j0] * 13);
@@ -957,8 +1001,9 @@ function paintWhorls(g: Ctx, job: Job): void {
           g.fillStyle = col;
           g.fill(p);
         }
+        if (!b.rim) return;
         g.strokeStyle = b.rim;
-        g.lineWidth = KIT_INK_W;
+        g.lineWidth = KIT_INK_W * 0.55;
         g.lineJoin = 'round';
         g.stroke(b.out);
       },

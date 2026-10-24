@@ -272,7 +272,7 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   /* ---- the whorls' heights, and the trunk in a piece between each two ---- */
   const n = b.bare ? 0 : Math.max(1, Math.round(w.tiers));
   const zs: number[] = [];
-  for (let i = 0; i < n; i++) zs.push(stemZ + (crownTop - stemZ) * (n === 1 ? 0 : Math.pow(i / (n - 1), 0.95)));
+  for (let i = 0; i < n; i++) zs.push(stemZ + (crownTop - stemZ) * (n === 1 ? 0 : i / (n - 1)));
   const cuts = [0, stemZ * 0.5, ...zs.filter((z) => z > stemZ * 0.5 + 0.5 && z < topZ - 0.5), topZ];
   if (b.bare) for (let i = 1; i < 6; i++) cuts.splice(cuts.length - 1, 0, stemZ + ((topZ - stemZ) * i) / 6);
   for (let i = 0; i + 1 < cuts.length; i++) {
@@ -352,44 +352,66 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   const env: Envelope = { c: axis(stemZ + (crownTop - stemZ) * 0.4), r: H * b.spread, rz: Math.max(1, (H - stemZ) / 2) };
   const gap = n > 1 ? (crownTop - stemZ) / (n - 1) : H * 0.2;
   let a0 = R() * TAU;
-  /** A bough off the leader at `z`, pointing `az` round, `reach` long; `whole` the reach of its whorl, `u` how far up the crown. */
-  const bough = (z: number, az: number, reach: number, whole: number, u: number, fingers: number): void => {
+  /**
+   * A bough off the leader at `z`, pointing `az` round, `reach` long from the
+   * leader to its tip; `whole` the reach of its whorl, `u` how far up the
+   * crown. A bare branch runs out nearly level and carries a spray on its
+   * outer part, which falls to a fingered end.
+   */
+  const bough = (z: number, az: number, reach: number, whole: number, u: number, fingers: number, further = 0): void => {
     const d: V3 = [Math.cos(az), Math.sin(az), 0];
-    const width = reach * w.width * (0.85 + 0.3 * R());
+    const out0 = radius(z) * 0.6 + reach * w.bare * (0.85 + 0.3 * R()) + further;
+    reach += further;
+    const sl = Math.max(1, reach - out0);
+    const width = sl * w.width * (0.85 + 0.3 * R());
     // A whorl falls as one, whatever each bough's reach, so it hangs to one hem.
-    let drop = (reach * 0.4 + whole * 0.6) * b.droop * (0.9 + 0.2 * R());
-    let hang = Math.min(gap * w.hang, reach * 0.4) * (0.85 + 0.3 * R());
-    const root = add(axis(z), mul(d, radius(z) * 0.4));
+    let drop = (sl * 0.4 + whole * 0.6 * (1 - w.bare)) * b.droop * (0.9 + 0.2 * R());
+    let hang = Math.min(gap * w.hang, sl * 0.35) * (0.85 + 0.3 * R());
+    const base = axis(z);
+    const root = add(base, [d[0] * out0, d[1] * out0, out0 * 0.04]);
     // Kept clear of the ground, and of the tiles in front of its own, which are laid after it (`hemAt`).
     const low = drop + hang * 2;
-    const floor = Math.max(H * w.hem, hemAt(H, Math.hypot(root[0], root[1]) + reach * 1.15));
+    const floor = Math.max(H * w.hem, hemAt(H, Math.hypot(root[0], root[1]) + sl * 1.15));
     if (root[2] - low < floor) {
       const k = Math.max(0.15, (root[2] - floor) / low);
       drop *= k;
       hang *= k;
     }
-    const c = add(root, [d[0] * reach * 0.5, d[1] * reach * 0.5, -drop * 0.35]);
+    const c = add(root, [d[0] * sl * 0.5, d[1] * sl * 0.5, -drop * 0.3]);
+    const at = clumps.length;
     clumps.push({
-      // Its mass's radius: what its shade on the ground is laid round, wide enough that a whorl's shade meets the next one's under a low sun.
-      c, r: reach * 0.72, limb: pieceAt(z), k: R(), out: 1, up: u,
-      pad: { root: sub(root, c), d, reach, w: width, drop, hang, fingers },
+      c, r: sl * 0.6, limb: pieceAt(z), k: R(), out: 1, up: u,
+      pad: { root: sub(root, c), base: sub(base, c), d, reach: sl, w: width, drop, hang, fingers },
     });
+    // Its branch, out to where the spray starts and a little under it.
+    const r = Math.max(0.16, radius(z) * 0.22);
+    const mid = add(lerp(base, root, 0.5), [0, 0, out0 * 0.03]);
+    const end = add(root, [d[0] * sl * 0.2, d[1] * sl * 0.2, -drop * 0.04]);
+    const i0 = limbs.length;
+    limbs.push({ a: base, b: mid, ra: r, rb: r * 0.8, order: 3, parent: pieceAt(z), bough: i0, pad: at });
+    limbs.push({ a: mid, b: root, ra: r * 0.8, rb: r * 0.6, order: 3, parent: i0, bough: i0, pad: at });
+    limbs.push({ a: root, b: end, ra: r * 0.6, rb: r * 0.45, order: 3, parent: i0 + 1, bough: i0, pad: at, tip: true });
   };
+  // A few boughs that stick out past the rest, low in the crown.
+  const longs = new Set<number>();
+  for (let k = 0; k < Math.round(w.long); k++) longs.add(Math.floor(n * (0.1 + 0.5 * R())) * 100 + Math.floor(R() * 6));
   for (let i = 0; i < n; i++) {
     const u = n === 1 ? 0 : i / (n - 1);
-    const reachT = H * b.spread * (1 - (1 - w.taper) * u) * (0.92 + 0.16 * R());
-    const m = Math.max(3, Math.round(w.pads * (1 - 0.3 * u)));
+    const reachT = H * b.spread * (1 - (1 - w.taper) * u) * (0.95 + 0.1 * R());
+    const m = Math.max(3, Math.round(w.pads * (1 - 0.45 * u)));
     a0 += 2.4;
     for (let j = 0; j < m; j++) {
       if (w.gaps > 0 && R() < w.gaps && i > 0) continue;
-      const az = a0 + (j / m) * TAU + (R() - 0.5) * (TAU / m) * 0.3;
-      bough(zs[i], az, reachT * (1 + w.ragged * (R() - 0.5) * 0.6), reachT, n === 1 ? 1 : u, Math.max(3, Math.round(w.fingers - u)));
+      const az = a0 + (j / m) * TAU + (R() - 0.5) * (TAU / m) * 0.6;
+      // A long bough is a longer bare branch with a spray of the usual size on its end.
+      const further = longs.has(i * 100 + j) ? reachT * 0.35 : 0;
+      bough(zs[i] + (R() - 0.5) * gap * 0.25, az, reachT * (1 + w.ragged * (R() - 0.5)), reachT, n === 1 ? 1 : u, Math.max(3, Math.round(w.fingers - u)), further);
     }
   }
   /* ---- a ragged tuft of small boughs on the leader over the top whorl, the leader's tip clear of it ---- */
   if (n > 0 && w.spire && w.deadTop >= 1) {
     const top = H * b.spread * w.taper;
-    for (const [f, k, m] of [[0.3, 0.7, 4], [0.6, 0.42, 3]]) {
+    for (const [f, k, m] of [[0.28, 0.8, 5], [0.62, 0.45, 3]]) {
       a0 += 2.4;
       for (let j = 0; j < m; j++) bough(crownTop + (H - crownTop) * f, a0 + (j / m) * TAU + (R() - 0.5) * 0.8, top * k * (0.8 + 0.4 * R()), top * k, 1, 3);
     }

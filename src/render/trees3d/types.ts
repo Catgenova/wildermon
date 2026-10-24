@@ -29,6 +29,8 @@ export interface Limb {
   dead?: boolean;
   /** Has nothing growing off its end. */
   tip?: boolean;
+  /** A conifer's branch: the clump of the spray it carries (`Pad`), which it turns with. */
+  pad?: number;
 }
 
 /**
@@ -162,8 +164,12 @@ export interface Whorls {
   tiers: number;
   /** Boughs in the lowest whorl; the top ones have fewer. */
   pads: number;
-  /** A bough's half-width at its widest, against its reach. */
+  /** A spray's half-width at its widest, against its length. */
   width: number;
+  /** How much of a bough's reach is bare branch before its spray starts. */
+  bare: number;
+  /** Boughs that reach out further than the rest of their whorl. */
+  long: number;
   /** How far its fingers hang under it, against the rise from one whorl to the next. */
   hang: number;
   /** Fingers round a bough's end. */
@@ -188,8 +194,10 @@ export interface Whorls {
 
 /** One bough of a conifer, round its mass's middle. */
 export interface Pad {
-  /** From the mass's middle to where it leaves the leader. */
+  /** From the mass's middle to where the spray starts, on its branch. */
   root: V3;
+  /** From the mass's middle to where its branch leaves the leader. */
+  base: V3;
   /** Its way out along the ground, a unit vector. */
   d: V3;
   reach: number;
