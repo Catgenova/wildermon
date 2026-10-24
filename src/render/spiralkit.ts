@@ -425,6 +425,23 @@ export function spiralOutline(fl: SpiralFlight, f: SpiralFrame): Array<[number, 
   });
 }
 
+/** The soft shade a stack throws on the floor round its foot: rings out to the treads' ends, toward the bottom right of the screen as every piece's is. */
+export function spiralShade(ctx: CanvasRenderingContext2D, fl: SpiralFlight, f: SpiralFrame, zoom: number): void {
+  const cx = fl.x + 0.5, cy = fl.y + 0.5;
+  for (const [k, a] of [[1.08, 0.05], [0.95, 0.07], [0.75, 0.08]] as Array<[number, number]>) {
+    ctx.beginPath();
+    for (let j = 0; j <= 24; j++) {
+      const ang = (j / 24) * Math.PI * 2;
+      const wx = cx + Math.cos(ang) * SPIRAL_OUT * k, wy = cy + Math.sin(ang) * SPIRAL_OUT * k;
+      const x = f.sx(wx, wy) + 1.6 * zoom, y = f.sy(wx, wy, fl.foot) + 0.8 * zoom;
+      if (j) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(44, 74, 78, ${a})`;
+    ctx.fill();
+  }
+}
+
 /** Let go of every picture: for a harness timing them cold. */
 export function forgetSpiralBakes(): void {
   kept.clear();

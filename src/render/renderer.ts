@@ -60,7 +60,7 @@ import { FLOOR_PPT, FLOOR_TILES, concrete, flooring, slabbing } from './flooring
 import { LADDER, stairStyle } from './stairing';
 import { BEAM_DEEP, drawBeam, drawColumn, drawJettySupports, drawRailing, JOIST_DEEP, PILASTER_PROUD, type Body, type Cut, type RailEnds } from './framing';
 import { jettyBase, outsideStairBase, spiralBase } from '../game/frame';
-import { drawSpiralPiece, drawSpiralWhole, spiralCapGlow, spiralKey, spiralOutline, spiralPieces, type SpiralFlight, type SpiralFrame, type SpiralPieceAt } from './spiralkit';
+import { drawSpiralPiece, drawSpiralWhole, spiralCapGlow, spiralKey, spiralShade, spiralOutline, spiralPieces, type SpiralFlight, type SpiralFrame, type SpiralPieceAt } from './spiralkit';
 import { spiralHeading, spiralRise, spiralSpot, spiralTurn, SPIRAL_TREADS } from '../game/spiral';
 import { storeyHeight, storeyTileAt } from '../game/storeyview';
 import { drawSteps, stepsFootAt } from './steps';
@@ -8635,6 +8635,14 @@ export class Renderer {
   private takeSpiral(floor: FloorTile, x: number, y: number, base: number, alpha: number, headOnly: boolean): void {
     const fl = this.spiralFlight(floor, x, y, base, headOnly);
     const done = isDone(floor);
+    // At the foot of a stack, its shade on the floor, under its pieces.
+    if (!fl.stack.below && !headOnly && done) {
+      const ctx = this.canvas.ctx;
+      ctx.save();
+      ctx.globalAlpha *= alpha;
+      spiralShade(ctx, fl, this.spiralFrame(), this.camera.zoom);
+      ctx.restore();
+    }
     for (const p of spiralPieces(fl, this.spiralFrame(), base)) {
       const e = this.take('spiral', x, y, p.sx, p.sy, null);
       e.sp = p;
