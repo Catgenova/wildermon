@@ -984,7 +984,7 @@ function buttress(job: Job, a: number, out: number, k: number): { at: V3; draw: 
   const dir: V3 = [Math.cos(a), Math.sin(a), 0];
   const perp: V3 = [-dir[1], dir[0], 0];
   const r0 = rT * 0.72, r1 = rT + Math.max(rT * 0.3, out);
-  const h0 = rT * 1.05, w0 = rT * 0.62;
+  const h0 = rT * 0.75, w0 = rT * 0.62;
   const N = 8;
   const ridge: V3[] = [], left: V3[] = [], right: V3[] = [];
   for (let i = 0; i <= N; i++) {
@@ -1005,12 +1005,12 @@ function buttress(job: Job, a: number, out: number, k: number): { at: V3; draw: 
     p.closePath();
     return p;
   };
-  const zm = h0 * 0.4, wm = w0 * 0.75;
-  const nL = unit(add(mul(perp, zm), [0, 0, wm])), nR = unit(add(mul(perp, -zm), [0, 0, wm]));
+  // Its sides are steep: lit mostly as the trunk's sides are, a little more from above.
+  const nL = unit(add(perp, [0, 0, 0.35])), nR = unit(add(mul(perp, -1), [0, 0, 0.35]));
   const colOf = (n: V3): string => {
     const lam = Math.max(0, dot(n, light.sun));
     // A step under the limbs' light: a buttress is low, in the trunk's shade much of the day.
-    return rgb(mixRgb(hex(spec.bark.shade), hex(spec.bark.lit), 0.85 * clamp01((light.ambient + light.direct * lam - 0.22) / 0.82)));
+    return rgb(mixRgb(hex(spec.bark.shade), hex(spec.bark.lit), 0.6 * clamp01((light.ambient + light.direct * lam - 0.22) / 0.82)));
   };
   const toward = e.toward as V3;
   const sides: Array<[V3[], V3]> = [[left, nL], [right, nR]];
