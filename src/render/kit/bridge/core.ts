@@ -988,7 +988,8 @@ function refugeFor(k: Kit): void {
       const inset = line.map(([s0, t0]): [number, number] => [p.s + (s0 - p.s) * 0.7, t + (t0 - t) * 0.35]);
       for (let q = 0; q + 1 < line.length; q++) {
         const [a, b] = [line[q], line[q + 1]], [ai, bi] = [inset[q], inset[q + 1]];
-        const out: L = [(b[1] - a[1]) * edge, -(b[0] - a[0]) * edge, 0];
+        // Outward, away from the deck: the outline runs along the bridge, so out is its left turned toward `edge`.
+        const out: L = [-(b[1] - a[1]) * edge, (b[0] - a[0]) * edge, 0];
         face('front', [[a[0], a[1], under], [b[0], b[1], under], [b[0], b[1], z], [a[0], a[1], z]], out, st.trim,
           info('cornice', 0, 1, under, z, Math.round(p.s * 10) + q), segFrame(a, b));
         face('front', [[ai[0], ai[1], under - 4.6], [bi[0], bi[1], under - 4.6], [b[0], b[1], under], [a[0], a[1], under]], [out[0], out[1], -0.6], st.stone,
@@ -1067,7 +1068,7 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
   const segs = line.slice(0, -1).map((a, q) => {
     const b = line[q + 1];
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-    const n: [number, number] = [((b[1] - a[1]) / len) * edge, (-(b[0] - a[0]) / len) * edge];
+    const n: [number, number] = [(-(b[1] - a[1]) / len) * edge, ((b[0] - a[0]) / len) * edge];
     return { a, b, n, len };
   });
   const off = (pt: [number, number], n: [number, number], d: number): [number, number] => [pt[0] - n[0] * d, pt[1] - n[1] * d];
