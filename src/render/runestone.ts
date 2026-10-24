@@ -2813,12 +2813,19 @@ export class RunestoneNight {
   private scratch: Kept | undefined;
   private patch: Kept | undefined;
   private open = false;
+  /** Whether what keeps nothing in front of it (`glowing`'s `keeps`) is taken: after dark, and while a wash is laid before it. */
+  private glowOpen = false;
   /** How many of this frame's stones keep what stands in front of them. */
   private keepN = 0;
 
-  /** A new frame: forget the last one's stones, and open only after dark. */
-  begin(dark: boolean): void {
+  /**
+   * A new frame: forget the last one's stones, and open only after dark --
+   * or, for what keeps nothing in front of it (an altar's stars), whenever
+   * the sky's wash is `washed` on, so the night is still mixed small.
+   */
+  begin(dark: boolean, washed = dark): void {
     this.open = dark;
+    this.glowOpen = dark || washed;
     this.lit.length = 0;
     this.keepN = 0;
   }
@@ -2877,7 +2884,7 @@ export class RunestoneNight {
    * of it is not kept off them. False when the night is not open.
    */
   glowing(ctx: Ctx, L: number, T: number, R: number, B: number, holes: Lit['holes'], masks: Lit['masks'], keeps = true): boolean {
-    if (!this.open || !(R > L && B > T)) return false;
+    if (!(keeps ? this.open : this.glowOpen) || !(R > L && B > T)) return false;
     const m = ctx.getTransform();
     const dev = devBox(m, L, T, R - L, B - T);
     const i = this.lit.length;

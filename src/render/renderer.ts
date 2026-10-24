@@ -1030,6 +1030,20 @@ export function skyWash(hour: number, dark: number): Array<{ colour: string; alp
   return out;
 }
 
+/** The washes (`skyWash`) laid one over another, as the one colour they come to. */
+function washInk(washes: ReadonlyArray<{ colour: string; alpha: number }>): string {
+  let r = 0, g = 0, b = 0, a = 0;
+  for (const w of washes) {
+    const [wr, wg, wb] = w.colour.split(',').map(Number);
+    const k = Math.round(w.alpha * 1000) / 1000;
+    r = wr * k + r * (1 - k);
+    g = wg * k + g * (1 - k);
+    b = wb * k + b * (1 - k);
+    a = k + a * (1 - k);
+  }
+  return a > 0 ? `rgba(${Math.round(r / a)}, ${Math.round(g / a)}, ${Math.round(b / a)}, ${a.toFixed(4)})` : 'rgba(0, 0, 0, 0)';
+}
+
 /**
  * What a ground colour looks like once it is in the air. Kicked-up ground is
  * always paler than the ground it came off — it is the dry, fine part of it,
@@ -2009,7 +2023,7 @@ export class Renderer {
    * only resized when the window is, since making one every frame at screen
    * size is the sort of thing that costs a night's frame rate.
    */
-  private night: HTMLCanvasElement | null = null;
+  private nights = new Map<number, HTMLCanvasElement>();
   /**
    * The layer the cold wash over remembered ground is moved onto while
    * something in sight stands up in front of it (`fogLayer`). Kept between
@@ -2502,15 +2516,18 @@ export class Renderer {
     windOn(path, xs, ys, convexHull(xs, ys));
   }
 
+  /** The night's layer at `res` of the screen's size: one kept for each size it is mixed at, so going between them makes none. */
   private nightLayer(res = 1): HTMLCanvasElement {
     const w = Math.max(1, Math.ceil(this.canvas.width * res));
     const h = Math.max(1, Math.ceil(this.canvas.height * res));
-    if (!this.night || this.night.width !== w || this.night.height !== h) {
-      this.night = document.createElement('canvas');
-      this.night.width = w;
-      this.night.height = h;
+    let night = this.nights.get(res);
+    if (!night || night.width !== w || night.height !== h) {
+      night = document.createElement('canvas');
+      night.width = w;
+      night.height = h;
+      this.nights.set(res, night);
     }
-    return this.night;
+    return night;
   }
 
   /** Flat-shaded colour for a tile: base colour, slope lighting, per-tile variation and depth tint under water. */
@@ -3951,7 +3968,9 @@ export class Renderer {
     this.hitSeq = 0;
     this.glows.length = 0;
     this.swirlsSeen.length = 0;
-    this.runeNight.begin(this.game.darkness() > 0.02);
+    // After dark; and for an altar's stars, whenever the night layer is laid at all (`drawOverlays`), so it can be mixed small.
+    const dark0 = this.game.darkness();
+    this.runeNight.begin(dark0 > 0.02, skyWash(this.game.hourOfDay(), dark0).length > 0);
     this.anvilHits.length = 0;
     this.stoneHits.length = 0;
     this.postHits.length = 0;
@@ -15000,34 +15019,45 @@ export class Renderer {
         const lit = this.lightLayers(lights, W, H);
         /*
          * The wash is one colour, so the night is mixed at the size its holes
-         * were worked out at and laid over the screen scaled up -- unless
-         * something with a light of its own is in view, whose holes are fine
-         * work (an altar's stars and lines), and then at full size. A
-         * runestone's runes are as fine, but they are cut out of a copy of
-         * their own box at the screen's pixels as the night goes down
-         * (`RunestoneNight.lay`), so they ask for the full size only when
-         * two stones' boxes overlap.
+         * were worked out at and laid over the screen scaled up. What has a
+         * light of its own -- an altar's stars, a runestone's runes -- is
+         * fine work, cut out of a copy of its own box at the screen's pixels
+         * as the night goes down (`RunestoneNight.lay`), so it asks for the
+         * full size only when two such boxes overlap.
          */
         const patch = this.runeNight.active && this.runeNight.separate;
-        const res = this.glows.length || (this.runeNight.active && !patch) ? 1 : LIGHT_RES;
-        const night = this.nightLayer(res);
+        const res = this.runeNight.active && !patch ? 1 : LIGHT_RES;
+        /*
+         * At the lights' own size the night is mixed on their mask itself,
+         * which is the night's shape already: the washes laid on it as one
+         * colour, inside what the lights leave of it. It was a layer of its
+         * own, cleared, washed and cut to the mask, every frame.
+         */
+        const night = res === LIGHT_RES ? lit.mask : this.nightLayer(res);
         const nc = night.getContext('2d') as CanvasRenderingContext2D;
         nc.setTransform(1, 0, 0, 1, 0, 0);
-        nc.globalCompositeOperation = 'source-over';
-        nc.clearRect(0, 0, night.width, night.height);
-        for (const wash of washes) {
-          nc.fillStyle = `rgba(${wash.colour}, ${wash.alpha.toFixed(3)})`;
+        if (res === LIGHT_RES) {
+          nc.globalCompositeOperation = 'source-in';
+          nc.fillStyle = washInk(washes);
           nc.fillRect(0, 0, night.width, night.height);
+        } else {
+          nc.globalCompositeOperation = 'source-over';
+          nc.clearRect(0, 0, night.width, night.height);
+          for (const wash of washes) {
+            nc.fillStyle = `rgba(${wash.colour}, ${wash.alpha.toFixed(3)})`;
+            nc.fillRect(0, 0, night.width, night.height);
+          }
+          // What the lights leave of it (`lightLayers`).
+          nc.globalCompositeOperation = 'destination-in';
+          nc.drawImage(lit.mask, 0, 0, lit.mask.width / LIGHT_RES, lit.mask.height / LIGHT_RES);
         }
-        // What the lights leave of it (`lightLayers`).
-        nc.globalCompositeOperation = 'destination-in';
-        if (res === LIGHT_RES) nc.drawImage(lit.mask, 0, 0);
-        else nc.drawImage(lit.mask, 0, 0, lit.mask.width / LIGHT_RES, lit.mask.height / LIGHT_RES);
         nc.globalCompositeOperation = 'destination-out';
-        // And off whatever has a light of its own, where it was drawn this frame.
+        // And off whatever has a light of its own, where it was drawn this frame: at the layer's own size.
+        nc.setTransform(res, 0, 0, res, 0, 0);
         for (const n of this.glows) {
           for (const h of furnitureHoles(n.sx, n.sy, zoom, n.kind, n.view)) softHole(nc, h.x, h.y, h.r, h.a);
         }
+        nc.setTransform(1, 0, 0, 1, 0, 0);
         // And off the runestones' runes, in their own shapes, less whatever stands in front of them.
         if (!patch) this.runeNight.cut(nc);
         nc.globalCompositeOperation = 'source-over';
