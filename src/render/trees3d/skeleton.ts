@@ -341,7 +341,7 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
     const az = azOf[i] + (j < lowN ? -1 : 1) * (0.22 + 0.12 * R());
     const el = -0.5 + 0.3 * R();
     mine[i].push(spots.length);
-    spots.push({ c: at(az, el, 1.0 + 0.12 * R()), az, el });
+    spots.push({ c: at(az, el, 0.92 + 0.1 * R()), az, el });
   }
   const GOLD = Math.PI * (3 - Math.sqrt(5));
   const azR = R() * TAU;

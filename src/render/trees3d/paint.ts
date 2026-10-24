@@ -164,12 +164,14 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     const P = limbs[L.parent];
     return P.order === L.order && len(sub(L.a, P.b)) < 1e-6;
   };
-  for (let i = 0; i < limbs.length; i++) if (goesOn(i)) next.set(limbs[i].parent, i);
+  // What is never drawn is not looked at: under a full crown the finer wood, among any leaf an open crown's finest twigs.
+  const cut = leafy ? (job.spec.open ? 3 : 2) : job.spec.open && job.dress.full > 0 ? 4 : 99;
+  for (let i = 0; i < limbs.length; i++) if (limbs[i].order < cut && goesOn(i)) next.set(limbs[i].parent, i);
   const V = unit(e.toward as V3);
   const snowy = job.dress.season === 'winter';
   const out: Chain[] = [];
   for (let i = 0; i < limbs.length; i++) {
-    if (goesOn(i)) continue;
+    if (limbs[i].order >= cut || goesOn(i)) continue;
     const first = limbs[i];
     // Under a full crown the finest twigs are never seen.
     // Under a full crown only the trunk and the limbs it splits into are ever seen, below the crown.
@@ -555,11 +557,14 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
   g.fill(outline);
   g.save();
   g.clip(outline);
-  const plane = (along: number, down: number, k: number, col: string, n: number): void => {
+  const [ccx, ccy] = proj(job.e, s.c.c);
+  const plane = (along: number, down: number, k: number, col: string, n: number, lit = false): void => {
     const p = new Path2D();
     for (const u of lumps) {
+      // The lit plane only on the lumps turned to the sun and up: the rest are in the cluster's own shade.
+      if (lit && (u.x - ccx) * sun.sx + (u.y - ccy) * sun.sy - (u.y - ccy) * 0.5 < -u.rx * 0.35) continue;
       // A plane is inside the mass: lumpy, with no leaves standing out of it.
-      massPath(p, u.x + sun.sx * u.rx * along * off, u.y + sun.sy * u.ry * along * off + u.ry * down, u.rx * k, u.ry * k, outlineOf(mulberry32(u.seed + n), 0), 0.9, edge, 12);
+      massPath(p, u.x + sun.sx * u.rx * along * off, u.y + sun.sy * u.ry * along * off + u.ry * down, u.rx * k, u.ry * k, outlineOf(mulberry32(u.seed + n), 0), 0.9, edge, 10);
     }
     g.fillStyle = col;
     g.fill(p);
@@ -567,7 +572,7 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
   // The core of the shade: away from the sun and under; the middle, and the lit side, toward the sun and up.
   plane(-0.5, 0.28, 0.72, s.under[b - 1], 1);
   plane(0.16, -0.1, 0.8, s.ramp[b + 1], 2);
-  if (!job.light.night || L > 0.6) plane(0.38, -0.22, 0.48, s.over[b + 2], 3);
+  if (!job.light.night || L > 0.6) plane(0.38, -0.22, 0.48, s.over[b + 2], 3, true);
   // A leaf or two where the light catches the top lump's edge.
   const R = mulberry32(lumps[0]?.seed ?? 1);
   const u = lumps.reduce((m, v) => (v.y - v.ry < m.y - m.ry ? v : m), lumps[0]);
