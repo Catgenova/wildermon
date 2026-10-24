@@ -229,7 +229,7 @@ const sun = stoneCentre(at('sunreach'), N);
 /** Beside the Crownstone, on the tile under the middle of its south side. */
 const BESIDE: [number, number] = [crown.x + 0.5, crown.y + 2.5];
 /** The jobs a stone's ground is asked about, and where: on the stone, then the same job beside it. */
-const GROUND_JOBS: Array<{ id: string; on: Record<string, unknown>; off: Record<string, unknown> }> = [
+const GROUND_JOBS: Array<{ id: string; key?: string; on: Record<string, unknown>; off: Record<string, unknown> }> = [
   { id: 'dig', on: { kind: 'tile', x: crown.x, y: crown.y + 1, cx: crown.x, cy: crown.y + 2 }, off: { kind: 'tile', x: crown.x, y: crown.y + 3, cx: crown.x, cy: crown.y + 4 } },
   { id: 'flatten', on: { kind: 'tile', x: crown.x, y: crown.y + 1, cx: crown.x, cy: crown.y + 1 }, off: { kind: 'tile', x: crown.x, y: crown.y + 3, cx: crown.x, cy: crown.y + 3 } },
   { id: 'pave_cobble', on: { kind: 'tile', x: crown.x + 1, y: crown.y + 1, cx: crown.x + 1, cy: crown.y + 1 }, off: { kind: 'tile', x: crown.x + 1, y: crown.y + 2, cx: crown.x + 1, cy: crown.y + 2 } },
@@ -237,11 +237,13 @@ const GROUND_JOBS: Array<{ id: string; on: Record<string, unknown>; off: Record<
   { id: 'plan_building', on: { kind: 'tile', x: crown.x, y: crown.y, cx: crown.x, cy: crown.y }, off: { kind: 'tile', x: crown.x + 3, y: crown.y, cx: crown.x + 3, cy: crown.y } },
   { id: 'place_furniture', on: { kind: 'tile', x: crown.x, y: crown.y + 1, cx: crown.x, cy: crown.y + 1, sx: 1, sy: 1, itemUid: 1 }, off: { kind: 'tile', x: crown.x, y: crown.y + 2, cx: crown.x, cy: crown.y + 2, sx: 1, sy: 1, itemUid: 1 } },
   { id: 'plan_bridge', on: { kind: 'tile', x: crown.x, y: crown.y - 3, cx: crown.x, cy: crown.y - 3, material: 'plank' }, off: { kind: 'tile', x: crown.x + 3, y: crown.y + 2, cx: crown.x + 3, cy: crown.y + 2, material: 'plank' } },
+  // Three lanes along the stone's south side: its line is beside it, its north lane on it (`stone_job_tiles`, `Game.planTiles`).
+  { id: 'plan_bridge', key: 'plan_bridge3', on: { kind: 'tile', x: crown.x + 3, y: crown.y + 2, cx: crown.x + 3, cy: crown.y + 2, material: 'marble', width: 3 }, off: { kind: 'tile', x: crown.x + 3, y: crown.y + 2, cx: crown.x + 3, cy: crown.y + 2, material: 'marble' } },
   { id: 'drop_dirt_here', on: { kind: 'item', uid: 1 }, off: { kind: 'item', uid: 1 } },
 ];
 const jobSql = (on: 'on' | 'off'): string => GROUND_JOBS.map((j) => `
     ${j.id === 'drop_dirt_here' ? `update player set y = ${on === 'on' ? BESIDE[1] - 0.4 : BESIDE[1] + 0.6} where world_id = w and uid = u;` : ''}
-    insert into said values ('${on.toUpperCase()}:${j.id}', coalesce(act_refusal(w, u, '${j.id}', '${JSON.stringify(on === 'on' ? j.on : j.off)}'::jsonb), 'none'));
+    insert into said values ('${on.toUpperCase()}:${j.key ?? j.id}', coalesce(act_refusal(w, u, '${j.id}', '${JSON.stringify(on === 'on' ? j.on : j.off)}'::jsonb), 'none'));
     update player set body_at = now(), x = ${BESIDE[0]}, y = ${BESIDE[1]} where world_id = w and uid = u;`).join('');
 const travel = (stone: string, uidVar = 'ts'): string => `jsonb_build_object('kind', 'item', 'uid', ${uidVar}, 'stone', '${stone}')`;
 
@@ -423,7 +425,7 @@ const cleared = psql(`
 begin;
 create temp table said (k text, v text);
 do $t$
-declare w uuid; u uuid := '${MIRA}'; v uuid := '${TOBIN}'; v_chest bigint; v_bag bigint; v_br bigint; v_left bigint; r jsonb;
+declare w uuid; u uuid := '${MIRA}'; v uuid := '${TOBIN}'; v_chest bigint; v_bag bigint; v_br bigint; v_left bigint; r jsonb; v_wide bigint; v_wide_off bigint;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Runestones cleared', 4245, ${N}, 5, 5, true) returning id into w;
   perform land_blank(w, ${N});
@@ -472,6 +474,15 @@ begin
   insert into bridge (world_id, kind, ax, ay, bx, by, height) values (w, 'bridge', ${crown.x}, ${crown.y - 3}, ${crown.x}, ${crown.y + 3}, 10) returning id into v_br;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
     select w, v_br, k, ${crown.x}, ${crown.y} - 2 + k, '{}', '{}' from generate_series(0, 4) k;
+  -- Three lanes, its line a tile off the stone's west side and its east lane on it; and three lanes clear of it further west.
+  insert into bridge (world_id, kind, ax, ay, bx, by, height, width, side) values (w, 'marble', ${crown.x - 2}, ${crown.y - 3}, ${crown.x - 2}, ${crown.y + 3}, 10, 3, 1)
+    returning id into v_wide;
+  insert into bridge_span (world_id, bridge, n, x, y, needed, total)
+    select w, v_wide, k, ${crown.x - 2}, ${crown.y} - 2 + k, '{}', '{}' from generate_series(0, 4) k;
+  insert into bridge (world_id, kind, ax, ay, bx, by, height, width, side) values (w, 'marble', ${crown.x - 5}, ${crown.y - 3}, ${crown.x - 5}, ${crown.y + 3}, 10, 3, 1)
+    returning id into v_wide_off;
+  insert into bridge_span (world_id, bridge, n, x, y, needed, total)
+    select w, v_wide_off, k, ${crown.x - 5}, ${crown.y} - 2 + k, '{}', '{}' from generate_series(0, 4) k;
   insert into foundation (world_id, id, x, y, top, needed, total) values (w, 5, ${crown.x - 1}, ${crown.y - 1}, 20, '{}', '{}');
   insert into spring (world_id, x, y, cx, cy) values (w, ${crown.x + 1}, ${crown.y - 1}, ${crown.x + 1}, ${crown.y - 1});
   -- The ground dug, raised, stripped and paved, and said so.
@@ -508,7 +519,8 @@ begin
     ('crop', (select count(*) from crop where world_id = w)),
     ('water_plant', (select count(*) from water_plant where world_id = w)),
     ('tree_notch', (select count(*) from tree_notch where world_id = w)),
-    ('bridge', (select count(*) from bridge where world_id = w) + (select count(*) from bridge_span where world_id = w)),
+    ('bridge', (select count(*) from bridge where world_id = w and id <> v_wide_off) + (select count(*) from bridge_span where world_id = w and bridge <> v_wide_off)),
+    ('wide_off', (select count(*) from bridge where world_id = w and id = v_wide_off)),
     ('foundation', (select count(*) from foundation where world_id = w)),
     ('spring', (select count(*) from spring where world_id = w))) z(t, n);
   insert into said select 'GROUND', count(*) filter (where land_height(w, g.x, g.y) <> g.height or land_dirt(w, g.x, g.y) <> g.dirt
@@ -531,12 +543,12 @@ const clear = new Map(cleared.split('\n').filter((l) => l.includes('=')).map((l)
 {
   const want: Record<string, string> = {
     building: '0', building_tile: '0', wall: '0', floor: '0', cellar: '0', placed: '1', bench: '1', crate: '0', item: '1', plank_beside: '1',
-    crop: '0', water_plant: '0', tree_notch: '0', bridge: '0', foundation: '0', spring: '0',
+    crop: '0', water_plant: '0', tree_notch: '0', bridge: '0', wide_off: '1', foundation: '0', spring: '0',
   };
   const wrong = Object.entries(want).filter(([k, v]) => clear.get(`LEFT:${k}`) !== v).map(([k, v]) => `${k} ${clear.get(`LEFT:${k}`)} (want ${v})`);
   check('a stone\'s ground taken back: the house over it goes whole -- walls, floors, its cellar and what lay in it, and the chest upstairs beside it -- '
     + 'and so do a fence, a chest and the brick in it, a fire, a crate and its planks, a pile and the bag in it and the mote in that, a crop, a lily, '
-    + 'a notched tree, the bridge across it, a foundation and a spring; the bench downstairs beside it and the plank on the ground beside it stay',
+    + 'a notched tree, the bridge across it and a three-lane one with a lane on it, a foundation and a spring; the bench downstairs beside it, the plank on the ground beside it and a three-lane bridge clear of it stay',
     !wrong.length, `${wrong.join('; ')} (${clear.get('DID')})`);
   const [off, all] = (clear.get('GROUND') ?? '').split('|');
   check(`and the ground under it is the generated ground again, every one of its ${all} corners and their tiles`, off === '0' && Number(all) === 16, clear.get('GROUND'));
@@ -689,8 +701,8 @@ for (const j of GROUND_JOBS) {
   const offHere = def.check?.(j.off as Target, g) ?? 'none';
   g.putBody(BESIDE[0], BESIDE[1], 0);
   check(`${def.label} on the Crownstone's ground is refused on both sides, and beside it is not for that`,
-    isle.get(`ON:${j.id}`) === said && onHere === said && isle.get(`OFF:${j.id}`) !== said && offHere !== said,
-    `island ${isle.get(`ON:${j.id}`)} / ${isle.get(`OFF:${j.id}`)}; browser ${onHere} / ${offHere}`);
+    isle.get(`ON:${j.key ?? j.id}`) === said && onHere === said && isle.get(`OFF:${j.key ?? j.id}`) !== said && offHere !== said,
+    `${j.key ?? j.id}: island ${isle.get(`ON:${j.key ?? j.id}`)} / ${isle.get(`OFF:${j.key ?? j.id}`)}; browser ${onHere} / ${offHere}`);
 }
 check('nobody walks into a stone on the island, and walks past it', Number(part('WALK', 0)) < 1 && Number(part('WALK', 1)) === 1, isle.get('WALK'));
 check('a walk the browser says goes through it is stopped short of it',

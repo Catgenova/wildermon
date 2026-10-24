@@ -3463,7 +3463,7 @@ export class Renderer {
         sx: (wx, wy) => cam.worldToScreenX(wx, wy),
         sy: (wx, wy, h) => cam.worldToScreenY(wx, wy, h),
         heightAt: (wx, wy) => world.heightAt(wx, wy),
-        greenStage: (b) => Math.round(greenShows(bridgeGreen(this.game, b, this.greenAt) ?? 0, 0, 0) * 4),
+        greenStage: (b) => Math.round(greenShows(bridgeGreen(this.game, b, this.greenAt) ?? 0, 0, 0) * PAVE_STAGES),
       };
     }
     return this.bFrame;
@@ -4298,8 +4298,8 @@ export class Renderer {
             fe.piece = fu;
             fe.view = this.viewOf(fu);
             if (fu.rare) fe.rare = fu.rare;
-            // On a bridge's deck, among its pieces (`deckKey`): a stall on an outer lane, a wagon crossing.
-            if (!furnitureDef(fu.kind).boat) this.onBridgeDeck(fe, wx, wy);
+            // On a bridge's deck, among its pieces (`deckKey`): a stall on an outer lane, a wagon crossing. Anything else is under it (`pieceOnDeck`).
+            if (this.game.bridges.size && this.game.pieceOnDeck(fu, Math.floor(wx), Math.floor(wy))) this.onBridgeDeck(fe, wx, wy);
             if (fu.helm || fu.riders?.length || player.aboard === fu.id || this.helming === fu) this.takeAboard(fu, fe, x, y, zoom);
             // A cart on the move rocks and bumps on the track under her driver, and her driver with her (`cartSwayOf`).
             if (reinsTo(fu.kind)) fe.sway = this.cartSwayOf(fu, fe.sx, fe.sy, zoom);
@@ -4343,11 +4343,15 @@ export class Renderer {
             if (this.pinned !== null && peer.level !== this.pinned) continue;
             const [px, py] = this.game.roster.drawnAt(peer);
             const flight = peer.level === 0 ? this.onFlight(px, py) : null;
+            // Under a bridge's deck, at the ground's height or the water's, rather than on it (`bodyUnder`).
+            const under = this.game.bridges.size > 0 && peer.level === 0
+              && this.bodyUnder(`p${peer.id}`, Math.floor(px), Math.floor(py), [Math.floor(peer.fromX), Math.floor(peer.fromY)], peer.swimming);
+            const onDeck = under ? null : this.peerDeck(px, py, peer.level);
             const pe = this.take('peer', x, y, cam.worldToScreenX(px, py),
-              cam.worldToScreenY(px, py, flight ? flight.h : this.peerDeck(px, py, peer.level)
+              cam.worldToScreenY(px, py, flight ? flight.h : onDeck
                 ?? (this.game.deckBase(Math.floor(px), Math.floor(py), peer.level) ?? this.footOn(px, py, peer.level)) + peer.level * WALL_HEIGHT), null);
             pe.peer = peer;
-            if (this.peerDeck(px, py, peer.level) !== null) this.onBridgeDeck(pe, px, py);
+            if (onDeck !== null) this.onBridgeDeck(pe, px, py);
             if (flight) pe.clip = flight.clip;
           }
         }
@@ -4364,10 +4368,14 @@ export class Renderer {
             if (this.pinned !== null && up !== this.pinned && !cr.ridden && !(cr.hitchedTo !== null && this.game.furniture.get(cr.hitchedTo)?.driven)) continue;
             // Under you, as high as you are drawn, on the way up a flight too.
             const lift = cr.ridden ? player.visualLevel : up;
+            // Under a bridge's deck rather than on it, as whoever rides it is (`bodyUnder`).
+            // Every one kept track of where there are bridges, so the tile it came from is known when it steps under one.
+            const under = this.game.bridges.size > 0 && lift <= 0 && (cr.ridden ? this.game.underDeck : this.bodyUnder(`c${cr.id}`, x, y)) && deckHere !== null;
+            const stand = under ? null : deckHere;
             const ce = this.take('creature', x, y, cam.worldToScreenX(cr.x, cr.y),
-              cam.worldToScreenY(cr.x, cr.y, lift > 0 ? this.footOn(cr.x, cr.y, up) + lift * WALL_HEIGHT : deckHere ?? this.footAt(cr.x, cr.y)), null);
+              cam.worldToScreenY(cr.x, cr.y, lift > 0 ? this.footOn(cr.x, cr.y, up) + lift * WALL_HEIGHT : stand ?? this.footAt(cr.x, cr.y)), null);
             ce.creature = cr;
-            if (deckHere !== null && lift <= 0) this.onBridgeDeck(ce, cr.x, cr.y);
+            if (stand !== null && lift <= 0) this.onBridgeDeck(ce, cr.x, cr.y);
             // Somebody else up on it: on its saddle, a hair in front of it, as I am on mine.
             const rider = cr.riderUid && !cr.ridden ? this.riderOf(cr) : undefined;
             if (rider) {
@@ -5042,17 +5050,50 @@ export class Renderer {
     const up = f.level ?? 0;
     if (up > 0) return this.footOn(wx, wy, up) + up * WALL_HEIGHT;
     const h = this.game.world.heightAt(wx, wy);
-    return furnitureDef(f.kind).boat ? Math.max(h, 0) : this.standTop(wx, wy);
+    // On a bridge's deck, or on the ground under it (`pieceOnDeck`).
+    return furnitureDef(f.kind).boat ? Math.max(h, 0) : this.standTop(wx, wy, this.game.bridges.size > 0 && this.game.pieceOnDeck(f, Math.floor(wx), Math.floor(wy)));
   }
 
   /** Whether a tile stands on piers, for the pond painter (`WaterFrame.decked`). */
   private readonly pierOver = (x: number, y: number): boolean => this.game.buildings.onPiers(x, y);
 
-  /** How high a thing set down at a point stands: on the finished deck of a tile on piers or of a bridge, or on the ground. */
-  private standTop(wx: number, wy: number): number {
+  /**
+   * How high a thing set down at a point stands: on the finished deck of a
+   * tile on piers, or of a bridge where it is set down on the deck (an outer
+   * lane of a wide one, `deckLaneAt`, or `deck` as its caller has it), or on
+   * the ground, which is under any other bridge's deck.
+   */
+  private standTop(wx: number, wy: number, deck = this.game.bridges.size > 0 && this.game.deckLaneAt(Math.floor(wx), Math.floor(wy))): number {
     return (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(Math.floor(wx), Math.floor(wy)) : null)
-      ?? (this.game.bridges.size ? this.game.deckHeightAt(wx, wy) : null) ?? this.game.world.heightAt(wx, wy);
+      ?? (deck ? this.game.deckHeightAt(wx, wy) : null) ?? this.game.world.heightAt(wx, wy);
   }
+
+  /**
+   * Whether somebody other than the player, or a creature, is under a
+   * bridge's deck rather than on it, as the player's own `underDeck` is
+   * kept: off the tile they were on before (`Game.underAfter`), remembered
+   * from frame to frame by `key`; in under it from wherever they were first
+   * seen (`from`); and always, at the water's height (`low`), swimming.
+   */
+  private bodyUnder(key: string, x: number, y: number, from?: [number, number], low = false): boolean {
+    if (this.underFrame !== this.frameNo) {
+      this.underFrame = this.frameNo;
+      this.underWas = this.underNow;
+      this.underNow = new Map();
+    }
+    const had = this.underNow.get(key) ?? this.underWas.get(key);
+    let under = false;
+    if (this.game.onWalkedDeck(x, y)) {
+      if (low) under = true;
+      else if (had) under = had.x === x && had.y === y ? had.under : this.game.underAfter(had.x, had.y, x, y, had.under);
+      else if (from && (from[0] !== x || from[1] !== y)) under = this.game.underAfter(from[0], from[1], x, y, false);
+    }
+    this.underNow.set(key, { x, y, under });
+    return under;
+  }
+  private underFrame = -1;
+  private underWas = new Map<string, { x: number; y: number; under: boolean }>();
+  private underNow = new Map<string, { x: number; y: number; under: boolean }>();
 
   /** Something standing at a point on a bridge's walked deck sorts among the bridge's pieces as standing on it (`deckKey`). */
   private onBridgeDeck(ent: Entity, wx: number, wy: number): void {

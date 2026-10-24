@@ -27,7 +27,7 @@ import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, onceEvery, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, grapesFor, PICK_GRAPES, PLANT_VINE,
   TRELLIS_RULE, trellisRefusedSaid, VINE_BEARS, VINE_REST, VINE_SKILL, vineSoilWords, VINEYARD_ACTIONS, WILD_VINE,
 } from '../../game/vineyard';
-import { BAY_PAST_HEFT, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, WAGON_WIDTH, WIDEST } from '../../game/bridges';
+import { BAY_PAST_HEFT, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, HEAD_ROOM, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, WAGON_WIDTH, WIDEST } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, CORNER_LITRES, FOUNTAIN_RIM, TILE_METRES } from '../../world/aqueducts';
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
@@ -1980,7 +1980,8 @@ export function helpText(): string {
       max drop under the deck its storeys; its tool and trade. Per span: a solid wall's bill a lane. Per pier (one between bays): a solid wall's bill a storey of drop there, rounded up.
       ${listed(Object.values(BRIDGES).filter((b) => b.material).map((b) => `<b>${b.name.toLowerCase()}</b> ${b.span} tiles, bay ${b.bay}, drop ${b.storeys} storeys`))}.</li>
       <li>Lanes: up to ${WIDEST}: the line set out along; at ${WAGON_WIDTH}, one more on the side picked; at ${STALL_WIDTH}, one more each side. Every lane's ends land as the line's,
-      on the same storey within ${metres(END_SLOP)} m. ${WAGON_WIDTH} lanes: wagons cross. ${STALL_WIDTH} lanes: furniture and stalls on the outer lanes of a finished deck.</li>
+      on the same storey within ${metres(END_SLOP)} m. ${WAGON_WIDTH} lanes: wagons cross. ${STALL_WIDTH} lanes: furniture and stalls on the outer lanes of a finished deck.
+      Furniture under a deck: <b>${metres(HEAD_ROOM)} m</b> clearance.</li>
       <li><b>Ramp</b> (ends further apart): rises evenly, at most <b>${metres(RAMP_SLOPE)} m</b> per tile of deck, or refused with the tiles needed. A storey is ${metres(WALL_HEIGHT)} m:
       one storey needs at least ${rampTiles(WALL_HEIGHT)} tiles of deck;
       ${((up: number) => `${up} storeys (ground to storey ${up + 1}) at least ${rampTiles(up * WALL_HEIGHT)}`)(2)}.
