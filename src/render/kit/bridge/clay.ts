@@ -1,6 +1,6 @@
 import { cut, glyphPath, lightOf, proj, RUNE_GOLD } from '../../runestone';
 import { css, faceColour, hex, mix, type Ctx, type RGB, type Tone, type V3 } from '../core';
-import { bayAt, box, ownerOf, refugeGaps, samples, turned, U, type Bay, type BridgePainter, type FaceInfo, type Kit, type L, type Part3, type Pier, type Plan, type Role } from './core';
+import { bayAt, box, ownerOf, refugeGaps, refugeHalf, samples, turned, U, type Bay, type BridgePainter, type FaceInfo, type Kit, type L, type Part3, type Pier, type Plan, type Role } from './core';
 
 /**
  * What the two clay bridges share, built their own way rather than the
@@ -525,8 +525,8 @@ function cutwaters(k: Kit, edge: number, t: number, D: number): void {
 
 /* ---- round things ------------------------------------------------------------------------ */
 
-/** How far out a round pier stands from the wall, in tiles: as far as the refuge it carries. */
-export const roundOut = (p: Pier): number => p.half + 0.08;
+/** How far out a round pier stands from the wall, in tiles: under a refuge, as far as the refuge it carries (the parapet's gap, `refugeHalf`). */
+export const roundOut = (p: Pier, width: number): number => (width >= 2 ? refugeHalf(p) : (p.half + 0.08) * 0.85);
 
 /**
  * A round buttress on each pier's outer face, battered out to its foot:
@@ -538,7 +538,7 @@ function buttresses(k: Kit, edge: number, t: number, D: number): void {
   const n = 8;
   for (const p of plan.piers) {
     if (p.end) continue;
-    const R0 = roundOut(p) * (plan.width >= 2 ? 1 : 0.85), R1 = R0 * 1.18;
+    const R0 = roundOut(p, plan.width), R1 = R0 * 1.18;
     if (p.s + R1 < sl.s0 - EPS || p.s - R1 > sl.s1 + EPS) continue;
     const bay = bayAt(plan, p.s - 0.01), bay2 = bayAt(plan, p.s + 0.01);
     const deckBottom = plan.deck(p.s) - plan.thick - 1.4;

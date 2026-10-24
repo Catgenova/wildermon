@@ -186,7 +186,7 @@ function refuges(k: Kit): void {
   const n = 10, T = T_WALL, rz = (T * U) / 2;
   for (const p of plan.piers) {
     if (p.end) continue;
-    const R = roundOut(p);
+    const R = roundOut(p, plan.width);
     if (p.s + R < sl.s0 - 1e-6 || p.s - R > sl.s1 + 1e-6) continue;
     const z = plan.deck(p.s);
     const zb = z - plan.thick - 1.4;

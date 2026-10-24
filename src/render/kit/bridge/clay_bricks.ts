@@ -1,5 +1,5 @@
 import { css, hex, mix, type Tone } from '../core';
-import { box, BUILDERS, byRole, ownerOf, refugeGaps, runeLine, turned, U, type BridgePainter, type Kit, type L, type Part3 } from './core';
+import { box, BUILDERS, byRole, ownerOf, REFUGE_OUT, refugeHalf, refugeOutline, runeLine, turned, U, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
 import { stoneBase } from './base';
 import { arcade, brickPaint, cface, fi, herringbonePaint, lampPost, ringPaint, runeKey, seen, tilePaint, vaultPaint } from './clay';
 
@@ -56,64 +56,87 @@ function parapet(k0: Kit, edge: number, part: Part3): void {
   }
 }
 
+type ST = [number, number];
+
+/** Upright faces along a run of (s, t) points from `z0` to `z1`, each turned away from `from`, cut to the slice; painted as brick in its own frame. */
+function upright(k: Kit, part: Part3, line: ST[], z0: number, z1: number, tone: Tone, from: ST, role: Role | null, seed: number): void {
+  for (let q = 0; q + 1 < line.length; q++) {
+    const [a, b] = [line[q], line[q + 1]];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (len < 1e-4) continue;
+    const m: ST = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const out: L = [m[0] - from[0], m[1] - from[1], 0];
+    const fr = { o: [a[0], a[1], 0] as L, a: [(b[0] - a[0]) / len / U, (b[1] - a[1]) / len / U, 0] as L, b: [0, 0, 1] as L };
+    cface(k, part, [[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1]], out, tone, role ? fi(role, 0, len * U, z0, z1, seed + q) : undefined, role ? fr : undefined);
+  }
+}
+
+/** A run of (s, t) points pulled toward `c` by `fs` along the bridge and `ft` across it. */
+const toward = (line: ST[], c: ST, fs: number, ft: number): ST[] => line.map(([s0, t0]) => [c[0] + (s0 - c[0]) * fs, c[1] + (t0 - c[1]) * ft]);
+
 /**
- * Over each pier of a bridge two lanes wide or more, a refuge: a brick
- * buttress standing out from the pier, three courses corbelled out over it,
- * and on them a bay of deck stepped out from the parapet's line, walled round
- * on its three sides in the parapet's brick and coping, dark quoins at its
- * corners; at three lanes a lamp in it.
+ * Over each pier of a bridge two lanes wide or more, a refuge on the core's
+ * outline (`refugeOutline`, a half-hexagon stepped out over the pier): a
+ * brick buttress of the same plan standing on the ground, three courses
+ * corbelled out from it, the floor in the deck's pavers, its edge the
+ * cornice's, and round it a wall of the parapet's brick under the dark
+ * coping, the parapet's rune line along it; at three lanes a lamp in it.
  */
 function refuges(k: Kit): void {
   const { plan, sl, st } = k;
-  const gaps = refugeGaps(plan);
   const H = st.parapetHeight ?? 10, T = 0.09, cop = 1.6;
-  for (const [gi, p] of plan.piers.filter((q) => !q.end).entries()) {
-    const [g0, g1] = gaps[gi];
-    if (g1 < sl.s0 - 0.05 || g0 > sl.s1 + 0.05) continue;
+  for (const p of plan.piers) {
+    if (p.end) continue;
+    const half = refugeHalf(p);
+    if (p.s + half < sl.s0 - 0.02 || p.s - half > sl.s1 + 0.02) continue;
     const z = plan.deck(p.s), zb = z - plan.thick - 1.4;
     for (const edge of sl.edges) {
       const t = edge > 0 ? sl.t1 : sl.t0;
       const part: Part3 = edge === sl.near ? 'rail' : 'front';
-      const P = 0.3, Pb = 0.18, wb = Math.min(p.half * 0.8, (g1 - g0) / 2 - 0.05);
-      const tt = (d: number): [number, number] => (edge > 0 ? [t - 0.002, t + d] : [t - d, t + 0.002]);
-      // The floor stepped out, its edge the cornice's.
-      const [fa, fb] = tt(P);
-      box(k, 'front', g0, g1, fa, fb, zb, z - 0.02, st.trim, 'cornice', k.ord(edge, 0.9));
-      const floor: L[] = [[g0, fa, z], [g1, fa, z], [g1, fb, z], [g0, fb, z]];
-      k.solid('front', k.ord(edge, 0.95));
-      cface(k, 'front', floor, [0, 0, 1], PAVER, fi('deck', g0 * U, g1 * U, fa * U, fb * U, gi), { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
+      const line = refugeOutline(plan, p, edge, t) as ST[];
+      const c: ST = [p.s, t - edge * 0.12];
+      // The floor, and its edge the cornice's.
+      k.solid('front', k.ord(edge, 0.9));
+      cface(k, 'front', line.map(([s0, t0]) => [s0, t0, z] as L), [0, 0, 1], PAVER, fi('deck', 0, 1, 0, 1, 1), { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
+      upright(k, 'front', line, zb, z, st.trim, c, 'cornice', 0);
       if (seen(k, edge)) {
-        // Three courses corbelled out, and the buttress under them.
-        for (let c = 0; c < 3; c++) {
-          const d = Pb + ((P - Pb) * (2 - c)) / 3, [ca, cb] = tt(d), w = wb + (((g1 - g0) / 2 - wb) * (2 - c)) / 3;
-          box(k, 'front', p.s - w, p.s + w, ca, cb, zb - (c + 1) * 2.6, zb - c * 2.6, BRICK, 'pier', k.ord(edge, 0.85 - c * 0.01));
+        // Three courses corbelled out, and the buttress under them on the ground.
+        const at: ST = [p.s, t];
+        for (let q = 0; q < 3; q++) {
+          k.solid('front', k.ord(edge, 0.85 - q * 0.01));
+          upright(k, 'front', toward(line, at, 0.94 - 0.06 * q, 0.9 - 0.12 * q), zb - (q + 1) * 2.6, zb - q * 2.6, BRICK, c, 'pier', q * 7);
         }
-        const [ba, bb] = tt(Pb);
-        const foot = Math.min(plan.ground(p.s - wb, t + edge * Pb), plan.ground(p.s + wb, t + edge * Pb), plan.ground(p.s, t)) - 0.5;
-        const top = zb - 3 * 2.6;
-        box(k, 'front', p.s - wb, p.s + wb, ba, bb, foot, top, BRICK, 'pier', k.ord(edge, 0.8));
-        // Quoins up its two front corners, long and short by turns round each.
-        for (let zq = foot, j = 0; zq < top - 0.5; zq += 5.2, j++) {
-          const z1 = Math.min(top, zq + 5.2), w = Math.min(wb * 0.7, j % 2 ? 0.11 : 0.065), d = j % 2 ? 0.065 : 0.11;
-          for (const side of [-1, 1]) {
-            const sc = p.s + side * wb, a = Math.min(sc, sc - side * w), b = Math.max(sc, sc - side * w);
-            if (ownerOf(k, a - 0.01, b + 0.01) === null) continue;
-            box(k, 'front', a - (side < 0 ? 0.006 : 0), b + (side > 0 ? 0.006 : 0), ...tt(Pb + 0.006).map((v, i) => (i === (edge > 0 ? 0 : 1) ? t + edge * (Pb - d) : v)) as [number, number], zq, z1, st.trim, 'plinth', k.ord(edge, 0.82));
-          }
+        const foot = Math.min(...line.map(([s0, t0]) => plan.ground(s0, t + (t0 - t) * 0.5))) - 0.5;
+        k.solid('front', k.ord(edge, 0.8));
+        upright(k, 'front', toward(line, at, 0.76, 0.54), foot, zb - 3 * 2.6, BRICK, c, 'pier', 31);
+      }
+      // The wall round it, its coping, and where it meets the parapet's ends.
+      const inner = line.map(([s0, t0], i): ST => {
+        const ends = i === 0 || i === line.length - 1;
+        return ends ? [s0 + (i === 0 ? T : -T) * 1.2, t0 - edge * T] : [s0 + (s0 < p.s ? T : -T) * 0.6, t0 - edge * T];
+      });
+      k.solid(part, 2);
+      upright(k, part, line, z, z + H - cop, DEEP, c, 'parapet', 3);
+      upright(k, part, inner, z, z + H - cop, DEEP, [c[0], c[1] + edge * 2], 'parapet', 5);
+      const zc = z + H;
+      k.solid(part, 2.1);
+      for (let q = 0; q + 1 < line.length; q++) {
+        const o0 = line[q], o1 = line[q + 1], i0 = inner[q], i1 = inner[q + 1];
+        const grow = (pt: ST, from: ST, d: number): ST => { const l = Math.hypot(pt[0] - from[0], pt[1] - from[1]) || 1; return [pt[0] + ((pt[0] - from[0]) / l) * d, pt[1] + ((pt[1] - from[1]) / l) * d]; };
+        const [O0, O1] = [grow(o0, i0, 0.012), grow(o1, i1, 0.012)], [I0, I1] = [grow(i0, o0, 0.012), grow(i1, o1, 0.012)];
+        cface(k, part, [[O0[0], O0[1], zc], [O1[0], O1[1], zc], [I1[0], I1[1], zc], [I0[0], I0[1], zc]], [0, 0, 1], st.trim);
+        upright(k, part, [O0, O1], zc - cop, zc, st.trim, c, 'cap', q);
+        const a = Math.max(Math.min(o0[0], o1[0]), sl.s0), b = Math.min(Math.max(o0[0], o1[0]), sl.s1);
+        if (b > a + 1e-4) {
+          const tAt = (s0: number): number => o0[1] + ((o1[1] - o0[1]) * (s0 - o0[0])) / ((o1[0] - o0[0]) || 1e-6);
+          k.glow.lines.push([k.m([a, tAt(a) + edge * 0.004, zc - cop * 0.5]), k.m([b, tAt(b) + edge * 0.004, zc - cop * 0.5])]);
         }
       }
-      // The walls round it, front and two sides, and their coping.
-      const [wa, wbT] = tt(P);
-      const front: [number, number] = edge > 0 ? [wbT - T, wbT] : [wa, wa + T];
-      const [sa, sb] = edge > 0 ? [t - T, wbT] : [wa, t + T];
-      box(k, part, g0, g1, front[0], front[1], z, z + H - cop, DEEP, 'parapet', 2);
-      for (const s0 of [g0, g1 - T]) box(k, part, s0, s0 + T, sa, sb, z, z + H - cop, DEEP, 'parapet', 2);
-      box(k, part, g0 - 0.012, g1 + 0.012, front[0] - 0.012, front[1] + 0.012, z + H - cop, z + H, st.trim, 'cap', 2.1);
-      for (const s0 of [g0, g1 - T]) box(k, part, s0 - 0.012, s0 + T + 0.012, sa - 0.012, sb + 0.012, z + H - cop, z + H, st.trim, 'cap', 2.1);
-      const tg = edge > 0 ? front[1] + 0.004 : front[0] - 0.004;
-      const ga = Math.max(g0, sl.s0), gb = Math.min(g1, sl.s1);
-      if (gb > ga) k.glow.lines.push([k.m([ga, tg, z + H - cop * 0.5]), k.m([gb, tg, z + H - cop * 0.5])]);
-      if (plan.width >= 3 && ownerOf(k, p.s - 0.05, p.s + 0.05) !== null) lampPost(k, part, p.s, t + edge * P * 0.5, z, st.trim);
+      // The parapet's ends meet it a little inside: fill the corner.
+      for (const [s0, s1] of [[line[0][0], line[0][0] + T * 1.2], [line[line.length - 1][0] - T * 1.2, line[line.length - 1][0]]]) {
+        box(k, part, s0, s1, Math.min(t, t - edge * T), Math.max(t, t - edge * T), z, z + H - cop, DEEP, 'parapet', 1.9);
+      }
+      if (plan.width >= 3 && ownerOf(k, p.s - 0.05, p.s + 0.05) !== null) lampPost(k, part, p.s, t + edge * REFUGE_OUT * 0.5, z, st.trim);
     }
   }
 }
