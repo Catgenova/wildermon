@@ -144,6 +144,12 @@ export interface Species3D {
   bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean };
   /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed. */
   leafForm?: 'maple' | 'oak';
+  /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */
+  buttress?: boolean;
+  /** Snow as a narrow line along the top edge of the wood, rather than over all its upper face. */
+  snowLine?: boolean;
+  /** A carved rune inked in the kit's ink, and lit as a runestone's runes after dark. */
+  inkedRune?: boolean;
   /** A mass's height on the screen against its width: 0.86 unless given. */
   pad?: number;
   /** An open crown: the wood laid among the masses by depth, the branches seen through the gaps. */

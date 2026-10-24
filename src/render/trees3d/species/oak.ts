@@ -15,8 +15,14 @@ const rampOf = ([lit, mid, deep]: readonly [string, string, string]): Ramp =>
   [mix(tone(deep, -0.22), '#2a3a48', 0.25), deep, mix(deep, mid, 0.5), mid, mix(mid, lit, 0.5), lit, tone(lit, 0.08)];
 
 type Three = readonly [string, string, string];
-/** What the low masses go through on the way to the russet: ochre. */
-const GOLD: Three = ['#f2d27e', '#d8a650', '#9a7440'];
+/** What the low masses go through on the way to the russet: brown-gold. */
+const GOLD: Three = ['#e2b468', '#b98440', '#7a5630'];
+/**
+ * Autumn's ramp: the same three tones a step further down, so a mass's
+ * body is the turned leaf's middle and its shade the deep brown under it.
+ */
+const fallOf = ([lit, mid, deep]: Three): Ramp =>
+  [mix(tone(deep, -0.42), '#2a1a20', 0.2), tone(deep, -0.24), deep, mix(deep, mid, 0.5), mid, mix(mid, lit, 0.55), lit];
 const mix3 = (a: Three, b: Three, t: number): Three => a.map((c, i) => mix(c, b[i], t)) as unknown as Three;
 
 /**
@@ -49,9 +55,12 @@ export const oak: Species3D = {
   leafForm: 'oak',
   open: true,
   pad: 0.74,
+  buttress: true,
+  snowLine: true,
+  inkedRune: true,
   leaf: {
     summer: rampOf(flat.leaf),
     spring: rampOf(fresh(flat.leaf)),
-    autumn: [rampOf(autumn), rampOf(mix3(autumn, GOLD, 0.4)), rampOf(mix3(flat.leaf, GOLD, 0.45))],
+    autumn: [fallOf(autumn), fallOf(mix3(autumn, GOLD, 0.5)), fallOf(mix3(GOLD, flat.leaf, 0.12))],
   },
 };

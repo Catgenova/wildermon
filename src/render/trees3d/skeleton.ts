@@ -313,6 +313,20 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
   const azOf = [...Array(n).keys()].map((i) => a0 + (i / n) * TAU + (R() - 0.5) * (TAU / n) * 0.4);
   const angle = (a: number, c: number): number => Math.abs(((a - c + Math.PI * 3) % TAU) - Math.PI);
 
+  /** A fan of fine twigs off the tip of piece `at`, `l` long, out along it and up. */
+  const fan = (at: number, l: number, r: number, bough: number): void => {
+    const P = limbs[at];
+    const d = unit(sub(P.b, P.a));
+    const side = across(d);
+    const k = 3 + Math.floor(R() * 2);
+    for (let j = 0; j < k; j++) {
+      const sp = ((j + 0.5) / k - 0.5) * 1.8 + (R() - 0.5) * 0.3;
+      const dir = unit(add(add(d, mul(side, Math.tan(sp))), [0, 0, 0.25]));
+      const end = add(P.b, mul(dir, l * (0.7 + 0.5 * R())));
+      run([P.b, end], r, r * 0.3, 4, at, bough, false);
+    }
+  };
+
   /* ---- where the masses go: a skirt of them out on each low limb, the rest round the top of the crown ---- */
   const want = b.bare ? 0 : Math.max(1, Math.round(b.clumps));
   const rm = env.r * b.clumpSize;
@@ -384,7 +398,7 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
       const P = limbs[at];
       const end: V3 = dead ? lerp(P.b, s.c, 0.6) : [s.c[0], s.c[1], s.c[2] - rm * 0.25];
       const r = Math.max(0.15, P.rb * (0.55 + 0.15 * R()));
-      const bp = run(curve(P.b, end, 3, zig * 0.2, 2), r, r * 0.4, 2, at, i, dead, 0.45);
+      const bp = run(curve(P.b, end, 3, zig * 0.2, 2), r, r * 0.32, 2, at, i, dead, 0.45);
       const last = bp[bp.length - 1];
       // Twigs off the end, out through the mass.
       const tw = 2 + Math.floor(R() * 2);
@@ -393,7 +407,8 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
         const tz = 0.3 + 0.7 * R();
         const tl = rm * (dead ? 0.5 : 0.85 + 0.3 * R());
         const tip: V3 = add(limbs[last].b, mul(unit([Math.cos(ta), Math.sin(ta), tz]), tl));
-        run(crooked(limbs[last].b, tip, 2, zig * 0.12), r * 0.4, r * 0.15, 3, last, i, dead);
+        const tp = run(crooked(limbs[last].b, tip, 2, zig * 0.12), r * 0.3, r * 0.07, 3, last, i, dead);
+        if (!dead) fan(tp[tp.length - 1], tl * 0.5, r * 0.06, i);
       }
       if (!dead) {
         // The top of the crown in the biggest masses, the rim in smaller.
@@ -417,7 +432,7 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
         const bp = run(curve(P.b, tip, 2, zig * 0.3, 2), r, r * 0.4, 2, p, i, dead, 0.45);
         if (b.forks >= 2) {
           const last = limbs[bp[bp.length - 1]];
-          run(crooked(last.b, add(last.b, mul(unit([Math.cos(ta + 0.8), Math.sin(ta + 0.8), 0.5]), tl * 0.5)), 2, zig * 0.25), r * 0.4, r * 0.15, 3, bp[bp.length - 1], i, dead);
+          run(crooked(last.b, add(last.b, mul(unit([Math.cos(ta + 0.8), Math.sin(ta + 0.8), 0.5]), tl * 0.5)), 2, zig * 0.25), r * 0.38, r * 0.1, 3, bp[bp.length - 1], i, dead);
         }
       }
     }
