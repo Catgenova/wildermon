@@ -163,11 +163,9 @@ export interface PlanInput {
   style: BridgeStyle;
 }
 
-/** The drop at which a bay goes from low to high, and from high to two tiers, in units: a storey, and two and a half. */
+/** The drop at which a bay goes from low to high, and at which a timber bent is braced as a tall one, in units: a storey, and two and a half. */
 export const FORM_HIGH = 30;
 export const FORM_TIERS = 75;
-/** How far up from the ground to the upper crown two tiers' string course runs: the lower arcade the taller. */
-export const TIER_COURSE = 0.6;
 
 export function planOf(p: PlanInput): Plan {
   const thick = p.style.family === 'stone' ? 3.5 : 2.2;
@@ -198,12 +196,11 @@ export function planOf(p: PlanInput): Plan {
     const g = minGround(s0, s1);
     const top = p.deck(c) - thick - (p.style.family === 'stone' ? ring + 1.2 : 2.5);
     const drop = p.deck(c) - g;
-    // Under a ramp, a run of single open arches however deep, stepping with the deck.
-    const form: Form = drop <= FORM_HIGH ? 'low' : drop <= FORM_TIERS || p.rise ? 'high' : 'tiers';
+    // One tier however deep: a tall drop stands its round arches on taller piers.
+    const form: Form = drop <= FORM_HIGH ? 'low' : 'high';
     const A = a * U;
     let arch: (s: number) => number;
     let spring: number;
-    let tiers: { course: number; lc: number } | null = null;
     const crown = top;
     if (form === 'low') {
       // A segment of a circle, its rise a third of its half-span, never down into the ground.
@@ -211,32 +208,13 @@ export function planOf(p: PlanInput): Plan {
       const R = (A * A + r * r) / (2 * r);
       arch = (s) => crown - R + Math.sqrt(Math.max(0, R * R - ((s - c) * U) ** 2));
       spring = crown - r;
-    } else if (form === 'high') {
+    } else {
       // Round, or flattened to an ellipse where a round one would meet the ground.
       const r = Math.max(2, Math.min(A, crown - g - 3));
       arch = (s) => crown - r + r * Math.sqrt(Math.max(0, 1 - ((s - c) / a) ** 2));
       spring = crown - r;
-    } else {
-      // Two tiers, as an aqueduct: a string course three fifths of the way up; under it a tall arcade of round arches on tall
-      // piers, over it a shorter one whose arches spring from just over the course.
-      const course = g + (crown - g) * TIER_COURSE;
-      const r = Math.max(2, Math.min(A, crown - course - 2));
-      arch = (s) => crown - r + r * Math.sqrt(Math.max(0, 1 - ((s - c) / a) ** 2));
-      spring = crown - r;
-      tiers = { course, lc: course - 1.6 - ring - 0.4 };
     }
     const bay: Bay = { s0, s1, c, a, form, arch, crown, spring };
-    if (tiers) {
-      const { course, lc } = tiers;
-      // Round, springing two fifths of the way up: narrower than the bay where it must be, its piers the thicker for it.
-      const al = Math.max(0.15, Math.min(a, (0.6 * (lc - g)) / U));
-      const lr = al * U;
-      bay.course = course;
-      bay.lowerCrown = lc;
-      bay.lowerSpring = lc - lr;
-      bay.lowerHalf = al;
-      bay.lower = (s) => lc - lr + lr * Math.sqrt(Math.max(0, 1 - ((s - c) / al) ** 2));
-    }
     bays.push(bay);
   }
   const base = Math.min(...piers.map((q) => q.foot), minGround(0, p.n)) - 2;
