@@ -1411,7 +1411,8 @@ export class Renderer {
   /** Everything burning this frame, after dark, for what glows under glass: read once a frame. */
   private lightsNow: LightSource[] = [];
   /** Glass with a light under it, laid over the night once the night is down: see `drawGlassGlow`. */
-  private glassNight: Array<{ faces: Array<{ path: Path2D; m: DOMMatrix }>; lights: Array<{ x: number; y: number; r: number; a: number }>; box: [number, number, number, number] }> = [];
+  /** `dx`, `dy`: how far the faces, worked out where they were, have moved on the screen since (`roofGlass`). */
+  private glassNight: Array<{ faces: Array<{ path: Path2D; m: DOMMatrix }>; lights: Array<{ x: number; y: number; r: number; a: number }>; box: [number, number, number, number]; dx: number; dy: number }> = [];
   /** The layer a glass roof's glow is made on, at half the screen's size (`drawGlassGlow`). */
   private glowLayer: CanvasRenderingContext2D | null = null;
   /** The sky this frame, which the haze over the distance is drawn in. */
@@ -8413,9 +8414,9 @@ export class Renderer {
   private drawPitchedRoof(b: Building): void {
     const bld = this.game.buildings;
     const level = b.levels;
-    // Standing under it, or with a light burning under it after dark (glass glows with it, `lightsUnder`): as it always was.
+    // Standing under it: as it always was.
     const roofTiles = bld.roofTiles(b);
-    if ((this.game.darkness() >= LAMP_DARK && this.lightsUnder(b).length) || (this.roomTiles && roofTiles.some(([x, y]) => this.roomTiles?.has(`${x},${y}`)))) {
+    if (this.roomTiles && roofTiles.some(([x, y]) => this.roomTiles?.has(`${x},${y}`))) {
       this.drawPitchedRoofNow(b);
       this.occludeLine(null, () => this.drawPitchedRoofNow(b));
       return;
@@ -8468,10 +8469,34 @@ export class Renderer {
     const cap = 4 + 12 * cam.zoom;
     x0 -= cap; y0 -= cap; x1 += cap; y1 += cap;
     const key = `r|${b.id}|${level}|${b.deck ?? ''}|${roofShapeOf(b)}|${sig}`;
+    const ax = cam.worldToScreenX(fx, fy), ay = cam.worldToScreenY(fx, fy, lowest);
     // What it reads is its own building and what stands round it: `REACH` round the tiles it covers (`StructureWatch`).
-    this.baked(key, cam.worldToScreenX(fx, fy), cam.worldToScreenY(fx, fy, lowest), [x0, y0, x1, y1], () => this.drawPitchedRoofNow(b),
-      this.structs.version(fx, fy, gx, gy));
+    this.baked(key, ax, ay, [x0, y0, x1, y1], () => this.drawPitchedRoofNow(b, { key, ax, ay }), this.structs.version(fx, fy, gx, gy));
+    /*
+     * With a light burning under it after dark, its glass glows over the
+     * night (`drawGlassGlow`): from the faces of glass kept when its picture
+     * was made, where it lands now. A roof with a lamp under it used to be
+     * drawn afresh every frame of the night for that.
+     */
+    if (this.game.darkness() < LAMP_DARK) return;
+    const burning = this.lightsUnder(b);
+    if (!burning.length) return;
+    const kept = this.roofGlass.get(b.id);
+    if (kept && kept.key === key && kept.epoch === this.bakeEpoch) {
+      if (kept.faces.length) this.noteGlassGlow(kept.faces, kept.box, burning, kept.height, false, ax - kept.ax, ay - kept.ay);
+    } else {
+      this.drawPitchedRoofNow(b, { key, ax, ay }, true);
+      const now = this.roofGlass.get(b.id);
+      if (now?.faces.length) this.noteGlassGlow(now.faces, now.box, burning, now.height, false);
+    }
   }
+
+  /**
+   * A roof's faces of glass turned to the eye, as its picture was last made
+   * (`drawPitchedRoof`), for the glow of a light under it: its picture's key,
+   * the view it was made in and the point it hangs on.
+   */
+  private roofGlass = new Map<number, { key: string; epoch: number; ax: number; ay: number; faces: Array<{ path: Path2D; m: DOMMatrix }>; box: [number, number, number, number]; height: number }>();
 
   /** A building's roof tiles, its roof's shape (kept while its tiles are the same) and the height of its eaves; null with no roof. */
   private roofFrame(b: Building): { roofs: FloorTile[]; model: RoofModel; eave: number } | null {
@@ -8502,7 +8527,12 @@ export class Renderer {
     return { roofs, model: kept.model, eave };
   }
 
-  private drawPitchedRoofNow(b: Building): void {
+  /**
+   * `keep`: drawn for its picture, which keeps its faces of glass for the glow
+   * (`roofGlass`) rather than laying it on this frame's night; `glassOnly`
+   * finds those faces and draws nothing.
+   */
+  private drawPitchedRoofNow(b: Building, keep?: { key: string; ax: number; ay: number }, glassOnly = false): void {
     const main = this.canvas.ctx;
     const cam = this.camera;
     const bld = this.game.buildings;
@@ -8728,7 +8758,7 @@ export class Renderer {
       // Glass shows the slopes beyond it, from under them; anything else only what faces the eye.
       if (shown(f) <= 0) return;
       items.push({ d: faceDepth[i], plane: planeOf(f), face: i, draw: () => { ctx.beginPath(); outlineOf(f); fillAs(f); } });
-      if (burning.length && facing(f.fall) && glassy(tile) && isDone(tile)) {
+      if ((keep || burning.length) && facing(f.fall) && glassy(tile) && isDone(tile)) {
         const path = new Path2D();
         f.pts.forEach((p, k) => {
           const px = X(p), py = Y(p);
@@ -8740,7 +8770,10 @@ export class Renderer {
         glowing.push({ path, m: planeMatrix(f) });
       }
     });
-    if (glowing.length) this.noteGlassGlow(glowing, glowBox, burning, eave + pitch * 0.5, under);
+    if (keep) {
+      this.roofGlass.set(b.id, { ...keep, epoch: this.bakeEpoch, faces: glowing, box: glowBox, height: eave + pitch * 0.5 });
+      if (glassOnly) return;
+    } else if (glowing.length) this.noteGlassGlow(glowing, glowBox, burning, eave + pitch * 0.5, under);
     for (const f of roofs) if (!isDone(f)) plan.push(f);
     // The creases and the edges go on after the faces they lie along.
     const byPoint = new Map<string, number[]>();
@@ -9070,7 +9103,8 @@ export class Renderer {
    * nothing there -- and how strong it is. Over your head, at the third the
    * roof itself is laid at.
    */
-  private noteGlassGlow(faces: Array<{ path: Path2D; m: DOMMatrix }>, box: [number, number, number, number], lights: LightSource[], height: number, under: boolean): void {
+  private noteGlassGlow(faces: Array<{ path: Path2D; m: DOMMatrix }>, box: [number, number, number, number], lights: LightSource[], height: number, under: boolean,
+    dx = 0, dy = 0): void {
     const cam = this.camera;
     const zoom = cam.zoom;
     const [x0, y0, x1, y1] = box;
@@ -9080,7 +9114,7 @@ export class Renderer {
       r: Math.max(8, 1.5 * l.radius * HALF_W * zoom),
       a: l.strength * (under ? 0.35 : 1),
     }));
-    this.glassNight.push({ faces, lights: lit, box: [x0 - 2, y0 - 2, x1 + 2, y1 + 2] });
+    this.glassNight.push({ faces, lights: lit, box: [x0 + dx - 2, y0 + dy - 2, x1 + dx + 2, y1 + dy + 2], dx, dy });
   }
 
   /**
@@ -9145,6 +9179,7 @@ export class Renderer {
       // The lit faces over it, as strongly as it reaches them.
       layer.globalCompositeOperation = 'source-atop';
       layer.fillStyle = pat;
+      layer.translate(roof.dx, roof.dy);
       for (const f of roof.faces) {
         pat.setTransform(f.m);
         layer.fill(f.path);
@@ -10826,8 +10861,8 @@ export class Renderer {
       const sx = cam.worldToScreenX(wx, wy), sy = cam.worldToScreenY(wx, wy, z);
       x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
     }
-    // Seen through, half built, with a lamp behind it at night, or a portcullis on its way up or down: as it always was.
-    if (alpha < 1 || !isDone(wall) || this.lampBehind(wall, border) > 0 || this.gateMoving(wall, border)) {
+    // Seen through, half built, or a portcullis on its way up or down: as it always was.
+    if (alpha < 1 || !isDone(wall) || this.gateMoving(wall, border)) {
       this.drawWallNow(wall, border, base, alpha);
       // Kept off a runestone's runes in front of it too -- all but one seen through, which the runes show through.
       if (alpha >= 1) this.occludeLine([x0, y0, x1, y1], () => this.drawWallNow(wall, border, base, alpha));
@@ -10841,7 +10876,13 @@ export class Renderer {
      */
     const lift = this.wallLift;
     if (lift) this.liftBaked(wall, border, base);
-    let key = `w|${wall.level}|${border.dir}${border.x},${border.y}|${wall.type}|${wall.material}|${wall.dye ?? ''}|${wall.glass ?? ''}|${wall.building}|${base}`;
+    /*
+     * With a lamp in the room behind it after dark, its glass is warmed by it
+     * (`lampBehind`): the light in the room is in its key, and the dark it is
+     * seen in is the light it is made again for (`bakeLight`). Such a wall
+     * used to be drawn afresh every frame of the night.
+     */
+    let key = `w|${wall.level}|${border.dir}${border.x},${border.y}|${wall.type}|${wall.material}|${wall.dye ?? ''}|${wall.glass ?? ''}|${wall.building}|${base}|${this.roomLight(wall, border)}`;
     // A shop counter shows what is on it (`drawCounterPart`), which is no part of the building.
     if (wall.type === 'counter') {
       const c = this.game.counters.onBorder(border);
@@ -13286,6 +13327,11 @@ export class Renderer {
    * near the glass it stands.
    */
   private lampBehind(wall: Wall, border: Border): number {
+    return this.roomLight(wall, border) * this.game.darkness();
+  }
+
+  /** The brightest light burning in the room a wall shuts in, after dark (`LAMP_DARK`); none before. */
+  private roomLight(wall: Wall, border: Border): number {
     const dark = this.game.darkness();
     if (dark < LAMP_DARK) return 0;
     const near = this.game.buildings.buildingAt(border.x, border.y)
@@ -13297,7 +13343,7 @@ export class Renderer {
       this.roomLit.clear();
     }
     const known = this.roomLit.get(`${wall.level}|${near.x},${near.y}`);
-    if (known !== undefined) return known * dark;
+    if (known !== undefined) return known;
     const room = this.game.buildings.room(wall.level, near.x, near.y);
     if (!room) {
       this.roomLit.set(`${wall.level}|${near.x},${near.y}`, 0);
@@ -13311,7 +13357,7 @@ export class Renderer {
       most = Math.max(most, l.strength);
     }
     for (const t of room.tiles) this.roomLit.set(`${wall.level}|${t}`, most);
-    return most * dark;
+    return most;
   }
 
   /** The light in each room this frame (`lampBehind`), by storey and tile, and the frame it is for. */
