@@ -3,7 +3,7 @@ import { proj, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, faceColour, hex, mix, type Tone } from '../core';
 import { bayAt, BUILDERS, byRole, ownerOf, refugeGaps, runeLine, samples, turned, U, type BridgePainter, type FaceInfo, type Kit, type L, type Part3 } from './core';
 import { plasterPaint, stoneBase } from './base';
-import { arcade, cface, fi, lampPost, roundOut, runsOf, tilePaint, wallFrame, refuged, runeKey, seen, whole } from './clay';
+import { arcade, cface, fi, lampPost, roundOut, runsOf, tilePaint, wallFrame, refuged, runeKey, seen, whole, hash2 } from './clay';
 
 /**
  * Clay adobe: the coat of the island's adobe houses (`ADOBE` in
@@ -80,6 +80,76 @@ const wave = (k: Kit, s: number): number => {
   return 1.8 * (2 * u - 1) ** 2;
 };
 
+/** Where the deck's tiles lie, in units of its frame: its outer edges, each lane's middle and each bay's. */
+interface DeckLay { tLo: number; tHi: number; lanes: number[]; bays: number[] }
+interface DeckInfo extends FaceInfo { lay?: DeckLay }
+
+const deckTiles = tilePaint(8, '#d6b89d', undefined, 0.6);
+/**
+ * The deck in the houses' terracotta tiles: along each parapet a border of
+ * narrow tiles a step deeper and browner, a pale line inside it; over each
+ * bay's middle a diamond of four dark tiles set on the diagonal; the odd tile
+ * relaid paler; and the wheel tracks of each lane worn a shade paler.
+ */
+const deckPaint: BridgePainter = (g, k, f, st) => {
+  deckTiles(g, k, f, st);
+  const lay = (f as DeckInfo).lay;
+  if (!lay) return;
+  const x0 = Math.min(f.x0, f.x1), x1 = Math.max(f.x0, f.x1);
+  const W = 8;
+  // Relaid tiles, here and there.
+  const relaid = new Path2D();
+  for (let i = Math.floor(x0 / W); i * W < x1; i++) {
+    for (let j = Math.ceil(lay.tLo / W) + 1; (j + 1) * W < lay.tHi - W; j++) if (hash2(i * 3 + 1, j * 7 + 2) < 0.035) relaid.rect(i * W + 0.4, j * W + 0.4, W - 0.8, W - 0.8);
+  }
+  g.fillStyle = css(mix(k.fill, hex('#efe2cc'), 0.4), 0.8);
+  g.fill(relaid);
+  // The wheel tracks, worn soft and pale.
+  for (const o of lay.lanes) {
+    for (const d of [-9, 9]) {
+      const grad = g.createLinearGradient(0, o + d - 3, 0, o + d + 3);
+      const c = mix(k.fill, [255, 246, 232], 0.5);
+      grad.addColorStop(0, css(c, 0)); grad.addColorStop(0.5, css(c, 0.28)); grad.addColorStop(1, css(c, 0));
+      g.fillStyle = grad;
+      g.fillRect(x0 - 1, o + d - 3, x1 - x0 + 2, 6);
+    }
+  }
+  // The border inside each parapet: narrow tiles, deeper and browner, a pale line on their inner side.
+  // As wide as the near parapet leaves some of it in sight: a quarter tile on a wide deck, less on one lane.
+  const P = T_WALL * U, B = Math.min(10, (lay.tHi - lay.tLo) * 0.16);
+  const border = mix(k.fill, hex('#a8654c'), 0.36);
+  const joints = new Path2D();
+  for (const [ya, yb, line] of [[lay.tLo + P, lay.tLo + P + B, lay.tLo + P + B], [lay.tHi - P - B, lay.tHi - P, lay.tHi - P - B]]) {
+    g.fillStyle = css(border);
+    g.fillRect(x0 - 1, ya, x1 - x0 + 2, yb - ya);
+    for (let x = Math.floor(x0 / 5) * 5; x < x1 + 5; x += 5) { joints.moveTo(x, ya); joints.lineTo(x, yb); }
+    joints.moveTo(x0 - 1, (ya + yb) / 2); joints.lineTo(x1 + 1, (ya + yb) / 2);
+    g.fillStyle = css(mix(k.fill, [255, 248, 236], 0.55), 0.9);
+    g.fillRect(x0 - 1, line - 0.45, x1 - x0 + 2, 0.9);
+  }
+  g.strokeStyle = css(mix(border, hex('#5a4038'), 0.35), 0.7);
+  g.lineWidth = 0.4;
+  g.stroke(joints);
+  // Over each bay's middle, on the bridge's middle, a round inlay: a pale ring, a dark disc, a cross of four petals in it.
+  const mid = (lay.tLo + lay.tHi) / 2, R = Math.min(8, (lay.tHi - lay.tLo) / 2 - P - B - 1);
+  for (const c of lay.bays) {
+    if (c + R + 2 < x0 || c - R - 2 > x1) continue;
+    g.beginPath(); g.arc(c, mid, R + 1.4, 0, Math.PI * 2);
+    g.fillStyle = css(mix(k.fill, [255, 248, 236], 0.5));
+    g.fill();
+    g.beginPath(); g.arc(c, mid, R, 0, Math.PI * 2);
+    g.fillStyle = css(mix(k.fill, hex('#9a5844'), 0.4));
+    g.fill();
+    g.fillStyle = css(mix(k.fill, [255, 244, 228], 0.35));
+    for (let q = 0; q < 4; q++) {
+      const a = (q * Math.PI) / 2;
+      g.beginPath();
+      g.ellipse(c + Math.cos(a) * R * 0.45, mid + Math.sin(a) * R * 0.45, R * 0.42, R * 0.2, a, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+};
+
 /** What a ramp's tread or riser is told: which way the ramp climbs, and whether it is the riser. */
 interface StepInfo extends FaceInfo { up?: boolean; riser?: boolean }
 
@@ -141,7 +211,11 @@ function deck(k: Kit): void {
     // The core's deck less its treads and risers: what is left is the edge and the cornice on each outer edge.
     BUILDERS.deck({ ...k, face: (part, pts, out, tone, inf, fr) => { if (inf?.role === 'tread' || out[0] !== 0) return; k.face(part, pts, out, tone, inf, fr); } });
     rampSteps(k);
-  } else BUILDERS.deck(k);
+  } else {
+    // The core's deck, its top told where the bridge's edges, lanes and bays are, for the tiles' border, inlay and wear.
+    const lay: DeckLay = { tLo: plan.tLo * U, tHi: plan.tHi * U, lanes: plan.lanes.map((o) => o * U), bays: plan.bays.map((b) => b.c * U) };
+    BUILDERS.deck({ ...k, face: (part, pts, out, tone, inf, fr) => k.face(part, pts, out, tone, inf?.role === 'deck' ? ({ ...inf, lay } as DeckInfo) : inf, fr) });
+  }
   const gaps = refugeGaps(plan);
   const r = 1.45, rs = r / U, out = 0.065, n = 6;
   for (const edge of sl.edges) {
@@ -312,7 +386,7 @@ export const clay_adobe = stoneBase('clay_adobe', {
     key: runeKey('sowilo', 0.56, true),
     cap: runeLine('sowilo'),
     beam: vigaEnd,
-    deck: tilePaint(8, '#d6b89d', undefined, 0.6),
+    deck: deckPaint,
     tread: stepPaint,
   }),
   build: {
