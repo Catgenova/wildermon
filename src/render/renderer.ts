@@ -43,7 +43,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
-import { SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
+import { formAt, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -1252,7 +1252,7 @@ export class Renderer {
   /** The trees drawn as solids in the shade's window, read off the world, and which of them shade which line under this sun. */
   private solidScan: {
     key: string;
-    trees: Array<{ ix: number; iy: number; x: number; y: number; species: number; variant: number; grew: number }>;
+    trees: Array<{ ix: number; iy: number; x: number; y: number; species: number; variant: number; form: number; grew: number }>;
     top0: number;
     /** The lowest foot on the screen of the trees on each line: the next line's shade starts no higher, so it is never laid over one. */
     feet: Map<number, number>;
@@ -7250,7 +7250,7 @@ export class Renderer {
           const u = cam.rotateX(x + 0.5, y + 0.5), v = cam.rotateY(x + 0.5, y + 0.5), h = world.centerHeight(x, y);
           const iy = (u + v) * HALF_H - h * HEIGHT_SCALE;
           const g = grownAt(x, y);
-          trees.push({ ix: (u - v) * HALF_W, iy, x, y, species, variant: treeVariant(data), grew: g });
+          trees.push({ ix: (u - v) * HALF_W, iy, x, y, species, variant: treeVariant(data), form: formAt(x, y), grew: g });
           feet.set(d, Math.max(feet.get(d) ?? -Infinity, iy));
           let at = footAt.get(d);
           if (!at) footAt.set(d, (at = []));
@@ -7270,8 +7270,12 @@ export class Renderer {
       // Kept as done only when every tree's shade is this sun's own, not one standing in for it.
       const was = tree3dStats.shadeStandIns;
       scan.lines = new Map();
+      // Asked once for each shape a tree can be grown as, not once a tree.
+      const shades = new Map<string, ReturnType<typeof tree3dShadow>>();
       for (const tr of scan.trees) {
-        const shade = tree3dShadow(tr.species, tr.variant, season, day, tr.x, tr.y, step, cam.rotation);
+        const kind = `${tr.species}|${tr.variant}|${tr.form}`;
+        let shade = shades.get(kind);
+        if (shade === undefined) shades.set(kind, (shade = tree3dShadow(tr.species, tr.variant, season, day, tr.x, tr.y, step, cam.rotation)));
         if (!shade) continue;
         const g = tr.grew;
         const [bx0, by0, bx1, by1] = shade.box;
