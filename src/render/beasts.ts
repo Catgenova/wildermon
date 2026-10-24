@@ -2,7 +2,7 @@ import {
   ball, joint, mesh, onScreen, PLAIN_PALETTE, place, render, ROOT, viewOf,
   type Face, type Mat, type Mesh, type Palette, type Part, type RGB, type V3, type View, type Xf,
 } from './figure';
-import { UNITS_PER_TILE } from './iso';
+import { HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import type { BeastAct } from '../game/events';
 
 /**
@@ -1394,58 +1394,28 @@ function keep(key: string, f: Frame, now: number): void {
 }
 
 /**
- * The pad a picture is drawn on before it is kept: as big as the kind can reach
- * at any facing and in any pose (`reachOf`), cleared, and kept for the next.
+ * A picture kept as the box of what it draws and two pixels clear round it
+ * (`cropBox`), not the whole of the box the kind reaches at every facing and
+ * in every pose (`reachOf`), which one pose at one facing covers about a fifth
+ * of. Kept whole, the pictures of fifteen wildermon standing about a
+ * settlement came to nearly five times `BUDGET` at twice the zoom on a screen
+ * of two pixels to the point: the ones longest unused went just before they
+ * were wanted again, and every body drew a new picture every sixth of a second
+ * for as long as it was in view. Drawn straight onto a canvas of that box, at
+ * the same whole pixels as on the whole box.
  */
-let pad: HTMLCanvasElement | null = null;
-let padCtx: CanvasRenderingContext2D | null = null;
-function drawPad(w: number, h: number): CanvasRenderingContext2D {
-  if (!pad || !padCtx || pad.width < w || pad.height < h) {
-    pad = document.createElement('canvas');
-    pad.width = Math.max(w, pad?.width ?? 0);
-    pad.height = Math.max(h, pad?.height ?? 0);
-    padCtx = pad.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
-  }
-  padCtx.setTransform(1, 0, 0, 1, 0, 0);
-  padCtx.clearRect(0, 0, w, h);
-  return padCtx;
-}
-
-/**
- * A picture kept as what was drawn on the pad and a pixel clear round it, not
- * the whole of the pad. The pad is the box the kind reaches at every facing
- * and in every pose, with room to spare, and one pose at one facing covers
- * about a fifth of it. Kept whole, the pictures of fifteen wildermon standing
- * about a settlement came to nearly five times `BUDGET` at twice the zoom on
- * a screen of two pixels to the point: the ones longest unused went just
- * before they were wanted again, and every body drew a new picture every
- * sixth of a second for as long as it was in view.
- */
-function cropped(g: CanvasRenderingContext2D, w: number, h: number, ox: number, oy: number, k: number, set: string): Frame {
-  const px = new Uint32Array(g.getImageData(0, 0, w, h).data.buffer);
-  let x0 = w, y0 = h, x1 = -1, y1 = -1;
-  for (let y = 0; y < h; y++) {
-    const row = y * w;
-    for (let x = 0; x < w; x++) {
-      // Any byte order: an empty pixel is all nought.
-      if (px[row + x] === 0) continue;
-      if (x < x0) x0 = x;
-      if (x > x1) x1 = x;
-      if (y < y0) y0 = y;
-      y1 = y;
-    }
-  }
-  // A pixel clear on every side, so a picture put down stretched blends out at its edge as the whole pad did.
-  if (x1 < 0) x0 = y0 = x1 = y1 = 0;
-  x0 = Math.max(0, x0 - 1);
-  y0 = Math.max(0, y0 - 1);
-  x1 = Math.min(w - 1, x1 + 1);
-  y1 = Math.min(h - 1, y1 + 1);
+function pictureOf(kind: Kind, kit: readonly Piece[], r: Reach, pal: Palette, facing: number, a: Anim, step: number, k: number, set: string): Frame {
+  const w = Math.max(1, Math.ceil((r.right - r.left) * k)), h = Math.max(1, Math.ceil((r.bottom - r.top) * k));
+  const ox = Math.round(-r.left * k), oy = Math.round(-r.top * k);
+  // At an act, the whole box: what a kind flings about at a strike or a task, drawn by hand, goes further from it than that.
+  const c = a.act ? { x0: 0, y0: 0, x1: w - 1, y1: h - 1 } : cropBox(kind, kit, r, facing, a, step, k, ox, oy, w, h);
   const canvas = document.createElement('canvas');
-  canvas.width = x1 - x0 + 1;
-  canvas.height = y1 - y0 + 1;
-  (canvas.getContext('2d') as CanvasRenderingContext2D).drawImage(g.canvas, -x0, -y0);
-  return { canvas, ox: ox - x0, oy: oy - y0, k, px: canvas.width * canvas.height, set };
+  canvas.width = Math.max(1, c.x1 - c.x0 + 1);
+  canvas.height = Math.max(1, c.y1 - c.y0 + 1);
+  const g = canvas.getContext('2d') as CanvasRenderingContext2D;
+  g.setTransform(k, 0, 0, k, ox - c.x0, oy - c.y0);
+  drawKind(g, kind, kit, pal, facing, a, inkAt(step, kind.size), 1 / step);
+  return { canvas, ox: ox - c.x0, oy: oy - c.y0, k, px: canvas.width * canvas.height, set };
 }
 
 /** A body standing or grazing at the `i`th sixth of a second of its loop, as that sixth's picture is drawn. */
@@ -1615,9 +1585,13 @@ function standMap(species: string, kind: Kind, grazing: boolean, k: number): Int
   return map;
 }
 
-/** How far round its feet a kind can reach at any facing and in any pose, in its own units, with room to spare: the size of its picture. */
-const reach = new Map<string, { left: number; right: number; top: number; bottom: number }>();
-function reachOf(id: string, kind: Kind, kit: readonly Piece[]): { left: number; right: number; top: number; bottom: number } {
+/**
+ * How far round its feet a kind can reach at any facing and in any pose, in its own units, with room to spare (`pad`, and half
+ * as much again over it): the size of its picture.
+ */
+interface Reach { left: number; right: number; top: number; bottom: number; pad: number }
+const reach = new Map<string, Reach>();
+function reachOf(id: string, kind: Kind, kit: readonly Piece[]): Reach {
   let r = reach.get(id);
   if (!r) {
     let x0 = 0, y0 = 0, x1 = 0, y1 = 0;
@@ -1629,10 +1603,228 @@ function reachOf(id: string, kind: Kind, kit: readonly Piece[]): { left: number;
       }
     }
     const pad = 3 + (x1 - x0) * 0.1;
-    r = { left: x0 - pad, right: x1 + pad, top: y0 - pad * 1.5, bottom: Math.max(y1, 0) + pad };
+    r = { left: x0 - pad, right: x1 + pad, top: y0 - pad * 1.5, bottom: Math.max(y1, 0) + pad, pad };
     reach.set(id, r);
   }
   return r;
+}
+
+/**
+ * Where a body puts ink round its feet in a pose (its bones `b`) seen from
+ * `view`, in its own units: every corner of every piece shown, the shadow under
+ * it and any light over it -- not what it draws by hand (`handBox`) or its
+ * outline (`cropBox`).
+ */
+function inkBox(kind: Kind, kit: readonly Piece[], b: Bones, view: View, a: Anim): { x0: number; y0: number; x1: number; y1: number } {
+  const { ex, ey } = view;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const pc of kit) {
+    if (pc.shown && !pc.shown(a)) continue;
+    const xf = b[pc.bone];
+    if (!xf) continue;
+    const m = xf.m, t = xf.t;
+    for (const v of pc.bent ? pc.bent(pc.mesh.v, a) : pc.mesh.v) {
+      const px = m[0] * v[0] + m[1] * v[1] + m[2] * v[2] + t[0];
+      const py = m[3] * v[0] + m[4] * v[1] + m[5] * v[2] + t[1];
+      const pz = m[6] * v[0] + m[7] * v[1] + m[8] * v[2] + t[2];
+      const x = px * ex[0] + py * ey[0], y = px * ex[1] + py * ey[1] - pz * HEIGHT_SCALE;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  // The shadow (`contact`): an ellipse, its two half-axes along the view's two ground axes.
+  const s = b.shadow ?? (b.body ? { m: [1, 0, 0, 0, 1, 0, 0, 0, 1], t: [b.body.t[0], b.body.t[1], 0] as V3 } : { m: [1, 0, 0, 0, 1, 0, 0, 0, 1], t: [0, 0, 0] as V3 });
+  const c = s.t, k = s.m[0];
+  const rx = kind.shadow[1] * 1.05 * k, ry = kind.shadow[0] * 1.02 * k;
+  const cx = c[0] * ex[0] + c[1] * ey[0] + (0.25 * ex[0] - 0.1 * ey[0]) * k, cy = c[0] * ex[1] + c[1] * ey[1] + (0.25 * ex[1] - 0.1 * ey[1]) * k;
+  const hx = Math.hypot(rx * ex[0], ry * ey[0]), hy = Math.hypot(rx * ex[1], ry * ey[1]);
+  x0 = Math.min(x0, cx - hx); x1 = Math.max(x1, cx + hx); y0 = Math.min(y0, cy - hy); y1 = Math.max(y1, cy + hy);
+  for (const l of kind.glow ? kind.glow(b, a) : []) {
+    const [x, y] = onScreen(view, l.p);
+    x0 = Math.min(x0, x - l.r); x1 = Math.max(x1, x + l.r); y0 = Math.min(y0, y - l.r); y1 = Math.max(y1, y + l.r);
+  }
+  return { x0, y0, x1, y1 };
+}
+
+/**
+ * A stand-in for the canvas that draws nothing and keeps the box of what would
+ * be drawn on it, in its device pixels: for what a kind draws by hand
+ * (`Kind.extra`). Anything it does not know how to measure -- text, a path
+ * kept to draw later, a pattern, a filter other than a blur, the canvas
+ * itself -- throws, and the box is not to be had (`handBox`). A clip is let
+ * be: it only takes ink away.
+ */
+type M6 = [number, number, number, number, number, number];
+interface Kept { m: M6; lineWidth: number; lineJoin: string; miterLimit: number; shadowBlur: number; shadowOffsetX: number; shadowOffsetY: number; shadowColor: string; filter: string }
+class Measure {
+  private m: M6;
+  private stack: Kept[] = [];
+  private path = [Infinity, Infinity, -Infinity, -Infinity];
+  box = [Infinity, Infinity, -Infinity, -Infinity];
+  fillStyle: unknown = '#000';
+  strokeStyle: unknown = '#000';
+  lineWidth = 1;
+  lineCap = 'butt';
+  lineJoin = 'miter';
+  miterLimit = 10;
+  lineDashOffset = 0;
+  globalAlpha = 1;
+  globalCompositeOperation = 'source-over';
+  shadowBlur = 0;
+  shadowOffsetX = 0;
+  shadowOffsetY = 0;
+  shadowColor = 'rgba(0, 0, 0, 0)';
+  filter = 'none';
+  imageSmoothingEnabled = true;
+  constructor(k: number) { this.m = [k, 0, 0, k, 0, 0]; }
+  get canvas(): never { throw new Error('not to be measured'); }
+  private at(x: number, y: number, into: number[]): void {
+    const m = this.m;
+    const X = m[0] * x + m[2] * y + m[4], Y = m[1] * x + m[3] * y + m[5];
+    if (!Number.isFinite(X) || !Number.isFinite(Y)) throw new Error('not to be measured');
+    if (X < into[0]) into[0] = X;
+    if (Y < into[1]) into[1] = Y;
+    if (X > into[2]) into[2] = X;
+    if (Y > into[3]) into[3] = Y;
+  }
+  private square(x: number, y: number, r: number, into: number[]): void {
+    for (const [dx, dy] of [[-r, -r], [r, -r], [-r, r], [r, r]]) this.at(x + dx, y + dy, into);
+  }
+  /** Lay `from` into the whole, `spread` device pixels fatter all round, and its shadow and blur with it. */
+  private lay(from: number[], spread: number): void {
+    if (from[0] > from[2]) return;
+    let sp = spread;
+    const blur = /^blur\(([\d.]+)px\)$/.exec(this.filter);
+    if (this.filter !== 'none' && this.filter !== '') {
+      if (!blur) throw new Error('not to be measured');
+      sp += 3 * Number(blur[1]);
+    }
+    const B = this.box;
+    const put = (dx: number, dy: number, more: number): void => {
+      B[0] = Math.min(B[0], from[0] + dx - more); B[1] = Math.min(B[1], from[1] + dy - more);
+      B[2] = Math.max(B[2], from[2] + dx + more); B[3] = Math.max(B[3], from[3] + dy + more);
+    };
+    put(0, 0, sp);
+    if (this.shadowBlur > 0 || this.shadowOffsetX || this.shadowOffsetY) put(this.shadowOffsetX, this.shadowOffsetY, sp + 2 * this.shadowBlur);
+  }
+  private half(): number {
+    const m = this.m;
+    const s = Math.max(Math.hypot(m[0], m[1]), Math.hypot(m[2], m[3]));
+    const join = this.lineJoin === 'miter' ? Math.max(1, this.miterLimit) : 1;
+    return (this.lineWidth / 2) * s * Math.max(join, this.lineCap === 'square' ? Math.SQRT2 : 1);
+  }
+  save(): void {
+    this.stack.push({ m: [...this.m] as M6, lineWidth: this.lineWidth, lineJoin: this.lineJoin, miterLimit: this.miterLimit, shadowBlur: this.shadowBlur, shadowOffsetX: this.shadowOffsetX, shadowOffsetY: this.shadowOffsetY, shadowColor: this.shadowColor, filter: this.filter });
+  }
+  restore(): void {
+    const k = this.stack.pop();
+    if (k) Object.assign(this, k);
+  }
+  transform(a: number, b: number, c: number, d: number, e: number, f: number): void {
+    const m = this.m;
+    this.m = [m[0] * a + m[2] * b, m[1] * a + m[3] * b, m[0] * c + m[2] * d, m[1] * c + m[3] * d, m[0] * e + m[2] * f + m[4], m[1] * e + m[3] * f + m[5]];
+  }
+  setTransform(a: number | DOMMatrix2DInit, b?: number, c?: number, d?: number, e?: number, f?: number): void {
+    if (typeof a === 'object') this.m = [a.a ?? 1, a.b ?? 0, a.c ?? 0, a.d ?? 1, a.e ?? 0, a.f ?? 0];
+    else this.m = [a, b as number, c as number, d as number, e as number, f as number];
+  }
+  resetTransform(): void { this.m = [1, 0, 0, 1, 0, 0]; }
+  getTransform(): DOMMatrix { return new DOMMatrix(this.m); }
+  translate(x: number, y: number): void { this.transform(1, 0, 0, 1, x, y); }
+  scale(x: number, y: number): void { this.transform(x, 0, 0, y, 0, 0); }
+  rotate(t: number): void { this.transform(Math.cos(t), Math.sin(t), -Math.sin(t), Math.cos(t), 0, 0); }
+  beginPath(): void { this.path = [Infinity, Infinity, -Infinity, -Infinity]; }
+  closePath(): void {}
+  moveTo(x: number, y: number): void { this.at(x, y, this.path); }
+  lineTo(x: number, y: number): void { this.at(x, y, this.path); }
+  quadraticCurveTo(cx: number, cy: number, x: number, y: number): void { this.at(cx, cy, this.path); this.at(x, y, this.path); }
+  bezierCurveTo(c1x: number, c1y: number, c2x: number, c2y: number, x: number, y: number): void {
+    this.at(c1x, c1y, this.path); this.at(c2x, c2y, this.path); this.at(x, y, this.path);
+  }
+  arc(x: number, y: number, r: number): void { this.square(x, y, Math.abs(r), this.path); }
+  ellipse(x: number, y: number, rx: number, ry: number): void { this.square(x, y, Math.max(Math.abs(rx), Math.abs(ry)), this.path); }
+  rect(x: number, y: number, w: number, h: number): void { this.at(x, y, this.path); this.at(x + w, y + h, this.path); this.at(x + w, y, this.path); this.at(x, y + h, this.path); }
+  fill(...args: unknown[]): void {
+    if (args.length && typeof args[0] !== 'string') throw new Error('not to be measured');
+    this.lay(this.path, 1);
+  }
+  stroke(...args: unknown[]): void {
+    if (args.length) throw new Error('not to be measured');
+    this.lay(this.path, this.half() + 1);
+  }
+  clip(): void {}
+  fillRect(x: number, y: number, w: number, h: number): void {
+    const into = [Infinity, Infinity, -Infinity, -Infinity];
+    this.at(x, y, into); this.at(x + w, y + h, into); this.at(x + w, y, into); this.at(x, y + h, into);
+    this.lay(into, 1);
+  }
+  strokeRect(x: number, y: number, w: number, h: number): void {
+    const into = [Infinity, Infinity, -Infinity, -Infinity];
+    this.at(x, y, into); this.at(x + w, y + h, into); this.at(x + w, y, into); this.at(x, y + h, into);
+    this.lay(into, this.half() + 1);
+  }
+  clearRect(): void {}
+  drawImage(img: { width: number; height: number }, ...n: number[]): void {
+    const [x, y, w, h] = n.length === 8 ? n.slice(4) : n.length === 4 ? n : [n[0], n[1], img.width, img.height];
+    const into = [Infinity, Infinity, -Infinity, -Infinity];
+    this.at(x, y, into); this.at(x + w, y + h, into); this.at(x + w, y, into); this.at(x, y + h, into);
+    this.lay(into, 1);
+  }
+  createRadialGradient(): { addColorStop(): void } { return { addColorStop: () => {} }; }
+  createLinearGradient(): { addColorStop(): void } { return { addColorStop: () => {} }; }
+  setLineDash(): void {}
+  getLineDash(): number[] { return []; }
+}
+
+/**
+ * Where what a kind draws by hand (`Kind.extra`) puts ink in a pose (its
+ * bones `b`) seen from `view`, in device pixels about its feet at `k` pixels
+ * to the unit, under the body and over it; nothing when it draws nothing, and
+ * null when it is not to be measured (`Measure`).
+ */
+function handBox(kind: Kind, b: Bones, view: View, a: Anim, k: number): number[] | null {
+  if (!kind.extra) return [Infinity, Infinity, -Infinity, -Infinity];
+  const g = new Measure(k);
+  try {
+    kind.extra(g as unknown as CanvasRenderingContext2D, view, b, a, true);
+    kind.extra(g as unknown as CanvasRenderingContext2D, view, b, a, false);
+  } catch {
+    return null;
+  }
+  return g.box;
+}
+
+/**
+ * The box a picture is kept as, in device pixels on the whole box the kind
+ * reaches (`reachOf`), `w` by `h` with its feet at (ox, oy), `k` pixels to the
+ * unit: where its pieces, its shadow and its light put ink in this pose at
+ * this facing (`inkBox`) and its outline round them, and where what it draws
+ * by hand does (`handBox`); two pixels clear, and no more than the whole box.
+ * What it draws by hand that cannot be measured, the room to spare round
+ * every pose that the whole box has instead. It was the box of what was
+ * drawn, read back pixel by pixel, which took as long as drawing the picture.
+ */
+function cropBox(kind: Kind, kit: readonly Piece[], r: Reach, facing: number, a: Anim, step: number, k: number, ox: number, oy: number, w: number, h: number): { x0: number; y0: number; x1: number; y1: number } {
+  const b = kind.bones(a);
+  const view = viewOf(facing);
+  const e = inkBox(kind, kit, b, view, a);
+  const hand = handBox(kind, b, view, a, k);
+  // The outline is stroked twice as wide as the ink, with round joins.
+  const ink = hand ? inkAt(step, kind.size) : 0;
+  let x0 = (e.x0 - (hand ? ink : r.pad)) * k, y0 = (e.y0 - (hand ? ink : r.pad * 1.5)) * k;
+  let x1 = (e.x1 + (hand ? ink : r.pad)) * k, y1 = (e.y1 + (hand ? ink : r.pad)) * k;
+  if (hand) {
+    x0 = Math.min(x0, hand[0]); y0 = Math.min(y0, hand[1]);
+    x1 = Math.max(x1, hand[2]); y1 = Math.max(y1, hand[3]);
+  }
+  return {
+    x0: Math.max(0, Math.floor(ox + x0) - 2),
+    y0: Math.max(0, Math.floor(oy + y0) - 2),
+    x1: Math.min(w - 1, Math.ceil(ox + x1) + 2),
+    y1: Math.min(h - 1, Math.ceil(oy + y1) + 2),
+  };
 }
 
 /** The top of a kind standing, over its feet, in screen units at zoom one: where a name or a health bar goes over it. */
@@ -1813,14 +2005,7 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     }
   } else {
     made = performance.now();
-    const box = reachOf(species, kind, kit);
-    const k = step * dev;
-    const w = Math.max(1, Math.ceil((box.right - box.left) * k)), hh = Math.max(1, Math.ceil((box.bottom - box.top) * k));
-    const ox = Math.round(-box.left * k), oy = Math.round(-box.top * k);
-    const g = drawPad(w, hh);
-    g.setTransform(k, 0, 0, k, ox, oy);
-    drawKind(g, kind, kit, pal, facing, a, inkAt(step, kind.size), 1 / step);
-    f = cropped(g, w, hh, ox, oy, k, base);
+    f = pictureOf(kind, kit, reachOf(species, kind, kit), pal, facing, a, step, step * dev, base);
     keep(key, f, now);
     if (h) {
       h.waiting = undefined;
