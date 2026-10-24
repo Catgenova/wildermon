@@ -48,6 +48,8 @@ export interface BridgeFrame {
 /* ---- the view ---------------------------------------------------------------------------- */
 
 const views = new Map<number, { view: { ux: number; uy: number; vx: number; vy: number }; e: Eye; key: string }>();
+/** The kit's eye on the world's own axes at a camera turn, and a key for it: what a spiral staircase is drawn by too (`spiralkit.ts`). */
+export const kitEyeOfTurn = (rotation: number): { e: Eye; key: string } => viewOfTurn(rotation);
 /** The kit's view of the world's own axes from a camera turn: a unit of x and a unit of y, in pixels at zoom one. */
 function viewOfTurn(rotation: number): { e: Eye; key: string } {
   let v = views.get(rotation);

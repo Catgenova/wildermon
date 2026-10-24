@@ -62,6 +62,7 @@ import {
   progressOf,
   roofShapeOf,
   SIDE_NAMES,
+  SPIRAL,
   WALL_HEIGHT,
   type Border,
   type Building,
@@ -196,6 +197,18 @@ export function outsideStairBase(g: Game, b: Building, x: number, y: number, fac
 }
 
 /**
+ * The height an outside spiral staircase on a tile is counted from: the
+ * floor of the first footprint tile beside it, going round from the north,
+ * as a jetty's is (`jettyBase`). Null with none beside it.
+ */
+export function spiralBase(g: Game, b: Building, x: number, y: number): number | null {
+  for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+    if (g.buildings.tileIndex.get(`${x + dx},${y + dy}`) === b.id) return b.deck ?? g.world.getHeight(x + dx, y + dy);
+  }
+  return null;
+}
+
+/**
  * Why an outside staircase may not be planned on a tile out past a
  * building's footprint, or null when it may: a staircase, wide or single,
  * on storey `OUTSIDE_STAIR_LEVEL + 1`'s floor slot, on open ground, its head
@@ -217,8 +230,10 @@ export function outsideStairReason(g: Game, t: TileTarget, b: Building, level: n
   const tile = g.world.getTile(t.x, t.y);
   if (!g.world.isPassable(t.x, t.y) || tile === TileType.Bush) return 'Needs open ground: clear the tree or bush first.';
   if (g.world.hasWater(t.x, t.y)) return 'Not in water.';
-  if (!t.side) return 'Choose the side to climb from.';
-  const base = outsideStairBase(g, b, t.x, t.y, t.side);
+  // A spiral staircase has no side it is climbed from: its head meets the floor across any side shared with the building (`spiralBase`).
+  const spiral = t.floorKind === 'stairs' && t.hand === SPIRAL;
+  if (!t.side && !spiral) return 'Choose the side to climb from.';
+  const base = spiral ? spiralBase(g, b, t.x, t.y) : outsideStairBase(g, b, t.x, t.y, t.side as Side);
   if (base === null) return `Must climb toward ${b.name}: turn it.`;
   // Its foot on the ground and the whole flight over it: never lower than the floor its head is level with the bottom of.
   const floorBelow = base + (level - 1) * WALL_HEIGHT;

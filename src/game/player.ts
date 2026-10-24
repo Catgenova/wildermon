@@ -9,6 +9,7 @@ import { findPath, type PathPoint } from '../world/pathfinding';
 import { groundRoll, ROAD_TILES, standCap, TILE_DEFS, TileType } from '../world/tiles';
 import type { World } from '../world/world';
 import { cleanLook, DEFAULT_LOOK, type Look } from './look';
+import { SPIRAL_CLIMB, spiralHeading } from './spiral';
 
 export interface Stats {
   health: number;
@@ -251,6 +252,13 @@ export class Player {
   attackedAt = -1e9;
   /** Eased copy of `level` for drawing, so climbing stairs is not a jump. */
   visualLevel = 0;
+  /**
+   * A storey up or down a spiral staircase being climbed on its tile: the
+   * storey it is from and the one it is to, and how far round, 0 to 1
+   * (`climb`). The storey changes when it is done; `visualLevel` goes up
+   * with it all the way.
+   */
+  lifting: { from: number; to: number; t: number } | null = null;
   moving = false;
   swimming = false;
   /**
@@ -355,9 +363,9 @@ export class Player {
    * storeys under the ground the walk may use (a cellar), and `goalLevel` the
    * storey it has to arrive on, when that matters.
    */
-  walkTo(world: World, tx: number, ty: number, rule?: StepRule, levels = 1, below = 0, goalLevel?: number): boolean {
+  walkTo(world: World, tx: number, ty: number, rule?: StepRule, levels = 1, below = 0, goalLevel?: number, lift?: LiftRule): boolean {
     const path = findPath(world, this.tileX, this.tileY, this.level, tx, ty,
-      { ...pathOptions(world, rule, levels, this.wheelLoad, this.speedMul === 1 ? this.tilePace : undefined), below, goalLevel });
+      { ...pathOptions(world, rule, levels, this.wheelLoad, this.speedMul === 1 ? this.tilePace : undefined), lift, below, goalLevel });
     if (!path) return false;
     this.path = path.length ? path : null;
     return true;
@@ -365,6 +373,7 @@ export class Player {
 
   stop(): void {
     this.path = null;
+    this.lifting = null;
   }
 
   /**
@@ -385,7 +394,11 @@ export class Player {
    * nobody on one is in the water under it, and a step onto one or off it is
    * no climb.
    */
-  update(dt: number, world: World, rule?: StepRule, decked?: (x: number, y: number) => boolean): number {
+  update(dt: number, world: World, rule?: StepRule, decked?: (x: number, y: number) => boolean, lift?: LiftRule): number {
+    // Up or down a spiral staircase on this tile: the next step of the path is the same tile on another storey.
+    const next = this.path?.[0];
+    if (next && next.x === this.tileX && next.y === this.tileY && next.level !== this.level) return this.climb(dt, next, lift);
+    this.lifting = null;
     this.visualLevel += (this.level - this.visualLevel) * Math.min(1, dt * 7);
     if (Math.abs(this.level - this.visualLevel) < 0.01) this.visualLevel = this.level;
     const step = (x0: number, y0: number, x1: number, y1: number): number | null =>
@@ -406,6 +419,8 @@ export class Player {
     // stood still, and every tile of a walk read as stopping and starting again -- the body blended to standing and back.
     while (this.path && this.path.length) {
       const wp = this.path[0];
+      // A storey up or down a spiral staircase on this tile is the next frame's (`climb`).
+      if (wp.x === this.tileX && wp.y === this.tileY && wp.level !== this.level) break;
       const dx = wp.x + 0.5 - this.x;
       const dy = wp.y + 0.5 - this.y;
       const dist = Math.hypot(dx, dy);
@@ -499,6 +514,46 @@ export class Player {
     return rest > 1e-6 ? moved + this.update(rest, world, rule, decked) : moved;
   }
 
+  /**
+   * A storey up or down a spiral staircase, on the tile the body stands on:
+   * round the post at the pace of the legs on a floor, `SPIRAL_CLIMB` tiles of
+   * walking a storey, the storey its own when the turn is done (`lifting`).
+   * Nothing to climb -- the stair taken down under it, a saddle under you --
+   * and the walk ends where it is.
+   */
+  private climb(dt: number, to: PathPoint, lift?: LiftRule): number {
+    if (!lift || !lift(this.tileX, this.tileY, this.level).includes(to.level)) {
+      this.path = null;
+      this.lifting = null;
+      this.moving = false;
+      return 0;
+    }
+    if (!this.lifting || this.lifting.to !== to.level || this.lifting.from !== this.level) this.lifting = { from: this.level, to: to.level, t: 0 };
+    const free = this.unslowed && this.speedMul === 1;
+    let speed = BASE_SPEED * (free ? 1 : this.legPace) * this.drawPace * this.spellPace * this.pathPace;
+    if (this.stats.stamina < WINDED_AT && !free) speed *= WINDED_PACE;
+    if (this.burden > 0 && !free) speed /= 1 + this.burden;
+    if (this.stalled && !free) speed *= CARRY_CRAWL;
+    const l = this.lifting;
+    const up = l.to > l.from;
+    l.t = Math.min(1, l.t + (dt * speed) / SPIRAL_CLIMB);
+    // Round the way it goes, a share of the way up the storey that is climbed.
+    [this.dirX, this.dirY] = spiralHeading(up ? l.t : 1 - l.t, up);
+    this.visualLevel = l.from + (l.to - l.from) * l.t;
+    this.moving = true;
+    this.walkPhase += dt * speed * phasePerTile(speed);
+    if (l.t >= 1) {
+      this.level = l.to;
+      this.visualLevel = l.to;
+      this.lifting = null;
+      this.path?.shift();
+      if (!this.path?.length) this.path = null;
+      if (this.turns.length >= TURNS_KEPT) this.turns.shift();
+      this.turns.push({ x: this.x, y: this.y, level: this.level });
+    }
+    return 0;
+  }
+
   /** Move to a point if the tile it lies on can be entered from here; updates the storey. */
   private tryMove(world: World, nx: number, ny: number, step: (x0: number, y0: number, x1: number, y1: number) => number | null,
     decked?: (x: number, y: number) => boolean): boolean {
@@ -574,6 +629,9 @@ export type StepBlock = (x0: number, y0: number, x1: number, y1: number) => bool
 
 /** Decides a step between tiles: the storey you land on, or null when it is not allowed. */
 export type StepRule = (x0: number, y0: number, level: number, x1: number, y1: number) => number | null;
+
+/** The storeys a body goes to from a tile at a storey without leaving it: up and down a spiral staircase (`Game.liftRule`). */
+export type LiftRule = (x: number, y: number, level: number) => readonly number[];
 
 /**
  * The key a pace on this tile is kept under, as the Terraformer's `walk:road`

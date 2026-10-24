@@ -21,6 +21,8 @@ import {
   OPPOSITE_SIDE,
   OUTSIDE_STAIR_LEVEL,
   SINGLE_STAIRS_NAME,
+  SPIRAL,
+  SPIRAL_STAIRS_NAME,
   takesAs,
   progressOf,
   ROOF_SHAPES,
@@ -153,7 +155,7 @@ function outsideStairRows(g: Game, b: Building, base: TileTarget, place?: PlaceS
   const t: TileTarget = { ...base, level: OUTSIDE_STAIR_LEVEL };
   const there = bld.outsideStair(t.x, t.y);
   if (there && there.building === b.id) {
-    const what = there.hand ? `outside ${SINGLE_STAIRS_NAME}` : 'outside staircase';
+    const what = there.hand === SPIRAL ? `outside ${SPIRAL_STAIRS_NAME}` : there.hand ? `outside ${SINGLE_STAIRS_NAME}` : 'outside staircase';
     const rows: MenuItem[] = [];
     if (!isDone(there)) rows.push(build(g, act('build_floor'), t, `Build ${what} · needs ${describeNeeds(there, materialName)}`, there));
     rows.push(entry(g, act('remove_floor'), t, `Remove ${what}`));
@@ -168,9 +170,11 @@ function outsideStairRows(g: Game, b: Building, base: TileTarget, place?: PlaceS
   const side = OPPOSITE_SIDE[head];
   const plan = act('plan_floor');
   const rows: MenuItem[] = [];
-  for (const hand of [undefined, 'l'] as Array<StairHand | undefined>) {
-    const label = `Plan outside ${hand ? SINGLE_STAIRS_NAME : 'staircase'} (storey ${storey})`;
-    const asked: TileTarget = { ...t, floorKind: 'stairs', side, ...(hand ? { hand } : {}) };
+  for (const hand of [undefined, 'l', SPIRAL] as Array<StairHand | undefined>) {
+    // A spiral one has no side it is climbed from, and nothing for Q and E to turn.
+    const spiral = hand === SPIRAL;
+    const label = `Plan outside ${spiral ? SPIRAL_STAIRS_NAME : hand ? SINGLE_STAIRS_NAME : 'staircase'} (storey ${storey})`;
+    const asked: TileTarget = { ...t, floorKind: 'stairs', ...(spiral ? {} : { side }), ...(hand ? { hand } : {}) };
     const probe = plan.check?.({ ...asked, material: 'log' }, g) ?? null;
     if (probe) {
       rows.push({ label, hint: probe, disabled: true });
@@ -182,7 +186,7 @@ function outsideStairRows(g: Game, b: Building, base: TileTarget, place?: PlaceS
         const why = plan.check?.({ ...asked, material: m.id }, g) ?? null;
         return {
           label: m.name,
-          note: `${describeNeeds(floorBill(m.id, 'stairs', undefined, hand), materialName)} · Q/E rotate`,
+          note: spiral ? describeNeeds(floorBill(m.id, 'stairs', undefined, hand), materialName) : `${describeNeeds(floorBill(m.id, 'stairs', undefined, hand), materialName)} · Q/E rotate`,
           hint: why ?? undefined,
           disabled: !!why,
           onSelect: () => place(t, OUTSIDE_STAIR_LEVEL, m.id, side, hand),

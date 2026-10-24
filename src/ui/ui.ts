@@ -12,6 +12,8 @@ import {
   FENCE_TYPES,
   floorName,
   SINGLE_STAIRS_NAME,
+  SPIRAL,
+  SPIRAL_STAIRS_NAME,
   type StairHand,
   floorBill,
   floorKind,
@@ -197,6 +199,26 @@ function gateEntries(g: Game, t: Extract<Target, { kind: 'tile' }>): MenuItem[] 
 /** What Q and E do to a single staircase being placed (`rotatePlacing`). */
 const SINGLE_TURNS = 'Q/E: climbing side and tile half';
 
+/**
+ * The row for a spiral staircase on a tile (`label`): barred with the refusal
+ * where it is barred, else its materials, each with its bill, planned on the
+ * tile with no side to choose (`place`).
+ */
+export function spiralRow(g: Game, t: Extract<Target, { kind: 'tile' }>, label: string, place: (material: string) => void): MenuItem[] {
+  const plan = ACTION_BY_ID.get('plan_floor');
+  if (!plan) return [];
+  const why = cellarReason(g, plan, { ...t, material: 'log', floorKind: 'stairs', hand: SPIRAL });
+  if (why) return [{ label, hint: why, disabled: true }];
+  return [{
+    label,
+    children: MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' })).map((m) => {
+      const why = cellarReason(g, plan, { ...t, material: m.id, floorKind: 'stairs', hand: SPIRAL });
+      if (why) return { label: m.name, hint: why, disabled: true };
+      return { label: m.name, note: describeNeeds(floorBill(m.id, 'stairs', undefined, SPIRAL), materialName), onSelect: () => place(m.id) };
+    }),
+  }];
+}
+
 function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: Side, place: (material: string, kind: 'stairs' | 'ladder', hand?: StairHand) => void): MenuItem[] {
   const bld = g.buildings;
   if (!bld.cellar(base.x, base.y)) return [];
@@ -219,6 +241,8 @@ function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: S
   }
   const plan = ACTION_BY_ID.get('plan_floor');
   if (!plan) return [];
+  // A spiral staircase down has no side to choose, and comes down on its own tile.
+  const spiral = spiralRow(g, { ...base, down: true }, `Plan ${SPIRAL_STAIRS_NAME} down`, (material) => place(material, 'stairs', SPIRAL));
   // Which side it is climbed from is chosen as it is placed: barred only when no side will do, with the
   // refusal for the side the cursor is nearest unless another side's says more.
   const said = (['n', 'e', 's', 'w'] as Side[]).map((sd) => cellarReason(g, plan, { ...base, side: sd, material: 'log', floorKind: 'stairs', down: true }));
@@ -229,6 +253,7 @@ function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: S
     entries.push({ label: 'Plan staircase down', hint: why, disabled: true });
     entries.push({ label: `Plan ${SINGLE_STAIRS_NAME} down`, hint: why, disabled: true });
     entries.push({ label: 'Plan ladder down', hint: why, disabled: true });
+    entries.push(...spiral);
     return entries;
   }
   entries.push({
@@ -252,6 +277,7 @@ function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: S
     note: `${describeNeeds(floorBill('plank', 'ladder'), materialName)} · Q/E: side`,
     onSelect: () => place('plank', 'ladder'),
   });
+  entries.push(...spiral);
   return entries;
 }
 
@@ -1100,7 +1126,7 @@ export class UI {
     const single = floorKind === 'stairs' ? hand : undefined;
     // Out past the footprint, an outside staircase: for the building the job names, on the storey it names (`outsideStairReason`).
     this.placing = { kind: 'stairs', x: base.x, y: base.y, cx: base.cx, cy: base.cy, level, material, floorKind, side, down, hand: single, buildingId: base.buildingId };
-    this.game.logMsg(single ? `${SINGLE_TURNS}. Click: plan. Esc: cancel.` : 'Q/E: climbing side. Click: plan. Esc: cancel.', 'info');
+    this.game.logMsg(single === SPIRAL ? 'Click: plan. Esc: cancel.' : single ? `${SINGLE_TURNS}. Click: plan. Esc: cancel.` : 'Q/E: climbing side. Click: plan. Esc: cancel.', 'info');
   }
 
   /** A quarter turn of what is being placed: to the right for +1, to the left for -1. */
@@ -1108,6 +1134,8 @@ export class UI {
     const p = this.placing;
     if (!p) return;
     if (p.kind === 'furniture') p.facing = turnedFacing(p.facing, step);
+    // A spiral staircase has no side it is climbed from.
+    else if (p.hand === SPIRAL) return;
     else if (p.hand) {
       // A single staircase goes round the tile a half at a time: across to the other half, then a quarter turn on.
       const [first, second]: [StairHand, StairHand] = step > 0 ? ['l', 'r'] : ['r', 'l'];
@@ -3546,6 +3574,8 @@ export class UI {
               onSelect: () => this.startPlacingStairs(base, level, 'plank', 'ladder', side),
             });
           }
+          // Round a post in the middle of the tile, on and off across any side: no side to choose.
+          entries.push(...spiralRow(g, base, `Plan ${SPIRAL_STAIRS_NAME}`, (material) => this.startPlacingStairs(base, level, material, 'stairs', side, false, SPIRAL)));
         }
       }
     }
@@ -3576,7 +3606,8 @@ function stairsUpEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, level
   const at: Extract<Target, { kind: 'tile' }> = { ...base, level };
   const storey = `storey ${level + 1}`;
   const why = cellarReason(g, plan, { ...at, side, material: 'log', floorKind: 'stairs' });
-  if (why) return [{ label: `Plan staircase up (${storey})`, hint: why, disabled: true }];
+  const spiral = spiralRow(g, at, `Plan ${SPIRAL_STAIRS_NAME} up (${storey})`, (material) => place(at, level, material, 'stairs', side, SPIRAL));
+  if (why) return [{ label: `Plan staircase up (${storey})`, hint: why, disabled: true }, ...spiral];
   return [
     {
       label: `Plan staircase up (${storey})`,
@@ -3599,6 +3630,7 @@ function stairsUpEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, level
       note: `${describeNeeds(floorBill('plank', 'ladder'), materialName)} · Q/E: side`,
       onSelect: () => place(at, level, 'plank', 'ladder', side),
     },
+    ...spiral,
   ];
 }
 

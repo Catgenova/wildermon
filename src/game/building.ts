@@ -470,16 +470,29 @@ export type FloorKind = 'floor' | 'stairs' | 'ladder' | 'roof';
 export const FLOOR_KIND_NAMES: Record<FloorKind, string> = { floor: 'floor', stairs: 'staircase', ladder: 'ladder', roof: 'roof' };
 /**
  * Which half of its tile a single staircase runs up: the half on your left as
- * you climb it, or the one on your right. A staircase with no hand is the
- * wide one, the width of the tile.
+ * you climb it, or the one on your right; or `SPIRAL`, a spiral staircase. A
+ * staircase with no hand is the wide one, the width of the tile.
  */
-export type StairHand = 'l' | 'r';
-export const STAIR_HANDS: readonly StairHand[] = ['l', 'r'];
+export type StairHand = 'l' | 'r' | 's';
+export const STAIR_HANDS: readonly StairHand[] = ['l', 'r', 's'];
 /** What a single staircase is called, beside the wide one's `FLOOR_KIND_NAMES.stairs`. */
 export const SINGLE_STAIRS_NAME = 'single staircase';
-/** What a floor slot is called: a staircase with a hand is a single one. */
+/**
+ * The hand of a spiral staircase: wound round a post in the middle of its
+ * tile, stepped on from the storey below and off on the storey above across
+ * any side, and stacked a storey over a storey on the same tile
+ * (`Game.liftRule`). Walked on foot only. It costs what a single one does
+ * (`floorBill`).
+ */
+export const SPIRAL: StairHand = 's';
+export const SPIRAL_STAIRS_NAME = 'spiral staircase';
+/** Why a mount, a cart or a wagon goes no further than beside a spiral staircase: the island's `spiral_foot_said`. */
+export const SPIRAL_FOOT_SAID = 'Spiral staircase: on foot only.';
+/** Whether a floor tile is a spiral staircase. */
+export const isSpiral = (f: FloorTile | undefined | null): boolean => !!f && f.kind === 'stairs' && f.hand === SPIRAL;
+/** What a floor slot is called: a staircase with a hand is a single one, or a spiral one. */
 export const floorNameOf = (kind: FloorKind, hand?: StairHand | null): string =>
-  kind === 'stairs' && hand ? SINGLE_STAIRS_NAME : FLOOR_KIND_NAMES[kind];
+  kind === 'stairs' && hand === SPIRAL ? SPIRAL_STAIRS_NAME : kind === 'stairs' && hand ? SINGLE_STAIRS_NAME : FLOOR_KIND_NAMES[kind];
 export const floorName = (f: FloorTile): string => floorNameOf(floorKind(f), f.hand);
 
 export interface FloorTile extends Bill {
@@ -489,9 +502,9 @@ export interface FloorTile extends Bill {
   y: number;
   material: string;
   kind?: FloorKind;
-  /** For stairs and ladders: the side where you step on from below. */
+  /** For stairs and ladders: the side where you step on from below. None on a spiral staircase, which is stepped on across any. */
   facing?: Side;
-  /** For a single staircase: the half of the tile it runs up (`StairHand`). None on the wide one. */
+  /** For a single staircase: the half of the tile it runs up, or a spiral staircase (`StairHand`). None on the wide one. */
   hand?: StairHand;
   /** The colour it has been painted, if it has. */
   dye?: string;
@@ -671,7 +684,7 @@ export const wallBill = (material: string, type: WallType, scale = 1): Bill => {
 /** Planks in a ladder, whatever the house it climbs is built of. */
 export const LADDER_PLANKS = 8;
 
-/** A wide staircase's share of a solid wall's bill, and a single one's: half the width, so less of it, but the same climb. */
+/** A wide staircase's share of a solid wall's bill, and a single one's (a spiral one's too): half the width, so less of it, but the same climb. */
 export const STAIRS_SHARE = 0.75;
 export const SINGLE_STAIRS_SHARE = 0.5;
 
@@ -1028,7 +1041,8 @@ export class Buildings {
 
   setFloor(b: Building, level: number, x: number, y: number, material: string, kind: FloorKind = 'floor', facing?: Side, hand?: StairHand): FloorTile {
     const single = kind === 'stairs' && hand && STAIR_HANDS.includes(hand) ? hand : undefined;
-    const f: FloorTile = { building: b.id, level, x, y, material, kind, facing, ...(single ? { hand: single } : {}), ...floorBill(material, kind, roofShapeOf(b), single) };
+    // A spiral staircase is stepped on across any side, and has none it is climbed from.
+    const f: FloorTile = { building: b.id, level, x, y, material, kind, facing: single === SPIRAL ? undefined : facing, ...(single ? { hand: single } : {}), ...floorBill(material, kind, roofShapeOf(b), single) };
     this.floors.set(floorKey(level, x, y), f);
     this.revision++;
     if (level > 0 && !this.tileIndex.has(tileKey(x, y))) this.jettyIndex.set(tileKey(x, y), b.id);

@@ -2600,6 +2600,21 @@ jobs:
             --outfile=node_modules/.cache/outstairs.mjs --log-level=error
           node node_modules/.cache/outstairs.mjs
 
+      - name: The spiral staircase
+        if: matrix.shard == 3
+        run: |
+          # A tile a storey round a post, no climbing side: stepped onto and
+          # off at the storey walked on across any side, up and down it on its
+          # tile, stacked storey on storey down to a cellar. Planned inside,
+          # outside and down to a cellar with no side, refused and stacked in
+          # the same words on both sides, a single staircase's bill, built;
+          # walked up the stack and back down through rpc_move never held
+          # back, a change of storey with no spiral held back; mounts and
+          # wheels refused in the same words; a pinned storey's walk to it.
+          npx esbuild supabase/test/spiral.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/spiral.mjs --log-level=error
+          node node_modules/.cache/spiral.mjs
+
       - name: Storey mode
         if: matrix.shard == 3
         env:

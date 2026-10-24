@@ -7,6 +7,12 @@ export interface PathOptions {
    * null when the step is not allowed (slopes, walls, missing floors).
    */
   step: (x0: number, y0: number, level: number, x1: number, y1: number) => number | null;
+  /**
+   * The storeys a body goes to from a tile at a storey without leaving the
+   * tile -- up and down a spiral staircase (`Game.liftRule`) -- each a step
+   * of the search costing `LIFT_COST`. Unset, none.
+   */
+  lift?: (x: number, y: number, level: number) => readonly number[];
   /** Extra cost multiplier for entering a tile. */
   cost: (x: number, y: number) => number;
   /** How many storeys the search may use; 1 keeps everything on the ground. */
@@ -31,6 +37,9 @@ export interface PathPoint {
   level: number;
 }
 
+/** What a storey up or down a spiral staircase costs the search, against a tile walked: a turn round its post. */
+export const LIFT_COST = 2;
+
 const DIRS = [
   [1, 0],
   [-1, 0],
@@ -54,7 +63,7 @@ const DIRS = [
  *
  * So tiles get slots instead. A node is given one the first time it is
  * reached, and there can never be more of them than the search is allowed to
- * open: one for the start and eight per expansion. That is about seven
+ * open: one for the start and ten per expansion. That is about nine
  * megabytes, on any island there will ever be.
  */
 interface Buffers {
@@ -108,9 +117,9 @@ export function findPath(world: World, sx: number, sy: number, sl: number, tx: n
   const below = Math.max(0, opts.below ?? 0);
   const goalAt = opts.goalLevel;
   const maxNodes = opts.maxNodes ?? 30000;
-  // One for the start and eight per expansion is every slot the search can
-  // possibly want, and it is the ceiling whatever the size of the island.
-  const b = getBuffers(maxNodes * 8 + 2);
+  // One for the start and ten per expansion -- eight tiles round it and up and down a spiral staircase (`lift`) --
+  // is every slot the search can possibly want, and it is the ceiling whatever the size of the island.
+  const b = getBuffers(maxNodes * 10 + 2);
   const OPEN = 1;
   const CLOSED = 2;
 
@@ -220,6 +229,20 @@ export function findPath(world: World, sx: number, sy: number, sl: number, tx: n
       b.parent[n] = cur;
       b.state[n] = OPEN;
       push(n, ng + heuristic(nx, ny));
+    }
+    // Up or down a spiral staircase, on the same tile.
+    if (opts.lift) {
+      for (const nl of opts.lift(cx, cy, cl)) {
+        if (nl === cl || nl < -below || nl >= levels) continue;
+        const n = slotOf((nl + below) * layer + tileIdx);
+        if (n < 0 || b.state[n] === CLOSED) continue;
+        const ng = b.g[cur] + LIFT_COST;
+        if (b.state[n] === OPEN && ng >= b.g[n]) continue;
+        b.g[n] = ng;
+        b.parent[n] = cur;
+        b.state[n] = OPEN;
+        push(n, ng + heuristic(cx, cy));
+      }
     }
   }
 

@@ -5,7 +5,7 @@
  */
 import type { ActionDef, Target } from './actions';
 import { consumeUnit, materialName, needsText, needTool, nextAvailable } from './buildActions';
-import { floorKind, heftWord, INDOORS_DECAY, INDOORS_REST, isDone, jobLevel, MATERIAL_BY_ID, onlyRefusal, SIDE_NAMES, TOP_LEVELS } from './building';
+import { floorKind, heftWord, INDOORS_DECAY, INDOORS_REST, isDone, isSpiral, jobLevel, MATERIAL_BY_ID, onlyRefusal, SIDE_NAMES, SPIRAL_STAIRS_NAME, TOP_LEVELS } from './building';
 import { SUBTILES } from './crates';
 import { furnitureCovers } from './furniture';
 import type { Game } from './game';
@@ -153,8 +153,10 @@ export function frameSays(g: Game, x: number, y: number): string {
       if (!f || f.building !== j.id) continue;
       // An outside staircase, up from the ground on it (`outsideStair`).
       if (floorKind(f) === 'stairs') {
-        out += isDone(f) ? ` Outside staircase: up to ${j.name} storey ${level + 1}, climbed from the ${SIDE_NAMES[f.facing ?? 's']}.`
-          : ` Outside staircase planned: up to ${j.name} storey ${level + 1}.`;
+        // A spiral one is climbed from any side.
+        out += isDone(f) ? ` Outside ${isSpiral(f) ? `${SPIRAL_STAIRS_NAME}: up to ${j.name} storey ${level + 1}, climbed from any side.`
+          : `staircase: up to ${j.name} storey ${level + 1}, climbed from the ${SIDE_NAMES[f.facing ?? 's']}.`}`
+          : ` Outside ${isSpiral(f) ? SPIRAL_STAIRS_NAME : 'staircase'} planned: up to ${j.name} storey ${level + 1}.`;
       } else if (!isDone(f)) out += ` Jetty planned over it: ${j.name} storey ${level + 1}.`;
       else if (bld.storeyArea(j, level).has(`${x},${y}`)) {
         out += ` Jetty over it: ${j.name} storey ${level + 1}, part of that storey. Open sides need a wall, railing or columns to enclose it; a roof over it needs walls or columns, not railings.`;

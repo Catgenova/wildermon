@@ -1,6 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import {
-  CELLAR_DEPTH, CELLAR_LEVEL, CELLAR_SOIL, FLOOR_KIND_NAMES, floorKind, floorOf, gapText, type Building, type Side,
+  CELLAR_DEPTH, CELLAR_LEVEL, CELLAR_SOIL, FLOOR_KIND_NAMES, floorKind, floorOf, isSpiral, gapText, type Building, type Side,
 } from './building';
 import { FURNITURE, furnitureDef, type FurnitureDef } from './furniture';
 import type { Game } from './game';
@@ -275,8 +275,8 @@ export function flightOnto(g: Game, x: number, y: number): 'stairs' | 'ladder' |
   for (const [dx, dy, side] of [[0, -1, 's'], [1, 0, 'w'], [0, 1, 'n'], [-1, 0, 'e']] as Array<[number, number, Side]>) {
     const f = b.floor(0, x + dx, y + dy);
     if (!f || (floorKind(f) !== 'stairs' && floorKind(f) !== 'ladder') || !b.cellar(x + dx, y + dy)) continue;
-    // Its foot is on the side it is climbed from: this tile, when that side faces here.
-    if ((f.facing ?? 's') === side) return floorKind(f) as 'stairs' | 'ladder';
+    // Its foot is on the side it is climbed from: this tile, when that side faces here. A spiral staircase's is its own tile.
+    if (!isSpiral(f) && (f.facing ?? 's') === side) return floorKind(f) as 'stairs' | 'ladder';
   }
   return null;
 }

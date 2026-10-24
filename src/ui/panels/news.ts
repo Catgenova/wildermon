@@ -28,10 +28,11 @@ import { SALE_DAYS } from '../../game/prices';
 import { RECENT } from './craft';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
 import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
+import { SPIRAL_TREADS } from '../../game/spiral';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
 import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW, armourSwingSays, overburdenSwingSays } from '../../game/fight';
 import {
-  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
+  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
   NO_PLAN_FROM, OUTSIDE_STAIR_LEVEL, roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
@@ -3648,6 +3649,19 @@ export const NEWS: News[] = [
       `Changed: idle ${SPECIES.cobbe.name}, work in range wanting only what your settlement stores lack: "${idleSays({ why: 'stock', n: 2, what: ['marble_brick', 'glass'] }, 'hod')}" (up to ${IDLE_WANTS} named), `
         + 'not "no planned building work". Carried piece no work in range wants: back to your settlement stores.',
     ],
+  },
+  {
+    n: 303,
+    day: '2026-10-24',
+    lines: () => {
+      const staired = WALL_MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' }));
+      return [
+        `Added: ${SPIRAL_STAIRS_NAME}, in all ${num(staired.length)} stair materials: a tile a storey, ${num(SPIRAL_TREADS)} treads round a post, no climbing side. `
+          + `Upper storey, cellar or outside staircase tile → Plan ${SPIRAL_STAIRS_NAME}.`,
+        `Added: on from the storey below, off on the storey above, any side; stacks storey on storey on one tile, cellar included, on spirals only. `
+          + `Cost ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials. On foot only.`,
+      ];
+    },
   },
 ];
 

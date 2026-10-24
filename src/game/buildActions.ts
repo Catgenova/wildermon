@@ -8,7 +8,10 @@ import {
   FLOOR_KIND_NAMES,
   floorName,
   floorKind,
+  connectsDown,
   isDone,
+  isSpiral,
+  SPIRAL,
   MATERIAL_BY_ID,
   MAX_LEVELS,
   SIDE_NAMES,
@@ -150,7 +153,7 @@ const across = (x: number, y: number, side: Side): [number, number] =>
  * down, on the side it is climbed from, onto another: the island's
  * `cellar_flight_refusal` says the same.
  */
-function flightDownReason(g: Game, t: TileTarget, b: Building): string | null {
+function flightDownReason(g: Game, t: TileTarget, b: Building, spiral = false): string | null {
   const c = g.buildings.cellar(t.x, t.y);
   if (!c && !t.down) {
     // Not a way down, so a way up: jobs go to the storey being worked on (`jobLevel`), and in a building with one over the ground it is that storey to work on.
@@ -161,6 +164,8 @@ function flightDownReason(g: Game, t: TileTarget, b: Building): string | null {
   if (dug < CELLAR_DEPTH) return `Dig the cellar first: ${metres(dug)} m of ${metres(CELLAR_DEPTH)} m dug.`;
   // A glasshouse's field is cleared before anything is planned over it (`glasshouse.ts`).
   if (g.world.getTile(t.x, t.y) === TileType.Field) return 'Field here: clear it first.';
+  // A spiral staircase comes down on its own tile, which is dug.
+  if (spiral) return null;
   if (!t.side) return 'Choose the side to climb from.';
   const [fx, fy] = across(t.x, t.y, t.side);
   if (g.buildings.cellar(fx, fy)?.building !== b.id || !g.buildings.cellarDone(fx, fy)) {
@@ -175,11 +180,30 @@ function flightDownReason(g: Game, t: TileTarget, b: Building): string | null {
  * only the one would ever be taken: one way off the ground floor a tile. The
  * island's `cellar_stack_refusal` says the same.
  */
-function stackedFlightReason(g: Game, t: TileTarget, level: number): string | null {
+function stackedFlightReason(g: Game, t: TileTarget, level: number, spiral = false): string | null {
   const other = level === 1 ? g.buildings.floor(0, t.x, t.y) : level === 0 ? g.buildings.floor(1, t.x, t.y) : undefined;
-  if (!other || (floorKind(other) !== 'stairs' && floorKind(other) !== 'ladder')) return null;
-  const what = FLOOR_KIND_NAMES[floorKind(other)];
-  return level === 1 ? `${capital(what)} down to the cellar is there.` : `${capital(what)} up to the next storey is there.`;
+  if (other && connectsDown(floorKind(other)) && !(spiral && isSpiral(other))) {
+    const what = FLOOR_KIND_NAMES[floorKind(other)];
+    return level === 1 ? `${capital(what)} down to the cellar is there.` : `${capital(what)} up to the next storey is there.`;
+  }
+  return spiralStackReason(g, t, level, spiral);
+}
+/**
+ * Why a flight or a ladder goes in here over or under one of the other sort on
+ * the same tile, or null: a spiral staircase stacks on a spiral staircase and
+ * under one, storey over storey, and on nothing else, nor anything else on it.
+ * Storey 2 and up: on the ground floor, `stackedFlightReason`. The island's
+ * `spiral_stack_refusal` says the same.
+ */
+function spiralStackReason(g: Game, t: TileTarget, level: number, spiral: boolean): string | null {
+  if (level < 1) return null;
+  for (const [at, where] of [[level - 1, 'below'], [level + 1, 'above']] as Array<[number, string]>) {
+    if (at < 1) continue;
+    const other = g.buildings.floor(at, t.x, t.y);
+    if (!other || !connectsDown(floorKind(other)) || isSpiral(other) === spiral) continue;
+    return `${capital(floorName(other))} ${where}: spirals stack on spirals only.`;
+  }
+  return null;
 }
 /** The storey wall work happens on: a building's working one, a jetty's, round a flat roof, or the ground (`wallLevelOf`). */
 const wallLevel = (g: Game, t: TileTarget): number => wallLevelOf(g, t);
@@ -791,15 +815,17 @@ export const BUILD_ACTIONS: ActionDef[] = [
         const top = gapText(b.levels, g.buildings.levelGaps(b, b.levels - 1, g.player.x, g.player.y));
         if (top) return top;
       } else if (kind === 'stairs' || kind === 'ladder') {
+        // A spiral staircase is stepped on across any side, and has none to choose.
+        const spiral = kind === 'stairs' && t.hand === SPIRAL;
         // On the ground floor, a way down to the cellar under it.
         if (level < 1) {
-          const down = flightDownReason(g, t, b);
+          const down = flightDownReason(g, t, b, spiral);
           if (down) return down;
         }
-        if (!t.side) return 'Choose the side to climb from.';
+        if (!t.side && !spiral) return 'Choose the side to climb from.';
         // A flight or a ladder up from a tile on piers stands on its deck.
         if ((level > 1 || g.buildings.onPiers(t.x, t.y)) && !g.buildings.floor(level - 1, t.x, t.y)) return 'Plan the floor below first.';
-        const stacked = stackedFlightReason(g, t, level);
+        const stacked = stackedFlightReason(g, t, level, spiral);
         if (stacked) return stacked;
       }
       // A flight or a ladder down takes up the ground floor's flooring where it goes (`flooringUnder`).

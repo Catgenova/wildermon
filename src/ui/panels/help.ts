@@ -35,9 +35,10 @@ import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_
 import { HOARD_LUMPS, HOARD_MORE } from '../../game/butcher';
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, columnBill, floorBill, GLASS_ROOF, HEFT_WORDS, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIALS as WALL_MATERIALS, onlySaid, OUTSIDE_STAIR_LEVEL, takesAs,
-  MAX_LEVELS, NO_PLAN_FROM, RAILING_HEIGHT, roofShapeDef, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, STAIRS_SHARE, roofShapeOf, SIDE_NAMES, WALL_HEIGHT, wallBill, WALL_TYPE_BY_ID, WALL_TYPES,
+  MAX_LEVELS, NO_PLAN_FROM, RAILING_HEIGHT, roofShapeDef, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, roofShapeOf, SIDE_NAMES, WALL_HEIGHT, wallBill, WALL_TYPE_BY_ID, WALL_TYPES,
 } from '../../game/building';
 import { CELLAR_ACTION_BY_ID, CELLAR_DAYLIGHT, cellarOutdoor } from '../../game/cellar';
+import { SPIRAL_TREADS } from '../../game/spiral';
 import { materialName } from '../../game/buildActions';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_SEEN, COUNTER_WALL } from '../../game/counters';
 import { BARTER_IDLE, BARTER_MOST, BARTER_REACH } from '../../game/barter';
@@ -1713,6 +1714,8 @@ export function helpText(): string {
       <li>On an upper storey, plan a <b>staircase</b> or <b>ladder</b> instead of a floor. Walk onto it from below: up. Step off it toward the ground: down.</li>
       <li>Every flight material comes in both widths: wide (full tile), ${percent(STAIRS_SHARE)} of a solid wall's materials; <b>${SINGLE_STAIRS_NAME}</b> (half the tile),
       ${percent(SINGLE_STAIRS_SHARE)}. The ${SINGLE_STAIRS_NAME} runs up the left or right half; the other half is the stairwell.</li>
+      <li><b>${capital(SPIRAL_STAIRS_NAME)}</b>: ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials; 1 tile, ${SPIRAL_TREADS} treads round a post; no climbing side, no Q/E.
+      On from the storey below, off on the storey above, any side. Stacks storey on storey on one tile, down to a cellar too; on spirals only. Inside, outside staircase or down to a cellar. On foot only.</li>
       <li><b>Outside staircase</b>: ground to storey ${OUTSIDE_STAIR_LEVEL + 1}. On open ground sharing a side with a building of ${OUTSIDE_STAIR_LEVEL + 1} storeys or more:
       <b>Plan outside staircase</b> or <b>Plan outside ${SINGLE_STAIRS_NAME}</b>, same materials as inside. Q and E turn it; head against the building.</li>
       <li>Refused: in water, on a tree or bush, under a jetty or bridge, off your settlement, on ground higher than the building's ground floor. Ladders stay inside the footprint.</li>

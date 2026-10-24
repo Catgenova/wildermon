@@ -20,7 +20,7 @@ import type { ItemRow } from '../net/island';
 import { packed, type Aged } from '../net/packed';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, staminaBarAbove, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
-import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
+import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, isSpiral, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
@@ -44,7 +44,7 @@ import { runeGateLights } from './runegate';
 import { GameEmitter, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
 import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
-import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
+import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
 import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS, world } from './pace';
@@ -1461,6 +1461,41 @@ export class Game {
     return !!f && isDone(f) && connectsDown(floorKind(f));
   }
 
+  /** A finished spiral staircase in a tile's floor slot at a storey: up to it from the storey under it, on its own tile. */
+  spiralAt(x: number, y: number, level: number): boolean {
+    const f = this.buildings.floor(level, x, y);
+    return !!f && isDone(f) && isSpiral(f);
+  }
+
+  /**
+   * The storeys a body standing on a tile at a storey goes to without leaving
+   * it: up a finished spiral staircase going up from the storey, or down the
+   * one it stands at the head of -- to the cellar too, down one let into the
+   * ground floor (`flightDown`). On foot only: none mounted, driving or
+   * afloat. A spiral staircase's tile is stepped onto and off at the storey
+   * it is walked on (`step`), across any side, and these are the only ways
+   * up and down it; spirals on the same tile a storey over a storey are one
+   * stair. The island's `spiral_lift_ok` holds a body to the same.
+   */
+  readonly liftRule = (x: number, y: number, level: number): number[] => (this.driving() || this.mounted() ? [] : this.liftFree(x, y, level));
+
+  /** The same with nothing under you, to say a way would be there on foot (`onFootTo`). */
+  readonly liftFree = (x: number, y: number, level: number): number[] => {
+    const out: number[] = [];
+    if (!this.buildings.list.size) return out;
+    if (level < 0) {
+      const down = this.buildings.flightDown(x, y);
+      if (down && isSpiral(down)) out.push(0);
+      return out;
+    }
+    if (this.spiralAt(x, y, level + 1) && this.standable(x, y, level)) out.push(level + 1);
+    if (level === 0) {
+      const down = this.buildings.cellars.size ? this.buildings.flightDown(x, y) : undefined;
+      if (down && isSpiral(down)) out.push(CELLAR_LEVEL);
+    } else if (this.spiralAt(x, y, level) && this.standable(x, y, level - 1)) out.push(level - 1);
+    return out;
+  };
+
   /**
    * The one rule for moving between neighbouring tiles: stepping onto a
    * staircase or ladder from below takes you up a storey, stepping off one
@@ -1483,7 +1518,8 @@ export class Game {
       const under = this.cellarStep(x0, y0, level, x1, y1, tow);
       if (under !== undefined) return under;
     }
-    if (this.connector(x1, y1, level + 1) && !b.blocksAt(level, x0, y0, x1, y1)) return level + 1;
+    // Onto a spiral staircase's tile at the storey you are on: up it is a climb on the tile (`liftRule`).
+    if (this.connector(x1, y1, level + 1) && !b.blocksAt(level, x0, y0, x1, y1) && !(this.spiralAt(x1, y1, level + 1) && this.standable(x1, y1, level))) return level + 1;
     // Deck is ground: it is flat, and the drop under it is not your problem.
     if (this.bridges.size) {
       // Walked at the storey you are on: a ramp's at either of its ends' (`bridgeStepLevel`).
@@ -1501,7 +1537,8 @@ export class Game {
       }
       return level;
     }
-    if (level > 0 && this.connector(x0, y0, level) && this.standable(x1, y1, level - 1) && !b.blocksAt(level - 1, x0, y0, x1, y1)) {
+    // Off a flight down onto the storey under it; off a spiral staircase only at the storey it is walked on.
+    if (level > 0 && this.connector(x0, y0, level) && !this.spiralAt(x0, y0, level) && this.standable(x1, y1, level - 1) && !b.blocksAt(level - 1, x0, y0, x1, y1)) {
       return level - 1;
     }
     return null;
@@ -1530,18 +1567,19 @@ export class Game {
       if (!b.sameCellar(own, x1, y1)) return null;
       if (x1 !== x0 && y1 !== y0 && !b.sameCellar(own, x1, y0) && !b.sameCellar(own, x0, y1)) return null;
       const up = b.flightDown(x1, y1);
-      if (!up) return CELLAR_LEVEL;
+      // Under a spiral staircase, its foot: up it is a climb on the tile (`liftRule`).
+      if (!up || isSpiral(up)) return CELLAR_LEVEL;
       return acrossSide(up.facing ?? 's', x1, y1, x0, y0) ? 0 : null;
     }
     if (level !== 0) return undefined;
     const from = b.flightDown(x0, y0);
-    if (from && acrossSide(from.facing ?? 's', x0, y0, x1, y1)) {
+    if (from && !isSpiral(from) && acrossSide(from.facing ?? 's', x0, y0, x1, y1)) {
       if (!b.sameCellar(from.building, x1, y1)) return null;
       if (tow) for (const f of this.furniture.values()) if (f.hitched) return null;
       return CELLAR_LEVEL;
     }
     const onto = b.flightDown(x1, y1);
-    if (onto && acrossSide(onto.facing ?? 's', x1, y1, x0, y0)) return null;
+    if (onto && !isSpiral(onto) && acrossSide(onto.facing ?? 's', x1, y1, x0, y0)) return null;
     return undefined;
   }
 
@@ -1637,6 +1675,8 @@ export class Game {
       if (!acrossSide(OPPOSITE_SIDE[facing], x0, y0, x1, y1)) return null;
     }
     if (blocks(x0, y0, x1, y1, level)) return null;
+    // No wheels or hooves on a spiral staircase's tile, at its foot or its head (`SPIRAL_FOOT_SAID`).
+    if (this.spiralAt(x1, y1, level + 1)) return null;
     const there = this.wideFlight(x1, y1, level);
     if (there) return acrossSide(OPPOSITE_SIDE[there.facing ?? 's'], x1, y1, x0, y0) ? level : null;
     return this.floorTakesWheels(x1, y1, level) ? level : null;
@@ -2097,16 +2137,21 @@ export class Game {
 
   /**
    * Whether the player stands at a flight or a ladder down to a cellar: on its
-   * tile up top, or on the tile at its foot down there. Those two are said to
+   * tile up top, or on the tile at its foot down there; or on a spiral
+   * staircase's tile, at its foot or its head, at any storey. Those two are said to
    * the island the moment they are stepped onto (`Island.move`), because it
    * lets a body change storey only off the one onto the other.
    */
   atStairs(): boolean {
     const b = this.buildings;
-    if (!b.cellars.size) return false;
     const { tileX: x, tileY: y, level } = this.player;
+    // On a spiral staircase's tile, at its foot or its head: the island takes a storey up or down it on its tile only (`spiral_lift_ok`).
+    if (level >= 0 && b.list.size && (this.spiralAt(x, y, level) || this.spiralAt(x, y, level + 1))) return true;
+    if (!b.cellars.size) return false;
     if (level === 0) return !!b.flightDown(x, y);
     if (level > 0) return false;
+    // Under a spiral staircase down to the cellar, at its foot.
+    if (isSpiral(b.flightDown(x, y))) return true;
     for (const [dx, dy, side] of [[0, -1, 's'], [1, 0, 'w'], [0, 1, 'n'], [-1, 0, 'e']] as Array<[number, number, Side]>) {
       const f = b.flightDown(x + dx, y + dy);
       if (f && (f.facing ?? 's') === side) return true;
@@ -2161,13 +2206,14 @@ export class Game {
   }
 
   /** How the player may move right now, how many storeys they may cross, and how many under the ground (a cellar). */
-  movement(): { rule: (x0: number, y0: number, level: number, x1: number, y1: number) => number | null; levels: number; below: number } {
+  movement(): { rule: (x0: number, y0: number, level: number, x1: number, y1: number) => number | null; levels: number; below: number; lift?: LiftRule } {
     if (this.afloat()) return { rule: this.sailRule, levels: 1, below: 0 };
     // Wheels go up wide staircases, so a drive crosses storeys as a walk does (`driveStorey`).
     if (this.driving()) return { rule: this.driveRule, levels: TOP_LEVELS, below: 0 };
     // And a mount goes up wide staircases as wheels do (`rideRule`).
     if (this.mounted()) return { rule: this.rideRule, levels: TOP_LEVELS, below: 0 };
-    return { rule: this.stepRule, levels: TOP_LEVELS, below: this.buildings.cellars.size ? -CELLAR_LEVEL : 0 };
+    // On foot, up and down spiral staircases on their own tiles as well (`liftRule`).
+    return { rule: this.stepRule, levels: TOP_LEVELS, below: this.buildings.cellars.size ? -CELLAR_LEVEL : 0, lift: this.liftRule };
   }
 
   /**
@@ -4580,10 +4626,10 @@ export class Game {
     } else {
       // Nothing under it on its storey: let down onto the highest one under it that has (`footing`).
       if (p.level > 0) p.level = this.footing(p.tileX, p.tileY, p.level);
-      const { rule } = this.movement();
+      const { rule, lift } = this.movement();
       const [fx, fy] = [p.tileX, p.tileY];
-      // A deck on piers is walked dry and level, whatever is under it (`piers.ts`).
-      moved = p.update(dt, this.world, rule, this.buildings.pierTiles.size ? this.onPierDeck : undefined);
+      // A deck on piers is walked dry and level, whatever is under it (`piers.ts`); up and down a spiral staircase on its tile (`liftRule`).
+      moved = p.update(dt, this.world, rule, this.buildings.pierTiles.size ? this.onPierDeck : undefined, lift);
       if (this.bridges.size && (fx !== p.tileX || fy !== p.tileY)) this.underDeck = this.walksUnder(fx, fy, p.tileX, p.tileY);
     }
     this.acting.stepped = moved;
@@ -5739,14 +5785,16 @@ export class Game {
     else if (!this.drawingBow()) this.pauseAction();
     const p = this.player;
     if (!this.world.inBounds(x, y)) return false;
-    const { rule, levels, below } = this.movement();
+    const { rule, levels, below, lift } = this.movement();
+    // A spiral staircase is walked on foot only: mounted or driving, a walk to its tile stops beside it, and says so.
+    if (!quiet && !lift && (this.mounted() || this.driving()) && this.spiralTile(x, y)) this.logMsg(SPIRAL_FOOT_SAID, 'error');
     // Clicked in the cellar's view, the cellar is where you mean; up top, the ground (`walkFloor`); on a pinned storey, that storey.
     const aim = floor ?? this.walkFloor(x, y);
-    if (this.world.isPassable(x, y) && (floor === undefined || this.standable(x, y, floor)) && p.walkTo(this.world, x, y, rule, levels, below, aim)) return true;
+    if (this.world.isPassable(x, y) && (floor === undefined || this.standable(x, y, floor)) && p.walkTo(this.world, x, y, rule, levels, below, aim, lift)) return true;
     // Beside it, on the storey asked for: a storey's floor, not the ground under it.
     const candidates = this.neighbours(x, y).filter((c) => this.world.isPassable(c.x, c.y) && (floor === undefined || this.standable(c.x, c.y, floor)));
     candidates.sort((a, b) => this.distanceToPlayer(a.x, a.y) - this.distanceToPlayer(b.x, b.y));
-    for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim)) return true;
+    for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim, lift)) return true;
     if (!quiet) {
       if (floor !== undefined && floor > 0 && !candidates.length) this.logMsg(`No floor on storey ${floor + 1}.`, 'error');
       // Mounted, where your own feet would get there: a single staircase, a ladder or a narrow doorway in the way (`rideRule`).
@@ -5842,7 +5890,13 @@ export class Game {
   private onFootTo(x: number, y: number, level: number): boolean {
     const p = this.player;
     return !!findPath(this.world, p.tileX, p.tileY, p.level, x, y,
-      { ...pathOptions(this.world, this.stepFree, TOP_LEVELS), below: this.buildings.cellars.size ? -CELLAR_LEVEL : 0, goalLevel: level });
+      { ...pathOptions(this.world, this.stepFree, TOP_LEVELS), lift: this.liftFree, below: this.buildings.cellars.size ? -CELLAR_LEVEL : 0, goalLevel: level });
+  }
+
+  /** Whether a spiral staircase stands on a tile, at any storey, finished or not. */
+  spiralTile(x: number, y: number): boolean {
+    for (let level = 0; level <= TOP_LEVELS; level++) if (isSpiral(this.buildings.floor(level, x, y))) return true;
+    return false;
   }
 
   /** `noWay`, for a job whose target is down in a cellar. */
@@ -5984,7 +6038,7 @@ export class Game {
     }
     candidates = candidates.filter((c) => this.world.isPassable(c.x, c.y));
     candidates.sort((a, b) => this.distanceToPlayer(a.x, a.y) - this.distanceToPlayer(b.x, b.y));
-    const { rule, levels, below } = this.movement();
+    const { rule, levels, below, lift } = this.movement();
     // To the storey the thing is on: down to a crate in the cellar, up to a tree out of one.
     const at = below || this.player.level < 0 ? targetFloor(this, def.id, target) : null;
     // A piece set down on a pinned storey: to a spot on that storey's floor.
@@ -5993,7 +6047,7 @@ export class Game {
       if (at === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y)) continue;
       if (on !== undefined && !this.standable(c.x, c.y, on)) continue;
       const aim = on ?? (at === CELLAR_LEVEL ? CELLAR_LEVEL : at === 0 && this.player.level < 0 ? 0 : undefined);
-      if (!this.player.walkTo(this.world, c.x, c.y, rule, levels, below, aim)) continue;
+      if (!this.player.walkTo(this.world, c.x, c.y, rule, levels, below, aim, lift)) continue;
       // Already on the tile, but in the corner of it furthest from the store:
       // to the middle of it, which every tile beside a store is near enough from.
       if (target.kind === 'item' && !this.player.path && !this.inRange(def, target)) {
@@ -9148,8 +9202,8 @@ export class Game {
     // Put somewhere, on a deck rather than under it.
     this.underDeck = false;
     if (goal) {
-      const { rule, levels, below } = this.movement();
-      this.player.walkTo(this.world, goal.x, goal.y, rule, levels, below, goal.level);
+      const { rule, levels, below, lift } = this.movement();
+      this.player.walkTo(this.world, goal.x, goal.y, rule, levels, below, goal.level, lift);
     }
     this.events.emit('world', Math.floor(x), Math.floor(y));
     this.events.emit('stats');
