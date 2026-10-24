@@ -23,7 +23,8 @@ const DEEP: Tone = { lit: hex('#b96a60'), shade: hex('#7f4448') };
 /** The pavers: a buff brick, worn paler than the walls. */
 const PAVER: Tone = { lit: hex('#dcb7a0'), shade: hex('#a68a84') };
 
-const brick = brickPaint(2.6, 6.6, MORTAR);
+/** The walls' brick in a lime mortar paler than the brick, a band of burnt headers every seventh course. */
+const brick = brickPaint(2.6, 6.6, '#e3d3c3', 7);
 
 /** A cut-stone band: long stones, a groove ruled along it. */
 const bandPaint: BridgePainter = (g, k, f) => {
