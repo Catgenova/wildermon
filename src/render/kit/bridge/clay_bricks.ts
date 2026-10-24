@@ -1,5 +1,5 @@
 import { css, hex, mix, type Tone } from '../core';
-import { box, BUILDERS, byRole, ownerOf, REFUGE_OUT, refugeHalf, refugeOutline, runeLine, turned, U, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
+import { box, BUILDERS, byRole, ownerOf, REFUGE_OUT, refugeHalf, refugeLine, refugeOutline, runeLine, turned, U, wallEnds, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
 import { stoneBase } from './base';
 import { arcade, brickPaint, cface, fi, herringbonePaint, lampPost, refuged, ringPaint, runeKey, seen, whole, tilePaint, vaultPaint } from './clay';
 
@@ -112,33 +112,37 @@ function refuges(k0: Kit): void {
         k.solid('front', k.ord(edge, 0.8));
         upright(k, 'front', toward(line, at, 0.76, 0.54), foot, zb - 3 * 2.6, BRICK, c, 'pier', 31);
       }
-      // The wall round it, its coping, and where it meets the parapet's ends.
-      const inner = line.map(([s0, t0], i): ST => {
-        const ends = i === 0 || i === line.length - 1;
-        return ends ? [s0 + (i === 0 ? T : -T) * 1.2, t0 - edge * T] : [s0 + (s0 < p.s ? T : -T) * 0.6, t0 - edge * T];
-      });
-      // Each run of it a solid of its own, its coping over it: they are seen past one another round the bay.
+      // The wall round it and its coping, between the outline and itself moved in, mitred at its corners and ending on the
+      // bridge's edge square to the parapet's ends (`refugeLine`); each side's outward normal off the outline.
       const zc = z + H;
-      const grow = (pt: ST, from: ST, d: number): ST => { const l = Math.hypot(pt[0] - from[0], pt[1] - from[1]) || 1; return [pt[0] + ((pt[0] - from[0]) / l) * d, pt[1] + ((pt[1] - from[1]) / l) * d]; };
+      const lOut = refugeLine(line, edge, 0), lIn = refugeLine(line, edge, T), lCo = refugeLine(line, edge, -0.012), lCi = refugeLine(line, edge, T + 0.012);
+      const nOf = (q: number): ST => { const [a, b] = [line[q], line[q + 1]]; const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(-(b[1] - a[1]) / l) * edge, ((b[0] - a[0]) / l) * edge]; };
+      const cut: Kit['face'] = (q, pts, out, tone, inf, fr) => cface(k, q, pts, out, tone, inf, fr);
+      const segFr = (a: ST, b: ST): { o: L; a: L; b: L } => { const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return { o: [a[0], a[1], 0], a: [(b[0] - a[0]) / l / U, (b[1] - a[1]) / l / U, 0], b: [0, 0, 1] }; };
+      const last = line.length - 2;
+      k.solid(part, 2);
       for (let q = 0; q + 1 < line.length; q++) {
-        const o0 = line[q], o1 = line[q + 1], i0 = inner[q], i1 = inner[q + 1];
-        k.solid(part, 2);
-        upright(k, part, [o0, o1], z, zc - cop, DEEP, c, 'parapet', 3 + q);
-        upright(k, part, [i0, i1], z, zc - cop, DEEP, [c[0], c[1] + edge * 2], 'parapet', 7 + q);
-        const [O0, O1] = [grow(o0, i0, 0.012), grow(o1, i1, 0.012)], [I0, I1] = [grow(i0, o0, 0.012), grow(i1, o1, 0.012)];
-        k.solid(part, 2.1);
-        cface(k, part, [[O0[0], O0[1], zc], [O1[0], O1[1], zc], [I1[0], I1[1], zc], [I0[0], I0[1], zc]], [0, 0, 1], st.trim);
-        upright(k, part, [O0, O1], zc - cop, zc, st.trim, c, 'cap', q);
-        upright(k, part, [I0, I1], zc - cop, zc, st.trim, [c[0], c[1] + edge * 2], null, q);
+        const n = nOf(q), [a, b, ai, bi] = [lOut[q], lOut[q + 1], lIn[q], lIn[q + 1]];
+        cut(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], zc - cop], [a[0], a[1], zc - cop]], [n[0], n[1], 0], DEEP, fi('parapet', 0, 1, z, zc - cop, 3 + q), segFr(a, b));
+        cut(part, [[bi[0], bi[1], z], [ai[0], ai[1], z], [ai[0], ai[1], zc - cop], [bi[0], bi[1], zc - cop]], [-n[0], -n[1], 0], DEEP, fi('parapet', 0, 1, z, zc - cop, 7 + q), segFr(bi, ai));
+        // Its ends where it leaves the bridge's edge: a side seen end on is seen as a wall, not through (`wallEnds`).
+        if (q === 0) wallEnds(cut, part, a, b, ai, bi, z, zc - cop, DEEP, 'start');
+        if (q === last) wallEnds(cut, part, a, b, ai, bi, z, zc - cop, DEEP, 'end');
+      }
+      k.solid(part, 2.1);
+      for (let q = 0; q + 1 < line.length; q++) {
+        const n = nOf(q), [O0, O1, I0, I1] = [lCo[q], lCo[q + 1], lCi[q], lCi[q + 1]];
+        cut(part, [[O0[0], O0[1], zc], [O1[0], O1[1], zc], [I1[0], I1[1], zc], [I0[0], I0[1], zc]], [0, 0, 1], st.trim);
+        cut(part, [[O0[0], O0[1], zc - cop], [O1[0], O1[1], zc - cop], [O1[0], O1[1], zc], [O0[0], O0[1], zc]], [n[0], n[1], 0], st.trim, fi('cap', 0, 1, zc - cop, zc, q), segFr(O0, O1));
+        cut(part, [[I1[0], I1[1], zc - cop], [I0[0], I0[1], zc - cop], [I0[0], I0[1], zc], [I1[0], I1[1], zc]], [-n[0], -n[1], 0], st.trim);
+        if (q === 0) wallEnds(cut, part, O0, O1, I0, I1, zc - cop, zc, st.trim, 'start');
+        if (q === last) wallEnds(cut, part, O0, O1, I0, I1, zc - cop, zc, st.trim, 'end');
+        const [o0, o1] = [line[q], line[q + 1]];
         const a = Math.min(o0[0], o1[0]), b = Math.max(o0[0], o1[0]);
         if (b > a + 1e-4) {
           const tAt = (s0: number): number => o0[1] + ((o1[1] - o0[1]) * (s0 - o0[0])) / ((o1[0] - o0[0]) || 1e-6);
           k.glow.lines.push([k.m([a, tAt(a) + edge * 0.004, zc - cop * 0.5]), k.m([b, tAt(b) + edge * 0.004, zc - cop * 0.5])]);
         }
-      }
-      // The parapet's ends meet it a little inside: fill the corner.
-      for (const [s0, s1] of [[line[0][0], line[0][0] + T * 1.2], [line[line.length - 1][0] - T * 1.2, line[line.length - 1][0]]]) {
-        box(k, part, s0, s1, Math.min(t, t - edge * T), Math.max(t, t - edge * T), z, z + H - cop, DEEP, 'parapet', 1.9);
       }
       if (plan.width >= 3 && ownerOf(k, p.s - 0.05, p.s + 0.05) !== null) lampPost(k, part, p.s, t + edge * REFUGE_OUT * 0.5, z, st.trim);
     }

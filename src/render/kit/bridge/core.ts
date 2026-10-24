@@ -470,9 +470,12 @@ export const BUILDERS: Builders = {
       const tt = t + edge * proud;
       const z0 = (s: number): number => top(s) - plan.thick;
       k.solid('front', 1);
-      const xs = samples(sl.s0, sl.s1, [], 0.5);
+      // Not where a refuge carries the deck out: its platform is the edge there, and the band would lie on it.
+      const gaps = refugeGaps(plan);
+      const xs = samples(sl.s0, sl.s1, gaps.flat(), 0.5);
       for (let j = 0; j + 1 < xs.length; j++) {
         const a = xs[j], b2 = xs[j + 1];
+        if (gaps.some(([g0, g1]) => (a + b2) / 2 > g0 && (a + b2) / 2 < g1)) continue;
         k.face('front', [[a, tt, z0(a) - 1.4], [b2, tt, z0(b2) - 1.4], [b2, tt, top(b2) - 0.6], [a, tt, top(a) - 0.6]], [0, edge, 0], st.trim,
           info('cornice', a * U, b2 * U, z0(a) - 1.4, top(a), sl.i), wallFrame(tt, edge));
         k.face('front', [[a, t, top(a) - 0.6], [b2, t, top(b2) - 0.6], [b2, tt, top(b2) - 0.6], [a, tt, top(a) - 0.6]], [0, 0, 1], st.trim);
@@ -740,10 +743,10 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
   }
 }
 
-/** How deep each of a ramp's two arcaded walls is, across the bridge, in tiles. */
-const RAMP_WALL = 0.2;
+/** How deep each of a ramp's two arcaded walls is, across the bridge, in tiles. For every style's ramp arcade. */
+export const RAMP_WALL = 0.2;
 /** The runs across a slice a ramp's pier side stands in: within its walls' depth of each outer edge it has. */
-function rampReturns(plan: Plan, sl: Slice): Array<[number, number]> {
+export function rampReturns(plan: Plan, sl: Slice): Array<[number, number]> {
   const out: Array<[number, number]> = [];
   if (sl.t0 <= plan.tLo + EPS) out.push([sl.t0, Math.min(sl.t1, sl.t0 + RAMP_WALL)]);
   if (sl.t1 >= plan.tHi - EPS) out.push([Math.max(sl.t0, sl.t1 - RAMP_WALL), sl.t1]);
@@ -770,6 +773,7 @@ function cutwaters(k: Kit, edge: number, t: number): void {
     if (p.s < sl.s0 - p.half - EPS || p.s > sl.s1 + p.half + EPS) continue;
     const bay = bayAt(plan, p.s - 0.01);
     // Up to the refuge it carries, or the springing; under a ramp's run of arches, plain piers with a short one at the foot.
+    if (plan.ramp && RAMP_CUTWATER <= 0) continue;
     const top = plan.ramp ? Math.min(p.foot + 1.5 + RAMP_CUTWATER, bay.spring)
       : plan.width >= 2 ? plan.deck(p.s) - plan.thick - 1.4 : (bay.lower ? bay.lowerSpring! : bay.spring) + 1;
     const nose = 0.2;
@@ -1003,8 +1007,13 @@ function refugeFor(k: Kit): void {
   }
 }
 
-/** How high a cutwater stands at the foot of a ramp's pier, in units. */
-const RAMP_CUTWATER = 6;
+/**
+ * How high a cutwater stands at the foot of a ramp's pier, in units: none.
+ * Under a ramp the piers are plain and square, as a stair's arcade's are;
+ * and a nose stood out past the lane's edge on dry ground is the next
+ * tile's, whose ground is laid over its foot. For every style's cutwaters.
+ */
+export const RAMP_CUTWATER = 0;
 /** How far a refuge steps out from the bridge's outer edge, in tiles. */
 export const REFUGE_OUT = 0.24;
 /** Half a refuge's run along the bridge where it leaves the edge, in tiles: room for a body to step into, however slim the pier. */
@@ -1023,6 +1032,29 @@ export function refugeOutline(plan: Plan, p: Pier, edge: number, t: number): Arr
   const tf = t + edge * REFUGE_OUT;
   void plan;
   return [[g0, t], [g0 + c, tf], [g1 - c, tf], [g1, t]];
+}
+
+/**
+ * A refuge's outline moved in by `d` (out, for less than nought): each side
+ * moved along its outward normal, mitred where two meet, and its two ends
+ * moved only across the bridge, so they stay on its edge and meet the
+ * parapet's ends square. What a style's walls round a refuge are laid
+ * between.
+ */
+export function refugeLine(line: Array<[number, number]>, edge: number, d: number): Array<[number, number]> {
+  const n = line.slice(0, -1).map((a, q) => {
+    const b = line[q + 1];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    return [(-(b[1] - a[1]) / len) * edge, ((b[0] - a[0]) / len) * edge] as [number, number];
+  });
+  return line.map((p, q): [number, number] => {
+    if (q === 0 || q === line.length - 1) return [p[0], p[1] - edge * d];
+    const n0 = n[q - 1], n1 = n[q];
+    const m: [number, number] = [n0[0] + n1[0], n0[1] + n1[1]];
+    const ml = Math.hypot(m[0], m[1]) || 1;
+    const k = d / Math.max(0.4, (m[0] * n0[0] + m[1] * n0[1]) / ml);
+    return [p[0] - (m[0] / ml) * k, p[1] - (m[1] / ml) * k];
+  });
 }
 
 /** A polygon of the frame cut to the slice's run along the bridge. */
@@ -1044,6 +1076,20 @@ function clipToSlice(pts: L[], s0: number, s1: number): L[] {
     if (out.length < 3) return [];
   }
   return out;
+}
+
+/**
+ * The two ends of a wall along a segment of the plan, from `a` to `b` on its
+ * outer face and `ai` to `bi` on its inner, from `z0` to `z1`: each a face
+ * across its thickness, turned out along the segment. A refuge's sides meet
+ * the bridge's parapet at their roots and turn at their corners; from where
+ * one is seen end on, its end is what is seen of it.
+ */
+export function wallEnds(face: (q: Part3, pts: L[], out: L, tone: Tone) => void, part: Part3, a: [number, number], b: [number, number],
+  ai: [number, number], bi: [number, number], z0: number, z1: number, tone: Tone, which?: 'start' | 'end'): void {
+  const d: L = [b[0] - a[0], b[1] - a[1], 0];
+  if (which !== 'end') face(part, [[a[0], a[1], z0], [ai[0], ai[1], z0], [ai[0], ai[1], z1], [a[0], a[1], z1]], [-d[0], -d[1], 0], tone);
+  if (which !== 'start') face(part, [[b[0], b[1], z0], [bi[0], bi[1], z0], [bi[0], bi[1], z1], [b[0], b[1], z1]], [d[0], d[1], 0], tone);
 }
 
 /** A face's frame along a segment of the plan from `a` to `b`: `x` a unit along it, `y` up. */
@@ -1072,6 +1118,8 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
     return { a, b, n, len };
   });
   const off = (pt: [number, number], n: [number, number], d: number): [number, number] => [pt[0] - n[0] * d, pt[1] - n[1] * d];
+  // The outline moved in by `d`, mitred at its corners and its two ends kept on the bridge's edge (`refugeLine`).
+  const lineAt = (d: number): Array<[number, number]> => refugeLine(line, edge, d);
   if (timber) {
     const post = st.post ?? st.stone, rail = st.rail ?? st.ring;
     for (const [s0, t0] of line) if (ownerOf(k, s0 - 0.03, s0 + 0.03) !== null) turned(k, part, s0, t0 - edge * 0.03, z, [[0, 0.03], [H, 0.03], [H + 0.8, 0]], 4, post, 1.5);
@@ -1088,13 +1136,19 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
   const kind = st.parapet;
   const top = kind === 'crenel' ? H - 3.5 - coping : kind === 'curved' ? H * 0.7 : kind === 'balustrade' ? 1.8 : H - coping;
   const wallTone = kind === 'balustrade' ? st.trim : st.stone;
-  for (const { a, b, n, len } of segs) {
-    const [ai, bi] = [off(a, n, T), off(b, n, T)];
+  const lOut = lineAt(0), lIn = lineAt(T), lCo = lineAt(-0.012), lCi = lineAt(T + 0.012);
+  segs.forEach(({ n, len }, q) => {
+    const [a, b, ai, bi] = [lOut[q], lOut[q + 1], lIn[q], lIn[q + 1]];
+    const first = q === 0, last = q === segs.length - 1;
     // The wall's two faces and, for a balustrade, its plinth.
     face(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], z + top], [a[0], a[1], z + top]], [n[0], n[1], 0], wallTone,
       info(kind === 'balustrade' ? 'plinth' : 'parapet', 0, 1, z, z + top, 11), segFrame(a, b));
     face(part, [[ai[0], ai[1], z], [bi[0], bi[1], z], [bi[0], bi[1], z + top], [ai[0], ai[1], z + top]], [-n[0], -n[1], 0], wallTone,
       info(kind === 'balustrade' ? 'plinth' : 'parapet', 0, 1, z, z + top, 12), segFrame(bi, ai));
+    // Its ends where it leaves the bridge's edge, across its thickness and along the bridge, so a side seen end on is seen
+    // as a wall and not through (`wallEnds`). At its corners it is mitred to the next side.
+    if (first) wallEnds(face, part, a, b, ai, bi, z, z + top, wallTone, 'start');
+    if (last) wallEnds(face, part, a, b, ai, bi, z, z + top, wallTone, 'end');
     const ztop = kind === 'balustrade' ? H - coping : top;
     if (kind === 'balustrade') {
       // Balusters along its middle, the coping on them.
@@ -1108,7 +1162,7 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
       }
     }
     // The coping, a hair over both faces, and the rune line along its outer face.
-    const [ao, bo, aj, bj] = [off(a, n, -0.012), off(b, n, -0.012), off(a, n, T + 0.012), off(b, n, T + 0.012)];
+    const [ao, bo, aj, bj] = [lCo[q], lCo[q + 1], lCi[q], lCi[q + 1]];
     face(part, [[ao[0], ao[1], z + ztop + coping], [bo[0], bo[1], z + ztop + coping], [bj[0], bj[1], z + ztop + coping], [aj[0], aj[1], z + ztop + coping]], [0, 0, 1], st.trim,
       info('cap', 0, 1, 0, 1, 13), { ...segFrame(ao, bo), b: [n[0] / U, n[1] / U, 0], o: [ao[0], ao[1], z + ztop + coping] });
     face(part, [[ao[0], ao[1], z + ztop], [bo[0], bo[1], z + ztop], [bo[0], bo[1], z + ztop + coping], [ao[0], ao[1], z + ztop + coping]], [n[0], n[1], 0], st.trim,
@@ -1117,6 +1171,8 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
       // Behind a wall the coping's inner face; a balustrade's shows between the balusters anyway.
       face(part, [[aj[0], aj[1], z + ztop], [bj[0], bj[1], z + ztop], [bj[0], bj[1], z + ztop + coping], [aj[0], aj[1], z + ztop + coping]], [-n[0], -n[1], 0], st.trim);
     }
+    if (first) wallEnds(face, part, ao, bo, aj, bj, z + ztop, z + ztop + coping, st.trim, 'start');
+    if (last) wallEnds(face, part, ao, bo, aj, bj, z + ztop, z + ztop + coping, st.trim, 'end');
     k.glow.lines.push([k.m([ao[0] + n[0] * 0.004, ao[1] + n[1] * 0.004, z + ztop + coping * 0.5]), k.m([bo[0] + n[0] * 0.004, bo[1] + n[1] * 0.004, z + ztop + coping * 0.5])]);
     if (kind === 'crenel' && len > 0.18) {
       // A merlon in the middle of each side long enough for one.
@@ -1131,7 +1187,7 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
         face(part, [[x[0], x[1], zb], [y[0], y[1], zb], [y[0], y[1], zt], [x[0], x[1], zt]], [sg * (b[0] - a[0]), sg * (b[1] - a[1]), 0], st.stone);
       }
     }
-  }
+  });
   // A post at each corner of a balustrade.
   if (kind === 'balustrade') {
     for (const [s0, t0] of line.slice(1, -1)) {

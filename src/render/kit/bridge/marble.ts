@@ -1,7 +1,7 @@
 import { css, dot, faceColour, hex, mix, proj, sub, TAU, type Ctx, type RGB, type Tone } from '../core';
 import { cut, glyphPath, lightOf, RUNE_GOLD, RUNE_WHITE, type Eye } from '../../runestone';
 import {
-  BRIDGE_INK, U, bayAt, box, ownerOf, refugeGaps, refugeOutline, samples,
+  BRIDGE_INK, RAMP_CUTWATER, RAMP_WALL, U, bayAt, box, ownerOf, rampReturns, refugeGaps, refugeOutline, samples, wallEnds,
   type BridgePainter, type BridgeStyle, type FaceInfo, type Kit, type L, type Part3, type Plan, type Role,
 } from './core';
 
@@ -921,6 +921,9 @@ function refugesOf(k: Kit, cfg: Classical): void {
         face(part, [[ai[0], ai[1], z], [bi[0], bi[1], z], [bi[0], bi[1], topP], [ai[0], ai[1], topP]], [-n[0], -n[1], 0], wallTone,
           { role, x0: 0, x1: 1, y0: 0, y1: 1, seed: 4 }, segF(bi, ai));
         face(part, [[a[0], a[1], topP], [b[0], b[1], topP], [bi[0], bi[1], topP], [ai[0], ai[1], topP]], [0, 0, 1], st.trim);
+        // Its end where it leaves the bridge's edge, across its thickness: a side seen end on is seen as a wall, not through (`wallEnds`).
+        if (q === 0) wallEnds(face, part, a, b, ai, bi, z, topP, wallTone, 'start');
+        if (q === segs.length - 1) wallEnds(face, part, a, b, ai, bi, z, topP, wallTone, 'end');
         // The coping, a hair over either face.
         const [ao, bo, aj, bj] = [lnOut[q], lnOut[q + 1], lnCap[q], lnCap[q + 1]];
         k2.solid(part, 3);
@@ -930,6 +933,8 @@ function refugesOf(k: Kit, cfg: Classical): void {
           { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 6 }, segF(ao, bo));
         face(part, [[aj[0], aj[1], railLow], [bj[0], bj[1], railLow], [bj[0], bj[1], railLow + COPING], [aj[0], aj[1], railLow + COPING]], [-n[0], -n[1], 0], st.trim,
           { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 7 }, segF(bj, aj));
+        if (q === 0) wallEnds(face, part, ao, bo, aj, bj, railLow, railLow + COPING, st.trim, 'start');
+        if (q === segs.length - 1) wallEnds(face, part, ao, bo, aj, bj, railLow, railLow + COPING, st.trim, 'end');
         const mo = lnGlow[q], mb = lnGlow[q + 1];
         const ca = clipRun([[mo[0], mo[1], 0], [mb[0], mb[1], 0], [mb[0], mb[1], 1]], sl.s0, sl.s1);
         if (ca.length >= 3) {
@@ -1265,17 +1270,8 @@ function vaultOf(k: Kit, cfg: Classical, arc: Arcade, within: (a: number, b: num
   }, reach, 0);
 }
 
-/** How deep each of a ramp's two arcaded walls is, across the bridge, in tiles (the core's). */
-const RAMP_WALL = 0.2;
-/** How high a cutwater stands at the foot of a ramp's pier, in units (the core's). */
-const RAMP_CUTWATER = 6;
-/** The runs across a slice a ramp's pier side stands in: within its walls' depth of each outer edge it has. */
-function rampWalls(plan: Plan, sl: Kit['sl']): Array<[number, number]> {
-  const out: Array<[number, number]> = [];
-  if (sl.t0 <= plan.tLo + 1e-6) out.push([sl.t0, Math.min(sl.t1, sl.t0 + RAMP_WALL)]);
-  if (sl.t1 >= plan.tHi - 1e-6) out.push([Math.max(sl.t0, sl.t1 - RAMP_WALL), sl.t1]);
-  return out;
-}
+/** The runs across a slice a ramp's pier side stands in: within its walls' depth of each outer edge it has (the core's). */
+const rampWalls = (plan: Plan, sl: Kit['sl']): Array<[number, number]> => rampReturns(plan, sl);
 
 /** A pointed cutwater on each pier's outer face, from its foot to its spring (to the deck under a refuge), capped with a sloped top. */
 function cutwatersOf(k: Kit, cfg: Classical, edge: number, t: number): void {
@@ -1284,6 +1280,8 @@ function cutwatersOf(k: Kit, cfg: Classical, edge: number, t: number): void {
     if (p.end) continue;
     if (p.s < sl.s0 - p.half - 1e-6 || p.s > sl.s1 + p.half + 1e-6) continue;
     const bay = bayAt(plan, p.s - 0.01);
+    // Under a ramp the core's (`RAMP_CUTWATER`): plain piers.
+    if (plan.ramp && RAMP_CUTWATER <= 0) continue;
     const top = plan.ramp ? Math.min(p.foot + 1.5 + RAMP_CUTWATER, bay.spring)
       : plan.width >= 2 ? plan.deck(p.s) - plan.thick - 1.4 : (bay.lower ? bay.lowerSpring! : bay.spring) + 1;
     const nose = 0.2;

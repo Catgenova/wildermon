@@ -1,6 +1,6 @@
 import { cut, glyphPath, lightOf, proj, RUNE_GOLD } from '../../runestone';
 import { css, faceColour, hex, mix, type Ctx, type RGB, type Tone, type V3 } from '../core';
-import { bayAt, box, ownerOf, refugeGaps, refugeHalf, samples, turned, U, type Bay, type BridgePainter, type FaceInfo, type Kit, type L, type Part3, type Pier, type Plan, type Role } from './core';
+import { bayAt, box, ownerOf, RAMP_CUTWATER, RAMP_WALL, rampReturns, refugeGaps, refugeHalf, samples, turned, U, type Bay, type BridgePainter, type FaceInfo, type Kit, type L, type Part3, type Pier, type Plan, type Role } from './core';
 
 /**
  * What the two clay bridges share, built their own way rather than the
@@ -371,15 +371,6 @@ export function arcade(look: ArcadeLook): (k: Kit) => void {
   };
 }
 
-/** How deep each of a ramp's two arcaded walls is, across the bridge, in tiles (as the core's). */
-const RAMP_WALL = 0.2;
-/** The runs across a slice a ramp's pier side stands in: within its walls' depth of each outer edge it has. */
-function rampReturns(plan: Plan, sl: Kit['sl']): Array<[number, number]> {
-  const out: Array<[number, number]> = [];
-  if (sl.t0 <= plan.tLo + EPS) out.push([sl.t0, Math.min(sl.t1, sl.t0 + RAMP_WALL)]);
-  if (sl.t1 >= plan.tHi - EPS) out.push([Math.max(sl.t0, sl.t1 - RAMP_WALL), sl.t1]);
-  return out;
-}
 
 /** A ring of voussoirs proud of the wall, as deep at its springing as at its crown: its face, the top of it and, on the near face, its soffit. */
 function voussoirRing(k: Kit, edge: number, t: number, arc: Arc, D: number, proud: number): void {
@@ -556,7 +547,9 @@ function cutwaters(k: Kit, edge: number, t: number, D: number): void {
     const sh = shapeOf(plan, bay, D);
     const spring = springOf(sh.lower ?? sh.upper);
     // Up to the refuge it carries, or over the springing; under a ramp's run of arches a short one at the foot.
-    const top = refuged(plan) ? plan.deck(p.s) - plan.thick - 1.4 : plan.ramp ? Math.min(p.foot + 7.5, spring) : spring + 1;
+    // Under a ramp the core's (`RAMP_CUTWATER`): plain piers.
+    if (plan.ramp && RAMP_CUTWATER <= 0) continue;
+    const top = refuged(plan) ? plan.deck(p.s) - plan.thick - 1.4 : plan.ramp ? Math.min(p.foot + 1.5 + RAMP_CUTWATER, spring) : spring + 1;
     const nose = 0.2;
     // Not where the arches spring from the ground: a cutwater there is a stub.
     if (top - (plan.ground(p.s, t) - 0.5) < 6) continue;
