@@ -654,30 +654,38 @@ const shade = (c: RGB, toward: RGB | string, k: number, a: number): string => cs
  * on either side of a cut), bedded in mortar a step under it, a hair of
  * light along each course's top.
  */
-export function brickPaint(course: number, len: number, mortar: string): BridgePainter {
+export function brickPaint(course: number, len: number, mortar: string, band = 0): BridgePainter {
   return (g, k, f) => {
     const x0 = Math.min(f.x0, f.x1) - 1, x1 = Math.max(f.x0, f.x1) + 1;
     const r0 = Math.floor(Math.min(f.y0, f.y1) / course) - 1, r1 = Math.ceil(Math.max(f.y0, f.y1) / course) + 1;
-    const pale = shade(k.fill, [255, 246, 236], 0.14, 0.85), deep = shade(k.fill, '#7a4650', 0.14, 0.8), burnt = shade(k.fill, '#6d5a78', 0.18, 0.8);
+    const pale = shade(k.fill, [255, 246, 236], 0.2, 0.85), warm = shade(k.fill, '#e0a070', 0.18, 0.8);
+    const deep = shade(k.fill, '#7a4650', 0.2, 0.85), burnt = shade(k.fill, '#4e4258', 0.4, 0.9);
+    const fills = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
     const joints = new Path2D(), lit = new Path2D();
     for (let r = r0; r <= r1; r++) {
-      const y = r * course, off = (r & 1) * len * 0.5;
+      const y = r * course;
       joints.moveTo(x0, y); joints.lineTo(x1, y);
       lit.moveTo(x0, y + course - 0.42); lit.lineTo(x1, y + course - 0.42);
-      for (let c = Math.floor((x0 - off) / len); c * len + off < x1; c++) {
-        const x = c * len + off;
+      // Every `band` courses, a course of headers, burnt and plain by turns: a dark stripe through the wall.
+      const headers = band > 0 && ((r % band) + band) % band === 0;
+      const u = headers ? len / 2 : len, off = headers ? 0 : (r & 1) * len * 0.5;
+      for (let c = Math.floor((x0 - off) / u); c * u + off < x1; c++) {
+        const x = c * u + off;
         const v = hash2(c, r);
-        if (v < 0.2) { g.fillStyle = pale; g.fillRect(x, y, len, course); }
-        else if (v > 0.9) { g.fillStyle = burnt; g.fillRect(x, y, len, course); }
-        else if (v > 0.74) { g.fillStyle = deep; g.fillRect(x, y, len, course); }
+        if (headers) { if (c & 1) fills[3].rect(x, y, u, course); else if (v < 0.3) fills[2].rect(x, y, u, course); }
+        else if (v < 0.16) fills[0].rect(x, y, u, course);
+        else if (v < 0.27) fills[1].rect(x, y, u, course);
+        else if (v > 0.93) fills[3].rect(x, y, u, course);
+        else if (v > 0.76) fills[2].rect(x, y, u, course);
         joints.moveTo(x, y); joints.lineTo(x, y + course);
       }
     }
+    [pale, warm, deep, burnt].forEach((c, i) => { g.fillStyle = c; g.fill(fills[i]); });
     g.strokeStyle = css(mix(k.fill, [255, 248, 240], 0.3), 0.35);
     g.lineWidth = 0.3;
     g.stroke(lit);
     g.strokeStyle = shade(k.fill, mortar, 0.6, 0.9);
-    g.lineWidth = 0.42;
+    g.lineWidth = 0.45;
     g.stroke(joints);
   };
 }

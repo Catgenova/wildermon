@@ -1,7 +1,7 @@
 import { rand } from '../../ivy';
 import { proj, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, faceColour, hex, mix, type Tone } from '../core';
-import { bayAt, BUILDERS, byRole, ownerOf, refugeGaps, runeLine, samples, turned, U, type BridgePainter, type Kit, type L, type Part3 } from './core';
+import { bayAt, BUILDERS, byRole, ownerOf, refugeGaps, runeLine, samples, turned, U, type BridgePainter, type FaceInfo, type Kit, type L, type Part3 } from './core';
 import { plasterPaint, stoneBase } from './base';
 import { arcade, cface, fi, lampPost, roundOut, runsOf, tilePaint, wallFrame, refuged, runeKey, seen, whole } from './clay';
 
@@ -80,10 +80,68 @@ const wave = (k: Kit, s: number): number => {
   return 1.8 * (2 * u - 1) ** 2;
 };
 
-/** The deck: the core's, and a row of viga ends under its edge, a third of a tile apart. */
-function deck(k: Kit): void {
-  BUILDERS.deck(k);
+/** What a ramp's tread or riser is told: which way the ramp climbs, and whether it is the riser. */
+interface StepInfo extends FaceInfo { up?: boolean; riser?: boolean }
+
+/**
+ * A ramp's steps as the houses' stairs are laid: the tread a pale plaster
+ * with a rolled nosing lit along its front, the riser a step deeper with the
+ * nosing's shadow along its top. Three to a tile, as the core lays them.
+ */
+const RISER: Tone = { lit: hex('#cdb394'), shade: hex('#8a7468') };
+function rampSteps(k: Kit): void {
   const { plan, sl } = k;
+  const up = plan.deck(plan.n) >= plan.deck(0);
+  const n = 3;
+  const at = (q: number): number => plan.deck(Math.min(plan.n, Math.max(0, q / n)));
+  // A tread's height: the height its far end reaches (`BUILDERS.deck`).
+  const treadZ = (j: number): number => (up ? at(j + 1) : at(j));
+  k.solid('front', 0);
+  for (let q = Math.round(sl.s0 * n); q < Math.round(sl.s1 * n); q++) {
+    const a = q / n, b = (q + 1) / n, z = treadZ(q);
+    k.face('front', [[a, sl.t0, z], [b, sl.t0, z], [b, sl.t1, z], [a, sl.t1, z]], [0, 0, 1], PALE,
+      { ...fi('tread', a * U, b * U, sl.t0 * U, sl.t1 * U, q), up } as StepInfo, { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
+  }
+  // A riser at each tread's edge, in the slice of the higher tread.
+  for (let q = Math.round(sl.s0 * n); q <= Math.round(sl.s1 * n); q++) {
+    const s0 = q / n;
+    if (q <= 0 || q >= plan.n * n) continue;
+    const zl = treadZ(q - 1), zr = treadZ(q);
+    if (Math.abs(zl - zr) < 1e-3) continue;
+    if (zr > zl ? q >= Math.round(sl.s1 * n) : q <= Math.round(sl.s0 * n)) continue;
+    const lo = Math.min(zl, zr), hi = Math.max(zl, zr);
+    k.face('front', [[s0, sl.t0, lo], [s0, sl.t1, lo], [s0, sl.t1, hi], [s0, sl.t0, hi]], [zr > zl ? -1 : 1, 0, 0], RISER,
+      { ...fi('tread', sl.t0 * U, sl.t1 * U, lo, hi, q), riser: true } as StepInfo, { o: [s0, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+  }
+}
+
+/** A tread or a riser: the tread in tiles laid by hand with its nosing lit at the front and the next riser's shade at its back; the riser shaded under the nosing. */
+const stepTiles = tilePaint(40 / 6, '#cdb89c', undefined, 0.5);
+const stepPaint: BridgePainter = (g, k, f, st) => {
+  const inf = f as StepInfo;
+  const y0 = Math.min(f.y0, f.y1), y1 = Math.max(f.y0, f.y1), x0 = Math.min(f.x0, f.x1), x1 = Math.max(f.x0, f.x1);
+  if (inf.riser) {
+    g.fillStyle = css(mix(k.fill, hex('#5a4e5e'), 0.35), 0.7);
+    g.fillRect(x0 - 1, y1 - 1.1, x1 - x0 + 2, 1.2);
+    return;
+  }
+  stepTiles(g, k, f, st);
+  if (inf.up === undefined) return;
+  const front = inf.up ? x0 : x1, back = inf.up ? x1 : x0, d = inf.up ? 1 : -1;
+  g.fillStyle = css(mix(k.fill, [255, 252, 244], 0.7), 0.95);
+  g.fillRect(Math.min(front, front + d * 1.6), y0 - 1, 1.6, y1 - y0 + 2);
+  g.fillStyle = css(mix(k.fill, hex('#5a4e5e'), 0.3), 0.5);
+  g.fillRect(Math.min(back, back - d * 2.2), y0 - 1, 2.2, y1 - y0 + 2);
+};
+
+/** The deck: the core's (on a ramp its edges only, the steps our own), and a row of viga ends under its edge, a third of a tile apart. */
+function deck(k: Kit): void {
+  const { plan, sl } = k;
+  if (plan.ramp) {
+    // The core's deck less its treads and risers: what is left is the edge and the cornice on each outer edge.
+    BUILDERS.deck({ ...k, face: (part, pts, out, tone, inf, fr) => { if (inf?.role === 'tread' || out[0] !== 0) return; k.face(part, pts, out, tone, inf, fr); } });
+    rampSteps(k);
+  } else BUILDERS.deck(k);
   const gaps = refugeGaps(plan);
   const r = 1.45, rs = r / U, out = 0.065, n = 6;
   for (const edge of sl.edges) {
@@ -255,7 +313,7 @@ export const clay_adobe = stoneBase('clay_adobe', {
     cap: runeLine('sowilo'),
     beam: vigaEnd,
     deck: tilePaint(8, '#d6b89d', undefined, 0.6),
-    tread: tilePaint(40 / 3, '#cdb89c', PALE),
+    tread: stepPaint,
   }),
   build: {
     arches: arcade({ ringD: 2.8, proud: 0.01, ring: 'soft', key: 'plaque', keyTone: () => GLAZE, pier: 'round', inner: (st) => ({ lit: mix(st.stone.shade, st.stone.lit, 0.25), shade: mix(st.stone.shade, hex('#5a4e5e'), 0.25) }) }),
