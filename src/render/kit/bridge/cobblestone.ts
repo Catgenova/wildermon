@@ -127,8 +127,8 @@ function roughEnds(k: Kit): void {
     const tt = edge > 0 ? sl.t1 - 0.08 : sl.t0 + 0.08;
     const part: Part3 = edge === sl.near ? 'rail' : 'front';
     const o = { shaft: WALL + STRING + TALL + 2.5, half: 0.08, tone: st.stone, trim: st.trim, finial: st.ring, profile: [[0, 0.036], [0.6, 0.05], [2.4, 0.058], [4.2, 0.04], [5, 0]] as Array<[number, number]> };
-    if (sl.i === 0) newelPost(k, part, 0.08, tt, plan.deck(0.08), o);
-    if (sl.i === plan.n - 1) newelPost(k, part, plan.n - 0.08, tt, plan.deck(plan.n - 0.08), o);
+    if (sl.i === 0) newelPost(k, part, 0.1, tt, plan.deck(0.1), o);
+    if (sl.i === plan.n - 1) newelPost(k, part, plan.n - 0.1, tt, plan.deck(plan.n - 0.1), o);
   }
 }
 

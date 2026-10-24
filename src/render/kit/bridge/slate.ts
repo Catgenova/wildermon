@@ -81,8 +81,8 @@ function slateEnds(k: Kit): void {
     const tt = edge > 0 ? sl.t1 - 0.075 : sl.t0 + 0.075;
     const part: Part3 = edge === sl.near ? 'rail' : 'front';
     const o = { shaft: WALL + CAP + 3, half: 0.07, tone: st.stone, trim: st.trim, finial: VOUS, profile: [[0, 0.05], [0.9, 0.05], [1.5, 0.036], [6.4, 0]] as Array<[number, number]> };
-    if (sl.i === 0) newelPost(k, part, 0.075, tt, plan.deck(0.075), o);
-    if (sl.i === plan.n - 1) newelPost(k, part, plan.n - 0.075, tt, plan.deck(plan.n - 0.075), o);
+    if (sl.i === 0) newelPost(k, part, 0.095, tt, plan.deck(0.095), o);
+    if (sl.i === plan.n - 1) newelPost(k, part, plan.n - 0.095, tt, plan.deck(plan.n - 0.095), o);
   }
 }
 
