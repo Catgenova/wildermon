@@ -1,8 +1,8 @@
-import { css, dot, faceColour, hex, inlay, mix, proj, sub, TAU, type Ctx, type RGB, type Tone } from '../core';
+import { css, dot, faceColour, hex, mix, proj, sub, TAU, type Ctx, type RGB, type Tone } from '../core';
 import { cut, glyphPath, lightOf, RUNE_GOLD, RUNE_WHITE, type Eye } from '../../runestone';
 import {
-  BRIDGE_INK, U, bayAt, box, ownerOf, refugeGaps, samples,
-  type Bay, type BridgePainter, type BridgeStyle, type FaceInfo, type Kit, type L, type Part3, type Plan, type Role,
+  BRIDGE_INK, U, bayAt, box, ownerOf, samples,
+  type BridgePainter, type BridgeStyle, type FaceInfo, type Kit, type L, type Part3, type Plan, type Role,
 } from './core';
 
 /**
@@ -380,14 +380,37 @@ export function flagPaint(along: number, across: number, tint = 0.06): BridgePai
 export function keystonePaint(glyph: string): BridgePainter {
   return (g, k, f) => {
     const w = f.x1 - f.x0, h = f.y1 - f.y0;
-    const x = (f.x0 + f.x1) / 2, y = f.y0 + h * 0.46;
+    const x = (f.x0 + f.x1) / 2, y = f.y0 + h * KEY_MID;
     // The stone's bevel: light down its left and over its top, shade down its right.
     g.lineWidth = 0.35;
     g.strokeStyle = css(mix(k.fill, CREAM, 0.6), 0.8);
-    g.beginPath(); g.moveTo(f.x0 + 0.5, f.y0 + 0.4); g.lineTo(f.x0 + 0.5, f.y1 - 0.5); g.lineTo(f.x1 - 0.5, f.y1 - 0.5); g.stroke();
+    g.beginPath(); g.moveTo(f.x0 + 0.6, f.y0 + 0.4); g.lineTo(f.x0 + 0.6, f.y1 - 0.5); g.lineTo(f.x1 - 0.6, f.y1 - 0.5); g.stroke();
     g.strokeStyle = css(mix(k.fill, DUSK, 0.3), 0.7);
-    g.beginPath(); g.moveTo(f.x1 - 0.5, f.y1 - 0.5); g.lineTo(f.x1 - 0.5, f.y0 + 0.4); g.stroke();
-    inlay(g, k.fill, glyph, x, y, Math.min(w * 0.36, h * 0.3), 0.36);
+    g.beginPath(); g.moveTo(f.x1 - 0.6, f.y1 - 0.5); g.lineTo(f.x1 - 0.6, f.y0 + 0.4); g.stroke();
+    // Widened across, where a unit along the bridge is drawn the narrower: so it reads as square as it is cut.
+    // A sunk field for it, a step deeper than the stone, so the gold reads against it even at a glance.
+    const r = keySize(w, h);
+    const field = mix(k.fill, DUSK, 0.5);
+    g.fillStyle = css(field);
+    g.beginPath();
+    g.ellipse(x, y, Math.min(w * 0.4, r * KEY_WIDE * 1.05), r * 1.18, 0, 0, TAU);
+    g.fill();
+    g.save();
+    g.translate(x, y);
+    g.scale(KEY_WIDE, 1);
+    glyphPath(g, glyph, 0, 0, r);
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.strokeStyle = css(mix(field, DUSK, 0.6));
+    g.lineWidth = 0.85;
+    g.stroke();
+    g.strokeStyle = RUNE_GOLD;
+    g.lineWidth = 0.5;
+    g.stroke();
+    g.strokeStyle = css(mix(hex(RUNE_WHITE), hex(RUNE_GOLD), 0.4), 0.9);
+    g.lineWidth = 0.18;
+    g.stroke();
+    g.restore();
   };
 }
 
@@ -451,10 +474,10 @@ const stepOf = (plan: Plan): number => (plan.ramp ? Math.abs(plan.deck(plan.n) -
 
 /** A ring's voussoir joints, square to the arch: [s, z] inside to [s, z] outside, by arch. */
 const jointCache = new WeakMap<(s: number) => number, Array<[number, number, number, number, number]>>();
-function voussoirs(bay: Bay, f: (s: number) => number, ringD: number, every: number): Array<[number, number, number, number, number]> {
+function voussoirs(c: number, a: number, f: (s: number) => number, ringD: number, every: number): Array<[number, number, number, number, number]> {
   const got = jointCache.get(f);
   if (got) return got;
-  const s0 = bay.c - bay.a, s1 = bay.c + bay.a;
+  const s0 = c - a, s1 = c + a;
   const N = 120;
   const P: Array<[number, number]> = [];
   const cum = [0];
@@ -505,10 +528,8 @@ function roundelsOf(plan: Plan, ringD: number): Array<[number, number, number]> 
   // The top of whatever stands under the spandrel at `s`: a ring's back, or nothing over a pier.
   const under = (s: number): number => {
     if (s < 0 || s > plan.n) return Infinity;
-    const bay = bayAt(plan, s);
-    const pier = plan.piers.find((p) => Math.abs(p.s - s) <= p.half);
-    if (pier) return pier.end ? -Infinity : -Infinity;
-    return bay.arch(s) + ringD;
+    for (const o of arcadeOf(plan).openings) if (o.ceil === o.band.top && s > o.c - o.a && s < o.c + o.a) return o.f(s) + ringD;
+    return -Infinity;
   };
   const deckUnder = (s: number): number => plan.deck(s) - plan.thick - 1.4;
   const fits = (s: number, R: number): number | null => {
@@ -613,14 +634,15 @@ interface Run { sa: number; sb: number }
 /** The posts and gaps of a bridge's parapet, along it: posts at every tile's middle and either side of a refuge; the newels at the ends. */
 const layoutCache = new WeakMap<Plan, { posts: Array<[number, number]>; gaps: Array<[number, number]> }>();
 const POST = 0.055;
+const COPING = 1.7;
 const NEWEL = 0.095;
 function layoutOf(plan: Plan): { posts: Array<[number, number]>; gaps: Array<[number, number]> } {
   const got = layoutCache.get(plan);
   if (got) return got;
   const stops: Array<[number, number]> = [[-1, 2 * NEWEL], [plan.n - 2 * NEWEL, plan.n + 1]];
   const posts: Array<[number, number]> = [];
-  const refuges = refugeGaps(plan);
-  // A refuge's side walls end the runs either side of it.
+  const refuges = refugeSpans(plan);
+  // A refuge's corner posts end the runs either side of it.
   for (const [g0, g1] of refuges) stops.push([g0, g1]);
   for (let i = 0; i < plan.n; i++) {
     const s = i + 0.5;
@@ -649,7 +671,7 @@ function parapetLine(k: Kit, cfg: Classical, part: Part3, edge: number, tOut: nu
   const tIn = tOut - edge * T;
   const [t0, t1] = edge > 0 ? [tIn, tOut] : [tOut, tIn];
   const plinth = cfg.parapet === 'balustrade' ? 2.2 : 1.8;
-  const coping = 1.7;
+  const coping = COPING;
   const topP = (s: number): number => deck(s) + lift + plinth;
   const railLow = (s: number): number => deck(s) + lift + H - coping;
   // Each run is whole faces, one to a side (the deck is straight within a slice), so no joint is inked across it.
@@ -694,25 +716,16 @@ function parapetLine(k: Kit, cfg: Classical, part: Part3, edge: number, tOut: nu
       if ((dirn < 0 && sa <= sl.s0 + 1e-6) || (dirn > 0 && sb >= sl.s1 - 1e-6)) continue;
       k.face(part, [[s, c0, railLow(s)], [s, c1, railLow(s)], [s, c1, cz(s)], [s, c0, cz(s)]], [dirn, 0, 0], st.trim);
     }
+    // The rune line: along the coping's outer face, and along its top, so it shows from above as well as from the side.
     k.glow.lines.push([k.m([sa, lt, railLow(sa) + coping * 0.5]), k.m([sb, lt, railLow(sb) + coping * 0.5])]);
+    k.glow.lines.push([k.m([sa, (c0 + c1) / 2, cz(sa)]), k.m([sb, (c0 + c1) / 2, cz(sb)])]);
   }
-  // Posts (dies on a solid parapet), each with a cap over the coping and its finial: proud of the parapet's
-  // faces, so laid in the slice widened to take them in.
-  const kw: Kit = { ...k, sl: { ...sl, t0: sl.t0 - 0.1, t1: sl.t1 + 0.1 } };
+  // Posts (dies on a solid parapet), each with a cap over the coping and its finial.
   const inRuns = (s: number): boolean => runs.some((r) => s >= r.sa - 1e-6 && s <= r.sb + 1e-6);
   for (const [p0, p1] of posts) {
     const sp = (p0 + p1) / 2;
     if (sp < sl.s0 - 1e-6 || sp >= sl.s1 - 1e-6 || !inRuns(sp)) continue;
-    const solid = cfg.parapet === 'solid';
-    const dt = solid ? 0.02 : 0.01;
-    box(kw, part, p0, p1, t0 - dt, t1 + dt, treadAt(plan, sp), railLow(sp) + (solid ? coping : 0), cfg.posts === 'trim' ? st.trim : st.stone, 'post', order + 0.5);
-    const capZ = railLow(sp) + coping;
-    box(kw, part, p0 - 0.012, p1 + 0.012, t0 - dt - 0.012, t1 + dt + 0.012, capZ, capZ + 1.3, st.trim, 'cap', order + 1.6);
-    const tc = (t0 + t1) / 2;
-    const fin = cfg.finial === 'urn' ? URN : BALL;
-    const sc = cfg.finial === 'urn' ? 0.55 : 0.8;
-    k.loose(part, (g, e) => lathe(g, e, k, [sp, tc, capZ + 1.3], fin.map(([h, r]) => [h * sc, r * sc]), st.stone, 0.45),
-      [[sp - 0.05, tc, capZ], [sp + 0.05, tc, capZ + 1.3 + 3.2 * sc]], order + 1.7);
+    postAt(k, cfg, part, p0, p1, t0, t1, order);
   }
   // The balusters, a run of them in each gap between posts: those whose middles are in this slice.
   if (cfg.parapet !== 'balustrade') return;
@@ -741,10 +754,36 @@ function parapetLine(k: Kit, cfg: Classical, part: Part3, edge: number, tOut: nu
 /** The frame of an upright face along the bridge at `t`, as the core's. */
 const wallF = (t: number, out: number): { o: L; a: L; b: L } => ({ o: [0, t, 0], a: [out > 0 ? 1 / U : -1 / U, 0, 0], b: [0, 0, 1] });
 
+/** A post of the parapet (a die on a solid one) over `p0`..`p1` along the bridge on the line `t0`..`t1`, its cap over the coping and its finial. */
+function postAt(k: Kit, cfg: Classical, part: Part3, p0: number, p1: number, t0: number, t1: number, order: number): void {
+  const { plan, st } = k;
+  const sp = (p0 + p1) / 2;
+  const solid = cfg.parapet === 'solid';
+  const dt = solid ? 0.02 : 0.01;
+  const coping = COPING;
+  const railLow = plan.deck(sp) + stepOf(plan) + cfg.parapetHeight - coping;
+  box(k, part, p0, p1, t0 - dt, t1 + dt, treadAt(plan, sp), railLow + (solid ? coping : 0), cfg.posts === 'trim' ? st.trim : st.stone, 'post', order + 0.5);
+  const capZ = railLow + coping;
+  box(k, part, p0 - 0.012, p1 + 0.012, t0 - dt - 0.012, t1 + dt + 0.012, capZ, capZ + 1.3, st.trim, 'cap', order + 1.6);
+  const tc = (t0 + t1) / 2;
+  const fin = cfg.finial === 'urn' ? URN : BALL;
+  const sc = cfg.finial === 'urn' ? 0.55 : 0.8;
+  k.loose(part, (g, e) => lathe(g, e, k, [sp, tc, capZ + 1.3], fin.map(([h, r]) => [h * sc, r * sc]), st.stone, 0.45),
+    [[sp - 0.05, tc, capZ], [sp + 0.05, tc, capZ + 1.3 + 3.2 * sc]], order + 1.7);
+}
+
+/** A refuge over each pier of a bridge two lanes wide or more: how far either side of the pier's middle it runs, and how far out it steps. */
+const REFUGE_OUT = 0.27;
+const refugeHalf = (p: { half: number }): number => p.half + 0.17;
+function refugeSpans(plan: Plan): Array<[number, number]> {
+  if (plan.width < 2) return [];
+  return plan.piers.filter((p) => !p.end).map((p) => [p.s - refugeHalf(p), p.s + refugeHalf(p)]);
+}
+
 /** The runs of a slice's parapet: the slice less the refuges' gaps. */
 function runsOf(plan: Plan, s0: number, s1: number): Run[] {
   let runs: Run[] = [{ sa: s0, sb: s1 }];
-  for (const [g0, g1] of refugeGaps(plan)) {
+  for (const [g0, g1] of refugeSpans(plan)) {
     runs = runs.flatMap((r): Run[] => {
       if (g1 <= r.sa || g0 >= r.sb) return [r];
       const out: Run[] = [];
@@ -789,68 +828,106 @@ function lampAt(k: Kit, part: Part3, s: number, t: number, z: number): void {
   k.glow.lamps.push(k.m([s, t, z + H - 3.3]));
 }
 
-/** Over each pier of a bridge two lanes wide, a refuge on a corbel: its own parapet round three sides, a lamp at three lanes. */
+/**
+ * Over each pier of a bridge two lanes wide or more, a refuge: the deck
+ * stepped out over the cutwater on a corbel, its cornice run round it, and
+ * the parapet turned out round its three sides between a post at each
+ * corner; a lamp in it at three lanes.
+ */
 function refugesOf(k: Kit, cfg: Classical): void {
   const { plan, sl, st } = k;
+  const T = 0.1;
   for (const p of plan.piers) {
     if (p.end) continue;
+    const w = refugeHalf(p);
+    if (p.s + w < sl.s0 - 1e-6 || p.s - w > sl.s1 + 1e-6) continue;
     for (const edge of sl.edges) {
-      const t = edge > 0 ? sl.t1 : sl.t0;
-      const out = 0.17;
-      const w = p.half + 0.08;
-      if (p.s + w < sl.s0 || p.s - w > sl.s1) continue;
       const part: Part3 = edge === sl.near ? 'rail' : 'front';
-      const z = plan.deck(p.s);
-      const [ta, tb] = edge > 0 ? [t, t + out] : [t - out, t];
-      const k2: Kit = { ...k, sl: { ...sl, t0: Math.min(sl.t0, ta), t1: Math.max(sl.t1, tb) } };
-      box(k2, 'front', p.s - w, p.s + w, ta, tb, z - plan.thick - 1.4, z, st.trim, 'cornice', k.ord(edge, 0.9));
-      box(k2, 'front', p.s - w * 0.75, p.s + w * 0.75, Math.min(ta, tb - edge * 0.04), Math.max(tb, ta - edge * 0.04), z - plan.thick - 7, z - plan.thick - 1.4, st.stone, 'pier', k.ord(edge, 0.85));
-      // Its parapet: a run along its front between corner posts, and its two sides.
-      const tFront = edge > 0 ? tb : ta;
-      const runs = [{ sa: Math.max(sl.s0, p.s - w), sb: Math.min(sl.s1, p.s + w) }];
-      const posts: Array<[number, number]> = [[p.s - w, p.s - w + 2 * POST], [p.s + w - 2 * POST, p.s + w]];
-      parapetLine(k2, cfg, part, edge, tFront, runs, posts, [[p.s - w + 2 * POST, p.s + w - 2 * POST]], 2);
-      const H = cfg.parapetHeight;
-      for (const s0 of [p.s - w, p.s + w - 2 * POST]) {
-        const [u0, u1] = edge > 0 ? [t - 0.1, tFront - 0.1] : [tFront + 0.1, t + 0.1];
-        box(k2, part, s0, s0 + 2 * POST, u0, u1, z, z + H - 1.7, st.stone, 'parapet', 2);
-        box(k2, part, s0 - 0.012, s0 + 2 * POST + 0.012, u0, u1, z + H - 1.7, z + H, st.trim, 'cap', 2.1);
+      const tOut = edge > 0 ? sl.t1 : sl.t0, tF = tOut + edge * REFUGE_OUT;
+      const [ta, tb] = edge > 0 ? [tOut, tF] : [tF, tOut];
+      const k2: Kit = { ...k, sl: { ...sl, t0: Math.min(sl.t0, ta) - 0.05, t1: Math.max(sl.t1, tb) + 0.05 } };
+      const sa = Math.max(sl.s0, p.s - w), sb = Math.min(sl.s1, p.s + w);
+      const z = plan.deck, lo = (s: number): number => z(s) - plan.thick - 1.4;
+      // The platform, the deck's flags carried out; its edge the cornice's, round its front and its ends.
+      if (sb - sa > 1e-4) {
+        k.solid('front', 1.2);
+        k.face('front', [[sa, ta, z(sa)], [sb, ta, z(sb)], [sb, tb, z(sb)], [sa, tb, z(sa)]], [0, 0, 1], st.deck,
+          { role: 'deck', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i, along: true }, { o: [0, 0, z(0)], a: [1 / U, 0, (z(1) - z(0)) / U], b: [0, 1 / U, 0] });
+        k.face('front', [[sa, tF, lo(sa)], [sb, tF, lo(sb)], [sb, tF, z(sb)], [sa, tF, z(sa)]], [0, edge, 0], st.trim,
+          { role: 'cornice', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i }, wallF(tF, edge));
+        for (const [s, dirn] of [[p.s - w, -1], [p.s + w, 1]] as Array<[number, number]>) {
+          if (s < sl.s0 - 1e-6 || s > sl.s1 + 1e-6) continue;
+          k.face('front', [[s, ta, lo(s)], [s, tb, lo(s)], [s, tb, z(s)], [s, ta, z(s)]], [dirn, 0, 0], st.trim,
+            { role: 'cornice', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i }, { o: [s, 0, 0], a: [0, dirn * edge / U, 0], b: [0, 0, 1] });
+        }
       }
-      if (plan.width >= 3 && ownerOf(k2, p.s - 0.05, p.s + 0.05) !== null) lampAt(k2, part, p.s, (ta + tb) / 2 + (edge > 0 ? -0.03 : 0.03), z);
+      // The corbel it stands on, over the cutwater.
+      box(k2, 'front', p.s - w * 0.62, p.s + w * 0.62, Math.min(tOut, tF - edge * 0.06), Math.max(tOut, tF - edge * 0.06), lo(p.s) - 9, lo(p.s), st.stone, 'pier', k.ord(edge, 1.1));
+      // Its parapet: along its front between its outer corner posts, and back along each end to a post on the bridge's line.
+      const H = cfg.parapetHeight, lift = stepOf(plan);
+      const front: Array<[number, number]> = [[p.s - w, p.s - w + 2 * POST], [p.s + w - 2 * POST, p.s + w]];
+      parapetLine(k2, cfg, part, edge, tF, [{ sa, sb }], front, [[p.s - w + 2 * POST, p.s + w - 2 * POST]], 2);
+      for (const [p0, p1] of front) {
+        const sc = (p0 + p1) / 2;
+        if (sc < sl.s0 - 1e-6 || sc >= sl.s1 - 1e-6) continue;
+        const [l0, l1] = edge > 0 ? [tOut - T, tOut] : [tOut, tOut + T];
+        postAt(k2, cfg, part, p0, p1, l0, l1, 2);
+        // The end: a short run out from the bridge's line to the front.
+        const [u0, u1] = edge > 0 ? [tOut, tF - T] : [tF + T, tOut];
+        const zf = treadAt(plan, sc), rail = z(sc) + lift + H - COPING;
+        const r0 = sc - T / 2, r1 = sc + T / 2;
+        if (cfg.parapet === 'balustrade') {
+          box(k2, part, r0, r1, u0, u1, zf, z(sc) + lift + 2.2, st.trim, 'plinth', 2);
+          const n = Math.max(1, Math.round((u1 - u0) / 0.088));
+          const ts = Array.from({ length: n }, (_, j) => u0 + ((u1 - u0) * (j + 0.5)) / n);
+          if (dot(k.P, k.e.toward) * 1 < 0) ts.reverse();
+          const zb = z(sc) + lift + 2.2, h = rail - zb;
+          k.loose(part, (g, e) => { for (const t of ts) lathe(g, e, k, [sc, t, zb], BALUSTER.map(([y, r]) => [y * h, r * 1.25]), st.stone, 0.4); },
+            [[sc, u0, zb], [sc, u1, rail]], 2.5);
+        } else {
+          box(k2, part, r0, r1, u0, u1, zf, rail, st.stone, 'parapet', 2);
+        }
+        box(k2, part, r0 - 0.014, r1 + 0.014, u0, u1, rail, rail + COPING, st.trim, 'cap', 3);
+        k.glow.lines.push([k.m([sc, u0, rail + COPING]), k.m([sc, u1, rail + COPING])]);
+      }
+      if (plan.width >= 3 && ownerOf(k2, p.s - 0.05, p.s + 0.05) !== null) lampAt(k2, part, p.s, (ta + tb) / 2 + (edge > 0 ? -0.02 : 0.02), z(p.s));
     }
   }
 }
 
-/** A keystone at each crown in the slice, larger than the ring and hanging under it, its rune cut in gold. */
+/**
+ * A keystone at each crown in the slice: the ring's middle voussoir, a wedge
+ * as deep as the ring and a little under it, standing a hair proud of it,
+ * its rune cut in gold as large as the stone takes.
+ */
 function keystones(k: Kit, cfg: Classical): void {
   const { plan, sl, st } = k;
   const ringD = cfg.ringDepth;
   for (const edge of sl.edges) {
     const t = edge > 0 ? sl.t1 : sl.t0;
-    for (const bay of plan.bays) {
-      const tiers: Array<[number, number]> = [[bay.crown, plan.deck(bay.c) - plan.thick - 1.4]];
-      if (bay.lowerCrown !== undefined && bay.course !== undefined) tiers.push([bay.lowerCrown, bay.course - 1.6]);
-      for (const [crown, ceil] of tiers) {
-        const wb = 0.062, wt = 0.08;
-        if (ownerOf(k, bay.c - wt, bay.c + wt) === null) continue;
-        const tk = t + edge * 0.036;
-        const z0 = crown - 3.4, z1 = Math.min(crown + ringD + 0.8, ceil);
-        k.solid('front', k.ord(edge, 0.85));
-        const c = bay.c;
-        const fr = { o: [c - wt * edge, tk, 0] as L, a: [edge > 0 ? 1 / U : -1 / U, 0, 0] as L, b: [0, 0, 1] as L };
-        k.face('front', [[c - wb, tk, z0], [c + wb, tk, z0], [c + wt, tk, z1], [c - wt, tk, z1]], [0, edge, 0], cfg.key,
-          { role: 'key', x0: 0, x1: wt * 2 * U, y0: z0, y1: z1, seed: Math.round(c * 10) }, fr);
-        k.face('front', [[c - wb, t, z0], [c - wb, tk, z0], [c - wt, tk, z1], [c - wt, t, z1]], [-1, 0, 0.2], cfg.key);
-        k.face('front', [[c + wb, t, z0], [c + wb, tk, z0], [c + wt, tk, z1], [c + wt, t, z1]], [1, 0, 0.2], cfg.key);
-        k.face('front', [[c - wt, t, z1], [c + wt, t, z1], [c + wt, tk, z1], [c - wt, tk, z1]], [0, 0, 1], cfg.key);
-        k.face('front', [[c - wb, t, z0], [c + wb, t, z0], [c + wb, tk, z0], [c - wb, tk, z0]], [0, 0, -1], cfg.key);
-        const size = Math.min(wt * 2 * U * 0.36, (z1 - z0) * 0.3);
-        // Its rune lights at night only where the face it is cut in can be seen: the night's light is laid over all.
-        if (edge === sl.near) k.glow.runes.push({ at: k.m([c, tk, z0 + (z1 - z0) * 0.46]), s: size, glyph: st.rune });
-      }
+    for (const o of arcadeOf(plan).openings) {
+      const c = o.c;
+      // Half as wide at its foot as the ring is deep, a third as wide again at its head.
+      const wb = (ringD * 0.5) / U, wt = (ringD * 0.68) / U;
+      if (ownerOf(k, c - wt, c + wt) === null) continue;
+      const tk = t + edge * 0.024;
+      const z0 = o.crown - 1.4, z1 = Math.min(o.crown + ringD, o.ceil(c) - 0.01);
+      k.solid('front', k.ord(edge, 0.85));
+      const fr = { o: [c - wt * edge, tk, 0] as L, a: [edge > 0 ? 1 / U : -1 / U, 0, 0] as L, b: [0, 0, 1] as L };
+      k.face('front', [[c - wb, tk, z0], [c + wb, tk, z0], [c + wt, tk, z1], [c - wt, tk, z1]], [0, edge, 0], cfg.key,
+        { role: 'key', x0: 0, x1: wt * 2 * U, y0: z0, y1: z1, seed: Math.round(c * 10) }, fr);
+      k.face('front', [[c - wb, t, z0], [c - wb, tk, z0], [c - wt, tk, z1], [c - wt, t, z1]], [-1, 0, 0.2], cfg.key);
+      k.face('front', [[c + wb, t, z0], [c + wb, tk, z0], [c + wt, tk, z1], [c + wt, t, z1]], [1, 0, 0.2], cfg.key);
+      k.face('front', [[c - wb, t, z0], [c + wb, t, z0], [c + wb, tk, z0], [c - wb, tk, z0]], [0, 0, -1], cfg.key);
+      // Its rune lights at night only where the face it is cut in can be seen: the night's light is laid over all.
+      if (edge === sl.near) k.glow.runes.push({ at: k.m([c, tk, z0 + (z1 - z0) * KEY_MID]), s: keySize(wt * 2 * U, z1 - z0), glyph: st.rune });
     }
   }
 }
+/** Where a keystone's rune is cut, up it, and how large: half its height, from its middle to its top, as wide as its face takes. */
+const KEY_MID = 0.48;
+const KEY_WIDE = 1.45;
+const keySize = (w: number, h: number): number => Math.min((w * 0.4) / KEY_WIDE / 0.8, h * 0.34);
 
 /* ---- the deck and the arches, in whole faces ---------------------------------------------------- */
 
@@ -897,143 +974,177 @@ function deckOf(k: Kit, cfg: Classical): void {
   void cfg;
 }
 
-/** Where the bay's opening is at `s`, if it is in one: not over a pier. */
-function openAt(plan: Plan, s: number): Bay | null {
-  for (const p of plan.piers) if (s > p.s - p.half - 1e-6 && s < p.s + p.half + 1e-6) return null;
-  return bayAt(plan, s);
+/* ---- the arcade: the openings the deck is carried over ----------------------------------------------- */
+
+/** An arch's opening: its middle and clear half-span (tiles), its underside, crown and spring, what it stands on and what its ring stops under. */
+interface Opening {
+  c: number;
+  a: number;
+  f: (s: number) => number;
+  crown: number;
+  spring: number;
+  /** The jambs' foot: a height, or the ground. */
+  floor: number | null;
+  ceil: (s: number) => number;
+  band: Band;
+}
+/** A band of the outer wall over a bay: from the ground (or a height) up to its top, its openings cut out of its foot. */
+interface Band { s0: number; s1: number; bottom: number | null; top: (s: number) => number; openings: Opening[] }
+interface Arcade {
+  bands: Band[];
+  openings: Opening[];
+  /** Two tiers: the string course over each bay, and the tops of the thicker piers beside the lower arch, at it. */
+  courses: Array<{ s0: number; s1: number; z: number }>;
+  ledges: Array<{ s0: number; s1: number; z: number }>;
 }
 
 /**
- * The stone under the deck, each piece one face to the slice: on each outer
- * edge the wall from the ground (or the ring's back) up to the cornice, the
- * ring proud of it in voussoirs, for two tiers the lower spandrel and the
- * course; a cutwater on each pier; across the lane the vault (a loose
- * drawing, shaded a strip at a time, coursed) and the side of each pier
- * facing into its bay.
+ * A plan's arcade, off its bays (`planOf`): an arch to each bay, or for two
+ * tiers a tall lower arch (`Bay.lower`, `lowerHalf`) under a string course
+ * and the upper arch over it, open between them across the lane.
+ */
+const arcadeCache = new WeakMap<Plan, Arcade>();
+function arcadeOf(plan: Plan): Arcade {
+  const got = arcadeCache.get(plan);
+  if (got) return got;
+  const db = (s: number): number => plan.deck(s) - plan.thick - 1.4;
+  const out: Arcade = { bands: [], openings: [], courses: [], ledges: [] };
+  for (const bay of plan.bays) {
+    const p0 = plan.piers.find((p) => Math.abs(p.s - bay.s0) < 1e-6), p1 = plan.piers.find((p) => Math.abs(p.s - bay.s1) < 1e-6);
+    if (bay.lower && bay.course !== undefined && bay.lowerHalf !== undefined) {
+      const z = bay.course;
+      const lowerBand: Band = { s0: bay.s0, s1: bay.s1, bottom: null, top: () => z, openings: [] };
+      const upperBand: Band = { s0: bay.s0, s1: bay.s1, bottom: z, top: db, openings: [] };
+      lowerBand.openings.push({ c: bay.c, a: bay.lowerHalf, f: bay.lower, crown: bay.lowerCrown!, spring: bay.lowerSpring!, floor: null, ceil: () => z - 1.6, band: lowerBand });
+      // The upper arch as wide as the lower, so the piers run up unbroken through the course, as an aqueduct's do.
+      const al = bay.lowerHalf, c = bay.c, crown = bay.crown;
+      const r = Math.max(2, Math.min(al * U, crown - z - 2.5));
+      const upper = (s: number): number => crown - r + r * Math.sqrt(Math.max(0, 1 - ((s - c) / al) ** 2));
+      upperBand.openings.push({ c, a: al, f: upper, crown, spring: crown - r, floor: z, ceil: db, band: upperBand });
+      out.bands.push(lowerBand, upperBand);
+      out.courses.push({ s0: bay.s0, s1: bay.s1, z });
+      void p0; void p1;
+    } else {
+      const band: Band = { s0: bay.s0, s1: bay.s1, bottom: null, top: db, openings: [] };
+      band.openings.push({ c: bay.c, a: bay.a, f: bay.arch, crown: bay.crown, spring: bay.spring, floor: null, ceil: db, band });
+      out.bands.push(band);
+    }
+  }
+  for (const b of out.bands) out.openings.push(...b.openings);
+  arcadeCache.set(plan, out);
+  return out;
+}
+
+/**
+ * The stone under the deck: on each outer edge each band of wall (one, or
+ * two either side of a string course) from the ground or the course up,
+ * the openings cut from its foot, the rings proud of it in voussoirs, the
+ * string course a thin band on the face only; a cutwater on each pier;
+ * across the lane the vaults (a loose drawing, shaded a strip at a time,
+ * coursed), the jambs, and for two tiers the tops of the thicker piers.
  */
 function archesOf(k: Kit, cfg: Classical): void {
   const { plan, sl, st } = k;
   const ringD = cfg.ringDepth;
-  const db = (s: number): number => plan.deck(s) - plan.thick - 1.4;
+  const arc = arcadeOf(plan);
   const breaks: number[] = [];
   for (const p of plan.piers) breaks.push(p.s - p.half, p.s + p.half);
-  for (const bay of plan.bays) breaks.push(bay.c);
+  for (const o of arc.openings) breaks.push(o.c, o.c - o.a, o.c + o.a);
+  for (const b of arc.bands) breaks.push(b.s0, b.s1);
   const xs = samples(sl.s0, sl.s1, breaks, 1 / 16);
-  const env = (s: number, t: number): number => {
-    const bay = openAt(plan, s);
-    if (!bay) return plan.ground(s, t) - 0.5;
-    return Math.min(db(s) - 0.01, bay.arch(s) + ringD);
-  };
-  const ringFns = (bay: Bay): Array<[(s: number) => number, (s: number) => number]> => {
-    const out: Array<[(s: number) => number, (s: number) => number]> = [[bay.arch, db]];
-    if (bay.lower && bay.course !== undefined) { const c = bay.course; out.push([bay.lower, () => c - 1.6]); }
-    return out;
-  };
+  const within = (a: number, b: number): number[] => xs.filter((x) => x > a + 1e-6 && x < b - 1e-6).concat([a, b]).sort((p, q) => p - q);
   for (const edge of sl.edges) {
     const t = edge > 0 ? sl.t1 : sl.t0;
     const fr = wallF(t, edge);
-    // The wall: along the cornice's foot, and back along the ground and the rings' backs.
+    // Each band of wall: along its top, and back along its foot and its rings' backs.
     k.solid('front', k.ord(edge, -1));
-    const wall: L[] = [[sl.s0, t, db(sl.s0)], [sl.s1, t, db(sl.s1)]];
-    for (let j = xs.length - 1; j >= 0; j--) {
-      const s = xs[j];
-      const r = j < xs.length - 1 ? env(s + 1e-4, t) : null, l = j > 0 ? env(s - 1e-4, t) : null;
-      if (r !== null) wall.push([s, t, r]);
-      if (l !== null && (r === null || Math.abs(l - r) > 1e-3)) wall.push([s, t, l]);
-    }
-    k.face('front', wall, [0, edge, 0], st.stone, { role: 'wall', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i }, fr);
-    // Two tiers: the lower spandrel, from the lower ring's back to the course.
-    for (const bay of plan.bays) {
-      if (!bay.lower || bay.course === undefined) continue;
-      const a = Math.max(sl.s0, bay.c - bay.a), b = Math.min(sl.s1, bay.c + bay.a);
+    for (const band of arc.bands) {
+      const a = Math.max(sl.s0, band.s0), b = Math.min(sl.s1, band.s1);
       if (b - a < 1e-4) continue;
-      const c = bay.course;
-      const pts: L[] = [[a, t, c], [b, t, c]];
-      for (const s of xs.filter((x) => x > a + 1e-6 && x < b - 1e-6).concat([a, b]).sort((p, q) => q - p)) pts.push([s, t, Math.min(c - 0.01, bay.lower(s) + ringD)]);
-      k.face('front', pts, [0, edge, 0], st.stone, { role: 'wall', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i + 1 }, fr);
-    }
-    // The rings, proud of the wall: one face a bay and a tier.
-    const tr = t + edge * 0.015;
-    for (const bay of plan.bays) {
-      const a = Math.max(sl.s0, bay.c - bay.a), b = Math.min(sl.s1, bay.c + bay.a);
-      if (b - a < 1e-4) continue;
-      for (const [f, ceil] of ringFns(bay)) {
-        k.solid('front', k.ord(edge, 0.5));
-        const ss = xs.filter((x) => x > a + 1e-6 && x < b - 1e-6).concat([a, b]).sort((p, q) => p - q);
-        const pts: L[] = ss.map((s) => [s, tr, f(s)] as L);
-        for (let j = ss.length - 1; j >= 0; j--) pts.push([ss[j], tr, Math.min(ceil(ss[j]), f(ss[j]) + ringD)]);
-        const joints = voussoirs(bay, f, ringD, ringD * 1.15);
-        k.face('front', pts, [0, edge, 0], st.ring, { role: 'ring', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(bay.c * 10), along: true, ring: [f, joints] } as Info, wallF(tr, edge));
+      const env = (s: number): number => {
+        for (const o of band.openings) if (s > o.c - o.a + 1e-6 && s < o.c + o.a - 1e-6) return Math.min(band.top(s) - 0.01, o.f(s) + ringD);
+        return band.bottom ?? plan.ground(s, t) - 0.5;
+      };
+      const ss = within(a, b);
+      const pts: L[] = [[a, t, band.top(a)], [b, t, band.top(b)]];
+      for (let j = ss.length - 1; j >= 0; j--) {
+        const s = ss[j];
+        const r = j < ss.length - 1 ? env(s + 1e-4) : null, l = j > 0 ? env(s - 1e-4) : null;
+        if (r !== null) pts.push([s, t, r]);
+        if (l !== null && (r === null || Math.abs(l - r) > 1e-3)) pts.push([s, t, l]);
       }
+      k.face('front', pts, [0, edge, 0], st.stone, { role: 'wall', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i }, fr);
+    }
+    // The rings, proud of the wall: one face an opening.
+    const tr = t + edge * 0.015;
+    for (const o of arc.openings) {
+      const a = Math.max(sl.s0, o.c - o.a), b = Math.min(sl.s1, o.c + o.a);
+      if (b - a < 1e-4) continue;
+      k.solid('front', k.ord(edge, 0.5));
+      const ss = within(a, b);
+      const pts: L[] = ss.map((s) => [s, tr, o.f(s)] as L);
+      for (let j = ss.length - 1; j >= 0; j--) pts.push([ss[j], tr, Math.min(o.ceil(ss[j]) - 0.01, o.f(ss[j]) + ringD)]);
+      const joints = voussoirs(o.c, o.a, o.f, ringD, ringD * 1.1);
+      k.face('front', pts, [0, edge, 0], st.ring, { role: 'ring', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(o.c * 10), along: true, ring: [o.f, joints] } as Info, wallF(tr, edge));
+    }
+    // Two tiers: the string course, a thin band on the face only.
+    for (const c of arc.courses) {
+      const a = Math.max(sl.s0, c.s0), b = Math.min(sl.s1, c.s1);
+      if (b - a < 1e-4) continue;
+      const tt = t + edge * 0.022;
+      k.solid('front', k.ord(edge, 0.6));
+      k.face('front', [[a, tt, c.z - 1.6], [b, tt, c.z - 1.6], [b, tt, c.z + 0.4], [a, tt, c.z + 0.4]], [0, edge, 0], st.trim,
+        { role: 'plinth', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i }, wallF(tt, edge));
+      k.face('front', [[a, t, c.z + 0.4], [b, t, c.z + 0.4], [b, tt, c.z + 0.4], [a, tt, c.z + 0.4]], [0, 0, 1], st.trim);
     }
     cutwatersOf(k, cfg, edge, t);
   }
-  // Two tiers: the course the upper arcade stands on, across the lane, and its band on each outer face.
-  for (const bay of plan.bays) {
-    if (bay.course === undefined) continue;
-    const z = bay.course;
-    const a = Math.max(sl.s0, bay.s0), b = Math.min(sl.s1, bay.s1);
-    if (b - a < 1e-4) continue;
-    const oa = Math.max(a, bay.c - bay.a), ob = Math.min(b, bay.c + bay.a);
-    if (ob - oa > 1e-4) {
-      k.solid('front', -6);
-      k.face('front', [[oa, sl.t0, z], [ob, sl.t0, z], [ob, sl.t1, z], [oa, sl.t1, z]], [0, 0, 1], st.trim,
-        { role: 'deck', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i, along: true }, { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
-    }
-    for (const edge of sl.edges) {
-      const t = edge > 0 ? sl.t1 : sl.t0, tt = t + edge * 0.022;
-      k.solid('front', k.ord(edge, 0.3));
-      k.face('front', [[a, tt, z - 1.6], [b, tt, z - 1.6], [b, tt, z + 0.4], [a, tt, z + 0.4]], [0, edge, 0], st.trim,
-        { role: 'cornice', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i }, wallF(tt, edge));
-      k.face('front', [[a, t, z + 0.4], [b, t, z + 0.4], [b, tt, z + 0.4], [a, tt, z + 0.4]], [0, 0, 1], st.trim);
+  // Across the lane: the vault under each arch, a loose drawing so its strips meet with no ink between them.
+  vaultOf(k, cfg, arc, within);
+  // Each opening's jambs, from its foot to its spring.
+  for (const o of arc.openings) {
+    for (const [s, dirn] of [[o.c - o.a, 1], [o.c + o.a, -1]] as Array<[number, number]>) {
+      if (s < sl.s0 - 1e-6 || s > sl.s1 + 1e-6) continue;
+      const z0 = o.floor ?? plan.ground(s, sl.t0) - 0.5, z0b = o.floor ?? plan.ground(s, sl.t1) - 0.5, z1 = o.f(s);
+      if (z1 - Math.max(z0, z0b) < 0.1) continue;
+      k.solid('back', -1);
+      k.face('back', [[s, sl.t0, z0], [s, sl.t1, z0b], [s, sl.t1, z1], [s, sl.t0, z1]], [dirn, 0, 0], st.stone,
+        { role: 'pier', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(s * 10) }, { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
     }
   }
-  // Across the lane: the vault under each arch, a loose drawing so its strips meet with no ink between them.
-  vaultOf(k, cfg, xs);
-  // The side of each pier facing into its bay, up to the spring (for two tiers, to each spring).
-  for (const bay of plan.bays) {
-    const p0 = plan.piers.find((p) => Math.abs(p.s - bay.s0) < 1e-6), p1 = plan.piers.find((p) => Math.abs(p.s - bay.s1) < 1e-6);
-    if (!p0 || !p1) continue;
-    for (const [s, dirn] of [[p0.s + p0.half, 1], [p1.s - p1.half, -1]] as Array<[number, number]>) {
-      if (s < sl.s0 - 1e-6 || s > sl.s1 + 1e-6) continue;
-      const g0 = plan.ground(s, sl.t0) - 0.5, g1 = plan.ground(s, sl.t1) - 0.5;
-      const spans: Array<[number, number, number]> = bay.lower ? [[g0, g1, bay.lower(s)], [bay.course!, bay.course!, bay.arch(s)]] : [[g0, g1, bay.arch(s)]];
-      for (const [z0, z0b, z1] of spans) {
-        if (z1 - Math.max(z0, z0b) < 0.1) continue;
-        k.solid('back', -1);
-        k.face('back', [[s, sl.t0, z0], [s, sl.t1, z0b], [s, sl.t1, z1], [s, sl.t0, z1]], [dirn, 0, 0], st.stone,
-          { role: 'pier', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(s * 10) }, { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
-      }
-    }
+  // Two tiers: the tops of the piers beside the lower arch, where they are the thicker under the course.
+  for (const l of arc.ledges) {
+    const a = Math.max(sl.s0, l.s0), b = Math.min(sl.s1, l.s1);
+    if (b - a < 1e-3) continue;
+    k.solid('back', -0.5);
+    k.face('back', [[a, sl.t0, l.z], [b, sl.t0, l.z], [b, sl.t1, l.z], [a, sl.t1, l.z]], [0, 0, 1], st.stone);
   }
 }
 
 /** The underside of each arch across the lane: strips shaded by how each faces the light, a joint along each voussoir's. */
-function vaultOf(k: Kit, cfg: Classical, xs: number[]): void {
-  const { plan, sl, st } = k;
+function vaultOf(k: Kit, cfg: Classical, arc: Arcade, within: (a: number, b: number) => number[]): void {
+  const { sl, st } = k;
   const strips: Array<{ pts: L[]; n: [number, number, number] }> = [];
   const joints: L[][] = [];
   const reach: L[] = [];
-  for (const bay of plan.bays) {
-    const a = Math.max(sl.s0, bay.c - bay.a), b = Math.min(sl.s1, bay.c + bay.a);
+  for (const o of arc.openings) {
+    const a = Math.max(sl.s0, o.c - o.a), b = Math.min(sl.s1, o.c + o.a);
     if (b - a < 1e-4) continue;
-    for (const f of [bay.arch, bay.lower]) {
-      if (!f) continue;
-      const ss = xs.filter((x) => x > a + 1e-6 && x < b - 1e-6).concat([a, b]).sort((p, q) => p - q);
-      for (let j = 0; j + 1 < ss.length; j++) {
-        const s0 = ss[j], s1 = ss[j + 1];
-        const pts: L[] = [[s0, sl.t0, f(s0)], [s1, sl.t0, f(s1)], [s1, sl.t1, f(s1)], [s0, sl.t1, f(s0)]];
-        // Its normal, down and in toward the middle of the opening.
-        const m0 = k.m(pts[0]), m1 = k.m(pts[1]), m3 = k.m(pts[3]);
-        const u = sub(m1, m0), v = sub(m3, m0);
-        let n: [number, number, number] = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
-        if (n[2] > 0) n = [-n[0], -n[1], -n[2]];
-        const l = Math.hypot(n[0], n[1], n[2]) || 1;
-        strips.push({ pts, n: [n[0] / l, n[1] / l, n[2] / l] });
-        reach.push(pts[0], pts[2]);
-      }
-      for (const [s, z] of voussoirs(bay, f, cfg.ringDepth, cfg.ringDepth * 1.15)) if (s > a && s < b) joints.push([[s, sl.t0, z], [s, sl.t1, z]]);
+    const f = o.f;
+    const ss = within(a, b);
+    for (let j = 0; j + 1 < ss.length; j++) {
+      const s0 = ss[j], s1 = ss[j + 1];
+      const pts: L[] = [[s0, sl.t0, f(s0)], [s1, sl.t0, f(s1)], [s1, sl.t1, f(s1)], [s0, sl.t1, f(s0)]];
+      // Its normal, down and in toward the middle of the opening.
+      const m0 = k.m(pts[0]), m1 = k.m(pts[1]), m3 = k.m(pts[3]);
+      const u = sub(m1, m0), v = sub(m3, m0);
+      let n: [number, number, number] = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+      if (n[2] > 0) n = [-n[0], -n[1], -n[2]];
+      const l = Math.hypot(n[0], n[1], n[2]) || 1;
+      strips.push({ pts, n: [n[0] / l, n[1] / l, n[2] / l] });
+      reach.push(pts[0], pts[2]);
     }
+    for (const [s, z] of voussoirs(o.c, o.a, f, cfg.ringDepth, cfg.ringDepth * 1.1)) if (s > a && s < b) joints.push([[s, sl.t0, z], [s, sl.t1, z]]);
   }
   if (!strips.length) return;
   k.loose('back', (g, e) => {
@@ -1157,7 +1268,7 @@ export const marble = classical({
   deck: { lit: hex('#e9eaee'), shade: hex('#a7a9ba') },
   rune: 'star8',
   glow: '#cfe6ff',
-  ringDepth: 4.2,
+  ringDepth: 6,
   parapetHeight: 10,
   parapet: 'balustrade',
   finial: 'ball',
