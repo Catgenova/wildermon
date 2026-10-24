@@ -663,8 +663,8 @@ export function ownerOf(k: Kit, a: number, b: number): number | null {
   // Straddling a cut: the slice on the side of it nearer the eye.
   const towardS = dot(k.A, k.e.toward);
   const nearer = towardS >= 0 ? 1 : -1;
-  if (a < sl.s0 - EPS) return nearer < 0 ? sl.i : null;
-  return nearer > 0 ? sl.i : null;
+  if (a < sl.s0 - EPS) return nearer > 0 ? sl.i : null;
+  return nearer < 0 ? sl.i : null;
 }
 
 /** A pointed cutwater on a pier's outer face, from its foot to its spring, capped with a sloped top; stone only. */
