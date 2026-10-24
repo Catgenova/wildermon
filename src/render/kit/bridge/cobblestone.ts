@@ -24,6 +24,8 @@ const HI = t('#ddd4c6');
 const DRESS = t('#ded5c4');
 const DRESS_BEDS: Beds = [[DRESS, 3], [t('#d3c9b8'), 2], [t('#e6ded0'), 1.5], [t('#cfc6b3'), 1.5]];
 const RING_JOINT = t('#a09a8a');
+/** The rough stones an arch is turned in: picked paler than the wall's, so the ring stands out of it. */
+const RING_BEDS: Beds = [[t('#d9d0bf'), 3], [t('#cdc3b1'), 2], [t('#e3dbcc'), 1.5], [t('#c4baa6'), 1.5], [t('#c9cbaa'), 0.8]];
 const BAND = t('#d3c9b8');
 /** Its crazy paving (`flooring.ts`). */
 const FLOOR_BEDS: Beds = [[t('#ded5c4'), 3], [t('#d5cbb8'), 2], [t('#e6ded0'), 2], [t('#cfc6b3'), 2], [t('#d4d2bf'), 1], [t('#dccfbf'), 1]];
@@ -35,34 +37,48 @@ const LINE = t('#94896c');
 const wall = rubble({ rows: [3.4, 5.4], len: [4.5, 10.5], beds: BEDS, joint: JOINT, hi: HI, gap: 0.6, line: LINE });
 const deck = rubble({ rows: [7, 11], len: [7, 15], beds: FLOOR_BEDS, joint: FLOOR_BED, hi: t('#f4eee4'), gap: 0.9, line: t('#8d846f') });
 
-/** The wall of the parapet, and the stones on edge along its top: how many to the tile, and how high, least and most. */
+/**
+ * The wall of the parapet, and the rough capstones along its top: about how
+ * many to the tile, each its own length and height and laid a little proud
+ * of the wall either side.
+ */
 const WALL = 6.2;
 const STRING = 1.1;
-const ON_EDGE = 11;
-const LOW = 2.4, TALL = 3.8;
-const heightOf = (q: number): number => (q % 2 === 0 ? TALL - hash(q, 1) * 0.8 : LOW + hash(q, 2) * 0.7);
+const ON_EDGE = 4.5;
+const TALL = 3;
+const heightOf = (q: number): number => 1.9 + hash(q, 1) * 1.1;
 const toneOf = (q: number): Tone => DRESS_BEDS[Math.floor(hash(q, 3) * DRESS_BEDS.length)][0];
+/** Where capstone `q` starts along the bridge: a place a stone, wandering up to a quarter of one either way. */
+const capAt = (q: number): number => (q + (hash(q, 11) - 0.5) * 0.5) / ON_EDGE;
+/** The capstone over `s`. */
+function capOver(s: number): number {
+  let q = Math.floor(s * ON_EDGE);
+  if (s < capAt(q)) q--;
+  else if (s >= capAt(q + 1)) q++;
+  return q;
+}
 
-/** The stones on edge, painted on a face of the cope: each its own tone, a joint between each, a paler top. */
+/** The capstones, painted on a face of the cope: each its own tone, a joint between each. */
 const onEdge: BridgePainter = (g, k, f) => {
   const pf = f as Placed;
   const x0 = Math.min(f.x0, f.x1), x1 = Math.max(f.x0, f.x1);
   const sx = pf.sx || 1;
-  const w = U / ON_EDGE;
+  // The face's run along the bridge, in tiles, whichever way its frame runs.
+  const s0 = (sx > 0 ? x0 : -x1) / U, s1 = (sx > 0 ? x1 : -x0) / U;
   const joints = new Path2D();
-  for (let x = Math.floor(x0 / w) * w; x < x1 + w; x += w) {
-    const q = Math.round((sx > 0 ? x : -x - w) / w);
+  for (let q = capOver(s0); capAt(q) < s1; q++) {
+    const a = capAt(q) * U * sx, b = capAt(q + 1) * U * sx;
     g.fillStyle = css(faceColour(toneOf(q), k.L));
-    g.fillRect(x, f.y0 - 1, w, f.y1 - f.y0 + 2);
-    joints.moveTo(x, f.y0 - 1);
-    joints.lineTo(x, f.y1 + 1);
+    g.fillRect(Math.min(a, b), f.y0 - 1, Math.abs(b - a), f.y1 - f.y0 + 2);
+    joints.moveTo(a, f.y0 - 1);
+    joints.lineTo(a, f.y1 + 1);
   }
   g.strokeStyle = css(faceColour(RING_JOINT, k.L));
-  g.lineWidth = 0.5;
+  g.lineWidth = 0.55;
   g.stroke(joints);
 };
 
-/** A rough parapet: rubble to a string course with the rune line in it, then a row of stones on edge. */
+/** A rough parapet: rubble to a string course with the rune line in it, then a cope of rough capstones. */
 function roughParapet(k: Kit, edge: number, part: Part3): void {
   const { plan, sl, st } = k;
   const T = 0.095;
@@ -74,17 +90,16 @@ function roughParapet(k: Kit, edge: number, part: Part3): void {
   for (const [sa, sb] of runsOf(plan, sl)) {
     wallRun(k, part, sa, sb, { tOut, tIn, edge, foot: deckAt, top: (s) => deckAt(s) + WALL, tone: st.stone, role: 'parapet', order: 1 }, step, false);
     copingRun(k, part, sa, sb, edge, t0, t1, (s) => deckAt(s) + WALL, STRING, 0.008, st.trim, step);
-    copeOnEdge(k, part, sa, sb, edge, t0 + 0.006, t1 - 0.006, (s) => deckAt(s) + WALL + STRING);
+    copeOnEdge(k, part, sa, sb, edge, t0 - 0.014, t1 + 0.014, (s) => deckAt(s) + WALL + STRING);
   }
 }
 
-/** The stones on edge from `sa` to `sb`: one solid, its two long faces stepped along their tops, each stone's top and the step up to the next. */
+/** The capstones from `sa` to `sb`: one solid, its two long faces stepped along their tops, each stone's top and the step up to the next. */
 function copeOnEdge(k: Kit, part: Part3, sa: number, sb: number, edge: number, t0: number, t1: number, base: (s: number) => number): void {
   const { sl } = k;
-  const w = 1 / ON_EDGE;
   const qs: Array<[number, number, number]> = [];
-  for (let q = Math.floor(sa / w); q * w < sb - 1e-6; q++) {
-    const a = Math.max(sa, q * w), b = Math.min(sb, (q + 1) * w);
+  for (let q = capOver(sa); capAt(q) < sb - 1e-6; q++) {
+    const a = Math.max(sa, capAt(q)), b = Math.min(sb, capAt(q + 1));
     if (b - a > 1e-4) qs.push([q, a, b]);
   }
   if (!qs.length) return;
@@ -140,12 +155,12 @@ export const cobblestone: BridgeStyle = framed({
   deck: t('#d9d0be'),
   parapet: 'rough',
   parapetHeight: WALL + STRING,
-  ringDepth: 3.8,
+  ringDepth: 7,
   rune: RUNE,
   glow: '#d4f2c4',
   paint: {
     wall, pier: wall, parapet: wall, post: wall,
-    ring: voussoirs({ width: 3.6, wander: 0.8, ragged: 0.45, rough: LINE, beds: BEDS, joint: JOINT, soffit: rubble({ rows: [3, 4.6], len: [4, 8], beds: BEDS, joint: JOINT, gap: 0.6, line: LINE }) }),
+    ring: voussoirs({ width: 4.4, wander: 0.8, ragged: 0.42, rough: t('#7f7559'), beds: RING_BEDS, joint: t('#9a9486'), soffit: rubble({ rows: [3, 4.6], len: [4, 8], beds: BEDS, joint: JOINT, gap: 0.6, line: LINE }) }),
     key: keystone(RUNE),
     cap: moulding({ joint: RING_JOINT, hi: t('#efe8dc'), len: 9, rune: RUNE }),
     cornice: moulding({ joint: RING_JOINT, hi: t('#efe8dc'), len: 8 }),
