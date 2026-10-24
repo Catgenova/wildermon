@@ -299,3 +299,17 @@ jobs:
               creature_tile_ok(g.world_id, floor(creature_x(e))::int, floor(creature_y(e))::int) as e_tile_ok,
               (select p.kind || ':' || coalesce(p.sub, '') from placed p where p.world_id = g.world_id and p.x = floor(creature_x(e))::int and p.y = floor(creature_y(e))::int limit 1) as e_on
              from creature g join creature e on e.world_id = g.world_id and e.id = g.enemy where g.mode = 'deed' and e.mode = 'wild'"
+          # Asked about: "i am stuck cant go down" (catgenova, mounted or driving on storey 2 of Solara Manor).
+          # Where the body is, what it rides or drives, and the storeys' floors and walls round it. Reads only.
+          ask "stuck: the body" "select x, y, level, level_h, moved_at from player where name = 'catgenova'"
+          ask "stuck: ridden or pulling" "select c.id, c.species, c.rider is not null as ridden, c.hitched_to, creature_x(c) as cx, creature_y(c) as cy
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+            where c.rider = p.uid or c.hitched_to in (select v.id from placed v where v.world_id = p.world_id and v.driver = p.uid)"
+          ask "stuck: driven vehicle" "select v.id, v.sub, v.x, v.y, v.level from placed v join player p on p.world_id = v.world_id and p.name = 'catgenova' where v.driver = p.uid"
+          ask "stuck: floors near" "select f.level, f.x, f.y, f.kind, f.facing, f.hand, f.needed = '{}'::jsonb or not exists (select 1 from jsonb_each(f.needed) e where (e.value)::numeric > 0) as done
+             from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova'
+            where f.x between floor(p.x)::int - 7 and floor(p.x)::int + 7 and f.y between floor(p.y)::int - 7 and floor(p.y)::int + 7 and f.level <= 2
+            order by f.level, f.y, f.x"
+          ask "stuck: walls near" "select w.level, w.dir, w.x, w.y, w.type from wall w join player p on p.world_id = w.world_id and p.name = 'catgenova'
+            where w.x between floor(p.x)::int - 7 and floor(p.x)::int + 8 and w.y between floor(p.y)::int - 7 and floor(p.y)::int + 8 and w.level <= 2
+            order by w.level, w.y, w.x, w.dir"
