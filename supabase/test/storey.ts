@@ -145,6 +145,34 @@ const enoughTheirs = theirSay('add_floor', '{"x":40,"y":40}');
 check('and with the ten it is allowed on both sides', enoughMine === 'ALLOWED' && enoughTheirs === 'ALLOWED',
   `browser "${enoughMine}", island "${enoughTheirs}"`);
 
+/* ---- a third storey plans over a second still going up ------------------- */
+/*
+ * Asked for: "After first storey is complete, no longer require completed
+ * storeys to plan 3+". Storey 2 here has no wall at all.
+ */
+setSkill('carpentry', 90);
+setLevels(2, 1);
+const thirdMine = mineSay('add_floor', {});
+const thirdTheirs = theirSay('add_floor', '{"x":40,"y":40}');
+check('a third storey plans over a second with no walls yet, on both sides',
+  thirdMine === 'ALLOWED' && thirdTheirs === 'ALLOWED', `browser "${thirdMine}", island "${thirdTheirs}"`);
+
+// While a second still asks the ground storey closed in.
+bld.removeWall(0, 40, 40, 'n');
+psql(`delete from wall where world_id = ${W} and level = 0 and dir = 'h' and x = 40 and y = 40;`);
+setLevels(1, 0);
+const openMine = mineSay('add_floor', {});
+const openTheirs = theirSay('add_floor', '{"x":40,"y":40}');
+check('while a second still asks the ground storey closed in, in the same words on both sides',
+  openMine.startsWith('Storey 1 not enclosed') && openTheirs === openMine, `browser "${openMine}", island "${openTheirs}"`);
+{
+  const w = bld.setWall(b, 0, 40, 40, 'n', 'solid', 'log');
+  for (const k of Object.keys(w.needed)) w.needed[k] = 0;
+  psql(`do $$ declare w uuid; begin select id into w from world where name = 'Hoarding';
+        insert into wall (world_id, level, dir, x, y, building, type, material, needed, total) values ${wallRow(40, 40, 'n', 0, 'solid', 'log')};
+        end $$;`);
+}
+
 /* ---- and what may be raised over it -------------------------------------- */
 setSkill('carpentry', 90);
 setLevels(2, 1);

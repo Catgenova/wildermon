@@ -676,8 +676,11 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (g.buildings.hasLowWall(b, b.levels - 1)) {
         return 'Storey below needs walls, or finished columns at both ends of each open side. Fences, half walls and railings carry nothing.';
       }
-      const below = gapText(b.levels, g.buildings.levelGaps(b, b.levels - 1, g.player.x, g.player.y));
-      if (below) return below;
+      // Only the ground storey closed in before a second; a third and up plans over one still going up.
+      if (b.levels === 1) {
+        const below = gapText(b.levels, g.buildings.levelGaps(b, b.levels - 1, g.player.x, g.player.y));
+        if (below) return below;
+      }
       return null;
     },
     perform: (t, g) => {

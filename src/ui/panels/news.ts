@@ -3602,6 +3602,13 @@ export const NEWS: News[] = [
       'Pinned: clicks land on that storey\'s floor and walk you there; its menu: that storey\'s walls, floors, columns, jetties, Plan staircase up, furniture set down on it. Roof work on the top storey.',
     ],
   },
+  {
+    n: 297,
+    day: '2026-10-24',
+    lines: () => [
+      'Changed: Plan another storey: only the ground storey must be closed in. 3rd storey and up: planned over a storey still going up.',
+    ],
+  },
 ];
 
 /**
