@@ -1,0 +1,46 @@
+# One fixed repair to the live island, run by hand. It writes; look.yml only reads.
+#
+# Asked about: "i am stuck cant go down". A drive down a wide staircase cut off partway left a body (riding, and
+# driving a wagon) stored on storey 2 at the foot of the flight, a tile with no storey-2 floor: every path from there
+# fails. This puts that body and its wagon on the ground at the same tile, only while they are still in that state.
+name: Mend the island
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mend:
+    name: One repair
+    runs-on: ubuntu-latest
+    environment: AI
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: latest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Mend
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          supabase db query --linked "
+            with stuck as (
+              select p.world_id, p.uid from player p
+               where p.name = 'catgenova' and p.level = 1 and floor(p.x)::int = 2586 and floor(p.y)::int = 3025
+                 and not exists (select 1 from floor_tile f where f.world_id = p.world_id and f.level = 1 and f.x = 2586 and f.y = 3025)
+            ), body as (
+              update player p set level = 0 from stuck s where p.world_id = s.world_id and p.uid = s.uid returning p.name, p.x, p.y, p.level
+            ), wagon as (
+              update placed v set level = 0 from stuck s
+               where v.world_id = s.world_id and v.driver = s.uid and v.level = 1 and v.x = 2586 and v.y = 3025
+              returning v.id, v.sub, v.x, v.y, v.level
+            )
+            select 'body' as what, name as id, x, y, level from body
+            union all select 'wagon', id::text || ' ' || sub, x, y, level from wagon"
