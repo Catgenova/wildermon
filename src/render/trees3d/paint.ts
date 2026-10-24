@@ -564,7 +564,7 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
       // The lit plane only on the lumps turned to the sun and up: the rest are in the cluster's own shade.
       if (lit && (u.x - ccx) * sun.sx + (u.y - ccy) * sun.sy - (u.y - ccy) * 0.5 < -u.rx * 0.35) continue;
       // A plane is inside the mass: lumpy, with no leaves standing out of it.
-      massPath(p, u.x + sun.sx * u.rx * along * off, u.y + sun.sy * u.ry * along * off + u.ry * down, u.rx * k, u.ry * k, outlineOf(mulberry32(u.seed + n), 0), 0.9, edge, 10);
+      massPath(p, u.x + sun.sx * u.rx * along * off, u.y + sun.sy * u.ry * along * off + u.ry * down, u.rx * k, u.ry * k, outlineOf(mulberry32(u.seed + n), 0), 0.9, edge, 14);
     }
     g.fillStyle = col;
     g.fill(p);
@@ -790,7 +790,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
     // A cluster: its lumps' outlines in the one path, filled as one.
     if (s.c.subs) {
       const lumps = lumpsOf(job, s);
-      for (const u of lumps) massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec), 16);
+      for (const u of lumps) massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec), 24);
       return { o, path, lumps };
     }
     const [cx, cy] = proj(e, s.c.c);
@@ -1065,7 +1065,16 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
     y0 = Math.min(y0, y - rr); y1 = Math.max(y1, y + rr);
   };
   for (const L of sk.limbs) { take(L.a, L.ra); take(L.b, L.rb); }
-  for (const c of sk.clumps) take(c.c, c.r * (sk.leafReach ?? 1.45));
+  for (const c of sk.clumps) {
+    if (!c.subs) { take(c.c, c.r * (sk.leafReach ?? 1.45)); continue; }
+    // A cluster by its lumps: each out to its leaves' tips across, and no more than a mass's height up and down.
+    for (const u of c.subs) {
+      const [x, y] = proj(e, [c.c[0] + u.o[0], c.c[1] + u.o[1], c.c[2] + u.o[2]]);
+      const rx = u.r * ACROSS * 1.5 + KIT_INK_W * 2, ry = u.r * ACROSS * 0.86 * 1.5 + KIT_INK_W * 2;
+      x0 = Math.min(x0, x - rx); x1 = Math.max(x1, x + rx);
+      y0 = Math.min(y0, y - ry); y1 = Math.max(y1, y + ry);
+    }
+  }
   // The litter round its foot.
   const reach = Math.min(16, sk.crown.r * 0.55) + 2;
   for (const a of [0, 1, 2, 3]) take([Math.cos(a * Math.PI / 2) * reach, Math.sin(a * Math.PI / 2) * reach, 0], 1);
