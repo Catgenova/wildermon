@@ -65,7 +65,7 @@ import {
   type TrapKind,
 } from './traps';
 import { BAIT_BY_ID, FISH, fishHere, pickFish, waterDepth } from './fishing';
-import { across, BRIDGES, sideStep, bridgeDone, bridgeLevels, bridgeWheels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
+import { across, BRIDGES, sideStep, bridgeDone, deckLane, bridgeLevels, bridgeWheels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
 import { AQ_NOT_THROWN, AQ_OVER, channelOf, fitIntoChannel } from './aqueducts';
 import { AQUEDUCT_LPS, aqueductShut, type Channel } from '../world/aqueducts';
 import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hingeOf, isDrawbridge, keepHiddenAsks } from './gates';
@@ -2477,6 +2477,23 @@ export class Game {
       for (let x = Math.min(ax, t.x) + lo * px; x <= Math.max(ax, t.x) + hi * px; x++) out.push([x, y]);
     }
     return out;
+  }
+
+  /**
+   * Whether a piece standing on a tile stands on a bridge's deck there rather
+   * than on the ground under it: wheels, which only come onto a deck from
+   * its end, and anything set down on an outer lane of a wide one
+   * (`deckLane`). What is drawn, nothing more.
+   */
+  pieceOnDeck(f: { kind: string; level?: number }, x: number, y: number): boolean {
+    if (furnitureDef(f.kind).boat) return false;
+    return furnitureDef(f.kind).vehicle ? this.onWalkedDeck(x, y) : this.deckLaneAt(x, y);
+  }
+
+  /** Whether a thing set down on a tile is on a bridge's deck there: an outer lane of a wide one (`deckLane`). */
+  deckLaneAt(x: number, y: number): boolean {
+    const b = this.bridges.size ? this.bridgeAt(x, y) : undefined;
+    return !!b && b.kind !== 'aqueduct' && deckLane(b, x, y);
   }
 
   /** The bridge one of whose two ends is this tile, if any. */
@@ -9226,14 +9243,15 @@ export class Game {
       for (let dy = 0; dy < fh; dy++) for (let dx = 0; dx < fw; dx++) if (this.occupiedSubtile(x, y, ax + dx, ay + dy, except)) return 'Something already in the water there.';
       return null;
     }
-    // Under a bridge's deck, on it: only a wide material bridge's outer lanes take a piece (`deckFurnitureRefusal`).
+    // On a bridge's deck, a wide material bridge's outer lanes; under it anywhere else, high enough over the ground (`deckFurnitureRefusal`).
     const over = this.bridges.size ? this.bridgeAt(x, y) : undefined;
     const bridged = !!over && over.kind !== 'aqueduct';
     if (over && bridged) {
-      const why = deckFurnitureRefusal(over, x, y);
+      const why = deckFurnitureRefusal(over, x, y, deckHeight(over, x + 0.5, y + 0.5) - this.surfaceHeight(x, y));
       if (why) return why;
     }
-    const deck = bridged ? true : this.deckFooting(x, y);
+    // On the deck, the deck is the footing; under it, the ground.
+    const deck = bridged && deckLane(over, x, y) ? true : this.deckFooting(x, y);
     if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Furniture needs dry, solid ground.';
     const steepest = 16;
     if (deck === null && this.world.slope(x, y) > steepest) return `Too uneven: slope over ${metres(steepest)} m.`;

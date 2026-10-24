@@ -4298,8 +4298,8 @@ export class Renderer {
             fe.piece = fu;
             fe.view = this.viewOf(fu);
             if (fu.rare) fe.rare = fu.rare;
-            // On a bridge's deck, among its pieces (`deckKey`): a stall on an outer lane, a wagon crossing.
-            if (!furnitureDef(fu.kind).boat) this.onBridgeDeck(fe, wx, wy);
+            // On a bridge's deck, among its pieces (`deckKey`): a stall on an outer lane, a wagon crossing. Anything else is under it (`pieceOnDeck`).
+            if (this.game.bridges.size && this.game.pieceOnDeck(fu, Math.floor(wx), Math.floor(wy))) this.onBridgeDeck(fe, wx, wy);
             if (fu.helm || fu.riders?.length || player.aboard === fu.id || this.helming === fu) this.takeAboard(fu, fe, x, y, zoom);
             // A cart on the move rocks and bumps on the track under her driver, and her driver with her (`cartSwayOf`).
             if (reinsTo(fu.kind)) fe.sway = this.cartSwayOf(fu, fe.sx, fe.sy, zoom);
@@ -5042,16 +5042,22 @@ export class Renderer {
     const up = f.level ?? 0;
     if (up > 0) return this.footOn(wx, wy, up) + up * WALL_HEIGHT;
     const h = this.game.world.heightAt(wx, wy);
-    return furnitureDef(f.kind).boat ? Math.max(h, 0) : this.standTop(wx, wy);
+    // On a bridge's deck, or on the ground under it (`pieceOnDeck`).
+    return furnitureDef(f.kind).boat ? Math.max(h, 0) : this.standTop(wx, wy, this.game.bridges.size > 0 && this.game.pieceOnDeck(f, Math.floor(wx), Math.floor(wy)));
   }
 
   /** Whether a tile stands on piers, for the pond painter (`WaterFrame.decked`). */
   private readonly pierOver = (x: number, y: number): boolean => this.game.buildings.onPiers(x, y);
 
-  /** How high a thing set down at a point stands: on the finished deck of a tile on piers or of a bridge, or on the ground. */
-  private standTop(wx: number, wy: number): number {
+  /**
+   * How high a thing set down at a point stands: on the finished deck of a
+   * tile on piers, or of a bridge where it is set down on the deck (an outer
+   * lane of a wide one, `deckLaneAt`, or `deck` as its caller has it), or on
+   * the ground, which is under any other bridge's deck.
+   */
+  private standTop(wx: number, wy: number, deck = this.game.bridges.size > 0 && this.game.deckLaneAt(Math.floor(wx), Math.floor(wy))): number {
     return (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(Math.floor(wx), Math.floor(wy)) : null)
-      ?? (this.game.bridges.size ? this.game.deckHeightAt(wx, wy) : null) ?? this.game.world.heightAt(wx, wy);
+      ?? (deck ? this.game.deckHeightAt(wx, wy) : null) ?? this.game.world.heightAt(wx, wy);
   }
 
   /** Something standing at a point on a bridge's walked deck sorts among the bridge's pieces as standing on it (`deckKey`). */

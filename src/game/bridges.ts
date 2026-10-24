@@ -307,16 +307,27 @@ export const bridgeWheels = (b: Bridge, vehicle: string): boolean =>
   !!BRIDGES[b.kind]?.carts && (vehicle !== 'wagon' || bridgeWidth(b) >= WAGON_WIDTH);
 
 /**
- * Why a piece of furniture may not be set down on a bridge's deck here, or
- * null where it may: on a finished material bridge `STALL_WIDTH` lanes wide,
- * on either of its outer lanes. The island's `bridge_furniture_refusal`.
+ * Whether a piece set down on this tile of a bridge's deck goes on the deck:
+ * on either outer lane of a material bridge `STALL_WIDTH` lanes wide.
+ * Anywhere else under a deck it goes on the ground under it.
  */
-export function deckFurnitureRefusal(b: Bridge, x: number, y: number): string | null {
-  if (!isMaterialBridge(b.kind) || bridgeWidth(b) < STALL_WIDTH) return `Bridge deck: furniture only on a ${STALL_WIDTH}-lane bridge's outer lanes.`;
+export function deckLane(b: Bridge, x: number, y: number): boolean {
+  if (!isMaterialBridge(b.kind) || bridgeWidth(b) < STALL_WIDTH) return false;
   const o = laneOf(b, x, y);
-  if (o === null || o === 0) return `Bridge deck: outer lanes only.`;
-  if (!bridgeDone(b)) return 'Bridge deck not finished.';
-  return null;
+  return o !== null && o !== 0;
+}
+
+/**
+ * Why a piece of furniture may not be set down on this tile of a bridge's
+ * deck, or under it, or null where it may: on the deck of an outer lane of a
+ * finished material bridge `STALL_WIDTH` lanes wide (`deckLane`); anywhere
+ * else on the ground under the deck, `over` over it there, at `CLEARANCE`
+ * or more. The island's `bridge_furniture_refusal`.
+ */
+export function deckFurnitureRefusal(b: Bridge, x: number, y: number, over: number): string | null {
+  if (deckLane(b, x, y)) return bridgeDone(b) ? null : 'Bridge deck not finished.';
+  if (over >= CLEARANCE) return null;
+  return `Under a bridge deck: needs ${metres(CLEARANCE)} m clearance.`;
 }
 
 export interface BridgeSpan extends Bill {

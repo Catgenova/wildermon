@@ -15,8 +15,9 @@
  *     storey of drop, one, two and three lanes, and what is said of it;
  *   * a wagon onto a bridge of two lanes and not one; a cart onto either;
  *     and the same from the bridge's end, where it stands already;
- *   * furniture on a three-lane bridge's outer lanes and not its middle one,
- *     nor on a two-lane one;
+ *   * furniture on a three-lane bridge's outer lanes, and under any other
+ *     lane's deck where it is `CLEARANCE` over the ground, and not under one
+ *     lower;
  *   * no lane's deck wears the ground under it (`wearStep`, `wear_walk`),
  *     and a laden cart on an outer lane of your own bridge counts for the
  *     journal (`journal_move`);
@@ -161,10 +162,18 @@ const setSql = SET.map((s) => {
   insert into said values ('ROW:${s.name}', (select b.kind || '|' || b.width || '|' || b.side || '|' || bridge_gear(b)::text from bridge b where b.world_id = w and b.ax = ${AX} and b.ay = ${s.y}));`;
 }).join('\n');
 
+/** A tile of the one-lane plank bridge's deck, and how far under its deck its ground is raised to: under `CLEARANCE`. */
+const LOW_AT: [number, number] = [27, 17];
+const LOW = CLEARANCE - 1;
 const lanes = (s: (typeof SET)[number]): number[] => (s.width === 3 ? [-1, 0, 1] : s.width === 2 ? [0, 1] : [0]);
 const furnSql = SET.flatMap((s) => lanes(s).map((o) => `
   insert into said values ('FURN:${s.name}:${o}', coalesce(fire_refusal(w, u, 'place_furniture',
-    jsonb_build_object('kind', 'tile', 'x', 25, 'y', ${s.y + o}, 'cx', 25, 'cy', ${s.y + o}, 'sx', 0, 'sy', 0, 'facing', 's', 'itemUid', v_stool)), 'ALLOWED'));`)).join('\n');
+    jsonb_build_object('kind', 'tile', 'x', 25, 'y', ${s.y + o}, 'cx', 25, 'cy', ${s.y + o}, 'sx', 0, 'sy', 0, 'facing', 's', 'itemUid', v_stool)), 'ALLOWED'));`)).join('\n')
+  // And under a tile of the one-lane plank bridge whose ground is raised to within CLEARANCE of its deck.
+  + `
+  perform land_set_height(w, gx, gy, ${BASE - LOW}) from generate_series(${LOW_AT[0]}, ${LOW_AT[0] + 1}) gx, generate_series(${LOW_AT[1]}, ${LOW_AT[1] + 1}) gy;
+  insert into said values ('FURN:LOW', coalesce(fire_refusal(w, u, 'place_furniture',
+    jsonb_build_object('kind', 'tile', 'x', ${LOW_AT[0]}, 'y', ${LOW_AT[1]}, 'cx', ${LOW_AT[0]}, 'cy', ${LOW_AT[1]}, 'sx', 0, 'sy', 0, 'facing', 's', 'itemUid', v_stool)), 'ALLOWED'));`;
 const wheelSql = ['PLANK2', 'PLANK1'].flatMap((n) => {
   const s = SET.find((x) => x.name === n)!;
   return ['wagon', 'large_cart'].map((v) => `
@@ -340,11 +349,19 @@ for (const n of ['PLANK2', 'PLANK1']) {
 for (const s of SET) {
   for (const o of lanes(s)) {
     const mine = game.furniturePlaceReason('stool', 25, s.y + o, 0, 0, 's') ?? ALLOWED;
-    const want = s.width >= STALL_WIDTH && o !== 0 ? ALLOWED
-      : s.width >= STALL_WIDTH ? 'Bridge deck: outer lanes only.' : `Bridge deck: furniture only on a ${STALL_WIDTH}-lane bridge's outer lanes.`;
-    check(`a stool on ${s.name}'s lane ${o}: ${want === ALLOWED ? 'set down' : 'refused'} on both sides`,
-      mine === want && theirs(`FURN:${s.name}:${o}`) === want, `browser ${mine}; island ${theirs(`FURN:${s.name}:${o}`)}`);
+    // On the deck of a three-lane bridge's outer lanes; under the deck anywhere else, over this ravine.
+    const onDeck = s.width >= STALL_WIDTH && o !== 0;
+    check(`a stool on ${s.name}'s lane ${o}: set down ${onDeck ? 'on the deck' : 'under it'} on both sides`,
+      mine === ALLOWED && theirs(`FURN:${s.name}:${o}`) === ALLOWED && game.pieceOnDeck({ kind: 'stool' }, 25, s.y + o) === onDeck,
+      `browser ${mine}; island ${theirs(`FURN:${s.name}:${o}`)}`);
   }
+}
+{
+  for (let y = LOW_AT[1]; y <= LOW_AT[1] + 1; y++) for (let x = LOW_AT[0]; x <= LOW_AT[0] + 1; x++) world.setHeight(x, y, BASE - LOW);
+  const mine = game.furniturePlaceReason('stool', LOW_AT[0], LOW_AT[1], 0, 0, 's') ?? ALLOWED;
+  const want = `Under a bridge deck: needs ${metres(CLEARANCE)} m clearance.`;
+  check('and refused under a deck under CLEARANCE over the ground, in the same words', mine === want && theirs('FURN:LOW') === want,
+    `browser ${mine}; island ${theirs('FURN:LOW')}`);
 }
 
 /* ---- every lane: worn, driven ---------------------------------------------------------------------- */
