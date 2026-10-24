@@ -13,8 +13,8 @@ import {
  * stone brick, slate and cobblestone -- share: tones taken off their
  * houses' own colours, painters that lay a face in courses or rubble a
  * stone at a time, voussoirs that follow their arch, runes cut upright, and
- * `framed`, which hands every painter the true extent of its face in its own
- * frame and, for an arch ring, the arch it is on.
+ * `framed`, which tells every painter whether its face lies mirrored and,
+ * for an arch ring, the arch it is on.
  */
 
 /* ---- tones ----------------------------------------------------------------------------------- */
@@ -115,7 +115,7 @@ function arcLength(f: (s: number) => number, c: number, s: number): number {
   return s < c ? -len : len;
 }
 
-/** A kit whose faces reach their painters with their true extent in their frames, an arch ring's arch, and a frame for the underside of a vault. */
+/** A kit whose faces reach their painters with which way their frames lie, an arch ring's arch, and a frame for the underside of a vault. */
 function framedKit(k: Kit): Kit {
   const face: Kit['face'] = (part, pts, out, tone, info, frame) => {
     let inf: Placed | undefined = info;
@@ -135,13 +135,8 @@ function framedKit(k: Kit): Kit {
       }
     }
     if (inf && fr) {
-      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-      for (const p of pts) {
-        const [x, y] = inFrame(fr, p);
-        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
-      }
-      // Whether the frame lies mirrored on the screen, for a rune cut in it to be turned back.
-      inf = { ...inf, x0, x1, y0, y1, flip: mirrored(k, fr), sx: Math.abs(fr.a[0]) > 1e-9 ? Math.sign(fr.a[0]) : 0 };
+      // Its run in its frame the core works out from its points; here, whether the frame lies mirrored on the screen, for a rune cut in it to be turned back.
+      inf = { ...inf, flip: mirrored(k, fr), sx: Math.abs(fr.a[0]) > 1e-9 ? Math.sign(fr.a[0]) : 0 };
       if (inf.role === 'ring' && !inf.soffit) inf.arc = arcOf(k.plan, fr, pts[0][0], pts[1][0], pts[0][1], pts[0][2]);
     }
     k.face(part, pts, out, tone, inf, fr);
@@ -546,8 +541,10 @@ export const infoOf = (role: Role, x0: number, x1: number, y0: number, y1: numbe
 
 /** A box as the core's (`box`), but its top painted as `top` rather than as a cap, or not at all. */
 export function block(k: Kit, part: Part3, s0: number, s1: number, t0: number, t1: number, z0: number, z1: number, tone: Tone, role: Role, top: Role | null, order?: number): void {
-  const { sl } = k;
-  const a = Math.max(s0, sl.s0), b = Math.min(s1, sl.s1), c = Math.max(t0, sl.t0), d = Math.min(t1, sl.t1);
+  const { sl, plan } = k;
+  // Clipped across only at a cut between two lanes, as the core's, so what stands proud of an outer edge keeps its outer face.
+  const a = Math.max(s0, sl.s0), b = Math.min(s1, sl.s1);
+  const c = sl.t0 > plan.tLo + 1e-6 ? Math.max(t0, sl.t0) : t0, d = sl.t1 < plan.tHi - 1e-6 ? Math.min(t1, sl.t1) : t1;
   if (b - a < 1e-4 || d - c < 1e-4 || z1 - z0 < 1e-4) return;
   k.solid(part, order);
   const seed = Math.round(s0 * 97 + t0 * 13);
@@ -643,6 +640,8 @@ export function keystones(k: Kit, w: number, below: number, above: number): void
   const { plan, sl, st } = k;
   const ringD = st.ringDepth ?? 3.2;
   for (const edge of sl.edges) {
+    // Not on an outer edge turned from the eye, where it would show through the arches (as the core's rings).
+    if (edge * dot(k.P, k.e.toward) < -1e-6) continue;
     const t = edge > 0 ? sl.t1 : sl.t0;
     for (const bay of plan.bays) {
       for (const crown of [bay.crown, bay.lowerCrown]) {
@@ -684,7 +683,8 @@ export function archesKeyed(w: number, below: number, above: number): Builders['
 /** A newel at an abutment, as the core's but its own: plinth, shaft, a cap overhanging it and a finial turned on that. */
 export function newelPost(k: Kit, part: Part3, s: number, t: number, z: number, o: { shaft: number; half: number; tone: Tone; trim: Tone; finial: Tone; profile: ReadonlyArray<[number, number]>; crenel?: boolean }): void {
   const h = o.half;
-  if (ownerOf(k, s - h - 0.02, s + h + 0.02) === null) return;
+  // Its run along the bridge, kept to the bridge: at an end there is no slice beyond to own it.
+  if (ownerOf(k, Math.max(0, s - h - 0.02), Math.min(k.plan.n, s + h + 0.02)) === null) return;
   block(k, part, s - h - 0.015, s + h + 0.015, t - h - 0.015, t + h + 0.015, z, z + 2.4, o.trim, 'plinth', null, 3);
   block(k, part, s - h, s + h, t - h, t + h, z + 2.4, z + o.shaft, o.tone, 'post', null, 3.1);
   block(k, part, s - h - 0.018, s + h + 0.018, t - h - 0.018, t + h + 0.018, z + o.shaft, z + o.shaft + 1.8, o.trim, 'plinth', null, 3.2);
@@ -786,8 +786,8 @@ function crenelEnds(k: Kit): void {
     const tt = edge > 0 ? sl.t1 - 0.075 : sl.t0 + 0.075;
     const part: Part3 = edge === sl.near ? 'rail' : 'front';
     const o = { shaft: LOW + COPE + MERLON + 1, half: 0.075, tone: st.stone, trim: st.trim, finial: st.ring, crenel: true, profile: [[0, 0.03], [0.8, 0.04], [2.2, 0.05], [3.6, 0.034], [4.4, 0.012], [4.9, 0]] as Array<[number, number]> };
-    if (sl.i === 0) newelPost(k, part, 0.075, tt, plan.deck(0.075), o);
-    if (sl.i === plan.n - 1) newelPost(k, part, plan.n - 0.075, tt, plan.deck(plan.n - 0.075), o);
+    if (sl.i === 0) newelPost(k, part, 0.095, tt, plan.deck(0.095), o);
+    if (sl.i === plan.n - 1) newelPost(k, part, plan.n - 0.095, tt, plan.deck(plan.n - 0.095), o);
   }
 }
 
