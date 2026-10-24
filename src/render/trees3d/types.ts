@@ -103,6 +103,17 @@ export interface Build {
   /** A rune cut in the bark. */
   rune: boolean;
   hollow: boolean;
+  /**
+   * How it is grown: 'dome' (`grow`) a few sinuous limbs under one dome of
+   * big masses; 'spreading' (`growSpreading`) a short trunk on buttress roots
+   * splitting low into crooked limbs, the lowest near level, under an open
+   * crown of many small masses on the branch ends.
+   */
+  habit?: 'dome' | 'spreading';
+  /** Spreading: share of the scaffold limbs that reach out near level. */
+  low?: number;
+  /** Spreading: how far a limb turns at each elbow, radians. */
+  zig?: number;
 }
 
 /** A run of tones from the deepest shade to the lit top: a clump is painted in four neighbours on it. */
@@ -129,8 +140,14 @@ export interface Species3D {
   /** Each age's build: the mature one, and what each other age changes. */
   build: Build;
   ages: Partial<Record<AgeKey, Partial<Build>>>;
-  /** Bark in the light and in shade, and the dead wood's. */
-  bark: { lit: string; shade: string; dead: string; furrow: string };
+  /** Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk and the roots, where it has any. */
+  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string };
+  /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed. */
+  leafForm?: 'maple' | 'oak';
+  /** A mass's height on the screen against its width: 0.86 unless given. */
+  pad?: number;
+  /** An open crown: the wood laid among the masses by depth, the branches seen through the gaps. */
+  open?: boolean;
   /** The leaf through the year. A ramp runs from the deepest shade to the lit top. */
   leaf: {
     summer: Ramp;

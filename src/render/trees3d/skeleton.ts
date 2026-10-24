@@ -22,6 +22,7 @@ const bezier = (a: V3, b: V3, c: V3, d: V3, t: number): V3 => {
 
 /** Grow a tree `height` units tall to a build, from a seed. */
 export function grow(b: Build, height: number, seed: number): Skeleton {
+  if (b.habit === 'spreading') return growSpreading(b, height, seed);
   const R = mulberry32(seed);
   const H = height;
   const stemZ = H * b.stem;
@@ -179,6 +180,211 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
   return {
     limbs, clumps, crown: env, height: H,
     // Cut where it is seen from the first turn of the camera.
+    rune: b.rune ? toward(Math.PI / 4) : null,
+    hollow: b.hollow ? toward(Math.PI / 4 + 1.1) : null,
+  };
+}
+
+/* ---- a spreading tree ---- */
+
+/**
+ * A spreading tree, grown from a seed, crown first: its masses of leaf set
+ * round the top of a broad, low ellipsoid with gaps between them; a short,
+ * massive trunk on buttress roots splitting low into a few thick, crooked
+ * limbs, each taking the masses on its side of the crown -- the lowest
+ * reaching out near level -- and a crooked branch from a limb's elbow into
+ * each mass, with twigs off its end.
+ */
+export function growSpreading(b: Build, height: number, seed: number): Skeleton {
+  const R = mulberry32(seed);
+  const H = height;
+  const stemZ = H * b.stem;
+  const rz = (H - stemZ) * b.dome;
+  const leanA = R() * TAU;
+  const leanD: V3 = [Math.cos(leanA), Math.sin(leanA), 0];
+  const sideD: V3 = [-leanD[1], leanD[0], 0];
+  const env: Envelope = { c: [leanD[0] * b.lean, leanD[1] * b.lean, H - rz], r: H * b.spread, rz };
+  const limbs: Limb[] = [];
+  const r0 = H * b.girth;
+  const zig = b.zig ?? 0.5;
+
+  /* ---- the trunk: short and thick, swelling to its foot ---- */
+  const bend = (R() - 0.5) * 2 * b.gnarl * r0 * 0.8;
+  const trunkAt = (f: number): V3 => {
+    const s = Math.sin(f * Math.PI) * bend;
+    return [leanD[0] * b.lean * f + sideD[0] * s, leanD[1] * b.lean * f + sideD[1] * s, stemZ * f];
+  };
+  const trunkR = (f: number): number => r0 * (1 - 0.18 * f + 0.3 * Math.pow(Math.max(0, 1 - f / 0.4), 2));
+  const TRUNK = 5;
+  for (let i = 0; i < TRUNK; i++) {
+    const f0 = i / TRUNK, f1 = (i + 1) / TRUNK;
+    limbs.push({ a: trunkAt(f0), b: trunkAt(f1), ra: trunkR(f0), rb: trunkR(f1), order: 0, parent: i - 1, bough: -1 });
+  }
+
+  /* ---- buttress roots: down off the trunk in an elbow and out along the ground ---- */
+  const roots = b.flare > 1.15 ? 5 + Math.round(R() * 2) : 0;
+  const rootA = R() * TAU;
+  for (let i = 0; i < roots; i++) {
+    const a = rootA + (i / roots) * TAU + (R() - 0.5) * 0.6;
+    const bendA = a + (R() - 0.5) * 0.6;
+    const reach = r0 * b.flare * (0.8 + 0.35 * R());
+    const top: V3 = [Math.cos(a) * r0 * 0.4, Math.sin(a) * r0 * 0.4, r0 * (1.3 + 0.7 * R())];
+    const knee: V3 = [Math.cos(a) * r0 * 1.0, Math.sin(a) * r0 * 1.0, r0 * (0.3 + 0.12 * R())];
+    const end: V3 = [Math.cos(bendA) * reach, Math.sin(bendA) * reach, r0 * 0.04];
+    const first = limbs.length;
+    limbs.push({ a: top, b: knee, ra: r0 * 0.6, rb: r0 * 0.4, order: -1, parent: 0, bough: -1 });
+    limbs.push({ a: knee, b: end, ra: r0 * 0.4, rb: r0 * 0.12, order: -1, parent: first, bough: -1 });
+  }
+
+  /** A crooked run from `a` to `z` in `k` elbows, each turned the other way across: its points. */
+  const crooked = (a: V3, z: V3, k: number, amp: number): V3[] => {
+    const d = sub(z, a);
+    const L = len(d) || 1;
+    const u = mul(d, 1 / L);
+    const side = across(u);
+    const up = unit(sub([0, 0, 1], mul(u, u[2])));
+    const sgn = R() < 0.5 ? -1 : 1;
+    const pts: V3[] = [a];
+    for (let j = 1; j < k; j++) {
+      const t = (j + (R() - 0.5) * 0.35) / k;
+      const w = (j % 2 ? sgn : -sgn) * amp * L * (0.6 + 0.6 * R()) * Math.sin(Math.PI * t) ** 0.5;
+      const h = (R() - 0.3) * amp * L * 0.5;
+      pts.push(add(add(add(a, mul(d, t)), mul(side, w)), mul(up, h)));
+    }
+    pts.push(z);
+    return pts;
+  };
+  const run = (pts: V3[], ra: number, rb: number, order: number, parent: number, bough: number, dead: boolean): number[] => {
+    const out: number[] = [];
+    let up = parent;
+    for (let i = 1; i < pts.length; i++) {
+      const idx = limbs.length;
+      const t0 = (i - 1) / (pts.length - 1), t1 = i / (pts.length - 1);
+      limbs.push({ a: pts[i - 1], b: pts[i], ra: ra + (rb - ra) * t0, rb: ra + (rb - ra) * t1, order, parent: up, bough, dead });
+      out.push(idx);
+      up = idx;
+    }
+    return out;
+  };
+
+  /* ---- where the masses go: round the top of the crown, the top one first ---- */
+  const want = b.bare ? 0 : Math.max(1, Math.round(b.clumps));
+  const rm = env.r * b.clumpSize;
+  const spots: Array<{ c: V3; az: number; el: number }> = [];
+  const GOLD = Math.PI * (3 - Math.sqrt(5));
+  const azR = R() * TAU;
+  for (let i = 0; i < want; i++) {
+    // Even over the shell from its top down to a little under its middle, a golden turn apart.
+    const s = 1 - ((i + 0.5) / want) * 1.55;
+    const el = Math.asin(Math.max(-1, Math.min(1, s))) + (R() - 0.5) * 0.18;
+    const az = azR + i * GOLD + (R() - 0.5) * 0.35;
+    const k = 0.72 + 0.2 * R();
+    spots.push({ c: [env.c[0] + Math.cos(az) * Math.cos(el) * env.r * k, env.c[1] + Math.sin(az) * Math.cos(el) * env.r * k, env.c[2] + Math.sin(el) * rz * k], az, el });
+  }
+
+  /* ---- the limbs, each to its side of the crown ---- */
+  const n = Math.max(1, Math.round(b.scaffolds));
+  const a0 = R() * TAU;
+  const lowN = Math.round(n * (b.low ?? 0.4));
+  const lowOnes = new Set<number>();
+  for (let k = 0; k < lowN; k++) lowOnes.add(Math.floor(((k + 0.5) / Math.max(1, lowN)) * n));
+  const highs = [...Array(n).keys()].filter((i) => !lowOnes.has(i));
+  const deadOnes = new Set<number>();
+  for (let k = 0; k < Math.min(highs.length, Math.round(b.dead)); k++) deadOnes.add(highs[Math.floor(R() * highs.length)]);
+  const azOf = [...Array(n).keys()].map((i) => a0 + (i / n) * TAU + (R() - 0.5) * (TAU / n) * 0.4);
+  const angle = (a: number, c: number): number => Math.abs(((a - c + Math.PI * 3) % TAU) - Math.PI);
+  // Each mass to the limb nearest round the trunk: the low ones' masses low, the rest's high.
+  const mine: number[][] = azOf.map(() => []);
+  spots.forEach((s, k) => {
+    let best = 0, bd = Infinity;
+    azOf.forEach((a, i) => {
+      const lowSpot = s.el < 0.35;
+      const d = angle(s.az, a) + (lowOnes.has(i) === lowSpot || !lowN ? 0 : 0.9);
+      if (d < bd) { bd = d; best = i; }
+    });
+    mine[best].push(k);
+  });
+  const clumps: Clump[] = [];
+  for (let i = 0; i < n; i++) {
+    const low = lowOnes.has(i);
+    const f = low ? 0.62 + 0.2 * R() : 0.84 + 0.16 * R();
+    const B = trunkAt(f);
+    const dead = b.bare || deadOnes.has(i);
+    // Out under its masses: a low limb near level to the rim, the rest up into the crown.
+    let az = azOf[i], out = 0, top = 0;
+    if (mine[i].length) {
+      let sx = 0, sy = 0;
+      for (const k of mine[i]) { sx += spots[k].c[0] - B[0]; sy += spots[k].c[1] - B[1]; top += spots[k].c[2]; out += Math.hypot(spots[k].c[0] - B[0], spots[k].c[1] - B[1]); }
+      az = Math.atan2(sy, sx);
+      out /= mine[i].length;
+      top /= mine[i].length;
+    } else {
+      // No masses on it (a bare tree): out and up into where its crown was, broken back.
+      out = env.r * (low ? 0.85 : 0.7);
+      top = env.c[2] + (low ? 0 : rz * 0.4);
+    }
+    const reach = out * (low ? 0.8 + 0.1 * R() : mine[i].length ? 0.45 + 0.15 * R() : 0.6 + 0.2 * R());
+    const lift = low ? Math.max(stemZ * 0.15, top - B[2] - rm * 1.3) : (top - B[2]) * (0.5 + 0.2 * R());
+    const T: V3 = [B[0] + Math.cos(az) * reach, B[1] + Math.sin(az) * reach, B[2] + lift];
+    const pts = crooked(B, T, 4, zig * 0.3);
+    // A low limb sags between its elbows and turns up at its end.
+    if (low) for (let j = 1; j < pts.length - 1; j++) pts[j][2] -= Math.sin((j / (pts.length - 1)) * Math.PI) * reach * b.droop * 0.25;
+    const rb = trunkR(f) * (0.55 + 0.1 * R());
+    const pieces = run(pts, rb, rb * 0.42, 1, Math.min(TRUNK - 1, Math.floor(f * TRUNK - 1e-6)), i, dead);
+    // A branch from the elbow nearest each of its masses, into it.
+    for (const k of mine[i]) {
+      const s = spots[k];
+      let at = pieces[pieces.length - 1], bd = Infinity;
+      for (const p of pieces.slice(1)) {
+        const dd = len(sub(limbs[p].b, s.c));
+        if (dd < bd) { bd = dd; at = p; }
+      }
+      const P = limbs[at];
+      const end: V3 = dead ? lerp(P.b, s.c, 0.6) : [s.c[0], s.c[1], s.c[2] - rm * 0.25];
+      const r = Math.max(0.15, P.rb * (0.55 + 0.15 * R()));
+      const bp = run(crooked(P.b, end, 3, zig * 0.2), r, r * 0.4, 2, at, i, dead);
+      const last = bp[bp.length - 1];
+      // Twigs off the end, out through the mass.
+      const tw = 2 + Math.floor(R() * 2);
+      for (let t = 0; t < tw && b.forks >= 2; t++) {
+        const ta = s.az + (R() - 0.5) * 2.2;
+        const tz = 0.3 + 0.7 * R();
+        const tl = rm * (dead ? 0.5 : 0.85 + 0.3 * R());
+        const tip: V3 = add(limbs[last].b, mul(unit([Math.cos(ta), Math.sin(ta), tz]), tl));
+        run(crooked(limbs[last].b, tip, 2, zig * 0.12), r * 0.4, r * 0.15, 3, last, i, dead);
+      }
+      if (!dead) {
+        const cr = rm * (0.88 + 0.28 * R());
+        clumps.push({
+          c: s.c, r: cr, limb: last, k: R(),
+          out: Math.min(1, outOf(env, s.c)),
+          up: Math.max(0, Math.min(1, (s.c[2] - (env.c[2] - rz)) / (2 * rz))),
+        });
+      }
+    }
+    // A limb with nothing on it -- a dead one, a bare tree's -- still forks at its elbows.
+    if (!mine[i].length || b.bare) {
+      for (const p of pieces.slice(1)) {
+        const P = limbs[p];
+        const ta = az + (R() - 0.5) * 1.6;
+        const tl = env.r * (0.22 + 0.14 * R());
+        const tip = add(P.b, mul(unit([Math.cos(ta), Math.sin(ta), 0.5 + 0.6 * R()]), tl));
+        const r = Math.max(0.15, P.rb * 0.6);
+        const bp = run(crooked(P.b, tip, 2, zig * 0.3), r, r * 0.4, 2, p, i, dead);
+        if (b.forks >= 2) {
+          const last = limbs[bp[bp.length - 1]];
+          run(crooked(last.b, add(last.b, mul(unit([Math.cos(ta + 0.8), Math.sin(ta + 0.8), 0.8]), tl * 0.5)), 2, zig * 0.25), r * 0.4, r * 0.15, 3, bp[bp.length - 1], i, dead);
+        }
+      }
+    }
+  }
+  for (let i = 0; i < limbs.length; i++) {
+    const L = limbs[i];
+    if (L.order >= 1 && !limbs.some((m) => m.parent === i)) L.tip = true;
+  }
+  const toward = (a: number): number => a + (R() - 0.5) * 0.5;
+  return {
+    limbs, clumps, crown: env, height: H,
     rune: b.rune ? toward(Math.PI / 4) : null,
     hollow: b.hollow ? toward(Math.PI / 4 + 1.1) : null,
   };

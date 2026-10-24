@@ -100,6 +100,24 @@ function leafAt(g: Ctx | Path2D, x: number, y: number, s: number, a: number, fla
   g.closePath();
 }
 
+/** One small oak leaf lying or flying: long, in round lobes either side, `s` long, turned `a`, squashed `flat` top to bottom. */
+function oakLeafAt(g: Ctx | Path2D, x: number, y: number, s: number, a: number, flat = 1): void {
+  const ca = Math.cos(a), sa = Math.sin(a);
+  const N = 20;
+  for (let i = 0; i <= N; i++) {
+    const t = (i / N) * TAU;
+    const u = (1 - Math.cos(t)) / 2;
+    const w = Math.sin(Math.PI * u) * (0.62 + 0.38 * Math.abs(Math.sin(4.5 * Math.PI * u))) * 0.42 * Math.sign(Math.sin(t) || 1);
+    const lx = (u - 0.5) * s * 1.2, ly = w * s;
+    const px = x + lx * ca - ly * sa, py = y + (lx * sa + ly * ca) * flat;
+    if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+  }
+  g.closePath();
+}
+
+/** The leaf a species lies and falls in. */
+const leafOf = (spec: Species3D): typeof leafAt => (spec.leafForm === 'oak' ? oakLeafAt : leafAt);
+
 /* ---- wood -------------------------------------------------------------------------- */
 
 function barkAt(job: Job, L: Limb, n: V3, snow: boolean): string {
@@ -155,7 +173,7 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     const first = limbs[i];
     // Under a full crown the finest twigs are never seen.
     // Under a full crown only the trunk and the limbs it splits into are ever seen, below the crown.
-    if (leafy && first.order >= 2) continue;
+    if (leafy && first.order >= (job.spec.open ? 3 : 2)) continue;
     const pieces = [i];
     for (let k = next.get(i); k !== undefined; k = next.get(k)) pieces.push(k);
     const pts: V3[] = [limbs[pieces[0]].a, ...pieces.map((k) => limbs[k].b)];
@@ -242,6 +260,7 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     g.arc(c.q[j1][0], c.q[j1][1], c.r[j1], 0, TAU);
     g.fill();
   }
+  if (job.spec.bark.moss && c.order === 0 && j0 === 0) paintMoss(g, job.spec.bark.moss, c, R);
   // Furrows down the bark of the trunk and the big limbs.
   const rm = Math.max(c.r[j0], c.r[j1]);
   if (rm > 2.2 && c.order <= 1) {
@@ -282,6 +301,23 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
   g.stroke();
 }
 
+/** Moss up the trunk's shaded side from the ground: a ragged flat patch, gone by a third of the way up. */
+function paintMoss(g: Ctx, moss: string, c: Chain, R: () => number): void {
+  const top = Math.max(1, Math.round((c.q.length - 1) * 0.4));
+  const p = new Path2D();
+  for (let k = 0; k <= top; k++) {
+    const s = -1 + (0.62 + 0.3 * R()) * (1 - k / top) ** 0.7;
+    const x = c.q[k][0] + c.n[k][0] * c.r[k] * s, y = c.q[k][1] + c.n[k][1] * c.r[k] * s;
+    if (k === 0) p.moveTo(x, y); else p.lineTo(x, y);
+  }
+  for (let k = top; k >= 0; k--) p.lineTo(c.q[k][0] - c.n[k][0] * c.r[k], c.q[k][1] - c.n[k][1] * c.r[k]);
+  p.closePath();
+  g.fillStyle = moss;
+  g.globalAlpha = 0.7;
+  g.fill(p);
+  g.globalAlpha = 1;
+}
+
 /* ---- leaf -------------------------------------------------------------------------- */
 
 /** The sun's way across the screen, and how much of a ball facing the eye it lights: 0 lit from behind to 1 from the front. */
@@ -314,6 +350,14 @@ const LEAF_EDGE: ReadonlyArray<Pt> = Array.from({ length: 15 }, (_, i) => {
   return [u, Math.pow(Math.sin(Math.PI * u), 0.75) * (1 - 0.42 * Math.pow(Math.abs(Math.cos(3 * Math.PI * u)), 6) * Math.sin(Math.PI * u))] as Pt;
 });
 
+/** An oak leaf's edge standing out of a mass: long and low, in round lobes with a notch between each. */
+const OAK_EDGE: ReadonlyArray<Pt> = Array.from({ length: 21 }, (_, i) => {
+  const u = i / 20;
+  return [u, Math.pow(Math.sin(Math.PI * u), 0.6) * (0.55 + 0.45 * Math.sqrt(Math.abs(Math.sin(3 * Math.PI * u))))] as Pt;
+});
+/** The edge a species' masses stand out of. */
+const edgeOf = (spec: Species3D): ReadonlyArray<Pt> => (spec.leafForm === 'oak' ? OAK_EDGE : LEAF_EDGE);
+
 /** The shape of a mass, seeded: two waves of lumps round it and the leaves standing out of its edge. */
 interface Outline { lumps: [number, number, number, number]; leaves: Array<{ at: number; w: number; h: number }> }
 
@@ -326,7 +370,7 @@ function outlineOf(R: () => number, leaves: number): Outline {
 }
 
 /** A mass's outline round (cx, cy), lumpy, with its leaves standing out of it `k` as far. */
-function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: Outline, k = 1): void {
+function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: Outline, k = 1, edge: ReadonlyArray<Pt> = LEAF_EDGE): void {
   const [a1, p1, a2, p2] = o.lumps;
   const rad = (t: number): number => 1 + a1 * Math.sin(3 * t + p1) + a2 * Math.sin(5 * t + p2);
   let first = true;
@@ -340,7 +384,7 @@ function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: 
   for (const L of o.leaves) {
     const from = L.at - L.w / 2;
     for (; t < from; t += STEP) pt(t, rad(t));
-    for (const [u, h] of LEAF_EDGE) {
+    for (const [u, h] of edge) {
       const a = from + u * L.w;
       pt(a, rad(a) + h * L.h * k);
     }
@@ -361,7 +405,7 @@ function paintMass(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; fr
   const { c } = s;
   const R = mulberry32(job.seed * 977 + Math.round(c.k * 1e6));
   const [cx, cy] = proj(job.e, c.c);
-  const rx = c.r * ACROSS * s.grown, ry = rx * 0.86;
+  const rx = c.r * ACROSS * s.grown, ry = rx * (job.spec.pad ?? 0.86);
   const L = clumpLight(job, c);
   const top = s.ramp.length - 1;
   const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
@@ -369,7 +413,7 @@ function paintMass(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; fr
   const plane = (dx: number, dy: number, k: number, col: string, seed: number): void => {
     const p = new Path2D();
     const po = outlineOf(mulberry32(seed), 3);
-    massPath(p, cx + dx, cy + dy, rx * k, ry * k, po, 0.9);
+    massPath(p, cx + dx, cy + dy, rx * k, ry * k, po, 0.9, edgeOf(job.spec));
     g.fillStyle = col;
     g.fill(p);
   };
@@ -389,7 +433,7 @@ function paintMass(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; fr
   for (let i = 0; i < 2; i++) {
     const a = Math.atan2(sun.sy - 0.6, sun.sx) + (R() - 0.5) * 1.4;
     const d = 0.4 + 0.3 * R();
-    leafAt(g, cx + Math.cos(a) * rx * d, cy + Math.sin(a) * ry * d, rx * 0.24, (R() - 0.5) * 0.8, 0.85);
+    leafOf(job.spec)(g, cx + Math.cos(a) * rx * d, cy + Math.sin(a) * ry * d, rx * 0.24, (R() - 0.5) * 0.8, 0.85);
   }
   g.fill();
   g.restore();
@@ -454,7 +498,7 @@ function paintLitter(g: Ctx, job: Job, R: () => number): void {
       const ramp = spec.leaf.autumn[Math.floor(R() * 3)];
       g.fillStyle = ramp[3 + Math.floor(R() * 3)];
       g.beginPath();
-      leafAt(g, x, y, 1.5 + R(), R() * TAU, 0.5);
+      leafOf(spec)(g, x, y, 1.5 + R(), R() * TAU, 0.5);
       g.fill();
       g.strokeStyle = rgb(KIT_INK, 0.45);
       g.lineWidth = 0.3;
@@ -481,7 +525,7 @@ function paintFalling(g: Ctx, job: Job, n: number): void {
     const [x, y] = proj(job.e, p);
     g.fillStyle = spec.leaf.autumn[Math.floor(R() * 3)][4];
     g.beginPath();
-    leafAt(g, x, y, 1.1, R() * TAU, 0.75 + 0.25 * R());
+    leafOf(spec)(g, x, y, 1.1, R() * TAU, 0.75 + 0.25 * R());
     g.fill();
     g.strokeStyle = rgb(KIT_INK, 0.6);
     g.lineWidth = 0.3;
@@ -504,10 +548,13 @@ function onTrunk(job: Job, z: number, az: number): { p: V3; n: V3; seen: number;
   return { p: add(axis, mul(n, r * 0.92)), n, seen, r };
 }
 
+/** How high the trunk goes before it splits. */
+const trunkTop = (job: Job): number => job.sk.limbs.reduce((m, l) => (l.order === 0 ? Math.max(m, l.b[2]) : m), 0);
+
 function paintCarving(g: Ctx, job: Job): void {
   const { sk, spec, e } = job;
   if (sk.hollow !== null) {
-    const at = onTrunk(job, sk.height * 0.2, sk.hollow);
+    const at = onTrunk(job, Math.min(sk.height * 0.2, trunkTop(job) * 0.75), sk.hollow);
     if (at && at.seen > 0.15) {
       const [x, y] = proj(e, at.p);
       const w = at.r * ACROSS * 0.55 * at.seen;
@@ -521,7 +568,7 @@ function paintCarving(g: Ctx, job: Job): void {
     }
   }
   if (sk.rune !== null) {
-    const at = onTrunk(job, sk.height * 0.12, sk.rune);
+    const at = onTrunk(job, Math.min(sk.height * 0.12, trunkTop(job) * 0.45), sk.rune);
     if (at && at.seen > 0.3) {
       const [x, y] = proj(e, at.p);
       const tan: V3 = [-at.n[1], at.n[0], 0];
@@ -556,7 +603,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
     const [cx, cy] = proj(e, s.c.c);
     const rx = s.c.r * ACROSS * s.grown;
     const path = new Path2D();
-    massPath(path, cx, cy, rx, rx * 0.86, o);
+    massPath(path, cx, cy, rx, rx * (spec.pad ?? 0.86), o, 1, edgeOf(spec));
     return { o, path };
   });
   /*
@@ -594,8 +641,10 @@ export function paintTree3d(g: Ctx, job: Job): void {
       const j1 = Math.min(c.q.length - 1, j0 + per);
       const L0 = sk.limbs[c.pieces[j0]], L1 = sk.limbs[c.pieces[j1 - 1]];
       const R = mulberry32(job.seed + c.pieces[j0] * 13);
-      // Under a full crown the wood goes in first: the crown is in front of all of it.
-      items.push({ d: leafy ? -1e6 : near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0), draw: () => paintChain(g, job, c, j0, j1, R) });
+      // Under a full crown the wood goes in first: the crown is in front of all of it. An open crown's
+      // wood is among its masses, set back a little so a branch's end goes into the mass on it.
+      const d = near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0);
+      items.push({ d: leafy && !spec.open ? -1e6 : leafy ? d - sk.crown.r * 0.12 * Math.max(0, c.order) : d, draw: () => paintChain(g, job, c, j0, j1, R) });
     }
   }
   const sizeOfKey = sk.crown.r * 0.12;
