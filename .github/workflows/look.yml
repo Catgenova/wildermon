@@ -336,5 +336,5 @@ jobs:
              from item i join player p on p.world_id = i.world_id and p.name = 'catgenova'
             where i.def = 'mortar' and (i.rare is not null or i.maker is not null) and i.made_at > now() - interval '1 day' order by i.id"
           ask "mortar: the keeper's events, not their wildermon" "select e.n, e.kind, e.at, e.text from event e join player p on p.world_id = e.world_id and p.uid = e.uid and p.name = 'catgenova'
-            where e.kind <> 'wildermon' and e.at > now() - interval '3 hours'
-              and e.text ilike any (array['%mortar%', '%supreme%', '%kept%', '%lock%', '%stores%', '%stack%', '%moved%', '%put%']) order by e.at desc limit 40"
+            where e.kind <> 'wildermon' and e.at between '2026-10-24 00:30+00' and '2026-10-24 02:30+00'
+              and e.text !~ '^Planned' order by e.at limit 120"
