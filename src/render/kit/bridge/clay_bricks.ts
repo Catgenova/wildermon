@@ -1,7 +1,7 @@
 import { css, hex, mix, type Tone } from '../core';
-import { box, BUILDERS, byRole, runeLine, turned, type BridgePainter, type Kit, type Part3 } from './core';
+import { box, BUILDERS, byRole, ownerOf, runeLine, turned, type BridgePainter, type Kit, type Part3 } from './core';
 import { stoneBase } from './base';
-import { arcade, brickPaint, fixKit, herringbonePaint, ringPaint, tilePaint, vaultPaint, wide , ownerOf, runeKey } from './clay';
+import { arcade, brickPaint, herringbonePaint, ringPaint, tilePaint, vaultPaint, runeKey } from './clay';
 
 /**
  * Clay bricks: the brick of the island's brick houses (`BRICK` in
@@ -34,8 +34,7 @@ const bandPaint: BridgePainter = (g, k, f) => {
 };
 
 /** The parapet: the core's brick wall and stone coping, with a brick pilaster over each pier where no refuge breaks it. */
-function parapet(k0: Kit, edge: number, part: Part3): void {
-  const k = fixKit(k0);
+function parapet(k: Kit, edge: number, part: Part3): void {
   BUILDERS.parapet(k, edge, part);
   const { plan, sl, st } = k;
   if (plan.width >= 2) return;
@@ -43,7 +42,7 @@ function parapet(k0: Kit, edge: number, part: Part3): void {
   const tOut = edge > 0 ? sl.t1 : sl.t0;
   const ta = tOut + edge * 0.024, tb = tOut - edge * 0.112;
   const [t0, t1] = [Math.min(ta, tb), Math.max(ta, tb)];
-  const kw = wide(k, t0 - 0.014, t1 + 0.014);
+  const kw = k;
   for (const p of plan.piers) {
     if (p.end) continue;
     const w = 0.075, z = plan.deck(p.s);
@@ -53,8 +52,7 @@ function parapet(k0: Kit, edge: number, part: Part3): void {
 }
 
 /** A brick gate pier at each end of each outer edge: a stone plinth, a brick shaft, a stone cap and a stone ball on it. */
-function ends(k0: Kit): void {
-  const k = fixKit(k0);
+function ends(k: Kit): void {
   const { plan, sl, st } = k;
   const pier = (part: Part3, s: number, t: number, z: number): void => {
     if (ownerOf(k, s - 0.085, s + 0.085) === null) return;
@@ -94,7 +92,7 @@ export const clay_bricks = stoneBase('clay_bricks', {
     arches: arcade({ ringD: 4.6, proud: 0.03, ring: 'voussoir', key: 'wedge', keyTone: (st) => st.trim, pier: 'cutwater', impost: (st) => st.trim }),
     parapet,
     ends,
-    refuges: (k) => BUILDERS.refuges(fixKit(k)),
-    deck: (k) => BUILDERS.deck(fixKit(k)),
+    refuges: (k) => BUILDERS.refuges(k),
+    deck: (k) => BUILDERS.deck(k),
   },
 });

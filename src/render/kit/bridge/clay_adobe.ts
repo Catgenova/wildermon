@@ -1,9 +1,9 @@
 import { rand } from '../../ivy';
 import { proj, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, faceColour, hex, mix, type Tone } from '../core';
-import { bayAt, BUILDERS, byRole, refugeGaps, runeLine, samples, turned, U, type BridgePainter, type Kit, type L, type Part3 } from './core';
+import { bayAt, BUILDERS, byRole, ownerOf, refugeGaps, runeLine, samples, turned, U, type BridgePainter, type Kit, type L, type Part3 } from './core';
 import { plasterPaint, stoneBase } from './base';
-import { arcade, cface, fi, fixKit, lampPost, roundOut, runsOf, tilePaint, wallFrame, wide , ownerOf, runeKey, seen } from './clay';
+import { arcade, cface, fi, lampPost, roundOut, runsOf, tilePaint, wallFrame, runeKey, seen } from './clay';
 
 /**
  * Clay adobe: the coat of the island's adobe houses (`ADOBE` in
@@ -79,8 +79,7 @@ const wave = (k: Kit, s: number): number => {
 };
 
 /** The deck: the core's, and a row of viga ends under its edge, a third of a tile apart. */
-function deck(k0: Kit): void {
-  const k = fixKit(k0);
+function deck(k: Kit): void {
   BUILDERS.deck(k);
   const { plan, sl } = k;
   const gaps = refugeGaps(plan);
@@ -110,8 +109,7 @@ function deck(k0: Kit): void {
 }
 
 /** A run of the low parapet: a wall rounded over its top, its outer face's top band carrying the rune line. */
-function parapet(k0: Kit, edge: number, part: Part3): void {
-  const k = fixKit(k0);
+function parapet(k: Kit, edge: number, part: Part3): void {
   const { plan, sl, st } = k;
   const T = T_WALL, rz = (T * U) / 2;
   const tOut = edge > 0 ? sl.t1 : sl.t0, tIn = tOut - edge * T, tc = (tOut + tIn) / 2;
@@ -160,8 +158,7 @@ function parapet(k0: Kit, edge: number, part: Part3): void {
 }
 
 /** At each end of each outer edge, a round post of the coat, swelling at its foot and domed, a terracotta knob on it. */
-function ends(k0: Kit): void {
-  const k = fixKit(k0);
+function ends(k: Kit): void {
   const { plan, sl, st } = k;
   const post = (part: Part3, s: number, t: number, z: number): void => {
     if (ownerOf(k, s - 0.09, s + 0.09) === null) return;
@@ -182,8 +179,7 @@ function ends(k0: Kit): void {
  * round wall about it with a round post where it meets the parapet; at three
  * lanes a lamp in it.
  */
-function refuges(k0: Kit): void {
-  const k = fixKit(k0);
+function refuges(k: Kit): void {
   const { plan, sl, st } = k;
   const n = 10, T = T_WALL, rz = (T * U) / 2;
   for (const p of plan.piers) {
@@ -233,7 +229,7 @@ function refuges(k0: Kit): void {
       }
       if (plan.width >= 3 && ownerOf(k, p.s - 0.05, p.s + 0.05) !== null) {
         const tl = t + edge * R * 0.45;
-        lampPost(wide(k, tl - 0.05, tl + 0.05), part, p.s, tl, z, PALE);
+        lampPost(k, part, p.s, tl, z, PALE);
       }
     }
   }
