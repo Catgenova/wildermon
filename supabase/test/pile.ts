@@ -14,6 +14,8 @@
  *   * the reported case folds, with nothing gained or lost by it;
  *   * the things that must not fold do not -- a locked pile above all, since
  *     locking is how somebody says *not this one*;
+ *   * but more of the same coming in goes onto a kept pile, and is kept with
+ *     it: five kept, five made, ten kept;
  *   * the two sides agree, pair by pair, rather than being trusted to;
  *   * the doors that move rows fold them on arrival;
  *   * ash is a worked material on both sides, and the craft material bin will
@@ -26,7 +28,7 @@
  * Runs against the database the suite leaves behind.
  */
 import { execFileSync } from 'node:child_process';
-import { sameStack, itemDef, isWorked } from '../../src/game/items';
+import { sameStack, keptStack, itemDef, isWorked, Inventory } from '../../src/game/items';
 import { RAW_BIN_REFUSAL } from '../../src/game/furniture';
 import type { Item } from '../../src/game/items';
 
@@ -123,11 +125,23 @@ insert into said select 'LOCKED|' || pack_fold(w.world_id, w.uid) || '|' ||
   (select count(*) from item i where i.world_id = w.world_id and i.holder_uid = w.uid and i.def = 'cotton_seed')
   from who w;
 
+-- 2b. More of the same, made: onto the kept pile, not the loose one.
+insert into said select 'KEPTID|' || give(w.world_id, w.uid, 'cotton_seed', 2, 50) from who w;
+insert into said select 'KEPTGIVE|' ||
+  (select string_agg(i.id || ':' || i.count || ':' || i.locked, ',' order by i.id) from item i
+    where i.world_id = w.world_id and i.holder_uid = w.uid and i.def = 'cotton_seed')
+  from who w;
+
 -- 3. The rule itself, pair by pair, against the same pairs in TypeScript.
 insert into said
 select 'PAIR|' || q.i || '|' || case when stack_key(q.a) is not null and stack_key(q.a) = stack_key(q.b)
                                      then 'one' else 'two' end
 from (values ${rows.map((r) => `(${r.i}, ${asRow({})}, ${asRow(r.diff)})`).join(',\n      ')}) q(i, a, b);
+-- 3b. And onto a kept pile, by the same pairs.
+insert into said
+select 'KPAIR|' || q.i || '|' || case when kept_key(q.a) is not null and kept_key(q.a) = stack_key(q.b)
+                                      then 'one' else 'two' end
+from (values ${rows.map((r) => `(${r.i}, ${asRow({ locked: true })}, ${asRow(r.diff)})`).join(',\n      ')}) q(i, a, b);
 
 -- 4. Taking all from a crate, which is the loudest of the doors.
 do $$
@@ -240,6 +254,33 @@ check('and the pile is worth the average of what went into it', wasQl === nowQl,
 const [lockedFolded, lockedRows] = said('LOCKED').split('|');
 check('a locked pile stands apart, and asking again does not wear it down',
   lockedFolded === '0' && lockedRows === '2', `${lockedFolded} folded, ${lockedRows} rows left`);
+
+const keptId = said('KEPTID');
+const keptRows = said('KEPTGIVE');
+const keptPile = keptRows.split(',').map((r) => r.split(':')).find(([id]) => id === keptId);
+check('more of the same, made, goes onto the kept pile and is kept with it',
+  !!keptPile && keptPile[1] === '3' && keptPile[2] === 'true' && keptRows.split(',').length === 2,
+  `onto ${keptId}; piles ${keptRows}`);
+
+const inv = new Inventory();
+inv.add('mortar', { count: 5, ql: 87, rare: 2, maker: 'cat' }).locked = true;
+inv.add('mortar', { count: 5, ql: 90, rare: 2, maker: 'cat' });
+inv.add('mortar', { count: 5, ql: 50 });
+const kept = inv.items.filter((it) => it.id === 'mortar');
+check('and in the browser: five kept, five made, ten kept; the plain ones a pile of their own',
+  kept.length === 2 && kept[0].locked === true && kept[0].count === 10 && !kept[1].locked && kept[1].count === 5,
+  kept.map((it) => `${it.count}${it.locked ? ' kept' : ''}`).join(', '));
+
+let keptAgreed = 0;
+const keptDisagreed: string[] = [];
+for (const [i, [what, diff, want]] of PAIRS.entries()) {
+  const island = said(`KPAIR|${i}`) === 'one';
+  const browser = keptStack({ ...base, locked: true } as Item, { ...base, ...diff } as Item);
+  if (island === browser && island === want) keptAgreed += 1;
+  else keptDisagreed.push(`${what}: island ${island ? 'one' : 'two'}, browser ${browser ? 'one' : 'two'}, wanted ${want ? 'one' : 'two'}`);
+}
+check('both sides answer the same on what joins a kept pile',
+  keptDisagreed.length === 0, keptDisagreed.length ? keptDisagreed.join('; ') : `${keptAgreed} of ${PAIRS.length} pairs`);
 
 let agreed = 0;
 const disagreed: string[] = [];

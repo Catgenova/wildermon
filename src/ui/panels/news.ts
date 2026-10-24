@@ -3663,6 +3663,14 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 304,
+    day: '2026-10-24',
+    lines: () => [
+      'Changed: into the pack (made, gathered, picked up), same as a kept pile but for the keeping: onto the kept pile, kept. Was: a pile of its own.',
+      'Changed: count boxes for a craft (shopping list, make until you hold): button Select Quantity.',
+    ],
+  },
 ];
 
 /**

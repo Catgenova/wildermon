@@ -1410,6 +1410,15 @@ export function sameStack(a: Item, b: Item): boolean {
     && a.enchant?.id === b.enchant?.id && a.enchant?.ql === b.enchant?.ql;
 }
 
+/**
+ * Whether `item` goes onto `kept`, a kept pile it matches in everything but the
+ * keeping: what comes into a pack joins a kept pile before a loose one, and is
+ * kept with it. `kept_key` on the island.
+ */
+export function keptStack(kept: Item, item: Item): boolean {
+  return !!kept.locked && !item.locked && sameStack({ ...kept, locked: undefined }, item);
+}
+
 /** Fold one thing into another, both quality and damage by the unit. */
 export function foldInto(stack: Item, item: Item): void {
   const units = stack.count + item.count;
@@ -1579,7 +1588,9 @@ export class Inventory {
   /** Put an existing item into the inventory, merging it into a matching stack. */
   addItem(item: Item): Item {
     if (item.uid >= this.nextUid) this.nextUid = item.uid + 1;
-    const existing = this.items.find((it) => it.uid !== item.uid && sameStack(it, item));
+    // A kept pile first (`keptStack`), then a loose one.
+    const existing = this.items.find((it) => it.uid !== item.uid && keptStack(it, item))
+      ?? this.items.find((it) => it.uid !== item.uid && sameStack(it, item));
     if (existing) {
       foldInto(existing, item);
       this.onChange?.();
