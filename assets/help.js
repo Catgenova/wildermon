@@ -919,7 +919,7 @@ import{$ as e,$C as t,$_ as n,$a as r,$c as i,$l as a,$n as o,$o as s,$t as ee,$
       (<i>Use stores within reach</i> unticked: pack and the crate on the tile only). Floors, frames, and bridge and aqueduct spans draw the same way.</li>
       <li>Actions per click: one, ${S(cd.map(String))} (where the piece still needs more), or all it needs (max 100); stops when finished or out of materials.</li>
       <li>Floors: planned the same way; laid with paving.</li>
-      <li>Next storey: needs every side of the storey below finished as a wall, or with a finished column at each end. Max 10 storeys.</li>
+      <li>2nd storey: needs every side of the ground storey finished as a wall, or with a finished column at each end. 3rd and up: planned over a storey still going up. Max 10 storeys.</li>
       <li>Actions go to the storey you are working on (<b>Work on storey N</b> on its menu).</li>
       <li>A finished full-height wall with a wall of the storey above on the same side (once any of that wall's materials are in) cannot come down until that upper
       wall does, or a finished column stands at each end; likewise the last wall a jetty rests on. To turn one into a door: column at each end, take it down, build the door.</li>
@@ -1051,7 +1051,7 @@ import{$ as e,$C as t,$_ as n,$a as r,$c as i,$l as a,$n as o,$o as s,$t as ee,$
       <li>Ground under it: nothing planned or planted; no bridge or aqueduct; corners not dug or raised.</li>
       <li>The last wall it rests on stays up until the jetty is removed or a finished column stands at each end of it.</li>
       <li>Removed only after the walls, railings and columns on it, the floor above and the roof over it are down.</li>
-      <li>Open to its storey, it <b>is part of that storey</b>: its open sides need a wall, railing or columns before the storey counts as closed for another storey or a roof.</li>
+      <li>Open to its storey, it <b>is part of that storey</b>: its open sides need a wall, railing or columns before the storey counts as closed for a 2nd storey or a roof.</li>
       <li><b>Plan roof over the jetty</b>: only on <b>walls or columns</b>; every side out from the storey needs a finished full-height wall, or at each end a finished column or
       a finished full-height wall's end (railings carry nothing). The refusal names the corner missing a column.</li>
       <li>Under a jetty roof: its wall stays until a column at each end carries the roof; a wall end that alone carries a side stays until a column stands on that corner;
