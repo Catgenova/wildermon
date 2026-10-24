@@ -431,10 +431,12 @@ export const BUILDERS: Builders = {
         k.face('front', [[a, sl.t0, z], [b2, sl.t0, z], [b2, sl.t1, z], [a, sl.t1, z]], [0, 0, 1], tone,
           info('tread', a * U, b2 * U, sl.t0 * U, sl.t1 * U, sl.i * 7 + j, true), { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
         // The riser up to the next.
+        // And at the tile's own end, up to the next tile's first tread, a hair inside it so its edges are inked.
         const zr = up ? top(b2) : top(a);
-        const zn = up ? (j + 1 < n ? top(sl.s0 + ((sl.s1 - sl.s0) * (j + 2)) / n) : zr) : (j > 0 ? top(sl.s0 + ((sl.s1 - sl.s0) * (j - 1)) / n) : zr);
-        if (up && j + 1 < n) k.face('front', [[b2, sl.t0, zr], [b2, sl.t1, zr], [b2, sl.t1, zn], [b2, sl.t0, zn]], [-1, 0, 0], st.trim);
-        if (!up && j > 0) k.face('front', [[a, sl.t0, zr], [a, sl.t1, zr], [a, sl.t1, zn], [a, sl.t0, zn]], [1, 0, 0], st.trim);
+        const len = sl.s1 - sl.s0;
+        const zn = up ? top(sl.s0 + (len * (j + 2)) / n) : top(sl.s0 + (len * (j - 1)) / n);
+        const sr = up ? (j + 1 < n ? b2 : b2 - 1e-3) : (j > 0 ? a : a + 1e-3);
+        if (zn - zr > 1e-3) k.face('front', [[sr, sl.t0, zr], [sr, sl.t1, zr], [sr, sl.t1, zn], [sr, sl.t0, zn]], [up ? -1 : 1, 0, 0], st.trim);
       }
     } else {
       k.face('front', [[sl.s0, sl.t0, top(sl.s0)], [sl.s1, sl.t0, top(sl.s1)], [sl.s1, sl.t1, top(sl.s1)], [sl.s0, sl.t1, top(sl.s0)]], [0, 0, 1], tone,
