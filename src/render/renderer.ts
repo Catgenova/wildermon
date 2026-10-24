@@ -2019,11 +2019,14 @@ export class Renderer {
   }
 
   /**
-   * The scratch canvas the night is mixed on. It is kept between frames and
-   * only resized when the window is, since making one every frame at screen
-   * size is the sort of thing that costs a night's frame rate.
+   * The scratch canvases the night is mixed on at the screen's size, one for
+   * each share of it. Kept between frames and only resized when the window
+   * is, since making one every frame at screen size is the sort of thing
+   * that costs a night's frame rate.
    */
   private nights = new Map<number, HTMLCanvasElement>();
+  /** What the night was last mixed on: the lights' mask at their size, or a layer of its own at the screen's. Read by the crowd check. */
+  night: HTMLCanvasElement | null = null;
   /**
    * The layer the cold wash over remembered ground is moved onto while
    * something in sight stands up in front of it (`fogLayer`). Kept between
@@ -15034,6 +15037,7 @@ export class Renderer {
          * own, cleared, washed and cut to the mask, every frame.
          */
         const night = res === LIGHT_RES ? lit.mask : this.nightLayer(res);
+        this.night = night;
         const nc = night.getContext('2d') as CanvasRenderingContext2D;
         nc.setTransform(1, 0, 0, 1, 0, 0);
         if (res === LIGHT_RES) {
