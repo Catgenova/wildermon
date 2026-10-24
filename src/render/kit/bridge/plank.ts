@@ -214,8 +214,9 @@ export interface Carpentry {
   tallX?: boolean;
   /** No girts along the faces between bents. */
   noGirts?: boolean;
-  /** What the stringers are painted as: `beam` else. */
-  stringerRole?: Role;
+  /** What the stringers are painted as (`beam` else; nothing for null), and their tone (the beams' else). */
+  stringerRole?: Role | null;
+  stringerTone?: Tone;
   /** The ramp's stringer along each outer edge, done this carpentry's way (`stairStringer` else). */
   rampStringer?: (k: Kit, edge: number, te: number) => void;
   /** Border boards along each outer edge of a level deck: how wide, in tiles, their tone and what they are painted as. */
@@ -294,7 +295,7 @@ function bents(k: Kit, c: Carpentry): void {
     const capSec = c.round ? rnd(c.cap, 8) : sq(c.cap, c.cap);
     lay(k, 'front', -1.6, bar([b.s, plan.tLo - over, b.capB + c.cap], [b.s, plan.tHi + over, b.capB + c.cap], capSec, beam,
       { caps: [true, true], paint: c.round ? undefined : 'beam', capTone: c.endTone, capPaint: c.round ? 'plinth' : undefined }), 't');
-    // The braces across, on the face toward the eye (at an end, the face toward the bridge, clear of what it lands on): by the carpentry's kind, a girt between two tiers.
+    // The braces across, on the face toward the eye (at an end, the face toward the bridge, clear of what it lands on): by the carpentry's kind.
     const side = b.end ? (b.s < plan.n / 2 ? 1 : -1) : face;
     const sb = b.s + side * (w + (c.round ? c.brace : c.brace * 0.45) / U);
     const tiers = tiersOf(k, b);
@@ -311,10 +312,6 @@ function bents(k: Kit, c: Carpentry): void {
         ...bar([sb, postT(b, p0, z0), z0], [sb, postT(b, p1, z1), z1], braceSec, beam),
         ...bar([sb, postT(b, p1, z0), z0], [sb, postT(b, p0, z1), z1], braceSec, beam),
       ]), '');
-    if (tiers.length === 2) {
-      const zm = (tiers[0][1] + tiers[1][0]) / 2;
-      lay(k, 'front', -1.8, bar([sb, sl.t0 - 0.02, zm], [sb, sl.t1 + 0.02, zm], c.round ? rnd(c.brace * 1.2, 6) : sq(c.brace * 0.5, c.brace * 1.3), beam), 't');
-    }
   }
   // Along each outer face: knee braces up from every post to the stringer, and for a trestle a girt at each tier's top between like bents.
   for (const edge of k.sl.edges) {
@@ -354,13 +351,13 @@ const PAD: Tone = { lit: hex('#e2dad6'), shade: hex('#857d96') };
 /** Stringers under the deck: one over each line of posts, the length of the slice. */
 function stringers(k: Kit, c: Carpentry): void {
   const { plan, sl } = k;
-  const beam = c.beamTone(k);
+  const beam = c.stringerTone ?? c.beamTone(k);
   const sec = c.round ? rnd(c.stringer, 8) : sq(c.stringerW, c.stringer);
   const z = (s: number): number => plan.deck(s) - plan.thick - c.stringer;
   // Over the outer posts only: the deck's own thickness spans the rest, out of sight under it.
   for (const p of postsOf(k, c).filter((q) => q.out !== 0)) {
     lay(k, 'front', -1.5, bar([sl.s0, p.t, z(sl.s0)], [sl.s1, p.t, z(sl.s1)], sec, beam,
-      { caps: [sl.s0 <= EPS, sl.s1 >= plan.n - EPS], paint: c.stringerRole ?? 'beam', capTone: c.endTone, capPaint: c.round ? 'plinth' : undefined, seed: sl.i * 5 + Math.round(p.t * 9) }), '');
+      { caps: [sl.s0 <= EPS, sl.s1 >= plan.n - EPS], paint: c.stringerRole === null ? undefined : c.stringerRole ?? 'beam', capTone: c.endTone, capPaint: c.round ? 'plinth' : undefined, seed: sl.i * 5 + Math.round(p.t * 9) }), '');
   }
 }
 
@@ -434,12 +431,12 @@ function stairStringer(k: Kit, c: Carpentry, edge: number, te: number): void {
   const zt = (s: number): number => plan.deck(s) + rise + 0.7;
   const T = 0.028;
   const [ti, to] = [te - edge * 0.004, te + edge * T];
-  const tone = c.beamTone(k);
+  const tone = c.stringerTone ?? c.beamTone(k);
   const a = sl.s0, b = sl.s1;
   const len = (b - a) * U;
   // The far one before the treads, which stand in front of its inside face; the near one after.
   lay(k, 'front', k.ord(edge, 1), [
-    { pts: [[a, to, zb(a)], [b, to, zb(b)], [b, to, zt(b)], [a, to, zt(a)]], out: [0, edge, 0], tone, info: finfo('beam', 0, len, 0, zt(a) - zb(a), sl.i), frame: { o: [a, to, zb(a)], a: [1 / U, 0, (zb(b) - zb(a)) / len], b: [0, 0, 1] } },
+    { pts: [[a, to, zb(a)], [b, to, zb(b)], [b, to, zt(b)], [a, to, zt(a)]], out: [0, edge, 0], tone, info: finfo(c.stringerRole ?? 'beam', 0, len, 0, zt(a) - zb(a), sl.i), frame: { o: [a, to, zb(a)], a: [1 / U, 0, (zb(b) - zb(a)) / len], b: [0, 0, 1] } },
     { pts: [[a, ti, zb(a)], [b, ti, zb(b)], [b, ti, zt(b)], [a, ti, zt(a)]], out: [0, -edge, 0], tone },
     { pts: [[a, ti, zt(a)], [b, ti, zt(b)], [b, to, zt(b)], [a, to, zt(a)]], out: [0, 0, 1], tone },
     { pts: [[a, ti, zb(a)], [b, ti, zb(b)], [b, to, zb(b)], [a, to, zb(a)]], out: [0, 0, -1], tone },
@@ -701,10 +698,11 @@ export function clothPaint(glyph: string): BridgePainter {
 
 const base = timberBase('plank', { parapet: 'rail', rune: 'kenaz' });
 const P = {
-  post: tone('#a87464', '#4e3648'),
+  post: tone('#946256', '#3e2a3e'),
   beam: tone('#b48c64', '#62505e'),
-  rail: tone('#e3c49a', '#8a7078'),
-  cap: tone('#ecd2a8', '#94787c'),
+  rail: tone('#f0d8ac', '#94787c'),
+  cap: tone('#f6e2ba', '#9a8082'),
+  tar: tone('#86707c', '#383046'),
   fascia: tone('#d6b488', '#7e6670'),
   plaque: tone('#8e6e62', '#4a3a4c'),
 };
@@ -769,16 +767,17 @@ const laminated: BridgePainter = (g, k, f) => {
   g.lineWidth = 0.14;
   g.stroke(lam);
   const iron = faceColour(IRON_PLATE, k.L);
-  for (let x = Math.ceil((x0 - 10) / 20) * 20 + 10; x < x1 + 2; x += 20) {
+  for (let x = Math.ceil((x0 - 10) / 20) * 20 + 10; x < x1 + 3; x += 20) {
     g.fillStyle = css(iron);
-    g.fillRect(x - 1.5, 0.4, 3, h - 0.8);
-    g.strokeStyle = css(mix(iron, hex('#2e2a3c'), 0.5), 0.9);
-    g.lineWidth = 0.16;
-    g.strokeRect(x - 1.5, 0.4, 3, h - 0.8);
-    for (const bx of [x - 0.8, x + 0.8]) for (const by of [h * 0.28, h * 0.72]) nail(g, iron, bx, by, 0.3);
+    g.fillRect(x - 2.6, 0.3, 5.2, h - 0.6);
+    g.strokeStyle = css(mix(iron, hex('#2e2a3c'), 0.6), 0.95);
+    g.lineWidth = 0.24;
+    g.strokeRect(x - 2.6, 0.3, 5.2, h - 0.6);
+    for (const bx of [x - 1.4, x + 1.4]) for (const by of [h * 0.27, h * 0.73]) nail(g, iron, bx, by, 0.5);
   }
 };
-const IRON_PLATE: Tone = { lit: hex('#a4aabd'), shade: hex('#4a4c64') };
+const LANTERN: Tone = { lit: hex('#ffe7a4'), shade: hex('#e9b468') };
+const IRON_PLATE: Tone = { lit: hex('#d2d6e2'), shade: hex('#6a6e88') };
 
 /** A shallow pyramid: a square cap `w` either side at `z`, rising `h` to a point. */
 export function pyramid(s: number, t: number, z: number, w: number, h: number, tn: Tone): Fc[] {
@@ -799,6 +798,7 @@ const plankCarpentry: Carpentry = {
   stringer: 3.0,
   stringerW: 1.7,
   stringerRole: 'plinth',
+  stringerTone: P.tar,
   tallX: true,
   noGirts: true,
   cap: 1.5,
@@ -806,10 +806,21 @@ const plankCarpentry: Carpentry = {
   postTone: () => P.post,
   beamTone: () => P.beam,
   rail: plankRail,
-  newel: (k, part, s, t, z) => {
+  newel: (k, part, s, t, z, edge) => {
     lay(k, part, 3, bar([s, t, z], [s, t, z + 11.5], sq(2.1), P.post, { paint: 'post' }), '');
     lay(k, part, 3.05, bar([s, t, z + 11.5], [s, t, z + 12.4], sq(2.6), P.cap), '');
     lay(k, part, 3.1, pyramid(s, t, z + 12.4, 2.6, 2.6, P.cap), '');
+    // A lantern on an iron bracket out over the bridge's edge.
+    const tl = t + edge * 0.11;
+    lay(k, part, 3.15, [
+      ...bar([s, t + edge * 0.05, z + 10.6], [s, tl, z + 10.6], sq(0.35, 0.4), IRON_PLATE),
+      ...bar([s, t + edge * 0.05, z + 8.4], [s, tl - edge * 0.03, z + 10.6], sq(0.3, 0.3), IRON_PLATE),
+    ], '');
+    lay(k, part, 3.2, [
+      ...bar([s, tl, z + 6.6], [s, tl, z + 9.6], sq(1.05), LANTERN, { caps: [true, false] }),
+      ...pyramid(s, tl, z + 9.6, 1.4, 1.0, IRON_PLATE),
+    ], '');
+    k.glow.lamps.push(k.m([s, tl, z + 8.1]));
   },
   plaque: (k, part, order, s, t, z, edge, glow) => plankPlaque(k, part, order, s, t, z, edge, glow, P.plaque, base.rune),
   deckEdge: (k, edge, te) => fascia(k, edge, te, P.fascia, 'cornice'),

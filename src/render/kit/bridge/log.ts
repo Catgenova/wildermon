@@ -11,8 +11,8 @@ import { bar, carpentry, clothPaint, finfo, lay, ownNear, pennant, ringsPaint, r
  */
 
 const LOG = {
-  bark: tone('#a88a72', '#504258'),
-  beam: tone('#b8967a', '#5a4a5e'),
+  bark: tone('#bc9c7e', '#463850'),
+  beam: tone('#c4a282', '#4c3e54'),
   end: tone('#f2dcb0', '#a68e86'),
   deck: tone('#d8b88c', '#7e6870'),
   post: tone('#9c7e66', '#4c3e56'),
@@ -178,12 +178,16 @@ function roundel(k: Kit, part: Part3, order: number, s: number, t: number, z: nu
 
 const logCarpentry: Carpentry = {
   round: true,
-  post: 2.6,
-  stringer: 2.9,
-  stringerW: 2.9,
-  cap: 2.6,
-  brace: 1.5,
+  post: 3.3,
+  stringer: 3.1,
+  stringerW: 3.1,
+  cap: 3.1,
+  brace: 2.1,
   braces: 'a',
+  // Two tiers shored as one: a single pair of long shores the bent's height.
+  tallX: true,
+  // The stringers in the deck's shade, their bark left unpainted.
+  stringerRole: null,
   noGirts: true,
   // On a ramp, a round log raking up each edge over the treads' ends, its rings at the bridge's ends.
   rampStringer: (k, edge, te) => {
