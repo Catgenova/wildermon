@@ -122,11 +122,22 @@ function planAnew(b: Bridge, f: BridgeFrame): Planned | null {
   const plan = planOf({
     n, lanes, ground, done, rise: b.rise ?? 0, width: bridgeWidth(b), moss, style,
     deck: (s) => rampDeck(b.height, b.rise ?? 0, n, s),
-    bays: bridgeBays(n, BRIDGES[b.kind].bay),
+    bays: drawnBays(n, BRIDGES[b.kind].bay, !!b.rise),
   });
   const p: Planned = { key, uid: ++planUid, plan, A, P, slices: new Map() };
   plans.set(b.id, p);
   return p;
+}
+
+/**
+ * The arches a bridge is drawn with: its bays (`bridgeBays`); and under a
+ * ramp, each of them split into arches of about a tile, each springing at
+ * its own height under the slope, a run of small arches stepping up with
+ * the deck. Only how it is drawn: its piers and its bill are its bays'.
+ */
+export function drawnBays(n: number, bay: number | undefined, ramp: boolean): number[] {
+  const bays = bridgeBays(n, bay);
+  return ramp ? bays.flatMap((len) => { const m = Math.max(1, Math.round(len)); return new Array<number>(m).fill(len / m); }) : bays;
 }
 
 /** Forget the plans of bridges no longer standing. */
