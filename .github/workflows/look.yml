@@ -323,3 +323,8 @@ jobs:
           ask "hods: the unfinished storey-2 floors" "select f.level, f.x, f.y, f.kind, f.material, f.needed from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova'
             where f.level >= 1 and f.x between 2575 and 2595 and f.y between 3015 and 3035
               and exists (select 1 from jsonb_each(f.needed) e where (e.value)::numeric > 0) order by f.level, f.y, f.x"
+          ask "hods: marble brick and mortar in the keeper's settlement stores" "select (s.it).def, sum((s.it).count) as n, bool_or(coalesce((s.it).locked, false)) as any_locked
+             from player p cross join lateral deed_store_items(p.world_id, p.uid) s
+            where p.name = 'catgenova' and (s.it).def in ('marble_brick', 'mortar', 'marble_shards') group by 1"
+          ask "hods: the stocked work the island finds" "select * from hod_needing_stocked((select world_id from player where name = 'catgenova'), (select uid from player where name = 'catgenova'), 2584, 3026, 30)"
+          ask "hods: hod work near, any" "select w.kind, w.level, w.x, w.y, w.needed from hod_work((select world_id from player where name = 'catgenova'), 2584, 3026, 30) w limit 15"
