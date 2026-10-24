@@ -2059,7 +2059,7 @@ export class Renderer {
    * pixels. Made again when the lights change, or the view slides further
    * than the margin.
    */
-  private lit: { mask: HTMLCanvasElement; warm: HTMLCanvasElement; key: string; cx: number; cy: number; pad: number } | null = null;
+  private lit: { mask: HTMLCanvasElement; warm: HTMLCanvasElement; sig: number[]; inks: (string | undefined)[]; cx: number; cy: number; pad: number } | null = null;
   private litNow: { mask: HTMLCanvasElement; warm: HTMLCanvasElement } | null = null;
 
   /** Each rune lantern post's spot at its foot near enough to matter (`runeLanternPool`), as `lights` gathers what burns. */
@@ -2100,80 +2100,114 @@ export class Renderer {
       if (c.width !== lw || c.height !== lh) { c.width = lw; c.height = lh; }
       return c;
     };
-    /** Each light where it falls on the screen this frame, and how far it reaches there. */
-    const placed = (l: LightSource, pad = 0): { sx: number; sy: number; r: number } | null => {
-      const sx = cam.worldToScreenX(l.x, l.y) + pad;
+    /*
+     * Each light where it falls on the screen this frame, and how far it
+     * reaches there: worked out once a light a frame, four numbers a light
+     * (x, y, reach, what it stands on), and read by everything below.
+     */
+    const n = lights.length;
+    if (this.lightSpots.length < n * 4) this.lightSpots = new Float64Array(n * 8);
+    const spots = this.lightSpots;
+    for (let i = 0; i < n; i++) {
+      const l = lights[i];
       // At what it stands on: the ground, or the finished deck of a tile on piers (`standTop`).
-      const sy = cam.worldToScreenY(l.x, l.y, this.standTop(l.x, l.y)) + pad;
+      const top = this.standTop(l.x, l.y);
+      spots[i * 4] = cam.worldToScreenX(l.x, l.y);
+      spots[i * 4 + 1] = cam.worldToScreenY(l.x, l.y, top);
       // A flame is never steady; a candle behind cloth very nearly is.
-      const r = Math.max(8, l.radius * HALF_W * zoom * this.flicker(l));
-      return sx < -r || sy < -r || sx > w + 2 * pad + r || sy > h + 2 * pad + r ? null : { sx, sy, r };
+      spots[i * 4 + 2] = Math.max(8, l.radius * HALF_W * zoom * this.flicker(l));
+      spots[i * 4 + 3] = top;
+    }
+    /** Whether light `i` falls on a layer `pad` wider than the screen on every side. */
+    const shows = (i: number, pad: number): boolean => {
+      const sx = spots[i * 4] + pad, sy = spots[i * 4 + 1] + pad, r = spots[i * 4 + 2];
+      return !(sx < -r || sy < -r || sx > w + 2 * pad + r || sy > h + 2 * pad + r);
     };
-    const holes = (g: CanvasRenderingContext2D, ls: LightSource[], pad = 0): void => {
+    /*
+     * Each light's gradient made once and kept, by its stops, at a reach of
+     * one round nothing, and laid moved and scaled to where it falls: they
+     * were made afresh for every light every frame.
+     */
+    const kept = (map: Map<number | string, CanvasGradient>, key: number | string, make: () => CanvasGradient): CanvasGradient => {
+      let grad = map.get(key);
+      if (!grad) {
+        if (map.size >= 64) map.clear();
+        grad = make();
+        map.set(key, grad);
+      }
+      return grad;
+    };
+    /** Light `i`'s disc onto `g`, `pad` in from the layer's corner, in `grad`, squashed up and down by `flat`. */
+    const disc = (g: CanvasRenderingContext2D, i: number, pad: number, grad: CanvasGradient, flat: number): void => {
+      const r = spots[i * 4 + 2];
+      g.setTransform(LIGHT_RES * r, 0, 0, LIGHT_RES * r * flat, LIGHT_RES * (spots[i * 4] + pad), LIGHT_RES * (spots[i * 4 + 1] + pad));
+      g.fillStyle = grad;
+      g.beginPath();
+      g.arc(0, 0, 1, 0, Math.PI * 2);
+      g.fill();
+    };
+    const holes = (g: CanvasRenderingContext2D, steady: boolean, pad = 0): void => {
       g.globalCompositeOperation = 'destination-out';
-      for (const l of ls) {
-        const p = placed(l, pad);
-        if (!p) continue;
+      for (let i = 0; i < n; i++) {
+        const l = lights[i];
+        if (!l.steady !== !steady || !shows(i, pad)) continue;
         let grad: CanvasGradient;
         if (l.soft) {
           // A spell's: falling smoothly to nothing at its edge, and less at its middle the wider it is.
           const a = l.strength * lightHole(l.radius);
-          grad = fallGradient(g, p.sx, p.sy, p.r, (f) => `rgba(0,0,0,${(a * f).toFixed(3)})`);
+          grad = kept(this.softHoleGrads, a, () => fallGradient(g, 0, 0, 1, (f) => `rgba(0,0,0,${(a * f).toFixed(3)})`));
         } else {
-          grad = g.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, p.r);
-          grad.addColorStop(0, `rgba(0,0,0,${l.strength.toFixed(2)})`);
-          grad.addColorStop(0.55, `rgba(0,0,0,${(l.strength * 0.55).toFixed(2)})`);
-          grad.addColorStop(1, 'rgba(0,0,0,0)');
+          grad = kept(this.holeGrads, l.strength, () => {
+            const made = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+            made.addColorStop(0, `rgba(0,0,0,${l.strength.toFixed(2)})`);
+            made.addColorStop(0.55, `rgba(0,0,0,${(l.strength * 0.55).toFixed(2)})`);
+            made.addColorStop(1, 'rgba(0,0,0,0)');
+            return made;
+          });
         }
-        g.fillStyle = grad;
-        g.beginPath();
-        g.arc(p.sx, p.sy, p.r, 0, Math.PI * 2);
-        g.fill();
+        disc(g, i, pad, grad, 1);
       }
+      g.setTransform(LIGHT_RES, 0, 0, LIGHT_RES, 0, 0);
       g.globalCompositeOperation = 'source-over';
     };
     /** The part of the layers the casts cover, in their own whole pixels: x, y, width, height. */
-    const cover = (ls: LightSource[], into: Box = [0, 0, 0, 0]): Box => {
-      let [x0, y0, x1, y1] = into[2] > 0 ? [into[0], into[1], into[0] + into[2], into[1] + into[3]] : [Infinity, Infinity, -Infinity, -Infinity];
-      for (const l of ls) {
-        const p = placed(l);
-        if (!p) continue;
-        x0 = Math.min(x0, Math.max(0, Math.floor((p.sx - p.r) * LIGHT_RES)));
-        y0 = Math.min(y0, Math.max(0, Math.floor((p.sy - p.r) * LIGHT_RES)));
-        x1 = Math.max(x1, Math.min(lw, Math.ceil((p.sx + p.r) * LIGHT_RES)));
-        y1 = Math.max(y1, Math.min(lh, Math.ceil((p.sy + p.r) * LIGHT_RES)));
+    const cover = (): Box => {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i < n; i++) {
+        if (!shows(i, 0)) continue;
+        const sx = spots[i * 4], sy = spots[i * 4 + 1], r = spots[i * 4 + 2];
+        x0 = Math.min(x0, Math.max(0, Math.floor((sx - r) * LIGHT_RES)));
+        y0 = Math.min(y0, Math.max(0, Math.floor((sy - r) * LIGHT_RES)));
+        x1 = Math.max(x1, Math.min(lw, Math.ceil((sx + r) * LIGHT_RES)));
+        y1 = Math.max(y1, Math.min(lh, Math.ceil((sy + r) * LIGHT_RES)));
       }
       return x1 > x0 && y1 > y0 ? [x0, y0, x1 - x0, y1 - y0] : [0, 0, 0, 0];
     };
-    const casts = (g: CanvasRenderingContext2D, ls: LightSource[], pad = 0): void => {
+    const casts = (g: CanvasRenderingContext2D, steady: boolean, pad = 0): void => {
       // Opaque on black, so 'lighten' keeps the larger of what is there and what comes: the warmest light, not the sum.
       g.globalCompositeOperation = 'lighten';
-      for (const l of ls) {
-        const p = placed(l, pad);
-        if (!p) continue;
+      for (let i = 0; i < n; i++) {
+        const l = lights[i];
+        if (!l.steady !== !steady || !shows(i, pad)) continue;
         const a = (l.castAlpha ?? 0.16 * l.strength) * (l.soft ? lightHole(l.radius) : 1);
-        const [r0, g0, b0] = (l.cast ?? '255, 186, 92').split(',').map((v) => Number(v) * a);
+        const rgb = this.castRgb(l.cast ?? '255, 186, 92');
+        const r0 = rgb[0] * a, g0 = rgb[1] * a, b0 = rgb[2] * a;
         let grad: CanvasGradient;
+        if (l.soft) {
+          grad = kept(this.softCastGrads, `${r0},${g0},${b0}`, () => fallGradient(g, 0, 0, 1, (f) => `rgb(${Math.round(r0 * f)}, ${Math.round(g0 * f)}, ${Math.round(b0 * f)})`));
+        } else {
+          const R = Math.round(r0), G = Math.round(g0), B = Math.round(b0);
+          grad = kept(this.castGrads, R * 65536 + G * 256 + B, () => {
+            const made = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+            made.addColorStop(0, `rgb(${R}, ${G}, ${B})`);
+            made.addColorStop(1, 'rgb(0, 0, 0)');
+            return made;
+          });
+        }
         // A pool on the ground flattened as the ground is seen (`LightSource.flat`): laid round its middle squashed up and down.
-        const flat = l.flat ?? 1;
-        const cy = flat === 1 ? p.sy : 0, cx = flat === 1 ? p.sx : 0;
-        if (flat !== 1) {
-          g.save();
-          g.translate(p.sx, p.sy);
-          g.scale(1, flat);
-        }
-        if (l.soft) grad = fallGradient(g, cx, cy, p.r, (f) => `rgb(${Math.round(r0 * f)}, ${Math.round(g0 * f)}, ${Math.round(b0 * f)})`);
-        else {
-          grad = g.createRadialGradient(cx, cy, 0, cx, cy, p.r);
-          grad.addColorStop(0, `rgb(${Math.round(r0)}, ${Math.round(g0)}, ${Math.round(b0)})`);
-          grad.addColorStop(1, 'rgb(0, 0, 0)');
-        }
-        g.fillStyle = grad;
-        g.beginPath();
-        g.arc(cx, cy, p.r, 0, Math.PI * 2);
-        g.fill();
-        if (flat !== 1) g.restore();
+        disc(g, i, pad, grad, l.flat ?? 1);
       }
+      g.setTransform(LIGHT_RES, 0, 0, LIGHT_RES, 0, 0);
       g.globalCompositeOperation = 'source-over';
     };
     const ctxOf = (c: HTMLCanvasElement): CanvasRenderingContext2D => {
@@ -2181,15 +2215,35 @@ export class Renderer {
       g.setTransform(LIGHT_RES, 0, 0, LIGHT_RES, 0, 0);
       return g;
     };
-    const steady = lights.filter((l) => l.steady);
-    const live = lights.filter((l) => !l.steady);
-    // Not where the camera is: the layers are slid with it (`lit`).
-    const key = `${lw}x${lh}|${zoom},${cam.rotation}|`
-      + steady.map((l) => `${l.x.toFixed(3)},${l.y.toFixed(3)},${this.standTop(l.x, l.y)},${l.radius},${l.strength},${l.cast ?? ''},${l.castAlpha ?? ''},${l.flat ?? ''}`).join(';');
+    /*
+     * Not where the camera is: the layers are slid with it (`lit`). What the
+     * steady lights are, as numbers and their colours, against what they
+     * were when the layers were made: it was a string a light a frame.
+     */
+    const sig = this.litSig, inks = this.litInks;
+    sig.length = 0;
+    inks.length = 0;
+    sig.push(lw, lh, zoom, cam.rotation);
+    let live = false;
+    for (let i = 0; i < n; i++) {
+      const l = lights[i];
+      if (!l.steady) {
+        live = true;
+        continue;
+      }
+      sig.push(l.x, l.y, spots[i * 4 + 3], l.radius, l.strength, l.castAlpha ?? -1, l.flat ?? -1);
+      inks.push(l.cast);
+    }
+    const same = (at: NonNullable<Renderer['lit']>): boolean => {
+      if (at.sig.length !== sig.length || at.inks.length !== inks.length) return false;
+      for (let i = 0; i < sig.length; i++) if (at.sig[i] !== sig[i]) return false;
+      for (let i = 0; i < inks.length; i++) if (at.inks[i] !== inks[i]) return false;
+      return true;
+    };
     const slid = (at: { cx: number; cy: number }): [number, number] => [(at.cx - cam.cx) * zoom, (at.cy - cam.cy) * zoom];
     const stale = (at: NonNullable<Renderer['lit']>): boolean => {
       const [ox, oy] = slid(at);
-      return at.key !== key || Math.abs(ox) > at.pad || Math.abs(oy) > at.pad;
+      return !same(at) || Math.abs(ox) > at.pad || Math.abs(oy) > at.pad;
     };
     if (!this.lit || stale(this.lit)) {
       // A quarter of the screen spare on every side.
@@ -2205,12 +2259,12 @@ export class Renderer {
       m.globalCompositeOperation = 'source-over';
       m.fillStyle = '#000';
       m.fillRect(0, 0, w + 2 * pad, h + 2 * pad);
-      holes(m, steady, pad);
+      holes(m, true, pad);
       c.globalCompositeOperation = 'source-over';
       c.fillStyle = '#000';
       c.fillRect(0, 0, w + 2 * pad, h + 2 * pad);
-      casts(c, steady, pad);
-      this.lit = { mask, warm, key, cx: cam.cx, cy: cam.cy, pad };
+      casts(c, true, pad);
+      this.lit = { mask, warm, sig: sig.slice(), inks: inks.slice(), cx: cam.cx, cy: cam.cy, pad };
     }
     // The steady layers where the camera is now, and the fires over them.
     const now = this.litNow ?? (this.litNow = { mask: sheet(undefined), warm: sheet(undefined) });
@@ -2223,11 +2277,34 @@ export class Renderer {
       g.drawImage(from, (ox - this.lit.pad) * LIGHT_RES, (oy - this.lit.pad) * LIGHT_RES);
       g.globalCompositeOperation = 'source-over';
     }
-    if (live.length) {
-      holes(ctxOf(mask), live);
-      casts(ctxOf(warm), live);
+    if (live) {
+      holes(ctxOf(mask), false);
+      casts(ctxOf(warm), false);
     }
-    return { mask, warm, box: cover(live, cover(steady)) };
+    return { mask, warm, box: cover() };
+  }
+
+  /** Where each light falls this frame (`lightLayers`), four numbers a light. */
+  private lightSpots = new Float64Array(64);
+  /** The steady lights as numbers and their colours this frame, against the layers' own (`lit`). */
+  private litSig: number[] = [];
+  private litInks: (string | undefined)[] = [];
+  /** The lights' gradients, by their stops, at a reach of one round nothing (`lightLayers`). */
+  private holeGrads = new Map<number | string, CanvasGradient>();
+  private softHoleGrads = new Map<number | string, CanvasGradient>();
+  private castGrads = new Map<number | string, CanvasGradient>();
+  private softCastGrads = new Map<number | string, CanvasGradient>();
+  private castRgbs = new Map<string, [number, number, number]>();
+
+  /** A light's colour, 'r, g, b', as numbers: read once for each colour. */
+  private castRgb(cast: string): [number, number, number] {
+    let rgb = this.castRgbs.get(cast);
+    if (!rgb) {
+      const [r, g, b] = cast.split(',').map(Number);
+      rgb = [r, g, b];
+      this.castRgbs.set(cast, rgb);
+    }
+    return rgb;
   }
 
   /**
