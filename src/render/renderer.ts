@@ -1,4 +1,4 @@
-import { actOf } from './beasts';
+import { actOf, beastFrame } from './beasts';
 import { gearFrom, wornWire } from '../game/worn';
 import { Camera } from '../engine/camera';
 import { emoteAt } from '../game/emotes';
@@ -3477,6 +3477,7 @@ export class Renderer {
     this.zoomSettled = now - this.zoomMovedAt >= ZOOM_SETTLE;
     this.stillsLeft.left = this.zoomSettled ? STILLS_A_FRAME : 0;
     piecesFrame(this.zoomSettled);
+    beastFrame();
     zoomHeld.left = this.zoomSettled ? 1 : 0;
     this.hemsMoving = 0;
     if (fit !== this.hemFor) {

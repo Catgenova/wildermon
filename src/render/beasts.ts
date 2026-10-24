@@ -1284,21 +1284,34 @@ const GRAZE_STEPS = 4;
  */
 const STEPS = Array.from({ length: 21 }, (_, q) => 0.5 * 2 ** (q / 4));
 /**
- * How long, in milliseconds, new pictures may take in any sixtieth of a
- * second: drawing one and putting it down the first time, which is when the
- * canvas actually fills it in. A herd come into view at once, or a zoom,
- * wants a great many new pictures in the same moment; past this, a body
- * waiting for its next one keeps the nearest one before it that is drawn, and
- * the pictures fill in over the next few frames rather than all in one. None
- * waits longer than `WAIT` seconds, so a body kept waiting in a crowd still
- * moves, if less often, rather than standing frozen while others are drawn.
+ * How long, in milliseconds, new pictures may take in a frame: drawing one
+ * and putting it down the first time, which is when the canvas actually fills
+ * it in. A herd come into view at once, or a zoom, wants a great many new
+ * pictures in the same moment; past this, a body waiting for its next one
+ * keeps the nearest one before it that is drawn, and the pictures fill in over
+ * the next few frames rather than all in one. None waits longer than `WAIT`
+ * seconds, so a body kept waiting in a crowd still moves, if less often,
+ * rather than standing frozen while others are drawn.
+ *
+ * Counted by the frame (`beastFrame`), not by the sixtieth of a second: by
+ * the clock, a frame slowed by new pictures was given a fresh allowance every
+ * sixtieth of a second inside it, so the more pictures a frame drew the more
+ * it was let draw.
  */
 const ALLOWANCE = 4;
 const WAIT = 0.4;
-let spent = 0, since = 0;
+let spent = 0, since = 0, framed = false;
+/** Once a frame, from the renderer: a new allowance for new pictures. */
+export function beastFrame(): void {
+  framed = true;
+  spent = 0;
+}
 function drawingAllowed(): boolean {
-  const now = performance.now();
-  if (now - since > 16) { since = now; spent = 0; }
+  // Drawn with no renderer counting frames (`beastFrame`): by the clock, a sixtieth of a second as a frame.
+  if (!framed) {
+    const now = performance.now();
+    if (now - since > 16) { since = now; spent = 0; }
+  }
   return spent < ALLOWANCE;
 }
 
