@@ -36,17 +36,17 @@ const mix3 = (a: Three, b: Three, t: number): Three => a.map((c, i) => mix(c, b[
 export const oak: Species3D = {
   name: 'Oak',
   build: {
-    height: 40, stem: 0.23, spread: 0.66, dome: 0.4, droop: 0.25, girth: 0.125, flare: 2.4, scaffolds: 5, forks: 3, branching: 2,
-    clumps: 12, clumpSize: 0.36, gnarl: 0.6, lean: 1.5, dead: 0, bare: false, rune: false, hollow: false,
+    height: 40, stem: 0.23, spread: 0.64, dome: 0.44, droop: 0.25, girth: 0.125, flare: 2.4, scaffolds: 5, forks: 3, branching: 2,
+    clumps: 12, clumpSize: 0.46, gnarl: 0.6, lean: 1.5, dead: 0, bare: false, rune: false, hollow: false,
     habit: 'spreading', low: 0.4, zig: 0.38,
   },
   ages: {
-    sapling: { stem: 0.36, spread: 0.36, dome: 0.5, girth: 0.05, flare: 1, scaffolds: 3, forks: 1, branching: 1.6, clumps: 3, clumpSize: 0.55, gnarl: 0.2, lean: 0.5, low: 0, zig: 0.3 },
-    young: { stem: 0.24, spread: 0.58, dome: 0.42, girth: 0.075, flare: 1.4, scaffolds: 4, forks: 2, clumps: 6, clumpSize: 0.4, gnarl: 0.35, lean: 1, low: 0, zig: 0.35 },
-    old: { spread: 0.68, girth: 0.13, flare: 2.6, scaffolds: 5, clumps: 13, clumpSize: 0.35, gnarl: 0.75, lean: 2, low: 0.5, rune: true },
-    veryOld: { spread: 0.7, girth: 0.135, flare: 2.7, scaffolds: 5, clumps: 11, clumpSize: 0.35, gnarl: 0.9, lean: 2.5, low: 0.5, dead: 1, rune: true, hollow: true },
+    sapling: { stem: 0.36, spread: 0.36, dome: 0.5, girth: 0.05, flare: 1, scaffolds: 3, forks: 1, branching: 1.6, clumps: 3, clumpSize: 0.66, gnarl: 0.2, lean: 0.5, low: 0, zig: 0.3 },
+    young: { stem: 0.3, spread: 0.52, dome: 0.5, girth: 0.08, flare: 1.4, scaffolds: 4, forks: 2, clumps: 6, clumpSize: 0.56, gnarl: 0.35, lean: 1, low: 0, zig: 0.35 },
+    old: { spread: 0.66, girth: 0.13, flare: 2.6, scaffolds: 5, clumps: 13, clumpSize: 0.44, gnarl: 0.75, lean: 2, low: 0.5, rune: true },
+    veryOld: { spread: 0.68, girth: 0.135, flare: 2.7, scaffolds: 5, clumps: 11, clumpSize: 0.44, gnarl: 0.9, lean: 2.5, low: 0.5, dead: 1, rune: true, hollow: true },
     shrivelled: { girth: 0.13, flare: 2.5, scaffolds: 5, forks: 2, gnarl: 0.9, lean: 2.5, bare: true, rune: true },
-    clipped: { stem: 0.14, spread: 0.6, dome: 0.55, droop: 0.1, girth: 0.1, flare: 1.4, scaffolds: 4, forks: 2, clumps: 5, clumpSize: 0.48, gnarl: 0.3, lean: 0.6, low: 0.25 },
+    clipped: { stem: 0.14, spread: 0.6, dome: 0.55, droop: 0.1, girth: 0.1, flare: 1.4, scaffolds: 4, forks: 2, clumps: 5, clumpSize: 0.6, gnarl: 0.3, lean: 0.6, low: 0.25 },
   },
   bark: {
     lit: tone(flat.bark, 0.3), shade: mix(flat.bark, '#3e3040', 0.45), dead: tone(flat.bark, 0.5), furrow: mix(flat.bark, '#2e2230', 0.6),
@@ -54,7 +54,7 @@ export const oak: Species3D = {
   },
   leafForm: 'oak',
   open: true,
-  pad: 0.74,
+  pad: 0.84,
   buttress: true,
   snowLine: true,
   inkedRune: true,

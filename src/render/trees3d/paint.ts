@@ -165,7 +165,8 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     return P.order === L.order && len(sub(L.a, P.b)) < 1e-6;
   };
   // What is never drawn is not looked at: under a full crown the finer wood, among any leaf an open crown's finest twigs.
-  const cut = leafy ? (job.spec.open ? 3 : 2) : job.spec.open && job.dress.full > 0 ? 4 : 99;
+  // An open crown in full leaf hides its branches: only the limbs off the trunk show, low and through its gaps.
+  const cut = leafy ? 2 : job.spec.open && job.dress.full > 0 ? 4 : 99;
   for (let i = 0; i < limbs.length; i++) if (limbs[i].order < cut && goesOn(i)) next.set(limbs[i].parent, i);
   const V = unit(e.toward as V3);
   const snowy = job.dress.season === 'winter';
@@ -175,7 +176,7 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     const first = limbs[i];
     // Under a full crown the finest twigs are never seen.
     // Under a full crown only the trunk and the limbs it splits into are ever seen, below the crown.
-    if (leafy && first.order >= (job.spec.open ? 3 : 2)) continue;
+    if (leafy && first.order >= 2) continue;
     // The finest twigs only on the bare wood: among leaf they would be scratches over it.
     if (job.spec.open && first.order >= 4 && job.dress.full > 0) continue;
     // A buttressed foot's roots are drawn as the foot's lobes (`footPath`).

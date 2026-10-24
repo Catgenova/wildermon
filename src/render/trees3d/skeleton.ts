@@ -387,7 +387,7 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
     }
     const reach = out * (low ? 0.8 + 0.1 * R() : mine[i].length ? 0.55 + 0.2 * R() : 0.9 + 0.2 * R());
     const lift = !mine[i].length ? (low ? stemZ * (0.4 + 0.4 * R()) : (top - B[2]) * (0.55 + 0.25 * R()))
-      : low ? Math.max(stemZ * 0.15, top - B[2] - rm * 1.3) : (top - B[2]) * (0.42 + 0.2 * R());
+      : low ? Math.max(stemZ * 0.15, top - B[2] - rm * 0.45) : (top - B[2]) * (0.5 + 0.2 * R());
     const T: V3 = [B[0] + Math.cos(az) * reach, B[1] + Math.sin(az) * reach, B[2] + lift];
     const pts = curve(B, T, 4, zig * 0.26, 3);
     // A low limb sags between its elbows and turns up at its end.
