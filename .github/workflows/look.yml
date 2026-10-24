@@ -332,5 +332,9 @@ jobs:
              from item i join player p on p.world_id = i.world_id and p.name = 'catgenova'
             where i.def = 'mortar' and ((i.holder = 'player' and i.holder_uid = p.uid) or (i.holder = 'bag' and i.inside in (select b.id from item b where b.holder = 'player' and b.holder_uid = p.uid)))
             order by i.id"
-          ask "mortar: the keeper's last events" "select e.* from event e join player p on p.world_id = e.world_id and p.uid = e.uid and p.name = 'catgenova'
-            where e.text ilike any (array['%mortar%', '%supreme%', '%kept%', '%lock%']) order by e.at desc limit 25"
+          ask "mortar: every mortar row made in the last day" "select i.id, i.holder, i.holder_uid = p.uid as theirs, i.inside, i.crate, i.gx, i.gy, i.count, round(i.ql::numeric, 2) as ql, i.rare, i.locked, i.maker, i.made_at
+             from item i join player p on p.world_id = i.world_id and p.name = 'catgenova'
+            where i.def = 'mortar' and (i.rare is not null or i.maker is not null) and i.made_at > now() - interval '1 day' order by i.id"
+          ask "mortar: the keeper's events, not their wildermon" "select e.n, e.kind, e.at, e.text from event e join player p on p.world_id = e.world_id and p.uid = e.uid and p.name = 'catgenova'
+            where e.kind <> 'wildermon' and e.at > now() - interval '3 hours'
+              and e.text ilike any (array['%mortar%', '%supreme%', '%kept%', '%lock%', '%stores%', '%stack%', '%moved%', '%put%']) order by e.at desc limit 40"
