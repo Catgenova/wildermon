@@ -13,6 +13,8 @@
  * what stands where rebuilt.
  */
 
+import { furnitureDef } from './furniture';
+
 /** Whether two values read off the island are the same: numbers, strings, arrays and plain objects, all the way down. */
 export function same(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -33,31 +35,64 @@ export function same(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Keys that change on every read without anything having happened: the
- * caller's own (`team` and `worker`, made again from the creatures after
- * every read, and a trap's `checkAt`, which is the moment of the read), and
- * what this side draws forward between one read and the next (fuel burning
- * down, a brazier's at more than a second a second, ash building up, a well
- * filling, a wine working; absent counts as none) or what lands a few milliseconds of latency later each time (moss
- * and ivy begun, a grave's hour). Written as the read says, as every key is;
- * not news to a window showing them unless they are further out than that.
- * A well filling here says it holds water before the island does, which is
- * not news either: what it holds is (`litres`).
+ * The caller's own keys, which change on every read without anything having
+ * happened: `team` and `worker`, made again from the creatures after every
+ * read, and a trap's `checkAt`, which is the moment of the read. Written as
+ * the read says; never news.
  */
 const OWN = new Set(['team', 'worker', 'checkAt']);
-const DRAWN: Record<string, number> = { fuel: 60, ash: 0.5, litres: 2, ferment: 2, greenSince: 5 };
-/** Within `by` of each other. A fire burnt out is news by its `lit`, which is not one of these. */
+
+/**
+ * How far the read's value of `k` may be from the one held and still be no
+ * news to a window, for what this side itself moves on between one read and
+ * the next, so the read only corrects what is already on screen; undefined,
+ * so any change is news, for everything else.
+ *
+ * - `fuel` and `ash` of a piece alight before and after the read: burnt down
+ *   and built up every frame by `burnFires` (campfires, braziers),
+ *   `runPlaceables` (an oven or any hearth), `runSmelters`, `runKilns`
+ *   (`game.ts`) and `burnLamps` (`lamps.ts`), at no more than 1.55 s of fuel
+ *   a second (`BRAZIER_BURN_AT_ONE`) and that over `ASH_RATE` in ash. A fire
+ *   lit, put out or fed by any log at all is news.
+ * - `ferment` while it is counting: counted down a second a second by
+ *   `runPlaceables`.
+ * - `litres` of a well and `liquid`: a well is filled every frame by
+ *   `runPlaceables`, which says it holds water before the island does.
+ * - `greenSince` and a grave's `crumbles`: not moved on here, but made at
+ *   each read from how long ago and how long left (`sinceAgo`, `left`) and
+ *   the moment the read lands, so the same instant arrives a little later
+ *   each time; what is shown is worked out from them by this side's clock.
+ */
+type Raw = Record<string, unknown>;
+const lit = (held: Raw, fresh: Raw): boolean => held.lit === true && fresh.lit === true;
+function drift(k: string, held: Raw, fresh: Raw): number | undefined {
+  switch (k) {
+    case 'fuel': return lit(held, fresh) ? 5 : undefined;
+    case 'ash': return lit(held, fresh) ? 0.1 : undefined;
+    case 'ferment': return typeof held.ferment === 'number' && held.ferment > 0 ? 5 : undefined;
+    case 'litres': return typeof fresh.kind === 'string' && furnitureDef(fresh.kind).well ? 2 : undefined;
+    case 'greenSince': return 5;
+    default: return undefined;
+  }
+}
+/** Within `by` of each other; absent counts as none. */
 const near = (a: unknown, b: unknown, by: number): boolean => {
   if (a === b) return true;
   if ((typeof a !== 'number' && a !== undefined) || (typeof b !== 'number' && b !== undefined)) return same(a, b);
   return Math.abs((a ?? 0) - (b ?? 0)) <= by;
 };
-const sameLiquid = (a: unknown, b: unknown): boolean => a === b || (a ?? 'water') === (b ?? 'water');
 const graveSame = (a: unknown, b: unknown): boolean => {
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return same(a, b);
-  const A = a as Record<string, unknown>, B = b as Record<string, unknown>;
+  const A = a as Raw, B = b as Raw;
   return same({ ...A, crumbles: 0 }, { ...B, crumbles: 0 }) && near(A.crumbles, B.crumbles, 5);
 };
+/** Whether the read's `k` is no news against what was held: `was` is the held value, `held` the piece as it was before the read was written into it. */
+function noNews(k: string, was: unknown, now: unknown, held: Raw, fresh: Raw): boolean {
+  if (k === 'grave') return graveSame(was, now);
+  if (k === 'liquid') return typeof fresh.kind === 'string' && !!furnitureDef(fresh.kind).well && (was ?? 'water') === (now ?? 'water');
+  const by = drift(k, held, fresh);
+  return by !== undefined && near(was, now, by);
+}
 
 /** A vehicle's team, which `teamsFromCreatures` makes again after every read from nothing: left on it for that to do. */
 const REMADE = 'team';
@@ -72,9 +107,11 @@ const NEWS = 1, GONE = 2;
  * and so is every loop over the collection it is in): the caller keeps
  * `fresh` in its place instead.
  */
-function writeInto(held: Record<string, unknown>, fresh: Record<string, unknown>): number {
+function writeInto(held: Raw, fresh: Raw): number {
   let news = 0, shared = 0;
   const had = Object.keys(held).length;
+  // What `drift` asks of the piece as it was: alight, or fermenting, before this read.
+  const before: Raw = { lit: held.lit, ferment: held.ferment };
   for (const k in fresh) {
     const was = held[k], now = fresh[k];
     const has = was !== undefined || k in held;
@@ -82,8 +119,7 @@ function writeInto(held: Record<string, unknown>, fresh: Record<string, unknown>
     if (has && (was === now || (typeof now === 'object' && now !== null && typeof was === 'object' && same(was, now)))) continue;
     held[k] = now;
     if (OWN.has(k)) continue;
-    const by = DRAWN[k];
-    if (by !== undefined ? !near(was, now, by) : k === 'grave' ? !graveSame(was, now) : k === 'liquid' ? !sameLiquid(was, now) : true) news = NEWS;
+    if (!noNews(k, was, now, before, fresh)) news = NEWS;
   }
   if (had === shared) return news;
   for (const k in held) if (k !== REMADE && !(k in fresh)) return NEWS | GONE;
