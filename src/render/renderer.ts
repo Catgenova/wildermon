@@ -4318,12 +4318,14 @@ export class Renderer {
           for (const cr of this.game.creatures.atTile(x, y)) {
             // One shut in a crate is drawn in the crate, by the crate.
             if (cr.mode === 'stored') continue;
-            // One in the traces of a wagon a storey up is up there with it (`driveStorey`).
-            const up = cr.hitchedTo !== null ? this.game.furniture.get(cr.hitchedTo)?.level ?? 0 : 0;
+            // One in the traces of a wagon a storey up is up there with it (`driveStorey`), and a mount ridden up a wide staircase (`rideRule`).
+            const up = this.game.creatureStorey(cr);
             // Pinned on a storey, those on it; and the one you ride or drive, under you whatever is pinned.
             if (this.pinned !== null && up !== this.pinned && !cr.ridden && !(cr.hitchedTo !== null && this.game.furniture.get(cr.hitchedTo)?.driven)) continue;
+            // Under you, as high as you are drawn, on the way up a flight too.
+            const lift = cr.ridden ? player.visualLevel : up;
             const ce = this.take('creature', x, y, cam.worldToScreenX(cr.x, cr.y),
-              cam.worldToScreenY(cr.x, cr.y, up > 0 ? this.footOn(cr.x, cr.y, up) + up * WALL_HEIGHT : deckHere ?? this.footAt(cr.x, cr.y)), null);
+              cam.worldToScreenY(cr.x, cr.y, lift > 0 ? this.footOn(cr.x, cr.y, up) + lift * WALL_HEIGHT : deckHere ?? this.footAt(cr.x, cr.y)), null);
             ce.creature = cr;
             // Somebody else up on it: on its saddle, a hair in front of it, as I am on mine.
             const rider = cr.riderUid && !cr.ridden ? this.riderOf(cr) : undefined;
@@ -4363,8 +4365,9 @@ export class Renderer {
         // Sat on the box, the driver goes where the box goes rather than where
         // their own feet are, and sorts a hair behind it so it is drawn first.
         const [vx, vy] = drivenBy ? furnitureCentre(drivenBy) : [player.x, player.y];
-        // A rider sits where their mount stands, which is where they stand.
-        const sy = drivenBy || up ? cam.worldToScreenY(vx, vy, drivenBy ? this.pieceBase(drivenBy, vx, vy) : world.heightAt(vx, vy)) + 0.01 : cam.worldToScreenY(player.x, player.y, ph);
+        // A rider sits where their mount stands, which is where they stand: a storey up too (`rideRule`).
+        const seatBase = drivenBy ? this.pieceBase(drivenBy, vx, vy) : player.visualLevel > 0 ? this.footOn(vx, vy, player.level) + player.visualLevel * WALL_HEIGHT : world.heightAt(vx, vy);
+        const sy = drivenBy || up ? cam.worldToScreenY(vx, vy, seatBase) + 0.01 : cam.worldToScreenY(player.x, player.y, ph);
         const pe = this.take('player', player.tileX, player.tileY, cam.worldToScreenX(vx, vy), sy, null);
         pe.lift = this.driverSeat() * zoom;
         if (flight) pe.clip = flight.clip;
@@ -5023,10 +5026,10 @@ export class Renderer {
     return (wildermonSeat(up.species, stageOf(up)) ?? SPECIES[up.species]?.mount ?? 0) * ageDef(up, this.game.time).scale * bodySize(up);
   }
 
-  /** Somebody else up on a wildermon, on the ground, when they are here to be drawn on it. */
+  /** Somebody else up on a wildermon, on the ground or a storey up a wide staircase, when they are here to be drawn on it. */
   private riderOf(c: Creature): Peer | undefined {
     const p = c.riderUid ? this.game.roster.byUid(c.riderUid) : undefined;
-    return p && p.level === 0 ? p : undefined;
+    return p && p.level >= 0 ? p : undefined;
   }
 
   /**

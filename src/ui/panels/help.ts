@@ -1677,7 +1677,7 @@ export function helpText(): string {
     <h3>Looking inside a building</h3>
     <ul>
       <li>Storey arrows (right edge, once anything is built): <b>pin one storey</b>, up to the tallest building's roof. Every other storey hidden, above and below:
-      walls, floors, roofs, and the furniture and people on them. Clicks and walks: onto that storey's floor (mounted: dismount first). Its menu: that storey's
+      walls, floors, roofs, and the furniture and people on them. Clicks and walks: onto that storey's floor (mounted: wide staircases only). Its menu: that storey's
       building work, <i>Plan staircase up</i>, furniture set down on it. Label <i>1st</i>, <i>2nd</i>…; click for <i>Auto</i> (every storey).
       <kbd>Page Up</kbd> / <kbd>Page Down</kbd> do the same.</li>
       <li>Once any cellar is dug: <i>Cellar</i>, below the ground floor: every nearby cellar as dug, buildings over them removed. Contents and people in a cellar
@@ -2956,6 +2956,8 @@ export function helpText(): string {
       <li><b>Bura</b>: no task; panniers hold <b>${SPECIES.bura.pannier} things</b> (open from its menu).</li>
       <li><b>Gorral</b>: saddle mount; climbs ground ${article(SPECIES.orse.name)} ${SPECIES.orse.name} refuses.</li>
       <li><b>Wadd</b>: the only mount that swims deep water with a rider.</li>
+      <li>Mounted, indoors: through an <b>arch</b>, <b>double door</b> or <b>gate</b>; no plain door, hidden door or iron-bound gate. Up a finished <b>wide staircase</b>
+      from its foot, onto finished floors of that storey; no ${SINGLE_STAIRS_NAME}, ladder or roof; never over a staircase's rails. Mount and dismount on the ground floor only.</li>
       <li><b>Shaggan</b>: slowest in the traces; +${percent(SPECIES.shaggan.pull ?? PULL_DEFAULT)} team pull each (most add ${percent(PULL_DEFAULT)}).</li>
       <li><b>${SPECIES.warda.name}</b> (was Warda): sees ${SPECIES.warda.sight} tiles for you wherever it stands. Evolves: ${evolves('warda')}.</li>
       <li><b>Quill</b>: <b>pluck</b> for <b>feathers</b>.</li>

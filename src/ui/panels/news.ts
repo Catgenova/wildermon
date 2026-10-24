@@ -3609,6 +3609,15 @@ export const NEWS: News[] = [
       'Changed: Plan another storey: only the ground storey must be closed in. 3rd storey and up: planned over a storey still going up.',
     ],
   },
+  {
+    n: 298,
+    day: '2026-10-24',
+    lines: () => [
+      'Added: mounts climb finished wide staircases: ride on from the foot, through an arch, double door or gate; along finished floors of the storey above. '
+        + `No ${SINGLE_STAIRS_NAME}, ladder, roof or staircase side.`,
+      'Changed: mounted, indoors through an arch, double door or gate only; no plain door, hidden door or iron-bound gate. Mount and dismount on the ground floor only.',
+    ],
+  },
 ];
 
 /**

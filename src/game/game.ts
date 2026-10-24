@@ -35,7 +35,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { glassResync, underGlass } from './glasshouse';
-import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
+import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -1566,14 +1566,14 @@ export class Game {
    * rails, and nothing on wheels goes over them. Undefined where no wide
    * flight goes up from the tile.
    */
-  private wideFlightUp(x0: number, y0: number, level: number, x1: number, y1: number): number | null | undefined {
+  private wideFlightUp(x0: number, y0: number, level: number, x1: number, y1: number, hooves = false): number | null | undefined {
     if (level < 0) return undefined;
     const f = this.wideFlight(x1, y1, level + 1);
     if (!f) return undefined;
     if (!acrossSide(f.facing ?? 's', x1, y1, x0, y0)) return null;
-    if (this.buildings.blocksVehicle(x0, y0, x1, y1, level)) return null;
+    if (hooves ? this.mountBlocks(x0, y0, x1, y1, level) : this.buildings.blocksVehicle(x0, y0, x1, y1, level)) return null;
     // From the ground, the ground it is driven off still has to take wheels.
-    if (level === 0 && !this.vehicleGround(x0, y0)) return null;
+    if (!hooves && level === 0 && !this.vehicleGround(x0, y0)) return null;
     return level + 1;
   }
 
@@ -1583,21 +1583,24 @@ export class Game {
    * single staircase -- and through its doorways only where they are wide
    * enough, as on the ground. On a wide staircase you go on off its head, or
    * back down off its foot onto the storey under it; never over its rails.
+   * A mount goes the same way, through the doorways it takes (`mountBlocks`).
    */
-  private driveStorey(x0: number, y0: number, level: number, x1: number, y1: number): number | null {
+  private driveStorey(x0: number, y0: number, level: number, x1: number, y1: number, hooves = false): number | null {
     const b = this.buildings;
+    const blocks = (fx: number, fy: number, tx: number, ty: number, at: number): boolean =>
+      hooves ? this.mountBlocks(fx, fy, tx, ty, at) : b.blocksVehicle(fx, fy, tx, ty, at);
     const here = this.wideFlight(x0, y0, level);
     if (here) {
       const facing = here.facing ?? 's';
       if (acrossSide(facing, x0, y0, x1, y1)) {
         const below = level - 1;
-        if (below === 0) return this.driveRule(x0, y0, 0, x1, y1) === 0 ? 0 : null;
-        if (b.blocksVehicle(x0, y0, x1, y1, below)) return null;
+        if (below === 0) return (hooves ? this.rideRule : this.driveRule)(x0, y0, 0, x1, y1) === 0 ? 0 : null;
+        if (blocks(x0, y0, x1, y1, below)) return null;
         return this.floorTakesWheels(x1, y1, below) ? below : null;
       }
       if (!acrossSide(OPPOSITE_SIDE[facing], x0, y0, x1, y1)) return null;
     }
-    if (b.blocksVehicle(x0, y0, x1, y1, level)) return null;
+    if (blocks(x0, y0, x1, y1, level)) return null;
     const there = this.wideFlight(x1, y1, level);
     if (there) return acrossSide(OPPOSITE_SIDE[there.facing ?? 's'], x1, y1, x0, y0) ? level : null;
     return this.floorTakesWheels(x1, y1, level) ? level : null;
@@ -1610,20 +1613,40 @@ export class Game {
   }
 
   /**
+   * Whether a wall stops a mount between two tiles at a storey, the ground floor too: what stops
+   * wheels (`blocksVehicle`: only an arch, a double door or a gate is wide
+   * enough), and an iron-bound gate, which swings for a person only.
+   */
+  private mountBlocks(x0: number, y0: number, x1: number, y1: number, level: number): boolean {
+    return this.buildings.blocksVehicle(x0, y0, x1, y1, level) || this.buildings.blocksAt(level, x0, y0, x1, y1, true);
+  }
+
+  /**
    * The rule for riding. A mount takes a slope a walker would balk at, the
-   * better the further it has been worked, but it will not swim and it will
-   * not go indoors.
+   * better the further it has been worked, but it will not swim. Indoors and
+   * up a building it goes where wheels go (`driveRule`): through a doorway
+   * wide enough (`mountBlocks`), up a finished wide staircase from its foot
+   * (`wideFlightUp`) and on the finished floors of a storey (`driveStorey`);
+   * never up a single staircase or a ladder.
    */
   readonly rideRule = (x0: number, y0: number, level: number, x1: number, y1: number): number | null => {
     const up = this.mounted();
-    if (!up || level !== 0) return null;
+    if (!up || level < 0) return null;
+    // Up a wide staircase, from its foot, onto the storey over the one you are on (`wideFlightUp`).
+    const flight = this.wideFlightUp(x0, y0, level, x1, y1, true);
+    if (flight !== undefined) return flight;
+    // Up there, on the building's own floors (`driveStorey`).
+    if (level > 0) return this.driveStorey(x0, y0, level, x1, y1, true);
     if (!this.world.inBounds(x1, y1) || !this.world.isPassable(x1, y1)) return null;
     // A deck on piers takes feet, not hooves (`pier_step`).
     if (this.buildings.pierTiles.size && this.buildings.onPiers(x1, y1)) return null;
     if (this.bridges.size && this.pierBetween(x0, y0, x1, y1)) return null;
     // Only the web-footed sort will take a rider into deep water.
     if (!this.creatures.species(up).swims && this.world.bedAt(x1 + 0.5, y1 + 0.5) < this.world.surfaceAt(x1, y1) - SWIM_DEPTH) return null;
-    if (this.buildings.blocksAt(0, x0, y0, x1, y1)) return null;
+    // Through a doorway wide enough, as wheels go (`mountBlocks`).
+    if (this.mountBlocks(x0, y0, x1, y1, 0)) return null;
+    // And a staircase or a ladder going up from the tile is no way for hooves but a wide one from its foot (`wideFlightUp`).
+    if (this.connector(x1, y1, 1)) return null;
     // Nor over the open stairwell of a flight down to a cellar.
     if (this.buildings.cellars.size && this.buildings.flightDown(x1, y1)) return null;
     return groundStep(this.world, x0, y0, x1, y1, this.mountStep(up)) && standsOn(this.world, x1, y1, this.mountStand(up)) ? 0 : null;
@@ -2106,7 +2129,8 @@ export class Game {
     if (this.afloat()) return { rule: this.sailRule, levels: 1, below: 0 };
     // Wheels go up wide staircases, so a drive crosses storeys as a walk does (`driveStorey`).
     if (this.driving()) return { rule: this.driveRule, levels: TOP_LEVELS, below: 0 };
-    if (this.mounted()) return { rule: this.rideRule, levels: 1, below: 0 };
+    // And a mount goes up wide staircases as wheels do (`rideRule`).
+    if (this.mounted()) return { rule: this.rideRule, levels: TOP_LEVELS, below: 0 };
     return { rule: this.stepRule, levels: TOP_LEVELS, below: this.buildings.cellars.size ? -CELLAR_LEVEL : 0 };
   }
 
@@ -5614,10 +5638,6 @@ export class Game {
     const { rule, levels, below } = this.movement();
     // Clicked in the cellar's view, the cellar is where you mean; up top, the ground (`walkFloor`); on a pinned storey, that storey.
     const aim = floor ?? this.walkFloor(x, y);
-    if (floor !== undefined && floor > 0 && this.mounted()) {
-      if (!quiet) this.logMsg('Dismount first.', 'error');
-      return false;
-    }
     if (this.world.isPassable(x, y) && (floor === undefined || this.standable(x, y, floor)) && p.walkTo(this.world, x, y, rule, levels, below, aim)) return true;
     // Beside it, on the storey asked for: a storey's floor, not the ground under it.
     const candidates = this.neighbours(x, y).filter((c) => this.world.isPassable(c.x, c.y) && (floor === undefined || this.standable(c.x, c.y, floor)));
@@ -5625,6 +5645,8 @@ export class Game {
     for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim)) return true;
     if (!quiet) {
       if (floor !== undefined && floor > 0 && !candidates.length) this.logMsg(`No floor on storey ${floor + 1}.`, 'error');
+      // Mounted, where your own feet would get there: a single staircase, a ladder or a narrow doorway in the way (`rideRule`).
+      else if (floor !== undefined && floor > 0 && this.mounted() && this.onFootTo(x, y, floor)) this.logMsg(MOUNT_STAIRS_SAID, 'error');
       else this.logMsg(aim === CELLAR_LEVEL ? this.noWay(x, y, 'No path there.') : 'No path there.', 'error');
     }
     return false;
@@ -5706,13 +5728,17 @@ export class Game {
     const mount = this.mounted();
     const seat = this.driving();
     if (!towing && !mount && !seat) return plain;
-    const p = this.player;
-    const onFoot = findPath(this.world, p.tileX, p.tileY, p.level, x, y,
-      { ...pathOptions(this.world, this.stepFree, TOP_LEVELS), below: -CELLAR_LEVEL, goalLevel: CELLAR_LEVEL });
-    if (!onFoot) return plain;
+    if (!this.onFootTo(x, y, CELLAR_LEVEL)) return plain;
     if (mount) return 'Dismount first: no mounts in a cellar.';
     if (seat) return 'Get off first: no vehicles in a cellar.';
     return 'Let go of the cart first: nothing towed into a cellar.';
+  }
+
+  /** Whether your own feet, with nothing in tow, would find a way to a tile on a storey. */
+  private onFootTo(x: number, y: number, level: number): boolean {
+    const p = this.player;
+    return !!findPath(this.world, p.tileX, p.tileY, p.level, x, y,
+      { ...pathOptions(this.world, this.stepFree, TOP_LEVELS), below: this.buildings.cellars.size ? -CELLAR_LEVEL : 0, goalLevel: level });
   }
 
   /** `noWay`, for a job whose target is down in a cellar. */
@@ -7709,6 +7735,18 @@ export class Game {
     return VEHICLE_STEP + (f ? this.teamClimb(f) * CLIMB_PITCH : 0);
   }
 
+  /**
+   * The storey a creature stands on: a wagon's it is in the traces of, its
+   * rider's under a rider (`rideRule`), and otherwise the ground. A mount is
+   * mounted and dismounted on the ground floor only (`MOUNT_STOREY_SAID`).
+   */
+  creatureStorey(c: Creature): number {
+    if (c.hitchedTo !== null) return Math.max(0, this.furniture.get(c.hitchedTo)?.level ?? 0);
+    if (c.ridden) return Math.max(0, this.player.level);
+    if (c.riderUid) return Math.max(0, this.roster.byUid(c.riderUid)?.level ?? c.storey ?? 0);
+    return 0;
+  }
+
   /** The wildermon the player is up on, if any. */
   mounted(): Creature | undefined {
     for (const c of this.creatures.list.values()) if (c.ridden) return c;
@@ -8169,7 +8207,8 @@ export class Game {
     if (!this.player.moving) return;
     c.walkPhase += dt * 10;
     c.hunger = Math.max(0, c.hunger - dt * HAUL_HUNGER);
-    this.workClimb(c, moved);
+    // On the ground only, as the island pays it (`rpc_move`): a floor is flat.
+    if (this.player.level === 0) this.workClimb(c, moved);
   }
 
   /**

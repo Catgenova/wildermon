@@ -3932,6 +3932,10 @@ kindNames(SPECIES);
 export const PULL_DEFAULT = 0.25;
 /** No mount carries a rider faster than this. */
 export const MAX_MOUNT_SPEED = 5;
+/** Why a rider a storey up does not get down there: mounted and dismounted on the ground floor only. The island's `ride_refusal`. */
+export const MOUNT_STOREY_SAID = 'Ride to the ground floor first: mount and dismount on the ground only.';
+/** What a mounted walk to a storey your own feet would reach says (`Game.rideRule`). */
+export const MOUNT_STAIRS_SAID = 'Dismount first: mounts take wide staircases and wide doorways only.';
 /** What practice on bad ground is worth to a beast's pace, from its climbing. */
 export const footing = (climb: number): number => 0.9 + climb / 140;
 
@@ -4808,6 +4812,8 @@ export interface IslandCreature {
   ridden?: boolean;
   /** Who is up on it, by their uid, whoever they are: somebody else's is drawn on it and it goes where they go. */
   rider?: string | null;
+  /** The storey its rider is on, sent only under a rider: a mount goes up wide staircases (`Game.rideRule`). */
+  storey?: number | null;
   /** What the tack on it carries of its makers' marks, when anything (a Tailor's Saddler). */
   tack?: Record<string, Mark> | null;
   /** The enchantments in the tack on it, by the piece, when any (Fleetfoot, Tamer's Bridle). */
@@ -5109,6 +5115,8 @@ export interface Creature {
   ridden: boolean;
   /** Who is up on its back by the island's word, by their uid, whoever they are. */
   riderUid?: string;
+  /** The storey its rider is on, by the island's word, for one under somebody else (`Game.creatureStorey`). */
+  storey?: number;
   /** The hour it was born, which is all that age is. */
   born: number;
   /** When a wild one was put out, which its stay in the wild is counted from (`WILD_STAY`); its birth where it is not kept. */
@@ -5714,6 +5722,9 @@ export class Creatures {
       if (r.ridden !== undefined) c.ridden = r.ridden;
       // And who, which anybody else's screen draws on it (`walkLegs`, `Renderer`).
       if (r.rider !== undefined) c.riderUid = r.rider ?? undefined;
+      // And the storey they ride it on, up a wide staircase (`Game.creatureStorey`).
+      if (r.storey) c.storey = r.storey;
+      else delete c.storey;
       if (r.tack !== undefined) {
         if (r.tack) c.tack = r.tack;
         else delete c.tack;
@@ -5823,7 +5834,8 @@ export class Creatures {
        * slower one of the wildlife, behind them.
        */
       const rider = c.riderUid && !c.ridden ? game.roster.byUid(c.riderUid) : undefined;
-      if (rider && rider.level === 0) {
+      // On the ground or a storey up a wide staircase (`Game.rideRule`); never down a cellar.
+      if (rider && rider.level >= 0) {
         const [nx, ny] = game.roster.drawnAt(rider);
         const gone = Math.hypot(nx - c.x, ny - c.y);
         c.moving = rider.moving && gone > 0.002;

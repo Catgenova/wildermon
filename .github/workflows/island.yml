@@ -2543,6 +2543,21 @@ jobs:
             --outfile=node_modules/.cache/stairs.mjs --log-level=error
           node node_modules/.cache/stairs.mjs
 
+      - name: Mounts up wide staircases
+        if: matrix.shard == 3
+        run: |
+          # "Mounts and carts can go up staircases, but not single staircases".
+          # Ridden up a wide staircase from its foot to storey 2 and along its
+          # floor, through doorways wide enough for wheels, and back down; not
+          # over its rails, up a single staircase or a ladder, or off the
+          # floor's edge. Replayed through rpc_move, never held back, the mount
+          # under its rider up there and its storey sent to everybody; no
+          # getting down or mounting a storey up, in the same words on both
+          # sides.
+          npx esbuild supabase/test/mountstairs.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/mountstairs.mjs --log-level=error
+          node node_modules/.cache/mountstairs.mjs
+
       - name: The outside staircase
         if: matrix.shard == 3
         run: |
