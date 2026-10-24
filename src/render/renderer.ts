@@ -1570,10 +1570,13 @@ export class Renderer {
   }
   private readonly outsetNormals = new Float64Array(8);
 
+  /** The transform the ground of this line is laid under (`occludeGround`). */
+  private groundMatrix: DOMMatrix | undefined;
+
   private occludeGround(ctx: CanvasRenderingContext2D, pts: ArrayLike<number>, minY: number, maxY: number): void {
     const minX = Math.min(pts[0], pts[2], pts[4], pts[6]);
     const maxX = Math.max(pts[0], pts[2], pts[4], pts[6]);
-    if (!this.runeNight.falls(ctx, minX, minY, maxX - minX, maxY - minY)) return;
+    if (!this.runeNight.falls(ctx, minX, minY, maxX - minX, maxY - minY, this.groundMatrix)) return;
     this.runeNight.occludeDraw(ctx, minX, minY, maxX - minX, maxY - minY, (g) => {
       g.beginPath();
       g.moveTo(pts[0], pts[1]);
@@ -4050,6 +4053,8 @@ export class Renderer {
       this.entN = 0;
       // Whether a runestone drawn on a line before this one is lit for the night, so this line's ground is kept off it.
       const stoneLit = this.runeNight.keeping;
+      // The ground is laid under one transform: read once a line, not once a tile (`occludeGround`).
+      if (stoneLit) this.groundMatrix = ctx.getTransform();
       if (grain) {
         this.grainN = 0;
         this.grainM = 0;

@@ -2930,9 +2930,13 @@ export class RunestoneNight {
     return g;
   }
 
-  /** Whether a box in `ctx`'s units, under its transform now, falls on any stone's shapes: for a caller choosing how to hand it over. */
-  falls(ctx: Ctx, x: number, y: number, w: number, h: number): boolean {
-    return !!this.keepN && !!this.under(devBox(ctx.getTransform(), x, y, w, h));
+  /**
+   * Whether a box in `ctx`'s units, under its transform now (or `m`, for a
+   * caller asking for a run of things under the one transform), falls on any
+   * stone's shapes: for a caller choosing how to hand it over.
+   */
+  falls(ctx: Ctx, x: number, y: number, w: number, h: number, m?: DOMMatrix): boolean {
+    return !!this.keepN && !!this.under(devBox(m ?? ctx.getTransform(), x, y, w, h));
   }
 
   /** A picture drawn after the stones, as `drawImage` took it on `ctx` just now: kept wherever it falls on one. */
