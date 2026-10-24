@@ -325,7 +325,7 @@ export function arcade(look: ArcadeLook): (k: Kit) => void {
 function voussoirRing(k: Kit, edge: number, t: number, arc: Arc, D: number, proud: number): void {
   const { sl, st } = k;
   const tr = t + edge * proud;
-  const n = Math.max(16, Math.round((arc.A / U) * 24));
+  const n = Math.max(12, Math.round((arc.A / U) * 14));
   const joints = jointsOf(arc, D * 0.5, 2.7);
   const info: RingInfo = { ...fi('ring', 0, 0, 0, 0, Math.round(arc.c * 10), true), arc, D, joints };
   const [sa] = arcAt(arc, Math.PI - arc.th0, D), [sb] = arcAt(arc, arc.th0, D);
@@ -447,6 +447,8 @@ function imposts(k: Kit, edge: number, t: number, tone: Tone, D: number): void {
       // From inside the opening a hair, back over the ring's foot to the pier's middle (to its end on an abutment).
       for (const [p, dirn] of [[p0, 1], [p1, -1]] as Array<[Pier, number]>) {
         const face = p.s + dirn * p.half;
+        // Not buried in a bank, nor on the ground where an arch springs from it.
+        if (z - 1.7 < plan.ground(face + dirn * 0.02, t) + 1) continue;
         const back = p.end ? face - dirn * Math.min(reach + 0.04, 0.1) : p.s;
         const s0 = Math.min(face + dirn * 0.02, back), s1 = Math.max(face + dirn * 0.02, back);
         box(wide(k, ta, tb), 'front', s0, s1, ta, tb, z - 1.7, z, tone, 'plinth', k.ord(edge, 0.45));
@@ -464,6 +466,8 @@ function cutwaters(k: Kit, edge: number, t: number): void {
     const bay = bayAt(plan, p.s - 0.01);
     const top = plan.width >= 2 ? plan.deck(p.s) - plan.thick - 1.4 : (bay.lower ? bay.lowerSpring! : bay.spring) + 1;
     const nose = 0.2;
+    // Not where the arches spring from the ground: a cutwater there is a stub.
+    if (top - (plan.ground(p.s, t) - 0.5) < 6) continue;
     for (const side of [-1, 1]) {
       const sa = p.s, sb = p.s + side * p.half;
       if ((side < 0 && p.s <= sl.s0 + EPS) || (side > 0 && p.s >= sl.s1 - EPS)) continue;
@@ -492,7 +496,7 @@ export const roundOut = (p: Pier): number => p.half + 0.08;
  */
 function buttresses(k: Kit, edge: number, t: number): void {
   const { plan, sl, st } = k;
-  const n = 10;
+  const n = 8;
   for (const p of plan.piers) {
     if (p.end) continue;
     const R0 = roundOut(p) * (plan.width >= 2 ? 1 : 0.85), R1 = R0 * 1.18;
@@ -509,7 +513,7 @@ function buttresses(k: Kit, edge: number, t: number): void {
       cface(k, 'front', [at(f0, R1, g0), at(f1, R1, g1), at(f1, R0, top), at(f0, R0, top)], [Math.sin(fm), edge * Math.cos(fm), 0.1], st.stone);
       if (plan.width >= 2) continue;
       // The dome over it.
-      const rings = 3;
+      const rings = 2;
       for (let q = 0; q < rings; q++) {
         const ps0 = (q / rings) * (Math.PI / 2), ps1 = ((q + 1) / rings) * (Math.PI / 2);
         const r0 = R0 * Math.cos(ps0), r1 = R0 * Math.cos(ps1), z0 = top + domeH * Math.sin(ps0), z1 = top + domeH * Math.sin(ps1);

@@ -84,7 +84,7 @@ function deck(k0: Kit): void {
   BUILDERS.deck(k);
   const { plan, sl } = k;
   const gaps = refugeGaps(plan);
-  const r = 1.45, rs = r / U, out = 0.065, n = 8;
+  const r = 1.45, rs = r / U, out = 0.065, n = 6;
   for (const edge of sl.edges) {
     if (!seen(k, edge)) continue;
     const t = edge > 0 ? sl.t1 : sl.t0;
@@ -117,7 +117,7 @@ function parapet(k0: Kit, edge: number, part: Part3): void {
   const tOut = edge > 0 ? sl.t1 : sl.t0, tIn = tOut - edge * T, tc = (tOut + tIn) / 2;
   const deckZ = plan.deck;
   const zTop = (s: number): number => deckZ(s) + H_WALL + wave(k, s);
-  const Q = 4;
+  const Q = 3;
   const bull = (s: number, q: number): L => { const p = (q / Q) * Math.PI; return [s, tc + edge * (T / 2) * Math.cos(p), zTop(s) + rz * Math.sin(p)]; };
   for (const [sa, sb] of runsOf(plan, sl.s0, sl.s1)) {
     const xs = samples(sa, sb, plan.piers.map((p) => p.s), 1 / 6);
@@ -165,8 +165,8 @@ function ends(k0: Kit): void {
   const { plan, sl, st } = k;
   const post = (part: Part3, s: number, t: number, z: number): void => {
     if (ownerOf(k, s - 0.09, s + 0.09) === null) return;
-    turned(k, part, s, t, z, [[0, 0.09], [1.2, 0.08], [8.6, 0.07], [9.6, 0.078], [10.6, 0.074], [11.8, 0.056], [12.6, 0.03], [12.9, 0]], 10, st.stone, 3);
-    turned(k, part, s, t, z + 12.6, [[0, 0.02], [0.9, 0.03], [1.9, 0.026], [2.6, 0.008], [2.8, 0]], 8, TILE, 3.3);
+    turned(k, part, s, t, z, [[0, 0.09], [1.2, 0.078], [9.4, 0.07], [10.6, 0.076], [12, 0.05], [12.9, 0]], 8, st.stone, 3);
+    turned(k, part, s, t, z + 12.6, [[0, 0.02], [1, 0.03], [2.2, 0.018], [2.8, 0]], 6, TILE, 3.3);
   };
   for (const edge of sl.edges) {
     const t = edge > 0 ? sl.t1 - 0.09 : sl.t0 + 0.09;
@@ -185,7 +185,7 @@ function ends(k0: Kit): void {
 function refuges(k0: Kit): void {
   const k = fixKit(k0);
   const { plan, sl, st } = k;
-  const n = 12, T = T_WALL, rz = (T * U) / 2;
+  const n = 10, T = T_WALL, rz = (T * U) / 2;
   for (const p of plan.piers) {
     if (p.end) continue;
     const R = roundOut(p);
@@ -208,7 +208,7 @@ function refuges(k0: Kit): void {
       }
       // The wall round it, rounded over.
       k.solid(part, 2);
-      const Q = 4;
+      const Q = 3;
       const bull = (f: number, q: number): L => { const a = (q / Q) * Math.PI; return at(f, R - T / 2 + (T / 2) * Math.cos(a), zt + rz * Math.sin(a)); };
       for (let i = 0; i < n; i++) {
         const f0 = phis[i], f1 = phis[i + 1], fm = (f0 + f1) / 2;
@@ -229,7 +229,7 @@ function refuges(k0: Kit): void {
       for (const side of [-1, 1]) {
         const s = p.s + side * (R - T / 2), tp = t - edge * (T / 2);
         if (ownerOf(k, s - T * 0.6, s + T * 0.6) === null) continue;
-        turned(k, part, s, tp, z, [[0, T * 0.62], [zt - z + 0.4, T * 0.6], [zt - z + 1.6, T * 0.5], [zt - z + 2.8, T * 0.22], [zt - z + 3.1, 0]], 10, st.stone, 2.4);
+        turned(k, part, s, tp, z, [[0, T * 0.62], [zt - z + 0.6, T * 0.6], [zt - z + 2.2, T * 0.4], [zt - z + 3.1, 0]], 8, st.stone, 2.4);
       }
       if (plan.width >= 3 && ownerOf(k, p.s - 0.05, p.s + 0.05) !== null) {
         const tl = t + edge * R * 0.45;
