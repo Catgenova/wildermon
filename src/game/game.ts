@@ -7998,6 +7998,7 @@ export class Game {
   wallFitted(wall: Wall): void {
     if (!isDone(wall)) return;
     wall.greenSince = greenNow();
+    this.buildings.changed();
     glassResync(this);
     counterFinished(this, wall);
   }
@@ -8625,7 +8626,14 @@ export class Game {
     if (ground.buildings) {
       // When the ivy on each began, on this machine's clock rather than the island's (`greening.ts`).
       for (const w of ground.buildings.walls ?? []) {
-        w.greenSince = sinceAgo(w.greenAgo);
+        /*
+         * Worked out from seconds ago, it moves by however long each read took
+         * to come: within `SAME_SINCE` of what this wall had, it is that, or
+         * every wall looked changed on every read and was drawn afresh.
+         */
+        const since = sinceAgo(w.greenAgo);
+        const had = this.buildings.wallOnBorder(w.level, w)?.greenSince;
+        w.greenSince = since !== undefined && had !== undefined && Math.abs(since - had) < SAME_SINCE ? had : since;
         delete w.greenAgo;
       }
       this.buildings.sawIsland(ground.buildings);
@@ -10430,6 +10438,9 @@ export const storedThing = (it: StoredThing): Item => ({
   ...(it.occupant ? { occupant: it.occupant } : {}),
   ...(typeof it.price === 'number' ? { price: it.price } : {}),
 });
+
+/** How far apart, in seconds, two reads of when a thing began to green are the same moment, read across the network twice (`sinceAgo`). */
+const SAME_SINCE = 60;
 
 /**
  * Seconds ago on the island as a moment on this machine's clock, in real

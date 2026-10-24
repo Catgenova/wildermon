@@ -1681,6 +1681,8 @@ export class Renderer {
     game.world.onChange(() => this.life.touched());
     // And what stands on the ground, or near it: a wall's foot, its shade, how wet it is (`structwatch.ts`).
     game.world.onChange((x, y) => this.structs.ground(x, y));
+    // Whatever the game says has changed in the world may be set on a wall or a floor in place (`Buildings.changed`).
+    game.events.on('world', () => game.buildings.changed());
     // Damage and skill both go up over the thing they happened to. Damage adds
     // up per target, skill per skill, so a flurry of either reads as one
     // running number rather than a stack of them.

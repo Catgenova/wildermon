@@ -109,6 +109,8 @@ export const LOCK_ACTIONS: ActionDef[] = [
        * makes it (`keyFromPadlock`): every key keyed to its own number.
        */
       store.lock = lock.uid;
+      // A portcullis is a wall: drawn again with its padlock.
+      g.buildings.changed();
       keyFromPadlock(lock);
       g.logMsg(`Padlock fitted; key made. Only that key opens it${
         g.deedOfMineAt(Math.floor(store.x), Math.floor(store.y)) ? ', or you, on your own land' : ''}.`, 'event');
@@ -135,6 +137,7 @@ export const LOCK_ACTIONS: ActionDef[] = [
       const key = keyFor(g.inventory.items, store);
       const code = store.lock;
       store.lock = undefined;
+      g.buildings.changed();
       // The key goes with the lock it was cut to. A key to nothing is an
       // item nobody can tell from a key to something, and a pack full of
       // those is how a lock stops being worth fitting.
