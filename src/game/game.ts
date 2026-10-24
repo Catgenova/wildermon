@@ -109,6 +109,7 @@ import { REACH_FORCE, sailFactor, sailWord, windAt, windFrom, windWord, type Win
 import { festerChance, PART_NAMES, woundClose, woundDrain, WOUND_KINDS, woundText, type Wound, type WoundKind } from './wounds';
 import { baubleLearn, baublePace, baublePlus, baublesFrom, baublesServe, baubleTwice, YIELD_TIMES, type DeedBauble, type IslandBauble } from './baubles';
 import { orderRefusal, queueDropped, seenOf, type SeenJob } from './jobqueue';
+import { layOver, same } from './heldrows';
 
 export type { ActiveAction } from './actor';
 
@@ -994,6 +995,16 @@ export class Game {
   /** Anvils by id; each covers four subtiles. */
   readonly anvils = new Map<number, PlacedAnvil>();
   nextAnvilId = 1;
+  /**
+   * What a ground read builds before it is laid over what is held (`layOver`),
+   * and the counters it named last time: kept, so a read that says what the
+   * last one said makes no maps and tells no window anything.
+   */
+  private readonly readBuilt = {
+    crates: new Map<number, PlacedCrate>(), campfires: new Map<number, PlacedCampfire>(), smelters: new Map<number, PlacedSmelter>(),
+    kilns: new Map<number, PlacedKiln>(), furniture: new Map<number, PlacedFurniture>(), anvils: new Map<number, PlacedAnvil>(),
+    posts: new Map<number, PlacedPost>(), traps: new Map<number, PlacedTrap>(), piles: new Map<number, Item[]>(), counters: [] as unknown[],
+  };
   /** Crops growing on tilled fields, keyed by "x,y". */
   readonly crops = new Map<number, Crop>();
   /** The crop last sown on each field, by tile, for a Farmer's Crop Rotation. */
@@ -8454,28 +8465,27 @@ export class Game {
      * answer has been picked up, has rotted, or is out of range. Ids are the
      * island's, so a pile clicked is the row the island will be asked about.
      */
+    const built = this.readBuilt;
+    // Whether this read changed anything a window shows, which is all the 'crate' and 'smelter' below are for.
+    let news = false;
     for (const [rows, piles] of [[ground.lying, this.ground], [ground.cellarLying, this.cellarGround]] as const) {
       if (!rows) continue;
-      piles.clear();
+      const next = built.piles;
       for (const row of rows) {
         if (row.gx === null || row.gy === null) continue;
         const key = tileKey(row.gx, row.gy);
-        const pile = piles.get(key) ?? [];
+        const pile = next.get(key) ?? [];
         pile.push(packed(row, aged));
-        piles.set(key, pile);
+        next.set(key, pile);
       }
+      if (next.size !== piles.size) news = true;
+      else for (const [key, pile] of next) if (!same(piles.get(key), pile)) { news = true; break; }
+      piles.clear();
+      for (const [key, pile] of next) piles.set(key, pile);
+      next.clear();
     }
-    this.crates.clear();
-    this.campfires.clear();
-    this.smelters.clear();
-    this.kilns.clear();
-    this.furniture.clear();
     this.counters.clear();
-    this.anvils.clear();
-    this.posts.clear();
-    this.traps.clear();
-    this.placed.posts.reset([]);
-    this.placed.traps.reset([]);
+    const counterRows: unknown[] = [];
     for (const r of ground.placed ?? []) {
       /*
        * `mine` rides along with everything set down.
@@ -8493,15 +8503,15 @@ export class Game {
       // Down in a cellar, or a storey up: a wagon driven up a wide staircase (`driveStorey`).
       const down = (r.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : (r.level ?? 0) > 0 ? { level: r.level as number } : {};
       if (r.kind === 'campfire' || r.kind === 'fire') {
-        this.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0 });
+        built.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0 });
       } else if (r.kind === 'smelter') {
-        this.smelters.set(r.id, {
+        built.smelters.set(r.id, {
           ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
       } else if (r.kind === 'kiln') {
-        this.kilns.set(r.id, {
+        built.kilns.set(r.id, {
           ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
@@ -8512,11 +8522,10 @@ export class Game {
         // `anvil_ql` read it back from there; `material` is never written for
         // one. Reported as "made a copper anvil and placed down an iron anvil":
         // this read `material`, found nothing, and called every anvil iron.
-        this.anvils.set(r.id, { ...at, ...kept, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
+        built.anvils.set(r.id, { ...at, ...kept, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
       } else if (r.kind === 'post') {
         const p: PlacedPost = { ...at, ql: r.ql ?? 20, dmg: r.dmg ?? 0, worker: null, name: r.name ?? undefined, material: r.material ?? undefined };
-        this.posts.set(r.id, p);
-        this.placed.posts.add(p);
+        built.posts.set(r.id, p);
       } else if (r.kind === 'trap') {
         const t: PlacedTrap = {
           ...at, kind: (r.sub ?? 'deadfall') as PlacedTrap['kind'], ql: r.ql ?? 20, dmg: r.dmg ?? 0,
@@ -8525,13 +8534,13 @@ export class Game {
           material: r.material ?? undefined,
           ...(r.enchant ? { enchant: r.enchant } : {}),
         };
-        this.traps.set(r.id, t);
-        this.placed.traps.add(t);
+        built.traps.set(r.id, t);
       } else if (r.kind === 'counter') {
         // What is set out on a shop counter, and for whom (`counters.ts`).
         this.counters.saw(r as unknown as CounterWire);
+        counterRows.push(r);
       } else if (r.kind === 'furniture') {
-        this.furniture.set(r.id, {
+        built.furniture.set(r.id, {
           ...at, ...kept, ...down, kind: r.sub ?? 'chest', ql: r.ql ?? 20,
           // What the island says is in it, and empty for one too far off to
           // reach into, which is the only reason this is ever short.
@@ -8600,6 +8609,14 @@ export class Game {
         });
       }
     }
+    // Laid over what is held, by id: what the island names again keeps the object it had (`heldrows.ts`).
+    const laid = {
+      campfires: layOver(this.campfires, built.campfires), smelters: layOver(this.smelters, built.smelters),
+      kilns: layOver(this.kilns, built.kilns), furniture: layOver(this.furniture, built.furniture),
+      anvils: layOver(this.anvils, built.anvils), posts: layOver(this.posts, built.posts), traps: layOver(this.traps, built.traps),
+    };
+    if (!same(counterRows, built.counters)) news = true;
+    built.counters = counterRows;
     /*
      * Whether we are aboard something as a passenger, which is the island's to
      * say: it moves us with her and keeps our place, and the list of who is
@@ -8691,7 +8708,7 @@ export class Game {
       }
     }
     for (const c of ground.crates ?? []) {
-      this.crates.set(c.id, {
+      built.crates.set(c.id, {
         id: c.id, x: c.x, y: c.y, sx: c.sx, sy: c.sy,
         kind: c.kind as PlacedCrate['kind'],
         // What the island says is in it. Empty for a crate too far off to
@@ -8835,15 +8852,28 @@ export class Game {
         });
       }
     }
-    this.placed.crates.reset(this.crates.values());
-    this.placed.campfires.reset(this.campfires.values());
-    this.placed.smelters.reset(this.smelters.values());
-    this.placed.kilns.reset(this.kilns.values());
-    this.placed.furniture.reset(this.furniture.values());
-    this.placed.anvils.reset(this.anvils.values());
+    const crates = layOver(this.crates, built.crates);
+    // Filed by tile again only when something is new, gone or standing elsewhere.
+    if (crates.moved) this.placed.crates.reset(this.crates.values());
+    if (laid.campfires.moved) this.placed.campfires.reset(this.campfires.values());
+    if (laid.smelters.moved) this.placed.smelters.reset(this.smelters.values());
+    if (laid.kilns.moved) this.placed.kilns.reset(this.kilns.values());
+    if (laid.furniture.moved) this.placed.furniture.reset(this.furniture.values());
+    if (laid.anvils.moved) this.placed.anvils.reset(this.anvils.values());
+    if (laid.posts.moved) this.placed.posts.reset(this.posts.values());
+    if (laid.traps.moved) this.placed.traps.reset(this.traps.values());
     this.teamsFromCreatures();
-    this.events.emit('crate');
-    this.events.emit('smelter');
+    /*
+     * And told only when it said something new. Anything but the burning
+     * half -- the slow half's settlements, buildings and fields -- is taken
+     * to be news, as it always was.
+     */
+    if (crates.news || Object.values(laid).some((l) => l.news)) news = true;
+    else for (const k in ground) if (!FAST_KEYS.has(k)) { news = true; break; }
+    if (news) {
+      this.events.emit('crate');
+      this.events.emit('smelter');
+    }
   }
 
   /**
@@ -10454,6 +10484,9 @@ const SAME_SINCE = 60;
  * seconds: when a thing began to green, for `greenSince`. Seconds since are
  * what two clocks agree on without being set to each other.
  */
+/** What the burning half of a ground read carries: a read of only these that says what the last said is not news (`sawGround`). */
+const FAST_KEYS: ReadonlySet<string> = new Set(['placed', 'crates', 'lying', 'cellarLying', 'now']);
+
 const sinceAgo = (ago: number | null | undefined): number | undefined =>
   ago === null || ago === undefined || !Number.isFinite(ago) ? undefined : Date.now() / 1000 - ago;
 
