@@ -3637,7 +3637,7 @@ export const NEWS: News[] = [
     day: '2026-10-24',
     lines: () => [
       `Changed: wooden bridge and stone arch replaced by a bridge of each of ${listed(THROWN.filter(isMaterialBridge).map((k) => MATERIAL_BY_ID.get(k)!.name.toLowerCase()))}: `
-        + `max length storeys + ${BRIDGE_REACH} tiles, bay heft + ${BAY_PAST_HEFT} tiles, max drop its storeys; per span a wall's bill a lane, per pier a wall's bill a storey of drop; `
+        + `max length storeys + ${BRIDGE_REACH} tiles, bays equal, each at most heft + ${BAY_PAST_HEFT} tiles, max drop its storeys; per span a wall's bill a lane, per pier a wall's bill a storey of drop; `
         + `1 to ${WIDEST} lanes (${WAGON_WIDTH}: wagons; ${STALL_WIDTH}: furniture on the outer lanes). Existing: wooden → plank, stone arch → stone brick, 1 lane.`,
     ],
   },
