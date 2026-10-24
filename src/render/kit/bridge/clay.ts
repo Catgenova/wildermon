@@ -1,6 +1,6 @@
 import { cut, glyphPath, lightOf, proj, RUNE_GOLD } from '../../runestone';
 import { css, faceColour, hex, mix, type Ctx, type RGB, type Tone, type V3 } from '../core';
-import { bayAt, box, refugeGaps, samples, turned, U, type Bay, type BridgePainter, type FaceInfo, type Kit, type L, type Part3, type Pier, type Plan, type Role } from './core';
+import { bayAt, box, ownerOf, refugeGaps, refugeHalf, samples, turned, U, type Bay, type BridgePainter, type FaceInfo, type Kit, type L, type Part3, type Pier, type Plan, type Role } from './core';
 
 /**
  * What the two clay bridges share, built their own way rather than the
@@ -44,22 +44,6 @@ export function clipS(pts: L[], s0: number, s1: number): L[] {
   return out;
 }
 
-/**
- * The kit with its faces' extents told the way they are painted: a face in a
- * wall's frame on the low edge is painted backwards (`wallFrame`), so its run
- * along the bridge is told as the painter will see it, negative.
- */
-export function fixKit(k: Kit): Kit {
-  return {
-    ...k,
-    face: (part, pts, out, tone, info, frame) => k.face(part, pts, out, tone,
-      info && frame && frame.o[0] === 0 && frame.a[0] < 0 && frame.a[1] === 0 && frame.a[2] === 0 ? { ...info, x0: -Math.max(info.x0, info.x1), x1: -Math.min(info.x0, info.x1) } : info, frame),
-  };
-}
-
-/** The kit with its slice widened across to take in `ta` to `tb`, for a box that stands proud of an outer edge. */
-export const wide = (k: Kit, ta: number, tb: number): Kit => ({ ...k, sl: { ...k.sl, t0: Math.min(k.sl.t0, ta, tb), t1: Math.max(k.sl.t1, ta, tb) } });
-
 /** A polygon of the frame cut to where `f` of a point is not below nought (linear along any edge). */
 export function clipBy(pts: L[], f: (p: L) => number): L[] {
   const out: L[] = [];
@@ -82,23 +66,22 @@ export function groundLine(k: Kit, t: number): (p: L) => number {
   return (p) => p[2] - (g0 + ((g1 - g0) * (p[0] - sl.s0)) / Math.max(1e-6, sl.s1 - sl.s0));
 }
 
+/** Whether a bridge has refuges over its piers: two lanes or more, and not a ramp (`refugeGaps`). */
+export const refuged = (plan: Plan): boolean => refugeGaps(plan).length > 0;
+
 /** Whether an outer edge is the one toward the eye: what stands out from the far one, under the deck, is hidden by the bridge. */
 export const seen = (k: Kit, edge: number): boolean => k.sl.near === edge;
 
 /**
- * The slice that draws something running along the bridge from `a` to `b`:
- * this one, or null where another does. One straddling a cut is drawn whole
- * by the slice on the side of it nearer the eye, which is laid after the
- * other and would cover its half.
+ * The kit for something drawn whole from `a` to `b` along the bridge by the
+ * one slice that owns it (`ownerOf`, the nearer the eye where it straddles a
+ * cut, which is laid after the other): its run widened to take it in, or
+ * null in the slice that does not own it. A refuge over a pier on a cut is
+ * then never half under the next slice's vault.
  */
-export function ownerOf(k: Kit, a: number, b: number): number | null {
-  const { sl } = k;
-  if (b < sl.s0 - EPS || a > sl.s1 + EPS) return null;
-  if (a >= sl.s0 - EPS && b <= sl.s1 + EPS) return sl.i;
-  // Which way along the bridge is toward the eye.
-  const nearer = k.A[0] * k.e.toward[0] + k.A[1] * k.e.toward[1] >= 0 ? 1 : -1;
-  if (a < sl.s0 - EPS) return nearer > 0 ? sl.i : null;
-  return nearer < 0 ? sl.i : null;
+export function whole(k: Kit, a: number, b: number): Kit | null {
+  if (ownerOf(k, a, b) === null) return null;
+  return { ...k, sl: { ...k.sl, s0: Math.min(k.sl.s0, a - 0.05), s1: Math.max(k.sl.s1, b + 0.05) } };
 }
 
 /** A face cut to the slice. */
@@ -126,17 +109,33 @@ export function inOpening(plan: Plan, s: number): boolean {
  */
 export interface Arc { c: number; A: number; B: number; zc: number; th0: number }
 
-export function arcOf(bay: Bay, lower: boolean): Arc | null {
-  if (lower) {
-    if (!bay.lower || bay.lowerCrown === undefined || bay.lowerSpring === undefined) return null;
-    return { c: bay.c, A: bay.a * U, B: bay.lowerCrown - bay.lowerSpring, zc: bay.lowerSpring, th0: 0 };
-  }
+export function arcOf(bay: Bay): Arc {
   if (bay.form === 'low') {
     const A = bay.a * U, r = Math.max(0.5, bay.crown - bay.spring);
     const R = (A * A + r * r) / (2 * r);
     return { c: bay.c, A: R, B: R, zc: bay.crown - R, th0: Math.asin(Math.max(-1, Math.min(1, (R - r) / R))) };
   }
   return { c: bay.c, A: bay.a * U, B: bay.crown - bay.spring, zc: bay.spring, th0: 0 };
+}
+
+/**
+ * How a bay is carried, as the core plans it (`planOf`): its arch, and over a
+ * deep drop two tiers -- a string course, the upper arch springing just over
+ * it, and under it a round arch `lowerHalf` either side of the bay's middle,
+ * the pier the thicker beside it.
+ */
+export interface Shape { upper: Arc; arch: (s: number) => number; lower?: Arc; lowerArch?: (s: number) => number; course?: number; lowerHalf?: number }
+
+export function shapeOf(_plan: Plan, bay: Bay, _D: number): Shape {
+  const sh: Shape = { upper: arcOf(bay), arch: bay.arch };
+  if (bay.lower && bay.course !== undefined && bay.lowerCrown !== undefined && bay.lowerSpring !== undefined) {
+    const half = bay.lowerHalf ?? bay.a;
+    sh.lower = { c: bay.c, A: half * U, B: bay.lowerCrown - bay.lowerSpring, zc: bay.lowerSpring, th0: 0 };
+    sh.lowerArch = bay.lower;
+    sh.course = bay.course;
+    sh.lowerHalf = half;
+  }
+  return sh;
 }
 
 /** A point `d` units out from the intrados at angle `th`: tiles along, units up. */
@@ -177,16 +176,16 @@ function bandPoly(r: Arc, D: number, t: number, n: number): L[] {
   return pts;
 }
 
-/** Each arch of the plan that reaches into the slice, with its bay. */
-function arcsIn(k: Kit, D: number): Array<{ bay: Bay; arc: Arc }> {
-  const out: Array<{ bay: Bay; arc: Arc }> = [];
+/** Each arch of the plan that reaches into the slice, with its bay's shape. */
+function arcsIn(k: Kit, D: number): Array<{ sh: Shape; arc: Arc }> {
+  const out: Array<{ sh: Shape; arc: Arc }> = [];
   for (const bay of k.plan.bays) {
-    for (const lower of [false, true]) {
-      const arc = arcOf(bay, lower);
+    const sh = shapeOf(k.plan, bay, D);
+    for (const arc of [sh.upper, sh.lower]) {
       if (!arc) continue;
       const reach = (arc.A + D) / U;
       if (arc.c + reach < k.sl.s0 - EPS || arc.c - reach > k.sl.s1 + EPS) continue;
-      out.push({ bay, arc });
+      out.push({ sh, arc });
     }
   }
   return out;
@@ -207,18 +206,23 @@ export interface ArcadeLook {
   pier: 'cutwater' | 'round';
   /** Imposts of cut stone under each springing. */
   impost?: (st: Kit['st']) => Tone;
+  /** Two tiers: the top of the lower tier between the faces, seen through the upper arches, in the shade of the vault over it. */
+  inner: (st: Kit['st']) => Tone;
+  /** Dressed quoins up each jamb of an opening, long and short by turns, as the houses' corners have. */
+  quoins?: (st: Kit['st']) => Tone;
+  /** At two lanes and more the refuge builds the pier's outer face itself (no cutwater). */
+  refugePier?: boolean;
 }
 
 /** What a ring's painter is told besides the face: its arch, its depth and its joints. */
 export interface RingInfo extends FaceInfo { arc?: Arc; D?: number; joints?: number[]; outer?: number[] }
 
 export function arcade(look: ArcadeLook): (k: Kit) => void {
-  return (k0) => {
-    const k = fixKit(k0);
+  return (k) => {
     const { plan, sl, st } = k;
     const breaks: number[] = [];
     for (const p of plan.piers) breaks.push(p.s - p.half, p.s + p.half, p.s);
-    for (const bay of plan.bays) breaks.push(bay.c);
+    for (const bay of plan.bays) breaks.push(bay.c, ...(bay.lowerHalf !== undefined ? [bay.c - bay.lowerHalf, bay.c + bay.lowerHalf] : []));
     const xs = samples(sl.s0, sl.s1, breaks, 0.125);
     const deckBottom = (s: number): number => plan.deck(s) - plan.thick - 1.4;
     const D = look.ringD;
@@ -233,13 +237,16 @@ export function arcade(look: ArcadeLook): (k: Kit) => void {
       const lowers: L[][] = [];
       for (let j = 0; j + 1 < xs.length; j++) {
         const a = xs[j], b = xs[j + 1], mid = (a + b) / 2;
-        const open = inOpening(plan, mid), bay = bayAt(plan, mid);
-        const z = (s: number): number => (open ? bay.arch(s) : plan.ground(s, t) - 0.5);
+        const open = inOpening(plan, mid), sh = shapeOf(plan, bayAt(plan, mid), D);
+        const z = (s: number): number => (open ? sh.arch(s) : plan.ground(s, t) - 0.5);
         bot.push([a, t, z(a)], [b, t, z(b)]);
         topl.push([a, t, deckBottom(a)], [b, t, deckBottom(b)]);
-        if (open && bay.lower && bay.course !== undefined) {
-          if (!lower.length) lower.push([a, t, bay.course], [a, t, bay.lower(a)]);
-          lower.push([b, t, bay.lower(b)]);
+        if (open && sh.lowerArch && sh.course !== undefined) {
+          const bay = bayAt(plan, mid);
+          const lz = (s: number): number => (Math.abs(mid - bay.c) < sh.lowerHalf! ? sh.lowerArch!(s) : plan.ground(s, t) - 0.5);
+          if (!lower.length) lower.push([a, t, sh.course], [a, t, lz(a)]);
+          else lower.push([a, t, lz(a)]);
+          lower.push([b, t, lz(b)]);
         } else if (lower.length) { lowers.push(lower); lower = []; }
         if (j + 2 === xs.length && lower.length) { lowers.push(lower); lower = []; }
       }
@@ -252,15 +259,15 @@ export function arcade(look: ArcadeLook): (k: Kit) => void {
         const lz = lw.map((p) => p[2]);
         k.face('front', lw, [0, edge, 0], st.stone, fi('wall', lw[0][0] * U, last[0] * U, Math.min(...lz), Math.max(...lz), sl.i), fr);
       }
-      // The course two tiers stand on, its band on the face.
+      // Two tiers: a thin course on the face, the upper arch springing from its top.
       const tt = t + edge * 0.02;
       k.solid('front', k.ord(edge, 0.3));
       for (let j = 0; j + 1 < xs.length; j++) {
-        const a = xs[j], b = xs[j + 1], bay = bayAt(plan, (a + b) / 2);
-        if (bay.course === undefined) continue;
-        const z = bay.course;
-        k.face('front', [[a, tt, z - 1.6], [b, tt, z - 1.6], [b, tt, z + 0.4], [a, tt, z + 0.4]], [0, edge, 0], st.trim, fi('cornice', a * U, b * U, z - 1.6, z + 0.4, sl.i), wallFrame(tt, edge));
-        k.face('front', [[a, t, z + 0.4], [b, t, z + 0.4], [b, tt, z + 0.4], [a, tt, z + 0.4]], [0, 0, 1], st.trim);
+        const a = xs[j], b = xs[j + 1], sh = shapeOf(plan, bayAt(plan, (a + b) / 2), D);
+        if (sh.course === undefined) continue;
+        const z = sh.course;
+        k.face('front', [[a, tt, z - 1.8], [b, tt, z - 1.8], [b, tt, z], [a, tt, z]], [0, edge, 0], st.trim, fi('cornice', a * U, b * U, z - 1.8, z, sl.i), wallFrame(tt, edge));
+        k.face('front', [[a, t, z], [b, t, z], [b, tt, z], [a, tt, z]], [0, 0, 1], st.trim);
       }
       if (!seen(k, edge)) continue;
       if (look.impost) imposts(k, edge, t, look.impost(st), D);
@@ -269,36 +276,40 @@ export function arcade(look: ArcadeLook): (k: Kit) => void {
         else softRing(k, edge, t, arc, D);
         keystone(k, edge, t, arc, D, look);
       }
-      if (look.pier === 'cutwater') cutwaters(k, edge, t);
-      else buttresses(k, edge, t);
+      if (look.quoins) quoins(k, edge, t, look.quoins(st), D);
+      if (look.pier === 'cutwater') { if (!(look.refugePier && refuged(plan))) cutwaters(k, edge, t, D); }
+      else buttresses(k, edge, t, D);
     }
-    // Across the lane: the course's top, the vault under each arch, and the pier sides facing into the bay.
+    // Across the lane: the lower tier's top in the vault's shade, the vault under each arch, and the pier sides facing into the bay.
     k.solid('front', -6);
     let run: [number, number, number] | null = null;
+    const inner = look.inner(st);
     const course = (): void => {
       if (!run) return;
       const [a, b, z] = run;
-      k.face('front', [[a, sl.t0, z], [b, sl.t0, z], [b, sl.t1, z], [a, sl.t1, z]], [0, 0, 1], st.trim);
+      k.face('front', [[a, sl.t0, z], [b, sl.t0, z], [b, sl.t1, z], [a, sl.t1, z]], [0, 0, 1], inner,
+        fi('wall', a * U, b * U, sl.t0 * U, sl.t1 * U, sl.i), { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
       run = null;
     };
     for (let j = 0; j + 1 < xs.length; j++) {
       const a = xs[j], b = xs[j + 1], mid = (a + b) / 2;
-      const bay = bayAt(plan, mid);
-      if (!inOpening(plan, mid) || bay.course === undefined) { course(); continue; }
-      if (run && Math.abs(run[2] - bay.course) < 1e-6 && Math.abs(run[1] - a) < 1e-6) run[1] = b;
-      else { course(); run = [a, b, bay.course]; }
+      const sh = shapeOf(plan, bayAt(plan, mid), D);
+      if (!inOpening(plan, mid) || sh.course === undefined) { course(); continue; }
+      if (run && Math.abs(run[2] - sh.course) < 1e-6 && Math.abs(run[1] - a) < 1e-6) run[1] = b;
+      else { course(); run = [a, b, sh.course]; }
     }
     course();
     k.solid('back', 0);
     for (let j = 0; j + 1 < xs.length; j++) {
       const a = xs[j], b = xs[j + 1], mid = (a + b) / 2;
       if (!inOpening(plan, mid)) continue;
-      const bay = bayAt(plan, mid);
-      for (const f of [bay.arch, bay.lower]) {
+      const bay = bayAt(plan, mid), sh = shapeOf(plan, bay, D);
+      for (const f of [sh.arch, sh.lowerArch]) {
         if (!f) continue;
+        if (f === sh.lowerArch && Math.abs(mid - bay.c) >= sh.lowerHalf!) continue;
         const za = f(a), zb = f(b);
         const m = (zb - za) / ((b - a) * U);
-        k.face('back', [[a, sl.t0, za], [b, sl.t0, zb], [b, sl.t1, zb], [a, sl.t1, za]], [(bay.c - mid) * 0.3, 0, -1], st.ring,
+        k.face('back', [[a, sl.t0, za], [b, sl.t0, zb], [b, sl.t1, zb], [a, sl.t1, za]], [(bay.c - mid) * 0.3, 0, -1], st.stone,
           fi('ring', a * U, b * U, sl.t0 * U, sl.t1 * U, sl.i, false), { o: [0, 0, za - m * a * U], a: [1 / U, 0, m], b: [0, 1 / U, 0] });
       }
     }
@@ -307,18 +318,67 @@ export function arcade(look: ArcadeLook): (k: Kit) => void {
       for (const [s, dirn] of [[p0.s + p0.half, 1], [p1.s - p1.half, -1]] as Array<[number, number]>) {
         if (s < sl.s0 - EPS || s > sl.s1 + EPS) continue;
         const g0 = plan.ground(s, sl.t0) - 0.5, g1 = plan.ground(s, sl.t1) - 0.5;
-        const tops: Array<[number, number, number]> = bay.lower
-          ? [[g0, g1, bay.lower(s)], [bay.course!, bay.course!, bay.arch(s)]]
-          : [[g0, g1, bay.arch(s)]];
+        const sh = shapeOf(plan, bay, D);
+        const tops: Array<[number, number, number]> = sh.course !== undefined
+          ? [[sh.course, sh.course, sh.arch(s)]]
+          : [[g0, g1, sh.arch(s)]];
         for (const [z0, z0b, z1] of tops) {
           if (z1 - Math.max(z0, z0b) < 0.1) continue;
           k.solid('back', -1);
-          k.face('back', [[s, sl.t0, z0], [s, sl.t1, z0b], [s, sl.t1, z1], [s, sl.t0, z1]], [dirn, 0, 0], st.stone,
-            fi('pier', sl.t0 * U, sl.t1 * U, Math.min(z0, z0b), z1, Math.round(s * 10)), { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+          // Under a ramp the arcade is two walls along the outer edges, the deck vaulted between: a pier's side only as deep as its wall.
+          for (const [ta, tb] of plan.ramp ? rampReturns(plan, sl) : [[sl.t0, sl.t1]]) {
+            const za = ta === sl.t0 ? z0 : z0b, zb = tb === sl.t1 ? z0b : z0;
+            k.face('back', [[s, ta, za], [s, tb, zb], [s, tb, z1], [s, ta, z1]], [dirn, 0, 0], st.stone,
+              fi('pier', ta * U, tb * U, Math.min(za, zb), z1, Math.round(s * 10)), { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+          }
+        }
+      }
+      // Two tiers: the lower arch's sides, from the ground to its springing, where the pier is the thicker under the course.
+      const sh = shapeOf(plan, bay, D);
+      if (sh.lower && sh.lowerHalf !== undefined) {
+        for (const [s, dirn] of [[bay.c - sh.lowerHalf, 1], [bay.c + sh.lowerHalf, -1]] as Array<[number, number]>) {
+          if (s < sl.s0 - EPS || s > sl.s1 + EPS) continue;
+          const g0 = plan.ground(s, sl.t0) - 0.5, g1 = plan.ground(s, sl.t1) - 0.5, z1 = springOf(sh.lower);
+          if (z1 - Math.max(g0, g1) < 0.1) continue;
+          k.solid('back', -1);
+          k.face('back', [[s, sl.t0, g0], [s, sl.t1, g1], [s, sl.t1, z1], [s, sl.t0, z1]], [dirn, 0, 0], st.stone,
+            fi('pier', sl.t0 * U, sl.t1 * U, Math.min(g0, g1), z1, Math.round(s * 10)), { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
         }
       }
     }
+    // Under a ramp, each wall's inner face over its arches and down its piers, and the wall's underside over each arch.
+    if (plan.ramp) {
+      for (const edge of sl.edges) {
+        const ti = edge > 0 ? sl.t1 - RAMP_WALL : sl.t0 + RAMP_WALL;
+        k.solid('back', -0.8);
+        const bot: L[] = [], topl: L[] = [];
+        for (let j = 0; j + 1 < xs.length; j++) {
+          const a = xs[j], b = xs[j + 1], mid = (a + b) / 2;
+          const open = inOpening(plan, mid), sh = shapeOf(plan, bayAt(plan, mid), D);
+          const z = (s: number): number => (open ? sh.arch(s) : plan.ground(s, ti) - 0.5);
+          bot.push([a, ti, z(a)], [b, ti, z(b)]);
+          topl.push([a, ti, deckBottom(a)], [b, ti, deckBottom(b)]);
+          if (open) {
+            const [t0, t1] = edge > 0 ? [ti, sl.t1] : [sl.t0, ti];
+            k.face('back', [[a, t0, z(a)], [b, t0, z(b)], [b, t1, z(b)], [a, t1, z(a)]], [0, 0, -1], st.stone);
+          }
+        }
+        const wall = [...bot, ...topl.reverse()];
+        const zs = wall.map((q) => q[2]);
+        k.face('back', wall, [0, -edge, 0], st.stone, fi('wall', sl.s0 * U, sl.s1 * U, Math.min(...zs), Math.max(...zs), sl.i), wallFrame(ti, -edge));
+      }
+    }
   };
+}
+
+/** How deep each of a ramp's two arcaded walls is, across the bridge, in tiles (as the core's). */
+const RAMP_WALL = 0.2;
+/** The runs across a slice a ramp's pier side stands in: within its walls' depth of each outer edge it has. */
+function rampReturns(plan: Plan, sl: Kit['sl']): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  if (sl.t0 <= plan.tLo + EPS) out.push([sl.t0, Math.min(sl.t1, sl.t0 + RAMP_WALL)]);
+  if (sl.t1 >= plan.tHi - EPS) out.push([Math.max(sl.t0, sl.t1 - RAMP_WALL), sl.t1]);
+  return out;
 }
 
 /** A ring of voussoirs proud of the wall, as deep at its springing as at its crown: its face, the top of it and, on the near face, its soffit. */
@@ -432,39 +492,71 @@ function keystone(k: Kit, edge: number, t: number, arc: Arc, D: number, look: Ar
   }
 }
 
-/** Cut stone under each springing, on the pier's outer face. */
+/** Cut stone under each springing, on the pier's outer face: from a hair inside the opening back over the ring's foot. */
 function imposts(k: Kit, edge: number, t: number, tone: Tone, D: number): void {
   const { plan } = k;
   const out = 0.034;
   const [ta, tb] = edge > 0 ? [t - 0.002, t + out] : [t - out, t + 0.002];
   for (const bay of plan.bays) {
-    const [p0, p1] = piersOf(plan, bay);
-    for (const lower of [false, true]) {
-      const arc = arcOf(bay, lower);
-      if (!arc) continue;
-      const z = springOf(arc);
-      const reach = Math.max(0.03, D / U * 0.9);
-      // From inside the opening a hair, back over the ring's foot to the pier's middle (to its end on an abutment).
-      for (const [p, dirn] of [[p0, 1], [p1, -1]] as Array<[Pier, number]>) {
-        const face = p.s + dirn * p.half;
-        // Not buried in a bank, nor on the ground where an arch springs from it.
-        if (z - 1.7 < plan.ground(face + dirn * 0.02, t) + 1) continue;
-        const back = p.end ? face - dirn * Math.min(reach + 0.04, 0.1) : p.s;
-        const s0 = Math.min(face + dirn * 0.02, back), s1 = Math.max(face + dirn * 0.02, back);
-        box(wide(k, ta, tb), 'front', s0, s1, ta, tb, z - 1.7, z, tone, 'plinth', k.ord(edge, 0.45));
+    const sh = shapeOf(plan, bay, D);
+    // Two tiers: the lower arch's springing only, the upper springing from over the course.
+    const arc = sh.lower ?? sh.upper;
+    const half = sh.lowerHalf ?? bay.a;
+    const z = springOf(arc);
+    const back = Math.min(0.12, D / U + 0.04);
+    for (const dirn of [-1, 1]) {
+      const jamb = bay.c + dirn * half;
+      // Not buried in a bank, nor on the ground where an arch springs from it.
+      if (z - 1.7 < plan.ground(jamb, t) + 1) continue;
+      const s0 = Math.min(jamb - dirn * 0.02, jamb + dirn * back), s1 = Math.max(jamb - dirn * 0.02, jamb + dirn * back);
+      box(k, 'front', s0, s1, ta, tb, z - 1.7, z, tone, 'plinth', k.ord(edge, 0.45));
+    }
+  }
+}
+
+/** Quoins up each jamb: blocks two courses high, long and short by turns into the pier, a hair proud of it. */
+function quoins(k: Kit, edge: number, t: number, tone: Tone, D: number): void {
+  const { plan, sl } = k;
+  const tq = t + edge * 0.006;
+  const H = 5.2;
+  for (const bay of plan.bays) {
+    const sh = shapeOf(plan, bay, D);
+    const runs: Array<[number, number, number]> = [];
+    if (sh.lower && sh.lowerHalf !== undefined) {
+      runs.push([sh.lowerHalf, -Infinity, springOf(sh.lower)]);
+      if (springOf(sh.upper) - sh.course! > 3) runs.push([bay.a, sh.course!, springOf(sh.upper)]);
+    } else runs.push([bay.a, -Infinity, springOf(sh.upper)]);
+    for (const [half, from, to] of runs) {
+      for (const dirn of [-1, 1]) {
+        const jamb = bay.c + dirn * half;
+        if (jamb < sl.s0 - 0.1 || jamb > sl.s1 + 0.1) continue;
+        const g = Math.max(from, plan.ground(jamb, t) - 0.5);
+        for (let z = g, j = 0; z < to - 0.5; z += H, j++) {
+          const z1 = Math.min(to, z + H);
+          const pier = piersOf(plan, bay)[dirn < 0 ? 0 : 1];
+          const room = (Math.abs(pier.s - jamb) + 0.002) * 0.9;
+          const w = Math.min(room, (j + Math.round(bay.c * 10)) % 2 ? 0.13 : 0.08);
+          const a = jamb, b = jamb + dirn * w;
+          if (ownerOf(k, Math.min(a, b), Math.max(a, b)) === null) continue;
+          k.solid('front', k.ord(edge, 0.4));
+          k.face('front', [[a, tq, z], [b, tq, z], [b, tq, z1], [a, tq, z1]], [0, edge, 0], tone);
+        }
       }
     }
   }
 }
 
 /** A pointed cutwater on each pier's outer face, from its foot to over its springing, capped with a slope. */
-function cutwaters(k: Kit, edge: number, t: number): void {
+function cutwaters(k: Kit, edge: number, t: number, D: number): void {
   const { plan, sl, st } = k;
   for (const p of plan.piers) {
     if (p.end) continue;
     if (p.s < sl.s0 - p.half - EPS || p.s > sl.s1 + p.half + EPS) continue;
     const bay = bayAt(plan, p.s - 0.01);
-    const top = plan.width >= 2 ? plan.deck(p.s) - plan.thick - 1.4 : (bay.lower ? bay.lowerSpring! : bay.spring) + 1;
+    const sh = shapeOf(plan, bay, D);
+    const spring = springOf(sh.lower ?? sh.upper);
+    // Up to the refuge it carries, or over the springing; under a ramp's run of arches a short one at the foot.
+    const top = refuged(plan) ? plan.deck(p.s) - plan.thick - 1.4 : plan.ramp ? Math.min(p.foot + 7.5, spring) : spring + 1;
     const nose = 0.2;
     // Not where the arches spring from the ground: a cutwater there is a stub.
     if (top - (plan.ground(p.s, t) - 0.5) < 6) continue;
@@ -476,7 +568,7 @@ function cutwaters(k: Kit, edge: number, t: number): void {
       k.solid('front', k.ord(edge, 0.2));
       k.face('front', [[sb, t, fb], [sa, tip, fa], [sa, tip, top], [sb, t, top]], [side * 0.5, edge, 0], st.stone,
         fi('pier', 0, Math.hypot(p.half, nose) * U, Math.min(fa, fb), top, Math.round(p.s * 10)), { o: [sb, t, 0], a: [(sa - sb) / Math.hypot(sa - sb, nose) / U, (edge * nose) / Math.hypot(sa - sb, nose) / U, 0], b: [0, 0, 1] });
-      if (plan.width < 2) {
+      if (!refuged(plan)) {
         const capTop = top + nose * U * 0.45;
         k.face('front', [[sb, t, top], [sa, tip, top], [sa, t, capTop]], [side * 0.3, edge * 0.6, 1], st.trim);
       }
@@ -486,32 +578,32 @@ function cutwaters(k: Kit, edge: number, t: number): void {
 
 /* ---- round things ------------------------------------------------------------------------ */
 
-/** How far out a round pier stands from the wall, in tiles: as far as the refuge it carries. */
-export const roundOut = (p: Pier): number => p.half + 0.08;
+/** How far out a round pier stands from the wall, in tiles: under a refuge, as far as the refuge it carries (the parapet's gap, `refugeHalf`). */
+export const roundOut = (p: Pier, plan: Plan): number => (refuged(plan) ? refugeHalf(p) : (p.half + 0.08) * 0.85);
 
 /**
  * A round buttress on each pier's outer face, battered out to its foot:
  * under a refuge, up to the deck's edge to carry it; otherwise to over its
  * springing, rounded off into the wall.
  */
-function buttresses(k: Kit, edge: number, t: number): void {
+function buttresses(k: Kit, edge: number, t: number, D: number): void {
   const { plan, sl, st } = k;
   const n = 8;
   for (const p of plan.piers) {
     if (p.end) continue;
-    const R0 = roundOut(p) * (plan.width >= 2 ? 1 : 0.85), R1 = R0 * 1.18;
+    const R0 = roundOut(p, plan), R1 = R0 * 1.18;
     if (p.s + R1 < sl.s0 - EPS || p.s - R1 > sl.s1 + EPS) continue;
     const bay = bayAt(plan, p.s - 0.01), bay2 = bayAt(plan, p.s + 0.01);
     const deckBottom = plan.deck(p.s) - plan.thick - 1.4;
     const domeH = R0 * U * 0.55;
-    const top = plan.width >= 2 ? deckBottom : Math.min(deckBottom - domeH - 0.5, Math.max(bay.lowerSpring ?? bay.spring, bay2.lowerSpring ?? bay2.spring) + 4);
+    const top = refuged(plan) ? deckBottom : Math.min(deckBottom - domeH - 0.5, Math.max(...[bay, bay2].map((b) => { const sh = shapeOf(plan, b, D); return springOf(sh.lower ?? sh.upper); })) + 4);
     const at = (phi: number, R: number, z: number): L => [p.s + R * Math.sin(phi), t + edge * R * Math.cos(phi), z];
     k.solid('front', k.ord(edge, 0.2));
     for (let i = 0; i < n; i++) {
       const f0 = -Math.PI / 2 + (Math.PI * i) / n, f1 = -Math.PI / 2 + (Math.PI * (i + 1)) / n, fm = (f0 + f1) / 2;
       const g0 = plan.ground(at(f0, R1, 0)[0], at(f0, R1, 0)[1]) - 0.5, g1 = plan.ground(at(f1, R1, 0)[0], at(f1, R1, 0)[1]) - 0.5;
       cface(k, 'front', [at(f0, R1, g0), at(f1, R1, g1), at(f1, R0, top), at(f0, R0, top)], [Math.sin(fm), edge * Math.cos(fm), 0.1], st.stone);
-      if (plan.width >= 2) continue;
+      if (refuged(plan)) continue;
       // The dome over it.
       const rings = 2;
       for (let q = 0; q < rings; q++) {
@@ -701,23 +793,23 @@ export function herringbonePaint(w: number, bed: string, cast?: Tone): BridgePai
   };
 }
 
-/** Square tiles laid by hand, `w` units, wide pale joints, each tile its own firing. */
-export function tilePaint(w: number, bed: string, cast?: Tone): BridgePainter {
+/** Square tiles laid by hand, `w` units, wide pale joints, each tile its own firing (`vary`: how many tiles of ten are off the field's tone, and how far). */
+export function tilePaint(w: number, bed: string, cast?: Tone, vary = 1): BridgePainter {
   return (g, k, f) => {
     const fill = cast ? faceColour(cast, k.L) : k.fill;
     if (cast) { g.fillStyle = css(fill); g.fillRect(Math.min(f.x0, f.x1) - 2, Math.min(f.y0, f.y1) - 2, Math.abs(f.x1 - f.x0) + 4, Math.abs(f.y1 - f.y0) + 4); }
     const x0 = Math.min(f.x0, f.x1) - w, x1 = Math.max(f.x0, f.x1) + w, y0 = Math.min(f.y0, f.y1) - w, y1 = Math.max(f.y0, f.y1) + w;
-    const pale = shade(fill, [255, 240, 226], 0.12, 0.8), deep = shade(fill, '#9a5a50', 0.1, 0.75);
+    const pale = shade(fill, [255, 240, 226], 0.12 * vary, 0.8), deep = shade(fill, '#9a5a50', 0.1 * vary, 0.75);
     const joints = new Path2D();
     for (let i = Math.floor(x0 / w); i * w < x1; i++) {
       for (let j = Math.floor(y0 / w); j * w < y1; j++) {
         const h = hash2(i, j);
-        if (h < 0.25 || h > 0.82) { g.fillStyle = h < 0.25 ? pale : deep; g.fillRect(i * w, j * w, w, w); }
+        if (h < 0.25 * vary || h > 1 - 0.18 * vary) { g.fillStyle = h < 0.25 ? pale : deep; g.fillRect(i * w, j * w, w, w); }
       }
       joints.moveTo(i * w, y0); joints.lineTo(i * w, y1);
     }
     for (let j = Math.floor(y0 / w); j * w < y1; j++) { joints.moveTo(x0, j * w); joints.lineTo(x1, j * w); }
-    g.strokeStyle = css(hex(bed), 0.9);
+    g.strokeStyle = css(hex(bed), 0.5 + 0.4 * Math.min(1, vary));
     g.lineWidth = 0.6;
     g.stroke(joints);
   };

@@ -1,9 +1,9 @@
 import { rand } from '../../ivy';
 import { proj, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, faceColour, hex, mix, type Tone } from '../core';
-import { bayAt, BUILDERS, byRole, refugeGaps, runeLine, samples, turned, U, type BridgePainter, type Kit, type L, type Part3 } from './core';
+import { bayAt, BUILDERS, byRole, ownerOf, refugeGaps, runeLine, samples, turned, U, type BridgePainter, type Kit, type L, type Part3 } from './core';
 import { plasterPaint, stoneBase } from './base';
-import { arcade, cface, fi, fixKit, lampPost, roundOut, runsOf, tilePaint, wallFrame, wide , ownerOf, runeKey, seen } from './clay';
+import { arcade, cface, fi, lampPost, roundOut, runsOf, tilePaint, wallFrame, refuged, runeKey, seen, whole } from './clay';
 
 /**
  * Clay adobe: the coat of the island's adobe houses (`ADOBE` in
@@ -19,6 +19,8 @@ import { arcade, cface, fi, fixKit, lampPost, roundOut, runsOf, tilePaint, wallF
 const COAT: Tone = { lit: hex('#e4cdab'), shade: hex('#a99282') };
 const PALE: Tone = { lit: hex('#eedfc4'), shade: hex('#b6a394') };
 const TILE: Tone = { lit: hex('#e5a585'), shade: hex('#b27e70') };
+/** The deck's tiles: the houses' terracotta, worn and dusted toward the coat. */
+const FLOOR: Tone = { lit: hex('#e2b89a'), shade: hex('#ad8d7e') };
 /** A glazed tile set over each crown, the pale blue of the houses' glass. */
 const GLAZE: Tone = { lit: hex('#b3dcd8'), shade: hex('#6f9099') };
 const VIGA: Tone = { lit: hex('#ab8a6c'), shade: hex('#6a5650') };
@@ -79,8 +81,7 @@ const wave = (k: Kit, s: number): number => {
 };
 
 /** The deck: the core's, and a row of viga ends under its edge, a third of a tile apart. */
-function deck(k0: Kit): void {
-  const k = fixKit(k0);
+function deck(k: Kit): void {
   BUILDERS.deck(k);
   const { plan, sl } = k;
   const gaps = refugeGaps(plan);
@@ -110,8 +111,7 @@ function deck(k0: Kit): void {
 }
 
 /** A run of the low parapet: a wall rounded over its top, its outer face's top band carrying the rune line. */
-function parapet(k0: Kit, edge: number, part: Part3): void {
-  const k = fixKit(k0);
+function parapet(k: Kit, edge: number, part: Part3): void {
   const { plan, sl, st } = k;
   const T = T_WALL, rz = (T * U) / 2;
   const tOut = edge > 0 ? sl.t1 : sl.t0, tIn = tOut - edge * T, tc = (tOut + tIn) / 2;
@@ -160,8 +160,7 @@ function parapet(k0: Kit, edge: number, part: Part3): void {
 }
 
 /** At each end of each outer edge, a round post of the coat, swelling at its foot and domed, a terracotta knob on it. */
-function ends(k0: Kit): void {
-  const k = fixKit(k0);
+function ends(k: Kit): void {
   const { plan, sl, st } = k;
   const post = (part: Part3, s: number, t: number, z: number): void => {
     if (ownerOf(k, s - 0.09, s + 0.09) === null) return;
@@ -183,13 +182,14 @@ function ends(k0: Kit): void {
  * lanes a lamp in it.
  */
 function refuges(k0: Kit): void {
-  const k = fixKit(k0);
-  const { plan, sl, st } = k;
+  const { plan, sl, st } = k0;
   const n = 10, T = T_WALL, rz = (T * U) / 2;
+  if (!refuged(plan)) return;
   for (const p of plan.piers) {
     if (p.end) continue;
-    const R = roundOut(p);
-    if (p.s + R < sl.s0 - 1e-6 || p.s - R > sl.s1 + 1e-6) continue;
+    const R = roundOut(p, plan);
+    const k = whole(k0, p.s - R - 0.02, p.s + R + 0.02);
+    if (!k) continue;
     const z = plan.deck(p.s);
     const zb = z - plan.thick - 1.4;
     const zt = z + H_WALL + 1.8;
@@ -233,7 +233,7 @@ function refuges(k0: Kit): void {
       }
       if (plan.width >= 3 && ownerOf(k, p.s - 0.05, p.s + 0.05) !== null) {
         const tl = t + edge * R * 0.45;
-        lampPost(wide(k, tl - 0.05, tl + 0.05), part, p.s, tl, z, PALE);
+        lampPost(k, part, p.s, tl, z, PALE);
       }
     }
   }
@@ -244,7 +244,7 @@ export const clay_adobe = stoneBase('clay_adobe', {
   stone: COAT,
   ring: PALE,
   trim: PALE,
-  deck: TILE,
+  deck: FLOOR,
   parapet: 'curved',
   // The crown set lower than the band is deep, for the viga ends over it.
   ringDepth: 7,
@@ -254,11 +254,11 @@ export const clay_adobe = stoneBase('clay_adobe', {
     key: runeKey('sowilo', 0.56, true),
     cap: runeLine('sowilo'),
     beam: vigaEnd,
-    deck: tilePaint(6.6, '#dccab3'),
+    deck: tilePaint(8, '#d6b89d', undefined, 0.6),
     tread: tilePaint(40 / 3, '#cdb89c', PALE),
   }),
   build: {
-    arches: arcade({ ringD: 2.8, proud: 0.01, ring: 'soft', key: 'plaque', keyTone: () => GLAZE, pier: 'round' }),
+    arches: arcade({ ringD: 2.8, proud: 0.01, ring: 'soft', key: 'plaque', keyTone: () => GLAZE, pier: 'round', inner: (st) => ({ lit: mix(st.stone.shade, st.stone.lit, 0.25), shade: mix(st.stone.shade, hex('#5a4e5e'), 0.25) }) }),
     deck,
     parapet,
     ends,
