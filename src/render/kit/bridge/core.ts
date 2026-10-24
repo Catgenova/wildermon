@@ -1101,6 +1101,19 @@ function clipToSlice(pts: L[], s0: number, s1: number): L[] {
   return out;
 }
 
+/**
+ * Whether a face turned out along `n` (across the plan) is seen nearly edge
+ * on, its cosine to the eye under `EDGE_ON`: a refuge's side turned that
+ * far from the eye shows only as a sliver of its colour past the coping,
+ * and is not laid.
+ */
+const EDGE_ON = 0.2;
+export function edgeOn(k: Kit, n: readonly [number, number]): boolean {
+  const d = add(mul(k.A, n[0]), mul(k.P, n[1]));
+  const t = k.e.toward;
+  return Math.abs(dot(d, t)) < EDGE_ON * Math.hypot(d[0], d[1], d[2]) * Math.hypot(t[0], t[1], t[2]);
+}
+
 /** A face's frame along a segment of the plan from `a` to `b`: `x` a unit along it, `y` up. */
 const segFrame = (a: [number, number], b: [number, number]): { o: L; a: L; b: L } => {
   const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
@@ -1155,7 +1168,7 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
     const [a, b, ai, bi] = [lOut[q], lOut[q + 1], lIn[q], lIn[q + 1]];
     // The wall's two faces and, for a balustrade, its plinth.
     k.solid(part, 1);
-    face(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], z + top], [a[0], a[1], z + top]], [n[0], n[1], 0], wallTone,
+    if (!edgeOn(k, n)) face(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], z + top], [a[0], a[1], z + top]], [n[0], n[1], 0], wallTone,
       info(kind === 'balustrade' ? 'plinth' : 'parapet', 0, 1, z, z + top, 11), segFrame(a, b));
     face(part, [[ai[0], ai[1], z], [bi[0], bi[1], z], [bi[0], bi[1], z + top], [ai[0], ai[1], z + top]], [-n[0], -n[1], 0], wallTone,
       info(kind === 'balustrade' ? 'plinth' : 'parapet', 0, 1, z, z + top, 12), segFrame(bi, ai));
@@ -1178,7 +1191,7 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
     k.solid(part, 2);
     face(part, [[ao[0], ao[1], z + ztop + coping], [bo[0], bo[1], z + ztop + coping], [bj[0], bj[1], z + ztop + coping], [aj[0], aj[1], z + ztop + coping]], [0, 0, 1], st.trim,
       info('cap', 0, 1, 0, 1, 13), { ...segFrame(ao, bo), b: [n[0] / U, n[1] / U, 0], o: [ao[0], ao[1], z + ztop + coping] });
-    face(part, [[ao[0], ao[1], z + ztop], [bo[0], bo[1], z + ztop], [bo[0], bo[1], z + ztop + coping], [ao[0], ao[1], z + ztop + coping]], [n[0], n[1], 0], st.trim,
+    if (!edgeOn(k, n)) face(part, [[ao[0], ao[1], z + ztop], [bo[0], bo[1], z + ztop], [bo[0], bo[1], z + ztop + coping], [ao[0], ao[1], z + ztop + coping]], [n[0], n[1], 0], st.trim,
       info('cap', 0, 1, z + ztop, z + ztop + coping, 14), segFrame(ao, bo));
     if (kind !== 'balustrade') {
       // Behind a wall the coping's inner face; a balustrade's shows between the balusters anyway.

@@ -1,6 +1,6 @@
 import { glyphPath, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, hex, mix, type Tone } from '../core';
-import { box, BUILDERS, byRole, ownerOf, REFUGE_OUT, refugeHalf, refugeLine, refugeOutline, turned, U, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
+import { box, BUILDERS, byRole, edgeOn, ownerOf, REFUGE_OUT, refugeHalf, refugeLine, refugeOutline, turned, U, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
 import { stoneBase } from './base';
 import { arcade, brickPaint, cface, fi, herringbonePaint, lampPost, refuged, ringPaint, runeKey, seen, whole, tilePaint, vaultPaint } from './clay';
 
@@ -151,14 +151,14 @@ function refuges(k0: Kit): void {
       for (let q = 0; q + 1 < line.length; q++) {
         const n = nOf(q), [a, b, ai, bi] = [lOut[q], lOut[q + 1], lIn[q], lIn[q + 1]];
         k.solid(part, 1);
-        cut(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], zc - cop], [a[0], a[1], zc - cop]], [n[0], n[1], 0], DEEP, fi('parapet', 0, 1, z, zc - cop, 3 + q), segFr(a, b));
+        if (!edgeOn(k, n)) cut(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], zc - cop], [a[0], a[1], zc - cop]], [n[0], n[1], 0], DEEP, fi('parapet', 0, 1, z, zc - cop, 3 + q), segFr(a, b));
         cut(part, [[bi[0], bi[1], z], [ai[0], ai[1], z], [ai[0], ai[1], zc - cop], [bi[0], bi[1], zc - cop]], [-n[0], -n[1], 0], DEEP, fi('parapet', 0, 1, z, zc - cop, 7 + q), segFr(bi, ai));
       }
       for (let q = 0; q + 1 < line.length; q++) {
         const n = nOf(q), [O0, O1, I0, I1] = [lCo[q], lCo[q + 1], lCi[q], lCi[q + 1]];
         k.solid(part, 2);
         cut(part, [[O0[0], O0[1], zc], [O1[0], O1[1], zc], [I1[0], I1[1], zc], [I0[0], I0[1], zc]], [0, 0, 1], st.trim);
-        cut(part, [[O0[0], O0[1], zc - cop], [O1[0], O1[1], zc - cop], [O1[0], O1[1], zc], [O0[0], O0[1], zc]], [n[0], n[1], 0], st.trim, fi('cap', 0, 1, zc - cop, zc, q), segFr(O0, O1));
+        if (!edgeOn(k, n)) cut(part, [[O0[0], O0[1], zc - cop], [O1[0], O1[1], zc - cop], [O1[0], O1[1], zc], [O0[0], O0[1], zc]], [n[0], n[1], 0], st.trim, fi('cap', 0, 1, zc - cop, zc, q), segFr(O0, O1));
         cut(part, [[I1[0], I1[1], zc - cop], [I0[0], I0[1], zc - cop], [I0[0], I0[1], zc], [I1[0], I1[1], zc]], [-n[0], -n[1], 0], st.trim);
         const [o0, o1] = [line[q], line[q + 1]];
         const a = Math.min(o0[0], o1[0]), b = Math.max(o0[0], o1[0]);

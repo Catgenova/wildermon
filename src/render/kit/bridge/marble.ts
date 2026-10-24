@@ -1,7 +1,7 @@
 import { css, dot, faceColour, hex, mix, proj, sub, TAU, type Ctx, type RGB, type Tone } from '../core';
 import { cut, glyphPath, lightOf, RUNE_GOLD, RUNE_WHITE, type Eye } from '../../runestone';
 import {
-  BRIDGE_INK, RAMP_CUTWATER, RAMP_WALL, U, bayAt, box, ownerOf, rampReturns, refugeGaps, refugeOutline, samples,
+  BRIDGE_INK, edgeOn, RAMP_CUTWATER, RAMP_WALL, U, bayAt, box, ownerOf, rampReturns, refugeGaps, refugeOutline, samples,
   type BridgePainter, type BridgeStyle, type FaceInfo, type Kit, type L, type Part3, type Plan, type Role,
 } from './core';
 
@@ -904,7 +904,8 @@ function refugesOf(k: Kit, cfg: Classical): void {
       const offLine = (d: number): Array<[number, number]> => { const o = mitred(d); o[0] = [o[0][0], o[0][1] - edge * d]; o[o.length - 1] = [o[o.length - 1][0], o[o.length - 1][1] - edge * d]; return o; };
       const lnIn = offLine(T), lnOut = offLine(-0.014), lnCap = offLine(T + 0.014), lnGlow = offLine(-0.02);
       // The platform, the deck's flags carried out; its edge the cornice's; under it a corbel onto the cutwater.
-      k2.solid('front', 1.2);
+      // Before the walls round it (order 1), which stand on it.
+      k2.solid('front', 0.9);
       face('front', line.map(([s0, t0]) => [s0, t0, z] as L), [0, 0, 1], st.deck,
         { role: 'deck', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(p.s * 10), along: true }, { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
       // Its edge drops below the deck's: behind the deck on the far side, so laid before it there.
@@ -929,7 +930,8 @@ function refugesOf(k: Kit, cfg: Classical): void {
         // sort by depth. A side's root is flush with the run's end and has no face of its own.
         k2.solid(part, 1);
         const wallTone = cfg.parapet === 'solid' ? st.stone : st.trim, role: Role = cfg.parapet === 'solid' ? 'parapet' : 'plinth';
-        face(part, [[a[0], a[1], z - 0.6], [b[0], b[1], z - 0.6], [b[0], b[1], topP], [a[0], a[1], topP]], [n[0], n[1], 0], wallTone,
+        // From the deck up: under it the platform's cornice is the outside.
+        if (!edgeOn(k, n)) face(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], topP], [a[0], a[1], topP]], [n[0], n[1], 0], wallTone,
           { role, x0: 0, x1: 1, y0: 0, y1: 1, seed: 3 }, segF(a, b));
         face(part, [[ai[0], ai[1], z], [bi[0], bi[1], z], [bi[0], bi[1], topP], [ai[0], ai[1], topP]], [-n[0], -n[1], 0], wallTone,
           { role, x0: 0, x1: 1, y0: 0, y1: 1, seed: 4 }, segF(bi, ai));
@@ -939,7 +941,7 @@ function refugesOf(k: Kit, cfg: Classical): void {
         k2.solid(part, 2);
         face(part, [[ao[0], ao[1], railLow + COPING], [bo[0], bo[1], railLow + COPING], [bj[0], bj[1], railLow + COPING], [aj[0], aj[1], railLow + COPING]], [0, 0, 1], st.trim,
           { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 5 }, { o: [0, 0, railLow + COPING], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
-        face(part, [[ao[0], ao[1], railLow], [bo[0], bo[1], railLow], [bo[0], bo[1], railLow + COPING], [ao[0], ao[1], railLow + COPING]], [n[0], n[1], 0], st.trim,
+        if (!edgeOn(k, n)) face(part, [[ao[0], ao[1], railLow], [bo[0], bo[1], railLow], [bo[0], bo[1], railLow + COPING], [ao[0], ao[1], railLow + COPING]], [n[0], n[1], 0], st.trim,
           { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 6 }, segF(ao, bo));
         face(part, [[aj[0], aj[1], railLow], [bj[0], bj[1], railLow], [bj[0], bj[1], railLow + COPING], [aj[0], aj[1], railLow + COPING]], [-n[0], -n[1], 0], st.trim,
           { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 7 }, segF(bj, aj));
