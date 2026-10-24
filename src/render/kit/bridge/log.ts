@@ -129,7 +129,7 @@ function ropes(k: Kit, part: Part3, spans: Array<[L, L]>, zs: number[], sag: num
 const logRail: RailSpec = {
   H: 8.5,
   spacing: 0.5,
-  inset: 0.1,
+  inset: 0.13,
   // A round post, its top cut to a blunt point.
   post: (s, t, z) => [...bar([s, t, z], [s, t, z + 8.4], rnd(1.5, 7), LOG.post), ...cone(s, t, z + 8.4, 1.5, 1.4, 7, LOG.post)],
   run: (k, part, _order, a, b, posts) => {
@@ -203,8 +203,8 @@ const logCarpentry: Carpentry = {
     lay(k, 'front', 1, [{ pts: [[sl.s0, to, z0(sl.s0)], [sl.s1, to, z0(sl.s1)], [sl.s1, to, z1(sl.s1)], [sl.s0, to, z1(sl.s0)]], out: [0, edge, 0], tone: LOG.deck,
       info: finfo('cornice', sl.s0 * U, sl.s0 * U + len, 0, plan.thick, sl.i), frame: { o: [sl.s0, to, z0(sl.s0)], a: [1 / U, 0, 0], b: [0, 0, 1] } }], '');
     // A curb log along the edge on the poles, the rope posts lashed inside it, its cut ends at the bridge's.
-    const r = 1.9, tc = te - edge * (r / U + 0.004);
-    lay(k, edge === sl.near ? 'rail' : 'front', 1.2, bar([sl.s0, tc, top(sl.s0) + r * 0.85], [sl.s1, tc, top(sl.s1) + r * 0.85], rnd(r, 8), LOG.bark,
+    const r = 2.4, tc = te - edge * (r / U + 0.004);
+    lay(k, edge === sl.near ? 'rail' : 'front', 1.2, bar([sl.s0, tc, top(sl.s0) + r * 0.9], [sl.s1, tc, top(sl.s1) + r * 0.9], rnd(r, 8), LOG.bark,
       { caps: [sl.s0 <= 1e-6, sl.s1 >= plan.n - 1e-6], paint: 'beam', capTone: LOG.end, capPaint: 'plinth', seed: sl.i * 3 + edge }), '');
   },
   banner: (k, part, s, t, z) => pennant(k, part, s, t, z, LOG.bark, tone('#cfe0b4', '#6f7f74'), tone('#ffe7a4', '#e9b468')),

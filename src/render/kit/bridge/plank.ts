@@ -221,7 +221,7 @@ export interface Bent { s: number; zTop: number; capB: number; foot: number; for
 /** A pier's bent: where it stands (an abutment's a hair in from the end), its cap beam's top and bottom, its foot and its form. */
 export function bentOf(k: Kit, c: Carpentry, p: Pier): Bent {
   const { plan } = k;
-  const s = p.end ? (p.s < plan.n / 2 ? p.s + 0.08 : p.s - 0.08) : p.s;
+  const s = p.end ? (p.s < plan.n / 2 ? p.s + 0.16 : p.s - 0.16) : p.s;
   const zTop = plan.deck(s) - plan.thick - 2 * c.stringer;
   const drop = plan.deck(s) - (p.foot + 1.5);
   const form: Form = drop <= FORM_HIGH ? 'low' : drop <= FORM_TIERS ? 'high' : 'tiers';
@@ -429,7 +429,8 @@ function stairStringer(k: Kit, c: Carpentry, edge: number, te: number): void {
   const tone = c.beamTone(k);
   const a = sl.s0, b = sl.s1;
   const len = (b - a) * U;
-  lay(k, 'front', 1, [
+  // The far one before the treads, which stand in front of its inside face; the near one after.
+  lay(k, 'front', k.ord(edge, 1), [
     { pts: [[a, to, zb(a)], [b, to, zb(b)], [b, to, zt(b)], [a, to, zt(a)]], out: [0, edge, 0], tone, info: finfo('beam', 0, len, 0, zt(a) - zb(a), sl.i), frame: { o: [a, to, zb(a)], a: [1 / U, 0, (zb(b) - zb(a)) / len], b: [0, 0, 1] } },
     { pts: [[a, ti, zb(a)], [b, ti, zb(b)], [b, ti, zt(b)], [a, ti, zt(a)]], out: [0, -edge, 0], tone },
     { pts: [[a, ti, zt(a)], [b, ti, zt(b)], [b, to, zt(b)], [a, to, zt(a)]], out: [0, 0, 1], tone },
