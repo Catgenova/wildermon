@@ -1252,7 +1252,7 @@ export class Renderer {
   /** The trees drawn as solids in the shade's window, read off the world, and which of them shade which line under this sun. */
   private solidScan: {
     key: string;
-    trees: Array<{ ix: number; iy: number; x: number; y: number; species: number; variant: number; form: number; grew: number }>;
+    trees: Array<{ ix: number; iy: number; x: number; y: number; species: number; variant: number; form: number; grew: number; h: number }>;
     top0: number;
     /** The lowest foot on the screen of the trees on each line: the next line's shade starts no higher, so it is never laid over one. */
     feet: Map<number, number>;
@@ -7250,7 +7250,7 @@ export class Renderer {
           const u = cam.rotateX(x + 0.5, y + 0.5), v = cam.rotateY(x + 0.5, y + 0.5), h = world.centerHeight(x, y);
           const iy = (u + v) * HALF_H - h * HEIGHT_SCALE;
           const g = grownAt(x, y);
-          trees.push({ ix: (u - v) * HALF_W, iy, x, y, species, variant: treeVariant(data), form: formAt(x, y), grew: g });
+          trees.push({ ix: (u - v) * HALF_W, iy, x, y, species, variant: treeVariant(data), form: formAt(x, y), grew: g, h });
           feet.set(d, Math.max(feet.get(d) ?? -Infinity, iy));
           let at = footAt.get(d);
           if (!at) footAt.set(d, (at = []));
@@ -7270,9 +7270,15 @@ export class Renderer {
       // Kept as done only when every tree's shade is this sun's own, not one standing in for it.
       const was = tree3dStats.shadeStandIns;
       scan.lines = new Map();
-      // The height of the ground under the middle of each tree's shade on the screen: what rows of the screen are lines of ground at.
-      const under: number[] = [];
+      /*
+       * Rows of the screen to lines of ground at the height the trees on the
+       * screen stand at, not every tree in the window, which takes in trees on
+       * other ground: a band a third of a line off the ground it is laid with
+       * is covered by the next line's.
+       */
       const sx0 = cam.cx - W / zoom / 2, sx1 = cam.cx + W / zoom / 2, sy0 = cam.cy - H / zoom / 2, sy1 = cam.cy + H / zoom / 2;
+      const standing = scan.trees.filter((tr) => tr.ix > sx0 && tr.ix < sx1 && tr.iy > sy0 && tr.iy < sy1).map((tr) => tr.h).sort((a, b) => a - b);
+      if (standing.length) scan.top0 = -standing[standing.length >> 1] * HEIGHT_SCALE;
       // Asked once for each shape a tree can be grown as, not once a tree.
       const shades = new Map<string, ReturnType<typeof tree3dShadow>>();
       for (const tr of scan.trees) {
@@ -7283,22 +7289,12 @@ export class Renderer {
         const g = tr.grew;
         const [bx0, by0, bx1, by1] = shade.box;
         const part = { cv: shade.canvas, x: tr.ix + bx0 * g, y: tr.iy + by0 * g, w: (bx1 - bx0) * g, h: (by1 - by0) * g };
-        const mx = part.x + part.w / 2, my = part.y + part.h / 2;
-        if (mx > sx0 && mx < sx1 && my > sy0 && my < sy1) {
-          const dm = Math.round((my - scan.top0) / stepH);
-          let em = Math.round(mx / stepW);
-          if (V.staggered && ((em + dm) & 1) !== 0) em++;
-          const gx = V.x[0] + V.x[1] * dm + V.x[2] * em, gy = V.y[0] + V.y[1] * dm + V.y[2] * em;
-          if (world.inBounds(gx, gy)) under.push(world.centerHeight(gx, gy));
-        }
         for (let d = Math.floor((part.y - scan.top0) / stepH) - 1, end = Math.floor((part.y + part.h - scan.top0) / stepH) + 1; d <= end; d++) {
           let line = scan.lines.get(d);
           if (!line) scan.lines.set(d, (line = []));
           line.push(part);
         }
       }
-      // Not the height of every tree in the window, which takes in trees on other ground: a band a third of a line off the ground it is laid with is covered by the next line's.
-      if (under.length) scan.top0 = -under.sort((a, b) => a - b)[under.length >> 1] * HEIGHT_SCALE;
       scan.linesKey = tree3dStats.shadeStandIns === was ? linesKey : '';
     }
     /*
