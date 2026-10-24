@@ -1,7 +1,7 @@
 import { css, faceColour, type Tone } from '../core';
 import { U, type BridgePainter, type BridgeStyle, type Kit, type L, type Part3 } from './core';
 import {
-  archesKeyed, copingRun, framed, hash, houseTone, infoOf, keystone, moulding, newelPost, rubble, runsOf, voussoirs, wallFrame, wallRun,
+  archesKeyed, copingRun, framed, treadPaint, hash, houseTone, infoOf, keystone, moulding, newelPost, rubble, runsOf, voussoirs, wallFrame, wallRun,
   type Beds, type Placed,
 } from './stone_brick';
 
@@ -145,13 +145,13 @@ export const cobblestone: BridgeStyle = framed({
   glow: '#d4f2c4',
   paint: {
     wall, pier: wall, parapet: wall, post: wall,
-    ring: voussoirs({ width: 3.4, wander: 0.45, ragged: 0.35, beds: DRESS_BEDS, joint: RING_JOINT, soffit: rubble({ rows: [3, 4.6], len: [4, 8], beds: BEDS, joint: JOINT, gap: 0.6, line: LINE }) }),
+    ring: voussoirs({ width: 3.6, wander: 0.8, ragged: 0.45, rough: LINE, beds: BEDS, joint: JOINT, soffit: rubble({ rows: [3, 4.6], len: [4, 8], beds: BEDS, joint: JOINT, gap: 0.6, line: LINE }) }),
     key: keystone(RUNE),
-    cap: moulding({ joint: RING_JOINT, hi: t('#efe8dc'), len: 9, rune: RUNE, wide: deck }),
+    cap: moulding({ joint: RING_JOINT, hi: t('#efe8dc'), len: 9, rune: RUNE }),
     cornice: moulding({ joint: RING_JOINT, hi: t('#efe8dc'), len: 8 }),
     plinth: moulding({ joint: RING_JOINT, hi: t('#efe8dc'), len: 8 }),
     rail: onEdge,
-    deck, tread: deck,
+    deck, tread: treadPaint(deck, t('#efe8dc'), t('#8d846f')),
   },
-  build: { parapet: roughParapet, ends: roughEnds, arches: archesKeyed(0.1, 2, 1) },
-});
+  build: { parapet: roughParapet, ends: roughEnds, arches: archesKeyed(0.12, 2.6, 1) },
+}, { riser: t('#a3998a') });

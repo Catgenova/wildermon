@@ -63,6 +63,9 @@ export interface Placed extends FaceInfo {
   /** Whether the frame lies mirrored on the screen, and which way its `x` runs along the bridge (+1, -1, or nought across it). */
   flip?: boolean;
   sx?: number;
+  /** A tread: where its nosing is along its frame's `x`, and which way the tread runs back from it. */
+  nose?: number;
+  inward?: number;
 }
 
 const S = (v: L): V3 => [v[0] * U, v[1] * U, v[2]];
@@ -138,6 +141,14 @@ function framedKit(k: Kit): Kit {
       // Its run in its frame the core works out from its points; here, whether the frame lies mirrored on the screen, for a rune cut in it to be turned back.
       inf = { ...inf, flip: mirrored(k, fr), sx: Math.abs(fr.a[0]) > 1e-9 ? Math.sign(fr.a[0]) : 0 };
       if (inf.role === 'ring' && !inf.soffit) inf.arc = arcOf(k.plan, fr, pts[0][0], pts[1][0], pts[0][1], pts[0][2]);
+      if (inf.role === 'tread') {
+        // Its nosing is at its low end going up, the high end going down.
+        const a = pts[0][0], b = pts[1][0];
+        const up = k.plan.deck(b) >= k.plan.deck(a);
+        const [xn] = inFrame(fr, [up ? a : b, pts[0][1], pts[0][2]]), [xb] = inFrame(fr, [up ? b : a, pts[0][1], pts[0][2]]);
+        inf.nose = xn;
+        inf.inward = Math.sign(xb - xn);
+      }
     }
     k.face(part, pts, out, tone, inf, fr);
   };
@@ -154,15 +165,38 @@ function mirrored(k: Kit, fr: { o: L; a: L; b: L }): boolean {
 }
 
 /** A style whose builders lay their faces through `framedKit`. */
-export function framed(st: BridgeStyle): BridgeStyle {
+export function framed(st: BridgeStyle, o: { riser?: Tone } = {}): BridgeStyle {
   const own = st.build ?? {};
   const wrap = <K extends keyof Builders>(key: K): Builders[K] => {
     const fn = (own[key] ?? BUILDERS[key]) as (k: Kit, ...rest: never[]) => void;
     return ((k: Kit, ...rest: never[]) => fn(framedKit(k), ...rest)) as Builders[K];
   };
+  // A ramp's risers, the only faces of the deck turned along the bridge, in a tone of their own so each tread stands off the next.
+  const deck: Builders['deck'] = (k) => {
+    const fk = framedKit(k);
+    const face: Kit['face'] = (part, pts, out, tone, info, frame) =>
+      fk.face(part, pts, out, o.riser && !info && out[1] === 0 && out[2] === 0 ? o.riser : tone, info, frame);
+    (own.deck ?? BUILDERS.deck)({ ...fk, face });
+  };
   return {
     ...st,
-    build: { ...own, deck: wrap('deck'), arches: wrap('arches'), parapet: wrap('parapet'), ends: wrap('ends'), refuges: wrap('refuges') },
+    build: { ...own, deck, arches: wrap('arches'), parapet: wrap('parapet'), ends: wrap('ends'), refuges: wrap('refuges') },
+  };
+}
+
+/** A tread laid as `lay` says, the stone along its nosing paler and a shadow line at its very edge, so a flight reads step by step. */
+export function treadPaint(lay: BridgePainter, nose: Tone, shade: Tone): BridgePainter {
+  return (g, k, f, st) => {
+    lay(g, k, f, st);
+    const pf = f as Placed;
+    if (pf.nose === undefined || !pf.inward) return;
+    const [, , y0, y1] = ext(f);
+    const x = pf.nose, d = pf.inward;
+    g.fillStyle = css(faceColour(nose, k.L));
+    g.fillRect(Math.min(x, x + d * 2.4), y0 - 1, 2.4, y1 - y0 + 2);
+    g.strokeStyle = css(faceColour(shade, k.L), 0.9);
+    g.lineWidth = 0.7;
+    g.beginPath(); g.moveTo(x + d * 2.4, y0 - 1); g.lineTo(x + d * 2.4, y1 + 1); g.stroke();
   };
 }
 
@@ -379,6 +413,21 @@ export interface Voussoirs {
   alternate?: boolean;
   /** Rubble: each stone its own length out from the arch, by as much as this share of the ring, the mortar showing past the short ones. */
   ragged?: number;
+  /** And each stone rounded off, as a field stone is, the line round it in this tone. */
+  rough?: Tone;
+}
+
+/** A closed outline through the midpoints of `pts`, each corner rounded off: a field stone. */
+function roundStone(p: Path2D, pts: ReadonlyArray<readonly [number, number]>): void {
+  const n = pts.length;
+  const mid = (i: number): [number, number] => [(pts[i][0] + pts[(i + 1) % n][0]) / 2, (pts[i][1] + pts[(i + 1) % n][1]) / 2];
+  const m0 = mid(n - 1);
+  p.moveTo(m0[0], m0[1]);
+  for (let i = 0; i < n; i++) {
+    const m = mid(i);
+    p.quadraticCurveTo(pts[i][0], pts[i][1], m[0], m[1]);
+  }
+  p.closePath();
 }
 
 /**
@@ -443,7 +492,14 @@ export function voussoirs(c: Voussoirs): BridgePainter {
       const mid = i === (n - 1) / 2;
       const bi = mid ? 0 : c.alternate ? i % c.beds.length : i % 2 === 0 ? pick(c.beds, hash(seed, i, 2)) : (pick(c.beds, hash(seed, i, 3)) + 1) % c.beds.length;
       const p = paths[bi];
-      if (c.ragged) {
+      if (c.rough) {
+        // A field stone: pulled in from its neighbours, its corners worn round, a bulge on its outer end.
+        const ix = (b[0] - a[0]) * 0.1, iy = (b[1] - a[1]) * 0.1;
+        const ox = (b[2] - a[2]) * 0.1, oy = (b[3] - a[3]) * 0.1;
+        const bulge = 0.12 + hash(seed, i, 7) * 0.12;
+        const cx2 = (a[2] + b[2]) / 2 + (a[2] - a[0] + b[2] - b[0]) * bulge * 0.5, cy2 = (a[3] + b[3]) / 2 + (a[3] - a[1] + b[3] - b[1]) * bulge * 0.5;
+        roundStone(p, [[a[0] + ix, a[1] + iy], [b[0] - ix, b[1] - iy], [b[2] - ox, b[3] - oy], [cx2, cy2], [a[2] + ox, a[3] + oy]]);
+      } else if (c.ragged) {
         // A rounded wedge: its outer end bowed, its joints pulled in a hair either side.
         const ix = (b[0] - a[0]) * 0.06, iy = (b[1] - a[1]) * 0.06;
         p.moveTo(a[0] + ix, a[1] + iy); p.lineTo(b[0] - ix, b[1] - iy); p.lineTo(b[2] - ix, b[3] - iy);
@@ -456,6 +512,11 @@ export function voussoirs(c: Voussoirs): BridgePainter {
       }
     }
     for (let i = 0; i < paths.length; i++) { g.fillStyle = css(fills[i]); g.fill(paths[i]); }
+    if (c.rough) {
+      g.strokeStyle = css(faceColour(c.rough, k.L), 0.7);
+      g.lineWidth = 0.32;
+      for (const p of paths) g.stroke(p);
+    }
     g.strokeStyle = css(faceColour(c.joint, k.L));
     g.lineWidth = jw;
     g.stroke(joints);
@@ -473,6 +534,7 @@ export function upright(g: Ctx, f: Placed, rune: string, x: number, y: number, s
 
 /** A rune cut in a keystone and inlaid in gold, as large as the stone will take, upright however the face lies. */
 export function keystone(rune: string, size = 0.42): BridgePainter {
+  // As large as the stone allows, its gold a third again as broad as the core's so it holds at the far zoom.
   return (g, k, f) => {
     const pf = f as Placed;
     const [x0, x1, y0, y1] = ext(f);
@@ -481,7 +543,7 @@ export function keystone(rune: string, size = 0.42): BridgePainter {
     cut(g, k.fill, s * 0.42, path);
     path();
     g.strokeStyle = RUNE_GOLD;
-    g.lineWidth = s * 0.22;
+    g.lineWidth = s * 0.27;
     g.lineCap = 'round';
     g.stroke();
   };
@@ -633,11 +695,13 @@ export function copingRun(k: Kit, part: Part3, sa: number, sb: number, edge: num
 
 /**
  * A keystone at the crown of every arch in the slice, larger than the core's
- * and standing proud of it, so the rune cut in it reads at the far zoom; its
- * rune glows at night at its own size.
+ * and standing proud of it: an upper arch's runs up through the cornice to
+ * the deck's edge, as a classical keystone breaks its entablature, so the
+ * rune cut in it reads at the far zoom; its rune glows at night at its own size.
  */
-export function keystones(k: Kit, w: number, below: number, above: number): void {
+export function keystones(k: Kit, w: number, below: number, above: number, tone?: Tone): void {
   const { plan, sl, st } = k;
+  const key = tone ?? st.ring;
   const ringD = st.ringDepth ?? 3.2;
   for (const edge of sl.edges) {
     // Not on an outer edge turned from the eye, where it would show through the arches (as the core's rings).
@@ -647,16 +711,19 @@ export function keystones(k: Kit, w: number, below: number, above: number): void
       for (const crown of [bay.crown, bay.lowerCrown]) {
         if (crown === undefined) continue;
         if (ownerOf(k, bay.c - w, bay.c + w) === null) continue;
-        k.solid('front', k.ord(edge, 0.85));
+        const upper = crown === bay.crown;
+        // Laid after the cornice, which it stands proud of.
+        k.solid('front', k.ord(edge, upper ? 1.05 : 0.85));
         const tk = t + edge * 0.036;
-        // Up to the cornice band under the deck, which would hide its head.
-        const z0 = crown - below, z1 = Math.min(crown + ringD + above, plan.deck(bay.c) - plan.thick - 1.45);
+        // Up to the top of the cornice; a lower arch's, to the band of the course over it.
+        const z0 = crown - below;
+        const z1 = upper ? plan.deck(bay.c) - 0.6 : Math.min(crown + ringD + above, (bay.course ?? Infinity) - 1.7);
         const ks = [bay.c - w, bay.c + w];
-        k.face('front', [[ks[0], tk, z0], [ks[1], tk, z0], [ks[1], tk, z1], [ks[0], tk, z1]], [0, edge, 0], st.ring,
+        k.face('front', [[ks[0], tk, z0], [ks[1], tk, z0], [ks[1], tk, z1], [ks[0], tk, z1]], [0, edge, 0], key,
           infoOf('key', 0, 0, 0, 0, Math.round(bay.c * 10)), wallFrame(tk, edge));
-        for (const s of ks) k.face('front', [[s, t, z0], [s, tk, z0], [s, tk, z1], [s, t, z1]], [s < bay.c ? -1 : 1, 0, 0], st.ring);
-        k.face('front', [[ks[0], t, z1], [ks[1], t, z1], [ks[1], tk, z1], [ks[0], tk, z1]], [0, 0, 1], st.ring);
-        k.face('front', [[ks[0], t, z0], [ks[1], t, z0], [ks[1], tk, z0], [ks[0], tk, z0]], [0, 0, -1], st.ring);
+        for (const s of ks) k.face('front', [[s, t, z0], [s, tk, z0], [s, tk, z1], [s, t, z1]], [s < bay.c ? -1 : 1, 0, 0], key);
+        k.face('front', [[ks[0], t, z1], [ks[1], t, z1], [ks[1], tk, z1], [ks[0], tk, z1]], [0, 0, 1], key);
+        k.face('front', [[ks[0], t, z0], [ks[1], t, z0], [ks[1], tk, z0], [ks[0], tk, z0]], [0, 0, -1], key);
         k.glow.runes.push({ at: k.m([bay.c, tk, (z0 + z1) / 2]), s: (Math.min(w * 2 * U, z1 - z0) * 0.42) / 2.25, glyph: st.rune });
       }
     }
@@ -664,7 +731,7 @@ export function keystones(k: Kit, w: number, below: number, above: number): void
 }
 
 /** The core's arches, their keystones replaced by `keystones`: the core's runes taken out of the night's glow for the new ones. */
-export function archesKeyed(w: number, below: number, above: number): Builders['arches'] {
+export function archesKeyed(w: number, below: number, above: number, tone?: Tone): Builders['arches'] {
   return (k) => {
     const before = k.glow.runes.length;
     // The core's keystone, every face of it within its width of a crown and its height of the ring, is not laid at all.
@@ -676,7 +743,7 @@ export function archesKeyed(w: number, below: number, above: number): Builders['
     };
     BUILDERS.arches({ ...k, face });
     k.glow.runes.splice(before);
-    keystones(k, w, below, above);
+    keystones(k, w, below, above, tone);
   };
 }
 
@@ -806,10 +873,10 @@ export const stone_brick: BridgeStyle = framed({
     wall, pier: wall, parapet: wall, post: wall,
     ring: voussoirs({ width: 4.2, beds: DRESS_BEDS, joint: DRESS_JOINT, soffit: coursed({ rows: [4.2], len: 11, beds: SOFFIT_BEDS, joint: STONE_JOINT }) }),
     key: keystone(RUNE),
-    cap: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 12, rune: RUNE, wide: deck }),
+    cap: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 12, rune: RUNE }),
     cornice: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 14 }),
     plinth: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 10 }),
-    deck, tread: deck,
+    deck, tread: treadPaint(deck, t('#e1e3e9'), t('#6b6d7d')),
   },
-  build: { parapet: crenelParapet, refuges: crenelRefuges, ends: crenelEnds, arches: archesKeyed(0.11, 2.2, 1.2) },
-});
+  build: { parapet: crenelParapet, refuges: crenelRefuges, ends: crenelEnds, arches: archesKeyed(0.12, 2.6, 1.2) },
+}, { riser: t('#9a9eab') });
