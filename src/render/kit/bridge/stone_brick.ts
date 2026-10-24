@@ -121,7 +121,7 @@ function arcLength(f: (s: number) => number, c: number, s: number): number {
 
 /** A kit whose faces reach their painters with which way their frames lie, an arch ring's arch, and a frame for the underside of a vault. */
 function framedKit(k: Kit): Kit {
-  const face: Kit['face'] = (part, pts, out, tone, info, frame) => {
+  const face: Kit['face'] = (part, pts, out, tone, info, frame, bare) => {
     let inf: Placed | undefined = info;
     let fr = frame;
     if (inf && !fr && inf.role === 'ring' && pts.length === 4) {
@@ -151,7 +151,7 @@ function framedKit(k: Kit): Kit {
         inf.inward = Math.sign(xb - xn);
       }
     }
-    k.face(part, pts, out, tone, inf, fr);
+    k.face(part, pts, out, tone, inf, fr, bare);
   };
   return { ...k, face };
 }
@@ -863,9 +863,9 @@ export function refugesOwn(w: RefugeWall): Builders['refuges'] {
         const part: Part3 = edge === sl.near ? 'rail' : 'front';
         const z = plan.deck(p.s);
         const k2: Kit = { ...k, sl: { ...sl, t0: Math.min(sl.t0, t - REFUGE_OUT - 0.1), t1: Math.max(sl.t1, t + REFUGE_OUT + 0.1) } };
-        const clip: Kit['face'] = (q, pts, out, tone, info, frame) => {
+        const clip: Kit['face'] = (q, pts, out, tone, info, frame, bare) => {
           const c = clipRun(pts, sl.s0, sl.s1);
-          if (c.length >= 3) k2.face(q, c, out, tone, info, frame);
+          if (c.length >= 3) k2.face(q, c, out, tone, info, frame, bare);
         };
         const segs: Seg[] = line.slice(0, -1).map((a, q) => {
           const b = line[q + 1];
@@ -899,10 +899,11 @@ export function refugesOwn(w: RefugeWall): Builders['refuges'] {
           const [a, b, ai, bi] = [co[q], co[q + 1], ci[q], ci[q + 1]];
           const n = segs[q].n;
           k2.solid(part, 2);
+          // Under a crown and its side seen edge on, its top uninked: it shows there only as a sliver past the crown's stones.
           clip(part, [[a[0], a[1], z2], [b[0], b[1], z2], [bi[0], bi[1], z2], [ai[0], ai[1], z2]], [0, 0, 1], st.trim, infoOf('cap', 0, 0, 0, 0, 13),
-            { o: [a[0], a[1], z2], a: segFrame(a, b).a, b: [-n[0] / U, -n[1] / U, 0] });
+            { o: [a[0], a[1], z2], a: segFrame(a, b).a, b: [-n[0] / U, -n[1] / U, 0] }, !!w.crown && edgeOn(k, n));
           if (!edgeOn(k, n)) clip(part, [[a[0], a[1], z1], [b[0], b[1], z1], [b[0], b[1], z2], [a[0], a[1], z2]], [n[0], n[1], 0], st.trim, infoOf('cap', 0, 0, 0, 0, 14), segFrame(a, b));
-          clip(part, [[bi[0], bi[1], z1], [ai[0], ai[1], z1], [ai[0], ai[1], z2], [bi[0], bi[1], z2]], [-n[0], -n[1], 0], st.trim);
+          if (!edgeOn(k, n)) clip(part, [[bi[0], bi[1], z1], [ai[0], ai[1], z1], [ai[0], ai[1], z2], [bi[0], bi[1], z2]], [-n[0], -n[1], 0], st.trim);
           clip(part, [[a[0], a[1], z1], [b[0], b[1], z1], [bi[0], bi[1], z1], [ai[0], ai[1], z1]], [0, 0, -1], st.trim);
           const mid = (a[0] + b[0]) / 2;
           if (mid >= sl.s0 && mid < sl.s1) {
@@ -930,12 +931,14 @@ export function segBlock(k: Kit, part: Part3, face: Kit['face'], o: Seg, i: Seg,
   const out = (p: Pt2, d: number): Pt2 => [p[0] + n[0] * d, p[1] + n[1] * d];
   const a = out(P(o, u0 - du), grow), b = out(P(o, u1 + du), grow), bi = out(P(i, u1 + du), -grow), ai = out(P(i, u0 - du), -grow);
   k.solid(part, order);
-  face(part, [[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1]], [n[0], n[1], 0], tone, role ? infoOf(role, 0, 0, 0, 0, 15) : undefined, role ? segFrame(a, b) : undefined);
+  // Its outer face and its ends; its side seen edge on (`edgeOn`), uninked: a row of them shows there only as slivers past each other.
+  const bare = edgeOn(k, n);
+  face(part, [[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1]], [n[0], n[1], 0], tone, role ? infoOf(role, 0, 0, 0, 0, 15) : undefined, role ? segFrame(a, b) : undefined, bare);
   face(part, [[bi[0], bi[1], z0], [ai[0], ai[1], z0], [ai[0], ai[1], z1], [bi[0], bi[1], z1]], [-n[0], -n[1], 0], tone);
   face(part, [[a[0], a[1], z1], [b[0], b[1], z1], [bi[0], bi[1], z1], [ai[0], ai[1], z1]], [0, 0, 1], tone);
   const along: Pt2 = [b[0] - a[0], b[1] - a[1]];
-  face(part, [[ai[0], ai[1], z0], [a[0], a[1], z0], [a[0], a[1], z1], [ai[0], ai[1], z1]], [-along[0], -along[1], 0], tone);
-  face(part, [[b[0], b[1], z0], [bi[0], bi[1], z0], [bi[0], bi[1], z1], [b[0], b[1], z1]], [along[0], along[1], 0], tone);
+  face(part, [[ai[0], ai[1], z0], [a[0], a[1], z0], [a[0], a[1], z1], [ai[0], ai[1], z1]], [-along[0], -along[1], 0], tone, undefined, undefined, bare);
+  face(part, [[b[0], b[1], z0], [bi[0], bi[1], z0], [bi[0], bi[1], z1], [b[0], b[1], z1]], [along[0], along[1], 0], tone, undefined, undefined, bare);
 }
 
 /* ---- stone brick --------------------------------------------------------------------------------------- */

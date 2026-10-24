@@ -293,8 +293,8 @@ export interface Kit {
   /** The world's way across the frame, in the model: which way `+t` and `+s` go. */
   P: V3;
   A: V3;
-  /** A face of the frame's points, turned out toward `out` (a direction in the frame), its frame for painting. */
-  face: (part: Part3, pts: L[], out: L, tone: Tone, info?: FaceInfo, frame?: { o: L; a: L; b: L }) => void;
+  /** A face of the frame's points, turned out toward `out` (a direction in the frame), its frame for painting; `bare`, none of its edges inked. */
+  face: (part: Part3, pts: L[], out: L, tone: Tone, info?: FaceInfo, frame?: { o: L; a: L; b: L }, bare?: boolean) => void;
   /** A loose drawing in the model. */
   loose: (part: Part3, draw: (g: Ctx, e: Eye) => void, reach: L[], order?: number) => void;
   /** Start a new solid in a piece: the faces after it are inked as one, apart from those before. */
@@ -348,7 +348,7 @@ export function buildSlice(plan: Plan, sl: Slice, e: Eye, A2: [number, number], 
       return [a, ...cuts.map((g): L => { const u = (g - a[0]) / (b[0] - a[0]); return [g, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]; })];
     });
   };
-  const face = (part: Part3, pts: L[], o: L, tone: Tone, info?: FaceInfo, frame?: { o: L; a: L; b: L }): void => {
+  const face = (part: Part3, pts: L[], o: L, tone: Tone, info?: FaceInfo, frame?: { o: L; a: L; b: L }, bare = false): void => {
     if (pts.length < 3) return;
     pts = atGaps(pts);
     const mp = pts.map(m);
@@ -358,7 +358,7 @@ export function buildSlice(plan: Plan, sl: Slice, e: Eye, A2: [number, number], 
     n = mul(n, 1 / l);
     if (dot(n, dir(o)) < 0) n = mul(n, -1);
     if (!cur[part]) solid(part);
-    const ink = pts.map((p, k) => !onCut(p, pts[(k + 1) % pts.length]));
+    const ink = pts.map((p, k) => !bare && !onCut(p, pts[(k + 1) % pts.length]));
     const fr = frame ? { o: m(frame.o), a: dir(frame.a), b: dir(frame.b) } : undefined;
     /*
      * And what the painter is told of its run, as the face lies in its own
