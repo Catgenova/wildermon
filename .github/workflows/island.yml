@@ -3348,6 +3348,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/hodwork.mjs --log-level=error
           node node_modules/.cache/hodwork.mjs
 
+      - name: A hod carrier says what it wants and puts back what nothing wants
+        if: matrix.shard == 4
+        run: |
+          # Seen on the island: hod carriers idle with "nothing in range"
+          # while work in range wanted marble brick and glass the stores did
+          # not hold, one holding mortar nothing wanted. Now `stock`, naming
+          # what is wanted, the same words on both sides; `range` only with no
+          # work at all; and the unwanted piece back in the stores.
+          npx esbuild supabase/test/hodwhy.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/hodwhy.mjs --log-level=error
+          node node_modules/.cache/hodwhy.mjs
+
       - name: A worker far from anybody still walks home
         if: matrix.shard == 4
         run: |

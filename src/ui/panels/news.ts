@@ -150,7 +150,7 @@ import { DARK_WALK, DARK_WORK, NIGHT_EYES_FROM, TRACK_AWARE } from '../../game/l
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
-import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
+import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
 import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
 import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
@@ -3639,6 +3639,14 @@ export const NEWS: News[] = [
       `Changed: wooden bridge and stone arch replaced by a bridge of each of ${listed(THROWN.filter(isMaterialBridge).map((k) => MATERIAL_BY_ID.get(k)!.name.toLowerCase()))}: `
         + `max length storeys + ${BRIDGE_REACH} tiles, bays equal, each at most heft + ${BAY_PAST_HEFT} tiles, max drop its storeys; per span a wall's bill a lane, per pier a wall's bill a storey of drop; `
         + `1 to ${WIDEST} lanes (${WAGON_WIDTH}: wagons; ${STALL_WIDTH}: furniture on the outer lanes). Existing: wooden → plank, stone arch → stone brick, 1 lane.`,
+    ],
+  },
+  {
+    n: 302,
+    day: '2026-10-24',
+    lines: () => [
+      `Changed: idle ${SPECIES.cobbe.name}, work in range wanting only what your settlement stores lack: "${idleSays({ why: 'stock', n: 2, what: ['marble_brick', 'glass'] }, 'hod')}" (up to ${IDLE_WANTS} named), `
+        + 'not "no planned building work". Carried piece no work in range wants: back to your settlement stores.',
     ],
   },
 ];

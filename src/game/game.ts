@@ -8074,6 +8074,32 @@ export class Game {
   }
 
   /**
+   * Everything planned work within reach (`near`) still wants, whether the
+   * stores hold it or not: each thing once, nearest the work wanting it to
+   * `from` first, then by name; and how many things that is. What a hod
+   * carrier with nothing it can fetch names as wanted (`Idle.what`). The
+   * island's `hod_wanted`.
+   */
+  hodWanted(near: (x: number, y: number) => boolean, from: { x: number; y: number }): { items: string[]; n: number } {
+    const nearest = new Map<string, number>();
+    const consider = (bill: Bill, x: number, y: number): void => {
+      if (!near(x, y)) return;
+      const d = (x - from.x) ** 2 + (y - from.y) ** 2;
+      for (const [item, n] of Object.entries(bill.needed)) if (n > 0 && d < (nearest.get(item) ?? Infinity)) nearest.set(item, d);
+    };
+    for (const wall of this.buildings.walls.values()) if (!isDone(wall)) consider(wall, wall.x, wall.y);
+    for (const floor of this.buildings.floors.values()) if (!isDone(floor)) consider(floor, floor.x, floor.y);
+    for (const column of this.buildings.columns.values()) if (!isDone(column)) consider(column, column.x, column.y);
+    for (const bridge of this.bridges.values()) {
+      const span = openSpan(bridge);
+      if (span) consider(span, span.x, span.y);
+    }
+    for (const foundation of this.foundations.values()) if (!foundationDone(foundation)) consider(foundation, foundation.x, foundation.y);
+    const items = [...nearest].sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([item]) => item);
+    return { items, n: items.length };
+  }
+
+  /**
    * Fit one piece of `item` into a piece of planned work, as a builder's own go
    * at it does: the same bill, and what the last of it starts (`wallFitted`,
    * `floorFitted`, `fitIntoSpan`, `fitIntoChannel`, `pourIntoFoundation`).

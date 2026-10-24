@@ -57,7 +57,7 @@ import { auraMul, BLOOD_CHANNELS, bredLine, breedTraits, channelOf, LAMP_TIER_OD
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
-import { IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerlog';
+import { IDLE_WANTS, IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerlog';
 import { kindNames } from './journal-b';
 import { workFromLedger, workTime, type WorkStats } from './workstats';
 import { bredForm, formMul, wildFormRoll, type SizeForm } from './wildforms';
@@ -4272,7 +4272,7 @@ sayLine('holla', `Settlement task: fill a bladder at the shore or a well ${reach
   'Level: carrying.');
 sayLine('sedra', `Settlement task: cut reed beds ${reach('sedra')}, from the bank. Reeds per cut: 1, +1 per ${REED_LEVELS} levels. QL: ${percent(DIG_QL[0])}–${percent(DIG_QL[1])} of its foraging +1, max 100. Output to the crate.`,
   'Level: foraging.');
-sayLine('cobbe', `Settlement task: carry what planned building work still wants from your settlement stores, crates and furniture, ${reach('cobbe')}, 1 piece a trip, and fit it as a builder's action: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations. Order: where the carried piece is wanted, else the nearest work wanting something in your settlement stores; of that work's wants, the one furthest behind its bill.`,
+sayLine('cobbe', `Settlement task: carry what planned building work still wants from your settlement stores, crates and furniture, ${reach('cobbe')}, 1 piece a trip, and fit it as a builder's action: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations. Order: where the carried piece is wanted, else the nearest work wanting something in your settlement stores; of that work's wants, the one furthest behind its bill. Carried piece no work in range wants: back to your settlement stores.`,
   'Level: masonry.');
 sayLine('embra', `Settlement task: keep your campfires, smelters and kilns fuelled and lit, ${reach('embra')}: under ${HEARTH_FULL / 60} minutes of fuel, it carries 1 piece of fuel from your settlement stores to the nearest, and relights it if out. Eats only cooked food.`,
   'Level: smelting.');
@@ -4858,6 +4858,8 @@ export interface IslandCreature {
   work?: WorkStats | null;
   /** For a rest in a wildermon bed, the bed's kind (`Idle.bed`). */
   idleBed?: string | null;
+  /** For `stock`, what the work in range wants that the stores do not hold (`Idle.what`). */
+  idleWhat?: string[] | null;
   /**
    * A worker of yours: its goes since it rested (`TIRE_GOES`), its seconds at work since it last ate (`UPKEEP_FOR`),
    * and how many deed workers of its trade its settlement has (`SPECIALTY_AT`).
@@ -5772,7 +5774,7 @@ export class Creatures {
       // Why it is standing about, and what it did yesterday: the island's words for both, said on its card here (`idleSays`).
       if (r.idleWhy !== undefined) {
         c.idle = r.idleWhy && (IDLE_WHYS as readonly string[]).includes(r.idleWhy)
-          ? { why: r.idleWhy as IdleWhy, n: r.idleN ?? 0, post: !!r.idlePost, ...(r.idleBed ? { bed: r.idleBed } : {}) }
+          ? { why: r.idleWhy as IdleWhy, n: r.idleN ?? 0, post: !!r.idlePost, ...(r.idleBed ? { bed: r.idleBed } : {}), ...(r.idleWhat?.length ? { what: r.idleWhat } : {}) }
           : null;
       }
       if (r.ledger !== undefined) c.ledger = r.ledger;
@@ -8398,11 +8400,22 @@ export class Creatures {
     const takeable = (it: Item, item: string): boolean => it.id === item && it.count > 0 && !it.locked;
     const stocked = (item: string): boolean => game.deedStores().some((st) => st.items.some((it: Item) => takeable(it, item)));
     const job = game.hodNeeding(near, c.carrying?.id, deed, stocked);
-    if (!job) {
+    // Holding a piece nothing within reach wants: back to the nearest store with room for it (`storeFor`).
+    if (c.carrying && job?.item !== c.carrying.id) {
+      const held = c.carrying;
+      const st = this.storeFor(game, c, held);
+      if (!st) return this.why(c, 'full');
+      if (!goto(st.centre[0], st.centre[1])) return true;
+      this.intoStores(game, held, st, st.x, st.y);
       c.carrying = null;
-      return this.why(c, 'range', range);
+      this.errandWork(game, c, 'hod');
+      return true;
     }
-    if (c.carrying && c.carrying.id !== job.item) c.carrying = null;
+    if (!job) {
+      // Work within reach wanting only what the stores do not hold: `stock`, naming it. None at all: `range`.
+      const wanted = game.hodWanted(near, deed);
+      return wanted.n > 0 ? this.why(c, 'stock', wanted.n, wanted.items.slice(0, IDLE_WANTS)) : this.why(c, 'range', range);
+    }
     if (!c.carrying) {
       // The store nearest the work holding it (the island's `store_holding`).
       const holding = game.deedStores().filter((st) => st.items.some((it: Item) => takeable(it, job.item)));
@@ -9573,8 +9586,8 @@ export class Creatures {
   }
 
   /** Nothing to do, and why (`IdleWhy`): kept on it for its card, and false, for a step to return. The island's `idle_why`. */
-  private why(c: Creature, why: IdleWhy, n = 0): false {
-    c.idle = { why, n, post: c.post !== null };
+  private why(c: Creature, why: IdleWhy, n = 0, what?: string[]): false {
+    c.idle = { why, n, post: c.post !== null, ...(what?.length ? { what } : {}) };
     return false;
   }
 

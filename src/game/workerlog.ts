@@ -30,7 +30,9 @@ import { article, listed, listedOr } from './words';
  * from:
  *
  *   * `range`: nothing of its trade within its range (the number) of the token or its post;
- *   * `stock`: nothing in the stores on the settlement for it to work;
+ *   * `stock`: nothing in the stores on the settlement for it to work; for a hod carrier with work within its range
+ *     wanting only what the stores do not hold, those things (`what`, the first `IDLE_WANTS` of them, nearest first)
+ *     and how many there are (the number);
  *   * `room`: nowhere on the settlement with room for what it brings (a barrel, for water);
  *   * `full`: holding a load with nowhere on the settlement to put it;
  *   * `far`: walking home, so many tiles (the number) from its work;
@@ -59,7 +61,11 @@ export interface Idle {
   n: number;
   post?: boolean;
   bed?: string;
+  what?: string[];
 }
+
+/** How many of what work in range wants a `stock` reason names (`Idle.what`). The island's `idle_wants`. */
+export const IDLE_WANTS = 3;
 
 /**
  * What there is none of within its range, by the trade: the island's
@@ -75,7 +81,7 @@ const IDLE_SOURCE: Partial<Record<GatherKind, string>> = {
   sprout: 'trees to pick a sprout off', resin: 'pines to tap', flower: 'wildflowers to pick', scrub: 'moss or ivy on your stone',
   fetch: 'anything lying on the ground', compost: 'anything rotting on the ground', hunt: 'quarry or carcass',
   water: 'shore or well to fill from', fill: 'shore or well to fill a bucket at', prospect: 'unread ground',
-  plant: 'cleared ground to plant a sprout in', hod: 'planned building work wanting something your settlement stores hold',
+  plant: 'cleared ground to plant a sprout in', hod: 'planned building work',
   stoke: 'fire, furnace or kiln burning low', groom: 'wildermon of yours wanting brushing',
   dairy: 'wildermon of yours ready to milk or shear', heal: 'wildermon of yours hurt or bleeding',
   lamp: 'lantern post or pillar of yours wanting a candle, lighting or putting out',
@@ -147,6 +153,12 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
       }
       return `Idle: no ${(kind && IDLE_SOURCE[kind]) ?? 'work of its task'} within ${n} tiles of ${idle.post ? 'its work post' : 'the totem'}.`;
     case 'stock': {
+      // What the work in range wants, by name, and how many more past those: "no marble brick or glass".
+      if (idle.what?.length) {
+        const names = idle.what.map((id) => itemDef(id).name.toLowerCase());
+        if (n > names.length) names.push(`${n - names.length} more`);
+        return `Idle: no ${listedOr(names)} in your settlement stores.`;
+      }
       const verb = (kind && IDLE_STOCK[kind]) ?? 'work';
       const wants = kind ? IDLE_STOCK_THING[kind] ?? recipeWants(kind) : '';
       return `Idle: nothing in your settlement stores to ${verb}${wants ? ` (needs ${wants})` : ''}.`;
