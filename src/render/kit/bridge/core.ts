@@ -1,4 +1,4 @@
-import { rand } from '../../ivy';
+import { cushions, hashOf, PAVE_STAGES, rand, type Cushion } from '../../ivy';
 import { cut, glyphPath, lightOf, newell, proj, RUNE_GOLD, RUNE_WHITE, type Eye, type PaintCtx } from '../../runestone';
 import { add, css, dot, faceColour, hex, mix, mul, sub, TAU, type Ctx, type RGB, type Tone, type V3 } from '../core';
 
@@ -142,7 +142,7 @@ export interface Plan {
   /** Whether the deck rises (a ramp), and how many treads a tile it climbs in. */
   ramp: boolean;
   width: number;
-  /** How far the moss has got, in stages (stone only). */
+  /** How far the moss has got, in stages of `PAVE_STAGES` (stone only): laid over whatever the style paints (`mossPaint`). */
   moss: number;
   style: BridgeStyle;
 }
@@ -320,7 +320,24 @@ export function buildSlice(plan: Plan, sl: Slice, e: Eye, A2: [number, number], 
     if (dot(n, dir(o)) < 0) n = mul(n, -1);
     if (!cur[part]) solid(part);
     const ink = pts.map((p, k) => !onCut(p, pts[(k + 1) % pts.length]));
-    cur[part]!.faces.push({ pts: mp, n, tone, ink, info, frame: frame ? { o: m(frame.o), a: dir(frame.a), b: dir(frame.b) } : undefined });
+    const fr = frame ? { o: m(frame.o), a: dir(frame.a), b: dir(frame.b) } : undefined;
+    /*
+     * And what the painter is told of its run, as the face lies in its own
+     * frame: a wall's frame on the low edge runs backwards along the bridge
+     * (`wallFrame`), a ring's from its crown, a box's from its corner. Told
+     * the same way by a style that tells it so itself.
+     */
+    if (info && fr) {
+      const aa = dot(fr.a, fr.a), bb = dot(fr.b, fr.b);
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const q of mp) {
+        const d = sub(q, fr.o);
+        const x = dot(d, fr.a) / aa, y = dot(d, fr.b) / bb;
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+      info = { ...info, x0, x1, y0, y1 };
+    }
+    cur[part]!.faces.push({ pts: mp, n, tone, ink, info, frame: fr });
   };
   const loose = (part: Part3, draw: (g: Ctx, e: Eye) => void, reach: L[], order?: number): void => {
     out[part].parts.push({ faces: [], draw, reach: reach.map(m), order });
@@ -414,10 +431,12 @@ export const BUILDERS: Builders = {
         k.face('front', [[a, sl.t0, z], [b2, sl.t0, z], [b2, sl.t1, z], [a, sl.t1, z]], [0, 0, 1], tone,
           info('tread', a * U, b2 * U, sl.t0 * U, sl.t1 * U, sl.i * 7 + j, true), { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
         // The riser up to the next.
+        // And at the tile's own end, up to the next tile's first tread, a hair inside it so its edges are inked.
         const zr = up ? top(b2) : top(a);
-        const zn = up ? (j + 1 < n ? top(sl.s0 + ((sl.s1 - sl.s0) * (j + 2)) / n) : zr) : (j > 0 ? top(sl.s0 + ((sl.s1 - sl.s0) * (j - 1)) / n) : zr);
-        if (up && j + 1 < n) k.face('front', [[b2, sl.t0, zr], [b2, sl.t1, zr], [b2, sl.t1, zn], [b2, sl.t0, zn]], [-1, 0, 0], st.trim);
-        if (!up && j > 0) k.face('front', [[a, sl.t0, zr], [a, sl.t1, zr], [a, sl.t1, zn], [a, sl.t0, zn]], [1, 0, 0], st.trim);
+        const len = sl.s1 - sl.s0;
+        const zn = up ? top(sl.s0 + (len * (j + 2)) / n) : top(sl.s0 + (len * (j - 1)) / n);
+        const sr = up ? (j + 1 < n ? b2 : b2 - 1e-3) : (j > 0 ? a : a + 1e-3);
+        if (zn - zr > 1e-3) k.face('front', [[sr, sl.t0, zr], [sr, sl.t1, zr], [sr, sl.t1, zn], [sr, sl.t0, zn]], [up ? -1 : 1, 0, 0], st.trim);
       }
     } else {
       k.face('front', [[sl.s0, sl.t0, top(sl.s0)], [sl.s1, sl.t0, top(sl.s1)], [sl.s1, sl.t1, top(sl.s1)], [sl.s0, sl.t1, top(sl.s0)]], [0, 0, 1], tone,
@@ -500,10 +519,15 @@ export const BUILDERS: Builders = {
 
 /* ---- boxes -------------------------------------------------------------------------------------- */
 
-/** A box in the frame from (s0, t0, z0) to (s1, t1, z1), clipped to the slice; no bottom; one solid. */
+/**
+ * A box in the frame from (s0, t0, z0) to (s1, t1, z1), clipped to the
+ * slice -- across it only at a cut between two lanes, so whatever stands
+ * proud of an outer edge keeps its outer face; no bottom; one solid.
+ */
 export function box(k: Kit, part: Part3, s0: number, s1: number, t0: number, t1: number, z0: number, z1: number, tone: Tone, role: Role = 'post', order?: number): void {
-  const { sl } = k;
-  const a = Math.max(s0, sl.s0), b = Math.min(s1, sl.s1), c = Math.max(t0, sl.t0), d = Math.min(t1, sl.t1);
+  const { sl, plan } = k;
+  const a = Math.max(s0, sl.s0), b = Math.min(s1, sl.s1);
+  const c = sl.t0 > plan.tLo + EPS ? Math.max(t0, sl.t0) : t0, d = sl.t1 < plan.tHi - EPS ? Math.min(t1, sl.t1) : t1;
   if (b - a < 1e-4 || d - c < 1e-4 || z1 - z0 < 1e-4) return;
   k.solid(part, order);
   const seed = Math.round(s0 * 97 + t0 * 13);
@@ -539,6 +563,8 @@ export function turned(k: Kit, part: Part3, s: number, t: number, z: number, pro
 
 function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ringD: number): void {
   const { plan, sl, st } = k;
+  // An outer edge turned from the eye: what stands proud of it (rings, keystones, cutwaters) would show through the arches.
+  const away = (edge: number): boolean => edge * dot(k.P, k.e.toward) < -EPS;
   // The pier walls laid by the loop in `arches` stand where there is no opening; here, where there is one:
   for (const edge of sl.edges) {
     const t = edge > 0 ? sl.t1 : sl.t0;
@@ -560,6 +586,7 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
           info('wall', a * U, b2 * U, Math.min(la, lb), bay.course, sl.i), fr);
       }
     }
+    if (away(edge)) continue;
     // The rings, proud of the wall.
     const proud = 0.012;
     const tr = t + edge * proud;
@@ -573,7 +600,7 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
         if (!f) continue;
         const za = f(a), zb = f(b2);
         k.face('front', [[a, tr, za], [b2, tr, zb], [b2, tr, zb + ringD], [a, tr, za + ringD]], [0, edge, 0], st.ring,
-          info('ring', (a - bay.c) * U, (b2 - bay.c) * U, za, za + ringD, Math.round(bay.c * 10), true), fr);
+          info('ring', (a - bay.c) * U, (b2 - bay.c) * U, za, za + ringD, Math.round(bay.c * 10), true), { ...fr, o: [bay.c, tr, 0] });
         // The ring's soffit edge and its top, between its face and the wall: on the near face, the far one's being hidden by the vault.
         if (edge === sl.near) {
           k.face('front', [[a, t, za], [b2, t, zb], [b2, tr, zb], [a, tr, za]], [0, 0, -1], st.ring);
@@ -663,8 +690,8 @@ export function ownerOf(k: Kit, a: number, b: number): number | null {
   // Straddling a cut: the slice on the side of it nearer the eye.
   const towardS = dot(k.A, k.e.toward);
   const nearer = towardS >= 0 ? 1 : -1;
-  if (a < sl.s0 - EPS) return nearer < 0 ? sl.i : null;
-  return nearer > 0 ? sl.i : null;
+  if (a < sl.s0 - EPS) return nearer > 0 ? sl.i : null;
+  return nearer < 0 ? sl.i : null;
 }
 
 /** A pointed cutwater on a pier's outer face, from its foot to its spring, capped with a sloped top; stone only. */
@@ -1074,7 +1101,8 @@ export const BRIDGE_INK: RGB = mix(hex('#5f5148'), hex('#5a3a30'), 0.35);
  * twice the ink wide, its faces filled a hair over them nearest last, lit
  * and painted; the loose drawings in their turn.
  */
-export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 0.7): void {
+export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 0.7, moss = 0): void {
+  const mossy = moss > 0 && st.family === 'stone';
   const parts = pm.parts.slice();
   const near = (p: BPart): number => {
     const pts = p.faces.length ? p.faces.flatMap((f) => f.pts) : p.reach ?? [];
@@ -1120,7 +1148,9 @@ export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 
       g.fillStyle = css(fill);
       g.fill();
       const p = painter(st, f.info);
-      if (p && f.frame && f.info) {
+      // And the moss over whatever the material paints, on a stone bridge (`mossPaint`).
+      const green = mossy && !!f.info && MOSS_ON.has(f.info.role);
+      if ((p || green) && f.frame && f.info) {
         let a2 = 0;
         for (let j = 0; j < pts.length; j++) { const q = pts[j], r = pts[(j + 1) % pts.length]; a2 += q[0] * r[1] - r[0] * q[1]; }
         if (Math.abs(a2) * 0.5 * px2 >= 6) {
@@ -1128,12 +1158,75 @@ export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 
           g.clip();
           const [ox, oy] = proj(e, f.frame.o), [ax, ay] = proj(e, f.frame.a), [bx, by] = proj(e, f.frame.b);
           g.transform(ax, ay, bx, by, ox, oy);
-          p(g, { e, L, fill, base }, f.info, st);
+          if (p) p(g, { e, L, fill, base }, f.info, st);
+          if (green) mossPaint(g, f.info, moss);
           g.restore();
         }
       }
     });
   }
+}
+
+/* ---- moss ---------------------------------------------------------------------------------------------- */
+
+/** The faces moss is laid on: where it climbs from the foot, where it hangs from an edge, and along a coping's top. */
+const MOSS_FOOT = new Set<Role>(['pier', 'wall', 'post', 'parapet']);
+const MOSS_LIP = new Set<Role>(['cornice', 'ring']);
+const MOSS_ON = new Set<Role>([...MOSS_FOOT, ...MOSS_LIP, 'cap', 'plinth']);
+const ROLE_SALT: Partial<Record<Role, number>> = { pier: 3, wall: 5, post: 7, parapet: 11, cornice: 13, ring: 17, cap: 19, plinth: 23 };
+
+/** Value noise along a face, nought to one: the same clumps at every stage, so moss spreads rather than moves. */
+function clumpAt(x: number, y: number, salt: number): number {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+  const h = (a: number, b: number): number => hashOf(a + 4096, b + 4096, 0, salt);
+  const a = h(ix, iy), b = h(ix + 1, iy), c = h(ix, iy + 1), d = h(ix + 1, iy + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+
+/**
+ * Moss on a face of a stone bridge at `stage` of `PAVE_STAGES`, in the
+ * face's own frame (`FaceInfo`, units), over whatever its material paints:
+ * cushions climbing from the foot of a pier, a wall, a newel or a parapet;
+ * a row hanging from the underside of a cornice or an arch ring; clumps
+ * along the top of a coping. Clumped by noise along the face off where it
+ * is on the bridge, so slices join and a stage only adds to the last.
+ */
+export function mossPaint(g: Ctx, f: FaceInfo, stage: number): void {
+  const upto = Math.min(stage, PAVE_STAGES) / PAVE_STAGES;
+  if (upto <= 0) return;
+  const salt = ROLE_SALT[f.role] ?? 29;
+  const x0 = Math.min(f.x0, f.x1), x1 = Math.max(f.x0, f.x1);
+  const y0 = Math.min(f.y0, f.y1), y1 = Math.max(f.y0, f.y1);
+  const cover = 0.62 * Math.pow(upto, 0.8);
+  const cs: Cushion[] = [];
+  const step = 1.3;
+  for (let x = Math.floor(x0 / step) * step; x <= x1 + step; x += step) {
+    const xi = Math.round(x / step);
+    const clump = clumpAt(x / 9, salt * 0.37, salt) + 0.12 * hashOf(xi + 4096, 0, salt, 43);
+    if (clump >= cover) continue;
+    const deep = Math.min(1, (cover - clump) / 0.2);
+    if (MOSS_FOOT.has(f.role)) {
+      // Up from the foot in a band, higher in the heart of a clump; and specks in the joints above it.
+      const rise = 1.2 + 9 * deep * upto;
+      for (let y = y0 + 0.5, j = 0; y < Math.min(y1, y0 + rise); y += 1.5, j++) {
+        const t = (y - y0) / rise;
+        if (hashOf(xi + 4096, j, salt, 47) > 0.92 - 0.45 * t) continue;
+        cs.push([x + (hashOf(xi + 4096, j, salt, 53) - 0.5) * 1.6, y, (0.75 + 0.75 * deep) * (1 - 0.35 * t)]);
+      }
+    } else if (MOSS_LIP.has(f.role)) {
+      // Along the underside of the edge, a few hanging lower where it is heaviest.
+      cs.push([x, y0 + 0.4 + hashOf(xi + 4096, 1, salt, 59) * 0.6, 0.6 + 0.7 * deep]);
+      if (deep > 0.55 && hashOf(xi + 4096, 2, salt, 59) < 0.4) cs.push([x, y0 - 0.6 - deep * 1.4, 0.5 + 0.4 * deep]);
+    } else {
+      // Along the top of a coping or a plinth: down its middle and on its edges.
+      const span = y1 - y0;
+      cs.push([x, y0 + span * (0.25 + 0.5 * hashOf(xi + 4096, 3, salt, 61)), Math.min(span * 0.45, 0.7 + 0.8 * deep)]);
+      if (deep > 0.5 && hashOf(xi + 4096, 4, salt, 61) < 0.5) cs.push([x + 0.6, y0 + span * 0.1, Math.min(span * 0.3, 0.5 + 0.5 * deep)]);
+    }
+  }
+  if (cs.length) cushions(g, cs);
 }
 
 const avgNear = (f: BFace, e: Eye): number => {
@@ -1156,7 +1249,7 @@ function grown(pts: ReadonlyArray<[number, number]>, d: number): Array<[number, 
     if (ml < 1e-6) return [p[0], p[1]];
     mx /= ml; my /= ml;
     const k = Math.min(2, 1 / Math.max(0.5, mx * n1x + my * n1y));
-    return [p[0] - sgn * mx * d * k, p[1] - sgn * my * d * k];
+    return [p[0] + sgn * mx * d * k, p[1] + sgn * my * d * k];
   });
 }
 
