@@ -760,7 +760,7 @@ function rimOf(p: Pad, R: () => number): Rim[] {
     const k = 1.08 + 0.14 * R();
     const end = 0.3 + 0.7 * Math.cos(m);
     const dz = -H * (0.2 + 0.25 * R()) * end;
-    const h = H * (0.9 + 0.6 * R()) * (0.55 + 0.45 * end);
+    const h = H * (0.6 + 1.1 * R() * R() + 0.3 * R()) * (0.55 + 0.45 * end);
     at(m - half, k, dz, h, true);
     at(m + half, k, dz, h * (0.9 + 0.2 * R()), true);
   }
@@ -850,13 +850,16 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
   const lt = faceLight(job, nTop, c.up);
   const lh = faceLight(job, d, c.up);
   const bt = Math.max(1, Math.min(top - 2, Math.round(lt * (top - 1.2))));
-  const bh = Math.max(0, Math.min(top - 3, Math.round(lh * (top - 1.2)) - 1));
+  const bh = Math.max(0, Math.min(top - 3, Math.round(lh * (top - 1.2)) - 2));
   planes.push([out, s.ramp[bh]]);
   const face = new Path2D();
   roundPath(face, q);
   planes.push([face, s.ramp[bt]]);
+  // Behind the leader, or small: the whorls over it hide all but its outline and its top.
+  const tw = Math.hypot(e.toward[0], e.toward[1]) || 1;
+  const fine = (d[0] * e.toward[0] + d[1] * e.toward[1]) / tw > -0.5 && L * ACROSS > 4;
   // The inner part of its top in the shade of the whorl over it.
-  if (c.up < 0.95) {
+  if (c.up < 0.95 && fine) {
     const inner = new Path2D();
     const pts: Pt[] = [];
     for (const r of rim) pts.push(proj(e, at(r.x * 0.48, r.y * 0.85, 0)));
@@ -868,19 +871,19 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
   const sl = Math.hypot(sx, sy) || 1;
   const fx = (d[0] * sx + d[1] * sy) / sl, fy = (side[0] * sx + side[1] * sy) / sl;
   const cx = L * (0.62 + 0.12 * fx), cy = W * 0.38 * fy;
-  const patch = (k: number, ky: number, lift: number, keep: (r: Rim) => boolean): Path2D => {
+  const patch = (k: number, ky: number, lift: number): Path2D => {
     const pp = new Path2D();
     const pts: Pt[] = [];
-    for (const r of rim) if (keep(r)) pts.push(proj(e, at(cx + (r.x - cx) * k, cy + (r.y - cy) * ky, r.dz * k + lift)));
+    for (const r of rim) pts.push(proj(e, at(cx + (r.x - cx) * k, cy + (r.y - cy) * ky, r.dz * k + lift)));
     roundPath(pp, pts);
     return pp;
   };
   if (winter) {
-    planes.push([patch(0.78, 0.7, 0.25, () => true), snow(lt * 0.9)]);
-    if (!light.night) planes.push([patch(0.5, 0.45, 0.3, () => true), snow(lt * 1.25)]);
+    planes.push([patch(0.78, 0.7, 0.25), snow(lt * 0.9)]);
+    if (!light.night && fine) planes.push([patch(0.5, 0.45, 0.3), snow(lt * 1.25)]);
   } else if (!light.night || lt > 0.6) {
-    planes.push([patch(0.62, 0.56, 0.05, () => true), s.ramp[Math.min(top, bt + 1)]]);
-    if (dot(nTop, light.sun) > 0.35 && !light.night) planes.push([patch(0.36, 0.34, 0.1, () => true), s.ramp[Math.min(top, bt + 2)]]);
+    planes.push([patch(0.62, 0.56, 0.05), s.ramp[Math.min(top, bt + 1)]]);
+    if (dot(nTop, light.sun) > 0.35 && !light.night && fine) planes.push([patch(0.36, 0.34, 0.1), s.ramp[Math.min(top, bt + 2)]]);
   }
   // New growth on the ends of the fingers through the spring: along their tops, and where they hang in sight.
   if (dress.season === 'spring') {

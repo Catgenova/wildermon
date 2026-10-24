@@ -336,8 +336,14 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
     }
   }
 
-  /* ---- stubs on the bare trunk under the crown ---- */
+  /* ---- stubs on the bare trunk under the crown, and every other one out through the crown ---- */
   for (let i = 0; i < Math.round(w.stubs); i++) {
+    if (i % 2 && !b.bare && crownTop > stemZ) {
+      const u = 0.2 + 0.6 * R();
+      const z = stemZ + (crownTop - stemZ) * u;
+      stub(z, R() * TAU, H * b.spread * (1 - (1 - w.taper) * u) * (1.05 + 0.25 * R()), 0.05 + 0.2 * R());
+      continue;
+    }
     const z = stemZ * (0.4 + 0.55 * R());
     stub(z, R() * TAU, H * b.spread * (0.25 + 0.25 * R()), -0.2 + 0.4 * R());
   }
