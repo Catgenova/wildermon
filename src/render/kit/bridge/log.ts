@@ -1,6 +1,6 @@
 import { css, hex, mix, proj, TAU, type Tone } from '../core';
 import { U, byRole, turned, type BridgePainter, type Kit, type L, type Part3 } from './core';
-import { timberBase, grainPaint } from './base';
+import { timberBase } from './base';
 import { bar, carpentry, clothPaint, finfo, lay, ownNear, pennant, ringsPaint, rnd, roundRune, tone, type Carpentry, type Fc, type RailSpec } from './plank';
 
 /**
@@ -75,15 +75,14 @@ const poleEndsPaint: BridgePainter = (g, k, f) => {
   g.stroke(rings);
 };
 
-/** Bark: deep fissures down a log, plates between them a step paler, and the grain. */
-const barkPaint: BridgePainter = (g, k, f, st) => {
-  grainPaint(g, k, f, st);
+/** Bark: deep fissures down a log, and plates between them a step paler. */
+const barkPaint: BridgePainter = (g, k, f) => {
   const len = Math.abs(f.x1 - f.x0), h = Math.abs(f.y1 - f.y0);
   const x0 = Math.min(f.x0, f.x1);
   const fis = new Path2D(), plate = new Path2D();
   let q = f.seed * 13;
-  for (let y = 0.4; y < h; y += 1.1) {
-    for (let x = x0 + ((q * 7) % 5); x < x0 + len; x += 4 + (q % 4)) {
+  for (let y = 0.5; y < h; y += 1.6) {
+    for (let x = x0 + ((q * 7) % 5); x < x0 + len; x += 6 + (q % 5)) {
       q = (q * 1103515245 + 12345) & 0x7fffffff;
       const l = 2 + (q % 5);
       fis.moveTo(x, y); fis.lineTo(x + l, y + ((q >> 4) % 3 - 1) * 0.15);
@@ -131,7 +130,7 @@ const logRail: RailSpec = {
   spacing: 0.5,
   inset: 0.13,
   // A round post, its top cut to a blunt point.
-  post: (s, t, z) => [...bar([s, t, z], [s, t, z + 8.4], rnd(1.5, 7), LOG.post), ...cone(s, t, z + 8.4, 1.5, 1.4, 7, LOG.post)],
+  post: (s, t, z) => [...bar([s, t, z], [s, t, z + 8.4], rnd(1.5, 5), LOG.post), ...cone(s, t, z + 8.4, 1.5, 1.4, 5, LOG.post)],
   run: (k, part, _order, a, b, posts) => {
     const spans: Array<[L, L]> = [];
     for (let i = 0; i + 1 < posts.length; i++) {
@@ -204,7 +203,7 @@ const logCarpentry: Carpentry = {
       info: finfo('cornice', sl.s0 * U, sl.s0 * U + len, 0, plan.thick, sl.i), frame: { o: [sl.s0, to, z0(sl.s0)], a: [1 / U, 0, 0], b: [0, 0, 1] } }], '');
     // A curb log along the edge on the poles, the rope posts lashed inside it, its cut ends at the bridge's.
     const r = 2.4, tc = te - edge * (r / U + 0.004);
-    lay(k, edge === sl.near ? 'rail' : 'front', 1.2, bar([sl.s0, tc, top(sl.s0) + r * 0.9], [sl.s1, tc, top(sl.s1) + r * 0.9], rnd(r, 8), LOG.bark,
+    lay(k, edge === sl.near ? 'rail' : 'front', 1.2, bar([sl.s0, tc, top(sl.s0) + r * 0.9], [sl.s1, tc, top(sl.s1) + r * 0.9], rnd(r, 6), LOG.bark,
       { caps: [sl.s0 <= 1e-6, sl.s1 >= plan.n - 1e-6], paint: 'beam', capTone: LOG.end, capPaint: 'plinth', seed: sl.i * 3 + edge }), '');
   },
   banner: (k, part, s, t, z) => pennant(k, part, s, t, z, LOG.bark, tone('#cfe0b4', '#6f7f74'), tone('#ffe7a4', '#e9b468')),

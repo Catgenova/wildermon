@@ -221,7 +221,7 @@ const tcCarpentry: Carpentry = {
   noKnees: true,
   splay: 0,
   braces: 'lower',
-  border: { w: 0.14, tone: tone('#c87e78', '#7a4a62'), role: 'plinth' },
+  border: { w: 0.22, tone: tone('#c47a76', '#784860'), role: 'plinth' },
   postTone: () => TC.post,
   beamTone: () => TC.beam,
   rail: tcRail,

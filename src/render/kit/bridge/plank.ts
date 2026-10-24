@@ -1,6 +1,6 @@
 import { rand } from '../../ivy';
 import { add, cross, css, hex, inlay, mix, mul, nail, sub, TAU, unit, type RGB, type Tone, type V3 } from '../core';
-import { BUILDERS, FORM_HIGH, FORM_TIERS, U, boardPaint, byRole, refugeGaps, ownerOf, turned, type BridgePainter, type Builders, type FaceInfo, type Form, type Kit, type L, type Part3, type Pier, type Role } from './core';
+import { BUILDERS, FORM_HIGH, FORM_TIERS, REFUGE_OUT, U, boardPaint, byRole, refugeGaps, refugeHalf, refugeOutline, ownerOf, turned, type BridgePainter, type Builders, type FaceInfo, type Form, type Kit, type L, type Part3, type Pier, type Role } from './core';
 import { grainPaint, timberBase } from './base';
 
 /**
@@ -296,8 +296,8 @@ function bents(k: Kit, c: Carpentry): void {
     const tm = (p0.t + p1.t) / 2;
     lay(k, 'front', -1.9, braced.flatMap(([z0, z1]) => kind === 'a'
       ? [
-        ...bar([sb, tm, z1 + 0.5], [sb, postT(b, p0, z0), z0], braceSec, beam, { paint: 'beam' }),
-        ...bar([sb, tm, z1 + 0.5], [sb, postT(b, p1, z0), z0], braceSec, beam, { paint: 'beam' }),
+        ...bar([sb, tm, z1 + 0.5], [sb, postT(b, p0, z0), z0], braceSec, beam),
+        ...bar([sb, tm, z1 + 0.5], [sb, postT(b, p1, z0), z0], braceSec, beam),
       ]
       : [
         ...bar([sb, postT(b, p0, z0), z0], [sb, postT(b, p1, z1), z1], braceSec, beam),
@@ -457,13 +457,11 @@ export function fascia(k: Kit, edge: number, te: number, tone: Tone, role: Role 
 
 /* ---- railings ------------------------------------------------------------------------------------------ */
 
-/** Half the length of a refuge along the bridge, in tiles. */
-const REFUGE = 0.3;
 
 /** The runs of railing along the bridge: its length less the refuges' gaps. */
 function railRuns(k: Kit): Array<[number, number]> {
   let runs: Array<[number, number]> = [[0, k.plan.n]];
-  const gaps = refugeGaps(k.plan).map(([a, b]): [number, number] => [(a + b) / 2 - REFUGE, (a + b) / 2 + REFUGE]);
+  const gaps = refugeGaps(k.plan);
   for (const [g0, g1] of gaps) {
     runs = runs.flatMap(([a, b]): Array<[number, number]> => (g1 <= a || g0 >= b ? [[a, b]] : [...(g0 > a + 0.02 ? [[a, g0] as [number, number]] : []), ...(g1 < b - 0.02 ? [[g1, b] as [number, number]] : [])]));
   }
@@ -532,14 +530,15 @@ function refuges(k: Kit, c: Carpentry): void {
   for (const p of plan.piers) {
     if (p.end) continue;
     if (p.s < sl.s0 - 0.5 || p.s > sl.s1 + 0.5) continue;
-    const w = REFUGE;
-    const out = 0.22;
+    const w = refugeHalf(p);
+    const out = REFUGE_OUT;
     const z = plan.deck(p.s);
     for (const edge of sl.edges) {
       const te = edge > 0 ? sl.t1 : sl.t0;
       const part: Part3 = edge === sl.near ? 'rail' : 'front';
       const tf = te + edge * out;
-      const B0: P2 = [p.s - w, te], F0: P2 = [p.s - w * 0.5, tf], F1: P2 = [p.s + w * 0.5, tf], B1: P2 = [p.s + w, te];
+      // The core's outline round it: from where it leaves the edge, out along its splayed side, across its front, and back.
+      const [B0, F0, F1, B1] = refugeOutline(plan, p, edge, te) as P2[];
       const zb = z - plan.thick - 0.8;
       lay(k, 'front', k.ord(edge, 0.9), slab([B0, F0, F1, B1], zb, z, st.deck, beam, finfo('deck', 0, w * 2 * U, 0, out * U, Math.round(p.s * 3)), 'beam'), 's');
       // The outrigger under it, and two knee braces up to its front corners.
