@@ -1,6 +1,6 @@
 import { RUNE_GOLD } from '../../runestone';
 import { css, faceColour, hex, mix, nail, proj } from '../core';
-import { BRIDGE_INK, U, boardPaint, byRole, type BridgePainter, type Kit, type L, type Part3 } from './core';
+import { BRIDGE_INK, U, byRole, type BridgePainter, type Kit, type L, type Part3 } from './core';
 import { timberBase, grainPaint } from './base';
 import { bar, bars, bentOf, carpentry, clothPaint, fascia, finfo, lay, ownNear, pennant, plankPlaque, plaquePaint, sq, tone, type Carpentry, type Fc, type RailSpec } from './plank';
 
@@ -19,7 +19,7 @@ const TC = {
   railDeep: tone('#e89c92', '#8a5670'),
   gold: tone('#f6dc98', '#a2805c'),
   plaque: tone('#6f7fa0', '#3a4260'),
-  deck: tone('#e2c49a', '#84707a'),
+  deck: tone('#e8b690', '#8a5e6c'),
 };
 
 /**
@@ -211,6 +211,33 @@ const borderPaint: BridgePainter = (g, k, f) => {
   for (let x = Math.ceil((x0 - 10) / 20) * 20 + 10; x < x1; x += 20) nail(g, hex('#f6dc98'), x, h * 0.72, 0.42);
 };
 
+/**
+ * A lacquered herringbone floor: courses along the bridge, the short boards
+ * in each laid on the slant one way and in the next the other, a dark joint
+ * between courses, and a gloss streak down each.
+ */
+const herringbone: BridgePainter = (g, k, f) => {
+  const B = 8, w = 2.8;
+  const x0 = Math.min(f.x0, f.x1) - 1, x1 = Math.max(f.x0, f.x1) + 1;
+  const y0 = Math.min(f.y0, f.y1), y1 = Math.max(f.y0, f.y1);
+  const slant = new Path2D(), course = new Path2D(), gloss = new Path2D();
+  for (let yb = Math.floor(y0 / B) * B, q = Math.floor(y0 / B); yb < y1; yb += B, q++) {
+    const d = q % 2 ? 1 : -1;
+    for (let c = Math.floor((x0 - B) / w) * w; c < x1 + B; c += w) { slant.moveTo(c, yb); slant.lineTo(c + d * B, yb + B); }
+    course.moveTo(x0, yb); course.lineTo(x1, yb);
+    gloss.moveTo(x0, yb + B * 0.35); gloss.lineTo(x1, yb + B * 0.35);
+  }
+  g.strokeStyle = css(mix(k.fill, [255, 250, 240], 0.4), 0.35);
+  g.lineWidth = 1.6;
+  g.stroke(gloss);
+  g.strokeStyle = css(mix(k.fill, hex('#5a3a48'), 0.45), 0.85);
+  g.lineWidth = 0.24;
+  g.stroke(slant);
+  g.strokeStyle = css(mix(k.fill, hex('#4a3040'), 0.5), 0.85);
+  g.lineWidth = 0.3;
+  g.stroke(course);
+};
+
 const tcCarpentry: Carpentry = {
   round: false,
   post: 1.7,
@@ -219,8 +246,9 @@ const tcCarpentry: Carpentry = {
   cap: 1.4,
   brace: 1.1,
   noKnees: true,
-  splay: 0,
-  braces: 'lower',
+  // Under the arches only tall splayed posts, a tie across the bent where two tiers meet; nothing along the faces.
+  braces: 'none',
+  noGirts: true,
   border: { w: 0.22, tone: tone('#c47a76', '#784860'), role: 'plinth' },
   postTone: () => TC.post,
   beamTone: () => TC.beam,
@@ -246,8 +274,8 @@ export const timbercraft = timberBase('timbercraft', {
   trim: TC.gold,
   deck: TC.deck,
   paint: byRole({
-    deck: boardPaint(3.2),
-    tread: boardPaint(3.2),
+    deck: herringbone,
+    tread: herringbone,
     beam: grainPaint,
     post: grainPaint,
     rail: paintedPaint,
