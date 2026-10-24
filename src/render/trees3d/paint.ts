@@ -854,7 +854,7 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
   planes.push([out, s.ramp[bh]]);
   const face = new Path2D();
   roundPath(face, q);
-  planes.push([face, s.ramp[bt + 1]]);
+  planes.push([face, s.ramp[bt]]);
   // The inner part of its top in the shade of the whorl over it.
   if (c.up < 0.95) {
     const inner = new Path2D();
@@ -879,8 +879,8 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
     planes.push([patch(0.78, 0.7, 0.25, () => true), snow(lt * 0.9)]);
     if (!light.night) planes.push([patch(0.5, 0.45, 0.3, () => true), snow(lt * 1.25)]);
   } else if (!light.night || lt > 0.6) {
-    planes.push([patch(0.74, 0.66, 0.05, () => true), s.ramp[Math.min(top, bt + 2)]]);
-    if (dot(nTop, light.sun) > 0.35 && !light.night) planes.push([patch(0.4, 0.38, 0.1, () => true), s.ramp[top]]);
+    planes.push([patch(0.62, 0.56, 0.05, () => true), s.ramp[Math.min(top, bt + 1)]]);
+    if (dot(nTop, light.sun) > 0.35 && !light.night) planes.push([patch(0.36, 0.34, 0.1, () => true), s.ramp[Math.min(top, bt + 2)]]);
   }
   // New growth on the ends of the fingers through the spring: along their tops, and where they hang in sight.
   if (dress.season === 'spring') {
@@ -902,7 +902,7 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
       roundPath(tips, [[a[0], a[1] + ha * (1 - f)], [a[0], a[1] + ha * 0.97], [b[0], b[1] + hb * 0.97], [b[0], b[1] + hb * (1 - f)]]);
       i++;
     }
-    planes.push([tips, spec.leaf.spring[Math.min(top, bt + 3)]]);
+    planes.push([tips, spec.leaf.spring[Math.min(top, bt + 1)]]);
   }
   return { d: dot(c.c, e.toward as V3), out, planes, rim: rimCol };
 }

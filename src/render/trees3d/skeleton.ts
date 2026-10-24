@@ -339,7 +339,7 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   /* ---- stubs on the bare trunk under the crown ---- */
   for (let i = 0; i < Math.round(w.stubs); i++) {
     const z = stemZ * (0.4 + 0.55 * R());
-    stub(z, R() * TAU, H * b.spread * (0.18 + 0.2 * R()), -0.2 + 0.4 * R());
+    stub(z, R() * TAU, H * b.spread * (0.25 + 0.25 * R()), -0.2 + 0.4 * R());
   }
 
   /* ---- the boughs ---- */
@@ -361,7 +361,7 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
       const width = reach * w.width * (0.85 + 0.3 * R());
       // A whorl falls as one, whatever each bough's reach, so it hangs to one hem.
       let drop = (reach * 0.4 + reachT * 0.6) * b.droop * (0.9 + 0.2 * R());
-      let hang = gap * w.hang * (0.85 + 0.3 * R());
+      let hang = Math.min(gap * w.hang, reach * 0.4) * (0.85 + 0.3 * R());
       const root = add(axis(z), mul(d, radius(z) * 0.4));
       // Kept clear of the ground, and of the tiles in front of its own, which are laid after it (`hemAt`).
       const low = drop + hang * 2;
