@@ -752,7 +752,7 @@ function cutwaters(k: Kit, edge: number, t: number): void {
 /** Where a bridge two lanes wide or more breaks its parapet for the refuge bay over each pier, along it: from and to. */
 export function refugeGaps(plan: Plan): Array<[number, number]> {
   if (plan.width < 2) return [];
-  return plan.piers.filter((p) => !p.end).map((p) => [p.s - p.half - 0.08, p.s + p.half + 0.08]);
+  return plan.piers.filter((p) => !p.end).map((p) => [p.s - refugeHalf(p), p.s + refugeHalf(p)]);
 }
 
 /** The runs of parapet in a slice: the slice less the refuges' gaps. */
@@ -915,30 +915,169 @@ function refugeFor(k: Kit): void {
     if (p.end) continue;
     for (const edge of sl.edges) {
       const t = edge > 0 ? sl.t1 : sl.t0;
-      const out = 0.17;
-      const w = p.half + 0.08;
+      const line = refugeOutline(plan, p, edge, t);
+      const [g0, g1] = [line[0][0], line[line.length - 1][0]];
+      if (g1 < sl.s0 - EPS || g0 > sl.s1 + EPS) continue;
       const part: Part3 = edge === sl.near ? 'rail' : 'front';
       const z = plan.deck(p.s);
-      const [ta, tb] = edge > 0 ? [t, t + out] : [t - out, t];
-      // The slice widened to take the refuge in, along its own run.
-      const k2: Kit = { ...k, sl: { ...sl, t0: Math.min(sl.t0, ta), t1: Math.max(sl.t1, tb) } };
-      // The platform, its top the deck's and its face the cornice's, on a corbel down to the cutwater.
-      box(k2, 'front', p.s - w, p.s + w, ta, tb, z - plan.thick - 1.4, z, st.trim, 'cornice', k.ord(edge, 0.9));
-      box(k2, 'front', p.s - w * 0.75, p.s + w * 0.75, Math.min(ta, tb - edge * 0.04), Math.max(tb, ta - edge * 0.04), z - plan.thick - 6, z - plan.thick - 1.4, st.stone, 'pier', k.ord(edge, 0.85));
-      // Its parapet: across its front and back along its two sides to the bridge's.
-      const H = (st.parapetHeight ?? (st.family === 'stone' ? 10 : 9));
-      const T = st.family === 'stone' ? 0.07 : 0.03;
-      const tFront0 = edge > 0 ? tb - T : ta, tFront1 = tFront0 + T;
-      const wallTone = st.family === 'stone' ? st.stone : st.rail ?? st.stone;
-      const capTone = st.family === 'stone' ? st.trim : st.rail ?? st.stone;
-      const h = st.family === 'stone' ? H - 1.6 : H;
-      box(k2, part, p.s - w, p.s + w, tFront0, tFront1, z, z + h, wallTone, 'parapet', 2);
-      for (const s0 of [p.s - w, p.s + w - T]) box(k2, part, s0, s0 + T, Math.min(ta, tb), Math.max(ta, tb), z, z + h, wallTone, 'parapet', 2);
-      if (st.family === 'stone') {
-        box(k2, part, p.s - w - 0.012, p.s + w + 0.012, tFront0 - 0.012, tFront1 + 0.012, z + h, z + H, capTone, 'cap', 2.1);
-        k.glow.lines.push([k.m([p.s - w, tFront0 + (edge > 0 ? T : 0), z + H - 0.8]), k.m([p.s + w, tFront0 + (edge > 0 ? T : 0), z + H - 0.8])]);
+      const under = z - plan.thick - 1.4;
+      // The slice widened across to take the refuge in; it is cut along the bridge where the slice is.
+      const k2: Kit = { ...k, sl: { ...sl, t0: Math.min(sl.t0, t - REFUGE_OUT), t1: Math.max(sl.t1, t + REFUGE_OUT) } };
+      const face = (q: Part3, pts: L[], out: L, tone: Tone, inf?: FaceInfo, fr?: { o: L; a: L; b: L }): void => {
+        const c = clipToSlice(pts, sl.s0, sl.s1);
+        if (c.length >= 3) k2.face(q, c, out, tone, inf, fr);
+      };
+      // The platform: its top the deck's, its edge the cornice's, on a corbel down onto the cutwater.
+      k2.solid('front', k.ord(edge, 0.9));
+      face('front', line.map(([s0, t0]) => [s0, t0, z] as L), [0, 0, 1], st.deck);
+      const inset = line.map(([s0, t0]): [number, number] => [p.s + (s0 - p.s) * 0.7, t + (t0 - t) * 0.35]);
+      for (let q = 0; q + 1 < line.length; q++) {
+        const [a, b] = [line[q], line[q + 1]], [ai, bi] = [inset[q], inset[q + 1]];
+        const out: L = [(b[1] - a[1]) * edge, -(b[0] - a[0]) * edge, 0];
+        face('front', [[a[0], a[1], under], [b[0], b[1], under], [b[0], b[1], z], [a[0], a[1], z]], out, st.trim,
+          info('cornice', 0, 1, under, z, Math.round(p.s * 10) + q), segFrame(a, b));
+        face('front', [[ai[0], ai[1], under - 4.6], [bi[0], bi[1], under - 4.6], [b[0], b[1], under], [a[0], a[1], under]], [out[0], out[1], -0.6], st.stone,
+          info('pier', 0, 1, under - 4.6, under, Math.round(p.s * 10) + q), segFrame(ai, bi));
       }
-      if (plan.width >= 3 && ownerOf(k2, p.s - 0.05, p.s + 0.05) !== null) lamp(k2, part, p.s, (ta + tb) / 2 + (edge > 0 ? -0.02 : 0.02), z);
+      // Its parapet, run round it.
+      k2.solid(part, 2);
+      refugeParapet(k2, part, line, edge, z, face);
+      if (plan.width >= 3 && ownerOf(k2, p.s - 0.05, p.s + 0.05) !== null) lamp(k2, part, p.s, t + edge * REFUGE_OUT * 0.45, z);
+    }
+  }
+}
+
+/** How far a refuge steps out from the bridge's outer edge, in tiles. */
+export const REFUGE_OUT = 0.24;
+/** Half a refuge's run along the bridge where it leaves the edge, in tiles: room for a body to step into, however slim the pier. */
+export const refugeHalf = (p: Pier): number => Math.max(p.half + 0.08, 0.3);
+
+/**
+ * The outline of the refuge over a pier on outer edge `edge` (at `t`
+ * across), as points (s, t) along it from where it leaves the edge to where
+ * it comes back: a half-hexagon, its front parallel to the bridge
+ * `REFUGE_OUT` out, its two sides splayed, over the gap `refugeGaps` breaks
+ * in the parapet. What a style's parapet follows round it.
+ */
+export function refugeOutline(plan: Plan, p: Pier, edge: number, t: number): Array<[number, number]> {
+  const g0 = p.s - refugeHalf(p), g1 = p.s + refugeHalf(p);
+  const c = Math.min(REFUGE_OUT, (g1 - g0) * 0.3);
+  const tf = t + edge * REFUGE_OUT;
+  void plan;
+  return [[g0, t], [g0 + c, tf], [g1 - c, tf], [g1, t]];
+}
+
+/** A polygon of the frame cut to the slice's run along the bridge. */
+function clipToSlice(pts: L[], s0: number, s1: number): L[] {
+  let out = pts;
+  for (const [lim, lo] of [[s0, true], [s1, false]] as Array<[number, boolean]>) {
+    const inp = out;
+    out = [];
+    const keep = (q: L): boolean => (lo ? q[0] >= lim - EPS : q[0] <= lim + EPS);
+    for (let i = 0; i < inp.length; i++) {
+      const a = inp[i], b = inp[(i + 1) % inp.length];
+      const ia = keep(a), ib = keep(b);
+      if (ia) out.push(a);
+      if (ia !== ib) {
+        const u = (lim - a[0]) / (b[0] - a[0]);
+        out.push([lim, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]);
+      }
+    }
+    if (out.length < 3) return [];
+  }
+  return out;
+}
+
+/** A face's frame along a segment of the plan from `a` to `b`: `x` a unit along it, `y` up. */
+const segFrame = (a: [number, number], b: [number, number]): { o: L; a: L; b: L } => {
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  return { o: [a[0], a[1], 0], a: [(b[0] - a[0]) / len / U, (b[1] - a[1]) / len / U, 0], b: [0, 0, 1] };
+};
+
+/**
+ * A refuge's parapet along its outline, of the material's kind: a wall and a
+ * coping (with merlons where crenellated, balusters where balustraded) or,
+ * timber, posts at its corners and two rails; the rune line along it.
+ */
+function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge: number, z: number,
+  face: (q: Part3, pts: L[], out: L, tone: Tone, inf?: FaceInfo, fr?: { o: L; a: L; b: L }) => void): void {
+  const { st } = k;
+  const timber = st.family === 'timber' || ['rope', 'rail', 'painted'].includes(st.parapet);
+  const H = st.parapetHeight ?? (timber ? 9 : 10);
+  const T = timber ? 0.03 : 0.08;
+  const coping = 1.6;
+  // Each segment's outward normal, across the plan, and the point `d` in from a point on it.
+  const segs = line.slice(0, -1).map((a, q) => {
+    const b = line[q + 1];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const n: [number, number] = [((b[1] - a[1]) / len) * edge, (-(b[0] - a[0]) / len) * edge];
+    return { a, b, n, len };
+  });
+  const off = (pt: [number, number], n: [number, number], d: number): [number, number] => [pt[0] - n[0] * d, pt[1] - n[1] * d];
+  if (timber) {
+    const post = st.post ?? st.stone, rail = st.rail ?? st.ring;
+    for (const [s0, t0] of line) if (ownerOf(k, s0 - 0.03, s0 + 0.03) !== null) turned(k, part, s0, t0 - edge * 0.03, z, [[0, 0.03], [H, 0.03], [H + 0.8, 0]], 4, post, 1.5);
+    for (const { a, b, n } of segs) {
+      const [ai, bi] = [off(a, n, 0.03), off(b, n, 0.03)];
+      for (const [zo, h] of [[H - 1.4, 1.4], [H * 0.45, 0.9]] as Array<[number, number]>) {
+        face(part, [[ai[0], ai[1], z + zo], [bi[0], bi[1], z + zo], [bi[0], bi[1], z + zo + h], [ai[0], ai[1], z + zo + h]], [n[0], n[1], 0], rail,
+          info('rail', 0, 1, 0, h, 7), segFrame(ai, bi));
+      }
+      k.glow.lines.push([k.m([ai[0] + n[0] * 0.016, ai[1] + n[1] * 0.016, z + H - 0.7]), k.m([bi[0] + n[0] * 0.016, bi[1] + n[1] * 0.016, z + H - 0.7])]);
+    }
+    return;
+  }
+  const kind = st.parapet;
+  const top = kind === 'crenel' ? H - 3.5 - coping : kind === 'curved' ? H * 0.7 : kind === 'balustrade' ? 1.8 : H - coping;
+  const wallTone = kind === 'balustrade' ? st.trim : st.stone;
+  for (const { a, b, n, len } of segs) {
+    const [ai, bi] = [off(a, n, T), off(b, n, T)];
+    // The wall's two faces and, for a balustrade, its plinth.
+    face(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], z + top], [a[0], a[1], z + top]], [n[0], n[1], 0], wallTone,
+      info(kind === 'balustrade' ? 'plinth' : 'parapet', 0, 1, z, z + top, 11), segFrame(a, b));
+    face(part, [[ai[0], ai[1], z], [bi[0], bi[1], z], [bi[0], bi[1], z + top], [ai[0], ai[1], z + top]], [-n[0], -n[1], 0], wallTone,
+      info(kind === 'balustrade' ? 'plinth' : 'parapet', 0, 1, z, z + top, 12), segFrame(bi, ai));
+    const ztop = kind === 'balustrade' ? H - coping : top;
+    if (kind === 'balustrade') {
+      // Balusters along its middle, the coping on them.
+      const m = Math.max(1, Math.round(len / 0.14));
+      for (let j = 0; j < m; j++) {
+        const u = (j + 0.5) / m;
+        const sx = (a[0] + ai[0]) / 2 + (b[0] - a[0]) * u, tx = (a[1] + ai[1]) / 2 + (b[1] - a[1]) * u;
+        if (sx < k.sl.s0 || sx >= k.sl.s1) continue;
+        const h = ztop - top, r = 0.028;
+        turned(k, part, sx, tx, z + top, [[0, r * 0.9], [h * 0.12, r * 0.55], [h * 0.38, r * 1.05], [h * 0.62, r * 0.75], [h * 0.82, r * 0.45], [h, r * 0.9]], 6, st.trim, 1.2);
+      }
+    }
+    // The coping, a hair over both faces, and the rune line along its outer face.
+    const [ao, bo, aj, bj] = [off(a, n, -0.012), off(b, n, -0.012), off(a, n, T + 0.012), off(b, n, T + 0.012)];
+    face(part, [[ao[0], ao[1], z + ztop + coping], [bo[0], bo[1], z + ztop + coping], [bj[0], bj[1], z + ztop + coping], [aj[0], aj[1], z + ztop + coping]], [0, 0, 1], st.trim,
+      info('cap', 0, 1, 0, 1, 13), { ...segFrame(ao, bo), b: [n[0] / U, n[1] / U, 0], o: [ao[0], ao[1], z + ztop + coping] });
+    face(part, [[ao[0], ao[1], z + ztop], [bo[0], bo[1], z + ztop], [bo[0], bo[1], z + ztop + coping], [ao[0], ao[1], z + ztop + coping]], [n[0], n[1], 0], st.trim,
+      info('cap', 0, 1, z + ztop, z + ztop + coping, 14), segFrame(ao, bo));
+    if (kind !== 'balustrade') {
+      // Behind a wall the coping's inner face; a balustrade's shows between the balusters anyway.
+      face(part, [[aj[0], aj[1], z + ztop], [bj[0], bj[1], z + ztop], [bj[0], bj[1], z + ztop + coping], [aj[0], aj[1], z + ztop + coping]], [-n[0], -n[1], 0], st.trim);
+    }
+    k.glow.lines.push([k.m([ao[0] + n[0] * 0.004, ao[1] + n[1] * 0.004, z + ztop + coping * 0.5]), k.m([bo[0] + n[0] * 0.004, bo[1] + n[1] * 0.004, z + ztop + coping * 0.5])]);
+    if (kind === 'crenel' && len > 0.18) {
+      // A merlon in the middle of each side long enough for one.
+      const u0 = 0.5 - 0.11 / len, u1 = 0.5 + 0.11 / len;
+      const P = (pt: [number, number], q: [number, number], u: number): [number, number] => [pt[0] + (q[0] - pt[0]) * u, pt[1] + (q[1] - pt[1]) * u];
+      const [m0, m1, m2, m3] = [P(a, b, u0), P(a, b, u1), P(ai, bi, u1), P(ai, bi, u0)];
+      const zb = z + ztop + coping, zt = z + H + 1;
+      face(part, [[m0[0], m0[1], zb], [m1[0], m1[1], zb], [m1[0], m1[1], zt], [m0[0], m0[1], zt]], [n[0], n[1], 0], st.stone, info('parapet', 0, 1, zb, zt, 15), segFrame(m0, m1));
+      face(part, [[m3[0], m3[1], zb], [m2[0], m2[1], zb], [m2[0], m2[1], zt], [m3[0], m3[1], zt]], [-n[0], -n[1], 0], st.stone);
+      face(part, [[m0[0], m0[1], zt], [m1[0], m1[1], zt], [m2[0], m2[1], zt], [m3[0], m3[1], zt]], [0, 0, 1], st.trim);
+      for (const [x, y, sg] of [[m0, m3, -1], [m1, m2, 1]] as Array<[[number, number], [number, number], number]>) {
+        face(part, [[x[0], x[1], zb], [y[0], y[1], zb], [y[0], y[1], zt], [x[0], x[1], zt]], [sg * (b[0] - a[0]), sg * (b[1] - a[1]), 0], st.stone);
+      }
+    }
+  }
+  // A post at each corner of a balustrade.
+  if (kind === 'balustrade') {
+    for (const [s0, t0] of line.slice(1, -1)) {
+      if (ownerOf(k, s0 - 0.05, s0 + 0.05) !== null) turned(k, part, s0, t0 - edge * T / 2, z, [[0, 0.05], [H - coping, 0.05], [H - coping + 0.01, 0]], 4, st.trim, 1.5);
     }
   }
 }
