@@ -365,7 +365,7 @@ export const STONE_GUARDED: ReadonlySet<string> = new Set([
  * The tiles a job works or puts something on: a corner's four, a tile, the
  * tile under your feet for a job aimed at something in your pack (a corner's
  * four for a spadeful dropped there), and for a bridge or an aqueduct every
- * tile between its two ends. The island's `stone_job_tiles`.
+ * tile between its two ends, every lane of a bridge's. The island's `stone_job_tiles`.
  */
 export function stoneJobTiles(g: Game, def: ActionDef, t: Target): Array<[number, number]> {
   const box = (x0: number, y0: number, x1: number, y1: number): Array<[number, number]> => {
@@ -381,7 +381,8 @@ export function stoneJobTiles(g: Game, def: ActionDef, t: Target): Array<[number
     }
     return [[g.player.tileX, g.player.tileY]];
   }
-  if (def.id === 'plan_bridge') return box(g.player.tileX, g.player.tileY, t.x, t.y);
+  // Every lane of it (`Game.planTiles`).
+  if (def.id === 'plan_bridge') return g.planTiles(g.player.tileX, g.player.tileY, t);
   if (def.id === 'plan_aqueduct') return t.head ? box(t.head[0], t.head[1], t.x, t.y) : [[t.x, t.y]];
   if (def.corner) return corner(t.cx, t.cy);
   return [[t.x, t.y]];

@@ -65,7 +65,7 @@ import {
   type TrapKind,
 } from './traps';
 import { BAIT_BY_ID, FISH, fishHere, pickFish, waterDepth } from './fishing';
-import { across, BRIDGES, bridgeDone, bridgeLevels, bridgeWheels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
+import { across, BRIDGES, sideStep, bridgeDone, bridgeLevels, bridgeWheels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
 import { AQ_NOT_THROWN, AQ_OVER, channelOf, fitIntoChannel } from './aqueducts';
 import { AQUEDUCT_LPS, aqueductShut, type Channel } from '../world/aqueducts';
 import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hingeOf, isDrawbridge, keepHiddenAsks } from './gates';
@@ -2461,6 +2461,22 @@ export class Game {
     if (this.player.tileX === x && this.player.tileY === y) return 'Step off the tile first.';
     if (this.peerOn(x, y)) return 'Someone is on that tile.';
     return null;
+  }
+
+  /**
+   * Every tile a bridge set out from here to there covers, every lane of it
+   * (`laneOffsets`), in a box: what a stone's ground is asked about. The
+   * island's `stone_job_tiles`.
+   */
+  planTiles(ax: number, ay: number, t: { x: number; y: number; width?: number; side?: Side }): Array<[number, number]> {
+    const [px, py] = across(ax, ay)(t.x, t.y);
+    const lanes = laneOffsets(t.width ?? 1, sideStep(ax, ay, t.x, t.y, t.side) || 1);
+    const lo = Math.min(...lanes), hi = Math.max(...lanes);
+    const out: Array<[number, number]> = [];
+    for (let y = Math.min(ay, t.y) + lo * py; y <= Math.max(ay, t.y) + hi * py; y++) {
+      for (let x = Math.min(ax, t.x) + lo * px; x <= Math.max(ax, t.x) + hi * px; x++) out.push([x, y]);
+    }
+    return out;
   }
 
   /** The bridge one of whose two ends is this tile, if any. */

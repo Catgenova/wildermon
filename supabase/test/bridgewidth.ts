@@ -16,6 +16,9 @@
  *   * a wagon onto a bridge of two lanes and not one; a cart onto either;
  *   * furniture on a three-lane bridge's outer lanes and not its middle one,
  *     nor on a two-lane one;
+ *   * no lane's deck wears the ground under it (`wearStep`, `wear_walk`),
+ *     and a laden cart on an outer lane of your own bridge counts for the
+ *     journal (`journal_move`);
  *   * a wooden bridge and a stone arch of before, made a plank and a stone
  *     brick one by the migration's own lines.
  *
@@ -174,7 +177,7 @@ const out = psql(`
 begin;
 create temp table said (k text, v text);
 do $$
-declare w uuid; u uuid; c record; v_stool bigint; v_old bigint; v_arch bigint;
+declare w uuid; u uuid; c record; v_stool bigint; v_old bigint; v_arch bigint; p player; v_cart placed; v_orse int;
 begin
   select id into w from world where name = 'Hoarding';
   select uid into u from player where world_id = w and name = 'Dane';
@@ -202,6 +205,24 @@ begin
   select id into v_stool from item where world_id = w and holder = 'player' and holder_uid = u and def = 'stool' limit 1;
   ${furnSql}
   ${wheelSql}
+  -- Feet along the three-lane bridge's outer lane, its middle lane and the ground beside it (wear_walk).
+  delete from tile_wear where world_id = w;
+  perform wear_walk(w, 24.5, 13.5, 26.5, 13.5, u);
+  perform wear_walk(w, 24.5, 12.5, 26.5, 12.5, u);
+  perform wear_walk(w, 24.5, 15.5, 26.5, 15.5, u);
+  insert into said values ('WEAR', (select coalesce(string_agg(x || ',' || y, ';' order by y, x), '') from tile_wear where world_id = w));
+  -- A laden cart onto the outer lane of a bridge Dane built (journal_move).
+  delete from placed where world_id = w and driver = u;
+  update player set tally = coalesce(tally, '{}'::jsonb) - 'cartbridge' where world_id = w and uid = u;
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, driver)
+    values (w, 'furniture', 'large_cart', 24, 13, 0, 0, 24.5, 13.5, 40, u, u) returning * into v_cart;
+  insert into item (world_id, holder, placed, def, ql, count) values (w, 'furniture', v_cart.id, 'log', 30, 3);
+  v_orse := creature_spawn(w, 'orse', 24.5, 13.5, 'deed', now() - interval '60 days', u);
+  update creature set hitched_to = v_cart.id, hunger = 1 where world_id = w and id = v_orse;
+  select * into p from player where world_id = w and uid = u;
+  p.x := 24.5; p.y := 13.5;
+  perform journal_move(w, u, p, 25.5, 13.5, v_cart, array[24.5, 25.5], array[13.5, 13.5]);
+  insert into said values ('CARTBRIDGE', coalesce((select tally->>'cartbridge' from player where world_id = w and uid = u), '0'));
   -- A wooden bridge and a stone arch of before, and the migration's own lines over them.
   insert into bridge (world_id, kind, ax, ay, bx, by, height, material, made_by, level) values (w, 'wood', 2, 50, 6, 50, ${BASE}, 'Oak', u, 0) returning id into v_old;
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level) values (w, 'stone', 2, 52, 6, 52, ${BASE}, u, 0) returning id into v_arch;
@@ -310,6 +331,16 @@ for (const s of SET) {
     check(`a stool on ${s.name}'s lane ${o}: ${want === ALLOWED ? 'set down' : 'refused'} on both sides`,
       mine === want && theirs(`FURN:${s.name}:${o}`) === want, `browser ${mine}; island ${theirs(`FURN:${s.name}:${o}`)}`);
   }
+}
+
+/* ---- every lane: worn, driven ---------------------------------------------------------------------- */
+{
+  world.wear.clear();
+  for (const y of [13, 12, 15]) for (const x of [25, 26]) game.wearStep(x, y);
+  const mine = [...world.wear.keys()].sort((a, b) => a - b).map((i) => `${i % world.w},${Math.floor(i / world.w)}`).join(';');
+  check('no lane of a bridge wears the ground under it, and the ground beside it wears, on both sides',
+    mine === '25,15;26,15' && theirs('WEAR') === mine, `browser ${mine}; island ${theirs('WEAR')}`);
+  check('a laden cart on the outer lane of a bridge you built counts for the journal', theirs('CARTBRIDGE') === '1', theirs('CARTBRIDGE'));
 }
 
 /* ---- the old kinds ------------------------------------------------------------------------------------ */
