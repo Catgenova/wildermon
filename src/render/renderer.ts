@@ -128,6 +128,12 @@ import { css, HAZE_REACH, rgba, skyAt, unknownInk, type Sky } from './sky';
  * rather than one per tree per frame.
  */
 const HAZE_STEPS = 6;
+/**
+ * How far the distance's colour may move, in any channel out of 255, before
+ * the tree pictures mixed toward it are made again (`treePicture`): at most
+ * 0.62 of it is laid on the furthest tree, so that one is out by under eight.
+ */
+const HAZE_INK_STEP = 12;
 /** The share of the screen's pixels the swell's gradients are worked out at, across and down (`drawSwell`). */
 const SWELL_RES = 0.5;
 /** Device pixels of tree pictures kept between frames (`drawTree`): about forty-eight megabytes. */
@@ -6337,6 +6343,7 @@ export class Renderer {
   private treeOwn = new Map<string, (TreePicture | undefined)[]>();
   /** The colour the distance is mixed toward this frame, and the frame it was read in. */
   private hazeInk = '';
+  private hazeRgb: [number, number, number] | null = null;
   private inkFrame = -1;
   /** The milliseconds spent making tree pictures in the frame `treeMakeFrame`, against `TREE_PICTURE_MS`. */
   private treeMadeMs = 0;
@@ -6381,7 +6388,12 @@ export class Renderer {
     }
     if (this.inkFrame !== this.frameNo) {
       this.inkFrame = this.frameNo;
-      this.hazeInk = css(this.sky.far);
+      // Moved on only once the distance's colour has gone `HAZE_INK_STEP` off it: it moves through every dusk and dawn, and every move made every hazed tree again.
+      const far = this.sky.far, was = this.hazeRgb;
+      if (!was || Math.max(Math.abs(far[0] - was[0]), Math.abs(far[1] - was[1]), Math.abs(far[2] - was[2])) > HAZE_INK_STEP) {
+        this.hazeRgb = [far[0], far[1], far[2]];
+        this.hazeInk = css(far);
+      }
     }
     const key = `${id}|${w}|${h}|${haze}|${lean}`;
     const own = `${id}|${tree}`;
