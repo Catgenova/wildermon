@@ -749,11 +749,11 @@ export function paintTree3d(g: Ctx, job: Job): void {
   }
   // An open crown's trunk stands on a round foot, the ground's circle of it, laid just behind the trunk.
   const trunk = chains.find((c) => c.order === 0);
-  const foot = spec.open && trunk ? footPath(job) : null;
+  const foot = spec.open && trunk ? footOf(job) : null;
   if (foot && trunk) {
     g.lineWidth = KIT_INK_W * 2;
-    g.stroke(foot);
-    g.stroke(footTop(job));
+    g.stroke(foot.base);
+    g.stroke(foot.top);
     items.push({ d: near(sk.limbs[0].a) - 0.6, draw: () => paintFoot(g, job, foot, trunk) });
   }
   // The wood, a few pieces of a limb at a time, so each run is laid in its own place among the leaf.
@@ -843,14 +843,13 @@ function groundShape(job: Job, r: (t: number) => number, N: number, z: (t: numbe
  * The ground's shape under a trunk, as a path on the screen: its circle, and
  * where it is buttressed a lobe out along each root with a soft dip between.
  */
-function footPath(job: Job): Path2D {
+function footPath(job: Job, lobes: Array<[number, number]>): Path2D {
   const rT = job.sk.limbs[0].ra * 1.02;
-  const lobes = lobesOf(job);
   return groundShape(job, (t) => {
     let r = rT;
     for (const [a, out] of lobes) r += Math.max(0, out) * Math.pow(Math.max(0, Math.cos(t - a)), 6);
     return r;
-  }, lobes.length ? 72 : 36);
+  }, lobes.length ? 48 : 32);
 }
 
 /**
@@ -858,9 +857,8 @@ function footPath(job: Job): Path2D {
  * highest against the trunk and coming down toward each lobe's end, so the
  * foot stands up off the ground with its side showing under it.
  */
-function footTop(job: Job): Path2D {
+function footTop(job: Job, lobes: Array<[number, number]>): Path2D {
   const rT = job.sk.limbs[0].ra * 1.02;
-  const lobes = lobesOf(job);
   const h = rT * 0.42;
   const most = Math.max(1e-6, ...lobes.map(([, o]) => o));
   const lobeAt = (t: number): number => {
@@ -868,7 +866,14 @@ function footTop(job: Job): Path2D {
     for (const [a, out] of lobes) r += Math.max(0, out) * Math.pow(Math.max(0, Math.cos(t - a)), 6);
     return r;
   };
-  return groundShape(job, (t) => rT * 0.96 + lobeAt(t) * 0.82, 72, (t) => h * (1 - 0.75 * Math.min(1, lobeAt(t) / most)));
+  return groundShape(job, (t) => rT * 0.96 + lobeAt(t) * 0.82, 48, (t) => h * (1 - 0.75 * Math.min(1, lobeAt(t) / most)));
+}
+
+/** A trunk's foot on the screen: its shape on the ground, its raised top, and the lobes they are made with. */
+interface Foot { base: Path2D; top: Path2D; lobes: Array<[number, number]> }
+function footOf(job: Job): Foot {
+  const lobes = lobesOf(job);
+  return { base: footPath(job, lobes), top: footTop(job, lobes), lobes };
 }
 
 /**
@@ -876,11 +881,11 @@ function footTop(job: Job): Path2D {
  * two are one piece of wood; then each buttress's ridge, lit as its top
  * faces, with moss on those turned from the sun, and a crease in each dip.
  */
-function paintFoot(g: Ctx, job: Job, foot: Path2D, c: Chain): void {
+function paintFoot(g: Ctx, job: Job, foot: Foot, c: Chain): void {
   // Its side, under the tops: the bark's shade, a step toward the ink.
   g.fillStyle = rgb(mixRgb(hex(job.spec.bark.shade), KIT_INK, 0.25));
-  g.fill(foot);
-  const top = footTop(job);
+  g.fill(foot.base);
+  const { top, lobes } = foot;
   const [x, y] = c.q[0];
   const [nx, ny] = c.n[0];
   const ax = c.q[1][0] - x, ay = c.q[1][1] - y;
@@ -902,11 +907,10 @@ function paintFoot(g: Ctx, job: Job, foot: Path2D, c: Chain): void {
   }
   const { sk, spec, light } = job;
   const rT = sk.limbs[0].ra * 1.02;
-  const lobes = lobesOf(job);
   const base = sk.limbs[0].a;
   lobes.forEach(([a, out], k) => {
     // The ridge: the lobe narrower and drawn in to the trunk, lit by the way its top faces.
-    const ridge = groundShape(job, (t) => rT * 0.6 + Math.max(0, out) * 0.8 * Math.pow(Math.max(0, Math.cos(t - a)), 8), 48);
+    const ridge = groundShape(job, (t) => rT * 0.6 + Math.max(0, out) * 0.8 * Math.pow(Math.max(0, Math.cos(t - a)), 8), 24);
     const n = unit([Math.cos(a), Math.sin(a), 1.1]);
     const lam = Math.max(0, dot(n, light.sun));
     const l = clamp01((light.ambient + light.direct * lam - 0.22) / 0.82);
@@ -917,7 +921,7 @@ function paintFoot(g: Ctx, job: Job, foot: Path2D, c: Chain): void {
     if (spec.bark.moss && lam < 0.45 && k % 2 === 0) {
       g.globalAlpha = 0.7;
       g.fillStyle = spec.bark.moss;
-      g.fill(groundShape(job, (t) => rT * 0.55 + Math.max(0, out) * 0.6 * Math.pow(Math.max(0, Math.cos(t - a)), 18), 40));
+      g.fill(groundShape(job, (t) => rT * 0.55 + Math.max(0, out) * 0.6 * Math.pow(Math.max(0, Math.cos(t - a)), 18), 20));
       g.globalAlpha = 1;
     }
   });
