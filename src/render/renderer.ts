@@ -200,7 +200,12 @@ const BAKE_KEEP = 20;
  * village is not all drawn afresh in one frame.
  */
 const BAKE_LIFE = 0.5;
-/** Device pixels of wall and roof pictures kept before the lot go: about a hundred and twenty-eight megabytes. */
+/**
+ * Device pixels of wall and roof pictures kept on a screen of one device pixel
+ * to a CSS pixel, about a hundred and twenty-eight megabytes, and the square
+ * of that as many on a sharper one (`bakeRoom`): the same village is four
+ * times the pixels at two. Past it, the pictures gone longest undrawn go.
+ */
 const BAKE_PIXELS = 32_000_000;
 /** No one picture is bigger than this; a thing that would be is drawn as it always was. */
 const BAKE_MOST = 4_000_000;
@@ -210,7 +215,11 @@ const BAKE_MOST = 4_000_000;
  * is drawn in the sun's light, and so made again when that moves on (`lit`).
  */
 interface BakeAs { occludes?: boolean; lit?: boolean }
-/** Pictures made again in a frame for the zoom alone once it has settled, while the last one stands in (`baked`). */
+/**
+ * Pictures made in a frame where an older one can stand in (`baked`): for the
+ * zoom once it has settled, and for anything read round it that has changed,
+ * the old one drawn until its turn comes.
+ */
 const BAKES_A_FRAME = 12;
 /** And while the zoom moves, for things with no picture near enough this size to stand in. */
 const BAKES_MOVING = 6;
@@ -238,8 +247,10 @@ interface Baked {
   /** The view it was made in less the zoom (`bakeShape`), and the zoom: at another zoom in the same view it stands in, stretched (`baked`). */
   shape: number;
   zoom: number;
+  /** The frame it was last drawn in (`bakeRoom`). */
+  used: number;
 }
-/** How many device pixels of tile edge pictures are kept before the lot go (`hems`): about sixty-four megabytes. */
+/** How many device pixels of tile edge pictures are kept at one device pixel to a CSS pixel, about sixty-four megabytes, and the square of the screen's sharpness times that on one sharper (`hems`); past it, those gone longest undrawn go. */
 const HEM_PIXELS = 16_000_000;
 /** No one tile's edge picture is bigger than this; a tile that would be is drawn as it always was. */
 const HEM_TILE_MOST = 400_000;
@@ -252,6 +263,8 @@ interface HemPicture {
   by: number;
   /** The zoom it was made at: at another, it is stretched about the tile's corner while the zoom moves (`hems`) and made again once it stops. */
   zoom: number;
+  /** The frame it was last drawn in. */
+  used: number;
 }
 
 /** The thin darker line where a pond meets its bank. */
@@ -2710,8 +2723,9 @@ export class Renderer {
    * drawn as they always were and nothing is kept.
    *
    * By tile, for ground in sight and ground remembered apart; dropped with the
-   * colour, which goes stale at the same moments, and all at once past
-   * `HEM_PIXELS` of pictures.
+   * colour, which goes stale at the same moments, and past `HEM_PIXELS` of
+   * pictures those gone longest undrawn (`hemRoom`). Each map is kept in the
+   * order its pictures were last drawn in, oldest first.
    */
   private hemCache = new Map<number, HemPicture>();
   private hemMemCache = new Map<number, HemPicture>();
@@ -2763,6 +2777,7 @@ export class Renderer {
     if (!this.zoomSettled) {
       const r = had ? zoom / had.zoom : 0;
       if (had && (!had.cv || (r <= STAND_IN_MOST && r * STAND_IN_MOST >= 1))) {
+        this.hemUsed(cache, key, had);
         if (had.cv) ctx.drawImage(had.cv, pts[0] + (had.bx - had.px) * r, pts[1] + (had.by - had.py) * r, (had.cv.width / dpr) * r, (had.cv.height / dpr) * r);
         return had.cv !== null;
       }
@@ -2773,6 +2788,7 @@ export class Renderer {
       const dy = (pts[1] - had.py) * dpr;
       const rx = Math.round(dx), ry = Math.round(dy);
       if (Math.abs(dx - rx) < 0.02 && Math.abs(dy - ry) < 0.02) {
+        this.hemUsed(cache, key, had);
         if (had.cv) ctx.drawImage(had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
         return had.cv !== null;
       }
@@ -2797,13 +2813,39 @@ export class Renderer {
     if (!g) return this.swardEdges(ctx, V, x, y, pts, zoom, lit);
     g.setTransform(dpr, 0, 0, dpr, -bx, -by);
     const drew = this.swardEdges(g, V, x, y, pts, zoom, lit);
-    if (this.hemPixels + w * h > HEM_PIXELS) this.forgetHems();
-    cache.set(key, { cv: drew ? cv : null, px: pts[0], py: pts[1], bx: bx / dpr, by: by / dpr, zoom });
+    if (drew) this.hemRoom(w * h);
+    cache.set(key, { cv: drew ? cv : null, px: pts[0], py: pts[1], bx: bx / dpr, by: by / dpr, zoom, used: this.frameNo });
     if (drew) {
       this.hemPixels += w * h;
       ctx.drawImage(cv, bx / dpr, by / dpr, w / dpr, h / dpr);
     }
     return drew;
+  }
+
+  /** A tile's edges drawn from its picture: to the back of the order they are put away in, once a frame. */
+  private hemUsed(cache: Map<number, HemPicture>, key: number, h: HemPicture): void {
+    if (h.used === this.frameNo) return;
+    h.used = this.frameNo;
+    cache.delete(key);
+    cache.set(key, h);
+  }
+
+  /** Room for `need` more pixels of tiles' edges: the pictures gone longest undrawn put away, of either map, and never one drawn this frame. */
+  private hemRoom(need: number): void {
+    const most = HEM_PIXELS * this.canvas.dpr * this.canvas.dpr;
+    if (this.hemPixels + need <= most) return;
+    const lit = this.hemCache.entries(), mem = this.hemMemCache.entries();
+    let a = lit.next(), b = mem.next();
+    while (this.hemPixels + need > most) {
+      const fromLit = !a.done && (b.done || a.value[1].used <= b.value[1].used);
+      const at = fromLit ? a : b;
+      if (at.done || at.value[1].used === this.frameNo) break;
+      const [key, h] = at.value;
+      if (h.cv) this.hemPixels -= h.cv.width * h.cv.height;
+      (fromLit ? this.hemCache : this.hemMemCache).delete(key);
+      if (fromLit) a = lit.next();
+      else b = mem.next();
+    }
   }
 
   /** One tile's ruffled edges, and one colour's worth of them: reused, never remade. */
@@ -10512,7 +10554,7 @@ export class Renderer {
   /** And the view less the zoom, the same way: a picture made at another zoom in it can stand in while the zoom moves. */
   private bakeShape = 0;
   private bakeShapeWas = '';
-  /** Pictures still to be made again this frame for the zoom alone, where the last one could stand in (`BAKES_A_FRAME`). */
+  /** Pictures still to be made this frame where an older one could stand in (`BAKES_A_FRAME`). */
   private bakesLeft = 0;
   /** And while it moves, where none can (`BAKES_MOVING`). */
   private bakesMoving = 0;
@@ -10542,7 +10584,7 @@ export class Renderer {
       this.bakeShapeWas = shape;
       this.bakeShape++;
     }
-    this.bakesLeft = this.zoomSettled ? BAKES_A_FRAME : 0;
+    this.bakesLeft = BAKES_A_FRAME;
     this.bakesMoving = BAKES_MOVING;
     const lit = `${Math.floor((this.game.hourOfDay() / 24) * SUN_STEPS)}|${Math.round(this.game.darkness() * 20)}|${this.bloom}`;
     if (lit !== this.bakeLit) {
@@ -10565,8 +10607,16 @@ export class Renderer {
     const dpr = this.canvas.dpr;
     const zoom = this.camera.zoom;
     const had = this.bakes.get(key);
-    if (had && had.ver === ver && had.epoch === this.bakeEpoch && this.time - had.at < had.life && this.time >= had.at
-      && (!lit || had.light === this.bakeLight || this.time - this.bakeLightAt < had.wait)) {
+    if (had) this.bakeUsed(key, had);
+    /*
+     * One for this view that has gone out of date -- something read round it
+     * has changed, the light has moved on, or it has been kept its time --
+     * is drawn as it is until its turn comes to be made again, `BAKES_A_FRAME`
+     * a frame: a whole village gone out of date at once was all made again
+     * in the one frame.
+     */
+    if (had && had.epoch === this.bakeEpoch && (this.bakesLeft <= 0 || (had.ver === ver && this.time - had.at < had.life && this.time >= had.at
+      && (!lit || had.light === this.bakeLight || this.time - this.bakeLightAt < had.wait)))) {
       const dx = (ax - had.ax) * dpr, dy = (ay - had.ay) * dpr;
       const rx = Math.round(dx), ry = Math.round(dy);
       if (Math.abs(dx - rx) < 0.02 && Math.abs(dy - ry) < 0.02) {
@@ -10585,7 +10635,7 @@ export class Renderer {
      * and every one of them made again in the frame it stopped.
      */
     const r = had && had.ver === ver && had.shape === this.bakeShape && had.zoom !== zoom ? zoom / had.zoom : 0;
-    if (had && r && r <= STAND_IN_MOST && r * STAND_IN_MOST >= 1 && (!this.hemSteady || this.bakesLeft <= 0)) {
+    if (had && r && r <= STAND_IN_MOST && r * STAND_IN_MOST >= 1 && (!this.zoomSettled || this.bakesLeft <= 0)) {
       const x = ax + (had.bx - had.ax) * r, y = ay + (had.by - had.ay) * r, w = (had.cv.width / dpr) * r, h = (had.cv.height / dpr) * r;
       ctx.drawImage(had.cv, x, y, w, h);
       if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, had.cv, x, y, w, h);
@@ -10597,7 +10647,6 @@ export class Renderer {
       if (occludes) this.occludeLine(box, draw);
       return;
     }
-    if (r) this.bakesLeft--;
     const bx = Math.floor(box[0] * dpr) - 2, by = Math.floor(box[1] * dpr) - 2;
     const w = Math.ceil(box[2] * dpr) + 2 - bx, h = Math.ceil(box[3] * dpr) + 2 - by;
     // Off the screen altogether, or too big to be worth keeping: drawn as it always was.
@@ -10607,6 +10656,7 @@ export class Renderer {
       if (occludes) this.occludeLine(box, draw);
       return;
     }
+    this.bakesLeft--;
     let cv = had?.cv;
     if (had) {
       this.bakePixels -= had.cv.width * had.cv.height;
@@ -10651,21 +10701,42 @@ export class Renderer {
     } finally {
       canvas.ctx = ctx;
     }
-    if (this.bakePixels + w * h > BAKE_PIXELS) {
-      this.bakes.clear();
-      this.bakePixels = 0;
-    }
+    this.bakeRoom(w * h);
     // Its turn, by the key, so they come due apart: when the light moves on, and when it is kept no longer.
     let spread = 0;
     for (let i = 0; i < key.length; i++) spread = (spread * 31 + key.charCodeAt(i)) >>> 0;
     const turn = (spread % 1000) / 1000;
     this.bakes.set(key, {
       cv, ax, ay, bx: bx / dpr, by: by / dpr, at: this.time, life: BAKE_KEEP * (0.75 + turn / 2), wait: BAKE_LIFE * turn,
-      ver, epoch: this.bakeEpoch, light: this.bakeLight, shape: this.bakeShape, zoom,
+      ver, epoch: this.bakeEpoch, light: this.bakeLight, shape: this.bakeShape, zoom, used: this.frameNo,
     });
     this.bakePixels += w * h;
     ctx.drawImage(cv, bx / dpr, by / dpr, w / dpr, h / dpr);
     if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, cv, bx / dpr, by / dpr, w / dpr, h / dpr);
+  }
+
+  /** A picture drawn: to the back of the order they are put away in (`bakeRoom`), once a frame. */
+  private bakeUsed(key: string, b: Baked): void {
+    if (b.used === this.frameNo) return;
+    b.used = this.frameNo;
+    this.bakes.delete(key);
+    this.bakes.set(key, b);
+  }
+
+  /**
+   * Room for `need` more device pixels of pictures, within `BAKE_PIXELS` for
+   * the screen's sharpness: those gone longest undrawn put away, and never
+   * one drawn this frame. It used to put the lot away, and on a sharp screen
+   * a village's pictures were more than that by themselves: every one of them
+   * was made again over and over, most of every frame.
+   */
+  private bakeRoom(need: number): void {
+    const most = BAKE_PIXELS * this.canvas.dpr * this.canvas.dpr;
+    for (const [key, b] of this.bakes) {
+      if (this.bakePixels + need <= most || b.used === this.frameNo) break;
+      this.bakePixels -= b.cv.width * b.cv.height;
+      this.bakes.delete(key);
+    }
   }
 
   private bearsJoists(id: number, border: Border): boolean {
