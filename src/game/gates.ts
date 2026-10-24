@@ -209,6 +209,7 @@ export function planGate(g: Game, wall: Wall): string | null {
   keyFromPadlock(lock);
   wall.type = 'hidden_door';
   wall.lock = lock.uid;
+  g.buildings.changed();
   g.events.emit('inventory');
   return hiddenDoorSaid(founderWord(g, wall.x, wall.y));
 }

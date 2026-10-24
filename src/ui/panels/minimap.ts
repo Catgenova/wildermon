@@ -59,6 +59,13 @@ export class MinimapPanel {
   private view: HTMLCanvasElement;
   private viewCtx: CanvasRenderingContext2D;
   private dirty = true;
+  /** All of the picture wants uploading, not only what `paint` changed: the first fill. */
+  private whole = true;
+  /** The pixels `paint` has changed since the last upload; empty (x0 > x1) when none. */
+  private dx0 = Infinity;
+  private dy0 = Infinity;
+  private dx1 = -1;
+  private dy1 = -1;
   private lastVision = -1;
   private painted = false;
   private lastFog = true;
@@ -72,6 +79,8 @@ export class MinimapPanel {
   private names = true;
   /** How big the map is on screen, in CSS pixels: the smaller side, as it is drawn square. Kept by a watcher rather than measured each frame. */
   private shown = 0;
+  /** The list of marks wants listing again (`listMarks`). */
+  private marksStale = false;
 
   constructor(
     win: UIWindow,
@@ -127,7 +136,10 @@ export class MinimapPanel {
     new ResizeObserver(() => {
       this.shown = Math.min(this.view.clientWidth, this.view.clientHeight);
     }).observe(this.view);
-    game.events.on('world', () => this.listMarks());
+    // Listed again at the next drawing while the window shows, not on every tile that changes, nor while it is shut.
+    game.events.on('world', () => {
+      this.marksStale = true;
+    });
     this.listMarks();
     // Unexplored to start with, which is a fill rather than a million lookups.
     // What is known is painted the first time the map is opened.
@@ -185,6 +197,7 @@ export class MinimapPanel {
   /** Redraw the list of marks under the map. */
   private listMarks(): void {
     const g = this.game;
+    this.marksStale = false;
     this.marksEl.replaceChildren();
     if (!g.marks.length) {
       const none = document.createElement('div');
@@ -285,7 +298,12 @@ export class MinimapPanel {
 
   private paint(x: number, y: number): void {
     const w = this.game.world;
-    const i = (((y / this.step) | 0) * this.bw + ((x / this.step) | 0)) * 4;
+    const px = (x / this.step) | 0, py = (y / this.step) | 0;
+    if (px < this.dx0) this.dx0 = px;
+    if (px > this.dx1) this.dx1 = px;
+    if (py < this.dy0) this.dy0 = py;
+    if (py > this.dy1) this.dy1 = py;
+    const i = (py * this.bw + px) * 4;
     const d = this.image.data;
     // Three states here as in the world: nothing for land nobody has seen, the
     // land as it is where somebody is looking, and what it was where not.
@@ -445,14 +463,20 @@ export class MinimapPanel {
   update(): void {
     this.frame ??= this.view.closest('.win');
     if (this.frame?.hasAttribute('hidden')) return;
+    if (this.marksStale) this.listMarks();
     const now = performance.now();
     if (now - this.lastDraw < MAP_EVERY) return;
     this.lastDraw = now;
     this.followWater();
     this.followVision();
     if (this.dirty) {
-      this.baseCtx.putImageData(this.image, 0, 0);
+      // Only the box painted since the last upload.
+      if (!this.whole && this.dx1 >= this.dx0) this.baseCtx.putImageData(this.image, 0, 0, this.dx0, this.dy0, this.dx1 - this.dx0 + 1, this.dy1 - this.dy0 + 1);
+      else this.baseCtx.putImageData(this.image, 0, 0);
       this.dirty = false;
+      this.whole = false;
+      this.dx0 = this.dy0 = Infinity;
+      this.dx1 = this.dy1 = -1;
     }
     const ctx = this.viewCtx;
     const view = this.window();

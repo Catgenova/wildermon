@@ -2813,11 +2813,21 @@ export class RunestoneNight {
   private scratch: Kept | undefined;
   private patch: Kept | undefined;
   private open = false;
+  /** Whether what keeps nothing in front of it (`glowing`'s `keeps`) is taken: after dark, and while a wash is laid before it. */
+  private glowOpen = false;
+  /** How many of this frame's stones keep what stands in front of them. */
+  private keepN = 0;
 
-  /** A new frame: forget the last one's stones, and open only after dark. */
-  begin(dark: boolean): void {
+  /**
+   * A new frame: forget the last one's stones, and open only after dark --
+   * or, for what keeps nothing in front of it (an altar's stars), whenever
+   * the sky's wash is `washed` on, so the night is still mixed small.
+   */
+  begin(dark: boolean, washed = dark): void {
     this.open = dark;
+    this.glowOpen = dark || washed;
     this.lit.length = 0;
+    this.keepN = 0;
   }
 
   /** Whether it is dark enough this frame for anything to take the night off itself (`begin`). */
@@ -2828,6 +2838,11 @@ export class RunestoneNight {
   /** Whether any stone this frame has its night shapes to lay: false by day, and before the first stone is drawn. */
   get active(): boolean {
     return this.lit.length > 0;
+  }
+
+  /** Whether any stone this frame keeps what is drawn in front of it: what the occluding calls are for. */
+  get keeping(): boolean {
+    return this.keepN > 0;
   }
 
   /** A runestone has just been drawn on `ctx` with its footprint's middle at (sx, sy): from now on, what falls on its shapes is kept. */
@@ -2874,12 +2889,13 @@ export class RunestoneNight {
    * of it is not kept off them. False when the night is not open.
    */
   glowing(ctx: Ctx, L: number, T: number, R: number, B: number, holes: Lit['holes'], masks: Lit['masks'], keeps = true): boolean {
-    if (!this.open || !(R > L && B > T)) return false;
+    if (!(keeps ? this.open : this.glowOpen) || !(R > L && B > T)) return false;
     const m = ctx.getTransform();
     const dev = devBox(m, L, T, R - L, B - T);
     const i = this.lit.length;
     const over = (this.pool[i] = keep(this.pool[i], keeps ? dev[2] - dev[0] : 1, keeps ? dev[3] - dev[1] : 1));
     this.lit.push({ holes, masks, m, dev, over, touched: false, keeps });
+    if (keeps) this.keepN++;
     return true;
   }
 
@@ -2919,14 +2935,18 @@ export class RunestoneNight {
     return g;
   }
 
-  /** Whether a box in `ctx`'s units, under its transform now, falls on any stone's shapes: for a caller choosing how to hand it over. */
-  falls(ctx: Ctx, x: number, y: number, w: number, h: number): boolean {
-    return !!this.lit.length && !!this.under(devBox(ctx.getTransform(), x, y, w, h));
+  /**
+   * Whether a box in `ctx`'s units, under its transform now (or `m`, for a
+   * caller asking for a run of things under the one transform), falls on any
+   * stone's shapes: for a caller choosing how to hand it over.
+   */
+  falls(ctx: Ctx, x: number, y: number, w: number, h: number, m?: DOMMatrix): boolean {
+    return !!this.keepN && !!this.under(devBox(m ?? ctx.getTransform(), x, y, w, h));
   }
 
   /** A picture drawn after the stones, as `drawImage` took it on `ctx` just now: kept wherever it falls on one. */
   occlude(ctx: Ctx, img: CanvasImageSource, dx: number, dy: number, dw: number, dh: number, clips?: readonly OccluderClip[]): void {
-    if (!this.lit.length) return;
+    if (!this.keepN) return;
     const m = ctx.getTransform();
     const hit = this.under(devBox(m, dx, dy, dw, dh));
     if (!hit) return;
@@ -2944,7 +2964,7 @@ export class RunestoneNight {
    * transform and clips, so what is kept is exactly its own shape.
    */
   occludeDraw(ctx: Ctx, x: number, y: number, w: number, h: number, draw: (g: CanvasRenderingContext2D) => void, clips?: readonly OccluderClip[]): void {
-    if (!this.lit.length) return;
+    if (!this.keepN) return;
     const m = ctx.getTransform();
     const hit = this.under(devBox(m, x, y, w, h));
     if (!hit) return;
@@ -2957,7 +2977,7 @@ export class RunestoneNight {
 
   /** Something drawn after the stones that cannot be drawn again: its whole box is kept, so the night is left on all of it. */
   occludeRect(ctx: Ctx, x: number, y: number, w: number, h: number, clips?: readonly OccluderClip[]): void {
-    if (!this.lit.length) return;
+    if (!this.keepN) return;
     const m = ctx.getTransform();
     const hit = this.under(devBox(m, x, y, w, h));
     if (!hit) return;

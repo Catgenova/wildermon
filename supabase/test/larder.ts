@@ -61,6 +61,8 @@ begin
 
   -- Nothing in any crate on the deed, and a larder with three of what it eats.
   delete from item i where i.world_id = d.world_id and i.holder = 'crate';
+  -- Nor in any other store on the deed an earlier test left stocked: only the larder holds food.
+  delete from item i where i.world_id = d.world_id and i.holder = 'furniture';
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, made_by)
     values (d.world_id, 'furniture', 'larder', d.x, d.y, 0, 0, d.x + 0.5, d.y + 0.5, d.founded_by)
     returning id into v_larder;

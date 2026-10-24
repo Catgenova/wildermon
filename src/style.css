@@ -537,7 +537,6 @@ kbd {
     0 8px 28px var(--t-shadow, rgba(0, 0, 0, 0.55));
   resize: both;
   overflow: hidden;
-  backdrop-filter: blur(3px);
 }
 
 .win[hidden] {
@@ -6210,7 +6209,6 @@ button.goal-row:focus-visible {
     linear-gradient(45deg, transparent var(--d), var(--cut-line) 0 calc(var(--d) + 1px), transparent 0),
     var(--plate);
   box-shadow: inset 0 0 0 1px var(--cut-line);
-  backdrop-filter: blur(3px);
 }
 
 /* Small plates are cut less deep than a window, and are solid: they are read in a glance. */

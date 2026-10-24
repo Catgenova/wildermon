@@ -108,6 +108,7 @@ export function consumeUnit(g: Game, bill: Bill & { material: string }, at?: { x
   const from = id ? takeUnit(g, id, material(bill.material), at) : null;
   if (!id || !from) return null;
   bill.needed[id] -= 1;
+  g.buildings.changed();
   took?.(from);
   return id;
 }

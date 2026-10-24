@@ -789,6 +789,18 @@ export class Buildings {
   private readonly chosen = new Map<number, { level: number; levels: number }>();
   nextId = 1;
   /**
+   * Counts every change to what is built: everything here that adds, takes
+   * away or replaces any of it, and `changed` for what is set on one in place.
+   * What is worked out from the buildings looks them over again only when it
+   * has gone up (`StructureWatch`).
+   */
+  revision = 0;
+
+  /** Something set on a wall, a floor, a column or a building in place: a coat of paint, a padlock, a bill paid. */
+  changed(): void {
+    this.revision++;
+  }
+  /**
    * Whether the body playing opens a wall's padlock: a hidden door is a door
    * only to whoever its lock admits (`gates.ts`). Set by the game; unset, it
    * admits nobody.
@@ -820,6 +832,7 @@ export class Buildings {
   /** A new plan on one tile: on its ground, or on piers under a deck at `deck`. */
   create(name: string, x: number, y: number, deck?: number): Building {
     const b: Building = { id: this.nextId++, name, tiles: [tileKey(x, y)], levels: 1 };
+    this.revision++;
     this.list.set(b.id, b);
     this.tileIndex.set(tileKey(x, y), b.id);
     if (deck !== undefined) this.standOnPiers(b, x, y, deck);
@@ -829,6 +842,7 @@ export class Buildings {
   addTile(b: Building, x: number, y: number, deck?: number): void {
     const key = tileKey(x, y);
     if (this.tileIndex.has(key)) return;
+    this.revision++;
     b.tiles.push(key);
     this.tileIndex.set(key, b.id);
     if (deck !== undefined) this.standOnPiers(b, x, y, deck);
@@ -882,6 +896,7 @@ export class Buildings {
   /** Drop a tile from a footprint; deletes the building when it was the last one. */
   removeTile(b: Building, x: number, y: number): void {
     const key = tileKey(x, y);
+    this.revision++;
     b.tiles = b.tiles.filter((t) => t !== key);
     this.tileIndex.delete(key);
     if (b.piers?.includes(key)) {
@@ -951,6 +966,7 @@ export class Buildings {
     this.walls.set(wallKey(level, border), wall);
     // A wall planned on a side marked No plan clears the mark.
     this.noPlans.delete(wallKey(level, border));
+    this.revision++;
     return wall;
   }
 
@@ -963,16 +979,19 @@ export class Buildings {
   markNoPlan(b: Building, level: number, x: number, y: number, side: Side): void {
     const border = borderOf(x, y, side);
     this.noPlans.set(wallKey(level, border), { building: b.id, level, ...border });
+    this.revision++;
   }
 
   /** Take the No plan mark off a side: its plan model is drawn again. */
   markOut(level: number, x: number, y: number, side: Side): void {
     this.noPlans.delete(wallKey(level, borderOf(x, y, side)));
+    this.revision++;
   }
 
   /** Clear a building's No plan marks on storey `from` and up: a storey removed, or the building. */
   dropNoPlans(id: number, from = 0): void {
     for (const [k, m] of this.noPlans) if (m.building === id && m.level >= from) this.noPlans.delete(k);
+    this.revision++;
   }
 
   /**
@@ -1000,6 +1019,7 @@ export class Buildings {
 
   removeWall(level: number, x: number, y: number, side: Side): void {
     this.walls.delete(wallKey(level, borderOf(x, y, side)));
+    this.revision++;
   }
 
   floor(level: number, x: number, y: number): FloorTile | undefined {
@@ -1010,6 +1030,7 @@ export class Buildings {
     const single = kind === 'stairs' && hand && STAIR_HANDS.includes(hand) ? hand : undefined;
     const f: FloorTile = { building: b.id, level, x, y, material, kind, facing, ...(single ? { hand: single } : {}), ...floorBill(material, kind, roofShapeOf(b), single) };
     this.floors.set(floorKey(level, x, y), f);
+    this.revision++;
     if (level > 0 && !this.tileIndex.has(tileKey(x, y))) this.jettyIndex.set(tileKey(x, y), b.id);
     return f;
   }
@@ -1027,6 +1048,7 @@ export class Buildings {
 
   removeFloor(level: number, x: number, y: number): void {
     this.floors.delete(floorKey(level, x, y));
+    this.revision++;
     if (this.jettyIndex.has(tileKey(x, y))) this.reindexJetty(x, y);
   }
 
@@ -1053,6 +1075,7 @@ export class Buildings {
 
   /** Dig a tile down to `dug`, or fill it back in to nothing. */
   setCellar(building: number, x: number, y: number, dug: number): void {
+    this.revision++;
     if (dug <= 0) this.cellars.delete(tileKey(x, y));
     else this.cellars.set(tileKey(x, y), { building, x, y, dug: Math.min(CELLAR_DEPTH, dug) });
   }
@@ -1489,11 +1512,13 @@ export class Buildings {
     const c: Column = { building: b.id, level, x, y, material, ...columnBill(material) };
     if (!this.columns.has(columnKey(level, x, y))) this.cornerIndex.set(cornerNumber(x, y), (this.cornerIndex.get(cornerNumber(x, y)) ?? 0) + 1);
     this.columns.set(columnKey(level, x, y), c);
+    this.revision++;
     return c;
   }
 
   removeColumn(level: number, x: number, y: number): void {
     if (!this.columns.delete(columnKey(level, x, y))) return;
+    this.revision++;
     const n = (this.cornerIndex.get(cornerNumber(x, y)) ?? 1) - 1;
     if (n > 0) this.cornerIndex.set(cornerNumber(x, y), n);
     else this.cornerIndex.delete(cornerNumber(x, y));
@@ -1620,6 +1645,7 @@ export class Buildings {
    * would leave it standing in this browser for ever.
    */
   sawIsland(data: BuildingsJSON): void {
+    this.revision++;
     this.list.clear();
     this.tileIndex.clear();
     this.pierTiles.clear();
