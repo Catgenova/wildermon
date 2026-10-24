@@ -122,11 +122,22 @@ function planAnew(b: Bridge, f: BridgeFrame): Planned | null {
   const plan = planOf({
     n, lanes, ground, done, rise: b.rise ?? 0, width: bridgeWidth(b), moss, style,
     deck: (s) => rampDeck(b.height, b.rise ?? 0, n, s),
-    bays: bridgeBays(n, BRIDGES[b.kind].bay),
+    bays: drawnBays(n, BRIDGES[b.kind].bay, !!b.rise),
   });
   const p: Planned = { key, uid: ++planUid, plan, A, P, slices: new Map() };
   plans.set(b.id, p);
   return p;
+}
+
+/**
+ * The arches a bridge is drawn with: its bays (`bridgeBays`); and under a
+ * ramp, each of them split into arches of about a tile, each springing at
+ * its own height under the slope, a run of small arches stepping up with
+ * the deck. Only how it is drawn: its piers and its bill are its bays'.
+ */
+export function drawnBays(n: number, bay: number | undefined, ramp: boolean): number[] {
+  const bays = bridgeBays(n, bay);
+  return ramp ? bays.flatMap((len) => { const m = Math.max(1, Math.round(len)); return new Array<number>(m).fill(len / m); }) : bays;
 }
 
 /** Forget the plans of bridges no longer standing. */
@@ -355,7 +366,7 @@ export function bridgeNight(p: BridgePieceAt, zoom: number, rotation: number): {
     box: [p.sx + box[0] * zoom, p.sy + box[1] * zoom, p.sx + box[2] * zoom, p.sy + box[3] * zoom],
     holes: (dx, dy) => [
       ...g.lamps.map((q) => { const [x, y] = proj(e, q); return { x: p.sx + dx + x * zoom, y: p.sy + dy + y * zoom, r: 34 * zoom, a: 0.75 }; }),
-      ...g.lines.filter((_, i) => i % 2 === 0).map((l) => { const [x, y] = proj(e, l[0]); return { x: p.sx + dx + x * zoom, y: p.sy + dy + y * zoom, r: 12 * zoom, a: 0.28 }; }),
+      ...lineHoles(g.lines.map((l) => [proj(e, l[0]), proj(e, l[1])])).map(([x, y]) => ({ x: p.sx + dx + x * zoom, y: p.sy + dy + y * zoom, r: 12 * zoom, a: 0.28 })),
     ],
     masks: (dx, dy) => {
       let sh = kept.get(mkey);
@@ -366,6 +377,26 @@ export function bridgeNight(p: BridgePieceAt, zoom: number, rotation: number): {
       return [{ canvas: sh.canvas, x: p.sx + dx + sh.x * zoom, y: p.sy + dy + sh.y * zoom, w: sh.w * zoom, h: sh.h * zoom, a: 0.9 }];
     },
   };
+}
+
+/**
+ * Where a rune line's soft light falls, along its pieces of line on the
+ * screen (pixels at zoom one): one every `LINE_LIGHT` of their length,
+ * however finely a style has cut the line, so every kind glows as strongly.
+ */
+const LINE_LIGHT = 20;
+function lineHoles(lines: Array<[[number, number], [number, number]]>): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  let at = LINE_LIGHT / 2;
+  for (const [[x0, y0], [x1, y1]] of lines) {
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    while (at <= len) {
+      out.push([x0 + ((x1 - x0) * at) / len, y0 + ((y1 - y0) * at) / len]);
+      at += LINE_LIGHT;
+    }
+    at -= len;
+  }
+  return out;
 }
 
 /** Whether a bridge is drawn by this kit. */
