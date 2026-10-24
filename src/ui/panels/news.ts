@@ -55,6 +55,8 @@ import { REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
 import { LIGHT_RES, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
+import { SUN_STEPS } from '../../render/trees3d';
+import { TURNS } from '../../render/view';
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
@@ -3671,6 +3673,13 @@ export const NEWS: News[] = [
       'Changed: count boxes for a craft (shopping list, make until you hold): button Select Quantity.',
       'Fixed: part of a row of a thing that does not stack (needles) into a crate: the count asked for, as far as there is room. Was: the whole row.',
       'Fixed: mounted and at a wagon\'s reins at once: drawn twice, name and speech bubble twice, to everyone else. Take the reins while mounted: refused, "Dismount first."',
+    ],
+  },
+  {
+    n: 305,
+    day: '2026-10-24',
+    lines: () => [
+      `Changed: maples drawn solid: own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun.`,
     ],
   },
 ];

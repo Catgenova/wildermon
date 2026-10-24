@@ -127,8 +127,8 @@ const bakes = new Map<string, TreeSprite>();
 let pixels = 0;
 let spent = 0;
 let made = 0;
-/** What has been made, for a harness to read. */
-export const tree3dStats = { bakes: 0, ms: 0, standIns: 0, paintMs: 0 };
+/** What has been made, and how often an older one stood in: for a harness, and for the renderer to know a shade is not yet its sun's own. */
+export const tree3dStats = { bakes: 0, ms: 0, standIns: 0, paintMs: 0, shadeStandIns: 0 };
 
 /** A new frame: its own `BAKE_MS` to spend. Called by the renderer once a frame. */
 export function tree3dFrame(): void {
@@ -253,7 +253,10 @@ export function tree3dShadow(species: number, variant: number, season: Season, d
     for (let d = 1; d <= SUN_STEPS + 1; d++) {
       for (const s of [step - d, step + d]) {
         const near = shadows.get(`${head}${s}|${turn}`);
-        if (near) return near;
+        if (near) {
+          tree3dStats.shadeStandIns++;
+          return near;
+        }
       }
     }
   }

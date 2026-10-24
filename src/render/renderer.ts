@@ -43,7 +43,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
-import { SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFrame, tree3dShadow, type TreeView } from './trees3d';
+import { SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFrame, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -156,9 +156,9 @@ const ZOOM_SETTLE = 220;
 const TREE_PICTURE_MS = 6;
 /** How long, in milliseconds, a frame may spend making the solid trees' shade pictures afresh (`solidFrame`); the rest lay last frame's. */
 const SHADE_MS = 3;
-/** How many trees' shade a frame may lay into lines' pictures made again, and how many pictures of solid trees it may make, while older ones can stand in: the clock sees only part of what a picture costs, its drawing being done when it is first copied. */
+/** How many trees' shade a frame may lay into lines' pictures made again (at zoom one; fewer closer in), and how many device pixels of pictures of solid trees it may make, while older ones can stand in: the clock sees only part of what a picture costs, its drawing being done when it is first copied. */
 const SHADE_PARTS = 20;
-const SOLID_PICTURES = 12;
+const SOLID_PICTURE_PX = 250_000;
 /** The solid trees' shade pictures' resolution against the screen's: the screen's, as a picture blown up is dear to lay. */
 const SHADE_RES = 1;
 /** How long, in milliseconds, a frame may spend making pictures of blocks of the ground (`bakeChunk`); the rest is drawn as it always was. */
@@ -7252,7 +7252,8 @@ export class Renderer {
     // Which trees' shade falls on which line, and where, for this sun.
     const linesKey = `${step}|${season}${lookStep(day)}`;
     if (scan.linesKey !== linesKey) {
-      scan.linesKey = linesKey;
+      // Kept as done only when every tree's shade is this sun's own, not one standing in for it.
+      const was = tree3dStats.shadeStandIns;
       scan.lines = new Map();
       for (const tr of scan.trees) {
         const shade = tree3dShadow(tr.species, tr.variant, season, day, tr.x, tr.y, step, cam.rotation);
@@ -7266,6 +7267,7 @@ export class Renderer {
           line.push(part);
         }
       }
+      scan.linesKey = tree3dStats.shadeStandIns === was ? linesKey : '';
     }
     /*
      * The pictures: kept while nothing they show has changed, and made again
@@ -7333,7 +7335,7 @@ export class Renderer {
         g.fillStyle = `rgba(30,56,66,${alpha})`;
         g.fillRect(from, 0, to - from, H1);
         g.restore();
-        if (had) remade += n;
+        if (had) remade += n * zoom * zoom;
         had = { sig, cv: g.canvas, x0: wx0, top, wIso, k, stepH };
         this.solidStripsKept.set(d, had);
       }
@@ -7509,7 +7511,7 @@ export class Renderer {
   private inkFrame = -1;
   /** The milliseconds spent making tree pictures in the frame `treeMakeFrame`, against `TREE_PICTURE_MS`. */
   private treeMadeMs = 0;
-  /** How many pictures of solid trees this frame has made (`SOLID_PICTURES`). */
+  /** How many device pixels of pictures of solid trees this frame has made (`SOLID_PICTURE_PX`). */
   private solidMade = 0;
   private treeMakeFrame = -1;
 
@@ -7575,8 +7577,8 @@ export class Renderer {
       this.treeMadeMs = 0;
       this.solidMade = 0;
     }
-    // A solid tree's pictures are made a few a frame, too: a step of the sun changes every one of them at once (`SOLID_PICTURES`).
-    const may = this.treeMadeMs < TREE_PICTURE_MS && (!spr.solid || this.solidMade < SOLID_PICTURES);
+    // A solid tree's pictures are made a few a frame, too: a step of the sun changes every one of them at once (`SOLID_PICTURE_PX`).
+    const may = this.treeMadeMs < TREE_PICTURE_MS && (!spr.solid || this.solidMade < SOLID_PICTURE_PX);
     if (had && (!may || !this.zoomSettled)) return use(had, key);
     if (!may || !this.zoomSettled) {
       const list = this.treeOwn.get(own);
@@ -7589,7 +7591,15 @@ export class Renderer {
     const t0 = performance.now();
     const made = this.makeTreePicture(spr, key, own, w, h, haze, lean);
     this.treeMadeMs += performance.now() - t0;
-    if (spr.solid) this.solidMade++;
+    if (spr.solid) this.solidMade += w * h;
+    // No room for it: what this tree had stands in, rather than the sprite squeezed afresh every frame.
+    if (!made && spr.solid) {
+      const list = this.treeOwn.get(own);
+      for (let d = 0; list && d <= HAZE_STEPS; d++) {
+        const near = list[haze - d] ?? list[haze + d];
+        if (near) return use(near, near.key);
+      }
+    }
     return made;
   }
 
