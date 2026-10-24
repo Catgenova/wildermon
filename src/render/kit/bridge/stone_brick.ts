@@ -672,7 +672,7 @@ export function wallRun(k: Kit, part: Part3, sa: number, sb: number, w: Wall, st
 }
 
 /** A coping along a run: its top and its two faces, overhanging `over` either side, its rune line glowing. */
-export function copingRun(k: Kit, part: Part3, sa: number, sb: number, edge: number, t0: number, t1: number, z: (s: number) => number, h: number, over: number, tone: Tone, step: number, order = 2, role: Role = 'cap'): void {
+export function copingRun(k: Kit, part: Part3, sa: number, sb: number, edge: number, t0: number, t1: number, z: (s: number) => number, h: number, over: number, tone: Tone, step: number, order = 2, role: Role = 'cap', glowAt: readonly number[] = [0.5]): void {
   const { sl } = k;
   const xs = samples(sa, sb, [], step);
   const c0 = t0 - over, c1 = t1 + over;
@@ -686,7 +686,8 @@ export function copingRun(k: Kit, part: Part3, sa: number, sb: number, edge: num
       k.face(part, [[a, t, z(a)], [b, t, z(b)], [b, t, z(b) + h], [a, t, z(a) + h]], [0, out, 0], tone,
         infoOf(role, 0, 0, 0, 0, sl.i), wallFrame(t, out));
     }
-    k.glow.lines.push([k.m([a, tOut + edge * 0.004, z(a) + h * 0.5]), k.m([b, tOut + edge * 0.004, z(b) + h * 0.5])]);
+    // The rune line's glow, at each height given up its face: a broader band where one line would be lost on a dark stone.
+    for (const f of glowAt) k.glow.lines.push([k.m([a, tOut + edge * 0.004, z(a) + h * f]), k.m([b, tOut + edge * 0.004, z(b) + h * f])]);
   }
   for (const [s, dirn] of [[sa, -1], [sb, 1]] as Array<[number, number]>) {
     if ((dirn < 0 && sa <= sl.s0 + 1e-6) || (dirn > 0 && sb >= sl.s1 - 1e-6)) continue;

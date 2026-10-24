@@ -1,4 +1,4 @@
-import { css, faceColour, type Tone } from '../core';
+import { css, faceColour, hex, type Tone } from '../core';
 import { type BridgePainter, type BridgeStyle, type Kit, type Part3 } from './core';
 import { archesKeyed, copingRun, coursed, framed, refugesOwn, treadPaint, houseTone, keystone, moulding, newelPost, runsOf, voussoirs, wallRun, type Beds } from './stone_brick';
 
@@ -15,11 +15,20 @@ const DUSK: [number, number, number] = [0.9, 0.89, 0.97];
 const PALE_DUSK: [number, number, number] = [0.862, 0.858, 0.893];
 const t = (h: string): Tone => houseTone(h, DUSK);
 const p = (h: string): Tone => houseTone(h, PALE_DUSK);
+/**
+ * The dark slate a step lifted toward the island's pale lilac: a bridge
+ * stands out in the open, most of its faces turned from the light, where a
+ * house's walls are seen lit; this keeps it the house's slate on the screen.
+ */
+const lift = (h: string): Tone => {
+  const c = hex(h).map((v, i) => Math.round(v + ([214, 216, 236][i] - v) * 0.15));
+  return houseTone(`#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`, DUSK);
+};
 
-const FIELD = t('#4f5369');
-const BEDS: Beds = [[FIELD, 5], [t('#544f69'), 1.6], [t('#474b62'), 1.6], [t('#4a4f68'), 1], [t('#585c72'), 1.2], [t('#43465a'), 0.8]];
-const JOINT = t('#6a6c84');
-const HI = t('#666a84');
+const FIELD = lift('#4f5369');
+const BEDS: Beds = [[FIELD, 5], [lift('#544f69'), 1.6], [lift('#474b62'), 1.6], [lift('#4a4f68'), 1], [lift('#585c72'), 1.2], [lift('#43465a'), 0.8]];
+const JOINT = lift('#6a6c84');
+const HI = lift('#666a84');
 /** The pale slate it is dressed in, and the violet of its voussoirs. */
 const DRESS = p('#aeb0c4');
 const VOUS = p('#7b76a0');
@@ -27,12 +36,12 @@ const DRESS_JOINT = p('#7f8198');
 const DRESS_HI = p('#c4c6d6');
 const BAND = p('#b4b6c8');
 /** Its riven floor (`flooring.ts`). */
-const FLOOR_BEDS: Beds = [[t('#6b7089'), 3], [t('#646983'), 3], [t('#727792'), 2], [t('#5e637c'), 2], [t('#6a6a86'), 1]];
+const FLOOR_BEDS: Beds = [[lift('#6b7089'), 3], [lift('#646983'), 3], [lift('#727792'), 2], [lift('#5e637c'), 2], [lift('#6a6a86'), 1]];
 
 const RUNE = 'laguz';
 
 const wall = coursed({ rows: [2.1, 1.6, 2.4, 1.8, 2.2], len: 7.5, wander: 0.45, beds: BEDS, joint: JOINT, hi: HI, jointW: 0.4, bevel: 0.3 });
-const deck = coursed({ rows: [9, 13, 7.5, 11], len: 15, wander: 0.5, beds: FLOOR_BEDS, joint: t('#34364a'), hi: t('#8f94ad'), jointW: 0.7, bevel: 0.5 });
+const deck = coursed({ rows: [9, 13, 7.5, 11], len: 15, wander: 0.5, beds: FLOOR_BEDS, joint: lift('#34364a'), hi: lift('#8f94ad'), jointW: 0.7, bevel: 0.5 });
 
 /** The dogtooth: a row of teeth across the middle of a band, each one face lit and one turned from the light, the dark between them. */
 const dogtooth: BridgePainter = (g, k, f) => {
@@ -70,7 +79,7 @@ function cappedParapet(k: Kit, edge: number, part: Part3): void {
   const step = plan.ramp ? 1 / 3 : 1;
   for (const [sa, sb] of runsOf(plan, sl)) {
     wallRun(k, part, sa, sb, { tOut, tIn, edge, foot: deckAt, top: (s) => deckAt(s) + WALL, tone: st.stone, role: 'parapet', order: 1 }, step, false);
-    copingRun(k, part, sa, sb, edge, t0, t1, (s) => deckAt(s) + WALL, CAP, 0.034, st.trim, step);
+    copingRun(k, part, sa, sb, edge, t0, t1, (s) => deckAt(s) + WALL, CAP, 0.034, st.trim, step, 2, 'cap', [0.3, 0.5, 0.7]);
   }
 }
 
@@ -91,12 +100,12 @@ export const slate: BridgeStyle = framed({
   stone: FIELD,
   ring: DRESS,
   trim: BAND,
-  deck: t('#686d87'),
+  deck: lift('#686d87'),
   parapet: 'capped',
   parapetHeight: WALL + CAP,
   ringDepth: 3.8,
   rune: RUNE,
-  glow: '#e4deff',
+  glow: '#f2eeff',
   paint: {
     wall, pier: wall, parapet: wall, post: wall,
     ring: voussoirs({ width: 3, beds: [[DRESS, 1], [VOUS, 1]], alternate: true, joint: DRESS_JOINT, soffit: coursed({ rows: [3.2], len: 9, beds: BEDS, joint: t('#3b3e51'), jointW: 0.4 }) }),
@@ -104,7 +113,7 @@ export const slate: BridgeStyle = framed({
     cap: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 11, rune: RUNE }),
     cornice: dogtooth,
     plinth: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 9 }),
-    deck, tread: treadPaint(deck, t('#8f94ad'), t('#34364a')),
+    deck, tread: treadPaint(deck, lift('#8f94ad'), t('#34364a')),
   },
   build: { parapet: cappedParapet, refuges: refugesOwn({ top: WALL, cope: CAP, over: 0.034, thick: 0.085 }), ends: slateEnds, arches: archesKeyed(0.12, 1.8, 1, VOUS) },
-}, { riser: t('#474b61') });
+}, { riser: lift('#474b61') });
