@@ -180,7 +180,7 @@ export interface Whorls {
   stubs: number;
   /** Share of the boughs gone from the whorls. */
   gaps: number;
-  /** A pointed tuft on the leader over the top whorl. */
+  /** A ragged tuft of small boughs on the leader over the top whorl, its tip clear of them. */
   spire: boolean;
   /** How low the lowest boughs hang, as a share of the height. */
   hem: number;
@@ -195,11 +195,9 @@ export interface Pad {
   reach: number;
   /** Half-width at its widest. */
   w: number;
-  /** How far its end falls below where it leaves the leader; for the tuft, how tall it stands. */
+  /** How far its end falls below where it leaves the leader. */
   drop: number;
   /** How far the needles hang under it at its end. */
   hang: number;
   fingers: number;
-  /** The tuft on the leader's top rather than a bough. */
-  spire?: boolean;
 }

@@ -13,7 +13,7 @@ const rampOf = ([lit, mid, deep]: readonly [string, string, string]): Ramp =>
 
 /** The pine's habit: tall whorls of hanging, fingered boughs. The cedar can hang the same to its own numbers. */
 const HABIT: Whorls = {
-  tiers: 7, pads: 7, width: 0.55, hang: 0.3, fingers: 6, ragged: 0.6, taper: 0.16, deadTop: 1, broken: false, stubs: 1, gaps: 0, spire: true, hem: 0.24,
+  tiers: 6, pads: 5, width: 0.6, hang: 0.3, fingers: 6, ragged: 0.3, taper: 0.26, deadTop: 1, broken: false, stubs: 1, gaps: 0, spire: true, hem: 0.24,
 };
 const habit = (w: Partial<Whorls>): Pick<Build, 'whorls'> => ({ whorls: { ...HABIT, ...w } });
 
@@ -30,21 +30,21 @@ const habit = (w: Partial<Whorls>): Pick<Build, 'whorls'> => ({ whorls: { ...HAB
 export const pine: Species3D = {
   name: 'Pine',
   build: {
-    height: 54, stem: 0.36, spread: 0.36, dome: 0, droop: 0.15, girth: 0.03, flare: 1.7, scaffolds: 0, forks: 0, branching: 0,
+    height: 62, stem: 0.36, spread: 0.36, dome: 0, droop: 0.15, girth: 0.04, flare: 1.7, scaffolds: 0, forks: 0, branching: 0,
     clumps: 0, clumpSize: 0, gnarl: 0.1, lean: 0.8, dead: 0, bare: false, rune: false, hollow: false, ...habit({}),
   },
   ages: {
-    sapling: { stem: 0.06, spread: 0.3, girth: 0.03, flare: 1, gnarl: 0, lean: 0.2, ...habit({ tiers: 4, pads: 5, stubs: 0, fingers: 4, hem: 0.04, taper: 0.35 }) },
-    young: { stem: 0.26, spread: 0.28, girth: 0.028, flare: 1.3, lean: 0.4, ...habit({ tiers: 6, stubs: 0, hem: 0.16, taper: 0.22 }) },
-    old: { stem: 0.4, spread: 0.31, girth: 0.034, flare: 1.85, gnarl: 0.2, lean: 1.2, rune: true, ...habit({ tiers: 8, stubs: 3, gaps: 0.15 }) },
+    sapling: { stem: 0.06, spread: 0.3, girth: 0.034, flare: 1, gnarl: 0, lean: 0.2, ...habit({ tiers: 4, pads: 5, stubs: 0, fingers: 5, hem: 0.04, taper: 0.35 }) },
+    young: { stem: 0.26, spread: 0.3, girth: 0.036, flare: 1.3, lean: 0.4, ...habit({ tiers: 5, stubs: 0, hem: 0.16, taper: 0.22 }) },
+    old: { stem: 0.4, spread: 0.31, girth: 0.044, flare: 1.85, gnarl: 0.2, lean: 1.2, rune: true, ...habit({ tiers: 7, stubs: 3, gaps: 0.12 }) },
     veryOld: {
-      stem: 0.4, spread: 0.3, girth: 0.038, flare: 1.95, gnarl: 0.35, lean: 1.6, rune: true, hollow: true,
-      ...habit({ tiers: 8, stubs: 4, gaps: 0.15, deadTop: 0.8, broken: true }),
+      stem: 0.4, spread: 0.3, girth: 0.046, flare: 1.95, gnarl: 0.35, lean: 1.6, rune: true, hollow: true,
+      ...habit({ tiers: 6, stubs: 4, gaps: 0.15, deadTop: 0.8, broken: true }),
     },
-    shrivelled: { stem: 0.25, spread: 0.3, girth: 0.036, flare: 1.9, gnarl: 0.4, lean: 1.6, bare: true, rune: true, ...habit({ broken: true }) },
+    shrivelled: { stem: 0.25, spread: 0.3, girth: 0.044, flare: 1.9, gnarl: 0.4, lean: 1.6, bare: true, rune: true, ...habit({ broken: true }) },
     clipped: { height: 30, stem: 0.05, spread: 0.62, droop: 0.15, girth: 0.05, flare: 1.3, lean: 0.3, ...habit({ tiers: 4, pads: 7, taper: 0.4, spire: false, stubs: 0, hem: 0.03 }) },
   },
-  bark: { lit: tone(flat.bark, 0.3), shade: mix(flat.bark, '#3e3040', 0.45), dead: tone(mix(flat.bark, '#9a9a9a', 0.5), 0.35), furrow: mix(flat.bark, '#2e2230', 0.6) },
+  bark: { lit: tone(flat.bark, 0.2), shade: mix(flat.bark, '#3e3040', 0.25), dead: tone(mix(flat.bark, '#9a9a9a', 0.5), 0.35), furrow: mix(flat.bark, '#2e2230', 0.6) },
   leaf: {
     summer: rampOf(flat.leaf),
     spring: rampOf(fresh(flat.leaf)),

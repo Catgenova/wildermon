@@ -736,35 +736,39 @@ function hung(q: Pt[], h: number[], under?: boolean[]): Pt[] {
 interface Rim { x: number; y: number; dz: number; h: number; finger: boolean }
 
 /**
- * A bough's outline: narrow where it leaves the leader, widest past its
- * middle, its end cut into fingers that hang lower than the rest, the
- * needles under them hanging longest.
+ * A bough's outline: narrow where it leaves the leader, broad past its
+ * middle, its end cut into a few blunt fingers between sharp notches, the
+ * fingers hanging lower than the rest and the needles under them longest.
  */
 function rimOf(p: Pad, R: () => number): Rim[] {
   const L = p.reach, W = p.w, H = p.hang;
-  const wAt = (t: number): number => W * (0.22 + 0.78 * Math.sin(Math.PI * Math.min(1, t) * 0.8));
+  // A fan: a narrow heel on the leader, opening out to a broad, fingered end.
+  const wAt = (t: number): number => W * (0.35 + 0.65 * Math.min(1, t * 1.6));
   const out: Rim[] = [];
-  for (const t of [0, 0.2, 0.38]) out.push({ x: t * L, y: -wAt(t), dz: 0, h: H * (0.15 + 0.4 * t), finger: false });
-  const xc = 0.55 * L, rx = 0.45 * L + W * 0.08, ry = wAt(0.55);
+  for (const t of [0, 0.3]) out.push({ x: t * L, y: -wAt(t), dz: 0, h: H * (0.2 + 0.3 * t), finger: false });
+  const xc = 0.62 * L, rx = 0.38 * L, ry = wAt(0.62);
   const F = p.fingers;
   const at = (a: number, k: number, dz: number, h: number, finger: boolean): void => {
     out.push({ x: xc + Math.cos(a) * rx * k, y: Math.sin(a) * ry * k, dz, h, finger });
   };
   for (let j = 0; j <= F; j++) {
     const a = -Math.PI / 2 + (Math.PI * j) / F;
-    const notch = 0.8 - 0.1 * R();
-    at(a, notch, 0, H * 0.18, false);
-    at(a, notch, 0, H * 0.18, false);
+    // A sharp notch, cut deep between two fingers.
+    const notch = j === 0 || j === F ? 0.97 : 0.7 + 0.14 * R();
+    at(a, notch, 0, H * 0.22, false);
+    at(a, notch, 0, H * 0.22, false);
     if (j === F) break;
-    const m = a + Math.PI / (2 * F), half = (Math.PI / (2 * F)) * 0.32;
-    const k = 1.08 + 0.14 * R();
-    const end = 0.3 + 0.7 * Math.cos(m);
-    const dz = -H * (0.2 + 0.25 * R()) * end;
-    const h = H * (0.6 + 1.1 * R() * R() + 0.3 * R()) * (0.55 + 0.45 * end);
+    // A blunt finger, the ones round the end longest.
+    const m = a + Math.PI / (2 * F) + (R() - 0.5) * (Math.PI / (4 * F));
+    const half = (Math.PI / (2 * F)) * 0.22;
+    const end = 0.55 + 0.45 * Math.cos(m);
+    const k = 1.08 + 0.2 * R();
+    const dz = -H * (0.25 + 0.3 * R()) * end;
+    const h = H * (0.6 + 1.0 * R()) * (0.5 + 0.5 * end);
     at(m - half, k, dz, h, true);
-    at(m + half, k, dz, h * (0.9 + 0.2 * R()), true);
+    at(m + half, k * (0.96 + 0.08 * R()), dz, h * (0.9 + 0.2 * R()), true);
   }
-  for (const t of [0.38, 0.2, 0]) out.push({ x: t * L, y: wAt(t), dz: 0, h: H * (0.15 + 0.4 * t), finger: false });
+  for (const t of [0.3, 0]) out.push({ x: t * L, y: wAt(t), dz: 0, h: H * (0.2 + 0.3 * t), finger: false });
   return out;
 }
 
@@ -789,52 +793,25 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
   const planes: Array<[Path2D, string]> = [];
   const winter = dress.season === 'winter';
   const snow = (l: number): string => rgb(mixRgb(hex('#c4d0e4'), hex('#fbfcff'), clamp01(l)));
-  if (p.spire) {
-    // The top: a narrow cone of needles on the leader, its hem hanging in fingers.
-    const apex = add(root, [0, 0, p.drop * 0.72]);
-    const K = 12;
-    const ring: Pt[] = [], h: number[] = [];
-    for (let k = 0; k < K; k++) {
-      const a = (k / K) * TAU + c.k * 3;
-      const r = p.reach * (k % 2 ? 0.8 : 1.05);
-      ring.push(proj(e, add(root, [Math.cos(a) * r, Math.sin(a) * r, k % 2 ? 0 : -p.hang * 0.3])));
-      h.push(p.hang * HEIGHT_SCALE * (k % 2 ? 0.25 : 0.7 + 0.4 * R()));
-    }
-    const q = proj(e, apex);
-    // Its underside: from the ring's leftmost point round the front to its rightmost, each point let down.
-    let iL = 0, iR = 0;
-    ring.forEach((pt, i) => { if (pt[0] < ring[iL][0]) iL = i; if (pt[0] > ring[iR][0]) iR = i; });
-    const run = (from: number, to: number): number[] => {
-      const o = [from];
-      for (let i = from; i !== to;) { i = (i + 1) % K; o.push(i); }
-      return o;
-    };
-    const A = run(iL, iR), B = run(iR, iL).reverse();
-    const avg = (c: number[]): number => c.reduce((t, i) => t + ring[i][1], 0) / c.length;
-    const under = (avg(A) >= avg(B) ? A : B).map((i): Pt => [ring[i][0], ring[i][1] + h[i]]);
-    const pts: Pt[] = [q, q, ...under];
-    roundPath(out, pts);
-    roundPath(all, pts);
-    const L = faceLight(job, [0, 0, 1], 1);
-    const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
-    planes.push([out, s.ramp[b]]);
-    const sun = sunOnScreen(job);
-    const lit = new Path2D();
-    const side = sun.sx >= 0 ? 1 : -1;
-    // The sunward half of it lit: the far half drawn in to the middle.
-    roundPath(lit, [q, q, ...under.map((pt): Pt => {
-      const dx = pt[0] - q[0];
-      return [q[0] + dx * (dx * side > 0 ? 0.88 : 0.12), q[1] + (pt[1] - q[1]) * 0.88];
-    })]);
-    if (!light.night || L > 0.6) planes.push([lit, winter ? snow(L) : s.ramp[b + 2]]);
-    return { d: dot(c.c, e.toward as V3), out, planes, rim: rimCol };
+  /*
+   * Parted in front: a bough pointing at the eye is turned aside, so the
+   * whorls part up the middle and the trunk shows between them, as the flat
+   * conifers hang a pair either side of the trunk.
+   */
+  let d = p.d;
+  const ex = e.toward[0], ey = e.toward[1];
+  const el = Math.hypot(ex, ey) || 1;
+  const phi = Math.atan2((ex * d[1] - ey * d[0]) / el, (ex * d[0] + ey * d[1]) / el);
+  if (Math.abs(phi) < PART) {
+    const to = (phi < 0 ? -1 : 1) * (PART + Math.abs(phi) * 0.3);
+    d = [(Math.cos(to) * ex - Math.sin(to) * ey) / el, (Math.sin(to) * ex + Math.cos(to) * ey) / el, 0];
   }
-  const d = p.d;
+  const centre = add(root, [d[0] * p.reach * 0.5, d[1] * p.reach * 0.5, -(root[2] - c.c[2])]);
   const side: V3 = [-d[1], d[0], 0];
   const L = p.reach, W = p.w;
   const at = (x: number, y: number, dz: number): V3 => {
     const t = x / L;
-    const z = -p.drop * Math.pow(Math.max(0, t), 1.5) + L * 0.05 * Math.sin(Math.PI * t) - 0.3 * (y * y) / W + dz;
+    const z = -p.drop * Math.pow(Math.max(0, t), 1.5) + L * 0.05 * Math.sin(Math.PI * t) - 0.12 * (y * y) / W + dz;
     return [root[0] + d[0] * x + side[0] * y, root[1] + d[1] * x + side[1] * y, root[2] + z];
   };
   const rim = rimOf(p, R);
@@ -854,7 +831,7 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
   planes.push([out, s.ramp[bh]]);
   const face = new Path2D();
   roundPath(face, q);
-  planes.push([face, s.ramp[bt]]);
+  planes.push([face, s.ramp[Math.max(1, bt - 1)]]);
   // Behind the leader, or small: the whorls over it hide all but its outline and its top.
   const tw = Math.hypot(e.toward[0], e.toward[1]) || 1;
   const fine = (d[0] * e.toward[0] + d[1] * e.toward[1]) / tw > -0.5 && L * ACROSS > 4;
@@ -885,30 +862,23 @@ function boughOf(job: Job, s: Shown, all: Path2D): Bough {
     planes.push([patch(0.62, 0.56, 0.05), s.ramp[Math.min(top, bt + 1)]]);
     if (dot(nTop, light.sun) > 0.35 && !light.night && fine) planes.push([patch(0.36, 0.34, 0.1), s.ramp[Math.min(top, bt + 2)]]);
   }
-  // New growth on the ends of the fingers through the spring: along their tops, and where they hang in sight.
+  // New growth on the ends of the fingers through the spring: the tip of each, where it hangs in sight or lies on the top.
   if (dress.season === 'spring') {
     const tips = new Path2D();
-    const k = dress.step === 0 ? 0.88 : 0.74;
-    const pts: Pt[] = [];
-    const end = rim.filter((r) => r.finger);
-    for (const r of end) pts.push(proj(e, at(r.x, r.y, r.dz)));
-    for (let i = end.length - 1; i >= 0; i--) {
-      const r = end[i];
-      pts.push(proj(e, at(L * 0.55 + (r.x - L * 0.55) * k, r.y * k, r.dz * k)));
-    }
-    roundPath(tips, pts);
-    const f = dress.step === 0 ? 0.25 : 0.42;
-    for (let i = 0; i + 1 < rim.length; i++) {
-      if (!rim[i].finger || !rim[i + 1].finger || !under[i] || !under[i + 1]) continue;
-      const [a, b] = [q[i], q[i + 1]];
-      const [ha, hb] = [hs[i], hs[i + 1]];
-      roundPath(tips, [[a[0], a[1] + ha * (1 - f)], [a[0], a[1] + ha * 0.97], [b[0], b[1] + hb * 0.97], [b[0], b[1] + hb * (1 - f)]]);
+    const k = dress.step === 0 ? 0.22 : 0.38;
+    const seen = (i: number): Pt => (under[i] ? [q[i][0], q[i][1] + hs[i]] : q[i]);
+    for (let i = 1; i + 2 < rim.length; i++) {
+      if (!rim[i].finger || !rim[i + 1].finger) continue;
+      const a = seen(i), b = seen(i + 1), na = seen(i - 1), nb = seen(i + 2);
+      roundPath(tips, [a, b, [b[0] + (nb[0] - b[0]) * k, b[1] + (nb[1] - b[1]) * k], [a[0] + (na[0] - a[0]) * k, a[1] + (na[1] - a[1]) * k]]);
       i++;
     }
-    planes.push([tips, spec.leaf.spring[Math.min(top, bt + 1)]]);
+    planes.push([tips, spec.leaf.spring[Math.min(top, bt + 2)]]);
   }
-  return { d: dot(c.c, e.toward as V3), out, planes, rim: rimCol };
+  return { d: dot(centre, e.toward as V3), out, planes, rim: rimCol };
 }
+/** How far round from the eye a bough is turned aside, at the least, in radians. */
+const PART = 0.7;
 
 /** A rune cut in the bark lit from inside at night, as the island's runes are. */
 function runeGlow(g: Ctx, job: Job): void {

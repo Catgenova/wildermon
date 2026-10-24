@@ -257,7 +257,7 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   const stemZ = H * b.stem;
   const dead = b.bare || w.deadTop < 1;
   // Where the live crown stops, and where the leader does.
-  const crownTop = b.bare ? stemZ : H * (w.deadTop < 1 ? w.deadTop : w.spire ? 0.9 : 0.97);
+  const crownTop = b.bare ? stemZ : H * (w.deadTop < 1 ? w.deadTop : w.spire ? 0.86 : 0.97);
   const topZ = b.bare ? H * 0.88 : w.deadTop < 1 ? crownTop : H;
   const bend = (R() - 0.5) * 2 * b.gnarl * r0 * 2.2;
   const axis = (z: number): V3 => {
@@ -352,49 +352,47 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   const env: Envelope = { c: axis(stemZ + (crownTop - stemZ) * 0.4), r: H * b.spread, rz: Math.max(1, (H - stemZ) / 2) };
   const gap = n > 1 ? (crownTop - stemZ) / (n - 1) : H * 0.2;
   let a0 = R() * TAU;
+  /** A bough off the leader at `z`, pointing `az` round, `reach` long; `whole` the reach of its whorl, `u` how far up the crown. */
+  const bough = (z: number, az: number, reach: number, whole: number, u: number, fingers: number): void => {
+    const d: V3 = [Math.cos(az), Math.sin(az), 0];
+    const width = reach * w.width * (0.85 + 0.3 * R());
+    // A whorl falls as one, whatever each bough's reach, so it hangs to one hem.
+    let drop = (reach * 0.4 + whole * 0.6) * b.droop * (0.9 + 0.2 * R());
+    let hang = Math.min(gap * w.hang, reach * 0.4) * (0.85 + 0.3 * R());
+    const root = add(axis(z), mul(d, radius(z) * 0.4));
+    // Kept clear of the ground, and of the tiles in front of its own, which are laid after it (`hemAt`).
+    const low = drop + hang * 2;
+    const floor = Math.max(H * w.hem, hemAt(H, Math.hypot(root[0], root[1]) + reach * 1.15));
+    if (root[2] - low < floor) {
+      const k = Math.max(0.15, (root[2] - floor) / low);
+      drop *= k;
+      hang *= k;
+    }
+    const c = add(root, [d[0] * reach * 0.5, d[1] * reach * 0.5, -drop * 0.35]);
+    clumps.push({
+      // Its mass's radius: what its shade on the ground is laid round, wide enough that a whorl's shade meets the next one's under a low sun.
+      c, r: reach * 0.72, limb: pieceAt(z), k: R(), out: 1, up: u,
+      pad: { root: sub(root, c), d, reach, w: width, drop, hang, fingers },
+    });
+  };
   for (let i = 0; i < n; i++) {
     const u = n === 1 ? 0 : i / (n - 1);
-    const z = zs[i];
     const reachT = H * b.spread * (1 - (1 - w.taper) * u) * (0.92 + 0.16 * R());
-    const m = Math.max(3, Math.round(w.pads * (1 - 0.4 * u)));
+    const m = Math.max(3, Math.round(w.pads * (1 - 0.3 * u)));
     a0 += 2.4;
-    const piece = pieceAt(z);
     for (let j = 0; j < m; j++) {
       if (w.gaps > 0 && R() < w.gaps && i > 0) continue;
-      const az = a0 + (j / m) * TAU + (R() - 0.5) * (TAU / m) * 0.5;
-      const d: V3 = [Math.cos(az), Math.sin(az), 0];
-      const reach = reachT * (1 + w.ragged * (R() - 0.5) * 0.6);
-      const width = reach * w.width * (0.85 + 0.3 * R());
-      // A whorl falls as one, whatever each bough's reach, so it hangs to one hem.
-      let drop = (reach * 0.4 + reachT * 0.6) * b.droop * (0.9 + 0.2 * R());
-      let hang = Math.min(gap * w.hang, reach * 0.4) * (0.85 + 0.3 * R());
-      const root = add(axis(z), mul(d, radius(z) * 0.4));
-      // Kept clear of the ground, and of the tiles in front of its own, which are laid after it (`hemAt`).
-      const low = drop + hang * 2;
-      const floor = Math.max(H * w.hem, hemAt(H, Math.hypot(root[0], root[1]) + reach * 1.15));
-      if (root[2] - low < floor) {
-        const k = Math.max(0.15, (root[2] - floor) / low);
-        drop *= k;
-        hang *= k;
-      }
-      const c = add(root, [d[0] * reach * 0.5, d[1] * reach * 0.5, -drop * 0.35]);
-      clumps.push({
-        c, r: reach * 0.55, limb: piece, k: R(), out: 1, up: n === 1 ? 1 : u,
-        pad: { root: sub(root, c), d, reach, w: width, drop, hang, fingers: Math.max(3, Math.round(w.fingers - u * 2)) },
-      });
+      const az = a0 + (j / m) * TAU + (R() - 0.5) * (TAU / m) * 0.3;
+      bough(zs[i], az, reachT * (1 + w.ragged * (R() - 0.5) * 0.6), reachT, n === 1 ? 1 : u, Math.max(3, Math.round(w.fingers - u)));
     }
   }
-  /* ---- the tuft on the top ---- */
+  /* ---- a ragged tuft of small boughs on the leader over the top whorl, the leader's tip clear of it ---- */
   if (n > 0 && w.spire && w.deadTop >= 1) {
-    const z = crownTop + gap * 0.15;
-    const root = axis(z);
-    const tall = H - z;
-    const r = Math.max(1.2, H * b.spread * w.taper * 1.1);
-    const c = add(root, [0, 0, tall * 0.3]);
-    clumps.push({
-      c, r: Math.max(r, tall * 0.35), limb: pieceAt(z), k: R(), out: 1, up: 1,
-      pad: { root: sub(root, c), d: [1, 0, 0], reach: r, w: r, drop: tall, hang: gap * w.hang * 0.7, fingers: 5, spire: true },
-    });
+    const top = H * b.spread * w.taper;
+    for (const [f, k, m] of [[0.3, 0.7, 4], [0.6, 0.42, 3]]) {
+      a0 += 2.4;
+      for (let j = 0; j < m; j++) bough(crownTop + (H - crownTop) * f, a0 + (j / m) * TAU + (R() - 0.5) * 0.8, top * k * (0.8 + 0.4 * R()), top * k, 1, 3);
+    }
   }
   return {
     limbs, clumps, crown: env, height: H,
