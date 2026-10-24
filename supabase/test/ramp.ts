@@ -122,10 +122,10 @@ const BANK_B: [number, number] = [27, 34];
 const BANK_SPANS = BANK_B[0] - BANK_A[0] - 1;
 raiseTile(...BANK_B, BASE + RAMP_SLOPE * BANK_SPANS);
 same(`between two banks ${RAMP_SLOPE * BANK_SPANS} apart, ${RAMP_SLOPE} a tile over ${BANK_SPANS} tiles of deck is allowed on both sides`,
-  'wood', BANK_A, BANK_B, ALLOWED);
+  'plank', BANK_A, BANK_B, ALLOWED);
 raiseTile(...BANK_B, BASE + (RAMP_SLOPE + 1) * BANK_SPANS);
 same(`and ${RAMP_SLOPE + 1} a tile is refused in the same words, which say what that climb wants`,
-  'wood', BANK_A, BANK_B, rampRefusal(0, 0, (RAMP_SLOPE + 1) * BANK_SPANS, BANK_SPANS));
+  'plank', BANK_A, BANK_B, rampRefusal(0, 0, (RAMP_SLOPE + 1) * BANK_SPANS, BANK_SPANS));
 check('which are the numbers', rampRefusal(0, 0, (RAMP_SLOPE + 1) * BANK_SPANS, BANK_SPANS)
   === `Ends ${metres((RAMP_SLOPE + 1) * BANK_SPANS)} m apart in height. Max rise ${metres(RAMP_SLOPE)} m/tile: needs ${BANK_SPANS + 1} tiles of deck; has ${BANK_SPANS}.`);
 same('a drawbridge, whose deck stands on end over its hinge, is still carried level, as it was',
@@ -140,9 +140,9 @@ raiseTile(...BANK_B, BASE);
   const [a, b]: Array<[number, number]> = [[24, 32], [28, 32]];
   for (const x of [26, 27]) for (const y of [32, 33]) setCorner(x, y, BASE - 20);
   raiseTile(...b, BASE + END_SLOP);
-  same(`within ${END_SLOP} it is a level bridge as it always was`, 'wood', a, b, ALLOWED);
+  same(`within ${END_SLOP} it is a level bridge as it always was`, 'plank', a, b, ALLOWED);
   raiseTile(...b, BASE + END_SLOP + 1);
-  same(`and ${END_SLOP + 1} apart over three tiles is a ramp, allowed as well`, 'wood', a, b, ALLOWED);
+  same(`and ${END_SLOP + 1} apart over three tiles is a ramp, allowed as well`, 'plank', a, b, ALLOWED);
   for (const x of [26, 27]) for (const y of [32, 33]) setCorner(x, y, BASE);
   raiseTile(...b, BASE);
 }
@@ -179,10 +179,10 @@ const SHORT: [number, number] = [TOWER[0] - NEED, TOWER[1]];
     top.level === TOP && top.height === BASE + CLIMB && theirs === `${TOP},${BASE + CLIMB}`, `browser ${top.level},${top.height}; island ${theirs}`);
 }
 same(`from the ground to storey 3, ${CLIMB} up, over the ${NEED} tiles of deck that climb wants at ${RAMP_SLOPE} a tile is allowed on both sides`,
-  'wood', FOOT, TOWER, ALLOWED);
-same('and planned from the top down as well', 'wood', TOWER, FOOT, ALLOWED);
+  'plank', FOOT, TOWER, ALLOWED);
+same('and planned from the top down as well', 'plank', TOWER, FOOT, ALLOWED);
 same(`over ${NEED - 1} it is refused in the same words, which name the storeys and say it wants ${NEED}`,
-  'wood', SHORT, TOWER, rampRefusal(0, TOP, CLIMB, NEED - 1));
+  'plank', SHORT, TOWER, rampRefusal(0, TOP, CLIMB, NEED - 1));
 check('which are the numbers', rampRefusal(0, TOP, CLIMB, NEED - 1)
   === `Ends ${metres(CLIMB)} m apart in height (the ground to storey ${TOP + 1}). Max rise ${metres(RAMP_SLOPE)} m/tile: needs ${NEED} tiles of deck; has ${NEED - 1}.`);
 
@@ -191,7 +191,8 @@ game.player.x = FOOT[0] + 0.5;
 game.player.y = FOOT[1] + 0.5;
 game.player.level = 0;
 sql(`update player set body_at = now(), x = ${FOOT[0] + 0.5}, y = ${FOOT[1] + 0.5}, level = 0 where world_id = w and uid = u;`);
-const TARGET = { kind: 'tile', x: TOWER[0], y: TOWER[1], cx: TOWER[0], cy: TOWER[1], material: 'wood' };
+// Marble: a bay as long as this deck, so no pier, and a span's bill on every tile.
+const TARGET = { kind: 'tile', x: TOWER[0], y: TOWER[1], cx: TOWER[0], cy: TOWER[1], material: 'marble' };
 game.log.length = 0;
 ACTION_BY_ID.get('plan_bridge')!.perform(TARGET as never, game);
 const saidMine = game.log.map((l) => l.text).find((s) => s.startsWith('Planned: ')) ?? 'NOTHING SAID';
@@ -200,7 +201,7 @@ const saidTheirs = psql(`select text from event where world_id = ${W} and uid = 
 // What each span wants is named in the order each side keeps its bill in, which was so before ramps; the rest is the same.
 const upTo = (said: string): string => said.slice(0, said.indexOf(' Per span:'));
 check('set out, both sides say the same, the storeys and the rise among it', upTo(saidMine) === upTo(saidTheirs)
-  && saidMine.startsWith(`Planned: wooden bridge, ${NEED} spans, the ground to storey ${TOP + 1}, deck rising ${metres(CLIMB)} m toward the far end.`),
+  && saidMine.startsWith(`Planned: ${BRIDGES.marble.name.toLowerCase()}, ${NEED} spans, the ground to storey ${TOP + 1}, deck rising ${metres(CLIMB)} m toward the far end.`),
   `browser "${saidMine}", island "${saidTheirs}"`);
 const ramp = [...game.bridges.values()][0];
 {
@@ -213,8 +214,8 @@ const ramp = [...game.bridges.values()][0];
     mine === want && theirs === want, `browser ${mine}; island ${theirs}; want ${want}`);
 }
 {
-  // What a span of a wooden bridge takes, on every tile of the ramp's deck, as on any bridge's.
-  const one = Object.fromEntries(BRIDGES.wood.bill);
+  // What a span of a marble bridge takes, on every tile of the ramp's deck, as on any bridge's.
+  const one = Object.fromEntries(BRIDGES.marble.bill);
   const all = Object.fromEntries(Object.entries(one).map(([id, n]) => [id, n * NEED]).sort());
   const mine: Record<string, number> = {};
   for (const sp of ramp.spans) for (const [id, n] of Object.entries(sp.total)) mine[id] = (mine[id] ?? 0) + n;
@@ -222,7 +223,7 @@ const ramp = [...game.bridges.values()][0];
   const theirs = psql(`select jsonb_object_agg(k, n)::text from (select k, sum(v::int) as n
       from bridge_span s cross join lateral jsonb_each_text(s.total) t(k, v) where s.world_id = ${W} group by k order by k) x;`).replace(/ /g, '');
   check(`its bill is a span's on each of its ${NEED} tiles, ${JSON.stringify(one)} each, on both sides`,
-    mineS === JSON.stringify(all) && JSON.stringify(JSON.parse(theirs)) === JSON.stringify(all), `browser ${mineS}; island ${theirs}`);
+    mineS === JSON.stringify(all) && JSON.stringify(Object.fromEntries(Object.entries(JSON.parse(theirs) as Record<string, number>).sort())) === JSON.stringify(all), `browser ${mineS}; island ${theirs}`);
 }
 
 /* ---- built: where a body on it stands ----------------------------------------- */

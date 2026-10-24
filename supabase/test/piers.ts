@@ -823,12 +823,12 @@ begin
   ${BUILT.map(([x, y]) => `perform perform_building(w, me, 'plan_floor', ${jt(x, y, { material: 'plank', floorKind: 'floor' })});`).join('\n  ')}
   insert into said select 'decks', string_agg(b.name || ' ' || coalesce(b.deck::text, '-'), ', ' order by b.name)
     from building b where b.world_id = w and b.name in ('West deck', 'East deck', 'Landing', 'Perch');
-  insert into said values ('unbuilt', coalesce(bridge_reason(w, me, 'wood', 27, 34, 30, 34), 'ALLOWED'));
+  insert into said values ('unbuilt', coalesce(bridge_reason(w, me, 'plank', 27, 34, 30, 34), 'ALLOWED'));
   ${BUILT.map(([x, y]) => finishSql(x, x, y)).join('\n  ')}
-  ${BRIDGES.map(([, [ax, ay, bx, by]], i) => `insert into said values ('B${i}', coalesce(bridge_reason(w, me, 'wood', ${ax}, ${ay}, ${bx}, ${by}), 'ALLOWED')
+  ${BRIDGES.map(([, [ax, ay, bx, by]], i) => `insert into said values ('B${i}', coalesce(bridge_reason(w, me, 'plank', ${ax}, ${ay}, ${bx}, ${by}), 'ALLOWED')
     || ' ' || deck_height(w, ${ax}, ${ay}) || ' ' || deck_height(w, ${bx}, ${by}));`).join('\n  ')}
   -- The first of them thrown and built: walked onto from the deck, and the deck under its end not to be taken up.
-  insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level) values (w, 'wood', 27, 34, 30, 34, 40, me, 0) returning id into v_br;
+  insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level) values (w, 'plank', 27, 34, 30, 34, 40, me, 0) returning id into v_br;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total) values
     (w, v_br, 0, 28, 34, '{"plank": 0}', '{"plank": 10}'), (w, v_br, 1, 29, 34, '{"plank": 0}', '{"plank": 10}');
   update player set body_at = now(), x = 27.5, y = 34.5, level = 0 where world_id = w and uid = me;
@@ -838,7 +838,7 @@ begin
   update player set body_at = now(), x = 25.5, y = 34.5 where world_id = w and uid = me;
   insert into said values ('upUnder', coalesce(build_refusal(w, me, 'remove_floor', ${jt(27, 34)}), 'OK'));
   -- And a bridge thrown from slope to slope across row 35: its end is not then taken onto piers.
-  insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level) values (w, 'wood', 27, 35, 30, 35, 25, me, 0) returning id into v_br;
+  insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level) values (w, 'plank', 27, 35, 30, 35, 25, me, 0) returning id into v_br;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total) values
     (w, v_br, 0, 28, 35, '{"plank": 0}', '{"plank": 10}'), (w, v_br, 1, 29, 35, '{"plank": 0}', '{"plank": 10}');
   insert into said values ('endPlan', coalesce(build_refusal(w, me, 'plan_building', ${jt(27, 35, { name: 'End' })}), 'OK'));
@@ -857,15 +857,15 @@ rollback;`));
   const decks = [...g.buildings.list.values()].filter((b) => ['West deck', 'East deck', 'Landing', 'Perch'].includes(b.name))
     .sort((a, b) => a.name.localeCompare(b.name)).map((b) => `${b.name} ${b.deck ?? '-'}`).join(', ');
   say(decks === island.get('decks'), `four buildings on piers over the gully, on the same decks on both sides: ${decks}${decks === island.get('decks') ? '' : ` -- island ${island.get('decks')}`}`);
-  const unbuilt = g.bridgeReason('wood', 27, 34, 30, 34) ?? 'ALLOWED';
+  const unbuilt = g.bridgeReason('plank', 27, 34, 30, 34) ?? 'ALLOWED';
   say(unbuilt === island.get('unbuilt'), `a bridge between two decks not yet built: "${unbuilt}"${unbuilt === island.get('unbuilt') ? '' : ` -- island "${island.get('unbuilt')}"`}`);
   for (const [x, y] of BUILT) finish(g, x, x, y);
   BRIDGES.forEach(([name, [ax, ay, bx, by]], i) => {
-    const mine = `${g.bridgeReason('wood', ax, ay, bx, by) ?? 'ALLOWED'} ${g.topDeck(ax, ay).height} ${g.topDeck(bx, by).height}`;
+    const mine = `${g.bridgeReason('plank', ax, ay, bx, by) ?? 'ALLOWED'} ${g.topDeck(ax, ay).height} ${g.topDeck(bx, by).height}`;
     const theirs = island.get(`B${i}`) ?? '';
     say(mine === theirs, `a bridge ${name}, built: ${mine.replace(/ (\S+) (\S+)$/, ', its ends at $1 and $2')}${mine === theirs ? '' : ` -- island ${theirs}`}`);
   });
-  const br = g.addBridge('wood', 27, 34, 30, 34, 40);
+  const br = g.addBridge('plank', 27, 34, 30, 34, 40);
   for (const s of br.spans) for (const k of Object.keys(s.needed)) s.needed[k] = 0;
   const walkOn = String(g.stepRule(27, 34, 0, 28, 34) !== null);
   const walkOff = String(g.stepRule(29, 34, 0, 30, 34) !== null);
@@ -875,7 +875,7 @@ rollback;`));
   g.player.y = 34.5;
   const upUnder = build('remove_floor').check?.(tile(27, 34), g) ?? 'OK';
   say(upUnder === island.get('upUnder'), `taking up the deck the bridge lands on: "${upUnder}"${upUnder === island.get('upUnder') ? '' : ` -- island "${island.get('upUnder')}"`}`);
-  const end = g.addBridge('wood', 27, 35, 30, 35, 25);
+  const end = g.addBridge('plank', 27, 35, 30, 35, 25);
   for (const s of end.spans) for (const k of Object.keys(s.needed)) s.needed[k] = 0;
   const endPlan = build('plan_building').check?.(tile(27, 35, { name: 'End' }), g) ?? 'OK';
   say(endPlan === island.get('endPlan'), `taking the end of a bridge onto piers: "${endPlan}"${endPlan === island.get('endPlan') ? '' : ` -- island "${island.get('endPlan')}"`}`);

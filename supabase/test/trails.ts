@@ -102,7 +102,7 @@ const layBrowser = (): void => {
 layBrowser();
 game.buildings.create('Wearless', 10, Y.built);
 game.addFoundation(12, Y.built, 4, 0);
-game.addBridge('wood', 13, Y.built, 16, Y.built, 30);
+game.addBridge('plank', 13, Y.built, 16, Y.built, 30);
 
 psql(`
 do $$
@@ -120,7 +120,7 @@ begin
   insert into building (world_id, id, name) values (w, 90210, 'Wearless') on conflict do nothing;
   insert into building_tile (world_id, building, x, y) values (w, 90210, 10, ${Y.built});
   insert into foundation (world_id, id, x, y, top, needed, total) values (w, 90210, 12, ${Y.built}, 4, '{}', '{}');
-  insert into bridge (world_id, kind, ax, ay, bx, by, height) values (w, 'wood', 13, ${Y.built}, 16, ${Y.built}, 30)
+  insert into bridge (world_id, kind, ax, ay, bx, by, height) values (w, 'plank', 13, ${Y.built}, 16, ${Y.built}, 30)
     returning id into v_b;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
     values (w, v_b, 0, 14, ${Y.built}, '{}', '{}'), (w, v_b, 1, 15, ${Y.built}, '{}', '{}');

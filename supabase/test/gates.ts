@@ -254,7 +254,7 @@ check('a drawbridge is a timber bridge of a stated length, both ends on the grou
 check('and its first span takes its winch as well as its deck, the same on both sides',
   same(spanBill('draw', true).total, JSON.parse(psql(`select span_bill('draw', 1)`)))
     && same(spanBill('draw').total, JSON.parse(psql(`select span_bill('draw', 2)`)))
-    && same(spanBill('wood').total, JSON.parse(psql(`select span_bill('wood', 1)`))),
+    && same(spanBill('plank').total, JSON.parse(psql(`select span_bill('plank', 1)`))),
   `first ${said(spanBill('draw', true).total)}; the rest ${said(spanBill('draw').total)}`);
 
 /* ---- 2. what the island says, and to whom ------------------------------------ */
@@ -655,9 +655,9 @@ declare w uuid; v_b bigint;
 begin
   select id into w from world where name = 'Hoarding';
   insert into bridge (world_id, kind, ax, ay, bx, by, height, material, made_by)
-    values (w, 'wood', ${x}, 12, ${x}, 15, ${BANK}, 'Oak', '${WHO[by]}') returning id into v_b;
+    values (w, 'plank', ${x}, 12, ${x}, 15, ${BANK}, 'Oak', '${WHO[by]}') returning id into v_b;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
-    select w, v_b, t.n, t.x, t.y, (select jsonb_object_agg(k, 0) from jsonb_object_keys(span_bill('wood', t.n)) k), span_bill('wood', t.n)
+    select w, v_b, t.n, t.x, t.y, (select jsonb_object_agg(k, 0) from jsonb_object_keys(span_bill('plank', t.n)) k), span_bill('plank', t.n)
       from span_tiles(${x}, 12, ${x}, 15) t;
 end $$;`);
   return { kind: 'bridge', id: Number(psql(`select id from bridge where world_id = ${W} and ax = ${x} and ay = 12`)) };
@@ -1362,7 +1362,7 @@ const bridgeBoth = (what: string, kind: BridgeKind, a: [number, number], b: [num
 };
 bridgeBoth('a drawbridge is not set out from inside a building: its winch stands outside, in the same words', 'draw', [10, 9], [10, 7], drawbridgeEndsOut(0));
 bridgeBoth('nor brought down inside one', 'draw', [10, 7], [10, 9], drawbridgeEndsOut(1));
-bridgeBoth('and no bridge starts on a building\'s ground floor', 'wood', [10, 9], [10, 7], BRIDGE_END_INSIDE);
+bridgeBoth('and no bridge starts on a building\'s ground floor', 'plank', [10, 9], [10, 7], BRIDGE_END_INSIDE);
 psql(`insert into wall (world_id, level, dir, x, y, building, type, material, needed, total)
   values (${W}, 0, 'h', 14, 13, 0, 'fence', 'log', '${LOG_ZERO('fence')}', '${LOG_BILL('fence')}');`);
 bridgeBoth('nor through a fence across its end, which it names', 'draw', [14, 12], [14, 15], bridgeEndWall('fence'));
@@ -1396,14 +1396,14 @@ const filled = (g: Game): void => { g.world.setHeight(10, MOAT_Y, BANK); g.world
 // A hidden door across a bridge's end is the solid wall it looks like to the rule, whoever asks: its key holder too.
 for (const who of ['kay', 'sim'] as Who[]) {
   const g = browserFor(who, 12.5, 10.5);
-  const door = bridgeEndRefusal(g, 'wood', 12, 10, 10, 10, [0, 0]);
-  const plain = bridgeEndRefusal(g, 'wood', 12, 11, 10, 11, [0, 0]);
-  const theirs = psql(`select bridge_end_refusal(${W}, '${WHO[who]}', 'wood', 12, 10, 10, 10, 0, 0)`);
+  const door = bridgeEndRefusal(g, 'plank', 12, 10, 10, 10, [0, 0]);
+  const plain = bridgeEndRefusal(g, 'plank', 12, 11, 10, 11, [0, 0]);
+  const theirs = psql(`select bridge_end_refusal(${W}, '${WHO[who]}', 'plank', 12, 10, 10, 10, 0, 0)`);
   check(`a hidden door across a bridge's end is a solid wall to the rule, to ${NAME[who]}${ADMITTED[who] ? ', whose key opens it,' : ''} as to the wall beside it, in the same words on both sides`,
     door === theirs && door === bridgeEndWall('solid') && plain === door, `browser "${door}", island "${theirs}", the wall beside it "${plain}"`);
 }
 bridgeBoth('a drawbridge from the gate tile out through the portcullis is refused: its winch stands outside', 'draw', [10, 11], [10, 13], drawbridgeEndsOut(0), filled);
-bridgeBoth('and a plank bridge from it', 'wood', [10, 11], [10, 13], BRIDGE_END_INSIDE, filled);
+bridgeBoth('and a plank bridge from it', 'plank', [10, 11], [10, 13], BRIDGE_END_INSIDE, filled);
 {
   // One laid through it all the same, as one set out before this rule may be: a wall on the border is still a wall.
   const g = browserFor('sim', 10.5, 11.5);
@@ -1412,7 +1412,7 @@ bridgeBoth('and a plank bridge from it', 'wood', [10, 11], [10, 13], BRIDGE_END_
     for (const s of b.spans) for (const k of Object.keys(s.needed)) s.needed[k] = 0;
   };
   lay('draw', 10);
-  lay('wood', 9);
+  lay('plank', 9);
   g.reindexDecks();
   const port = g.buildings.wall(0, 10, 11, 's');
   const way = (): string => {
@@ -1486,9 +1486,9 @@ begin
   update world set piers = true where id = w;
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by) values (w, 'aqueduct', 26, 8, 26, 10, ${BANK}, '${WHO.kay}') returning id into v_b;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total) values (w, v_b, 1, 26, 9, span_bill('aqueduct'), span_bill('aqueduct'));
-  insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by) values (w, 'wood', 28, 12, 28, 15, ${BANK}, '${WHO.kay}') returning id into v_b;
+  insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by) values (w, 'plank', 28, 12, 28, 15, ${BANK}, '${WHO.kay}') returning id into v_b;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
-    select w, v_b, t.n, t.x, t.y, ${ZERO("span_bill('wood')")}, span_bill('wood') from span_tiles(28, 12, 28, 15) t;
+    select w, v_b, t.n, t.x, t.y, ${ZERO("span_bill('plank')")}, span_bill('plank') from span_tiles(28, 12, 28, 15) t;
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by) values (w, 'draw', 22, 11, 22, 8, ${BANK}, '${WHO.kay}') returning id into v_b;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
     select w, v_b, t.n, t.x, t.y, ${ZERO("span_bill('draw', t.n)")}, span_bill('draw', t.n) from span_tiles(22, 11, 22, 8) t;
@@ -1534,8 +1534,8 @@ const sameBridge = (what: string, kind: BridgeKind, ax: number, ay: number, bx: 
 
 // A deck on piers: a bridge lands on it as on a bank; a drawbridge, which stands outside at both ends, does not.
 sameBridge('a wooden bridge lands on a finished deck on piers as on a bank, which the rule against a ground floor\'s inside does not refuse, on both sides',
-  'wood', 20, 13, 20, 15, ALLOWED);
-sameBridge('and from the bank to the deck too', 'wood', 20, 15, 20, 13, ALLOWED);
+  'plank', 20, 13, 20, 15, ALLOWED);
+sameBridge('and from the bank to the deck too', 'plank', 20, 15, 20, 13, ALLOWED);
 sameBridge('but a drawbridge\'s winch is not set on a deck, in the same words on both sides', 'draw', 20, 13, 20, 15, drawbridgeEndsOut(0));
 sameBridge('nor does a drawbridge come down on one', 'draw', 20, 15, 20, 13, drawbridgeEndsOut(1));
 {
@@ -1543,16 +1543,16 @@ sameBridge('nor does a drawbridge come down on one', 'draw', 20, 15, 20, 13, dra
   psql(`insert into wall (world_id, level, dir, x, y, building, type, material, needed, total)
     values (${W}, 0, 'h', 20, 14, 78, 'solid', '${MAT}', '${zero('solid')}', '${bill('solid')}');`);
   sameBridge('and a deck\'s wall across the end stops a bridge as a storey\'s does, a hidden door counted as the solid wall it looks like',
-    'wood', 20, 13, 20, 15, bridgeEndWall('solid'));
+    'plank', 20, 13, 20, 15, bridgeEndWall('solid'));
   psql(`update wall set type = 'hidden_door', lock = ${LOCK_H} where world_id = ${W} and level = 0 and dir = 'h' and x = 20 and y = 14;`);
-  sameBridge('the same for a hidden door there', 'wood', 20, 13, 20, 15, bridgeEndWall('solid'));
+  sameBridge('the same for a hidden door there', 'plank', 20, 13, 20, 15, bridgeEndWall('solid'));
   psql(`delete from wall where world_id = ${W} and level = 0 and dir = 'h' and x = 20 and y = 14;`);
 }
 
 // Another bridge's end, or a span over one: refused on both sides, as the island's `bridge_at` has always counted it.
 sameBridge('no bridge ends on another\'s end: a drawbridge set out from the far end of a wooden bridge is refused in the same words on both sides',
   'draw', 28, 15, 28, 17, 'An end is already under a bridge.');
-sameBridge('nor on an aqueduct\'s', 'wood', 26, 10, 29, 10, 'An end is already under a bridge.');
+sameBridge('nor on an aqueduct\'s', 'plank', 26, 10, 29, 10, 'An end is already under a bridge.');
 sameBridge('nor crosses one: a drawbridge over the end of the wooden bridge', 'draw', 27, 12, 29, 12, 'Already bridged there.');
 sameBridge('nor over an aqueduct\'s span', 'draw', 25, 9, 27, 9, 'Already bridged there.');
 
@@ -1613,7 +1613,7 @@ sameBridge('while its far end there is refused for what is under it, the flat gr
   // Storey 2 to the ground over a tile of deck: a ramp too steep for it (`rampRefusal`), which names the jetty's storey.
   const g = kayAt(24.5, 11.5);
   const [a, b] = [g.topDeck(23, 11), g.topDeck(23, 9)];
-  sameBridge('a bridge\'s end at a finished jetty is on the jetty\'s storey, as on any finished floor, on both sides', 'wood', 23, 11, 23, 9,
+  sameBridge('a bridge\'s end at a finished jetty is on the jetty\'s storey, as on any finished floor, on both sides', 'plank', 23, 11, 23, 9,
     a.level === 1 && b.level === 0 ? rampRefusal(a.level, b.level, Math.abs(a.height - b.height), 1) : `storeys ${a.level} and ${b.level}`);
 }
 sameBridge('so a drawbridge, which goes from ground to ground, ends on none', 'draw', 23, 9, 23, 11, `${BRIDGES.draw.name}: ground to ground only, not to a storey.`);

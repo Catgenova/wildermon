@@ -47,7 +47,7 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTIONS, type ActionDef, type Target } from '../../src/game/actions';
-import { BRIDGES } from '../../src/game/bridges';
+import { STONE_ARCH } from '../../src/game/bridges';
 import { FOUNTAIN_HOLDS } from '../../src/game/furniture';
 import { TileType } from '../../src/world/tiles';
 import { NOTHING_YET } from '../../src/game/greening';
@@ -201,9 +201,9 @@ function spanWantsOf(needed: Record<string, number>): string {
       && Number(deep) === CHANNEL_DEEP && def === mine,
     `the numbers agree: a channel ${CHANNEL_WIDE * 4} m wide and ${CHANNEL_DEEP / 10} m deep carries ${AQUEDUCT_LPS} litres a second, ${AQUEDUCT_FLOW} a minute; `
     + `${CORNER_LITRES} litres a unit over a corner; a fountain's rim ${FOUNTAIN_RIM}; an aqueduct spans ${def}`);
-  const stone = new Map(BRIDGES.stone.bill);
-  say(AQUEDUCT.span === BRIDGES.stone.span && AQUEDUCT.bill.every(([id, n]) => n >= (stone.get(id) ?? 0)),
-    `an aqueduct is a stone arch's span (${BRIDGES.stone.span}) at a stone arch's bill and its channel's lining: ${AQUEDUCT.bill.map(([i, n]) => `${n} ${i}`).join(', ')} a span`);
+  const stone = new Map(STONE_ARCH.bill);
+  say(AQUEDUCT.span === STONE_ARCH.span && AQUEDUCT.bill.every(([id, n]) => n >= (stone.get(id) ?? 0)),
+    `an aqueduct is a stone arch's span (${STONE_ARCH.span}) at a stone arch's bill and its channel's lining: ${AQUEDUCT.bill.map(([i, n]) => `${n} ${i}`).join(', ')} a span`);
 }
 
 /* ---- The same water from the same ground ------------------------------------------------------ */
@@ -810,7 +810,7 @@ begin
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
     select w, v_b, t.n, t.x, t.y, '{}'::jsonb, '{"mortar":1}'::jsonb from span_tiles(16, 38, 16, 44) t;
   insert into said values ('cliff', walk_share(w, me, 0, 17.5, 41.5, 16.5, 41.5)::text);
-  update bridge set kind = 'stone' where id = v_b;
+  update bridge set kind = 'stone_brick' where id = v_b;
   insert into said values ('arch', walk_share(w, me, 0, 17.5, 41.5, 16.5, 41.5)::text);
   delete from bridge_span where world_id = w;
   delete from bridge where world_id = w;

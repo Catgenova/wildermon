@@ -195,7 +195,7 @@ begin
   insert into said select 'STRUCK', (select count(*)::text from green_since where world_id = w and thing = 'slab');
 
   -- An arch: bare from when its last span is decked; a rope bridge never.
-  insert into bridge (world_id, kind, ax, ay, bx, by, height, level) values (w, 'stone', 38, 41, 38, 44, 12, 0) returning id into v_b;
+  insert into bridge (world_id, kind, ax, ay, bx, by, height, level) values (w, 'stone_brick', 38, 41, 38, 44, 12, 0) returning id into v_b;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total) values
     (w, v_b, 0, 38, 42, '{"stone_brick": 1}', '{"stone_brick": 10}'),
     (w, v_b, 1, 38, 43, '{"stone_brick": 1}', '{"stone_brick": 10}');
@@ -422,7 +422,7 @@ begin
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'furniture', 'chest', 46, 52, 0, 0, 46.5, 52.5, 30, '${IVY}') returning id into v_chest;
   -- A stone arch decked twenty days ago, which is as green as it gets, and a rope bridge.
-  insert into bridge (world_id, kind, ax, ay, bx, by, height, level) values (w, 'stone', 48, 52, 52, 52, 12, 0) returning id into v_arch;
+  insert into bridge (world_id, kind, ax, ay, bx, by, height, level) values (w, 'stone_brick', 48, 52, 52, 52, 12, 0) returning id into v_arch;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total) values
     (w, v_arch, 0, 49, 52, '{"stone_brick": 0}', '{"stone_brick": 10}'),
     (w, v_arch, 1, 50, 52, '{"stone_brick": 0}', '{"stone_brick": 10}'),

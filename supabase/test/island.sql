@@ -3924,7 +3924,7 @@ select '509. a rope bridge to the next tile along: '
      || ' — and one that goes across a corner: '
      || coalesce(bridge_reason(:'world2', 'rope', 2, 13, 7, 14), 'allowed');
 delete from event where uid = :'ivar';
-select act_perform(:'world2', :'ivar', 'plan_bridge', '{"kind":"tile","x":7,"y":13,"material":"wood"}'::jsonb) \g /dev/null
+select act_perform(:'world2', :'ivar', 'plan_bridge', '{"kind":"tile","x":7,"y":13,"material":"plank"}'::jsonb) \g /dev/null
 select id as span_bridge from bridge where world_id = :'world2' order by id desc limit 1 \gset
 select '510. ' || (select text from event where uid = :'ivar' order by n desc limit 1);
 select '511. as it stands: ' || bridge_state(:'world2', :'span_bridge')
@@ -3934,10 +3934,10 @@ select give(:'world2', :'ivar', 'mallet', 1, 50) \g /dev/null
 select give(:'world2', :'ivar', 'timber', 40, 40) \g /dev/null
 select give(:'world2', :'ivar', 'plank', 60, 40) \g /dev/null
 select give(:'world2', :'ivar', 'nail', 120, 40) \g /dev/null
--- And what the whole deck takes, span by span off its own bill, over that.
-select give(:'world2', :'ivar', b.item, b.count * (select count(*) from bridge_span sp
-         where sp.world_id = :'world2' and sp.bridge = :'span_bridge')::int, 40)
-  from bridge_bill b where b.kind = 'wood' \g /dev/null
+-- And what the whole deck takes, span by span off its own bill and its piers', over that.
+select give(:'world2', :'ivar', e.key, sum(e.value::int)::int, 40)
+  from bridge_span sp cross join lateral jsonb_each_text(sp.total) e
+ where sp.world_id = :'world2' and sp.bridge = :'span_bridge' group by e.key \g /dev/null
 update player set x = 3.5, y = 13.5 where world_id = :'world2' and uid = :'ivar';
 delete from event where uid = :'ivar';
 select act_perform(:'world2', :'ivar', 'build_bridge',

@@ -7,6 +7,7 @@ import { lacks } from './ranks';
 import { itemDef } from './items';
 import { fill } from './words';
 import { metres } from '../world/tiles';
+import { MATERIAL_BY_ID, WALL_HEIGHT, type Side } from './building';
 import { AQUEDUCT_FLOW, CHANNEL_WIDE, TILE_METRES } from '../world/aqueducts';
 
 /**
@@ -24,7 +25,27 @@ import { AQUEDUCT_FLOW, CHANNEL_WIDE, TILE_METRES } from '../world/aqueducts';
  * season and carries anything at all, further than either.
  */
 
-export type BridgeKind = 'rope' | 'wood' | 'stone' | 'aqueduct' | 'draw';
+/**
+ * The wall materials a bridge is built of, one kind each: their storeys and
+ * heft say how long, how far between piers and how high (`materialBridge`).
+ * Not stained glass, nor the two ornate stones.
+ */
+export const BRIDGE_MATERIALS = ['log', 'plank', 'timbercraft', 'cobblestone', 'slate', 'marble', 'sandstone', 'stone_brick', 'clay_adobe', 'clay_bricks'] as const;
+export type MaterialBridgeKind = (typeof BRIDGE_MATERIALS)[number];
+export type BridgeKind = 'rope' | 'aqueduct' | 'draw' | MaterialBridgeKind;
+export const isMaterialBridge = (kind: string): kind is MaterialBridgeKind => (BRIDGE_MATERIALS as readonly string[]).includes(kind);
+
+/** A material bridge's longest run of deck past its material's storeys, in tiles: the island's `bridge_def.span`. */
+export const BRIDGE_REACH = 4;
+/** And a bay (one arch, or one beam between two piers) past its heft, in tiles. */
+export const BAY_PAST_HEFT = 1;
+/** How many lanes wide a material bridge may be planned, and from how many wagons and furniture go on it. */
+export const WIDEST = 3;
+export const WAGON_WIDTH = 2;
+export const STALL_WIDTH = 3;
+/** The work a material bridge asks of its trade: a timber one's, and a step harder each grade of heft past timber. */
+const BRIDGE_DIFFICULTY = 30;
+const DIFFICULTY_PER_HEFT = 7;
 
 /**
  * gates: how near the middle of one of its two end tiles a body stands to
@@ -36,7 +57,7 @@ export const PULL_REACH = 4.5;
 export interface BridgeDef {
   id: BridgeKind;
   name: string;
-  /** What one tile of deck takes. */
+  /** What one tile of deck takes, a lane: a material bridge's is a solid wall's of its material. */
   bill: Array<[string, number]>;
   /** The longest gap it will span, in tiles of deck. */
   span: number;
@@ -54,7 +75,55 @@ export interface BridgeDef {
   winch?: Array<[string, number]>;
   /** Both ends on the ground: a drawbridge, which lands on no storey. */
   grounded?: boolean;
+  /** A material bridge's wall material (`MATERIALS`), and of that: */
+  material?: MaterialBridgeKind;
+  /** a bay, in tiles: one arch, or one beam between two piers; */
+  bay?: number;
+  /** the deepest drop from its deck to the ground under it, in height units; */
+  deepest?: number;
+  /** its material's storeys, which that is; and whether it is stone (`MaterialDef.kind`): mossed, and a Mason's. */
+  storeys?: number;
+  stone?: boolean;
   note: string;
+}
+
+/**
+ * A stone arch as it was before bridges were built by material: what an
+ * aqueduct's span is still built as (`CHANNEL_LINING` on top), and its name
+ * in what the past said.
+ */
+export const STONE_ARCH = {
+  name: 'Stone arch',
+  bill: [['stone_brick', 40], ['mortar', 20], ['stone_slab', 6]] as Array<[string, number]>,
+  span: 8,
+  tool: 'trowel' as const,
+  skill: 'masonry' as const,
+  difficulty: 44,
+};
+
+/** A material bridge, off its wall material: every number in it is the material's. */
+function materialBridge(id: MaterialBridgeKind): BridgeDef {
+  const m = MATERIAL_BY_ID.get(id)!;
+  const span = m.storeys + BRIDGE_REACH;
+  const bay = m.heft + BAY_PAST_HEFT;
+  const deepest = m.storeys * WALL_HEIGHT;
+  return {
+    id,
+    name: `${m.name} bridge`,
+    bill: m.bill.map(([item, n]) => [item, n]),
+    span,
+    tool: m.tool,
+    skill: m.skill,
+    difficulty: BRIDGE_DIFFICULTY + DIFFICULTY_PER_HEFT * (m.heft - 1),
+    carts: true,
+    material: id,
+    bay,
+    deepest,
+    storeys: m.storeys,
+    stone: m.kind === 'stone',
+    note: `Max length: ${span} tiles. Bay: ${bay} tiles. Max drop: ${metres(deepest)} m (${m.storeys} storeys). `
+      + `Per pier: a lane's bill per storey of drop. Carts cross; wagons from ${WAGON_WIDTH} lanes; furniture on the outer lanes at ${STALL_WIDTH}.`,
+  };
 }
 
 export const BRIDGES: Record<BridgeKind, BridgeDef> = {
@@ -69,28 +138,7 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
     carts: false,
     note: 'Longest span: {span} tiles. Foot traffic only.',
   },
-  wood: {
-    id: 'wood',
-    name: 'Wooden bridge',
-    bill: [['timber', 12], ['plank', 24], ['nail', 24]],
-    span: 10,
-    tool: 'mallet',
-    skill: 'carpentry',
-    difficulty: 30,
-    carts: true,
-    note: 'Longest span: {span} tiles. Carts may cross.',
-  },
-  stone: {
-    id: 'stone',
-    name: 'Stone arch',
-    bill: [['stone_brick', 40], ['mortar', 20], ['stone_slab', 6]],
-    span: 8,
-    tool: 'trowel',
-    skill: 'masonry',
-    difficulty: 44,
-    carts: true,
-    note: 'Longest span: {span} tiles. Carts may cross.',
-  },
+  ...(Object.fromEntries(BRIDGE_MATERIALS.map((id) => [id, materialBridge(id)])) as Record<MaterialBridgeKind, BridgeDef>),
   /*
    * A stone arch whose deck is a water channel (`./aqueducts`). Set out from
    * the basin it pours into rather than thrown from a bank, so it is not
@@ -127,6 +175,9 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
   },
 };
 
+/** The kinds "Throw a bridge across" offers, in the order it offers them: rope, the materials, the drawbridge. */
+export const THROWN: BridgeKind[] = ['rope', ...BRIDGE_MATERIALS, 'draw'];
+
 /**
  * What an aqueduct's channel adds to a span of stone arch: the slabs it is
  * lined with and the mortar they are bedded in. Its span, its trade and how
@@ -135,7 +186,7 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
 export const CHANNEL_LINING: Array<[string, number]> = [['mortar', 10], ['stone_slab', 4]];
 {
   const a = BRIDGES.aqueduct;
-  const s = BRIDGES.stone;
+  const s = STONE_ARCH;
   const bill = new Map(s.bill);
   for (const [id, n] of CHANNEL_LINING) bill.set(id, (bill.get(id) ?? 0) + n);
   // Named in the order the island names them, so a span says what it wants the same way on both sides.
@@ -149,6 +200,124 @@ export const CHANNEL_LINING: Array<[string, number]> = [['mortar', 10], ['stone_
 
 // A bridge's note counts what it is made of off its own bill: `{bill.thick_rope:W}`, and a drawbridge's winch off its own.
 for (const b of Object.values(BRIDGES)) b.note = fill(b.note, { ...b, bill: Object.fromEntries(b.bill), winch: Object.fromEntries(b.winch ?? []), reach: PULL_REACH });
+
+/* ---- bays and piers ------------------------------------------------------------------- */
+
+/**
+ * The bays a material bridge's deck is carried in, in tiles, end a's first:
+ * as many as a bay of its material takes to cover the deck, as even as they
+ * go, the longer ones in the middle -- an odd count's middle one the widest.
+ * One bay for anything else. The island's `bridge_bays`.
+ */
+export function bridgeBays(n: number, bay: number | undefined): number[] {
+  if (!bay || n <= 0) return n > 0 ? [n] : [];
+  const k = Math.ceil(n / bay);
+  const base = Math.floor(n / k);
+  const out = new Array<number>(k).fill(base);
+  // What is left over, one a bay from the middle out, the far side of the middle first.
+  let left = n - base * k;
+  const order = Array.from({ length: k }, (_, i) => i).sort((a, b) => Math.abs(2 * a - (k - 1)) - Math.abs(2 * b - (k - 1)) || b - a);
+  for (const i of order) {
+    if (left <= 0) break;
+    out[i]++;
+    left--;
+  }
+  return out;
+}
+
+/** The tiles of deck, counted from nought at end a, that carry a pier: the last of every bay but the last. The island's `bridge_pier`. */
+export function pierSpans(n: number, bay: number | undefined): number[] {
+  const out: number[] = [];
+  let at = 0;
+  const bays = bridgeBays(n, bay);
+  for (let i = 0; i + 1 < bays.length; i++) {
+    at += bays[i];
+    out.push(at - 1);
+  }
+  return out;
+}
+
+/** How many storeys of drop a pier stands down, off its deck's drop: what it is billed by. The island's `pier_storeys`. */
+export const pierStoreys = (drop: number): number => Math.max(1, Math.ceil(drop / WALL_HEIGHT));
+
+/* ---- lanes ------------------------------------------------------------------------------ */
+
+/** How many lanes wide a bridge is. */
+export const bridgeWidth = (b: { width?: number }): number => b.width ?? 1;
+
+/**
+ * The lanes of a bridge, as how far each is off the line it was set out
+ * along, across it: that line alone at one; it and the next on the side it
+ * was given (`side`, toward the east or the south for one, the west or the
+ * north for less) at two; it and one either side at three. The island's
+ * `bridge_lanes`.
+ */
+export function laneOffsets(width = 1, side = 1): number[] {
+  if (width >= 3) return [-1, 0, 1];
+  if (width === 2) return [0, side < 0 ? -1 : 1];
+  return [0];
+}
+
+/** Across a bridge's run, a step: south for one running east and west, east for one running north and south. */
+export const across = (ax: number, ay: number): ((bx: number, by: number) => [number, number]) => (bx, by) => (ay === by && ax !== bx ? [0, 1] : [1, 0]);
+export const laneStep = (b: { ax: number; ay: number; bx: number; by: number }): [number, number] => across(b.ax, b.ay)(b.bx, b.by);
+
+/** Which side a second lane is laid on, as a compass side: what the planning menu offers. */
+export const laneSide = (ax: number, ay: number, bx: number, by: number, side: number): Side => {
+  const [px] = across(ax, ay)(bx, by);
+  return px ? (side < 0 ? 'w' : 'e') : side < 0 ? 'n' : 's';
+};
+/** And back: a compass side to the step it is, nought for one not across the run. */
+export const sideStep = (ax: number, ay: number, bx: number, by: number, side: Side | undefined): number => {
+  const [px] = across(ax, ay)(bx, by);
+  if (px) return side === 'w' ? -1 : side === 'e' ? 1 : 0;
+  return side === 'n' ? -1 : side === 's' ? 1 : 0;
+};
+
+/** Every tile of a bridge's deck, every lane: where it is, its lane's offset and how far along it is from end a (nought the first). */
+export function deckTiles(b: Bridge): Array<{ x: number; y: number; o: number; i: number }> {
+  const [px, py] = laneStep(b);
+  const out: Array<{ x: number; y: number; o: number; i: number }> = [];
+  for (const o of laneOffsets(bridgeWidth(b), b.side)) b.spans.forEach((s, i) => out.push({ x: s.x + o * px, y: s.y + o * py, o, i }));
+  return out;
+}
+
+/** Every end tile of a bridge, every lane's: which end (nought for a, one for b) and its lane's offset. */
+export function endTiles(b: Pick<Bridge, 'ax' | 'ay' | 'bx' | 'by' | 'width' | 'side'>): Array<{ x: number; y: number; end: 0 | 1; o: number }> {
+  const [px, py] = laneStep(b);
+  const out: Array<{ x: number; y: number; end: 0 | 1; o: number }> = [];
+  for (const o of laneOffsets(bridgeWidth(b), b.side)) {
+    out.push({ x: b.ax + o * px, y: b.ay + o * py, end: 0, o }, { x: b.bx + o * px, y: b.by + o * py, end: 1, o });
+  }
+  return out;
+}
+
+/** The lane a tile of a bridge's deck or ends is in, as its offset, or null where it is not on it. */
+export function laneOf(b: Bridge, x: number, y: number): number | null {
+  const [px, py] = laneStep(b);
+  for (const o of laneOffsets(bridgeWidth(b), b.side)) {
+    const cx = x - o * px, cy = y - o * py;
+    if ((cx === b.ax && cy === b.ay) || (cx === b.bx && cy === b.by) || b.spans.some((s) => s.x === cx && s.y === cy)) return o;
+  }
+  return null;
+}
+
+/** Whether wheels of this kind may cross a bridge: a cart where carts cross, a wagon only from `WAGON_WIDTH` lanes. The island's `deck_wheels`. */
+export const bridgeWheels = (b: Bridge, vehicle: string): boolean =>
+  !!BRIDGES[b.kind]?.carts && (vehicle !== 'wagon' || bridgeWidth(b) >= WAGON_WIDTH);
+
+/**
+ * Why a piece of furniture may not be set down on a bridge's deck here, or
+ * null where it may: on a finished material bridge `STALL_WIDTH` lanes wide,
+ * on either of its outer lanes. The island's `bridge_furniture_refusal`.
+ */
+export function deckFurnitureRefusal(b: Bridge, x: number, y: number): string | null {
+  if (!isMaterialBridge(b.kind) || bridgeWidth(b) < STALL_WIDTH) return `Bridge deck: furniture only on a ${STALL_WIDTH}-lane bridge's outer lanes.`;
+  const o = laneOf(b, x, y);
+  if (o === null || o === 0) return `Bridge deck: outer lanes only.`;
+  if (!bridgeDone(b)) return 'Bridge deck not finished.';
+  return null;
+}
 
 export interface BridgeSpan extends Bill {
   x: number;
@@ -183,8 +352,12 @@ export interface Bridge {
    */
   level?: number;
   material?: string;
-  /** One entry per tile of deck between the ends, in order. */
+  /** One entry per tile of deck between the ends, in order: the line it was set out along, whatever its width. */
   spans: BridgeSpan[];
+  /** How many lanes wide (`laneOffsets`): one when unsaid. */
+  width?: number;
+  /** At two lanes, which side of the line it was set out along the second is laid: 1 toward the east or the south, -1 the west or the north. */
+  side?: number;
   /**
    * When the moss on a stone arch began, in real seconds: when its last span
    * was decked or it was last scrubbed. See `greening.ts`.
@@ -237,10 +410,14 @@ export function spanTiles(ax: number, ay: number, bx: number, by: number): Array
   return out;
 }
 
-/** One tile of deck, unbuilt: the first also takes a drawbridge's winch. */
-export const spanBill = (kind: BridgeKind, first = false): Bill => {
+/**
+ * One tile of deck, unbuilt: its bill once a lane, the first also a
+ * drawbridge's winch, and one that carries a pier its bill again for every
+ * storey that pier stands down (`pierStoreys`). The island's `span_bill`.
+ */
+export const spanBill = (kind: BridgeKind, first = false, width = 1, pier = 0): Bill => {
   const needed: Record<string, number> = {};
-  for (const [id, n] of BRIDGES[kind].bill) needed[id] = n;
+  for (const [id, n] of BRIDGES[kind].bill) needed[id] = n * (width + pier);
   if (first) for (const [id, n] of BRIDGES[kind].winch ?? []) needed[id] = (needed[id] ?? 0) + n;
   return { needed, total: { ...needed } };
 };
@@ -326,7 +503,8 @@ export const bridgeState = (b: Bridge): string => {
 /** What one tile of deck still wants, written out. */
 export function spanWants(s: BridgeSpan): string {
   const parts: string[] = [];
-  for (const [id, n] of Object.entries(s.needed)) if (n > 0) parts.push(`${n} ${itemDef(id).name.toLowerCase()}`);
+  // By id, as the island's `span_wants` names them.
+  for (const [id, n] of Object.entries(s.needed).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) if (n > 0) parts.push(`${n} ${itemDef(id).name.toLowerCase()}`);
   return parts.length ? parts.join(', ') : 'nothing';
 }
 
@@ -355,6 +533,31 @@ export function pullDownRefusal(g: Game, b: Bridge, job = BRIDGE_ACTIONS.find((a
   return null;
 }
 
+/**
+ * What is said of a bridge set out, after its spans: its lanes past one,
+ * where it goes (`setOutWords`), what a span takes, and its piers and what
+ * they take all told. The island's `bridge_planned`.
+ */
+export function plannedWords(b: Bridge): string {
+  const def = bridgeDef(b);
+  const w = bridgeWidth(b);
+  const lanes = w > 1 ? `, ${w} lanes` : '';
+  const span = spanBill(b.kind, false, w);
+  const piers = isMaterialBridge(b.kind) ? pierSpans(b.spans.length, def.bay).map((i) => b.spans[i]) : [];
+  const pierBill: Record<string, number> = {};
+  for (const s of piers) for (const [id, n] of Object.entries(s.total)) pierBill[id] = (pierBill[id] ?? 0) + n - (span.total[id] ?? 0);
+  const pierWords = piers.length ? `. Piers: ${piers.length}, ${spanWants({ x: 0, y: 0, needed: pierBill, total: pierBill })}` : '';
+  return `${lanes}${setOutWords(b)}. Per span: ${spanWants({ x: 0, y: 0, ...span })}${pierWords}`;
+}
+
+/** What may cross a bridge, as its last span decked says: by its kind and its width. The island's `bridge_crosses`. */
+export function crossWords(b: Bridge): string {
+  if (!bridgeDef(b).carts) return 'Foot traffic only.';
+  const w = bridgeWidth(b);
+  if (w < WAGON_WIDTH) return 'Carts may cross.';
+  return w < STALL_WIDTH ? 'Carts and wagons may cross.' : 'Carts and wagons may cross. Furniture on the outer lanes.';
+}
+
 export const BRIDGE_ACTIONS: ActionDef[] = [
   {
     id: 'plan_bridge',
@@ -372,13 +575,15 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       const kind = (t.material ?? 'rope') as BridgeKind;
       if (!BRIDGES[kind]) return 'Choose a material.';
       const [ax, ay] = [g.player.tileX, g.player.tileY];
-      return g.bridgeReason(kind, ax, ay, t.x, t.y);
+      return g.bridgeReason(kind, ax, ay, t.x, t.y, t.width ?? 1, sideStep(ax, ay, t.x, t.y, t.side) || 1);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       const kind = (t.material ?? 'rope') as BridgeKind;
       const [ax, ay] = [g.player.tileX, g.player.tileY];
-      if (g.bridgeReason(kind, ax, ay, t.x, t.y)) return;
+      const width = t.width ?? 1;
+      const side = sideStep(ax, ay, t.x, t.y, t.side) || 1;
+      if (g.bridgeReason(kind, ax, ay, t.x, t.y, width, side)) return;
       /*
        * The height the deck is carried at, off whatever each end lands on:
        * bank, poured slab, or the floor of a storey. `centerHeight` was the
@@ -388,15 +593,12 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       const ends = [g.topDeck(ax, ay), g.topDeck(t.x, t.y)];
       const height = Math.round((ends[0].height + ends[1].height) / 2);
       // And past `END_SLOP` between them, a ramp: its deck rises from one end to the other (`rampRise`).
-      const b = g.addBridge(kind, ax, ay, t.x, t.y, height, kind === 'stone' ? undefined : 'Oak', ends[0].level, ends[1].level,
-        rampRise(ends[0].height, ends[1].height));
+      const b = g.addBridge(kind, ax, ay, t.x, t.y, height, isMaterialBridge(kind) ? undefined : 'Oak', ends[0].level, ends[1].level,
+        rampRise(ends[0].height, ends[1].height), width, side);
       const def = BRIDGES[kind];
       g.gainSkill(def.skill, 0.4);
       g.note('planned_bridge');
-      g.logMsg(
-        `Planned: ${def.name.toLowerCase()}, ${b.spans.length} span${b.spans.length > 1 ? 's' : ''}${setOutWords(b)}. Per span: ${def.bill.map(([id, n]) => `${n} ${itemDef(id).name.toLowerCase()}`).join(', ')}. ${def.note}`,
-        'system',
-      );
+      g.logMsg(`Planned: ${def.name.toLowerCase()}, ${b.spans.length} span${b.spans.length > 1 ? 's' : ''}${plannedWords(b)}. ${def.note}`, 'system');
       for (const sp of b.spans) g.events.emit('world', sp.x, sp.y);
     },
   },
@@ -446,7 +648,7 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
           g.note('bridged');
           // And which kind, for the journal's drawbridge (the island's the same).
           g.note(`bridged:${b.kind}`);
-          g.logMsg(`Last span decked: ${bridgeName(b).toLowerCase()} open. ${def.carts ? 'Carts may cross.' : 'Foot traffic only.'}`, 'system');
+          g.logMsg(`Last span decked: ${bridgeName(b).toLowerCase()} open. ${crossWords(b)}`, 'system');
         }
       } else {
         g.logMsg(`Added: ${itemDef(id).name.toLowerCase()}. Span needs ${spanWants(s)}.`, 'event');

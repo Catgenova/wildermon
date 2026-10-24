@@ -148,11 +148,11 @@ check('a finished second floor is the top deck of its tile',
   gb.topDeck(40, 40).level === 1 && Math.abs(gb.topDeck(40, 40).height - (100 + WALL_HEIGHT)) < 1e-6,
   `storey ${gb.topDeck(40, 40).level} at ${gb.topDeck(40, 40).height}`);
 
-const across = gb.bridgeReason('wood', 40, 40, 42, 40);
+const across = gb.bridgeReason('plank', 40, 40, 42, 40);
 check('and a walkway may be thrown from one tower to the other', across === null, across ?? 'allowed');
 
 // From a storey to the ground is a ramp (`ramp.ts`), and over a tile of deck too steep a one, which says which end is which.
-const down = gb.bridgeReason('wood', 42, 40, 44, 40);
+const down = gb.bridgeReason('plank', 42, 40, 44, 40);
 check('but not from a storey to the ground over too few tiles, and it says which is which',
   down === rampRefusal(1, 0, WALL_HEIGHT, 1), down ?? 'allowed');
 
@@ -182,12 +182,12 @@ begin
 end $$;`);
 const theirDeck = Number(psql(`select top_deck(${W}, 40, 40);`));
 check('the island reads the same top deck', theirDeck === 1, `storey ${theirDeck + 1}`);
-const theirDown = psql(`select coalesce(bridge_reason(${W}, 'wood', 42, 40, 44, 40), 'ALLOWED');`);
+const theirDown = psql(`select coalesce(bridge_reason(${W}, 'plank', 42, 40, 44, 40), 'ALLOWED');`);
 check('and refuses the mismatched pair in the same words', theirDown === down,
   `island "${theirDown}", browser "${down}"`);
 
 /* And you walk it at the storey it lands on, not at the ground under it. */
-const deck = gb.addBridge('wood', 40, 40, 42, 40, 100 + WALL_HEIGHT, 'Oak', 1);
+const deck = gb.addBridge('plank', 40, 40, 42, 40, 100 + WALL_HEIGHT, 'Oak', 1);
 for (const sp of deck.spans) for (const k of Object.keys(sp.needed)) sp.needed[k] = 0;
 check('a finished walkway is stepped onto from the storey it meets',
   gb.stepRule(40, 40, 1, 41, 40) === 1, `stepRule gives ${gb.stepRule(40, 40, 1, 41, 40)}`);

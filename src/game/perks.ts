@@ -446,6 +446,11 @@ const standsNow = (): string => {
   return [...by].sort((a, b) => b[0] - a[0]).map(([n, names]) => `${listed(names)} ${n}`).join(', ');
 };
 const STONE_BRICK_WALL = MATERIAL_BY_ID.get('stone_brick')!;
+/** How many tiles a Mason's Bridge Mason and a Carpenter's Bridge Wright carry a bridge further. */
+const PERK_REACH = 2;
+/** "plank bridge 10 (base 8), log bridge 9 (base 7)": each stone or timber bridge's longest with a perk's `more` tiles, and without. */
+const spansOf = (stone: boolean, more: number): string => Object.values(BRIDGES).filter((b) => b.material && !!b.stone === stone)
+  .map((b) => `${b.name.toLowerCase()} ${b.span + more} (base ${b.span})`).join(', ');
 const CONCRETE = RECIPES.find((r) => r.result === 'concrete')!;
 
 const MASON: Seed[] = [
@@ -530,9 +535,9 @@ const MASON: Seed[] = [
   },
   {
     num: 29, name: 'Bridge Mason',
-    fx: { 'time:bridge_stone': 0.7, 'span:bridge_stone': 10 },
-    note: (fx) => `${BRIDGES.stone.name} work time ${cut(fx['time:bridge_stone'])} `
-      + `(base ${secs(base('build_bridge'))}). Max span: ${fx['span:bridge_stone']} tiles (base ${BRIDGES.stone.span}).`,
+    fx: { 'time:bridge_stone': 0.7, 'span:bridge_stone': PERK_REACH },
+    note: (fx) => `Work time ${cut(fx['time:bridge_stone'])} (base ${secs(base('build_bridge'))}) and max length +${fx['span:bridge_stone']} tiles: `
+      + `${spansOf(true, fx['span:bridge_stone'])}.`,
   },
   {
     num: 33, name: 'Brick Porter',
@@ -695,12 +700,10 @@ const CARPENTER: Seed[] = [
     num: 27, name: 'Bridge Wright',
     fx: {
       'time:bridge_wood': 0.7, 'time:bridge_rope': 0.7,
-      'span:bridge_wood': BRIDGES.wood.span + 2, 'span:bridge_rope': BRIDGES.rope.span + 2,
+      'span:bridge_wood': PERK_REACH, 'span:bridge_rope': BRIDGES.rope.span + PERK_REACH,
     },
-    note: (fx) => `${BRIDGES.wood.name} and ${BRIDGES.rope.name.toLowerCase()} work time `
-      + `${cut(fx['time:bridge_wood'])} (base ${secs(base('build_bridge'))}). Max span +`
-      + `${fx['span:bridge_wood'] - BRIDGES.wood.span} tiles: ${fx['span:bridge_wood']} and ${fx['span:bridge_rope']} `
-      + `(base ${BRIDGES.wood.span} and ${BRIDGES.rope.span}).`,
+    note: (fx) => `Work time ${cut(fx['time:bridge_wood'])} (base ${secs(base('build_bridge'))}) and max length +${fx['span:bridge_wood']} tiles: `
+      + `${spansOf(false, fx['span:bridge_wood'])}, ${BRIDGES.rope.name.toLowerCase()} ${fx['span:bridge_rope']} (base ${BRIDGES.rope.span}).`,
   },
   {
     num: 31, name: "Bowyer's Draw",

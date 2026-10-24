@@ -65,7 +65,7 @@ import {
   type TrapKind,
 } from './traps';
 import { BAIT_BY_ID, FISH, fishHere, pickFish, waterDepth } from './fishing';
-import { BRIDGES, bridgeDone, bridgeLevels, CLEARANCE, deckHeight, END_SLOP, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
+import { across, BRIDGES, bridgeDone, bridgeLevels, bridgeWheels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
 import { AQ_NOT_THROWN, AQ_OVER, channelOf, fitIntoChannel } from './aqueducts';
 import { AQUEDUCT_LPS, aqueductShut, type Channel } from '../world/aqueducts';
 import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hingeOf, isDrawbridge, keepHiddenAsks } from './gates';
@@ -1529,10 +1529,16 @@ export class Game {
     // A deck on piers takes feet, not wheels (`pier_step`).
     if (this.buildings.pierTiles.size && this.buildings.onPiers(x1, y1)) return null;
     if (this.bridges.size && this.pierBetween(x0, y0, x1, y1)) return null;
-    // A wooden bridge or a stone arch carries wheels; a rope bridge does not.
+    // Onto a bridge's end, any lane's, as onto its deck: only wheels that may cross it, as the island's `deck_wheels` has it.
+    if (this.bridges.size) {
+      const end = this.bridgeEndAt(x1, y1);
+      if (end && end.kind !== 'aqueduct' && deckDown(end) && (!bridgeWheels(end, this.driving()?.kind ?? 'cart') || end.level || end.levelB)) return null;
+    }
+    // A material bridge carries wheels, a wagon from `WAGON_WIDTH` lanes; a rope bridge does not.
     if (this.bridges.size && this.bridgeStep(x0, y0, x1, y1)) {
       const b = this.bridgeAt(x1, y1) ?? this.bridgeAt(x0, y0);
-      if (!b || !BRIDGES[b.kind].carts) return null;
+      // A wagon only on a bridge `WAGON_WIDTH` lanes wide (`bridgeWheels`).
+      if (!b || !bridgeWheels(b, this.driving()?.kind ?? 'cart')) return null;
       // A walkway between two upper storeys is a walkway, and so is a ramp up to one. Nobody drives it.
       if (b.level || b.levelB) return null;
       // Coming off the deck onto the bank: the bank still has to take wheels.
@@ -2441,7 +2447,10 @@ export class Game {
 
   /** The bridge one of whose two ends is this tile, if any. */
   bridgeEndAt(x: number, y: number): Bridge | undefined {
-    for (const b of this.bridges.values()) if ((b.ax === x && b.ay === y) || (b.bx === x && b.by === y)) return b;
+    for (const b of this.bridges.values()) {
+      if ((b.ax === x && b.ay === y) || (b.bx === x && b.by === y)) return b;
+      if ((b.width ?? 1) > 1 && endTiles(b).some((e) => e.x === x && e.y === y)) return b;
+    }
     return undefined;
   }
 
@@ -6223,10 +6232,20 @@ export class Game {
   // ---- Bridges: ground where there was none. ----
 
   addBridge(kind: BridgeKind, ax: number, ay: number, bx: number, by: number, height: number, material?: string, level = 0,
-    levelB = level, rise = 0): Bridge {
+    levelB = level, rise = 0, width = 1, side = 1): Bridge {
+    const tiles = spanTiles(ax, ay, bx, by);
+    // A material bridge's piers, each billed by the storeys it stands down from the deck there (`pierStoreys`).
+    const piers = new Set(isMaterialBridge(kind) ? pierSpans(tiles.length, BRIDGES[kind].bay) : []);
+    const pier = (i: number, x: number, y: number): number =>
+      piers.has(i) ? pierStoreys(rampDeck(height, rise, tiles.length, i + 0.5) - this.surfaceHeight(x, y)) : 0;
     // The first span, beside the end it is set out from, carries a drawbridge's winch.
-    const spans = spanTiles(ax, ay, bx, by).map(([x, y], i) => ({ x, y, ...spanBill(kind, i === 0) }));
+    const spans = tiles.map(([x, y], i) => ({ x, y, ...spanBill(kind, i === 0, width, pier(i, x, y)) }));
     const b: Bridge = { id: this.nextBridgeId++, kind, ax, ay, bx, by, height, material, level, spans };
+    // Wider than a lane, its lanes (`laneOffsets`).
+    if (width > 1) {
+      b.width = width;
+      b.side = side;
+    }
     // A ramp: its far end on another storey, and its deck rising to it (`deckHeight`).
     if (levelB !== level) b.levelB = levelB;
     if (rise) b.rise = rise;
@@ -6248,7 +6267,9 @@ export class Game {
     this.deckIndex.clear();
     this.hinges.clear();
     for (const b of this.bridges.values()) {
-      for (const s of b.spans) this.deckIndex.set(`${s.x},${s.y}`, b.id);
+      // Every lane of it (`deckTiles`).
+      if ((b.width ?? 1) > 1) for (const t of deckTiles(b)) this.deckIndex.set(`${t.x},${t.y}`, b.id);
+      else for (const s of b.spans) this.deckIndex.set(`${s.x},${s.y}`, b.id);
       // A drawbridge drawn up stands on end over its hinge, which is shut to everything (`gates.ts`).
       if (isDrawbridge(b) && b.raised) this.hinges.set(hingeKey(b.level ?? 0, hingeOf(b)), b.id);
     }
@@ -6331,6 +6352,7 @@ export class Game {
   /** Whether a bridge's ends or deck cover this tile, which is where you may step on. */
   onBridge(b: Bridge, x: number, y: number): boolean {
     if ((x === b.ax && y === b.ay) || (x === b.bx && y === b.by)) return true;
+    if ((b.width ?? 1) > 1) return endTiles(b).some((e) => e.x === x && e.y === y) || this.bridgeAt(x, y) === b;
     return b.spans.some((s) => s.x === x && s.y === y);
   }
 
@@ -6370,7 +6392,11 @@ export class Game {
   /** The storey a bridge's end on this tile lands on, or null where neither of its ends is. */
   bridgeEndLevel(b: Bridge, x: number, y: number): number | null {
     const [la, lb] = bridgeLevels(b);
-    return x === b.ax && y === b.ay ? la : x === b.bx && y === b.by ? lb : null;
+    if (x === b.ax && y === b.ay) return la;
+    if (x === b.bx && y === b.by) return lb;
+    // Every lane's ends land as the line's do (`bridgeReason`).
+    const e = (b.width ?? 1) > 1 ? endTiles(b).find((t) => t.x === x && t.y === y) : undefined;
+    return e ? (e.end ? lb : la) : null;
   }
 
   /**
@@ -6391,19 +6417,36 @@ export class Game {
     return { level: 0, height: base };
   }
 
-  /** Why a bridge of this sort cannot be thrown between these two tiles, or null. */
-  bridgeReason(kind: BridgeKind, ax: number, ay: number, bx: number, by: number): string | null {
+  /**
+   * Why a bridge of this sort, `width` lanes wide (its second on `side` at
+   * two, `laneOffsets`), cannot be thrown between these two tiles, or null.
+   * Every lane's ends land as the line's do, and every lane's deck is asked
+   * what the line's is. The island's `bridge_reason`, in the same order.
+   */
+  bridgeReason(kind: BridgeKind, ax: number, ay: number, bx: number, by: number, width = 1, side = 1): string | null {
     const def = BRIDGES[kind];
     // An aqueduct is set out from where it pours (`plan_aqueduct`).
     if (kind === 'aqueduct') return AQ_NOT_THROWN;
+    if (!def) return 'Choose a material.';
     const w = this.world;
     if (!w.inBounds(ax, ay) || !w.inBounds(bx, by)) return 'Not there.';
     if (ax !== bx && ay !== by) return 'Bridges run straight: pick an end due north, south, east or west.';
     const span = spanTiles(ax, ay, bx, by);
     if (!span.length) return 'No gap between those tiles.';
-    // A Mason's Bridge Mason carries a stone arch further (`span:bridge_stone`).
-    const reach = this.perk(`span:bridge_${kind}`, def.span);
+    // Lanes: a material bridge one to `WIDEST`, anything else one.
+    if (!Number.isInteger(width) || width < 1 || width > (isMaterialBridge(kind) ? WIDEST : 1)) {
+      return isMaterialBridge(kind) ? `Width: 1 to ${WIDEST} lanes.` : `${def.name}: 1 lane only.`;
+    }
+    /*
+     * A Mason's Bridge Mason carries a stone bridge further, and a
+     * Carpenter's Bridge Wright a timber or a rope one: a material bridge by
+     * so many tiles past its own (`span:bridge_stone`, `span:bridge_wood`), a
+     * rope bridge to so many (`span:bridge_rope`).
+     */
+    const reach = isMaterialBridge(kind) ? def.span + this.perk(`span:bridge_${def.stone ? 'stone' : 'wood'}`, 0) : this.perk(`span:bridge_${kind}`, def.span);
     if (span.length > reach) return `${def.name}: max span ${reach} tiles; this is ${span.length}.`;
+    const [px, py] = across(ax, ay)(bx, by);
+    const lanes = laneOffsets(width, side);
     /*
      * And what each end lands on.
      *
@@ -6415,21 +6458,33 @@ export class Game {
      * to do with a staircase down, a walk across the yard and a staircase up.
      */
     const ends = [this.topDeck(ax, ay), this.topDeck(bx, by)];
-    for (const [i, [x, y]] of ([[ax, ay], [bx, by]] as Array<[number, number]>).entries()) {
-      // A deck on piers is landed on once it is built, and is dry, solid ground whatever is under it (`piers.ts`).
-      if (this.pierBare(x, y)) return 'Needs a finished deck at that end.';
-      // The bank of a ravine always shares a corner with the ravine, so what
-      // matters is whether you can stand in the middle of the tile, not
-      // whether every corner of it is dry.
-      if (!ends[i].level && !this.slabAt(x, y) && !this.onPierDeck(x, y) && (!w.isPassable(x, y) || w.centerHeight(x, y) < w.surfaceAt(x, y) && w.hasWater(x, y))) {
-        return 'Both ends need dry, solid ground.';
+    for (const o of lanes) {
+      for (const [i, [x0, y0]] of ([[ax, ay], [bx, by]] as Array<[number, number]>).entries()) {
+        const x = x0 + o * px, y = y0 + o * py;
+        if (!w.inBounds(x, y)) return 'Not there.';
+        const end = o ? this.topDeck(x, y) : ends[i];
+        // A deck on piers is landed on once it is built, and is dry, solid ground whatever is under it (`piers.ts`).
+        if (this.pierBare(x, y)) return 'Needs a finished deck at that end.';
+        // The bank of a ravine always shares a corner with the ravine, so what
+        // matters is whether you can stand in the middle of the tile, not
+        // whether every corner of it is dry.
+        if (!end.level && !this.slabAt(x, y) && !this.onPierDeck(x, y) && (!w.isPassable(x, y) || w.centerHeight(x, y) < w.surfaceAt(x, y) && w.hasWater(x, y))) {
+          return 'Both ends need dry, solid ground.';
+        }
+        // gates: nor on the end of another, which the island's `bridge_at` counts as under it as it counts a span.
+        if (this.bridgeAt(x, y) || this.bridgeEndAt(x, y)) return 'An end is already under a bridge.';
+        // A lane's end on the storey the line's is, within `END_SLOP` of it.
+        if (o && end.level !== ends[i].level) return 'Lane ends on different storeys.';
+        if (o && Math.abs(end.height - ends[i].height) > END_SLOP) {
+          return `Lane ends ${metres(Math.abs(end.height - ends[i].height))} m apart in height; max ${metres(END_SLOP)} m.`;
+        }
       }
-      // gates: nor on the end of another, which the island's `bridge_at` counts as under it as it counts a span.
-      if (this.bridgeAt(x, y) || this.bridgeEndAt(x, y)) return 'An end is already under a bridge.';
     }
-    // gates: not from inside a ground floor nor through a wall, and a drawbridge outside at both ends (`gates.ts`).
-    const outside = bridgeEndRefusal(this, kind, ax, ay, bx, by, [ends[0].level, ends[1].level]);
-    if (outside) return outside;
+    // gates: not from inside a ground floor nor through a wall, and a drawbridge outside at both ends (`gates.ts`): every lane's.
+    for (const o of lanes) {
+      const outside = bridgeEndRefusal(this, kind, ax + o * px, ay + o * py, bx + o * px, by + o * py, [ends[0].level, ends[1].level]);
+      if (outside) return outside;
+    }
     // A drawbridge goes from bank to bank: its hinge and its winch stand on the ground (`gates.ts`).
     if (def.grounded && (ends[0].level || ends[1].level)) return `${def.name}: ground to ground only, not to a storey.`;
     const ha = ends[0].height;
@@ -6440,13 +6495,22 @@ export class Game {
     if (apart > END_SLOP && apart > RAMP_SLOPE * span.length) return rampRefusal(ends[0].level, ends[1].level, apart, span.length);
     const height = Math.round((ha + hb) / 2);
     const rise = rampRise(ha, hb);
-    for (const [i, [x, y]] of span.entries()) {
-      // gates: nor over the end of another, as the island has it (`bridge_at`).
-      if (this.bridgeAt(x, y) || this.bridgeEndAt(x, y)) return 'Already bridged there.';
-      if (this.buildings.buildingAt(x, y)) return 'Not over a building.';
-      if (this.buildings.jettyAt(x, y)) return 'Not over a building\'s jetty.';
-      // At the deck's height over the middle of the tile, up a ramp's slope.
-      if (rampDeck(height, rise, span.length, i + 0.5) - this.surfaceHeight(x, y) < CLEARANCE) return `Ground under the span: needs ${metres(CLEARANCE)} m clearance.`;
+    for (const o of lanes) {
+      for (const [i, [x0, y0]] of span.entries()) {
+        const x = x0 + o * px, y = y0 + o * py;
+        if (!w.inBounds(x, y)) return 'Not there.';
+        // gates: nor over the end of another, as the island has it (`bridge_at`).
+        if (this.bridgeAt(x, y) || this.bridgeEndAt(x, y)) return 'Already bridged there.';
+        if (this.buildings.buildingAt(x, y)) return 'Not over a building.';
+        if (this.buildings.jettyAt(x, y)) return 'Not over a building\'s jetty.';
+        // At the deck's height over the middle of the tile, up a ramp's slope.
+        const drop = rampDeck(height, rise, span.length, i + 0.5) - this.surfaceHeight(x, y);
+        if (drop < CLEARANCE) return `Ground under the span: needs ${metres(CLEARANCE)} m clearance.`;
+        // And no deeper than its material stands (`BridgeDef.deepest`).
+        if (def.deepest !== undefined && drop > def.deepest) {
+          return `Drop under the span ${metres(drop)} m; max ${metres(def.deepest)} m (${def.storeys} storeys).`;
+        }
+      }
     }
     return null;
   }
@@ -9124,7 +9188,14 @@ export class Game {
       for (let dy = 0; dy < fh; dy++) for (let dx = 0; dx < fw; dx++) if (this.occupiedSubtile(x, y, ax + dx, ay + dy, except)) return 'Something already in the water there.';
       return null;
     }
-    const deck = this.deckFooting(x, y);
+    // Under a bridge's deck, on it: only a wide material bridge's outer lanes take a piece (`deckFurnitureRefusal`).
+    const over = this.bridges.size ? this.bridgeAt(x, y) : undefined;
+    const bridged = !!over && over.kind !== 'aqueduct';
+    if (over && bridged) {
+      const why = deckFurnitureRefusal(over, x, y);
+      if (why) return why;
+    }
+    const deck = bridged ? true : this.deckFooting(x, y);
     if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Furniture needs dry, solid ground.';
     const steepest = 16;
     if (deck === null && this.world.slope(x, y) > steepest) return `Too uneven: slope over ${metres(steepest)} m.`;

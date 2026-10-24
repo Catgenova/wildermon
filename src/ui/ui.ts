@@ -52,7 +52,7 @@ import { anvilAnchor, anvilName, type PlacedAnvil } from '../game/anvil';
 import { postCandidates, postKeep, postLife, postName, postRadius, postState, type PlacedPost } from '../game/posts';
 import { baitInPack, creelHold, trapDef, trapHolds, trapKeep, trapLife, trapName, TRAPS, trapState, type PlacedTrap } from '../game/traps';
 import { BAIT_BY_ID } from '../game/fishing';
-import { BRIDGES, bridgeDef, bridgeDone, bridgeName, bridgeState, spanWants, type Bridge } from '../game/bridges';
+import { BRIDGES, bridgeDef, bridgeDone, bridgeName, bridgeState, isMaterialBridge, laneSide, spanWants, STALL_WIDTH, THROWN, WAGON_WIDTH, type Bridge } from '../game/bridges';
 import { aqueductEntries, aqueductMenu } from './aqueducts';
 import { drawbridgeState, fitsMaterial, gateHoverLine, gatePlanRefusal, hiddenDoorIronWords, hiddenDoorWants, isDrawbridge, planHiddenDoor, portcullisAt, portcullisState } from '../game/gates';
 import { foundationState } from '../game/foundations';
@@ -1648,20 +1648,49 @@ export class UI {
     const planBridge = ACTION_BY_ID.get('plan_bridge');
     if (planBridge && (pick.x !== this.game.player.tileX || pick.y !== this.game.player.tileY)) {
       // An aqueduct is not thrown from a bank but led to where it pours (`aqueductMenu`).
-      const options = (Object.keys(BRIDGES) as Array<keyof typeof BRIDGES>).filter((kind) => kind !== 'aqueduct')
-        .map((kind) => ({ kind, def: BRIDGES[kind], reason: planBridge.check?.({ ...target, material: kind }, this.game) ?? null }))
-        .filter((o) => o.reason === null || !/runs straight|nothing between|a gap, it is ground|dry, solid ground/.test(o.reason));
+      const g = this.game;
+      const billSaid = (bill: Array<[string, number]>, k = 1): string => bill.map(([id, n]) => `${n * k} ${itemName({ uid: 0, id, ql: 1, dmg: 0, count: 1 }).toLowerCase()}`).join(', ');
+      const [ax, ay] = [g.player.tileX, g.player.tileY];
+      // Lanes on offer: one; two, the second either side of the line; three. Labels, and what each lets over.
+      const widths: Array<{ width: number; side?: Side; label: string; crosses: string }> = [
+        { width: 1, label: '1 lane', crosses: 'carts' },
+        ...[1, -1].map((k) => ({ width: WAGON_WIDTH, side: laneSide(ax, ay, pick.x, pick.y, k), label: `${WAGON_WIDTH} lanes, ${SIDE_NAMES[laneSide(ax, ay, pick.x, pick.y, k)]}`, crosses: 'carts, wagons' })),
+        { width: STALL_WIDTH, label: `${STALL_WIDTH} lanes`, crosses: 'carts, wagons, outer-lane furniture' },
+      ];
+      const hidden = (reason: string | null): boolean => reason !== null && /runs straight|nothing between|a gap, it is ground|dry, solid ground/.test(reason);
+      const options = THROWN.map((kind) => {
+        const def = BRIDGES[kind];
+        if (!isMaterialBridge(kind)) {
+          const reason = planBridge.check?.({ ...target, material: kind }, g) ?? null;
+          return hidden(reason) ? null : {
+            label: def.name,
+            note: reason ? undefined : `${billSaid(def.bill)} a span${def.winch ? ` · the first also ${billSaid(def.winch)}` : ''} · ${def.carts ? 'carts cross' : 'foot only'}`,
+            hint: reason ?? undefined,
+            disabled: !!reason,
+            onSelect: () => g.requestAction(planBridge, { ...target, material: kind }),
+          };
+        }
+        const lanes = widths.map((w) => {
+          const t: Target = { ...target, material: kind, width: w.width, ...(w.side ? { side: w.side } : {}) };
+          return { w, t, reason: planBridge.check?.(t, g) ?? null };
+        });
+        if (lanes.every((l) => hidden(l.reason))) return null;
+        return {
+          label: def.name,
+          note: `max ${def.span} tiles · bay ${def.bay} · max drop ${def.storeys} storeys`,
+          children: lanes.map(({ w, t, reason }) => ({
+            label: w.label,
+            note: reason ? undefined : `${billSaid(def.bill, w.width)} a span · a pier ${billSaid(def.bill)} a storey of drop · ${w.crosses}`,
+            hint: reason ?? undefined,
+            disabled: !!reason,
+            onSelect: () => g.requestAction(planBridge, t),
+          })),
+        };
+      }).filter((o): o is NonNullable<typeof o> => o !== null);
       if (options.length) {
         entries.push({
           label: 'Build bridge from here',
-          children: options.map((o) => ({
-            label: o.def.name,
-            note: o.reason ? undefined : `${o.def.bill.map(([id, n]) => `${n} ${itemName({ uid: 0, id, ql: 1, dmg: 0, count: 1 }).toLowerCase()}`).join(', ')} a span${
-              o.def.winch ? ` · the first also ${o.def.winch.map(([id, n]) => `${n} ${itemName({ uid: 0, id, ql: 1, dmg: 0, count: 1 }).toLowerCase()}`).join(', ')}` : ''} · ${o.def.carts ? 'carts cross' : 'foot only'}`,
-            hint: o.reason ?? undefined,
-            disabled: !!o.reason,
-            onSelect: () => this.game.requestAction(planBridge, { ...target, material: o.kind }),
-          })),
+          children: options,
         });
       }
     }

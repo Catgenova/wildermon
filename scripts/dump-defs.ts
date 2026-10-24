@@ -100,7 +100,7 @@ import {
 } from '../src/game/classes';
 import { FX_RULE, PERKS } from '../src/game/perks';
 import { SCHOOLS, SPELLS } from '../src/game/arcane';
-import { BRIDGES, CLEARANCE, END_SLOP, RAMP_SLOPE } from '../src/game/bridges';
+import { BRIDGES, CLEARANCE, END_SLOP, RAMP_SLOPE, STALL_WIDTH, WAGON_WIDTH, WIDEST } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
@@ -591,6 +591,12 @@ out.push(`create table if not exists bridge_winch (
   kind text not null, item text not null, count int not null, primary key (kind, item)
 );`);
 out.push(`alter table bridge_def add column if not exists grounded boolean not null default false;`);
+/* A material bridge's wall material, its bay in tiles, its deepest drop in height units, its storeys, and whether it is stone (`materialBridge`). */
+out.push(`alter table bridge_def add column if not exists material text;`);
+out.push(`alter table bridge_def add column if not exists bay int;`);
+out.push(`alter table bridge_def add column if not exists deepest int;`);
+out.push(`alter table bridge_def add column if not exists storeys int;`);
+out.push(`alter table bridge_def add column if not exists stone boolean not null default false;`);
 /* Something to sleep in, and how much of a night it is worth. */
 out.push(`alter table furniture_def add column if not exists bed real;`);
 /* A wildermon bed: the stage of wildermon it is sized for (`FurnitureDef.den`, `fitsDen`), nought before its first evolution. */
@@ -1537,6 +1543,8 @@ out.push(`create or replace function board_top() returns int language sql immuta
  * will stand close enough to be put together. */
 for (const [fn, v] of [
   ['clearance', CLEARANCE], ['end_slop', END_SLOP], ['ramp_slope', RAMP_SLOPE], ['pair_range', PAIR_RANGE],
+  // A material bridge's lanes: the most, and from how many wagons cross and furniture goes on its outer lanes.
+  ['bridge_widest', WIDEST], ['wagon_width', WAGON_WIDTH], ['stall_width', STALL_WIDTH],
   ['groom_cap', GROOM_CAP], ['groom_heal', GROOM_HEAL], ['breed_rest', BREED_REST], ['gestation', GESTATION],
   ['rest_cap', REST_CAP], ['rest_mult', REST_MULT], ['rest_per_second', REST_PER_SECOND],
   ['dawn_hour', DAWN], ['dusk_hour', DUSK], ['day_seconds', DAY_SECONDS],
@@ -2293,6 +2301,9 @@ for (const b of Object.values(BRIDGES)) {
   for (const [item, n] of b.bill) out.push(`insert into bridge_bill values (${q(b.id)}, ${q(item)}, ${q(n)});`);
   for (const [item, n] of b.winch ?? []) out.push(`insert into bridge_winch values (${q(b.id)}, ${q(item)}, ${q(n)});`);
   if (b.grounded) out.push(`update bridge_def set grounded = true where id = ${q(b.id)};`);
+  if (b.material) {
+    out.push(`update bridge_def set material = ${q(b.material)}, bay = ${q(b.bay)}, deepest = ${q(b.deepest)}, storeys = ${q(b.storeys)}, stone = ${q(!!b.stone)} where id = ${q(b.id)};`);
+  }
 }
 for (const b of BREWS) {
   out.push(`insert into brew_def values (` + [q(b.id), q(b.name), q(b.input), q(b.count),

@@ -80,7 +80,7 @@ const wall = game.buildings.setFence(px, py, 'n', 'solid', 'log');
 const wagon = game.addFurniture('wagon', px + 2, py, 0, 0, 40, [stack('log', 3), stack('plank', 2)], 'Pine');
 wagon.mine = false;
 const bridge = {
-  id: 9001, kind: 'wood', ax: px, ay: py + 3, bx: px + 3, by: py + 3, height: 40, level: 0,
+  id: 9001, kind: 'plank', ax: px, ay: py + 3, bx: px + 3, by: py + 3, height: 40, level: 0,
   spans: [{ x: px + 1, y: py + 3, needed: { plank: 2 }, total: { plank: 2 } }],
 } as unknown as Bridge;
 game.bridges.set(bridge.id, bridge);
@@ -161,7 +161,7 @@ begin
     (w, 'furniture', v_wagon, 'log', 30, 3), (w, 'furniture', v_wagon, 'plank', 30, 2);
   -- A wooden bridge's open span three tiles south.
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level)
-    values (w, 'wood', v_x, v_y + 3, v_x + 3, v_y + 3, 40, me, 0) returning id into v_bridge;
+    values (w, 'plank', v_x, v_y + 3, v_x + 3, v_y + 3, 40, me, 0) returning id into v_bridge;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
     values (w, v_bridge, 1, v_x + 1, v_y + 3, '{"plank": 2}', '{"plank": 2}');
 

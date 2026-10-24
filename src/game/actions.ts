@@ -99,6 +99,8 @@ export type Target =
       side?: Side;
       wallType?: WallType;
       material?: string;
+      /** How many lanes wide a bridge being thrown across is (`laneOffsets`); its second lane's side is `side`. */
+      width?: number;
       floorKind?: FloorKind;
       /** For a single staircase, the half of the tile it runs up; none for the wide one (`StairHand`). */
       hand?: StairHand;

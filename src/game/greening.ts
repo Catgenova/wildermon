@@ -1,6 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import { borderOf, isDone, MATERIAL_BY_ID, SIDE_NAMES, type Side, type Wall } from './building';
-import { bridgeDone, type Bridge } from './bridges';
+import { BRIDGES, bridgeDone, type Bridge } from './bridges';
 import { foundationDone, type Foundation } from './foundations';
 import { furnitureDef, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
@@ -88,8 +88,8 @@ export const wetFrom = (near: number): number => Math.max(0, 1 - near / GREEN_WE
 export const ivied = (w: Wall): boolean => isDone(w) && MATERIAL_BY_ID.get(w.material)?.kind === 'stone';
 /** A piece moss gathers on (`FurnitureDef.mossy`): a statue. */
 export const mossyPiece = (f: { kind: string }): boolean => !!furnitureDef(f.kind).mossy;
-/** A bridge moss gathers on: a finished stone arch, or a finished aqueduct, which is one. */
-export const mossyBridge = (b: Bridge): boolean => (b.kind === 'stone' || b.kind === 'aqueduct') && bridgeDone(b);
+/** A bridge moss gathers on: a finished one of stone, brick or earth (`BridgeDef.stone`), or a finished aqueduct, which is a stone arch. */
+export const mossyBridge = (b: Bridge): boolean => (!!BRIDGES[b.kind]?.stone || b.kind === 'aqueduct') && bridgeDone(b);
 
 /** The days a wall has been greening, or null for a wall ivy does not climb. */
 export function wallGreen(g: Game, w: Wall, now: number): number | null {

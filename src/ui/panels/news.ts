@@ -175,7 +175,7 @@ import {
 import { BOIL_LITRES, boilCountPlain, gramsOf } from '../../game/dyes';
 import { GREEN_ACTIONS, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET } from '../../game/greening';
 import { BUCKET_LITRES, FURNITURE, WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
-import { BRIDGES, CLEARANCE, END_SLOP, PULL_REACH, RAMP_SLOPE, rampTiles } from '../../game/bridges';
+import { BAY_PAST_HEFT, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBridge, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, STONE_ARCH, THROWN, WAGON_WIDTH, WIDEST } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, TILE_METRES } from '../../world/aqueducts';
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
@@ -950,7 +950,7 @@ export const NEWS: News[] = [
       const [clear, scrub] = GREEN_ACTIONS;
       const a = (name: string): string => `${article(name)} ${name.toLowerCase()}`;
       return [
-        `Added: greening. Ivy on finished stone or brick walls, fences and half walls; moss on paving, poured foundations, ${listed([...FURNITURE.filter((f) => f.mossy).map((f) => a(f.name)), a(BRIDGES.stone.name)])}. Bare when made; greens daily for ${GREEN_DAYS} days. Everything existing starts bare today.`,
+        `Added: greening. Ivy on finished stone or brick walls, fences and half walls; moss on paving, poured foundations, ${listed([...FURNITURE.filter((f) => f.mossy).map((f) => a(f.name)), a(STONE_ARCH.name)])}. Bare when made; greens daily for ${GREEN_DAYS} days. Everything existing starts bare today.`,
         `Added: shown amount = days / ${GREEN_DAYS} × pace: ${GREEN_SUN} on tops and south/east faces, ${+(GREEN_SUN + GREEN_SHADE).toFixed(2)} on north/west faces, up to +${GREEN_WET} beside water.`,
         `Added: ${clear.label} (${a(itemDef(clear.tool ?? '').name)}): 1 wall side, every storey; ${scrub.label} (${a(itemDef(scrub.tool ?? '').name)}): paving, foundation, statue or arch. Both reset to bare. On a settlement builders only; elsewhere anyone. Island keeps the clock for everyone.`,
         'Fixed: island bridges were invisible and uncrossable; now drawn and walkable for everyone.',
@@ -3623,6 +3623,15 @@ export const NEWS: News[] = [
     day: '2026-10-24',
     lines: () => [
       `Added: No plan (side): storey ${NO_PLAN_FROM + 1} and up, bare outside side; no plan model drawn; side still counts as open. Mark out (side): the model back.`,
+    ],
+  },
+  {
+    n: 301,
+    day: '2026-10-24',
+    lines: () => [
+      `Changed: wooden bridge and stone arch replaced by a bridge of each of ${listed(THROWN.filter(isMaterialBridge).map((k) => MATERIAL_BY_ID.get(k)!.name.toLowerCase()))}: `
+        + `max length storeys + ${BRIDGE_REACH} tiles, bay heft + ${BAY_PAST_HEFT} tiles, max drop its storeys; per span a wall's bill a lane, per pier a wall's bill a storey of drop; `
+        + `1 to ${WIDEST} lanes (${WAGON_WIDTH}: wagons; ${STALL_WIDTH}: furniture on the outer lanes). Existing: wooden → plank, stone arch → stone brick, 1 lane.`,
     ],
   },
 ];

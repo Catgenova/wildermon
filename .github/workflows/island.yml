@@ -959,6 +959,20 @@ jobs:
           npx esbuild supabase/test/ramp.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/ramp.mjs --log-level=error
           node node_modules/.cache/ramp.mjs
+      - name: A bridge of each wall material, one to three lanes wide
+        if: matrix.shard == 1
+        run: |
+          # Asked for: stone and timber bridges by wall material, their length,
+          # bays and drop off the material's storeys and heft, one to three
+          # lanes wide. Both sides allow each material's longest deck and
+          # deepest drop and refuse one more in the same words, lay the same
+          # bays and piers, bill a span a lane and a pier a storey of drop,
+          # let a wagon onto two lanes and not one, furniture onto a three-lane
+          # deck's outer lanes and not its middle, and turn the old wooden
+          # bridge and stone arch into a plank and a stone brick one.
+          npx esbuild supabase/test/bridgewidth.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/bridgewidth.mjs --log-level=error
+          node node_modules/.cache/bridgewidth.mjs
       - name: Eight ways round, not two
         if: matrix.shard == 1
         run: |

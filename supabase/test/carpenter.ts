@@ -63,6 +63,9 @@ const P = (name: string): PerkDef => {
   return p;
 };
 const q = (s: string): string => `'${s.replace(/'/g, "''")}'`;
+/** The far end of a plank bridge from 1 one tile past its longest, and one tile past its longest with a Bridge Wright. */
+const WOOD_PAST = 1 + BRIDGES.plank.span + 2;
+const WOOD_PAST_PERK = WOOD_PAST + P('Bridge Wright').fx['span:bridge_wood'];
 const hold = (...names: string[]): string =>
   `perform pg_temp.hold(w, u, array[${names.map((n) => q(P(n).id)).join(', ')}]::text[])`;
 /** A perk's number put where a go must show it, for the length of the transaction. */
@@ -356,20 +359,20 @@ begin
 
   /* ---- Bridge Wright: the time of a go on a wooden and a rope bridge, and how far each spans. ---- */
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level)
-    values (w, 'wood', 1, 14, 5, 14, 40, u, 0) returning id into v_wood;
+    values (w, 'plank', 1, 14, 5, 14, 40, u, 0) returning id into v_wood;
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level)
     values (w, 'rope', 1, 15, 5, 15, 40, u, 0) returning id into v_rope;
   perform pg_temp.hold(w, u, '{}');
   select class_mul into v_mul from player where world_id = w and uid = u;
   v_t := perk_time(v_mul, w, 'build_bridge', jsonb_build_object('kind', 'bridge', 'id', v_wood))
     || '#' || perk_time(v_mul, w, 'build_bridge', jsonb_build_object('kind', 'bridge', 'id', v_rope))
-    || '#' || coalesce(bridge_reason(w, u, 'wood', 1, 13, 13, 13), 'ALLOWED');
+    || '#' || coalesce(bridge_reason(w, u, 'plank', 1, 13, ${WOOD_PAST}, 13), 'ALLOWED');
   ${hold('Bridge Wright')};
   select class_mul into v_mul from player where world_id = w and uid = u;
   insert into said values ('BRIDGE', v_t || '|' || perk_time(v_mul, w, 'build_bridge', jsonb_build_object('kind', 'bridge', 'id', v_wood))
     || '#' || perk_time(v_mul, w, 'build_bridge', jsonb_build_object('kind', 'bridge', 'id', v_rope))
-    || '#' || coalesce(bridge_reason(w, u, 'wood', 1, 13, 13, 13), 'ALLOWED')
-    || '#' || coalesce(bridge_reason(w, u, 'wood', 1, 13, 15, 13), 'ALLOWED'));
+    || '#' || coalesce(bridge_reason(w, u, 'plank', 1, 13, ${WOOD_PAST}, 13), 'ALLOWED')
+    || '#' || coalesce(bridge_reason(w, u, 'plank', 1, 13, ${WOOD_PAST_PERK}, 13), 'ALLOWED'));
   delete from bridge where world_id = w and id in (v_wood, v_rope);
 
   /*
@@ -505,9 +508,9 @@ check(`${P('Bridge Wright').name}: a go on a wooden and a rope bridge takes ${bw
   wA === '1' && rA === '1' && near(Number(wB), bw['time:bridge_wood']) && near(Number(rB), bw['time:bridge_rope']), say('BRIDGE'));
 // Eleven tiles between the ends: too long for a plain wooden bridge, and past the span with the perk
 // (the ground under it is what refuses it then); thirteen is too long either way.
-check(`and a wooden bridge spans ${bw['span:bridge_wood']} tiles with it, ${BRIDGES.wood.span} without`,
-  spanA === `Wooden bridge: max span ${BRIDGES.wood.span} tiles; this is 11.` && !spanB.includes('max span')
-    && spanC === `Wooden bridge: max span ${bw['span:bridge_wood']} tiles; this is 13.`, say('BRIDGE'));
+check(`and a plank bridge spans ${bw['span:bridge_wood']} tiles further with it: ${BRIDGES.plank.span + bw['span:bridge_wood']}, ${BRIDGES.plank.span} without`,
+  spanA === `${BRIDGES.plank.name}: max span ${BRIDGES.plank.span} tiles; this is ${BRIDGES.plank.span + 1}.` && !spanB.includes('max span')
+    && spanC === `${BRIDGES.plank.name}: max span ${BRIDGES.plank.span + bw['span:bridge_wood']} tiles; this is ${BRIDGES.plank.span + bw['span:bridge_wood'] + 1}.`, say('BRIDGE'));
 
 const STEP = ['-', 'rare', 'supreme', 'fantastic'];
 const holds = say('HOLDS').split(',').map((b) => b.split('|'));

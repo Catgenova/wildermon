@@ -59,6 +59,10 @@ const P = (name: string): PerkDef => {
   return p;
 };
 const q = (s: string): string => `'${s.replace(/'/g, "''")}'`;
+/** A cobblestone bridge, and the far end of one from 1 one tile past its longest, and one tile past its longest with a Bridge Mason. */
+const ARCH = BRIDGES.cobblestone;
+const ARCH_PAST = 1 + ARCH.span + 2;
+const ARCH_PAST_PERK = ARCH_PAST + P('Bridge Mason').fx['span:bridge_stone'];
 const hold = (...names: string[]): string =>
   `perform pg_temp.hold(w, u, array[${names.map((n) => q(P(n).id)).join(', ')}]::text[])`;
 /** A perk's number put where a go must show it, for the length of the transaction. */
@@ -337,20 +341,20 @@ begin
 
   /* ---- Bridge Mason: the time of a go on a stone arch and a wooden bridge, and the span. ---- */
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level)
-    values (w, 'stone', 1, 14, 5, 14, 40, u, 0) returning id into v_arch;
+    values (w, 'cobblestone', 1, 14, 5, 14, 40, u, 0) returning id into v_arch;
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level)
-    values (w, 'wood', 1, 15, 5, 15, 40, u, 0) returning id into v_wood;
+    values (w, 'plank', 1, 15, 5, 15, 40, u, 0) returning id into v_wood;
   perform pg_temp.hold(w, u, '{}');
   v_mul := (select class_mul from player where world_id = w and uid = u);
   v_t := perk_time(v_mul, w, 'build_bridge', jsonb_build_object('kind', 'bridge', 'id', v_arch))
     || '#' || perk_time(v_mul, w, 'build_bridge', jsonb_build_object('kind', 'bridge', 'id', v_wood))
-    || '#' || bridge_reason(w, u, 'stone', 1, 13, 11, 13);
+    || '#' || bridge_reason(w, u, 'cobblestone', 1, 13, ${ARCH_PAST}, 13);
   ${hold('Bridge Mason')};
   v_mul := (select class_mul from player where world_id = w and uid = u);
   insert into said values ('ARCH', v_t || '|' || perk_time(v_mul, w, 'build_bridge', jsonb_build_object('kind', 'bridge', 'id', v_arch))
     || '#' || perk_time(v_mul, w, 'build_bridge', jsonb_build_object('kind', 'bridge', 'id', v_wood))
-    || '#' || coalesce(bridge_reason(w, u, 'stone', 1, 13, 11, 13), 'ALLOWED')
-    || '#' || coalesce(bridge_reason(w, u, 'stone', 1, 13, 13, 13), 'ALLOWED'));
+    || '#' || coalesce(bridge_reason(w, u, 'cobblestone', 1, 13, ${ARCH_PAST}, 13), 'ALLOWED')
+    || '#' || coalesce(bridge_reason(w, u, 'cobblestone', 1, 13, ${ARCH_PAST_PERK}, 13), 'ALLOWED'));
   delete from bridge where world_id = w and id in (v_arch, v_wood);
 
   /* ---- The rock: Concrete Hand with every check failing. ---- */
@@ -518,11 +522,11 @@ check(`and the island keeps a building of ${TOP_LEVELS} storeys`, tallLevels ===
 
 const [archA, archB] = say('ARCH').split('|').map((s) => s.split('#'));
 const bm = P('Bridge Mason');
-check(`${bm.name}: a go on a stone arch takes ${bm.fx['time:bridge_stone']} of the time with it, and a wooden bridge all of it`,
+check(`${bm.name}: a go on a ${ARCH.name.toLowerCase()} takes ${bm.fx['time:bridge_stone']} of the time with it, and a plank bridge all of it`,
   archA[0] === '1' && archA[1] === '1' && near(Number(archB[0]), bm.fx['time:bridge_stone']) && archB[1] === '1', say('ARCH'));
-check(`and a stone arch spans ${bm.fx['span:bridge_stone']} tiles with it, ${BRIDGES.stone.span} without`,
-  archA[2] === `${BRIDGES.stone.name}: max span ${BRIDGES.stone.span} tiles; this is 9.` && !archB[2].includes('max span')
-    && archB[3] === `${BRIDGES.stone.name}: max span ${bm.fx['span:bridge_stone']} tiles; this is 11.`, say('ARCH'));
+check(`and a ${ARCH.name.toLowerCase()} spans ${bm.fx['span:bridge_stone']} tiles further with it: ${ARCH.span + bm.fx['span:bridge_stone']}, ${ARCH.span} without`,
+  archA[2] === `${ARCH.name}: max span ${ARCH.span} tiles; this is ${ARCH.span + 1}.` && !archB[2].includes('max span')
+    && archB[3] === `${ARCH.name}: max span ${ARCH.span + bm.fx['span:bridge_stone']} tiles; this is ${ARCH.span + bm.fx['span:bridge_stone'] + 1}.`, say('ARCH'));
 
 /* ---- the rock ------------------------------------------------------------------------ */
 

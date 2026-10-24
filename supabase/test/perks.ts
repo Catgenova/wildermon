@@ -497,9 +497,10 @@ const JOBS = new Set(['time', 'ql', 'rare', 'map', 'fail', 'keep', 'more', 'gem'
   'grow', 'rotate', 'bumper', 'fodder', 'tool', 'passes', 'empty', 'mend', 'hook', 'haul', 'cost', 'harm', 'age', 'tier', 'stone']);
 /*
  * And a kind of work, where the rule asks what is being worked rather than
- * which job: a wall or floor of stone or of timber, a bridge of each kind.
+ * which job: a wall or floor of stone or of timber, a bridge of each kind or family.
  */
-const WORKS = new Set([...BUILD_MATERIALS.map((m) => buildWork(m)), ...Object.keys(BRIDGES).map((k) => `bridge_${k}`), 'fence']);
+// A material bridge is worked as its family, stone or timber (`work_kind`).
+const WORKS = new Set([...BUILD_MATERIALS.map((m) => buildWork(m)), ...Object.keys(BRIDGES).map((k) => `bridge_${k}`), 'bridge_stone', 'bridge_wood', 'fence']);
 const WORK_FAMILIES = new Set(['lay', 'storeys', 'salvage', 'span', 'bill']);
 const OTHERS = new Set([
   'depth:dig', 'depth:dredge', 'flatten:step', 'stump:log', 'walk:road', 'reach:soil', 'carry', 'dig_tile',

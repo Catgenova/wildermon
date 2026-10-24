@@ -1,6 +1,7 @@
 import type { Game } from '../game/game';
 import { TileType, stepsTimber } from '../world/tiles';
 import { MATERIAL_BY_ID } from '../game/building';
+import { BRIDGES } from '../game/bridges';
 import { blow, chime, footfall, stroke, type Footing, type Stroke } from './kit';
 import { VOICES } from './voices';
 import { stageOf } from '../game/creatures';
@@ -98,7 +99,7 @@ export function footingAt(g: Game, x: number, y: number, level: number): Footing
   if (floor) return MATERIAL_BY_ID.get(floor.material)?.kind === 'stone' ? 'stone' : 'wood';
   const bridge = g.bridgeAt(tx, ty);
   // Under an aqueduct the feet are on the ground: nobody walks its deck.
-  if (bridge && bridge.kind !== 'aqueduct') return bridge.kind === 'stone' ? 'stone' : 'wood';
+  if (bridge && bridge.kind !== 'aqueduct') return BRIDGES[bridge.kind]?.stone ? 'stone' : 'wood';
   // Stepping stones are stepped on, not waded through, whatever water is round them.
   if (g.world.stonesAt(tx, ty)) return 'stone';
   if (g.world.hasWater(tx, ty) && g.world.heightAt(x, y) < g.world.surfaceAt(tx, ty)) return 'water';

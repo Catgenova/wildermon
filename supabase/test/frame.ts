@@ -386,8 +386,8 @@ same('so with a post at each corner of it the roof may go over the jetty with th
 for (const [cx, cy] of [[18, 24], [19, 24], [18, 25], [19, 25]]) uncolumn(1, cx, cy);
 /* No bridge goes through a jetty, its railings and whoever is on it. */
 {
-  const mine = game.bridgeReason('wood', 17, 24, 19, 24);
-  const theirs = psql(`select coalesce(bridge_reason(${W}, ${DANE}, 'wood', 17, 24, 19, 24), 'ALLOWED');`);
+  const mine = game.bridgeReason('plank', 17, 24, 19, 24);
+  const theirs = psql(`select coalesce(bridge_reason(${W}, ${DANE}, 'plank', 17, 24, 19, 24), 'ALLOWED');`);
   check('no bridge is planned through a jetty, on both sides', mine === "Not over a building's jetty." && theirs === mine,
     `browser "${mine}", island "${theirs}"`);
 }

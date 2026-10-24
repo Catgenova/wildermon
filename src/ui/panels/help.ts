@@ -27,7 +27,7 @@ import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, onceEvery, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, grapesFor, PICK_GRAPES, PLANT_VINE,
   TRELLIS_RULE, trellisRefusedSaid, VINE_BEARS, VINE_REST, VINE_SKILL, vineSoilWords, VINEYARD_ACTIONS, WILD_VINE,
 } from '../../game/vineyard';
-import { BRIDGES, CLEARANCE, END_SLOP, PULL_REACH, RAMP_SLOPE, rampTiles } from '../../game/bridges';
+import { BAY_PAST_HEFT, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, WAGON_WIDTH, WIDEST } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, CORNER_LITRES, FOUNTAIN_RIM, TILE_METRES } from '../../world/aqueducts';
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
@@ -1975,8 +1975,12 @@ export function helpText(): string {
       middle of; everything between at least ${metres(CLEARANCE)} m below the deck over its tile's middle (a gap, not a slope).</li>
       <li>End height: the tile's middle (mean of corners), or the top of a poured foundation or finished deck on piers; an upper-floor end at that floor's height.
       Ends within ${metres(END_SLOP)} m: a level deck at their mean.</li>
-      <li>${Object.values(BRIDGES).filter((b) => b !== AQUEDUCT).length} kinds:
-      ${listed(Object.values(BRIDGES).filter((b) => b !== AQUEDUCT).map((b) => `<b>${b.name.toLowerCase()}</b> (${billIn(b.bill)} a span${b.tool === 'trowel' ? ', trowel' : ''}): <b>${b.span}</b> tiles, ${b.carts ? 'carries a cart' : 'foot traffic only'}`))}.</li>
+      <li>${listed(Object.values(BRIDGES).filter((b) => b !== AQUEDUCT && !b.material).map((b) => `<b>${b.name.toLowerCase()}</b> (${billIn(b.bill)} a span${b.tool === 'trowel' ? ', trowel' : ''}): <b>${b.span}</b> tiles, ${b.carts ? 'carries a cart' : 'foot traffic only'}`))}.</li>
+      <li>One bridge per wall material: max length its storeys + ${BRIDGE_REACH} tiles; bay (one arch or beam) its heft + ${BAY_PAST_HEFT} tiles, bays even, an odd count's middle widest;
+      max drop under the deck its storeys; its tool and trade. Per span: a solid wall's bill a lane. Per pier (one between bays): a solid wall's bill a storey of drop there, rounded up.
+      ${listed(Object.values(BRIDGES).filter((b) => b.material).map((b) => `<b>${b.name.toLowerCase()}</b> ${b.span} tiles, bay ${b.bay}, drop ${b.storeys} storeys`))}.</li>
+      <li>Lanes: up to ${WIDEST}: the line set out along; at ${WAGON_WIDTH}, one more on the side picked; at ${STALL_WIDTH}, one more each side. Every lane's ends land as the line's,
+      on the same storey within ${metres(END_SLOP)} m. ${WAGON_WIDTH} lanes: wagons cross. ${STALL_WIDTH} lanes: furniture and stalls on the outer lanes of a finished deck.</li>
       <li><b>Ramp</b> (ends further apart): rises evenly, at most <b>${metres(RAMP_SLOPE)} m</b> per tile of deck, or refused with the tiles needed. A storey is ${metres(WALL_HEIGHT)} m:
       one storey needs at least ${rampTiles(WALL_HEIGHT)} tiles of deck;
       ${((up: number) => `${up} storeys (ground to storey ${up + 1}) at least ${rampTiles(up * WALL_HEIGHT)}`)(2)}.
@@ -2046,7 +2050,7 @@ export function helpText(): string {
       <li><b>Ivy</b>: every finished wall, fence and half wall of ${listed(WALL_MATERIALS.filter((m) => m.kind === 'stone').map((m) => m.name.toLowerCase()))}; up from the foot and
       down from the top where nothing stands on it; never on doorways, arches, windows or gates.</li>
       <li><b>Moss</b>: paving joints (${listed(Object.values(TILE_DEFS).filter((d) => d.paved).map((d) => d.name.toLowerCase()))}), poured foundations,
-      ${listed(FURNITURE.filter((f) => f.mossy).map((f) => aOrAn(f.name)))}, ${aOrAn(BRIDGES.stone.name)}, ${aOrAn(BRIDGES.aqueduct.name)}.</li>
+      ${listed(FURNITURE.filter((f) => f.mossy).map((f) => aOrAn(f.name)))}, ${listed(Object.values(BRIDGES).filter((b) => b.stone).map((b) => aOrAn(b.name.toLowerCase())))}, ${aOrAn(BRIDGES.aqueduct.name)}.</li>
       <li>Bare when built, laid, set down or poured; grows a day at a time for <b>${GREEN_DAYS} days</b> (a day = ${GREEN_DAY / HOUR} hours real time), then stops.
       Things standing before this existed started bare that day. Island: one clock for everybody.</li>
       <li>Cover = days ÷ ${GREEN_DAYS} × pace (speed multiplier). Pace: <b>${GREEN_SUN}</b> for tops and south or east faces; <b>${+(GREEN_SUN + GREEN_SHADE).toFixed(2)}</b> for north or west faces;
