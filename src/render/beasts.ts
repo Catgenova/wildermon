@@ -1123,6 +1123,8 @@ interface Held {
   u?: number; phase?: number; at?: number; k?: number;
   /** Since when it has been put down from a picture other than its own, waiting for a new one to be drawn: see `drawBeast`. */
   waiting?: number;
+  /** The picture it was put down from last. */
+  shown?: string;
 }
 const held = new Map<string, Held>();
 
@@ -1792,13 +1794,21 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
         f = frames.get(fkey);
       }
     }
+    // None of this one at any size, as when it has just turned, set off or stopped: the picture it was put down from last.
+    if (!f && h?.shown) {
+      fkey = h.shown;
+      f = frames.get(fkey);
+    }
   }
   let made = 0;
   setUsed.set(base, now);
   if (f) {
     frames.delete(fkey);
     frames.set(fkey, f);
-    if (h) h.waiting = fkey === key ? undefined : h.waiting ?? now;
+    if (h) {
+      h.waiting = fkey === key ? undefined : h.waiting ?? now;
+      h.shown = fkey;
+    }
   } else {
     made = performance.now();
     const box = reachOf(species, kind, kit);
@@ -1810,7 +1820,10 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     drawKind(g, kind, kit, pal, facing, a, inkAt(step, kind.size), 1 / step);
     f = cropped(g, w, hh, ox, oy, k, base);
     keep(key, f, now);
-    if (h) h.waiting = undefined;
+    if (h) {
+      h.waiting = undefined;
+      h.shown = key;
+    }
   }
   const [ax, ay] = go > 0 ? ahead(a.u) : [0, 0];
   ctx.drawImage(f.canvas, sx + ax - (f.ox / f.k) * zoom, sy + ay - (f.oy / f.k) * zoom, (f.canvas.width / f.k) * zoom, (f.canvas.height / f.k) * zoom);
