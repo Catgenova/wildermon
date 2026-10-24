@@ -94,6 +94,8 @@ export interface BarOpts {
   capPaint?: Role;
   capTone?: Tone;
   seed?: number;
+  /** The section at `b` this much of the section at `a`: a member tapering (or flaring) along its run. */
+  taper?: number;
 }
 
 /**
@@ -110,7 +112,8 @@ export function bar(a: L, b: L, sec: P2[], tone: Tone, o: BarOpts = {}): Fc[] {
   const u = unit(cross(dn, Math.abs(dn[2]) > 0.95 ? [0, 1, 0] : [0, 0, 1]));
   const v = cross(u, dn);
   const off = (c: P2): V3 => add(mul(u, c[0]), mul(v, c[1]));
-  const P = sec.map((c) => toL(add(A, off(c)))), Q = sec.map((c) => toL(add(B, off(c))));
+  const tb = o.taper ?? 1;
+  const P = sec.map((c) => toL(add(A, off(c)))), Q = sec.map((c) => toL(add(B, off([c[0] * tb, c[1] * tb]))));
   const seed = o.seed ?? Math.round(a[0] * 31 + a[1] * 17 + a[2]);
   const out: Fc[] = [];
   const n = sec.length;
@@ -289,7 +292,10 @@ function bents(k: Kit, c: Carpentry): void {
       const tf = postT(b, p, b.foot);
       const g = plan.ground(b.s, tf);
       if (g > b.foot + 0.5 && g < b.capB - 4) pads.push(...bar([b.s, tf, g - 1], [b.s, tf, g + 1.4], sq(c.post + 0.9), PAD));
-      return bar([b.s, tf, b.foot], [b.s, p.t, b.capB], postSec, postTone, { paint: 'post', seed: j + Math.round(b.s * 7) });
+      // A tall bent's posts heavier, flaring to the foot.
+      const tall = b.form !== 'low';
+      return bar([b.s, tf, b.foot], [b.s, p.t, b.capB], tall ? (c.round ? rnd(c.post * 1.55, 8) : sq(c.post * 1.55)) : postSec, postTone,
+        { paint: 'post', seed: j + Math.round(b.s * 7), taper: tall ? 0.72 : 1 });
     }), '');
     lay(k, 'front', -2.1, pads, '');
     // The cap beam across the whole bent, its ends proud of the outer faces.
@@ -309,7 +315,18 @@ function bents(k: Kit, c: Carpentry): void {
     if (b.form === 'tiers' && kind !== 'none') {
       const [z0, z1] = [tiers[0][0], tiers[tiers.length - 1][1]];
       const [pa, pb] = (bi + Math.round(k.sl.o * 2)) % 2 ? [p0, p1] : [p1, p0];
-      lay(k, 'front', -1.9, bar([sb, postT(b, pa, z0), z0], [sb, postT(b, pb, z1), z1], c.round ? rnd(c.brace * 1.15, 6) : sq(c.brace * 0.55, c.brace * 1.2), beam), '');
+      const zm = (z0 + z1) / 2;
+      const bsec = c.round ? rnd(c.brace * 1.3, 6) : sq(c.brace * 0.6, c.brace * 1.35);
+      lay(k, 'front', -1.9, [
+        // The long brace, and a short one the other way across its lower half.
+        ...bar([sb, postT(b, pa, z0), z0], [sb, postT(b, pb, z1), z1], bsec, beam),
+        ...bar([sb, postT(b, pb, z0), z0], [sb, postT(b, pa, zm), zm], bsec, beam),
+      ], '');
+      // A heavy sill across the bent at the foot, the posts standing on it.
+      const sw = (c.post * 1.55 + 1.2) / U;
+      const zs = b.foot + 1.5 + c.cap * 1.1;
+      lay(k, 'front', -2.05, bar([b.s, postT(b, p0, b.foot) - sw * Math.sign(p1.t - p0.t), zs], [b.s, postT(b, p1, b.foot) + sw * Math.sign(p1.t - p0.t), zs],
+        c.round ? rnd(c.cap * 1.25, 8) : sq(c.cap * 1.2, c.cap * 1.1), beam, { caps: [true, true], capTone: c.endTone, capPaint: c.round ? 'plinth' : undefined }), 't');
       continue;
     }
     lay(k, 'front', -1.9, braced.flatMap(([z0, z1]) => kind === 'a'
@@ -719,7 +736,7 @@ const P = {
   rail: tone('#f0d8ac', '#94787c'),
   cap: tone('#f6e2ba', '#9a8082'),
   tar: tone('#86707c', '#383046'),
-  fascia: tone('#d6b488', '#7e6670'),
+  fascia: tone('#8a5c52', '#3c2a3c'),
   plaque: tone('#8e6e62', '#4a3a4c'),
 };
 
@@ -761,6 +778,11 @@ const fasciaBoards: BridgePainter = (g, k, f, st) => {
   grainPaint(g, k, f, st);
   const h = Math.abs(f.y1 - f.y0);
   const x0 = Math.min(f.x0, f.x1), x1 = Math.max(f.x0, f.x1);
+  // A painted stripe along its upper board: cream, a red line under it.
+  g.fillStyle = css(mix(hex('#f4dcae'), k.fill, 0.18 + (1 - k.L) * 0.5));
+  g.fillRect(x0 - 1, h * 0.58, x1 - x0 + 2, h * 0.26);
+  g.fillStyle = css(mix(hex('#d0605a'), k.fill, 0.2 + (1 - k.L) * 0.5));
+  g.fillRect(x0 - 1, h * 0.52, x1 - x0 + 2, h * 0.06);
   g.strokeStyle = css(mix(k.fill, hex('#4a3640'), 0.5), 0.85);
   g.lineWidth = 0.26;
   g.beginPath(); g.moveTo(x0 - 1, h * 0.5); g.lineTo(x1 + 1, h * 0.5); g.stroke();
