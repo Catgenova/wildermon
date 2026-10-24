@@ -1,4 +1,5 @@
 import { actOf, beastFrame } from './beasts';
+import { sunAt } from './sun';
 import { gearFrom, wornWire } from '../game/worn';
 import { Camera } from '../engine/camera';
 import { emoteAt } from '../game/emotes';
@@ -42,6 +43,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
+import { SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFrame, tree3dShadow, type TreeView } from './trees3d';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -1037,23 +1039,7 @@ const EAVE_SHADE = 10;
 /** The colour an outline is drawn in round whatever the cursor is on. */
 const HOVER_INK = 'rgb(255, 226, 120)';
 
-function normalize(x: number, y: number, z: number): [number, number, number] {
-  const l = Math.hypot(x, y, z);
-  return [x / l, y / l, z / l];
-}
-
-/**
- * Where the light comes from at a given hour. The sun rises on one side, goes
- * overhead at noon and sets on the other, so a hillside that was bright in the
- * morning is in shade by the afternoon and every slope on the island changes
- * shape as the day goes by. Before dawn and after dusk it sits on the horizon,
- * which is as close to moonlight as this needs to get.
- */
-export function sunAt(hour: number): [number, number, number] {
-  const t = Math.min(1, Math.max(0, (hour - DAWN) / (DUSK - DAWN)));
-  const a = Math.PI * t;
-  return normalize(0.72 * Math.cos(a), -0.3, 0.3 + 0.7 * Math.sin(a));
-}
+export { sunAt } from './sun';
 
 /** How finely the sun's walk is cut up: the ground is re-shaded on each step. */
 const SUN_STEPS = 48;
@@ -1244,6 +1230,20 @@ export class Renderer {
   private sunWasUsed = false;
   /** Where a shadow falls this frame, in screen pixels, and how dark it is. */
   private shadow = { dx: 0, dy: 0, alpha: 0 };
+  /*
+   * The trees drawn as solids (`./trees3d`): the hour and darkness they are
+   * baked for this frame, whether the wind moves them, and the ones drawn
+   * last frame, for the shade they throw on the ground this one (`solidShadeFor`).
+   */
+  private solidHour = 12;
+  private solidDark = 0;
+  private solidSway = false;
+  private solidPx = 0;
+  private solidTrees: Array<{ ix: number; iy: number; x: number; y: number; h: number; species: number; variant: number; grew: number }> = [];
+  private solidTurn = -1;
+  private solidShadeCv: HTMLCanvasElement | null = null;
+  /** This frame's shade from them: a picture of it all, laid a band of the screen at a time as each line of ground goes down (`solidShadeLine`). */
+  private solidShade: { cv: HTMLCanvasElement; lines: Map<number, [number, number]>; base0: number; S: number; t: DOMMatrix; alpha: number } | null = null;
   /** Tile colours as the map remembers them, for ground nobody is watching. */
   private memColors: ColourPages;
   /**
@@ -4274,6 +4274,8 @@ export class Renderer {
       visible: this.lifeVisible, covered: this.lifeCovered, indoors: this.lifeIndoors, pieces: this.lifePieces,
     }, zoom);
 
+    // The trees drawn as solids: what they are baked for this frame, and the shade they throw.
+    this.solidFrame(ctx, zoom, W, H, hs, stepH);
     // The ground laid from pictures of it a block at a time where it can be (`GroundChunks`).
     this.gf = this.groundFrame(V, zoom, W, H, drawnAt, grid, paveRot, grassy, hemmed, paved, seamed, water, sun, voidInk);
     for (let d = dLo; d <= dHi; d++) {
@@ -4495,7 +4497,7 @@ export class Renderer {
           if (stoneMem && !aloft) this.takeStone(stoneMem, x, y, V);
           if (!stoneMem && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
             const data = world.viewData(x, y, false);
-            const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day) : stumpSprite(treeSpecies(data));
+            const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day) : stumpSprite(treeSpecies(data));
             const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
             this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX, baseY + hh - avg * hs, spr);
           }
@@ -4512,7 +4514,7 @@ export class Renderer {
         if (stone && !aloft) this.takeStone(stone, x, y, V);
         if (!stone && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
           const data = world.getData(x, y);
-          const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day) : stumpSprite(treeSpecies(data));
+          const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day) : stumpSprite(treeSpecies(data));
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
           this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX, baseY + hh - avg * hs, spr);
         }
@@ -4886,6 +4888,8 @@ export class Renderer {
       if (!this.fast) for (const m of this.life.aloft(d)) this.take('life', m.tx, m.ty, m.sx, m.sy, null).mote = m;
       // What spells lay on this line's ground, under everything standing on it; and what of them stands here, sorted in with it.
       this.spells.groundLine(ctx, d);
+      // And the shade of the trees drawn as solids that falls on it.
+      if (this.solidShade) this.solidShadeLine(ctx, d);
       for (const rec of this.spells.itemsAt(d)) this.take('spell', Math.floor(rec.x), Math.floor(rec.y), rec.sx, rec.sy, null).fx = rec;
       // Whoever stands in a rune gate's opening is drawn on the line of its front tile, between its two pictures (`runegate.ts`):
       // they first, then the gates' fronts, then everything else on the line, which stands in front of both.
@@ -7143,6 +7147,112 @@ export class Renderer {
     if (this.ghost && !this.inCellarPass) this.drawGhost(ctx, zoom, this.ghost);
   }
 
+  /** The view a tree of a species drawn as a solid is baked for (`./trees3d`); nothing for any other. */
+  private treeAt(species: number, x: number, y: number): TreeView | undefined {
+    if (!TREE3D_SPECIES.has(species)) return undefined;
+    return { x, y, turn: this.camera.rotation, hour: this.solidHour, dark: this.solidDark, sway: this.solidSway ? swayAt(x, y, this.time * 1000) : 0 };
+  }
+
+  /** A tree drawn as a solid was put down: kept for the shade it throws next frame, where it stands in the camera's own plane. */
+  private noteSolid(ent: Entity, zoom: number, grew: number): void {
+    const cam = this.camera;
+    const data = this.game.world.getData(ent.x, ent.y);
+    this.solidTrees.push({
+      ix: (ent.sx - this.canvas.width / 2) / zoom + cam.cx, iy: (ent.sy - this.canvas.height / 2) / zoom + cam.cy,
+      x: ent.x, y: ent.y, h: this.game.world.centerHeight(ent.x, ent.y), species: treeSpecies(data), variant: treeVariant(data), grew,
+    });
+  }
+
+  /**
+   * What the trees drawn as solids are baked for this frame, and the shade
+   * they throw: the trees put down last frame (the same trees, near enough,
+   * and the shade has to go down with the ground, before any of them are
+   * reached), each one's discs of shade (`tree3dShadow`) filled into one
+   * picture so where they overlap is no darker, and which band of the screen
+   * each line of ground will lay of it. The band a line lays is the one its
+   * own ground and every line's before it have finished: what falls on ground
+   * further forward is laid with that ground, not under it.
+   */
+  private solidFrame(ctx: CanvasRenderingContext2D, zoom: number, W: number, H: number, hs: number, stepH: number): void {
+    tree3dFrame();
+    const hour = this.game.hourOfDay();
+    this.solidHour = hour;
+    this.solidDark = this.game.darkness();
+    // The wind only while every frame of it for every tree in sight fits in what the pictures may keep.
+    this.solidSway = this.zoomSettled && this.solidPx * SWAY_FRAMES < TREE_PIXELS * 0.5;
+    this.solidPx = 0;
+    const trees = this.solidTrees;
+    this.solidTrees = [];
+    const cam = this.camera;
+    const turned = this.solidTurn !== cam.rotation;
+    this.solidTurn = cam.rotation;
+    this.solidShade = null;
+    const alpha = 0.26 * (1 - this.solidDark);
+    if (!trees.length || turned || alpha < 0.02) return;
+    const step = sunStepOf(hour, this.solidDark);
+    const t = ctx.getTransform();
+    const cw = ctx.canvas.width, ch = ctx.canvas.height;
+    let cv = this.solidShadeCv;
+    if (!cv) cv = this.solidShadeCv = document.createElement('canvas');
+    if (cv.width !== cw || cv.height !== ch) {
+      cv.width = cw;
+      cv.height = ch;
+    }
+    const g = cv.getContext('2d');
+    if (!g) return;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, cw, ch);
+    g.setTransform(t);
+    // Rows of the screen to lines of ground, at the height the trees stand at.
+    let href = 0;
+    for (const tr of trees) href += tr.h;
+    href /= trees.length;
+    // A line's ground is laid from its own top row down one step: past that is the next line's (`off`).
+    const S = stepH * zoom;
+    const base0 = H / 2 - cam.cy * zoom - href * hs;
+    const lines = new Map<number, [number, number]>();
+    const take = (x0: number, y0: number, x1: number, y1: number): void => {
+      for (let d = Math.ceil((y0 - base0) / S) - 1, end = Math.ceil((y1 - base0) / S) - 1; d <= end; d++) {
+        const had = lines.get(d);
+        if (had) { had[0] = Math.min(had[0], x0); had[1] = Math.max(had[1], x1); } else lines.set(d, [x0, x1]);
+      }
+    };
+    g.fillStyle = 'rgb(30,56,66)';
+    let any = false;
+    const season = this.year.season, day = this.year.day;
+    for (const tr of trees) {
+      const shade = tree3dShadow(tr.species, tr.variant, season, day, tr.x, tr.y, step, cam.rotation);
+      if (!shade) continue;
+      const fx = (tr.ix - cam.cx) * zoom + W / 2, fy = (tr.iy - cam.cy) * zoom + H / 2;
+      const k = zoom * tr.grew;
+      const [bx0, by0, bx1, by1] = shade.box;
+      if (fx + bx1 * k < 0 || fx + bx0 * k > W || fy + by1 * k < 0 || fy + by0 * k > H) continue;
+      g.setTransform(t.a * k, 0, 0, t.d * k, t.a * fx + t.e, t.d * fy + t.f);
+      g.fill(shade.path);
+      take(fx + bx0 * k, fy + by0 * k, fx + bx1 * k, fy + by1 * k);
+      any = true;
+    }
+    if (!any) return;
+    this.solidShade = { cv, lines, base0, S, t, alpha };
+  }
+
+  /** The band of the solid trees' shade that line `d` of the ground lays (`solidFrame`). */
+  private solidShadeLine(ctx: CanvasRenderingContext2D, d: number): void {
+    const sh = this.solidShade!;
+    const span = sh.lines.get(d);
+    if (!span) return;
+    const t = sh.t;
+    const y0 = Math.round(t.d * (sh.base0 + d * sh.S) + t.f), y1 = Math.round(t.d * (sh.base0 + (d + 1) * sh.S) + t.f);
+    const x0 = Math.max(0, Math.floor(t.a * span[0] + t.e) - 1), x1 = Math.min(sh.cv.width, Math.ceil(t.a * span[1] + t.e) + 1);
+    const top = Math.max(0, y0), bottom = Math.min(sh.cv.height, y1);
+    if (x1 <= x0 || bottom <= top) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = sh.alpha;
+    ctx.drawImage(sh.cv, x0, top, x1 - x0, bottom - top, x0, top, x1 - x0, bottom - top);
+    ctx.restore();
+  }
+
   /**
    * A tree or a bush, from a picture of it kept at exactly the size it is on
    * the screen, already leaning the way it grew and already mixed toward the
@@ -7162,7 +7272,9 @@ export class Renderer {
     const dh = spr.h * zoom * grew;
     const left = ent.sx - spr.ax * zoom * grew;
     const top = ent.sy - spr.ay * zoom * grew;
-    if (this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
+    // A tree drawn as a solid throws its own shade, laid with the ground (`solidShadeFor`).
+    if (spr.solid) this.noteSolid(ent, zoom, grew);
+    else if (this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
     /*
      * Air between here and the back of the wood.
      *
@@ -7215,6 +7327,7 @@ export class Renderer {
       const wDev = Math.round(dw * t.a);
       const hDev = Math.round(dh * t.a);
       const pic = wDev > 0 && hDev > 0 ? this.treePicture(spr, `${ent.x},${ent.y}`, wDev, hDev, step, Math.round(stand * hDev)) : null;
+      if (pic && spr.solid) this.solidPx += pic.cv.width * pic.cv.height;
       if (pic) {
         const cv = pic.cv;
         // How much it is stretched: not at all, unless it is this tree's picture at another size standing in while the zoom moves (`treePicture`).
@@ -7321,7 +7434,8 @@ export class Renderer {
       }
     }
     const key = `${id}|${w}|${h}|${haze}|${lean}`;
-    const own = `${id}|${tree}`;
+    // A solid tree's bakes change with the sun, the turn and the wind, and any picture of the tree stands in for the next.
+    const own = spr.solid ? `solid|${tree}` : `${id}|${tree}`;
     const had = this.treePics.get(key);
     const use = (pic: TreePicture, k: string): TreePicture => {
       pic.used = this.frameNo;
@@ -7365,7 +7479,8 @@ export class Renderer {
      * pixels at zoom one where a screen does. Moved by whole pixels only, so
      * what is kept is the same picture to the pixel.
      */
-    const [u0, v0, u1, v1] = this.spriteInk(spr.canvas);
+    // A solid tree's bake is cut to what it covers already.
+    const [u0, v0, u1, v1] = spr.solid ? [0, 0, 1, 1] : this.spriteInk(spr.canvas);
     const x0 = Math.max(0, Math.floor(u0 * w) - 2), x1 = Math.min(w, Math.ceil(u1 * w) + 2);
     const y0 = Math.max(0, Math.floor(v0 * h) - 2), y1 = Math.min(h, Math.ceil(v1 * h) + 2);
     const ch = Math.max(1, y1 - y0);

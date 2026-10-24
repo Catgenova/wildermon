@@ -10,6 +10,7 @@ import { drawWildermon, drawWildermonPortrait, modelled, wildermonTop } from './
 import { bushYear, leafageOf } from './foliage';
 import { LIT, contact, dulled, wob } from './trees/kit';
 import { paintTree } from './trees';
+import { forgetTrees3d, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
 import type { Season } from '../world/calendar';
 import { cropPlant } from './crops';
 
@@ -21,6 +22,8 @@ export interface Sprite {
   /** Anchor (feet) offset from the top-left corner. */
   ax: number;
   ay: number;
+  /** A tree drawn as a solid (`./trees3d`): a bake of one view of it, which its tile's pictures follow from bake to bake. */
+  solid?: boolean;
 }
 
 /**
@@ -566,6 +569,7 @@ function bareWood(ctx: CanvasRenderingContext2D, mass: Mass, cx: number, cy: num
  */
 export function forgetTrees(): void {
   for (const k of cache.keys()) if (k.includes('|tree:') || k.includes('|bush:')) cache.delete(k);
+  forgetTrees3d();
 }
 
 /**
@@ -574,7 +578,9 @@ export function forgetTrees(): void {
  * under the look it has, so a day's wood is drawn once and every tree whose
  * look the season does not touch is the one picture all year.
  */
-export function treeSprite(species: number, variant: number, season: Season = 'summer', day = 1): Sprite {
+export function treeSprite(species: number, variant: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
+  // A species drawn as a solid, seen from where the camera is and lit as the hour has it.
+  if (at && TREE3D_SPECIES.has(species)) return tree3dSprite(species, variant, season, day, at, SPRITE_SCALE);
   const look = leafageOf(species, variant, season, day);
   const key = `${SPRITE_SCALE}|tree:${species}:${variant}${look.key ? `:${look.key}` : ''}`;
   let spr = cache.get(key);
