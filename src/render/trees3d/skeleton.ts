@@ -214,26 +214,31 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
     const s = Math.sin(f * Math.PI) * bend;
     return [leanD[0] * b.lean * f + sideD[0] * s, leanD[1] * b.lean * f + sideD[1] * s, stemZ * f];
   };
-  const trunkR = (f: number): number => r0 * (1 - 0.18 * f + 0.3 * Math.pow(Math.max(0, 1 - f / 0.4), 2));
-  const TRUNK = 5;
+  // Swelling into the ground at its foot and again into the limbs at its split.
+  const trunkR = (f: number): number => r0 * (0.88 + 0.45 * Math.pow(Math.max(0, 1 - f / 0.28), 2) + 0.2 * Math.pow(f, 3));
+  // Closer together low down, where it flares.
+  const FS = [0, 0.07, 0.16, 0.3, 0.5, 0.75, 1];
+  const TRUNK = FS.length - 1;
   for (let i = 0; i < TRUNK; i++) {
-    const f0 = i / TRUNK, f1 = (i + 1) / TRUNK;
+    const f0 = FS[i], f1 = FS[i + 1];
     limbs.push({ a: trunkAt(f0), b: trunkAt(f1), ra: trunkR(f0), rb: trunkR(f1), order: 0, parent: i - 1, bough: -1 });
   }
 
-  /* ---- buttress roots: down off the trunk in an elbow and out along the ground ---- */
-  const roots = b.flare > 1.15 ? 5 + Math.round(R() * 2) : 0;
+  /* ---- buttress roots: short and fat, the trunk's foot swelling out into the ground ---- */
+  const roots = b.flare > 1.15 ? 4 + Math.round(R()) : 0;
   const rootA = R() * TAU;
+  const rootTop = Math.min(r0 * 1.1, stemZ * 0.5);
   for (let i = 0; i < roots; i++) {
     const a = rootA + (i / roots) * TAU + (R() - 0.5) * 0.6;
-    const bendA = a + (R() - 0.5) * 0.6;
-    const reach = r0 * b.flare * (0.8 + 0.35 * R());
-    const top: V3 = [Math.cos(a) * r0 * 0.4, Math.sin(a) * r0 * 0.4, r0 * (1.3 + 0.7 * R())];
-    const knee: V3 = [Math.cos(a) * r0 * 1.0, Math.sin(a) * r0 * 1.0, r0 * (0.3 + 0.12 * R())];
-    const end: V3 = [Math.cos(bendA) * reach, Math.sin(bendA) * reach, r0 * 0.04];
+    const bendA = a + (R() - 0.5) * 0.4;
+    // Kept on its own tile: the ground in front is laid over whatever reaches past it.
+    const reach = Math.min(r0 * b.flare * (0.62 + 0.2 * R()), 17);
+    const top: V3 = [Math.cos(a) * r0 * 0.7, Math.sin(a) * r0 * 0.7, rootTop * (0.8 + 0.2 * R())];
+    const knee: V3 = [Math.cos(a) * r0 * 1.2, Math.sin(a) * r0 * 1.2, r0 * (0.25 + 0.1 * R())];
+    const end: V3 = [Math.cos(bendA) * reach, Math.sin(bendA) * reach, r0 * 0.03];
     const first = limbs.length;
-    limbs.push({ a: top, b: knee, ra: r0 * 0.6, rb: r0 * 0.4, order: -1, parent: 0, bough: -1 });
-    limbs.push({ a: knee, b: end, ra: r0 * 0.4, rb: r0 * 0.12, order: -1, parent: first, bough: -1 });
+    limbs.push({ a: top, b: knee, ra: r0 * 0.78, rb: r0 * 0.55, order: -1, parent: 0, bough: -1 });
+    limbs.push({ a: knee, b: end, ra: r0 * 0.55, rb: r0 * 0.24, order: -1, parent: first, bough: -1 });
   }
 
   /** A crooked run from `a` to `z` in `k` elbows, each turned the other way across: its points. */
@@ -255,13 +260,40 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
     pts.push(z);
     return pts;
   };
-  const run = (pts: V3[], ra: number, rb: number, order: number, parent: number, bough: number, dead: boolean): number[] => {
+  /** A crooked run's elbows rounded off into one curve (Catmull-Rom), `sub` points to a stretch. */
+  const smooth = (pts: V3[], sub: number): V3[] => {
+    const out: V3[] = [pts[0]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+      for (let j = 1; j <= sub; j++) {
+        const t = j / sub, t2 = t * t, t3 = t2 * t;
+        const k = (q: number): number =>
+          0.5 * (2 * p1[q] + (-p0[q] + p2[q]) * t + (2 * p0[q] - 5 * p1[q] + 4 * p2[q] - p3[q]) * t2 + (-p0[q] + 3 * p1[q] - 3 * p2[q] + p3[q]) * t3);
+        out.push([k(0), k(1), k(2)]);
+      }
+    }
+    return out;
+  };
+  /** A crooked run rounded off: twisting rather than kinked. */
+  const curve = (a: V3, z: V3, k: number, amp: number, sub: number): V3[] => smooth(crooked(a, z, k, amp), sub);
+  /**
+   * A run of pieces along points, `ra` thick at its start to `rb` at its end:
+   * holding its thickness out to its forks rather than thinning evenly, and
+   * swelling `flare` more where it grows out of what it is on.
+   */
+  const run = (pts: V3[], ra: number, rb: number, order: number, parent: number, bough: number, dead: boolean, flare = 0): number[] => {
     const out: number[] = [];
+    const along = [0];
+    for (let i = 1; i < pts.length; i++) along.push(along[i - 1] + len(sub(pts[i], pts[i - 1])));
+    const total = along[along.length - 1] || 1;
+    const rAt = (i: number): number => {
+      const t = along[i] / total;
+      return rb + (ra - rb) * Math.pow(1 - t, 0.75) + ra * flare * Math.pow(Math.max(0, 1 - t / 0.22), 2);
+    };
     let up = parent;
     for (let i = 1; i < pts.length; i++) {
       const idx = limbs.length;
-      const t0 = (i - 1) / (pts.length - 1), t1 = i / (pts.length - 1);
-      limbs.push({ a: pts[i - 1], b: pts[i], ra: ra + (rb - ra) * t0, rb: ra + (rb - ra) * t1, order, parent: up, bough, dead });
+      limbs.push({ a: pts[i - 1], b: pts[i], ra: rAt(i - 1), rb: rAt(i), order, parent: up, bough, dead });
       out.push(idx);
       up = idx;
     }
@@ -328,18 +360,18 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
       top /= mine[i].length;
     } else {
       // No masses on it (a bare tree): out and up into where its crown was, broken back.
-      out = env.r * (low ? 0.85 : 0.7);
+      out = env.r * (low ? 1 : 0.85);
       top = env.c[2] + (low ? 0 : rz * 0.4);
     }
-    const reach = out * (low ? 0.8 + 0.1 * R() : mine[i].length ? 0.45 + 0.15 * R() : 0.75 + 0.2 * R());
-    const lift = !mine[i].length ? (low ? stemZ * (0.2 + 0.3 * R()) : (top - B[2]) * (0.35 + 0.2 * R()))
+    const reach = out * (low ? 0.8 + 0.1 * R() : mine[i].length ? 0.45 + 0.15 * R() : 0.9 + 0.2 * R());
+    const lift = !mine[i].length ? (low ? stemZ * (0.4 + 0.4 * R()) : (top - B[2]) * (0.55 + 0.25 * R()))
       : low ? Math.max(stemZ * 0.15, top - B[2] - rm * 1.3) : (top - B[2]) * (0.5 + 0.2 * R());
     const T: V3 = [B[0] + Math.cos(az) * reach, B[1] + Math.sin(az) * reach, B[2] + lift];
-    const pts = crooked(B, T, 4, zig * 0.3);
+    const pts = curve(B, T, 4, zig * 0.3, 2);
     // A low limb sags between its elbows and turns up at its end.
     if (low) for (let j = 1; j < pts.length - 1; j++) pts[j][2] -= Math.sin((j / (pts.length - 1)) * Math.PI) * reach * b.droop * 0.25;
     const rb = trunkR(f) * (0.55 + 0.1 * R());
-    const pieces = run(pts, rb, rb * 0.42, 1, Math.min(TRUNK - 1, Math.floor(f * TRUNK - 1e-6)), i, dead);
+    const pieces = run(pts, rb, rb * 0.4, 1, Math.max(0, FS.findIndex((x) => x >= f) - 1), i, dead, 0.3);
     // A branch from the elbow nearest each of its masses, into it.
     for (const k of mine[i]) {
       const s = spots[k];
@@ -351,7 +383,7 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
       const P = limbs[at];
       const end: V3 = dead ? lerp(P.b, s.c, 0.6) : [s.c[0], s.c[1], s.c[2] - rm * 0.25];
       const r = Math.max(0.15, P.rb * (0.55 + 0.15 * R()));
-      const bp = run(crooked(P.b, end, 3, zig * 0.2), r, r * 0.4, 2, at, i, dead);
+      const bp = run(curve(P.b, end, 3, zig * 0.2, 2), r, r * 0.4, 2, at, i, dead, 0.45);
       const last = bp[bp.length - 1];
       // Twigs off the end, out through the mass.
       const tw = 2 + Math.floor(R() * 2);
@@ -374,13 +406,14 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
     }
     // A limb with nothing on it -- a dead one, a bare tree's -- still forks at its elbows.
     if (!mine[i].length || b.bare) {
-      for (const p of pieces.slice(1)) {
+      // At its elbows: every other point of the rounded run.
+      for (const p of pieces.filter((_, k) => k % 2 === 1)) {
         const P = limbs[p];
         const ta = az + (R() - 0.5) * 1.6;
         const tl = env.r * (0.26 + 0.16 * R());
         const tip = add(P.b, mul(unit([Math.cos(ta), Math.sin(ta), 0.25 + 0.5 * R()]), tl));
         const r = Math.max(0.15, P.rb * 0.6);
-        const bp = run(crooked(P.b, tip, 2, zig * 0.3), r, r * 0.4, 2, p, i, dead);
+        const bp = run(curve(P.b, tip, 2, zig * 0.3, 2), r, r * 0.4, 2, p, i, dead, 0.45);
         if (b.forks >= 2) {
           const last = limbs[bp[bp.length - 1]];
           run(crooked(last.b, add(last.b, mul(unit([Math.cos(ta + 0.8), Math.sin(ta + 0.8), 0.5]), tl * 0.5)), 2, zig * 0.25), r * 0.4, r * 0.15, 3, bp[bp.length - 1], i, dead);

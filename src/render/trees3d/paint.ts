@@ -197,7 +197,8 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     const normal = (s: number): V3 => unit(add(mul(P, s), mul(Vp, Math.sqrt(Math.max(0, 1 - s * s)))));
     const cols = CHAIN_BANDS.map(([, , s]) => barkAt(job, mid, normal(s), false));
     let snow: [number, number] | null = null;
-    if (snowy && Math.abs(D[2]) < 0.5) {
+    // No snow on an open crown's roots: they are the trunk's foot.
+    if (snowy && Math.abs(D[2]) < 0.5 && !(job.spec.open && first.order < 0)) {
       const on: number[] = [];
       for (let s = -0.95; s <= 0.951; s += 0.1) if (normal(s)[2] > 0.68) on.push(s);
       if (on.length) snow = [Math.max(-1, on[0] - 0.05), Math.min(1, on[on.length - 1] + 0.05)];
@@ -281,6 +282,9 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     g.stroke();
     g.globalAlpha = 1;
   }
+  // An open crown's roots and the foot of its trunk are one mass: only the ink round the whole tree is on them.
+  if (job.spec.open && c.order < 0) return;
+  if (job.spec.open && c.order === 0) j0 = Math.max(j0, Math.min(j1 - 1, 2));
   // Its two sides in ink, from clear of whatever it grows out of.
   g.strokeStyle = rgb(KIT_INK, 0.85);
   g.lineWidth = KIT_INK_W * 0.75;
@@ -304,7 +308,8 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
 
 /** Furrows as rough bark has them: wandering, broken into ridges, between `n` lines across. */
 function ridges(g: Ctx, c: Chain, j0: number, j1: number, n: number, R: () => number): void {
-  const SUB = 4;
+  // Steps enough to wander: fewer on a run of many short pieces.
+  const SUB = j1 - j0 >= 4 ? 1 : 3;
   for (let i = 0; i < n; i++) {
     const s = -0.8 + (1.6 * (i + 0.5)) / n;
     let on = false;
@@ -667,10 +672,18 @@ export function paintTree3d(g: Ctx, job: Job): void {
       g.fill();
     }
   }
+  // An open crown's trunk stands on a round foot, the ground's circle of it, laid just behind the trunk.
+  const trunk = chains.find((c) => c.order === 0);
+  const foot = spec.open && trunk ? footPath(job) : null;
+  if (foot && trunk) {
+    g.lineWidth = KIT_INK_W * 2;
+    g.stroke(foot);
+    items.push({ d: near(sk.limbs[0].a) - 0.6, draw: () => { g.fillStyle = trunk.cols[1]; g.fill(foot); } });
+  }
   // The wood, a few pieces of a limb at a time, so each run is laid in its own place among the leaf.
   for (const c of chains) {
     // An open crown's branches go in whole: each is short, and among the masses by its own depth.
-    const per = c.order <= 0 ? 8 : spec.open && c.order >= 2 ? 3 : 2;
+    const per = c.order <= 0 ? 8 : spec.open ? (c.order === 1 ? 4 : 6) : 2;
     for (let j0 = 0; j0 < c.q.length - 1; j0 += per) {
       const j1 = Math.min(c.q.length - 1, j0 + per);
       const L0 = sk.limbs[c.pieces[j0]], L1 = sk.limbs[c.pieces[j1 - 1]];
@@ -678,8 +691,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
       // Under a full crown the wood goes in first: the crown is in front of all of it. An open crown's
       // wood is among its masses, set back a little so a branch's end goes into the mass on it.
       const d = near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0);
-      // An open crown's roots go in behind its trunk, which they come out of.
-      const at = spec.open && c.order < 0 ? -1e5 : leafy && !spec.open ? -1e6 : spec.open && shown.length ? d - sk.crown.r * 0.12 * Math.max(0, c.order) : d;
+      const at = leafy && !spec.open ? -1e6 : spec.open && shown.length ? d - sk.crown.r * 0.12 * Math.max(0, c.order) : d;
       items.push({ d: at, draw: () => paintChain(g, job, c, j0, j1, R) });
     }
   }
@@ -722,6 +734,16 @@ export function paintTree3d(g: Ctx, job: Job): void {
 }
 
 const mixRgbHex = (a: string, b: string, t: number): string => rgbHex(mixRgb(hex(a), hex(b), t));
+
+/** The ground's circle under a trunk, as a path on the screen. */
+function footPath(job: Job): Path2D {
+  const L = job.sk.limbs[0];
+  const [x, y] = proj(job.e, L.a);
+  const rx = L.ra * ACROSS * 1.04;
+  const p = new Path2D();
+  p.ellipse(x, y, rx, rx / 2, 0, 0, TAU);
+  return p;
+}
 
 /** What a tree covers from an eye, in pixels at zoom one from its foot: left, top, right, bottom. */
 export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number] {
