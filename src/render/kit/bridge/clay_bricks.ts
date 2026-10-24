@@ -1,5 +1,6 @@
+import { glyphPath, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, hex, mix, type Tone } from '../core';
-import { box, BUILDERS, byRole, ownerOf, REFUGE_OUT, refugeHalf, refugeOutline, runeLine, turned, U, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
+import { box, BUILDERS, byRole, ownerOf, REFUGE_OUT, refugeHalf, refugeOutline, turned, U, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
 import { stoneBase } from './base';
 import { arcade, brickPaint, cface, fi, herringbonePaint, lampPost, refuged, ringPaint, runeKey, seen, whole, tilePaint, vaultPaint } from './clay';
 
@@ -37,6 +38,31 @@ const bandPaint: BridgePainter = (g, k, f) => {
   g.lineWidth = 0.28;
   g.stroke();
 };
+
+/**
+ * The rune line along the dark coping, inlaid broad enough in pale gold that
+ * the night, which shows what lies under it, has something bright to show:
+ * a groove, the gold in it, little runes along it.
+ */
+function boldRuneLine(glyph: string): BridgePainter {
+  return (g, k, f) => {
+    const y = (f.y0 + f.y1) / 2;
+    g.lineCap = 'round';
+    g.beginPath(); g.moveTo(f.x0 - 1, y); g.lineTo(f.x1 + 1, y);
+    g.strokeStyle = css(mix(k.fill, hex('#3e3a4c'), 0.45), 0.9);
+    g.lineWidth = 0.75;
+    g.stroke();
+    g.strokeStyle = css(mix(hex(RUNE_GOLD), hex(RUNE_WHITE), 0.35));
+    g.lineWidth = 0.42;
+    g.stroke();
+    for (let x = Math.ceil(Math.min(f.x0, f.x1) / 10) * 10; x < Math.max(f.x0, f.x1); x += 10) {
+      glyphPath(g, glyph, x, y, 0.5);
+      g.strokeStyle = css(hex(RUNE_GOLD), 0.9);
+      g.lineWidth = 0.14;
+      g.stroke();
+    }
+  };
+}
 
 /** The parapet: the core's wall and coping in the deeper brick, with a pilaster over each pier where no refuge breaks it. */
 function parapet(k0: Kit, edge: number, part: Part3): void {
@@ -172,12 +198,12 @@ export const clay_bricks = stoneBase('clay_bricks', {
   deck: PAVER,
   parapet: 'brick',
   ringDepth: 5.2,
-  rune: 'kenaz',
+  rune: 'dagaz',
   paint: byRole({
     wall: brick, pier: brick, parapet: brick, post: brick,
     ring: ringPaint('#f6e6d6', vaultPaint(2.6, 6.6, MORTAR)),
-    key: runeKey('kenaz', 0.46),
-    cap: runeLine('kenaz'),
+    key: runeKey('dagaz', 0.74),
+    cap: boldRuneLine('dagaz'),
     cornice: bandPaint,
     deck: herringbonePaint(2.3, '#c9b3a2'),
     tread: tilePaint(40 / 3, '#6a6476', DRESS),
