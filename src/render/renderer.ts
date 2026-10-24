@@ -1485,7 +1485,7 @@ export class Renderer {
    * keeping, as `baked` makes it the picture.
    */
   private occludeLine(box: [number, number, number, number] | null, draw: () => void): void {
-    if (!this.runeNight.active) return;
+    if (!this.runeNight.keeping) return;
     const ctx = this.canvas.ctx;
     const [x0, y0, x1, y1] = box ?? [-1e5, -1e5, 1e5, 1e5];
     this.runeNight.occludeDraw(ctx, x0, y0, x1 - x0, y1 - y0, (g) => {
@@ -4027,7 +4027,7 @@ export class Renderer {
       this.ents.length = 0;
       this.entN = 0;
       // Whether a runestone drawn on a line before this one is lit for the night, so this line's ground is kept off it.
-      const stoneLit = this.runeNight.active;
+      const stoneLit = this.runeNight.keeping;
       if (grain) {
         this.grainN = 0;
         this.grainM = 0;
@@ -5260,7 +5260,7 @@ export class Renderer {
      * the stone's keeping both; otherwise drawn again onto the keeping by
      * the same drawing, under the same transform and clips.
      */
-    if (this.runeNight.active) {
+    if (this.runeNight.keeping) {
       const [bx, by, bw, bh] = box ?? [sx - 90 * zoom, sy - 230 * zoom, 180 * zoom, 250 * zoom];
       if (this.runeNight.falls(ctx, bx, by, bw, bh)) {
         if (effect === 'none') {
@@ -5341,7 +5341,7 @@ export class Renderer {
   /** Save the context and clip it to `clip`, when there is one: the caller restores it after drawing. */
   private clipTo(ctx: CanvasRenderingContext2D, clip: Array<[number, number]> | undefined): void {
     if (!clip) return;
-    if (this.runeNight.active) {
+    if (this.runeNight.keeping) {
       // And on whatever keeps it off a runestone's runes (`paint`).
       const path = new Path2D();
       clip.forEach(([cx, cy], i) => (i ? path.lineTo(cx, cy) : path.moveTo(cx, cy)));
@@ -5522,7 +5522,7 @@ export class Renderer {
         ctx.save();
         ctx.clip(under, 'evenodd');
         behind = true;
-        if (this.runeNight.active) this.occClips.push({ path: under, m: ctx.getTransform(), rule: 'evenodd' });
+        if (this.runeNight.keeping) this.occClips.push({ path: under, m: ctx.getTransform(), rule: 'evenodd' });
       }
       // A boat on the water, and whoever is aboard her, drawn as she rolls and pitches (`swayOf`).
       if (ent.sway) {
@@ -5738,7 +5738,7 @@ export class Renderer {
         const hb = drawFurniture(ctx, ent.sx, ent.sy + (ent.drawDy ?? 0), zoom, piece.kind, !!piece.lit, dyeOf(piece) ?? undefined, this.pieceTrim(piece), ent.view, piece.material, crewOf(piece.kind) ?? undefined, ent.layer, true,
           helm ? figurePicture(helm === 'player' ? helm : 'o' + helm.id) : null, this.manned(piece));
         // A hull is drawn in layers round her crew, not to be drawn again: in front of a runestone's runes, her box is kept off them.
-        if (this.runeNight.active) this.runeNight.occludeRect(ctx, ent.sx + hb[0], ent.sy + (ent.drawDy ?? 0) + hb[1], hb[2] - hb[0], hb[3] - hb[1], this.occClips);
+        if (this.runeNight.keeping) this.runeNight.occludeRect(ctx, ent.sx + hb[0], ent.sy + (ent.drawDy ?? 0) + hb[1], hb[2] - hb[0], hb[3] - hb[1], this.occClips);
         continue;
       }
       if (ent.kind === 'furniture' && ent.piece) {
@@ -6116,7 +6116,7 @@ export class Renderer {
       if (ent.kind === 'deck' && ent.aq) {
         const box = this.aqueducts.draw(ctx, ent.aq);
         // An aqueduct's bays are laid in pieces round what stands under them: in front of a runestone's runes, its box is kept off them.
-        if (box && this.runeNight.active) this.runeNight.occludeRect(ctx, box.left, box.top, box.w, box.h, this.occClips);
+        if (box && this.runeNight.keeping) this.runeNight.occludeRect(ctx, box.left, box.top, box.w, box.h, this.occClips);
         if (box) this.deckHits.push({ x: ent.x, y: ent.y, left: box.left, top: box.top, w: box.w, h: box.h, bridge: ent.aq.b.id, aq: box.shape });
         continue;
       }
@@ -6127,7 +6127,7 @@ export class Renderer {
           const span = (g: CanvasRenderingContext2D): void => drawDrawbridgeSpan(g, this.project, this.drawbridgeGeom(b), ent.deck!.span ?? 0, zoom, this.deckLit(b), ent.deck!.done,
             bridgeDone(b) && !this.game.buildings.buildingAt(b.ax, b.ay));
           span(ctx);
-          if (this.runeNight.active) this.runeNight.occludeDraw(ctx, ent.sx - 120 * zoom, ent.sy - 160 * zoom, 240 * zoom, 220 * zoom, span, this.occClips);
+          if (this.runeNight.keeping) this.runeNight.occludeDraw(ctx, ent.sx - 120 * zoom, ent.sy - 160 * zoom, 240 * zoom, 220 * zoom, span, this.occClips);
         }
         this.deckHits.push({ x: ent.x, y: ent.y, left: ent.sx - 40 * zoom, top: ent.sy - 22 * zoom, w: 80 * zoom, h: 44 * zoom, bridge: ent.deck.id });
         continue;
@@ -6305,7 +6305,7 @@ export class Renderer {
         if (k === 1) ctx.drawImage(cv, x, y);
         else if (d1 > y) ctx.drawImage(cv, x, y, W, d1 - y);
         // In front of a runestone's runes after dark: the same picture, kept off them (`RunestoneNight`).
-        if (this.runeNight.active) {
+        if (this.runeNight.keeping) {
           this.runeNight.occludeDraw(ctx, x - 1, y, Math.ceil(W) + 2, Math.ceil(cv.height * k), (g) => {
             if (k === 1) g.drawImage(cv, x, y);
             else if (d1 > y) g.drawImage(cv, x, y, W, d1 - y);
@@ -6319,7 +6319,7 @@ export class Renderer {
     const shown = step > 0 ? this.hazed(ready, step) : ready;
     if (Math.abs(stand) * dh < 1.5) {
       ctx.drawImage(shown, left, top, dw, dh);
-      if (this.runeNight.active) this.runeNight.occlude(ctx, shown, left, top, dw, dh, this.occClips);
+      if (this.runeNight.keeping) this.runeNight.occlude(ctx, shown, left, top, dw, dh, this.occClips);
       return;
     }
     ctx.save();
@@ -6327,7 +6327,7 @@ export class Renderer {
     ctx.transform(1, 0, stand, 1, 0, 0);
     ctx.drawImage(shown, left - ent.sx, top - ent.sy, dw, dh);
     // Under the same shear: what is kept off a runestone's runes is the tree as it leans.
-    if (this.runeNight.active) this.runeNight.occlude(ctx, shown, left - ent.sx, top - ent.sy, dw, dh, this.occClips);
+    if (this.runeNight.keeping) this.runeNight.occlude(ctx, shown, left - ent.sx, top - ent.sy, dw, dh, this.occClips);
     ctx.restore();
   }
 
@@ -10779,7 +10779,7 @@ export class Renderer {
       if (Math.abs(dx - rx) < 0.02 && Math.abs(dy - ry) < 0.02) {
         ctx.drawImage(had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
         // In front of a runestone's runes after dark: the same picture kept off them (`RunestoneNight`).
-        if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
+        if (occludes && this.runeNight.keeping) this.runeNight.occlude(ctx, had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
         return;
       }
     }
@@ -10795,7 +10795,7 @@ export class Renderer {
     if (had && r && r <= STAND_IN_MOST && r * STAND_IN_MOST >= 1 && (!this.zoomSettled || this.bakesLeft <= 0)) {
       const x = ax + (had.bx - had.ax) * r, y = ay + (had.by - had.ay) * r, w = (had.cv.width / dpr) * r, h = (had.cv.height / dpr) * r;
       ctx.drawImage(had.cv, x, y, w, h);
-      if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, had.cv, x, y, w, h);
+      if (occludes && this.runeNight.keeping) this.runeNight.occlude(ctx, had.cv, x, y, w, h);
       return;
     }
     // One too far from this size to stretch, or none: a few a frame are made at this size, to stand in from the next.
@@ -10869,7 +10869,7 @@ export class Renderer {
     });
     this.bakePixels += w * h;
     ctx.drawImage(cv, bx / dpr, by / dpr, w / dpr, h / dpr);
-    if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, cv, bx / dpr, by / dpr, w / dpr, h / dpr);
+    if (occludes && this.runeNight.keeping) this.runeNight.occlude(ctx, cv, bx / dpr, by / dpr, w / dpr, h / dpr);
   }
 
   /** A picture drawn: to the back of the order they are put away in (`bakeRoom`), once a frame. */
@@ -11043,7 +11043,7 @@ export class Renderer {
       const d = drawRuneGate(ctx, sx, sy, zoom, border.dir, turn, variant, lit, since, RUNE_GATE_RISE, dark, t, which);
       ctx.globalAlpha = was;
       if (alpha < 1) return;
-      if (this.runeNight.active) this.runeNight.occlude(ctx, d.img, d.x, d.y, d.w, d.h);
+      if (this.runeNight.keeping) this.runeNight.occlude(ctx, d.img, d.x, d.y, d.w, d.h);
       // Its runes take the night off themselves through the one night the runestones use, their shapes given as drawn at (sx, sy) moved by (dx, dy).
       if (d.lightBox) this.runeNight.glowing(ctx, ...d.lightBox, (dx, dy) => d.holes(sx + dx, sy + dy), (dx, dy) => d.masks(sx + dx, sy + dy));
     };
