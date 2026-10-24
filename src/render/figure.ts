@@ -70,7 +70,10 @@ export function joint(p: Xf, at: V3, pitch = 0, roll = 0, yaw = 0): Xf {
   const o = mv(p.m, at);
   return { m: mm(p.m, r), t: [o[0] + p.t[0], o[1] + p.t[1], o[2] + p.t[2]] };
 }
-export const place = (x: Xf, v: V3): V3 => { const o = mv(x.m, v); return [o[0] + x.t[0], o[1] + x.t[1], o[2] + x.t[2]]; };
+export const place = (x: Xf, v: V3): V3 => {
+  const m = x.m, t = x.t;
+  return [m[0] * v[0] + m[1] * v[1] + m[2] * v[2] + t[0], m[3] * v[0] + m[4] * v[1] + m[5] * v[2] + t[1], m[6] * v[0] + m[7] * v[1] + m[8] * v[2] + t[2]];
+};
 const dot = (a: V3, b: V3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const unit = (v: V3): V3 => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
@@ -10935,6 +10938,8 @@ function toonSplit(mesh: Mesh, s: readonly Pt[], vis: readonly boolean[], k: num
 
 /** Room for the outward squares of a facet's edges, kept between facets rather than made for each. */
 let EDGE_X = new Float64Array(32), EDGE_Y = new Float64Array(32);
+/** Room for a part's corners placed on its bone, three numbers each, kept between parts rather than made for each corner. */
+let PLACED = new Float64Array(3 * 256);
 
 export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette, view: View, ink: number, px: number, now = 0): void {
   const { ex, ey, T, L, H } = view;
@@ -10942,8 +10947,18 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
   // How far a step across the body goes on the screen, on the whole: what a pattern's rings are counted off.
   const hs = (Math.hypot(ex[0], ex[1]) + Math.hypot(ey[0], ey[1])) / 2;
   const laid: Laid[] = parts.map((part) => {
-    const pv = (part.v ?? part.mesh.v).map((p) => place(part.xf, p));
-    const s = pv.map((p): Pt => [p[0] * ex[0] + p[1] * ey[0], p[0] * ex[1] + p[1] * ey[1] - p[2] * HEIGHT_SCALE]);
+    const src = part.v ?? part.mesh.v, nv = src.length;
+    if (PLACED.length < nv * 3) PLACED = new Float64Array(nv * 6);
+    const pv = PLACED, xm = part.xf.m, xt = part.xf.t;
+    const s: Pt[] = [];
+    for (let q = 0; q < nv; q++) {
+      const v = src[q];
+      const x = xm[0] * v[0] + xm[1] * v[1] + xm[2] * v[2] + xt[0];
+      const y = xm[3] * v[0] + xm[4] * v[1] + xm[5] * v[2] + xt[1];
+      const z = xm[6] * v[0] + xm[7] * v[1] + xm[8] * v[2] + xt[2];
+      pv[q * 3] = x; pv[q * 3 + 1] = y; pv[q * 3 + 2] = z;
+      s.push([x * ex[0] + y * ey[0], x * ex[1] + y * ey[1] - z * HEIGHT_SCALE]);
+    }
     const vis: boolean[] = [], k: number[] = [], d: number[] = [], t: number[] = [];
     const tests = (part.hide ?? []).map((solid) => behind(solid.in ?? part.hideIn ?? part.xf, solid, T));
     const hidden = tests.length ? (p: V3): boolean => tests.some((t) => t(p)) : undefined;
@@ -10952,21 +10967,21 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
       const idx = face.i, m = idx.length;
       let nx = 0, ny = 0, nz = 0, cx = 0, cy = 0, cz = 0;
       for (let q = 0; q < m; q++) {
-        const a = pv[idx[q]], b = pv[idx[(q + 1) % m]];
-        nx += (a[1] - b[1]) * (a[2] + b[2]);
-        ny += (a[2] - b[2]) * (a[0] + b[0]);
-        nz += (a[0] - b[0]) * (a[1] + b[1]);
-        cx += a[0]; cy += a[1]; cz += a[2];
+        const a = idx[q] * 3, b = idx[(q + 1) % m] * 3;
+        nx += (pv[a + 1] - pv[b + 1]) * (pv[a + 2] + pv[b + 2]);
+        ny += (pv[a + 2] - pv[b + 2]) * (pv[a] + pv[b]);
+        nz += (pv[a] - pv[b]) * (pv[a + 1] + pv[b + 1]);
+        cx += pv[a]; cy += pv[a + 1]; cz += pv[a + 2];
       }
       const l = Math.sqrt(nx * nx + ny * ny + nz * nz);
       const u: V3 = l > 1e-9 ? [nx / l, ny / l, nz / l] : [0, 0, 0];
-      const c: V3 = [cx / m, cy / m, cz / m];
+      const mx = cx / m, my = cy / m, mz = cz / m;
       const off = face.unless && mv(part.xf.m, face.unless);
       const toward = u[0] * T[0] + u[1] * T[1] + u[2] * T[2];
-      vis.push(l > 1e-9 && toward > 1e-4 && !(hidden && hidden(face.at ? place(part.xf, face.at) : c)) && !(off && off[0] * T[0] + off[1] * T[1] + off[2] * T[2] > 0.05));
+      vis.push(l > 1e-9 && toward > 1e-4 && !(hidden && hidden(face.at ? place(part.xf, face.at) : [mx, my, mz])) && !(off && off[0] * T[0] + off[1] * T[1] + off[2] * T[2] > 0.05));
       t.push(toward);
       k.push(part.toon ? toonK(u, L) : face.crease ? lightOn(creased(u), L) : lightOn(u, L));
-      d.push(c[0] * T[0] + c[1] * T[1] + c[2] * T[2]);
+      d.push(mx * T[0] + my * T[1] + mz * T[2]);
       if (part.toon) { normals.push(u); areas.push(l); }
     }
     if (part.flat) {
@@ -10975,8 +10990,8 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
       if (lo < Infinity) k.fill(lo);
     }
     let cx = 0, cy = 0, cz = 0;
-    for (const p of pv) { cx += p[0]; cy += p[1]; cz += p[2]; }
-    cx /= pv.length; cy /= pv.length; cz /= pv.length;
+    for (let q = 0; q < nv * 3; q += 3) { cx += pv[q]; cy += pv[q + 1]; cz += pv[q + 2]; }
+    cx /= nv; cy /= nv; cz /= nv;
     const split = part.toon ? toonSplit(part.mesh, s, vis, k, normals, areas, L, part.sheen ? t : undefined) : undefined;
     normals.length = 0;
     areas.length = 0;
