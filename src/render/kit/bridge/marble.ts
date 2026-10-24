@@ -856,6 +856,8 @@ const segF = (a: [number, number], b: [number, number]): { o: L; a: L; b: L } =>
  */
 function refugesOf(k: Kit, cfg: Classical): void {
   const { plan, sl, st } = k;
+  // None on a ramp, whose piers are its run of arches'.
+  if (plan.ramp) return;
   const T = 0.1;
   const H = cfg.parapetHeight, lift = stepOf(plan);
   for (const p of plan.piers) {
@@ -1175,15 +1177,33 @@ function archesOf(k: Kit, cfg: Classical): void {
   }
   // Across the lane: the vault under each arch, a loose drawing so its strips meet with no ink between them.
   vaultOf(k, cfg, arc, within);
-  // Each opening's jambs, from its foot to its spring.
+  // Each opening's jambs, from its foot to its spring: across the lane; under a ramp, whose arcade is two walls along
+  // its outer edges with the deck vaulted between, only as deep as each wall.
+  const across: Array<[number, number]> = plan.ramp ? rampWalls(plan, sl) : [[sl.t0, sl.t1]];
   for (const o of arc.openings) {
     for (const [s, dirn] of [[o.c - o.a, 1], [o.c + o.a, -1]] as Array<[number, number]>) {
       if (s < sl.s0 - 1e-6 || s > sl.s1 + 1e-6) continue;
-      const z0 = o.floor ?? plan.ground(s, sl.t0) - 0.5, z0b = o.floor ?? plan.ground(s, sl.t1) - 0.5, z1 = o.f(s);
-      if (z1 - Math.max(z0, z0b) < 0.1) continue;
-      k.solid('back', -1);
-      k.face('back', [[s, sl.t0, z0], [s, sl.t1, z0b], [s, sl.t1, z1], [s, sl.t0, z1]], [dirn, 0, 0], st.stone,
-        { role: 'pier', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(s * 10) }, { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+      for (const [ta, tb] of across) {
+        const z0 = o.floor ?? plan.ground(s, ta) - 0.5, z0b = o.floor ?? plan.ground(s, tb) - 0.5, z1 = o.f(s);
+        if (z1 - Math.max(z0, z0b) < 0.1) continue;
+        k.solid('back', -1);
+        k.face('back', [[s, ta, z0], [s, tb, z0b], [s, tb, z1], [s, ta, z1]], [dirn, 0, 0], st.stone,
+          { role: 'pier', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(s * 10) }, { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+      }
+    }
+  }
+  // Under a ramp, each wall's inner face down its piers, from the ground to the vault.
+  if (plan.ramp) {
+    for (const edge of sl.edges) {
+      const ti = edge > 0 ? sl.t1 - RAMP_WALL : sl.t0 + RAMP_WALL;
+      for (const p of plan.piers) {
+        const a = Math.max(sl.s0, p.s - p.half), b = Math.min(sl.s1, p.s + p.half);
+        if (b - a < 1e-4) continue;
+        const top = (s: number): number => Math.min(plan.deck(s) - plan.thick - 1.4, ...arc.openings.filter((o) => Math.abs(s - o.c) <= o.a + 1e-6).map((o) => o.f(s)));
+        k.solid('back', -0.8);
+        k.face('back', [[a, ti, plan.ground(a, ti) - 0.5], [b, ti, plan.ground(b, ti) - 0.5], [b, ti, top(b)], [a, ti, top(a)]], [0, -edge, 0], st.stone,
+          { role: 'pier', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i }, wallF(ti, -edge));
+      }
     }
   }
   // Two tiers: the tops of the piers beside the lower arch, where they are the thicker under the course.
@@ -1245,6 +1265,18 @@ function vaultOf(k: Kit, cfg: Classical, arc: Arcade, within: (a: number, b: num
   }, reach, 0);
 }
 
+/** How deep each of a ramp's two arcaded walls is, across the bridge, in tiles (the core's). */
+const RAMP_WALL = 0.2;
+/** How high a cutwater stands at the foot of a ramp's pier, in units (the core's). */
+const RAMP_CUTWATER = 6;
+/** The runs across a slice a ramp's pier side stands in: within its walls' depth of each outer edge it has. */
+function rampWalls(plan: Plan, sl: Kit['sl']): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  if (sl.t0 <= plan.tLo + 1e-6) out.push([sl.t0, Math.min(sl.t1, sl.t0 + RAMP_WALL)]);
+  if (sl.t1 >= plan.tHi - 1e-6) out.push([Math.max(sl.t0, sl.t1 - RAMP_WALL), sl.t1]);
+  return out;
+}
+
 /** A pointed cutwater on each pier's outer face, from its foot to its spring (to the deck under a refuge), capped with a sloped top. */
 function cutwatersOf(k: Kit, cfg: Classical, edge: number, t: number): void {
   const { plan, sl, st } = k;
@@ -1252,7 +1284,8 @@ function cutwatersOf(k: Kit, cfg: Classical, edge: number, t: number): void {
     if (p.end) continue;
     if (p.s < sl.s0 - p.half - 1e-6 || p.s > sl.s1 + p.half + 1e-6) continue;
     const bay = bayAt(plan, p.s - 0.01);
-    const top = plan.width >= 2 ? plan.deck(p.s) - plan.thick - 1.4 : (bay.lower ? bay.lowerSpring! : bay.spring) + 1;
+    const top = plan.ramp ? Math.min(p.foot + 1.5 + RAMP_CUTWATER, bay.spring)
+      : plan.width >= 2 ? plan.deck(p.s) - plan.thick - 1.4 : (bay.lower ? bay.lowerSpring! : bay.spring) + 1;
     const nose = 0.2;
     for (const side of [-1, 1]) {
       const sa = p.s, sb = p.s + side * p.half;
@@ -1262,7 +1295,7 @@ function cutwatersOf(k: Kit, cfg: Classical, edge: number, t: number): void {
       k.solid('front', k.ord(edge, 0.2));
       k.face('front', [[sb, t, fb], [sa, tip[1], fa], [sa, tip[1], top], [sb, t, top]], [side * 0.5, edge, 0], st.stone,
         { role: 'pier', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(p.s * 10) }, { o: [sb, t, 0], a: [(sa - sb) / U, edge * nose / U, 0], b: [0, 0, 1] });
-      if (plan.width < 2) {
+      if (plan.width < 2 || plan.ramp) {
         // Its cap: a band of the dressing, then a slope up from the nose to the wall.
         const capTop = top + nose * U * 0.45;
         k.face('front', [[sb, t, top], [sa, tip[1], top], [sa, t, capTop]], [side * 0.3, edge * 0.6, 1], st.trim);
