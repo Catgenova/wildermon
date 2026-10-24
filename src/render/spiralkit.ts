@@ -96,7 +96,13 @@ export function spiralLook(material: string, dye?: string): Look {
   const tread = pastel(paint(st.tread), 0.18);
   // The risers and the treads' ends a step deeper than their tops, toward the dusk, so each tread reads against the next.
   const edge0 = pastel(paint(timber ? st.string : st.riser), 0.08, 0.55);
-  const edge: Tone = { lit: mix(edge0.lit, hex('#a9a3bd'), timber ? 0.12 : 0.3), shade: mix(edge0.shade, hex('#463f5a'), 0.25) };
+  // On a pale stone -- marble, sandstone, adobe -- a good step deeper again, so a white step reads against the white one over it.
+  const lum = (c: readonly number[]): number => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+  const pale = !timber && lum(tread.lit) > 205;
+  const edge: Tone = {
+    lit: mix(edge0.lit, hex(pale ? '#8e87a8' : '#a9a3bd'), timber ? 0.12 : pale ? 0.5 : 0.3),
+    shade: mix(edge0.shade, hex('#3e3752'), pale ? 0.45 : 0.25),
+  };
   const post = pastel(paint(timber ? st.post : st.string), timber ? 0.12 : 0.2);
   const railTone = st.rail === 'iron' ? IRON_TONE : pastel(paint(st.rail === 'stone' ? st.post : st.bar), 0.15);
   const baluster = st.rail === 'iron' ? IRON_TONE : pastel(paint(st.post), 0.15);
@@ -122,12 +128,23 @@ export interface SpiralStack { below: boolean; above: boolean }
 const railed = (i: number, s: SpiralStack): boolean => (s.below || i >= OPEN) && (s.above || i <= N - 1 - OPEN);
 
 /** A tread's top, painted: a lit nosing along its leading edge, and on timber the boards' seams. */
-function treadPaint(look: Look, r0: number, r1: number, w: number): (g: Ctx, k: PaintCtx) => void {
+function treadPaint(look: Look, r0: number, r1: number, w: number, span: number): (g: Ctx, k: PaintCtx) => void {
   return (g, k) => {
-    // `x` out along the nosing from the post, `y` round from it toward the tread's back edge.
-    g.strokeStyle = css(mix(k.fill, [255, 252, 244], 0.55), 0.85);
-    g.lineWidth = 0.45;
-    g.beginPath(); g.moveTo(r0, 0.25); g.lineTo(r1, 0.25); g.stroke();
+    // `x` out along the nosing from the post, `y` round from it toward the tread's back edge, which runs out from the post at `span`.
+    // The shade the tread over it throws on its back: a band in from the back edge, deepest under the nosing over it.
+    const c = Math.cos(span), sn = Math.sin(span);
+    for (const [k2, a] of [[0.42, 0.1], [0.26, 0.12], [0.12, 0.14]] as Array<[number, number]>) {
+      const c2 = Math.cos(span * (1 - k2)), s2 = Math.sin(span * (1 - k2));
+      g.beginPath();
+      g.moveTo(r0 * c, r0 * sn); g.lineTo(r1 * c, r1 * sn); g.lineTo(r1 * c2, r1 * s2); g.lineTo(r0 * c2, r0 * s2);
+      g.closePath();
+      g.fillStyle = css(hex('#4a4262'), a);
+      g.fill();
+    }
+    // The nosing, caught in the light.
+    g.strokeStyle = css(mix(k.fill, [255, 253, 247], 0.8), 0.95);
+    g.lineWidth = 0.7;
+    g.beginPath(); g.moveTo(r0, 0.3); g.lineTo(r1, 0.3); g.stroke();
     if (look.family === 'timber') {
       for (const f of [0.36, 0.68]) seam(g, k.fill, r0 + 0.5, w * f * 0.55, r1 - 0.3, w * f);
     } else {
@@ -157,7 +174,7 @@ function treadFaces(look: Look, i: number, turn: number): Face[] {
   const across: V3 = sub(round, mul(radial, round[0] * radial[0] + round[1] * radial[1]));
   const w = R_OUT * Math.abs(a1 - a0);
   return prism([ring(zb), ring(z1)], look.edge, () => ({ crease: 0.35 }),
-    { tone: look.tread, crease: 0.5, frame: { o, a: radial, b: unit(across) }, paint: treadPaint(look, R_IN, R_OUT, w) });
+    { tone: look.tread, crease: 0.5, frame: { o, a: radial, b: unit(across) }, paint: treadPaint(look, R_IN, R_OUT, w, Math.abs(a1 - a0)) });
 }
 
 /** A stretch of the rail from `s0` to `s1` of the storey round, a section `RAIL_W` by `RAIL_T` swept along the helix; its end at `s1` capped where the rail ends there. */

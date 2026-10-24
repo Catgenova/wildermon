@@ -771,6 +771,8 @@ const SHADE_INK = 'rgba(50, 44, 70, 0.26)';
 const FLIGHT_STEPS = 8;
 /** How much of a spiral staircase still planned is drawn: the kit's ghost of it. */
 const PLANNED_SPIRAL = 0.5;
+/** How much of a spiral staircase in front of the player climbing it is drawn in the window round the body. */
+const SPIRAL_SEE_THROUGH = 0.35;
 /** The ground under a jetty: open ground with a storey over it, in its shade. */
 const JETTY_SHADE = 'rgba(50, 44, 70, 0.13)';
 /**
@@ -4139,6 +4141,7 @@ export class Renderer {
     // Close enough to be picking things up rather than looking at the country.
     const player = this.game.player;
     const playerDepth = depthOf(V, player.tileX, player.tileY);
+    this.spiralSeen = null;
     // Everybody at the helm of a hull somebody else is steering, or aboard one, is drawn with her; see `takeAboard`.
     this.seated.clear();
     for (const f of this.game.furniture.values()) {
@@ -4792,6 +4795,7 @@ export class Renderer {
         const sy = spiral ? cam.worldToScreenY(spiral.x, spiral.y, spiral.h) : drivenBy || up ? cam.worldToScreenY(vx, vy, seatBase) + 0.01 : cam.worldToScreenY(player.x, player.y, ph);
         const pe = this.take('player', player.tileX, player.tileY, spiral ? cam.worldToScreenX(spiral.x, spiral.y) : cam.worldToScreenX(vx, vy), sy, null);
         if (spiral) pe.key = spiral.key;
+        this.spiralSeen = spiral ? { tx: player.tileX, ty: player.tileY, x: pe.sx, y: pe.sy, key: spiral.key } : null;
         pe.lift = this.driverSeat() * zoom;
         // On a bridge's deck: after its deck and before its near parapet, not under it (`deckKey`).
         if ((deck !== null || drivenBy) && !this.game.underDeck) this.onBridgeDeck(pe, vx, vy);
@@ -5694,6 +5698,8 @@ export class Renderer {
   private helming: PlacedFurniture | null = null;
   /** Where the player is drawn on a spiral staircase this frame, and how far up its storey, for the way the body faces climbing it (`spiralBody`). */
   private spiralLift: { turn: number; t: number } | null = null;
+  /** Where the player stands on a spiral staircase's tile on the screen this frame, and what the body sorts by: what of the stair in front of it goes see-through round it. */
+  private spiralSeen: { tx: number; ty: number; x: number; y: number; key: number } | null = null;
   private takeAboard(f: PlacedFurniture, fe: Entity, x: number, y: number, zoom: number): void {
     const boat = furnitureDef(f.kind).boat;
     if (!boat) {
@@ -6989,7 +6995,24 @@ export class Renderer {
       if (ent.kind === 'spiral' && ent.sp) {
         const a = ent.spAlpha ?? 1;
         if (a < 1) { ctx.save(); ctx.globalAlpha *= a; }
-        drawSpiralPiece(ctx, ent.sp, zoom, this.camera.rotation);
+        // Laid over the player climbing it: see-through in a window round the body, so nobody loses themselves behind the turn.
+        const seen = this.spiralSeen;
+        if (seen && seen.tx === ent.sp.fl.x && seen.ty === ent.sp.fl.y && ent.sp.key > seen.key) {
+          const cy = seen.y - FIGURE_TOP * zoom * 0.5, rx = 15 * zoom, ry = (FIGURE_TOP * 0.5 + 7) * zoom;
+          // Feathered: whole outside the window, then rings toward the body, each fainter.
+          const rings = [1.3, 1.15, 1, 0];
+          rings.forEach((out, j) => {
+            ctx.save();
+            ctx.beginPath();
+            if (j === 0) ctx.rect(-1e5, -1e5, 2e5, 2e5);
+            else ctx.ellipse(seen.x, cy, rx * rings[j - 1], ry * rings[j - 1], 0, 0, Math.PI * 2);
+            if (out > 0) ctx.ellipse(seen.x, cy, rx * out, ry * out, 0, 0, Math.PI * 2);
+            ctx.clip('evenodd');
+            ctx.globalAlpha *= j === 0 ? 1 : 1 - (1 - SPIRAL_SEE_THROUGH) * (j / (rings.length - 1));
+            drawSpiralPiece(ctx, ent.sp!, zoom, this.camera.rotation);
+            ctx.restore();
+          });
+        } else drawSpiralPiece(ctx, ent.sp, zoom, this.camera.rotation);
         if (a < 1) ctx.restore();
         // After dark, the night taken off round the runes cut in its cap.
         const glow = this.runeNight.isOpen && a >= 1 ? spiralCapGlow(ent.sp, zoom, this.camera.rotation) : null;
