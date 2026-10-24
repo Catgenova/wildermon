@@ -516,6 +516,8 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
+      // In a saddle and at the reins at once is two bodies on everybody else's screen (`ride_refusal`).
+      if (g.mounted()) return 'Dismount first.';
       // Nobody takes the reins or the helm out of somebody else's hands.
       if (f.helm) return isBoat(f) ? 'Someone else has the helm.' : 'Someone else has the reins.';
       // Aboard her already, the helm is a step away; aboard anything else, it is not yours to reach.

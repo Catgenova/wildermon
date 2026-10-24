@@ -4148,8 +4148,14 @@ export class Renderer {
       if (f.helm) this.seated.add(f.helm);
       for (const r of f.riders ?? []) this.seated.add(r.who);
     }
-    // And everybody up on a wildermon, who is drawn on its saddle with it (`peerOnMount`).
-    for (const c of this.game.creatures.list.values()) if (c.riderUid && !c.ridden && this.riderOf(c)) this.seated.add(c.riderUid);
+    // And everybody up on a wildermon, who is drawn on its saddle with it (`peerOnMount`): on one only, and not as well as at
+    // a wagon's reins. Reported: "I appear double to other players": up on a mount and at the reins at once, drawn in both.
+    this.saddled.clear();
+    for (const c of this.game.creatures.list.values()) {
+      if (!c.riderUid || c.ridden || this.seated.has(c.riderUid) || !this.riderOf(c)) continue;
+      this.seated.add(c.riderUid);
+      this.saddled.add(c.id);
+    }
     // A hull with a deck of her own whose helm I have: I am drawn among her crew, by `takeAboard`, rather than on my own.
     const mine = this.game.driving();
     this.helming = mine && crewOf(mine.kind) ? mine : null;
@@ -4750,7 +4756,7 @@ export class Renderer {
             ce.creature = cr;
             if (stand !== null && lift <= 0) this.onBridgeDeck(ce, cr.x, cr.y);
             // Somebody else up on it: on its saddle, a hair in front of it, as I am on mine.
-            const rider = cr.riderUid && !cr.ridden ? this.riderOf(cr) : undefined;
+            const rider = this.saddled.has(cr.id) ? this.riderOf(cr) : undefined;
             if (rider) {
               const pe = this.take('peer', x, y, ce.sx, ce.sy + 0.01, null);
               pe.peer = rider;
@@ -5694,6 +5700,8 @@ export class Renderer {
    * Any other hull is one picture with its people after it, as they come.
    */
   private readonly seated = new Set<string>();
+  /** The wildermon whose rider is drawn on its saddle this frame, by id: one a rider, and none for a rider seated on a hull or a wagon. */
+  private readonly saddled = new Set<number>();
   /** The hull with a deck of her own that I have the helm of, this frame. */
   private helming: PlacedFurniture | null = null;
   /** Where the player is drawn on a spiral staircase this frame, and how far up its storey, for the way the body faces climbing it (`spiralBody`). */

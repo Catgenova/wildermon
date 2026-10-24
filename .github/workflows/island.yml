@@ -1017,6 +1017,20 @@ jobs:
           npx esbuild supabase/test/crowd.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/crowd.mjs --log-level=error
           node node_modules/.cache/crowd.mjs
+      - name: Somebody else is drawn once, in a saddle or at the reins
+        if: matrix.shard == 1
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          CROWD_STRICT: '1'
+        run: |
+          # "I appear double to other players, even my chat bubble is
+          # doubled": up on Thistlekit and at a wagon's reins at once, drawn
+          # on the saddle and on the box. Drawn in Chrome at three zooms and
+          # every eighth of a turn: up on a mount, at the reins, and both, the
+          # name is written once a frame.
+          npx esbuild supabase/test/saddle.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/saddle.mjs --log-level=error
+          node node_modules/.cache/saddle.mjs
       - name: The island heard from where the camera is standing
         if: matrix.shard == 1
         run: |

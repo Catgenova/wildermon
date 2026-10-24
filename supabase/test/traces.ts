@@ -128,6 +128,13 @@ check('nothing offers to hitch it again, and it can be taken out',
 game.moveTo(px + 1, py + 1);
 for (let t = 0; t < 600 && game.player.path; t++) game.update(0.2);
 const reins = { kind: 'furniture' as const, id: cart.id };
+// Up on a wildermon, the reins are refused: in its saddle and on the box at once, everybody else saw two of us.
+{
+  const mount = game.creatures.spawn('orse', px + 0.5, py + 1.5, 'active', game.rand, game.time - 3600 * 24);
+  mount.ridden = true;
+  check('up on a wildermon, the reins are refused', board.check?.(reins, game) === 'Dismount first.', board.check?.(reins, game) ?? 'nothing in the way');
+  game.creatures.remove(mount.id);
+}
 check('back at the cart the reins are there to take', board.applies(reins, game) && !board.check?.(reins, game),
   board.check?.(reins, game) ?? 'nothing in the way');
 board.perform(reins, game);
@@ -370,6 +377,10 @@ begin
   perform creature_settle(w, v_pet);
   insert into said select 'came-out', round(h_pet::numeric, 4) || '|' || round(hunger::numeric, 4)
     from creature where world_id = w and id = v_pet;
+  -- Up on a wildermon, the reins are refused.
+  update creature set rider = b where world_id = w and id = v_free;
+  insert into said values ('b-mounted', coalesce(act_refusal(w, b, 'board_vehicle', jsonb_build_object('kind', 'furniture', 'id', v_cart.id)), 'none'));
+  update creature set rider = null where world_id = w and id = v_free;
   insert into said values ('b-board', coalesce(act_refusal(w, b, 'board_vehicle', jsonb_build_object('kind', 'furniture', 'id', v_cart.id)), 'none'));
   perform act_perform(w, b, 'board_vehicle', jsonb_build_object('kind', 'furniture', 'id', v_cart.id));
   insert into said select 'b-driving', coalesce((driver = b)::text, 'nobody') from placed where id = v_cart.id;
@@ -452,6 +463,7 @@ for (const [key, what] of [['b-hitch', 'hitch her own to his cart'], ['b-unhitch
   check(`somebody who did not build it, on his settlement, may ${what}`, said(key) === 'none', said(key));
 }
 check('and she is the one driving it', said('b-driving') === 'true', said('b-driving'));
+check('but not from a saddle: up on a wildermon, the reins are refused', said('b-mounted') === 'Dismount first.', said('b-mounted'));
 
 const [outWas, outNow] = said('came-out').split('|');
 check('an hour in the traces nothing settled is not billed to its belly when it comes out', outWas === outNow,
