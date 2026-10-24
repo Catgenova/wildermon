@@ -844,7 +844,8 @@ function keystones(k: Kit, cfg: Classical): void {
         k.face('front', [[c - wt, t, z1], [c + wt, t, z1], [c + wt, tk, z1], [c - wt, tk, z1]], [0, 0, 1], cfg.key);
         k.face('front', [[c - wb, t, z0], [c + wb, t, z0], [c + wb, tk, z0], [c - wb, tk, z0]], [0, 0, -1], cfg.key);
         const size = Math.min(wt * 2 * U * 0.36, (z1 - z0) * 0.3);
-        k.glow.runes.push({ at: k.m([c, tk, z0 + (z1 - z0) * 0.46]), s: size, glyph: st.rune });
+        // Its rune lights at night only where the face it is cut in can be seen: the night's light is laid over all.
+        if (edge === sl.near) k.glow.runes.push({ at: k.m([c, tk, z0 + (z1 - z0) * 0.46]), s: size, glyph: st.rune });
       }
     }
   }
