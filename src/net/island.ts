@@ -1264,6 +1264,11 @@ export class Island {
   private lastTile = '';
   /** Where the body was and what it was at, the last time that went out over Broadcast. */
   private lastShown = '';
+  /** `lastShown` less what was worn: what `wordDue` can say has changed without the gear being read. */
+  private lastShownAt = '';
+  /** What was worn as last said (`move`), and its words, so the same gear is not written out again every call. */
+  private wornWas: WornWire | undefined;
+  private wornSaid = '';
   /** The highest tile change we have taken in, so catching up never doubles back. */
   private seenChange = 0;
   /**
@@ -2891,6 +2896,23 @@ export class Island {
   }
 
   /**
+   * Whether `move` would say something now that it would not have said at its last call: a word to the island
+   * where the body has moved to, or one over Broadcast where it is or what it is at. Cheap, so it can be asked
+   * every frame and `move` called only when it is so, or on the caller's own round for everything else `move`
+   * keeps up (the reads, and what is worn).
+   */
+  wordDue(x: number, y: number, level: number, now: number, stairs = false): boolean {
+    if (!this.info) return false;
+    const said = `${x.toFixed(2)},${y.toFixed(2)},${level}`;
+    if (said !== this.lastSaid) {
+      if (now - this.lastMove >= MOVE_EVERY || level !== this.lastLevel) return true;
+      if (stairs && `${Math.floor(x)},${Math.floor(y)},${level}` !== this.lastTile) return true;
+    }
+    if (!this.bodies || now - this.lastBody < BODY_EVERY) return false;
+    return !this.lastShown || `${said}|${this.doing ?? ''}` !== this.lastShownAt;
+  }
+
+  /**
    * Say where we have walked to — rarely, and never twice for standing still.
    *
    * The island believes this only as far as its own clock allows, and pulls us
@@ -2934,11 +2956,16 @@ export class Island {
      * still is seen by everybody straight away rather than at their next read
      * of the island (`rpc_worn`), and a new arrival drawn in what they have on.
      */
-    const gear = wearing ? JSON.stringify(wearing) : '';
-    const shown = `${said}|${this.doing ?? ''}|${gear}`;
+    if (wearing !== this.wornWas) {
+      this.wornWas = wearing;
+      this.wornSaid = wearing ? JSON.stringify(wearing) : '';
+    }
+    const at = `${said}|${this.doing ?? ''}`;
+    const shown = `${at}|${this.wornSaid}`;
     if (shown !== this.lastShown && now - this.lastBody >= BODY_EVERY && this.bodies) {
       this.lastBody = now;
       this.lastShown = shown;
+      this.lastShownAt = at;
       void this.bodies.send({
         type: 'broadcast', event: 'body',
         payload: { uid: this.uid, name: this.me?.name ?? '', x, y, level, look: this.me?.look, act: this.doing, gear: wearing },
