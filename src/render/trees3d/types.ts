@@ -31,29 +31,14 @@ export interface Limb {
   tip?: boolean;
 }
 
-/** One leaf of a spray, from the spray's middle. */
-export interface Leaf {
-  p: V3;
-  /** Its size against the species' leaf. */
-  s: number;
-  /** How far up the spray it lies, 0 its underside to 1 its top. */
-  top: number;
-  /** Its own seeded number, 0..1: the order it comes out in spring and down in autumn. */
-  k: number;
-  /** Which way it is turned, in radians. */
-  a: number;
-}
-
 /**
- * One spray of leaf: a flattened, ragged cloud of leaves lying along a limb,
- * domed on top and drooping at its outer end.
+ * One mass of leaf: a lumpy ball round `c`, `r` across, edged in a few big
+ * leaves. A crown is a handful of them, touching and overlapping.
  */
 export interface Clump {
   c: V3;
-  /** Its reach from its middle, along the limb; it is narrower across. */
   r: number;
-  leaves: Leaf[];
-  /** The limb it lies along. */
+  /** The limb it grows on, which it moves with in the wind. */
   limb: number;
   /** Its own seeded number, 0..1, for its order in a turning or thinning crown. */
   k: number;
@@ -103,12 +88,10 @@ export interface Build {
   forks: number;
   /** Branches off each limb at each fork. */
   branching: number;
-  /** Sprays of leaf wanted on a full crown. */
+  /** Masses of leaf in a full crown: one on top and the rest round it. */
   clumps: number;
-  /** A spray's reach against the crown's half-width. */
+  /** A mass's radius against the crown's half-width. */
   clumpSize: number;
-  /** Leaves in a spray of the usual size. */
-  leaves: number;
   /** How bent the trunk and limbs grow, 0 to 1. */
   gnarl: number;
   /** Trunk lean, in model units at the top. */
@@ -152,13 +135,9 @@ export interface Species3D {
   leaf: {
     summer: Ramp;
     spring: Ramp;
-    /** The flower before the leaf, in tufts. */
-    bud: Ramp;
     /** Autumn's three, from the top of the crown outward. */
     autumn: readonly [Ramp, Ramp, Ramp];
   };
-  /** A leaf's size from its middle to its tip, in model units. */
-  leafSize: number;
   /** The seed it hangs: winged keys in pairs. */
   keys?: { colour: string; ripe: string };
   /** The buds on the bare twigs at the start of spring. */

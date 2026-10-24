@@ -11,7 +11,7 @@ import { KIT_INK, KIT_INK_W } from '../kit/core';
 import { cut, glyphPath, proj, type Eye } from '../runestone';
 import { mulberry32 } from '../../world/noise';
 import type { Light } from './light';
-import type { Clump, Dress, Leaf, Limb, Ramp, RGB, Skeleton, Species3D, V3 } from './types';
+import type { Clump, Dress, Limb, Ramp, RGB, Skeleton, Species3D, V3 } from './types';
 import { add, cross, dot, hex, len, lerp, mixRgb, mul, rgb, sub, unit } from './vec';
 
 type Ctx = CanvasRenderingContext2D;
@@ -39,61 +39,48 @@ export interface Job {
 /* ---- what is shown ------------------------------------------------------------- */
 
 /**
- * A spray as a day shows it: the leaves it has out, the ramp they are
- * painted on -- and in autumn the ramps of its underside and its top, deeper
- * red under and gold over -- and how far grown its leaves are.
+ * A mass as a day shows it: the ramp it is painted on -- in autumn, the ramp
+ * of its top and of its underside too -- and how far grown it is.
  */
-export interface Shown { c: Clump; leaves: Leaf[]; ramp: Ramp; under: Ramp; over: Ramp; grown: number }
+export interface Shown { c: Clump; ramp: Ramp; under: Ramp; over: Ramp; grown: number }
 
 function rampMix(a: Ramp, b: Ramp, t: number): Ramp {
   return a.map((c, i) => rgbHex(mixRgb(hex(c), hex(b[i] ?? b[b.length - 1]), t)));
 }
 const rgbHex = (c: RGB): string => `#${c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
 
-/** Autumn's colour at `t`: crimson at nought, orange at a half, gold at one. */
+/** Autumn's colour at `t`: the crown's top at nought, through the summer leaf, to gold at one. */
 function autumnAt(spec: Species3D, t: number): Ramp {
-  const [crimson, orange, gold] = spec.leaf.autumn;
+  const [top, mid, rim] = spec.leaf.autumn;
   const u = clamp01(t);
-  return u < 0.5 ? rampMix(crimson, orange, u * 2) : rampMix(orange, gold, (u - 0.5) * 2);
+  return u < 0.5 ? rampMix(top, mid, u * 2) : rampMix(mid, rim, (u - 0.5) * 2);
 }
-/** Where on autumn's colours a spray is: crimson at the top of the crown, gold out at its rim and underside. */
-const autumnT = (c: Clump): number => 1.45 * (1 - c.up) - 0.2 + (c.k - 0.5) * 0.3;
+/** Where on autumn's colours a mass is: its own colour at the top of the crown, toward gold low and out at the rim. */
+const autumnT = (c: Clump): number => 1.3 * (1 - c.up) - 0.15 + (c.k - 0.5) * 0.3;
 
-/** The order a spray turns in autumn: the top of the crown and its outside first. */
+/** The order a mass turns in autumn and goes bare in: the top of the crown and its outside first. */
 const turnOrder = (c: Clump): number => 0.55 * (1 - c.up) + 0.25 * (1 - c.out) + 0.35 * c.k;
 
 export function shownOf(job: Job): Shown[] {
   const { sk, spec, dress } = job;
   const out: Shown[] = [];
   if (dress.full <= 0) return out;
-  const spring = dress.season === 'spring';
-  const keepAll = (r: Ramp): Pick<Shown, 'ramp' | 'under' | 'over'> => ({ ramp: r, under: r, over: r });
+  const one = (r: Ramp): Pick<Shown, 'ramp' | 'under' | 'over'> => ({ ramp: r, under: r, over: r });
   for (const c of sk.clumps) {
-    let look = keepAll(spec.leaf.summer);
+    let look = one(spec.leaf.summer);
     let grown = 1;
-    let share = 1;
-    if (spring && dress.step === 0) {
-      // Before the leaf: the red flower in small tufts over the bare crown.
-      if (c.k > 0.75) continue;
-      look = keepAll(spec.leaf.bud);
-      grown = 0.6;
-      share = 0.35;
-    } else if (spring && dress.full < 1) {
-      // The leaf coming out, small, among the last of the flower.
-      grown = 0.65 + 0.3 * dress.full;
-      share = dress.full;
-      look = { ramp: spec.leaf.spring, under: spec.leaf.bud, over: spec.leaf.spring };
-    } else if (spring) {
-      look = keepAll(spec.leaf.spring);
+    // Coming out in spring and coming down in autumn, every mass is there: those not yet out, or nearly bare, small.
+    if (dress.full < 1) grown = c.k < dress.full ? 0.72 + 0.28 * dress.full : 0.4 + 0.15 * dress.full;
+    if (dress.season === 'spring') {
+      look = one(spec.leaf.spring);
     } else if (dress.season === 'autumn') {
-      share = dress.full;
+      if (dress.full < 0.5 && c.k > dress.full + 0.45) continue;
       const o = turnOrder(c) / 1.15;
       const t = autumnT(c);
-      if (dress.turned >= 1 || o < dress.turned) look = { ramp: autumnAt(spec, t), under: autumnAt(spec, t - 0.45), over: autumnAt(spec, t + 0.45) };
-      else if (o < dress.turned + 0.15) look = { ramp: spec.leaf.summer, under: spec.leaf.summer, over: autumnAt(spec, t + 0.3) };
+      if (dress.turned >= 1 || o < dress.turned) look = { ramp: autumnAt(spec, t), under: autumnAt(spec, t + 0.35), over: autumnAt(spec, t - 0.25) };
+      else if (o < dress.turned + 0.15) look = { ramp: spec.leaf.summer, under: spec.leaf.summer, over: autumnAt(spec, t) };
     }
-    const leaves = share >= 1 ? c.leaves : c.leaves.filter((l) => l.k < share);
-    if (leaves.length) out.push({ c, leaves, ...look, grown });
+    out.push({ c, ...look, grown });
   }
   return out;
 }
@@ -167,7 +154,8 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     if (goesOn(i)) continue;
     const first = limbs[i];
     // Under a full crown the finest twigs are never seen.
-    if (leafy && first.order >= 4) continue;
+    // Under a full crown only the trunk and the limbs it splits into are ever seen, below the crown.
+    if (leafy && first.order >= 2) continue;
     const pieces = [i];
     for (let k = next.get(i); k !== undefined; k = next.get(k)) pieces.push(k);
     const pts: V3[] = [limbs[pieces[0]].a, ...pieces.map((k) => limbs[k].b)];
@@ -317,67 +305,98 @@ function clumpLight(job: Job, c: Clump): number {
 }
 
 /**
- * A spray: its leaves, each a small five-pointed leaf, laid from its
- * underside up -- first all of them a step deeper and a little lower, the
- * shade the spray throws on itself, then each in the tone its place on the
- * spray and the spray's place in the crown give it: the tops toward the sun
- * lit, the undersides in shade.
+ * One leaf standing out of the edge of a mass, across it from 0 to 1: a
+ * broad round-pointed scallop in three lobes, the middle one tallest, as the
+ * flat maple's leaves are cut.
  */
-/** A spray as it is drawn: its underside's outline, and its leaves gathered by the tone each is filled in. */
-interface Spray { back: Path2D; base: string; groups: Array<[string, Path2D]> }
+const LEAF_EDGE: ReadonlyArray<Pt> = Array.from({ length: 15 }, (_, i) => {
+  const u = i / 14;
+  return [u, Math.pow(Math.sin(Math.PI * u), 0.75) * (1 - 0.42 * Math.pow(Math.abs(Math.cos(3 * Math.PI * u)), 6) * Math.sin(Math.PI * u))] as Pt;
+});
 
-function sprayOf(job: Job, s: Shown, sun: { sx: number; sy: number; front: number }): Spray {
-  const { c } = s;
-  const e = job.e;
-  const L = clumpLight(job, c);
-  const top = s.ramp.length - 1;
-  const sz = job.spec.leafSize * ACROSS * s.grown;
-  const [cx, cy] = proj(e, c.c);
-  const span = c.r * ACROSS || 1;
-  const back = new Path2D();
-  const groups = new Map<number, Path2D>();
-  const flutter = job.frame * 0.35;
-  for (const lf of s.leaves) {
-    const [x, y] = proj(e, add(c.c, lf.p));
-    const a = lf.a + flutter * (lf.k - 0.5);
-    leafAt(back, x, y + sz * 0.45, sz * lf.s * 1.18, a, 0.72);
-    const side = ((x - cx) * sun.sx + (y - cy) * sun.sy) / span;
-    const lit = L * (0.78 + 0.6 * lf.top) + 0.14 * side;
-    // The palest tone only for the very top of a spray full in the sun.
-    const idx = Math.max(1, Math.min(lf.top > 0.8 ? top : top - 1, Math.round(lit * (top - 0.4))));
-    const which = lf.top > 0.62 ? 2 : lf.top < 0.3 ? 0 : 1;
-    const key = idx * 3 + which;
-    let p = groups.get(key);
-    if (!p) groups.set(key, (p = new Path2D()));
-    leafAt(p, x, y, sz * lf.s, a, 0.72);
-  }
-  const base = Math.max(0, Math.min(top - 1, Math.round(L * (top - 0.4)) - 1));
-  return {
-    back, base: s.under[base],
-    groups: [...groups.keys()].sort((p, q) => p - q).map((key) => {
-      const which = key % 3;
-      return [(which === 0 ? s.under : which === 2 ? s.over : s.ramp)[(key - which) / 3], groups.get(key)!];
-    }),
+/** The shape of a mass, seeded: two waves of lumps round it and the leaves standing out of its edge. */
+interface Outline { lumps: [number, number, number, number]; leaves: Array<{ at: number; w: number; h: number }> }
+
+function outlineOf(R: () => number, leaves: number): Outline {
+  const out: Outline = { lumps: [0.07 + 0.05 * R(), R() * TAU, 0.04 + 0.03 * R(), R() * TAU], leaves: [] };
+  const a0 = R() * TAU;
+  for (let i = 0; i < leaves; i++) out.leaves.push({ at: a0 + ((i + 0.3 * R()) / leaves) * TAU, w: Math.min(TAU / leaves - 0.1, 0.8 + 0.3 * R()), h: 0.2 + 0.1 * R() });
+  out.leaves.sort((p, q) => p.at - q.at);
+  return out;
+}
+
+/** A mass's outline round (cx, cy), lumpy, with its leaves standing out of it `k` as far. */
+function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: Outline, k = 1): void {
+  const [a1, p1, a2, p2] = o.lumps;
+  const rad = (t: number): number => 1 + a1 * Math.sin(3 * t + p1) + a2 * Math.sin(5 * t + p2);
+  let first = true;
+  const pt = (t: number, r: number): void => {
+    const x = cx + Math.cos(t) * rx * r, y = cy + Math.sin(t) * ry * r;
+    if (first) { p.moveTo(x, y); first = false; } else p.lineTo(x, y);
   };
+  const STEP = TAU / 28;
+  const start = o.leaves.length ? o.leaves[0].at - o.leaves[0].w / 2 : 0;
+  let t = start;
+  for (const L of o.leaves) {
+    const from = L.at - L.w / 2;
+    for (; t < from; t += STEP) pt(t, rad(t));
+    for (const [u, h] of LEAF_EDGE) {
+      const a = from + u * L.w;
+      pt(a, rad(a) + h * L.h * k);
+    }
+    t = from + L.w;
+  }
+  for (; t < start + TAU; t += STEP) pt(t, rad(t));
+  p.closePath();
 }
 
 /**
- * A spray, laid from its underside up: all its leaves a step deeper and a
- * little lower -- the shade it throws on itself -- edged in a crease's ink,
- * then each leaf in the tone its place on the spray and the spray's place in
- * the crown give it: the tops toward the sun lit, the undersides in shade.
+ * A mass of leaf, as the island's flat shapes are painted: its outline filled
+ * in its shaded tone, the core of its shade a step deeper on the side away
+ * from the sun, then a middle plane and a lit plane laid toward the sun, each
+ * the mass's own lumpy shape smaller -- four flat pastel planes -- with a few
+ * big leaves picked out where the light catches the edge, and ink round it.
  */
-function paintClump(g: Ctx, sp: Spray, rim: string): void {
-  g.strokeStyle = rim;
-  g.lineWidth = KIT_INK_W * 1.2;
-  g.lineJoin = 'round';
-  g.stroke(sp.back);
-  g.fillStyle = sp.base;
-  g.fill(sp.back);
-  for (const [col, path] of sp.groups) {
+function paintMass(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; front: number }, outline: Path2D, o: Outline, rim: string): void {
+  const { c } = s;
+  const R = mulberry32(job.seed * 977 + Math.round(c.k * 1e6));
+  const [cx, cy] = proj(job.e, c.c);
+  const rx = c.r * ACROSS * s.grown, ry = rx * 0.86;
+  const L = clumpLight(job, c);
+  const top = s.ramp.length - 1;
+  const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
+  const off = 1 - 0.55 * sun.front;
+  const plane = (dx: number, dy: number, k: number, col: string, seed: number): void => {
+    const p = new Path2D();
+    const po = outlineOf(mulberry32(seed), 3);
+    massPath(p, cx + dx, cy + dy, rx * k, ry * k, po, 0.9);
     g.fillStyle = col;
-    g.fill(path);
+    g.fill(p);
+  };
+  g.fillStyle = s.under[b];
+  g.fill(outline);
+  g.save();
+  g.clip(outline);
+  const seed = Math.round(c.k * 1e6);
+  // The core of the shade: away from the sun and under.
+  plane(-sun.sx * rx * 0.5 * off, -sun.sy * ry * 0.5 * off + ry * 0.28, 0.72, s.under[b - 1], seed + 1);
+  // The middle, and the lit side, toward the sun and up.
+  plane(sun.sx * rx * 0.16 * off, sun.sy * ry * 0.16 * off - ry * 0.1, 0.8, s.ramp[b + 1], seed + 2);
+  if (!job.light.night || L > 0.6) plane(sun.sx * rx * 0.38 * off, sun.sy * ry * 0.38 * off - ry * 0.22, 0.48, s.over[b + 2], seed + 3);
+  // A few big leaves where the light catches the edge.
+  g.fillStyle = s.over[Math.min(top, b + 2)];
+  g.beginPath();
+  for (let i = 0; i < 2; i++) {
+    const a = Math.atan2(sun.sy - 0.6, sun.sx) + (R() - 0.5) * 1.4;
+    const d = 0.4 + 0.3 * R();
+    leafAt(g, cx + Math.cos(a) * rx * d, cy + Math.sin(a) * ry * d, rx * 0.24, (R() - 0.5) * 0.8, 0.85);
   }
+  g.fill();
+  g.restore();
+  g.strokeStyle = rim;
+  g.lineWidth = KIT_INK_W;
+  g.lineJoin = 'round';
+  g.stroke(outline);
 }
 
 /** Winged keys hanging in a bunch from under a clump: pairs of wings on short stalks. */
@@ -531,7 +550,15 @@ export function paintTree3d(g: Ctx, job: Job): void {
   const items: Item[] = [];
   const leafy = shown.length > 0 && dress.full >= 0.6;
   const chains = chainsOf(job, leafy);
-  const sprays = shown.map((s) => sprayOf(job, s, sun));
+  // Each mass's outline, worked out once: the ink is laid under all of them before any is painted.
+  const masses = shown.map((s) => {
+    const o = outlineOf(mulberry32(job.seed * 31 + Math.round(s.c.k * 1e6)), 4 + Math.floor(s.c.k * 2.99));
+    const [cx, cy] = proj(e, s.c.c);
+    const rx = s.c.r * ACROSS * s.grown;
+    const path = new Path2D();
+    massPath(path, cx, cy, rx, rx * 0.86, o);
+    return { o, path };
+  });
   /*
    * The ink round the whole tree, laid first under everything: every spray's
    * outline and every limb's stroked one ink's width out in the kit's ink.
@@ -543,7 +570,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
   g.lineJoin = 'round';
   g.lineCap = 'round';
   g.lineWidth = KIT_INK_W * 2;
-  for (const sp of sprays) g.stroke(sp.back);
+  for (const m of masses) g.stroke(m.path);
   for (const c of chains) {
     if (c.thin) {
       g.lineWidth = c.r[0] + c.r[c.r.length - 1] + KIT_INK_W * 2;
@@ -567,21 +594,22 @@ export function paintTree3d(g: Ctx, job: Job): void {
       const j1 = Math.min(c.q.length - 1, j0 + per);
       const L0 = sk.limbs[c.pieces[j0]], L1 = sk.limbs[c.pieces[j1 - 1]];
       const R = mulberry32(job.seed + c.pieces[j0] * 13);
-      items.push({ d: near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0), draw: () => paintChain(g, job, c, j0, j1, R) });
+      // Under a full crown the wood goes in first: the crown is in front of all of it.
+      items.push({ d: leafy ? -1e6 : near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0), draw: () => paintChain(g, job, c, j0, j1, R) });
     }
   }
   const sizeOfKey = sk.crown.r * 0.12;
   const keyed = spec.keys && dress.keys && ((dress.season === 'spring' && dress.step >= 3) || dress.season === 'summer');
   shown.forEach((s, i) => {
-    const rim = rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.6), 0.75);
+    const rim = rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.7), 0.9);
     items.push({
       d: near(s.c.c),
       draw: () => {
-        paintClump(g, sprays[i], rim);
-        if (keyed && s.c.up < 0.5 && s.c.k < 0.3) {
+        paintMass(g, job, s, sun, masses[i].path, masses[i].o, rim);
+        if (keyed && s.c.up < 0.6 && s.c.k < 0.55) {
           const [x, y] = proj(e, s.c.c);
           const col = dress.season === 'summer' ? mixRgbHex(spec.keys!.colour, spec.keys!.ripe, 0.2) : spec.keys!.colour;
-          paintKeys(g, x + (s.c.k - 0.2) * 6, y + s.c.r * ACROSS * 0.55, sizeOfKey * ACROSS * 0.4, 2 + Math.floor(s.c.k * 8), col, mulberry32(job.seed + Math.round(s.c.k * 1e5)));
+          paintKeys(g, x + (s.c.k - 0.4) * s.c.r * ACROSS, y + s.c.r * ACROSS * 0.62, sizeOfKey * ACROSS * 0.4, 2 + Math.floor(s.c.k * 8), col, mulberry32(job.seed + Math.round(s.c.k * 1e5)));
         }
       },
     });

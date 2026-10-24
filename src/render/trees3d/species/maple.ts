@@ -1,39 +1,51 @@
-import type { Species3D } from '../types';
+import { mix, tone } from '../../trees/kit';
+import { maple as flat } from '../../trees/species/maple';
+import { AUTUMN, fresh } from '../../foliage';
+import type { Ramp, Species3D } from '../types';
 
 /**
- * Maple: a leaning, bending trunk that splits low into a few sinuous limbs
- * spreading into a broad crown wider than it is tall, its leaf in ragged
- * sprays of five-pointed leaves along the branches, the ends hanging. Green
- * through the summer; red in the flower before the leaf, then hung with
- * winged keys; crimson, orange and gold in autumn from the top of the crown
- * outward, gold over and red under; bare and snowed on in winter.
+ * A ramp of seven from a crown's three tones (lit, body, underside), as the
+ * flat trees are painted (`../../trees`): the same colours, with a step
+ * deeper under the underside and a step paler over the lit.
+ */
+/** The colour the flat maple turns. */
+const autumn = flat.autumn ?? AUTUMN.Maple;
+
+const rampOf = ([lit, mid, deep]: readonly [string, string, string]): Ramp =>
+  [mix(tone(deep, -0.22), '#3a2a48', 0.25), deep, mix(deep, mid, 0.5), mid, mix(mid, lit, 0.5), lit, tone(lit, 0.32)];
+
+/**
+ * Maple: a short, stout trunk splitting low into a few limbs under one broad,
+ * rounded dome of big lumpy masses edged in five-pointed leaves. Its colours
+ * are the flat maple's (`../../trees/species/maple`): orange-red through the
+ * summer, its fresh leaf in spring and hung with winged keys, its autumn
+ * colour on the top of the crown going to the summer red and to gold low at
+ * the rim, bare and snowed on in winter.
  */
 export const maple: Species3D = {
   name: 'Maple',
   build: {
-    height: 44, stem: 0.2, spread: 0.78, dome: 0.4, droop: 0.26, girth: 0.07, flare: 1.7, scaffolds: 5, forks: 3, branching: 2.4,
-    clumps: 100, clumpSize: 0.3, leaves: 34, gnarl: 0.45, lean: 3, dead: 0, bare: false, rune: false, hollow: false,
+    height: 44, stem: 0.27, spread: 0.55, dome: 0.42, droop: 0.2, girth: 0.095, flare: 1.7, scaffolds: 6, forks: 3, branching: 2.4,
+    clumps: 7, clumpSize: 0.52, gnarl: 0.35, lean: 2, dead: 0, bare: false, rune: false, hollow: false,
   },
   ages: {
-    sapling: { stem: 0.4, spread: 0.4, dome: 0.45, girth: 0.036, flare: 1, scaffolds: 3, forks: 1, branching: 2, clumps: 16, clumpSize: 0.36, leaves: 22, gnarl: 0.1, lean: 0.8 },
-    young: { stem: 0.26, spread: 0.64, girth: 0.05, flare: 1.3, scaffolds: 3, forks: 2, clumps: 50, clumpSize: 0.3, gnarl: 0.3, lean: 2 },
-    old: { spread: 0.84, girth: 0.09, flare: 1.85, scaffolds: 5, clumps: 108, gnarl: 0.65, lean: 4, rune: true },
-    veryOld: { spread: 0.84, girth: 0.1, flare: 1.95, scaffolds: 5, clumps: 88, gnarl: 0.85, lean: 4.5, dead: 2, rune: true, hollow: true },
-    shrivelled: { girth: 0.09, flare: 1.9, scaffolds: 4, forks: 2, gnarl: 0.85, lean: 4.5, bare: true, rune: true },
-    clipped: { stem: 0.16, spread: 0.85, dome: 0.55, droop: 0.15, girth: 0.07, flare: 1.3, scaffolds: 4, forks: 2, clumps: 30, clumpSize: 0.36, leaves: 28, gnarl: 0.3, lean: 1 },
+    sapling: { stem: 0.42, spread: 0.36, dome: 0.45, girth: 0.045, flare: 1, scaffolds: 3, forks: 1, branching: 2, clumps: 4, clumpSize: 0.58, gnarl: 0.1, lean: 0.6 },
+    young: { stem: 0.34, spread: 0.46, girth: 0.07, flare: 1.3, scaffolds: 4, forks: 2, clumps: 5, clumpSize: 0.56, gnarl: 0.2, lean: 1.2 },
+    old: { spread: 0.6, girth: 0.11, flare: 1.85, scaffolds: 7, clumps: 8, clumpSize: 0.5, gnarl: 0.55, lean: 3, rune: true },
+    veryOld: { spread: 0.6, girth: 0.12, flare: 1.95, scaffolds: 7, clumps: 7, clumpSize: 0.48, gnarl: 0.75, lean: 3.5, dead: 2, rune: true, hollow: true },
+    shrivelled: { girth: 0.11, flare: 1.9, scaffolds: 5, forks: 2, gnarl: 0.8, lean: 3.5, bare: true, rune: true },
+    clipped: { stem: 0.16, spread: 0.6, dome: 0.5, droop: 0.1, girth: 0.08, flare: 1.3, scaffolds: 4, forks: 2, clumps: 5, clumpSize: 0.6, gnarl: 0.3, lean: 0.8 },
   },
-  bark: { lit: '#c4ad9c', shade: '#5e4c5c', dead: '#b8b0a8', furrow: '#4a3a48' },
+  bark: { lit: tone(flat.bark, 0.3), shade: mix(flat.bark, '#3e3040', 0.45), dead: tone(flat.bark, 0.5), furrow: mix(flat.bark, '#2e2230', 0.6) },
   leaf: {
-    summer: ['#4a6e60', '#5a8a62', '#6ca464', '#86bc6c', '#a4d07a', '#c4e292', '#e2f2b8'],
-    spring: ['#4a6e52', '#5c8e52', '#78aa58', '#98c464', '#b8da74', '#d2ea90', '#ecf6ba'],
-    bud: ['#8a3044', '#b0384a', '#d0464e', '#e45c58', '#f07a6a', '#f89a86', '#fcbaa6'],
+    summer: rampOf(flat.leaf),
+    spring: rampOf(fresh(flat.leaf)),
     autumn: [
-      ['#5a2244', '#842846', '#ac3048', '#cc3c46', '#e2504c', '#ee6c5a', '#f68e74'],
-      ['#7a3a3e', '#a64e3a', '#cc6a38', '#e88a3e', '#f4a650', '#fac26e', '#fdd898'],
-      ['#806040', '#a87e3c', '#cca040', '#e6bc48', '#f2d05c', '#f8e080', '#fcf0b0'],
+      rampOf(autumn),
+      rampOf(autumn.map((c, i) => mix(c, flat.leaf[i], 0.5)) as unknown as readonly [string, string, string]),
+      rampOf(flat.leaf.map((c) => mix(c, '#f2c24e', 0.35)) as unknown as readonly [string, string, string]),
     ],
   },
-  leafSize: 1.9,
-  keys: { colour: '#d2d48e', ripe: '#c8a470' },
+  keys: { colour: '#e8c890', ripe: '#c8a470' },
   buds: '#d0464a',
 };

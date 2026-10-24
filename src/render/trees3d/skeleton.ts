@@ -6,7 +6,7 @@
  * twigs' ends poking out past them. The same seed is the same tree.
  */
 import { mulberry32 } from '../../world/noise';
-import type { Build, Clump, Envelope, Leaf, Limb, Skeleton, V3 } from './types';
+import type { Build, Clump, Envelope, Limb, Skeleton, V3 } from './types';
 import { across, add, dot, len, lerp, mul, sub, turn, unit } from './vec';
 
 const TAU = Math.PI * 2;
@@ -126,8 +126,8 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
     const B = trunkAt(f);
     const az = a0 + (i / n) * TAU + (R() - 0.5) * (TAU / n) * 0.55;
     const dead = b.bare || deadOnes.has(i);
-    const reach = 0.72 + 0.34 * R();
-    const rise = -0.5 + 0.55 * R();
+    const reach = b.bare ? 0.72 + 0.34 * R() : 0.5 + 0.14 * R();
+    const rise = b.bare ? -0.5 + 0.55 * R() : -0.3 + 0.42 * R();
     let T: V3 = [env.c[0] + Math.cos(az) * env.r * reach, env.c[1] + Math.sin(az) * env.r * reach, env.c[2] + rise * rz];
     if (b.bare) T = lerp(B, T, 0.7);
     const L = len(sub(T, B));
@@ -148,48 +148,30 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
     if (L.order >= 1 && !limbs.some((m) => m.parent === i)) L.tip = true;
   }
 
-  /* ---- the leaf: sprays along the branches ---- */
+  /* ---- the leaf: a dome of big lumpy masses ---- */
   const clumps: Clump[] = [];
   if (!b.bare && b.clumps > 0) {
-    const size = env.r * b.clumpSize;
-    const spots: Array<{ c: V3; r: number; limb: number; along: V3; pri: number }> = [];
-    for (let i = 0; i < limbs.length; i++) {
-      const L = limbs[i];
-      if (L.dead || L.order < 1 || (L.order === 1 && !L.tip && !limbs.some((m) => m.parent === i && m.order === 1 && m.tip))) continue;
-      const l = len(sub(L.b, L.a));
-      const along = unit([L.b[0] - L.a[0], L.b[1] - L.a[1], 0]);
-      const k = L.order >= 4 ? 0.75 : L.order === 3 ? 0.95 : 1.15;
-      // At the end of a twig, short of its tip so the tip shows; and down a long piece.
-      const ts = L.tip ? [0.72] : l > size * 1.6 ? [0.35, 0.85] : [0.7];
-      for (const t of ts) {
-        const p = lerp(L.a, L.b, t);
-        const r = size * k * (0.62 + 0.76 * R() * R() + 0.1 * R());
-        spots.push({ c: [p[0], p[1], p[2] + r * 0.18], r, limb: i, along, pri: 0.4 * outOf(env, p) + (L.tip ? 0.15 : 0) + R() });
+    const n = Math.max(1, Math.round(b.clumps));
+    const rm = env.r * b.clumpSize;
+    const tips: number[] = [];
+    for (let i = 0; i < limbs.length; i++) if (limbs[i].order >= 1 && !limbs[i].dead) tips.push(i);
+    const ring = Math.max(1, n - 1);
+    for (let i = 0; i < n; i++) {
+      // One on the crown's top, the rest round it over the scaffold limbs, each touching the next.
+      const top = i === 0 && n > 1;
+      const az = a0 + ((i - 1) / ring) * TAU + (R() - 0.5) * (TAU / ring) * 0.3;
+      const out = top ? 0.12 * R() : 0.52 + 0.14 * R();
+      const z = top ? 0.38 + 0.12 * R() : -0.5 + 0.5 * R();
+      const c: V3 = [env.c[0] + Math.cos(az) * env.r * out, env.c[1] + Math.sin(az) * env.r * out, env.c[2] + z * env.rz];
+      let best = 0, bd = Infinity;
+      for (const t of tips) {
+        const d = len(sub(limbs[t].b, c));
+        if (d < bd) { bd = d; best = t; }
       }
-    }
-    spots.sort((p, q) => q.pri - p.pri);
-    spots.length = Math.min(spots.length, Math.round(b.clumps));
-    for (const s of spots) {
-      const side: V3 = [-s.along[1], s.along[0], 0];
-      const nl = Math.max(5, Math.round(b.leaves * Math.pow(s.r / size, 1.6)));
-      const leaves: Leaf[] = [];
-      let lo = Infinity, hi = -Infinity;
-      for (let i = 0; i < nl; i++) {
-        const u = Math.sqrt(R());
-        const phi = R() * TAU;
-        const x = Math.cos(phi) * u * s.r, y = Math.sin(phi) * u * s.r * 0.72;
-        // Domed over its middle, hanging at the end away from the limb's root.
-        const z = s.r * 0.3 * (1 - u * u) - b.droop * s.r * 0.9 * Math.max(0, Math.cos(phi)) * u * u + (R() - 0.5) * s.r * 0.2;
-        lo = Math.min(lo, z);
-        hi = Math.max(hi, z);
-        leaves.push({ p: add(add(mul(s.along, x), mul(side, y)), [0, 0, z]), s: (0.8 + 0.45 * R()) * (1 - 0.2 * u), top: z, k: R(), a: R() * TAU });
-      }
-      for (const lf of leaves) lf.top = (lf.top - lo) / Math.max(1e-6, hi - lo);
-      leaves.sort((p, q) => p.top - q.top);
       clumps.push({
-        c: s.c, r: s.r, leaves, limb: s.limb, k: R(),
-        out: Math.min(1, outOf(env, s.c)),
-        up: Math.max(0, Math.min(1, (s.c[2] - (env.c[2] - rz)) / (2 * rz))),
+        c, r: rm * (top ? 1.05 : 0.85 + 0.3 * R()), limb: best, k: R(),
+        out: Math.min(1, outOf(env, c)),
+        up: Math.max(0, Math.min(1, (c[2] - (env.c[2] - rz)) / (2 * rz))),
       });
     }
   }

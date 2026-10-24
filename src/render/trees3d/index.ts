@@ -230,8 +230,7 @@ const SHADE_SCALE = 2;
 
 /**
  * What a tree throws on the ground at a step of the sun, seen from a turn:
- * a disc of shade on the ground under every few leaves -- dappled, with the
- * light through it where the sprays part -- and along its wood. Null when it
+ * lumpy shade on the ground under each mass of leaf, and along its wood. Null when it
  * throws none. The renderer lays it with the ground (`Renderer.solidFrame`).
  */
 export function tree3dShadow(species: number, variant: number, season: Season, day: number, x: number, y: number, step: number, turn: number): TreeShade | null {
@@ -279,9 +278,13 @@ export function tree3dShadow(species: number, variant: number, season: Season, d
     }
     const job = { sk, spec, dress, light, e, seed: 0, frame: 0 };
     for (const s of shownOf(job)) {
-      s.leaves.forEach((l, i) => {
-        if (i % 3 === 0) disc([s.c.c[0] + l.p[0], s.c.c[1] + l.p[1], s.c.c[2] + l.p[2]], spec.leafSize * 1.7 * s.grown);
-      });
+      // A mass throws a lumpy shade: its middle, and four lumps round it.
+      const r = s.c.r * s.grown;
+      disc(s.c.c, r * 0.8);
+      for (let i = 0; i < 4; i++) {
+        const a = s.c.k * 9 + (i * Math.PI) / 2;
+        disc([s.c.c[0] + Math.cos(a) * r * 0.42, s.c.c[1] + Math.sin(a) * r * 0.42, s.c.c[2]], r * 0.55);
+      }
     }
     if (x1 > x0) {
       const canvas = document.createElement('canvas');
