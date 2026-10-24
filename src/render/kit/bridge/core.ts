@@ -325,9 +325,32 @@ export function buildSlice(plan: Plan, sl: Slice, e: Eye, A2: [number, number], 
     (Math.abs(a[0] - sl.s0) < EPS && Math.abs(b[0] - sl.s0) < EPS && sl.s0 > EPS)
     || (Math.abs(a[0] - sl.s1) < EPS && Math.abs(b[0] - sl.s1) < EPS && sl.s1 < plan.n - EPS)
     || (Math.abs(a[1] - sl.t0) < EPS && Math.abs(b[1] - sl.t0) < EPS && sl.t0 > plan.tLo + EPS)
-    || (Math.abs(a[1] - sl.t1) < EPS && Math.abs(b[1] - sl.t1) < EPS && sl.t1 < plan.tHi - EPS);
+    || (Math.abs(a[1] - sl.t1) < EPS && Math.abs(b[1] - sl.t1) < EPS && sl.t1 < plan.tHi - EPS)
+    || inGap(a, b);
+  // Where a refuge breaks the parapet its floor is flush with the deck: no line between them along the bridge's edge.
+  const gaps = refugeGaps(plan);
+  const onEdge = (p: L): number => (Math.abs(p[1] - plan.tLo) < EPS ? -1 : Math.abs(p[1] - plan.tHi) < EPS ? 1 : 0);
+  const flush = (a: L, b: L): boolean => {
+    const side = onEdge(a);
+    return side !== 0 && onEdge(b) === side && Math.abs(a[2] - plan.deck(a[0])) <= 0.3 && Math.abs(b[2] - plan.deck(b[0])) <= 0.3;
+  };
+  function inGap(a: L, b: L): boolean {
+    return flush(a, b) && gaps.some(([g0, g1]) => Math.min(a[0], b[0]) >= g0 - EPS && Math.max(a[0], b[0]) <= g1 + EPS);
+  }
+  // A face's edge along the bridge's edge at the deck, the deck's own, broken where a refuge's gap begins and ends.
+  const atGaps = (pts: L[]): L[] => {
+    if (!gaps.length) return pts;
+    return pts.flatMap((a, j) => {
+      const b = pts[(j + 1) % pts.length];
+      if (!flush(a, b)) return [a];
+      const lo = Math.min(a[0], b[0]), hi = Math.max(a[0], b[0]);
+      const cuts = gaps.flat().filter((g) => g > lo + EPS && g < hi - EPS).sort((x, y) => (b[0] > a[0] ? x - y : y - x));
+      return [a, ...cuts.map((g): L => { const u = (g - a[0]) / (b[0] - a[0]); return [g, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]; })];
+    });
+  };
   const face = (part: Part3, pts: L[], o: L, tone: Tone, info?: FaceInfo, frame?: { o: L; a: L; b: L }): void => {
     if (pts.length < 3) return;
+    pts = atGaps(pts);
     const mp = pts.map(m);
     let n = newell(mp);
     const l = Math.hypot(n[0], n[1], n[2]);

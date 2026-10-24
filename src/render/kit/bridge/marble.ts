@@ -1054,7 +1054,8 @@ function deckOf(k: Kit, cfg: Classical): void {
     const tt = t + edge * 0.03;
     const lo = (s: number): number => top(s) - plan.thick - 1.4, hi = (s: number): number => top(s) - 0.6;
     const [a, b] = [sl.s0, sl.s1];
-    k.solid('front', 1);
+    // Behind the deck and the parapet on the far side, so laid before them there.
+    k.solid('front', k.ord(edge, 1));
     k.face('front', [[a, tt, lo(a)], [b, tt, lo(b)], [b, tt, hi(b)], [a, tt, hi(a)]], [0, edge, 0], st.trim,
       { role: 'cornice', x0: 0, x1: 1, y0: 0, y1: 1, seed: sl.i }, wallF(tt, edge));
     k.face('front', [[a, t, hi(a)], [b, t, hi(b)], [b, tt, hi(b)], [a, tt, hi(a)]], [0, 0, 1], st.trim);
