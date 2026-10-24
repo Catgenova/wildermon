@@ -2559,6 +2559,29 @@ jobs:
             --outfile=node_modules/.cache/outstairs.mjs --log-level=error
           node node_modules/.cache/outstairs.mjs
 
+      - name: Storey mode
+        if: matrix.shard == 3
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          STOREY_STRICT: '1'
+        run: |
+          # "Navigating and building 2nd+ storey is super clumsy. We have a
+          # storey toggle UI, lets lean into that. Clicking that toggle hides
+          # all other storey, allowing players to move onto and along that
+          # storey and build options exclusively for that storey". Pinned on
+          # storey 2 of a hall with a staircase, a jetty and an outside
+          # staircase: a click answers on its floor, the jetty, the outside
+          # staircase's head and the open air beside it, at the floor's
+          # height, and not on far ground; a walk there ends on storey 2 up
+          # the staircase, and replayed through rpc_move is never held back;
+          # the jetty's and the footprint's rows name storey 2. Drawn in
+          # Chrome: no ground-floor wall or piece pinned on storey 2, a click
+          # on its floor picks it with storey 2's menu and none of the
+          # ground's jobs; Auto as before.
+          npx esbuild supabase/test/storeyview.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/storeyview.mjs --log-level=error
+          node node_modules/.cache/storeyview.mjs
+
       - name: Glassblowing, glass panels, bottles and the stained glass wall
         if: matrix.shard == 3
         run: |
