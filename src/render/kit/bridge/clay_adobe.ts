@@ -100,18 +100,20 @@ const deckPaint: BridgePainter = (g, k, f, st) => {
   // Relaid tiles, here and there.
   const relaid = new Path2D();
   for (let i = Math.floor(x0 / W); i * W < x1; i++) {
-    for (let j = Math.ceil(lay.tLo / W) + 1; (j + 1) * W < lay.tHi - W; j++) if (hash2(i * 3 + 1, j * 7 + 2) < 0.035) relaid.rect(i * W + 0.4, j * W + 0.4, W - 0.8, W - 0.8);
+    for (let j = Math.max(Math.ceil(lay.tLo / W) + 1, Math.floor(Math.min(f.y0, f.y1) / W)); (j + 1) * W < Math.min(lay.tHi - W, Math.max(f.y0, f.y1) + W); j++) if (hash2(i * 3 + 1, j * 7 + 2) < 0.035) relaid.rect(i * W + 0.4, j * W + 0.4, W - 0.8, W - 0.8);
   }
   g.fillStyle = css(mix(k.fill, hex('#efe2cc'), 0.4), 0.8);
   g.fill(relaid);
-  // The wheel tracks, worn soft and pale.
+  // The wheel tracks, worn soft and pale: two bands a lane, feathered by a wider fainter one.
+  const y0 = Math.min(f.y0, f.y1), y1 = Math.max(f.y0, f.y1);
+  const wear = mix(k.fill, [255, 246, 232], 0.5);
   for (const o of lay.lanes) {
+    if (o + 13 < y0 || o - 13 > y1) continue;
     for (const d of [-9, 9]) {
-      const grad = g.createLinearGradient(0, o + d - 3, 0, o + d + 3);
-      const c = mix(k.fill, [255, 246, 232], 0.5);
-      grad.addColorStop(0, css(c, 0)); grad.addColorStop(0.5, css(c, 0.28)); grad.addColorStop(1, css(c, 0));
-      g.fillStyle = grad;
+      g.fillStyle = css(wear, 0.12);
       g.fillRect(x0 - 1, o + d - 3, x1 - x0 + 2, 6);
+      g.fillStyle = css(wear, 0.14);
+      g.fillRect(x0 - 1, o + d - 1.5, x1 - x0 + 2, 3);
     }
   }
   // The border inside each parapet: narrow tiles, deeper and browner, a pale line on their inner side.
