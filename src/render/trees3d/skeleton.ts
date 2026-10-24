@@ -225,7 +225,8 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
   }
 
   /* ---- buttress roots: short and fat, the trunk's foot swelling out into the ground ---- */
-  const roots = b.flare > 1.15 ? 4 + Math.round(R()) : 0;
+  // Only a trunk with a real flare has roots to show past it.
+  const roots = b.flare > 1.5 ? 4 + Math.round(R()) : 0;
   const rootA = R() * TAU;
   const rootTop = Math.min(r0 * 1.1, stemZ * 0.5);
   for (let i = 0; i < roots; i++) {
@@ -363,11 +364,11 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
       out = env.r * (low ? 1 : 0.85);
       top = env.c[2] + (low ? 0 : rz * 0.4);
     }
-    const reach = out * (low ? 0.8 + 0.1 * R() : mine[i].length ? 0.45 + 0.15 * R() : 0.9 + 0.2 * R());
+    const reach = out * (low ? 0.8 + 0.1 * R() : mine[i].length ? 0.55 + 0.2 * R() : 0.9 + 0.2 * R());
     const lift = !mine[i].length ? (low ? stemZ * (0.4 + 0.4 * R()) : (top - B[2]) * (0.55 + 0.25 * R()))
-      : low ? Math.max(stemZ * 0.15, top - B[2] - rm * 1.3) : (top - B[2]) * (0.5 + 0.2 * R());
+      : low ? Math.max(stemZ * 0.15, top - B[2] - rm * 1.3) : (top - B[2]) * (0.42 + 0.2 * R());
     const T: V3 = [B[0] + Math.cos(az) * reach, B[1] + Math.sin(az) * reach, B[2] + lift];
-    const pts = curve(B, T, 4, zig * 0.3, 2);
+    const pts = curve(B, T, 4, zig * 0.26, 3);
     // A low limb sags between its elbows and turns up at its end.
     if (low) for (let j = 1; j < pts.length - 1; j++) pts[j][2] -= Math.sin((j / (pts.length - 1)) * Math.PI) * reach * b.droop * 0.25;
     const rb = trunkR(f) * (0.55 + 0.1 * R());
@@ -406,8 +407,8 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
     }
     // A limb with nothing on it -- a dead one, a bare tree's -- still forks at its elbows.
     if (!mine[i].length || b.bare) {
-      // At its elbows: every other point of the rounded run.
-      for (const p of pieces.filter((_, k) => k % 2 === 1)) {
+      // At its elbows: every third point of the rounded run.
+      for (const p of pieces.filter((_, k) => k % 3 === 2)) {
         const P = limbs[p];
         const ta = az + (R() - 0.5) * 1.6;
         const tl = env.r * (0.26 + 0.16 * R());

@@ -246,10 +246,18 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     }
     return;
   }
-  CHAIN_BANDS.forEach(([s0, s1], i) => {
-    g.fillStyle = c.cols[i];
-    g.fill(bandPath(c, j0, j1, i === 0 ? s0 : s0 - 0.04, i === 2 ? s1 : s1 + 0.04));
-  });
+  if (job.spec.open && c.order >= 2) {
+    // An open crown's branches in two: the whole in its middle tone, its shaded side over it.
+    g.fillStyle = c.cols[1];
+    g.fill(bandPath(c, j0, j1, -1, 1));
+    g.fillStyle = c.cols[0];
+    g.fill(bandPath(c, j0, j1, -1, -0.3));
+  } else {
+    CHAIN_BANDS.forEach(([s0, s1], i) => {
+      g.fillStyle = c.cols[i];
+      g.fill(bandPath(c, j0, j1, i === 0 ? s0 : s0 - 0.04, i === 2 ? s1 : s1 + 0.04));
+    });
+  }
   if (c.snow) {
     g.fillStyle = '#f4f7fd';
     g.fill(bandPath(c, j0, j1, c.snow[0], c.snow[1]));
@@ -264,7 +272,8 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
   if (job.spec.bark.moss && c.order === 0 && j0 === 0) paintMoss(g, job.spec.bark.moss, c, R);
   // Furrows down the bark of the trunk and the big limbs.
   const rm = Math.max(c.r[j0], c.r[j1]);
-  if (rm > 2.2 && c.order <= 1) {
+  // Rough bark only where it is broad enough to show.
+  if (rm > (job.spec.bark.ridged && c.order > 0 ? 3 : 2.2) && c.order <= 1) {
     g.strokeStyle = job.spec.bark.furrow;
     g.globalAlpha = c.order < 0 ? 0.35 : 0.5;
     g.lineWidth = 0.42;

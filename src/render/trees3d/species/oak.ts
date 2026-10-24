@@ -36,7 +36,7 @@ export const oak: Species3D = {
   },
   ages: {
     sapling: { stem: 0.36, spread: 0.36, dome: 0.5, girth: 0.05, flare: 1, scaffolds: 3, forks: 1, branching: 1.6, clumps: 4, clumpSize: 0.5, gnarl: 0.2, lean: 0.5, low: 0, zig: 0.3 },
-    young: { stem: 0.28, spread: 0.5, dome: 0.48, girth: 0.075, flare: 1.4, scaffolds: 4, forks: 2, clumps: 8, clumpSize: 0.38, gnarl: 0.35, lean: 1, low: 0, zig: 0.35 },
+    young: { stem: 0.24, spread: 0.58, dome: 0.42, girth: 0.075, flare: 1.4, scaffolds: 4, forks: 2, clumps: 8, clumpSize: 0.34, gnarl: 0.35, lean: 1, low: 0, zig: 0.35 },
     old: { spread: 0.8, girth: 0.13, flare: 2.6, scaffolds: 5, clumps: 15, clumpSize: 0.25, gnarl: 0.75, lean: 2, low: 0.5, rune: true },
     veryOld: { spread: 0.82, girth: 0.135, flare: 2.7, scaffolds: 5, clumps: 14, clumpSize: 0.25, gnarl: 0.9, lean: 2.5, low: 0.5, dead: 1, rune: true, hollow: true },
     shrivelled: { girth: 0.13, flare: 2.5, scaffolds: 5, forks: 2, gnarl: 0.9, lean: 2.5, bare: true, rune: true },
