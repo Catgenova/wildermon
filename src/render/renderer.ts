@@ -957,6 +957,8 @@ type Box = [number, number, number, number];
 /** How far the eaves hang out past the wall's line, and the verge past a gable end, in tiles. */
 const ROOF_OVER = 0.14;
 const ROOF_VERGE = 0.1;
+/** How far down the wall under an eave its shade reaches, in height units: further than any eave's board is deep (`EAVE_DEEP`). */
+const EAVE_SHADE = 10;
 /** The colour an outline is drawn in round whatever the cursor is on. */
 const HOVER_INK = 'rgb(255, 226, 120)';
 
@@ -8422,7 +8424,7 @@ export class Renderer {
     const world = this.game.world;
     let sig = '';
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    let lowest = Infinity, wide = 1;
+    let lowest = Infinity;
     let fx = Infinity, fy = Infinity, gx = -Infinity, gy = -Infinity;
     for (const [x, y] of roofTiles) {
       const f = bld.floor(level, x, y);
@@ -8431,32 +8433,50 @@ export class Renderer {
       lowest = Math.min(lowest, world.getHeight(x, y));
       fx = Math.min(fx, x); fy = Math.min(fy, y);
       gx = Math.max(gx, x); gy = Math.max(gy, y);
-      wide = Math.max(wide, Math.abs(x - roofTiles[0][0]) + 1, Math.abs(y - roofTiles[0][1]) + 1);
     }
     if (!sig) return;
     if (b.deck != null) lowest = Math.min(lowest, b.deck);
-    // From the ground under it to the ridge as high as the widest roof of its footprint could stand, a tile and a half past every eave.
-    const top = Math.max(lowest, b.deck ?? lowest) + (level + 0.5) * WALL_HEIGHT + ROOF_PITCH * roofShapeDef(b).rise * (wide + 2);
-    for (const [x, y] of roofTiles) {
-      for (const [cx, cy] of [[x - 1.5, y - 1.5], [x + 2.5, y - 1.5], [x - 1.5, y + 2.5], [x + 2.5, y + 2.5]]) {
-        for (const z of [lowest - WALL_HEIGHT * 0.2, top]) {
+    /*
+     * What it is drawn over (`drawPitchedRoofNow`): the box round its faces,
+     * a wall's thickness out for the gable ends and the shade under the
+     * eaves, from `EAVE_SHADE` under the eaves to the top of the ridge; and
+     * past that on the screen by as much as the widest ridge cap and the
+     * tallest cresting stand off their line. It was a tile and a half past
+     * every eave, up to as high as the widest roof of its footprint could
+     * stand: most of a roof's picture was nothing, and made and copied the same.
+     */
+    const frame = this.roofFrame(b);
+    if (!frame) return;
+    let wx0 = Infinity, wy0 = Infinity, wx1 = -Infinity, wy1 = -Infinity, rise = 0;
+    for (const f of frame.model.faces) {
+      for (const p of f.pts) {
+        wx0 = Math.min(wx0, p[0]); wx1 = Math.max(wx1, p[0]);
+        wy0 = Math.min(wy0, p[1]); wy1 = Math.max(wy1, p[1]);
+        rise = Math.max(rise, p[2]);
+      }
+    }
+    const out = WALL_THICK * 2;
+    const ridge = frame.eave + ROOF_PITCH * roofShapeDef(b).rise * rise;
+    for (const cx of [wx0 - out, wx1 + out]) {
+      for (const cy of [wy0 - out, wy1 + out]) {
+        for (const z of [frame.eave - EAVE_SHADE, ridge]) {
           const sx = cam.worldToScreenX(cx, cy), sy = cam.worldToScreenY(cx, cy, z);
           x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
         }
       }
     }
+    const cap = 4 + 12 * cam.zoom;
+    x0 -= cap; y0 -= cap; x1 += cap; y1 += cap;
     const key = `r|${b.id}|${level}|${b.deck ?? ''}|${roofShapeOf(b)}|${sig}`;
     // What it reads is its own building and what stands round it: `REACH` round the tiles it covers (`StructureWatch`).
     this.baked(key, cam.worldToScreenX(fx, fy), cam.worldToScreenY(fx, fy, lowest), [x0, y0, x1, y1], () => this.drawPitchedRoofNow(b),
       this.structs.version(fx, fy, gx, gy));
   }
 
-  private drawPitchedRoofNow(b: Building): void {
-    const main = this.canvas.ctx;
-    const cam = this.camera;
+  /** A building's roof tiles, its roof's shape (kept while its tiles are the same) and the height of its eaves; null with no roof. */
+  private roofFrame(b: Building): { roofs: FloorTile[]; model: RoofModel; eave: number } | null {
     const bld = this.game.buildings;
     const world = this.game.world;
-    const zoom = cam.zoom;
     const level = b.levels;
     const roofs: FloorTile[] = [];
     // Over its jetties as well as its footprint (`roofTiles`).
@@ -8464,7 +8484,7 @@ export class Renderer {
       const f = bld.floor(level, x, y);
       if (f && floorKind(f) === 'roof') roofs.push(f);
     }
-    if (!roofs.length) return;
+    if (!roofs.length) return null;
     const shape = roofShapeOf(b) === 'gable' ? 'gable' : 'hip';
     const sig = `${shape}:${roofs.map((f) => `${f.x},${f.y}`).join(';')}`;
     let kept = this.roofShapes.get(b.id);
@@ -8472,8 +8492,6 @@ export class Renderer {
       kept = { sig, model: roofModel(roofs.map((f): [number, number] => [f.x, f.y]), shape, ROOF_OVER, ROOF_VERGE, ROOF_CAP) };
       this.roofShapes.set(b.id, kept);
     }
-    const model = kept.model;
-    const pitch = ROOF_PITCH * roofShapeDef(b).rise;
     let eave = -Infinity;
     // A jetty's ground is not the building's: the eaves are over the footprint's.
     for (const f of roofs) if (bld.buildingAt(f.x, f.y)) eave = Math.max(eave, world.getHeight(f.x, f.y));
@@ -8481,6 +8499,19 @@ export class Renderer {
     // A building on piers stands on its deck, whatever the ground under it does.
     if (b.deck != null) eave = b.deck;
     eave += level * WALL_HEIGHT;
+    return { roofs, model: kept.model, eave };
+  }
+
+  private drawPitchedRoofNow(b: Building): void {
+    const main = this.canvas.ctx;
+    const cam = this.camera;
+    const bld = this.game.buildings;
+    const zoom = cam.zoom;
+    const level = b.levels;
+    const frame = this.roofFrame(b);
+    if (!frame) return;
+    const { roofs, model, eave } = frame;
+    const pitch = ROOF_PITCH * roofShapeDef(b).rise;
     const X = (p: RoofPt): number => cam.worldToScreenX(p[0], p[1]);
     const Y = (p: RoofPt, drop = 0): number => cam.worldToScreenY(p[0], p[1], eave + pitch * p[2] - drop);
     const deep = (x: number, y: number): number => cam.worldToScreenY(x, y, 0);
@@ -8854,10 +8885,10 @@ export class Renderer {
         const off = (p: RoofPt): RoofPt => [p[0] + ox * WALL_THICK, p[1] + oy * WALL_THICK, 0];
         const A = off(wa), B = off(wb);
         items.push({ d: -Infinity, draw: () => {
-          const top = Y(A, pitch * WALL_THICK), bottom = Y(A, 10);
+          const top = Y(A, pitch * WALL_THICK), bottom = Y(A, EAVE_SHADE);
           ctx.beginPath();
           ctx.moveTo(X(A), Y(A, pitch * WALL_THICK)); ctx.lineTo(X(B), Y(B, pitch * WALL_THICK));
-          ctx.lineTo(X(B), Y(B, 10)); ctx.lineTo(X(A), Y(A, 10));
+          ctx.lineTo(X(B), Y(B, EAVE_SHADE)); ctx.lineTo(X(A), Y(A, EAVE_SHADE));
           ctx.closePath();
           const g = ctx.createLinearGradient(0, top, 0, bottom);
           g.addColorStop(0, 'rgba(44, 34, 56, 0.3)');
