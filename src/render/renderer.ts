@@ -22,7 +22,6 @@ import {
   FENCE_THICK,
   FLOOR_DEEP,
   WALL_TYPE_BY_ID,
-  workLevel,
   TOP_LEVELS,
   type Column,
   type Border,
@@ -60,6 +59,7 @@ import { FLOOR_PPT, FLOOR_TILES, concrete, flooring, slabbing } from './flooring
 import { LADDER, stairStyle } from './stairing';
 import { BEAM_DEEP, drawBeam, drawColumn, drawJettySupports, drawRailing, JOIST_DEEP, PILASTER_PROUD, type Body, type Cut, type RailEnds } from './framing';
 import { jettyBase, outsideStairBase } from '../game/frame';
+import { storeyHeight, storeyTileAt } from '../game/storeyview';
 import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
 import { drawShine, shines } from './shine';
@@ -406,7 +406,7 @@ import { PICK_SLACK, PICK_SLACK_TOUCH } from './pickslack';
  * `ok` is whether it can go where it is.
  */
 export type Ghost =
-  | { kind: 'furniture'; piece: string; material?: string; x: number; y: number; sx: number; sy: number; facing: Side; ok: boolean }
+  | { kind: 'furniture'; piece: string; material?: string; x: number; y: number; sx: number; sy: number; facing: Side; ok: boolean; level?: number }
   | { kind: 'stairs'; x: number; y: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; hand?: StairHand; ok: boolean; buildingId?: number };
 
 export interface Pick {
@@ -447,6 +447,11 @@ export interface Pick {
   furniture?: number;
   /** Picked on the floor of a cellar, looking into it, rather than on the ground over it. */
   down?: boolean;
+  /**
+   * The storey picked on, while one is pinned on the storey control (`storeyview.ts`): its floor, or 0 for the
+   * ground. Undefined on Auto, where a click is on the ground and a walk arrives wherever it first can.
+   */
+  level?: number;
   /**
    * For a thing set down on the ground (a wagon, a crate, a fire...): the ground the cursor is over behind it, as it
    * would have been picked were the thing not there, so the tile under or behind a thing can still be got at.
@@ -1111,7 +1116,7 @@ export class Renderer {
   /** What is being set down, drawn after everything that stands. */
   ghost: Ghost | null = null;
   /** The tile the tile window is looking at, outlined so you can see which it is. */
-  selected: { x: number; y: number; down?: boolean } | null = null;
+  selected: { x: number; y: number; down?: boolean; level?: number } | null = null;
   fps = 0;
   private colors: ColourPages;
   /** Which step of the sun's walk the ground was last shaded for. */
@@ -1582,6 +1587,8 @@ export class Renderer {
    * costs nothing.
    */
   private roomTiles: Set<string> | null = null;
+  /** The storey pinned on the storey control this frame (`Game.pinnedStorey`), or null. */
+  private pinned: number | null = null;
   /**
    * The shade each wall throws on the ground, worked out the first time a
    * tile asks for it: up to six tiles ask after the same wall, and every
@@ -3511,7 +3518,9 @@ export class Renderer {
     this.bloom = season === 'spring' || season === 'summer';
     // Whether the fields are waiting out a winter, which they are drawn doing: asked once a frame, not once a tile.
     this.dormant = this.game.crops.size > 0 && fieldRate(this.game.wallNow()) <= 0;
-    this.roomTiles = this.myRoom();
+    // Pinned on a storey nothing is let go to be seen through: the storey is drawn whole (`storeyview.ts`).
+    this.pinned = this.game.pinnedStorey();
+    this.roomTiles = this.pinned === null ? this.myRoom() : null;
     // The spells first: what they light is among what is burning.
     this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness() });
     this.game.spellLights = this.spells.lights;
@@ -4078,12 +4087,14 @@ export class Renderer {
         const t = here;
         // A building over a cellar you are looking into is taken off, and everything in it with it.
         const cutHere = this.cut.size > 0 && this.cut.has(this.game.buildings.buildingAt(x, y)?.id ?? -1);
+        // Pinned on a storey over the ground, what stands on the ground is hidden with the ground floor (`storeyview.ts`).
+        const aloft = this.pinned !== null && this.pinned > 0;
         if (!lit) {
           // Remembered ground keeps its shape and its trees and nothing else:
           // no creatures, no piles, no detail, and a cold wash over the lot.
           // A Runestone stands in memory as it stands in sight: it is the landmark, and is drawn from its front tile.
           const stoneMem = world.solid !== null && world.solid.has(y * world.w + x) ? runestoneAt(x, y, world.w) : null;
-          if (stoneMem) this.takeStone(stoneMem, x, y, V);
+          if (stoneMem && !aloft) this.takeStone(stoneMem, x, y, V);
           if (!stoneMem && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
             const data = world.viewData(x, y, false);
             const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day) : stumpSprite(treeSpecies(data));
@@ -4091,7 +4102,7 @@ export class Renderer {
             this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX, baseY + hh - avg * hs, spr);
           }
           if (this.structs.nearAny(x, y)) this.drawStructures(x, y, V, d > playerDepth);
-          if (this.hingeTiles.has(x * 65536 + y)) this.drawGateAt(x, y, V);
+          if (!aloft && this.hingeTiles.has(x * 65536 + y)) this.drawGateAt(x, y, V);
           const top = raising ? this.raisedTop(x, y) : null;
           this.tileColumn(lineFog, pts, c, top, hs);
           // Come down over something waiting to take the wash off, which stands behind it, its wash and its water's: that goes first.
@@ -4100,14 +4111,14 @@ export class Renderer {
         }
         // A Runestone's nine tiles: the stone is taken on its front one, and nothing that grows there is drawn under it.
         const stone = world.solid !== null && world.solid.has(y * world.w + x) ? runestoneAt(x, y, world.w) : null;
-        if (stone) this.takeStone(stone, x, y, V);
+        if (stone && !aloft) this.takeStone(stone, x, y, V);
         if (!stone && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
           const data = world.getData(x, y);
           const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day) : stumpSprite(treeSpecies(data));
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
           this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX, baseY + hh - avg * hs, spr);
         }
-        if (!cutHere && this.game.ground.size && this.game.groundAt(x, y).length) {
+        if (!cutHere && !aloft && this.game.ground.size && this.game.groundAt(x, y).length) {
           const avg = (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(x, y) : null) ?? (c[0] + c[1] + c[2] + c[3]) / 4;
           const pile = this.take('pile', x, y, baseX, baseY + hh - avg * hs, lyingSprite(this.game.groundAt(x, y), x, y));
           // A heap shines for the best thing in it: one fantastic hatchet under
@@ -4116,7 +4127,7 @@ export class Renderer {
           for (const it of this.game.groundAt(x, y)) if ((it.rare ?? 0) > best) best = it.rare ?? 0;
           if (best) pile.rare = best;
         }
-        const deed = this.game.tokenAt(x, y);
+        const deed = aloft ? undefined : this.game.tokenAt(x, y);
         if (deed) {
           // A settlement's token, ours or a neighbour's, as tall as the settlement's level has built it (`deedtotem.ts`).
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
@@ -4164,7 +4175,9 @@ export class Renderer {
          * for on its own rather than through the count below.
          */
         if (this.game.bridges.size) {
-          const bridge = this.game.bridgeAt(x, y);
+          const found = this.game.bridgeAt(x, y);
+          // Pinned on a storey, a bridge with an end on it; an aqueduct runs on the ground.
+          const bridge = found && (this.pinned === null || bridgeLevels(found).includes(this.pinned)) ? found : undefined;
           // An aqueduct's bay is two pieces, its insides behind whoever stands under it and its face in front (`./aqueducts`).
           if (bridge?.kind === 'aqueduct') {
             const k = bridge.spans.findIndex((sp) => sp.x === x && sp.y === y);
@@ -4174,16 +4187,16 @@ export class Renderer {
             }
           }
           // And the fall at its foot goes with the tile it pours into, and the cut its water comes in by with the tile it draws from.
-          for (const b of this.aqueducts.footAt(x, y) ?? []) {
+          for (const b of aloft ? [] : this.aqueducts.footAt(x, y) ?? []) {
             const [px, py] = this.aqueducts.sortPoint(b, x, y, 'spout');
             this.take('deck', x, y, px, py, null).aq = { b, k: b.spans.length - 1, part: 'spout' };
           }
-          for (const b of this.aqueducts.headAt(x, y) ?? []) {
+          for (const b of aloft ? [] : this.aqueducts.headAt(x, y) ?? []) {
             const [px, py] = this.aqueducts.sortPoint(b, x, y, 'intake');
             this.take('deck', x, y, px, py, null).aq = { b, k: 0, part: 'intake' };
           }
           // And water poured onto a foundation at the foot going over its edge, with the tile it falls into.
-          for (const { b } of this.aqueducts.offAt(x, y) ?? []) {
+          for (const { b } of aloft ? [] : this.aqueducts.offAt(x, y) ?? []) {
             const [px, py] = this.aqueducts.sortPoint(b, x, y, 'off');
             this.take('deck', x, y, px, py, null).aq = { b, k: b.spans.length - 1, part: 'off' };
           }
@@ -4224,13 +4237,13 @@ export class Renderer {
          * them.
          */
         if (!cutHere && this.game.anythingPlaced(x, y)) {
-          for (const sm of this.game.smeltersOnTile(x, y)) {
+          for (const sm of aloft ? [] : this.game.smeltersOnTile(x, y)) {
             const [wx, wy] = smelterCentre(sm);
             const se = this.take('smelter', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), null);
             se.smelter = sm;
             if (sm.rare) se.rare = sm.rare;
           }
-          for (const kl of this.game.kilnsOnTile(x, y)) {
+          for (const kl of aloft ? [] : this.game.kilnsOnTile(x, y)) {
             const [wx, wy] = kilnCentre(kl);
             const ke = this.take('kiln', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), null);
             ke.kiln = kl;
@@ -4239,6 +4252,8 @@ export class Renderer {
           for (const fu of this.game.furnitureOnTile(x, y)) {
             // A piece down in a cellar is drawn with the cellar (`drawCellarView`), and not at all from up top.
             if ((fu.level ?? 0) < 0) continue;
+            // Pinned on a storey, the pieces on it, and whatever you are aboard or driving.
+            if (this.pinned !== null && (fu.level ?? 0) !== this.pinned && player.aboard !== fu.id && this.helming !== fu && !fu.driven) continue;
             // A hull somebody else is steering is where their hands are, which is read a dozen times a second; where
             // she was set down is read once.
             const [wx, wy] = fu.helm ? this.game.hullCentre(fu) : furnitureCentre(fu);
@@ -4250,21 +4265,21 @@ export class Renderer {
             // A cart on the move rocks and bumps on the track under her driver, and her driver with her (`cartSwayOf`).
             if (reinsTo(fu.kind)) fe.sway = this.cartSwayOf(fu, fe.sx, fe.sy, zoom);
           }
-          for (const an of this.game.anvilsOnTile(x, y)) {
+          for (const an of aloft ? [] : this.game.anvilsOnTile(x, y)) {
             const [wx, wy] = anvilCentre(an);
             const ae = this.take('anvil', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), null);
             ae.anvil = an;
             if (an.rare) ae.rare = an.rare;
           }
-          for (const po of this.game.postsOnTile(x, y)) {
+          for (const po of aloft ? [] : this.game.postsOnTile(x, y)) {
             const [wx, wy] = postCentre(po);
             this.take('post', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), null).post = po;
           }
-          for (const tr of this.game.trapsOnTile(x, y)) {
+          for (const tr of aloft ? [] : this.game.trapsOnTile(x, y)) {
             const [wx, wy] = trapCentre(tr);
             this.take('trap', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), null).trap = tr;
           }
-          for (const fire of this.game.campfiresOnTile(x, y)) {
+          for (const fire of aloft ? [] : this.game.campfiresOnTile(x, y)) {
             const [wx, wy] = fireCentre(fire);
             this.take('campfire', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), null).fire = fire;
           }
@@ -4273,6 +4288,7 @@ export class Renderer {
             // where it actually is. Drawn here as well it would be a second
             // crate on the floor underneath the first. And one down in a cellar is drawn with the cellar.
             if ((crate.level ?? 0) < 0 || this.game.rackAt(crate.x, crate.y, crate.sx, crate.sy, crate.level)) continue;
+            if (this.pinned !== null && (crate.level ?? 0) !== this.pinned) continue;
             const [wx, wy] = crateCentre(crate);
             const ce = this.take('crate', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), crateSprite(crate.kind));
             ce.crateId = crate.id;
@@ -4284,6 +4300,8 @@ export class Renderer {
           for (const peer of this.game.roster.atTile(x, y)) {
             // Down in a cellar: drawn with it, from down there, and not from up top.
             if (peer.level < 0 || (peer.uid && this.seated.has(peer.uid))) continue;
+            // Pinned on a storey, those standing on it.
+            if (this.pinned !== null && peer.level !== this.pinned) continue;
             const [px, py] = this.game.roster.drawnAt(peer);
             const flight = peer.level === 0 ? this.onFlight(px, py) : null;
             const pe = this.take('peer', x, y, cam.worldToScreenX(px, py),
@@ -4302,6 +4320,8 @@ export class Renderer {
             if (cr.mode === 'stored') continue;
             // One in the traces of a wagon a storey up is up there with it (`driveStorey`).
             const up = cr.hitchedTo !== null ? this.game.furniture.get(cr.hitchedTo)?.level ?? 0 : 0;
+            // Pinned on a storey, those on it; and the one you ride or drive, under you whatever is pinned.
+            if (this.pinned !== null && up !== this.pinned && !cr.ridden && !(cr.hitchedTo !== null && this.game.furniture.get(cr.hitchedTo)?.driven)) continue;
             const ce = this.take('creature', x, y, cam.worldToScreenX(cr.x, cr.y),
               cam.worldToScreenY(cr.x, cr.y, up > 0 ? this.footOn(cr.x, cr.y, up) + up * WALL_HEIGHT : deckHere ?? this.footAt(cr.x, cr.y)), null);
             ce.creature = cr;
@@ -4318,7 +4338,7 @@ export class Renderer {
         // Only a tile near something built has anything of it to draw (`StructureWatch.nearAny`): once one building stood
         // anywhere, every tile on the screen went through all of this, and a tenth of a far view's frame with it.
         if (this.structs.nearAny(x, y)) this.drawStructures(x, y, V, d > playerDepth);
-        if (this.hingeTiles.has(x * 65536 + y)) this.drawGateAt(x, y, V);
+        if (!aloft && this.hingeTiles.has(x * 65536 + y)) this.drawGateAt(x, y, V);
       }
 
       // Down in a cellar you are drawn with it (`drawCellarView`), and from up top not at all.
@@ -6371,7 +6391,7 @@ export class Renderer {
       const wx = ghost.x + (ghost.sx + w / 2) / SUBTILES;
       const wy = ghost.y + (ghost.sy + h / 2) / SUBTILES;
       const px = cam.worldToScreenX(wx, wy);
-      const py = cam.worldToScreenY(wx, wy, below ? cellarFloorHeight(this.game, ghost.x, ghost.y) : this.pieceBase({ kind: ghost.piece }, wx, wy));
+      const py = cam.worldToScreenY(wx, wy, below ? cellarFloorHeight(this.game, ghost.x, ghost.y) : this.pieceBase({ kind: ghost.piece, level: ghost.level }, wx, wy));
       // A memorial stone is drawn as itself (`memorial.ts`), blank, as it will be set down.
       if (ghost.piece === MEMORIAL) drawMemorial(ctx, px, py, zoom, ghost.facing, cam.rotation, undefined, 0, this.time);
       else if (isRuneLantern({ kind: ghost.piece })) {
@@ -6460,12 +6480,15 @@ export class Renderer {
     const backB: Border = borderOf(x, y, V.back[1]);
     const playerLevel = this.game.player.level;
     const maxLevels = building ? building.levels : Math.max(1, this.maxLevelsAround(x, y));
-    const { cutaway } = this.game.settings;
+    const cutaway = this.cutawayOn();
     // Looking into a cellar, a building with none under it is looked at as its ground floor is.
     const viewLevel = this.game.settings.viewLevel === null ? null : Math.max(0, this.game.settings.viewLevel);
+    // Pinned on a storey, that storey and nothing else of any building (`storeyview.ts`).
+    const pinned = this.game.pinnedStorey();
     // And one over a cellar is taken off, all of it, its jetties with it: only another building's wall on this tile's borders stands.
     const gone = (!!building && this.cut.has(building.id)) || (!!jetty && this.cut.has(jetty.id));
-    if (jetty && !gone) this.jettyShade(x, y, jetty);
+    // Pinned, only under a jetty with a floor on the storey shown.
+    if (jetty && !gone && (pinned === null || bld.floor(pinned, x, y))) this.jettyShade(x, y, jetty);
     // Floors, stairs and ladders for each storey, walls of each storey, then the roof one level up.
     let columnsTo = -1;
     for (let level = 0; level <= maxLevels; level++) {
@@ -6476,7 +6499,7 @@ export class Renderer {
        */
       let late: (() => void) | null = null;
       // Under the ground floor of a tile on piers, the piers: see `piers.ts`.
-      if (level === 0 && building && !gone && bld.pierTiles.size && bld.onPiers(x, y)) this.drawPiers(x, y, V);
+      if (level === 0 && building && !gone && !this.storeyHidden(0) && bld.pierTiles.size && bld.onPiers(x, y)) this.drawPiers(x, y, V);
       const host = gone ? undefined : building ?? (level > 0 ? jetty : undefined);
       if (host) {
         const floor = bld.floor(level, x, y);
@@ -6488,10 +6511,11 @@ export class Renderer {
          */
         const above = floor && viewLevel !== null ? floor.level - viewLevel : 0;
         const climb = !!floor && (floorKind(floor) === 'stairs' || floorKind(floor) === 'ladder');
-        if (floor && (above <= 0 || (above === 1 && climb))) {
+        // Pinned, the storey's own floor, and the flights and ladders standing on it up to the next.
+        if (floor && (pinned !== null ? above === 0 || (above === 1 && climb) : above <= 0 || (above === 1 && climb))) {
           // A floor over your head is the ceiling of the room you are in, and
-          // only of that room: the far end of a longhouse keeps its own.
-          const dim = level > playerLevel && !!this.roomTiles?.has(`${x},${y}`);
+          // only of that room: the far end of a longhouse keeps its own. A pinned storey's is drawn whole.
+          const dim = pinned === null && level > playerLevel && !!this.roomTiles?.has(`${x},${y}`);
           const alpha = dim ? 0.35 : 1;
           // A way down from the ground floor is a hole in it, and only the top of the way down shows: see `drawOpening`.
           // Under a finished roof drawn whole over it -- you are not standing under it, nor looking into the storey --
@@ -6521,10 +6545,10 @@ export class Renderer {
           }
         }
       }
-      if (level >= maxLevels || (viewLevel !== null && level > viewLevel)) {
+      if (level >= maxLevels || this.storeyHidden(level)) {
         late?.();
         // A railing round a flat roof stands on the roof's own level (`frame.ts`).
-        if (level === maxLevels && !gone && (viewLevel === null || level <= viewLevel)) this.drawTerrace(x, y, level, [backA, backB], building ?? jetty, inFront);
+        if (level === maxLevels && !gone && !this.storeyHidden(level)) this.drawTerrace(x, y, level, [backA, backB], building ?? jetty, inFront);
         if (level >= maxLevels) break;
         continue;
       }
@@ -6592,7 +6616,7 @@ export class Renderer {
       if (bld.columns.size) this.drawColumnsAt(x, y, V, level, level);
       columnsTo = level;
     }
-    // And any on storeys this tile's own did not reach.
+    // And any on storeys this tile's own did not reach (`drawColumnsAt` leaves out a hidden storey's).
     if (bld.columns.size) this.drawColumnsAt(x, y, V, columnsTo + 1, TOP_LEVELS);
   }
 
@@ -7458,7 +7482,7 @@ export class Renderer {
     if (!wall) return done(null);
     const [fx, fy] = from(b);
     // A wall the cutaway has taken away takes its shade with it: not one seen edge on, which it leaves (`edgeOn`).
-    if (this.game.settings.cutaway && bld.buildingAt(fx, fy)?.id !== wall.building && !this.edgeOn(b)) return done(null);
+    if (this.cutawayOn() && bld.buildingAt(fx, fy)?.id !== wall.building && !this.edgeOn(b)) return done(null);
     const reach = reachOf(wall);
     if (!reach) return done(null);
     const low = !!WALL_TYPE_BY_ID.get(wall.type)?.low;
@@ -8222,11 +8246,11 @@ export class Renderer {
     const bld = this.game.buildings;
     // A building pulled down takes its roof's shape with it.
     for (const id of this.roofShapes.keys()) if (!bld.list.has(id)) this.roofShapes.delete(id);
-    const { viewLevel } = this.game.settings;
     for (const b of bld.list.values()) {
       if (roofShapeOf(b) === 'flat') continue;
       // Looking at one storey lifts everything over it off, the roof with it; and looking into a cellar, the building over it.
-      if (viewLevel !== null && b.levels > viewLevel) continue;
+      // Pinned on a storey, a roof is shown only from its own level (`storeyview.ts`).
+      if (this.storeyHidden(b.levels)) continue;
       if (this.cut.has(b.id)) continue;
       let front = -Infinity;
       // Its jetties' tiles too, where the roof goes out over them (`roofTiles`).
@@ -9247,13 +9271,20 @@ export class Renderer {
   // -------------------------------------------------------------------------
 
   /**
-   * The storey being looked at, as `drawStructures` draws to it: looking into
-   * a cellar, every building over none is drawn as its ground floor is, so
-   * the ground floor's walls, columns and beams with it. Null for all of them.
+   * Whether a storey's walls, floors, columns and beams are left out: looking
+   * at one storey lifts every storey over it off, and looking into a cellar
+   * every storey over the ground floor; pinned on a storey (`storeyview.ts`),
+   * every storey but that one, under it as well as over it.
    */
-  private seenLevel(): number | null {
+  private storeyHidden(level: number): boolean {
     const v = this.game.settings.viewLevel;
-    return v === null ? null : Math.max(0, v);
+    if (v === null) return false;
+    return v < 0 ? level > 0 : level !== v;
+  }
+
+  /** Whether the walls between the eye and the inside are taken away: the cutaway, and always on a pinned storey. */
+  private cutawayOn(): boolean {
+    return this.game.settings.cutaway || this.game.pinnedStorey() !== null;
   }
 
   /** Whether a column stands at either end of a border, on any storey. */
@@ -9339,11 +9370,10 @@ export class Renderer {
     const had = this.jettyCuts.get(key);
     if (had !== undefined) return had;
     let out: Path2D | null = null;
-    const seen = this.seenLevel();
     for (let level = 1; level < j.levels && !this.cut.has(j.id); level++) {
       const f = bld.floor(level, ent.x, ent.y);
       if (!f || f.building !== j.id || floorKind(f) !== 'floor') continue;
-      if (isDone(f) && (seen === null || level <= seen)) {
+      if (isDone(f) && !this.storeyHidden(level)) {
         const cam = this.camera;
         const top = (jettyBase(this.game, j, ent.x, ent.y) ?? this.game.world.getHeight(ent.x, ent.y)) + level * WALL_HEIGHT + 0.5;
         const pts: number[] = [];
@@ -9411,7 +9441,7 @@ export class Renderer {
   /** The railings round a flat roof that this tile draws: on its back borders, on the roof's own level. */
   private drawTerrace(x: number, y: number, level: number, backs: Border[], own: Building | undefined, inFront: boolean): void {
     const bld = this.game.buildings;
-    const { cutaway } = this.game.settings;
+    const cutaway = this.cutawayOn();
     for (const border of backs) {
       const wall = bld.wallOnBorder(level, border);
       if (!wall || this.cut.has(wall.building)) continue;
@@ -9495,9 +9525,8 @@ export class Renderer {
    * through in front of you. A wall needs `w`; a beam is never cut away.
    */
   private drawnWhole(b: Border, level: number, V: View, w?: Wall): boolean {
-    const { cutaway } = this.game.settings;
-    const viewLevel = this.seenLevel();
-    if (viewLevel !== null && level > viewLevel) return false;
+    const cutaway = this.cutawayOn();
+    if (this.storeyHidden(level)) return false;
     const bld = this.game.buildings;
     // The tile that draws it: the one it is a back edge of.
     const [tx, ty] = b.dir === 'h' ? (V.back.includes('n') ? [b.x, b.y] : [b.x, b.y - 1]) : (V.back.includes('w') ? [b.x, b.y] : [b.x - 1, b.y]);
@@ -9554,9 +9583,8 @@ export class Renderer {
       }
     }
     // The floors and the decks of the storey over it round its corner, which lie over its head, drawn whole.
-    const viewLevel = this.seenLevel();
     const over = level + 1;
-    if (viewLevel === null || over <= viewLevel) {
+    if (!this.storeyHidden(over)) {
       const top = base + over * WALL_HEIGHT + 0.5;
       for (const [tx, ty] of [[cx - 1, cy - 1], [cx, cy - 1], [cx - 1, cy], [cx, cy]]) {
         const f = bld.floor(over, tx, ty);
@@ -9604,11 +9632,10 @@ export class Renderer {
     const [ox, oy] = this.cornerClaim(V);
     const cx = x - ox, cy = y - oy;
     if (!bld.hasColumnAt(cx, cy)) return;
-    const viewLevel = this.seenLevel();
     for (let level = from; level <= to; level++) {
       const c = bld.column(level, cx, cy);
       // Looking into a cellar, a building over it goes, its columns with it.
-      if (!c || (viewLevel !== null && level > viewLevel) || this.cut.has(c.building)) continue;
+      if (!c || this.storeyHidden(level) || this.cut.has(c.building)) continue;
       const engaged = this.engagedIn(level, cx, cy);
       // In sight from any tile round its corner, it takes the wash off remembered ground behind it (`liftColumn`).
       const lift = this.columnLift && this.cornerSeen(cx, cy) ? this.columnLift : null;
@@ -9706,8 +9733,7 @@ export class Renderer {
     const cx = x - order[3][0], cy = y - order[3][1];
     if (!bld.hasColumnAt(cx, cy)) return;
     const c = bld.column(level, cx, cy);
-    const viewLevel = this.seenLevel();
-    if (!c || (viewLevel !== null && level > viewLevel) || this.cut.has(c.building)) return;
+    if (!c || this.storeyHidden(level) || this.cut.has(c.building)) return;
     // The tile that put it up: a pilaster goes up at the end of its line, which is after this tile when this tile is on it.
     const engaged = this.engagedIn(level, cx, cy);
     if (engaged > 0 && depthOf(V, x, y) <= depthOf(V, cx + order[2][0], cy + order[2][1])) return;
@@ -9825,9 +9851,8 @@ export class Renderer {
     const bld = this.game.buildings;
     const wall = bld.wallOnBorder(level, b);
     if (!wall) return null;
-    const { cutaway } = this.game.settings;
-    const viewLevel = this.seenLevel();
-    if (viewLevel !== null && level > viewLevel) return null;
+    const cutaway = this.cutawayOn();
+    if (this.storeyHidden(level)) return null;
     const [tx, ty] = b.dir === 'h' ? (V.back.includes('n') ? [b.x, b.y] : [b.x, b.y - 1]) : (V.back.includes('w') ? [b.x, b.y] : [b.x - 1, b.y]);
     const building = bld.buildingAt(tx, ty);
     if (level >= (building ? building.levels : Math.max(1, this.maxLevelsAround(tx, ty)))) return null;
@@ -9871,8 +9896,7 @@ export class Renderer {
       ctx.clip();
       this.drawWall(d.wall, b, d.base, d.alpha);
       const up = this.game.buildings.column(level + 1, cx, cy);
-      const viewLevel = this.seenLevel();
-      if (up && (viewLevel === null || level + 1 <= viewLevel) && !this.engagedIn(level + 1, cx, cy)) this.columnOn(up, level + 1, cx, cy, V, 0, null);
+      if (up && !this.storeyHidden(level + 1) && !this.engagedIn(level + 1, cx, cy)) this.columnOn(up, level + 1, cx, cy, V, 0, null);
       ctx.restore();
     }
   }
@@ -10503,7 +10527,7 @@ export class Renderer {
     const settings = this.game.settings;
     this.structs.update(this.game.buildings);
     const cut = this.cut.size ? [...this.cut].join(',') : '';
-    const shape = `${cam.rotation}|${this.canvas.dpr}|${settings.viewLevel}|${settings.cutaway}|${cut}`;
+    const shape = `${cam.rotation}|${this.canvas.dpr}|${settings.viewLevel}|${this.cutawayOn()}|${cut}`;
     const view = `${cam.zoom}|${shape}`;
     if (view !== this.bakeView) {
       this.bakeView = view;
@@ -10522,7 +10546,7 @@ export class Renderer {
       this.bakeLightAt = this.time;
     }
     // The shade reads the walls, the ground under them, which way is the back of a tile, the cutaway and what is taken off.
-    const shade = `${this.structs.stamp}|${cam.rotation}|${settings.cutaway}|${cut}`;
+    const shade = `${this.structs.stamp}|${cam.rotation}|${this.cutawayOn()}|${cut}`;
     if (shade !== this.shadeFor || this.shades.size > 200_000) {
       this.shadeFor = shade;
       this.shades.clear();
@@ -14644,12 +14668,16 @@ export class Renderer {
     }
   }
 
-  /** A tile's outline on the screen: on the ground, or on the floor of the cellar under it (`down`). */
-  private tilePath(ctx: CanvasRenderingContext2D, x: number, y: number, down = false): void {
+  /**
+   * A tile's outline on the screen: on the ground, on the floor of the cellar under it (`down`), or on the floor of
+   * a pinned storey over the ground (`level`, `storeyview.ts`).
+   */
+  private tilePath(ctx: CanvasRenderingContext2D, x: number, y: number, down = false, level?: number): void {
     const w = this.game.world;
     const cam = this.camera;
-    const floor = down ? cellarFloorHeight(this.game, x, y) : 0;
-    const h = (cx: number, cy: number): number => (down ? floor : w.getHeight(cx, cy));
+    const aloft = !down && level !== undefined && level > 0 && this.game.pinnedStorey() === level;
+    const floor = down ? cellarFloorHeight(this.game, x, y) : aloft ? storeyHeight(this.game, x, y, level) : 0;
+    const h = (cx: number, cy: number): number => (down || aloft ? floor : w.getHeight(cx, cy));
     ctx.beginPath();
     ctx.moveTo(cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h(x, y)));
     ctx.lineTo(cam.worldToScreenX(x + 1, y), cam.worldToScreenY(x + 1, y, h(x + 1, y)));
@@ -14658,10 +14686,10 @@ export class Renderer {
     ctx.closePath();
   }
 
-  private cornerMarker(ctx: CanvasRenderingContext2D, cx: number, cy: number, zoom: number, color: string): void {
+  private cornerMarker(ctx: CanvasRenderingContext2D, cx: number, cy: number, zoom: number, color: string, flat?: number): void {
     const w = this.game.world;
     const sx = this.camera.worldToScreenX(cx, cy);
-    const sy = this.camera.worldToScreenY(cx, cy, w.getHeight(cx, cy));
+    const sy = this.camera.worldToScreenY(cx, cy, flat ?? w.getHeight(cx, cy));
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(sx, sy, 3.5 * Math.max(0.8, zoom), 0, Math.PI * 2);
@@ -14679,8 +14707,9 @@ export class Renderer {
         ctx.fillStyle = 'rgba(255,255,255,0.55)';
         for (const p of path) {
           const sx = cam.worldToScreenX(p.x + 0.5, p.y + 0.5);
-          // A step down in a cellar is on its floor.
-          const sy = cam.worldToScreenY(p.x + 0.5, p.y + 0.5, p.level < 0 ? cellarFloorHeight(game, p.x, p.y) : w.centerHeight(p.x, p.y));
+          // A step down in a cellar is on its floor; and one up a storey, on a pinned storey's floor (`storeyview.ts`).
+          const sy = cam.worldToScreenY(p.x + 0.5, p.y + 0.5, p.level < 0 ? cellarFloorHeight(game, p.x, p.y)
+            : p.level > 0 && this.pinned !== null ? storeyHeight(game, p.x, p.y, p.level) : w.centerHeight(p.x, p.y));
           ctx.beginPath();
           ctx.arc(sx, sy, 2.5 * zoom, 0, Math.PI * 2);
           ctx.fill();
@@ -14791,7 +14820,7 @@ export class Renderer {
     // The chosen tile, marked whether or not the cursor is anywhere near it.
     const chosen = this.selected;
     if (chosen && w.inBounds(chosen.x, chosen.y)) {
-      this.tilePath(ctx, chosen.x, chosen.y, !!chosen.down && this.cellarFrame);
+      this.tilePath(ctx, chosen.x, chosen.y, !!chosen.down && this.cellarFrame, chosen.level);
       ctx.fillStyle = 'rgba(227,182,87,0.14)';
       ctx.fill();
       ctx.lineWidth = 2;
@@ -14804,7 +14833,7 @@ export class Renderer {
     this.drawProspected(ctx);
     if (game.deed && (game.settings.deedBorder || (hover && game.isMyToken(hover.x, hover.y)))) this.drawDeedBorder(ctx);
     if (hover) {
-      this.tilePath(ctx, hover.x, hover.y, !!hover.down);
+      this.tilePath(ctx, hover.x, hover.y, !!hover.down, hover.level);
       ctx.fillStyle = 'rgba(255,255,255,0.08)';
       ctx.fill();
       ctx.lineWidth = 1.5;
@@ -14843,10 +14872,11 @@ export class Renderer {
       if (hover.down) {
         // Nothing is built down in a cellar: the floor is the whole of it.
       } else if (building) {
-        // Show which border a wall would go on, at the storey being worked on.
+        // Show which border a wall would go on, at the storey being worked on: on a pinned storey, the one picked on.
         const side = nearestSide(hover.x, hover.y, hover.wx, hover.wy);
         const [ax, ay, bx, by] = borderPoints(borderOf(hover.x, hover.y, side));
-        const h = (building.deck ?? w.getHeight(hover.x, hover.y)) + workLevel(building) * WALL_HEIGHT + 0.5;
+        const storey = hover.level !== undefined ? Math.min(hover.level, building.levels) : game.storeyFor(building);
+        const h = (building.deck ?? w.getHeight(hover.x, hover.y)) + storey * WALL_HEIGHT + 0.5;
         ctx.beginPath();
         ctx.moveTo(cam.worldToScreenX(ax, ay), cam.worldToScreenY(ax, ay, h));
         ctx.lineTo(cam.worldToScreenX(bx, by), cam.worldToScreenY(bx, by, h));
@@ -14855,7 +14885,9 @@ export class Renderer {
         ctx.stroke();
         ctx.lineWidth = 1;
       } else {
-        this.cornerMarker(ctx, hover.cx, hover.cy, zoom, 'rgba(255,235,150,0.9)');
+        // On a pinned storey's floor out past a footprint, on that floor.
+        const flat = hover.level !== undefined && hover.level > 0 ? storeyHeight(game, hover.x, hover.y, hover.level) : undefined;
+        this.cornerMarker(ctx, hover.cx, hover.cy, zoom, 'rgba(255,235,150,0.9)', flat);
       }
     }
   }
@@ -15038,10 +15070,15 @@ export class Renderer {
   /** What is under the cursor, and for a thing set down there, the ground behind it too (`Pick.ground`). */
   pick(sx: number, sy: number): Pick | null {
     const p = this.pickTop(sx, sy);
+    const pinned = this.game.pinnedStorey();
     if (p && p.peer === undefined && p.creature === undefined && p.bridge === undefined && !p.down
       && (p.crate ?? p.fire ?? p.smelter ?? p.kiln ?? p.anvil ?? p.post ?? p.trap ?? p.furniture) !== undefined) {
-      p.ground = this.groundPick(sx, sy) ?? undefined;
+      const up = pinned ? this.storeyPick(sx, sy, pinned) : null;
+      const ground = up ? null : this.groundPick(sx, sy);
+      p.ground = up ?? (ground && pinned !== null ? { ...ground, level: 0 } : ground) ?? undefined;
     }
+    // Pinned on a storey, whatever is picked is on it: only what stands on it is drawn (`storeyview.ts`).
+    if (p && pinned !== null && p.level === undefined && !p.down) p.level = pinned;
     return p;
   }
 
@@ -15103,7 +15140,46 @@ export class Renderer {
       }
       for (const h of hulls) if (inOutline(h.hull, sx, sy)) return null;
     }
+    // Pinned on a storey over the ground: its floor, and where none of it is under the cursor, the ground.
+    const pinned = this.game.pinnedStorey();
+    if (pinned !== null && pinned > 0) {
+      const up = this.storeyPick(sx, sy, pinned);
+      if (up) return up;
+      const ground = this.groundPick(sx, sy);
+      return ground && { ...ground, level: 0 };
+    }
     return this.groundPick(sx, sy);
+  }
+
+  /**
+   * The tile of a storey under a point on the screen (`storeyview.ts`): of
+   * those that answer on the storey (`storeyTileAt`), the first whose floor,
+   * laid flat at its height (`storeyHeight`), is under the point, from the
+   * nearest line back.
+   */
+  private storeyPick(sx: number, sy: number, level: number): Pick | null {
+    const cam = this.camera;
+    const world = this.game.world;
+    const iso = cam.screenToIso(sx, sy);
+    const V = cam.view;
+    const stepW = HALF_W * V.unit;
+    const stepH = HALF_H * V.unit;
+    const eF = iso.x / stepW;
+    const dF = iso.y / stepH;
+    const up = Math.ceil(((world.maxHeight + (level + 1) * WALL_HEIGHT) * HEIGHT_SCALE) / stepH) + 1;
+    const down = Math.ceil((-world.minHeight * HEIGHT_SCALE) / stepH) + 3;
+    for (let d = Math.floor(dF) + up; d >= Math.floor(dF) - down; d--) {
+      for (let e = Math.floor(eF) - 1; e <= Math.ceil(eF) + 1; e++) {
+        if (V.staggered && ((e + d) & 1) !== 0) continue;
+        const x = V.x[0] + V.x[1] * d + V.x[2] * e;
+        const y = V.y[0] + V.y[1] * d + V.y[2] * e;
+        if (!world.inBounds(x, y) || !storeyTileAt(this.game, x, y, level)) continue;
+        const h = storeyHeight(this.game, x, y, level);
+        if (!this.pointInTile(x, y, sx, sy, h)) continue;
+        return this.game.vision.state(x, y) === UNSEEN ? null : { ...this.makePick(x, y, sx, sy, h), level };
+      }
+    }
+    return null;
   }
 
   /** The ground under a point on the screen, whatever stands on it: the first tile it hits, from the nearest line back. */
@@ -15340,18 +15416,20 @@ export class Renderer {
     return false;
   }
 
-  private pointInTile(x: number, y: number, sx: number, sy: number): boolean {
+  /** Whether a screen point is on a tile: on its ground, or laid flat at height `flat` (a storey's floor). */
+  private pointInTile(x: number, y: number, sx: number, sy: number, flat?: number): boolean {
     const w = this.game.world;
     const cam = this.camera;
     const p = this.pts;
+    const h = (cx: number, cy: number): number => flat ?? w.getHeight(cx, cy);
     p[0] = cam.worldToScreenX(x, y);
-    p[1] = cam.worldToScreenY(x, y, w.getHeight(x, y));
+    p[1] = cam.worldToScreenY(x, y, h(x, y));
     p[2] = cam.worldToScreenX(x + 1, y);
-    p[3] = cam.worldToScreenY(x + 1, y, w.getHeight(x + 1, y));
+    p[3] = cam.worldToScreenY(x + 1, y, h(x + 1, y));
     p[4] = cam.worldToScreenX(x + 1, y + 1);
-    p[5] = cam.worldToScreenY(x + 1, y + 1, w.getHeight(x + 1, y + 1));
+    p[5] = cam.worldToScreenY(x + 1, y + 1, h(x + 1, y + 1));
     p[6] = cam.worldToScreenX(x, y + 1);
-    p[7] = cam.worldToScreenY(x, y + 1, w.getHeight(x, y + 1));
+    p[7] = cam.worldToScreenY(x, y + 1, h(x, y + 1));
     let inside = false;
     for (let i = 0, j = 3; i < 4; j = i++) {
       const xi = p[i * 2];

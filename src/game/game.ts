@@ -20,7 +20,7 @@ import type { ItemRow } from '../net/island';
 import { packed, type Aged } from '../net/packed';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, staminaBarAbove, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
-import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
+import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
@@ -2079,6 +2079,26 @@ export class Game {
     const view = floorOf(this.settings.viewLevel ?? this.player.level);
     if (view < 0) return this.buildings.cellarDone(x, y) ? CELLAR_LEVEL : undefined;
     return this.player.level < 0 ? 0 : undefined;
+  }
+
+  /**
+   * The storey pinned on the storey control (`storeyview.ts`): every other
+   * storey hidden, clicks and walks on this one. Null on Auto, and looking
+   * into a cellar, which is its own view (`cellarView`).
+   */
+  pinnedStorey(): number | null {
+    const v = this.settings.viewLevel;
+    return v !== null && v >= 0 ? v : null;
+  }
+
+  /**
+   * The storey of a building that menus, hover lines and markers are for:
+   * the pinned one, as far as the building goes, and on Auto the one being
+   * worked (`workLevel`).
+   */
+  storeyFor(b: Building): number {
+    const pinned = this.pinnedStorey();
+    return pinned === null ? workLevel(b) : Math.max(0, Math.min(pinned, b.levels - 1));
   }
 
   /** How the player may move right now, how many storeys they may cross, and how many under the ground (a cellar). */
@@ -5573,7 +5593,7 @@ export class Game {
    * click, walking home, a job that wants you nearer — is you, and you going
    * somewhere is how anybody stops following without thinking about it.
    */
-  moveTo(x: number, y: number, keepFollowing = false, quiet = false): boolean {
+  moveTo(x: number, y: number, keepFollowing = false, quiet = false, floor?: number): boolean {
     // You going somewhere is a new order: a long walk in legs gives way to it (`travelTo` asks quietly).
     if (!quiet) this.travel = null;
     if (this.player.aboard !== null) {
@@ -5592,13 +5612,21 @@ export class Game {
     const p = this.player;
     if (!this.world.inBounds(x, y)) return false;
     const { rule, levels, below } = this.movement();
-    // Clicked in the cellar's view, the cellar is where you mean; up top, the ground (`walkFloor`).
-    const aim = this.walkFloor(x, y);
-    if (this.world.isPassable(x, y) && p.walkTo(this.world, x, y, rule, levels, below, aim)) return true;
-    const candidates = this.neighbours(x, y).filter((c) => this.world.isPassable(c.x, c.y));
+    // Clicked in the cellar's view, the cellar is where you mean; up top, the ground (`walkFloor`); on a pinned storey, that storey.
+    const aim = floor ?? this.walkFloor(x, y);
+    if (floor !== undefined && floor > 0 && this.mounted()) {
+      if (!quiet) this.logMsg('Dismount first.', 'error');
+      return false;
+    }
+    if (this.world.isPassable(x, y) && (floor === undefined || this.standable(x, y, floor)) && p.walkTo(this.world, x, y, rule, levels, below, aim)) return true;
+    // Beside it, on the storey asked for: a storey's floor, not the ground under it.
+    const candidates = this.neighbours(x, y).filter((c) => this.world.isPassable(c.x, c.y) && (floor === undefined || this.standable(c.x, c.y, floor)));
     candidates.sort((a, b) => this.distanceToPlayer(a.x, a.y) - this.distanceToPlayer(b.x, b.y));
     for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim)) return true;
-    if (!quiet) this.logMsg(aim === CELLAR_LEVEL ? this.noWay(x, y, 'No path there.') : 'No path there.', 'error');
+    if (!quiet) {
+      if (floor !== undefined && floor > 0 && !candidates.length) this.logMsg(`No floor on storey ${floor + 1}.`, 'error');
+      else this.logMsg(aim === CELLAR_LEVEL ? this.noWay(x, y, 'No path there.') : 'No path there.', 'error');
+    }
     return false;
   }
 
@@ -5783,6 +5811,9 @@ export class Game {
     // On the storey the thing is on, first: a crate down in the cellar is not reached from the floor over it,
     // nor one in the cellar next door from this one (`cellarGate`).
     if ((this.buildings.cellars.size || this.player.level < 0) && cellarGate(this, def.id, target)) return false;
+    // A piece set down on a pinned storey is set down on the storey you stand on: that one (`setsDownOn`).
+    const on = this.setsDownOn(def, target);
+    if (on !== undefined && this.player.level !== on) return false;
     if (target.kind === 'item') {
       const into = this.intoStore(def, target);
       if (!into) return true;
@@ -5796,6 +5827,11 @@ export class Game {
     const py = this.player.tileY;
     if (def.corner && target.kind === 'tile') return px >= target.cx - 1 && px <= target.cx && py >= target.cy - 1 && py <= target.cy;
     return Math.max(Math.abs(px - tile.x), Math.abs(py - tile.y)) <= (def.rangeFor?.(this) ?? def.range ?? 1);
+  }
+
+  /** The storey a piece is being set down on, picked on a pinned storey (`storeyview.ts`); undefined for any other job. */
+  private setsDownOn(def: ActionDef, target: Target): number | undefined {
+    return def.id === 'place_furniture' && target.kind === 'tile' && typeof target.level === 'number' && target.level >= 0 ? target.level : undefined;
   }
 
   private walkToward(def: ActionDef, target: Target): boolean {
@@ -5821,9 +5857,12 @@ export class Game {
     const { rule, levels, below } = this.movement();
     // To the storey the thing is on: down to a crate in the cellar, up to a tree out of one.
     const at = below || this.player.level < 0 ? targetFloor(this, def.id, target) : null;
+    // A piece set down on a pinned storey: to a spot on that storey's floor.
+    const on = this.setsDownOn(def, target);
     for (const c of candidates) {
       if (at === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y)) continue;
-      const aim = at === CELLAR_LEVEL ? CELLAR_LEVEL : at === 0 && this.player.level < 0 ? 0 : undefined;
+      if (on !== undefined && !this.standable(c.x, c.y, on)) continue;
+      const aim = on ?? (at === CELLAR_LEVEL ? CELLAR_LEVEL : at === 0 && this.player.level < 0 ? 0 : undefined);
       if (!this.player.walkTo(this.world, c.x, c.y, rule, levels, below, aim)) continue;
       // Already on the tile, but in the corner of it furthest from the store:
       // to the middle of it, which every tile beside a store is near enough from.

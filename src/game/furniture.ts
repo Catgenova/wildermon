@@ -1135,7 +1135,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (t.kind !== 'tile' || t.itemUid === undefined || t.sx === undefined || t.sy === undefined) return 'Choose a piece and a spot.';
       const item = g.inventory.get(t.itemUid);
       if (!item || !isFurniture(item.id)) return 'That is not furniture.';
-      return g.furniturePlaceReason(item.id, t.x, t.y, t.sx, t.sy, t.facing ?? 's');
+      // On the storey it was picked on, when one is pinned (`storeyview.ts`); else the one you stand on.
+      return g.furniturePlaceReason(item.id, t.x, t.y, t.sx, t.sy, t.facing ?? 's', undefined, t.level);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile' || t.itemUid === undefined || t.sx === undefined || t.sy === undefined) return;

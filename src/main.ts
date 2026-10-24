@@ -290,8 +290,8 @@ input.onClick = (x, y, button) => {
       return;
     }
     // A left click both walks you there and chooses the tile, so the tile
-    // window follows wherever you are looking.
-    game.moveTo(pick.x, pick.y);
+    // window follows wherever you are looking: on a pinned storey, there on that storey (`storeyview.ts`).
+    game.moveTo(pick.x, pick.y, false, false, pick.level);
     ui.selectTile(pick);
   } else if (button === 2) {
     ui.selectTile(pick);

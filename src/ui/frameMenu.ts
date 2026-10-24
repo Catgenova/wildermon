@@ -29,7 +29,6 @@ import {
   wallBill,
   WALL_TYPE_BY_ID,
   WALL_TYPES,
-  workLevel,
   type Building,
   type RoofShape,
   type Side,
@@ -97,7 +96,7 @@ function roofShapeMenu(g: Game, b: Building, target: TileTarget): MenuItem[] | n
 
 /** Rows for the column on the corner nearest the click, on the storey the job names (`level`), which they say. */
 function columnRows(g: Game, b: Building, base: TileTarget): MenuItem[] {
-  const level = base.level ?? workLevel(b);
+  const level = base.level ?? g.storeyFor(b);
   const corner = cornerName(base, base.cx, base.cy);
   const where = `${corner} corner, storey ${level + 1}`;
   const c = g.buildings.column(level, base.cx, base.cy);
@@ -125,10 +124,18 @@ function terraceRows(g: Game, b: Building, pick: Pick, base: TileTarget): MenuIt
   return [materials(g, act('plan_wall'), { ...t, wallType: 'railing' }, `Plan roof railing (${SIDE_NAMES[side]})`, (m) => wallBill(m, 'railing'))];
 }
 
-/** The rows for a tile of a building: its columns, and the railing round its roof. */
-export function frameFootprintEntries(g: Game, pick: Pick, b: Building): MenuItem[] {
-  const base: TileTarget = { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, level: workLevel(b) };
+/**
+ * The rows for a tile of a building: its columns on the storey `level` (the one being worked, or pinned:
+ * `Game.storeyFor`), and the railing round its roof.
+ */
+export function frameFootprintEntries(g: Game, pick: Pick, b: Building, level = g.storeyFor(b)): MenuItem[] {
+  const base: TileTarget = { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, level };
   return [...columnRows(g, b, base), ...terraceRows(g, b, pick, base)];
+}
+
+/** The rows for a tile of a building on its roof's own level, pinned on it (`storeyview.ts`): the railing round a flat roof. */
+export function frameRoofEntries(g: Game, pick: Pick, b: Building): MenuItem[] {
+  return terraceRows(g, b, pick, { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, level: b.levels - 1 });
 }
 
 /** Starts placing an outside staircase on a tile for a building: Q and E turn it (`UI.startPlacingStairs`). */
@@ -191,25 +198,28 @@ function outsideStairRows(g: Game, b: Building, base: TileTarget, place?: PlaceS
  * that has a storey above the ground, or whose jetty is already there, the
  * jetty's floor, its walls and railings, its columns and the roof over it, on
  * the storey being worked; and its outside staircase (`outsideStairRows`).
+ * Asked for a storey (`storey`, from a pinned storey's menu: `storeyview.ts`),
+ * the rows for that storey only, of the buildings that have it, and the
+ * outside staircase only on the storey it climbs to.
  */
-export function frameJettyEntries(g: Game, pick: Pick, place?: PlaceStairs): MenuItem[] {
+export function frameJettyEntries(g: Game, pick: Pick, place?: PlaceStairs, storey?: number): MenuItem[] {
   const bld = g.buildings;
   const { x, y } = pick;
   const hosts: Building[] = [];
   const there = bld.jettyAt(x, y);
-  if (there) hosts.push(there);
-  else {
+  if (there && (storey === undefined || there.levels > storey)) hosts.push(there);
+  else if (!there) {
     for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
       const b = bld.buildingAt(x + dx, y + dy);
-      if (b && b.levels > 1 && !hosts.includes(b)) hosts.push(b);
+      if (b && b.levels > Math.max(1, storey ?? 1) && !hosts.includes(b)) hosts.push(b);
     }
   }
   const out: MenuItem[] = [];
   for (const b of hosts) {
     // A jetty is a storey above the ground's: worked from the ground floor, the rows are for the storey over it.
-    const level = b.levels > 1 ? Math.max(1, workLevel(b)) : workLevel(b);
+    const level = storey ?? (b.levels > 1 ? Math.max(1, g.storeyFor(b)) : g.storeyFor(b));
     const base: TileTarget = { kind: 'tile', x, y, cx: pick.cx, cy: pick.cy, buildingId: b.id, level };
-    const stairs = outsideStairRows(g, b, base, place);
+    const stairs = storey === undefined || storey === OUTSIDE_STAIR_LEVEL ? outsideStairRows(g, b, base, place) : [];
     const stair = bld.outsideStair(x, y);
     const ownStair = !!stair && stair.building === b.id;
     // On its own storey the tile is its outside staircase and nothing else: no jetty is floored there too.
@@ -302,9 +312,11 @@ export function frameHoverLines(g: Game, pick: Pick): string[] {
   if (host) {
     // Every storey floored out over the tile, from the lowest: a jetty open to its storey, or a balcony shut off from it.
     const side = nearestSide(x, y, pick.wx, pick.wy);
+    const pinned = g.pinnedStorey();
     for (let level = 1; level < host.levels; level++) {
       const f = bld.floor(level, x, y);
-      if (!f || f.building !== host.id) continue;
+      // Pinned on a storey, that storey's (`storeyview.ts`).
+      if (!f || f.building !== host.id || (pinned !== null && level !== pinned)) continue;
       const what = floorKind(f) === 'stairs' ? 'outside staircase' : bld.storeyArea(host, level).has(`${x},${y}`) ? 'jetty' : 'balcony';
       out.push(`${host.name}'s ${what} · storey ${level + 1} · ${stuffOf(f.material)} ${FLOOR_KIND_NAMES[floorKind(f)]}${built(f)}`);
       const wall = bld.wall(level, x, y, side);
@@ -317,7 +329,7 @@ export function frameHoverLines(g: Game, pick: Pick): string[] {
   // The column on the nearest corner: on the storey being worked, or the lowest one with a column there.
   if (bld.columns.size && bld.hasColumnAt(pick.cx, pick.cy)) {
     const b = bld.buildingAt(x, y) ?? host;
-    let c = b ? bld.column(workLevel(b), pick.cx, pick.cy) : undefined;
+    let c = b ? bld.column(g.storeyFor(b), pick.cx, pick.cy) : undefined;
     for (let l = 0; !c && l <= (b?.levels ?? 1); l++) c = bld.column(l, pick.cx, pick.cy);
     if (c) {
       const of = bld.list.get(c.building);

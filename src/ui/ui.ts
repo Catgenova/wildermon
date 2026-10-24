@@ -27,7 +27,6 @@ import {
   wallBill,
   WALL_TYPE_BY_ID,
   WALL_TYPES,
-  workLevel,
   CELLAR_DEPTH,
   CELLAR_LEVEL,
   type Building,
@@ -97,7 +96,8 @@ import { ContextMenu, type MenuItem } from './contextmenu';
 import { AutoEat } from '../game/autoeat';
 import { ShoppingPanel } from './panels/shopping';
 import { rotLine, rotSaid, rotSeconds } from '../game/rot';
-import { frameFootprintEntries, frameHoverLines, frameJettyEntries } from './frameMenu';
+import { frameFootprintEntries, frameHoverLines, frameJettyEntries, frameRoofEntries } from './frameMenu';
+import { storeyHost } from '../game/storeyview';
 import { jobEntry, pinEntry, pinnable } from './beltmenu';
 import { creatureLines } from './creatureinfo';
 import { MARK_COLOURS } from '../game/marks';
@@ -965,7 +965,7 @@ export class UI {
    */
   selectTile(pick: Pick | null): void {
     this.tilePanel.select(pick, this.game.settings.tileWindow);
-    this.renderer.selected = pick ? { x: pick.x, y: pick.y, down: pick.down } : null;
+    this.renderer.selected = pick ? { x: pick.x, y: pick.y, down: pick.down, level: pick.level } : null;
   }
 
   focusChat(): void {
@@ -981,7 +981,7 @@ export class UI {
     this.pointerRing.update(performance.now());
     this.deedBanner.update(performance.now());
     this.hud.update(this.renderer, fps);
-    this.renderer.selected = this.tilePanel.target ? { x: this.tilePanel.target.x, y: this.tilePanel.target.y, down: this.tilePanel.target.down } : null;
+    this.renderer.selected = this.tilePanel.target ? { x: this.tilePanel.target.x, y: this.tilePanel.target.y, down: this.tilePanel.target.down, level: this.tilePanel.target.level } : null;
     this.minimap.update();
     this.settings.refresh();
     this.wildermon.update(performance.now());
@@ -1119,7 +1119,8 @@ export class UI {
 
   /** The job a staircase or a ladder being placed asks for: an outside staircase names its building and its storey. */
   private stairsTarget(p: Extract<Placing, { kind: 'stairs' }>): Target {
-    const out = p.buildingId !== undefined ? { buildingId: p.buildingId, level: p.level } : {};
+    // Up a storey it names its storey, as every storey job does (`jobLevel`); a way down to a cellar is the ground floor's.
+    const out = p.buildingId !== undefined ? { buildingId: p.buildingId, level: p.level } : p.down ? {} : { level: p.level };
     return { kind: 'tile', x: p.x, y: p.y, cx: p.cx, cy: p.cy, side: p.side, material: p.material, floorKind: p.floorKind, down: p.down, hand: p.hand, ...out };
   }
 
@@ -1148,7 +1149,9 @@ export class UI {
     const [s0, t0] = subtileOf(pick.x, pick.y, pick.wx, pick.wy);
     const facing = this.placingFacing(p, pick);
     const [ax, ay] = furnitureAnchor(p.piece, s0, t0, facing);
-    this.renderer.ghost = { kind: 'furniture', piece: p.piece, material: p.material, x: pick.x, y: pick.y, sx: ax, sy: ay, facing, ok: !this.game.furniturePlaceReason(p.piece, pick.x, pick.y, ax, ay, facing) };
+    // On a pinned storey, on its floor (`storeyview.ts`).
+    this.renderer.ghost = { kind: 'furniture', piece: p.piece, material: p.material, x: pick.x, y: pick.y, sx: ax, sy: ay, facing, level: pick.level,
+      ok: !this.game.furniturePlaceReason(p.piece, pick.x, pick.y, ax, ay, facing, undefined, pick.level) };
   }
 
   /** A click while something is being placed: the left button sets it down where the cursor is, any other keeps it. */
@@ -1176,7 +1179,7 @@ export class UI {
     const [s0, t0] = subtileOf(pick.x, pick.y, pick.wx, pick.wy);
     const facing = this.placingFacing(p, pick);
     const [ax, ay] = furnitureAnchor(p.piece, s0, t0, facing);
-    const target: Target = { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, sx: ax, sy: ay, itemUid: p.itemUid, facing };
+    const target: Target = { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, sx: ax, sy: ay, itemUid: p.itemUid, facing, ...(pick.level !== undefined ? { level: pick.level } : {}) };
     const reason = def?.check?.(target, this.game) ?? null;
     if (reason) {
       this.game.logMsg(reason, 'error');
@@ -1253,8 +1256,12 @@ export class UI {
       this.tooltip.show(sx, sy, lines);
       return;
     }
+    // On a pinned storey's floor (`storeyview.ts`): the storey, and nothing of the ground under it.
+    const aloft = (pick.level ?? 0) > 0;
     const t = w.getTile(pick.x, pick.y);
-    if (t === TileType.Tree) {
+    if (aloft) {
+      lines.push(`Storey ${(pick.level ?? 0) + 1} · ${pick.x}, ${pick.y}`);
+    } else if (t === TileType.Tree) {
       const data = w.getData(pick.x, pick.y);
       lines.push(`${treeAge(data).name} ${TREE_DEFS[treeSpecies(data)].name.toLowerCase()} tree`);
     } else if (growing) {
@@ -1262,19 +1269,21 @@ export class UI {
     } else {
       lines.push(w.tileName(pick.x, pick.y));
     }
-    if (growing) lines.push(this.cropLine(growing));
-    const planted = this.game.waterPlantAt(pick.x, pick.y);
-    if (planted) lines.push(describeWaterPlant(this.game, planted, this.game.wallNow()));
-    // A mote swirl over it, by its element (`motes.ts`).
-    const swirl = this.game.swirlAt(pick.x, pick.y);
-    if (swirl) lines.push(swirlName(swirl.element));
-    // A Runestone standing on it, by name (`runestones.ts`).
-    const stone = runestoneAt(pick.x, pick.y, w.w);
-    if (stone) lines.push(`${stone.name}, a Runestone`);
-    lines.push(`${pick.x}, ${pick.y} · slope ${metres(w.slope(pick.x, pick.y))} m`);
-    lines.push(cornerReading(this.game, pick.cx, pick.cy));
-    const reading = groundReading(this.game, pick.x, pick.y);
-    if (reading) lines.push(reading);
+    if (!aloft) {
+      if (growing) lines.push(this.cropLine(growing));
+      const planted = this.game.waterPlantAt(pick.x, pick.y);
+      if (planted) lines.push(describeWaterPlant(this.game, planted, this.game.wallNow()));
+      // A mote swirl over it, by its element (`motes.ts`).
+      const swirl = this.game.swirlAt(pick.x, pick.y);
+      if (swirl) lines.push(swirlName(swirl.element));
+      // A Runestone standing on it, by name (`runestones.ts`).
+      const stone = runestoneAt(pick.x, pick.y, w.w);
+      if (stone) lines.push(`${stone.name}, a Runestone`);
+      lines.push(`${pick.x}, ${pick.y} · slope ${metres(w.slope(pick.x, pick.y))} m`);
+      lines.push(cornerReading(this.game, pick.cx, pick.cy));
+      const reading = groundReading(this.game, pick.x, pick.y);
+      if (reading) lines.push(reading);
+    }
     /*
      * Whose ground this is, and what you are on it.
      *
@@ -1297,19 +1306,26 @@ export class UI {
     // A drawbridge says whether it is up (`gates.ts`).
     const span = pick.bridge !== undefined ? this.game.bridges.get(pick.bridge) : undefined;
     if (span && isDrawbridge(span)) lines.push(`${bridgeName(span)} · ${bridgeDone(span) ? drawbridgeState(span) : bridgeState(span)}`);
-    const b = this.game.buildings.buildingAt(pick.x, pick.y);
+    // Pinned on a storey over the ground, a building's tile picked on the ground is of a storey hidden (`storeyview.ts`).
+    const pinned = this.game.pinnedStorey();
+    const hidden = pinned !== null && pinned > 0 && pick.level === 0;
+    const b = hidden ? undefined : this.game.buildings.buildingAt(pick.x, pick.y);
+    // The storey the lines are for: the one picked on when one is pinned, else the one being worked (`Game.storeyFor`).
+    const level = b ? (pick.level !== undefined ? Math.min(pick.level, b.levels - 1) : this.game.storeyFor(b)) : 0;
     // And a portcullis, or a hidden door to whoever it admits, whatever storey is worked on and from either side (`gates.ts`).
     const gateSide = nearestSide(pick.x, pick.y, pick.wx, pick.wy);
-    const gateLine = gateHoverLine(this.game, pick.x, pick.y, gateSide, SIDE_NAMES[gateSide], !!b && workLevel(b) > 0);
+    const gateLine = gateHoverLine(this.game, pick.x, pick.y, gateSide, SIDE_NAMES[gateSide], !!b && level > 0);
     if (gateLine && !b) lines.push(gateLine);
     if (b) {
-      const level = workLevel(b);
-      lines.push(`${b.name} · ${b.levels === 1 ? '1 storey' : `${b.levels} storeys, working on storey ${level + 1}`}${isGlasshouse(this.game.buildings, b) ? ' · glasshouse' : ''}`);
+      const storeys = b.levels === 1 ? '1 storey' : pinned !== null ? `${b.levels} storeys` : `${b.levels} storeys, working on storey ${level + 1}`;
+      const onRoof = pick.level !== undefined && pick.level >= b.levels;
+      const shown = pinned === null ? '' : onRoof ? ' · roof' : ` · storey ${level + 1}`;
+      lines.push(`${b.name} · ${storeys}${shown}${isGlasshouse(this.game.buildings, b) ? ' · glasshouse' : ''}`);
       if (gateLine) lines.push(gateLine);
       const side = nearestSide(pick.x, pick.y, pick.wx, pick.wy);
-      const wall = gateLine && level === 0 ? undefined : this.game.buildings.wall(level, pick.x, pick.y, side);
-      if (gateLine && level === 0) {
-        // Said above, with its state.
+      const wall = (gateLine && level === 0) || onRoof ? undefined : this.game.buildings.wall(level, pick.x, pick.y, side);
+      if ((gateLine && level === 0) || onRoof) {
+        // Said above, with its state; and on the roof's own level, the roof is all there is.
       } else if (wall) {
         // What it is to you: a hidden door you hold no key to is the solid wall it looks like (`gates.ts`).
         const seen = this.game.buildings.seenType(wall);
@@ -1320,7 +1336,7 @@ export class UI {
       } else {
         lines.push(`${SIDE_NAMES[side]} side: no wall`);
       }
-      const floor = this.game.buildings.floor(level, pick.x, pick.y);
+      const floor = onRoof ? undefined : this.game.buildings.floor(level, pick.x, pick.y);
       if (floor) {
         const k = floorKind(floor);
         const mat = MATERIALS.find((m) => m.id === floor.material)?.name.toLowerCase() ?? floor.material;
@@ -1329,11 +1345,11 @@ export class UI {
       const roof = this.game.buildings.floor(b.levels, pick.x, pick.y);
       if (roof) lines.push(`${roof.material === GLASS_ROOF.id ? 'glass roof' : 'roof'}${isDone(roof) ? '' : ` · ${Math.round(progressOf(roof) * 100)}% built`}`);
     }
-    const counterLine = counterTip(this.game, pick);
+    const counterLine = aloft ? null : counterTip(this.game, pick);
     if (counterLine) lines.push(counterLine);
     // A jetty over the tile, and a column on the corner nearest the pointer (`frameMenu.ts`).
     lines.push(...frameHoverLines(this.game, pick));
-    const pile = this.game.groundAt(pick.x, pick.y);
+    const pile = aloft ? [] : this.game.groundAt(pick.x, pick.y);
     if (pile.length === 1) {
       const it = pile[0];
       lines.push(`On the ground: ${itemName(it).toLowerCase()}${it.count > 1 ? ` ×${it.count}` : ''}${it.dmg >= 1 ? ` · ${Math.round(it.dmg)}% damage` : ''} · ${rotLine(this.game, it, pick.x, pick.y)}`);
@@ -1426,7 +1442,8 @@ export class UI {
   private groundEntries(pick: Pick, go: (ground: Pick) => void): MenuItem[] {
     if (pick.ground === undefined) return [];
     const named = (p: Pick): string => `${this.game.world.tileName(p.x, p.y)} (${p.x}, ${p.y})`;
-    const under: Pick = { x: pick.x, y: pick.y, wx: pick.wx, wy: pick.wy, cx: pick.cx, cy: pick.cy };
+    // On a pinned storey, its floor under it (`storeyview.ts`).
+    const under: Pick = { x: pick.x, y: pick.y, wx: pick.wx, wy: pick.wy, cx: pick.cx, cy: pick.cy, ...(pick.level !== undefined ? { level: pick.level } : {}) };
     const out: MenuItem[] = [{ label: 'Ground under it', note: named(under), onSelect: () => go(under) }];
     const behind = pick.ground;
     if (behind.x !== pick.x || behind.y !== pick.y || behind.down) out.push({ label: 'Ground behind it', note: named(behind), onSelect: () => go(behind) });
@@ -1443,7 +1460,8 @@ export class UI {
     if (pick.creature !== undefined) return { kind: 'creature', id: pick.creature };
     const placed = pick.furniture ?? pick.fire ?? pick.smelter ?? pick.kiln ?? pick.anvil ?? pick.post;
     if (placed !== undefined) return { kind: 'placed', id: placed };
-    if (pick.crate !== undefined || pick.trap !== undefined || pick.bridge !== undefined || pick.down) return null;
+    // Nor at a pinned storey's floor (`storeyview.ts`): a spell is cast at the ground.
+    if (pick.crate !== undefined || pick.trap !== undefined || pick.bridge !== undefined || pick.down || (pick.level ?? 0) > 0) return null;
     return { kind: 'area', x: pick.x + 0.5, y: pick.y + 0.5 };
   }
 
@@ -1490,6 +1508,10 @@ export class UI {
     if (bridgeHere) return { title: `${bridgeName(bridgeHere)} (${bridgeState(bridgeHere)})`, entries: this.bridgeEntries(bridgeHere) };
     // Picked on a cellar's floor, looking into it: the cellar's own list.
     if (pick.down) return this.cellarMenu(pick);
+    // Picked on the floor of a pinned storey over the ground: that storey's own list (`storeyview.ts`).
+    if ((pick.level ?? 0) > 0) return this.storeyMenu(pick);
+    // And on the ground while one is pinned, the ground's, without the hidden storeys' building work.
+    const builds = (this.game.pinnedStorey() ?? 0) === 0;
     const target = { kind: 'tile' as const, x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy };
     const entries: MenuItem[] = [];
     entries.push(...this.settlementEntry(pick));
@@ -1662,19 +1684,7 @@ export class UI {
       }
     }
     // Setting carried furniture down on the block of subtiles under the cursor.
-    const placeFurnitureDef = ACTION_BY_ID.get('place_furniture');
-    const carried = this.game.inventory.items.filter((it) => isFurniture(it.id));
-    if (placeFurnitureDef && carried.length) {
-      // The piece follows the cursor from here: Q and E turn it, a click sets it down.
-      entries.push({
-        label: 'Set furniture down',
-        children: carried.map((it) => ({
-          label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
-          note: 'follows the cursor · Q/E rotate · click to place',
-          onSelect: () => this.startPlacing(it),
-        })),
-      });
-    }
+    entries.push(...this.furnitureDownEntries());
     // Sowing on a tilled field: pick from the seeds you carry. A Farmer who has
     // learned to sow a patch is offered that too, from the same seeds.
     const seedsCarried = this.game.inventory.items.filter((it) => CROP_BY_SEED.has(it.id));
@@ -1798,7 +1808,7 @@ export class UI {
     // A shop counter on a border of this tile: looked at, bought from, and its till.
     entries.push(...counterEntries(this.game, pick, this.counterWays()));
     const building = this.game.buildings.buildingAt(pick.x, pick.y);
-    if (building) entries.push(...this.buildingEntries(pick));
+    if (building && builds) entries.push(...this.buildingEntries(pick));
     for (const { def, reason } of this.game.actionsFor(target)) {
       // Slabs come in four stones and they do not look alike: choose which goes down.
       if (def.id === 'pave_slabs') {
@@ -1865,7 +1875,71 @@ export class UI {
       }
       entries.push(this.jobEntry(def, target, reason, def.labelFor?.(target, this.game) ?? def.label));
     }
-    if (!building) entries.push(...this.buildingEntries(pick));
+    if (!building && builds) entries.push(...this.buildingEntries(pick));
+    entries.push(...this.markEntries(pick));
+    // Hanging one of this tile's jobs on the belt, to be pressed anywhere after.
+    const hangable = this.game.actionsFor(target).filter((a) => pinnable(a.def));
+    if (hangable.length && this.game.beltLoops()) {
+      entries.push({
+        label: 'Hang action on belt',
+        children: hangable.map(({ def }) => ({ label: def.label, children: pinEntry(this.game, { action: def.id }).children })),
+      });
+    }
+    const title = building ? `${building.name} (${pick.x}, ${pick.y})` : `${this.game.world.tileName(pick.x, pick.y)} (${pick.x}, ${pick.y})`;
+    /*
+     * What is true of the ground, above the list of what can be done to it.
+     *
+     * Where the corner you picked stands, first, because half the list is
+     * corner work and the dot on the ground says which corner without saying
+     * how high it is. Then what a prospector read, when anybody has read it.
+     * Both were mouseover lines, and neither was readable at all with a
+     * finger.
+     */
+    const reading = groundReading(this.game, pick.x, pick.y);
+    // And the slab, if there is one: a tile whose top is somewhere other than
+    // the ground has to say where, or nothing else on this list makes sense.
+    const slab = this.game.foundations.size ? this.game.foundationAt(pick.x, pick.y) : undefined;
+    const facts = [
+      cornerReading(this.game, pick.cx, pick.cy),
+      ...(slab ? [`Concrete foundation · ${foundationState(slab)}`] : []),
+      ...(reading ? [reading] : []),
+    ];
+    return { title, facts, entries };
+  }
+
+  /**
+   * The list for a tile of a pinned storey over the ground (`storeyview.ts`): that storey's building work, the
+   * furniture you carry to set down on it, and marks. Nothing of the ground under it, and no spells.
+   */
+  private storeyMenu(pick: Pick): { title: string; facts?: string[]; entries: MenuItem[] } {
+    const g = this.game;
+    const level = pick.level ?? 0;
+    const host = g.buildings.buildingAt(pick.x, pick.y) ?? storeyHost(g, pick.x, pick.y, level);
+    const onRoof = !!host && g.buildings.buildingAt(pick.x, pick.y) === host && level >= host.levels;
+    const entries: MenuItem[] = [...this.buildingEntries(pick, level)];
+    if (!onRoof && g.standable(pick.x, pick.y, level)) entries.push(...this.furnitureDownEntries());
+    entries.push(...this.markEntries(pick));
+    const where = onRoof ? 'roof' : `storey ${level + 1}`;
+    return { title: `${host ? `${host.name} · ` : ''}${where} (${pick.x}, ${pick.y})`, entries };
+  }
+
+  /** Setting a carried piece of furniture down: it follows the cursor from here, Q and E turn it, a click sets it down. */
+  private furnitureDownEntries(): MenuItem[] {
+    const carried = this.game.inventory.items.filter((it) => isFurniture(it.id));
+    if (!ACTION_BY_ID.get('place_furniture') || !carried.length) return [];
+    return [{
+      label: 'Set furniture down',
+      children: carried.map((it) => ({
+        label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
+        note: 'follows the cursor · Q/E rotate · click to place',
+        onSelect: () => this.startPlacing(it),
+      })),
+    }];
+  }
+
+  /** Pinning a name to a spot on the map, or the one there renamed, recoloured or rubbed off. */
+  private markEntries(pick: Pick): MenuItem[] {
+    const entries: MenuItem[] = [];
     // Pinning a name to this spot, or rubbing one off.
     const here = this.game.markNear(pick.x, pick.y, 1.5);
     if (here) {
@@ -1902,34 +1976,7 @@ export class UI {
         })),
       });
     }
-    // Hanging one of this tile's jobs on the belt, to be pressed anywhere after.
-    const hangable = this.game.actionsFor(target).filter((a) => pinnable(a.def));
-    if (hangable.length && this.game.beltLoops()) {
-      entries.push({
-        label: 'Hang action on belt',
-        children: hangable.map(({ def }) => ({ label: def.label, children: pinEntry(this.game, { action: def.id }).children })),
-      });
-    }
-    const title = building ? `${building.name} (${pick.x}, ${pick.y})` : `${this.game.world.tileName(pick.x, pick.y)} (${pick.x}, ${pick.y})`;
-    /*
-     * What is true of the ground, above the list of what can be done to it.
-     *
-     * Where the corner you picked stands, first, because half the list is
-     * corner work and the dot on the ground says which corner without saying
-     * how high it is. Then what a prospector read, when anybody has read it.
-     * Both were mouseover lines, and neither was readable at all with a
-     * finger.
-     */
-    const reading = groundReading(this.game, pick.x, pick.y);
-    // And the slab, if there is one: a tile whose top is somewhere other than
-    // the ground has to say where, or nothing else on this list makes sense.
-    const slab = this.game.foundations.size ? this.game.foundationAt(pick.x, pick.y) : undefined;
-    const facts = [
-      cornerReading(this.game, pick.cx, pick.cy),
-      ...(slab ? [`Concrete foundation · ${foundationState(slab)}`] : []),
-      ...(reading ? [reading] : []),
-    ];
-    return { title, facts, entries };
+    return entries;
   }
 
   /**
@@ -3210,8 +3257,12 @@ export class UI {
     this.game.logMsg(why ?? boughtLine(it.count, itemName(it), price), why ? 'error' : 'event');
   }
 
-  /** Planning and construction entries for a tile: footprint, walls on the nearest side, floors, storeys. */
-  private buildingEntries(pick: Pick): MenuItem[] {
+  /**
+   * Planning and construction entries for a tile: footprint, walls on the nearest side, floors, storeys. On the storey
+   * being worked, or pinned (`Game.storeyFor`); `storey` is the storey a pinned storey's own menu is for (`storeyMenu`),
+   * which has that storey's work and nothing of the ground's.
+   */
+  private buildingEntries(pick: Pick, storey?: number): MenuItem[] {
     /** What a tile going on piers adds to an entry: to its label, and a note of the deck and the drop. */
     type PierNote = { on: string; note?: string };
     const g = this.game;
@@ -3259,7 +3310,9 @@ export class UI {
     const b = bld.buildingAt(x, y);
     if (!b) {
       // Out past a building: the jetty that goes there, or is there (`frameMenu.ts`).
-      entries.push(...frameJettyEntries(g, pick, (base, level, material, side, hand) => this.startPlacingStairs(base, level, material, 'stairs', side, false, hand)));
+      entries.push(...frameJettyEntries(g, pick, (base, level, material, side, hand) => this.startPlacingStairs(base, level, material, 'stairs', side, false, hand), storey));
+      // Up on a pinned storey, nothing else: what follows is the ground's.
+      if (storey !== undefined) return entries;
       // No building here: a fence or a half wall still goes on any border,
       // and the border is decided by which edge of the tile was clicked.
       const side = nearestSide(x, y, pick.wx, pick.wy);
@@ -3305,7 +3358,17 @@ export class UI {
       entries.push({ ...item(act('plan_building'), base, `${act('plan_building').label}${p.on}`), note: p.note });
       return entries;
     }
-    const level = workLevel(b);
+    const pinned = g.pinnedStorey();
+    // A pinned storey's own menu, on its roof's level: the roof, its railing and a storey more, and nothing else.
+    if (storey !== undefined && storey >= b.levels) {
+      base.level = b.levels - 1;
+      entries.push(...this.roofEntries(b, base, act, item, build));
+      entries.push(...frameRoofEntries(g, pick, b));
+      entries.push(item(act('add_floor'), base));
+      entries.push(item(act('rename_building'), base));
+      return entries;
+    }
+    const level = storey ?? g.storeyFor(b);
     // Every storey job asked from here names the storey it was shown for (`jobLevel`), which is how the island knows it.
     base.level = level;
     const side = nearestSide(x, y, pick.wx, pick.wy);
@@ -3324,7 +3387,8 @@ export class UI {
         disabled: true,
       });
     }
-    if (b.levels > 1) {
+    // Pinned on a storey, the storey control says which.
+    if (b.levels > 1 && pinned === null) {
       entries.push({
         label: `Work on storey ${level + 1}`,
         children: Array.from({ length: b.levels }, (_, i) => ({
@@ -3336,8 +3400,8 @@ export class UI {
       });
     }
     const wall = bld.wall(level, x, y, side);
-    // A portcullis stands on the ground floor, whichever storey is being worked on.
-    entries.push(...gateEntries(this.game, withSide));
+    // A portcullis stands on the ground floor, whichever storey is being worked on; not in an upper storey's own menu.
+    if (storey === undefined) entries.push(...gateEntries(this.game, withSide));
     if (wall) {
       if (!isDone(wall)) entries.push(build(act('build_wall'), withSide, `Build wall (${sideName}) · needs ${describeNeeds(wall, materialName)}`, wall));
       entries.push(item(act('remove_wall'), withSide, `Remove wall (${sideName})`));
@@ -3377,7 +3441,7 @@ export class UI {
     // Every storey's wall on this side, whichever storey is being worked on.
     entries.push(...ivy(withSide));
     // Columns on its corners, and the railing round a flat roof (`frameMenu.ts`).
-    entries.push(...frameFootprintEntries(g, pick, b));
+    entries.push(...frameFootprintEntries(g, pick, b, level));
     const floor = bld.floor(level, x, y);
     const plan = act('plan_floor');
     // A flight or a ladder down to the cellar is the ground floor's, and has entries of its own (`cellarEntries`).
@@ -3447,7 +3511,66 @@ export class UI {
         }
       }
     }
-    entries.push(...cellarEntries(g, base, side, (material, kind, hand) => this.startPlacingStairs(base, 0, material, kind, side, true, hand)));
+    // Pinned on a storey, the way up to the next from its floor: a flight or a ladder on the floor slot over it.
+    if (pinned !== null && level + 1 < b.levels && !bld.floor(level + 1, x, y)) entries.push(...this.stairsUpEntries(base, level + 1, side));
+    if (storey === undefined) entries.push(...cellarEntries(g, base, side, (material, kind, hand) => this.startPlacingStairs(base, 0, material, kind, side, true, hand)));
+    // Pinned, the roof and the storeys are the top storey's work.
+    if (pinned === null || level === b.levels - 1) {
+      entries.push(...this.roofEntries(b, base, act, item, build));
+      entries.push(item(act('add_floor'), base));
+      if (b.levels > 1) entries.push(item(act('remove_storey'), base));
+    }
+    if (storey === undefined) entries.push(item(act('remove_from_plan'), base));
+    entries.push(item(act('rename_building'), base));
+    return entries;
+  }
+
+  /**
+   * The rows for a flight or a ladder on the floor slot of storey `level`, up to it from the storey under it: planned
+   * on the tile, Q and E turning the side it is climbed from (`startPlacingStairs`).
+   */
+  private stairsUpEntries(base: Extract<Target, { kind: 'tile' }>, level: number, side: Side): MenuItem[] {
+    const g = this.game;
+    const plan = BUILD_ACTION_BY_ID.get('plan_floor');
+    if (!plan) return [];
+    const at: Extract<Target, { kind: 'tile' }> = { ...base, level };
+    const storey = `storey ${level + 1}`;
+    const why = cellarReason(g, plan, { ...at, side, material: 'log', floorKind: 'stairs' });
+    if (why) return [{ label: `Plan staircase up (${storey})`, hint: why, disabled: true }];
+    return [
+      {
+        label: `Plan staircase up (${storey})`,
+        children: MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' })).map((m) => ({
+          label: m.name,
+          note: `${describeNeeds(floorBill(m.id, 'stairs'), materialName)} · Q/E: side`,
+          onSelect: () => this.startPlacingStairs(at, level, m.id, 'stairs', side),
+        })),
+      },
+      {
+        label: `Plan ${SINGLE_STAIRS_NAME} up (${storey})`,
+        children: MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' })).map((m) => ({
+          label: m.name,
+          note: `${describeNeeds(floorBill(m.id, 'stairs', undefined, 'l'), materialName)} · ${SINGLE_TURNS}`,
+          onSelect: () => this.startPlacingStairs(at, level, m.id, 'stairs', side, false, 'l'),
+        })),
+      },
+      {
+        label: `Plan ladder up (${storey})`,
+        note: `${describeNeeds(floorBill('plank', 'ladder'), materialName)} · Q/E: side`,
+        onSelect: () => this.startPlacingStairs(at, level, 'plank', 'ladder', side),
+      },
+    ];
+  }
+
+  /** The roof's rows for a tile of a building: building or taking out the one there, or planning one. */
+  private roofEntries(b: Building, base: Extract<Target, { kind: 'tile' }>, act: (id: string) => ActionDef,
+    item: (def: ActionDef, target: Target, label?: string) => MenuItem,
+    build: (def: ActionDef, target: Target, label: string, bill: Bill) => MenuItem): MenuItem[] {
+    const g = this.game;
+    const bld = g.buildings;
+    const { x, y } = base;
+    const entries: MenuItem[] = [];
+    const plan = act('plan_floor');
     const roof = bld.floor(b.levels, x, y);
     const roofTarget: Target = { ...base, floorKind: 'roof' };
     if (roof) {
@@ -3498,10 +3621,6 @@ export class UI {
         });
       }
     }
-    entries.push(item(act('add_floor'), base));
-    if (b.levels > 1) entries.push(item(act('remove_storey'), base));
-    entries.push(item(act('remove_from_plan'), base));
-    entries.push(item(act('rename_building'), base));
     return entries;
   }
 }

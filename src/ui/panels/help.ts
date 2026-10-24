@@ -1262,7 +1262,7 @@ export function helpText(): string {
       <tr><td><kbd>I</kbd></td><td>Inventory</td></tr>
       <tr><td><kbd>R</kbd></td><td>Crafting: everything you can make with what you carry</td></tr>
       <tr><td><kbd>T</kbd></td><td>Tile: every action on the tile you last clicked</td></tr>
-      <tr><td><kbd>Page Up</kbd> / <kbd>Page Down</kbd></td><td>View the storey above or below</td></tr>
+      <tr><td><kbd>Page Up</kbd> / <kbd>Page Down</kbd></td><td>Pin the storey above or below: other storeys hidden</td></tr>
       <tr><td><kbd>X</kbd></td><td>Cut away the walls facing you</td></tr>
       <tr><td><kbd>K</kbd></td><td>Skills</td></tr>
       <tr><td><kbd>F</kbd></td><td>Trades: every trade's and class's offer, yours, its perks or class tiers, its rite</td></tr>
@@ -1676,11 +1676,13 @@ export function helpText(): string {
     </ul>
     <h3>Looking inside a building</h3>
     <ul>
-      <li>Storey arrows (right edge, once anything is built): pick the <b>storey shown</b>; everything above it is hidden. Label <i>1st</i>, <i>2nd</i>…;
-      click for <i>Auto</i> (follows your storey). <kbd>Page Up</kbd> / <kbd>Page Down</kbd> do the same.</li>
+      <li>Storey arrows (right edge, once anything is built): <b>pin one storey</b>, up to the tallest building's roof. Every other storey hidden, above and below:
+      walls, floors, roofs, and the furniture and people on them. Clicks and walks: onto that storey's floor (mounted: dismount first). Its menu: that storey's
+      building work, <i>Plan staircase up</i>, furniture set down on it. Label <i>1st</i>, <i>2nd</i>…; click for <i>Auto</i> (every storey).
+      <kbd>Page Up</kbd> / <kbd>Page Down</kbd> do the same.</li>
       <li>Once any cellar is dug: <i>Cellar</i>, below the ground floor: every nearby cellar as dug, buildings over them removed. Contents and people in a cellar
       show only to somebody in it, within their sight.</li>
-      <li><b>◪</b>, <kbd>X</kbd> or the Settings box: <b>hides the walls facing you</b>; far walls stay.</li>
+      <li><b>◪</b>, <kbd>X</kbd> or the Settings box: <b>hides the walls facing you</b>; far walls stay. Always on while a storey is pinned.</li>
     </ul>
     <h3>Settling and building</h3>
     <h4>Founding</h4>

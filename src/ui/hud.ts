@@ -2,7 +2,8 @@ import { keyName, type Keybinds } from '../game/keybinds';
 import { balance, fedWord, NUTRIENTS, NUTRIENT_NAMES, NUTRIENT_NOTES, tableMul } from '../game/nutrition';
 import { sailWord, windFrom, windWord } from '../game/wind';
 import { FURNITURE_BY_ID } from '../game/furniture';
-import { CELLAR_LEVEL, TOP_LEVELS } from '../game/building';
+import { CELLAR_LEVEL } from '../game/building';
+import { tallestStorey } from '../game/storeyview';
 import { seasonLine } from '../world/calendar';
 import { metres } from '../world/tiles';
 import { CHAR_START, type Game } from '../game/game';
@@ -555,8 +556,9 @@ export class Hud {
       });
       return b;
     };
+    // Titles are set as the storey changes (`refreshStorey`).
     this.storeyUp = mk('tb-btn storey-btn', '▲', 'Storey up (Page Up)', () => this.stepStorey(1));
-    this.storeyLabel = mk('storey-label', 'Auto', 'Click: follow your storey', () => {
+    this.storeyLabel = mk('storey-label', 'Auto', 'All storeys', () => {
       this.game.settings.viewLevel = null;
     });
     this.storeyDown = mk('tb-btn storey-btn', '▼', 'Storey down (Page Down)', () => this.stepStorey(-1));
@@ -706,11 +708,24 @@ export class Hud {
     return codes.length ? keyName(codes[0]) : null;
   }
 
-  /** Move the view a storey up or down, starting from where the player stands: down to a cellar, where there is one. */
+  /**
+   * Pin the view a storey up or down, starting from where the player stands: down to a cellar, where there is one,
+   * and up to the tallest building's roof. Pinned, every other storey is hidden (`storeyview.ts`).
+   */
   stepStorey(step: number): void {
     const s = this.game.settings;
-    const from = s.viewLevel ?? this.game.player.level;
-    s.viewLevel = Math.max(this.lowestStorey(), Math.min(TOP_LEVELS - 1, from + step));
+    s.viewLevel = this.storeyStep(step);
+  }
+
+  /** The storey a step of the control pins, up to `top` (`highestStorey`). */
+  private storeyStep(step: number, top = this.highestStorey()): number {
+    const from = this.game.settings.viewLevel ?? this.game.player.level;
+    return Math.max(this.lowestStorey(), Math.min(top, from + step));
+  }
+
+  /** The highest storey there is to look at: the tallest building's roof, and never under where you stand. */
+  private highestStorey(): number {
+    return Math.max(tallestStorey(this.game), this.game.player.level, 0);
   }
 
   /** The lowest storey there is to look at: a cellar's, once anybody has dug one, and otherwise the ground floor. */
@@ -754,9 +769,18 @@ export class Hud {
     const level = s.viewLevel;
     this.storeyLabel.textContent = level === null ? 'Auto' : level < 0 ? 'Cellar' : ordinal(level + 1);
     this.storeyLabel.classList.toggle('pinned', level !== null);
-    this.storeyUp.disabled = level !== null && level >= TOP_LEVELS - 1;
+    const top = this.highestStorey();
+    this.storeyUp.disabled = level !== null && level >= top;
     this.storeyDown.disabled = level !== null && level <= this.lowestStorey();
-    this.cutBtn.classList.toggle('active', s.cutaway);
+    // Each says what it pins: a storey on its own, every other one hidden.
+    const named = (l: number): string => (l < 0 ? 'Cellar' : `Storey ${l + 1} only`);
+    this.tip(this.storeyUp, `${named(this.storeyStep(1, top))} (Page Up)`);
+    this.tip(this.storeyDown, `${named(this.storeyStep(-1, top))} (Page Down)`);
+    this.tip(this.storeyLabel, level === null ? 'All storeys' : 'All storeys (click)');
+    // Pinned on a storey the facing walls are always cut away.
+    const pinned = this.game.pinnedStorey() !== null;
+    this.cutBtn.classList.toggle('active', s.cutaway || pinned);
+    this.tip(this.cutBtn, pinned ? 'Facing walls cut away: storey pinned' : 'Cut away facing walls (X)');
   }
 
   /** A node's tooltip, written only when it has changed. */

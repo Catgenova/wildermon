@@ -3594,6 +3594,14 @@ export const NEWS: News[] = [
       'Changed: furniture art: every piece redrawn in the style of the smelter, anvil and wildermon beds. Carts, wagons and boats recoloured to match. Bells coloured by their metal.',
     ],
   },
+  {
+    n: 296,
+    day: '2026-10-24',
+    lines: () => [
+      'Added: storey mode. Storey arrows or Page Up / Page Down pin one storey: every other storey hidden, above and below, with its furniture and people; facing walls cut away.',
+      'Pinned: clicks land on that storey\'s floor and walk you there; its menu: that storey\'s walls, floors, columns, jetties, Plan staircase up, furniture set down on it. Roof work on the top storey.',
+    ],
+  },
 ];
 
 /**

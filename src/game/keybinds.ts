@@ -62,8 +62,8 @@ export const BINDS: BindDef[] = [
   { id: 'turn_right', label: 'Turn the view right', hint: 'Rotate the other way (view, or the piece being placed).', group: 'Moving the view', keys: ['KeyE'] },
   { id: 'zoom_in', label: 'Zoom in', hint: 'Same as scroll up.', group: 'Moving the view', keys: ['Equal', 'NumpadAdd'] },
   { id: 'zoom_out', label: 'Zoom out', hint: 'Same as scroll down.', group: 'Moving the view', keys: ['Minus', 'NumpadSubtract'] },
-  { id: 'storey_up', label: 'Look at the storey above', hint: 'Inside multi-storey buildings.', group: 'Moving the view', keys: ['PageUp'] },
-  { id: 'storey_down', label: 'Look at the storey below', hint: 'Inside multi-storey buildings.', group: 'Moving the view', keys: ['PageDown'] },
+  { id: 'storey_up', label: 'Look at the storey above', hint: 'Pins it: other storeys hidden, clicks on its floor.', group: 'Moving the view', keys: ['PageUp'] },
+  { id: 'storey_down', label: 'Look at the storey below', hint: 'Pins it: other storeys hidden, clicks on its floor.', group: 'Moving the view', keys: ['PageDown'] },
   { id: 'cutaway', label: 'Cut away the walls facing you', hint: 'Hide walls between you and a building interior.', group: 'Moving the view', keys: ['KeyX'] },
   { id: 'grid', label: 'Show the tile grid', hint: 'Outline every tile.', group: 'Moving the view', keys: ['KeyG'] },
 
