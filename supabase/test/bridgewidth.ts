@@ -14,6 +14,7 @@
  *   * set out, a span's bill a lane, and a pier's span its bill again a
  *     storey of drop, one, two and three lanes, and what is said of it;
  *   * a wagon onto a bridge of two lanes and not one; a cart onto either;
+ *     and the same from the bridge's end, where it stands already;
  *   * furniture on a three-lane bridge's outer lanes and not its middle one,
  *     nor on a two-lane one;
  *   * no lane's deck wears the ground under it (`wearStep`, `wear_walk`),
@@ -170,7 +171,11 @@ const wheelSql = ['PLANK2', 'PLANK1'].flatMap((n) => {
   delete from placed where world_id = w and driver = u;
   insert into placed (world_id, kind, sub, x, y, cx, cy, ql, made_by, driver)
     values (w, 'furniture', '${v}', ${AX - 1}, ${s.y}, ${AX - 1}.5, ${s.y}.5, 30, u, u);
-  insert into said values ('WHEEL:${n}:${v}', (walk_share(w, u, 0, ${AX - 1}.5, ${s.y}.5, ${AX}.5, ${s.y}.5) >= 1)::text);`);
+  insert into said values ('WHEEL:${n}:${v}', (walk_share(w, u, 0, ${AX - 1}.5, ${s.y}.5, ${AX}.5, ${s.y}.5) >= 1)::text);
+  -- And standing on its end already: onto the deck, and back off onto the bank.
+  update placed set x = ${AX}, cx = ${AX}.5 where world_id = w and driver = u;
+  insert into said values ('ENDON:${n}:${v}', (walk_share(w, u, 0, ${AX}.5, ${s.y}.5, ${AX + 1}.5, ${s.y}.5) >= 1)::text);
+  insert into said values ('ENDOFF:${n}:${v}', (walk_share(w, u, 0, ${AX}.5, ${s.y}.5, ${AX - 1}.5, ${s.y}.5) >= 1)::text);`);
 }).join('\n');
 
 const out = psql(`
@@ -319,6 +324,15 @@ for (const n of ['PLANK2', 'PLANK1']) {
     const want = v !== 'wagon' || s.width >= WAGON_WIDTH;
     check(`a ${v.replace('_', ' ')} ${want ? 'onto' : 'not onto'} a plank bridge of ${s.width} lane${s.width > 1 ? 's' : ''}, on both sides`,
       mine === want && theirs(`WHEEL:${n}:${v}`) === String(want), `browser ${mine}; island ${theirs(`WHEEL:${n}:${v}`)}`);
+    // From its end, where it stands already: onto the deck as from the bank, and off it again either way.
+    const g = game.addFurniture(v, AX, s.y, 0, 0, 30);
+    g.driven = true;
+    const on = game.driveRule(AX, s.y, 0, AX + 1, s.y) !== null;
+    const off = game.driveRule(AX, s.y, 0, AX - 1, s.y) !== null;
+    game.removeFurniture(g.id);
+    check(`and from its end: ${want ? 'onto' : 'not onto'} the deck, and back onto the bank, on both sides`,
+      on === want && theirs(`ENDON:${n}:${v}`) === String(want) && off && theirs(`ENDOFF:${n}:${v}`) === 'true',
+      `browser ${on} ${off}; island ${theirs(`ENDON:${n}:${v}`)} ${theirs(`ENDOFF:${n}:${v}`)}`);
   }
 }
 
