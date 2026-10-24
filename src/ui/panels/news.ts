@@ -3625,6 +3625,13 @@ export const NEWS: News[] = [
       `Added: No plan (side): storey ${NO_PLAN_FROM + 1} and up, bare outside side; no plan model drawn; side still counts as open. Mark out (side): the model back.`,
     ],
   },
+  {
+    n: 300,
+    day: '2026-10-24',
+    lines: () => [
+      'Faster frames: wildermon, walls, roofs, ground, night lights, trees at dusk and dawn, windows, map, log, island reads.',
+    ],
+  },
 ];
 
 /**
