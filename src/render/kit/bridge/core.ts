@@ -198,7 +198,8 @@ export function planOf(p: PlanInput): Plan {
     const g = minGround(s0, s1);
     const top = p.deck(c) - thick - (p.style.family === 'stone' ? ring + 1.2 : 2.5);
     const drop = p.deck(c) - g;
-    const form: Form = drop <= FORM_HIGH ? 'low' : drop <= FORM_TIERS ? 'high' : 'tiers';
+    // Under a ramp, a run of single open arches however deep, stepping with the deck.
+    const form: Form = drop <= FORM_HIGH ? 'low' : drop <= FORM_TIERS || p.rise ? 'high' : 'tiers';
     const A = a * U;
     let arch: (s: number) => number;
     let spring: number;
@@ -691,8 +692,13 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
       for (const [z0, z0b, z1, z1b] of tops) {
         if (z1 - Math.max(z0, z0b) < 0.1) continue;
         k.solid('back', -1);
-        k.face('back', [[s, sl.t0, z0], [s, sl.t1, z0b], [s, sl.t1, z1b], [s, sl.t0, z1]], [dirn, 0, 0], st.stone,
-          info('pier', sl.t0 * U, sl.t1 * U, Math.min(z0, z0b), z1, Math.round(s * 10)), { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+        // Under a ramp the arcade is two walls, one along each outer edge, the deck vaulted between them: a pier's side
+        // only as deep as its wall, so the bays are seen through as a wider bridge's are.
+        for (const [ta, tb] of plan.ramp ? rampReturns(plan, sl) : [[sl.t0, sl.t1]]) {
+          const za = ta === sl.t0 ? z0 : z0b, zb = tb === sl.t1 ? z0b : z0;
+          k.face('back', [[s, ta, za], [s, tb, zb], [s, tb, z1b], [s, ta, z1]], [dirn, 0, 0], st.stone,
+            info('pier', ta * U, tb * U, Math.min(za, zb), z1, Math.round(s * 10)), { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+        }
       }
     }
     // Two tiers: the lower arch's sides, from the ground to its springing, and the top of the thicker pier beside it, at the course.
@@ -713,6 +719,35 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
       }
     }
   }
+  // Under a ramp, each wall's inner face, under the deck and over its arches and down its piers.
+  if (plan.ramp) {
+    for (const edge of sl.edges) {
+      const ti = edge > 0 ? sl.t1 - RAMP_WALL : sl.t0 + RAMP_WALL;
+      k.solid('back', -0.8);
+      for (let j = 0; j + 1 < xs.length; j++) {
+        const a = xs[j], b2 = xs[j + 1], mid = (a + b2) / 2;
+        const op = opening(plan, mid);
+        const za = op ? bayAt(plan, mid).arch(a) : plan.ground(a, ti) - 0.5, zb = op ? bayAt(plan, mid).arch(b2) : plan.ground(b2, ti) - 0.5;
+        k.face('back', [[a, ti, za], [b2, ti, zb], [b2, ti, deckBottom(b2)], [a, ti, deckBottom(a)]], [0, -edge, 0], st.stone,
+          info(op ? 'wall' : 'pier', a * U, b2 * U, Math.min(za, zb), deckBottom(mid), sl.i), wallFrame(ti, -edge));
+        // And the underside of the wall over the arch, across its depth.
+        if (op) {
+          const [t0, t1] = edge > 0 ? [ti, sl.t1] : [sl.t0, ti];
+          k.face('back', [[a, t0, za], [b2, t0, zb], [b2, t1, zb], [a, t1, za]], [0, 0, -1], st.ring);
+        }
+      }
+    }
+  }
+}
+
+/** How deep each of a ramp's two arcaded walls is, across the bridge, in tiles. */
+const RAMP_WALL = 0.2;
+/** The runs across a slice a ramp's pier side stands in: within its walls' depth of each outer edge it has. */
+function rampReturns(plan: Plan, sl: Slice): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  if (sl.t0 <= plan.tLo + EPS) out.push([sl.t0, Math.min(sl.t1, sl.t0 + RAMP_WALL)]);
+  if (sl.t1 >= plan.tHi - EPS) out.push([Math.max(sl.t0, sl.t1 - RAMP_WALL), sl.t1]);
+  return out;
 }
 
 /** The slice that owns something running along the bridge from `a` to `b`: this one, or null where another nearer the eye does. */
@@ -734,7 +769,9 @@ function cutwaters(k: Kit, edge: number, t: number): void {
     if (p.end) continue;
     if (p.s < sl.s0 - p.half - EPS || p.s > sl.s1 + p.half + EPS) continue;
     const bay = bayAt(plan, p.s - 0.01);
-    const top = plan.width >= 2 ? plan.deck(p.s) - plan.thick - 1.4 : (bay.lower ? bay.lowerSpring! : bay.spring) + 1;
+    // Up to the refuge it carries, or the springing; under a ramp's run of arches, plain piers with a short one at the foot.
+    const top = plan.ramp ? Math.min(p.foot + 1.5 + RAMP_CUTWATER, bay.spring)
+      : plan.width >= 2 ? plan.deck(p.s) - plan.thick - 1.4 : (bay.lower ? bay.lowerSpring! : bay.spring) + 1;
     const nose = 0.2;
     // Each half, on its own side of the pier's middle, belongs to the slice it is in.
     for (const side of [-1, 1]) {
@@ -756,7 +793,8 @@ function cutwaters(k: Kit, edge: number, t: number): void {
 
 /** Where a bridge two lanes wide or more breaks its parapet for the refuge bay over each pier, along it: from and to. */
 export function refugeGaps(plan: Plan): Array<[number, number]> {
-  if (plan.width < 2) return [];
+  // None on a ramp, whose piers are its run of arches'.
+  if (plan.width < 2 || plan.ramp) return [];
   return plan.piers.filter((p) => !p.end).map((p) => [p.s - refugeHalf(p), p.s + refugeHalf(p)]);
 }
 
@@ -927,6 +965,7 @@ export function newel(k: Kit, part: Part3, s: number, t: number, z: number): voi
  */
 function refugeFor(k: Kit): void {
   const { plan, sl, st } = k;
+  if (plan.ramp) return;
   for (const p of plan.piers) {
     if (p.end) continue;
     for (const edge of sl.edges) {
@@ -949,7 +988,8 @@ function refugeFor(k: Kit): void {
       const inset = line.map(([s0, t0]): [number, number] => [p.s + (s0 - p.s) * 0.7, t + (t0 - t) * 0.35]);
       for (let q = 0; q + 1 < line.length; q++) {
         const [a, b] = [line[q], line[q + 1]], [ai, bi] = [inset[q], inset[q + 1]];
-        const out: L = [(b[1] - a[1]) * edge, -(b[0] - a[0]) * edge, 0];
+        // Outward, away from the deck: the outline runs along the bridge, so out is its left turned toward `edge`.
+        const out: L = [-(b[1] - a[1]) * edge, (b[0] - a[0]) * edge, 0];
         face('front', [[a[0], a[1], under], [b[0], b[1], under], [b[0], b[1], z], [a[0], a[1], z]], out, st.trim,
           info('cornice', 0, 1, under, z, Math.round(p.s * 10) + q), segFrame(a, b));
         face('front', [[ai[0], ai[1], under - 4.6], [bi[0], bi[1], under - 4.6], [b[0], b[1], under], [a[0], a[1], under]], [out[0], out[1], -0.6], st.stone,
@@ -963,6 +1003,8 @@ function refugeFor(k: Kit): void {
   }
 }
 
+/** How high a cutwater stands at the foot of a ramp's pier, in units. */
+const RAMP_CUTWATER = 6;
 /** How far a refuge steps out from the bridge's outer edge, in tiles. */
 export const REFUGE_OUT = 0.24;
 /** Half a refuge's run along the bridge where it leaves the edge, in tiles: room for a body to step into, however slim the pier. */
@@ -1026,7 +1068,7 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
   const segs = line.slice(0, -1).map((a, q) => {
     const b = line[q + 1];
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-    const n: [number, number] = [((b[1] - a[1]) / len) * edge, (-(b[0] - a[0]) / len) * edge];
+    const n: [number, number] = [(-(b[1] - a[1]) / len) * edge, ((b[0] - a[0]) / len) * edge];
     return { a, b, n, len };
   });
   const off = (pt: [number, number], n: [number, number], d: number): [number, number] => [pt[0] - n[0] * d, pt[1] - n[1] * d];
