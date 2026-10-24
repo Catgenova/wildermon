@@ -3463,7 +3463,7 @@ export class Renderer {
         sx: (wx, wy) => cam.worldToScreenX(wx, wy),
         sy: (wx, wy, h) => cam.worldToScreenY(wx, wy, h),
         heightAt: (wx, wy) => world.heightAt(wx, wy),
-        greenStage: (b) => Math.round(greenShows(bridgeGreen(this.game, b, this.greenAt) ?? 0, 0, 0) * 4),
+        greenStage: (b) => Math.round(greenShows(bridgeGreen(this.game, b, this.greenAt) ?? 0, 0, 0) * PAVE_STAGES),
       };
     }
     return this.bFrame;

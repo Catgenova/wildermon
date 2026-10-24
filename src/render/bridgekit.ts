@@ -304,7 +304,7 @@ function drawPiece(ctx: CanvasRenderingContext2D, p: BridgePieceAt, zoom: number
   let sh = kept.get(key);
   const make = (): Sheet => {
     const t0 = performance.now();
-    const s = bake(pm, sl.box[p.part], e, scale, (g) => layPiece(g, e, pm, pl.plan.style, 0.7));
+    const s = bake(pm, sl.box[p.part], e, scale, (g) => layPiece(g, e, pm, pl.plan.style, 0.7, pl.plan.moss));
     bridgeBakes.count++;
     bridgeBakes.ms += performance.now() - t0;
     keep(key, s);
