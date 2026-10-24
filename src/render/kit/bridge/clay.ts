@@ -454,9 +454,9 @@ function keystone(k: Kit, edge: number, t: number, arc: Arc, D: number, look: Ar
   const tk = t + edge * (look.proud + 0.018);
   const sg = edge > 0 ? 1 : -1;
   if (look.key === 'wedge') {
-    const wi = 0.058, wo = 0.084;
+    const wi = 0.075, wo = 0.11;
     if (ownerOf(k, arc.c - wo, arc.c + wo) === null) return;
-    const z0 = crown - 1.2, z1 = crown + D + 1.1;
+    const z0 = crown - 1.8, z1 = crown + D + 1.4;
     k.solid('front', k.ord(edge, 0.8));
     const pts: L[] = [[arc.c - wi, tk, z0], [arc.c + wi, tk, z0], [arc.c + wo, tk, z1], [arc.c - wo, tk, z1]];
     k.face('front', pts, [0, edge, 0], tone, fi('key', -wo * U, wo * U, z0, z1, Math.round(arc.c * 10)), { o: [arc.c, tk, 0], a: [sg / U, 0, 0], b: [0, 0, 1] });
@@ -464,7 +464,7 @@ function keystone(k: Kit, edge: number, t: number, arc: Arc, D: number, look: Ar
     k.face('front', [[arc.c + wi, t, z0], [arc.c + wi, tk, z0], [arc.c + wo, tk, z1], [arc.c + wo, t, z1]], [1, 0, -0.1], tone);
     k.face('front', [[arc.c - wo, t, z1], [arc.c + wo, t, z1], [arc.c + wo, tk, z1], [arc.c - wo, tk, z1]], [0, 0, 1], tone);
     k.face('front', [[arc.c - wi, t, z0], [arc.c + wi, t, z0], [arc.c + wi, tk, z0], [arc.c - wi, tk, z0]], [0, 0, -1], tone);
-    k.glow.runes.push({ at: k.m([arc.c, tk, (z0 + z1) / 2]), s: (z1 - z0) * 0.26, glyph: st.rune });
+    k.glow.runes.push({ at: k.m([arc.c, tk, (z0 + z1) / 2]), s: (z1 - z0) * 0.32, glyph: st.rune });
   } else {
     // A round plaque set in the coat over the crown.
     const r = 3.3, rs = r / U;
@@ -584,12 +584,16 @@ function buttresses(k: Kit, edge: number, t: number, D: number): void {
   const n = 8;
   for (const p of plan.piers) {
     if (p.end) continue;
-    const R0 = roundOut(p, plan), R1 = R0 * 1.18;
+    // Under a ramp's run of arches, a low battered foot to each pier, as the stone kinds' short cutwaters.
+    const R0 = roundOut(p, plan) * (plan.ramp ? 0.72 : 1), R1 = R0 * (plan.ramp ? 1.3 : 1.18);
     if (p.s + R1 < sl.s0 - EPS || p.s - R1 > sl.s1 + EPS) continue;
     const bay = bayAt(plan, p.s - 0.01), bay2 = bayAt(plan, p.s + 0.01);
     const deckBottom = plan.deck(p.s) - plan.thick - 1.4;
     const domeH = R0 * U * 0.55;
-    const top = refuged(plan) ? deckBottom : Math.min(deckBottom - domeH - 0.5, Math.max(...[bay, bay2].map((b) => { const sh = shapeOf(plan, b, D); return springOf(sh.lower ?? sh.upper); })) + 4);
+    // Under a refuge, up to the deck's edge to carry it; else domed off under the lower of its two springings, into the wall.
+    const spring = Math.min(...[bay, bay2].map((b) => { const sh = shapeOf(plan, b, D); return springOf(sh.lower ?? sh.upper); }));
+    const top = refuged(plan) ? deckBottom : Math.min(deckBottom - domeH - 0.5, spring - domeH, plan.ramp ? p.foot + 1.5 + 6 : Infinity);
+    if (top - (plan.ground(p.s, t) - 0.5) < 3) continue;
     const at = (phi: number, R: number, z: number): L => [p.s + R * Math.sin(phi), t + edge * R * Math.cos(phi), z];
     k.solid('front', k.ord(edge, 0.2));
     for (let i = 0; i < n; i++) {
