@@ -11,11 +11,11 @@ import { bar, carpentry, clothPaint, finfo, lay, ownNear, pennant, ringsPaint, r
  */
 
 const LOG = {
-  bark: tone('#b89270', '#5e4a5c'),
-  beam: tone('#c49c74', '#64505e'),
+  bark: tone('#a88a72', '#504258'),
+  beam: tone('#b8967a', '#5a4a5e'),
   end: tone('#f2dcb0', '#a68e86'),
   deck: tone('#d8b88c', '#7e6870'),
-  post: tone('#a8825e', '#56445a'),
+  post: tone('#9c7e66', '#4c3e56'),
   rope: tone('#efdcae', '#8c7468'),
   roundel: tone('#9a7660', '#4e3c4c'),
 };
@@ -23,19 +23,24 @@ const LOG = {
 /** Split poles across the deck: each its own round, lit along one side and shaded along the other. */
 const polesPaint: BridgePainter = (g, k, f) => {
   const w = 2.6;
-  const y0 = Math.min(f.y0, f.y1) - 1, y1 = Math.max(f.y0, f.y1) + 1;
-  const lite = css(mix(k.fill, [255, 248, 230], 0.28), 0.7), dark = css(mix(k.fill, hex('#4a3640'), 0.5), 0.85), mid = css(mix(k.fill, hex('#6e5060'), 0.16), 0.5);
+  const y0 = Math.min(f.y0, f.y1) - 1, y1 = Math.max(f.y0, f.y1) + 1, h = y1 - y0;
+  const mid = new Path2D(), lite = new Path2D(), dark = new Path2D(), knots = new Path2D();
   let i = 0;
   for (let x = Math.floor(Math.min(f.x0, f.x1) / w) * w; x < Math.max(f.x0, f.x1); x += w, i++) {
-    g.fillStyle = mid;
-    g.fillRect(x + w * 0.62, y0, w * 0.38, y1 - y0);
-    g.fillStyle = lite;
-    g.fillRect(x + w * 0.12, y0, w * 0.22, y1 - y0);
-    g.strokeStyle = dark;
-    g.lineWidth = 0.24;
-    g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke();
-    if ((i * 7 + f.seed) % 5 === 0) { g.fillStyle = dark; g.beginPath(); g.ellipse(x + w * 0.5, y0 + (y1 - y0) * (((i * 37 + f.seed) % 10) / 10), 0.4, 0.25, 0, 0, TAU); g.fill(); }
+    mid.rect(x + w * 0.62, y0, w * 0.38, h);
+    lite.rect(x + w * 0.12, y0, w * 0.22, h);
+    dark.moveTo(x, y0); dark.lineTo(x, y1);
+    if ((i * 7 + f.seed) % 5 === 0) { const ky = y0 + h * (((i * 37 + f.seed) % 10) / 10); knots.moveTo(x + w * 0.5 + 0.4, ky); knots.ellipse(x + w * 0.5, ky, 0.4, 0.25, 0, 0, TAU); }
   }
+  g.fillStyle = css(mix(k.fill, hex('#6e5060'), 0.16), 0.5);
+  g.fill(mid);
+  g.fillStyle = css(mix(k.fill, [255, 248, 230], 0.28), 0.7);
+  g.fill(lite);
+  g.strokeStyle = css(mix(k.fill, hex('#4a3640'), 0.5), 0.85);
+  g.lineWidth = 0.24;
+  g.stroke(dark);
+  g.fillStyle = g.strokeStyle;
+  g.fill(knots);
 };
 
 /** The poles' cut ends along the deck's edge, in a row. */
@@ -43,56 +48,52 @@ const poleEndsPaint: BridgePainter = (g, k, f) => {
   const w = 2.6;
   const h = Math.abs(f.y1 - f.y0);
   const r = Math.min(w, h) * 0.46;
+  const ends = new Path2D(), rings = new Path2D();
   for (let x = Math.floor(Math.min(f.x0, f.x1) / w) * w + w / 2; x < Math.max(f.x0, f.x1) + w; x += w) {
-    g.beginPath();
-    g.ellipse(x, h / 2, w * 0.47, r, 0, 0, TAU);
-    g.fillStyle = css(mix(hex('#f2dcb0'), k.fill, 0.35), 0.95);
-    g.fill();
-    g.strokeStyle = css(mix(k.fill, hex('#4a3640'), 0.5), 0.8);
-    g.lineWidth = 0.2;
-    g.stroke();
-    g.beginPath(); g.arc(x, h / 2, r * 0.4, 0, TAU);
-    g.strokeStyle = css(mix(k.fill, hex('#7a5a48'), 0.35), 0.5);
-    g.lineWidth = 0.12;
-    g.stroke();
+    ends.moveTo(x + w * 0.47, h / 2);
+    ends.ellipse(x, h / 2, w * 0.47, r, 0, 0, TAU);
+    rings.moveTo(x + r * 0.4, h / 2);
+    rings.arc(x, h / 2, r * 0.4, 0, TAU);
   }
+  g.fillStyle = css(mix(hex('#f2dcb0'), k.fill, 0.35), 0.95);
+  g.fill(ends);
+  g.strokeStyle = css(mix(k.fill, hex('#4a3640'), 0.5), 0.8);
+  g.lineWidth = 0.2;
+  g.stroke(ends);
+  g.strokeStyle = css(mix(k.fill, hex('#7a5a48'), 0.35), 0.5);
+  g.lineWidth = 0.12;
+  g.stroke(rings);
 };
 
 /** Bark: long streaks down a log, and a knot now and then. */
 const barkPaint: BridgePainter = (g, k, f, st) => grainPaint(g, k, f, st);
 
-/** The rope from one post to the next, hanging. */
-function rope(k: Kit, part: Part3, a: L, b: L, zs: number[], sag: number): void {
-  const reach: L[] = [[a[0], a[1], a[2] + Math.max(...zs) + 1], [b[0], b[1], b[2] + Math.min(...zs) - sag - 1]];
+/** The ropes hung between posts: each span from one post to the next, sagging, lashed round the post at each end; all of them one drawing. */
+function ropes(k: Kit, part: Part3, spans: Array<[L, L]>, zs: number[], sag: number): void {
+  if (!spans.length) return;
+  const reach: L[] = spans.flatMap(([a, b]): L[] => [[a[0], a[1], a[2] + Math.max(...zs) + 1], [b[0], b[1], b[2] + Math.min(...zs) - sag - 1]]);
   k.loose(part, (g, e) => {
     g.lineCap = 'round';
     g.lineJoin = 'round';
-    for (const zo of zs) {
-      g.beginPath();
-      for (let q = 0; q <= 8; q++) {
-        const f = q / 8;
-        const p: L = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f + zo - sag * 4 * f * (1 - f)];
-        const [x, y] = proj(e, k.m(p));
-        if (q) g.lineTo(x, y); else g.moveTo(x, y);
-      }
-      g.strokeStyle = css(hex('#6a5048'));
-      g.lineWidth = 1.9;
-      g.stroke();
-      g.strokeStyle = css(LOG.rope.lit);
-      g.lineWidth = 0.9;
-      g.stroke();
-      // Its lashing round the post at each end.
-      for (const p of [a, b]) {
-        const [x, y] = proj(e, k.m([p[0], p[1], p[2] + zo]));
-        g.beginPath(); g.moveTo(x - 1.5, y - 0.4); g.lineTo(x + 1.5, y + 0.4);
-        g.strokeStyle = css(hex('#6a5048'));
-        g.lineWidth = 2.6;
-        g.stroke();
-        g.strokeStyle = css(LOG.rope.lit);
-        g.lineWidth = 1.5;
-        g.stroke();
+    const line = new Path2D(), lash = new Path2D();
+    for (const [a, b] of spans) {
+      for (const zo of zs) {
+        for (let q = 0; q <= 8; q++) {
+          const f = q / 8;
+          const [x, y] = proj(e, k.m([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f + zo - sag * 4 * f * (1 - f)]));
+          if (q) line.lineTo(x, y); else line.moveTo(x, y);
+        }
+        for (const p of [a, b]) {
+          const [x, y] = proj(e, k.m([p[0], p[1], p[2] + zo]));
+          lash.moveTo(x - 1.5, y - 0.4); lash.lineTo(x + 1.5, y + 0.4);
+        }
       }
     }
+    const dark = css(hex('#6a5048')), lit = css(LOG.rope.lit);
+    g.strokeStyle = dark; g.lineWidth = 1.9; g.stroke(line);
+    g.strokeStyle = lit; g.lineWidth = 0.9; g.stroke(line);
+    g.strokeStyle = dark; g.lineWidth = 2.6; g.stroke(lash);
+    g.strokeStyle = lit; g.lineWidth = 1.5; g.stroke(lash);
   }, reach, 2.6);
 }
 
@@ -103,11 +104,12 @@ const logRail: RailSpec = {
   // A round post, its top cut to a blunt point.
   post: (s, t, z) => [...bar([s, t, z], [s, t, z + 8.4], rnd(1.4, 6), LOG.post), ...cone(s, t, z + 8.4, 1.4, 1.3, 6, LOG.post)],
   run: (k, part, _order, a, b, posts) => {
+    const spans: Array<[L, L]> = [];
     for (let i = 0; i + 1 < posts.length; i++) {
       const pa: L = lerp(a, b, posts[i]), pb: L = lerp(a, b, posts[i + 1]);
-      if (!ownNear(k, Math.min(pa[0], pb[0]), Math.max(pa[0], pb[0]))) continue;
-      rope(k, part, pa, pb, [7.6, 4.3], 1.5);
+      if (ownNear(k, Math.min(pa[0], pb[0]), Math.max(pa[0], pb[0]))) spans.push([pa, pb]);
     }
+    ropes(k, part, spans, [7.6, 4.3], 1.5);
     // The glow runs along the upper rope, as straight as the eye allows at night.
     const { sl } = k;
     const lo = Math.max(Math.min(a[0], b[0]), sl.s0), hi = Math.min(Math.max(a[0], b[0]), sl.s1);
