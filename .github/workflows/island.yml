@@ -2597,6 +2597,26 @@ jobs:
             --outfile=node_modules/.cache/storeyview.mjs --log-level=error
           node node_modules/.cache/storeyview.mjs
 
+      - name: No plan on a bare side of storey 2 and up
+        if: matrix.shard == 3
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          STOREY_STRICT: '1'
+        run: |
+          # "On storey 2+ you can select a wall option 'no plan' that removes
+          # the plan model and leaves the wall blank". A bare outside side of
+          # storey 2 marked No plan and marked out again, in the same words on
+          # both sides; refused on the ground storey, inside, off the
+          # building, where a wall is planned and twice; a wall planned on it,
+          # the storey removed or the building removed clears it; a fresh
+          # browser is handed it by the ground read; with every side marked
+          # the storey is as open as before (level_gap, a roof refused). Drawn
+          # in Chrome: no plan model on a marked side, one on every other;
+          # No plan and Mark out on storey 2's menu only.
+          npx esbuild supabase/test/noplan.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/noplan.mjs --log-level=error
+          node node_modules/.cache/noplan.mjs
+
       - name: Glassblowing, glass panels, bottles and the stained glass wall
         if: matrix.shard == 3
         run: |

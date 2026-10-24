@@ -722,6 +722,19 @@ export interface Column extends Bill {
 /** What a column of a material takes to build: `COLUMN_SHARE` of a solid wall of it, rounded up. */
 export const columnBill = (material: string): Bill => scaledBill(material, COLUMN_SHARE);
 
+/** The lowest storey a side may be marked No plan on: storey 2. */
+export const NO_PLAN_FROM = 1;
+/**
+ * No plan: a bare outside side of storey 2 and up drawn with no plan model
+ * on it. Shown only: the side is open for every rule that asks a storey
+ * closed in (`levelGaps`). Planning a wall on it, or removing the storey or
+ * the building, clears it. `no_plan_side` on the island.
+ */
+export interface NoPlan extends Border {
+  building: number;
+  level: number;
+}
+
 export const tileKey = (x: number, y: number): string => `${x},${y}`;
 const wallKey = (level: number, b: Border): string => `${level}:${b.dir}:${b.x},${b.y}`;
 const floorKey = (level: number, x: number, y: number): string => `${level}:${x},${y}`;
@@ -740,6 +753,8 @@ export interface BuildingsJSON {
   cellars?: CellarTile[];
   /** The columns standing on its corners, where there are any. */
   columns?: Column[];
+  /** The sides marked No plan (`NoPlan`). */
+  noPlan?: NoPlan[];
 }
 
 export class Buildings {
@@ -755,6 +770,8 @@ export class Buildings {
   readonly cellars = new Map<string, CellarTile>();
   /** Columns, by storey and corner. */
   readonly columns = new Map<string, Column>();
+  /** Sides marked No plan, by storey and border, as walls are keyed. */
+  readonly noPlans = new Map<string, NoPlan>();
   /**
    * The tiles out past every footprint that carry a floor of a storey, and
    * whose: a jetty's, a balcony's, or the roof over one (`jettyAt`). Kept as
@@ -872,7 +889,10 @@ export class Buildings {
       this.pierTiles.delete(key);
       this.pierStamp++;
     }
-    if (!b.tiles.length) this.list.delete(b.id);
+    if (!b.tiles.length) {
+      this.list.delete(b.id);
+      this.dropNoPlans(b.id);
+    }
   }
 
   /** Edge-adjacent buildings around a tile. */
@@ -929,7 +949,30 @@ export class Buildings {
     const border = borderOf(x, y, side);
     const wall: Wall = { building, level, x: border.x, y: border.y, dir: border.dir, type, material, ...wallBill(material, type, scale) };
     this.walls.set(wallKey(level, border), wall);
+    // A wall planned on a side marked No plan clears the mark.
+    this.noPlans.delete(wallKey(level, border));
     return wall;
+  }
+
+  /** Whether a border of a storey is marked No plan (`NoPlan`). */
+  noPlan(level: number, border: Border): boolean {
+    return this.noPlans.size > 0 && this.noPlans.has(wallKey(level, border));
+  }
+
+  /** Mark a side of a tile of a building's storey No plan. */
+  markNoPlan(b: Building, level: number, x: number, y: number, side: Side): void {
+    const border = borderOf(x, y, side);
+    this.noPlans.set(wallKey(level, border), { building: b.id, level, ...border });
+  }
+
+  /** Take the No plan mark off a side: its plan model is drawn again. */
+  markOut(level: number, x: number, y: number, side: Side): void {
+    this.noPlans.delete(wallKey(level, borderOf(x, y, side)));
+  }
+
+  /** Clear a building's No plan marks on storey `from` and up: a storey removed, or the building. */
+  dropNoPlans(id: number, from = 0): void {
+    for (const [k, m] of this.noPlans) if (m.building === id && m.level >= from) this.noPlans.delete(k);
   }
 
   /**
@@ -1564,7 +1607,7 @@ export class Buildings {
   toJSON(): BuildingsJSON {
     return {
       nextId: this.nextId, list: [...this.list.values()], walls: [...this.walls.values()], floors: [...this.floors.values()],
-      cellars: [...this.cellars.values()], columns: [...this.columns.values()],
+      cellars: [...this.cellars.values()], columns: [...this.columns.values()], noPlan: [...this.noPlans.values()],
     };
   }
 
@@ -1585,6 +1628,7 @@ export class Buildings {
     this.floors.clear();
     this.cellars.clear();
     this.columns.clear();
+    this.noPlans.clear();
     this.jettyIndex.clear();
     this.nextId = data.nextId ?? 1;
     // A choice for a building that is gone goes with it: a new one given its number starts on its own top storey.
@@ -1610,6 +1654,7 @@ export class Buildings {
       this.cornerIndex.set(cornerNumber(c.x, c.y), (this.cornerIndex.get(cornerNumber(c.x, c.y)) ?? 0) + 1);
     }
     for (const c of data.cellars ?? []) if (c.dug > 0) this.cellars.set(tileKey(c.x, c.y), c);
+    for (const m of data.noPlan ?? []) this.noPlans.set(wallKey(m.level, m), m);
   }
 
   static fromJSON(data: BuildingsJSON | undefined): Buildings {

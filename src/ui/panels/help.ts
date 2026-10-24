@@ -35,7 +35,7 @@ import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_
 import { HOARD_LUMPS, HOARD_MORE } from '../../game/butcher';
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, columnBill, floorBill, GLASS_ROOF, HEFT_WORDS, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIALS as WALL_MATERIALS, onlySaid, OUTSIDE_STAIR_LEVEL, takesAs,
-  MAX_LEVELS, RAILING_HEIGHT, roofShapeDef, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, STAIRS_SHARE, roofShapeOf, SIDE_NAMES, WALL_HEIGHT, wallBill, WALL_TYPE_BY_ID, WALL_TYPES,
+  MAX_LEVELS, NO_PLAN_FROM, RAILING_HEIGHT, roofShapeDef, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, STAIRS_SHARE, roofShapeOf, SIDE_NAMES, WALL_HEIGHT, wallBill, WALL_TYPE_BY_ID, WALL_TYPES,
 } from '../../game/building';
 import { CELLAR_ACTION_BY_ID, CELLAR_DAYLIGHT, cellarOutdoor } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
@@ -1702,6 +1702,8 @@ export function helpText(): string {
       <li>Floors: planned the same way; laid with paving.</li>
       <li>2nd storey: needs every side of the ground storey finished as a wall, or with a finished column at each end. 3rd and up: planned over a storey still going up. Max ${MAX_LEVELS} storeys.</li>
       <li>Actions go to the storey you are working on (<b>Work on storey N</b> on its menu).</li>
+      <li><b>No plan</b>, storey ${NO_PLAN_FROM + 1} and up, on a bare outside side: no plan model drawn there. No tool, no materials. The side still counts as open
+      (next storey, roof, glasshouse). <b>Mark out</b>: the model back. Cleared by a wall planned on it, or the storey or building removed.</li>
       <li>A finished full-height wall with a wall of the storey above on the same side (once any of that wall's materials are in) cannot come down until that upper
       wall does, or a finished column stands at each end; likewise the last wall a jetty rests on. To turn one into a door: column at each end, take it down, build the door.</li>
       <li>Roof: <b>Plan roof</b> tile by tile once the top storey's walls are done; neighbours join into ridges and hips.</li>

@@ -26,6 +26,7 @@ import {
   type FloorKind,
   type MaterialDef,
   jobLevel,
+  NO_PLAN_FROM,
 } from './building';
 import { dyeChoice, dyeEnough, dyeReason, litresWord, paneTint, pickDye, spendDye, TINTED_PANE } from './dyes';
 import { capital } from './words';
@@ -185,6 +186,28 @@ const wallLevel = (g: Game, t: TileTarget): number => wallLevelOf(g, t);
 /** The wall or fence on the side of a tile that is being worked on. */
 const wallAt = (g: Game, t: TileTarget) => (t.side ? g.buildings.wall(wallLevel(g, t), t.x, t.y, t.side) : undefined);
 const material = (id: string | undefined): MaterialDef | undefined => (id ? MATERIAL_BY_ID.get(id) : undefined);
+
+const SIDES: readonly Side[] = ['n', 'e', 's', 'w'];
+/**
+ * Why a side cannot be marked No plan (`no_plan`), or the mark taken off it
+ * (`mark_out`), or null: a bare outside side of a building's storey 2 and up,
+ * on the storey the job names (`jobLevel`). The island's `no_plan_refusal`
+ * says the same, in the same order.
+ */
+export function noPlanReason(g: Game, t: TileTarget, id: 'no_plan' | 'mark_out'): string | null {
+  if (!t.side || !SIDES.includes(t.side)) return 'Choose a side.';
+  const b = buildingOf(g, t);
+  if (!b) return 'No building here.';
+  const level = jobLevel(b, t);
+  if (level < NO_PLAN_FROM) return `Storey ${NO_PLAN_FROM + 1} and up only.`;
+  const [ox, oy] = across(t.x, t.y, t.side);
+  if (g.buildings.buildingAt(ox, oy)?.id === b.id) return 'Outside sides only.';
+  if (g.buildings.wall(level, t.x, t.y, t.side)) return 'Already a wall on that side.';
+  const marked = g.buildings.noPlan(level, borderOf(t.x, t.y, t.side));
+  if (id === 'no_plan' && marked) return 'Already no plan.';
+  if (id === 'mark_out' && !marked) return 'Already marked out.';
+  return null;
+}
 
 /** Building work. These are hidden from the generic menu; the UI composes them with sides and materials. */
 export const BUILD_ACTIONS: ActionDef[] = [
@@ -633,6 +656,49 @@ export const BUILD_ACTIONS: ActionDef[] = [
       g.events.emit('world', t.x, t.y);
     },
   },
+  /*
+   * No plan: a bare outside side of storey 2 and up drawn with no plan model
+   * on it, and the mark taken off again. Shown only: the side stays open to
+   * every rule that asks the storey closed in.
+   */
+  {
+    id: 'no_plan',
+    label: 'No plan',
+    verb: 'clearing the plan model',
+    hidden: true,
+    stamina: 0.01,
+    baseTime: 1,
+    applies: (t, g) => isTile(t) && !!buildingOf(g, t),
+    check: (t, g) => (isTile(t) ? noPlanReason(g, t, 'no_plan') : 'Choose a side.'),
+    perform: (t, g) => {
+      if (!isTile(t) || !t.side) return;
+      const b = buildingOf(g, t);
+      if (!b || noPlanReason(g, t, 'no_plan')) return;
+      const level = jobLevel(b, t);
+      g.buildings.markNoPlan(b, level, t.x, t.y, t.side);
+      g.logMsg(`No plan: ${SIDE_NAMES[t.side]} side, storey ${level + 1}.`, 'event');
+      g.events.emit('world', t.x, t.y);
+    },
+  },
+  {
+    id: 'mark_out',
+    label: 'Mark out',
+    verb: 'marking out the side',
+    hidden: true,
+    stamina: 0.01,
+    baseTime: 1,
+    applies: (t, g) => isTile(t) && !!buildingOf(g, t),
+    check: (t, g) => (isTile(t) ? noPlanReason(g, t, 'mark_out') : 'Choose a side.'),
+    perform: (t, g) => {
+      if (!isTile(t) || !t.side) return;
+      const b = buildingOf(g, t);
+      if (!b || noPlanReason(g, t, 'mark_out')) return;
+      const level = jobLevel(b, t);
+      g.buildings.markOut(level, t.x, t.y, t.side);
+      g.logMsg(`Marked out: ${SIDE_NAMES[t.side]} side, storey ${level + 1}.`, 'event');
+      g.events.emit('world', t.x, t.y);
+    },
+  },
   {
     id: 'add_floor',
     label: 'Plan another storey',
@@ -903,6 +969,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!b || b.levels <= 1) return;
       b.levels -= 1;
       b.workLevel = b.levels - 1;
+      // Its sides marked No plan go with it.
+      g.buildings.dropNoPlans(b.id, b.levels);
       glassResync(g);
       g.logMsg(`${b.name}: ${b.levels} ${b.levels === 1 ? 'storey' : 'storeys'}.`, 'event');
       g.events.emit('world', t.x, t.y);

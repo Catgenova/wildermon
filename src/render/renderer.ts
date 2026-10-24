@@ -6572,8 +6572,9 @@ export class Renderer {
            * a footprint still looks like one.
            */
           const plan = bld.edgeOf(border);
-          // A side with a column at an end of it is built, not marked out: it is open on purpose (`framing.ts`).
-          if (plan && !(cutaway && building?.id !== plan.id) && !this.cut.has(plan.id) && !this.columnEnds(border)) {
+          // A side with a column at an end of it is built, not marked out: it is open on purpose (`framing.ts`). Nor a side
+          // marked No plan (`NoPlan`).
+          if (plan && !(cutaway && building?.id !== plan.id) && !this.cut.has(plan.id) && !this.columnEnds(border) && !bld.noPlan(level, border)) {
             const [tx, ty] = border.dir === 'h'
               ? [border.x, bld.buildingAt(border.x, border.y) === plan ? border.y : border.y - 1]
               : [bld.buildingAt(border.x, border.y) === plan ? border.x : border.x - 1, border.y];

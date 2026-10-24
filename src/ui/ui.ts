@@ -29,6 +29,8 @@ import {
   WALL_TYPES,
   CELLAR_DEPTH,
   CELLAR_LEVEL,
+  borderOf,
+  NO_PLAN_FROM,
   type Building,
   type RoofShape,
   type Side,
@@ -3436,6 +3438,13 @@ export class UI {
             };
           }),
         });
+      }
+      // No plan: a bare outside side of storey 2 and up, drawn with no plan model; or the mark taken off (`noPlanReason`).
+      const [ox, oy] = side === 'n' ? [x, y - 1] : side === 's' ? [x, y + 1] : side === 'w' ? [x - 1, y] : [x + 1, y];
+      if (level >= NO_PLAN_FROM && bld.buildingAt(ox, oy)?.id !== b.id) {
+        entries.push(bld.noPlan(level, borderOf(x, y, side))
+          ? item(act('mark_out'), withSide, `Mark out (${sideName})`)
+          : item(act('no_plan'), withSide, `No plan (${sideName})`));
       }
     }
     // Every storey's wall on this side, whichever storey is being worked on.
