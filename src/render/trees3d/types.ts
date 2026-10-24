@@ -46,6 +46,11 @@ export interface Clump {
   out: number;
   /** How high up the crown, 0 its underside to 1 its top. */
   up: number;
+  /**
+   * Where it is a cluster: the lumps it is made of, each `o` off its middle
+   * and `r` across, all inside `r` of it. Painted as one mass with one rim.
+   */
+  subs?: Array<{ o: V3; r: number }>;
 }
 
 /** The crown's ellipsoid: what the clumps are kept inside and lit against. */
@@ -64,6 +69,8 @@ export interface Skeleton {
   rune: number | null;
   /** A hollow in the trunk, facing this way, when it has one. */
   hollow: number | null;
+  /** How far past a mass's `r` its leaf reaches on the screen, for the bounds of its picture: 1.45 unless given. */
+  leafReach?: number;
 }
 
 /** The tree's proportions at one age, in model units. */
