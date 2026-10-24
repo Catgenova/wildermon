@@ -1,6 +1,6 @@
 import { rand } from '../../ivy';
 import { add, cross, css, hex, inlay, mix, mul, nail, sub, TAU, unit, type RGB, type Tone, type V3 } from '../core';
-import { BUILDERS, FORM_HIGH, FORM_TIERS, U, boardPaint, byRole, refugeGaps, turned, type BridgePainter, type Builders, type FaceInfo, type Form, type Kit, type L, type Part3, type Pier, type Role } from './core';
+import { BUILDERS, FORM_HIGH, FORM_TIERS, U, boardPaint, byRole, refugeGaps, ownerOf, turned, type BridgePainter, type Builders, type FaceInfo, type Form, type Kit, type L, type Part3, type Pier, type Role } from './core';
 import { grainPaint, timberBase } from './base';
 
 /**
@@ -158,16 +158,8 @@ export function ownFar(k: Kit, a: number, b: number): boolean {
   return toward >= 0;
 }
 
-/** Of something on an outer face or on the deck, whether this slice draws it: the one nearer the eye where it straddles a cut, so nothing of the other is laid over it. */
-export function ownNear(k: Kit, a: number, b: number): boolean {
-  const { sl, plan } = k;
-  if (b < sl.s0 - EPS || a > sl.s1 + EPS) return false;
-  const loIn = a >= sl.s0 - EPS || sl.s0 <= EPS, hiIn = b <= sl.s1 + EPS || sl.s1 >= plan.n - EPS;
-  if (loIn && hiIn) return true;
-  const toward = k.A[0] * k.e.toward[0] + k.A[1] * k.e.toward[1];
-  if (!loIn) return toward >= 0;
-  return toward < 0;
-}
+/** Of something on an outer face or on the deck, whether this slice draws it (`ownerOf`: the nearer where it straddles a cut), what runs past an end of the bridge taken as ending there. */
+export const ownNear = (k: Kit, a: number, b: number): boolean => ownerOf(k, Math.max(a, 0), Math.min(b, k.plan.n)) !== null;
 
 /* ---- what a timber bridge is built of ------------------------------------------------------------ */
 
@@ -597,25 +589,27 @@ export function carpentry(c: Carpentry): Partial<Builders> {
 
 /* ---- painters ------------------------------------------------------------------------------------------ */
 
-/** A plaque's face: a bevelled border, two pegs, and the rune inlaid in gold. */
-export function plaquePaint(glyph: string): BridgePainter {
-  return (g, k, f) => {
-    const x0 = Math.min(f.x0, f.x1), x1 = Math.max(f.x0, f.x1), y0 = Math.min(f.y0, f.y1), y1 = Math.max(f.y0, f.y1);
-    const w = x1 - x0, h = y1 - y0;
+/**
+ * A plaque's face, `w` by `h` units either side of its middle, from its
+ * frame's corner: a bevelled border and the rune inlaid in gold. Sized by
+ * the plaque, not by the face it is told of, as one on a cut is laid in halves.
+ */
+export function plaquePaint(glyph: string, w: number, h: number): BridgePainter {
+  return (g, k) => {
+    const x1 = 2 * w, y1 = 2 * h;
     g.strokeStyle = css(mix(k.fill, hex('#4a3640'), 0.45), 0.8);
     g.lineWidth = 0.22;
-    g.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
+    g.strokeRect(0.5, 0.5, x1 - 1, y1 - 1);
     g.strokeStyle = css(mix(k.fill, [255, 248, 232], 0.5), 0.6);
     g.lineWidth = 0.14;
-    g.beginPath(); g.moveTo(x0 + 0.65, y0 + 0.65); g.lineTo(x0 + 0.65, y1 - 0.65); g.lineTo(x1 - 0.65, y1 - 0.65); g.stroke();
-    inlay(g, k.fill, glyph, (x0 + x1) / 2, (y0 + y1) / 2, Math.min(w, h) * 0.36, 0.34);
+    g.beginPath(); g.moveTo(0.65, 0.65); g.lineTo(0.65, y1 - 0.65); g.lineTo(x1 - 0.65, y1 - 0.65); g.stroke();
+    inlay(g, k.fill, glyph, w, h, Math.min(w, h) * 0.72, 0.34);
   };
 }
 
-/** A rune inlaid in the middle of a face whose frame's nought is its middle (a log's cut end, a round plaque). */
-export function roundRune(glyph: string): BridgePainter {
-  return (g, k, f) => {
-    const r = f.x1;
+/** A rune inlaid in a roundel `r` units round, its middle at its frame's nought. */
+export function roundRune(glyph: string, r: number): BridgePainter {
+  return (g, k) => {
     g.strokeStyle = css(mix(k.fill, hex('#6a4a40'), 0.4), 0.7);
     g.lineWidth = 0.18;
     g.beginPath(); g.arc(0, 0, r * 0.82, 0, TAU); g.stroke();
@@ -625,7 +619,7 @@ export function roundRune(glyph: string): BridgePainter {
 
 /** Growth rings on a log's cut end, its pith at the frame's nought; a check split out from it. */
 export const ringsPaint: BridgePainter = (g, k, f) => {
-  const r = f.x1;
+  const r = Math.max(Math.abs(f.x0), Math.abs(f.x1));
   g.strokeStyle = css(mix(k.fill, hex('#7a5a48'), 0.4), 0.55);
   g.lineWidth = 0.13;
   for (let q = r * 0.25; q < r * 0.95; q += r * 0.24) { g.beginPath(); g.arc(0, 0, q, 0, TAU); g.stroke(); }
@@ -766,7 +760,7 @@ export const plank = timberBase('plank', {
     beam: sawnPaint,
     post: grainPaint,
     rail: grainPaint,
-    key: plaquePaint('kenaz'),
+    key: plaquePaint('kenaz', 3.5, 3.9),
     lamp: clothPaint('kenaz'),
   }),
   build: carpentry(plankCarpentry),

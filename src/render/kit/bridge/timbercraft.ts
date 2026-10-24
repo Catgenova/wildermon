@@ -122,7 +122,8 @@ function arches(k: Kit, c: Carpentry): void {
       const ord = k.ord(edge, -1.4);
       // The far face's ribs are seen only from inside: their inner faces.
       const near = edge === sl.near;
-      const ribs: Array<[number, number]> = [[R, R - 2.6], [R - 4.6, R - 7]];
+      // The far face only its upper rib: the lower one's feet, seen from inside past the near posts, are slivers.
+      const ribs: Array<[number, number]> = near ? [[R, R - 2.6], [R - 4.6, R - 7]] : [[R, R - 2.6]];
       for (const [ro, ri] of ribs) {
         const th0 = Math.asin(Math.min(1, A / ri)), th1 = Math.asin(Math.min(1, A / ro));
         const N = 12;
@@ -148,7 +149,7 @@ function arches(k: Kit, c: Carpentry): void {
       }
       // Blocks between the ribs.
       const thB = Math.asin(Math.min(1, A / (R - 2.6)));
-      for (const f of [-0.75, -0.5, -0.25, 0.25, 0.5, 0.75]) {
+      for (const f of near ? [-0.75, -0.5, -0.25, 0.25, 0.5, 0.75] : []) {
         const th = f * thB;
         lay(k, 'front', ord - 0.02, bar(at(R - 2.4, th, tr), at(R - 4.8, th, tr), sq(1.0, 0.9), TC.beam), 's');
       }
@@ -235,7 +236,7 @@ export const timbercraft = timberBase('timbercraft', {
     rail: paintedPaint,
     ring: ribPaint,
     cornice: fasciaPaint,
-    key: plaquePaint('ingwaz'),
+    key: plaquePaint('ingwaz', 3.4, 4.4),
     lamp: clothPaint('ingwaz'),
   }),
   build: carpentry(tcCarpentry),

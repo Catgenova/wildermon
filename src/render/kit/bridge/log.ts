@@ -190,7 +190,7 @@ export const log = timberBase('log', {
     beam: barkPaint,
     post: barkPaint,
     plinth: ringsPaint,
-    key: roundRune('thurisaz'),
+    key: roundRune('thurisaz', 4),
     lamp: clothPaint('thurisaz'),
   }),
   build: carpentry(logCarpentry),
