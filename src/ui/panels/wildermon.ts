@@ -499,6 +499,18 @@ export class WildermonPanel {
       if (el.textContent !== text) el.textContent = text;
       if (el.title !== title) el.title = title;
     };
+    // Written only when it changes: a refresh of every card is a few hundred figures, nearly all the same as before.
+    const say = (el: { textContent: string | null }, text: string): void => {
+      if (el.textContent !== text) el.textContent = text;
+    };
+    const tip = (el: HTMLElement, title: string): void => {
+      if (el.title !== title) el.title = title;
+    };
+    const hide = (el: HTMLElement, hidden: boolean): void => {
+      if (el.hidden !== hidden) el.hidden = hidden;
+    };
+    // The trait chips and the "In all" row, kept by what they say.
+    let bloodSays = '', worthSays = '';
 
     const refresh = (c: Creature): void => {
       cur = c;
@@ -511,7 +523,7 @@ export class WildermonPanel {
       if (rarityName.textContent !== named) rarityName.textContent = named;
       const figures = gives.length ? ` · ${gives.join(' · ')}` : '';
       if (rarityGives.textContent !== figures) rarityGives.textContent = figures;
-      rarity.hidden = !what;
+      hide(rarity, !what);
       const hue = c.rare ? rarityOf(c).css : '';
       if (rarityName.style.color !== hue) rarityName.style.color = hue;
       // Age reads before anything else: a yearling cannot be worked at all.
@@ -544,27 +556,35 @@ export class WildermonPanel {
       };
       const top = maxHealth(c, def);
       width(health.fill, c.health / top);
-      health.value.textContent = `${Math.ceil(c.health)}/${top}`;
+      say(health.value, `${Math.ceil(c.health)}/${top}`);
       width(hunger.fill, c.hunger);
-      hunger.value.textContent = `${Math.round(c.hunger * 100)}%`;
+      say(hunger.value, `${Math.round(c.hunger * 100)}%`);
       // What a meal is putting on its learning now, and what its favourite would (`fedOn`).
-      hunger.row.title = [wellFedSays(c, this.game.time), favouriteSays(def)].filter(Boolean).join(' \u00b7 ');
+      tip(hunger.row, [wellFedSays(c, this.game.time), favouriteSays(def)].filter(Boolean).join(' \u00b7 '));
       width(care.fill, c.care);
-      care.value.textContent = `${Math.round(c.care * 100)}%`;
+      say(care.value, `${Math.round(c.care * 100)}%`);
       // What brushing is worth, said as the figure the rules read rather than
       // as “a quarter”, which was a number written in prose and never checked.
-      care.row.title = `${careWord(c.care)} \u2014 work and learning \u00d7${careMul(c).toFixed(2)}, max \u00d7${(1 + CARE_BONUS).toFixed(2)} at full care; better young`;
+      tip(care.row, `${careWord(c.care)} \u2014 work and learning \u00d7${careMul(c).toFixed(2)}, max \u00d7${(1 + CARE_BONUS).toFixed(2)} at full care; better young`);
 
       // Who it was bred from, over the traits it had from them, and how deep its
       // line runs on each channel it runs past one on (`lineLines`). Nothing at
       // all for anything that was not bred, or was born before pedigrees were kept.
       const bred = c.pedigree ? [pedigreeLine(c.pedigree), ...lineLines(c)].join('\n') : '';
       if (pedigree.textContent !== bred) pedigree.textContent = bred;
-      pedigree.hidden = !bred;
-      bloodBox.replaceChildren(...this.blood(c).childNodes);
+      hide(pedigree, !bred);
+      const b = this.blood(c);
+      if (b.innerHTML !== bloodSays) {
+        bloodSays = b.innerHTML;
+        bloodBox.replaceChildren(...b.childNodes);
+      }
       const w = this.worth(c);
-      worthBox.replaceChildren(...(w ? [...w.childNodes] : []));
-      worthBox.hidden = !w;
+      const worthNow = w?.innerHTML ?? '';
+      if (worthNow !== worthSays) {
+        worthSays = worthNow;
+        worthBox.replaceChildren(...(w ? [...w.childNodes] : []));
+      }
+      hide(worthBox, !w);
       const tags = [...baseStatTags(this.game, c), ...fittedTags(this.game, c), ...gearTags(c)];
       const statKey = tags.map((t) => t.text).join('|');
       if (statBox.dataset.says !== statKey) {
@@ -617,14 +637,14 @@ export class WildermonPanel {
       const job = c.trade ?? def.gathers;
       const idle = place === 'deed' && c.idle ? idleSays(c.idle, job, c.carrying ? itemDef(c.carrying.id).name : null) : '';
       if (idleLine.textContent !== idle) idleLine.textContent = idle;
-      idleLine.hidden = !idle;
+      hide(idleLine, !idle);
       const ledger = c.mode === 'deed' ? ledgerLines(c.ledger, this.game.islandDay()).join('\n') : '';
       if (ledgerBox.textContent !== ledger) ledgerBox.textContent = ledger;
-      ledgerBox.hidden = !ledger;
+      hide(ledgerBox, !ledger);
       const work = workLines(c.work, c.ledger);
       const worked = work.length ? ['Work', ...work].join('\n') : '';
       if (workBox.textContent !== worked) workBox.textContent = worked;
-      workBox.hidden = !worked;
+      hide(workBox, !worked);
     };
 
     return { el: card, refresh };

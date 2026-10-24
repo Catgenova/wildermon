@@ -181,9 +181,21 @@ export class DeedPanel {
     this.body.className = 'deed-list';
     this.boardHead.className = 'deed-head';
     win.body.append(this.body);
-    game.events.on('world', () => this.render());
-    game.events.on('inventory', () => this.render());
+    // Drawn at once while it shows; shut, when it is next opened.
+    game.events.on('world', () => this.soon());
+    game.events.on('inventory', () => this.soon());
+    win.onOpen = () => {
+      if (this.stale) this.render();
+    };
     this.render();
+  }
+
+  /** What it shows has changed since it was last drawn, while it was shut. */
+  private stale = false;
+
+  private soon(): void {
+    if (this.win.isOpen) this.render();
+    else this.stale = true;
   }
 
   /**
@@ -537,6 +549,7 @@ export class DeedPanel {
   }
 
   render(): void {
+    this.stale = false;
     if (this.tab !== 'overview' && this.roll) this.renderBoard();
     else this.renderOverview();
   }

@@ -37,6 +37,9 @@ export const TABS: Array<{ id: string; label: string; title: string; kinds: LogK
   { id: 'error', label: 'Trouble', title: 'Errors and refusals', kinds: ['error'] },
 ];
 
+/** Lines the list keeps, the oldest let go past it. */
+const LIST_MAX = 400;
+
 export class EventLogPanel {
   private list: HTMLDivElement;
   readonly input: HTMLInputElement;
@@ -46,6 +49,9 @@ export class EventLogPanel {
   private search: HTMLInputElement;
   private tabEls = new Map<string, HTMLButtonElement>();
   private unread = new Map<string, number>();
+  /** Lines come in since the list was last brought up to date, laid in together once a frame (`flush`). */
+  private pending: LogEntry[] = [];
+  private flushing = 0;
 
   constructor(
     win: UIWindow,
@@ -128,6 +134,8 @@ export class EventLogPanel {
 
   /** Redraw the whole list from the game's own log. */
   private render(): void {
+    // Everything in the game's log, the lines waiting included.
+    this.pending.length = 0;
     this.list.replaceChildren();
     let shown = 0;
     for (const entry of this.game.log) {
@@ -148,18 +156,28 @@ export class EventLogPanel {
     this.list.scrollTop = this.list.scrollHeight;
   }
 
-  /** A line has come in: add it if it belongs here, and count it if it does not. */
+  /** A line has come in: counted now, laid in with the others that come in this frame. */
   private arrived(entry: LogEntry): void {
     for (const t of TABS) {
       if (t === this.tab || (t.kinds && !t.kinds.includes(entry.kind))) continue;
       this.unread.set(t.id, (this.unread.get(t.id) ?? 0) + 1);
     }
+    this.pending.push(entry);
+    if (this.pending.length > LIST_MAX) this.pending.shift();
+    if (!this.flushing) this.flushing = requestAnimationFrame(() => this.flush());
+  }
+
+  /** Add the lines that came in and belong here, then scroll to them once, rather than once a line. */
+  private flush(): void {
+    this.flushing = 0;
     this.marks();
-    if (!this.keeps(entry)) return;
+    const lines = this.pending.filter((e) => this.keeps(e));
+    this.pending.length = 0;
+    if (!lines.length) return;
     // The first real line clears the "nothing of that sort" notice.
     if (this.list.firstElementChild && !this.list.querySelector('.log-time')) this.list.replaceChildren();
-    this.list.append(this.line(entry));
-    while (this.list.childElementCount > 400) this.list.firstElementChild?.remove();
+    this.list.append(...lines.map((e) => this.line(e)));
+    while (this.list.childElementCount > LIST_MAX) this.list.firstElementChild?.remove();
     if (this.pinned) this.list.scrollTop = this.list.scrollHeight;
   }
 
@@ -169,6 +187,8 @@ export class EventLogPanel {
       const el = this.tabEls.get(t.id);
       if (!el) continue;
       const n = t === this.tab ? 0 : (this.unread.get(t.id) ?? 0);
+      if (el.dataset.n === String(n)) continue;
+      el.dataset.n = String(n);
       el.textContent = t.label;
       if (n) {
         const count = document.createElement('span');

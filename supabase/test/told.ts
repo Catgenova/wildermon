@@ -160,8 +160,11 @@ const ashore = (x: number, y: number, level: number): Island => {
 /** The body walks to x, y on a storey, and the game hands that to `move` with the time on its own clock. */
 const go = (isle: Island, x: number, y: number, level: number, now: number, stairs: boolean): void => {
   Object.assign(body, { x, y, level });
+  // Whether the game, which calls `move` only when `wordDue` says so or on its round, would have called it here.
+  dues.push(isle.wordDue(x, y, level, now, stairs));
   void isle.move(x, y, level, now, undefined, stairs);
 };
+let dues: boolean[] = [];
 
 /** Run a case's steps at their times, in seconds from its start, and wait until `until`. */
 const play = async (steps: Array<[number, () => void]>, until: number): Promise<void> => {
@@ -189,6 +192,7 @@ for (const [label, legs] of [
   ['the first answer quick', [[25, 25], [60, 60], [30, 30]]],
 ] as Array<[string, Array<[number, number]>]>) {
   link = (n) => legs[n] ?? [5, 5];
+  dues = [];
   // The game's clock, which `move` is handed, reads 100 at the start of each case.
   let isle = ashore(10.5, 13.5, 0);
   await play([
@@ -212,6 +216,8 @@ for (const [label, legs] of [
   ], 2);
   const up = heard(upNamed);
   check(`up, ${label}: the island hears C L F G in that order`, up === 'C L F G', up);
+  check(`${label}: every step down and up, onto the stairs and off them, is a word due (\`wordDue\`), so the game calls \`move\` for it at once`,
+    dues.length === 8 && dues.every(Boolean), dues.join(' '));
   check(`up, ${label}: and takes every one, ending on the ground floor with the browser`,
     refusals() === 0 && held.level === 0 && body.level === 0 && put.length === 0,
     `${refusals()} refused; island on ${held.level}, browser on ${body.level}`);
@@ -309,7 +315,7 @@ for (const [label, legs] of [
  * Then ten seconds of standing at the end of it, as the game goes on calling
  * `move` every frame whether the body moves or not.
  */
-const walk = async (there: number, back: number, fast: number): Promise<{ took: number; stoppedAt: number; end: number; words: number[] }> => {
+const walk = async (there: number, back: number, fast: number, gated = false): Promise<{ took: number; stoppedAt: number; end: number; words: number[]; moves: number; frames: number }> => {
   link = () => [there, back];
   const isle = ashore(10.5, 20.5, 0);
   // The keeper's clock is the link's, which the game's runs `fast` times over.
@@ -320,13 +326,22 @@ const walk = async (there: number, back: number, fast: number): Promise<{ took: 
   const words: number[] = [];
   let lastWord = 0;
   let lastSaid = '';
+  // Gated as the game calls it (`main.ts`): when `wordDue` says so, and on a round of a tenth of a second.
+  let round = 0;
+  let moves = 0;
+  let frames = 0;
   for (;;) {
     const secs = (clock() - start) / 1000 * fast;
     const now = 100 + secs;
     const x = 10.5 + WALK * Math.min(secs, 30);
     if (secs >= 30 && !stoppedAt) stoppedAt = clock();
     walkedTo = x;
-    void isle.move(x, 20.5, 0, now, undefined, false);
+    frames++;
+    if (!gated || now >= round || isle.wordDue(x, 20.5, 0, now, false)) {
+      round = now + 0.1;
+      moves++;
+      void isle.move(x, 20.5, 0, now, undefined, false);
+    }
     const said = x.toFixed(2);
     if (said !== lastSaid && now - lastWord >= MOVE_EVERY) {
       words.push(x);
@@ -337,7 +352,7 @@ const walk = async (there: number, back: number, fast: number): Promise<{ took: 
     await sleep(4);
   }
   await sleep(there + back + 50);
-  return { took: stoppedAt - start, stoppedAt, end: 10.5 + WALK * 30, words };
+  return { took: stoppedAt - start, stoppedAt, end: 10.5 + WALK * 30, words, moves, frames };
 };
 const atOnce = (): number => Math.max(0, ...calls.map((c) => calls.filter((d) => d.sentAt < c.doneAt && d.doneAt > c.sentAt).length));
 {
@@ -347,6 +362,14 @@ const atOnce = (): number => Math.max(0, ...calls.map((c) => calls.filter((d) =>
   check('thirty seconds of walking on a quick link sends every word of the one-a-second rule, as before, each in turn',
     sent === words.map((x) => x.toFixed(2)).join(' ') && atOnce() === 1,
     `${calls.length} calls for ${words.length} words, ${atOnce()} on the way at once`);
+}
+{
+  // The same walk, `move` called only when `wordDue` says it has a word or on its tenth-of-a-second round.
+  const { words, moves, frames } = await walk(2, 2, 5, true);
+  const sent = calls.map((c) => c.x.toFixed(2)).join(' ');
+  check('called only when a word is due and on its round, the walk sends the same words, each in turn',
+    sent === words.map((x) => x.toFixed(2)).join(' ') && atOnce() === 1 && moves < frames,
+    `${calls.length} calls for ${words.length} words, ${moves} moves for ${frames} frames, ${atOnce()} on the way at once`);
 }
 {
   const FAST = 10;

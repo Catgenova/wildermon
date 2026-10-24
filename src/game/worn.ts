@@ -34,6 +34,16 @@ export function wornWire(worn: (slot: Slot) => { id: string; rare?: number; extr
   return out;
 }
 
+/** Whether two wire gears say the same, piece by piece. */
+export function sameWorn(a: WornWire, b: WornWire): boolean {
+  for (const slot of SLOTS) {
+    const p = a[slot], q = b[slot];
+    if (p === q) continue;
+    if (!p || !q || p[0] !== q[0] || p[1] !== q[1] || p[2] !== q[2] || p[3] !== q[3]) return false;
+  }
+  return true;
+}
+
 /** What the wire says is worn, made into what the figure draws; nothing for anything it does not recognise. */
 export function gearFrom(raw: unknown): GearLook | undefined {
   if (!raw || typeof raw !== 'object') return undefined;

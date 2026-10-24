@@ -90,9 +90,21 @@ export class StoresPanel {
     this.footer = document.createElement('div');
     this.footer.className = 'inv-footer';
     win.body.append(this.search, bar, this.list, this.footer);
-    game.events.on('crate', () => this.render());
-    game.events.on('world', () => this.render());
+    // Drawn at once while it shows; shut, when it is next opened.
+    game.events.on('crate', () => this.soon());
+    game.events.on('world', () => this.soon());
+    win.onOpen = () => {
+      if (this.stale) this.render();
+    };
     this.render();
+  }
+
+  /** What it shows has changed since it was last drawn, while it was shut. */
+  private stale = false;
+
+  private soon(): void {
+    if (this.win.isOpen) this.render();
+    else this.stale = true;
   }
 
   /** Redraw a few times a second while open; workers are filling these. */
@@ -142,6 +154,7 @@ export class StoresPanel {
   }
 
   render(): void {
+    this.stale = false;
     const all = this.holders();
     const pool = this.near ? all.filter((h) => this.within(h)) : all;
     const shown = this.query ? pool.filter((h) => this.hits(h).length) : pool;

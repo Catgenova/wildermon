@@ -1,4 +1,4 @@
-import type { Bill, Building, Buildings, CellarTile, Column, FloorTile, Wall } from '../game/building';
+import type { Bill, Buildings } from '../game/building';
 
 /**
  * What the renderer knows has changed about the buildings since the last
@@ -39,6 +39,13 @@ const PATCH = 8;
  */
 export const REACH = 2;
 
+/**
+ * How many frames at most go by without a look over the buildings when they
+ * have not said they changed: something set on a wall in place, as a padlock
+ * or a coat of paint is, is drawn within a second whether it says so or not.
+ */
+const LOOK_ANYWAY = 60;
+
 /** A patch, or a tile, as one number: no island is 32768 tiles across. */
 const patchKey = (px: number, py: number): number => (px + 4096) * 65536 + (py + 4096);
 const tileNumber = (x: number, y: number): number => (x + 4096) * 65536 + (y + 4096);
@@ -78,11 +85,21 @@ export class StructureWatch {
   private readonly near = new Set<number>();
   /** Whether something has come or gone, or a building's footprint changed, so `near` is to be made again. */
   private moved = true;
-  private readonly walls = new Map<Wall, WallSeen>();
-  private readonly floors = new Map<FloorTile, FloorSeen>();
-  private readonly columns = new Map<Column, ColumnSeen>();
-  private readonly cellars = new Map<CellarTile, CellarSeen>();
-  private readonly buildings = new Map<Building, BuildingSeen>();
+  /**
+   * What was seen, by the key the buildings keep each under (`Buildings.walls`
+   * and the rest, a building by its number) rather than by the object: every
+   * ground read the island sends brings every wall and floor as a new one,
+   * and by the object every picture in sight was made again each time.
+   */
+  private readonly walls = new Map<string, WallSeen>();
+  private readonly floors = new Map<string, FloorSeen>();
+  private readonly columns = new Map<string, ColumnSeen>();
+  private readonly cellars = new Map<string, CellarSeen>();
+  private readonly buildings = new Map<number, BuildingSeen>();
+  /** The buildings looked at last, their count of changes then (`Buildings.revision`), and the frame of that look. */
+  private of: Buildings | null = null;
+  private revision = -1;
+  private looked = 0;
 
   /** Put up the count of every patch within `REACH` of the tiles from (x0, y0) to (x1, y1). */
   touch(x0: number, y0: number, x1: number, y1: number): void {
@@ -116,15 +133,23 @@ export class StructureWatch {
     return this.near.has(tileNumber(x, y));
   }
 
-  /** Look the buildings over for what has changed since the last frame. */
+  /**
+   * Look the buildings over for what has changed since the last frame: only
+   * when they say they have changed (`Buildings.revision`), or once in
+   * `LOOK_ANYWAY` frames for what is changed on them without saying.
+   */
   update(bld: Buildings): void {
     this.frame++;
+    if (bld === this.of && bld.revision === this.revision && this.frame - this.looked < LOOK_ANYWAY) return;
+    this.of = bld;
+    this.revision = bld.revision;
+    this.looked = this.frame;
     const f = this.frame;
     // Walls: a wall stands on the border between two tiles.
-    for (const w of bld.walls.values()) {
+    for (const [k, w] of bld.walls) {
       const done = finished(w);
       const seen = w.type === 'hidden_door' ? bld.seenType(w) : w.type;
-      const r = this.walls.get(w);
+      const r = this.walls.get(k);
       if (r && r.level === w.level && r.x === w.x && r.y === w.y && r.dir === w.dir && r.type === w.type && r.material === w.material
         && r.dye === w.dye && r.glass === w.glass && r.building === w.building && r.done === done && r.lowered === w.lowered
         && r.lock === w.lock && r.greenSince === w.greenSince && r.seen === seen) {
@@ -137,13 +162,13 @@ export class StructureWatch {
         frame: f, level: w.level, x: w.x, y: w.y, dir: w.dir, type: w.type, material: w.material, dye: w.dye, glass: w.glass,
         building: w.building, done, lowered: w.lowered, lock: w.lock, greenSince: w.greenSince, seen,
       };
-      this.walls.set(w, n);
+      this.walls.set(k, n);
       this.wallTouch(n);
     }
     if (this.walls.size !== bld.walls.size) this.sweep(this.walls, (r) => this.wallTouch(r));
-    for (const fl of bld.floors.values()) {
+    for (const [k, fl] of bld.floors) {
       const done = finished(fl);
-      const r = this.floors.get(fl);
+      const r = this.floors.get(k);
       if (r && r.level === fl.level && r.x === fl.x && r.y === fl.y && r.material === fl.material && r.kind === fl.kind
         && r.facing === fl.facing && r.hand === fl.hand && r.dye === fl.dye && r.building === fl.building && r.done === done) {
         r.frame = f;
@@ -151,7 +176,7 @@ export class StructureWatch {
       }
       if (r) this.touch(r.x, r.y, r.x, r.y);
       if (!r || r.x !== fl.x || r.y !== fl.y || r.level !== fl.level) this.moved = true;
-      this.floors.set(fl, {
+      this.floors.set(k, {
         frame: f, level: fl.level, x: fl.x, y: fl.y, material: fl.material, kind: fl.kind, facing: fl.facing, hand: fl.hand,
         dye: fl.dye, building: fl.building, done,
       });
@@ -159,9 +184,9 @@ export class StructureWatch {
     }
     if (this.floors.size !== bld.floors.size) this.sweep(this.floors, (r) => this.touch(r.x, r.y, r.x, r.y));
     // A column stands on the corner of four tiles, the one at its own x and y and the three up and left of it.
-    for (const c of bld.columns.values()) {
+    for (const [k, c] of bld.columns) {
       const done = finished(c);
-      const r = this.columns.get(c);
+      const r = this.columns.get(k);
       if (r && r.level === c.level && r.x === c.x && r.y === c.y && r.material === c.material && r.dye === c.dye
         && r.building === c.building && r.done === done) {
         r.frame = f;
@@ -169,26 +194,26 @@ export class StructureWatch {
       }
       if (r) this.touch(r.x - 1, r.y - 1, r.x, r.y);
       if (!r || r.x !== c.x || r.y !== c.y || r.level !== c.level) this.moved = true;
-      this.columns.set(c, { frame: f, level: c.level, x: c.x, y: c.y, material: c.material, dye: c.dye, building: c.building, done });
+      this.columns.set(k, { frame: f, level: c.level, x: c.x, y: c.y, material: c.material, dye: c.dye, building: c.building, done });
       this.touch(c.x - 1, c.y - 1, c.x, c.y);
     }
     if (this.columns.size !== bld.columns.size) this.sweep(this.columns, (r) => this.touch(r.x - 1, r.y - 1, r.x, r.y));
-    for (const c of bld.cellars.values()) {
-      const r = this.cellars.get(c);
+    for (const [k, c] of bld.cellars) {
+      const r = this.cellars.get(k);
       if (r && r.x === c.x && r.y === c.y && r.dug === c.dug && r.building === c.building) {
         r.frame = f;
         continue;
       }
       if (r) this.touch(r.x, r.y, r.x, r.y);
       if (!r || r.x !== c.x || r.y !== c.y) this.moved = true;
-      this.cellars.set(c, { frame: f, x: c.x, y: c.y, dug: c.dug, building: c.building });
+      this.cellars.set(k, { frame: f, x: c.x, y: c.y, dug: c.dug, building: c.building });
       this.touch(c.x, c.y, c.x, c.y);
     }
     if (this.cellars.size !== bld.cellars.size) this.sweep(this.cellars, (r) => this.touch(r.x, r.y, r.x, r.y));
     // A building: what all its walls and its roof read of it -- its storeys, its roof, its deck, its footprint.
-    for (const b of bld.list.values()) {
+    for (const [k, b] of bld.list) {
       const t = b.tiles;
-      const r = this.buildings.get(b);
+      const r = this.buildings.get(k);
       if (r && r.levels === b.levels && r.roof === b.roof && r.deck === b.deck && r.tiles === t.length && r.first === t[0]
         && r.last === t[t.length - 1] && r.piers === (b.piers?.length ?? 0)) {
         r.frame = f;
@@ -209,7 +234,7 @@ export class StructureWatch {
         frame: f, levels: b.levels, roof: b.roof, deck: b.deck, tiles: t.length, first: t[0], last: t[t.length - 1],
         piers: b.piers?.length ?? 0, x0, y0, x1, y1,
       };
-      this.buildings.set(b, n);
+      this.buildings.set(k, n);
       if (x0 <= x1) this.touch(x0, y0, x1, y1);
     }
     if (this.buildings.size !== bld.list.size) this.sweep(this.buildings, (r) => { if (r.x0 <= r.x1) this.touch(r.x0, r.y0, r.x1, r.y1); });

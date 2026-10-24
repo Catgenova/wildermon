@@ -1,4 +1,4 @@
-import { wornWire } from './game/worn';
+import { sameWorn, wornWire, type WornWire } from './game/worn';
 import type { CastAt } from './game/events';
 import { ALL_SPELL_IDS } from './render/spells/info';
 import { dprCapOf, frameCapOf } from './game/settings';
@@ -460,6 +460,10 @@ input.onKey = (code, ev) => {
   else if (id.startsWith('win_')) ui.toggleWindow(id.slice(4));
 };
 
+/** Seconds between calls of `island.move` when it has no word to say: ten a second, for its reads and what is worn. */
+const MOVE_ROUND = 0.1;
+let moveRound = 0;
+let wearing: WornWire = {};
 const loop = new GameLoop(
   (dt) => {
     /*
@@ -492,7 +496,17 @@ const loop = new GameLoop(
 
     // Where we have walked to, told rarely and never twice for standing still, with the turns of the path
     // walked since: the island believes it only as far as its own clock allows, and walks it leg by leg.
-    if (island) void island.move(player.x, player.y, player.level, performance.now() / 1000, wornWire((slot) => game.worn(slot)), game.atStairs(), player.takeTurns());
+    // Called when it has a word to say, and on a round of `MOVE_ROUND` for the reads it keeps up and what is worn.
+    if (island) {
+      const t = performance.now() / 1000;
+      const stairs = game.atStairs();
+      if (t >= moveRound || island.wordDue(player.x, player.y, player.level, t, stairs)) {
+        moveRound = t + MOVE_ROUND;
+        const now = wornWire((slot) => game.worn(slot));
+        if (!sameWorn(now, wearing)) wearing = now;
+        void island.move(player.x, player.y, player.level, t, wearing, stairs, player.takeTurns());
+      }
+    }
 
     /*
      * The view at the screen edge. Resting the cursor in the outer band slides

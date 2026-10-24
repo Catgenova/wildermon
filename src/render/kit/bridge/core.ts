@@ -111,6 +111,8 @@ export interface Bay {
   lowerCrown?: number;
   lowerSpring?: number;
   course?: number;
+  /** Two tiers: the lower arch's clear half-span, in tiles, round; the piers under the course are that much thicker. */
+  lowerHalf?: number;
 }
 
 export interface Pier {
@@ -164,6 +166,8 @@ export interface PlanInput {
 /** The drop at which a bay goes from low to high, and from high to two tiers, in units: a storey, and two and a half. */
 export const FORM_HIGH = 30;
 export const FORM_TIERS = 75;
+/** How far up from the ground to the upper crown two tiers' string course runs: the lower arcade the taller. */
+export const TIER_COURSE = 0.6;
 
 export function planOf(p: PlanInput): Plan {
   const thick = p.style.family === 'stone' ? 3.5 : 2.2;
@@ -198,6 +202,7 @@ export function planOf(p: PlanInput): Plan {
     const A = a * U;
     let arch: (s: number) => number;
     let spring: number;
+    let tiers: { course: number; lc: number } | null = null;
     const crown = top;
     if (form === 'low') {
       // A segment of a circle, its rise a third of its half-span, never down into the ground.
@@ -205,21 +210,31 @@ export function planOf(p: PlanInput): Plan {
       const R = (A * A + r * r) / (2 * r);
       arch = (s) => crown - R + Math.sqrt(Math.max(0, R * R - ((s - c) * U) ** 2));
       spring = crown - r;
-    } else {
+    } else if (form === 'high') {
       // Round, or flattened to an ellipse where a round one would meet the ground.
-      const r = Math.max(2, Math.min(A, crown - g - (form === 'tiers' ? (crown - g) * 0.5 : 3)));
+      const r = Math.max(2, Math.min(A, crown - g - 3));
       arch = (s) => crown - r + r * Math.sqrt(Math.max(0, 1 - ((s - c) / a) ** 2));
       spring = crown - r;
+    } else {
+      // Two tiers, as an aqueduct: a string course three fifths of the way up; under it a tall arcade of round arches on tall
+      // piers, over it a shorter one whose arches spring from just over the course.
+      const course = g + (crown - g) * TIER_COURSE;
+      const r = Math.max(2, Math.min(A, crown - course - 2));
+      arch = (s) => crown - r + r * Math.sqrt(Math.max(0, 1 - ((s - c) / a) ** 2));
+      spring = crown - r;
+      tiers = { course, lc: course - 1.6 - ring - 0.4 };
     }
     const bay: Bay = { s0, s1, c, a, form, arch, crown, spring };
-    if (form === 'tiers') {
-      const course = spring - 2;
-      const lc = course - 2.5;
-      const lr = Math.max(2, Math.min(A, (lc - g) * 0.6));
+    if (tiers) {
+      const { course, lc } = tiers;
+      // Round, springing two fifths of the way up: narrower than the bay where it must be, its piers the thicker for it.
+      const al = Math.max(0.15, Math.min(a, (0.6 * (lc - g)) / U));
+      const lr = al * U;
       bay.course = course;
       bay.lowerCrown = lc;
       bay.lowerSpring = lc - lr;
-      bay.lower = (s) => lc - lr + lr * Math.sqrt(Math.max(0, 1 - ((s - c) / a) ** 2));
+      bay.lowerHalf = al;
+      bay.lower = (s) => lc - lr + lr * Math.sqrt(Math.max(0, 1 - ((s - c) / al) ** 2));
     }
     bays.push(bay);
   }
@@ -470,7 +485,7 @@ export const BUILDERS: Builders = {
     const { plan, sl, st } = k;
     const breaks: number[] = [];
     for (const p of plan.piers) breaks.push(p.s - p.half, p.s + p.half, p.s);
-    for (const bay of plan.bays) breaks.push(bay.c);
+    for (const bay of plan.bays) breaks.push(bay.c, ...(bay.lowerHalf !== undefined ? [bay.c - bay.lowerHalf, bay.c + bay.lowerHalf] : []));
     const xs = samples(sl.s0, sl.s1, breaks, 0.125);
     const deckBottom = (s: number): number => plan.deck(s) - plan.thick - 1.4;
     const ringD = st.ringDepth ?? 3.2;
@@ -581,9 +596,11 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
       // Two tiers: the wall between the lower arch and the course, and the course itself.
       const bay = bayAt(plan, mid);
       if (bay.lower && bay.course !== undefined) {
-        const la = bay.lower(a), lb = bay.lower(b2);
-        k.face('front', [[a, t, la + ringD], [b2, t, lb + ringD], [b2, t, bay.course], [a, t, bay.course]], [0, edge, 0], st.stone,
-          info('wall', a * U, b2 * U, Math.min(la, lb), bay.course, sl.i), fr);
+        // Over the lower arch; and beside it, where the pier is the thicker under the course, from the ground.
+        const inside = Math.abs(mid - bay.c) < (bay.lowerHalf ?? bay.a);
+        const la = inside ? bay.lower(a) + ringD : plan.ground(a, t) - 0.5, lb = inside ? bay.lower(b2) + ringD : plan.ground(b2, t) - 0.5;
+        k.face('front', [[a, t, la], [b2, t, lb], [b2, t, bay.course], [a, t, bay.course]], [0, edge, 0], st.stone,
+          info(inside ? 'wall' : 'pier', a * U, b2 * U, Math.min(la, lb), bay.course, sl.i), fr);
       }
     }
     if (away(edge)) continue;
@@ -598,6 +615,7 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
         const bay = bayAt(plan, mid);
         const f = which === 'upper' ? bay.arch : bay.lower;
         if (!f) continue;
+        if (which === 'lower' && Math.abs(mid - bay.c) >= (bay.lowerHalf ?? bay.a)) continue;
         const za = f(a), zb = f(b2);
         k.face('front', [[a, tr, za], [b2, tr, zb], [b2, tr, zb + ringD], [a, tr, za + ringD]], [0, edge, 0], st.ring,
           info('ring', (a - bay.c) * U, (b2 - bay.c) * U, za, za + ringD, Math.round(bay.c * 10), true), { ...fr, o: [bay.c, tr, 0] });
@@ -629,16 +647,7 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
     }
     cutwaters(k, edge, t);
   }
-  // Two tiers: the course the upper arcade stands on, across the lane, and its band on each outer face.
-  k.solid('front', -6);
-  for (let j = 0; j + 1 < xs.length; j++) {
-    const a = xs[j], b2 = xs[j + 1], mid = (a + b2) / 2;
-    const bay = bayAt(plan, mid);
-    if (!opening(plan, mid) || bay.course === undefined) continue;
-    const z = bay.course;
-    k.face('front', [[a, sl.t0, z], [b2, sl.t0, z], [b2, sl.t1, z], [a, sl.t1, z]], [0, 0, 1], st.trim,
-      info('cap', a * U, b2 * U, sl.t0 * U, sl.t1 * U, sl.i), { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
-  }
+  // Two tiers: the string course between them, a thin band on each outer face only; the arcades are open between it.
   for (const edge of sl.edges) {
     const t = edge > 0 ? sl.t1 : sl.t0, tt = t + edge * 0.02;
     k.solid('front', k.ord(edge, 0.3));
@@ -658,6 +667,7 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
     const bay = bayAt(plan, mid);
     for (const f of [bay.arch, bay.lower]) {
       if (!f) continue;
+      if (f === bay.lower && Math.abs(mid - bay.c) >= (bay.lowerHalf ?? bay.a)) continue;
       const za = f(a), zb = f(b2);
       const up: L = [(bay.c - mid) * 0.3, 0, -1];
       k.face('back', [[a, sl.t0, za], [b2, sl.t0, zb], [b2, sl.t1, zb], [a, sl.t1, za]], up, st.ring, info('ring', a * U, b2 * U, sl.t0 * U, sl.t1 * U, sl.i, false));
@@ -669,14 +679,32 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
       if (s < sl.s0 - EPS || s > sl.s1 + EPS) continue;
       // Against the arch's spring, and for two tiers the lower spring and between the course and the upper spring.
       const g0 = plan.ground(s, sl.t0) - 0.5, g1 = plan.ground(s, sl.t1) - 0.5;
+      // Two tiers: the lower side stands at the lower arch's springing, where the pier is the thicker (`lowerHalf`).
       const tops: Array<[number, number, number, number]> = bay.lower
-        ? [[g0, g1, bay.lower(s), bay.lower(s)], [bay.course!, bay.course!, bay.arch(s), bay.arch(s)]]
+        ? [[bay.course!, bay.course!, bay.arch(s), bay.arch(s)]]
         : [[g0, g1, bay.arch(s), bay.arch(s)]];
       for (const [z0, z0b, z1, z1b] of tops) {
         if (z1 - Math.max(z0, z0b) < 0.1) continue;
         k.solid('back', -1);
         k.face('back', [[s, sl.t0, z0], [s, sl.t1, z0b], [s, sl.t1, z1b], [s, sl.t0, z1]], [dirn, 0, 0], st.stone,
           info('pier', sl.t0 * U, sl.t1 * U, Math.min(z0, z0b), z1, Math.round(s * 10)), { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+      }
+    }
+    // Two tiers: the lower arch's sides, from the ground to its springing, and the top of the thicker pier beside it, at the course.
+    if (bay.lower && bay.lowerHalf !== undefined && bay.course !== undefined) {
+      for (const [s, dirn] of [[bay.c - bay.lowerHalf, 1], [bay.c + bay.lowerHalf, -1]] as Array<[number, number]>) {
+        if (s < sl.s0 - EPS || s > sl.s1 + EPS) continue;
+        const g0 = plan.ground(s, sl.t0) - 0.5, g1 = plan.ground(s, sl.t1) - 0.5, z1 = bay.lowerSpring!;
+        if (z1 - Math.max(g0, g1) < 0.1) continue;
+        k.solid('back', -1);
+        k.face('back', [[s, sl.t0, g0], [s, sl.t1, g1], [s, sl.t1, z1], [s, sl.t0, z1]], [dirn, 0, 0], st.stone,
+          info('pier', sl.t0 * U, sl.t1 * U, Math.min(g0, g1), z1, Math.round(s * 10)), { o: [s, 0, 0], a: [0, 1 / U, 0], b: [0, 0, 1] });
+      }
+      for (const [x0, x1] of [[p0.s + p0.half, bay.c - bay.lowerHalf], [bay.c + bay.lowerHalf, p1.s - p1.half]]) {
+        const a = Math.max(x0, sl.s0), b2 = Math.min(x1, sl.s1);
+        if (b2 - a < 1e-3) continue;
+        k.solid('back', -0.5);
+        k.face('back', [[a, sl.t0, bay.course], [b2, sl.t0, bay.course], [b2, sl.t1, bay.course], [a, sl.t1, bay.course]], [0, 0, 1], st.stone);
       }
     }
   }

@@ -205,35 +205,29 @@ for (const b of Object.values(BRIDGES)) b.note = fill(b.note, { ...b, bill: Obje
 
 /**
  * The bays a material bridge's deck is carried in, in tiles, end a's first:
- * as many as a bay of its material takes to cover the deck, as even as they
- * go, the longer ones in the middle -- an odd count's middle one the widest.
- * One bay for anything else. The island's `bridge_bays`.
+ * as many as a bay of its material takes to cover the deck, all the same
+ * length, which need not be whole tiles (three tiles at a bay of two are two
+ * bays of one and a half). One bay for anything else. The island's
+ * `bridge_bays`.
  */
 export function bridgeBays(n: number, bay: number | undefined): number[] {
   if (!bay || n <= 0) return n > 0 ? [n] : [];
   const k = Math.ceil(n / bay);
-  const base = Math.floor(n / k);
-  const out = new Array<number>(k).fill(base);
-  // What is left over, one a bay from the middle out, the far side of the middle first.
-  let left = n - base * k;
-  const order = Array.from({ length: k }, (_, i) => i).sort((a, b) => Math.abs(2 * a - (k - 1)) - Math.abs(2 * b - (k - 1)) || b - a);
-  for (const i of order) {
-    if (left <= 0) break;
-    out[i]++;
-    left--;
-  }
-  return out;
+  return new Array<number>(k).fill(n / k);
 }
 
-/** The tiles of deck, counted from nought at end a, that carry a pier: the last of every bay but the last. The island's `bridge_pier`. */
+/**
+ * The tiles of deck, counted from nought at end a, that carry a pier: one
+ * between every two bays, at `j * n / k` tiles along, on the tile that point
+ * is in -- and on a point between two tiles, the tile before it. The
+ * island's `bridge_piers`.
+ */
 export function pierSpans(n: number, bay: number | undefined): number[] {
+  if (!bay || n <= 0) return [];
+  const k = Math.ceil(n / bay);
   const out: number[] = [];
-  let at = 0;
-  const bays = bridgeBays(n, bay);
-  for (let i = 0; i + 1 < bays.length; i++) {
-    at += bays[i];
-    out.push(at - 1);
-  }
+  // ceil(j * n / k) - 1, in whole numbers.
+  for (let j = 1; j < k; j++) out.push(Math.floor((j * n - 1) / k));
   return out;
 }
 

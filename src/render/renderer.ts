@@ -1,4 +1,4 @@
-import { actOf } from './beasts';
+import { actOf, beastFrame } from './beasts';
 import { gearFrom, wornWire } from '../game/worn';
 import { Camera } from '../engine/camera';
 import { emoteAt } from '../game/emotes';
@@ -118,6 +118,7 @@ import { runestoneAt, stoneCentre, type Runestone } from '../game/runestones';
 import type { WaterField } from '../world/springs';
 import { Dust } from './dust';
 import { StructureWatch } from './structwatch';
+import { AFTER, BAKED, GroundChunks, LIT, staled, VOID, type GroundLine, type GroundRun } from './groundchunks';
 import { BEAST_WALK, Gaits } from './gait';
 import type { Peer } from '../game/roster';
 import { css, HAZE_REACH, rgba, skyAt, unknownInk, type Sky } from './sky';
@@ -128,6 +129,12 @@ import { css, HAZE_REACH, rgba, skyAt, unknownInk, type Sky } from './sky';
  * rather than one per tree per frame.
  */
 const HAZE_STEPS = 6;
+/**
+ * How far the distance's colour may move, in any channel out of 255, before
+ * the tree pictures mixed toward it are made again (`treePicture`): at most
+ * 0.62 of it is laid on the furthest tree, so that one is out by under eight.
+ */
+const HAZE_INK_STEP = 12;
 /** The share of the screen's pixels the swell's gradients are worked out at, across and down (`drawSwell`). */
 const SWELL_RES = 0.5;
 /** Device pixels of tree pictures kept between frames (`drawTree`): about forty-eight megabytes. */
@@ -142,6 +149,55 @@ const TREE_PIXELS = 12_000_000;
 const ZOOM_SETTLE = 220;
 /** How long, in milliseconds, a frame may spend making tree pictures (`drawTree`) for trees that already have one at another size to stand in. */
 const TREE_PICTURE_MS = 6;
+/** How long, in milliseconds, a frame may spend making pictures of blocks of the ground (`bakeChunk`); the rest is drawn as it always was. */
+const GROUND_BAKE_MS = 4;
+/** How many screens' worth of device pixels the ground's pictures keep between them (`GroundChunks`), and the most in all. */
+const GROUND_SCREENS = 8;
+const GROUND_PIXELS = 16_000_000;
+/**
+ * The least zoom the ground is laid from pictures at. Further out a tile is a
+ * fill and little else, and laying a run of them from a picture cost more
+ * than filling them (a far view laid ~1,400 runs and took 45 ms more a frame).
+ */
+const GROUND_FROM = 0.7;
+/** How long the view holds still, in milliseconds, before pictures of the ground are made: on the move a new one is out of date in a moment. */
+const GROUND_STILL_MS = 300;
+/** About how tall a block of the ground is on the screen, in device pixels; it is as wide as the screen, so a line is laid in a run or two. */
+const GROUND_BLOCK_H = 256;
+/** The most device pixels one block's picture may have; past it the block is drawn as it always was. */
+const GROUND_BLOCK_MOST = 6_000_000;
+
+/** What a frame's blocks of ground are made and laid with (`Renderer.groundFrame`). */
+interface GroundFrame {
+  V: View;
+  zoom: number;
+  /** The canvas's scale and offset in device pixels. */
+  a: number;
+  te: number;
+  tf: number;
+  /** Where the lattice's first point falls on the screen, in whole device pixels. */
+  sx: number;
+  sy: number;
+  W: number;
+  H: number;
+  stepW: number;
+  stepH: number;
+  hs: number;
+  off: Float64Array;
+  co: View['corners'];
+  paveRot: number;
+  grassy: boolean;
+  hemmed: boolean;
+  paved: boolean;
+  seamed: boolean;
+  grid: boolean;
+  water: WaterField | null;
+  piers: boolean;
+  /** The colour of ground nobody has seen, and whether it is the colour it was last frame (it moves at dusk and dawn). */
+  voidInk: string;
+  voidSteady: boolean;
+  sun: [number, number, number];
+}
 /**
  * How far a tree's picture at another size is stretched, either way, to
  * stand in for it while the zoom moves (`treePicture`). Past this a picture
@@ -200,7 +256,12 @@ const BAKE_KEEP = 20;
  * village is not all drawn afresh in one frame.
  */
 const BAKE_LIFE = 0.5;
-/** Device pixels of wall and roof pictures kept before the lot go: about a hundred and twenty-eight megabytes. */
+/**
+ * Device pixels of wall and roof pictures kept on a screen of one device pixel
+ * to a CSS pixel, about a hundred and twenty-eight megabytes, and the square
+ * of that as many on a sharper one (`bakeRoom`): the same village is four
+ * times the pixels at two. Past it, the pictures gone longest undrawn go.
+ */
 const BAKE_PIXELS = 32_000_000;
 /** No one picture is bigger than this; a thing that would be is drawn as it always was. */
 const BAKE_MOST = 4_000_000;
@@ -210,7 +271,11 @@ const BAKE_MOST = 4_000_000;
  * is drawn in the sun's light, and so made again when that moves on (`lit`).
  */
 interface BakeAs { occludes?: boolean; lit?: boolean }
-/** Pictures made again in a frame for the zoom alone once it has settled, while the last one stands in (`baked`). */
+/**
+ * Pictures made in a frame where an older one can stand in (`baked`): for the
+ * zoom once it has settled, and for anything read round it that has changed,
+ * the old one drawn until its turn comes.
+ */
 const BAKES_A_FRAME = 12;
 /** And while the zoom moves, for things with no picture near enough this size to stand in. */
 const BAKES_MOVING = 6;
@@ -238,8 +303,10 @@ interface Baked {
   /** The view it was made in less the zoom (`bakeShape`), and the zoom: at another zoom in the same view it stands in, stretched (`baked`). */
   shape: number;
   zoom: number;
+  /** The frame it was last drawn in (`bakeRoom`). */
+  used: number;
 }
-/** How many device pixels of tile edge pictures are kept before the lot go (`hems`): about sixty-four megabytes. */
+/** How many device pixels of tile edge pictures are kept at one device pixel to a CSS pixel, about sixty-four megabytes, and the square of the screen's sharpness times that on one sharper (`hems`); past it, those gone longest undrawn go. */
 const HEM_PIXELS = 16_000_000;
 /** No one tile's edge picture is bigger than this; a tile that would be is drawn as it always was. */
 const HEM_TILE_MOST = 400_000;
@@ -252,6 +319,8 @@ interface HemPicture {
   by: number;
   /** The zoom it was made at: at another, it is stretched about the tile's corner while the zoom moves (`hems`) and made again once it stops. */
   zoom: number;
+  /** The frame it was last drawn in. */
+  used: number;
 }
 
 /** The thin darker line where a pond meets its bank. */
@@ -351,7 +420,7 @@ import { ColourPages, MarkPages } from './pages';
 import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
-import { drawFace, EDGES, ROCK_MOSS, topEdges, type Face } from './outcrops';
+import { drawFace, EDGES, ROCK_MOSS, sprigOf, topEdges, type Face } from './outcrops';
 import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
@@ -953,6 +1022,8 @@ type Box = [number, number, number, number];
 /** How far the eaves hang out past the wall's line, and the verge past a gable end, in tiles. */
 const ROOF_OVER = 0.14;
 const ROOF_VERGE = 0.1;
+/** How far down the wall under an eave its shade reaches, in height units: further than any eave's board is deep (`EAVE_DEEP`). */
+const EAVE_SHADE = 10;
 /** The colour an outline is drawn in round whatever the cursor is on. */
 const HOVER_INK = 'rgb(255, 226, 120)';
 
@@ -976,6 +1047,12 @@ export function sunAt(hour: number): [number, number, number] {
 
 /** How finely the sun's walk is cut up: the ground is re-shaded on each step. */
 const SUN_STEPS = 48;
+/**
+ * How long, in milliseconds, a frame may spend shading the ground afresh for a
+ * new step of the sun (`groundColor`); past it a tile keeps the colour it had
+ * at the step before until a later frame gets to it.
+ */
+const SUN_REPAINT_MS = 2;
 
 /** How often a still cursor is told again what it is over, in milliseconds. */
 const PICK_EVERY = 90;
@@ -1016,6 +1093,20 @@ export function skyWash(hour: number, dark: number): Array<{ colour: string; alp
   if (dawn > 0.01) out.push({ colour: '255, 168, 146', alpha: dawn * 0.18 });
   if (dark > 0.01) out.push({ colour: NIGHT_WASH.colour, alpha: dark * NIGHT_WASH.alpha });
   return out;
+}
+
+/** The washes (`skyWash`) laid one over another, as the one colour they come to. */
+function washInk(washes: ReadonlyArray<{ colour: string; alpha: number }>): string {
+  let r = 0, g = 0, b = 0, a = 0;
+  for (const w of washes) {
+    const [wr, wg, wb] = w.colour.split(',').map(Number);
+    const k = Math.round(w.alpha * 1000) / 1000;
+    r = wr * k + r * (1 - k);
+    g = wg * k + g * (1 - k);
+    b = wb * k + b * (1 - k);
+    a = k + a * (1 - k);
+  }
+  return a > 0 ? `rgba(${Math.round(r / a)}, ${Math.round(g / a)}, ${Math.round(b / a)}, ${a.toFixed(4)})` : 'rgba(0, 0, 0, 0)';
 }
 
 /**
@@ -1130,6 +1221,17 @@ export class Renderer {
   private colors: ColourPages;
   /** Which step of the sun's walk the ground was last shaded for. */
   private lastSun = -1;
+  /** The sun the ground was last shaded under: at night it holds still across steps (`sunAt`). */
+  private sunWas: [number, number, number] | null = null;
+  /**
+   * The colours and path colours of the step before, laid where this step's
+   * are not worked out yet (`SUN_REPAINT_MS`); dropped once a frame has
+   * needed none of them. And when this frame's time for working them out is up.
+   */
+  private colorsWas: ColourPages | null = null;
+  private trailPaintWas: ColourPages | null = null;
+  private sunRepaintBy = Infinity;
+  private sunWasUsed = false;
   /** Where a shadow falls this frame, in screen pixels, and how dark it is. */
   private shadow = { dx: 0, dy: 0, alpha: 0 };
   /** Tile colours as the map remembers them, for ground nobody is watching. */
@@ -1407,7 +1509,8 @@ export class Renderer {
   /** Everything burning this frame, after dark, for what glows under glass: read once a frame. */
   private lightsNow: LightSource[] = [];
   /** Glass with a light under it, laid over the night once the night is down: see `drawGlassGlow`. */
-  private glassNight: Array<{ faces: Array<{ path: Path2D; m: DOMMatrix }>; lights: Array<{ x: number; y: number; r: number; a: number }>; box: [number, number, number, number] }> = [];
+  /** `dx`, `dy`: how far the faces, worked out where they were, have moved on the screen since (`roofGlass`). */
+  private glassNight: Array<{ faces: Array<{ path: Path2D; m: DOMMatrix }>; lights: Array<{ x: number; y: number; r: number; a: number }>; box: [number, number, number, number]; dx: number; dy: number }> = [];
   /** The layer a glass roof's glow is made on, at half the screen's size (`drawGlassGlow`). */
   private glowLayer: CanvasRenderingContext2D | null = null;
   /** The sky this frame, which the haze over the distance is drawn in. */
@@ -1474,7 +1577,7 @@ export class Renderer {
    * keeping, as `baked` makes it the picture.
    */
   private occludeLine(box: [number, number, number, number] | null, draw: () => void): void {
-    if (!this.runeNight.active) return;
+    if (!this.runeNight.keeping) return;
     const ctx = this.canvas.ctx;
     const [x0, y0, x1, y1] = box ?? [-1e5, -1e5, 1e5, 1e5];
     this.runeNight.occludeDraw(ctx, x0, y0, x1 - x0, y1 - y0, (g) => {
@@ -1513,16 +1616,8 @@ export class Renderer {
    * is not convex on the screen -- folded over on a cliff, or flat to a line.
    */
   private outsetTile(ctx: CanvasRenderingContext2D, pts: ArrayLike<number>): boolean {
-    // Which way round it goes on the screen: every corner must turn the same way.
-    let turn = 0;
-    for (let i = 0; i < 4; i++) {
-      const a = i * 2, b = ((i + 1) & 3) * 2, c = ((i + 2) & 3) * 2;
-      const z = (pts[b] - pts[a]) * (pts[c + 1] - pts[b + 1]) - (pts[b + 1] - pts[a + 1]) * (pts[c] - pts[b]);
-      if (Math.abs(z) < 1e-6) return false;
-      const sz = z > 0 ? 1 : -1;
-      if (turn && sz !== turn) return false;
-      turn = sz;
-    }
+    const turn = this.outsetTurn(pts);
+    if (!turn) return false;
     const n = this.outsetNormals;
     for (let i = 0; i < 4; i++) {
       const a = i * 2, b = ((i + 1) & 3) * 2;
@@ -1545,10 +1640,26 @@ export class Renderer {
   }
   private readonly outsetNormals = new Float64Array(8);
 
+  /** The transform the ground of this line is laid under (`occludeGround`). */
+  private groundMatrix: DOMMatrix | undefined;
+  /** Which way round a tile goes on the screen, as one or minus one: every corner must turn the same way. Nought for one folded over. */
+  private outsetTurn(pts: ArrayLike<number>): number {
+    let turn = 0;
+    for (let i = 0; i < 4; i++) {
+      const a = i * 2, b = ((i + 1) & 3) * 2, c = ((i + 2) & 3) * 2;
+      const z = (pts[b] - pts[a]) * (pts[c + 1] - pts[b + 1]) - (pts[b + 1] - pts[a + 1]) * (pts[c] - pts[b]);
+      if (Math.abs(z) < 1e-6) return 0;
+      const sz = z > 0 ? 1 : -1;
+      if (turn && sz !== turn) return 0;
+      turn = sz;
+    }
+    return turn;
+  }
+
   private occludeGround(ctx: CanvasRenderingContext2D, pts: ArrayLike<number>, minY: number, maxY: number): void {
     const minX = Math.min(pts[0], pts[2], pts[4], pts[6]);
     const maxX = Math.max(pts[0], pts[2], pts[4], pts[6]);
-    if (!this.runeNight.falls(ctx, minX, minY, maxX - minX, maxY - minY)) return;
+    if (!this.runeNight.falls(ctx, minX, minY, maxX - minX, maxY - minY, this.groundMatrix)) return;
     this.runeNight.occludeDraw(ctx, minX, minY, maxX - minX, maxY - minY, (g) => {
       g.beginPath();
       g.moveTo(pts[0], pts[1]);
@@ -1673,12 +1784,15 @@ export class Renderer {
     this.trailPaint = new ColourPages(game.world.w);
     this.flowerMarks = new MarkPages(game.world.w);
     game.world.onChange((x, y) => this.invalidate(x, y));
+    game.world.onChange((x, y) => this.chunks.touch(x, y));
     // Ground dug under or beside a stream moves the line it runs along.
     game.world.onChange((x, y) => this.springWater.touched(x, y));
     // And what is near a tree or near water, for the fireflies.
     game.world.onChange(() => this.life.touched());
     // And what stands on the ground, or near it: a wall's foot, its shade, how wet it is (`structwatch.ts`).
     game.world.onChange((x, y) => this.structs.ground(x, y));
+    // Whatever the game says has changed in the world may be set on a wall or a floor in place (`Buildings.changed`).
+    game.events.on('world', () => game.buildings.changed());
     // Damage and skill both go up over the thing they happened to. Damage adds
     // up per target, skill per skill, so a flurry of either reads as one
     // running number rather than a stack of them.
@@ -1909,10 +2023,12 @@ export class Renderer {
       for (let xx = x - 1; xx <= x + 1; xx++) {
         if (w.inBounds(xx, yy)) {
           this.colors.forget(xx, yy);
+          this.colorsWas?.forget(xx, yy);
           this.memColors.forget(xx, yy);
           this.trailMarks.forget(xx, yy);
           this.trailMemMarks.forget(xx, yy);
           this.trailPaint.forget(xx, yy);
+          this.trailPaintWas?.forget(xx, yy);
           this.trailShapes.delete(yy * w.w + xx);
           this.flowerMarks.forget(xx, yy);
           this.faces.delete(yy * w.w + xx);
@@ -1992,11 +2108,14 @@ export class Renderer {
   }
 
   /**
-   * The scratch canvas the night is mixed on. It is kept between frames and
-   * only resized when the window is, since making one every frame at screen
-   * size is the sort of thing that costs a night's frame rate.
+   * The scratch canvases the night is mixed on at the screen's size, one for
+   * each share of it. Kept between frames and only resized when the window
+   * is, since making one every frame at screen size is the sort of thing
+   * that costs a night's frame rate.
    */
-  private night: HTMLCanvasElement | null = null;
+  private nights = new Map<number, HTMLCanvasElement>();
+  /** What the night was last mixed on: the lights' mask at their size, or a layer of its own at the screen's. Read by the crowd check. */
+  night: HTMLCanvasElement | null = null;
   /**
    * The layer the cold wash over remembered ground is moved onto while
    * something in sight stands up in front of it (`fogLayer`). Kept between
@@ -2052,7 +2171,7 @@ export class Renderer {
    * pixels. Made again when the lights change, or the view slides further
    * than the margin.
    */
-  private lit: { mask: HTMLCanvasElement; warm: HTMLCanvasElement; key: string; cx: number; cy: number; pad: number } | null = null;
+  private lit: { mask: HTMLCanvasElement; warm: HTMLCanvasElement; sig: number[]; inks: (string | undefined)[]; cx: number; cy: number; pad: number } | null = null;
   private litNow: { mask: HTMLCanvasElement; warm: HTMLCanvasElement } | null = null;
 
   /** Each rune lantern post's spot at its foot near enough to matter (`runeLanternPool`), as `lights` gathers what burns. */
@@ -2078,8 +2197,9 @@ export class Renderer {
     const { x: px, y: py, level } = this.game.player;
     if (level < 0) return out;
     for (const f of this.game.furniture.values()) {
-      if ((f.level ?? 0) < 0 || Math.abs(f.x - px) >= 60 || Math.abs(f.y - py) >= 60) continue;
-      out.push(...denPools(f.kind, furnitureCentre(f), pieceFacing(f), this.camera.rotation));
+      // Only a bed: every piece in the settlement is looked at every frame.
+      if (!isDen(f.kind) || (f.level ?? 0) < 0 || Math.abs(f.x - px) >= 60 || Math.abs(f.y - py) >= 60) continue;
+      for (const l of denPools(f.kind, furnitureCentre(f), pieceFacing(f), this.camera.rotation)) out.push(l);
     }
     return out;
   }
@@ -2093,80 +2213,114 @@ export class Renderer {
       if (c.width !== lw || c.height !== lh) { c.width = lw; c.height = lh; }
       return c;
     };
-    /** Each light where it falls on the screen this frame, and how far it reaches there. */
-    const placed = (l: LightSource, pad = 0): { sx: number; sy: number; r: number } | null => {
-      const sx = cam.worldToScreenX(l.x, l.y) + pad;
+    /*
+     * Each light where it falls on the screen this frame, and how far it
+     * reaches there: worked out once a light a frame, four numbers a light
+     * (x, y, reach, what it stands on), and read by everything below.
+     */
+    const n = lights.length;
+    if (this.lightSpots.length < n * 4) this.lightSpots = new Float64Array(n * 8);
+    const spots = this.lightSpots;
+    for (let i = 0; i < n; i++) {
+      const l = lights[i];
       // At what it stands on: the ground, or the finished deck of a tile on piers (`standTop`).
-      const sy = cam.worldToScreenY(l.x, l.y, this.standTop(l.x, l.y)) + pad;
+      const top = this.standTop(l.x, l.y);
+      spots[i * 4] = cam.worldToScreenX(l.x, l.y);
+      spots[i * 4 + 1] = cam.worldToScreenY(l.x, l.y, top);
       // A flame is never steady; a candle behind cloth very nearly is.
-      const r = Math.max(8, l.radius * HALF_W * zoom * this.flicker(l));
-      return sx < -r || sy < -r || sx > w + 2 * pad + r || sy > h + 2 * pad + r ? null : { sx, sy, r };
+      spots[i * 4 + 2] = Math.max(8, l.radius * HALF_W * zoom * this.flicker(l));
+      spots[i * 4 + 3] = top;
+    }
+    /** Whether light `i` falls on a layer `pad` wider than the screen on every side. */
+    const shows = (i: number, pad: number): boolean => {
+      const sx = spots[i * 4] + pad, sy = spots[i * 4 + 1] + pad, r = spots[i * 4 + 2];
+      return !(sx < -r || sy < -r || sx > w + 2 * pad + r || sy > h + 2 * pad + r);
     };
-    const holes = (g: CanvasRenderingContext2D, ls: LightSource[], pad = 0): void => {
+    /*
+     * Each light's gradient made once and kept, by its stops, at a reach of
+     * one round nothing, and laid moved and scaled to where it falls: they
+     * were made afresh for every light every frame.
+     */
+    const kept = (map: Map<number | string, CanvasGradient>, key: number | string, make: () => CanvasGradient): CanvasGradient => {
+      let grad = map.get(key);
+      if (!grad) {
+        if (map.size >= 64) map.clear();
+        grad = make();
+        map.set(key, grad);
+      }
+      return grad;
+    };
+    /** Light `i`'s disc onto `g`, `pad` in from the layer's corner, in `grad`, squashed up and down by `flat`. */
+    const disc = (g: CanvasRenderingContext2D, i: number, pad: number, grad: CanvasGradient, flat: number): void => {
+      const r = spots[i * 4 + 2];
+      g.setTransform(LIGHT_RES * r, 0, 0, LIGHT_RES * r * flat, LIGHT_RES * (spots[i * 4] + pad), LIGHT_RES * (spots[i * 4 + 1] + pad));
+      g.fillStyle = grad;
+      g.beginPath();
+      g.arc(0, 0, 1, 0, Math.PI * 2);
+      g.fill();
+    };
+    const holes = (g: CanvasRenderingContext2D, steady: boolean, pad = 0): void => {
       g.globalCompositeOperation = 'destination-out';
-      for (const l of ls) {
-        const p = placed(l, pad);
-        if (!p) continue;
+      for (let i = 0; i < n; i++) {
+        const l = lights[i];
+        if (!l.steady !== !steady || !shows(i, pad)) continue;
         let grad: CanvasGradient;
         if (l.soft) {
           // A spell's: falling smoothly to nothing at its edge, and less at its middle the wider it is.
           const a = l.strength * lightHole(l.radius);
-          grad = fallGradient(g, p.sx, p.sy, p.r, (f) => `rgba(0,0,0,${(a * f).toFixed(3)})`);
+          grad = kept(this.softHoleGrads, a, () => fallGradient(g, 0, 0, 1, (f) => `rgba(0,0,0,${(a * f).toFixed(3)})`));
         } else {
-          grad = g.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, p.r);
-          grad.addColorStop(0, `rgba(0,0,0,${l.strength.toFixed(2)})`);
-          grad.addColorStop(0.55, `rgba(0,0,0,${(l.strength * 0.55).toFixed(2)})`);
-          grad.addColorStop(1, 'rgba(0,0,0,0)');
+          grad = kept(this.holeGrads, l.strength, () => {
+            const made = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+            made.addColorStop(0, `rgba(0,0,0,${l.strength.toFixed(2)})`);
+            made.addColorStop(0.55, `rgba(0,0,0,${(l.strength * 0.55).toFixed(2)})`);
+            made.addColorStop(1, 'rgba(0,0,0,0)');
+            return made;
+          });
         }
-        g.fillStyle = grad;
-        g.beginPath();
-        g.arc(p.sx, p.sy, p.r, 0, Math.PI * 2);
-        g.fill();
+        disc(g, i, pad, grad, 1);
       }
+      g.setTransform(LIGHT_RES, 0, 0, LIGHT_RES, 0, 0);
       g.globalCompositeOperation = 'source-over';
     };
     /** The part of the layers the casts cover, in their own whole pixels: x, y, width, height. */
-    const cover = (ls: LightSource[], into: Box = [0, 0, 0, 0]): Box => {
-      let [x0, y0, x1, y1] = into[2] > 0 ? [into[0], into[1], into[0] + into[2], into[1] + into[3]] : [Infinity, Infinity, -Infinity, -Infinity];
-      for (const l of ls) {
-        const p = placed(l);
-        if (!p) continue;
-        x0 = Math.min(x0, Math.max(0, Math.floor((p.sx - p.r) * LIGHT_RES)));
-        y0 = Math.min(y0, Math.max(0, Math.floor((p.sy - p.r) * LIGHT_RES)));
-        x1 = Math.max(x1, Math.min(lw, Math.ceil((p.sx + p.r) * LIGHT_RES)));
-        y1 = Math.max(y1, Math.min(lh, Math.ceil((p.sy + p.r) * LIGHT_RES)));
+    const cover = (): Box => {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i < n; i++) {
+        if (!shows(i, 0)) continue;
+        const sx = spots[i * 4], sy = spots[i * 4 + 1], r = spots[i * 4 + 2];
+        x0 = Math.min(x0, Math.max(0, Math.floor((sx - r) * LIGHT_RES)));
+        y0 = Math.min(y0, Math.max(0, Math.floor((sy - r) * LIGHT_RES)));
+        x1 = Math.max(x1, Math.min(lw, Math.ceil((sx + r) * LIGHT_RES)));
+        y1 = Math.max(y1, Math.min(lh, Math.ceil((sy + r) * LIGHT_RES)));
       }
       return x1 > x0 && y1 > y0 ? [x0, y0, x1 - x0, y1 - y0] : [0, 0, 0, 0];
     };
-    const casts = (g: CanvasRenderingContext2D, ls: LightSource[], pad = 0): void => {
+    const casts = (g: CanvasRenderingContext2D, steady: boolean, pad = 0): void => {
       // Opaque on black, so 'lighten' keeps the larger of what is there and what comes: the warmest light, not the sum.
       g.globalCompositeOperation = 'lighten';
-      for (const l of ls) {
-        const p = placed(l, pad);
-        if (!p) continue;
+      for (let i = 0; i < n; i++) {
+        const l = lights[i];
+        if (!l.steady !== !steady || !shows(i, pad)) continue;
         const a = (l.castAlpha ?? 0.16 * l.strength) * (l.soft ? lightHole(l.radius) : 1);
-        const [r0, g0, b0] = (l.cast ?? '255, 186, 92').split(',').map((v) => Number(v) * a);
+        const rgb = this.castRgb(l.cast ?? '255, 186, 92');
+        const r0 = rgb[0] * a, g0 = rgb[1] * a, b0 = rgb[2] * a;
         let grad: CanvasGradient;
+        if (l.soft) {
+          grad = kept(this.softCastGrads, `${r0},${g0},${b0}`, () => fallGradient(g, 0, 0, 1, (f) => `rgb(${Math.round(r0 * f)}, ${Math.round(g0 * f)}, ${Math.round(b0 * f)})`));
+        } else {
+          const R = Math.round(r0), G = Math.round(g0), B = Math.round(b0);
+          grad = kept(this.castGrads, R * 65536 + G * 256 + B, () => {
+            const made = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+            made.addColorStop(0, `rgb(${R}, ${G}, ${B})`);
+            made.addColorStop(1, 'rgb(0, 0, 0)');
+            return made;
+          });
+        }
         // A pool on the ground flattened as the ground is seen (`LightSource.flat`): laid round its middle squashed up and down.
-        const flat = l.flat ?? 1;
-        const cy = flat === 1 ? p.sy : 0, cx = flat === 1 ? p.sx : 0;
-        if (flat !== 1) {
-          g.save();
-          g.translate(p.sx, p.sy);
-          g.scale(1, flat);
-        }
-        if (l.soft) grad = fallGradient(g, cx, cy, p.r, (f) => `rgb(${Math.round(r0 * f)}, ${Math.round(g0 * f)}, ${Math.round(b0 * f)})`);
-        else {
-          grad = g.createRadialGradient(cx, cy, 0, cx, cy, p.r);
-          grad.addColorStop(0, `rgb(${Math.round(r0)}, ${Math.round(g0)}, ${Math.round(b0)})`);
-          grad.addColorStop(1, 'rgb(0, 0, 0)');
-        }
-        g.fillStyle = grad;
-        g.beginPath();
-        g.arc(cx, cy, p.r, 0, Math.PI * 2);
-        g.fill();
-        if (flat !== 1) g.restore();
+        disc(g, i, pad, grad, l.flat ?? 1);
       }
+      g.setTransform(LIGHT_RES, 0, 0, LIGHT_RES, 0, 0);
       g.globalCompositeOperation = 'source-over';
     };
     const ctxOf = (c: HTMLCanvasElement): CanvasRenderingContext2D => {
@@ -2174,15 +2328,35 @@ export class Renderer {
       g.setTransform(LIGHT_RES, 0, 0, LIGHT_RES, 0, 0);
       return g;
     };
-    const steady = lights.filter((l) => l.steady);
-    const live = lights.filter((l) => !l.steady);
-    // Not where the camera is: the layers are slid with it (`lit`).
-    const key = `${lw}x${lh}|${zoom},${cam.rotation}|`
-      + steady.map((l) => `${l.x.toFixed(3)},${l.y.toFixed(3)},${this.standTop(l.x, l.y)},${l.radius},${l.strength},${l.cast ?? ''},${l.castAlpha ?? ''},${l.flat ?? ''}`).join(';');
+    /*
+     * Not where the camera is: the layers are slid with it (`lit`). What the
+     * steady lights are, as numbers and their colours, against what they
+     * were when the layers were made: it was a string a light a frame.
+     */
+    const sig = this.litSig, inks = this.litInks;
+    sig.length = 0;
+    inks.length = 0;
+    sig.push(lw, lh, zoom, cam.rotation);
+    let live = false;
+    for (let i = 0; i < n; i++) {
+      const l = lights[i];
+      if (!l.steady) {
+        live = true;
+        continue;
+      }
+      sig.push(l.x, l.y, spots[i * 4 + 3], l.radius, l.strength, l.castAlpha ?? -1, l.flat ?? -1);
+      inks.push(l.cast);
+    }
+    const same = (at: NonNullable<Renderer['lit']>): boolean => {
+      if (at.sig.length !== sig.length || at.inks.length !== inks.length) return false;
+      for (let i = 0; i < sig.length; i++) if (at.sig[i] !== sig[i]) return false;
+      for (let i = 0; i < inks.length; i++) if (at.inks[i] !== inks[i]) return false;
+      return true;
+    };
     const slid = (at: { cx: number; cy: number }): [number, number] => [(at.cx - cam.cx) * zoom, (at.cy - cam.cy) * zoom];
     const stale = (at: NonNullable<Renderer['lit']>): boolean => {
       const [ox, oy] = slid(at);
-      return at.key !== key || Math.abs(ox) > at.pad || Math.abs(oy) > at.pad;
+      return !same(at) || Math.abs(ox) > at.pad || Math.abs(oy) > at.pad;
     };
     if (!this.lit || stale(this.lit)) {
       // A quarter of the screen spare on every side.
@@ -2198,12 +2372,12 @@ export class Renderer {
       m.globalCompositeOperation = 'source-over';
       m.fillStyle = '#000';
       m.fillRect(0, 0, w + 2 * pad, h + 2 * pad);
-      holes(m, steady, pad);
+      holes(m, true, pad);
       c.globalCompositeOperation = 'source-over';
       c.fillStyle = '#000';
       c.fillRect(0, 0, w + 2 * pad, h + 2 * pad);
-      casts(c, steady, pad);
-      this.lit = { mask, warm, key, cx: cam.cx, cy: cam.cy, pad };
+      casts(c, true, pad);
+      this.lit = { mask, warm, sig: sig.slice(), inks: inks.slice(), cx: cam.cx, cy: cam.cy, pad };
     }
     // The steady layers where the camera is now, and the fires over them.
     const now = this.litNow ?? (this.litNow = { mask: sheet(undefined), warm: sheet(undefined) });
@@ -2216,11 +2390,34 @@ export class Renderer {
       g.drawImage(from, (ox - this.lit.pad) * LIGHT_RES, (oy - this.lit.pad) * LIGHT_RES);
       g.globalCompositeOperation = 'source-over';
     }
-    if (live.length) {
-      holes(ctxOf(mask), live);
-      casts(ctxOf(warm), live);
+    if (live) {
+      holes(ctxOf(mask), false);
+      casts(ctxOf(warm), false);
     }
-    return { mask, warm, box: cover(live, cover(steady)) };
+    return { mask, warm, box: cover() };
+  }
+
+  /** Where each light falls this frame (`lightLayers`), four numbers a light. */
+  private lightSpots = new Float64Array(64);
+  /** The steady lights as numbers and their colours this frame, against the layers' own (`lit`). */
+  private litSig: number[] = [];
+  private litInks: (string | undefined)[] = [];
+  /** The lights' gradients, by their stops, at a reach of one round nothing (`lightLayers`). */
+  private holeGrads = new Map<number | string, CanvasGradient>();
+  private softHoleGrads = new Map<number | string, CanvasGradient>();
+  private castGrads = new Map<number | string, CanvasGradient>();
+  private softCastGrads = new Map<number | string, CanvasGradient>();
+  private castRgbs = new Map<string, [number, number, number]>();
+
+  /** A light's colour, 'r, g, b', as numbers: read once for each colour. */
+  private castRgb(cast: string): [number, number, number] {
+    let rgb = this.castRgbs.get(cast);
+    if (!rgb) {
+      const [r, g, b] = cast.split(',').map(Number);
+      rgb = [r, g, b];
+      this.castRgbs.set(cast, rgb);
+    }
+    return rgb;
   }
 
   /**
@@ -2412,15 +2609,18 @@ export class Renderer {
     windOn(path, xs, ys, convexHull(xs, ys));
   }
 
+  /** The night's layer at `res` of the screen's size: one kept for each size it is mixed at, so going between them makes none. */
   private nightLayer(res = 1): HTMLCanvasElement {
     const w = Math.max(1, Math.ceil(this.canvas.width * res));
     const h = Math.max(1, Math.ceil(this.canvas.height * res));
-    if (!this.night || this.night.width !== w || this.night.height !== h) {
-      this.night = document.createElement('canvas');
-      this.night.width = w;
-      this.night.height = h;
+    let night = this.nights.get(res);
+    if (!night || night.width !== w || night.height !== h) {
+      night = document.createElement('canvas');
+      night.width = w;
+      night.height = h;
+      this.nights.set(res, night);
     }
-    return this.night;
+    return night;
   }
 
   /** Flat-shaded colour for a tile: base colour, slope lighting, per-tile variation and depth tint under water. */
@@ -2560,11 +2760,21 @@ export class Renderer {
     const cache = lit ? this.colors : this.memColors;
     let color = cache.get(x, y);
     if (!color) {
+      const was = lit ? this.sunStale(this.colorsWas, x, y) : null;
+      if (was) return was;
       const w = this.game.world;
       color = this.computeColor(x, y, w.viewTile(x, y, lit), w.viewData(x, y, lit), sun, lit);
       cache.set(x, y, color);
     }
     return color;
+  }
+
+  /** A colour from the step of the sun before, where this frame's time for shading tiles afresh is up and there is one. */
+  private sunStale(was: ColourPages | null, x: number, y: number): string | null {
+    if (!was || this.baking || performance.now() < this.sunRepaintBy) return null;
+    const c = was.get(x, y);
+    if (c) this.sunWasUsed = true;
+    return c;
   }
 
   /** Scratch for `groundAt`: four neighbours, and no array made per tile. */
@@ -2721,8 +2931,9 @@ export class Renderer {
    * drawn as they always were and nothing is kept.
    *
    * By tile, for ground in sight and ground remembered apart; dropped with the
-   * colour, which goes stale at the same moments, and all at once past
-   * `HEM_PIXELS` of pictures.
+   * colour, which goes stale at the same moments, and past `HEM_PIXELS` of
+   * pictures those gone longest undrawn (`hemRoom`). Each map is kept in the
+   * order its pictures were last drawn in, oldest first.
    */
   private hemCache = new Map<number, HemPicture>();
   private hemMemCache = new Map<number, HemPicture>();
@@ -2738,6 +2949,46 @@ export class Renderer {
   private readonly stillsLeft = { left: 0 };
   /** Tiles' edge pictures made this frame while the zoom moves (`HEM_MOVING_MOST`). */
   private hemsMoving = 0;
+
+  /** The ground kept as pictures a block of lines at a time (`GroundChunks`), and this frame's way of making and laying them. */
+  private readonly chunks = new GroundChunks();
+  private gf: GroundFrame | null = null;
+  /** Whether the ground is laid from them at all: off, every frame is drawn as it always was. */
+  private bakeGround = true;
+  /** Put up each time the ground's colours are worked out under a new sun, so a block knows it was made under an older one. */
+  private sunEpoch = 0;
+  /** Where the ground's drawing goes while a block is being made, rather than the screen (`strewTile`, `laidOver`). */
+  private groundCtx: CanvasRenderingContext2D | null = null;
+  private baking = false;
+  /** The line being drawn's blocks, from the first across the screen; and the blocks to be made, by how soon. */
+  private lineChunks: Array<GroundLine | null> = [];
+  private lineCe0 = 0;
+  private lineWant: number[] = [];
+  private chunkWants = new Map<number, [number, number, number]>();
+  /** The line width, join and cap the grid was stroked in on tiles of blocks wanted this frame, by step (`bakeChunk`). */
+  private strokeAt = new Map<number, [number, CanvasLineJoin, CanvasLineCap]>();
+  /**
+   * Everything a tile's sort (`groundClass`) reads besides the tile and what
+   * is in sight, as it stands this frame: a line found as it was made under
+   * the same, with nothing in sight changed in its block since, is not asked
+   * again. The moss is asked again a minute at a time.
+   */
+  private groundSig = '';
+  /** Where the view was last frame, and when it last moved. */
+  private viewWas: [number, number] = [NaN, NaN];
+  private viewMovedAt = 0;
+  /** Whether it has moved within `GROUND_STILL_MS`: nothing is made, and nothing wanted. */
+  private viewMoving = false;
+  private voidWas = '';
+  /** The box what is in sight last changed in, for the next change to be taken with it (`sightBox`). */
+  private sightWas: { x0: number; y0: number; x1: number; y1: number } | null = null;
+  /** The moss stage `groundClass` found on the tile it was asked about, or -1. */
+  private classMoss = -1;
+  private readonly classBuf = [0, 0, 0, 0];
+  private readonly classPts = new Float64Array(8);
+  /** How far a steep face's ferns reach (`groundReach`), and a tile's box as a block's picture makes room for it. */
+  private reach4: [number, number, number, number] | null = null;
+  private readonly reachBox = [0, 0, 0, 0];
 
   private forgetHems(lit?: boolean): void {
     if (lit !== false) this.hemCache.clear();
@@ -2774,6 +3025,7 @@ export class Renderer {
     if (!this.zoomSettled) {
       const r = had ? zoom / had.zoom : 0;
       if (had && (!had.cv || (r <= STAND_IN_MOST && r * STAND_IN_MOST >= 1))) {
+        this.hemUsed(cache, key, had);
         if (had.cv) ctx.drawImage(had.cv, pts[0] + (had.bx - had.px) * r, pts[1] + (had.by - had.py) * r, (had.cv.width / dpr) * r, (had.cv.height / dpr) * r);
         return had.cv !== null;
       }
@@ -2784,6 +3036,7 @@ export class Renderer {
       const dy = (pts[1] - had.py) * dpr;
       const rx = Math.round(dx), ry = Math.round(dy);
       if (Math.abs(dx - rx) < 0.02 && Math.abs(dy - ry) < 0.02) {
+        this.hemUsed(cache, key, had);
         if (had.cv) ctx.drawImage(had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
         return had.cv !== null;
       }
@@ -2808,13 +3061,39 @@ export class Renderer {
     if (!g) return this.swardEdges(ctx, V, x, y, pts, zoom, lit);
     g.setTransform(dpr, 0, 0, dpr, -bx, -by);
     const drew = this.swardEdges(g, V, x, y, pts, zoom, lit);
-    if (this.hemPixels + w * h > HEM_PIXELS) this.forgetHems();
-    cache.set(key, { cv: drew ? cv : null, px: pts[0], py: pts[1], bx: bx / dpr, by: by / dpr, zoom });
+    if (drew) this.hemRoom(w * h);
+    cache.set(key, { cv: drew ? cv : null, px: pts[0], py: pts[1], bx: bx / dpr, by: by / dpr, zoom, used: this.frameNo });
     if (drew) {
       this.hemPixels += w * h;
       ctx.drawImage(cv, bx / dpr, by / dpr, w / dpr, h / dpr);
     }
     return drew;
+  }
+
+  /** A tile's edges drawn from its picture: to the back of the order they are put away in, once a frame. */
+  private hemUsed(cache: Map<number, HemPicture>, key: number, h: HemPicture): void {
+    if (h.used === this.frameNo) return;
+    h.used = this.frameNo;
+    cache.delete(key);
+    cache.set(key, h);
+  }
+
+  /** Room for `need` more pixels of tiles' edges: the pictures gone longest undrawn put away, of either map, and never one drawn this frame. */
+  private hemRoom(need: number): void {
+    const most = HEM_PIXELS * this.canvas.dpr * this.canvas.dpr;
+    if (this.hemPixels + need <= most) return;
+    const lit = this.hemCache.entries(), mem = this.hemMemCache.entries();
+    let a = lit.next(), b = mem.next();
+    while (this.hemPixels + need > most) {
+      const fromLit = !a.done && (b.done || a.value[1].used <= b.value[1].used);
+      const at = fromLit ? a : b;
+      if (at.done || at.value[1].used === this.frameNo) break;
+      const [key, h] = at.value;
+      if (h.cv) this.hemPixels -= h.cv.width * h.cv.height;
+      (fromLit ? this.hemCache : this.hemMemCache).delete(key);
+      if (fromLit) a = lit.next();
+      else b = mem.next();
+    }
   }
 
   /** One tile's ruffled edges, and one colour's worth of them: reused, never remade. */
@@ -3111,6 +3390,8 @@ export class Renderer {
     if (!lit) return this.computeColor(x, y, TileType.Trail, 0, this.sunNow, false, true);
     let c = this.trailPaint.get(x, y);
     if (!c) {
+      const was = this.sunStale(this.trailPaintWas, x, y);
+      if (was) return was;
       c = this.computeColor(x, y, TileType.Trail, 0, this.sunNow, true, true);
       this.trailPaint.set(x, y, c);
     }
@@ -3232,7 +3513,7 @@ export class Renderer {
    * whichever way round the two of them have come out.
    */
   private laidOver(img: HTMLCanvasElement, pts: Float64Array, rot: number, mode: GlobalCompositeOperation): void {
-    const ctx = this.canvas.ctx;
+    const ctx = this.groundCtx ?? this.canvas.ctx;
     const qx: number[] = [];
     const qy: number[] = [];
     for (let i = 0; i < 4; i++) {
@@ -3336,12 +3617,18 @@ export class Renderer {
    * its own colour rather than in the ground's light and shade.
    */
   private pavingMoss(pics: HTMLCanvasElement[], q: number, i: number, x: number, y: number, pts: Float64Array, rot: number): void {
-    const days = pavingGreen(this.game, x, y, this.greenAt);
-    if (!days) return;
-    const g = greenShows(days, 0, this.wetness(x, y));
-    const stage = Math.max(0, Math.min(PAVE_STAGES, Math.round(g * PAVE_STAGES + (hashOf(x, y, 0, 5) - 0.5) * 1.6)));
+    const stage = this.mossStage(x, y);
+    if (stage < 0) return;
     const moss = pavingMoss(pics, q, stage);
     if (moss) this.laidOver(moss[i], pts, rot, 'source-over');
+  }
+
+  /** How far on the moss in a paved tile's joints is (`pavingMoss`), or -1 for none. */
+  private mossStage(x: number, y: number): number {
+    const days = pavingGreen(this.game, x, y, this.greenAt);
+    if (!days) return -1;
+    const g = greenShows(days, 0, this.wetness(x, y));
+    return Math.max(0, Math.min(PAVE_STAGES, Math.round(g * PAVE_STAGES + (hashOf(x, y, 0, 5) - 0.5) * 1.6)));
   }
 
   /**
@@ -3358,8 +3645,8 @@ export class Renderer {
    * and its trees and nothing else, and a clump you are remembering is not a
    * clump you are looking at.
    */
-  private strewTile(type: TileType, x: number, y: number, pts: Float64Array, rot: number, zoom: number, lit: boolean): void {
-    const ctx = this.canvas.ctx;
+  private strewTile(type: TileType, x: number, y: number, pts: Float64Array, rot: number, zoom: number, lit: boolean, box?: number[]): void {
+    const ctx = this.groundCtx ?? this.canvas.ctx;
     const m = strew(type);
     if (!lit) return;
     // The tile's own corners, so a daisy stays on the same square foot of
@@ -3392,8 +3679,15 @@ export class Renderer {
         u = Math.min(0.9, Math.max(0.1, u));
         v = Math.min(0.9, Math.max(0.1, v));
       }
+      const left = atX(u, v) - b.ax * zoom, top = atY(u, v) - b.ay * zoom;
+      // Only where it would go, for a block's picture to make room for it (`bakeChunk`).
+      if (box) {
+        box[0] = Math.min(box[0], left); box[1] = Math.min(box[1], top);
+        box[2] = Math.max(box[2], left + b.w * zoom); box[3] = Math.max(box[3], top + b.h * zoom);
+        continue;
+      }
       const ready = this.atSize(b.canvas, b.w * zoom, b.h * zoom);
-      ctx.drawImage(ready, atX(u, v) - b.ax * zoom, atY(u, v) - b.ay * zoom, b.w * zoom, b.h * zoom);
+      ctx.drawImage(ready, left, top, b.w * zoom, b.h * zoom);
     }
   }
 
@@ -3503,6 +3797,7 @@ export class Renderer {
     this.zoomSettled = now - this.zoomMovedAt >= ZOOM_SETTLE;
     this.stillsLeft.left = this.zoomSettled ? STILLS_A_FRAME : 0;
     piecesFrame(this.zoomSettled);
+    beastFrame();
     zoomHeld.left = this.zoomSettled ? 1 : 0;
     this.hemsMoving = 0;
     if (fit !== this.hemFor) {
@@ -3552,7 +3847,13 @@ export class Renderer {
     this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness() });
     this.game.spellLights = this.spells.lights;
     // What is burning, for glass to glow with at night, and last frame's glow gone.
-    this.lightsNow = this.game.darkness() > 0.02 ? [...this.game.lights(), ...this.runeLanternPools(), ...this.denPools()] : [];
+    if (this.game.darkness() > 0.02) {
+      // One list, the lights' own, rather than three spread into a fourth.
+      const lights = this.game.lights();
+      for (const l of this.runeLanternPools()) lights.push(l);
+      for (const l of this.denPools()) lights.push(l);
+      this.lightsNow = lights;
+    } else this.lightsNow = [];
     this.glassNight.length = 0;
     // Every drawbridge by the border it is hinged on, and the two tiles either side of that border, one of
     // which draws it (`drawGateAt`): a number per tile, so the tiles with none cost one lookup.
@@ -3704,12 +4005,27 @@ export class Renderer {
     // A tile last seen a moment ago has a new memory; throw away the colour
     // that was worked out from the old one.
     if (vision.revision !== this.lastVision) {
+      /*
+       * The blocks' tiles are checked again where what is in sight has changed:
+       * one change since the last frame is inside its box and the box before
+       * it, and two or more might be anywhere.
+       */
+      const one = vision.revision === this.lastVision + 1;
       this.lastVision = vision.revision;
       const box = vision.dirty;
+      const was = this.sightWas;
+      if (one && box && was) {
+        this.chunks.sightBox(V, Math.min(box.x0, was.x0) - 3, Math.min(box.y0, was.y0) - 3, Math.max(box.x1, was.x1) + 3, Math.max(box.y1, was.y1) + 3, vision.revision);
+      } else this.chunks.sightAll(vision.revision);
+      this.sightWas = box ? { ...box } : null;
       if (box) {
         this.memColors.forgetBox(Math.max(0, box.x0), Math.max(0, box.y0),
           Math.min(world.w - 1, box.x1), Math.min(world.h - 1, box.y1));
-      } else this.memColors.clear();
+        this.chunks.forgetBox(V, box.x0, box.y0, box.x1, box.y1, true);
+      } else {
+        this.memColors.clear();
+        this.chunks.forgetMem();
+      }
     }
     /*
      * And the edges and path marks of remembered ground, for the tiles
@@ -3721,9 +4037,12 @@ export class Renderer {
     if (!fresh) {
       this.forgetHems(false);
       this.trailMemMarks.clear();
+      this.chunks.forgetMem();
     } else {
       for (const i of fresh) {
         const x = i % world.w, y = (i - x) / world.w;
+        // Remembered afresh: what a block drew of it remembered is out of date, and what it drew of it in sight is not.
+        this.chunks.forgetBox(V, x - 2, y - 2, x + 2, y + 2, true);
         for (let ny = y - 1; ny <= y + 1; ny++) {
           for (let nx = x - 1; nx <= x + 1; nx++) {
             if (!world.inBounds(nx, ny)) continue;
@@ -3740,12 +4059,29 @@ export class Renderer {
     const sun = sunAt(hour);
     this.sunNow = sun;
     const sunStep = Math.floor((hour / 24) * SUN_STEPS);
+    /*
+     * The colours are worked out again a frame's worth of time at a time
+     * (`SUN_REPAINT_MS`), the last step's laid where they are not yet: a whole
+     * screen of them at once was a frame of up to a tenth of a second every
+     * step. Under a sun that has not moved (the night's) there is nothing to
+     * work out. The edges' pictures (`hems`) are not shaded by the sun and stay.
+     */
     if (sunStep !== this.lastSun) {
+      // Only the step before is near enough to stand in: after a jump of the clock, every colour is worked out at once, as ever.
+      const next = this.lastSun >= 0 && (sunStep - this.lastSun + SUN_STEPS) % SUN_STEPS === 1;
       this.lastSun = sunStep;
-      this.colors.clear();
-      this.forgetHems();
-      this.trailPaint.clear();
+      const was = this.sunWas;
+      if (!was || was[0] !== sun[0] || was[1] !== sun[1] || was[2] !== sun[2]) {
+        this.sunWas = sun;
+        this.colorsWas = next ? this.colors : null;
+        this.colors = new ColourPages(world.w);
+        this.trailPaintWas = next ? this.trailPaint : null;
+        this.trailPaint = new ColourPages(world.w);
+        this.sunEpoch += next ? 1 : 2;
+      }
     }
+    this.sunRepaintBy = this.colorsWas ? performance.now() + SUN_REPAINT_MS : Infinity;
+    this.sunWasUsed = false;
     /*
      * Where a shadow falls, and how long it is. Straight down and invisible at
      * noon; away from the sun and two and a half tiles long when the sun is on
@@ -3847,7 +4183,9 @@ export class Renderer {
     this.hitSeq = 0;
     this.glows.length = 0;
     this.swirlsSeen.length = 0;
-    this.runeNight.begin(this.game.darkness() > 0.02);
+    // After dark; and for an altar's stars, whenever the night layer is laid at all (`drawOverlays`), so it can be mixed small.
+    const dark0 = this.game.darkness();
+    this.runeNight.begin(dark0 > 0.02, skyWash(this.game.hourOfDay(), dark0).length > 0);
     this.anvilHits.length = 0;
     this.stoneHits.length = 0;
     this.postHits.length = 0;
@@ -3917,13 +4255,19 @@ export class Renderer {
       visible: this.lifeVisible, covered: this.lifeCovered, indoors: this.lifeIndoors, pieces: this.lifePieces,
     }, zoom);
 
+    // The ground laid from pictures of it a block at a time where it can be (`GroundChunks`).
+    this.gf = this.groundFrame(V, zoom, W, H, drawnAt, grid, paveRot, grassy, hemmed, paved, seamed, water, sun, voidInk);
     for (let d = dLo; d <= dHi; d++) {
       // A building on piers in the water stands in front of all the water drawn before its line, swell and wakes and all.
       if (this.wetPierLines?.has(d)) this.layWater(ctx, zoom);
       this.ents.length = 0;
       this.entN = 0;
       // Whether a runestone drawn on a line before this one is lit for the night, so this line's ground is kept off it.
-      const stoneLit = this.runeNight.active;
+      const stoneLit = this.runeNight.keeping;
+      // The ground is laid under one transform: read once a line, not once a tile (`occludeGround`).
+      if (stoneLit) this.groundMatrix = ctx.getTransform();
+      // Which of this line's tiles are laid from a block's picture (`chunkLine`): none where a runestone is keeping the ground off it.
+      const lineRuns = this.gf !== null && this.chunkLine(d, eMin, eMax) && !stoneLit;
       if (grain) {
         this.grainN = 0;
         this.grainM = 0;
@@ -3957,23 +4301,29 @@ export class Renderer {
         // Three states: land nobody has seen is not drawn at all, land in sight
         // is drawn as it is, and land only remembered is drawn as it was.
         const fog = vision.state(x, y);
+        // Its ground laid already, with the rest of its run, from its block's picture; or the run laid now, at its first tile.
+        let run = lineRuns ? this.chunkRun(e) : null;
+        if (run && run.laid !== this.frameNo && !this.layRun(ctx, run, drawnAt, Math.floor(d / this.chunks.lines), Math.floor(e / this.chunks.across))) run = null;
+        if (this.gf) this.chunkSeen(ctx, d, e, run);
         if (fog === UNSEEN) {
           // Still lay the shape down, flat and empty. A hill drawn behind a
           // hole in the map would otherwise hang its face out over the dark.
-          ctx.beginPath();
-          ctx.moveTo(pts[0], pts[1]);
-          ctx.lineTo(pts[2], pts[3]);
-          ctx.lineTo(pts[4], pts[5]);
-          ctx.lineTo(pts[6], pts[7]);
-          ctx.closePath();
-          ctx.fillStyle = voidInk;
-          ctx.fill();
+          if (!run) {
+            ctx.beginPath();
+            ctx.moveTo(pts[0], pts[1]);
+            ctx.lineTo(pts[2], pts[3]);
+            ctx.lineTo(pts[4], pts[5]);
+            ctx.lineTo(pts[6], pts[7]);
+            ctx.closePath();
+            ctx.fillStyle = voidInk;
+            ctx.fill();
+          }
           if (stoneLit) this.occludeGround(ctx, pts, minY, maxY);
           continue;
         }
         const lit = fog === VISIBLE;
-        const color = this.groundColor(x, y, lit, sun);
-        ctx.beginPath();
+        const color = run ? '' : this.groundColor(x, y, lit, sun);
+        if (!run) ctx.beginPath();
         /*
          * Without the grid, a tile's edge is stroked in its own colour, to
          * close the hairline the smoothing leaves between two tiles; the same
@@ -3981,7 +4331,7 @@ export class Renderer {
          * fill and a stroke (`outsetTile`), and a far view is six thousand
          * tiles. One folded over on a cliff is outlined and stroked as before.
          */
-        const outset = !grid && this.outsetTile(ctx, pts);
+        const outset = !!run || (!grid && this.outsetTile(ctx, pts));
         if (!outset) {
           ctx.moveTo(pts[0], pts[1]);
           ctx.lineTo(pts[2], pts[3]);
@@ -3989,8 +4339,10 @@ export class Renderer {
           ctx.lineTo(pts[6], pts[7]);
           ctx.closePath();
         }
-        ctx.fillStyle = color;
-        ctx.fill();
+        if (!run) {
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
         if (stoneLit) this.occludeGround(ctx, pts, minY, maxY);
         // Remembered ground's wash comes this far down the screen; ground in sight that comes up past it takes it off what it covers.
         this.wallLift = null;
@@ -4066,7 +4418,7 @@ export class Renderer {
          * no weed at all.
          */
         const wades = wet && WADES.has(t0) && (c[0] + c[1] + c[2] + c[3]) / 4 > (pond ? Math.max(0, this.pondTop) : 0) - WADE_DEPTH;
-        if (grassy && (!wet || wades) && STREWN.has(t0) && here !== TileType.Trail) this.strewTile(t0, x, y, pts, paveRot, zoom, lit);
+        if (!run && grassy && (!wet || wades) && STREWN.has(t0) && here !== TileType.Trail) this.strewTile(t0, x, y, pts, paveRot, zoom, lit);
         // And the wildflowers in it, in their season: see `drawFlowers`.
         if (lit && !wet && here === TileType.Grass) this.drawFlowers(ctx, x, y, pts, zoom);
         /*
@@ -4080,7 +4432,7 @@ export class Renderer {
          * beside the colour: one means there was nothing growing over this
          * tile and it can be passed over, two means there was.
          */
-        if (hemmed && !wet && !PAVED.has(t0) && t0 !== TileType.Steps) {
+        if (!run && hemmed && !wet && !PAVED.has(t0) && t0 !== TileType.Steps) {
           const seams = lit ? this.colors : this.memColors;
           const known = seams.flag(x, y);
           if (known !== 1) {
@@ -4093,20 +4445,20 @@ export class Renderer {
          * of one that crosses a corner of this tile on the diagonal. Asked of
          * every tile, off a mask kept beside the colour.
          */
-        if (!wet) {
+        if (!wet && !run) {
           const tm = this.trailMaskAt(x, y, lit);
           if (tm) this.drawTrail(ctx, x, y, tm, pts, lit, zoom);
         }
         // And a face of steep ground dressed as the rock in the pictures is: see `dressFace`.
-        if (lit) this.dressFace(ctx, x, y, pts, zoom, sea, pond);
-        if (paved && !wet && PAVED.has(t0)) this.paving(t0, x, y, world.viewData(x, y, lit), pts, paveRot, lit);
+        if (lit && !run) this.dressFace(ctx, x, y, pts, zoom, sea, pond);
+        if (paved && !wet && !run && PAVED.has(t0)) this.paving(t0, x, y, world.viewData(x, y, lit), pts, paveRot, lit);
         // A flight of garden steps, built up the tile over its colour: see `steps.ts`.
         if (!wet && t0 === TileType.Steps) {
           drawSteps({ ctx, cam, world, zoom, season: this.season, light: this.stepsLight, dpr: this.canvas.dpr }, x, y);
         }
         // And the metal in the stone, where there is any. Plain rock is plain.
         // It keeps to its own tile without a clip: see `seams/paint.ts`.
-        if (seamed && !wet && t0 === TileType.Rock) {
+        if (seamed && !wet && !run && t0 === TileType.Rock) {
           const kind = world.rockFace(x, y);
           if (kind > 0) seam(ctx, x, y, kind, pts, paveRot, zoom, this.canvas.dpr);
         }
@@ -4533,6 +4885,9 @@ export class Renderer {
         lineAny = false;
       }
     }
+    // And pictures made of the blocks of ground this frame wanted and did not have, as long as the frame can spare.
+    if (this.gf) this.bakeChunks();
+    this.gf = null;
     // Anybody put off to a line past the last drawn, and any rune gate's front still waiting.
     if (this.gateDeferred.size) {
       this.ents.length = 0;
@@ -4565,9 +4920,531 @@ export class Renderer {
       ctx.fill(fogPath);
     }
 
+    // Every tile in view shaded for this step of the sun: the last step's colours are done with.
+    if (this.colorsWas && !this.sunWasUsed) {
+      this.colorsWas = null;
+      this.trailPaintWas = null;
+    }
     this.drawOverlays(ctx, zoom);
     this.drawFight(ctx, zoom);
     if (this.game.settings.markThreats) this.drawThreats(ctx, zoom);
+  }
+
+  /**
+   * How this frame's blocks of ground are made and laid (`GroundChunks`), or
+   * null for a frame drawn as it always was: the zoom still moving, the grid
+   * on, a cellar being looked into, or a canvas turned or skewed. A new view,
+   * zoom, screen or fraction of a pixel the camera sits on drops them all.
+   */
+  private groundFrame(V: View, zoom: number, W: number, H: number, at: DOMMatrix, grid: boolean, paveRot: number,
+    grassy: boolean, hemmed: boolean, paved: boolean, seamed: boolean, water: WaterField | null, sun: [number, number, number], voidInk: string): GroundFrame | null {
+    if (!this.bakeGround || zoom < GROUND_FROM || !this.zoomSettled || this.cellarFrame || at.b !== 0 || at.c !== 0 || at.a !== at.d) return null;
+    const a = at.a;
+    const cam = this.camera;
+    if (cam.cx !== this.viewWas[0] || cam.cy !== this.viewWas[1]) {
+      this.viewWas = [cam.cx, cam.cy];
+      this.viewMovedAt = performance.now();
+    }
+    this.viewMoving = performance.now() - this.viewMovedAt < GROUND_STILL_MS;
+    const stepW = HALF_W * V.unit;
+    const stepH = HALF_H * V.unit;
+    // Where the lattice's first point lands, in device pixels: the camera is on a whole one (`render`), so this keeps its fraction.
+    const X0 = a * (W / 2 - cam.cx * zoom) + at.e;
+    const Y0 = a * (H / 2 - cam.cy * zoom) + at.f;
+    const frac = (v: number): number => (Math.abs(v - Math.round(v)) < 1e-4 ? 0 : v - Math.floor(v));
+    const fx = frac(X0), fy = frac(Y0);
+    const lines = Math.max(2, Math.min(64, Math.round(GROUND_BLOCK_H / (stepH * zoom * a))));
+    const across = 2 * Math.max(2, Math.min(512, Math.ceil(this.canvas.el.width / (2 * stepW * zoom * a))));
+    const key = `${cam.rotation}|${zoom}|${a}|${Math.round(fx * 1000)}|${Math.round(fy * 1000)}|${lines}|${across}|${grid}`;
+    if (key !== this.chunks.key) this.chunks.reset(key, lines, across);
+    else this.chunks.forgetTouched(V);
+    this.chunkWants.clear();
+    this.strokeAt.clear();
+    const g = this.game;
+    this.groundSig = `${this.structs.stamp}|${this.hingeTiles.size}|${g.bridges.size}|${g.foundations.size}|${g.buildings.pierTiles.size}|`
+      + `${this.flowerSeasonNow}|${this.flowerBuildings}|${water ? this.frameNo : 0}|${Math.floor(this.greenAt / 60)}|${g.settings.fog}`;
+    const voidSteady = voidInk === this.voidWas;
+    this.voidWas = voidInk;
+    const hw = stepW * zoom, hh = stepH * zoom;
+    const off = new Float64Array(8);
+    for (let i = 0; i < 4; i++) {
+      off[i * 2] = V.shape[i][0] * hw;
+      off[i * 2 + 1] = V.shape[i][1] * hh;
+    }
+    return {
+      V, zoom, a, te: at.e, tf: at.f, sx: Math.round(X0 - fx), sy: Math.round(Y0 - fy), W, H, stepW, stepH, hs: HEIGHT_SCALE * zoom, off,
+      co: V.corners, paveRot, grassy, hemmed, paved, seamed, grid, water, piers: this.game.buildings.pierTiles.size > 0, sun,
+      voidInk, voidSteady,
+    };
+  }
+
+  /**
+   * What a tile is for its block's picture (`GroundChunks`): nought for one
+   * drawn as it always was -- under water, folded over on a cliff, a flight of
+   * steps, paving under the grid, flowers in it that nod, the foot of a pier --
+   * or `BAKED`, with `VOID` for ground nobody has seen, `LIT` for ground in
+   * sight and `AFTER` where something is drawn on it
+   * after its ground. And the moss in a paved tile's joints, in `classMoss`.
+   */
+  private groundClass(x: number, y: number): number {
+    const gf = this.gf!;
+    const world = this.game.world;
+    const co = gf.co;
+    const c = this.classBuf;
+    this.classMoss = -1;
+    const fog = this.game.vision.state(x, y);
+    if (fog === UNSEEN) return BAKED | VOID;
+    const lit = fog === VISIBLE;
+    for (let k = 0; k < 4; k++) c[k] = world.getHeight(x + co[k][0], y + co[k][1]);
+    if (c[0] < 0 || c[1] < 0 || c[2] < 0 || c[3] < 0) return 0;
+    if (gf.water !== null && gf.water.wet(x, y) && this.pondsOn(gf.water, x, y, c, co)) return 0;
+    const p = this.classPts;
+    for (let k = 0; k < 4; k++) {
+      p[k * 2] = gf.off[k * 2];
+      p[k * 2 + 1] = gf.off[k * 2 + 1] - c[k] * gf.hs;
+    }
+    if (!gf.grid && !this.outsetTurn(p)) return 0;
+    const here = world.viewTile(x, y, lit);
+    const t0 = this.groundAt(x, y, lit);
+    if (t0 === TileType.Steps) return 0;
+    /*
+     * Paving is laid on in `overlay`, which mixes with what is under it; under
+     * the grid a tile's edge is not covered whole by its own colour, and what
+     * shows through there is the line before, which a block's picture has not
+     * got.
+     */
+    if (gf.grid && gf.paved && PAVED.has(t0)) return 0;
+    if (lit && here === TileType.Grass && gf.zoom >= FLOWERS_DRAWN && (this.flowerAt(x, y) & 7) !== 0) return 0;
+    const near = this.structs.nearAny(x, y);
+    if (near && gf.piers) return 0;
+    let k = BAKED | (lit ? LIT : 0);
+    if (near || this.hingeTiles.has(x * 65536 + y) || (lit && this.game.foundations.size > 0 && this.game.foundationAt(x, y))) k |= AFTER;
+    if (lit && gf.paved && PAVED.has(t0)) this.classMoss = this.mossStage(x, y);
+    return k;
+  }
+
+  /**
+   * The blocks across line `d` that its ground can be laid from: each one's
+   * tiles in view checked against what it was made of, and a block wanted
+   * (`bakeChunks`) where there is none, it is out of date, a tile has changed
+   * or it was made under another sun. Says whether there is any.
+   */
+  private chunkLine(d: number, eMin: number, eMax: number): boolean {
+    const ch = this.chunks;
+    const V = this.gf!.V;
+    const world = this.game.world;
+    const cd = Math.floor(d / ch.lines);
+    const li = d - cd * ch.lines;
+    const ce0 = Math.floor(eMin / ch.across);
+    const ce1 = Math.floor(eMax / ch.across);
+    const out = this.lineChunks;
+    const want = this.lineWant;
+    out.length = 0;
+    want.length = 0;
+    this.lineCe0 = ce0;
+    let any = false;
+    const gf = this.gf!;
+    for (let ce = ce0; ce <= ce1; ce++) {
+      const c = ch.get(cd, ce);
+      // Made under the sun before last or longer ago: not laid (the colours of one step back are, `colorsWas`).
+      if (!c || c.dead || c.sun < this.sunEpoch - 1) {
+        want.push(0);
+        out.push(null);
+        continue;
+      }
+      c.used = this.frameNo;
+      // Unseen ground laid in another colour of the void: made again once the colour holds still.
+      if (c.voidInk !== null && c.voidInk !== gf.voidInk) {
+        want.push(gf.voidSteady ? 1 : -1);
+        out.push(null);
+        continue;
+      }
+      want.push(c.stale ? (performance.now() < c.hold ? -1 : 1) : c.sun !== this.sunEpoch ? 2 : -1);
+      const L = c.lines[li];
+      // Off the top or the bottom of the screen: nothing of it to lay.
+      if (!L.runs.length || L.y1 + gf.sy < 0 || L.y0 + gf.sy > this.canvas.el.height) {
+        out.push(null);
+        continue;
+      }
+      const vision = this.game.vision.revision;
+      if (L.sig === this.groundSig && L.vis >= c.vis) {
+        out.push(L);
+        any = true;
+        continue;
+      }
+      let ok = true;
+      const e0 = Math.max(eMin, ce * ch.across), e1 = Math.min(eMax, ce * ch.across + ch.across - 1);
+      for (let e = e0; ok && e <= e1; e++) {
+        if (V.staggered && ((e + d) & 1) !== 0) continue;
+        const x = V.x[0] + V.x[1] * d + V.x[2] * e;
+        const y = V.y[0] + V.y[1] * d + V.y[2] * e;
+        if (x < 0 || y < 0 || x >= world.w || y >= world.h) continue;
+        const s = e - ce * ch.across;
+        if (this.groundClass(x, y) !== L.cls[s] || this.classMoss !== L.moss[s]) ok = false;
+      }
+      if (!ok) {
+        staled(c, performance.now());
+        if (performance.now() >= c.hold) want[want.length - 1] = 1;
+      } else {
+        L.sig = this.groundSig;
+        L.vis = vision;
+      }
+      out.push(ok ? L : null);
+      any ||= ok;
+    }
+    return any;
+  }
+
+  private wantChunk(cd: number, ce: number, soon: number): void {
+    const id = cd * 65536 + ce;
+    const had = this.chunkWants.get(id);
+    if (!had || had[2] > soon) this.chunkWants.set(id, [cd, ce, soon]);
+  }
+
+  /** The run the tile at step `e` of the line being drawn is laid in, or null for one drawn as it always was. */
+  private chunkRun(e: number): GroundRun | null {
+    const ch = this.chunks;
+    const ce = Math.floor(e / ch.across);
+    const L = this.lineChunks[ce - this.lineCe0];
+    if (!L) return null;
+    const r = L.run[e - ce * ch.across];
+    return r < 0 || L.runs[r].refused === this.frameNo ? null : L.runs[r];
+  }
+
+  /**
+   * A tile on the screen: its block wanted where there is none to lay, it is
+   * out of date or of an older sun -- only blocks with something on the
+   * screen are made -- and, drawn as it always was, the state of the canvas
+   * the grid was stroked in on it, for the block to be made in.
+   */
+  private chunkSeen(ctx: CanvasRenderingContext2D, d: number, e: number, run: GroundRun | null): void {
+    if (this.viewMoving) return;
+    const ch = this.chunks;
+    const ce = Math.floor(e / ch.across);
+    const w = this.lineWant[ce - this.lineCe0];
+    if (w === undefined || w < 0) return;
+    this.wantChunk(Math.floor(d / ch.lines), ce, w);
+    if (!run && this.gf!.grid) this.strokeAt.set((d + 32768) * 65536 + e + 32768, [ctx.lineWidth, ctx.lineJoin, ctx.lineCap]);
+  }
+
+  /**
+   * A run of a line's ground laid from its block's picture, a device pixel to
+   * a device pixel, and the canvas left as its tiles would have left it. Under
+   * the grid, which is stroked in whatever the canvas was left with, only where
+   * that is what the run was made in; and not at all, and the block made again,
+   * where it is not.
+   */
+  private layRun(ctx: CanvasRenderingContext2D, run: GroundRun, at: DOMMatrix, cd: number, ce: number): boolean {
+    const gf = this.gf!;
+    if (gf.grid && (ctx.lineWidth !== run.width0 || ctx.lineJoin !== run.join0 || ctx.lineCap !== run.cap0)) {
+      run.refused = this.frameNo;
+      const c = this.chunks.get(cd, ce);
+      if (c) {
+        staled(c, performance.now());
+        if (performance.now() >= c.hold) this.lineWant[ce - this.lineCe0] = 1;
+      }
+      return false;
+    }
+    // Only what is on the screen of it.
+    let x = run.dx + gf.sx, y = run.dy + gf.sy, sx = run.sx, sy = run.sy, w = run.w, h = run.h;
+    const cut = (lo: number): number => Math.max(0, lo);
+    const l = cut(-x), t = cut(-y);
+    x += l; sx += l; w -= l + cut(x + w - l - this.canvas.el.width);
+    y += t; sy += t; h -= t + cut(y + h - t - this.canvas.el.height);
+    if (w > 0 && h > 0) {
+      // Under a scale of one, two or four a device pixel is a whole number of the canvas's units over it, and the transform can stay.
+      if (gf.a === 1 || gf.a === 2 || gf.a === 4) {
+        const a = gf.a;
+        ctx.drawImage(run.cv, sx, sy, w, h, (x - gf.te) / a, (y - gf.tf) / a, w / a, h / a);
+      } else {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(run.cv, sx, sy, w, h, x, y, w, h);
+        ctx.setTransform(at);
+      }
+    }
+    if (run.width !== null) ctx.lineWidth = run.width;
+    if (run.join !== null) ctx.lineJoin = run.join;
+    if (run.cap !== null) ctx.lineCap = run.cap;
+    run.laid = this.frameNo;
+    return true;
+  }
+
+  /** How far the ferns and tufts on a steep face (`drawFace`) reach past where they stand, at zoom one: left, right, up, down. */
+  private groundReach(): [number, number, number, number] {
+    if (this.reach4) return this.reach4;
+    const r: [number, number, number, number] = [0, 0, 0, 0];
+    for (let v = 0; v < 3; v++) for (const kind of ['fern', 'tuft'] as const) {
+      const b = sprigOf(kind, v);
+      r[0] = Math.max(r[0], b.ax * 1.2);
+      r[1] = Math.max(r[1], (b.w - b.ax) * 1.2);
+      r[2] = Math.max(r[2], b.ay * 1.2);
+      r[3] = Math.max(r[3], (b.h - b.ay) * 1.2);
+    }
+    this.reach4 = r;
+    return r;
+  }
+
+  /** Whether a tile is steep enough to show its rock (`dressFace`). */
+  private steep(x: number, y: number): boolean {
+    const w = this.game.world;
+    const h0 = w.getHeight(x, y), h1 = w.getHeight(x + 1, y), h2 = w.getHeight(x + 1, y + 1), h3 = w.getHeight(x, y + 1);
+    return bareRock(Math.hypot((h1 + h2 - h0 - h3) / 2 / UNITS_PER_TILE, (h2 + h3 - h0 - h1) / 2 / UNITS_PER_TILE)) > 0;
+  }
+
+  /** A tile's screen corners this frame, as the ground pass works them out. */
+  private chunkPts(d: number, e: number, x: number, y: number, out: Float64Array): void {
+    const gf = this.gf!;
+    const world = this.game.world;
+    const cam = this.camera;
+    const baseX = (e * gf.stepW - cam.cx) * gf.zoom + gf.W / 2;
+    const baseY = (d * gf.stepH - cam.cy) * gf.zoom + gf.H / 2;
+    for (let k = 0; k < 4; k++) {
+      out[k * 2] = baseX + gf.off[k * 2];
+      out[k * 2 + 1] = baseY + gf.off[k * 2 + 1] - world.getHeight(x + gf.co[k][0], y + gf.co[k][1]) * gf.hs;
+    }
+  }
+
+  /** The blocks this frame wanted, soonest first, made as long as the frame can spare and there is room. */
+  private bakeChunks(): void {
+    if (!this.chunkWants.size || this.viewMoving) return;
+    const wants = [...this.chunkWants.values()].sort((p, q) => p[2] - q[2]);
+    this.chunkWants.clear();
+    const until = performance.now() + GROUND_BAKE_MS;
+    const most = Math.min(GROUND_PIXELS, GROUND_SCREENS * this.canvas.el.width * this.canvas.el.height);
+    this.baking = true;
+    try {
+      for (const [cd, ce] of wants) {
+        if (performance.now() > until) break;
+        this.chunks.evict(most, this.frameNo);
+        // One made again takes the place of the one it was.
+        if (this.chunks.pixels - (this.chunks.get(cd, ce)?.pixels ?? 0) > most) break;
+        this.bakeChunk(cd, ce);
+      }
+    } finally {
+      this.baking = false;
+      this.groundCtx = null;
+    }
+  }
+
+  /**
+   * A block's picture (`GroundChunks`): its lines' tiles sorted into runs, a
+   * run's room in the picture its tiles' reach, and each run drawn as the
+   * ground pass draws its tiles (`bakeTile`), where on the screen this frame
+   * would have put them.
+   */
+  private bakeChunk(cd: number, ce: number): void {
+    const gf = this.gf!;
+    const ch = this.chunks;
+    const world = this.game.world;
+    const { V, a } = gf;
+    const A = ch.across;
+    const lines: GroundLine[] = [];
+    const pend: Array<{ run: GroundRun; tiles: number[]; pts: Float64Array[]; x0: number; y0: number; x1: number; y1: number; seen: boolean; area: number; line: GroundLine }> = [];
+    let mem = false;
+    let unseen = false;
+    for (let li = 0; li < ch.lines; li++) {
+      const d = cd * ch.lines + li;
+      const L: GroundLine = { cls: new Uint8Array(A), moss: new Int8Array(A).fill(-1), run: new Int16Array(A).fill(-1), runs: [], y0: Infinity, y1: -Infinity, sig: this.groundSig, vis: this.game.vision.revision };
+      lines.push(L);
+      let cur: (typeof pend)[number] | null = null;
+      for (let s = 0; s < A; s++) {
+        const e = ce * A + s;
+        if (V.staggered && ((e + d) & 1) !== 0) continue;
+        const x = V.x[0] + V.x[1] * d + V.x[2] * e;
+        const y = V.y[0] + V.y[1] * d + V.y[2] * e;
+        if (x < 0 || y < 0 || x >= world.w || y >= world.h) continue;
+        const k = this.groundClass(x, y);
+        L.cls[s] = k;
+        L.moss[s] = this.classMoss;
+        if (!k) {
+          cur = null;
+          continue;
+        }
+        const lit = (k & LIT) !== 0;
+        if (k & VOID) unseen = true;
+        else if (!lit) mem = true;
+        const pts = new Float64Array(8);
+        this.chunkPts(d, e, x, y, pts);
+        // What it draws past its corners: its clumps and a steep face's ferns, a path's lobes, and a pixel or two of smoothing.
+        const t0 = this.groundAt(x, y, lit);
+        const here = world.viewTile(x, y, lit);
+        const z = gf.zoom;
+        const steep = lit && !(k & VOID) && this.steep(x, y);
+        const [rl, rr, ru, rd] = steep && z >= 1 ? this.groundReach() : [0, 0, 0, 0];
+        // A steep face's moss and lip hang over its edges as well.
+        const pad = 2 + (gf.grid ? 1.5 : 0) + (steep ? 12 * z : 0) + (!(k & VOID) && this.trailMaskAt(x, y, lit) ? TRAIL_LOBE * 2 * z : 0);
+        const box = this.reachBox;
+        box[0] = box[1] = Infinity;
+        box[2] = box[3] = -Infinity;
+        for (let q = 0; q < 8; q += 2) {
+          box[0] = Math.min(box[0], pts[q] - rl * z); box[2] = Math.max(box[2], pts[q] + rr * z);
+          box[1] = Math.min(box[1], pts[q + 1] - ru * z); box[3] = Math.max(box[3], pts[q + 1] + rd * z);
+        }
+        if (gf.grassy && lit && !(k & VOID) && STREWN.has(t0) && here !== TileType.Trail) this.strewTile(t0, x, y, pts, gf.paveRot, z, lit, box);
+        const x0 = Math.floor(a * (box[0] - pad) + gf.te);
+        const x1 = Math.ceil(a * (box[2] + pad) + gf.te);
+        const y0 = Math.floor(a * (box[1] - pad) + gf.tf);
+        const y1 = Math.ceil(a * (box[3] + pad) + gf.tf);
+        // A run whose box would be mostly empty -- over a hill, its tiles at heights far apart -- is cut, and goes on in another.
+        const area = (x1 - x0) * (y1 - y0);
+        if (cur && (Math.max(cur.x1, x1) - Math.min(cur.x0, x0)) * (Math.max(cur.y1, y1) - Math.min(cur.y0, y0)) > 2 * (cur.area + area)) cur = null;
+        if (!cur) {
+          cur = {
+            run: {
+              cv: null as unknown as HTMLCanvasElement, sx: 0, sy: 0, w: 0, h: 0, dx: 0, dy: 0, laid: -1, refused: -1,
+              width0: 1, join0: 'round', cap0: 'butt', width: null, join: null, cap: null,
+            },
+            tiles: [], pts: [], x0, y0, x1, y1, seen: false, area: 0, line: L,
+          };
+          L.runs.push(cur.run);
+          pend.push(cur);
+        }
+        // The canvas as the grid found it on the run's first tile drawn this frame: off the screen, a tile draws nothing to change it.
+        const st = !cur.seen ? this.strokeAt.get((d + 32768) * 65536 + e + 32768) : undefined;
+        if (st) {
+          [cur.run.width0, cur.run.join0, cur.run.cap0] = st;
+          cur.seen = true;
+        }
+        L.run[s] = L.runs.length - 1;
+        cur.tiles.push(x, y, k);
+        cur.area += area;
+        cur.pts.push(pts);
+        cur.x0 = Math.min(cur.x0, x0); cur.y0 = Math.min(cur.y0, y0);
+        cur.x1 = Math.max(cur.x1, x1); cur.y1 = Math.max(cur.y1, y1);
+        // Something drawn on it after its ground: the next tile's ground goes down after that, in a run of its own.
+        if (k & AFTER) cur = null;
+      }
+    }
+    // The runs packed in rows, tallest first, a row as wide as the picture's area squared or the widest run.
+    let w = 0, h = 0, area = 0;
+    for (const p of pend) {
+      p.run.w = p.x1 - p.x0;
+      p.run.h = p.y1 - p.y0;
+      w = Math.max(w, p.run.w);
+      area += p.run.w * p.run.h;
+    }
+    w = Math.max(w, Math.ceil(Math.sqrt(area * 1.15)));
+    let rx = 0, ry = 0, rh = 0;
+    for (const p of [...pend].sort((q, r) => r.run.h - q.run.h)) {
+      if (rx + p.run.w > w) {
+        ry += rh;
+        rx = 0;
+        rh = 0;
+      }
+      p.run.sx = rx;
+      p.run.sy = ry;
+      rx += p.run.w;
+      rh = Math.max(rh, p.run.h);
+    }
+    h = ry + rh;
+    let cv: HTMLCanvasElement | null = null;
+    const g = w > 0 && h > 0 && w * h <= GROUND_BLOCK_MOST ? (cv = document.createElement('canvas'), cv.width = w, cv.height = h, cv.getContext('2d')) : null;
+    if (!g || !cv) {
+      // Nothing to lay, or too much: every tile drawn as it always was.
+      for (const L of lines) {
+        L.runs.length = 0;
+        L.run.fill(-1);
+      }
+      cv = null;
+    } else {
+      this.groundCtx = g;
+      for (const p of pend) {
+        const r = p.run;
+        r.cv = cv;
+        r.dx = p.x0 - gf.sx;
+        r.dy = p.y0 - gf.sy;
+        p.line.y0 = Math.min(p.line.y0, r.dy);
+        p.line.y1 = Math.max(p.line.y1, r.dy + r.h);
+        // Kept to its own room in the picture, whatever reaches further than it was given.
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.beginPath();
+        g.rect(r.sx, r.sy, r.w, r.h);
+        g.clip();
+        g.setTransform(a, 0, 0, a, gf.te - p.x0 + r.sx, gf.tf - p.y0 + r.sy);
+        /*
+         * Under the grid, the canvas as its first tile found it; without, as
+         * nothing on the ground ever leaves it, so that what its tiles change
+         * is told from what they leave alone.
+         */
+        const [w0, j0, c0]: [number, CanvasLineJoin, CanvasLineCap] = gf.grid ? [r.width0, r.join0, r.cap0] : [0.125, 'bevel', 'square'];
+        g.lineWidth = w0;
+        g.lineJoin = j0;
+        g.lineCap = c0;
+        for (let i = 0; i < p.tiles.length; i += 3) this.bakeTile(g, p.tiles[i], p.tiles[i + 1], p.tiles[i + 2], p.pts[i / 3]);
+        if (g.lineWidth !== w0) r.width = g.lineWidth;
+        if (g.lineJoin !== j0) r.join = g.lineJoin;
+        if (g.lineCap !== c0) r.cap = g.lineCap;
+        g.restore();
+      }
+      this.groundCtx = null;
+    }
+    ch.set({
+      cd, ce, lines, cv, pixels: cv ? w * h : 0, sun: this.sunEpoch, dead: false, stale: false, mem, used: this.frameNo,
+      voidInk: unseen ? gf.voidInk : null, vis: this.game.vision.revision,
+      made: performance.now(), holdFor: ch.get(cd, ce)?.holdFor ?? 0, hold: 0,
+    });
+  }
+
+  /**
+   * One tile's ground into a block's picture, as the ground pass draws a
+   * dry tile (`renderFrame`): its colour, what is strewn on it, the edges of
+   * the ground beside it, a path, a face's dressing, its paving and the metal
+   * in it, in that order. What that pass lays a line at a time -- grain,
+   * flowers from far off -- it still lays.
+   */
+  private bakeTile(g: CanvasRenderingContext2D, x: number, y: number, k: number, pts: Float64Array): void {
+    const gf = this.gf!;
+    const world = this.game.world;
+    // Ground nobody has seen: its shape, flat and empty, as the line lays it.
+    if (k & VOID) {
+      g.beginPath();
+      g.moveTo(pts[0], pts[1]);
+      g.lineTo(pts[2], pts[3]);
+      g.lineTo(pts[4], pts[5]);
+      g.lineTo(pts[6], pts[7]);
+      g.closePath();
+      g.fillStyle = gf.voidInk;
+      g.fill();
+      return;
+    }
+    const lit = (k & LIT) !== 0;
+    const here = world.viewTile(x, y, lit) as TileType;
+    const t0 = this.groundAt(x, y, lit);
+    const color = this.groundColor(x, y, lit, gf.sun);
+    g.beginPath();
+    const outset = !gf.grid && this.outsetTile(g, pts);
+    if (!outset) {
+      g.moveTo(pts[0], pts[1]);
+      g.lineTo(pts[2], pts[3]);
+      g.lineTo(pts[4], pts[5]);
+      g.lineTo(pts[6], pts[7]);
+      g.closePath();
+    }
+    g.fillStyle = color;
+    g.fill();
+    if (!outset) {
+      g.strokeStyle = gf.grid ? GRID_COLOR : color;
+      g.stroke();
+    }
+    if (gf.grassy && STREWN.has(t0) && here !== TileType.Trail) this.strewTile(t0, x, y, pts, gf.paveRot, gf.zoom, lit);
+    if (gf.hemmed && !PAVED.has(t0) && t0 !== TileType.Steps) {
+      const seams = lit ? this.colors : this.memColors;
+      const known = seams.flag(x, y);
+      // Straight into the block rather than through a picture of the tile's own (`hems`), which the block is.
+      if (known !== 1) {
+        const drew = this.swardEdges(g, gf.V, x, y, pts, gf.zoom, lit);
+        if (known === 0) seams.setFlag(x, y, drew ? 2 : 1);
+      }
+    }
+    const tm = this.trailMaskAt(x, y, lit);
+    if (tm) this.drawTrail(g, x, y, tm, pts, lit, gf.zoom);
+    if (lit) this.dressFace(g, x, y, pts, gf.zoom, false, false);
+    if (gf.paved && PAVED.has(t0)) this.paving(t0, x, y, world.viewData(x, y, lit), pts, gf.paveRot, lit);
+    if (gf.seamed && t0 === TileType.Rock) {
+      const kind = world.rockFace(x, y);
+      if (kind > 0) seam(g, x, y, kind, pts, gf.paveRot, gf.zoom, this.canvas.dpr);
+    }
   }
 
   /** Where your feet were drawn this frame, on the screen. */
@@ -5222,7 +6099,7 @@ export class Renderer {
      * the stone's keeping both; otherwise drawn again onto the keeping by
      * the same drawing, under the same transform and clips.
      */
-    if (this.runeNight.active) {
+    if (this.runeNight.keeping) {
       const [bx, by, bw, bh] = box ?? [sx - 90 * zoom, sy - 230 * zoom, 180 * zoom, 250 * zoom];
       if (this.runeNight.falls(ctx, bx, by, bw, bh)) {
         if (effect === 'none') {
@@ -5303,7 +6180,7 @@ export class Renderer {
   /** Save the context and clip it to `clip`, when there is one: the caller restores it after drawing. */
   private clipTo(ctx: CanvasRenderingContext2D, clip: Array<[number, number]> | undefined): void {
     if (!clip) return;
-    if (this.runeNight.active) {
+    if (this.runeNight.keeping) {
       // And on whatever keeps it off a runestone's runes (`paint`).
       const path = new Path2D();
       clip.forEach(([cx, cy], i) => (i ? path.lineTo(cx, cy) : path.moveTo(cx, cy)));
@@ -5484,7 +6361,7 @@ export class Renderer {
         ctx.save();
         ctx.clip(under, 'evenodd');
         behind = true;
-        if (this.runeNight.active) this.occClips.push({ path: under, m: ctx.getTransform(), rule: 'evenodd' });
+        if (this.runeNight.keeping) this.occClips.push({ path: under, m: ctx.getTransform(), rule: 'evenodd' });
       }
       // A boat on the water, and whoever is aboard her, drawn as she rolls and pitches (`swayOf`).
       if (ent.sway) {
@@ -5700,7 +6577,7 @@ export class Renderer {
         const hb = drawFurniture(ctx, ent.sx, ent.sy + (ent.drawDy ?? 0), zoom, piece.kind, !!piece.lit, dyeOf(piece) ?? undefined, this.pieceTrim(piece), ent.view, piece.material, crewOf(piece.kind) ?? undefined, ent.layer, true,
           helm ? figurePicture(helm === 'player' ? helm : 'o' + helm.id) : null, this.manned(piece));
         // A hull is drawn in layers round her crew, not to be drawn again: in front of a runestone's runes, her box is kept off them.
-        if (this.runeNight.active) this.runeNight.occludeRect(ctx, ent.sx + hb[0], ent.sy + (ent.drawDy ?? 0) + hb[1], hb[2] - hb[0], hb[3] - hb[1], this.occClips);
+        if (this.runeNight.keeping) this.runeNight.occludeRect(ctx, ent.sx + hb[0], ent.sy + (ent.drawDy ?? 0) + hb[1], hb[2] - hb[0], hb[3] - hb[1], this.occClips);
         continue;
       }
       if (ent.kind === 'furniture' && ent.piece) {
@@ -6078,7 +6955,7 @@ export class Renderer {
       if (ent.kind === 'deck' && ent.aq) {
         const box = this.aqueducts.draw(ctx, ent.aq);
         // An aqueduct's bays are laid in pieces round what stands under them: in front of a runestone's runes, its box is kept off them.
-        if (box && this.runeNight.active) this.runeNight.occludeRect(ctx, box.left, box.top, box.w, box.h, this.occClips);
+        if (box && this.runeNight.keeping) this.runeNight.occludeRect(ctx, box.left, box.top, box.w, box.h, this.occClips);
         if (box) this.deckHits.push({ x: ent.x, y: ent.y, left: box.left, top: box.top, w: box.w, h: box.h, bridge: ent.aq.b.id, aq: box.shape });
         continue;
       }
@@ -6103,7 +6980,7 @@ export class Renderer {
           const span = (g: CanvasRenderingContext2D): void => drawDrawbridgeSpan(g, this.project, this.drawbridgeGeom(b), ent.deck!.span ?? 0, zoom, this.deckLit(b), ent.deck!.done,
             bridgeDone(b) && !this.game.buildings.buildingAt(b.ax, b.ay));
           span(ctx);
-          if (this.runeNight.active) this.runeNight.occludeDraw(ctx, ent.sx - 120 * zoom, ent.sy - 160 * zoom, 240 * zoom, 220 * zoom, span, this.occClips);
+          if (this.runeNight.keeping) this.runeNight.occludeDraw(ctx, ent.sx - 120 * zoom, ent.sy - 160 * zoom, 240 * zoom, 220 * zoom, span, this.occClips);
         }
         this.deckHits.push({ x: ent.x, y: ent.y, left: ent.sx - 40 * zoom, top: ent.sy - 22 * zoom, w: 80 * zoom, h: 44 * zoom, bridge: ent.deck.id });
         continue;
@@ -6281,7 +7158,7 @@ export class Renderer {
         if (k === 1) ctx.drawImage(cv, x, y);
         else if (d1 > y) ctx.drawImage(cv, x, y, W, d1 - y);
         // In front of a runestone's runes after dark: the same picture, kept off them (`RunestoneNight`).
-        if (this.runeNight.active) {
+        if (this.runeNight.keeping) {
           this.runeNight.occludeDraw(ctx, x - 1, y, Math.ceil(W) + 2, Math.ceil(cv.height * k), (g) => {
             if (k === 1) g.drawImage(cv, x, y);
             else if (d1 > y) g.drawImage(cv, x, y, W, d1 - y);
@@ -6295,7 +7172,7 @@ export class Renderer {
     const shown = step > 0 ? this.hazed(ready, step) : ready;
     if (Math.abs(stand) * dh < 1.5) {
       ctx.drawImage(shown, left, top, dw, dh);
-      if (this.runeNight.active) this.runeNight.occlude(ctx, shown, left, top, dw, dh, this.occClips);
+      if (this.runeNight.keeping) this.runeNight.occlude(ctx, shown, left, top, dw, dh, this.occClips);
       return;
     }
     ctx.save();
@@ -6303,7 +7180,7 @@ export class Renderer {
     ctx.transform(1, 0, stand, 1, 0, 0);
     ctx.drawImage(shown, left - ent.sx, top - ent.sy, dw, dh);
     // Under the same shear: what is kept off a runestone's runes is the tree as it leans.
-    if (this.runeNight.active) this.runeNight.occlude(ctx, shown, left - ent.sx, top - ent.sy, dw, dh, this.occClips);
+    if (this.runeNight.keeping) this.runeNight.occlude(ctx, shown, left - ent.sx, top - ent.sy, dw, dh, this.occClips);
     ctx.restore();
   }
 
@@ -6319,6 +7196,7 @@ export class Renderer {
   private treeOwn = new Map<string, (TreePicture | undefined)[]>();
   /** The colour the distance is mixed toward this frame, and the frame it was read in. */
   private hazeInk = '';
+  private hazeRgb: [number, number, number] | null = null;
   private inkFrame = -1;
   /** The milliseconds spent making tree pictures in the frame `treeMakeFrame`, against `TREE_PICTURE_MS`. */
   private treeMadeMs = 0;
@@ -6363,7 +7241,12 @@ export class Renderer {
     }
     if (this.inkFrame !== this.frameNo) {
       this.inkFrame = this.frameNo;
-      this.hazeInk = css(this.sky.far);
+      // Moved on only once the distance's colour has gone `HAZE_INK_STEP` off it: it moves through every dusk and dawn, and every move made every hazed tree again.
+      const far = this.sky.far, was = this.hazeRgb;
+      if (!was || Math.max(Math.abs(far[0] - was[0]), Math.abs(far[1] - was[1]), Math.abs(far[2] - was[2])) > HAZE_INK_STEP) {
+        this.hazeRgb = [far[0], far[1], far[2]];
+        this.hazeInk = css(far);
+      }
     }
     const key = `${id}|${w}|${h}|${haze}|${lean}`;
     const own = `${id}|${tree}`;
@@ -8473,9 +9356,9 @@ export class Renderer {
   private drawPitchedRoof(b: Building): void {
     const bld = this.game.buildings;
     const level = b.levels;
-    // Standing under it, or with a light burning under it after dark (glass glows with it, `lightsUnder`): as it always was.
+    // Standing under it: as it always was.
     const roofTiles = bld.roofTiles(b);
-    if ((this.game.darkness() >= LAMP_DARK && this.lightsUnder(b).length) || (this.roomTiles && roofTiles.some(([x, y]) => this.roomTiles?.has(`${x},${y}`)))) {
+    if (this.roomTiles && roofTiles.some(([x, y]) => this.roomTiles?.has(`${x},${y}`))) {
       this.drawPitchedRoofNow(b);
       this.occludeLine(null, () => this.drawPitchedRoofNow(b));
       return;
@@ -8484,7 +9367,7 @@ export class Renderer {
     const world = this.game.world;
     let sig = '';
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    let lowest = Infinity, wide = 1;
+    let lowest = Infinity;
     let fx = Infinity, fy = Infinity, gx = -Infinity, gy = -Infinity;
     for (const [x, y] of roofTiles) {
       const f = bld.floor(level, x, y);
@@ -8493,32 +9376,74 @@ export class Renderer {
       lowest = Math.min(lowest, world.getHeight(x, y));
       fx = Math.min(fx, x); fy = Math.min(fy, y);
       gx = Math.max(gx, x); gy = Math.max(gy, y);
-      wide = Math.max(wide, Math.abs(x - roofTiles[0][0]) + 1, Math.abs(y - roofTiles[0][1]) + 1);
     }
     if (!sig) return;
     if (b.deck != null) lowest = Math.min(lowest, b.deck);
-    // From the ground under it to the ridge as high as the widest roof of its footprint could stand, a tile and a half past every eave.
-    const top = Math.max(lowest, b.deck ?? lowest) + (level + 0.5) * WALL_HEIGHT + ROOF_PITCH * roofShapeDef(b).rise * (wide + 2);
-    for (const [x, y] of roofTiles) {
-      for (const [cx, cy] of [[x - 1.5, y - 1.5], [x + 2.5, y - 1.5], [x - 1.5, y + 2.5], [x + 2.5, y + 2.5]]) {
-        for (const z of [lowest - WALL_HEIGHT * 0.2, top]) {
+    /*
+     * What it is drawn over (`drawPitchedRoofNow`): the box round its faces,
+     * a wall's thickness out for the gable ends and the shade under the
+     * eaves, from `EAVE_SHADE` under the eaves to the top of the ridge; and
+     * past that on the screen by as much as the widest ridge cap and the
+     * tallest cresting stand off their line. It was a tile and a half past
+     * every eave, up to as high as the widest roof of its footprint could
+     * stand: most of a roof's picture was nothing, and made and copied the same.
+     */
+    const frame = this.roofFrame(b);
+    if (!frame) return;
+    let wx0 = Infinity, wy0 = Infinity, wx1 = -Infinity, wy1 = -Infinity, rise = 0;
+    for (const f of frame.model.faces) {
+      for (const p of f.pts) {
+        wx0 = Math.min(wx0, p[0]); wx1 = Math.max(wx1, p[0]);
+        wy0 = Math.min(wy0, p[1]); wy1 = Math.max(wy1, p[1]);
+        rise = Math.max(rise, p[2]);
+      }
+    }
+    const out = WALL_THICK * 2;
+    const ridge = frame.eave + ROOF_PITCH * roofShapeDef(b).rise * rise;
+    for (const cx of [wx0 - out, wx1 + out]) {
+      for (const cy of [wy0 - out, wy1 + out]) {
+        for (const z of [frame.eave - EAVE_SHADE, ridge]) {
           const sx = cam.worldToScreenX(cx, cy), sy = cam.worldToScreenY(cx, cy, z);
           x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
         }
       }
     }
+    const cap = 4 + 12 * cam.zoom;
+    x0 -= cap; y0 -= cap; x1 += cap; y1 += cap;
     const key = `r|${b.id}|${level}|${b.deck ?? ''}|${roofShapeOf(b)}|${sig}`;
+    const ax = cam.worldToScreenX(fx, fy), ay = cam.worldToScreenY(fx, fy, lowest);
     // What it reads is its own building and what stands round it: `REACH` round the tiles it covers (`StructureWatch`).
-    this.baked(key, cam.worldToScreenX(fx, fy), cam.worldToScreenY(fx, fy, lowest), [x0, y0, x1, y1], () => this.drawPitchedRoofNow(b),
-      this.structs.version(fx, fy, gx, gy));
+    this.baked(key, ax, ay, [x0, y0, x1, y1], () => this.drawPitchedRoofNow(b, { key, ax, ay }), this.structs.version(fx, fy, gx, gy));
+    /*
+     * With a light burning under it after dark, its glass glows over the
+     * night (`drawGlassGlow`): from the faces of glass kept when its picture
+     * was made, where it lands now. A roof with a lamp under it used to be
+     * drawn afresh every frame of the night for that.
+     */
+    if (this.game.darkness() < LAMP_DARK) return;
+    const burning = this.lightsUnder(b);
+    if (!burning.length) return;
+    const kept = this.roofGlass.get(b.id);
+    if (kept && kept.key === key && kept.epoch === this.bakeEpoch) {
+      if (kept.faces.length) this.noteGlassGlow(kept.faces, kept.box, burning, kept.height, false, ax - kept.ax, ay - kept.ay);
+    } else {
+      this.drawPitchedRoofNow(b, { key, ax, ay }, true);
+      const now = this.roofGlass.get(b.id);
+      if (now?.faces.length) this.noteGlassGlow(now.faces, now.box, burning, now.height, false);
+    }
   }
 
-  private drawPitchedRoofNow(b: Building): void {
-    const main = this.canvas.ctx;
-    const cam = this.camera;
+  /**
+   * A roof's faces of glass turned to the eye, as its picture was last made
+   * (`drawPitchedRoof`), for the glow of a light under it: its picture's key,
+   * the view it was made in and the point it hangs on.
+   */
+  private roofGlass = new Map<number, { key: string; epoch: number; ax: number; ay: number; faces: Array<{ path: Path2D; m: DOMMatrix }>; box: [number, number, number, number]; height: number }>();
+
+  /** A building's roof tiles, its roof's shape (kept while its tiles are the same) and the height of its eaves; null with no roof. */
+  private roofFrame(b: Building): { roofs: FloorTile[]; model: RoofModel; eave: number } | null {
     const bld = this.game.buildings;
     const world = this.game.world;
-    const zoom = cam.zoom;
     const level = b.levels;
     const roofs: FloorTile[] = [];
     // Over its jetties as well as its footprint (`roofTiles`).
@@ -8526,7 +9451,7 @@ export class Renderer {
       const f = bld.floor(level, x, y);
       if (f && floorKind(f) === 'roof') roofs.push(f);
     }
-    if (!roofs.length) return;
+    if (!roofs.length) return null;
     const shape = roofShapeOf(b) === 'gable' ? 'gable' : 'hip';
     const sig = `${shape}:${roofs.map((f) => `${f.x},${f.y}`).join(';')}`;
     let kept = this.roofShapes.get(b.id);
@@ -8534,8 +9459,6 @@ export class Renderer {
       kept = { sig, model: roofModel(roofs.map((f): [number, number] => [f.x, f.y]), shape, ROOF_OVER, ROOF_VERGE, ROOF_CAP) };
       this.roofShapes.set(b.id, kept);
     }
-    const model = kept.model;
-    const pitch = ROOF_PITCH * roofShapeDef(b).rise;
     let eave = -Infinity;
     // A jetty's ground is not the building's: the eaves are over the footprint's.
     for (const f of roofs) if (bld.buildingAt(f.x, f.y)) eave = Math.max(eave, world.getHeight(f.x, f.y));
@@ -8543,6 +9466,24 @@ export class Renderer {
     // A building on piers stands on its deck, whatever the ground under it does.
     if (b.deck != null) eave = b.deck;
     eave += level * WALL_HEIGHT;
+    return { roofs, model: kept.model, eave };
+  }
+
+  /**
+   * `keep`: drawn for its picture, which keeps its faces of glass for the glow
+   * (`roofGlass`) rather than laying it on this frame's night; `glassOnly`
+   * finds those faces and draws nothing.
+   */
+  private drawPitchedRoofNow(b: Building, keep?: { key: string; ax: number; ay: number }, glassOnly = false): void {
+    const main = this.canvas.ctx;
+    const cam = this.camera;
+    const bld = this.game.buildings;
+    const zoom = cam.zoom;
+    const level = b.levels;
+    const frame = this.roofFrame(b);
+    if (!frame) return;
+    const { roofs, model, eave } = frame;
+    const pitch = ROOF_PITCH * roofShapeDef(b).rise;
     const X = (p: RoofPt): number => cam.worldToScreenX(p[0], p[1]);
     const Y = (p: RoofPt, drop = 0): number => cam.worldToScreenY(p[0], p[1], eave + pitch * p[2] - drop);
     const deep = (x: number, y: number): number => cam.worldToScreenY(x, y, 0);
@@ -8759,7 +9700,7 @@ export class Renderer {
       // Glass shows the slopes beyond it, from under them; anything else only what faces the eye.
       if (shown(f) <= 0) return;
       items.push({ d: faceDepth[i], plane: planeOf(f), face: i, draw: () => { ctx.beginPath(); outlineOf(f); fillAs(f); } });
-      if (burning.length && facing(f.fall) && glassy(tile) && isDone(tile)) {
+      if ((keep || burning.length) && facing(f.fall) && glassy(tile) && isDone(tile)) {
         const path = new Path2D();
         f.pts.forEach((p, k) => {
           const px = X(p), py = Y(p);
@@ -8771,7 +9712,10 @@ export class Renderer {
         glowing.push({ path, m: planeMatrix(f) });
       }
     });
-    if (glowing.length) this.noteGlassGlow(glowing, glowBox, burning, eave + pitch * 0.5, under);
+    if (keep) {
+      this.roofGlass.set(b.id, { ...keep, epoch: this.bakeEpoch, faces: glowing, box: glowBox, height: eave + pitch * 0.5 });
+      if (glassOnly) return;
+    } else if (glowing.length) this.noteGlassGlow(glowing, glowBox, burning, eave + pitch * 0.5, under);
     for (const f of roofs) if (!isDone(f)) plan.push(f);
     // The creases and the edges go on after the faces they lie along.
     const byPoint = new Map<string, number[]>();
@@ -8916,10 +9860,10 @@ export class Renderer {
         const off = (p: RoofPt): RoofPt => [p[0] + ox * WALL_THICK, p[1] + oy * WALL_THICK, 0];
         const A = off(wa), B = off(wb);
         items.push({ d: -Infinity, draw: () => {
-          const top = Y(A, pitch * WALL_THICK), bottom = Y(A, 10);
+          const top = Y(A, pitch * WALL_THICK), bottom = Y(A, EAVE_SHADE);
           ctx.beginPath();
           ctx.moveTo(X(A), Y(A, pitch * WALL_THICK)); ctx.lineTo(X(B), Y(B, pitch * WALL_THICK));
-          ctx.lineTo(X(B), Y(B, 10)); ctx.lineTo(X(A), Y(A, 10));
+          ctx.lineTo(X(B), Y(B, EAVE_SHADE)); ctx.lineTo(X(A), Y(A, EAVE_SHADE));
           ctx.closePath();
           const g = ctx.createLinearGradient(0, top, 0, bottom);
           g.addColorStop(0, 'rgba(44, 34, 56, 0.3)');
@@ -9101,7 +10045,8 @@ export class Renderer {
    * nothing there -- and how strong it is. Over your head, at the third the
    * roof itself is laid at.
    */
-  private noteGlassGlow(faces: Array<{ path: Path2D; m: DOMMatrix }>, box: [number, number, number, number], lights: LightSource[], height: number, under: boolean): void {
+  private noteGlassGlow(faces: Array<{ path: Path2D; m: DOMMatrix }>, box: [number, number, number, number], lights: LightSource[], height: number, under: boolean,
+    dx = 0, dy = 0): void {
     const cam = this.camera;
     const zoom = cam.zoom;
     const [x0, y0, x1, y1] = box;
@@ -9111,7 +10056,7 @@ export class Renderer {
       r: Math.max(8, 1.5 * l.radius * HALF_W * zoom),
       a: l.strength * (under ? 0.35 : 1),
     }));
-    this.glassNight.push({ faces, lights: lit, box: [x0 - 2, y0 - 2, x1 + 2, y1 + 2] });
+    this.glassNight.push({ faces, lights: lit, box: [x0 + dx - 2, y0 + dy - 2, x1 + dx + 2, y1 + dy + 2], dx, dy });
   }
 
   /**
@@ -9176,6 +10121,7 @@ export class Renderer {
       // The lit faces over it, as strongly as it reaches them.
       layer.globalCompositeOperation = 'source-atop';
       layer.fillStyle = pat;
+      layer.translate(roof.dx, roof.dy);
       for (const f of roof.faces) {
         pat.setTransform(f.m);
         layer.fill(f.path);
@@ -10618,7 +11564,7 @@ export class Renderer {
   /** And the view less the zoom, the same way: a picture made at another zoom in it can stand in while the zoom moves. */
   private bakeShape = 0;
   private bakeShapeWas = '';
-  /** Pictures still to be made again this frame for the zoom alone, where the last one could stand in (`BAKES_A_FRAME`). */
+  /** Pictures still to be made this frame where an older one could stand in (`BAKES_A_FRAME`). */
   private bakesLeft = 0;
   /** And while it moves, where none can (`BAKES_MOVING`). */
   private bakesMoving = 0;
@@ -10648,7 +11594,7 @@ export class Renderer {
       this.bakeShapeWas = shape;
       this.bakeShape++;
     }
-    this.bakesLeft = this.zoomSettled ? BAKES_A_FRAME : 0;
+    this.bakesLeft = BAKES_A_FRAME;
     this.bakesMoving = BAKES_MOVING;
     const lit = `${Math.floor((this.game.hourOfDay() / 24) * SUN_STEPS)}|${Math.round(this.game.darkness() * 20)}|${this.bloom}`;
     if (lit !== this.bakeLit) {
@@ -10671,14 +11617,22 @@ export class Renderer {
     const dpr = this.canvas.dpr;
     const zoom = this.camera.zoom;
     const had = this.bakes.get(key);
-    if (had && had.ver === ver && had.epoch === this.bakeEpoch && this.time - had.at < had.life && this.time >= had.at
-      && (!lit || had.light === this.bakeLight || this.time - this.bakeLightAt < had.wait)) {
+    if (had) this.bakeUsed(key, had);
+    /*
+     * One for this view that has gone out of date -- something read round it
+     * has changed, the light has moved on, or it has been kept its time --
+     * is drawn as it is until its turn comes to be made again, `BAKES_A_FRAME`
+     * a frame: a whole village gone out of date at once was all made again
+     * in the one frame.
+     */
+    if (had && had.epoch === this.bakeEpoch && (this.bakesLeft <= 0 || (had.ver === ver && this.time - had.at < had.life && this.time >= had.at
+      && (!lit || had.light === this.bakeLight || this.time - this.bakeLightAt < had.wait)))) {
       const dx = (ax - had.ax) * dpr, dy = (ay - had.ay) * dpr;
       const rx = Math.round(dx), ry = Math.round(dy);
       if (Math.abs(dx - rx) < 0.02 && Math.abs(dy - ry) < 0.02) {
         ctx.drawImage(had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
         // In front of a runestone's runes after dark: the same picture kept off them (`RunestoneNight`).
-        if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
+        if (occludes && this.runeNight.keeping) this.runeNight.occlude(ctx, had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
         return;
       }
     }
@@ -10691,10 +11645,10 @@ export class Renderer {
      * and every one of them made again in the frame it stopped.
      */
     const r = had && had.ver === ver && had.shape === this.bakeShape && had.zoom !== zoom ? zoom / had.zoom : 0;
-    if (had && r && r <= STAND_IN_MOST && r * STAND_IN_MOST >= 1 && (!this.hemSteady || this.bakesLeft <= 0)) {
+    if (had && r && r <= STAND_IN_MOST && r * STAND_IN_MOST >= 1 && (!this.zoomSettled || this.bakesLeft <= 0)) {
       const x = ax + (had.bx - had.ax) * r, y = ay + (had.by - had.ay) * r, w = (had.cv.width / dpr) * r, h = (had.cv.height / dpr) * r;
       ctx.drawImage(had.cv, x, y, w, h);
-      if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, had.cv, x, y, w, h);
+      if (occludes && this.runeNight.keeping) this.runeNight.occlude(ctx, had.cv, x, y, w, h);
       return;
     }
     // One too far from this size to stretch, or none: a few a frame are made at this size, to stand in from the next.
@@ -10703,7 +11657,6 @@ export class Renderer {
       if (occludes) this.occludeLine(box, draw);
       return;
     }
-    if (r) this.bakesLeft--;
     const bx = Math.floor(box[0] * dpr) - 2, by = Math.floor(box[1] * dpr) - 2;
     const w = Math.ceil(box[2] * dpr) + 2 - bx, h = Math.ceil(box[3] * dpr) + 2 - by;
     // Off the screen altogether, or too big to be worth keeping: drawn as it always was.
@@ -10713,6 +11666,7 @@ export class Renderer {
       if (occludes) this.occludeLine(box, draw);
       return;
     }
+    this.bakesLeft--;
     let cv = had?.cv;
     if (had) {
       this.bakePixels -= had.cv.width * had.cv.height;
@@ -10757,21 +11711,42 @@ export class Renderer {
     } finally {
       canvas.ctx = ctx;
     }
-    if (this.bakePixels + w * h > BAKE_PIXELS) {
-      this.bakes.clear();
-      this.bakePixels = 0;
-    }
+    this.bakeRoom(w * h);
     // Its turn, by the key, so they come due apart: when the light moves on, and when it is kept no longer.
     let spread = 0;
     for (let i = 0; i < key.length; i++) spread = (spread * 31 + key.charCodeAt(i)) >>> 0;
     const turn = (spread % 1000) / 1000;
     this.bakes.set(key, {
       cv, ax, ay, bx: bx / dpr, by: by / dpr, at: this.time, life: BAKE_KEEP * (0.75 + turn / 2), wait: BAKE_LIFE * turn,
-      ver, epoch: this.bakeEpoch, light: this.bakeLight, shape: this.bakeShape, zoom,
+      ver, epoch: this.bakeEpoch, light: this.bakeLight, shape: this.bakeShape, zoom, used: this.frameNo,
     });
     this.bakePixels += w * h;
     ctx.drawImage(cv, bx / dpr, by / dpr, w / dpr, h / dpr);
-    if (occludes && this.runeNight.active) this.runeNight.occlude(ctx, cv, bx / dpr, by / dpr, w / dpr, h / dpr);
+    if (occludes && this.runeNight.keeping) this.runeNight.occlude(ctx, cv, bx / dpr, by / dpr, w / dpr, h / dpr);
+  }
+
+  /** A picture drawn: to the back of the order they are put away in (`bakeRoom`), once a frame. */
+  private bakeUsed(key: string, b: Baked): void {
+    if (b.used === this.frameNo) return;
+    b.used = this.frameNo;
+    this.bakes.delete(key);
+    this.bakes.set(key, b);
+  }
+
+  /**
+   * Room for `need` more device pixels of pictures, within `BAKE_PIXELS` for
+   * the screen's sharpness: those gone longest undrawn put away, and never
+   * one drawn this frame. It used to put the lot away, and on a sharp screen
+   * a village's pictures were more than that by themselves: every one of them
+   * was made again over and over, most of every frame.
+   */
+  private bakeRoom(need: number): void {
+    const most = BAKE_PIXELS * this.canvas.dpr * this.canvas.dpr;
+    for (const [key, b] of this.bakes) {
+      if (this.bakePixels + need <= most || b.used === this.frameNo) break;
+      this.bakePixels -= b.cv.width * b.cv.height;
+      this.bakes.delete(key);
+    }
   }
 
   private bearsJoists(id: number, border: Border): boolean {
@@ -10828,8 +11803,8 @@ export class Renderer {
       const sx = cam.worldToScreenX(wx, wy), sy = cam.worldToScreenY(wx, wy, z);
       x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
     }
-    // Seen through, half built, with a lamp behind it at night, or a portcullis on its way up or down: as it always was.
-    if (alpha < 1 || !isDone(wall) || this.lampBehind(wall, border) > 0 || this.gateMoving(wall, border)) {
+    // Seen through, half built, or a portcullis on its way up or down: as it always was.
+    if (alpha < 1 || !isDone(wall) || this.gateMoving(wall, border)) {
       this.drawWallNow(wall, border, base, alpha);
       // Kept off a runestone's runes in front of it too -- all but one seen through, which the runes show through.
       if (alpha >= 1) this.occludeLine([x0, y0, x1, y1], () => this.drawWallNow(wall, border, base, alpha));
@@ -10843,7 +11818,13 @@ export class Renderer {
      */
     const lift = this.wallLift;
     if (lift) this.liftBaked(wall, border, base);
-    let key = `w|${wall.level}|${border.dir}${border.x},${border.y}|${wall.type}|${wall.material}|${wall.dye ?? ''}|${wall.glass ?? ''}|${wall.building}|${base}`;
+    /*
+     * With a lamp in the room behind it after dark, its glass is warmed by it
+     * (`lampBehind`): the light in the room is in its key, and the dark it is
+     * seen in is the light it is made again for (`bakeLight`). Such a wall
+     * used to be drawn afresh every frame of the night.
+     */
+    let key = `w|${wall.level}|${border.dir}${border.x},${border.y}|${wall.type}|${wall.material}|${wall.dye ?? ''}|${wall.glass ?? ''}|${wall.building}|${base}|${this.roomLight(wall, border)}`;
     // A shop counter shows what is on it (`drawCounterPart`), which is no part of the building.
     if (wall.type === 'counter') {
       const c = this.game.counters.onBorder(border);
@@ -10915,7 +11896,7 @@ export class Renderer {
       const d = drawRuneGate(ctx, sx, sy, zoom, border.dir, turn, variant, lit, since, RUNE_GATE_RISE, dark, t, which);
       ctx.globalAlpha = was;
       if (alpha < 1) return;
-      if (this.runeNight.active) this.runeNight.occlude(ctx, d.img, d.x, d.y, d.w, d.h);
+      if (this.runeNight.keeping) this.runeNight.occlude(ctx, d.img, d.x, d.y, d.w, d.h);
       // Its runes take the night off themselves through the one night the runestones use, their shapes given as drawn at (sx, sy) moved by (dx, dy).
       if (d.lightBox) this.runeNight.glowing(ctx, ...d.lightBox, (dx, dy) => d.holes(sx + dx, sy + dy), (dx, dy) => d.masks(sx + dx, sy + dy));
     };
@@ -13288,6 +14269,11 @@ export class Renderer {
    * near the glass it stands.
    */
   private lampBehind(wall: Wall, border: Border): number {
+    return this.roomLight(wall, border) * this.game.darkness();
+  }
+
+  /** The brightest light burning in the room a wall shuts in, after dark (`LAMP_DARK`); none before. */
+  private roomLight(wall: Wall, border: Border): number {
     const dark = this.game.darkness();
     if (dark < LAMP_DARK) return 0;
     const near = this.game.buildings.buildingAt(border.x, border.y)
@@ -13299,7 +14285,7 @@ export class Renderer {
       this.roomLit.clear();
     }
     const known = this.roomLit.get(`${wall.level}|${near.x},${near.y}`);
-    if (known !== undefined) return known * dark;
+    if (known !== undefined) return known;
     const room = this.game.buildings.room(wall.level, near.x, near.y);
     if (!room) {
       this.roomLit.set(`${wall.level}|${near.x},${near.y}`, 0);
@@ -13313,7 +14299,7 @@ export class Renderer {
       most = Math.max(most, l.strength);
     }
     for (const t of room.tiles) this.roomLit.set(`${wall.level}|${t}`, most);
-    return most * dark;
+    return most;
   }
 
   /** The light in each room this frame (`lampBehind`), by storey and tile, and the frame it is for. */
@@ -14867,34 +15853,46 @@ export class Renderer {
         const lit = this.lightLayers(lights, W, H);
         /*
          * The wash is one colour, so the night is mixed at the size its holes
-         * were worked out at and laid over the screen scaled up -- unless
-         * something with a light of its own is in view, whose holes are fine
-         * work (an altar's stars and lines), and then at full size. A
-         * runestone's runes are as fine, but they are cut out of a copy of
-         * their own box at the screen's pixels as the night goes down
-         * (`RunestoneNight.lay`), so they ask for the full size only when
-         * two stones' boxes overlap.
+         * were worked out at and laid over the screen scaled up. What has a
+         * light of its own -- an altar's stars, a runestone's runes -- is
+         * fine work, cut out of a copy of its own box at the screen's pixels
+         * as the night goes down (`RunestoneNight.lay`), so it asks for the
+         * full size only when two such boxes overlap.
          */
         const patch = this.runeNight.active && this.runeNight.separate;
-        const res = this.glows.length || (this.runeNight.active && !patch) ? 1 : LIGHT_RES;
-        const night = this.nightLayer(res);
+        const res = this.runeNight.active && !patch ? 1 : LIGHT_RES;
+        /*
+         * At the lights' own size the night is mixed on their mask itself,
+         * which is the night's shape already: the washes laid on it as one
+         * colour, inside what the lights leave of it. It was a layer of its
+         * own, cleared, washed and cut to the mask, every frame.
+         */
+        const night = res === LIGHT_RES ? lit.mask : this.nightLayer(res);
+        this.night = night;
         const nc = night.getContext('2d') as CanvasRenderingContext2D;
         nc.setTransform(1, 0, 0, 1, 0, 0);
-        nc.globalCompositeOperation = 'source-over';
-        nc.clearRect(0, 0, night.width, night.height);
-        for (const wash of washes) {
-          nc.fillStyle = `rgba(${wash.colour}, ${wash.alpha.toFixed(3)})`;
+        if (res === LIGHT_RES) {
+          nc.globalCompositeOperation = 'source-in';
+          nc.fillStyle = washInk(washes);
           nc.fillRect(0, 0, night.width, night.height);
+        } else {
+          nc.globalCompositeOperation = 'source-over';
+          nc.clearRect(0, 0, night.width, night.height);
+          for (const wash of washes) {
+            nc.fillStyle = `rgba(${wash.colour}, ${wash.alpha.toFixed(3)})`;
+            nc.fillRect(0, 0, night.width, night.height);
+          }
+          // What the lights leave of it (`lightLayers`).
+          nc.globalCompositeOperation = 'destination-in';
+          nc.drawImage(lit.mask, 0, 0, lit.mask.width / LIGHT_RES, lit.mask.height / LIGHT_RES);
         }
-        // What the lights leave of it (`lightLayers`).
-        nc.globalCompositeOperation = 'destination-in';
-        if (res === LIGHT_RES) nc.drawImage(lit.mask, 0, 0);
-        else nc.drawImage(lit.mask, 0, 0, lit.mask.width / LIGHT_RES, lit.mask.height / LIGHT_RES);
         nc.globalCompositeOperation = 'destination-out';
-        // And off whatever has a light of its own, where it was drawn this frame.
+        // And off whatever has a light of its own, where it was drawn this frame: at the layer's own size.
+        nc.setTransform(res, 0, 0, res, 0, 0);
         for (const n of this.glows) {
           for (const h of furnitureHoles(n.sx, n.sy, zoom, n.kind, n.view)) softHole(nc, h.x, h.y, h.r, h.a);
         }
+        nc.setTransform(1, 0, 0, 1, 0, 0);
         // And off the runestones' runes, in their own shapes, less whatever stands in front of them.
         if (!patch) this.runeNight.cut(nc);
         nc.globalCompositeOperation = 'source-over';

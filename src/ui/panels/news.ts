@@ -3626,6 +3626,13 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 300,
+    day: '2026-10-24',
+    lines: () => [
+      'Faster frames: wildermon, walls, roofs, ground, night lights, trees at dusk and dawn, windows, map, log, island reads.',
+    ],
+  },
+  {
     n: 301,
     day: '2026-10-24',
     lines: () => [

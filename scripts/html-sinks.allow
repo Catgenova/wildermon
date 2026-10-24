@@ -39,3 +39,8 @@ src/ui/panels/settings.ts	seeHead.innerHTML = '<b>See-through windows</b><small>
 # Settings: key binding labels and hints, and window titles, escaped.
 src/ui/panels/settings.ts	text.innerHTML = `<b>${esc(bind.label)}</b><small>${esc(bind.hint)}</small>`;
 src/ui/panels/settings.ts	text.innerHTML = `<b>${esc(w.opts.title)}</b>`;
+
+# Wildermon window: innerHTML read, not written, to compare a freshly built card section with the one shown.
+src/ui/panels/wildermon.ts	if (b.innerHTML !== bloodSays) {
+src/ui/panels/wildermon.ts	bloodSays = b.innerHTML;
+src/ui/panels/wildermon.ts	const worthNow = w?.innerHTML ?? '';
