@@ -9282,9 +9282,9 @@ export class Renderer {
     return v < 0 ? level > 0 : level !== v;
   }
 
-  /** Whether the walls between the eye and the inside are taken away: the cutaway, and always on a pinned storey. */
+  /** Whether the walls between the eye and the inside are taken away: the cutaway button, pinned storey or not. */
   private cutawayOn(): boolean {
-    return this.game.settings.cutaway || this.game.pinnedStorey() !== null;
+    return this.game.settings.cutaway;
   }
 
   /** Whether a column stands at either end of a border, on any storey. */

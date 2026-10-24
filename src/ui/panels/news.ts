@@ -3598,7 +3598,7 @@ export const NEWS: News[] = [
     n: 296,
     day: '2026-10-24',
     lines: () => [
-      'Added: storey mode. Storey arrows or Page Up / Page Down pin one storey: every other storey hidden, above and below, with its furniture and people; facing walls cut away.',
+      'Added: storey mode. Storey arrows or Page Up / Page Down pin one storey: every other storey hidden, above and below, with its furniture and people.',
       'Pinned: clicks land on that storey\'s floor and walk you there; its menu: that storey\'s walls, floors, columns, jetties, Plan staircase up, furniture set down on it. Roof work on the top storey.',
     ],
   },

@@ -777,10 +777,8 @@ export class Hud {
     this.tip(this.storeyUp, `${named(this.storeyStep(1, top))} (Page Up)`);
     this.tip(this.storeyDown, `${named(this.storeyStep(-1, top))} (Page Down)`);
     this.tip(this.storeyLabel, level === null ? 'All storeys' : 'All storeys (click)');
-    // Pinned on a storey the facing walls are always cut away.
-    const pinned = this.game.pinnedStorey() !== null;
-    this.cutBtn.classList.toggle('active', s.cutaway || pinned);
-    this.tip(this.cutBtn, pinned ? 'Facing walls cut away: storey pinned' : 'Cut away facing walls (X)');
+    this.cutBtn.classList.toggle('active', s.cutaway);
+    this.tip(this.cutBtn, 'Cut away facing walls (X)');
   }
 
   /** A node's tooltip, written only when it has changed. */
