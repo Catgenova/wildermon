@@ -184,6 +184,15 @@ const logCarpentry: Carpentry = {
   cap: 2.6,
   brace: 1.5,
   braces: 'a',
+  noGirts: true,
+  // On a ramp, a round log raking up each edge over the treads' ends, its rings at the bridge's ends.
+  rampStringer: (k, edge, te) => {
+    const { plan, sl } = k;
+    const r = 3.2, tc = te - edge * (r / U - 0.01);
+    const z = (s: number): number => plan.deck(s) + 0.8;
+    lay(k, k.ord(edge, 1) < 0 ? 'front' : edge === sl.near ? 'rail' : 'front', k.ord(edge, 1), bar([sl.s0, tc, z(sl.s0)], [sl.s1, tc, z(sl.s1)], rnd(r, 7), LOG.bark,
+      { caps: [sl.s0 <= 1e-6, sl.s1 >= plan.n - 1e-6], paint: 'beam', capTone: LOG.end, capPaint: 'plinth', seed: sl.i * 3 + edge }), '');
+  },
   postTone: () => LOG.bark,
   beamTone: () => LOG.beam,
   endTone: LOG.end,
