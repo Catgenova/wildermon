@@ -154,6 +154,13 @@ const TREE_PIXELS = 12_000_000;
 const ZOOM_SETTLE = 220;
 /** How long, in milliseconds, a frame may spend making tree pictures (`drawTree`) for trees that already have one at another size to stand in. */
 const TREE_PICTURE_MS = 6;
+/** How long, in milliseconds, a frame may spend making the solid trees' shade pictures afresh (`solidFrame`); the rest lay last frame's. */
+const SHADE_MS = 3;
+/** How many trees' shade a frame may lay into lines' pictures made again, and how many pictures of solid trees it may make, while older ones can stand in: the clock sees only part of what a picture costs, its drawing being done when it is first copied. */
+const SHADE_PARTS = 20;
+const SOLID_PICTURES = 12;
+/** The solid trees' shade pictures' resolution against the screen's: the screen's, as a picture blown up is dear to lay. */
+const SHADE_RES = 1;
 /** How long, in milliseconds, a frame may spend making pictures of blocks of the ground (`bakeChunk`); the rest is drawn as it always was. */
 const GROUND_BAKE_MS = 4;
 /** How many screens' worth of device pixels the ground's pictures keep between them (`GroundChunks`), and the most in all. */
@@ -1239,12 +1246,21 @@ export class Renderer {
   private solidDark = 0;
   private solidSway = false;
   private solidPx = 0;
-  private solidTrees: Array<{ ix: number; iy: number; x: number; y: number; h: number; species: number; variant: number; grew: number }> = [];
   private solidTurn = -1;
-  /** This frame's shade from them: a picture of it all, laid a band of the screen at a time as each line of ground goes down (`solidShadeLine`). */
-  private solidShade: { strips: Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }> } | null = null;
-  /** Each line's picture of that shade, kept while the same trees throw it, and pictures put by to be used again. */
-  private solidStripsKept = new Map<number, { sig: string; cv: HTMLCanvasElement; x0: number; top: number; w: number }>();
+  /** A count of the world's changes, so the trees read off it are read again after one (`solidFrame`). */
+  private solidRev = 0;
+  /** The trees drawn as solids in the shade's window, read off the world, and which of them shade which line under this sun. */
+  private solidScan: {
+    key: string;
+    trees: Array<{ ix: number; iy: number; x: number; y: number; species: number; variant: number; grew: number }>;
+    top0: number;
+    linesKey: string;
+    lines: Map<number, Array<{ cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }>>;
+  } = { key: '', trees: [], top0: 0, linesKey: '', lines: new Map() };
+  /** This frame's shade from them, a picture a line, where each is laid (`solidShadeLine`). */
+  private solidShade: { strips: Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number; sx: number; sw: number; sh: number }> } | null = null;
+  /** Each line's picture of that shade, what it shows, and where; and pictures put by to be used again. */
+  private solidStripsKept = new Map<number, { sig: string; cv: HTMLCanvasElement; x0: number; top: number; wIso: number; k: number; stepH: number }>();
   private solidStripsFree: HTMLCanvasElement[] = [];
   /** Tile colours as the map remembers them, for ground nobody is watching. */
   private memColors: ColourPages;
@@ -1799,6 +1815,7 @@ export class Renderer {
     this.flowerMarks = new MarkPages(game.world.w);
     game.world.onChange((x, y) => this.invalidate(x, y));
     game.world.onChange((x, y) => this.chunks.touch(x, y));
+    game.world.onChange(() => { this.solidRev++; });
     // Ground dug under or beside a stream moves the line it runs along.
     game.world.onChange((x, y) => this.springWater.touched(x, y));
     // And what is near a tree or near water, for the fireflies.
@@ -4284,7 +4301,7 @@ export class Renderer {
     }, zoom);
 
     // The trees drawn as solids: what they are baked for this frame, and the shade they throw.
-    this.solidFrame(ctx, zoom, W, H, stepH);
+    this.solidFrame(ctx, zoom, W, H, V, stepW, stepH, dLo, dHi);
     // The ground laid from pictures of it a block at a time where it can be (`GroundChunks`).
     this.gf = this.groundFrame(V, zoom, W, H, drawnAt, grid, paveRot, grassy, hemmed, paved, seamed, water, sun, voidInk);
     for (let d = dLo; d <= dHi; d++) {
@@ -7162,28 +7179,24 @@ export class Renderer {
     return { x, y, turn: this.camera.rotation, hour: this.solidHour, dark: this.solidDark, sway: this.solidSway ? swayAt(x, y, this.time * 1000) : 0 };
   }
 
-  /** A tree drawn as a solid was put down: kept for the shade it throws next frame, where it stands in the camera's own plane. */
-  private noteSolid(ent: Entity, zoom: number, grew: number): void {
-    const cam = this.camera;
-    const data = this.game.world.getData(ent.x, ent.y);
-    this.solidTrees.push({
-      ix: (ent.sx - this.canvas.width / 2) / zoom + cam.cx, iy: (ent.sy - this.canvas.height / 2) / zoom + cam.cy,
-      x: ent.x, y: ent.y, h: this.game.world.centerHeight(ent.x, ent.y), species: treeSpecies(data), variant: treeVariant(data), grew,
-    });
-  }
-
   /**
    * What the trees drawn as solids are baked for this frame, and the shade
-   * they throw. The shade has to go down with the ground, a line at a time,
-   * before anything standing on that line, and before any of the trees are
-   * reached: so it is worked out from the trees put down last frame (the same
-   * trees, near enough). Each line of ground gets a picture of the shade
-   * falling on it, every tree's together so where two overlap is no darker
-   * (`tree3dShadow`), kept from frame to frame while the same trees throw it
-   * under the same sun at the same zoom -- panning moves it and does not
-   * make it again -- and laid with that line (`solidShadeLine`).
+   * they throw.
+   *
+   * The shade has to go down with the ground, a line at a time, before
+   * anything standing on that line. So each line of ground has a picture of
+   * all the shade falling on it, every tree's together so where two overlap
+   * is no darker (`tree3dShadow`), laid with that line (`solidShadeLine`).
+   *
+   * A line's picture covers the screen and half a screen or more either side
+   * of it, and the window it covers moves a quarter of a screen at a time: a
+   * pan lays the same pictures further over and makes none. Which trees throw shade on which
+   * line is read off the world when that window moves, the sun steps, or a
+   * tile changes, not off what was drawn. And a picture is made again only
+   * for so long a frame (`SHADE_MS`): a step of the sun or a move of the
+   * window lays the last picture, a step behind, until its turn comes.
    */
-  private solidFrame(ctx: CanvasRenderingContext2D, zoom: number, W: number, H: number, stepH: number): void {
+  private solidFrame(ctx: CanvasRenderingContext2D, zoom: number, W: number, H: number, V: View, stepW: number, stepH: number, dLo: number, dHi: number): void {
     tree3dFrame();
     const hour = this.game.hourOfDay();
     this.solidHour = hour;
@@ -7191,100 +7204,177 @@ export class Renderer {
     // The wind only while every frame of it for every tree in sight fits in what the pictures may keep.
     this.solidSway = this.zoomSettled && this.solidPx * SWAY_FRAMES < TREE_PIXELS * 0.5;
     this.solidPx = 0;
-    const trees = this.solidTrees;
-    this.solidTrees = [];
     const cam = this.camera;
-    const turned = this.solidTurn !== cam.rotation;
-    this.solidTurn = cam.rotation;
+    if (this.solidTurn !== cam.rotation) {
+      this.solidTurn = cam.rotation;
+      this.dropStrips(-Infinity, -Infinity);
+    }
     this.solidShade = null;
     // How dark the shade is, in a few steps, so a dusk makes its pictures again only a few times.
     const alpha = Math.round(6 * (1 - this.solidDark)) * 0.045;
-    if (!trees.length || turned || alpha < 0.02) {
-      this.dropStrips(new Set());
+    if (!TREE3D_SPECIES.size || alpha < 0.02) {
+      this.dropStrips(-Infinity, -Infinity);
       return;
     }
     const step = sunStepOf(hour, this.solidDark);
     const t = ctx.getTransform();
-    const k = zoom * t.a;
-    // Lines of ground in the camera's own plane, at about the height the trees stand at.
-    let href = 0;
-    for (const tr of trees) href += tr.h;
-    href = Math.round(href / trees.length / 10) * 10;
-    const top0 = -href * HEIGHT_SCALE;
+    const world = this.game.world;
     const season = this.year.season, day = this.year.day;
-    const look = `${k.toFixed(3)}|${step}|${cam.rotation}|${season}${lookStep(day)}|${href}|${alpha}`;
-    // Which trees' shade falls on which line, and across how much of it.
-    const per = new Map<number, { x0: number; x1: number; ids: string[]; parts: Array<{ cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }> }>();
-    for (const tr of trees) {
-      const shade = tree3dShadow(tr.species, tr.variant, season, day, tr.x, tr.y, step, cam.rotation);
-      if (!shade) continue;
-      const g = tr.grew;
-      const [bx0, by0, bx1, by1] = shade.box;
-      const x = tr.ix + bx0 * g, y = tr.iy + by0 * g, w = (bx1 - bx0) * g, h = (by1 - by0) * g;
-      // Out of sight: nothing of it is laid.
-      if ((x + w - cam.cx) * zoom + W / 2 < 0 || (x - cam.cx) * zoom + W / 2 > W || (y + h - cam.cy) * zoom + H / 2 < 0 || (y - cam.cy) * zoom + H / 2 > H) continue;
-      for (let d = Math.floor((y - top0) / stepH), end = Math.floor((y + h - top0) / stepH); d <= end; d++) {
-        let line = per.get(d);
-        if (!line) per.set(d, (line = { x0: x, x1: x + w, ids: [], parts: [] }));
-        line.x0 = Math.min(line.x0, x);
-        line.x1 = Math.max(line.x1, x + w);
-        line.ids.push(`${tr.x},${tr.y},${tr.variant}`);
-        line.parts.push({ cv: shade.canvas, x, y, w, h });
+    // The window: the screen and at least half a screen either side, moved a quarter of a screen at a time.
+    const qW = W / zoom / 4, halfH = H / zoom / 2;
+    const wx0 = Math.floor((cam.cx - 4 * qW) / qW) * qW, wy0 = Math.floor((cam.cy - 2 * halfH) / halfH) * halfH;
+    const wIso = 9 * qW;
+    const scanKey = `${cam.rotation}|${wx0}|${wy0}|${this.solidRev}`;
+    if (scanKey !== this.solidScan.key) {
+      const trees: typeof this.solidScan.trees = [];
+      const pad = 3 * stepH;
+      const d0 = Math.floor((wy0 - pad + world.minHeight * HEIGHT_SCALE) / stepH), d1 = Math.ceil((wy0 + 6 * halfH + pad + world.maxHeight * HEIGHT_SCALE) / stepH);
+      const e0 = Math.floor((wx0 - pad * 2) / stepW) - 1, e1 = Math.ceil((wx0 + wIso + pad * 2) / stepW) + 1;
+      let href = 0;
+      for (let d = d0; d <= d1; d++) {
+        let e = e0;
+        if (V.staggered && ((e + d) & 1) !== 0) e++;
+        for (; e <= e1; e += V.staggered ? 2 : 1) {
+          const x = V.x[0] + V.x[1] * d + V.x[2] * e, y = V.y[0] + V.y[1] * d + V.y[2] * e;
+          if (!world.inBounds(x, y) || world.getTile(x, y) !== TileType.Tree) continue;
+          const data = world.getData(x, y);
+          const species = treeSpecies(data);
+          if (!TREE3D_SPECIES.has(species)) continue;
+          const u = cam.rotateX(x + 0.5, y + 0.5), v = cam.rotateY(x + 0.5, y + 0.5), h = world.centerHeight(x, y);
+          trees.push({ ix: (u - v) * HALF_W, iy: (u + v) * HALF_H - h * HEIGHT_SCALE, x, y, species, variant: treeVariant(data), grew: grownAt(x, y) });
+          href += h;
+        }
+      }
+      // Rows of the screen to lines of ground, at about the height the trees stand at.
+      this.solidScan = { key: scanKey, trees, top0: -Math.round(href / Math.max(1, trees.length) / 10) * 10 * HEIGHT_SCALE, lines: new Map(), linesKey: '' };
+    }
+    const scan = this.solidScan;
+    // Which trees' shade falls on which line, and where, for this sun.
+    const linesKey = `${step}|${season}${lookStep(day)}`;
+    if (scan.linesKey !== linesKey) {
+      scan.linesKey = linesKey;
+      scan.lines = new Map();
+      for (const tr of scan.trees) {
+        const shade = tree3dShadow(tr.species, tr.variant, season, day, tr.x, tr.y, step, cam.rotation);
+        if (!shade) continue;
+        const g = tr.grew;
+        const [bx0, by0, bx1, by1] = shade.box;
+        const part = { cv: shade.canvas, x: tr.ix + bx0 * g, y: tr.iy + by0 * g, w: (bx1 - bx0) * g, h: (by1 - by0) * g };
+        for (let d = Math.floor((part.y - scan.top0) / stepH), end = Math.floor((part.y + part.h - scan.top0) / stepH); d <= end; d++) {
+          let line = scan.lines.get(d);
+          if (!line) scan.lines.set(d, (line = []));
+          line.push(part);
+        }
       }
     }
-    const strips = new Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }>();
-    for (const [d, line] of per) {
-      const sig = `${look}|${line.ids.join(';')}`;
+    /*
+     * The pictures: kept while nothing they show has changed, and made again
+     * a few a frame when it has. When only the window has moved along the
+     * line, the picture is moved over by as much and only the strip it has
+     * not got yet is drawn: a pan along a wood lays the same shade.
+     */
+    const k = zoom * t.a * SHADE_RES;
+    const sig = `${cam.rotation}|${this.solidRev}|${linesKey}|${alpha}|${k.toFixed(3)}|${scan.top0}`;
+    const t0 = performance.now();
+    let remade = 0;
+    const strips = new Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; sx: number; sw: number; sh: number; h: number }>();
+    const W1 = Math.ceil(wIso * k) + 2, H1 = Math.ceil(stepH * k) + 2;
+    const canvasFor = (cv?: HTMLCanvasElement): CanvasRenderingContext2D | null => {
+      const c = cv ?? this.solidStripsFree.pop() ?? document.createElement('canvas');
+      if (c.width < W1 || c.height < H1) {
+        c.width = Math.max(c.width, W1);
+        c.height = Math.max(c.height, H1);
+      }
+      return c.getContext('2d');
+    };
+    for (let d = dLo; d <= dHi; d++) {
+      const parts = scan.lines.get(d);
       let had = this.solidStripsKept.get(d);
-      if (!had || had.sig !== sig) {
-        const cv = had?.cv ?? this.solidStripsFree.pop() ?? document.createElement('canvas');
-        const w = Math.ceil((line.x1 - line.x0) * k) + 2, h = Math.ceil(stepH * k) + 2;
-        if (cv.width < w || cv.height < h) {
-          cv.width = Math.max(cv.width, w);
-          cv.height = Math.max(cv.height, h);
+      if (!parts) {
+        if (had) this.dropStrip(d, had);
+        continue;
+      }
+      const top = scan.top0 + d * stepH;
+      const fresh = !had || had.sig !== sig;
+      const moved = !fresh && had!.x0 !== wx0;
+      if (!had || ((fresh || moved) && performance.now() - t0 < SHADE_MS && remade < SHADE_PARTS)) {
+        // What of the window is new: all of it, or the end it has moved on to.
+        let from = 0, to = W1;
+        let g: CanvasRenderingContext2D | null;
+        if (!fresh && moved && had) {
+          g = canvasFor();
+          if (!g) continue;
+          const dx = (had.x0 - wx0) * k;
+          g.globalCompositeOperation = 'copy';
+          g.drawImage(had.cv, dx, 0);
+          g.globalCompositeOperation = 'source-over';
+          if (dx > 0) { from = 0; to = Math.min(W1, Math.ceil(dx) + 1); } else { from = Math.max(0, Math.floor(W1 + dx) - 1); to = W1; }
+          g.clearRect(from, 0, to - from, g.canvas.height);
+          if (this.solidStripsFree.length < 64) this.solidStripsFree.push(had.cv);
+        } else {
+          g = canvasFor(had?.cv);
+          if (!g) continue;
+          g.globalCompositeOperation = 'source-over';
+          g.clearRect(0, 0, g.canvas.width, g.canvas.height);
         }
-        const g = cv.getContext('2d');
-        if (!g) continue;
-        g.clearRect(0, 0, cv.width, cv.height);
-        const top = top0 + d * stepH;
-        for (const p of line.parts) g.drawImage(p.cv, (p.x - line.x0) * k, (p.y - top) * k, p.w * k, p.h * k);
+        g.save();
+        g.beginPath();
+        g.rect(from, 0, to - from, H1);
+        g.clip();
+        let n = 0;
+        for (const p of parts) {
+          const px = (p.x - wx0) * k, pw = p.w * k;
+          if (px + pw < from || px > to) continue;
+          g.drawImage(p.cv, px, (p.y - top) * k, pw, p.h * k);
+          n++;
+        }
         // As see-through as it is laid, so laying it is a plain copy.
         g.globalCompositeOperation = 'source-in';
         g.fillStyle = `rgba(30,56,66,${alpha})`;
-        g.fillRect(0, 0, w, h);
-        g.globalCompositeOperation = 'source-over';
-        had = { sig, cv, x0: line.x0, top, w };
+        g.fillRect(from, 0, to - from, H1);
+        g.restore();
+        if (had) remade += n;
+        had = { sig, cv: g.canvas, x0: wx0, top, wIso, k, stepH };
         this.solidStripsKept.set(d, had);
       }
+      if (!had) continue;
       // Its rows on the screen, cut so each line's meet the next's with no row laid twice.
       const y0 = Math.round(t.d * ((had.top - cam.cy) * zoom + H / 2) + t.f);
       const y1 = Math.round(t.d * ((had.top + stepH - cam.cy) * zoom + H / 2) + t.f);
-      const x = Math.round(t.a * ((had.x0 - cam.cx) * zoom + W / 2) + t.e);
-      if (y1 > y0) strips.set(d, { cv: had.cv, x, y: y0, w: had.w, h: Math.min(y1 - y0, had.cv.height) });
+      if (y1 <= y0) continue;
+      // Only what of it is on the screen.
+      const x = t.a * ((had.x0 - cam.cx) * zoom + W / 2) + t.e;
+      const per = had.k / (zoom * t.a);
+      const sx0 = Math.max(0, -x * per), sx1 = Math.min(had.wIso * had.k, (ctx.canvas.width - x) * per);
+      if (sx1 <= sx0) continue;
+      strips.set(d, { cv: had.cv, x: x + sx0 / per, y: y0, w: (sx1 - sx0) / per, h: y1 - y0, sx: sx0, sw: sx1 - sx0, sh: had.stepH * had.k });
     }
-    this.dropStrips(new Set(per.keys()));
+    // Lines well off the screen are let go.
+    this.dropStrips(dLo - 8, dHi + 8);
     if (strips.size) this.solidShade = { strips };
   }
 
-  /** The kept pictures of the solid trees' shade on lines not in `keep` put back to be used again. */
-  private dropStrips(keep: Set<number>): void {
-    for (const [d, s] of this.solidStripsKept) {
-      if (keep.has(d)) continue;
-      this.solidStripsKept.delete(d);
-      if (this.solidStripsFree.length < 64) this.solidStripsFree.push(s.cv);
-    }
+  /** A line's kept shade picture put back to be used again. */
+  private dropStrip(d: number, s: { cv: HTMLCanvasElement }): void {
+    this.solidStripsKept.delete(d);
+    if (this.solidStripsFree.length < 64) this.solidStripsFree.push(s.cv);
+  }
+
+  /** Every kept shade picture outside lines `lo` to `hi` let go. */
+  private dropStrips(lo: number, hi: number): void {
+    for (const [d, s] of this.solidStripsKept) if (d < lo || d > hi) this.dropStrip(d, s);
   }
 
   /** The band of the solid trees' shade that line `d` of the ground lays (`solidFrame`). */
   private solidShadeLine(ctx: CanvasRenderingContext2D, d: number): void {
-    const sh = this.solidShade!;
-    const strip = sh.strips.get(d);
+    const strip = this.solidShade!.strips.get(d);
     if (!strip) return;
     const t = ctx.getTransform();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(strip.cv, 0, 0, strip.w, strip.h, strip.x, strip.y, strip.w, strip.h);
+    ctx.drawImage(strip.cv, strip.sx, 0, strip.sw, strip.sh, strip.x, strip.y, strip.w, strip.h);
     ctx.setTransform(t);
   }
+
 
 
 
@@ -7308,8 +7398,7 @@ export class Renderer {
     const left = ent.sx - spr.ax * zoom * grew;
     const top = ent.sy - spr.ay * zoom * grew;
     // A tree drawn as a solid throws its own shade, laid with the ground (`solidFrame`).
-    if (spr.solid) this.noteSolid(ent, zoom, grew);
-    else if (this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
+    if (!spr.solid && this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
     /*
      * Air between here and the back of the wood.
      *
@@ -7420,6 +7509,8 @@ export class Renderer {
   private inkFrame = -1;
   /** The milliseconds spent making tree pictures in the frame `treeMakeFrame`, against `TREE_PICTURE_MS`. */
   private treeMadeMs = 0;
+  /** How many pictures of solid trees this frame has made (`SOLID_PICTURES`). */
+  private solidMade = 0;
   private treeMakeFrame = -1;
 
   private forgetTreePictures(): void {
@@ -7482,8 +7573,10 @@ export class Renderer {
     if (this.treeMakeFrame !== this.frameNo) {
       this.treeMakeFrame = this.frameNo;
       this.treeMadeMs = 0;
+      this.solidMade = 0;
     }
-    const may = this.treeMadeMs < TREE_PICTURE_MS;
+    // A solid tree's pictures are made a few a frame, too: a step of the sun changes every one of them at once (`SOLID_PICTURES`).
+    const may = this.treeMadeMs < TREE_PICTURE_MS && (!spr.solid || this.solidMade < SOLID_PICTURES);
     if (had && (!may || !this.zoomSettled)) return use(had, key);
     if (!may || !this.zoomSettled) {
       const list = this.treeOwn.get(own);
@@ -7496,6 +7589,7 @@ export class Renderer {
     const t0 = performance.now();
     const made = this.makeTreePicture(spr, key, own, w, h, haze, lean);
     this.treeMadeMs += performance.now() - t0;
+    if (spr.solid) this.solidMade++;
     return made;
   }
 
@@ -7514,8 +7608,7 @@ export class Renderer {
      * pixels at zoom one where a screen does. Moved by whole pixels only, so
      * what is kept is the same picture to the pixel.
      */
-    // A solid tree's bake is cut to what it covers already.
-    const [u0, v0, u1, v1] = spr.solid ? [0, 0, 1, 1] : this.spriteInk(spr.canvas);
+    const [u0, v0, u1, v1] = this.spriteInk(spr.canvas);
     const x0 = Math.max(0, Math.floor(u0 * w) - 2), x1 = Math.min(w, Math.ceil(u1 * w) + 2);
     const y0 = Math.max(0, Math.floor(v0 * h) - 2), y1 = Math.min(h, Math.ceil(v1 * h) + 2);
     const ch = Math.max(1, y1 - y0);

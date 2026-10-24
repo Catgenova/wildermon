@@ -41,8 +41,14 @@ export const FORMS = 3;
 /** Frames of the wind, gone round one after another, `SWAY_MS` each. */
 export const SWAY_FRAMES = 4;
 export const SWAY_MS = 260;
-/** Milliseconds a frame may spend making bakes when an older one can stand in. */
+/**
+ * What a frame may make, bakes and shades together, when an older one can
+ * stand in: so many milliseconds, and so many of them. The count is the one
+ * that holds: a canvas's drawing is mostly done when it is first copied, not
+ * when it is drawn, so the clock here sees only part of what a bake costs.
+ */
 const BAKE_MS = 4;
+const MAKE_MOST = 1;
 /** Pixels of bakes kept. */
 const PIXELS = 20_000_000;
 
@@ -120,12 +126,14 @@ export function dressOf(variant: number, season: Season, day: number): { dress: 
 const bakes = new Map<string, TreeSprite>();
 let pixels = 0;
 let spent = 0;
+let made = 0;
 /** What has been made, for a harness to read. */
 export const tree3dStats = { bakes: 0, ms: 0, standIns: 0, paintMs: 0 };
 
 /** A new frame: its own `BAKE_MS` to spend. Called by the renderer once a frame. */
 export function tree3dFrame(): void {
   spent = 0;
+  made = 0;
 }
 
 /** Every bake let go: the season's look has turned (`forgetTrees`). */
@@ -187,7 +195,7 @@ export function tree3dSprite(species: number, variant: number, season: Season, d
     bakes.set(key, had);
     return had;
   }
-  if (spent >= BAKE_MS) {
+  if (spent >= BAKE_MS || made >= MAKE_MOST) {
     const near = standIn(head, at.turn, step, frame);
     if (near) {
       tree3dStats.standIns++;
@@ -197,6 +205,7 @@ export function tree3dSprite(species: number, variant: number, season: Season, d
   const t0 = performance.now();
   const spr = bake(scale, species, variant, form, dress, at.turn, step, frame);
   spent += performance.now() - t0;
+  made++;
   keep(key, spr);
   return spr;
 }
@@ -240,7 +249,7 @@ export function tree3dShadow(species: number, variant: number, season: Season, d
   const k = `${head}${step}|${turn}`;
   if (shadows.has(k)) return shadows.get(k) ?? null;
   // Out of time this frame: the sun's nearest step stands in.
-  if (spent >= BAKE_MS) {
+  if (spent >= BAKE_MS || made >= MAKE_MOST) {
     for (let d = 1; d <= SUN_STEPS + 1; d++) {
       for (const s of [step - d, step + d]) {
         const near = shadows.get(`${head}${s}|${turn}`);
@@ -301,6 +310,7 @@ export function tree3dShadow(species: number, variant: number, season: Season, d
   }
   shadows.set(k, out);
   spent += performance.now() - t0;
+  made++;
   if (shadows.size > 160) shadows.delete(shadows.keys().next().value as string);
   return out;
 }
