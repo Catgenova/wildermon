@@ -104,18 +104,33 @@ function arcOf(plan: Plan, fr: { o: L; a: L; b: L }, s0: number, s1: number, t: 
   return { cx, cy, ax: Math.abs(ex - cx), ay: Math.abs(ey - cy), th0, th1 };
 }
 
+/** How far round an arch `f` it is from its crown at `c` to `s`, in units: less than nought on the near side of the crown. */
+function arcLength(f: (s: number) => number, c: number, s: number): number {
+  const n = 16;
+  let len = 0;
+  for (let i = 0; i < n; i++) {
+    const p = c + ((s - c) * i) / n, q = c + ((s - c) * (i + 1)) / n;
+    len += Math.hypot((q - p) * U, f(q) - f(p));
+  }
+  return s < c ? -len : len;
+}
+
 /** A kit whose faces reach their painters with their true extent in their frames, an arch ring's arch, and a frame for the underside of a vault. */
 function framedKit(k: Kit): Kit {
   const face: Kit['face'] = (part, pts, out, tone, info, frame) => {
     let inf: Placed | undefined = info;
     let fr = frame;
     if (inf && !fr && inf.role === 'ring' && pts.length === 4) {
-      // The underside of an arch: `x` across the bridge, `y` along it up the slope.
+      // The underside of an arch: `x` across the bridge, `y` round the arch from its crown, so its courses keep their width down to the spring.
       const [a, b] = [pts[0], pts[1]];
-      const ds = b[0] - a[0];
-      if (Math.abs(ds) > 1e-6) {
-        const slope = (b[2] - a[2]) / ds;
-        fr = { o: [0, 0, a[2] - a[0] * slope], a: [0, 1 / U, 0], b: [1 / U, 0, slope / U] };
+      const ds = b[0] - a[0], dz = b[2] - a[2];
+      const chord = Math.hypot(ds * U, dz);
+      if (chord > 1e-6) {
+        const bay = bayAt(k.plan, (a[0] + b[0]) / 2);
+        const f = bay.lower && Math.abs(bay.lower(a[0]) - a[2]) < 0.05 ? bay.lower : bay.arch;
+        const round = arcLength(f, bay.c, a[0]);
+        const dir: L = [ds / chord, 0, dz / chord];
+        fr = { o: [a[0] - dir[0] * round, 0, a[2] - dir[2] * round], a: [0, 1 / U, 0], b: dir };
         inf = { ...inf, soffit: true };
       }
     }
@@ -137,7 +152,7 @@ function framedKit(k: Kit): Kit {
 /** Whether a frame lies mirrored on the screen: its `x` turned to the left of its `y`, which runs up. */
 function mirrored(k: Kit, fr: { o: L; a: L; b: L }): boolean {
   const o = proj(k.e, k.m(fr.o));
-  const add3 = (d: L): L => [fr.o[0] + d[0] * U, fr.o[1] + d[1] * U, fr.o[2] + d[2]];
+  const add3 = (d: L): L => [fr.o[0] + d[0] * 10, fr.o[1] + d[1] * 10, fr.o[2] + d[2] * 10];
   const a = proj(k.e, k.m(add3(fr.a))), b = proj(k.e, k.m(add3(fr.b)));
   // On the screen y runs down: a frame the right way round turns from `x` to `y` against the clock.
   return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]) > 0;
@@ -348,8 +363,8 @@ export function rubble(c: Rubble): BridgePainter {
       g.stroke(tops);
     }
     if (c.line) {
-      g.strokeStyle = css(faceColour(c.line, L), 0.55);
-      g.lineWidth = 0.3;
+      g.strokeStyle = css(faceColour(c.line, L), 0.7);
+      g.lineWidth = 0.32;
       for (const p of paths) g.stroke(p);
     }
   };

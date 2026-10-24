@@ -17,8 +17,8 @@ const DUSK: [number, number, number] = [0.79, 0.79, 0.8];
 const t = (h: string): Tone => houseTone(h, DUSK);
 
 const FIELD = t('#cbc0b0');
-const BEDS: Beds = [[FIELD, 5], [t('#c6bdab'), 2], [t('#c6bba8'), 1.5], [t('#bdc09b'), 1], [t('#bdb9a9'), 1.5], [t('#dcd3c2'), 1], [t('#b4ab98'), 1]];
-const JOINT = t('#aeaa9c');
+const BEDS: Beds = [[FIELD, 5], [t('#c6bdab'), 2], [t('#c6bba8'), 1.5], [t('#bdc09b'), 1.6], [t('#bdb9a9'), 1.5], [t('#dcd3c2'), 1.2], [t('#a89e8a'), 1.2]];
+const JOINT = t('#a7a294');
 const HI = t('#ddd4c6');
 /** The paler stone its openings are picked out in. */
 const DRESS = t('#ded5c4');
