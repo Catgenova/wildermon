@@ -1125,19 +1125,32 @@ export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 
     seen.sort((a, b) => avgNear(a, e) - avgNear(b, e));
     const scr = seen.map((f) => f.pts.map((q) => proj(e, q)));
     // The ink round the solid: its inked edges, twice the ink wide, the faces filled over so only its rim is left.
+    // Each face's inked edges run on as one line, joined round, and end square where they meet a cut, so no cap pokes past it into the next slice.
     const rim = new Path2D();
     seen.forEach((f, i) => {
       const pts = scr[i];
-      for (let j = 0; j < pts.length; j++) {
-        if (!f.ink[j]) continue;
-        const a = pts[j], b = pts[(j + 1) % pts.length];
-        rim.moveTo(a[0], a[1]);
+      const n = pts.length;
+      const from = f.ink.findIndex((on, j) => on && !f.ink[(j + n - 1) % n]);
+      if (from < 0) {
+        if (!f.ink[0]) return;
+        pts.forEach(([x, y], j) => (j ? rim.lineTo(x, y) : rim.moveTo(x, y)));
+        rim.closePath();
+        return;
+      }
+      let open = false;
+      for (let q = 0; q < n; q++) {
+        const j = (from + q) % n;
+        if (!f.ink[j]) { open = false; continue; }
+        const a = pts[j], b = pts[(j + 1) % n];
+        if (!open) { rim.moveTo(a[0], a[1]); open = true; }
         rim.lineTo(b[0], b[1]);
       }
     });
     g.strokeStyle = css(BRIDGE_INK);
     g.lineWidth = ink * 2 + 2 * grow;
+    g.lineCap = 'butt';
     g.stroke(rim);
+    g.lineCap = 'round';
     seen.forEach((f, i) => {
       const pts = scr[i];
       const L = lightOf(e, f.n);
