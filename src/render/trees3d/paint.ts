@@ -269,7 +269,8 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     g.lineWidth = 0.42;
     g.beginPath();
     const n = Math.min(6, Math.floor(rm / 1.3));
-    for (let i = 0; i < n; i++) {
+    if (job.spec.bark.ridged) ridges(g, c, j0, j1, n, R);
+    else for (let i = 0; i < n; i++) {
       const s = -0.75 + (1.5 * (i + 0.5)) / n + (R() - 0.5) * 0.18;
       for (let j = j0; j <= j1; j++) {
         const w = (R() - 0.5) * 0.45;
@@ -301,19 +302,51 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
   g.stroke();
 }
 
-/** Moss up the trunk's shaded side from the ground: a ragged flat patch, gone by a third of the way up. */
-function paintMoss(g: Ctx, moss: string, c: Chain, R: () => number): void {
-  const top = Math.max(1, Math.round((c.q.length - 1) * 0.4));
-  const p = new Path2D();
-  for (let k = 0; k <= top; k++) {
-    const s = -1 + (0.62 + 0.3 * R()) * (1 - k / top) ** 0.7;
-    const x = c.q[k][0] + c.n[k][0] * c.r[k] * s, y = c.q[k][1] + c.n[k][1] * c.r[k] * s;
-    if (k === 0) p.moveTo(x, y); else p.lineTo(x, y);
+/** Furrows as rough bark has them: wandering, broken into ridges, between `n` lines across. */
+function ridges(g: Ctx, c: Chain, j0: number, j1: number, n: number, R: () => number): void {
+  const SUB = 4;
+  for (let i = 0; i < n; i++) {
+    const s = -0.8 + (1.6 * (i + 0.5)) / n;
+    let on = false;
+    for (let j = j0; j < j1; j++) {
+      for (let k = 0; k <= SUB; k++) {
+        const t = k / SUB;
+        const r = c.r[j] + (c.r[j + 1] - c.r[j]) * t;
+        const qx = c.q[j][0] + (c.q[j + 1][0] - c.q[j][0]) * t, qy = c.q[j][1] + (c.q[j + 1][1] - c.q[j][1]) * t;
+        const nx = c.n[j][0] + (c.n[j + 1][0] - c.n[j][0]) * t, ny = c.n[j][1] + (c.n[j + 1][1] - c.n[j][1]) * t;
+        const w = s * r + (R() - 0.5) * r * 0.22;
+        const x = qx + nx * w, y = qy + ny * w;
+        // A ridge runs two or three steps and breaks.
+        if (!on || R() < 0.22) { g.moveTo(x, y); on = true; } else g.lineTo(x, y);
+      }
+    }
   }
-  for (let k = top; k >= 0; k--) p.lineTo(c.q[k][0] - c.n[k][0] * c.r[k], c.q[k][1] - c.n[k][1] * c.r[k]);
+}
+
+/** Moss up the trunk's shaded side from the ground: a flat patch with a ragged top, gone by half way up. */
+function paintMoss(g: Ctx, moss: string, c: Chain, R: () => number): void {
+  const top = Math.max(1, Math.round((c.q.length - 1) * 0.5));
+  const SUB = 3;
+  const p = new Path2D();
+  const at = (j: number, t: number, s: number): Pt => {
+    const r = c.r[j] + (c.r[j + 1] - c.r[j]) * t;
+    return [
+      c.q[j][0] + (c.q[j + 1][0] - c.q[j][0]) * t + (c.n[j][0] + (c.n[j + 1][0] - c.n[j][0]) * t) * r * s,
+      c.q[j][1] + (c.q[j + 1][1] - c.q[j][1]) * t + (c.n[j][1] + (c.n[j + 1][1] - c.n[j][1]) * t) * r * s,
+    ];
+  };
+  p.moveTo(...at(0, 0, -1));
+  // Up the shaded edge, then down its ragged inner edge.
+  for (let j = 0; j < top; j++) for (let k = 1; k <= SUB; k++) p.lineTo(...at(j, k / SUB, -1));
+  for (let j = top - 1; j >= 0; j--) {
+    for (let k = SUB; k >= 0; k--) {
+      const f = (j + k / SUB) / top;
+      p.lineTo(...at(j, k / SUB, -1 + (1 - f) * (0.55 + 0.45 * R()) + (k % 2 ? 0.12 : 0)));
+    }
+  }
   p.closePath();
   g.fillStyle = moss;
-  g.globalAlpha = 0.7;
+  g.globalAlpha = 0.8;
   g.fill(p);
   g.globalAlpha = 1;
 }
@@ -351,8 +384,8 @@ const LEAF_EDGE: ReadonlyArray<Pt> = Array.from({ length: 15 }, (_, i) => {
 });
 
 /** An oak leaf's edge standing out of a mass: long and low, in round lobes with a notch between each. */
-const OAK_EDGE: ReadonlyArray<Pt> = Array.from({ length: 21 }, (_, i) => {
-  const u = i / 20;
+const OAK_EDGE: ReadonlyArray<Pt> = Array.from({ length: 13 }, (_, i) => {
+  const u = i / 12;
   return [u, Math.pow(Math.sin(Math.PI * u), 0.6) * (0.55 + 0.45 * Math.sqrt(Math.abs(Math.sin(3 * Math.PI * u))))] as Pt;
 });
 /** The edge a species' masses stand out of. */
@@ -636,7 +669,8 @@ export function paintTree3d(g: Ctx, job: Job): void {
   }
   // The wood, a few pieces of a limb at a time, so each run is laid in its own place among the leaf.
   for (const c of chains) {
-    const per = c.order <= 0 ? 8 : 2;
+    // An open crown's branches go in whole: each is short, and among the masses by its own depth.
+    const per = c.order <= 0 ? 8 : spec.open && c.order >= 2 ? 3 : 2;
     for (let j0 = 0; j0 < c.q.length - 1; j0 += per) {
       const j1 = Math.min(c.q.length - 1, j0 + per);
       const L0 = sk.limbs[c.pieces[j0]], L1 = sk.limbs[c.pieces[j1 - 1]];
@@ -644,7 +678,9 @@ export function paintTree3d(g: Ctx, job: Job): void {
       // Under a full crown the wood goes in first: the crown is in front of all of it. An open crown's
       // wood is among its masses, set back a little so a branch's end goes into the mass on it.
       const d = near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0);
-      items.push({ d: leafy && !spec.open ? -1e6 : leafy ? d - sk.crown.r * 0.12 * Math.max(0, c.order) : d, draw: () => paintChain(g, job, c, j0, j1, R) });
+      // An open crown's roots go in behind its trunk, which they come out of.
+      const at = spec.open && c.order < 0 ? -1e5 : leafy && !spec.open ? -1e6 : spec.open && shown.length ? d - sk.crown.r * 0.12 * Math.max(0, c.order) : d;
+      items.push({ d: at, draw: () => paintChain(g, job, c, j0, j1, R) });
     }
   }
   const sizeOfKey = sk.crown.r * 0.12;

@@ -247,7 +247,8 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
     const pts: V3[] = [a];
     for (let j = 1; j < k; j++) {
       const t = (j + (R() - 0.5) * 0.35) / k;
-      const w = (j % 2 ? sgn : -sgn) * amp * L * (0.6 + 0.6 * R()) * Math.sin(Math.PI * t) ** 0.5;
+      // Straight out of what it grows from, crooked further along.
+      const w = (j % 2 ? sgn : -sgn) * amp * L * (0.6 + 0.6 * R()) * Math.sin(Math.PI * t) ** 0.5 * Math.min(1, t * 2.2);
       const h = (R() - 0.3) * amp * L * 0.5;
       pts.push(add(add(add(a, mul(d, t)), mul(side, w)), mul(up, h)));
     }
@@ -267,22 +268,7 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
     return out;
   };
 
-  /* ---- where the masses go: round the top of the crown, the top one first ---- */
-  const want = b.bare ? 0 : Math.max(1, Math.round(b.clumps));
-  const rm = env.r * b.clumpSize;
-  const spots: Array<{ c: V3; az: number; el: number }> = [];
-  const GOLD = Math.PI * (3 - Math.sqrt(5));
-  const azR = R() * TAU;
-  for (let i = 0; i < want; i++) {
-    // Even over the shell from its top down to a little under its middle, a golden turn apart.
-    const s = 1 - ((i + 0.5) / want) * 1.55;
-    const el = Math.asin(Math.max(-1, Math.min(1, s))) + (R() - 0.5) * 0.18;
-    const az = azR + i * GOLD + (R() - 0.5) * 0.35;
-    const k = 0.72 + 0.2 * R();
-    spots.push({ c: [env.c[0] + Math.cos(az) * Math.cos(el) * env.r * k, env.c[1] + Math.sin(az) * Math.cos(el) * env.r * k, env.c[2] + Math.sin(el) * rz * k], az, el });
-  }
-
-  /* ---- the limbs, each to its side of the crown ---- */
+  /* ---- the limbs round the trunk: some low, reaching out near level ---- */
   const n = Math.max(1, Math.round(b.scaffolds));
   const a0 = R() * TAU;
   const lowN = Math.round(n * (b.low ?? 0.4));
@@ -293,17 +279,39 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
   for (let k = 0; k < Math.min(highs.length, Math.round(b.dead)); k++) deadOnes.add(highs[Math.floor(R() * highs.length)]);
   const azOf = [...Array(n).keys()].map((i) => a0 + (i / n) * TAU + (R() - 0.5) * (TAU / n) * 0.4);
   const angle = (a: number, c: number): number => Math.abs(((a - c + Math.PI * 3) % TAU) - Math.PI);
-  // Each mass to the limb nearest round the trunk: the low ones' masses low, the rest's high.
+
+  /* ---- where the masses go: a skirt of them out on each low limb, the rest round the top of the crown ---- */
+  const want = b.bare ? 0 : Math.max(1, Math.round(b.clumps));
+  const rm = env.r * b.clumpSize;
+  const spots: Array<{ c: V3; az: number; el: number }> = [];
   const mine: number[][] = azOf.map(() => []);
-  spots.forEach((s, k) => {
+  const at = (az: number, el: number, k: number): V3 =>
+    [env.c[0] + Math.cos(az) * Math.cos(el) * env.r * k, env.c[1] + Math.sin(az) * Math.cos(el) * env.r * k, env.c[2] + Math.sin(el) * rz * k];
+  const skirt = Math.min(want - 1, lowN * 2);
+  for (let j = 0; j < skirt; j++) {
+    const i = [...lowOnes][j % lowN];
+    const az = azOf[i] + (j < lowN ? -1 : 1) * (0.22 + 0.12 * R());
+    const el = -0.5 + 0.3 * R();
+    mine[i].push(spots.length);
+    spots.push({ c: at(az, el, 1.0 + 0.12 * R()), az, el });
+  }
+  const GOLD = Math.PI * (3 - Math.sqrt(5));
+  const azR = R() * TAU;
+  const dome = want - skirt;
+  for (let j = 0; j < dome; j++) {
+    // Even over the shell from its top down to its middle, a golden turn apart.
+    const s = 1 - ((j + 0.5) / dome) * (lowN ? 1.05 : 1.45);
+    const el = Math.asin(Math.max(-1, Math.min(1, s))) + (R() - 0.5) * 0.18;
+    const az = azR + j * GOLD + (R() - 0.5) * 0.35;
+    // Each to the upper limb nearest round the trunk.
     let best = 0, bd = Infinity;
     azOf.forEach((a, i) => {
-      const lowSpot = s.el < 0.35;
-      const d = angle(s.az, a) + (lowOnes.has(i) === lowSpot || !lowN ? 0 : 0.9);
+      const d = angle(az, a) + (lowOnes.has(i) && highs.length ? 9 : 0);
       if (d < bd) { bd = d; best = i; }
     });
-    mine[best].push(k);
-  });
+    mine[best].push(spots.length);
+    spots.push({ c: at(az, el, 0.7 + 0.2 * R()), az, el });
+  }
   const clumps: Clump[] = [];
   for (let i = 0; i < n; i++) {
     const low = lowOnes.has(i);
@@ -323,8 +331,9 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
       out = env.r * (low ? 0.85 : 0.7);
       top = env.c[2] + (low ? 0 : rz * 0.4);
     }
-    const reach = out * (low ? 0.8 + 0.1 * R() : mine[i].length ? 0.45 + 0.15 * R() : 0.6 + 0.2 * R());
-    const lift = low ? Math.max(stemZ * 0.15, top - B[2] - rm * 1.3) : (top - B[2]) * (0.5 + 0.2 * R());
+    const reach = out * (low ? 0.8 + 0.1 * R() : mine[i].length ? 0.45 + 0.15 * R() : 0.75 + 0.2 * R());
+    const lift = !mine[i].length ? (low ? stemZ * (0.2 + 0.3 * R()) : (top - B[2]) * (0.35 + 0.2 * R()))
+      : low ? Math.max(stemZ * 0.15, top - B[2] - rm * 1.3) : (top - B[2]) * (0.5 + 0.2 * R());
     const T: V3 = [B[0] + Math.cos(az) * reach, B[1] + Math.sin(az) * reach, B[2] + lift];
     const pts = crooked(B, T, 4, zig * 0.3);
     // A low limb sags between its elbows and turns up at its end.
@@ -354,7 +363,8 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
         run(crooked(limbs[last].b, tip, 2, zig * 0.12), r * 0.4, r * 0.15, 3, last, i, dead);
       }
       if (!dead) {
-        const cr = rm * (0.88 + 0.28 * R());
+        // The top of the crown in the biggest masses, the rim in smaller.
+        const cr = rm * (0.7 + 0.45 * Math.max(0, Math.sin(s.el)) + 0.3 * R());
         clumps.push({
           c: s.c, r: cr, limb: last, k: R(),
           out: Math.min(1, outOf(env, s.c)),
@@ -367,13 +377,13 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
       for (const p of pieces.slice(1)) {
         const P = limbs[p];
         const ta = az + (R() - 0.5) * 1.6;
-        const tl = env.r * (0.22 + 0.14 * R());
-        const tip = add(P.b, mul(unit([Math.cos(ta), Math.sin(ta), 0.5 + 0.6 * R()]), tl));
+        const tl = env.r * (0.26 + 0.16 * R());
+        const tip = add(P.b, mul(unit([Math.cos(ta), Math.sin(ta), 0.25 + 0.5 * R()]), tl));
         const r = Math.max(0.15, P.rb * 0.6);
         const bp = run(crooked(P.b, tip, 2, zig * 0.3), r, r * 0.4, 2, p, i, dead);
         if (b.forks >= 2) {
           const last = limbs[bp[bp.length - 1]];
-          run(crooked(last.b, add(last.b, mul(unit([Math.cos(ta + 0.8), Math.sin(ta + 0.8), 0.8]), tl * 0.5)), 2, zig * 0.25), r * 0.4, r * 0.15, 3, bp[bp.length - 1], i, dead);
+          run(crooked(last.b, add(last.b, mul(unit([Math.cos(ta + 0.8), Math.sin(ta + 0.8), 0.5]), tl * 0.5)), 2, zig * 0.25), r * 0.4, r * 0.15, 3, bp[bp.length - 1], i, dead);
         }
       }
     }

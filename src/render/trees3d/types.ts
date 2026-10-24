@@ -140,8 +140,8 @@ export interface Species3D {
   /** Each age's build: the mature one, and what each other age changes. */
   build: Build;
   ages: Partial<Record<AgeKey, Partial<Build>>>;
-  /** Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk and the roots, where it has any. */
-  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string };
+  /** Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough. */
+  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean };
   /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed. */
   leafForm?: 'maple' | 'oak';
   /** A mass's height on the screen against its width: 0.86 unless given. */
