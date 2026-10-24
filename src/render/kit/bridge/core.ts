@@ -320,15 +320,24 @@ export function buildSlice(plan: Plan, sl: Slice, e: Eye, A2: [number, number], 
     if (dot(n, dir(o)) < 0) n = mul(n, -1);
     if (!cur[part]) solid(part);
     const ink = pts.map((p, k) => !onCut(p, pts[(k + 1) % pts.length]));
+    const fr = frame ? { o: m(frame.o), a: dir(frame.a), b: dir(frame.b) } : undefined;
     /*
-     * A wall's frame on the low edge runs backwards along the bridge
-     * (`wallFrame`), so its run is told to the painter as it paints it,
-     * negative; a run a style has told so already is left as it is.
+     * And what the painter is told of its run, as the face lies in its own
+     * frame: a wall's frame on the low edge runs backwards along the bridge
+     * (`wallFrame`), a ring's from its crown, a box's from its corner. Told
+     * the same way by a style that tells it so itself.
      */
-    if (info && frame && frame.o[0] === 0 && frame.a[0] < 0 && frame.a[1] === 0 && frame.a[2] === 0 && Math.min(info.x0, info.x1) >= 0 && Math.max(info.x0, info.x1) > 0) {
-      info = { ...info, x0: -Math.max(info.x0, info.x1), x1: -Math.min(info.x0, info.x1) };
+    if (info && fr) {
+      const aa = dot(fr.a, fr.a), bb = dot(fr.b, fr.b);
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const q of mp) {
+        const d = sub(q, fr.o);
+        const x = dot(d, fr.a) / aa, y = dot(d, fr.b) / bb;
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+      info = { ...info, x0, x1, y0, y1 };
     }
-    cur[part]!.faces.push({ pts: mp, n, tone, ink, info, frame: frame ? { o: m(frame.o), a: dir(frame.a), b: dir(frame.b) } : undefined });
+    cur[part]!.faces.push({ pts: mp, n, tone, ink, info, frame: fr });
   };
   const loose = (part: Part3, draw: (g: Ctx, e: Eye) => void, reach: L[], order?: number): void => {
     out[part].parts.push({ faces: [], draw, reach: reach.map(m), order });
@@ -584,7 +593,7 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
         if (!f) continue;
         const za = f(a), zb = f(b2);
         k.face('front', [[a, tr, za], [b2, tr, zb], [b2, tr, zb + ringD], [a, tr, za + ringD]], [0, edge, 0], st.ring,
-          info('ring', (a - bay.c) * U, (b2 - bay.c) * U, za, za + ringD, Math.round(bay.c * 10), true), fr);
+          info('ring', (a - bay.c) * U, (b2 - bay.c) * U, za, za + ringD, Math.round(bay.c * 10), true), { ...fr, o: [bay.c, tr, 0] });
         // The ring's soffit edge and its top, between its face and the wall: on the near face, the far one's being hidden by the vault.
         if (edge === sl.near) {
           k.face('front', [[a, t, za], [b2, t, zb], [b2, tr, zb], [a, tr, za]], [0, 0, -1], st.ring);
