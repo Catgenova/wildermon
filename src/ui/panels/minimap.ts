@@ -59,6 +59,13 @@ export class MinimapPanel {
   private view: HTMLCanvasElement;
   private viewCtx: CanvasRenderingContext2D;
   private dirty = true;
+  /** All of the picture wants uploading, not only what `paint` changed: the first fill. */
+  private whole = true;
+  /** The pixels `paint` has changed since the last upload; empty (x0 > x1) when none. */
+  private dx0 = Infinity;
+  private dy0 = Infinity;
+  private dx1 = -1;
+  private dy1 = -1;
   private lastVision = -1;
   private painted = false;
   private lastFog = true;
@@ -291,7 +298,12 @@ export class MinimapPanel {
 
   private paint(x: number, y: number): void {
     const w = this.game.world;
-    const i = (((y / this.step) | 0) * this.bw + ((x / this.step) | 0)) * 4;
+    const px = (x / this.step) | 0, py = (y / this.step) | 0;
+    if (px < this.dx0) this.dx0 = px;
+    if (px > this.dx1) this.dx1 = px;
+    if (py < this.dy0) this.dy0 = py;
+    if (py > this.dy1) this.dy1 = py;
+    const i = (py * this.bw + px) * 4;
     const d = this.image.data;
     // Three states here as in the world: nothing for land nobody has seen, the
     // land as it is where somebody is looking, and what it was where not.
@@ -458,8 +470,13 @@ export class MinimapPanel {
     this.followWater();
     this.followVision();
     if (this.dirty) {
-      this.baseCtx.putImageData(this.image, 0, 0);
+      // Only the box painted since the last upload.
+      if (!this.whole && this.dx1 >= this.dx0) this.baseCtx.putImageData(this.image, 0, 0, this.dx0, this.dy0, this.dx1 - this.dx0 + 1, this.dy1 - this.dy0 + 1);
+      else this.baseCtx.putImageData(this.image, 0, 0);
       this.dirty = false;
+      this.whole = false;
+      this.dx0 = this.dy0 = Infinity;
+      this.dx1 = this.dy1 = -1;
     }
     const ctx = this.viewCtx;
     const view = this.window();
