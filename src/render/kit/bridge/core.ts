@@ -547,6 +547,8 @@ export function turned(k: Kit, part: Part3, s: number, t: number, z: number, pro
 
 function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ringD: number): void {
   const { plan, sl, st } = k;
+  // An outer edge turned from the eye: what stands proud of it (rings, keystones, cutwaters) would show through the arches.
+  const away = (edge: number): boolean => edge * dot(k.P, k.e.toward) < -EPS;
   // The pier walls laid by the loop in `arches` stand where there is no opening; here, where there is one:
   for (const edge of sl.edges) {
     const t = edge > 0 ? sl.t1 : sl.t0;
@@ -568,6 +570,7 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
           info('wall', a * U, b2 * U, Math.min(la, lb), bay.course, sl.i), fr);
       }
     }
+    if (away(edge)) continue;
     // The rings, proud of the wall.
     const proud = 0.012;
     const tr = t + edge * proud;
