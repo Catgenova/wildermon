@@ -1,4 +1,4 @@
-import { css, hex, mix, proj, TAU } from '../core';
+import { css, hex, mix, proj, TAU, type Tone } from '../core';
 import { U, byRole, turned, type BridgePainter, type Kit, type L, type Part3 } from './core';
 import { timberBase, grainPaint } from './base';
 import { bar, carpentry, clothPaint, finfo, lay, ownNear, pennant, ringsPaint, rnd, roundRune, tone, type Carpentry, type Fc, type RailSpec } from './plank';
@@ -100,9 +100,8 @@ const logRail: RailSpec = {
   H: 8.5,
   spacing: 0.5,
   inset: 0.045,
-  post: (k, part, order, s, t, z) => {
-    turned(k, part, s, t, z, [[0, 0.036], [8.4, 0.033], [9.6, 0]], 6, LOG.post, order);
-  },
+  // A round post, its top cut to a blunt point.
+  post: (s, t, z) => [...bar([s, t, z], [s, t, z + 8.4], rnd(1.4, 6), LOG.post), ...cone(s, t, z + 8.4, 1.4, 1.3, 6, LOG.post)],
   run: (k, part, _order, a, b, posts) => {
     for (let i = 0; i + 1 < posts.length; i++) {
       const pa: L = lerp(a, b, posts[i]), pb: L = lerp(a, b, posts[i + 1]);
@@ -120,10 +119,20 @@ const logRail: RailSpec = {
   },
 };
 
+/** A cone `n` sides round, `r` units at its foot at height `z`, rising `h`. */
+function cone(s: number, t: number, z: number, r: number, h: number, n: number, tn: Tone): Fc[] {
+  const ring = rnd(r, n).map(([x, y]): L => [s + x / U, t + y / U, z]);
+  const apex: L = [s, t, z + h];
+  return ring.map((a, i) => {
+    const b = ring[(i + 1) % n];
+    return { pts: [a, b, apex], out: [(a[0] + b[0]) / 2 - s, (a[1] + b[1]) / 2 - t, 0.02], tone: tn };
+  });
+}
+
 const lerp = (a: L, b: L, f: number): L => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
 
 /** A log roundel pegged on, its face toward `edge`. */
-function roundel(k: Kit, part: Part3, order: number, s: number, t: number, z: number, edge: number, glyph: string): void {
+function roundel(k: Kit, part: Part3, order: number, s: number, t: number, z: number, edge: number, glow: boolean, glyph: string): void {
   const r = 4;
   const faces: Fc[] = bar([s, t - edge * 0.01, z], [s, t + edge * 0.012, z], rnd(r, 10), LOG.roundel, { caps: [false, true], capPaint: 'key', capTone: LOG.roundel });
   // The roundel's axis runs across the bridge: its face's frame turned so the rune stands upright.
@@ -131,9 +140,9 @@ function roundel(k: Kit, part: Part3, order: number, s: number, t: number, z: nu
   cap.info = finfo('key', -r, r, -r, r, Math.round(s * 10));
   cap.frame = { o: [s, t + edge * 0.012, z], a: [edge > 0 ? 1 / U : -1 / U, 0, 0], b: [0, 0, 1] };
   for (const f of faces.slice(0, -1)) f.tone = LOG.bark;
-  lay(k, part, order, faces, '');
+  lay(k, part, order, faces, 's');
   const n = edge * (k.P[0] * k.e.toward[0] + k.P[1] * k.e.toward[1]);
-  if (n > 0) k.glow.runes.push({ at: k.m([s, t + edge * 0.012, z]), s: r * 0.5, glyph });
+  if (glow && n > 0) k.glow.runes.push({ at: k.m([s, t + edge * 0.012, z]), s: r * 0.5, glyph });
 }
 
 const logCarpentry: Carpentry = {
@@ -151,7 +160,7 @@ const logCarpentry: Carpentry = {
     turned(k, part, s, t, z, [[0, 0.07], [12.5, 0.066], [13.2, 0.056], [14.2, 0.064], [16.6, 0]], 8, LOG.bark, 3);
     for (const zo of [7.4, 4.1]) turned(k, part, s, t, z + zo - 0.8, [[0, 0.074], [1.6, 0.074], [1.6, 0]], 8, LOG.rope, 3.05);
   },
-  plaque: (k, part, order, s, t, z, edge) => roundel(k, part, order, s, t - edge * 0.01, z - 0.6, edge, 'thurisaz'),
+  plaque: (k, part, order, s, t, z, edge, glow) => roundel(k, part, order, s, t - edge * 0.01, z - 0.6, edge, glow, 'thurisaz'),
   deckEdge: (k, edge, te) => {
     const { plan, sl } = k;
     const top = plan.deck;

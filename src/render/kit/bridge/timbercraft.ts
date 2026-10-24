@@ -66,10 +66,8 @@ const tcRail: RailSpec = {
   H: 9,
   spacing: 0.5,
   inset: 0.035,
-  post: (k, part, order, s, t, z) => {
-    lay(k, part, order, bar([s, t, z], [s, t, z + 9.6], sq(1.2), TC.railDeep, { caps: [false, true] }), '');
-    onion(k, part, s, t, z + 9.6, 1, order + 0.05);
-  },
+  post: (s, t, z) => bar([s, t, z], [s, t, z + 9.6], sq(1.2), TC.railDeep, { caps: [false, true] }),
+  top: (k, part, order, s, t, z) => onion(k, part, s, t, z + 9.6, 1, order),
   run: (k, part, order, a, b) => {
     bars(k, part, order, a, b, [
       { z: 8.6, sec: sq(1.15, 0.6), tone: TC.rail, role: 'rail' },
@@ -139,6 +137,9 @@ function arches(k: Kit, c: Carpentry): void {
           faces.push({ pts: [oa, ob, ib, ia], out: [0, edge, 0], tone: TC.rib, info: finfo('ring', 0, segLen, 0, ro - ri, j), frame: { o: ia, a: [Math.cos(mm) / U, 0, -Math.sin(mm)], b: [Math.sin(mm) / U, 0, Math.cos(mm)] } });
           faces.push({ pts: [oa2, ob2, ib2, ia2], out: [0, -edge, 0], tone: TC.rib });
           if (!near) continue;
+          // Its ends against the posts.
+          if (j === 0) faces.push({ pts: [oa, ia, ia2, oa2], out: [-1, 0, 0], tone: TC.rib });
+          if (j === N - 1) faces.push({ pts: [ob, ib, ib2, ob2], out: [1, 0, 0], tone: TC.rib });
           const mo = ((fa + fb) / 2) * th1, mi = ((fa + fb) / 2) * th0;
           faces.push({ pts: [oa, ob, ob2, oa2], out: [Math.sin(mo) / U, 0, Math.cos(mo)], tone: TC.rib });
           faces.push({ pts: [ia, ib, ib2, ia2], out: [-Math.sin(mi) / U, 0, -Math.cos(mi)], tone: TC.rib });
@@ -160,7 +161,7 @@ function arches(k: Kit, c: Carpentry): void {
         lay(k, 'front', ord + 0.02, bar([s, tr, zr - 0.5], [s, tr, base(s) + 0.2], sq(0.9), TC.beam, { paint: 'beam' }), '');
       }
       // The crown's plaque, over both ribs.
-      if (ownNear(k, cA - 0.08, cA + 0.08)) plankPlaque(k, 'front', ord + 0.1, cA, tr + edge * hw, zc + R - 3.4, edge, TC.plaque, 'ingwaz', 3.4, 4.4);
+      if (cA + 0.12 >= sl.s0 && cA - 0.12 <= sl.s1) plankPlaque(k, 'front', ord + 0.1, cA, tr + edge * hw, zc + R - 3.4, edge, ownNear(k, cA - 0.08, cA + 0.08), TC.plaque, 'ingwaz', 3.4, 4.4);
     }
   }
 }
@@ -202,6 +203,7 @@ const tcCarpentry: Carpentry = {
   cap: 1.4,
   brace: 1.1,
   noKnees: true,
+  splay: 0,
   postTone: () => TC.post,
   beamTone: () => TC.beam,
   rail: tcRail,
