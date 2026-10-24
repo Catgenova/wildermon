@@ -2111,8 +2111,9 @@ export class Renderer {
     const { x: px, y: py, level } = this.game.player;
     if (level < 0) return out;
     for (const f of this.game.furniture.values()) {
-      if ((f.level ?? 0) < 0 || Math.abs(f.x - px) >= 60 || Math.abs(f.y - py) >= 60) continue;
-      out.push(...denPools(f.kind, furnitureCentre(f), pieceFacing(f), this.camera.rotation));
+      // Only a bed: every piece in the settlement is looked at every frame.
+      if (!isDen(f.kind) || (f.level ?? 0) < 0 || Math.abs(f.x - px) >= 60 || Math.abs(f.y - py) >= 60) continue;
+      for (const l of denPools(f.kind, furnitureCentre(f), pieceFacing(f), this.camera.rotation)) out.push(l);
     }
     return out;
   }
@@ -3679,7 +3680,13 @@ export class Renderer {
     this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness() });
     this.game.spellLights = this.spells.lights;
     // What is burning, for glass to glow with at night, and last frame's glow gone.
-    this.lightsNow = this.game.darkness() > 0.02 ? [...this.game.lights(), ...this.runeLanternPools(), ...this.denPools()] : [];
+    if (this.game.darkness() > 0.02) {
+      // One list, the lights' own, rather than three spread into a fourth.
+      const lights = this.game.lights();
+      for (const l of this.runeLanternPools()) lights.push(l);
+      for (const l of this.denPools()) lights.push(l);
+      this.lightsNow = lights;
+    } else this.lightsNow = [];
     this.glassNight.length = 0;
     // Every drawbridge by the border it is hinged on, and the two tiles either side of that border, one of
     // which draws it (`drawGateAt`): a number per tile, so the tiles with none cost one lookup.

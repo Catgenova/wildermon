@@ -508,9 +508,40 @@ function grew(b: KitBake, px: number): void {
 const viewKey = (v: KitView): string => `${v.ux.toFixed(3)},${v.uy.toFixed(3)},${v.vx.toFixed(3)},${v.vy.toFixed(3)}`;
 const pieceKey = (kind: string, look: KitLook, view: KitView): string => `${kind}|${lookKey(KIT_PIECES[kind], look)}|${viewKey(view)}`;
 
+/**
+ * A piece's keys as it is drawn, kept for each look and turn it is drawn at:
+ * the key strings were built afresh several times a frame for every piece on
+ * the screen. Found again by the very numbers and words `lookKey` and
+ * `viewKey` are made of, so the same ones always find the same keys; at the
+ * scale last asked, with the turns either side (`neighbours`) at it.
+ */
+interface Keys {
+  lit: boolean; tint: string | undefined; trim: number | undefined; material: string | undefined; frame: number | undefined;
+  ux: number; uy: number; vx: number; vy: number;
+  piece: string; scale: number; at: string; turns: Array<[KitView, string]> | null;
+}
+/** How many looks and turns of one kind are kept: a cart driven about turns to a new heading every frame. */
+const KEYS_KEPT = 64;
+const keysKept = new Map<string, Keys[]>();
+function keysOf(kind: string, look: KitLook, view: KitView, scale: number): Keys {
+  let list = keysKept.get(kind);
+  if (!list) keysKept.set(kind, (list = []));
+  const tint = look.tint?.colour;
+  for (const k of list) {
+    if (k.ux !== view.ux || k.uy !== view.uy || k.vx !== view.vx || k.vy !== view.vy || k.lit !== look.lit || k.tint !== tint
+      || k.trim !== look.trim || k.material !== look.material || k.frame !== look.frame) continue;
+    if (k.scale !== scale) { k.scale = scale; k.at = `${k.piece}|${scale}`; k.turns = null; }
+    return k;
+  }
+  const piece = pieceKey(kind, look, view);
+  const k: Keys = { lit: look.lit, tint, trim: look.trim, material: look.material, frame: look.frame, ux: view.ux, uy: view.uy, vx: view.vx, vy: view.vy, piece, scale, at: `${piece}|${scale}`, turns: null };
+  list.push(k);
+  if (list.length > KEYS_KEPT) list.shift();
+  return k;
+}
+
 /** The bake of a piece at a scale, kept or made: drawn in this frame unless it is wanted `ahead`. */
-function baked(kind: string, look: KitLook, view: KitView, scale: number, ahead = false): KitBake {
-  const key = `${pieceKey(kind, look, view)}|${scale}`;
+function baked(kind: string, look: KitLook, view: KitView, scale: number, ahead = false, key = `${pieceKey(kind, look, view)}|${scale}`): KitBake {
   const k = kept.get(key);
   if (k) {
     kept.delete(key);
@@ -618,28 +649,28 @@ function drawn(b: KitBake, L: number): Sheet {
  * frame has a little time left, its own after all; else none this frame.
  */
 function pictureOf(kind: string, look: KitLook, view: KitView, zoom: number, L: number): { b: KitBake | null; sh: Sheet | null } {
-  const scale = scaleFor(zoom), piece = pieceKey(kind, look, view);
+  const scale = scaleFor(zoom), keys = keysOf(kind, look, view, scale), piece = keys.piece, at = keys.at;
   // A piece new to the screen when the frame's share is spent: not even its model this frame, unless another picture of it stands in.
-  if (!sync && !kept.has(`${piece}|${scale}`) && frameMs >= (settled ? FRAME_MS : MOVING_MS)) {
+  if (!sync && !kept.has(at) && frameMs >= (settled ? FRAME_MS : MOVING_MS)) {
     const other = standIn(piece, scale, L, otherFlickers(kind, look, view));
     later(`${piece}|${scale}|${L}`, () => baked(kind, look, view, scale).sheet(L), true);
     return { b: other ?? null, sh: other ? other.sheet(L) : null };
   }
-  const b = baked(kind, look, view, scale);
+  const b = baked(kind, look, view, scale, false, at);
   let sh: Sheet | null = null;
   if (b.has(L) || sync || frameMs < (settled ? FRAME_MS : 0)) sh = drawn(b, L);
   else {
     const other = standIn(piece, scale, L, otherFlickers(kind, look, view));
     if (other) sh = other.sheet(L);
     else if (frameMs < MOVING_MS) sh = drawn(b, L);
-    if (!sh || other) later(`${piece}|${scale}|${L}`, () => { if (kept.get(`${piece}|${scale}`)?.b === b) b.sheet(L); }, true);
+    if (!sh || other) later(`${at}|${L}`, () => { if (kept.get(at)?.b === b) b.sheet(L); }, true);
   }
   // The turns either side, drawn ahead while there is room for them.
   if (!sync && sh) {
     const px = b.area || sh.canvas.width * sh.canvas.height;
     if (keptArea + 2 * px < BUDGET() * AHEAD_FILL) {
-      for (const v of neighbours(view)) {
-        const vk = `${pieceKey(kind, look, v)}|${scale}`;
+      const turns = (keys.turns ??= neighbours(view).map((v): [KitView, string] => [v, `${pieceKey(kind, look, v)}|${scale}`]));
+      for (const [v, vk] of turns) {
         if (kept.get(vk)?.b.has(L)) continue;
         later(`${vk}|${L}`, () => { if (keptArea + px < BUDGET() * AHEAD_FILL) baked(kind, look, v, scale, true).sheet(L); });
       }

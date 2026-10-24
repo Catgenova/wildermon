@@ -607,8 +607,9 @@ export class SmallLife {
          * more of them, and the likelier the more clumps it has.
          */
         if (nectar && t === TileType.Grass) {
-          const clumps = flowersOn(w.seed, x, y, t, data[i], f.season);
           const roll = hash2(x, y, 5019);
+          // A roll no tile's clumps this season could carry it under is passed by without working out the drift.
+          const clumps = roll < SHARE.wildflowers * FLOWER_MOST[f.season] / FLOWER_MOST.summer ? flowersOn(w.seed, x, y, t, data[i], f.season) : 0;
           if (clumps > 0 && roll < SHARE.wildflowers * clumps / FLOWER_MOST.summer && f.visible(x, y)) {
             const h = this.home();
             h.kind = Home.Nectar;

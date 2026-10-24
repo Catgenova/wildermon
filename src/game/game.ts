@@ -2229,9 +2229,10 @@ export class Game {
 
   /** Which settlement of ours covers this tile, when one does. */
   deedOfMineAt(x: number, y: number): Deed | null {
-    for (const d of this.myDeeds()) {
-      if (Math.abs(x - d.x) <= d.radius && Math.abs(y - d.y) <= d.radius) return d;
-    }
+    // `myDeeds` in its order, without making the list: asked per tile.
+    const d = this.deed;
+    if (d && Math.abs(x - d.x) <= d.radius && Math.abs(y - d.y) <= d.radius) return d;
+    for (const n of this.neighbourDeeds) if (n.mine && Math.abs(x - n.x) <= n.radius && Math.abs(y - n.y) <= n.radius) return n;
     return null;
   }
 
@@ -2362,7 +2363,9 @@ export class Game {
    * stranger's token either, and a stranger's is drawn as ours is.
    */
   tokenAt(x: number, y: number): Deed | null {
-    for (const d of this.myDeeds()) if (d.x === x && d.y === y) return d;
+    // `myDeeds` first and then everybody's, without making the list: the renderer asks this of every tile it draws.
+    if (this.deed && this.deed.x === x && this.deed.y === y) return this.deed;
+    for (const d of this.neighbourDeeds) if (d.mine && d.x === x && d.y === y) return d;
     for (const d of this.neighbourDeeds) if (d.x === x && d.y === y) return d;
     return null;
   }
@@ -3658,7 +3661,6 @@ export class Game {
     for (const f of this.furniture.values()) {
       // A piece down in a cellar lights nothing up here: an altar's glow stays under the floor.
       if (!near(f.x, f.y) || (f.level ?? 0) < 0) continue;
-      const [cx, cy] = furnitureCentre(f);
       // A rune lantern throws what a lantern of its quality throws, and needs nothing to (`runelantern.ts`).
       if (isRuneLantern(f)) {
         out.push(runeLanternLight(f));
@@ -3670,6 +3672,9 @@ export class Game {
         continue;
       }
       // An enchanter's plinth's runes, brighter while somebody enchants at it (`plinth.ts`).
+      // Where it stands, worked out only for what lights from there: every piece in the settlement is looked at every frame.
+      if (f.kind !== ENCHANTERS_PLINTH && f.kind !== MEMORIAL && !f.lit && !furnitureDef(f.kind).altar) continue;
+      const [cx, cy] = furnitureCentre(f);
       if (f.kind === ENCHANTERS_PLINTH) {
         out.push(plinthLight(cx, cy, plinthBusy(this, f)));
         continue;
