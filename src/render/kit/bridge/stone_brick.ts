@@ -1,7 +1,7 @@
 import { cut, glyphPath, proj, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, dot, faceColour, hex, mix, type Ctx, type RGB, type Tone, type V3 } from '../core';
 import {
-  bayAt, BUILDERS, ownerOf, REFUGE_OUT, refugeGaps, refugeOutline, samples, turned, U, wallEnds,
+  bayAt, BUILDERS, ownerOf, REFUGE_OUT, refugeGaps, refugeOutline, samples, turned, U,
   type BridgePainter, type BridgeStyle, type Builders, type FaceInfo, type Kit, type L, type Part3, type Plan, type Role, type Slice,
 } from './core';
 
@@ -886,27 +886,24 @@ export function refugesOwn(w: RefugeWall): Builders['refuges'] {
           clip('front', [[a[0], a[1], under], [b[0], b[1], under], [b[0], b[1], z], [a[0], a[1], z]], [n[0], n[1], 0], st.trim, infoOf('cornice', 0, 0, 0, 0, q), segFrame(a, b));
           clip('front', [[ai[0], ai[1], under - 4.6], [bi[0], bi[1], under - 4.6], [b[0], b[1], under], [a[0], a[1], under]], [n[0], n[1], -0.6], st.stone, infoOf('pier', 0, 0, 0, 0, q), segFrame(ai, bi));
         }
-        k2.solid(part, 2);
+        // Each side a solid of its own, in the bridge's own run's orders (wall, then coping), so a side and the run it leaves
+        // sort by depth. A side's root is flush with the run's end and has no face of its own.
         for (let q = 0; q < segs.length; q++) {
           const [a, b, ai, bi] = [outer[q], outer[q + 1], inner[q], inner[q + 1]];
           const n = segs[q].n;
+          k2.solid(part, 1);
           clip(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], z1], [a[0], a[1], z1]], [n[0], n[1], 0], st.stone, infoOf('parapet', 0, 0, 0, 0, 11), segFrame(a, b));
           clip(part, [[bi[0], bi[1], z], [ai[0], ai[1], z], [ai[0], ai[1], z1], [bi[0], bi[1], z1]], [-n[0], -n[1], 0], st.stone, infoOf('parapet', 0, 0, 0, 0, 12), segFrame(bi, ai));
         }
-        // Its ends where it leaves the bridge's edge, across its thickness: a side seen end on is seen as a wall, not through (`wallEnds`).
-        wallEnds(clip, part, outer[0], outer[1], inner[0], inner[1], z, z1, st.stone, 'start');
-        wallEnds(clip, part, outer[segs.length - 1], outer[segs.length], inner[segs.length - 1], inner[segs.length], z, z1, st.stone, 'end');
-        k2.solid(part, 2.1);
         for (let q = 0; q < segs.length; q++) {
           const [a, b, ai, bi] = [co[q], co[q + 1], ci[q], ci[q + 1]];
           const n = segs[q].n;
+          k2.solid(part, 2);
           clip(part, [[a[0], a[1], z2], [b[0], b[1], z2], [bi[0], bi[1], z2], [ai[0], ai[1], z2]], [0, 0, 1], st.trim, infoOf('cap', 0, 0, 0, 0, 13),
             { o: [a[0], a[1], z2], a: segFrame(a, b).a, b: [-n[0] / U, -n[1] / U, 0] });
           clip(part, [[a[0], a[1], z1], [b[0], b[1], z1], [b[0], b[1], z2], [a[0], a[1], z2]], [n[0], n[1], 0], st.trim, infoOf('cap', 0, 0, 0, 0, 14), segFrame(a, b));
           clip(part, [[bi[0], bi[1], z1], [ai[0], ai[1], z1], [ai[0], ai[1], z2], [bi[0], bi[1], z2]], [-n[0], -n[1], 0], st.trim);
           clip(part, [[a[0], a[1], z1], [b[0], b[1], z1], [bi[0], bi[1], z1], [ai[0], ai[1], z1]], [0, 0, -1], st.trim);
-          if (q === 0) wallEnds(clip, part, a, b, ai, bi, z1, z2, st.trim, 'start');
-          if (q === segs.length - 1) wallEnds(clip, part, a, b, ai, bi, z1, z2, st.trim, 'end');
           const mid = (a[0] + b[0]) / 2;
           if (mid >= sl.s0 && mid < sl.s1) {
             const g = (pt: Pt2): V3 => k.m([pt[0] + n[0] * 0.004, pt[1] + n[1] * 0.004, z1 + w.cope * 0.5]);

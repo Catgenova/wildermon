@@ -1,7 +1,7 @@
 import { css, dot, faceColour, hex, mix, proj, sub, TAU, type Ctx, type RGB, type Tone } from '../core';
 import { cut, glyphPath, lightOf, RUNE_GOLD, RUNE_WHITE, type Eye } from '../../runestone';
 import {
-  BRIDGE_INK, RAMP_CUTWATER, RAMP_WALL, U, bayAt, box, ownerOf, rampReturns, refugeGaps, refugeOutline, samples, wallEnds,
+  BRIDGE_INK, RAMP_CUTWATER, RAMP_WALL, U, bayAt, box, ownerOf, rampReturns, refugeGaps, refugeOutline, samples,
   type BridgePainter, type BridgeStyle, type FaceInfo, type Kit, type L, type Part3, type Plan, type Role,
 } from './core';
 
@@ -907,6 +907,8 @@ function refugesOf(k: Kit, cfg: Classical): void {
       k2.solid('front', 1.2);
       face('front', line.map(([s0, t0]) => [s0, t0, z] as L), [0, 0, 1], st.deck,
         { role: 'deck', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(p.s * 10), along: true }, { o: [0, 0, z], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
+      // Its edge drops below the deck's: behind the deck on the far side, so laid before it there.
+      k2.solid('front', k.ord(edge, 1.15));
       for (const { a, b, n } of segs) {
         face('front', [[a[0], a[1], under], [b[0], b[1], under], [b[0], b[1], z], [a[0], a[1], z]], [n[0], n[1], 0], st.trim,
           { role: 'cornice', x0: 0, x1: 1, y0: 0, y1: 1, seed: Math.round(p.s * 10) }, segF(a, b));
@@ -923,27 +925,24 @@ function refugesOf(k: Kit, cfg: Classical): void {
       for (let q = 0; q < segs.length; q++) {
         const { a, b, n, len } = segs[q];
         const [ai, bi] = [lnIn[q], lnIn[q + 1]];
-        k2.solid(part, 2);
+        // Each side a solid of its own, in the bridge's own run's orders (wall, then coping), so a side and the run it leaves
+        // sort by depth. A side's root is flush with the run's end and has no face of its own.
+        k2.solid(part, 1);
         const wallTone = cfg.parapet === 'solid' ? st.stone : st.trim, role: Role = cfg.parapet === 'solid' ? 'parapet' : 'plinth';
         face(part, [[a[0], a[1], z - 0.6], [b[0], b[1], z - 0.6], [b[0], b[1], topP], [a[0], a[1], topP]], [n[0], n[1], 0], wallTone,
           { role, x0: 0, x1: 1, y0: 0, y1: 1, seed: 3 }, segF(a, b));
         face(part, [[ai[0], ai[1], z], [bi[0], bi[1], z], [bi[0], bi[1], topP], [ai[0], ai[1], topP]], [-n[0], -n[1], 0], wallTone,
           { role, x0: 0, x1: 1, y0: 0, y1: 1, seed: 4 }, segF(bi, ai));
         face(part, [[a[0], a[1], topP], [b[0], b[1], topP], [bi[0], bi[1], topP], [ai[0], ai[1], topP]], [0, 0, 1], st.trim);
-        // Its end where it leaves the bridge's edge, across its thickness: a side seen end on is seen as a wall, not through (`wallEnds`).
-        if (q === 0) wallEnds(face, part, a, b, ai, bi, z, topP, wallTone, 'start');
-        if (q === segs.length - 1) wallEnds(face, part, a, b, ai, bi, z, topP, wallTone, 'end');
         // The coping, a hair over either face.
         const [ao, bo, aj, bj] = [lnOut[q], lnOut[q + 1], lnCap[q], lnCap[q + 1]];
-        k2.solid(part, 3);
+        k2.solid(part, 2);
         face(part, [[ao[0], ao[1], railLow + COPING], [bo[0], bo[1], railLow + COPING], [bj[0], bj[1], railLow + COPING], [aj[0], aj[1], railLow + COPING]], [0, 0, 1], st.trim,
           { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 5 }, { o: [0, 0, railLow + COPING], a: [1 / U, 0, 0], b: [0, 1 / U, 0] });
         face(part, [[ao[0], ao[1], railLow], [bo[0], bo[1], railLow], [bo[0], bo[1], railLow + COPING], [ao[0], ao[1], railLow + COPING]], [n[0], n[1], 0], st.trim,
           { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 6 }, segF(ao, bo));
         face(part, [[aj[0], aj[1], railLow], [bj[0], bj[1], railLow], [bj[0], bj[1], railLow + COPING], [aj[0], aj[1], railLow + COPING]], [-n[0], -n[1], 0], st.trim,
           { role: 'cap', x0: 0, x1: 1, y0: 0, y1: 1, seed: 7 }, segF(bj, aj));
-        if (q === 0) wallEnds(face, part, ao, bo, aj, bj, railLow, railLow + COPING, st.trim, 'start');
-        if (q === segs.length - 1) wallEnds(face, part, ao, bo, aj, bj, railLow, railLow + COPING, st.trim, 'end');
         const mo = lnGlow[q], mb = lnGlow[q + 1];
         const ca = clipRun([[mo[0], mo[1], 0], [mb[0], mb[1], 0], [mb[0], mb[1], 1]], sl.s0, sl.s1);
         if (ca.length >= 3) {

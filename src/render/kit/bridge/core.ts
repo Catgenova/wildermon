@@ -469,7 +469,8 @@ export const BUILDERS: Builders = {
       const proud = st.family === 'stone' ? 0.025 : 0.015;
       const tt = t + edge * proud;
       const z0 = (s: number): number => top(s) - plan.thick;
-      k.solid('front', 1);
+      // Behind the parapet on the far side, so laid before it there.
+      k.solid('front', k.ord(edge, 1));
       // Not where a refuge carries the deck out: its platform is the edge there, and the band would lie on it.
       const gaps = refugeGaps(plan);
       const xs = samples(sl.s0, sl.s1, gaps.flat(), 0.5);
@@ -1000,7 +1001,6 @@ function refugeFor(k: Kit): void {
           info('pier', 0, 1, under - 4.6, under, Math.round(p.s * 10) + q), segFrame(ai, bi));
       }
       // Its parapet, run round it.
-      k2.solid(part, 2);
       refugeParapet(k2, part, line, edge, z, face);
       if (plan.width >= 3 && ownerOf(k2, p.s - 0.05, p.s + 0.05) !== null) lamp(k2, part, p.s, t + edge * REFUGE_OUT * 0.45, z);
     }
@@ -1078,20 +1078,6 @@ function clipToSlice(pts: L[], s0: number, s1: number): L[] {
   return out;
 }
 
-/**
- * The two ends of a wall along a segment of the plan, from `a` to `b` on its
- * outer face and `ai` to `bi` on its inner, from `z0` to `z1`: each a face
- * across its thickness, turned out along the segment. A refuge's sides meet
- * the bridge's parapet at their roots and turn at their corners; from where
- * one is seen end on, its end is what is seen of it.
- */
-export function wallEnds(face: (q: Part3, pts: L[], out: L, tone: Tone) => void, part: Part3, a: [number, number], b: [number, number],
-  ai: [number, number], bi: [number, number], z0: number, z1: number, tone: Tone, which?: 'start' | 'end'): void {
-  const d: L = [b[0] - a[0], b[1] - a[1], 0];
-  if (which !== 'end') face(part, [[a[0], a[1], z0], [ai[0], ai[1], z0], [ai[0], ai[1], z1], [a[0], a[1], z1]], [-d[0], -d[1], 0], tone);
-  if (which !== 'start') face(part, [[b[0], b[1], z0], [bi[0], bi[1], z0], [bi[0], bi[1], z1], [b[0], b[1], z1]], [d[0], d[1], 0], tone);
-}
-
 /** A face's frame along a segment of the plan from `a` to `b`: `x` a unit along it, `y` up. */
 const segFrame = (a: [number, number], b: [number, number]): { o: L; a: L; b: L } => {
   const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
@@ -1123,6 +1109,7 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
   if (timber) {
     const post = st.post ?? st.stone, rail = st.rail ?? st.ring;
     for (const [s0, t0] of line) if (ownerOf(k, s0 - 0.03, s0 + 0.03) !== null) turned(k, part, s0, t0 - edge * 0.03, z, [[0, 0.03], [H, 0.03], [H + 0.8, 0]], 4, post, 1.5);
+    k.solid(part, 2);
     for (const { a, b, n } of segs) {
       const [ai, bi] = [off(a, n, 0.03), off(b, n, 0.03)];
       for (const [zo, h] of [[H - 1.4, 1.4], [H * 0.45, 0.9]] as Array<[number, number]>) {
@@ -1137,19 +1124,18 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
   const top = kind === 'crenel' ? H - 3.5 - coping : kind === 'curved' ? H * 0.7 : kind === 'balustrade' ? 1.8 : H - coping;
   const wallTone = kind === 'balustrade' ? st.trim : st.stone;
   const lOut = lineAt(0), lIn = lineAt(T), lCo = lineAt(-0.012), lCi = lineAt(T + 0.012);
+  // Each side a solid of its own, in the order the bridge's parapet runs are in (walls, then copings over all of them), so a
+  // side and the run it leaves sort by depth: the run in front of a side's root covers it. A side's root is the run's end,
+  // flush with it, and has no face of its own; at its corners a side is mitred to the next.
+  const ztop = kind === 'balustrade' ? H - coping : top;
   segs.forEach(({ n, len }, q) => {
     const [a, b, ai, bi] = [lOut[q], lOut[q + 1], lIn[q], lIn[q + 1]];
-    const first = q === 0, last = q === segs.length - 1;
     // The wall's two faces and, for a balustrade, its plinth.
+    k.solid(part, 1);
     face(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], z + top], [a[0], a[1], z + top]], [n[0], n[1], 0], wallTone,
       info(kind === 'balustrade' ? 'plinth' : 'parapet', 0, 1, z, z + top, 11), segFrame(a, b));
     face(part, [[ai[0], ai[1], z], [bi[0], bi[1], z], [bi[0], bi[1], z + top], [ai[0], ai[1], z + top]], [-n[0], -n[1], 0], wallTone,
       info(kind === 'balustrade' ? 'plinth' : 'parapet', 0, 1, z, z + top, 12), segFrame(bi, ai));
-    // Its ends where it leaves the bridge's edge, across its thickness and along the bridge, so a side seen end on is seen
-    // as a wall and not through (`wallEnds`). At its corners it is mitred to the next side.
-    if (first) wallEnds(face, part, a, b, ai, bi, z, z + top, wallTone, 'start');
-    if (last) wallEnds(face, part, a, b, ai, bi, z, z + top, wallTone, 'end');
-    const ztop = kind === 'balustrade' ? H - coping : top;
     if (kind === 'balustrade') {
       // Balusters along its middle, the coping on them.
       const m = Math.max(1, Math.round(len / 0.14));
@@ -1161,8 +1147,12 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
         turned(k, part, sx, tx, z + top, [[0, r * 0.9], [h * 0.12, r * 0.55], [h * 0.38, r * 1.05], [h * 0.62, r * 0.75], [h * 0.82, r * 0.45], [h, r * 0.9]], 6, st.trim, 1.2);
       }
     }
+  });
+  segs.forEach(({ n, len }, q) => {
+    const [a, b, ai, bi] = [lOut[q], lOut[q + 1], lIn[q], lIn[q + 1]];
     // The coping, a hair over both faces, and the rune line along its outer face.
     const [ao, bo, aj, bj] = [lCo[q], lCo[q + 1], lCi[q], lCi[q + 1]];
+    k.solid(part, 2);
     face(part, [[ao[0], ao[1], z + ztop + coping], [bo[0], bo[1], z + ztop + coping], [bj[0], bj[1], z + ztop + coping], [aj[0], aj[1], z + ztop + coping]], [0, 0, 1], st.trim,
       info('cap', 0, 1, 0, 1, 13), { ...segFrame(ao, bo), b: [n[0] / U, n[1] / U, 0], o: [ao[0], ao[1], z + ztop + coping] });
     face(part, [[ao[0], ao[1], z + ztop], [bo[0], bo[1], z + ztop], [bo[0], bo[1], z + ztop + coping], [ao[0], ao[1], z + ztop + coping]], [n[0], n[1], 0], st.trim,
@@ -1171,8 +1161,6 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
       // Behind a wall the coping's inner face; a balustrade's shows between the balusters anyway.
       face(part, [[aj[0], aj[1], z + ztop], [bj[0], bj[1], z + ztop], [bj[0], bj[1], z + ztop + coping], [aj[0], aj[1], z + ztop + coping]], [-n[0], -n[1], 0], st.trim);
     }
-    if (first) wallEnds(face, part, ao, bo, aj, bj, z + ztop, z + ztop + coping, st.trim, 'start');
-    if (last) wallEnds(face, part, ao, bo, aj, bj, z + ztop, z + ztop + coping, st.trim, 'end');
     k.glow.lines.push([k.m([ao[0] + n[0] * 0.004, ao[1] + n[1] * 0.004, z + ztop + coping * 0.5]), k.m([bo[0] + n[0] * 0.004, bo[1] + n[1] * 0.004, z + ztop + coping * 0.5])]);
     if (kind === 'crenel' && len > 0.18) {
       // A merlon in the middle of each side long enough for one.
@@ -1180,6 +1168,7 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
       const P = (pt: [number, number], q: [number, number], u: number): [number, number] => [pt[0] + (q[0] - pt[0]) * u, pt[1] + (q[1] - pt[1]) * u];
       const [m0, m1, m2, m3] = [P(a, b, u0), P(a, b, u1), P(ai, bi, u1), P(ai, bi, u0)];
       const zb = z + ztop + coping, zt = z + H + 1;
+      k.solid(part, 2.5);
       face(part, [[m0[0], m0[1], zb], [m1[0], m1[1], zb], [m1[0], m1[1], zt], [m0[0], m0[1], zt]], [n[0], n[1], 0], st.stone, info('parapet', 0, 1, zb, zt, 15), segFrame(m0, m1));
       face(part, [[m3[0], m3[1], zb], [m2[0], m2[1], zb], [m2[0], m2[1], zt], [m3[0], m3[1], zt]], [-n[0], -n[1], 0], st.stone);
       face(part, [[m0[0], m0[1], zt], [m1[0], m1[1], zt], [m2[0], m2[1], zt], [m3[0], m3[1], zt]], [0, 0, 1], st.trim);

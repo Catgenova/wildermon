@@ -1,6 +1,6 @@
 import { glyphPath, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, hex, mix, type Tone } from '../core';
-import { box, BUILDERS, byRole, ownerOf, REFUGE_OUT, refugeHalf, refugeLine, refugeOutline, turned, U, wallEnds, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
+import { box, BUILDERS, byRole, ownerOf, REFUGE_OUT, refugeHalf, refugeLine, refugeOutline, turned, U, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
 import { stoneBase } from './base';
 import { arcade, brickPaint, cface, fi, herringbonePaint, lampPost, refuged, ringPaint, runeKey, seen, whole, tilePaint, vaultPaint } from './clay';
 
@@ -145,24 +145,20 @@ function refuges(k0: Kit): void {
       const nOf = (q: number): ST => { const [a, b] = [line[q], line[q + 1]]; const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(-(b[1] - a[1]) / l) * edge, ((b[0] - a[0]) / l) * edge]; };
       const cut: Kit['face'] = (q, pts, out, tone, inf, fr) => cface(k, q, pts, out, tone, inf, fr);
       const segFr = (a: ST, b: ST): { o: L; a: L; b: L } => { const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return { o: [a[0], a[1], 0], a: [(b[0] - a[0]) / l / U, (b[1] - a[1]) / l / U, 0], b: [0, 0, 1] }; };
-      const last = line.length - 2;
-      k.solid(part, 2);
+      // Each side a solid of its own, in the bridge's own run's orders (wall, then coping), so a side and the run it leaves
+      // sort by depth. A side's root is flush with the run's end and has no face of its own.
       for (let q = 0; q + 1 < line.length; q++) {
         const n = nOf(q), [a, b, ai, bi] = [lOut[q], lOut[q + 1], lIn[q], lIn[q + 1]];
+        k.solid(part, 1);
         cut(part, [[a[0], a[1], z], [b[0], b[1], z], [b[0], b[1], zc - cop], [a[0], a[1], zc - cop]], [n[0], n[1], 0], DEEP, fi('parapet', 0, 1, z, zc - cop, 3 + q), segFr(a, b));
         cut(part, [[bi[0], bi[1], z], [ai[0], ai[1], z], [ai[0], ai[1], zc - cop], [bi[0], bi[1], zc - cop]], [-n[0], -n[1], 0], DEEP, fi('parapet', 0, 1, z, zc - cop, 7 + q), segFr(bi, ai));
-        // Its ends where it leaves the bridge's edge: a side seen end on is seen as a wall, not through (`wallEnds`).
-        if (q === 0) wallEnds(cut, part, a, b, ai, bi, z, zc - cop, DEEP, 'start');
-        if (q === last) wallEnds(cut, part, a, b, ai, bi, z, zc - cop, DEEP, 'end');
       }
-      k.solid(part, 2.1);
       for (let q = 0; q + 1 < line.length; q++) {
         const n = nOf(q), [O0, O1, I0, I1] = [lCo[q], lCo[q + 1], lCi[q], lCi[q + 1]];
+        k.solid(part, 2);
         cut(part, [[O0[0], O0[1], zc], [O1[0], O1[1], zc], [I1[0], I1[1], zc], [I0[0], I0[1], zc]], [0, 0, 1], st.trim);
         cut(part, [[O0[0], O0[1], zc - cop], [O1[0], O1[1], zc - cop], [O1[0], O1[1], zc], [O0[0], O0[1], zc]], [n[0], n[1], 0], st.trim, fi('cap', 0, 1, zc - cop, zc, q), segFr(O0, O1));
         cut(part, [[I1[0], I1[1], zc - cop], [I0[0], I0[1], zc - cop], [I0[0], I0[1], zc], [I1[0], I1[1], zc]], [-n[0], -n[1], 0], st.trim);
-        if (q === 0) wallEnds(cut, part, O0, O1, I0, I1, zc - cop, zc, st.trim, 'start');
-        if (q === last) wallEnds(cut, part, O0, O1, I0, I1, zc - cop, zc, st.trim, 'end');
         const [o0, o1] = [line[q], line[q + 1]];
         const a = Math.min(o0[0], o1[0]), b = Math.max(o0[0], o1[0]);
         if (b > a + 1e-4) {
