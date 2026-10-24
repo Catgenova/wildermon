@@ -988,6 +988,12 @@ export function sunAt(hour: number): [number, number, number] {
 
 /** How finely the sun's walk is cut up: the ground is re-shaded on each step. */
 const SUN_STEPS = 48;
+/**
+ * How long, in milliseconds, a frame may spend shading the ground afresh for a
+ * new step of the sun (`groundColor`); past it a tile keeps the colour it had
+ * at the step before until a later frame gets to it.
+ */
+const SUN_REPAINT_MS = 2;
 
 /** How often a still cursor is told again what it is over, in milliseconds. */
 const PICK_EVERY = 90;
@@ -1156,6 +1162,17 @@ export class Renderer {
   private colors: ColourPages;
   /** Which step of the sun's walk the ground was last shaded for. */
   private lastSun = -1;
+  /** The sun the ground was last shaded under: at night it holds still across steps (`sunAt`). */
+  private sunWas: [number, number, number] | null = null;
+  /**
+   * The colours and path colours of the step before, laid where this step's
+   * are not worked out yet (`SUN_REPAINT_MS`); dropped once a frame has
+   * needed none of them. And when this frame's time for working them out is up.
+   */
+  private colorsWas: ColourPages | null = null;
+  private trailPaintWas: ColourPages | null = null;
+  private sunRepaintBy = Infinity;
+  private sunWasUsed = false;
   /** Where a shadow falls this frame, in screen pixels, and how dark it is. */
   private shadow = { dx: 0, dy: 0, alpha: 0 };
   /** Tile colours as the map remembers them, for ground nobody is watching. */
@@ -1939,10 +1956,12 @@ export class Renderer {
       for (let xx = x - 1; xx <= x + 1; xx++) {
         if (w.inBounds(xx, yy)) {
           this.colors.forget(xx, yy);
+          this.colorsWas?.forget(xx, yy);
           this.memColors.forget(xx, yy);
           this.trailMarks.forget(xx, yy);
           this.trailMemMarks.forget(xx, yy);
           this.trailPaint.forget(xx, yy);
+          this.trailPaintWas?.forget(xx, yy);
           this.trailShapes.delete(yy * w.w + xx);
           this.flowerMarks.forget(xx, yy);
           this.faces.delete(yy * w.w + xx);
@@ -2674,11 +2693,21 @@ export class Renderer {
     const cache = lit ? this.colors : this.memColors;
     let color = cache.get(x, y);
     if (!color) {
+      const was = lit ? this.sunStale(this.colorsWas, x, y) : null;
+      if (was) return was;
       const w = this.game.world;
       color = this.computeColor(x, y, w.viewTile(x, y, lit), w.viewData(x, y, lit), sun, lit);
       cache.set(x, y, color);
     }
     return color;
+  }
+
+  /** A colour from the step of the sun before, where this frame's time for shading tiles afresh is up and there is one. */
+  private sunStale(was: ColourPages | null, x: number, y: number): string | null {
+    if (!was || performance.now() < this.sunRepaintBy) return null;
+    const c = was.get(x, y);
+    if (c) this.sunWasUsed = true;
+    return c;
   }
 
   /** Scratch for `groundAt`: four neighbours, and no array made per tile. */
@@ -3254,6 +3283,8 @@ export class Renderer {
     if (!lit) return this.computeColor(x, y, TileType.Trail, 0, this.sunNow, false, true);
     let c = this.trailPaint.get(x, y);
     if (!c) {
+      const was = this.sunStale(this.trailPaintWas, x, y);
+      if (was) return was;
       c = this.computeColor(x, y, TileType.Trail, 0, this.sunNow, true, true);
       this.trailPaint.set(x, y, c);
     }
@@ -3874,12 +3905,28 @@ export class Renderer {
     const sun = sunAt(hour);
     this.sunNow = sun;
     const sunStep = Math.floor((hour / 24) * SUN_STEPS);
+    /*
+     * The colours are worked out again a frame's worth of time at a time
+     * (`SUN_REPAINT_MS`), the last step's laid where they are not yet: a whole
+     * screen of them at once was a frame of up to a tenth of a second every
+     * step. Under a sun that has not moved (the night's) there is nothing to
+     * work out. The edges' pictures (`hems`) are not shaded by the sun and stay.
+     */
     if (sunStep !== this.lastSun) {
+      // Only the step before is near enough to stand in: after a jump of the clock, every colour is worked out at once, as ever.
+      const next = this.lastSun >= 0 && (sunStep - this.lastSun + SUN_STEPS) % SUN_STEPS === 1;
       this.lastSun = sunStep;
-      this.colors.clear();
-      this.forgetHems();
-      this.trailPaint.clear();
+      const was = this.sunWas;
+      if (!was || was[0] !== sun[0] || was[1] !== sun[1] || was[2] !== sun[2]) {
+        this.sunWas = sun;
+        this.colorsWas = next ? this.colors : null;
+        this.colors = new ColourPages(world.w);
+        this.trailPaintWas = next ? this.trailPaint : null;
+        this.trailPaint = new ColourPages(world.w);
+      }
     }
+    this.sunRepaintBy = this.colorsWas ? performance.now() + SUN_REPAINT_MS : Infinity;
+    this.sunWasUsed = false;
     /*
      * Where a shadow falls, and how long it is. Straight down and invisible at
      * noon; away from the sun and two and a half tiles long when the sun is on
@@ -4679,6 +4726,11 @@ export class Renderer {
       ctx.fill(fogPath);
     }
 
+    // Every tile in view shaded for this step of the sun: the last step's colours are done with.
+    if (this.colorsWas && !this.sunWasUsed) {
+      this.colorsWas = null;
+      this.trailPaintWas = null;
+    }
     this.drawOverlays(ctx, zoom);
     this.drawFight(ctx, zoom);
     if (this.game.settings.markThreats) this.drawThreats(ctx, zoom);
