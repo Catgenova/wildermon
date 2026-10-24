@@ -10,7 +10,8 @@
  *
  *   * every material's longest deck allowed and one tile more refused, in
  *     the same words; its deepest drop allowed and one more refused;
- *   * every material's bays and piers for every length up to its longest;
+ *   * every material's bays, all one length, and piers for every length up
+ *     to its longest;
  *   * set out, a span's bill a lane, and a pier's span its bill again a
  *     storey of drop, one, two and three lanes, and what is said of it;
  *   * a wagon onto a bridge of two lanes and not one; a cart onto either;
@@ -273,13 +274,20 @@ KINDS.forEach((k, i) => {
 for (const k of KINDS) {
   const def = BRIDGES[k];
   const mine = Array.from({ length: def.span }, (_, i) => `${bridgeBays(i + 1, def.bay).join(',')}/${pierSpans(i + 1, def.bay).map((n) => n + 1).join(',')}`).join(';');
-  const even = Array.from({ length: def.span }, (_, i) => bridgeBays(i + 1, def.bay)).every((b) => Math.max(...b) - Math.min(...b) <= 1 && b.every((n) => n <= def.bay!));
-  check(`${def.name}: bays of at most ${def.bay} tiles, even, and their piers, the same on both sides for every length to ${def.span}`,
+  // All one length, as few as cover the deck, none longer than a bay; and each pier on the tile its point is in, the tile before a point between two.
+  const even = Array.from({ length: def.span }, (_, i) => {
+    const n = i + 1, b = bridgeBays(n, def.bay!), k = Math.ceil(n / def.bay!);
+    const piers = pierSpans(n, def.bay);
+    return b.length === k && b.every((x) => x === n / k && x <= def.bay!)
+      && piers.every((t, j) => t === Math.ceil(((j + 1) * n) / k) - 1);
+  }).every(Boolean);
+  check(`${def.name}: bays of at most ${def.bay} tiles, all one length, and their piers, the same on both sides for every length to ${def.span}`,
     mine === theirs(`BAYS:${k}`) && even, `browser ${mine}; island ${theirs(`BAYS:${k}`)}`);
 }
 {
-  const odd = bridgeBays(11, 4);
-  check('an odd count of bays has the widest in the middle', odd.length === 3 && odd[1] === Math.max(...odd), odd.join(','));
+  const three = bridgeBays(3, 2), piers = pierSpans(3, 2), on = pierSpans(8, 4);
+  check('three tiles at a bay of two: two bays of one and a half, the pier on the middle tile; on a point between two tiles, the tile before it',
+    three.join(',') === '1.5,1.5' && piers.join(',') === '1' && on.join(',') === '3', `${three.join(',')} / ${piers.join(',')} / ${on.join(',')}`);
 }
 
 /* ---- C. set out: bills, lanes, what is said ------------------------------------------------------ */

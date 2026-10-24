@@ -1976,7 +1976,7 @@ export function helpText(): string {
       <li>End height: the tile's middle (mean of corners), or the top of a poured foundation or finished deck on piers; an upper-floor end at that floor's height.
       Ends within ${metres(END_SLOP)} m: a level deck at their mean.</li>
       <li>${listed(Object.values(BRIDGES).filter((b) => b !== AQUEDUCT && !b.material).map((b) => `<b>${b.name.toLowerCase()}</b> (${billIn(b.bill)} a span${b.tool === 'trowel' ? ', trowel' : ''}): <b>${b.span}</b> tiles, ${b.carts ? 'carries a cart' : 'foot traffic only'}`))}.</li>
-      <li>One bridge per wall material: max length its storeys + ${BRIDGE_REACH} tiles; bay (one arch or beam) its heft + ${BAY_PAST_HEFT} tiles, bays even, an odd count's middle widest;
+      <li>One bridge per wall material: max length its storeys + ${BRIDGE_REACH} tiles; bay (one arch or beam) at most its heft + ${BAY_PAST_HEFT} tiles, all bays one length;
       max drop under the deck its storeys; its tool and trade. Per span: a solid wall's bill a lane. Per pier (one between bays): a solid wall's bill a storey of drop there, rounded up.
       ${listed(Object.values(BRIDGES).filter((b) => b.material).map((b) => `<b>${b.name.toLowerCase()}</b> ${b.span} tiles, bay ${b.bay}, drop ${b.storeys} storeys`))}.</li>
       <li>Lanes: up to ${WIDEST}: the line set out along; at ${WAGON_WIDTH}, one more on the side picked; at ${STALL_WIDTH}, one more each side. Every lane's ends land as the line's,
