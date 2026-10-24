@@ -8290,8 +8290,7 @@ export class Game {
         if (storey > 0) f.level = storey;
         else delete f.level;
         this.placed.furniture.moved(f, from.x, from.y);
-        this.events.emit('world', from.x, from.y);
-        this.events.emit('world', f.x, f.y);
+        this.movedOn(from.x, from.y, f.x, f.y);
       }
     }
     // The team keeps its line whether the wheels are turning or not, so a
@@ -8348,8 +8347,16 @@ export class Game {
     f.sx = ax;
     f.sy = ay;
     this.placed.furniture.moved(f, from.x, from.y);
-    this.events.emit('world', from.x, from.y);
-    this.events.emit('world', f.x, f.y);
+    this.movedOn(from.x, from.y, f.x, f.y);
+  }
+
+  /**
+   * A vehicle moved from one tile to another (or within one): one 'world' for the step. Its new tile's is enough
+   * when the old one is beside it, since a 'world' at a tile is heard for the tiles round it (the map repaints those).
+   */
+  private movedOn(fromX: number, fromY: number, x: number, y: number): void {
+    if (Math.abs(fromX - x) > 1 || Math.abs(fromY - y) > 1) this.events.emit('world', fromX, fromY);
+    this.events.emit('world', x, y);
   }
 
   /** Burn down every lit fire; one that runs out goes cold. */

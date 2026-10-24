@@ -222,8 +222,20 @@ export class CratePanel {
       (p) => p.from === 'inventory' && this.store() !== undefined,
       (p) => this.dropped?.(p),
     );
-    game.events.on('crate', () => this.render());
+    // Drawn at once while it shows; shut, when it is next opened.
+    game.events.on('crate', () => this.soon());
+    win.onOpen = () => {
+      if (this.stale) this.render();
+    };
     this.render();
+  }
+
+  /** What it shows has changed since it was last drawn, while it was shut. */
+  private stale = false;
+
+  private soon(): void {
+    if (this.win.isOpen) this.render();
+    else this.stale = true;
   }
 
   /** Whichever container is open, seen the same way. */
@@ -621,6 +633,7 @@ export class CratePanel {
   }
 
   render(): void {
+    this.stale = false;
     const store = this.store();
     this.list.replaceChildren();
     if (!store) {

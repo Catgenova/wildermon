@@ -72,6 +72,8 @@ export class MinimapPanel {
   private names = true;
   /** How big the map is on screen, in CSS pixels: the smaller side, as it is drawn square. Kept by a watcher rather than measured each frame. */
   private shown = 0;
+  /** The list of marks wants listing again (`listMarks`). */
+  private marksStale = false;
 
   constructor(
     win: UIWindow,
@@ -127,7 +129,10 @@ export class MinimapPanel {
     new ResizeObserver(() => {
       this.shown = Math.min(this.view.clientWidth, this.view.clientHeight);
     }).observe(this.view);
-    game.events.on('world', () => this.listMarks());
+    // Listed again at the next drawing while the window shows, not on every tile that changes, nor while it is shut.
+    game.events.on('world', () => {
+      this.marksStale = true;
+    });
     this.listMarks();
     // Unexplored to start with, which is a fill rather than a million lookups.
     // What is known is painted the first time the map is opened.
@@ -185,6 +190,7 @@ export class MinimapPanel {
   /** Redraw the list of marks under the map. */
   private listMarks(): void {
     const g = this.game;
+    this.marksStale = false;
     this.marksEl.replaceChildren();
     if (!g.marks.length) {
       const none = document.createElement('div');
@@ -445,6 +451,7 @@ export class MinimapPanel {
   update(): void {
     this.frame ??= this.view.closest('.win');
     if (this.frame?.hasAttribute('hidden')) return;
+    if (this.marksStale) this.listMarks();
     const now = performance.now();
     if (now - this.lastDraw < MAP_EVERY) return;
     this.lastDraw = now;
