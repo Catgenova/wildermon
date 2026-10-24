@@ -517,10 +517,15 @@ export const BUILDERS: Builders = {
 
 /* ---- boxes -------------------------------------------------------------------------------------- */
 
-/** A box in the frame from (s0, t0, z0) to (s1, t1, z1), clipped to the slice; no bottom; one solid. */
+/**
+ * A box in the frame from (s0, t0, z0) to (s1, t1, z1), clipped to the
+ * slice -- across it only at a cut between two lanes, so whatever stands
+ * proud of an outer edge keeps its outer face; no bottom; one solid.
+ */
 export function box(k: Kit, part: Part3, s0: number, s1: number, t0: number, t1: number, z0: number, z1: number, tone: Tone, role: Role = 'post', order?: number): void {
-  const { sl } = k;
-  const a = Math.max(s0, sl.s0), b = Math.min(s1, sl.s1), c = Math.max(t0, sl.t0), d = Math.min(t1, sl.t1);
+  const { sl, plan } = k;
+  const a = Math.max(s0, sl.s0), b = Math.min(s1, sl.s1);
+  const c = sl.t0 > plan.tLo + EPS ? Math.max(t0, sl.t0) : t0, d = sl.t1 < plan.tHi - EPS ? Math.min(t1, sl.t1) : t1;
   if (b - a < 1e-4 || d - c < 1e-4 || z1 - z0 < 1e-4) return;
   k.solid(part, order);
   const seed = Math.round(s0 * 97 + t0 * 13);
