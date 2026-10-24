@@ -1276,6 +1276,13 @@ const GLOW_UNITS = 10;
 const SNAP_BELOW = 1.5;
 const GRAZE_STEPS = 4;
 /**
+ * Drawn big enough for a turn to show, the ways round between two of the
+ * eight that a turn put down from pictures goes through: a fourth of an
+ * eighth each, so a turn of an eighth, a tenth of a second, is four pictures
+ * rather than six drawn afresh, and not one cut from the one way to the next.
+ */
+const TURN_STEPS = 4;
+/**
  * The scales pictures are drawn at, a zoom taking the next one up and
  * shrinking it: the island's zoom is a wheel, and a picture for every notch
  * of it would be drawn and thrown away. Each a fourth of an octave over the
@@ -1654,9 +1661,19 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   const step = STEPS.find((z) => z >= zoom * 0.98) ?? STEPS[STEPS.length - 1];
   const lod = step < 1.5 ? 0 : 1;
   // Small, a change is put down from pictures as well (`SNAP_BELOW`): at the nearest way round, going or not, and a step of
-  // the way down to the grass; on the move, with its head up.
+  // the way down to the grass; on the move, with its head up. Bigger, the same for a turn on the move, and for any change
+  // once this frame's allowance for new pictures is spent (`ALLOWANCE`), which a change drawn for itself is counted against:
+  // a herd turning at once drew a whole picture a frame for every body in it. Bigger, a turn goes round in `TURN_STEPS`.
   let facing = s.facing, go = s.go, graze = s.graze, changing = s.changing;
-  if (changing && step < SNAP_BELOW) {
+  // The ways round it may be put down at, nearest first (`keyAt` below).
+  let ways: number[] | undefined;
+  if (changing && (step < SNAP_BELOW || (go === 1 && graze === 0) || !drawingAllowed())) {
+    const n = step < SNAP_BELOW ? 1 : TURN_STEPS;
+    const lo = Math.floor(facing);
+    if (lo !== facing) {
+      const at = facing;
+      ways = Array.from({ length: n + 1 }, (_, q) => lo + q / n).sort((x, y) => Math.abs(x - at) - Math.abs(y - at)).map((w) => ((w % 8) + 8) % 8);
+    }
     facing = ((Math.round(facing) % 8) + 8) % 8;
     if (go > 0 && go < 1) go = go >= 0.5 ? 1 : 0;
     graze = go > 0 ? 0 : Math.round(graze * GRAZE_STEPS) / GRAZE_STEPS;
@@ -1690,7 +1707,8 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   // themselves.
   const actHeld = !!a.act && a.act.kind !== 'evolve' && !changing && (graze === 0 || graze === 1) && (go === 0 || a.act.kind === 'work');
   // Turning, getting going or settling, or rare, its light crossing it: drawn for itself, as it is this frame.
-  if (changing || !Number.isInteger(facing) || p.rare || (p.act && !actHeld)) {
+  if (changing || (!ways && !Number.isInteger(facing)) || p.rare || (p.act && !actHeld)) {
+    const t0 = changing && !p.rare && !p.act ? performance.now() : 0;
     const [ax, ay] = ahead(a.u);
     ctx.save();
     ctx.translate(sx + ax, sy + ay);
@@ -1701,6 +1719,7 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     drawKind(ctx, kind, kit, pal, facing, a, inkAt(zoom, kind.size), 1 / zoom, false, shine);
     if (a.act?.kind === 'evolve') evolveBurst(ctx, species, kind, pal, a.act.t, false);
     ctx.restore();
+    if (t0) spent += performance.now() - t0;
     return;
   }
   // Which picture it is: a fifteenth of a second of an act (and a twelfth of a stride, at it on the move), a twelfth of a stride
@@ -1745,6 +1764,10 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   }
   const fleece = Math.round(clamp(a.fleece) * 6);
   a.fleece = fleece / 6;
+  const keyAt = (w: number): string => `${species}|${colors[0]}|${colors[1]}|${w}|${step}|${dev}|${prefix}${i}|${fleece}`;
+  // Part way round: at the nearest of its ways, drawn now if it is not yet and a new picture may be; or else at the nearest of
+  // them that is drawn; or, none, at the nearest of the eight, put down from the pictures nearest it as any body waiting is.
+  if (ways) facing = frames.has(keyAt(ways[0])) || drawingAllowed() ? ways[0] : ways.find((w) => frames.has(keyAt(w))) ?? facing;
   const head = `${species}|${colors[0]}|${colors[1]}|${facing}|`;
   const base = `${head}${step}|${dev}|`;
   const key = `${base}${prefix}${i}|${fleece}`;
