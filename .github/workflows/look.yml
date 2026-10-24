@@ -328,3 +328,6 @@ jobs:
             where p.name = 'catgenova' and (s.it).def in ('marble_brick', 'mortar', 'marble_shards') group by 1"
           ask "hods: the stocked work the island finds" "select * from hod_needing_stocked((select world_id from player where name = 'catgenova'), (select uid from player where name = 'catgenova'), 2584, 3026, 30)"
           ask "hods: hod work near, any" "select w.kind, w.level, w.x, w.y, w.needed from hod_work((select world_id from player where name = 'catgenova'), 2584, 3026, 30) w limit 15"
+          ask "double: wildermon with the keeper as rider" "select c.id, c.species, c.name, c.mode, c.to_x, c.to_y, c.leg_ends, c.keeper = p.uid as theirs, c.tacked
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova' where c.rider = p.uid"
+          ask "double: bodies named catgenova" "select p.uid, p.x, p.y, p.level, p.act, p.body_at from player p where p.name ilike 'catgenova%'"
