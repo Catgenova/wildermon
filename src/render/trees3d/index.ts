@@ -22,7 +22,7 @@ import { eyeOf, proj } from '../runestone';
 import { ageKeyOf } from '../trees/tree';
 import type { AgeKey } from '../trees/types';
 import { lightOf, SUN_STEPS, sunStepOf } from './light';
-import { ACROSS, boundsOf, footShade, paintTree3d, shownOf } from './paint';
+import { ACROSS, boundsOf, footReach, footShade, paintTree3d, shownOf } from './paint';
 import { grow, swayed } from './skeleton';
 import { maple } from './species/maple';
 import type { Build, Dress, Skeleton, Species3D, V3 } from './types';
@@ -280,12 +280,19 @@ export function tree3dShadow(species: number, variant: number, season: Season, d
       x0 = Math.min(x0, sx - rx); x1 = Math.max(x1, sx + rx);
       y0 = Math.min(y0, sy - ry); y1 = Math.max(y1, sy + ry);
     };
+    // The trunk's shade starts clear of the trunk and its roots: what is right at its foot is the tree's own (`footShade`), drawn with it.
+    const r0 = sk.limbs[0]?.ra ?? 0;
+    const clear = r0 * 2.6;
     for (const L of sk.limbs) {
       if (L.order < 0 || L.order > (dress.full > 0 ? 2 : 3)) continue;
       const n = Math.max(1, Math.ceil(Math.hypot(L.b[0] - L.a[0], L.b[1] - L.a[1], (L.b[2] - L.a[2]) * light.throw) / (Math.max(0.5, L.rb) * 1.3)));
       for (let i = 0; i <= n; i++) {
         const t = i / n;
-        disc([L.a[0] + (L.b[0] - L.a[0]) * t, L.a[1] + (L.b[1] - L.a[1]) * t, L.a[2] + (L.b[2] - L.a[2]) * t], Math.max(0.5, L.ra + (L.rb - L.ra) * t));
+        const p: V3 = [L.a[0] + (L.b[0] - L.a[0]) * t, L.a[1] + (L.b[1] - L.a[1]) * t, L.a[2] + (L.b[2] - L.a[2]) * t];
+        const r = Math.max(0.5, L.ra + (L.rb - L.ra) * t);
+        const z = Math.max(0, p[2]);
+        if (L.order === 0 && Math.hypot(p[0] + dx * z, p[1] + dy * z) < clear + r) continue;
+        disc(p, r);
       }
     }
     const job = { sk, spec, dress, light, e, seed: 0, frame: 0 };
@@ -318,3 +325,8 @@ export function tree3dShadow(species: number, variant: number, season: Season, d
   return out;
 }
 const shadows = new Map<string, TreeShade | null>();
+
+/** How far round a tile's tree's foot its own shade reaches, in pixels at zoom one across, before it grows (`grownAt`). */
+export function tree3dFoot(species: number, variant: number, x: number, y: number): number {
+  return footReach(skeletonOf(species, variant, formAt(x, y)));
+}

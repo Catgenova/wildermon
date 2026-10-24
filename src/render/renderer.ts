@@ -43,7 +43,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
-import { SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFrame, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
+import { SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -1254,13 +1254,17 @@ export class Renderer {
     key: string;
     trees: Array<{ ix: number; iy: number; x: number; y: number; species: number; variant: number; grew: number }>;
     top0: number;
+    /** The lowest foot on the screen of the trees on each line: the next line's shade starts no higher, so it is never laid over one. */
+    feet: Map<number, number>;
+    /** And where each of those trees stands and how far its own foot shade reaches: the next line's shade is not laid there either. */
+    footAt: Map<number, Array<[number, number, number]>>;
     linesKey: string;
     lines: Map<number, Array<{ cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }>>;
-  } = { key: '', trees: [], top0: 0, linesKey: '', lines: new Map() };
+  } = { key: '', trees: [], top0: 0, feet: new Map(), footAt: new Map(), linesKey: '', lines: new Map() };
   /** This frame's shade from them, a picture a line, where each is laid (`solidShadeLine`). */
   private solidShade: { strips: Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number; sx: number; sw: number; sh: number }> } | null = null;
   /** Each line's picture of that shade, what it shows, and where; and pictures put by to be used again. */
-  private solidStripsKept = new Map<number, { sig: string; cv: HTMLCanvasElement; x0: number; top: number; wIso: number; k: number; stepH: number }>();
+  private solidStripsKept = new Map<number, { sig: string; cv: HTMLCanvasElement; x0: number; top: number; wIso: number; k: number; band: number }>();
   private solidStripsFree: HTMLCanvasElement[] = [];
   /** Tile colours as the map remembers them, for ground nobody is watching. */
   private memColors: ColourPages;
@@ -7227,10 +7231,13 @@ export class Renderer {
     const scanKey = `${cam.rotation}|${wx0}|${wy0}|${this.solidRev}`;
     if (scanKey !== this.solidScan.key) {
       const trees: typeof this.solidScan.trees = [];
-      const pad = 3 * stepH;
+      // Room for the longest shade, thrown in from trees beyond the window.
+      const pad = 8 * stepH;
       const d0 = Math.floor((wy0 - pad + world.minHeight * HEIGHT_SCALE) / stepH), d1 = Math.ceil((wy0 + 6 * halfH + pad + world.maxHeight * HEIGHT_SCALE) / stepH);
       const e0 = Math.floor((wx0 - pad * 2) / stepW) - 1, e1 = Math.ceil((wx0 + wIso + pad * 2) / stepW) + 1;
       let href = 0;
+      const feet = new Map<number, number>();
+      const footAt = new Map<number, Array<[number, number, number]>>();
       for (let d = d0; d <= d1; d++) {
         let e = e0;
         if (V.staggered && ((e + d) & 1) !== 0) e++;
@@ -7241,14 +7248,22 @@ export class Renderer {
           const species = treeSpecies(data);
           if (!TREE3D_SPECIES.has(species)) continue;
           const u = cam.rotateX(x + 0.5, y + 0.5), v = cam.rotateY(x + 0.5, y + 0.5), h = world.centerHeight(x, y);
-          trees.push({ ix: (u - v) * HALF_W, iy: (u + v) * HALF_H - h * HEIGHT_SCALE, x, y, species, variant: treeVariant(data), grew: grownAt(x, y) });
+          const iy = (u + v) * HALF_H - h * HEIGHT_SCALE;
+          const g = grownAt(x, y);
+          trees.push({ ix: (u - v) * HALF_W, iy, x, y, species, variant: treeVariant(data), grew: g });
+          feet.set(d, Math.max(feet.get(d) ?? -Infinity, iy));
+          let at = footAt.get(d);
+          if (!at) footAt.set(d, (at = []));
+          at.push([(u - v) * HALF_W, iy, tree3dFoot(species, treeVariant(data), x, y) * g]);
           href += h;
         }
       }
       // Rows of the screen to lines of ground, at about the height the trees stand at.
-      this.solidScan = { key: scanKey, trees, top0: -Math.round(href / Math.max(1, trees.length) / 10) * 10 * HEIGHT_SCALE, lines: new Map(), linesKey: '' };
+      this.solidScan = { key: scanKey, trees, top0: -(href / Math.max(1, trees.length)) * HEIGHT_SCALE, feet, footAt, lines: new Map(), linesKey: '' };
     }
     const scan = this.solidScan;
+    // Where line d's band of shade starts: a step down for each line, and never above a foot on the line behind it.
+    const bandTop = (d: number): number => Math.max(scan.top0 + d * stepH, scan.feet.get(d - 1) ?? -Infinity);
     // Which trees' shade falls on which line, and where, for this sun.
     const linesKey = `${step}|${season}${lookStep(day)}`;
     if (scan.linesKey !== linesKey) {
@@ -7261,7 +7276,7 @@ export class Renderer {
         const g = tr.grew;
         const [bx0, by0, bx1, by1] = shade.box;
         const part = { cv: shade.canvas, x: tr.ix + bx0 * g, y: tr.iy + by0 * g, w: (bx1 - bx0) * g, h: (by1 - by0) * g };
-        for (let d = Math.floor((part.y - scan.top0) / stepH), end = Math.floor((part.y + part.h - scan.top0) / stepH); d <= end; d++) {
+        for (let d = Math.floor((part.y - scan.top0) / stepH) - 1, end = Math.floor((part.y + part.h - scan.top0) / stepH) + 1; d <= end; d++) {
           let line = scan.lines.get(d);
           if (!line) scan.lines.set(d, (line = []));
           line.push(part);
@@ -7280,7 +7295,7 @@ export class Renderer {
     const t0 = performance.now();
     let remade = 0;
     const strips = new Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; sx: number; sw: number; sh: number; h: number }>();
-    const W1 = Math.ceil(wIso * k) + 2, H1 = Math.ceil(stepH * k) + 2;
+    const W1 = Math.ceil(wIso * k) + 2, H1 = Math.ceil(2 * stepH * k) + 2;
     const canvasFor = (cv?: HTMLCanvasElement): CanvasRenderingContext2D | null => {
       const c = cv ?? this.solidStripsFree.pop() ?? document.createElement('canvas');
       if (c.width < W1 || c.height < H1) {
@@ -7296,8 +7311,13 @@ export class Renderer {
         if (had) this.dropStrip(d, had);
         continue;
       }
-      const top = scan.top0 + d * stepH;
-      const fresh = !had || had.sig !== sig;
+      const top = bandTop(d);
+      const bottom = Math.min(top + 2 * stepH, Math.max(top, bandTop(d + 1)));
+      if (bottom <= top) {
+        if (had) this.dropStrip(d, had);
+        continue;
+      }
+      const fresh = !had || had.sig !== sig || had.top !== top || had.band !== bottom - top;
       const moved = !fresh && had!.x0 !== wx0;
       if (!had || ((fresh || moved) && performance.now() - t0 < SHADE_MS && remade < SHADE_PARTS)) {
         // What of the window is new: all of it, or the end it has moved on to.
@@ -7320,8 +7340,9 @@ export class Renderer {
           g.clearRect(0, 0, g.canvas.width, g.canvas.height);
         }
         g.save();
+        // Only its own band: a row more and the next line's shade would be laid twice there.
         g.beginPath();
-        g.rect(from, 0, to - from, H1);
+        g.rect(from, 0, to - from, Math.ceil((bottom - top) * k));
         g.clip();
         let n = 0;
         for (const p of parts) {
@@ -7334,22 +7355,36 @@ export class Renderer {
         g.globalCompositeOperation = 'source-in';
         g.fillStyle = `rgba(30,56,66,${alpha})`;
         g.fillRect(from, 0, to - from, H1);
+        // Not round the foot of a tree on this line or the one behind: its own foot shade is laid with it, over the ground and under the tree.
+        const behind = [...(scan.footAt.get(d - 1) ?? []), ...(scan.footAt.get(d) ?? [])];
+        if (behind.length) {
+          g.globalCompositeOperation = 'destination-out';
+          g.fillStyle = '#000';
+          g.beginPath();
+          for (const [fx, fy, r] of behind) {
+            const x = (fx - wx0) * k, y = (fy - top) * k;
+            // A hair inside the foot shade's own edge, so the two meet with no light seam.
+            g.moveTo(x + r * k * 0.985, y);
+            g.ellipse(x, y, r * k * 0.985, r * k * 0.4925, 0, 0, Math.PI * 2);
+          }
+          g.fill();
+        }
         g.restore();
         if (had) remade += n * zoom * zoom;
-        had = { sig, cv: g.canvas, x0: wx0, top, wIso, k, stepH };
+        had = { sig, cv: g.canvas, x0: wx0, top, wIso, k, band: bottom - top };
         this.solidStripsKept.set(d, had);
       }
       if (!had) continue;
       // Its rows on the screen, cut so each line's meet the next's with no row laid twice.
       const y0 = Math.round(t.d * ((had.top - cam.cy) * zoom + H / 2) + t.f);
-      const y1 = Math.round(t.d * ((had.top + stepH - cam.cy) * zoom + H / 2) + t.f);
+      const y1 = Math.round(t.d * ((had.top + had.band - cam.cy) * zoom + H / 2) + t.f);
       if (y1 <= y0) continue;
       // Only what of it is on the screen.
       const x = t.a * ((had.x0 - cam.cx) * zoom + W / 2) + t.e;
       const per = had.k / (zoom * t.a);
       const sx0 = Math.max(0, -x * per), sx1 = Math.min(had.wIso * had.k, (ctx.canvas.width - x) * per);
       if (sx1 <= sx0) continue;
-      strips.set(d, { cv: had.cv, x: x + sx0 / per, y: y0, w: (sx1 - sx0) / per, h: y1 - y0, sx: sx0, sw: sx1 - sx0, sh: had.stepH * had.k });
+      strips.set(d, { cv: had.cv, x: x + sx0 / per, y: y0, w: (sx1 - sx0) / per, h: y1 - y0, sx: sx0, sw: sx1 - sx0, sh: had.band * had.k });
     }
     // Lines well off the screen are let go.
     this.dropStrips(dLo - 8, dHi + 8);
