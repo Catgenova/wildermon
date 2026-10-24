@@ -131,14 +131,16 @@ function planAnew(b: Bridge, f: BridgeFrame): Planned | null {
 
 /**
  * The arches a bridge is drawn with: its bays (`bridgeBays`); and under a
- * ramp, each of them split into arches of about a tile, each springing at
+ * ramp, each of them split into arches of about `RAMP_ARCH` tiles -- wide
+ * enough to be seen through across a lane's depth -- each springing at
  * its own height under the slope, a run of small arches stepping up with
  * the deck. Only how it is drawn: its piers and its bill are its bays'.
  */
 export function drawnBays(n: number, bay: number | undefined, ramp: boolean): number[] {
   const bays = bridgeBays(n, bay);
-  return ramp ? bays.flatMap((len) => { const m = Math.max(1, Math.round(len)); return new Array<number>(m).fill(len / m); }) : bays;
+  return ramp ? bays.flatMap((len) => { const m = Math.max(1, Math.round(len / RAMP_ARCH)); return new Array<number>(m).fill(len / m); }) : bays;
 }
+const RAMP_ARCH = 2;
 
 /** Forget the plans of bridges no longer standing. */
 export function forgetBridges(keep: (id: number) => boolean): void {
