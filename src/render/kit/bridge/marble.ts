@@ -163,11 +163,12 @@ export function slabPaint(o: SlabOpts): BridgePainter {
           if (Math.abs(tn) > 0.3) tints[(tn > 0 ? 0 : 2) + (Math.abs(tn) > 0.7 ? 1 : 0)].rect(a, y, b - a, ch);
           if (o.iron && v > 0.93) iron.rect(a, y + ch * 0.35, b - a, ch * 0.3);
           if (o.beds) {
-            const nb = 2 + Math.floor(hash(c, row, salt + 3) * 2);
+            // The beds it was laid down in: a lamina or two across it, a hair off level.
+            const nb = 1 + (hash(c, row, salt + 3) > 0.55 ? 1 : 0);
             for (let q = 1; q <= nb; q++) {
-              const yy = y + (ch * q) / (nb + 1) + (hash(c, row * 7 + q, salt) - 0.5) * 0.4;
-              beds.moveTo(a + 0.4, yy);
-              beds.quadraticCurveTo((a + b) / 2, yy + (hash(q, c, row) - 0.5) * 0.8, b - 0.4, yy + (hash(c, q, row) - 0.5) * 0.4);
+              const yy = y + (ch * q) / (nb + 1) + (hash(c, row * 7 + q, salt) - 0.5) * 0.5;
+              beds.moveTo(a + 0.5, yy);
+              beds.lineTo(b - 0.5, yy + (hash(c, q, row) - 0.5) * 0.6);
             }
           }
           if (o.vein && v < (o.veined ?? 0.45)) {
