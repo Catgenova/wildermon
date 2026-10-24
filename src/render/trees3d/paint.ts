@@ -340,7 +340,8 @@ function paintClump(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; f
     leafAt(back, x, y + sz * 0.45, sz * lf.s * 1.18, a, 0.72);
     const side = ((x - cx) * sun.sx + (y - cy) * sun.sy) / span;
     const lit = L * (0.78 + 0.6 * lf.top) + 0.14 * side;
-    const idx = Math.max(1, Math.min(top, Math.round(lit * (top - 0.4))));
+    // The palest tone only for the very top of a spray full in the sun.
+    const idx = Math.max(1, Math.min(lf.top > 0.8 ? top : top - 1, Math.round(lit * (top - 0.4))));
     const which = lf.top > 0.62 ? 2 : lf.top < 0.3 ? 0 : 1;
     const key = idx * 3 + which;
     let p = groups.get(key);
@@ -348,6 +349,11 @@ function paintClump(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; f
     leafAt(p, x, y, sz * lf.s, a, 0.72);
   }
   const base = Math.max(0, Math.min(top - 1, Math.round(L * (top - 0.4)) - 1));
+  // Ruled round in the kit's ink first, so all that shows of it is a rim round the spray.
+  g.strokeStyle = rgb(KIT_INK, 0.9);
+  g.lineWidth = KIT_INK_W * 1.5;
+  g.lineJoin = 'round';
+  g.stroke(back);
   g.fillStyle = s.under[base];
   g.fill(back);
   for (const key of [...groups.keys()].sort((p, q) => p - q)) {
@@ -571,29 +577,6 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
   const reach = Math.min(16, sk.crown.r * 0.55) + 2;
   for (const a of [0, 1, 2, 3]) take([Math.cos(a * Math.PI / 2) * reach, Math.sin(a * Math.PI / 2) * reach, 0], 1);
   return [Math.floor(x0 - 4), Math.floor(y0 - 8), Math.ceil(x1 + 4), Math.ceil(y1 + 6)];
-}
-
-/**
- * The ink round the whole tree: its own shape in the kit's ink, laid under it
- * one ink's width out every way, so all that shows is a rim.
- */
-export function inkRound(cv: HTMLCanvasElement, w: number): void {
-  const ink = document.createElement('canvas');
-  ink.width = cv.width;
-  ink.height = cv.height;
-  const k = ink.getContext('2d');
-  const g = cv.getContext('2d');
-  if (!k || !g) return;
-  k.drawImage(cv, 0, 0);
-  k.globalCompositeOperation = 'source-in';
-  k.fillStyle = rgb(KIT_INK);
-  k.fillRect(0, 0, ink.width, ink.height);
-  g.save();
-  g.setTransform(1, 0, 0, 1, 0, 0);
-  g.globalCompositeOperation = 'destination-over';
-  const d = w * 0.7071;
-  for (const [x, y] of [[w, 0], [-w, 0], [0, w], [0, -w], [d, d], [-d, d], [d, -d], [-d, -d]]) g.drawImage(ink, x, y);
-  g.restore();
 }
 
 /** The soft shade right at its foot, laid under everything else. */

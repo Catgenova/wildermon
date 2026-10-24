@@ -18,12 +18,11 @@ import type { Season } from '../../world/calendar';
 import { hash2 } from '../../world/noise';
 import { TREE_AGES, TREE_DEFS } from '../../world/tiles';
 import { LEAFING, LEAVES_DOWN, lookStep, SHEDDING, TURNING } from '../foliage';
-import { KIT_INK_W } from '../kit/core';
 import { eyeOf, proj } from '../runestone';
 import { ageKeyOf } from '../trees/tree';
 import type { AgeKey } from '../trees/types';
-import { lightOf, sunStepOf } from './light';
-import { ACROSS, boundsOf, footShade, inkRound, paintTree3d, shownOf } from './paint';
+import { lightOf, SUN_STEPS, sunStepOf } from './light';
+import { ACROSS, boundsOf, footShade, paintTree3d, shownOf } from './paint';
 import { grow, swayed } from './skeleton';
 import { maple } from './species/maple';
 import type { Build, Dress, Skeleton, Species3D, V3 } from './types';
@@ -122,7 +121,7 @@ const bakes = new Map<string, TreeSprite>();
 let pixels = 0;
 let spent = 0;
 /** What has been made, for a harness to read. */
-export const tree3dStats = { bakes: 0, ms: 0, standIns: 0 };
+export const tree3dStats = { bakes: 0, ms: 0, standIns: 0, paintMs: 0 };
 
 /** A new frame: its own `BAKE_MS` to spend. Called by the renderer once a frame. */
 export function tree3dFrame(): void {
@@ -160,8 +159,9 @@ function bake(scale: number, species: number, variant: number, form: number, dre
   if (!g) throw new Error('no 2d context');
   g.scale(scale, scale);
   g.translate(-x0, -y0);
+  const t1 = performance.now();
   paintTree3d(g, { sk, spec, dress, light: lightOf(step), e, seed, frame });
-  inkRound(canvas, KIT_INK_W * scale);
+  tree3dStats.paintMs += performance.now() - t1;
   footShade(g, sk);
   tree3dStats.bakes++;
   tree3dStats.ms += performance.now() - t0;
@@ -216,11 +216,17 @@ function standIn(head: string, turn: number, step: number, frame: number): TreeS
 
 /* ---- the shade on the ground ------------------------------------------------------- */
 
-/** What a tree throws on the ground, from one turn: a path in pixels at zoom one from its foot, and the box round it. */
+/**
+ * What a tree throws on the ground, from one turn: a picture of it, solid,
+ * `SHADE_SCALE` pixels to a pixel at zoom one, and the box it covers in
+ * pixels at zoom one from the tree's foot.
+ */
 export interface TreeShade {
-  path: Path2D;
+  canvas: HTMLCanvasElement;
   box: [number, number, number, number];
 }
+/** How finely a tree's shade is kept: it is soft at the edge whatever it is drawn at. */
+const SHADE_SCALE = 2;
 
 /**
  * What a tree throws on the ground at a step of the sun, seen from a turn:
@@ -231,8 +237,19 @@ export interface TreeShade {
 export function tree3dShadow(species: number, variant: number, season: Season, day: number, x: number, y: number, step: number, turn: number): TreeShade | null {
   const form = formAt(x, y);
   const { dress, key: look } = dressOf(variant, season, day);
-  const k = `${species}|${variant}|${form}|${look}|${step}|${turn}`;
+  const head = `${species}|${variant}|${form}|${look}|`;
+  const k = `${head}${step}|${turn}`;
   if (shadows.has(k)) return shadows.get(k) ?? null;
+  // Out of time this frame: the sun's nearest step stands in.
+  if (spent >= BAKE_MS) {
+    for (let d = 1; d <= SUN_STEPS + 1; d++) {
+      for (const s of [step - d, step + d]) {
+        const near = shadows.get(`${head}${s}|${turn}`);
+        if (near) return near;
+      }
+    }
+  }
+  const t0 = performance.now();
   const light = lightOf(step);
   let out: TreeShade | null = null;
   if (light.throw > 0) {
@@ -266,10 +283,22 @@ export function tree3dShadow(species: number, variant: number, season: Season, d
         if (i % 3 === 0) disc([s.c.c[0] + l.p[0], s.c.c[1] + l.p[1], s.c.c[2] + l.p[2]], spec.leafSize * 1.7 * s.grown);
       });
     }
-    if (x1 > x0) out = { path, box: [x0, y0, x1, y1] };
+    if (x1 > x0) {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.ceil((x1 - x0) * SHADE_SCALE));
+      canvas.height = Math.max(1, Math.ceil((y1 - y0) * SHADE_SCALE));
+      const g = canvas.getContext('2d');
+      if (g) {
+        g.setTransform(SHADE_SCALE, 0, 0, SHADE_SCALE, -x0 * SHADE_SCALE, -y0 * SHADE_SCALE);
+        g.fillStyle = 'rgb(30,56,66)';
+        g.fill(path);
+        out = { canvas, box: [x0, y0, x1, y1] };
+      }
+    }
   }
   shadows.set(k, out);
-  if (shadows.size > 400) shadows.delete(shadows.keys().next().value as string);
+  spent += performance.now() - t0;
+  if (shadows.size > 160) shadows.delete(shadows.keys().next().value as string);
   return out;
 }
 const shadows = new Map<string, TreeShade | null>();

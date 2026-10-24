@@ -1241,9 +1241,11 @@ export class Renderer {
   private solidPx = 0;
   private solidTrees: Array<{ ix: number; iy: number; x: number; y: number; h: number; species: number; variant: number; grew: number }> = [];
   private solidTurn = -1;
-  private solidShadeCv: HTMLCanvasElement | null = null;
   /** This frame's shade from them: a picture of it all, laid a band of the screen at a time as each line of ground goes down (`solidShadeLine`). */
-  private solidShade: { cv: HTMLCanvasElement; lines: Map<number, [number, number]>; base0: number; S: number; t: DOMMatrix; alpha: number } | null = null;
+  private solidShade: { strips: Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }> } | null = null;
+  /** Each line's picture of that shade, kept while the same trees throw it, and pictures put by to be used again. */
+  private solidStripsKept = new Map<number, { sig: string; cv: HTMLCanvasElement; x0: number; top: number; w: number }>();
+  private solidStripsFree: HTMLCanvasElement[] = [];
   /** Tile colours as the map remembers them, for ground nobody is watching. */
   private memColors: ColourPages;
   /**
@@ -4275,7 +4277,7 @@ export class Renderer {
     }, zoom);
 
     // The trees drawn as solids: what they are baked for this frame, and the shade they throw.
-    this.solidFrame(ctx, zoom, W, H, hs, stepH);
+    this.solidFrame(ctx, zoom, W, H, stepH);
     // The ground laid from pictures of it a block at a time where it can be (`GroundChunks`).
     this.gf = this.groundFrame(V, zoom, W, H, drawnAt, grid, paveRot, grassy, hemmed, paved, seamed, water, sun, voidInk);
     for (let d = dLo; d <= dHi; d++) {
@@ -7165,15 +7167,16 @@ export class Renderer {
 
   /**
    * What the trees drawn as solids are baked for this frame, and the shade
-   * they throw: the trees put down last frame (the same trees, near enough,
-   * and the shade has to go down with the ground, before any of them are
-   * reached), each one's discs of shade (`tree3dShadow`) filled into one
-   * picture so where they overlap is no darker, and which band of the screen
-   * each line of ground will lay of it. The band a line lays is the one its
-   * own ground and every line's before it have finished: what falls on ground
-   * further forward is laid with that ground, not under it.
+   * they throw. The shade has to go down with the ground, a line at a time,
+   * before anything standing on that line, and before any of the trees are
+   * reached: so it is worked out from the trees put down last frame (the same
+   * trees, near enough). Each line of ground gets a picture of the shade
+   * falling on it, every tree's together so where two overlap is no darker
+   * (`tree3dShadow`), kept from frame to frame while the same trees throw it
+   * under the same sun at the same zoom -- panning moves it and does not
+   * make it again -- and laid with that line (`solidShadeLine`).
    */
-  private solidFrame(ctx: CanvasRenderingContext2D, zoom: number, W: number, H: number, hs: number, stepH: number): void {
+  private solidFrame(ctx: CanvasRenderingContext2D, zoom: number, W: number, H: number, stepH: number): void {
     tree3dFrame();
     const hour = this.game.hourOfDay();
     this.solidHour = hour;
@@ -7187,71 +7190,96 @@ export class Renderer {
     const turned = this.solidTurn !== cam.rotation;
     this.solidTurn = cam.rotation;
     this.solidShade = null;
-    const alpha = 0.26 * (1 - this.solidDark);
-    if (!trees.length || turned || alpha < 0.02) return;
+    // How dark the shade is, in a few steps, so a dusk makes its pictures again only a few times.
+    const alpha = Math.round(6 * (1 - this.solidDark)) * 0.045;
+    if (!trees.length || turned || alpha < 0.02) {
+      this.dropStrips(new Set());
+      return;
+    }
     const step = sunStepOf(hour, this.solidDark);
     const t = ctx.getTransform();
-    const cw = ctx.canvas.width, ch = ctx.canvas.height;
-    let cv = this.solidShadeCv;
-    if (!cv) cv = this.solidShadeCv = document.createElement('canvas');
-    if (cv.width !== cw || cv.height !== ch) {
-      cv.width = cw;
-      cv.height = ch;
-    }
-    const g = cv.getContext('2d');
-    if (!g) return;
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, cw, ch);
-    g.setTransform(t);
-    // Rows of the screen to lines of ground, at the height the trees stand at.
+    const k = zoom * t.a;
+    // Lines of ground in the camera's own plane, at about the height the trees stand at.
     let href = 0;
     for (const tr of trees) href += tr.h;
-    href /= trees.length;
-    // A line's ground is laid from its own top row down one step: past that is the next line's (`off`).
-    const S = stepH * zoom;
-    const base0 = H / 2 - cam.cy * zoom - href * hs;
-    const lines = new Map<number, [number, number]>();
-    const take = (x0: number, y0: number, x1: number, y1: number): void => {
-      for (let d = Math.ceil((y0 - base0) / S) - 1, end = Math.ceil((y1 - base0) / S) - 1; d <= end; d++) {
-        const had = lines.get(d);
-        if (had) { had[0] = Math.min(had[0], x0); had[1] = Math.max(had[1], x1); } else lines.set(d, [x0, x1]);
-      }
-    };
-    g.fillStyle = 'rgb(30,56,66)';
-    let any = false;
+    href = Math.round(href / trees.length / 10) * 10;
+    const top0 = -href * HEIGHT_SCALE;
     const season = this.year.season, day = this.year.day;
+    const look = `${k.toFixed(3)}|${step}|${cam.rotation}|${season}${lookStep(day)}|${href}|${alpha}`;
+    // Which trees' shade falls on which line, and across how much of it.
+    const per = new Map<number, { x0: number; x1: number; ids: string[]; parts: Array<{ cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }> }>();
     for (const tr of trees) {
       const shade = tree3dShadow(tr.species, tr.variant, season, day, tr.x, tr.y, step, cam.rotation);
       if (!shade) continue;
-      const fx = (tr.ix - cam.cx) * zoom + W / 2, fy = (tr.iy - cam.cy) * zoom + H / 2;
-      const k = zoom * tr.grew;
+      const g = tr.grew;
       const [bx0, by0, bx1, by1] = shade.box;
-      if (fx + bx1 * k < 0 || fx + bx0 * k > W || fy + by1 * k < 0 || fy + by0 * k > H) continue;
-      g.setTransform(t.a * k, 0, 0, t.d * k, t.a * fx + t.e, t.d * fy + t.f);
-      g.fill(shade.path);
-      take(fx + bx0 * k, fy + by0 * k, fx + bx1 * k, fy + by1 * k);
-      any = true;
+      const x = tr.ix + bx0 * g, y = tr.iy + by0 * g, w = (bx1 - bx0) * g, h = (by1 - by0) * g;
+      // Out of sight: nothing of it is laid.
+      if ((x + w - cam.cx) * zoom + W / 2 < 0 || (x - cam.cx) * zoom + W / 2 > W || (y + h - cam.cy) * zoom + H / 2 < 0 || (y - cam.cy) * zoom + H / 2 > H) continue;
+      for (let d = Math.floor((y - top0) / stepH), end = Math.floor((y + h - top0) / stepH); d <= end; d++) {
+        let line = per.get(d);
+        if (!line) per.set(d, (line = { x0: x, x1: x + w, ids: [], parts: [] }));
+        line.x0 = Math.min(line.x0, x);
+        line.x1 = Math.max(line.x1, x + w);
+        line.ids.push(`${tr.x},${tr.y},${tr.variant}`);
+        line.parts.push({ cv: shade.canvas, x, y, w, h });
+      }
     }
-    if (!any) return;
-    this.solidShade = { cv, lines, base0, S, t, alpha };
+    const strips = new Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }>();
+    for (const [d, line] of per) {
+      const sig = `${look}|${line.ids.join(';')}`;
+      let had = this.solidStripsKept.get(d);
+      if (!had || had.sig !== sig) {
+        const cv = had?.cv ?? this.solidStripsFree.pop() ?? document.createElement('canvas');
+        const w = Math.ceil((line.x1 - line.x0) * k) + 2, h = Math.ceil(stepH * k) + 2;
+        if (cv.width < w || cv.height < h) {
+          cv.width = Math.max(cv.width, w);
+          cv.height = Math.max(cv.height, h);
+        }
+        const g = cv.getContext('2d');
+        if (!g) continue;
+        g.clearRect(0, 0, cv.width, cv.height);
+        const top = top0 + d * stepH;
+        for (const p of line.parts) g.drawImage(p.cv, (p.x - line.x0) * k, (p.y - top) * k, p.w * k, p.h * k);
+        // As see-through as it is laid, so laying it is a plain copy.
+        g.globalCompositeOperation = 'source-in';
+        g.fillStyle = `rgba(30,56,66,${alpha})`;
+        g.fillRect(0, 0, w, h);
+        g.globalCompositeOperation = 'source-over';
+        had = { sig, cv, x0: line.x0, top, w };
+        this.solidStripsKept.set(d, had);
+      }
+      // Its rows on the screen, cut so each line's meet the next's with no row laid twice.
+      const y0 = Math.round(t.d * ((had.top - cam.cy) * zoom + H / 2) + t.f);
+      const y1 = Math.round(t.d * ((had.top + stepH - cam.cy) * zoom + H / 2) + t.f);
+      const x = Math.round(t.a * ((had.x0 - cam.cx) * zoom + W / 2) + t.e);
+      if (y1 > y0) strips.set(d, { cv: had.cv, x, y: y0, w: had.w, h: Math.min(y1 - y0, had.cv.height) });
+    }
+    this.dropStrips(new Set(per.keys()));
+    if (strips.size) this.solidShade = { strips };
+  }
+
+  /** The kept pictures of the solid trees' shade on lines not in `keep` put back to be used again. */
+  private dropStrips(keep: Set<number>): void {
+    for (const [d, s] of this.solidStripsKept) {
+      if (keep.has(d)) continue;
+      this.solidStripsKept.delete(d);
+      if (this.solidStripsFree.length < 64) this.solidStripsFree.push(s.cv);
+    }
   }
 
   /** The band of the solid trees' shade that line `d` of the ground lays (`solidFrame`). */
   private solidShadeLine(ctx: CanvasRenderingContext2D, d: number): void {
     const sh = this.solidShade!;
-    const span = sh.lines.get(d);
-    if (!span) return;
-    const t = sh.t;
-    const y0 = Math.round(t.d * (sh.base0 + d * sh.S) + t.f), y1 = Math.round(t.d * (sh.base0 + (d + 1) * sh.S) + t.f);
-    const x0 = Math.max(0, Math.floor(t.a * span[0] + t.e) - 1), x1 = Math.min(sh.cv.width, Math.ceil(t.a * span[1] + t.e) + 1);
-    const top = Math.max(0, y0), bottom = Math.min(sh.cv.height, y1);
-    if (x1 <= x0 || bottom <= top) return;
-    ctx.save();
+    const strip = sh.strips.get(d);
+    if (!strip) return;
+    const t = ctx.getTransform();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalAlpha = sh.alpha;
-    ctx.drawImage(sh.cv, x0, top, x1 - x0, bottom - top, x0, top, x1 - x0, bottom - top);
-    ctx.restore();
+    ctx.drawImage(strip.cv, 0, 0, strip.w, strip.h, strip.x, strip.y, strip.w, strip.h);
+    ctx.setTransform(t);
   }
+
+
 
   /**
    * A tree or a bush, from a picture of it kept at exactly the size it is on
