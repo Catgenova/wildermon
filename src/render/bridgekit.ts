@@ -366,7 +366,7 @@ export function bridgeNight(p: BridgePieceAt, zoom: number, rotation: number): {
     box: [p.sx + box[0] * zoom, p.sy + box[1] * zoom, p.sx + box[2] * zoom, p.sy + box[3] * zoom],
     holes: (dx, dy) => [
       ...g.lamps.map((q) => { const [x, y] = proj(e, q); return { x: p.sx + dx + x * zoom, y: p.sy + dy + y * zoom, r: 34 * zoom, a: 0.75 }; }),
-      ...g.lines.filter((_, i) => i % 2 === 0).map((l) => { const [x, y] = proj(e, l[0]); return { x: p.sx + dx + x * zoom, y: p.sy + dy + y * zoom, r: 12 * zoom, a: 0.28 }; }),
+      ...lineHoles(g.lines.map((l) => [proj(e, l[0]), proj(e, l[1])])).map(([x, y]) => ({ x: p.sx + dx + x * zoom, y: p.sy + dy + y * zoom, r: 12 * zoom, a: 0.28 })),
     ],
     masks: (dx, dy) => {
       let sh = kept.get(mkey);
@@ -377,6 +377,26 @@ export function bridgeNight(p: BridgePieceAt, zoom: number, rotation: number): {
       return [{ canvas: sh.canvas, x: p.sx + dx + sh.x * zoom, y: p.sy + dy + sh.y * zoom, w: sh.w * zoom, h: sh.h * zoom, a: 0.9 }];
     },
   };
+}
+
+/**
+ * Where a rune line's soft light falls, along its pieces of line on the
+ * screen (pixels at zoom one): one every `LINE_LIGHT` of their length,
+ * however finely a style has cut the line, so every kind glows as strongly.
+ */
+const LINE_LIGHT = 20;
+function lineHoles(lines: Array<[[number, number], [number, number]]>): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  let at = LINE_LIGHT / 2;
+  for (const [[x0, y0], [x1, y1]] of lines) {
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    while (at <= len) {
+      out.push([x0 + ((x1 - x0) * at) / len, y0 + ((y1 - y0) * at) / len]);
+      at += LINE_LIGHT;
+    }
+    at -= len;
+  }
+  return out;
 }
 
 /** Whether a bridge is drawn by this kit. */

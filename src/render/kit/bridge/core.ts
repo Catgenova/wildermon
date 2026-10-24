@@ -366,7 +366,12 @@ export function buildSlice(plan: Plan, sl: Slice, e: Eye, A2: [number, number], 
     b.deck(k);
     if (plan.style.family === 'stone') b.arches(k);
     else b.trestle(k);
-    for (const edge of sl.edges) b.parapet(k, edge, edge === sl.near ? 'rail' : 'front');
+    for (const edge of sl.edges) {
+      const had = glow.lines.length;
+      b.parapet(k, edge, edge === sl.near ? 'rail' : 'front');
+      // A stone parapet that lays no rune line of its own still glows along its top at night, as every one does.
+      if (plan.style.family === 'stone' && glow.lines.length === had) runeLineGlow(k, edge);
+    }
     b.ends(k);
     if (plan.width >= 2) b.refuges(k);
   }
@@ -630,13 +635,13 @@ function archFaces(k: Kit, xs: number[], deckBottom: (s: number) => number, ring
     for (const bay of plan.bays) {
       for (const [f, crown] of [[bay.arch, bay.crown], [bay.lower, bay.lowerCrown]] as Array<[((s: number) => number) | undefined, number | undefined]>) {
         if (!f || crown === undefined) continue;
-        const w = 0.07;
+        const w = 0.09;
         // Wholly in the slice nearer the eye where it straddles a cut.
         const owner = ownerOf(k, bay.c - w, bay.c + w);
         if (owner === null) continue;
         k.solid('front', k.ord(edge, 0.8));
         const tk = t + edge * 0.03;
-        const z0 = crown - 0.6, z1 = crown + ringD + 0.8;
+        const z0 = crown - 1, z1 = crown + ringD + 1.4;
         const ks = [bay.c - w, bay.c + w];
         k.face('front', [[ks[0], tk, z0], [ks[1], tk, z0], [ks[1], tk, z1], [ks[0], tk, z1]], [0, edge, 0], st.ring,
           info('key', 0, w * 2 * U, z0, z1, Math.round(bay.c * 10)), { o: [ks[0], tk, z0], a: [edge > 0 ? 1 / U : -1 / U, 0, 0], b: [0, 0, 1] });
@@ -768,6 +773,17 @@ function parapetRuns(plan: Plan, sl: Slice): Array<[number, number]> {
     });
   }
   return runs;
+}
+
+/** The rune line's glow along the top of a slice's parapet on outer edge `edge`, its runs (`parapetRuns`): for a parapet that lays none. */
+function runeLineGlow(k: Kit, edge: number): void {
+  const { plan, sl, st } = k;
+  const t = (edge > 0 ? sl.t1 : sl.t0) + edge * 0.004;
+  const z = (s: number): number => plan.deck(s) + (st.parapetHeight ?? 10) - 0.8;
+  for (const [a, b] of parapetRuns(plan, sl)) {
+    const xs = samples(a, b, [], plan.ramp ? 1 / 3 : 1);
+    for (let j = 0; j + 1 < xs.length; j++) k.glow.lines.push([k.m([xs[j], t, z(xs[j])]), k.m([xs[j + 1], t, z(xs[j + 1])])]);
+  }
 }
 
 function parapetFor(k: Kit, edge: number, part: Part3): void {
@@ -1450,7 +1466,7 @@ export function layGlowMask(g: Ctx, e: Eye, glow: Glow): void {
   for (const r of glow.runes) {
     const [x, y] = proj(e, r.at);
     glyphPath(g, r.glyph, x, y, r.s * 2.25);
-    g.lineWidth = 1;
+    g.lineWidth = 1.5;
     g.stroke();
   }
   for (const l of glow.lamps) {
@@ -1541,11 +1557,16 @@ export function settPaint(w: number, h: number): BridgePainter {
 /** A rune cut in a keystone, inlaid in the runes' gold. */
 export function keyRune(glyph: string): BridgePainter {
   return (g, k, f) => {
-    const x = (f.x0 + f.x1) / 2, y = (f.y0 + f.y1) / 2, s = Math.min(f.x1 - f.x0, f.y1 - f.y0) * 0.32;
-    cut(g, k.fill, s * 0.28, () => glyphPath(g, glyph, x, y, s));
+    // As big as the stone takes, cut dark and inlaid bright, to be read at zoom one.
+    const x = (f.x0 + f.x1) / 2, y = (f.y0 + f.y1) / 2, s = Math.min(f.x1 - f.x0, f.y1 - f.y0) * 0.44;
+    cut(g, k.fill, s * 0.34, () => glyphPath(g, glyph, x, y, s));
     glyphPath(g, glyph, x, y, s);
-    g.strokeStyle = RUNE_GOLD;
-    g.lineWidth = s * 0.16;
+    g.lineCap = 'round';
+    g.strokeStyle = css(mix(k.fill, hex('#3e3446'), 0.6), 0.9);
+    g.lineWidth = s * 0.36;
+    g.stroke();
+    g.strokeStyle = css(mix(hex(RUNE_GOLD), hex(RUNE_WHITE), 0.15));
+    g.lineWidth = s * 0.2;
     g.stroke();
   };
 }
