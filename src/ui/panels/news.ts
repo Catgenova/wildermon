@@ -3669,6 +3669,7 @@ export const NEWS: News[] = [
     lines: () => [
       'Changed: into the pack (made, gathered, picked up), same as a kept pile but for the keeping: onto the kept pile, kept. Was: a pile of its own.',
       'Changed: count boxes for a craft (shopping list, make until you hold): button Select Quantity.',
+      'Fixed: part of a row of a thing that does not stack (needles) into a crate: the count asked for, as far as there is room. Was: the whole row.',
     ],
   },
 ];

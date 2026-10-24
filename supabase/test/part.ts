@@ -117,6 +117,37 @@ check('a crate with no room at all refuses, and names itself',
   full === `${crateName(crate)} full.` && theirFull === full,
   `browser "${full}", island "${theirFull}"`);
 
+/*
+ * ---- one needle of three: part of a row of a thing that does not stack ----
+ *
+ * Reported: "When a player tries to move just one needle to a crate it always
+ * moves the whole stack." Needles are carved two at a time and do not stack,
+ * so they lie in the pack as one row of several; the island moved such a row
+ * whole whatever count was asked.
+ */
+const roomy = game.addCrate('plank', 31, 30, 0, 0, [], false, 'pine');
+const needles = game.inventory.add('needle', { ql: 30, count: 3 });
+psql(`
+do $$
+declare w uuid; u uuid;
+begin
+  select id into w from world where name = 'Hoarding';
+  select uid into u from player where world_id = w and name = 'Dane';
+  insert into crate (world_id, id, kind, x, y, sx, sy, deed, made_by, material)
+    values (w, 2, 'plank', 31, 30, 0, 0, false, u, 'pine');
+  delete from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def = 'needle';
+  insert into item (world_id, holder, holder_uid, def, ql, count) values (w, 'player', u, 'needle', 30, 3);
+end $$;`);
+const NEEDLE = `(select i.id from item i where i.world_id = ${W} and i.holder = 'player' and i.holder_uid = ${DANE} and i.def = 'needle' order by i.id limit 1)`;
+def.perform?.({ kind: 'item', uid: needles.uid, count: 1, into: roomy.id }, game);
+psql(`${asDane} select rpc_act(${W}, 'store_in_crate', jsonb_build_object('kind', 'item', 'uid', ${NEEDLE}, 'count', 1, 'into', 2), 1);`);
+const theirNeedles = psql(`select coalesce(sum(count) filter (where holder = 'crate' and crate = 2), 0) || '/'
+  || coalesce(sum(count) filter (where holder = 'player'), 0) from item i
+  where i.world_id = ${W} and i.def = 'needle' and (i.crate = 2 or i.holder_uid = ${DANE})`);
+const mineNeedles = `${roomy.items.filter((it) => it.id === 'needle').reduce((n, it) => n + it.count, 0)}/${game.inventory.countAll('needle')}`;
+check('one needle of three into a crate: one goes in, two stay in the pack',
+  theirNeedles === '1/2' && mineNeedles === '1/2', `crate/pack: browser ${mineNeedles}, island ${theirNeedles}`);
+
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {
   console.error(`${bad.length} of ${ok.length + bad.length} are not the same on both sides`);
