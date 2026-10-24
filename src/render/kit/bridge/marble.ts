@@ -422,7 +422,12 @@ export function roundelPaint(under: BridgePainter, dress: RGB): BridgePainter {
     if (!rs?.length) return;
     for (const [x, y, R] of rs) {
       if (x + R < f.x0 || x - R > f.x1) continue;
-      const disc = mix(k.fill, dress, 0.55);
+      const disc = mix(k.fill, dress, 0.85);
+      // Its shadow under the moulding, then the disc.
+      g.beginPath();
+      g.ellipse(x + 0.25, y - 0.3, R * 1.04, R * 0.58, 0, 0, TAU);
+      g.fillStyle = css(mix(k.fill, DUSK, 0.4), 0.8);
+      g.fill();
       g.beginPath();
       g.ellipse(x, y, R, R * 0.55, 0, 0, TAU);
       g.fillStyle = css(disc);
@@ -430,8 +435,8 @@ export function roundelPaint(under: BridgePainter, dress: RGB): BridgePainter {
       const ring = (r: number, w: number): void => cut(g, disc, w, () => { g.beginPath(); g.ellipse(x, y, r, r * 0.55, 0, 0, TAU); });
       ring(R * 0.96, 0.7);
       ring(R * 0.76, 0.5);
-      // The rosette: eight petals about a boss.
-      cut(g, disc, 0.45, () => {
+      // The rosette: eight petals about a boss, raised and catching the light.
+      const petals = (): void => {
         g.beginPath();
         for (let i = 0; i < 8; i++) {
           const a = (i / 8) * TAU, ca = Math.cos(a), sa = Math.sin(a);
@@ -440,7 +445,11 @@ export function roundelPaint(under: BridgePainter, dress: RGB): BridgePainter {
           g.quadraticCurveTo(x + ca * (r0 + r1) / 2 - sa * wv, y + (sa * (r0 + r1) / 2 + ca * wv) * 0.55, x + ca * r1, y + sa * r1 * 0.55);
           g.quadraticCurveTo(x + ca * (r0 + r1) / 2 + sa * wv, y + (sa * (r0 + r1) / 2 - ca * wv) * 0.55, x + ca * r0, y + sa * r0 * 0.55);
         }
-      });
+      };
+      petals();
+      g.fillStyle = css(mix(disc, CREAM, 0.35));
+      g.fill();
+      cut(g, disc, 0.4, petals);
       g.beginPath();
       g.ellipse(x, y, R * 0.13, R * 0.13 * 0.55, 0, 0, TAU);
       g.fillStyle = css(mix(hex(RUNE_GOLD), disc, 0.35));
@@ -524,7 +533,7 @@ function roundelsOf(plan: Plan, ringD: number): Array<[number, number, number]> 
   const got = roundelCache.get(plan);
   if (got) return got;
   const out: Array<[number, number, number]> = [];
-  const RMAX = 7, RMIN = 3.2;
+  const RMAX = 8.5, RMIN = 3.6;
   // The top of whatever stands under the spandrel at `s`: a ring's back, or nothing over a pier.
   const under = (s: number): number => {
     if (s < 0 || s > plan.n) return Infinity;
