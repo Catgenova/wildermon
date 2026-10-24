@@ -43,8 +43,8 @@ export class Asker {
    * answer — take the suggestion — is one tap, and the second commonest —
    * replace it — is typing.
    */
-  name(question: string, fallback: string, max = 32): Promise<string | null> {
-    return this.ask(question, { text: fallback, max });
+  name(question: string, fallback: string, max = 32, ok?: string): Promise<string | null> {
+    return this.ask(question, { text: fallback, max, ok });
   }
 
   /**

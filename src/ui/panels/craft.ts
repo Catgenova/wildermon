@@ -15,6 +15,8 @@ import { QueueView } from './craftqueue';
 
 const skillName = (id: string): string => SKILL_DEFS.find((s) => s.id === id)?.name ?? id;
 const lower = (id: string): string => itemDef(id).name.toLowerCase();
+/** The button on a box that asks how many to make. */
+const QUANTITY = 'Select Quantity';
 
 /** Where the pinned and the lately made are kept: in this browser, like the window layout, since they are about whoever sits here. */
 const KEPT_KEY = 'wurm-iso-recipes';
@@ -583,7 +585,7 @@ export class CraftPanel {
   /** Ask how many to put on the shopping list. */
   private async askList(r: Recipe): Promise<void> {
     const per = this.game.madeAGo(r);
-    const said = await this.game.hooks.prompt(`Count of ${lower(r.result)} for the shopping list (${per} per action):`, String(per));
+    const said = await this.game.hooks.prompt(`Count of ${lower(r.result)} for the shopping list (${per} per action):`, String(per), QUANTITY);
     if (said === null) return;
     const n = Math.floor(Number(said.trim()));
     if (!Number.isFinite(n) || n <= 0) {
@@ -603,7 +605,7 @@ export class CraftPanel {
   private async askTarget(r: Recipe): Promise<void> {
     const name = lower(r.result);
     const had = this.holding(r);
-    const said = await this.game.hooks.prompt(`Make ${name} until you hold (have ${had}, pack, bags and stores within ${reachFor(this.game, r)} tiles):`, String(had + 10 * this.game.madeAGo(r)));
+    const said = await this.game.hooks.prompt(`Make ${name} until you hold (have ${had}, pack, bags and stores within ${reachFor(this.game, r)} tiles):`, String(had + 10 * this.game.madeAGo(r)), QUANTITY);
     if (said === null) return;
     const want = Math.floor(Number(said.trim()));
     if (!Number.isFinite(want) || want <= 0) {

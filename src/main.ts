@@ -237,7 +237,7 @@ mountPhone(game, island, uiRoot);
  */
 const asker = new Asker(uiRoot);
 game.hooks = {
-  prompt: (question, fallback) => asker.name(question, fallback),
+  prompt: (question, fallback, ok) => asker.name(question, fallback, 32, ok),
   confirm: (question) => asker.sure(question),
   choose: (question, choices) => asker.choose(question, choices),
   count: (question, most, fallback) => asker.count(question, most, fallback),

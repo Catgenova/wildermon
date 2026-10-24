@@ -328,3 +328,9 @@ jobs:
             where p.name = 'catgenova' and (s.it).def in ('marble_brick', 'mortar', 'marble_shards') group by 1"
           ask "hods: the stocked work the island finds" "select * from hod_needing_stocked((select world_id from player where name = 'catgenova'), (select uid from player where name = 'catgenova'), 2584, 3026, 30)"
           ask "hods: hod work near, any" "select w.kind, w.level, w.x, w.y, w.needed from hod_work((select world_id from player where name = 'catgenova'), 2584, 3026, 30) w limit 15"
+          ask "mortar: the keeper's mortar rows" "select i.id, i.holder, i.inside, i.count, round(i.ql::numeric, 2) as ql, i.rare, i.locked, i.extra, i.maker, i.mark, i.made_at
+             from item i join player p on p.world_id = i.world_id and p.name = 'catgenova'
+            where i.def = 'mortar' and ((i.holder = 'player' and i.holder_uid = p.uid) or (i.holder = 'bag' and i.inside in (select b.id from item b where b.holder = 'player' and b.holder_uid = p.uid)))
+            order by i.id"
+          ask "mortar: the keeper's last events" "select e.* from event e join player p on p.world_id = e.world_id and p.uid = e.uid and p.name = 'catgenova'
+            where e.text ilike any (array['%mortar%', '%supreme%', '%kept%', '%lock%']) order by e.at desc limit 25"

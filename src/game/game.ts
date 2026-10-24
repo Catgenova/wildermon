@@ -320,7 +320,8 @@ journalRulesA(creatureRules, guideRules, { most: MAX_DEED_LEVEL, workersAt: deed
  * What that looks like from the outside is a game that ignores you.
  */
 export interface GameHooks {
-  prompt: (question: string, fallback: string) => Promise<string | null>;
+  /** A line of text, `fallback` offered; `ok` labels the button ("Name it" when absent). Resolves with what was typed, or null. */
+  prompt: (question: string, fallback: string, ok?: string) => Promise<string | null>;
   confirm: (question: string) => Promise<boolean>;
   /** Choose one of several: each with a colour to show beside it and what it says. Resolves with the key chosen, or null. */
   choose: (question: string, choices: ReadonlyArray<{ key: string; colour?: string; text: string }>) => Promise<string | null>;
