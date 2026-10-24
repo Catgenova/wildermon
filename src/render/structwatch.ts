@@ -96,7 +96,8 @@ export class StructureWatch {
   private readonly columns = new Map<string, ColumnSeen>();
   private readonly cellars = new Map<string, CellarSeen>();
   private readonly buildings = new Map<number, BuildingSeen>();
-  /** The buildings' count of changes (`Buildings.revision`) at the last look, and the frame of the last look. */
+  /** The buildings looked at last, their count of changes then (`Buildings.revision`), and the frame of that look. */
+  private of: Buildings | null = null;
   private revision = -1;
   private looked = 0;
 
@@ -139,7 +140,8 @@ export class StructureWatch {
    */
   update(bld: Buildings): void {
     this.frame++;
-    if (bld.revision === this.revision && this.frame - this.looked < LOOK_ANYWAY) return;
+    if (bld === this.of && bld.revision === this.revision && this.frame - this.looked < LOOK_ANYWAY) return;
+    this.of = bld;
     this.revision = bld.revision;
     this.looked = this.frame;
     const f = this.frame;
