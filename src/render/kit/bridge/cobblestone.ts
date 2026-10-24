@@ -153,5 +153,5 @@ export const cobblestone: BridgeStyle = framed({
     rail: onEdge,
     deck, tread: treadPaint(deck, t('#efe8dc'), t('#8d846f')),
   },
-  build: { parapet: roughParapet, ends: roughEnds, arches: archesKeyed(0.12, 2.6, 1) },
+  build: { parapet: roughParapet, ends: roughEnds, arches: archesKeyed(0.11, 1.6, 1) },
 }, { riser: t('#a3998a') });

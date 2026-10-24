@@ -106,5 +106,5 @@ export const slate: BridgeStyle = framed({
     plinth: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 9 }),
     deck, tread: treadPaint(deck, t('#8f94ad'), t('#34364a')),
   },
-  build: { parapet: cappedParapet, ends: slateEnds, arches: archesKeyed(0.12, 2.6, 1, VOUS) },
+  build: { parapet: cappedParapet, ends: slateEnds, arches: archesKeyed(0.12, 1.8, 1, VOUS) },
 }, { riser: t('#474b61') });

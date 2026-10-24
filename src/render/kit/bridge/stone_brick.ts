@@ -83,7 +83,8 @@ function arcOf(plan: Plan, fr: { o: L; a: L; b: L }, s0: number, s1: number, t: 
   const upper = Math.abs(bay.arch(s0) - z) < 0.05;
   const lower = !upper && bay.lower && Math.abs(bay.lower(s0) - z) < 0.05;
   if (!upper && !lower) return undefined;
-  const A = bay.a * U;
+  // A lower arch of two tiers may be narrower than its bay (`lowerHalf`).
+  const A = (upper ? bay.a : bay.lowerHalf ?? bay.a) * U;
   const crown = upper ? bay.crown : bay.lowerCrown!;
   const spring = upper ? bay.spring : bay.lowerSpring!;
   const r = crown - spring;
@@ -718,12 +719,16 @@ export function keystones(k: Kit, w: number, below: number, above: number, tone?
         // Up to the top of the cornice; a lower arch's, to the band of the course over it.
         const z0 = crown - below;
         const z1 = upper ? plan.deck(bay.c) - 0.6 : Math.min(crown + ringD + above, (bay.course ?? Infinity) - 1.7);
-        const ks = [bay.c - w, bay.c + w];
-        k.face('front', [[ks[0], tk, z0], [ks[1], tk, z0], [ks[1], tk, z1], [ks[0], tk, z1]], [0, edge, 0], key,
+        // A wedge, broader at its head than its foot, as a keystone is.
+        const lo = [bay.c - w * 0.72, bay.c + w * 0.72], hi = [bay.c - w, bay.c + w];
+        k.face('front', [[lo[0], tk, z0], [lo[1], tk, z0], [hi[1], tk, z1], [hi[0], tk, z1]], [0, edge, 0], key,
           infoOf('key', 0, 0, 0, 0, Math.round(bay.c * 10)), wallFrame(tk, edge));
-        for (const s of ks) k.face('front', [[s, t, z0], [s, tk, z0], [s, tk, z1], [s, t, z1]], [s < bay.c ? -1 : 1, 0, 0], key);
-        k.face('front', [[ks[0], t, z1], [ks[1], t, z1], [ks[1], tk, z1], [ks[0], tk, z1]], [0, 0, 1], key);
-        k.face('front', [[ks[0], t, z0], [ks[1], t, z0], [ks[1], tk, z0], [ks[0], tk, z0]], [0, 0, -1], key);
+        for (const j of [0, 1]) {
+          const side = j ? 1 : -1;
+          k.face('front', [[lo[j], t, z0], [lo[j], tk, z0], [hi[j], tk, z1], [hi[j], t, z1]], [side, 0, -side * (hi[j] - lo[j]) * U / (z1 - z0) * side], key);
+        }
+        k.face('front', [[hi[0], t, z1], [hi[1], t, z1], [hi[1], tk, z1], [hi[0], tk, z1]], [0, 0, 1], key);
+        k.face('front', [[lo[0], t, z0], [lo[1], t, z0], [lo[1], tk, z0], [lo[0], tk, z0]], [0, 0, -1], key);
         k.glow.runes.push({ at: k.m([bay.c, tk, (z0 + z1) / 2]), s: (Math.min(w * 2 * U, z1 - z0) * 0.42) / 2.25, glyph: st.rune });
       }
     }
@@ -878,5 +883,5 @@ export const stone_brick: BridgeStyle = framed({
     plinth: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 10 }),
     deck, tread: treadPaint(deck, t('#e1e3e9'), t('#6b6d7d')),
   },
-  build: { parapet: crenelParapet, refuges: crenelRefuges, ends: crenelEnds, arches: archesKeyed(0.12, 2.6, 1.2) },
+  build: { parapet: crenelParapet, refuges: crenelRefuges, ends: crenelEnds, arches: archesKeyed(0.12, 1.8, 1.2) },
 }, { riser: t('#9a9eab') });
