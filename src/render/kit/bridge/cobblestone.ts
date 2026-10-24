@@ -1,7 +1,7 @@
 import { css, faceColour, type Tone } from '../core';
 import { U, type BridgePainter, type BridgeStyle, type Kit, type L, type Part3 } from './core';
 import {
-  archesKeyed, copingRun, framed, hash, houseTone, infoOf, keystone, moulding, newelPost, rubble, runsOf, voussoirs, wallFrame, wallRun,
+  archesKeyed, copingRun, framed, refugesOwn, segBlock, treadPaint, hash, houseTone, infoOf, keystone, moulding, newelPost, rubble, runsOf, voussoirs, wallFrame, wallRun,
   type Beds, type Placed,
 } from './stone_brick';
 
@@ -145,13 +145,26 @@ export const cobblestone: BridgeStyle = framed({
   glow: '#d4f2c4',
   paint: {
     wall, pier: wall, parapet: wall, post: wall,
-    ring: voussoirs({ width: 3.4, wander: 0.45, ragged: 0.35, beds: DRESS_BEDS, joint: RING_JOINT, soffit: rubble({ rows: [3, 4.6], len: [4, 8], beds: BEDS, joint: JOINT, gap: 0.6, line: LINE }) }),
+    ring: voussoirs({ width: 3.6, wander: 0.8, ragged: 0.45, rough: LINE, beds: BEDS, joint: JOINT, soffit: rubble({ rows: [3, 4.6], len: [4, 8], beds: BEDS, joint: JOINT, gap: 0.6, line: LINE }) }),
     key: keystone(RUNE),
-    cap: moulding({ joint: RING_JOINT, hi: t('#efe8dc'), len: 9, rune: RUNE, wide: deck }),
+    cap: moulding({ joint: RING_JOINT, hi: t('#efe8dc'), len: 9, rune: RUNE }),
     cornice: moulding({ joint: RING_JOINT, hi: t('#efe8dc'), len: 8 }),
     plinth: moulding({ joint: RING_JOINT, hi: t('#efe8dc'), len: 8 }),
     rail: onEdge,
-    deck, tread: deck,
+    deck, tread: treadPaint(deck, t('#efe8dc'), t('#8d846f')),
   },
-  build: { parapet: roughParapet, ends: roughEnds, arches: archesKeyed(0.1, 2, 1) },
-});
+  build: {
+    parapet: roughParapet,
+    // Round each refuge the same rubble wall, string course and stones on edge.
+    refuges: refugesOwn({
+      top: WALL, cope: STRING, over: 0.008, thick: 0.095,
+      crown: (k, part, face, o, i, z, q0) => {
+        const n = Math.max(1, Math.round(o.len * ON_EDGE));
+        for (let j = 0; j < n; j++) {
+          const q = q0 * 64 + j;
+          segBlock(k, part, face, o, i, j / n + 0.02 / n, (j + 1) / n - 0.02 / n, z, z + heightOf(q), toneOf(q), -0.006, 2.4);
+        }
+      },
+    }),
+    ends: roughEnds, arches: archesKeyed(0.11, 1.6, 1) },
+}, { riser: t('#a3998a') });

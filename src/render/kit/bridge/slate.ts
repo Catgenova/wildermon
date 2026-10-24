@@ -1,6 +1,6 @@
 import { css, faceColour, type Tone } from '../core';
 import { type BridgePainter, type BridgeStyle, type Kit, type Part3 } from './core';
-import { archesKeyed, copingRun, coursed, framed, houseTone, keystone, moulding, newelPost, runsOf, voussoirs, wallRun, type Beds } from './stone_brick';
+import { archesKeyed, copingRun, coursed, framed, refugesOwn, treadPaint, houseTone, keystone, moulding, newelPost, runsOf, voussoirs, wallRun, type Beds } from './stone_brick';
 
 /**
  * Slate: the island's dark coursed slate, as its houses are laid
@@ -96,15 +96,15 @@ export const slate: BridgeStyle = framed({
   parapetHeight: WALL + CAP,
   ringDepth: 3.8,
   rune: RUNE,
-  glow: '#cdc4ff',
+  glow: '#e4deff',
   paint: {
     wall, pier: wall, parapet: wall, post: wall,
     ring: voussoirs({ width: 3, beds: [[DRESS, 1], [VOUS, 1]], alternate: true, joint: DRESS_JOINT, soffit: coursed({ rows: [3.2], len: 9, beds: BEDS, joint: t('#3b3e51'), jointW: 0.4 }) }),
     key: keystone(RUNE),
-    cap: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 11, rune: RUNE, wide: deck }),
+    cap: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 11, rune: RUNE }),
     cornice: dogtooth,
     plinth: moulding({ joint: DRESS_JOINT, hi: DRESS_HI, len: 9 }),
-    deck, tread: deck,
+    deck, tread: treadPaint(deck, t('#8f94ad'), t('#34364a')),
   },
-  build: { parapet: cappedParapet, ends: slateEnds, arches: archesKeyed(0.1, 2, 1) },
-});
+  build: { parapet: cappedParapet, refuges: refugesOwn({ top: WALL, cope: CAP, over: 0.034, thick: 0.085 }), ends: slateEnds, arches: archesKeyed(0.12, 1.8, 1, VOUS) },
+}, { riser: t('#474b61') });
