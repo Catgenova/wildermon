@@ -16,7 +16,7 @@
  *   * a wagon onto a bridge of two lanes and not one; a cart onto either;
  *     and the same from the bridge's end, where it stands already;
  *   * furniture on a three-lane bridge's outer lanes, and under any other
- *     lane's deck where it is `CLEARANCE` over the ground, and not under one
+ *     lane's deck where it is `HEAD_ROOM` over the ground, and not under one
  *     lower;
  *   * no lane's deck wears the ground under it (`wearStep`, `wear_walk`),
  *     and a laden cart on an outer lane of your own bridge counts for the
@@ -30,7 +30,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import {
-  BRIDGE_MATERIALS, BRIDGES, bridgeBays, CLEARANCE, crossWords, pierSpans, pierStoreys, STALL_WIDTH, WAGON_WIDTH, type Bridge, type BridgeKind,
+  BRIDGE_MATERIALS, BRIDGES, bridgeBays, CLEARANCE, crossWords, HEAD_ROOM, pierSpans, pierStoreys, STALL_WIDTH, WAGON_WIDTH, type Bridge, type BridgeKind,
 } from '../../src/game/bridges';
 import { WALL_HEIGHT } from '../../src/game/building';
 import { Game } from '../../src/game/game';
@@ -162,14 +162,14 @@ const setSql = SET.map((s) => {
   insert into said values ('ROW:${s.name}', (select b.kind || '|' || b.width || '|' || b.side || '|' || bridge_gear(b)::text from bridge b where b.world_id = w and b.ax = ${AX} and b.ay = ${s.y}));`;
 }).join('\n');
 
-/** A tile of the one-lane plank bridge's deck, and how far under its deck its ground is raised to: under `CLEARANCE`. */
+/** A tile of the one-lane plank bridge's deck, and how far under its deck its ground is raised to: under `HEAD_ROOM`. */
 const LOW_AT: [number, number] = [27, 17];
-const LOW = CLEARANCE - 1;
+const LOW = HEAD_ROOM - 1;
 const lanes = (s: (typeof SET)[number]): number[] => (s.width === 3 ? [-1, 0, 1] : s.width === 2 ? [0, 1] : [0]);
 const furnSql = SET.flatMap((s) => lanes(s).map((o) => `
   insert into said values ('FURN:${s.name}:${o}', coalesce(fire_refusal(w, u, 'place_furniture',
     jsonb_build_object('kind', 'tile', 'x', 25, 'y', ${s.y + o}, 'cx', 25, 'cy', ${s.y + o}, 'sx', 0, 'sy', 0, 'facing', 's', 'itemUid', v_stool)), 'ALLOWED'));`)).join('\n')
-  // And under a tile of the one-lane plank bridge whose ground is raised to within CLEARANCE of its deck.
+  // And under a tile of the one-lane plank bridge whose ground is raised to within HEAD_ROOM of its deck.
   + `
   perform land_set_height(w, gx, gy, ${BASE - LOW}) from generate_series(${LOW_AT[0]}, ${LOW_AT[0] + 1}) gx, generate_series(${LOW_AT[1]}, ${LOW_AT[1] + 1}) gy;
   insert into said values ('FURN:LOW', coalesce(fire_refusal(w, u, 'place_furniture',
@@ -359,8 +359,8 @@ for (const s of SET) {
 {
   for (let y = LOW_AT[1]; y <= LOW_AT[1] + 1; y++) for (let x = LOW_AT[0]; x <= LOW_AT[0] + 1; x++) world.setHeight(x, y, BASE - LOW);
   const mine = game.furniturePlaceReason('stool', LOW_AT[0], LOW_AT[1], 0, 0, 's') ?? ALLOWED;
-  const want = `Under a bridge deck: needs ${metres(CLEARANCE)} m clearance.`;
-  check('and refused under a deck under CLEARANCE over the ground, in the same words', mine === want && theirs('FURN:LOW') === want,
+  const want = `Under a bridge deck: needs ${metres(HEAD_ROOM)} m clearance.`;
+  check('and refused under a deck under HEAD_ROOM over the ground, in the same words', mine === want && theirs('FURN:LOW') === want,
     `browser ${mine}; island ${theirs('FURN:LOW')}`);
 }
 

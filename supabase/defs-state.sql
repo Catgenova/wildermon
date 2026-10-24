@@ -5481,6 +5481,7 @@ create or replace function pair_range() returns double precision language sql im
 create or replace function bridge_widest() returns double precision language sql immutable as $fn$ select 3::double precision $fn$;
 create or replace function wagon_width() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
 create or replace function stall_width() returns double precision language sql immutable as $fn$ select 3::double precision $fn$;
+create or replace function head_room() returns double precision language sql immutable as $fn$ select 20::double precision $fn$;
 create or replace function groom_cap() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
 create or replace function groom_heal() returns double precision language sql immutable as $fn$ select 0.06::double precision $fn$;
 create or replace function breed_rest() returns double precision language sql immutable as $fn$ select 3000::double precision $fn$;

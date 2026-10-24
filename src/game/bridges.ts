@@ -321,13 +321,13 @@ export function deckLane(b: Bridge, x: number, y: number): boolean {
  * Why a piece of furniture may not be set down on this tile of a bridge's
  * deck, or under it, or null where it may: on the deck of an outer lane of a
  * finished material bridge `STALL_WIDTH` lanes wide (`deckLane`); anywhere
- * else on the ground under the deck, `over` over it there, at `CLEARANCE`
+ * else on the ground under the deck, `over` over it there, at `HEAD_ROOM`
  * or more. The island's `bridge_furniture_refusal`.
  */
 export function deckFurnitureRefusal(b: Bridge, x: number, y: number, over: number): string | null {
   if (deckLane(b, x, y)) return bridgeDone(b) ? null : 'Bridge deck not finished.';
-  if (over >= CLEARANCE) return null;
-  return `Under a bridge deck: needs ${metres(CLEARANCE)} m clearance.`;
+  if (over >= HEAD_ROOM) return null;
+  return `Under a bridge deck: needs ${metres(HEAD_ROOM)} m clearance.`;
 }
 
 export interface BridgeSpan extends Bill {
@@ -435,6 +435,8 @@ export const spanBill = (kind: BridgeKind, first = false, width = 1, pier = 0): 
 
 /** How much under a deck counts as a gap worth bridging. */
 export const CLEARANCE = 3;
+/** How high a deck must stand over the ground for a body, or a piece of furniture, to stand under it: 2 m. The island's `head_room`. */
+export const HEAD_ROOM = 20;
 /**
  * How far apart the two ends may be in height and still carry one deck. Two
  * natural banks are rarely level, so there is some give in it; past this the
