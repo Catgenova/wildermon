@@ -665,6 +665,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   sparra: { kind: 'blood', n: 1.1, channel: 'tough', what: 'blow' },
   plucka: { kind: 'more', n: 1, what: 'fruit per pick' },
   grista: { kind: 'loads', n: 1, what: 'batches per cycle' },
+  relka: { kind: 'loads', n: 1, what: 'relics per cycle' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2493,8 +2494,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   relka: {
     id: 'relka',
-    name: 'Relka',
+    name: 'Kintsu',
+    was: ['Relka'],
+    // Asked for, with a reference sheet: Kintsu, Relicrawler, Aureliax.
     description: 'Settlement task: restore each relic whose pieces are all in your settlement stores, at the pieces\' worth less their damage and at its restoration, as your hands would. Output: your settlement stores. Never fails.',
+    stages: [
+      { name: 'Relicrawler', description: '' },
+      { name: 'Aureliax', description: '' },
+    ],
     health: 16,
     attack: 1,
     speed: 1.8,
@@ -2505,13 +2512,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'restore',
     workRange: 6,
+    // Its shell and its gold: turquoise, cerulean, jade and a deep teal, each mended in gold.
     variants: [
-      ['#8a7a6a', '#e6dacc'],
-      ['#7a7a84', '#d8d8e2'],
-      ['#94806c', '#ecdcc8'],
-      ['#6e6a60', '#cec8bc'],
+      ['#3f9c9c', '#c9a13a'],
+      ['#3f88a8', '#cfa648'],
+      ['#4ea488', '#c49a3c'],
+      ['#2f8486', '#d4ae52'],
     ],
-    butcher: { meat: 2, fur: 2, leather: 1, bone: 2, gland: 1 },
+    butcher: { meat: 2, leather: 1, bone: 2, gland: 1 },
   },
   bedda: {
     id: 'bedda',
@@ -4298,7 +4306,7 @@ sayLine('stona', `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('ward
 // The seven lines asked for on 22–23 October: each one's words as its kind already says them, at every stage.
 for (const [id, level] of [['magga', 'foraging'], ['grazza', 'foraging'], ['grubba', 'digging'], ['wurla', 'digging'],
   ['mudda', 'pottery'], ['dippa', 'carrying'], ['middun', 'farming']] as const) sayLine(id, SPECIES[id].description, `Level: ${level}.`);
-for (const id of ['plucka', 'grista']) sayLine(id, SPECIES[id].description, `Level: ${GATHER_SKILL[SPECIES[id].gathers!]}.`);
+for (const id of ['plucka', 'grista', 'relka']) sayLine(id, SPECIES[id].description, `Level: ${GATHER_SKILL[SPECIES[id].gathers!]}.`);
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });
 // And the Sparra, which does not evolve: how it fights, its settlement task, and its level (`sparTaskSays`).
 sayLine('sparra', `Tamed: ${STYLE_SAYS.spar}. ${sparTaskSays()}`, `Level: fighting, learned ${LEARNS_SAYS.spar}.`);

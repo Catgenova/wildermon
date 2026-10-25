@@ -3793,6 +3793,19 @@ export const NEWS: News[] = [
       `Added: cottage pie (cooking ${RECIPE_BY_ID.get('make_cottage_pie')?.difficulty ?? 0}, clay bowl, lit fire): ${recipeBill('make_cottage_pie')}; makes ${RECIPE_BY_ID.get('make_cottage_pie')?.count ?? 1}, ${Math.round((itemDef('cottage_pie').food ?? 0) * 100)}% food each.`,
     ],
   },
+  {
+    n: 325,
+    day: '2026-10-25',
+    lines: () => {
+      const d = SPECIES.relka, [one, two] = d.stages!;
+      return [
+        `Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats.`,
+        `Each stage: own model, animations and voice. Stage 2: ${stageSays(1)}; stage 3: ${stageSays(2)}.`,
+        `Added: stage 3 skill: ${two.name} ${perkSays('relka')}.`,
+        `Changed: butchered, ${d.name} line gives no fur.`,
+      ];
+    },
+  },
 ];
 
 /**

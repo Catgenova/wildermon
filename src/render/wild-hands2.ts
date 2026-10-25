@@ -8,12 +8,12 @@ import { pawed, trot } from './wild-paws';
 import { links, snout } from './wild-hands';
 
 /**
- * Ten more of the settlement's hands: the forga, the potta, the cindra,
- * the hoppa, the simma, the relka, the bedda, the ambra, the petta and the
- * scurra (the sprigga is the Lemlet now, `./wild-lemur`, and the wurla the
- * Pebblebeak, `./wild-curlew`). As with the first ten (`./wild-hands`), each
- * wears the tool of its trade: tongs for a tail, a spoon, a lens, a trowel,
- * a scrubbing brush.
+ * More of the settlement's hands: the forga, the potta, the cindra,
+ * the hoppa, the simma, the bedda, the ambra, the petta and the scurra (the
+ * relka is the Kintsu now, `./wild-relic`, the sprigga the Lemlet,
+ * `./wild-lemur`, and the wurla the Pebblebeak, `./wild-curlew`). As with
+ * the first ten (`./wild-hands`), each wears the tool of its trade: tongs
+ * for a tail, a spoon, a trowel, a scrubbing brush.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -254,52 +254,6 @@ export const SIMMA: Kind = {
   shadow: [1.5, 1.3],
   stride: 1.35,
   size: 1.6,
-};
-
-/* ---- the relka: a lens over one eye -------------------------------------------------- */
-
-const RELKA_SPEC: QuadSpec = { ...pawed({ high: 1.3, len: 1.9, legs: 0.75, neck: 0.35, lean: 35, swing: [24, 40], ears: [30, 25], tail: [0.4, 16, 12] }), nose: 12 };
-/** Which way the lens looks: out of its right eye, toward whoever is in front of it. */
-const LENS_FACING: V3 = [0.55, 0.8, 0.22];
-const RELKA_HEAD = { c: [0, 0.3, 0.2] as V3, r: [0.98, 0.94, 0.9] as V3 };
-
-function relkaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = RELKA_HEAD;
-  // A lens on its right eye: a brass ring with a glass in it, and long whiskers.
-  const lensAt: V3 = [0.62, 0.98, 0.5];
-  const lens = merge(
-    tube([lensAt, add(lensAt, scale(LENS_FACING, 0.08))], 0.24, 0.24, 10, 'metal', { seam: 'both' }),
-    paint([disc(add(lensAt, scale(LENS_FACING, 0.085)), LENS_FACING, 0.2, 0.2, 10, 'crystal', { lit: true })]),
-  );
-  const whiskers = merge(...[-1, 1].flatMap((s) => [0.05, -0.05].map((z) => taper([[s * 0.2, 1.25, -0.2 + z], [s * 0.85, 1.35, -0.12 + z * 2]], 0.015, 0.005, 3, 'lid'))));
-  return quadPieces({
-    n, k,
-    body: barrel(2.0, 0.92, 0.82),
-    neck: { w: 0.56, h: 0.56, len: 0.35 },
-    head: { c: H.c, r: H.r, face: merge(snout(1.0, -0.2, [0.34, 0.28, 0.36], 0.1, n, k), lens, whiskers), eye: { dir: [0.76, 0.5, 0.32], size: 0.29, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.16] },
-    ear: earMesh(0.44, 0.26, n, { point: true }),
-    earTurn: 30,
-    tail: links([0.14, 0.11, 0.08, 0.04], 0.3, n, 'coat'),
-    ...paws(n, k, 0.75, 0.2, 0.19, 'mark'),
-  });
-}
-
-export const RELKA: Kind = {
-  bones: quadBonesOf(RELKA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it peers: the head lowered and tipped, as at something small and old.
-    if (a.go <= 0) {
-      const peer = beat(a.t, [4.8, 14.6], 3.0) * (1 - a.graze);
-      p.neck[0] += 14 * peer;
-      p.head[2] += 16 * peer;
-    }
-  }),
-  build: relkaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ metal: [214, 178, 96], crystal: [210, 232, 246], lid: [90, 80, 72] }), 260),
-  shadow: [1.2, 1.0],
-  stride: 1.25,
-  size: 1.5,
 };
 
 /* ---- the bedda: seedlings on its back, a trowel for a nose -------------------------- */
