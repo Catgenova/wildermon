@@ -292,9 +292,13 @@ export function tree3dShadow(species: number, variant: number, season: Season, d
   });
 }
 
-/** Points along a limb close enough for the shade's discs to run together, and its radius at each. */
-function alongLimb(L: Skeleton['limbs'][number], light: Light, at: (p: V3, r: number) => void): void {
-  const n = Math.max(1, Math.ceil(Math.hypot(L.b[0] - L.a[0], L.b[1] - L.a[1], (L.b[2] - L.a[2]) * light.throw) / (Math.max(0.5, L.rb) * 1.3)));
+/** How many steps along a limb the shade's discs take to run together. */
+const stepsAlong = (L: Skeleton['limbs'][number], light: Light): number =>
+  Math.max(1, Math.ceil(Math.hypot(L.b[0] - L.a[0], L.b[1] - L.a[1], (L.b[2] - L.a[2]) * light.throw) / (Math.max(0.5, L.rb) * 1.3)));
+
+/** Points along a limb close enough for the shade's discs to run together, `spread` times as far apart, and its radius at each. */
+function alongLimb(L: Skeleton['limbs'][number], light: Light, at: (p: V3, r: number) => void, spread = 1): void {
+  const n = Math.max(1, Math.ceil(stepsAlong(L, light) / spread));
   for (let i = 0; i <= n; i++) {
     const t = i / n;
     at([L.a[0] + (L.b[0] - L.a[0]) * t, L.a[1] + (L.b[1] - L.a[1]) * t, L.a[2] + (L.b[2] - L.a[2]) * t], Math.max(0.5, L.ra + (L.rb - L.ra) * t));
@@ -412,19 +416,24 @@ export function bush3dShadow(species: number, season: Season, day: number, x: nu
   const look = bushYear(BUSH_DEFS[species] ?? BUSH_DEFS[0], species, season, day);
   return shaded(`bush${species}|${form}|${season}${look.key}|`, step, turn, (light, _e, disc) => {
     const sk = bushModelOf(species, form);
-    // Clear of its foot, which is its own shade (`footShade`).
+    // Clear of its foot, which is its own shade laid with it (`Sprite.foot`).
     const clear = footReach(sk) / ACROSS;
-    for (const L of sk.limbs) {
-      if (L.order < 0) continue;
+    // Its canes and the shoots off them, not the finest twigs; and no more than `BUSH_WOOD_DISCS` discs along them, spread over their length.
+    const wood = sk.limbs.filter((L) => L.order >= 0 && L.order <= 2);
+    const spread = Math.max(1, wood.reduce((n, L) => n + stepsAlong(L, light) + 1, 0) / BUSH_WOOD_DISCS);
+    for (const L of wood) {
       alongLimb(L, light, (p, r) => {
         const z = Math.max(0, p[2]);
         if (Math.hypot(p[0] + light.dx * z, p[1] + light.dy * z) < clear - r) return;
         disc(p, r);
-      });
+      }, spread);
     }
     if (look.full > 0) for (const c of sk.clumps) lumpyDisc(disc, c.c, c.r * (0.4 + 0.6 * look.full), c.k);
   });
 }
+
+/** The most discs a bush's wood throws its shade with: a twiggy bush's are spread out along it to this many. */
+const BUSH_WOOD_DISCS = 720;
 
 /** How far round a tile's bush's foot its own shade reaches, as `tree3dFoot`. */
 export function bush3dFoot(species: number, x: number, y: number): number {
