@@ -79,6 +79,8 @@ export interface TreeSprite {
   ay: number;
   /** Drawn here: its pictures are its tile's, whichever bake it is (`Renderer.treePicture`). */
   solid: true;
+  /** A bush's shade at its foot, which the renderer lays (`Sprite.foot`); a tree's is in its bake (`footShade`). */
+  foot?: number;
 }
 
 /** Where a tree is seen from and when. */
@@ -171,8 +173,8 @@ function keep(key: string, spr: TreeSprite): void {
   }
 }
 
-/** A model seen from a turn, painted at a scale onto a canvas just its size, its own shade at its foot under it. */
-function bake(scale: number, sk: Skeleton, turn: number, paint: (g: CanvasRenderingContext2D, e: Eye) => void): TreeSprite {
+/** A model seen from a turn, painted at a scale onto a canvas just its size, its own shade at its foot under it unless the renderer lays that. */
+function bake(scale: number, sk: Skeleton, turn: number, paint: (g: CanvasRenderingContext2D, e: Eye) => void, ownFoot = true): TreeSprite {
   const t0 = performance.now();
   const e = eyeOf(0, turn);
   const [x0, y0, x1, y1] = boundsOf(sk, e);
@@ -187,10 +189,10 @@ function bake(scale: number, sk: Skeleton, turn: number, paint: (g: CanvasRender
   const t1 = performance.now();
   paint(g, e);
   tree3dStats.paintMs += performance.now() - t1;
-  footShade(g, sk);
+  if (ownFoot) footShade(g, sk);
   tree3dStats.bakes++;
   tree3dStats.ms += performance.now() - t0;
-  return { canvas, w, h, ax: -x0, ay: -y0, solid: true };
+  return { canvas, w, h, ax: -x0, ay: -y0, solid: true, foot: ownFoot ? undefined : footReach(sk) };
 }
 
 /**
@@ -399,7 +401,8 @@ export function bush3dSprite(species: number, season: Season, day: number, at: T
     const seed = bushSeedOf(species, form);
     const sk = swayed(bushModelOf(species, form), frame, SWAY_FRAMES, seed);
     const spec = BUSH3D.get(species) ?? rose;
-    return bake(scale, sk, at.turn, (g, e) => spec.paint(g, { sk, look, season, def, light: lightOf(step), e, seed, frame }));
+    // Its foot's shade is laid by the renderer, in the ground shade's tone (`Sprite.foot`).
+    return bake(scale, sk, at.turn, (g, e) => spec.paint(g, { sk, look, season, def, light: lightOf(step), e, seed, frame }), false);
   });
 }
 

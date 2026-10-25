@@ -1264,6 +1264,8 @@ export class Renderer {
     lines: Map<number, Array<{ cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }>>;
   } = { key: '', trees: [], top0: 0, feet: new Map(), footAt: new Map(), linesKey: '', lines: new Map() };
   /** This frame's shade from them, a picture a line, where each is laid (`solidShadeLine`). */
+  /** How dark the solid trees' and bushes' shade is laid this frame (`solidFrame`): 0 when none is. */
+  private solidAlpha = 0;
   private solidShade: { strips: Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number; sx: number; sw: number; sh: number }> } | null = null;
   /** Each line's picture of that shade, what it shows, and where; and pictures put by to be used again. */
   private solidStripsKept = new Map<number, { sig: string; cv: HTMLCanvasElement; x0: number; top: number; wIso: number; k: number; band: number }>();
@@ -7230,6 +7232,7 @@ export class Renderer {
     this.solidShade = null;
     // How dark the shade is, in a few steps, so a dusk makes its pictures again only a few times.
     const alpha = Math.round(6 * (1 - this.solidDark)) * 0.045;
+    this.solidAlpha = alpha < 0.02 ? 0 : alpha;
     if ((!TREE3D_SPECIES.size && !BUSH3D_SPECIES.size) || alpha < 0.02) {
       this.dropStrips(-Infinity, -Infinity);
       return;
@@ -7467,6 +7470,14 @@ export class Renderer {
     const top = ent.sy - spr.ay * zoom * grew;
     // A tree drawn as a solid throws its own shade, laid with the ground (`solidFrame`).
     if (!spr.solid && this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
+    // A solid bush's shade at its foot: the hole its line's shade leaves round it (`footAt`), filled in that shade's own tone, so the two are one.
+    if (spr.foot && this.solidAlpha > 0) {
+      const r = spr.foot * zoom * grew * 0.985 + 0.2;
+      ctx.fillStyle = `rgba(30,56,66,${this.solidAlpha})`;
+      ctx.beginPath();
+      ctx.ellipse(ent.sx, ent.sy, r, r / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
     /*
      * Air between here and the back of the wood.
      *
