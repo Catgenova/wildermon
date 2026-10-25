@@ -642,8 +642,8 @@ const tileAt = (x: number, y: number): Target => ({ kind: 'tile', x, y, cx: x + 
 const forage = ACTION_BY_ID.get('forage')!;
 const found = (): number => game.inventory.items.reduce((n, it) => n + (['blueberry', 'raspberry', 'strawberry', 'lingonberry', 'acorn', 'nuts', 'potato', 'onion'].includes(it.id) || it.id.endsWith('_seed') ? it.count : 0), 0);
 check('the browser\'s Keen Eye says the passes as the island counts them',
-  forage.labelFor?.(tileAt(px, py), game) === `Forage (${plainPasses} passes)`
-    && (game.setPerks(P('Keen Eye').fx), forage.labelFor?.(tileAt(px, py), game) === `Forage (${plainPasses + keen} passes)`),
+  !!forage.labelFor?.(tileAt(px, py), game).startsWith(`Forage (${plainPasses} passes at `)
+    && (game.setPerks(P('Keen Eye').fx), !!forage.labelFor?.(tileAt(px, py), game).startsWith(`Forage (${plainPasses + keen} passes at `)),
   String(forage.labelFor?.(tileAt(px, py), game)));
 game.setPerks({});
 game.rand = () => EMPTY_BELOW;

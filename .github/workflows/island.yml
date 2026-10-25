@@ -2132,6 +2132,16 @@ jobs:
             --outfile=node_modules/.cache/sprouts.mjs --log-level=error
           node node_modules/.cache/sprouts.mjs
 
+      - name: What gathering gives, and when a spot is ready again
+        if: matrix.shard == 2
+        run: |
+          # A spot picked over says the wait to the second on both sides, the
+          # browser reading `foraged`; odds, ceilings and seasons on the menus
+          # and the tile window are the island's numbers.
+          npx esbuild supabase/test/yields.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/yields.mjs --log-level=error
+          node node_modules/.cache/yields.mjs
+
       - name: A slab is floor for everything on it
         if: matrix.shard == 2
         run: |

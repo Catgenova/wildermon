@@ -3,7 +3,7 @@ import type { Pick } from '../../render/renderer';
 import { buildMenuRows, type MenuItem } from '../contextmenu';
 import { creatureSkills } from '../creatureinfo';
 import { Repaint } from '../repaint';
-import { groundReading, tileUses } from '../tileinfo';
+import { groundReading, tileUses, yieldLines } from '../tileinfo';
 import type { Tooltip } from '../tooltip';
 import type { UIWindow } from '../windows';
 
@@ -38,6 +38,8 @@ export class TilePanel {
   private factsEl: HTMLDivElement;
   /** The reading as last drawn, because it fades with nothing to announce it. */
   private reading: string | null = null;
+  /** What `yieldLines` said when the window was last drawn, to redraw when a wait runs down. */
+  private yields = '';
   private info: HTMLButtonElement;
   /** Whether the note is up at all, by hover or by click. */
   private noteOpen = false;
@@ -99,7 +101,7 @@ export class TilePanel {
     // Every action gains a skill, so these fire several times a second while
     // you work. The list is looked at on a beat and only redrawn when it would
     // actually say something different.
-    for (const ev of ['world', 'inventory', 'action', 'crate', 'skill'] as const) game.events.on(ev, () => this.repaint.ask());
+    for (const ev of ['world', 'inventory', 'action', 'crate', 'skill', 'foraged'] as const) game.events.on(ev, () => this.repaint.ask());
     this.render();
   }
 
@@ -162,6 +164,8 @@ export class TilePanel {
      * `changed` below still refuses to redraw when it reads the same.
      */
     if (this.pick && groundReading(this.game, this.pick.x, this.pick.y) !== this.reading) this.repaint.ask();
+    // And a spot picked over counts down to ready by itself, as the marks do (`yieldLines`).
+    if (this.pick && yieldLines(this.game, this.pick.x, this.pick.y).join('\u0001') !== this.yields) this.repaint.ask();
     if (!this.repaint.due(now)) return;
     this.render(now);
   }
@@ -188,6 +192,7 @@ export class TilePanel {
     this.titleEl.textContent = title;
     this.info.hidden = false;
     this.reading = groundReading(this.game, this.pick.x, this.pick.y);
+    this.yields = yieldLines(this.game, this.pick.x, this.pick.y).join('\u0001');
     this.factsEl.replaceChildren(...(facts ?? []).map((fact) => {
       const line = document.createElement('div');
       line.textContent = fact;

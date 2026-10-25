@@ -71,12 +71,12 @@ import { jobName, smelterAnchor, smelterState, type PlacedSmelter } from '../gam
 import { isGreenware, kilnAnchor, kilnState, type PlacedKiln } from '../game/kiln';
 import { furnitureAnchor, furnitureCapacity, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureName, furnitureState, furnitureUnits, isFurniture, isPlanter, rackDeck, rackSpots, type PlacedFurniture, teamOf, turnedFacing, vehicleOf } from '../game/furniture';
 import { DEED_ACTION_BY_ID, joinFromAfar, leaveQuestion, standingWord, upgradeProgress, upgradeReason } from '../game/deed';
-import { CROP_BY_SEED, cropDef, describeCrop, emptyFields, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
+import { CROP_BY_SEED, cropDef, cropReady, describeCrop, emptyFields, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
 import { PLANTER_GROWTH } from '../game/growth';
 import { describeWaterPlant } from '../game/watergarden';
 import { swirlName } from '../game/motes';
 import { runestoneAt } from '../game/runestones';
-import { cornerReading, groundReading } from './tileinfo';
+import { cornerReading, groundReading, yieldLines } from './tileinfo';
 import { deedWorkersAt, MAX_DEED_LEVEL, type Deed } from '../game/game';
 import { isFounder, lacks } from '../game/ranks';
 import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, skillName, type CraftStock, type Recipe } from '../game/recipes';
@@ -1302,12 +1302,15 @@ export class UI {
       const data = w.getData(pick.x, pick.y);
       lines.push(`${treeAge(data).name} ${TREE_DEFS[treeSpecies(data)].name.toLowerCase()} tree`);
     } else if (growing) {
-      lines.push(`${cropDef(growing.id).name} field`);
+      // A ripe field says so on its first line, for picking it out of a row of them.
+      lines.push(`${cropDef(growing.id).name} field${cropReady(growing) ? ' · ripe' : ''}`);
     } else {
       lines.push(w.tileName(pick.x, pick.y));
     }
     if (!aloft) {
       if (growing) lines.push(this.cropLine(growing));
+      // What it gives now: fish, picked over or ready, in season (`yieldLines`).
+      lines.push(...yieldLines(this.game, pick.x, pick.y));
       const planted = this.game.waterPlantAt(pick.x, pick.y);
       if (planted) lines.push(describeWaterPlant(this.game, planted, this.game.wallNow()));
       // A mote swirl over it, by its element (`motes.ts`).
@@ -1969,6 +1972,7 @@ export class UI {
       cornerReading(this.game, pick.cx, pick.cy),
       ...(slab ? [`Concrete foundation · ${foundationState(slab)}`] : []),
       ...(reading ? [reading] : []),
+      ...yieldLines(this.game, pick.x, pick.y),
     ];
     return { title, facts, entries };
   }
@@ -2302,7 +2306,7 @@ export class UI {
   /** A crop as a look says it, in a field or a planter: its stage, when the next comes in real time, and what its tending earned you. */
   private cropLine(c: Crop): string {
     const g = this.game;
-    return describeCrop(c, g.cropPer(c), g.growNow(c), g.wallNow(), g.perk('bumper:harvest_crop', 0));
+    return describeCrop(c, g.cropPer(c), g.growNow(c), g.wallNow(), g.perk('bumper:harvest_crop', 0), g.qlCeiling('farming'));
   }
 
   /** What a planter has in it, or that it is empty and grows at its rate in every season. */

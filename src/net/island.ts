@@ -19,7 +19,7 @@ import type { DeedRole, PowerId, RankDef } from '../game/ranks';
 import type { StoreLogEntry } from '../game/stores';
 import type { Mark } from '../game/items';
 import type { PathBeat, PathSaid } from '../game/meditation';
-import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
+import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
 import type { GuideBook } from '../game/guide';
 import { packFog, unpackFog } from './fogpack';
 import { chartedSquare } from '../game/cartography';
@@ -1029,6 +1029,13 @@ export interface IslandHooks {
    * did not have as they are now.
    */
   springs?: (near: Array<{ id: number; ver: number }>, chains: IslandSpring[]) => void;
+  /**
+   * The spots near us that are picked over (`foraged`), each with the seconds
+   * since it was worked by the island's clock, for the waits the menus say.
+   */
+  foraged?: (rows: Array<{ x: number; y: number; kind: string; ago: number }>) => void;
+  /** And how far back a row of it still matters, in seconds: the longest wait there is (`SPROUT_COOLDOWN`). */
+  foragedWithin?: number;
   /** What this side already holds of the springs, by id, for asking only for what has changed. */
   knownSprings?: () => Record<string, number>;
   /**
@@ -1190,6 +1197,9 @@ export class Island {
   private lastMobs = 0;
   private lastGround = 0;
   private lastSprings = 0;
+  /** When the spots picked over near us were last read (`refreshForaged`), and where we were. */
+  private lastForaged = 0;
+  private near: { x: number; y: number } | null = null;
   /** When the swirls were last asked for, and whether something has said to ask again now. */
   private lastSwirls = 0;
   /** When the rolls rune gates are lit by were last asked for (`refreshGateFolk`), in seconds; never, to begin with. */
@@ -2133,6 +2143,11 @@ export class Island {
       // Something landed, so what we are carrying may have changed in a way no
       // row-level message would have told us about — a thing put down, say.
       if ((said.settled ?? 0) > 0) void this.refreshPack();
+      // And a job done may have picked a spot over: read again at once.
+      if ((said.settled ?? 0) > 0) {
+        this.lastForaged = -Infinity;
+        void this.refreshForaged(performance.now() / 1000);
+      }
       const due = said.ends ? (new Date(said.ends).getTime() - Date.now()) / 1000 : Infinity;
       // A quarter-second of slack, because a timer that fires a shade early
       // asks for work that is not due yet and has to ask again.
@@ -2794,6 +2809,34 @@ export class Island {
   }
 
   /**
+   * Which spots near us are picked over, and since when (`foraged`).
+   *
+   * Straight off the table, which every body on an island may read for its
+   * own island: the rows within `GROUND_RANGE` of where we last said we were,
+   * and only those written within the longest wait there is
+   * (`foragedWithin`), since an older row is ground grown back. Each row's
+   * age is read on the island's clock (`since`), so a browser whose clock is
+   * out still counts the right seconds down. Every `FORAGED_EVERY` seconds,
+   * and again as soon as a job of ours is done.
+   */
+  async refreshForaged(now: number): Promise<void> {
+    if (!this.info || !this.hooks.foraged || !this.hooks.foragedWithin || !this.near) return;
+    if (now - this.lastForaged < FORAGED_EVERY * this.slower()) return;
+    this.lastForaged = now;
+    const x = Math.floor(this.near.x), y = Math.floor(this.near.y);
+    const from = new Date(Date.parse(this.info.epoch) + (this.time() - this.hooks.foragedWithin) * 1000).toISOString();
+    const { data, error } = await supabase().from('foraged').select('x, y, kind, at')
+      .eq('world_id', this.info.id)
+      .gte('x', x - GROUND_RANGE).lte('x', x + GROUND_RANGE)
+      .gte('y', y - GROUND_RANGE).lte('y', y + GROUND_RANGE)
+      .gt('at', from);
+    // A read that failed is not ground grown back: what we had stands till the next.
+    if (error || !Array.isArray(data)) return;
+    this.hooks.foraged(rowsIn<{ x: number; y: number; kind: string; at: string }>(data)
+      .map((r) => ({ x: r.x, y: r.y, kind: r.kind, ago: this.since(r.at) })));
+  }
+
+  /**
    * The mote swirls in the nine blocks round us (`rpc_swirls`): when something
    * has said to ask -- coming ashore, walking into another block, a new day's
    * swirls -- and otherwise every `SWIRLS_EVERY` seconds. A swirl collected
@@ -2929,6 +2972,8 @@ export class Island {
     void this.refreshMobs(now);
     void this.refreshGround(now);
     void this.refreshSprings(now);
+    this.near = { x, y };
+    void this.refreshForaged(now);
     void this.refreshSwirls(now);
     void this.refreshGateFolk(now);
     void this.keepFog(now);

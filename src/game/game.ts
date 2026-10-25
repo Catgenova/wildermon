@@ -47,7 +47,7 @@ import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR,
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
-import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS, world } from './pace';
+import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS } from './pace';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, bagCarry, HIT_LOCATIONS, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
 import { boonOf, boonTime, BOON_BONUS, clockLeft, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
 import { cleanSaid } from './chat';
@@ -517,9 +517,12 @@ export const NIGHT_STARTS = DUSK - TWILIGHT + NIGHT_FROM * 2 * TWILIGHT;
 export const NIGHT_ENDS = DAWN + TWILIGHT - NIGHT_FROM * 2 * TWILIGHT;
 /** Game hours after sunrise that somebody asleep wakes up. */
 export const WAKE_AFTER_DAWN = 0.5;
-export const FORAGE_COOLDOWN = world(180);
+/** Real seconds a spot stays picked over, for every kind but a sprout (the island's `forage_cooldown`). */
+export const FORAGE_COOLDOWN = 180;
 /** Real seconds between sprouts off one tree (`sprout_cooldown`). */
 export const SPROUT_COOLDOWN = 3600;
+/** Real seconds a spot stays picked over for a kind of work: `SPROUT_COOLDOWN` for a sprout, `FORAGE_COOLDOWN` for the rest. */
+export const forageCooldown = (kind: string): number => (kind === 'sprout' ? SPROUT_COOLDOWN : FORAGE_COOLDOWN);
 /**
  * How dark it has to be before a fight teaches you anything about noticing.
  * Dusk is not night: a scuffle at seven in the evening is still fought by eye.
@@ -528,7 +531,7 @@ export const SPROUT_COOLDOWN = 3600;
  * The things a single tile can be worked over for, each with its own
  * cooldown: picking berries does not stop you cutting the grass.
  */
-const FORAGE_KINDS = ['forage', 'botanize', 'grass', 'reed', 'dig', 'moss', 'worm', 'sprout'];
+const FORAGE_KINDS = ['forage', 'botanize', 'grass', 'reed', 'dig', 'moss', 'worm', 'sprout', 'vine'];
 /** How long ore stays lit after prospecting. */
 export const PROSPECT_MARK_TIME = 120;
 /** Lines of the log kept of everything but talk. */
@@ -6381,6 +6384,19 @@ export class Game {
     return Math.min(s, Math.max(1, toolQl * (QL_LOW + this.rand() * QL_SPAN)));
   }
 
+  /** The most `productQl` can give for this skill and tool: the island's `product_ql` at its luckiest roll. */
+  qlCeiling(skill: string, toolQl = 0): number {
+    const s = Math.min(100, Math.max(1, this.skills.get(skill)));
+    return toolQl <= 0 ? Math.min(100, Math.max(1, s * (QL_LOW + QL_SPAN) + QL_BARE)) : s;
+  }
+
+  /** The chance a `sureCheck` comes off: the skill check, and a perk's second chance at a miss (`fail:<job>`). */
+  sureChance(job: string, skill: string, difficulty = 10, toolQl = 0): number {
+    const p = this.skillChance(skill, difficulty, toolQl);
+    const fail = this.perk(`fail:${job}`, 1);
+    return fail < 1 ? p + (1 - p) * (1 - Math.max(0, fail)) : p;
+  }
+
   nearestCornerToPlayer(): { cx: number; cy: number } {
     return { cx: Math.round(this.player.x), cy: Math.round(this.player.y) };
   }
@@ -10138,8 +10154,28 @@ export class Game {
   }
 
   isForaged(x: number, y: number, kind: string): boolean {
+    return this.foragedLeft(x, y, kind) > 0;
+  }
+
+  /** Seconds until a spot can be worked again for a kind (`forageCooldown`), nought when it can: the island's `foraged_left`. */
+  foragedLeft(x: number, y: number, kind: string): number {
+    if (!FORAGE_KINDS.includes(kind)) return 0;
     const t = this.foraged.get(this.forageKey(x, y, kind));
-    return t !== undefined && this.time - t < (kind === 'sprout' ? world(SPROUT_COOLDOWN) : FORAGE_COOLDOWN);
+    return t === undefined ? 0 : Math.max(0, forageCooldown(kind) - (this.time - t));
+  }
+
+  /**
+   * The spots near us the island has down as picked over (`foraged`), each
+   * with the seconds since, by the island's clock (`Island.refreshForaged`):
+   * every one it sent, so whatever this side held that is not among them has
+   * grown back or was never so.
+   */
+  foragedFromIsland(rows: Array<{ x: number; y: number; kind: string; ago: number }>): void {
+    this.foraged.clear();
+    for (const r of rows) {
+      if (FORAGE_KINDS.includes(r.kind) && this.world.inBounds(r.x, r.y)) this.foraged.set(this.forageKey(r.x, r.y, r.kind), this.time - r.ago);
+    }
+    this.events.emit('foraged');
   }
 
   /** The stage nothing else grows into: the beginning of a tree. */
