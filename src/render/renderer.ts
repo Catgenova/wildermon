@@ -439,6 +439,7 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, sprigOf, topEdges, type Face } from './outcrops';
+import { cropFrame } from './crops';
 import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { inkOf } from './ink';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
@@ -1756,6 +1757,7 @@ export class Renderer {
   private frameDt = 1 / 60;
   /** Whether the fields are waiting out a winter this frame: nothing in one grows, and it is drawn so. */
   private dormant = false;
+  private cropStep = 0;
   /**
    * The tiles of the room the player is standing in, for the cutaway.
    *
@@ -3913,7 +3915,10 @@ export class Renderer {
     const season = seasonAt(this.greenAt).season;
     this.bloom = season === 'spring' || season === 'summer';
     // Whether the fields are waiting out a winter, which they are drawn doing: asked once a frame, not once a tile.
-    this.dormant = this.game.crops.size > 0 && fieldRate(this.game.wallNow()) <= 0;
+    this.dormant = fieldRate(this.game.wallNow()) <= 0;
+    // And the sun's step the fields are lit at (`fieldBake`), and a new frame's time to bake them in.
+    this.cropStep = sunStepOf(this.game.hourOfDay(), this.game.darkness());
+    cropFrame();
     // Pinned on a storey nothing is let go to be seen through: the storey is drawn whole (`storeyview.ts`).
     this.pinned = this.game.pinnedStorey();
     this.roomTiles = this.pinned === null ? this.myRoom() : null;
@@ -4621,11 +4626,12 @@ export class Renderer {
             this.take('swirl', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, h), null).swirl = swirl;
           }
         }
-        if (this.game.crops.size) {
-          const crop = this.game.cropAt(x, y);
+        if (t === TileType.Field && !aloft) {
+          const crop = this.game.crops.size ? this.game.cropAt(x, y) : undefined;
+          const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
+          const [mx, my] = V.staggered ? [baseX, baseY + hh] : [baseX + hw / 2, baseY + hh / 2];
           if (crop) {
             const def = cropDef(crop.id);
-            const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
             /*
              * A field waits out a winter; what grows under glass does not
              * (`glasshouse.ts`). Stood at the tile's middle: the top corner and
@@ -4633,9 +4639,11 @@ export class Renderer {
              * a rectangle -- where it used to stand on the rectangle's corner,
              * and a glasshouse's crops stood half out through its walls.
              */
-            const [mx, my] = V.staggered ? [baseX, baseY + hh] : [baseX + hw / 2, baseY + hh / 2];
             this.take('crop', x, y, mx, my - avg * hs,
-              cropSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], this.dormant && !crop.glass, !V.staggered));
+              cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], this.dormant && !crop.glass, cam.rotation, this.cropStep));
+          } else {
+            // A field tilled and lying fallow: its ridges and furrows, rimed in a winter.
+            this.take('crop', x, y, mx, my - avg * hs, cropSprite('', -1, '', '', this.dormant, cam.rotation, this.cropStep));
           }
         }
         /*
@@ -7195,7 +7203,8 @@ export class Renderer {
         this.drawTree(ctx, ent, spr, zoom, grew);
         continue;
       }
-      if (this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
+      // A field's shade is its plants', thrown in its bake (`fieldBake`).
+      if (ent.kind !== 'crop' && this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
       const ready = this.atSize(spr.canvas, dw, dh);
       this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => g.drawImage(ready, px - spr.ax * zoom, py - spr.ay * zoom, dw, dh), undefined,
         [ent.sx - spr.ax * zoom, ent.sy - spr.ay * zoom, dw, dh]);

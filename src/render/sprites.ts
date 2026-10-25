@@ -1,5 +1,5 @@
 import type { BeastAct } from '../game/events';
-import { hash2, mulberry32 } from '../world/noise';
+import { hash2 } from '../world/noise';
 import { cushions, hashOf, type Cushion } from './ivy';
 import { inkOr } from './inks';
 import type { Look } from '../game/look';
@@ -12,7 +12,7 @@ import { LIT, contact, dulled, wob } from './trees/kit';
 import { paintTree } from './trees';
 import { BUSH3D_SPECIES, bush3dSprite, forgetTrees3d, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
 import type { Season } from '../world/calendar';
-import { cropPlant } from './crops';
+import { fieldBake } from './crops';
 
 /** A pre-rendered sprite. Sizes are in zoom-1 pixels; the canvas is drawn at SPRITE_SCALE for crispness. */
 export interface Sprite {
@@ -1009,112 +1009,14 @@ export function crateSprite(kind: 'log' | 'plank' = 'plank'): Sprite {
   return spr;
 }
 
-/** A crop's colours gone over for a winter it is waiting out: dull, and a little frosted. */
-const DORMANT_LEAF = '#8c8a62';
-const DORMANT_FRUIT = '#a99a78';
-const frosted = (c: string, into: string, k: number): string => {
-  const a = parseInt(c.slice(1), 16), b = parseInt(into.slice(1), 16);
-  const ch = (v: number, sh: number): number => (v >> sh) & 255;
-  const mix = (sh: number): number => Math.round(ch(a, sh) + (ch(b, sh) - ch(a, sh)) * k);
-  return `#${((1 << 24) | (mix(16) << 16) | (mix(8) << 8) | mix(0)).toString(16).slice(1)}`;
-};
-
 /**
- * A crop growing on a tilled field. Each of the four stages gets its own
- * model, and each family of crop its own shape (`cropPlant`), nine plants to
- * the tile. `dormant` is a field waiting out a winter, which grows nothing:
- * its green gone dull and a rime on the furrows.
+ * A tile of tilled field: `stage` -1 lying fallow, else a crop at that
+ * stage, built and lit as the solid trees are (`fieldBake`) from the camera's
+ * `turn` under the sun's `step`. `dormant` is a field waiting out a winter,
+ * which grows nothing: its green gone dull and a rime on it.
  */
-export function cropSprite(cropId: string, stage: number, look: string, leaf: string, fruit: string, dormant = false, rect = false): Sprite {
-  const key = `${SPRITE_SCALE}|crop:${cropId}:${stage}${dormant ? ':dormant' : ''}${rect ? ':rect' : ''}`;
-  let spr = cache.get(key);
-  if (spr) return spr;
-  if (dormant) {
-    leaf = frosted(leaf, DORMANT_LEAF, 0.6);
-    fruit = frosted(fruit, DORMANT_FRUIT, 0.45);
-  }
-  const rng = mulberry32(hashString(cropId) + stage * 7919);
-  // How far out of the tile centre anything drawn on the field may reach, as a
-  // share of the tile. A hair inside the half-tile, so nothing touches the edge.
-  const EDGE = 0.46;
-  // A tile's worth of furrows, anchored at the tile centre.
-  spr = makeSprite(96, 72, 48, 54, (ctx) => {
-    const cx = 48;
-    const cy = 52;
-    /*
-     * The tile as it lies on the screen: a diamond at the four cardinal turns,
-     * and at the four diagonals a rectangle root two wide to root two tall
-     * (`VIEWS`), which the field is laid out in as it is in the diamond --
-     * its furrows across it and its plants inside it.
-     */
-    const iso = rect
-      ? (u: number, v: number): [number, number] => [cx + u * 44 * Math.SQRT2, cy + v * 22 * Math.SQRT2]
-      : (u: number, v: number): [number, number] => [cx + (u - v) * 44, cy + (u + v) * 22];
-    ctx.lineCap = 'round';
-    /*
-     * Furrows run across the field under the plants. The ground they have to
-     * stay on is a diamond, so a furrow further from the middle is a shorter
-     * furrow: at the widest the full width of the tile, and at the last one
-     * before the corner barely more than a nick. Drawing them all the same
-     * length ran them a third of a tile out over the grass on either side.
-     */
-    ctx.strokeStyle = 'rgba(70,50,32,0.45)';
-    ctx.lineWidth = 2;
-    for (let i = -2; i <= 2; i++) {
-      // Across a rectangle every furrow is the whole width of it, and no wider: the sides of one are edges, not corners.
-      const f = i * (rect ? 0.17 : 0.19);
-      const half = rect ? 0.36 : EDGE - Math.abs(f);
-      if (half <= 0.03) continue;
-      const [ax, ay] = rect ? iso(-half, f) : iso(f - half, f + half);
-      const [bx, by] = rect ? iso(half, f) : iso(f + half, f - half);
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(bx, by);
-      ctx.stroke();
-      // A winter's rime along the middle of the ridge of each furrow.
-      if (dormant) {
-        ctx.strokeStyle = 'rgba(236,240,244,0.45)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(ax + (bx - ax) * 0.2, ay + (by - ay) * 0.2 - 1.2);
-        ctx.lineTo(ax + (bx - ax) * 0.8, ay + (by - ay) * 0.8 - 1.2);
-        ctx.stroke();
-        ctx.strokeStyle = 'rgba(70,50,32,0.45)';
-        ctx.lineWidth = 2;
-      }
-    }
-    if (stage === 0) {
-      // Sown: only the seed and the disturbed earth show.
-      ctx.fillStyle = 'rgba(58,42,26,0.7)';
-      for (let i = 0; i < 14; i++) {
-        const [px, py] = iso((rng() - 0.5) * 0.8, (rng() - 0.5) * 0.8);
-        ctx.beginPath();
-        ctx.ellipse(px, py, 1.5, 1, 0, 0, TAU);
-        ctx.fill();
-      }
-      cache.set(key, spr!);
-      return;
-    }
-    const plants: Array<[number, number]> = [];
-    for (let u = -1; u <= 1; u++) for (let v = -1; v <= 1; v++) plants.push([u * 0.26 + (rng() - 0.5) * 0.08, v * 0.26 + (rng() - 0.5) * 0.08]);
-    // Back to front: down the diamond, or down the rectangle.
-    plants.sort((a, b) => (rect ? a[1] - b[1] : a[0] + a[1] - (b[0] + b[1])));
-    for (const [u, v] of plants) {
-      const [px, py] = iso(u, v);
-      cropPlant(ctx, px, py, look, stage, leaf, fruit, u);
-    }
-  });
-  cache.set(key, spr);
-  return spr;
-}
-
-function hashString(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
+export function cropSprite(cropId: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number): Sprite {
+  return fieldBake(cropId, stage, leaf, fruit, dormant, turn, step, SPRITE_SCALE);
 }
 
 /**
