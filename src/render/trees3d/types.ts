@@ -107,6 +107,8 @@ export interface Skeleton {
   hidden?: [number, number];
   /** A dead weeping tree's few bare strands, each from `o` (a point of the tree), `len` down. */
   whips?: Array<{ o: V3; len: number; k: number }>;
+  /** Flower stems standing up out of the leaf, foot to tip, each with its own seeded number: what its picture's bounds take in (`boundsOf`). */
+  spikes?: Array<{ a: V3; b: V3; k: number }>;
   /** How far round its foot its own shade reaches, in pixels at zoom one across, where it is not the trunk's (`footReach`). */
   foot?: number;
 }
@@ -240,15 +242,17 @@ export interface Species3D {
   };
   /**
    * The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed, 'birch' small and pointed, 'willow' narrow and
-   * pointed, 'oval' pointed, 'narrow' long and thin, 'puff' scalloped.
+   * pointed, 'oval' pointed, 'narrow' long and thin, 'puff' scalloped, 'needle' fine upright needles in tufts.
    */
-  leafForm?: 'maple' | 'oak' | 'birch' | 'willow' | 'oval' | 'narrow' | 'puff';
+  leafForm?: 'maple' | 'oak' | 'birch' | 'willow' | 'oval' | 'narrow' | 'puff' | 'needle';
   /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */
   buttress?: boolean;
   /** Snow as a narrow line along the top edge of the wood, rather than over all its upper face. */
   snowLine?: boolean;
   /** Stones and ferns round the foot: the stone's colour (`Undergrowth`). */
   undergrowth?: { stone: RGB };
+  /** Snow along the top of each lump of leaf in winter: a leaf kept through it (`paintCluster`). */
+  snowCap?: boolean;
   /** A carved rune inked in the kit's ink, and lit as a runestone's runes after dark. */
   inkedRune?: boolean;
   /** A mass's height on the screen against its width: 0.86 unless given. */
