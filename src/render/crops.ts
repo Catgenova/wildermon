@@ -1,7 +1,6 @@
 /**
- * A crop's plant, drawn flat: shared by the field it grows in (`cropSprite`,
- * nine to a tile) and the planter (`MODELS.planter`, a row along the box), so
- * a planter of wheat is wheat the way a field of it is.
+ * Crops drawn: a planter's plants flat (`cropPlant`, a row along the box), and
+ * a field's as solids lit by the sun (`fieldBake`, below).
  */
 import { mulberry32 } from '../world/noise';
 import { HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
@@ -15,8 +14,8 @@ import { hex, mixRgb, rgb } from './trees3d/vec';
 const TAU = Math.PI * 2;
 
 /**
- * One plant of a crop at a stage, its foot at (px, py): the shape a field is
- * drawn with nine of and a planter with a row of. Roots keep their heads down
+ * One plant of a crop at a stage, its foot at (px, py), flat: what a planter
+ * is drawn with a row of. Roots keep their heads down
  * and swell late, leaves spread, grain runs up into ears, herbs stay low and
  * bushy, and fibre opens into bolls; a ripe one carries its produce. `u`
  * turns a rosette's leaves, and `s` is its size, one at a field's.
@@ -174,9 +173,6 @@ type Op =
   | { k: 'ball'; c: V3; r: number; col: string; shine?: boolean }
   | { k: 'spindle'; a: V3; b: V3; w: number; col: string; shine?: boolean };
 
-/** One plant: its foot, and what it is made of, back to front. */
-interface Plant { at: V3; ops: Op[] }
-
 const clamp01 = (x: number): number => Math.max(0, Math.min(1, x));
 const toHex = (c: RGB): string => `#${c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('')}`;
 const mixH = (a: string, b: string, k: number): string => toHex(mixRgb(hex(a), hex(b), k));
@@ -298,14 +294,13 @@ function plantOf(id: string, stage: number, leaf: string, fruit: string, R: () =
       break;
     }
     case 'cabbage': {
-      const n = 7, r = (ripe ? 6 : 4.6) * k;
+      const n = 7, r = ripe ? 6 : 4.6;
       for (let i = 0; i < n; i++) {
         const a = a0 + (i / n) * Math.PI * 2;
-        ops.push(leafOps([0, 0, 1], out([0, 0, 0], a, ripe ? 6 : 4.6, ripe ? 2.6 : 3.4), ripe ? 2.6 : 2.1, i % 2 ? leaf : mixH(leaf, '#000000', 0.06), -0.6, 0.55, true));
+        ops.push(leafOps([0, 0, 1], out([0, 0, 0], a, r, ripe ? 2.6 : 3.4), ripe ? 2.6 : 2.1, i % 2 ? leaf : mixH(leaf, '#000000', 0.06), -0.6, 0.55, true));
       }
       if (ripe) ops.push({ k: 'ball', c: [0, 0, 3.6], r: 3.7, col: fruit, shine: true });
       else ops.push({ k: 'ball', c: [0, 0, 2.4], r: 1.7, col: mixH(leaf, fruit, 0.4) });
-      void r;
       break;
     }
     case 'potato': {
@@ -417,21 +412,27 @@ function plantOf(id: string, stage: number, leaf: string, fruit: string, R: () =
   return ops;
 }
 
-/** The plants on a tile of a crop: a row along each ridge, `PER_ROW` to it, each a little off its place by the crop's own roll. */
-function plantsOf(id: string, stage: number, leaf: string, fruit: string): Plant[] {
+/** How many ways a crop's plant grows: each plant on a tile is one of them, stamped where it stands. */
+const VARIANTS = 4;
+
+/**
+ * The plants on a tile of a crop: a row along each ridge, `PER_ROW` to it,
+ * each a little off its place by the crop's own roll and grown as one of its
+ * `VARIANTS` -- the same at every stage, so a plant grows where it stood.
+ */
+function plantsOf(id: string, stage: number, leaf: string, fruit: string): { feet: Array<{ at: V3; v: number }>; kinds: Op[][] } {
   const per = PER_ROW[id] ?? 4;
   const R = mulberry32(fieldHash(id) + 77);
-  const plants: Plant[] = [];
+  const feet: Array<{ at: V3; v: number }> = [];
   for (let j = 0; j < ROWS; j++) {
     for (let i = 0; i < per; i++) {
       const jx = (R() - 0.5) * (UNITS_PER_TILE / per) * 0.3, jy = (R() - 0.5) * 1.2;
-      const at: V3 = [-HALF + (i + 0.5) * (UNITS_PER_TILE / per) + jx, -HALF + (j + 0.5) * ROW + jy, RIDGE * 0.8];
-      // The plant's own roll: the same at every stage, so it grows where it stood.
-      const own = mulberry32(fieldHash(id) + i * 131 + j * 7919);
-      plants.push({ at, ops: plantOf(id, stage, leaf, fruit, own) });
+      feet.push({ at: [-HALF + (i + 0.5) * (UNITS_PER_TILE / per) + jx, -HALF + (j + 0.5) * ROW + jy, RIDGE * 0.8], v: Math.floor(R() * VARIANTS) });
     }
   }
-  return plants;
+  const kinds: Op[][] = [];
+  for (let v = 0; v < VARIANTS; v++) kinds.push(plantOf(id, stage, leaf, fruit, mulberry32(fieldHash(id) + v * 7919 + 131)));
+  return { feet, kinds };
 }
 
 function fieldHash(s: string): number {
@@ -455,19 +456,23 @@ const litCol = (col: string, l: number): string => {
 export interface CropBake { canvas: HTMLCanvasElement; w: number; h: number; ax: number; ay: number }
 /** What the fields' bakes have cost: for a harness. */
 export const cropStats = { bakes: 0, ms: 0, standIns: 0 };
-const cropBakes = new Map<string, CropBake>();
-/** The latest bake of each crop, stage and turn, at any step of the sun: what stands in while a frame has made all it may. */
+/** Every bake kept, by its key, and the frame it was last asked for in. */
+const cropBakes = new Map<string, { spr: CropBake; used: number }>();
+/** The latest bake of each crop, stage and turn, at any step of the sun and any scale: what stands in while a frame has made all it may. */
 const cropLatest = new Map<string, CropBake>();
 let cropPixels = 0;
+let cropFrameNo = 0;
 /** Pixels of field bakes kept. */
 const CROP_PIXELS = 6_000_000;
-/** What a frame may spend baking fields when an older bake can stand in. */
+/** What a frame may spend baking fields when an older bake of the same can stand in, and when only the bare ground can. */
 const CROP_BAKE_MS = 3;
+const CROP_COLD_MS = 16;
 let cropSpent = 0;
 
 /** A new frame: its own `CROP_BAKE_MS` to spend. */
 export function cropFrame(): void {
   cropSpent = 0;
+  cropFrameNo++;
 }
 
 /**
@@ -476,22 +481,27 @@ export function cropFrame(): void {
  * nothing: its green gone dull, a rime on its ridges and on whatever faces up.
  * Seen from `turn`, under the sun's `step` (`sunStepOf`), `scale` pixels to a
  * pixel at zoom one, anchored at the tile's middle.
+ *
+ * Made now, or, once this frame has spent `CROP_BAKE_MS`, the same crop's
+ * last bake at another step of the sun or scale stands in; with none and
+ * `CROP_COLD_MS` spent, the sown ground does until its turn comes.
  */
 export function fieldBake(id: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number, scale: number): CropBake {
   // Bare and sown ground is the same whatever the crop: one bake for all of them.
   if (stage <= 0) id = '';
-  const head = `${scale}|${id}|${stage}|${dormant ? 1 : 0}|${turn}`;
-  const key = `${head}|${step}`;
+  const head = `${id}|${stage}|${dormant ? 1 : 0}|${turn}`;
+  const key = `${head}|${step}|${scale}`;
   const had = cropBakes.get(key);
   if (had) {
-    cropBakes.delete(key);
-    cropBakes.set(key, had);
-    return had;
+    had.used = cropFrameNo;
+    return had.spr;
   }
-  const near = cropLatest.get(head);
-  if (near && cropSpent >= CROP_BAKE_MS) {
-    cropStats.standIns++;
-    return near;
+  if (stage > 0 && cropSpent >= CROP_BAKE_MS) {
+    const near = cropLatest.get(head);
+    if (near || cropSpent >= CROP_COLD_MS) {
+      cropStats.standIns++;
+      return near ?? fieldBake('', 0, '', '', dormant, turn, step, scale);
+    }
   }
   const t0 = performance.now();
   const spr = bakeField(id, stage, leaf, fruit, dormant, turn, step, scale);
@@ -499,15 +509,19 @@ export function fieldBake(id: string, stage: number, leaf: string, fruit: string
   cropSpent += ms;
   cropStats.bakes++;
   cropStats.ms += ms;
-  cropBakes.set(key, spr);
+  cropBakes.set(key, { spr, used: cropFrameNo });
   cropLatest.set(head, spr);
   cropPixels += spr.canvas.width * spr.canvas.height;
-  while (cropPixels > CROP_PIXELS && cropBakes.size > 1) {
-    const [k, old] = cropBakes.entries().next().value as [string, CropBake];
-    cropBakes.delete(k);
-    cropPixels -= old.canvas.width * old.canvas.height;
-    const h = k.slice(0, k.lastIndexOf('|'));
-    if (cropLatest.get(h) === old) cropLatest.delete(h);
+  if (cropPixels > CROP_PIXELS) {
+    // Room made by letting go of what has gone longest unasked for, and never what this frame has asked for.
+    const old = [...cropBakes].sort((a, b) => a[1].used - b[1].used);
+    for (const [k, b] of old) {
+      if (cropPixels <= CROP_PIXELS * 0.8 || b.used === cropFrameNo) break;
+      cropBakes.delete(k);
+      cropPixels -= b.spr.canvas.width * b.spr.canvas.height;
+      const h = k.split('|').slice(0, 4).join('|');
+      if (cropLatest.get(h) === b.spr) cropLatest.delete(h);
+    }
   }
   return spr;
 }
@@ -525,24 +539,28 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
   const e = eyeOf(0, turn);
   const light = lightOf(step);
   const P = (p: V3): P2 => proj(e, p);
-  const plants = stage >= 1 ? plantsOf(id, stage, leaf, fruit) : [];
+  const { feet, kinds } = stage >= 1 ? plantsOf(id, stage, leaf, fruit) : { feet: [], kinds: [] };
   // Back to front.
   const near = (p: V3): number => p[0] * e.toward[0] + p[1] * e.toward[1];
-  plants.sort((a, b) => near(a.at) - near(b.at));
+  feet.sort((a, b) => near(a.at) - near(b.at));
+  // The sun across the screen, for which side of a round thing is lit.
+  const sv = [light.sun[0] * e.ux + light.sun[1] * e.vx, light.sun[0] * e.uy + light.sun[1] * e.vy - light.sun[2] * HEIGHT_SCALE];
+  const sl = Math.hypot(sv[0], sv[1]) || 1;
+  const look: PlantLook = { light, sun: [sv[0] / sl, sv[1] / sl], stalkLit: litOf(light, unitV([light.sun[0], light.sun[1], 0.4])) * 0.75, dormant };
+  // Each way the plant grows, painted once, its foot at the origin.
+  const stamps = kinds.map((ops) => stampOf(ops, P, look, scale));
 
-  /* ---- the box: the tile, and the tallest thing on it ---- */
+  /* ---- the box: the tile, and every plant on it ---- */
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   const grow = (x: number, y: number, r = 0): void => {
     x0 = Math.min(x0, x - r); x1 = Math.max(x1, x + r);
     y0 = Math.min(y0, y - r); y1 = Math.max(y1, y + r);
   };
   for (const [cx, cy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) grow(...P([cx * HALF, cy * HALF, 0]), 1);
-  for (const pl of plants) {
-    for (const op of pl.ops) {
-      const pts = op.k === 'ball' ? [op.c] : op.k === 'spindle' ? [op.a, op.b] : op.pts;
-      const r = op.k === 'ball' ? op.r * ACROSS + 2 : op.k === 'spindle' ? op.w * ACROSS + 2 : 2;
-      for (const p of pts) grow(...P(addV(p, pl.at)), r);
-    }
+  for (const f of feet) {
+    const [fx, fy] = P(f.at), st = stamps[f.v];
+    grow(fx + st.x0, fy + st.y0);
+    grow(fx + st.x0 + st.cv.width / scale, fy + st.y0 + st.cv.height / scale);
   }
   x0 = Math.floor(x0); y0 = Math.floor(y0); x1 = Math.ceil(x1); y1 = Math.ceil(y1);
   const canvas = document.createElement('canvas');
@@ -612,7 +630,7 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
   }
 
   /* ---- the plants' shade on it, every plant's at once ---- */
-  if (plants.length) {
+  if (feet.length) {
     const fl = Math.hypot(light.sun[0], light.sun[1]) || 1;
     const dx = (-light.sun[0] / fl) * light.throw, dy = (-light.sun[1] / fl) * light.throw;
     const shade = new Path2D();
@@ -623,16 +641,13 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
       shade.moveTo(sx + rx, sy);
       shade.ellipse(sx, sy, rx, ry, 0, 0, Math.PI * 2);
     };
-    for (const pl of plants) {
-      disc(pl.at, 1.4);
-      for (const op of pl.ops) {
-        if (op.k === 'ball') disc(addV(pl.at, op.c), op.r * 0.9);
-        else if (op.k === 'spindle') disc(addV(pl.at, [(op.a[0] + op.b[0]) / 2, (op.a[1] + op.b[1]) / 2, (op.a[2] + op.b[2]) / 2]), op.w);
-        else for (let i = 1; i < op.pts.length; i++) {
-          const p = op.k === 'leaf' ? op.pts[Math.floor(op.pts.length / 4)] : op.pts[i];
-          disc(addV(pl.at, p), op.k === 'leaf' ? 0.9 : 0.35);
-          if (op.k === 'leaf') break;
-        }
+    for (const f of feet) {
+      disc(f.at, 1.4);
+      for (const op of kinds[f.v]) {
+        if (op.k === 'ball') disc(addV(f.at, op.c), op.r * 0.9);
+        else if (op.k === 'spindle') disc(addV(f.at, [(op.a[0] + op.b[0]) / 2, (op.a[1] + op.b[1]) / 2, (op.a[2] + op.b[2]) / 2]), op.w);
+        else if (op.k === 'leaf') disc(addV(f.at, op.pts[Math.floor(op.pts.length / 4)]), 0.9);
+        else if (!op.bare) for (let i = 1; i < op.pts.length; i++) disc(addV(f.at, op.pts[i]), 0.35);
       }
     }
     g.fillStyle = SHADE_TONE;
@@ -640,136 +655,165 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
   }
   g.restore();
 
-  /* ---- the plants, back to front: each one's ink, then its faces ---- */
-  // The sun across the screen, for which side of a round thing is lit.
-  const sv = [light.sun[0] * e.ux + light.sun[1] * e.vx, light.sun[0] * e.uy + light.sun[1] * e.vy - light.sun[2] * HEIGHT_SCALE];
-  const sl = Math.hypot(sv[0], sv[1]) || 1;
-  const sun: P2 = [sv[0] / sl, sv[1] / sl];
-  const stalkN = unitV([light.sun[0], light.sun[1], 0.4]);
-  const stalkLit = litOf(light, stalkN) * 0.75;
-  for (const pl of plants) {
-    const at = (p: V3): P2 => P(addV(p, pl.at));
-    const shapes: Array<{ op: Op; path: Path2D | null; pts?: P2[] }> = [];
-    // Ink: every mass of it, and its stalks, as one.
-    const ink = new Path2D();
-    for (const op of pl.ops) {
-      if (op.k === 'stalk') {
-        const pts = op.pts.map(at);
-        const p = new Path2D();
-        p.moveTo(pts[0][0], pts[0][1]);
-        if (pts.length === 3) p.quadraticCurveTo(pts[1][0], pts[1][1], pts[2][0], pts[2][1]);
-        else for (const q of pts.slice(1)) p.lineTo(q[0], q[1]);
-        shapes.push({ op, path: p });
-      } else if (op.k === 'leaf') {
-        const pts = op.pts.map(at);
-        const p = new Path2D();
-        p.moveTo(pts[0][0], pts[0][1]);
-        for (const q of pts.slice(1)) p.lineTo(q[0], q[1]);
-        p.closePath();
-        ink.addPath(p);
-        shapes.push({ op, path: p, pts });
-      } else if (op.k === 'ball') {
-        const [cx, cy] = at(op.c);
-        const r = op.r * ACROSS;
-        const p = new Path2D();
-        p.arc(cx, cy, r, 0, Math.PI * 2);
-        ink.addPath(p);
-        shapes.push({ op, path: p, pts: [[cx, cy]] });
-      } else {
-        const a = at(op.a), b = at(op.b);
-        const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-        const nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l;
-        const w = op.w * ACROSS;
-        const p = new Path2D();
-        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-        p.moveTo(a[0], a[1]);
-        p.quadraticCurveTo(mx + nx * w * 2, my + ny * w * 2, b[0], b[1]);
-        p.quadraticCurveTo(mx - nx * w * 2, my - ny * w * 2, a[0], a[1]);
-        p.closePath();
-        ink.addPath(p);
-        shapes.push({ op, path: p, pts: [a, b, [nx, ny]] });
-      }
+  /* ---- the plants, back to front: each stamped where it stands, on whole pixels ---- */
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  for (const f of feet) {
+    const [fx, fy] = P(f.at), st = stamps[f.v];
+    g.drawImage(st.cv, Math.round((fx + st.x0 - x0) * scale), Math.round((fy + st.y0 - y0) * scale));
+  }
+  return { canvas, w: x1 - x0, h: y1 - y0, ax: -x0, ay: -y0 };
+}
+
+/** How a bake's plants are lit: the light, the sun's way across the screen, a stalk's light, and whether it is a winter. */
+interface PlantLook { light: Light; sun: P2; stalkLit: number; dormant: boolean }
+
+/** One way a plant grows, painted on a canvas of its own at `scale`, its foot `-x0, -y0` in from the corner: stamped on a tile as many times as it stands there. */
+function stampOf(ops: Op[], P: (p: V3) => P2, look: PlantLook, scale: number): { cv: HTMLCanvasElement; x0: number; y0: number } {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const op of ops) {
+    const pts = op.k === 'ball' ? [op.c] : op.k === 'spindle' ? [op.a, op.b] : op.pts;
+    const r = op.k === 'ball' ? op.r * ACROSS + 2 : op.k === 'spindle' ? op.w * ACROSS * 2 + 2 : 2;
+    for (const p of pts) {
+      const [x, y] = P(p);
+      x0 = Math.min(x0, x - r); x1 = Math.max(x1, x + r);
+      y0 = Math.min(y0, y - r); y1 = Math.max(y1, y + r);
     }
-    g.strokeStyle = STALK_INK;
-    for (const s of shapes) {
-      if (s.op.k !== 'stalk' || s.op.bare) continue;
-      g.lineWidth = s.op.w + KIT_INK_W * 1.6;
-      g.stroke(s.path as Path2D);
+  }
+  // On whole pixels of the bake, so a stamp is put down unstretched.
+  x0 = Math.floor(x0 * scale) / scale; y0 = Math.floor(y0 * scale) / scale;
+  const cv = document.createElement('canvas');
+  cv.width = Math.max(1, Math.ceil((x1 - x0) * scale));
+  cv.height = Math.max(1, Math.ceil((y1 - y0) * scale));
+  const g = cv.getContext('2d');
+  if (!g) throw new Error('no 2d context');
+  g.setTransform(scale, 0, 0, scale, -x0 * scale, -y0 * scale);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  paintPlant(g, ops, P, look);
+  return { cv, x0, y0 };
+}
+
+/** A plant's ink, then its faces, each lit as it faces the sun. */
+function paintPlant(g: CanvasRenderingContext2D, ops: Op[], P: (p: V3) => P2, { light, sun, stalkLit, dormant }: PlantLook): void {
+  const shapes: Array<{ op: Op; path: Path2D | null; pts?: P2[] }> = [];
+  // Ink: every mass of it, and its stalks, as one.
+  const ink = new Path2D();
+  for (const op of ops) {
+    if (op.k === 'stalk') {
+      const pts = op.pts.map(P);
+      const p = new Path2D();
+      p.moveTo(pts[0][0], pts[0][1]);
+      if (pts.length === 3) p.quadraticCurveTo(pts[1][0], pts[1][1], pts[2][0], pts[2][1]);
+      else for (const q of pts.slice(1)) p.lineTo(q[0], q[1]);
+      shapes.push({ op, path: p });
+    } else if (op.k === 'leaf') {
+      const pts = op.pts.map(P);
+      const p = new Path2D();
+      p.moveTo(pts[0][0], pts[0][1]);
+      for (const q of pts.slice(1)) p.lineTo(q[0], q[1]);
+      p.closePath();
+      ink.addPath(p);
+      shapes.push({ op, path: p, pts });
+    } else if (op.k === 'ball') {
+      const [cx, cy] = P(op.c);
+      const r = op.r * ACROSS;
+      const p = new Path2D();
+      p.arc(cx, cy, r, 0, Math.PI * 2);
+      ink.addPath(p);
+      shapes.push({ op, path: p, pts: [[cx, cy]] });
+    } else {
+      const a = P(op.a), b = P(op.b);
+      const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      const nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l;
+      const w = op.w * ACROSS;
+      const p = new Path2D();
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      p.moveTo(a[0], a[1]);
+      p.quadraticCurveTo(mx + nx * w * 2, my + ny * w * 2, b[0], b[1]);
+      p.quadraticCurveTo(mx - nx * w * 2, my - ny * w * 2, a[0], a[1]);
+      p.closePath();
+      ink.addPath(p);
+      shapes.push({ op, path: p, pts: [a, b, [nx, ny]] });
     }
-    g.strokeStyle = INK;
-    g.lineWidth = KIT_INK_W * 2;
-    g.stroke(ink);
-    for (const { op, path, pts } of shapes) {
-      if (op.k === 'stalk') {
-        g.strokeStyle = litCol(dormant ? mixH(op.col, RIME_TOP, FROST_SIDE) : op.col, Math.min(0.8, 0.35 + stalkLit));
-        g.lineWidth = op.w;
-        g.stroke(path as Path2D);
-      } else if (op.k === 'leaf') {
-        // Two-sided: lit by whichever face the sun is on, the underside a little less.
-        const l = Math.max(litOf(light, op.n), litOf(light, [-op.n[0], -op.n[1], -op.n[2]]) * 0.7);
-        const col = dormant ? mixH(op.col, RIME_TOP, op.n[2] > 0.3 ? FROST_UP : FROST_SIDE) : op.col;
-        g.fillStyle = litCol(col, l);
-        g.fill(path as Path2D);
-        if (op.rib && pts) {
-          const n = pts.length / 2;
-          g.strokeStyle = litCol(col, Math.max(0, l - 0.35));
-          g.lineWidth = 0.4;
-          g.beginPath();
-          const a = pts[0], b = pts[n - 1];
-          g.moveTo(a[0], a[1]);
-          g.lineTo(a[0] + (b[0] - a[0]) * 0.8, a[1] + (b[1] - a[1]) * 0.8);
-          g.stroke();
-        }
-      } else if (op.k === 'ball' && pts) {
-        // Round: its shade, a lit face toward the sun, and a light on that.
-        const [cx, cy] = pts[0];
-        const r = op.r * ACROSS;
-        g.fillStyle = litCol(op.col, litOf(light, unitV([-light.sun[0], -light.sun[1], 0.6])) * 0.6 + 0.12);
-        g.fill(path as Path2D);
-        g.fillStyle = litCol(op.col, litOf(light, unitV([light.sun[0] * 0.5, light.sun[1] * 0.5, 1])));
+  }
+  g.strokeStyle = STALK_INK;
+  for (const s of shapes) {
+    if (s.op.k !== 'stalk' || s.op.bare) continue;
+    g.lineWidth = s.op.w + KIT_INK_W * 1.6;
+    g.stroke(s.path as Path2D);
+  }
+  g.strokeStyle = INK;
+  g.lineWidth = KIT_INK_W * 2;
+  g.stroke(ink);
+  for (const { op, path, pts } of shapes) {
+    if (op.k === 'stalk') {
+      g.strokeStyle = litCol(dormant ? mixH(op.col, RIME_TOP, FROST_SIDE) : op.col, Math.min(0.8, 0.35 + stalkLit));
+      g.lineWidth = op.w;
+      g.stroke(path as Path2D);
+    } else if (op.k === 'leaf') {
+      // Two-sided: lit by whichever face the sun is on, the underside a little less.
+      const l = Math.max(litOf(light, op.n), litOf(light, [-op.n[0], -op.n[1], -op.n[2]]) * 0.7);
+      const col = dormant ? mixH(op.col, RIME_TOP, op.n[2] > 0.3 ? FROST_UP : FROST_SIDE) : op.col;
+      g.fillStyle = litCol(col, l);
+      g.fill(path as Path2D);
+      if (op.rib && pts) {
+        const n = pts.length / 2;
+        g.strokeStyle = litCol(col, Math.max(0, l - 0.35));
+        g.lineWidth = 0.4;
         g.beginPath();
-        g.arc(cx + sun[0] * r * 0.2, cy + sun[1] * r * 0.2 - r * 0.04, r * 0.76, 0, Math.PI * 2);
-        g.fill();
-        g.fillStyle = dormant ? RIME_TOP : litCol(op.col, Math.min(1, litOf(light, light.sun) + 0.15));
-        g.beginPath();
-        if (dormant) g.ellipse(cx, cy - r * 0.55, r * 0.62, r * 0.32, 0, 0, Math.PI * 2);
-        else g.arc(cx + sun[0] * r * 0.42, cy + sun[1] * r * 0.42, r * 0.3, 0, Math.PI * 2);
-        g.fill();
-        if (op.shine && !dormant) {
-          // Ripe: a crisp sheen round its lit side.
-          const a = Math.atan2(sun[1], sun[0]);
-          g.strokeStyle = SHEEN;
-          g.lineWidth = Math.max(0.45, r * 0.16);
-          g.beginPath();
-          g.arc(cx, cy, r * 0.74, a - 0.7, a + 0.7);
-          g.stroke();
-        }
-      } else if (op.k === 'spindle' && pts) {
-        // Long and round: its shade, and its half toward the sun lit.
-        const [a, b, [nx, ny]] = pts;
-        const w = op.w * ACROSS;
-        g.fillStyle = litCol(dormant ? mixH(op.col, RIME_TOP, FROST_SIDE) : op.col, litOf(light, unitV([-light.sun[0], -light.sun[1], 0.6])) * 0.6 + 0.15);
-        g.fill(path as Path2D);
-        const sgn = nx * sun[0] + ny * sun[1] >= 0 ? 1 : -1;
-        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-        g.fillStyle = dormant ? mixH(op.col, RIME_TOP, FROST_UP) : litCol(op.col, litOf(light, unitV([light.sun[0], light.sun[1], 0.8])));
-        g.beginPath();
+        const a = pts[0], b = pts[n - 1];
         g.moveTo(a[0], a[1]);
-        g.quadraticCurveTo(mx + nx * w * 2 * sgn, my + ny * w * 2 * sgn, b[0], b[1]);
-        g.quadraticCurveTo(mx + nx * w * 0.3 * sgn, my + ny * w * 0.3 * sgn, a[0], a[1]);
-        g.fill();
-        if (op.shine && !dormant) {
-          // Ripe: a glint along its lit side.
-          const o = w * 1.05 * sgn;
-          g.strokeStyle = SHEEN;
-          g.lineWidth = Math.max(0.4, w * 0.4);
-          g.beginPath();
-          g.moveTo(a[0] + (b[0] - a[0]) * 0.28 + nx * o, a[1] + (b[1] - a[1]) * 0.28 + ny * o);
-          g.lineTo(a[0] + (b[0] - a[0]) * 0.66 + nx * o, a[1] + (b[1] - a[1]) * 0.66 + ny * o);
-          g.stroke();
-        }
+        g.lineTo(a[0] + (b[0] - a[0]) * 0.8, a[1] + (b[1] - a[1]) * 0.8);
+        g.stroke();
+      }
+    } else if (op.k === 'ball' && pts) {
+      // Round: its shade, a lit face toward the sun, and a light on that.
+      const [cx, cy] = pts[0];
+      const r = op.r * ACROSS;
+      g.fillStyle = litCol(op.col, litOf(light, unitV([-light.sun[0], -light.sun[1], 0.6])) * 0.6 + 0.12);
+      g.fill(path as Path2D);
+      g.fillStyle = litCol(op.col, litOf(light, unitV([light.sun[0] * 0.5, light.sun[1] * 0.5, 1])));
+      g.beginPath();
+      g.arc(cx + sun[0] * r * 0.2, cy + sun[1] * r * 0.2 - r * 0.04, r * 0.76, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = dormant ? RIME_TOP : litCol(op.col, Math.min(1, litOf(light, light.sun) + 0.15));
+      g.beginPath();
+      if (dormant) g.ellipse(cx, cy - r * 0.55, r * 0.62, r * 0.32, 0, 0, Math.PI * 2);
+      else g.arc(cx + sun[0] * r * 0.42, cy + sun[1] * r * 0.42, r * 0.3, 0, Math.PI * 2);
+      g.fill();
+      if (op.shine && !dormant) {
+        // Ripe: a crisp sheen round its lit side.
+        const a = Math.atan2(sun[1], sun[0]);
+        g.strokeStyle = SHEEN;
+        g.lineWidth = Math.max(0.45, r * 0.16);
+        g.beginPath();
+        g.arc(cx, cy, r * 0.74, a - 0.7, a + 0.7);
+        g.stroke();
+      }
+    } else if (op.k === 'spindle' && pts) {
+      // Long and round: its shade, and its half toward the sun lit.
+      const [a, b, [nx, ny]] = pts;
+      const w = op.w * ACROSS;
+      g.fillStyle = litCol(dormant ? mixH(op.col, RIME_TOP, FROST_SIDE) : op.col, litOf(light, unitV([-light.sun[0], -light.sun[1], 0.6])) * 0.6 + 0.15);
+      g.fill(path as Path2D);
+      const sgn = nx * sun[0] + ny * sun[1] >= 0 ? 1 : -1;
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      g.fillStyle = dormant ? mixH(op.col, RIME_TOP, FROST_UP) : litCol(op.col, litOf(light, unitV([light.sun[0], light.sun[1], 0.8])));
+      g.beginPath();
+      g.moveTo(a[0], a[1]);
+      g.quadraticCurveTo(mx + nx * w * 2 * sgn, my + ny * w * 2 * sgn, b[0], b[1]);
+      g.quadraticCurveTo(mx + nx * w * 0.3 * sgn, my + ny * w * 0.3 * sgn, a[0], a[1]);
+      g.fill();
+      if (op.shine && !dormant) {
+        // Ripe: a glint along its lit side.
+        const o = w * 1.05 * sgn;
+        g.strokeStyle = SHEEN;
+        g.lineWidth = Math.max(0.4, w * 0.4);
+        g.beginPath();
+        g.moveTo(a[0] + (b[0] - a[0]) * 0.28 + nx * o, a[1] + (b[1] - a[1]) * 0.28 + ny * o);
+        g.lineTo(a[0] + (b[0] - a[0]) * 0.66 + nx * o, a[1] + (b[1] - a[1]) * 0.66 + ny * o);
+        g.stroke();
       }
     }
   }
-  return { canvas, w: x1 - x0, h: y1 - y0, ax: -x0, ay: -y0 };
 }
