@@ -486,7 +486,7 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
 /* ---- the wind ---- */
 
 /** Which way the wind pushes, along the ground. */
-const WIND: V3 = unit([1, -0.35, 0]);
+export const WIND: V3 = unit([1, -0.35, 0]);
 
 /**
  * The same tree a moment into a gust: every point pushed along the wind by
