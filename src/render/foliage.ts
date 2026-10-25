@@ -293,6 +293,9 @@ export const SHED_MOST = 1 - SHEDDING[LOOK_STEPS - 1];
 
 /* ---- Bushes ------------------------------------------------------------------ */
 
+/** A bush's wood, bare or showing through its leaf. */
+export const BUSH_WOOD = '#6f5a4c';
+
 /**
  * The bushes go through the year by the same rules, where it costs nothing:
  * the rose and the thorn are bare in winter and turn in autumn, and lavender
@@ -301,8 +304,6 @@ export const SHED_MOST = 1 - SHEDDING[LOOK_STEPS - 1];
  * end of summer; nothing in autumn, when the rose has hips on it and the
  * thorn its haws, and nothing in winter.
  */
-/** A bush's wood, bare or showing through its leaf. */
-export const BUSH_WOOD = '#6f5a4c';
 export const BUSH_EVERGREEN: ReadonlySet<string> = new Set(['Lavender bush']);
 const BUSH_AUTUMN: Readonly<Record<string, readonly [string, string]>> = {
   'Rose bush': ['#d0986a', '#9a5e44'],

@@ -1263,9 +1263,9 @@ export class Renderer {
     linesKey: string;
     lines: Map<number, Array<{ cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }>>;
   } = { key: '', trees: [], top0: 0, feet: new Map(), footAt: new Map(), linesKey: '', lines: new Map() };
-  /** This frame's shade from them, a picture a line, where each is laid (`solidShadeLine`). */
   /** How dark the solid trees' and bushes' shade is laid this frame (`solidFrame`): 0 when none is. */
   private solidAlpha = 0;
+  /** This frame's shade from them, a picture a line, where each is laid (`solidShadeLine`). */
   private solidShade: { strips: Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number; sx: number; sw: number; sh: number }> } | null = null;
   /** Each line's picture of that shade, what it shows, and where; and pictures put by to be used again. */
   private solidStripsKept = new Map<number, { sig: string; cv: HTMLCanvasElement; x0: number; top: number; wIso: number; k: number; band: number }>();
