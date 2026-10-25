@@ -9,7 +9,7 @@
 --     and a trap could be put down anywhere on the island, and a tile investigated from across it. The
 --     browser walks to within the job's range first (`Game.inRange`); the island now asks the same
 --     (`in_reach`, the job's `range`, 1 when it has none), and a crate's subtile is one of the four.
---   * And past those nine, no job pointed at a tile reaches further than `private.reach_most()` tiles,
+--   * And past those nine, no job pointed at a tile of the island reaches further than `private.reach_most()` tiles,
 --     whatever family answers for it: a ceiling under every reach the island has, for the next one that
 --     forgets its own.
 --   * `rpc_creatures`, `rpc_ground` and `rpc_springs` read as far round you as the browser asked: the whole
@@ -48,6 +48,16 @@ begin
   raise exception 'Bad request: % %.', p_door, p_what using errcode = '22023';
 end $fn$;
 
+/** Whether the point (x, y), both numbers and both on an island `p_size` across, is more than `p_most` tiles from (px, py). */
+create or replace function private.far_off(p_px double precision, p_py double precision, p_x jsonb, p_y jsonb,
+                                           p_size int, p_most int) returns boolean language sql immutable as $fn$
+  select case when jsonb_typeof(p_x) = 'number' and jsonb_typeof(p_y) = 'number'
+               and (p_x #>> '{}')::double precision between 0 and p_size and (p_y #>> '{}')::double precision between 0 and p_size
+              then greatest(abs(floor(p_px) - floor((p_x #>> '{}')::double precision)),
+                            abs(floor(p_py) - floor((p_y #>> '{}')::double precision))) > p_most
+              else false end
+$fn$;
+
 /**
  * Whether a job pointed at a tile is in reach of the body asking: the set-down jobs at their own range and
  * on one of a tile's subtiles, and every job under `reach_most`. Null when it is, or when the target is not
@@ -55,15 +65,15 @@ end $fn$;
  */
 create or replace function private.reach_refusal(p_world uuid, p_uid uuid, p_action text, p_target jsonb) returns text
 language plpgsql stable as $fn$
-declare v_x double precision; v_y double precision; v_d action_def; v_most int := private.reach_most();
+declare v_x double precision; v_y double precision; v_d action_def; v_most int := private.reach_most(); v_size int;
 begin
   if p_target is null or coalesce(p_target->>'kind', 'tile') not in ('tile', 'ground') then return null; end if;
-  select pl.x, pl.y into v_x, v_y from player pl where pl.world_id = p_world and pl.uid = p_uid;
+  select pl.x, pl.y, w.size into v_x, v_y, v_size from player pl join world w on w.id = pl.world_id
+   where pl.world_id = p_world and pl.uid = p_uid;
   if v_x is null then return null; end if;
-  if (jsonb_typeof(p_target->'x') = 'number' and abs(floor(v_x) - floor((p_target->>'x')::double precision)) > v_most)
-     or (jsonb_typeof(p_target->'y') = 'number' and abs(floor(v_y) - floor((p_target->>'y')::double precision)) > v_most)
-     or (jsonb_typeof(p_target->'cx') = 'number' and abs(floor(v_x) - floor((p_target->>'cx')::double precision)) > v_most)
-     or (jsonb_typeof(p_target->'cy') = 'number' and abs(floor(v_y) - floor((p_target->>'cy')::double precision)) > v_most) then
+  -- A tile of the island only, its tile or its corner: one off it is nothing to reach, and each family says so in its own words.
+  if private.far_off(v_x, v_y, p_target->'x', p_target->'y', v_size, v_most)
+     or private.far_off(v_x, v_y, p_target->'cx', p_target->'cy', v_size, v_most) then
     return 'You are too far away from that.';
   end if;
   if not private.set_down_job(p_action) then return null; end if;
@@ -80,7 +90,8 @@ end $fn$;
 
 revoke all on function private.reach_most(), private.read_range_most(), private.price_most(), private.island_name_most(),
   private.action_name_most(),
-  private.set_down_job(text), private.bad_request(text, text), private.reach_refusal(uuid, uuid, text, jsonb)
+  private.set_down_job(text), private.bad_request(text, text), private.reach_refusal(uuid, uuid, text, jsonb),
+  private.far_off(double precision, double precision, jsonb, jsonb, int, int)
   from public, anon, authenticated;
 
 insert into private.door_guard (door, ord, line) values
