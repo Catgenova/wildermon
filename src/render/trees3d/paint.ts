@@ -12,7 +12,8 @@ import { cut, glyphPath, proj, RUNE_EDGE, RUNE_GOLD, RUNE_WHITE, type Eye } from
 import { mulberry32 } from '../../world/noise';
 import { sprigOf } from '../outcrops';
 import type { Light } from './light';
-import type { Clump, Dress, Limb, Pad, Ramp, RGB, Skeleton, Species3D, V3 } from './types';
+import { WIND } from './skeleton';
+import type { Clump, Dress, Limb, Pad, Ramp, RGB, Skeleton, Species3D, Strand, V3 } from './types';
 import { add, cross, dot, hex, len, lerp, mixRgb, mul, rgb, sub, unit } from './vec';
 
 type Ctx = CanvasRenderingContext2D;
@@ -33,8 +34,9 @@ export interface Job {
   light: Light;
   e: Eye;
   seed: number;
-  /** Which of the wind's frames, for what is in the air. */
+  /** Which of the wind's frames, for what is in the air, and how many there are (4 unless given). */
   frame: number;
+  frames?: number;
 }
 
 /* ---- what is shown ------------------------------------------------------------- */
@@ -133,8 +135,19 @@ function birchLeafAt(g: Ctx | Path2D, x: number, y: number, s: number, a: number
   g.closePath();
 }
 
+/** One small willow leaf lying or flying: narrow and pointed at both ends, `s` long, turned `a`, squashed `flat` top to bottom. */
+function willowLeafAt(g: Ctx | Path2D, x: number, y: number, s: number, a: number, flat = 1): void {
+  const ca = Math.cos(a), sa = Math.sin(a);
+  const P = (lx: number, ly: number): Pt => [x + lx * ca - ly * sa, y + (lx * sa + ly * ca) * flat];
+  const L = s * 0.75, W = s * 0.2;
+  g.moveTo(...P(-L, 0));
+  g.quadraticCurveTo(...P(0, -W * 2), ...P(L, 0));
+  g.quadraticCurveTo(...P(0, W * 2), ...P(-L, 0));
+  g.closePath();
+}
+
 /** The leaf a species lies and falls in. */
-const leafOf = (spec: Species3D): typeof leafAt => (spec.leafForm === 'oak' ? oakLeafAt : spec.leafForm === 'birch' ? birchLeafAt : leafAt);
+const leafOf = (spec: Species3D): typeof leafAt => (spec.leafForm === 'oak' ? oakLeafAt : spec.leafForm === 'birch' ? birchLeafAt : spec.leafForm === 'willow' ? willowLeafAt : leafAt);
 
 /* ---- wood -------------------------------------------------------------------------- */
 
@@ -198,7 +211,8 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
   };
   // What is never drawn is not looked at: under a full crown the finer wood, among any leaf an open crown's finest twigs.
   // An open crown in full leaf hides its branches: only the limbs off the trunk show, low and through its gaps.
-  const cut = leafy ? 2 : job.spec.open && job.dress.full > 0 ? 4 : 99;
+  // A weeping crown in leaf hides its twigs behind its curtains.
+  const cut = leafy ? 2 : job.spec.open && job.dress.full > 0 ? (job.sk.clumps[0]?.curtain ? 3 : 4) : 99;
   for (let i = 0; i < limbs.length; i++) if (limbs[i].order < cut && goesOn(i)) next.set(limbs[i].parent, i);
   const V = unit(e.toward as V3);
   const snowy = job.dress.season === 'winter';
@@ -382,7 +396,8 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     g.lineWidth = 0.42;
     g.beginPath();
     const n = Math.min(6, Math.floor(rm / 1.3));
-    if (job.spec.bark.ridged) ridges(g, c, j0, j1, n, R);
+    if (job.spec.bark.twist) twisted(g, job, c, j0, j1, n);
+    else if (job.spec.bark.ridged) ridges(g, c, j0, j1, n, R);
     else if (job.spec.bark.strands && c.order === 0) fibres(g, c, j0, j1, Math.min(7, Math.floor(rm / 1.1)), R, job.spec.bark.strands);
     else for (let i = 0; i < n; i++) {
       const s = -0.75 + (1.5 * (i + 0.5)) / n + (R() - 0.5) * 0.18;
@@ -456,6 +471,47 @@ function fibres(g: Ctx, c: Chain, j0: number, j1: number, n: number, R: () => nu
   g.lineWidth = 0.32;
   g.stroke(light);
   g.globalAlpha = was;
+}
+
+/**
+ * Bark twisted as a rope is: `n` grooves wound round the limb, each drawn
+ * where it comes round the side the eye sees, with a lit ridge beside it on
+ * the side toward the light. Strokes into the path begun by the caller.
+ */
+function twisted(g: Ctx, job: Job, c: Chain, j0: number, j1: number, n: number): void {
+  const SUB = 3;
+  const k = n + 1;
+  // One turn round in about three widths of the limb.
+  let along = 0;
+  const ridge = new Path2D();
+  for (let i = 0; i < k; i++) {
+    const ph = (i / k) * TAU + c.pieces[0] * 0.7;
+    let on = false;
+    along = 0;
+    for (let j = j0; j < j1; j++) {
+      const seg = Math.hypot(c.q[j + 1][0] - c.q[j][0], c.q[j + 1][1] - c.q[j][1]);
+      for (let m = j === j0 ? 0 : 1; m <= SUB; m++) {
+        const t = m / SUB;
+        const r = c.r[j] + (c.r[j + 1] - c.r[j]) * t;
+        const th = ph + (along + seg * t) / (r * 1.9);
+        const s = Math.sin(th);
+        const qx = c.q[j][0] + (c.q[j + 1][0] - c.q[j][0]) * t, qy = c.q[j][1] + (c.q[j + 1][1] - c.q[j][1]) * t;
+        const nx = c.n[j][0] + (c.n[j + 1][0] - c.n[j][0]) * t, ny = c.n[j][1] + (c.n[j + 1][1] - c.n[j][1]) * t;
+        if (Math.cos(th) < 0.15 || Math.abs(s) > 0.86) { on = false; continue; }
+        const x = qx + nx * s * r, y = qy + ny * s * r;
+        const lx = x + nx * r * 0.16, ly = y + ny * r * 0.16;
+        if (!on) { g.moveTo(x, y); ridge.moveTo(lx, ly); on = true; } else { g.lineTo(x, y); ridge.lineTo(lx, ly); }
+      }
+      along += seg;
+    }
+  }
+  // The ridges in the lit side's tone, a little paler.
+  g.save();
+  g.globalAlpha = 0.55;
+  g.strokeStyle = rgb(mixRgb(hex(job.spec.bark.lit), [255, 246, 228], 0.25));
+  g.lineWidth = 0.5;
+  g.stroke(ridge);
+  g.restore();
 }
 
 /** Furrows as rough bark has them: wandering, broken into ridges, between `n` lines across. */
@@ -725,8 +781,13 @@ const BIRCH_EDGE: ReadonlyArray<Pt> = Array.from({ length: 7 }, (_, i) => {
   const u = i / 6;
   return [u, Math.pow(1 - Math.abs(2 * u - 1), 1.6) * (1 + 0.35 * Math.sin(Math.PI * u))] as Pt;
 });
+/** A willow leaf's tip standing out of a mass: narrow and pointed. */
+const WILLOW_EDGE: ReadonlyArray<Pt> = Array.from({ length: 7 }, (_, i) => {
+  const u = i / 6;
+  return [u, Math.pow(1 - Math.abs(2 * u - 1), 1.4) * 1.3] as Pt;
+});
 /** The edge a species' masses stand out of. */
-const edgeOf = (spec: Species3D): ReadonlyArray<Pt> => (spec.leafForm === 'oak' ? OAK_EDGE : spec.leafForm === 'birch' ? BIRCH_EDGE : LEAF_EDGE);
+const edgeOf = (spec: Species3D): ReadonlyArray<Pt> => (spec.leafForm === 'oak' ? OAK_EDGE : spec.leafForm === 'birch' ? BIRCH_EDGE : spec.leafForm === 'willow' ? WILLOW_EDGE : LEAF_EDGE);
 /** How many leaves stand out of the edge of a cluster's `j`th lump: a birch's many and small. */
 const lumpLeaves = (spec: Species3D, j: number): number => (spec.leafForm === 'birch' ? (j === 0 ? 3 : 8 + (j % 2)) : j === 0 ? 0 : 1 + (j % 2));
 
@@ -860,8 +921,9 @@ function lumpsOf(job: Job, s: Shown): Lump[] {
     const [x, y] = proj(job.e, [c.c[0] + u.o[0] * s.grown, c.c[1] + u.o[1] * s.grown, c.c[2] + u.o[2] * s.grown]);
     const rx = u.r * ACROSS * s.grown;
     const seed = job.seed * 31 + Math.round(c.k * 1e6) + j * 7;
-    // The middle lump is mostly inside the cluster: its edge plain; the others' edges in leaves.
-    return { x, y, rx, ry: rx * pad, o: outlineOf(mulberry32(seed), lumpLeaves(job.spec, j)), seed };
+    // The middle lump is mostly inside the cluster: its edge plain; the others' edges in leaves, a willow's many narrow ones.
+    const leaves = job.spec.leafForm === 'willow' ? 0 : lumpLeaves(job.spec, j);
+    return { x, y, rx, ry: rx * pad, o: outlineOf(mulberry32(seed), leaves), seed };
   });
 }
 
@@ -873,6 +935,7 @@ function lumpsOf(job: Job, s: Shown): Lump[] {
  * is still four flat tones.
  */
 function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; front: number }, outline: Path2D, lumps: Lump[], rim: string): void {
+  if (job.spec.leafForm === 'willow') return paintLobe(g, job, s, sun, outline, lumps);
   const L = clumpLight(job, s.c);
   const top = s.ramp.length - 1;
   const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
@@ -913,6 +976,111 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
     g.fill();
   }
   g.restore();
+}
+
+/**
+ * A willow lobe's outline round (cx, cy): its top and sides in shallow round
+ * bumps, the tips of the leaves it is made of, and round underneath, where
+ * its strands hang.
+ */
+function bumpPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, seed: number, n: number): void {
+  const R = mulberry32(seed + 11);
+  const a0 = R() * (TAU / n);
+  const w = TAU / n;
+  const pt = (t: number, r: number): Pt => [cx + Math.cos(t) * rx * r, cy + Math.sin(t) * ry * r];
+  p.moveTo(...pt(a0, 0.98));
+  for (let i = 0; i < n; i++) {
+    const a = a0 + i * w, mid = a + w / 2;
+    if (Math.sin(mid) > 0.45) p.quadraticCurveTo(...pt(mid, 1.02), ...pt(a + w, 0.98));
+    else p.quadraticCurveTo(...pt(mid, 1.1 + 0.06 * R()), ...pt(a + w, 0.98));
+  }
+  p.closePath();
+}
+
+/**
+ * A willow lobe as part of one dome, made of the strands that arch over it:
+ * each of its lumps filled dim for cover, then a ribbon of leaf out of its top
+ * to each bump of its edge, rising a little, arching over and falling past
+ * it. A ribbon is in the tone the dome has there: lit with a paler edge on
+ * the sun's side and the top, deeper down the far side. No rim of its own;
+ * the ink is only round the whole tree.
+ */
+function paintLobe(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number }, outline: Path2D, lumps: Lump[]): void {
+  const { sk, light, e } = job;
+  const env = sk.crown;
+  const top = s.ramp.length - 1;
+  const subs = s.c.subs ?? [];
+  const n = g.getTransform().a > 2.5 ? 12 : 9;
+  const at = lumps.map((u, j) => {
+    const o = subs[j]?.o ?? [0, 0, 0];
+    const p: V3 = [s.c.c[0] + o[0] * s.grown, s.c.c[1] + o[1] * s.grown, s.c.c[2] + o[2] * s.grown];
+    const nrm = unit([(p[0] - env.c[0]) / env.r, (p[1] - env.c[1]) / env.r, ((p[2] - env.c[2]) / env.rz) * 0.8 + 0.35]);
+    const wrap = clamp01((dot(nrm, light.sun) + 0.3) / 1.3);
+    const up = clamp01((p[2] - (env.c[2] - env.rz)) / (2 * env.rz));
+    return { u, d: dot(p, e.toward as V3), wrap, L: (light.ambient + light.direct * wrap) * (0.62 + 0.38 * up) };
+  });
+  at.sort((p, q) => p.d - q.d);
+  const lit = !light.night;
+  // The whole lobe dim, then its ribbons in the lobe's tones: three, and the pale edge of the lit ones.
+  const L0 = clumpLight(job, s.c);
+  const b = Math.max(1, Math.min(top - 2, Math.round(L0 * (top - 1.2))));
+  g.fillStyle = s.under[b - 1];
+  g.fill(outline);
+  const tones = [new Path2D(), new Path2D(), new Path2D()], edge = new Path2D();
+  for (const { u, wrap } of at) {
+    const R = mulberry32(u.seed + 11);
+    const nr = n > 9 ? Math.round(n * 1.4) : n + 2;
+    const w = TAU / nr, a0 = R() * w;
+    for (let i = 0; i < nr; i++) {
+      const mid = a0 + i * w + (R() - 0.5) * w * 0.4;
+      const cm = Math.cos(mid), sm = Math.sin(mid);
+      if (sm > 0.55) continue;
+      // Out of the top, up over the edge, and down past it: the further round to the side, the further it falls.
+      const sx = u.x + cm * u.rx * 0.32, sy = u.y - u.ry * (0.5 - 0.2 * Math.abs(cm)) + sm * u.ry * 0.15;
+      const ax = u.x + cm * u.rx * (0.9 + 0.08 * R()), ay = u.y + sm * u.ry * 0.95;
+      const cx = u.x + cm * u.rx * 0.7, cy = Math.min(u.y - u.ry * (0.85 + 0.1 * R()), ay - u.ry * 0.22);
+      const fx = ax + cm * u.rx * 0.12, fy = ay + u.ry * (0.3 + 0.6 * Math.abs(cm)) * (0.8 + 0.4 * R());
+      const xs: number[] = [], ys: number[] = [], hs: number[] = [];
+      const half = u.rx * w * 0.62;
+      for (let k = 0; k <= 4; k++) {
+        const t = k / 4, v = 1 - t;
+        xs.push(v * v * sx + 2 * v * t * cx + t * t * ax);
+        ys.push(v * v * sy + 2 * v * t * cy + t * t * ay);
+        hs.push(half * (0.35 + 0.65 * t));
+      }
+      xs.push((ax + fx) / 2 + cm * u.rx * 0.04, fx);
+      ys.push((ay + fy) / 2, fy);
+      hs.push(half * 0.85, half * 0.15);
+      // Each point's way across, turned out of the lump.
+      const m = xs.length;
+      const nx: number[] = [], ny: number[] = [];
+      for (let k = 0; k < m; k++) {
+        const a = Math.max(0, k - 1), c = Math.min(m - 1, k + 1);
+        const dx = xs[c] - xs[a], dy = ys[c] - ys[a], l = Math.hypot(dx, dy) || 1;
+        let ox = -dy / l, oy = dx / l;
+        if (ox * (xs[k] - u.x) + oy * (ys[k] - u.y) < 0) { ox = -ox; oy = -oy; }
+        nx.push(ox); ny.push(oy);
+      }
+      const band = (q: Path2D, s0: number, s1: number, to: number): void => {
+        q.moveTo(xs[0] + nx[0] * hs[0] * s1, ys[0] + ny[0] * hs[0] * s1);
+        for (let k = 1; k <= to; k++) q.lineTo(xs[k] + nx[k] * hs[k] * s1, ys[k] + ny[k] * hs[k] * s1);
+        for (let k = to; k >= 0; k--) q.lineTo(xs[k] + nx[k] * hs[k] * s0, ys[k] + ny[k] * hs[k] * s0);
+        q.closePath();
+      };
+      const score = cm * sun.sx * 0.8 - sm * 0.5 + (wrap - 0.5) + (R() - 0.5) * 0.3;
+      const t = score > 0.5 ? 2 : score > -0.35 ? 1 : 0;
+      band(tones[t], -1, 1, m - 1);
+      if (lit && t === 2) band(edge, 0.15, 1, 4);
+    }
+  }
+  for (let t = 0; t < 3; t++) {
+    g.fillStyle = t === 0 ? s.under[b] : t === 1 ? s.ramp[b] : s.over[b + 1];
+    g.fill(tones[t]);
+  }
+  if (lit) {
+    g.fillStyle = s.over[b + 2];
+    g.fill(edge);
+  }
 }
 
 /** Winged keys hanging in a bunch from under a clump: pairs of wings on short stalks. */
@@ -1100,9 +1268,280 @@ function paintCarving(g: Ctx, job: Job): void {
   }
 }
 
-/* ---- the whole ---------------------------------------------------------------------------- */
+/* ---- a weeping crown's curtains (`Weep`) ------------------------------------------------ */
 
 type Item = { d: number; draw: () => void };
+
+/** A strand's middle line on the screen: its points, its half-width at each, and its way across at each. */
+interface SLine { x: number[]; y: number[]; r: number[]; nx: number[]; ny: number[] }
+
+/** Points of a strand's line over the rim of its lobe, before it hangs. */
+const ARCH = 3;
+
+/**
+ * One strand's middle line on the screen: up out of its lobe and over the
+ * rim, then straight down, its end blown `dx` across; and its half-width at
+ * each point, narrow where it leaves the lobe and tapering to its end.
+ */
+function strandLine(e: Eye, root: V3, st: Strand, len: number, w: number, dx: number, step: number): SLine {
+  const ca = Math.cos(st.a), sa = Math.sin(st.a);
+  const [ax, ay] = proj(e, root);
+  const [bx, by] = proj(e, [root[0] + ca * st.arch * 0.75, root[1] + sa * st.arch * 0.75, root[2] + st.arch * 0.18]);
+  const [cx, cy] = proj(e, [root[0] + ca * st.arch * 1.15, root[1] + sa * st.arch * 1.15, root[2] - st.arch * 0.25]);
+  const [zx0, zy] = proj(e, [root[0] + ca * st.arch * 1.3, root[1] + sa * st.arch * 1.3, root[2] - len]);
+  const zx = zx0 + dx;
+  const x: number[] = [], y: number[] = [], r: number[] = [];
+  // Over the rim in a smooth curve through the apex.
+  for (let i = 0; i <= ARCH; i++) {
+    const t = i / ARCH, u = 1 - t;
+    x.push(u * u * ax + 2 * u * t * bx + t * t * cx);
+    y.push(u * u * ay + 2 * u * t * by + t * t * cy);
+    r.push(w * (0.3 + 0.7 * t));
+  }
+  const m = Math.max(2, Math.round((zy - cy) / step));
+  for (let i = 1; i <= m; i++) {
+    const u = i / m;
+    x.push(cx + (zx - cx) * Math.pow(u, 1.6));
+    y.push(cy + (zy - cy) * u);
+    r.push(w * (1 - 0.6 * u));
+  }
+  const n = x.length;
+  const nx: number[] = new Array(n), ny: number[] = new Array(n);
+  for (let j = 0; j < n; j++) {
+    const a = Math.max(0, j - 1), b = Math.min(n - 1, j + 1);
+    const ddx = x[b] - x[a], ddy = y[b] - y[a];
+    const l = Math.hypot(ddx, ddy) || 1;
+    nx[j] = -ddy / l;
+    ny[j] = ddx / l;
+  }
+  return { x, y, r, nx, ny };
+}
+
+/** Where each streamer of a strand ends, as a share of its points, from its seeded number. */
+const endsOf = (k: number): number[] => (k < 0.5 ? [0.72 + 0.24 * ((k * 7.3) % 1), 1] : [1, 0.72 + 0.24 * ((k * 13.7) % 1)]);
+const endsAt = (n: number, k: number): number[] => endsOf(k).map((f) => ARCH + 1 + Math.round((n - 2 - ARCH) * f));
+
+/**
+ * A strand's lines where it hangs: its edge on side `s`, from over the rim to
+ * the end of its streamer on that side, and the parting between its two
+ * streamers up from where the shorter one ends -- the thin rim between it
+ * and the next.
+ */
+function strandSides(p: Path2D, L: SLine, k: number, s: number): void {
+  const n = L.x.length;
+  const ends = endsAt(n, k);
+  const line = (s: number, j0: number, j1: number): void => {
+    for (let j = j0; j <= j1; j++) {
+      const x = L.x[j] + L.nx[j] * L.r[j] * s, y = L.y[j] + L.ny[j] * L.r[j] * s;
+      if (j === j0) p.moveTo(x, y); else p.lineTo(x, y);
+    }
+  };
+  if (s < 0) line(-0.7, ARCH, ends[0]);
+  else line(0.7, ARCH, ends[1]);
+  line(0, ARCH + Math.round((n - ARCH) * 0.35), Math.min(ends[0], ends[1]) - 1);
+}
+
+/**
+ * A strand as a pair of narrow streamers of leaves: from `s0` to `s1` across
+ * its width, its outer edges cut into leaf tips pointing down, each streamer
+ * ending at its own length in a pointed leaf, notched up between them. With
+ * `to` under one, only that much of its length, cut straight across, its
+ * edges plain.
+ */
+function strandPath(p: Path2D, L: SLine, s0: number, s1: number, to = 1, k = 0, teeth = true): void {
+  const { x, y, r, nx, ny } = L;
+  const n = x.length;
+  const whole = to >= 1;
+  const ends = whole ? endsAt(n, k) : [];
+  const last = whole ? ends[1] : Math.max(2, Math.round((n - 1) * to));
+  const leafy = teeth && whole && Math.abs(s1) > 0.9;
+  p.moveTo(x[0] + nx[0] * r[0] * s1, y[0] + ny[0] * r[0] * s1);
+  // Down one side, a leaf's tip out past every other point, the other side's between them.
+  for (let j = 1; j <= last; j++) {
+    if (leafy && j > ARCH && j % 2 === 0) p.lineTo(x[j] + nx[j] * r[j] * s1 * 1.4, y[j] + ny[j] * r[j] * s1 * 1.4 - (y[j] - y[j - 1]) * 0.5);
+    const s = whole ? s1 * 0.66 : s1;
+    p.lineTo(x[j] + nx[j] * r[j] * s, y[j] + ny[j] * r[j] * s);
+  }
+  let from = last;
+  if (whole) {
+    // Each streamer's pointed end, and the notch up between them.
+    const e1 = ends[1], e0 = ends[0], d = s1 - s0;
+    const m1 = s0 + d * 0.75, m0 = s0 + d * 0.25;
+    p.lineTo(x[e1] + (x[e1] - x[e1 - 1]) * 0.5 + nx[e1] * r[e1] * m1, y[e1] + ny[e1] * r[e1] * m1 + r[e1] * 1.7);
+    p.lineTo(x[e1] + nx[e1] * r[e1] * (m1 - d * 0.15), y[e1] + ny[e1] * r[e1] * (m1 - d * 0.15));
+    const jn = Math.min(e0, e1) - 1, mn = s0 + d * 0.5;
+    p.lineTo(x[jn] + nx[jn] * r[jn] * mn, y[jn] + ny[jn] * r[jn] * mn);
+    p.lineTo(x[e0] + nx[e0] * r[e0] * (m0 + d * 0.15), y[e0] + ny[e0] * r[e0] * (m0 + d * 0.15));
+    p.lineTo(x[e0] + (x[e0] - x[e0 - 1]) * 0.5 + nx[e0] * r[e0] * m0, y[e0] + ny[e0] * r[e0] * m0 + r[e0] * 1.7);
+    from = e0;
+  }
+  const leafy0 = teeth && whole && Math.abs(s0) > 0.9;
+  for (let j = from; j >= 1; j--) {
+    const s = whole ? s0 * 0.66 : s0;
+    p.lineTo(x[j] + nx[j] * r[j] * s, y[j] + ny[j] * r[j] * s);
+    if (leafy0 && j > ARCH && j % 2 === 1) p.lineTo(x[j] + nx[j] * r[j] * s0 * 1.4, y[j] + ny[j] * r[j] * s0 * 1.4 - (y[j] - y[j - 1]) * 0.5);
+  }
+  p.lineTo(x[0] + nx[0] * r[0] * s0, y[0] + ny[0] * r[0] * s0);
+  p.closePath();
+}
+
+/** A weeping crown's strands and bare whips, as items to lay among the rest, and the ink for under everything. */
+function curtainsOf(job: Job, shown: Shown[], sun: { sx: number; sy: number }): { ink: Path2D; items: Item[] } {
+  const { sk, e, dress, spec } = job;
+  const ink = new Path2D();
+  const items: Item[] = [];
+  const toward = e.toward as V3;
+  const near = (p: V3): number => dot(p, toward);
+  const tw = Math.hypot(toward[0], toward[1]) || 1;
+  const byClump = new Map<Clump, Shown>();
+  for (const s of shown) byClump.set(s.c, s);
+  // The trunk shows between the curtains in front of it: the strands hanging in front of it end short.
+  const fork = sk.limbs.filter((l) => l.order === 0).reduce((m, l) => (l.b[2] > m[2] ? l.b : m), [0, 0, 0] as V3);
+  const [fx] = proj(e, fork);
+  const partW = sk.crown.r * ACROSS * 0.42;
+  const frames = job.frames ?? 4;
+  const ph = (job.frame / frames) * TAU;
+  const wind = projVec(e, WIND);
+  const top = spec.leaf.summer.length - 1;
+  const whipCol = spec.whips ?? spec.bark.lit;
+  // Drawn small (two pixels to one at zoom one, or less), a strand's leaves are under a pixel: plain edges, fewer points.
+  const fine = g0.getTransform().a > 2.5;
+  const step = fine ? 4 : 6;
+  /** Bare whips, as one stroke. */
+  const whipItem = (d: number, p: Path2D): void => {
+    items.push({
+      d,
+      draw: () => {
+        g0.strokeStyle = rgb(mixRgb(hex(whipCol), KIT_INK, 0.35), 0.35);
+        g0.lineWidth = 0.65;
+        g0.lineCap = 'round';
+        g0.stroke(p);
+        g0.strokeStyle = rgb(hex(whipCol), 0.85);
+        g0.lineWidth = 0.32;
+        g0.stroke(p);
+      },
+    });
+  };
+  const line = (p: Path2D, L: SLine): void => L.x.forEach((x, j) => (j ? p.lineTo(x, L.y[j]) : p.moveTo(x, L.y[j])));
+  for (const c of sk.clumps) {
+    if (!c.curtain) continue;
+    const s = byClump.get(c);
+    const grown = s?.grown ?? 1;
+    const L = s ? clumpLight(job, c) : 0;
+    const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
+    // Strands in front of the lobe's middle and behind it, each in three tones, and their lit sides.
+    const groups = [0, 1].map(() => new Map<string, { body: Path2D; lit: Path2D; rim: Path2D }>());
+    const whips = [new Path2D(), new Path2D()];
+    let any = [false, false], bare = [false, false];
+    for (const st of c.curtain) {
+      const facing = (Math.cos(st.a) * toward[0] + Math.sin(st.a) * toward[1]) / tw;
+      const front = facing > 0 ? 1 : 0;
+      // Behind the lobe's middle it hangs from under the lobe, out of sight over it.
+      const drop = front ? 0 : c.r * 0.35 + st.o[2];
+      const root: V3 = [c.c[0] + st.o[0] * grown, c.c[1] + st.o[1] * grown, c.c[2] + (st.o[2] - drop) * grown];
+      const [rx] = proj(e, root);
+      // Parted in front of the trunk.
+      let len = st.len - drop * grown;
+      if (near(root) > near(fork) && Math.abs(rx - fx) < partW) len *= 0.28 + 0.72 * Math.pow(Math.abs(rx - fx) / partW, 1.5) + 0.1 * st.k;
+      // The ends blow about more than the lobe does.
+      const sway = frames > 1 ? 0.07 * len * (Math.sin(ph + st.k * 5) - Math.sin(st.k * 5)) : 0;
+      // Drawn small, fewer and broader: a curtain as heavy as the other trees' masses.
+      const w = st.w * ACROSS * (fine ? 1 : 1.45);
+      // Coming out in spring, the leaf down only part of each whip; going in autumn, whole strands bare.
+      const leafy = s ? (dress.season === 'autumn' ? st.k < dress.full + 0.08 : true) : false;
+      const leafLen = dress.season === 'spring' && dress.full < 1 ? len * (0.25 + 0.65 * dress.full) : len;
+      // Bare, every other one: a haze of whips rather than a cage.
+      if ((!leafy || leafLen < len) && st.k < 0.6) {
+        // A bare whip hangs from further in, off the twigs' ends, and arches out over where the lobe was.
+        const inR: V3 = [c.c[0] + st.o[0] * 0.4, c.c[1] + st.o[1] * 0.4, c.c[2] + st.o[2] * 0.4];
+        line(whips[front], strandLine(e, inR, { ...st, arch: st.arch + Math.hypot(st.o[0], st.o[1]) * 0.6 }, len + st.o[2] * 0.6, w, wind[0] * sway, 8));
+        bare[front] = true;
+      }
+      // Behind the lobe's middle, seen only between those in front: half of them, with fewer points. Drawn small, fewer still.
+      if (!leafy || (!front && st.k > (fine ? 0.55 : 0.4)) || (front && !fine && st.k > 0.66)) continue;
+      const sl = strandLine(e, root, st, leafLen, w * (s ? Math.max(0.6, grown) : 1), wind[0] * sway, (step + w) * (front ? 1 : 1.5));
+      // Lit on the side of the lobe toward the sun; a step darker behind the lobe's middle.
+      const sunny = Math.cos(st.a) * job.light.sun[0] + Math.sin(st.a) * job.light.sun[1];
+      const t = Math.max(0, Math.min(top - 1, b + (sunny > 0.35 ? 2 : sunny < -0.35 ? -1 : 1) - (front ? 0 : 2)));
+      const key = `${t}`;
+      let gp = groups[front].get(key);
+      if (!gp) groups[front].set(key, (gp = { body: new Path2D(), lit: new Path2D(), rim: new Path2D() }));
+      strandPath(gp.body, sl, -1, 1, 1, st.k, fine);
+      // Its ink: the same an ink's width wider all round.
+      strandPath(ink, { ...sl, r: sl.r.map((v) => v + KIT_INK_W * 0.75) }, -1, 1, 1, st.k, fine);
+      // Behind the lobe's middle, seen only between the strands in front: no lit side, no rim.
+      if (front) {
+        // The lit side: the half toward the sun, down most of its length; the rim down its other side.
+        const side = sun.sx >= 0 ? 1 : -1;
+        strandSides(gp.rim, sl, st.k, -side);
+        strandPath(gp.lit, sl, side * 0.1, side * 0.75, 0.7 + 0.25 * st.k);
+      }
+      any[front] = true;
+    }
+    for (const front of [0, 1]) {
+      const d = near(c.c) + (front ? c.r * 0.45 : -c.r * 0.5);
+      if (bare[front]) whipItem(d - 0.01, whips[front]);
+      if (!any[front] || !s) continue;
+      const ramp = s.ramp, over = s.over;
+      const rim = rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.6), 0.75);
+      const gs = [...groups[front].entries()].sort((p, q) => Number(p[0]) - Number(q[0]));
+      items.push({
+        d,
+        draw: () => {
+          for (const [k, gp] of gs) {
+            const t = Number(k);
+            g0.fillStyle = ramp[t];
+            g0.fill(gp.body);
+            if (!front) continue;
+            g0.fillStyle = over[Math.min(top, t + 1)];
+            g0.fill(gp.lit);
+            g0.strokeStyle = rim;
+            g0.lineWidth = KIT_INK_W * 0.45;
+            g0.stroke(gp.rim);
+          }
+        },
+      });
+    }
+  }
+  // The inside of the crown, dark under the dome: what shows through the gaps in the curtains, behind the trunk.
+  const lit = shown.filter((s) => s.c.curtain);
+  if (lit.length && dress.full >= 0.6) {
+    const env = sk.crown;
+    const rx = env.r * ACROSS * 0.46;
+    const [cx, cy] = proj(e, [env.c[0], env.c[1], env.c[2] - env.rz * 0.2]);
+    const [, by] = proj(e, [env.c[0], env.c[1], sk.height * 0.45]);
+    const p = new Path2D();
+    // A dome over, narrowing down to a ragged hem of strand ends.
+    p.moveTo(cx - rx, cy);
+    p.ellipse(cx, cy, rx, rx * 0.5, 0, Math.PI, TAU);
+    const R = mulberry32(job.seed + 77);
+    const n = 8;
+    for (let i = 0; i <= n; i++) {
+      const u = i / n;
+      const x = cx + rx * 0.8 * (1 - 2 * u);
+      const y = by + (by - cy) * 0.25 * Math.sin(Math.PI * u);
+      p.lineTo(x, y - (by - cy) * 0.15 * R());
+      if (i < n) p.lineTo(x - (rx * 0.8) / n, y + (by - cy) * (0.08 + 0.12 * R()));
+    }
+    p.closePath();
+    const ramp = lit[0].under;
+    items.push({ d: Math.min(near(env.c), near(fork)) - env.r * 0.4, draw: () => { g0.fillStyle = ramp[0]; g0.fill(p); } });
+  }
+  // A dead willow's few limp strands.
+  if (sk.whips) {
+    const p = new Path2D();
+    for (const wv of sk.whips) {
+      const st: Strand = { o: [0, 0, 0], a: wv.k * TAU, arch: 1, len: wv.len, w: 0.5, k: wv.k };
+      line(p, strandLine(e, wv.o, st, wv.len, 0.5, 0, 6));
+    }
+    whipItem(near(sk.crown.c) + sk.crown.r, p);
+  }
+  return { ink, items };
+}
+/** The context the curtains' items draw into, set as a tree is painted. */
+let g0: Ctx;
+
+/* ---- the whole ---------------------------------------------------------------------------- */
 
 export function paintTree3d(g: Ctx, job: Job): void {
   const { sk, e, dress, spec } = job;
@@ -1121,7 +1560,10 @@ export function paintTree3d(g: Ctx, job: Job): void {
     // A cluster: its lumps' outlines in the one path, filled as one.
     if (s.c.subs) {
       const lumps = lumpsOf(job, s);
-      for (const u of lumps) massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec), spec.leafForm === 'birch' ? 16 : 24);
+      for (const u of lumps) {
+        if (spec.leafForm === 'willow') bumpPath(path, u.x, u.y, u.rx, u.ry, u.seed, g.getTransform().a > 2.5 ? 12 : 9);
+        else massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec), spec.leafForm === 'birch' ? 16 : 24);
+      }
       if (spec.leafForm === 'birch') dropsOf(path, lumps);
       return { o, path, lumps };
     }
@@ -1142,6 +1584,16 @@ export function paintTree3d(g: Ctx, job: Job): void {
   g.lineCap = 'round';
   g.lineWidth = KIT_INK_W * 2;
   for (const m of masses) g.stroke(m.path);
+  // A weeping crown's strands, inked as its masses are.
+  const weeping = sk.clumps.some((c) => c.curtain) || !!sk.whips;
+  if (weeping) {
+    g0 = g;
+    const cur = curtainsOf(job, shown, sun);
+    // The strands' ink: each strand an ink's width fatter, filled in ink under them all.
+    g.fillStyle = rgb(KIT_INK);
+    g.fill(cur.ink);
+    items.push(...cur.items);
+  }
   for (const c of chains) {
     if (c.thin) {
       // A haze of fine twigs is not inked.
@@ -1443,6 +1895,16 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
       y0 = Math.min(y0, y - ry); y1 = Math.max(y1, y + ry);
     }
   }
+  // A weeping lobe's strands, out over its rim and down to their ends, blown about; a dead one's whips.
+  for (const c of sk.clumps) {
+    for (const st of c.curtain ?? []) {
+      const o: V3 = [c.c[0] + st.o[0], c.c[1] + st.o[1], c.c[2] + st.o[2]];
+      const out = st.arch * 1.35;
+      take(o, st.w + 1);
+      take([o[0] + Math.cos(st.a) * out, o[1] + Math.sin(st.a) * out, o[2] - st.len], st.w + st.len * 0.12);
+    }
+  }
+  for (const w of sk.whips ?? []) { take(w.o, 1); take([w.o[0], w.o[1], w.o[2] - w.len], 2); }
   // A hanging pad out to its fingers' tips (`Clump.pad`).
   for (const c of sk.clumps) if (c.pad) take(add(c.c, add(c.pad.root, [0, 0, -c.pad.drop - c.pad.hang * 1.6])), c.r * 0.5);
   // The litter round its foot.
