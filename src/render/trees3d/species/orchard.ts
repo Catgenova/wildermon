@@ -19,7 +19,7 @@ const mix3 = (a: Tones, b: Tones | string, t: number): Tones =>
 /** A fruit tree at its prime: small, squat and gnarled, its trunk wound round itself, under a low dome of small clusters. */
 const BUILD: Build = {
   height: 34, stem: 0.2, spread: 0.95, dome: 0.27, droop: 0.15, girth: 0.1, flare: 1.8, scaffolds: 4, forks: 3, branching: 2,
-  clumps: 22, clumpSize: 0.27, gnarl: 0.6, lean: 1.2, dead: 0, bare: false, rune: false, hollow: false,
+  clumps: 19, clumpSize: 0.29, gnarl: 0.6, lean: 1.2, dead: 0, bare: false, rune: false, hollow: false,
   habit: 'orchard', zig: 0.35, twist: 0.35, stems: 0,
 };
 

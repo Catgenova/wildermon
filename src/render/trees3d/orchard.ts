@@ -139,13 +139,14 @@ export function growOrchard(b: Build, height: number, seed: number): Skeleton {
   const azR = R() * TAU;
   for (let j = 0; j < want; j++) {
     const s = 1 - ((j + 0.5) / want) * 1.12;
-    const el = Math.asin(Math.max(-1, Math.min(1, s))) + (R() - 0.5) * 0.14;
+    // The first on the crown's top, big, so the dome has no hole in its middle.
+    const el = j === 0 ? Math.PI / 2 : Math.asin(Math.max(-1, Math.min(1, s))) + (R() - 0.5) * 0.14;
     const az = azR + j * GOLD + (R() - 0.5) * 0.3;
     // Even over the dome; one in five in toward the heart, so it is never hollow.
-    const inner = j % 5 === 3 && el > 0.3 && el < 0.9;
-    const k = inner ? 0.45 + 0.15 * R() : 0.86 + 0.08 * R();
+    const inner = j === 0 || (j % 5 === 3 && el > 0.65);
+    const k = j === 0 ? 0.9 : inner ? 0.45 + 0.15 * R() : 0.86 + 0.08 * R();
     const c: V3 = [env.c[0] + Math.cos(az) * Math.cos(el) * env.r * k, env.c[1] + Math.sin(az) * Math.cos(el) * env.r * k, env.c[2] + Math.sin(el) * rz * k];
-    spots.push({ c, az, size: inner ? 1.15 + 0.2 * R() : R() < 0.2 ? 1.2 + 0.2 * R() : 0.85 + 0.25 * R() });
+    spots.push({ c, az, size: j === 0 ? 1.4 : inner ? 1.15 + 0.2 * R() : R() < 0.2 ? 1.2 + 0.2 * R() : 0.85 + 0.25 * R() });
   }
   // Each to the living limb nearest round the trunk; a shrivelled tree's to any, grown to where its crown was.
   const mine: number[][] = azOf.map(() => []);
@@ -178,8 +179,9 @@ export function growOrchard(b: Build, height: number, seed: number): Skeleton {
       out /= mine[i].length;
       top /= mine[i].length;
     } else if (dead && !b.bare) {
-      out = env.r * (1.0 + 0.15 * R());
-      top = env.c[2] + rz * (0.55 + 0.4 * R());
+      // Up and out through the top of the crown, standing clear of it.
+      out = env.r * (0.75 + 0.15 * R());
+      top = env.c[2] + rz * 1.2 + rm * (1.3 + 0.3 * R());
     }
     const reach = out * (dead && !b.bare ? 1 : 0.62 + 0.12 * R());
     const lift = (top - B[2]) * (dead && !b.bare ? 1 : 0.6 + 0.15 * R());

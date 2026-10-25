@@ -42,7 +42,7 @@ export interface Job {
  * A mass as a day shows it: the ramp it is painted on -- in autumn, the ramp
  * of its top and of its underside too -- and how far grown it is.
  */
-export interface Shown { c: Clump; ramp: Ramp; under: Ramp; over: Ramp; grown: number; bloom?: boolean }
+export interface Shown { c: Clump; ramp: Ramp; under: Ramp; over: Ramp; grown: number; bloom?: boolean; back?: boolean }
 
 function rampMix(a: Ramp, b: Ramp, t: number): Ramp {
   return a.map((c, i) => rgbHex(mixRgb(hex(c), hex(b[i] ?? b[b.length - 1]), t)));
@@ -103,10 +103,12 @@ function inFlower(job: Job): Shown[] {
   const out: Shown[] = [];
   for (const c of sk.clumps) {
     if (c.k >= keep) continue;
-    const fl = flowerRoll(c) < bloom.cover;
+    // The top of the crown always in flower: its new leaf shows between the clusters, not over them.
+    const fl = flowerRoll(c) < bloom.cover || c.up > 0.7;
     const r = fl ? bloom.ramp : leaf;
-    // A deciduous tree's leaf is only coming out among its blossom: small tufts of it.
-    out.push({ c, ramp: r, under: r, over: r, grown: fl || spec.evergreen ? 1 : 0.38 + 0.2 * dress.full, bloom: fl });
+    // A deciduous tree's leaf is only coming out among its blossom: tufts of it set back among the flowers.
+    const back = !fl && !spec.evergreen;
+    out.push({ c, ramp: r, under: r, over: r, grown: back ? 0.55 + 0.2 * dress.full : 1, bloom: fl, back });
   }
   return out;
 }
@@ -708,7 +710,7 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
     g.beginPath();
     for (let i = 0; i < 2; i++) {
       const a = Math.PI / 2 + (i - 0.5) * 1.3 + (R() - 0.5) * 0.5;
-      leafOf(job.spec)(g, u.x + Math.cos(a) * u.rx * 0.78, u.y + Math.sin(a) * u.ry * 0.78, u.rx * 0.42, a + (R() - 0.5) * 0.6, 0.85);
+      leafOf(job.spec)(g, u.x + Math.cos(a) * u.rx * 0.82, u.y + Math.sin(a) * u.ry * 0.82, u.rx * 0.55, a + (R() - 0.5) * 0.6, 0.85);
     }
     g.fill();
   } else if (u && !froth) {
@@ -723,7 +725,7 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
 
 /** One flower, `r` across, its five round petals turned `a`. */
 function flowerAt(p: Path2D, x: number, y: number, r: number, a: number): void {
-  const N = 20;
+  const N = 15;
   for (let i = 0; i <= N; i++) {
     const t = (i / N) * TAU;
     const k = r * (0.5 + 0.5 * Math.abs(Math.cos(2.5 * t)));
@@ -744,7 +746,8 @@ function paintBlossom(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
   for (const u of lumps) {
     const R = mulberry32(u.seed + 11);
     const sunny = (u.x - ccx) * sun.sx + (u.y - ccy) * sun.sy - (u.y - ccy) * 0.5 >= -u.rx * 0.35;
-    const n = sunny ? 2 + (u.rx > 9 ? 1 : 0) : 1;
+    // In blossom two on a lit lump and one in the shade; a frothy crown's florets one to a lit lump.
+    const n = open ? (sunny ? 2 : 1) : sunny ? 1 : 0;
     const fr = Math.max(0.8, u.rx * 0.3);
     for (let i = 0; i < n; i++) {
       const a = Math.atan2(sun.sy - 0.8, sun.sx) + (R() - 0.5) * 2.6;
@@ -1172,7 +1175,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
   shown.forEach((s, i) => {
     const rim = rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.7), 0.9);
     items.push({
-      d: near(s.c.c),
+      d: near(s.c.c) - (s.back ? sk.crown.r * 0.4 : 0),
       draw: () => {
         const lumps = masses[i].lumps;
         if (lumps) paintCluster(g, job, s, sun, masses[i].path, lumps, rim);
