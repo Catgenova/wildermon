@@ -330,6 +330,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_report_player(uuid,uuid,text,text)",
     "rpc_rite(uuid,text)",
     "rpc_rune_gate_folk(uuid)",
+    "rpc_sales(uuid,text)",
     "rpc_say(uuid,text)",
     "rpc_set_look(jsonb)",
     "rpc_settle(bigint,uuid,bigint,boolean,jsonb)",

@@ -1494,6 +1494,74 @@ button.goal-row:focus-visible {
   min-width: 0;
 }
 
+/* Find: the box takes the line, the sort beside it; on a narrow window the sort goes under. */
+.market-findbar {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 6px;
+}
+
+.market-find {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+
+.market-sort {
+  flex: 0 0 auto;
+}
+
+/* A price against the month's average, under the price. */
+.market-cost .market-vs,
+.market-row > .market-vs {
+  display: block;
+  color: var(--ui-dim);
+  font-size: 11px;
+}
+
+/* A stall's heading with Walk and Pin at its end. */
+.market-stall {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.market-stall > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* A thing's last sales, under its price row. */
+.market-sales {
+  margin: 0 0 6px 8px;
+  color: var(--ui-dim);
+  font-size: 11px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.price-row > .market-acts {
+  flex: 0 0 auto;
+}
+
+/* A narrow window: a thing's name takes its line, the price and buttons the next. */
+@container (max-width: 340px) {
+  .market-good.market-hit {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .market-hit > .market-what {
+    grid-column: 1 / -1;
+  }
+
+  .price-row {
+    flex-wrap: wrap;
+  }
+
+  .price-row > .price-name {
+    flex-basis: 100%;
+  }
+}
+
 /* The Trade window: two columns side by side, which stack one over the other in a narrow window or on a phone. */
 .barter-page {
   display: flex;

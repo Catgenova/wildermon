@@ -41,6 +41,8 @@ import { CELLAR_ACTION_BY_ID, CELLAR_DAYLIGHT, cellarOutdoor } from '../../game/
 import { SPIRAL_TREADS } from '../../game/spiral';
 import { materialName } from '../../game/buildActions';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_SEEN, COUNTER_WALL } from '../../game/counters';
+import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
+import { FIND_SHOWN } from '../../game/marketfind';
 import { BARTER_IDLE, BARTER_MOST, BARTER_REACH } from '../../game/barter';
 import { flameSources } from '../../game/lantern';
 import { LAMP_INTO_WALL } from '../../game/lamps';
@@ -2270,6 +2272,13 @@ export function helpText(): string {
       <li><b>Market</b> window (<kbd>U</kbd>) holds every way below.</li>
       <li><b>The market board</b> (at a settlement totem or mailbox): every stall on the island, location, owner, goods and prices, nearest first.
       Buy at the stall: <b>Buy</b> at its counter; the price goes from your purse to its till.</li>
+      <li><b>Find</b> (Board and Prices tabs): every priced thing on every stall and shop counter matching the words typed (name or material), one row each:
+      QL, silver each, % under or over its ${SALE_DAYS}-day average, stall, location, distance; max ${FIND_SHOWN} rows. Sort: price each, QL, distance.</li>
+      <li>Each row: <b>Walk</b> (there, however far), <b>Pin</b> (a map mark in the market colour), <b>Buy</b> once within ${COUNTER_REACH} tiles of its counter.</li>
+      <li>Away from a totem or mailbox: the last board read this session (Find, Walk, Pin and Buy still work; Fill does not), and the nearest settlement totem with Walk and Pin.</li>
+      <li><b>Prices</b> tab: every thing sold in ${SALE_DAYS} days: count, lowest to highest silver each, average, average QL, a bar a day.
+      <b>History</b>: its last ${SALES_SHOWN} sales: when, how many, QL, silver each. <b>Order</b>: the buy-order form for it at its average price.</li>
+      <li><b>Map</b>: a square at every stall and shop counter on the last board read, in the market colour; your own hollow.</li>
       <li><b>A deal</b> (both present, within a few tiles): tick what you give, name what you want, choose who. Your side is held out of your pack while it stands (cannot be eaten,
       sold or promised elsewhere). Accepted or declined whole; you may withdraw until they answer.</li>
       <li><b>A stall</b> (you absent): nail one up, put goods on the counter, price each; sells while you are away; coins wait in its till. Only its owner takes goods back;

@@ -2859,6 +2859,26 @@ jobs:
             --outfile=node_modules/.cache/market.mjs --log-level=error
           node node_modules/.cache/market.mjs
 
+      - name: Finding things on the market
+        if: matrix.shard == 3
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          CROWD_STRICT: '1'
+        run: |
+          # "The stalls work, but finding things in them doesn't." Through the
+          # doors on Hoarding: a sale off a stall and one brought to an order
+          # written down with the quality of what went; rpc_prices with a day's
+          # average quality; rpc_sales, a thing's last sales newest first and
+          # no more than sales_shown(); away from the board, the nearest
+          # settlement token. Drawn in Chrome: Find across every stall, by the
+          # price of one, by QL and by distance, each against the month's
+          # average; Walk, Pin once, Buy at the counter; History and Order;
+          # the last board read still found in away from the token; the map
+          # handed every stall; nothing off the side of a phone.
+          npx esbuild supabase/test/marketfind.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/marketfind.mjs --log-level=error
+          node node_modules/.cache/marketfind.mjs
+
       - name: A shop counter, on both sides
         if: matrix.shard == 3
         run: |

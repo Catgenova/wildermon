@@ -559,6 +559,8 @@ export class UI {
      */
     const marketWin = this.windows.create({ id: 'market', title: 'Market', x: 12, y: 56, width: 360, height: 440, anchor: 'tr', open: false });
     this.market = new MarketPanel(marketWin, game, this.island, () => this.social.folk());
+    // The market on the map: every stall and counter on the last board read, and your own.
+    this.minimap.stalls = () => this.market.stallsSeen();
     /*
      * Who leads the island: each skill's highest, the best-bred wildermon and
      * the biggest settlements. Beside the other two windows about other people,
