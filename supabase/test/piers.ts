@@ -968,7 +968,8 @@ rollback;`));
    * its stone decks rather than a dead end.
    */
   const entries = (UI.prototype as unknown as { buildingEntries(this: unknown, pick: unknown): MenuItem[] }).buildingEntries
-    .call({ game: g, startPlacingStairs() {} }, { x: 27, y: 58, cx: 27, cy: 58, wx: 27.5, wy: 58.5 });
+    // On a stand-in that has the window's own helpers (the area plan rows, `planarea.ts`), and the game.
+    .call(Object.assign(Object.create(UI.prototype), { game: g, startPlacingStairs() {} }), { x: 27, y: 58, cx: 27, cy: 58, wx: 27.5, wy: 58.5 });
   const planDeck = entries.find((e) => e.label === 'Plan deck');
   const byName = new Map(MATERIALS.map((m) => [m.name, m.id]));
   const offered = (planDeck?.children ?? []).map((c) => `${byName.get(c.label)}=${c.disabled ? c.hint : 'OK'}`).sort().join('|');
