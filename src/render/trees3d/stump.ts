@@ -12,6 +12,7 @@ import { proj } from '../runestone';
 import { dulled, mix } from '../trees/kit';
 import { mulberry32 } from '../../world/noise';
 import { ACROSS, bandPath, buttress, chainsOf, footOf, paintChain, paintFoot, SNOW_EDGE, type Chain, type Item, type Job } from './paint';
+import type { Light } from './light';
 import type { Limb, Skeleton, Species3D, V3 } from './types';
 import { add, dot, hex, lerp, mixRgb, mul, rgb, sub, unit } from './vec';
 
@@ -181,6 +182,8 @@ export function logsOf(r: number, length: number, n: number, angle: number, off:
     return { a: sub(mid, half), b: add(mid, half), ra: rr * 1.06, rb: rr * 0.94 };
   });
   const limbs: Limb[] = logs.map((l) => ({ a: l.a, b: l.b, ra: l.ra, rb: l.rb, order: 0, parent: -1, bough: -1 }));
+  // And each one's shade on the ground under it, for the picture's bounds only (`boundsOf`): `paintLogs3d` paints the first `logs.length`.
+  for (const l of logs) limbs.push({ a: [l.a[0], l.a[1], 0], b: [l.b[0], l.b[1], 0], ra: l.ra * 1.3, rb: l.rb * 1.3, order: 0, parent: -1, bough: -1 });
   const reach = Math.max(...logs.flatMap((l) => [Math.hypot(l.a[0], l.a[1]), Math.hypot(l.b[0], l.b[1])])) + r;
   return { sk: { limbs, clumps: [], crown: { c: [0, 0, r], r: reach, rz: r }, height: r * 2, rune: null, hollow: null }, logs };
 }
@@ -341,15 +344,79 @@ function capOf(job: Job, cut: Cut): { top: Path2D; side: Path2D } {
   return { top, side };
 }
 
+/** The ground shade's tone and strength by day, as a tree's own at its foot (`footShade`) and the shade the trees throw (`Renderer.solidFrame`). */
+const SHADE = 'rgba(30,56,66,0.27)';
+
+/** Which way and how far the light throws a stump's shade along the ground for each unit up: none at night. */
+function throwOf(light: Light): [number, number] {
+  const fl = Math.hypot(light.sun[0], light.sun[1]) || 1;
+  return [(-light.sun[0] / fl) * light.throw, (-light.sun[1] / fl) * light.throw];
+}
+
+/**
+ * The stump's model with pieces on the ground out to the end of its shade
+ * under `light`, so the picture it is baked into takes it in (`boundsOf`):
+ * never painted as wood (`paintStump3d`).
+ */
+export function thrown(m: StumpModel, light: Light): Skeleton {
+  const [dx, dy] = throwOf(light);
+  if (!dx && !dy) return m.sk;
+  const ends = m.cuts.map((c): Limb => {
+    const z = c.c[2];
+    const p: V3 = [c.c[0] + dx * z, c.c[1] + dy * z, 0];
+    return { a: p, b: p, ra: c.r, rb: c.r, order: 0, parent: -1, bough: -1 };
+  });
+  return { ...m.sk, limbs: [...m.sk.limbs, ...ends] };
+}
+
+/**
+ * Its shade on the ground, in the picture under it: round its foot, and
+ * thrown away from the sun along its stem to its cut, as the trees' is laid
+ * from discs along their wood (`./index` makeShade). It is low and small, so
+ * it goes in its own picture, a step of the sun to each, rather than in the
+ * shade laid with the ground.
+ */
+function paintStumpShade(g: Ctx, job: Job, m: StumpModel): void {
+  const [dx, dy] = throwOf(job.light);
+  const path = new Path2D();
+  const disc = (p: V3, r: number): void => {
+    const z = Math.max(0, p[2]);
+    const [sx, sy] = proj(job.e, [p[0] + dx * z, p[1] + dy * z, 0]);
+    const rx = r * ACROSS;
+    path.moveTo(sx + rx, sy);
+    path.ellipse(sx, sy, rx, rx / 2, 0, 0, TAU);
+  };
+  const foot = m.sk.foot ?? 4;
+  path.moveTo(foot, 0.5);
+  path.ellipse(0, 0.5, foot, foot * 0.5, 0, 0, TAU);
+  if (dx || dy) {
+    for (const L of m.sk.limbs) {
+      if (L.order !== 0) continue;
+      const n = Math.max(1, Math.ceil(Math.hypot(L.b[0] - L.a[0], L.b[1] - L.a[1], (L.b[2] - L.a[2]) * job.light.throw) / Math.max(0.5, L.rb)));
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        disc(lerp(L.a, L.b, t), L.ra + (L.rb - L.ra) * t);
+      }
+    }
+  }
+  g.save();
+  g.globalCompositeOperation = 'destination-over';
+  g.fillStyle = SHADE;
+  g.fill(path, 'nonzero');
+  g.restore();
+}
+
 /**
  * A stump: its foot and buttresses, its trunk banded and inked as its tree's
  * is, and each stem's sawn top, laid back to front; its bark's moss over the
  * rim in the damp seasons, snow capped on the top in winter.
  */
-export function paintStump3d(g: Ctx, job: Job, cuts: Cut[], wood: { face: string; ring: string }): void {
+export function paintStump3d(g: Ctx, job: Job, m: StumpModel, wood: { face: string; ring: string }): void {
   const { sk, e, spec } = job;
+  const cuts = m.cuts;
   const near = (p: V3): number => dot(p, e.toward as V3);
-  const chains = chainsOf(job, false);
+  // The model's own wood: what `throwOf` added past it is only for the picture's bounds.
+  const chains = chainsOf(job, false).filter((c) => c.pieces[0] < m.sk.limbs.length);
   const sawn = new Set(cuts.map((c) => c.limb));
   for (const c of chains) if (sawn.has(c.pieces[c.pieces.length - 1])) c.cut = true;
   const winter = job.dress.season === 'winter';
@@ -416,6 +483,7 @@ export function paintStump3d(g: Ctx, job: Job, cuts: Cut[], wood: { face: string
   });
   items.sort((a, b) => a.d - b.d);
   for (const it of items) it.draw();
+  paintStumpShade(g, job, m);
 }
 
 /**
@@ -431,7 +499,7 @@ export function paintLogs3d(g: Ctx, job: Job, logs: Log[], wood: { face: string;
   // The shade each lays on the ground under it, under everything, in the trees' foot shade's tone.
   g.save();
   g.globalCompositeOperation = 'destination-over';
-  g.fillStyle = 'rgba(30,56,66,0.27)';
+  g.fillStyle = SHADE;
   for (const l of logs) {
     if (l.a[2] > l.ra * 1.5) continue;
     const d = unit(sub(l.b, l.a));

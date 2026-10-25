@@ -62,7 +62,7 @@ import { quince } from './species/quince';
 import { rose } from './species/rose';
 import { thorn } from './species/thorn';
 import { willow } from './species/willow';
-import { logsOf, paintLogs3d, paintStump3d, stumpOf, woodOf, woodSpec, type StumpModel } from './stump';
+import { logsOf, paintLogs3d, paintStump3d, stumpOf, thrown, woodOf, woodSpec, type StumpModel } from './stump';
 import type { Build, Bush3D, Dress, Skeleton, Species3D, V3 } from './types';
 
 export { nextSunStep, sunStepOf, SUN_STEPS } from './light';
@@ -880,45 +880,26 @@ function stumpMaker(species: number, season: Season, x: number, y: number, turn:
     leafy: false,
     makeAt: (step) => {
       const m = stumpModelOf(species, form);
-      const job = { sk: m.sk, spec: woodSpec(spec, damp), dress: bareOf(season), light: lightOf(step), seed: seedOf(species, STUMP_AGE, form), frame: 0, scale };
-      return bake(scale, m.sk, turn, (g, e) => paintStump3d(g, { ...job, e }, m.cuts, woodOf((TREE_DEFS[species] ?? TREE_DEFS[0]).trunk)));
+      const light = lightOf(step);
+      const sk = thrown(m, light);
+      const job = { sk, spec: woodSpec(spec, damp), dress: bareOf(season), light, seed: seedOf(species, STUMP_AGE, form), frame: 0, scale };
+      // Its shade, at its foot and thrown, is in its picture (`paintStump3d`).
+      return bake(scale, sk, turn, (g, e) => paintStump3d(g, { ...job, e }, m, woodOf((TREE_DEFS[species] ?? TREE_DEFS[0]).trunk)), false);
     },
+    // It throws none with the trees' (`Renderer.solidFrame`): its own is in its picture.
     shadeHead: `stump${species}|${form}|`,
-    throwOf: (light, _e, disc) => {
-      const m = stumpModelOf(species, form);
-      // Clear of its foot, which is its own shade drawn with it (`footShade`).
-      const clear = footReach(m.sk) / ACROSS;
-      for (const L of m.sk.limbs) {
-        if (L.order !== 0) continue;
-        alongLimb(L, light, (p, r) => {
-          const z = Math.max(0, p[2]);
-          if (Math.hypot(p[0] + light.dx * z, p[1] + light.dy * z) < clear - r) return;
-          disc(p, r);
-        });
-      }
-    },
+    throwOf: () => {},
   };
 }
 
 /**
  * The picture of a stump drawn as a solid, as `tree3dSprite` makes a tree's:
- * the foot of its species' tree on that tile, sawn off. Moss over its rim
- * outside the summer where its bark has moss, and snow on its top in winter.
- * Null to be drawn flat this frame.
+ * the foot of its species' tree on that tile, sawn off, and its shade.
+ * Moss over its rim outside the summer where its bark has moss, and snow on
+ * its top in winter. Null to be drawn flat this frame.
  */
 export function stump3dSprite(species: number, season: Season, _day: number, at: TreeView, scale: number): TreeSprite | null {
   return baked(stumpMaker(species, season, at.x, at.y, at.turn, scale), at.turn, sunStepOf(at.hour, at.dark), 0, at.x, at.y);
-}
-
-/** What a stump throws on the ground, as `tree3dShadow` a tree's: along its wood, clear of its foot. */
-export function stump3dShadow(species: number, x: number, y: number, step: number, turn: number): TreeShade | null {
-  const m = stumpMaker(species, 'summer', x, y, turn, 1);
-  return shaded(m.shadeHead, step, turn, x, y, m.throwOf);
-}
-
-/** How far round a tile's stump's foot its own shade reaches, as `tree3dFoot`. */
-export function stump3dFoot(species: number, x: number, y: number): number {
-  return footReach(stumpModelOf(species, formOf(species, x, y)).sk);
 }
 
 /** The ways a felled log lies, round the compass: it keeps none of its own, so its tile picks one. */

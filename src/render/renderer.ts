@@ -43,7 +43,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
-import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, formAt, nextSunStep, STUMP3D_SPECIES, stump3dFoot, stump3dShadow, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, formAt, nextSunStep, STUMP3D_SPECIES, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -1257,7 +1257,7 @@ export class Renderer {
   /** The trees drawn as solids in the shade's window, read off the world, and which of them shade which line under this sun. */
   private solidScan: {
     key: string;
-    trees: Array<{ ix: number; iy: number; x: number; y: number; species: number; variant: number; form: number; grew: number; h: number; bush: boolean; stump?: boolean }>;
+    trees: Array<{ ix: number; iy: number; x: number; y: number; species: number; variant: number; form: number; grew: number; h: number; bush: boolean }>;
     top0: number;
     /** The lowest foot on the screen of the trees on each line: the next line's shade starts no higher, so it is never laid over one. */
     feet: Map<number, number>;
@@ -7174,7 +7174,7 @@ export class Renderer {
         this.drawTree(ctx, ent, spr, zoom, grew);
         continue;
       }
-      // A solid stump or log has its own shade at its foot, and throws the rest with the trees' (`solidFrame`).
+      // A solid stump or log has its shade, at its foot and thrown, in its own picture (`paintStump3d`, `paintLogs3d`).
       if (this.shadow.alpha > 0.012 && !spr.solid) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
       const ready = this.atSize(spr.canvas, dw, dh);
       this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => g.drawImage(ready, px - spr.ax * zoom * grew, py - spr.ay * zoom * grew, dw, dh), undefined,
@@ -7278,20 +7278,20 @@ export class Renderer {
           const x = V.x[0] + V.x[1] * d + V.x[2] * e, y = V.y[0] + V.y[1] * d + V.y[2] * e;
           if (!world.inBounds(x, y)) continue;
           const tile = world.getTile(x, y);
-          if (tile !== TileType.Tree && tile !== TileType.Bush && tile !== TileType.Stump) continue;
+          if (tile !== TileType.Tree && tile !== TileType.Bush) continue;
           const data = world.getData(x, y);
-          const bush = tile === TileType.Bush, stump = tile === TileType.Stump;
+          const bush = tile === TileType.Bush;
           const species = bush ? bushSpecies(data) : treeSpecies(data);
-          if (!(bush ? BUSH3D_SPECIES : stump ? STUMP3D_SPECIES : TREE3D_SPECIES).has(species)) continue;
-          const variant = bush || stump ? 0 : treeVariant(data);
+          if (!(bush ? BUSH3D_SPECIES : TREE3D_SPECIES).has(species)) continue;
+          const variant = bush ? 0 : treeVariant(data);
           const u = cam.rotateX(x + 0.5, y + 0.5), v = cam.rotateY(x + 0.5, y + 0.5), h = world.centerHeight(x, y);
           const iy = (u + v) * HALF_H - h * HEIGHT_SCALE;
-          const g = stump ? stumpGrown(x, y) : grownAt(x, y);
-          trees.push({ ix: (u - v) * HALF_W, iy, x, y, species, variant, form: formAt(x, y), grew: g, h, bush, stump });
+          const g = grownAt(x, y);
+          trees.push({ ix: (u - v) * HALF_W, iy, x, y, species, variant, form: formAt(x, y), grew: g, h, bush });
           feet.set(d, Math.max(feet.get(d) ?? -Infinity, iy));
           let at = footAt.get(d);
           if (!at) footAt.set(d, (at = []));
-          at.push([(u - v) * HALF_W, iy, (bush ? bush3dFoot(species, x, y) : stump ? stump3dFoot(species, x, y) : tree3dFoot(species, variant, x, y)) * g]);
+          at.push([(u - v) * HALF_W, iy, (bush ? bush3dFoot(species, x, y) : tree3dFoot(species, variant, x, y)) * g]);
           href += h;
         }
       }
@@ -7319,13 +7319,9 @@ export class Renderer {
       // Asked once for each shape a tree can be grown as, not once a tree.
       const shades = new Map<string, ReturnType<typeof tree3dShadow>>();
       for (const tr of scan.trees) {
-        const kind = `${tr.bush ? 'b' : tr.stump ? 's' : ''}${tr.species}|${tr.variant}|${tr.form}`;
+        const kind = `${tr.bush ? 'b' : ''}${tr.species}|${tr.variant}|${tr.form}`;
         let shade = shades.get(kind);
-        if (shade === undefined) {
-          shades.set(kind, (shade = tr.bush ? bush3dShadow(tr.species, season, day, tr.x, tr.y, step, cam.rotation)
-            : tr.stump ? stump3dShadow(tr.species, tr.x, tr.y, step, cam.rotation)
-            : tree3dShadow(tr.species, tr.variant, season, day, tr.x, tr.y, step, cam.rotation)));
-        }
+        if (shade === undefined) shades.set(kind, (shade = tr.bush ? bush3dShadow(tr.species, season, day, tr.x, tr.y, step, cam.rotation) : tree3dShadow(tr.species, tr.variant, season, day, tr.x, tr.y, step, cam.rotation)));
         if (!shade) continue;
         const g = tr.grew;
         const [bx0, by0, bx1, by1] = shade.box;
