@@ -116,17 +116,42 @@ function oakLeafAt(g: Ctx | Path2D, x: number, y: number, s: number, a: number, 
   g.closePath();
 }
 
+/** One small birch leaf lying or flying: a pointed oval, `s` long, turned `a`, squashed `flat` top to bottom. */
+function birchLeafAt(g: Ctx | Path2D, x: number, y: number, s: number, a: number, flat = 1): void {
+  const ca = Math.cos(a), sa = Math.sin(a);
+  const N = 12;
+  for (let i = 0; i <= N; i++) {
+    const t = (i / N) * TAU;
+    const u = (1 - Math.cos(t)) / 2;
+    // Broad near its stalk, drawn out to a point.
+    const w = Math.pow(Math.sin(Math.PI * u), 0.8) * (1 - 0.45 * u) * 0.5 * Math.sign(Math.sin(t) || 1);
+    const lx = (u - 0.4) * s, ly = w * s;
+    const px = x + lx * ca - ly * sa, py = y + (lx * sa + ly * ca) * flat;
+    if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+  }
+  g.closePath();
+}
+
 /** The leaf a species lies and falls in. */
-const leafOf = (spec: Species3D): typeof leafAt => (spec.leafForm === 'oak' ? oakLeafAt : leafAt);
+const leafOf = (spec: Species3D): typeof leafAt => (spec.leafForm === 'oak' ? oakLeafAt : spec.leafForm === 'birch' ? birchLeafAt : leafAt);
 
 /* ---- wood -------------------------------------------------------------------------- */
+
+/** A marked bark's rough foot facing `n`: its own colour, lit as the bark is. */
+function roughAt(job: Job, base: string, n: V3): string {
+  const { light, spec } = job;
+  const l = clamp01((light.ambient + light.direct * Math.max(0, dot(n, light.sun)) - 0.22) / 0.82);
+  return rgb(mixRgb(mixRgb(hex(base), hex(spec.bark.shade), 0.25), mixRgb(hex(base), hex(spec.bark.lit), 0.3), l));
+}
 
 function barkAt(job: Job, L: Limb, n: V3, snow: boolean): string {
   const { light, spec } = job;
   const lam = Math.max(0, dot(n, light.sun));
   const l = clamp01((light.ambient + light.direct * lam - 0.22) / 0.82);
-  const lit = hex(L.dead ? spec.bark.dead : spec.bark.lit);
-  const shade = hex(spec.bark.shade);
+  // The fine twigs in their own colour, where it differs from the bark's.
+  const twig = spec.bark.twig && L.order >= 3 && !L.dead ? spec.bark.twig : null;
+  const lit = hex(twig ?? (L.dead ? spec.bark.dead : spec.bark.lit));
+  const shade = twig ? mixRgb(hex(twig), hex(spec.bark.shade), 0.4) : hex(spec.bark.shade);
   if (snow && n[2] > 0.42) return rgb(mixRgb(hex('#c9d3e6'), hex('#fbfcff'), l));
   return rgb(mixRgb(shade, lit, l));
 }
@@ -144,6 +169,8 @@ interface Chain {
   n: Pt[];
   /** Its colours from one side to the other, in `CHAIN_BANDS`, and the snow's where it lies. */
   cols: string[];
+  /** A marked bark's rough foot, in the same bands (`Species3D.bark.marks`). */
+  rough: string[] | null;
   snow: [number, number] | null;
   /** How far along its first piece its ink starts: clear of what it grows out of. */
   skip: number;
@@ -204,9 +231,13 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     const Vp = unit(sub(V, mul(D, dot(V, D))));
     const normal = (s: number): V3 => unit(add(mul(P, s), mul(Vp, Math.sqrt(Math.max(0, 1 - s * s)))));
     const cols = CHAIN_BANDS.map(([, , s]) => barkAt(job, mid, normal(s), false));
+    const marks = job.spec.bark.marks;
+    const rough = marks && first.order === 0 ? CHAIN_BANDS.map(([, , s]) => roughAt(job, marks.base, normal(s))) : null;
     let snow: [number, number] | null = null;
     // No snow on an open crown's roots: they are the trunk's foot.
-    if (snowy && Math.abs(D[2]) < 0.5 && !(job.spec.open && first.order < 0)) {
+    // Snow lies along the upswept limbs of an upright tree too, but not on its fine twigs.
+    const steep = job.spec.build.habit === 'upright' ? (first.order >= 3 ? -1 : 0.85) : 0.5;
+    if (snowy && Math.abs(D[2]) < steep && !(job.spec.open && first.order < 0)) {
       const on: number[] = [];
       for (let s = -0.95; s <= 0.951; s += 0.1) if (normal(s)[2] > 0.68) on.push(s);
       if (on.length) snow = [Math.max(-1, on[0] - 0.05), Math.min(1, on[on.length - 1] + 0.05)];
@@ -220,7 +251,7 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     const par = first.parent >= 0 && first.order > 0 ? limbs[first.parent] : null;
     const l0 = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) || 1;
     out.push({
-      pieces, q, r: rs, n, cols, snow, order: first.order,
+      pieces, q, r: rs, n, cols, rough, snow, order: first.order,
       skip: par ? Math.min(0.7, (par.rb * ACROSS * 1.1) / l0) : 0,
       thin: Math.max(...rs) < 0.75,
     });
@@ -283,6 +314,7 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
       g.fill(bandPath(c, j0, j1, i === 0 ? s0 : s0 - 0.04, i === 2 ? s1 : s1 + 0.04));
     });
   }
+  if (job.spec.bark.marks && c.order <= 1) paintMarks(g, job, c, j0, j1);
   if (c.snow) {
     g.fillStyle = '#f4f7fd';
     g.fill(bandPath(c, j0, j1, c.snow[0], c.snow[1]));
@@ -306,7 +338,7 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
   // Furrows down the bark of the trunk and the big limbs.
   const rm = Math.max(c.r[j0], c.r[j1]);
   // Rough bark only where it is broad enough to show.
-  if (rm > (job.spec.bark.ridged && c.order > 0 ? 3 : 2.2) && c.order <= 1) {
+  if (rm > (job.spec.bark.ridged && c.order > 0 ? 3 : 2.2) && c.order <= 1 && !job.spec.bark.marks) {
     g.strokeStyle = job.spec.bark.furrow;
     g.globalAlpha = c.order < 0 ? 0.35 : 0.5;
     g.lineWidth = 0.42;
@@ -326,7 +358,7 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
   }
   // An open crown's roots and the foot of its trunk are one mass: only the ink round the whole tree is on them.
   if (job.spec.open && c.order < 0) return;
-  if (job.spec.open && c.order === 0) j0 = Math.max(j0, Math.min(j1 - 1, 2));
+  if (job.spec.open && job.spec.buttress && c.order === 0) j0 = Math.max(j0, Math.min(j1 - 1, 2));
   // Its two sides in ink, from clear of whatever it grows out of.
   g.strokeStyle = rgb(KIT_INK, 0.85);
   g.lineWidth = KIT_INK_W * 0.75;
@@ -398,6 +430,149 @@ function paintMoss(g: Ctx, moss: string, c: Chain, R: () => number): void {
   g.globalAlpha = 1;
 }
 
+/* ---- a marked bark ---------------------------------------------------------------- */
+
+/** The angle `a` brought into -pi..pi. */
+const wrap = (a: number): number => a - TAU * Math.round(a / TAU);
+
+/** A point on the skin of piece `L`, `t` along it (past its ends too), facing `az` round it, `lift` along it: where it is on the screen. */
+function skinAt(job: Job, L: Limb, t: number, az: number, lift = 0): Pt {
+  const D = unit(sub(L.b, L.a));
+  const h: V3 = [Math.cos(az), Math.sin(az), 0];
+  const n = unit(sub(h, mul(D, dot(h, D))));
+  const r = Math.max(0.1, L.ra + (L.rb - L.ra) * clamp01(t));
+  return proj(job.e, add(add(lerp(L.a, L.b, t), mul(n, r)), mul(D, lift)));
+}
+
+/**
+ * A pale bark's marks on points `j0` to `j1` of a chain: dark dashes across
+ * it, a dark scar spreading down either side under every limb that leaves
+ * it, and on a stem a band of rough, cracked bark at its foot. Each is laid
+ * on the wood's skin and seen round it, so the marks keep their places as
+ * the camera turns; those round the back are not drawn.
+ */
+function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
+  const marks = job.spec.bark.marks;
+  if (!marks) return;
+  const { sk } = job;
+  const V = unit(job.e.toward as V3);
+  const aV = Math.atan2(V[1], V[0]);
+  const EDGE = Math.PI / 2 - 0.12;
+  g.save();
+  g.clip(bandPath(c, j0, j1, -1, 1));
+  const ink = new Path2D();
+  /** A mark round the skin of `L` from `a0` to `a1`, `t` along it, `th` thick along it, its ends falling `fall`: the part in sight. */
+  const band = (L: Limb, t: number, a0: number, a1: number, th: number, fall: number): void => {
+    const lo = Math.max(wrap(a0 - aV), -EDGE), hi = Math.min(wrap(a0 - aV) + (a1 - a0), EDGE);
+    if (hi <= lo) return;
+    const mid = (wrap(a0 - aV) + (a1 - a0) / 2);
+    const half = (a1 - a0) / 2 || 1;
+    const N = 6;
+    const top: Pt[] = [], bot: Pt[] = [];
+    for (let i = 0; i <= N; i++) {
+      const a = lo + ((hi - lo) * i) / N;
+      const u = (a - mid) / half;
+      const w = th * Math.sqrt(Math.max(0, 1 - u * u)) * 0.5;
+      const f = -fall * u * u;
+      top.push(skinAt(job, L, t, aV + a, f + w));
+      bot.push(skinAt(job, L, t, aV + a, f - w));
+    }
+    ink.moveTo(top[0][0], top[0][1]);
+    for (const p of top.slice(1)) ink.lineTo(p[0], p[1]);
+    for (const p of bot.reverse()) ink.lineTo(p[0], p[1]);
+    ink.closePath();
+  };
+  const rough = c.order === 0 && c.rough ? sk.rough ?? 0 : 0;
+  for (let j = j0; j < j1; j++) {
+    const i = c.pieces[j];
+    const L = sk.limbs[i];
+    const R = mulberry32(job.seed * 7 + i * 131);
+    const long = len(sub(L.b, L.a));
+    const r = (L.ra + L.rb) / 2;
+    // Dashes all round it, the more the thicker it is.
+    const n = Math.round(long * (0.6 + r * 0.8));
+    for (let k = 0; k < n; k++) {
+      // Spread evenly up it and round it, each a little off its place.
+      const t = (k + 0.2 + 0.6 * R()) / n, a = k * 2.4 + R() * 0.8, w = (0.6 + 1.3 * R() * R()) * Math.min(1, 2 / Math.max(0.5, r)) + 0.3, th = (0.2 + 0.28 * R() * R()) * Math.min(1.6, 0.6 + r * 0.25);
+      if (L.a[2] + (L.b[2] - L.a[2]) * t < rough * 0.9) continue;
+      band(L, t, a, a + w, th, th * 0.3);
+    }
+    // A scar under each limb that leaves it.
+    for (let q = i + 1; q < sk.limbs.length; q++) {
+      const K = sk.limbs[q];
+      if (K.parent !== i || K.order < 1) continue;
+      const d = sub(K.b, K.a);
+      const a = Math.atan2(d[1], d[0]);
+      const dl = Math.max(1e-6, len(sub(L.b, L.a)));
+      const t = clamp01(dot(sub(K.a, L.a), sub(L.b, L.a)) / (dl * dl)) - (K.ra * 0.9) / dl;
+      const sp = 0.7 + 0.3 * R();
+      band(L, t, a - sp, a + sp, K.ra * 0.55, K.ra * 1.6);
+      band(L, t + (K.ra * 0.5) / dl, a - 0.3, a + 0.3, K.ra * 0.7, -K.ra * 0.2);
+    }
+  }
+  g.fillStyle = marks.ink;
+  g.globalAlpha = 0.9;
+  g.fill(ink);
+  g.globalAlpha = 1;
+  // The rough bark at the foot of a stem: a ragged band in its own colour, cracked up and across.
+  if (rough > 0 && sk.limbs[c.pieces[j0]].a[2] < rough * 1.3 && c.rough) {
+    const L0 = sk.limbs[c.pieces[0]];
+    const pieceAt = (z: number): { L: Limb; t: number } => {
+      for (const k of c.pieces) {
+        const L = sk.limbs[k];
+        if (L.b[2] >= z) return { L, t: (z - L.a[2]) / Math.max(1e-6, L.b[2] - L.a[2]) };
+      }
+      return { L: L0, t: 0 };
+    };
+    const at = (z: number, a: number): Pt => {
+      const { L, t } = pieceAt(z);
+      return skinAt(job, L, t, aV + a);
+    };
+    const R = mulberry32(job.seed * 3 + c.pieces[0] * 17);
+    const N = 14;
+    const edge: Pt[] = [];
+    for (let i = 0; i <= N; i++) {
+      const a = -Math.PI / 2 + (Math.PI * i) / N;
+      // Ragged: higher and lower by turns, in steps.
+      const z = rough * (0.85 + 0.3 * R() + (i % 2 ? 0.12 : -0.08));
+      edge.push(at(z, a));
+    }
+    const p = new Path2D();
+    p.moveTo(...at(-2, -Math.PI / 2));
+    for (const e of edge) p.lineTo(e[0], e[1]);
+    p.lineTo(...at(-2, Math.PI / 2));
+    p.closePath();
+    g.clip(p);
+    CHAIN_BANDS.forEach(([s0, s1], i) => {
+      g.fillStyle = c.rough![i];
+      g.fill(bandPath(c, j0, j1, i === 0 ? s0 : s0 - 0.04, i === 2 ? s1 : s1 + 0.04));
+    });
+    // Cracks: up from the ground, and a few across.
+    g.strokeStyle = marks.ink;
+    g.lineWidth = 0.32;
+    g.lineCap = 'round';
+    g.beginPath();
+    for (let k = 0; k < 7; k++) {
+      const a = (R() - 0.5) * Math.PI * 0.9;
+      const z1 = rough * (0.35 + 0.6 * R());
+      let x = a;
+      for (let s = 0; s <= 4; s++) {
+        const z = (z1 * s) / 4;
+        x += (R() - 0.5) * 0.12;
+        const [px, py] = at(z, x);
+        if (s === 0) g.moveTo(px, py); else g.lineTo(px, py);
+      }
+    }
+    for (let k = 0; k < 4; k++) {
+      const a = (R() - 0.5) * Math.PI * 0.8, z = rough * (0.2 + 0.6 * R());
+      g.moveTo(...at(z, a));
+      g.lineTo(...at(z + (R() - 0.5) * 0.4, a + 0.3 + 0.3 * R()));
+    }
+    g.stroke();
+  }
+  g.restore();
+}
+
 /* ---- leaf -------------------------------------------------------------------------- */
 
 /** The sun's way across the screen, and how much of a ball facing the eye it lights: 0 lit from behind to 1 from the front. */
@@ -435,8 +610,15 @@ const OAK_EDGE: ReadonlyArray<Pt> = Array.from({ length: 13 }, (_, i) => {
   const u = i / 12;
   return [u, Math.pow(Math.sin(Math.PI * u), 0.6) * (0.55 + 0.45 * Math.sqrt(Math.abs(Math.sin(3 * Math.PI * u))))] as Pt;
 });
+/** A birch leaf's edge standing out of a mass: one small leaf, drawn out to a point. */
+const BIRCH_EDGE: ReadonlyArray<Pt> = Array.from({ length: 9 }, (_, i) => {
+  const u = i / 8;
+  return [u, Math.pow(1 - Math.abs(2 * u - 1), 1.25) * (1 + 0.25 * Math.sin(Math.PI * u))] as Pt;
+});
 /** The edge a species' masses stand out of. */
-const edgeOf = (spec: Species3D): ReadonlyArray<Pt> => (spec.leafForm === 'oak' ? OAK_EDGE : LEAF_EDGE);
+const edgeOf = (spec: Species3D): ReadonlyArray<Pt> => (spec.leafForm === 'oak' ? OAK_EDGE : spec.leafForm === 'birch' ? BIRCH_EDGE : LEAF_EDGE);
+/** How many leaves stand out of the edge of a cluster's `j`th lump: a birch's many and small. */
+const lumpLeaves = (spec: Species3D, j: number): number => (spec.leafForm === 'birch' ? (j === 0 ? 3 : 6 + (j % 2)) : j === 0 ? 0 : 1 + (j % 2));
 
 /** The shape of a mass, seeded: two waves of lumps round it and the leaves standing out of its edge. */
 interface Outline { lumps: [number, number, number, number]; leaves: Array<{ at: number; w: number; h: number }> }
@@ -534,7 +716,7 @@ function lumpsOf(job: Job, s: Shown): Lump[] {
     const rx = u.r * ACROSS * s.grown;
     const seed = job.seed * 31 + Math.round(c.k * 1e6) + j * 7;
     // The middle lump is mostly inside the cluster: its edge plain; the others' edges in leaves.
-    return { x, y, rx, ry: rx * pad, o: outlineOf(mulberry32(seed), j === 0 ? 0 : 1 + (j % 2)), seed };
+    return { x, y, rx, ry: rx * pad, o: outlineOf(mulberry32(seed), lumpLeaves(job.spec, j)), seed };
   });
 }
 
@@ -815,8 +997,10 @@ export function paintTree3d(g: Ctx, job: Job): void {
   for (const m of masses) g.stroke(m.path);
   for (const c of chains) {
     if (c.thin) {
+      // A haze of fine twigs is not inked.
+      if (spec.haze && c.order >= 4) continue;
       // An open crown's twigs inked finer, or the ink is all there is of them.
-      g.lineWidth = c.r[0] + c.r[c.r.length - 1] + KIT_INK_W * (spec.open && c.order >= 3 ? 1.2 : 2);
+      g.lineWidth = c.r[0] + c.r[c.r.length - 1] + KIT_INK_W * (spec.open && c.order >= 3 ? (spec.haze ? 0.7 : 1.2) : 2);
       g.beginPath();
       c.q.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
       g.stroke();
@@ -830,13 +1014,13 @@ export function paintTree3d(g: Ctx, job: Job): void {
       g.fill();
     }
   }
-  // An open crown's trunk stands on a round foot, the ground's circle of it, laid just behind the trunk.
-  const trunk = chains.find((c) => c.order === 0);
-  const foot = spec.open && trunk ? footOf(job) : null;
-  if (foot && trunk) {
+  // An open crown's trunk stands on a round foot, the ground's circle of it, laid just behind the trunk; each stem of several on its own.
+  for (const trunk of spec.open ? chains.filter((c) => c.order === 0 && sk.limbs[c.pieces[0]].parent < 0) : []) {
+    const at = trunk.pieces[0];
+    const foot = footOf(job, at);
     g.lineWidth = KIT_INK_W * 2;
     g.stroke(foot.base);
-    items.push({ d: near(sk.limbs[0].a) - 0.6, draw: () => paintFoot(g, foot, trunk) });
+    items.push({ d: near(sk.limbs[at].a) - 0.6, draw: () => paintFoot(g, foot, trunk) });
     // Each buttress by its own depth: those behind the trunk under it, those in front over it.
     foot.lobes.forEach(([a, out], k) => {
       const b = buttress(job, a, out, k);
@@ -846,7 +1030,8 @@ export function paintTree3d(g: Ctx, job: Job): void {
   // The wood, a few pieces of a limb at a time, so each run is laid in its own place among the leaf.
   for (const c of chains) {
     // An open crown's branches go in whole: each is short, and among the masses by its own depth.
-    const per = c.order <= 0 ? 8 : spec.open ? (c.order === 1 ? 4 : 6) : 2;
+    // An upright tree's stems go up through its crown: laid a few pieces at a time among the masses.
+    const per = c.order <= 0 ? (spec.build.habit === 'upright' ? 3 : 8) : spec.open ? (c.order === 1 ? 4 : 6) : 2;
     for (let j0 = 0; j0 < c.q.length - 1; j0 += per) {
       const j1 = Math.min(c.q.length - 1, j0 + per);
       const L0 = sk.limbs[c.pieces[j0]], L1 = sk.limbs[c.pieces[j1 - 1]];
@@ -915,8 +1100,7 @@ function lobesOf(job: Job): Array<[number, number]> {
 }
 
 /** A closed shape round the trunk's foot, `r(t)` from its axis at each way round, `z(t)` up. */
-function groundShape(job: Job, r: (t: number) => number, N: number, z: (t: number) => number = () => 0): Path2D {
-  const base = job.sk.limbs[0].a;
+function groundShape(job: Job, r: (t: number) => number, N: number, z: (t: number) => number = () => 0, base = job.sk.limbs[0].a): Path2D {
   const p = new Path2D();
   for (let i = 0; i <= N; i++) {
     const t = (i / N) * TAU;
@@ -932,19 +1116,19 @@ function groundShape(job: Job, r: (t: number) => number, N: number, z: (t: numbe
  * The ground's shape under a trunk, as a path on the screen: its circle, and
  * where it is buttressed a lobe out along each root with a soft dip between.
  */
-function footPath(job: Job, lobes: Array<[number, number]>): Path2D {
-  const rT = job.sk.limbs[0].ra * 1.02;
+function footPath(job: Job, lobes: Array<[number, number]>, at = 0): Path2D {
+  const rT = job.sk.limbs[at].ra * 1.02;
   return groundShape(job, (t) => {
     let r = rT;
     for (const [a, out] of lobes) r += Math.max(0, out) * Math.pow(Math.max(0, Math.cos(t - a)), 6);
     return r;
-  }, lobes.length ? 48 : 32);
+  }, lobes.length ? 48 : 32, () => 0, job.sk.limbs[at].a);
 }
 
 /** A trunk's foot on the screen: its round base on the ground, and the buttresses standing out of it. */
 interface Foot { base: Path2D; lobes: Array<[number, number]> }
-function footOf(job: Job): Foot {
-  return { base: footPath(job, []), lobes: lobesOf(job) };
+function footOf(job: Job, at = 0): Foot {
+  return { base: footPath(job, [], at), lobes: at === 0 ? lobesOf(job) : [] };
 }
 
 /** The foot's base filled in the trunk's own bands, carried down across it, so the two are one piece of wood. */
@@ -959,7 +1143,7 @@ function paintFoot(g: Ctx, foot: Foot, c: Chain): void {
   g.clip(foot.base);
   const BANDS: Array<[number, number, number]> = [[-40, -0.36, 0], [-0.36, 0.34, 1], [0.34, 40, 2]];
   for (const [s0, s1, i] of BANDS) {
-    g.fillStyle = c.cols[i];
+    g.fillStyle = (c.rough ?? c.cols)[i];
     g.beginPath();
     g.moveTo(x + nx * r * s0 - ux, y + ny * r * s0 - uy);
     g.lineTo(x + nx * r * s1 - ux, y + ny * r * s1 - uy);

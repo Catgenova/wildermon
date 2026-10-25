@@ -24,6 +24,7 @@ import type { AgeKey } from '../trees/types';
 import { lightOf, SUN_STEPS, sunStepOf } from './light';
 import { ACROSS, boundsOf, footReach, footShade, paintTree3d, shownOf } from './paint';
 import { grow, swayed } from './skeleton';
+import { birch } from './species/birch';
 import { maple } from './species/maple';
 import { oak } from './species/oak';
 import { pine } from './species/pine';
@@ -38,6 +39,7 @@ const SPECIES: ReadonlyMap<number, Species3D> = new Map([
   [byName('Maple'), maple],
   [byName('Oak'), oak],
   [byName('Pine'), pine],
+  [byName('Birch'), birch],
 ]);
 /** Which species are drawn here: take one out and it is drawn flat again. */
 export const TREE3D_SPECIES: Set<number> = new Set(SPECIES.keys());

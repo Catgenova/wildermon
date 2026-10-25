@@ -126,6 +126,9 @@ export function bolePath(ctx: CanvasRenderingContext2D, b: Bole, a = 0, c = 1): 
   ctx.closePath();
 }
 
+/** The birch's marks on its white bark. */
+export const BIRCH_INK = '#3b3532';
+
 /**
  * The trunk: roots, the bole in three bands of one bark (the lit flank, the
  * body, the shaded flank), and its marks. `marks` is the species' bark:
@@ -171,7 +174,7 @@ export function paintTrunk(ctx: CanvasRenderingContext2D, b: Bole, bark: string,
   ctx.clip();
   if (marks === 'birch') {
     // Lenticels: short dark dashes across the white, and a darker patch or two near the foot.
-    ctx.fillStyle = markInk ?? '#3b3532';
+    ctx.fillStyle = markInk ?? BIRCH_INK;
     ctx.beginPath();
     const count = 6 + Math.round((b.y[0] - b.y[n - 1]) / 5);
     for (let i = 0; i < count; i++) {
