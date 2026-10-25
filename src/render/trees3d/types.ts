@@ -135,6 +135,8 @@ export interface Build {
   stems?: number;
   /** Orchard: gaps through the lower crown, each over a limb that shows through it. */
   holes?: number;
+  /** Orchard: how far the crown narrows to its top, 0 a dome. */
+  peak?: number;
 }
 
 /** A run of tones from the deepest shade to the lit top: a clump is painted in four neighbours on it. */
@@ -167,9 +169,10 @@ export interface Species3D {
   ages: Partial<Record<AgeKey, Partial<Build>>>;
   /**
    * Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where
-   * it is rough; ridges wound round the trunk and the big limbs, lit in `rope`, where it has them.
+   * it is rough; ridges wound round the trunk and the big limbs, lit in `rope`, where it has them; the dead wood's shade, where it is not
+   * the living bark's.
    */
-  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; rope?: string };
+  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; rope?: string; deadShade?: string };
   /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed, 'oval' pointed, 'narrow' long and thin, 'puff' scalloped. */
   leafForm?: 'maple' | 'oak' | 'oval' | 'narrow' | 'puff';
   /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */

@@ -60,6 +60,8 @@ export interface OrchardKind {
   smooth?: boolean;
   /** Fruit hung in pairs on stalks. */
   pairs?: boolean;
+  /** Glossy leaf: its lit planes a step paler, and the light it catches nearly white. */
+  gloss?: boolean;
 }
 
 /** The leaf edge a flat tree's clump of leaf hints at (`../../trees/types` ClusterLook): scalloped puffs, long thin leaves or pointed ovals. */
@@ -83,12 +85,14 @@ export function orchardOf(name: string, flat: TreeLook, kind: OrchardKind): Spec
   // The new leaf among blossom is green whatever the summer crown is (`../../trees/tree`).
   const green = parseInt(flat.leaf[1].slice(3, 5), 16) > parseInt(flat.leaf[1].slice(1, 3), 16);
   const fruit = flat.fruit;
+  const shine = (r: Ramp): Ramp => (kind.gloss ? [...r.slice(0, 5), tone(r[5], 0.22), tone(r[6], 0.45)] : r);
   return {
     name,
     build,
     ages,
     bark: {
-      lit: tone(flat.bark, 0.3), shade: mix(flat.bark, '#3e3040', 0.4), dead: tone(mix(flat.bark, '#9a9a9a', 0.55), 0.3),
+      lit: tone(flat.bark, 0.3), shade: mix(flat.bark, '#3e3040', 0.4), dead: tone(mix(flat.bark, '#a4a4a8', 0.7), 0.35),
+      deadShade: mix(flat.bark, '#5c5c66', 0.7),
       furrow: mix(flat.bark, '#2e2230', 0.6), ...(kind.smooth ? {} : { rope: tone(flat.bark, 0.5) }),
     },
     leafForm: kind.leafForm ?? leafFormOf(flat),
@@ -97,11 +101,11 @@ export function orchardOf(name: string, flat: TreeLook, kind: OrchardKind): Spec
     snowLine: true,
     inkedRune: true,
     leaf: {
-      summer: rampOf(flat.leaf),
-      spring: rampOf(fresh(flat.leaf)),
+      summer: shine(rampOf(flat.leaf)),
+      spring: shine(rampOf(fresh(flat.leaf))),
       autumn: [rampOf(au), rampOf(mix3(au, flat.leaf, 0.4)), rampOf(mix3(au, '#f2c24e', 0.25))],
     },
-    ...(EVERGREEN.has(name) ? { evergreen: { winter: rampOf(wintry(flat.leaf)) } } : {}),
+    ...(EVERGREEN.has(name) ? { evergreen: { winter: shine(rampOf(wintry(flat.leaf))) } } : {}),
     orchard: {
       bloom: {
         ramp: rampOf(bloom?.tones ?? flat.leaf), eye: bloom?.eye ?? null, cover: bloom?.cover ?? 0,

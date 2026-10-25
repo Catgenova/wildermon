@@ -145,7 +145,9 @@ export function growOrchard(b: Build, height: number, seed: number): Skeleton {
     // Even over the dome; one in five in toward the heart, so it is never hollow.
     const inner = j === 0 || (j % 5 === 3 && el > 0.65);
     const k = j === 0 ? 0.9 : inner ? 0.45 + 0.15 * R() : 0.86 + 0.08 * R();
-    const c: V3 = [env.c[0] + Math.cos(az) * Math.cos(el) * env.r * k, env.c[1] + Math.sin(az) * Math.cos(el) * env.r * k, env.c[2] + Math.sin(el) * rz * k];
+    // A crown that narrows to its top drawn in toward it the higher it is.
+    const w = k * (1 - (b.peak ?? 0) * Math.max(0, Math.sin(el)));
+    const c: V3 = [env.c[0] + Math.cos(az) * Math.cos(el) * env.r * w, env.c[1] + Math.sin(az) * Math.cos(el) * env.r * w, env.c[2] + Math.sin(el) * rz * k];
     spots.push({ c, az, el, size: j === 0 ? 1.4 : inner ? 1.15 + 0.2 * R() : R() < 0.2 ? 1.2 + 0.2 * R() : 0.85 + 0.25 * R() });
   }
   // Gaps through the lower dome over a few of the limbs: their branches go on into them with nothing on them, and show.
@@ -242,7 +244,7 @@ export function growOrchard(b: Build, height: number, seed: number): Skeleton {
         fan(tp[tp.length - 1], u.r * 0.9, r * 0.06, i);
       }
       // At the rim, a twig or two through the cluster and out past its edge, which shows in leaf (`Limb.poke`).
-      if (rim && !dead && b.forks >= 2) {
+      if (rim && !dead && !s.hole && b.forks >= 2) {
         const o = unit([s.c[0] - env.c[0], s.c[1] - env.c[1], (s.c[2] - env.c[2]) * 0.6 + rz * 0.3]);
         // About one rim cluster in two.
         if (R() < 0.5) {

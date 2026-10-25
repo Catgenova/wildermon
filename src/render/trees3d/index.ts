@@ -25,10 +25,20 @@ import { lightOf, SUN_STEPS, sunStepOf } from './light';
 import { ACROSS, boundsOf, footReach, footShade, paintTree3d, shownOf } from './paint';
 import { growOrchard } from './orchard';
 import { grow, swayed } from './skeleton';
+import { apple } from './species/apple';
+import { apricot } from './species/apricot';
 import { cherry } from './species/cherry';
+import { fig } from './species/fig';
+import { lemon } from './species/lemon';
 import { maple } from './species/maple';
 import { oak } from './species/oak';
+import { olive } from './species/olive';
+import { peach } from './species/peach';
+import { pear } from './species/pear';
 import { pine } from './species/pine';
+import { plum } from './species/plum';
+import { pomegranate } from './species/pomegranate';
+import { quince } from './species/quince';
 import type { Build, Dress, Skeleton, Species3D, V3 } from './types';
 
 export { sunStepOf, SUN_STEPS } from './light';
@@ -41,6 +51,16 @@ const SPECIES: ReadonlyMap<number, Species3D> = new Map([
   [byName('Oak'), oak],
   [byName('Pine'), pine],
   [byName('Cherry'), cherry],
+  [byName('Apple'), apple],
+  [byName('Pear'), pear],
+  [byName('Plum'), plum],
+  [byName('Peach'), peach],
+  [byName('Apricot'), apricot],
+  [byName('Quince'), quince],
+  [byName('Fig'), fig],
+  [byName('Lemon'), lemon],
+  [byName('Olive'), olive],
+  [byName('Pomegranate'), pomegranate],
 ]);
 /** Which species are drawn here: take one out and it is drawn flat again. */
 export const TREE3D_SPECIES: Set<number> = new Set(SPECIES.keys());
