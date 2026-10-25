@@ -199,10 +199,21 @@ function willowLeafAt(g: Ctx | Path2D, x: number, y: number, s: number, a: numbe
   g.closePath();
 }
 
+/** A tuft of three needles standing up, `s` tall, leaning `a`: a needle leaf's picked-out leaf. */
+function needleTuft(g: Ctx | Path2D, x: number, y: number, s: number, a: number): void {
+  for (let i = -1; i <= 1; i++) {
+    const bx = x + i * s * 0.18, tx = bx + (i * 0.3 + a * 0.4) * s, ty = y - s * (1.05 - Math.abs(i) * 0.2);
+    g.moveTo(bx - s * 0.09, y);
+    g.lineTo(tx, ty);
+    g.lineTo(bx + s * 0.09, y);
+    g.closePath();
+  }
+}
+
 /** The leaf a species lies and falls in. */
 const leafOf = (spec: Species3D): typeof leafAt =>
   spec.leafForm === 'oak' ? oakLeafAt : spec.leafForm === 'birch' ? birchLeafAt : spec.leafForm === 'willow' ? willowLeafAt
-    : spec.leafForm === 'oval' || spec.leafForm === 'puff' ? ovalLeafAt : spec.leafForm === 'narrow' ? narrowLeafAt : leafAt;
+    : spec.leafForm === 'oval' || spec.leafForm === 'puff' ? ovalLeafAt : spec.leafForm === 'narrow' ? narrowLeafAt : spec.leafForm === 'needle' ? needleTuft : leafAt;
 
 /* ---- wood -------------------------------------------------------------------------- */
 
@@ -858,7 +869,7 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
 /* ---- leaf -------------------------------------------------------------------------- */
 
 /** The sun's way across the screen, and how much of a ball facing the eye it lights: 0 lit from behind to 1 from the front. */
-function sunOnScreen(job: Job): { sx: number; sy: number; front: number } {
+export function sunOnScreen(job: Pick<Job, 'e' | 'light'>): { sx: number; sy: number; front: number } {
   const { e, light } = job;
   const v = projVec(e, light.sun);
   const l = Math.hypot(v[0], v[1]) || 1;
@@ -866,7 +877,7 @@ function sunOnScreen(job: Job): { sx: number; sy: number; front: number } {
   return { sx: v[0] / l, sy: v[1] / l, front: (1 + dot(V, light.sun)) / 2 };
 }
 
-function clumpLight(job: Job, c: Clump): number {
+export function clumpLight(job: Pick<Job, 'sk' | 'light' | 'e'>, c: Clump): number {
   const { sk, light, e } = job;
   const env = sk.crown;
   const n = unit([(c.c[0] - env.c[0]) / env.r, (c.c[1] - env.c[1]) / env.r, (c.c[2] - env.c[2]) / env.rz * 0.8]);
@@ -918,6 +929,10 @@ const PETAL_EDGE: ReadonlyArray<Pt> = Array.from({ length: 13 }, (_, i) => {
   const u = i / 12;
   return [u, Math.pow(Math.abs(Math.sin(3 * Math.PI * u)), 0.6) * 0.55 * (0.6 + 0.4 * Math.sin(Math.PI * u))] as Pt;
 });
+/** A needle leaf's edge: four thin points, each its own height. */
+const NEEDLE_EDGE: ReadonlyArray<Pt> = [0, 1, 2, 3].flatMap((j): Pt[] => [[j / 4, 0], [(j + 0.5) / 4, [1, 0.75, 1.15, 0.85][j]]]).concat([[1, 0]]);
+/** How much longer a needle stands than a leaf's edge does. */
+const NEEDLE_LEN = 1.05;
 /** A frothy crown's edge: two round puffs. */
 const PUFF_EDGE: ReadonlyArray<Pt> = Array.from({ length: 13 }, (_, i) => {
   const u = i / 12;
@@ -926,14 +941,14 @@ const PUFF_EDGE: ReadonlyArray<Pt> = Array.from({ length: 13 }, (_, i) => {
 /** The edge a species' masses stand out of; a mass in flower, its petals. */
 const edgeOf = (spec: Species3D, bloom = false): ReadonlyArray<Pt> =>
   bloom ? PETAL_EDGE : spec.leafForm === 'oak' ? OAK_EDGE : spec.leafForm === 'birch' ? BIRCH_EDGE : spec.leafForm === 'willow' ? WILLOW_EDGE
-    : spec.leafForm === 'oval' ? OVAL_EDGE : spec.leafForm === 'narrow' ? NARROW_EDGE : spec.leafForm === 'puff' ? PUFF_EDGE : LEAF_EDGE;
-/** How many leaves stand out of the edge of a cluster's `j`th lump: a birch's many and small. */
-const lumpLeaves = (spec: Species3D, j: number): number => (spec.leafForm === 'birch' ? (j === 0 ? 3 : 8 + (j % 2)) : j === 0 ? 0 : 1 + (j % 2));
+    : spec.leafForm === 'oval' ? OVAL_EDGE : spec.leafForm === 'narrow' ? NARROW_EDGE : spec.leafForm === 'puff' ? PUFF_EDGE : spec.leafForm === 'needle' ? NEEDLE_EDGE : LEAF_EDGE;
+/** How many leaves stand out of the edge of a cluster's `j`th lump: a birch's many and small; needles all round every lump, the middle one's too, as they are what its edge is. */
+const lumpLeaves = (spec: Species3D, j: number): number => (spec.leafForm === 'needle' ? 3 : spec.leafForm === 'birch' ? (j === 0 ? 3 : 8 + (j % 2)) : j === 0 ? 0 : 1 + (j % 2));
 
 /** The shape of a mass, seeded: two waves of lumps round it and the leaves standing out of its edge. */
-interface Outline { lumps: [number, number, number, number]; leaves: Array<{ at: number; w: number; h: number }> }
+export interface Outline { lumps: [number, number, number, number]; leaves: Array<{ at: number; w: number; h: number }> }
 
-function outlineOf(R: () => number, leaves: number): Outline {
+export function outlineOf(R: () => number, leaves: number): Outline {
   const out: Outline = { lumps: [0.07 + 0.05 * R(), R() * TAU, 0.04 + 0.03 * R(), R() * TAU], leaves: [] };
   const a0 = R() * TAU;
   for (let i = 0; i < leaves; i++) out.leaves.push({ at: a0 + ((i + 0.3 * R()) / leaves) * TAU, w: Math.min(TAU / leaves - 0.1, 0.8 + 0.3 * R()), h: 0.2 + 0.1 * R() });
@@ -942,7 +957,7 @@ function outlineOf(R: () => number, leaves: number): Outline {
 }
 
 /** A mass's outline round (cx, cy), lumpy, with its leaves standing out of it `k` as far. */
-function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: Outline, k = 1, edge: ReadonlyArray<Pt> = LEAF_EDGE, steps = 28): void {
+export function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: Outline, k = 1, edge: ReadonlyArray<Pt> = LEAF_EDGE, steps = 28): void {
   const [a1, p1, a2, p2] = o.lumps;
   const rad = (t: number): number => 1 + a1 * Math.sin(3 * t + p1) + a2 * Math.sin(5 * t + p2);
   let first = true;
@@ -956,9 +971,21 @@ function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: 
   for (const L of o.leaves) {
     const from = L.at - L.w / 2;
     for (; t < from; t += STEP) pt(t, rad(t));
-    for (const [u, h] of edge) {
-      const a = from + u * L.w;
-      pt(a, rad(a) + h * L.h * k);
+    if (edge === NEEDLE_EDGE) {
+      // Needles stand up: on the top and the sides of a mass straight up the screen and a little out, under it out from it.
+      for (const [u, h] of edge) {
+        const a = from + u * L.w;
+        const r = rad(a), c = Math.cos(a), s = Math.sin(a);
+        // Shorter where they lean out sideways: a needle stands up, it does not stick out.
+        const up = clamp01((0.35 - s) / 0.7), l = h * L.h * k * NEEDLE_LEN * (0.35 + 0.65 * up);
+        const x = cx + c * rx * (r + l * (1 - up + up * 0.3)), y = cy + s * ry * r + (s * (1 - up) - up) * ry * l;
+        if (first) { p.moveTo(x, y); first = false; } else p.lineTo(x, y);
+      }
+    } else {
+      for (const [u, h] of edge) {
+        const a = from + u * L.w;
+        pt(a, rad(a) + h * L.h * k);
+      }
     }
     t = from + L.w;
   }
@@ -1098,7 +1125,7 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
   const off = 1 - 0.55 * sun.front;
   const edge = edgeOf(job.spec, s.cloud);
   g.strokeStyle = rim;
-  g.lineWidth = KIT_INK_W * 2;
+  g.lineWidth = KIT_INK_W * (job.spec.leafForm === 'needle' ? 1.4 : 2);
   g.lineJoin = 'round';
   g.stroke(outline);
   g.fillStyle = s.under[b];
@@ -1124,6 +1151,7 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
   // Flowers on a mass in blossom; a frothy crown's own florets the year round.
   const froth = job.spec.leafForm === 'puff';
   if ((s.bloom || froth) && !s.leafy && job.spec.orchard) paintBlossom(g, job, s, sun, lumps, b, ccx, ccy, !!s.bloom);
+  if (job.spec.leafForm === 'needle') needleTufts(g, lumps, sun, ccx, ccy, s, b);
   // A leaf or two where the light catches the top lump's edge; among blossom, the new leaf's green under it.
   const R = mulberry32(lumps[0]?.seed ?? 1);
   const u = s.cloud ? lumps.reduce((m, v) => (v.y + v.ry > m.y + m.ry ? v : m), lumps[0]) : lumps.reduce((m, v) => (v.y - v.ry < m.y - m.ry ? v : m), lumps[0]);
@@ -1143,6 +1171,35 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
     const a = Math.atan2(sun.sy - 0.6, sun.sx) + (R() - 0.5) * 1.2;
     leafOf(job.spec)(g, u.x + Math.cos(a) * u.rx * 0.5, u.y + Math.sin(a) * u.ry * 0.5, u.rx * 0.3, (R() - 0.5) * 0.8, 0.85);
     g.fill();
+  }
+  // A kept leaf in winter: one line of snow along the top of the mass, just inside its edge, over its upper part.
+  if (job.spec.snowCap && job.dress.season === 'winter' && lumps.length) {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const v of lumps) {
+      x0 = Math.min(x0, v.x - v.rx * 0.9); x1 = Math.max(x1, v.x + v.rx * 0.9);
+      y0 = Math.min(y0, v.y - v.ry * 0.88); y1 = Math.max(y1, v.y + v.ry);
+    }
+    // Where it lies: the top edge, down its sides no further than a third of the way.
+    const low = y0 + (y1 - y0) * 0.3;
+    const p = new Path2D();
+    const N = 28;
+    let on = false;
+    for (let i = 0; i <= N; i++) {
+      const x = x0 + ((x1 - x0) * i) / N;
+      let y = Infinity;
+      for (const v of lumps) {
+        const u = (x - v.x) / (v.rx * 0.9);
+        if (Math.abs(u) < 1) y = Math.min(y, v.y - v.ry * 0.88 * Math.sqrt(1 - u * u));
+      }
+      const open = y < low;
+      if (open && on) p.lineTo(x, y); else if (open) p.moveTo(x, y);
+      on = open;
+    }
+    g.strokeStyle = '#f4f7fd';
+    g.lineWidth = Math.max(0.5, (lumps[0]?.ry ?? 2) * 0.16);
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.stroke(p);
   }
   g.restore();
 }
@@ -1440,6 +1497,44 @@ function paintFruit(g: Ctx, job: Job, at: Hang[], r: number, sun: { sx: number; 
   g.strokeStyle = rgb(KIT_INK, 0.8);
   g.lineWidth = KIT_INK_W * 0.8;
   g.stroke(lipInk);
+}
+
+/**
+ * Needle leaf across a cluster, not only round its edge: along each lump's
+ * top a fringe of upright needles, lit where the lump is turned to the sun,
+ * with dark slivers between them where the fringe goes down into the gaps.
+ */
+function needleTufts(g: Ctx, lumps: Lump[], sun: { sx: number; sy: number }, ccx: number, ccy: number, s: Shown, b: number): void {
+  const gaps = new Path2D(), lit = new Path2D(), dim = new Path2D();
+  for (const u of [...lumps].sort((p, q) => p.y - q.y)) {
+    const toSun = (u.x - ccx) * sun.sx + (u.y - ccy) * sun.sy - (u.y - ccy) * 0.5 >= -u.rx * 0.35;
+    const p = toSun ? lit : dim;
+    const n = Math.max(3, Math.round(u.rx / 1.3));
+    const R = mulberry32(u.seed + 11);
+    for (let i = 0; i < n; i++) {
+      const a = Math.PI + 0.3 + ((i + 0.2 + 0.6 * R()) / n) * (Math.PI - 0.6);
+      const x = u.x + Math.cos(a) * u.rx * 0.8, y = u.y + Math.sin(a) * u.ry * 0.78;
+      const h = u.ry * (0.5 + 0.35 * R()), w = Math.max(0.28, u.rx * 0.07);
+      p.moveTo(x - w, y + h * 0.15);
+      p.lineTo(x + Math.cos(a) * u.rx * 0.18, y - h);
+      p.lineTo(x + w, y + h * 0.15);
+      p.closePath();
+      // A dark sliver beside it, lower: the gap under the next lump's needles.
+      if (i % 2) {
+        const gx = x + u.rx * 0.16, gy = y + u.ry * 0.3;
+        gaps.moveTo(gx - w * 0.8, gy + h * 0.2);
+        gaps.lineTo(gx + Math.cos(a) * u.rx * 0.12, gy - h * 0.7);
+        gaps.lineTo(gx + w * 0.8, gy + h * 0.2);
+        gaps.closePath();
+      }
+    }
+  }
+  g.fillStyle = s.under[Math.max(0, b - 3)];
+  g.fill(gaps);
+  g.fillStyle = s.under[b - 1];
+  g.fill(dim);
+  g.fillStyle = s.ramp[b + 1];
+  g.fill(lit);
 }
 
 /** Winged keys hanging in a bunch from under a clump: pairs of wings on short stalks. */
@@ -1953,12 +2048,12 @@ export function paintTree3d(g: Ctx, job: Job): void {
     // A cluster: its lumps' outlines in the one path, filled as one.
     if (s.c.subs) {
       const lumps = lumpsOf(job, s);
-      // A frothy crown's lumps, and any in flower, scalloped all round in florets; a willow's in round bumps; the rest edged in their leaves.
+      // A frothy crown's lumps, and any in flower, scalloped all round in florets; a willow's in round bumps; the rest edged in their leaves; a needle leaf's lumps, small and many, in fewer steps round each.
       const froth = s.cloud || spec.leafForm === 'puff';
       for (const [j, u] of lumps.entries()) {
         if (froth) scallopPath(path, u.x, u.y, u.rx, u.ry, u.o, 9 + (j % 3));
         else if (spec.leafForm === 'willow') bumpPath(path, u.x, u.y, u.rx, u.ry, u.seed, g.getTransform().a > 2.5 ? 12 : 9);
-        else massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec, s.cloud), spec.leafForm === 'birch' ? 16 : 24);
+        else massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec, s.cloud), spec.leafForm === 'birch' || spec.leafForm === 'needle' ? 16 : 24);
       }
       if (spec.leafForm === 'birch') dropsOf(path, lumps);
       return { o, path, lumps };
@@ -1979,7 +2074,8 @@ export function paintTree3d(g: Ctx, job: Job): void {
   g.lineJoin = 'round';
   g.lineCap = 'round';
   g.lineWidth = KIT_INK_W * 2;
-  for (const m of masses) g.stroke(m.path);
+  // A needle leaf is one mass with its own softer, finer rim (`paintCluster`), which is all the ink round it.
+  if (spec.leafForm !== 'needle') for (const m of masses) g.stroke(m.path);
   // A weeping crown's strands, inked as its masses are.
   const weeping = sk.clumps.some((c) => c.curtain) || !!sk.whips;
   if (weeping) {
@@ -2041,7 +2137,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
   const sizeOfKey = sk.crown.r * 0.12;
   const keyed = spec.keys && dress.keys && ((dress.season === 'spring' && dress.step >= 3) || dress.season === 'summer');
   shown.forEach((s, i) => {
-    const rim = rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.7), 0.9);
+    const rim = spec.leafForm === 'needle' ? rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.5), 0.85) : rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.7), 0.9);
     items.push({
       d: near(s.c.c),
       draw: () => {
@@ -2308,6 +2404,8 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
     }
   }
   for (const w of sk.whips ?? []) { take(w.o, 1); take([w.o[0], w.o[1], w.o[2] - w.len], 2); }
+  // Flower stems out to their tips, and the heads on them.
+  for (const s of sk.spikes ?? []) take(s.b, 1.5);
   // A hanging pad out to its fingers' tips (`Clump.pad`).
   for (const c of sk.clumps) if (c.pad) take(add(c.c, add(c.pad.root, [0, 0, -c.pad.drop - c.pad.hang * 1.6])), c.r * 0.5);
   // The litter round its foot.
@@ -2317,7 +2415,7 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
 }
 
 /** How far round its foot a tree's own shade reaches, in pixels at zoom one across: under it, the shade it throws is not laid. */
-export const footReach = (sk: Skeleton): number => Math.max(4, (sk.limbs[0]?.ra ?? 2) * ACROSS * 2.6);
+export const footReach = (sk: Skeleton): number => sk.foot ?? Math.max(4, (sk.limbs[0]?.ra ?? 2) * ACROSS * 2.6);
 
 /**
  * The shade right at its foot, laid under everything else, in the colour and

@@ -293,6 +293,9 @@ export const SHED_MOST = 1 - SHEDDING[LOOK_STEPS - 1];
 
 /* ---- Bushes ------------------------------------------------------------------ */
 
+/** A bush's wood, bare or showing through its leaf. */
+export const BUSH_WOOD = '#6f5a4c';
+
 /**
  * The bushes go through the year by the same rules, where it costs nothing:
  * the rose and the thorn are bare in winter and turn in autumn, and lavender

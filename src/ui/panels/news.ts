@@ -50,12 +50,13 @@ import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
-import { ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
+import { BUSH_DEFS, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
 import { LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
-import { SUN_STEPS } from '../../render/trees3d';
+import { FLOWER_COLOURS } from '../../render/flowers';
+import { BUSH3D_SPECIES, SUN_STEPS } from '../../render/trees3d';
 import { TURNS } from '../../render/view';
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
@@ -3747,6 +3748,14 @@ export const NEWS: News[] = [
     day: '2026-10-25',
     lines: () => [
       `Changed: trees drawn solid, as maples: birch, cedar, willow, cherry, apple, pear, plum, peach, apricot, quince, fig, lemon, olive, pomegranate. Own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun.`,
+    ],
+  },
+  {
+    n: 314,
+    day: '2026-10-25',
+    lines: () => [
+      `Changed: bushes drawn solid, as trees: ${[...BUSH3D_SPECIES].map((b) => BUSH_DEFS[b].name.replace(/ bush$/, '').toLowerCase()).join(', ')}. Own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun.`,
+      `Changed: rose bush flowers: ${FLOWER_COLOURS.find((c) => c.petal === BUSH_DEFS.find((b) => b.name === 'Rose bush')?.flowers)?.name ?? 'pink'}.`,
     ],
   },
 ];

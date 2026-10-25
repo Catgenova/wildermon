@@ -7,10 +7,10 @@ import { EMOTE_BY_ID, HOPS, emotePose } from '../game/emotes';
 import { drawBust, drawFigure, figureJoints, figureStance, shineOver, viewOf, type FigurePose } from './figure';
 import { BUSH_DEFS, TREE_AGES, TREE_DEFS } from '../world/tiles';
 import { drawWildermon, drawWildermonPortrait, modelled, wildermonTop } from './wildermon';
-import { bushYear, leafageOf } from './foliage';
+import { BUSH_WOOD, bushYear, leafageOf } from './foliage';
 import { LIT, contact, dulled, wob } from './trees/kit';
 import { paintTree } from './trees';
-import { forgetTrees3d, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dSprite, forgetTrees3d, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
 import type { Season } from '../world/calendar';
 import { cropPlant } from './crops';
 
@@ -22,8 +22,10 @@ export interface Sprite {
   /** Anchor (feet) offset from the top-left corner. */
   ax: number;
   ay: number;
-  /** A tree drawn as a solid (`./trees3d`): a bake of one view of it, which its tile's pictures follow from bake to bake. */
+  /** A tree or a bush drawn as a solid (`./trees3d`): a bake of one view of it, which its tile's pictures follow from bake to bake. */
   solid?: boolean;
+  /** A solid bush's shade at its foot, laid by the renderer in the tone of the ground's shade: its reach across, in pixels at zoom one (`Renderer.drawTree`). */
+  foot?: number;
 }
 
 /**
@@ -638,9 +640,11 @@ export function stumpSprite(species: number): Sprite {
 
 /**
  * A bush, as it is on a day of the island's year (`./foliage`, `bushYear`):
- * in leaf or bare, in flower or in fruit or neither.
+ * in leaf or bare, in flower or in fruit or neither. A species drawn as a
+ * solid is seen from where the camera is and lit as the hour has it.
  */
-export function bushSprite(species: number, season: Season = 'summer', day = 1): Sprite {
+export function bushSprite(species: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
+  if (at && BUSH3D_SPECIES.has(species)) return bush3dSprite(species, season, day, at, SPRITE_SCALE);
   const def = BUSH_DEFS[species];
   const look = bushYear(def, species, season, day);
   const key = `${SPRITE_SCALE}|bush:${species}${look.key ? `:${look.key}` : ''}`;
@@ -659,7 +663,7 @@ export function bushSprite(species: number, season: Season = 'summer', day = 1):
     };
     contact(ctx, bx, by, 12);
     // With its leaves down, or coming or going, its twigs show: grown up out of the ground into its own shape, as a tree's are.
-    if (look.full < 1) bareWood(ctx, mass, bx, by - 9.5, 11, 8, seed, [bx, by - 1], '#6f5a4c', 1.5, look.full > 0 ? 0.08 : 0.16);
+    if (look.full < 1) bareWood(ctx, mass, bx, by - 9.5, 11, 8, seed, [bx, by - 1], BUSH_WOOD, 1.5, look.full > 0 ? 0.08 : 0.16);
     if (look.foliage) {
       const pal: [string, string, string] = [shade(look.foliage[0], 0.2), look.foliage[0], look.foliage[1]];
       if (look.full < 1) {
