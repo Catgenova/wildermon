@@ -1150,7 +1150,8 @@ async function main(): Promise<void> {
         for (let i = 0; i < waitFor(20) && left > 0; i++) {
           await sleep(1000);
           await supabase().rpc('rpc_settle');
-          const { count } = await supabase().from('item').select('*', { count: 'exact', head: true })
+          // `id` and not `*`: where a thing came from is not the browser's to read (`origin`).
+          const { count } = await supabase().from('item').select('id', { count: 'exact', head: true })
             .eq('world_id', id).eq('holder', 'ground').eq('id', lying.id);
           left = count ?? 0;
         }
@@ -1160,8 +1161,8 @@ async function main(): Promise<void> {
       }
     }
 
-    const { data: pack } = await supabase().from('item').select('*').eq('world_id', id).eq('holder_uid', uid);
-    check('we are carrying the starting kit', (pack ?? []).length >= 9, `${(pack ?? []).length} things`);
+    const { data: pack, error: packErr } = await supabase().from('item').select('id,def,count').eq('world_id', id).eq('holder_uid', uid);
+    check('we are carrying the starting kit', (pack ?? []).length >= 9, packErr ? packErr.message : `${(pack ?? []).length} things`);
 
     /*
      * The social doors, through PostgREST rather than through psql.
