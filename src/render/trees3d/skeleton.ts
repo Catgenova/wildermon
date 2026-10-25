@@ -529,6 +529,9 @@ export function swayed(sk: Skeleton, frame: number, frames: number, seed: number
 
 /* ---- a conifer ---- */
 
+/** How far a lacy spray's fringe reaches from its middle, against its mass's `r`, for the bounds of its picture. */
+const LACE_REACH = 1.2;
+
 /** Where a nodding leader starts to bend over, as a share of the height. */
 const NOD_FROM = 0.8;
 
@@ -747,6 +750,8 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   }
   return {
     limbs, clumps, crown: env, height: H, core: n > 0 ? w.core : undefined, parted: w.parted,
+    // A lacy spray reaches no further than its fringe (`laceRimOf`).
+    leafReach: w.lace ? LACE_REACH : undefined,
     // A dense crown hides its leader from part way up to just under its tip.
     hidden: n > 0 && (w.core ?? 0) >= 0.4 ? [stemZ + (crownTop - stemZ) * 0.4, crownTop + (H - crownTop) * 0.78] : undefined,
     rune: b.rune ? Math.PI / 4 + (R() - 0.5) * 0.5 : null,

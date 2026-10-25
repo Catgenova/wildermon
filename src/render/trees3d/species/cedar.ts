@@ -43,7 +43,7 @@ export const cedar: Species3D = {
     young: { stem: 0.18, spread: 0.34, girth: 0.045, flare: 2.4, lean: 0.4, ...habit({ tiers: 10, pads: 7, stubs: 0, lace: 10, long: 0, swell: 0.25 }) },
     old: { stem: 0.25, spread: 0.39, girth: 0.06, flare: 4, gnarl: 0.15, lean: 1, rune: true, ...habit({ tiers: 11, pads: 7, stubs: 2, gaps: 0.08 }) },
     veryOld: {
-      stem: 0.2, spread: 0.4, girth: 0.066, flare: 3.8, gnarl: 0.3, lean: 1.4, rune: true, hollow: true,
+      stem: 0.2, spread: 0.37, girth: 0.066, flare: 3.8, gnarl: 0.3, lean: 1.4, rune: true, hollow: true,
       ...habit({ tiers: 10, pads: 7, stubs: 3, gaps: 0.26, bare: 0.4, limb: 0.42, core: 0.18, ragged: 0.5, long: 2, split: 0 }),
     },
     shrivelled: { stem: 0.2, spread: 0.3, girth: 0.06, flare: 3.4, gnarl: 0.4, lean: 1.4, bare: true, rune: true, ...habit({ broken: true, swell: 0 }) },
