@@ -8,7 +8,11 @@
  * the light on it and the shade it throws agree with the ground's.
  */
 import type { Season } from '../../world/calendar';
+import type { BushDef } from '../../world/tiles';
+import type { BushYear } from '../foliage';
+import type { Eye } from '../runestone';
 import type { AgeKey } from '../trees/types';
+import type { Light } from './light';
 
 export type V3 = [number, number, number];
 export type RGB = [number, number, number];
@@ -103,6 +107,8 @@ export interface Skeleton {
   hidden?: [number, number];
   /** A dead weeping tree's few bare strands, each from `o` (a point of the tree), `len` down. */
   whips?: Array<{ o: V3; len: number; k: number }>;
+  /** How far round its foot its own shade reaches, in pixels at zoom one across, where it is not the trunk's (`footReach`). */
+  foot?: number;
 }
 
 /** The tree's proportions at one age, in model units. */
@@ -362,4 +368,37 @@ export interface Pad {
   fingers: number;
   /** Lacy (`Whorls.lace`): its fringe's tips. */
   lace?: number;
+}
+
+/* ---- bushes -------------------------------------------------------------------------- */
+
+/** What a bush is painted from: its grown and swayed model, the day's dress (`bushYear`), its `BUSH_DEFS` entry, the eye and the light. */
+export interface BushJob {
+  sk: Skeleton;
+  look: BushYear;
+  season: Season;
+  def: BushDef;
+  light: Light;
+  e: Eye;
+  seed: number;
+  /** Which of the wind's frames. */
+  frame: number;
+}
+
+/**
+ * A bush drawn as a solid (`BUSH3D` in `./index`). The engine bakes, keeps,
+ * stands in, sways and shades it as it does a tree: the species grows the
+ * model and paints it.
+ */
+export interface Bush3D {
+  /** The `BUSH_DEFS` name. */
+  name: string;
+  /**
+   * The bush grown from a seed (one of `FORMS` a tile wears), in the trees'
+   * units, its foot at the origin. Its limbs and clumps are what it sways
+   * and throws shade with; `foot` the reach of its own shade at its foot.
+   */
+  grow(seed: number): Skeleton;
+  /** The bush in pixels at zoom one, its foot at the origin, inked round. */
+  paint(g: CanvasRenderingContext2D, job: BushJob): void;
 }

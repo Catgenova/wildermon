@@ -858,7 +858,7 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
 /* ---- leaf -------------------------------------------------------------------------- */
 
 /** The sun's way across the screen, and how much of a ball facing the eye it lights: 0 lit from behind to 1 from the front. */
-function sunOnScreen(job: Job): { sx: number; sy: number; front: number } {
+export function sunOnScreen(job: Pick<Job, 'e' | 'light'>): { sx: number; sy: number; front: number } {
   const { e, light } = job;
   const v = projVec(e, light.sun);
   const l = Math.hypot(v[0], v[1]) || 1;
@@ -866,7 +866,7 @@ function sunOnScreen(job: Job): { sx: number; sy: number; front: number } {
   return { sx: v[0] / l, sy: v[1] / l, front: (1 + dot(V, light.sun)) / 2 };
 }
 
-function clumpLight(job: Job, c: Clump): number {
+export function clumpLight(job: Pick<Job, 'sk' | 'light' | 'e'>, c: Clump): number {
   const { sk, light, e } = job;
   const env = sk.crown;
   const n = unit([(c.c[0] - env.c[0]) / env.r, (c.c[1] - env.c[1]) / env.r, (c.c[2] - env.c[2]) / env.rz * 0.8]);
@@ -931,9 +931,9 @@ const edgeOf = (spec: Species3D, bloom = false): ReadonlyArray<Pt> =>
 const lumpLeaves = (spec: Species3D, j: number): number => (spec.leafForm === 'birch' ? (j === 0 ? 3 : 8 + (j % 2)) : j === 0 ? 0 : 1 + (j % 2));
 
 /** The shape of a mass, seeded: two waves of lumps round it and the leaves standing out of its edge. */
-interface Outline { lumps: [number, number, number, number]; leaves: Array<{ at: number; w: number; h: number }> }
+export interface Outline { lumps: [number, number, number, number]; leaves: Array<{ at: number; w: number; h: number }> }
 
-function outlineOf(R: () => number, leaves: number): Outline {
+export function outlineOf(R: () => number, leaves: number): Outline {
   const out: Outline = { lumps: [0.07 + 0.05 * R(), R() * TAU, 0.04 + 0.03 * R(), R() * TAU], leaves: [] };
   const a0 = R() * TAU;
   for (let i = 0; i < leaves; i++) out.leaves.push({ at: a0 + ((i + 0.3 * R()) / leaves) * TAU, w: Math.min(TAU / leaves - 0.1, 0.8 + 0.3 * R()), h: 0.2 + 0.1 * R() });
@@ -942,7 +942,7 @@ function outlineOf(R: () => number, leaves: number): Outline {
 }
 
 /** A mass's outline round (cx, cy), lumpy, with its leaves standing out of it `k` as far. */
-function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: Outline, k = 1, edge: ReadonlyArray<Pt> = LEAF_EDGE, steps = 28): void {
+export function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: Outline, k = 1, edge: ReadonlyArray<Pt> = LEAF_EDGE, steps = 28): void {
   const [a1, p1, a2, p2] = o.lumps;
   const rad = (t: number): number => 1 + a1 * Math.sin(3 * t + p1) + a2 * Math.sin(5 * t + p2);
   let first = true;
@@ -2317,7 +2317,7 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
 }
 
 /** How far round its foot a tree's own shade reaches, in pixels at zoom one across: under it, the shade it throws is not laid. */
-export const footReach = (sk: Skeleton): number => Math.max(4, (sk.limbs[0]?.ra ?? 2) * ACROSS * 2.6);
+export const footReach = (sk: Skeleton): number => sk.foot ?? Math.max(4, (sk.limbs[0]?.ra ?? 2) * ACROSS * 2.6);
 
 /**
  * The shade right at its foot, laid under everything else, in the colour and
