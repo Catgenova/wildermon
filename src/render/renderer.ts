@@ -82,7 +82,7 @@ import { smelterCentre, type PlacedSmelter } from '../game/smelter';
 import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
 import { kilnCentre, type PlacedKiln } from '../game/kiln';
 import { furnitureCentre, furnitureDef, hearthCapacity, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
-import { UNSEEN, VISIBLE } from '../game/vision';
+import { KNOWN, UNSEEN, VISIBLE } from '../game/vision';
 import { darknessAt, DAWN, deedLevel, DUSK } from '../game/game';
 import { boatSway, clothInWind, crewOrder, deviceOf, drawFurniture, drawFurnitureLive, driverOn, swayOnScreen, WHEELS, wheelBlur, wheelTrim, steeredByTiller, woodHex, furnitureHoles, helmSeat, reinsTo, rowedPiece, furnitureSpan, FURNITURE_HEIGHT, glowsAtNight, headingView, mossTrim, PIECE_STAGES, pieceView, planterTrim, roseTrim, vineTrim, VINE_VARIANTS, type Air, type Crew, type PieceView } from './furniture';
 import { roseStage } from '../game/roses';
@@ -782,6 +782,10 @@ function windOn(path: Path2D, xs: ArrayLike<number>, ys: ArrayLike<number>, orde
 }
 /** How much of its own colour remembered ground keeps. */
 const MEMORY_SATURATION = 0.22;
+/** And remembered sea: a little more, being little else but its colour (`seaStill`). */
+const MEMORY_SEA = 0.35;
+/** How much of a bed of weed on the sea floor shows however deep it is, so it can be told from the floor (`drawSea`). */
+const WEED_SEEN = 0.35;
 const GRID_COLOR = 'rgba(0,0,0,0.16)';
 const DEED_COLOR = 'rgba(96, 230, 110, 0.9)';
 const DEED_SHADOW = 'rgba(0, 40, 0, 0.6)';
@@ -4495,7 +4499,7 @@ export class Renderer {
         // Weed on the bottom goes under the water rather than over it.
         if (!run && grassy && wet && DROWNS.has(here)) {
           // Seen through the water over it, laid under this one (`drawSea`): as much of it as the water lets show.
-          if (seaFloor) ctx.globalAlpha = 1 - waterVeil(Math.max(0, -(c[0] + c[1] + c[2] + c[3]) / 4));
+          if (seaFloor) ctx.globalAlpha = WEED_SEEN + (1 - WEED_SEEN) * (1 - waterVeil(Math.max(0, -(c[0] + c[1] + c[2] + c[3]) / 4)));
           this.strewTile(here, x, y, pts, paveRot, zoom, lit);
           ctx.globalAlpha = 1;
         }
@@ -15893,7 +15897,9 @@ export class Renderer {
     const vx0 = Math.max(0, rx0), vy0 = Math.max(0, ry0), vx1 = Math.min(CW, rx1), vy1 = Math.min(CH, ry1);
     if (vx1 <= vx0 || vy1 <= vy0) return false;
     const ax = cam.worldToScreenX(0, 0), ay = cam.worldToScreenY(0, 0, 0);
-    const fit = `${zoom}|${cam.rotation}|${W}|${H}|${dev}|${t.e}|${t.f}|${this.fast}|${this.tint.stamp}`;
+    // Remembered sea is drawn as it was, and changes as the sight does.
+    const fog = this.game.settings.fog;
+    const fit = `${zoom}|${cam.rotation}|${W}|${H}|${dev}|${t.e}|${t.f}|${this.fast}|${this.tint.stamp}|${fog ? this.game.vision.revision : -1}|${this.game.buildings.pierStamp}`;
     let pic = this.seaPic;
     let mx = pic ? Math.round((ax - pic.ax) * dev) : 0, my = pic ? Math.round((ay - pic.ay) * dev) : 0;
     // The picture covers the sea where it is now, moved with the view since it was made.
@@ -15941,6 +15947,7 @@ export class Renderer {
         this.swellBand(h, zoom, 0.55, SHORT_WAVE, TROUGH_ALPHA * 0.7, 0.62, null);
         this.shore.lace(h, this.shoreField, this.game.world, ix0, iy0, ix1, iy1);
       }
+      this.seaStill(h, cam, ix0, iy0, ix1, iy1);
       h.restore();
       const g = full.getContext('2d') as CanvasRenderingContext2D;
       g.save();
@@ -15959,6 +15966,65 @@ export class Renderer {
     ctx.drawImage(pic.cv, vx0 - mx + M, vy0 - my + M, vx1 - vx0, vy1 - vy0, vx0, vy0, vx1 - vx0, vy1 - vy0);
     ctx.restore();
     return true;
+  }
+
+  /**
+   * The parts of the sea's picture with no swell and no foam on them, its
+   * colour laid back over them as it is with nothing moving: under a deck on
+   * piers, which is in its shade, and the sea only remembered rather than in
+   * sight, which keeps as little of its colour as remembered ground does
+   * (`MEMORY_SATURATION`) and nothing that moves on it.
+   */
+  private seaStill(h: CanvasRenderingContext2D, cam: Camera, sx0: number, sy0: number, sx1: number, sy1: number): void {
+    const game = this.game;
+    const world = game.world;
+    const piers = game.buildings.pierTiles;
+    const fog = game.settings.fog;
+    if (!fog && !piers.size) return;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [sx, sy] of [[sx0, sy0], [sx1, sy0], [sx0, sy1], [sx1, sy1]]) {
+      const p = cam.screenToWorld(sx, sy, 0);
+      x0 = Math.min(x0, p.x);
+      y0 = Math.min(y0, p.y);
+      x1 = Math.max(x1, p.x);
+      y1 = Math.max(y1, p.y);
+    }
+    x0 = Math.max(0, Math.floor(x0));
+    y0 = Math.max(0, Math.floor(y0));
+    x1 = Math.min(world.w - 1, Math.ceil(x1));
+    y1 = Math.min(world.h - 1, Math.ceil(y1));
+    const tile = (path: Path2D, x: number, y: number): void => {
+      path.moveTo(cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, 0));
+      path.lineTo(cam.worldToScreenX(x + 1, y), cam.worldToScreenY(x + 1, y, 0));
+      path.lineTo(cam.worldToScreenX(x + 1, y + 1), cam.worldToScreenY(x + 1, y + 1, 0));
+      path.lineTo(cam.worldToScreenX(x, y + 1), cam.worldToScreenY(x, y + 1, 0));
+      path.closePath();
+    };
+    let calm: Path2D | null = null;
+    for (const key of piers) {
+      const [x, y] = key.split(',').map(Number);
+      if (x < x0 || x > x1 || y < y0 || y > y1 || !world.hasSea(x, y)) continue;
+      tile((calm ??= new Path2D()), x, y);
+    }
+    let mem: Path2D | null = null;
+    if (fog) {
+      const vision = game.vision;
+      for (let y = y0; y <= y1; y++) {
+        for (let x = x0; x <= x1; x++) if (vision.state(x, y) === KNOWN && world.hasSea(x, y)) tile((mem ??= new Path2D()), x, y);
+      }
+    }
+    for (const path of [calm, mem]) {
+      if (!path) continue;
+      h.save();
+      h.clip(path);
+      this.tint.paint(h, cam, sx0, sy0, sx1, sy1);
+      if (path === mem) {
+        h.globalCompositeOperation = 'saturation';
+        h.fillStyle = `rgba(128,128,128,${(1 - MEMORY_SEA).toFixed(3)})`;
+        h.fillRect(sx0, sy0, sx1 - sx0, sy1 - sy0);
+      }
+      h.restore();
+    }
   }
 
   /** The sea as last made (`drawSea`): its picture, the view it was made for, when, where the world's corner was on the screen, and the part of it made. */

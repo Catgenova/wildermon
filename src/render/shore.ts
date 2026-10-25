@@ -31,8 +31,8 @@ const OUT_LAG = 0.4;
 /** The foam's colour, unbroken; and the wet ground's tint. */
 const FOAM_CSS = `rgb(${FOAM.join(',')})`;
 const WET_CSS = `rgb(${WET_GROUND.join(',')})`;
-/** What each of the gathered bands (`ShorePainter.flush`) is filled with: the foam's core, its lace, what it leaves, the line out and its core; the wet band. */
-const SLOT_STYLE = [FOAM_CSS, 'flecks', 'flecks', 'flecks', FOAM_CSS, WET_CSS, WET_CSS] as const;
+/** What each of the gathered bands (`ShorePainter.flush`) is filled with: the foam's core, its lace, what it leaves, the line out and its core; the wet band, in two; and the core's flecks, which are flecks wherever they are laid. */
+const SLOT_STYLE = [FOAM_CSS, 'flecks', 'flecks', 'flecks', FOAM_CSS, WET_CSS, WET_CSS, 'broken'] as const;
 /** A tile's corners, in the order they are walked round. */
 const SQUARE: ReadonlyArray<readonly [number, number]> = [[0, 0], [1, 0], [1, 1], [0, 1]];
 
@@ -432,6 +432,10 @@ export class ShorePainter {
     for (let i = 0; i < 4; i++) kk += cs[i * 5 + 4] / 4;
     const top = (WET_ROCK + (WET_SAND - WET_ROCK) * kk) * (pond ? WET_POND : 1);
     if (Math.min(cs[3], cs[8], cs[13], cs[18]) > top || Math.max(cs[3], cs[8], cs[13], cs[18]) < 0) return;
+    if (!this.batching) {
+      this.wetSmooth(ctx, level, top, WET_ALPHA * (pond ? 0.8 : 1));
+      return;
+    }
     const was = ctx.globalAlpha;
     ctx.fillStyle = WET_CSS;
     for (let i = 0; i < WET_STEPS; i++) {
@@ -445,6 +449,53 @@ export class ShorePainter {
     }
     ctx.globalAlpha = was;
   }
+
+  /**
+   * The wet band in one fill shaded from the waterline up, where it is drawn
+   * once rather than every frame -- into a block of the ground's picture, or on
+   * a pond's bank: a gradient laid across the tile along the flat slope that
+   * best fits its corners' distances from the water on the screen.
+   */
+  private wetSmooth(ctx: CanvasRenderingContext2D, level: number, top: number, alpha: number): void {
+    if (!this.band(ctx, level, -0.02, 0, top, 0, false, false)) return;
+    const cs = this.cs;
+    const cam = this.s!.cam;
+    const px = this.px;
+    let mx = 0, my = 0, mv = 0;
+    for (let i = 0; i < 4; i++) {
+      px[i * 2] = cam.worldToScreenX(cs[i * 5], cs[i * 5 + 1]);
+      px[i * 2 + 1] = cam.worldToScreenY(cs[i * 5], cs[i * 5 + 1], Math.max(cs[i * 5 + 2], level));
+      mx += px[i * 2] / 4;
+      my += px[i * 2 + 1] / 4;
+      mv += cs[i * 5 + 3] / 4;
+    }
+    let sxx = 0, sxy = 0, syy = 0, sxv = 0, syv = 0;
+    for (let i = 0; i < 4; i++) {
+      const dx = px[i * 2] - mx, dy = px[i * 2 + 1] - my, dv = cs[i * 5 + 3] - mv;
+      sxx += dx * dx;
+      sxy += dx * dy;
+      syy += dy * dy;
+      sxv += dx * dv;
+      syv += dy * dv;
+    }
+    const det = sxx * syy - sxy * sxy;
+    const ga = Math.abs(det) > 1e-9 ? (sxv * syy - syv * sxy) / det : 0;
+    const gb = Math.abs(det) > 1e-9 ? (syv * sxx - sxv * sxy) / det : 0;
+    const g2 = ga * ga + gb * gb;
+    const [r, g, b] = WET_GROUND;
+    if (g2 < 1e-12) ctx.fillStyle = `rgba(${r},${g},${b},${(alpha * 0.5).toFixed(3)})`;
+    else {
+      const k0 = -mv / g2, k1 = (top - mv) / g2;
+      const grad = ctx.createLinearGradient(mx + ga * k0, my + gb * k0, mx + ga * k1, my + gb * k1);
+      grad.addColorStop(0, `rgba(${r},${g},${b},${alpha.toFixed(3)})`);
+      grad.addColorStop(0.5, `rgba(${r},${g},${b},${(alpha * 0.45).toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grad;
+    }
+    ctx.fill();
+  }
+
+  private readonly px = new Float64Array(8);
 
   /** A band into one of the gathered fills: `slot` the band, `layer` the step of it. */
   private slotBand(slot: number, layer: number, alpha: number, level: number, loA: number, loB: number, hiA: number, hiB: number, shared: boolean): void {
@@ -494,8 +545,8 @@ export class ShorePainter {
       const p = this.slots[i];
       if (!p) continue;
       const style = SLOT_STYLE[Math.floor(i / 3)];
-      // The land's side of the foam is a strip too thin to show its flecks: laid in its colour, a little fainter.
-      ctx.fillStyle = style !== 'flecks' ? style : fl ?? FOAM_CSS;
+      // The land's side of the lace is a strip too thin to show its flecks: laid in its colour, a little fainter.
+      ctx.fillStyle = style === 'broken' ? this.fleckFill(ctx, 0) : style !== 'flecks' ? style : fl ?? FOAM_CSS;
       ctx.globalAlpha = this.slotAlpha[i] * (style === 'flecks' && !fl ? 0.35 : 1);
       ctx.fill(p);
       this.slots[i] = undefined;
@@ -528,7 +579,7 @@ export class ShorePainter {
     field.each(Math.max(0, Math.floor(x0)), Math.max(0, Math.floor(y0)), Math.min(w.w - 1, Math.ceil(x1)), Math.min(w.h - 1, Math.ceil(y1)), (x, y) => {
       for (let i = 0; i < 4; i++) c[i] = w.getHeight(x + co[i][0], y + co[i][1]);
       if (c[0] >= 0 && c[1] >= 0 && c[2] >= 0 && c[3] >= 0) return;
-      if (this.load(w, field, x, y, co, c, 0)) this.foamBands(g, 0, false);
+      if (this.load(w, field, x, y, co, c, 0)) this.foamBands(g, 0, 'picture');
     });
     this.layers = layers;
     this.flush(g, true);
@@ -538,19 +589,17 @@ export class ShorePainter {
 
   private readonly heights = [0, 0, 0, 0];
 
-  /** The land's side of the foam on the loaded tile of the sea's shore, gathered for its line (`flush`). */
+  /** The foam on the loaded tile of the sea's shore drawn with the ground, gathered for its line (`flush`): the line's core either side of the waterline, and the lace up the land's side. */
   foamLand(ctx: CanvasRenderingContext2D): void {
-    // None of the tile is between the waterline and as far up as the foam ever runs.
-    if (this.vhi <= 0 || this.vlo >= SURGE_UP + FOAM_WIDE * 0.15) return;
-    this.part = 'land';
+    // None of the tile is between as far out as the line goes back and as far up as it ever runs.
+    if (this.vhi <= -(SURGE_BACK + FOAM_WIDE * 0.4) || this.vlo >= SURGE_UP + FOAM_WIDE * 0.15) return;
     this.batching = true;
-    // One step of each band is enough for the strip of it up the shore.
+    // One step of each band is enough for the strip of it up the shore; the line's core is soft from close up.
     const layers = this.layers;
-    this.layers = 1;
-    this.foamBands(ctx, 0, false);
+    this.layers = Math.min(2, layers);
+    this.foamBands(ctx, 0, 'tile');
     this.layers = layers;
     this.batching = false;
-    this.part = 'all';
   }
 
   /** The wet band on the loaded tile of the sea's shore, gathered for its line (`flush`). */
@@ -562,11 +611,12 @@ export class ShorePainter {
 
   /** The foam on the loaded tile of a pond's bank, laid now. */
   foam(ctx: CanvasRenderingContext2D, level: number): void {
-    this.foamBands(ctx, level, true);
+    this.foamBands(ctx, level, 'pond');
   }
 
   /** The foam's bands: a lace line along the waterline running up the shore and back, the lace it leaves going back, and a second line out in the shallows that comes in behind it. */
-  private foamBands(ctx: CanvasRenderingContext2D, level: number, pond: boolean): void {
+  private foamBands(ctx: CanvasRenderingContext2D, level: number, mode: 'pond' | 'picture' | 'tile'): void {
+    const pond = mode === 'pond';
     const cs = this.cs;
     for (let i = 0; i < 4; i++) {
       const sg = this.surge(cs[i * 5], cs[i * 5 + 1], pond);
@@ -579,14 +629,27 @@ export class ShorePainter {
     // How wide the line is, before a corner's share of a sand shore's.
     const W = FOAM_WIDE * (pond ? POND_SURGE * 1.6 : 1);
     const was = ctx.globalAlpha;
-    // The line's core, unbroken: more of it from further out, where the flecks are too small to carry the line.
-    ctx.fillStyle = FOAM_CSS;
-    this.soft(ctx, level, 0, strength * (0.65 + 0.25 * (1 - ease(1, 2, this.s!.cam.zoom))), -W * 0.4, 1, W * 0.1, 1);
+    /*
+     * The line's core, unbroken: drawn with the ground at the screen's own
+     * size, either side of the waterline, so it stays sharp over the sea's
+     * picture; more of it from further out, where the flecks are too small to
+     * carry the line.
+     */
+    if (mode !== 'picture') {
+      this.part = 'all';
+      const core = strength * (0.65 + 0.25 * (1 - ease(1, 2, this.s!.cam.zoom)));
+      ctx.fillStyle = FOAM_CSS;
+      // Faint and whole under it from further out, broken over it: a line of foam rather than a painted edge.
+      if (this.s!.cam.zoom < 1.5) this.soft(ctx, level, 0, core * 0.3, -W * 0.4, 1, W * 0.1, 1);
+      if (!this.batching) ctx.fillStyle = this.fleckFill(ctx, level);
+      this.soft(ctx, level, 7, core, -W * 0.45, 1, W * 0.12, 1);
+    }
     if (!this.batching) ctx.fillStyle = this.fleckFill(ctx, level);
-    // The lace either side of it, broken.
+    // The lace either side of it, broken: in the sea's picture on the water's side, with the ground on the land's.
+    this.part = mode === 'tile' ? 'land' : mode === 'picture' ? 'water' : 'all';
     this.soft(ctx, level, 1, strength * 0.95, -W, 1, W * 0.15, 1);
-    // What follows is all out in the water: not on the land's side.
-    if (!pond && this.part !== 'land') {
+    // What follows is all out in the water: in the sea's picture.
+    if (mode === 'picture') {
       // What it leaves on the wet sand as it goes back.
       this.soft(ctx, level, 2, strength * 0.3, -W * 2.4, 1, -W * 0.9, 1);
       // The second line further out, coming in behind the first: its own lap, a share of the first's reach.
@@ -596,6 +659,7 @@ export class ShorePainter {
       this.sgUse = this.surgeAt;
     }
     this.still = false;
+    this.part = 'all';
     ctx.globalAlpha = was;
   }
 }
