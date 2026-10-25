@@ -136,6 +136,25 @@ jobs:
           # green. This opens the committed build in Chrome, starts the game
           # on its own and the landing page, and fails on anything thrown.
           node scripts/boot-check.mjs
+      - name: Coming ashore in phases, and coming back after a cut
+        if: matrix.shard == 1
+        env:
+          BOOT_CHECK_STRICT: '1'
+        run: |
+          # The boot bar is the phases of coming ashore (src/ui/bootsteps.ts),
+          # each its share, moved only by the work: it only grows, fills, and
+          # passes through the phases in order. A cut live connection is come
+          # back from without a join: the socket opened at once rather than
+          # after Phoenix's backoff (which held a cut socket and ignored
+          # connect, so a page back on the network waited up to 10 s), the
+          # channels joined again, and only what changed read. Then the built
+          # page against a stand-in island: first frame timed, the network cut
+          # for 4 s and the socket alone dropped, each playable again within
+          # 2.5 s with the tile changed meanwhile laid.
+          npx esbuild supabase/test/bootsteps.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/bootsteps.mjs --log-level=error
+          node node_modules/.cache/bootsteps.mjs
+          node scripts/login-check.mjs
       - name: Every HTML sink in src has been looked at
         if: matrix.shard == 1
         run: |

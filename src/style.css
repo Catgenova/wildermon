@@ -348,10 +348,21 @@ body {
 }
 
 .boot-bar {
+  position: relative;
   height: 4px;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.14);
   overflow: hidden;
+}
+
+/* Where each phase's share of the bar ends (src/ui/bootsteps.ts). */
+.boot-bar s {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #12395f;
 }
 
 .boot-bar i {

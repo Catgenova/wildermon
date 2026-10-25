@@ -1,4 +1,5 @@
-import { preloadTreesAt } from '../render/preload';
+import { preloadTreesAt, type TreePreload } from '../render/preload';
+import { TREE_WAIT_MS, type BootPhase } from '../ui/bootsteps';
 import { gearFrom } from '../game/worn';
 import { BROWSER_TALLY, Game, SPROUT_COOLDOWN } from '../game/game';
 import type { Marker } from '../game/marks';
@@ -59,19 +60,16 @@ export interface Started {
   id: string;
 }
 
-/** How long the front door waits for an answer before giving you the other game. */
-const ASK_HOME_MS = 8000;
-
-/** A line on the loading screen, since founding an island is not instant. */
 /**
- * How the boot screen is told what is happening.
- *
- * `done` and `total` are given when the step is one of a known list, and left
- * out for a plain line. A `total` of nought means "counting up towards nobody
- * knows what", which is the island's history: a percentage of an unknown is
- * the one number that looks exactly like being stuck.
+ * How the boot screen is told what is happening: the phase (`BOOT_PHASES`), a word on what it is on, and how
+ * far through it is when that can be counted. A `total` of nought means "counting up towards nobody knows
+ * what", which is the island's history: a percentage of an unknown is the one number that looks exactly like
+ * being stuck.
  */
-type Telling = (text: string, done?: number, total?: number) => void;
+type Telling = (phase: BootPhase, detail?: string, done?: number, total?: number) => void;
+
+/** How long the front door waits for an answer before giving up on the keeper. */
+const ASK_HOME_MS = 8000;
 
 /**
  * Which island this keeper keeps, if it keeps one.
@@ -100,47 +98,13 @@ async function homeIsland(): Promise<string | null> {
 
 export async function startIsland(params: URLSearchParams, tell: Telling): Promise<Started> {
   const founding = params.get('found');
-  let joining = params.get('island');
-  if (!joining && founding === null) {
-    tell('Asking which island…');
-    joining = await homeIsland();
-    if (!joining) throw new Error('The island keeper has no island on it yet.');
-  }
-
-  /**
-   * What to call you.
-   *
-   * An account first, and the address bar only if there is no account. That
-   * order is the whole point of having accounts: `?me=` is a string anybody
-   * can type, while `whoAmI()` is the island keeper reading a name back out of
-   * the address you signed in with, which nobody can type their way into.
-   * With neither, you are a Wanderer, and the island still lets you in — an
-   * account is a name you can prove, not a toll.
-   */
-  const account = await whoAmI().catch(() => null);
+  tell('auth');
   /*
-   * No account, no island. The landing page first.
-   *
-   * It has been there all along and the game walked straight past it, so
-   * everybody who ever came ashore was an anonymous session called Wanderer —
-   * indistinguishable on the roster, impossible to tell apart on the tables,
-   * and hanging every skill they earned off a uid kept in `localStorage`,
-   * which is a place browsers tidy up. "Just had all my skills wiped" is what
-   * that looks like from inside.
-   *
+   * The survey chart, decoded while the keeper is asked who you are and which island: it is the first thing
+   * the join needs and nothing about it waits on an answer.
    */
-  if (!account) {
-    tell('Sending you to the landing page to pick a name…');
-    const carried = new URLSearchParams();
-    for (const key of ['island', 'found', 'size', 'seed']) {
-      const had = params.get(key);
-      if (had !== null) carried.set(key, had);
-    }
-    location.replace(`./account.html${carried.toString() ? `?${carried}` : ''}`);
-    // And hold here rather than hand back while the page navigates.
-    return new Promise<never>(() => {});
-  }
-  const name = account;
+  const charting = loadAtlas();
+  charting.catch(() => undefined);
   const log: Array<[string, string, number | undefined]> = [];
   const island = new Island({
     say: (text, kind, at) => log.push([text, kind, at]),
@@ -154,17 +118,73 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
      * up, 100%": it was not hung, it was counting, and saying 100% the whole
      * way through was the only thing wrong with it.
      */
-    progress: (done, total, what) => {
-      tell(what, done, total);
+    progress: (done, total, what, phase) => {
+      tell(phase ?? 'world', what, done, total);
       // The land is known and so is where you stand: the trees round you are baked while the rest is read.
-      if (!preloading && island.world && island.me) preloading = preloadTreesAt(island.world, island.me.x, island.me.y, island.time());
+      if (!preloading && phase === 'land' && island.world && island.me) preloading = preloadTreesAt(island.world, island.me.x, island.me.y, island.time(), undefined, treeStep);
     },
+    chart: () => charting,
   });
-  let preloading: Promise<void> | null = null;
+  let preloading: TreePreload | null = null;
+  // The near trees' parts as they are baked, said once the boot card is on the trees and kept until then.
+  let treesDone = 0;
+  let treesOf = 0;
+  let onTrees = false;
+  const treeStep = (done: number, total: number): void => {
+    treesDone = done;
+    treesOf = total;
+    if (onTrees) tell('trees', 'near', done, total);
+  };
+  /*
+   * Which island, who you are, and whether the island takes this build (with a session to ask it with; the join
+   * waits on the answer), side by side: none waits on another. A keeper that will not say which island is still
+   * the error it was, ahead of the landing page.
+   */
+  island.askBuildEarly();
+  const asked = params.get('island');
+  const [joining, account] = await Promise.all([
+    !asked && founding === null ? homeIsland() : Promise.resolve(asked),
+    whoAmI().catch(() => null),
+  ]);
+  if (!joining && founding === null) throw new Error('The island keeper has no island on it yet.');
+
+  /**
+   * What to call you.
+   *
+   * An account first, and the address bar only if there is no account. That
+   * order is the whole point of having accounts: `?me=` is a string anybody
+   * can type, while `whoAmI()` is the island keeper reading a name back out of
+   * the address you signed in with, which nobody can type their way into.
+   * With neither, you are a Wanderer, and the island still lets you in — an
+   * account is a name you can prove, not a toll.
+   */
+  /*
+   * No account, no island. The landing page first.
+   *
+   * It has been there all along and the game walked straight past it, so
+   * everybody who ever came ashore was an anonymous session called Wanderer —
+   * indistinguishable on the roster, impossible to tell apart on the tables,
+   * and hanging every skill they earned off a uid kept in `localStorage`,
+   * which is a place browsers tidy up. "Just had all my skills wiped" is what
+   * that looks like from inside.
+   *
+   */
+  if (!account) {
+    tell('auth', 'landing page');
+    const carried = new URLSearchParams();
+    for (const key of ['island', 'found', 'size', 'seed']) {
+      const had = params.get(key);
+      if (had !== null) carried.set(key, had);
+    }
+    location.replace(`./account.html${carried.toString() ? `?${carried}` : ''}`);
+    // And hold here rather than hand back while the page navigates.
+    return new Promise<never>(() => {});
+  }
+  const name = account;
 
   let id = joining ?? '';
   if (!id) {
-    tell('Rolling an island…');
+    tell('world', 'rolling');
     /*
      * Founding from a tab is for small islands, and `Island.found` says so
      * above 512. The big one — `ISLAND_SIZE`, four thousand and ninety-six —
@@ -184,7 +204,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
      * out from the seed. Two generators is two islands that have to agree
      * forever, and they would not.
      */
-    const gen = generateAtlasWorld(seed, await loadAtlas(), size);
+    const gen = generateAtlasWorld(seed, await charting, size);
     id = await island.found(gen.world, founding || 'An island', gen.spawn);
     /**
      * Put the island's name in the address bar.
@@ -202,7 +222,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
     history.replaceState({}, '', `?${here.toString()}`);
   }
 
-  tell('Coming ashore…');
+  tell('join');
   try {
     await island.join(id, name);
   } catch (e) {
@@ -747,8 +767,18 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
       : `You are playing as ${name}, which anybody could type. Settings (O) has a link to set up a name you can prove.`,
     'system',
   );
-  await island.refreshPack();
-  await island.refreshPeople();
+  tell('pack');
+  await Promise.all([island.refreshPack(), island.refreshPeople()]);
+  /*
+   * The trees round you (`NEAR_REACH`), baked before the first frame rather than in it: begun as the land came
+   * in, and waited for here up to `TREE_WAIT_MS`. A join that read no land (an island founded just now) begins
+   * them here. The rest of the reach go on baking until the first frame.
+   */
+  onTrees = true;
+  if (treesOf) tell('trees', 'near', treesDone, treesOf);
+  else tell('trees');
+  preloading ??= preloadTreesAt(world, me.x, me.y, island.time(), undefined, treeStep);
+  await Promise.race([preloading.near, new Promise<void>((done) => setTimeout(done, TREE_WAIT_MS))]);
   // Joined: what goes wrong in this browser from now on, and anything that
   // already has, goes to the island to be written down.
   reportErrorsTo((r) => island.reportError(r));

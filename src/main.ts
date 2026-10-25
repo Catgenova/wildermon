@@ -84,6 +84,7 @@ import { applyLook } from './ui/theme';
 import { STALE_BUILD, StaleBuild } from './version';
 import { reloadFresh } from './ui/update';
 import { Cadence } from './engine/cadence';
+import { BOOT_PHASES, BootProgress, type BootPhase } from './ui/bootsteps';
 
 const canvasEl = document.getElementById('game') as HTMLCanvasElement;
 const uiRoot = document.getElementById('ui') as HTMLElement;
@@ -110,48 +111,64 @@ await new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFr
  * It used to be one line of text. That is fine while everything is quick and
  * is the whole problem when one step is not: a screenshot came back of
  * "catching up… 100%", which was a step that had *finished*, sitting there
- * while two later ones ran in silence. A percentage of an unknown total, and
- * no clock, and no way to tell a slow step from a dead page.
+ * while two later ones ran in silence.
  *
- * So the bar is the steps, the line is the one it is on, the number beside it
- * is how long — appearing only once a step has taken long enough to wonder
- * about — and the list underneath is what it has already done and what each
- * cost. `total` of nought means counting up towards nobody knows what, which
- * is how the island's history is read; that shows the count instead of a
- * fraction, because a fraction would be made up.
+ * So the bar is the phases of coming ashore, each with its share
+ * (`BOOT_PHASES`, src/ui/bootsteps.ts), moved only by the work itself; the
+ * line is the phase it is on, the number beside it is how long — appearing
+ * only once a phase has taken long enough to wonder about — and the list
+ * underneath is what it has already done and what each cost.
  */
-const boot = ((): { say: (text: string, at?: number, of?: number) => void; stop: () => void } => {
+const boot = ((): { say: (phase: BootPhase, detail?: string, at?: number, of?: number) => void; finish: () => void; stop: () => void; steps: BootProgress } => {
   const root = document.querySelector('#boot');
   const bar = root?.querySelector('.boot-bar i') as HTMLElement | null;
   const line = root?.querySelector('.boot-now span') as HTMLElement | null;
   const clock = root?.querySelector('.boot-now b') as HTMLElement | null;
   const past = root?.querySelector('.boot-done') as HTMLElement | null;
-  let step = '';
-  let since = performance.now();
-  const secs = (): number => (performance.now() - since) / 1000;
+  const steps = new BootProgress();
+  // A notch where each phase's share ends, so the bar reads as its phases.
+  let edge = 0;
+  for (const p of BOOT_PHASES.slice(0, -1)) {
+    edge += p.share;
+    const notch = document.createElement('s');
+    notch.style.left = `${edge * 100}%`;
+    bar?.parentElement?.append(notch);
+  }
+  const secs = (): number => steps.elapsed / 1000;
   const tick = window.setInterval(() => {
     if (clock) clock.textContent = secs() < 0.8 ? '' : `${secs().toFixed(1)}s`;
   }, 100);
-  return {
-    say(text, at, of) {
-      if (text !== step) {
-        if (step && past) {
-          const was = document.createElement('li');
-          was.textContent = `${step} · ${secs().toFixed(1)}s`;
-          past.append(was);
-          // Four is enough to see where it has been without the card growing.
-          while (past.children.length > 4) past.firstElementChild?.remove();
-        }
-        step = text;
-        since = performance.now();
-        if (clock) clock.textContent = '';
+  let listed = 0;
+  const draw = (): void => {
+    if (past) {
+      for (; listed < steps.done.length; listed++) {
+        const d = steps.done[listed];
+        const was = document.createElement('li');
+        was.textContent = `${d.label} · ${(d.ms / 1000).toFixed(1)}s`;
+        past.append(was);
       }
-      if (line) line.textContent = of === 0 && at ? `${text} — ${at.toLocaleString()}` : text;
-      if (bar && of && of > 0 && at !== undefined) bar.style.width = `${Math.round((at / of) * 100)}%`;
+      // Four is enough to see where it has been without the card growing.
+      while (past.children.length > 4) past.firstElementChild?.remove();
+    }
+    if (line) line.textContent = steps.line;
+    if (bar) bar.style.width = `${Math.round(steps.fraction * 1000) / 10}%`;
+  };
+  return {
+    say(phase, detail, at, of) {
+      const was = steps.current;
+      steps.at(phase, detail, at, of);
+      if (steps.current !== was && clock) clock.textContent = '';
+      draw();
+    },
+    finish() {
+      steps.finish();
+      if (past) past.replaceChildren();
+      draw();
     },
     stop() {
       window.clearInterval(tick);
     },
+    steps,
   };
 })();
 /**
@@ -172,14 +189,17 @@ function cannotReach(why: string, stale = false): void {
 }
 // Before anything that could throw: what goes wrong from here on is written down (see `errors.ts`).
 watchErrors();
-const tellBoot = (text: string, done?: number, total?: number): void => boot.say(text, done, total);
-const started = await startIsland(params, tellBoot).catch((e: unknown) => {
+const started = await startIsland(params, boot.say).catch((e: unknown) => {
   boot.stop();
   cannotReach(e instanceof Error ? e.message : 'The island keeper did not answer.', e instanceof StaleBuild);
   // Nothing past here runs without an island: the page stays on its Retry.
   return new Promise<never>(() => {});
 });
 const { island, game } = started;
+// Everything the first frame needs is in: the rest is building the screen and drawing it.
+boot.say('frame');
+// One frame for the card to show it: everything from here to the first frame holds the thread.
+await new Promise<void>((done) => requestAnimationFrame(() => setTimeout(done, 0)));
 
 const canvas = new FullscreenCanvas(canvasEl);
 // The fast graphics, and Low power on a phone, draw a pixel for every screen pixel (`dprCapOf`); sized again whenever either changes.
@@ -264,7 +284,9 @@ declare global {
        * Play a spell's drawing from you at what is under the cursor, with no island (`Renderer.playSpell`): `from` as though
        * the island had moved you there from that spot, `companion` with that creature as your companion; and every spell id.
        */
-      spell: (id: string, at?: CastAt, opts?: { from?: { x: number; y: number }; companion?: number }) => boolean; spells: readonly string[] };
+      spell: (id: string, at?: CastAt, opts?: { from?: { x: number; y: number }; companion?: number }) => boolean; spells: readonly string[];
+      /** Milliseconds each phase of coming ashore took (`BOOT_PHASES`). */
+      boot?: Partial<Record<BootPhase, number>> };
   }
 }
 Object.assign(window as unknown as Record<string, unknown>, { catchFish, windAt, windFrom, windWord, pointOfSail, sailWord, favourCap, prayerWorth, PATHS, sittingWorth, weaponDamage, loopsFor, BELT_MAX, coaxBonus, COAX_STEP, COAX_LAPSE, rollsAt, PER_ROLL, cropSprite, creatureLines, tameChance, knackLands, knackBonus, KNACK_ODDS, KNACK_CAP, KNACK_BONUS, KNACK_HOME, boonTime, boonOf, BOON_BONUS, tableMul, upkeepMul, fedness, balance, NUTRIENTS, ITEM_DEFS, TILE_DEFS, groundRoll, crateName, furnitureName, trapName, postName, lanternReach, candleBurn, lanternState, sunAt, skyWash, puffAge, puffOf, PUFFS, PUFF_LIFE, PUFF_RISE, DUST_LIFE, FLOAT_LIFE, FLOAT_RISE, MERGE_WINDOW, Floaters, skyAt, unknownInk, findPath, WATER_PALETTE, waterRgb, CROPS, DAY_SECONDS, TORCH_BURN, WORLD_PACE, drawPortrait, drawHeadshot, LOOK_TABLES, cleanLook, randomLook, HAZE_MAX, HAZE_REACH, ROCK_VARIANTS, METALS, smeltableIn, smeltSeconds, needsIron, creatureSkills, tileUses, bodyOf, PROTOCOL, cleanName, cleanText, encode, decode, packLand, packWorld, unpack });
@@ -607,8 +629,11 @@ followScreen(uiRoot, () => {
   ui.windows.clampAll();
 });
 
+boot.finish();
 boot.stop();
 document.getElementById('boot')?.remove();
+// How long each phase took, for whoever is looking (`scripts/login-check.mjs`).
+window.wurm.boot = boot.steps.timings();
 
 // The cobblestone painted before it is needed: a wall of it coming into view should not be the thing that pays for drawing it.
 warmMasonry();
