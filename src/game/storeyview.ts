@@ -15,8 +15,16 @@
  * an outside staircase), and open air one tile out from a building that has
  * the storey, where a jetty could go. Each at the height its floor is drawn
  * at (`storeyHeight`, as `Renderer.drawFloor` stands it).
+ *
+ * A roof is a storey of its own: its building's level `levels`. Pinned there,
+ * the roof is drawn and nothing under it, its tiles still to plan are marked
+ * out at its eaves (`Renderer.drawRoofSites`), a pitched roof is clicked on
+ * its slopes (`Renderer.roofPick`), and its menu is the roof's work and
+ * nothing else; a storey under it neither draws it nor offers its work. A
+ * click on a pitched roof chooses the tile and walks nowhere
+ * (`pitchedRoofAt`): a flat one is a terrace, walked on.
  */
-import { WALL_HEIGHT, type Building } from './building';
+import { roofShapeDef, WALL_HEIGHT, type Building } from './building';
 import { jettyBase } from './frame';
 import type { Game } from './game';
 
@@ -55,6 +63,13 @@ export function storeyHeight(g: Game, x: number, y: number, level: number): numb
   const host = storeyHost(g, x, y, level) ?? g.buildings.jettyAt(x, y);
   const base = host ? jettyBase(g, host, x, y) : null;
   return (base ?? ground) + level * WALL_HEIGHT;
+}
+
+/** The building whose pitched roof a tile is part of on storey `level`, its roof's own level: no walking there. */
+export function pitchedRoofAt(g: Game, x: number, y: number, level: number): Building | undefined {
+  const b = storeyHost(g, x, y, level) ?? g.buildings.jettyAt(x, y);
+  if (!b || b.levels !== level || roofShapeDef(b).walkable) return undefined;
+  return g.buildings.roofTiles(b).some(([rx, ry]) => rx === x && ry === y) ? b : undefined;
 }
 
 /** The tallest building's roof level: the highest storey there is to pin. */

@@ -1,6 +1,7 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
+import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { FAST_DPR, LOW_POWER_FPS } from '../../game/settings';
 import { RECONNECTING } from '../phone';
@@ -3784,6 +3785,16 @@ export const NEWS: News[] = [
     day: '2026-10-25',
     lines: () => [
       `Added: Wildermon window, Care tab, opened first. Needs, worst first: ${listed(NEED_KINDS.map((k) => NEED_LABEL[k].toLowerCase()))}; hurt under ${percent(HURT_AT)} health, hungry under ${percent(HUNGRY_AT)} fed, care under ${percent(CARE_WANTING_317)}. Fix per row: feed, brush, fit gear, pair. Herd: fed, rest, health and care meters; size, job, idle and needs filters. Bulk: Feed hungry, Brush, Assign selected. Beds by size against workers. Gear Fit and Remove in its menu.`,
+    ],
+  },
+  {
+    n: 321,
+    day: '2026-10-26',
+    lines: () => [
+      `Added: plans over an area, max ${PLAN_AREA_MOST} pieces: Plan walls all round, Plan floor: every tile (a storey), Plan roof: every tile, Plan building over an area, Add an area, Extend over an area (a rectangle to the cursor). Ghost of every piece first, red where refused.`,
+      'Added: plan bar: materials summed over the plan; Need, Carried, Stored (crates on its tiles, stores within building reach), Short; refusals counted. Plan or Cancel (Esc).',
+      `Added: Undo last plan (Ctrl+Z, bar or menu), ${num(PLAN_UNDO_SECONDS / 60)} min: every piece still yours taken down as Remove wall, Remove floor, Remove from plan; delivered materials as those give back.`,
+      'Changed: storey mode: a roof is its own storey. Pinned there: roof drawn, unplanned roof tiles marked out, pitched roofs picked on their slopes, no walking onto one; roof work on that storey only.',
     ],
   },
 ];

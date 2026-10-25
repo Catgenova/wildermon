@@ -132,7 +132,8 @@ function terraceRows(g: Game, b: Building, pick: Pick, base: TileTarget): MenuIt
  */
 export function frameFootprintEntries(g: Game, pick: Pick, b: Building, level = g.storeyFor(b)): MenuItem[] {
   const base: TileTarget = { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, level };
-  return [...columnRows(g, b, base), ...terraceRows(g, b, pick, base)];
+  // Pinned on a storey, the railing round the roof is the roof's own level's (`frameRoofEntries`).
+  return [...columnRows(g, b, base), ...(g.pinnedStorey() === null ? terraceRows(g, b, pick, base) : [])];
 }
 
 /** The rows for a tile of a building on its roof's own level, pinned on it (`storeyview.ts`): the railing round a flat roof. */

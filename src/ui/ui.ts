@@ -19,12 +19,14 @@ import {
   floorKind,
   GLASS_ROOF,
   heftWord,
+  MATERIAL_BY_ID,
   isDone,
   MATERIALS,
   takesAs,
   progressOf,
   ROOF_SHAPES,
   roofShapeOf,
+  roofShapeDef,
   SIDE_NAMES,
   wallBill,
   WALL_TYPE_BY_ID,
@@ -36,6 +38,7 @@ import {
   type Building,
   type RoofShape,
   type Side,
+  type WallType,
 } from '../game/building';
 import { deckBill, metres, pierDrop } from '../game/piers';
 import { cellarGate, targetFloor } from '../game/cellar';
@@ -104,6 +107,8 @@ import { ShoppingPanel } from './panels/shopping';
 import { rotLine, rotSaid, rotSeconds } from '../game/rot';
 import { frameFootprintEntries, frameHoverLines, frameJettyEntries, frameRoofEntries } from './frameMenu';
 import { storeyHost } from '../game/storeyview';
+import { areaAsk, areaCount, areaPieces, areaRefusals, areaTotals, passing, PLAN_UNDO_SECONDS, UNDONE_PLANS, type AreaPlan, type AreaPiece } from '../game/planarea';
+import { PlanBar } from './planbar';
 import { jobEntry, pinEntry, pinnable } from './beltmenu';
 import { creatureLines } from './creatureinfo';
 import { MARK_COLOURS } from '../game/marks';
@@ -290,7 +295,9 @@ function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: S
  */
 type Placing =
   | { kind: 'furniture'; itemUid: number; piece: string; material?: string; facing: Side }
-  | { kind: 'stairs'; x: number; y: number; cx: number; cy: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; down?: boolean; hand?: StairHand; buildingId?: number };
+  | { kind: 'stairs'; x: number; y: number; cx: number; cy: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; down?: boolean; hand?: StairHand; buildingId?: number }
+  /** A plan over an area (`planarea.ts`): its ghost and its totals while it is laid out, a click plans it. */
+  | { kind: 'area'; plan: AreaPlan };
 
 /**
  * Where a stack at hand is, on its menu row, when it is not on you: "in the
@@ -368,6 +375,12 @@ export class UI {
   private readonly keys: Keybinds;
   /** Something on its way to the ground, or nothing. */
   placing: Placing | null = null;
+  /** The bar under a plan over an area: its totals and Plan while it is laid out, then Undo (`planbar.ts`). */
+  readonly planBar: PlanBar;
+  /** The pieces of the plan over an area laid out just now, as the ghost last drew them. */
+  private areaLaid: AreaPiece[] = [];
+  /** A plan over an area asked for from out of reach of it: sent once the feet are beside a piece of it (`areaArrived`). */
+  private areaPending: { plan: AreaPlan; asks: ReturnType<typeof areaAsk> } | null = null;
   /** Lines near the top of the screen for a new whole number, a knack, work done or a birth. */
   readonly notices: Notices;
   /** Eating by itself when Food runs low (`settings.autoEat`). */
@@ -403,6 +416,7 @@ export class UI {
       win?.folds && win.isFolded && root.classList.contains('phone') ? PHONE_FOLD_RIM : root.classList.contains('narrow') ? RIMS.phone : FRAME_RIM[kind] ?? RIMS.window;
     this.windows.onCreate = (win) => this.art.add(win.opts.id, win.el, (kind) => rim(kind, win), runeFor(win.opts.id));
     this.menu = new ContextMenu(root, canvas);
+    this.planBar = new PlanBar(root, { plan: () => void this.commitPlanArea(), cancel: () => this.cancelPlacing(), undo: () => void this.undoPlan() });
     this.tooltip = new Tooltip(root);
     this.hud = new Hud(root, game, {
       toggle: (id) => this.toggleWindow(id),
@@ -1126,6 +1140,60 @@ export class UI {
     return trellisFacing(this.game, pick.x, pick.y, pick.wx - pick.x, pick.wy - pick.y, this.game.player.level);
   }
 
+  /** Undo on your last plan, while the island still keeps it (`PLAN_UNDO_SECONDS`). */
+  private undoRows(): MenuItem[] {
+    return this.canUndoPlan() ? [{ label: 'Undo last plan', note: 'Ctrl+Z', onSelect: () => void this.undoPlan() }] : [];
+  }
+
+  /**
+   * Walls on every bare outside side of a building's storey, of one type in one material: laid out first, with its
+   * totals (`startPlanArea`). Types a whole round of is built in: no doors, gates or counters.
+   */
+  private areaWallRows(b: Building, level: number, x: number, y: number): MenuItem[] {
+    const bld = this.game.buildings;
+    const inside = new Set(b.tiles);
+    let bare = 0;
+    for (const k of b.tiles) {
+      const [tx, ty] = k.split(',').map(Number);
+      for (const [side, dx, dy] of [['n', 0, -1], ['e', 1, 0], ['s', 0, 1], ['w', -1, 0]] as Array<[Side, number, number]>) {
+        if (!inside.has(`${tx + dx},${ty + dy}`) && !bld.wall(level, tx, ty, side) && !bld.noPlan(level, borderOf(tx, ty, side))) bare++;
+      }
+    }
+    if (bare < 2) return [];
+    const types = WALL_TYPES.filter((wt) => !wt.passable && wt.id !== 'counter' && (wt.id !== 'railing' || level > 0 || b.deck != null));
+    return [{
+      label: `Plan walls all round (storey ${level + 1})`,
+      note: `${bare} sides`,
+      children: types.map((wt) => ({
+        label: wt.name,
+        children: MATERIALS.filter((m) => fitsMaterial(wt.id, m) && takesAs(m, { wall: wt.id })).map((m) => ({
+          label: m.name,
+          note: `${describeNeeds(wallBill(m.id, wt.id), materialName)} each`,
+          onSelect: () => this.startPlanArea({ kind: 'walls', buildingId: b.id, level, wallType: wt.id as WallType, material: m.id, anchor: { x, y } }),
+        })),
+      })),
+    }];
+  }
+
+  /** A floor on every tile of a building's storey with none, in one material: laid out first, with its totals. */
+  private areaFloorRows(b: Building, level: number, x: number, y: number): MenuItem[] {
+    const bld = this.game.buildings;
+    const bare = b.tiles.filter((k) => {
+      const [tx, ty] = k.split(',').map(Number);
+      return !bld.floor(level, tx, ty);
+    }).length;
+    if (bare < 2) return [];
+    return [{
+      label: `Plan ${level > 0 ? 'floor' : 'flooring'}: every tile (storey ${level + 1})`,
+      note: `${bare} tiles`,
+      children: MATERIALS.filter((m) => takesAs(m, { floor: 'floor' })).map((m) => ({
+        label: m.name,
+        note: `${describeNeeds(floorBill(m.id), materialName)} each`,
+        onSelect: () => this.startPlanArea({ kind: 'floor', buildingId: b.id, level, material: m.id, anchor: { x, y } }),
+      })),
+    }];
+  }
+
   /**
    * Plan a staircase or a ladder on a tile, up to the storey over it or down
    * to the cellar under it (`down`): the side to climb from turns with Q and
@@ -1142,7 +1210,7 @@ export class UI {
   /** A quarter turn of what is being placed: to the right for +1, to the left for -1. */
   rotatePlacing(step: number): void {
     const p = this.placing;
-    if (!p) return;
+    if (!p || p.kind === 'area') return;
     if (p.kind === 'furniture') p.facing = turnedFacing(p.facing, step);
     // A spiral staircase has no side it is climbed from.
     else if (p.hand === SPIRAL) return;
@@ -1165,15 +1233,135 @@ export class UI {
   }
 
   cancelPlacing(): void {
+    const area = this.placing?.kind === 'area';
     this.placing = null;
     this.renderer.ghost = null;
+    this.renderer.planGhost = null;
+    this.areaLaid = [];
+    if (area) this.planBar.hide();
+  }
+
+  /**
+   * Lay out a plan over an area (`planarea.ts`): every piece of it drawn as a
+   * ghost, red where it would be refused, with what the lot takes against the
+   * pack and the stores within reach on the bar under it. A click, or Plan on
+   * the bar, asks the island for the pieces that pass; Esc or Cancel drops it.
+   * A footprint follows the cursor from its first corner.
+   */
+  startPlanArea(plan: AreaPlan): void {
+    this.cancelPlacing();
+    this.placing = { kind: 'area', plan };
+    this.layArea(null);
+    this.game.logMsg(plan.kind === 'footprint' ? 'Planning an area: cursor sets the far corner. Click: plan. Esc: cancel.' : 'Click: plan. Esc: cancel.', 'info');
+  }
+
+  /** The plan over an area worked out afresh, its ghost and its bar: a footprint to the tile under the cursor. */
+  private layArea(pick: Pick | null): void {
+    const p = this.placing;
+    if (p?.kind !== 'area') return;
+    const plan = p.plan;
+    if (plan.kind === 'footprint' && pick && !pick.down && (pick.level ?? 0) <= 0) plan.corner = { x: pick.x, y: pick.y };
+    const pieces = areaPieces(this.game, plan);
+    this.areaLaid = pieces;
+    const ghostKind = plan.kind === 'walls' ? 'wall' : plan.kind === 'footprint' ? 'tile' : plan.kind;
+    this.renderer.planGhost = pieces.map((q) => ({
+      kind: ghostKind, x: q.target.x, y: q.target.y, side: q.target.side,
+      level: plan.kind === 'roof' ? plan.level + 1 : plan.level, ok: !q.why,
+    }));
+    const ok = passing(pieces).length;
+    const b = plan.buildingId !== undefined ? this.game.buildings.list.get(plan.buildingId) : undefined;
+    const what = plan.kind === 'walls' ? `${WALL_TYPE_BY_ID.get(plan.wallType ?? 'solid')?.name ?? 'Wall'}, ${MATERIAL_BY_ID.get(plan.material ?? '')?.name.toLowerCase() ?? ''}`
+      : plan.kind === 'footprint' ? (b ? `Add to ${b.name}` : plan.name ?? 'New building')
+        : `${plan.material === GLASS_ROOF.id ? GLASS_ROOF.name : MATERIAL_BY_ID.get(plan.material ?? '')?.name ?? ''}`;
+    const where = plan.kind === 'roof' ? ' · roof' : plan.kind === 'footprint' ? '' : ` · storey ${plan.level + 1}`;
+    this.planBar.show({
+      title: `Plan: ${areaCount(plan, ok)} · ${what}${where}`,
+      count: ok,
+      totals: areaTotals(this.game, pieces),
+      refused: areaRefusals(pieces),
+    });
+  }
+
+  /** The plan over an area laid out asked of the island, the pieces that pass, in one call; then Undo on the bar. */
+  async commitPlanArea(): Promise<void> {
+    const p = this.placing;
+    if (p?.kind !== 'area') return;
+    const plan = p.plan;
+    const pieces = this.areaLaid.length ? this.areaLaid : areaPieces(this.game, plan);
+    const asks = areaAsk(pieces);
+    if (!asks.length) {
+      this.game.logMsg(areaRefusals(pieces)[0]?.why ?? 'Nothing to plan.', 'error');
+      return;
+    }
+    this.cancelPlacing();
+    if (!this.game.planArea) {
+      this.game.logMsg('Not on the island.', 'error');
+      return;
+    }
+    // Asked from beside a piece of it, as a single plan is: walked to the nearest first, and sent on arriving.
+    const near = this.nearestAsk(asks);
+    if (near.d > 1) {
+      if (!this.game.moveTo(near.x, near.y)) return;
+      this.areaPending = { plan, asks };
+      return;
+    }
+    await this.sendArea(plan, asks);
+  }
+
+  /** The tile of the plan nearest where you stand, and how far it is, in whole tiles either way. */
+  private nearestAsk(asks: ReturnType<typeof areaAsk>): { x: number; y: number; d: number } {
+    const p = this.game.player;
+    let best = { x: p.tileX, y: p.tileY, d: Infinity };
+    for (const a of asks) {
+      const d = Math.max(Math.abs(a.target.x - p.tileX), Math.abs(a.target.y - p.tileY));
+      if (d < best.d) best = { x: a.target.x, y: a.target.y, d };
+    }
+    return best;
+  }
+
+  /** A plan over an area asked of the island, and Undo offered on it once it is planned. */
+  private async sendArea(plan: AreaPlan, asks: ReturnType<typeof areaAsk>): Promise<void> {
+    if (!this.game.planArea) return;
+    const said = await this.game.planArea(asks);
+    if (!said.planned) return;
+    this.game.plannedAt = Date.now();
+    this.planBar.offerUndo(`Planned: ${areaCount(plan, said.planned)}`, this.game.plannedAt + PLAN_UNDO_SECONDS * 1000);
+  }
+
+  /** A plan over an area waiting on the feet: sent once they stop beside a piece of it, dropped when they stop anywhere else. */
+  private areaArrived(): void {
+    const pending = this.areaPending;
+    if (!pending || this.game.player.moving || this.game.player.path?.length) return;
+    this.areaPending = null;
+    if (this.nearestAsk(pending.asks).d <= 1) void this.sendArea(pending.plan, pending.asks);
+  }
+
+  /** Whether your last plan can still be taken back (`PLAN_UNDO_SECONDS`). */
+  canUndoPlan(): boolean {
+    // Not while a plan asked for by hand is still in hand or lined up: the last plan is the one before it until it is done.
+    const pending = [this.game.action, ...this.game.queue].some((j) => !!j && UNDONE_PLANS.has(j.def.id));
+    return !!this.game.undoPlan && !pending && this.game.plannedAt > 0 && Date.now() - this.game.plannedAt < PLAN_UNDO_SECONDS * 1000;
+  }
+
+  /** Your last plan taken back, every piece of it still standing (`rpc_plan_undo`). */
+  async undoPlan(): Promise<void> {
+    this.planBar.hide();
+    if (!this.game.undoPlan) return;
+    const said = await this.game.undoPlan();
+    if (said.removed) this.game.plannedAt = 0;
   }
 
   /** The ghost the renderer draws for what is being placed, worked out from where the cursor is. */
   syncGhost(pick: Pick | null): void {
+    if (this.areaPending) this.areaArrived();
     const p = this.placing;
     if (!p) {
       this.renderer.ghost = null;
+      return;
+    }
+    // A footprint follows the cursor; any other plan over an area stays as it was laid out.
+    if (p.kind === 'area') {
+      if (p.plan.kind === 'footprint' && pick && (p.plan.corner?.x !== pick.x || p.plan.corner?.y !== pick.y)) this.layArea(pick);
       return;
     }
     if (p.kind === 'stairs') {
@@ -1200,6 +1388,11 @@ export class UI {
     if (!p) return;
     if (button !== 0) {
       this.cancelPlacing();
+      return;
+    }
+    if (p.kind === 'area') {
+      if (p.plan.kind === 'footprint' && pick) this.layArea(pick);
+      void this.commitPlanArea();
       return;
     }
     if (p.kind === 'stairs') {
@@ -1300,7 +1493,9 @@ export class UI {
     const aloft = (pick.level ?? 0) > 0;
     const t = w.getTile(pick.x, pick.y);
     if (aloft) {
-      lines.push(`Storey ${(pick.level ?? 0) + 1} · ${pick.x}, ${pick.y}`);
+      // A roof's own level is its roof's (`storeyview.ts`), on a building's own tiles.
+      const own = this.game.buildings.buildingAt(pick.x, pick.y);
+      lines.push(`${own && (pick.level ?? 0) >= own.levels ? 'Roof' : `Storey ${(pick.level ?? 0) + 1}`} · ${pick.x}, ${pick.y}`);
     } else if (t === TileType.Tree) {
       const data = w.getData(pick.x, pick.y);
       lines.push(`${treeAge(data).name} ${TREE_DEFS[treeSpecies(data)].name.toLowerCase()} tree`);
@@ -1385,8 +1580,13 @@ export class UI {
         const mat = MATERIALS.find((m) => m.id === floor.material)?.name.toLowerCase() ?? floor.material;
         lines.push(`${k === 'ladder' ? 'ladder' : `${mat} ${floorName(floor)}`}${isDone(floor) ? '' : ` · ${Math.round(progressOf(floor) * 100)}% built`}`);
       }
+      // The roof: on Auto, and on its own level when that is pinned (`storeyview.ts`); not on a storey under it.
       const roof = this.game.buildings.floor(b.levels, pick.x, pick.y);
-      if (roof) lines.push(`${roof.material === GLASS_ROOF.id ? 'glass roof' : 'roof'}${isDone(roof) ? '' : ` · ${Math.round(progressOf(roof) * 100)}% built`}`);
+      if (pinned === null || onRoof) {
+        const shape = onRoof ? `${roofShapeDef(b).name.toLowerCase()} ` : '';
+        if (roof) lines.push(`${shape}${roof.material === GLASS_ROOF.id ? 'glass roof' : 'roof'}${isDone(roof) ? '' : ` · ${Math.round(progressOf(roof) * 100)}% built`}`);
+        else if (onRoof) lines.push('roof: not planned');
+      }
     }
     const counterLine = aloft ? null : counterTip(this.game, pick);
     if (counterLine) lines.push(counterLine);
@@ -3447,15 +3647,20 @@ export class UI {
       }
       const p = onPiers();
       entries.push({ ...item(act('plan_building'), base, `${act('plan_building').label}${p.on}`), note: p.note });
+      // A footprint dragged out over a rectangle from this tile, laid out before it is asked for (`planarea.ts`).
+      if (nb && nb.levels === 1) entries.push({ label: `Add an area to ${nb.name}`, note: 'cursor: far corner · click to plan', onSelect: () => this.startPlanArea({ kind: 'footprint', buildingId: nb.id, level: 0, anchor: { x, y } }) });
+      else if (!nb) entries.push({ label: 'Plan building over an area', note: 'cursor: far corner · click to plan', onSelect: () => this.startPlanArea({ kind: 'footprint', level: 0, anchor: { x, y } }) });
+      entries.push(...this.undoRows());
       return entries;
     }
     const pinned = g.pinnedStorey();
     // A pinned storey's own menu, on its roof's level: the roof, its railing and a storey more, and nothing else.
     if (storey !== undefined && storey >= b.levels) {
       base.level = b.levels - 1;
-      entries.push(...roofEntries(g, b, base, act, item, build));
+      entries.push(...roofEntries(g, b, base, act, item, build, (plan) => this.startPlanArea(plan)));
       entries.push(...frameRoofEntries(g, pick, b));
       entries.push(item(act('add_floor'), base));
+      entries.push(...this.undoRows());
       entries.push(item(act('rename_building'), base));
       return entries;
     }
@@ -3538,6 +3743,8 @@ export class UI {
     }
     // Every storey's wall on this side, whichever storey is being worked on.
     entries.push(...ivy(withSide));
+    // Every bare outside side of the storey at once, laid out before it is asked for (`planarea.ts`).
+    entries.push(...this.areaWallRows(b, level, x, y));
     // Columns on its corners, and the railing round a flat roof (`frameMenu.ts`).
     entries.push(...frameFootprintEntries(g, pick, b, level));
     const floor = bld.floor(level, x, y);
@@ -3611,17 +3818,22 @@ export class UI {
         }
       }
     }
+    // Every tile of the storey with no floor at once, laid out before it is asked for (`planarea.ts`).
+    entries.push(...this.areaFloorRows(b, level, x, y));
     // Pinned on a storey, the way up to the next from its floor: a flight or a ladder on the floor slot over it.
     if (pinned !== null && level + 1 < b.levels && !bld.floor(level + 1, x, y)) entries.push(...stairsUpEntries(g, base, level + 1, side,
       (at, lv, material, kind, sd, hand) => this.startPlacingStairs(at, lv, material, kind, sd, false, hand)));
     if (storey === undefined) entries.push(...cellarEntries(g, base, side, (material, kind, hand) => this.startPlacingStairs(base, 0, material, kind, side, true, hand)));
-    // Pinned, the roof and the storeys are the top storey's work.
+    // Pinned, the storeys are the top storey's work, and the roof its own level's (`storeyview.ts`).
     if (pinned === null || level === b.levels - 1) {
-      entries.push(...roofEntries(g, b, base, act, item, build));
+      if (pinned === null) entries.push(...roofEntries(g, b, base, act, item, build, (plan) => this.startPlanArea(plan)));
       entries.push(item(act('add_floor'), base));
       if (b.levels > 1) entries.push(item(act('remove_storey'), base));
     }
     if (storey === undefined) entries.push(item(act('remove_from_plan'), base));
+    // The footprint dragged out over a rectangle from here, while it has one storey (`planarea.ts`).
+    if (storey === undefined && b.levels === 1) entries.push({ label: 'Extend over an area', note: 'cursor: far corner · click to plan', onSelect: () => this.startPlanArea({ kind: 'footprint', buildingId: b.id, level: 0, anchor: { x, y } }) });
+    entries.push(...this.undoRows());
     entries.push(item(act('rename_building'), base));
     return entries;
   }
@@ -3669,7 +3881,8 @@ function stairsUpEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, level
 /** The roof's rows for a tile of a building: building or taking out the one there, or planning one. */
 function roofEntries(g: Game, b: Building, base: Extract<Target, { kind: 'tile' }>, act: (id: string) => ActionDef,
   item: (def: ActionDef, target: Target, label?: string) => MenuItem,
-  build: (def: ActionDef, target: Target, label: string, bill: Bill) => MenuItem): MenuItem[] {
+  build: (def: ActionDef, target: Target, label: string, bill: Bill) => MenuItem,
+  area?: (plan: AreaPlan) => void): MenuItem[] {
   const bld = g.buildings;
   const { x, y } = base;
   const entries: MenuItem[] = [];
@@ -3724,5 +3937,27 @@ function roofEntries(g: Game, b: Building, base: Extract<Target, { kind: 'tile' 
       });
     }
   }
+  entries.push(...roofAreaRows(g, b, base, area));
   return entries;
+}
+
+/**
+ * The whole roof at once: every tile of it not yet planned, in one material and, for the first, one shape, laid
+ * out before it is asked for with its totals (`planarea.ts`). Offered while two or more tiles are left to plan.
+ */
+function roofAreaRows(g: Game, b: Building, base: Extract<Target, { kind: 'tile' }>, area?: (plan: AreaPlan) => void): MenuItem[] {
+  if (!area) return [];
+  const bld = g.buildings;
+  const left = bld.roofTiles(b).filter(([x, y]) => !bld.floor(b.levels, x, y)).length;
+  if (left < 2) return [];
+  const rows = (shape?: RoofShape): MenuItem[] => [...MATERIALS.filter((m) => takesAs(m, { floor: 'roof' })), GLASS_ROOF].map((m) => ({
+    label: m.name,
+    note: `${describeNeeds(floorBill(m.id, 'roof', shape ?? roofShapeOf(b)), materialName)} each`,
+    onSelect: () => area({ kind: 'roof', buildingId: b.id, level: b.levels - 1, material: m.id, roofShape: shape, anchor: { x: base.x, y: base.y } }),
+  }));
+  return [{
+    label: 'Plan roof: every tile',
+    note: `${left} tiles`,
+    children: b.roof ? rows() : ROOF_SHAPES.map((r) => ({ label: r.name, note: r.note, children: rows(r.id as RoofShape) })),
+  }];
 }

@@ -270,6 +270,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
     void island.hold();
   };
   game.reorder = (seen, order) => void island.queueOrder(seen, order);
+  // A plan over an area, and the last plan taken back: one call each (`planarea.ts`).
+  game.planArea = (asks) => island.planArea(asks);
+  game.undoPlan = () => island.undoPlan();
 
   /*
    * The clock on what the island is doing.

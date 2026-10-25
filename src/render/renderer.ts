@@ -499,6 +499,21 @@ export type Ghost =
   | { kind: 'furniture'; piece: string; material?: string; x: number; y: number; sx: number; sy: number; facing: Side; ok: boolean; level?: number }
   | { kind: 'stairs'; x: number; y: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; hand?: StairHand; ok: boolean; buildingId?: number };
 
+/**
+ * One piece of a plan over an area, drawn before it is asked for
+ * (`planarea.ts`): a wall on a side of a tile on a storey, a floor tile on a
+ * storey, a roof tile, or a tile of a footprint on the ground; `ok` is whether
+ * it would be planned, and a piece that would not is washed red.
+ */
+export interface PlanGhostPiece {
+  kind: 'wall' | 'floor' | 'roof' | 'tile';
+  x: number;
+  y: number;
+  side?: Side;
+  level: number;
+  ok: boolean;
+}
+
 export interface Pick {
   x: number;
   y: number;
@@ -782,6 +797,10 @@ const GRID_COLOR = 'rgba(0,0,0,0.16)';
 const DEED_COLOR = 'rgba(96, 230, 110, 0.9)';
 const DEED_SHADOW = 'rgba(0, 40, 0, 0.6)';
 const PLAN_COLOR = 'rgba(120, 220, 140, 0.95)';
+/** A plan over an area before it is asked for (`drawPlanGhost`): its pieces, and those that would be refused. */
+const PLAN_GHOST_FILL = 'rgba(120, 220, 140, 0.32)';
+const PLAN_GHOST_REFUSED = 'rgba(214, 58, 42, 0.38)';
+const PLAN_GHOST_REFUSED_LINE = 'rgba(214, 58, 42, 0.9)';
 /** The shade a wall throws on the ground at its foot: cool, as the shade on a wall's own turned face is. */
 const SHADE_INK = 'rgba(50, 44, 70, 0.26)';
 /** Steps to a storey's flight: six made every step half a metre, and a flight a pile of blocks. */
@@ -1228,6 +1247,8 @@ export class Renderer {
   hover: Pick | null = null;
   /** What is being set down, drawn after everything that stands. */
   ghost: Ghost | null = null;
+  /** A plan over an area before it is asked for, every piece of it, over everything (`planarea.ts`). */
+  planGhost: PlanGhostPiece[] | null = null;
   /** The tile the tile window is looking at, outlined so you can see which it is. */
   selected: { x: number; y: number; down?: boolean; level?: number } | null = null;
   fps = 0;
@@ -5030,6 +5051,8 @@ export class Renderer {
       this.trailPaintWas = null;
     }
     this.drawOverlays(ctx, zoom);
+    if (this.pinned !== null && this.pinned > 0) this.drawRoofSites(ctx);
+    if (this.planGhost?.length) this.drawPlanGhost(ctx, this.planGhost);
     this.drawFight(ctx, zoom);
     if (this.game.settings.markThreats) this.drawThreats(ctx, zoom);
   }
@@ -16319,6 +16342,85 @@ export class Renderer {
     ctx.closePath();
   }
 
+  /**
+   * A plan over an area, every piece of it, from the back to the front: a
+   * floor or a roof tile as a sheet at the height its floor would be drawn
+   * at (`storeyHeight`), a footprint's tile on the ground, and a wall as a
+   * pane a storey high on its side. Washed in the plan's colour, or red
+   * where the piece would be refused.
+   */
+  private drawPlanGhost(ctx: CanvasRenderingContext2D, pieces: PlanGhostPiece[]): void {
+    const cam = this.camera;
+    const w = this.game.world;
+    const V = cam.view;
+    const sorted = [...pieces].sort((a, b) => depthOf(V, a.x, a.y) - depthOf(V, b.x, b.y));
+    ctx.save();
+    ctx.lineWidth = 1.5;
+    for (const p of sorted) {
+      ctx.fillStyle = p.ok ? PLAN_GHOST_FILL : PLAN_GHOST_REFUSED;
+      ctx.strokeStyle = p.ok ? PLAN_COLOR : PLAN_GHOST_REFUSED_LINE;
+      if (p.kind === 'wall' && p.side) {
+        const [ax, ay, bx, by] = borderPoints(borderOf(p.x, p.y, p.side));
+        const h0 = storeyHeight(this.game, p.x, p.y, p.level);
+        const h1 = h0 + WALL_HEIGHT;
+        ctx.beginPath();
+        ctx.moveTo(cam.worldToScreenX(ax, ay), cam.worldToScreenY(ax, ay, h0));
+        ctx.lineTo(cam.worldToScreenX(bx, by), cam.worldToScreenY(bx, by, h0));
+        ctx.lineTo(cam.worldToScreenX(bx, by), cam.worldToScreenY(bx, by, h1));
+        ctx.lineTo(cam.worldToScreenX(ax, ay), cam.worldToScreenY(ax, ay, h1));
+        ctx.closePath();
+      } else {
+        const flat = p.kind === 'tile' ? undefined : storeyHeight(this.game, p.x, p.y, p.level);
+        const h = (cx: number, cy: number): number => flat ?? w.getHeight(cx, cy);
+        ctx.beginPath();
+        ctx.moveTo(cam.worldToScreenX(p.x, p.y), cam.worldToScreenY(p.x, p.y, h(p.x, p.y)));
+        ctx.lineTo(cam.worldToScreenX(p.x + 1, p.y), cam.worldToScreenY(p.x + 1, p.y, h(p.x + 1, p.y)));
+        ctx.lineTo(cam.worldToScreenX(p.x + 1, p.y + 1), cam.worldToScreenY(p.x + 1, p.y + 1, h(p.x + 1, p.y + 1)));
+        ctx.lineTo(cam.worldToScreenX(p.x, p.y + 1), cam.worldToScreenY(p.x, p.y + 1, h(p.x, p.y + 1)));
+        ctx.closePath();
+      }
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Pinned on the level a building's roof sits on (`storeyview.ts`), where
+   * every storey under it is hidden: each of its roof's tiles not yet planned,
+   * marked out at the height of its eaves, so the roof still to plan is there
+   * to click on.
+   */
+  private drawRoofSites(ctx: CanvasRenderingContext2D): void {
+    const level = this.pinned;
+    if (level === null) return;
+    const bld = this.game.buildings;
+    const cam = this.camera;
+    let any = false;
+    for (const b of bld.list.values()) {
+      if (b.levels !== level || this.cut.has(b.id)) continue;
+      for (const [x, y] of bld.roofTiles(b)) {
+        if (bld.floor(level, x, y)) continue;
+        if (!any) {
+          ctx.save();
+          ctx.strokeStyle = PLAN_COLOR;
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          any = true;
+        }
+        const h = storeyHeight(this.game, x, y, level);
+        ctx.beginPath();
+        ctx.moveTo(cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h));
+        ctx.lineTo(cam.worldToScreenX(x + 1, y), cam.worldToScreenY(x + 1, y, h));
+        ctx.lineTo(cam.worldToScreenX(x + 1, y + 1), cam.worldToScreenY(x + 1, y + 1, h));
+        ctx.lineTo(cam.worldToScreenX(x, y + 1), cam.worldToScreenY(x, y + 1, h));
+        ctx.closePath();
+        ctx.stroke();
+      }
+    }
+    if (any) ctx.restore();
+  }
+
   private cornerMarker(ctx: CanvasRenderingContext2D, cx: number, cy: number, zoom: number, color: string, flat?: number): void {
     const w = this.game.world;
     const sx = this.camera.worldToScreenX(cx, cy);
@@ -16803,6 +16905,9 @@ export class Renderer {
    * nearest line back.
    */
   private storeyPick(sx: number, sy: number, level: number): Pick | null {
+    // A pitched roof on its own level is picked on its slopes, where it is drawn, not on the flat of its eaves.
+    const roof = this.roofPick(sx, sy, level);
+    if (roof) return roof;
     const cam = this.camera;
     const world = this.game.world;
     const iso = cam.screenToIso(sx, sy);
@@ -16825,6 +16930,43 @@ export class Renderer {
       }
     }
     return null;
+  }
+
+  /**
+   * The roof tile under a point on the screen, on the level a pitched roof
+   * sits on (`storeyview.ts`): of the faces of every such roof drawn there
+   * (`roofFrame`), the nearest the eye that the point is in, picked at the
+   * face's own height; null where none is.
+   */
+  private roofPick(sx: number, sy: number, level: number): Pick | null {
+    const cam = this.camera;
+    const V = cam.view;
+    let best: { x: number; y: number; h: number; d: number } | null = null;
+    for (const b of this.game.buildings.list.values()) {
+      if (b.levels !== level || roofShapeOf(b) === 'flat') continue;
+      const frame = this.roofFrame(b);
+      if (!frame) continue;
+      const pitch = ROOF_PITCH * roofShapeDef(b).rise;
+      for (const face of frame.model.faces) {
+        const n = face.pts.length;
+        const poly = new Float64Array(n * 2);
+        let mx = 0, my = 0, md = 0;
+        face.pts.forEach((q, i) => {
+          poly[i * 2] = cam.worldToScreenX(q[0], q[1]);
+          poly[i * 2 + 1] = cam.worldToScreenY(q[0], q[1], frame.eave + pitch * q[2]);
+          mx += q[0] / n;
+          my += q[1] / n;
+          md += q[2] / n;
+        });
+        if (!inPolygon(poly, n * 2, sx, sy)) continue;
+        const d = depthOf(V, mx, my);
+        if (best && best.d >= d) continue;
+        const f = frame.roofs[face.tile];
+        best = { x: f.x, y: f.y, h: frame.eave + pitch * md, d };
+      }
+    }
+    if (!best) return null;
+    return this.game.vision.state(best.x, best.y) === UNSEEN ? null : { ...this.makePick(best.x, best.y, sx, sy, best.h), level };
   }
 
   /** The ground under a point on the screen, whatever stands on it: the first tile it hits, from the nearest line back. */

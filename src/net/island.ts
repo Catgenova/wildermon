@@ -4170,6 +4170,33 @@ export class Island {
   }
 
   /**
+   * A plan over an area, every piece of it, in one call (`planarea.ts`): the
+   * island plans each by its own refusal and performer, keeps the lot to undo,
+   * and says how many it planned, or why none. What it planned comes down
+   * with the next ground read, asked for at once.
+   */
+  async planArea(asks: Array<{ action: string; target: unknown }>): Promise<{ planned?: number; refused?: number; why?: string }> {
+    if (!this.info) return { why: 'You are not on an island.' };
+    const { data, error } = await supabase().rpc('rpc_plan_area', { p_world: this.info.id, p_asks: asks });
+    if (error) return { why: error.message };
+    this.stirred = true;
+    this.groundSlow = true;
+    this.armBeat(0.5);
+    return (data ?? {}) as { planned?: number; refused?: number; why?: string };
+  }
+
+  /** Your last plan taken back (`rpc_plan_undo`): how many pieces came down, or why none. */
+  async undoPlan(): Promise<{ removed?: number; why?: string }> {
+    if (!this.info) return { why: 'You are not on an island.' };
+    const { data, error } = await supabase().rpc('rpc_plan_undo', { p_world: this.info.id });
+    if (error) return { why: error.message };
+    this.stirred = true;
+    this.groundSlow = true;
+    this.armBeat(0.5);
+    return (data ?? {}) as { removed?: number; why?: string };
+  }
+
+  /**
    * Put down whatever is in hand, and everything lined up behind it.
    *
    * The other half of `act`, and missing until somebody noticed what that

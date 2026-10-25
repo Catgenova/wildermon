@@ -1,5 +1,6 @@
 import { BAG_CARRY } from '../../game/gear';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
+import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { CELL, CLEAR_CELLS } from '../snapgrid';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOINT_EVERY, PIN_EVERY, SOFT, STITCH_EVERY } from '../runecut-dress';
@@ -1686,6 +1687,8 @@ export function helpText(): string {
       walls, floors, roofs, and the furniture and people on them. Clicks and walks: onto that storey's floor (mounted: wide staircases only). Its menu: that storey's
       building work, <i>Plan staircase up</i>, furniture set down on it. Label <i>1st</i>, <i>2nd</i>…; click for <i>Auto</i> (every storey).
       <kbd>Page Up</kbd> / <kbd>Page Down</kbd> do the same.</li>
+      <li>Pinned one above a building's top storey: its <b>roof</b>, alone. Unplanned roof tiles marked out; a pitched roof picked on its slopes, not walked onto;
+      its menu: the roof's work only. A storey under it: no roof drawn, no roof work.</li>
       <li>Once any cellar is dug: <i>Cellar</i>, below the ground floor: every nearby cellar as dug, buildings over them removed. Contents and people in a cellar
       show only to somebody in it, within their sight.</li>
       <li><b>◪</b>, <kbd>X</kbd> or the Settings box: <b>hides the walls facing you</b>; far walls stay. Always on while a storey is pinned.</li>
@@ -1713,6 +1716,12 @@ export function helpText(): string {
       <li>A finished full-height wall with a wall of the storey above on the same side (once any of that wall's materials are in) cannot come down until that upper
       wall does, or a finished column stands at each end; likewise the last wall a jetty rests on. To turn one into a door: column at each end, take it down, build the door.</li>
       <li>Roof: <b>Plan roof</b> tile by tile once the top storey's walls are done; neighbours join into ridges and hips.</li>
+      <li>Plans over an area, max ${PLAN_AREA_MOST} pieces: <b>Plan walls all round</b>, <b>Plan floor: every tile</b> (the storey shown), <b>Plan roof: every tile</b>;
+      <b>Plan building over an area</b>, <b>Add an area to</b>, <b>Extend over an area</b> (rectangle to the cursor). Ghost of every piece first; red: refused.</li>
+      <li>Plan bar: each material summed over the plan; Need, Carried, Stored (crates on its tiles, stores within building reach), Short. Plan or click: planned,
+      walked to first. Esc or Cancel: dropped.</li>
+      <li><b>Undo last plan</b> (Ctrl+Z, the bar, or a building's menu), ${PLAN_UNDO_SECONDS / 60} min after planning: every piece still yours taken down as
+      Remove wall, Remove floor and Remove from plan take one down; delivered materials as those give back.</li>
     </ul>
     <h4>Stairs</h4>
     <ul>
