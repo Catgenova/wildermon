@@ -857,14 +857,14 @@ export function bush3dFoot(species: number, x: number, y: number): number {
 
 /** The species whose stumps and felled logs are drawn as solids, by their `TREE_DEFS` index: take one out and it is drawn flat again. */
 export const STUMP3D_SPECIES: Set<number> = new Set(SPECIES.keys());
-/** The age a stump is the foot of: a stump keeps its species and not its age (`packTreeData`). */
-const STUMP_AGE = Math.max(0, TREE_AGES.findIndex((a) => a.name === 'Mature'));
+/** The age a stump is the foot of: a stump keeps its species and not its age (`packTreeData`), and what is felled for its timber is mostly old. */
+const STUMP_AGE = Math.max(0, TREE_AGES.findIndex((a) => a.name === 'Old'));
 
 const stumpModels = new Map<string, StumpModel>();
 function stumpModelOf(species: number, form: number): StumpModel {
   const k = `${species}|${form}`;
   let m = stumpModels.get(k);
-  if (!m) stumpModels.set(k, (m = stumpOf(skeletonOf(species, STUMP_AGE, form))));
+  if (!m) stumpModels.set(k, (m = stumpOf(skeletonOf(species, STUMP_AGE, form), !!SPECIES.get(species)?.buttress)));
   return m;
 }
 /** A day's dress for wood with no leaf on it. */
@@ -929,15 +929,20 @@ function logMaker(species: number, n: number, season: Season, x: number, y: numb
   const way = Math.floor(hash2(Math.round(x), Math.round(y), 6271) * LOG_WAYS) % LOG_WAYS;
   const count = Math.max(1, Math.min(3, Math.round(n)));
   const spec = SPECIES.get(species) ?? maple;
-  const kind = `${species}|${way}|${count}|${beside ? 1 : 0}`;
+  const angle = (way / LOG_WAYS) * Math.PI + Math.PI / 8;
+  // Beside a stump, on its side nearer the eye: drawn after the stump, they are in front of it.
+  const e = eyeOf(0, turn);
+  const side = beside ? (Math.cos(angle + Math.PI / 2) * e.toward[0] + Math.sin(angle + Math.PI / 2) * e.toward[1] >= 0 ? 1 : -1) : 0;
+  const kind = `${species}|${way}|${count}|${side}`;
   const model = (): ReturnType<typeof logsOf> => {
     let m = logModels.get(kind);
     if (!m) {
       const trunk = skeletonOf(species, STUMP_AGE, 0).limbs;
       // As thick as its trunk a little way up, and as long as a tile is half wide and more.
       const r = Math.max(1.4, Math.min(4.2, (trunk.find((L) => L.order === 0 && L.b[2] > 8) ?? trunk[0]).rb * 0.85));
-      const off = beside ? stumpModelOf(species, 0).sk.crown.r * 0.45 + r * (count > 1 ? 2.1 : 1.3) : 0;
-      logModels.set(kind, (m = logsOf(r, 25, count, (way / LOG_WAYS) * Math.PI + Math.PI / 8, off, species * 31 + way * 7 + count)));
+      const stump = stumpModelOf(species, 0);
+      const off = side * (Math.max(...stump.cuts.map((c) => Math.hypot(c.c[0], c.c[1]) + c.r)) * 1.25 + r * (count > 1 ? 2.1 : 1.15));
+      logModels.set(kind, (m = logsOf(r, 25, count, angle, off, species * 31 + way * 7 + count)));
     }
     return m;
   };

@@ -355,6 +355,9 @@ export function grownAt(x: number, y: number): number {
       : 0.8 + 0.5 * ((r - 0.26) / 0.63);
 }
 
+/** How much bigger or smaller a tile's stump drawn as a solid is than its species' own: the tree that grew there's size (`grownAt`), by its square root. */
+export const stumpGrown = (x: number, y: number): number => Math.sqrt(grownAt(x, y));
+
 /** Whether a point given in the sprite's own units is inside the path last laid down. */
 function inside(ctx: CanvasRenderingContext2D, x: number, y: number): boolean {
   const m = ctx.getTransform();

@@ -9,7 +9,7 @@
  */
 import { KIT_INK, KIT_INK_W } from '../kit/core';
 import { proj } from '../runestone';
-import { dulled } from '../trees/kit';
+import { dulled, mix } from '../trees/kit';
 import { mulberry32 } from '../../world/noise';
 import { ACROSS, bandPath, buttress, chainsOf, footOf, paintChain, paintFoot, SNOW_EDGE, type Chain, type Item, type Job } from './paint';
 import type { Limb, Skeleton, Species3D, V3 } from './types';
@@ -45,6 +45,16 @@ export function woodOf(trunk: string): { face: string; ring: string } {
 const CUT_HIGH = 1.05;
 const CUT_LO = 2.6;
 const CUT_HI = 6;
+/** How far a stump's roots reach against its tree's. */
+const ROOT_IN = 0.78;
+/** How high up a stump its roots leave it, against where it is sawn. */
+const ROOT_UP = 0.5;
+/** How much of its tree's lean a stump keeps. */
+const LEAN_KEPT = 0.35;
+/** Where a stump's stem is cut into pieces, as shares of its height: close at its foot, where it flares. */
+const STEM_AT = [0, 0.12, 0.3, 0.6, 1];
+/** How far a sawn face's rings are taken toward the bark's furrows. */
+const RING_DARK = 0.3;
 
 /** The radius of the first stem of a tree's trunk at height `z`. */
 function radiusAt(limbs: Limb[], z: number): number {
@@ -60,46 +70,68 @@ function radiusAt(limbs: Limb[], z: number): number {
  * sawn, and its roots, kept below the cut. Its own shade at its foot reaches
  * a little past the trunk (`Skeleton.foot`).
  */
-export function stumpOf(tree: Skeleton): StumpModel {
+export function stumpOf(tree: Skeleton, buttressed: boolean): StumpModel {
   const L = tree.limbs;
   let zc = 3;
   for (let i = 0; i < 4; i++) zc = Math.max(CUT_LO, Math.min(CUT_HI, radiusAt(L, zc) * CUT_HIGH));
+  // Over the tops of its buttresses (`buttress`), which rise to three quarters of the foot's radius.
+  if (buttressed) zc = Math.min(CUT_HI * 1.1, Math.max(zc, (L[0]?.ra ?? 0) * 1.45));
   const limbs: Limb[] = [];
   const cuts: Cut[] = [];
   const kept = new Map<number, number>();
-  const above = new Set<number>();
+  // Each stem, from its foot up its run of pieces: stood up straighter, its lean kept only as far as `LEAN_KEPT`, and its girth at each height its own.
+  for (let i = 0; i < L.length; i++) {
+    if (L[i].order !== 0 || L[i].parent >= 0) continue;
+    const run = [i];
+    for (let k = i + 1; k < L.length; k++) if (L[k].order === 0 && L[k].parent === run[run.length - 1]) run.push(k);
+    const foot = L[i].a;
+    const along = (z: number): { p: V3; r: number } => {
+      for (const k of run) {
+        const P = L[k];
+        if (P.b[2] < z && k !== run[run.length - 1]) continue;
+        const t = clamp01((z - P.a[2]) / Math.max(1e-6, P.b[2] - P.a[2]));
+        const q = lerp(P.a, P.b, t);
+        return { p: [foot[0] + (q[0] - foot[0]) * LEAN_KEPT, foot[1] + (q[1] - foot[1]) * LEAN_KEPT, z], r: P.ra + (P.rb - P.ra) * t };
+      }
+      return { p: [foot[0], foot[1], z], r: L[i].ra };
+    };
+    const first = limbs.length;
+    for (const k of run) kept.set(k, first);
+    // Upright over its last piece, so the saw's cut meets its sides square.
+    const stand = (j: number): { p: V3; r: number } => {
+      const o = along(zc * STEM_AT[j]);
+      if (j < STEM_AT.length - 1) return o;
+      const below = along(zc * STEM_AT[j - 1]);
+      return { p: [below.p[0], below.p[1], o.p[2]], r: o.r };
+    };
+    for (let j = 0; j + 1 < STEM_AT.length; j++) {
+      const lo = stand(j), hi = stand(j + 1);
+      limbs.push({ a: lo.p, b: hi.p, ra: lo.r, rb: hi.r, order: 0, parent: j ? limbs.length - 1 : -1, bough: -1 });
+    }
+    const top = limbs[limbs.length - 1];
+    cuts.push({ c: top.b, r: top.rb, n: [0, 0, 1], limb: limbs.length - 1 });
+  }
   for (let i = 0; i < L.length; i++) {
     const P = L[i];
-    if (P.order === 0) {
-      if (P.parent >= 0 && (L[P.parent].order !== 0 || !kept.has(P.parent) || above.has(P.parent))) continue;
-      if (P.a[2] >= zc) continue;
-      let b = P.b, rb = P.rb;
-      const cut = P.b[2] >= zc - 0.01;
-      if (cut) {
-        const t = (zc - P.a[2]) / Math.max(1e-6, P.b[2] - P.a[2]);
-        b = lerp(P.a, P.b, t);
-        rb = P.ra + (P.rb - P.ra) * t;
-        above.add(i);
-      }
-      kept.set(i, limbs.length);
-      limbs.push({ a: P.a, b, ra: P.ra, rb, order: 0, parent: P.parent >= 0 ? kept.get(P.parent)! : -1, bough: -1 });
-      if (cut) cuts.push({ c: b, r: rb, n: [0, 0, 1], limb: limbs.length - 1 });
-    } else if (P.order === -1) {
-      const parent = kept.get(P.parent);
-      if (parent === undefined) continue;
-      // Out of the trunk under the cut.
-      const a: V3 = L[P.parent].order === 0 ? [P.a[0], P.a[1], Math.min(P.a[2], zc * 0.72)] : P.a;
-      kept.set(i, limbs.length);
-      limbs.push({ ...P, a, parent });
-    }
+    if (P.order !== -1) continue;
+    const parent = kept.get(P.parent);
+    if (parent === undefined) continue;
+    // Out of the trunk low under the cut, and drawn in toward it: a root's reach is the tree's, not a stump's.
+    const a: V3 = L[P.parent].order === 0 ? [P.a[0] * 0.8, P.a[1] * 0.8, Math.min(P.a[2], zc * ROOT_UP)] : P.a;
+    const b: V3 = [P.b[0] * ROOT_IN, P.b[1] * ROOT_IN, P.b[2]];
+    // The piece out of a knee starts where the piece to it now ends.
+    const from = L[P.parent].order === -1 ? limbs[parent].b : a;
+    kept.set(i, limbs.length);
+    limbs.push({ ...P, a: from, b, parent, ra: P.ra * 0.85, rb: P.rb * 0.85 });
   }
   const r0 = Math.max(...cuts.map((c) => Math.hypot(c.c[0], c.c[1]) + c.r), 1);
   const reach = Math.max(r0, ...limbs.filter((l) => l.order < 0).map((l) => Math.hypot(l.b[0], l.b[1]) + l.rb));
   return {
     sk: {
-      limbs, clumps: [], crown: { c: [0, 0, zc], r: reach, rz: 1 }, height: zc, rune: null, hollow: null,
+      // The crown's reach is what the picture's bounds take in round the foot (`boundsOf`): all of its own shade there.
+      limbs, clumps: [], crown: { c: [0, 0, zc], r: Math.max(reach, (r0 * 1.6) / 0.55 + 2), rz: 1 }, height: zc, rune: null, hollow: null,
       rough: tree.rough ? Math.min(tree.rough, zc * 0.45) : undefined,
-      foot: Math.max(3, r0 * ACROSS * 1.7),
+      foot: Math.max(3, r0 * ACROSS * 1.35),
     },
     cuts,
   };
@@ -149,8 +181,8 @@ export function woodSpec(spec: Species3D, moss: boolean, lying = false): Species
 /** How much light a face turned along `n` catches, 0 to 1, as the bark is lit (`./paint` barkAt). */
 const litBy = (job: Job, n: V3): number => clamp01((job.light.ambient + job.light.direct * Math.max(0, dot(n, job.light.sun)) - 0.22) / 0.82);
 
-/** A colour in shade and in the light, at `l`. */
-const lit = (shade: string, light: string, l: number): string => rgb(mixRgb(hex(shade), hex(light), l));
+/** A colour in shade and in the light, at `l`: both hex. */
+const lit = (shade: string, light: string, l: number): string => mix(shade, light, l);
 
 /** A sawn face on the screen: its middle, and where a unit of the model goes along each of its two ways across it. */
 interface Frame { o: Pt; u: Pt; v: Pt }
@@ -191,8 +223,10 @@ function paintFace(g: Ctx, job: Job, cut: Cut, wood: { face: string; ring: strin
   g.fillStyle = lit(spec.bark.shade, spec.bark.lit, l * 0.85);
   g.fill(ringPath(f, cut.r));
   // The wood: the pale face, in the bark's shade as the light leaves it.
-  const face = lit(rgb(mixRgb(hex(wood.face), hex(spec.bark.shade), 0.5)), wood.face, l);
-  const ring = lit(rgb(mixRgb(hex(wood.ring), hex(spec.bark.shade), 0.5)), wood.ring, l);
+  const face = lit(mix(wood.face, spec.bark.shade, 0.5), wood.face, l);
+  // The rings a step toward the bark's furrows, so they show on a pale wood too.
+  const rings = mix(wood.ring, spec.bark.furrow, RING_DARK);
+  const ring = lit(mix(rings, spec.bark.shade, 0.5), rings, l);
   g.fillStyle = face;
   g.fill(ringPath(f, cut.r, 0.84));
   // The rings, round a heart a little off the middle, each the further out the more it is drawn toward the edge.

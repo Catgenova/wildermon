@@ -435,7 +435,7 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, sprigOf, topEdges, type Face } from './outcrops';
-import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { inkOf } from './ink';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
@@ -7161,8 +7161,8 @@ export class Renderer {
        * as big or better, one in four is half size or less, and the rest
        * fill the middle. That is what puts a top and a floor on a canopy.
        */
-      // A stump drawn as a solid is the foot of the tree that grew there, as big.
-      const grew = ent.kind === 'tree' || ent.kind === 'bush' || (ent.kind === 'stump' && spr.solid) ? grownAt(ent.x, ent.y) : 1;
+      // A stump drawn as a solid is the foot of the tree that grew there: bigger or smaller with it, by less (`stumpGrown`).
+      const grew = ent.kind === 'tree' || ent.kind === 'bush' ? grownAt(ent.x, ent.y) : ent.kind === 'stump' && spr.solid ? stumpGrown(ent.x, ent.y) : 1;
       const dw = spr.w * zoom * grew;
       const dh = spr.h * zoom * grew;
       const left = ent.sx - spr.ax * zoom * grew;
@@ -7286,7 +7286,7 @@ export class Renderer {
           const variant = bush || stump ? 0 : treeVariant(data);
           const u = cam.rotateX(x + 0.5, y + 0.5), v = cam.rotateY(x + 0.5, y + 0.5), h = world.centerHeight(x, y);
           const iy = (u + v) * HALF_H - h * HEIGHT_SCALE;
-          const g = grownAt(x, y);
+          const g = stump ? stumpGrown(x, y) : grownAt(x, y);
           trees.push({ ix: (u - v) * HALF_W, iy, x, y, species, variant, form: formAt(x, y), grew: g, h, bush, stump });
           feet.set(d, Math.max(feet.get(d) ?? -Infinity, iy));
           let at = footAt.get(d);
