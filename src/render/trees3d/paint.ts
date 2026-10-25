@@ -449,7 +449,7 @@ const OAK_EDGE: ReadonlyArray<Pt> = Array.from({ length: 13 }, (_, i) => {
 /** A needle leaf's edge: four thin points, each its own height. */
 const NEEDLE_EDGE: ReadonlyArray<Pt> = [0, 1, 2, 3].flatMap((j): Pt[] => [[j / 4, 0], [(j + 0.5) / 4, [1, 0.75, 1.15, 0.85][j]]]).concat([[1, 0]]);
 /** How much longer a needle stands than a leaf's edge does. */
-const NEEDLE_LEN = 1.45;
+const NEEDLE_LEN = 1.05;
 /** The edge a species' masses stand out of. */
 const edgeOf = (spec: Species3D): ReadonlyArray<Pt> => (spec.leafForm === 'oak' ? OAK_EDGE : spec.leafForm === 'needle' ? NEEDLE_EDGE : LEAF_EDGE);
 
@@ -581,7 +581,7 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
   const off = 1 - 0.55 * sun.front;
   const edge = edgeOf(job.spec);
   g.strokeStyle = rim;
-  g.lineWidth = KIT_INK_W * 2;
+  g.lineWidth = KIT_INK_W * (job.spec.leafForm === 'needle' ? 1.4 : 2);
   g.lineJoin = 'round';
   g.stroke(outline);
   g.fillStyle = s.under[b];
@@ -615,20 +615,28 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
     leafOf(job.spec)(g, u.x + Math.cos(a) * u.rx * 0.5, u.y + Math.sin(a) * u.ry * 0.5, u.rx * 0.3, (R() - 0.5) * 0.8, 0.85);
     g.fill();
   }
-  // A kept leaf in winter: a line of snow along the top of the mass -- the tops of its lumps where no other lump is over them.
-  if (job.spec.snowCap && job.dress.season === 'winter') {
-    const p = new Path2D();
-    const N = 12;
+  // A kept leaf in winter: one line of snow along the top of the mass, just inside its edge, over its upper part.
+  if (job.spec.snowCap && job.dress.season === 'winter' && lumps.length) {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const v of lumps) {
-      let on = false;
-      for (let i = 0; i <= N; i++) {
-        const t = Math.PI + 0.25 + (i / N) * (Math.PI - 0.5);
-        const x = v.x + Math.cos(t) * v.rx * 0.9, y = v.y + Math.sin(t) * v.ry * 0.88;
-        const open = !lumps.some((w) => w !== v && Math.hypot((x - w.x) / w.rx, (y - w.y) / w.ry) < 0.9);
-        if (open && on) p.lineTo(x, y);
-        else if (open) p.moveTo(x, y);
-        on = open;
+      x0 = Math.min(x0, v.x - v.rx * 0.9); x1 = Math.max(x1, v.x + v.rx * 0.9);
+      y0 = Math.min(y0, v.y - v.ry * 0.88); y1 = Math.max(y1, v.y + v.ry);
+    }
+    // Where it lies: the top edge, down its sides no further than a third of the way.
+    const low = y0 + (y1 - y0) * 0.3;
+    const p = new Path2D();
+    const N = 28;
+    let on = false;
+    for (let i = 0; i <= N; i++) {
+      const x = x0 + ((x1 - x0) * i) / N;
+      let y = Infinity;
+      for (const v of lumps) {
+        const u = (x - v.x) / (v.rx * 0.9);
+        if (Math.abs(u) < 1) y = Math.min(y, v.y - v.ry * 0.88 * Math.sqrt(1 - u * u));
       }
+      const open = y < low;
+      if (open && on) p.lineTo(x, y); else if (open) p.moveTo(x, y);
+      on = open;
     }
     g.strokeStyle = '#f4f7fd';
     g.lineWidth = Math.max(0.5, (lumps[0]?.ry ?? 2) * 0.16);
@@ -671,9 +679,9 @@ function needleTufts(g: Ctx, lumps: Lump[], sun: { sx: number; sy: number }, ccx
   }
   g.fillStyle = s.under[Math.max(0, b - 3)];
   g.fill(gaps);
-  g.fillStyle = s.ramp[b + 1];
+  g.fillStyle = s.under[b - 1];
   g.fill(dim);
-  g.fillStyle = s.over[Math.min(s.over.length - 1, b + 2)];
+  g.fillStyle = s.ramp[b + 1];
   g.fill(lit);
 }
 
@@ -902,7 +910,8 @@ export function paintTree3d(g: Ctx, job: Job): void {
   g.lineJoin = 'round';
   g.lineCap = 'round';
   g.lineWidth = KIT_INK_W * 2;
-  for (const m of masses) g.stroke(m.path);
+  // A needle leaf is one mass with its own softer, finer rim (`paintCluster`), which is all the ink round it.
+  if (spec.leafForm !== 'needle') for (const m of masses) g.stroke(m.path);
   for (const c of chains) {
     if (c.thin) {
       // An open crown's twigs inked finer, or the ink is all there is of them.
@@ -951,7 +960,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
   const sizeOfKey = sk.crown.r * 0.12;
   const keyed = spec.keys && dress.keys && ((dress.season === 'spring' && dress.step >= 3) || dress.season === 'summer');
   shown.forEach((s, i) => {
-    const rim = rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.7), 0.9);
+    const rim = spec.leafForm === 'needle' ? rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.5), 0.85) : rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.7), 0.9);
     items.push({
       d: near(s.c.c),
       draw: () => {

@@ -33,11 +33,11 @@ const vivid = (c: string, k: number): string => {
  * over it.
  */
 const rampOf = ([lit, deep]: readonly [string, string]): Ramp =>
-  [tone(deep, -0.2), deep, mix(deep, lit, 0.3), mix(deep, lit, 0.62), lit, grey(tone(lit, 0.14), 0.12), grey(tone(lit, 0.3), 0.25)];
+  [tone(deep, -0.2), deep, mix(deep, lit, 0.35), mix(deep, lit, 0.68), lit, tone(lit, 0.12), grey(tone(lit, 0.3), 0.3)];
 
 /** The mound, in model units: its half-width and its height. */
-const REACH = 9.1;
-const TOP = 5.8;
+const REACH = 9.7;
+const TOP = 8.8;
 /** Flower stems: how many, at least, and how many more a bush may have. */
 const STEMS = 22;
 const STEMS_MORE = 8;
@@ -111,7 +111,7 @@ function growLavender(seed: number): Skeleton {
     const surface = top * Math.sqrt(Math.max(0, 1 - Math.pow(rho / reach, 2)));
     const a: V3 = [Math.cos(az) * rho, Math.sin(az) * rho, surface - 1.2];
     const tilt = 0.06 + 0.7 * (rho / inner) + (R() - 0.5) * 0.18;
-    const l = top * (0.8 + 0.55 * R()) * (1 - 0.15 * (rho / inner));
+    const l = top * (0.55 + 0.4 * R()) * (1 - 0.15 * (rho / inner));
     spikes.push({ a, b: add(a, [Math.cos(az) * Math.sin(tilt) * l, Math.sin(az) * Math.sin(tilt) * l, Math.cos(tilt) * l]), k: R() });
   }
   return { limbs, clumps, crown: env, height: top, rune: null, hollow: null, spikes, foot: reach * ACROSS * 1.05 };
@@ -193,7 +193,7 @@ function paintStems(g: CanvasRenderingContext2D, stems: Stem[], heads: Ramp, b: 
   g.strokeStyle = stemCol;
   g.lineWidth = 0.32;
   g.stroke(lines);
-  g.fillStyle = heads[b];
+  g.fillStyle = heads[b - 1];
   g.fill(outline);
   g.fillStyle = heads[b + 1];
   g.fill(lit);
@@ -230,10 +230,10 @@ export const lavender: Bush3D = {
     const shown = col ? (flowers ? all : all.filter((s) => s.k < 0.45)) : [];
     if (!col || !shown.length) return paintTree3d(g, { sk: job.sk, spec, dress, light: job.light, e: job.e, seed: job.seed, frame: job.frame });
     const { e, light } = job;
-    const heads: Ramp = [tone(col, -0.42), tone(col, -0.2), col, tone(col, 0.22), tone(col, 0.4)];
+    const heads: Ramp = [tone(col, -0.45), tone(col, -0.3), col, tone(col, 0.2), tone(col, 0.42)];
     // How lit a head is, as a mass is: wrapped round, from above.
     const L = (light.ambient + light.direct * clamp01((light.sun[2] + 0.3) / 1.3));
-    const b = Math.max(0, Math.min(2, Math.round(L * 2.2)));
+    const b = Math.max(1, Math.min(2, Math.round(L * 2.2)));
     const sv = [light.sun[0] * e.ux + light.sun[1] * e.vx, light.sun[0] * e.uy + light.sun[1] * e.vy - light.sun[2] * HEIGHT_SCALE];
     const sl = Math.hypot(sv[0], sv[1]) || 1;
     const sun: Pt = [sv[0] / sl, sv[1] / sl];
