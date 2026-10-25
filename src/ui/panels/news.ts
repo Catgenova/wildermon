@@ -107,7 +107,7 @@ import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_
 import { meltLumps } from '../../game/melt';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
-import { ACTION_BY_ID, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT } from '../../game/actions';
+import { ACTION_BY_ID, PACKED_FIRST, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
@@ -3858,6 +3858,14 @@ export const NEWS: News[] = [
       'Added: non-colour marks: hostile marker stacked while it hunts you; station ring fuel arc dashed while cold; Social ● ashore, ○ away.',
       `Changed: Market key: ${keyName(BIND_BY_ID.get('win_market')?.keys[0] ?? '')} (was U, shared with Stores; U opened Stores only).`,
       'Added: Settings, Keys: ↺ per row, restores its default keys (Esc, Backspace, Delete included). Stop cancels placing on its bound key. Key names in Settings, status panel and shopping list: as bound.',
+    ],
+  },
+  {
+    n: 325,
+    day: '2026-10-25',
+    lines: () => [
+      "Fixed: other players' wildermon drawn and named at their own level and stage (was level 1, first stage).",
+      `Fixed: Change tile on packed dirt: "${PACKED_FIRST}"`,
     ],
   },
 ];

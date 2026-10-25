@@ -200,6 +200,12 @@ ${DICE.map(([d], k) => `
   select e into v_got from jsonb_array_elements(rpc_creatures(w)) e where (e->>'id')::int = a;
   insert into said values ('SENT', coalesce(v_got->>'name', '-') || '|' || coalesce(v_got->'skills'->>'${SKILL}', '-'));
   insert into said values ('ROW', v_got::text);
+  -- And somebody else's, tamed and at its second stage: its skills too, so it is not drawn as a first.
+  update creature set mode = 'active', keeper = gen_random_uuid(),
+      skills = jsonb_build_object('${SKILL}', ${EVOLVE_AT[0]} + 1)
+    where world_id = w and id = a;
+  select e into v_got from jsonb_array_elements(rpc_creatures(w)) e where (e->>'id')::int = a;
+  insert into said values ('OTHERS', coalesce(v_got->>'mine', '-') || '|' || coalesce(v_got->'skills'->>'${SKILL}', '-'));
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -233,6 +239,9 @@ for (const k of ['block', 'all']) {
 check('and both stockings put them out through the roll', at('PATCHED') === '2', at('PATCHED'));
 check(`a browser is told a wild one's skills, so it names and draws it at its stage`,
   at('SENT').split('|')[0] === def.stages![0].name && stageOf({ species: KIND, skills: { [SKILL]: Number(at('SENT').split('|')[1]) } }) === 1, at('SENT'));
+
+check(`and of somebody else's, so theirs is drawn at its stage too, not as a first`,
+  at('OTHERS').split('|')[0] === 'false' && stageOf({ species: KIND, skills: { [SKILL]: Number(at('OTHERS').split('|')[1]) } }) === 1, at('OTHERS'));
 
 /* ---- the browser ----------------------------------------------------------------------------- */
 

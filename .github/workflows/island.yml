@@ -2219,6 +2219,15 @@ jobs:
             --outfile=node_modules/.cache/sprouts.mjs --log-level=error
           node node_modules/.cache/sprouts.mjs
 
+      - name: Packed dirt is not raised by Change tile
+        if: matrix.shard == 2
+        run: |
+          # Reported: packed dirt could not be flattened and could be raised
+          # with Change tile. Both Change tiles refuse it, on both sides.
+          npx esbuild supabase/test/packedground.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/packedground.mjs --log-level=error
+          node node_modules/.cache/packedground.mjs
+
       - name: What gathering gives, and when a spot is ready again
         if: matrix.shard == 2
         run: |

@@ -413,6 +413,9 @@ const cornerName = (t: Target & { kind: 'tile' }): string => {
 
 const tile = (t: Target, g: Game): TileType => (t.kind === 'tile' ? g.world.getTile(t.x, t.y) : TileType.Sand);
 
+/** Change tile on packed ground, as the island says it (`ground_refusal`, `terrain_refusal`). */
+export const PACKED_FIRST = `${TILE_DEFS[TileType.PackedDirt].name}: cultivate first.`;
+
 /** Paving goes on a packed floor, never on sod or loose earth. */
 const unpacked = (t: Target, g: Game): string | null =>
   tile(t, g) === TileType.PackedDirt ? null : 'Need packed dirt.';
@@ -1326,6 +1329,8 @@ export const ACTIONS: ActionDef[] = [
       }
       const under = cornerUnderBuilding(g, t.cx, t.cy);
       if (under) return under;
+      // Packed ground is not dug, flattened or raised: cultivate it first (`unpacked` paves it).
+      if (tile(t, g) === TileType.PackedDirt) return PACKED_FIRST;
       return levelStop(g, t.cx, t.cy, 1) ?? slopeRefusal(g, 'digging', t.cx, t.cy, 1);
     },
     perform: (t, g) => {
@@ -3272,7 +3277,9 @@ export const ACTIONS: ActionDef[] = [
       if (t.kind === 'item' && !((g.inventory.get(t.uid)?.id ?? '') in SPOIL_TILE)) return 'Need dirt, clay or sand.';
       const c = g.nearestCornerToPlayer();
       // Not a corner of a building: standing on a deck on piers, the ground under it (`piers.ts`), as `drop_dirt` has it.
-      return cornerUnderBuilding(g, c.cx, c.cy) ?? slopeRefusal(g, 'digging', c.cx, c.cy, 1);
+      return cornerUnderBuilding(g, c.cx, c.cy)
+        ?? (g.world.getTile(g.player.tileX, g.player.tileY) === TileType.PackedDirt ? PACKED_FIRST : null)
+        ?? slopeRefusal(g, 'digging', c.cx, c.cy, 1);
     },
     perform: (t, g) => {
       if (t.kind !== 'item') return;
