@@ -13,7 +13,8 @@
 --
 -- ---- the first lines of a door, kept there ---------------------------------------------------------
 --
--- `private.door_guard` lists statements that belong at the very top of a function's body, in order;
+-- `private.door_guard` lists statements that belong at the very top of a function's body, in order, after
+-- its knock (`private.pace`, the first statement of every door) where it has one;
 -- `private.guard_doors()` puts back any that a later `create or replace` dropped, and `private.lock_doors()`
 -- runs it after `pace_doors`, so a door rewritten by any later migration starts the same way again.
 
@@ -32,7 +33,7 @@ revoke all on table private.door_guard from public, anon, authenticated;
 
 /**
  * Put every `door_guard` line at the top of its door, in `ord` order: the first statements after the body's
- * own `begin` (a line that is that word alone, after a `declare` or none). A door whose top is already
+ * own `begin` (a line that is that word alone, after a `declare` or none) and its knock, where it has one. A door whose top is already
  * exactly those lines is left alone; one that is not PL/pgSQL, or has no such `begin`, is warned of and left.
  * Every overload of a name is a door. Returns how many it rewrote.
  */
@@ -61,6 +62,11 @@ begin
     else
       raise warning 'guard_doors: % has no begin on a line of its own', f.proname;
       continue;
+    end if;
+    -- After the door's knock, which stays its first statement (`private.pace_doors`): a call refused for its
+    -- arguments has still knocked.
+    if substr(v_body, length(v_pre) + 1) like E'\n  perform private.pace(%' then
+      v_pre := v_pre || E'\n' || split_part(substr(v_body, length(v_pre) + 1), E'\n', 2);
     end if;
     v_lines := f.lines;
     if substr(v_body, length(v_pre) + 1, length(v_lines)) = v_lines then continue; end if;
