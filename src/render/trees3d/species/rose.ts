@@ -55,24 +55,22 @@ function grow(seed: number): Skeleton {
     lobes.push({ c: [Math.cos(a) * d, Math.sin(a) * d, MID + R() * 0.6], r: 4.5 + 0.5 * R(), a });
   }
   lobes.forEach((L, i) => {
-    // Canes into each lobe from the crown at the foot: up and out, arching over, and down at its far side.
+    // Canes into each lobe from a tight crown at the foot: out at a slant, arching over, and down at its far side.
     let last = -1;
-    const canes = i === 0 ? 2 : 3;
+    const canes = i === 0 ? 1 : 2;
     for (let j = 0; j < canes; j++) {
-      const fa = R() * TAU, fr = 0.3 + 1.0 * R();
+      const fa = R() * TAU, fr = 0.2 + 0.5 * R();
       const f: V3 = [Math.cos(fa) * fr, Math.sin(fa) * fr, 0];
-      const out = (i === 0 ? R() * TAU : Math.atan2(L.c[1] - f[1], L.c[0] - f[0])) + (j - (canes - 1) / 2) * 0.5 + (R() - 0.5) * 0.3;
-      const reach = i === 0 ? 2.5 + 2 * R() : Math.hypot(L.c[0] - f[0], L.c[1] - f[1]) + L.r * (0.25 + 0.25 * R());
-      const top: V3 = [f[0] + Math.cos(out) * reach * 0.4, f[1] + Math.sin(out) * reach * 0.4, L.c[2] + L.r * (i === 0 ? 0.5 : 0.55)];
-      const end: V3 = [f[0] + Math.cos(out) * reach, f[1] + Math.sin(out) * reach, i === 0 ? L.c[2] + 0.5 : L.c[2] - L.r * 0.12];
-      const k = cane(f, top, end, 5, 0.34 - 0.03 * j, 0.1, 1, -1, i * 3 + j);
+      const out = (i === 0 ? R() * TAU : Math.atan2(L.c[1] - f[1], L.c[0] - f[0])) + (j - (canes - 1) / 2) * 0.6 + (R() - 0.5) * 0.3;
+      const reach = i === 0 ? 3.5 + 1.5 * R() : Math.hypot(L.c[0] - f[0], L.c[1] - f[1]) + L.r * (0.35 + 0.2 * R());
+      const top: V3 = [f[0] + Math.cos(out) * reach * 0.5, f[1] + Math.sin(out) * reach * 0.5, L.c[2] + L.r * (i === 0 ? 0.12 : 0.5)];
+      const end: V3 = [f[0] + Math.cos(out) * reach, f[1] + Math.sin(out) * reach, i === 0 ? L.c[2] - L.r * 0.25 : L.c[2] - L.r * 0.3];
+      const k = cane(f, top, end, 6, 0.34 - 0.03 * j, 0.1, 1, -1, i * 3 + j);
       if (j === 0) last = k - 2;
-      // Side shoots off its arch, out and up.
-      for (const at of [k - 3, k - 1]) {
-        const m = limbs[at].a;
-        const o2 = out + (R() < 0.5 ? -1 : 1) * (0.5 + 0.8 * R());
-        cane(m, add(m, [Math.cos(o2) * 0.9, Math.sin(o2) * 0.9, 1.2]), add(m, [Math.cos(o2) * 1.9, Math.sin(o2) * 1.9, 0.9 + R()]), 2, 0.15, 0.07, 2, at, i * 3 + j);
-      }
+      // A short side shoot off its arch, out along it.
+      const m = limbs[k - 2].a;
+      const o2 = out + (R() < 0.5 ? -1 : 1) * (0.5 + 0.6 * R());
+      cane(m, add(m, [Math.cos(o2) * 0.8, Math.sin(o2) * 0.8, 0.6]), add(m, [Math.cos(o2) * 1.7, Math.sin(o2) * 1.7, 0.2]), 2, 0.14, 0.07, 2, k - 2, i * 3 + j);
     }
     const subs: Array<{ o: V3; r: number }> = [{ o: [0, 0, L.r * 0.08], r: L.r * 0.6 }];
     const ns = 3 + Math.floor(R() * 2);
@@ -89,7 +87,7 @@ function grow(seed: number): Skeleton {
   for (let j = 0; j < 2; j++) {
     const a = a0 + (j + 0.5) * Math.PI + (R() - 0.5) * 0.8;
     const f: V3 = [(R() - 0.5) * 1.2, (R() - 0.5) * 1.2, 0];
-    cane(f, [f[0] + Math.cos(a) * 3.2, f[1] + Math.sin(a) * 3.2, MID * 2.7], [Math.cos(a) * (SPREAD + 0.4), Math.sin(a) * (SPREAD + 0.4), MID * 1.3], 6, 0.24, 0.08, 1, -1, 20 + j);
+    cane(f, [f[0] + Math.cos(a) * 3.2, f[1] + Math.sin(a) * 3.2, MID * 2.7], [Math.cos(a) * (SPREAD + 0.4), Math.sin(a) * (SPREAD + 0.4), MID * 1.3], 7, 0.24, 0.08, 1, -1, 20 + j);
   }
   return { limbs, clumps, crown, height: MID * 2 + 1, rune: null, hollow: null, leafReach: 1.5, foot: SPREAD * ACROSS * 0.72 };
 }
@@ -106,7 +104,7 @@ const EYE = FLOWER_COLOURS.find((c) => c.name === 'pink')?.eye ?? FLOWER_COLOURS
 /** A flower's or a hip's tones from its one colour: shade, body, lit, and its deep heart. */
 const bloomTones = (c: string, night: boolean): { shade: string; body: string; lit: string; deep: string; heart: string } => {
   const b = night ? mix(c, '#2a2a40', 0.4) : c;
-  return { shade: mix(tone(b, -0.3), '#3a2a48', 0.15), body: tone(b, 0.1), lit: tone(b, night ? 0.15 : 0.55), deep: mix(tone(b, -0.38), '#5a2a3a', 0.2), heart: night ? mix(EYE, b, 0.6) : EYE };
+  return { shade: tone(b, -0.26), body: b, lit: tone(b, night ? 0.1 : 0.32), deep: tone(b, -0.42), heart: night ? mix(EYE, b, 0.6) : EYE };
 };
 
 /* ---- the leaf ----------------------------------------------------------------------- */
@@ -377,7 +375,7 @@ function paintBlooms(g: Ctx, job: BushJob, lumps: Lump[], runs: Run[], hips: boo
   }
   // At the end of each long cane.
   for (const c of runs) {
-    if (c.q.length < 7) continue;
+    if (c.q.length < 8) continue;
     const [x, y] = c.q[c.q.length - 1];
     at.push({ x, y, s: size * ACROSS, bud: false, a: hips ? (R() - 0.5) * 1.2 : R() * TAU });
   }
@@ -436,10 +434,10 @@ function paintBlooms(g: Ctx, job: BushJob, lumps: Lump[], runs: Run[], hips: boo
   for (const f of open) {
     petals(f, inkP, 1, KIT_INK_W * 0.4);
     petals(f, shade, 1, 0);
-    petals({ ...f, x: f.x + ox * f.s * 0.08, y: f.y + oy * f.s * 0.08 - f.s * 0.04 }, lit, 0.94, 0);
-    const bx = f.x - ox * f.s * 0.08, by = f.y - oy * f.s * 0.08 + f.s * 0.03;
-    body.moveTo(bx + f.s * 0.74, by);
-    body.ellipse(bx, by, f.s * 0.74, f.s * 0.64, 0, 0, TAU);
+    petals({ ...f, x: f.x + ox * f.s * 0.14, y: f.y + oy * f.s * 0.14 - f.s * 0.05 }, lit, 0.86, 0);
+    const bx = f.x + ox * f.s * 0.05, by = f.y + oy * f.s * 0.05;
+    body.moveTo(bx + f.s * 0.6, by);
+    body.ellipse(bx, by, f.s * 0.6, f.s * 0.52, 0, 0, TAU);
     deep.moveTo(f.x + f.s * 0.3, f.y);
     deep.ellipse(f.x, f.y, f.s * 0.3, f.s * 0.25, 0, 0, TAU);
     eye.moveTo(f.x + f.s * 0.13, f.y);

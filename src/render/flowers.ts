@@ -1,4 +1,5 @@
 import { hash2 } from '../world/noise';
+import { PINK_PETAL } from '../world/tiles';
 import { HEIGHT_SCALE } from './iso';
 
 /**
@@ -28,7 +29,7 @@ type Ctx = CanvasRenderingContext2D;
 
 /** The four colours a meadow flowers in: the petals, the ring round a head, and its eye. */
 export const FLOWER_COLOURS: ReadonlyArray<{ name: string; petal: string; ring: string; eye: string }> = [
-  { name: 'pink', petal: '#f0a3b7', ring: '#a85f75', eye: '#f6d467' },
+  { name: 'pink', petal: PINK_PETAL, ring: '#a85f75', eye: '#f6d467' },
   { name: 'white', petal: '#fbf8ef', ring: '#7f988a', eye: '#efc23f' },
   { name: 'yellow', petal: '#f4d35a', ring: '#a5852a', eye: '#dd8f2b' },
   { name: 'blue', petal: '#98b8ee', ring: '#4f6b99', eye: '#f3eed6' },

@@ -742,9 +742,12 @@ export interface BushDef {
   yields?: string;
 }
 
+/** The meadow's pink flower's petals, and a rose's. */
+export const PINK_PETAL = '#f0a3b7';
+
 /** The three bushes, in the same teal as the canopies. Flowers stay theirs. */
 export const BUSH_DEFS: BushDef[] = [
-  { name: 'Rose bush', foliage: ['#509c6a', '#326a49'], flowers: '#9c8288', yields: 'rose_petals' },
+  { name: 'Rose bush', foliage: ['#509c6a', '#326a49'], flowers: PINK_PETAL, yields: 'rose_petals' },
   { name: 'Thorn bush', foliage: ['#549564', '#366444'] },
   { name: 'Lavender bush', foliage: ['#7ba589', '#567963'], flowers: '#8d8a99', yields: 'lavender' },
 ];
