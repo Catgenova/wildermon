@@ -3793,6 +3793,14 @@ export const NEWS: News[] = [
       `Added: cottage pie (cooking ${RECIPE_BY_ID.get('make_cottage_pie')?.difficulty ?? 0}, clay bowl, lit fire): ${recipeBill('make_cottage_pie')}; makes ${RECIPE_BY_ID.get('make_cottage_pie')?.count ?? 1}, ${Math.round((itemDef('cottage_pie').food ?? 0) * 100)}% food each.`,
     ],
   },
+  {
+    n: 319,
+    day: '2026-10-25',
+    lines: () => [
+      'Fixed: a kept stack put in a bag, chest or counter and taken back stays kept, part or whole. Loose stacks taken back join a kept stack first.',
+      'Fixed: a kept stack shown loose when two actions were answered out of order.',
+    ],
+  },
 ];
 
 /**

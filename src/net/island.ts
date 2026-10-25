@@ -1370,6 +1370,14 @@ export class Island {
    */
   private acted = 0;
   /**
+   * Our own asks, numbered as they go out, and the number of the last whose
+   * answer was laid down. Two asks out at once can be answered in either order,
+   * and each answer carries the whole pack: laid in the order they came back,
+   * the older one put a pile locked by the newer one back as loose.
+   */
+  private asksSent = 0;
+  private askLaid = 0;
+  /**
    * When the body last moved or did anything, for pacing the ground reads.
    * Infinity until the first of either, so a body that has only just arrived
    * is read at the quick pace rather than the slow one.
@@ -4094,6 +4102,7 @@ export class Island {
     if (!this.info) return { started: false, why: 'You are not on an island.' };
     // A word at a cellar's stairs still on its way lands first, so the job is judged on the storey the body is on.
     if (this.turning) await waitAtMost(this.turning, MOVE_LOST);
+    const sent = ++this.asksSent;
     /*
      * gates: a solid wall asked for as a hidden door (`gates.ts`) goes by
      * `rpc_plan_hidden_wall`, which is `rpc_act`'s own path for the plan and
@@ -4112,14 +4121,18 @@ export class Island {
      * Both halves together and from the one reading, so a thing never shows in
      * the pack and the crate at once, or in neither. `acted` goes up with
      * them, and any read that was already in flight when it did is thrown
-     * away rather than allowed to put the thing back.
+     * away rather than allowed to put the thing back. And an answer to an ask
+     * sent before one already laid down is older than what is on the screen,
+     * and is not laid (`asksSent`).
      */
-    if (result.pack) {
+    const newest = sent > this.askLaid;
+    if ((result.pack || result.crates) && newest) this.askLaid = sent;
+    if (result.pack && newest) {
       this.pack.clear();
       for (const it of result.pack) this.pack.set(it.id, it);
       this.hooks.pack([...this.pack.values()]);
     }
-    if (result.crates) this.hooks.stored?.(result.crates);
+    if (result.crates && newest) this.hooks.stored?.(result.crates);
     if (result.pack || result.crates) this.acted++;
     // Anything done with your hands can have changed what is standing here,
     // so the ground goes back to being read at the quick pace. A flag rather
