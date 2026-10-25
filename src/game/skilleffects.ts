@@ -213,7 +213,7 @@ const BRINGS_IN = new Set(['digging', 'mining', 'prospecting', 'woodcutting', 'f
 const CHANCE_AT = 10;
 
 /** The ore you may mine at a level: the hardest metal whose level is in reach (`oreNeeds`). */
-const hardestOre = (level: number): string => {
+export const hardestOre = (level: number): string => {
   const open = ROCK_VARIANTS.filter((r) => r.level !== undefined && r.level <= level).sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
   return open.length ? open[open.length - 1].name.replace(/ (vein|seam)$/, '') : 'none';
 };

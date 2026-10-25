@@ -3,7 +3,7 @@ import { staminaBarAbove } from '../../game/body';
 import { CONTROL_HIT } from '../../game/gear';
 import { listed, percent } from '../../game/words';
 import { SKILL_BY_ID, SKILL_DEFS } from '../../game/skills';
-import { effectTracks, hasEffects, type EffectTrack } from '../../game/skilleffects';
+import { effectTracks, hardestOre, hasEffects, type EffectTrack } from '../../game/skilleffects';
 import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
 import { raisedBySays } from '../raisedBy';
@@ -288,6 +288,16 @@ export class SkillsPanel {
         const odds = percent(g.skillChance('digging', dig?.difficulty ?? 0, shovel));
         return [`Slope ${slope} m, time ×${time}, dig ${odds}`,
           `Steepest slope left: ${slope} m. Time per action ×${time} of level 0. Dig success ${odds} (difficulty ${dig?.difficulty ?? 0}, shovel QL ${Math.round(shovel)}).`];
+      }
+      case 'mining': {
+        // A Miner's Ore Sense brings every ore that much nearer (`oreNeeds`).
+        const ore = hardestOre(v + g.perk('ore:below', 0));
+        const time = two(goSeconds(SLOW_GO, v) / goSeconds(SLOW_GO, 0));
+        const mine = ACTION_BY_ID.get('mine');
+        const pick = g.toolQl('pickaxe');
+        const odds = percent(g.skillChance('mining', mine?.difficulty ?? 0, pick));
+        return [`Ore ${ore}, time ×${time}, mine ${odds}`,
+          `Hardest ore: ${ore}. Time per action ×${time} of level 0. Mine success ${odds} (difficulty ${mine?.difficulty ?? 0}, pickaxe QL ${Math.round(pick)}).`];
       }
       case 'climbing': {
         const step = metres(g.climbStep());

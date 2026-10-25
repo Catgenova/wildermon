@@ -120,6 +120,9 @@ export function rollGem(rand: () => number, more = false): GemDef {
   return pool[pool.length - 1];
 }
 
+/** The line a gem found while working says, the island's `maybe_gem` in the same words. */
+export const gemFound = (name: string, ql: number): string => `Found: ${name.toLowerCase()}, QL ${ql.toFixed(1)}.`;
+
 /**
  * One swing in a few hundred brings out something nobody was mining for, and
  * more for a perk on the job (a Miner's Gem Eye or an Artisan's Gem Finder, `gem:` and
@@ -130,5 +133,5 @@ export function maybeGem(g: Game, skill: string, tool: string, job = 'mine'): vo
   const gem = rollGem(g.rand, g.perk('more_stones', 0) > 0);
   const item = g.gather('gem', { ql: g.productQl(skill, g.toolQl(tool)), extra: gem.name });
   g.note(`gem:${gem.id}`);
-  g.logMsg(`Something glints in the rubble: a ${gem.name.toLowerCase()}. (QL ${item.ql.toFixed(1)})`, 'event');
+  g.logMsg(gemFound(gem.name, item.ql), 'event');
 }

@@ -188,6 +188,7 @@ import { STONES_DEPTH, STONES_SLABS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { ENGRAVE_MAX, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
 import { CHAT_KEEP_DAYS, EVENT_KEEP_DAYS, TALK_LOG } from '../../game/events';
+import { gemFound } from '../../game/gems';
 import { BRAZIER_CAPACITY, DEPLOY_REACH, OVEN_CAPACITY } from '../../game/furniture';
 
 /**
@@ -3731,6 +3732,14 @@ export const NEWS: News[] = [
     lines: () => [
       'Fixed: on a foundation: wagon, driver, placed furniture, other players and creatures drawn on its top. Was: on the ground under it.',
       'Fixed: foundation poured in water: dry floor, no swimming. A pool dug in one: water.',
+    ],
+  },
+  {
+    n: 312,
+    day: '2026-10-25',
+    lines: () => [
+      'Added: Skills window, Mining: hardest ore, time per action, mine success.',
+      `Changed: gem found while working: "${gemFound('Ruby', 34)}" Was: a sentence.`,
     ],
   },
 ];
