@@ -66,6 +66,12 @@ export default defineConfig({
         entryFileNames: 'assets/[name].js',
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name][extname]',
+        /*
+         * `vite build` only (the dev server does not minify): no `console.*`
+         * call and no `debugger` in what players get. Nothing reports through
+         * the console -- errors reach the island by src/net/errors.ts.
+         */
+        minify: { compress: { dropConsole: true, dropDebugger: true }, mangle: true },
       },
     },
   },

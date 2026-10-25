@@ -43,6 +43,7 @@ import { groundRoll, TILE_DEFS } from '../world/tiles';
 import { furnitureDef } from '../game/furniture';
 import { capital, listed, percent, timeWords } from '../game/words';
 import type { TipLine, Tooltip } from './tooltip';
+import { fixedAll, html, setMarkup, type Markup } from './html';
 
 /* ---- What is on you -------------------------------------------------------- */
 
@@ -560,7 +561,7 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
 /* ---- How it is drawn -------------------------------------------------------- */
 
 /** Each mark, as the inside of a sixteen-unit square drawn in the current ink. */
-const GLYPHS: Record<Glyph, string> = {
+const GLYPHS: Record<Glyph, Markup> = fixedAll<Glyph>({
   rest: '<path d="M11 2.6A5.8 5.8 0 1 0 13.6 11 4.6 4.6 0 0 1 11 2.6z"/>',
   moon: '<path d="M2.2 8c2.6 3.1 9 3.1 11.6 0"/><path d="M4.2 10.4l-1 1.6M8 11.3v1.9M11.8 10.4l1 1.6"/>',
   meal: '<path d="M2 8.5h12a6 5.5 0 0 1-12 0z"/><path d="M6 6c-.8-.9.8-1.6 0-3.2M10 6c-.8-.9.8-1.6 0-3.2"/>',
@@ -601,10 +602,10 @@ const GLYPHS: Record<Glyph, string> = {
   stone: '<path d="M2.8 12.6l1.3-5.4 3.5-3.8 4.4 1.7 1.6 5.1-2.3 2.4z"/><path d="M7.6 3.4l.7 4.4 4.6 2.2M8.3 7.8l-4.2-.6"/>',
   wall: '<path d="M3 14V4.5h2.2v2h1.7v-2h2.2v2h1.7v-2H13V14z"/><path d="M6.8 14v-3.2h2.4V14"/>',
   wheel: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="1.4"/><path d="M8 2v4.6M8 9.4V14M2 8h4.6M9.4 8H14"/>',
-};
+});
 
-export const svgOf = (g: Glyph): string =>
-  `<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${GLYPHS[g]}</svg>`;
+export const svgOf = (g: Glyph): Markup =>
+  html`<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${GLYPHS[g]}</svg>`;
 
 /** One mark in the row, and what it last said, so nothing is written twice. */
 interface Mark {
@@ -749,7 +750,7 @@ export class EffectRow {
       el.setAttribute('role', 'listitem');
       const icon = document.createElement('span');
       icon.className = 'hud-fx-icon';
-      icon.innerHTML = svgOf(e.glyph);
+      setMarkup(icon, svgOf(e.glyph));
       const cap = document.createElement('span');
       cap.className = 'hud-fx-cap';
       el.append(icon, cap);
@@ -759,7 +760,7 @@ export class EffectRow {
     }
     if (m.glyph !== e.glyph) {
       m.glyph = e.glyph;
-      (m.el.firstElementChild as HTMLElement).innerHTML = svgOf(e.glyph);
+      setMarkup(m.el.firstElementChild as HTMLElement, svgOf(e.glyph));
     }
     if (m.caption !== e.caption) {
       m.caption = e.caption;

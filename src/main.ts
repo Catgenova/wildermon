@@ -1,3 +1,5 @@
+// First: out of another site's frame, and the page's Trusted Types policy (src/page-guard.ts).
+import './page-guard';
 import { sameWorn, wornWire, type WornWire } from './game/worn';
 import type { CastAt } from './game/events';
 import { ALL_SPELL_IDS } from './render/spells/info';

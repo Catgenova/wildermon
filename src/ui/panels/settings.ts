@@ -9,7 +9,7 @@ import { RARITIES } from '../../game/items';
 import { CRAFT_REACH } from '../../game/recipes';
 import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
 import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
-import { esc } from '../esc';
+import { fixed, html, setMarkup, type Markup } from '../html';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, uiSizeShown } from '../screen';
 import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
@@ -97,7 +97,7 @@ export class SettingsPanel {
     win.body.append(display, winPage, keyPage);
     this.buildWindows(winPage);
 
-    const add = (label: string, hint: string, read: () => boolean, write: (v: boolean) => void): HTMLLabelElement => {
+    const add = (label: string, hint: string | Markup, read: () => boolean, write: (v: boolean) => void): HTMLLabelElement => {
       const row = document.createElement('label');
       row.className = 'setting-row';
       const input = document.createElement('input');
@@ -105,7 +105,7 @@ export class SettingsPanel {
       input.checked = read();
       input.addEventListener('change', () => write(input.checked));
       const text = document.createElement('span');
-      text.innerHTML = `<b>${label}</b><small>${hint}</small>`;
+      setMarkup(text, html`<b>${label}</b><small>${hint}</small>`);
       row.append(input, text);
       display.append(row);
       this.toggles.push({ input, read });
@@ -139,7 +139,7 @@ export class SettingsPanel {
       const text = document.createElement('span');
       const say = (): void => {
         const pc = Math.round(game.settings.volume * 100);
-        text.innerHTML = `<b>Volume &mdash; ${pc === 0 ? 'silent' : `${pc}%`}</b><small>Sound effects volume. Panned by screen side; quieter with distance from the centre.</small>`;
+        setMarkup(text, html`<b>Volume &mdash; ${pc === 0 ? 'silent' : `${pc}%`}</b><small>Sound effects volume. Panned by screen side; quieter with distance from the centre.</small>`);
       };
       say();
       input.addEventListener('input', () => {
@@ -175,7 +175,7 @@ export class SettingsPanel {
         const shown = Math.round(uiSizeShown() * 100);
         // Only once it has been put on, and only if the screen held it back.
         const held = asked === put && shown < put ? ` Max on this screen: ${shown}%.` : '';
-        text.innerHTML = `<b>Text and window size &mdash; ${asked}%</b><small>Scale of all windows, menus, bars and text. World not scaled (zoom: mouse wheel or pinch).${held}</small>`;
+        setMarkup(text, html`<b>Text and window size &mdash; ${asked}%</b><small>Scale of all windows, menus, bars and text. World not scaled (zoom: mouse wheel or pinch).${held}</small>`);
       };
       say();
       input.addEventListener('input', say);
@@ -192,7 +192,7 @@ export class SettingsPanel {
      * so a list rather than a tick box. Every figure in the words comes from
      * the setting itself.
      */
-    const choose = <T extends string | number>(label: string, hint: string, options: Array<[T, string]>, read: () => T, write: (v: T) => void): void => {
+    const choose = <T extends string | number>(label: string, hint: string | Markup, options: Array<[T, string]>, read: () => T, write: (v: T) => void): void => {
       const row = document.createElement('label');
       row.className = 'setting-row setting-pick';
       const select = document.createElement('select');
@@ -205,7 +205,7 @@ export class SettingsPanel {
       select.value = String(read());
       select.addEventListener('change', () => write(options.find(([v]) => String(v) === select.value)![0]));
       const text = document.createElement('span');
-      text.innerHTML = `<b>${label}</b><small>${hint}</small>`;
+      setMarkup(text, html`<b>${label}</b><small>${hint}</small>`);
       row.append(select, text);
       display.append(row);
     };
@@ -241,7 +241,7 @@ export class SettingsPanel {
     // The colours that carry a meaning (`data-cb` in src/style.css); every place also has a mark that is not a colour, whichever is chosen.
     choose<UiColours>(
       'Colours',
-      'Recolours meaningful colours only (Runecut, Classic, world). '
+      fixed('Recolours meaningful colours only (Runecut, Classic, world). '
         + 'Red-green safe (deuteranopia, protanopia): good blue, bad vermilion, warning yellow. '
         + 'Blue-yellow safe (tritanopia): good teal, bad crimson, warning amber. '
         + 'Every coloured meaning also has a non-colour mark.'
@@ -258,7 +258,7 @@ export class SettingsPanel {
         + '<li>World: creature health bar (also length), heavy-blow ring and !, '
         + 'edge arrows for threats (also shape), screen edge when struck, '
         + 'health lost (also its −).</li>'
-        + '</ul></details>',
+        + '</ul></details>'),
       [['standard', 'Standard'], ['rg', 'Red–green safe'], ['by', 'Blue–yellow safe']],
       () => game.settings.uiColours,
       (v) => {
@@ -271,12 +271,11 @@ export class SettingsPanel {
       const of = (id: string): string => frameLabel(id).toLowerCase();
       choose<UiFrames>(
         'Window frames',
-        `Runecut only. Themed: border matches window content, ${FRAMES.length} kinds over ${framed} windows and bars: `
+        html`${`Runecut only. Themed: border matches window content, ${FRAMES.length} kinds over ${framed} windows and bars: `
           + `pack: ${of('inventory')}; crate or stores: ${of('crate')}; crafting: ${of('craft')}; events: ${of('events')}; map: ${of('map')} with compass rose. `
-          + 'Others: plain stone. Stone: plain rim everywhere. Inner space unchanged.'
-          + '<details class="setting-more"><summary>Border widths and overhangs</summary>'
-          + `Border: ${RIM} px (${frameOddities(FRAME_RIM)} themed; phone ${RIMS.phone}, status panel ${RIMS.hud}, toolbar ${RIMS.toolbar}). `
-          + `Knobs, knots, seals: up to ${FRAME_REACH} px past the edge (${frameOddities(FRAME_REACHES)}); click-through.</details>`,
+          + 'Others: plain stone. Stone: plain rim everywhere. Inner space unchanged.'}<details class="setting-more"><summary>Border widths and overhangs</summary>${
+          `Border: ${RIM} px (${frameOddities(FRAME_RIM)} themed; phone ${RIMS.phone}, status panel ${RIMS.hud}, toolbar ${RIMS.toolbar}). `
+          + `Knobs, knots, seals: up to ${FRAME_REACH} px past the edge (${frameOddities(FRAME_REACHES)}); click-through.`}</details>`,
         [['themed', 'Themed'], ['stone', 'Stone']],
         () => game.settings.uiFrames,
         (v) => {
@@ -287,9 +286,9 @@ export class SettingsPanel {
     }
     add(
       'Frame life',
-      'Animated animals and lights on window frames; never over window content; click-through. '
-        + 'Runecut themed frames only; off on phones, with Fast graphics, or with reduced motion.'
-        + `<details class="setting-more"><summary>Per frame</summary><ul>${lifeWords().split('; ').map((w) => `<li>${w}</li>`).join('')}</ul></details>`,
+      html`${'Animated animals and lights on window frames; never over window content; click-through. '
+        + 'Runecut themed frames only; off on phones, with Fast graphics, or with reduced motion.'}<details class="setting-more"><summary>Per frame</summary><ul>${
+        lifeWords().split('; ').map((w) => html`<li>${w}</li>`)}</ul></details>`,
       () => game.settings.uiLife,
       (v) => (game.settings.uiLife = v),
     );
@@ -349,9 +348,9 @@ export class SettingsPanel {
       const row = document.createElement('div');
       row.className = 'setting-row setting-look';
       const text = document.createElement('span');
-      text.innerHTML = `<b>Measure each layer</b><small>Hides each of ${listed(Object.keys(LAYERS))} for ${TRIAL_SECONDS} s in turn `
+      setMarkup(text, html`<b>Measure each layer</b><small>${`Hides each of ${listed(Object.keys(LAYERS))} for ${TRIAL_SECONDS} s in turn `
         + `(${(Object.keys(LAYERS).length + 2) * TRIAL_SECONDS} s total); shows frames per second without each under the frame rate. `
-        + 'Close this window first.</small>';
+        + 'Close this window first.'}</small>`);
       const go = document.createElement('button');
       go.type = 'button';
       go.className = 'tb-btn tb-small';
@@ -554,7 +553,7 @@ export class SettingsPanel {
       const row = document.createElement('div');
       row.className = 'setting-row setting-look';
       const text = document.createElement('span');
-      text.innerHTML = '<b>Appearance</b><small>Opens the character creator (build, skin, hair, hair colour, eyes, beard, shirt, trousers). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>';
+      setMarkup(text, fixed('<b>Appearance</b><small>Opens the character creator (build, skin, hair, hair colour, eyes, beard, shirt, trousers). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>'));
       const open = document.createElement('button');
       open.type = 'button';
       open.className = 'tb-btn tb-small';
@@ -567,10 +566,10 @@ export class SettingsPanel {
     // ---- The keys ----
     const lead = document.createElement('p');
     lead.className = 'keys-lead';
-    lead.innerHTML =
+    setMarkup(lead, fixed(
       '<b>Click a key to rebind</b>, then press the new key: <kbd>Esc</kbd> cancels, <kbd>Backspace</kbd> unbinds. ' +
       'Keys move the <i>view</i> and open windows, never your character (left click: walk; right click: actions). ' +
-      'Number keys <kbd>1</kbd>–<kbd>0</kbd>: always the Tile window or toolbelt.';
+      'Number keys <kbd>1</kbd>–<kbd>0</kbd>: always the Tile window or toolbelt.'));
     keyPage.append(lead);
 
     this.note = document.createElement('p');
@@ -592,7 +591,7 @@ export class SettingsPanel {
         row.className = 'keys-row';
         const text = document.createElement('span');
         text.className = 'keys-what';
-        text.innerHTML = `<b>${esc(bind.label)}</b><small>${esc(bind.hint)}</small>`;
+        setMarkup(text, html`<b>${bind.label}</b><small>${bind.hint}</small>`);
         const slots = document.createElement('span');
         slots.className = 'keys-slots';
         const btns: HTMLButtonElement[] = [];
@@ -646,7 +645,7 @@ export class SettingsPanel {
   private buildWindows(page: HTMLDivElement): void {
     const intro = document.createElement('p');
     intro.className = 'setting-note';
-    intro.innerHTML = '<b>Window layouts</b><small>Stores each window&rsquo;s position, size, open, expanded and see-through state. <b>Keep</b>: save current. <b>Use</b> or the layout key: restore. Shift+key: save. Windows snap to screen and window edges; hold Alt while dragging to place freely.</small>';
+    setMarkup(intro, fixed('<b>Window layouts</b><small>Stores each window&rsquo;s position, size, open, expanded and see-through state. <b>Keep</b>: save current. <b>Use</b> or the layout key: restore. Shift+key: save. Windows snap to screen and window edges; hold Alt while dragging to place freely.</small>'));
     page.append(intro);
     const note = document.createElement('p');
     note.className = 'keys-note';
@@ -695,7 +694,7 @@ export class SettingsPanel {
     page.append(note);
     const seeHead = document.createElement('p');
     seeHead.className = 'setting-note';
-    seeHead.innerHTML = '<b>See-through windows</b><small>Dimmed; clicks pass to the world. Title bar still drags and toggles it. Hold Alt to click or scroll inside. The title-bar ◐ is the same toggle.</small>';
+    setMarkup(seeHead, fixed('<b>See-through windows</b><small>Dimmed; clicks pass to the world. Title bar still drags and toggles it. Hold Alt to click or scroll inside. The title-bar ◐ is the same toggle.</small>'));
     page.append(seeHead);
     for (const w of this.windows.windows.values()) {
       if (!w.opts.seeThrough) continue;
@@ -707,7 +706,7 @@ export class SettingsPanel {
       input.checked = w.isSeeThrough;
       input.addEventListener('change', () => w.setSeeThrough(input.checked));
       const text = document.createElement('span');
-      text.innerHTML = `<b>${esc(w.opts.title)}</b>`;
+      setMarkup(text, html`<b>${w.opts.title}</b>`);
       row.append(input, text);
       page.append(row);
       this.seeRows.push({ input, win: w });

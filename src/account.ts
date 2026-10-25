@@ -1,3 +1,5 @@
+// First: out of another site's frame, and the page's Trusted Types policy (src/page-guard.ts).
+import './page-guard';
 import {
   PASSWORD_MIN, Unchecked, breachCount, breachWord, createAccount, foldName, writtenName,
   myLook, nameEmail, nameFree, nameTrouble, passwordTrouble, passwordVerdict,
