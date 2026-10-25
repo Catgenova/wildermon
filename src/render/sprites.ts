@@ -1012,11 +1012,12 @@ export function crateSprite(kind: 'log' | 'plank' = 'plank'): Sprite {
 /**
  * A tile of tilled field: `stage` -1 lying fallow, else a crop at that
  * stage, built and lit as the solid trees are (`fieldBake`) from the camera's
- * `turn` under the sun's `step`. `dormant` is a field waiting out a winter,
+ * `turn` under the sun's `step`, laid out the `layout`th way (`FIELD_LAYOUTS`).
+ * `dormant` is a field waiting out a winter,
  * which grows nothing: its green gone dull and a rime on it.
  */
-export function cropSprite(cropId: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number): Sprite {
-  return fieldBake(cropId, stage, leaf, fruit, dormant, turn, step, SPRITE_SCALE);
+export function cropSprite(cropId: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number, layout = 0): Sprite {
+  return fieldBake(cropId, stage, leaf, fruit, dormant, turn, step, SPRITE_SCALE, layout);
 }
 
 /**

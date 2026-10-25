@@ -414,15 +414,18 @@ function plantOf(id: string, stage: number, leaf: string, fruit: string, R: () =
 
 /** How many ways a crop's plant grows: each plant on a tile is one of them, stamped where it stands. */
 const VARIANTS = 4;
+/** How many ways a tile of a crop is laid out: a tile takes one by where it is. */
+export const FIELD_LAYOUTS = 3;
 
 /**
  * The plants on a tile of a crop: a row along each ridge, `PER_ROW` to it,
  * each a little off its place by the crop's own roll and grown as one of its
- * `VARIANTS` -- the same at every stage, so a plant grows where it stood.
+ * `VARIANTS` -- the same at every stage, so a plant grows where it stood --
+ * laid out one of `FIELD_LAYOUTS` ways, so a field is not one tile over again.
  */
-function plantsOf(id: string, stage: number, leaf: string, fruit: string): { feet: Array<{ at: V3; v: number }>; kinds: Op[][] } {
+function plantsOf(id: string, stage: number, leaf: string, fruit: string, layout: number): { feet: Array<{ at: V3; v: number }>; kinds: Op[][] } {
   const per = PER_ROW[id] ?? 4;
-  const R = mulberry32(fieldHash(id) + 77);
+  const R = mulberry32(fieldHash(id) + 77 + layout * 1013);
   const feet: Array<{ at: V3; v: number }> = [];
   for (let j = 0; j < ROWS; j++) {
     for (let i = 0; i < per; i++) {
@@ -486,10 +489,10 @@ export function cropFrame(): void {
  * last bake at another step of the sun or scale stands in; with none and
  * `CROP_COLD_MS` spent, the sown ground does until its turn comes.
  */
-export function fieldBake(id: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number, scale: number): CropBake {
-  // Bare and sown ground is the same whatever the crop: one bake for all of them.
-  if (stage <= 0) id = '';
-  const head = `${id}|${stage}|${dormant ? 1 : 0}|${turn}`;
+export function fieldBake(id: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number, scale: number, layout = 0): CropBake {
+  // Bare and sown ground is the same whatever the crop and however it is laid out: one bake for all of them.
+  if (stage <= 0) { id = ''; layout = 0; }
+  const head = `${id}|${stage}|${dormant ? 1 : 0}|${turn}|${layout}`;
   const key = `${head}|${step}|${scale}`;
   const had = cropBakes.get(key);
   if (had) {
@@ -504,7 +507,7 @@ export function fieldBake(id: string, stage: number, leaf: string, fruit: string
     }
   }
   const t0 = performance.now();
-  const spr = bakeField(id, stage, leaf, fruit, dormant, turn, step, scale);
+  const spr = bakeField(id, stage, leaf, fruit, dormant, turn, step, scale, layout);
   const ms = performance.now() - t0;
   cropSpent += ms;
   cropStats.bakes++;
@@ -519,7 +522,7 @@ export function fieldBake(id: string, stage: number, leaf: string, fruit: string
       if (cropPixels <= CROP_PIXELS * 0.8 || b.used === cropFrameNo) break;
       cropBakes.delete(k);
       cropPixels -= b.spr.canvas.width * b.spr.canvas.height;
-      const h = k.split('|').slice(0, 4).join('|');
+      const h = k.split('|').slice(0, 5).join('|');
       if (cropLatest.get(h) === b.spr) cropLatest.delete(h);
     }
   }
@@ -529,17 +532,18 @@ export function fieldBake(id: string, stage: number, leaf: string, fruit: string
 /** Every field bake let go. */
 export function forgetFields(): void {
   cropBakes.clear();
+  cropStamps.clear();
   cropLatest.clear();
   cropPixels = 0;
 }
 
-function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dormant: boolean, turn: number, step: number, scale: number): CropBake {
+function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dormant: boolean, turn: number, step: number, scale: number, layout: number): CropBake {
   const leaf = dormant ? mixH(leaf0, DORMANT_LEAF, 0.6) : leaf0;
   const fruit = dormant ? mixH(fruit0, DORMANT_FRUIT, 0.45) : fruit0;
   const e = eyeOf(0, turn);
   const light = lightOf(step);
   const P = (p: V3): P2 => proj(e, p);
-  const { feet, kinds } = stage >= 1 ? plantsOf(id, stage, leaf, fruit) : { feet: [], kinds: [] };
+  const { feet, kinds } = stage >= 1 ? plantsOf(id, stage, leaf, fruit, layout) : { feet: [], kinds: [] };
   // Back to front.
   const near = (p: V3): number => p[0] * e.toward[0] + p[1] * e.toward[1];
   feet.sort((a, b) => near(a.at) - near(b.at));
@@ -547,8 +551,14 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
   const sv = [light.sun[0] * e.ux + light.sun[1] * e.vx, light.sun[0] * e.uy + light.sun[1] * e.vy - light.sun[2] * HEIGHT_SCALE];
   const sl = Math.hypot(sv[0], sv[1]) || 1;
   const look: PlantLook = { light, sun: [sv[0] / sl, sv[1] / sl], stalkLit: litOf(light, unitV([light.sun[0], light.sun[1], 0.4])) * 0.75, dormant };
-  // Each way the plant grows, painted once, its foot at the origin.
-  const stamps = kinds.map((ops) => stampOf(ops, P, look, scale));
+  // Each way the plant grows, painted once, its foot at the origin: the same for every layout of the tile.
+  const sk = `${id}|${stage}|${dormant ? 1 : 0}|${turn}|${step}|${scale}`;
+  let stamps = cropStamps.get(sk);
+  if (!stamps) {
+    stamps = kinds.map((ops) => stampOf(ops, P, look, scale));
+    cropStamps.set(sk, stamps);
+    if (cropStamps.size > STAMPS_KEPT) cropStamps.delete(cropStamps.keys().next().value as string);
+  }
 
   /* ---- the box: the tile, and every plant on it ---- */
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -667,8 +677,13 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
 /** How a bake's plants are lit: the light, the sun's way across the screen, a stalk's light, and whether it is a winter. */
 interface PlantLook { light: Light; sun: P2; stalkLit: number; dormant: boolean }
 
+/** Each crop's plants painted, by crop, stage, winter, turn, step and scale, the latest `STAMPS_KEPT` of them: what the layouts of a tile share. */
+const cropStamps = new Map<string, Stamp[]>();
+const STAMPS_KEPT = 48;
+interface Stamp { cv: HTMLCanvasElement; x0: number; y0: number }
+
 /** One way a plant grows, painted on a canvas of its own at `scale`, its foot `-x0, -y0` in from the corner: stamped on a tile as many times as it stands there. */
-function stampOf(ops: Op[], P: (p: V3) => P2, look: PlantLook, scale: number): { cv: HTMLCanvasElement; x0: number; y0: number } {
+function stampOf(ops: Op[], P: (p: V3) => P2, look: PlantLook, scale: number): Stamp {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const op of ops) {
     const pts = op.k === 'ball' ? [op.c] : op.k === 'spindle' ? [op.a, op.b] : op.pts;
