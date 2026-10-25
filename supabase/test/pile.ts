@@ -89,9 +89,10 @@ const asRow = (it: Partial<Item> & { id?: string }): string =>
   + ` ${lit(it.charges ?? null)}, ${lit(it.locked ?? false)}, ${lit(it.issued ?? false)}, now(), null,`
   + ` ${lit(it.lit ?? false)}, null, null, null, ${lit(it.maker ?? null)}, ${lit(it.piece ?? null)},`
   + ` null, null, null, null, null, ${lit(it.mark ?? null)}, ${lit(it.cool ?? null)},`
-  // The enchantment a thing carries (`item.enchant`), then a memorial stone's line
-  // (`item.engraving`), the last column the item row has.
-  + ` ${lit(it.enchant ?? null)}, null)::item`;
+  // The enchantment a thing carries (`item.enchant`), a memorial stone's line
+  // (`item.engraving`), then where it came from (`origin`, `origin_fn`,
+  // `origin_uid`), the last columns the item row has.
+  + ` ${lit(it.enchant ?? null)}, null, null, null, null)::item`;
 
 const out = psql(`
 begin;
