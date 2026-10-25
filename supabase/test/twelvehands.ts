@@ -374,7 +374,8 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   g.world.setTile(23, 22, TileType.Marsh, 0);
   const c = worker(g, 'wurla');
   check('in the browser, a wurla digs a marsh for worms', g.creatures.gatherable(g, 23, 22, 'worm', c) && !g.creatures.gatherable(g, 24, 22, 'worm', c));
-  run(g, 240);
+  // Till the worms are home, not past the marsh's rest (`FORAGE_COOLDOWN`).
+  for (let s = 0; s < 240 && !crate.items.some((i) => i.id === 'worm'); s++) run(g, 1);
   check('and carries them home, and the marsh rests after', crate.items.some((i) => i.id === 'worm') && !g.creatures.gatherable(g, 23, 22, 'worm', c), held(crate));
 }
 {
