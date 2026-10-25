@@ -56,7 +56,7 @@ import { depthOf, type View } from './view';
 import { FALLS, roofModel, type Fall, type RoofGable, type RoofModel, type RoofPt } from './roofshape';
 import { COVER_PPT, covering } from './roofing';
 import { glass, glassBack, glassFace, glassReflects } from './glazing';
-import { GLASS } from '../game/glasshouse';
+import { GLASS, isGlasshouse } from '../game/glasshouse';
 import type { LightSource } from '../game/light';
 import { FLOOR_PPT, FLOOR_TILES, concrete, flooring, slabbing } from './flooring';
 import { LADDER, stairStyle } from './stairing';
@@ -4696,8 +4696,9 @@ export class Renderer {
             this.take('crop', x, y, mx, my - avg * hs,
               cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], this.dormant && !crop.glass, cam.rotation, this.cropStep));
           } else {
-            // A field tilled and lying fallow: its ridges and furrows, rimed in a winter. Ground, so first on its line, under whoever stands on it.
-            this.take('crop', x, y, mx, my - avg * hs, cropSprite('', -1, '', '', this.dormant, cam.rotation, this.cropStep)).key = -1e9;
+            // A field tilled and lying fallow: its ridges and furrows, rimed in a winter out of glass. Ground, so first on its line, under whoever stands on it.
+            const rimed = this.dormant && !isGlasshouse(this.game.buildings, this.game.buildings.buildingAt(x, y));
+            this.take('crop', x, y, mx, my - avg * hs, cropSprite('', -1, '', '', rimed, cam.rotation, this.cropStep)).key = -1e9;
           }
         }
         /*
