@@ -615,7 +615,7 @@ function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: 
  */
 function scallopPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: Outline, n: number): void {
   const [a1, p1, a2, p2] = o.lumps;
-  const N = n * 4;
+  const N = n * 3;
   const ph = p1 + p2;
   for (let i = 0; i <= N; i++) {
     const t = (i / N) * TAU;
@@ -1174,7 +1174,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
       // A frothy crown's lumps, and any in flower, scalloped all round in florets; the rest edged in their leaves.
       const froth = s.cloud || spec.leafForm === 'puff';
       for (const [j, u] of lumps.entries()) {
-        if (froth) scallopPath(path, u.x, u.y, u.rx, u.ry, u.o, 10 + (j % 3));
+        if (froth) scallopPath(path, u.x, u.y, u.rx, u.ry, u.o, 9 + (j % 3));
         else massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec, s.cloud), 24);
       }
       return { o, path, lumps };
