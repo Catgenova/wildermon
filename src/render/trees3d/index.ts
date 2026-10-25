@@ -17,18 +17,30 @@
 import type { Season } from '../../world/calendar';
 import { hash2 } from '../../world/noise';
 import { TREE_AGES, TREE_DEFS } from '../../world/tiles';
-import { LEAFING, LEAVES_DOWN, lookStep, SHEDDING, TURNING } from '../foliage';
+import { blooms, LEAFING, LEAVES_DOWN, lookStep, PETALS_DOWN, SHEDDING, TURNING } from '../foliage';
 import { eyeOf, proj } from '../runestone';
 import { ageKeyOf } from '../trees/tree';
 import type { AgeKey } from '../trees/types';
 import { lightOf, SUN_STEPS, sunStepOf } from './light';
 import { ACROSS, boundsOf, footReach, footShade, paintTree3d, shownOf } from './paint';
+import { growOrchard } from './orchard';
 import { grow, swayed } from './skeleton';
+import { apple } from './species/apple';
+import { apricot } from './species/apricot';
 import { birch } from './species/birch';
 import { cedar } from './species/cedar';
+import { cherry } from './species/cherry';
+import { fig } from './species/fig';
+import { lemon } from './species/lemon';
 import { maple } from './species/maple';
 import { oak } from './species/oak';
+import { olive } from './species/olive';
+import { peach } from './species/peach';
+import { pear } from './species/pear';
 import { pine } from './species/pine';
+import { plum } from './species/plum';
+import { pomegranate } from './species/pomegranate';
+import { quince } from './species/quince';
 import { willow } from './species/willow';
 import type { Build, Dress, Skeleton, Species3D, V3 } from './types';
 
@@ -44,6 +56,17 @@ const SPECIES: ReadonlyMap<number, Species3D> = new Map([
   [byName('Birch'), birch],
   [byName('Cedar'), cedar],
   [byName('Willow'), willow],
+  [byName('Cherry'), cherry],
+  [byName('Apple'), apple],
+  [byName('Pear'), pear],
+  [byName('Plum'), plum],
+  [byName('Peach'), peach],
+  [byName('Apricot'), apricot],
+  [byName('Quince'), quince],
+  [byName('Fig'), fig],
+  [byName('Lemon'), lemon],
+  [byName('Olive'), olive],
+  [byName('Pomegranate'), pomegranate],
 ]);
 /** Which species are drawn here: take one out and it is drawn flat again. */
 export const TREE3D_SPECIES: Set<number> = new Set(SPECIES.keys());
@@ -86,8 +109,9 @@ export interface TreeView {
   sway: number;
 }
 
-/** Which of `FORMS` a tile's tree is grown as. */
+/** Which of `FORMS` a tile's tree is grown as, and which of its own species' forms (`Species3D.forms`). */
 export const formAt = (x: number, y: number): number => Math.floor(hash2(Math.round(x), Math.round(y), 5309) * FORMS) % FORMS;
+const formOf = (species: number, x: number, y: number): number => formAt(x, y) % Math.max(1, Math.min(FORMS, SPECIES.get(species)?.forms ?? FORMS));
 /** The wind's frame a tile's tree is at: each its own beat. */
 export const swayAt = (x: number, y: number, ms: number): number =>
   Math.floor(ms / SWAY_MS + hash2(Math.round(x), Math.round(y), 811) * SWAY_FRAMES) % SWAY_FRAMES;
@@ -107,7 +131,8 @@ function skeletonOf(species: number, variant: number, form: number): Skeleton {
   const def = TREE_DEFS[species] ?? TREE_DEFS[0];
   const age = TREE_AGES[variant] ?? TREE_AGES[0];
   const b = buildOf(spec, ageKeyOf(age));
-  sk = grow(b, b.height * def.size * age.size, seedOf(species, variant, form));
+  const H = b.height * def.size * age.size, seed = seedOf(species, variant, form);
+  sk = b.habit === 'orchard' ? growOrchard(b, H, seed) : grow(b, H, seed);
   skeletons.set(k, sk);
   return sk;
 }
@@ -131,6 +156,28 @@ export function dressOf(variant: number, season: Season, day: number): { dress: 
     default:
       return { dress: { season, step: 0, full: 0, turned: 0, litter: 0, keys: false }, key: 'w' };
   }
+}
+
+/** How many of its fruit a tree hangs at each age, against a mature one's, as the flat trees hang them. */
+const FRUIT_BY: Partial<Record<AgeKey, number>> = { mature: 1, old: 1.15, veryOld: 0.7 };
+
+/**
+ * A tree's dress for its species: a fruit tree's flower in spring at the ages
+ * that bear (`blooms`), with its petals under it, and its fruit in the seasons
+ * the island's fruiting table has it on the tree.
+ */
+export function dressFor(species: number, variant: number, season: Season, day: number): { dress: Dress; key: string } {
+  const out = dressOf(variant, season, day);
+  const o = SPECIES.get(species)?.orchard;
+  if (!o) return out;
+  const age = TREE_AGES[variant] ?? TREE_AGES[0];
+  const d = out.dress;
+  d.keys = false;
+  d.bloom = season === 'spring' && blooms(species, variant);
+  if (d.bloom) d.litter = PETALS_DOWN[d.step];
+  else if (season !== 'autumn') d.litter = 0;
+  d.fruit = age.bears && age.alive && o.fruit.seasons.includes(season) ? o.fruit.count * (FRUIT_BY[ageKeyOf(age)] ?? 0.6) : 0;
+  return out;
 }
 
 /* ---- bakes --------------------------------------------------------------------------- */
@@ -180,7 +227,7 @@ function bake(scale: number, species: number, variant: number, form: number, dre
   g.scale(scale, scale);
   g.translate(-x0, -y0);
   const t1 = performance.now();
-  paintTree3d(g, { sk, spec, dress, light: lightOf(step), e, seed, frame, frames: SWAY_FRAMES });
+  paintTree3d(g, { sk, spec, dress, light: lightOf(step), e, seed, frame, frames: SWAY_FRAMES, scale });
   tree3dStats.paintMs += performance.now() - t1;
   footShade(g, sk);
   tree3dStats.bakes++;
@@ -194,8 +241,8 @@ function bake(scale: number, species: number, variant: number, form: number, dre
  * all it may.
  */
 export function tree3dSprite(species: number, variant: number, season: Season, day: number, at: TreeView, scale: number): TreeSprite {
-  const form = formAt(at.x, at.y);
-  const { dress, key: look } = dressOf(variant, season, day);
+  const form = formOf(species, at.x, at.y);
+  const { dress, key: look } = dressFor(species, variant, season, day);
   const step = sunStepOf(at.hour, at.dark);
   // The bare wood has no leaf to move.
   const frame = dress.full > 0 ? at.sway : 0;
@@ -255,8 +302,8 @@ const SHADE_SCALE = 2;
  * throws none. The renderer lays it with the ground (`Renderer.solidFrame`).
  */
 export function tree3dShadow(species: number, variant: number, season: Season, day: number, x: number, y: number, step: number, turn: number): TreeShade | null {
-  const form = formAt(x, y);
-  const { dress, key: look } = dressOf(variant, season, day);
+  const form = formOf(species, x, y);
+  const { dress, key: look } = dressFor(species, variant, season, day);
   const head = `${species}|${variant}|${form}|${look}|`;
   const k = `${head}${step}|${turn}`;
   if (shadows.has(k)) return shadows.get(k) ?? null;
@@ -340,5 +387,5 @@ const shadows = new Map<string, TreeShade | null>();
 
 /** How far round a tile's tree's foot its own shade reaches, in pixels at zoom one across, before it grows (`grownAt`). */
 export function tree3dFoot(species: number, variant: number, x: number, y: number): number {
-  return footReach(skeletonOf(species, variant, formAt(x, y)));
+  return footReach(skeletonOf(species, variant, formOf(species, x, y)));
 }

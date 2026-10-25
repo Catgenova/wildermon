@@ -31,6 +31,8 @@ export interface Limb {
   tip?: boolean;
   /** A conifer's branch: the clump of the spray it carries (`Pad`), which it turns with. */
   pad?: number;
+  /** A twig out through the edge of a fruit tree's crown, which shows in leaf as its limbs do. */
+  poke?: boolean;
 }
 
 /**
@@ -151,8 +153,8 @@ export interface Build {
    * upswept limbs along it, under a tall, narrow crown of small hanging
    * clusters on the limbs' drooping ends.
    */
-  habit?: 'dome' | 'spreading' | 'upright';
-  /** Upright: the most stems from one foot; each of the tile's grown shapes has its own count, one up to this. */
+  habit?: 'dome' | 'spreading' | 'upright' | 'orchard';
+  /** Upright: the most stems from one foot; each of the tile's grown shapes has its own count, one up to this. Orchard: stems from the ground, where it grows as a shrub of several. */
   stems?: number;
   /** Upright: how high the rough, dark bark at the foot reaches, as a share of the height. */
   rough?: number;
@@ -164,6 +166,12 @@ export interface Build {
   sBend?: number;
   /** A weeping crown: a lobe at the end of each limb, a curtain of strands off each. */
   weep?: Weep;
+  /** Orchard: turns the trunk winds through from its foot to its split. */
+  twist?: number;
+  /** Orchard: gaps through the lower crown, each over a limb that shows through it. */
+  holes?: number;
+  /** Orchard: how far the crown narrows to its top, 0 a dome. */
+  peak?: number;
 }
 
 /**
@@ -200,6 +208,10 @@ export interface Dress {
   litter: number;
   /** Old enough to hang keys. */
   keys: boolean;
+  /** A fruit tree in flower. */
+  bloom?: boolean;
+  /** How many fruit a fruit tree has on it. */
+  fruit?: number;
 }
 
 export interface Species3D {
@@ -210,17 +222,21 @@ export interface Species3D {
   ages: Partial<Record<AgeKey, Partial<Build>>>;
   /**
    * Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough;
-   * long fibres down the trunk in this colour between its furrows, where it is stringy; the dead wood's shade, where it is not the living's.
+   * long fibres down the trunk in this colour between its furrows, where it is stringy; ridges wound round the trunk and the big limbs, lit in `rope`,
+   * where it has them; the dead wood's shade, where it is not the living's.
    */
   bark: {
-    lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; twist?: boolean; strands?: string; deadShade?: string;
+    lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; twist?: boolean; strands?: string; rope?: string; deadShade?: string;
     /** The fine twigs, where they differ from the bark. */
     twig?: string;
     /** Pale bark marked in `ink` with dashes across it and scars where limbs leave, over a cracked band of `base` at its foot. */
     marks?: { ink: string; base: string };
   };
-  /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed, 'birch' small and pointed, 'willow' narrow and pointed. */
-  leafForm?: 'maple' | 'oak' | 'birch' | 'willow';
+  /**
+   * The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed, 'birch' small and pointed, 'willow' narrow and
+   * pointed, 'oval' pointed, 'narrow' long and thin, 'puff' scalloped.
+   */
+  leafForm?: 'maple' | 'oak' | 'birch' | 'willow' | 'oval' | 'narrow' | 'puff';
   /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */
   buttress?: boolean;
   /** Snow as a narrow line along the top edge of the wood, rather than over all its upper face. */
@@ -250,6 +266,18 @@ export interface Species3D {
   whips?: string;
   /** Keeps its leaf all year: its winter leaf, and its new tips in spring (`leaf.spring`). */
   evergreen?: { winter: Ramp };
+  /** How many of the shapes (`FORMS`) it grows at each age, where fewer than the rest: each one more to bake. */
+  forms?: number;
+  /** A fruit tree (`./orchard`): its blossom and its fruit. */
+  orchard?: Orchard;
+}
+
+/** What a fruit tree hangs, as its flat tree's own (`../trees/species`, `../foliage` BLOOMS) and the island's fruiting table. */
+export interface Orchard {
+  /** In flower in spring at the ages that bear: its ramp, the flower's middle, the share of the masses in flower, and the new leaf among them. */
+  bloom: { ramp: Ramp; eye: string | null; cover: number; leaf: Ramp };
+  /** Its fruit: colour, size against a small one, how many on a mature crown, its shape, and the seasons it is on the tree. */
+  fruit: { colour: string; size: number; count: number; shape: 'round' | 'pear' | 'oval'; seasons: readonly Season[]; pairs: boolean };
 }
 
 /**
