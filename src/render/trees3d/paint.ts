@@ -608,6 +608,7 @@ function lumpsOf(job: Job, s: Shown): Lump[] {
  * is still four flat tones.
  */
 function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; front: number }, outline: Path2D, lumps: Lump[], rim: string): void {
+  if (job.spec.leafForm === 'willow') return paintLobe(g, job, s, sun, outline, lumps);
   const L = clumpLight(job, s.c);
   const top = s.ramp.length - 1;
   const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
@@ -637,7 +638,6 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
   plane(-0.5, 0.28, 0.72, s.under[b - 1], 1);
   plane(0.16, -0.1, 0.8, s.ramp[b + 1], 2);
   if (!job.light.night || L > 0.6) plane(0.38, -0.22, 0.48, s.over[b + 2], 3, true);
-  if (job.spec.leafForm === 'willow') drapes(g, lumps, s.under[b], s.ramp[b + 1]);
   // A leaf or two where the light catches the top lump's edge.
   const R = mulberry32(lumps[0]?.seed ?? 1);
   const u = lumps.reduce((m, v) => (v.y - v.ry < m.y - m.ry ? v : m), lumps[0]);
@@ -652,30 +652,66 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
 }
 
 /**
- * A willow lobe's outline round (cx, cy): feathered over its top and sides
- * with narrow leaves, each swept down the way the strands fall off it, and
- * plain underneath, where its strands hang.
+ * A willow lobe's outline round (cx, cy): its top and sides in shallow round
+ * bumps, the tips of the leaves it is made of, and round underneath, where
+ * its strands hang.
  */
-function featherPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, seed: number, n: number): void {
+function bumpPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, seed: number, n: number): void {
   const R = mulberry32(seed + 11);
   const a0 = R() * (TAU / n);
+  const w = TAU / n;
   const pt = (t: number, r: number): Pt => [cx + Math.cos(t) * rx * r, cy + Math.sin(t) * ry * r];
-  p.moveTo(...pt(a0, 0.96));
+  p.moveTo(...pt(a0, 0.98));
   for (let i = 0; i < n; i++) {
-    const a = a0 + (i / n) * TAU, w = TAU / n;
-    const mid = a + w / 2;
-    // Under it, round: its strands hang there.
-    if (Math.sin(mid) > 0.45) {
-      p.lineTo(...pt(mid, 1));
-    } else {
-      // The tip swept down: on the right going round, on the left coming back.
-      const tip = a + w * (Math.cos(mid) > 0 ? 0.85 : 0.15);
-      p.lineTo(...pt(a + w * 0.5, 0.95));
-      p.lineTo(...pt(tip, 1.06 + 0.06 * R()));
-    }
-    p.lineTo(...pt(a + w, 0.96));
+    const a = a0 + i * w, mid = a + w / 2;
+    if (Math.sin(mid) > 0.45) p.quadraticCurveTo(...pt(mid, 1.02), ...pt(a + w, 0.98));
+    else p.quadraticCurveTo(...pt(mid, 1.1 + 0.06 * R()), ...pt(a + w, 0.98));
   }
   p.closePath();
+}
+
+/**
+ * A willow lobe as part of one dome: no rim of its own, each of its lumps
+ * filled in the tone the dome has where it is -- lit on its top on the sun's
+ * side, deeper down its far side and under -- with a lit patch on those
+ * turned to the sun, the strands draped over it from its top, and the ink
+ * only round the whole tree.
+ */
+function paintLobe(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number }, outline: Path2D, lumps: Lump[]): void {
+  const { sk, light, e } = job;
+  const env = sk.crown;
+  const top = s.ramp.length - 1;
+  const subs = s.c.subs ?? [];
+  const n = g.getTransform().a > 2.5 ? 12 : 9;
+  const at = lumps.map((u, j) => {
+    const o = subs[j]?.o ?? [0, 0, 0];
+    const p: V3 = [s.c.c[0] + o[0] * s.grown, s.c.c[1] + o[1] * s.grown, s.c.c[2] + o[2] * s.grown];
+    const nrm = unit([(p[0] - env.c[0]) / env.r, (p[1] - env.c[1]) / env.r, ((p[2] - env.c[2]) / env.rz) * 0.8 + 0.35]);
+    const wrap = clamp01((dot(nrm, light.sun) + 0.3) / 1.3);
+    const up = clamp01((p[2] - (env.c[2] - env.rz)) / (2 * env.rz));
+    return { u, d: dot(p, e.toward as V3), wrap, L: (light.ambient + light.direct * wrap) * (0.62 + 0.38 * up) };
+  });
+  at.sort((p, q) => p.d - q.d);
+  for (const { u, wrap, L } of at) {
+    const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
+    const p = new Path2D();
+    bumpPath(p, u.x, u.y, u.rx, u.ry, u.seed, n);
+    g.fillStyle = s.ramp[b];
+    g.fill(p);
+    if (light.night && L < 0.6) continue;
+    if (wrap > 0.45) {
+      const q = new Path2D();
+      bumpPath(q, u.x + sun.sx * u.rx * 0.2, u.y + sun.sy * u.ry * 0.2 - u.ry * 0.22, u.rx * 0.62, u.ry * 0.6, u.seed + 1, n);
+      g.fillStyle = s.over[Math.min(top, b + 1 + (wrap > 0.75 ? 1 : 0))];
+      g.fill(q);
+    }
+  }
+  g.save();
+  g.clip(outline);
+  const L = clumpLight(job, s.c);
+  const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
+  drapes(g, lumps, s.under[b], s.ramp[b + 1]);
+  g.restore();
 }
 
 /**
@@ -1078,8 +1114,8 @@ function curtainsOf(job: Job, shown: Shown[], sun: { sx: number; sy: number }): 
         line(whips[front], strandLine(e, inR, { ...st, arch: st.arch + Math.hypot(st.o[0], st.o[1]) * 0.6 }, len + st.o[2] * 0.6, w, wind[0] * sway, 8));
         bare[front] = true;
       }
-      // Behind the lobe's middle, seen only between those in front: half of them, with fewer points.
-      if (!leafy || (!front && st.k > 0.55)) continue;
+      // Behind the lobe's middle, seen only between those in front: half of them, with fewer points. Drawn small, fewer still.
+      if (!leafy || (!front && st.k > (fine ? 0.55 : 0.4)) || (front && !fine && st.k > 0.8)) continue;
       const sl = strandLine(e, root, st, leafLen, w * (s ? Math.max(0.6, grown) : 1), wind[0] * sway, (step + w) * (front ? 1 : 1.5));
       // Lit on the side of the lobe toward the sun; a step darker behind the lobe's middle.
       const sunny = Math.cos(st.a) * job.light.sun[0] + Math.sin(st.a) * job.light.sun[1];
@@ -1182,7 +1218,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
     if (s.c.subs) {
       const lumps = lumpsOf(job, s);
       for (const u of lumps) {
-        if (spec.leafForm === 'willow') featherPath(path, u.x, u.y, u.rx, u.ry, u.seed, g.getTransform().a > 2.5 ? 20 : 13);
+        if (spec.leafForm === 'willow') bumpPath(path, u.x, u.y, u.rx, u.ry, u.seed, g.getTransform().a > 2.5 ? 12 : 9);
         else massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec), 24);
       }
       return { o, path, lumps };
@@ -1262,8 +1298,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
   const sizeOfKey = sk.crown.r * 0.12;
   const keyed = spec.keys && dress.keys && ((dress.season === 'spring' && dress.step >= 3) || dress.season === 'summer');
   shown.forEach((s, i) => {
-    // A willow's lobes run into each other under one dome: a soft rim between them, the ink round the whole tree only.
-    const rim = s.c.curtain ? rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.25), 0.8) : rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.7), 0.9);
+    const rim = rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.7), 0.9);
     items.push({
       d: near(s.c.c),
       draw: () => {
