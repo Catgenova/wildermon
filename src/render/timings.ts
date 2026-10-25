@@ -22,8 +22,8 @@
 
 /** The layers, the methods each is made of, and what the line calls them. */
 export const LAYERS = {
-  water: ['drawWater', 'drawPonds', 'drawWakes'],
-  swell: ['drawSwell'],
+  water: ['drawWater', 'drawPonds', 'drawWakes', 'seaShore', 'pondBank'],
+  swell: ['drawSea'],
   trees: ['drawTree'],
   figures: ['paint'],
   buildings: ['drawStructures', 'drawPitchedRoof', 'drawPiers', 'drawFoundation'],
