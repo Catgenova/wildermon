@@ -77,6 +77,12 @@ export interface Skeleton {
   leafReach?: number;
   /** How high the rough, dark bark at the foot of its stems reaches (`Species3D.bark.marks`). */
   rough?: number;
+  /** A conifer's dark middle round its leader, as a share of each whorl's reach (`Whorls.core`). */
+  core?: number;
+  /** How low in its crown a conifer's sprays part to show the trunk (`Whorls.parted`). */
+  parted?: number;
+  /** Heights between which a conifer's leader is inside its crown, and not drawn. */
+  hidden?: [number, number];
 }
 
 /** The tree's proportions at one age, in model units. */
@@ -162,9 +168,12 @@ export interface Species3D {
   /** Each age's build: the mature one, and what each other age changes. */
   build: Build;
   ages: Partial<Record<AgeKey, Partial<Build>>>;
-  /** Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough. */
+  /**
+   * Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough;
+   * long fibres down the trunk in this colour between its furrows, where it is stringy; the dead wood's shade, where it is not the living's.
+   */
   bark: {
-    lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean;
+    lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; strands?: string; deadShade?: string;
     /** The fine twigs, where they differ from the bark. */
     twig?: string;
     /** Pale bark marked in `ink` with dashes across it and scars where limbs leave, over a cracked band of `base` at its foot. */
@@ -176,6 +185,8 @@ export interface Species3D {
   buttress?: boolean;
   /** Snow as a narrow line along the top edge of the wood, rather than over all its upper face. */
   snowLine?: boolean;
+  /** Stones and ferns round the foot: the stone's colour (`Undergrowth`). */
+  undergrowth?: { stone: RGB };
   /** A carved rune inked in the kit's ink, and lit as a runestone's runes after dark. */
   inkedRune?: boolean;
   /** A mass's height on the screen against its width: 0.86 unless given. */
@@ -237,6 +248,30 @@ export interface Whorls {
   spire: boolean;
   /** How low the lowest boughs hang, as a share of the height. */
   hem: number;
+  /**
+   * Lacy sprays: each bough sweeps out and hangs, its sides and end a fringe
+   * of this many small hanging tips, its top in layers. None: the pine's
+   * pads with blunt fingers.
+   */
+  lace?: number;
+  /** The leader's tip bent over, as a share of the height. */
+  nod?: number;
+  /** A bough's branch against the leader's radius where it leaves it: 0.22 unless given. */
+  limb?: number;
+  /** Roots as buttresses: two pieces, out of the trunk and down along the ground (`Species3D.buttress`). */
+  buttress?: boolean;
+  /** The crown's dark middle round the leader, as a share of each whorl's reach: none unless given. */
+  core?: number;
+  /** Where the top whorl is under a spire, as a share of the height: 0.86 unless given. */
+  top?: number;
+  /** Small whorls up the spire over the top whorl: two unless given. */
+  tufts?: number;
+  /** The trunk's foot swollen this much wider into its roots. */
+  swell?: number;
+  /** How far up the crown, as a share of it, each bough carries a second, shorter spray over it. */
+  split?: number;
+  /** Lacy sprays turned aside from the eye to show the trunk (`partOf`) only this low in the crown, and a few higher: all of them unless given. */
+  parted?: number;
 }
 
 /** One bough of a conifer, round its mass's middle. */
@@ -255,4 +290,6 @@ export interface Pad {
   /** How far the needles hang under it at its end. */
   hang: number;
   fingers: number;
+  /** Lacy (`Whorls.lace`): its fringe's tips. */
+  lace?: number;
 }
