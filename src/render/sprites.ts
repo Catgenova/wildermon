@@ -26,6 +26,8 @@ export interface Sprite {
   solid?: boolean;
   /** A solid bush's shade at its foot, laid by the renderer in the tone of the ground's shade: its reach across, in pixels at zoom one (`Renderer.drawTree`). */
   foot?: number;
+  /** Where in it there is anything, as `inkOf` reads it, when that is already known. */
+  ink?: [number, number, number, number];
 }
 
 /**
@@ -51,6 +53,8 @@ const SPRITE_STEPS = [2, 3, 5];
 /** How far past a step you must go before it takes, and how far back to drop. */
 const STEP_SLACK = 0.15;
 let SPRITE_SCALE = SPRITE_STEPS[0];
+/** The scale sprites are drawn at now (`spriteScaleFor`). */
+export const spriteScaleNow = (): number => SPRITE_SCALE;
 
 /**
  * Tell the sprites how close the camera is. Called once a frame by the
@@ -582,7 +586,11 @@ export function forgetTrees(): void {
  */
 export function treeSprite(species: number, variant: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
   // A species drawn as a solid, seen from where the camera is and lit as the hour has it.
-  if (at && TREE3D_SPECIES.has(species)) return tree3dSprite(species, variant, season, day, at, SPRITE_SCALE);
+  // None yet, and none to stand in: drawn flat this frame.
+  if (at && TREE3D_SPECIES.has(species)) {
+    const solid = tree3dSprite(species, variant, season, day, at, SPRITE_SCALE);
+    if (solid) return solid;
+  }
   const look = leafageOf(species, variant, season, day);
   const key = `${SPRITE_SCALE}|tree:${species}:${variant}${look.key ? `:${look.key}` : ''}`;
   let spr = cache.get(key);
@@ -644,7 +652,11 @@ export function stumpSprite(species: number): Sprite {
  * solid is seen from where the camera is and lit as the hour has it.
  */
 export function bushSprite(species: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
-  if (at && BUSH3D_SPECIES.has(species)) return bush3dSprite(species, season, day, at, SPRITE_SCALE);
+  // None yet, and none to stand in: drawn flat this frame.
+  if (at && BUSH3D_SPECIES.has(species)) {
+    const solid = bush3dSprite(species, season, day, at, SPRITE_SCALE);
+    if (solid) return solid;
+  }
   const def = BUSH_DEFS[species];
   const look = bushYear(def, species, season, day);
   const key = `${SPRITE_SCALE}|bush:${species}${look.key ? `:${look.key}` : ''}`;

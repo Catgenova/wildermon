@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 /**
  * Which deploy of the site this build is, for the corner of the screen (see
@@ -23,6 +25,29 @@ function deploy(): number | undefined {
 }
 
 /**
+ * A hash of the solid trees' code and everything it imports, for the bakes a
+ * browser keeps between visits (src/render/trees3d/store.ts): a change to how
+ * a tree is drawn throws away what was kept, and any other change keeps it.
+ */
+function trees3d(): string {
+  const seen = new Set<string>();
+  const hash = createHash('sha1');
+  const walk = (file: string): void => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    const text = readFileSync(file, 'utf8');
+    hash.update(file.slice(import.meta.dirname.length)).update(text);
+    for (const m of text.matchAll(/from '(\.[^']+)'/g)) {
+      const base = resolve(dirname(file), m[1]);
+      const next = [`${base}.ts`, resolve(base, 'index.ts'), base].find((f) => existsSync(f) && f.endsWith('.ts'));
+      if (next) walk(next);
+    }
+  };
+  walk(resolve(import.meta.dirname, 'src/render/trees3d/index.ts'));
+  return hash.digest('hex').slice(0, 16);
+}
+
+/**
  * The app source lives in src/ (including the HTML entries). `npm run build`
  * writes dist/ and then scripts/copy-site.mjs copies the pages and assets/ to
  * the repository root, which is what GitHub Pages serves from `main`.
@@ -39,7 +64,7 @@ const deployed = deploy();
 export default defineConfig({
   root: 'src',
   base: './',
-  define: { __DEPLOY__: String(deployed ?? 'undefined') },
+  define: { __DEPLOY__: String(deployed ?? 'undefined'), __TREES3D__: JSON.stringify(trees3d()) },
   /*
    * assets/version.json: which deploy is on the site now, for a page left open
    * on an older one to notice (src/ui/update.ts). In assets/ so the "Build site"

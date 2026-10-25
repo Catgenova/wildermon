@@ -43,7 +43,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
-import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, formAt, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, formAt, nextSunStep, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -83,7 +83,7 @@ import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, 
 import { kilnCentre, type PlacedKiln } from '../game/kiln';
 import { furnitureCentre, furnitureDef, hearthCapacity, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
 import { UNSEEN, VISIBLE } from '../game/vision';
-import { DAWN, deedLevel, DUSK } from '../game/game';
+import { darknessAt, DAWN, deedLevel, DUSK } from '../game/game';
 import { boatSway, clothInWind, crewOrder, deviceOf, drawFurniture, drawFurnitureLive, driverOn, swayOnScreen, WHEELS, wheelBlur, wheelTrim, steeredByTiller, woodHex, furnitureHoles, helmSeat, reinsTo, rowedPiece, furnitureSpan, FURNITURE_HEIGHT, glowsAtNight, headingView, mossTrim, PIECE_STAGES, pieceView, planterTrim, roseTrim, vineTrim, VINE_VARIANTS, type Air, type Crew, type PieceView } from './furniture';
 import { roseStage } from '../game/roses';
 import { isTrellis, vineStage } from '../game/vineyard';
@@ -156,6 +156,8 @@ const ZOOM_SETTLE = 220;
 const TREE_PICTURE_MS = 6;
 /** How long, in milliseconds, a frame may spend making the solid trees' shade pictures afresh (`solidFrame`); the rest lay last frame's. */
 const SHADE_MS = 3;
+/** The milliseconds a frame is drawn in when it leaves time to spare, for the solid trees' work after it (`tree3dIdle`): under a sixtieth of a second, for the drawing the browser does after. */
+const IDLE_FRAME_MS = 10;
 /** How many trees' shade a frame may lay into lines' pictures made again (at zoom one; fewer closer in), and how many device pixels of pictures of solid trees it may make, while older ones can stand in: the clock sees only part of what a picture costs, its drawing being done when it is first copied. */
 const SHADE_PARTS = 20;
 const SOLID_PICTURE_PX = 250_000;
@@ -434,6 +436,7 @@ import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, sprigOf, topEdges, type Face } from './outcrops';
 import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { inkOf } from './ink';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
   drawChains, drawDrawbridgeSpan, drawGallows, drawGatewayDressing, drawGrille, drawGrooves, drawHiddenMark, drawHingeCrib, drawLandingCrib,
@@ -3850,6 +3853,11 @@ export class Renderer {
     this.timings.begin();
     try {
       this.renderFrame(dt);
+      // The solid trees' work after the frame, in what is left of it (`tree3dIdle`).
+      if (TREE3D_SPECIES.size || BUSH3D_SPECIES.size) {
+        const next = nextSunStep(this.solidHour, darknessAt);
+        tree3dIdle(IDLE_FRAME_MS - (performance.now() - now), next, this.game.player.x, this.game.player.y);
+      }
     } finally {
       cam.cx = cx;
       cam.cy = cy;
@@ -7325,7 +7333,7 @@ export class Renderer {
      * not got yet is drawn: a pan along a wood lays the same shade.
      */
     const k = zoom * t.a * SHADE_RES;
-    const sig = `${cam.rotation}|${this.solidRev}|${linesKey}|${alpha}|${k.toFixed(3)}|${scan.top0}`;
+    const sig = `${cam.rotation}|${this.solidRev}|${scan.linesKey}|${alpha}|${k.toFixed(3)}|${scan.top0}`;
     const t0 = performance.now();
     let remade = 0;
     const strips = new Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; sx: number; sw: number; sh: number; h: number }>();
@@ -7695,7 +7703,7 @@ export class Renderer {
      * pixels at zoom one where a screen does. Moved by whole pixels only, so
      * what is kept is the same picture to the pixel.
      */
-    const [u0, v0, u1, v1] = this.spriteInk(spr.canvas);
+    const [u0, v0, u1, v1] = this.spriteInk(spr);
     const x0 = Math.max(0, Math.floor(u0 * w) - 2), x1 = Math.min(w, Math.ceil(u1 * w) + 2);
     const y0 = Math.max(0, Math.floor(v0 * h) - 2), y1 = Math.min(h, Math.ceil(v1 * h) + 2);
     const ch = Math.max(1, y1 - y0);
@@ -7739,30 +7747,12 @@ export class Renderer {
   /** Where in each sprite there is anything, as shares of its width and height: left, top, right, bottom (`spriteInk`). */
   private inked = new WeakMap<HTMLCanvasElement, [number, number, number, number]>();
 
-  /** The box round everything not see-through in a sprite, read off it once. The whole sprite where it cannot be read. */
-  private spriteInk(src: HTMLCanvasElement): [number, number, number, number] {
+  /** The box round everything not see-through in a sprite, read off it once (`inkOf`), or as a solid tree's bake already read it. */
+  private spriteInk(spr: Sprite): [number, number, number, number] {
+    const src = spr.canvas;
     const had = this.inked.get(src);
     if (had) return had;
-    let box: [number, number, number, number] = [0, 0, 1, 1];
-    try {
-      const W = src.width, H = src.height;
-      const px = src.getContext('2d')?.getImageData(0, 0, W, H).data;
-      if (px) {
-        let x0 = W, y0 = H, x1 = -1, y1 = -1;
-        for (let y = 0; y < H; y++) {
-          for (let x = 0, i = y * W * 4 + 3; x < W; x++, i += 4) {
-            if (!px[i]) continue;
-            if (x < x0) x0 = x;
-            if (x > x1) x1 = x;
-            if (y < y0) y0 = y;
-            y1 = y;
-          }
-        }
-        if (x1 >= 0) box = [x0 / W, y0 / H, (x1 + 1) / W, (y1 + 1) / H];
-      }
-    } catch {
-      // A sprite that cannot be read is kept whole.
-    }
+    const box = spr.ink ?? inkOf(src);
     this.inked.set(src, box);
     return box;
   }

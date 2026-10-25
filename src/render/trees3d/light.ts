@@ -37,3 +37,14 @@ export function lightOf(step: number): Light {
   const flat = Math.hypot(sun[0], sun[1]);
   return { sun, direct: 0.78, ambient: 0.3, night: false, throw: Math.min(1.9, flat / Math.max(0.2, sun[2])) };
 }
+
+/** The next step the sun takes after `hour`, with the darkness at each hour (`darknessAt`); null when none comes within six hours. */
+export function nextSunStep(hour: number, darkAt: (h: number) => number): number | null {
+  const now = sunStepOf(hour, darkAt(hour));
+  for (let d = 0.05; d <= 6; d += 0.05) {
+    const h = (hour + d) % 24;
+    const s = sunStepOf(h, darkAt(h));
+    if (s !== now) return s;
+  }
+  return null;
+}

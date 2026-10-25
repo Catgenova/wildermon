@@ -503,6 +503,13 @@ export const DAWN = 3;
 export const DUSK = 21;
 /** Game hours either side of sundown and of sunrise that the light takes to go, and to come back. */
 export const TWILIGHT = 1;
+/** How dark it is at an hour of the day, 0 to 1 (`Game.darkness`). */
+export function darknessAt(h: number): number {
+  if (h >= DAWN + TWILIGHT && h <= DUSK - TWILIGHT) return 0;
+  if (h >= DUSK + TWILIGHT || h <= DAWN - TWILIGHT) return 1;
+  const ramp = 2 * TWILIGHT;
+  return h > 12 ? Math.min(1, Math.max(0, (h - (DUSK - TWILIGHT)) / ramp)) : Math.min(1, Math.max(0, (DAWN + TWILIGHT - h) / ramp));
+}
 /** How dark it has to be (`Game.darkness`) for `isNight`: past it, the night's things happen and Runecut's clock light turns to Night. */
 export const NIGHT_FROM = 0.45;
 /** The game hours, after sundown and before sunrise, at which `darkness` crosses `NIGHT_FROM`. */
@@ -3944,11 +3951,7 @@ export class Game {
    * hour of dusk and an hour of dawn between the two.
    */
   darkness(): number {
-    const h = this.hourOfDay();
-    if (h >= DAWN + TWILIGHT && h <= DUSK - TWILIGHT) return 0;
-    if (h >= DUSK + TWILIGHT || h <= DAWN - TWILIGHT) return 1;
-    const ramp = 2 * TWILIGHT;
-    return h > 12 ? Math.min(1, Math.max(0, (h - (DUSK - TWILIGHT)) / ramp)) : Math.min(1, Math.max(0, (DAWN + TWILIGHT - h) / ramp));
+    return darknessAt(this.hourOfDay());
   }
 
   isNight(): boolean {
