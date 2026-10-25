@@ -20,18 +20,18 @@ const mix3 = (a: Tones, b: Tones | string, t: number): Tones =>
 const BUILD: Build = {
   height: 34, stem: 0.2, spread: 0.95, dome: 0.27, droop: 0.15, girth: 0.1, flare: 1.8, scaffolds: 4, forks: 3, branching: 2,
   clumps: 19, clumpSize: 0.29, gnarl: 0.6, lean: 1.2, dead: 0, bare: false, rune: false, hollow: false,
-  habit: 'orchard', zig: 0.35, twist: 0.35, stems: 0,
+  habit: 'orchard', zig: 0.35, twist: 0.35, stems: 0, holes: 2,
 };
 
 /** How each age changes a kind's prime, as the flat trees' age rules do (`../../trees/tree` AGE_RULES). */
 const AGES: Record<AgeKey, (b: Build) => Partial<Build>> = {
   sapling: (b) => ({
     stem: 0.5, spread: b.spread * 0.45, dome: 0.6, girth: b.girth * 0.4, flare: 1, scaffolds: 2, forks: 1, branching: 1.5, clumps: 4,
-    clumpSize: 0.5, gnarl: 0.3, lean: b.lean * 0.3, twist: 0.3, stems: 0,
+    clumpSize: 0.5, gnarl: 0.3, lean: b.lean * 0.3, twist: 0.3, stems: 0, holes: 0,
   }),
   young: (b) => ({
     stem: b.stem * 1.3, spread: b.spread * 0.62, dome: b.dome * 1.3, girth: b.girth * 0.55, flare: 1.3, scaffolds: 3, forks: 2,
-    clumps: Math.round(b.clumps * 0.5), clumpSize: b.clumpSize * 1.3, gnarl: b.gnarl * 0.7, lean: b.lean * 0.6, twist: (b.twist ?? 0) * 0.9, stems: Math.min(b.stems ?? 0, 2),
+    clumps: Math.round(b.clumps * 0.5), clumpSize: b.clumpSize * 1.3, gnarl: b.gnarl * 0.7, lean: b.lean * 0.6, twist: (b.twist ?? 0) * 0.9, stems: Math.min(b.stems ?? 0, 2), holes: 0,
   }),
   mature: () => ({}),
   old: (b) => ({
@@ -45,7 +45,7 @@ const AGES: Record<AgeKey, (b: Build) => Partial<Build>> = {
   shrivelled: (b) => ({ girth: b.girth * 1.2, flare: b.flare * 1.1, forks: 2, gnarl: 1, lean: b.lean * 1.5, twist: (b.twist ?? 0) * 1.5, bare: true, rune: true }),
   clipped: (b) => ({
     stem: 0.14, spread: b.spread * 0.95, dome: 0.55, droop: 0.1, girth: b.girth * 0.85, flare: 1.3, scaffolds: 3, forks: 2, clumps: 6,
-    clumpSize: 0.58, gnarl: 0.3, lean: b.lean * 0.4, twist: 0.15, stems: 0,
+    clumpSize: 0.58, gnarl: 0.3, lean: b.lean * 0.4, twist: 0.15, stems: 0, holes: 0,
   }),
 };
 

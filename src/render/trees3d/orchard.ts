@@ -135,7 +135,7 @@ export function growOrchard(b: Build, height: number, seed: number): Skeleton {
   /* ---- where the clusters go: over a broad, low dome, a golden turn apart ---- */
   const want = Math.max(1, Math.round(b.clumps));
   const rm = env.r * b.clumpSize;
-  const spots: Array<{ c: V3; az: number; size: number }> = [];
+  const spots: Array<{ c: V3; az: number; el: number; size: number; hole?: boolean }> = [];
   const azR = R() * TAU;
   for (let j = 0; j < want; j++) {
     const s = 1 - ((j + 0.5) / want) * 1.12;
@@ -146,7 +146,16 @@ export function growOrchard(b: Build, height: number, seed: number): Skeleton {
     const inner = j === 0 || (j % 5 === 3 && el > 0.65);
     const k = j === 0 ? 0.9 : inner ? 0.45 + 0.15 * R() : 0.86 + 0.08 * R();
     const c: V3 = [env.c[0] + Math.cos(az) * Math.cos(el) * env.r * k, env.c[1] + Math.sin(az) * Math.cos(el) * env.r * k, env.c[2] + Math.sin(el) * rz * k];
-    spots.push({ c, az, size: j === 0 ? 1.4 : inner ? 1.15 + 0.2 * R() : R() < 0.2 ? 1.2 + 0.2 * R() : 0.85 + 0.25 * R() });
+    spots.push({ c, az, el, size: j === 0 ? 1.4 : inner ? 1.15 + 0.2 * R() : R() < 0.2 ? 1.2 + 0.2 * R() : 0.85 + 0.25 * R() });
+  }
+  // Gaps through the lower dome over a few of the limbs: their branches go on into them with nothing on them, and show.
+  const holes = b.bare ? 0 : Math.min(n, Math.round(b.holes ?? 0));
+  for (let h = 0; h < holes; h++) {
+    const az = azOf[(h * 2 + Math.floor(R() * 2)) % n];
+    spots.map((sp, k) => ({ k, d: angle(sp.az, az) }))
+      .filter(({ k, d }) => d < 0.7 && spots[k].el < 0.35 && !spots[k].hole)
+      .sort((p, q) => p.d - q.d).slice(0, 2)
+      .forEach(({ k }) => { spots[k].hole = true; });
   }
   // Each to the living limb nearest round the trunk; a shrivelled tree's to any, grown to where its crown was.
   const mine: number[][] = azOf.map(() => []);
@@ -232,16 +241,17 @@ export function growOrchard(b: Build, height: number, seed: number): Skeleton {
         const tp = run(crooked(from, tip, 2, zig * 0.15), r * 0.3, r * 0.08, 3, last, i, false);
         fan(tp[tp.length - 1], u.r * 0.9, r * 0.06, i);
       }
-      // At the rim, a twig or two through the cluster and out past its edge.
+      // At the rim, a twig or two through the cluster and out past its edge, which shows in leaf (`Limb.poke`).
       if (rim && !dead && b.forks >= 2) {
         const o = unit([s.c[0] - env.c[0], s.c[1] - env.c[1], (s.c[2] - env.c[2]) * 0.6 + rz * 0.3]);
-        for (let j = 0; j < 1 + Math.floor(R() * 2); j++) {
+        // About one rim cluster in two.
+        if (R() < 0.5) {
           const d = unit(add(o, [(R() - 0.5) * 0.9, (R() - 0.5) * 0.9, (R() - 0.2) * 0.5]));
           const from = limbs[last].b;
-          run(crooked(from, add(from, mul(d, R0 * (1.4 + 0.25 * R()))), 2, zig * 0.2), r * 0.24, r * 0.06, 3, last, i, false);
+          run(crooked(from, add(from, mul(d, R0 * (1.25 + 0.2 * R()))), 3, zig * 0.35), r * 0.1, r * 0.03, 3, last, i, false).forEach((q) => { limbs[q].poke = true; });
         }
       }
-      if (!dead) {
+      if (!dead && !s.hole) {
         clumps.push({
           c: s.c, r: R0, limb: last, k: R(), subs,
           out: Math.min(1, outOf(env, s.c)),

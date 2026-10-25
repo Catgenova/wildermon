@@ -31,6 +31,8 @@ export interface Limb {
   tip?: boolean;
   /** A conifer's branch: the clump of the spray it carries (`Pad`), which it turns with. */
   pad?: number;
+  /** A twig out through the edge of a fruit tree's crown, which shows in leaf as its limbs do. */
+  poke?: boolean;
 }
 
 /**
@@ -131,6 +133,8 @@ export interface Build {
   twist?: number;
   /** Orchard: stems from the ground, where it grows as a shrub of several. */
   stems?: number;
+  /** Orchard: gaps through the lower crown, each over a limb that shows through it. */
+  holes?: number;
 }
 
 /** A run of tones from the deepest shade to the lit top: a clump is painted in four neighbours on it. */
