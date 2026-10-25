@@ -147,9 +147,9 @@ export function stumpOf(tree: Skeleton): StumpModel {
   return {
     sk: {
       // The crown's reach is what the picture's bounds take in round the foot (`boundsOf`): all of its own shade there.
-      limbs, clumps: [], crown: { c: [0, 0, zc], r: Math.max(reach, (r0 * 1.6) / 0.55 + 2), rz: 1 }, height: zc, rune: null, hollow: null,
+      limbs, clumps: [], crown: { c: [0, 0, zc], r: Math.max(reach * 2.1, (r0 * 1.6) / 0.55 + 2), rz: 1 }, height: zc, rune: null, hollow: null,
       rough: tree.rough ? Math.min(tree.rough, zc * 0.45) : undefined,
-      foot: Math.max(3, r0 * ACROSS * 1.35),
+      foot: Math.max(3, Math.max(r0 * 1.35, reach * 1.08) * ACROSS),
     },
     cuts,
   };
