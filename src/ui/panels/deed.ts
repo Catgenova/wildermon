@@ -1,8 +1,12 @@
 import { DEED_RADIUS_PER_LEVEL, MAX_DEED_LEVEL, deedWorkersAt, type Deed, type Game } from '../../game/game';
 import { DEED_ACTION_BY_ID, standingWord, upgradeProgress, upgradeReason } from '../../game/deed';
 import { furnitureDef, furnitureName } from '../../game/furniture';
-import { SPECIALTY_AT, SPECIALTY_BONUS, specialtySays, STANCES, STANCE_NAMES } from '../../game/creatures';
-import { percent } from '../../game/words';
+import {
+  BLOW_MEMORY, GATHER_VERB, SPECIALTY_AT, SPECIALTY_BONUS, SPECIES, STANCE_NAMES, UNFED_PACE, UPKEEP_FOR, unfedNow,
+  type Creature, type GatherKind,
+} from '../../game/creatures';
+import { capital, percent, timeWords, waitWords } from '../../game/words';
+import { ORDER_STANCES, VISIT_KEEP_DAYS, VISIT_LIST_MAX, type DeedWatch, type OrderStance } from '../../game/visitors';
 import { ACTION_BY_ID } from '../../game/actions';
 import { crateName } from '../../game/crates';
 import { trapName } from '../../game/traps';
@@ -51,15 +55,39 @@ export interface DeedRoll {
   deliver(founder: string, id: number): Promise<string | null>;
   /** A settlement's store log, newest first, by its founder (`rpc_store_log`). */
   storeLog(founder: string): Promise<{ why?: string; log?: StoreLogEntry[] }>;
+  /** A settlement's orders, workers by stance, guards and visitor log, or the island's refusal (`rpc_deed_watch`). */
+  watch(founder: string): Promise<DeedWatch | string>;
+  /** Every settlement worker on it set to one stance, and every one assigned after (`rpc_deed_orders`). */
+  orders(founder: string, stance: OrderStance): Promise<string | null>;
+  /** The Wildermon window, at its Care tab. */
+  care(): void;
 }
 
-/** The Settlement window's tabs: the settlement at a glance, its notices, and the work it wants with its ledger. */
-export type DeedTab = 'overview' | 'notices' | 'work';
-const DEED_TABS: ReadonlyArray<[DeedTab, string, string]> = [
-  ['overview', 'Settlement', 'Level, border, citizens, ranks, structures.'],
+/**
+ * The Settlement window's tabs: the settlement at a glance; its citizens,
+ * ranks and every rank's permissions; its workers' upkeep, specialties,
+ * guards and orders; who came onto it; its notices; and the work it wants
+ * with its ledger.
+ */
+export type DeedTab = 'overview' | 'ranks' | 'workers' | 'visitors' | 'notices' | 'work';
+export const DEED_TABS: ReadonlyArray<[DeedTab, string, string]> = [
+  ['overview', 'Settlement', 'Level, border, upgrade, structures, store log.'],
+  ['ranks', 'Ranks', 'Citizens, ranks, permissions of every rank.'],
+  ['workers', 'Workers', 'Upkeep, specialties, guards, orders.'],
+  ['visitors', 'Visitors', `Who came onto it, by the hour, last ${VISIT_KEEP_DAYS} days.`],
   ['notices', 'Notices', `Posts, newest first. Keeps ${NOTICE_KEEP}.`],
   ['work', 'Work', `Work wanted, deliveries, ledger (newest ${LEDGER_KEEP} lines).`],
 ];
+
+/** What each of a settlement's orders does to its workers, as `fight_target` has it. Guards and hunters fight at their trade whatever the orders. */
+export const ORDER_HINTS: Record<OrderStance, string> = {
+  passive: 'No fighting.',
+  defensive: `Fights a wild creature inside the border that struck it or anybody in the last ${BLOW_MEMORY} s.`,
+  aggressive: 'Attacks every wild creature inside the border, plus 1 tile.',
+};
+
+/** The trades that fight whatever the orders: a guard and a hunter (`fight_trade`). */
+const FIGHT_TRADES: readonly GatherKind[] = ['guard', 'hunt'];
 
 /** Every thing a deed crate takes, by its name in lower case: what a work may ask for. */
 let thingsByName: Map<string, string> | null = null;
@@ -129,8 +157,6 @@ function baublesFor(here: MyDeed | undefined): string {
 export class DeedPanel {
   private body: HTMLDivElement;
   private lastRender = 0;
-  /** The rank whose permissions are shown, by id. */
-  private openRank: number | null = null;
   private tab: DeedTab = 'overview';
   private readonly tabs = new Map<DeedTab, HTMLButtonElement>();
   /** The last board the island gave, the refusal it gave instead, and which settlement it was for. */
@@ -150,6 +176,12 @@ export class DeedPanel {
   private storeLogSeen: { founder: string; log: StoreLogEntry[]; why?: string } | null = null;
   private storeLogAsked = -1e12;
   private storeLogAsking = false;
+  /** The watch last read (`rpc_deed_watch`), by the founder of the settlement it is of, and when it was asked. */
+  private watchSeen: { founder: string; watch: DeedWatch | null; why: string | null } | null = null;
+  private watchAsked = -1e12;
+  private watchAsking = false;
+  /** What the Ranks and Workers tabs were last drawn from, so a redraw comes only when that has changed. */
+  private drawnKey = '';
 
   constructor(
     private readonly win: UIWindow,
@@ -205,6 +237,13 @@ export class DeedPanel {
    */
   update(now: number): void {
     if (!this.win.isOpen || now - this.lastRender < 900) return;
+    if ((this.tab === 'ranks' || this.tab === 'workers' || this.tab === 'visitors') && this.roll) {
+      // Drawn again only when what they show has changed (`drawnKey`), so a box or a button is never taken from under the pointer.
+      this.lastRender = now;
+      if (this.tab !== 'ranks' && Date.now() / 1000 - this.watchAsked >= SETTLE_REFRESH) void this.fetchWatch();
+      this.render();
+      return;
+    }
     if (this.tab !== 'overview' && this.roll) {
       // The board asked again now and then; its list drawn again only when what it shows has changed.
       this.lastRender = now;
@@ -229,9 +268,57 @@ export class DeedPanel {
     this.tab = tab;
     for (const [id, b] of this.tabs) b.classList.toggle('tb-on', id === tab);
     this.listKey = '';
+    this.drawnKey = '';
     this.body.replaceChildren();
-    if (tab !== 'overview') void this.fetchBoard();
+    if (tab === 'notices' || tab === 'work') void this.fetchBoard();
+    if (tab === 'workers' || tab === 'visitors') void this.fetchWatch();
     this.render();
+  }
+
+  /** The tab showing. */
+  get showing(): DeedTab {
+    return this.tab;
+  }
+
+  /** The orders last read for the settlement this window is about, or null. */
+  ordersKnown(): OrderStance | null {
+    const here = this.hereDeed();
+    return here && this.watchSeen?.founder === here.founder ? this.watchSeen.watch?.orders ?? null : null;
+  }
+
+  /** Ask the island for the settlement's watch: its orders, its workers by stance, its guards and its visitors. */
+  private async fetchWatch(): Promise<void> {
+    const roll = this.roll;
+    const here = this.hereDeed();
+    if (!roll || !here || this.watchAsking) return;
+    this.watchAsking = true;
+    this.watchAsked = Date.now() / 1000;
+    try {
+      const got = await roll.watch(here.founder);
+      this.watchSeen = { founder: here.founder, watch: typeof got === 'string' ? null : got, why: typeof got === 'string' ? got : null };
+    } finally {
+      this.watchAsking = false;
+    }
+    if (this.win.isOpen) this.render();
+  }
+
+  /**
+   * Set the orders of every settlement worker on it, and of every one
+   * assigned after: from this window and from the token's menu. The
+   * island's refusal goes to the log.
+   */
+  setOrders(stance: OrderStance): void {
+    const roll = this.roll;
+    const here = this.hereDeed();
+    if (!roll || !here) {
+      this.game.logMsg('No settlement.', 'error');
+      return;
+    }
+    void roll.orders(here.founder, stance).then(async (why) => {
+      if (why) this.game.logMsg(why, 'error');
+      else this.game.logMsg(`${here.name} orders: ${STANCE_NAMES[stance]}.`, 'wildermon');
+      await this.fetchWatch();
+    });
   }
 
   /** The settlement this window is about, as the island's social answer has it. */
@@ -366,10 +453,12 @@ export class DeedPanel {
   }
 
   /**
-   * The settlement's ranks, highest first. Its founder orders, renames,
-   * deletes and makes them, ticks what each may do, and chooses the one
-   * newcomers join at; everybody else sees the same list and cannot change
-   * it. Every refusal is the island's, said before it is asked.
+   * The settlement's ranks, highest first, and every rank's permissions on
+   * one grid: a column a rank, a row a power, a box ticked where the rank
+   * holds it. Its founder ticks them, orders, renames, deletes and makes
+   * ranks, and chooses the one newcomers join at; everybody else sees the
+   * same grid and cannot change it. Every refusal is the island's, said
+   * before it is asked.
    */
   private drawRanks(here: MyDeed): void {
     const roll = this.roll;
@@ -377,22 +466,19 @@ export class DeedPanel {
     const g = this.game;
     const defs = defsOf(here);
     const edits = here.mine && !!here.defs;
-    this.body.append(this.head(`Ranks (${defs.length} of ${RANK_CAP})`));
-    const note = document.createElement('div');
-    note.className = 'deed-note';
-    note.textContent = edits
-      ? 'Highest first. Founder (you): all permissions. A rank sends away and sets ranks only below it. Click a rank: permissions.'
-      : 'Highest first. Set by the founder. Click a rank: permissions.';
-    this.body.append(note);
+    this.body.append(this.head(`Permissions (${defs.length} of ${RANK_CAP} ranks)`));
+    this.body.append(this.note(edits
+      ? 'Highest first. Founder (you): all permissions. A rank sends away and sets ranks only below it. Tick: give; untick: take.'
+      : 'Highest first. Set by the founder.'));
+    this.body.append(this.matrix(defs, edits, roll));
+    this.body.append(this.head('Ranks'));
     for (const [i, r] of defs.entries()) {
       const row = document.createElement('div');
-      row.className = 'deed-row deed-rank' + (this.openRank === r.id ? ' deed-rank-open' : '');
-      const name = document.createElement('button');
-      name.type = 'button';
+      row.className = 'deed-row deed-rank';
+      const name = document.createElement('span');
       name.className = 'deed-rank-name';
-      name.textContent = `${this.openRank === r.id ? '▾' : '▸'} ${r.name}`;
+      name.textContent = r.name;
       name.title = `${r.name} may ${rankMay(r.perms)}.`;
-      name.setAttribute('aria-expanded', String(this.openRank === r.id));
       // The one an invitation puts newcomers on, marked where the list is read.
       if (r.newcomer) {
         const tag = document.createElement('span');
@@ -401,10 +487,6 @@ export class DeedPanel {
         tag.title = 'Newcomer rank.';
         name.append(tag);
       }
-      name.addEventListener('click', () => {
-        this.openRank = this.openRank === r.id ? null : r.id;
-        this.render();
-      });
       const held = document.createElement('span');
       held.className = 'deed-rank-held';
       held.textContent = `${r.held} held`;
@@ -443,7 +525,6 @@ export class DeedPanel {
         row.append(tools);
       }
       this.body.append(row);
-      if (this.openRank === r.id) this.body.append(this.permGrid(r, edits, roll));
     }
     if (!edits) return;
     // Newcomers, and a new rank.
@@ -483,6 +564,64 @@ export class DeedPanel {
       });
     });
     this.body.append(add);
+  }
+
+  /**
+   * Every rank's permissions at once: a column a rank, highest first, and a
+   * row a power in the order of `RANK_POWERS`, each with its exact rule. A
+   * box is one click to give or take, and the island says no in the log.
+   */
+  private matrix(defs: readonly RankDef[], edits: boolean, roll: DeedRoll): HTMLDivElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'deed-matrix-wrap';
+    const table = document.createElement('table');
+    table.className = 'deed-matrix';
+    const head = document.createElement('tr');
+    const corner = document.createElement('th');
+    corner.className = 'deed-matrix-corner';
+    corner.textContent = 'Permission';
+    head.append(corner);
+    for (const r of defs) {
+      const th = document.createElement('th');
+      th.className = 'deed-matrix-rank';
+      th.scope = 'col';
+      th.title = `${r.name}: held by ${r.held}.${r.newcomer ? ' Newcomer rank.' : ''}`;
+      const span = document.createElement('span');
+      span.textContent = r.name;
+      th.append(span);
+      head.append(th);
+    }
+    const thead = document.createElement('thead');
+    thead.append(head);
+    const body = document.createElement('tbody');
+    for (const p of RANK_POWERS) {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.className = 'deed-matrix-power';
+      th.scope = 'row';
+      th.textContent = p.label;
+      th.title = p.rule;
+      tr.append(th);
+      for (const r of defs) {
+        const td = document.createElement('td');
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.className = 'deed-matrix-box';
+        box.dataset.rank = String(r.id);
+        box.dataset.power = p.id;
+        box.checked = (r.perms & powerBit(p.id)) !== 0;
+        box.disabled = !edits;
+        box.title = `${r.name}: ${p.label}. ${p.rule}`;
+        box.setAttribute('aria-label', `${r.name}: ${p.label}`);
+        box.addEventListener('change', () => this.ask(roll.allow(r.id, p.id, box.checked)));
+        td.append(box);
+        tr.append(td);
+      }
+      body.append(tr);
+    }
+    table.append(thead, body);
+    wrap.append(table);
+    return wrap;
   }
 
   /**
@@ -527,31 +666,13 @@ export class DeedPanel {
     for (const e of seen.log) this.body.append(this.row(storeLogLine(e), agoWords(e.at), new Date(e.at * 1000).toLocaleString()));
   }
 
-  /** What one rank may do: a box a power, each with its exact rule, ticked where the rank holds it. */
-  private permGrid(r: RankDef, edits: boolean, roll: DeedRoll): HTMLDivElement {
-    const grid = document.createElement('div');
-    grid.className = 'deed-perms';
-    for (const p of RANK_POWERS) {
-      const cell = document.createElement('label');
-      cell.className = 'deed-perm';
-      cell.title = p.rule;
-      const box = document.createElement('input');
-      box.type = 'checkbox';
-      box.checked = (r.perms & powerBit(p.id)) !== 0;
-      box.disabled = !edits;
-      box.addEventListener('change', () => this.ask(roll.allow(r.id, p.id, box.checked)));
-      const text = document.createElement('span');
-      text.textContent = p.label;
-      cell.append(box, text);
-      grid.append(cell);
-    }
-    return grid;
-  }
-
   render(): void {
     this.stale = false;
-    if (this.tab !== 'overview' && this.roll) this.renderBoard();
-    else this.renderOverview();
+    if (!this.roll || this.tab === 'overview') this.renderOverview();
+    else if (this.tab === 'ranks') this.renderRanks();
+    else if (this.tab === 'workers') this.renderWorkers();
+    else if (this.tab === 'visitors') this.renderVisitors();
+    else this.renderBoard();
   }
 
   private renderOverview(): void {
@@ -585,29 +706,24 @@ export class DeedPanel {
     }
     this.body.append(this.row('Level', `${level} of ${MAX_DEED_LEVEL}`));
     this.body.append(this.row('Border', `radius ${d.radius} tiles · ${side} × ${side}`, `Centred on the totem at (${d.x}, ${d.y}).`));
-    this.body.append(this.row('Working', `${workers}/${g.workerCap}`, 'Wildermon working the settlement / max at this level.'));
-    // Each trade its workers are at, and whether there are enough of them at it for a specialty (`SPECIALTY_AT`).
-    for (const { kind, n } of g.creatures.specialties()) {
-      this.body.append(this.row(n >= SPECIALTY_AT ? 'Specialty' : 'Task', specialtySays(kind, n).replace(/^Specialty: /, ''),
-        `${SPECIALTY_AT}+ settlement workers on one task: task speed +${percent(SPECIALTY_BONUS)} each.`));
-    }
     this.body.append(this.row('In wildermon crates', String(crated), 'Yours in wildermon crates: not working or following.'));
-    this.body.append(this.row('Orders', STANCE_NAMES[g.deedStance()], 'Settlement wildermon response to intruders.'));
     this.body.append(this.place('Totem', d.x, d.y));
     // Who lives here and the settlement's ranks, from the island's social answer.
     this.roll?.prime();
     const here: MyDeed | undefined = this.roll?.known()?.deeds.find((e) => e.x === d.x && e.y === d.y);
-    if (this.roll && !here) {
-      this.body.append(this.head('Citizens'));
-      const wait = document.createElement('div');
-      wait.className = 'deed-note';
-      wait.textContent = 'Loading…';
-      this.body.append(wait);
-    } else if (here) {
-      this.drawRoll(here);
-      this.drawRanks(here);
-      this.drawStoreLog(here);
+    // Each of the other tabs at a glance, a click from it.
+    if (this.roll) {
+      const mine = g.creatures.working();
+      const unfed = mine.filter((c) => unfedNow(c)).length;
+      const specialties = g.creatures.specialties().filter((t) => t.n >= SPECIALTY_AT).length;
+      this.body.append(this.jump('ranks', 'Citizens · ranks',
+        here ? `${here.folk.length + 1} · ${defsOf(here).length} of ${RANK_CAP}` : '…'));
+      this.body.append(this.jump('workers', 'Working · unfed · specialties', `${workers}/${g.workerCap} · ${unfed} · ${specialties}`));
+      const w = this.watchFor(here);
+      this.body.append(this.jump('visitors', `Visitors, last ${VISIT_KEEP_DAYS} d`, w?.visitors ? String(w.total ?? w.visitors.length) : w?.visitorsWhy ? '—' : '…'));
+      if (here && !w && !this.watchAsking && Date.now() / 1000 - this.watchAsked >= SETTLE_REFRESH) void this.fetchWatch();
     }
+    if (here) this.drawStoreLog(here);
 
     // What the next level wants, and the button that buys it.
     this.body.append(this.head(level < MAX_DEED_LEVEL ? `Next: level ${level + 1}` : 'Max level'));
@@ -740,24 +856,309 @@ export class DeedPanel {
       if (tail.childElementCount) this.body.append(this.head('Settlement'), tail);
       return;
     }
-    this.body.append(this.head('Settlement wildermon orders'));
-    const stance = g.deedStance();
-    const row = document.createElement('div');
-    row.className = 'deed-buttons';
-    for (const st of STANCES) {
+    if (tail.childElementCount) this.body.append(this.head('Settlement'), tail);
+  }
+
+  /** A line that says how things stand on another tab, and turns to it. */
+  private jump(tab: DeedTab, label: string, value: string): HTMLDivElement {
+    const el = document.createElement('div');
+    el.className = 'deed-row deed-jump';
+    const a = document.createElement('span');
+    a.className = 'deed-who';
+    a.textContent = label;
+    const v = document.createElement('span');
+    v.className = 'deed-value';
+    v.textContent = value;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tb-btn tb-small deed-tool';
+    b.textContent = DEED_TABS.find((t) => t[0] === tab)?.[1] ?? tab;
+    b.title = DEED_TABS.find((t) => t[0] === tab)?.[2] ?? '';
+    b.addEventListener('click', () => this.show(tab));
+    el.append(a, v, b);
+    return el;
+  }
+
+  /** The watch last read for this settlement, or null. */
+  private watchFor(here: MyDeed | undefined): DeedWatch | null {
+    return here && this.watchSeen?.founder === here.founder ? this.watchSeen.watch : null;
+  }
+
+  /** Nothing to show: no settlement, or the island's answer not in yet. */
+  private bare(text: string): void {
+    const none = document.createElement('div');
+    none.className = 'deed-none';
+    none.textContent = text;
+    this.body.replaceChildren(none);
+  }
+
+  /* ---- the Ranks, Workers and Visitors tabs -------------------------------- */
+
+  /** Whether the tab was drawn from just this; when it was, nothing is drawn again. */
+  private same(key: unknown): boolean {
+    const k = JSON.stringify(key);
+    if (k === this.drawnKey) return true;
+    this.drawnKey = k;
+    return false;
+  }
+
+  /** Every rank's permissions on one grid, then the ranks themselves, then the citizens and their ranks. */
+  private renderRanks(): void {
+    const d = this.game.deed;
+    if (!d) {
+      if (!this.same(['ranks', null])) this.bare('No settlement. Plant a settlement totem to found one.');
+      return;
+    }
+    this.roll?.prime();
+    const here = this.hereDeed();
+    // Not while a list is dropped down: a redraw would shut it under the pointer.
+    const at = document.activeElement;
+    if (at instanceof HTMLSelectElement && this.body.contains(at)) return;
+    if (this.same(['ranks', d.name, here ?? null])) return;
+    if (!here) {
+      this.bare('Loading…');
+      return;
+    }
+    this.body.replaceChildren();
+    this.drawRanks(here);
+    this.drawRoll(here);
+  }
+
+  /**
+   * The settlement's workers: what each is owed in upkeep and when, each
+   * trade with how many are at it against `SPECIALTY_AT` and the wildermon of
+   * yours that would make up the number, and its guards and orders.
+   */
+  private renderWorkers(): void {
+    const g = this.game;
+    const d = g.deed;
+    if (!d) {
+      if (!this.same(['workers', null])) this.bare('No settlement. Plant a settlement totem to found one.');
+      return;
+    }
+    const here = this.hereDeed();
+    const w = this.watchFor(here);
+    const mine = g.creatures.working();
+    const others = this.assignable();
+    // To the minute: what a line says changes no faster.
+    const key = ['workers', d.name, g.workerCap, w, here?.founder ?? null,
+      mine.map((c) => [c.id, c.name, c.trade, c.stance, c.post, Math.floor((c.unfed ?? 0) / 60), Math.round(c.hunger * 100), g.creatures.specialtyOf(c)]),
+      others.map((c) => [c.id, c.name, c.mode, this.assignWhy(c, null)])];
+    if (this.same(key)) return;
+    this.body.replaceChildren();
+    this.drawUpkeep(mine);
+    this.drawSpecialties(mine, others);
+    this.drawGuards(mine, others, w);
+  }
+
+  /** Every wildermon of yours that could be assigned to the settlement: following you or at a post. */
+  private assignable(): Creature[] {
+    const def = ACTION_BY_ID.get('assign_deed');
+    if (!def) return [];
+    return [...this.game.creatures.list.values()]
+      .filter((c) => c.mine !== false && (c.mode !== 'deed' || c.post !== null) && def.applies({ kind: 'creature', id: c.id }, this.game))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** Its trades: the one its kind does, or the ones it may be set to. */
+  private tradesOf(c: Creature): GatherKind[] {
+    const def = SPECIES[c.species];
+    return (def?.trades ?? (def?.gathers ? [def.gathers] : [])) as GatherKind[];
+  }
+
+  /** Why it may not be assigned to a trade, or null (`assign_deed`'s own check). */
+  private assignWhy(c: Creature, job: GatherKind | null): string | null {
+    const def = ACTION_BY_ID.get('assign_deed');
+    if (!def) return 'No settlement.';
+    return def.check?.({ kind: 'creature', id: c.id, ...(job && this.tradesOf(c).length > 1 ? { job } : {}) }, this.game) ?? null;
+  }
+
+  /** A wildermon of yours, and the button that assigns it to the settlement at a trade. */
+  private assignRow(c: Creature, job: GatherKind): HTMLDivElement {
+    const el = document.createElement('div');
+    el.className = 'deed-row deed-candidate';
+    const name = document.createElement('span');
+    name.className = 'deed-who';
+    name.textContent = `${c.name} · ${c.post !== null ? 'at a post' : c.mode === 'active' ? 'following' : c.mode}`;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tb-btn tb-small deed-tool';
+    b.textContent = 'Assign';
+    const why = this.assignWhy(c, job);
+    b.disabled = !!why;
+    b.title = why ?? `Assign ${c.name} to the settlement: ${GATHER_VERB[job]}.`;
+    b.addEventListener('click', () => {
+      const def = ACTION_BY_ID.get('assign_deed');
+      if (def) this.game.requestAction(def, { kind: 'creature', id: c.id, ...(this.tradesOf(c).length > 1 ? { job } : {}) });
+    });
+    el.append(name, b);
+    return el;
+  }
+
+  /** What each worker of yours is owed: fed, and how long at work until it is unfed (`UPKEEP_FOR`), soonest first. */
+  private drawUpkeep(mine: Creature[]): void {
+    const unfed = mine.filter((c) => unfedNow(c)).length;
+    this.body.append(this.head(`Upkeep (${unfed} unfed of ${mine.length})`));
+    this.body.append(this.note(
+      `Meals: settlement stores, when hungry. Unfed after ${timeWords(UPKEEP_FOR)} at work without one: task pace ${percent(UNFED_PACE)} until fed.`));
+    if (!mine.length) {
+      this.body.append(this.note('No workers. Assign wildermon below.'));
+      return;
+    }
+    const left = (c: Creature): number => UPKEEP_FOR - (c.unfed ?? 0);
+    for (const c of [...mine].sort((a, b) => left(a) - left(b) || a.name.localeCompare(b.name))) {
+      const value = unfedNow(c) ? `unfed · pace ${percent(UNFED_PACE)}` : `fed ${percent(c.hunger)} · unfed in ${waitWords(left(c))}`;
+      const el = this.row(c.name, value, `${c.name}: ${unfedNow(c) ? `unfed for ${timeWords(c.unfed ?? 0)}` : `${timeWords(c.unfed ?? 0)} at work since its last meal`}.`);
+      el.classList.add(unfedNow(c) ? 'deed-unmet' : 'deed-upkeep');
+      this.body.append(el);
+    }
+    const care = this.roll?.care;
+    if (care) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small' + (st === stance ? ' tb-on' : '');
+      b.className = 'tb-btn tb-small';
+      b.textContent = 'Care tab';
+      b.title = 'Wildermon window, Care tab: feed, brush, beds.';
+      b.addEventListener('click', () => care());
+      const row = document.createElement('div');
+      row.className = 'deed-buttons';
+      row.append(b);
+      this.body.append(row);
+    }
+  }
+
+  /**
+   * Each trade a specialty speeds, that your workers are at or a wildermon of
+   * yours could be: how many the settlement has at it against `SPECIALTY_AT`,
+   * and the wildermon of yours that would add to it, each a click from it.
+   */
+  private drawSpecialties(mine: Creature[], others: Creature[]): void {
+    const g = this.game;
+    const have = new Map<GatherKind, number>(g.creatures.specialties().map((t) => [t.kind, t.n]));
+    const trades = new Set<GatherKind>(have.keys());
+    for (const c of others) for (const t of this.tradesOf(c)) if (!FIGHT_TRADES.includes(t)) trades.add(t);
+    const on = [...trades].filter((t) => !FIGHT_TRADES.includes(t))
+      .sort((a, b) => (have.get(b) ?? 0) - (have.get(a) ?? 0) || GATHER_VERB[a].localeCompare(GATHER_VERB[b]));
+    const made = on.filter((t) => (have.get(t) ?? 0) >= SPECIALTY_AT).length;
+    this.body.append(this.head(`Specialties (${made})`));
+    this.body.append(this.note(`${SPECIALTY_AT}+ workers on one task: task speed +${percent(SPECIALTY_BONUS)} each, on that task.`));
+    if (!on.length) {
+      this.body.append(this.note('No trades. No workers, no wildermon following you with a task.'));
+      return;
+    }
+    for (const t of on) {
+      const n = have.get(t) ?? 0;
+      const el = this.row(capital(GATHER_VERB[t]), n >= SPECIALTY_AT ? `${n} · +${percent(SPECIALTY_BONUS)}` : `${n}/${SPECIALTY_AT}`,
+        n >= SPECIALTY_AT ? `Specialty: task speed +${percent(SPECIALTY_BONUS)}.` : `${SPECIALTY_AT - n} more for task speed +${percent(SPECIALTY_BONUS)}.`);
+      el.classList.add('deed-trade', n >= SPECIALTY_AT ? 'deed-met' : 'deed-trade-short');
+      this.body.append(el);
+      const at = mine.filter((c) => (c.trade ?? SPECIES[c.species]?.gathers) === t).map((c) => c.name);
+      if (at.length) this.body.append(this.note(`Yours: ${andList(at)}.`));
+      for (const c of others.filter((o) => this.tradesOf(o).includes(t))) this.body.append(this.assignRow(c, t));
+    }
+  }
+
+  /**
+   * Its guards -- the workers at the guard trade, settlement-wide, and the
+   * wildermon of yours that could be -- and its orders: the stance every
+   * worker on it holds, set at once for all of them and for every one
+   * assigned after, by its founder and a rank holding Wildermon orders.
+   */
+  private drawGuards(mine: Creature[], others: Creature[], w: DeedWatch | null): void {
+    const guards = mine.filter((c) => (c.trade ?? SPECIES[c.species]?.gathers) === 'guard');
+    this.body.append(this.head(`Guards (${w ? w.guards : guards.length})`));
+    this.body.append(this.note('Guards and hunters attack wild creatures inside the border whatever the orders.'));
+    if (guards.length) this.body.append(this.note(`Yours: ${andList(guards.map((c) => c.name))}.`));
+    for (const c of others.filter((o) => this.tradesOf(o).includes('guard'))) this.body.append(this.assignRow(c, 'guard'));
+    const why = this.watchSeen && !w ? this.watchSeen.why : null;
+    this.body.append(this.head(`Orders${w?.orders ? `: ${STANCE_NAMES[w.orders]}` : ''}`));
+    if (!w) {
+      this.body.append(this.note(why ?? 'Loading…'));
+      return;
+    }
+    const counts = ORDER_STANCES.filter((st) => (w.stances[st] ?? 0) > 0).map((st) => `${w.stances[st]} ${STANCE_NAMES[st].toLowerCase()}`);
+    const rest = Object.entries(w.stances).filter(([st, n]) => !ORDER_STANCES.includes(st as OrderStance) && (n ?? 0) > 0)
+      .reduce((m, [, n]) => m + (n ?? 0), 0);
+    this.body.append(this.row('Workers by stance', [...counts, ...(rest ? [`${rest} ${STANCE_NAMES.guard.toLowerCase()}`] : [])].join(' · ') || 'none'));
+    const row = document.createElement('div');
+    row.className = 'deed-buttons deed-orders';
+    const refusal = w.order ? null : lacks(this.game.deed, 'orders') ?? 'Founder or Wildermon orders only.';
+    for (const st of ORDER_STANCES) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tb-btn tb-small' + (st === w.orders ? ' tb-on' : '');
       b.textContent = STANCE_NAMES[st];
-      b.title = st === 'aggressive' ? 'Attacks wild creatures inside the border' : st === 'defensive' ? 'Fights back when it or you are attacked' : 'Never fights';
-      b.addEventListener('click', () => {
-        g.setDeedStance(st);
-        this.render();
-      });
+      b.dataset.stance = st;
+      b.disabled = !!refusal;
+      b.title = refusal ?? `${STANCE_NAMES[st]}: ${ORDER_HINTS[st]} Every settlement worker, and every one assigned after.`;
+      b.addEventListener('click', () => this.setOrders(st));
       row.append(b);
     }
     this.body.append(row);
-    this.body.append(tail);
+    for (const st of ORDER_STANCES) this.body.append(this.hint(st));
+  }
+
+  /** What one of the orders does, under the buttons. */
+  private hint(st: OrderStance): HTMLDivElement {
+    const el = this.note(`${STANCE_NAMES[st]}: ${ORDER_HINTS[st]}`);
+    el.classList.add('deed-order-hint');
+    return el;
+  }
+
+  /** Who came onto the settlement who is not on its roll, the latest first, for its founder and a rank holding Visitor log. */
+  private renderVisitors(): void {
+    const d = this.game.deed;
+    if (!d) {
+      if (!this.same(['visitors', null])) this.bare('No settlement. Plant a settlement totem to found one.');
+      return;
+    }
+    this.roll?.prime();
+    const here = this.hereDeed();
+    const w = this.watchFor(here);
+    const why = here && this.watchSeen?.founder === here.founder ? this.watchSeen.why : null;
+    // To the minute, which is what "ago" says.
+    if (this.same(['visitors', d.name, w, why, Math.floor(Date.now() / 60000)])) return;
+    this.body.replaceChildren();
+    const total = w?.total ?? w?.visitors?.length ?? 0;
+    this.body.append(this.head(w?.visitors ? `Visitors (${total}) · last ${VISIT_KEEP_DAYS} d` : `Visitors · last ${VISIT_KEEP_DAYS} d`));
+    if (!w) {
+      this.body.append(this.note(why ?? 'Loading…'));
+      return;
+    }
+    if (!w.visitors) {
+      this.body.append(this.note(w.visitorsWhy ?? ''));
+      return;
+    }
+    this.body.append(this.note(`Not citizens. One entry per visitor per hour; kept ${VISIT_KEEP_DAYS} days.`
+      + (total > w.visitors.length ? ` Newest ${VISIT_LIST_MAX} shown.` : '')));
+    if (!w.visitors.length) {
+      this.body.append(this.note(`None in the last ${VISIT_KEEP_DAYS} days.`));
+      return;
+    }
+    const head = document.createElement('div');
+    head.className = 'deed-row deed-visit-head';
+    for (const t of ['Visitor', 'Last', 'Hours']) {
+      const c = document.createElement('span');
+      c.textContent = t;
+      head.append(c);
+    }
+    this.body.append(head);
+    for (const v of w.visitors) {
+      const el = document.createElement('div');
+      el.className = 'deed-row deed-visit';
+      el.title = `${v.name}: first ${when(v.first)}, last ${when(v.last)}, ${v.hours} h seen.`;
+      const name = document.createElement('span');
+      name.className = 'deed-who';
+      name.textContent = v.name;
+      const last = document.createElement('span');
+      last.className = 'deed-value';
+      last.textContent = v.last >= Math.floor(Date.now() / 3600000) * 3600 ? 'this hour' : `${agoWords(v.last)} ago`;
+      const hours = document.createElement('span');
+      hours.className = 'deed-value deed-visit-hours';
+      hours.textContent = String(v.hours);
+      el.append(name, last, hours);
+      this.body.append(el);
+    }
   }
 
   /* ---- the Notices and Work tabs ------------------------------------------- */

@@ -263,6 +263,8 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_deal(uuid,uuid,bigint[],bigint,bigint)",
     "rpc_deal_answer(uuid,bigint,boolean)",
     "rpc_deals(uuid)",
+    "rpc_deed_orders(uuid,uuid,text)",
+    "rpc_deed_watch(uuid,uuid)",
     "rpc_faith(uuid)",
     "rpc_fight_prefs(uuid,text,boolean)",
     "rpc_fog(uuid,text)",

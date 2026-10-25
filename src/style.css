@@ -4138,11 +4138,6 @@ button.goal-row:focus-visible {
   cursor: pointer;
 }
 
-.deed-rank-name:hover,
-.deed-rank-open .deed-rank-name {
-  color: var(--ui-accent);
-}
-
 .deed-rank-held {
   flex: 0 0 auto;
   color: var(--ui-dim);
@@ -4176,39 +4171,119 @@ button.goal-row:focus-visible {
   vertical-align: 1px;
 }
 
-.deed-perms {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-  gap: 1px 8px;
-  margin: 2px 0 6px 12px;
-  padding: 4px 6px;
-  background: var(--t-card, rgba(0, 0, 0, 0.2));
-  border-left: 2px solid var(--ui-accent);
+/*
+ * Every rank's permissions on one grid: a row a power, a column a rank, its
+ * name set on end so eight of them fit a narrow window. Scrolls sideways in
+ * its own box rather than pushing the window wider.
+ */
+.deed-matrix-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 2px 0 6px;
 }
 
-.deed-perm {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  color: var(--t-text, #c9c1ad);
+.deed-matrix {
+  border-collapse: collapse;
   font-size: 11px;
-  cursor: pointer;
+  color: var(--t-text, #c9c1ad);
 }
 
-.deed-perm span {
+.deed-matrix th,
+.deed-matrix td {
+  padding: 1px 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-border) 35%, transparent);
+}
+
+.deed-matrix-corner {
+  text-align: left;
+  vertical-align: bottom;
+  color: var(--ui-dim);
+  font-weight: normal;
+}
+
+.deed-matrix-rank {
+  vertical-align: bottom;
+  font-weight: normal;
+  color: var(--t-text, #eadfbf);
+}
+
+.deed-matrix-rank span {
+  display: inline-block;
+  max-height: 84px;
   overflow: hidden;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.deed-perm input {
-  flex: 0 0 auto;
-  margin: 0;
+.deed-matrix-power {
+  max-width: 132px;
+  padding-right: 6px;
+  overflow: hidden;
+  text-align: left;
+  font-weight: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.deed-perm:has(input:disabled) {
+.deed-matrix td {
+  text-align: center;
+}
+
+.deed-matrix tbody tr:hover {
+  background: var(--t-card, rgba(0, 0, 0, 0.2));
+}
+
+.deed-matrix-box {
+  margin: 0;
+  cursor: pointer;
+}
+
+.deed-matrix-box:disabled {
   cursor: default;
+}
+
+/* A line that says how another tab stands, with the button to it. */
+.deed-jump .deed-value {
+  margin-left: auto;
+}
+
+/* A wildermon of yours that would make up a trade's number, under the trade. */
+.deed-candidate {
+  padding-left: 10px;
+  font-size: 11px;
+}
+
+.deed-trade {
+  border-top: 1px solid color-mix(in srgb, var(--ui-border) 45%, transparent);
+}
+
+.deed-order-hint {
+  margin: 1px 0;
+}
+
+/* The visitor log: who, when last, and in how many hours, in three columns. */
+.deed-visit-head {
+  color: var(--ui-dim);
+  font-size: 11px;
+}
+
+.deed-visit-head span:first-child,
+.deed-visit .deed-who {
+  flex: 1 1 auto;
+}
+
+.deed-visit-head span:nth-child(2),
+.deed-visit .deed-value:nth-child(2) {
+  flex: 0 0 80px;
+  text-align: right;
+}
+
+.deed-visit-head span:nth-child(3),
+.deed-visit-hours {
+  flex: 0 0 40px;
+  text-align: right;
 }
 
 /* Its Notices and Work tabs: a form at the head, then the list. */

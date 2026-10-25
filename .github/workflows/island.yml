@@ -1920,6 +1920,30 @@ jobs:
             --outfile=node_modules/.cache/customranks.mjs --log-level=error
           node node_modules/.cache/customranks.mjs
 
+      - name: A settlement at a glance, its visitor log and its orders, on the island and in the window
+        if: matrix.shard == 2
+        env:
+          CROWD_STRICT: '1'
+        run: |
+          # "Put ranks, permissions, upkeep and specialties in one clear
+          # panel, plus a visitor log and guard settings." On an island of its
+          # own: Visitor log and Wildermon orders are the browser's powers and
+          # the log's limits its own; a stranger walking onto a settlement is
+          # written down once an hour, never its founder or a citizen, and a
+          # visit past the keeping goes at the sweep; the watch lists each
+          # visitor once to the founder and a rank with Visitor log and says
+          # the browser's sentence to anybody else; the orders set every
+          # settlement worker, a citizen's too, for a rank allowed them, and a
+          # wildermon assigned after takes them; writing a visit costs rpc_move
+          # little (timed). Then, in Chrome, the Settlement window drawn from
+          # the island's own answers: six tabs, every rank's permissions on one
+          # grid a click each, upkeep soonest first, each trade against a
+          # specialty with Assign, the orders, the visitors, and on a phone
+          # nothing off the side of the window.
+          npx esbuild supabase/test/deedmanage.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/deedmanage.mjs --log-level=error
+          node node_modules/.cache/deedmanage.mjs
+
       - name: A settlement's notices, posted by a rank that may and read by its citizens alone
         if: matrix.shard == 2
         run: |
