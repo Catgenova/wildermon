@@ -178,6 +178,9 @@ interface Chain {
   thin: boolean;
 }
 
+/** The cool blue-grey shade a snow line on pale bark is edged in. */
+const SNOW_EDGE = '#8e9fbd';
+
 /** Bands across a limb, from one side to the other: the shade side, the middle, the lit side. */
 const CHAIN_BANDS: ReadonlyArray<[number, number, number]> = [[-1, -0.36, -0.7], [-0.36, 0.34, 0], [0.34, 1, 0.66]];
 
@@ -308,6 +311,14 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
       g.stroke();
     }
     if (c.snow) {
+      // On pale bark a cool shade under the snow, or it is not seen.
+      if (job.spec.bark.marks) {
+        g.strokeStyle = SNOW_EDGE;
+        g.lineWidth = (c.r[j0] + c.r[j1]) * 0.3;
+        g.beginPath();
+        for (let j = j0; j <= j1; j++) (j === j0 ? g.moveTo(c.q[j][0], c.q[j][1] - c.r[j] * 0.15) : g.lineTo(c.q[j][0], c.q[j][1] - c.r[j] * 0.15));
+        g.stroke();
+      }
       g.strokeStyle = 'rgba(250,252,255,0.9)';
       g.lineWidth = (c.r[j0] + c.r[j1]) * (job.spec.snowLine ? 0.3 : 0.5);
       g.beginPath();
@@ -335,8 +346,8 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     // On pale bark the snow is edged in the cool of its own shade, or it is not seen.
     if (job.spec.bark.marks) {
       const e = Math.abs(c.snow[0]) < Math.abs(c.snow[1]) ? c.snow[0] : c.snow[1];
-      g.strokeStyle = '#a9b8cf';
-      g.lineWidth = 0.35;
+      g.strokeStyle = SNOW_EDGE;
+      g.lineWidth = Math.max(0.45, c.r[j0] * 0.18);
       g.beginPath();
       for (let j = j0; j <= j1; j++) {
         const x = c.q[j][0] + c.n[j][0] * c.r[j] * e, y = c.q[j][1] + c.n[j][1] * c.r[j] * e;
@@ -669,14 +680,14 @@ const OAK_EDGE: ReadonlyArray<Pt> = Array.from({ length: 13 }, (_, i) => {
   return [u, Math.pow(Math.sin(Math.PI * u), 0.6) * (0.55 + 0.45 * Math.sqrt(Math.abs(Math.sin(3 * Math.PI * u))))] as Pt;
 });
 /** A birch leaf's edge standing out of a mass: one small leaf, drawn out to a point. */
-const BIRCH_EDGE: ReadonlyArray<Pt> = Array.from({ length: 9 }, (_, i) => {
-  const u = i / 8;
-  return [u, Math.pow(1 - Math.abs(2 * u - 1), 1.25) * (1 + 0.25 * Math.sin(Math.PI * u))] as Pt;
+const BIRCH_EDGE: ReadonlyArray<Pt> = Array.from({ length: 7 }, (_, i) => {
+  const u = i / 6;
+  return [u, Math.pow(1 - Math.abs(2 * u - 1), 1.6) * (1 + 0.35 * Math.sin(Math.PI * u))] as Pt;
 });
 /** The edge a species' masses stand out of. */
 const edgeOf = (spec: Species3D): ReadonlyArray<Pt> => (spec.leafForm === 'oak' ? OAK_EDGE : spec.leafForm === 'birch' ? BIRCH_EDGE : LEAF_EDGE);
 /** How many leaves stand out of the edge of a cluster's `j`th lump: a birch's many and small. */
-const lumpLeaves = (spec: Species3D, j: number): number => (spec.leafForm === 'birch' ? (j === 0 ? 2 : 5 + (j % 2)) : j === 0 ? 0 : 1 + (j % 2));
+const lumpLeaves = (spec: Species3D, j: number): number => (spec.leafForm === 'birch' ? (j === 0 ? 3 : 8 + (j % 2)) : j === 0 ? 0 : 1 + (j % 2));
 
 /** The shape of a mass, seeded: two waves of lumps round it and the leaves standing out of its edge. */
 interface Outline { lumps: [number, number, number, number]; leaves: Array<{ at: number; w: number; h: number }> }
@@ -761,6 +772,41 @@ function paintMass(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; fr
   g.lineWidth = KIT_INK_W;
   g.lineJoin = 'round';
   g.stroke(outline);
+}
+
+/**
+ * A birch cluster's drooping tips, in its own outline: under its two lowest
+ * lumps a few small pointed leaves hanging off the edge, tips down.
+ */
+function dropsOf(path: Path2D, lumps: Lump[]): void {
+  const low = [...lumps].sort((a, b) => b.y + b.ry - (a.y + a.ry)).slice(0, 2);
+  for (const u of low) {
+    const R = mulberry32(u.seed * 17 + 3);
+    const n = 2 + Math.floor(R() * 2);
+    for (let i = 0; i < n; i++) {
+      const x = u.x + ((i + 0.5) / n - 0.5) * u.rx * 1.3 + (R() - 0.5) * u.rx * 0.2;
+      // Down from the lump's edge where it is, not from under its middle.
+      const dx = (x - u.x) / u.rx;
+      const y = u.y + u.ry * Math.sqrt(Math.max(0, 1 - dx * dx)) * 0.85;
+      leafDown(path, x, y, u.rx * (0.95 + 0.3 * R()), (R() - 0.5) * 0.6);
+    }
+  }
+}
+
+/** One small pointed leaf hanging from (x, y), `s` long, its tip `tilt` off straight down: wound as a mass's outline is, so it adds to it. */
+function leafDown(path: Path2D, x: number, y: number, s: number, tilt: number): void {
+  const N = 8;
+  const ca = Math.cos(Math.PI / 2 + tilt), sa = Math.sin(Math.PI / 2 + tilt);
+  for (let i = 0; i <= N; i++) {
+    // Round the leaf the same way a mass's outline goes round (`massPath`): its far side out, its near side back.
+    const t = (i / N) * TAU;
+    const u = (1 - Math.cos(t)) / 2;
+    const w = Math.pow(Math.sin(Math.PI * u), 0.8) * (1 - 0.55 * u) * 0.32 * (Math.sin(t) >= 0 ? 1 : -1);
+    const lx = (u - 0.15) * s, ly = -w * s;
+    const px = x + lx * ca - ly * sa, py = y + lx * sa + ly * ca;
+    if (i === 0) path.moveTo(px, py); else path.lineTo(px, py);
+  }
+  path.closePath();
 }
 
 /** A cluster's lumps on the screen: where each is, how big, and its outline's shape. */
@@ -1035,6 +1081,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
     if (s.c.subs) {
       const lumps = lumpsOf(job, s);
       for (const u of lumps) massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec), spec.leafForm === 'birch' ? 16 : 24);
+      if (spec.leafForm === 'birch') dropsOf(path, lumps);
       return { o, path, lumps };
     }
     const [cx, cy] = proj(e, s.c.c);

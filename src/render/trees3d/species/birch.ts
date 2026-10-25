@@ -17,8 +17,13 @@ const twig = flat.twig ?? BIRCH_INK;
 const rampOf = ([lit, mid, deep]: readonly [string, string, string]): Ramp =>
   [mix(tone(deep, -0.22), '#2a3a48', 0.25), deep, mix(deep, mid, 0.5), mid, mix(mid, lit, 0.5), lit, tone(lit, 0.25)];
 
-type Three = readonly [string, string, string];
-const mix3 = (a: Three, b: Three, t: number): Three => a.map((c, i) => mix(c, b[i], t)) as unknown as Three;
+/** The same gold with only its shade steps taken `by` further down, for the crown's lower masses. */
+const deeper = (three: readonly [string, string, string], by: number): Ramp => {
+  const r = [...rampOf(three)];
+  r[0] = tone(r[0], -by);
+  r[1] = tone(r[1], -by * 0.6);
+  return r;
+};
 
 /**
  * Birch: one to three slender white stems from one flared foot, each a
@@ -57,6 +62,6 @@ export const birch: Species3D = {
   leaf: {
     summer: rampOf(flat.leaf),
     spring: rampOf(fresh(flat.leaf)),
-    autumn: [rampOf(autumn), rampOf(mix3(autumn, flat.leaf, 0.06)), rampOf(mix3(autumn, flat.leaf, 0.2))],
+    autumn: [rampOf(autumn), deeper(autumn, 0.12), deeper(autumn, 0.24)],
   },
 };
