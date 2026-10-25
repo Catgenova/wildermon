@@ -153,8 +153,14 @@ export const REPORTS_PER_PERSON = 1;
 export const REPORT_HANDLED_DAYS = 30;
 export const REPORT_OPEN_DAYS = 90;
 
+/** Reasons the island files under itself, never offered in the menu (`private.item_sweep`). */
+export const ISLAND_REPORT_REASONS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: 'item', label: 'Impossible item' },
+];
+
 /** A reason's label, from its id. */
-export const reportReason = (id: string): string => REPORT_REASONS.find((r) => r.id === id)?.label ?? id;
+export const reportReason = (id: string): string =>
+  [...REPORT_REASONS, ...ISLAND_REPORT_REASONS].find((r) => r.id === id)?.label ?? id;
 
 /** One open report, as `rpc_owner_reports` sends it. */
 export interface KeptReport {

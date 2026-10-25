@@ -19,6 +19,10 @@ export const WATCH_SKILL_TIMES = 3;
 export const WATCH_SKILL_MINS = 60;
 /** Parts in a thousand an item's total may be off the ledger before it is flagged; any difference at all under a thousand. */
 export const WATCH_STOCK_PER_MILLE = 1;
+/** How many times the most goes a minute a body's gathering, crafting or looting must come due at to be flagged. */
+export const WATCH_RATE_TIMES = 3;
+/** The fewest goes measured before a work rate is flagged. */
+export const WATCH_RATE_LEAST = 10;
 
 /** The kinds of flag, and the label each is shown under. */
 export const FLAG_KINDS = {
@@ -27,6 +31,7 @@ export const FLAG_KINDS = {
   skill: 'Skill rate',
   stock: 'Stock off ledger',
   no_door: 'Made outside any door',
+  rate: 'Work rate',
 } as const;
 export type FlagKind = keyof typeof FLAG_KINDS;
 
@@ -60,6 +65,9 @@ const VIA: Record<string, string> = {
 };
 export const viaWord = (via: string): string => VIA[via] ?? via;
 
+/** The kinds of go a Work rate flag counts. */
+const RATE_KIND: Record<string, string> = { gather: 'Gathering', craft: 'Crafting', loot: 'Looting' };
+
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v ?? 0));
 const str = (v: unknown): string => (typeof v === 'string' ? v : String(v ?? ''));
 const signed = (n: number): string => (n > 0 ? `+${n}` : `${n}`);
@@ -86,6 +94,9 @@ export function flagLine(f: WatchFlag): string {
       return `${str(d.name)}: ${signed(num(d.diff))} · start of ${str(d.day)}: ${num(d.found)} counted, ${num(d.expected)} by ledger`;
     case 'no_door':
       return `${str(d.name)}: ${num(d.count)} on ${str(d.day)}`;
+    case 'rate':
+      return `${RATE_KIND[str(d.kind)] ?? str(d.kind)}, ${str(d.act)}: ${num(d.goes)} goes in ${num(d.secs)} s · `
+        + `${num(d.per_min)}/min, ${num(d.most)}/min possible · ${num(d.times)}×`;
     default:
       return JSON.stringify(d);
   }
