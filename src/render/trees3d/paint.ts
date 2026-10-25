@@ -541,7 +541,7 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
     const long = len(sub(L.b, L.a));
     const r = (L.ra + L.rb) / 2;
     // Dashes all round it, the more the thicker it is; none on wood too thin to show them.
-    const n = r * ACROSS < 1.2 ? 0 : Math.round(long * (0.4 + r * 0.55));
+    const n = r * ACROSS < 1.2 ? 0 : Math.round(long * (0.35 + r * 0.45));
     for (let k = 0; k < n; k++) {
       // Spread evenly up it and round it, each a little off its place.
       const t = (k + 0.2 + 0.6 * R()) / n, a = k * 2.4 + R() * 0.8, w = (0.6 + 1.3 * R() * R()) * Math.min(1, 2 / Math.max(0.5, r)) + 0.3, th = (0.2 + 0.28 * R() * R()) * Math.min(1.6, 0.6 + r * 0.25);
