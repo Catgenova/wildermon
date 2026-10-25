@@ -589,14 +589,14 @@ export class ShorePainter {
 
   private readonly heights = [0, 0, 0, 0];
 
-  /** The foam on the loaded tile of the sea's shore drawn with the ground, gathered for its line (`flush`): the line's core either side of the waterline, and the lace up the land's side. */
+  /** The foam on the loaded tile of the sea's shore drawn with the ground, gathered for its line (`flush`): the line's core, either side of the waterline. */
   foamLand(ctx: CanvasRenderingContext2D): void {
     // None of the tile is between as far out as the line goes back and as far up as it ever runs.
-    if (this.vhi <= -(SURGE_BACK + FOAM_WIDE * 0.4) || this.vlo >= SURGE_UP + FOAM_WIDE * 0.15) return;
+    if (this.vhi <= -(SURGE_BACK + FOAM_WIDE * 0.32) || this.vlo >= SURGE_UP + FOAM_WIDE * 0.1) return;
     this.batching = true;
-    // One step of each band is enough for the strip of it up the shore; the line's core is soft from close up.
+    // In one step: its flecks are soft at their edges of themselves.
     const layers = this.layers;
-    this.layers = Math.min(2, layers);
+    this.layers = 1;
     this.foamBands(ctx, 0, 'tile');
     this.layers = layers;
     this.batching = false;
@@ -642,11 +642,18 @@ export class ShorePainter {
       // Faint and whole under it from further out, broken over it: a line of foam rather than a painted edge.
       if (this.s!.cam.zoom < 1.5) this.soft(ctx, level, 0, core * 0.3, -W * 0.4, 1, W * 0.1, 1);
       if (!this.batching) ctx.fillStyle = this.fleckFill(ctx, level);
-      this.soft(ctx, level, 7, core, -W * 0.45, 1, W * 0.12, 1);
+      this.soft(ctx, level, 7, core, -W * 0.32, 1, W * 0.1, 1);
+    }
+    // With the ground, that is all: the lace is in the sea's picture.
+    if (mode === 'tile') {
+      this.still = false;
+      this.part = 'all';
+      ctx.globalAlpha = was;
+      return;
     }
     if (!this.batching) ctx.fillStyle = this.fleckFill(ctx, level);
-    // The lace either side of it, broken: in the sea's picture on the water's side, with the ground on the land's.
-    this.part = mode === 'tile' ? 'land' : mode === 'picture' ? 'water' : 'all';
+    // The lace either side of it, broken: in the sea's picture, on the water's side.
+    this.part = mode === 'picture' ? 'water' : 'all';
     this.soft(ctx, level, 1, strength * 0.95, -W, 1, W * 0.15, 1);
     // What follows is all out in the water: in the sea's picture.
     if (mode === 'picture') {

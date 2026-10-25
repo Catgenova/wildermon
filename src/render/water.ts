@@ -11,8 +11,13 @@
  * laid over the sea as two gradients (`Renderer.swellBand`).
  */
 
-/** How many times a second the sea's swell is painted afresh (`Renderer.drawSea`); it is copied on, moved with the view, in between. */
-export const SWELL_RATE = 15;
+/**
+ * How many times a second the sea's picture -- its colour, its swell and the
+ * lace along its shores -- is painted afresh (`Renderer.drawSea`); it is
+ * copied on, moved with the view, in between. The swell and the foam both
+ * move a tile in seconds, which ten steps a second keep smooth.
+ */
+export const SWELL_RATE = 10;
 
 /** Tiles a second the swell travels at, in a full blow. */
 export const SWELL_SPEED = 1.25;
