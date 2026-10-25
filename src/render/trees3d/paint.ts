@@ -657,7 +657,7 @@ function needleTufts(g: Ctx, lumps: Lump[], sun: { sx: number; sy: number }, ccx
   for (const u of [...lumps].sort((p, q) => p.y - q.y)) {
     const toSun = (u.x - ccx) * sun.sx + (u.y - ccy) * sun.sy - (u.y - ccy) * 0.5 >= -u.rx * 0.35;
     const p = toSun ? lit : dim;
-    const n = Math.max(3, Math.round(u.rx / 1.1));
+    const n = Math.max(3, Math.round(u.rx / 1.3));
     const R = mulberry32(u.seed + 11);
     for (let i = 0; i < n; i++) {
       const a = Math.PI + 0.3 + ((i + 0.2 + 0.6 * R()) / n) * (Math.PI - 0.6);
