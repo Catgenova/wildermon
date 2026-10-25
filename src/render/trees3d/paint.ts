@@ -656,9 +656,8 @@ function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number;
  * with narrow leaves, each swept down the way the strands fall off it, and
  * plain underneath, where its strands hang.
  */
-function featherPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, seed: number): void {
+function featherPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, seed: number, n: number): void {
   const R = mulberry32(seed + 11);
-  const n = 20;
   const a0 = R() * (TAU / n);
   const pt = (t: number, r: number): Pt => [cx + Math.cos(t) * rx * r, cy + Math.sin(t) * ry * r];
   p.moveTo(...pt(a0, 0.96));
@@ -971,13 +970,13 @@ function strandSides(p: Path2D, L: SLine, k: number, s: number): void {
  * `to` under one, only that much of its length, cut straight across, its
  * edges plain.
  */
-function strandPath(p: Path2D, L: SLine, s0: number, s1: number, to = 1, k = 0): void {
+function strandPath(p: Path2D, L: SLine, s0: number, s1: number, to = 1, k = 0, teeth = true): void {
   const { x, y, r, nx, ny } = L;
   const n = x.length;
   const whole = to >= 1;
   const ends = whole ? endsAt(n, k) : [];
   const last = whole ? ends[1] : Math.max(2, Math.round((n - 1) * to));
-  const leafy = whole && Math.abs(s1) > 0.9;
+  const leafy = teeth && whole && Math.abs(s1) > 0.9;
   p.moveTo(x[0] + nx[0] * r[0] * s1, y[0] + ny[0] * r[0] * s1);
   // Down one side, a leaf's tip out past every other point, the other side's between them.
   for (let j = 1; j <= last; j++) {
@@ -998,7 +997,7 @@ function strandPath(p: Path2D, L: SLine, s0: number, s1: number, to = 1, k = 0):
     p.lineTo(x[e0] + (x[e0] - x[e0 - 1]) * 0.5 + nx[e0] * r[e0] * m0, y[e0] + ny[e0] * r[e0] * m0 + r[e0] * 1.7);
     from = e0;
   }
-  const leafy0 = whole && Math.abs(s0) > 0.9;
+  const leafy0 = teeth && whole && Math.abs(s0) > 0.9;
   for (let j = from; j >= 1; j--) {
     const s = whole ? s0 * 0.66 : s0;
     p.lineTo(x[j] + nx[j] * r[j] * s, y[j] + ny[j] * r[j] * s);
@@ -1027,7 +1026,9 @@ function curtainsOf(job: Job, shown: Shown[], sun: { sx: number; sy: number }): 
   const wind = projVec(e, WIND);
   const top = spec.leaf.summer.length - 1;
   const whipCol = spec.whips ?? spec.bark.lit;
-  const step = 4;
+  // Drawn small (two pixels to one at zoom one, or less), a strand's leaves are under a pixel: plain edges, fewer points.
+  const fine = g0.getTransform().a > 2.5;
+  const step = fine ? 4 : 6;
   /** Bare whips, as one stroke. */
   const whipItem = (d: number, p: Path2D): void => {
     items.push({
@@ -1077,8 +1078,8 @@ function curtainsOf(job: Job, shown: Shown[], sun: { sx: number; sy: number }): 
         line(whips[front], strandLine(e, inR, { ...st, arch: st.arch + Math.hypot(st.o[0], st.o[1]) * 0.6 }, len + st.o[2] * 0.6, w, wind[0] * sway, 8));
         bare[front] = true;
       }
-      if (!leafy) continue;
-      // Behind, seen only between those in front: fewer points.
+      // Behind the lobe's middle, seen only between those in front: half of them, with fewer points.
+      if (!leafy || (!front && st.k > 0.55)) continue;
       const sl = strandLine(e, root, st, leafLen, w * (s ? Math.max(0.6, grown) : 1), wind[0] * sway, (step + w) * (front ? 1 : 1.5));
       // Lit on the side of the lobe toward the sun; a step darker behind the lobe's middle.
       const sunny = Math.cos(st.a) * job.light.sun[0] + Math.sin(st.a) * job.light.sun[1];
@@ -1086,7 +1087,9 @@ function curtainsOf(job: Job, shown: Shown[], sun: { sx: number; sy: number }): 
       const key = `${t}`;
       let gp = groups[front].get(key);
       if (!gp) groups[front].set(key, (gp = { body: new Path2D(), lit: new Path2D(), rim: new Path2D() }));
-      strandPath(gp.body, sl, -1, 1, 1, st.k);
+      strandPath(gp.body, sl, -1, 1, 1, st.k, fine);
+      // Its ink: the same an ink's width wider all round.
+      strandPath(ink, { ...sl, r: sl.r.map((v) => v + KIT_INK_W * 0.75) }, -1, 1, 1, st.k, fine);
       // Behind the lobe's middle, seen only between the strands in front: no lit side, no rim.
       if (front) {
         // The lit side: the half toward the sun, down most of its length; the rim down its other side.
@@ -1103,7 +1106,6 @@ function curtainsOf(job: Job, shown: Shown[], sun: { sx: number; sy: number }): 
       const ramp = s.ramp, over = s.over;
       const rim = rgb(mixRgb(hex(s.under[0]), KIT_INK, 0.6), 0.75);
       const gs = [...groups[front].entries()].sort((p, q) => Number(p[0]) - Number(q[0]));
-      for (const [, gp] of gs) ink.addPath(gp.body);
       items.push({
         d,
         draw: () => {
@@ -1180,7 +1182,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
     if (s.c.subs) {
       const lumps = lumpsOf(job, s);
       for (const u of lumps) {
-        if (spec.leafForm === 'willow') featherPath(path, u.x, u.y, u.rx, u.ry, u.seed);
+        if (spec.leafForm === 'willow') featherPath(path, u.x, u.y, u.rx, u.ry, u.seed, g.getTransform().a > 2.5 ? 20 : 13);
         else massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec), 24);
       }
       return { o, path, lumps };
@@ -1207,7 +1209,9 @@ export function paintTree3d(g: Ctx, job: Job): void {
   if (weeping) {
     g0 = g;
     const cur = curtainsOf(job, shown, sun);
-    g.stroke(cur.ink);
+    // The strands' ink: each strand an ink's width fatter, filled in ink under them all.
+    g.fillStyle = rgb(KIT_INK);
+    g.fill(cur.ink);
     items.push(...cur.items);
   }
   for (const c of chains) {

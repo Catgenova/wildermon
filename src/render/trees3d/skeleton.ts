@@ -327,7 +327,8 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
     const k = 3 + Math.floor(R() * 2);
     for (let j = 0; j < k; j++) {
       const sp = ((j + 0.5) / k - 0.5) * 1.8 + (R() - 0.5) * 0.3;
-      const dir = unit(add(add(d, mul(side, Math.tan(sp))), [0, 0, 0.25]));
+      // A willow's twigs hang from their ends; the others' turn up.
+      const dir = unit(add(add(d, mul(side, Math.tan(sp))), [0, 0, b.weep ? -0.35 : 0.25]));
       const end = add(P.b, mul(dir, l * (0.7 + 0.5 * R())));
       run([P.b, end], r, r * 0.3, 4, at, bough, false);
     }
