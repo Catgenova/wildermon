@@ -101,7 +101,7 @@ export const BUSH3D_SPECIES: Set<number> = new Set(BUSH3D.keys());
 export const FORMS = 3;
 /** Frames of the wind, gone round one after another, `SWAY_MS` each. */
 export const SWAY_FRAMES = 4;
-export const SWAY_MS = 260;
+export const SWAY_MS = 1040;
 /**
  * How long a frame may spend making bakes, and shades, while it draws. A bake
  * is read back once made (`inkOf`), which has the canvas draw it there and

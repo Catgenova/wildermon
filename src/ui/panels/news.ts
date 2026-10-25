@@ -56,7 +56,7 @@ import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
 import { LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { FLOWER_COLOURS } from '../../render/flowers';
-import { BUSH3D_SPECIES, SUN_STEPS } from '../../render/trees3d';
+import { BUSH3D_SPECIES, SUN_STEPS, SWAY_MS } from '../../render/trees3d';
 import { TURNS } from '../../render/view';
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
@@ -3756,6 +3756,14 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: bushes drawn solid, as trees: ${[...BUSH3D_SPECIES].map((b) => BUSH_DEFS[b].name.replace(/ bush$/, '').toLowerCase()).join(', ')}. Own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun.`,
       `Changed: rose bush flowers: ${FLOWER_COLOURS.find((c) => c.petal === BUSH_DEFS.find((b) => b.name === 'Rose bush')?.flowers)?.name ?? 'pink'}.`,
+    ],
+  },
+  {
+    n: 315,
+    day: '2026-10-25',
+    lines: () => [
+      `Changed: tree and bush sway: a step every ${(SWAY_MS / 1000).toFixed(2)} s.`,
+      `Changed: rose arch ${recipeBill('make_rose_arch')}; stone rose arch ${recipeBill('make_stone_rose_arch')}.`,
     ],
   },
 ];

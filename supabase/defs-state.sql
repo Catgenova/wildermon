@@ -8426,9 +8426,11 @@ insert into recipe (id, result, count, tool, station, skill, label, verb, base_t
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_rose_arch', 0, 'plank', 24, null);
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_rose_arch', 1, 'shaft', 6, null);
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_rose_arch', 2, 'nail', 36, null);
+insert into recipe_input (recipe, ord, item, count, litres) values ('make_rose_arch', 3, 'rose_petals', 16, null);
 insert into recipe (id, result, count, tool, station, skill, label, verb, base_time, stamina, difficulty, consume_on_fail, ql_from_inputs, material, wood, extra, done, fail) values ('make_stone_rose_arch', 'stone_rose_arch', 1, 'trowel', null, 'masonry', 'Build stone rose arch', 'building a stone rose arch', 22, 0.05, 24, false, false, null, null, null, 'Set down on any spot of a tile.', 'Failed: stone rose arch. Inputs kept.');
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_stone_rose_arch', 0, 'stone_brick', 36, null);
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_stone_rose_arch', 1, 'mortar', 12, null);
+insert into recipe_input (recipe, ord, item, count, litres) values ('make_stone_rose_arch', 2, 'rose_petals', 16, null);
 insert into recipe (id, result, count, tool, station, skill, label, verb, base_time, stamina, difficulty, consume_on_fail, ql_from_inputs, material, wood, extra, done, fail) values ('make_well', 'well', 1, 'trowel', null, 'masonry', 'Build well', 'building a well', 24, 0.05, 30, false, false, null, null, null, 'Set down on any spot of a tile.', 'Failed: well. Inputs kept.');
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_well', 0, 'stone_brick', 48, null);
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_well', 1, 'mortar', 16, null);

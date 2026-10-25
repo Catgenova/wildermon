@@ -488,10 +488,10 @@ export const FURNITURE: FurnitureDef[] = [
    * any piece: a timber one a carpenter builds and a stone one a mason lays,
    * each with a climbing rose planted at its feet (`roses.ts`).
    */
-  piece('rose_arch', 'Rose arch', 4, 1, [['plank', 24], ['shaft', 6], ['nail', 36]], 16, 16,
+  piece('rose_arch', 'Rose arch', 4, 1, [['plank', 24], ['shaft', 6], ['nail', 36], ['rose_petals', 16]], 16, 16,
     '', undefined,
     { skill: 'carpentry', roses: true }),
-  piece('stone_rose_arch', 'Stone rose arch', 4, 1, [['stone_brick', 36], ['mortar', 12]], 24, 22,
+  piece('stone_rose_arch', 'Stone rose arch', 4, 1, [['stone_brick', 36], ['mortar', 12], ['rose_petals', 16]], 24, 22,
     '', undefined,
     { skill: 'masonry', tool: 'trowel', roses: true }),
   piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16]], 30, 24, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
