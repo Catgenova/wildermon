@@ -4280,11 +4280,14 @@ select '554. what a stranger may call: '
 select '555. the policies on the roll of names: '
      || string_agg(p.polname || ' for ' || array_to_string(p.polroles::regrole[], ' and '), ', ' order by p.polname)
   from pg_policy p join pg_class c on c.oid = p.polrelid where c.relname = 'account';
-select count(*) as really from account \gset
 set role anon;
 select set_config('request.jwt.claims', json_build_object('sub', null)::text, false) \g /dev/null
-select '556. a stranger reads the roll of names: ' || (select count(*) from account)
-     || ' of the ' || :really || ' there are';
+-- anon holds no select on `account` at all now (20261026130800_doors_shut_tighter): refused at the grant.
+do $$ declare n bigint; begin
+  select count(*) into n from account;
+  if n > 0 then raise exception '556. a stranger reads the roll of names: % of them', n; end if;
+  raise notice '556. a stranger reads the roll of names: 0';
+exception when insufficient_privilege then raise notice '556. a stranger reads the roll of names: refused — %', sqlerrm; end $$;
 reset role;
 
 \echo ''

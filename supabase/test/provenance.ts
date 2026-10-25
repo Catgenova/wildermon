@@ -20,7 +20,8 @@
  *   * work rate: twenty forages due half a second apart are flagged, with the
  *     goes, the rate and the most there could be; twenty due at the pace are
  *     not, nor a backlog settled all at once;
- *   * and no browser reads the tables or calls the helpers.
+ *   * and no browser reads the tables or calls the helpers, or where a thing
+ *     came from: not on `item`, nor in a row it is sent (20261026131100).
  *
  * Makes and removes everything it uses, so it runs on the database the suite
  * leaves behind or on any other with the migrations in it.
@@ -379,6 +380,25 @@ check('no browser can read any of the tables', read.length === 0, read.join(' ')
 const helpers = ['item_sweep()', 'watch_rates()', `item_ql_ceiling('${W}', 'awl', 'Ines', null)`, `origin_kind('sql')`, 'watch_uid()']
   .filter((h) => !as(INES, `select private.${h};`).err);
 check('or call the helpers', helpers.length === 0, helpers.join(' '));
+const ORIGIN = ['origin', 'origin_fn', 'origin_uid'];
+const readable = ORIGIN.filter((c) => !as(INES, `select ${c} from item where world_id = ${W_} limit 1;`).err);
+check('no browser reads where a thing came from on the table', readable.length === 0, readable.join(' '));
+const pack = as(INES, `select count(*) || '|' || count(def) from item where world_id = ${W_} and holder_uid = '${INES}';`);
+check('and reads the rest of its own pack', !pack.err && /^[1-9]\d*\|[1-9]\d*$/.test(pack.out), pack.err || pack.out);
+const sentKeys = psql(`
+select set_config('request.jwt.claims', '${JSON.stringify({ sub: INES })}', false) \\g /dev/null
+delete from caller where uid = '${INES}';
+insert into item (world_id, holder, gx, gy, def, ql, dmg, count) values (${W_}, 'ground', 5, 5, 'rope', 30, 0, 1);
+select string_agg(distinct k, ' ') from (
+  select jsonb_object_keys(jsonb_array_elements(held_now(${W_}, '${INES}')->'pack')) as k
+  union all
+  select jsonb_object_keys(jsonb_array_elements(rpc_ground(${W_}, 3, false)->'lying'))
+) s;
+select set_config('request.jwt.claims', '', false) \\g /dev/null`);
+check('nor in the pack or what is lying on the ground it is sent',
+  /\bdef\b/.test(sentKeys) && /\bgx\b/.test(sentKeys) && !ORIGIN.some((c) => new RegExp(`\\b${c}\\b`).test(sentKeys)), sentKeys);
+const packOut = psql(`select pg_get_functiondef('private.pack_out()'::regprocedure);`);
+check('nor over Broadcast', (packOut.match(/to_jsonb\(f\) - array\['origin', 'origin_fn', 'origin_uid'\]/g) ?? []).length === 2);
 
 psql(CLEAN);
 for (const l of [...ok, ...bad]) console.log(l);

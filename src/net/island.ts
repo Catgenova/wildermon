@@ -444,6 +444,14 @@ export interface ItemRow {
   [key: string]: unknown;
 }
 
+/**
+ * The columns of an `item` row the browser reads (`packed`, `packAll`), asked for by name: where a
+ * thing came from (`origin`, `origin_fn`, `origin_uid`) is the watch's, and the island refuses a
+ * browser those (20261026131100).
+ */
+const PACK_COLUMNS = 'id,def,ql,dmg,count,extra,holder,inside,gx,gy,charges,locked,issued,rare,dye,bless,'
+  + 'maker,piece,creature,mark,enchant,engraving,lit,lit_at';
+
 /** Somebody, as the social window draws them. */
 export interface Folk {
   uid: string;
@@ -2944,7 +2952,7 @@ export class Island {
      * backpack on an island was an empty backpack however much was in it, and
      * `packed` nests the two back together on the way in.
      */
-    const { data, error } = await supabase().from('item').select('*')
+    const { data, error } = await supabase().from('item').select(PACK_COLUMNS)
       .eq('world_id', this.info.id).in('holder', ['player', 'bag']).eq('holder_uid', this.uid);
     // And a call that failed is not an empty pack. This cleared and refilled
     // from whatever came back, so one dropped read took everything a player was

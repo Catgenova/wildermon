@@ -5,17 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark" />
     <!-- What the page may load and talk to: itself, the island (src/net/supabase.ts PROJECT.url, https and wss), Google Fonts,
-         Cloudflare Turnstile (script and frame), the leaked-password list (src/net/accounts.ts). No inline or eval'd script.
-         Inline styles are allowed: markup sets style attributes. scripts/boot-check.mjs fails on any violation. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://glebtboagnafcgwjjvfy.supabase.co wss://glebtboagnafcgwjjvfy.supabase.co https://api.pwnedpasswords.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
+         Cloudflare Turnstile (script and frame), the leaked-password list (src/net/accounts.ts), and images this page made
+         itself (blob:, the window frames' pictures in src/ui/runecut-dress.ts). No inline or eval'd script.
+         No inline style either: no style attributes in markup, no <style> (a script sets element.style, which is allowed).
+         HTML sinks take only Trusted Types from the one policy, `default` (src/page-guard.ts). http requests go out as https.
+         No frame-ancestors in a <meta>: src/page-guard.ts refuses another site's frame instead. scripts/sri.mjs adds the
+         hash of the built page's import map to script-src. scripts/boot-check.mjs fails on any violation. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-JF/swfTHufOg5cvakn4Hm9f/yAn4aBIch1ivnFPFg0U=' https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://glebtboagnafcgwjjvfy.supabase.co wss://glebtboagnafcgwjjvfy.supabase.co https://api.pwnedpasswords.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; require-trusted-types-for 'script'; trusted-types default; upgrade-insecure-requests" />
     <title>Wildermon — your account</title>
     <meta name="description" content="A username and a password, and nothing else." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 30 11 16 19 2 11z' fill='%235c9a3e'/%3E%3Cpath d='M2 11v8l14 8v-8z' fill='%23795c3c'/%3E%3Cpath d='M30 11v8l-14 8v-8z' fill='%234f3c27'/%3E%3C/svg%3E" />
-    <script type="module" crossorigin src="./assets/account.js?v=65545376"></script>
-    <link rel="modulepreload" crossorigin href="./assets/keeper.js?v=a9a81c16">
-    <link rel="modulepreload" crossorigin href="./assets/mfa.js?v=fb045606">
-    <link rel="stylesheet" crossorigin href="./assets/mfa.css?v=71b4cb54">
-    <link rel="stylesheet" crossorigin href="./assets/account.css?v=b1830582">
+    <script type="importmap">{"imports":{"./assets/account.js":"./assets/account.js?v=8894db93","./assets/help.js":"./assets/help.js?v=fc55222e","./assets/keeper.js":"./assets/keeper.js?v=6d0e95b0","./assets/main.js":"./assets/main.js?v=a010be29","./assets/mfa.js":"./assets/mfa.js?v=a19d3671","./assets/watch.js":"./assets/watch.js?v=fb7bbfd7"},"integrity":{"./assets/account.js?v=8894db93":"sha384-8wG+fM6sNqlW6W83cmZJSW9ppkuHQDPt3wKinuBNAvnjqrfUyNvKzeVjbfmUaRsI","./assets/help.js?v=fc55222e":"sha384-pX3QeFnRfYmm6Jqt8JYQ4unJMvrj7EnrbIShBsW92/bpwjfUUfQ02WlRhwkh9dCC","./assets/keeper.js?v=6d0e95b0":"sha384-PZv3/nHn+meDGwJn12jZ+DSMyTWfoPwW0WHnekvyF8dgpQfsKTCRF6weQykUFw4L","./assets/main.js?v=a010be29":"sha384-4iEtkuTT5Q8ZfW9t+snoelDDZNIeP6hgT+ifBqyUi9AxVVxvs9Zknyo6dPtNxKCs","./assets/mfa.js?v=a19d3671":"sha384-x0E9kJrTh6RWWaWRQRioCk5UkoDDL8eyLewCr/rJlpJo5J2QSyx7yy3S5j2DXzrp","./assets/watch.js?v=fb7bbfd7":"sha384-iAYnGsh2dIwbOhfkppFBouoNsbuJbW+nn7iFh4bdnQwo2qsbnRRcoxPQQ+3on5Ee"}}</script>
+    <script type="module" crossorigin src="./assets/account.js?v=8894db93" integrity="sha384-8wG+fM6sNqlW6W83cmZJSW9ppkuHQDPt3wKinuBNAvnjqrfUyNvKzeVjbfmUaRsI"></script>
+    <link rel="modulepreload" crossorigin href="./assets/keeper.js?v=6d0e95b0" integrity="sha384-PZv3/nHn+meDGwJn12jZ+DSMyTWfoPwW0WHnekvyF8dgpQfsKTCRF6weQykUFw4L">
+    <link rel="modulepreload" crossorigin href="./assets/mfa.js?v=a19d3671" integrity="sha384-x0E9kJrTh6RWWaWRQRioCk5UkoDDL8eyLewCr/rJlpJo5J2QSyx7yy3S5j2DXzrp">
+    <link rel="stylesheet" crossorigin href="./assets/mfa.css?v=71b4cb54" integrity="sha384-OICpRbxDE2AHp4ZBTZpIvtAOEKlPi3NQU14d/1wbd4P88p6ltBwEvUh53+8Kr6gb">
+    <link rel="stylesheet" crossorigin href="./assets/account.css?v=b1830582" integrity="sha384-RnDEY8ySdHWi3eMCdTB9gUCgmURNaniL138IX+Bbjy2Ri9eudaDKRJof5+nW/yYi">
   </head>
   <body>
     <!-- Edit src/account.html, not the generated account.html at the repository root. -->
