@@ -39,8 +39,8 @@ const rampOf = ([lit, deep]: readonly [string, string]): Ramp =>
 const REACH = 9.1;
 const TOP = 5.8;
 /** Flower stems: how many, at least, and how many more a bush may have. */
-const STEMS = 26;
-const STEMS_MORE = 10;
+const STEMS = 22;
+const STEMS_MORE = 8;
 /** The share of a stem its head covers, from its tip. */
 const HEAD = 0.42;
 /** A head's half-width, in model units. */
@@ -111,7 +111,7 @@ function growLavender(seed: number): Skeleton {
     const surface = top * Math.sqrt(Math.max(0, 1 - Math.pow(rho / reach, 2)));
     const a: V3 = [Math.cos(az) * rho, Math.sin(az) * rho, surface - 1.2];
     const tilt = 0.06 + 0.7 * (rho / inner) + (R() - 0.5) * 0.18;
-    const l = top * (1 + 0.3 * R()) * (1 - 0.15 * (rho / inner));
+    const l = top * (0.8 + 0.55 * R()) * (1 - 0.15 * (rho / inner));
     spikes.push({ a, b: add(a, [Math.cos(az) * Math.sin(tilt) * l, Math.sin(az) * Math.sin(tilt) * l, Math.cos(tilt) * l]), k: R() });
   }
   return { limbs, clumps, crown: env, height: top, rune: null, hollow: null, spikes, foot: reach * ACROSS * 1.05 };

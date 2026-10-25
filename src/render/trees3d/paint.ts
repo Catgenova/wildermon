@@ -449,7 +449,7 @@ const OAK_EDGE: ReadonlyArray<Pt> = Array.from({ length: 13 }, (_, i) => {
 /** A needle leaf's edge: four thin points, each its own height. */
 const NEEDLE_EDGE: ReadonlyArray<Pt> = [0, 1, 2, 3].flatMap((j): Pt[] => [[j / 4, 0], [(j + 0.5) / 4, [1, 0.75, 1.15, 0.85][j]]]).concat([[1, 0]]);
 /** How much longer a needle stands than a leaf's edge does. */
-const NEEDLE_LEN = 1.7;
+const NEEDLE_LEN = 1.45;
 /** The edge a species' masses stand out of. */
 const edgeOf = (spec: Species3D): ReadonlyArray<Pt> => (spec.leafForm === 'oak' ? OAK_EDGE : spec.leafForm === 'needle' ? NEEDLE_EDGE : LEAF_EDGE);
 
