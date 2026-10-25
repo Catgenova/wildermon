@@ -812,6 +812,9 @@ kbd {
   transition: transform 0.25s ease;
 }
 
+.hud-compass-n { fill: var(--ui-accent); }
+.hud-compass-s { fill: var(--ui-border); }
+
 /* A warning by a sign as well as a colour, for whoever cannot see the colour. */
 .inv-footer.inv-over::before,
 .hud-target-intent.hud-target-warn::before {

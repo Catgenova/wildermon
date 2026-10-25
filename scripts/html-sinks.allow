@@ -1,44 +1,31 @@
 # HTML sinks in src/ that have been read and found safe (scripts/html-sinks.mjs).
 # One line per sink: the file, a tab, the trimmed text of the line. Comments say why.
 # Text from a player, the island or the browser's storage never reaches one of these
-# unescaped: it goes through esc() (src/ui/esc.ts) or in as textContent.
+# unescaped: it goes in as textContent, or through the html`` tag (src/ui/html.ts),
+# which escapes every ${…} with esc() (src/ui/esc.ts).
 
-# Status-effect icons: svgOf() indexes the fixed GLYPHS table; an unknown glyph is undefined, never the key.
-src/ui/effects.ts	icon.innerHTML = svgOf(e.glyph);
-src/ui/effects.ts	(m.el.firstElementChild as HTMLElement).innerHTML = svgOf(e.glyph);
+# The one writer of innerHTML: Markup only, made by html`` or fixed(), passed to the Trusted Types policy by vouch().
+src/ui/html.ts	el.innerHTML = vouch(m.html);
+src/page-guard.ts	export function vouch(text: string): string {
+
+# Pictures: fixed SVG tables written in this source, indexed by game ids (status effects, equipment places, health cares and wound pins).
+src/ui/effects.ts	const GLYPHS: Record<Glyph, Markup> = fixedAll<Glyph>({
+src/ui/panels/equipment.ts	const GLYPH: Record<string, Markup> = fixedAll({
+src/ui/panels/health.ts	const ITEM_ICONS: Record<string, Markup> = fixedAll({
+src/ui/panels/health.ts	const PIN_GLYPH: Record<WoundState, Markup> = fixedAll<WoundState>({
 
 # Compass: a fixed SVG literal.
-src/ui/hud.ts	this.compass.innerHTML =
-
-# Toolbar button: its fixed label and the bound key's name, both escaped (a stored binding comes from the browser's storage).
-src/ui/hud.ts	k.btn.innerHTML = codes.length ? `${esc(k.label)} <kbd>${esc(keyName(codes[0]))}</kbd>` : esc(k.label);
-
-# Equipment and health icons: fixed SVG tables (GLYPH, ITEM_ICONS, HEART, PIN_GLYPH, svgOf) indexed by game ids.
-src/ui/panels/equipment.ts	s.innerHTML = slot === 'weapon' ? GLYPH[w ? (w.thrown ? 'throwing' : w.kind) : 'fist'] ?? GLYPH.swords : GLYPH[slot];
-src/ui/panels/health.ts	s.innerHTML = ITEM_ICONS[item] ?? '';
-src/ui/panels/health.ts	b.innerHTML = `<svg viewBox="0 0 100 92" aria-hidden="true"><path d="${HEART}"/></svg>`;
-src/ui/panels/health.ts	if (dot) dot.innerHTML = `<svg viewBox="0 0 12 12" aria-hidden="true">${PIN_GLYPH[v.state]}</svg>`;
-src/ui/panels/health.ts	if (pic) chip.append(Object.assign(el('span', 'hp-rchip-icon'), { innerHTML: pic }));
-src/ui/panels/health.ts	chip.append(Object.assign(el('span', 'hp-rchip-icon'), { innerHTML: ITEM_ICONS.knife }), `${rv.tool.name} ${rv.tool.have ? '✓' : '✗'}`);
-src/ui/panels/health.ts	ic.innerHTML = svgOf(e.glyph as Parameters<typeof svgOf>[0]);
+src/ui/hud.ts	setMarkup(this.compass, fixed(
 
 # Help: helpText() is built from this source's constants and rule tables only.
-src/ui/panels/help.ts	holder.innerHTML = helpText();
+src/ui/panels/help.ts	setMarkup(holder, fixed(helpText()));
 
-# Settings: labels and hints written in settings.ts (some carry intended markup); numbers from settings.
-src/ui/panels/settings.ts	text.innerHTML = `<b>${label}</b><small>${hint}</small>`;
-src/ui/panels/settings.ts	text.innerHTML = `<b>Volume &mdash; ${pc === 0 ? 'silent' : `${pc}%`}</b><small>Sound effects volume. Panned by screen side; quieter with distance from the centre.</small>`;
-src/ui/panels/settings.ts	text.innerHTML = `<b>Text and window size &mdash; ${asked}%</b><small>Scale of all windows, menus, bars and text. World not scaled (zoom: mouse wheel or pinch).${held}</small>`;
-src/ui/panels/settings.ts	text.innerHTML = `<b>${label}</b><small>${hint}</small>`;
-src/ui/panels/settings.ts	text.innerHTML = `<b>Measure each layer</b><small>Hides each of ${listed(Object.keys(LAYERS))} for ${TRIAL_SECONDS} s in turn `
-src/ui/panels/settings.ts	text.innerHTML = '<b>Appearance</b><small>Opens the character creator (build, skin, hair, hair colour, eyes, beard, shirt, trousers). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>';
-src/ui/panels/settings.ts	lead.innerHTML =
-src/ui/panels/settings.ts	intro.innerHTML = '<b>Window layouts</b><small>Stores each window&rsquo;s position, size, open, expanded and see-through state. <b>Keep</b>: save current. <b>Use</b> or the layout key: restore. Shift+key: save. Windows snap to screen and window edges; hold Alt while dragging to place freely.</small>';
-src/ui/panels/settings.ts	seeHead.innerHTML = '<b>See-through windows</b><small>Dimmed; clicks pass to the world. Title bar still drags and toggles it. Hold Alt to click or scroll inside. The title-bar ◐ is the same toggle.</small>';
-
-# Settings: key binding labels and hints, and window titles, escaped.
-src/ui/panels/settings.ts	text.innerHTML = `<b>${esc(bind.label)}</b><small>${esc(bind.hint)}</small>`;
-src/ui/panels/settings.ts	text.innerHTML = `<b>${esc(w.opts.title)}</b>`;
+# Settings: string literals written in settings.ts.
+src/ui/panels/settings.ts	fixed('Recolours meaningful colours only (Runecut, Classic, world). '
+src/ui/panels/settings.ts	setMarkup(text, fixed('<b>Appearance</b><small>Opens the character creator (build, skin, hair, hair colour, eyes, beard, shirt, trousers). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>'));
+src/ui/panels/settings.ts	setMarkup(lead, fixed(
+src/ui/panels/settings.ts	setMarkup(intro, fixed('<b>Window layouts</b><small>Stores each window&rsquo;s position, size, open, expanded and see-through state. <b>Keep</b>: save current. <b>Use</b> or the layout key: restore. Shift+key: save. Windows snap to screen and window edges; hold Alt while dragging to place freely.</small>'));
+src/ui/panels/settings.ts	setMarkup(seeHead, fixed('<b>See-through windows</b><small>Dimmed; clicks pass to the world. Title bar still drags and toggles it. Hold Alt to click or scroll inside. The title-bar ◐ is the same toggle.</small>'));
 
 # Wildermon window: innerHTML read, not written, to compare a freshly built card section with the one shown.
 src/ui/panels/wildermon.ts	if (b.innerHTML !== bloodSays) {

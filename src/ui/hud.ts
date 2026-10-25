@@ -14,7 +14,7 @@ import type { Renderer } from '../render/renderer';
 import { ashore, JOURNAL, nextGoals } from '../game/journal';
 import { VERSION } from '../version';
 import { updateButton } from './update';
-import { esc } from './esc';
+import { fixed, html, setMarkup } from './html';
 import { BACK_SLACK, blowOf, blowWords, COWARD_DRAG, FIGHT_STANCE_NAMES, HEAVY_EVERY, HIDE_NAMES, hideSays, hideTakes, HUNT_REACH, KEEP_OFF, PACK_CALL, stanceSays, swungWith, TARGET_RANGE, THROW_HIT, THROW_REACH, turnsAt } from '../game/fight';
 import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER } from '../game/creatures';
 import { consider } from '../game/consider';
@@ -284,8 +284,8 @@ export class Hud {
     this.compass = document.createElement('span');
     this.compass.className = 'hud-compass';
     this.compass.title = 'North';
-    this.compass.innerHTML =
-      '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><polygon points="10,1 14,15 10,11.5 6,15" style="fill: var(--ui-accent)"/><polygon points="10,11.5 14,15 10,19 6,15" style="fill: var(--ui-border)"/></svg><b>N</b>';
+    setMarkup(this.compass, fixed(
+      '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><polygon points="10,1 14,15 10,11.5 6,15" class="hud-compass-n"/><polygon points="10,11.5 14,15 10,19 6,15" class="hud-compass-s"/></svg><b>N</b>'));
     footer.append(this.posEl, this.compass);
     status.append(footer);
     /*
@@ -694,7 +694,7 @@ export class Hud {
   drawKeys(): void {
     for (const k of this.keyed) {
       const codes = this.binds.codes(k.bind);
-      k.btn.innerHTML = codes.length ? `${esc(k.label)} <kbd>${esc(keyName(codes[0]))}</kbd>` : esc(k.label);
+      setMarkup(k.btn, codes.length ? html`${k.label} <kbd>${keyName(codes[0])}</kbd>` : html`${k.label}`);
     }
     const stop = this.keyWord('stop');
     const journal = this.keyWord('win_journal');

@@ -37,7 +37,16 @@ const filled = readFileSync('scripts/wildermon.html', 'utf8')
 const hashes = [...filled.matchAll(/<script>([\s\S]*?)<\/script>/g)]
   .map(([, code]) => `'sha256-${createHash('sha256').update(code).digest('base64')}'`);
 if (!hashes.length) throw new Error('scripts/wildermon.html: no <script> to hash for its Content-Security-Policy.');
-const page = filled.replace('__WILDERMON_SCRIPT_HASHES__', hashes.join(' '));
+/*
+ * And no style but its own <style> elements, by hash, so a style attribute or
+ * a <style> slipped into the page is refused; the script sets element.style,
+ * which a policy does not stop. Nothing on the page writes HTML, so it allows
+ * no Trusted Types policy at all.
+ */
+const styles = [...filled.matchAll(/<style>([\s\S]*?)<\/style>/g)]
+  .map(([, css]) => `'sha256-${createHash('sha256').update(css).digest('base64')}'`);
+if (!styles.length) throw new Error('scripts/wildermon.html: no <style> to hash for its Content-Security-Policy.');
+const page = filled.replace('__WILDERMON_SCRIPT_HASHES__', hashes.join(' ')).replace('__WILDERMON_STYLE_HASHES__', styles.join(' '));
 if (page.includes('__WILDERMON_')) throw new Error('scripts/wildermon.html: a placeholder was left unfilled.');
 
 const before = (() => { try { return readFileSync(OUT, 'utf8'); } catch { return null; } })();

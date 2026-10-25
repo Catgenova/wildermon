@@ -200,6 +200,7 @@ import { keepControlKeys } from '../controlkeys';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { RECONNECTING } from '../phone';
 import { WATCH_AWAKE_HOURS, WATCH_BREAK_MINS, WATCH_KEEP_DAYS, WATCH_SKILL_MINS, WATCH_SKILL_TIMES, WATCH_STOCK_PER_MILLE } from '../../game/watch';
+import { fixed, setMarkup } from '../html';
 
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
 const CELLAR_SHARDS = listed(ROCK_VARIANTS.filter((r) => r.yields.endsWith('_shards')).map((r) => itemDef(r.yields).name.toLowerCase()));
@@ -3453,7 +3454,7 @@ export interface HelpPages {
 export function buildHelp(host: HTMLElement): HelpPages {
   host.classList.add('help-body');
   const holder = document.createElement('div');
-  holder.innerHTML = helpText();
+  setMarkup(holder, fixed(helpText()));
   // Gather the run of nodes under each heading into a section of its own.
   const sections: Array<{ title: string; el: HTMLElement }> = [];
   let current: HTMLElement | null = null;

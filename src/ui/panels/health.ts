@@ -6,6 +6,7 @@ import { drawFigure, figureJoint, onScreen, viewOf, type FigurePose, type V3 } f
 import { svgOf, type Effect, type SpellsOnYou } from '../effects';
 import { clockWords, healthReport, type Care, type CareOption, type HealthReport, type RecipeView, type WoundState, type WoundView } from '../health';
 import type { UIWindow } from '../windows';
+import { fixedAll, html, NO_MARKUP, setMarkup, type Markup } from '../html';
 import { WOUND_KINDS } from '../../game/wounds';
 
 /**
@@ -68,13 +69,19 @@ const svg = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
   for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v));
   return e;
 };
+/** A span of `cls` holding the picture `m`. */
+const pictured = (cls: string, m: Markup): HTMLSpanElement => {
+  const s = el('span', cls);
+  setMarkup(s, m);
+  return s;
+};
 const pct = (x: number): string => `${Math.round(Math.max(0, Math.min(1, x)) * 100)}%`;
 
 /** The heart, as a path in a 100 × 92 box. */
 const HEART = 'M50 88 C 20 66 4 48 4 28 C 4 13 16 3 30 3 C 39 3 46 8 50 15 C 54 8 61 3 70 3 C 84 3 96 13 96 28 C 96 48 80 66 50 88 Z';
 
 /** Small pictures of what a care takes, in a 24 × 24 box, drawn in the window's own colours. */
-const ITEM_ICONS: Record<string, string> = {
+const ITEM_ICONS: Record<string, Markup> = fixedAll({
   bandage: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="9" cy="12" rx="6" ry="7" class="i-cloth"/><ellipse cx="9" cy="12" rx="2.2" ry="2.6" class="i-core"/><path d="M9 5 H19 a2 2 0 0 1 2 2 V9 L17 10 L21 12 V17 a2 2 0 0 1 -2 2 H9" class="i-cloth"/><path d="M13 8.5 h5 M13 15.5 h5" class="i-weave"/></svg>',
   cover: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="3" class="i-cloth"/><path d="M8 15 C 9 10 13 8 17 8 C 17 12 14 15 9 15.5 Z" class="i-leaf"/><path d="M9 15 L15 10" class="i-vein"/></svg>',
   lye_bucket: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 Q 12 1 18 6" class="i-handle"/><path d="M5 8 H19 L17.5 20 a1.5 1.5 0 0 1 -1.5 1.3 H8 a1.5 1.5 0 0 1 -1.5 -1.3 Z" class="i-wood"/><ellipse cx="12" cy="8" rx="7" ry="1.8" class="i-lye"/><path d="M6.3 12 H17.7 M6.8 16.5 H17.2" class="i-band"/></svg>',
@@ -86,26 +93,26 @@ const ITEM_ICONS: Record<string, string> = {
   wax: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10 L12 6 L20 10 V16 L12 20 L4 16 Z" class="i-wax"/><path d="M4 10 L12 14 L20 10 M12 14 V20" class="i-wax-edge"/></svg>',
   knife: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20 L10 14" class="i-handle-thick"/><path d="M10 14 L20 4 C 20 9 16 13 12 16 Z" class="i-blade"/></svg>',
   salve: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="9" rx="8" ry="3" class="i-lid"/><path d="M4 9 V16 a8 3 0 0 0 16 0 V9" class="i-tin"/><ellipse cx="12" cy="9" rx="8" ry="3" class="i-lid"/><path d="M9 8.5 C 10 6.5 13 6 15 7" class="i-vein"/></svg>',
-};
+});
 /** The healing herbs, which share one picture. */
 /** Conditions whose rule the mend checklist says under them. */
 const SAID_BELOW = new Set(['hunger', 'thirst']);
 const HERBS = new Set(Object.values(WOUND_KINDS).map((k) => k.herb));
 const icon = (item: string): HTMLSpanElement => {
   const s = el('span', `hp-icon hp-icon-${item}`);
-  s.innerHTML = ITEM_ICONS[item] ?? '';
+  setMarkup(s, ITEM_ICONS[item] ?? NO_MARKUP);
   return s;
 };
 
 /** What is drawn in a wound's pin, so its state reads without its colour: a drop, a fang, a wisp, a wrap or a leaf. */
-const PIN_GLYPH: Record<WoundState, string> = {
+const PIN_GLYPH: Record<WoundState, Markup> = fixedAll<WoundState>({
   bleeding: '<path d="M6 1.5 C 4 4.5 3 6 3 7.5 a3 3 0 0 0 6 0 C 9 6 8 4.5 6 1.5 Z"/>',
   open: '<path d="M6 1.5 C 4 4.5 3 6 3 7.5 a3 3 0 0 0 6 0 C 9 6 8 4.5 6 1.5 Z"/>',
   venom: '<path stroke="none" fill-rule="evenodd" d="M4.6 4.2 a3.2 3.2 0 1 0 .01 0 Z M3.6 5.6 a.85 .85 0 1 0 .01 0 Z M9 1.9 a2.1 2.1 0 1 0 .01 0 Z M9.4 7.6 a1.35 1.35 0 1 0 .01 0 Z"/>',
   bad: '<path fill-rule="evenodd" stroke="none" d="M6 1.2 a4.3 4.3 0 0 0 -4.3 4.3 c0 1.6 .8 2.7 1.9 3.3 V10.6 h4.8 V8.8 c1.1 -.6 1.9 -1.7 1.9 -3.3 A4.3 4.3 0 0 0 6 1.2 Z M4.4 4.6 a1 1 0 1 0 .01 0 Z M7.6 4.6 a1 1 0 1 0 .01 0 Z"/>',
   dressed: '<path stroke="none" fill-rule="evenodd" transform="rotate(-35 6 6)" d="M2.2 3.6 H9.8 a2.4 2.4 0 0 1 0 4.8 H2.2 a2.4 2.4 0 0 1 0 -4.8 Z M4.6 4.7 H7.4 V7.3 H4.6 Z M2.5 5.6 a.4 .4 0 1 0 .01 0 Z M9.5 5.6 a.4 .4 0 1 0 .01 0 Z"/>',
   covered: '<path d="M2.5 9.5 C 3 5 6 2.5 9.5 2.5 C 9.5 6 7 9 2.5 9.5 Z"/>',
-};
+});
 
 /** What a wound's state is called on the legend, in the order it is drawn. */
 const STATE_NAMES: Array<[WoundState, string]> = [
@@ -473,7 +480,7 @@ export class HealthPanel {
       const b = el('span', 'hp-burst');
       b.style.setProperty('--dx', `${(i - 1.5) * 9}px`);
       b.style.animationDelay = `${i * 90}ms`;
-      b.innerHTML = `<svg viewBox="0 0 100 92" aria-hidden="true"><path d="${HEART}"/></svg>`;
+      setMarkup(b, html`<svg viewBox="0 0 100 92" aria-hidden="true"><path d="${HEART}"/></svg>`);
       this.heart.append(b);
       b.addEventListener('animationend', () => b.remove());
     }
@@ -691,7 +698,7 @@ export class HealthPanel {
       if (b.dataset.state !== v.state) {
         b.dataset.state = v.state;
         const dot = b.querySelector('.hp-pin-dot');
-        if (dot) dot.innerHTML = `<svg viewBox="0 0 12 12" aria-hidden="true">${PIN_GLYPH[v.state]}</svg>`;
+        if (dot) setMarkup(dot, html`<svg viewBox="0 0 12 12" aria-hidden="true">${PIN_GLYPH[v.state]}</svg>`);
       }
       const name = `${v.title} on your ${v.part}`;
       b.title = name;
@@ -908,14 +915,14 @@ export class HealthPanel {
     for (const i of rv.inputs) {
       const ok = i.have >= i.need;
       const chip = el('span', `hp-rchip ${ok ? 'hp-rchip-ok' : 'hp-rchip-no'}`);
-      const pic = ITEM_ICONS[i.item] ?? (HERBS.has(i.item) ? ITEM_ICONS.herb : '');
-      if (pic) chip.append(Object.assign(el('span', 'hp-rchip-icon'), { innerHTML: pic }));
+      const pic = ITEM_ICONS[i.item] ?? (HERBS.has(i.item) ? ITEM_ICONS.herb : null);
+      if (pic) chip.append(pictured('hp-rchip-icon', pic));
       chip.append(`${i.name} ${Math.min(i.have, 99)}/${i.need}`);
       chips.append(chip);
     }
     if (rv.tool) {
       const chip = el('span', `hp-rchip ${rv.tool.have ? 'hp-rchip-ok' : 'hp-rchip-no'}`);
-      chip.append(Object.assign(el('span', 'hp-rchip-icon'), { innerHTML: ITEM_ICONS.knife }), `${rv.tool.name} ${rv.tool.have ? '✓' : '✗'}`);
+      chip.append(pictured('hp-rchip-icon', ITEM_ICONS.knife), `${rv.tool.name} ${rv.tool.have ? '✓' : '✗'}`);
       chips.append(chip);
     }
     chips.append(el('span', 'hp-rchip hp-rchip-skill', `${rv.skill.name} ${rv.skill.level.toFixed(1)}`));
@@ -951,7 +958,7 @@ export class HealthPanel {
     into.replaceChildren(...list.map((e) => {
       const row = el('div', `hp-card ${e.good ? 'hp-card-good' : 'hp-card-bad'}`);
       const ic = el('span', 'hp-card-icon');
-      ic.innerHTML = svgOf(e.glyph as Parameters<typeof svgOf>[0]);
+      setMarkup(ic, svgOf(e.glyph as Parameters<typeof svgOf>[0]));
       const text = el('div', 'hp-card-text');
       const name = el('div', 'hp-card-name');
       name.append(el('b', '', e.name));

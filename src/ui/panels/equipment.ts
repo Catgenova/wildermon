@@ -9,6 +9,7 @@ import { drawFigure, figureJoint, onScreen, viewOf, type FigurePose, type V3 } f
 import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
 import { EMPTY_SAYS, equipReport, fitsSlot, pc, type EquipReport, type ShelfView, type SkillView, type Stat } from '../equipment';
 import type { UIWindow } from '../windows';
+import { fixedAll, NO_MARKUP, setMarkup, type Markup } from '../html';
 
 /**
  * Equipment: what you have on, on a figure of you, and what it makes of you
@@ -70,7 +71,7 @@ const NARROW = 520;
 const SHELF_LEAST = 150;
 
 /** Small pictures of each place, in a 24 × 24 box, drawn in `currentColor`; a weapon by its family. */
-const GLYPH: Record<string, string> = {
+const GLYPH: Record<string, Markup> = fixedAll({
   head: '<path d="M4.5 15 C4.5 8 8 4.5 12 4.5 S19.5 8 19.5 15 V18 H15.5 V14 H8.5 V18 H4.5 Z"/><path d="M12 9 V15" class="eq-g-line"/>',
   chest: '<path d="M6 5 L9.5 4 Q12 6.5 14.5 4 L18 5 L19.5 9 L17.5 10 V19.5 Q12 21 6.5 19.5 V10 L4.5 9 Z"/><path d="M8.5 13 H15.5 M8.5 16 H15.5" class="eq-g-line"/>',
   arms: '<path d="M7 4.5 H14 L16.5 12 L15 19.5 H9.5 L8.5 12 Z"/><path d="M9 9 H15 M9.5 14.5 H15.5" class="eq-g-line"/>',
@@ -87,7 +88,7 @@ const GLYPH: Record<string, string> = {
   archery: '<path d="M7 3.5 Q19 12 7 20.5" class="eq-g-line"/><path d="M7 3.5 V20.5 M4 12 H17 L14.5 10 M17 12 L14.5 14" class="eq-g-line"/>',
   throwing: '<path d="M12 3.5 L14 10 L20.5 12 L14 14 L12 20.5 L10 14 L3.5 12 L10 10 Z"/>',
   fist: '<path d="M7 10 Q7 6.5 10 6.5 H15 Q18 6.5 18 10 V15 Q18 19.5 13 19.5 H11 Q7 19.5 7 15 Z"/><path d="M10 6.5 V11 M13 6.5 V11 M16 7 V11" class="eq-g-line"/>',
-};
+});
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
   const e = document.createElement(tag);
@@ -102,7 +103,7 @@ function glyph(slot: Slot, id?: string): SVGSVGElement {
   s.setAttribute('viewBox', '0 0 24 24');
   s.setAttribute('aria-hidden', 'true');
   const w = id ? WEAPON_BY_ID.get(id) : undefined;
-  s.innerHTML = slot === 'weapon' ? GLYPH[w ? (w.thrown ? 'throwing' : w.kind) : 'fist'] ?? GLYPH.swords : GLYPH[slot];
+  setMarkup(s, (slot === 'weapon' ? GLYPH[w ? (w.thrown ? 'throwing' : w.kind) : 'fist'] ?? GLYPH.swords : GLYPH[slot]) ?? NO_MARKUP);
   return s;
 }
 
