@@ -8,6 +8,19 @@
  */
 export type LogKind = 'info' | 'event' | 'skill' | 'error' | 'chat' | 'system' | 'fight' | 'wildermon';
 
+/**
+ * Lines of talk (chat and system) kept, apart from the rest of the log: a
+ * worker's run of work lines no longer pushes the last thing anybody said out
+ * of the Talk tab (`trimLog`). And as many said lately asked of the island on
+ * arriving (`recentChat`).
+ */
+export const TALK_LOG = 400;
+/** Days the island keeps a line (`event_keep`), and a line said aloud (`chat_keep`). */
+export const EVENT_KEEP_DAYS = 1;
+export const CHAT_KEEP_DAYS = 3 * EVENT_KEEP_DAYS;
+/** What the Talk tab keeps (`eventlog.ts`), and the log keeps apart. */
+export const isTalk = (kind: LogKind): boolean => kind === 'chat' || kind === 'system';
+
 /** What a wildermon did, for its moves, its light and its voice. */
 export type BeastAct = 'strike' | 'work' | 'cast' | 'evolve';
 

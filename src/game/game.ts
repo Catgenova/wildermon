@@ -41,7 +41,7 @@ import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
 import { runeGateLights } from './runegate';
-import { GameEmitter, type LogEntry, type LogKind } from './events';
+import { GameEmitter, isTalk, TALK_LOG, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
 import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
@@ -522,7 +522,22 @@ const FORAGE_COOLDOWN = world(180);
 const FORAGE_KINDS = ['forage', 'botanize', 'grass', 'reed', 'dig', 'moss'];
 /** How long ore stays lit after prospecting. */
 export const PROSPECT_MARK_TIME = 120;
+/** Lines of the log kept of everything but talk. */
 const MAX_LOG = 400;
+
+/** Let go of the oldest lines past `TALK_LOG` of talk and `MAX_LOG` of the rest, each counted apart. */
+export function trimLog(log: LogEntry[]): void {
+  let talk = 0;
+  for (const e of log) if (isTalk(e.kind)) talk += 1;
+  let over = talk - TALK_LOG, rest = log.length - talk - MAX_LOG;
+  if (over <= 0 && rest <= 0) return;
+  let w = 0;
+  for (const e of log) {
+    if (isTalk(e.kind) ? over-- > 0 : rest-- > 0) continue;
+    log[w++] = e;
+  }
+  log.length = w;
+}
 /** Seconds between ground decay passes while playing. */
 const DECAY_STEP = 5;
 /** Ground a sprout will take, which is the same ground a tree grows on. */
@@ -4458,7 +4473,7 @@ export class Game {
     }
     const entry: LogEntry = { time: at ?? Date.now(), text, kind };
     this.log.push(entry);
-    if (this.log.length > MAX_LOG) this.log.splice(0, this.log.length - MAX_LOG);
+    trimLog(this.log);
     this.events.emit('log', entry);
   }
 

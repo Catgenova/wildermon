@@ -187,6 +187,7 @@ import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_
 import { STONES_DEPTH, STONES_SLABS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { ENGRAVE_MAX, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
+import { CHAT_KEEP_DAYS, EVENT_KEEP_DAYS, TALK_LOG } from '../../game/events';
 
 /**
  * What's new: what changed on the island, a line each, shown once as you come
@@ -3688,6 +3689,14 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: oaks and pines drawn solid, as maples: own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun.`,
       'Fixed: solid trees\' long dusk shade on uneven ground: whole, not cut into strips.',
+    ],
+  },
+  {
+    n: 307,
+    day: '2026-10-25',
+    lines: () => [
+      `Fixed: Talk tab emptied by other lines (work, wildermon). Talk kept apart: ${num(TALK_LOG)} lines.`,
+      `Changed: chat kept on the island ${num(CHAT_KEEP_DAYS)} days, other lines ${num(EVENT_KEEP_DAYS)}; on arriving, last ${num(TALK_LOG)} lines of chat.`,
     ],
   },
 ];

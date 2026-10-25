@@ -14,6 +14,7 @@ import type { IslandSpring } from '../game/springs';
 import type { BredRecord } from '../game/boards';
 import { cleanLook, type Look } from '../game/look';
 import type { IslandCrate, IslandGround } from '../game/game';
+import { TALK_LOG } from '../game/events';
 import type { DeedRole, PowerId, RankDef } from '../game/ranks';
 import type { StoreLogEntry } from '../game/stores';
 import type { Mark } from '../game/items';
@@ -4169,7 +4170,7 @@ export class Island {
   }
 
   /** What has been said lately, oldest first, for somebody just arriving. */
-  async recentChat(limit = 60): Promise<Array<{ n: number; text: string; at?: number }>> {
+  async recentChat(limit = TALK_LOG): Promise<Array<{ n: number; text: string; at?: number }>> {
     if (!this.info) return [];
     const { data } = await supabase().rpc('rpc_chat', { p_world: this.info.id, p_limit: limit });
     // `rpc_chat` has sent `at` since the day it was written and nothing read it.

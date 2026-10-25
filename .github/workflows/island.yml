@@ -2102,6 +2102,17 @@ jobs:
             --outfile=node_modules/.cache/pile.mjs --log-level=error
           node node_modules/.cache/pile.mjs
 
+      - name: Talk kept apart and kept longer
+        if: matrix.shard == 2
+        run: |
+          # Reported: the Talk tab emptied once enough lines of any kind came
+          # in, a worker's run of work lines among them. The browser keeps
+          # talk apart now (`trimLog`), and the island keeps chat three days
+          # and hands back as many lines as the browser keeps.
+          npx esbuild supabase/test/talklog.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/talklog.mjs --log-level=error
+          node node_modules/.cache/talklog.mjs
+
       - name: A worker that can reach the larder
         if: matrix.shard == 2
         run: |
