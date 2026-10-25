@@ -238,10 +238,12 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     let snow: [number, number] | null = null;
     // No snow on an open crown's roots: they are the trunk's foot.
     // Snow lies along the upswept limbs of an upright tree too, but not on its fine twigs.
-    const steep = job.spec.build.habit === 'upright' ? (first.order >= 3 ? -1 : 0.85) : 0.5;
+    const steep = job.spec.build.habit === 'upright' ? (first.order >= 3 ? -1 : first.order >= 1 ? 0.95 : 0) : 0.5;
     if (snowy && Math.abs(D[2]) < steep && !(job.spec.open && first.order < 0)) {
       const on: number[] = [];
-      for (let s = -0.95; s <= 0.951; s += 0.1) if (normal(s)[2] > 0.68) on.push(s);
+      // On an upright tree's steep limbs, wherever the bark faces most of the way up that it can.
+      const lie = steep > 0.5 ? 0.68 * Math.sqrt(Math.max(0, 1 - D[2] * D[2])) : 0.68;
+      for (let s = -0.95; s <= 0.951; s += 0.1) if (normal(s)[2] > lie) on.push(s);
       if (on.length) snow = [Math.max(-1, on[0] - 0.05), Math.min(1, on[on.length - 1] + 0.05)];
       // Only along the top edge: the end of the snowy stretch nearest the limb's edge, a fifth of its width.
       if (snow && job.spec.snowLine) {
@@ -286,8 +288,8 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
       for (let j = j0; j <= j1; j++) (j === j0 ? g.moveTo(c.q[j][0], c.q[j][1]) : g.lineTo(c.q[j][0], c.q[j][1]));
       g.stroke();
     }
-    // A twig is a line: the colour of its middle.
-    g.strokeStyle = c.cols[1];
+    // A twig is a line: the colour of its middle; a pale one under snow its shade's, so the snow on it shows.
+    g.strokeStyle = c.snow && job.spec.bark.marks ? c.cols[0] : c.cols[1];
     g.lineCap = 'round';
     g.lineJoin = 'round';
     if (job.spec.open) {
@@ -330,6 +332,18 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
   if (c.snow) {
     g.fillStyle = '#f4f7fd';
     g.fill(bandPath(c, j0, j1, c.snow[0], c.snow[1]));
+    // On pale bark the snow is edged in the cool of its own shade, or it is not seen.
+    if (job.spec.bark.marks) {
+      const e = Math.abs(c.snow[0]) < Math.abs(c.snow[1]) ? c.snow[0] : c.snow[1];
+      g.strokeStyle = '#a9b8cf';
+      g.lineWidth = 0.35;
+      g.beginPath();
+      for (let j = j0; j <= j1; j++) {
+        const x = c.q[j][0] + c.n[j][0] * c.r[j] * e, y = c.q[j][1] + c.n[j][1] * c.r[j] * e;
+        if (j === j0) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.stroke();
+    }
   }
   // The open end of a limb rounded off.
   if (j1 === c.q.length - 1) {
