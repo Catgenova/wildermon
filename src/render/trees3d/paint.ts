@@ -671,11 +671,12 @@ function bumpPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, see
 }
 
 /**
- * A willow lobe as part of one dome: no rim of its own, each of its lumps
- * filled in the tone the dome has where it is -- lit on its top on the sun's
- * side, deeper down its far side and under -- with a lit patch on those
- * turned to the sun, the strands draped over it from its top, and the ink
- * only round the whole tree.
+ * A willow lobe as part of one dome, made of the strands that arch over it:
+ * each of its lumps filled dim for cover, then a ribbon of leaf out of its top
+ * to each bump of its edge, rising a little, arching over and falling past
+ * it. A ribbon is in the tone the dome has there: lit with a paler edge on
+ * the sun's side and the top, deeper down the far side. No rim of its own;
+ * the ink is only round the whole tree.
  */
 function paintLobe(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number }, outline: Path2D, lumps: Lump[]): void {
   const { sk, light, e } = job;
@@ -692,54 +693,67 @@ function paintLobe(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number }, 
     return { u, d: dot(p, e.toward as V3), wrap, L: (light.ambient + light.direct * wrap) * (0.62 + 0.38 * up) };
   });
   at.sort((p, q) => p.d - q.d);
-  for (const { u, wrap, L } of at) {
-    const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
-    const p = new Path2D();
-    bumpPath(p, u.x, u.y, u.rx, u.ry, u.seed, n);
-    g.fillStyle = s.ramp[b];
-    g.fill(p);
-    if (light.night && L < 0.6) continue;
-    if (wrap > 0.45) {
-      const q = new Path2D();
-      bumpPath(q, u.x + sun.sx * u.rx * 0.2, u.y + sun.sy * u.ry * 0.2 - u.ry * 0.22, u.rx * 0.62, u.ry * 0.6, u.seed + 1, n);
-      g.fillStyle = s.over[Math.min(top, b + 1 + (wrap > 0.75 ? 1 : 0))];
-      g.fill(q);
-    }
-  }
-  g.save();
-  g.clip(outline);
-  const L = clumpLight(job, s.c);
-  const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
-  drapes(g, lumps, s.under[b], s.ramp[b + 1]);
-  g.restore();
-}
-
-/**
- * A willow lobe's strands draped over it from its top: curved lines down and
- * out from the top of each lump, in its shade's tone with a lit one beside.
- */
-function drapes(g: Ctx, lumps: Lump[], dark: string, light: string): void {
-  const p = new Path2D(), l = new Path2D();
-  for (const u of lumps) {
-    const R = mulberry32(u.seed + 5);
-    const n = 4;
-    for (let i = 0; i < n; i++) {
-      // From somewhere over its top, out and down over its edge.
-      const s = (i + 0.2 + 0.6 * R()) / n - 0.5;
-      const x0 = u.x + s * u.rx * (0.6 + 0.6 * R()), y0 = u.y - u.ry * (0.35 + 0.35 * R() - s * s);
-      const x1 = u.x + s * u.rx * 2.2, y1 = u.y + u.ry * (0.5 + 0.5 * R());
-      for (const [path, dx] of [[p, 0], [l, u.rx * 0.07]] as Array<[Path2D, number]>) {
-        path.moveTo(x0 + dx, y0);
-        path.quadraticCurveTo(u.x + s * u.rx * 1.9 + dx, y0 - u.ry * 0.05, x1 + dx, y1);
+  const lit = !light.night;
+  // The whole lobe dim, then its ribbons in the lobe's tones: three, and the pale edge of the lit ones.
+  const L0 = clumpLight(job, s.c);
+  const b = Math.max(1, Math.min(top - 2, Math.round(L0 * (top - 1.2))));
+  g.fillStyle = s.under[b - 1];
+  g.fill(outline);
+  const tones = [new Path2D(), new Path2D(), new Path2D()], edge = new Path2D();
+  for (const { u, wrap } of at) {
+    const R = mulberry32(u.seed + 11);
+    const nr = n > 9 ? Math.round(n * 1.4) : n + 2;
+    const w = TAU / nr, a0 = R() * w;
+    for (let i = 0; i < nr; i++) {
+      const mid = a0 + i * w + (R() - 0.5) * w * 0.4;
+      const cm = Math.cos(mid), sm = Math.sin(mid);
+      if (sm > 0.55) continue;
+      // Out of the top, up over the edge, and down past it: the further round to the side, the further it falls.
+      const sx = u.x + cm * u.rx * 0.32, sy = u.y - u.ry * (0.5 - 0.2 * Math.abs(cm)) + sm * u.ry * 0.15;
+      const ax = u.x + cm * u.rx * (0.9 + 0.08 * R()), ay = u.y + sm * u.ry * 0.95;
+      const cx = u.x + cm * u.rx * 0.7, cy = Math.min(u.y - u.ry * (0.85 + 0.1 * R()), ay - u.ry * 0.22);
+      const fx = ax + cm * u.rx * 0.12, fy = ay + u.ry * (0.3 + 0.6 * Math.abs(cm)) * (0.8 + 0.4 * R());
+      const xs: number[] = [], ys: number[] = [], hs: number[] = [];
+      const half = u.rx * w * 0.62;
+      for (let k = 0; k <= 4; k++) {
+        const t = k / 4, v = 1 - t;
+        xs.push(v * v * sx + 2 * v * t * cx + t * t * ax);
+        ys.push(v * v * sy + 2 * v * t * cy + t * t * ay);
+        hs.push(half * (0.35 + 0.65 * t));
       }
+      xs.push((ax + fx) / 2 + cm * u.rx * 0.04, fx);
+      ys.push((ay + fy) / 2, fy);
+      hs.push(half * 0.85, half * 0.15);
+      // Each point's way across, turned out of the lump.
+      const m = xs.length;
+      const nx: number[] = [], ny: number[] = [];
+      for (let k = 0; k < m; k++) {
+        const a = Math.max(0, k - 1), c = Math.min(m - 1, k + 1);
+        const dx = xs[c] - xs[a], dy = ys[c] - ys[a], l = Math.hypot(dx, dy) || 1;
+        let ox = -dy / l, oy = dx / l;
+        if (ox * (xs[k] - u.x) + oy * (ys[k] - u.y) < 0) { ox = -ox; oy = -oy; }
+        nx.push(ox); ny.push(oy);
+      }
+      const band = (q: Path2D, s0: number, s1: number, to: number): void => {
+        q.moveTo(xs[0] + nx[0] * hs[0] * s1, ys[0] + ny[0] * hs[0] * s1);
+        for (let k = 1; k <= to; k++) q.lineTo(xs[k] + nx[k] * hs[k] * s1, ys[k] + ny[k] * hs[k] * s1);
+        for (let k = to; k >= 0; k--) q.lineTo(xs[k] + nx[k] * hs[k] * s0, ys[k] + ny[k] * hs[k] * s0);
+        q.closePath();
+      };
+      const score = cm * sun.sx * 0.8 - sm * 0.5 + (wrap - 0.5) + (R() - 0.5) * 0.3;
+      const t = score > 0.5 ? 2 : score > -0.35 ? 1 : 0;
+      band(tones[t], -1, 1, m - 1);
+      if (lit && t === 2) band(edge, 0.15, 1, 4);
     }
   }
-  g.lineCap = 'round';
-  g.lineWidth = 0.55;
-  g.strokeStyle = light;
-  g.stroke(l);
-  g.strokeStyle = dark;
-  g.stroke(p);
+  for (let t = 0; t < 3; t++) {
+    g.fillStyle = t === 0 ? s.under[b] : t === 1 ? s.ramp[b] : s.over[b + 1];
+    g.fill(tones[t]);
+  }
+  if (lit) {
+    g.fillStyle = s.over[b + 2];
+    g.fill(edge);
+  }
 }
 
 /** Winged keys hanging in a bunch from under a clump: pairs of wings on short stalks. */
@@ -1103,7 +1117,8 @@ function curtainsOf(job: Job, shown: Shown[], sun: { sx: number; sy: number }): 
       if (near(root) > near(fork) && Math.abs(rx - fx) < partW) len *= 0.28 + 0.72 * Math.pow(Math.abs(rx - fx) / partW, 1.5) + 0.1 * st.k;
       // The ends blow about more than the lobe does.
       const sway = frames > 1 ? 0.07 * len * (Math.sin(ph + st.k * 5) - Math.sin(st.k * 5)) : 0;
-      const w = st.w * ACROSS;
+      // Drawn small, fewer and broader: a curtain as heavy as the other trees' masses.
+      const w = st.w * ACROSS * (fine ? 1 : 1.45);
       // Coming out in spring, the leaf down only part of each whip; going in autumn, whole strands bare.
       const leafy = s ? (dress.season === 'autumn' ? st.k < dress.full + 0.08 : true) : false;
       const leafLen = dress.season === 'spring' && dress.full < 1 ? len * (0.25 + 0.65 * dress.full) : len;
@@ -1115,7 +1130,7 @@ function curtainsOf(job: Job, shown: Shown[], sun: { sx: number; sy: number }): 
         bare[front] = true;
       }
       // Behind the lobe's middle, seen only between those in front: half of them, with fewer points. Drawn small, fewer still.
-      if (!leafy || (!front && st.k > (fine ? 0.55 : 0.4)) || (front && !fine && st.k > 0.8)) continue;
+      if (!leafy || (!front && st.k > (fine ? 0.55 : 0.4)) || (front && !fine && st.k > 0.66)) continue;
       const sl = strandLine(e, root, st, leafLen, w * (s ? Math.max(0.6, grown) : 1), wind[0] * sway, (step + w) * (front ? 1 : 1.5));
       // Lit on the side of the lobe toward the sun; a step darker behind the lobe's middle.
       const sunny = Math.cos(st.a) * job.light.sun[0] + Math.sin(st.a) * job.light.sun[1];

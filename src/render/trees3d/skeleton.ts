@@ -281,6 +281,10 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
     }
     return out;
   };
+  /** A run lifted in an arch over its middle, `h` at the most: up out of what it grows on, and falling to its end. */
+  const arch = (pts: V3[], h: number): void => {
+    for (let j = 1; j < pts.length - 1; j++) pts[j][2] += Math.sin((Math.PI * j) / (pts.length - 1)) * h;
+  };
   /** A crooked run rounded off: twisting rather than kinked. */
   const curve = (a: V3, z: V3, k: number, amp: number, sub: number): V3[] => smooth(crooked(a, z, k, amp), sub);
   /**
@@ -445,9 +449,14 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
       }
       const P = limbs[at];
       // Dead, it still reaches most of the way, and ends snapped off.
-      const end: V3 = dead ? lerp(P.b, s.c, 0.82) : [s.c[0], s.c[1], s.c[2] - rm * 0.25];
+      // A willow's arches up and over into its lobe, its end falling out past the lobe's middle.
+      const oa = Math.atan2(s.c[1] - env.c[1], s.c[0] - env.c[0]);
+      const end: V3 = dead ? lerp(P.b, s.c, 0.82)
+        : b.weep ? [s.c[0] + Math.cos(oa) * rm * 0.3, s.c[1] + Math.sin(oa) * rm * 0.3, s.c[2] - rm * 0.4] : [s.c[0], s.c[1], s.c[2] - rm * 0.25];
       const r = Math.max(0.15, P.rb * (0.55 + 0.15 * R()));
-      const bp = run(curve(P.b, end, 3, zig * 0.2, 2), r, r * 0.32, 2, at, i, dead, 0.45);
+      const bpts = curve(P.b, end, 3, zig * 0.2, 2);
+      if (b.weep) arch(bpts, len(sub(end, P.b)) * 0.2);
+      const bp = run(bpts, r, r * 0.32, 2, at, i, dead, 0.45);
       const last = bp[bp.length - 1];
       // A cluster: a few big, many small; the big ones high in the crown.
       const big = sizes[k] > 1.15;
@@ -467,7 +476,11 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
         if (b.forks < 2 || dead) break;
         const tip: V3 = add(s.c, u.o);
         const from = limbs[last].b;
-        const tp = run(crooked(from, dead ? lerp(from, tip, 0.45) : tip, 2, zig * 0.12), r * 0.3, r * (dead ? 0.16 : 0.07), 3, last, i, dead);
+        // A willow's twig arches out over its lump and hangs at its end.
+        const to: V3 = b.weep && !dead ? [tip[0], tip[1], tip[2] - u.r * 0.5] : dead ? lerp(from, tip, 0.45) : tip;
+        const tpts = crooked(from, to, b.weep ? 3 : 2, zig * 0.12);
+        if (b.weep) arch(tpts, len(sub(to, from)) * 0.22);
+        const tp = run(tpts, r * 0.3, r * (dead ? 0.16 : 0.07), 3, last, i, dead);
         if (!dead) fan(tp[tp.length - 1], u.r * 0.9, r * 0.06, i);
       }
       if (!dead) {

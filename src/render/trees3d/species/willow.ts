@@ -38,10 +38,10 @@ export const willow: Species3D = {
     habit: 'spreading', low: 0, zig: 0.42, sBend: 0.9, ...weep({}),
   },
   ages: {
-    sapling: { stem: 0.4, spread: 0.5, dome: 0.45, girth: 0.05, flare: 1, scaffolds: 3, forks: 1, clumpSize: 0.5, gnarl: 0.2, lean: 1, sBend: 0.4, ...weep({ tops: 1, hem: 0.22, ragged: 0.2, width: 1 }) },
-    young: { stem: 0.38, spread: 0.62, girth: 0.065, flare: 1.4, scaffolds: 4, clumpSize: 0.48, gnarl: 0.45, lean: 2, sBend: 0.7, ...weep({ tops: 1, hem: 0.14 }) },
+    sapling: { stem: 0.36, spread: 0.52, dome: 0.45, girth: 0.05, flare: 1, scaffolds: 4, forks: 1, clumpSize: 0.62, gnarl: 0.2, lean: 1, sBend: 0.4, ...weep({ tops: 2, hem: 0.14, ragged: 0.18, width: 1, fill: 1.5 }) },
+    young: { stem: 0.36, spread: 0.64, girth: 0.065, flare: 1.4, scaffolds: 5, clumpSize: 0.5, gnarl: 0.45, lean: 2, sBend: 0.7, ...weep({ tops: 2, hem: 0.13, fill: 1.4 }) },
     old: { spread: 0.76, girth: 0.095, flare: 2.3, scaffolds: 5, gnarl: 0.85, lean: 5, sBend: 1.1, rune: true },
-    veryOld: { spread: 0.76, girth: 0.105, flare: 2.4, scaffolds: 6, gnarl: 1, lean: 5.5, sBend: 1.35, dead: 1, rune: true, hollow: true },
+    veryOld: { spread: 0.76, girth: 0.105, flare: 2.4, scaffolds: 5, clumpSize: 0.44, gnarl: 1, lean: 5.5, sBend: 1.35, dead: 1, rune: true, hollow: true },
     shrivelled: { girth: 0.1, flare: 2.3, scaffolds: 5, forks: 2, gnarl: 1, lean: 5, sBend: 1.2, bare: true, rune: true },
     clipped: { height: 30, stem: 0.2, spread: 0.75, dome: 0.5, droop: 0.1, girth: 0.08, flare: 1.4, scaffolds: 4, forks: 2, clumpSize: 0.5, gnarl: 0.4, lean: 0.6, sBend: 0.3, ...weep({ tops: 1, hem: 0.08, ragged: 0.15, width: 1 }) },
   },
