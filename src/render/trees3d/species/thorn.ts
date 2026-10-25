@@ -37,8 +37,12 @@ const KINKS = 5;
 /** Masses of leaf, and each one's radius against the half-width. */
 const MASSES = 54;
 const MASS_R = 0.19;
+/** Plates the masses are gathered into, each lit as one. */
+const PLATES = 15;
 /** A stem's radius at its foot and at its tip; a twig's. */
-const STEM_R: readonly [number, number] = [0.45, 0.15];
+const STEM_R: readonly [number, number] = [0.34, 0.06];
+/** A stem's radius a share `t` of the way up it: tapering fast off the foot, slender most of its length. */
+const stemR = (t: number): number => STEM_R[1] + (STEM_R[0] - STEM_R[1]) * Math.pow(1 - t, 1.7);
 const TWIG_R: readonly [number, number] = [0.12, 0.05];
 
 /** The thicket grown from a seed. */
@@ -91,7 +95,7 @@ export function growThorn(seed: number): Skeleton {
     for (let k = 0; k < KINKS; k++) {
       const b = add(p, mul(d, seg * (0.85 + 0.3 * R())));
       const t0 = k / KINKS, t1 = (k + 1) / KINKS;
-      par = push({ a: p, b, ra: STEM_R[0] + (STEM_R[1] - STEM_R[0]) * t0, rb: STEM_R[0] + (STEM_R[1] - STEM_R[0]) * t1, order: 1, parent: par, bough: s, tip: k === KINKS - 1 });
+      par = push({ a: p, b, ra: stemR(t0), rb: stemR(t1), order: 1, parent: par, bough: s, tip: k === KINKS - 1 });
       p = b;
       // The zig-zag: each run turned the other way off the last, and kept inside the bush.
       const side = unit(cross(d, [0, 0, 1]));
@@ -137,7 +141,43 @@ export function growThorn(seed: number): Skeleton {
     if (clumps.some((q) => len([q.c[0] - c[0], q.c[1] - c[1], (q.c[2] - c[2]) * 1.2]) < (q.r + r) * 0.5)) continue;
     clumps.push({ c, r, limb: t.limb, k: R(), out: clamp01(outOf(crown, c)), up: clamp01(c[2] / (H * 1.05)) });
   }
-  return { limbs, clumps, crown, height: H, rune: null, hollow: null, leafReach: 1.2, foot: W * ACROSS * 0.45 };
+  return { limbs, clumps: platesOf(clumps, crown, H, R), crown, height: H, rune: null, hollow: null, leafReach: 1.2, foot: W * ACROSS * 0.45 };
+}
+
+/**
+ * The masses gathered into a few broad plates, each lit as one: the plate's
+ * middle the mass furthest from those already taken, each mass going to the
+ * plate nearest it. A plate is a clump of clusters (`Clump.subs`), its
+ * masses as they lie round its middle.
+ */
+function platesOf(masses: Clump[], crown: Envelope, H: number, R: () => number): Clump[] {
+  if (!masses.length) return masses;
+  const dist = (a: V3, b: V3): number => len([a[0] - b[0], a[1] - b[1], (a[2] - b[2]) * 1.2]);
+  const mids: Clump[] = [masses[0]];
+  while (mids.length < Math.min(PLATES, masses.length)) {
+    let best = masses[0], bd = -1;
+    for (const m of masses) {
+      const d = Math.min(...mids.map((q) => dist(q.c, m.c)));
+      if (d > bd) { bd = d; best = m; }
+    }
+    mids.push(best);
+  }
+  const groups = mids.map(() => [] as Clump[]);
+  for (const m of masses) {
+    let j = 0;
+    for (let i = 1; i < mids.length; i++) if (dist(mids[i].c, m.c) < dist(mids[j].c, m.c)) j = i;
+    groups[j].push(m);
+  }
+  return groups.flatMap((g, i) => {
+    if (!g.length) return [];
+    const c: V3 = [0, 0, 0];
+    for (const m of g) for (let k = 0; k < 3; k++) c[k] += m.c[k] / g.length;
+    const r = Math.max(...g.map((m) => dist(m.c, c) + m.r));
+    return [{
+      c, r, limb: mids[i].limb, k: R(), out: clamp01(outOf(crown, c)), up: clamp01(c[2] / (H * 1.05)),
+      subs: g.map((m) => ({ o: [m.c[0] - c[0], m.c[1] - c[1], m.c[2] - c[2]] as V3, r: m.r })),
+    }];
+  });
 }
 
 /* ---- colours ------------------------------------------------------------------------ */
@@ -177,7 +217,7 @@ function paintThorn(g: Ctx, job: BushJob): void {
   const spring = job.season === 'spring';
   const bark = barkOf(job.def.foliage[1]);
   const l = clamp01((light.ambient + light.direct * 0.55 - 0.22) / 0.82);
-  const woodMid = hexOf(mixRgb(hex(bark.shade), hex(bark.lit), l * 0.55));
+  const woodMid = hexOf(mixRgb(hex(bark.shade), hex(bark.lit), l * 0.35));
   const woodLit = rgb(mixRgb(hex(bark.shade), hex(bark.lit), light.night ? l * 0.5 : l * 0.85));
   const inkCss = rgb(KIT_INK);
   const spineLit = tone(bark.lit, 0.12);
@@ -187,9 +227,9 @@ function paintThorn(g: Ctx, job: BushJob): void {
   let d0 = Infinity, d1 = -Infinity;
   for (const s of segs) { d0 = Math.min(d0, s.d); d1 = Math.max(d1, s.d); }
   const sliceOf = (d: number): number => Math.min(SLICES - 1, Math.floor(((d - d0) / Math.max(1e-6, d1 - d0)) * SLICES));
-  // Width classes: a stem's foot, the rest of the stem, twigs, spurs.
-  const classOf = (s: Seg): number => (s.L.order === 1 ? (s.L.ra > (STEM_R[0] + STEM_R[1]) / 2 ? 0 : 1) : s.L.order === 3 ? 2 : 3);
-  const CLASSES = 4;
+  // Width classes: a stem's foot, its middle, its top; twigs; spurs.
+  const classOf = (s: Seg): number => (s.L.order === 1 ? (s.L.ra > 0.2 ? 0 : s.L.ra > 0.12 ? 1 : 2) : s.L.order === 3 ? 3 : 4);
+  const CLASSES = 5;
   const widths = new Array(CLASSES).fill(0), counts = new Array(CLASSES).fill(0);
   for (const s of segs) { const c = classOf(s); widths[c] += s.w; counts[c]++; }
   for (let c = 0; c < CLASSES; c++) widths[c] = Math.max(0.3, widths[c] / Math.max(1, counts[c]));
@@ -214,14 +254,14 @@ function paintThorn(g: Ctx, job: BushJob): void {
     let nx = -uy, ny = ux;
     if (nx * sun.sx + ny * sun.sy < 0) { nx = -nx; ny = -ny; }
     if (c <= 1) {
-      const o = widths[c] * 0.22;
+      const o = widths[c] * 0.3;
       sl.lit.moveTo(s.qa[0] + nx * o, s.qa[1] + ny * o);
       sl.lit.lineTo(s.qb[0] + nx * o, s.qb[1] + ny * o);
     }
     // Snow along the top of what lies near level.
     if (winter) {
       const D = unit([s.L.b[0] - s.L.a[0], s.L.b[1] - s.L.a[1], s.L.b[2] - s.L.a[2]]);
-      if (c <= 1 && Math.abs(D[2]) < 0.65) {
+      if (c <= 2 && Math.abs(D[2]) < 0.65) {
         const o = widths[c] * 0.42;
         const [tx, ty] = ny < 0 || (ny === 0 && nx < 0) ? [nx, ny] : [-nx, -ny];
         sl.snow.moveTo(s.qa[0] + tx * o, s.qa[1] + ty * o - 0.1);
@@ -229,7 +269,7 @@ function paintThorn(g: Ctx, job: BushJob): void {
       }
     }
     // Spines on the outer wood: the twigs and spurs, and the upper half of each stem.
-    if (s.L.order >= 3 || s.L.rb < (STEM_R[0] + STEM_R[1]) * 0.55) {
+    if (c >= 2) {
       let side = R() < 0.5 ? 1 : -1;
       const ca = Math.cos(SPINE_ANGLE), sa = Math.sin(SPINE_ANGLE);
       const half = widths[c] / 2;
@@ -258,24 +298,34 @@ function paintThorn(g: Ctx, job: BushJob): void {
   }
 
   /* the masses as the day shows them */
-  const shown = leafy ? sk.clumps.filter((c) => c.k < look.full + 0.35) : [];
+  const shown = leafy ? sk.clumps : [];
   const grown = 0.45 + 0.55 * look.full;
   const ramp = look.foliage ? rampOf(look.foliage) : null;
   const leafInk = new Path2D();
-  const masses = shown.map((c) => {
-    const [x, y] = proj(e, c.c);
-    const rx = c.r * ACROSS * grown;
-    const u: Lump = { x, y, rx, ry: rx * 0.72, seed: job.seed * 31 + Math.round(c.k * 1e6) };
-    const lumps = [u];
+  const shapes = leafy ? shapesOfMass() : [];
+  const masses: Mass[] = [];
+  for (const c of shown) {
+    // A plate's masses, those of them out today: coming out in spring and coming down in autumn, not all are.
+    const lumps: Lump[] = [];
+    (c.subs ?? [{ o: [0, 0, 0] as V3, r: c.r }]).forEach((m, j) => {
+      if ((c.k * 7.31 + j * 0.618) % 1 >= look.full + 0.35) return;
+      const [x, y] = proj(e, add(c.c, mul(m.o, grown)));
+      const rx = m.r * ACROSS * grown;
+      lumps.push({ x, y, rx, ry: rx * 0.72, seed: job.seed * 31 + Math.round(c.k * 1e6) + j * 7 });
+    });
+    if (!lumps.length) continue;
     // Its outline, and the same a rim's and an ink's width out: filled, not stroked, as a stroke round so many points is slow to lay.
-    const shapes = shapesOfMass();
-    const t = shapes[u.seed % shapes.length];
     const path = new Path2D(), rim = new Path2D();
-    path.addPath(t, { a: u.rx, b: 0, c: 0, d: u.ry, e: u.x, f: u.y });
-    rim.addPath(t, { a: u.rx + RIM_W, b: 0, c: 0, d: u.ry + RIM_W, e: u.x, f: u.y });
-    leafInk.addPath(t, { a: u.rx + KIT_INK_W, b: 0, c: 0, d: u.ry + KIT_INK_W, e: u.x, f: u.y });
-    return { c, lumps, path, rim };
-  });
+    for (const u of lumps) {
+      const t = shapes[u.seed % shapes.length];
+      path.addPath(t, { a: u.rx, b: 0, c: 0, d: u.ry, e: u.x, f: u.y });
+      rim.addPath(t, { a: u.rx + RIM_W, b: 0, c: 0, d: u.ry + RIM_W, e: u.x, f: u.y });
+      leafInk.addPath(t, { a: u.rx + KIT_INK_W, b: 0, c: 0, d: u.ry + KIT_INK_W, e: u.x, f: u.y });
+    }
+    const [cx, cy] = proj(e, c.c);
+    const rx = c.r * ACROSS * grown;
+    masses.push({ c, lumps, path, rim, cx, cy, rx, ry: rx * 0.72 });
+  }
 
   /* the ink under everything: the bush's outline, and through every gap in it */
   g.lineJoin = 'round';
@@ -284,7 +334,7 @@ function paintThorn(g: Ctx, job: BushJob): void {
   g.fillStyle = inkCss;
   g.fill(leafInk);
   for (let c = 0; c < CLASSES; c++) {
-    g.lineWidth = widths[c] + KIT_INK_W * (c <= 1 ? 1.2 : 0.7);
+    g.lineWidth = widths[c] + KIT_INK_W * (c <= 2 ? 1.1 : 0.7);
     for (const sl of slices) g.stroke(sl.wood[c]);
   }
 
@@ -302,7 +352,7 @@ function paintThorn(g: Ctx, job: BushJob): void {
         if (i > 0 && masses.length) {
           g.strokeStyle = inkCss;
           for (let c = 0; c < CLASSES; c++) {
-            g.lineWidth = widths[c] + KIT_INK_W * (c <= 1 ? 0.9 : 0.6);
+            g.lineWidth = widths[c] + KIT_INK_W * (c <= 2 ? 0.8 : 0.6);
             g.stroke(sl.wood[c]);
           }
         }
@@ -312,7 +362,7 @@ function paintThorn(g: Ctx, job: BushJob): void {
           g.stroke(sl.wood[c]);
         }
         g.strokeStyle = woodLit;
-        g.lineWidth = widths[1] * 0.45;
+        g.lineWidth = widths[1] * 0.3;
         g.stroke(sl.lit);
         if (winter) {
           g.strokeStyle = 'rgba(248,250,255,0.95)';
@@ -391,16 +441,19 @@ const shapesOfPlane = (): Path2D[] => (planeShapes ??= Array.from({ length: 6 },
 }));
 
 /** A plane inside a mass: its lumps a step smaller, lumpy, no teeth. */
-function planeOf(p: Path2D, lumps: Lump[], dx: number, dy: number, k: number, only?: (u: Lump) => boolean): void {
-  for (const u of lumps) {
-    if (only && !only(u)) continue;
-    const shapes = shapesOfPlane();
-    p.addPath(shapes[(u.seed + Math.round(k * 10)) % shapes.length], { a: u.rx * k, b: 0, c: 0, d: u.ry * k, e: u.x + dx * u.rx, f: u.y + dy * u.ry });
+/** A plane across a plate: its masses drawn in `k` toward its middle and moved (dx, dy) of its size, so the plate is lit as one. */
+function planeOf(p: Path2D, m: Mass, dx: number, dy: number, k: number): void {
+  const shapes = shapesOfPlane();
+  for (const u of m.lumps) {
+    p.addPath(shapes[(u.seed + Math.round(k * 10)) % shapes.length], {
+      a: u.rx * k * 1.08, b: 0, c: 0, d: u.ry * k * 1.08, e: m.cx + (u.x - m.cx) * k + dx * m.rx, f: m.cy + (u.y - m.cy) * k + dy * m.ry,
+    });
   }
 }
 
 type Lump = { x: number; y: number; rx: number; ry: number; seed: number };
-type Mass = { c: Clump; lumps: Lump[]; path: Path2D; rim: Path2D };
+/** A plate: its masses on the screen, its outline and rim, and its middle and size there. */
+type Mass = { c: Clump; lumps: Lump[]; path: Path2D; rim: Path2D; cx: number; cy: number; rx: number; ry: number };
 
 /**
  * A layer of masses of leaf at about one depth, as the trees' are painted:
@@ -423,7 +476,7 @@ function paintLayer(g: Ctx, job: BushJob, layer: Mass[], sun: { sx: number; sy: 
     return p;
   };
   for (const m of layer) {
-    const { c, lumps } = m;
+    const { c } = m;
     const n = unit([(c.c[0] - env.c[0]) / env.r, (c.c[1] - env.c[1]) / env.r, ((c.c[2] - env.c[2]) / env.rz) * 0.8 + 0.25]);
     const wrap = clamp01((dot(n, light.sun) + 0.3) / 1.3);
     const occ = (0.5 + 0.5 * Math.pow(c.out, 1.3)) * (0.75 + 0.25 * c.up) * (1 + 0.3 * Math.min(0, dot(n, V)));
@@ -431,10 +484,10 @@ function paintLayer(g: Ctx, job: BushJob, layer: Mass[], sun: { sx: number; sy: 
     const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
     rims.addPath(m.rim);
     at(b * 8).addPath(m.path);
-    planeOf(at(b * 8 + 1), lumps, -sun.sx * 0.28 * off, -sun.sy * 0.28 * off + 0.18, 0.66);
-    planeOf(at(b * 8 + 2), lumps, sun.sx * 0.12 * off, sun.sy * 0.12 * off - 0.08, 0.7);
+    planeOf(at(b * 8 + 1), m, -sun.sx * 0.3 * off, -sun.sy * 0.3 * off + 0.14, 0.78);
+    planeOf(at(b * 8 + 2), m, sun.sx * 0.1 * off, sun.sy * 0.1 * off - 0.06, 0.8);
     // The lit plane only where the sun reaches round the bush.
-    if ((!light.night || L > 0.6) && wrap > 0.45) planeOf(at(b * 8 + 3), lumps, sun.sx * 0.3 * off, sun.sy * 0.3 * off - 0.2, 0.42);
+    if ((!light.night || L > 0.6) && wrap > 0.45) planeOf(at(b * 8 + 3), m, sun.sx * 0.28 * off, sun.sy * 0.28 * off - 0.18, 0.5);
   }
   g.fillStyle = rgb(mixRgb(hex(ramp[0]), KIT_INK, 0.45), 0.9);
   g.fill(rims);
