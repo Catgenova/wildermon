@@ -4696,8 +4696,8 @@ export class Renderer {
             this.take('crop', x, y, mx, my - avg * hs,
               cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], this.dormant && !crop.glass, cam.rotation, this.cropStep));
           } else {
-            // A field tilled and lying fallow: its ridges and furrows, rimed in a winter.
-            this.take('crop', x, y, mx, my - avg * hs, cropSprite('', -1, '', '', this.dormant, cam.rotation, this.cropStep));
+            // A field tilled and lying fallow: its ridges and furrows, rimed in a winter. Ground, so first on its line, under whoever stands on it.
+            this.take('crop', x, y, mx, my - avg * hs, cropSprite('', -1, '', '', this.dormant, cam.rotation, this.cropStep)).key = -1e9;
           }
         }
         /*

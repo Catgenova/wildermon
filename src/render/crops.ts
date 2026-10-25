@@ -478,6 +478,8 @@ export function cropFrame(): void {
  * pixel at zoom one, anchored at the tile's middle.
  */
 export function fieldBake(id: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number, scale: number): CropBake {
+  // Bare and sown ground is the same whatever the crop: one bake for all of them.
+  if (stage <= 0) id = '';
   const head = `${scale}|${id}|${stage}|${dormant ? 1 : 0}|${turn}`;
   const key = `${head}|${step}`;
   const had = cropBakes.get(key);
