@@ -81,6 +81,9 @@ import { WATER_PALETTE, waterRgb } from './render/water';
 import { drawHeadshot, drawPortrait } from './render/sprites';
 import { followScreen, pageZoom, setUiSize, unzoomPage } from './ui/screen';
 import { applyLook } from './ui/theme';
+import { STALE_BUILD, StaleBuild } from './version';
+import { reloadFresh } from './ui/update';
+import { Cadence } from './engine/cadence';
 
 const canvasEl = document.getElementById('game') as HTMLCanvasElement;
 const uiRoot = document.getElementById('ui') as HTMLElement;
@@ -151,17 +154,20 @@ const boot = ((): { say: (text: string, at?: number, of?: number) => void; stop:
     },
   };
 })();
-/** The keeper could not be reached, or keeps no island: said on the boot card, with a Retry. */
-function cannotReach(why: string): void {
+/**
+ * The keeper could not be reached, or keeps no island: said on the boot card, with a Retry. A build the island
+ * no longer takes (`StaleBuild`) says so instead, with a Reload that fetches the current one.
+ */
+function cannotReach(why: string, stale = false): void {
   const card = document.querySelector('#boot .boot-card');
   const line = card?.querySelector('.boot-now span');
-  if (line) line.textContent = `Can't reach the island: ${why}`;
+  if (line) line.textContent = stale ? STALE_BUILD : `Can't reach the island: ${why}`;
   const clock = card?.querySelector('.boot-now b');
   if (clock) clock.textContent = '';
   const again = document.createElement('button');
   again.className = 'boot-retry';
-  again.textContent = 'Retry';
-  again.addEventListener('click', () => location.reload());
+  again.textContent = stale ? 'Reload' : 'Retry';
+  again.addEventListener('click', () => (stale ? void reloadFresh() : location.reload()));
   card?.append(again);
 }
 // Before anything that could throw: what goes wrong from here on is written down (see `errors.ts`).
@@ -169,7 +175,7 @@ watchErrors();
 const tellBoot = (text: string, done?: number, total?: number): void => boot.say(text, done, total);
 const started = await startIsland(params, tellBoot).catch((e: unknown) => {
   boot.stop();
-  cannotReach(e instanceof Error ? e.message : 'The island keeper did not answer.');
+  cannotReach(e instanceof Error ? e.message : 'The island keeper did not answer.', e instanceof StaleBuild);
   // Nothing past here runs without an island: the page stays on its Retry.
   return new Promise<never>(() => {});
 });
@@ -556,6 +562,16 @@ const loop = new GameLoop(
   },
 );
 loop.start();
+/*
+ * Input timing for the island's watch, every `INPUT_NOTE_MS` while there was any: listeners only, nothing in the
+ * frame (src/engine/cadence.ts). A flag for a keeper at most.
+ */
+const INPUT_NOTE_MS = 5 * 60_000;
+const cadence = new Cadence();
+setInterval(() => {
+  const note = cadence.take();
+  if (note) void island.inputNote(note);
+}, INPUT_NOTE_MS);
 // Nothing drawn while the page is out of sight, and started again, from a fresh clock, when it is back.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) loop.stop();

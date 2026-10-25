@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { harden } from './scripts/harden.mjs';
 
 /**
  * Which deploy of the site this build is, for the corner of the screen (see
@@ -75,7 +76,9 @@ export default defineConfig({
     generateBundle() {
       this.emitFile({ type: 'asset', fileName: 'assets/version.json', source: `${JSON.stringify({ deploy: deployed ?? null })}\n` });
     },
-  }],
+  },
+  // Property names renamed, the wire code in src/net obfuscated, and the build's hash (scripts/harden.mjs).
+  harden()],
   server: { port: 5173, host: true },
   build: {
     outDir: '../dist',

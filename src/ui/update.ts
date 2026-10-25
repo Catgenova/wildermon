@@ -25,6 +25,16 @@ async function siteDeploy(): Promise<number | undefined> {
   }
 }
 
+/** Reload the page, its own copy of index.html refreshed first so the reload cannot come back from the cache as the old version. */
+export async function reloadFresh(): Promise<void> {
+  try {
+    await fetch(location.href.split('#')[0], { cache: 'reload' });
+  } catch {
+    /* the reload below fetches it anyway */
+  }
+  location.reload();
+}
+
 /** The button, hidden until there is something newer; a build with no deploy number ("dev") never shows it. */
 export function updateButton(): HTMLButtonElement {
   const btn = document.createElement('button');
@@ -43,14 +53,9 @@ export function updateButton(): HTMLButtonElement {
     btn.title = `Running v${running}`;
     btn.hidden = false;
   };
-  btn.addEventListener('click', async () => {
+  btn.addEventListener('click', () => {
     btn.disabled = true;
-    try {
-      await fetch(location.href.split('#')[0], { cache: 'reload' });
-    } catch {
-      /* the reload below fetches it anyway */
-    }
-    location.reload();
+    void reloadFresh();
   });
   setInterval(() => void look(), UPDATE_CHECK_MS);
   document.addEventListener('visibilitychange', () => {
