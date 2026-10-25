@@ -230,7 +230,7 @@ let drawing = false;
 /** Saved up for `tree3dIdle`, in milliseconds. */
 let credit = 0;
 /** What has been made, and how often an older one stood in: for a harness, and for the renderer to know a shade is not yet its sun's own. */
-export const tree3dStats = { bakes: 0, ms: 0, standIns: 0, paintMs: 0, shadeStandIns: 0, flats: 0, ahead: 0, stored: 0, shades: 0, shadeMs: 0, idleMs: 0 };
+export const tree3dStats = { bakes: 0, ms: 0, standIns: 0, paintMs: 0, shadeStandIns: 0, flats: 0, ahead: 0, aheadLook: 0, stored: 0, shades: 0, shadeMs: 0, idleMs: 0 };
 
 /** A bake under a head at a step of the sun and a frame of the wind, for a tile. */
 type MakeAt = (step: number, frame: number) => TreeSprite;
@@ -247,6 +247,8 @@ interface Job {
   x: number;
   y: number;
   makeAt: MakeAt;
+  /** The same tile's maker on another day (`Maker.lookAt`), for its next look made ahead. */
+  lookAt?: LookAt;
 }
 /** A shade to make (`shaded`). */
 interface ShadeJob {
@@ -255,6 +257,7 @@ interface ShadeJob {
   x: number;
   y: number;
   throwOf: ThrowOf;
+  lookAt?: LookAt;
 }
 /** What this frame stood in for, and every bake it drew in still air, by head and turn: what `tree3dIdle` makes. */
 const missing = new Map<string, Job>();
@@ -268,7 +271,7 @@ const loading = new Set<string>();
 const toStore: Array<[string, TreeSprite]> = [];
 
 /** What the bakes and shades kept hold: for a harness. */
-export const tree3dMemory = (): { bakes: number; bakePx: number; shades: number; shadePx: number; kinds: number; loading: number; missing: number } => ({ bakes: bakes.size, bakePx: pixels, shades: shadows.size, shadePx: shadePixels, kinds: shadeKinds.size, loading: loading.size, missing: missing.size });
+export const tree3dMemory = (): { bakes: number; bakePx: number; shades: number; shadePx: number; kinds: number; loading: number; missing: number; nextLookPx: number; nextShadesPx: number; lastLook: number } => ({ bakes: bakes.size, bakePx: pixels, shades: shadows.size, shadePx: shadePixels, kinds: shadeKinds.size, loading: loading.size, missing: missing.size, nextLookPx, nextShadesPx, lastLook: lastLook.size });
 
 /** A new frame: its own `BAKE_MS` to spend. Called by the renderer once a frame. */
 export function tree3dFrame(): void {
@@ -276,6 +279,9 @@ export function tree3dFrame(): void {
     drawing = true;
     void openStore();
   }
+  // The last look goes once a frame has drawn every tree from its own look's bakes, or after `LAST_LOOK_FRAMES` whatever.
+  if (oldLook.size && frameNo > lookTurnedIn + 1 && ((!usedLastLook && !missing.size) || frameNo > lastLookUntil)) dropLastLook();
+  usedLastLook = false;
   frameNo++;
   spent = 0;
   shadeSpent = 0;
@@ -284,23 +290,75 @@ export function tree3dFrame(): void {
   shadeMissing.clear();
 }
 
-/** Every bake let go: the season's look has turned (`forgetTrees`). */
-export function forgetTrees3d(): void {
-  // The last look's bakes in still air stand in for the new look's until those are made, rather than the flat trees.
+/**
+ * The season's look has turned (`forgetTrees`): the next look's bakes and
+ * shades made ahead (`tree3dIdle`) are the ones kept now, and the last look's
+ * stand in for any the new look has not got yet, rather than the flat trees,
+ * until a frame draws none of them (`dropLastLook`). With `all`, everything
+ * is let go.
+ */
+export function forgetTrees3d(all = false): void {
   lastLook.clear();
-  for (const [k, b] of bakes) {
-    const at = k.split('|');
-    if (at[at.length - 1] === '0') lastLook.set(`${at.slice(0, -4).join('|')}|${at[at.length - 3]}|${at[at.length - 2]}`, b);
+  oldLook.clear();
+  if (all) {
+    bakes.clear();
+    pixels = 0;
+  } else {
+    for (const [k, b] of bakes) {
+      oldLook.add(k);
+      const at = k.split('|');
+      if (at[at.length - 1] === '0') lastLook.set(`${at.slice(0, -4).join('|')}|${at[at.length - 3]}|${at[at.length - 2]}`, b);
+    }
+    lastLookUntil = frameNo + LAST_LOOK_FRAMES;
+    lookTurnedIn = frameNo;
   }
-  lastLookUntil = frameNo + LAST_LOOK_FRAMES;
-  bakes.clear();
-  pixels = 0;
+  for (const [k, b] of nextLook) {
+    if (bakes.has(k)) continue;
+    bakes.set(k, b);
+    usedIn.set(b, frameNo);
+    pixels += b.canvas.width * b.canvas.height;
+  }
+  for (const [k, sh] of nextShades) keepShade(k, sh);
+  nextLook.clear();
+  nextLookPx = 0;
+  nextShades.clear();
+  nextShadesPx = 0;
   shadeKinds.clear();
 }
-/** The bakes of the look before, by head less its look, turn and step: what stands in after a change of look (`forgetTrees3d`), for `LAST_LOOK_FRAMES`. */
+/** The bakes of the look before, by head less its look, turn and step: what stands in after a change of look (`forgetTrees3d`), for `LAST_LOOK_FRAMES` at most. */
 const lastLook = new Map<string, TreeSprite>();
+/** Every bake kept when the look turned, and the frame it turned in: those not drawn since are let go (`dropLastLook`). */
+const oldLook = new Set<string>();
+let lookTurnedIn = 0;
 const LAST_LOOK_FRAMES = 1800;
 let lastLookUntil = 0;
+/** Whether a frame stood in with the last look's bakes. */
+let usedLastLook = false;
+
+/** The last look let go: every bake kept when the look turned that no frame has drawn since. */
+function dropLastLook(): void {
+  for (const k of oldLook) {
+    const b = bakes.get(k);
+    if (!b || (usedIn.get(b) ?? 0) >= lookTurnedIn) continue;
+    bakes.delete(k);
+    pixels -= b.canvas.width * b.canvas.height;
+  }
+  oldLook.clear();
+  lastLook.clear();
+}
+
+/**
+ * The next look's bakes and shades, made ahead in the hour before it turns
+ * (`tree3dIdle`): kept apart, so making them puts away nothing, up to
+ * `LOOK_PIXELS` and `LOOK_SHADE_PIXELS`.
+ */
+const nextLook = new Map<string, TreeSprite>();
+let nextLookPx = 0;
+const nextShades = new Map<string, TreeShade | null>();
+let nextShadesPx = 0;
+/** About thirty-four megabytes of bakes, and eight of shades. */
+const LOOK_PIXELS = 8_500_000;
+const LOOK_SHADE_PIXELS = 2_000_000;
 
 /** A bake kept, and room made for it by letting go the least lately drawn: never one drawn this frame or the last, while there is another to let go. */
 function keep(key: string, spr: TreeSprite): void {
@@ -402,12 +460,17 @@ interface Maker {
   makeAt: MakeAt;
   shadeHead: string;
   throwOf: ThrowOf;
+  /** The same tile's maker as it will be dressed on another day: what its next look is made ahead from (`tree3dIdle`). Without it, a kind's next look is made when it comes. */
+  lookAt?: LookAt;
 }
+/** A tile's maker on a day of a season. */
+type LookAt = (season: Season, day: number) => Maker;
 
 function treeMaker(species: number, variant: number, season: Season, day: number, x: number, y: number, turn: number, scale: number): Maker {
   const form = formOf(species, x, y);
   const { dress, key: look } = dressFor(species, variant, season, day);
   return {
+    lookAt: (s, d) => treeMaker(species, variant, s, d, x, y, turn, scale),
     head: `${scale}|${species}|${variant}|${form}|${look}`,
     // The bare wood has no leaf to move.
     leafy: dress.full > 0,
@@ -453,7 +516,7 @@ function baked(m: Maker, turn: number, step: number, frame: number, x: number, y
   const { head } = m;
   const key = `${head}|${turn}|${step}|${frame}`;
   const still = `${head}|${turn}|0`;
-  if (!seen.has(still)) seen.set(still, { key: `${head}|${turn}|${step}|0`, head, turn, step, frame: 0, x, y, makeAt: m.makeAt });
+  if (!seen.has(still)) seen.set(still, { key: `${head}|${turn}|${step}|0`, head, turn, step, frame: 0, x, y, makeAt: m.makeAt, lookAt: m.lookAt });
   const had = bakes.get(key);
   if (had) {
     touch(key, had);
@@ -508,7 +571,10 @@ function standIn(head: string, turn: number, step: number, frame: number): [stri
     for (const s of d ? [step - d, step + d] : [step]) {
       const k = `${kind}|${turn}|${s}`;
       const was = lastLook.get(k);
-      if (was) return [k, was];
+      if (was) {
+        usedLastLook = true;
+        return [k, was];
+      }
     }
   }
   return null;
@@ -520,15 +586,17 @@ function standIn(head: string, turn: number, step: number, frame: number): [stri
  * sun's `next` step ahead of it. Given the frame's spare milliseconds, and
  * `TRICKLE_MS` more saved up each frame, so a wood that leaves no spare time
  * still gets its next step made a bake every so often rather than all at once
- * when the sun moves.
+ * when the sun moves. And in the last of the look's days, every one drawn
+ * made as `look` will dress it (`nextLook`), so the change finds them made.
  */
-export function tree3dIdle(spare: number, next: number | null, fx: number, fy: number): void {
-  credit = Math.min(CREDIT_MOST, credit + TRICKLE_MS + Math.max(0, spare));
+export function tree3dIdle(spare: number, next: number | null, fx: number, fy: number, look: { season: Season; day: number; step: number } | null = null): void {
+  const avg = tree3dStats.bakes ? tree3dStats.ms / tree3dStats.bakes : 8;
+  // Never less saved up than a bake costs, or a slow machine would never make one.
+  credit = Math.min(Math.max(CREDIT_MOST, avg * 1.25), credit + TRICKLE_MS + Math.max(0, spare));
   const put = toStore.shift();
   if (put) void putStored(put[0], put[1]);
   const t0 = performance.now();
   const far = (j: { x: number; y: number }): number => (j.x - fx) ** 2 + (j.y - fy) ** 2;
-  const avg = tree3dStats.bakes ? tree3dStats.ms / tree3dStats.bakes : 8;
   const bakeJobs = (list: Iterable<Job>): Job[] => [...list].filter((j) => !bakes.has(j.key) && !loading.has(j.key)).sort((a, b) => far(a) - far(b));
   const run = (j: Job, ahead = false): boolean => {
     if (bakes.has(j.key) || loading.has(j.key)) return true;
@@ -559,11 +627,84 @@ export function tree3dIdle(spare: number, next: number | null, fx: number, fy: n
       if (frameNo < fullUntil) break;
       if (!(going = run(j, true))) break;
     }
-    if (going) for (const sj of [...shadeKinds.values()].sort((a, b) => far(a) - far(b))) if (!(going = shade(sj, next, `${sj.head}${next}|${sj.turn}`))) break;
+    // Only into room there is: made ahead, a shade must not put away one the lines are laid from.
+    if (going) {
+      for (const sj of [...shadeKinds.values()].sort((a, b) => far(a) - far(b))) {
+        if (shadePixels >= SHADE_PIXELS * 0.85) break;
+        if (!(going = shade(sj, next, `${sj.head}${next}|${sj.turn}`))) break;
+      }
+    }
   }
+  if (going && look && frameNo >= lookRestUntil) going = lookAhead(look, far, avg);
   // Nothing left to do: none is saved up, so whatever comes next starts from a frame's worth rather than a burst.
   if (going) credit = Math.min(credit, TRICKLE_MS);
   tree3dStats.idleMs += performance.now() - t0;
+}
+
+/** Frames the next look's making rests once it has nothing left to make, and the frame it looks again. */
+const LOOK_REST = 30;
+let lookRestUntil = 0;
+/** The look and sun step the next look's bakes are made for. */
+let lookFor = '';
+
+/** The next look's bakes and then its shades, for every bake this frame drew, nearest first, while there is credit and room; false when out of credit. */
+function lookAhead(look: { season: Season; day: number; step: number }, far: (j: { x: number; y: number }) => number, avg: number): boolean {
+  // Made for another look than this one, they go.
+  const want = `${look.season}${lookStep(look.day)}|${look.step}`;
+  if (want !== lookFor) {
+    lookFor = want;
+    nextLook.clear();
+    nextLookPx = 0;
+    nextShades.clear();
+    nextShadesPx = 0;
+  }
+  const jobs: Job[] = [];
+  for (const j of seen.values()) {
+    if (!j.lookAt) continue;
+    const m = j.lookAt(look.season, look.day);
+    const key = `${m.head}|${j.turn}|${look.step}|0`;
+    if (bakes.has(key) || nextLook.has(key) || loading.has(key)) continue;
+    jobs.push({ key, head: m.head, turn: j.turn, step: look.step, frame: 0, x: j.x, y: j.y, makeAt: m.makeAt });
+  }
+  jobs.sort((a, b) => far(a) - far(b));
+  for (const j of jobs) {
+    if (nextLookPx >= LOOK_PIXELS) break;
+    if (isStored(j.key)) {
+      loading.add(j.key);
+      void fetchStored(j.key).then((got) => {
+        loading.delete(j.key);
+        if (!got || nextLook.has(j.key) || nextLookPx >= LOOK_PIXELS) return;
+        tree3dStats.stored++;
+        nextLook.set(j.key, { ...got, solid: true });
+        nextLookPx += got.canvas.width * got.canvas.height;
+      });
+      continue;
+    }
+    if (credit < avg) return false;
+    const t = performance.now();
+    const spr = j.makeAt(j.step, 0);
+    if (toStore.length < 256) toStore.push([j.key, spr]);
+    nextLook.set(j.key, spr);
+    nextLookPx += spr.canvas.width * spr.canvas.height;
+    tree3dStats.aheadLook++;
+    credit -= performance.now() - t;
+  }
+  let left = jobs.length > 0 && nextLookPx < LOOK_PIXELS;
+  for (const sj of [...shadeKinds.values()].sort((a, b) => far(a) - far(b))) {
+    if (!sj.lookAt || nextShadesPx >= LOOK_SHADE_PIXELS) continue;
+    const m = sj.lookAt(look.season, look.day);
+    const k = `${m.shadeHead}${look.step}|${sj.turn}`;
+    if (shadows.has(k) || nextShades.has(k)) continue;
+    left = true;
+    if (credit < 1) return false;
+    const t = performance.now();
+    const out = drawShade({ head: m.shadeHead, turn: sj.turn, x: sj.x, y: sj.y, throwOf: m.throwOf }, look.step);
+    nextShades.set(k, out);
+    if (out) nextShadesPx += out.canvas.width * out.canvas.height;
+    credit -= performance.now() - t;
+  }
+  if (!left) lookRestUntil = frameNo + LOOK_REST;
+  return true;
 }
 
 /**
@@ -660,7 +801,7 @@ const SHADE_SCALE = 2;
  */
 export function tree3dShadow(species: number, variant: number, season: Season, day: number, x: number, y: number, step: number, turn: number): TreeShade | null {
   const m = treeMaker(species, variant, season, day, x, y, turn, 1);
-  return shaded(m.shadeHead, step, turn, x, y, m.throwOf);
+  return shaded(m.shadeHead, step, turn, x, y, m.throwOf, m.lookAt);
 }
 
 /** How many steps along a limb the shade's discs take to run together. */
@@ -693,10 +834,10 @@ type Throw = Light & { dx: number; dy: number };
  * made now while this frame has time, a near step's standing in, or none yet
  * -- made after the frame (`tree3dIdle`).
  */
-function shaded(head: string, step: number, turn: number, x: number, y: number, throwOf: ThrowOf): TreeShade | null {
+function shaded(head: string, step: number, turn: number, x: number, y: number, throwOf: ThrowOf, lookAt?: LookAt): TreeShade | null {
   const kind = `${head}|${turn}`;
   if (!shadeKinds.has(kind)) {
-    shadeKinds.set(kind, { head, turn, x, y, throwOf });
+    shadeKinds.set(kind, { head, turn, x, y, throwOf, lookAt });
     if (shadeKinds.size > 1200) shadeKinds.delete(shadeKinds.keys().next().value as string);
   }
   const k = `${head}${step}|${turn}`;
@@ -724,8 +865,29 @@ function shaded(head: string, step: number, turn: number, x: number, y: number, 
   return null;
 }
 
-/** A shade made from the discs its job lays, kept under `k`, the least lately asked for let go past `SHADE_PIXELS`. */
+/** A shade made from the discs its job lays, kept under `k` (`keepShade`). */
 function makeShade(j: ShadeJob, step: number, k: string): TreeShade | null {
+  const out = drawShade(j, step);
+  keepShade(k, out);
+  return out;
+}
+
+/** A shade kept, the least lately asked for let go past `SHADE_PIXELS`. */
+function keepShade(k: string, out: TreeShade | null): void {
+  const was = shadows.get(k);
+  if (was) shadePixels -= was.canvas.width * was.canvas.height;
+  shadows.delete(k);
+  shadows.set(k, out);
+  if (out) shadePixels += out.canvas.width * out.canvas.height;
+  while (shadePixels > SHADE_PIXELS && shadows.size > 1) {
+    const [old, s] = shadows.entries().next().value as [string, TreeShade | null];
+    shadows.delete(old);
+    if (s) shadePixels -= s.canvas.width * s.canvas.height;
+  }
+}
+
+/** The shade the discs a job lays throw at a step of the sun. */
+function drawShade(j: ShadeJob, step: number): TreeShade | null {
   const t0 = performance.now();
   const sun = lightOf(step);
   let out: TreeShade | null = null;
@@ -758,13 +920,6 @@ function makeShade(j: ShadeJob, step: number, k: string): TreeShade | null {
       }
     }
   }
-  shadows.set(k, out);
-  if (out) shadePixels += out.canvas.width * out.canvas.height;
-  while (shadePixels > SHADE_PIXELS && shadows.size > 1) {
-    const [old, s] = shadows.entries().next().value as [string, TreeShade | null];
-    shadows.delete(old);
-    if (s) shadePixels -= s.canvas.width * s.canvas.height;
-  }
   tree3dStats.shades++;
   tree3dStats.shadeMs += performance.now() - t0;
   return out;
@@ -793,6 +948,7 @@ function bushMaker(species: number, season: Season, day: number, x: number, y: n
   const def = BUSH_DEFS[species] ?? BUSH_DEFS[0];
   const look = bushYear(def, species, season, day);
   return {
+    lookAt: (s, d) => bushMaker(species, s, d, x, y, turn, scale),
     head: `${scale}|bush${species}|${form}|${season}${look.key}`,
     // Bare canes have no leaf to move.
     leafy: look.full > 0,
@@ -832,7 +988,7 @@ export function bush3dSprite(species: number, season: Season, day: number, at: T
 /** What a bush throws on the ground, as `tree3dShadow` a tree's: along its wood, and lumpy under its leaf as far as it is in leaf. */
 export function bush3dShadow(species: number, season: Season, day: number, x: number, y: number, step: number, turn: number): TreeShade | null {
   const m = bushMaker(species, season, day, x, y, turn, 1);
-  return shaded(m.shadeHead, step, turn, x, y, m.throwOf);
+  return shaded(m.shadeHead, step, turn, x, y, m.throwOf, m.lookAt);
 }
 
 /** The most discs a bush's wood throws its shade with: a twiggy bush's are spread out along it to this many. */

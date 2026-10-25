@@ -29,7 +29,8 @@
  *
  * Only drawn. No rule asks what a tree looks like, and nothing here is kept.
  */
-import { SEASON_DAYS, seasonAt, type Season } from '../world/calendar';
+import { SEASON_DAYS, seasonAt, YEAR_FROM, type Season } from '../world/calendar';
+import { DAY_SECONDS } from '../game/pace';
 import { TREE_AGES, TREE_DEFS } from '../world/tiles';
 
 /** The kinds that keep their leaves all year, by name. Every other kind is bare in winter. */
@@ -224,6 +225,18 @@ export function wintry(canopy: readonly [string, string, string]): [string, stri
 /** The season and its day at `now`, in epoch seconds: what every crown is worked out from. */
 export function yearAt(now: number): { season: Season; day: number } {
   return seasonAt(now);
+}
+
+/** When the trees' look (`lookStep`, or the season) next changes after `now`, in the clock `yearAt` reads; Infinity when not within a year. */
+export function nextLookAt(now: number): number {
+  const look = (y: { season: Season; day: number }): string => `${y.season}${lookStep(y.day)}`;
+  const was = look(yearAt(now));
+  const start = now - ((((now - YEAR_FROM) % DAY_SECONDS) + DAY_SECONDS) % DAY_SECONDS);
+  for (let k = 1; k <= 4 * SEASON_DAYS; k++) {
+    const t = start + k * DAY_SECONDS;
+    if (look(yearAt(t)) !== was) return t;
+  }
+  return Infinity;
 }
 
 /**

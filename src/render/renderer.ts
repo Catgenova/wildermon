@@ -160,6 +160,8 @@ const TREE_PICTURE_MS = 6;
 const SHADE_MS = 3;
 /** The milliseconds a frame is drawn in when it leaves time to spare, for the solid trees' work after it (`tree3dIdle`): under a sixtieth of a second, for the drawing the browser does after. */
 const IDLE_FRAME_MS = 10;
+/** Seconds before the trees' look turns that its bakes are made ahead (`Renderer.lookAhead`). */
+const LOOK_AHEAD_S = 600;
 /** How many trees' shade a frame may lay into lines' pictures made again (at zoom one; fewer closer in), and how many device pixels of pictures of solid trees it may make, while older ones can stand in: the clock sees only part of what a picture costs, its drawing being done when it is first copied. */
 const SHADE_PARTS = 20;
 const SOLID_PICTURE_PX = 250_000;
@@ -456,7 +458,8 @@ import { creatureWide, fallGradient, lightHole } from './spells/kit';
 import { spellInfo } from './spells/info';
 import type { Body as SpellBody, WorldRec as SpellRec } from './spells/kit';
 import type { CastAt, CastTold } from '../game/events';
-import { lookStep, yearAt } from './foliage';
+import { lookStep, nextLookAt, yearAt } from './foliage';
+import { DAY_SECONDS } from '../game/pace';
 import { cartSway, FIGURE_TOP, figurePicture, type Seat } from './figure';
 /**
  * How much larger a beast in the traces is drawn than one loose: enough that
@@ -1256,6 +1259,22 @@ export class Renderer {
   private solidTurn = -1;
   /** A count of the world's changes, so the trees read off it are read again after one (`solidFrame`). */
   private solidRev = 0;
+  /** When the trees' look next turns (`nextLookAt`), and the wall clock it was worked out at. */
+  private lookTurns = 0;
+  private lookFrom = Infinity;
+
+  /** The look the trees turn to next and the sun's step when they do, once that is under `LOOK_AHEAD_S` away: what is made ahead for it (`tree3dIdle`). */
+  private lookAhead(): { season: Season; day: number; step: number } | null {
+    const wall = this.game.wallNow();
+    if (wall >= this.lookTurns || wall < this.lookFrom) {
+      this.lookTurns = nextLookAt(wall);
+      this.lookFrom = wall;
+    }
+    const until = this.lookTurns - wall;
+    if (!(until < LOOK_AHEAD_S)) return null;
+    const h = (this.solidHour + (until / DAY_SECONDS) * 24) % 24;
+    return { ...yearAt(this.lookTurns + 1), step: sunStepOf(h, darknessAt(h)) };
+  }
   /** The trees drawn as solids in the shade's window, read off the world, and which of them shade which line under this sun. */
   private solidScan: {
     key: string;
@@ -3857,8 +3876,11 @@ export class Renderer {
       this.renderFrame(dt);
       // The solid trees' work after the frame, in what is left of it (`tree3dIdle`).
       if (TREE3D_SPECIES.size || BUSH3D_SPECIES.size) {
-        const next = nextSunStep(this.solidHour, darknessAt);
-        tree3dIdle(IDLE_FRAME_MS - (performance.now() - now), next, this.game.player.x, this.game.player.y);
+        let next = nextSunStep(this.solidHour, darknessAt);
+        const look = this.lookAhead();
+        // The look turns before the sun next steps: the sun's next step would be made in the look going out.
+        if (look && look.step === sunStepOf(this.solidHour, this.solidDark)) next = null;
+        tree3dIdle(IDLE_FRAME_MS - (performance.now() - now), next, this.game.player.x, this.game.player.y, look);
       }
     } finally {
       cam.cx = cx;
@@ -4303,13 +4325,12 @@ export class Renderer {
       }, water);
     }
     // The day of the year the trees are dressed for, and what is out in it.
-    // When their look turns (`lookStep`), the last look's pictures of them go, and every copy made of them.
+    // When their look turns (`lookStep`), the last look's sprites go, and every copy made of them; the tree pictures stand in while the new look's are made (`treePicture`), and go as they are let go.
     const year = yearAt(this.game.wallNow());
     if (year.season !== this.year.season || lookStep(year.day) !== lookStep(this.year.day)) {
       forgetTrees();
       this.scaled.clear();
       this.forgetAllScaled();
-      this.forgetTreePictures();
     }
     this.year = year;
     if (!this.fast) this.life.frame({
@@ -7601,12 +7622,6 @@ export class Renderer {
   /** How many device pixels of pictures of solid trees this frame has made (`SOLID_PICTURE_PX`). */
   private solidMade = 0;
   private treeMakeFrame = -1;
-
-  private forgetTreePictures(): void {
-    this.treePics.clear();
-    this.treeOwn.clear();
-    this.treePixels = 0;
-  }
 
   /** A tree picture put away, and out of its tree's stand-ins if it was one. */
   private dropTreePicture(key: string, pic: TreePicture): void {
