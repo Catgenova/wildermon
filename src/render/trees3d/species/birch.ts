@@ -38,7 +38,7 @@ export const birch: Species3D = {
   },
   ages: {
     sapling: { stem: 0.34, spread: 0.26, girth: 0.036, flare: 1.1, scaffolds: 4, forks: 1, branching: 1, clumps: 5, clumpSize: 0.6, gnarl: 0.1, lean: 0.4, stems: 1, rough: 0 },
-    young: { stem: 0.3, spread: 0.27, girth: 0.042, flare: 1.3, scaffolds: 6, clumps: 10, clumpSize: 0.56, gnarl: 0.15, lean: 0.8, stems: 2, rough: 0.04 },
+    young: { stem: 0.28, spread: 0.3, girth: 0.042, flare: 1.3, scaffolds: 7, clumps: 13, clumpSize: 0.56, gnarl: 0.15, lean: 0.8, stems: 2, rough: 0.04 },
     old: { spread: 0.3, girth: 0.056, flare: 1.55, scaffolds: 10, clumps: 20, clumpSize: 0.42, gnarl: 0.3, lean: 1.6, rune: true, rough: 0.14 },
     veryOld: { spread: 0.3, girth: 0.06, flare: 1.65, scaffolds: 10, clumps: 16, clumpSize: 0.42, gnarl: 0.4, lean: 2, dead: 2, rune: true, hollow: true, rough: 0.17 },
     shrivelled: { girth: 0.058, flare: 1.65, scaffolds: 6, forks: 1, gnarl: 0.4, lean: 2, bare: true, rune: true, rough: 0.17 },
