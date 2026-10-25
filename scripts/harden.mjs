@@ -6,10 +6,11 @@
  *      it, it is not a word in any string, template or regular expression in
  *      src/, not a property of the DOM or the language (TypeScript's lib
  *      files), and not a word in any module bundled from outside src/ (the
- *      Supabase client, Vite's helpers). So nothing that crosses the wire, is
- *      kept in the browser's storage or is read by name — RPC arguments, JSON
- *      fields, storage keys, the protocol in src/net — is ever touched: each
- *      of those is written somewhere other than after `this.`. Every renamed
+ *      Supabase client, Vite's helpers), nor in the tests, tools and build
+ *      scripts, which may read a member by name. So nothing that crosses the
+ *      wire, is kept in the browser's storage or is read by name — RPC
+ *      arguments, JSON fields, storage keys, the protocol in src/net — is ever
+ *      touched: each of those is written somewhere other than after `this.`. Every renamed
  *      name becomes `$$<base 36>`, the same in every module. Done as each
  *      module is read, before Rolldown bundles and minifies it.
  *   2. The island's wire code (`NET_MODULES`: the RPC and realtime layer and
@@ -134,13 +135,33 @@ export function libWords() {
 }
 
 /**
+ * Every word in the tests, the tools and the build scripts. A test that reads a
+ * renderer's private member by name (`supabase/test/storeyview-page.ts` spies
+ * on `drawWall`) keeps reading it, and the renamed build can be held to the
+ * same page tests as the source.
+ */
+export function testWords() {
+  const words = new Set();
+  const walk = (dir) => {
+    for (const f of readdirSync(dir)) {
+      const p = join(dir, f);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.(ts|mjs|js)$/.test(f)) wordsOf(readFileSync(p, 'utf8'), words);
+    }
+  };
+  for (const dir of ['supabase/test', 'tools', 'scripts']) walk(join(ROOT, dir));
+  return words;
+}
+
+/**
  * The renames: name to `$$<base 36>`, the most used first so they get the
  * shortest. Names of three letters or fewer are left, as renaming them saves
  * nothing. `outside` is every word in the bundled modules from outside src/.
  */
 export function renames(outside = new Set()) {
   const dom = libWords();
-  const keep = [...privateOnly()].filter(([n]) => n.length > 3 && !n.startsWith('$$') && !dom.has(n) && !outside.has(n));
+  const tests = testWords();
+  const keep = [...privateOnly()].filter(([n]) => n.length > 3 && !n.startsWith('$$') && !dom.has(n) && !outside.has(n) && !tests.has(n));
   keep.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
   return Object.fromEntries(keep.map(([n], i) => [n, `$$${i.toString(36)}`]));
 }
