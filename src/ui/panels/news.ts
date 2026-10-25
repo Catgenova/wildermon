@@ -1,6 +1,7 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
+import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { FAST_DPR, LOW_POWER_FPS } from '../../game/settings';
 import { RECONNECTING } from '../phone';
@@ -3823,6 +3824,16 @@ export const NEWS: News[] = [
       `Added: Workers tab: each worker fed and unfed in (${timeWords(UPKEEP_FOR)} at work without a meal: task pace ${percent(UNFED_PACE)}), soonest first; each task's workers against ${SPECIALTY_AT} for a specialty (task speed +${percent(SPECIALTY_BONUS)}), with your wildermon that would add to it and Assign; guards; orders.`,
       `Added: Visitors tab: everybody not a citizen who came onto the settlement, by the hour: last hour, hours seen; kept ${VISIT_KEEP_DAYS} days. Rank permission: ${POWER.visitors.label}.`,
       `Fixed: settlement orders (${ORDER_STANCES.map((st) => STANCE_NAMES[st]).join(', ')}) changed nothing on the island. Now every settlement worker, the founder's and the citizens', and every one assigned after. Rank permission: ${POWER.orders.label}.`,
+    ],
+  },
+  {
+    n: 322,
+    day: '2026-10-26',
+    lines: () => [
+      `Added: plans over an area, max ${PLAN_AREA_MOST} pieces: Plan walls all round, Plan floor: every tile (a storey), Plan roof: every tile, Plan building over an area, Add an area, Extend over an area (a rectangle to the cursor). Ghost of every piece first, red where refused.`,
+      'Added: plan bar: materials summed over the plan; Need, Carried, Stored (crates on its tiles, stores within building reach), Short; refusals counted. Plan or Cancel (Esc).',
+      `Added: Undo last plan (Ctrl+Z, bar or menu), ${num(PLAN_UNDO_SECONDS / 60)} min: every piece still yours taken down as Remove wall, Remove floor, Remove from plan; delivered materials as those give back.`,
+      'Changed: storey mode: a roof is its own storey. Pinned there: roof drawn, unplanned roof tiles marked out, pitched roofs picked on their slopes, no walking onto one; roof work on that storey only.',
     ],
   },
 ];

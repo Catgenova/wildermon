@@ -2794,6 +2794,27 @@ jobs:
             --outfile=node_modules/.cache/noplan.mjs --log-level=error
           node node_modules/.cache/noplan.mjs
 
+      - name: Plans over an area, their totals, the last plan undone, and a roof as its own storey
+        if: matrix.shard == 3
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          STOREY_STRICT: '1'
+        run: |
+          # "Previews for multi-tile plans, cost totals before you commit, undo
+          # for a misplaced plan, and extend the storey mode to roofs". Walls
+          # all round, a whole roof and a footprint's rectangle planned in one
+          # call (rpc_plan_area), each piece by its own refusal and performer,
+          # said once; refused whole out of reach, a refused piece left out and
+          # counted, a bad list refused; the totals one bill times the pieces;
+          # the last plan, an area's or a single click's, undone by Remove wall,
+          # Remove floor and Remove from plan (rpc_plan_undo), not past its
+          # time. Drawn in Chrome at desktop and phone width: the ghost, the bar
+          # inside the screen, Plan and Undo; pinned on a roof, the roof's menu
+          # only, a pitched roof picked on its slope and not walked onto.
+          npx esbuild supabase/test/plantools.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/plantools.mjs --log-level=error
+          node node_modules/.cache/plantools.mjs
+
       - name: Glassblowing, glass panels, bottles and the stained glass wall
         if: matrix.shard == 3
         run: |

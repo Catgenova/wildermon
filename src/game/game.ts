@@ -23,6 +23,7 @@ import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
 import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, isSpiral, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
+import { UNDONE_PLANS, type PlanAnswer } from './planarea';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
@@ -5342,6 +5343,12 @@ export class Game {
    * than a second copy of every action.
    */
   ask: ((def: ActionDef, target: Target, goes?: number) => void) | null = null;
+  /** A plan over an area, asked of the island in one call (`planarea.ts`, `rpc_plan_area`); set by `play.ts`. */
+  planArea: ((asks: Array<{ action: string; target: Target }>) => Promise<PlanAnswer>) | null = null;
+  /** Your last plan taken back, every piece of it still standing (`rpc_plan_undo`); set by `play.ts`. */
+  undoPlan: (() => Promise<PlanAnswer>) | null = null;
+  /** When a plan of yours last went in or was asked for (ms on `Date.now`), for the undo offered on it (`PLAN_UNDO_SECONDS`). */
+  plannedAt = 0;
 
   /**
    * And somewhere else to send the putting down.
@@ -5484,6 +5491,8 @@ export class Game {
     this.travel = null;
     const named = target.kind === 'item' ? target.uid : 'itemUid' in target ? target.itemUid : undefined;
     this.lastAsked = { def, target, goes, was: named !== undefined ? this.inventory.get(named)?.id : undefined };
+    // A wall or a floor planned by hand is your last plan, to undo (`planarea.ts`).
+    if (UNDONE_PLANS.has(def.id)) this.plannedAt = Date.now();
     // gates: a hidden door asked for is kept only while a plan of a wall on its border is in hand or lined up (`keepHiddenAsks`).
     keepHiddenAsks(this);
     // Examining a wild thing says how a fight with it would go (`consider`), whoever answers the rest.

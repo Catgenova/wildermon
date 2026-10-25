@@ -120,3 +120,25 @@ export function toHand(g: Game, id: string, mat: MaterialDef | undefined, at: { 
   for (const st of buildStores(g, mat)) for (const it of st.items) if (takeable(it, id)) n += it.count;
   return n;
 }
+
+/**
+ * How much of `id` the stores building draws on hold for a plan over several
+ * tiles (`planarea.ts`): a crate on any of its tiles, and the stores within
+ * `buildReach` of where you stand. The pack is counted apart.
+ */
+export function storedFor(g: Game, id: string, mat: MaterialDef | undefined, tiles: ReadonlyArray<{ x: number; y: number }>): number {
+  let n = 0;
+  const on = new Set(tiles.map((t) => `${t.x},${t.y}`));
+  // A crate on a tile of the plan that is also within reach is counted once, by what it holds.
+  const counted = new Set<Item[]>();
+  for (const c of g.crates.values()) {
+    if (!on.has(`${c.x},${c.y}`)) continue;
+    counted.add(c.items);
+    for (const it of c.items) if (it.id === id) n += it.count;
+  }
+  for (const st of buildStores(g, mat)) {
+    if (counted.has(st.items)) continue;
+    for (const it of st.items) if (takeable(it, id)) n += it.count;
+  }
+  return n;
+}

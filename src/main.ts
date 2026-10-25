@@ -39,6 +39,7 @@ import { ITEM_DEFS, itemName } from './game/items';
 import { RECIPES } from './game/recipes';
 import { Game } from './game/game';
 import { Keybinds } from './game/keybinds';
+import { pitchedRoofAt } from './game/storeyview';
 import { warmMasonry } from './render/masonry';
 import { warmMeadow } from './render/meadow';
 import { Renderer, skyWash, sunAt, type Pick } from './render/renderer';
@@ -299,7 +300,8 @@ input.onClick = (x, y, button) => {
     }
     // A left click both walks you there and chooses the tile, so the tile
     // window follows wherever you are looking: on a pinned storey, there on that storey (`storeyview.ts`).
-    game.moveTo(pick.x, pick.y, false, false, pick.level);
+    // Not onto a pitched roof, which is clicked on to plan it, not to stand on (`pitchedRoofAt`).
+    if (pick.level === undefined || pick.level <= 0 || !pitchedRoofAt(game, pick.x, pick.y, pick.level)) game.moveTo(pick.x, pick.y, false, false, pick.level);
     ui.selectTile(pick);
   } else if (button === 2) {
     ui.selectTile(pick);
@@ -437,6 +439,12 @@ input.onKey = (code, ev) => {
   }
   if (code === 'Escape' && ui.placing) {
     ui.cancelPlacing();
+    return;
+  }
+  // Ctrl+Z, and ⌘Z on a Mac: your last plan taken back while the island keeps it (`planarea.ts`).
+  if ((ev.ctrlKey || ev.metaKey) && code === 'KeyZ' && ui.canUndoPlan()) {
+    ev.preventDefault();
+    void ui.undoPlan();
     return;
   }
   // The number keys: the selection window when it is looking at something,
