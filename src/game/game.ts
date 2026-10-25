@@ -35,7 +35,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { glassResync, underGlass } from './glasshouse';
-import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
+import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -180,8 +180,6 @@ export interface Deed {
   radius: number;
   /** Upgrades bought so far; level 1 is a freshly founded settlement. */
   level?: number;
-  /** Standing orders for every wildermon kept here. */
-  stance?: Stance;
   /**
    * Whether this one is yours.
    *
@@ -2741,26 +2739,6 @@ export class Game {
   /** Mind logic takes the edge off a difficult craft, though never more than half of it. */
   mindEase(): number {
     return mindEaseAt(this.skills.get('mind_logic'));
-  }
-
-  /** The orders every wildermon on the deed works under. */
-  deedStance(): Stance {
-    return this.deed?.stance ?? 'defensive';
-  }
-
-  /** Give every wildermon kept here the same orders. */
-  setDeedStance(stance: Stance): void {
-    if (!this.deed) return;
-    this.deed.stance = stance;
-    let n = 0;
-    for (const c of this.creatures.list.values()) {
-      if (c.mode !== 'deed') continue;
-      c.stance = stance;
-      c.enemy = null;
-      n++;
-    }
-    this.logMsg(`${this.deed.name} wildermon stance: ${stance}${n ? ` (${n} changed)` : ''}.`, 'wildermon');
-    this.events.emit('creature');
   }
 
   /** The best food you are carrying, for the eat button. */

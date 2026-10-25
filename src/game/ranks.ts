@@ -28,6 +28,7 @@
  */
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAX, WORK_COUNT_MAX, WORK_OPEN_MAX } from './noticeboard';
 import { cleanText, nameRefusal } from './playertext';
+import { VISIT_KEEP_DAYS } from './visitors';
 
 /**
  * What somebody is on a settlement: `founder` for whoever planted the stake,
@@ -61,7 +62,8 @@ export interface RankPower {
 }
 
 export type PowerId = 'shape' | 'stores' | 'locks' | 'gate' | 'served' | 'set_bauble' | 'replace_bauble'
-  | 'invite' | 'send_away' | 'set_ranks' | 'upgrade' | 'rename' | 'notices' | 'work' | 'keep_stores' | 'use_stores';
+  | 'invite' | 'send_away' | 'set_ranks' | 'upgrade' | 'rename' | 'notices' | 'work' | 'keep_stores' | 'use_stores'
+  | 'visitors' | 'orders';
 
 /**
  * How many takes and puts a settlement's store log keeps, newest first; an
@@ -159,6 +161,16 @@ export const RANK_POWERS: readonly RankPower[] = [
     id: 'use_stores', bit: 15, label: 'Use the settlement stores',
     may: 'take from and put into its settlement stores', mayNot: 'use its settlement stores',
     rule: 'Take from and put into every settlement store on it, padlocked or not, without the key. Nobody but its founder and the ranks holding this opens one, key or not.',
+  },
+  {
+    id: 'visitors', bit: 16, label: 'Visitor log',
+    may: 'read its visitor log', mayNot: 'read its visitor log',
+    rule: `Read who came onto it, not a citizen, by the hour: each visitor's first and last hour and hours seen, kept ${VISIT_KEEP_DAYS} days.`,
+  },
+  {
+    id: 'orders', bit: 17, label: 'Wildermon orders',
+    may: 'set the orders of its settlement wildermon', mayNot: 'set the orders of its settlement wildermon',
+    rule: 'Set the stance of every settlement worker on it at once (Passive, Defensive or Aggressive), and of every one assigned to it after.',
   },
 ];
 

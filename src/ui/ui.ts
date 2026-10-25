@@ -46,7 +46,7 @@ import { FIELD_GLASS_ONLY, glassDone, glazing, isGlasshouse, underGlass } from '
 import { GLASSHOUSE_GROWTH } from '../game/growth';
 import { crateLine, crateOf, CREATURE_CRATE, CREATURE_CRATE_ACTION_BY_ID, occupiedRefusal } from '../game/creaturecrate';
 import { graveLine, graveName, graveSays, graveUnits, isGrave } from '../game/graves';
-import { COMPANION_STANCES, isBaitFor, SPECIES, tameNeeds, STANCE_HINTS, STANCE_NAMES, STANCES, GATHER_VERB, GATHER_DO } from '../game/creatures';
+import { COMPANION_STANCES, isBaitFor, SPECIES, tameNeeds, STANCE_HINTS, STANCE_NAMES, GATHER_VERB, GATHER_DO } from '../game/creatures';
 import { itemDef, itemName, markOf, storedLine, type Item } from '../game/items';
 import { nearestSide } from '../render/renderer';
 import { crateHolds, crateKindOfItem, crateName, crateCapacity, crateUnits, rackSpotOf, subtileOf } from '../game/crates';
@@ -94,7 +94,8 @@ import { TilePanel } from './panels/tile';
 import type { DragPayload } from './dragdrop';
 import { WildermonPanel } from './panels/wildermon';
 import { StoresPanel } from './panels/stores';
-import { DeedPanel } from './panels/deed';
+import { DeedPanel, ORDER_HINTS } from './panels/deed';
+import { ORDER_STANCES } from '../game/visitors';
 import { DELIVER_REACH, settleLine } from '../game/noticeboard';
 import type { LedgerPanel } from './panels/ledger';
 import { JournalPanel, type JournalTab } from './panels/journal';
@@ -522,7 +523,7 @@ export class UI {
       (id) => this.cratePanel.open(id),
       (id) => this.cratePanel.openFurniture(id),
     );
-    const deedWin = this.windows.create({ id: 'deed', title: 'Settlement', x: 12, y: 56, width: 330, height: 440, anchor: 'tr', open: false });
+    const deedWin = this.windows.create({ id: 'deed', title: 'Settlement', x: 12, y: 56, width: 360, height: 480, anchor: 'tr', open: false });
     this.deedPanel = new DeedPanel(deedWin, game, (x, y) => {
       game.moveTo(x, y);
       game.logMsg(`Walking to (${x}, ${y}).`, 'info');
@@ -547,6 +548,13 @@ export class UI {
       dropWork: (founder, id) => this.island?.workDrop(founder, id) ?? Promise.resolve('Island only.'),
       deliver: (founder, id) => this.island?.workDeliver(founder, id) ?? Promise.resolve('Island only.'),
       storeLog: (founder) => this.island?.storeLog(founder) ?? Promise.resolve({ why: 'Island only.' }),
+      // Its orders, its workers by stance, its guards and who came onto it (`visitors.ts`).
+      watch: (founder) => this.island?.deedWatch(founder) ?? Promise.resolve('Island only.'),
+      orders: (founder, stance) => this.island?.deedOrders(founder, stance) ?? Promise.resolve('Island only.'),
+      care: () => {
+        this.wildermon.show('care');
+        pals.open();
+      },
     } : undefined);
     // Everybody, and what they are to you: who is waiting on an answer, who
     // you know and where they are, and what has been written.
@@ -2965,15 +2973,18 @@ export class UI {
       });
       for (const r of progress) children.push({ label: `${r.met ? '✓' : '✗'} ${r.label}`, disabled: true });
     }
-    // Standing orders for everything kept here.
-    const stance = g.deedStance();
+    // Standing orders for every worker on it, the island's (`rpc_deed_orders`), as the Settlement window's Workers tab sets them.
+    const stance = this.deedPanel.ordersKnown();
+    const ordersWhy = lacks(d, 'orders');
     children.push({
-      label: `Orders: ${STANCE_NAMES[stance]}`,
-      note: 'Applies to every wildermon on the settlement',
-      children: STANCES.map((st) => ({
+      label: stance ? `Orders: ${STANCE_NAMES[stance]}` : 'Orders',
+      note: 'Every settlement worker, and every one assigned after',
+      hint: ordersWhy ?? undefined,
+      disabled: !!ordersWhy,
+      children: ordersWhy ? undefined : ORDER_STANCES.map((st) => ({
         label: st === stance ? `${STANCE_NAMES[st]} (current)` : STANCE_NAMES[st],
-        note: st === 'aggressive' ? 'Attacks wild creatures inside the border' : st === 'defensive' ? 'Fights back when it or you are attacked' : 'Never fights',
-        onSelect: () => g.setDeedStance(st),
+        note: ORDER_HINTS[st],
+        onSelect: () => this.deedPanel.setOrders(st),
       })),
     });
     children.push(...this.deliverEntry());

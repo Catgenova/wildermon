@@ -17,6 +17,7 @@ import type { IslandCrate, IslandGround } from '../game/game';
 import { TALK_LOG } from '../game/events';
 import type { DeedRole, PowerId, RankDef } from '../game/ranks';
 import type { StoreLogEntry } from '../game/stores';
+import type { DeedWatch } from '../game/visitors';
 import type { Mark } from '../game/items';
 import type { PathBeat, PathSaid } from '../game/meditation';
 import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
@@ -3752,6 +3753,24 @@ export class Island {
     if (error) return { why: error.message };
     const said = data as { why?: string; log?: StoreLogEntry[] } | null;
     return said?.why ? { why: said.why } : { log: said?.log ?? [] };
+  }
+
+  /**
+   * A settlement's watch (`rpc_deed_watch`), for its founder and its
+   * citizens: its wildermon orders, its workers by stance, and -- for its
+   * founder and a rank holding Visitor log -- who came onto it.
+   */
+  async deedWatch(founder: string): Promise<DeedWatch | string> {
+    if (!this.info) return 'You are not on an island.';
+    const { data, error } = await supabase().rpc('rpc_deed_watch', { p_world: this.info.id, p_founder: founder });
+    if (error) return error.message;
+    const why = (data as { why?: string } | null)?.why;
+    return why ?? (data as DeedWatch);
+  }
+
+  /** Every settlement worker on a settlement set to one stance, and every one assigned after (`rpc_deed_orders`). */
+  async deedOrders(founder: string, stance: string): Promise<string | null> {
+    return this.door('rpc_deed_orders', { p_founder: founder, p_stance: stance });
   }
 
   /** Yes or no to an invitation of your own. */

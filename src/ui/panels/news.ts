@@ -80,12 +80,13 @@ import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
 import { GATHER_SKILL, LEARN_PACE as PACE_258, sparTaskSays } from '../../game/creatures';
-import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
+import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
 import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
+import { ORDER_STANCES, VISIT_KEEP_DAYS } from '../../game/visitors';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
 import { DYE_PANE_LITRES } from '../../game/dyestuffs';
 import { blockSays, reachSays } from '../../game/fight';
@@ -3784,6 +3785,17 @@ export const NEWS: News[] = [
     day: '2026-10-25',
     lines: () => [
       `Added: Wildermon window, Care tab, opened first. Needs, worst first: ${listed(NEED_KINDS.map((k) => NEED_LABEL[k].toLowerCase()))}; hurt under ${percent(HURT_AT)} health, hungry under ${percent(HUNGRY_AT)} fed, care under ${percent(CARE_WANTING_317)}. Fix per row: feed, brush, fit gear, pair. Herd: fed, rest, health and care meters; size, job, idle and needs filters. Bulk: Feed hungry, Brush, Assign selected. Beds by size against workers. Gear Fit and Remove in its menu.`,
+    ],
+  },
+  {
+    n: 320,
+    day: '2026-10-25',
+    lines: () => [
+      'Added: Settlement window tabs: Ranks, Workers, Visitors. Settlement tab: citizens, ranks, workers, unfed, specialties and visitors, each a click from its tab.',
+      `Added: Ranks tab: every rank's permissions on one grid, a column a rank, a row a permission; one click gives or takes. Was: open a rank, then tick.`,
+      `Added: Workers tab: each worker fed and unfed in (${timeWords(UPKEEP_FOR)} at work without a meal: task pace ${percent(UNFED_PACE)}), soonest first; each task's workers against ${SPECIALTY_AT} for a specialty (task speed +${percent(SPECIALTY_BONUS)}), with your wildermon that would add to it and Assign; guards; orders.`,
+      `Added: Visitors tab: everybody not a citizen who came onto the settlement, by the hour: last hour, hours seen; kept ${VISIT_KEEP_DAYS} days. Rank permission: ${POWER.visitors.label}.`,
+      `Fixed: settlement orders (${ORDER_STANCES.map((st) => STANCE_NAMES[st]).join(', ')}) changed nothing on the island. Now every settlement worker, the founder's and the citizens', and every one assigned after. Rank permission: ${POWER.orders.label}.`,
     ],
   },
 ];

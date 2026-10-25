@@ -186,6 +186,9 @@ import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import { NEED_KINDS, NEED_LABEL } from './care';
+import { ORDER_HINTS } from './deed';
+import { ORDER_STANCES, VISIT_KEEP_DAYS } from '../../game/visitors';
+import { STANCE_NAMES } from '../../game/creatures';
 import {
   ENCHANTMENTS, enchantFigure, enchantValue, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTERS_PLINTH, enchantChance, ENCHANTMENT_LIST, enchantPct, FROST_PACE, FROST_SECS, GRACE_TILES, NETMENDER_WEAR, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
 } from '../../game/enchant';
@@ -1075,7 +1078,7 @@ export function helpText(): string {
     </ul>
     <h4>Ranks and removal</h4>
     <ul>
-      <li>Set rank: Settlement window, <b>Citizens</b>. Founder: any rank to anybody else.
+      <li>Set rank: Settlement window, <b>Ranks</b> tab, <b>Citizens</b>. Founder: any rank to anybody else.
       <b>${POWER.set_ranks.label}</b>: to somebody ranked below you, a rank below your own. Nobody changes the founder's rank or their own.
       The ranked citizen is told the new rank's permissions.</li>
       <li><b>Send away</b> (Social window, beside a name): removes from the member list. Founder: anybody. <b>${POWER.send_away.label}</b>: anybody ranked below you.</li>
@@ -2302,7 +2305,7 @@ export function helpText(): string {
       <li><b>Ranks</b>: up to ${RANK_CAP} besides the founder. Each: a name of up to ${RANK_NAME_MAX} characters (unique in the settlement), a place in the list,
       and the permissions the founder ticked.</li>
       <li>The founder is no rank: holds every permission; cannot be demoted.</li>
-      <li>Settlement window, <b>Ranks</b>: highest first; click one for its permissions.</li>
+      <li>Settlement window, <b>Ranks</b> tab: every rank's permissions on one grid, a column a rank (highest first), a row a permission; tick a box: given.</li>
       <li>Founder only: <b>New rank</b> (added at the foot, no permissions), ▲ / ▼ move, <b>Rename</b>, ✕ delete, <b>Newcomers join as</b> (the invitation rank).
       A rank somebody holds cannot be deleted (re-rank them first), nor can the newcomers' rank.</li>
       <li>List order matters for <b>${POWER.send_away.label}</b> and <b>${POWER.set_ranks.label}</b>: a rank acts only on ranks below it.</li>
@@ -2311,7 +2314,7 @@ export function helpText(): string {
       ${RANK_POWERS.map((p) => `<tr><td><b>${p.label}</b></td><td>${p.rule}</td></tr>`).join('\n      ')}
     </table>
     <ul>
-      <li>Disbanding: founder only (frees the founder's wildermon and tips out the founder's settlement crate). Setting wildermon to work and standing orders: founder only.</li>
+      <li>Disbanding: founder only (frees the founder's wildermon and tips out the founder's settlement crate). Standing orders: founder and ranks with <b>${POWER.orders.label}</b>.</li>
       <li>Delivering to a settlement's work: every citizen, no permission needed (<b>The settlement window</b>).</li>
       <li>Starting ranks on every settlement (Mayor also holds <b>${POWER.notices.label}</b> and <b>${POWER.work.label}</b>):</li>
     </ul>
@@ -3022,8 +3025,12 @@ export function helpText(): string {
     <h4>Settlement menu and upgrades</h4>
     <ul>
       <li>Right-click any tile of your settlement: <b>settlement menu</b>: its wildermon, their <b>orders</b>, <b>upgrade</b>, rename, disband.</li>
-      <li>Orders apply to every settlement worker when something wild crosses the border: <b>aggressive</b> (drop work and attack), <b>defensive</b> (only answer what struck them or you),
-      <b>passive</b> (keep working).</li>
+      <li>Orders (settlement menu, or Settlement window, <b>Workers</b> tab): every settlement worker on it, the founder's and the citizens', and every one assigned after.
+      ${ORDER_STANCES.map((st) => `<b>${STANCE_NAMES[st]}</b>: ${ORDER_HINTS[st]}`).join(' ')} Guards and hunters fight at their trade whatever the orders.</li>
+      <li>Settlement window, <b>Workers</b> tab: each worker's upkeep (fed, time to unfed), each task's workers against ${SPECIALTY_AT} for a specialty, with your
+      wildermon that would add to it (<b>Assign</b>), guards and orders.</li>
+      <li>Settlement window, <b>Visitors</b> tab: everybody not a citizen who came onto it, by the hour: first and last hour and hours seen, kept ${VISIT_KEEP_DAYS} days.
+      Founder and ranks with <b>${POWER.visitors.label}</b>.</li>
       <li>Each upgrade: border +${DEED_RADIUS_PER_LEVEL} tiles; +${deedWorkersAt(2) - deedWorkersAt(1)} working wildermon. Requirements: ${UPGRADES_SAID}. In order; each level asks only
       the new thing. The menu ticks what you have. Max level ${MAX_DEED_LEVEL}.</li>
       <li>The totem grows a carved block per level, each with one lit rune: lit runes = level.</li>
