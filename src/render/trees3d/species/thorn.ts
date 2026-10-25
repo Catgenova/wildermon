@@ -27,16 +27,16 @@ const INK = hexOf(KIT_INK);
 /* ---- the thicket ------------------------------------------------------------------- */
 
 /** Height at the middle of its range, in the trees' units (tenths of a metre). */
-const HEIGHT = 9.2;
+const HEIGHT = 9.6;
 /** Its half-width against its height. */
-const SPREAD = 1.2;
+const SPREAD = 1.05;
 /** Stems out of the foot. */
 const STEMS = 8;
 /** Kinks up a stem. */
 const KINKS = 5;
 /** Masses of leaf, and each one's radius against the half-width. */
-const MASSES = 44;
-const MASS_R = 0.175;
+const MASSES = 54;
+const MASS_R = 0.19;
 /** A stem's radius at its foot and at its tip; a twig's. */
 const STEM_R: readonly [number, number] = [0.45, 0.15];
 const TWIG_R: readonly [number, number] = [0.12, 0.05];
@@ -134,7 +134,7 @@ export function growThorn(seed: number): Skeleton {
     if (clumps.length >= MASSES) break;
     const r = r0 * (0.8 + 0.4 * R());
     const c: V3 = [t.p[0], t.p[1], Math.max(r * 0.8, t.p[2])];
-    if (clumps.some((q) => len([q.c[0] - c[0], q.c[1] - c[1], (q.c[2] - c[2]) * 1.2]) < (q.r + r) * 0.6)) continue;
+    if (clumps.some((q) => len([q.c[0] - c[0], q.c[1] - c[1], (q.c[2] - c[2]) * 1.2]) < (q.r + r) * 0.5)) continue;
     clumps.push({ c, r, limb: t.limb, k: R(), out: clamp01(outOf(crown, c)), up: clamp01(c[2] / (H * 1.05)) });
   }
   return { limbs, clumps, crown, height: H, rune: null, hollow: null, leafReach: 1.2, foot: W * ACROSS * 0.45 };
@@ -148,7 +148,7 @@ const rampOf = ([lit, deep]: readonly [string, string]): Ramp => {
   return [mix(tone(d, -0.3), INK, 0.3), mix(tone(d, -0.14), INK, 0.1), d, mix(d, l, 0.45), mix(d, l, 0.75), l, tone(l, 0.1)];
 };
 /** The wood: its dark leaf most of the way to ink, in shade and in the light. */
-const barkOf = (dark: string): { shade: string; lit: string } => ({ shade: tone(mix(dark, INK, 0.7), -0.35), lit: mix(dulled(dark, 0.55), INK, 0.4) });
+const barkOf = (dark: string): { shade: string; lit: string } => ({ shade: tone(mix(dark, INK, 0.7), -0.35), lit: mix(dulled(dark, 0.5), INK, 0.55) });
 
 /* ---- painting ------------------------------------------------------------------------- */
 
@@ -157,6 +157,8 @@ interface Seg { qa: Pt; qb: Pt; w: number; L: Limb; d: number }
 /** How many depth slices the wood is laid in among the leaf, and the leaf in. */
 const SLICES = 4;
 const LAYERS = 3;
+/** How far back among the leaf the wood is laid, against the bush's half-width. */
+const WOOD_BACK = 0.4;
 /** Spines: how far apart along a twig, how long, at what angle off it; in pixels at zoom one. */
 const SPINE_GAP = 2.4;
 const SPINE_LEN = 1.2;
@@ -176,7 +178,7 @@ function paintThorn(g: Ctx, job: BushJob): void {
   const bark = barkOf(job.def.foliage[1]);
   const l = clamp01((light.ambient + light.direct * 0.55 - 0.22) / 0.82);
   const woodMid = hexOf(mixRgb(hex(bark.shade), hex(bark.lit), l * 0.55));
-  const woodLit = rgb(mixRgb(hex(bark.shade), hex(bark.lit), light.night ? l * 0.6 : Math.min(1, l * 1.1)));
+  const woodLit = rgb(mixRgb(hex(bark.shade), hex(bark.lit), light.night ? l * 0.5 : l * 0.85));
   const inkCss = rgb(KIT_INK);
   const spineLit = tone(bark.lit, 0.12);
 
@@ -290,8 +292,9 @@ function paintThorn(g: Ctx, job: BushJob): void {
   const items: Item[] = [];
   slices.forEach((sl, i) => {
     if (!sl.any) return;
+    // Set back among the leaf: a mass on the outside of the bush covers the wood it grows on, and only the wood under it and between shows.
     items.push({
-      d: sl.lo,
+      d: sl.lo - (masses.length ? sk.crown.r * WOOD_BACK : 0),
       draw: () => {
         g.lineCap = 'round';
         g.lineJoin = 'round';
@@ -430,7 +433,8 @@ function paintLayer(g: Ctx, job: BushJob, layer: Mass[], sun: { sx: number; sy: 
     at(b * 8).addPath(m.path);
     planeOf(at(b * 8 + 1), lumps, -sun.sx * 0.28 * off, -sun.sy * 0.28 * off + 0.18, 0.66);
     planeOf(at(b * 8 + 2), lumps, sun.sx * 0.12 * off, sun.sy * 0.12 * off - 0.08, 0.7);
-    if (!light.night || L > 0.6) planeOf(at(b * 8 + 3), lumps, sun.sx * 0.3 * off, sun.sy * 0.3 * off - 0.2, 0.42);
+    // The lit plane only where the sun reaches round the bush.
+    if ((!light.night || L > 0.6) && wrap > 0.45) planeOf(at(b * 8 + 3), lumps, sun.sx * 0.3 * off, sun.sy * 0.3 * off - 0.2, 0.42);
   }
   g.fillStyle = rgb(mixRgb(hex(ramp[0]), KIT_INK, 0.45), 0.9);
   g.fill(rims);
@@ -448,7 +452,7 @@ function extrasOf(lumps: Lump[], spring: boolean, at: Pt[]): void {
   for (const u of lumps) {
     const R = mulberry32(u.seed + 99);
     for (let i = 0; i < 3; i++) {
-      if (R() < (spring ? 0.4 : 0.5)) continue;
+      if (R() < (spring ? 0.4 : 0.62)) continue;
       const a = spring ? -Math.PI / 2 + (i - 1) * 1.1 + (R() - 0.5) * 0.6 : Math.PI / 2 + (i - 1) * 0.9 + (R() - 0.5) * 0.5;
       const d = spring ? 0.25 + 0.4 * R() : 0.55 + 0.2 * R();
       at.push([u.x + Math.cos(a) * u.rx * d, u.y + Math.sin(a) * u.ry * d]);
