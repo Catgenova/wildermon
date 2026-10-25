@@ -33,7 +33,8 @@ revoke all on table private.door_guard from public, anon, authenticated;
 /**
  * Put every `door_guard` line at the top of its door, in `ord` order: the first statements after the body's
  * own `begin` (a line that is that word alone, after a `declare` or none). A door whose top is already
- * exactly those lines is left alone. Every overload of a name is a door. Returns how many it rewrote.
+ * exactly those lines is left alone; one that is not PL/pgSQL, or has no such `begin`, is warned of and left.
+ * Every overload of a name is a door. Returns how many it rewrote.
  */
 create or replace function private.guard_doors() returns int language plpgsql as $fn$
 declare f record; d text; v_head int; v_body text; v_pre text; v_lines text; v_rest text; v_line text; v_n int := 0;
@@ -47,17 +48,19 @@ begin
       join pg_language l on l.oid = p.prolang
      group by p.oid, p.proname, l.lanname
   loop
-    if f.lanname <> 'plpgsql' then raise exception 'guard_doors: % is %', f.proname, f.lanname; end if;
+    -- A door the lines cannot go into is said, and left: the tests that ask for each line find it missing.
+    if f.lanname <> 'plpgsql' then raise warning 'guard_doors: % is %', f.proname, f.lanname; continue; end if;
     d := pg_get_functiondef(f.oid);
     v_head := position(E'AS $function$\n' in d);
-    if v_head = 0 then raise exception 'guard_doors: % has no $function$ body', f.proname; end if;
+    if v_head = 0 then raise warning 'guard_doors: % has no $function$ body', f.proname; continue; end if;
     v_head := v_head + length(E'AS $function$\n');
     v_body := substr(d, v_head);
     if v_body like E'begin\n%' then v_pre := 'begin';
     elsif v_body ~ '^declare\M' and position(E'\nbegin\n' in v_body) > 0 then
       v_pre := substr(v_body, 1, position(E'\nbegin\n' in v_body) + length('begin'));
     else
-      raise exception 'guard_doors: % has no begin on a line of its own', f.proname;
+      raise warning 'guard_doors: % has no begin on a line of its own', f.proname;
+      continue;
     end if;
     v_lines := f.lines;
     if substr(v_body, length(v_pre) + 1, length(v_lines)) = v_lines then continue; end if;

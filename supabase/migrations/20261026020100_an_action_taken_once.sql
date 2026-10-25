@@ -76,6 +76,7 @@ begin
   insert into private.door_guard (door, ord, line)
   select distinct p.proname, 20, 'perform private.once();'
     from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace and ns.nspname = 'public'
+    join pg_language l on l.oid = p.prolang and l.lanname = 'plpgsql'
    where p.proname like 'rpc\_%' and p.prokind = 'f'
      and private.pace_class(p.proname) in ('act', 'deal', 'land')
   on conflict do nothing;

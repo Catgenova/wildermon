@@ -11,7 +11,8 @@
  *   * no job pointed at a tile reaches past `reach_most`;
  *   * the ground, the creatures and the springs are read no further round you than `read_range_most`;
  *   * an island is founded with its spawn on it and a name of `island_name_most` at most;
- *   * no price, order or deal is under nought or over `price_most` silver.
+ *   * no price, order or deal is under nought or over `price_most` silver;
+ *   * and no action is asked for by an id longer than any there is.
  *
  * Makes its own island and rolls it back.
  */
@@ -102,6 +103,7 @@ const refused: Array<[string, string, string]> = [
   ['rpc_act', `rpc_act($1, 'plan_aqueduct', ${lit({ kind: 'tile', x: AT, y: AT, head: [AT] })})`, 'Bad request: rpc_act p_target.head: too few.'],
   ['rpc_act', `rpc_act($1, 'bind_wound', ${lit({ kind: 'person', uid: 'somebody' })})`, 'Bad request: rpc_act p_target.uid: not int or uuid.'],
   ['rpc_act', `rpc_act($1, 'dig', '[1, 2]'::jsonb)`, 'Bad request: rpc_act p_target: want an object.'],
+  ['rpc_act', `rpc_act($1, '${'x'.repeat(65)}', '{}'::jsonb)`, 'Bad request: rpc_act p_action: too long.'],
   ['rpc_plan_hidden_wall', `rpc_plan_hidden_wall($1, ${lit({ kind: 'tile', x: AT, y: AT, side: { n: 1 } })})`, 'Bad request: rpc_plan_hidden_wall p_target.side: want text.'],
   ['rpc_cast_spell', `rpc_cast_spell($1, 1, ${lit({ kind: 'player', uid: 7 })})`, 'Bad request: rpc_cast_spell p_target.uid: want text.'],
   ['rpc_spell', `rpc_spell($1, 'ember', ${lit({ id: 'one' })})`, 'Bad request: rpc_spell p_target.id: want a number.'],

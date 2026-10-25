@@ -16,6 +16,7 @@
 --     island, settling every crop and creature on it in one call. Now `private.read_range_most()` tiles.
 --   * `rpc_found` put the spawn wherever it was told, on the island or off it, and a name past the 40
 --     characters `world` holds failed on its check constraint; both are refused at the door now.
+--   * `rpc_act` said an action it did not know back into the log, at whatever length it was asked for.
 --   * `rpc_deal` kept a negative price; `rpc_price`, `rpc_order` and `rpc_deal` any price at all. Now no
 --     price is under nought or over `private.price_most()` silver.
 --
@@ -30,6 +31,8 @@ create or replace function private.reach_most() returns int language sql immutab
 create or replace function private.read_range_most() returns double precision language sql immutable as $fn$ select 64::double precision $fn$;
 /** The most silver a price, an order or a deal asks or offers. */
 create or replace function private.price_most() returns bigint language sql immutable as $fn$ select 1000000000::bigint $fn$;
+/** The longest action id asked for: every id in `action_def` is shorter, and a refusal says the id back in the log. */
+create or replace function private.action_name_most() returns int language sql immutable as $fn$ select 64 $fn$;
 /** The longest name an island is founded with: `world.name`'s own check. */
 create or replace function private.island_name_most() returns int language sql immutable as $fn$ select 40 $fn$;
 
@@ -76,6 +79,7 @@ begin
 end $fn$;
 
 revoke all on function private.reach_most(), private.read_range_most(), private.price_most(), private.island_name_most(),
+  private.action_name_most(),
   private.set_down_job(text), private.bad_request(text, text), private.reach_refusal(uuid, uuid, text, jsonb)
   from public, anon, authenticated;
 
@@ -89,7 +93,8 @@ insert into private.door_guard (door, ord, line) values
   ('rpc_found', 31, 'if char_length(p_name) > private.island_name_most() then perform private.bad_request(''rpc_found'', ''p_name: too long''); end if;'),
   ('rpc_deal', 30, 'if coalesce(p_want, 0) not between 0 and private.price_most() or coalesce(p_give, 0) not between 0 and private.price_most() then perform private.bad_request(''rpc_deal'', ''p_want, p_give: out of range''); end if;'),
   ('rpc_price', 30, 'if coalesce(p_silver, 0) > private.price_most() then perform private.bad_request(''rpc_price'', ''p_silver: out of range''); end if;'),
-  ('rpc_order', 30, 'if coalesce(p_price, 0) > private.price_most() then perform private.bad_request(''rpc_order'', ''p_price: out of range''); end if;')
+  ('rpc_order', 30, 'if coalesce(p_price, 0) > private.price_most() then perform private.bad_request(''rpc_order'', ''p_price: out of range''); end if;'),
+  ('rpc_act', 30, 'if char_length(p_action) > private.action_name_most() then perform private.bad_request(''rpc_act'', ''p_action: too long''); end if;')
 on conflict do nothing;
 
 select private.lock_doors();
