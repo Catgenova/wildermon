@@ -1,4 +1,6 @@
 import type { Bill } from '../game/building';
+import { drawsFast } from '../game/settings';
+import { onPhone } from '../engine/device';
 import { buildRow } from './buildCounts';
 import type { Game } from '../game/game';
 import { EMOTES } from '../game/emotes';
@@ -445,7 +447,7 @@ export class UI {
     }
     this.windows.onSeams = (seams, joins, fresh, shown) => this.art.seams(seams, joins, fresh, shown);
     // The life on the frames (`src/ui/runecut-life.ts`): wanted unless turned off, with Fast graphics or on a phone's screen; and what the island says to it.
-    this.art.lifeOn = () => game.settings.uiLife && game.settings.graphics !== 'fast' && !root.classList.contains('narrow');
+    this.art.lifeOn = () => game.settings.uiLife && !drawsFast(game.settings, onPhone()) && !root.classList.contains('narrow');
     this.art.lifeWorld = () => {
       const a = game.action;
       return {

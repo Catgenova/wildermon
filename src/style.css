@@ -25,6 +25,24 @@
 }
 
 /*
+ * Less motion (Settings, Motion; or the system's prefers-reduced-motion while
+ * the setting follows it): `data-motion="less"` on <html>, from
+ * `src/ui/theme.ts`. Every transition and animation over at once, a single
+ * pass, so nothing slides, bobs, spins or pulses; the end state still lands
+ * and `transitionend` and `animationend` still fire.
+ */
+:root[data-motion='less'] *,
+:root[data-motion='less'] *::before,
+:root[data-motion='less'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0s !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
+
+/*
  * Runecut: the stone of the runestones, the plinth, the rune gate and the rune
  * lantern, as the interface. Each value is traced to the colour it is drawn
  * with in src/render, so a window and a stone beside it are the same stone.
@@ -916,10 +934,9 @@ button.goal-row:focus-visible {
   gap: 4px 8px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .goal-fold {
-    transition: none;
-  }
+/* Less motion (Settings, Motion; or the system's prefers-reduced-motion): `data-motion` on <html>. */
+:root[data-motion='less'] .goal-fold {
+  transition: none;
 }
 
 .hud-companion {
@@ -2434,6 +2451,10 @@ button.goal-row:focus-visible {
   color: var(--ui-dim);
 }
 
+/* Back to a row's own keys: only while they are changed. */
+.keys-default { min-width: 0; padding-inline: 6px; }
+.keys-default[hidden] { display: none; }
+
 .keys-key.keys-listening {
   border-color: var(--ui-accent);
   color: var(--ui-accent);
@@ -2489,6 +2510,14 @@ button.goal-row:focus-visible {
 
 .setting-look > span { flex: 1 1 auto; }
 .setting-look > .tb-btn { flex: 0 0 auto; }
+
+/* Text size presets: the line over the full width, the buttons under it, wrapping on a narrow window. */
+.setting-presets { flex-wrap: wrap; row-gap: 4px; }
+.setting-presets > span:first-child { flex: 1 1 100%; }
+.setting-preset-btns { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* A key named in a setting's words, as it is bound now. */
+.setting-kbd { font: inherit; font-weight: 600; }
 
 /*
  * A row with a slider or a list: its name and the control on one line, what
@@ -5047,12 +5076,13 @@ button.goal-row:focus-visible {
   grid-template-columns: 1fr auto auto;
 }
 
+/* Away: a hollow ring; ashore: a filled dot. The shape says it in every palette, not the colour alone. */
 .social-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--t-off, #4b453a);
-  box-shadow: inset 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.4));
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--t-off, #8a8170);
 }
 
 .social-on {
@@ -6210,9 +6240,8 @@ button.goal-row:focus-visible {
   to { opacity: 1; transform: none; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .notice { animation: none; transition: none; }
-}
+/* Less motion (Settings, Motion; or the system's prefers-reduced-motion): `data-motion` on <html>. */
+:root[data-motion='less'] .notice { animation: none; transition: none; }
 
 /*
  * The job in hand as a ring round the mouse pointer (src/ui/pointerring.ts).
@@ -6334,10 +6363,9 @@ button.goal-row:focus-visible {
   transition: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .deed-banner-plate { animation: none; transition: none; }
-  .pointer-ring-done { transition: none; }
-}
+/* Less motion (Settings, Motion; or the system's prefers-reduced-motion): `data-motion` on <html>. */
+:root[data-motion='less'] .deed-banner-plate { animation: none; transition: none; }
+:root[data-motion='less'] .pointer-ring-done { transition: none; }
 
 /* Market prices: a row a thing, its month of sales as a bar a day. */
 .price-row {
@@ -6469,10 +6497,9 @@ button.goal-row:focus-visible {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  [data-ui='runecut'] .win-front .win-rune .rc-rune-light {
-    animation: none;
-  }
+/* Less motion (Settings, Motion; or the system's prefers-reduced-motion): `data-motion` on <html>. */
+:root[data-motion='less'][data-ui='runecut'] .win-front .win-rune .rc-rune-light {
+  animation: none;
 }
 
 [data-ui='runecut'] body {
@@ -8732,11 +8759,9 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 .hp-narrow .hp-empty-in { font-size: 15px; }
 .hp-narrow .hp-empty-rate { display: none; }
 
-@media (prefers-reduced-motion: reduce) {
-  .hp-heart > svg, .hp-heart-wave, .hp-heart-low .hp-heart-rim, .hp-flinch, .hp-pin-ring, .hp-wound-dot, .hp-wound-seen,
-  .hp-treat-opening, .hp-burst, .hp-empty-mark {
-    animation: none !important;
-  }
+/* Less motion (Settings, Motion; or the system's prefers-reduced-motion): `data-motion` on <html>. */
+:root[data-motion='less'] .hp-heart > svg, :root[data-motion='less'] .hp-heart-wave, :root[data-motion='less'] .hp-heart-low .hp-heart-rim, :root[data-motion='less'] .hp-flinch, :root[data-motion='less'] .hp-pin-ring, :root[data-motion='less'] .hp-wound-dot, :root[data-motion='less'] .hp-wound-seen, :root[data-motion='less'] .hp-treat-opening, :root[data-motion='less'] .hp-burst, :root[data-motion='less'] .hp-empty-mark {
+  animation: none !important;
 }
 
 /* Equipment ------------------------------------------------------------------------------------- */
@@ -9231,9 +9256,8 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 .eq-narrow .eq-top { grid-template-columns: minmax(0, 1fr); }
 .eq-narrow .eq-heads { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
-@media (prefers-reduced-motion: reduce) {
-  .eq-seat, .eq-seat::after, .eq-float, .eq-pane { animation: none !important; }
-}
+/* Less motion (Settings, Motion; or the system's prefers-reduced-motion): `data-motion` on <html>. */
+:root[data-motion='less'] .eq-seat, :root[data-motion='less'] .eq-seat::after, :root[data-motion='less'] .eq-float, :root[data-motion='less'] .eq-pane { animation: none !important; }
 .eq-narrow .eq-head { padding-inline: 12px; }
 .eq-narrow .eq-head-label { white-space: normal; text-align: center; line-height: 1.15; }
 
@@ -9273,9 +9297,8 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 }
 .eq-narrow .eq-head { align-content: start; }
 .eq-narrow .eq-head-label { min-height: 2.3em; }
-@media (prefers-reduced-motion: reduce) {
-  .eq-upgrade .eq-up { animation: none; }
-}
+/* Less motion (Settings, Motion; or the system's prefers-reduced-motion): `data-motion` on <html>. */
+:root[data-motion='less'] .eq-upgrade .eq-up { animation: none; }
 
 /* A hide and what a blow does against it, kept in one piece. */
 .eq-hides { display: flex; flex-wrap: wrap; gap: 0 10px; color: var(--eq-dim); }

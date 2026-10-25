@@ -1,5 +1,8 @@
 import type { ActionDef, Target } from '../../game/actions';
 import type { Game } from '../../game/game';
+import { lessMotion } from '../../engine/motion';
+import { drawsFast } from '../../game/settings';
+import { onPhone } from '../../engine/device';
 import { itemDef, type Item } from '../../game/items';
 import { dropOrder, moveOrder, seenOf, type SeenJob } from '../../game/jobqueue';
 import { INGOT_LUMPS, ingotOf, METAL_BY_LUMP } from '../../game/metal';
@@ -12,7 +15,7 @@ import { uiPoint } from '../screen';
 /** Where the list is kept folded or open, in this browser. */
 const FOLD_KEY = 'wurm-iso-queue-folded';
 const lower = (id: string): string => itemDef(id).name.toLowerCase();
-const reduced = (): boolean => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+const reduced = lessMotion;
 
 /** Seconds as the crafting window says a job's time: "40 s", "3 min 20 s", "1 h 5 min". */
 export function clockSaid(secs: number): string {
@@ -227,7 +230,7 @@ export class QueueView {
     let k = 0;
     if (a) rows.push(this.row(a.def, Math.max(1, a.left ?? 1), this.uses[k++], -1, a.goes));
     q.forEach((j, i) => rows.push(this.row(j.def, Math.max(1, j.goes ?? 1), this.uses[k++], i)));
-    this.list.classList.toggle('cq-anim', !reduced() && this.game.settings.graphics !== 'fast');
+    this.list.classList.toggle('cq-anim', !reduced() && !drawsFast(this.game.settings, onPhone()));
     this.list.replaceChildren(...rows);
     const back = this.refocus;
     this.refocus = null;

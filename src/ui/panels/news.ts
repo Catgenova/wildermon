@@ -58,7 +58,7 @@ import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
 import { LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { FLOWER_COLOURS } from '../../render/flowers';
-import { BUSH3D_SPECIES, SUN_STEPS, SWAY_MS } from '../../render/trees3d';
+import { BUSH3D_SPECIES, SUN_STEPS, SWAY_MS, TREE3D_SPECIES } from '../../render/trees3d';
 import { TURNS } from '../../render/view';
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
@@ -141,7 +141,7 @@ import { FED_SAID, SOUL_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import { RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
 import { CARRY_BASE, CARRY_PER_STRENGTH, DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, deedWorkersAt, goSeconds, MAX_DEED_LEVEL, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
-import { UI_SIZE_MAX, UI_SIZE_MIN } from '../screen';
+import { UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS } from '../screen';
 import { defaultKey } from '../../game/keybinds';
 import { guideEntries, guidePages } from '../../game/guide';
 import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY } from '../../game/keeper';
@@ -3846,6 +3846,18 @@ export const NEWS: News[] = [
       'Changed: loading: sign-in, island ask and map chart side by side; pack and roster side by side.',
       `Changed: coming back after the live connection was cut: socket reopened at once (was: after its backoff, up to ${dur(10)}); channels rejoined, no rejoin of the island; only what changed read: land history, lines, pack, roster.`,
       `Added: live connection cut while in front: picked up within ${CUT_POLL_MS} ms. Was: changes missed until the ${dur(RECONCILE_EVERY)} reconcile. "${RECONNECTING}" after ${dur(CUT_QUIET_MS / 1000)}; tried again after ${dur(RECONNECT_RETRY_MS / 1000)}, doubling to ${dur(RECONNECT_RETRY_MOST_MS / 1000)} (was every ${dur(3)}).`,
+    ],
+  },
+  {
+    n: 324,
+    day: '2026-10-25',
+    lines: () => [
+      `Added: Settings, Graphics: Low-end. Fast, plus solid trees (${TREE3D_SPECIES.size} kinds) and bushes (${BUSH3D_SPECIES.size} kinds) flat, frame limit ${LOW_POWER_FPS}/s, ${FAST_DPR} pixel per screen pixel, no wakes or work dust. Phone Low power: the same.`,
+      'Added: Settings, Motion: System, Reduced, Full. Reduced: no tree, bush or flower sway; no marker bob or pulse; steady firelight; interface transitions and animations instant.',
+      `Added: Settings, Text size presets: ${UI_SIZE_PRESETS.map(([v, name]) => `${name} ${Math.round(v * 100)}%`).join(', ')}.`,
+      'Added: non-colour marks: hostile marker stacked while it hunts you; station ring fuel arc dashed while cold; Social ● ashore, ○ away.',
+      `Changed: Market key: ${keyName(BIND_BY_ID.get('win_market')?.keys[0] ?? '')} (was U, shared with Stores; U opened Stores only).`,
+      'Added: Settings, Keys: ↺ per row, restores its default keys (Esc, Backspace, Delete included). Stop cancels placing on its bound key. Key names in Settings, status panel and shopping list: as bound.',
     ],
   },
 ];

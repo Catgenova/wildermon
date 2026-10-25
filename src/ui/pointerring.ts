@@ -1,5 +1,8 @@
 import type { Game } from '../game/game';
 import { uiPoint } from './screen';
+import { lessMotion } from '../engine/motion';
+import { drawsFast } from '../game/settings';
+import { onPhone } from '../engine/device';
 
 /**
  * The job in hand, as a ring round the mouse pointer.
@@ -27,7 +30,7 @@ export const RING_FADE_MS = 350;
 const FIGHT_JOBS = new Set(['attack_creature', 'shoot_creature']);
 
 const SVG = 'http://www.w3.org/2000/svg';
-const reduced = (): boolean => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+const reduced = lessMotion;
 
 export class PointerRing {
   private readonly el: HTMLDivElement;
@@ -107,7 +110,7 @@ export class PointerRing {
       this.draw(Math.max(0, Math.min(1, a.elapsed / a.duration)));
     } else if (this.state === 'on') {
       // Over: full, then gone. At once with the setting off, or with less motion asked for.
-      const still = !wanted || reduced() || this.game.settings.graphics === 'fast';
+      const still = !wanted || reduced() || drawsFast(this.game.settings, onPhone());
       this.draw(1);
       this.state = still ? 'off' : 'fading';
       this.fadeEnds = now + RING_FADE_MS;

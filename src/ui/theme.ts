@@ -1,6 +1,7 @@
 import { GLYPHS } from '../render/runestone';
 import { WORLD_INK } from '../render/inks';
 import type { Settings, UiColours, UiFrames, UiLight, UiStyle } from '../game/settings';
+import { lessMotion, setMotion } from '../engine/motion';
 
 /**
  * The interface's look: Runecut or Classic, and Runecut's stone by day or
@@ -8,7 +9,8 @@ import type { Settings, UiColours, UiFrames, UiLight, UiStyle } from '../game/se
  *
  * Everything that changes is in `src/style.css`, keyed on attributes on
  * <html>: `data-ui` (`runecut` or `classic`), `data-rc` (`day` or `night`),
- * and `data-cb` (`rg` or `by`, absent for standard colours).
+ * `data-cb` (`rg` or `by`, absent for standard colours), and `data-motion`
+ * (`less` or `full`: Settings, Motion, or the system's `prefers-reduced-motion`).
  * This only decides which, so a look is one attribute write and the browser's
  * own restyle rather than anything walking the windows.
  */
@@ -76,14 +78,17 @@ export function lightFor(light: UiLight, night: boolean, local = false): 'day' |
  * frame, which is how `clock` follows the island across dusk and dawn, and
  * `local` this computer across 20:00 and 07:00.
  */
-export function applyLook(settings: Pick<Settings, 'uiStyle' | 'uiLight' | 'uiFrames' | 'uiColours'>, night: boolean): void {
+export function applyLook(settings: Pick<Settings, 'uiStyle' | 'uiLight' | 'uiFrames' | 'uiColours' | 'motion'>, night: boolean): void {
   const ui: UiStyle = settings.uiStyle;
   const rc = lightFor(settings.uiLight, night, settings.uiLight === 'local' && localNightNow());
   const cb = settings.uiColours;
-  const key = `${ui}/${rc}/${settings.uiFrames}/${cb}`;
+  setMotion(settings.motion);
+  const motion = lessMotion() ? 'less' : 'full';
+  const key = `${ui}/${rc}/${settings.uiFrames}/${cb}/${motion}`;
   if (key === shown) return;
   shown = key;
   const root = document.documentElement;
+  root.dataset.motion = motion;
   root.dataset.ui = ui;
   root.dataset.rc = rc;
   if (cb === 'standard') delete root.dataset.cb;

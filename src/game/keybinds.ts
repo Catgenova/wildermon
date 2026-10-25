@@ -83,7 +83,8 @@ export const BINDS: BindDef[] = [
   // F3 is the browser's own Find in every one of them, and F4 is nobody's.
   { id: 'win_guide', label: 'Field guide', hint: 'Journal, Field guide tab: every creature kind; seen, tamed, bred; habitat and yields.', group: 'Windows', keys: ['F4'] },
   { id: 'win_deed', label: 'Settlement', hint: 'Settlement overview.', group: 'Windows', keys: ['KeyN'] },
-  { id: 'win_market', label: 'Market', hint: 'Stalls and buy orders, your orders, deals, stall sales, parcels in the post.', group: 'Windows', keys: ['KeyU'] },
+  // U is the Stores': the two shared it, and a key does one thing, so the Market had none.
+  { id: 'win_market', label: 'Market', hint: 'Stalls and buy orders, your orders, deals, stall sales, parcels in the post.', group: 'Windows', keys: ['BracketRight'] },
   { id: 'win_social', label: 'Social', hint: 'Requests, contacts and locations, letters.', group: 'Windows', keys: ['KeyY'] },
   // Every letter is spoken for, and no browser takes F2 for itself.
   { id: 'win_boards', label: 'Leaderboards', hint: 'Journal, Leaderboards tab: top skills, best-bred wildermon, biggest settlements.', group: 'Windows', keys: ['F2'] },
@@ -131,6 +132,15 @@ export const BINDS: BindDef[] = [
 export const BIND_BY_ID = new Map(BINDS.map((b) => [b.id, b]));
 /** The key a thing answers to out of the box, for a line said before anybody could have changed it. */
 export const defaultKey = (id: string): string => keyName(BIND_BY_ID.get(id)?.keys[0] ?? '');
+
+/** The table in use on this page, once there is one (`Keybinds`). */
+let live: Keybinds | null = null;
+/** The key a thing answers to now: the first of its keys in the table in use, or out of the box before there is one; "unbound" for none. */
+export const boundKey = (id: string): string => {
+  if (!live) return defaultKey(id) || 'unbound';
+  const code = live.codes(id)[0];
+  return code ? keyName(code) : 'unbound';
+};
 /** The most keys any one thing answers to. */
 export const MAX_KEYS = 2;
 
@@ -198,6 +208,7 @@ export class Keybinds {
   constructor() {
     this.reset(false);
     this.load();
+    live = this;
   }
 
   /** The codes one thing answers to, in the order they are shown. */
@@ -255,6 +266,36 @@ export class Keybinds {
     this.onChange?.();
   }
 
+  /**
+   * One thing back to how it came out of the box, taking its keys off whatever
+   * has them now. The way back to Escape, Backspace and Delete, which the Keys
+   * tab cannot be pressed with while it listens.
+   */
+  restore(id: string): { took: string[] } {
+    const def = BIND_BY_ID.get(id);
+    if (!def) return { took: [] };
+    const took: string[] = [];
+    for (const code of def.keys) {
+      const had = this.byCode.get(code);
+      if (had && had !== id) {
+        this.setCodes(had, this.codes(had).filter((c) => c !== code));
+        took.push(had);
+      }
+    }
+    this.setCodes(id, def.keys.slice());
+    this.save();
+    this.onChange?.();
+    return { took };
+  }
+
+  /** Whether one thing answers to other keys than it came with. */
+  isChanged(id: string): boolean {
+    const def = BIND_BY_ID.get(id);
+    if (!def) return false;
+    const mine = this.codes(id);
+    return mine.length !== def.keys.length || mine.some((c, i) => c !== def.keys[i]);
+  }
+
   /** Back to how it came out of the box. */
   reset(tell = true): void {
     this.keys.clear();
@@ -268,12 +309,7 @@ export class Keybinds {
 
   /** Whether anything at all has been changed from the defaults. */
   get changed(): boolean {
-    for (const b of BINDS) {
-      const mine = this.codes(b.id);
-      if (mine.length !== b.keys.length) return true;
-      for (let i = 0; i < mine.length; i++) if (mine[i] !== b.keys[i]) return true;
-    }
-    return false;
+    return BINDS.some((b) => this.isChanged(b.id));
   }
 
   private setCodes(id: string, codes: string[]): void {
@@ -316,6 +352,22 @@ export class Keybinds {
       const codes = saved[b.id];
       if (!Array.isArray(codes)) continue;
       this.keys.set(b.id, codes.filter((c) => typeof c === 'string' && !keyReserved(c)).slice(0, MAX_KEYS));
+    }
+    /*
+     * A key does one thing. A table kept with a key under two things -- the
+     * Market and the Stores both had U -- leaves it with the later, which is
+     * the one it reached; the earlier, left with no key, takes its own from
+     * out of the box where nothing else has it.
+     */
+    const owner = new Map<string, string>();
+    for (const b of BINDS) for (const c of this.codes(b.id)) owner.set(c, b.id);
+    for (const b of BINDS) {
+      const mine = this.codes(b.id);
+      const kept = mine.filter((c) => owner.get(c) === b.id);
+      if (kept.length === mine.length) continue;
+      const back = kept.length ? kept : b.keys.filter((c) => !owner.has(c));
+      for (const c of back) owner.set(c, b.id);
+      this.keys.set(b.id, back.slice(0, MAX_KEYS));
     }
     this.reindex();
   }

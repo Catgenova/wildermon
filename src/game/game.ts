@@ -3,7 +3,7 @@ import { DAMAGE_MAX, PLACED_REACH, QL_TOP, wearPerUse, wornShare } from './limit
 import { generateWorld } from '../world/generate';
 import { EMOTES, EMOTE_BY_ID } from './emotes';
 import { deedMay, lacks, type DeedRole } from './ranks';
-import { defaultKey } from './keybinds';
+import { boundKey } from './keybinds';
 import { capital, listed, percent } from './words';
 import { brazierBurn, shoreNear } from './placeables';
 import { dyeChoice, dyeEnough, pickDyeAsks, sourceSays, type DyeSource } from './dyes';
@@ -1271,7 +1271,7 @@ export class Game {
     // body on the first streaming pass, and the rest waits to be walked to.
     game.creatures.stockIsland(game);
     game.logMsg('Welcome to Wildermon.', 'system');
-    game.logMsg(`Left-click: walk. Right-click a tile: actions. WASD or arrows: pan the view. Scroll: zoom. Settings (O), Keys tab: rebind. ${defaultKey('win_help')}: help.`, 'system');
+    game.logMsg(`Left-click: walk. Right-click a tile: actions. ${['pan_up', 'pan_left', 'pan_down', 'pan_right'].map(boundKey).join(' ')}: pan the view. Scroll: zoom. Settings (${boundKey('win_settings')}), Keys tab: rebind. ${boundKey('win_help')}: help.`, 'system');
     return game;
   }
 
@@ -10531,7 +10531,7 @@ export class Game {
         break;
       case 'help':
         this.logMsg(`Commands: /name <name>, /where, ${EMOTES.map((e) => `/${e.id}`).join(', ')}, /help.`
-          + ` Controls: ${defaultKey('win_help')}.`, 'system');
+          + ` Controls: ${boundKey('win_help')}.`, 'system');
         break;
       default:
         // An emote is its own command, so /wave reads the way anybody would
