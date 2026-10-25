@@ -2926,6 +2926,9 @@ export class Renderer {
     const tx = Math.floor(x);
     const ty = Math.floor(y);
     if (world.getTile(tx, ty) === TileType.Steps) return stepsFootAt(world, x, y);
+    // On a poured slab, its top, whatever the ground or the water under it does (`dryTop`).
+    const slab = this.game.foundations.size ? this.game.dryTop(tx, ty) : null;
+    if (slab !== null) return slab;
     const ground = world.heightAt(x, y);
     if (world.stonesAt(tx, ty)) return Math.max(ground, world.hasWater(tx, ty) ? world.surfaceAt(tx, ty) : ground) + STONES_RISE;
     return Math.max(ground, world.surfaceAt(tx, ty) - 4);
@@ -6010,12 +6013,13 @@ export class Renderer {
 
   /**
    * How high a thing set down at a point stands: on the finished deck of a
-   * tile on piers, or of a bridge where it is set down on the deck (an outer
+   * tile on piers, on a poured slab, or on the deck of a bridge where it is set down on the deck (an outer
    * lane of a wide one, `deckLaneAt`, or `deck` as its caller has it), or on
    * the ground, which is under any other bridge's deck.
    */
   private standTop(wx: number, wy: number, deck = this.game.bridges.size > 0 && this.game.deckLaneAt(Math.floor(wx), Math.floor(wy))): number {
     return (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(Math.floor(wx), Math.floor(wy)) : null)
+      ?? (this.game.foundations.size ? this.game.dryTop(Math.floor(wx), Math.floor(wy)) : null)
       ?? (deck ? this.game.deckHeightAt(wx, wy) : null) ?? this.game.world.heightAt(wx, wy);
   }
 

@@ -2132,6 +2132,16 @@ jobs:
             --outfile=node_modules/.cache/sprouts.mjs --log-level=error
           node node_modules/.cache/sprouts.mjs
 
+      - name: A slab is floor for everything on it
+        if: matrix.shard == 2
+        run: |
+          # Reported: a wagon and an altar drawn on the ground under a slab,
+          # and a body swimming on one poured in water. Its top holds up
+          # whatever is on it, on both sides; a pool dug in it is water.
+          npx esbuild supabase/test/slabfloor.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/slabfloor.mjs --log-level=error
+          node node_modules/.cache/slabfloor.mjs
+
       - name: A worker that can reach the larder
         if: matrix.shard == 2
         run: |

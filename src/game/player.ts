@@ -390,9 +390,9 @@ export class Player {
 
   /**
    * Returns the distance actually moved this frame (tiles). `decked` says
-   * whether a tile is the finished deck of a building on piers (`piers.ts`):
-   * nobody on one is in the water under it, and a step onto one or off it is
-   * no climb.
+   * whether a tile is floor: the finished deck of a building on piers
+   * (`piers.ts`) or a dry slab (`Game.dryTop`). Nobody on one is in the water
+   * under it, and a step onto one or off it is no climb.
    */
   update(dt: number, world: World, rule?: StepRule, decked?: (x: number, y: number) => boolean, lift?: LiftRule): number {
     // Up or down a spiral staircase on this tile: the next step of the path is the same tile on another storey.

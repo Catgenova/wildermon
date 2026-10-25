@@ -4647,7 +4647,7 @@ export class Game {
       const { rule, lift } = this.movement();
       const [fx, fy] = [p.tileX, p.tileY];
       // A deck on piers is walked dry and level, whatever is under it (`piers.ts`); up and down a spiral staircase on its tile (`liftRule`).
-      moved = p.update(dt, this.world, rule, this.buildings.pierTiles.size ? this.onPierDeck : undefined, lift);
+      moved = p.update(dt, this.world, rule, this.buildings.pierTiles.size || this.foundations.size ? this.onFloor : undefined, lift);
       if (this.bridges.size && (fx !== p.tileX || fy !== p.tileY)) this.underDeck = this.walksUnder(fx, fy, p.tileX, p.tileY);
     }
     this.acting.stepped = moved;
@@ -6717,6 +6717,16 @@ export class Game {
     const f = this.foundationAt(x, y);
     return f && foundationDone(f) ? f : undefined;
   }
+
+  /** The top of a finished slab with no pool dug in it, which is dry floor whatever water stands round it; null anywhere else. */
+  dryTop(x: number, y: number): number | null {
+    const f = this.slabAt(x, y);
+    return f && !f.pool ? f.top : null;
+  }
+
+  /** What a body walks as floor rather than ground or water: a finished deck on piers, or a dry slab (`dryTop`). */
+  readonly onFloor = (x: number, y: number): boolean =>
+    this.onPierDeck(x, y) || (this.foundations.size > 0 && this.dryTop(x, y) !== null);
 
   /**
    * How high the top of a tile is: a poured slab's, the water in a pool dug

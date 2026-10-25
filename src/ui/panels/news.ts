@@ -3725,6 +3725,14 @@ export const NEWS: News[] = [
       'Fixed: right-click ▸ rows: note shown; rows of one label open apart.',
     ],
   },
+  {
+    n: 311,
+    day: '2026-10-25',
+    lines: () => [
+      'Fixed: on a foundation: wagon, driver, placed furniture, other players and creatures drawn on its top. Was: on the ground under it.',
+      'Fixed: foundation poured in water: dry floor, no swimming. A pool dug in one: water.',
+    ],
+  },
 ];
 
 /**
