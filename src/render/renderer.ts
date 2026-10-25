@@ -4557,7 +4557,10 @@ export class Renderer {
         // A Runestone's nine tiles: the stone is taken on its front one, and nothing that grows there is drawn under it.
         const stone = world.solid !== null && world.solid.has(y * world.w + x) ? runestoneAt(x, y, world.w) : null;
         if (stone && !aloft) this.takeStone(stone, x, y, V);
-        if (!stone && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
+        // A stump with felled logs on its tile drawn as solids is drawn with them, in their picture (`log3dSprite`).
+        const logged = t === TileType.Stump && !cutHere && !aloft && this.game.ground.size > 0 && this.game.groundAt(x, y).length > 0
+          && lyingSprite(this.game.groundAt(x, y), x, y, this.solidAt(x, y), this.year.season, true).solid === true;
+        if (!stone && !logged && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
           const data = world.getData(x, y);
           const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day, this.bushAt(bushSpecies(data), x, y)) : stumpSprite(treeSpecies(data), this.year.season, this.year.day, this.stumpAt(treeSpecies(data), x, y));
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;

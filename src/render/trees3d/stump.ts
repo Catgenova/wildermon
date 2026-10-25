@@ -9,7 +9,7 @@
  */
 import { KIT_INK, KIT_INK_W } from '../kit/core';
 import { proj } from '../runestone';
-import { dulled, mix } from '../trees/kit';
+import { dulled, mix, tone } from '../trees/kit';
 import { mulberry32 } from '../../world/noise';
 import { ACROSS, bandPath, buttress, chainsOf, footOf, paintChain, paintFoot, SNOW_EDGE, type Chain, type Item, type Job } from './paint';
 import type { Light } from './light';
@@ -42,24 +42,45 @@ export function woodOf(trunk: string): { face: string; ring: string } {
   return { face: dulled(trunk, -0.62), ring: dulled(trunk, -0.12) };
 }
 
-/** How high a stump is sawn, against its trunk's radius there; and the lowest and highest, in model units. */
-const CUT_HIGH = 1.05;
+/** The lowest and highest a stump is sawn, in model units. */
 const CUT_LO = 2.6;
-const CUT_HI = 6;
-/** The highest a stump is sawn for the buttresses its roots flare out as. */
-const BUTTRESS_HI = 7;
-/** How far a stump's roots reach against its tree's. */
-const ROOT_IN = 0.78;
+const CUT_HI = 8;
 /** How high up a stump its roots leave it, against where it is sawn. */
 const ROOT_UP = 0.5;
 /** How much of its tree's lean a stump keeps. */
-const LEAN_KEPT = 0.35;
+const LEAN_KEPT = 0.12;
 /** Where a stump's stem is cut into pieces, as shares of its height: close at its foot, where it flares. */
 const STEM_AT = [0, 0.12, 0.3, 0.6, 1];
 /** How far a sawn face's rings are taken toward the bark's furrows. */
 const RING_DARK = 0.3;
 /** A pale bark's dashes on a stump or a log, against its tree's: seen close to, they are small. */
-const MARKS_FINE = 0.45;
+const MARKS_FINE = 0.3;
+
+/**
+ * What sets one kind of stump apart, by how its tree grows (`Build.habit`,
+ * `Build.whorls`): its sawn face's radius in model units, whatever its tree's
+ * girth, so a field of them stays within a size of each other; how high it is
+ * sawn against that radius; how far its roots reach against its tree's; a
+ * stem with no flare at its foot; and knobs on its stem.
+ */
+export interface StumpShape {
+  radius: number;
+  cut: number;
+  roots: number;
+  straight?: boolean;
+  knobs?: number;
+}
+export const STUMP_SHAPES: Record<'conifer' | 'spreading' | 'upright' | 'orchard' | 'dome', StumpShape> = {
+  // Tall, on a broad foot of long buttresses.
+  conifer: { radius: 4.2, cut: 1.55, roots: 1 },
+  // Broad and low, craggy with its buttresses.
+  spreading: { radius: 4.9, cut: 0.8, roots: 0.75 },
+  // Straight-sided, with no flare.
+  upright: { radius: 3.9, cut: 1.35, roots: 0.6, straight: true },
+  // Short and knobbly.
+  orchard: { radius: 4.3, cut: 0.8, roots: 0.6, knobs: 3 },
+  dome: { radius: 4.6, cut: 1.05, roots: 0.78 },
+};
 
 /** The radius of the first stem of a tree's trunk at height `z`. */
 function radiusAt(limbs: Limb[], z: number): number {
@@ -70,40 +91,42 @@ function radiusAt(limbs: Limb[], z: number): number {
   return limbs[0]?.rb ?? 2;
 }
 
+/** A tree's wood, every point and radius `k` times. */
+const scaled = (limbs: Limb[], k: number): Limb[] => limbs.map((L) => ({ ...L, a: mul(L.a, k), b: mul(L.b, k), ra: L.ra * k, rb: L.rb * k }));
+
 /**
- * The stump a tree leaves: its trunk (every stem of it) up to where it is
- * sawn, and its roots, kept below the cut. Its own shade at its foot reaches
- * a little past the trunk (`Skeleton.foot`).
+ * The stump a tree leaves: its main stem up to where it is sawn, brought to
+ * its kind's size (`StumpShape`), and its roots below the cut, flared out as
+ * lobes on the ground (`lobesOf`); knobs on it where its kind has them. Its
+ * own contact shade at its foot just past the trunk (`Skeleton.foot`).
  */
-export function stumpOf(tree: Skeleton): StumpModel {
-  const L = tree.limbs;
-  let zc = 3;
-  for (let i = 0; i < 4; i++) zc = Math.max(CUT_LO, Math.min(CUT_HI, radiusAt(L, zc) * CUT_HIGH));
-  // Over the tops of its buttresses (`buttress`), which rise to over three quarters of the foot's radius.
-  // No higher than `BUTTRESS_HI`: past that, the foot its buttresses stand out of is taken in to fit under the cut.
-  // And no wider than the stem a little way up, or their ridges stand out past its sides.
-  const footR = Math.min(L[0]?.ra ?? 0, BUTTRESS_HI / (1.02 * 0.95), radiusAt(L, zc * 0.6) * 1.12);
-  zc = Math.max(zc, footR * 1.02 * 0.95);
+export function stumpOf(tree: Skeleton, shape: StumpShape, seed: number): StumpModel {
+  const k = shape.radius / Math.max(0.5, radiusAt(tree.limbs, 4));
+  const L = scaled(tree.limbs, k);
+  const zc = Math.max(CUT_LO, Math.min(CUT_HI, shape.radius * shape.cut));
+  // Its buttresses rise to three quarters of the foot's radius and stand out of it from seven tenths of it
+  // (`buttress`): the foot no wider than lets them fit under the cut and inside the stem a little way up.
+  const footR = Math.min(L[0]?.ra ?? 0, zc / (1.02 * 0.95), radiusAt(L, zc * 0.6) * 1.12);
   const limbs: Limb[] = [];
   const cuts: Cut[] = [];
   const kept = new Map<number, number>();
-  // Each stem, from its foot up its run of pieces: stood up straighter, its lean kept only as far as `LEAN_KEPT`, and its girth at each height its own.
-  // One stem: the first, the tree's main one, stood where the foot is.
+  // One stem: the first, the tree's main one, stood where the foot is, stood up straighter -- its lean kept only as
+  // far as `LEAN_KEPT` -- and its girth at each height its own, or the same all the way down where it is straight.
   for (let i = 0; i < L.length && !cuts.length; i++) {
     if (L[i].order !== 0 || L[i].parent >= 0) continue;
     const run = [i];
     for (let k = i + 1; k < L.length; k++) if (L[k].order === 0 && L[k].parent === run[run.length - 1]) run.push(k);
     const foot = L[i].a;
-    const at0: V3 = [0, 0, 0];
+    const straight = shape.straight ? radiusAt(L, zc * 0.8) : 0;
     const along = (z: number): { p: V3; r: number } => {
       for (const k of run) {
         const P = L[k];
         if (P.b[2] < z && k !== run[run.length - 1]) continue;
         const t = clamp01((z - P.a[2]) / Math.max(1e-6, P.b[2] - P.a[2]));
         const q = lerp(P.a, P.b, t);
-        return { p: [at0[0] + (q[0] - foot[0]) * LEAN_KEPT, at0[1] + (q[1] - foot[1]) * LEAN_KEPT, z], r: P.ra + (P.rb - P.ra) * t };
+        return { p: [(q[0] - foot[0]) * LEAN_KEPT, (q[1] - foot[1]) * LEAN_KEPT, z], r: straight || P.ra + (P.rb - P.ra) * t };
       }
-      return { p: [at0[0], at0[1], z], r: L[i].ra };
+      return { p: [0, 0, z], r: straight || L[i].ra };
     };
     const first = limbs.length;
     for (const k of run) kept.set(k, first);
@@ -118,18 +141,18 @@ export function stumpOf(tree: Skeleton): StumpModel {
       const lo = stand(j), hi = stand(j + 1);
       limbs.push({ a: lo.p, b: hi.p, ra: lo.r, rb: hi.r, order: 0, parent: j ? limbs.length - 1 : -1, bough: -1 });
     }
-    if (first === 0) limbs[0].ra = Math.min(limbs[0].ra, footR);
+    if (first === 0 && !straight) limbs[0].ra = Math.min(limbs[0].ra, footR);
     const top = limbs[limbs.length - 1];
     cuts.push({ c: top.b, r: top.rb, n: [0, 0, 1], limb: limbs.length - 1 });
   }
-  for (let i = 0; i < L.length; i++) {
+  for (let i = 0; i < L.length && !shape.straight; i++) {
     const P = L[i];
     if (P.order !== -1) continue;
     const parent = kept.get(P.parent);
     if (parent === undefined) continue;
-    // Out of the trunk low under the cut, and drawn in toward it: a root's reach is the tree's, not a stump's.
+    // Out of the trunk low under the cut, and drawn in toward it or out from it as its kind's roots reach.
     const a: V3 = L[P.parent].order === 0 ? [P.a[0] * 0.8, P.a[1] * 0.8, Math.min(P.a[2], zc * ROOT_UP)] : P.a;
-    const b: V3 = [P.b[0] * ROOT_IN, P.b[1] * ROOT_IN, P.b[2]];
+    const b: V3 = [P.b[0] * shape.roots, P.b[1] * shape.roots, P.b[2]];
     // The piece out of a knee starts where the piece to it now ends.
     const from = L[P.parent].order === -1 ? limbs[parent].b : a;
     // A root in one piece is given a knee, as a buttressed one has: its foot's lobes are drawn from the piece out of a knee (`lobesOf`).
@@ -142,14 +165,28 @@ export function stumpOf(tree: Skeleton): StumpModel {
     kept.set(i, limbs.length);
     limbs.push({ ...P, a: single ? limbs[up].b : from, b, parent: up, ra: P.ra * 0.85, rb: P.rb * 0.85 });
   }
+  // Knobs: short, thick stubs where limbs once were, low round the stem and level, each a third of the way on round;
+  // smooth, as a branch is (`paintChain`), not furrowed as the stem.
+  const R = mulberry32(seed);
+  const stem = limbs.filter((l) => l.order === 0);
+  for (let k = 0; k < (shape.knobs ?? 0); k++) {
+    const a = R() * 0.6 + (k * TAU) / (shape.knobs ?? 1);
+    const z = zc * (0.22 + 0.25 * R());
+    const at = stem.findIndex((l) => l.b[2] >= z);
+    const P = stem[Math.max(0, at)];
+    const r = radiusAt(stem, z);
+    const d: V3 = [Math.cos(a), Math.sin(a), 0];
+    const base: V3 = [P.a[0] + d[0] * r * 0.55, P.a[1] + d[1] * r * 0.55, z];
+    limbs.push({ a: base, b: add(base, mul(d, r * 0.62)), ra: r * 0.3, rb: r * 0.26, order: 2, parent: limbs.indexOf(P), bough: -1 });
+  }
   const r0 = Math.max(...cuts.map((c) => Math.hypot(c.c[0], c.c[1]) + c.r), 1);
   const reach = Math.max(r0, ...limbs.filter((l) => l.order < 0).map((l) => Math.hypot(l.b[0], l.b[1]) + l.rb));
   return {
     sk: {
-      // The crown's reach is what the picture's bounds take in round the foot (`boundsOf`): all of its own shade there.
+      // The crown's reach is what the picture's bounds take in round the foot (`boundsOf`).
       limbs, clumps: [], crown: { c: [0, 0, zc], r: Math.max(reach * 2.1, (r0 * 1.6) / 0.55 + 2), rz: 1 }, height: zc, rune: null, hollow: null,
-      rough: tree.rough ? Math.min(tree.rough, zc * 0.45) : undefined,
-      foot: Math.max(3, Math.max(r0 * 1.35, reach * 1.08) * ACROSS),
+      rough: tree.rough ? Math.min(tree.rough * k, zc * 0.4) : undefined,
+      foot: Math.max(2.5, r0 * ACROSS * 1.12),
     },
     cuts,
   };
@@ -189,7 +226,15 @@ export function logsOf(r: number, length: number, n: number, angle: number, off:
 }
 
 /** What of a species a stump or a log is painted as: its bark, always on an open foot; no leaf, no crown; moss only where `moss`. */
-export function woodSpec(spec: Species3D, moss: boolean, lying = false): Species3D {
+export function woodSpec(spec: Species3D, trunk: string, moss: boolean, lying = false): Species3D {
+  // In its flat stump's own wood (`TREE_DEFS` trunk), lit and shaded as the trees' bark is from theirs; a pale marked
+  // bark (`marks`), whose look is its marks, in its tree's.
+  const bark: Species3D['bark'] = spec.bark.marks ? spec.bark : {
+    ...spec.bark,
+    lit: tone(trunk, 0.35), shade: mix(trunk, '#3e3040', 0.3), dead: tone(trunk, 0.5), furrow: mix(trunk, '#2e2230', 0.55),
+    ...(spec.bark.strands ? { strands: tone(trunk, 0.5) } : {}),
+    ...(spec.bark.rope ? { rope: tone(trunk, 0.5) } : {}),
+  };
   return {
     ...spec,
     build: { ...spec.build, whorls: undefined, ...(lying ? { habit: undefined } : {}) },
@@ -197,7 +242,7 @@ export function woodSpec(spec: Species3D, moss: boolean, lying = false): Species
     // A stump's roots flare out of its foot as lobes on the ground, whatever its tree's are (`stumpOf`).
     buttress: lying ? spec.buttress : true,
     bark: {
-      ...spec.bark,
+      ...bark,
       ...(moss ? {} : { moss: undefined }),
       ...(spec.bark.marks ? { marks: { ...spec.bark.marks, fine: MARKS_FINE } } : {}),
     },
@@ -344,13 +389,17 @@ function capOf(job: Job, cut: Cut): { top: Path2D; side: Path2D } {
   return { top, side };
 }
 
-/** The ground shade's tone and strength by day, as a tree's own at its foot (`footShade`) and the shade the trees throw (`Renderer.solidFrame`). */
-const SHADE = 'rgba(30,56,66,0.27)';
+/** The shade's tone and strength on the ground: one flat shape at one alpha, as the flat stumps' contact shade (`contact`). */
+const SHADE = 'rgba(44,74,78,0.2)';
+/** The shortest a stump's shade is thrown by day, against its height: as the flat ones', it always falls a little away from the sun. */
+const THROW_LEAST = 0.55;
 
 /** Which way and how far the light throws a stump's shade along the ground for each unit up: none at night. */
 function throwOf(light: Light): [number, number] {
+  if (light.night) return [0, 0];
   const fl = Math.hypot(light.sun[0], light.sun[1]) || 1;
-  return [(-light.sun[0] / fl) * light.throw, (-light.sun[1] / fl) * light.throw];
+  const t = Math.max(THROW_LEAST, light.throw);
+  return [(-light.sun[0] / fl) * t, (-light.sun[1] / fl) * t];
 }
 
 /**
@@ -392,7 +441,7 @@ function paintStumpShade(g: Ctx, job: Job, m: StumpModel): void {
   if (dx || dy) {
     for (const L of m.sk.limbs) {
       if (L.order !== 0) continue;
-      const n = Math.max(1, Math.ceil(Math.hypot(L.b[0] - L.a[0], L.b[1] - L.a[1], (L.b[2] - L.a[2]) * job.light.throw) / Math.max(0.5, L.rb)));
+      const n = Math.max(1, Math.ceil(Math.hypot(L.b[0] - L.a[0] + (dx * (L.b[2] - L.a[2])), L.b[1] - L.a[1] + dy * (L.b[2] - L.a[2])) / Math.max(0.5, L.rb)));
       for (let i = 0; i <= n; i++) {
         const t = i / n;
         disc(lerp(L.a, L.b, t), L.ra + (L.rb - L.ra) * t);

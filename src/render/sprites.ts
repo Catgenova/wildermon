@@ -357,10 +357,11 @@ export function grownAt(x: number, y: number): number {
 
 /**
  * How much bigger or smaller a tile's stump drawn as a solid is than its
- * species' own: the tree that grew there's size (`grownAt`), by its square
- * root, in eighths, so a field of them is drawn at a few sizes of each picture.
+ * species' own: half as much as the square root of the tree that grew
+ * there's size (`grownAt`), in eighths, so a field of them is drawn at a few
+ * sizes of each picture and stays within a size of each other.
  */
-export const stumpGrown = (x: number, y: number): number => Math.round(Math.sqrt(grownAt(x, y)) * 8) / 8;
+export const stumpGrown = (x: number, y: number): number => Math.round((1 + (Math.sqrt(grownAt(x, y)) - 1) * 0.5) * 8) / 8;
 
 /** Whether a point given in the sprite's own units is inside the path last laid down. */
 function inside(ctx: CanvasRenderingContext2D, x: number, y: number): boolean {
