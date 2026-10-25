@@ -505,7 +505,7 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
   const k = stemsOf(b, seed);
   const leanA = R() * TAU;
   const leanD: V3 = [Math.cos(leanA), Math.sin(leanA), 0];
-  const env: Envelope = { c: [leanD[0] * b.lean, leanD[1] * b.lean, H - rz * 1.04], r: H * b.spread * (1 + 0.2 * (k - 1)), rz };
+  const env: Envelope = { c: [leanD[0] * b.lean, leanD[1] * b.lean, H - rz * 1.04], r: H * b.spread * (1 + 0.14 * (k - 1)), rz };
   const r0 = H * b.girth;
   const limbs: Limb[] = [];
   const clumps: Clump[] = [];

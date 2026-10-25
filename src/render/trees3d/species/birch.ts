@@ -32,7 +32,7 @@ const mix3 = (a: Three, b: Three, t: number): Three => a.map((c, i) => mix(c, b[
 export const birch: Species3D = {
   name: 'Birch',
   build: {
-    height: 70, stem: 0.28, spread: 0.3, dome: 0.5, droop: 0.4, girth: 0.05, flare: 1.45, scaffolds: 9, forks: 2, branching: 2,
+    height: 65, stem: 0.28, spread: 0.28, dome: 0.5, droop: 0.4, girth: 0.05, flare: 1.45, scaffolds: 9, forks: 2, branching: 2,
     clumps: 28, clumpSize: 0.38, gnarl: 0.2, lean: 1.2, dead: 0, bare: false, rune: false, hollow: false,
     habit: 'upright', stems: 3, rough: 0.1,
   },
