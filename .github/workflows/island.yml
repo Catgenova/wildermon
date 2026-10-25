@@ -2102,6 +2102,19 @@ jobs:
             --outfile=node_modules/.cache/mirror.mjs --log-level=error
           node node_modules/.cache/mirror.mjs
 
+      - name: A kept thing stays kept
+        if: matrix.shard == 2
+        run: |
+          # Reported: "Something is unlocking my supreme mortars over and
+          # over." Of every action asked of a kept pile only Unlock unlocks it;
+          # a part or the whole of one moved into a bag and back stays kept
+          # (`move_part`), a pile kept while the pack is folded is not folded
+          # (`pack_fold`), and in the browser an older answer arriving after a
+          # newer one does not put the kept pile back as loose (`Island.act`).
+          npx esbuild supabase/test/keptmoves.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/keptmoves.mjs --log-level=error
+          node node_modules/.cache/keptmoves.mjs
+
       - name: One pile and not six
         if: matrix.shard == 2
         run: |
