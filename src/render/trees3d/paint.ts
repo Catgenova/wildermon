@@ -486,9 +486,7 @@ function kids(limbs: Limb[]): Map<number, number[]> {
  * on the wood's skin and seen round it, so the marks keep their places as
  * the camera turns; those round the back are not drawn.
  */
-function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void { const T0 = performance.now(); try { paintMarks0(g, job, c, j0, j1); } finally { tm('marks', T0); } }
-const tm = (k: string, t0: number): void => { const T = ((globalThis as unknown as { __t?: Record<string, number> }).__t ??= {}); T[k] = (T[k] ?? 0) + performance.now() - t0; };
-function paintMarks0(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
+function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
   const marks = job.spec.bark.marks;
   if (!marks) return;
   const { sk } = job;
@@ -999,10 +997,6 @@ function paintCarving(g: Ctx, job: Job): void {
 type Item = { d: number; draw: () => void };
 
 export function paintTree3d(g: Ctx, job: Job): void {
-  const T9 = performance.now();
-  try { paintTree3d0(g, job); } finally { tm('all', T9); }
-}
-function paintTree3d0(g: Ctx, job: Job): void {
   const { sk, e, dress, spec } = job;
   if (spec.build.whorls) return paintWhorls(g, job);
   const near = (p: V3): number => dot(p, e.toward as V3);
@@ -1011,10 +1005,7 @@ function paintTree3d0(g: Ctx, job: Job): void {
   const sun = sunOnScreen(job);
   const items: Item[] = [];
   const leafy = shown.length > 0 && dress.full >= 0.6;
-  const T3 = performance.now();
   const chains = chainsOf(job, leafy);
-  tm('chains', T3);
-  const T4 = performance.now();
   // Each mass's outline, worked out once: the ink is laid under all of them before any is painted.
   const masses = shown.map((s) => {
     const o = outlineOf(mulberry32(job.seed * 31 + Math.round(s.c.k * 1e6)), 4 + Math.floor(s.c.k * 2.99));
@@ -1037,8 +1028,6 @@ function paintTree3d0(g: Ctx, job: Job): void {
    * left of it is the tree's own outline -- against the sky, and through
    * every gap in the crown.
    */
-  tm('outlines', T4);
-  const T5 = performance.now();
   g.strokeStyle = rgb(KIT_INK);
   g.lineJoin = 'round';
   g.lineCap = 'round';
@@ -1063,7 +1052,6 @@ function paintTree3d0(g: Ctx, job: Job): void {
       g.fill();
     }
   }
-  tm('ink', T5);
   // An open crown's trunk stands on a round foot, the ground's circle of it, laid just behind the trunk; each stem of several on its own.
   for (const trunk of spec.open ? chains.filter((c) => c.order === 0 && sk.limbs[c.pieces[0]].parent < 0) : []) {
     const at = trunk.pieces[0];
@@ -1090,7 +1078,7 @@ function paintTree3d0(g: Ctx, job: Job): void {
       // wood is among its masses, set back a little so a branch's end goes into the mass on it.
       const d = near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0);
       const at = leafy && !spec.open ? -1e6 : spec.open && shown.length ? d - sk.crown.r * 0.12 * Math.max(0, c.order) : d;
-      items.push({ d: at, draw: () => { const T2 = performance.now(); paintChain(g, job, c, j0, j1, R); tm(c.thin ? 'twig' : 'wood', T2); } });
+      items.push({ d: at, draw: () => paintChain(g, job, c, j0, j1, R) });
     }
   }
   const sizeOfKey = sk.crown.r * 0.12;
@@ -1101,10 +1089,8 @@ function paintTree3d0(g: Ctx, job: Job): void {
       d: near(s.c.c),
       draw: () => {
         const lumps = masses[i].lumps;
-        const T1 = performance.now();
         if (lumps) paintCluster(g, job, s, sun, masses[i].path, lumps, rim);
         else paintMass(g, job, s, sun, masses[i].path, masses[i].o, rim);
-        tm('cluster', T1);
         if (keyed && s.c.up < 0.6 && s.c.k < 0.55) {
           const [x, y] = proj(e, s.c.c);
           const col = dress.season === 'summer' ? mixRgbHex(spec.keys!.colour, spec.keys!.ripe, 0.2) : spec.keys!.colour;
@@ -1131,13 +1117,9 @@ function paintTree3d0(g: Ctx, job: Job): void {
   }
   items.sort((a, b) => a.d - b.d);
   // The haze of fine twigs once the leaf is mostly down: the half behind the crown's middle under all the wood, the half in front over it.
-  const T6 = performance.now();
   const haze = spec.haze && !leafy ? hazeOf(job) : null;
   if (haze) paintHaze(g, haze.col, haze.back);
-  tm('haze', T6);
-  const T7 = performance.now();
   for (const it of items) it.draw();
-  tm('items', T7);
   if (haze) paintHaze(g, haze.col, haze.front);
   paintCarving(g, job);
   if (dress.season === 'autumn' && dress.full < 1 && dress.full > 0) paintFalling(g, job, 4);
