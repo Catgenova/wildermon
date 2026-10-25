@@ -118,6 +118,9 @@ import { REPORTS_A_SESSION } from '../../net/errors';
 import { VIA_MAX } from '../../net/island';
 import { CATCH_UP, MAX_STEP as CLOCK_STEP } from '../../engine/loop';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
+import { NEED_KINDS, NEED_LABEL } from './care';
+import { HUNGRY_AT, HURT_AT } from './wildermon';
+import { CARE_WANTING as CARE_WANTING_317 } from '../../game/creatures';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
@@ -3757,8 +3760,7 @@ export const NEWS: News[] = [
       `Changed: bushes drawn solid, as trees: ${[...BUSH3D_SPECIES].map((b) => BUSH_DEFS[b].name.replace(/ bush$/, '').toLowerCase()).join(', ')}. Own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun.`,
       `Changed: rose bush flowers: ${FLOWER_COLOURS.find((c) => c.petal === BUSH_DEFS.find((b) => b.name === 'Rose bush')?.flowers)?.name ?? 'pink'}.`,
     ],
-  },
-  {
+  },  {
     n: 315,
     day: '2026-10-25',
     lines: () => [
@@ -3775,6 +3777,13 @@ export const NEWS: News[] = [
       `Changed: picked-over refusals end "${readyIn(FORAGE_COOLDOWN - 50)}" Was: "Try later."`,
       `Fixed: picked-over spots shown as ready. Wait: ${num(FORAGE_COOLDOWN / 60)} min, sprout ${num(SPROUT_COOLDOWN / 60)} min.`,
       `Added: field hover: ripe in, harvest QL cap; ripe fields marked ripe. Fixed: field info: untended harvest ${num(cropYield(0).produce)}, tended every stage ${num(cropYield(RIPE).produce)}. Was: "only the seed".`,
+    ],
+  },
+  {
+    n: 317,
+    day: '2026-10-25',
+    lines: () => [
+      `Added: Wildermon window, Care tab, opened first. Needs, worst first: ${listed(NEED_KINDS.map((k) => NEED_LABEL[k].toLowerCase()))}; hurt under ${percent(HURT_AT)} health, hungry under ${percent(HUNGRY_AT)} fed, care under ${percent(CARE_WANTING_317)}. Fix per row: feed, brush, fit gear, pair. Herd: fed, rest, health and care meters; size, job, idle and needs filters. Bulk: Feed hungry, Brush, Assign selected. Beds by size against workers. Gear Fit and Remove in its menu.`,
     ],
   },
 ];

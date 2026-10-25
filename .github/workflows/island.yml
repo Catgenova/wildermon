@@ -1031,6 +1031,19 @@ jobs:
           npx esbuild supabase/test/saddle.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/saddle.mjs --log-level=error
           node node_modules/.cache/saddle.mjs
+      - name: The Wildermon window's Care tab
+        if: matrix.shard == 1
+        env:
+          CROWD_STRICT: '1'
+        run: |
+          # Drawn in Chrome over a herd of twelve in every state: the window
+          # opens on Care, the needs read worst first, each fix asks the
+          # island for the job the creature menu would, Feed hungry feeds one
+          # at a time and each once, Assign selected assigns the ticked, and
+          # on a phone nothing runs off the side of the window.
+          npx esbuild supabase/test/care.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/care.mjs --log-level=error
+          node node_modules/.cache/care.mjs
       - name: The island heard from where the camera is standing
         if: matrix.shard == 1
         run: |

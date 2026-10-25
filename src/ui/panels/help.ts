@@ -185,6 +185,7 @@ import { RECORD_STATS } from '../../game/boards';
 import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
+import { NEED_KINDS, NEED_LABEL } from './care';
 import {
   ENCHANTMENTS, enchantFigure, enchantValue, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTERS_PLINTH, enchantChance, ENCHANTMENT_LIST, enchantPct, FROST_PACE, FROST_SECS, GRACE_TILES, NETMENDER_WEAR, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
 } from '../../game/enchant';
@@ -1041,11 +1042,14 @@ export function helpText(): string {
     </ul>
     <h3>Your wildermon, in order</h3>
     <ul>
-      <li>Wildermon window (<kbd>P</kbd>): sort by name, level, kind, health, hunger, care (${CARE_SAID}), age or best trait.</li>
+      <li>Wildermon window (<kbd>P</kbd>), Care tab, opened first. Needs, worst first: ${listed(NEED_KINDS.map((k) => NEED_LABEL[k].toLowerCase()))}. Fix per row: feed (poorest food in pack), brush, fit gear of its size, pair (preview first).</li>
+      <li>Care tab bulk: <b>Feed hungry</b>, <b>Brush</b>, <b>Assign selected</b> (ticked companions): one at a time, walking to each.</li>
+      <li>Care tab herd: fed, rest (cycles left before it rests), health and care meters; filters: size, job, idle, needs. Beds: wildermon beds by size on your settlement, free, and workers of that size.</li>
+      <li>Cards tab: sort by name, level, kind, health, hunger, care (${CARE_SAID}), age or best trait.</li>
       <li>Search matches name, kind, task, age, orders setting or any trait ("supreme", "hungry").</li>
       <li>Grouped: by location. Flat: one list.</li>
       <li>Card tags: <b>hurt</b> under ${percent(HURT_AT)} of max health; <b>hungry</b> under ${percent(HUNGRY_AT)} fed. Tagged cards are outlined.</li>
-      <li>Footer: herd count, hungry count, hurt count. Clicking a count lays the herd out flat, worst first, unfiltered.</li>
+      <li>Footer: herd count, hungry count, hurt count. Clicking a count lays the herd out flat, worst first, unfiltered; the attention count opens the Care tab.</li>
     </ul>
     <h3>Other people</h3>
     <h4>Right-click a person</h4>

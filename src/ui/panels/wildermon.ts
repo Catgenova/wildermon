@@ -16,6 +16,7 @@ import { percent } from '../../game/words';
 import { idleSays, ledgerLines } from '../../game/workerlog';
 import { workLines } from '../../game/workstats';
 import { formLabels } from '../../game/wildforms';
+import { CarePanel } from './care';
 
 /**
  * Where a wildermon is, as the list groups it: under a rider or in a
@@ -140,6 +141,14 @@ export class WildermonPanel {
   private readonly cards = new Map<number, { el: HTMLDivElement; refresh: (c: Creature) => void }>();
   private readonly heads = new Map<string, HTMLDivElement>();
   private footerKey = '';
+  /**
+   * Which tab shows: Care (`care.ts`), what wants doing worst first and the
+   * herd on a line each, which is where the window opens; or Cards, a card each.
+   */
+  tab: 'care' | 'cards' = 'care';
+  readonly care: CarePanel;
+  private readonly tabs = new Map<'care' | 'cards', HTMLButtonElement>();
+  private readonly cardsPage: HTMLDivElement;
 
   constructor(
     private readonly win: UIWindow,
@@ -206,8 +215,40 @@ export class WildermonPanel {
     this.list.className = 'pals-list';
     this.footer = document.createElement('div');
     this.footer.className = 'inv-footer';
-    win.body.append(this.search, bar, this.list, this.footer);
-    this.render();
+    this.care = new CarePanel(game, entriesFor, showMenu);
+    this.cardsPage = document.createElement('div');
+    this.cardsPage.className = 'pals-cards';
+    this.cardsPage.append(this.search, bar, this.list, this.footer);
+    const tabs = document.createElement('div');
+    tabs.className = 'log-tabs pals-tabs';
+    for (const [id, label, title] of [
+      ['care', 'Care', 'Needs worst first, one-click fixes; the herd with its meters'],
+      ['cards', 'Cards', 'A card each: stats, traits, pedigree, work'],
+    ] as Array<['care' | 'cards', string, string]>) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tb-btn tb-small log-tab';
+      b.textContent = label;
+      b.title = title;
+      b.addEventListener('click', () => this.show(id));
+      this.tabs.set(id, b);
+      tabs.append(b);
+    }
+    win.body.append(tabs, this.care.el, this.cardsPage);
+    this.show(this.tab);
+  }
+
+  /** Show a tab, and draw it at once. */
+  show(tab: 'care' | 'cards'): void {
+    this.tab = tab;
+    for (const [id, b] of this.tabs) {
+      b.classList.toggle('tb-on', id === tab);
+      b.setAttribute('aria-pressed', String(id === tab));
+    }
+    this.care.el.hidden = tab !== 'care';
+    this.cardsPage.hidden = tab !== 'cards';
+    if (tab === 'care') this.care.render();
+    else this.render();
   }
 
   /** Everything one of them answers to: its name, kind, job, orders and traits. */
@@ -247,9 +288,12 @@ export class WildermonPanel {
 
   /** Redraw a few times a second while open; stats move constantly. */
   update(now: number): void {
+    // A bulk job on the Care tab goes on with the window shut (`CarePanel.step`).
+    if (this.tab === 'care' && !this.win.isOpen) this.care.step(now);
     if (!this.win.isOpen || now - this.lastRender < 400) return;
     this.lastRender = now;
-    this.render();
+    if (this.tab === 'care') this.care.update(now);
+    else this.render();
   }
 
   /**
@@ -364,8 +408,8 @@ export class WildermonPanel {
         b.type = 'button';
         b.className = 'pal-jump';
         b.textContent = `${wanting} want attention`;
-        b.title = this.attentionBtn.title;
-        b.addEventListener('click', () => this.showAttention(true));
+        b.title = 'Care tab: needs worst first';
+        b.addEventListener('click', () => this.show('care'));
         this.footer.append(b);
       }
       this.footer.classList.toggle('inv-over', hungry > 0 || hurt > 0);

@@ -39,6 +39,8 @@ import {
 } from '../game/building';
 import { deckBill, metres, pierDrop } from '../game/piers';
 import { cellarGate, targetFloor } from '../game/cellar';
+import { GEAR_SLOTS } from '../game/wildgear';
+import { fitGearId, removeGearId } from '../game/wildgearActions';
 import { ARTIFACT_FOR, baitHint, CREATURE_ACTION_BY_ID, feedable, vehicleFor } from '../game/creatureActions';
 import { FIELD_GLASS_ONLY, glassDone, glazing, isGlasshouse, underGlass } from '../game/glasshouse';
 import { GLASSHOUSE_GROWTH } from '../game/growth';
@@ -3072,6 +3074,11 @@ export class UI {
       });
     } else push(pairing);
     push(item('read_blood'));
+    // Its gear, a slot at a time: fitted from the pack at its size, and taken off (`wildgearActions.ts`).
+    for (const slot of GEAR_SLOTS) {
+      push(item(fitGearId(slot)));
+      push(item(removeGearId(slot)));
+    }
     // An ancient comb, file, lamp or pot out of the ground, offered only while you carry one (`ARTIFACT_FOR`).
     for (const id of Object.keys(ARTIFACT_FOR)) push(item(id));
     push(item('shear'));
