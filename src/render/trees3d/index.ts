@@ -110,7 +110,7 @@ export const SWAY_MS = 260;
 const BAKE_MS = 4;
 const SHADE_MS = 2;
 /** And for a tree with no bake at all to stand in, which would otherwise be drawn flat. */
-const BARE_MS = 10;
+const BARE_MS = 16;
 /** Pixels of bakes kept, and of shades. */
 const PIXELS = 20_000_000;
 const SHADE_PIXELS = 6_000_000;
