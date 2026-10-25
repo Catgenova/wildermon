@@ -46,6 +46,11 @@ export interface Clump {
   out: number;
   /** How high up the crown, 0 its underside to 1 its top. */
   up: number;
+  /**
+   * Where it is a cluster: the lumps it is made of, each `o` off its middle
+   * and `r` across, all inside `r` of it. Painted as one mass with one rim.
+   */
+  subs?: Array<{ o: V3; r: number }>;
 }
 
 /** The crown's ellipsoid: what the clumps are kept inside and lit against. */
@@ -64,6 +69,8 @@ export interface Skeleton {
   rune: number | null;
   /** A hollow in the trunk, facing this way, when it has one. */
   hollow: number | null;
+  /** How far past a mass's `r` its leaf reaches on the screen, for the bounds of its picture: 1.45 unless given. */
+  leafReach?: number;
 }
 
 /** The tree's proportions at one age, in model units. */
@@ -103,6 +110,17 @@ export interface Build {
   /** A rune cut in the bark. */
   rune: boolean;
   hollow: boolean;
+  /**
+   * How it is grown: 'dome' (`grow`) a few sinuous limbs under one dome of
+   * big masses; 'spreading' (`growSpreading`) a short trunk on buttress roots
+   * splitting low into crooked limbs, the lowest near level, under an open
+   * crown of many small masses on the branch ends.
+   */
+  habit?: 'dome' | 'spreading';
+  /** Spreading: share of the scaffold limbs that reach out near level. */
+  low?: number;
+  /** Spreading: how far a limb turns at each elbow, radians. */
+  zig?: number;
 }
 
 /** A run of tones from the deepest shade to the lit top: a clump is painted in four neighbours on it. */
@@ -129,8 +147,20 @@ export interface Species3D {
   /** Each age's build: the mature one, and what each other age changes. */
   build: Build;
   ages: Partial<Record<AgeKey, Partial<Build>>>;
-  /** Bark in the light and in shade, and the dead wood's. */
-  bark: { lit: string; shade: string; dead: string; furrow: string };
+  /** Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough. */
+  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean };
+  /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed. */
+  leafForm?: 'maple' | 'oak';
+  /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */
+  buttress?: boolean;
+  /** Snow as a narrow line along the top edge of the wood, rather than over all its upper face. */
+  snowLine?: boolean;
+  /** A carved rune inked in the kit's ink, and lit as a runestone's runes after dark. */
+  inkedRune?: boolean;
+  /** A mass's height on the screen against its width: 0.86 unless given. */
+  pad?: number;
+  /** An open crown: the wood laid among the masses by depth, the branches seen through the gaps. */
+  open?: boolean;
   /** The leaf through the year. A ramp runs from the deepest shade to the lit top. */
   leaf: {
     summer: Ramp;

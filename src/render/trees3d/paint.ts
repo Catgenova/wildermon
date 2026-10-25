@@ -8,7 +8,7 @@
  */
 import { HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from '../iso';
 import { KIT_INK, KIT_INK_W } from '../kit/core';
-import { cut, glyphPath, proj, type Eye } from '../runestone';
+import { cut, glyphPath, proj, RUNE_EDGE, RUNE_GOLD, RUNE_WHITE, type Eye } from '../runestone';
 import { mulberry32 } from '../../world/noise';
 import type { Light } from './light';
 import type { Clump, Dress, Limb, Ramp, RGB, Skeleton, Species3D, V3 } from './types';
@@ -100,6 +100,24 @@ function leafAt(g: Ctx | Path2D, x: number, y: number, s: number, a: number, fla
   g.closePath();
 }
 
+/** One small oak leaf lying or flying: long, in round lobes either side, `s` long, turned `a`, squashed `flat` top to bottom. */
+function oakLeafAt(g: Ctx | Path2D, x: number, y: number, s: number, a: number, flat = 1): void {
+  const ca = Math.cos(a), sa = Math.sin(a);
+  const N = 20;
+  for (let i = 0; i <= N; i++) {
+    const t = (i / N) * TAU;
+    const u = (1 - Math.cos(t)) / 2;
+    const w = Math.sin(Math.PI * u) * (0.62 + 0.38 * Math.abs(Math.sin(4.5 * Math.PI * u))) * 0.42 * Math.sign(Math.sin(t) || 1);
+    const lx = (u - 0.5) * s * 1.2, ly = w * s;
+    const px = x + lx * ca - ly * sa, py = y + (lx * sa + ly * ca) * flat;
+    if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+  }
+  g.closePath();
+}
+
+/** The leaf a species lies and falls in. */
+const leafOf = (spec: Species3D): typeof leafAt => (spec.leafForm === 'oak' ? oakLeafAt : leafAt);
+
 /* ---- wood -------------------------------------------------------------------------- */
 
 function barkAt(job: Job, L: Limb, n: V3, snow: boolean): string {
@@ -146,16 +164,23 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     const P = limbs[L.parent];
     return P.order === L.order && len(sub(L.a, P.b)) < 1e-6;
   };
-  for (let i = 0; i < limbs.length; i++) if (goesOn(i)) next.set(limbs[i].parent, i);
+  // What is never drawn is not looked at: under a full crown the finer wood, among any leaf an open crown's finest twigs.
+  // An open crown in full leaf hides its branches: only the limbs off the trunk show, low and through its gaps.
+  const cut = leafy ? 2 : job.spec.open && job.dress.full > 0 ? 4 : 99;
+  for (let i = 0; i < limbs.length; i++) if (limbs[i].order < cut && goesOn(i)) next.set(limbs[i].parent, i);
   const V = unit(e.toward as V3);
   const snowy = job.dress.season === 'winter';
   const out: Chain[] = [];
   for (let i = 0; i < limbs.length; i++) {
-    if (goesOn(i)) continue;
+    if (limbs[i].order >= cut || goesOn(i)) continue;
     const first = limbs[i];
     // Under a full crown the finest twigs are never seen.
     // Under a full crown only the trunk and the limbs it splits into are ever seen, below the crown.
     if (leafy && first.order >= 2) continue;
+    // The finest twigs only on the bare wood: among leaf they would be scratches over it.
+    if (job.spec.open && first.order >= 4 && job.dress.full > 0) continue;
+    // A buttressed foot's roots are drawn as the foot's lobes (`footPath`).
+    if (job.spec.buttress && first.order < 0) continue;
     const pieces = [i];
     for (let k = next.get(i); k !== undefined; k = next.get(k)) pieces.push(k);
     const pts: V3[] = [limbs[pieces[0]].a, ...pieces.map((k) => limbs[k].b)];
@@ -179,10 +204,17 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     const normal = (s: number): V3 => unit(add(mul(P, s), mul(Vp, Math.sqrt(Math.max(0, 1 - s * s)))));
     const cols = CHAIN_BANDS.map(([, , s]) => barkAt(job, mid, normal(s), false));
     let snow: [number, number] | null = null;
-    if (snowy && Math.abs(D[2]) < 0.5) {
+    // No snow on an open crown's roots: they are the trunk's foot.
+    if (snowy && Math.abs(D[2]) < 0.5 && !(job.spec.open && first.order < 0)) {
       const on: number[] = [];
       for (let s = -0.95; s <= 0.951; s += 0.1) if (normal(s)[2] > 0.68) on.push(s);
       if (on.length) snow = [Math.max(-1, on[0] - 0.05), Math.min(1, on[on.length - 1] + 0.05)];
+      // Only along the top edge: the end of the snowy stretch nearest the limb's edge, a fifth of its width.
+      if (snow && job.spec.snowLine) {
+        const top = Math.abs(snow[1]) >= Math.abs(snow[0]) ? snow[1] : snow[0];
+        const w = Math.min(0.4, snow[1] - snow[0]);
+        snow = top > 0 ? [top - w, top] : [top, top + w];
+      }
     }
     const par = first.parent >= 0 && first.order > 0 ? limbs[first.parent] : null;
     const l0 = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) || 1;
@@ -214,23 +246,42 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     g.strokeStyle = c.cols[1];
     g.lineCap = 'round';
     g.lineJoin = 'round';
-    g.lineWidth = c.r[j0] + c.r[j1];
-    g.beginPath();
-    for (let j = j0; j <= j1; j++) (j === j0 ? g.moveTo(c.q[j][0], c.q[j][1]) : g.lineTo(c.q[j][0], c.q[j][1]));
-    g.stroke();
+    if (job.spec.open) {
+      // Tapering to its tip, a stroke a piece.
+      for (let j = j0; j < j1; j++) {
+        g.lineWidth = c.r[j] + c.r[j + 1];
+        g.beginPath();
+        g.moveTo(c.q[j][0], c.q[j][1]);
+        g.lineTo(c.q[j + 1][0], c.q[j + 1][1]);
+        g.stroke();
+      }
+    } else {
+      g.lineWidth = c.r[j0] + c.r[j1];
+      g.beginPath();
+      for (let j = j0; j <= j1; j++) (j === j0 ? g.moveTo(c.q[j][0], c.q[j][1]) : g.lineTo(c.q[j][0], c.q[j][1]));
+      g.stroke();
+    }
     if (c.snow) {
       g.strokeStyle = 'rgba(250,252,255,0.9)';
-      g.lineWidth = (c.r[j0] + c.r[j1]) * 0.5;
+      g.lineWidth = (c.r[j0] + c.r[j1]) * (job.spec.snowLine ? 0.3 : 0.5);
       g.beginPath();
       for (let j = j0; j <= j1; j++) (j === j0 ? g.moveTo(c.q[j][0], c.q[j][1] - c.r[j] * 0.5) : g.lineTo(c.q[j][0], c.q[j][1] - c.r[j] * 0.5));
       g.stroke();
     }
     return;
   }
-  CHAIN_BANDS.forEach(([s0, s1], i) => {
-    g.fillStyle = c.cols[i];
-    g.fill(bandPath(c, j0, j1, i === 0 ? s0 : s0 - 0.04, i === 2 ? s1 : s1 + 0.04));
-  });
+  if (job.spec.open && c.order >= 2) {
+    // An open crown's branches in two: the whole in its middle tone, its shaded side over it.
+    g.fillStyle = c.cols[1];
+    g.fill(bandPath(c, j0, j1, -1, 1));
+    g.fillStyle = c.cols[0];
+    g.fill(bandPath(c, j0, j1, -1, -0.3));
+  } else {
+    CHAIN_BANDS.forEach(([s0, s1], i) => {
+      g.fillStyle = c.cols[i];
+      g.fill(bandPath(c, j0, j1, i === 0 ? s0 : s0 - 0.04, i === 2 ? s1 : s1 + 0.04));
+    });
+  }
   if (c.snow) {
     g.fillStyle = '#f4f7fd';
     g.fill(bandPath(c, j0, j1, c.snow[0], c.snow[1]));
@@ -242,15 +293,26 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     g.arc(c.q[j1][0], c.q[j1][1], c.r[j1], 0, TAU);
     g.fill();
   }
+  // An open crown's limbs leave the trunk from its side: the start rounded off too, where it shows past the trunk.
+  if (job.spec.open && c.order === 1 && j0 === 0) {
+    g.fillStyle = c.cols[1];
+    g.beginPath();
+    g.arc(c.q[0][0], c.q[0][1], c.r[0] * 0.95, 0, TAU);
+    g.fill();
+  }
+  // A buttressed foot has its moss on the buttresses (`paintFoot`).
+  if (job.spec.bark.moss && !job.spec.buttress && c.order === 0 && j0 === 0) paintMoss(g, job.spec.bark.moss, c, R);
   // Furrows down the bark of the trunk and the big limbs.
   const rm = Math.max(c.r[j0], c.r[j1]);
-  if (rm > 2.2 && c.order <= 1) {
+  // Rough bark only where it is broad enough to show.
+  if (rm > (job.spec.bark.ridged && c.order > 0 ? 3 : 2.2) && c.order <= 1) {
     g.strokeStyle = job.spec.bark.furrow;
     g.globalAlpha = c.order < 0 ? 0.35 : 0.5;
     g.lineWidth = 0.42;
     g.beginPath();
     const n = Math.min(6, Math.floor(rm / 1.3));
-    for (let i = 0; i < n; i++) {
+    if (job.spec.bark.ridged) ridges(g, c, j0, j1, n, R);
+    else for (let i = 0; i < n; i++) {
       const s = -0.75 + (1.5 * (i + 0.5)) / n + (R() - 0.5) * 0.18;
       for (let j = j0; j <= j1; j++) {
         const w = (R() - 0.5) * 0.45;
@@ -261,6 +323,9 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     g.stroke();
     g.globalAlpha = 1;
   }
+  // An open crown's roots and the foot of its trunk are one mass: only the ink round the whole tree is on them.
+  if (job.spec.open && c.order < 0) return;
+  if (job.spec.open && c.order === 0) j0 = Math.max(j0, Math.min(j1 - 1, 2));
   // Its two sides in ink, from clear of whatever it grows out of.
   g.strokeStyle = rgb(KIT_INK, 0.85);
   g.lineWidth = KIT_INK_W * 0.75;
@@ -280,6 +345,56 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     }
   }
   g.stroke();
+}
+
+/** Furrows as rough bark has them: wandering, broken into ridges, between `n` lines across. */
+function ridges(g: Ctx, c: Chain, j0: number, j1: number, n: number, R: () => number): void {
+  // Steps enough to wander: fewer on a run of many short pieces.
+  const SUB = j1 - j0 >= 4 ? 1 : 3;
+  for (let i = 0; i < n; i++) {
+    const s = -0.8 + (1.6 * (i + 0.5)) / n;
+    let on = false;
+    for (let j = j0; j < j1; j++) {
+      for (let k = 0; k <= SUB; k++) {
+        const t = k / SUB;
+        const r = c.r[j] + (c.r[j + 1] - c.r[j]) * t;
+        const qx = c.q[j][0] + (c.q[j + 1][0] - c.q[j][0]) * t, qy = c.q[j][1] + (c.q[j + 1][1] - c.q[j][1]) * t;
+        const nx = c.n[j][0] + (c.n[j + 1][0] - c.n[j][0]) * t, ny = c.n[j][1] + (c.n[j + 1][1] - c.n[j][1]) * t;
+        const w = s * r + (R() - 0.5) * r * 0.22;
+        const x = qx + nx * w, y = qy + ny * w;
+        // A ridge runs two or three steps and breaks.
+        if (!on || R() < 0.22) { g.moveTo(x, y); on = true; } else g.lineTo(x, y);
+      }
+    }
+  }
+}
+
+/** Moss up the trunk's shaded side from the ground: a flat patch with a ragged top, gone by half way up. */
+function paintMoss(g: Ctx, moss: string, c: Chain, R: () => number): void {
+  const top = Math.max(1, Math.round((c.q.length - 1) * 0.5));
+  const SUB = 3;
+  const p = new Path2D();
+  const at = (j: number, t: number, s: number): Pt => {
+    const r = c.r[j] + (c.r[j + 1] - c.r[j]) * t;
+    return [
+      c.q[j][0] + (c.q[j + 1][0] - c.q[j][0]) * t + (c.n[j][0] + (c.n[j + 1][0] - c.n[j][0]) * t) * r * s,
+      c.q[j][1] + (c.q[j + 1][1] - c.q[j][1]) * t + (c.n[j][1] + (c.n[j + 1][1] - c.n[j][1]) * t) * r * s,
+    ];
+  };
+  p.moveTo(...at(0, 0, -1));
+  // Up the shaded edge, then down its ragged inner edge.
+  for (let j = 0; j < top; j++) for (let k = 1; k <= SUB; k++) p.lineTo(...at(j, k / SUB, -1));
+  for (let j = top - 1; j >= 0; j--) {
+    for (let k = SUB; k >= 0; k--) {
+      const f = (j + k / SUB) / top;
+      p.lineTo(...at(j, k / SUB, -1 + (1 - f) * (0.55 + 0.45 * R()) + (k % 2 ? 0.12 : 0)));
+    }
+  }
+  p.closePath();
+  g.fillStyle = moss;
+  g.globalAlpha = 0.8;
+  g.fill(p);
+  g.globalAlpha = 1;
 }
 
 /* ---- leaf -------------------------------------------------------------------------- */
@@ -314,6 +429,14 @@ const LEAF_EDGE: ReadonlyArray<Pt> = Array.from({ length: 15 }, (_, i) => {
   return [u, Math.pow(Math.sin(Math.PI * u), 0.75) * (1 - 0.42 * Math.pow(Math.abs(Math.cos(3 * Math.PI * u)), 6) * Math.sin(Math.PI * u))] as Pt;
 });
 
+/** An oak leaf's edge standing out of a mass: long and low, in round lobes with a notch between each. */
+const OAK_EDGE: ReadonlyArray<Pt> = Array.from({ length: 13 }, (_, i) => {
+  const u = i / 12;
+  return [u, Math.pow(Math.sin(Math.PI * u), 0.6) * (0.55 + 0.45 * Math.sqrt(Math.abs(Math.sin(3 * Math.PI * u))))] as Pt;
+});
+/** The edge a species' masses stand out of. */
+const edgeOf = (spec: Species3D): ReadonlyArray<Pt> => (spec.leafForm === 'oak' ? OAK_EDGE : LEAF_EDGE);
+
 /** The shape of a mass, seeded: two waves of lumps round it and the leaves standing out of its edge. */
 interface Outline { lumps: [number, number, number, number]; leaves: Array<{ at: number; w: number; h: number }> }
 
@@ -326,7 +449,7 @@ function outlineOf(R: () => number, leaves: number): Outline {
 }
 
 /** A mass's outline round (cx, cy), lumpy, with its leaves standing out of it `k` as far. */
-function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: Outline, k = 1): void {
+function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: Outline, k = 1, edge: ReadonlyArray<Pt> = LEAF_EDGE, steps = 28): void {
   const [a1, p1, a2, p2] = o.lumps;
   const rad = (t: number): number => 1 + a1 * Math.sin(3 * t + p1) + a2 * Math.sin(5 * t + p2);
   let first = true;
@@ -334,13 +457,13 @@ function massPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, o: 
     const x = cx + Math.cos(t) * rx * r, y = cy + Math.sin(t) * ry * r;
     if (first) { p.moveTo(x, y); first = false; } else p.lineTo(x, y);
   };
-  const STEP = TAU / 28;
+  const STEP = TAU / steps;
   const start = o.leaves.length ? o.leaves[0].at - o.leaves[0].w / 2 : 0;
   let t = start;
   for (const L of o.leaves) {
     const from = L.at - L.w / 2;
     for (; t < from; t += STEP) pt(t, rad(t));
-    for (const [u, h] of LEAF_EDGE) {
+    for (const [u, h] of edge) {
       const a = from + u * L.w;
       pt(a, rad(a) + h * L.h * k);
     }
@@ -361,7 +484,7 @@ function paintMass(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; fr
   const { c } = s;
   const R = mulberry32(job.seed * 977 + Math.round(c.k * 1e6));
   const [cx, cy] = proj(job.e, c.c);
-  const rx = c.r * ACROSS * s.grown, ry = rx * 0.86;
+  const rx = c.r * ACROSS * s.grown, ry = rx * (job.spec.pad ?? 0.86);
   const L = clumpLight(job, c);
   const top = s.ramp.length - 1;
   const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
@@ -369,7 +492,7 @@ function paintMass(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; fr
   const plane = (dx: number, dy: number, k: number, col: string, seed: number): void => {
     const p = new Path2D();
     const po = outlineOf(mulberry32(seed), 3);
-    massPath(p, cx + dx, cy + dy, rx * k, ry * k, po, 0.9);
+    massPath(p, cx + dx, cy + dy, rx * k, ry * k, po, 0.9, edgeOf(job.spec));
     g.fillStyle = col;
     g.fill(p);
   };
@@ -389,7 +512,7 @@ function paintMass(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; fr
   for (let i = 0; i < 2; i++) {
     const a = Math.atan2(sun.sy - 0.6, sun.sx) + (R() - 0.5) * 1.4;
     const d = 0.4 + 0.3 * R();
-    leafAt(g, cx + Math.cos(a) * rx * d, cy + Math.sin(a) * ry * d, rx * 0.24, (R() - 0.5) * 0.8, 0.85);
+    leafOf(job.spec)(g, cx + Math.cos(a) * rx * d, cy + Math.sin(a) * ry * d, rx * 0.24, (R() - 0.5) * 0.8, 0.85);
   }
   g.fill();
   g.restore();
@@ -397,6 +520,71 @@ function paintMass(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; fr
   g.lineWidth = KIT_INK_W;
   g.lineJoin = 'round';
   g.stroke(outline);
+}
+
+/** A cluster's lumps on the screen: where each is, how big, and its outline's shape. */
+interface Lump { x: number; y: number; rx: number; ry: number; o: Outline; seed: number }
+
+function lumpsOf(job: Job, s: Shown): Lump[] {
+  const { c } = s;
+  const pad = job.spec.pad ?? 0.86;
+  return (c.subs ?? []).map((u, j) => {
+    const [x, y] = proj(job.e, [c.c[0] + u.o[0] * s.grown, c.c[1] + u.o[1] * s.grown, c.c[2] + u.o[2] * s.grown]);
+    const rx = u.r * ACROSS * s.grown;
+    const seed = job.seed * 31 + Math.round(c.k * 1e6) + j * 7;
+    // The middle lump is mostly inside the cluster: its edge plain; the others' edges in leaves.
+    return { x, y, rx, ry: rx * pad, o: outlineOf(mulberry32(seed), j === 0 ? 0 : 1 + (j % 2)), seed };
+  });
+}
+
+/**
+ * A cluster of lumps as one mass, as `paintMass` paints one: its rim laid
+ * first and its fill over the inside of it, so only its outside edge is
+ * inked; then its shade's core, its middle and its lit plane, each a plane
+ * in every lump at once, so each lump is shaded as its own and the cluster
+ * is still four flat tones.
+ */
+function paintCluster(g: Ctx, job: Job, s: Shown, sun: { sx: number; sy: number; front: number }, outline: Path2D, lumps: Lump[], rim: string): void {
+  const L = clumpLight(job, s.c);
+  const top = s.ramp.length - 1;
+  const b = Math.max(1, Math.min(top - 2, Math.round(L * (top - 1.2))));
+  const off = 1 - 0.55 * sun.front;
+  const edge = edgeOf(job.spec);
+  g.strokeStyle = rim;
+  g.lineWidth = KIT_INK_W * 2;
+  g.lineJoin = 'round';
+  g.stroke(outline);
+  g.fillStyle = s.under[b];
+  g.fill(outline);
+  g.save();
+  g.clip(outline);
+  const [ccx, ccy] = proj(job.e, s.c.c);
+  const plane = (along: number, down: number, k: number, col: string, n: number, lit = false): void => {
+    const p = new Path2D();
+    for (const u of lumps) {
+      // The lit plane only on the lumps turned to the sun and up: the rest are in the cluster's own shade.
+      if (lit && (u.x - ccx) * sun.sx + (u.y - ccy) * sun.sy - (u.y - ccy) * 0.5 < -u.rx * 0.35) continue;
+      // A plane is inside the mass: lumpy, with no leaves standing out of it.
+      massPath(p, u.x + sun.sx * u.rx * along * off, u.y + sun.sy * u.ry * along * off + u.ry * down, u.rx * k, u.ry * k, outlineOf(mulberry32(u.seed + n), 0), 0.9, edge, 14);
+    }
+    g.fillStyle = col;
+    g.fill(p);
+  };
+  // The core of the shade: away from the sun and under; the middle, and the lit side, toward the sun and up.
+  plane(-0.5, 0.28, 0.72, s.under[b - 1], 1);
+  plane(0.16, -0.1, 0.8, s.ramp[b + 1], 2);
+  if (!job.light.night || L > 0.6) plane(0.38, -0.22, 0.48, s.over[b + 2], 3, true);
+  // A leaf or two where the light catches the top lump's edge.
+  const R = mulberry32(lumps[0]?.seed ?? 1);
+  const u = lumps.reduce((m, v) => (v.y - v.ry < m.y - m.ry ? v : m), lumps[0]);
+  if (u) {
+    g.fillStyle = s.over[Math.min(top, b + 2)];
+    g.beginPath();
+    const a = Math.atan2(sun.sy - 0.6, sun.sx) + (R() - 0.5) * 1.2;
+    leafOf(job.spec)(g, u.x + Math.cos(a) * u.rx * 0.5, u.y + Math.sin(a) * u.ry * 0.5, u.rx * 0.3, (R() - 0.5) * 0.8, 0.85);
+    g.fill();
+  }
+  g.restore();
 }
 
 /** Winged keys hanging in a bunch from under a clump: pairs of wings on short stalks. */
@@ -454,7 +642,7 @@ function paintLitter(g: Ctx, job: Job, R: () => number): void {
       const ramp = spec.leaf.autumn[Math.floor(R() * 3)];
       g.fillStyle = ramp[3 + Math.floor(R() * 3)];
       g.beginPath();
-      leafAt(g, x, y, 1.5 + R(), R() * TAU, 0.5);
+      leafOf(spec)(g, x, y, 1.5 + R(), R() * TAU, 0.5);
       g.fill();
       g.strokeStyle = rgb(KIT_INK, 0.45);
       g.lineWidth = 0.3;
@@ -481,7 +669,7 @@ function paintFalling(g: Ctx, job: Job, n: number): void {
     const [x, y] = proj(job.e, p);
     g.fillStyle = spec.leaf.autumn[Math.floor(R() * 3)][4];
     g.beginPath();
-    leafAt(g, x, y, 1.1, R() * TAU, 0.75 + 0.25 * R());
+    leafOf(spec)(g, x, y, 1.1, R() * TAU, 0.75 + 0.25 * R());
     g.fill();
     g.strokeStyle = rgb(KIT_INK, 0.6);
     g.lineWidth = 0.3;
@@ -504,10 +692,55 @@ function onTrunk(job: Job, z: number, az: number): { p: V3; n: V3; seen: number;
   return { p: add(axis, mul(n, r * 0.92)), n, seen, r };
 }
 
+/**
+ * A rune cut in the bark and inked as the kit inks: the ink, the groove in
+ * the bark's own shade inside it, and a lit edge; after dark the groove lit
+ * gold as a runestone's runes are, in a glow of widening faint strokes.
+ * In the glyph's own frame, a unit from its middle to its top.
+ */
+function inkedRune(g: Ctx, face: RGB, night: boolean): void {
+  const path = (): void => { g.beginPath(); glyphPath(g, 'algiz', 0, 0, 1); };
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  if (night) {
+    for (const [k, al] of [[2.2, 0.06], [1.6, 0.1], [1.15, 0.16], [0.8, 0.24]] as Array<[number, number]>) {
+      path();
+      g.strokeStyle = `rgba(255, 172, 72, ${al})`;
+      g.lineWidth = k;
+      g.stroke();
+    }
+    for (const [col, w] of [[RUNE_EDGE, 0.36], [RUNE_GOLD, 0.25], [RUNE_WHITE, 0.12]] as Array<[string, number]>) {
+      path();
+      g.strokeStyle = col;
+      g.lineWidth = w;
+      g.stroke();
+    }
+    return;
+  }
+  path();
+  g.strokeStyle = rgb(KIT_INK);
+  g.lineWidth = 0.42;
+  g.stroke();
+  path();
+  g.strokeStyle = rgb(mixRgb(face, hex('#2a2030'), 0.55));
+  g.lineWidth = 0.26;
+  g.stroke();
+  g.save();
+  g.translate(0.05, 0.05);
+  path();
+  g.strokeStyle = rgb(mixRgb(face, [255, 246, 228], 0.35), 0.7);
+  g.lineWidth = 0.08;
+  g.stroke();
+  g.restore();
+}
+
+/** How high the trunk goes before it splits. */
+const trunkTop = (job: Job): number => job.sk.limbs.reduce((m, l) => (l.order === 0 ? Math.max(m, l.b[2]) : m), 0);
+
 function paintCarving(g: Ctx, job: Job): void {
   const { sk, spec, e } = job;
   if (sk.hollow !== null) {
-    const at = onTrunk(job, sk.height * 0.2, sk.hollow);
+    const at = onTrunk(job, Math.min(sk.height * 0.2, trunkTop(job) * 0.75), sk.hollow);
     if (at && at.seen > 0.15) {
       const [x, y] = proj(e, at.p);
       const w = at.r * ACROSS * 0.55 * at.seen;
@@ -521,7 +754,7 @@ function paintCarving(g: Ctx, job: Job): void {
     }
   }
   if (sk.rune !== null) {
-    const at = onTrunk(job, sk.height * 0.12, sk.rune);
+    const at = onTrunk(job, Math.min(sk.height * 0.12, trunkTop(job) * 0.45), sk.rune);
     if (at && at.seen > 0.3) {
       const [x, y] = proj(e, at.p);
       const tan: V3 = [-at.n[1], at.n[0], 0];
@@ -531,7 +764,8 @@ function paintCarving(g: Ctx, job: Job): void {
       g.transform(tx * s, ty * s, 0, -HEIGHT_SCALE * s, x, y);
       const lam = Math.max(0, dot(at.n, job.light.sun));
       const face = mixRgb(hex(spec.bark.shade), hex(spec.bark.lit), clamp01((job.light.ambient + job.light.direct * lam - 0.22) / 0.82));
-      cut(g, face, 0.3, () => glyphPath(g, 'algiz', 0, 0, 1));
+      if (spec.inkedRune) inkedRune(g, face, job.light.night);
+      else cut(g, face, 0.3, () => glyphPath(g, 'algiz', 0, 0, 1));
       g.restore();
     }
   }
@@ -553,11 +787,17 @@ export function paintTree3d(g: Ctx, job: Job): void {
   // Each mass's outline, worked out once: the ink is laid under all of them before any is painted.
   const masses = shown.map((s) => {
     const o = outlineOf(mulberry32(job.seed * 31 + Math.round(s.c.k * 1e6)), 4 + Math.floor(s.c.k * 2.99));
+    const path = new Path2D();
+    // A cluster: its lumps' outlines in the one path, filled as one.
+    if (s.c.subs) {
+      const lumps = lumpsOf(job, s);
+      for (const u of lumps) massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec), 24);
+      return { o, path, lumps };
+    }
     const [cx, cy] = proj(e, s.c.c);
     const rx = s.c.r * ACROSS * s.grown;
-    const path = new Path2D();
-    massPath(path, cx, cy, rx, rx * 0.86, o);
-    return { o, path };
+    massPath(path, cx, cy, rx, rx * (spec.pad ?? 0.86), o, 1, edgeOf(spec));
+    return { o, path, lumps: null };
   });
   /*
    * The ink round the whole tree, laid first under everything: every spray's
@@ -573,7 +813,8 @@ export function paintTree3d(g: Ctx, job: Job): void {
   for (const m of masses) g.stroke(m.path);
   for (const c of chains) {
     if (c.thin) {
-      g.lineWidth = c.r[0] + c.r[c.r.length - 1] + KIT_INK_W * 2;
+      // An open crown's twigs inked finer, or the ink is all there is of them.
+      g.lineWidth = c.r[0] + c.r[c.r.length - 1] + KIT_INK_W * (spec.open && c.order >= 3 ? 1.2 : 2);
       g.beginPath();
       c.q.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
       g.stroke();
@@ -587,15 +828,32 @@ export function paintTree3d(g: Ctx, job: Job): void {
       g.fill();
     }
   }
+  // An open crown's trunk stands on a round foot, the ground's circle of it, laid just behind the trunk.
+  const trunk = chains.find((c) => c.order === 0);
+  const foot = spec.open && trunk ? footOf(job) : null;
+  if (foot && trunk) {
+    g.lineWidth = KIT_INK_W * 2;
+    g.stroke(foot.base);
+    items.push({ d: near(sk.limbs[0].a) - 0.6, draw: () => paintFoot(g, foot, trunk) });
+    // Each buttress by its own depth: those behind the trunk under it, those in front over it.
+    foot.lobes.forEach(([a, out], k) => {
+      const b = buttress(job, a, out, k);
+      items.push({ d: near(b.at) - 0.5, draw: () => b.draw(g) });
+    });
+  }
   // The wood, a few pieces of a limb at a time, so each run is laid in its own place among the leaf.
   for (const c of chains) {
-    const per = c.order <= 0 ? 8 : 2;
+    // An open crown's branches go in whole: each is short, and among the masses by its own depth.
+    const per = c.order <= 0 ? 8 : spec.open ? (c.order === 1 ? 4 : 6) : 2;
     for (let j0 = 0; j0 < c.q.length - 1; j0 += per) {
       const j1 = Math.min(c.q.length - 1, j0 + per);
       const L0 = sk.limbs[c.pieces[j0]], L1 = sk.limbs[c.pieces[j1 - 1]];
       const R = mulberry32(job.seed + c.pieces[j0] * 13);
-      // Under a full crown the wood goes in first: the crown is in front of all of it.
-      items.push({ d: leafy ? -1e6 : near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0), draw: () => paintChain(g, job, c, j0, j1, R) });
+      // Under a full crown the wood goes in first: the crown is in front of all of it. An open crown's
+      // wood is among its masses, set back a little so a branch's end goes into the mass on it.
+      const d = near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0);
+      const at = leafy && !spec.open ? -1e6 : spec.open && shown.length ? d - sk.crown.r * 0.12 * Math.max(0, c.order) : d;
+      items.push({ d: at, draw: () => paintChain(g, job, c, j0, j1, R) });
     }
   }
   const sizeOfKey = sk.crown.r * 0.12;
@@ -605,7 +863,9 @@ export function paintTree3d(g: Ctx, job: Job): void {
     items.push({
       d: near(s.c.c),
       draw: () => {
-        paintMass(g, job, s, sun, masses[i].path, masses[i].o, rim);
+        const lumps = masses[i].lumps;
+        if (lumps) paintCluster(g, job, s, sun, masses[i].path, lumps, rim);
+        else paintMass(g, job, s, sun, masses[i].path, masses[i].o, rim);
         if (keyed && s.c.up < 0.6 && s.c.k < 0.55) {
           const [x, y] = proj(e, s.c.c);
           const col = dress.season === 'summer' ? mixRgbHex(spec.keys!.colour, spec.keys!.ripe, 0.2) : spec.keys!.colour;
@@ -638,6 +898,164 @@ export function paintTree3d(g: Ctx, job: Job): void {
 
 const mixRgbHex = (a: string, b: string, t: number): string => rgbHex(mixRgb(hex(a), hex(b), t));
 
+/** Where a buttressed foot's lobes go: the way each root runs, and how far past the trunk it reaches. */
+function lobesOf(job: Job): Array<[number, number]> {
+  const { sk } = job;
+  const base = sk.limbs[0].a;
+  const rT = sk.limbs[0].ra * 1.02;
+  const out: Array<[number, number]> = [];
+  if (!job.spec.buttress) return out;
+  for (const R of sk.limbs) {
+    if (R.order >= 0 || sk.limbs[R.parent]?.order !== -1) continue;
+    out.push([Math.atan2(R.b[1] - base[1], R.b[0] - base[0]), Math.hypot(R.b[0] - base[0], R.b[1] - base[1]) + R.rb - rT]);
+  }
+  return out;
+}
+
+/** A closed shape round the trunk's foot, `r(t)` from its axis at each way round, `z(t)` up. */
+function groundShape(job: Job, r: (t: number) => number, N: number, z: (t: number) => number = () => 0): Path2D {
+  const base = job.sk.limbs[0].a;
+  const p = new Path2D();
+  for (let i = 0; i <= N; i++) {
+    const t = (i / N) * TAU;
+    const rr = r(t);
+    const [x, y] = proj(job.e, [base[0] + Math.cos(t) * rr, base[1] + Math.sin(t) * rr, z(t)]);
+    if (i === 0) p.moveTo(x, y); else p.lineTo(x, y);
+  }
+  p.closePath();
+  return p;
+}
+
+/**
+ * The ground's shape under a trunk, as a path on the screen: its circle, and
+ * where it is buttressed a lobe out along each root with a soft dip between.
+ */
+function footPath(job: Job, lobes: Array<[number, number]>): Path2D {
+  const rT = job.sk.limbs[0].ra * 1.02;
+  return groundShape(job, (t) => {
+    let r = rT;
+    for (const [a, out] of lobes) r += Math.max(0, out) * Math.pow(Math.max(0, Math.cos(t - a)), 6);
+    return r;
+  }, lobes.length ? 48 : 32);
+}
+
+/** A trunk's foot on the screen: its round base on the ground, and the buttresses standing out of it. */
+interface Foot { base: Path2D; lobes: Array<[number, number]> }
+function footOf(job: Job): Foot {
+  return { base: footPath(job, []), lobes: lobesOf(job) };
+}
+
+/** The foot's base filled in the trunk's own bands, carried down across it, so the two are one piece of wood. */
+function paintFoot(g: Ctx, foot: Foot, c: Chain): void {
+  const [x, y] = c.q[0];
+  const [nx, ny] = c.n[0];
+  const ax = c.q[1][0] - x, ay = c.q[1][1] - y;
+  const al = Math.hypot(ax, ay) || 1;
+  const ux = (ax / al) * 400, uy = (ay / al) * 400;
+  const r = c.r[0];
+  g.save();
+  g.clip(foot.base);
+  const BANDS: Array<[number, number, number]> = [[-40, -0.36, 0], [-0.36, 0.34, 1], [0.34, 40, 2]];
+  for (const [s0, s1, i] of BANDS) {
+    g.fillStyle = c.cols[i];
+    g.beginPath();
+    g.moveTo(x + nx * r * s0 - ux, y + ny * r * s0 - uy);
+    g.lineTo(x + nx * r * s1 - ux, y + ny * r * s1 - uy);
+    g.lineTo(x + nx * r * s1 + ux, y + ny * r * s1 + uy);
+    g.lineTo(x + nx * r * s0 + ux, y + ny * r * s0 + uy);
+    g.closePath();
+    g.fill();
+  }
+  g.restore();
+}
+
+/**
+ * One buttress, standing out of the trunk's foot: a ridge from high on the
+ * trunk running down to the ground at its end, its two sides falling from
+ * the ridge to the ground. Each side lit as it faces, the far one laid
+ * first; moss low on a shaded side; snow along the ridge in winter; inked
+ * along the ground and round its end. Where it stands, for its depth, and
+ * how to draw it.
+ */
+function buttress(job: Job, a: number, out: number, k: number): { at: V3; draw: (g: Ctx) => void } {
+  const { sk, spec, light, e } = job;
+  const base = sk.limbs[0].a;
+  const rT = sk.limbs[0].ra * 1.02;
+  const dir: V3 = [Math.cos(a), Math.sin(a), 0];
+  const perp: V3 = [-dir[1], dir[0], 0];
+  const r0 = rT * 0.72, r1 = rT + Math.max(rT * 0.3, out);
+  const h0 = rT * 0.75, w0 = rT * 0.62;
+  const N = 8;
+  const ridge: V3[] = [], left: V3[] = [], right: V3[] = [];
+  for (let i = 0; i <= N; i++) {
+    const s = i / N;
+    const c = add(base, mul(dir, r0 + (r1 - r0) * s));
+    // Falling steeply off the trunk and running out low; rounded off at its end.
+    const z = h0 * Math.pow(1 - s, 2.2) + rT * 0.08 * (1 - s * s);
+    const w = w0 * Math.sqrt(Math.max(0, 1 - s * s * s)) * (1 - 0.3 * s);
+    ridge.push([c[0], c[1], c[2] + z]);
+    left.push(add(c, mul(perp, w)));
+    right.push(add(c, mul(perp, -w)));
+  }
+  const P = (p: V3): Pt => proj(e, p);
+  const face = (side: V3[]): Path2D => {
+    const p = new Path2D();
+    ridge.forEach((q, i) => (i ? p.lineTo(...P(q)) : p.moveTo(...P(q))));
+    for (let i = N; i >= 0; i--) p.lineTo(...P(side[i]));
+    p.closePath();
+    return p;
+  };
+  // Its sides are steep: lit mostly as the trunk's sides are, a little more from above.
+  const nL = unit(add(perp, [0, 0, 0.35])), nR = unit(add(mul(perp, -1), [0, 0, 0.35]));
+  const colOf = (n: V3): string => {
+    const lam = Math.max(0, dot(n, light.sun));
+    // A step under the limbs' light: a buttress is low, in the trunk's shade much of the day.
+    return rgb(mixRgb(hex(spec.bark.shade), hex(spec.bark.lit), 0.6 * clamp01((light.ambient + light.direct * lam - 0.22) / 0.82)));
+  };
+  const toward = e.toward as V3;
+  const sides: Array<[V3[], V3]> = [[left, nL], [right, nR]];
+  sides.sort((p, q) => dot(p[1], toward) - dot(q[1], toward));
+  return {
+    at: add(base, mul(dir, (r0 + r1) / 2)),
+    draw: (g) => {
+      for (const [side, n] of sides) {
+        g.fillStyle = colOf(n);
+        g.fill(face(side));
+      }
+      // Moss low on the side turned from the sun.
+      const dark = sides[0][1];
+      if (spec.bark.moss && k % 2 === 0 && dot(dark, light.sun) < 0.3) {
+        const side = dot(nL, light.sun) < dot(nR, light.sun) ? left : right;
+        const m = new Path2D();
+        side.forEach((q, i) => (i ? m.lineTo(...P(q)) : m.moveTo(...P(q))));
+        for (let i = N; i >= 0; i--) m.lineTo(...P(lerp(side[i], ridge[i], 0.35 + 0.15 * Math.sin(i * 1.7 + k))));
+        m.closePath();
+        g.globalAlpha = 0.75;
+        g.fillStyle = spec.bark.moss;
+        g.fill(m);
+        g.globalAlpha = 1;
+      }
+      if (job.dress.season === 'winter') {
+        g.strokeStyle = 'rgba(250,252,255,0.9)';
+        g.lineWidth = KIT_INK_W * 0.9;
+        g.lineCap = 'round';
+        g.beginPath();
+        ridge.slice(0, N).forEach((q, i) => (i ? g.lineTo(...P(q)) : g.moveTo(...P(q))));
+        g.stroke();
+      }
+      // Ink along the ground and round its end.
+      g.strokeStyle = rgb(KIT_INK, 0.85);
+      g.lineWidth = KIT_INK_W * 0.9;
+      g.lineJoin = 'round';
+      g.beginPath();
+      left.forEach((q, i) => (i ? g.lineTo(...P(q)) : g.moveTo(...P(q))));
+      g.lineTo(...P(ridge[N]));
+      for (let i = N; i >= 0; i--) g.lineTo(...P(right[i]));
+      g.stroke();
+    },
+  };
+}
+
 /** What a tree covers from an eye, in pixels at zoom one from its foot: left, top, right, bottom. */
 export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number] {
   let x0 = -12, y0 = -12, x1 = 12, y1 = 10;
@@ -648,7 +1066,16 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
     y0 = Math.min(y0, y - rr); y1 = Math.max(y1, y + rr);
   };
   for (const L of sk.limbs) { take(L.a, L.ra); take(L.b, L.rb); }
-  for (const c of sk.clumps) take(c.c, c.r * 1.45);
+  for (const c of sk.clumps) {
+    if (!c.subs) { take(c.c, c.r * (sk.leafReach ?? 1.45)); continue; }
+    // A cluster by its lumps: each out to its leaves' tips across, and no more than a mass's height up and down.
+    for (const u of c.subs) {
+      const [x, y] = proj(e, [c.c[0] + u.o[0], c.c[1] + u.o[1], c.c[2] + u.o[2]]);
+      const rx = u.r * ACROSS * 1.5 + KIT_INK_W * 2, ry = u.r * ACROSS * 0.86 * 1.5 + KIT_INK_W * 2;
+      x0 = Math.min(x0, x - rx); x1 = Math.max(x1, x + rx);
+      y0 = Math.min(y0, y - ry); y1 = Math.max(y1, y + ry);
+    }
+  }
   // The litter round its foot.
   const reach = Math.min(16, sk.crown.r * 0.55) + 2;
   for (const a of [0, 1, 2, 3]) take([Math.cos(a * Math.PI / 2) * reach, Math.sin(a * Math.PI / 2) * reach, 0], 1);
