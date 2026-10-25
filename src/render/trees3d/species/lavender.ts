@@ -98,7 +98,8 @@ function growLavender(seed: number): Skeleton {
   });
   // The middle of the top, under the rest.
   subs.unshift({ o: [0, 0, top - lr * 1.1 - c[2]], r: lr * 1.3 });
-  const clumps: Clump[] = [{ c, r: reach, limb: 0, k: R(), subs, out: 1, up: 1 }];
+  // Its radius is what it throws shade with (`bush3dShadow`): a low mound's lies mostly under it.
+  const clumps: Clump[] = [{ c, r: reach * 0.62, limb: 0, k: R(), subs, out: 1, up: 1 }];
 
   /* ---- the flower stems: a fan out of the top ---- */
   const spikes: Array<{ a: V3; b: V3; k: number }> = [];
@@ -113,7 +114,7 @@ function growLavender(seed: number): Skeleton {
     const l = top * (1 + 0.3 * R()) * (1 - 0.15 * (rho / inner));
     spikes.push({ a, b: add(a, [Math.cos(az) * Math.sin(tilt) * l, Math.sin(az) * Math.sin(tilt) * l, Math.cos(tilt) * l]), k: R() });
   }
-  return { limbs, clumps, crown: env, height: top, rune: null, hollow: null, spikes, foot: reach * ACROSS * 0.82 };
+  return { limbs, clumps, crown: env, height: top, rune: null, hollow: null, spikes, foot: reach * ACROSS * 1.05 };
 }
 
 /* ---- the flower spikes ---------------------------------------------------------------- */

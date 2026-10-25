@@ -1169,7 +1169,7 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
     }
   }
   // Flower stems out to their tips, and the heads on them.
-  for (const s of sk.spikes ?? []) take(s.b, 2.4);
+  for (const s of sk.spikes ?? []) take(s.b, 1.5);
   // A hanging pad out to its fingers' tips (`Clump.pad`).
   for (const c of sk.clumps) if (c.pad) take(add(c.c, add(c.pad.root, [0, 0, -c.pad.drop - c.pad.hang * 1.6])), c.r * 0.5);
   // The litter round its foot.
