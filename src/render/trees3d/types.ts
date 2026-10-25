@@ -75,6 +75,8 @@ export interface Skeleton {
   hollow: number | null;
   /** How far past a mass's `r` its leaf reaches on the screen, for the bounds of its picture: 1.45 unless given. */
   leafReach?: number;
+  /** A conifer's dark middle round its leader, as a share of each whorl's reach (`Whorls.core`). */
+  core?: number;
 }
 
 /** The tree's proportions at one age, in model units. */
@@ -153,14 +155,19 @@ export interface Species3D {
   /** Each age's build: the mature one, and what each other age changes. */
   build: Build;
   ages: Partial<Record<AgeKey, Partial<Build>>>;
-  /** Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough. */
-  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean };
+  /**
+   * Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough;
+   * long fibres down the trunk in this colour between its furrows, where it is stringy.
+   */
+  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; strands?: string };
   /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed. */
   leafForm?: 'maple' | 'oak';
   /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */
   buttress?: boolean;
   /** Snow as a narrow line along the top edge of the wood, rather than over all its upper face. */
   snowLine?: boolean;
+  /** Stones and ferns round the foot: the stone's colour (`Undergrowth`). */
+  undergrowth?: { stone: RGB };
   /** A carved rune inked in the kit's ink, and lit as a runestone's runes after dark. */
   inkedRune?: boolean;
   /** A mass's height on the screen against its width: 0.86 unless given. */
@@ -220,6 +227,26 @@ export interface Whorls {
   spire: boolean;
   /** How low the lowest boughs hang, as a share of the height. */
   hem: number;
+  /**
+   * Lacy sprays: each bough sweeps out and hangs, its sides and end a fringe
+   * of this many small hanging tips, its top in layers. None: the pine's
+   * pads with blunt fingers.
+   */
+  lace?: number;
+  /** The leader's tip bent over, as a share of the height. */
+  nod?: number;
+  /** A bough's branch against the leader's radius where it leaves it: 0.22 unless given. */
+  limb?: number;
+  /** Roots as buttresses: two pieces, out of the trunk and down along the ground (`Species3D.buttress`). */
+  buttress?: boolean;
+  /** The crown's dark middle round the leader, as a share of each whorl's reach: none unless given. */
+  core?: number;
+  /** Where the top whorl is under a spire, as a share of the height: 0.86 unless given. */
+  top?: number;
+  /** Small whorls up the spire over the top whorl: two unless given. */
+  tufts?: number;
+  /** The trunk's foot swollen this much wider into its roots. */
+  swell?: number;
 }
 
 /** One bough of a conifer, round its mass's middle. */
@@ -238,4 +265,6 @@ export interface Pad {
   /** How far the needles hang under it at its end. */
   hang: number;
   fingers: number;
+  /** Lacy (`Whorls.lace`): its fringe's tips. */
+  lace?: number;
 }

@@ -529,6 +529,9 @@ export function swayed(sk: Skeleton, frame: number, frames: number, seed: number
 
 /* ---- a conifer ---- */
 
+/** Where a nodding leader starts to bend over, as a share of the height. */
+const NOD_FROM = 0.8;
+
 /**
  * How low anything of a tree may hang this far out from its foot: off the
  * ground, and over its own tile, since the ground of the tiles in front is
@@ -554,15 +557,21 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   const stemZ = H * b.stem;
   const dead = b.bare || w.deadTop < 1;
   // Where the live crown stops, and where the leader does.
-  const crownTop = b.bare ? stemZ : H * (w.deadTop < 1 ? w.deadTop : w.spire ? 0.86 : 0.97);
+  const crownTop = b.bare ? stemZ : H * (w.deadTop < 1 ? w.deadTop : w.spire ? w.top ?? 0.86 : 0.97);
   const topZ = b.bare ? H * 0.88 : w.deadTop < 1 ? crownTop : H;
   const bend = (R() - 0.5) * 2 * b.gnarl * r0 * 2.2;
+  // A nodding tip bends over across the lean, from `NOD_FROM` of the height up.
+  const nod = w.nod && !b.bare && w.deadTop >= 1 ? w.nod * H : 0;
+  const nodD: V3 = [Math.cos(leanA + 1.3), Math.sin(leanA + 1.3), 0];
   const axis = (z: number): V3 => {
     const f = z / H;
     const s = Math.sin(f * Math.PI * 1.15) * bend;
-    return [leanD[0] * b.lean * Math.pow(f, 1.4) + sideD[0] * s, leanD[1] * b.lean * Math.pow(f, 1.4) + sideD[1] * s, z];
+    const k = nod * Math.pow(Math.max(0, (f - NOD_FROM) / (1 - NOD_FROM)), 2.2);
+    return [leanD[0] * b.lean * Math.pow(f, 1.4) + sideD[0] * s + nodD[0] * k, leanD[1] * b.lean * Math.pow(f, 1.4) + sideD[1] * s + nodD[1] * k, z - k * 0.3];
   };
-  const radius = (z: number): number => Math.max(0.12, r0 * (1 - 0.9 * Math.pow(Math.min(1, z / H), 0.85)));
+  // A swollen foot: the trunk widening into its roots over the bottom of the bare stem.
+  const swell = (z: number): number => (w.swell ? 1 + w.swell * Math.pow(Math.max(0, 1 - z / Math.max(1, stemZ * 0.7)), 2) : 1);
+  const radius = (z: number): number => Math.max(0.12, r0 * (1 - 0.9 * Math.pow(Math.min(1, z / H), 0.85)) * swell(z));
   const limbs: Limb[] = [];
   const clumps: Clump[] = [];
 
@@ -572,6 +581,10 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   for (let i = 0; i < n; i++) zs.push(stemZ + (crownTop - stemZ) * (n === 1 ? 0 : i / (n - 1)));
   const cuts = [0, stemZ * 0.5, ...zs.filter((z) => z > stemZ * 0.5 + 0.5 && z < topZ - 0.5), topZ];
   if (b.bare) for (let i = 1; i < 6; i++) cuts.splice(cuts.length - 1, 0, stemZ + ((topZ - stemZ) * i) / 6);
+  // A swollen foot in short pieces, so it curves.
+  if (w.swell && !b.bare) cuts.splice(1, 0, stemZ * 0.12, stemZ * 0.26);
+  // A nodding tip in short pieces, so it curves.
+  if (nod) for (let i = 1; i < 5; i++) cuts.splice(cuts.length - 1, 0, crownTop + ((topZ - crownTop) * i) / 5);
   for (let i = 0; i + 1 < cuts.length; i++) {
     limbs.push({ a: axis(cuts[i]), b: axis(cuts[i + 1]), ra: radius(cuts[i]), rb: radius(cuts[i + 1]), order: 0, parent: i - 1, bough: -1, dead: b.bare });
   }
@@ -584,7 +597,19 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   /* ---- the root flare ---- */
   const roots = b.flare > 1.15 ? 4 + Math.round(R()) : 0;
   const rootA = R() * TAU;
-  for (let i = 0; i < roots; i++) {
+  // Buttresses, as the spreading grower's: out of the trunk's foot to a knee, and down along the ground.
+  if (w.buttress) for (let i = 0; i < roots; i++) {
+    const a = rootA + (i / roots) * TAU + (R() - 0.5) * 0.6;
+    const bendA = a + (R() - 0.5) * 0.4;
+    const reach = Math.min(r0 * b.flare * (0.7 + 0.25 * R()), 17);
+    const top: V3 = [Math.cos(a) * r0 * 0.7, Math.sin(a) * r0 * 0.7, r0 * (1.2 + 0.3 * R())];
+    const knee: V3 = [Math.cos(a) * r0 * 1.2, Math.sin(a) * r0 * 1.2, r0 * (0.25 + 0.1 * R())];
+    const end: V3 = [Math.cos(bendA) * reach, Math.sin(bendA) * reach, r0 * 0.03];
+    const first = limbs.length;
+    limbs.push({ a: top, b: knee, ra: r0 * 0.78, rb: r0 * 0.55, order: -1, parent: 0, bough: -1 });
+    limbs.push({ a: knee, b: end, ra: r0 * 0.55, rb: r0 * 0.24, order: -1, parent: first, bough: -1 });
+  }
+  else for (let i = 0; i < roots; i++) {
     const a = rootA + (i / roots) * TAU + (R() - 0.5) * 0.7;
     const reach = r0 * b.flare * (0.7 + 0.25 * R());
     limbs.push({
@@ -678,10 +703,10 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
     const at = clumps.length;
     clumps.push({
       c, r: sl * 0.6, limb: pieceAt(z), k: R(), out: 1, up: u,
-      pad: { root: sub(root, c), base: sub(base, c), d, reach: sl, w: width, drop, hang, fingers },
+      pad: { root: sub(root, c), base: sub(base, c), d, reach: sl, w: width, drop, hang, fingers, lace: w.lace },
     });
     // Its branch, out to where the spray starts and a little under it.
-    const r = Math.max(0.16, radius(z) * 0.22);
+    const r = Math.max(0.16, radius(z) * (w.limb ?? 0.22));
     const mid = add(lerp(base, root, 0.5), [0, 0, out0 * 0.03]);
     const end = add(root, [d[0] * sl * 0.2, d[1] * sl * 0.2, -drop * 0.04]);
     const i0 = limbs.length;
@@ -708,13 +733,16 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   /* ---- a ragged tuft of small boughs on the leader over the top whorl, the leader's tip clear of it ---- */
   if (n > 0 && w.spire && w.deadTop >= 1) {
     const top = H * b.spread * w.taper;
-    for (const [f, k, m] of [[0.28, 0.8, 5], [0.62, 0.45, 3]]) {
+    // Given a number of tufts, that many up the spire, smaller and fewer up it, to short of its tip.
+    const T = w.tufts ?? 0;
+    const tufts = T ? Array.from({ length: T }, (_, i) => [0.12 + (0.7 * i) / Math.max(1, T - 1), 0.9 - (0.6 * i) / Math.max(1, T - 1), Math.max(2, 5 - i)]) : [[0.28, 0.8, 5], [0.62, 0.45, 3]];
+    for (const [f, k, m] of tufts) {
       a0 += 2.4;
       for (let j = 0; j < m; j++) bough(crownTop + (H - crownTop) * f, a0 + (j / m) * TAU + (R() - 0.5) * 0.8, top * k * (0.8 + 0.4 * R()), top * k, 1, 3);
     }
   }
   return {
-    limbs, clumps, crown: env, height: H,
+    limbs, clumps, crown: env, height: H, core: n > 0 ? w.core : undefined,
     rune: b.rune ? Math.PI / 4 + (R() - 0.5) * 0.5 : null,
     hollow: b.hollow ? Math.PI / 4 + 1.1 + (R() - 0.5) * 0.5 : null,
   };
