@@ -541,15 +541,15 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
     const flat = unit([d[0], d[1], 0.0001]);
     const side = across(flat);
     for (let j = 0; j < n; j++) {
-      const s = ((j + 0.5) / n - 0.5) * 1.6 + (R() - 0.5) * (order >= 4 ? 1.6 : 0.4);
+      const s = ((j + 0.5) / n - 0.5) * (order >= 4 ? 2.4 : 1.6) + (R() - 0.5) * (order >= 4 ? 0.9 : 0.4);
       const o = unit(add(flat, mul(side, Math.tan(s))));
       const ll = l * (0.7 + 0.5 * R());
       // Out and a little up, the end falling: the height drawn twice the width, so a little is a lot. The finest stand up
       // and out of what they grow on and fall only at their tips.
       const fine = order >= 4;
       const lift = fine ? 0.3 + 0.2 * R() : Math.max(0, d[2]) * 0.25 + 0.1;
-      const mid = add(from, add(mul(o, ll * 0.5), [0, 0, ll * lift]));
-      const end = add(from, add(mul(o, ll * 0.9), [0, 0, ll * (fine ? lift * 1.1 - 0.1 : lift - 0.12 - 0.3 * b.droop - 0.1 * R())]));
+      const mid = add(from, add(mul(o, ll * 0.5), [0, 0, ll * lift * (fine ? 0.6 : 1)]));
+      const end = add(from, add(mul(o, ll * 0.9), [0, 0, ll * (fine ? lift * 0.9 : lift - 0.12 - 0.3 * b.droop - 0.1 * R())]));
       run([from, mid, end], r, r * 0.45, order, at, bough, false);
     }
   };
@@ -576,7 +576,8 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
       return [foot[0] + top[0] * g + side[0] * s, foot[1] + top[1] * g + side[1] * s, tall * f];
     };
     // Slender all the way up, flaring into the ground at its foot.
-    const r = (f: number): number => Math.max(0.16, rs * (1 - 0.86 * Math.pow(f, 0.9))) + rs * (b.flare - 1) * Math.pow(Math.max(0, 1 - f / 0.11), 2);
+    // A dead stem is snapped off: still thick where it broke.
+    const r = (f: number): number => Math.max(0.16, rs * (1 - (b.bare ? 0.5 : 0.86) * Math.pow(f, 0.9))) + rs * (b.flare - 1) * Math.pow(Math.max(0, 1 - f / 0.11), 2);
     const pieces: number[] = [];
     for (let j = 0; j + 1 < FS.length; j++) {
       // A dead stem is snapped off: no leader past where it broke.
@@ -585,6 +586,12 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
     }
     stems.push({ pieces, az, tall, at, r });
     if (!b.bare) ends.push({ at: pieces[pieces.length - 1], out, top: true });
+    else {
+      // A splinter standing up off one side of the break.
+      const top = at(1), rt = r(1), sa = R() * TAU;
+      const foot: V3 = add(top, [Math.cos(sa) * rt * 0.45, Math.sin(sa) * rt * 0.45, -rt * 0.2]);
+      run([foot, add(foot, [Math.cos(sa) * rt * 0.3, Math.sin(sa) * rt * 0.3, rt * (2.2 + 1.5 * R())])], rt * 0.45, rt * 0.08, 1, pieces[pieces.length - 1], -1, true);
+    }
   }
   const pieceAt = (s: (typeof stems)[number], f: number): number => s.pieces[Math.max(0, Math.min(s.pieces.length - 1, FS.findIndex((x) => x >= f) - 1))];
 
@@ -596,7 +603,7 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
   for (let q = 0; q < Math.round(b.dead); q++) deadOnes.add(Math.floor(R() * n * 0.6));
   let li = 0;
   stems.forEach((st, i) => {
-    const m = Math.max(b.bare ? 2 : 1, Math.round((n * share[i]) / all));
+    const m = Math.max(b.bare ? 3 : 1, Math.round((n * share[i]) / all));
     let az = st.az + R() * TAU;
     const lo = Math.min(0.8, (stemZ * 1.05) / st.tall), hi = b.bare ? 0.92 : 0.9;
     for (let j = 0; j < m; j++, li++) {
@@ -612,7 +619,7 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
       const rise = Math.min(env.c[2] + env.rz * 0.85 - B[2], env.rz * (0.3 + 0.3 * u) * (0.8 + 0.4 * R())) * (b.bare ? 0.6 : 1);
       const full = toEdge(B, d, B[2] + rise);
       // A dead tree's limbs broken off short.
-      const reach = full * (b.bare ? 0.25 + 0.3 * R() : dead ? 0.5 + 0.2 * R() : 0.78 + 0.18 * R());
+      const reach = full * (b.bare ? 0.15 + 0.3 * R() : dead ? 0.8 + 0.2 * R() : 0.78 + 0.18 * R());
       const T: V3 = add(B, [d[0] * reach, d[1] * reach, rise]);
       const L = len(sub(T, B));
       const C1 = add(B, add(mul(d, L * 0.18), [0, 0, L * 0.42]));
@@ -622,7 +629,18 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
       pts[4] = add(pts[4], [0, 0, -L * b.droop * 0.12]);
       const rl = Math.min(st.r(f) * 0.8, Math.max(0.2, st.r(f) * (0.55 + 0.1 * R())));
       const pieces = run(pts, rl, rl * (dead ? 0.55 : 0.3), 1, pieceAt(st, f), li, dead);
-      if (dead) continue;
+      if (dead) {
+        // A dead limb in a living crown keeps a fork or two, snapped short.
+        if (!b.bare) {
+          for (let q = 0; q < 2; q++) {
+            const P = limbs[pieces[1 + q * 2]];
+            const sd = (q ? 1 : -1) * (0.6 + 0.4 * R());
+            const fl = L * (0.2 + 0.12 * R());
+            run([P.b, add(P.b, [Math.cos(az + sd) * fl, Math.sin(az + sd) * fl, fl * 0.5])], P.rb * 0.6, P.rb * 0.35, 2, pieces[1 + q * 2], li, true);
+          }
+        }
+        continue;
+      }
       ends.push({ at: pieces[pieces.length - 1], out: d });
       // Forks off it, up and to either side, their ends falling.
       const nb = Math.max(0, Math.round(b.branching + (R() - 0.5) * 0.8)) * (b.forks >= 2 ? 1 : 0.5);
@@ -647,16 +665,17 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
   for (const e of ends) {
     const P = limbs[e.at];
     const r = Math.max(0.08, P.rb * 0.5);
-    if (b.forks >= 1) hangers(e.at, e.top ? 2 : 3 + Math.floor(R() * 2), env.r * (e.top ? 0.18 : 0.26), r, P.bough, 3);
+    if (b.forks >= 1) hangers(e.at, e.top ? 3 : 4 + Math.floor(R() * 2), env.r * (e.top ? 0.3 : 0.36), r, P.bough, 4);
   }
   // Fine twigs up the forks and limbs, for a bare crown's haze.
   if (b.forks >= 2) {
     const count = limbs.length;
     for (let i = 0; i < count; i++) {
       const L = limbs[i];
-      if (L.order < 1 || L.order > 3 || L.dead) continue;
-      // Up the limbs and forks as well as off their ends, so the bare crown is a haze through and through.
-      hangers(i, L.order === 3 ? 1 + Math.floor(R() * 2) : 2, env.r * (L.order === 3 ? 0.1 : 0.17), 0.06, L.bough, 4, L.order === 3 ? 1 : 0.3 + 0.6 * R());
+      // Up the limbs, the forks and the leader in the crown as well as off their ends, so the bare crown is a haze through and through.
+      const leader = L.order === 0 && L.a[2] > stemZ;
+      if ((!leader && (L.order < 1 || L.order > 2)) || L.dead || L.parent < 0) continue;
+      hangers(i, 3, env.r * (leader ? 0.5 : 0.42), 0.06, L.bough, 4, 0.2 + 0.7 * R());
     }
   }
   if (!b.bare && b.clumps > 0) {

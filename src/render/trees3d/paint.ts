@@ -207,6 +207,8 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
     if (leafy && first.order >= 2) continue;
     // The finest twigs only on the bare wood: among leaf they would be scratches over it.
     if (job.spec.open && first.order >= 4 && job.dress.full > 0) continue;
+    // A haze of the finest twigs is laid as one (`paintHaze`).
+    if (job.spec.haze && first.order >= 4) continue;
     // A buttressed foot's roots are drawn as the foot's lobes (`footPath`).
     if (job.spec.buttress && first.order < 0) continue;
     const pieces = [i];
@@ -274,6 +276,16 @@ function bandPath(c: Chain, j0: number, j1: number, s0: number, s1: number): Pat
 /** Points `j0` to `j1` of a chain (its pieces `j0` to `j1 - 1`): banded, ink down its sides, furrowed. */
 function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () => number): void {
   if (c.thin) {
+    // Among the masses of a hazy crown a thin limb carries its own ink: what was laid under the whole tree is under them.
+    if (job.spec.haze && c.order <= 2) {
+      g.strokeStyle = rgb(KIT_INK, 0.85);
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      g.lineWidth = c.r[j0] + c.r[j1] + KIT_INK_W * 0.9;
+      g.beginPath();
+      for (let j = j0; j <= j1; j++) (j === j0 ? g.moveTo(c.q[j][0], c.q[j][1]) : g.lineTo(c.q[j][0], c.q[j][1]));
+      g.stroke();
+    }
     // A twig is a line: the colour of its middle.
     g.strokeStyle = c.cols[1];
     g.lineCap = 'round';
@@ -435,13 +447,36 @@ function paintMoss(g: Ctx, moss: string, c: Chain, R: () => number): void {
 /** The angle `a` brought into -pi..pi. */
 const wrap = (a: number): number => a - TAU * Math.round(a / TAU);
 
-/** A point on the skin of piece `L`, `t` along it (past its ends too), facing `az` round it, `lift` along it: where it is on the screen. */
-function skinAt(job: Job, L: Limb, t: number, az: number, lift = 0): Pt {
-  const D = unit(sub(L.b, L.a));
-  const h: V3 = [Math.cos(az), Math.sin(az), 0];
-  const n = unit(sub(h, mul(D, dot(h, D))));
-  const r = Math.max(0.1, L.ra + (L.rb - L.ra) * clamp01(t));
-  return proj(job.e, add(add(lerp(L.a, L.b, t), mul(n, r)), mul(D, lift)));
+/** The skin of piece `L` from an eye: a point on it `t` along it (past its ends too), facing `az` round it, `lift` along it, on the screen. */
+function skinOf(e: Eye, L: Limb): (t: number, az: number, lift?: number) => Pt {
+  const ax = L.a[0], ay = L.a[1], az0 = L.a[2];
+  const bx = L.b[0] - ax, by = L.b[1] - ay, bz = L.b[2] - az0;
+  const l = Math.hypot(bx, by, bz) || 1;
+  const dx = bx / l, dy = by / l, dz = bz / l;
+  return (t, az, lift = 0) => {
+    const hx = Math.cos(az), hy = Math.sin(az);
+    const hd = hx * dx + hy * dy;
+    let nx = hx - dx * hd, ny = hy - dy * hd, nz = -dz * hd;
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    const r = Math.max(0.1, L.ra + (L.rb - L.ra) * clamp01(t)) / nl;
+    nx *= r; ny *= r; nz *= r;
+    const px = ax + bx * t + nx + dx * lift, py = ay + by * t + ny + dy * lift, pz = az0 + bz * t + nz + dz * lift;
+    return [px * e.ux + py * e.vx, px * e.uy + py * e.vy - pz * HEIGHT_SCALE];
+  };
+}
+/** What grows off each piece of a tree's wood, by the piece. */
+const kidsOf = new WeakMap<Limb[], Map<number, number[]>>();
+function kids(limbs: Limb[]): Map<number, number[]> {
+  let m = kidsOf.get(limbs);
+  if (m) return m;
+  m = new Map();
+  limbs.forEach((L, i) => {
+    if (L.parent < 0) return;
+    const k = m!.get(L.parent);
+    if (k) k.push(i); else m!.set(L.parent, [i]);
+  });
+  kidsOf.set(limbs, m);
+  return m;
 }
 
 /**
@@ -451,7 +486,9 @@ function skinAt(job: Job, L: Limb, t: number, az: number, lift = 0): Pt {
  * on the wood's skin and seen round it, so the marks keep their places as
  * the camera turns; those round the back are not drawn.
  */
-function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
+function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void { const T0 = performance.now(); try { paintMarks0(g, job, c, j0, j1); } finally { tm('marks', T0); } }
+const tm = (k: string, t0: number): void => { const T = ((globalThis as unknown as { __t?: Record<string, number> }).__t ??= {}); T[k] = (T[k] ?? 0) + performance.now() - t0; };
+function paintMarks0(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
   const marks = job.spec.bark.marks;
   if (!marks) return;
   const { sk } = job;
@@ -462,20 +499,20 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
   g.clip(bandPath(c, j0, j1, -1, 1));
   const ink = new Path2D();
   /** A mark round the skin of `L` from `a0` to `a1`, `t` along it, `th` thick along it, its ends falling `fall`: the part in sight. */
-  const band = (L: Limb, t: number, a0: number, a1: number, th: number, fall: number): void => {
+  const band = (skin: ReturnType<typeof skinOf>, t: number, a0: number, a1: number, th: number, fall: number): void => {
     const lo = Math.max(wrap(a0 - aV), -EDGE), hi = Math.min(wrap(a0 - aV) + (a1 - a0), EDGE);
     if (hi <= lo) return;
     const mid = (wrap(a0 - aV) + (a1 - a0) / 2);
     const half = (a1 - a0) / 2 || 1;
-    const N = 6;
+    const N = 4;
     const top: Pt[] = [], bot: Pt[] = [];
     for (let i = 0; i <= N; i++) {
       const a = lo + ((hi - lo) * i) / N;
       const u = (a - mid) / half;
       const w = th * Math.sqrt(Math.max(0, 1 - u * u)) * 0.5;
       const f = -fall * u * u;
-      top.push(skinAt(job, L, t, aV + a, f + w));
-      bot.push(skinAt(job, L, t, aV + a, f - w));
+      top.push(skin(t, aV + a, f + w));
+      bot.push(skin(t, aV + a, f - w));
     }
     ink.moveTo(top[0][0], top[0][1]);
     for (const p of top.slice(1)) ink.lineTo(p[0], p[1]);
@@ -483,31 +520,33 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
     ink.closePath();
   };
   const rough = c.order === 0 && c.rough ? sk.rough ?? 0 : 0;
+  const below = kids(sk.limbs);
   for (let j = j0; j < j1; j++) {
     const i = c.pieces[j];
     const L = sk.limbs[i];
+    const skin = skinOf(job.e, L);
     const R = mulberry32(job.seed * 7 + i * 131);
     const long = len(sub(L.b, L.a));
     const r = (L.ra + L.rb) / 2;
-    // Dashes all round it, the more the thicker it is.
-    const n = Math.round(long * (0.6 + r * 0.8));
+    // Dashes all round it, the more the thicker it is; none on wood too thin to show them.
+    const n = r * ACROSS < 1.2 ? 0 : Math.round(long * (0.4 + r * 0.55));
     for (let k = 0; k < n; k++) {
       // Spread evenly up it and round it, each a little off its place.
       const t = (k + 0.2 + 0.6 * R()) / n, a = k * 2.4 + R() * 0.8, w = (0.6 + 1.3 * R() * R()) * Math.min(1, 2 / Math.max(0.5, r)) + 0.3, th = (0.2 + 0.28 * R() * R()) * Math.min(1.6, 0.6 + r * 0.25);
       if (L.a[2] + (L.b[2] - L.a[2]) * t < rough * 0.9) continue;
-      band(L, t, a, a + w, th, th * 0.3);
+      band(skin, t, a, a + w, th, th * 0.3);
     }
     // A scar under each limb that leaves it.
-    for (let q = i + 1; q < sk.limbs.length; q++) {
+    for (const q of below.get(i) ?? []) {
       const K = sk.limbs[q];
-      if (K.parent !== i || K.order < 1) continue;
+      if (K.order < 1 || K.order === L.order) continue;
       const d = sub(K.b, K.a);
       const a = Math.atan2(d[1], d[0]);
       const dl = Math.max(1e-6, len(sub(L.b, L.a)));
       const t = clamp01(dot(sub(K.a, L.a), sub(L.b, L.a)) / (dl * dl)) - (K.ra * 0.9) / dl;
       const sp = 0.7 + 0.3 * R();
-      band(L, t, a - sp, a + sp, K.ra * 0.55, K.ra * 1.6);
-      band(L, t + (K.ra * 0.5) / dl, a - 0.3, a + 0.3, K.ra * 0.7, -K.ra * 0.2);
+      band(skin, t, a - sp, a + sp, K.ra * 0.55, K.ra * 1.6);
+      band(skin, t + (K.ra * 0.5) / dl, a - 0.3, a + 0.3, K.ra * 0.7, -K.ra * 0.2);
     }
   }
   g.fillStyle = marks.ink;
@@ -526,7 +565,7 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
     };
     const at = (z: number, a: number): Pt => {
       const { L, t } = pieceAt(z);
-      return skinAt(job, L, t, aV + a);
+      return skinOf(job.e, L)(t, aV + a);
     };
     const R = mulberry32(job.seed * 3 + c.pieces[0] * 17);
     const N = 14;
@@ -937,7 +976,8 @@ function paintCarving(g: Ctx, job: Job): void {
     }
   }
   if (sk.rune !== null) {
-    const at = onTrunk(job, Math.min(sk.height * 0.12, trunkTop(job) * 0.45), sk.rune);
+    // Cut in the smooth bark over a rough foot.
+    const at = onTrunk(job, Math.max(Math.min(sk.height * 0.12, trunkTop(job) * 0.45), (sk.rough ?? 0) * 1.3), sk.rune);
     if (at && at.seen > 0.3) {
       const [x, y] = proj(e, at.p);
       const tan: V3 = [-at.n[1], at.n[0], 0];
@@ -959,6 +999,10 @@ function paintCarving(g: Ctx, job: Job): void {
 type Item = { d: number; draw: () => void };
 
 export function paintTree3d(g: Ctx, job: Job): void {
+  const T9 = performance.now();
+  try { paintTree3d0(g, job); } finally { tm('all', T9); }
+}
+function paintTree3d0(g: Ctx, job: Job): void {
   const { sk, e, dress, spec } = job;
   if (spec.build.whorls) return paintWhorls(g, job);
   const near = (p: V3): number => dot(p, e.toward as V3);
@@ -967,7 +1011,10 @@ export function paintTree3d(g: Ctx, job: Job): void {
   const sun = sunOnScreen(job);
   const items: Item[] = [];
   const leafy = shown.length > 0 && dress.full >= 0.6;
+  const T3 = performance.now();
   const chains = chainsOf(job, leafy);
+  tm('chains', T3);
+  const T4 = performance.now();
   // Each mass's outline, worked out once: the ink is laid under all of them before any is painted.
   const masses = shown.map((s) => {
     const o = outlineOf(mulberry32(job.seed * 31 + Math.round(s.c.k * 1e6)), 4 + Math.floor(s.c.k * 2.99));
@@ -990,6 +1037,8 @@ export function paintTree3d(g: Ctx, job: Job): void {
    * left of it is the tree's own outline -- against the sky, and through
    * every gap in the crown.
    */
+  tm('outlines', T4);
+  const T5 = performance.now();
   g.strokeStyle = rgb(KIT_INK);
   g.lineJoin = 'round';
   g.lineCap = 'round';
@@ -1014,6 +1063,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
       g.fill();
     }
   }
+  tm('ink', T5);
   // An open crown's trunk stands on a round foot, the ground's circle of it, laid just behind the trunk; each stem of several on its own.
   for (const trunk of spec.open ? chains.filter((c) => c.order === 0 && sk.limbs[c.pieces[0]].parent < 0) : []) {
     const at = trunk.pieces[0];
@@ -1040,7 +1090,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
       // wood is among its masses, set back a little so a branch's end goes into the mass on it.
       const d = near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0);
       const at = leafy && !spec.open ? -1e6 : spec.open && shown.length ? d - sk.crown.r * 0.12 * Math.max(0, c.order) : d;
-      items.push({ d: at, draw: () => paintChain(g, job, c, j0, j1, R) });
+      items.push({ d: at, draw: () => { const T2 = performance.now(); paintChain(g, job, c, j0, j1, R); tm(c.thin ? 'twig' : 'wood', T2); } });
     }
   }
   const sizeOfKey = sk.crown.r * 0.12;
@@ -1051,8 +1101,10 @@ export function paintTree3d(g: Ctx, job: Job): void {
       d: near(s.c.c),
       draw: () => {
         const lumps = masses[i].lumps;
+        const T1 = performance.now();
         if (lumps) paintCluster(g, job, s, sun, masses[i].path, lumps, rim);
         else paintMass(g, job, s, sun, masses[i].path, masses[i].o, rim);
+        tm('cluster', T1);
         if (keyed && s.c.up < 0.6 && s.c.k < 0.55) {
           const [x, y] = proj(e, s.c.c);
           const col = dress.season === 'summer' ? mixRgbHex(spec.keys!.colour, spec.keys!.ripe, 0.2) : spec.keys!.colour;
@@ -1078,9 +1130,45 @@ export function paintTree3d(g: Ctx, job: Job): void {
     }
   }
   items.sort((a, b) => a.d - b.d);
+  // The haze of fine twigs once the leaf is mostly down: the half behind the crown's middle under all the wood, the half in front over it.
+  const T6 = performance.now();
+  const haze = spec.haze && !leafy ? hazeOf(job) : null;
+  if (haze) paintHaze(g, haze.col, haze.back);
+  tm('haze', T6);
+  const T7 = performance.now();
   for (const it of items) it.draw();
+  tm('items', T7);
+  if (haze) paintHaze(g, haze.col, haze.front);
   paintCarving(g, job);
   if (dress.season === 'autumn' && dress.full < 1 && dress.full > 0) paintFalling(g, job, 4);
+}
+
+/** The finest twigs of a hazy crown (`Species3D.haze`) on the screen: those behind its middle and those in front, and their colour. */
+function hazeOf(job: Job): { back: Path2D; front: Path2D; col: string } | null {
+  const { sk, e } = job;
+  const back = new Path2D(), front = new Path2D();
+  const mid = dot(sk.crown.c, e.toward as V3);
+  let one: Limb | null = null;
+  for (const L of sk.limbs) {
+    if (L.order < 4) continue;
+    one ??= L;
+    const [x0, y0] = proj(e, L.a), [x1, y1] = proj(e, L.b);
+    const p = dot(L.a, e.toward as V3) < mid ? back : front;
+    p.moveTo(x0, y0);
+    p.lineTo(x1, y1);
+  }
+  if (!one) return null;
+  const { bark } = job.spec;
+  return { back, front, col: rgb(mixRgb(hex(bark.twig ?? bark.shade), hex(bark.shade), job.light.night ? 0.5 : 0.15)) };
+}
+
+/** Hairlines, with no ink round them. */
+function paintHaze(g: Ctx, col: string, p: Path2D): void {
+  g.strokeStyle = col;
+  g.lineWidth = 0.42;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  g.stroke(p);
 }
 
 const mixRgbHex = (a: string, b: string, t: number): string => rgbHex(mixRgb(hex(a), hex(b), t));

@@ -1,4 +1,4 @@
-import { mix, tone } from '../../trees/kit';
+import { dulled, mix, tone } from '../../trees/kit';
 import { BIRCH_INK } from '../../trees/paint';
 import { birch as flat } from '../../trees/species/birch';
 import { AUTUMN, fresh } from '../../foliage';
@@ -45,7 +45,7 @@ export const birch: Species3D = {
     clipped: { stem: 0.12, spread: 0.45, dome: 0.5, droop: 0.3, girth: 0.035, flare: 1.1, scaffolds: 6, forks: 1, clumps: 8, clumpSize: 0.55, gnarl: 0.2, lean: 0.4, stems: 3, rough: 0 },
   },
   bark: {
-    lit: tone(flat.bark, 0.6), shade: mix(flat.bark, '#3e3040', 0.13), dead: mix(flat.bark, twig, 0.4), furrow: mix(twig, '#2e2230', 0.4),
+    lit: tone(flat.bark, 0.6), shade: mix(flat.bark, '#3e3040', 0.13), dead: dulled(flat.bark, 0.4), furrow: mix(twig, '#2e2230', 0.4),
     twig, marks: { ink: BIRCH_INK, base: mix(twig, flat.bark, 0.3) },
   },
   leafForm: 'birch',
