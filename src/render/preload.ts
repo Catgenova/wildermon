@@ -6,7 +6,8 @@
  */
 import { darknessAt } from '../game/game';
 import { DAY_SECONDS } from '../game/pace';
-import { liveSettings } from '../game/settings';
+import { drawsLow, liveSettings } from '../game/settings';
+import { onPhone } from '../engine/device';
 import type { World } from '../world/world';
 import { bushSpecies, TileType, treeSpecies, treeVariant } from '../world/tiles';
 import { yearAt } from './foliage';
@@ -20,6 +21,9 @@ const REACH = 28;
 export function preloadTreesAt(world: World, x: number, y: number, islandSeconds: number, wallSeconds = Date.now() / 1000): Promise<void> {
   try {
     if (!TREE3D_SPECIES.size && !BUSH3D_SPECIES.size) return Promise.resolve();
+    // The low-end graphics draw every tree and bush flat: nothing to bake.
+    const settings = liveSettings();
+    if (drawsLow(settings, onPhone())) return Promise.resolve();
     const tiles: Array<{ bush: boolean; species: number; variant: number; x: number; y: number; d: number }> = [];
     const cx = Math.floor(x), cy = Math.floor(y);
     for (let ty = cy - REACH; ty <= cy + REACH; ty++) {
@@ -35,7 +39,7 @@ export function preloadTreesAt(world: World, x: number, y: number, islandSeconds
     tiles.sort((a, b) => a.d - b.d);
     const hour = ((((islandSeconds % DAY_SECONDS) + DAY_SECONDS) % DAY_SECONDS) / DAY_SECONDS) * 24;
     const { season, day } = yearAt(wallSeconds);
-    const turn = liveSettings().rotation;
+    const turn = settings.rotation;
     return preloadTrees3d(tiles, { season, day, hour, dark: darknessAt(hour), turn, scale: spriteScaleNow(), next: nextSunStep(hour, darknessAt) }).catch(() => {});
   } catch {
     return Promise.resolve();

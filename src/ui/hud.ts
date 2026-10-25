@@ -1,4 +1,4 @@
-import { keyName, type Keybinds } from '../game/keybinds';
+import { boundKey, keyName, type Keybinds } from '../game/keybinds';
 import { balance, fedWord, NUTRIENTS, NUTRIENT_NAMES, NUTRIENT_NOTES, tableMul } from '../game/nutrition';
 import { sailWord, windFrom, windWord } from '../game/wind';
 import { FURNITURE_BY_ID } from '../game/furniture';
@@ -562,7 +562,7 @@ export class Hud {
       this.game.settings.viewLevel = null;
     });
     this.storeyDown = mk('tb-btn storey-btn', '▼', 'Storey down (Page Down)', () => this.stepStorey(-1));
-    this.cutBtn = mk('tb-btn storey-cut', '◪', 'Cut away facing walls (X)', () => {
+    this.cutBtn = mk('tb-btn storey-cut', '◪', `Cut away facing walls (${boundKey('cutaway')})`, () => {
       this.game.settings.cutaway = !this.game.settings.cutaway;
     });
     this.storeyEl.append(this.storeyUp, this.storeyLabel, this.storeyDown, this.cutBtn);
@@ -778,7 +778,7 @@ export class Hud {
     this.tip(this.storeyDown, `${named(this.storeyStep(-1, top))} (Page Down)`);
     this.tip(this.storeyLabel, level === null ? 'All storeys' : 'All storeys (click)');
     this.cutBtn.classList.toggle('active', s.cutaway);
-    this.tip(this.cutBtn, 'Cut away facing walls (X)');
+    this.tip(this.cutBtn, `Cut away facing walls (${boundKey('cutaway')})`);
   }
 
   /** A node's tooltip, written only when it has changed. */

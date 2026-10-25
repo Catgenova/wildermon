@@ -1,5 +1,6 @@
 import { ACTION_BY_ID } from '../../game/actions';
 import { emotePose } from '../../game/emotes';
+import { lessMotion } from '../../engine/motion';
 import type { Game } from '../../game/game';
 import { SLOTS, slotOf, WEAPON_BY_ID, type Slot } from '../../game/gear';
 import { itemName } from '../../game/items';
@@ -147,7 +148,7 @@ export class EquipmentPanel {
   /** Whether the last draw was made with the window open: only a change seen while it is open is played out. */
   private seen = false;
   private next = 0;
-  private readonly still = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  private get still(): boolean { return lessMotion(); }
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
     win.body.classList.add('eq-body');

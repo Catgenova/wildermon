@@ -25,6 +25,8 @@
  * anything changes.
  */
 
+import { MOTIONS, type Motion } from '../engine/motion';
+
 const KEY = 'wurm.settings.v1';
 
 /** The frame-rate limits on offer, 0 for every refresh of the screen. */
@@ -112,11 +114,19 @@ export const SETTING_DEFAULTS = {
   /** The most frames drawn a second, or 0 for every refresh of the screen (`GameLoop.maxFps`). */
   frameCap: 0,
   /**
-   * How much is drawn: everything, or the fast set (`FAST_GRAPHICS`), which
-   * draws one pixel for every screen pixel and leaves out the swell, the haze
-   * and the small life.
+   * How much is drawn: everything; the fast set (`drawsFast`), which draws one
+   * pixel for every screen pixel and leaves out the swell, the haze and the
+   * small life; or the low-end set (`drawsLow`), the fast set with the solid
+   * trees and bushes drawn flat, at most `LOW_POWER_FPS` frames a second, and
+   * no wakes or dust.
    */
-  graphics: 'full' as 'full' | 'fast',
+  graphics: 'full' as Graphics,
+  /**
+   * Motion (`src/engine/motion.ts`): as the system asks (`prefers-reduced-motion`),
+   * always less, or always full. Less: no sway in trees, bushes and flowers,
+   * no bob or pulse in the markers, steady lights, no interface animation.
+   */
+  motion: 'auto' as Motion,
   /** Under the frame rate, the milliseconds a frame spends drawing each layer (`Timings`). */
   timings: false,
   /**
@@ -178,15 +188,27 @@ export const SETTING_DEFAULTS = {
 /** Whether Low power is on, which it only ever is on a phone. */
 export const lowPowerOn = (s: { lowPower: boolean }, phone: boolean): boolean => phone && s.lowPower;
 
-/** The frame-rate limit the loop keeps to: the one chosen, or `LOW_POWER_FPS` with Low power if that is lower. */
-export function frameCapOf(s: { frameCap: number; lowPower: boolean }, phone: boolean): number {
-  if (!lowPowerOn(s, phone)) return s.frameCap;
+/** The graphics presets, best first: Full, Fast and Low-end. */
+export const GRAPHICS = ['full', 'fast', 'low'] as const;
+export type Graphics = (typeof GRAPHICS)[number];
+
+/**
+ * Whether the low-end graphics are drawn: chosen, or put on by Low power. The
+ * fast set, and the solid trees and bushes flat (`TREE3D_SPECIES`,
+ * `BUSH3D_SPECIES`), at most `LOW_POWER_FPS` frames a second, no wakes or dust.
+ */
+export const drawsLow = (s: { graphics: string; lowPower: boolean }, phone: boolean): boolean =>
+  s.graphics === 'low' || lowPowerOn(s, phone);
+
+/** The frame-rate limit the loop keeps to: the one chosen, or `LOW_POWER_FPS` with the low-end graphics if that is lower. */
+export function frameCapOf(s: { frameCap: number; lowPower: boolean; graphics: string }, phone: boolean): number {
+  if (!drawsLow(s, phone)) return s.frameCap;
   return s.frameCap > 0 ? Math.min(s.frameCap, LOW_POWER_FPS) : LOW_POWER_FPS;
 }
 
-/** Whether the fast graphics are drawn: chosen, or put on by Low power. */
+/** Whether the fast graphics are drawn: chosen, as part of the low-end set, or put on by Low power. */
 export const drawsFast = (s: { graphics: string; lowPower: boolean }, phone: boolean): boolean =>
-  s.graphics === 'fast' || lowPowerOn(s, phone);
+  s.graphics !== 'full' || lowPowerOn(s, phone);
 
 /** Device pixels drawn to a screen pixel, at most (`FullscreenCanvas.maxDpr`). */
 export const dprCapOf = (s: { graphics: string; lowPower: boolean }, phone: boolean): number =>
@@ -237,7 +259,8 @@ function read(): Partial<typeof SETTING_DEFAULTS> {
     for (const k of KEPT) if (typeof got[k] === typeof SETTING_DEFAULTS[k]) out[k] = got[k];
     // A stance is one of three words, not any word.
     if (!['aggressive', 'balanced', 'defensive'].includes(out.fightStance as string)) delete out.fightStance;
-    if (!['full', 'fast'].includes(out.graphics as string)) delete out.graphics;
+    if (!(GRAPHICS as readonly string[]).includes(out.graphics as string)) delete out.graphics;
+    if (!(MOTIONS as readonly string[]).includes(out.motion as string)) delete out.motion;
     if (!(FRAME_CAPS as readonly number[]).includes(out.frameCap as number)) delete out.frameCap;
     if (!(UI_STYLES as readonly string[]).includes(out.uiStyle as string)) delete out.uiStyle;
     if (!(UI_LIGHTS as readonly string[]).includes(out.uiLight as string)) delete out.uiLight;

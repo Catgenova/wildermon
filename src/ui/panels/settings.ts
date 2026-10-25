@@ -10,8 +10,10 @@ import { CRAFT_REACH } from '../../game/recipes';
 import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
 import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
 import { fixed, html, setMarkup, type Markup } from '../html';
-import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, uiSizeShown } from '../screen';
-import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
+import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS, uiSizeShown } from '../screen';
+import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type Graphics, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
+import type { Motion } from '../../engine/motion';
+import { BUSH3D_SPECIES, TREE3D_SPECIES } from '../../render/trees3d';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
 import { lifeWords } from '../runecut-life';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
@@ -48,6 +50,9 @@ export class SettingsPanel {
   private grabbing: { id: string; slot: number; btn: HTMLButtonElement } | null = null;
   private note: HTMLParagraphElement;
   private keyRows = new Map<string, HTMLButtonElement[]>();
+  /** Each row's button back to its own keys, shown only while they are changed. */
+  private keyBacks = new Map<string, HTMLButtonElement>();
+  private readonly root: HTMLElement;
   /** Rows for a keeper of the island alone, hidden until the island says this body is one. */
   private keeperRows: HTMLDivElement[] = [];
   /** The window layouts' rows: the name, Use, and the key that does the same. */
@@ -63,6 +68,7 @@ export class SettingsPanel {
     private readonly windows: WindowManager,
   ) {
     win.body.classList.add('settings-body');
+    this.root = win.body;
     // A slot waiting for a key takes Tab, Enter and Space as keys to bind.
     keepControlKeys(win.body, 'button, select, summary, input[type="checkbox"]', () => this.grabbing !== null);
     const bar = document.createElement('div');
@@ -97,6 +103,8 @@ export class SettingsPanel {
     win.body.append(display, winPage, keyPage);
     this.buildWindows(winPage);
 
+    /** A key as it is bound now, kept in step by `drawKeys`. */
+    const kbd = (id: string): Markup => html`<kbd class="setting-kbd" data-bind="${id}">${this.keys.label(id)}</kbd>`;
     const add = (label: string, hint: string | Markup, read: () => boolean, write: (v: boolean) => void): HTMLLabelElement => {
       const row = document.createElement('label');
       row.className = 'setting-row';
@@ -159,6 +167,13 @@ export class SettingsPanel {
      * number in the caption follows the drag, so you can see where you are.
      */
     head('Interface');
+    /** The slider, kept so a preset can move it. */
+    let sizeSlider: HTMLInputElement | null = null;
+    let sizeSay: (() => void) | null = null;
+    const presetBtns: Array<[number, HTMLButtonElement]> = [];
+    const markPreset = (): void => {
+      for (const [v, b] of presetBtns) b.classList.toggle('tb-on', Math.round(v * 100) === Math.round(game.settings.uiSize * 100));
+    };
     {
       const row = document.createElement('label');
       row.className = 'setting-row setting-pick';
@@ -183,9 +198,40 @@ export class SettingsPanel {
         game.settings.uiSize = Number(input.value) / 100;
         setUiSize(game.settings.uiSize);
         say();
+        markPreset();
       });
       row.append(input, text);
       display.append(row);
+      sizeSlider = input;
+      sizeSay = say;
+    }
+    // The same size in one press: a preset each, its share written on it.
+    {
+      const row = document.createElement('div');
+      row.className = 'setting-row setting-look setting-presets';
+      const text = document.createElement('span');
+      setMarkup(text, html`<b>Text size presets</b><small>${`Sets Text and window size: ${UI_SIZE_PRESETS.map(([v, name]) => `${name} ${Math.round(v * 100)}%`).join(', ')}.`}</small>`);
+      const btns = document.createElement('span');
+      btns.className = 'setting-preset-btns';
+      for (const [v, name] of UI_SIZE_PRESETS) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tb-btn tb-small';
+        b.dataset.size = String(v);
+        b.textContent = `${name} ${Math.round(v * 100)}%`;
+        b.addEventListener('click', () => {
+          game.settings.uiSize = v;
+          setUiSize(v);
+          if (sizeSlider) sizeSlider.value = String(Math.round(v * 100));
+          sizeSay?.();
+          markPreset();
+        });
+        presetBtns.push([v, b]);
+        btns.append(b);
+      }
+      row.append(text, btns);
+      display.append(row);
+      markPreset();
     }
     /*
      * How hard the screen is worked: a choice of two rather than a yes or no,
@@ -258,6 +304,9 @@ export class SettingsPanel {
         + '<li>World: creature health bar (also length), heavy-blow ring and !, '
         + 'edge arrows for threats (also shape), screen edge when struck, '
         + 'health lost (also its −).</li>'
+        + '<li>Hostile marker: ▼ over the creature; stacked ▼ while it hunts you.</li>'
+        + '<li>Station rings: fuel arc solid while lit, dashed while cold.</li>'
+        + '<li>Social: ● ashore, ○ away.</li>'
         + '</ul></details>'),
       [['standard', 'Standard'], ['rg', 'Red–green safe'], ['by', 'Blue–yellow safe']],
       () => game.settings.uiColours,
@@ -287,7 +336,7 @@ export class SettingsPanel {
     add(
       'Frame life',
       html`${'Animated animals and lights on window frames; never over window content; click-through. '
-        + 'Runecut themed frames only; off on phones, with Fast graphics, or with reduced motion.'}<details class="setting-more"><summary>Per frame</summary><ul>${
+        + 'Runecut themed frames only; off on phones, with Fast or Low-end graphics, or with Motion reduced.'}<details class="setting-more"><summary>Per frame</summary><ul>${
         lifeWords().split('; ').map((w) => html`<li>${w}</li>`)}</ul></details>`,
       () => game.settings.uiLife,
       (v) => (game.settings.uiLife = v),
@@ -317,13 +366,28 @@ export class SettingsPanel {
       () => game.settings.presenceBanner,
       (v) => (game.settings.presenceBanner = v),
     );
+    // Less motion, which the stylesheet and the canvas both read (`src/engine/motion.ts`).
+    choose<Motion>(
+      'Motion',
+      'Reduced: no tree, bush or flower sway; no bob or pulse on markers; steady firelight; '
+        + 'interface transitions and animations instant; no frame life; no pointer-ring fade. '
+        + 'System: Reduced while the system asks for reduced motion. No screen shake in either.',
+      [['auto', 'System'], ['less', 'Reduced'], ['full', 'Full']],
+      () => game.settings.motion,
+      (v) => {
+        game.settings.motion = v;
+        relook();
+      },
+    );
     head('Performance');
-    choose<'full' | 'fast'>(
+    choose<Graphics>(
       'Graphics',
       `Fast: ${FAST_DPR} pixel per screen pixel on high-density screens (Full: up to ${FULL_DPR}), `
         + `${Math.round((1 - (FAST_DPR / FULL_DPR) ** 2) * 100)}% fewer pixels at ${FULL_DPR}×; no sea swell, `
-        + 'distance haze, butterflies, dragonflies, fireflies, petals, falling leaves or frame life.',
-      [['full', 'Full'], ['fast', 'Fast']],
+        + 'distance haze, butterflies, dragonflies, fireflies, petals, falling leaves or frame life. '
+        + `Low-end: Fast, plus solid trees (${TREE3D_SPECIES.size} kinds) and bushes (${BUSH3D_SPECIES.size} kinds) drawn flat, `
+        + `frame limit ${LOW_POWER_FPS}/s, no wakes or work dust.`,
+      [['full', 'Full'], ['fast', 'Fast'], ['low', 'Low-end']],
       () => game.settings.graphics,
       (v) => {
         game.settings.graphics = v;
@@ -371,8 +435,8 @@ export class SettingsPanel {
       }
       add(
         'Low power',
-        `Frame limit ${LOW_POWER_FPS}/s; Fast graphics (${FAST_DPR} pixel per screen pixel, no sea swell, haze or small life); no wakes or dust. `
-          + 'Overrides Graphics and a higher frame limit.',
+        `Low-end graphics: frame limit ${LOW_POWER_FPS}/s; ${FAST_DPR} pixel per screen pixel; no sea swell, haze or small life; `
+          + 'solid trees and bushes flat; no wakes or dust. Overrides Graphics and a higher frame limit.',
         () => game.settings.lowPower,
         (v) => {
           game.settings.lowPower = v;
@@ -381,7 +445,7 @@ export class SettingsPanel {
       );
     }
     head('World view');
-    add('Show tile grid', 'Tile outlines. Toggle: G.', () => game.settings.grid, (v) => (game.settings.grid = v));
+    add('Show tile grid', html`Tile outlines. Toggle: ${kbd('grid')}.`, () => game.settings.grid, (v) => (game.settings.grid = v));
     add(
       'Show the first-steps card',
       'Next-step card above the action bar while the first journal chapter is unfinished. Hidden once your settlement is founded.',
@@ -390,7 +454,7 @@ export class SettingsPanel {
     );
     add(
       'Cut away walls facing you',
-      'Hide walls between you and building interiors. Toggle: X or ◪.',
+      html`Hide walls between you and building interiors. Toggle: ${kbd('cutaway')} or ◪.`,
       () => game.settings.cutaway,
       (v) => (game.settings.cutaway = v),
     );
@@ -405,13 +469,13 @@ export class SettingsPanel {
     );
     add(
       'Open the tile window on a click',
-      'Click a tile: its actions in the Tile window (T). Off: right-click menu only.',
+      html`Click a tile: its actions in the Tile window (${kbd('win_tile')}). Off: right-click menu only.`,
       () => game.settings.tileWindow,
       (v) => (game.settings.tileWindow = v),
     );
     add(
       'Keep the camera on you',
-      'Camera follows you. Moving it by keys or drag pauses this; C or Centre resumes. Off: camera stays put.',
+      html`Camera follows you. Moving it by keys or drag pauses this; ${kbd('centre')} or Centre resumes. Off: camera stays put.`,
       () => game.settings.follow,
       (v) => (game.settings.follow = v),
     );
@@ -428,9 +492,9 @@ export class SettingsPanel {
       (v) => (game.settings.deedBorder = v),
     );
     add('Mark hostile creatures',
-      `Aggressive creatures and any creature hunting you: red overlay through trees and buildings, ${percent(THREAT_SHADE)} strength (${percent(THREAT_SHADE_HUNTING)} while hunting you), red marker overhead (pulsing while hunting you).`,
+      `Aggressive creatures and any creature hunting you: red overlay through trees and buildings, ${percent(THREAT_SHADE)} strength (${percent(THREAT_SHADE_HUNTING)} while hunting you), red marker overhead (stacked and pulsing while hunting you).`,
       () => game.settings.markThreats, (v) => (game.settings.markThreats = v));
-    add('Rings over fires, ovens, braziers, smelters and kilns', `Within ${RING_REACH} tiles: outer ring fuel (full at ${burnsFor(FIRE_CAPACITY)} of burning; oven ${burnsFor(OVEN_CAPACITY)}, brazier ${burnsFor(BRAZIER_CAPACITY)}; orange lit, grey cold); inner ring front item progress; gold dot when something is done.`,
+    add('Rings over fires, ovens, braziers, smelters and kilns', `Within ${RING_REACH} tiles: outer ring fuel (full at ${burnsFor(FIRE_CAPACITY)} of burning; oven ${burnsFor(OVEN_CAPACITY)}, brazier ${burnsFor(BRAZIER_CAPACITY)}; orange solid lit, grey dashed cold); inner ring front item progress; gold dot when something is done.`,
       () => game.settings.stationRings, (v) => (game.settings.stationRings = v));
 
     /*
@@ -603,6 +667,22 @@ export class SettingsPanel {
           btns.push(b);
           slots.append(b);
         }
+        // Back to its own keys, which is the way back to Esc, Backspace and Delete: a slot listening takes those as cancel and unbind.
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'tb-btn tb-small keys-default';
+        back.textContent = '↺';
+        const own = bind.keys.length ? bind.keys.map(keyName).join(' / ') : 'unbound';
+        back.title = `Default: ${own}`;
+        back.setAttribute('aria-label', `${bind.label}: default (${own})`);
+        back.addEventListener('click', () => {
+          this.stopListening();
+          const { took } = this.keys.restore(bind.id);
+          const from = took.map((id) => BINDS.find((b) => b.id === id)?.label.toLowerCase() ?? id);
+          this.say(`${bind.label}: ${own}.${from.length ? ` Unbound from: ${from.join(', ')}.` : ''}`);
+        });
+        slots.append(back);
+        this.keyBacks.set(bind.id, back);
         this.keyRows.set(bind.id, btns);
         row.append(text, slots);
         if (bind.keeper) {
@@ -846,7 +926,11 @@ export class SettingsPanel {
         b.classList.toggle('keys-empty', !code);
         b.title = code ? `${keyName(code)}: click to change` : 'Unbound: click to set';
       });
+      const back = this.keyBacks.get(id);
+      if (back) back.hidden = !this.keys.isChanged(id);
     }
+    // The keys named in the Display tab's words.
+    for (const k of this.root.querySelectorAll<HTMLElement>('kbd[data-bind]')) k.textContent = this.keys.label(k.dataset.bind ?? '');
   }
 
   /** Keep the boxes in step with hotkeys that change the same settings. */

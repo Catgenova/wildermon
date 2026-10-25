@@ -1,5 +1,6 @@
 import { frameFor, frameLamps, reachOf, NICHE_H, NICHE_W, paintFrame, paintNiche, paintNightGlow, paintPlate, seedOf, sideOf, type ArtOpts } from './runecut-art';
 import { watchLook, type Look } from './theme';
+import { lessMotion } from '../engine/motion';
 import type { Join, Seam } from './snapgrid';
 import { livesOn, paintLife, type LifePiece, type LifeWorld } from './runecut-life';
 
@@ -222,9 +223,8 @@ function gold(g: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y
   return f;
 }
 
-/** Whether the system asks for less motion: the query made once, and read each time it is asked. */
-let lessMotion: MediaQueryList | null | undefined;
-const reduced = (): boolean => (lessMotion === undefined ? (lessMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null) : lessMotion)?.matches ?? false;
+/** Whether less motion is drawn: Settings, Motion, or the system's (`src/engine/motion.ts`). */
+const reduced = lessMotion;
 
 /** One thing dressed in the art: a window, the HUD or the toolbar. */
 class Dressed {

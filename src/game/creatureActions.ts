@@ -17,7 +17,7 @@ import { BANE_BONUS, banes, hitChance, isBow, WEAPON_BY_ID, weaponDamage } from 
 import { ARROWS, armsRefusal, beastReach, BLINDSIDE, blowOf, bowReach, critMul, drawClosest, FALL_BACK, FIST, headBlow, headHide, headSide, hideTakes, nockedArrow, KNIFE_BLEED, KNIFE_BLEED_SECS, meleeReach, myCritChance, STAGGER_MAUL, STAGGER_POLE, stanceDealt, swungWith } from './fight';
 import { matOfItem } from './materials';
 import { takeGear } from './wildgearActions';
-import { defaultKey } from './keybinds';
+import { boundKey } from './keybinds';
 
 /**
  * What one offering and one blow teach, landed or not.
@@ -611,7 +611,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c || c.mode !== 'active') return 'Companions only.';
       const foe = isCreature(t) && typeof t.foe === 'number' ? g.creatures.get(t.foe) : undefined;
-      if (!foe || foe.mode !== 'wild' || foe.hitchedTo !== null) return `No target: mark a wild one (${defaultKey('fight_mark')}) or fight it.`;
+      if (!foe || foe.mode !== 'wild' || foe.hitchedTo !== null) return `No target: mark a wild one (${boundKey('fight_mark')}) or fight it.`;
       // As far as it follows a fight: further for a Beastmaster's Long Leash.
       const leash = g.perk('leash:companion', COMPANION_LEASH);
       if (Math.hypot(foe.x - g.player.x, foe.y - g.player.y) > leash) return `Too far: max ${leash} tiles.`;

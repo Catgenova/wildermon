@@ -1,5 +1,8 @@
 import type { Deed, Game } from '../game/game';
 import { isFounder, rankName } from '../game/ranks';
+import { drawsFast } from '../game/settings';
+import { onPhone } from '../engine/device';
+import { lessMotion } from '../engine/motion';
 import { underTopBars } from './notices';
 
 /**
@@ -153,7 +156,7 @@ export class DeedBanner {
     this.subEl.hidden = !sub;
     this.el.classList.toggle('deed-banner-leaving', leaving);
     this.el.classList.remove('deed-banner-going');
-    this.el.classList.toggle('deed-banner-still', this.game.settings.graphics === 'fast');
+    this.el.classList.toggle('deed-banner-still', drawsFast(this.game.settings, onPhone()) || lessMotion());
     this.el.hidden = false;
     this.el.style.top = `${underTopBars(this.root, this.el)}px`;
     // Start the fade in again, for a banner that replaces one still up.

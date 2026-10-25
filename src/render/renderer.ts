@@ -6,7 +6,8 @@ import { emoteAt } from '../game/emotes';
 import { ACTION_BY_ID } from '../game/actions';
 import type { FullscreenCanvas } from '../engine/canvas';
 import { onPhone } from '../engine/device';
-import { drawsFast, lowPowerOn } from '../game/settings';
+import { drawsFast, drawsLow } from '../game/settings';
+import { lessMotion } from '../engine/motion';
 import type { Game } from '../game/game';
 import {
   borderOf,
@@ -2165,7 +2166,7 @@ export class Renderer {
   }
 
   private flicker(l: { x: number; y: number; steady?: boolean }): number {
-    if (l.steady) return 1;
+    if (l.steady || this.calm) return 1;
     const seed = l.x * 0.7 + l.y * 1.3;
     return 1 + 0.055 * Math.sin(this.time * 6.1 + seed) + 0.035 * Math.sin(this.time * 11.3 + seed * 2.1);
   }
@@ -3291,7 +3292,7 @@ export class Renderer {
         }
         continue;
       }
-      const spr = flowerSprite(colour, variant, swayFrame(lean, this.lean.force, this.time, phase));
+      const spr = flowerSprite(colour, variant, this.calm ? 0 : swayFrame(lean, this.lean.force, this.time, phase));
       const k = zoom * size;
       const ready = this.atSize(spr.canvas, spr.w * k, spr.h * k);
       ctx.drawImage(ready, sx - spr.ax * k, sy - spr.ay * k, spr.w * k, spr.h * k);
@@ -3875,7 +3876,7 @@ export class Renderer {
     try {
       this.renderFrame(dt);
       // The solid trees' work after the frame, in what is left of it (`tree3dIdle`).
-      if (TREE3D_SPECIES.size || BUSH3D_SPECIES.size) {
+      if ((TREE3D_SPECIES.size || BUSH3D_SPECIES.size) && !this.still) {
         let next = nextSunStep(this.solidHour, darknessAt);
         const look = this.lookAhead();
         // The look turns before the sun next steps: the sun's next step would be made in the look going out.
@@ -3894,17 +3895,28 @@ export class Renderer {
 
   /** The fast graphics this frame (`Settings.graphics`, or Low power): no swell, no haze, no small life. */
   private fast = false;
-  /** Low power this frame (`lowPowerOn`): no wakes and no dust either. */
+  /** The low-end graphics this frame (`drawsLow`, or Low power): no wakes and no dust either, and the solid trees and bushes drawn flat. */
   private still = false;
+  /** Less motion this frame (`lessMotion`): no sway in trees, bushes and flowers, no bob or pulse in the markers, steady lights. */
+  private calm = false;
 
   /** Frames drawn, for anything worked out once a frame and asked for more than once in it. */
   private frameNo = 0;
 
+  /** Trees and bushes drawn this frame, and how many of them as solids (`./trees3d`): none with the low-end graphics. */
+  readonly drawnTrees = { all: 0, solid: 0 };
+  /** Whether the solid trees and bushes move in the wind this frame: never with less motion. */
+  get treesSway(): boolean {
+    return this.solidSway;
+  }
+
   private renderFrame(dt: number): void {
     this.frameNo++;
+    this.drawnTrees.all = this.drawnTrees.solid = 0;
     const phone = onPhone();
     this.fast = drawsFast(this.game.settings, phone);
-    this.still = lowPowerOn(this.game.settings, phone);
+    this.still = drawsLow(this.game.settings, phone);
+    this.calm = lessMotion();
     this.time += dt;
     this.frameDt = dt;
     this.poolRuns.clear();
@@ -5564,7 +5576,7 @@ export class Renderer {
   private drawThreats(ctx: CanvasRenderingContext2D, zoom: number): void {
     if (!this.threats.length) return;
     const red = inkOr('bad', '#e2553c');
-    const bob = Math.sin(this.time * 4) * 2 * zoom;
+    const bob = this.calm ? 0 : Math.sin(this.time * 4) * 2 * zoom;
     for (const t of this.threats) {
       const { pad, g, ox, oy, side } = this.scratch(zoom);
       t.draw(g, ox, oy);
@@ -5584,9 +5596,20 @@ export class Renderer {
       ctx.lineWidth = Math.max(1.5, zoom * 1.5);
       ctx.strokeStyle = 'rgba(20, 6, 4, 0.85)';
       ctx.stroke();
-      ctx.globalAlpha = t.hunting ? 0.75 + 0.25 * Math.sin(this.time * 8) : 0.8;
+      ctx.globalAlpha = t.hunting ? (this.calm ? 0.95 : 0.75 + 0.25 * Math.sin(this.time * 8)) : 0.8;
       ctx.fillStyle = red;
       ctx.fill();
+      // Hunting you: a second marker over the first, so the shape says it as well as the pulse and the colour.
+      if (t.hunting) {
+        const y2 = y - r * 1.9;
+        ctx.beginPath();
+        ctx.moveTo(x, y2);
+        ctx.lineTo(x - r * 0.7, y2 - r * 1.1);
+        ctx.lineTo(x + r * 0.7, y2 - r * 1.1);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fill();
+      }
       ctx.globalAlpha = 1;
     }
   }
@@ -7192,6 +7215,8 @@ export class Renderer {
       // ends of the day and gone at noon. The sprite's own contact shadow does
       // the rest, which is why this can be thrown away entirely at midday.
       if (ent.kind === 'tree' || ent.kind === 'bush') {
+        this.drawnTrees.all++;
+        if (spr.solid) this.drawnTrees.solid++;
         this.drawTree(ctx, ent, spr, zoom, grew);
         continue;
       }
@@ -7218,12 +7243,12 @@ export class Renderer {
 
   /** The view a tree of a species drawn as a solid is baked for (`./trees3d`); nothing for any other. */
   private treeAt(species: number, x: number, y: number): TreeView | undefined {
-    return TREE3D_SPECIES.has(species) ? this.solidAt(x, y) : undefined;
+    return TREE3D_SPECIES.has(species) && !this.still ? this.solidAt(x, y) : undefined;
   }
 
   /** And a bush's. */
   private bushAt(species: number, x: number, y: number): TreeView | undefined {
-    return BUSH3D_SPECIES.has(species) ? this.solidAt(x, y) : undefined;
+    return BUSH3D_SPECIES.has(species) && !this.still ? this.solidAt(x, y) : undefined;
   }
 
   private solidAt(x: number, y: number): TreeView {
@@ -7253,7 +7278,7 @@ export class Renderer {
     this.solidHour = hour;
     this.solidDark = this.game.darkness();
     // The wind only while every frame of it for every tree in sight is a few screens of pictures.
-    this.solidSway = this.zoomSettled && this.solidPx * SWAY_FRAMES < SWAY_PIXELS;
+    this.solidSway = !this.calm && this.zoomSettled && this.solidPx * SWAY_FRAMES < SWAY_PIXELS;
     this.solidPx = 0;
     const cam = this.camera;
     if (this.solidTurn !== cam.rotation) {
@@ -7264,7 +7289,9 @@ export class Renderer {
     // How dark the shade is, in a few steps, so a dusk makes its pictures again only a few times.
     const alpha = Math.round(6 * (1 - this.solidDark)) * 0.045;
     this.solidAlpha = alpha < 0.02 ? 0 : alpha;
-    if ((!TREE3D_SPECIES.size && !BUSH3D_SPECIES.size) || alpha < 0.02) {
+    // None drawn as solids with the low-end graphics: every tree and bush is flat and throws its own shade (`drawTree`).
+    if ((!TREE3D_SPECIES.size && !BUSH3D_SPECIES.size) || alpha < 0.02 || this.still) {
+      if (this.still) this.solidAlpha = 0;
       this.dropStrips(-Infinity, -Infinity);
       return;
     }
@@ -15406,7 +15433,7 @@ export class Renderer {
     const w = this.game.world;
     // Fade out over the last few seconds rather than blinking off.
     const left = p.until - this.game.time;
-    const pulse = 0.72 + Math.sin(this.time * 3) * 0.22;
+    const pulse = this.calm ? 0.85 : 0.72 + Math.sin(this.time * 3) * 0.22;
     ctx.save();
     ctx.globalAlpha = Math.min(1, left / 8) * pulse;
     for (const key of p.tiles) {
@@ -15674,9 +15701,12 @@ export class Renderer {
       const share = Math.max(0, Math.min(1, fuel / full));
       if (share > 0) {
         ctx.strokeStyle = lit ? 'rgb(240,150,52)' : 'rgb(150,146,138)';
+        // Cold: dashed, so lit and cold differ by more than the colour.
+        if (!lit) ctx.setLineDash([2.5, 3]);
         ctx.beginPath();
         ctx.arc(sx, sy, r, top, top + share * Math.PI * 2);
         ctx.stroke();
+        ctx.setLineDash([]);
       }
       if (work !== null) {
         ctx.lineWidth = 2;
@@ -16351,7 +16381,7 @@ export class Renderer {
       const action = game.action;
       if (action && action.target.kind === 'tile') {
         const t = action.target;
-        const pulse = 0.55 + 0.45 * Math.sin(this.time * 6);
+        const pulse = this.calm ? 0.85 : 0.55 + 0.45 * Math.sin(this.time * 6);
         ctx.lineWidth = 2;
         if (action.def.corner) {
           this.cornerMarker(ctx, t.cx, t.cy, zoom, `rgba(255,200,70,${pulse.toFixed(2)})`);

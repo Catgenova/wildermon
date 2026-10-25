@@ -85,6 +85,8 @@ function insets(): { t: number; r: number; b: number; l: number } {
  */
 export const UI_SIZE_MIN = 0.8;
 export const UI_SIZE_MAX = 1.5;
+/** The sizes offered at one press (Settings, Text size presets), smallest first, each with its name. */
+export const UI_SIZE_PRESETS: ReadonlyArray<readonly [number, string]> = [[0.9, 'Small'], [1, 'Standard'], [1.25, 'Large'], [1.5, 'Largest']];
 let chosen = 1;
 
 /**
@@ -243,8 +245,10 @@ export function fitScreen(ui: HTMLElement): number {
  * viewports are the same thing and nothing is lost.
  */
 export function followScreen(ui: HTMLElement, onChange?: (scale: number) => void): void {
+  // Fitted first and told after: `onChange?.(fitScreen(ui))` skips the fit itself when nobody is told.
   const fit = (): void => {
-    onChange?.(fitScreen(ui));
+    const scale = fitScreen(ui);
+    onChange?.(scale);
   };
   const vv = window.visualViewport;
   vv?.addEventListener('resize', fit);

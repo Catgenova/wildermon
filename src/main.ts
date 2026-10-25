@@ -435,7 +435,8 @@ input.onKey = (code, ev) => {
     ui.openPalette();
     return;
   }
-  if (code === 'Escape' && ui.placing) {
+  // Stop puts down what is being placed, on whichever key Stop is.
+  if (keys.actionFor(code) === 'stop' && ui.placing) {
     ui.cancelPlacing();
     return;
   }

@@ -1,5 +1,6 @@
 import { ACTION_BY_ID } from '../../game/actions';
 import type { Game } from '../../game/game';
+import { lessMotion } from '../../engine/motion';
 import { DEFAULT_LOOK } from '../../game/look';
 import { gearFrom, wornWire } from '../../game/worn';
 import { drawFigure, figureJoint, onScreen, viewOf, type FigurePose, type V3 } from '../../render/figure';
@@ -181,7 +182,7 @@ export class HealthPanel {
   /** The stage's size in CSS px, as its ResizeObserver last saw it (0 before). */
   private stageW = 0;
   private stageH = 0;
-  private readonly still = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  private get still(): boolean { return lessMotion(); }
 
   constructor(private readonly win: UIWindow, private readonly game: Game, private readonly spells: SpellsOnYou) {
     win.body.classList.add('hp-body');

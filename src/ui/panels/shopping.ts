@@ -1,5 +1,6 @@
 import type { Game } from '../../game/game';
 import { itemDef } from '../../game/items';
+import { boundKey } from '../../game/keybinds';
 import { CRAFT_REACH, RECIPE_BY_ID, stationName } from '../../game/recipes';
 import { shoppingList, type ShoppingEntry } from '../../game/shopping';
 import { Repaint } from '../repaint';
@@ -81,7 +82,7 @@ export class ShoppingPanel {
     if (!this.entries.length) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = 'Empty. Crafting (R): press List on a recipe to add its full bill, down to raw materials, against what you hold and nearby stores.';
+      empty.textContent = `Empty. Crafting (${boundKey('win_craft')}): press List on a recipe to add its full bill, down to raw materials, against what you hold and nearby stores.`;
       this.body.append(empty);
       return;
     }
