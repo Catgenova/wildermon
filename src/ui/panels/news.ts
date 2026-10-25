@@ -8,7 +8,7 @@ import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { rackPutLine, STORE_REACH } from '../../game/crates';
-import { DAMAGE_WARN, TRAVEL_LEG } from '../../game/game';
+import { DAMAGE_WARN, SPROUT_COOLDOWN, TRAVEL_LEG } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
@@ -3705,6 +3705,14 @@ export const NEWS: News[] = [
     day: '2026-10-25',
     lines: () => [
       `Added: Deploy on a carried cart, wagon or hull (pack, right click): set down at once on the nearest free spot within ${num(DEPLOY_REACH)} tiles, off your own tile, facing your way.`,
+    ],
+  },
+  {
+    n: 309,
+    day: '2026-10-25',
+    lines: () => [
+      `Fixed: Pick sprout on a sapling or clipped tree: refused.`,
+      `Changed: Pick sprout: once per tree per ${num(SPROUT_COOLDOWN / 60)} min, workers included.`,
     ],
   },
 ];

@@ -510,7 +510,9 @@ export const NIGHT_STARTS = DUSK - TWILIGHT + NIGHT_FROM * 2 * TWILIGHT;
 export const NIGHT_ENDS = DAWN + TWILIGHT - NIGHT_FROM * 2 * TWILIGHT;
 /** Game hours after sunrise that somebody asleep wakes up. */
 export const WAKE_AFTER_DAWN = 0.5;
-const FORAGE_COOLDOWN = world(180);
+export const FORAGE_COOLDOWN = world(180);
+/** Real seconds between sprouts off one tree (`sprout_cooldown`). */
+export const SPROUT_COOLDOWN = 3600;
 /**
  * How dark it has to be before a fight teaches you anything about noticing.
  * Dusk is not night: a scuffle at seven in the evening is still fought by eye.
@@ -519,7 +521,7 @@ const FORAGE_COOLDOWN = world(180);
  * The things a single tile can be worked over for, each with its own
  * cooldown: picking berries does not stop you cutting the grass.
  */
-const FORAGE_KINDS = ['forage', 'botanize', 'grass', 'reed', 'dig', 'moss'];
+const FORAGE_KINDS = ['forage', 'botanize', 'grass', 'reed', 'dig', 'moss', 'worm', 'sprout'];
 /** How long ore stays lit after prospecting. */
 export const PROSPECT_MARK_TIME = 120;
 /** Lines of the log kept of everything but talk. */
@@ -10110,7 +10112,7 @@ export class Game {
 
   isForaged(x: number, y: number, kind: string): boolean {
     const t = this.foraged.get(this.forageKey(x, y, kind));
-    return t !== undefined && this.time - t < FORAGE_COOLDOWN;
+    return t !== undefined && this.time - t < (kind === 'sprout' ? world(SPROUT_COOLDOWN) : FORAGE_COOLDOWN);
   }
 
   /** The stage nothing else grows into: the beginning of a tree. */

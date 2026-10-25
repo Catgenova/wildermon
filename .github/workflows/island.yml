@@ -2123,6 +2123,15 @@ jobs:
             --outfile=node_modules/.cache/deploy.mjs --log-level=error
           node node_modules/.cache/deploy.mjs
 
+      - name: Sprouts, none off a sapling and one a tree an hour
+        if: matrix.shard == 2
+        run: |
+          # Reported: sprouts picked off saplings. A stage with no timber has
+          # none, and a pick marks the tree for `sprout_cooldown`, workers too.
+          npx esbuild supabase/test/sprouts.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/sprouts.mjs --log-level=error
+          node node_modules/.cache/sprouts.mjs
+
       - name: A worker that can reach the larder
         if: matrix.shard == 2
         run: |

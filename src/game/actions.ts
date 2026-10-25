@@ -1743,7 +1743,11 @@ export const ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
       if (g.world.getTile(t.x, t.y) !== TileType.Tree) return 'No tree here.';
-      return treeAge(g.world.getData(t.x, t.y)).alive ? null : 'Tree is dead.';
+      const age = treeAge(g.world.getData(t.x, t.y));
+      if (!age.alive) return 'Tree is dead.';
+      // A stage with no timber in it has no sprouts either: a sapling, or one clipped to a shrub.
+      if (age.logs === 0) return `${age.name}: no sprouts.`;
+      return g.isForaged(t.x, t.y, 'sprout') ? 'Sprout already picked. Try later.' : null;
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -1756,6 +1760,8 @@ export const ACTIONS: ActionDef[] = [
       // And picks more than one for a Forester's Sprout Picker (`count:sprout`), as the island does.
       const n = Math.max(1, Math.floor(g.perk('count:sprout', 1)));
       g.gather('sprout', { count: n, ql: g.productQl('forestry'), extra: def.name });
+      // One pick a tree an hour (`SPROUT_COOLDOWN`), whoever picks it.
+      g.markForaged(t.x, t.y, 'sprout');
       g.logMsg(`Picked: ${n} ${def.name.toLowerCase()} ${n === 1 ? 'sprout' : 'sprouts'}.`, 'event');
     },
   },

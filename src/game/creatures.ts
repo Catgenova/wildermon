@@ -6793,7 +6793,7 @@ export class Creatures {
       // A living tree, picked from beside it, and a sprout taken off it not lately; a pine big enough to tap, not tapped since dawn.
       if (game.world.getTile(x, y) !== TileType.Tree || !this.beside(game, x, y) || this.claimed(x, y, c)) return false;
       const data = game.world.getData(x, y);
-      if (kind === 'sprout') return treeAge(data).alive && !game.isForaged(x, y, 'sprout');
+      if (kind === 'sprout') return treeAge(data).alive && treeAge(data).logs > 0 && !game.isForaged(x, y, 'sprout');
       return treeSpecies(data) === RESIN_TREE && tappable(data) && !game.tappedToday(x, y);
     }
     if (kind === 'flower') {
