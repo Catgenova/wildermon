@@ -1,6 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import { enchantTail, furnaceBurn, type Enchant } from './enchant';
 import { FIRE_CAPACITY, FUEL_SAID, FUEL_VALUES, fuelAtHand, fuelledSaid, hasAshes, rakeAshes } from './campfire';
+import { burnsFor, heatSaid } from './words';
 import { DEED_PLACE } from './furniture';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
@@ -99,18 +100,14 @@ export function smelterAnchor(sx: number, sy: number): [number, number] {
 }
 
 /** How long its fuel keeps it hot: longer for an Ember Heart (`furnaceBurn`). */
-export const smelterBurnsFor = (s: PlacedSmelter): string => {
-  const secs = s.fuel / furnaceBurn(s);
-  const m = Math.round(secs / 60);
-  return m >= 60 ? `${(m / 60).toFixed(1)} hours` : m >= 1 ? `${m} minutes` : `${Math.round(secs)} seconds`;
-};
+export const smelterBurnsFor = (s: PlacedSmelter): string => burnsFor(s.fuel / furnaceBurn(s));
 
 /** What a job in the furnace is making, said plainly: a shovel head casting, an iron lump, an anvil. */
 export const jobName = (job: SmeltJob): string =>
   job.makes === 'casting' && job.piece ? `${itemDef(job.piece).name.toLowerCase()} casting` : itemDef(job.makes).name.toLowerCase();
 
 export function smelterState(s: PlacedSmelter): string {
-  const heat = s.lit ? `lit, fuel ${smelterBurnsFor(s)}` : s.fuel > 0 ? `unlit, fuel ${smelterBurnsFor(s)}` : 'unlit, no fuel';
+  const heat = heatSaid(s.lit, s.fuel, s.fuel / furnaceBurn(s));
   const work = s.jobs.length ? ` · ${s.jobs.length} smelting` : '';
   const out = s.output.length ? ` · ${s.output.length} ready` : '';
   return `QL ${s.ql.toFixed(0)} · ${heat}${work}${out}${enchantTail(s)}`;

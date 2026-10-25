@@ -15,12 +15,13 @@ import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type UiColours, type UiF
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
 import { lifeWords } from '../runecut-life';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
-import { listed, percent } from '../../game/words';
+import { burnsFor, listed, percent } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
 import { RING_FADE_MS } from '../pointerring';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
-import { FIRE_CAPACITY, fireBurnsFor, type PlacedCampfire } from '../../game/campfire';
+import { FIRE_CAPACITY } from '../../game/campfire';
+import { BRAZIER_CAPACITY, OVEN_CAPACITY } from '../../game/furniture';
 import { keepControlKeys } from '../controlkeys';
 import { onPhone } from '../../engine/device';
 import { fullscreenOffered, isFullscreen, setFullscreen, wakeOffered } from '../phone';
@@ -430,7 +431,7 @@ export class SettingsPanel {
     add('Mark hostile creatures',
       `Aggressive creatures and any creature hunting you: red overlay through trees and buildings, ${percent(THREAT_SHADE)} strength (${percent(THREAT_SHADE_HUNTING)} while hunting you), red marker overhead (pulsing while hunting you).`,
       () => game.settings.markThreats, (v) => (game.settings.markThreats = v));
-    add('Rings over fires, smelters and kilns', `Within ${RING_REACH} tiles: outer ring fuel (full at ${fireBurnsFor({ fuel: FIRE_CAPACITY } as PlacedCampfire)} of burning; orange lit, grey cold); inner ring front item progress; gold dot when something is done.`,
+    add('Rings over fires, ovens, braziers, smelters and kilns', `Within ${RING_REACH} tiles: outer ring fuel (full at ${burnsFor(FIRE_CAPACITY)} of burning; oven ${burnsFor(OVEN_CAPACITY)}, brazier ${burnsFor(BRAZIER_CAPACITY)}; orange lit, grey cold); inner ring front item progress; gold dot when something is done.`,
       () => game.settings.stationRings, (v) => (game.settings.stationRings = v));
 
     /*

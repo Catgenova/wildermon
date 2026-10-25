@@ -81,7 +81,7 @@ import { FIRE_CAPACITY, fireCentre, type PlacedCampfire } from '../game/campfire
 import { smelterCentre, type PlacedSmelter } from '../game/smelter';
 import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
 import { kilnCentre, type PlacedKiln } from '../game/kiln';
-import { furnitureCentre, furnitureDef, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
+import { furnitureCentre, furnitureDef, hearthCapacity, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
 import { UNSEEN, VISIBLE } from '../game/vision';
 import { DAWN, deedLevel, DUSK } from '../game/game';
 import { boatSway, clothInWind, crewOrder, deviceOf, drawFurniture, drawFurnitureLive, driverOn, swayOnScreen, WHEELS, wheelBlur, wheelTrim, steeredByTiller, woodHex, furnitureHoles, helmSeat, reinsTo, rowedPiece, furnitureSpan, FURNITURE_HEIGHT, glowsAtNight, headingView, mossTrim, PIECE_STAGES, pieceView, planterTrim, roseTrim, vineTrim, VINE_VARIANTS, type Air, type Crew, type PieceView } from './furniture';
@@ -1209,6 +1209,8 @@ const ANVIL_UNDER_WASH = 0.4;
 
 /** Tiles round you within which a fire, a smelter or a kiln has its ring drawn (`drawStationRings`). */
 export const RING_REACH = 14;
+/** How high over the ground a hearth's ring stands, in the units `drawStationRings` lifts by: a brazier is a bowl, an oven a chest-high dome. */
+const HEARTH_LIFT = { brazier: 34, oven: 44 };
 /** The zoom below which the rings are left off, as too small to read. */
 const RING_ZOOM = 0.55;
 
@@ -15605,8 +15607,9 @@ export class Renderer {
    * being a number rather than a line in the log.
    */
   /**
-   * A ring over every fire, smelter and kiln near you: the outer arc its fuel,
-   * out of the most it holds (`FIRE_CAPACITY`), orange while it burns and grey
+   * A ring over every fire, oven, brazier, smelter and kiln near you: the outer
+   * arc its fuel, out of the most it holds (`FIRE_CAPACITY`; a hearth's own,
+   * `hearthCapacity`), orange while it burns and grey
    * while it is cold; the inner arc how far the piece at the front of it has
    * come, for a smelter or a kiln with work in it; and a dot when something is
    * finished and waiting to be taken out. Asked for so a station can be read
@@ -15620,7 +15623,7 @@ export class Renderer {
     const level = p.level ?? 0;
     const r = Math.max(6, Math.min(12, 8 * zoom));
     // Over the top of what it is drawn over: a fire is low, a smelter and a kiln stand chest high.
-    const ring = (x: number, y: number, lift: number, fuel: number, lit: boolean, work: number | null, ready: boolean): void => {
+    const ring = (x: number, y: number, lift: number, fuel: number, lit: boolean, work: number | null, ready: boolean, full = FIRE_CAPACITY): void => {
       const sx = cam.worldToScreenX(x, y);
       const sy = cam.worldToScreenY(x, y, w.heightAt(x, y)) - lift * zoom - r;
       ctx.beginPath();
@@ -15634,7 +15637,7 @@ export class Renderer {
       ctx.beginPath();
       ctx.arc(sx, sy, r, 0, Math.PI * 2);
       ctx.stroke();
-      const share = Math.max(0, Math.min(1, fuel / FIRE_CAPACITY));
+      const share = Math.max(0, Math.min(1, fuel / full));
       if (share > 0) {
         ctx.strokeStyle = lit ? 'rgb(240,150,52)' : 'rgb(150,146,138)';
         ctx.beginPath();
@@ -15662,6 +15665,12 @@ export class Renderer {
     this.game.placed.campfires.around(p.x, p.y, RING_REACH, (f) => {
       const [x, y] = fireCentre(f);
       ring(x, y, 30, f.fuel, f.lit, null, false);
+    }, level);
+    // An oven and a brazier, which burn as a fire does and said nothing of it from across the yard.
+    this.game.placed.furniture.around(p.x, p.y, RING_REACH, (f) => {
+      if (!furnitureDef(f.kind).hearth) return;
+      const [x, y] = furnitureCentre(f);
+      ring(x, y, f.kind === 'brazier' ? HEARTH_LIFT.brazier : HEARTH_LIFT.oven, f.fuel ?? 0, !!f.lit, null, false, hearthCapacity(f));
     }, level);
     this.game.placed.smelters.around(p.x, p.y, RING_REACH, (s) => {
       const [x, y] = smelterCentre(s);

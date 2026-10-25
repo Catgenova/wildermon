@@ -1,6 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import { enchantTail, furnaceBurn, type Enchant } from './enchant';
 import { FIRE_CAPACITY, FUEL_SAID, FUEL_VALUES, fuelAtHand, fuelledSaid, hasAshes, rakeAshes } from './campfire';
+import { burnsFor, heatSaid } from './words';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
 import { itemDef, itemName, rarityOf, roomFor, type Item } from './items';
@@ -124,14 +125,10 @@ export function kilnAnchor(sx: number, sy: number): [number, number] {
 }
 
 /** How long its fuel keeps it hot: longer for an Ember Heart (`furnaceBurn`). */
-export const kilnBurnsFor = (k: PlacedKiln): string => {
-  const secs = k.fuel / furnaceBurn(k);
-  const m = Math.round(secs / 60);
-  return m >= 60 ? `${(m / 60).toFixed(1)} hours` : m >= 1 ? `${m} minutes` : `${Math.round(secs)} seconds`;
-};
+export const kilnBurnsFor = (k: PlacedKiln): string => burnsFor(k.fuel / furnaceBurn(k));
 
 export function kilnState(k: PlacedKiln): string {
-  const heat = k.lit ? `lit, fuel ${kilnBurnsFor(k)}` : k.fuel > 0 ? `unlit, fuel ${kilnBurnsFor(k)}` : 'unlit, no fuel';
+  const heat = heatSaid(k.lit, k.fuel, k.fuel / furnaceBurn(k));
   const work = k.jobs.length ? ` · ${k.jobs.length} firing` : '';
   const out = k.output.length ? ` · ${k.output.length} ready` : '';
   return `QL ${k.ql.toFixed(0)} · ${heat}${work}${out}${enchantTail(k)}`;
