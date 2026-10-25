@@ -507,6 +507,10 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
   const V = unit(job.e.toward as V3);
   const aV = Math.atan2(V[1], V[0]);
   const EDGE = Math.PI / 2 - 0.12;
+  // Wood too thin on the screen to carry a mark is left plain.
+  let wide = false;
+  for (let j = j0; j <= j1; j++) if (c.r[j] >= 1.2) wide = true;
+  if (!wide) return;
   g.save();
   g.clip(bandPath(c, j0, j1, -1, 1));
   const ink = new Path2D();
@@ -541,10 +545,11 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
     const long = len(sub(L.b, L.a));
     const r = (L.ra + L.rb) / 2;
     // Dashes all round it, the more the thicker it is; none on wood too thin to show them.
-    const n = r * ACROSS < 1.2 ? 0 : Math.round(long * (0.35 + r * 0.45));
+    const n = r * ACROSS < 1.2 ? 0 : Math.round(long * (0.2 + r * 0.25));
+    if (r * ACROSS < 1.2) continue;
     for (let k = 0; k < n; k++) {
       // Spread evenly up it and round it, each a little off its place.
-      const t = (k + 0.2 + 0.6 * R()) / n, a = k * 2.4 + R() * 0.8, w = (0.6 + 1.3 * R() * R()) * Math.min(1, 2 / Math.max(0.5, r)) + 0.3, th = (0.2 + 0.28 * R() * R()) * Math.min(1.6, 0.6 + r * 0.25);
+      const t = (k + 0.2 + 0.6 * R()) / n, a = k * 2.4 + R() * 0.8, w = (0.8 + 1.4 * R() * R()) * Math.min(1, 2.4 / Math.max(0.5, r)) + 0.35, th = (0.42 + 0.4 * R() * R()) * Math.min(1.6, 0.7 + r * 0.25);
       if (L.a[2] + (L.b[2] - L.a[2]) * t < rough * 0.9) continue;
       band(skin, t, a, a + w, th, th * 0.3);
     }
@@ -556,9 +561,11 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
       const a = Math.atan2(d[1], d[0]);
       const dl = Math.max(1e-6, len(sub(L.b, L.a)));
       const t = clamp01(dot(sub(K.a, L.a), sub(L.b, L.a)) / (dl * dl)) - (K.ra * 0.9) / dl;
-      const sp = 0.7 + 0.3 * R();
-      band(skin, t, a - sp, a + sp, K.ra * 0.55, K.ra * 1.6);
-      band(skin, t + (K.ra * 0.5) / dl, a - 0.3, a + 0.3, K.ra * 0.7, -K.ra * 0.2);
+      // Bold enough to read at a distance however thin what left it.
+      const kr = Math.max(K.ra, r * 0.4);
+      const sp = 0.75 + 0.3 * R();
+      band(skin, t, a - sp, a + sp, kr * 0.75, kr * 1.8);
+      band(skin, t + (kr * 0.5) / dl, a - 0.35, a + 0.35, kr * 0.9, -kr * 0.2);
     }
   }
   g.fillStyle = marks.ink;
@@ -669,7 +676,7 @@ const BIRCH_EDGE: ReadonlyArray<Pt> = Array.from({ length: 9 }, (_, i) => {
 /** The edge a species' masses stand out of. */
 const edgeOf = (spec: Species3D): ReadonlyArray<Pt> => (spec.leafForm === 'oak' ? OAK_EDGE : spec.leafForm === 'birch' ? BIRCH_EDGE : LEAF_EDGE);
 /** How many leaves stand out of the edge of a cluster's `j`th lump: a birch's many and small. */
-const lumpLeaves = (spec: Species3D, j: number): number => (spec.leafForm === 'birch' ? (j === 0 ? 3 : 6 + (j % 2)) : j === 0 ? 0 : 1 + (j % 2));
+const lumpLeaves = (spec: Species3D, j: number): number => (spec.leafForm === 'birch' ? (j === 0 ? 2 : 5 + (j % 2)) : j === 0 ? 0 : 1 + (j % 2));
 
 /** The shape of a mass, seeded: two waves of lumps round it and the leaves standing out of its edge. */
 interface Outline { lumps: [number, number, number, number]; leaves: Array<{ at: number; w: number; h: number }> }
@@ -1027,7 +1034,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
     // A cluster: its lumps' outlines in the one path, filled as one.
     if (s.c.subs) {
       const lumps = lumpsOf(job, s);
-      for (const u of lumps) massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec), 24);
+      for (const u of lumps) massPath(path, u.x, u.y, u.rx, u.ry, u.o, 1, edgeOf(spec), spec.leafForm === 'birch' ? 16 : 24);
       return { o, path, lumps };
     }
     const [cx, cy] = proj(e, s.c.c);

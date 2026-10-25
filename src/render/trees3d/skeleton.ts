@@ -487,7 +487,7 @@ export function growSpreading(b: Build, height: number, seed: number): Skeleton 
 /* ---- an upright tree ---- */
 
 /** How many stems an upright tree of this seed has, to its build's most: each of the tile's grown shapes its own count (`FORMS`). */
-export const stemsOf = (b: Build, seed: number): number => Math.max(1, Math.min(Math.round(b.stems ?? 1), 1 + (seed % 3)));
+export const stemsOf = (b: Build, seed: number): number => Math.max(1, Math.min(Math.round(b.stems ?? 1), [2, 1, 3][seed % 3]));
 
 /**
  * An upright tree grown from a seed: one to `stems` slender stems from one
@@ -553,8 +553,10 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
       run([from, mid, end], r, r * 0.45, order, at, bough, false);
     }
   };
-  /** Ends that leaf hangs from: the piece, which way is out, and how far up the tree. */
-  const ends: Array<{ at: number; out: V3; top?: boolean }> = [];
+  /** Ends that leaf hangs from: the piece, which way is out, and whether it is a stem's top. */
+  const ends: Array<{ at: number; out: V3; top?: boolean; inner?: boolean }> = [];
+  /** Places inside the crown a small cluster can hang from, to fill it: along the limbs and up the leaders. */
+  const mids: Array<{ at: number; out: V3; top?: boolean; inner?: boolean }> = [];
 
   /* ---- the stems, from one foot ---- */
   const a0 = R() * TAU;
@@ -566,31 +568,30 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
     const side: V3 = [-out[1], out[0], 0];
     const foot: V3 = k === 1 ? [0, 0, 0] : mul(out, r0 * 0.42);
     const tall = b.bare ? H * (i === 0 ? 0.6 + 0.15 * R() : 0.38 + 0.2 * R()) : H * (i === 0 ? 0.95 : 0.78 + 0.1 * R());
-    const rs = r0 * (k === 1 ? 1 : i === 0 ? 0.78 : 0.66);
+    const rs = r0 * (k === 1 ? 1 : i === 0 ? 0.86 : 0.74);
     // Apart from each other up the crown, all of them leaning as the tree leans.
-    const top: V3 = k === 1 ? mul(leanD, b.lean * 1.5) : add(mul(out, env.r * (0.32 + 0.12 * R())), mul(leanD, b.lean));
+    const top: V3 = k === 1 ? mul(leanD, b.lean * 1.5) : add(mul(out, env.r * (0.4 + 0.15 * R())), mul(leanD, b.lean));
     const bend = (R() - 0.5) * 2 * b.gnarl * rs * 2.4;
     const at = (f: number): V3 => {
       const s = Math.sin(f * Math.PI * 1.1) * bend;
       const g = Math.pow(f, 1.15);
       return [foot[0] + top[0] * g + side[0] * s, foot[1] + top[1] * g + side[1] * s, tall * f];
     };
-    // Slender all the way up, flaring into the ground at its foot.
-    // A dead stem is snapped off: still thick where it broke.
+    // Slender all the way up, flaring into the ground at its foot; a dead one snapped off, still thick where it broke.
     const r = (f: number): number => Math.max(0.16, rs * (1 - (b.bare ? 0.5 : 0.86) * Math.pow(f, 0.9))) + rs * (b.flare - 1) * Math.pow(Math.max(0, 1 - f / 0.11), 2);
     const pieces: number[] = [];
     for (let j = 0; j + 1 < FS.length; j++) {
-      // A dead stem is snapped off: no leader past where it broke.
       pieces.push(limbs.length);
       limbs.push({ a: at(FS[j]), b: at(FS[j + 1]), ra: r(FS[j]), rb: r(FS[j + 1]), order: 0, parent: j ? limbs.length - 1 : -1, bough: -1, dead: b.bare });
     }
     stems.push({ pieces, az, tall, at, r });
+    if (!b.bare) for (const q of pieces) if (limbs[q].a[2] > stemZ * 1.15 && limbs[q].b[2] < tall * 0.92) mids.push({ at: q, out: [Math.cos(az + q * 2.4), Math.sin(az + q * 2.4), 0], inner: true });
     if (!b.bare) ends.push({ at: pieces[pieces.length - 1], out, top: true });
     else {
       // A splinter standing up off one side of the break.
-      const top = at(1), rt = r(1), sa = R() * TAU;
-      const foot: V3 = add(top, [Math.cos(sa) * rt * 0.45, Math.sin(sa) * rt * 0.45, -rt * 0.2]);
-      run([foot, add(foot, [Math.cos(sa) * rt * 0.3, Math.sin(sa) * rt * 0.3, rt * (2.2 + 1.5 * R())])], rt * 0.45, rt * 0.08, 1, pieces[pieces.length - 1], -1, true);
+      const rt = r(1), sa = R() * TAU;
+      const p: V3 = add(at(1), [Math.cos(sa) * rt * 0.45, Math.sin(sa) * rt * 0.45, -rt * 0.2]);
+      run([p, add(p, [Math.cos(sa) * rt * 0.3, Math.sin(sa) * rt * 0.3, rt * (2.2 + 1.5 * R())])], rt * 0.45, rt * 0.08, 1, pieces[pieces.length - 1], -1, true);
     }
   }
   const pieceAt = (s: (typeof stems)[number], f: number): number => s.pieces[Math.max(0, Math.min(s.pieces.length - 1, FS.findIndex((x) => x >= f) - 1))];
@@ -642,6 +643,7 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
         continue;
       }
       ends.push({ at: pieces[pieces.length - 1], out: d });
+      mids.push({ at: pieces[1], out: d, inner: true });
       // Forks off it, up and to either side, their ends falling.
       const nb = Math.max(0, Math.round(b.branching + (R() - 0.5) * 0.8)) * (b.forks >= 2 ? 1 : 0.5);
       for (let q = 0; q < Math.round(nb); q++) {
@@ -681,9 +683,11 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
   if (!b.bare && b.clumps > 0) {
     // As many as the build asks for, as far apart as they can be: the highest first, then each the end furthest from those taken.
     const want = Math.max(1, Math.round(b.clumps));
-    const spots = ends.map((e) => {
+    const spots = [...ends, ...mids].map((e) => {
       const P = limbs[e.at];
-      return { e, c: add(P.b, add(mul(e.out, rm * 0.2), [0, 0, e.top ? rm * 0.1 : -rm * 0.4])) };
+      // Inside the crown a cluster hangs off the side of what it grows on.
+      const off = e.inner ? Math.max(P.ra, rm * 0.5) : rm * 0.2;
+      return { e, c: add(P.b, add(mul(e.out, off), [0, 0, e.top ? rm * 0.1 : -rm * 0.4])) };
     });
     const taken: number[] = [];
     if (spots.length) taken.push(spots.reduce((m, s, i) => (s.c[2] > spots[m].c[2] ? i : m), 0));
@@ -698,11 +702,11 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
     }
     for (const i of taken) {
       const { e, c } = spots[i];
-      const R0 = rm * (e.top ? 1.05 : 0.8 + 0.4 * R());
+      const R0 = rm * (e.top ? 1.05 : e.inner ? 0.6 + 0.25 * R() : 0.8 + 0.4 * R());
       const outA = Math.atan2(e.out[1], e.out[0]);
       const o: V3 = [Math.cos(outA), Math.sin(outA), 0], side: V3 = [-o[1], o[0], 0];
       // A spray hanging off the end: lumps one after another out and down from it, each smaller, and one up behind for its body.
-      const m = e.top ? 2 : 2 + Math.floor(R() * 2);
+      const m = e.top || e.inner ? 2 : 2 + Math.floor(R() * 2);
       const subs: Array<{ o: V3; r: number }> = [{ o: [0, 0, R0 * 0.1], r: R0 * 0.52 }];
       let at: V3 = [0, 0, R0 * 0.1];
       for (let j = 1; j < m; j++) {
@@ -711,7 +715,8 @@ export function growUpright(b: Build, height: number, seed: number): Skeleton {
         subs.push({ o: at, r: R0 * (0.46 - 0.06 * j) * (0.85 + 0.3 * R()) });
       }
       const ba = outA + (R() < 0.5 ? -1 : 1) * (1.2 + 0.6 * R());
-      subs.push({ o: [Math.cos(ba) * R0 * 0.42, Math.sin(ba) * R0 * 0.42, R0 * (0.2 + 0.2 * R())], r: R0 * (0.36 + 0.1 * R()) });
+      // Inside the crown a spray needs no body: those round it are its body.
+      if (!e.inner) subs.push({ o: [Math.cos(ba) * R0 * 0.42, Math.sin(ba) * R0 * 0.42, R0 * (0.2 + 0.2 * R())], r: R0 * (0.36 + 0.1 * R()) });
       clumps.push({
         c, r: R0, limb: e.at, k: R(), subs,
         out: Math.min(1, outOf(env, c)),

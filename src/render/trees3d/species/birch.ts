@@ -32,15 +32,15 @@ const mix3 = (a: Three, b: Three, t: number): Three => a.map((c, i) => mix(c, b[
 export const birch: Species3D = {
   name: 'Birch',
   build: {
-    height: 62, stem: 0.3, spread: 0.28, dome: 0.5, droop: 0.4, girth: 0.05, flare: 1.45, scaffolds: 9, forks: 2, branching: 2,
-    clumps: 18, clumpSize: 0.42, gnarl: 0.2, lean: 1.2, dead: 0, bare: false, rune: false, hollow: false,
+    height: 70, stem: 0.28, spread: 0.3, dome: 0.5, droop: 0.4, girth: 0.05, flare: 1.45, scaffolds: 9, forks: 2, branching: 2,
+    clumps: 28, clumpSize: 0.38, gnarl: 0.2, lean: 1.2, dead: 0, bare: false, rune: false, hollow: false,
     habit: 'upright', stems: 3, rough: 0.1,
   },
   ages: {
     sapling: { stem: 0.34, spread: 0.26, girth: 0.036, flare: 1.1, scaffolds: 4, forks: 1, branching: 1, clumps: 5, clumpSize: 0.6, gnarl: 0.1, lean: 0.4, stems: 1, rough: 0 },
-    young: { stem: 0.28, spread: 0.3, girth: 0.042, flare: 1.3, scaffolds: 7, clumps: 13, clumpSize: 0.56, gnarl: 0.15, lean: 0.8, stems: 2, rough: 0.04 },
-    old: { spread: 0.3, girth: 0.056, flare: 1.55, scaffolds: 10, clumps: 20, clumpSize: 0.42, gnarl: 0.3, lean: 1.6, rune: true, rough: 0.14 },
-    veryOld: { spread: 0.3, girth: 0.06, flare: 1.65, scaffolds: 10, clumps: 16, clumpSize: 0.42, gnarl: 0.4, lean: 2, dead: 2, rune: true, hollow: true, rough: 0.17 },
+    young: { stem: 0.28, spread: 0.3, girth: 0.042, flare: 1.3, scaffolds: 7, clumps: 18, clumpSize: 0.5, gnarl: 0.15, lean: 0.8, stems: 2, rough: 0.04 },
+    old: { spread: 0.3, girth: 0.056, flare: 1.55, scaffolds: 10, clumps: 30, clumpSize: 0.36, gnarl: 0.3, lean: 1.6, rune: true, rough: 0.14 },
+    veryOld: { spread: 0.3, girth: 0.06, flare: 1.65, scaffolds: 10, clumps: 24, clumpSize: 0.36, gnarl: 0.4, lean: 2, dead: 2, rune: true, hollow: true, rough: 0.17 },
     shrivelled: { girth: 0.058, flare: 1.65, scaffolds: 6, forks: 1, gnarl: 0.4, lean: 2, bare: true, rune: true, rough: 0.17 },
     clipped: { stem: 0.12, spread: 0.45, dome: 0.5, droop: 0.3, girth: 0.035, flare: 1.1, scaffolds: 6, forks: 1, clumps: 8, clumpSize: 0.55, gnarl: 0.2, lean: 0.4, stems: 3, rough: 0 },
   },
