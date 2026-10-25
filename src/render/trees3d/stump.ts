@@ -74,7 +74,7 @@ export const STUMP_SHAPES: Record<'conifer' | 'spreading' | 'upright' | 'orchard
   // Tall, on a broad foot of long buttresses.
   conifer: { radius: 4.2, cut: 1.55, roots: 1 },
   // Broad and low, craggy with its buttresses.
-  spreading: { radius: 4.9, cut: 0.8, roots: 0.75 },
+  spreading: { radius: 4.6, cut: 0.85, roots: 0.75 },
   // Straight-sided, with no flare.
   upright: { radius: 3.9, cut: 1.35, roots: 0.6, straight: true },
   // Short and knobbly.
@@ -500,8 +500,10 @@ export function paintStump3d(g: Ctx, job: Job, m: StumpModel, wood: { face: stri
     g.lineWidth = KIT_INK_W * 2;
     g.stroke(foot.base);
     items.push({ d: near(sk.limbs[at].a) - 0.6, draw: () => paintFoot(g, foot, trunk) });
+    // No snow along the buttresses: a stump's snow is on its top (`capOf`), and a thin line of it down each read as string.
+    const bare = { ...job, dress: { ...job.dress, season: job.dress.season === 'winter' ? ('autumn' as const) : job.dress.season } };
     foot.lobes.forEach(([a, out], k) => {
-      const b = buttress(job, a, out, k);
+      const b = buttress(bare, a, out, k);
       items.push({ d: near(b.at) - 0.5, draw: () => b.draw(g) });
     });
   }
