@@ -1223,6 +1223,12 @@ const HEARTH_LIFT = { brazier: 34, oven: 44 };
 /** The zoom below which the rings are left off, as too small to read. */
 const RING_ZOOM = 0.55;
 
+/** A field's lip of turned soil where it meets other ground (`fieldLip`): how far in, as a share of the way to the tile's middle, and its tones over the field's. */
+const FIELD_LIP = 0.07;
+const FIELD_LIP_TOP = 'rgba(255,232,206,0.22)';
+const FIELD_LIP_SHADE = 'rgba(70,50,32,0.38)';
+const FIELD_LIP_FOOT = 'rgba(58,40,26,0.5)';
+
 export class Renderer {
   readonly camera = new Camera();
   time = 0;
@@ -3168,11 +3174,59 @@ export class Renderer {
   private hemBuf: number[] = [];
   private hemRun: number[] = [];
 
+  /**
+   * A field's edges where it meets anything but field: a lip of turned soil
+   * along each, a little raised -- its top lit, a line of shade inside it
+   * and its foot outside. Field against field runs on with no edge.
+   */
+  private fieldLip(ctx: CanvasRenderingContext2D, V: View, x: number, y: number, pts: Float64Array, zoom: number, lit: boolean): boolean {
+    const world = this.game.world;
+    const cx = (pts[0] + pts[2] + pts[4] + pts[6]) / 4;
+    const cy = (pts[1] + pts[3] + pts[5] + pts[7]) / 4;
+    const top = new Path2D(), inner = new Path2D(), foot = new Path2D();
+    let any = false;
+    for (let e = 0; e < 4; e++) {
+      const nx = x + V.edges[e][0], ny = y + V.edges[e][1];
+      if (nx < 0 || ny < 0 || nx >= world.w || ny >= world.h) continue;
+      if (this.groundAt(nx, ny, lit) === TileType.Field) continue;
+      any = true;
+      const f = (e + 1) & 3;
+      const ax = pts[e * 2], ay = pts[e * 2 + 1], bx = pts[f * 2], by = pts[f * 2 + 1];
+      // The lip's inner line: the edge taken in toward the middle.
+      const k = FIELD_LIP;
+      const ix = (px: number): number => px + (cx - px) * k, iy = (py: number): number => py + (cy - py) * k;
+      top.moveTo(ax, ay); top.lineTo(bx, by); top.lineTo(ix(bx), iy(by)); top.lineTo(ix(ax), iy(ay)); top.closePath();
+      inner.moveTo(ix(ax), iy(ay)); inner.lineTo(ix(bx), iy(by));
+      foot.moveTo(ax, ay); foot.lineTo(bx, by);
+    }
+    if (!any) return false;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0], pts[1]);
+    for (let k = 1; k < 4; k++) ctx.lineTo(pts[k * 2], pts[k * 2 + 1]);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = FIELD_LIP_TOP;
+    ctx.fill(top);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = FIELD_LIP_SHADE;
+    ctx.lineWidth = Math.max(0.6, 0.9 * zoom);
+    ctx.stroke(inner);
+    ctx.strokeStyle = FIELD_LIP_FOOT;
+    ctx.lineWidth = Math.max(0.8, 1.4 * zoom);
+    ctx.stroke(foot);
+    ctx.restore();
+    return true;
+  }
+
   private swardEdges(ctx: CanvasRenderingContext2D, V: View, x: number, y: number, pts: Float64Array, zoom: number, lit: boolean): boolean {
     const world = this.game.world;
     const co = V.corners;
     const mine = world.heightAt(x + 0.5, y + 0.5);
-    const grew = growth(this.groundAt(x, y, lit));
+    const ground = this.groundAt(x, y, lit);
+    // A tilled field is cut clean: no sward ruffles over it, and a lip of turned soil along its edge (`fieldLip`).
+    if (ground === TileType.Field) return this.fieldLip(ctx, V, x, y, pts, zoom, lit);
+    const grew = growth(ground);
     const buf = this.hemBuf;
     buf.length = 0;
     for (let e = 0; e < 4; e++) {
