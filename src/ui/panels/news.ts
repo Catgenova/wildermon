@@ -24,7 +24,7 @@ import { JOINT_EVERY, PIN_EVERY, STITCH_EVERY } from '../runecut-dress';
 import { lifeWords } from '../runecut-life';
 import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM } from '../runecut-art';
-import { SALE_DAYS } from '../../game/prices';
+import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
 import { RECENT } from './craft';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
 import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
@@ -3799,6 +3799,18 @@ export const NEWS: News[] = [
     lines: () => [
       'Fixed: a kept stack put in a bag, chest or counter and taken back stays kept, part or whole. Loose stacks taken back join a kept stack first.',
       'Fixed: a kept stack shown loose when two actions were answered out of order.',
+    ],
+  },
+  {
+    n: 320,
+    day: '2026-10-25',
+    lines: () => [
+      `Added: Market window, Board and Prices tabs: Find. Every priced thing on every stall and shop counter: QL, silver each, % under or over the ${SALE_DAYS}-day average, stall, location, distance. Sort: price each, QL, distance.`,
+      `Added: per row: Walk, Pin (map mark, market colour), Buy within ${COUNTER_REACH} tiles of the counter.`,
+      'Added: away from a totem or mailbox: last board read this session, and the nearest settlement totem with Walk and Pin.',
+      `Added: price History: last ${SALES_SHOWN} sales of a thing: when, how many, QL, silver each. Order: buy-order form at its ${SALE_DAYS}-day average. Prices: average QL.`,
+      'Added: map: a square at every stall and shop counter on the last board read; yours hollow.',
+      'Changed: Market board: each thing with its QL, and silver each for a stack.',
     ],
   },
 ];

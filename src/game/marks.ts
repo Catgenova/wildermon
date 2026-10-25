@@ -27,7 +27,11 @@ export const MARK_COLOURS: Array<{ id: string; name: string; css: string; note: 
   { id: 'red', name: 'Red', css: '#e8695a', note: 'something that will kill you' },
   { id: 'grey', name: 'Stone', css: '#c9c1ad', note: 'ore, rock, clay' },
   { id: 'violet', name: 'Violet', css: '#b48ce0', note: 'an altar, a rug, a quiet place' },
+  { id: 'market', name: 'Market', css: '#4fd1b5', note: 'a stall, a shop counter, a settlement token' },
 ];
+
+/** The colour a mark dropped from the Market window is drawn in, and the stalls the map shows from the last board read. */
+export const MARKET_MARK = 'market';
 
 export const MARK_CSS = (id: string): string => MARK_COLOURS.find((c) => c.id === id)?.css ?? MARK_COLOURS[0].css;
 

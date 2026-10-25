@@ -1,4 +1,4 @@
-import type { Prices } from '../game/prices';
+import type { Prices, Sale } from '../game/prices';
 import type { WornWire } from '../game/worn';
 import type { Enchant } from '../game/enchant';
 import { firedIn, toldIn, type FiredWire, type ToldWire } from './told';
@@ -658,6 +658,13 @@ export interface Stall {
   goods: Good[];
   /** Which it is: a market stall, or the store behind a shop counter (`counters.ts`). */
   what?: 'stall' | 'counter';
+}
+
+/** The nearest settlement token, where the board is read: its tile and its settlement (`rpc_market`, away from the board). */
+export interface BoardSpot {
+  x: number;
+  y: number;
+  deed: string;
 }
 
 /**
@@ -4002,12 +4009,22 @@ export class Island {
    * when you stand at a settlement token or a mailbox; and your own stalls
    * wherever you are, with their tills.
    */
-  async market(): Promise<{ board: boolean; stalls: Stall[] }> {
+  async market(): Promise<{ board: boolean; stalls: Stall[]; token?: BoardSpot | null }> {
     if (!this.info) return { board: false, stalls: [] };
     const { data, error } = await supabase().rpc('rpc_market', { p_world: this.info.id });
     if (error || !data) return { board: false, stalls: [] };
-    const got = data as { board?: boolean; stalls?: unknown };
-    return { board: !!got.board, stalls: rowsIn<Stall>(got.stalls) };
+    const got = data as { board?: boolean; stalls?: unknown; token?: BoardSpot | null };
+    const t = got.token;
+    return { board: !!got.board, stalls: rowsIn<Stall>(got.stalls),
+      token: t && typeof t.x === 'number' && typeof t.y === 'number' ? { x: t.x, y: t.y, deed: String(t.deed ?? '') } : null };
+  }
+
+  /** A thing's last `SALES_SHOWN` sales on the island this month, newest first (`rpc_sales`). */
+  async sales(def: string): Promise<Sale[]> {
+    if (!this.info) return [];
+    const { data, error } = await supabase().rpc('rpc_sales', { p_world: this.info.id, p_def: def });
+    if (error || !data) return [];
+    return rowsIn<Sale>((data as { sales?: unknown }).sales);
   }
 
   /** What everything has sold for on the island in the last `SALE_DAYS` days, a row a day per thing (`rpc_prices`). */

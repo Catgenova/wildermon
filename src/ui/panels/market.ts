@@ -1,14 +1,16 @@
-import { LETTER_MAX, type Deal, type Good, type Island, type Occupant, type Order, type Parcel, type Stall } from '../../net/island';
+import { LETTER_MAX, type BoardSpot, type Deal, type Good, type Island, type Occupant, type Order, type Parcel, type Stall } from '../../net/island';
 import type { Enchant } from '../../game/enchant';
 import type { Game } from '../../game/game';
 import { billWords, ITEM_DEFS, itemDef, itemName, RARITIES, type Item } from '../../game/items';
-import { dailyEach, SALE_DAYS, silverEach, summarise, type Prices, type SaleDay, type SaleSummary } from '../../game/prices';
+import { dailyEach, SALE_DAYS, saleLine, SALES_SHOWN, silverEach, summarise, summaryWords, type Prices, type Sale, type SaleDay, type SaleSummary } from '../../game/prices';
+import { againstAverage, againstWords, answers, FIND_SHOWN, FIND_SORTS, kindsOnSale, offersFor, tilesTo, type FindSort } from '../../game/marketfind';
+import { MARKET_MARK } from '../../game/marks';
 import { furnitureDef } from '../../game/furniture';
 import { SPECIES } from '../../game/creatures';
 import { priceWords, purse } from '../../game/money';
 import { couldBring, ORDER_LIFE, orderWords } from '../../game/orders';
 import { awayFor } from '../../game/away';
-import { COUNTER_BUY_FROM, sellsTooFar } from '../../game/counters';
+import { COUNTER_BUY_FROM, COUNTER_REACH, sellsTooFar } from '../../game/counters';
 import { durationSaid } from '../../game/boons';
 import type { UIWindow } from '../windows';
 
@@ -20,14 +22,19 @@ const REFRESH = 5;
  *
  * Coins have existed since there was an anvil to strike them on and have
  * never bought anything, because there was nothing to buy them with and
- * nobody to buy from. Five tabs, because they answer five different
+ * nobody to buy from. Six tabs, because they answer six different
  * questions:
  *
  *   **Board** — what is for sale anywhere on the island, and what is wanted.
- *   Every stall, where it stands, what is on it and for how much, read at a
- *   settlement token or a mailbox, and a Buy for each, which goes through
- *   when you stand at that stall's counter; and every buy order, with a Fill
- *   for each, which goes through there and then.
+ *   Every stall, where it stands, what is on it, its quality and its price,
+ *   read at a settlement token or a mailbox; a Find across all of them, by the
+ *   price of one, quality or distance, each with Walk and Pin, and Buy once
+ *   you stand at that stall's counter -- the last board read kept for that,
+ *   since the counter is not where the board is read; and every buy order,
+ *   with a Fill for each, which goes through there and then.
+ *
+ *   **Prices** — what each thing has sold for on the island this month, its
+ *   last sales one by one, and a buy order for it at its average.
  *
  *   **Orders** — what you want and nobody has put out. Your own buy orders,
  *   wherever you are, to take back; and putting one up, at a token or a
@@ -96,7 +103,18 @@ export class MarketPanel {
   private readonly tabs = new Map<string, HTMLButtonElement>();
   private tab: Tab = 'board';
   private deals: Deal[] = [];
-  private market: { board: boolean; stalls: Stall[] } = { board: false, stalls: [] };
+  private market: { board: boolean; stalls: Stall[]; token?: BoardSpot | null } = { board: false, stalls: [] };
+  /**
+   * The last board read at a token or a mailbox: everybody else's stalls and orders, and when. Kept for the session so
+   * that what was found there can be walked to, pinned and bought once you have left the token: a stall is bought from
+   * at its counter, not at the board, and the board is not read away from one.
+   */
+  private lastBoard: { stalls: Stall[]; orders: Order[]; at: number } | null = null;
+  /** What is typed into the Find box (Board and Prices tabs alike), and how the found are sorted. */
+  private query = '';
+  private sort: FindSort = 'each';
+  /** A thing's last sales (`rpc_sales`), by kind, for each history open; 'asking' while the island is asked. */
+  private readonly history = new Map<string, Sale[] | 'asking'>();
   private orders: { board: boolean; orders: Order[] } = { board: false, orders: [] };
   /** What everything has sold for on the island in the last month (`rpc_prices`), read when the window is and once at the start. */
   prices: Prices = {};
@@ -150,6 +168,12 @@ export class MarketPanel {
     if (island) void island.prices().then((p) => (this.prices = p));
   }
 
+  /** Every stall and shop counter on the last board read, and your own: what the map draws as the market (`MinimapPanel.stalls`). */
+  stallsSeen(): Array<{ x: number; y: number; mine: boolean }> {
+    const mine = this.market.stalls.filter((st) => st.mine);
+    return [...(this.lastBoard?.stalls ?? []), ...mine].map((st) => ({ x: st.x, y: st.y, mine: st.mine }));
+  }
+
   /** Open on the Stall tab, where your stalls' and counters' goods are priced. */
   openStall(): void {
     this.show('stall');
@@ -187,6 +211,9 @@ export class MarketPanel {
       this.market = await this.island.market();
       this.orders = await this.island.orders();
       this.prices = await this.island.prices();
+      if (this.market.board) {
+        this.lastBoard = { stalls: this.market.stalls.filter((st) => !st.mine), orders: this.orders.orders.filter((o) => !o.mine), at: Date.now() };
+      }
     } finally {
       this.asking = false;
     }
@@ -222,33 +249,135 @@ export class MarketPanel {
 
   /**
    * Every thing sold on the island in the month, most sold first: how many,
-   * the cheapest and dearest one and the average, and a bar a day of what one
-   * fetched, oldest on the left. Read wherever you stand, unlike the board:
-   * what things go for is common knowledge.
+   * the cheapest and dearest one and the average, the average quality, and a
+   * bar a day of what one fetched, oldest on the left. Read wherever you
+   * stand, unlike the board: what things go for is common knowledge. The Find
+   * box narrows it; each row opens its last sales (`rpc_sales`) and starts a
+   * buy order for it.
    */
   private drawPrices(): void {
+    this.findBar([], false);
     const rows = Object.entries(this.prices)
+      .filter(([def]) => !this.query.trim() || answers(def, null, this.query))
       .map(([def, days]) => ({ def, days, s: summarise(days) }))
       .filter((r): r is { def: string; days: SaleDay[]; s: SaleSummary } => !!r.s)
       .sort((a, b) => b.s.n - a.s.n || itemDef(a.def).name.localeCompare(itemDef(b.def).name));
     if (!rows.length) {
-      this.say(`No sales in the last ${SALE_DAYS} days.`);
+      this.say(`No sales in the last ${SALE_DAYS} days${this.query.trim() ? `: ${this.query.trim()}` : ''}.`);
       return;
     }
     this.say(`Stall, counter and buy-order sales, last ${SALE_DAYS} days. One bar per day, oldest left; height: that day's price vs its highest; gap: no sale.`);
-    for (const { def, days, s } of rows) {
-      const row = document.createElement('div');
-      row.className = 'price-row';
-      const name = document.createElement('div');
-      name.className = 'price-name';
-      name.textContent = itemDef(def).name;
-      const said = document.createElement('small');
-      said.textContent = `${s.n} sold · ${s.lo === s.hi ? `${silverEach(s.lo)} silver each` : `${silverEach(s.lo)}–${silverEach(s.hi)} silver each, ${silverEach(s.each)} on average`}`
-        + ` · last ${s.last === 0 ? 'today' : s.last === 1 ? 'yesterday' : `${s.last} days ago`}`;
-      name.append(said);
-      row.append(name, priceChart(days));
-      this.page.append(row);
+    for (const { def, days, s } of rows) this.priceRow(def, days, s);
+  }
+
+  /** One thing's month of sales: its name, the month summed, its bars, History and Order; and its last sales when open. */
+  private priceRow(def: string, days: readonly SaleDay[], s: SaleSummary): void {
+    const row = document.createElement('div');
+    row.className = 'price-row';
+    row.dataset.def = def;
+    const name = document.createElement('div');
+    name.className = 'price-name';
+    name.textContent = itemDef(def).name;
+    const said = document.createElement('small');
+    said.textContent = `${summaryWords(s)} · last ${s.last === 0 ? 'today' : s.last === 1 ? 'yesterday' : `${s.last} days ago`}`;
+    name.append(said);
+    const acts = document.createElement('span');
+    acts.className = 'market-acts';
+    acts.append(this.historyButton(def), this.orderButton(def));
+    row.append(name, priceChart(days), acts);
+    this.page.append(row);
+    this.drawHistory(def);
+  }
+
+  /** History: open or shut a thing's last sales. */
+  private historyButton(def: string): HTMLButtonElement {
+    const open = this.history.has(def);
+    const b = this.button(open ? 'Hide' : 'History', `Last ${SALES_SHOWN} sales, ${SALE_DAYS} days: when, how many, QL, silver each`, () => void this.toggleHistory(def));
+    b.classList.add('market-history');
+    return b;
+  }
+
+  private async toggleHistory(def: string): Promise<void> {
+    if (this.history.has(def)) {
+      this.history.delete(def);
+      this.draw();
+      return;
     }
+    this.history.set(def, 'asking');
+    this.draw();
+    const got = this.island ? await this.island.sales(def) : [];
+    if (this.history.has(def)) this.history.set(def, got);
+    this.draw();
+  }
+
+  /** A thing's last sales, newest first, under its row while its history is open. */
+  private drawHistory(def: string): void {
+    const got = this.history.get(def);
+    if (!got) return;
+    const list = document.createElement('div');
+    list.className = 'market-sales';
+    const line = (text: string): void => {
+      const el = document.createElement('div');
+      el.textContent = text;
+      list.append(el);
+    };
+    if (got === 'asking') line('Asking the island…');
+    else if (!got.length) line(`No sales in ${SALE_DAYS} days.`);
+    else for (const sale of got) line(saleLine(sale));
+    this.page.append(list);
+  }
+
+  /** Order: a buy order for this kind, on the Orders tab, at the month's average price of one. */
+  private orderButton(def: string): HTMLButtonElement {
+    const avg = summarise(this.prices[def])?.each;
+    return this.button('Order', `Buy order form: ${itemDef(def).name}${avg ? `, ${silverEach(avg)} silver each (${SALE_DAYS}-day avg)` : ''}`, () => {
+      this.wanted = { name: itemDef(def).name, ql: 0, count: 1, price: Math.max(1, Math.round(avg ?? 1)) };
+      this.show('orders');
+    });
+  }
+
+  /**
+   * The Find box, and on the Board how the found are sorted: what is typed is
+   * kept across tabs and redraws the page as it is typed, the box kept in hand.
+   */
+  private findBar(kinds: readonly string[], sorting = true): void {
+    const bar = document.createElement('div');
+    bar.className = 'panel-bar market-findbar';
+    const box = document.createElement('input');
+    box.type = 'text';
+    box.className = 'panel-select market-find';
+    box.placeholder = 'Find: item or material';
+    box.setAttribute('aria-label', 'Find');
+    box.value = this.query;
+    if (kinds.length) {
+      const list = document.createElement('datalist');
+      list.id = 'market-onsale';
+      for (const k of kinds) list.append(Object.assign(document.createElement('option'), { value: k }));
+      box.setAttribute('list', list.id);
+      bar.append(list);
+    }
+    box.addEventListener('input', () => {
+      this.query = box.value;
+      const at = box.selectionStart ?? box.value.length;
+      this.draw();
+      const again = this.page.querySelector<HTMLInputElement>('.market-find');
+      again?.focus();
+      again?.setSelectionRange(at, at);
+    });
+    bar.append(box);
+    if (sorting) {
+      const sort = document.createElement('select');
+      sort.className = 'panel-select market-sort';
+      sort.title = 'Sort found';
+      sort.setAttribute('aria-label', 'Sort found');
+      for (const [id, label] of FIND_SORTS) sort.append(Object.assign(document.createElement('option'), { value: id, textContent: label, selected: id === this.sort }));
+      sort.addEventListener('change', () => {
+        this.sort = sort.value as FindSort;
+        this.draw();
+      });
+      bar.append(sort);
+    }
+    this.page.append(bar);
   }
 
   private say(text: string): HTMLDivElement {
@@ -300,15 +429,6 @@ export class MarketPanel {
     doing.append(...acts);
     row.append(what, price, doing);
     return row;
-  }
-
-  /** A stall's heading: whose and what, and under it, smaller, where and how far. */
-  private place(title: string, where: string): void {
-    this.head(title);
-    const el = document.createElement('div');
-    el.className = 'market-where';
-    el.textContent = where;
-    this.page.append(el);
   }
 
   /** What a deal is, in one line: the goods, and the coins one way or the other. */
@@ -424,45 +544,160 @@ export class MarketPanel {
   }
 
   /**
-   * Everything for sale on the island, stall by stall, nearest first, and
-   * then everything wanted, order by order, oldest first. It is read at a
-   * settlement token or a mailbox; buying is done at the stall, whose counter
-   * you have to be standing at when you press Buy, and filling an order is
-   * done where you stand.
+   * Everything for sale on the island and everything wanted, read at a
+   * settlement token or a mailbox -- and, once away from it, the last board
+   * read there, so that what was found can be walked to, pinned on the map and
+   * bought at its counter, which is where buying is done.
+   *
+   * Nothing typed: stall by stall, nearest first, each thing with its quality
+   * and its price of one. Something typed: every priced thing on every stall
+   * that answers it in one list, by the price of one, by quality or by
+   * distance, each against the month's average; what the island's sales say of
+   * it; the buy orders that want it; and a buy order for it.
    */
   private drawBoard(): void {
-    if (!this.market.board) {
-      this.say('Board: stand at a settlement totem or mailbox.');
-      return;
-    }
-    const me = this.game.player;
-    const theirs = this.market.stalls
-      .filter((st) => !st.mine && st.goods.length)
-      .sort((a, b) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(b.x - me.x, b.y - me.y));
-    if (!theirs.length) this.say('Nothing for sale.');
-    for (const st of theirs) {
-      const far = Math.round(Math.hypot(st.x + 0.5 - me.x, st.y + 0.5 - me.y));
-      this.place(`${st.owner}'s ${st.what === 'counter' ? 'shop counter' : 'stall'}`,
-        `${st.x},${st.y}${st.deed ? ` on ${st.deed}` : ''} · ${far} ${far === 1 ? 'tile' : 'tiles'} away`);
-      for (const good of st.goods) {
-        this.page.append(this.good(this.lines(goodName(good)), priceWords(good.price ?? 0),
-          this.button('Buy', st.what === 'counter' ? COUNTER_BUY_FROM : sellsTooFar('stall'), () => void this.act(this.island!.buy(good.id)))));
+    const live = this.market.board;
+    const seen = live
+      ? { stalls: this.market.stalls.filter((st) => !st.mine), orders: this.orders.orders.filter((o) => !o.mine), at: Date.now() }
+      : this.lastBoard;
+    this.findBar(seen ? kindsOnSale(seen.stalls) : []);
+    if (!live) {
+      this.say(seen ? `Board read ${awayFor(Math.max(0, (Date.now() - seen.at) / 1000))} ago. Live at a settlement totem or mailbox.`
+        : 'Board: stand at a settlement totem or mailbox.');
+      const t = this.market.token;
+      if (t) {
+        const far = tilesTo(t, this.game.player);
+        const spot = { x: t.x, y: t.y, name: `${t.deed} settlement totem` };
+        this.page.append(this.good(this.lines(`Nearest totem: ${t.deed}`, `${t.x},${t.y} · ${far} ${far === 1 ? 'tile' : 'tiles'}`), '',
+          this.walkButton(spot), this.pinButton(spot)));
       }
     }
-    this.drawWanted();
+    if (seen) {
+      if (this.query.trim()) this.drawFound(seen.stalls, seen.orders, live);
+      else {
+        this.drawStalls(seen.stalls);
+        this.drawWanted(seen.orders, live);
+      }
+    }
     this.say(`Carried: ${priceWords(purse(this.game.inventory.items))}. Your stalls: Stall tab. Your orders: Orders tab.`);
   }
 
+  /** Every stall but your own, nearest first: who, where, and how far; then each priced thing on it, with its quality and price of one. */
+  private drawStalls(stalls: readonly Stall[]): void {
+    const me = this.game.player;
+    const theirs = stalls.filter((st) => st.goods.length).sort((a, b) => tilesTo(a, me) - tilesTo(b, me));
+    if (!theirs.length) this.say('Nothing for sale.');
+    for (const st of theirs) {
+      const far = tilesTo(st, me);
+      const spot = stallSpot(st);
+      const head = document.createElement('div');
+      head.className = 'skill-group market-stall';
+      head.append(Object.assign(document.createElement('span'), { textContent: spot.name }));
+      const acts = document.createElement('span');
+      acts.className = 'market-acts';
+      if (!this.within(st)) acts.append(this.walkButton(spot));
+      acts.append(this.pinButton(spot));
+      head.append(acts);
+      this.page.append(head);
+      const where = document.createElement('div');
+      where.className = 'market-where';
+      where.textContent = `${st.x},${st.y}${st.deed ? ` on ${st.deed}` : ''} · ${far} ${far === 1 ? 'tile' : 'tiles'} away`;
+      this.page.append(where);
+      for (const good of st.goods) {
+        if (!good.price) continue;
+        const each = good.price / Math.max(1, good.count);
+        this.page.append(this.good(this.lines(`${goodName(good)}, QL ${Math.round(good.ql)}`, good.count > 1 ? `${silverEach(each)} silver each` : ''),
+          priceWords(good.price), ...(this.within(st) ? [this.buyButton(st, good)] : [])));
+      }
+    }
+  }
+
+  /** What answers the Find box, across every stall: one row a thing, then what the island's sales say, the orders that want it, and an order. */
+  private drawFound(stalls: readonly Stall[], orders: readonly Order[], live: boolean): void {
+    const me = this.game.player;
+    const found = offersFor(stalls, this.query, me, this.sort);
+    const wanted = orders.filter((o) => answers(o.def, null, this.query));
+    const kinds = [...new Set([...found.map((o) => o.good.def), ...wanted.map((o) => o.def)])];
+    const typed = kindNamed(this.query);
+    if (typed && !kinds.includes(typed)) kinds.unshift(typed);
+    this.head(`For sale: ${found.length}`);
+    if (!found.length) this.say(`None for sale: ${this.query.trim()}.`);
+    for (const o of found.slice(0, FIND_SHOWN)) {
+      const spot = stallSpot(o.stall);
+      const cost = document.createElement('span');
+      cost.append(`${silverEach(o.each)} silver each`);
+      const vs = againstWords(againstAverage(o.each, summarise(this.prices[o.good.def])?.each));
+      if (vs) cost.append(Object.assign(document.createElement('small'), { className: 'market-vs', textContent: vs }));
+      const acts = this.within(o.stall) ? [this.buyButton(o.stall, o.good)] : [this.walkButton(spot)];
+      const row = this.good(this.lines(`${goodName(o.good)}, QL ${Math.round(o.good.ql)}`,
+        `${spot.name} · ${o.stall.x},${o.stall.y}${o.stall.deed ? ` on ${o.stall.deed}` : ''} · ${o.far} ${o.far === 1 ? 'tile' : 'tiles'}`
+        + (o.good.count > 1 ? ` · ${priceWords(o.good.price ?? 0)} for ${o.good.count}` : '')),
+        cost, ...acts, this.pinButton(spot));
+      row.classList.add('market-hit');
+      this.page.append(row);
+    }
+    if (found.length > FIND_SHOWN) this.say(`+${found.length - FIND_SHOWN} more not shown.`);
+    // What the island's sales say of each kind found, with its history and an order for it.
+    for (const def of kinds.slice(0, 4)) {
+      const s = summarise(this.prices[def]);
+      if (s) this.priceRow(def, this.prices[def], s);
+      else {
+        const row = document.createElement('div');
+        row.className = 'price-row';
+        row.dataset.def = def;
+        row.append(this.lines(itemDef(def).name, `No sales in ${SALE_DAYS} days.`));
+        const acts = document.createElement('span');
+        acts.className = 'market-acts';
+        acts.append(this.orderButton(def));
+        row.append(acts);
+        this.page.append(row);
+      }
+    }
+    if (wanted.length) this.drawWanted(wanted, live);
+  }
+
+  /** Whether you stand within reach of a stall's counter, where its goods are bought. */
+  private within(st: Stall): boolean {
+    const me = this.game.player;
+    return Math.max(Math.abs(st.x + 0.5 - me.x), Math.abs(st.y + 0.5 - me.y)) <= COUNTER_REACH;
+  }
+
+  private buyButton(st: Stall, good: Good): HTMLButtonElement {
+    return this.button('Buy', `${priceWords(good.price ?? 0)}. ${st.what === 'counter' ? COUNTER_BUY_FROM : sellsTooFar('stall')}`,
+      () => void this.act(this.island!.buy(good.id)));
+  }
+
+  /** Walk: there, a leg at a time however far (`Game.travelTo`). */
+  private walkButton(spot: Spot): HTMLButtonElement {
+    return this.button('Walk', `Walk to ${spot.name} (${spot.x}, ${spot.y})`, () => {
+      this.game.travelTo(spot.x, spot.y, spot.name);
+      this.draw();
+    });
+  }
+
+  /** Pin: a mark on the map in the market colour, once a place. */
+  private pinButton(spot: Spot): HTMLButtonElement {
+    const pinned = this.game.marks.some((m) => m.x === spot.x && m.y === spot.y && m.colour === MARKET_MARK);
+    const b = this.button(pinned ? 'Pinned' : 'Pin', `Map mark: ${spot.name} (${spot.x}, ${spot.y})`, () => {
+      if (!this.game.marks.some((m) => m.x === spot.x && m.y === spot.y && m.colour === MARKET_MARK)) {
+        this.game.addMark(spot.x, spot.y, spot.name, MARKET_MARK);
+      }
+      this.draw();
+    });
+    b.disabled = pinned;
+    return b;
+  }
+
   /**
-   * Everybody else's buy orders, and a Fill for each that you have something
-   * for: how many of yours will do is counted off your pack the way the
-   * island counts it, and the box starts at as many as it can take.
+   * Buy orders that want something, and a Fill for each that you have
+   * something for: how many of yours will do is counted off your pack the way
+   * the island counts it, and the box starts at as many as it can take. Filled
+   * only where the board is read.
    */
-  private drawWanted(): void {
+  private drawWanted(orders: readonly Order[], live: boolean): void {
     this.head('Wanted');
-    const theirs = this.orders.orders.filter((o) => !o.mine);
-    if (!theirs.length) this.say('No orders.');
-    for (const o of theirs) {
+    if (!orders.length) this.say('No orders.');
+    for (const o of orders) {
       const left = o.want - o.got;
       const have = couldBring(this.game.inventory.items, o, (uid) => this.game.isEquipped(uid));
       const row = document.createElement('div');
@@ -470,7 +705,8 @@ export class MarketPanel {
       row.append(this.lines(`${orderWords(o.def, left, o.ql)} at ${priceWords(o.price)} each`,
         `${o.who}'s order at ${o.x},${o.y}${o.deed ? ` on ${o.deed}` : ''}. `
         + `You have: ${have}.`));
-      if (have) {
+      if (have && !live) row.append(Object.assign(document.createElement('small'), { className: 'market-vs', textContent: 'Fill at a totem or mailbox' }));
+      if (have && live) {
         const most = Math.min(have, left);
         const box = document.createElement('input');
         box.type = 'number';
@@ -531,7 +767,10 @@ export class MarketPanel {
     kind.title = 'Any material of this kind accepted';
     kind.setAttribute('list', list.id);
     kind.value = this.wanted.name;
-    kind.addEventListener('input', () => (this.wanted.name = kind.value));
+    kind.addEventListener('input', () => {
+      this.wanted.name = kind.value;
+      held.textContent = this.holds();
+    });
     const box = (value: number, least: number, title: string, set: (n: number) => void): HTMLInputElement => {
       const el = document.createElement('input');
       el.type = 'number';
@@ -565,12 +804,15 @@ export class MarketPanel {
     this.page.append(form, list, held);
   }
 
-  /** What the order being written would hold, and for how long, against what you carry. */
+  /** What the order being written would hold, and for how long, against what you carry; and what its kind has sold for. */
   private holds(): string {
     const { count, price } = this.wanted;
+    const def = kindNamed(this.wanted.name);
+    const sold = def ? summarise(this.prices[def]) : null;
     return `Holds ${priceWords(count * price)} from your purse until filled, withdrawn, `
       + `or lapsed after ${durationSaid(ORDER_LIFE)} (remainder returned). `
-      + `Carried: ${priceWords(purse(this.game.inventory.items))}.`;
+      + `Carried: ${priceWords(purse(this.game.inventory.items))}.`
+      + (def ? ` ${itemDef(def).name}, ${SALE_DAYS} days: ${sold ? summaryWords(sold) : 'no sales'}.` : '');
   }
 
   /** A tick list of what is in your pack, to offer or to post. A crate with a wildermon in it is on it too. */
@@ -665,6 +907,15 @@ export class MarketPanel {
     this.page.append(bar);
   }
 }
+
+/** A place to walk to or pin: its tile and what it is called. */
+interface Spot {
+  x: number;
+  y: number;
+  name: string;
+}
+/** A stall as a place: "Ama's stall", "Bryn's shop counter". */
+const stallSpot = (st: Stall): Spot => ({ x: st.x, y: st.y, name: `${st.owner}'s ${st.what === 'counter' ? 'shop counter' : 'stall'}` });
 
 /** How many things of the pack a tick list shows. */
 const PICK_SHOWN = 40;

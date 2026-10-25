@@ -1,5 +1,5 @@
 import { TRAVEL_LEG, type Game } from '../../game/game';
-import { MARK_COLOURS, MARK_CSS } from '../../game/marks';
+import { MARK_COLOURS, MARK_CSS, MARKET_MARK } from '../../game/marks';
 import { furnitureDef, furnitureName } from '../../game/furniture';
 import { hasRunestones, RUNESTONES, stoneCentre } from '../../game/runestones';
 import type { Renderer } from '../../render/renderer';
@@ -81,6 +81,8 @@ export class MinimapPanel {
   private shown = 0;
   /** The list of marks wants listing again (`listMarks`). */
   private marksStale = false;
+  /** Every stall and shop counter on the last market board read (`MarketPanel.stallsSeen`), drawn as a square each. */
+  stalls: () => ReadonlyArray<{ x: number; y: number; mine: boolean }> = () => [];
 
   constructor(
     win: UIWindow,
@@ -515,6 +517,24 @@ export class MinimapPanel {
      * Drawn at one fixed size, a name came out at six pixels high.
      */
     const k = Math.max(0.5, Math.min(4, this.view.width / (this.shown || this.view.width))) * (LABEL_PX / 15);
+    // The market: every stall and counter on the last board read, a square each in the market colour; your own hollow.
+    const market = MARK_CSS(MARKET_MARK);
+    for (const st of this.stalls()) {
+      const mx = (st.x + 0.5 - ox) * scale;
+      const my = (st.y + 0.5 - oy) * scale;
+      if (mx < -8 * k || my < -8 * k || mx > this.view.width + 8 * k || my > this.view.height + 8 * k) continue;
+      this.at(mx, my, k, () => {
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.fillStyle = market;
+        if (!st.mine) ctx.fillRect(-3.5, -3.5, 7, 7);
+        ctx.strokeRect(-3.5, -3.5, 7, 7);
+        if (st.mine) {
+          ctx.strokeStyle = market;
+          ctx.strokeRect(-2, -2, 4, 4);
+        }
+      });
+    }
     ctx.font = '15px system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     for (const m of this.game.marks) {
