@@ -8,7 +8,8 @@
  *   * every call to a door carries a key, a fresh one a call;
  *   * a call the network drops, or the gateway answers 502/503/504 for, is tried again with its own key;
  *   * a key the island has already taken comes back as an empty success, so nothing is said;
- *   * a call that is not to a door carries no key and is not tried again.
+ *   * a call that is not to a door carries no key and is not tried again;
+ *   * and a gateway that drops every call carrying the header is found once, and calls go without it.
  *
  * The island, in a transaction rolled back:
  *   * an order put up twice with one key holds its silver once, and with two keys twice;
@@ -89,8 +90,9 @@ answers = [dropped, dropped, dropped];
 keys = [];
 let threw = '';
 try { await call('rpc/rpc_buy'); } catch (err) { threw = (err as Error).message; }
-check(`dropped every time: tried ${ONCE_RETRIES.length + 1} times, then the network's error`,
-  keys.length === ONCE_RETRIES.length + 1 && threw === 'Failed to fetch', `${keys.length} tries, ${threw}`);
+check(`dropped every time: tried ${ONCE_RETRIES.length + 1} times with its key and once without, then the network's error`,
+  keys.length === ONCE_RETRIES.length + 2 && new Set(keys.slice(0, -1)).size === 1 && keys[keys.length - 1] === null
+    && threw === 'Failed to fetch', `${keys.length} tries, ${threw}`);
 
 answers = [dropped, taken];
 keys = [];
@@ -114,6 +116,16 @@ keys = [];
 threw = '';
 try { await call('rest-of-it/item?select=*', { method: 'GET' }); } catch (err) { threw = (err as Error).message; }
 check('and is not tried again', keys.length === 1 && threw === 'Failed to fetch', `${keys.length} tries`);
+
+// Last, because it is for the rest of the session: a gateway that drops every call carrying the header.
+answers = [dropped, dropped, dropped, fine, fine];
+keys = [];
+const through = await call('rpc/rpc_act');
+check('a gateway that drops the header: the call goes through without it', through.status === 200
+  && keys.length === ONCE_RETRIES.length + 2 && keys[keys.length - 1] === null, keys.join(', '));
+keys = [];
+await call('rpc/rpc_act');
+check('and so does every call after it', keys.length === 1 && keys[0] === null, keys.join(', '));
 
 /* ---- the island ----------------------------------------------------------------------------------- */
 
@@ -169,8 +181,8 @@ begin
   insert into said values ('ORDER_TWO', purse(w, me) || '|' || (select count(*) from buy_order where world_id = w and poster = me));
 
   -- A dig, the same key twice: one job, and run out, one go's dirt. Another key queues a second.
-  -- Every go comes off (\`skill_check\` asked to foreknow), so what is counted is goes and not luck.
-  perform set_config('wurm.foreknow', 'on', true);
+  -- Every go comes off (a Foreknow's goes, which \`skill_check\` never fails), so what is counted is goes and not luck.
+  update player set foreknow = 10 where world_id = w and uid = me;
   perform pg_temp.req('${K3}');
   perform rpc_act(w, 'dig', '{"kind":"tile","x":16,"y":16,"cx":16,"cy":16}'::jsonb, 1);
   begin

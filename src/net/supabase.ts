@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { captchaOptions } from './captcha';
+import { queueReport } from './errors';
 
 /**
  * Which island keeper to talk to.
@@ -75,11 +76,19 @@ const RETRY_STATUS = new Set([502, 503, 504]);
 const newKey = (): string => crypto.randomUUID();
 
 /**
+ * Whether calls carry keys. A gateway that will not let the header through answers every call with it as
+ * a dropped connection; found so once -- every try with the key dropped, the same call without it
+ * answered -- the rest of the session's calls go without, and the island is told.
+ */
+let keyed = true;
+
+/**
  * A call to a door: with its key, tried again with the same key when the network drops it or the gateway
  * answers for it, and a key the island has already taken answered as an empty success, said to nobody --
  * the first try did the thing, and its answer is what was lost.
  */
 async function onceFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  if (!keyed) return fetch(input, init);
   const headers = new Headers(init?.headers);
   if (!headers.has(ONCE_HEADER)) headers.set(ONCE_HEADER, newKey());
   const sent: RequestInit = { ...init, headers };
@@ -88,7 +97,14 @@ async function onceFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
     try {
       res = await fetch(input, sent);
     } catch (err) {
-      if (i >= ONCE_RETRIES.length || init?.signal?.aborted) throw err;
+      if (init?.signal?.aborted) throw err;
+      if (i >= ONCE_RETRIES.length) {
+        const bare = await fetch(input, init).catch(() => null);
+        if (!bare) throw err;
+        keyed = false;
+        queueReport(`Calls with ${ONCE_HEADER} were dropped and one without it was answered: calls go without keys.`);
+        return bare;
+      }
     }
     if (res && (!RETRY_STATUS.has(res.status) || i >= ONCE_RETRIES.length)) {
       if (res.ok) return res;
