@@ -27,6 +27,7 @@ import { grow, swayed } from './skeleton';
 import { maple } from './species/maple';
 import { oak } from './species/oak';
 import { pine } from './species/pine';
+import { willow } from './species/willow';
 import type { Build, Dress, Skeleton, Species3D, V3 } from './types';
 
 export { sunStepOf, SUN_STEPS } from './light';
@@ -38,6 +39,7 @@ const SPECIES: ReadonlyMap<number, Species3D> = new Map([
   [byName('Maple'), maple],
   [byName('Oak'), oak],
   [byName('Pine'), pine],
+  [byName('Willow'), willow],
 ]);
 /** Which species are drawn here: take one out and it is drawn flat again. */
 export const TREE3D_SPECIES: Set<number> = new Set(SPECIES.keys());
@@ -174,7 +176,7 @@ function bake(scale: number, species: number, variant: number, form: number, dre
   g.scale(scale, scale);
   g.translate(-x0, -y0);
   const t1 = performance.now();
-  paintTree3d(g, { sk, spec, dress, light: lightOf(step), e, seed, frame });
+  paintTree3d(g, { sk, spec, dress, light: lightOf(step), e, seed, frame, frames: SWAY_FRAMES });
   tree3dStats.paintMs += performance.now() - t1;
   footShade(g, sk);
   tree3dStats.bakes++;

@@ -55,6 +55,22 @@ export interface Clump {
    * and `r` across, all inside `r` of it. Painted as one mass with one rim.
    */
   subs?: Array<{ o: V3; r: number }>;
+  /** A weeping lobe's curtain: the strands hanging off its rim (`Weep`). */
+  curtain?: Strand[];
+}
+
+/**
+ * One hanging strand of a weeping lobe: from `o` off the lobe's middle, out
+ * `arch` over its rim, then straight down `len`; `w` its half-width at the
+ * top, `a` the way it faces out round the lobe, `k` its own seeded 0..1.
+ */
+export interface Strand {
+  o: V3;
+  a: number;
+  arch: number;
+  len: number;
+  w: number;
+  k: number;
 }
 
 /** The crown's ellipsoid: what the clumps are kept inside and lit against. */
@@ -75,6 +91,8 @@ export interface Skeleton {
   hollow: number | null;
   /** How far past a mass's `r` its leaf reaches on the screen, for the bounds of its picture: 1.45 unless given. */
   leafReach?: number;
+  /** A dead weeping tree's few bare strands, each from `o` (a point of the tree), `len` down. */
+  whips?: Array<{ o: V3; len: number; k: number }>;
 }
 
 /** The tree's proportions at one age, in model units. */
@@ -127,6 +145,28 @@ export interface Build {
   low?: number;
   /** Spreading: how far a limb turns at each elbow, radians. */
   zig?: number;
+  /** Spreading: an S-bend in the trunk, its sway either side in trunk radii. */
+  sBend?: number;
+  /** A weeping crown: a lobe at the end of each limb, a curtain of strands off each. */
+  weep?: Weep;
+}
+
+/**
+ * A weeping crown: one lobe of leaf on the end of each scaffold limb, and
+ * one or two over the middle, each hung round its rim with strands nearly to
+ * the ground.
+ */
+export interface Weep {
+  /** Lobes over the middle of the crown, besides one on each limb. */
+  tops: number;
+  /** Strands round a lobe, against its rim's length over a strand's width. */
+  fill: number;
+  /** A strand's half-width, in model units. */
+  width: number;
+  /** How low the longest strands hang, as a share of the height over the ground. */
+  hem: number;
+  /** How unevenly they end, as a share of the height. */
+  ragged: number;
 }
 
 /** A run of tones from the deepest shade to the lit top: a clump is painted in four neighbours on it. */
@@ -154,9 +194,9 @@ export interface Species3D {
   build: Build;
   ages: Partial<Record<AgeKey, Partial<Build>>>;
   /** Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough. */
-  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean };
-  /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed. */
-  leafForm?: 'maple' | 'oak';
+  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; twist?: boolean; deadShade?: string };
+  /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed, 'willow' narrow and pointed. */
+  leafForm?: 'maple' | 'oak' | 'willow';
   /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */
   buttress?: boolean;
   /** Snow as a narrow line along the top edge of the wood, rather than over all its upper face. */
@@ -178,6 +218,8 @@ export interface Species3D {
   keys?: { colour: string; ripe: string };
   /** The buds on the bare twigs at the start of spring. */
   buds?: string;
+  /** A weeping tree's bare strands, hanging with the leaf down. */
+  whips?: string;
   /** Keeps its leaf all year: its winter leaf, and its new tips in spring (`leaf.spring`). */
   evergreen?: { winter: Ramp };
 }
