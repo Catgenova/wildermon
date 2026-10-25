@@ -127,7 +127,7 @@ function barkAt(job: Job, L: Limb, n: V3, snow: boolean): string {
   const lam = Math.max(0, dot(n, light.sun));
   const l = clamp01((light.ambient + light.direct * lam - 0.22) / 0.82);
   const lit = hex(L.dead ? spec.bark.dead : spec.bark.lit);
-  const shade = hex(spec.bark.shade);
+  const shade = hex(L.dead && spec.bark.deadShade ? spec.bark.deadShade : spec.bark.shade);
   if (snow && n[2] > 0.42) return rgb(mixRgb(hex('#c9d3e6'), hex('#fbfcff'), l));
   return rgb(mixRgb(shade, lit, l));
 }
@@ -1050,10 +1050,12 @@ function buttress(job: Job, a: number, out: number, k: number): { at: V3; draw: 
   };
   // Its sides are steep: lit mostly as the trunk's sides are, a little more from above.
   const nL = unit(add(perp, [0, 0, 0.35])), nR = unit(add(mul(perp, -1), [0, 0, 0.35]));
+  // A dead trunk's foot in its dead wood, where that has its own shade.
+  const deadFoot = sk.limbs[0].dead ? spec.bark.deadShade : undefined;
   const colOf = (n: V3): string => {
     const lam = Math.max(0, dot(n, light.sun));
     // A step under the limbs' light: a buttress is low, in the trunk's shade much of the day.
-    return rgb(mixRgb(hex(spec.bark.shade), hex(spec.bark.lit), 0.6 * clamp01((light.ambient + light.direct * lam - 0.22) / 0.82)));
+    return rgb(mixRgb(hex(deadFoot ?? spec.bark.shade), hex(deadFoot ? spec.bark.dead : spec.bark.lit), 0.6 * clamp01((light.ambient + light.direct * lam - 0.22) / 0.82)));
   };
   const toward = e.toward as V3;
   const sides: Array<[V3[], V3]> = [[left, nL], [right, nR]];
@@ -1167,10 +1169,14 @@ function roundPath(path: Path2D, p: Pt[]): void {
   path.closePath();
 }
 
-/** A closed outline straight through `p`. */
-function polyPath(path: Path2D, p: Pt[]): void {
+/** A closed outline through `p`: rounded along its first `round` points (its top, `hung`), straight through the rest (its fringe). */
+function polyPath(path: Path2D, p: Pt[], round = 0): void {
   path.moveTo(p[0][0], p[0][1]);
-  for (let i = 1; i < p.length; i++) path.lineTo(p[i][0], p[i][1]);
+  for (let i = 1; i < round; i++) {
+    const a = p[i], b = p[i + 1];
+    path.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+  }
+  for (let i = Math.max(1, round); i < p.length; i++) path.lineTo(p[i][0], p[i][1]);
   path.closePath();
 }
 
@@ -1180,7 +1186,7 @@ function polyPath(path: Path2D, p: Pt[]): void {
  * back along its underside with each point let down; `under` marks which
  * of the points are on the underside.
  */
-function hung(q: Pt[], h: number[], under?: boolean[]): Pt[] {
+function hung(q: Pt[], h: number[], under?: boolean[], tops?: { n: number }): Pt[] {
   const n = q.length;
   let iL = 0, iR = 0;
   for (let i = 1; i < n; i++) {
@@ -1199,6 +1205,7 @@ function hung(q: Pt[], h: number[], under?: boolean[]): Pt[] {
   const avg = (c: number[]): number => c.reduce((s, i) => s + q[i][1], 0) / c.length;
   const [top, low] = avg(A) <= avg(B) ? [A, B] : [B, A];
   const out: Pt[] = top.map((i) => q[i]);
+  if (tops) tops.n = top.length;
   for (const i of low) out.push([q[i][0], q[i][1] + h[i]]);
   if (under) {
     under.length = n;
@@ -1392,9 +1399,10 @@ function boughOf(job: Job, s: Shown, all: Path2D[], turnBy: number): Bough {
   const q = lace ? rim.map((r) => laceAt(r.x, r.y, r.dz)) : rim.map((r) => proj(e, at(r.x, r.y, r.dz)));
   const hs = rim.map((r) => r.h * HEIGHT_SCALE);
   const under: boolean[] = [];
-  const outline = hung(q, hs, under);
-  // A lacy spray in straight strokes: its many small tips sharp.
-  if (lace) polyPath(out, outline);
+  const tops = { n: 0 };
+  const outline = hung(q, hs, under, tops);
+  // A lacy spray's top rounded, its fringe in straight strokes: its many small tips sharp.
+  if (lace) polyPath(out, outline, tops.n);
   else roundPath(out, outline);
   all.push(out);
   // The light on its top, sloping out and down, and on the needles hanging off its end.
@@ -1439,7 +1447,8 @@ function boughOf(job: Job, s: Shown, all: Path2D[], turnBy: number): Bough {
     const layer = (x0: number, x1: number, ky: number, lift: number, hk: number, of = rim): Path2D => {
       const pts = of.map((r) => laceAt(L * x0 + (x1 - x0) * r.x, r.y * ky + W * 0.2 * across, r.dz * hk + lift));
       const pp = new Path2D();
-      polyPath(pp, hung(pts, of.map((r) => r.h * hk * HEIGHT_SCALE)));
+      const n = { n: 0 };
+      polyPath(pp, hung(pts, of.map((r) => r.h * hk * HEIGHT_SCALE), undefined, n), n.n);
       return pp;
     };
     const lit = (!light.night || lt > 0.6) && toSun > -0.6;
@@ -1521,7 +1530,9 @@ function paintWhorls(g: Ctx, job: Job): void {
   const { e } = job;
   const near = (p: V3): number => dot(p, e.toward as V3);
   // Each spray's turn aside from the eye, and its branch turned with it.
-  const turns = job.sk.clumps.map((c) => (c.pad ? partOf(e, c.pad.d) : 0));
+  // A crown parted only low (`Skeleton.parted`): its sprays above that over the trunk, but for a few.
+  const low = job.sk.parted;
+  const turns = job.sk.clumps.map((c) => (c.pad && (low === undefined || c.up < low || c.k < 0.08) ? partOf(e, c.pad.d) : 0));
   const limbs = job.sk.limbs.map((L) => {
     const a = L.pad !== undefined ? turns[L.pad] : 0;
     if (!a) return L;
@@ -1681,7 +1692,7 @@ function undergrowth(g: Ctx, job: Job, items: Item[]): void {
   const n = 5 + Math.floor(R() * 2);
   for (let i = 0; i < n; i++) {
     const a = a0 + (i / n) * TAU + (R() - 0.5) * 0.6;
-    const d = r0 * (1.5 + 1.1 * R());
+    const d = r0 * (1.15 + 0.7 * R());
     const p: V3 = [Math.cos(a) * d, Math.sin(a) * d, 0];
     const fern = i % 2 === 1;
     const size = 0.6 + 0.5 * R();
@@ -1696,7 +1707,7 @@ function undergrowth(g: Ctx, job: Job, items: Item[]): void {
       } });
       continue;
     }
-    const r = r0 * (0.32 + 0.22 * R()) * ACROSS;
+    const r = r0 * (0.2 + 0.14 * R()) * ACROSS;
     const o = outlineOf(R, 0);
     items.push({ d: dot(p, toward), draw: () => {
       const [x, y] = proj(e, p);

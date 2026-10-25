@@ -77,6 +77,8 @@ export interface Skeleton {
   leafReach?: number;
   /** A conifer's dark middle round its leader, as a share of each whorl's reach (`Whorls.core`). */
   core?: number;
+  /** How low in its crown a conifer's sprays part to show the trunk (`Whorls.parted`). */
+  parted?: number;
 }
 
 /** The tree's proportions at one age, in model units. */
@@ -157,9 +159,9 @@ export interface Species3D {
   ages: Partial<Record<AgeKey, Partial<Build>>>;
   /**
    * Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough;
-   * long fibres down the trunk in this colour between its furrows, where it is stringy.
+   * long fibres down the trunk in this colour between its furrows, where it is stringy; the dead wood's shade, where it is not the living's.
    */
-  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; strands?: string };
+  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; strands?: string; deadShade?: string };
   /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed. */
   leafForm?: 'maple' | 'oak';
   /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */
@@ -247,6 +249,10 @@ export interface Whorls {
   tufts?: number;
   /** The trunk's foot swollen this much wider into its roots. */
   swell?: number;
+  /** How far up the crown, as a share of it, each bough carries a second, shorter spray over it. */
+  split?: number;
+  /** Lacy sprays turned aside from the eye to show the trunk (`partOf`) only this low in the crown, and a few higher: all of them unless given. */
+  parted?: number;
 }
 
 /** One bough of a conifer, round its mass's middle. */

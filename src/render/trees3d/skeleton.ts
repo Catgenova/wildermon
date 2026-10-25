@@ -727,7 +727,10 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
       const az = a0 + (j / m) * TAU + (R() - 0.5) * (TAU / m) * 0.6;
       // A long bough is a longer bare branch with a spray of the usual size on its end.
       const further = longs.has(i * 100 + j) ? reachT * 0.35 : 0;
-      bough(zs[i] + (R() - 0.5) * gap * 0.25, az, reachT * (1 + w.ragged * (R() - 0.5)), reachT, n === 1 ? 1 : u, Math.max(3, Math.round(w.fingers - u)), further);
+      const z = zs[i] + (R() - 0.5) * gap * 0.25;
+      bough(z, az, reachT * (1 + w.ragged * (R() - 0.5)), reachT, n === 1 ? 1 : u, Math.max(3, Math.round(w.fingers - u)), further);
+      // Low in the crown, a shorter spray over it, turned a little aside.
+      if (w.split && u < w.split) bough(z + gap * 0.35, az + (R() - 0.5) * 0.9, reachT * 0.6, reachT * 0.6, u + 0.05, 3);
     }
   }
   /* ---- a ragged tuft of small boughs on the leader over the top whorl, the leader's tip clear of it ---- */
@@ -742,7 +745,7 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
     }
   }
   return {
-    limbs, clumps, crown: env, height: H, core: n > 0 ? w.core : undefined,
+    limbs, clumps, crown: env, height: H, core: n > 0 ? w.core : undefined, parted: w.parted,
     rune: b.rune ? Math.PI / 4 + (R() - 0.5) * 0.5 : null,
     hollow: b.hollow ? Math.PI / 4 + 1.1 + (R() - 0.5) * 0.5 : null,
   };
