@@ -11,8 +11,15 @@
  * the sun's step and the wind's frame. A frame makes bakes for at most
  * `BAKE_MS`; past that a tree is shown by its nearest bake already made --
  * the same sun a frame of the wind back, the sun's last step, the last turn --
- * so a step of the sun or a turn of the camera is made over a few frames
- * rather than in one.
+ * or, with none, flat for that frame, so a step of the sun or a turn of the
+ * camera is made over a few frames rather than in one.
+ *
+ * What a frame had to stand in for is made in the frames' spare time after
+ * (`tree3dIdle`), nearest the middle of the view first, and then the next step
+ * of the sun ahead of it, bakes and shades, so the step finds them made. A
+ * bake is kept in the browser between visits (`./store`), and the trees round
+ * where you come ashore are baked while the island is still being read
+ * (`preloadTrees3d`).
  *
  * The bushes in `BUSH3D` are drawn the same way, by the same bakes, budget,
  * stand-ins and shade: a bush species grows its own model and paints it
@@ -29,6 +36,8 @@ import { lightOf, SUN_STEPS, sunStepOf, type Light } from './light';
 import { ACROSS, boundsOf, footReach, footShade, paintTree3d, shownOf } from './paint';
 import { growOrchard } from './orchard';
 import { grow, swayed } from './skeleton';
+import { fetchStored, isStored, openStore, putStored } from './store';
+import { inkOf } from '../ink';
 import { apple } from './species/apple';
 import { apricot } from './species/apricot';
 import { birch } from './species/birch';
@@ -51,7 +60,7 @@ import { thorn } from './species/thorn';
 import { willow } from './species/willow';
 import type { Build, Bush3D, Dress, Skeleton, Species3D, V3 } from './types';
 
-export { sunStepOf, SUN_STEPS } from './light';
+export { nextSunStep, sunStepOf, SUN_STEPS } from './light';
 
 const byName = (name: string): number => TREE_DEFS.findIndex((d) => d.name === name);
 
@@ -94,15 +103,21 @@ export const FORMS = 3;
 export const SWAY_FRAMES = 4;
 export const SWAY_MS = 260;
 /**
- * What a frame may make, bakes and shades together, when an older one can
- * stand in: so many milliseconds, and so many of them. The count is the one
- * that holds: a canvas's drawing is mostly done when it is first copied, not
- * when it is drawn, so the clock here sees only part of what a bake costs.
+ * How long a frame may spend making bakes, and shades, while it draws. A bake
+ * is read back once made (`inkOf`), which has the canvas draw it there and
+ * then, so the clock sees the whole of what it cost.
  */
 const BAKE_MS = 4;
-const MAKE_MOST = 1;
-/** Pixels of bakes kept. */
+const SHADE_MS = 2;
+/** And for a tree with no bake at all to stand in, which would otherwise be drawn flat. */
+const BARE_MS = 16;
+/** Pixels of bakes kept, and of shades. */
 const PIXELS = 20_000_000;
+const SHADE_PIXELS = 6_000_000;
+/** Milliseconds a frame lends the work after it (`tree3dIdle`) on top of its spare time, and the most saved up. */
+const TRICKLE_MS = 1;
+const CREDIT_MOST = 12;
+
 
 export interface TreeSprite {
   canvas: HTMLCanvasElement;
@@ -114,6 +129,8 @@ export interface TreeSprite {
   solid: true;
   /** A bush's shade at its foot, which the renderer lays (`Sprite.foot`); a tree's is in its bake (`footShade`). */
   foot?: number;
+  /** Where in it there is anything (`inkOf`). */
+  ink: [number, number, number, number];
 }
 
 /** Where a tree is seen from and when. */
@@ -203,26 +220,100 @@ export function dressFor(species: number, variant: number, season: Season, day: 
 
 const bakes = new Map<string, TreeSprite>();
 let pixels = 0;
+/** The frame each bake was last drawn in, so making ahead never puts away what is on the screen. */
+const usedIn = new WeakMap<TreeSprite, number>();
+let frameNo = 0;
 let spent = 0;
-let made = 0;
+let shadeSpent = 0;
+/** Whether the renderer has drawn a frame: a preload stops then (`preloadTrees3d`). */
+let drawing = false;
+/** Saved up for `tree3dIdle`, in milliseconds. */
+let credit = 0;
 /** What has been made, and how often an older one stood in: for a harness, and for the renderer to know a shade is not yet its sun's own. */
-export const tree3dStats = { bakes: 0, ms: 0, standIns: 0, paintMs: 0, shadeStandIns: 0 };
+export const tree3dStats = { bakes: 0, ms: 0, standIns: 0, paintMs: 0, shadeStandIns: 0, flats: 0, ahead: 0, stored: 0, shades: 0, shadeMs: 0, idleMs: 0 };
+
+/** A bake under a head at a step of the sun and a frame of the wind, for a tile. */
+type MakeAt = (step: number, frame: number) => TreeSprite;
+/** The discs a model throws its shade with, under a light. */
+type ThrowOf = (light: Throw, e: Eye, disc: (p: V3, r: number) => void) => void;
+
+/** A bake to make: its key, its head, and how. */
+interface Job {
+  key: string;
+  head: string;
+  turn: number;
+  step: number;
+  frame: number;
+  x: number;
+  y: number;
+  makeAt: MakeAt;
+}
+/** A shade to make (`shaded`). */
+interface ShadeJob {
+  head: string;
+  turn: number;
+  x: number;
+  y: number;
+  throwOf: ThrowOf;
+}
+/** What this frame stood in for, and every bake it drew in still air, by head and turn: what `tree3dIdle` makes. */
+const missing = new Map<string, Job>();
+const seen = new Map<string, Job>();
+/** The shades this frame had none of, by key, with the step each is for. */
+const shadeMissing = new Map<string, [ShadeJob, number]>();
+/** The shapes the shade was last asked for, by head and turn. */
+const shadeKinds = new Map<string, ShadeJob>();
+/** Bakes being fetched from the browser's store, and new ones to put there. */
+const loading = new Set<string>();
+const toStore: Array<[string, TreeSprite]> = [];
+
+/** What the bakes and shades kept hold: for a harness. */
+export const tree3dMemory = (): { bakes: number; bakePx: number; shades: number; shadePx: number; kinds: number; loading: number; missing: number } => ({ bakes: bakes.size, bakePx: pixels, shades: shadows.size, shadePx: shadePixels, kinds: shadeKinds.size, loading: loading.size, missing: missing.size });
 
 /** A new frame: its own `BAKE_MS` to spend. Called by the renderer once a frame. */
 export function tree3dFrame(): void {
+  if (!drawing) {
+    drawing = true;
+    void openStore();
+  }
+  frameNo++;
   spent = 0;
-  made = 0;
+  shadeSpent = 0;
+  missing.clear();
+  seen.clear();
+  shadeMissing.clear();
 }
 
 /** Every bake let go: the season's look has turned (`forgetTrees`). */
 export function forgetTrees3d(): void {
+  // The last look's bakes in still air stand in for the new look's until those are made, rather than the flat trees.
+  lastLook.clear();
+  for (const [k, b] of bakes) {
+    const at = k.split('|');
+    if (at[at.length - 1] === '0') lastLook.set(`${at.slice(0, -4).join('|')}|${at[at.length - 3]}|${at[at.length - 2]}`, b);
+  }
+  lastLookUntil = frameNo + LAST_LOOK_FRAMES;
   bakes.clear();
   pixels = 0;
+  shadeKinds.clear();
 }
+/** The bakes of the look before, by head less its look, turn and step: what stands in after a change of look (`forgetTrees3d`), for `LAST_LOOK_FRAMES`. */
+const lastLook = new Map<string, TreeSprite>();
+const LAST_LOOK_FRAMES = 1800;
+let lastLookUntil = 0;
 
+/** A bake kept, and room made for it by letting go the least lately drawn: never one drawn this frame or the last, while there is another to let go. */
 function keep(key: string, spr: TreeSprite): void {
   bakes.set(key, spr);
+  usedIn.set(spr, frameNo);
   pixels += spr.canvas.width * spr.canvas.height;
+  if (pixels <= PIXELS) return;
+  for (const [k, old] of bakes) {
+    if (pixels <= PIXELS) return;
+    if ((usedIn.get(old) ?? 0) >= frameNo - 1) continue;
+    bakes.delete(k);
+    pixels -= old.canvas.width * old.canvas.height;
+  }
   while (pixels > PIXELS && bakes.size > 1) {
     const [k, old] = bakes.entries().next().value as [string, TreeSprite];
     bakes.delete(k);
@@ -230,7 +321,29 @@ function keep(key: string, spr: TreeSprite): void {
   }
 }
 
-/** A model seen from a turn, painted at a scale onto a canvas just its size, its own shade at its foot under it unless the renderer lays that. */
+/** A bake drawn this frame moved to the end of the line to be let go. */
+function touch(key: string, spr: TreeSprite): void {
+  bakes.delete(key);
+  bakes.set(key, spr);
+  usedIn.set(spr, frameNo);
+}
+
+/** Frames making ahead rests once the bakes are full of what is on the screen, and the frame it starts again. */
+const AHEAD_REST = 600;
+let fullUntil = 0;
+
+/** Whether a bake of `px` pixels can be kept without putting away one drawn this frame or the last. */
+function roomAhead(px: number): boolean {
+  let left = pixels + px - PIXELS;
+  for (const b of bakes.values()) {
+    if (left <= 0) return true;
+    if ((usedIn.get(b) ?? 0) >= frameNo - 1) return false;
+    left -= b.canvas.width * b.canvas.height;
+  }
+  return left <= 0;
+}
+
+/** A model seen from a turn, painted at a scale onto a canvas just its size, its own shade at its foot under it unless the renderer lays that; and read back once for where in it there is anything. */
 function bake(scale: number, sk: Skeleton, turn: number, paint: (g: CanvasRenderingContext2D, e: Eye) => void, ownFoot = true): TreeSprite {
   const t0 = performance.now();
   const e = eyeOf(0, turn);
@@ -247,65 +360,281 @@ function bake(scale: number, sk: Skeleton, turn: number, paint: (g: CanvasRender
   paint(g, e);
   tree3dStats.paintMs += performance.now() - t1;
   if (ownFoot) footShade(g, sk);
+  const ink = inkOf(canvas);
   tree3dStats.bakes++;
   tree3dStats.ms += performance.now() - t0;
-  return { canvas, w, h, ax: -x0, ay: -y0, solid: true, foot: ownFoot ? undefined : footReach(sk) };
+  return { canvas, w, h, ax: -x0, ay: -y0, solid: true, foot: ownFoot ? undefined : footReach(sk), ink };
+}
+
+/** A job's bake made and kept, and put by to be kept in the browser too. Made ahead, it is kept only if that puts away nothing on the screen. */
+function make(j: Job, ahead = false): TreeSprite | null {
+  const spr = j.makeAt(j.step, j.frame);
+  if (toStore.length < 256) toStore.push([j.key, spr]);
+  if (ahead && !roomAhead(spr.canvas.width * spr.canvas.height)) {
+    fullUntil = frameNo + AHEAD_REST;
+    return null;
+  }
+  keep(j.key, spr);
+  return spr;
+}
+
+/** A job's bake fetched from the browser's store, kept when it comes. */
+function fetchJob(j: Job, ahead = false): void {
+  if (loading.has(j.key)) return;
+  loading.add(j.key);
+  void fetchStored(j.key).then((got) => {
+    loading.delete(j.key);
+    if (!got || bakes.has(j.key)) return;
+    if (ahead && !roomAhead(got.canvas.width * got.canvas.height)) {
+      fullUntil = frameNo + AHEAD_REST;
+      return;
+    }
+    tree3dStats.stored++;
+    keep(j.key, { ...got, solid: true });
+  });
+}
+
+/** What a tree or a bush on a tile is baked and shaded under, and how: one for `tree3dSprite`, `tree3dShadow`, `tree3dIdle` and `preloadTrees3d` alike. */
+interface Maker {
+  head: string;
+  /** Whether it is in leaf, which the wind moves. */
+  leafy: boolean;
+  makeAt: MakeAt;
+  shadeHead: string;
+  throwOf: ThrowOf;
+}
+
+function treeMaker(species: number, variant: number, season: Season, day: number, x: number, y: number, turn: number, scale: number): Maker {
+  const form = formOf(species, x, y);
+  const { dress, key: look } = dressFor(species, variant, season, day);
+  return {
+    head: `${scale}|${species}|${variant}|${form}|${look}`,
+    // The bare wood has no leaf to move.
+    leafy: dress.full > 0,
+    makeAt: (step, frame) => {
+      const spec = SPECIES.get(species) ?? maple;
+      const seed = seedOf(species, variant, form);
+      const sk = swayed(skeletonOf(species, variant, form), frame, SWAY_FRAMES, seed);
+      return bake(scale, sk, turn, (g, e) => paintTree3d(g, { sk, spec, dress, light: lightOf(step), e, seed, frame, frames: SWAY_FRAMES, scale }));
+    },
+    shadeHead: `${species}|${variant}|${form}|${look}|`,
+    throwOf: (light, e, disc) => {
+      const sk = skeletonOf(species, variant, form);
+      const spec = SPECIES.get(species) ?? maple;
+      // The trunk's shade starts clear of the trunk and its roots: what is right at its foot is the tree's own (`footShade`), drawn with it.
+      const r0 = sk.limbs[0]?.ra ?? 0;
+      const clear = r0 * 2.6;
+      for (const L of sk.limbs) {
+        if (L.order < 0 || L.order > (dress.full > 0 ? 2 : 3)) continue;
+        alongLimb(L, light, (p, r) => {
+          const z = Math.max(0, p[2]);
+          if (L.order === 0 && Math.hypot(p[0] + light.dx * z, p[1] + light.dy * z) < clear + r) return;
+          disc(p, r);
+        });
+      }
+      const job = { sk, spec, dress, light, e, seed: 0, frame: 0 };
+      for (const s of shownOf(job)) lumpyDisc(disc, s.c.c, s.c.r * s.grown, s.c.k);
+    },
+  };
 }
 
 /**
  * The picture of a tree drawn as a solid, at a scale of pixels to a pixel at
  * zoom one: made now, or a near one standing in while this frame has made
- * all it may.
+ * all it may, or null -- drawn flat this frame -- with none to stand in.
  */
-export function tree3dSprite(species: number, variant: number, season: Season, day: number, at: TreeView, scale: number): TreeSprite {
-  const form = formOf(species, at.x, at.y);
-  const { dress, key: look } = dressFor(species, variant, season, day);
-  const step = sunStepOf(at.hour, at.dark);
-  // The bare wood has no leaf to move.
-  const frame = dress.full > 0 ? at.sway : 0;
-  return baked(`${scale}|${species}|${variant}|${form}|${look}`, at.turn, step, frame, () => {
-    const spec = SPECIES.get(species) ?? maple;
-    const seed = seedOf(species, variant, form);
-    const sk = swayed(skeletonOf(species, variant, form), frame, SWAY_FRAMES, seed);
-    return bake(scale, sk, at.turn, (g, e) => paintTree3d(g, { sk, spec, dress, light: lightOf(step), e, seed, frame, frames: SWAY_FRAMES, scale }));
-  });
+export function tree3dSprite(species: number, variant: number, season: Season, day: number, at: TreeView, scale: number): TreeSprite | null {
+  const m = treeMaker(species, variant, season, day, at.x, at.y, at.turn, scale);
+  return baked(m, at.turn, sunStepOf(at.hour, at.dark), m.leafy ? at.sway : 0, at.x, at.y);
 }
 
-/** The bake under a key's head at a turn, a step of the sun and a frame of the wind: kept, made now, or a near one standing in while this frame has made all it may. */
-function baked(head: string, turn: number, step: number, frame: number, make: () => TreeSprite): TreeSprite {
+/** The bake under a maker's head at a turn, a step of the sun and a frame of the wind: kept, fetched from the browser's store, made now, or a near one standing in; null when there is none. */
+function baked(m: Maker, turn: number, step: number, frame: number, x: number, y: number): TreeSprite | null {
+  const { head } = m;
   const key = `${head}|${turn}|${step}|${frame}`;
+  const still = `${head}|${turn}|0`;
+  if (!seen.has(still)) seen.set(still, { key: `${head}|${turn}|${step}|0`, head, turn, step, frame: 0, x, y, makeAt: m.makeAt });
   const had = bakes.get(key);
   if (had) {
-    bakes.delete(key);
-    bakes.set(key, had);
+    touch(key, had);
     return had;
   }
-  if (spent >= BAKE_MS || made >= MAKE_MOST) {
-    const near = standIn(head, turn, step, frame);
-    if (near) {
-      tree3dStats.standIns++;
-      return near;
-    }
+  const job: Job = { key, head, turn, step, frame, x, y, makeAt: m.makeAt };
+  const near = standIn(head, turn, step, frame);
+  if (isStored(key)) fetchJob(job);
+  else if (spent < (near ? BAKE_MS : BARE_MS)) {
+    const t0 = performance.now();
+    const spr = make(job);
+    spent += performance.now() - t0;
+    return spr;
   }
-  const t0 = performance.now();
-  const spr = make();
-  spent += performance.now() - t0;
-  made++;
-  keep(key, spr);
-  return spr;
+  if (!missing.has(key)) missing.set(key, job);
+  if (near) {
+    tree3dStats.standIns++;
+    if (bakes.has(near[0])) touch(near[0], near[1]);
+    return near[1];
+  }
+  tree3dStats.flats++;
+  return null;
 }
 
-/** The nearest bake already made of the same tree in the same dress: still air, the sun's nearest step, then any turn. */
-function standIn(head: string, turn: number, step: number, frame: number): TreeSprite | null {
-  const tries: string[] = [];
-  if (frame) tries.push(`${head}|${turn}|${step}|0`);
-  for (let d = 1; d <= 9; d++) for (const s of [step - d, step + d]) if (s >= -1 && s <= 8) tries.push(`${head}|${turn}|${s}|0`);
-  for (let t = 1; t < 8; t++) tries.push(`${head}|${(turn + t) % 8}|${step}|0`);
-  for (const k of tries) {
+/** The nearest bake already made of the same tree in the same dress: still air, the sun's nearest step, then any turn at this step, then any turn at any step. */
+function standIn(head: string, turn: number, step: number, frame: number): [string, TreeSprite] | null {
+  const at = (t: number, s: number): [string, TreeSprite] | null => {
+    const k = `${head}|${t}|${s}|0`;
     const b = bakes.get(k);
-    if (b) return b;
+    return b ? [k, b] : null;
+  };
+  const steps = (t: number): [string, TreeSprite] | null => {
+    for (let d = 1; d <= 9; d++) {
+      for (const s of [step - d, step + d]) {
+        if (s < -1 || s > 8) continue;
+        const b = at(t, s);
+        if (b) return b;
+      }
+    }
+    return null;
+  };
+  let b = (frame ? at(turn, step) : null) ?? steps(turn);
+  for (let t = 1; t < 8 && !b; t++) b = at((turn + t) % 8, step);
+  for (let t = 1; t < 8 && !b; t++) b = steps((turn + t) % 8);
+  if (b || !lastLook.size) return b;
+  if (frameNo > lastLookUntil) {
+    lastLook.clear();
+    return null;
+  }
+  const kind = head.slice(0, head.lastIndexOf('|'));
+  for (let d = 0; d <= 9; d++) {
+    for (const s of d ? [step - d, step + d] : [step]) {
+      const k = `${kind}|${turn}|${s}`;
+      const was = lastLook.get(k);
+      if (was) return [k, was];
+    }
   }
   return null;
+}
+
+/**
+ * The work after a frame: what it stood in for, nearest `(fx, fy)` first, then
+ * the shades it had none of, then every bake and shade it drew made for the
+ * sun's `next` step ahead of it. Given the frame's spare milliseconds, and
+ * `TRICKLE_MS` more saved up each frame, so a wood that leaves no spare time
+ * still gets its next step made a bake every so often rather than all at once
+ * when the sun moves.
+ */
+export function tree3dIdle(spare: number, next: number | null, fx: number, fy: number): void {
+  credit = Math.min(CREDIT_MOST, credit + TRICKLE_MS + Math.max(0, spare));
+  const put = toStore.shift();
+  if (put) void putStored(put[0], put[1]);
+  const t0 = performance.now();
+  const far = (j: { x: number; y: number }): number => (j.x - fx) ** 2 + (j.y - fy) ** 2;
+  const avg = tree3dStats.bakes ? tree3dStats.ms / tree3dStats.bakes : 8;
+  const bakeJobs = (list: Iterable<Job>): Job[] => [...list].filter((j) => !bakes.has(j.key) && !loading.has(j.key)).sort((a, b) => far(a) - far(b));
+  const run = (j: Job, ahead = false): boolean => {
+    if (bakes.has(j.key) || loading.has(j.key)) return true;
+    if (isStored(j.key)) {
+      fetchJob(j, ahead);
+      return true;
+    }
+    if (credit < avg) return false;
+    const t = performance.now();
+    make(j, ahead);
+    if (ahead) tree3dStats.ahead++;
+    credit -= performance.now() - t;
+    return true;
+  };
+  const shade = (sj: ShadeJob, step: number, k: string): boolean => {
+    if (shadows.has(k)) return true;
+    if (credit < 1) return false;
+    const t = performance.now();
+    makeShade(sj, step, k);
+    credit -= performance.now() - t;
+    return true;
+  };
+  let going = true;
+  for (const j of bakeJobs(missing.values())) if (!(going = run(j))) break;
+  if (going) for (const [k, [sj, step]] of [...shadeMissing.entries()].sort((a, b) => far(a[1][0]) - far(b[1][0]))) if (!(going = shade(sj, step, k))) break;
+  if (going && next !== null) {
+    for (const j of bakeJobs([...seen.values()].map((j) => ({ ...j, step: next, key: `${j.head}|${j.turn}|${next}|0` })))) {
+      if (frameNo < fullUntil) break;
+      if (!(going = run(j, true))) break;
+    }
+    if (going) for (const sj of [...shadeKinds.values()].sort((a, b) => far(a) - far(b))) if (!(going = shade(sj, next, `${sj.head}${next}|${sj.turn}`))) break;
+  }
+  // Nothing left to do: none is saved up, so whatever comes next starts from a frame's worth rather than a burst.
+  if (going) credit = Math.min(credit, TRICKLE_MS);
+  tree3dStats.idleMs += performance.now() - t0;
+}
+
+/**
+ * Baked ahead of the first frame, while the island is still being read: every
+ * tree and bush in `tiles` (nearest the middle first) as it will be seen, and
+ * its shade, and then the same for the sun's `next` step. A bake kept in the
+ * browser's store is fetched rather than baked. It works a slice at a time so
+ * the page keeps answering, and stops once the renderer draws its first frame.
+ */
+export async function preloadTrees3d(
+  tiles: ReadonlyArray<{ bush: boolean; species: number; variant: number; x: number; y: number }>,
+  at: { season: Season; day: number; hour: number; dark: number; turn: number; scale: number; next: number | null },
+): Promise<void> {
+  await openStore();
+  const step = sunStepOf(at.hour, at.dark);
+  const slice = (): Promise<void> => new Promise((ok) => setTimeout(ok, 0));
+  let t0 = performance.now();
+  const yieldNow = async (): Promise<void> => {
+    if (performance.now() - t0 < 12) return;
+    const put = toStore.shift();
+    if (put) void putStored(put[0], put[1]);
+    await slice();
+    t0 = performance.now();
+  };
+  const makers = tiles
+    .filter((t) => (t.bush ? BUSH3D_SPECIES : TREE3D_SPECIES).has(t.species))
+    .map((t) => ({ t, m: t.bush ? bushMaker(t.species, at.season, at.day, t.x, t.y, at.turn, at.scale) : treeMaker(t.species, t.variant, at.season, at.day, t.x, t.y, at.turn, at.scale) }));
+  for (const s of at.next === null ? [step] : [step, at.next]) {
+    const jobs = new Map<string, Job>();
+    const shades: Array<[ShadeJob, string]> = [];
+    for (const { t, m } of makers) {
+      const key = `${m.head}|${at.turn}|${s}|0`;
+      if (jobs.has(key)) continue;
+      jobs.set(key, { key, head: m.head, turn: at.turn, step: s, frame: 0, x: t.x, y: t.y, makeAt: m.makeAt });
+      shades.push([{ head: m.shadeHead, turn: at.turn, x: t.x, y: t.y, throwOf: m.throwOf }, `${m.shadeHead}${s}|${at.turn}`]);
+    }
+    // What the browser kept is fetched, several at a time, while what it did not keep is baked.
+    const fetches: Promise<void>[] = [];
+    for (const j of jobs.values()) {
+      if (bakes.has(j.key) || !isStored(j.key)) continue;
+      fetches.push(fetchStored(j.key).then((got) => {
+        if (got && !bakes.has(j.key)) {
+          tree3dStats.stored++;
+          keep(j.key, { ...got, solid: true });
+        }
+      }));
+    }
+    for (const j of jobs.values()) {
+      if (drawing) return;
+      if (bakes.has(j.key) || isStored(j.key)) continue;
+      make(j);
+      await yieldNow();
+    }
+    for (const [sj, k] of shades) {
+      if (drawing) return;
+      if (!shadows.has(k)) makeShade(sj, s, k);
+      await yieldNow();
+    }
+    await Promise.all(fetches);
+    // Any that would not come back are baked.
+    for (const j of jobs.values()) {
+      if (drawing) return;
+      if (bakes.has(j.key)) continue;
+      make(j);
+      await yieldNow();
+    }
+  }
+  while (toStore.length && !drawing) {
+    const put = toStore.shift();
+    if (put) await putStored(put[0], put[1]);
+  }
 }
 
 /* ---- the shade on the ground ------------------------------------------------------- */
@@ -325,28 +654,13 @@ const SHADE_SCALE = 2;
 /**
  * What a tree throws on the ground at a step of the sun, seen from a turn:
  * lumpy shade on the ground under each mass of leaf, and along its wood. Null when it
- * throws none. The renderer lays it with the ground (`Renderer.solidFrame`).
+ * throws none, or when it is not made yet and the sun's nearest step has none
+ * to stand in (counted in `shadeStandIns`, so the renderer asks again). The
+ * renderer lays it with the ground (`Renderer.solidFrame`).
  */
 export function tree3dShadow(species: number, variant: number, season: Season, day: number, x: number, y: number, step: number, turn: number): TreeShade | null {
-  const form = formOf(species, x, y);
-  const { dress, key: look } = dressFor(species, variant, season, day);
-  return shaded(`${species}|${variant}|${form}|${look}|`, step, turn, (light, e, disc) => {
-    const sk = skeletonOf(species, variant, form);
-    const spec = SPECIES.get(species) ?? maple;
-    // The trunk's shade starts clear of the trunk and its roots: what is right at its foot is the tree's own (`footShade`), drawn with it.
-    const r0 = sk.limbs[0]?.ra ?? 0;
-    const clear = r0 * 2.6;
-    for (const L of sk.limbs) {
-      if (L.order < 0 || L.order > (dress.full > 0 ? 2 : 3)) continue;
-      alongLimb(L, light, (p, r) => {
-        const z = Math.max(0, p[2]);
-        if (L.order === 0 && Math.hypot(p[0] + light.dx * z, p[1] + light.dy * z) < clear + r) return;
-        disc(p, r);
-      });
-    }
-    const job = { sk, spec, dress, light, e, seed: 0, frame: 0 };
-    for (const s of shownOf(job)) lumpyDisc(disc, s.c.c, s.c.r * s.grown, s.c.k);
-  });
+  const m = treeMaker(species, variant, season, day, x, y, turn, 1);
+  return shaded(m.shadeHead, step, turn, x, y, m.throwOf);
 }
 
 /** How many steps along a limb the shade's discs take to run together. */
@@ -376,29 +690,47 @@ type Throw = Light & { dx: number; dy: number };
 
 /**
  * A shade picture under a key's head at a step of the sun and a turn: kept,
- * a near step's standing in while this frame has made all it may, or made
- * now from the discs `throwOf` lays, each a point of the model and a radius.
+ * made now while this frame has time, a near step's standing in, or none yet
+ * -- made after the frame (`tree3dIdle`).
  */
-function shaded(head: string, step: number, turn: number, throwOf: (light: Throw, e: Eye, disc: (p: V3, r: number) => void) => void): TreeShade | null {
+function shaded(head: string, step: number, turn: number, x: number, y: number, throwOf: ThrowOf): TreeShade | null {
+  const kind = `${head}|${turn}`;
+  if (!shadeKinds.has(kind)) {
+    shadeKinds.set(kind, { head, turn, x, y, throwOf });
+    if (shadeKinds.size > 1200) shadeKinds.delete(shadeKinds.keys().next().value as string);
+  }
   const k = `${head}${step}|${turn}`;
-  if (shadows.has(k)) return shadows.get(k) ?? null;
-  // Out of time this frame: the sun's nearest step stands in.
-  if (spent >= BAKE_MS || made >= MAKE_MOST) {
-    for (let d = 1; d <= SUN_STEPS + 1; d++) {
-      for (const s of [step - d, step + d]) {
-        const near = shadows.get(`${head}${s}|${turn}`);
-        if (near) {
-          tree3dStats.shadeStandIns++;
-          return near;
-        }
-      }
+  const had = shadows.get(k);
+  if (had !== undefined) {
+    shadows.delete(k);
+    shadows.set(k, had);
+    return had;
+  }
+  if (shadeSpent < SHADE_MS) {
+    const t0 = performance.now();
+    const out = makeShade({ head, turn, x, y, throwOf }, step, k);
+    shadeSpent += performance.now() - t0;
+    return out;
+  }
+  // Out of time this frame: the sun's nearest step stands in, or none yet.
+  tree3dStats.shadeStandIns++;
+  if (!shadeMissing.has(k)) shadeMissing.set(k, [{ head, turn, x, y, throwOf }, step]);
+  for (let d = 1; d <= SUN_STEPS + 1; d++) {
+    for (const s of [step - d, step + d]) {
+      const near = shadows.get(`${head}${s}|${turn}`);
+      if (near) return near;
     }
   }
+  return null;
+}
+
+/** A shade made from the discs its job lays, kept under `k`, the least lately asked for let go past `SHADE_PIXELS`. */
+function makeShade(j: ShadeJob, step: number, k: string): TreeShade | null {
   const t0 = performance.now();
   const sun = lightOf(step);
   let out: TreeShade | null = null;
   if (sun.throw > 0) {
-    const e = eyeOf(0, turn);
+    const e = eyeOf(0, j.turn);
     const fl = Math.hypot(sun.sun[0], sun.sun[1]) || 1;
     const dx = (-sun.sun[0] / fl) * sun.throw, dy = (-sun.sun[1] / fl) * sun.throw;
     const path = new Path2D();
@@ -412,7 +744,7 @@ function shaded(head: string, step: number, turn: number, throwOf: (light: Throw
       x0 = Math.min(x0, sx - rx); x1 = Math.max(x1, sx + rx);
       y0 = Math.min(y0, sy - ry); y1 = Math.max(y1, sy + ry);
     };
-    throwOf({ ...sun, dx, dy }, e, disc);
+    j.throwOf({ ...sun, dx, dy }, e, disc);
     if (x1 > x0) {
       const canvas = document.createElement('canvas');
       canvas.width = Math.max(1, Math.ceil((x1 - x0) * SHADE_SCALE));
@@ -427,12 +759,18 @@ function shaded(head: string, step: number, turn: number, throwOf: (light: Throw
     }
   }
   shadows.set(k, out);
-  spent += performance.now() - t0;
-  made++;
-  if (shadows.size > 160) shadows.delete(shadows.keys().next().value as string);
+  if (out) shadePixels += out.canvas.width * out.canvas.height;
+  while (shadePixels > SHADE_PIXELS && shadows.size > 1) {
+    const [old, s] = shadows.entries().next().value as [string, TreeShade | null];
+    shadows.delete(old);
+    if (s) shadePixels -= s.canvas.width * s.canvas.height;
+  }
+  tree3dStats.shades++;
+  tree3dStats.shadeMs += performance.now() - t0;
   return out;
 }
 const shadows = new Map<string, TreeShade | null>();
+let shadePixels = 0;
 
 /** How far round a tile's tree's foot its own shade reaches, in pixels at zoom one across, before it grows (`grownAt`). */
 export function tree3dFoot(species: number, variant: number, x: number, y: number): number {
@@ -450,43 +788,51 @@ function bushModelOf(species: number, form: number): Skeleton {
 }
 const bushSeedOf = (species: number, form: number): number => 104729 + species * 7919 + form * 17;
 
-/** The picture of a bush drawn as a solid, as `tree3dSprite` makes a tree's: its day's dress is `bushYear`'s. */
-export function bush3dSprite(species: number, season: Season, day: number, at: TreeView, scale: number): TreeSprite {
-  const form = formAt(at.x, at.y);
+function bushMaker(species: number, season: Season, day: number, x: number, y: number, turn: number, scale: number): Maker {
+  const form = formAt(x, y);
   const def = BUSH_DEFS[species] ?? BUSH_DEFS[0];
   const look = bushYear(def, species, season, day);
-  const step = sunStepOf(at.hour, at.dark);
-  // Bare canes have no leaf to move.
-  const frame = look.full > 0 ? at.sway : 0;
-  return baked(`${scale}|bush${species}|${form}|${season}${look.key}`, at.turn, step, frame, () => {
-    const seed = bushSeedOf(species, form);
-    const sk = swayed(bushModelOf(species, form), frame, SWAY_FRAMES, seed);
-    const spec = BUSH3D.get(species) ?? rose;
-    // Its foot's shade is laid by the renderer, in the ground shade's tone (`Sprite.foot`).
-    return bake(scale, sk, at.turn, (g, e) => spec.paint(g, { sk, look, season, def, light: lightOf(step), e, seed, frame }), false);
-  });
+  return {
+    head: `${scale}|bush${species}|${form}|${season}${look.key}`,
+    // Bare canes have no leaf to move.
+    leafy: look.full > 0,
+    makeAt: (step, frame) => {
+      const seed = bushSeedOf(species, form);
+      const sk = swayed(bushModelOf(species, form), frame, SWAY_FRAMES, seed);
+      const spec = BUSH3D.get(species) ?? rose;
+      // Its foot's shade is laid by the renderer, in the ground shade's tone (`Sprite.foot`).
+      return bake(scale, sk, turn, (g, e) => spec.paint(g, { sk, look, season, def, light: lightOf(step), e, seed, frame }), false);
+    },
+    shadeHead: `bush${species}|${form}|${season}${look.key}|`,
+    throwOf: (light, _e, disc) => {
+      const sk = bushModelOf(species, form);
+      // Clear of its foot, which is its own shade laid with it (`Sprite.foot`).
+      const clear = footReach(sk) / ACROSS;
+      // Its canes and the shoots off them, not the finest twigs; and no more than `BUSH_WOOD_DISCS` discs along them, spread over their length.
+      const wood = sk.limbs.filter((L) => L.order >= 0 && L.order <= 2);
+      const spread = Math.max(1, wood.reduce((n, L) => n + stepsAlong(L, light) + 1, 0) / BUSH_WOOD_DISCS);
+      for (const L of wood) {
+        alongLimb(L, light, (p, r) => {
+          const z = Math.max(0, p[2]);
+          if (Math.hypot(p[0] + light.dx * z, p[1] + light.dy * z) < clear - r) return;
+          disc(p, r);
+        }, spread);
+      }
+      if (look.full > 0) for (const c of sk.clumps) lumpyDisc(disc, c.c, c.r * (0.4 + 0.6 * look.full), c.k);
+    },
+  };
+}
+
+/** The picture of a bush drawn as a solid, as `tree3dSprite` makes a tree's: its day's dress is `bushYear`'s. Null to be drawn flat this frame. */
+export function bush3dSprite(species: number, season: Season, day: number, at: TreeView, scale: number): TreeSprite | null {
+  const m = bushMaker(species, season, day, at.x, at.y, at.turn, scale);
+  return baked(m, at.turn, sunStepOf(at.hour, at.dark), m.leafy ? at.sway : 0, at.x, at.y);
 }
 
 /** What a bush throws on the ground, as `tree3dShadow` a tree's: along its wood, and lumpy under its leaf as far as it is in leaf. */
 export function bush3dShadow(species: number, season: Season, day: number, x: number, y: number, step: number, turn: number): TreeShade | null {
-  const form = formAt(x, y);
-  const look = bushYear(BUSH_DEFS[species] ?? BUSH_DEFS[0], species, season, day);
-  return shaded(`bush${species}|${form}|${season}${look.key}|`, step, turn, (light, _e, disc) => {
-    const sk = bushModelOf(species, form);
-    // Clear of its foot, which is its own shade laid with it (`Sprite.foot`).
-    const clear = footReach(sk) / ACROSS;
-    // Its canes and the shoots off them, not the finest twigs; and no more than `BUSH_WOOD_DISCS` discs along them, spread over their length.
-    const wood = sk.limbs.filter((L) => L.order >= 0 && L.order <= 2);
-    const spread = Math.max(1, wood.reduce((n, L) => n + stepsAlong(L, light) + 1, 0) / BUSH_WOOD_DISCS);
-    for (const L of wood) {
-      alongLimb(L, light, (p, r) => {
-        const z = Math.max(0, p[2]);
-        if (Math.hypot(p[0] + light.dx * z, p[1] + light.dy * z) < clear - r) return;
-        disc(p, r);
-      }, spread);
-    }
-    if (look.full > 0) for (const c of sk.clumps) lumpyDisc(disc, c.c, c.r * (0.4 + 0.6 * look.full), c.k);
-  });
+  const m = bushMaker(species, season, day, x, y, turn, 1);
+  return shaded(m.shadeHead, step, turn, x, y, m.throwOf);
 }
 
 /** The most discs a bush's wood throws its shade with: a twiggy bush's are spread out along it to this many. */

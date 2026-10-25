@@ -1,3 +1,4 @@
+import { preloadTreesAt } from '../render/preload';
 import { gearFrom } from '../game/worn';
 import { BROWSER_TALLY, Game } from '../game/game';
 import type { Marker } from '../game/marks';
@@ -153,8 +154,13 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
      * up, 100%": it was not hung, it was counting, and saying 100% the whole
      * way through was the only thing wrong with it.
      */
-    progress: (done, total, what) => tell(what, done, total),
+    progress: (done, total, what) => {
+      tell(what, done, total);
+      // The land is known and so is where you stand: the trees round you are baked while the rest is read.
+      if (!preloading && island.world && island.me) preloading = preloadTreesAt(island.world, island.me.x, island.me.y, island.time());
+    },
   });
+  let preloading: Promise<void> | null = null;
 
   let id = joining ?? '';
   if (!id) {
