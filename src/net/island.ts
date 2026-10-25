@@ -2235,6 +2235,22 @@ export class Island {
   }
 
   /**
+   * Whether the live connection was cut, as against still being set up: the
+   * socket not open, or a channel errored, which is what a dropped socket
+   * leaves every channel in. A channel still joining is not cut: walking into
+   * the next block joins three new ones (`listen`), deaf for a round trip and
+   * nothing to come back from.
+   */
+  cut(): boolean {
+    if (!this.info) return false;
+    const rt = supabase().realtime as unknown as { isConnected?: () => boolean };
+    if (rt.isConnected && !rt.isConnected()) return true;
+    const channels = this.hears ? [...this.heard.values()] : this.channel ? [this.channel] : [];
+    if (this.bodies) channels.push(this.bodies);
+    return channels.some((ch) => ch.state === 'errored');
+  }
+
+  /**
    * Back in front of somebody: the page shown again, the network back, or the
    * live connection cut while in front (`watchReturn`).
    *

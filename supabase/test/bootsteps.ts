@@ -219,12 +219,19 @@ inner.bodies = { state: 'joined' };
 rt.channels.push(inner.bodies);
 const world = island.world as unknown as { getTile(x: number, y: number): number };
 
-check('listening, the island is not deaf', !island.deaf() && island.armed());
+check('listening, the island is not deaf', !island.deaf() && !island.cut() && island.armed());
+{
+  // A channel still joining (the next block's, walked into) is deaf for a round trip and not cut.
+  const joining = [...inner.heard.values()][2];
+  joining.state = 'joining';
+  check('a channel still joining is deaf but not cut', island.deaf() && !island.cut());
+  joining.state = 'joined';
+}
 {
   rt.cut();
   missed = [{ n: 1, x: 12, y: 10, tile: 4, data: 0, corners: null, soil: null }];
   asked.length = 0;
-  check('the far end closing the socket is deaf', island.deaf());
+  check('the far end closing the socket is deaf and cut', island.deaf() && island.cut());
   const from = performance.now();
   const answered = await island.comeBack();
   const took = performance.now() - from;
@@ -269,7 +276,7 @@ console.log('--- the notice');
   let calls = 0;
   let answer: () => Promise<boolean> = async () => true;
   let cut = false;
-  const stand = { deaf: () => cut, armed: () => true, comeBack: () => { calls++; return answer(); } };
+  const stand = { deaf: () => cut, cut: () => cut, armed: () => true, comeBack: () => { calls++; return answer(); } };
   watchReturn(stand, root);
   const banner = kids[0];
   check('the notice says what it is', banner?.textContent === RECONNECTING && banner.hidden === true, String(banner?.textContent));

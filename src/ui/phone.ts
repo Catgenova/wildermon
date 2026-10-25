@@ -246,7 +246,7 @@ export function keepAboveKeyboard(root: HTMLElement): void {
  * While the browser says it has no network, nothing is asked until it says
  * it is back.
  */
-export function watchReturn(island: Pick<Island, 'deaf' | 'comeBack' | 'armed'>, root: HTMLElement): void {
+export function watchReturn(island: Pick<Island, 'deaf' | 'cut' | 'comeBack' | 'armed'>, root: HTMLElement): void {
   const bar = document.createElement('div');
   bar.className = 'saving-banner reconnect-banner';
   bar.setAttribute('role', 'status');
@@ -276,7 +276,7 @@ export function watchReturn(island: Pick<Island, 'deaf' | 'comeBack' | 'armed'>,
     hiddenAt = Infinity;
     const cut = island.deaf();
     if (why === 'return' && !cut && away < REREAD_AFTER_MS && bar.hidden) return;
-    if (why === 'cut' && !cut) return;
+    if (why === 'cut' && !island.cut()) return;
     // No network at all, as the browser knows it: the notice, and nothing asked until it says it is back.
     if (cut && navigator.onLine === false) {
       show();
@@ -311,7 +311,7 @@ export function watchReturn(island: Pick<Island, 'deaf' | 'comeBack' | 'armed'>,
   });
   // A cut while in front, which says nothing to the page: the far end closing the socket, a channel dropped.
   window.setInterval(() => {
-    if (!document.hidden && !going && bar.hidden && island.armed() && island.deaf()) void back('cut');
+    if (!document.hidden && !going && bar.hidden && island.armed() && island.cut()) void back('cut');
   }, CUT_POLL_MS);
 }
 
