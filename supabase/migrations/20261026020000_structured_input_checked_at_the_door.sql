@@ -98,7 +98,7 @@ end $do$;
  *    "min", "max"             -- int and num: the range, inclusive
  *    "len"                    -- text: most characters
  *    "in": [...]              -- text: one of these
- *    "keys": {k: spec}        -- object: the keys it may have, each to its spec
+ *    "keys": {k: spec}        -- object: the keys it may have, each to its spec (a key set to null is one left out)
  *    "req": [k]               -- object: the keys it must have
  *    "each": spec             -- object: a map; every value to this spec (and `keys` not used)
  *    "kpat": regex            -- object map: every key matches this
@@ -171,6 +171,8 @@ begin
       if v_k is not null then return p_path || '.' || v_k || ': missing'; end if;
     end if;
     for v_k, v_e in select key, value from jsonb_each(v) loop
+      -- A key set to null is a key left out, as every reader takes it (`->>` is null either way).
+      continue when jsonb_typeof(v_e) = 'null' and not (s ? 'each');
       if s ? 'each' then
         if s ? 'kpat' and v_k !~ (s->>'kpat') then return p_path || '.' || left(v_k, 32) || ': not a key'; end if;
         v_why := private.arg_why(v_e, s->'each', p_path || '.' || v_k);
