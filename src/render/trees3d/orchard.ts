@@ -143,12 +143,12 @@ export function growOrchard(b: Build, height: number, seed: number): Skeleton {
     const el = j === 0 ? Math.PI / 2 : Math.asin(Math.max(-1, Math.min(1, s))) + (R() - 0.5) * 0.14;
     const az = azR + j * GOLD + (R() - 0.5) * 0.3;
     // Even over the dome; one in five in toward the heart, so it is never hollow.
-    const inner = j === 0 || (j % 5 === 3 && el > 0.65);
-    const k = j === 0 ? 0.9 : inner ? 0.45 + 0.15 * R() : 0.86 + 0.08 * R();
+    const inner = j === 0 || (j % 4 === 2 && el > 0.45);
+    const k = j === 0 ? 0.9 : inner ? 0.42 + 0.15 * R() : 0.86 + 0.08 * R();
     // A crown that narrows to its top drawn in toward it the higher it is.
     const w = k * (1 - (b.peak ?? 0) * Math.max(0, Math.sin(el)));
     const c: V3 = [env.c[0] + Math.cos(az) * Math.cos(el) * env.r * w, env.c[1] + Math.sin(az) * Math.cos(el) * env.r * w, env.c[2] + Math.sin(el) * rz * k];
-    spots.push({ c, az, el, size: j === 0 ? 1.4 : inner ? 1.15 + 0.2 * R() : R() < 0.2 ? 1.2 + 0.2 * R() : 0.85 + 0.25 * R() });
+    spots.push({ c, az, el, size: j === 0 ? 1.4 : inner ? 1.25 + 0.2 * R() : R() < 0.2 ? 1.2 + 0.2 * R() : 0.85 + 0.25 * R() });
   }
   // Gaps through the lower dome over a few of the limbs: their branches go on into them with nothing on them, and show.
   const holes = b.bare ? 0 : Math.min(n, Math.round(b.holes ?? 0));

@@ -16,6 +16,13 @@ const rampOf = ([lit, mid, deep]: readonly [string, string, string]): Ramp =>
 const mix3 = (a: Tones, b: Tones | string, t: number): Tones =>
   a.map((c, i) => mix(c, typeof b === 'string' ? b : b[i], t)) as unknown as Tones;
 
+/**
+ * Shapes a fruit tree grows at each age: one, as the flat fruit trees are one picture a kind and age, rather than the
+ * timber trees' three. A wood mixes eleven kinds of them, and each shape is a picture baked on the first frame it is
+ * seen (`../index` FORMS); with one, a cold wood of all eleven costs what one of the maple, oak and pine does.
+ */
+const FORMS = 1;
+
 /** A fruit tree at its prime: small, squat and gnarled, its trunk wound round itself, under a low dome of small clusters. */
 const BUILD: Build = {
   height: 34, stem: 0.2, spread: 0.95, dome: 0.27, droop: 0.15, girth: 0.1, flare: 1.8, scaffolds: 4, forks: 3, branching: 2,
@@ -97,6 +104,7 @@ export function orchardOf(name: string, flat: TreeLook, kind: OrchardKind): Spec
     },
     leafForm: kind.leafForm ?? leafFormOf(flat),
     open: true,
+    forms: FORMS,
     pad: kind.pad ?? 0.84,
     snowLine: true,
     inkedRune: true,

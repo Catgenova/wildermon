@@ -198,6 +198,8 @@ export interface Species3D {
   buds?: string;
   /** Keeps its leaf all year: its winter leaf, and its new tips in spring (`leaf.spring`). */
   evergreen?: { winter: Ramp };
+  /** How many of the shapes (`FORMS`) it grows at each age, where fewer than the rest: each one more to bake. */
+  forms?: number;
   /** A fruit tree (`./orchard`): its blossom and its fruit. */
   orchard?: Orchard;
 }

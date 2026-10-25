@@ -34,6 +34,8 @@ export interface Job {
   seed: number;
   /** Which of the wind's frames, for what is in the air. */
   frame: number;
+  /** Pixels a bake has to a pixel at zoom one, where it is known: what is small is drawn bigger in the coarsest. */
+  scale?: number;
 }
 
 /* ---- what is shown ------------------------------------------------------------- */
@@ -619,7 +621,7 @@ function scallopPath(p: Path2D, cx: number, cy: number, rx: number, ry: number, 
   const ph = p1 + p2;
   for (let i = 0; i <= N; i++) {
     const t = (i / N) * TAU;
-    const r = 1 + a1 * Math.sin(3 * t + p1) + a2 * Math.sin(5 * t + p2) + 0.16 * (Math.sqrt(Math.abs(Math.sin((n * t) / 2 + ph))) - 0.75);
+    const r = 1 + a1 * Math.sin(3 * t + p1) + a2 * Math.sin(5 * t + p2) + 0.24 * (Math.sqrt(Math.abs(Math.sin((n * t) / 2 + ph))) - 0.75);
     const x = cx + Math.cos(t) * rx * r, y = cy + Math.sin(t) * ry * r;
     if (i === 0) p.moveTo(x, y); else p.lineTo(x, y);
   }
@@ -870,7 +872,7 @@ function paintFruit(g: Ctx, job: Job, at: Hang[], r: number, sun: { sx: number; 
   at.forEach((h, i) => {
     if (!f.pairs) {
       spots.push([h.x, h.y]);
-      lip(h, h.x - r * 0.2, h.y - r * 1.15, r * 1.5, r * 0.8);
+      lip(h, h.x - r * 0.2, h.y - r * 1.35, r * 1.25, r * 0.6);
       return;
     }
     const dx = r * (0.8 + 0.15 * (i % 3)), dy = r * 0.4 * ((i % 2) * 2 - 1);
@@ -907,20 +909,31 @@ function paintFruit(g: Ctx, job: Job, at: Hang[], r: number, sun: { sx: number; 
     }
     return p;
   };
-  g.fillStyle = rgb(KIT_INK, 0.85);
-  g.fill(body(0, 0, 1, KIT_INK_W * 0.5));
+  g.fillStyle = rgb(KIT_INK, 0.9);
+  g.fill(body(0, 0, 1, KIT_INK_W * 0.35));
   g.fillStyle = rgb(mixRgb(base, KIT_INK, 0.35));
   g.fill(body(0, 0, 1));
-  g.fillStyle = rgb(base);
+  // A dark fruit lit a step paler, so it stands off the leaf behind it.
+  const dark = base[0] * 0.3 + base[1] * 0.59 + base[2] * 0.11 < 100;
+  g.fillStyle = rgb(dark ? mixRgb(base, [255, 255, 255], 0.22) : base);
   g.fill(body(sun.sx * r * 0.14, sun.sy * r * 0.14 - r * 0.1, 0.78));
   if (!job.light.night) {
-    g.fillStyle = rgb(mixRgb(base, [255, 255, 255], 0.6));
-    const shine = new Path2D();
+    // Its lit edge, and a fleck of shine on its shoulder.
+    const pale = rgb(mixRgb(base, [255, 255, 255], 0.75));
+    const edge = new Path2D(), shine = new Path2D();
+    const a = Math.atan2(sun.sy - 0.5, sun.sx);
     for (const [x, y] of spots) {
-      const hx = x + sun.sx * r * 0.32, hy = y + sun.sy * r * 0.32 - r * 0.38;
-      shine.moveTo(hx + r * 0.22, hy);
-      shine.arc(hx, hy, r * 0.22, 0, TAU);
+      edge.moveTo(x + Math.cos(a - 0.9) * r * 0.8, y + Math.sin(a - 0.9) * r * 0.8);
+      edge.arc(x, y, r * 0.8, a - 0.9, a + 0.9);
+      const hx = x + Math.cos(a) * r * 0.42, hy = y + Math.sin(a) * r * 0.42;
+      shine.moveTo(hx + r * 0.26, hy);
+      shine.arc(hx, hy, r * 0.26, 0, TAU);
     }
+    g.strokeStyle = pale;
+    g.lineWidth = Math.max(0.3, r * 0.2);
+    g.lineCap = 'round';
+    g.stroke(edge);
+    g.fillStyle = pale;
     g.fill(shine);
   }
   for (const [col, p] of lips) {
@@ -1279,7 +1292,8 @@ export function paintTree3d(g: Ctx, job: Job): void {
   for (const it of items) it.draw();
   paintCarving(g, job);
   if (spec.orchard && dress.fruit) {
-    const r = Math.max(0.9, sk.crown.r * (spec.orchard.fruit.pairs ? 0.032 : 0.042) * spec.orchard.fruit.size * ACROSS);
+    // A step bigger in the coarsest bakes, the ones seen from far out, where it would be a speck.
+    const r = Math.max(0.9, sk.crown.r * (spec.orchard.fruit.pairs ? 0.032 : 0.042) * spec.orchard.fruit.size * ACROSS) * ((job.scale ?? 2) <= 2 ? 1.35 : 1);
     const pairs = spec.orchard.fruit.pairs;
     paintFruit(g, job, fruitSpots({ ...job, dress: { ...dress, fruit: (dress.fruit ?? 0) / (pairs ? 2 : 1) } }, shown, pairs ? r * 2 : r), r, sun);
   }

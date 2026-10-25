@@ -103,8 +103,9 @@ export interface TreeView {
   sway: number;
 }
 
-/** Which of `FORMS` a tile's tree is grown as. */
+/** Which of `FORMS` a tile's tree is grown as, and which of its own species' forms (`Species3D.forms`). */
 export const formAt = (x: number, y: number): number => Math.floor(hash2(Math.round(x), Math.round(y), 5309) * FORMS) % FORMS;
+const formOf = (species: number, x: number, y: number): number => formAt(x, y) % Math.max(1, Math.min(FORMS, SPECIES.get(species)?.forms ?? FORMS));
 /** The wind's frame a tile's tree is at: each its own beat. */
 export const swayAt = (x: number, y: number, ms: number): number =>
   Math.floor(ms / SWAY_MS + hash2(Math.round(x), Math.round(y), 811) * SWAY_FRAMES) % SWAY_FRAMES;
@@ -220,7 +221,7 @@ function bake(scale: number, species: number, variant: number, form: number, dre
   g.scale(scale, scale);
   g.translate(-x0, -y0);
   const t1 = performance.now();
-  paintTree3d(g, { sk, spec, dress, light: lightOf(step), e, seed, frame });
+  paintTree3d(g, { sk, spec, dress, light: lightOf(step), e, seed, frame, scale });
   tree3dStats.paintMs += performance.now() - t1;
   footShade(g, sk);
   tree3dStats.bakes++;
@@ -234,7 +235,7 @@ function bake(scale: number, species: number, variant: number, form: number, dre
  * all it may.
  */
 export function tree3dSprite(species: number, variant: number, season: Season, day: number, at: TreeView, scale: number): TreeSprite {
-  const form = formAt(at.x, at.y);
+  const form = formOf(species, at.x, at.y);
   const { dress, key: look } = dressFor(species, variant, season, day);
   const step = sunStepOf(at.hour, at.dark);
   // The bare wood has no leaf to move.
@@ -295,7 +296,7 @@ const SHADE_SCALE = 2;
  * throws none. The renderer lays it with the ground (`Renderer.solidFrame`).
  */
 export function tree3dShadow(species: number, variant: number, season: Season, day: number, x: number, y: number, step: number, turn: number): TreeShade | null {
-  const form = formAt(x, y);
+  const form = formOf(species, x, y);
   const { dress, key: look } = dressFor(species, variant, season, day);
   const head = `${species}|${variant}|${form}|${look}|`;
   const k = `${head}${step}|${turn}`;
@@ -380,5 +381,5 @@ const shadows = new Map<string, TreeShade | null>();
 
 /** How far round a tile's tree's foot its own shade reaches, in pixels at zoom one across, before it grows (`grownAt`). */
 export function tree3dFoot(species: number, variant: number, x: number, y: number): number {
-  return footReach(skeletonOf(species, variant, formAt(x, y)));
+  return footReach(skeletonOf(species, variant, formOf(species, x, y)));
 }
