@@ -2611,6 +2611,28 @@ jobs:
             --outfile=node_modules/.cache/stairs.mjs --log-level=error
           node node_modules/.cache/stairs.mjs
 
+      - name: The builds the island takes, input timing on the watch, and the doors around them
+        if: matrix.shard == 3
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          BOOT_CHECK_STRICT: '1'
+        run: |
+          # The join refuses a build the deploy did not hand over, unless the
+          # island has none, it was retired within the hour, it is of a later
+          # deploy, or the check fails; the words are the page's. The browser's
+          # count of its own clicks and keys, held to the island's lines, raises
+          # an input flag on the watch once a day per body and nothing else.
+          # And with them, the page and the doors they sit beside: the built
+          # page starts with its names renamed and its wire code obfuscated,
+          # everything typechecks, and the accounts, watch and keeper tests.
+          npm run typecheck
+          node scripts/boot-check.mjs
+          for t in build inputwatch accounts watch keeper; do
+            npx esbuild supabase/test/$t.ts --bundle --platform=node --format=esm \
+              --external:typescript --outfile=node_modules/.cache/s3-$t.mjs --log-level=error
+            node node_modules/.cache/s3-$t.mjs
+          done
+
       - name: Mounts up wide staircases
         if: matrix.shard == 3
         run: |
@@ -4542,6 +4564,10 @@ jobs:
     environment: AI
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # The whole history, so the build this job makes for "The builds the island takes" counts
+          # the same deploy number as the "Build site" workflow's.
+          fetch-depth: 0
       - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
         id: cli
         continue-on-error: true
@@ -4763,6 +4789,52 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: The builds the island takes
+        # The join refuses a build of the site the island does not know, as
+        # "Game updated. Reload." (20261026050000). Every build hashes its own
+        # scripts and stylesheets (scripts/harden.mjs) into assets/version.json;
+        # this hands the island two: the build committed here, and the one this
+        # job makes from the same commit, which is what the "Build site"
+        # workflow commits and serves if the committed one was out of date.
+        # Every other build is retired, and taken for an hour more, so a page
+        # open across the deploy keeps playing. A build of a later deploy than
+        # any handed over is taken too: Pages serves the new site before this
+        # run reaches the island.
+        #
+        # Allowed to fail without failing the deploy: the island takes every
+        # build while it has none, and the last deploy's for an hour after.
+        # The list goes to psql as a variable and reaches the database as a
+        # quoted literal, as supabase/owner.sql's address does.
+        continue-on-error: true
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+        run: |
+          set -o pipefail
+          pick='select(type == "object" and (.build | type) == "string") | {build, deploy}'
+          committed=$(jq -c "$pick" assets/version.json 2>/dev/null || true)
+          npx vite build --logLevel warn > vite.log 2>&1 || { tail -20 vite.log; echo "::warning::Could not build the site here; handing over the committed build only."; }
+          built=$(jq -c "$pick" dist/assets/version.json 2>/dev/null || true)
+          BUILDS=$(printf '%s\n%s\n' "$committed" "$built" | jq -cs 'map(select(. != null)) | unique')
+          if [ "$BUILDS" = "[]" ]; then
+            echo "::warning::No build hash in assets/version.json or in this job's build, so the island's builds are as they were."
+            exit 0
+          fi
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD" PGCONNECT_TIMEOUT=20
+          urls=""
+          if [ -s supabase/.temp/pooler-url ]; then
+            urls="$(sed 's/:\[YOUR-PASSWORD\]//' supabase/.temp/pooler-url)"
+          fi
+          urls="$urls postgresql://postgres@db.$PROJECT_REF.supabase.co:5432/postgres"
+          for url in $urls; do
+            if said=$(psql "$url" -X -q -t -A -v ON_ERROR_STOP=1 -v builds="$BUILDS" -f supabase/build.sql); then
+              echo "The island takes $BUILDS, and the last deploy's builds for an hour: ${said} current."
+              echo "### Builds the island takes" >> "$GITHUB_STEP_SUMMARY"
+              echo "$BUILDS" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          done
+          echo "::warning::Could not reach the database to hand over the builds. The island takes the last deploy's for an hour, and the next deploy tries again."
       - name: Carry the generator's moves onto islands already founded
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}

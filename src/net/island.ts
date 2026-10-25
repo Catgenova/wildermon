@@ -30,6 +30,8 @@ import { isBarred, type Kept, type KeptBody, type KeptReport } from '../game/kee
 import type { Barter } from '../game/barter';
 import type { Notice, SettleBoard } from '../game/noticeboard';
 import { presenceOf } from './presence';
+import { BUILD, DEPLOY, StaleBuild } from '../version';
+import type { InputNote } from '../engine/cadence';
 
 /**
  * The jobs whose work shows only on the ground's slow half: Clear the ivy and
@@ -1474,6 +1476,15 @@ export class Island {
   async join(worldId: string, name: string): Promise<void> {
     this.uid = await signIn();
     const sb = supabase();
+    /*
+     * This build, before anything else: an old or altered page is sent back
+     * for the current one (20261026050000). Only a plain no refuses; a check
+     * that cannot be made lets the join go on.
+     */
+    if (BUILD) {
+      const { data: build, error: unchecked } = await sb.rpc('rpc_build_check', { p_build: BUILD, p_deploy: DEPLOY ?? null });
+      if (!unchecked && (build as { ok?: unknown } | null)?.ok === false) throw new StaleBuild();
+    }
     const { data, error } = await sb.rpc('rpc_join', { p_world: worldId, p_name: name });
     if (error) throw new Error(`The island would not have us: ${error.message}`);
     const got = data as { world: WorldRow; you: PlayerRow; new: boolean };
@@ -2012,6 +2023,16 @@ export class Island {
   private armBeat(seconds: number): void {
     if (this.beat) clearTimeout(this.beat);
     this.beat = setTimeout(() => void this.pulse(), Math.max(0.5, seconds) * 1000);
+  }
+
+  /** Input timing for the island's watch (`src/engine/cadence.ts`): a flag at most, so nothing comes back and a failure is dropped. */
+  async inputNote(note: InputNote): Promise<void> {
+    if (!this.info) return;
+    try {
+      await supabase().rpc('rpc_input_note', { p_world: this.info.id, p_note: note });
+    } catch {
+      /* the next one goes in its turn */
+    }
   }
 
   /** One beat; true when the island answered it. */

@@ -19,6 +19,16 @@ export const WATCH_SKILL_TIMES = 3;
 export const WATCH_SKILL_MINS = 60;
 /** Parts in a thousand an item's total may be off the ledger before it is flagged; any difference at all under a thousand. */
 export const WATCH_STOCK_PER_MILLE = 1;
+/** Intervals in a run of clicks or keys before its timing counts (`watch_input_run`). */
+export const WATCH_INPUT_RUN = 40;
+/** Spread of a run's intervals, parts per thousand of their mean, at or under which an Input timing flag is raised. */
+export const WATCH_INPUT_CV = 30;
+/** Parts per thousand of mouse clicks with no pointer movement before them that raise an Input timing flag. */
+export const WATCH_INPUT_STILL = 950;
+/** Clicks and keys dispatched by a script that raise an Input timing flag. */
+export const WATCH_INPUT_SYNTHETIC = 10;
+/** Minutes between the input summaries the island reads from one body. */
+export const WATCH_INPUT_MINS = 4;
 
 /** The kinds of flag, and the label each is shown under. */
 export const FLAG_KINDS = {
@@ -27,6 +37,7 @@ export const FLAG_KINDS = {
   skill: 'Skill rate',
   stock: 'Stock off ledger',
   no_door: 'Made outside any door',
+  input: 'Input timing',
 } as const;
 export type FlagKind = keyof typeof FLAG_KINDS;
 
@@ -86,6 +97,15 @@ export function flagLine(f: WatchFlag): string {
       return `${str(d.name)}: ${signed(num(d.diff))} · start of ${str(d.day)}: ${num(d.found)} counted, ${num(d.expected)} by ledger`;
     case 'no_door':
       return `${str(d.name)}: ${num(d.count)} on ${str(d.day)}`;
+    case 'input': {
+      const why = Array.isArray(d.why) ? (d.why as string[]) : [];
+      const parts: string[] = [];
+      if (why.includes('clicks')) parts.push(`Clicks: ${num(d.clicks)} at ${num(d.click_ms)} ms, spread ${num(d.click_cv) / 10}%`);
+      if (why.includes('keys')) parts.push(`Keys: ${num(d.keys)} at ${num(d.key_ms)} ms, spread ${num(d.key_cv) / 10}%`);
+      if (why.includes('still')) parts.push(`Still clicks: ${num(d.still)} of ${num(d.mouse)}`);
+      if (why.includes('synthetic')) parts.push(`Synthetic: ${num(d.synthetic)}`);
+      return parts.join(' · ') || JSON.stringify(d);
+    }
     default:
       return JSON.stringify(d);
   }
