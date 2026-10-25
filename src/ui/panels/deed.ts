@@ -430,7 +430,7 @@ export class DeedPanel {
         tool('Rename', `Rename ${r.name}`, null, () => {
           void g.hooks.prompt(`Rename ${r.name} (max ${RANK_NAME_MAX} characters):`, r.name).then((to) => {
             if (to === null || to.trim() === r.name) return;
-            const why = rankNameRefusal(here.name, defs, to, r.id);
+            const why = rankNameRefusal(here.name, defs, to, r.id, g.keeper);
             if (why) g.logMsg(why, 'error');
             else this.ask(roll.rename(r.id, to.trim()));
           });
@@ -477,7 +477,7 @@ export class DeedPanel {
     add.addEventListener('click', () => {
       void g.hooks.prompt(`New rank name (max ${RANK_NAME_MAX} characters):`, '').then((name) => {
         if (name === null) return;
-        const why = rankAddRefusal(here.name, defs, name);
+        const why = rankAddRefusal(here.name, defs, name, g.keeper);
         if (why) g.logMsg(why, 'error');
         else this.ask(roll.add(name.trim()));
       });

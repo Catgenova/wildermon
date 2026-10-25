@@ -27,6 +27,7 @@
  * holds the two to each other.
  */
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAX, WORK_COUNT_MAX, WORK_OPEN_MAX } from './noticeboard';
+import { cleanText, nameRefusal } from './playertext';
 
 /**
  * What somebody is on a settlement: `founder` for whoever planted the stake,
@@ -262,19 +263,22 @@ export const lacks = (d: Ranked | null | undefined, p: PowerId): string | null =
 /* ---- naming, ordering and deleting a rank: the founder's -------------------- */
 
 /** Why a name will not do for a rank of this settlement, or null. `except` is the rank being renamed. */
-export function rankNameRefusal(deed: string, defs: readonly RankDef[], name: string, except?: number): string | null {
-  const n = name.trim();
+export function rankNameRefusal(deed: string, defs: readonly RankDef[], name: string, except?: number, keeper = false): string | null {
+  const n = cleanText(name);
   if (!n) return 'Name the rank.';
-  if (n.length > RANK_NAME_MAX) return `Rank name: max ${RANK_NAME_MAX} characters.`;
+  if ([...n].length > RANK_NAME_MAX) return `Rank name: max ${RANK_NAME_MAX} characters.`;
   if (n.toLowerCase() === FOUNDER) return 'Founder is not a rank name.';
+  // Not a keeper's or staff's name, unless a keeper of the island names it (the island's `name_refusal`).
+  const reserved = nameRefusal(n, [], keeper);
+  if (reserved) return reserved;
   if (defs.some((r) => r.id !== except && r.name.toLowerCase() === n.toLowerCase())) return `${deed} already has a rank named ${n}.`;
   return null;
 }
 
 /** Why a new rank will not be made, or null. The island's `rpc_rank_add`. */
-export function rankAddRefusal(deed: string, defs: readonly RankDef[], name: string): string | null {
+export function rankAddRefusal(deed: string, defs: readonly RankDef[], name: string, keeper = false): string | null {
   if (defs.length >= RANK_CAP) return `${deed}: max ${RANK_CAP} ranks besides the founder.`;
-  return rankNameRefusal(deed, defs, name);
+  return rankNameRefusal(deed, defs, name, undefined, keeper);
 }
 
 /** Why a rank will not move a place up (-1) or down (1) the list, or null. `rpc_rank_move`. */

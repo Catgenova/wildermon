@@ -39,6 +39,7 @@
  */
 
 import { QL_TOP } from './limits';
+import { cleanText } from './playertext';
 
 /** The longest a notice may be, in characters, after runs of spaces and line breaks are made one space. */
 export const NOTICE_MAX = 200;
@@ -191,8 +192,8 @@ export interface SettleBoard {
   room: number | null;
 }
 
-/** A notice as it is kept: trimmed, every run of spaces, tabs and line breaks made one space. */
-export const cleanNotice = (text: string): string => text.trim().replace(/\s+/g, ' ');
+/** A notice as it is kept: cleaned as any player text is (`cleanText`), and refused rather than cut when too long. */
+export const cleanNotice = (text: string): string => cleanText(text);
 
 /** Why a notice will not be posted, or null: `rpc_notice_post`, after the rank. */
 export function noticeRefusal(text: string): string | null {

@@ -51,6 +51,7 @@ import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS, world } from './pace';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, bagCarry, HIT_LOCATIONS, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
 import { boonOf, boonTime, BOON_BONUS, clockLeft, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
 import { cleanSaid } from './chat';
+import { cleanText, nameRefusal, NAMES_ASKED } from './playertext';
 import { ALL_GOALS } from './journal';
 import { journalRulesA } from './journal-a';
 import * as creatureRules from './creatures';
@@ -1146,6 +1147,9 @@ export class Game {
 
   /** The last log on or off the island said (`src/net/presence.ts`), for the banner: who, which, and when it came in. Not saved. */
   loggedSaid: { name: string; on: boolean; at: number } | null = null;
+
+  /** Whether this body keeps the island (`rpc_owner_am_i`): a keeper's names are not refused as a keeper's (`playertext.ts`). Not saved. */
+  keeper = false;
 
   private swingMissed = false;
   /** Whether the go in hand had its roll taken by a Foreknow, which spends one of its goes when the go is done. */
@@ -2929,9 +2933,15 @@ export class Game {
     const asks = def.asks;
     if (!asks) return;
     const said = await this.hooks.prompt(asks.question, asks.fallback?.(target, this) ?? '');
-    const name = said === null ? null : said.trim().slice(0, asks.max ?? 32);
+    const name = said === null ? null : cleanText(said, asks.max ?? 32);
     if (name === null || (!name && !asks.allowEmpty)) {
       if (asks.declined) this.logMsg(asks.declined, 'info');
+      return;
+    }
+    // A name that reads as a keeper or staff, refused before it is sent, in the island's words (`act_refusal`).
+    const reserved = (NAMES_ASKED as readonly string[]).includes(def.id) ? nameRefusal(name, [], this.keeper) : null;
+    if (reserved) {
+      this.logMsg(reserved, 'error');
       return;
     }
     this.requestAction(def, { ...target, name } as unknown as Target, goes);

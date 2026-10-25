@@ -670,6 +670,7 @@ export class UI {
     // Whether this body keeps the island, asked once now that it is ashore.
     const isle = this.island;
     if (isle) void isle.amKeeper().then((yes) => {
+      this.game.keeper = yes;
       if (yes) this.makeKeeper(isle);
     });
   }
