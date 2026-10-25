@@ -537,7 +537,7 @@ export const FURNITURE: FurnitureDef[] = [
     '',
     undefined, { heft: 100, takes: 'sprout' }),
   piece('trash_crate', 'Trash crate', 1, 1, [['plank', 12], ['nail', 12]], 8, 5, '', 30, { trash: 30 }),
-  piece('cart', 'Small cart', 2, 1, [['plank', 32], ['shaft', 4], ['nail', 32]], 18, 14, '', 100, { cart: true }),
+  piece('cart', 'Small cart', 2, 1, [['plank', 32], ['shaft', 4]], 18, 14, '', 100, { cart: true }),
   // The two that are driven rather than carried. A wheelwright's bill: wheels
   // on cast axles, a body banded with metal ribbon, and a yoke a wildermon is
   // hitched into.

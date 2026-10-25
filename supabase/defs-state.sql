@@ -8475,7 +8475,6 @@ insert into recipe_input (recipe, ord, item, count, litres) values ('make_trash_
 insert into recipe (id, result, count, tool, station, skill, label, verb, base_time, stamina, difficulty, consume_on_fail, ql_from_inputs, material, wood, extra, done, fail) values ('make_cart', 'cart', 1, 'mallet', null, 'fine_carpentry', 'Build small cart', 'building a small cart', 14, 0.05, 18, false, false, 'wood', null, null, 'Set down on any spot of a tile.', 'Failed: small cart. Inputs kept.');
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_cart', 0, 'plank', 32, null);
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_cart', 1, 'shaft', 4, null);
-insert into recipe_input (recipe, ord, item, count, litres) values ('make_cart', 2, 'nail', 32, null);
 insert into recipe (id, result, count, tool, station, skill, label, verb, base_time, stamina, difficulty, consume_on_fail, ql_from_inputs, material, wood, extra, done, fail) values ('make_large_cart', 'large_cart', 1, 'mallet', null, 'carpentry', 'Build large cart', 'building a large cart', 40, 0.05, 30, false, false, 'wood', null, null, 'Set down on any spot of a tile.', 'Failed: large cart. Inputs kept.');
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_large_cart', 0, 'plank', 80, null);
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_large_cart', 1, 'timber', 24, null);

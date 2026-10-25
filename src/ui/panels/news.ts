@@ -3866,6 +3866,7 @@ export const NEWS: News[] = [
     lines: () => [
       "Fixed: other players' wildermon drawn and named at their own level and stage (was level 1, first stage).",
       `Fixed: Change tile on packed dirt: "${PACKED_FIRST}"`,
+      `Changed: small cart ${recipeBill('make_cart')} (no nails).`,
     ],
   },
 ];
