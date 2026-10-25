@@ -599,6 +599,8 @@ interface Entity {
    * `deckKey`).
    */
   key?: number;
+  /** A field on a slope: how far its picture's points go down the screen for each pixel across and down from its middle (`fieldTilt`). */
+  tilt?: [number, number];
   /** A lotus standing up off the water: its raised leaves, flowers and seed heads, sorted among what else stands there. */
   plant?: WaterPlant;
   /** A mote swirl turning over the tile (`./swirls`). */
@@ -1228,6 +1230,8 @@ const FIELD_LIP = 0.07;
 const FIELD_LIP_TOP = 'rgba(255,232,206,0.22)';
 const FIELD_LIP_SHADE = 'rgba(70,50,32,0.38)';
 const FIELD_LIP_FOOT = 'rgba(58,40,26,0.5)';
+/** The most a field's picture is sheared down the screen for each pixel across or down it (`fieldTilt`). */
+const FIELD_TILT_MOST = 0.45;
 
 export class Renderer {
   readonly camera = new Camera();
@@ -1424,6 +1428,7 @@ export class Renderer {
     e.sp = undefined;
     e.spAlpha = undefined;
     e.key = undefined;
+    e.tilt = undefined;
     e.clip = undefined;
     this.ents.push(e);
     return e;
@@ -3175,6 +3180,25 @@ export class Renderer {
   private hemRun: number[] = [];
 
   /**
+   * A field on a slope, as a shear of its flat picture: the plane through its
+   * corners' heights, as how far each point goes down the screen for each
+   * pixel across and down from the tile's middle, so its furrows lie on the
+   * ground and its plants stand on it. Undefined on the flat. `off` is the
+   * tile's corners on the screen from its base point, `ox, oy` its middle.
+   */
+  private fieldTilt(c: ArrayLike<number>, off: ArrayLike<number>, ox: number, oy: number, avg: number, hs: number): [number, number] | undefined {
+    if (c[0] === c[1] && c[1] === c[2] && c[2] === c[3]) return undefined;
+    let dx = 0, dy = 0, xx = 0, yy = 0;
+    for (let i = 0; i < 4; i++) {
+      const X = off[i * 2] - ox, Y = off[i * 2 + 1] - oy, D = -(c[i] - avg) * hs;
+      dx += D * X; dy += D * Y; xx += X * X; yy += Y * Y;
+    }
+    // Kept to a plane a field can lie on: past that a picture sheared that far is more stretch than slope.
+    const most = FIELD_TILT_MOST;
+    return [Math.max(-most, Math.min(most, xx > 0 ? dx / xx : 0)), Math.max(-most, Math.min(most, yy > 0 ? dy / yy : 0))];
+  }
+
+  /**
    * A field's edges where it meets anything but field: a lip of turned soil
    * along each, a little raised -- its top lit, a line of shade inside it
    * and its foot outside. Field against field runs on with no edge.
@@ -4695,11 +4719,13 @@ export class Renderer {
              */
             this.take('crop', x, y, mx, my - avg * hs,
               cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], this.dormant && !crop.glass, cam.rotation, this.cropStep,
-                Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS)));
+                Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS))).tilt = this.fieldTilt(c, off, mx - baseX, my - baseY, avg, hs);
           } else {
             // A field tilled and lying fallow: its ridges and furrows, rimed in a winter out of glass. Ground, so first on its line, under whoever stands on it.
             const rimed = this.dormant && !isGlasshouse(this.game.buildings, this.game.buildings.buildingAt(x, y));
-            this.take('crop', x, y, mx, my - avg * hs, cropSprite('', -1, '', '', rimed, cam.rotation, this.cropStep)).key = -1e9;
+            const bare = this.take('crop', x, y, mx, my - avg * hs, cropSprite('', -1, '', '', rimed, cam.rotation, this.cropStep));
+            bare.key = -1e9;
+            bare.tilt = this.fieldTilt(c, off, mx - baseX, my - baseY, avg, hs);
           }
         }
         /*
@@ -7262,7 +7288,11 @@ export class Renderer {
       // A field's shade is its plants', thrown in its bake (`fieldBake`).
       if (ent.kind !== 'crop' && this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
       const ready = this.atSize(spr.canvas, dw, dh);
-      this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => g.drawImage(ready, px - spr.ax * zoom, py - spr.ay * zoom, dw, dh), undefined,
+      const tilt = ent.tilt;
+      this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, tilt
+        // A field on a slope: its flat picture sheared onto the ground about its middle (`fieldTilt`).
+        ? (g, px, py) => { g.save(); g.transform(1, tilt[0], 0, 1 + tilt[1], 0, -tilt[0] * px - tilt[1] * py); g.drawImage(ready, px - spr.ax * zoom, py - spr.ay * zoom, dw, dh); g.restore(); }
+        : (g, px, py) => g.drawImage(ready, px - spr.ax * zoom, py - spr.ay * zoom, dw, dh), undefined,
         [ent.sx - spr.ax * zoom, ent.sy - spr.ay * zoom, dw, dh]);
       /*
        * And the shine, over the top of whatever it is, because the light comes

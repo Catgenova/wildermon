@@ -5,9 +5,9 @@
 import { mulberry32 } from '../world/noise';
 import { HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { KIT_INK, KIT_INK_W } from './kit/core';
-import { eyeOf, proj } from './runestone';
+import { eyeOf, proj, type Eye } from './runestone';
 import { ACROSS } from './trees3d/paint';
-import { lightOf, type Light } from './trees3d/light';
+import { lightOf, SUN_STEPS, type Light } from './trees3d/light';
 import type { RGB, V3 } from './trees3d/types';
 import { hex, mixRgb, rgb } from './trees3d/vec';
 
@@ -152,6 +152,13 @@ const GREEN_HEAD = '#d8f0a0';
 const NEEDLE_DARK = '#1e3a2c';
 const WOODY_STEM = '#5e4632';
 const AWN_LIGHT = '#fff4d0';
+/** What each herb's leaf is taken toward, so each reads by its colour as well as its shape: sage silver, basil bright, thyme pale, mint fresh. */
+const SAGE_SILVER = '#c9d2c2';
+const BASIL_BRIGHT = '#6cd04a';
+const THYME_PALE = '#d8e4be';
+const MINT_BRIGHT = '#7fe0a0';
+/** The gloss along a glossy leaf (basil). */
+const GLOSS = 'rgba(255,255,250,0.55)';
 /** What a sprout's first leaves are taken toward: fresh and bright. */
 const SPROUT_GREEN = '#b8e07a';
 /** Ripe grain: its heads warmed toward this, its stems a step darker. */
@@ -170,13 +177,13 @@ const TASSEL = '#cdb07e';
 
 /** Plants a row on a tile, by crop: a stage before ripe has the same. */
 const PER_ROW: Record<string, number> = {
-  wheat: 7, corn: 3, onion: 6, carrot: 6, cabbage: 3, potato: 3, sage: 4, basil: 4, thyme: 5, mint: 5, rosemary: 4, cotton: 3, wemp: 4,
+  wheat: 7, corn: 3, onion: 6, carrot: 6, cabbage: 3, potato: 3, sage: 3, basil: 4, thyme: 6, mint: 5, rosemary: 5, cotton: 3, wemp: 4,
 };
 
 type P2 = [number, number];
 type Op =
   | { k: 'stalk'; pts: V3[]; w: number; col: string; bare?: boolean }
-  | { k: 'leaf'; pts: V3[]; n: V3; col: string; rib?: boolean }
+  | { k: 'leaf'; pts: V3[]; n: V3; col: string; rib?: boolean; gloss?: boolean }
   | { k: 'ball'; c: V3; r: number; col: string; shine?: boolean }
   | { k: 'spindle'; a: V3; b: V3; w: number; col: string; shine?: boolean };
 
@@ -325,60 +332,72 @@ function plantOf(id: string, stage: number, leaf: string, fruit: string, R: () =
       break;
     }
     case 'sage': {
-      for (let i = 0; i < 9; i++) {
-        const a = a0 + i * 0.7 + R() * 0.3, z = 0.6 + (i % 3) * 1.4;
-        ops.push(leafOps([0, 0, z], out([0, 0, z], a, (3.3 + R()) * k, 1.8 * k), 1.25 * k, i > 5 ? mixH(leaf, fruit, ripe ? 0.6 : 0.2) : leaf, 0.4, 0.6));
+      // A broad, low, silvery dome of soft oval leaves, a round crown under them.
+      const silver = mixH(leaf, SAGE_SILVER, 0.22);
+      ops.push({ k: 'ball', c: [0, 0, 1.8 * k], r: 2.2 * k, col: mixH(silver, '#000000', 0.12) });
+      for (let i = 0; i < 13; i++) {
+        // Three rings, low and wide to high and in, each turned off the one under it.
+        const ring = i < 7 ? 0 : i < 11 ? 1 : 2, n = [7, 4, 2][ring], j = i - [0, 7, 11][ring];
+        const a = a0 + ring * 0.5 + (j / n) * Math.PI * 2 + R() * 0.25, z = (0.6 + ring * 1.3) * k;
+        const col = ring === 2 ? mixH(silver, fruit, ripe ? 0.5 : 0.15) : ring === 1 ? silver : mixH(silver, '#000000', 0.05);
+        ops.push(leafOps([0, 0, z], out([0, 0, z], a, (4.0 - ring * 0.9 + R() * 0.4) * k, (0.6 + ring * 0.5) * k), 1.7 * k, col, 0.4, 0.6));
       }
       if (ripe) for (let i = 0; i < 3; i++) {
-        const b = out([0, 0, 3], a0 + i * 2.1, 1.6, 4.5);
-        ops.push({ k: 'stalk', pts: [[0, 0, 3], b], w: 0.5, col: leaf });
-        ops.push({ k: 'spindle', a: out(b, a0 + i * 2.1, 0.1, -0.6), b: out(b, a0 + i * 2.1, 0.5, 2.3), w: 0.55, col: FLOWER.sage, shine: true });
+        const b = out([0, 0, 3.4], a0 + i * 2.1, 1.2, 4.0);
+        ops.push({ k: 'stalk', pts: [[0, 0, 3.2], b], w: 0.5, col: silver });
+        ops.push({ k: 'spindle', a: out(b, a0 + i * 2.1, 0.1, -0.6), b: out(b, a0 + i * 2.1, 0.4, 2.4), w: 0.55, col: FLOWER.sage, shine: true });
       }
       break;
     }
     case 'basil': {
-      const h = 5.5 * k;
-      ops.push({ k: 'stalk', pts: [[0, 0, 0], [0, 0, h]], w: 0.8, col: leaf });
+      // A bushy, bright, glossy plant of big cupped leaves.
+      const bright = mixH(leaf, BASIL_BRIGHT, 0.3);
+      const h = 5.4 * k;
+      ops.push({ k: 'stalk', pts: [[0, 0, 0], [0, 0, h]], w: 0.8, col: bright });
       for (let j = 0; j < 3; j++) {
-        const z = h * (0.3 + j * 0.3), a = a0 + j * 1.57, r = (3.4 - j * 0.7) * k;
-        for (const s of [0, Math.PI]) ops.push(leafOps([0, 0, z], out([0, 0, z], a + s, r, 0.8), 1.5 * k, j === 2 ? mixH(leaf, fruit, ripe ? 0.65 : 0.25) : leaf, 1.0, 0.55, true));
+        const z = h * (0.25 + j * 0.3), a = a0 + j * 1.57, r = (4.0 - j * 0.8) * k;
+        for (const s of [0, Math.PI]) ops.push({ ...leafOps([0, 0, z], out([0, 0, z], a + s, r, 0.7), 2.0 * k, j === 2 ? mixH(bright, fruit, ripe ? 0.6 : 0.2) : bright, 0.9, 0.55, true), gloss: true } as Op);
       }
-      if (ripe) for (const s of [-1, 1]) ops.push({ k: 'spindle', a: out([0, 0, h - 0.5], a0 + s, 0.3, 0), b: out([0, 0, h - 0.5], a0 + s, 1.0, 2.6), w: 0.55, col: FLOWER.basil, shine: true });
+      if (ripe) for (const s of [-1, 1]) ops.push({ k: 'spindle', a: out([0, 0, h - 0.5], a0 + s, 0.3, 0), b: out([0, 0, h - 0.5], a0 + s, 0.9, 2.4), w: 0.55, col: FLOWER.basil, shine: true });
       break;
     }
     case 'thyme': {
-      for (let i = 0; i < 5; i++) {
-        const c = i === 4 ? [0, 0, 1.6 * k] as V3 : out([0, 0, 0], a0 + i * 1.57, 1.9 * k, 1.0 * k);
-        ops.push({ k: 'ball', c, r: 1.7 * k, col: i === 4 ? mixH(leaf, fruit, ripe ? 0.55 : 0.2) : leaf });
+      // A low, pale, spreading mat.
+      const pale = mixH(leaf, THYME_PALE, 0.32);
+      for (let i = 0; i < 7; i++) {
+        const c = i === 6 ? [0, 0, 0.9 * k] as V3 : out([0, 0, 0], a0 + i * 1.05, 2.3 * k, 0.7 * k);
+        ops.push({ k: 'ball', c, r: 1.35 * k, col: i % 2 ? pale : mixH(pale, fruit, ripe ? 0.45 : 0.15) });
       }
-      if (ripe) for (let i = 0; i < 5; i++) ops.push({ k: 'ball', c: out([0, 0, 0], a0 + i * 1.26 + 0.6, i === 4 ? 0.3 : 1.7, i === 4 ? 3.6 : 2.6), r: 0.62, col: FLOWER.thyme, shine: true });
+      if (ripe) for (let i = 0; i < 6; i++) ops.push({ k: 'ball', c: out([0, 0, 0], a0 + i * 1.05 + 0.5, i === 5 ? 0.3 : 1.8, 1.9), r: 0.5, col: FLOWER.thyme, shine: true });
       break;
     }
     case 'mint': {
-      for (let i = 0; i < 4; i++) {
-        const a = a0 + i * 1.57 + R() * 0.4, h = (4.6 + R() * 1.2) * k;
-        const top = out([0, 0, 0], a, 1.2, h);
-        ops.push({ k: 'stalk', pts: [[0, 0, 0], top], w: 0.6, col: leaf });
-        for (let j = 0; j < 2; j++) {
-          const z = h * (0.45 + j * 0.35);
-          const c = out([0, 0, 0], a, 1.2 * (z / h), z);
-          for (const s of [-1, 1]) ops.push(leafOps(c, out(c, a + s * 1.57 + j, 1.9 * k, 0.4), 0.85 * k, j ? mixH(leaf, fruit, ripe ? 0.55 : 0.2) : leaf, 0.5, 0.5));
+      // Bright mid-green upright stems, leaves in pairs up each.
+      const bright = mixH(leaf, MINT_BRIGHT, 0.35);
+      for (let i = 0; i < 5; i++) {
+        const a = a0 + i * 1.26 + R() * 0.4, h = (6.2 + R() * 1.2) * k;
+        const top = out([0, 0, 0], a, 0.7, h);
+        ops.push({ k: 'stalk', pts: [[0, 0, 0], top], w: 0.6, col: bright });
+        for (let j = 0; j < 3; j++) {
+          const z = h * (0.35 + j * 0.25);
+          const c = out([0, 0, 0], a, 0.7 * (z / h), z);
+          for (const s of [-1, 1]) ops.push(leafOps(c, out(c, a + s * 1.57 + j, (1.8 - j * 0.3) * k, 0.3), 0.85 * k, j === 2 ? mixH(bright, fruit, ripe ? 0.5 : 0.15) : bright, 0.4, 0.5));
         }
-        if (ripe) ops.push({ k: 'spindle', a: top, b: out(top, a, 0.3, 2.4), w: 0.5, col: FLOWER.mint, shine: true });
+        if (ripe) ops.push({ k: 'spindle', a: top, b: out(top, a, 0.2, 1.9), w: 0.48, col: FLOWER.mint, shine: true });
       }
       break;
     }
     case 'rosemary': {
-      // Upright woody sprays, dark needles in pairs up each.
-      const needle = mixH(leaf, NEEDLE_DARK, 0.1);
-      for (let i = 0; i < 5; i++) {
-        const a = a0 + i * 1.26, h = (6.6 + R() * 1.4) * k, top = out([0, 0, 0], a, (1.5 + R()) * k, h);
-        ops.push({ k: 'stalk', pts: [[0, 0, 0], out([0, 0, 0], a, 0.5 * k, h * 0.55), top], w: 0.6, col: mixH(leaf, WOODY_STEM, 0.5) });
-        for (let j = 1; j <= 4; j++) {
-          const t = j / 4.6, c: V3 = [top[0] * t, top[1] * t, top[2] * t];
-          for (const s of [-1, 1]) ops.push(leafOps(c, out(c, a + s * 1.2, 1.3 * k, 0.9 * k), 0.38, j === 4 && ripe ? mixH(needle, fruit, 0.6) : needle, 0, 0.4));
+      // Dark, upright needle spikes on woody stems.
+      const needle = mixH(leaf, NEEDLE_DARK, 0.35);
+      for (let i = 0; i < 6; i++) {
+        const a = a0 + i * 1.05, h = (7.6 + R() * 1.6) * k, top = out([0, 0, 0], a, (0.9 + R() * 0.5) * k, h);
+        ops.push({ k: 'stalk', pts: [[0, 0, 0], out([0, 0, 0], a, 0.3 * k, h * 0.55), top], w: 0.55, col: mixH(leaf, WOODY_STEM, 0.5) });
+        for (let j = 1; j <= 6; j++) {
+          const t = j / 6.4, c: V3 = [top[0] * t, top[1] * t, top[2] * t];
+          for (const s of [-1, 1]) ops.push(leafOps(c, out(c, a + s * 1.3, 0.95 * k, 0.75 * k), 0.3, j >= 5 && ripe ? mixH(needle, fruit, 0.45) : needle, 0, 0.4));
         }
-        if (ripe) ops.push({ k: 'ball', c: out(top, a, -0.2, -1.4), r: 0.6, col: FLOWER.rosemary, shine: true });
+        if (ripe) for (const t of [0.7, 0.86]) ops.push({ k: 'ball', c: out([top[0] * t, top[1] * t, top[2] * t], a + 1.6, 0.6, 0), r: 0.5, col: FLOWER.rosemary, shine: true });
       }
       break;
     }
@@ -441,9 +460,7 @@ function plantsOf(id: string, stage: number, leaf: string, fruit: string, layout
       feet.push({ at: [-HALF + (i + 0.5) * (UNITS_PER_TILE / per) + jx, -HALF + (j + 0.5) * ROW + jy, RIDGE * 0.8], v: Math.floor(R() * VARIANTS) });
     }
   }
-  const kinds: Op[][] = [];
-  for (let v = 0; v < VARIANTS; v++) kinds.push(plantOf(id, stage, leaf, fruit, mulberry32(fieldHash(id) + v * 7919 + 131)));
-  return { feet, kinds };
+  return { feet, kinds: kindsOf(id, stage, leaf, fruit) };
 }
 
 function fieldHash(s: string): number {
@@ -556,9 +573,7 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
   const near = (p: V3): number => p[0] * e.toward[0] + p[1] * e.toward[1];
   feet.sort((a, b) => near(a.at) - near(b.at));
   // The sun across the screen, for which side of a round thing is lit.
-  const sv = [light.sun[0] * e.ux + light.sun[1] * e.vx, light.sun[0] * e.uy + light.sun[1] * e.vy - light.sun[2] * HEIGHT_SCALE];
-  const sl = Math.hypot(sv[0], sv[1]) || 1;
-  const look: PlantLook = { light, sun: [sv[0] / sl, sv[1] / sl], stalkLit: litOf(light, unitV([light.sun[0], light.sun[1], 0.4])) * 0.75, dormant };
+  const look = lookOf(light, e, dormant);
   // Each way the plant grows, painted once, its foot at the origin: the same for every layout of the tile.
   const sk = `${id}|${stage}|${dormant ? 1 : 0}|${turn}|${step}|${scale}`;
   let stamps = cropStamps.get(sk);
@@ -690,6 +705,58 @@ const cropStamps = new Map<string, Stamp[]>();
 const STAMPS_KEPT = 48;
 interface Stamp { cv: HTMLCanvasElement; x0: number; y0: number }
 
+/** How a bake's plants are lit, from a light and an eye. */
+function lookOf(light: Light, e: Eye, dormant: boolean): PlantLook {
+  // The sun across the screen, for which side of a round thing is lit.
+  const sv = [light.sun[0] * e.ux + light.sun[1] * e.vx, light.sun[0] * e.uy + light.sun[1] * e.vy - light.sun[2] * HEIGHT_SCALE];
+  const sl = Math.hypot(sv[0], sv[1]) || 1;
+  return { light, sun: [sv[0] / sl, sv[1] / sl], stalkLit: litOf(light, unitV([light.sun[0], light.sun[1], 0.4])) * 0.75, dormant };
+}
+
+/* ---- a planter's row ------------------------------------------------------------------- */
+
+/** The sun a planter's plants are lit by: a kit piece is baked once, so the late morning's. */
+const PLANTER_SUN = Math.round(SUN_STEPS * 0.4);
+
+/** A crop's plants at a stage, each way it grows (`VARIANTS`), its own roll the field's. */
+const kindsOf = (id: string, stage: number, leaf: string, fruit: string): Op[][] =>
+  Array.from({ length: VARIANTS }, (_, v) => plantOf(id, stage, leaf, fruit, mulberry32(fieldHash(id) + v * 7919 + 131)));
+
+/** A plant drawn `k` times its size: its round parts and stalks as well as its points. */
+const sized = (ops: Op[], k: number): Op[] => ops.map((op) => {
+  if (op.k === 'ball') return { ...op, c: [op.c[0] * k, op.c[1] * k, op.c[2] * k] as V3, r: op.r * k };
+  if (op.k === 'spindle') return { ...op, a: [op.a[0] * k, op.a[1] * k, op.a[2] * k] as V3, b: [op.b[0] * k, op.b[1] * k, op.b[2] * k] as V3, w: op.w * k };
+  const pts = op.pts.map((p) => [p[0] * k, p[1] * k, p[2] * k] as V3);
+  return op.k === 'stalk' ? { ...op, pts, w: Math.max(0.35, op.w * k) } : { ...op, pts };
+});
+
+/** How tall a planter's plants of a crop at a stage stand, `k` times their size, in model units. */
+export function planterTall(id: string, stage: number, k: number): number {
+  let top = 0;
+  for (const op of plantOf(id, stage, '#000000', '#000000', mulberry32(fieldHash(id) + 131))) {
+    const zs = op.k === 'ball' ? [op.c[2] + op.r] : op.k === 'spindle' ? [op.a[2], op.b[2]] : op.pts.map((p) => p[2]);
+    top = Math.max(top, ...zs);
+  }
+  return top * k + 1;
+}
+
+/**
+ * A planter's row of a crop at a stage, `k` times a field's size, seen by a
+ * kit piece's eye: the field's own plants (`plantOf`), lit and inked as
+ * they are, back to front, each foot at one of `at`.
+ */
+export function planterRow(g: CanvasRenderingContext2D, e: Eye, at: V3[], id: string, stage: number, leaf: string, fruit: string, k: number): void {
+  if (stage < 1) return;
+  const kinds = kindsOf(id, stage, leaf, fruit).map((ops) => sized(ops, k));
+  const look = lookOf(lightOf(PLANTER_SUN), e, false);
+  const order = at.map((p, i) => ({ p, i, d: p[0] * e.toward[0] + p[1] * e.toward[1] })).sort((a, b) => a.d - b.d);
+  g.save();
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  for (const { p, i } of order) paintPlant(g, kinds[i % VARIANTS], (q) => proj(e, [p[0] + q[0], p[1] + q[1], p[2] + q[2]]), look);
+  g.restore();
+}
+
 /** One way a plant grows, painted on a canvas of its own at `scale`, its foot `-x0, -y0` in from the corner: stamped on a tile as many times as it stands there. */
 function stampOf(ops: Op[], P: (p: V3) => P2, look: PlantLook, scale: number): Stamp {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -779,6 +846,19 @@ function paintPlant(g: CanvasRenderingContext2D, ops: Op[], P: (p: V3) => P2, { 
       const col = dormant ? mixH(op.col, RIME_TOP, op.n[2] > 0.3 ? FROST_UP : FROST_SIDE) : op.col;
       g.fillStyle = litCol(col, l);
       g.fill(path as Path2D);
+      if (op.gloss && pts && !dormant) {
+        // Glossy: a light along it, on its half toward the sun.
+        const n = pts.length / 2;
+        const a = pts[0], b = pts[n - 1], m = pts[Math.floor(n / 2)], o = pts[pts.length - 1 - Math.floor(n / 2)];
+        const sx = (m[0] - o[0]) * 0.25, sy = (m[1] - o[1]) * 0.25;
+        const side = sx * sun[0] + sy * sun[1] >= 0 ? 1 : -1;
+        g.strokeStyle = GLOSS;
+        g.lineWidth = 0.45;
+        g.beginPath();
+        g.moveTo(a[0] + (b[0] - a[0]) * 0.25 + sx * side, a[1] + (b[1] - a[1]) * 0.25 + sy * side);
+        g.lineTo(a[0] + (b[0] - a[0]) * 0.7 + sx * side, a[1] + (b[1] - a[1]) * 0.7 + sy * side);
+        g.stroke();
+      }
       if (op.rib && pts) {
         const n = pts.length / 2;
         g.strokeStyle = litCol(col, Math.max(0, l - 0.35));
