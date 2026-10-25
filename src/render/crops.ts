@@ -128,7 +128,7 @@ const STALK_INK = rgb(KIT_INK, 0.55);
 /** The furrows' tones laid over the field's ground: a furrow's floor, a ridge's crest, a drill's wet line. */
 const FURROW_INK = 'rgba(70,50,32,0.5)';
 const CREST_LIGHT = 'rgba(255,236,214,0.32)';
-const DRILL = 'rgba(56,38,24,0.62)';
+const DRILL = 'rgba(52,34,22,0.78)';
 /** Slope light laid over the ground: the sunny face of a ridge, and the face away. */
 const SLOPE_LIT: RGB = [255, 238, 214];
 const SLOPE_DARK: RGB = [52, 36, 24];
@@ -147,6 +147,13 @@ export const DORMANT_LEAF = '#8c8a62';
 export const DORMANT_FRUIT = '#a99a78';
 /** What a ripe crop's leaf turns toward as it ripens: grain and wemp to straw, potato haulm to yellow, cotton to rust. */
 const STRAW = '#d8c27a';
+/** A green head not yet ripe (grain, wemp); a rosemary's needles' shade; a woody stem (rosemary, cotton); a ripe awn's light. */
+const GREEN_HEAD = '#d8f0a0';
+const NEEDLE_DARK = '#1e3a2c';
+const WOODY_STEM = '#5e4632';
+const AWN_LIGHT = '#fff4d0';
+/** What a sprout's first leaves are taken toward: fresh and bright. */
+const SPROUT_GREEN = '#b8e07a';
 /** Ripe grain: its heads warmed toward this, its stems a step darker. */
 const GRAIN_WARM = '#e3a63e';
 const GRAIN_STEM = '#9a7a3c';
@@ -219,16 +226,17 @@ function plantOf(id: string, stage: number, leaf: string, fruit: string, R: () =
   const ripe = stage >= 3;
   const a0 = R() * Math.PI * 2;
   if (stage === 1) {
-    // A sprout: a few blades for what comes up as grass, two seed leaves for the rest.
-    const young = mixH(leaf, '#e8f4c0', 0.18);
+    // A sprout: a tuft of blades for what comes up as grass, a pair of seed leaves and a first true leaf for the rest -- big enough to read as a green row from afar.
+    const young = mixH(leaf, SPROUT_GREEN, 0.25);
     if (id === 'wheat' || id === 'corn' || id === 'onion') {
-      for (let i = 0; i < 3; i++) {
-        const a = a0 + i * 2.1;
-        ops.push({ k: 'stalk', pts: [[0, 0, 0], out([0, 0, 0], a, 0.5, 1.6), out([0, 0, 0], a, 1.1, 2.8 + R())], w: 0.9, col: young });
+      for (let i = 0; i < 4; i++) {
+        const a = a0 + i * 1.6;
+        ops.push({ k: 'stalk', pts: [[0, 0, 0], out([0, 0, 0], a, 0.6, 2.2), out([0, 0, 0], a, 1.5, 3.8 + R())], w: 1.1, col: young });
       }
     } else {
-      ops.push({ k: 'stalk', pts: [[0, 0, 0], [0, 0, 1.3]], w: 0.8, col: young });
-      for (const s of [0, Math.PI]) ops.push(leafOps([0, 0, 1.2], out([0, 0, 1.2], a0 + s, 1.9, 0.7), 0.85, young, 0, 0.6));
+      ops.push({ k: 'stalk', pts: [[0, 0, 0], [0, 0, 1.8]], w: 0.9, col: young });
+      for (const s of [0, Math.PI]) ops.push(leafOps([0, 0, 1.7], out([0, 0, 1.7], a0 + s, 2.6, 0.9), 1.15, young, 0, 0.6));
+      ops.push(leafOps([0, 0, 1.8], out([0, 0, 1.8], a0 + 1.57, 1.6, 1.9), 0.8, leaf, 0, 0.6));
     }
     return ops;
   }
@@ -237,7 +245,7 @@ function plantOf(id: string, stage: number, leaf: string, fruit: string, R: () =
     case 'wheat': {
       // Ripe: a dense gold mass of bowed heads over darker stems, straw blades filling in under them.
       const stalk = ripe ? mixH(fruit, GRAIN_STEM, 0.6) : leaf;
-      const head = ripe ? mixH(fruit, GRAIN_WARM, 0.35) : mixH(leaf, '#d8f0a0', 0.15);
+      const head = ripe ? mixH(fruit, GRAIN_WARM, 0.35) : mixH(leaf, GREEN_HEAD, 0.15);
       const blades = ripe ? 4 : 2;
       for (let i = 0; i < blades; i++) ops.push(leafOps([0, 0, 0.4], out([0, 0, 0], a0 + i * (6.28 / blades), 3.6 * k, 2.8 * k), ripe ? 0.6 : 0.45, ripe ? mixH(fruit, STRAW, 0.5) : leaf, 1.2, 0.35));
       const n = ripe ? 7 : 5;
@@ -251,7 +259,7 @@ function plantOf(id: string, stage: number, leaf: string, fruit: string, R: () =
           const tip = out(top, nod, 2.7, 0.9);
           ops.push({ k: 'spindle', a: out(top, nod, -0.2, -0.4), b: tip, w: 0.72, col: head, shine: true });
           // Its awns, fine and unruled, on past the tip.
-          for (const s of [-0.35, 0.35]) ops.push({ k: 'stalk', pts: [out(top, nod, 1.6, 0.9), out(tip, nod + s, 1.4, 0.7)], w: 0.3, col: mixH(head, '#fff4d0', 0.3), bare: true });
+          for (const s of [-0.35, 0.35]) ops.push({ k: 'stalk', pts: [out(top, nod, 1.6, 0.9), out(tip, nod + s, 1.4, 0.7)], w: 0.3, col: mixH(head, AWN_LIGHT, 0.3), bare: true });
         } else ops.push({ k: 'spindle', a: top, b: out(top, a, 0.3, 2.2), w: 0.42, col: head });
       }
       break;
@@ -362,10 +370,10 @@ function plantOf(id: string, stage: number, leaf: string, fruit: string, R: () =
     }
     case 'rosemary': {
       // Upright woody sprays, dark needles in pairs up each.
-      const needle = mixH(leaf, '#1e3a2c', 0.1);
+      const needle = mixH(leaf, NEEDLE_DARK, 0.1);
       for (let i = 0; i < 5; i++) {
         const a = a0 + i * 1.26, h = (6.6 + R() * 1.4) * k, top = out([0, 0, 0], a, (1.5 + R()) * k, h);
-        ops.push({ k: 'stalk', pts: [[0, 0, 0], out([0, 0, 0], a, 0.5 * k, h * 0.55), top], w: 0.6, col: mixH(leaf, '#5a4a36', 0.5) });
+        ops.push({ k: 'stalk', pts: [[0, 0, 0], out([0, 0, 0], a, 0.5 * k, h * 0.55), top], w: 0.6, col: mixH(leaf, WOODY_STEM, 0.5) });
         for (let j = 1; j <= 4; j++) {
           const t = j / 4.6, c: V3 = [top[0] * t, top[1] * t, top[2] * t];
           for (const s of [-1, 1]) ops.push(leafOps(c, out(c, a + s * 1.2, 1.3 * k, 0.9 * k), 0.38, j === 4 && ripe ? mixH(needle, fruit, 0.6) : needle, 0, 0.4));
@@ -377,10 +385,10 @@ function plantOf(id: string, stage: number, leaf: string, fruit: string, R: () =
     case 'cotton': {
       const green = ripe ? mixH(leaf, COTTON_RUST, 0.3) : leaf;
       const h = 9 * k;
-      ops.push({ k: 'stalk', pts: [[0, 0, 0], [0, 0, h]], w: 0.9, col: mixH(green, '#6a4a30', 0.4) });
+      ops.push({ k: 'stalk', pts: [[0, 0, 0], [0, 0, h]], w: 0.9, col: mixH(green, WOODY_STEM, 0.4) });
       for (let i = 0; i < 4; i++) {
         const a = a0 + i * 1.57, z = h * (0.35 + i * 0.15), tip = out([0, 0, z], a, 3.2 * k, 1.6 * k);
-        ops.push({ k: 'stalk', pts: [[0, 0, z], tip], w: 0.6, col: mixH(green, '#6a4a30', 0.4) });
+        ops.push({ k: 'stalk', pts: [[0, 0, z], tip], w: 0.6, col: mixH(green, WOODY_STEM, 0.4) });
         ops.push(leafOps(tip, out(tip, a + 0.6, 2.6 * k, 0.6), 1.9 * k, green, 0.8, 0.6));
         if (ripe) for (let j = 0; j < 3; j++) ops.push({ k: 'ball', c: out(tip, a + j * 2.1, 0.55, 0.9 + (j === 2 ? 0.5 : 0)), r: 0.95, col: fruit, shine: true });
       }
@@ -403,7 +411,7 @@ function plantOf(id: string, stage: number, leaf: string, fruit: string, R: () =
       if (ripe) {
         ops.push({ k: 'spindle', a: [0.4, 0.2, h - 1], b: [0.4, 0.4, h + 3.4], w: 1.0, col: fruit, shine: true });
         for (const s of [-1, 1]) ops.push({ k: 'spindle', a: [0.4, 0.2, h - 2.5], b: out([0.4, 0.2, h - 2.5], a0 + s, 1.5, 2.6), w: 0.7, col: fruit, shine: true });
-      } else ops.push({ k: 'spindle', a: [0.4, 0.2, h - 0.5], b: [0.4, 0.3, h + 1.5], w: 0.6, col: mixH(leaf, '#d8f0a0', 0.2) });
+      } else ops.push({ k: 'spindle', a: [0.4, 0.2, h - 0.5], b: [0.4, 0.3, h + 1.5], w: 0.6, col: mixH(leaf, GREEN_HEAD, 0.2) });
       break;
     }
     default:
@@ -461,7 +469,7 @@ export interface CropBake { canvas: HTMLCanvasElement; w: number; h: number; ax:
 export const cropStats = { bakes: 0, ms: 0, standIns: 0 };
 /** Every bake kept, by its key, and the frame it was last asked for in. */
 const cropBakes = new Map<string, { spr: CropBake; used: number }>();
-/** The latest bake of each crop, stage and turn, at any step of the sun and any scale: what stands in while a frame has made all it may. */
+/** The latest bake of each crop, stage and turn, in any layout, at any step of the sun and any scale: what stands in while a frame has made all it may. */
 const cropLatest = new Map<string, CropBake>();
 let cropPixels = 0;
 let cropFrameNo = 0;
@@ -469,7 +477,7 @@ let cropFrameNo = 0;
 const CROP_PIXELS = 6_000_000;
 /** What a frame may spend baking fields when an older bake of the same can stand in, and when only the bare ground can. */
 const CROP_BAKE_MS = 3;
-const CROP_COLD_MS = 16;
+const CROP_COLD_MS = 24;
 let cropSpent = 0;
 
 /** A new frame: its own `CROP_BAKE_MS` to spend. */
@@ -486,14 +494,14 @@ export function cropFrame(): void {
  * pixel at zoom one, anchored at the tile's middle.
  *
  * Made now, or, once this frame has spent `CROP_BAKE_MS`, the same crop's
- * last bake at another step of the sun or scale stands in; with none and
+ * last bake in another layout, step of the sun or scale stands in; with none and
  * `CROP_COLD_MS` spent, the sown ground does until its turn comes.
  */
 export function fieldBake(id: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number, scale: number, layout = 0): CropBake {
   // Bare and sown ground is the same whatever the crop and however it is laid out: one bake for all of them.
   if (stage <= 0) { id = ''; layout = 0; }
-  const head = `${id}|${stage}|${dormant ? 1 : 0}|${turn}|${layout}`;
-  const key = `${head}|${step}|${scale}`;
+  const head = `${id}|${stage}|${dormant ? 1 : 0}|${turn}`;
+  const key = `${head}|${layout}|${step}|${scale}`;
   const had = cropBakes.get(key);
   if (had) {
     had.used = cropFrameNo;
@@ -522,7 +530,7 @@ export function fieldBake(id: string, stage: number, leaf: string, fruit: string
       if (cropPixels <= CROP_PIXELS * 0.8 || b.used === cropFrameNo) break;
       cropBakes.delete(k);
       cropPixels -= b.spr.canvas.width * b.spr.canvas.height;
-      const h = k.split('|').slice(0, 5).join('|');
+      const h = k.split('|').slice(0, 4).join('|');
       if (cropLatest.get(h) === b.spr) cropLatest.delete(h);
     }
   }
@@ -635,7 +643,7 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
   if (stage === 0) {
     // Sown: a dark drill pressed along each crest, the seed in it.
     g.strokeStyle = DRILL;
-    g.lineWidth = 1.5;
+    g.lineWidth = 1.9;
     g.stroke(crests);
   }
 
