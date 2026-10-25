@@ -172,7 +172,7 @@ import {
   TREE_DAWN_UTC, TREE_DEFS, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS,
 } from '../../world/tiles';
 import { STEPS_BACK, stepsBack, STONE_DIFFICULTY, STONE_STEPS_BILL, TIMBER_DIFFICULTY, TIMBER_STEPS_BILL } from '../../game/steps';
-import { ROSES_RULE } from '../../game/roses';
+import { LAVENDER_RULE, ROSES_RULE } from '../../game/roses';
 import { DEVICE_COUNT } from '../../render/furniture';
 import { FLOWER_MOST, FLOWER_SEASONS } from '../../world/flowers';
 import { SEASON_DAYS, SEASONS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
@@ -3393,6 +3393,8 @@ export function helpText(): string {
       or ${stepsBack(STEPS_PLANKS)} of ${STEPS_PLANKS} planks); leaves packed dirt.</li>
       <li><b>Rose arch</b> (${workedAt('make_rose_arch')}: ${bill('make_rose_arch')}); <b>stone rose arch</b> (${workedAt('make_stone_rose_arch')}, trowel: ${bill('make_stone_rose_arch')}):
       ${furnitureDef('rose_arch').w} subtiles across, ${furnitureDef('rose_arch').h} deep; set down like furniture; walk-through. ${ROSES_RULE} Pointing shows its roses' state and time to the next change.</li>
+      <li><b>Lavender arch</b> (${workedAt('make_lavender_arch')}: ${bill('make_lavender_arch')}); <b>stone lavender arch</b> (${workedAt('make_stone_lavender_arch')}, trowel: ${bill('make_stone_lavender_arch')}):
+      ${furnitureDef('lavender_arch').w} subtiles across, ${furnitureDef('lavender_arch').h} deep; set down like furniture; walk-through. ${LAVENDER_RULE} Pointing shows its lavender's state and time to the next change.</li>
       <li><b>Flagpole</b> (${workedAt('make_flagpole')}: ${bill('make_flagpole')}): the flag shows wind direction and strength. A <b>banner</b> does too. Dyed before setting down: flies that colour.
       On a settlement: shows its device, one of ${DEVICE_COUNT}, picked by the settlement's name.</li>
     </ul>

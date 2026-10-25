@@ -165,7 +165,7 @@ check('workers: one of them at a post is not', !met('workers'));
 for (const c of workers.slice(SPECIALTY_AT - 1)) game.creatures.list.delete(c.id);
 check(`specialty: not at ${SPECIALTY_AT - 1}`, !met('specialty'));
 
-// Pieces: a rose arch grown, a memorial stone, a rune lantern post.
+// Pieces: a rose arch or a lavender arch grown, a memorial stone, a rune lantern post.
 const arch = game.addFurniture('rose_arch', px + 6, py + 6, 0, 0, 30);
 arch.setAt = game.wallNow() - (ROSE_FLOWER - 0.5) * DAY_SECONDS;
 check('roses: not yet grown', !met('roses'));
@@ -173,6 +173,12 @@ arch.setAt = game.wallNow() - ROSE_FLOWER * DAY_SECONDS;
 check('roses: grown', met('roses'));
 arch.mine = false;
 check('roses: not somebody else\'s', !met('roses'));
+const lav = game.addFurniture('lavender_arch', px + 6, py + 8, 0, 0, 30);
+lav.setAt = game.wallNow() - (ROSE_FLOWER - 0.5) * DAY_SECONDS;
+check('roses: a lavender arch not yet grown', !met('roses'));
+lav.setAt = game.wallNow() - ROSE_FLOWER * DAY_SECONDS;
+check('roses: a lavender arch grown', met('roses'));
+lav.mine = false;
 check('memorial and runelantern: none set', !met('memorial') && !met('runelantern'));
 game.addFurniture('memorial_stone', px + 8, py + 6, 0, 0, 30);
 game.addFurniture('rune_lantern', px + 10, py + 6, 0, 0, 30);

@@ -8,7 +8,7 @@ import { describeFrom, describeWith, isWorked, ITEM_DEFS, itemDef, itemName, mar
 import { fill, heatSaid } from './words';
 import { world } from './pace';
 import { matOf } from './materials';
-import { roseSays, ROSES_RULE } from './roses';
+import { climberRule, roseSays, type Climber } from './roses';
 import { STATE_TAILS } from './pieceTails';
 import type { Lamp } from './lamps';
 import { colourWord, dyeHex, readDye } from './dyestuffs';
@@ -166,11 +166,12 @@ export interface FurnitureDef {
    */
   grave?: boolean;
   /**
-   * Climbing roses grow on it, from the moment it is set down (`roses.ts`):
-   * the island hands every browser that moment for a piece with this, and no
-   * other (`rpc_ground`, `furniture_def.roses`).
+   * What is planted at its feet and climbs it -- roses or lavender -- growing
+   * from the moment it is set down (`roses.ts`): the island hands every
+   * browser that moment for a piece with this, and no other (`rpc_ground`,
+   * `furniture_def.roses`, true for either).
    */
-  roses?: boolean;
+  climber?: Climber;
   /**
    * A grapevine is planted at its foot and grows up it (`vineyard.ts`): a
    * trellis. It is set down on the ground outside a building, against the
@@ -486,14 +487,19 @@ export const FURNITURE: FurnitureDef[] = [
   /*
    * An arch over a path, a tile across and a subtile deep, walked through like
    * any piece: a timber one a carpenter builds and a stone one a mason lays,
-   * each with a climbing rose planted at its feet (`roses.ts`).
+   * each with a climbing rose -- or lavender -- planted at its feet (`roses.ts`).
    */
-  piece('rose_arch', 'Rose arch', 4, 1, [['plank', 24], ['shaft', 6], ['nail', 36], ['rose_petals', 16]], 16, 16,
-    '', undefined,
-    { skill: 'carpentry', roses: true }),
-  piece('stone_rose_arch', 'Stone rose arch', 4, 1, [['stone_brick', 36], ['mortar', 12], ['rose_petals', 16]], 24, 22,
-    '', undefined,
-    { skill: 'masonry', tool: 'trowel', roses: true }),
+  ...(['rose', 'lavender'] as const).flatMap((climber) => {
+    const [cut, name] = climber === 'rose' ? ['rose_petals', 'Rose'] : ['lavender', 'Lavender'];
+    return [
+      piece(`${climber}_arch`, `${name} arch`, 4, 1, [['plank', 24], ['shaft', 6], ['nail', 36], [cut, 16]], 16, 16,
+        '', undefined,
+        { skill: 'carpentry', climber }),
+      piece(`stone_${climber}_arch`, `Stone ${name.toLowerCase()} arch`, 4, 1, [['stone_brick', 36], ['mortar', 12], [cut, 16]], 24, 22,
+        '', undefined,
+        { skill: 'masonry', tool: 'trowel', climber }),
+    ];
+  }),
   piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16]], 30, 24, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
   /*
    * A tiered fountain: basins of cut slab, each smaller than the one under
@@ -697,9 +703,9 @@ export interface PlacedFurniture {
    */
   dye?: string;
   /**
-   * When it was set down, in epoch seconds, for a piece with roses on it: the
-   * island's own moment for it (`placed.made_at`), so that every browser that
-   * sees one arch sees its roses grown as far.
+   * When it was set down, in epoch seconds, for a piece with roses or lavender
+   * on it (`climber`): the island's own moment for it (`placed.made_at`), so
+   * that every browser that sees one arch sees it grown as far.
    */
   setAt?: number;
   /**
@@ -814,8 +820,8 @@ describeFrom('butter_churn', { reach: STATION_REACH });
 describeFrom('fountain', { least: (WELL_TRICKLE * 60).toFixed(1), most: ((WELL_TRICKLE + WELL_TRICKLE_QL) * 60).toFixed(1), top: WELL_TRICKLE_AT });
 // A tent's night measured against a bed's, off the two pieces.
 describeFrom('tent', { ofBed: (furnitureDef('tent').bed ?? 0) / (furnitureDef('bed').bed ?? 1) });
-// How the roses on an arch grow, off the rule that grows them.
-for (const id of ['rose_arch', 'stone_rose_arch']) describeFrom(id, { rule: ROSES_RULE });
+// How the roses or lavender on an arch grow, off the rule that grows them.
+for (const d of FURNITURE) if (d.climber) describeFrom(d.id, { rule: climberRule(d.climber) });
 
 /**
  * What to call a piece standing on the ground.
@@ -1124,7 +1130,7 @@ function stateOf(f: PlacedFurniture): string {
   if (def.runes) return `${ql} · lights ${lanternReach(f.ql)} tiles at night, burns nothing`;
   // A memorial stone, what is cut into it (`memorial.ts`).
   if (f.engraving) return `${ql} · \u201c${f.engraving}\u201d`;
-  if (def.roses) return `${ql} · ${roseSays(f.setAt, Date.now() / 1000)}`;
+  if (def.climber) return `${ql} · ${roseSays(f.setAt, Date.now() / 1000, def.climber)}`;
   if (def.hive) return `${ql} · ${furnitureUnits(f)} / ${furnitureCapacity(f)} of comb`;
   if (def.pond) return `${ql} · ${furnitureUnits(f)} / ${furnitureCapacity(f)} fish`;
   // A bin measured in kilograms says so; everything else counts things.
@@ -1194,8 +1200,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (!item || !isFurniture(item.id) || !g.inventory.remove(item.uid, 1)) return;
       const f = g.addFurniture(item.id, t.x, t.y, t.sx, t.sy, item.ql, [], item.extra, t.facing ?? 's', g.player.level);
       if (item.dye) f.dye = item.dye;
-      // Roses planted at its feet grow from now, on the wall clock (`roses.ts`).
-      if (furnitureDef(item.id).roses) f.setAt = Date.now() / 1000;
+      // Roses or lavender planted at its feet grow from now, on the wall clock (`roses.ts`).
+      if (furnitureDef(item.id).climber) f.setAt = Date.now() / 1000;
       // A skep starts filling from now, on the wall clock (`bees.ts`).
       if (furnitureDef(item.id).skep) f.skepAt = g.wallNow();
       // Everything the thing was keeps standing when the thing is standing.

@@ -16742,8 +16742,8 @@ export class Renderer {
       };
       return vineTrim(vineStage(f, this.game.wallNow()), Math.floor(hash2(f.x, f.y, 53) * VINE_VARIANTS), joins(-1), joins(1));
     }
-    // An arch's roses: their variety, which is its place's, and how far they have grown (`roses.ts`).
-    if (FURNITURE_BY_ID.get(f.kind)?.roses) {
+    // An arch's roses or lavender: the variety, which is its place's, and how far it has grown (`roses.ts`).
+    if (FURNITURE_BY_ID.get(f.kind)?.climber) {
       const r = roseStage(f.setAt, this.game.wallNow());
       return roseTrim(Math.floor(hash2(f.x * 4 + f.sx, f.y * 4 + f.sy, 71) * 4), r.days, r.blooms);
     }

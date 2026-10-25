@@ -176,7 +176,7 @@ import {
   WEAR_TRAIL, WEARS,
 } from '../../world/tiles';
 import { STEPS_BACK, stepsBack, STONE_STEPS_BILL, TIMBER_STEPS_BILL } from '../../game/steps';
-import { ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, ROSES_RULE } from '../../game/roses';
+import { LAVENDER_RULE, ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, ROSES_RULE } from '../../game/roses';
 import { DEVICE_COUNT } from '../../render/furniture';
 import { FLOWER_MOST, FLOWER_SEASONS } from '../../world/flowers';
 import {
@@ -3893,6 +3893,13 @@ export const NEWS: News[] = [
         `Changed: butchered, ${d.name} line gives no fur.`,
       ];
     },
+  },
+  {
+    n: 328,
+    day: '2026-10-26',
+    lines: () => [
+      `Added: lavender arch (${skillOf('make_lavender_arch')}: ${recipeBill('make_lavender_arch')}); stone lavender arch (${skillOf('make_stone_lavender_arch')}: ${recipeBill('make_stone_lavender_arch')}). ${furnitureDef('lavender_arch').w} subtiles across; walk-through. ${LAVENDER_RULE}`,
+    ],
   },
 ];
 

@@ -308,10 +308,10 @@ export const STANDING_A: Goal[] = [
   },
   {
     id: 'roses',
-    get text() { return late(() => `Grow a ${lower(pieceName('rose_arch'))} to full`); },
+    get text() { return late(() => `Grow a ${listedOr([lower(pieceName('rose_arch')), lower(pieceName('lavender_arch'))])} to full`); },
     get hint() { return late(() => `${ROSE_FLOWER} days after it is set down`); },
-    get how() { return late(() => `Build a ${lower(pieceName('rose_arch'))} (Crafting (R)) and set it down; leave it standing ${ROSE_FLOWER} days. Picking it up starts its roses again.`); },
-    met: (g) => ours(g.furniture.values()).some((f) => !!furnitureDef(f.kind).roses && f.setAt !== undefined && roseStage(f.setAt, g.wallNow()).days >= ROSE_FLOWER),
+    get how() { return late(() => `Build a ${listedOr([lower(pieceName('rose_arch')), lower(pieceName('lavender_arch'))])} (Crafting (R)) and set it down; leave it standing ${ROSE_FLOWER} days. Picking it up starts it again.`); },
+    met: (g) => ours(g.furniture.values()).some((f) => !!furnitureDef(f.kind).climber && f.setAt !== undefined && roseStage(f.setAt, g.wallNow()).days >= ROSE_FLOWER),
   },
   {
     id: 'watergarden',

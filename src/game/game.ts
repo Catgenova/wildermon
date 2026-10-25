@@ -10683,8 +10683,8 @@ export interface IslandPlaced {
   /** The line cut into a memorial stone (`memorial.ts`); null uncut. */
   engraving?: string | null;
   /**
-   * When it was set down, in epoch seconds, for a piece with roses on it
-   * (`furniture_def.roses`): what its roses grow from (`roses.ts`).
+   * When it was set down, in epoch seconds, for a piece with roses or
+   * lavender on it (`furniture_def.roses`): what they grow from (`roses.ts`).
    */
   set?: number | null;
   /**

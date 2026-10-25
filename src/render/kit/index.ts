@@ -21,7 +21,7 @@ import { MAILBOX } from './mailbox';
 import { OVEN } from './oven';
 import { PLANTER } from './planter';
 import { FISH_POND } from './pond';
-import { ROSE_ARCH, STONE_ROSE_ARCH } from './rosearch';
+import { LAVENDER_ARCH, ROSE_ARCH, STONE_LAVENDER_ARCH, STONE_ROSE_ARCH } from './rosearch';
 import { BENCH, STOOL } from './seating';
 import { BOOKSHELF, CRATE_SHELF, SHELVES } from './shelving';
 import { GREAT_SIGN, SIGN } from './signs';
@@ -88,6 +88,8 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   trellis: TRELLIS,
   rose_arch: ROSE_ARCH,
   stone_rose_arch: STONE_ROSE_ARCH,
+  lavender_arch: LAVENDER_ARCH,
+  stone_lavender_arch: STONE_LAVENDER_ARCH,
   coffer: COFFER,
   cupboard: CUPBOARD,
   wardrobe: WARDROBE,
