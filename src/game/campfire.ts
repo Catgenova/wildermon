@@ -3,6 +3,7 @@ import { SUBTILES } from './crates';
 import type { Game } from './game';
 import { itemDef, itemName, type Item } from './items';
 import { world } from './pace';
+import { burnsFor, heatSaid } from './words';
 import type { CraftStock } from './recipes';
 
 /**
@@ -126,11 +127,8 @@ export function fuelAtHand(g: Game, uid?: number, reach?: number): CraftStock | 
 }
 /** World position of a fire's centre. */
 export const fireCentre = (f: PlacedCampfire): [number, number] => [f.x + (f.sx + 1) / SUBTILES, f.y + (f.sy + 1) / SUBTILES];
-export const fireBurnsFor = (f: PlacedCampfire): string => {
-  const m = Math.round(f.fuel / 60);
-  return m >= 60 ? `${(m / 60).toFixed(1)} hours` : m >= 1 ? `${m} minutes` : `${Math.round(f.fuel)} seconds`;
-};
-export const fireState = (f: PlacedCampfire): string => (f.lit ? `lit, fuel ${fireBurnsFor(f)}` : f.fuel > 0 ? `unlit, fuel ${fireBurnsFor(f)}` : 'no fuel');
+export const fireBurnsFor = (f: PlacedCampfire): string => burnsFor(f.fuel);
+export const fireState = (f: PlacedCampfire): string => heatSaid(f.lit, f.fuel, f.fuel);
 /**
  * What feeding a fire, a smelter, a kiln or an oven says: so many of what,
  * and how long it now burns. The island's `perform_fire` says the same.

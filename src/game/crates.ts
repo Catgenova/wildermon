@@ -1,9 +1,9 @@
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { roomMul, type Enchant } from './enchant';
-import { describeFrom, itemDef, itemName, rarityOf, roomFor, storedLine, type Item } from './items';
+import { describeFrom, foldInto, itemDef, itemName, rarityOf, roomFor, sameStack, storedLine, type Item } from './items';
 import { matOf } from './materials';
-import { furnitureCentre, furnitureDef, furnitureName, pieceShut, rackSpots, type PlacedFurniture } from './furniture';
+import { furnitureCentre, furnitureDef, furnitureName, pieceShut, rackDeck, rackSpots, type PlacedFurniture } from './furniture';
 import { CELLAR_FLOOR, floorOf } from './building';
 import { lacks } from './ranks';
 import { storeMoveRefusal, storeUse } from './stores';
@@ -458,6 +458,89 @@ CRATE_ACTIONS.push({
   },
 });
 
+/**
+ * A crate's spot on its rack, counted from one in the order the spots fill
+ * (`rackDeck`): the number the rack's menu and its store window both say, so
+ * a crate is the same crate in either.
+ */
+export const rackSpotOf = (f: PlacedFurniture, c: PlacedCrate): number =>
+  rackDeck(f).findIndex(([sx, sy]) => sx === c.sx && sy === c.sy) + 1;
+
+/** How many kinds `crateHolds` names before it says how many more there are. */
+export const CRATE_KINDS_SAID = 2;
+
+/**
+ * What a crate holds, in short: the kinds it holds most of with their counts,
+ * the most first, and how many kinds more ("Cotton seed 58 · Wheat seed 40 ·
+ * +3"). Null for one with nothing in it, or whose contents have not come.
+ */
+export function crateHolds(c: PlacedCrate): string | null {
+  if (!c.items.length) return null;
+  const by = new Map<string, number>();
+  for (const it of c.items) {
+    const name = itemDef(it.id).name;
+    by.set(name, (by.get(name) ?? 0) + it.count);
+  }
+  const kinds = [...by].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const said = kinds.slice(0, CRATE_KINDS_SAID).map(([name, n]) => `${name} ${n}`);
+  if (kinds.length > CRATE_KINDS_SAID) said.push(`+${kinds.length - CRATE_KINDS_SAID}`);
+  return said.join(' \u00b7 ');
+}
+
+/**
+ * One line of everything on a rack: a pile as the pack would make it of the
+ * rows in all its crates (`sameStack`), with the rows it is made of in the
+ * rack's order and the spots they stand on.
+ *
+ * Asked for: "is it possible to just condense the inventory instead of having
+ * to go through each box?" `item` is the pile as one: its count the rows'
+ * together, its quality and damage by the unit (`foldInto`), and the uid of
+ * its first row, which is what the store window and a drag name it by.
+ */
+export interface RackLine {
+  item: Item;
+  rows: Array<{ crate: PlacedCrate; item: Item }>;
+  spots: number[];
+}
+
+export function rackStock(g: Game, f: PlacedFurniture): RackLine[] {
+  const lines: RackLine[] = [];
+  for (const c of g.cratesOn(f)) {
+    const spot = rackSpotOf(f, c);
+    for (const it of c.items) {
+      const line = lines.find((l) => sameStack(l.rows[0].item, it));
+      if (!line) {
+        lines.push({ item: { ...it }, rows: [{ crate: c, item: it }], spots: [spot] });
+        continue;
+      }
+      foldInto(line.item, it);
+      line.rows.push({ crate: c, item: it });
+      if (!line.spots.includes(spot)) line.spots.push(spot);
+    }
+  }
+  return lines;
+}
+
+/**
+ * Taking `count` of a line of a rack: from its rows in the rack's order, each
+ * as much as it has, until the count is met. Each is one `take_from_store`,
+ * the door a row of a single crate goes out by, so the island is asked
+ * nothing it is not asked already. A row in a crate shut to you is passed
+ * over, as `rack_put` passes over a crate shut to a load.
+ */
+export function rackTakes(g: Game, line: RackLine, count: number): Array<{ uid: number; count: number }> {
+  let left = Math.max(0, Math.min(count, line.item.count));
+  const out: Array<{ uid: number; count: number }> = [];
+  for (const row of line.rows) {
+    if (left <= 0) break;
+    if (crateShut(g, row.crate)) continue;
+    const n = Math.min(left, row.item.count);
+    out.push({ uid: row.item.uid, count: n });
+    left -= n;
+  }
+  return out;
+}
+
 CRATE_ACTIONS.push({
   id: 'take_from_store',
   label: 'Take out',
@@ -496,7 +579,8 @@ CRATE_ACTIONS.push({
     if (t.kind !== 'item') return;
     const where = g.storeWith(t.uid);
     if (!where) return;
-    const got = where.take(t.uid);
+    // The count asked for, as the island takes it: the rest of the row stays put.
+    const got = where.take(t.uid, Math.max(1, t.count ?? Infinity));
     if (!got) return;
     g.inventory.addItem(got);
     // Honey out of a hive, for the journal (the island's `perform_crate` the same).

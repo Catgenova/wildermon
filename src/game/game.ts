@@ -7232,7 +7232,7 @@ export class Game {
    * Crates and the chests and barrels that hold things are shown through the
    * same window, and had the same hole in them, so both are looked in.
    */
-  storeWith(uid: number): { what: string; at: [number, number]; take: (id: number) => Item | null; piece?: PlacedFurniture; crate?: PlacedCrate; level?: number } | null {
+  storeWith(uid: number): { what: string; at: [number, number]; take: (id: number, count?: number) => Item | null; piece?: PlacedFurniture; crate?: PlacedCrate; level?: number } | null {
     /*
      * A bag on your back is the third of these, and was missing.
      *
@@ -7254,16 +7254,30 @@ export class Game {
         },
       };
     }
+    /*
+     * `count` of a stack, split off it, as the island's `move_part` does for
+     * `take_from_store`: the rest stays where it is under its own uid. All of
+     * it, or with no count, the stack itself.
+     */
+    const part = (items: Item[], whole: (id: number) => Item | null) => (id: number, count?: number): Item | null => {
+      const it = items.find((i) => i.uid === id);
+      if (!it) return null;
+      if (count === undefined || count >= it.count) return whole(id);
+      if (count < 1) return null;
+      it.count -= count;
+      this.events.emit('crate');
+      return { ...it, uid: this.inventory.nextUid++, count };
+    };
     for (const c of this.crates.values()) {
       if (!c.items.some((it) => it.uid === uid)) continue;
-      return { what: crateName(c).toLowerCase(), at: crateCentre(c), take: (id) => this.crateTake(c, id), crate: c, level: c.level ?? 0 };
+      return { what: crateName(c).toLowerCase(), at: crateCentre(c), take: part(c.items, (id) => this.crateTake(c, id)), crate: c, level: c.level ?? 0 };
     }
     for (const f of this.furniture.values()) {
       if (!f.items.some((it) => it.uid === uid)) continue;
       return {
         what: furnitureName(f).toLowerCase(),
         at: [f.x + 0.5, f.y + 0.5],
-        take: (id) => this.furnitureTake(f, id),
+        take: part(f.items, (id) => this.furnitureTake(f, id)),
         piece: f,
         level: f.level ?? 0,
       };

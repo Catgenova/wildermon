@@ -5,7 +5,8 @@ import { STORE_REACH, SUBTILES } from './crates';
 import { CROP_BY_SEED } from './farming';
 import type { Game } from './game';
 import { describeFrom, describeWith, isWorked, ITEM_DEFS, itemDef, itemName, markOf, rarityOf, roomFor, storedLine, type Item, type Mark } from './items';
-import { fill } from './words';
+import { fill, heatSaid } from './words';
+import { world } from './pace';
 import { matOf } from './materials';
 import { roseSays, ROSES_RULE } from './roses';
 import { STATE_TAILS } from './pieceTails';
@@ -1054,6 +1055,54 @@ export function furnitureRefuses(f: PlacedFurniture, item: Item): string | null 
   return null;
 }
 
+/** Most fuel an oven holds: it is bigger than a campfire and burns longer. */
+export const OVEN_CAPACITY = world(7200);
+
+/**
+ * How fast a brazier eats what is in it, by how well it was built.
+ *
+ * A shallow bowl with a bad draw roars through its fuel; one laid true and
+ * banded tight burns low and long. Seconds of fuel spent per second alight:
+ * about one and a half at quality 1, one at 40, and three fifths at 100 — so
+ * a well-made brazier gets nearly three times the night out of the same
+ * armful of wood as a rough one.
+ *
+ * Braziers only. Every other fire on this island burns a second a second, and
+ * quietly re-pricing the smelters and the kilns is not what anybody asked for.
+ */
+export const BRAZIER_BURN_AT_ONE = 1.55;
+export const BRAZIER_BURN_AT_HUNDRED = 0.6;
+export const brazierBurn = (ql: number): number =>
+  BRAZIER_BURN_AT_ONE
+  + (BRAZIER_BURN_AT_HUNDRED - BRAZIER_BURN_AT_ONE) * (Math.max(1, Math.min(100, ql)) - 1) / 99;
+
+/** What a brazier holds: a night's worth and a little over. */
+export const BRAZIER_CAPACITY = world(3600);
+
+/**
+ * What a hearth holds: an oven's or a brazier's. Here beside its state line
+ * (`furnitureState`) rather than with the four actions that fuel, light, put
+ * out and rake one (`placeables.ts`), which import it from here.
+ */
+export const hearthCapacity = (f: PlacedFurniture): number =>
+  (f.kind === 'brazier' ? BRAZIER_CAPACITY : OVEN_CAPACITY);
+
+/**
+ * Seconds of fuel a hearth spends per second alight.
+ *
+ * One, for everything that was here before this: an oven, a smelter and a
+ * kiln all burn a second a second, and quietly re-pricing them is not what
+ * anybody asked for.
+ */
+export const hearthBurn = (f: PlacedFurniture): number =>
+  (f.kind === 'brazier' ? brazierBurn(f.ql ?? 20) : 1);
+
+/**
+ * Seconds a hearth burns on what is in it: its fuel over how fast it goes,
+ * which for everything but a brazier are the same number.
+ */
+export const hearthLeft = (f: PlacedFurniture): number => (f.fuel ?? 0) / hearthBurn(f);
+
 /** A piece's status line, and the enchantment set into it where it stands (`enchantTail`). */
 export const furnitureState = (f: PlacedFurniture): string => stateOf(f) + STATE_TAILS.map((tail) => tail(f)).join('') + enchantTail(f);
 function stateOf(f: PlacedFurniture): string {
@@ -1069,7 +1118,8 @@ function stateOf(f: PlacedFurniture): string {
     const working = left > 0 ? ` · working, ${left >= 60 ? `${Math.ceil(left / 60)}m` : `${Math.ceil(left)}s`} to go` : '';
     return `${ql} · ${litres.toFixed(0)} / ${liquidCapacity(f)} litres of ${what}${working}`;
   }
-  if (def.hearth) return `${ql} · ${f.lit ? 'lit' : 'cold'}`;
+  // Lit or not and the fuel left, as a fire, a smelter and a kiln say it.
+  if (def.hearth) return `${ql} · ${heatSaid(f.lit, f.fuel, hearthLeft(f))}`;
   // A rune lantern's reach is a lantern's of its quality (`runelantern.ts`).
   if (def.runes) return `${ql} · lights ${lanternReach(f.ql)} tiles at night, burns nothing`;
   // A memorial stone, what is cut into it (`memorial.ts`).

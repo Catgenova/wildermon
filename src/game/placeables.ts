@@ -1,4 +1,4 @@
-import { capital } from './words';
+import { burnsFor, capital } from './words';
 import { INDOORS_REST } from './building';
 import { brewQl, drawnQl, keepsQl, pouredQl, wineAgeSays } from './ageing';
 import { drinkable, isBrew, isWorking } from './brewing';
@@ -10,6 +10,8 @@ import {
   furnitureCentre,
   furnitureDef,
   furnitureName,
+  hearthCapacity,
+  hearthLeft,
   tracesStoreyRefusal,
   holdsLiquid,
   freeSeat,
@@ -31,7 +33,6 @@ import type { Game } from './game';
 import { describeWith, itemDef, litresOf, markOf, type Item } from './items';
 import type { CraftStock } from './recipes';
 import { swingEnchant } from './enchant';
-import { world } from './pace';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } from './dyestuffs';
 
 /**
@@ -40,42 +41,11 @@ import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } 
  * you about, and a bed worth waking in.
  */
 
-/** Most fuel an oven holds: it is bigger than a campfire and burns longer. */
-export const OVEN_CAPACITY = world(7200);
+// What a hearth holds and how fast it burns live beside its state line (`furnitureState`).
+export { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY, brazierBurn, hearthBurn, hearthCapacity, OVEN_CAPACITY } from './furniture';
 
-/**
- * How fast a brazier eats what is in it, by how well it was built.
- *
- * A shallow bowl with a bad draw roars through its fuel; one laid true and
- * banded tight burns low and long. Seconds of fuel spent per second alight:
- * about one and a half at quality 1, one at 40, and three fifths at 100 — so
- * a well-made brazier gets nearly three times the night out of the same
- * armful of wood as a rough one.
- *
- * Braziers only. Every other fire on this island burns a second a second, and
- * quietly re-pricing the smelters and the kilns is not what anybody asked for.
- */
-export const BRAZIER_BURN_AT_ONE = 1.55;
-export const BRAZIER_BURN_AT_HUNDRED = 0.6;
-export const brazierBurn = (ql: number): number =>
-  BRAZIER_BURN_AT_ONE
-  + (BRAZIER_BURN_AT_HUNDRED - BRAZIER_BURN_AT_ONE) * (Math.max(1, Math.min(100, ql)) - 1) / 99;
-
-/** What a brazier holds: a night's worth and a little over. */
-export const BRAZIER_CAPACITY = world(3600);
-
-/**
- * What a hearth holds and what it is called.
- *
- * `isOven` has been `furnitureDef(kind).hearth` since the day it was written —
- * the four actions below were never about ovens, only ever about anything that
- * burns. What *was* about ovens was every sentence they said, so a brazier
- * would have told you its firebox was packed and that it had been raked out.
- * The name comes off the piece now, and the capacity with it.
- */
+/** What a hearth is called: off the piece, so a brazier says brazier. */
 const hearthName = (f: PlacedFurniture): string => furnitureDef(f.kind).name.toLowerCase();
-const hearthCapacity = (f: PlacedFurniture): number =>
-  (f.kind === 'brazier' ? BRAZIER_CAPACITY : OVEN_CAPACITY);
 
 type FurnitureTarget = Extract<Target, { kind: 'furniture' }>;
 const pieceOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.furniture.get((t as FurnitureTarget).id) : undefined);
@@ -92,23 +62,7 @@ export function trashNear(g: Game): PlacedFurniture | undefined {
 }
 
 /** How long an oven's fuel will last, in words. */
-/**
- * Seconds of fuel a hearth spends per second alight.
- *
- * One, for everything that was here before this: an oven, a smelter and a
- * kiln all burn a second a second, and quietly re-pricing them is not what
- * anybody asked for.
- */
-export const hearthBurn = (f: PlacedFurniture): number =>
-  (f.kind === 'brazier' ? brazierBurn(f.ql ?? 20) : 1);
-
-export const ovenBurnsFor = (f: PlacedFurniture): string => {
-  // What is in it divided by how fast it goes, which is how long it will
-  // burn — and for everything but a brazier those are the same number.
-  const left = (f.fuel ?? 0) / hearthBurn(f);
-  const m = Math.round(left / 60);
-  return m >= 60 ? `${(m / 60).toFixed(1)} hours` : m >= 1 ? `${m} minutes` : `${Math.round(left)} seconds`;
-};
+export const ovenBurnsFor = (f: PlacedFurniture): string => burnsFor(hearthLeft(f));
 
 /** Every vessel within reach that has a liquid in it, the fullest first. */
 export function vesselsNear(g: Game, kind?: LiquidKind): PlacedFurniture[] {

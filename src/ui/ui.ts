@@ -47,7 +47,7 @@ import { graveLine, graveName, graveSays, graveUnits, isGrave } from '../game/gr
 import { COMPANION_STANCES, isBaitFor, SPECIES, tameNeeds, STANCE_HINTS, STANCE_NAMES, STANCES, GATHER_VERB, GATHER_DO } from '../game/creatures';
 import { itemDef, itemName, markOf, storedLine, type Item } from '../game/items';
 import { nearestSide } from '../render/renderer';
-import { crateKindOfItem, crateName, crateCapacity, crateUnits, subtileOf } from '../game/crates';
+import { crateHolds, crateKindOfItem, crateName, crateCapacity, crateUnits, rackSpotOf, subtileOf } from '../game/crates';
 import { trellisFacing } from '../game/vineyard';
 import { butcherPreview } from '../game/butcher';
 import { anvilAnchor, anvilName, type PlacedAnvil } from '../game/anvil';
@@ -932,10 +932,17 @@ export class UI {
      * doors. Panniers have none of their own and are still carried here, which
      * is right: they are a beast's and travel with it.
      */
+    // A line out of everything on a rack: from its crates in the rack's order until the count is met (`rackTakes`).
+    if (to === 'inventory' && store.takeN) {
+      const held = store.items.find((it) => it.uid === p.uid);
+      if (held) store.takeN(p.uid, Math.min(n ?? Infinity, held.count));
+      return;
+    }
     if ((g.ask || store.doors) && store.kind !== 'carried') {
       const id = store.doors ? (to === 'inventory' ? store.doors.out : store.doors.in)
         : to === 'inventory' ? 'take_from_store'
         : store.kind === 'crate' ? 'store_in_crate'
+        : store.kind === 'rack' ? 'rack_put'
         : store.kind === 'bag' ? 'stow_item' : 'store_in_furniture';
       const def = ACTION_BY_ID.get(id);
       if (!def) return;
@@ -2520,6 +2527,8 @@ export class UI {
       const on = g.cratesOn(f);
       const free = deck.find(([sx, sy]) => !g.crateAt(f.x, f.y, sx, sy));
       entries.push({ label: this.rackLine(f), disabled: true });
+      // Everything on it in one window, piled as the pack piles it (`rackStock`); the crates one by one below.
+      if (on.length) entries.push({ label: 'Open all', note: `${on.length} crates`, onSelect: () => this.cratePanel.openRack(f.id) });
       const placeDef = ACTION_BY_ID.get('place_crate');
       const carried = g.inventory.items.filter((it) => crateKindOfItem(it.id));
       if (placeDef) {
@@ -2545,7 +2554,18 @@ export class UI {
           children.push({ label: d.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(d, ct) });
         }
         children.push(...this.nameEntry(ct));
-        entries.push({ label: crateName(c), note: `${crateUnits(c)} / ${crateCapacity(c)} things`, children });
+        /*
+         * Each by its spot, and by what is in it: its own name when it has one,
+         * else the kinds it holds most of (`crateHolds`). Reported off a full
+         * rack of eight rows all reading "Seeds": named alike, and the note
+         * that told them apart was never drawn on a row that folds.
+         */
+        const holds = crateHolds(c);
+        const room = `${crateUnits(c)} / ${crateCapacity(c)} things`;
+        const spot = rackSpotOf(f, c);
+        entries.push(c.name || !holds
+          ? { label: `${spot} \u00b7 ${crateName(c)}`, note: holds ? `${holds} \u00b7 ${room}` : room, children }
+          : { label: `${spot} \u00b7 ${holds}`, note: room, children });
       }
     }
     // An oven is fed and lit like a fire, and cooks like one.

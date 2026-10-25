@@ -7,7 +7,7 @@ import { RECONNECTING } from '../phone';
 import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
-import { rackPutLine, STORE_REACH } from '../../game/crates';
+import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
 import { DAMAGE_WARN, SPROUT_COOLDOWN, TRAVEL_LEG } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
@@ -54,7 +54,7 @@ import { ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS
 import { REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
-import { LIGHT_RES, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
+import { LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { SUN_STEPS } from '../../render/trees3d';
 import { TURNS } from '../../render/view';
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
@@ -117,7 +117,7 @@ import { REPORTS_A_SESSION } from '../../net/errors';
 import { VIA_MAX } from '../../net/island';
 import { CATCH_UP, MAX_STEP as CLOCK_STEP } from '../../engine/loop';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
-import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
+import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
 import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
@@ -188,7 +188,7 @@ import { STONES_DEPTH, STONES_SLABS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { ENGRAVE_MAX, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
 import { CHAT_KEEP_DAYS, EVENT_KEEP_DAYS, TALK_LOG } from '../../game/events';
-import { DEPLOY_REACH } from '../../game/furniture';
+import { BRAZIER_CAPACITY, DEPLOY_REACH, OVEN_CAPACITY } from '../../game/furniture';
 
 /**
  * What's new: what changed on the island, a line each, shown once as you come
@@ -3713,6 +3713,16 @@ export const NEWS: News[] = [
     lines: () => [
       `Fixed: Pick sprout on a sapling or clipped tree: refused.`,
       `Changed: Pick sprout: once per tree per ${num(SPROUT_COOLDOWN / 60)} min, workers included.`,
+    ],
+  },
+  {
+    n: 310,
+    day: '2026-10-25',
+    lines: () => [
+      `Fixed: oven, brazier: fuel left on hover and right-click title; fuel ring within ${num(RING_REACH)} tiles. Full: oven ${burnsFor(OVEN_CAPACITY)}, brazier ${burnsFor(BRAZIER_CAPACITY)}.`,
+      'Added: crate shelf → Open all: every crate in one store window, a line per pile (total, spots). Take and put in: crates in spot order.',
+      `Changed: crate shelf menu rows: spot, then name or top ${numberWord(CRATE_KINDS_SAID)} kinds with counts; things / room.`,
+      'Fixed: right-click ▸ rows: note shown; rows of one label open apart.',
     ],
   },
 ];

@@ -154,6 +154,23 @@ export function timeWords(secs: number): string {
   return unit(mins, 'minute');
 }
 
+/**
+ * How long fuel lasts, from its seconds of burning: "1.5 hours", "12 minutes",
+ * "40 seconds". One for every fire there is -- campfire, oven, brazier,
+ * smelter, kiln -- so they cannot come to say it differently.
+ */
+export function burnsFor(secs: number): string {
+  const m = Math.round(secs / 60);
+  return m >= 60 ? `${(m / 60).toFixed(1)} hours` : m >= 1 ? `${m} minutes` : `${Math.round(secs)} seconds`;
+}
+
+/**
+ * A fire's state in a hover, a menu title and a window: lit or not, and the
+ * fuel left as `burnsFor` says it, from its fuel and the seconds it lasts.
+ */
+export const heatSaid = (lit: boolean | undefined, fuel: number | undefined, secs: number): string =>
+  (lit ? `lit, fuel ${burnsFor(secs)}` : (fuel ?? 0) > 0 ? `unlit, fuel ${burnsFor(secs)}` : 'unlit, no fuel');
+
 /** The months of the year, January first. */
 export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 /** A day of the year as [month, day], month counted from one: "15 October". */
