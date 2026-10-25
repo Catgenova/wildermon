@@ -99,7 +99,7 @@ end $do$;
 /*
  * A spec is jsonb:
  *
- *   {"t": "int" | "num" | "text" | "bool" | "uuid" | "object" | "array" | "any",
+ *   {"t": "int" | "num" | "text" | "bool" | "uuid" | "object" | "array" | "any",   (a number may come as its digits)
  *    "null": true             -- a JSON null (or SQL null) is let through
  *    "min", "max"             -- int and num: the range, inclusive
  *    "len"                    -- text: most characters
@@ -133,8 +133,12 @@ begin
   end if;
   if v_t = 'any' then return null; end if;
   if v_t in ('int', 'num') then
-    if v_type <> 'number' then return p_path || ': want a number'; end if;
-    v_n := (v #>> '{}')::numeric;
+    -- Its digits as text are the same number to every reader (`(t->>'id')::bigint`), and are taken.
+    if v_type = 'string' and (v #>> '{}') ~ '^-?[0-9]{1,18}(\.[0-9]{1,18})?$' then
+      v_n := (v #>> '{}')::numeric;
+    elsif v_type <> 'number' then return p_path || ': want a number';
+    else v_n := (v #>> '{}')::numeric;
+    end if;
     if v_t = 'int' and v_n <> trunc(v_n) then return p_path || ': want a whole number'; end if;
     if v_n < coalesce((s->>'min')::numeric, -9007199254740991) or v_n > coalesce((s->>'max')::numeric, 9007199254740991) then
       return p_path || ': out of range';

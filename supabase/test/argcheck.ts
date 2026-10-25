@@ -82,6 +82,8 @@ const targets: Array<[string, Target & Record<string, unknown>]> = [
   // And what a menu adds on the way: a name, a yes, which dye.
   ['name_thing', { kind: 'item', uid: 1, name: 'Old Faithful', sure: true, dyeFrom: 'barrel:1' }],
 ];
+// And a number as its digits, which every reader takes as the number (`(t->>'uid')::bigint`).
+const digits = { kind: 'item', uid: '12', count: '10', into: '92' };
 const aims: SpellAim[] = [
   { kind: 'self' }, { kind: 'player', uid: YOU }, { kind: 'creature', id: 3 }, { kind: 'item', id: 4 },
   { kind: 'placed', id: 5 }, { kind: 'area' }, { kind: 'area', x: AT + 2.5, y: AT - 1.25 },
@@ -94,7 +96,7 @@ const look = randomLook(() => 0.5);
 
 // [door, the SQL call, what the refusal says]
 const refused: Array<[string, string, string]> = [
-  ['rpc_act', `rpc_act($1, 'dig', ${lit({ kind: 'tile', x: '21', y: AT })})`, 'Bad request: rpc_act p_target.x: want a number.'],
+  ['rpc_act', `rpc_act($1, 'dig', ${lit({ kind: 'tile', x: 'east', y: AT })})`, 'Bad request: rpc_act p_target.x: want a number.'],
   ['rpc_act', `rpc_act($1, 'dig', ${lit({ kind: 'tile', x: AT, y: AT, cx: AT, cy: AT, sx: 2.5 })})`, 'Bad request: rpc_act p_target.sx: want a whole number.'],
   ['rpc_act', `rpc_act($1, 'dig', ${lit({ kind: 'tile', x: 1e9, y: AT })})`, 'Bad request: rpc_act p_target.x: out of range.'],
   ['rpc_act', `rpc_act($1, 'dig', ${lit({ kind: 'tile', x: AT, y: AT, owner: 'me' })})`, 'Bad request: rpc_act p_target.owner: not a key.'],
@@ -157,6 +159,7 @@ end $t$;
 -- Every shape the browser sends, through its door: not one refused as a bad request.
 ${[
   ...targets.map(([a, t]) => `rpc_act($1, '${a}', ${lit(t)})`),
+  `rpc_act($1, 'store_in_crate', ${lit(digits)})`,
   ...targets.filter(([a]) => a === 'plan_wall').map(([, t]) => `rpc_plan_hidden_wall($1, ${lit(t)})`),
   ...aims.map((aim) => `rpc_cast_spell($1, 1, ${lit(aim)})`),
   `rpc_spell($1, 'ember', ${lit({ id: 3 })})`,
