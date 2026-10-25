@@ -55,10 +55,13 @@ const pressBlock = /const PRESSES: Record<string, \(\) => void> = \{([\s\S]*?)\n
 const presses = [...pressBlock.matchAll(/^ {2}([a-z_0-9]+): /gm)].map((m) => m[1]);
 const onKey = /input\.onKey = \(code, ev\) => \{([\s\S]*?)\n\};/.exec(main)?.[1] ?? '';
 const named = [...onKey.matchAll(/code === '([A-Za-z0-9]+)'/g)].map((m) => m[1]);
-/** Ctrl+K is an alias for Find anything, which has its own row; Tab, Slash and the F-keys are only kept from the browser. */
-const ALIASES = new Set(['KeyK', 'Tab', 'Slash']);
+/**
+ * Ctrl+K is an alias for Find anything, which has its own row; Ctrl+Z is Undo last plan, as most programs have it, with
+ * its own button on the plan bar (`planbar.ts`); Tab, Slash and the F-keys are only kept from the browser.
+ */
+const ALIASES = new Set(['KeyK', 'KeyZ', 'Tab', 'Slash']);
 check('the key handler in main.ts was found, and the presses in it', presses.length > 20 && onKey.length > 100, `${presses.length} presses`);
-check('the key handler matches no key by name past the table (Ctrl+K and the browser\'s own aside)',
+check('the key handler matches no key by name past the table (Ctrl+K, Ctrl+Z and the browser\'s own aside)',
   named.every((c) => ALIASES.has(c)), named.filter((c) => !ALIASES.has(c)).join(', ') || 'none');
 
 const options = browserOptions();
