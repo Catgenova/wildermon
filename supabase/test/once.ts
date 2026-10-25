@@ -169,6 +169,8 @@ begin
   insert into said values ('ORDER_TWO', purse(w, me) || '|' || (select count(*) from buy_order where world_id = w and poster = me));
 
   -- A dig, the same key twice: one job, and run out, one go's dirt. Another key queues a second.
+  -- Every go comes off (\`skill_check\` asked to foreknow), so what is counted is goes and not luck.
+  perform set_config('wurm.foreknow', 'on', true);
   perform pg_temp.req('${K3}');
   perform rpc_act(w, 'dig', '{"kind":"tile","x":16,"y":16,"cx":16,"cy":16}'::jsonb, 1);
   begin
