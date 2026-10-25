@@ -142,8 +142,10 @@ const HAZE_STEPS = 6;
 const HAZE_INK_STEP = 12;
 /** The share of the screen's pixels the swell's gradients are worked out at, across and down (`drawSwell`). */
 const SWELL_RES = 0.5;
-/** Device pixels of tree pictures kept between frames (`drawTree`): about forty-eight megabytes. */
-const TREE_PIXELS = 12_000_000;
+/** Device pixels of tree pictures kept between frames (`drawTree`): about sixty-four megabytes. */
+const TREE_PIXELS = 16_000_000;
+/** The most device pixels of solid trees' pictures a frame may put down for the wind to move them (`solidFrame`): every frame of it is a picture of its own. */
+const SWAY_PIXELS = 6_000_000;
 /**
  * How long the zoom has to have held still, in milliseconds, before pictures
  * are made for it (`zoomSettled`). A wheel is a run of notches with a few
@@ -7229,8 +7231,8 @@ export class Renderer {
     const hour = this.game.hourOfDay();
     this.solidHour = hour;
     this.solidDark = this.game.darkness();
-    // The wind only while every frame of it for every tree in sight fits in what the pictures may keep.
-    this.solidSway = this.zoomSettled && this.solidPx * SWAY_FRAMES < TREE_PIXELS * 0.5;
+    // The wind only while every frame of it for every tree in sight is a few screens of pictures.
+    this.solidSway = this.zoomSettled && this.solidPx * SWAY_FRAMES < SWAY_PIXELS;
     this.solidPx = 0;
     const cam = this.camera;
     if (this.solidTurn !== cam.rotation) {
