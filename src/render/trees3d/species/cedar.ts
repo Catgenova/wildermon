@@ -14,9 +14,9 @@ const rampOf = ([lit, mid, deep]: readonly [string, string, string]): Ramp =>
 
 /** The cedar's habit: many close whorls of lacy sprays down nearly to the ground, under a nodding tip. */
 const HABIT: Whorls = {
-  tiers: 12, pads: 7, width: 0.5, bare: 0.18, long: 1, hang: 0.55, fingers: 3, ragged: 0.35, taper: 0.16,
+  tiers: 11, pads: 7, width: 0.52, bare: 0.18, long: 1, hang: 0.55, fingers: 3, ragged: 0.35, taper: 0.16,
   deadTop: 1, broken: false, stubs: 1, gaps: 0.04, spire: true, hem: 0.16,
-  lace: 9, nod: 0.08, top: 0.84, tufts: 4, limb: 0.24, buttress: true, core: 0.55, swell: 0.6, split: 0.4, parted: 0.18,
+  lace: 9, nod: 0.08, top: 0.84, tufts: 4, limb: 0.24, buttress: true, core: 0.55, swell: 0.35, split: 0.4, parted: 0.18,
 };
 const habit = (w: Partial<Whorls>): Pick<Build, 'whorls'> => ({ whorls: { ...HABIT, ...w } });
 
@@ -39,8 +39,8 @@ export const cedar: Species3D = {
   },
   ages: {
     sapling: { stem: 0.04, spread: 0.26, girth: 0.034, flare: 1, gnarl: 0, lean: 0.2, ...habit({ tiers: 6, pads: 6, stubs: 0, lace: 8, hem: 0.03, taper: 0.3, long: 0, nod: 0.05, core: 0.4, buttress: false, swell: 0, split: 0 }) },
-    young: { stem: 0.18, spread: 0.34, girth: 0.045, flare: 2.4, lean: 0.4, ...habit({ tiers: 10, pads: 7, stubs: 0, lace: 10, long: 0, swell: 0.4 }) },
-    old: { stem: 0.22, spread: 0.39, girth: 0.06, flare: 4, gnarl: 0.15, lean: 1, rune: true, ...habit({ tiers: 12, pads: 7, stubs: 2, gaps: 0.08 }) },
+    young: { stem: 0.18, spread: 0.34, girth: 0.045, flare: 2.4, lean: 0.4, ...habit({ tiers: 10, pads: 7, stubs: 0, lace: 10, long: 0, swell: 0.25 }) },
+    old: { stem: 0.22, spread: 0.39, girth: 0.06, flare: 4, gnarl: 0.15, lean: 1, rune: true, ...habit({ tiers: 11, pads: 7, stubs: 2, gaps: 0.08 }) },
     veryOld: {
       stem: 0.2, spread: 0.4, girth: 0.066, flare: 3.8, gnarl: 0.3, lean: 1.4, rune: true, hollow: true,
       ...habit({ tiers: 10, pads: 7, stubs: 3, gaps: 0.26, bare: 0.4, limb: 0.42, core: 0.18, ragged: 0.5, long: 2, split: 0 }),

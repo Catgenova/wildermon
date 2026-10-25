@@ -1262,7 +1262,9 @@ function rimOf(p: Pad, R: () => number): Rim[] {
  * hanging under it, `lace` of them across the end, the end's the longest.
  */
 function laceRimOf(p: Pad, R: () => number): Rim[] {
-  const L = p.reach, W = p.w, H = p.hang, F = Math.max(1, p.fingers), per = Math.max(2, Math.round((p.lace ?? 6) / F));
+  // Tips no smaller than `LACE_TIP` along: a small spray has fewer of them.
+  const L = p.reach, W = p.w, H = p.hang, F = Math.max(1, p.fingers);
+  const per = Math.max(1, Math.min(Math.round((p.lace ?? 6) / F), Math.round(L / (LACE_TIP * F))));
   const wAt = (t: number): number => W * (0.28 + 0.72 * Math.min(1, t * 1.6));
   const xc = 0.58 * L, rx = 0.42 * L, ry = wAt(0.58);
   const out: Rim[] = [];
@@ -1271,7 +1273,7 @@ function laceRimOf(p: Pad, R: () => number): Rim[] {
   const tip = (x: number, y: number, nx: number, ny: number, k: number, h: number): void => {
     out.push({ x: x + nx * k, y: y + ny * k, dz: -h * 0.25, h, finger: true });
   };
-  const SIDE = [0.15, 0.3, 0.45];
+  const SIDE = L > LACE_TIP * 6 ? [0.15, 0.3, 0.45] : L > LACE_TIP * 3 ? [0.25] : [];
   notch(0, -wAt(0), H * 0.1);
   for (const t of SIDE) {
     notch(t * L, -wAt(t) * 0.93, H * 0.15);
@@ -1296,6 +1298,9 @@ function laceRimOf(p: Pad, R: () => number): Rim[] {
   notch(0, wAt(0), H * 0.1);
   return out;
 }
+
+/** How far apart, in model units, a lacy spray's tips are at the least. */
+const LACE_TIP = 1.1;
 
 /** A lacy spray's outline is its own whatever the eye: worked out once (`laceRimOf`). */
 const laceRims = new WeakMap<Pad, Rim[]>();
@@ -1716,13 +1721,11 @@ function undergrowth(g: Ctx, job: Job, items: Item[]): void {
       massPath(body, x, y - r * 0.35, r, r * 0.72, o, 0, LEAF_EDGE, 12);
       g.fillStyle = rgb(mixRgb(stone, hex('#3e3040'), 0.42 - 0.2 * l));
       g.fill(body);
-      g.save();
-      g.clip(body);
+      // Its top, inside its outline.
       const top = new Path2D();
-      massPath(top, x + sun.sx * r * 0.25, y - r * 0.62, r * 0.78, r * 0.48, o, 0, LEAF_EDGE, 12);
+      massPath(top, x + sun.sx * r * 0.15, y - r * 0.55, r * 0.7, r * 0.42, o, 0, LEAF_EDGE, 12);
       g.fillStyle = winter ? '#f4f7fd' : rgb(mixRgb(stone, [255, 250, 240], 0.15 * l));
       g.fill(top);
-      g.restore();
       g.strokeStyle = rgb(KIT_INK, 0.85);
       g.lineWidth = KIT_INK_W * 0.8;
       g.stroke(body);

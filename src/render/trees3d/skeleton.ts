@@ -729,8 +729,8 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
       const further = longs.has(i * 100 + j) ? reachT * 0.35 : 0;
       const z = zs[i] + (R() - 0.5) * gap * 0.25;
       bough(z, az, reachT * (1 + w.ragged * (R() - 0.5)), reachT, n === 1 ? 1 : u, Math.max(3, Math.round(w.fingers - u)), further);
-      // Low in the crown, a shorter spray over it, turned a little aside.
-      if (w.split && u < w.split) bough(z + gap * 0.35, az + (R() - 0.5) * 0.9, reachT * 0.6, reachT * 0.6, u + 0.05, 3);
+      // Low in the crown, a shorter spray over every other one, turned a little aside.
+      if (w.split && u < w.split && j % 2 === 0) bough(z + gap * 0.35, az + (R() - 0.5) * 0.9, reachT * 0.6, reachT * 0.6, u + 0.05, 3);
     }
   }
   /* ---- a ragged tuft of small boughs on the leader over the top whorl, the leader's tip clear of it ---- */
@@ -738,7 +738,7 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
     const top = H * b.spread * w.taper;
     // Given a number of tufts, that many up the spire, smaller and fewer up it, to short of its tip.
     const T = w.tufts ?? 0;
-    const tufts = T ? Array.from({ length: T }, (_, i) => [0.12 + (0.7 * i) / Math.max(1, T - 1), 0.9 - (0.6 * i) / Math.max(1, T - 1), Math.max(2, 5 - i)]) : [[0.28, 0.8, 5], [0.62, 0.45, 3]];
+    const tufts = T ? Array.from({ length: T }, (_, i) => [0.12 + (0.7 * i) / Math.max(1, T - 1), 0.9 - (0.6 * i) / Math.max(1, T - 1), Math.max(2, 4 - i)]) : [[0.28, 0.8, 5], [0.62, 0.45, 3]];
     for (const [f, k, m] of tufts) {
       a0 += 2.4;
       for (let j = 0; j < m; j++) bough(crownTop + (H - crownTop) * f, a0 + (j / m) * TAU + (R() - 0.5) * 0.8, top * k * (0.8 + 0.4 * R()), top * k, 1, 3);
