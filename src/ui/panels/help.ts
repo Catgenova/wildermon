@@ -2314,7 +2314,7 @@ export function helpText(): string {
       ${RANK_POWERS.map((p) => `<tr><td><b>${p.label}</b></td><td>${p.rule}</td></tr>`).join('\n      ')}
     </table>
     <ul>
-      <li>Disbanding: founder only (frees the founder's wildermon and tips out the founder's settlement crate). Standing orders: founder and ranks with <b>${POWER.orders.label}</b>.</li>
+      <li>Disbanding: founder only (frees the founder's wildermon and tips out the founder's settlement crate). Setting wildermon to work: founder only. Standing orders: founder and ranks with <b>${POWER.orders.label}</b>.</li>
       <li>Delivering to a settlement's work: every citizen, no permission needed (<b>The settlement window</b>).</li>
       <li>Starting ranks on every settlement (Mayor also holds <b>${POWER.notices.label}</b> and <b>${POWER.work.label}</b>):</li>
     </ul>
