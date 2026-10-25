@@ -75,6 +75,8 @@ export interface Skeleton {
   hollow: number | null;
   /** How far past a mass's `r` its leaf reaches on the screen, for the bounds of its picture: 1.45 unless given. */
   leafReach?: number;
+  /** How high the rough, dark bark at the foot of its stems reaches (`Species3D.bark.marks`). */
+  rough?: number;
 }
 
 /** The tree's proportions at one age, in model units. */
@@ -120,9 +122,16 @@ export interface Build {
    * How it is grown: 'dome' (`grow`) a few sinuous limbs under one dome of
    * big masses; 'spreading' (`growSpreading`) a short trunk on buttress roots
    * splitting low into crooked limbs, the lowest near level, under an open
-   * crown of many small masses on the branch ends.
+   * crown of many small masses on the branch ends; 'upright' (`growUpright`)
+   * one to `stems` slender stems from one foot, each a leader to the top with
+   * upswept limbs along it, under a tall, narrow crown of small hanging
+   * clusters on the limbs' drooping ends.
    */
-  habit?: 'dome' | 'spreading';
+  habit?: 'dome' | 'spreading' | 'upright';
+  /** Upright: the most stems from one foot; each of the tile's grown shapes has its own count, one up to this. */
+  stems?: number;
+  /** Upright: how high the rough, dark bark at the foot reaches, as a share of the height. */
+  rough?: number;
   /** Spreading: share of the scaffold limbs that reach out near level. */
   low?: number;
   /** Spreading: how far a limb turns at each elbow, radians. */
@@ -154,9 +163,15 @@ export interface Species3D {
   build: Build;
   ages: Partial<Record<AgeKey, Partial<Build>>>;
   /** Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough. */
-  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean };
-  /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed. */
-  leafForm?: 'maple' | 'oak';
+  bark: {
+    lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean;
+    /** The fine twigs, where they differ from the bark. */
+    twig?: string;
+    /** Pale bark marked in `ink` with dashes across it and scars where limbs leave, over a cracked band of `base` at its foot. */
+    marks?: { ink: string; base: string };
+  };
+  /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed, 'birch' small and pointed. */
+  leafForm?: 'maple' | 'oak' | 'birch';
   /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */
   buttress?: boolean;
   /** Snow as a narrow line along the top edge of the wood, rather than over all its upper face. */
@@ -167,6 +182,8 @@ export interface Species3D {
   pad?: number;
   /** An open crown: the wood laid among the masses by depth, the branches seen through the gaps. */
   open?: boolean;
+  /** Its finest twigs (order 4) a haze: hairlines in the twig's colour with no ink round them, and the twigs over them inked finer. */
+  haze?: boolean;
   /** The leaf through the year. A ramp runs from the deepest shade to the lit top. */
   leaf: {
     summer: Ramp;
