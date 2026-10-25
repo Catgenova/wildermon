@@ -338,7 +338,7 @@ function weeping(s: Shape, size: number, bx: number, by: number, seed: number, k
 }
 
 /** The leaf a crown that is not green in summer shows among its blossom. */
-const SPRING_GREEN: Tones = ['#a6d06c', '#62a046', '#356c36'];
+export const SPRING_GREEN: Tones = ['#a6d06c', '#62a046', '#356c36'];
 
 /** How much a tree has to shrink to sit inside its box. */
 function fitIn(g: TreeGeometry, box: Box): number {

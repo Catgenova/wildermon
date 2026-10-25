@@ -122,11 +122,15 @@ export interface Build {
    * splitting low into crooked limbs, the lowest near level, under an open
    * crown of many small masses on the branch ends.
    */
-  habit?: 'dome' | 'spreading';
+  habit?: 'dome' | 'spreading' | 'orchard';
   /** Spreading: share of the scaffold limbs that reach out near level. */
   low?: number;
   /** Spreading: how far a limb turns at each elbow, radians. */
   zig?: number;
+  /** Orchard: turns the trunk winds through from its foot to its split. */
+  twist?: number;
+  /** Orchard: stems from the ground, where it grows as a shrub of several. */
+  stems?: number;
 }
 
 /** A run of tones from the deepest shade to the lit top: a clump is painted in four neighbours on it. */
@@ -145,6 +149,10 @@ export interface Dress {
   litter: number;
   /** Old enough to hang keys. */
   keys: boolean;
+  /** A fruit tree in flower. */
+  bloom?: boolean;
+  /** How many fruit a fruit tree has on it. */
+  fruit?: number;
 }
 
 export interface Species3D {
@@ -153,10 +161,13 @@ export interface Species3D {
   /** Each age's build: the mature one, and what each other age changes. */
   build: Build;
   ages: Partial<Record<AgeKey, Partial<Build>>>;
-  /** Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough. */
-  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean };
-  /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed. */
-  leafForm?: 'maple' | 'oak';
+  /**
+   * Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where
+   * it is rough; ridges wound round the trunk and the big limbs, lit in `rope`, where it has them.
+   */
+  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; rope?: string };
+  /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed, 'oval' pointed, 'narrow' long and thin, 'puff' scalloped. */
+  leafForm?: 'maple' | 'oak' | 'oval' | 'narrow' | 'puff';
   /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */
   buttress?: boolean;
   /** Snow as a narrow line along the top edge of the wood, rather than over all its upper face. */
@@ -180,6 +191,16 @@ export interface Species3D {
   buds?: string;
   /** Keeps its leaf all year: its winter leaf, and its new tips in spring (`leaf.spring`). */
   evergreen?: { winter: Ramp };
+  /** A fruit tree (`./orchard`): its blossom and its fruit. */
+  orchard?: Orchard;
+}
+
+/** What a fruit tree hangs, as its flat tree's own (`../trees/species`, `../foliage` BLOOMS) and the island's fruiting table. */
+export interface Orchard {
+  /** In flower in spring at the ages that bear: its ramp, the flower's middle, the share of the masses in flower, and the new leaf among them. */
+  bloom: { ramp: Ramp; eye: string | null; cover: number; leaf: Ramp };
+  /** Its fruit: colour, size against a small one, how many on a mature crown, its shape, and the seasons it is on the tree. */
+  fruit: { colour: string; size: number; count: number; shape: 'round' | 'pear' | 'oval'; seasons: readonly Season[]; pairs: boolean };
 }
 
 /**
