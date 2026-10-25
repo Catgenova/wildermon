@@ -2298,7 +2298,7 @@ export function paintFoot(g: Ctx, foot: Foot, c: Chain): void {
  * along the ground and round its end. Where it stands, for its depth, and
  * how to draw it.
  */
-export function buttress(job: Job, a: number, out: number, k: number): { at: V3; draw: (g: Ctx) => void } {
+export function buttress(job: Job, a: number, out: number, k: number, blunt = 0): { at: V3; draw: (g: Ctx) => void } {
   const { sk, spec, light, e } = job;
   const base = sk.limbs[0].a;
   const rT = sk.limbs[0].ra * 1.02;
@@ -2313,7 +2313,8 @@ export function buttress(job: Job, a: number, out: number, k: number): { at: V3;
     const c = add(base, mul(dir, r0 + (r1 - r0) * s));
     // Falling steeply off the trunk and running out low; rounded off at its end.
     const z = h0 * Math.pow(1 - s, 2.2) + rT * 0.08 * (1 - s * s);
-    const w = w0 * Math.sqrt(Math.max(0, 1 - s * s * s)) * (1 - 0.3 * s);
+    // Blunt (a stump's): still that share of its width at its end.
+    const w = w0 * Math.sqrt(Math.max(0, 1 - s * s * s * (1 - blunt))) * (1 - 0.3 * s);
     ridge.push([c[0], c[1], c[2] + z]);
     left.push(add(c, mul(perp, w)));
     right.push(add(c, mul(perp, -w)));

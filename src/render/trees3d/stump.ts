@@ -55,6 +55,18 @@ const STEM_AT = [0, 0.12, 0.3, 0.6, 1];
 const RING_DARK = 0.3;
 /** A pale bark's dashes on a stump or a log, against its tree's: seen close to, they are small. */
 const MARKS_FINE = 0.3;
+/** How blunt a stump's buttresses end (`buttress`): rounded off, not run out to a point. */
+const BLUNT = 0.6;
+/** How much brighter in its colour a stump's bark is than its flat stump's wood, as the flat stump is drawn in it. */
+const VIVID = 0.3;
+
+/** A hex colour taken `k` further from its own grey. */
+function vivid(c: string, k: number): string {
+  const [r, g, b] = hex(c);
+  const m = (r + g + b) / 3;
+  const f = (x: number): string => Math.round(Math.max(0, Math.min(255, m + (x - m) * (1 + k)))).toString(16).padStart(2, '0');
+  return `#${f(r)}${f(g)}${f(b)}`;
+}
 
 /**
  * What sets one kind of stump apart, by how its tree grows (`Build.habit`,
@@ -72,7 +84,7 @@ export interface StumpShape {
 }
 export const STUMP_SHAPES: Record<'conifer' | 'spreading' | 'upright' | 'orchard' | 'dome', StumpShape> = {
   // Tall, on a broad foot of long buttresses.
-  conifer: { radius: 4.2, cut: 1.55, roots: 1 },
+  conifer: { radius: 4.2, cut: 1.55, roots: 0.62 },
   // Broad and low, craggy with its buttresses.
   spreading: { radius: 4.6, cut: 0.85, roots: 0.75 },
   // Straight-sided, with no flare.
@@ -226,12 +238,13 @@ export function logsOf(r: number, length: number, n: number, angle: number, off:
 }
 
 /** What of a species a stump or a log is painted as: its bark, always on an open foot; no leaf, no crown; moss only where `moss`. */
-export function woodSpec(spec: Species3D, trunk: string, moss: boolean, lying = false): Species3D {
+export function woodSpec(spec: Species3D, flatTrunk: string, moss: boolean, lying = false): Species3D {
+  const trunk = vivid(flatTrunk, VIVID);
   // In its flat stump's own wood (`TREE_DEFS` trunk), lit and shaded as the trees' bark is from theirs; a pale marked
   // bark (`marks`), whose look is its marks, in its tree's.
   const bark: Species3D['bark'] = spec.bark.marks ? spec.bark : {
     ...spec.bark,
-    lit: tone(trunk, 0.35), shade: mix(trunk, '#3e3040', 0.3), dead: tone(trunk, 0.5), furrow: mix(trunk, '#2e2230', 0.55),
+    lit: tone(trunk, 0.25), shade: mix(trunk, '#3e3040', 0.24), dead: tone(trunk, 0.5), furrow: mix(trunk, '#2e2230', 0.55),
     ...(spec.bark.strands ? { strands: tone(trunk, 0.5) } : {}),
     ...(spec.bark.rope ? { rope: tone(trunk, 0.5) } : {}),
   };
@@ -503,7 +516,7 @@ export function paintStump3d(g: Ctx, job: Job, m: StumpModel, wood: { face: stri
     // No snow along the buttresses: a stump's snow is on its top (`capOf`), and a thin line of it down each read as string.
     const bare = { ...job, dress: { ...job.dress, season: job.dress.season === 'winter' ? ('autumn' as const) : job.dress.season } };
     foot.lobes.forEach(([a, out], k) => {
-      const b = buttress(bare, a, out, k);
+      const b = buttress(bare, a, out, k, BLUNT);
       items.push({ d: near(b.at) - 0.5, draw: () => b.draw(g) });
     });
   }
