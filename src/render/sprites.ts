@@ -8,9 +8,10 @@ import { drawBust, drawFigure, figureJoints, figureStance, shineOver, viewOf, ty
 import { BUSH_DEFS, TREE_AGES, TREE_DEFS } from '../world/tiles';
 import { drawWildermon, drawWildermonPortrait, modelled, wildermonTop } from './wildermon';
 import { BUSH_WOOD, bushYear, leafageOf } from './foliage';
-import { LIT, contact, dulled, wob } from './trees/kit';
+import { LIT, contact, wob } from './trees/kit';
 import { paintTree } from './trees';
-import { BUSH3D_SPECIES, bush3dSprite, forgetTrees3d, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dSprite, forgetTrees3d, log3dSprite, STUMP3D_SPECIES, stump3dSprite, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
+import { woodOf } from './trees3d/stump';
 import type { Season } from '../world/calendar';
 import { cropPlant } from './crops';
 
@@ -603,8 +604,17 @@ export function treeSprite(species: number, variant: number, season: Season = 's
   return spr;
 }
 
-/** What a felled tree leaves: a short wide stub of its trunk, cut flat. */
-export function stumpSprite(species: number): Sprite {
+/**
+ * What a felled tree leaves: a short wide stub of its trunk, cut flat. A
+ * species drawn as a solid is seen from where the camera is and lit as the
+ * hour has it, with its season's moss and snow.
+ */
+export function stumpSprite(species: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
+  // None yet, and none to stand in: drawn flat this frame.
+  if (at && STUMP3D_SPECIES.has(species)) {
+    const solid = stump3dSprite(species, season, day, at, SPRITE_SCALE);
+    if (solid) return solid;
+  }
   const key = `${SPRITE_SCALE}|stump:${species}`;
   let spr = cache.get(key);
   if (spr) return spr;
@@ -630,11 +640,12 @@ export function stumpSprite(species: number): Sprite {
     ctx.beginPath();
     ctx.ellipse(bx, by - h, w * 0.46, w * 0.23, 0, 0, TAU);
     ctx.fill();
-    ctx.fillStyle = dulled(def.trunk, -0.62);
+    const wood = woodOf(def.trunk);
+    ctx.fillStyle = wood.face;
     ctx.beginPath();
     ctx.ellipse(bx, by - h - 0.3, w * 0.37, w * 0.18, 0, 0, TAU);
     ctx.fill();
-    ctx.strokeStyle = dulled(def.trunk, -0.12);
+    ctx.strokeStyle = wood.ring;
     ctx.lineWidth = 0.7;
     for (const r of [0.34, 0.66, 0.92]) {
       ctx.beginPath();
@@ -945,8 +956,14 @@ export function carcassSprite(flip: boolean, heap: boolean): Sprite {
   return spr;
 }
 
-/** What lies on a tile: a carcass if there is one there, the heap otherwise. */
-export function lyingSprite(items: readonly { id: string }[], x: number, y: number): Sprite {
+/** What lies on a tile: a carcass if there is one there, felled logs drawn as solids if that is all there is, the heap otherwise. */
+export function lyingSprite(items: readonly { id: string; count?: number; extra?: string }[], x: number, y: number, at?: TreeView, season: Season = 'summer', beside = false): Sprite {
+  // Felled logs, and nothing else: lying as solids, in their species' bark, beside the stump they came off if it is there.
+  if (at && items.length && items.every((it) => it.id === 'log')) {
+    const species = TREE_DEFS.findIndex((d) => d.name === items[0].extra);
+    const solid = STUMP3D_SPECIES.has(species) ? log3dSprite(species, items.reduce((n, it) => n + (it.count ?? 1), 0), season, at, SPRITE_SCALE, beside) : null;
+    if (solid) return solid;
+  }
   if (!items.some((it) => it.id === 'corpse')) return pileSprite();
   return carcassSprite(((x + y) & 1) === 1, items.some((it) => it.id !== 'corpse'));
 }
