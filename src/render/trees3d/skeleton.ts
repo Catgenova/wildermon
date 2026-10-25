@@ -690,7 +690,8 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
     let drop = (sl * 0.4 + whole * 0.6 * (1 - w.bare)) * b.droop * (0.9 + 0.2 * R());
     let hang = Math.min(gap * w.hang, sl * 0.35) * (0.85 + 0.3 * R());
     const base = axis(z);
-    const root = add(base, [d[0] * out0, d[1] * out0, out0 * 0.04]);
+    // A lacy spray's branch droops to it; the pine's rises a little.
+    const root = add(base, [d[0] * out0, d[1] * out0, out0 * (w.lace ? -0.22 : 0.04)]);
     // Kept clear of the ground, and of the tiles in front of its own, which are laid after it (`hemAt`).
     const low = drop + hang * 2;
     const floor = Math.max(H * w.hem, hemAt(H, Math.hypot(root[0], root[1]) + sl * 1.15));
@@ -707,7 +708,7 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
     });
     // Its branch, out to where the spray starts and a little under it.
     const r = Math.max(0.16, radius(z) * (w.limb ?? 0.22));
-    const mid = add(lerp(base, root, 0.5), [0, 0, out0 * 0.03]);
+    const mid = add(lerp(base, root, 0.5), [0, 0, out0 * (w.lace ? 0.04 : 0.03)]);
     const end = add(root, [d[0] * sl * 0.2, d[1] * sl * 0.2, -drop * 0.04]);
     const i0 = limbs.length;
     limbs.push({ a: base, b: mid, ra: r, rb: r * 0.8, order: 3, parent: pieceAt(z), bough: i0, pad: at });
@@ -738,7 +739,7 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
     const top = H * b.spread * w.taper;
     // Given a number of tufts, that many up the spire, smaller and fewer up it, to short of its tip.
     const T = w.tufts ?? 0;
-    const tufts = T ? Array.from({ length: T }, (_, i) => [0.12 + (0.7 * i) / Math.max(1, T - 1), 0.9 - (0.6 * i) / Math.max(1, T - 1), Math.max(2, 4 - i)]) : [[0.28, 0.8, 5], [0.62, 0.45, 3]];
+    const tufts = T ? Array.from({ length: T }, (_, i) => [0.08 + (0.76 * i) / Math.max(1, T - 1), 1.25 - (0.75 * i) / Math.max(1, T - 1), Math.max(2, 4 - (i >> 1))]) : [[0.28, 0.8, 5], [0.62, 0.45, 3]];
     for (const [f, k, m] of tufts) {
       a0 += 2.4;
       for (let j = 0; j < m; j++) bough(crownTop + (H - crownTop) * f, a0 + (j / m) * TAU + (R() - 0.5) * 0.8, top * k * (0.8 + 0.4 * R()), top * k, 1, 3);
@@ -746,6 +747,8 @@ export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skelet
   }
   return {
     limbs, clumps, crown: env, height: H, core: n > 0 ? w.core : undefined, parted: w.parted,
+    // A dense crown hides its leader from part way up to just under its tip.
+    hidden: n > 0 && (w.core ?? 0) >= 0.4 ? [stemZ + (crownTop - stemZ) * 0.4, crownTop + (H - crownTop) * 0.78] : undefined,
     rune: b.rune ? Math.PI / 4 + (R() - 0.5) * 0.5 : null,
     hollow: b.hollow ? Math.PI / 4 + 1.1 + (R() - 0.5) * 0.5 : null,
   };

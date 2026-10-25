@@ -79,6 +79,8 @@ export interface Skeleton {
   core?: number;
   /** How low in its crown a conifer's sprays part to show the trunk (`Whorls.parted`). */
   parted?: number;
+  /** Heights between which a conifer's leader is inside its crown, and not drawn. */
+  hidden?: [number, number];
 }
 
 /** The tree's proportions at one age, in model units. */

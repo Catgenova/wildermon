@@ -1319,7 +1319,7 @@ function layersOf(rim: Rim[], L: number): { end: Rim[]; inner: Rim[] } {
   if (!o) {
     const last = rim.length - 1;
     o = {
-      end: rim.filter((r, i) => i === 0 || i === last || r.x > L * 0.5),
+      end: rim.filter((r, i) => i === 0 || i === last || !r.finger || r.x > L * 0.5),
       inner: rim.filter((r, i) => i === 0 || i === last || !r.finger || r.x > L * 0.5),
     };
     laceLayers.set(rim, o);
@@ -1554,7 +1554,25 @@ function paintWhorls(g: Ctx, job: Job): void {
     return (d[0] * e.toward[0] + d[1] * e.toward[1]) / el < -0.55;
   };
   // A dense crown (`Skeleton.core`) hides its branches: only the trunk, the roots and the dead stubs are looked at.
-  const chains = chainsOf({ ...job, sk }, (sk.core ?? 0) >= 0.4).filter((c) => !behind(sk.limbs[c.pieces[0]]));
+  // A cedar's (`Skeleton.core`) branches coming at the eye are lost among their sprays: only those running out to the sides are drawn.
+  const ahead = (L: Limb): boolean => {
+    if (L.pad === undefined || sk.core === undefined) return false;
+    const d = spin((job.sk.clumps[L.pad].pad as Pad).d, [0, 0, 0], turns[L.pad]);
+    return (d[0] * e.toward[0] + d[1] * e.toward[1]) / el > 0.55;
+  };
+  const chains = chainsOf({ ...job, sk }, (sk.core ?? 0) >= 0.4).filter((c) => !behind(sk.limbs[c.pieces[0]]) && !ahead(sk.limbs[c.pieces[0]]));
+  /** The runs of a chain that are drawn: the leader's are less where the crown hides it (`Skeleton.hidden`). */
+  const runs = (c: Chain): Array<[number, number]> => {
+    const end = c.q.length - 1;
+    if (c.order !== 0 || !sk.hidden) return [[0, end]];
+    const zAt = (j: number): number => (j === 0 ? sk.limbs[c.pieces[0]].a[2] : sk.limbs[c.pieces[j - 1]].b[2]);
+    let a = 0, b = end;
+    while (a < end && zAt(a + 1) <= sk.hidden[0]) a++;
+    while (b > 0 && zAt(b - 1) >= sk.hidden[1]) b--;
+    // Its tip is always drawn: the last piece at the least.
+    b = Math.min(b, end - 1);
+    return a + 1 >= b ? [[0, end]] : [[0, Math.max(1, a)], [b, end]];
+  };
   const all: Path2D[] = [];
   const kept = keptOf(job);
   const boughs = kept.map((s, i) => boughOf(job, s, all, turns[i]));
@@ -1574,7 +1592,7 @@ function paintWhorls(g: Ctx, job: Job): void {
       tw = Math.max(tw, c.r[0] + c.r[c.r.length - 1]);
     } else {
       g.lineWidth = KIT_INK_W * 2;
-      g.stroke(bandPath(c, 0, c.q.length - 1, -1, 1));
+      for (const [j0, j1] of runs(c)) g.stroke(bandPath(c, j0, j1, -1, 1));
       const [x, y] = c.q[c.q.length - 1];
       g.beginPath();
       g.arc(x, y, c.r[c.r.length - 1] + KIT_INK_W, 0, TAU);
@@ -1604,7 +1622,7 @@ function paintWhorls(g: Ctx, job: Job): void {
     // The leader is laid whole, where the leader stands: everything is laid by how near it is along the ground.
     if (c.order === 0) {
       const L = sk.limbs[c.pieces[0]];
-      items.push({ d: near(L.a) - 0.5, draw: () => paintChain(g, job, c, 0, c.q.length - 1, mulberry32(job.seed + c.pieces[0] * 13)) });
+      for (const [j0, j1] of runs(c)) items.push({ d: near(L.a) - 0.5, draw: () => paintChain(g, job, c, j0, j1, mulberry32(job.seed + c.pieces[0] * 13)) });
       continue;
     }
     // A branch is laid whole, where its middle is; so is a cedar's (`Skeleton.core`), however thick.
