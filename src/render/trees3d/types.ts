@@ -31,6 +31,8 @@ export interface Limb {
   tip?: boolean;
   /** A conifer's branch: the clump of the spray it carries (`Pad`), which it turns with. */
   pad?: number;
+  /** A twig out through the edge of a fruit tree's crown, which shows in leaf as its limbs do. */
+  poke?: boolean;
 }
 
 /**
@@ -55,6 +57,22 @@ export interface Clump {
    * and `r` across, all inside `r` of it. Painted as one mass with one rim.
    */
   subs?: Array<{ o: V3; r: number }>;
+  /** A weeping lobe's curtain: the strands hanging off its rim (`Weep`). */
+  curtain?: Strand[];
+}
+
+/**
+ * One hanging strand of a weeping lobe: from `o` off the lobe's middle, out
+ * `arch` over its rim, then straight down `len`; `w` its half-width at the
+ * top, `a` the way it faces out round the lobe, `k` its own seeded 0..1.
+ */
+export interface Strand {
+  o: V3;
+  a: number;
+  arch: number;
+  len: number;
+  w: number;
+  k: number;
 }
 
 /** The crown's ellipsoid: what the clumps are kept inside and lit against. */
@@ -75,6 +93,16 @@ export interface Skeleton {
   hollow: number | null;
   /** How far past a mass's `r` its leaf reaches on the screen, for the bounds of its picture: 1.45 unless given. */
   leafReach?: number;
+  /** How high the rough, dark bark at the foot of its stems reaches (`Species3D.bark.marks`). */
+  rough?: number;
+  /** A conifer's dark middle round its leader, as a share of each whorl's reach (`Whorls.core`). */
+  core?: number;
+  /** How low in its crown a conifer's sprays part to show the trunk (`Whorls.parted`). */
+  parted?: number;
+  /** Heights between which a conifer's leader is inside its crown, and not drawn. */
+  hidden?: [number, number];
+  /** A dead weeping tree's few bare strands, each from `o` (a point of the tree), `len` down. */
+  whips?: Array<{ o: V3; len: number; k: number }>;
 }
 
 /** The tree's proportions at one age, in model units. */
@@ -120,13 +148,48 @@ export interface Build {
    * How it is grown: 'dome' (`grow`) a few sinuous limbs under one dome of
    * big masses; 'spreading' (`growSpreading`) a short trunk on buttress roots
    * splitting low into crooked limbs, the lowest near level, under an open
-   * crown of many small masses on the branch ends.
+   * crown of many small masses on the branch ends; 'upright' (`growUpright`)
+   * one to `stems` slender stems from one foot, each a leader to the top with
+   * upswept limbs along it, under a tall, narrow crown of small hanging
+   * clusters on the limbs' drooping ends.
    */
-  habit?: 'dome' | 'spreading';
+  habit?: 'dome' | 'spreading' | 'upright' | 'orchard';
+  /** Upright: the most stems from one foot; each of the tile's grown shapes has its own count, one up to this. Orchard: stems from the ground, where it grows as a shrub of several. */
+  stems?: number;
+  /** Upright: how high the rough, dark bark at the foot reaches, as a share of the height. */
+  rough?: number;
   /** Spreading: share of the scaffold limbs that reach out near level. */
   low?: number;
   /** Spreading: how far a limb turns at each elbow, radians. */
   zig?: number;
+  /** Spreading: an S-bend in the trunk, its sway either side in trunk radii. */
+  sBend?: number;
+  /** A weeping crown: a lobe at the end of each limb, a curtain of strands off each. */
+  weep?: Weep;
+  /** Orchard: turns the trunk winds through from its foot to its split. */
+  twist?: number;
+  /** Orchard: gaps through the lower crown, each over a limb that shows through it. */
+  holes?: number;
+  /** Orchard: how far the crown narrows to its top, 0 a dome. */
+  peak?: number;
+}
+
+/**
+ * A weeping crown: one lobe of leaf on the end of each scaffold limb, and
+ * one or two over the middle, each hung round its rim with strands nearly to
+ * the ground.
+ */
+export interface Weep {
+  /** Lobes over the middle of the crown, besides one on each limb. */
+  tops: number;
+  /** Strands round a lobe, against its rim's length over a strand's width. */
+  fill: number;
+  /** A strand's half-width, in model units. */
+  width: number;
+  /** How low the longest strands hang, as a share of the height over the ground. */
+  hem: number;
+  /** How unevenly they end, as a share of the height. */
+  ragged: number;
 }
 
 /** A run of tones from the deepest shade to the lit top: a clump is painted in four neighbours on it. */
@@ -145,6 +208,10 @@ export interface Dress {
   litter: number;
   /** Old enough to hang keys. */
   keys: boolean;
+  /** A fruit tree in flower. */
+  bloom?: boolean;
+  /** How many fruit a fruit tree has on it. */
+  fruit?: number;
 }
 
 export interface Species3D {
@@ -153,20 +220,37 @@ export interface Species3D {
   /** Each age's build: the mature one, and what each other age changes. */
   build: Build;
   ages: Partial<Record<AgeKey, Partial<Build>>>;
-  /** Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough. */
-  bark: { lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean };
-  /** The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed. */
-  leafForm?: 'maple' | 'oak';
+  /**
+   * Bark in the light and in shade, and the dead wood's; moss on the foot of the trunk, where it has any; furrows broken into ridges, where it is rough;
+   * long fibres down the trunk in this colour between its furrows, where it is stringy; ridges wound round the trunk and the big limbs, lit in `rope`,
+   * where it has them; the dead wood's shade, where it is not the living's.
+   */
+  bark: {
+    lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; twist?: boolean; strands?: string; rope?: string; deadShade?: string;
+    /** The fine twigs, where they differ from the bark. */
+    twig?: string;
+    /** Pale bark marked in `ink` with dashes across it and scars where limbs leave, over a cracked band of `base` at its foot. */
+    marks?: { ink: string; base: string };
+  };
+  /**
+   * The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed, 'birch' small and pointed, 'willow' narrow and
+   * pointed, 'oval' pointed, 'narrow' long and thin, 'puff' scalloped.
+   */
+  leafForm?: 'maple' | 'oak' | 'birch' | 'willow' | 'oval' | 'narrow' | 'puff';
   /** Roots drawn as lobes of the trunk's foot on the ground, with dips between, rather than as limbs. */
   buttress?: boolean;
   /** Snow as a narrow line along the top edge of the wood, rather than over all its upper face. */
   snowLine?: boolean;
+  /** Stones and ferns round the foot: the stone's colour (`Undergrowth`). */
+  undergrowth?: { stone: RGB };
   /** A carved rune inked in the kit's ink, and lit as a runestone's runes after dark. */
   inkedRune?: boolean;
   /** A mass's height on the screen against its width: 0.86 unless given. */
   pad?: number;
   /** An open crown: the wood laid among the masses by depth, the branches seen through the gaps. */
   open?: boolean;
+  /** Its finest twigs (order 4) a haze: hairlines in the twig's colour with no ink round them, and the twigs over them inked finer. */
+  haze?: boolean;
   /** The leaf through the year. A ramp runs from the deepest shade to the lit top. */
   leaf: {
     summer: Ramp;
@@ -178,8 +262,22 @@ export interface Species3D {
   keys?: { colour: string; ripe: string };
   /** The buds on the bare twigs at the start of spring. */
   buds?: string;
+  /** A weeping tree's bare strands, hanging with the leaf down. */
+  whips?: string;
   /** Keeps its leaf all year: its winter leaf, and its new tips in spring (`leaf.spring`). */
   evergreen?: { winter: Ramp };
+  /** How many of the shapes (`FORMS`) it grows at each age, where fewer than the rest: each one more to bake. */
+  forms?: number;
+  /** A fruit tree (`./orchard`): its blossom and its fruit. */
+  orchard?: Orchard;
+}
+
+/** What a fruit tree hangs, as its flat tree's own (`../trees/species`, `../foliage` BLOOMS) and the island's fruiting table. */
+export interface Orchard {
+  /** In flower in spring at the ages that bear: its ramp, the flower's middle, the share of the masses in flower, and the new leaf among them. */
+  bloom: { ramp: Ramp; eye: string | null; cover: number; leaf: Ramp };
+  /** Its fruit: colour, size against a small one, how many on a mature crown, its shape, and the seasons it is on the tree. */
+  fruit: { colour: string; size: number; count: number; shape: 'round' | 'pear' | 'oval'; seasons: readonly Season[]; pairs: boolean };
 }
 
 /**
@@ -220,6 +318,30 @@ export interface Whorls {
   spire: boolean;
   /** How low the lowest boughs hang, as a share of the height. */
   hem: number;
+  /**
+   * Lacy sprays: each bough sweeps out and hangs, its sides and end a fringe
+   * of this many small hanging tips, its top in layers. None: the pine's
+   * pads with blunt fingers.
+   */
+  lace?: number;
+  /** The leader's tip bent over, as a share of the height. */
+  nod?: number;
+  /** A bough's branch against the leader's radius where it leaves it: 0.22 unless given. */
+  limb?: number;
+  /** Roots as buttresses: two pieces, out of the trunk and down along the ground (`Species3D.buttress`). */
+  buttress?: boolean;
+  /** The crown's dark middle round the leader, as a share of each whorl's reach: none unless given. */
+  core?: number;
+  /** Where the top whorl is under a spire, as a share of the height: 0.86 unless given. */
+  top?: number;
+  /** Small whorls up the spire over the top whorl: two unless given. */
+  tufts?: number;
+  /** The trunk's foot swollen this much wider into its roots. */
+  swell?: number;
+  /** How far up the crown, as a share of it, each bough carries a second, shorter spray over it. */
+  split?: number;
+  /** Lacy sprays turned aside from the eye to show the trunk (`partOf`) only this low in the crown, and a few higher: all of them unless given. */
+  parted?: number;
 }
 
 /** One bough of a conifer, round its mass's middle. */
@@ -238,4 +360,6 @@ export interface Pad {
   /** How far the needles hang under it at its end. */
   hang: number;
   fingers: number;
+  /** Lacy (`Whorls.lace`): its fringe's tips. */
+  lace?: number;
 }
