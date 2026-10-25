@@ -46,6 +46,7 @@ import { plum } from './species/plum';
 import { pomegranate } from './species/pomegranate';
 import { quince } from './species/quince';
 import { rose } from './species/rose';
+import { thorn } from './species/thorn';
 import { willow } from './species/willow';
 import type { Build, Bush3D, Dress, Skeleton, Species3D, V3 } from './types';
 
@@ -80,6 +81,7 @@ const bushByName = (name: string): number => BUSH_DEFS.findIndex((d) => d.name =
 /** The bushes drawn as solids, by their `BUSH_DEFS` index, and what each is: one file in `./species` each. */
 const BUSH3D: ReadonlyMap<number, Bush3D> = new Map([
   [bushByName('Rose bush'), rose],
+  [bushByName('Thorn bush'), thorn],
 ]);
 /** Which bushes are drawn here: take one out and it is drawn flat again. */
 export const BUSH3D_SPECIES: Set<number> = new Set(BUSH3D.keys());
