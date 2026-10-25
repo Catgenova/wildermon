@@ -37,7 +37,18 @@ export interface RowHooks {
  * window both draw their entries with this, so the two can never drift apart.
  */
 export function buildMenuRows(items: MenuItem[], depth: number, hooks: RowHooks = {}, path = ''): HTMLElement[] {
-  return items.flatMap((item) => buildMenuRow(item, depth, hooks, `${path}/${item.label}`));
+  /*
+   * Two rows of one label are two folds, not one: eight crates on a rack all
+   * named Seeds opened and shut together, and a rebuild opened all eight for
+   * the one that had been. The second and after are told apart by how many
+   * of that label came before.
+   */
+  const seen = new Map<string, number>();
+  return items.flatMap((item) => {
+    const n = seen.get(item.label) ?? 0;
+    seen.set(item.label, n + 1);
+    return buildMenuRow(item, depth, hooks, `${path}/${item.label}${n ? `#${n}` : ''}`);
+  });
 }
 
 function buildMenuRow(item: MenuItem, depth: number, hooks: RowHooks, path: string): HTMLElement[] {
@@ -87,6 +98,13 @@ function buildMenuRow(item: MenuItem, depth: number, hooks: RowHooks, path: stri
       hint.textContent = item.hint;
       row.append(hint);
       row.title = item.hint;
+    } else if (item.note) {
+      // And a fold's note, as any row's: a crate's units on a rack were set here and never drawn.
+      const note = document.createElement('span');
+      note.className = 'ctx-note';
+      note.textContent = item.note;
+      row.append(note);
+      row.title = item.note;
     }
     const chevron = document.createElement('span');
     chevron.className = 'ctx-chevron';

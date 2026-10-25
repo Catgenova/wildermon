@@ -2938,6 +2938,20 @@ jobs:
             --outfile=node_modules/.cache/sent.mjs --log-level=error
           node node_modules/.cache/sent.mjs
 
+      - name: Everything on a rack in one list, taken across its crates
+        if: matrix.shard == 3
+        run: |
+          # Asked for off a rack of eight rows all reading "Seeds": "is it
+          # possible to just condense the inventory instead of having to go
+          # through each box?" Open all piles the rows of every crate on a
+          # rack as the pack would (`stack_key`), and a count taken from a
+          # line comes out of its crates in the rack's order, one
+          # take_from_store a row, passing over a crate shut to you. Both
+          # sides, over the same rack, the same rows and the same plan.
+          npx esbuild supabase/test/rackall.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/rackall.mjs --log-level=error
+          node node_modules/.cache/rackall.mjs
+
       - name: A caravel, and the people she carries
         if: matrix.shard == 4
         run: |

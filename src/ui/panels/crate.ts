@@ -1,6 +1,6 @@
 import { capital } from '../../game/words';
-import { crateCentre, crateName, crateCapacity, crateSpare, STORE_REACH } from '../../game/crates';
-import { furnitureCapacity, furnitureCentre, furnitureDef, furnitureHeft, furnitureName, furnitureRefuses, furnitureRoom, furnitureUnits } from '../../game/furniture';
+import { crateCentre, crateName, crateCapacity, crateShut, crateSpare, rackStock, rackTakes, STORE_REACH } from '../../game/crates';
+import { furnitureCapacity, furnitureCentre, furnitureDef, furnitureHeft, furnitureName, furnitureRefuses, furnitureRoom, furnitureUnits, rackSpots, type PlacedFurniture } from '../../game/furniture';
 import { graveLine, graveName, graveSays, isGrave } from '../../game/graves';
 import { bloodMul } from '../../game/creatures';
 import { ACTION_BY_ID, type ActionDef } from '../../game/actions';
@@ -57,7 +57,15 @@ export interface Store {
    * since the bag work — a bag on your back are the island's, and a drag has
    * to ask: `take_from_store` knows about all three.
    */
-  kind: 'crate' | 'furniture' | 'bag' | 'carried' | 'counter';
+  kind: 'crate' | 'furniture' | 'bag' | 'carried' | 'counter' | 'rack';
+  /**
+   * How `count` of a line is taken out, for a store whose lines are not one
+   * row apiece: everything on a rack, where a line is a pile across several
+   * crates and is taken from them in the rack's order (`rackTakes`).
+   */
+  takeN?: (uid: number, count: number) => void;
+  /** Where a line is, said after its name: the spots on a rack its rows stand on. */
+  where?: (item: Item) => string | undefined;
   /**
    * The two doors a store has of its own, where it has them: a shop
    * counter's goods go out on it by `set_out_goods` and come back by
@@ -111,6 +119,8 @@ export class CratePanel {
   private bagUid: number | null = null;
   /** A shop counter's store, by id (`counters.ts`). */
   private counterId: number | null = null;
+  /** A crate rack, everything on it at once (`rackStock`). */
+  private rackId: number | null = null;
   /** How a thing on somebody else's counter is bought, on an island. */
   buyer?: (item: Item) => void;
   /**
@@ -249,7 +259,7 @@ export class CratePanel {
     if (!store) return false;
     // A store down in a cellar is out of reach from the floor over it, one up top from down there, and one in
     // the cellar next door from this one (`onMySide`).
-    const placed = store.kind === 'crate' ? this.game.crates.get(store.id) : store.kind === 'furniture' ? this.game.furniture.get(store.id) : undefined;
+    const placed = store.kind === 'crate' ? this.game.crates.get(store.id) : store.kind === 'furniture' || store.kind === 'rack' ? this.game.furniture.get(store.id) : undefined;
     if (placed && !this.game.onMySide(placed.level, placed.x, placed.y)) return false;
     if (store.near) return store.near();
     const [cx, cy] = store.centre;
@@ -259,6 +269,8 @@ export class CratePanel {
   private store(): Store | undefined {
     const counter = this.counterId !== null ? this.game.counters.list.get(this.counterId) : undefined;
     if (counter) return counterStore(this.game, counter, this.buyer);
+    const rack = this.rackId !== null ? this.game.furniture.get(this.rackId) : undefined;
+    if (rack && rackSpots(rack)) return this.rackStore(rack);
     const crate = this.crateId !== null ? this.game.crates.get(this.crateId) : undefined;
     if (crate) {
       return {
@@ -371,6 +383,54 @@ export class CratePanel {
   }
 
   /**
+   * Everything on a rack, through one window.
+   *
+   * Asked for: "is it possible to just condense the inventory instead of having
+   * to go through each box? I do like being able to separate, but I get lost
+   * pretty easily." Each line is a pile across all the crates on it
+   * (`rackStock`), with the spots it stands on. Taken out, it comes from those
+   * crates in the rack's order until the count is met, one `take_from_store`
+   * a row (`rackTakes`); put in, it fills them in the same order, as a drop on
+   * the rack does (`rack_put`). Each crate is still on the rack's menu.
+   */
+  private rackStore(rack: PlacedFurniture): Store {
+    const g = this.game;
+    const lines = rackStock(g, rack);
+    const on = g.cratesOn(rack);
+    const what = furnitureName(rack).toLowerCase();
+    const spare = (): number => on.reduce((n, c) => n + crateSpare(c), 0);
+    return {
+      title: `${furnitureName(rack)} (QL ${rack.ql.toFixed(0)} \u00b7 ${on.length} crates)`,
+      id: rack.id,
+      items: lines.map((l) => l.item),
+      capacity: on.reduce((n, c) => n + crateCapacity(c), 0),
+      centre: furnitureCentre(rack),
+      what,
+      kind: 'rack',
+      where: (item) => {
+        const spots = lines.find((l) => l.item.uid === item.uid)?.spots;
+        return spots ? `${spots.length === 1 ? 'spot' : 'spots'} ${spots.join(', ')}` : undefined;
+      },
+      takeN: (uid, count) => {
+        const line = lines.find((l) => l.item.uid === uid);
+        const def = ACTION_BY_ID.get('take_from_store');
+        if (!line || !def) return;
+        const plan = rackTakes(g, line, count);
+        if (!plan.length) {
+          g.logMsg(crateShut(g, line.rows[0].crate) ?? 'It is gone.', 'error');
+          return;
+        }
+        for (const step of plan) g.requestAction(def, { kind: 'item', uid: step.uid, count: step.count });
+      },
+      // Only ever through the island's doors: nothing is moved here.
+      take: () => null,
+      refuses: () => (!on.length ? `No crates on ${what}.` : spare() <= 0 ? `All crates on ${what} full.` : null),
+      fits: (item) => Math.min(item.count, spare()),
+      add: () => false,
+    };
+  }
+
+  /**
    * The island's door for the store that is open, when there is an island.
    *
    * Every button on this bar moved rows about in the browser's own copy and
@@ -384,8 +444,8 @@ export class CratePanel {
     if (store.doors) return ACTION_BY_ID.get(what === 'in' ? store.doors.in : store.doors.out);
     if (!this.game.ask || store.kind === 'carried') return undefined;
     const id = what === 'out'
-      ? store.kind === 'crate' ? 'crate_take_all' : store.kind === 'bag' ? 'empty_bag' : 'furniture_take_all'
-      : store.kind === 'crate' ? 'store_in_crate' : store.kind === 'bag' ? 'stow_item' : 'store_in_furniture';
+      ? store.kind === 'crate' || store.kind === 'rack' ? 'crate_take_all' : store.kind === 'bag' ? 'empty_bag' : 'furniture_take_all'
+      : store.kind === 'crate' ? 'store_in_crate' : store.kind === 'rack' ? 'rack_put' : store.kind === 'bag' ? 'stow_item' : 'store_in_furniture';
     return ACTION_BY_ID.get(id);
   }
 
@@ -474,6 +534,10 @@ export class CratePanel {
       this.game.logMsg(`Too far from the ${store.what}.`, 'error');
       return;
     }
+    if (store.takeN) {
+      store.takeN(item.uid, count);
+      return;
+    }
     const def = ACTION_BY_ID.get(store.doors?.out ?? 'take_from_store');
     if ((this.game.ask || store.doors) && def && store.kind !== 'carried') {
       this.game.requestAction(def, { kind: 'item', uid: item.uid, count });
@@ -536,6 +600,12 @@ export class CratePanel {
     // A counter comes off a thing at a time, by its own door.
     if (door && store.doors) {
       for (const it of [...store.items]) this.game.requestAction(door, { kind: 'item', uid: it.uid, count: it.count });
+      return;
+    }
+    // A rack is emptied a crate at a time, in its order, each by naming the crate.
+    if (door && store.kind === 'rack') {
+      const rack = this.game.furniture.get(store.id);
+      for (const c of rack ? this.game.cratesOn(rack) : []) this.game.requestAction(door, { kind: 'crate', id: c.id });
       return;
     }
     if (door) {
@@ -710,6 +780,11 @@ export class CratePanel {
        */
       const name = nameCell(item, { worn: this.game.isEquipped(item.uid), occupant: item.occupant ? undefined : occupantOf(this.game, item) });
       if (store.priced) name.textContent += ` — ${item.price !== undefined ? priceWords(item.price) : 'not for sale'}`;
+      const at = store.where?.(item);
+      if (at) {
+        name.textContent += ` \u00b7 ${at}`;
+        name.title += ` \u00b7 ${at}`;
+      }
       const ql = qualityCell(this.game, item);
       const dmg = damageCell(item);
       const take = document.createElement('button');
@@ -729,6 +804,10 @@ export class CratePanel {
         }
         if (!this.withinReach()) {
           this.game.logMsg(`Too far from the ${store.what}.`, 'error');
+          return;
+        }
+        if (store.takeN) {
+          store.takeN(item.uid, item.count);
           return;
         }
         /*
@@ -820,6 +899,7 @@ export class CratePanel {
     this.furnitureId = null;
     this.creatureId = null;
     this.bagUid = null;
+    this.rackId = null;
     this.render();
     this.win.open();
   }
@@ -837,6 +917,7 @@ export class CratePanel {
     this.counterId = null;
     this.creatureId = null;
     this.bagUid = null;
+    this.rackId = null;
     this.render();
     this.win.open();
   }
@@ -848,6 +929,19 @@ export class CratePanel {
     this.furnitureId = null;
     this.creatureId = null;
     this.bagUid = null;
+    this.rackId = null;
+    this.render();
+    this.win.open();
+  }
+
+  /** Everything on a crate rack at once (`rackStore`). */
+  openRack(id: number): void {
+    this.rackId = id;
+    this.crateId = null;
+    this.counterId = null;
+    this.furnitureId = null;
+    this.creatureId = null;
+    this.bagUid = null;
     this.render();
     this.win.open();
   }
@@ -855,6 +949,7 @@ export class CratePanel {
   /** Open a bag carried in the pack. */
   openBag(uid: number): void {
     this.bagUid = uid;
+    this.rackId = null;
     this.counterId = null;
     this.crateId = null;
     this.furnitureId = null;
@@ -870,6 +965,7 @@ export class CratePanel {
     this.crateId = null;
     this.furnitureId = null;
     this.bagUid = null;
+    this.rackId = null;
     this.render();
     this.win.open();
   }
