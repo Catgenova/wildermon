@@ -116,7 +116,7 @@ const PIXELS = 20_000_000;
 const SHADE_PIXELS = 6_000_000;
 /** Milliseconds a frame lends the work after it (`tree3dIdle`) on top of its spare time, and the most saved up. */
 const TRICKLE_MS = 1;
-const CREDIT_MOST = 24;
+const CREDIT_MOST = 12;
 
 
 export interface TreeSprite {
@@ -286,10 +286,21 @@ export function tree3dFrame(): void {
 
 /** Every bake let go: the season's look has turned (`forgetTrees`). */
 export function forgetTrees3d(): void {
+  // The last look's bakes in still air stand in for the new look's until those are made, rather than the flat trees.
+  lastLook.clear();
+  for (const [k, b] of bakes) {
+    const at = k.split('|');
+    if (at[at.length - 1] === '0') lastLook.set(`${at.slice(0, -4).join('|')}|${at[at.length - 3]}|${at[at.length - 2]}`, b);
+  }
+  lastLookUntil = frameNo + LAST_LOOK_FRAMES;
   bakes.clear();
   pixels = 0;
   shadeKinds.clear();
 }
+/** The bakes of the look before, by head less its look, turn and step: what stands in after a change of look (`forgetTrees3d`), for `LAST_LOOK_FRAMES`. */
+const lastLook = new Map<string, TreeSprite>();
+const LAST_LOOK_FRAMES = 1800;
+let lastLookUntil = 0;
 
 /** A bake kept, and room made for it by letting go the least lately drawn: never one drawn this frame or the last, while there is another to let go. */
 function keep(key: string, spr: TreeSprite): void {
@@ -460,7 +471,7 @@ function baked(m: Maker, turn: number, step: number, frame: number, x: number, y
   if (!missing.has(key)) missing.set(key, job);
   if (near) {
     tree3dStats.standIns++;
-    touch(near[0], near[1]);
+    if (bakes.has(near[0])) touch(near[0], near[1]);
     return near[1];
   }
   tree3dStats.flats++;
@@ -487,7 +498,20 @@ function standIn(head: string, turn: number, step: number, frame: number): [stri
   let b = (frame ? at(turn, step) : null) ?? steps(turn);
   for (let t = 1; t < 8 && !b; t++) b = at((turn + t) % 8, step);
   for (let t = 1; t < 8 && !b; t++) b = steps((turn + t) % 8);
-  return b;
+  if (b || !lastLook.size) return b;
+  if (frameNo > lastLookUntil) {
+    lastLook.clear();
+    return null;
+  }
+  const kind = head.slice(0, head.lastIndexOf('|'));
+  for (let d = 0; d <= 9; d++) {
+    for (const s of d ? [step - d, step + d] : [step]) {
+      const k = `${kind}|${turn}|${s}`;
+      const was = lastLook.get(k);
+      if (was) return [k, was];
+    }
+  }
+  return null;
 }
 
 /**
@@ -535,8 +559,10 @@ export function tree3dIdle(spare: number, next: number | null, fx: number, fy: n
       if (frameNo < fullUntil) break;
       if (!(going = run(j, true))) break;
     }
-    if (going) for (const sj of [...shadeKinds.values()].sort((a, b) => far(a) - far(b))) if (!shade(sj, next, `${sj.head}${next}|${sj.turn}`)) break;
+    if (going) for (const sj of [...shadeKinds.values()].sort((a, b) => far(a) - far(b))) if (!(going = shade(sj, next, `${sj.head}${next}|${sj.turn}`))) break;
   }
+  // Nothing left to do: none is saved up, so whatever comes next starts from a frame's worth rather than a burst.
+  if (going) credit = Math.min(credit, TRICKLE_MS);
   tree3dStats.idleMs += performance.now() - t0;
 }
 
