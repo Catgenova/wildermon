@@ -4559,6 +4559,183 @@ button.goal-row:focus-visible {
   text-decoration: underline;
 }
 
+/* The Wildermon window's tabs, and its Care tab (`care.ts`) ----------------- */
+
+.pals-cards {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pals-cards[hidden],
+.care-page[hidden] {
+  display: none;
+}
+
+.care-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 6px;
+}
+
+.care-page > .panel-bar {
+  flex-wrap: wrap;
+  padding: 4px 0 2px;
+  row-gap: 4px;
+}
+
+.care-page > .inv-group {
+  padding: 6px 0 2px;
+}
+
+.care-round {
+  color: var(--ui-accent);
+  font-size: 11px;
+}
+
+/* The beds on the settlement against the workers that sleep in each size; short of one, in the warning colour. */
+.care-beds {
+  margin: 2px 0;
+  color: var(--ui-dim);
+  font-size: 11px;
+}
+
+.care-beds.care-short {
+  color: var(--t-warn, #e8bc6a);
+}
+
+/* A need: its tag, whose it is, what it is, and its fix at the end of the line, or under it where there is no room. */
+.care-need {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--t-line-2, #3f3428);
+  font-size: 11px;
+}
+
+.care-need .care-tag {
+  flex: 0 0 auto;
+  min-width: 4.5em;
+  text-align: center;
+}
+
+.care-who {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+.care-says {
+  flex: 1 1 8em;
+  min-width: 0;
+  color: var(--ui-dim);
+  overflow-wrap: break-word;
+}
+
+.care-fix {
+  flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.care-fix[hidden] {
+  display: none;
+}
+
+.care-tag-hurt {
+  background: var(--t-bad-wash, rgba(198, 78, 62, 0.22));
+  color: var(--t-bad, #f0907e);
+}
+
+:is(.care-tag-hungry, .care-tag-unfed, .care-tag-due, .care-tag-rest) {
+  background: var(--t-warn-wash, rgba(214, 160, 60, 0.2));
+  color: var(--t-warn, #e8bc6a);
+}
+
+:is(.care-tag-idle, .care-tag-care, .care-tag-gear, .care-tag-pair) {
+  background: var(--t-hover, rgba(255, 255, 255, 0.06));
+  color: var(--ui-dim);
+}
+
+/* One of the herd: who, its job, stage and gear, and four meters under it. */
+.care-row {
+  margin: 3px 0 5px;
+  padding: 4px 6px;
+  border: 1px solid var(--t-line-2, #3f3428);
+  border-radius: 3px;
+  background: var(--t-card, rgba(255, 255, 255, 0.03));
+}
+
+.care-row-wants {
+  border-color: var(--t-bad-line, #8a4a3c);
+}
+
+.care-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+}
+
+.care-tick {
+  margin: 0;
+}
+
+.care-name {
+  flex: 1 1 8em;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.care-job {
+  margin: 1px 0 3px;
+  color: var(--ui-dim);
+  font-size: 11px;
+}
+
+.care-meters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 2px 8px;
+  font-size: 10px;
+}
+
+.care-meter {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0 4px;
+}
+
+.care-meter .hud-bar {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  height: 6px;
+}
+
+.care-meter-label {
+  color: var(--ui-dim);
+}
+
+.care-meter-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A phone: the fixes and the tick big enough for a thumb. */
+#ui.phone :is(.care-fix, .care-bulk .tb-btn) {
+  min-height: var(--tap, 32px);
+}
+
+#ui.phone .care-tick {
+  width: 20px;
+  height: 20px;
+}
+
 /*
  * Asking for a name, and asking whether you are sure.
  *
