@@ -864,7 +864,7 @@ const stumpModels = new Map<string, StumpModel>();
 function stumpModelOf(species: number, form: number): StumpModel {
   const k = `${species}|${form}`;
   let m = stumpModels.get(k);
-  if (!m) stumpModels.set(k, (m = stumpOf(skeletonOf(species, STUMP_AGE, form), !!SPECIES.get(species)?.buttress)));
+  if (!m) stumpModels.set(k, (m = stumpOf(skeletonOf(species, STUMP_AGE, form))));
   return m;
 }
 /** A day's dress for wood with no leaf on it. */

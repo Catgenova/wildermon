@@ -788,7 +788,10 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
       // Spread evenly up it and round it, each a little off its place.
       const t = (k + 0.2 + 0.6 * R()) / n, a = k * 2.4 + R() * 0.8, w = (0.8 + 1.4 * R() * R()) * Math.min(1, 2.4 / Math.max(0.5, r)) + 0.35, th = (0.42 + 0.4 * R() * R()) * Math.min(1.6, 0.7 + r * 0.25);
       if (L.a[2] + (L.b[2] - L.a[2]) * t < rough * 0.9) continue;
-      band(skin, t, a, a + w, th, th * 0.3);
+      // Finer where the marks ask it (`Species3D.bark.marks.fine`): a stump's, close to.
+      const f = marks.fine;
+      if (f === undefined) band(skin, t, a, a + w, th, th * 0.3);
+      else band(skin, t, a, a + w * f, th * f, th * f * 0.3);
     }
     // A scar under each limb that leaves it.
     for (const q of below.get(i) ?? []) {

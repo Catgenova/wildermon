@@ -45,6 +45,8 @@ export function woodOf(trunk: string): { face: string; ring: string } {
 const CUT_HIGH = 1.05;
 const CUT_LO = 2.6;
 const CUT_HI = 6;
+/** The highest a stump is sawn for the buttresses its roots flare out as. */
+const BUTTRESS_HI = 7;
 /** How far a stump's roots reach against its tree's. */
 const ROOT_IN = 0.78;
 /** How high up a stump its roots leave it, against where it is sawn. */
@@ -55,6 +57,8 @@ const LEAN_KEPT = 0.35;
 const STEM_AT = [0, 0.12, 0.3, 0.6, 1];
 /** How far a sawn face's rings are taken toward the bark's furrows. */
 const RING_DARK = 0.3;
+/** A pale bark's dashes on a stump or a log, against its tree's: seen close to, they are small. */
+const MARKS_FINE = 0.45;
 
 /** The radius of the first stem of a tree's trunk at height `z`. */
 function radiusAt(limbs: Limb[], z: number): number {
@@ -70,30 +74,35 @@ function radiusAt(limbs: Limb[], z: number): number {
  * sawn, and its roots, kept below the cut. Its own shade at its foot reaches
  * a little past the trunk (`Skeleton.foot`).
  */
-export function stumpOf(tree: Skeleton, buttressed: boolean): StumpModel {
+export function stumpOf(tree: Skeleton): StumpModel {
   const L = tree.limbs;
   let zc = 3;
   for (let i = 0; i < 4; i++) zc = Math.max(CUT_LO, Math.min(CUT_HI, radiusAt(L, zc) * CUT_HIGH));
-  // Over the tops of its buttresses (`buttress`), which rise to three quarters of the foot's radius.
-  if (buttressed) zc = Math.min(CUT_HI * 1.1, Math.max(zc, (L[0]?.ra ?? 0) * 1.45));
+  // Over the tops of its buttresses (`buttress`), which rise to over three quarters of the foot's radius.
+  // No higher than `BUTTRESS_HI`: past that, the foot its buttresses stand out of is taken in to fit under the cut.
+  // And no wider than the stem a little way up, or their ridges stand out past its sides.
+  const footR = Math.min(L[0]?.ra ?? 0, BUTTRESS_HI / (1.02 * 0.95), radiusAt(L, zc * 0.6) * 1.12);
+  zc = Math.max(zc, footR * 1.02 * 0.95);
   const limbs: Limb[] = [];
   const cuts: Cut[] = [];
   const kept = new Map<number, number>();
   // Each stem, from its foot up its run of pieces: stood up straighter, its lean kept only as far as `LEAN_KEPT`, and its girth at each height its own.
-  for (let i = 0; i < L.length; i++) {
+  // One stem: the first, the tree's main one, stood where the foot is.
+  for (let i = 0; i < L.length && !cuts.length; i++) {
     if (L[i].order !== 0 || L[i].parent >= 0) continue;
     const run = [i];
     for (let k = i + 1; k < L.length; k++) if (L[k].order === 0 && L[k].parent === run[run.length - 1]) run.push(k);
     const foot = L[i].a;
+    const at0: V3 = [0, 0, 0];
     const along = (z: number): { p: V3; r: number } => {
       for (const k of run) {
         const P = L[k];
         if (P.b[2] < z && k !== run[run.length - 1]) continue;
         const t = clamp01((z - P.a[2]) / Math.max(1e-6, P.b[2] - P.a[2]));
         const q = lerp(P.a, P.b, t);
-        return { p: [foot[0] + (q[0] - foot[0]) * LEAN_KEPT, foot[1] + (q[1] - foot[1]) * LEAN_KEPT, z], r: P.ra + (P.rb - P.ra) * t };
+        return { p: [at0[0] + (q[0] - foot[0]) * LEAN_KEPT, at0[1] + (q[1] - foot[1]) * LEAN_KEPT, z], r: P.ra + (P.rb - P.ra) * t };
       }
-      return { p: [foot[0], foot[1], z], r: L[i].ra };
+      return { p: [at0[0], at0[1], z], r: L[i].ra };
     };
     const first = limbs.length;
     for (const k of run) kept.set(k, first);
@@ -108,6 +117,7 @@ export function stumpOf(tree: Skeleton, buttressed: boolean): StumpModel {
       const lo = stand(j), hi = stand(j + 1);
       limbs.push({ a: lo.p, b: hi.p, ra: lo.r, rb: hi.r, order: 0, parent: j ? limbs.length - 1 : -1, bough: -1 });
     }
+    if (first === 0) limbs[0].ra = Math.min(limbs[0].ra, footR);
     const top = limbs[limbs.length - 1];
     cuts.push({ c: top.b, r: top.rb, n: [0, 0, 1], limb: limbs.length - 1 });
   }
@@ -121,8 +131,15 @@ export function stumpOf(tree: Skeleton, buttressed: boolean): StumpModel {
     const b: V3 = [P.b[0] * ROOT_IN, P.b[1] * ROOT_IN, P.b[2]];
     // The piece out of a knee starts where the piece to it now ends.
     const from = L[P.parent].order === -1 ? limbs[parent].b : a;
+    // A root in one piece is given a knee, as a buttressed one has: its foot's lobes are drawn from the piece out of a knee (`lobesOf`).
+    const single = L[P.parent].order === 0 && !L.some((K) => K.order === -1 && K.parent === i);
+    let up = parent;
+    if (single) {
+      limbs.push({ ...P, a: from, b: lerp(from, b, 0.35), parent, ra: P.ra * 0.85, rb: P.ra * 0.7 });
+      up = limbs.length - 1;
+    }
     kept.set(i, limbs.length);
-    limbs.push({ ...P, a: from, b, parent, ra: P.ra * 0.85, rb: P.rb * 0.85 });
+    limbs.push({ ...P, a: single ? limbs[up].b : from, b, parent: up, ra: P.ra * 0.85, rb: P.rb * 0.85 });
   }
   const r0 = Math.max(...cuts.map((c) => Math.hypot(c.c[0], c.c[1]) + c.r), 1);
   const reach = Math.max(r0, ...limbs.filter((l) => l.order < 0).map((l) => Math.hypot(l.b[0], l.b[1]) + l.rb));
@@ -174,7 +191,13 @@ export function woodSpec(spec: Species3D, moss: boolean, lying = false): Species
     ...spec,
     build: { ...spec.build, whorls: undefined, ...(lying ? { habit: undefined } : {}) },
     open: !lying, haze: false, evergreen: undefined, orchard: undefined, keys: undefined, buds: undefined,
-    bark: moss ? spec.bark : { ...spec.bark, moss: undefined },
+    // A stump's roots flare out of its foot as lobes on the ground, whatever its tree's are (`stumpOf`).
+    buttress: lying ? spec.buttress : true,
+    bark: {
+      ...spec.bark,
+      ...(moss ? {} : { moss: undefined }),
+      ...(spec.bark.marks ? { marks: { ...spec.bark.marks, fine: MARKS_FINE } } : {}),
+    },
   };
 }
 
@@ -278,22 +301,44 @@ function paintRimMoss(g: Ctx, job: Job, cut: Cut, moss: string): void {
   g.globalAlpha = 1;
 }
 
-/** Snow on a sawn top: a cap a little in from its edge, standing up over it, edged underneath in the snow's shade. */
-function capPath(job: Job, cut: Cut): Path2D {
-  const rise = cut.r * 0.32;
-  const p = new Path2D();
+/** How thick the snow lies on a sawn top, against its radius; and how far in from its edge. */
+const SNOW_DEEP = 0.12;
+const SNOW_IN = 0.93;
+/** Snow's top and its side, as the snow on the trees' wood is lit (`./paint` barkAt). */
+const SNOW_TOP = '#f4f7fd';
+const SNOW_SIDE = '#c9d3e6';
+
+/** Snow on a sawn top: a cushion a little in from its edge, its top and its front side, and its outline for the ink. */
+function capOf(job: Job, cut: Cut): { top: Path2D; side: Path2D } {
+  const lift: V3 = [0, 0, cut.r * SNOW_DEEP];
   const N = 28;
-  for (let i = 0; i <= N; i++) {
-    const t = (i / N) * TAU;
-    const k = 0.95 + 0.04 * Math.sin(t * 3 + cut.r);
-    const [x, y] = proj(job.e, add(cut.c, [Math.cos(t) * cut.r * k, Math.sin(t) * cut.r * k, 0]));
-    // Mounded: up over its middle, the far side of it seen over the top.
-    const [, ym] = proj(job.e, cut.c);
-    const up = y < ym ? rise : rise * 0.35;
-    if (i) p.lineTo(x, y - up); else p.moveTo(x, y - up);
+  const ring = (z: V3, k: number): Pt[] => {
+    const out: Pt[] = [];
+    for (let i = 0; i <= N; i++) {
+      const t = (i / N) * TAU;
+      out.push(proj(job.e, add(add(cut.c, z), [Math.cos(t) * cut.r * k, Math.sin(t) * cut.r * k, 0])));
+    }
+    return out;
+  };
+  const hi = ring(lift, SNOW_IN), lo = ring([0, 0, 0], SNOW_IN + 0.02);
+  const top = new Path2D();
+  hi.forEach(([x, y], i) => (i ? top.lineTo(x, y) : top.moveTo(x, y)));
+  top.closePath();
+  // Its side: round the front from one end of the top to the other, between the top's edge and the face.
+  const [, cy] = proj(job.e, cut.c);
+  const side = new Path2D();
+  // From where the rim comes round to the front, on round to where it goes behind again.
+  const isFront = (i: number): boolean => lo[i % N][1] >= cy - 0.01;
+  let from = 0;
+  while (from < N && !(isFront(from) && !isFront(from + N - 1))) from++;
+  const front: Array<readonly [Pt, Pt]> = [];
+  for (let k = 0; k < N && isFront(from + k); k++) front.push([hi[(from + k) % N], lo[(from + k) % N]]);
+  if (front.length > 1) {
+    front.forEach(([p], i) => (i ? side.lineTo(p[0], p[1]) : side.moveTo(p[0], p[1])));
+    for (let i = front.length - 1; i >= 0; i--) side.lineTo(front[i][1][0], front[i][1][1]);
+    side.closePath();
   }
-  p.closePath();
-  return p;
+  return { top, side };
 }
 
 /**
@@ -326,7 +371,11 @@ export function paintStump3d(g: Ctx, job: Job, cuts: Cut[], wood: { face: string
   }
   for (const cut of cuts) {
     g.stroke(ringPath(frameOf(job, cut), cut.r));
-    if (winter) g.stroke(capPath(job, cut));
+    if (winter) {
+      const cap = capOf(job, cut);
+      g.stroke(cap.top);
+      g.stroke(cap.side);
+    }
   }
   // Each stem's foot, round on the ground, and the buttresses out of it.
   for (const trunk of chains.filter((c) => c.order === 0 && sk.limbs[c.pieces[0]].parent < 0)) {
@@ -343,7 +392,8 @@ export function paintStump3d(g: Ctx, job: Job, cuts: Cut[], wood: { face: string
   for (const c of chains) {
     const R = mulberry32(job.seed + c.pieces[0] * 13);
     const L0 = sk.limbs[c.pieces[0]], L1 = sk.limbs[c.pieces[c.pieces.length - 1]];
-    items.push({ d: near(lerp(L0.a, L1.b, 0.5)) - (c.order <= 0 ? 0.5 : 0), draw: () => paintChain(g, job, c, 0, c.q.length - 1, R) });
+    // Roots under the stem they come out of: it covers where they leave it, and they run out from under it.
+    items.push({ d: near(lerp(L0.a, L1.b, 0.5)) - (c.order < 0 ? 1e5 : 0.5), draw: () => paintChain(g, job, c, 0, c.q.length - 1, R) });
   }
   cuts.forEach((cut, i) => {
     items.push({
@@ -352,16 +402,14 @@ export function paintStump3d(g: Ctx, job: Job, cuts: Cut[], wood: { face: string
         paintFace(g, job, cut, wood, job.seed + i * 977);
         if (spec.bark.moss) paintRimMoss(g, job, cut, spec.bark.moss);
         if (winter) {
-          const cap = capPath(job, cut);
-          g.fillStyle = '#f4f7fd';
-          g.fill(cap);
-          g.save();
-          g.clip(cap);
+          const cap = capOf(job, cut);
+          g.fillStyle = SNOW_SIDE;
+          g.fill(cap.side);
+          g.fillStyle = SNOW_TOP;
+          g.fill(cap.top);
           g.strokeStyle = SNOW_EDGE;
-          g.lineWidth = Math.max(0.5, cut.r * ACROSS * 0.16);
-          const f = frameOf(job, cut);
-          g.stroke(ringPath({ ...f, o: [f.o[0], f.o[1] + cut.r * ACROSS * 0.1] }, cut.r, 0.95));
-          g.restore();
+          g.lineWidth = Math.max(0.35, cut.r * ACROSS * 0.05);
+          g.stroke(cap.side);
         }
       },
     });
