@@ -1087,7 +1087,7 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
 }
 
 /** How far round its foot a tree's own shade reaches, in pixels at zoom one across: under it, the shade it throws is not laid. */
-export const footReach = (sk: Skeleton): number => Math.max(4, (sk.limbs[0]?.ra ?? 2) * ACROSS * 2.6);
+export const footReach = (sk: Skeleton): number => sk.foot ?? Math.max(4, (sk.limbs[0]?.ra ?? 2) * ACROSS * 2.6);
 
 /**
  * The shade right at its foot, laid under everything else, in the colour and

@@ -10,7 +10,7 @@ import { drawWildermon, drawWildermonPortrait, modelled, wildermonTop } from './
 import { bushYear, leafageOf } from './foliage';
 import { LIT, contact, dulled, wob } from './trees/kit';
 import { paintTree } from './trees';
-import { forgetTrees3d, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dSprite, forgetTrees3d, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
 import type { Season } from '../world/calendar';
 import { cropPlant } from './crops';
 
@@ -22,7 +22,7 @@ export interface Sprite {
   /** Anchor (feet) offset from the top-left corner. */
   ax: number;
   ay: number;
-  /** A tree drawn as a solid (`./trees3d`): a bake of one view of it, which its tile's pictures follow from bake to bake. */
+  /** A tree or a bush drawn as a solid (`./trees3d`): a bake of one view of it, which its tile's pictures follow from bake to bake. */
   solid?: boolean;
 }
 
@@ -638,9 +638,11 @@ export function stumpSprite(species: number): Sprite {
 
 /**
  * A bush, as it is on a day of the island's year (`./foliage`, `bushYear`):
- * in leaf or bare, in flower or in fruit or neither.
+ * in leaf or bare, in flower or in fruit or neither. A species drawn as a
+ * solid is seen from where the camera is and lit as the hour has it.
  */
-export function bushSprite(species: number, season: Season = 'summer', day = 1): Sprite {
+export function bushSprite(species: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
+  if (at && BUSH3D_SPECIES.has(species)) return bush3dSprite(species, season, day, at, SPRITE_SCALE);
   const def = BUSH_DEFS[species];
   const look = bushYear(def, species, season, day);
   const key = `${SPRITE_SCALE}|bush:${species}${look.key ? `:${look.key}` : ''}`;
