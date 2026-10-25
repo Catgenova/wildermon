@@ -3733,6 +3733,13 @@ export const NEWS: News[] = [
       'Fixed: foundation poured in water: dry floor, no swimming. A pool dug in one: water.',
     ],
   },
+  {
+    n: 312,
+    day: '2026-10-25',
+    lines: () => [
+      `Changed: trees drawn solid, as maples: birch, cedar, willow, cherry, apple, pear, plum, peach, apricot, quince, fig, lemon, olive, pomegranate. Own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun.`,
+    ],
+  },
 ];
 
 /**
