@@ -825,6 +825,7 @@ import{$A as e,$C as t,$D as n,$T as r,$a as i,$b as a,$c as o,$d as s,$f as ee,
       <li>Peat: dug off a peat bed with a shovel; free.</li>
       <li><b>Cook</b> at a lit fire: cooked meat fills ${w(C(`cooked_meat`).food??0)} of the food bar (raw ${w(C(`meat`).food??0)}); baked potatoes;
       roast onions and nuts; with a <b>clay bowl</b>: berry compote, meat and vegetable stew.</li>
+      <li><b>Cottage pie</b> (${V(`make_cottage_pie`)}, clay bowl, lit fire): ${R(`make_cottage_pie`)}; makes ${B(`make_cottage_pie`)}, ${w(C(`cottage_pie`).food??0)} food each.</li>
       <li>Cooking recipes: in the crafting window, unlocked next to a lit fire. A failed dish loses the ingredients.</li>
       <li>Burns fuel in real time; goes cold when out. Unlit: take apart for the wood.</li>
     </ul>

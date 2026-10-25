@@ -1609,6 +1609,7 @@ export function helpText(): string {
       <li>Peat: dug off a peat bed with a shovel; free.</li>
       <li><b>Cook</b> at a lit fire: cooked meat fills ${percent(itemDef('cooked_meat').food ?? 0)} of the food bar (raw ${percent(itemDef('meat').food ?? 0)}); baked potatoes;
       roast onions and nuts; with a <b>clay bowl</b>: berry compote, meat and vegetable stew.</li>
+      <li><b>Cottage pie</b> (${workedAt('make_cottage_pie')}, clay bowl, lit fire): ${bill('make_cottage_pie')}; makes ${made('make_cottage_pie')}, ${percent(itemDef('cottage_pie').food ?? 0)} food each.</li>
       <li>Cooking recipes: in the crafting window, unlocked next to a lit fire. A failed dish loses the ingredients.</li>
       <li>Burns fuel in real time; goes cold when out. Unlit: take apart for the wood.</li>
     </ul>

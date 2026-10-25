@@ -380,6 +380,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   roast_lotus_seeds: { name: 'Roasted lotus seeds', category: 'food', weight: 0.06, stackable: true, food: 0.14, decay: 40, feeds: { starch: 0.1, fat: 0.04 } },
   berry_compote: { name: 'Berry compote', category: 'food', weight: 0.3, stackable: true, food: 0.3, decay: 60, feeds: { greens: 0.2, starch: 0.06 } },
   stew: { name: 'Stew', category: 'food', weight: 0.6, stackable: true, food: 0.75, decay: 70, feeds: { flesh: 0.26, starch: 0.22, greens: 0.2, fat: 0.12 } },
+  cottage_pie: { name: 'Cottage pie', category: 'food', weight: 0.9, stackable: true, food: 0.85, decay: 40, feeds: { flesh: 0.24, starch: 0.26, greens: 0.22, fat: 0.13 } },
   pottage: { name: 'Pottage', category: 'food', weight: 0.7, stackable: true, food: 0.6, decay: 50, feeds: { starch: 0.24, greens: 0.22, fat: 0.1 } },
   bread: { name: 'Bread', category: 'food', weight: 0.35, stackable: true, food: 0.42, decay: 70, feeds: { starch: 0.3, fat: 0.04 } },
   porridge: { name: 'Porridge', category: 'food', weight: 0.4, stackable: true, food: 0.32, decay: 80, feeds: { starch: 0.24, fat: 0.08, greens: 0.05 } },

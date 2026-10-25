@@ -3786,6 +3786,13 @@ export const NEWS: News[] = [
       `Added: Wildermon window, Care tab, opened first. Needs, worst first: ${listed(NEED_KINDS.map((k) => NEED_LABEL[k].toLowerCase()))}; hurt under ${percent(HURT_AT)} health, hungry under ${percent(HUNGRY_AT)} fed, care under ${percent(CARE_WANTING_317)}. Fix per row: feed, brush, fit gear, pair. Herd: fed, rest, health and care meters; size, job, idle and needs filters. Bulk: Feed hungry, Brush, Assign selected. Beds by size against workers. Gear Fit and Remove in its menu.`,
     ],
   },
+  {
+    n: 318,
+    day: '2026-10-25',
+    lines: () => [
+      `Added: cottage pie (cooking ${RECIPE_BY_ID.get('make_cottage_pie')?.difficulty ?? 0}, clay bowl, lit fire): ${recipeBill('make_cottage_pie')}; makes ${RECIPE_BY_ID.get('make_cottage_pie')?.count ?? 1}, ${Math.round((itemDef('cottage_pie').food ?? 0) * 100)}% food each.`,
+    ],
+  },
 ];
 
 /**
