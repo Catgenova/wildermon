@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { captchaOptions } from './captcha';
+import { queueReport } from './errors';
 
 /**
  * Which island keeper to talk to.
@@ -60,12 +61,67 @@ export function onSaving(watch: (saving: boolean) => void): () => void {
   return () => savingWatchers.delete(watch);
 }
 
-/** Exported for supabase/test/saving.ts, which asks it with a stand-in `fetch`. */
+/**
+ * The key every call to a door carries (`private.once` on the island), and the answer to a key it has
+ * already taken. A call sent again after a network error carries the key it was first sent with, so the
+ * island does what it asks once.
+ */
+export const ONCE_HEADER = 'x-wurm-once';
+export const ONCE_TAKEN = 'WK409';
+/** Waits before each try again of a call the network dropped, in milliseconds. */
+export const ONCE_RETRIES = [300, 1200] as const;
+/** Statuses a call is tried again on: the gateway's, which say nothing about whether the island did it. */
+const RETRY_STATUS = new Set([502, 503, 504]);
+
+const newKey = (): string => crypto.randomUUID();
+
+/**
+ * Whether calls carry keys. A gateway that will not let the header through answers every call with it as
+ * a dropped connection; found so once -- every try with the key dropped, the same call without it
+ * answered -- the rest of the session's calls go without, and the island is told.
+ */
+let keyed = true;
+
+/**
+ * A call to a door: with its key, tried again with the same key when the network drops it or the gateway
+ * answers for it, and a key the island has already taken answered as an empty success, said to nobody --
+ * the first try did the thing, and its answer is what was lost.
+ */
+async function onceFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  if (!keyed) return fetch(input, init);
+  const headers = new Headers(init?.headers);
+  if (!headers.has(ONCE_HEADER)) headers.set(ONCE_HEADER, newKey());
+  const sent: RequestInit = { ...init, headers };
+  for (let i = 0; ; i++) {
+    let res: Response | null = null;
+    try {
+      res = await fetch(input, sent);
+    } catch (err) {
+      if (init?.signal?.aborted) throw err;
+      if (i >= ONCE_RETRIES.length) {
+        const bare = await fetch(input, init).catch(() => null);
+        if (!bare) throw err;
+        keyed = false;
+        queueReport(`Calls with ${ONCE_HEADER} were dropped and one without it was answered: calls go without keys.`);
+        return bare;
+      }
+    }
+    if (res && (!RETRY_STATUS.has(res.status) || i >= ONCE_RETRIES.length)) {
+      if (res.ok) return res;
+      const body = (await res.clone().json().catch(() => null)) as { code?: string } | null;
+      if (body?.code !== ONCE_TAKEN) return res;
+      return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    await new Promise((done) => setTimeout(done, ONCE_RETRIES[i]));
+  }
+}
+
+/** Exported for supabase/test/saving.ts and once.ts, which ask it with a stand-in `fetch`. */
 export async function watchedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const res = await fetch(input, init);
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   const door = /\/rest\/v1\/rpc\/([\w]+)/.exec(url)?.[1];
-  if (!door) return res;
+  if (!door) return fetch(input, init);
+  const res = await onceFetch(input, init);
   if (res.ok) {
     if (refused.has(door)) {
       refused.clear();

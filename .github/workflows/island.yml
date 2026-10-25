@@ -4217,6 +4217,44 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/goals-a.mjs --log-level=error
           node node_modules/.cache/goals-a.mjs
 
+      - name: What a browser hands the island is checked and bounded
+        if: matrix.shard == 5
+        run: |
+          # The ten doors that take jsonb refuse a value of the wrong shape in
+          # one line naming the door, the argument and the key, and take every
+          # shape the browser sends. The set-down jobs are held to their reach,
+          # no job reaches past a ceiling, a read reaches 64 tiles round you,
+          # and a spawn, an island's name and a price are bounded.
+          npx esbuild supabase/test/argcheck.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/argcheck.mjs --log-level=error
+          node node_modules/.cache/argcheck.mjs
+      - name: An action taken once, however many times it is sent
+        if: matrix.shard == 5
+        run: |
+          # Every call to a door carries a key, the same one when it is tried
+          # again after a network error; the island takes a key once, so an
+          # order put up twice or a dig asked twice with one key is done once.
+          npx esbuild supabase/test/once.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/once.mjs --log-level=error
+          node node_modules/.cache/once.mjs
+      - name: A stack split without built SQL does what it did
+        if: matrix.shard == 5
+        run: |
+          # barter_split and rpc_work_deliver copy the row itself now; the old
+          # SQL is put back beside each and both run on the same things.
+          npx esbuild supabase/test/stacksplit.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/stacksplit.mjs --log-level=error
+          node node_modules/.cache/stacksplit.mjs
+      - name: No SQL is built at run time
+        if: matrix.shard == 5
+        run: |
+          # Every function in public is read, and every EXECUTE in it must run
+          # a literal or format() of one with %I and %L only: no ||, no %s, no
+          # SQL out of a variable.
+          npx esbuild supabase/test/builtsql.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/builtsql.mjs --log-level=error
+          node node_modules/.cache/builtsql.mjs
+
       - name: Thirty-six goals in the crafts, the land and the water
         if: matrix.shard == 6
         run: |
