@@ -6,7 +6,8 @@
  * twigs' ends poking out past them. The same seed is the same tree.
  */
 import { mulberry32 } from '../../world/noise';
-import type { Build, Clump, Envelope, Limb, Skeleton, V3 } from './types';
+import { HALF_H, HEIGHT_SCALE, UNITS_PER_TILE } from '../iso';
+import type { Build, Clump, Envelope, Limb, Skeleton, V3, Whorls } from './types';
 import { across, add, dot, len, lerp, mul, sub, turn, unit } from './vec';
 
 const TAU = Math.PI * 2;
@@ -25,6 +26,7 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
   if (b.habit === 'spreading') return growSpreading(b, height, seed);
   const R = mulberry32(seed);
   const H = height;
+  if (b.whorls) return growWhorls(b, b.whorls, H, seed);
   const stemZ = H * b.stem;
   const rz = (H - stemZ) * b.dome;
   const leanA = R() * TAU;
@@ -523,4 +525,197 @@ export function swayed(sk: Skeleton, frame: number, frames: number, seed: number
     return { ...c, c: [p[0] + j, p[1] - j * 0.5, p[2] + j * 0.6] as V3 };
   });
   return { ...sk, limbs, clumps };
+}
+
+/* ---- a conifer ---- */
+
+/**
+ * How low anything of a tree may hang this far out from its foot: off the
+ * ground, and over its own tile, since the ground of the tiles in front is
+ * laid after it (`../iso`).
+ */
+const hemAt = (H: number, out: number): number => Math.max(H * 0.03, ((2 * HALF_H * out) / UNITS_PER_TILE - HALF_H) / HEIGHT_SCALE + 0.6);
+
+/**
+ * A conifer grown from a seed: a straight leader on a root flare, bare to
+ * `stem` of the height, then whorls of boughs up it to its top -- each
+ * whorl a few boughs round the leader turned from the one under it, the
+ * lowest reaching furthest -- and a tuft on the top. A dead crown leaves the
+ * leader bare and grey over the last whorl, snapped and bent over when
+ * `broken`; stubs of dead boughs stand off the bare trunk. A dead tree is a
+ * pole with the stubs of its whorls all the way up.
+ */
+export function growWhorls(b: Build, w: Whorls, H: number, seed: number): Skeleton {
+  const R = mulberry32(seed);
+  const leanA = R() * TAU;
+  const leanD: V3 = [Math.cos(leanA), Math.sin(leanA), 0];
+  const sideD: V3 = [-leanD[1], leanD[0], 0];
+  const r0 = H * b.girth;
+  const stemZ = H * b.stem;
+  const dead = b.bare || w.deadTop < 1;
+  // Where the live crown stops, and where the leader does.
+  const crownTop = b.bare ? stemZ : H * (w.deadTop < 1 ? w.deadTop : w.spire ? 0.86 : 0.97);
+  const topZ = b.bare ? H * 0.88 : w.deadTop < 1 ? crownTop : H;
+  const bend = (R() - 0.5) * 2 * b.gnarl * r0 * 2.2;
+  const axis = (z: number): V3 => {
+    const f = z / H;
+    const s = Math.sin(f * Math.PI * 1.15) * bend;
+    return [leanD[0] * b.lean * Math.pow(f, 1.4) + sideD[0] * s, leanD[1] * b.lean * Math.pow(f, 1.4) + sideD[1] * s, z];
+  };
+  const radius = (z: number): number => Math.max(0.12, r0 * (1 - 0.9 * Math.pow(Math.min(1, z / H), 0.85)));
+  const limbs: Limb[] = [];
+  const clumps: Clump[] = [];
+
+  /* ---- the whorls' heights, and the trunk in a piece between each two ---- */
+  const n = b.bare ? 0 : Math.max(1, Math.round(w.tiers));
+  const zs: number[] = [];
+  for (let i = 0; i < n; i++) zs.push(stemZ + (crownTop - stemZ) * (n === 1 ? 0 : i / (n - 1)));
+  const cuts = [0, stemZ * 0.5, ...zs.filter((z) => z > stemZ * 0.5 + 0.5 && z < topZ - 0.5), topZ];
+  if (b.bare) for (let i = 1; i < 6; i++) cuts.splice(cuts.length - 1, 0, stemZ + ((topZ - stemZ) * i) / 6);
+  for (let i = 0; i + 1 < cuts.length; i++) {
+    limbs.push({ a: axis(cuts[i]), b: axis(cuts[i + 1]), ra: radius(cuts[i]), rb: radius(cuts[i + 1]), order: 0, parent: i - 1, bough: -1, dead: b.bare });
+  }
+  const trunkN = limbs.length;
+  const pieceAt = (z: number): number => {
+    for (let i = 0; i < trunkN; i++) if (limbs[i].b[2] >= z) return i;
+    return trunkN - 1;
+  };
+
+  /* ---- the root flare ---- */
+  const roots = b.flare > 1.15 ? 4 + Math.round(R()) : 0;
+  const rootA = R() * TAU;
+  for (let i = 0; i < roots; i++) {
+    const a = rootA + (i / roots) * TAU + (R() - 0.5) * 0.7;
+    const reach = r0 * b.flare * (0.7 + 0.25 * R());
+    limbs.push({
+      a: [Math.cos(a) * r0 * 0.5, Math.sin(a) * r0 * 0.5, r0 * (1.1 + 0.4 * R())],
+      b: [Math.cos(a) * reach, Math.sin(a) * reach, r0 * 0.08],
+      ra: r0 * 0.55, rb: r0 * 0.3, order: -1, parent: 0, bough: -1,
+    });
+  }
+
+  /** A dead stub off the trunk at `z`, pointing `a` round, `len` long, `rise` up for its length. */
+  const stub = (z: number, a: number, len: number, rise: number): void => {
+    const p = axis(z);
+    const r = radius(z) * 0.32;
+    const d: V3 = [Math.cos(a), Math.sin(a), 0];
+    const mid = add(p, add(mul(d, len * 0.55), [0, 0, len * rise * 0.4]));
+    const end = add(p, add(mul(d, len), [0, 0, len * rise]));
+    const at = limbs.length;
+    limbs.push({ a: p, b: mid, ra: r, rb: r * 0.7, order: 1, parent: pieceAt(z), bough: limbs.length, dead: true });
+    limbs.push({ a: mid, b: end, ra: r * 0.7, rb: r * 0.35, order: 1, parent: at, bough: at, dead: true, tip: true });
+  };
+
+  /* ---- the dead leader over a dead crown ---- */
+  if (dead) {
+    const z0 = b.bare ? topZ : crownTop;
+    const tall = H * (b.bare ? 0.06 : 0.97) - (b.bare ? 0 : z0);
+    if (tall > 1) {
+      const p0 = axis(z0);
+      const a = R() * TAU;
+      const k = w.broken ? 0.55 : 1;
+      const p1 = add(p0, [0, 0, tall * 0.6 * k + tall * 0.1]);
+      const tilt: V3 = [Math.cos(a), Math.sin(a), 0];
+      const p2 = add(p1, add(mul(tilt, w.broken ? tall * 0.3 : tall * 0.04), [0, 0, w.broken ? tall * 0.22 : tall * 0.35]));
+      const r = radius(z0);
+      const at = limbs.length;
+      limbs.push({ a: p0, b: p1, ra: r, rb: r * 0.6, order: 1, parent: pieceAt(z0), bough: at, dead: true });
+      limbs.push({ a: p1, b: p2, ra: r * 0.6, rb: 0.12, order: 1, parent: at, bough: at, dead: true, tip: true });
+    }
+    // The stubs of the dead whorls up the bare leader.
+    const top = b.bare ? topZ : crownTop + tall * 0.6;
+    const from = b.bare ? stemZ : crownTop;
+    const m = b.bare ? 11 : 2;
+    for (let i = 0; i < m; i++) {
+      const u = (i + 0.5) / m;
+      const reach = H * b.spread * (1 - u * (1 - w.taper)) * (b.bare ? 0.35 + 0.5 * R() : 0.4 + 0.3 * R());
+      stub(from + (top - from) * u, R() * TAU, reach * (b.bare ? 1 : 0.4), b.bare ? -0.15 + 0.5 * R() : -0.1 + 0.3 * R());
+    }
+  }
+
+  /* ---- stubs on the bare trunk under the crown, and every other one out through the crown ---- */
+  for (let i = 0; i < Math.round(w.stubs); i++) {
+    if (i % 2 && !b.bare && crownTop > stemZ) {
+      const u = 0.2 + 0.6 * R();
+      const z = stemZ + (crownTop - stemZ) * u;
+      stub(z, R() * TAU, H * b.spread * (1 - (1 - w.taper) * u) * (1.05 + 0.25 * R()), 0.05 + 0.2 * R());
+      continue;
+    }
+    const z = stemZ * (0.4 + 0.55 * R());
+    stub(z, R() * TAU, H * b.spread * (0.25 + 0.25 * R()), -0.2 + 0.4 * R());
+  }
+
+  /* ---- the boughs ---- */
+  const env: Envelope = { c: axis(stemZ + (crownTop - stemZ) * 0.4), r: H * b.spread, rz: Math.max(1, (H - stemZ) / 2) };
+  const gap = n > 1 ? (crownTop - stemZ) / (n - 1) : H * 0.2;
+  let a0 = R() * TAU;
+  /**
+   * A bough off the leader at `z`, pointing `az` round, `reach` long from the
+   * leader to its tip; `whole` the reach of its whorl, `u` how far up the
+   * crown. A bare branch runs out nearly level and carries a spray on its
+   * outer part, which falls to a fingered end.
+   */
+  const bough = (z: number, az: number, reach: number, whole: number, u: number, fingers: number, further = 0): void => {
+    const d: V3 = [Math.cos(az), Math.sin(az), 0];
+    const out0 = radius(z) * 0.6 + reach * w.bare * (0.85 + 0.3 * R()) + further;
+    reach += further;
+    const sl = Math.max(1, reach - out0);
+    const width = sl * w.width * (0.85 + 0.3 * R());
+    // A whorl falls as one, whatever each bough's reach, so it hangs to one hem.
+    let drop = (sl * 0.4 + whole * 0.6 * (1 - w.bare)) * b.droop * (0.9 + 0.2 * R());
+    let hang = Math.min(gap * w.hang, sl * 0.35) * (0.85 + 0.3 * R());
+    const base = axis(z);
+    const root = add(base, [d[0] * out0, d[1] * out0, out0 * 0.04]);
+    // Kept clear of the ground, and of the tiles in front of its own, which are laid after it (`hemAt`).
+    const low = drop + hang * 2;
+    const floor = Math.max(H * w.hem, hemAt(H, Math.hypot(root[0], root[1]) + sl * 1.15));
+    if (root[2] - low < floor) {
+      const k = Math.max(0.15, (root[2] - floor) / low);
+      drop *= k;
+      hang *= k;
+    }
+    const c = add(root, [d[0] * sl * 0.5, d[1] * sl * 0.5, -drop * 0.3]);
+    const at = clumps.length;
+    clumps.push({
+      c, r: sl * 0.6, limb: pieceAt(z), k: R(), out: 1, up: u,
+      pad: { root: sub(root, c), base: sub(base, c), d, reach: sl, w: width, drop, hang, fingers },
+    });
+    // Its branch, out to where the spray starts and a little under it.
+    const r = Math.max(0.16, radius(z) * 0.22);
+    const mid = add(lerp(base, root, 0.5), [0, 0, out0 * 0.03]);
+    const end = add(root, [d[0] * sl * 0.2, d[1] * sl * 0.2, -drop * 0.04]);
+    const i0 = limbs.length;
+    limbs.push({ a: base, b: mid, ra: r, rb: r * 0.8, order: 3, parent: pieceAt(z), bough: i0, pad: at });
+    limbs.push({ a: mid, b: root, ra: r * 0.8, rb: r * 0.6, order: 3, parent: i0, bough: i0, pad: at });
+    limbs.push({ a: root, b: end, ra: r * 0.6, rb: r * 0.45, order: 3, parent: i0 + 1, bough: i0, pad: at, tip: true });
+  };
+  // A few boughs that stick out past the rest, low in the crown.
+  const longs = new Set<number>();
+  for (let k = 0; k < Math.round(w.long); k++) longs.add(Math.floor(n * (0.1 + 0.5 * R())) * 100 + Math.floor(R() * 6));
+  for (let i = 0; i < n; i++) {
+    const u = n === 1 ? 0 : i / (n - 1);
+    const reachT = H * b.spread * (1 - (1 - w.taper) * u) * (0.95 + 0.1 * R());
+    const m = Math.max(3, Math.round(w.pads * (1 - 0.45 * u)));
+    a0 += 2.4;
+    for (let j = 0; j < m; j++) {
+      if (w.gaps > 0 && R() < w.gaps && i > 0) continue;
+      const az = a0 + (j / m) * TAU + (R() - 0.5) * (TAU / m) * 0.6;
+      // A long bough is a longer bare branch with a spray of the usual size on its end.
+      const further = longs.has(i * 100 + j) ? reachT * 0.35 : 0;
+      bough(zs[i] + (R() - 0.5) * gap * 0.25, az, reachT * (1 + w.ragged * (R() - 0.5)), reachT, n === 1 ? 1 : u, Math.max(3, Math.round(w.fingers - u)), further);
+    }
+  }
+  /* ---- a ragged tuft of small boughs on the leader over the top whorl, the leader's tip clear of it ---- */
+  if (n > 0 && w.spire && w.deadTop >= 1) {
+    const top = H * b.spread * w.taper;
+    for (const [f, k, m] of [[0.28, 0.8, 5], [0.62, 0.45, 3]]) {
+      a0 += 2.4;
+      for (let j = 0; j < m; j++) bough(crownTop + (H - crownTop) * f, a0 + (j / m) * TAU + (R() - 0.5) * 0.8, top * k * (0.8 + 0.4 * R()), top * k, 1, 3);
+    }
+  }
+  return {
+    limbs, clumps, crown: env, height: H,
+    rune: b.rune ? Math.PI / 4 + (R() - 0.5) * 0.5 : null,
+    hollow: b.hollow ? Math.PI / 4 + 1.1 + (R() - 0.5) * 0.5 : null,
+  };
 }

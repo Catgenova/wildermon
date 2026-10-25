@@ -26,6 +26,7 @@ import { ACROSS, boundsOf, footReach, footShade, paintTree3d, shownOf } from './
 import { grow, swayed } from './skeleton';
 import { maple } from './species/maple';
 import { oak } from './species/oak';
+import { pine } from './species/pine';
 import type { Build, Dress, Skeleton, Species3D, V3 } from './types';
 
 export { sunStepOf, SUN_STEPS } from './light';
@@ -36,6 +37,7 @@ const byName = (name: string): number => TREE_DEFS.findIndex((d) => d.name === n
 const SPECIES: ReadonlyMap<number, Species3D> = new Map([
   [byName('Maple'), maple],
   [byName('Oak'), oak],
+  [byName('Pine'), pine],
 ]);
 /** Which species are drawn here: take one out and it is drawn flat again. */
 export const TREE3D_SPECIES: Set<number> = new Set(SPECIES.keys());

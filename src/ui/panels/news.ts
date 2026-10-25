@@ -3682,6 +3682,14 @@ export const NEWS: News[] = [
       `Changed: maples drawn solid: own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun.`,
     ],
   },
+  {
+    n: 306,
+    day: '2026-10-25',
+    lines: () => [
+      `Changed: oaks and pines drawn solid, as maples: own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun.`,
+      'Fixed: solid trees\' long dusk shade on uneven ground: whole, not cut into strips.',
+    ],
+  },
 ];
 
 /**
