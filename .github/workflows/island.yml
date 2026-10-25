@@ -4503,6 +4503,22 @@ jobs:
             --outfile=node_modules/.cache/wildermontab.mjs --log-level=error
           node node_modules/.cache/wildermontab.mjs
 
+      - name: The same thing, asked for at once
+        if: matrix.shard == 6
+        run: |
+          # Two to six identical calls at the same row, each on a connection of
+          # its own, let go together from an advisory-lock gate and each held
+          # open a moment after its work: take from a crate, put into one, empty
+          # one, load a rack, both Accepts of a trade, a stall's buy, a pick-up,
+          # a drop, a delivery to settlement work, workers fetching out of the
+          # stores, and the pairs of doors that touch one stack at once. Every
+          # thing and coin is counted before and after: none made, none lost, no
+          # count below one. Seven connections at most, inside the service's
+          # default of a hundred.
+          npx esbuild supabase/test/twice.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/twice.mjs --log-level=error
+          node node_modules/.cache/twice.mjs
+
       - name: The doors, as the security advisors read them
         if: matrix.shard == 6
         run: |
