@@ -1,6 +1,7 @@
 import { cleanLook, type Look } from '../game/look';
 import { supabase } from './supabase';
 import { captchaOptions } from './captcha';
+import { nameRefusal } from '../game/playertext';
 
 /**
  * Accounts: a username, a password, and nothing else.
@@ -275,6 +276,9 @@ export async function createAccount(rawName: string, password: string): Promise<
   const shown = writtenName(rawName);
   const bad = nameTrouble(rawName);
   if (bad) throw new Error(bad);
+  // Not a name that reads as a keeper or staff: the island takes no such account up (`rpc_my_name`).
+  const reserved = nameRefusal(rawName);
+  if (reserved) throw new Error(reserved);
   const worse = passwordTrouble(password);
   if (worse) throw new Error(worse);
 

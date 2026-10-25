@@ -4612,6 +4612,37 @@ jobs:
             --outfile=node_modules/.cache/doors.mjs --log-level=error
           node node_modules/.cache/doors.mjs
 
+      - name: Permissions, held to a list somebody has read
+        if: matrix.shard == 1
+        run: |
+          # As anon and as authenticated: every table and view in public is in
+          # supabase/test/permissions.allow.ts and read on exactly its terms
+          # there (nothing, every row, its policy word for word, or through a
+          # security_invoker view); neither may insert, update, delete or
+          # truncate any of them; neither reads a row but the rulebook's from
+          # an island it is not on; the functions each may execute are exactly
+          # the list's, and every other one, called, is refused; every
+          # SECURITY DEFINER function fixes its search_path; nothing on a
+          # sequence or a table in private. A new table or rpc_* fails here
+          # until it is written down.
+          npx esbuild supabase/test/permissions.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/permissions.mjs --log-level=error
+          node node_modules/.cache/permissions.mjs
+
+      - name: Player text, cleaned the same on both sides
+        if: matrix.shard == 1
+        run: |
+          # private.clean_text and src/game/playertext.ts on a list of nasty
+          # strings (an RTL override, zero-width characters, a homoglyph
+          # Keeper, a 500-character name, a newline injection, <script>):
+          # cleaned, cut, folded and judged the same; the refusal in the same
+          # words. Through the doors: talk, letters, notices, crate, wildermon,
+          # settlement, rank, body, island and account names cleaned, and a
+          # name that reads as a keeper or staff refused.
+          npx esbuild supabase/test/playertext.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/playertext.mjs --log-level=error
+          node node_modules/.cache/playertext.mjs
+
   migrate:
     name: Push the migrations to the project
     # On the rules having passed here, or over the same code already (`already`).

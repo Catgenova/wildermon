@@ -6,6 +6,7 @@ import {
 import { LOOK_TABLES, cleanLook, randomLook, type Look } from './game/look';
 import { Creator } from './ui/creator';
 import { CODE_DIGITS, CODE_SECONDS, finishEnrol, myFactor, removeFactor, startEnrol } from './net/mfa';
+import { nameRefusal } from './game/playertext';
 
 /**
  * The landing page: a username, a password, and a way back in.
@@ -123,6 +124,8 @@ function checkName(): void {
   const bad = nameTrouble(typed);
   if (bad) return note(nameNote, bad, 'bad');
   if (mode === 'back') return note(nameNote, `Signing in as ${typed}.`);
+  const reserved = nameRefusal(typed);
+  if (reserved) return note(nameNote, reserved, 'bad');
   note(nameNote, `Asking whether ${typed} is taken…`);
   const mine = ++asking;
   timer = window.setTimeout(() => {

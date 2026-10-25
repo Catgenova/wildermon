@@ -1,3 +1,5 @@
+import { cleanText } from './playertext';
+
 /**
  * Talking, and what the island will take.
  *
@@ -41,8 +43,9 @@ export const SAY_A_MINUTE = 20;
  * Newlines and tabs become spaces rather than being refused, because a phone
  * keyboard puts them in by accident and a line silently lost is worse than a
  * line tidied. Runs of whitespace collapse, so a wall of spaces cannot be used
- * to push the window about. The island cleans it again the same way — this is
- * the courtesy, that is the rule.
+ * to push the window about; control, zero-width and bidi characters go
+ * (`playertext.ts`). The island cleans it again the same way — this is the
+ * courtesy, that is the rule.
  */
 export const cleanSaid = (raw: string): string => cleanLine(raw, SAY_MAX);
 
@@ -51,5 +54,4 @@ export const cleanSaid = (raw: string): string => cleanLine(raw, SAY_MAX);
  * own length: what talk is held to, and what is cut into a memorial stone
  * (`memorial.ts`).
  */
-export const cleanLine = (raw: string, max: number): string =>
-  raw.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, max);
+export const cleanLine = (raw: string, max: number): string => cleanText(raw, max);

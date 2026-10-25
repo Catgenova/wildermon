@@ -143,7 +143,7 @@ begin
   insert into said values ('REN_DUP|' || coalesce(rpc_rank_rename(w, r_new, 'MAYOR')->>'why', 'ALLOWED'));
   insert into said values ('REN_GONE|' || coalesce(rpc_rank_rename(w, -5, 'Anything')->>'why', 'ALLOWED'));
   insert into said values ('REN_SELF_CASE|' || coalesce(rpc_rank_rename(w, r_new, 'WARDEN')->>'renamed', 'REFUSED'));
-  insert into said values ('REN|' || coalesce(rpc_rank_rename(w, r_new, 'Keeper')->>'renamed', 'REFUSED'));
+  insert into said values ('REN|' || coalesce(rpc_rank_rename(w, r_new, 'Steward')->>'renamed', 'REFUSED'));
   r_keep := r_new;
   insert into said values ('MOVE_TOP|' || coalesce(rpc_rank_move(w, r_mayor, -1)->>'why', 'ALLOWED'));
   insert into said values ('MOVE_BOTTOM|' || coalesce(rpc_rank_move(w, (select id from deed_rank_def where world_id = w and founder = boss
@@ -158,7 +158,7 @@ begin
   insert into said values ('DROP_GONE|' || coalesce(rpc_rank_drop(w, -5)->>'why', 'ALLOWED'));
   insert into said values ('ORDS|' || (select string_agg(ord::text, ',' order by ord) from deed_rank_def where world_id = w and founder = boss));
   insert into said values ('ALLOW_BAD|' || coalesce(rpc_rank_allow(w, r_keep, 'fly', true)->>'why', 'ALLOWED'));
-  -- Nothing but the first three and Keeper from here on.
+  -- Nothing but the first three and Steward from here on.
   delete from deed_rank_def where world_id = w and founder = boss and name like 'Rank %';
   insert into said values ('S1|' || rpc_social(w)::text);
 
@@ -264,7 +264,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', boss)::text, true);
   perform rpc_rank_allow(w, r_builder, 'set_ranks', false);
   perform set_config('request.jwt.claims', json_build_object('sub', bld)::text, true);
-  insert into said values ('RANK_OFF|' || coalesce(rpc_rank(w, boss, gst, 'Keeper')->>'why', 'ALLOWED'));
+  insert into said values ('RANK_OFF|' || coalesce(rpc_rank(w, boss, gst, 'Steward')->>'why', 'ALLOWED'));
   perform set_config('request.jwt.claims', json_build_object('sub', boss)::text, true);
   perform rpc_rank_allow(w, r_builder, 'set_ranks', true);
   perform set_config('request.jwt.claims', json_build_object('sub', bld)::text, true);
@@ -274,12 +274,12 @@ begin
   insert into said values ('RANK_TO_MINE|' || coalesce(rpc_rank(w, boss, gst, 'builder')->>'why', 'ALLOWED'));
   insert into said values ('RANK_NONE|' || coalesce(rpc_rank(w, boss, gst, 'Nobody')->>'why', 'ALLOWED'));
   insert into said values ('RANK_ALREADY|' || coalesce(rpc_rank(w, boss, gst, 'guest')->>'why', 'ALLOWED'));
-  insert into said values ('RANK_DOWN|' || coalesce(rpc_rank(w, boss, gst, 'keeper')->>'rank', 'REFUSED'));
+  insert into said values ('RANK_DOWN|' || coalesce(rpc_rank(w, boss, gst, 'steward')->>'rank', 'REFUSED'));
   insert into said values ('RANK_TOLD|' || (select text from event where world_id = w and uid = gst order by n desc limit 1));
   insert into said values ('RANK_ROLE|' || deed_role(w, boss, gst));
   -- A rank whose name changes keeps everybody on it, under the new name.
   perform set_config('request.jwt.claims', json_build_object('sub', boss)::text, true);
-  perform rpc_rank_rename(w, r_keep, 'Steward');
+  perform rpc_rank_rename(w, r_keep, 'Reeve');
   insert into said values ('RENAMED_ROLE|' || deed_role(w, boss, gst) || '|' || (select rank_id = r_keep from deed_member where world_id = w and founder = boss and uid = gst));
   insert into said values ('DROP_KEEP|' || coalesce(rpc_rank_drop(w, r_keep)->>'why', 'ALLOWED'));
 end $$;
@@ -321,13 +321,13 @@ same(`but not a ${RANK_CAP + 1}th`, rankAddRefusal(deed, defsOf(sFull), 'One mor
 const warden = defsOf(sFull).find((r) => r.name === 'Warden')!;
 same('a rank is not renamed to another\'s name', rankNameRefusal(deed, defsOf(sFull), 'MAYOR', warden.id), got('REN_DUP'));
 check('renaming a rank that is gone is refused', got('REN_GONE') === 'That rank is gone.', got('REN_GONE'));
-check('a rank may be renamed to its own name in another case, and then renamed', got('REN_SELF_CASE') === 'WARDEN' && got('REN') === 'Keeper',
+check('a rank may be renamed to its own name in another case, and then renamed', got('REN_SELF_CASE') === 'WARDEN' && got('REN') === 'Steward',
   `${got('REN_SELF_CASE')}, ${got('REN')}`);
 same('the highest rank goes no higher', rankMoveRefusal(defsOf(sFull), defsOf(sFull)[0].id, -1), got('MOVE_TOP'));
 same('the lowest no lower', rankMoveRefusal(defsOf(sFull), defsOf(sFull)[RANK_CAP - 1].id, 1), got('MOVE_BOTTOM'));
 check('a rank moves a place up and back down, trading places with its neighbour',
-  got('MOVE') === 'Keeper' && got('MOVE_BACK') === 'Keeper'
-  && got('ORDER') === ['Mayor', 'Builder', 'Guest', 'Keeper', ...Array.from({ length: RANK_CAP - 4 }, (_, i) => `Rank ${i + 5}`)].join(','), got('ORDER'));
+  got('MOVE') === 'Steward' && got('MOVE_BACK') === 'Steward'
+  && got('ORDER') === ['Mayor', 'Builder', 'Guest', 'Steward', ...Array.from({ length: RANK_CAP - 4 }, (_, i) => `Rank ${i + 5}`)].join(','), got('ORDER'));
 same('the newcomers\' rank is not deleted', rankDropRefusal(defsOf(sFull), defsOf(sFull).find((r) => r.name === 'Builder')!.id), got('DROP_NEW'));
 same('nor a rank somebody holds', rankDropRefusal(defsOf(sFull), defsOf(sFull).find((r) => r.name === 'Guest')!.id), got('DROP_HELD'));
 check('one nobody holds is, and the list closes up behind it',
@@ -337,7 +337,7 @@ check('a rank that is gone, or a permission that is not one, is refused',
 check('only the founder changes them', got('MAY_ADD') === 'You have founded no settlement to set ranks on.'
   && got('MAY_ALLOW') === got('MAY_ADD') && got('MAY_PERMS') === String(permsOf(DEFAULT_RANKS[1].powers)), `${got('MAY_ADD')}; ${got('MAY_PERMS')}`);
 const s1 = on(answer('S1'));
-const keeper = defsOf(s1).find((r) => r.name === 'Keeper')!;
+const keeper = defsOf(s1).find((r) => r.name === 'Steward')!;
 
 console.log('--- shape');
 const game = Game.create(4242);
@@ -433,12 +433,12 @@ same('nor somebody ranked the same', rankRefusal(sRank, bld, bld2, nBld2, 'Guest
 same('nor to their own rank', rankRefusal(sRank, bld, gst, nGst, 'builder'), got('RANK_TO_MINE'));
 same('nor to a rank there is not', rankRefusal(sRank, bld, gst, nGst, 'Nobody'), got('RANK_NONE'));
 same('nor to the rank they hold', rankRefusal(sRank, bld, gst, nGst, 'guest'), got('RANK_ALREADY'));
-check('but to a rank below their own, for somebody below', got('RANK_DOWN') === 'Keeper' && rankRefusal(sRank, bld, gst, nGst, 'keeper') === null,
-  `${got('RANK_DOWN')}; ${rankRefusal(sRank, bld, gst, nGst, 'keeper')}`);
+check('but to a rank below their own, for somebody below', got('RANK_DOWN') === 'Steward' && rankRefusal(sRank, bld, gst, nGst, 'steward') === null,
+  `${got('RANK_DOWN')}; ${rankRefusal(sRank, bld, gst, nGst, 'steward')}`);
 check('the one ranked is told what the rank may do, in the browser\'s words',
-  got('RANK_TOLD') === rankedLine(got('N_BLD'), 'Keeper', deed, keeper.perms) && got('RANK_ROLE') === 'keeper', got('RANK_TOLD'));
-check('a rank renamed keeps everybody on it, under its new name', got('RENAMED_ROLE') === 'steward|true', got('RENAMED_ROLE'));
-check('and one somebody holds is not deleted', got('DROP_KEEP') === `Steward held by 1 citizen: give them another rank first.`, got('DROP_KEEP'));
+  got('RANK_TOLD') === rankedLine(got('N_BLD'), 'Steward', deed, keeper.perms) && got('RANK_ROLE') === 'steward', got('RANK_TOLD'));
+check('a rank renamed keeps everybody on it, under its new name', got('RENAMED_ROLE') === 'reeve|true', got('RENAMED_ROLE'));
+check('and one somebody holds is not deleted', got('DROP_KEEP') === `Reeve held by 1 citizen: give them another rank first.`, got('DROP_KEEP'));
 check('the browser knows which rank everybody holds, by id', defOf(sRank, gst)?.name === 'Guest' && defOf(sRank, may)?.name === 'Mayor'
   && asRanked(sRank).rank === 'Builder', JSON.stringify(sRank.held));
 
