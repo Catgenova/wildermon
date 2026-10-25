@@ -111,6 +111,8 @@ export type GameEvents = {
   action: [];
   stats: [];
   world: [x: number, y: number];
+  /** The island's word on the spots near us that are picked over came in (`Game.foragedFromIsland`). */
+  foraged: [];
   /** A square went on the map without being walked: a map studied (`cartography.ts`). */
   charted: [x0: number, y0: number, x1: number, y1: number];
   crate: [];

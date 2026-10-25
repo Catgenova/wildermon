@@ -670,10 +670,12 @@ check('its Rare Catch lands a rare fish all the way under the same dice',
 for (const it of [...game.inventory.items]) if (FISH.some((f) => f.id === it.id) || it.id === 'worm') game.inventory.remove(it.uid, it.count);
 game.inventory.add('cooked_fish', { ql: 30 });
 game.setPerks({});
-const foodPlain = fishDef.labelFor?.(tileAt(px + 5, py), game);
+// The odds and the ceiling after it are `yields.ts`'s (`supabase/test/yields.ts`); the bait is the label's own.
+const baitSaid = (): string | undefined => fishDef.labelFor?.(tileAt(px + 5, py), game)?.replace(/ \(stay on .*\)$/, '');
+const foodPlain = baitSaid();
 game.setPerks(P('Any Bait').fx);
 check('its Any Bait puts the food on the hook, and says so on the menu', foodPlain === 'Fish'
-  && fishDef.labelFor?.(tileAt(px + 5, py), game) === 'Fish with cooked fish', `${foodPlain} / ${fishDef.labelFor?.(tileAt(px + 5, py), game)}`);
+  && baitSaid() === 'Fish with cooked fish', `${foodPlain} / ${fishDef.labelFor?.(tileAt(px + 5, py), game)}`);
 game.inventory.remove(game.inventory.find('cooked_fish')!.uid, 1);
 // The net, a drag at a time.
 game.setPerks({});

@@ -16,7 +16,7 @@
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { FORAGE_COOLDOWN, Game, SPROUT_COOLDOWN } from '../../src/game/game';
-import { world } from '../../src/game/pace';
+import { readyIn } from '../../src/game/words';
 import { packTreeData, TileType, TREE_AGES } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -63,13 +63,13 @@ game.markForaged(tx, ty, 'sprout');
 const picked = said(MATURE);
 game.time += FORAGE_COOLDOWN + 1;
 const pastForage = said(MATURE);
-game.time += world(SPROUT_COOLDOWN);
+game.time += SPROUT_COOLDOWN;
 const pastHour = said(MATURE);
 check('and a tree picked has none till the hour is up, not the three minutes a bush takes',
-  picked === 'Sprout already picked. Try later.' && pastForage === picked && pastHour === null,
+  picked === `Sprout already picked. ${readyIn(SPROUT_COOLDOWN)}` && pastForage === `Sprout already picked. ${readyIn(SPROUT_COOLDOWN - FORAGE_COOLDOWN - 1)}` && pastHour === null,
   `${picked} / ${pastForage} / ${pastHour}`);
 check('picking it marks the tree for the next body', (() => {
-  game.time += world(SPROUT_COOLDOWN) + 1;
+  game.time += SPROUT_COOLDOWN + 1;
   for (let i = 0; i < 200 && !game.isForaged(tx, ty, 'sprout'); i++) pick.perform?.(target, game);
   return game.isForaged(tx, ty, 'sprout');
 })());
@@ -120,7 +120,7 @@ check('on the island, a sapling and a clipped one have no sprouts, said as the b
   island('sapling') === browser.sapling && island('clipped') === browser.clipped, `${island('sapling')} / ${island('clipped')}`);
 check('and a grown tree has', island('mature') === 'null', island('mature'));
 check('a pick marks the tree, and it has none till the hour is up, said as the browser says it',
-  island('marked') === 'true' && island('picked') === picked && island('past_forage') === picked && island('past_hour') === 'null',
+  island('marked') === 'true' && island('picked') === picked && island('past_forage') === pastForage && island('past_hour') === 'null',
   `${island('marked')} / ${island('picked')} / ${island('past_forage')} / ${island('past_hour')}`);
 check('a worker passes over a sapling and a tree picked within the hour, and not a grown one',
   island('worker_sapling') === 'false' && island('worker_picked') === 'false' && island('worker_mature') !== 'false',

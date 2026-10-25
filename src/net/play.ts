@@ -1,5 +1,5 @@
 import { gearFrom } from '../game/worn';
-import { BROWSER_TALLY, Game } from '../game/game';
+import { BROWSER_TALLY, Game, SPROUT_COOLDOWN } from '../game/game';
 import type { Marker } from '../game/marks';
 import { EMOTE_BY_ID } from '../game/emotes';
 import { cleanLook } from '../game/look';
@@ -355,6 +355,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   island.hooks.built = (ground) => game.sawGround(ground, island, island.uid || null);
   island.hooks.paved = (x, y, on) => game.sawPaving(x, y, on);
   island.hooks.springs = (near, chains) => game.springs.sawIsland(near, chains);
+  // And which spots near us are picked over, for the waits the menus and the tile window say (`yieldLines`).
+  island.hooks.foraged = (rows) => game.foragedFromIsland(rows);
+  island.hooks.foragedWithin = SPROUT_COOLDOWN;
   island.hooks.knownSprings = () => Object.fromEntries([...game.springs.list.values()].map((s) => [String(s.id), s.ver]));
   // And the mote swirls round us, which the island puts down at dawn and takes away as they are collected (`motes.ts`).
   island.hooks.swirls = (rows) => game.setSwirls(rows.map(swirlIn).filter((s): s is Swirl => s !== null));

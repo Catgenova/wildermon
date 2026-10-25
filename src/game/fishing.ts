@@ -3,6 +3,7 @@ import type { ActionDef } from './actions';
 import type { Game } from './game';
 import { ITEM_DEFS, itemDef, markOf, RARITIES, RARITY_WORD, rollRarity } from './items';
 import { swingEnchant } from './enchant';
+import { castOdds, qlTag, taggedWith } from './yields';
 
 /** What one cast and one sweep of the net teach, fish or no fish. */
 export const ROD_GAIN = 0.4;
@@ -269,6 +270,8 @@ export const FISHING_ACTIONS: ActionDef[] = [
   {
     id: 'drag_net',
     label: 'Drag the net',
+    // The most quality a netted fish comes up at, the net in the hand (`perform_fish`).
+    labelFor: (_t, g) => taggedWith(g, 'fishing_net', 'Drag the net', qlTag(g.qlCeiling('fishing', g.toolQl('fishing_net')))),
     verb: 'dragging the net',
     skill: 'fishing',
     tool: 'fishing_net',
@@ -353,7 +356,9 @@ export const FISHING_ACTIONS: ActionDef[] = [
     labelFor: (t, g) => {
       const spot = t.kind === 'tile' ? castAt(g, t.x, t.y) : null;
       const bait = spot ? baitFor(g, spot.depth) : null;
-      return bait ? `Fish with ${itemDef(bait.id).name.toLowerCase()}` : 'Fish';
+      const label = bait ? `Fish with ${itemDef(bait.id).name.toLowerCase()}` : 'Fish';
+      // The chance a bite stays on and the most quality a fish comes up at (`yields.ts`), where any fish can be had.
+      return spot && fishHere(spot.depth, g.skills.get('fishing')).length ? taggedWith(g, 'fishing_rod', label, ...castOdds(g, spot.depth)) : label;
     },
     skill: 'fishing',
     tool: 'fishing_rod',

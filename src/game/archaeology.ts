@@ -4,6 +4,7 @@ import type { ActionDef } from './actions';
 import type { Game } from './game';
 import { itemName, markOf, RARITY_ODDS, RARITY_WORD, rollRarity, type Item } from './items';
 import { SKILL_DEFS } from './skills';
+import { pct, pickedSaid, taggedWith } from './yields';
 import {
   BAUBLE_SHARE, BAUBLE_TIER_BY_ID, BAUBLE_TIERS, findKind, readBauble, REGRET, rollBauble, rollTier, TARNISHED, type BaubleTier, type BaubleTierDef,
 } from './baubles';
@@ -228,6 +229,8 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
   {
     id: 'investigate',
     label: 'Investigate',
+    // The chance a go turns something up, as the roll below takes it.
+    labelFor: (_t, g) => taggedWith(g, 'trowel', 'Investigate', pct(findChance(g.skills.get('archaeology'), g.toolQl('trowel'), g.perk('find:investigate', 0), g.perk('cap:investigate', FIND_CAP)))),
     verb: 'investigating the ground',
     skill: 'archaeology',
     tool: 'trowel',
@@ -237,7 +240,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
       if (!g.inventory.has('trowel')) return 'Need a trowel.';
-      if (g.isForaged(t.x, t.y, 'dig')) return 'Already searched this tile.';
+      if (g.isForaged(t.x, t.y, 'dig')) return `Already searched this tile. ${pickedSaid(g, t.x, t.y, 'dig')}`;
       return null;
     },
     perform: (t, g) => {

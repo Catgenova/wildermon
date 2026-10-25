@@ -155,6 +155,22 @@ export function timeWords(secs: number): string {
 }
 
 /**
+ * A short wait to the second, as a label says it: "40 s", "2 min 10 s",
+ * "1 h 5 min"; whole seconds rounded up, so a wait is never said as over
+ * before it is. The island's `wait_words`, word for word.
+ */
+export function waitWords(secs: number): string {
+  const s = Math.max(1, Math.ceil(secs - 1e-6));
+  if (s < 60) return `${s} s`;
+  if (s < 3600) return s % 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s / 60} min`;
+  const m = Math.floor((s % 3600) / 60);
+  return m ? `${Math.floor(s / 3600)} h ${m} min` : `${Math.floor(s / 3600)} h`;
+}
+
+/** "Ready in 2 min 10 s.": the end of a refusal for a spot worked too lately. The island's `ready_in`. */
+export const readyIn = (secs: number): string => `Ready in ${waitWords(secs)}.`;
+
+/**
  * How long fuel lasts, from its seconds of burning: "1.5 hours", "12 minutes",
  * "40 seconds". One for every fire there is -- campfire, oven, brazier,
  * smelter, kiln -- so they cannot come to say it differently.

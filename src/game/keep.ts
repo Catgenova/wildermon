@@ -516,6 +516,14 @@ export const STORE_SEEN = 6;
 export const SPRINGS_EVERY = 4;
 
 /**
+ * Seconds between reading which spots near you are picked over (`foraged`),
+ * for the waits the menus and the tile window say. Anything you do yourself
+ * reads again as soon as it is done, so this is how long somebody else's
+ * picking takes to show.
+ */
+export const FORAGED_EVERY = 5;
+
+/**
  * Seconds between asking the island for the mote swirls in the nine blocks
  * round you (`rpc_swirls`), when nothing has said to ask sooner. A swirl
  * collected is said at once over the block's channel, and so is a new day's

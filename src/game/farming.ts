@@ -196,7 +196,17 @@ export const cropGrowthLeft = (c: Crop, per: number, now: number): number => Mat
  */
 export function cropTimeLeft(c: Crop, per: number, now: number, wall: number): number | null {
   if (cropReady(c)) return null;
-  const left = cropGrowthLeft(c, per, now);
+  return growingToWall(c, cropGrowthLeft(c, per, now), wall);
+}
+
+/** Real seconds until a crop is ripe, every stage still to come counted, or null once it is (`cropTimeLeft` for the whole way). */
+export function cropRipeLeft(c: Crop, per: number, now: number, wall: number): number | null {
+  if (cropReady(c)) return null;
+  return growingToWall(c, cropGrowthLeft(c, per, now) + per * (RIPE - 1 - c.stage), wall);
+}
+
+/** Real seconds from `wall` that `left` growing seconds take on a crop's clock: a field's over the year, the others' steady. */
+function growingToWall(c: Crop, left: number, wall: number): number {
   const clock = cropClockOf(c);
   if (clock === 'hand') return left > 0 ? handMoment(handClock(wall) + left) - wall : 0;
   if (clock !== 'field') return left / steadyRate(clock);
@@ -278,12 +288,19 @@ export const sownSaid = (name: string, clock: boolean | CropClock, when: string)
  * the moment; `bumper` is the looker's own Bumper Crop, for what it would
  * give them.
  */
-export function describeCrop(c: Crop, per: number, now: number, wall: number, bumper = 0): string {
+export function describeCrop(c: Crop, per: number, now: number, wall: number, bumper = 0, qlTop = 0): string {
   const def = cropDef(c.id);
   const when = cropReady(c) ? 'ready to harvest' : cropWhen(STAGE_NAMES[c.stage + 1], cropGrowthLeft(c, per, now), cropClockOf(c), wall);
+  // And the whole way to ripe, where that is more than the next stage.
+  const ripe = c.stage < RIPE - 1 ? cropRipeLeft(c, per, now, wall) : null;
   const y = cropYield(c.tended, bumper);
-  return `${def.name}${c.glass ? ' under glass' : ''}, ${cropStageName(c)} · ${when} · tended ${c.tended}/${RIPE}: yield ${y.produce} ${itemDef(def.produce).name.toLowerCase()}, ${seedSays()}`;
+  // The harvest's quality: the field's and the harvester's hand, halved (`harvestQl`), at the hand's best.
+  const ql = qlTop > 0 ? ` · harvest QL up to ${Math.ceil(harvestQl(c.ql, qlTop) - 1e-9)}` : '';
+  return `${def.name}${c.glass ? ' under glass' : ''}, ${cropStageName(c)} · ${when}${ripe !== null && Number.isFinite(ripe) ? ` · ripe in ${timeWords(ripe)}` : ''} · tended ${c.tended}/${RIPE}: yield ${y.produce} ${itemDef(def.produce).name.toLowerCase()}, ${seedSays()}${ql}`;
 }
+
+/** What a harvest comes out at: the field's own quality and the harvester's, halved (the island's `harvest_crop`). */
+export const harvestQl = (fieldQl: number, handQl: number): number => Math.max(1, Math.min(100, (fieldQl + handQl) / 2));
 
 // The planter says what it grows at, off the rule.
 describeFrom('planter', { growth: PLANTER_GROWTH });
@@ -383,7 +400,7 @@ function reapOne(g: Game, c: Crop): { produce: Item; got: number; seeds: number;
   const def = cropDef(c.id);
   const y = cropYield(c.tended, g.perk('bumper:harvest_crop', 0));
   // The field's own quality, lifted by the farmer's skill at harvest.
-  const ql = Math.max(1, Math.min(100, (c.ql + g.productQl('farming')) / 2));
+  const ql = harvestQl(c.ql, g.productQl('farming'));
   // Love's Abundance takes more out of the same ground.
   const more = g.pathFx('harvest', 1);
   const got = Math.max(1, Math.round(y.produce * more)) + g.perk(`plus:${def.produce}`, 0);

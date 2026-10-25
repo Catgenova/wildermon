@@ -8,7 +8,7 @@ import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
-import { DAMAGE_WARN, SPROUT_COOLDOWN, TRAVEL_LEG } from '../../game/game';
+import { DAMAGE_WARN, FORAGE_COOLDOWN, SPROUT_COOLDOWN, TRAVEL_LEG } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
@@ -112,13 +112,13 @@ import { BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
 import { RELICS } from '../../game/archaeology';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
-import { seedSays } from '../../game/farming';
+import { cropYield, RIPE, seedSays } from '../../game/farming';
 import { HEARTBEAT, IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { VIA_MAX } from '../../net/island';
 import { CATCH_UP, MAX_STEP as CLOCK_STEP } from '../../engine/loop';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
-import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, timeWords } from '../../game/words';
+import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
 import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
@@ -3756,6 +3756,17 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: bushes drawn solid, as trees: ${[...BUSH3D_SPECIES].map((b) => BUSH_DEFS[b].name.replace(/ bush$/, '').toLowerCase()).join(', ')}. Own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun.`,
       `Changed: rose bush flowers: ${FLOWER_COLOURS.find((c) => c.petal === BUSH_DEFS.find((b) => b.name === 'Rose bush')?.flowers)?.name ?? 'pink'}.`,
+    ],
+  },
+  {
+    n: 315,
+    day: '2026-10-25',
+    lines: () => [
+      'Added: tile window, hover, right-click head: fish catchable here and QL cap; forage, botanize: ready, or wait left; fruit, bush: season time left, wait left, QL cap; sprout wait; wildflowers; grass, moss, reeds cut: wait left.',
+      'Added: menu odds and QL cap: Forage, Botanize (passes, find %), Fish (stay on %), Drag the net, Mine, Cut down, Collect, Pick sprout, Pick fruit, Cut (bush), Pick flowers, Investigate (find %).',
+      `Changed: picked-over refusals end "${readyIn(FORAGE_COOLDOWN - 50)}" Was: "Try later."`,
+      `Fixed: picked-over spots shown as ready. Wait: ${num(FORAGE_COOLDOWN / 60)} min, sprout ${num(SPROUT_COOLDOWN / 60)} min.`,
+      `Added: field hover: ripe in, harvest QL cap; ripe fields marked ripe. Fixed: field info: untended harvest ${num(cropYield(0).produce)}, tended every stage ${num(cropYield(RIPE).produce)}. Was: "only the seed".`,
     ],
   },
 ];

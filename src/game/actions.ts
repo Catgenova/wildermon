@@ -66,7 +66,7 @@ import { ENCHANT_ACTIONS, enchantSays, knowJobs } from './enchanting';
 import { MEDITATION_ACTIONS } from './meditation';
 import { TRACK_ACTIONS } from './trackAction';
 import { SPECIES, type Stance, takeArms } from './creatures';
-import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollsAt, rollTable } from './forage';
+import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollTable } from './forage';
 import { atWaterEdge, WATER_GARDEN_ACTIONS } from './watergarden';
 import { CELLAR_DEPTH, CELLAR_LEVEL, floorOf, type FloorKind, type RoofShape, type Side, type StairHand, type WallType } from './building';
 import { DEED_RADIUS, PROSPECT_MARK_TIME, type Game } from './game';
@@ -80,6 +80,7 @@ import {
   NOT_RESTORED, unrestored, type Item,
 } from './items';
 import { capital } from './words';
+import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
 import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
 import { knackable, RECIPE_ACTIONS } from './recipes';
 
@@ -558,8 +559,7 @@ export const REED_CUT = 2;
 export const REED_EXTRA_AT = 140;
 
 /** How many times a go of foraging or botanizing looks: by the skill, and once more for a Naturalist's Keen Eye. */
-const searches = (g: Game, job: 'forage' | 'botanize', skill: string): number =>
-  rollsAt(g.skills.get(skill)) + Math.floor(g.perk(`passes:${job}`, 0));
+const searches = searchPasses;
 
 /**
  * The looks themselves, and what each turned up: none by chance on a share
@@ -952,7 +952,10 @@ export const ACTIONS: ActionDef[] = [
     // tile, and the tile is as it was when you walk off it.
     id: 'collect',
     label: 'Collect',
-    labelFor: (t, g) => `Collect ${TILE_DEFS[tile(t, g)].name.toLowerCase()}`,
+    // The chance a shovelful comes off and its most quality, a Digger's `ql:collect` counted in (`perform_gather`).
+    labelFor: (t, g) => taggedWith(g, 'shovel', `Collect ${TILE_DEFS[tile(t, g)].name.toLowerCase()}`,
+      pct(g.skillChance('digging', 6, g.toolQl('shovel'))),
+      qlTag(Math.min(100, g.qlCeiling('digging', g.toolQl('shovel')) * g.perk('ql:collect', 1)))),
     verb: 'filling a shovel',
     skill: 'digging',
     tool: 'shovel',
@@ -1449,6 +1452,18 @@ export const ACTIONS: ActionDef[] = [
   {
     id: 'mine',
     label: 'Mine',
+    /*
+     * The chance a swing comes off (`fail:mine` for a Miner's perk) and the
+     * most quality it brings out: the pickaxe in the hand, and no more than
+     * the seam holds where the rock is known -- bare, or prospected (`groundReading`).
+     */
+    labelFor: (t, g) => {
+      if (t.kind !== 'tile') return 'Mine';
+      const known = g.world.getTile(t.x, t.y) === TileType.Rock || g.isProspected(t.x, t.y);
+      const pick = g.toolQl('pickaxe');
+      const ceiling = g.qlCeiling('mining', pick);
+      return taggedWith(g, 'pickaxe', 'Mine', pct(g.sureChance('mine', 'mining', 12, pick)), qlTag(known ? Math.min(bedrockAt(g.world, t.x, t.y).maxQl, ceiling) : ceiling));
+    },
     verb: 'mining',
     skill: 'mining',
     tool: 'pickaxe',
@@ -1638,6 +1653,9 @@ export const ACTIONS: ActionDef[] = [
   {
     id: 'cut_down',
     label: 'Cut down',
+    // The chance a swing bites (`fail:cut_down`) and the most quality a log comes out at (`ql:cut_down`), as `perform_gather` rolls them.
+    labelFor: (_t, g) => taggedWith(g, 'hatchet', 'Cut down', pct(g.sureChance('cut_down', 'woodcutting', 10, g.toolQl('hatchet'))),
+      qlTag(Math.min(100, g.qlCeiling('woodcutting', g.toolQl('hatchet')) * g.perk('ql:cut_down', 1)))),
     verb: 'cutting down',
     skill: 'woodcutting',
     tool: 'hatchet',
@@ -1740,6 +1758,8 @@ export const ACTIONS: ActionDef[] = [
     baseTime: 4,
     difficulty: 15,
     applies: (t, g) => tile(t, g) === TileType.Tree,
+    // The chance a pick finds one (`fail:pick_sprout` for a Forester's Sprout Picker) and its most quality.
+    labelFor: (_t, g) => tagged('Pick sprout', pct(g.sureChance('pick_sprout', 'forestry', 15)), qlTag(g.qlCeiling('forestry'))),
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
       if (g.world.getTile(t.x, t.y) !== TileType.Tree) return 'No tree here.';
@@ -1747,7 +1767,7 @@ export const ACTIONS: ActionDef[] = [
       if (!age.alive) return 'Tree is dead.';
       // A stage with no timber in it has no sprouts either: a sapling, or one clipped to a shrub.
       if (age.logs === 0) return `${age.name}: no sprouts.`;
-      return g.isForaged(t.x, t.y, 'sprout') ? 'Sprout already picked. Try later.' : null;
+      return g.isForaged(t.x, t.y, 'sprout') ? `Sprout already picked. ${pickedSaid(g, t.x, t.y, 'sprout')}` : null;
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -1813,7 +1833,7 @@ export const ACTIONS: ActionDef[] = [
     label: 'Harvest',
     labelFor: (t, g) => {
       const def = t.kind === 'tile' ? BUSH_DEFS[bushSpecies(g.world.getData(t.x, t.y))] : undefined;
-      return def?.yields ? `Cut ${itemDef(def.yields).name.toLowerCase()}` : 'Harvest';
+      return def?.yields ? taggedWith(g, 'sickle', `Cut ${itemDef(def.yields).name.toLowerCase()}`, qlTag(g.qlCeiling('forestry', g.toolQl('sickle')))) : 'Harvest';
     },
     verb: 'harvesting',
     skill: 'forestry',
@@ -1829,7 +1849,7 @@ export const ACTIONS: ActionDef[] = [
       // Nothing to cut out of its season (`fruiting.ts`).
       const out = fruitRefusal(def.yields, g.wallNow());
       if (out) return out;
-      if (g.isForaged(t.x, t.y, 'forage')) return `${def.name}: already picked. Try later.`;
+      if (g.isForaged(t.x, t.y, 'forage')) return `${def.name}: already picked. ${pickedSaid(g, t.x, t.y, 'forage')}`;
       return g.inventory.has('sickle') ? null : 'Need a sickle.';
     },
     perform: (t, g) => {
@@ -1852,7 +1872,7 @@ export const ACTIONS: ActionDef[] = [
     label: 'Pick fruit',
     labelFor: (t, g) => {
       const def = t.kind === 'tile' ? TREE_DEFS[treeSpecies(g.world.getData(t.x, t.y))] : undefined;
-      return def?.fruit ? `Pick ${itemDef(def.fruit).name.toLowerCase()}s` : 'Pick fruit';
+      return def?.fruit ? tagged(`Pick ${itemDef(def.fruit).name.toLowerCase()}s`, qlTag(g.qlCeiling('forestry'))) : 'Pick fruit';
     },
     verb: 'picking fruit',
     skill: 'forestry',
@@ -1874,7 +1894,7 @@ export const ACTIONS: ActionDef[] = [
       // Nothing hangs on it out of its season (`fruiting.ts`).
       const out = fruitRefusal(def.fruit, g.wallNow());
       if (out) return out;
-      if (g.isForaged(t.x, t.y, 'forage')) return `${def.name}: already picked. Try later.`;
+      if (g.isForaged(t.x, t.y, 'forage')) return `${def.name}: already picked. ${pickedSaid(g, t.x, t.y, 'forage')}`;
       return null;
     },
     perform: (t, g) => {
@@ -2118,11 +2138,9 @@ export const ACTIONS: ActionDef[] = [
     stamina: 0.03,
     baseTime: 5,
     applies: (t, g) => t.kind === 'tile' && !!TILE_DEFS[tile(t, g)].forage,
-    check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'forage') ? 'Already searched. Try later.' : null),
-    labelFor: (_t, g) => {
-      const rolls = searches(g, 'forage', 'foraging');
-      return rolls > 1 ? `Forage (${rolls} passes)` : 'Forage';
-    },
+    check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'forage') ? `Already searched. ${pickedSaid(g, t.x, t.y, 'forage')}` : null),
+    // How many looks, what each finds, and the most quality a find comes out at (`yields.ts`).
+    labelFor: (_t, g) => tagged('Forage', searchOdds(g, 'forage', 'foraging'), qlTag(g.qlCeiling('foraging'))),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       g.markForaged(t.x, t.y, 'forage');
@@ -2154,11 +2172,8 @@ export const ACTIONS: ActionDef[] = [
     stamina: 0.03,
     baseTime: 5,
     applies: (t, g) => t.kind === 'tile' && !!TILE_DEFS[tile(t, g)].botanize,
-    check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'botanize') ? 'Already searched. Try later.' : null),
-    labelFor: (_t, g) => {
-      const rolls = searches(g, 'botanize', 'botanizing');
-      return rolls > 1 ? `Botanize (${rolls} passes)` : 'Botanize';
-    },
+    check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'botanize') ? `Already searched. ${pickedSaid(g, t.x, t.y, 'botanize')}` : null),
+    labelFor: (_t, g) => tagged('Botanize', searchOdds(g, 'botanize', 'botanizing'), qlTag(g.qlCeiling('botanizing'))),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       g.markForaged(t.x, t.y, 'botanize');
@@ -3120,7 +3135,7 @@ export const ACTIONS: ActionDef[] = [
     stamina: 0.02,
     baseTime: 3,
     applies: (t, g) => CUT_GRASS.has(tile(t, g)),
-    check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'grass') ? 'Grass too short. Try later.' : null),
+    check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'grass') ? `Grass too short. ${pickedSaid(g, t.x, t.y, 'grass')}` : null),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       g.markForaged(t.x, t.y, 'grass');
@@ -3150,7 +3165,7 @@ export const ACTIONS: ActionDef[] = [
     stamina: 0.02,
     baseTime: 3,
     applies: (t, g) => tile(t, g) === TileType.Moss,
-    check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'moss') ? 'Moss too short. Try later.' : null),
+    check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'moss') ? `Moss too short. ${pickedSaid(g, t.x, t.y, 'moss')}` : null),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       g.markForaged(t.x, t.y, 'moss');
@@ -3169,7 +3184,7 @@ export const ACTIONS: ActionDef[] = [
     applies: (t, g) => tile(t, g) === TileType.Reed,
     check: (t, g) => {
       if (!g.inventory.has('carving_knife')) return 'Need a carving knife.';
-      return t.kind === 'tile' && g.isForaged(t.x, t.y, 'reed') ? 'Reeds already cut. Try later.' : null;
+      return t.kind === 'tile' && g.isForaged(t.x, t.y, 'reed') ? `Reeds already cut. ${pickedSaid(g, t.x, t.y, 'reed')}` : null;
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;

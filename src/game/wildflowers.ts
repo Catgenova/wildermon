@@ -14,6 +14,7 @@ import { flowerSeason, flowersOn, FLOWER_SEASONS } from '../world/flowers';
 import { SEASONS } from '../world/calendar';
 import { FLOWERS_PICKED, TILE_DEFS, TileType, trailGround, TREE_DAWN_UTC, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS } from '../world/tiles';
 import { listed } from './words';
+import { qlTag, tagged } from './yields';
 import { swirlSays } from './motes';
 import { runestoneAt, stoneSays } from './runestones';
 
@@ -75,6 +76,7 @@ export const FLOWER_ACTIONS: ActionDef[] = [
   {
     id: 'pick_flowers',
     label: 'Pick flowers',
+    labelFor: (_t, g) => tagged('Pick flowers', qlTag(g.qlCeiling('foraging'))),
     verb: 'picking flowers',
     skill: 'foraging',
     stamina: 0.02,

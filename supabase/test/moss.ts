@@ -26,7 +26,8 @@
  * Runs against the database the suite leaves behind, and puts it back.
  */
 import { execFileSync } from 'node:child_process';
-import { Game } from '../../src/game/game';
+import { FORAGE_COOLDOWN, Game } from '../../src/game/game';
+import { readyIn } from '../../src/game/words';
 import { ACTION_BY_ID, GRASS_PER_CUT, GRASS_PLANT, MOSS_PER_CUT, MOSS_PLANT, type Target } from '../../src/game/actions';
 import { itemDef } from '../../src/game/items';
 import { TILE_DEFS, TileType } from '../../src/world/tiles';
@@ -197,7 +198,7 @@ check(`Cut moss gives ${MOSS_PER_CUT} moss on the island, no mixed grass, and th
   say('CUT_REF') === 'ALLOWED' && moss1 === String(MOSS_PER_CUT) && grass1 === '0' && Number(mossTile) === TileType.Moss,
   `${say('CUT_REF')} / ${say('CUT')}`);
 check('and says so', say('CUT_SAID') === `Cut: ${MOSS_PER_CUT} moss.`, say('CUT_SAID'));
-check('cut once, the tile is short until it grows back', say('SHORT') === 'Moss too short. Try later.', say('SHORT'));
+check('cut once, the tile is short until it grows back', say('SHORT') === `Moss too short. ${readyIn(FORAGE_COOLDOWN)}`, say('SHORT'));
 check('and there is no moss to cut on grass', say('NO_MOSS') === 'There is no moss here to cut.', say('NO_MOSS'));
 
 check(`Plant moss with ${MOSS_PER_CUT} moss is refused for want of ${MOSS_PLANT}`,
@@ -248,7 +249,7 @@ const cut = ACTION_BY_ID.get('cut_moss')!;
 const plant = ACTION_BY_ID.get('plant_moss')!;
 
 check('Collect is offered on dirt in the browser, as Collect dirt, and not on moss or grass',
-  collect.applies(at(DIRT), game) && collect.labelFor?.(at(DIRT), game) === 'Collect dirt'
+  collect.applies(at(DIRT), game) && /^Collect dirt( \(\d+%, QL \u2264\d+\))?$/.test(collect.labelFor?.(at(DIRT), game) ?? '')
     && !collect.applies(at(MOSS), game) && !collect.applies(at(GRASS), game));
 collect.perform(at(DIRT), game);
 check('the browser collects one dirt off dirt, the tile as it was',
