@@ -3579,6 +3579,24 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/bagcarry.mjs --log-level=error
           node node_modules/.cache/bagcarry.mjs
 
+      - name: Where things come from, impossible things swept, and work faster than its pace
+        if: matrix.shard == 4
+        run: |
+          # Asked for: modified-item detection. Every new row of the item table
+          # says what kind of door made it, the door and whose it was: a craft,
+          # a forage, a butchering, a deal, a part split off a stack, a
+          # migration and a straight insert. A sweep of `sweep_rows()` rows at
+          # a go flags each impossible kind -- QL, damage and count out of
+          # bounds, no such thing, QL past its maker's best, a rarity with no
+          # such rarity or no roll, no origin -- leaves good things and the
+          # island alone, and files one keeper report a holder. Only a keeper
+          # may hold a thing out of play and put it back. Goes due faster than
+          # any go can are a Work rate flag; goes at the pace, and a backlog
+          # settled at once, are not.
+          npx esbuild supabase/test/provenance.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/provenance.mjs --log-level=error
+          node node_modules/.cache/provenance.mjs
+
       - name: The Bauble of Regret, and a trade undone
         if: matrix.shard == 5
         run: |
