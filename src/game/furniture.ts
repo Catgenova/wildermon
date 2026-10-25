@@ -1373,3 +1373,41 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
 
 export const FURNITURE_ACTION_BY_ID = new Map(FURNITURE_ACTIONS.map((a) => [a.id, a]));
 export { itemDef };
+
+/** Tiles out from your own a vehicle is looked for room to be deployed in (`deploySpot`). */
+export const DEPLOY_REACH = 2;
+/** Deploy with no room for it near enough. */
+export const DEPLOY_SAID = `No room within ${DEPLOY_REACH} tiles.`;
+
+/**
+ * Where a carried vehicle goes down on Deploy: the nearest spot beside you, off your own tile, it
+ * may be set down on (`place_furniture`'s own check), turned the way you face
+ * first, then each other way; or null with no room within `DEPLOY_REACH`.
+ */
+export function deploySpot(g: Game, item: Item): Extract<Target, { kind: 'tile' }> | null {
+  const place = FURNITURE_ACTION_BY_ID.get('place_furniture');
+  if (!place) return null;
+  const p = g.player;
+  const ahead: Side = Math.abs(p.dirX) >= Math.abs(p.dirY) ? (p.dirX >= 0 ? 'e' : 'w') : (p.dirY >= 0 ? 's' : 'n');
+  const facings = [0, 1, 3, 2].map((k) => turnedFacing(ahead, k));
+  const px = p.tileX, py = p.tileY;
+  // Not on the tile you stand on, which would set it down on top of you.
+  for (let r = 1; r <= DEPLOY_REACH; r++) {
+    const ring: Array<[number, number]> = [];
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r) ring.push([px + dx, py + dy]);
+    // Nearest the body first, and those ahead of it before those behind.
+    ring.sort((a, b) => Math.hypot(a[0] + 0.5 - p.x, a[1] + 0.5 - p.y) - Math.hypot(b[0] + 0.5 - p.x, b[1] + 0.5 - p.y));
+    for (const [x, y] of ring) {
+      for (const facing of facings) {
+        const [w, h] = furnitureFootprint(item.id, facing);
+        for (let sy = 0; sy <= SUBTILES - h; sy++) {
+          for (let sx = 0; sx <= SUBTILES - w; sx++) {
+            const t: Extract<Target, { kind: 'tile' }> = { kind: 'tile', x, y, cx: x, cy: y, sx, sy, itemUid: item.uid, facing };
+            if (!(place.check?.(t, g) ?? null)) return t;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}

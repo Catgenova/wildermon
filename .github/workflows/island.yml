@@ -2113,6 +2113,16 @@ jobs:
             --outfile=node_modules/.cache/talklog.mjs --log-level=error
           node node_modules/.cache/talklog.mjs
 
+      - name: Deploy a carried vehicle beside you
+        if: matrix.shard == 2
+        run: |
+          # Asked for: Deploy on a carried wagon, set down at once rather than
+          # steered like furniture. The spot is `place_furniture`'s own: off
+          # your tile, within reach, turned the way you face.
+          npx esbuild supabase/test/deploy.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/deploy.mjs --log-level=error
+          node node_modules/.cache/deploy.mjs
+
       - name: A worker that can reach the larder
         if: matrix.shard == 2
         run: |

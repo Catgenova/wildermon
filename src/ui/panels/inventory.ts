@@ -13,6 +13,7 @@ import type { UIWindow } from '../windows';
 import { COUNTS, pinEntry, pinnable } from '../beltmenu';
 import { orderBy, sortSelect, type SortKey } from '../sorting';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
+import { DEPLOY_SAID, deploySpot, isDriveable, isFurniture } from '../../game/furniture';
 import { ABSORB_SAID, absorbable, SOUL } from '../../game/sacrifice';
 import { ENCHANT, enchantable, fitsOn } from '../../game/enchanting';
 import { ENCHANT_SAID, enchantChance, ENCHANTERS_PLINTH, ENCHANTING, scrollOf, wrongKind } from '../../game/enchant';
@@ -397,6 +398,20 @@ export class InventoryPanel {
         onSelect: () => {
           this.game.settings.nock = item.id;
           this.game.logMsg(`Shot first: ${itemName(item).toLowerCase()}.`, 'info');
+        },
+      });
+    }
+    // A cart, a wagon or a hull carried: set down beside you at once, the way you face (`deploySpot`).
+    const place = ACTION_BY_ID.get('place_furniture');
+    if (place && isFurniture(item.id) && isDriveable({ kind: item.id })) {
+      const spot = deploySpot(this.game, item);
+      entries.push({
+        label: 'Deploy',
+        note: 'beside you, facing your way',
+        hint: spot ? undefined : DEPLOY_SAID,
+        disabled: !spot,
+        onSelect: () => {
+          if (spot) this.game.requestAction(place, spot);
         },
       });
     }
