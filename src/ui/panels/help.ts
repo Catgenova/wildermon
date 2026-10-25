@@ -204,7 +204,7 @@ import { ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, MEMORIAL } from '../../game/m
 import { HOUR as SKEP_HOUR, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SKILL, SKEP_WAX_EVERY, skepRate, skepRateSaid, skepWax } from '../../game/bees';
 import { keepControlKeys } from '../controlkeys';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
-import { RECONNECTING } from '../phone';
+import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
 import { WATCH_AWAKE_HOURS, WATCH_BREAK_MINS, WATCH_KEEP_DAYS, WATCH_SKILL_MINS, WATCH_SKILL_TIMES, WATCH_STOCK_PER_MILLE } from '../../game/watch';
 import { fixed, setMarkup } from '../html';
 
@@ -1009,7 +1009,8 @@ export function helpText(): string {
       <li>Settings (<kbd>O</kbd>), Display, <b>Phone</b>: <i>Fullscreen</i> (where the browser has it; not iPhone Safari);
       <i>Keep screen on while working</i> (${SETTING_DEFAULTS.keepAwake ? 'on' : 'off'} at first): while an action runs or one is queued;
       <i>Low power</i> (${SETTING_DEFAULTS.lowPower ? 'on' : 'off'} at first): frame limit ${LOW_POWER_FPS}/s, Fast graphics (${FAST_DPR} pixel per screen pixel), no wakes or dust.</li>
-      <li>Page hidden: nothing drawn. Back to it with the live connection cut: <i>${RECONNECTING}</i> until the island answers; island re-read at once.</li>
+      <li>Page hidden: nothing drawn. Back to it with the live connection cut: <i>${RECONNECTING}</i> until the island answers and every channel is joined again; changes since read at once.</li>
+      <li>Live connection cut while in front (any screen): picked up within ${CUT_POLL_MS} ms, no rejoin; <i>${RECONNECTING}</i> after ${CUT_QUIET_MS / 1000} s; tried again after ${RECONNECT_RETRY_MS / 1000} s, doubling to ${RECONNECT_RETRY_MOST_MS / 1000} s.</li>
       <li>Text boxes: no zoom on focus; kept above the keyboard.</li>
     </ul>
     <h3>Doing things</h3>

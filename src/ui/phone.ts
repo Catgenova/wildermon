@@ -17,8 +17,14 @@ import { underTopBars } from './notices';
 export const RECONNECTING = 'Reconnecting…';
 /** How long a page may be in the background, in milliseconds, before the island is read again on its return even with nothing cut. */
 export const REREAD_AFTER_MS = 5000;
-/** How soon a coming back that got no answer is tried again, in milliseconds, while the notice is up. */
-export const RECONNECT_RETRY_MS = 3000;
+/** How soon a coming back that got no answer is tried again, in milliseconds, while the notice is up: doubled each time it fails again, to `RECONNECT_RETRY_MOST_MS`. */
+export const RECONNECT_RETRY_MS = 1000;
+/** The longest wait between tries of a coming back that gets no answer, in milliseconds. */
+export const RECONNECT_RETRY_MOST_MS = 10_000;
+/** How often the live connection is looked at while the page is in front, in milliseconds: a cut one is come back from at once. */
+export const CUT_POLL_MS = 250;
+/** How long a cut found while in front may last before `RECONNECTING` is shown, in milliseconds: a blip mended in that time says nothing. */
+export const CUT_QUIET_MS = 1000;
 /** How often the wake lock is matched to the work in hand, in milliseconds. */
 export const WAKE_EVERY_MS = 1000;
 /** How long after a refused wake lock before it is asked for again, in milliseconds. */
@@ -223,16 +229,24 @@ export function keepAboveKeyboard(root: HTMLElement): void {
 }
 
 /**
- * Coming back to the island after the page was in the background, or after
- * the network came back.
+ * Coming back to the island after the page was in the background, after the
+ * network came back, or after the live connection was cut while in front.
  *
- * A phone cuts the live connection while the app is out of sight. On return
- * the island is listened to again and read again at once (`Island.comeBack`),
- * with `RECONNECTING` across the top while anything had been cut, until the
- * island's first fresh answer lands. A short look away with nothing cut reads
- * nothing; past `REREAD_AFTER_MS` it reads again quietly.
+ * A phone cuts the live connection while the app is out of sight, and a
+ * network can drop it at any time. On return, on the network coming back,
+ * and within `CUT_POLL_MS` of a cut seen while in front, the island is
+ * resumed (`Island.comeBack`): listened to again and read for what changed.
+ * `RECONNECTING` is across the top until it has answered and every channel is
+ * joined: at once on a return or the network back with anything cut, and
+ * after `CUT_QUIET_MS` for a cut seen while in front. A short look away with
+ * nothing cut reads nothing; past `REREAD_AFTER_MS` it reads again quietly.
+ * A coming back that gets no answer is tried again after `RECONNECT_RETRY_MS`,
+ * doubling to `RECONNECT_RETRY_MOST_MS`;
+ * one asked for while another is under way runs as soon as that one ends.
+ * While the browser says it has no network, nothing is asked until it says
+ * it is back.
  */
-export function watchReturn(island: Pick<Island, 'deaf' | 'comeBack'>, root: HTMLElement): void {
+export function watchReturn(island: Pick<Island, 'deaf' | 'cut' | 'comeBack' | 'armed'>, root: HTMLElement): void {
   const bar = document.createElement('div');
   bar.className = 'saving-banner reconnect-banner';
   bar.setAttribute('role', 'status');
@@ -240,33 +254,65 @@ export function watchReturn(island: Pick<Island, 'deaf' | 'comeBack'>, root: HTM
   bar.hidden = true;
   root.append(bar);
   let going = false;
+  let owed: 'return' | 'online' | 'cut' | null = null;
   let again = 0;
+  let fails = 0;
+  let showing = 0;
   let hiddenAt = document.hidden ? performance.now() : Infinity;
-  const back = async (loud: boolean): Promise<void> => {
-    if (document.hidden || going) return;
+  const show = (): void => {
+    window.clearTimeout(showing);
+    if (!bar.hidden) return;
+    bar.hidden = false;
+    bar.style.top = `${underTopBars(root, bar)}px`;
+  };
+  const back = async (why: 'return' | 'online' | 'cut' | 'retry'): Promise<void> => {
+    if (document.hidden) return;
+    if (going) {
+      // The network back outranks a cut: it is the one that shows the notice at once.
+      if (why !== 'retry' && owed !== 'online' && owed !== 'return') owed = why;
+      return;
+    }
     const away = performance.now() - hiddenAt;
     hiddenAt = Infinity;
     const cut = island.deaf();
-    if (!loud && !cut && away < REREAD_AFTER_MS && bar.hidden) return;
+    if (why === 'return' && !cut && away < REREAD_AFTER_MS && bar.hidden) return;
+    if (why === 'cut' && !island.cut()) return;
+    // No network at all, as the browser knows it: the notice, and nothing asked until it says it is back.
+    if (cut && navigator.onLine === false) {
+      show();
+      return;
+    }
     going = true;
     window.clearTimeout(again);
-    if (loud || cut) {
-      bar.hidden = false;
-      bar.style.top = `${underTopBars(root, bar)}px`;
-    }
+    if (why === 'online' || why === 'retry' || (why === 'return' && cut)) show();
+    else if (why === 'cut') showing = window.setTimeout(show, CUT_QUIET_MS);
     const answered = await island.comeBack().catch(() => false);
     going = false;
-    if (answered) bar.hidden = true;
-    else if (!bar.hidden) again = window.setTimeout(() => void back(true), RECONNECT_RETRY_MS);
+    if (answered) {
+      window.clearTimeout(showing);
+      bar.hidden = true;
+      fails = 0;
+    } else {
+      show();
+      again = window.setTimeout(() => void back('retry'), Math.min(RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS * 2 ** fails));
+      fails++;
+    }
+    const next = owed;
+    owed = null;
+    if (next) void back(next);
   };
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) hiddenAt = Math.min(hiddenAt, performance.now());
-    else void back(false);
+    else void back('return');
   });
-  window.addEventListener('online', () => void back(true));
+  window.addEventListener('online', () => void back('online'));
   window.addEventListener('pageshow', (e) => {
-    if (e.persisted) void back(true);
+    if (e.persisted) void back('online');
   });
+  // A cut while in front, which says nothing to the page: the far end closing the socket, a channel dropped.
+  window.setInterval(() => {
+    if (!document.hidden && !going && bar.hidden && island.armed() && island.cut()) void back('cut');
+  }, CUT_POLL_MS);
 }
 
 /** The screen kept on while there is work (`wantAwake`), matched every `WAKE_EVERY_MS` and on every return to the page. */

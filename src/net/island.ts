@@ -33,6 +33,7 @@ import type { Notice, SettleBoard } from '../game/noticeboard';
 import { presenceOf } from './presence';
 import { BUILD, DEPLOY, StaleBuild } from '../version';
 import type { InputNote } from '../engine/cadence';
+import type { BootPhase } from '../ui/bootsteps';
 
 /**
  * The jobs whose work shows only on the ground's slow half: Clear the ivy and
@@ -243,14 +244,14 @@ const LAND_ASKED_EVERY = 2;
 /** The longest line a letter or a parcel's note takes: the island's `letter_length` check holds it to this. */
 export const LETTER_MAX = 400;
 
-/**
- * How many steps coming ashore has, for the bar on the boot screen.
- *
- * It said three and there were five, so the bar reached the end and then sat
- * there while two more things happened in silence — which is exactly what
- * "hung on catching up, 100%" was looking at.
- */
-const JOIN_STEPS = 4;
+/** Longest a coming back waits for every channel to join again, in milliseconds (`Island.comeBack`). */
+export const REJOIN_WAIT_MS = 6000;
+/** How often a coming back looks at whether the channels have joined, in milliseconds. */
+const REJOIN_POLL_MS = 25;
+/** How often a coming back opens a socket that is still shut, in milliseconds: the network may be back by then. */
+const WAKE_EVERY_MS = 500;
+/** Longest a cut socket is waited on to finish closing before a new one is opened, in milliseconds. */
+const WAKE_TEARDOWN_MS = 500;
 
 /**
  * When the island says a thing happened, in milliseconds.
@@ -1127,8 +1128,8 @@ export interface IslandHooks {
    * us is in neither, and goes over again the next time one is in view.
    */
   guided?: (added: string[], had: string[]) => void;
-  /** Getting an island down takes a moment; this says how it is going. */
-  progress?: (done: number, total: number, what: string) => void;
+  /** Getting an island down takes a moment; this says how it is going, and in which phase of the boot bar (`BOOT_PHASES`). */
+  progress?: (done: number, total: number, what: string, phase?: BootPhase) => void;
   /**
    * How to read the survey chart, for anybody joining from outside a browser.
    *
@@ -1477,7 +1478,7 @@ export class Island {
       const batch = rowsOf(world, y, Math.min(world.h, y + UPLOAD_BATCH - 1));
       const { error: put } = await sb.rpc('rpc_put_land', { p_world: id, p_rows: batch });
       if (put) throw new Error(`The land did not all arrive: ${put.message}`);
-      this.hooks.progress?.(Math.min(rows, y + UPLOAD_BATCH), rows, 'handing over the island');
+      this.hooks.progress?.(Math.min(rows, y + UPLOAD_BATCH), rows, 'handing over', 'world');
     }
     const { error: open } = await sb.rpc('rpc_ready', { p_world: id });
     if (open) throw new Error(`The island would not open: ${open.message}`);
@@ -1512,13 +1513,12 @@ export class Island {
     const sb = supabase();
     /*
      * This build, before anything else: an old or altered page is sent back
-     * for the current one (20261026130900). Only a plain no refuses; a check
-     * that cannot be made lets the join go on.
+     * for the current one (20261026130900). Asked already when there was a
+     * session to ask with (`askBuildEarly`), and here otherwise.
      */
-    if (BUILD) {
-      const { data: build, error: unchecked } = await sb.rpc('rpc_build_check', { p_build: BUILD, p_deploy: DEPLOY ?? null });
-      if (!unchecked && (build as { ok?: unknown } | null)?.ok === false) throw new StaleBuild();
-    }
+    const early = this.buildEarly ? await this.buildEarly : 'unasked';
+    this.buildEarly = null;
+    if ((early === 'unasked' ? await this.buildSaid() : early) === 'stale') throw new StaleBuild();
     const { data, error } = await sb.rpc('rpc_join', { p_world: worldId, p_name: name });
     if (error) throw new Error(`The island would not have us: ${error.message}`);
     const got = data as { world: WorldRow; you: PlayerRow; new: boolean };
@@ -1534,12 +1534,12 @@ export class Island {
     const size = got.world.size;
     const seed = got.world.seed;
     const world = blankWorld(size, seed);
-    this.hooks.progress?.(1, JOIN_STEPS, 'reading the chart');
+    this.hooks.progress?.(0, 2, 'chart', 'world');
     const atlas = await this.chart();
     world.streamFrom((x0, y0, w, h) => generateAtlasWindow(seed, atlas, x0, y0, w, h, size));
     // The ground under your own feet, before anything else asks for it.
     const here = got.you;
-    this.hooks.progress?.(2, JOIN_STEPS, 'working out the ground');
+    this.hooks.progress?.(1, 2, 'ground', 'world');
     world.ensureBox(Math.floor(here.x) - 64, Math.floor(here.y) - 64, Math.floor(here.x) + 64, Math.floor(here.y) + 64);
 
     /*
@@ -1613,7 +1613,7 @@ export class Island {
     const you = this.me;
     let read = false;
     if (you) {
-      this.hooks.progress?.(3, JOIN_STEPS, 'reading the land');
+      this.hooks.progress?.(0, 2, 'near', 'land');
       const [bx0, by0, bx1, by1] = this.nearBox(you.x, you.y);
       // Twice, and then the old road -- but only on an island that still has
       // all of its history. One that has let some go can only be read as it
@@ -1634,7 +1634,7 @@ export class Island {
     }
     // Whatever has happened since the island read that land — and everything
     // ever, when there was no land to read.
-    this.hooks.progress?.(3, JOIN_STEPS, read ? 'catching up' : 'reading what has been dug');
+    this.hooks.progress?.(1, 2, read ? 'since' : 'changes', 'land');
     await this.catchUp();
     world.groundTouched = false;
 
@@ -1653,16 +1653,44 @@ export class Island {
      * either used to be a page that never opened. It is now a map that is dark
      * for a moment.
      */
-    this.hooks.progress?.(JOIN_STEPS, JOIN_STEPS, 'coming ashore');
+    this.hooks.progress?.(2, 2, 'in', 'land');
     this.settling = Promise.all([
       // The fog first and then the rest of the land, in that order: the map of
       // where this body has been is what says which squares are worth reading.
       this.restoreFog().then(() => this.fillLand()).catch(() => undefined),
       this.watch(worldId).catch((e: unknown) => {
         this.hooks.say(`The island is not telling this machine what it does (${String(e)}).`, 'error');
-      }),
+      }).finally(() => (this.arming = false)),
     ]).then(() => undefined);
     this.armBeat(HEARTBEAT);
+  }
+
+  /** Whether the join's first go at listening (`watch`) is still under way: deaf until it is done, and not cut. */
+  private arming = true;
+
+  /** Whether the channels have had their first go at joining, so that a deaf one now is one that was cut (`watchReturn`). */
+  armed(): boolean {
+    return !!this.info && !this.arming;
+  }
+
+  /** Whether the island takes this build (`rpc_build_check`): only a plain no is stale; a check that cannot be made lets the join go on. */
+  private async buildSaid(): Promise<'ok' | 'stale'> {
+    if (!BUILD) return 'ok';
+    const { data: build, error } = await supabase().rpc('rpc_build_check', { p_build: BUILD, p_deploy: DEPLOY ?? null });
+    return !error && (build as { ok?: unknown } | null)?.ok === false ? 'stale' : 'ok';
+  }
+
+  private buildEarly: Promise<'ok' | 'stale' | 'unasked'> | null = null;
+
+  /**
+   * Ask now whether the island takes this build, beside the reads that come before a join, when there is a
+   * session already to ask with; `join` waits on the answer before it does anything. With no session it is
+   * not asked here: signing in is the join's to do.
+   */
+  askBuildEarly(): void {
+    this.buildEarly ??= supabase().auth.getSession()
+      .then(({ data }) => (data.session ? this.buildSaid() : 'unasked' as const))
+      .catch(() => 'unasked' as const);
   }
 
   /**
@@ -1864,7 +1892,7 @@ export class Island {
         return { rows: rowsIn<TileChange & { n: number; world_id?: string }>(data) };
       },
       (c) => this.applyChange(c),
-      (seen) => this.hooks.progress?.(seen, 0, 'reading what has been dug'),
+      (seen) => this.hooks.progress?.(seen, 0, 'changes', 'land'),
     );
   }
 
@@ -2223,42 +2251,110 @@ export class Island {
   }
 
   /**
-   * Back in front of somebody: the page shown again, or the network back.
+   * Whether the live connection was cut, as against still being set up: the
+   * socket not open, or a channel errored, which is what a dropped socket
+   * leaves every channel in. A channel still joining is not cut: walking into
+   * the next block joins three new ones (`listen`), deaf for a round trip and
+   * nothing to come back from.
+   */
+  cut(): boolean {
+    if (!this.info) return false;
+    const rt = supabase().realtime as unknown as { isConnected?: () => boolean };
+    if (rt.isConnected && !rt.isConnected()) return true;
+    const channels = this.hears ? [...this.heard.values()] : this.channel ? [this.channel] : [];
+    if (this.bodies) channels.push(this.bodies);
+    return channels.some((ch) => ch.state === 'errored');
+  }
+
+  /**
+   * Back in front of somebody: the page shown again, the network back, or the
+   * live connection cut while in front (`watchReturn`).
    *
-   * Listening again if anything stopped (`deaf`): a fresh token, the socket
-   * opened at once rather than after its backoff, and every channel joined
-   * again (`watch`; one that errored rejoins as the socket opens). Then the
-   * island read again at once rather than on the next beat: the settle, the
-   * reconcile, the creatures and the ground, as on a fresh join.
+   * Resumed, not joined again: the same channels, the same land, the same
+   * cursors. If anything stopped (`deaf`): a fresh token, the socket opened
+   * at once rather than after its backoff (`wake`), and every channel joined
+   * again (`watch`). Then only what changed while cut is read: the lines
+   * past the said cursor (the settle) first, and once every channel is joined
+   * again, so that nothing sent in between is missed, the history past the
+   * land cursor, the pack and the roster, side by side, with the creatures and
+   * the ground near, which are read whole every few seconds anyway. Nothing
+   * that reads with GET is asked before the channels are back: a GET the
+   * network drops is tried again for seven seconds before it fails.
    *
-   * Resolves true once the settle has answered, which is the first fresh word.
+   * Resolves true once the settle has answered and every channel is joined,
+   * which is the island talking again; false if either has not within
+   * `REJOIN_WAIT_MS`, for the caller to try again.
    */
   async comeBack(): Promise<boolean> {
     if (!this.info) return false;
     const id = this.info.id;
-    if (this.deaf()) {
+    const cut = this.deaf();
+    if (cut) {
       await this.freshToken();
-      (supabase().realtime as unknown as { connect?: () => void }).connect?.();
+      await this.wake();
       // The bodies' topic is held once for the whole stay (`holdBodies`), so a closed one is joined again here.
       if (this.bodies?.state === 'closed') this.bodies.subscribe();
       void this.watch(id).catch((e: unknown) => {
         this.hooks.say(`The island is not telling this machine what it does (${String(e)}).`, 'error');
       });
     }
-    this.lastReconcile = -Infinity;
     this.lastMobs = -Infinity;
     this.lastGround = -Infinity;
     this.groundSlow = true;
     this.swirlsOwed = true;
     if (this.beat) clearTimeout(this.beat);
-    const now = performance.now() / 1000;
-    const [answered] = await Promise.all([
-      this.pulse(),
-      this.reconcile(now).catch(() => undefined),
-      this.refreshMobs(now).catch(() => undefined),
-      this.refreshGround(now).catch(() => undefined),
-    ]);
-    return answered;
+    const answered = this.pulse();
+    const joined = cut ? await this.rejoined() : true;
+    if (joined) {
+      const now = performance.now() / 1000;
+      this.lastReconcile = now;
+      await Promise.all([
+        this.refreshPeople().catch(() => undefined),
+        this.refreshPack().catch(() => undefined),
+        this.catchUpQuietly(),
+        this.refreshMobs(now).catch(() => undefined),
+        this.refreshGround(now).catch(() => undefined),
+      ]);
+    }
+    return (await answered) && joined;
+  }
+
+  /**
+   * Open the socket now, if it is neither open nor opening.
+   *
+   * Phoenix keeps a socket the far end closed until its own backoff (1, 2, 5,
+   * then 10 s) tears it down, and `connect` on it does nothing, so a page
+   * back on the network sat out the rest of that wait. Torn down first, then
+   * opened; every channel that errored joins again as it opens. Opened on the
+   * socket itself where there is one to open (`socketAdapter`): the client's
+   * own `connect` adds its handlers again every time it is called, and a long
+   * cut would pile them up on every message after.
+   */
+  private async wake(): Promise<void> {
+    const rt = supabase().realtime as unknown as {
+      isConnected?: () => boolean; isConnecting?: () => boolean; disconnect?: () => Promise<unknown>; connect?: () => void;
+      socketAdapter?: { connect?: () => void };
+    };
+    if (rt.isConnected?.() || rt.isConnecting?.()) return;
+    await Promise.race([rt.disconnect?.(), new Promise((done) => setTimeout(done, WAKE_TEARDOWN_MS))]).catch(() => undefined);
+    if (rt.socketAdapter?.connect) rt.socketAdapter.connect();
+    else rt.connect?.();
+  }
+
+  /** Every channel joined again, waking the socket each `WAKE_EVERY_MS` it is still shut; false past `REJOIN_WAIT_MS`. */
+  private async rejoined(): Promise<boolean> {
+    const from = performance.now();
+    let woke = from;
+    while (this.deaf()) {
+      const now = performance.now();
+      if (!this.info || now - from > REJOIN_WAIT_MS) return false;
+      if (now - woke >= WAKE_EVERY_MS) {
+        woke = now;
+        await this.wake();
+      }
+      await new Promise((done) => setTimeout(done, REJOIN_POLL_MS));
+    }
+    return true;
   }
 
   /**

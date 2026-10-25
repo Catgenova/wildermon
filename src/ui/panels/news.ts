@@ -4,7 +4,8 @@ import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { FAST_DPR, LOW_POWER_FPS } from '../../game/settings';
-import { RECONNECTING } from '../phone';
+import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
+import { BOOT_PHASES, NEAR_REACH, TREE_WAIT_MS } from '../bootsteps';
 import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
@@ -115,7 +116,7 @@ import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELO
 import { RELICS } from '../../game/archaeology';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
 import { cropYield, RIPE, seedSays } from '../../game/farming';
-import { HEARTBEAT, IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
+import { HEARTBEAT, IDLE_LOGOUT, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { VIA_MAX } from '../../net/island';
 import { CATCH_UP, MAX_STEP as CLOCK_STEP } from '../../engine/loop';
@@ -3834,6 +3835,17 @@ export const NEWS: News[] = [
       'Added: plan bar: materials summed over the plan; Need, Carried, Stored (crates on its tiles, stores within building reach), Short; refusals counted. Plan or Cancel (Esc).',
       `Added: Undo last plan (Ctrl+Z, bar or menu), ${num(PLAN_UNDO_SECONDS / 60)} min: every piece still yours taken down as Remove wall, Remove floor, Remove from plan; delivered materials as those give back.`,
       'Changed: storey mode: a roof is its own storey. Pinned there: roof drawn, unplanned roof tiles marked out, pitched roofs picked on their slopes, no walking onto one; roof work on that storey only.',
+    ],
+  },
+  {
+    n: 323,
+    day: '2026-10-25',
+    lines: () => [
+      `Changed: loading bar in phases, each its share of the bar: ${BOOT_PHASES.map((p) => `${p.label} ${percent(p.share)}`).join(', ')}. Moves only as each phase does its work; time per phase listed under it.`,
+      `Added: loading waits for the trees within ${NEAR_REACH} tiles to be made, up to ${dur(TREE_WAIT_MS / 1000)}.`,
+      'Changed: loading: sign-in, island ask and map chart side by side; pack and roster side by side.',
+      `Changed: coming back after the live connection was cut: socket reopened at once (was: after its backoff, up to ${dur(10)}); channels rejoined, no rejoin of the island; only what changed read: land history, lines, pack, roster.`,
+      `Added: live connection cut while in front: picked up within ${CUT_POLL_MS} ms. Was: changes missed until the ${dur(RECONCILE_EVERY)} reconcile. "${RECONNECTING}" after ${dur(CUT_QUIET_MS / 1000)}; tried again after ${dur(RECONNECT_RETRY_MS / 1000)}, doubling to ${dur(RECONNECT_RETRY_MOST_MS / 1000)} (was every ${dur(3)}).`,
     ],
   },
 ];
