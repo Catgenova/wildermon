@@ -4019,6 +4019,17 @@ export const NEWS: News[] = [
       'Fixed: maples and shrivelled maples: one trunk on a buttressed foot, limbs grow out of it (was: roots and limbs as separate pieces clipped through each other).',
     ],
   },
+  {
+    n: 343,
+    day: '2026-10-26',
+    lines: () => {
+      const stitch = CLASS_SPELL_BY_ID.get('chirurgeon_quick_stitch')!;
+      return [
+        `Fixed: ${stitch.name}: deepest wound depth ×${Number((1 - stitch.fx.close).toFixed(2))}; log: wound, depth before → after `
+          + '(was: any bleeding or gone-bad wound first, however light).',
+      ];
+    },
+  },
 ];
 
 /**

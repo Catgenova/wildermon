@@ -1068,7 +1068,7 @@ export const CHIRURGEON: Record<string, SpellVisual> = {
       } },
     },
   },
-  // Quick Stitch (ally, on self, player, 2 tiles round): The worst wound on you or on somebody within 2 tiles of you closes by 30% of its severity.
+  // Quick Stitch (ally, on self, player, 2 tiles round): You or a player within 2 tiles: deepest wound depth ×0.7.
   chirurgeon_quick_stitch: {
     palette: PALETTE,
     cast: { timing: { secs: 0.85, release: 0.55 }, pose: stitchPose, hold: { at: STITCH_HOLD, secs: 0.55 } },
