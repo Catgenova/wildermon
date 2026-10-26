@@ -124,6 +124,10 @@ type Spot = { x: number; y: number; level: number };
  * twistiest wood several times over.
  */
 export const VIA_MAX = 64;
+/** The most things one `rpc_act_many` moves: the island's `act_many_most()`. */
+export const ACT_MANY_MOST = 30;
+/** The jobs `rpc_act_many` does: the island's `private.act_many_job`. */
+export const ACT_MANY_JOBS: ReadonlySet<string> = new Set(['store_in_crate', 'store_in_furniture', 'rack_put', 'stow_item', 'take_from_store']);
 
 /**
  * The turns of a walk from `from` through `steps` to `to`: the steps where the
@@ -4354,6 +4358,44 @@ export class Island {
     // read after it brings the half that holds walls.
     this.groundSlow = true;
     return result;
+  }
+
+  /**
+   * Many things put in a store or taken out of one (`rpc_act_many`): Put all
+   * in, Take all of a kind, a rack filled. `ACT_MANY_MOST` to a call, each
+   * call sent when the last is answered, so the island has one ask of yours
+   * at a time rather than one a stack all at once -- which was 150 asks for a
+   * pack of relics, most of them refused by the pace and every one answering
+   * with the whole pack. Each answer is laid as `act` lays one. Returns the
+   * things not asked for when the island answered `busy` (a job in hand: they
+   * go one at a time, to be queued behind it), or after a call that raised.
+   */
+  async actMany(action: string, targets: Array<Record<string, unknown>>): Promise<{ rest: Array<Record<string, unknown>>; busy: boolean }> {
+    if (!this.info) return { rest: targets, busy: false };
+    for (let i = 0; i < targets.length; i += ACT_MANY_MOST) {
+      const chunk = targets.slice(i, i + ACT_MANY_MOST);
+      const sent = ++this.asksSent;
+      const { data, error } = await supabase().rpc('rpc_act_many', { p_world: this.info.id, p_action: action, p_targets: chunk });
+      // Raised rather than refused, so told nowhere else (`act`).
+      if (error) {
+        this.hooks.say(refusedSaid(error.message), 'error');
+        return { rest: targets.slice(i + ACT_MANY_MOST), busy: false };
+      }
+      const result = (data ?? {}) as ActResult & { busy?: boolean };
+      if (result.busy) return { rest: targets.slice(i), busy: true };
+      const newest = sent > this.askLaid;
+      if ((result.pack || result.crates) && newest) this.askLaid = sent;
+      if (result.pack && newest) {
+        this.pack.clear();
+        for (const it of result.pack) this.pack.set(it.id, it);
+        this.hooks.pack([...this.pack.values()]);
+      }
+      if (result.crates && newest) this.hooks.stored?.(result.crates);
+      if (result.pack || result.crates) this.acted++;
+    }
+    this.stirred = true;
+    this.armBeat(0.5);
+    return { rest: [], busy: false };
   }
 
   /**

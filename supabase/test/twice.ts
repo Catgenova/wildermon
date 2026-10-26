@@ -16,7 +16,8 @@
  * (`settle` with the job due), a door the way a browser calls it.
  *
  * Covered, each with identical calls:
- *   * take from a crate; put into a crate; empty a crate; load a rack;
+ *   * take from a crate; put into a crate, a thing an ask and many in one (`rpc_act_many`); empty a crate;
+ *     load a rack;
  *   * both Accepts of a trade pressed twice over;
  *   * buy the same thing off a stall;
  *   * pick up the same thing off the ground, and the same body's drop beaten
@@ -237,6 +238,25 @@ for (let r = 0; r < ROUNDS; r += 1) {
   conserved(`put into a crate (${r + 1})`, before, after, FOLK.map((u) => `player:${u}`));
   check(`put into a crate (${r + 1}): ten went in, and no more`, after.get('crate:1') === 10 && room(1) === 0, `${show(after)}, room ${room(1)}`);
   noFault(`put into a crate (${r + 1})`);
+}
+
+/* ---- put many into a crate, in one ask each ------------------------------------ */
+console.log('--- put many into a crate');
+for (let r = 0; r < ROUNDS; r += 1) {
+  reset();
+  crate(1, 10, 10, null);
+  fill(1, 10);
+  // Two stacks each, the way Put all in asks them (`rpc_act_many`), every body at once.
+  const mine = FOLK.map((u) => [carry(u, 'iron_ore', 2), carry(u, 'iron_ore', 2, "'odd'")]);
+  const before = holdings('iron_ore');
+  await race(FOLK.map((u, i) => ({
+    who: u,
+    text: `select rpc_act_many('${W}', 'store_in_crate', '${JSON.stringify(mine[i].map((uid) => ({ kind: 'item', uid, count: 2, into: 1 })))}'::jsonb) \\g /dev/null`,
+  })));
+  const after = holdings('iron_ore');
+  conserved(`put many into a crate (${r + 1})`, before, after, FOLK.map((u) => `player:${u}`));
+  check(`put many into a crate (${r + 1}): ten went in, and no more`, after.get('crate:1') === 10 && room(1) === 0, `${show(after)}, room ${room(1)}`);
+  noFault(`put many into a crate (${r + 1})`);
 }
 
 /* ---- empty a crate ------------------------------------------------------------- */

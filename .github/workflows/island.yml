@@ -4754,6 +4754,23 @@ jobs:
             --outfile=node_modules/.cache/twice.mjs --log-level=error
           node node_modules/.cache/twice.mjs
 
+      - name: Put all in, in one ask
+        if: matrix.shard == 6
+        run: |
+          # Reported: "Did I crash the server trying to transfer all of my
+          # relics to the cart at once?" 150 things put in a crate and in a
+          # cart as the browser now asks them (`rpc_act_many`, 30 to an ask),
+          # with the clock going: none made or lost, the kept pile kept, rarity
+          # and origins as they were, the rest said as did not fit, one line an
+          # ask, and the clock never standing waiting on a lock. A round with a
+          # body's row held leaves it to the next round (`busy`); a guard's and
+          # a hunter's look round for wild things the same as every one read the
+          # old way; an instant ask asks its refusal once; and the browser's
+          # asks, a few dozen at a time, one after another (`Island.actMany`).
+          npx esbuild supabase/test/putall.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/putall.mjs --log-level=error
+          node node_modules/.cache/putall.mjs
+
       - name: The doors, as the security advisors read them
         if: matrix.shard == 6
         run: |

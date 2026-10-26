@@ -9,7 +9,7 @@ import { whoAmI } from './accounts';
 import { supabase } from './supabase';
 import { toldOf, toldWire } from './told';
 import { PRESENCE_FRESH_MS } from './presence';
-import { Island, type CastMore, type CastWire, type HeldSaid, type ItemRow, type PlayerRow, type SkinSaid } from './island';
+import { ACT_MANY_JOBS, Island, type CastMore, type CastWire, type HeldSaid, type ItemRow, type PlayerRow, type SkinSaid } from './island';
 import { heldFrom } from '../ui/effects';
 import { isSpell } from '../render/spells/info';
 import type { CastAt } from '../game/events';
@@ -280,6 +280,18 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
     // gates: a solid wall asked for as a hidden door goes in the one call that keeps the ask with its plan (`gates.ts`).
     // A fight asked for without a count goes on until it is over or out of reach, as it does here.
     void island.act(def.id, target as unknown as Record<string, unknown>, goes ?? (isFightJob(def.id) ? FIGHT_BACK_GOES : 1), hiddenAsk(target));
+  };
+  /*
+   * Many things into a store or out of one, a few dozen to an ask (`Island.actMany`). With a job in hand the
+   * island does none of them, and the rest go one at a time, as before, to be queued behind it.
+   */
+  game.askAll = (def: ActionDef, targets: Target[]) => {
+    if (!ACT_MANY_JOBS.has(def.id)) return false;
+    lastTarget = targets[targets.length - 1] ?? null;
+    void island.actMany(def.id, targets as unknown as Array<Record<string, unknown>>).then(({ rest, busy }) => {
+      if (busy) for (const t of rest) void island.act(def.id, t, 1);
+    });
+    return true;
   };
   game.stop = () => {
     lastTarget = null;

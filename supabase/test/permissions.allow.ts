@@ -241,6 +241,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "private.on_island(uuid)",
     "rpc_abandon(uuid)",
     "rpc_act(uuid,text,jsonb,integer)",
+    "rpc_act_many(uuid,text,jsonb)",
     "rpc_barred(uuid)",
     "rpc_barter(uuid)",
     "rpc_barter_accept(uuid,bigint,integer)",

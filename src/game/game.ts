@@ -5344,6 +5344,11 @@ export class Game {
    * than a second copy of every action.
    */
   ask: ((def: ActionDef, target: Target, goes?: number) => void) | null = null;
+  /**
+   * Many things put in a store or taken out of one, asked of the island in one ask a few dozen at a time
+   * (`rpc_act_many`); set by `play.ts`. False when the job is not one it takes: asked one at a time, as ever.
+   */
+  askAll: ((def: ActionDef, targets: Target[]) => boolean) | null = null;
   /** A plan over an area, asked of the island in one call (`planarea.ts`, `rpc_plan_area`); set by `play.ts`. */
   planArea: ((asks: Array<{ action: string; target: Target }>) => Promise<PlanAnswer>) | null = null;
   /** Your last plan taken back, every piece of it still standing (`rpc_plan_undo`); set by `play.ts`. */
@@ -5485,6 +5490,22 @@ export class Game {
       return;
     }
     this.requestAction(last.def, target, last.goes);
+  }
+
+  /**
+   * The same job of many things at once -- Put all in, Take all of a kind, a rack filled -- in as few asks as the
+   * island takes (`askAll`). Only while every one of them is in reach and passes what `requestAction` asks first
+   * of a thing (a crate with a wildermon in it, a grave); otherwise, and with no `askAll`, one `requestAction` each.
+   */
+  requestMany(def: ActionDef, targets: Target[]): void {
+    if (!targets.length) return;
+    const each = (): void => {
+      for (const t of targets) this.requestAction(def, t);
+    };
+    if (!this.askAll || targets.length < 2) return each();
+    if (targets.some((t) => occupiedRefusal(this, def.id, t) || graveRefusal(this, def.id, t) || !this.inRange(def, t))) return each();
+    this.travel = null;
+    if (!this.askAll(def, targets)) each();
   }
 
   requestAction(def: ActionDef, target: Target, goes?: number): void {

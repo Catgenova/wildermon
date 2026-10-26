@@ -3,7 +3,7 @@ import { crateCentre, crateName, crateCapacity, crateShut, crateSpare, rackStock
 import { furnitureCapacity, furnitureCentre, furnitureDef, furnitureHeft, furnitureName, furnitureRefuses, furnitureRoom, furnitureUnits, rackSpots, type PlacedFurniture } from '../../game/furniture';
 import { graveLine, graveName, graveSays, isGrave } from '../../game/graves';
 import { bloodMul } from '../../game/creatures';
-import { ACTION_BY_ID, type ActionDef } from '../../game/actions';
+import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { bagAdd, bagRefuses, bagRoom, bagSpare, bagTake, itemDef, type Item, itemName } from '../../game/items';
 import type { MenuItem } from '../contextmenu';
@@ -420,7 +420,7 @@ export class CratePanel {
           g.logMsg(crateShut(g, line.rows[0].crate) ?? 'It is gone.', 'error');
           return;
         }
-        for (const step of plan) g.requestAction(def, { kind: 'item', uid: step.uid, count: step.count });
+        g.requestMany(def, plan.map((step) => ({ kind: 'item', uid: step.uid, count: step.count })));
       },
       // Only ever through the island's doors: nothing is moved here.
       take: () => null,
@@ -500,7 +500,7 @@ export class CratePanel {
     take.textContent = 'Take out';
     take.title = `All picked stacks from the ${store.what} into your pack`;
     take.addEventListener('click', () => {
-      for (const it of store.items.filter((i) => this.picking.uids.has(i.uid))) this.takeOne(it);
+      this.takeMany(store.items.filter((i) => this.picking.uids.has(i.uid)));
       this.picking.clear();
       this.render();
     });
@@ -527,6 +527,25 @@ export class CratePanel {
    * `take_from_store` (or the store's own door), or straight across when
    * nobody else keeps the store.
    */
+  /**
+   * Several things out of the open store at once, through the same door as Take: on an island, in as few asks as
+   * it takes (`requestMany`) rather than one a stack all at once.
+   */
+  private takeMany(items: Item[]): void {
+    const store = this.store();
+    if (!store) return;
+    const def = ACTION_BY_ID.get('take_from_store');
+    if (!this.game.ask || store.takeN || store.doors || store.kind === 'carried' || !def || items.length < 2) {
+      for (const it of items) this.takeOne(it);
+      return;
+    }
+    if (!this.withinReach()) {
+      this.game.logMsg(`Too far from the ${store.what}.`, 'error');
+      return;
+    }
+    this.game.requestMany(def, items.map((it) => ({ kind: 'item', uid: it.uid, count: it.count })));
+  }
+
   private takeOne(item: Item, count = item.count): void {
     const store = this.store();
     if (!store) return;
@@ -564,7 +583,7 @@ export class CratePanel {
       label: `Take all ${itemDef(item.id).name.toLowerCase()}`,
       note: `${same.length} stacks, ${total} in all`,
       onSelect: () => {
-        for (const it of same) this.takeOne(it);
+        this.takeMany(same);
       },
     };
   }
@@ -649,15 +668,16 @@ export class CratePanel {
        * takes no tools — so the asks go out and it answers for each of them,
        * rather than this side guessing and being corrected a moment later.
        */
-      let asked = 0;
+      const asks: Target[] = [];
       for (const item of [...this.game.inventory.items]) {
         if (item.locked || item.creature !== undefined || this.game.isEquipped(item.uid)) continue;
         if (sameKinds && !kinds.has(item.id)) continue;
         if (only && item.id !== only) continue;
-        asked++;
-        this.game.requestAction(door, { kind: 'item', uid: item.uid, count: item.count, into: store.id });
+        asks.push({ kind: 'item', uid: item.uid, count: item.count, into: store.id });
       }
-      if (!asked) this.game.logMsg('Nothing loose to put in.', 'error');
+      if (!asks.length) this.game.logMsg('Nothing loose to put in.', 'error');
+      // In as few asks as the island takes (`requestMany`): one a stack, all at once, was refused past the pace.
+      else this.game.requestMany(door, asks);
       return;
     }
     let moved = 0;

@@ -120,7 +120,7 @@ import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/crea
 import { cropYield, RIPE, seedSays } from '../../game/farming';
 import { HEARTBEAT, IDLE_LOGOUT, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
-import { VIA_MAX } from '../../net/island';
+import { ACT_MANY_MOST, VIA_MAX } from '../../net/island';
 import { SAID_LAG_MS } from '../../net/heardlines';
 import { CATCH_UP, MAX_STEP as CLOCK_STEP } from '../../engine/loop';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
@@ -3953,6 +3953,14 @@ export const NEWS: News[] = [
       ...(['ulva', 'dowse', 'siffa'] as const).map((id) => `Changed: ${SPECIES[id].name}: settlement task ${GATHER_DO[SPECIES[id].gathers!]}.`),
       `Changed: ${SPECIES.ulva.name}: no longer guards; wild, no longer hunts on sight. ${SPECIES.dowse.name}: no longer prospects. ${SPECIES.siffa.name}: no longer pans.`,
       `Changed: settlement workers need no tools in the stores: no ${listedOr(workerSkipsTools())}. Stations still needed.`,
+    ],
+  },
+  {
+    n: 334,
+    day: '2026-10-26',
+    lines: () => [
+      `Changed: Put all in, Take all of a kind, rack fill: ${ACT_MANY_MOST} stacks an ask (was 1 a stack, all at once: past the request limit refused, "Too many requests"). Log: 1 line an ask: moved, did not fit, refused.`,
+      'Fixed: island stalls: the clock leaves a body or wildermon in use to the next round (was: waited for it, everybody with it). Guards look round for what hurt somebody: those few only (was: every wild creature).',
     ],
   },
 ];
