@@ -50,7 +50,8 @@ import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
 import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS } from './pace';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, bagCarry, HIT_LOCATIONS, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
-import { boonOf, boonTime, BOON_BONUS, clockLeft, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
+import { asleepIn, SLEEP_BONUS_MULT } from './sleep';
+import { boonOf, boonTime, BOON_BONUS, clockLeft, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
 import { cleanSaid } from './chat';
 import { cleanText, nameRefusal, NAMES_ASKED } from './playertext';
 import { ALL_GOALS } from './journal';
@@ -3979,7 +3980,7 @@ export class Game {
    * Sleep until morning. The world does not stop for it: fires burn down,
    * crops come on and everything left outside ages by however long you slept.
    */
-  sleepUntilMorning(rest: number, what: string, dream = 0): void {
+  sleepUntilMorning(rest: number, what: string): void {
     const h = this.hourOfDay();
     const wake = DAWN + WAKE_AFTER_DAWN;
     const hours = h < wake ? wake - h : 24 - h + wake;
@@ -4017,13 +4018,10 @@ export class Game {
     s.hunger = Math.max(0, s.hunger - 0.2);
     s.thirst = Math.max(0, s.thirst - 0.25);
     this.gainSkill('body_stamina', 0.3 * rest);
-    // A good bed banks more of the night than a poor one, and a Dreamweave in it more again.
-    const banked = this.bankRest(seconds, rest, dream);
-    const bank = banked > 1 ? ` Rested: ${clockLeft(this.player.rested)}, skill gain ×${REST_MULT}.` : '';
     this.logMsg(
       skipped
-        ? `Slept in the ${what}: woke at ${this.clock()}.${bank}`
-        : `Dozed in the ${what}. Time ${this.clock()}: the night is not skipped while others are on the island.${bank}`,
+        ? `Slept in the ${what}: woke at ${this.clock()}.`
+        : `Dozed in the ${what}. Time ${this.clock()}: the night is not skipped while others are on the island.`,
       'event',
     );
     this.events.emit('world', this.player.tileX, this.player.tileY);
@@ -4066,7 +4064,7 @@ export class Game {
    * eaten that favours it.
    */
   skillMult(id: string): number {
-    let mult = this.player.rested > 0 ? REST_MULT : 1;
+    let mult = this.player.sleepOn && this.player.rested > 0 ? SLEEP_BONUS_MULT : 1;
     // A knack earned on the way up never wears off, unlike a meal or a night's sleep.
     mult += knackBonus(this.player.knacks[id]);
     // And the stone you wear, worth a knack on the one trade it favours.
@@ -4386,12 +4384,33 @@ export class Game {
     return `Full: ${filled.join(' and ')}.`;
   }
 
-  /** Bank a night's sleep as rest, up to the hour that will stay banked. */
-  bankRest(seconds: number, quality: number, dream = 0): number {
-    const before = this.player.rested;
-    // What a Dreamweave in the bed adds, to the night and to the most that is held.
-    this.player.rested = Math.max(before, Math.min(REST_CAP * (1 + dream), before + seconds * REST_PER_SECOND * quality * (1 + dream)));
-    return this.player.rested - before;
+  /**
+   * Lie down in a bed and log off (`sleep.ts`): wind full, health back by the bed's worth (`rest`), hungrier and
+   * thirstier, and asleep in it until the island wakes you on the next join (`sleep_wake`). The island's `sleep_fall`.
+   */
+  fallAsleep(rest: number, what: string): void {
+    const s = this.player.stats;
+    s.stamina = 1;
+    s.health = Math.min(1, s.health + 0.25 * rest);
+    s.hunger = Math.max(0, s.hunger - 0.2);
+    s.thirst = Math.max(0, s.thirst - 0.25);
+    this.gainSkill('body_stamina', 0.3 * rest);
+    this.action = null;
+    this.clearQueue(true);
+    this.asleep = what;
+    this.logMsg(`${asleepIn(what)}.`, 'event');
+    this.events.emit('asleep', what);
+  }
+
+  /** The bed this body lay down in, while it is logged off asleep in it (`fallAsleep`, the island's `asleep`). */
+  asleep: string | null = null;
+
+  /** Ask the island to switch the sleep bonus (`rpc_sleep_bonus`); set by the page (`play.ts`). */
+  sleepBonusAsk?: (on: boolean) => void;
+
+  /** Switch the sleep bonus: the button in the Skills window and the status panel, and its key. */
+  toggleSleepBonus(): void {
+    this.sleepBonusAsk?.(!this.player.sleepOn);
   }
 
   gainSkill(id: string, base = ORDINARY_GAIN): number {
@@ -4781,12 +4800,8 @@ export class Game {
     }
     this.checkJournal();
     const performing = this.action?.state === 'performing';
-    // Rest only goes while you are working; standing about does not spend it.
-    if (performing && this.player.rested > 0) {
-      const was = this.player.rested;
-      this.player.rested = Math.max(0, was - dt);
-      if (was > 0 && this.player.rested === 0) this.logMsg(`Rested ended: normal skill gain.`, 'system');
-    }
+    // Sleep bonus switched on drains a second a second while you are on the island; the island's beat sets it again (`body_settle`).
+    if (this.player.sleepOn && this.player.rested > 0) this.player.rested = Math.max(0, this.player.rested - dt);
     if (p.swimming) {
       /*
        * Deep water is its own teacher, and a strong swimmer tires more slowly.

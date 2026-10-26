@@ -818,7 +818,7 @@ describeFrom(ENCHANTERS_PLINTH, { reach: STATION_REACH });
 describeFrom('butter_churn', { reach: STATION_REACH });
 // What a fountain draws, off the well's own rate: litres a minute at the least, and at quality 100.
 describeFrom('fountain', { least: (WELL_TRICKLE * 60).toFixed(1), most: ((WELL_TRICKLE + WELL_TRICKLE_QL) * 60).toFixed(1), top: WELL_TRICKLE_AT });
-// A tent's night measured against a bed's, off the two pieces.
+// A tent's sleep measured against a bed's, off the two pieces.
 describeFrom('tent', { ofBed: (furnitureDef('tent').bed ?? 0) / (furnitureDef('bed').bed ?? 1) });
 // How the roses or lavender on an arch grow, off the rule that grows them.
 for (const d of FURNITURE) if (d.climber) describeFrom(d.id, { rule: climberRule(d.climber) });

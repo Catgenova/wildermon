@@ -3,10 +3,8 @@ import { SKILL_DEFS } from './skills';
 import { world } from './pace';
 
 /**
- * Two things that make the work go into you faster than it otherwise would.
- *
- * A night in a bed banks **rest**, which burns down while you work and makes
- * everything you do teach you twice as much until it is gone. A cooked dish
+ * What makes the work go into you faster than it otherwise would, besides the
+ * sleep bonus (`sleep.ts`). A cooked dish
  * carries a **knack** for one trade, and eating it leaves you better at
  * that trade for a while. This is the same idea as the knack a long day at a
  * trade leaves behind, except that this one wears off. Which dish favours which trade is settled when the
@@ -29,13 +27,6 @@ export interface Boon {
    */
   kind?: 'tincture';
 }
-
-/** The most rest that will stay banked: an hour of it, and no more. */
-export const REST_CAP = 3600;
-/** What rest is worth while it burns. */
-export const REST_MULT = 2;
-/** How much of a night's sleep is banked as rest, at a perfect bed. */
-export const REST_PER_SECOND = 0.5;
 
 /** What a dish's knack is worth, and how long the best of them carries it. */
 export const BOON_BONUS = 0.5;

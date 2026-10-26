@@ -36,7 +36,7 @@ export const RAISED_BY: Readonly<Record<string, readonly Raise[]>> = {
   ],
   body_stamina: [
     { what: 'action that costs stamina', base: WORK_WIND, more: `+${percent(WORK_WIND_SPENT)} of an action's gain per full stamina bar spent, proportional` },
-    { what: 'night of sleep', how: 'more in a better bed' },
+    { what: 'Sleep in a bed', how: 'more in a better bed' },
   ],
   body_control: [
     { what: 'action with a stamina cost or a time', base: WORK_HAND },

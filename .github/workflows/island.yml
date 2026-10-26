@@ -3386,6 +3386,22 @@ jobs:
           npx esbuild supabase/test/respawnpick.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/respawnpick.mjs --log-level=error
           node node_modules/.cache/respawnpick.mjs
+      - name: Sleep logs you off in a bed, and the sleep bonus, the same on both sides
+        if: matrix.shard == 4
+        run: |
+          # "beds ... should operate like wurm beds, logging the player off and
+          # beginning the stage of sleep bonus gain while the player is
+          # offline". Sleep at any hour in a bed of yours or on a settlement of
+          # yours; refused on a stranger's, with a job going, in a fight and
+          # mounted. Done through rpc_act: logged off, asleep, the beat says so
+          # and nothing is asked of it. The next join wakes it beside the bed
+          # (on a free tile round it when that ground is gone, where the bed
+          # stood when the bed is), with the time asleep at the bed's rate,
+          # capped, said. Switched on: skill gain doubled, a minute drained a
+          # minute; off: kept. The words and numbers against sleep.ts.
+          npx esbuild supabase/test/bedsleep.ts --bundle --platform=node --format=esm --external:typescript \
+            --outfile=node_modules/.cache/bedsleep.mjs --log-level=error
+          node node_modules/.cache/bedsleep.mjs
       - name: Enchanting, the paper press and three melee enchantments, the same on both sides
         if: matrix.shard == 4
         run: |

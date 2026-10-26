@@ -938,6 +938,8 @@ export interface IslandHooks {
    * where to wake; null when it may not. `src/ui/respawn.ts` shows it.
    */
   fallen?: (offer: Fallen | null) => void;
+  /** Logged off asleep in a bed, by its name (`rpc_settle`'s `asleep`): the page logs off (`src/main.ts`). */
+  asleep?: (what: string) => void;
   /**
    * Somebody else cast a spell and the island took it: their browser says so
    * over Broadcast (`castSeen`), for this one to draw. Only drawn -- the
@@ -1013,6 +1015,8 @@ export interface IslandHooks {
      * titles and what is on your table.
      */
     rested?: number;
+    /** Whether the sleep bonus is switched on (`player.sleep_on`). */
+    sleepOn?: boolean;
     /** Your favour as it stands, trickle included (`rpc_settle`). */
     favour?: number;
     boons?: unknown[];
@@ -2200,6 +2204,7 @@ export class Island {
         titles?: string[]; title?: string | null; nutrition?: Record<string, number>;
         equipped?: Record<string, number | null>;
         blessings?: unknown; skin?: SkinSaid | null;
+        sleep_on?: boolean; asleep?: string | null;
         tally?: Record<string, number>; ledger?: Record<string, unknown>; ticked?: string[];
         goes?: number | null; time?: number | null; night?: boolean | null;
         said?: Array<{ n: number; text: string; kind: string; at?: string }> | null;
@@ -2247,7 +2252,8 @@ export class Island {
         wounds: Array.isArray(said.wounds) ? said.wounds : undefined,
         marks: said.marks?.tiles ? { tiles: rowsIn<number>(said.marks.tiles), secs: said.marks.secs ?? 0 } : null,
         path: said.path && typeof said.path === 'object' ? said.path : undefined,
-        rested: said.rested, favour: said.favour, boons: said.boons, knacks: said.knacks,
+        rested: said.rested, sleepOn: typeof said.sleep_on === 'boolean' ? said.sleep_on : undefined,
+        favour: said.favour, boons: said.boons, knacks: said.knacks,
         titles: said.titles, title: said.title, nutrition: said.nutrition,
         equipped: said.equipped,
         // An island from before these says neither, and what is held stands.
@@ -2257,6 +2263,11 @@ export class Island {
       });
       // After a death, where to wake, while the body may still pick: shown over the world (`src/ui/respawn.ts`).
       if (!error) this.hooks.fallen?.(fallenIn(said.fallen));
+      // Asleep in a bed: logged off, and nothing more is asked (`src/main.ts`).
+      if (!error && typeof said.asleep === 'string') {
+        this.hooks.asleep?.(said.asleep);
+        return true;
+      }
       /*
        * A clearing of ivy or moss has landed: what it cleared rides the
        * ground's slow half, so that is what the next ground read brings, and
@@ -3809,6 +3820,18 @@ export class Island {
   }
 
   /** The two fighting settings, kept on the body: the island lands the blows (`rpc_fight_prefs`). */
+  /**
+   * Switch the sleep bonus (`rpc_sleep_bonus`): the answer is whether it is on and what is stored, or why not.
+   */
+  async sleepBonus(on: boolean): Promise<{ on: boolean; left: number } | { why: string }> {
+    if (!this.info) return { why: 'You are not on an island.' };
+    const { data, error } = await supabase().rpc('rpc_sleep_bonus', { p_world: this.info.id, p_on: on });
+    if (error) return { why: error.message };
+    const d = (data ?? {}) as { on?: boolean; left?: number; why?: string };
+    if (typeof d.why === 'string') return { why: d.why };
+    return { on: !!d.on, left: Number(d.left ?? 0) };
+  }
+
   async fightPrefs(stance: string, fightBack: boolean, quiet = false): Promise<void> {
     if (!this.info) return;
     const { error } = await supabase().rpc('rpc_fight_prefs', {

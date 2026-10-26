@@ -19,6 +19,7 @@
  */
 
 import { SIDE_NAMES } from './building';
+import { SLEEP_BONUS_MULT } from './sleep';
 import { NODES_PER_TRADE, PERK_TIER_AT, PERKS_PER_TIER } from './classes';
 import { FAITH_TIER_AT, PATRONS, SPELLS_PER_TIER } from './patrons';
 import { TURNS } from '../render/view';
@@ -109,6 +110,8 @@ export const BINDS: BindDef[] = [
     keys: [`F${6 + i}`],
   })),
 
+  // The backslash was nobody's.
+  { id: 'sleep_bonus', label: 'Sleep bonus on/off', hint: `Switch the sleep bonus: on, skill gain ×${SLEEP_BONUS_MULT} while any is stored, draining 1 s per s on the island; off, kept.`, group: 'Doing things', keys: ['Backslash'] },
   { id: 'walk_home', label: 'Walk home', hint: 'Walk to your settlement totem or bed.', group: 'Doing things', keys: ['Home'] },
   /*
    * One key for all of them rather than one each. Two emotes is a pair of

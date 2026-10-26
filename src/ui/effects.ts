@@ -5,7 +5,7 @@
  * or a tap.
  *
  * Everything here is read off the rules that do it, never typed again: rest
- * off `REST_MULT`, tired arms off `tiredPace`, a wound's blood off
+ * off `SLEEP_BONUS_MULT`, tired arms off `tiredPace`, a wound's blood off
  * `woundDrain`, a worn enchantment off its own Examine line, a spell off its
  * own note. A spell cast on you is known by the island's answer to the cast
  * (`CastSeen.told`, the seconds it lasts on you), which is also what draws it,
@@ -19,7 +19,8 @@
 import type { Game } from '../game/game';
 import { CARRY_STOP, overDrag } from '../game/game';
 import type { CastSeen } from '../game/events';
-import { REST_MULT } from '../game/boons';
+import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_RATE, sleepBonusLabel, sleepHm } from '../game/sleep';
+import { boundKey } from '../game/keybinds';
 import { SKILL_BY_ID } from '../game/skills';
 import { FAITH, favourCap } from '../game/faith';
 import { CLOSE_BARE, CLOSE_RIGHT, PART_NAMES, WOUND_KINDS, woundDrain, woundText, worstWound, type Wound } from '../game/wounds';
@@ -351,13 +352,14 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
   if (p.foreknow > 0 && fore) {
     add({ id: 'path:foreknow', good: true, glyph: 'tick', name: fore.name, caption: String(p.foreknow), does: [foreknowSaid(p.foreknow)], from: `Your ${PATHS[fore.path].name} technique.` });
   }
-  // Rest, banked in a bed and burned at the work.
+  // Sleep bonus, gained logged off asleep in a bed and drained while switched on (`sleep.ts`).
   if (p.rested > 0) {
     add({
-      id: 'rest', good: true, glyph: 'rest', name: 'Rested', caption: shortLeft(p.rested),
-      does: [`Skill gain ×${REST_MULT} base, other bonuses added.`,
-        `Used only while working: ${longLeft(p.rested)} of work left.`],
-      from: 'Sleep in a bed.',
+      id: 'rest', good: true, glyph: 'rest', name: p.sleepOn ? 'Sleep bonus' : 'Sleep bonus (off)', caption: shortLeft(p.rested),
+      does: [sleepBonusLabel(p.sleepOn, p.rested),
+        `On: skill gain ×${SLEEP_BONUS_MULT} base, other bonuses added; drains 1 s per s while on the island. Off: kept.`,
+        `Switch: ${boundKey('sleep_bonus')}, Skills window or status panel.`],
+      from: `Sleep in a bed: +${sleepHm(3600 * SLEEP_BONUS_RATE)} per hour asleep (bed, QL 0), max ${sleepHm(SLEEP_BONUS_CAP)}.`,
     });
   }
   // What a dish or a tincture favours, while it lasts.

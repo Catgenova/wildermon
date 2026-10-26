@@ -1,4 +1,5 @@
 import { boundKey, keyName, type Keybinds } from '../game/keybinds';
+import { SLEEP_BONUS_MULT, sleepBonusLabel } from '../game/sleep';
 import { balance, fedWord, NUTRIENTS, NUTRIENT_NAMES, NUTRIENT_NOTES, tableMul } from '../game/nutrition';
 import { sailWord, windFrom, windWord } from '../game/wind';
 import { FURNITURE_BY_ID } from '../game/furniture';
@@ -166,6 +167,8 @@ export class Hud {
   private gearEl: HTMLDivElement;
   private eatBtn!: HTMLButtonElement;
   private stanceBtn!: HTMLButtonElement;
+  /** The sleep bonus switch: "Sleep bonus: on · 2 h 5 m left" (`sleep.ts`). */
+  private sleepBtn!: HTMLButtonElement;
   /** What you are fighting or have marked: its name, its health, what it is about, and what it is weak to. */
   private targetEl = document.createElement('div');
   private targetName = document.createElement('div');
@@ -275,7 +278,11 @@ export class Hud {
     this.eatBtn.className = 'hud-mini';
     this.eatBtn.textContent = 'Eat';
     this.eatBtn.addEventListener('click', () => this.eatBest());
-    acts.append(this.stanceBtn, this.eatBtn);
+    this.sleepBtn = document.createElement('button');
+    this.sleepBtn.type = 'button';
+    this.sleepBtn.className = 'hud-mini hud-sleep';
+    this.sleepBtn.addEventListener('click', () => this.game.toggleSleepBonus());
+    acts.append(this.stanceBtn, this.eatBtn, this.sleepBtn);
     status.append(acts);
     const footer = document.createElement('div');
     footer.className = 'hud-footer';
@@ -836,6 +843,11 @@ export class Hud {
     const deed = standing ? `  ·  ${standing.name}` : '';
     const title = this.game.titleName();
     this.say(this.posEl, `${p.tileX}, ${p.tileY}  ·  h ${metres(h)} m  ·  ${this.game.clock()}  ·  ${seasonLine(this.game.wallNow())}${p.swimming ? '  ·  swimming' : ''}${deed}${title ? `  ·  ${title}` : ''}`);
+    // The sleep bonus switch, and what it does.
+    this.say(this.sleepBtn, sleepBonusLabel(p.sleepOn, p.rested));
+    const sleepTip = `${p.sleepOn ? 'Switch off' : 'Switch on'} (${boundKey('sleep_bonus')}). On: skill gain ×${SLEEP_BONUS_MULT} while any is stored; drains 1 s per s on the island. Gained logged off asleep in a bed.`;
+    if (this.sleepBtn.title !== sleepTip) this.sleepBtn.title = sleepTip;
+    this.sleepBtn.classList.toggle('hud-sleep-on', p.sleepOn);
     // What is on you: a mark each, written only where a mark has changed.
     this.effects.update();
     // The wind, which only matters when there is a sail over you.

@@ -202,6 +202,7 @@ import { ENGRAVE_MAX, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
 import { CHAT_KEEP_DAYS, EVENT_KEEP_DAYS, TALK_LOG } from '../../game/events';
 import { gemFound } from '../../game/gems';
 import { BRAZIER_CAPACITY, DEPLOY_REACH, OVEN_CAPACITY } from '../../game/furniture';
+import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, sleepHm } from '../../game/sleep';
 
 /**
  * What's new: what changed on the island, a line each, shown once as you come
@@ -4052,6 +4053,14 @@ export const NEWS: News[] = [
     n: 347,
     day: '2026-10-26',
     lines: () => ['Changed: pools, ponds and lakes not joined to the sea: still edge, no foam, waves or wet band.'],
+  },
+  {
+    n: 348,
+    day: '2026-10-26',
+    lines: () => [
+      `Changed: beds: Sleep (any hour) logs you off; sleep bonus +${sleepHm(3600 * SLEEP_BONUS_RATE)} per hour asleep (QL +${percent(1 / SLEEP_BONUS_QL)} per point), `
+        + `max ${sleepHm(SLEEP_BONUS_CAP)}; on: skill gain ×${SLEEP_BONUS_MULT}, drains 1 s per s (Skills window, status panel, ${defaultKey('sleep_bonus')}); replaces rest.`,
+    ],
   },
 ];
 

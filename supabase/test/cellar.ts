@@ -539,7 +539,7 @@ check('and a crate set down from down there is down there too, on both sides',
   mineCrateSay === 'ALLOWED' && theirCrateSay === 'ALLOWED' && mineCrateLevel === String(CELLAR_LEVEL) && theirCrateLevel === String(CELLAR_LEVEL),
   `browser "${mineCrateSay}" at ${mineCrateLevel}, island "${theirCrateSay}" at ${theirCrateLevel}`);
 
-// A night in a bed down there, under a house with walls and no roof: a cellar is indoors, roof or none, on both sides.
+// Sleep in a bed down there, under a house with walls and no roof: a cellar is indoors, roof or none, on both sides.
 const bedItem = game.inventory.add('bed', { ql: 50 });
 ACTION_BY_ID.get('place_furniture')?.perform(tile(21, 44, { itemUid: bedItem.uid, sx: 0, sy: 0, facing: 's' }) as never, game);
 const myBed = [...game.furniture.values()].find((f) => f.kind === 'bed');
@@ -552,11 +552,14 @@ island(`update player set stats = jsonb_set(stats, '{health}', '0'::jsonb) where
   perform perform_last(w, u, 'sleep', jsonb_build_object('kind', 'furniture', 'id', ${theirBed}));`);
 const theirRest = Number(val(`(select (stats->>'health')::double precision from player where world_id = ${W} and uid = ${DANE})`));
 const wantRest = 0.25 * (furnitureDef('bed').bed ?? 1) * (0.6 + 50 / 250) * INDOORS_REST;
-check('a night in a bed down there rests as a night indoors does, though the house over it has no roof, on both sides',
+check('Sleep in a bed down there gives back the health a bed indoors does, though the house over it has no roof, on both sides',
   myBed?.level === CELLAR_LEVEL && Math.abs(mineRest - wantRest) < 1e-9 && Math.abs(theirRest - wantRest) < 1e-6,
   `health back ${mineRest.toFixed(3)} in the browser, ${theirRest.toFixed(3)} on the island, ${wantRest.toFixed(3)} with the indoor ${INDOORS_REST}`);
 if (myBed) game.removeFurniture(myBed.id);
-psql(`delete from placed where id = ${theirBed};`);
+// Sleep logs off (`sleep_fall`): woken again, back on the island, for what follows.
+psql(`select private.sleep_wake(${W}, ${DANE});
+      update player set away = false where world_id = ${W} and uid = ${DANE};
+      delete from placed where id = ${theirBed};`);
 
 /* ---- reached from down there, and only from down there ------------------------------ */
 const mineChestTarget = { kind: 'furniture', id: mineChest?.id ?? -1 };

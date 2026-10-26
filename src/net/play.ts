@@ -574,6 +574,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
      * meal's favour showed for a browser that had granted it to itself.
      */
     if (typeof what.rested === 'number') game.player.rested = what.rested;
+    // And whether the sleep bonus is switched on, which the island keeps (`rpc_sleep_bonus`).
+    if (typeof what.sleepOn === 'boolean') game.player.sleepOn = what.sleepOn;
     // And your favour, which the island keeps and spends: the browser's own was its save's, nought after a reload.
     if (typeof what.favour === 'number') game.player.favour = what.favour;
     /*
@@ -778,6 +780,18 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
   if (isFightStance(toldStance)) game.settings.fightStance = toldStance;
   if (typeof toldBack === 'boolean') game.settings.fightBack = toldBack;
   game.fightPrefsChanged = () => void island.fightPrefs(game.settings.fightStance, game.settings.fightBack);
+  // The sleep bonus switched: the island says whether it is on and what is stored, or why not (`rpc_sleep_bonus`).
+  game.sleepBonusAsk = (on) => {
+    void island.sleepBonus(on).then((said) => {
+      if ('why' in said) {
+        game.logMsg(said.why, 'error');
+        return;
+      }
+      game.player.sleepOn = said.on;
+      game.player.rested = said.left;
+      game.events.emit('stats');
+    });
+  };
   if (!isFightStance(toldStance) || typeof toldBack !== 'boolean') {
     void island.fightPrefs(game.settings.fightStance, game.settings.fightBack, true);
   }

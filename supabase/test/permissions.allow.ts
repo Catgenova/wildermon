@@ -341,6 +341,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_set_look(jsonb)",
     "rpc_settle(bigint,uuid,bigint,boolean,jsonb)",
     "rpc_settlement(uuid,uuid,boolean)",
+    "rpc_sleep_bonus(uuid,boolean)",
     "rpc_social(uuid)",
     "rpc_spell(uuid,text,jsonb)",
     "rpc_spell_bar(uuid,integer,text)",

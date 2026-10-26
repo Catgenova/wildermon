@@ -511,7 +511,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   den_medium: { name: 'Medium wildermon bed', category: 'misc', weight: 8, decay: 6, description: 'Your settlement workers tire every {den.tire} cycles and rest. Sleeps one second-evolution-stage wildermon (level {den.first} to {den.secondLast}), or a non-evolving one with {den.small} health or more, under {den.large}: rest {den.share:pct} as long, {den.bed:time} instead of {den.rest:time}. One at a time; no other size.' },
   den_large: { name: 'Large wildermon bed', category: 'misc', weight: 16, decay: 6, description: 'Your settlement workers tire every {den.tire} cycles and rest. Sleeps one third-evolution-stage wildermon (level {den.second} and over), or a non-evolving one with {den.large} health or more: rest {den.share:pct} as long, {den.bed:time} instead of {den.rest:time}. One at a time; no other size.' },
   cot: { name: 'Cot', category: 'misc', weight: 16, decay: 5 },
-  tent: { name: 'Tent', category: 'misc', weight: 6, decay: 5, description: 'Sleep in it at night: {ofBed:pct} of the rest of a bed of the same QL.' },
+  tent: { name: 'Tent', category: 'misc', weight: 6, decay: 5, description: 'Sleep: {ofBed:pct} of the sleep bonus per hour asleep, and of the health back, of a bed of the same QL.' },
   chest: { name: 'Chest', category: 'misc', weight: 26, decay: 4, description: 'Holds {capacity} things.' },
   coffer: { name: 'Coffer', category: 'misc', weight: 10, decay: 4, description: 'Holds {capacity} things.' },
   cupboard: { name: 'Cupboard', category: 'misc', weight: 30, decay: 4, description: 'Holds {capacity} things.' },
