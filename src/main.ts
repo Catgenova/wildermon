@@ -575,20 +575,7 @@ const loop = new GameLoop(
 
     sound.step();
 
-    if (dropOver) {
-      renderer.hover = dropOver.pick;
-      ui.setHover(dropOver.pick, dropOver.x, dropOver.y);
-      ui.syncGhost(null);
-    } else if (input.pointer.overCanvas && !input.dragging && !ui.menu.isOpen) {
-      renderer.hover = renderer.hoverPick(input.pointer.x, input.pointer.y);
-      ui.setHover(renderer.hover, input.pointer.x, input.pointer.y);
-      ui.syncGhost(renderer.hover);
-    } else {
-      renderer.hover = null;
-      renderer.forgetPick();
-      ui.setHover(null, 0, 0);
-      ui.syncGhost(null);
-    }
+    ui.hoverFrame(input.pointer, input.dragging, dropOver);
   },
   (dt) => {
     renderer.render(dt);

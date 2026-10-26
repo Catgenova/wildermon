@@ -4048,6 +4048,12 @@ export const NEWS: News[] = [
         + 'you founded or are a member of; distance in tiles from your body on each (was: the island\'s spawn, still the default).',
     ],
   },
+  {
+    n: 347,
+    day: '2026-10-26',
+    lines: () => ['Fixed: hover boxes over the world stop after a while (was: gone until reload after an item left the pack or a store under the pointer; '
+      + 'a pinned Tile i note now closes on a press anywhere else).'],
+  },
 ];
 
 /**

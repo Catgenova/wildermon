@@ -88,6 +88,14 @@ export class TilePanel {
       if (this.pinned) this.showNote();
       else this.tooltip.hide(this);
     });
+    // A press anywhere else puts a pinned note away, as the effects row's does: while it is up it holds the
+    // tooltip, and the world under the pointer was not said again until the `i` was pressed or the window shut.
+    document.addEventListener('pointerdown', (e) => {
+      if (!this.pinned || (e.target instanceof Node && this.info.contains(e.target))) return;
+      this.pinned = false;
+      this.noteOpen = false;
+      this.tooltip.hide(this);
+    }, true);
     this.factsEl = document.createElement('div');
     this.factsEl.className = 'tile-head-facts';
     this.factsEl.hidden = true;
