@@ -96,8 +96,45 @@ const near = (x: number, y: number, a: number, b: number): boolean => {
   const p = Math.min(0.5, Math.max(0.005, (x + y) / 2));
   return Math.abs(x - y) <= 4.5 * Math.sqrt(p * (1 - p) * (1 / a + 1 / b)) + 0.002;
 };
-/** How far a share counted off `n` draws may land from the exact odds `x`: four and a half deviations, and a hair. */
-const nearExact = (x: number, y: number, n: number): boolean => Math.abs(x - y) <= 4.5 * Math.sqrt(Math.max(x * (1 - x), 1e-6) / n) + 0.0005;
+/**
+ * The chance one agreement check below fails when the two sides are one rule: a count of young is refused only in a
+ * tail of the exact binomial (`n` young, each carrying it at the exact odds, alone) that holds `TAIL / 2` or less on
+ * its side. A run makes 1,845 of them (eight tallies of some 230 shares), and summed over the tails each one actually
+ * refuses, a run fails by chance about once in 9,000. A band of four and a half normal deviations and a hair, as here
+ * before, failed about once in 80 runs: a share a few young in 3,000 carry is nothing like normal (the island's 3,000
+ * draws of a trait at 0.065% once came out at 10 young, 1.9 expected, which that band refused).
+ */
+const TAIL = 1e-7;
+/** The binomial's terms, from count `k` of `n` at odds `p`. */
+const logChoose = (n: number, k: number): number => {
+  let s = 0;
+  for (let i = 1; i <= Math.min(k, n - k); i++) s += Math.log((n - Math.min(k, n - k) + i) / i);
+  return s;
+};
+/** The chance a count of `n` draws at odds `p` comes out `k` or fewer (`below`), or `k` or more. */
+function tail(p: number, n: number, k: number, below: boolean): number {
+  if (k < 0 || k > n) return 0;
+  const lp = Math.log(p);
+  const lq = Math.log1p(-p);
+  let term = Math.exp(logChoose(n, k) + k * lp + (n - k) * lq);
+  let sum = 0;
+  for (let j = k; below ? j >= 0 : j <= n; j += below ? -1 : 1) {
+    sum += term;
+    if (term < sum * 1e-15) break;
+    // The next term outward, by the ratio of neighbours.
+    term *= below ? (j / (n - j + 1)) * Math.exp(lq - lp) : ((n - j) / (j + 1)) * Math.exp(lp - lq);
+  }
+  return sum;
+}
+/** Whether a share counted off `n` draws, `y`, is a count the exact odds `x` throw outside the outer `TAIL` of the time. */
+const nearExact = (x: number, y: number, n: number): boolean => {
+  const k = Math.round(y * n);
+  // Never and always, to the float error a sum of shares carries; and odds outside them are no odds.
+  if (x < -1e-9 || x > 1 + 1e-9) return false;
+  if (x < 1e-12) return k === 0;
+  if (x > 1 - 1e-12) return k === n;
+  return tail(x, n, k, true) > TAIL / 2 && tail(x, n, k, false) > TAIL / 2;
+};
 /** Every share a count of `n` young gives against the exact odds, and the ones that do not agree. */
 function agree(exact: BreedOdds, got: BreedOdds, n: number): string[] {
   const off: string[] = [];
