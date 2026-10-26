@@ -346,6 +346,12 @@ jobs:
             where p.name = 'catgenova' order by q.kind, q.id"
           ask "smiths: lumps and fibre in the keeper's stores" "select l, stores_count(p.world_id, p.uid, l) as n from player p,
                  unnest(array['iron_lump', 'copper_lump', 'tin_lump', 'zinc_lump', 'lead_lump', 'wool', 'cotton', 'wemp']) l where p.name = 'catgenova'"
+          ask "smiths: the dowse's ledger, worn and bed" "select c.id, c.worn, c.bed, c.ledger::text as ledger, c.idle_since, to_char(c.until, 'HH24:MI:SS') as until
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+            where c.keeper = p.uid and c.species = 'dowse'"
+          ask "smiths: nails and ribbons in the keeper's stores, by metal" "select (s.it).def, (s.it).extra, sum((s.it).count) as n
+             from player p cross join lateral deed_store_items(p.world_id, p.uid) s
+            where p.name = 'catgenova' and (s.it).def in ('nail', 'ribbon', 'iron_lump') group by 1, 2 order by 1, 2"
           ask "smiths: where the island sends each next" "select c.id, c.species, s.* from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
              cross join lateral errand_step(c.world_id, c.id) s
             where c.keeper = p.uid and c.mode = 'deed' and c.species in ('dowse', 'siffa', 'ulva') order by c.id"
