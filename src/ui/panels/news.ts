@@ -4007,6 +4007,13 @@ export const NEWS: News[] = [
       `New: first join: pick one of the ${num(RUNESTONES.length)} Runestones; you start ${num(START_GAP)} tiles from it (was: the island's spawn).`,
     ],
   },
+  {
+    n: 341,
+    day: '2026-10-26',
+    lines: () => [
+      'Fixed: maples and shrivelled maples: one trunk on a buttressed foot, limbs grow out of it (was: roots and limbs as separate pieces clipped through each other).',
+    ],
+  },
 ];
 
 /**

@@ -46,6 +46,7 @@ export const maple: Species3D = {
       rampOf(flat.leaf.map((c) => mix(c, '#f2c24e', 0.35)) as unknown as readonly [string, string, string]),
     ],
   },
+  buttress: true,
   keys: { colour: '#e8c890', ripe: '#c8a470' },
   buds: '#d0464a',
 };

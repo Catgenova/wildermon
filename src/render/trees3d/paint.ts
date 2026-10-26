@@ -364,6 +364,9 @@ export function bandPath(c: Chain, j0: number, j1: number, s0: number, s1: numbe
   return p;
 }
 
+/** A limb that starts inside the wood it grows out of, in a crown neither open (whose limbs have their own start) nor whorled. */
+const growsOut = (job: Job, c: Chain): boolean => c.skip > 0 && !c.thin && !job.spec.open && !job.spec.build.whorls;
+
 /** Points `j0` to `j1` of a chain (its pieces `j0` to `j1 - 1`): banded, ink down its sides, furrowed. */
 export function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () => number): void {
   if (c.thin) {
@@ -412,6 +415,25 @@ export function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R
       g.stroke();
     }
     return;
+  }
+  // A limb out of what it grows on comes out of that wood: its bands fade in from its start, inside it, to
+  // where it leaves it, with no edge across them -- seen end on, as it leaves toward the eye, no sawn-off end.
+  if (growsOut(job, c) && j0 === 0) {
+    const t = c.skip;
+    const S: Pt = [c.q[0][0] + (c.q[1][0] - c.q[0][0]) * t, c.q[0][1] + (c.q[1][1] - c.q[0][1]) * t];
+    const rS = c.r[0] + (c.r[1] - c.r[0]) * t;
+    const into: Chain = { ...c, q: [c.q[0], S], r: [c.r[0], rS], n: [c.n[0], c.n[0]] };
+    const fadeIn = (col: string, s0: number, s1: number): void => {
+      const fade = g.createLinearGradient(c.q[0][0], c.q[0][1], S[0], S[1]);
+      fade.addColorStop(0, col.replace('rgb(', 'rgba(').replace(')', ',0)'));
+      fade.addColorStop(1, col);
+      g.fillStyle = fade;
+      g.fill(bandPath(into, 0, 1, s0, s1));
+    };
+    CHAIN_BANDS.forEach(([s0, s1], i) => fadeIn(c.cols[i], i === 0 ? s0 : s0 - 0.04, i === 2 ? s1 : s1 + 0.04));
+    if (c.snow) fadeIn('rgb(244,247,253)', c.snow[0], c.snow[1]);
+    // The rest from there, as any limb.
+    c = { ...c, q: [S, ...c.q.slice(1)], r: [rS, ...c.r.slice(1)], skip: 0 };
   }
   if (job.spec.open && c.order >= 2) {
     // An open crown's branches in two: the whole in its middle tone, its shaded side over it.
@@ -2110,17 +2132,19 @@ export function paintTree3d(g: Ctx, job: Job): void {
       g.fill();
     }
   }
-  // An open crown's trunk stands on a round foot, the ground's circle of it, laid just behind the trunk; each stem of several on its own.
-  for (const trunk of spec.open ? chains.filter((c) => c.order === 0 && sk.limbs[c.pieces[0]].parent < 0) : []) {
+  // Under a full crown that is not open the wood goes in first, the crown in front of all of it; among itself by depth.
+  const under = leafy && !spec.open ? -1e6 : 0;
+  // An open crown's trunk, or a buttressed one, stands on a round foot, the ground's circle of it, laid just behind the trunk; each stem of several on its own.
+  for (const trunk of spec.open || spec.buttress ? chains.filter((c) => c.order === 0 && sk.limbs[c.pieces[0]].parent < 0) : []) {
     const at = trunk.pieces[0];
     const foot = footOf(job, at);
     g.lineWidth = KIT_INK_W * 2;
     g.stroke(foot.base);
-    items.push({ d: near(sk.limbs[at].a) - 0.6, draw: () => paintFoot(g, foot, trunk) });
+    items.push({ d: under + near(sk.limbs[at].a) - 0.6, draw: () => paintFoot(g, foot, trunk) });
     // Each buttress by its own depth: those behind the trunk under it, those in front over it.
     foot.lobes.forEach(([a, out], k) => {
       const b = buttress(job, a, out, k);
-      items.push({ d: near(b.at) - 0.5, draw: () => b.draw(g) });
+      items.push({ d: under + near(b.at) - 0.5, draw: () => b.draw(g) });
     });
   }
   // The wood, a few pieces of a limb at a time, so each run is laid in its own place among the leaf.
@@ -2135,7 +2159,7 @@ export function paintTree3d(g: Ctx, job: Job): void {
       // Under a full crown the wood goes in first: the crown is in front of all of it. An open crown's
       // wood is among its masses, set back a little so a branch's end goes into the mass on it.
       const d = near(lerp(L0.a, L1.b, 0.5)) + (c.order <= 0 ? -0.5 : 0);
-      const at = leafy && !spec.open ? -1e6 : spec.open && shown.length ? d - sk.crown.r * 0.12 * Math.max(0, c.order) : d;
+      const at = under ? under + d : spec.open && shown.length ? d - sk.crown.r * 0.12 * Math.max(0, c.order) : d;
       items.push({ d: at, draw: () => paintChain(g, job, c, j0, j1, R) });
     }
   }
