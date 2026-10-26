@@ -555,7 +555,7 @@ function drum(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: number
  * it (`Laid`), for the wash over remembered ground to be taken off it.
  */
 export function drawColumn(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: number, h0: number, h1: number,
-  material: string, done: number, alpha: number, planInk: string, paint?: RGB, dpr = 1, grounded = true, engaged = 0, cuts: readonly Cut[] = []): Laid {
+  material: string, done: number, alpha: number, planInk: string, paint?: RGB, dpr = 1, grounded = true, engaged = 0, cuts: readonly Cut[] = [], cap?: HeadTone): Laid {
   const zoom = cam.zoom;
   const pal = palette(material, paint);
   const r = engaged > 0 ? engaged + PILASTER_PROUD : 0.05;
@@ -565,7 +565,7 @@ export function drawColumn(ctx: CanvasRenderingContext2D, cam: Camera, cx: numbe
   // A finished column is the same picture wherever it stands, for its stuff, its height, the turn and the zoom;
   // a pilaster the same again for the walls round it, which are cut out of it once (`cutPictureOf`).
   if (done >= 1 && zoom >= FRAME_DETAIL) {
-    const pic = pictureOf(cam, material, pal, paint, h1 - h0, dpr, grounded, engaged);
+    const pic = pictureOf(cam, material, pal, paint, h1 - h0, dpr, grounded, engaged, cap);
     const laid = cuts.length ? cutPictureOf(cam, pic, cuts, cx, cy, h0, dpr) : pic;
     const at: Body = { c: laid.c, x: snap(cam.worldToScreenX(cx, cy) + pic.x, dpr), y: snap(cam.worldToScreenY(cx, cy, h0) + pic.y, dpr), w: pic.w, h: pic.h };
     ctx.drawImage(at.c, at.x, at.y, at.w, at.h);
@@ -630,6 +630,12 @@ function coursesOn(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: n
 export const PILASTER_PROUD = 0.025;
 /** How much further out than its shaft a pilaster's base and head stand, in tiles. */
 const PILASTER_DRESS = 0.016;
+/**
+ * The tones a pilaster's head takes where it is the stone at the corner of
+ * the caps of the walls it stands in (`drawColumn`): its sides, and its top
+ * as `block` lights a top (`top` is drawn at 1.18 of itself).
+ */
+export interface HeadTone { body: RGB; top: RGB }
 /** A pilaster's head in a material: how much further out than its shaft it stands, and how deep it is. */
 export function pilasterHead(material: string): { reach: number; deep: number } {
   return stony(material) ? { reach: PILASTER_DRESS, deep: 1.6 } : { reach: 0.014, deep: 2.4 };
@@ -644,10 +650,10 @@ const COLUMN_REACH = 0.088;
  * walls meeting on its corner (`engaged`, half their thickness) it is a
  * pilaster instead.
  */
-function columnBody(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: number, h0: number, h1: number, material: string, pal: Palette, grounded = true, engaged = 0): void {
+function columnBody(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: number, h0: number, h1: number, material: string, pal: Palette, grounded = true, engaged = 0, cap?: HeadTone): void {
   const zoom = cam.zoom;
   if (engaged > 0) {
-    pilasterBody(ctx, cam, cx, cy, h0, h1, material, pal, engaged + PILASTER_PROUD, grounded);
+    pilasterBody(ctx, cam, cx, cy, h0, h1, material, pal, engaged + PILASTER_PROUD, grounded, cap);
     return;
   }
   if (!stony(material)) {
@@ -689,7 +695,7 @@ function columnBody(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: 
  * cap. Only what stands clear of the walls is seen of it: they are cut out of
  * it when it is drawn (`drawColumn`).
  */
-function pilasterBody(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: number, h0: number, h1: number, material: string, pal: Palette, r: number, grounded: boolean): void {
+function pilasterBody(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: number, h0: number, h1: number, material: string, pal: Palette, r: number, grounded: boolean, cap?: HeadTone): void {
   const zoom = cam.zoom;
   if (!stony(material)) {
     const pad = MATERIAL_BY_ID.get('cobblestone')?.color ?? [140, 136, 128];
@@ -698,7 +704,7 @@ function pilasterBody(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy
     block(ctx, cam, cx, cy, r, h0 + 1.2, h1 - 2.4, pal.body, pal.hi, pal.line, zoom);
     chamferLights(ctx, cam, cx, cy, r, h0 + 1.6, h1 - 2.8, pal);
     const head = pilasterHead(material);
-    block(ctx, cam, cx, cy, r + head.reach, h1 - head.deep, h1, pal.dark, pal.body, pal.line, zoom);
+    block(ctx, cam, cx, cy, r + head.reach, h1 - head.deep, h1, cap?.body ?? pal.dark, cap?.top ?? pal.body, pal.line, zoom);
     return;
   }
   if (ROUND.has(material)) {
@@ -721,13 +727,13 @@ function pilasterBody(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy
     }
     const head = pilasterHead(material);
     block(ctx, cam, cx, cy, r + 0.008, h1 - 3, h1 - head.deep, pal.dress, pal.dressHi, pal.line, zoom);
-    block(ctx, cam, cx, cy, r + head.reach, h1 - head.deep, h1, pal.dress, pal.dress, pal.line, zoom);
+    block(ctx, cam, cx, cy, r + head.reach, h1 - head.deep, h1, cap?.body ?? pal.dress, cap?.top ?? pal.dress, pal.line, zoom);
   } else {
     block(ctx, cam, cx, cy, r + PILASTER_DRESS, h0, h0 + 1.4, pal.dress, pal.dressHi, pal.line, zoom);
     block(ctx, cam, cx, cy, r, h0 + 1.4, h1 - 1.6, pal.body, pal.hi, pal.line, zoom);
     coursesOn(ctx, cam, cx, cy, r, h0 + 2.4, h1 - 2, material, pal);
     const head = pilasterHead(material);
-    block(ctx, cam, cx, cy, r + head.reach, h1 - head.deep, h1, pal.dress, pal.dressHi, pal.line, zoom);
+    block(ctx, cam, cx, cy, r + head.reach, h1 - head.deep, h1, cap?.body ?? pal.dress, cap?.top ?? pal.dressHi, pal.line, zoom);
   }
 }
 
@@ -803,8 +809,8 @@ function columnBox(cam: Camera, cx: number, cy: number, h0: number, h1: number):
 const pictures = new Map<string, Body>();
 const PICTURES = 48;
 
-function pictureOf(cam: Camera, material: string, pal: Palette, paint: RGB | undefined, height: number, dpr: number, grounded: boolean, engaged: number): Body {
-  const key = `${material}|${paint ? paint.join(',') : ''}|${cam.rotation}|${cam.zoom}|${height.toFixed(2)}|${dpr}|${grounded ? 1 : 0}|${engaged.toFixed(3)}`;
+function pictureOf(cam: Camera, material: string, pal: Palette, paint: RGB | undefined, height: number, dpr: number, grounded: boolean, engaged: number, cap?: HeadTone): Body {
+  const key = `${material}|${paint ? paint.join(',') : ''}|${cam.rotation}|${cam.zoom}|${height.toFixed(2)}|${dpr}|${grounded ? 1 : 0}|${engaged.toFixed(3)}|${cap ? `${cap.body.join(',')}/${cap.top.join(',')}` : ''}`;
   const had = pictures.get(key);
   if (had) {
     pictures.delete(key);
@@ -829,7 +835,7 @@ function pictureOf(cam: Camera, material: string, pal: Palette, paint: RGB | und
   const shifted = Object.create(cam) as Camera;
   shifted.worldToScreenX = (x: number, y: number): number => cam.worldToScreenX(x, y) - X0 - x0;
   shifted.worldToScreenY = (x: number, y: number, hh: number): number => cam.worldToScreenY(x, y, hh) - Y0 - y0;
-  columnBody(g, shifted, 0, 0, 0, height, material, pal, grounded, engaged);
+  columnBody(g, shifted, 0, 0, 0, height, material, pal, grounded, engaged, cap);
   const pic: Body = { c, x: x0, y: y0, w, h, key };
   pictures.set(key, pic);
   while (pictures.size > PICTURES) {

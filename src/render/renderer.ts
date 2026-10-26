@@ -61,7 +61,7 @@ import { GLASS, isGlasshouse } from '../game/glasshouse';
 import type { LightSource } from '../game/light';
 import { FLOOR_PPT, FLOOR_TILES, concrete, flooring, slabbing } from './flooring';
 import { LADDER, stairStyle } from './stairing';
-import { BEAM_DEEP, drawBeam, drawColumn, drawJettySupports, drawRailing, JOIST_DEEP, PILASTER_PROUD, pilasterHead, type Body, type Cut, type RailEnds } from './framing';
+import { BEAM_DEEP, drawBeam, drawColumn, drawJettySupports, drawRailing, JOIST_DEEP, PILASTER_PROUD, pilasterHead, type Body, type HeadTone, type Cut, type RailEnds } from './framing';
 import { jettyBase, outsideStairBase, spiralBase } from '../game/frame';
 import { drawSpiralPiece, drawSpiralWhole, spiralCapGlow, spiralKey, spiralShade, spiralOutline, spiralPieces, type SpiralFlight, type SpiralFrame, type SpiralPieceAt } from './spiralkit';
 import { spiralHeading, spiralRise, spiralSpot, spiralTurn, SPIRAL_TREADS } from '../game/spiral';
@@ -70,7 +70,7 @@ import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
 import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
-import { ARCH, BAY, DOOR, DOUBLE, FENCE_GAP, STAINED_PANEL, WINDOW, type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
+import { ARCH, BAY, DOOR, DOUBLE, FENCE_GAP, STAINED_OPENING, STAINED_PANEL, WINDOW, type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
 import { CAP_D, CAP_W, capMoss, hashOf, ivyLayout, mossStrip, PAVE_STAGES, pavingMoss, PPM, slabTopMoss, strandPic, vigour, type Keep } from './ivy';
 import { bridgeGreen, greenNow, greenShows, GREEN_WET_REACH, mossyPiece, pavingGreen, pieceGreen, slabGreen, wallGreen, wetFrom } from '../game/greening';
 import { ANVIL_SUBTILES, anvilCentre, type PlacedAnvil } from '../game/anvil';
@@ -11723,7 +11723,22 @@ export class Renderer {
       cuts = this.frameCuts.get(key);
       if (!cuts) this.frameCuts.set(key, (cuts = this.pilasterCuts(level, cx, cy, base, h1, engaged + PILASTER_PROUD, V)));
     }
-    const laid = drawColumn(this.canvas.ctx, this.camera, cx, cy, h0, h1, c.material, progressOf(c), alpha, PLAN_COLOR, paint, this.canvas.dpr, level === 0, engaged, cuts);
+    /*
+     * A head level with the walls' top is the stone at the corner of their
+     * caps, so it is in the caps' stone (`Masonry.top`), not the column's own:
+     * a white block on a marble house's dove-grey coping.
+     */
+    let cap: HeadTone | undefined;
+    if (engaged > 0 && !paint && h1 >= base + (level + 1) * WALL_HEIGHT - 1e-6) {
+      for (const [b] of Renderer.arms(cx, cy)) {
+        const w = this.game.buildings.wallOnBorder(level, b);
+        const top = w && isDone(w) ? this.masonryOf(w)?.top : undefined;
+        if (!top) continue;
+        cap = { body: top.shade, top: top.lit.map((v) => v / 1.18) as [number, number, number] };
+        break;
+      }
+    }
+    const laid = drawColumn(this.canvas.ctx, this.camera, cx, cy, h0, h1, c.material, progressOf(c), alpha, PLAN_COLOR, paint, this.canvas.dpr, level === 0, engaged, cuts, cap);
     if (lift && alpha >= 1 && laid !== null) this.liftColumn(lift, laid, cx, cy, h0, h1);
   }
 
@@ -13245,7 +13260,16 @@ export class Renderer {
        */
       const R = !past && !up && !n && !(P && Q) ? P ?? Q : null;
       const owns = !!R && (border.dir === 'h' ? !(hidden && !R.lid) : R.lid && !hidden);
-      return { i, n, P, Q, line, past, up, R, owns };
+      /*
+       * And the half-length of the stone over the square at this end, where
+       * this wall's top covers it: at a corner it owns, the corner's; where
+       * it runs on through a T, or east and west through a cross, the
+       * junction's, which the cap of the wall coming into it stops at. Each
+       * section of a run through lays the same stone in the same place.
+       */
+      const stone = owns && R ? R.h
+        : n && !past && !up && (P || Q) && (!(P && Q) || border.dir === 'h') ? Math.max(P?.h ?? 0, Q?.h ?? 0) : 0;
+      return { i, n, P, Q, line, past, up, R, owns, stone };
     });
     const joinAt = (i: -1 | 1): (typeof joins)[number] => joins[i < 0 ? 0 : 1];
     /** Where the face on the camera's side stops at the `i` end, along the run. */
@@ -13622,10 +13646,10 @@ export class Renderer {
         ctx.closePath();
       };
       /** A picture laid flat over the top from `a` to `b` along it, back edge at its top, front edge at its bottom. */
-      const capStone = (img: HTMLCanvasElement, a: number, b: number): void => {
-        const tlx = px(a, 1, -1), tly = py(a, 1, -1);
+      const capStone = (img: HTMLCanvasElement, a: number, b: number, far = -1): void => {
+        const tlx = px(a, 1, far), tly = py(a, 1, far);
         ctx.save();
-        ctx.transform((px(b, 1, -1) - tlx) / img.width, (py(b, 1, -1) - tly) / img.width,
+        ctx.transform((px(b, 1, far) - tlx) / img.width, (py(b, 1, far) - tly) / img.width,
           (px(a, 1, 1) - tlx) / img.height, (py(a, 1, 1) - tly) / img.height, tlx, tly);
         ctx.drawImage(img, 0, 0);
         ctx.restore();
@@ -14042,6 +14066,13 @@ export class Renderer {
             ctx.fill();
           }
           blit(hung ? lw.gateCap[v] : lw.cap[v], 1, 1, 1, true, lw.proud / cob.capH);
+          // A garden wall's corner and junctions take one cope stone of their own, as a house wall's do.
+          if (lw.corner) {
+            for (const i of [-1, 1] as const) {
+              const { stone } = joinAt(i);
+              if (stone) capStone(lw.corner, (i < 0 ? 0 : 1) - stone, (i < 0 ? 0 : 1) + stone, -(1 + 2 * lw.proud / cob.capH));
+            }
+          }
           for (const [a, b] of capRuns) { cap(a, b, 1); light(capLit); }
         }
         endGrain(lw.ends);
@@ -14154,35 +14185,44 @@ export class Renderer {
       /** gates: the face's picture with a portcullis's gateway in it. */
       const gatePic = (img: HTMLCanvasElement): HTMLCanvasElement =>
         gatewayPicture(img, WALL_HEIGHT, cob.reveal.map((c) => c * 1.3) as unknown as [number, number, number], cob.line);
-      blit(gateway ? gatePic(cob.face[v])
-        : arched ? cob.arch[v]
-        : windowed ? cob.window[v]
-        : doored ? cob.door[v]
-        : gated ? cob.gate[v]
-        : bayed ? cob.bay[v]
-        : cob.face[v], 0, 1, 1, false, 0, 0, turned);
       /*
-       * Stained glass set in a run of another masonry is set in that
-       * masonry (`dress`): its face round the glass (`STAINED_PANEL`), its
-       * cap and its foot, so the band, the cap and the plinth along the run
-       * go on across the panel and the stone either side of it is the
-       * run's own. In its own ivory every panel stepped the lines of a
-       * marble wall from grey to cream and stood in a cream frame.
+       * Stained glass set in a run of another masonry is a window of it
+       * (`dress`): the run's own face, with the opening its windows are cut
+       * and dressed as -- sill, jambs, head -- made wide enough for a panel
+       * (`STAINED_OPENING`, `Masonry.glazed`), and the panel of glass set in
+       * it; and the run's cap and foot over and under it, so its band, cap
+       * and plinth go on across. In its own ivory every panel stepped the
+       * lines of a marble wall from grey to cream and stood in a cream frame.
        */
-      /** All of the face but the glass of stained glass (`STAINED_PANEL`), as a path to clip even-odd to. */
+      const O = STAINED_OPENING;
+      /** All of the face but the opening the glass is set in, as a path to clip even-odd to. */
       const glassOut = (): void => {
-        const G = STAINED_PANEL;
         quad(-1, 2, -0.1, 1.002);
-        ctx.moveTo(px(G.t0, G.k0), py(G.t0, G.k0)); ctx.lineTo(px(G.t0, G.k1), py(G.t0, G.k1));
-        ctx.lineTo(px(G.t1, G.k1), py(G.t1, G.k1)); ctx.lineTo(px(G.t1, G.k0), py(G.t1, G.k0));
+        ctx.moveTo(px(O.t0, O.k0), py(O.t0, O.k0)); ctx.lineTo(px(O.t0, O.k1), py(O.t0, O.k1));
+        ctx.lineTo(px(O.t1, O.k1), py(O.t1, O.k1)); ctx.lineTo(px(O.t1, O.k0), py(O.t1, O.k0));
         ctx.closePath();
       };
       if (dress) {
+        // The panel (`STAINED_PANEL` of its own picture) drawn into the opening, and the run's face round it over its edges.
+        const G = STAINED_PANEL, img = cob.face[v];
+        const sx = (O.t1 - O.t0) / (G.t1 - G.t0), sk = (O.k1 - O.k0) / (G.k1 - G.k0);
+        const ta = O.t0 - G.t0 * sx, tb = O.t0 + (1 - G.t0) * sx, kt = O.k0 + (1 - G.k0) * sk, kb = O.k0 - G.k0 * sk;
         ctx.save();
-        glassOut();
-        ctx.clip('evenodd');
-        blit(dress.face[v % dress.face.length], 0, 1, 1, false, 0, 0, !!dress.handed && px(1, 0) < px(0, 0));
+        quad(O.t0 - 0.02, O.t1 + 0.02, O.k0 - 0.02, O.k1 + 0.02);
+        ctx.clip();
+        const tlx = px(ta, kt), tly = py(ta, kt);
+        ctx.transform((px(tb, kt) - tlx) / img.width, (py(tb, kt) - tly) / img.width, (px(ta, kb) - tlx) / img.height, (py(ta, kb) - tly) / img.height, tlx, tly);
+        ctx.drawImage(img, 0, 0);
         ctx.restore();
+        blit(dress.glazed(v), 0, 1, 1, false, 0, 0, !!dress.handed && px(1, 0) < px(0, 0));
+      } else {
+        blit(gateway ? gatePic(cob.face[v])
+          : arched ? cob.arch[v]
+          : windowed ? cob.window[v]
+          : doored ? cob.door[v]
+          : gated ? cob.gate[v]
+          : bayed ? cob.bay[v]
+          : cob.face[v], 0, 1, 1, false, 0, 0, turned);
       }
       /*
        * Quoins, where the run stops or turns a corner: the masonry's own
@@ -14417,8 +14457,8 @@ export class Renderer {
         const corner = (dress ?? cob).corner;
         if (corner) {
           for (const i of [-1, 1] as const) {
-            const { R, owns } = joinAt(i);
-            if (R && owns) capStone(corner, (i < 0 ? 0 : 1) - R.h, (i < 0 ? 0 : 1) + R.h);
+            const { stone } = joinAt(i);
+            if (stone) capStone(corner, (i < 0 ? 0 : 1) - stone, (i < 0 ? 0 : 1) + stone);
           }
         }
         cap(C0, C1, 1);

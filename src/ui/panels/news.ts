@@ -4057,9 +4057,10 @@ export const NEWS: News[] = [
     n: 348,
     day: '2026-10-26',
     lines: () => [
-      'Fixed: walls: corners, caps and window joins close cleanly: one corner stone where two caps meet, no hole at the corner of a storey set back, '
-        + 'a pilaster\'s head level with the caps, stained glass set in the band, cap and plinth of the wall beside it '
-        + '(was: caps overlapped, gaps at corners, a pale strip down corners, a cream frame round stained glass).',
+      'Fixed: walls: corners, caps and window joins close cleanly: one stone where two caps meet, at corners, T-junctions and garden wall corners; '
+        + 'no hole at the corner of a storey set back; a pilaster\'s head level with the caps, in their stone; '
+        + 'stained glass in a run of another stone set as its window (sill, jambs, head) under its band, cap and plinth '
+        + '(was: caps overlapped, gaps at corners, a pale strip down corners, stained glass in a cream frame).',
     ],
   },
 ];
