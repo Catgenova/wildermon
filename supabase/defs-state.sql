@@ -5933,6 +5933,8 @@ create or replace function grave_keeps() returns double precision language sql i
 create or replace function grave_reach() returns int language sql immutable as $fn$ select 3::int $fn$;
 create or replace function grave_keeps_said() returns text language sql immutable as $fn$ select '1 hour' $fn$;
 create or replace function brazier_capacity() returns double precision language sql immutable as $fn$ select 9000::double precision $fn$;
+create or replace function fire_capacity() returns double precision language sql immutable as $fn$ select 9000::double precision $fn$;
+create or replace function oven_capacity() returns double precision language sql immutable as $fn$ select 18000::double precision $fn$;
 create or replace function brazier_burn_one() returns double precision language sql immutable as $fn$ select 1.55::double precision $fn$;
 create or replace function brazier_burn_hundred() returns double precision language sql immutable as $fn$ select 0.6::double precision $fn$;
 create or replace function map_odds() returns double precision language sql immutable as $fn$ select 0.001::double precision $fn$;

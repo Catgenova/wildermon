@@ -213,8 +213,11 @@ check('on the island, coal before logs', at('ORDER:coal') === 'coal|17|-', at('O
 check('on the island, only a fuel a whole piece of fits: peat in 250 seconds of room, thatch in 100, none in 50', at('FITS') === 'peat,thatch,-', at('FITS'));
 check(`on the island, a Sluglow feeds a cold campfire a piece of tar, ${FUEL_VALUES.tar} seconds, and lights it; then has no fuel`,
   at('TAR') === `-|${FUEL_VALUES.tar}|true|stock`, at('TAR'));
-check(`on the island, a Slugferno carries ${COAL_FITS} coal to a campfire at ${NEAR_FULL} seconds, not its ${at('LOADS')} loads`,
-  Number(at('LOADS')) > COAL_FITS && at('FITTED') === `coal ${10 - COAL_FITS}|${NEAR_FULL + COAL_FITS * FUEL_VALUES.coal}`, `${at('LOADS')} ${at('FITTED')}`);
+{
+  const n = Math.min(Number(at('LOADS')), COAL_FITS);
+  check(`on the island, a Slugferno carries its ${at('LOADS')} loads of coal, or the ${COAL_FITS} that fit in a campfire at ${NEAR_FULL} seconds if fewer`,
+    at('FITTED') === `coal ${10 - n}|${NEAR_FULL + n * FUEL_VALUES.coal}`, `${at('LOADS')} ${at('FITTED')}`);
+}
 check(`on the island, holding ${COAL_FITS + 1} coal at that campfire it feeds ${COAL_FITS} and keeps 1`,
   at('PART') === `${NEAR_FULL + COAL_FITS * FUEL_VALUES.coal}|coal 1`, at('PART'));
 check('on the island, and takes that one back to the stores', at('BACK') === 'coal 1|-', at('BACK'));

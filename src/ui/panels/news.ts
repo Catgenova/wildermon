@@ -171,7 +171,7 @@ import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
 import { CHANNELS, FIGHTING, gradeId, traitOf, traitSays, type TraitDef } from '../../game/traits';
 import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import { STOKE_SAYS, STOKE_SMELT_SAYS, STOKE_SMELTS_AT } from '../../game/creatures';
-import { FUEL_VALUES as FUEL_VALUES_337 } from '../../game/campfire';
+import { FIRE_CAPACITY as FIRE_CAPACITY_338, FUEL_VALUES as FUEL_VALUES_337 } from '../../game/campfire';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
 import { MAX_STAND, SWIM_DEPTH } from '../../game/player';
@@ -3984,6 +3984,13 @@ export const NEWS: News[] = [
       `Changed: ${SPECIES.embra.stages![STOKE_SMELTS_AT - 1].name} and ${SPECIES.embra.stages![1].name}: ${STOKE_SMELT_SAYS}`,
       `Changed: stokers: ${STOKE_SAYS} Pieces a trip: whole pieces that fit only (was: at least 1, past full). Also fuel ovens and braziers.`,
       `Changed: tar: fuel, ${FUEL_VALUES_337.tar} seconds a piece.`,
+    ],
+  },
+  {
+    n: 338,
+    day: '2026-10-26',
+    lines: () => [
+      `Fixed: most fuel a fire holds: ${FIRE_CAPACITY_338} seconds, an oven ${OVEN_CAPACITY}, on the island as shown (was: island held less).`,
     ],
   },
 ];

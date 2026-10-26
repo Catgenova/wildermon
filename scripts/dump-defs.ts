@@ -140,7 +140,7 @@ import { CALLS_A_MINUTE, CHANGE_KEEP, EVENT_KEEP, FOG_BYTES, FOUND_MAX, GUIDE_BA
 import { CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STAND, MAX_STEP, SWIM_DEPTH } from '../src/game/player';
 import { CHUNK } from '../src/world/world';
 import { REGIONS } from '../src/world/regions';
-import { FUELS, FUEL_SAID } from '../src/game/campfire';
+import { FIRE_CAPACITY, FUELS, FUEL_SAID } from '../src/game/campfire';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../src/game/graves';
 import { spanWords } from '../src/game/words';
 import { DARK_HIT, DARK_SHOT, DARK_SWING, ENCHANT_HEAD, HEAVY_SKILLS, HOARD_HEAD, NIGHT_EYES_FROM, PROSPECT_HEAD, SOUL_GAIN, SOUL_PER_LEVEL, TAME_HEAD, WORK_BACK, WORK_HAND, WORK_WIND, WORK_WIND_SPENT } from '../src/game/learn';
@@ -148,7 +148,7 @@ import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, B
 import { SOUL_CHANCE } from '../src/game/sacrifice';
 import { GLASSHOUSE_GROWTH, HAND_WINTER, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_GROWTH, YEAR_SECONDS, YEARLESS_GROWTH } from '../src/game/growth';
 import { SEASON_DAYS, SEASONS, YEAR_DAYS, YEAR_FROM } from '../src/world/calendar';
-import { PLANTER_GROWING } from '../src/game/furniture';
+import { OVEN_CAPACITY, PLANTER_GROWING } from '../src/game/furniture';
 import { FRUITING, fruitingSays, fruitingSeasons, outOfSeasonSaid } from '../src/game/fruiting';
 import { FIELD_GLASS_ONLY, FIELD_NO_STOREY, FIELD_PACKED, GLASS, GLASS_FLOORED, GLASS_PITCHED, GLASS_ROOF_ONLY, GLASS_SLAB, FIELD_UNFLOORED, NOT_A_GLASSHOUSE, NOT_TILLABLE } from '../src/game/glasshouse';
 import {
@@ -2033,9 +2033,9 @@ out.push(`create or replace function grave_keeps() returns double precision lang
 out.push(`create or replace function grave_reach() returns int language sql immutable as $fn$ select ${q(GRAVE_REACH)}::int $fn$;`);
 out.push(`create or replace function grave_keeps_said() returns text language sql immutable as $fn$ select ${q(spanWords(GRAVE_KEEPS))} $fn$;`);
 
-/* What a brazier is: how much it holds, and how fast it goes by how well it was built. */
+/* What a brazier is: how much it holds, and how fast it goes by how well it was built. And what a fire and an oven hold. */
 for (const [fn, v] of [
-  ['brazier_capacity', BRAZIER_CAPACITY],
+  ['brazier_capacity', BRAZIER_CAPACITY], ['fire_capacity', FIRE_CAPACITY], ['oven_capacity', OVEN_CAPACITY],
   ['brazier_burn_one', BRAZIER_BURN_AT_ONE], ['brazier_burn_hundred', BRAZIER_BURN_AT_HUNDRED],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
