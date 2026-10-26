@@ -6,7 +6,7 @@ import type { Renderer } from '../../render/renderer';
 import { ROCK_VARIANTS, TileType, TILE_DEFS } from '../../world/tiles';
 import { UNSEEN, VISIBLE } from '../../game/vision';
 import type { UIWindow } from '../windows';
-import { springRgb, waterRgb } from '../../render/water';
+import { waterRgb } from '../../render/water';
 import type { WaterField } from '../../world/springs';
 
 /** How wide the drawn map is, whatever size the island is. */
@@ -335,8 +335,8 @@ export class MinimapPanel {
       // The same ramp the world is painted with. The map used to roll its own,
       // over a different pair of colours and a different depth, so a shelf
       // that read as pale green out of the window read as navy on the map.
-      // A pond is spring water, turquoise, measured down from its own level.
-      [r, g, b] = w.hasSea(x, y) ? waterRgb(Math.max(0, -h)) : springRgb(w.surfaceAt(x, y) - h);
+      // A pond is measured down from its own level.
+      [r, g, b] = w.hasSea(x, y) ? waterRgb(Math.max(0, -h)) : waterRgb(w.surfaceAt(x, y) - h);
     } else {
       const slope = w.getHeight(x + 1, y + 1) - w.getHeight(x, y);
       const shade = 0.9 + Math.max(-0.35, Math.min(0.25, -slope / 60));
@@ -359,7 +359,7 @@ export class MinimapPanel {
       }
       // A stream is narrower than a tile, and is drawn as a thread of water through the ground it crosses.
       if (this.streamTiles.has(y * w.w + x)) {
-        const [wr, wg, wb] = springRgb(3);
+        const [wr, wg, wb] = waterRgb(3);
         r = r * 0.3 + wr * 0.7;
         g = g * 0.3 + wg * 0.7;
         b = b * 0.3 + wb * 0.7;

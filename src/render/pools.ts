@@ -32,10 +32,10 @@
  * on the still water.
  */
 import type { Camera } from '../engine/camera';
-import { POOL_LIP, type Spill } from '../world/springs';
+import { POOL_DEPTH, POOL_LIP, type Spill } from '../world/springs';
 import { drawFoot, drawLip, drawSheet, fallView, place, type FallView, type Placed, type Sheet } from './falls';
 import { HALF_H, HALF_W, HEIGHT_SCALE } from './iso';
-import { SPRING_EDGE, SPRING_FOAM, SPRING_WATER } from './water';
+import { SPRING_EDGE, SPRING_FOAM, waterRgb } from './water';
 
 type RGB = readonly [number, number, number];
 
@@ -46,6 +46,9 @@ const PAD_LIGHT: RGB = [172, 226, 150];
 const PETAL: RGB = [246, 168, 184];
 const PETAL_TIP: RGB = [255, 226, 232];
 const HEART: RGB = [250, 214, 110];
+
+/** A pool's water: the ramp's colour at the depth from its surface to its floor. */
+const POOL_WATER = `rgb(${waterRgb(POOL_DEPTH - POOL_LIP).join(',')})`;
 
 /** The concrete left round a pool, as a share of the tile's side. */
 const RIM = 0.12;
@@ -403,7 +406,7 @@ export function drawPool(ctx: CanvasRenderingContext2D, cam: Camera, p: PoolScen
       ctx.closePath();
     }
   }
-  ctx.fillStyle = rgb(SPRING_WATER);
+  ctx.fillStyle = POOL_WATER;
   ctx.fill();
   ctx.clip();
 
