@@ -1689,7 +1689,7 @@ export function helpText(): string {
     </ul>
     <h3>Looking inside a building</h3>
     <ul>
-      <li>Storey arrows (right edge, once anything is built): <b>pin one storey</b>, up to the tallest building's roof. Every other storey hidden, above and below:
+      <li>Storey arrows (toolbar, once anything is built): <b>pin one storey</b>, up to the tallest building's roof. Every other storey hidden, above and below:
       walls, floors, roofs, and the furniture and people on them. Clicks and walks: onto that storey's floor (mounted: wide staircases only). Its menu: that storey's
       building work, <i>Plan staircase up</i>, furniture set down on it. Label <i>1st</i>, <i>2nd</i>…; click for <i>Auto</i> (every storey).
       <kbd>Page Up</kbd> / <kbd>Page Down</kbd> do the same.</li>

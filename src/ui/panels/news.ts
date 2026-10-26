@@ -3963,6 +3963,11 @@ export const NEWS: News[] = [
       'Fixed: island stalls: the clock leaves a body or wildermon in use to the next round (was: waited for it, everybody with it). Guards look round for what hurt somebody: those few only (was: every wild creature).',
     ],
   },
+  {
+    n: 335,
+    day: '2026-10-26',
+    lines: () => ['Changed: storey arrows and the wall cutaway: on the toolbar (was: right edge).'],
+  },
 ];
 
 /**

@@ -538,8 +538,8 @@ export class Hud {
     this.drawBelt();
 
     /*
-     * The storey control: which floor of a building you are looking at, and
-     * whether the walls between you and it are taken away.
+     * The storey control, on the toolbar's row: which floor of a building you
+     * are looking at, and whether the walls between you and it are taken away.
      */
     this.storeyEl = document.createElement('div');
     this.storeyEl.className = 'storey';
@@ -565,9 +565,9 @@ export class Hud {
     this.cutBtn = mk('tb-btn storey-cut', '◪', `Cut away facing walls (${boundKey('cutaway')})`, () => {
       this.game.settings.cutaway = !this.game.settings.cutaway;
     });
-    this.storeyEl.append(this.storeyUp, this.storeyLabel, this.storeyDown, this.cutBtn);
-    root.append(this.storeyEl);
-    for (const el of [status, toolbar, this.stackEl, this.beltEl, this.storeyEl]) keepKeys(el);
+    this.storeyEl.append(this.storeyDown, this.storeyLabel, this.storeyUp, this.cutBtn);
+    row.append(this.storeyEl);
+    for (const el of [status, toolbar, this.stackEl, this.beltEl]) keepKeys(el);
   }
 
   /**

@@ -2876,19 +2876,9 @@ button.goal-row:focus-visible {
 /* Storey view ------------------------------------------------------------ */
 
 .storey {
-  position: absolute;
-  top: 50%;
-  right: 12px;
   display: flex;
-  flex-direction: column;
   gap: 4px;
   align-items: stretch;
-  transform: translateY(-50%);
-  padding: 5px;
-  background: var(--ui-bg);
-  border: 1px solid var(--ui-border);
-  box-shadow: 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6));
-  pointer-events: auto;
 }
 
 .storey-btn {
@@ -2921,16 +2911,8 @@ button.goal-row:focus-visible {
 }
 
 .storey-cut {
-  margin-top: 2px;
   padding: 2px 8px;
-  border-top: 1px solid var(--ui-border);
   font-size: 13px;
-}
-
-#ui.narrow .storey {
-  top: auto;
-  bottom: 96px;
-  transform: none;
 }
 
 /* Dragging things between windows ------------------------------------------ */
@@ -6532,7 +6514,7 @@ button.goal-row:focus-visible {
  * is cast from. The outline along the four cuts is a line in a gradient laid
  * at forty-five degrees in each corner, the same distance in from it as the cut.
  */
-[data-ui='runecut'] :is(.win, .hud-status, .toolbar, .ctx-menu, .tooltip, .action-bar, .hud-target, .storey, .palette-box, .ask-box) {
+[data-ui='runecut'] :is(.win, .hud-status, .toolbar, .ctx-menu, .tooltip, .action-bar, .hud-target, .palette-box, .ask-box) {
   --cut: 5px;
   --face: color-mix(in srgb, var(--rc-stone) var(--rc-face), transparent);
   --plate: var(--rc-tex),
@@ -6555,7 +6537,7 @@ button.goal-row:focus-visible {
   position: relative;
 }
 
-[data-ui='runecut'] :is(.win, .hud-status, .toolbar, .ctx-menu, .tooltip, .action-bar, .hud-target, .storey, .palette-box, .ask-box)::before {
+[data-ui='runecut'] :is(.win, .hud-status, .toolbar, .ctx-menu, .tooltip, .action-bar, .hud-target, .palette-box, .ask-box)::before {
   --d: calc(var(--cut) * 0.7071);
   content: '';
   position: absolute;
@@ -6573,7 +6555,7 @@ button.goal-row:focus-visible {
 }
 
 /* Small plates are cut less deep than a window, and are solid: they are read in a glance. */
-[data-ui='runecut'] :is(.tooltip, .storey, .ctx-menu) {
+[data-ui='runecut'] :is(.tooltip, .ctx-menu) {
   --cut: 5px;
   --rc-face: 100%;
 }
@@ -9544,18 +9526,12 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
   z-index: 50;
 }
 
-/* The top corners, which the strip has left: the version and the frame rate on the right, the storey under them. */
+/* The top corners, which the strip has left: the version and the frame rate on the right. */
 #ui.phone .hud-corner {
   top: calc(var(--sa-t) + 4px);
   right: calc(var(--sa-r) + 8px);
   bottom: auto;
   align-items: flex-start;
-}
-
-#ui.phone .storey {
-  top: calc(var(--sa-t) + 28px);
-  right: calc(var(--sa-r) + 8px);
-  bottom: auto;
 }
 
 #ui.phone .zoom-out {
