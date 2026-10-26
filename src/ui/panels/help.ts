@@ -1759,6 +1759,7 @@ export function helpText(): string {
     <h4>Fences, gates, half walls</h4>
     <ul>
       <li>No building needed: <b>Plan fence</b> on any tile edge, on or off your settlement, packed or not.</li>
+      <li>Shore or waterway edge: allowed where both corners of the edge are at or above the water (sea level, or the pond's); posts on the dry side.</li>
       <li>Log fence: ${wallBill('log', 'fence').needed.log} logs (log wall: ${wallBill('log', 'solid').needed.log}). Half wall: ${frac(WALL_TYPE_BY_ID.get('half_wall')?.factor ?? 0)} of a wall.</li>
       <li>Both block everything alive, you included (a paddock holds a ${SPECIES.roxxen.name}). <b>Fence gate</b>: passable.</li>
       <li><b>Build fence</b> feeds them like a wall; taken down from the same menu.</li>

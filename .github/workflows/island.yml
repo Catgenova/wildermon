@@ -4065,6 +4065,21 @@ jobs:
             --outfile=node_modules/.cache/gates.mjs --log-level=error
           node node_modules/.cache/gates.mjs
 
+      - name: A fence stands on a shore where its border is above the water
+        if: matrix.shard == 5
+        run: |
+          # Reported: Plan fence on a path's border with a waterway, 0.1 m up,
+          # refused "Not in water." because a tile beside it had water on it.
+          # Only a corner of the border under the sea or a pond refuses it now,
+          # and 'No room for posts.' asks the dry side: the reported border, a
+          # corner at and under the sea, a border out in it, a pond's border
+          # above, at and under its level, a tree on either side and a border on
+          # land, the same on both sides; the reported fence planned and built
+          # on both, and finished, it stops a step across it either way.
+          npx esbuild supabase/test/wetfence.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/wetfence.mjs --log-level=error
+          node node_modules/.cache/wetfence.mjs
+
       - name: A rune gate is laid, passed and lit the same on both sides
         if: matrix.shard == 5
         run: |
