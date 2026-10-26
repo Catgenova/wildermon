@@ -13,7 +13,7 @@ import { paintTree } from './trees';
 import { BUSH3D_SPECIES, bush3dSprite, forgetTrees3d, log3dSprite, STUMP3D_SPECIES, stump3dSprite, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
 import { woodOf } from './trees3d/stump';
 import type { Season } from '../world/calendar';
-import { cropPlant } from './crops';
+import { cropPlant, DORMANT_FRUIT, DORMANT_LEAF, fieldBake } from './crops';
 
 /** A pre-rendered sprite. Sizes are in zoom-1 pixels; the canvas is drawn at SPRITE_SCALE for crispness. */
 export interface Sprite {
@@ -1034,9 +1034,7 @@ export function crateSprite(kind: 'log' | 'plank' = 'plank'): Sprite {
   return spr;
 }
 
-/** A crop's colours gone over for a winter it is waiting out: dull, and a little frosted. */
-const DORMANT_LEAF = '#8c8a62';
-const DORMANT_FRUIT = '#a99a78';
+/** A crop's colours gone over for a winter it is waiting out, drawn flat. */
 const frosted = (c: string, into: string, k: number): string => {
   const a = parseInt(c.slice(1), 16), b = parseInt(into.slice(1), 16);
   const ch = (v: number, sh: number): number => (v >> sh) & 255;
@@ -1045,13 +1043,13 @@ const frosted = (c: string, into: string, k: number): string => {
 };
 
 /**
- * A crop growing on a tilled field. Each of the four stages gets its own
- * model, and each family of crop its own shape (`cropPlant`), nine plants to
- * the tile. `dormant` is a field waiting out a winter, which grows nothing:
- * its green gone dull and a rime on the furrows.
+ * A crop on a tilled field drawn flat, for the low-end graphics (`drawsLow`):
+ * each of the four stages its own model, each family of crop its own shape
+ * (`cropPlant`), nine plants to the tile. `dormant` dulls its green and rimes
+ * its furrows.
  */
-export function cropSprite(cropId: string, stage: number, look: string, leaf: string, fruit: string, dormant = false, rect = false): Sprite {
-  const key = `${SPRITE_SCALE}|crop:${cropId}:${stage}${dormant ? ':dormant' : ''}${rect ? ':rect' : ''}`;
+export function cropFlatSprite(cropId: string, stage: number, look: string, leaf: string, fruit: string, dormant = false, rect = false): Sprite {
+  const key = `${SPRITE_SCALE}|cropflat:${cropId}:${stage}${dormant ? ':dormant' : ''}${rect ? ':rect' : ''}`;
   let spr = cache.get(key);
   if (spr) return spr;
   if (dormant) {
@@ -1140,6 +1138,17 @@ function hashString(s: string): number {
     h = Math.imul(h, 16777619);
   }
   return h >>> 0;
+}
+
+/**
+ * A tile of tilled field: `stage` -1 lying fallow, else a crop at that
+ * stage, built and lit as the solid trees are (`fieldBake`) from the camera's
+ * `turn` under the sun's `step`, laid out the `layout`th way (`FIELD_LAYOUTS`).
+ * `dormant` is a field waiting out a winter,
+ * which grows nothing: its green gone dull and a rime on it.
+ */
+export function cropSprite(cropId: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number, layout = 0): Sprite {
+  return fieldBake(cropId, stage, leaf, fruit, dormant, turn, step, SPRITE_SCALE, layout);
 }
 
 /**

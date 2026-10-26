@@ -1,8 +1,8 @@
-import { cropPlant } from '../crops';
+import { planterRow, planterTall } from '../crops';
 import { planterHolds as holds, planterTrim as trimOf } from '../plantertrim';
 import { rand } from '../ivy';
 import {
-  boards, css, deeper, grain, hex, mix, nail, paler, proj, slab, TAU, toneOf, woodTone,
+  boards, css, deeper, grain, hex, mix, nail, paler, slab, TAU, toneOf, woodTone,
   type Ctx, type KitLook, type KitModel, type KitPart, type KitPiece, type PaintCtx, type Side, type V3,
 } from './core';
 
@@ -11,16 +11,17 @@ import {
  * of the wood it was built of on four short feet, a capping rail round its
  * top, full of earth. Empty, the earth is bare and raked; sown, a drill runs
  * down its middle with the seed in it; after that a row of the crop grows
- * along it at its stage, the field's own plants at the box's size
- * (`cropPlant`), as the old model drew them. Dyed, its boards are painted.
+ * along it at its stage, the field's own plants at the box's size, lit and
+ * inked as a field's are (`planterRow`). Dyed, its boards are painted.
  *
  * Its `trim` is what it holds (`planterTrim`, plantertrim.ts): nought for
  * bare earth, otherwise one more than the crop's place in `CROP_LIST` times
  * `CROP_STAGES`, plus the stage. Read back with `planterHolds`.
  */
 
-/** How big a crop's plant is drawn in a planter, against one in a field (`PLANTER_PLANT`). */
-const PLANT = 0.85;
+/** How big a crop's plant is drawn in a planter, against one in a field, and the tallest one stands, in model units: corn and wemp come down to it. */
+const PLANT = 0.6;
+const PLANT_TALL = 9;
 /** How many plants along the row. */
 const ROW = 5;
 
@@ -106,18 +107,13 @@ function planterOf(look: KitLook): KitModel {
   if (has && has.stage > 0) {
     const [leaf, fruit] = has.crop.colors;
     const at: V3[] = Array.from({ length: ROW }, (_, i) => [-X + T + 1.5 + (i * (2 * (X - T) - 3)) / (ROW - 1), ((((i * 37) % 5) - 2) * 0.16), SOIL]);
-    const tall = 3 + has.stage * 2.2;
+    const size = Math.min(PLANT, PLANT_TALL / Math.max(1, planterTall(has.crop.id, has.stage, 1)));
+    const tall = planterTall(has.crop.id, has.stage, size);
     parts.push({
       reach: at.flatMap(([x, y, z]) => [[x - 1.4, y - 1.4, z], [x + 1.4, y + 1.4, z + tall]] as V3[]),
       // Clicked by too: the box it is clicked by grows with what grows in it.
       solid: true,
-      draw: (g, e) => {
-        const order = at.map((p, i) => ({ p, i, d: p[0] * e.toward[0] + p[1] * e.toward[1] })).sort((a, b) => a.d - b.d);
-        for (const { p, i } of order) {
-          const [px, py] = proj(e, p);
-          cropPlant(g, px, py, has.crop.look, has.stage, leaf, fruit, i * 0.9, PLANT);
-        }
-      },
+      draw: (g, e) => planterRow(g, e, at, has.crop.id, has.stage, leaf, fruit, size),
     });
   }
   return { parts, shade: [[-X, -Y, 0], [X, -Y, 0], [X, Y, 0], [-X, Y, 0]] };

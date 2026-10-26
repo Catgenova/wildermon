@@ -57,7 +57,7 @@ import { depthOf, type View } from './view';
 import { FALLS, roofModel, type Fall, type RoofGable, type RoofModel, type RoofPt } from './roofshape';
 import { COVER_PPT, covering } from './roofing';
 import { glass, glassBack, glassFace, glassReflects } from './glazing';
-import { GLASS } from '../game/glasshouse';
+import { GLASS, isGlasshouse } from '../game/glasshouse';
 import type { LightSource } from '../game/light';
 import { FLOOR_PPT, FLOOR_TILES, concrete, flooring, slabbing } from './flooring';
 import { LADDER, stairStyle } from './stairing';
@@ -440,7 +440,8 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, sprigOf, topEdges, type Face } from './outcrops';
-import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { cropFrame, FIELD_LAYOUTS } from './crops';
+import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropFlatSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { inkOf } from './ink';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
@@ -614,6 +615,8 @@ interface Entity {
    * `deckKey`).
    */
   key?: number;
+  /** A field on a slope: how far its picture's points go down the screen for each pixel across and down from its middle (`fieldTilt`). */
+  tilt?: [number, number];
   /** A lotus standing up off the water: its raised leaves, flowers and seed heads, sorted among what else stands there. */
   plant?: WaterPlant;
   /** A mote swirl turning over the tile (`./swirls`). */
@@ -1242,6 +1245,14 @@ const HEARTH_LIFT = { brazier: 34, oven: 44 };
 /** The zoom below which the rings are left off, as too small to read. */
 const RING_ZOOM = 0.55;
 
+/** A field's lip of turned soil where it meets other ground (`fieldLip`): how far in, as a share of the way to the tile's middle, and its tones over the field's. */
+const FIELD_LIP = 0.07;
+const FIELD_LIP_TOP = 'rgba(255,232,206,0.22)';
+const FIELD_LIP_SHADE = 'rgba(70,50,32,0.38)';
+const FIELD_LIP_FOOT = 'rgba(58,40,26,0.5)';
+/** The most a field's picture is sheared down the screen for each pixel across or down it (`fieldTilt`). */
+const FIELD_TILT_MOST = 0.45;
+
 export class Renderer {
   readonly camera = new Camera();
   time = 0;
@@ -1439,6 +1450,7 @@ export class Renderer {
     e.sp = undefined;
     e.spAlpha = undefined;
     e.key = undefined;
+    e.tilt = undefined;
     e.clip = undefined;
     this.ents.push(e);
     return e;
@@ -1778,6 +1790,7 @@ export class Renderer {
   private frameDt = 1 / 60;
   /** Whether the fields are waiting out a winter this frame: nothing in one grows, and it is drawn so. */
   private dormant = false;
+  private cropStep = 0;
   /**
    * The tiles of the room the player is standing in, for the cutaway.
    *
@@ -3188,11 +3201,78 @@ export class Renderer {
   private hemBuf: number[] = [];
   private hemRun: number[] = [];
 
+  /**
+   * A field on a slope, as a shear of its flat picture: the plane through its
+   * corners' heights, as how far each point goes down the screen for each
+   * pixel across and down from the tile's middle, so its furrows lie on the
+   * ground and its plants stand on it. Undefined on the flat. `off` is the
+   * tile's corners on the screen from its base point, `ox, oy` its middle.
+   */
+  private fieldTilt(c: ArrayLike<number>, off: ArrayLike<number>, ox: number, oy: number, avg: number, hs: number): [number, number] | undefined {
+    if (c[0] === c[1] && c[1] === c[2] && c[2] === c[3]) return undefined;
+    let dx = 0, dy = 0, xx = 0, yy = 0;
+    for (let i = 0; i < 4; i++) {
+      const X = off[i * 2] - ox, Y = off[i * 2 + 1] - oy, D = -(c[i] - avg) * hs;
+      dx += D * X; dy += D * Y; xx += X * X; yy += Y * Y;
+    }
+    // Kept to a plane a field can lie on: past that a picture sheared that far is more stretch than slope.
+    const most = FIELD_TILT_MOST;
+    return [Math.max(-most, Math.min(most, xx > 0 ? dx / xx : 0)), Math.max(-most, Math.min(most, yy > 0 ? dy / yy : 0))];
+  }
+
+  /**
+   * A field's edges where it meets anything but field: a lip of turned soil
+   * along each, a little raised -- its top lit, a line of shade inside it
+   * and its foot outside. Field against field runs on with no edge.
+   */
+  private fieldLip(ctx: CanvasRenderingContext2D, V: View, x: number, y: number, pts: Float64Array, zoom: number, lit: boolean): boolean {
+    const world = this.game.world;
+    const cx = (pts[0] + pts[2] + pts[4] + pts[6]) / 4;
+    const cy = (pts[1] + pts[3] + pts[5] + pts[7]) / 4;
+    const top = new Path2D(), inner = new Path2D(), foot = new Path2D();
+    let any = false;
+    for (let e = 0; e < 4; e++) {
+      const nx = x + V.edges[e][0], ny = y + V.edges[e][1];
+      if (nx < 0 || ny < 0 || nx >= world.w || ny >= world.h) continue;
+      if (this.groundAt(nx, ny, lit) === TileType.Field) continue;
+      any = true;
+      const f = (e + 1) & 3;
+      const ax = pts[e * 2], ay = pts[e * 2 + 1], bx = pts[f * 2], by = pts[f * 2 + 1];
+      // The lip's inner line: the edge taken in toward the middle.
+      const k = FIELD_LIP;
+      const ix = (px: number): number => px + (cx - px) * k, iy = (py: number): number => py + (cy - py) * k;
+      top.moveTo(ax, ay); top.lineTo(bx, by); top.lineTo(ix(bx), iy(by)); top.lineTo(ix(ax), iy(ay)); top.closePath();
+      inner.moveTo(ix(ax), iy(ay)); inner.lineTo(ix(bx), iy(by));
+      foot.moveTo(ax, ay); foot.lineTo(bx, by);
+    }
+    if (!any) return false;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0], pts[1]);
+    for (let k = 1; k < 4; k++) ctx.lineTo(pts[k * 2], pts[k * 2 + 1]);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = FIELD_LIP_TOP;
+    ctx.fill(top);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = FIELD_LIP_SHADE;
+    ctx.lineWidth = Math.max(0.6, 0.9 * zoom);
+    ctx.stroke(inner);
+    ctx.strokeStyle = FIELD_LIP_FOOT;
+    ctx.lineWidth = Math.max(0.8, 1.4 * zoom);
+    ctx.stroke(foot);
+    ctx.restore();
+    return true;
+  }
+
   private swardEdges(ctx: CanvasRenderingContext2D, V: View, x: number, y: number, pts: Float64Array, zoom: number, lit: boolean): boolean {
     const world = this.game.world;
     const co = V.corners;
     const mine = world.heightAt(x + 0.5, y + 0.5);
-    const grew = growth(this.groundAt(x, y, lit));
+    const ground = this.groundAt(x, y, lit);
+    // A tilled field is cut clean: no sward ruffles over it, and a lip of turned soil along its edge (`fieldLip`).
+    if (ground === TileType.Field) return this.fieldLip(ctx, V, x, y, pts, zoom, lit);
+    const grew = growth(ground);
     const buf = this.hemBuf;
     buf.length = 0;
     for (let e = 0; e < 4; e++) {
@@ -3916,7 +3996,7 @@ export class Renderer {
 
   /** The fast graphics this frame (`Settings.graphics`, or Low power): no swell, no haze, no small life. */
   private fast = false;
-  /** The low-end graphics this frame (`drawsLow`, or Low power): no wakes and no dust either, and the solid trees, bushes, stumps and logs drawn flat. */
+  /** The low-end graphics this frame (`drawsLow`, or Low power): no wakes and no dust either, and the solid trees, bushes, stumps, logs and fields drawn flat. */
   private still = false;
   /** Less motion this frame (`lessMotion`): no sway in trees, bushes and flowers, no bob or pulse in the markers, steady lights. */
   private calm = false;
@@ -3946,7 +4026,10 @@ export class Renderer {
     const season = seasonAt(this.greenAt).season;
     this.bloom = season === 'spring' || season === 'summer';
     // Whether the fields are waiting out a winter, which they are drawn doing: asked once a frame, not once a tile.
-    this.dormant = this.game.crops.size > 0 && fieldRate(this.game.wallNow()) <= 0;
+    this.dormant = fieldRate(this.game.wallNow()) <= 0;
+    // And the sun's step the fields are lit at (`fieldBake`), and a new frame's time to bake them in.
+    this.cropStep = sunStepOf(this.game.hourOfDay(), this.game.darkness());
+    cropFrame();
     // Pinned on a storey nothing is let go to be seen through: the storey is drawn whole (`storeyview.ts`).
     this.pinned = this.game.pinnedStorey();
     this.roomTiles = this.pinned === null ? this.myRoom() : null;
@@ -4658,11 +4741,17 @@ export class Renderer {
             this.take('swirl', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, h), null).swirl = swirl;
           }
         }
-        if (this.game.crops.size) {
-          const crop = this.game.cropAt(x, y);
-          if (crop) {
+        if (t === TileType.Field && !aloft) {
+          const crop = this.game.crops.size ? this.game.cropAt(x, y) : undefined;
+          const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
+          const [mx, my] = V.staggered ? [baseX, baseY + hh] : [baseX + hw / 2, baseY + hh / 2];
+          if (crop && this.still) {
+            // The low-end graphics: drawn flat (`cropFlatSprite`), and a field lying fallow is its ground alone.
             const def = cropDef(crop.id);
-            const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
+            this.take('crop', x, y, mx, my - avg * hs,
+              cropFlatSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], this.dormant && !crop.glass, !V.staggered));
+          } else if (crop) {
+            const def = cropDef(crop.id);
             /*
              * A field waits out a winter; what grows under glass does not
              * (`glasshouse.ts`). Stood at the tile's middle: the top corner and
@@ -4670,9 +4759,15 @@ export class Renderer {
              * a rectangle -- where it used to stand on the rectangle's corner,
              * and a glasshouse's crops stood half out through its walls.
              */
-            const [mx, my] = V.staggered ? [baseX, baseY + hh] : [baseX + hw / 2, baseY + hh / 2];
             this.take('crop', x, y, mx, my - avg * hs,
-              cropSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], this.dormant && !crop.glass, !V.staggered));
+              cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], this.dormant && !crop.glass, cam.rotation, this.cropStep,
+                Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS))).tilt = this.fieldTilt(c, off, mx - baseX, my - baseY, avg, hs);
+          } else if (!this.still) {
+            // A field tilled and lying fallow: its ridges and furrows, rimed in a winter out of glass. Ground, so first on its line, under whoever stands on it.
+            const rimed = this.dormant && !isGlasshouse(this.game.buildings, this.game.buildings.buildingAt(x, y));
+            const bare = this.take('crop', x, y, mx, my - avg * hs, cropSprite('', -1, '', '', rimed, cam.rotation, this.cropStep));
+            bare.key = -1e9;
+            bare.tilt = this.fieldTilt(c, off, mx - baseX, my - baseY, avg, hs);
           }
         }
         /*
@@ -7248,10 +7343,15 @@ export class Renderer {
         this.drawTree(ctx, ent, spr, zoom, grew);
         continue;
       }
-      // A solid stump or log has its shade, at its foot and thrown, in its own picture (`paintStump3d`, `paintLogs3d`).
-      if (this.shadow.alpha > 0.012 && !spr.solid) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
+      // A field's shade is its plants', thrown in its bake (`fieldBake`); a solid stump's or log's, at its foot and thrown, is in its own picture (`paintStump3d`, `paintLogs3d`).
+      if ((ent.kind !== 'crop' || this.still) && !spr.solid && this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
       const ready = this.atSize(spr.canvas, dw, dh);
-      this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => g.drawImage(ready, px - spr.ax * zoom * grew, py - spr.ay * zoom * grew, dw, dh), undefined,
+      const tilt = ent.tilt;
+      const ox = spr.ax * zoom * grew, oy = spr.ay * zoom * grew;
+      this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, tilt
+        // A field on a slope: its flat picture sheared onto the ground about its middle (`fieldTilt`).
+        ? (g, px, py) => { g.save(); g.transform(1, tilt[0], 0, 1 + tilt[1], 0, -tilt[0] * px - tilt[1] * py); g.drawImage(ready, px - ox, py - oy, dw, dh); g.restore(); }
+        : (g, px, py) => g.drawImage(ready, px - ox, py - oy, dw, dh), undefined,
         [left, top, dw, dh]);
       /*
        * And the shine, over the top of whatever it is, because the light comes
