@@ -73,15 +73,15 @@ import { NIGHT_WASH } from './nightwash';
 import { ARCH, BAY, DOOR, DOUBLE, FENCE_GAP, WINDOW, type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
 import { CAP_D, CAP_W, capMoss, hashOf, ivyLayout, mossStrip, PAVE_STAGES, pavingMoss, PPM, slabTopMoss, strandPic, vigour, type Keep } from './ivy';
 import { bridgeGreen, greenNow, greenShows, GREEN_WET_REACH, mossyPiece, pavingGreen, pieceGreen, slabGreen, wallGreen, wetFrom } from '../game/greening';
-import { anvilCentre, type PlacedAnvil } from '../game/anvil';
+import { ANVIL_SUBTILES, anvilCentre, type PlacedAnvil } from '../game/anvil';
 import { postCentre, postLeft, postLife, type PlacedPost } from '../game/posts';
 import { trapCentre, type PlacedTrap } from '../game/traps';
 import { ageDef, stageOf } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
 import { FIRE_CAPACITY, fireCentre, type PlacedCampfire } from '../game/campfire';
-import { smelterCentre, type PlacedSmelter } from '../game/smelter';
+import { SMELTER_H, SMELTER_W, smelterCentre, type PlacedSmelter } from '../game/smelter';
 import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
-import { kilnCentre, type PlacedKiln } from '../game/kiln';
+import { KILN_SUBTILES, kilnCentre, type PlacedKiln } from '../game/kiln';
 import { furnitureCentre, furnitureDef, hearthCapacity, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
 import { KNOWN, UNSEEN, VISIBLE } from '../game/vision';
 import { darknessAt, DAWN, deedLevel, DUSK } from '../game/game';
@@ -1122,7 +1122,35 @@ interface HitShape {
   sy: number;
   /** The transform it was drawn under, relative to the screen's: a boat's roll (`swayIn`). */
   m: DOMMatrix | null;
+  /** How opaque it was drawn (`footOver` draws it again so). */
+  alpha: number;
 }
+
+/**
+ * Something standing on the ground that reaches out over the tiles of the
+ * lines in front of its own (`standsOn`): its line, the ground under it on
+ * the screen and the box round that, and its drawings (`paint`) under the
+ * screen's transform, to be drawn again over the ground of those lines there
+ * (`footOver`).
+ */
+interface Foot {
+  d: number;
+  under: Path2D;
+  box: [number, number, number, number];
+  shapes: HitShape[];
+  at: DOMMatrix;
+  /** What was drawn after it where its foot is (`footShy`): drawn again after it, so still in front of it. */
+  after: HitShape[];
+}
+
+/** How many sides the round a thing stands over is taken as (`footOver`). */
+const FOOT_SIDES = 16;
+/** How many lines in front of its own a thing's foot is looked for on (`footOver`). */
+const FOOT_LINES = 4;
+/** How far past its footprint, in tiles, what stands on it is drawn: a wagon's wheels, a smelter's plinth (`standsOn`). */
+const FOOT_PAST = 0.12;
+/** How far past a tile's edge, in pixels, its ground can have been laid with its smoothing (`outsetTile`): what of a foot is drawn again over it reaches that far. */
+const FOOT_SEAM = 1;
 
 /**
  * The wash over everything at this hour: warm at the two ends of the day, cold
@@ -1651,6 +1679,12 @@ export class Renderer {
   /** What `paint` has drawn of the entity being drawn, and the screen's own transform it is measured from. */
   private entPaints: HitShape[] = [];
   private paintBase: DOMMatrix | null = null;
+  /** The line of the ground being drawn (`render`), or null outside that pass: what `standsOn` takes a thing's line from. */
+  private lineNow: number | null = null;
+  /** What stands on the lines just drawn and reaches over the ground of the lines in front (`standsOn`, `footOver`). */
+  private feet: Foot[] = [];
+  /** The feet the thing being drawn stands near (`footShy`), or null. */
+  private shyOf: Foot[] | null = null;
   /** The few pixels a pick is tested on (`shapeHas`). */
   private hitPad: HTMLCanvasElement | null = null;
   /**
@@ -1724,7 +1758,7 @@ export class Renderer {
    * out at the sharpest. False, and nothing put on the path, for a tile that
    * is not convex on the screen -- folded over on a cliff, or flat to a line.
    */
-  private outsetTile(ctx: CanvasRenderingContext2D, pts: ArrayLike<number>): boolean {
+  private outsetTile(ctx: CanvasRenderingContext2D, pts: ArrayLike<number>, by = 0.5): boolean {
     const turn = this.outsetTurn(pts);
     if (!turn) return false;
     const n = this.outsetNormals;
@@ -1739,8 +1773,8 @@ export class Renderer {
     for (let i = 0; i < 4; i++) {
       const a = i * 2, p = ((i + 3) & 3) * 2;
       const sx = n[p] + n[a], sy = n[p + 1] + n[a + 1];
-      // Half a pixel out along both edges' normals: half the sum over one plus their dot, kept to two pixels.
-      const k = Math.min(2 / Math.max(Math.hypot(sx, sy), 1e-6), 0.5 / Math.max(1 + n[p] * n[a] + n[p + 1] * n[a + 1], 1e-6));
+      // Half a pixel (`by`) out along both edges' normals: that over one plus their dot, kept to four times it.
+      const k = Math.min((4 * by) / Math.max(Math.hypot(sx, sy), 1e-6), by / Math.max(1 + n[p] * n[a] + n[p + 1] * n[a + 1], 1e-6));
       const x = pts[a] + sx * k, y = pts[a + 1] + sy * k;
       if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
@@ -4487,9 +4521,13 @@ export class Renderer {
     this.solidFrame(ctx, zoom, W, H, V, stepW, stepH, dLo, dHi);
     // The ground laid from pictures of it a block at a time where it can be (`GroundChunks`).
     this.gf = this.groundFrame(V, zoom, W, H, drawnAt, grid, paveRot, grassy, hemmed, paved, seamed, water, sun, voidInk);
+    this.feet.length = 0;
     for (let d = dLo; d <= dHi; d++) {
       // A building on piers in the water stands in front of all the water drawn before its line, swell and wakes and all.
       if (this.wetPierLines?.has(d)) this.layWater(ctx, zoom);
+      this.lineNow = d;
+      // What stood on a line well behind this one reaches no further.
+      if (this.feet.length && this.feet[0].d < d - FOOT_LINES) this.feet = this.feet.filter((f) => f.d >= d - FOOT_LINES);
       this.ents.length = 0;
       this.entN = 0;
       // Whether a runestone drawn on a line before this one is lit for the night, so this line's ground is kept off it.
@@ -4704,6 +4742,9 @@ export class Renderer {
           const kind = world.rockFace(x, y);
           if (kind > 0) seam(ctx, x, y, kind, pts, paveRot, zoom, this.canvas.dpr);
         }
+
+        // What stands on a line behind and reaches out over this tile's ground: drawn again over the part of it under its feet.
+        if (this.feet.length) this.footOver(ctx, d, pts, minY, maxY);
 
         const t = here;
         // A building over a cellar you are looking into is taken off, and everything in it with it.
@@ -5170,6 +5211,8 @@ export class Renderer {
         lineAny = false;
       }
     }
+    this.lineNow = null;
+    this.feet.length = 0;
     // And pictures made of the blocks of ground this frame wanted and did not have, as long as the frame can spare.
     if (this.gf) this.bakeChunks();
     this.gf = null;
@@ -6398,7 +6441,7 @@ export class Renderer {
     // Kept for picking by its pixels, with any roll it is drawn under.
     const cm = ctx.getTransform(), base = this.paintBase;
     const rolled = base && (cm.a !== base.a || cm.b !== base.b || cm.c !== base.c || cm.d !== base.d || cm.e !== base.e || cm.f !== base.f);
-    this.entPaints.push({ draw, sx, sy, m: rolled && base ? base.inverse().multiply(cm) : null });
+    this.entPaints.push({ draw, sx, sy, m: rolled && base ? base.inverse().multiply(cm) : null, alpha: ctx.globalAlpha });
     /*
      * After dark, drawn after a runestone and falling on its runes (its own
      * box, left, top, width and height on the screen, when the caller knows
@@ -6657,6 +6700,7 @@ export class Renderer {
     let behind = false, swayed = false;
     this.paintBase = ctx.getTransform();
     for (const ent of ents) {
+      this.footShown();
       this.entPaints.length = 0;
       if (swayed) {
         ctx.restore();
@@ -6667,6 +6711,8 @@ export class Renderer {
         behind = false;
       }
       this.occClips.length = 0;
+      // Drawn in front of something whose foot is to be drawn again over the ground in front: drawn again after that foot (`footShy`).
+      if (this.feet.length && ent.kind !== 'life' && ent.kind !== 'spell') this.footShy(ent, zoom);
       const under = ent.kind === 'life' || ent.kind === 'spell' || ent.kind === 'player' || ent.kind === 'peer' || ent.kind === 'creature' ? null : this.underJetty(ent);
       if (under) {
         ctx.save();
@@ -7098,6 +7144,12 @@ export class Renderer {
           bottom = Math.max(bottom, ent.sy + drawn[3]);
         }
         this.furnitureHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left, top, w: right - left, h: bottom - top, furniture: piece.id });
+        // On the ground, and not a hull on the water nor up on a storey, a deck or under a jetty: its foot over the lines in front (`standsOn`).
+        if (!behind && !(piece.level ?? 0) && !furnitureDef(piece.kind).boat && !(this.game.bridges.size && this.game.pieceOnDeck(piece, Math.floor(piece.x), Math.floor(piece.y)))) {
+          const [fw, fh] = furnitureFootprint(piece.kind, pieceFacing(piece));
+          const [wx, wy] = furnitureCentre(piece);
+          this.standsOn(wx, wy, ent.sy, Math.hypot(fw, fh) / 2 / SUBTILES + FOOT_PAST, zoom);
+        }
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, piece.id, this.time, W * 2 * zoom, h * zoom);
       }
       if (ent.kind === 'kiln' && ent.kiln) {
@@ -7121,6 +7173,7 @@ export class Renderer {
         if (look.lit && dark > 0.02) drawKilnNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time, this.nightOver(ent.sx, ent.sy - 24 * zoom, dark));
         const [hl, ht, hr, hb] = kilnHit(turn, zoom);
         this.kilnHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, kiln: kiln.id });
+        if (!behind) this.standsOn(...kilnCentre(kiln), ent.sy, this.footReach(KILN_SUBTILES, KILN_SUBTILES, hl, hr), zoom);
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, kiln.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
@@ -7146,6 +7199,7 @@ export class Renderer {
         if (look.lit && dark > 0.02) drawSmelterNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time, this.nightOver(ent.sx, ent.sy - 30 * zoom, dark));
         const [hl, ht, hr, hb] = smelterHit(turn, zoom);
         this.smelterHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, smelter: sm.id });
+        if (!behind) this.standsOn(...smelterCentre(sm), ent.sy, this.footReach(SMELTER_W, SMELTER_H, hl, hr), zoom);
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, sm.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
@@ -7183,6 +7237,7 @@ export class Renderer {
         }
         const [hl, ht, hr, hb] = anvilHit(face, shade, variant, turn, zoom);
         this.anvilHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, anvil: an.id });
+        if (!behind) this.standsOn(...anvilCentre(an), ent.sy, this.footReach(ANVIL_SUBTILES, ANVIL_SUBTILES, hl, hr), zoom);
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, an.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
@@ -7416,6 +7471,7 @@ export class Renderer {
         this.crateHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left, top, w: dw, h: dh, crate: ent.crateId });
       }
     }
+    this.footShown();
     if (swayed) ctx.restore();
     if (behind) ctx.restore();
     // Down a cellar it goes on once, over the whole of the cellar (`drawCellarView`).
@@ -7750,6 +7806,104 @@ export class Renderer {
       g.fillRect(0, 0, 128, 128);
     }
     return (this.contactPic = cv);
+  }
+
+  /** How far round its middle, in tiles, a thing of `w` by `h` subtiles stands that is drawn from `left` to `right` of it at zoom one (`standsOn`). */
+  private footReach(w: number, h: number, left: number, right: number): number {
+    return Math.max(Math.hypot(w, h) / 2 / SUBTILES, Math.max(-left, right) / (HALF_W * Math.SQRT2)) + FOOT_PAST;
+  }
+
+  /**
+   * Something just drawn on the line being drawn that stands on the ground
+   * (`Foot`): its middle in the world, `r` tiles round, drawn from the height
+   * `sy` on the screen says. Its line's ground was laid before it, but the
+   * lines in front of it lay theirs after: where that ground is under it, it
+   * is drawn again over it (`footOver`), so it stands on its ground rather
+   * than sunk into the next tile's. Under it is the round it stands over on
+   * the screen, at the ground's height and at its own, and all between.
+   */
+  private standsOn(wx: number, wy: number, sy: number, r: number, zoom: number): void {
+    if (this.lineNow === null || !this.entPaints.length || !this.paintBase) return;
+    const cam = this.camera, world = this.game.world;
+    const hb = (cam.worldToScreenY(wx, wy, 0) - sy) / (HEIGHT_SCALE * zoom);
+    const xs: number[] = [], ys: number[] = [];
+    for (let i = 0; i < FOOT_SIDES; i++) {
+      const a = (i / FOOT_SIDES) * Math.PI * 2;
+      const px = wx + Math.cos(a) * r, py = wy + Math.sin(a) * r, x = cam.worldToScreenX(px, py);
+      xs.push(x, x);
+      ys.push(cam.worldToScreenY(px, py, world.heightAt(px, py)), cam.worldToScreenY(px, py, hb));
+    }
+    const under = new Path2D();
+    let l = Infinity, t = Infinity, rt = -Infinity, b = -Infinity;
+    convexHull(xs, ys).forEach((i, k) => {
+      if (k === 0) under.moveTo(xs[i], ys[i]);
+      else under.lineTo(xs[i], ys[i]);
+      l = Math.min(l, xs[i]);
+      rt = Math.max(rt, xs[i]);
+      t = Math.min(t, ys[i]);
+      b = Math.max(b, ys[i]);
+    });
+    under.closePath();
+    this.feet.push({ d: this.lineNow, under, box: [l - 2, t - 2, rt + 2, b + 2], shapes: this.entPaints.slice(), at: this.paintBase, after: [] });
+  }
+
+  /**
+   * Something about to be drawn after a thing whose foot is drawn again over
+   * the ground in front (`footOver`), and so in front of it: where it stands
+   * near that foot, its drawings are kept to be drawn again after the foot
+   * (`footShown`), so the foot does not come over it.
+   */
+  private footShy(ent: Entity, zoom: number): void {
+    const body = ent.kind === 'player' || ent.kind === 'peer';
+    const w = HALF_W * zoom * (body ? 0.45 : 0.7);
+    const foot = ent.sy + (ent.drawDy ?? 0) - (ent.lift ?? 0) + HALF_H * zoom * 0.5;
+    const l = ent.sx + (ent.drawDx ?? 0) - w, r = l + 2 * w, t = foot - HALF_H * zoom * 6;
+    for (const f of this.feet) {
+      if (f.box[0] > r || f.box[2] < l || f.box[1] > foot || f.box[3] < t) continue;
+      (this.shyOf ??= []).push(f);
+    }
+  }
+
+  /** The thing just drawn (`footShy`): its drawings kept with each foot it stands near. */
+  private footShown(): void {
+    if (!this.shyOf) return;
+    for (const f of this.shyOf) f.after.push(...this.entPaints);
+    this.shyOf = null;
+  }
+
+  /**
+   * Tile (x, y) of line `d`, its ground laid, and what stands on a line
+   * behind reaching out over it (`standsOn`): each drawn again over the part
+   * of this tile's ground under it, before anything on this tile is. Ground
+   * of this tile further out is in front of it, and a rise there still hides
+   * it.
+   */
+  private footOver(ctx: CanvasRenderingContext2D, d: number, pts: ArrayLike<number>, minY: number, maxY: number): void {
+    const minX = Math.min(pts[0], pts[2], pts[4], pts[6]), maxX = Math.max(pts[0], pts[2], pts[4], pts[6]);
+    for (const f of this.feet) {
+      if (f.d >= d || f.box[0] > maxX || f.box[2] < minX || f.box[1] > maxY || f.box[3] < minY) continue;
+      ctx.save();
+      try {
+        ctx.beginPath();
+        // The tile as its ground was laid, half a pixel bigger all round (`outsetTile`), and as far again as that edge is smoothed over.
+        if (!this.outsetTile(ctx, pts, FOOT_SEAM)) {
+          ctx.moveTo(pts[0], pts[1]);
+          ctx.lineTo(pts[2], pts[3]);
+          ctx.lineTo(pts[4], pts[5]);
+          ctx.lineTo(pts[6], pts[7]);
+          ctx.closePath();
+        }
+        ctx.clip();
+        ctx.clip(f.under);
+        for (const s of f.after.length ? [...f.shapes, ...f.after] : f.shapes) {
+          ctx.setTransform(s.m ? f.at.multiply(s.m) : f.at);
+          ctx.globalAlpha = s.alpha;
+          s.draw(ctx, s.sx, s.sy);
+        }
+      } finally {
+        ctx.restore();
+      }
+    }
   }
 
 
