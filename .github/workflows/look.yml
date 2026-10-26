@@ -328,3 +328,24 @@ jobs:
             where p.name = 'catgenova' and (s.it).def in ('marble_brick', 'mortar', 'marble_shards') group by 1"
           ask "hods: the stocked work the island finds" "select * from hod_needing_stocked((select world_id from player where name = 'catgenova'), (select uid from player where name = 'catgenova'), 2584, 3026, 30)"
           ask "hods: hod work near, any" "select w.kind, w.level, w.x, w.y, w.needed from hod_work((select world_id from player where name = 'catgenova'), 2584, 3026, 30) w limit 15"
+          # Asked: "Dowse does not appear to be making nails or giving an error". The keeper's dowse, siffa and ulva,
+          # their trade on the island, the anvils and spindles in reach of the token, the lumps in the stores, and
+          # what the island would send each to next. Reads only.
+          ask "smiths: the trades on the island" "select id, gathers, work_range from species_def where id in ('dowse', 'siffa', 'ulva')"
+          ask "smiths: the keeper's dowse, siffa and ulva" "select c.id, c.species, c.mode, c.phase, c.job, c.idle_why, c.idle_n, c.idle_since, c.carrying, c.post,
+                 round(extract(epoch from now() - c.until)::numeric) as overdue_s, to_char(c.settled_at, 'HH24:MI:SS') as settled,
+                 round(creature_x(c)::numeric, 1) as cx, round(creature_y(c)::numeric, 1) as cy, c.work_x, c.work_y, work_range(c) as rng,
+                 left(c.skills::text, 120) as skills
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+            where c.keeper = p.uid and c.species in ('dowse', 'siffa', 'ulva') order by c.id"
+          ask "smiths: anvils and spindles on the keeper's settlement" "select q.id, q.kind, q.sub, q.x, q.y, q.level, d.name as deed,
+                 greatest(abs(q.x - d.x), abs(q.y - d.y)) as from_token, on_my_deed(q.world_id, p.uid, q.x, q.y) as on_deed
+             from player p join deed d on d.world_id = p.world_id and d.founded_by = p.uid
+             join placed q on q.world_id = p.world_id and (q.kind = 'anvil' or (q.kind = 'furniture' and q.sub = 'spindle'))
+              and abs(q.x - d.x) <= 80 and abs(q.y - d.y) <= 80
+            where p.name = 'catgenova' order by q.kind, q.id"
+          ask "smiths: lumps and fibre in the keeper's stores" "select l, stores_count(p.world_id, p.uid, l) as n from player p,
+                 unnest(array['iron_lump', 'copper_lump', 'tin_lump', 'zinc_lump', 'lead_lump', 'wool', 'cotton', 'wemp']) l where p.name = 'catgenova'"
+          ask "smiths: where the island sends each next" "select c.id, c.species, s.* from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+             cross join lateral errand_step(c.world_id, c.id) s
+            where c.keeper = p.uid and c.mode = 'deed' and c.species in ('dowse', 'siffa', 'ulva') order by c.id"
