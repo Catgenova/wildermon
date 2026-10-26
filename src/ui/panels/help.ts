@@ -166,6 +166,7 @@ import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
+import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
 import { LANDING_STAND, RUNESTONES, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
   BUSH_DEFS, groundRoll, ROCK_VARIANTS, SLAB_VARIANTS, STEPS_BRICKS, STEPS_LEAST, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS, STEPS_TWIST, TILE_DEFS, TileType,
@@ -2188,6 +2189,7 @@ export function helpText(): string {
       <li>First join on the island: pick a Runestone (${listed(RUNESTONES.map((r) => `${r.name}, ${r.place.toLowerCase()}`))}); you start ${START_GAP} tiles from its edge,
       on the nearest ring ${START_GAP} to ${START_GAP + START_SPARE} tiles out with a free tile (as a Telestone's: dry, no building, no more than ${metres(LANDING_STAND)} m between highest and lowest corner).
       Never asked again.</li>
+      <li>On death: <b>Respawn</b> beside one, on the same ring as a first join (Dying, below).</li>
       <li>Impassable; nothing dug, built, planted or set down on its ${STONE_SPAN * STONE_SPAN} tiles. Hover or Examine names it.</li>
       <li>Meditation gain ${mul(SIT_WORTH.stone)} on a rug within ${SIT_WORTH.stoneReach} tiles (Meditation, below).</li>
       <li><b>Telestone</b>: ${bill('make_telestone')}, ${workedAt('make_telestone')}. <b>Travel to a Runestone</b> on it in the pack, pick a stone: instant, onto a free tile beside it
@@ -2580,7 +2582,11 @@ export function helpText(): string {
     </ul>
     <h3>Dying, and your grave</h3>
     <ul>
-      <li>Health at zero: you <b>die</b> and wake on your landing shore, every wound closed.</li>
+      <li>Health at zero: you <b>die</b> and wake on the island's spawn, every wound closed.</li>
+      <li><b>Respawn</b> chooser, until you step off the spawn: each of the ${RUNESTONES.length} Runestones (${START_GAP} tiles from its edge, as a first join),
+      or a settlement you founded or are a member of (first free tile ${RESPAWN_GAP} to ${RESPAWN_GAP + RESPAWN_SPARE} tiles from its token: dry, no building,
+      no more than ${metres(LANDING_STAND)} m between highest and lowest corner). Each card: distance in tiles from where you fell.
+      <b>${STAY_SAID}</b>, a step or a closed tab: the spawn.</li>
       <li><b>What you carried stays</b> in a <b>grave</b> where you fell: pack, held items, toolbelt, every bag and its contents.</li>
       <li>Kept on you: clothing, armour, jewel, a crate with a wildermon in it, anything offered in a deal.</li>
       <li>Died in water too deep to stand: grave on the nearest dry ground within <b>${GRAVE_REACH} tiles</b>, else where you fell. Carrying nothing: no grave.</li>

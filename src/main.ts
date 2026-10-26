@@ -49,6 +49,7 @@ import { DUST_LIFE } from './render/dust';
 import { FLOAT_LIFE, FLOAT_RISE, Floaters, MERGE_WINDOW } from './render/floaters';
 import { HAZE_MAX, HAZE_REACH, skyAt, unknownInk } from './render/sky';
 import { Asker } from './ui/ask';
+import { mountRespawn } from './ui/respawn';
 import { UI } from './ui/ui';
 import { dragging } from './ui/dragdrop';
 // Debug surface only. These come last on purpose: main is the entry point, so
@@ -273,6 +274,8 @@ game.hooks = {
   count: (question, most, fallback) => asker.count(question, most, fallback),
   note: (question, max) => asker.name(question, '', max),
 };
+// After a death, where to wake: the Runestones and your settlements, over the world (`src/ui/respawn.ts`).
+mountRespawn(uiRoot, game, island);
 
 const player = game.player;
 camera.rotation = game.settings.rotation;

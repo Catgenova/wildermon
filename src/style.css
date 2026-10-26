@@ -549,6 +549,122 @@ body {
   }
 }
 
+/* How far a card's stone or token is (the death chooser): the number picked by, so it stands out from the place. */
+.boot-stone-far {
+  font-style: normal;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #b9dc93;
+}
+
+/*
+ * After a death, where to wake (src/ui/respawn.ts): the first join's cards on a card of the boot's colours, over the
+ * world dimmed behind it. Scrolled within when the screen is too short for it, never cut off.
+ */
+.respawn {
+  position: absolute;
+  inset: 0;
+  z-index: 19000;
+  display: flex;
+  padding: 16px;
+  overflow-y: auto;
+  background: rgba(4, 9, 16, 0.62);
+}
+
+.respawn-card {
+  box-sizing: border-box;
+  width: min(44rem, 100%);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem 1.1rem;
+  background: #12395f;
+  color: #e9e1cf;
+  font: var(--ui-font);
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(233, 225, 207, 0.32);
+  border-radius: 4px;
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.6);
+}
+
+.respawn-title {
+  font-size: 1.15rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.respawn-why {
+  padding: 0.35rem 0.6rem;
+  border-left: 3px solid #e8907a;
+  background: rgba(232, 144, 122, 0.12);
+  color: #f3c2b4;
+}
+
+/* The two rows' heads: the settlements' a little apart from the stones above them. */
+.respawn .boot-stones-head + .boot-stone ~ .boot-stones-head {
+  margin-top: 0.45rem;
+}
+
+.respawn-stay {
+  align-self: flex-end;
+  padding: 0.4rem 0.9rem;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid rgba(233, 225, 207, 0.3);
+  border-radius: 3px;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+.respawn-stay:hover,
+.respawn-stay:focus-visible {
+  opacity: 1;
+  border-color: #9ec37a;
+  outline: none;
+}
+
+/* A phone held upright: the list, its pictures small, so the five and the settlements fit with little scrolling. */
+@media (max-width: 559px) {
+  .respawn {
+    padding: 10px;
+  }
+
+  .respawn-card {
+    padding: 0.8rem 0.8rem 0.9rem;
+  }
+
+  .respawn .boot-stone-pic {
+    width: 3rem;
+    height: 4rem;
+  }
+
+  .respawn .boot-stone-words {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 0.6rem;
+  }
+
+  .respawn .boot-stone-words span {
+    grid-column: 1;
+  }
+
+  /* The distance at the row's right, level with the name. */
+  .respawn .boot-stone-far {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+
+  .respawn-stay {
+    align-self: stretch;
+  }
+}
+
 .boot-done {
   margin: 0;
   padding: 0;

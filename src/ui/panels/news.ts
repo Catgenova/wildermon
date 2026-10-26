@@ -4035,6 +4035,14 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => ['Changed: Runestone picker: a picture of each stone.'],
   },
+  {
+    n: 345,
+    day: '2026-10-26',
+    lines: () => [
+      `New: on death: respawn at one of the ${num(RUNESTONES.length)} Runestones (${num(START_GAP)} tiles from it) or next to the token of a settlement `
+        + 'you founded or are a member of; distance in tiles from your body on each (was: the island\'s spawn, still the default).',
+    ],
+  },
 ];
 
 /**

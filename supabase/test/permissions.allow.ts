@@ -333,6 +333,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_regret_class(uuid,text)",
     "rpc_report_error(text,text,text,text,uuid)",
     "rpc_report_player(uuid,uuid,text,text)",
+    "rpc_respawn(uuid,text)",
     "rpc_rite(uuid,text)",
     "rpc_rune_gate_folk(uuid)",
     "rpc_sales(uuid,text)",
