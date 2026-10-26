@@ -4012,6 +4012,17 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => ['Fixed: altar casts (Light of the dawn and the rest): cast where you stand at the altar (was: "too far" from its far side).'],
   },
+  {
+    n: 342,
+    day: '2026-10-26',
+    lines: () => {
+      const stitch = CLASS_SPELL_BY_ID.get('chirurgeon_quick_stitch')!;
+      return [
+        `Fixed: ${stitch.name}: deepest wound depth ×${Number((1 - stitch.fx.close).toFixed(2))}; log: wound, depth before → after `
+          + '(was: any bleeding or gone-bad wound first, however light).',
+      ];
+    },
+  },
 ];
 
 /**

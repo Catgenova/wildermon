@@ -163,7 +163,7 @@ begin
   insert into said values ('FIELD:FAR', class_spell_cast(w.world_id, w.uid, 'chirurgeon_field_dressing', ${ON_O})->>'why');
   update player set body_at = now(), x = v_px + 1.5, stats = jsonb_set(stats, '{health}', '1') where world_id = w.world_id and uid = o;
 
-  /* ---- Quick Stitch: the worst wound by its share, and nothing else ---- */
+  /* ---- Quick Stitch: the deepest wound by its share, and nothing else ---- */
   update player set wounds = ${WOUNDS} where world_id = w.world_id and uid = o;
   r := class_spell_cast(w.world_id, w.uid, 'chirurgeon_quick_stitch', ${ON_O});
   insert into said select 'STITCH', ${WOUNDS_READ} || '|' || coalesce(r->>'said', r->>'why') from player pl where pl.world_id = w.world_id and pl.uid = o;
@@ -424,8 +424,9 @@ check('the trade is taken up', island('TAKE') === 'took', island('TAKE'));
 }
 {
   const [wounds, line] = parts('STITCH');
-  check(`Quick Stitch: the worst wound ${pct(fx('quick_stitch', 'close'))} closed, and the other as it was`,
-    wounds === `1:0.100:true,2:${(0.2 * (1 - fx('quick_stitch', 'close'))).toFixed(3)}:true` && line.endsWith(`: worst wound closed ${pct(fx('quick_stitch', 'close'))}.`), island('STITCH'));
+  check(`Quick Stitch: the deepest wound ${pct(fx('quick_stitch', 'close'))} closed, and the other as it was`,
+    wounds === `1:0.100:true,2:${(0.2 * (1 - fx('quick_stitch', 'close'))).toFixed(3)}:true`
+      && line.endsWith(`: bite (leg) depth ${pct(0.2)} → ${pct(0.2 * (1 - fx('quick_stitch', 'close')))}.`), island('STITCH'));
   check('and on wounds as a body takes them, with no id, it closes the deep burn and not the light cut taken before it',
     island('STITCH:TAKEN') === `cut:0.030,burn:${(0.94 * (1 - fx('quick_stitch', 'close'))).toFixed(3)}`, island('STITCH:TAKEN'));
   check('and it is refused on somebody with no wound', / has no wound\.$/.test(island('STITCH:NONE')), island('STITCH:NONE'));

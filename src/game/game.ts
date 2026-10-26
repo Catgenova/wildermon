@@ -9250,7 +9250,8 @@ export class Game {
    * answers; it does not decide anything about them.
    */
   sawWounds(rows: unknown[]): void {
-    this.player.wounds = rows as Wound[];
+    // Nothing on a wound is `dressing: null`; the beat's answer drops null keys (`jsonb_strip_nulls`), and a missing one read as a herb on it.
+    this.player.wounds = (rows as Wound[]).map((w) => ({ ...w, dressing: w.dressing ?? null }));
     this.events.emit('stats');
   }
 

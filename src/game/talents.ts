@@ -371,7 +371,7 @@ export const CLASS_SPELLS: ClassSpellDef[] = ([
   chirurgeon(1, 'Field Dressing', 0.06, 8, ['self', 'player'], { heal: 0.1, reach: 2 },
     (fx) => `You or a player within ${fx.reach} tiles: health +${percent(fx.heal)}; worst bleeding wound stops bleeding.`),
   chirurgeon(2, 'Quick Stitch', 0.08, 10, ['self', 'player'], { close: 0.3, reach: 2 },
-    (fx) => `You or a player within ${fx.reach} tiles: worst wound severity −${percent(fx.close)}.`),
+    (fx) => `You or a player within ${fx.reach} tiles: deepest wound depth ×${Number((1 - fx.close).toFixed(2))}.`),
   chirurgeon(49, 'Leech', 0.12, 20, ['enemy'], { more: 0.8 },
     (fx) => `knife blow at ${ofBlow(fx.more)}; health regained: the % of the target's max health it takes, as % of yours.`, 'knives'),
   chirurgeon(4, 'Regenerate', 0.15, 45, ['self', 'player'], { each: 0.02, secs: 15, reach: 4 },

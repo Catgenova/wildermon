@@ -2574,6 +2574,23 @@ jobs:
             --outfile=node_modules/.cache/chirurgeon.mjs --log-level=error
           node node_modules/.cache/chirurgeon.mjs
 
+      - name: Quick Stitch closes the deepest wound
+        if: matrix.shard == 3
+        run: |
+          # Reported: "quick stitch isn't working at all to lower wound
+          # severity". It closed the wound a dressing goes to first, scored
+          # bleeding and gone bad over depth, so once the deep one was dressed
+          # it took 30% of 3% off a light cut. Asked through the spell bar's
+          # door, on yourself and on somebody within reach: the deepest wound
+          # and only it goes to its share, the line names it with its depth
+          # before and after, the cost is spent and the spell rests, the next
+          # beat closes on from there, past reach and unhurt are refused with
+          # nothing spent; and the browser's wound window shows the depth the
+          # line says, the spell's text the island's.
+          npx esbuild supabase/test/quickstitch.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/quickstitch.mjs --log-level=error
+          node node_modules/.cache/quickstitch.mjs
+
       - name: A dressing goes past a wound gone bad
         if: matrix.shard == 3
         run: |
