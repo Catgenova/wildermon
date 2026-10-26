@@ -35,6 +35,7 @@ import { presenceOf } from './presence';
 import { BUILD, DEPLOY, StaleBuild } from '../version';
 import type { InputNote } from '../engine/cadence';
 import type { BootPhase } from '../ui/bootsteps';
+import { fallenIn, type Fallen } from '../game/respawn';
 
 /**
  * The jobs whose work shows only on the ground's slow half: Clear the ivy and
@@ -931,6 +932,12 @@ export function castWireIn(v: unknown): CastWire | null {
 }
 
 export interface IslandHooks {
+  /**
+   * The island's offer after a death, on every beat (`rpc_settle`'s `fallen`):
+   * where the body fell and the settlements it may wake at, while it may pick
+   * where to wake; null when it may not. `src/ui/respawn.ts` shows it.
+   */
+  fallen?: (offer: Fallen | null) => void;
   /**
    * Somebody else cast a spell and the island took it: their browser says so
    * over Broadcast (`castSeen`), for this one to draw. Only drawn -- the
@@ -2198,6 +2205,7 @@ export class Island {
         said?: Array<{ n: number; text: string; kind: string; at?: string }> | null;
         saidTo?: number | null;
         land_from?: number;
+        fallen?: unknown;
       };
       if (typeof said.land_from === 'number') this.landFrom = Math.max(this.landFrom, said.land_from);
       // The hour, on the beat every browser makes anyway. Nothing else has to
@@ -2247,6 +2255,8 @@ export class Island {
         skin: said.skin && typeof said.skin === 'object' ? said.skin : undefined,
         tally: said.tally, ledger: said.ledger, ticked: said.ticked,
       });
+      // After a death, where to wake, while the body may still pick: shown over the world (`src/ui/respawn.ts`).
+      if (!error) this.hooks.fallen?.(fallenIn(said.fallen));
       /*
        * A clearing of ivy or moss has landed: what it cleared rides the
        * ground's slow half, so that is what the next ground read brings, and
@@ -3658,6 +3668,23 @@ export class Island {
     this.stairsSaid = null;
     this.crossed = null;
     this.hooks.moved?.(x, y, level);
+  }
+
+  /**
+   * Where to wake after a death (`rpc_respawn`): a Runestone's id, `DEED_AT`
+   * and a founder's id, or `RESPAWN_STAY`. The body goes where the island put
+   * it; the answer is null, or why not.
+   */
+  async respawn(at: string): Promise<string | null> {
+    if (!this.info) return 'You are not on an island.';
+    const { data, error } = await supabase().rpc('rpc_respawn', { p_world: this.info.id, p_at: at });
+    // The next beat says whether the offer still stands.
+    this.armBeat(0.5);
+    if (error) return error.message;
+    const put = (data ?? {}) as { why?: string; x?: number; y?: number; level?: number };
+    if (typeof put.why === 'string') return put.why;
+    if (typeof put.x === 'number' && typeof put.y === 'number') this.follow({ x: put.x, y: put.y, level: put.level ?? 0 });
+    return null;
   }
 
   /** A faith door: the whole answer, or `why` alone when it refused or failed. */

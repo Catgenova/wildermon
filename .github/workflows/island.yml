@@ -3366,6 +3366,26 @@ jobs:
           npx esbuild supabase/test/stonestart.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/stonestart.mjs --log-level=error
           node node_modules/.cache/stonestart.mjs
+      - name: On death, wake at a Runestone or a settlement of yours
+        if: matrix.shard == 4
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          RESPAWN_STRICT: '1'
+        run: |
+          # "show that screen on death, with an indicator of how far each rune
+          # is from your corpse, or an option to respawn at your deed token or
+          # one you belong to". A death is as it was (the spawn, whole, a grave
+          # where the body fell); the beat then offers where it fell and its
+          # own and member settlements. Each stone wakes it on a first join's
+          # ring; a settlement next to its token, the next tile when that one
+          # is built on; a stranger's settlement, a body that never died or
+          # stepped off the spawn, and a pick that is none of these are
+          # refused; stay, or never picking, is the spawn. Drawn in Chrome over
+          # the world: the five and the two settlements with their distances
+          # and pictures, keys kept in it, a refusal shown again with why.
+          npx esbuild supabase/test/respawnpick.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/respawnpick.mjs --log-level=error
+          node node_modules/.cache/respawnpick.mjs
       - name: Enchanting, the paper press and three melee enchantments, the same on both sides
         if: matrix.shard == 4
         run: |

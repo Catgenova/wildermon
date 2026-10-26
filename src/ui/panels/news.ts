@@ -4040,6 +4040,14 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => ['Fixed: wagons, smelters, kilns, anvils and other pieces on a slope: no longer cut off by the ground in front.'],
   },
+  {
+    n: 346,
+    day: '2026-10-26',
+    lines: () => [
+      `New: on death: respawn at one of the ${num(RUNESTONES.length)} Runestones (${num(START_GAP)} tiles from it) or next to the token of a settlement `
+        + 'you founded or are a member of; distance in tiles from your body on each (was: the island\'s spawn, still the default).',
+    ],
+  },
 ];
 
 /**

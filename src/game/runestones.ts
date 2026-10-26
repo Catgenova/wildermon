@@ -173,11 +173,13 @@ export const LANDING: ReadonlyArray<readonly [number, number]> = rings(1, 3);
 /**
  * The square rings `from` to `to` tiles out from a stone's edge, as offsets
  * from its centre, in the order they are tried: ring by ring outwards, within
- * a ring the middles of its sides first, the south side first.
+ * a ring the middles of its sides first, the south side first. `half` is how
+ * far the thing ringed reaches each way from its centre tile: a stone's
+ * `STONE_HALF`, nought for a thing on one tile (a settlement's token).
  */
-function rings(from: number, to: number): ReadonlyArray<readonly [number, number]> {
+export function rings(from: number, to: number, half = STONE_HALF): ReadonlyArray<readonly [number, number]> {
   const out: Array<[number, number, number]> = [];
-  for (let r = STONE_HALF + from; r <= STONE_HALF + to; r++) {
+  for (let r = half + from; r <= half + to; r++) {
     for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r) out.push([dx, dy, r]);
   }
   out.sort((a, b) => a[2] - b[2] || (Math.abs(a[0]) + Math.abs(a[1])) - (Math.abs(b[0]) + Math.abs(b[1])) || b[1] - a[1] || a[0] - b[0]);

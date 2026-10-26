@@ -118,6 +118,8 @@ const refused: Array<[string, string, string]> = [
   ['rpc_settle', `rpc_settle(null, $1, null, false, ${lit(Array.from({ length: 501 }, (_, i) => `goal${i}`))})`, 'Bad request: rpc_settle p_ticked: too many.'],
   ['rpc_settle', `rpc_settle(null, $1, null, false, ${lit({ goal: true })})`, 'Bad request: rpc_settle p_ticked: want a list.'],
   ['rpc_join', `rpc_join($1, 'Arjen', 'atlantis')`, 'Bad request: rpc_join p_stone: not a Runestone.'],
+  ['rpc_respawn', `rpc_respawn($1, 'atlantis')`, 'Bad request: rpc_respawn p_at: not a Runestone, a settlement or stay.'],
+  ['rpc_respawn', `rpc_respawn($1, 'deed:somebody')`, 'Bad request: rpc_respawn p_at: not a Runestone, a settlement or stay.'],
 ];
 
 /* ---- the island ----------------------------------------------------------------------------------- */
