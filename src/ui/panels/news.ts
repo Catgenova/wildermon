@@ -4035,6 +4035,11 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => ['Changed: Runestone picker: a picture of each stone.'],
   },
+  {
+    n: 345,
+    day: '2026-10-26',
+    lines: () => ['Fixed: wagons, smelters, kilns, anvils and other pieces on a slope: no longer cut off by the ground in front.'],
+  },
 ];
 
 /**
