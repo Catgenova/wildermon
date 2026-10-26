@@ -494,6 +494,9 @@ begin
      end $f$
   $x$;
   update player set foreknow = ${P('foreknow').fx.goes} where world_id = w.world_id and uid = u;
+  -- A swirl on the tile, which every go is asked for again at its go (\`settle\`); the stand-in collects none.
+  delete from mote_swirl where world_id = w.world_id and x = tx and y = ty;
+  insert into mote_swirl (world_id, x, y, element, region) values (w.world_id, tx, ty, 'fire', 0);
   for v_n in 1..${P('foreknow').fx.goes + 1} loop
     update player set act = 'collect_motes', act_target = jsonb_build_object('kind', 'tile', 'x', tx, 'y', ty),
            act_started = now() - interval '2 seconds', act_ends = now() - interval '1 second', act_left = 1, act_goes = 1, act_queue = '[]'::jsonb

@@ -20,7 +20,7 @@ import type { ItemRow } from '../net/island';
 import { packed, type Aged } from '../net/packed';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, staminaBarAbove, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
-import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, isSpiral, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
+import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
 import { UNDONE_PLANS, type PlanAnswer } from './planarea';
@@ -5490,6 +5490,8 @@ export class Game {
   requestAction(def: ActionDef, target: Target, goes?: number): void {
     // Asking for a job is deciding to stop somewhere: a long walk in legs ends here.
     this.travel = null;
+    // A storey job keeps the storey it was asked on, however the work level moves before its go (`keepJobLevel`).
+    target = keepJobLevel(this.buildings, def.id, target);
     const named = target.kind === 'item' ? target.uid : 'itemUid' in target ? target.itemUid : undefined;
     this.lastAsked = { def, target, goes, was: named !== undefined ? this.inventory.get(named)?.id : undefined };
     // A wall or a floor planned by hand is your last plan, to undo (`planarea.ts`).

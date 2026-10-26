@@ -24,6 +24,15 @@
  *     after it in the same call is hushed;
  *   * and coming ashore says where the island's lines stood (`saidTo`).
  *
+ * And every go asked again before it is done (`20261026180100_every_go_asked_again.sql`):
+ *
+ *   * every go but a fight on a job its refusal now refuses is not done, and
+ *     tells that refusal word for word, after the job's label, with the goes
+ *     left: the shovel gone, no wind, walked out of reach, the thing gone;
+ *   * a perk's reach is asked as `rpc_act` asks it (a Fisher's Long Cast);
+ *   * and a storey job keeps the storey it was asked on, written into its
+ *     target where it names none, the same on both sides.
+ *
  * The browser (`src/net/heardlines.ts`, `Island`):
  *
  *   * a line is said the first time its number is heard, by any road, in
@@ -43,7 +52,8 @@ import { execFileSync } from 'node:child_process';
 import { HeardLines, SAID_LAG_MS } from '../../src/net/heardlines';
 import { Island, refusedSaid, type PlayerRow } from '../../src/net/island';
 import { Game } from '../../src/game/game';
-import { ACTION_BY_ID } from '../../src/game/actions';
+import { ACTION_BY_ID, ACTIONS } from '../../src/game/actions';
+import { keepJobLevel, STOREY_JOBS } from '../../src/game/building';
 import type { Target } from '../../src/game/actions';
 
 const psql = (sql: string): string =>
@@ -79,6 +89,7 @@ create temp table swept (action text, target text, why text, lines int, said tex
 do $t$
 declare w uuid; a uuid := '${A}'; b uuid := '${B}'; r jsonb; m bigint; d record; t jsonb; ts jsonb[]; why text;
         v_lines int; v_said text; v_msg text; v_tool bigint; v_any bigint; v_food bigint; v_pk text; v_n int;
+        v_h double precision;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Eventlog', 61, 16, 8, 8, true) returning id into w;
   perform land_blank(w, 16);
@@ -139,8 +150,10 @@ begin
   delete from item where world_id = w and holder_uid = a and def = 'shovel';
   delete from event where world_id = w and uid = a;
   update player set act_ends = now() - interval '1 second' where world_id = w and uid = a;
+  v_h := land_height(w, 8, 8);
   perform settle(w, a);
   insert into said values ('RUN2', (select string_agg(text, ' | ' order by n) from event where world_id = w and uid = a));
+  insert into said values ('RUN2DUG', (land_height(w, 8, 8) <> v_h)::text);
   insert into said values ('RUN2ACT', coalesce((select act from player where world_id = w and uid = a), 'none'));
   insert into item (world_id, holder, holder_uid, def, ql, issued) values (w, 'player', a, 'shovel', 20, true);
 
@@ -149,8 +162,10 @@ begin
   update player set stats = jsonb_set(stats, '{stamina}', '0'), body_at = now(), act = 'dig',
          act_target = '{"kind":"tile","x":8,"y":8,"cx":8,"cy":8}', act_ends = now() - interval '1 second', act_left = 3, act_goes = 3
    where world_id = w and uid = a;
+  v_h := land_height(w, 8, 8);
   perform settle(w, a);
   insert into said values ('WIND', (select string_agg(text, ' | ' order by n) from event where world_id = w and uid = a));
+  insert into said values ('WINDDUG', (land_height(w, 8, 8) <> v_h)::text);
   update player set stats = jsonb_set(stats, '{stamina}', '1'), body_at = now() where world_id = w and uid = a;
 
   -- A loaf asked for, and eaten by somebody else before the go.
@@ -212,6 +227,50 @@ begin
     insert into said values ('RAISED', sqlerrm || '#' || (select count(*) from event where world_id = w and n > m));
   end;
 
+  -- A run of three digs, and the body walks out of reach of its corner before the go.
+  delete from event where world_id = w and uid = a;
+  update player set x = 13.5, y = 13.5, stats = jsonb_set(stats, '{stamina}', '1'), body_at = now(), act = 'dig',
+         act_target = '{"kind":"tile","x":8,"y":8,"cx":8,"cy":8}', act_ends = now() - interval '1 second', act_left = 3, act_goes = 3,
+         act_queue = '[]'
+   where world_id = w and uid = a;
+  v_h := land_height(w, 8, 8);
+  perform settle(w, a);
+  insert into said values ('WALK', (select string_agg(text, ' | ' order by n) from event where world_id = w and uid = a)
+    || '#' || (land_height(w, 8, 8) <> v_h)::text);
+  update player set x = 8.5, y = 8.5, act = null, act_target = null, act_left = null, act_goes = null where world_id = w and uid = a;
+
+  -- A perk's reach is asked again as it was asked: a Fisher's Long Cast, five tiles out over a pond.
+  perform land_set_height(w, i, j, -30) from generate_series(13, 16) i, generate_series(0, 16) j;
+  perform give(w, a, 'fishing_rod', 1, 40);
+  insert into said values ('CASTNO', coalesce(act_refusal(w, a, 'fish', '{"kind":"tile","x":13,"y":8}'), 'ALLOWED'));
+  update player set craft_class = 'fisher' where world_id = w and uid = a;
+  insert into player_node (world_id, uid, node) values (w, a, 'fisher_long_cast');
+  perform class_fold(w, a);
+  delete from event where world_id = w and uid = a;
+  update player set act = 'fish', act_target = '{"kind":"tile","x":13,"y":8}', act_ends = now() - interval '1 second',
+         act_left = 1, act_goes = 1, act_queue = '[]'
+   where world_id = w and uid = a;
+  perform settle(w, a);
+  insert into said values ('CASTYES', coalesce(act_refusal(w, a, 'fish', '{"kind":"tile","x":13,"y":8}'), 'ALLOWED') || '#'
+    || (select string_agg(text, ' | ' order by n) from event where world_id = w and uid = a));
+  perform land_set_height(w, i, j, 100) from generate_series(13, 16) i, generate_series(0, 16) j;
+
+  -- A storey job keeps the storey it is asked on: written in where the target names none.
+  insert into building (world_id, id, name, levels, work_level, planned_by) values (w, 501, 'Twostorey', 2, 0, a);
+  insert into building_tile (world_id, building, x, y) values (w, 501, 4, 4);
+  insert into said select 'KEPT', string_agg(coalesce((private.keep_job_level(w, k.act, k.t)->>'level'), '-'), ',' order by k.o)
+    from (values (1, 'plan_wall', '{"kind":"tile","x":4,"y":4,"side":"n"}'::jsonb),
+                 (2, 'plan_wall', '{"kind":"tile","x":4,"y":4,"side":"n","level":1}'::jsonb),
+                 (3, 'plan_wall', '{"kind":"tile","x":4,"y":4,"side":"n","terrace":true}'::jsonb),
+                 (4, 'plan_floor', '{"kind":"tile","x":4,"y":4,"floorKind":"roof"}'::jsonb),
+                 (5, 'dig', '{"kind":"tile","x":4,"y":4,"cx":4,"cy":4}'::jsonb),
+                 (6, 'plan_wall', '{"kind":"tile","x":9,"y":9,"side":"n"}'::jsonb)) k(o, act, t);
+  update building set work_level = 1 where world_id = w and id = 501;
+  insert into said select 'KEPTUP', private.keep_job_level(w, 'build_floor', '{"kind":"tile","x":4,"y":4}')->>'level';
+  insert into said select 'STOREYJOBS', string_agg(id, ',' order by id) from action_def where private.storey_job(id);
+  delete from building_tile where world_id = w and building = 501;
+  delete from building where world_id = w and id = 501;
+
   -- A plan over an area: its pieces hushed, the lot told once, and nothing after it hushed.
   update player set act = null, act_queue = '[]' where world_id = w and uid = a;
   perform act_perform(w, a, 'found_settlement', '{"kind":"tile","x":8,"y":8,"cx":8,"cy":8,"name":"Eventstead"}');
@@ -230,6 +289,9 @@ select 'SWEPT|' || count(*) || '|' || count(distinct action) || '|' || count(*) 
 select 'SILENT|' || action || ' on ' || target || ' (' || coalesce(why, 'allowed') || ')' from swept where lines = 0 order by 1 limit 40;
 select 'REFUSALTOLD|' || count(*) filter (where why is not null and position(why in said) > 0) || '|' || count(*) filter (where why is not null) from swept;
 select 'FAULTED|' || count(*) from swept where said like '%Island error%';
+select 'UNASKED|' || (select count(*) from swept where why is not null and position(why in said) = 0 and not is_fight(action))
+  || '|' || coalesce((select string_agg(action || ' on ' || target || ': ' || said, '; ') from (select * from swept
+       where why is not null and position(why in said) = 0 and not is_fight(action) limit 10) z), '');
 select 'SAMPLE|' || action || ' on ' || target || ': ' || said from swept
  where (action, target) in (('dig', 'tile:8'), ('dig', 'tile:14'), ('eat', 'item:999999999'), ('make_planks', 'tile:8'));
 select k || '|' || coalesce(v, '') from said;
@@ -251,10 +313,24 @@ for (const s of fields('SAMPLE')) check(`for instance, ${s.slice(0, s.indexOf(':
 
 check('a run of five digs: the first go is dug, or fails, and says so, and the run goes on',
   /Dug: dirt, QL |Dig failed\./.test(field('RUN1')) && field('RUNLEFT') === '4', `"${field('RUN1')}", left ${field('RUNLEFT')}`);
-check('its shovel gone before the second go: the run stops on "Dig: Need a shovel. Left: 4.", and the job is put down',
-  field('RUN2').endsWith('Dig: Need a shovel. Left: 4.') && field('RUN2ACT') === 'none', `"${field('RUN2')}", in hand ${field('RUN2ACT')}`);
-check('no wind left: the run stops on "Dig: Too exhausted. Rest. Left: 3."', field('WIND').endsWith('Dig: Too exhausted. Rest. Left: 3.'), `"${field('WIND')}"`);
-check('a thing to eat gone before the go: said', /^Eat: /.test(field('GONE')) && field('GONE').length > 5, `"${field('GONE')}"`);
+const [unasked, unaskedOnes] = field('UNASKED').split('|');
+check('every go but a fight is asked again before it is done: a go its job would be refused for is told that refusal, word for word',
+  unasked === '0', `${unasked} not${unaskedOnes ? `: ${unaskedOnes}` : ''}`);
+check('its shovel gone before the second go: not dug, and the run stops on "Dig: Need a shovel. Left: 4.", the job put down',
+  field('RUN2') === 'Dig: Need a shovel. Left: 4.' && field('RUN2DUG') === 'false' && field('RUN2ACT') === 'none',
+  `"${field('RUN2')}", dug ${field('RUN2DUG')}, in hand ${field('RUN2ACT')}`);
+check('no wind left before the go: not dug, and "Dig: Too exhausted. Rest. Left: 3."',
+  field('WIND') === 'Dig: Too exhausted. Rest. Left: 3.' && field('WINDDUG') === 'false', `"${field('WIND')}", dug ${field('WINDDUG')}`);
+const [walked, walkDug] = field('WALK').split('#');
+check('walked out of reach before the go: not dug, and "Dig: You are too far away from that. Left: 3."',
+  walked === 'Dig: You are too far away from that. Left: 3.' && walkDug === 'false', `"${walked}", dug ${walkDug}`);
+check('a thing to eat gone before the go: "Eat: It is gone. Left: 1."', field('GONE') === 'Eat: It is gone. Left: 1.', `"${field('GONE')}"`);
+const [castYes, castSaid] = field('CASTYES').split('#');
+check('a perk\'s reach is asked again as it was asked: a cast five tiles out is refused without Long Cast, and with it allowed and cast at its go',
+  field('CASTNO') === 'You are too far away from that.' && castYes === 'ALLOWED' && !!castSaid && !castSaid.includes('too far'),
+  `without "${field('CASTNO')}"; with "${castYes}", told "${castSaid}"`);
+check('a storey job keeps the storey it is asked on: written in where the target names none, the one named kept, a terrace, a roof, another job and a tile off any building left alone',
+  field('KEPT') === '0,1,-,-,-,-' && field('KEPTUP') === '1', `${field('KEPT')}; at work level 1: ${field('KEPTUP')}`);
 check('a go whose performer says nothing: "Set level here: nothing done."', field('UNSAID') === 'Set level here: nothing done.', `"${field('UNSAID')}"`);
 check('a job in the queue that cannot be done when its turn comes: said',
   /Dug: dirt, QL |Dig failed\./.test(field('QUEUE')) && field('QUEUE').endsWith(' | You are too far away from that.'), `"${field('QUEUE')}"`);
@@ -271,6 +347,33 @@ const [planned, hushed, areaSaid] = field('AREA').split('#');
 check('a plan over an area: its pieces hushed and told once, and a line after it in the same call is told',
   planned === '2' && hushed === 'false' && areaSaid === 'Planned: 2 tiles. | After the plan.', `planned ${planned}, hushed after ${hushed}, told "${areaSaid}"`);
 check('coming ashore says where the island\'s lines stood, its own included', field('SAIDTO') === 'true', field('SAIDTO'));
+
+/* ---- the browser: a storey job keeps its storey, as the island has it ----- */
+
+{
+  const g = Game.create(4242, 64);
+  const b = g.buildings.create('Twostorey', 4, 4);
+  b.levels = 2;
+  b.workLevel = 0;
+  const kept = ([
+    ['plan_wall', { kind: 'tile', x: 4, y: 4, side: 'n' }],
+    ['plan_wall', { kind: 'tile', x: 4, y: 4, side: 'n', level: 1 }],
+    ['plan_wall', { kind: 'tile', x: 4, y: 4, side: 'n', terrace: true }],
+    ['plan_floor', { kind: 'tile', x: 4, y: 4, floorKind: 'roof' }],
+    ['dig', { kind: 'tile', x: 4, y: 4, cx: 4, cy: 4 }],
+    ['plan_wall', { kind: 'tile', x: 9, y: 9, side: 'n' }],
+  ] as unknown as Array<[string, { kind: string; level?: number }]>).map(([id, t]) => {
+    const l = keepJobLevel(g.buildings, id, t).level;
+    return l === undefined ? '-' : String(l);
+  }).join(',');
+  b.workLevel = 1;
+  const up = keepJobLevel(g.buildings, 'build_floor', { kind: 'tile', x: 4, y: 4 } as { kind: string; level?: number }).level;
+  check('and in the browser the same, case for case (`keepJobLevel`)', kept === field('KEPT') && String(up) === field('KEPTUP'),
+    `browser ${kept}; ${up}, island ${field('KEPT')}; ${field('KEPTUP')}`);
+  const mine = ACTIONS.map((a) => a.id).filter((id) => STOREY_JOBS.has(id)).sort().join(',');
+  check('the storey jobs are the same jobs on both sides (`STOREY_JOBS`, `private.storey_job`)', mine === field('STOREYJOBS'),
+    `browser ${mine}; island ${field('STOREYJOBS')}`);
+}
 
 /* ---- the browser: lines by number -------------------------------------- */
 

@@ -949,7 +949,8 @@ const B_LATER = 'solid, the padlock in the pack';
   const s = sent[0];
   check('on an island, asked for from across the yard, nothing goes to the island while the feet are on their way, and when they arrive the one call goes: the solid wall\'s plan, sent as a hidden door\'s',
     walking && before === 0 && sent.length === 1 && s.action === 'plan_wall' && s.hidden
-      && JSON.stringify(s.target) === JSON.stringify({ ...HT, wallType: 'solid' }),
+      // With the storey it was asked on, which the island keeps the job to (`keepJobLevel`).
+      && JSON.stringify(s.target) === JSON.stringify({ ...HT, wallType: 'solid', level: 0 }),
     `walking ${walking}, ${before} sent on the way; then ${JSON.stringify(sent.map((x) => ({ ...x, target: undefined })))}`);
   const near = onIsland([11.5, 9.5]);
   planHiddenDoor(near.g, PLAN_WALL, HT);
@@ -1137,7 +1138,9 @@ select ${askPlan(false, ST)} \\g /dev/null`);
     `island: ${I.walls}; ${I.state}; refused "${I.refused}". browser: ${B.walls}; ${B.state}; refused "${B.refused}"${I.told === B.told ? '' : `; told "${I.told}" and "${B.told}"`}`);
 }
 {
-  // Asked on the ground floor, and the work raised a storey before the plan is done: the wall it plans, up there, is the door.
+  // Asked on the ground floor, and the work raised a storey before the plan is done: the wall goes where it was asked,
+  // on the ground floor, and is the door. It used to go up to the storey being worked when its go came, an unfloored
+  // one here, which the go is now asked again on and would be refused (`keepJobLevel`, `private.keep_job_level`).
   const I = islandOne(`update building set levels = 2, work_level = 0 where world_id = ${W} and id = 77;
 select ${askPlan(true, HT)} \\g /dev/null
 update building set work_level = 1 where world_id = ${W} and id = 77;`);
@@ -1152,8 +1155,8 @@ delete from wall where world_id = ${W} and level = 1 and dir = 'h' and x = 11 an
     planHiddenDoor(g, PLAN_WALL, HT);
     if (b) b.workLevel = 1;
   });
-  check('asked for on the ground floor and planned after the work was raised a storey, the wall planned on that side up there is the door, on both sides',
-    I.walls === B.walls && I.state === B.state && I.told === B.told && I.walls === '1 hidden_door' && I.state === DOOR.state,
+  check('asked for on the ground floor and planned after the work was raised a storey, the wall goes where it was asked and is the door, on both sides',
+    I.walls === B.walls && I.state === B.state && I.told === B.told && I.walls === '0 hidden_door' && I.state === DOOR.state,
     `island: ${I.walls}; ${I.state}. browser: ${B.walls}; ${B.state}${I.told === B.told ? '' : `; told "${I.told}" and "${B.told}"`}`);
 }
 

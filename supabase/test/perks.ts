@@ -372,6 +372,8 @@ begin
   delete from item where world_id = w and holder = 'player' and holder_uid = u and def = 'dirt';
 
   /* ---- 14. Clean Earth: a dig's quality, with the roll taken out (a perfect shovel gives the skill). ---- */
+  -- Beside the corner dug, 9,4, through 17: every go is asked again as it is asked for, the reach with it (\`settle\`).
+  update player set x = 9.5, y = 4.5 where world_id = w and uid = u;
   perform pg_temp.hold(w, u, '{}');
   ${until(`update skill set value = 50 where world_id = w and uid = u and id = 'digging'; ${dig(9, 4)}`, `pack_count(w, u, 'dirt') > 0`)}
   select max(ql) into v_a from item where world_id = w and holder = 'player' and holder_uid = u and def = 'dirt';
@@ -417,7 +419,7 @@ begin
 
   /* ---- 17. Long Reach: a cart four tiles off, to take soil from and to dig into. ---- */
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, material, made_by)
-    values (w, 'furniture', 'cart', 12, 8, 0, 0, 12.5, 8.5, 40, 'Pine', u) returning id into v_cart;
+    values (w, 'furniture', 'cart', 13, 4, 0, 0, 13.5, 4.5, 40, 'Pine', u) returning id into v_cart;
   insert into item (world_id, holder, placed, def, ql, count) values (w, 'furniture', v_cart, 'dirt', 30, 5);
   perform pg_temp.hold(w, u, '{}');
   insert into said values ('SPOIL', coalesce(spoil_near(w, u, null), 'none') || '|' || take_spoil(w, u, 'dirt'));
@@ -433,6 +435,8 @@ begin
   ${until(dig(9, 4), `(select coalesce(sum(count), 0) from item where placed = v_cart and def = 'dirt') > 4`)}
   insert into said select 'CARTED', v_t || '|' || pack_count(w, u, 'dirt') || ','
     || (select coalesce(sum(count), 0) from item where placed = v_cart and def = 'dirt');
+
+  update player set x = 8.5, y = 8.5 where world_id = w and uid = u;
 
   /* ---- 18. And putting the trade down takes the perks with it. ---- */
   perform pg_temp.hold(w, u, ${arr(EACH)});

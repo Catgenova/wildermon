@@ -4802,6 +4802,9 @@ jobs:
           # mark at the join. And the browser: a line said the first time its
           # number comes, in any order, the beat asking from a floor that waits
           # for late lines, and an ask the island raised on said in the log.
+          # And every go asked again before it is done: the shovel gone, no
+          # wind, walked out of reach, the thing gone; a perk's reach as asked;
+          # a storey job kept to the storey it was asked on, on both sides.
           npx esbuild supabase/test/eventlog.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/eventlog.mjs --log-level=error
           node node_modules/.cache/eventlog.mjs

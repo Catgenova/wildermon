@@ -67,6 +67,9 @@ const patch = (name: string, fx: Record<string, number>): string =>
 /** The face at 3,3, worked from its 4,4 corner. */
 const FACE = `jsonb_build_object('kind', 'tile', 'x', 3, 'y', 3, 'cx', 4, 'cy', 4)`;
 const mine = `perform pg_temp.go(w, u, 'mine', ${FACE})`;
+/** A face off the settlement at 12,7, worked from its 13,8 corner beside the body at 12.5,7.5: a go is asked again at its go, the reach with it. */
+const OFF_FACE = `jsonb_build_object('kind', 'tile', 'x', 12, 'y', 7, 'cx', 13, 'cy', 8)`;
+const mineOff = `perform pg_temp.go(w, u, 'mine', ${OFF_FACE})`;
 /* Until a go comes off: a skill check fails now and again however good the hand. */
 const until = (what: string, done: string): string => `
   for k in 1..12 loop
@@ -257,14 +260,16 @@ begin
   -- a map is never buried on one, and a map with nowhere to point is no map.
   ${clear('gem', 'treasure_map')};
   update player set body_at = now(), x = 12.5, y = 7.5 where world_id = w and uid = u;
+  perform land_set_tile(w, 12, 7, 4); perform land_set_rock(w, 12, 7, 0);
+  for tx in 12..13 loop for ty in 7..8 loop perform land_set_dirt(w, tx, ty, 0); end loop; end loop;
   perform pg_temp.hold(w, u, '{}');
-  ${until(mine, `${count('rock_shards')} > 0`)}
+  ${until(mineOff, `${count('rock_shards')} > 0`)}
   v_t := ${count('gem')} || ',' || ${count('treasure_map')};
   ${clear('rock_shards')};
   ${patch('Gem Eye', { 'gem:mine': 1 })};
   ${patch('Treasure in the Rock', { 'map:mine': 1 })};
   ${hold('Gem Eye', 'Treasure in the Rock')};
-  ${until(mine, `${count('rock_shards')} > 0`)}
+  ${until(mineOff, `${count('rock_shards')} > 0`)}
   insert into said values ('FINDS2', v_t || '|' || ${count('gem')} || ',' || ${count('treasure_map')});
   ${clear('rock_shards', 'gem', 'treasure_map')};
   update player set body_at = now(), x = 3.5, y = 3.5 where world_id = w and uid = u;

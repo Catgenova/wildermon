@@ -210,7 +210,8 @@ const ROUNDS = 4;
 console.log('--- take from a crate');
 for (let r = 0; r < ROUNDS; r += 1) {
   reset();
-  crate(1, 10, 10, A);
+  // Anybody's crate: one of A's own is "Not yours" to the rest, which every go is now asked again (`settle`).
+  crate(1, 10, 10, null);
   const ore = put('crate', 'iron_ore', 10, 'crate=1');
   for (const u of FOLK) due(u, 'take_from_store', { kind: 'item', uid: ore, count: 3 });
   const before = holdings('iron_ore');

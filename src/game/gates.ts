@@ -1,6 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import { BRIDGES, bridgeDone, type Bridge, type BridgeKind } from './bridges';
-import { borderOf, isDone, MATERIALS, onlyRefusal, progressOf, WALL_TYPE_BY_ID, type Border, type MaterialDef, type Side, type Wall, type WallType } from './building';
+import { borderOf, isDone, keepJobLevel, MATERIALS, onlyRefusal, progressOf, WALL_TYPE_BY_ID, type Border, type MaterialDef, type Side, type Wall, type WallType } from './building';
 import type { Game } from './game';
 import { isFounder } from './ranks';
 import type { Lockable } from './locks';
@@ -157,7 +157,8 @@ export function planHiddenDoor(g: Game, planWall: ActionDef, t: TileTarget): voi
     g.logMsg(why, 'error');
     return;
   }
-  const target = { ...t, wallType: 'solid' } as Target;
+  // On the storey it is asked on, written in before it is kept, so the ask stays the one kept (`keepJobLevel`).
+  const target = keepJobLevel(g.buildings, planWall.id, { ...t, wallType: 'solid' } as Target);
   hiddenJobs.add(target);
   g.requestAction(planWall, target);
   const at = planBorder(planWall, target);

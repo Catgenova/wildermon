@@ -626,6 +626,29 @@ export function jobLevel(b: Building, t: { level?: number }): number {
   return typeof l === 'number' && Number.isInteger(l) && l >= 0 && l <= b.levels - 1 ? l : workLevel(b);
 }
 
+/** The jobs done on one storey of a building, whose storey a target names: the island's `private.storey_job`. */
+export const STOREY_JOBS: ReadonlySet<string> = new Set([
+  'plan_wall', 'plan_fence', 'build_wall', 'remove_wall', 'plan_floor', 'build_floor', 'remove_floor',
+  'paint_wall', 'strip_wall_paint', 'paint_floor', 'repoint_wall', 'no_plan', 'mark_out',
+  'plan_column', 'build_column', 'remove_column',
+]);
+
+/**
+ * A storey job's target with the storey it is asked on written into it, where it names none (`jobLevel` now),
+ * so it is judged and done on that storey however the work level moves before its go: the island's
+ * `private.keep_job_level`, which `rpc_act` asks of every job. A terrace's wall and a roof are on their own
+ * levels, and are left as they are.
+ */
+export function keepJobLevel<T extends { kind: string }>(bs: Buildings, action: string, t: T): T {
+  const s = t as unknown as { kind: string; x?: unknown; y?: unknown; level?: unknown; terrace?: unknown; floorKind?: unknown; buildingId?: unknown };
+  if (!STOREY_JOBS.has(action) || s.kind !== 'tile' || s.level !== undefined || s.terrace === true || s.floorKind === 'roof'
+    || typeof s.x !== 'number' || typeof s.y !== 'number') return t;
+  const x = Math.floor(s.x);
+  const y = Math.floor(s.y);
+  const b = bs.buildingAt(x, y) ?? bs.jettyHost(x, y, typeof s.buildingId === 'number' ? s.buildingId : undefined);
+  return b ? { ...t, level: jobLevel(b, {}) } : t;
+}
+
 export const isDone = (b: Bill): boolean => Object.values(b.needed).every((n) => n <= 0);
 
 /**

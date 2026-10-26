@@ -36,6 +36,7 @@ import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays,
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
   NO_PLAN_FROM, OUTSIDE_STAIR_LEVEL, roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
+  STOREY_JOBS,
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
@@ -3935,6 +3936,14 @@ export const NEWS: News[] = [
       `Changed: foam line on every shore: up the shore ${SURGE_UP} tile and back every ${SURGE_PERIOD} s on sand, rock ${percent(SHORE_ROCK)} of that. Wet band: ${WET_SAND} tile up sand, ${WET_ROCK} up rock.`,
       `Changed: sea drawn once under the ground, its picture painted ${num(SWELL_RATE)} times a second. Boat wake: foam.`,
       'Changed: remembered sea: grey, still. No swell under decks. Sea-floor weed: seen through deep water.',
+    ],
+  },
+  {
+    n: 332,
+    day: '2026-10-26',
+    lines: () => [
+      'Changed: every go of a job checked again before it is done: tool, materials, target, stamina and reach. Refused: not done, no stamina spent, logged as "<job>: <reason> Left: <goes>.", queue goes on (was done anyway). Fights: unchanged.',
+      `Changed: storey jobs (${[...new Set([...STOREY_JOBS].map((id) => ACTION_BY_ID.get(id)?.label).filter((l): l is string => !!l))].join(', ')}): done on the storey asked on (was the storey being worked when the go came).`,
     ],
   },
 ];
