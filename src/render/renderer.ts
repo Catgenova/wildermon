@@ -109,6 +109,7 @@ import { coatOf, formScale } from '../game/wildforms';
 const bodySize = (c: { rare?: number; formSize?: 'large' | 'small' | null }): number => rarityOf(c).size * formScale(c);
 import { CREST_ALPHA, FOAM, LONG_WAVE, SHORE_FAR, SHORT_WAVE, SWELL_RATE, SWELL_SPEED, swellShow, TROUGH_ALPHA, WAKE_ALPHA, WAKE_ARM, WAKE_TRACK, WATER_LIT, waterVeil } from './water';
 import { WaterTint } from './watertint';
+import { SeaReach, type ReachBox } from './seareach';
 import { ShoreField, ShorePainter } from './shore';
 import { Wakes } from './wake';
 import { foamTexture, SpringWater } from './ponds';
@@ -1630,9 +1631,13 @@ export class Renderer {
   readonly wakes = new Wakes();
   /** The colour of the water by its depth at each corner (`watertint.ts`). */
   private readonly tint: WaterTint;
-  /** The sea's shore, and the painter of every shore's wet band and foam (`shore.ts`). */
+  /** Which water below nought is the sea's and which is walled in from it (`seareach.ts`). */
+  private readonly seaReach: SeaReach;
+  /** The sea's shore, and the painter of it and of still water's edge (`shore.ts`). */
   private readonly shoreField: ShoreField;
   private readonly shore = new ShorePainter();
+  /** Boxes of tiles whose water turned from the sea's to still or back, for the ground's blocks there to be made again (`SeaReach.settle`). */
+  private reachMoved: ReachBox[] = [];
   /** What has been kicked up underfoot. */
   readonly dust = new Dust();
   /** Numbers and words standing over what they belong to. */
@@ -1931,9 +1936,11 @@ export class Renderer {
     game.world.onChange((x, y) => this.chunks.touch(x, y));
     // The water's colour and its shore, worked out a block of corners at a time (`watertint.ts`, `shore.ts`).
     this.tint = new WaterTint(game.world);
-    this.shoreField = new ShoreField(game.world);
+    this.seaReach = new SeaReach(game.world);
+    this.shoreField = new ShoreField(game.world, (cx, cy) => this.seaReach.sea(cx, cy));
     game.world.onChange((x, y) => {
       this.tint.touched(x, y);
+      this.seaReach.touched(x, y);
       this.shoreField.touched(x, y);
     });
     game.world.onChange(() => { this.solidRev++; });
@@ -1989,6 +1996,7 @@ export class Renderer {
       this.wakes.clear();
       this.gaits.clear();
       this.tint.clear();
+      this.seaReach.clear();
       this.shoreField.clear();
     });
     canvas.onResize(() => this.camera.setViewport(canvas.width, canvas.height));
@@ -4487,6 +4495,11 @@ export class Renderer {
     this.pondPath = water && waked ? new Path2D() : null;
     this.seaPath = waked ? new Path2D() : null;
     this.tint.begin(cam, this.frameNo, HEIGHT_SCALE);
+    // Water that has turned from the sea's to still or back since the last frame: its shore is worked out again.
+    for (const b of this.seaReach.settle()) {
+      this.shoreField.touchBox(b[0], b[1], b[2], b[3]);
+      this.reachMoved.push(b);
+    }
     this.shore.begin({ cam, t: this.time, dirX: this.surf.dirX, dirY: this.surf.dirY });
     // The sea, under everything (`drawSea`).
     this.seaUnder = this.drawSea(ctx, zoom);
@@ -4670,7 +4683,6 @@ export class Renderer {
         if (sea) this.drawWater(V, x, y, c, fogged && !lit ? lineFog : undefined);
         if ((sea || (c[0] < SHORE_HIGH && c[1] < SHORE_HIGH && c[2] < SHORE_HIGH && c[3] < SHORE_HIGH)) && !this.fast) this.seaShore(V, x, y, c, !run, lit);
         if (pond) this.drawPonds(V, x, y, c, lit, fogged && !lit ? lineFog : undefined);
-        else if (water !== null && !this.fast && water.ponds.length) this.pondBank(water, V, x, y, c, lit);
         // The water lapping round the feet of piers this tile is in front of, now its water is down (`piers.ts`).
         if (wet && this.game.buildings.pierTiles.size && this.game.buildings.onPiers(x, y)) this.pierFeetHere(x, y, V);
         if (this.pierFeet.size) {
@@ -5286,6 +5298,8 @@ export class Renderer {
     const key = `${cam.rotation}|${zoom}|${a}|${Math.round(fx * 1000)}|${Math.round(fy * 1000)}|${lines}|${across}|${grid}`;
     if (key !== this.chunks.key) this.chunks.reset(key, lines, across);
     else this.chunks.forgetTouched(V);
+    for (const b of this.reachMoved) this.chunks.forgetBox(V, b[0] - 1, b[1] - 1, b[2] + 1, b[3] + 1, false);
+    this.reachMoved.length = 0;
     this.chunkWants.clear();
     this.strokeAt.clear();
     const g = this.game;
@@ -5759,7 +5773,7 @@ export class Renderer {
     const c = this.classBuf;
     for (let q = 0; q < 4; q++) c[q] = world.getHeight(x + gf.co[q][0], y + gf.co[q][1]);
     if (!this.fast && c[0] < SHORE_HIGH && c[1] < SHORE_HIGH && c[2] < SHORE_HIGH && c[3] < SHORE_HIGH && this.shoreField.on(x, y) && !this.shoreBare(x, y)
-      && this.shore.load(world, this.shoreField, x, y, gf.co, c, 0)) this.shore.wet(g, 0, false);
+      && this.shore.load(world, this.shoreField, x, y, gf.co, c, 0)) this.shore.wet(g, 0);
     if (gf.grassy && STREWN.has(t0) && here !== TileType.Trail) this.strewTile(t0, x, y, pts, gf.paveRot, gf.zoom, lit);
     if (gf.hemmed && !PAVED.has(t0) && t0 !== TileType.Steps) {
       const seams = lit ? this.colors : this.memColors;
@@ -16282,7 +16296,7 @@ export class Renderer {
     const ax = cam.worldToScreenX(0, 0), ay = cam.worldToScreenY(0, 0, 0);
     // Remembered sea is drawn as it was, and changes as the sight does.
     const fog = this.game.settings.fog;
-    const fit = `${zoom}|${cam.rotation}|${W}|${H}|${dev}|${t.e}|${t.f}|${this.fast}|${this.tint.stamp}|${fog ? this.game.vision.revision : -1}|${this.game.buildings.pierStamp}`;
+    const fit = `${zoom}|${cam.rotation}|${W}|${H}|${dev}|${t.e}|${t.f}|${this.fast}|${this.tint.stamp}|${this.seaReach.stamp}|${fog ? this.game.vision.revision : -1}|${this.game.buildings.pierStamp}`;
     let pic = this.seaPic;
     let mx = pic ? Math.round((ax - pic.ax) * dev) : 0, my = pic ? Math.round((ay - pic.ay) * dev) : 0;
     // The picture covers the sea where it is now, moved with the view since it was made.
@@ -16354,7 +16368,8 @@ export class Renderer {
   /**
    * The parts of the sea's picture with no swell and no foam on them, its
    * colour laid back over them as it is with nothing moving: under a deck on
-   * piers, which is in its shade, and the sea only remembered rather than in
+   * piers, which is in its shade; water below nought walled in from the sea
+   * (`SeaReach`), which is still; and the sea only remembered rather than in
    * sight, which keeps as little of its colour as remembered ground does
    * (`MEMORY_SATURATION`) and nothing that moves on it.
    */
@@ -16363,7 +16378,6 @@ export class Renderer {
     const world = game.world;
     const piers = game.buildings.pierTiles;
     const fog = game.settings.fog;
-    if (!fog && !piers.size) return;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const [sx, sy] of [[sx0, sy0], [sx1, sy0], [sx0, sy1], [sx1, sy1]]) {
       const p = cam.screenToWorld(sx, sy, 0);
@@ -16389,6 +16403,15 @@ export class Renderer {
       if (x < x0 || x > x1 || y < y0 || y > y1 || !world.hasSea(x, y)) continue;
       tile((calm ??= new Path2D()), x, y);
     }
+    // Still water, a run of tiles along a row at a time.
+    this.seaReach.stillIn(x0, y0, x1, y1, (y, xa, xb) => {
+      const path = (calm ??= new Path2D());
+      path.moveTo(cam.worldToScreenX(xa, y), cam.worldToScreenY(xa, y, 0));
+      path.lineTo(cam.worldToScreenX(xb + 1, y), cam.worldToScreenY(xb + 1, y, 0));
+      path.lineTo(cam.worldToScreenX(xb + 1, y + 1), cam.worldToScreenY(xb + 1, y + 1, 0));
+      path.lineTo(cam.worldToScreenX(xa, y + 1), cam.worldToScreenY(xa, y + 1, 0));
+      path.closePath();
+    });
     let mem: Path2D | null = null;
     if (fog) {
       const vision = game.vision;
@@ -16794,9 +16817,8 @@ export class Renderer {
         }
       }
       if (n < 6) continue;
-      // Its bank's wet band, under the water's edge (`shore.ts`).
-      const banked = !lip && !bare && !this.fast && mask !== 15 && this.shore.load(this.game.world, null, x, y, cs, c, level, this.pondWet(this.pondsHere[q]));
-      if (banked) this.shore.wet(ctx, level, true);
+      // Where its bank comes into the tile, the still water's edge (`shore.ts`).
+      const banked = lit && !lip && !bare && !this.fast && mask !== 15;
       // Coloured a corner at a time by its depth under the pond's own surface (`watertint.ts`).
       ctx.fillStyle = this.tint.pond(ctx, this.pondsHere[q], level);
       ctx.beginPath();
@@ -16817,56 +16839,10 @@ export class Renderer {
       fogInto?.closePath();
       wakes?.closePath();
       ctx.fill();
-      if (banked && lit) this.shore.foam(ctx, level);
+      if (banked) this.shore.calm(ctx, x, y, cs, c, level);
     }
   }
 
-  /**
-   * The bank of a pond on a tile beside the pond's own, all above its water:
-   * the wet band, which reaches further up a gentle bank than the tiles the
-   * water is on.
-   */
-  private pondBank(water: WaterField, V: View, x: number, y: number, c: number[], lit: boolean): void {
-    if (this.banksOf !== water) {
-      this.banksOf = water;
-      this.banks.clear();
-      const w = this.game.world.w, h = this.game.world.h;
-      for (const p of water.ponds) {
-        const cw = w + 1;
-        for (const k of p.wet) {
-          const cx = k % cw, cy = (k - cx) / cw;
-          for (let dy = -2; dy <= 1; dy++) {
-            for (let dx = -2; dx <= 1; dx++) {
-              const tx = cx + dx, ty = cy + dy;
-              if (tx < 0 || ty < 0 || tx >= w || ty >= h || water.wet(tx, ty) || this.banks.has(ty * w + tx)) continue;
-              this.banks.set(ty * w + tx, p);
-            }
-          }
-        }
-      }
-    }
-    const p = this.banks.get(y * this.game.world.w + x);
-    if (!p || this.shoreBare(x, y)) return;
-    const level = this.springWater.levelOf(p);
-    if (c[0] < level || c[1] < level || c[2] < level || c[3] < level) return;
-    if (!this.shore.load(this.game.world, null, x, y, V.corners, c, level, this.pondWet(p))) return;
-    this.shore.wet(this.canvas.ctx, level, true);
-    if (lit) this.shore.foam(this.canvas.ctx, level);
-  }
-  /** Whether a pond's water is on a corner, for its shore (`cornerShore`). */
-  private pondWet(p: PondWater): (cx: number, cy: number) => boolean {
-    if (this.wetOf !== p) {
-      const cw = this.game.world.w + 1;
-      this.wetOf = p;
-      this.wetTest = (cx, cy) => p.wet.has(cy * cw + cx);
-    }
-    return this.wetTest;
-  }
-  private wetOf: PondWater | null = null;
-  private wetTest: (cx: number, cy: number) => boolean = () => false;
-  /** The tiles round each pond that are not its own, and the pond each is beside, for the water they were worked out for. */
-  private banks = new Map<number, PondWater>();
-  private banksOf: WaterField | null = null;
 
   /** Whether a tile is kept clear of the shore's wet band and foam: a slab poured over it, or a deck on piers. */
   private shoreBare(x: number, y: number): boolean {
@@ -16874,12 +16850,26 @@ export class Renderer {
       || (this.game.buildings.pierTiles.size > 0 && this.game.buildings.onPiers(x, y));
   }
 
-  /** The sea's shore on a tile, if any of it is there: its wet band (not where its block's picture has it), and the land's side of its foam where it is in sight, gathered for its line (`ShorePainter.flush`). */
+  /**
+   * The sea's shore on a tile, if any of it is there: its wet band (not where
+   * its block's picture has it), and the land's side of its foam where it is in
+   * sight, gathered for its line (`ShorePainter.flush`). Water below nought
+   * walled in from the sea has neither: only still water's edge, in sight.
+   */
   private seaShore(V: View, x: number, y: number, c: number[], wet: boolean, foam: boolean): void {
-    if ((!wet && !foam) || !this.shoreField.on(x, y) || this.shoreBare(x, y)) return;
-    if (!this.shore.load(this.game.world, this.shoreField, x, y, V.corners, c, 0)) return;
-    if (wet) this.shore.wetLand(this.canvas.ctx);
-    if (foam) this.shore.foamLand(this.canvas.ctx);
+    if ((!wet && !foam) || this.shoreBare(x, y)) return;
+    if (this.shoreField.on(x, y) && this.shore.load(this.game.world, this.shoreField, x, y, V.corners, c, 0)) {
+      if (wet) this.shore.wetLand(this.canvas.ctx);
+      if (foam) this.shore.foamLand(this.canvas.ctx);
+    }
+    if (foam && this.stillShore(V, x, y, c)) this.shore.calm(this.canvas.ctx, x, y, V.corners, c, 0);
+  }
+
+  /** Whether a tile is on the edge of water below nought walled in from the sea (`SeaReach`). */
+  private stillShore(V: View, x: number, y: number, c: number[]): boolean {
+    if (!(c[0] < 0 || c[1] < 0 || c[2] < 0 || c[3] < 0) || (c[0] < 0 && c[1] < 0 && c[2] < 0 && c[3] < 0)) return false;
+    for (let i = 0; i < 4; i++) if (c[i] < 0 && this.seaReach.inland(x + V.corners[i][0], y + V.corners[i][1])) return true;
+    return false;
   }
 
   /**

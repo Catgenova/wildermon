@@ -132,12 +132,8 @@ export const FOAM_WIDE = 0.22;
 export const SHORE_ROCK = 0.45;
 /** Seconds for one run up the shore and back. */
 export const SURGE_PERIOD = 6.5;
-/** How strong the foam is at its brightest, and how much of that a pond's still water keeps. */
+/** How strong the foam is at its brightest. */
 export const FOAM_ALPHA = 0.85;
-export const POND_FOAM = 0.55;
-/** How much of the sea's surge and foam line a pond's bank gets, and of its wet band. */
-export const POND_SURGE = 0.3;
-export const WET_POND = 0.5;
 /** A wake's foam at its freshest; how much of each side's spread its arm is; how much of it the track down the middle is. */
 export const WAKE_ALPHA = 0.8;
 export const WAKE_ARM = 0.24;
@@ -163,3 +159,14 @@ export const SPRING_FOAM: RGB = FOAM;
 /** The two streaks a fall comes down in: the near white, and the darker teal between them. */
 export const SPRING_PALE: RGB = [214, 248, 238];
 export const SPRING_DARK: RGB = [52, 156, 162];
+
+/**
+ * The edge of still water -- a pool or a lake walled in from the sea, and a
+ * spring's pond -- which has no foam and no wet band (`ShorePainter.calm`):
+ * the darker line at the waterline and the paler one just inside it, and how
+ * strong each is.
+ */
+export const STILL_EDGE: RGB = SPRING_EDGE;
+export const STILL_EDGE_ALPHA = 0.55;
+export const STILL_GLINT: RGB = SPRING_PALE;
+export const STILL_GLINT_ALPHA = 0.22;

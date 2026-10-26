@@ -4048,6 +4048,11 @@ export const NEWS: News[] = [
         + 'you founded or are a member of; distance in tiles from your body on each (was: the island\'s spawn, still the default).',
     ],
   },
+  {
+    n: 347,
+    day: '2026-10-26',
+    lines: () => ['Changed: pools, ponds and lakes not joined to the sea: still edge, no foam, waves or wet band.'],
+  },
 ];
 
 /**
