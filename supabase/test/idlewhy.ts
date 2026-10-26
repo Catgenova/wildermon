@@ -69,7 +69,7 @@ begin
   v_sedra := creature_spawn(w, 'sedra', ${T} - 1.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   v_tinka := creature_spawn(w, 'tinka', ${T} + 0.5, ${T} + 1.5, 'deed', now() - interval '60 days', u);
   v_far := creature_spawn(w, 'tinka', ${T + FAR} + 1.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
-  update creature set traits = '{}', keeper = u, phase = 'idle', carrying = null, job = null, post = null,
+  update creature set traits = '{}', rare = null, form_size = null, keeper = u, phase = 'idle', carrying = null, job = null, post = null,
          until = now() - interval '60 seconds', leg_at = now() - interval '60 seconds', leg_ends = now() - interval '60 seconds'
    where world_id = w and id in (v_holla, v_sedra, v_tinka, v_far);
   update creature set carrying = '{"def": "water_bucket", "count": 1, "ql": 40}'::jsonb where world_id = w and id = v_holla;
