@@ -135,7 +135,7 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'mend': return 'Fish per drag +{v} on average; wear \u2212{w}.';
     case 'fleet': return 'Mount speed +{v}, after tack makers\' bonuses.';
     case 'tame': return 'In pack: tame chance per offering +{v}. On a mount: never breaks off a fight for distance.';
-    case 'dream': return 'Rest banked per night +{v}; max banked rest +{v}.';
+    case 'dream': return 'Sleep bonus per hour asleep +{v}; max stored +{v}.';
   }
 }
 /** That line with its figure at this quality. */

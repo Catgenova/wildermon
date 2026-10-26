@@ -120,6 +120,7 @@ const refused: Array<[string, string, string]> = [
   ['rpc_join', `rpc_join($1, 'Arjen', 'atlantis')`, 'Bad request: rpc_join p_stone: not a Runestone.'],
   ['rpc_respawn', `rpc_respawn($1, 'atlantis')`, 'Bad request: rpc_respawn p_at: not a Runestone, a settlement or stay.'],
   ['rpc_respawn', `rpc_respawn($1, 'deed:somebody')`, 'Bad request: rpc_respawn p_at: not a Runestone, a settlement or stay.'],
+  ['rpc_sleep_bonus', `rpc_sleep_bonus($1, null)`, 'Bad request: rpc_sleep_bonus p_on: want true or false.'],
 ];
 
 /* ---- the island ----------------------------------------------------------------------------------- */

@@ -334,7 +334,7 @@ export const TOP_LEVELS = MAX_LEVELS + TALL_STOREYS;
  * all before this.
  */
 export const INDOORS_DECAY = 0.1;
-/** How much more of a night a bed indoors banks than the same bed in a field. */
+/** How much more health a bed indoors gives back on lying down than the same bed in a field (Sleep, `fallAsleep`). */
 export const INDOORS_REST = 1.35;
 
 /**

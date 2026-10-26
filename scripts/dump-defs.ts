@@ -105,7 +105,7 @@ import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
 import { BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason, GUARD_LEARN, SPAR_REACH } from '../src/game/creatures';
-import { REST_CAP, REST_MULT, REST_PER_SECOND } from '../src/game/boons';
+import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, SLEEP_SAID } from '../src/game/sleep';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
 import { RELICS, DIGGABLE } from '../src/game/archaeology';
@@ -1555,7 +1555,8 @@ for (const [fn, v] of [
   // How high a deck stands over the ground for a piece to go under it.
   ['head_room', HEAD_ROOM],
   ['groom_cap', GROOM_CAP], ['groom_heal', GROOM_HEAL], ['breed_rest', BREED_REST], ['gestation', GESTATION],
-  ['rest_cap', REST_CAP], ['rest_mult', REST_MULT], ['rest_per_second', REST_PER_SECOND],
+  // Sleep bonus (`sleep.ts`): gained per second asleep in a bed, the most stored, skill gain while on, and a QL's share.
+  ['sleep_bonus_rate', SLEEP_BONUS_RATE], ['sleep_bonus_cap', SLEEP_BONUS_CAP], ['sleep_bonus_mult', SLEEP_BONUS_MULT], ['sleep_bonus_ql', SLEEP_BONUS_QL],
   ['dawn_hour', DAWN], ['dusk_hour', DUSK], ['day_seconds', DAY_SECONDS],
   /*
    * What one unit of `base_time` is worth in seconds, and the shortest a go at
@@ -2170,6 +2171,8 @@ for (const [fn, v] of [
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }
+// What Sleep and the sleep bonus say on both sides (`SLEEP_SAID`).
+out.push(`create or replace function sleep_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${Object.entries(SLEEP_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
 out.push(`create or replace function telestone_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${Object.entries(TELESTONE_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
 /*
  * Enchanting (`enchant.ts`, `enchanting.ts`): the skill, the station papyrus

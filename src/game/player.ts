@@ -188,10 +188,12 @@ export class Player {
   /** Storey the player stands on; 0 is the ground. */
   level = 0;
   /**
-   * Rest banked from a night in a bed, in seconds. It burns while you work,
-   * and everything you do while it burns teaches you twice as much.
+   * Sleep bonus stored, in seconds (`sleep.ts`): gained logged off asleep in a bed; while `sleepOn`, skill gain
+   * ×`SLEEP_BONUS_MULT` and it drains a second a second. The island's `player.rested`.
    */
   rested = 0;
+  /** Whether the sleep bonus is switched on. The island's `player.sleep_on`. */
+  sleepOn = false;
   /** Knacks running just now off what you have eaten and drunk; these wear off. */
   boons: Boon[] = [];
   /** What is actually in you, by nutrient. Eating well holds hunger off and teaches you more. */

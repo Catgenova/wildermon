@@ -11,6 +11,8 @@ import { TRACKING, trackingSays } from '../../game/tracking';
 import { metres } from '../../game/piers';
 import { ACTION_BY_ID, maxDigSlope } from '../../game/actions';
 import { TABLET, TABLET_BELOW, TABLET_GAIN } from '../../game/relicuse';
+import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, sleepBonusLabel, sleepHm } from '../../game/sleep';
+import { boundKey } from '../../game/keybinds';
 
 /** A long action, to read a skill's pace off without the floor (`goSeconds`). */
 const SLOW_GO = 100;
@@ -32,9 +34,23 @@ export class SkillsPanel {
   private open = new Set<string>();
 
   private titleBox: HTMLDivElement;
+  /** The sleep bonus switch and what it does (`sleep.ts`). */
+  private sleepBtn: HTMLButtonElement;
+  private sleepNote: HTMLDivElement;
 
   constructor(win: UIWindow, private readonly game: Game) {
     win.body.classList.add('skills-body', 'skill-book');
+    // The sleep bonus: how much is stored, and the switch.
+    const sleepHead = document.createElement('div');
+    sleepHead.className = 'skill-group';
+    sleepHead.textContent = 'Sleep bonus';
+    this.sleepBtn = document.createElement('button');
+    this.sleepBtn.type = 'button';
+    this.sleepBtn.className = 'skill-sleep';
+    this.sleepBtn.addEventListener('click', () => game.toggleSleepBonus());
+    this.sleepNote = document.createElement('div');
+    this.sleepNote.className = 'skill-sleep-note';
+    win.body.append(sleepHead, this.sleepBtn, this.sleepNote);
     // What the trades have earned you the right to be called.
     const head = document.createElement('div');
     head.className = 'skill-group';
@@ -103,6 +119,8 @@ export class SkillsPanel {
     this.refresh();
     win.onOpen = () => this.refresh();
     game.events.on('inventory', () => this.drawTablets());
+    // The sleep bonus as the island last said it, and as it drains.
+    game.events.on('stats', () => this.drawSleep());
     game.events.on('skill', (id) => {
       this.refresh();
       const row = this.rows.get(id);
@@ -127,6 +145,19 @@ export class SkillsPanel {
     for (const id of this.open) this.drawEffects(id);
     this.drawTitles();
     this.drawTablets();
+    this.drawSleep();
+  }
+
+  /** The sleep bonus switch: on or off, what is stored, and what each does. */
+  drawSleep(): void {
+    const p = this.game.player;
+    const label = sleepBonusLabel(p.sleepOn, p.rested);
+    if (this.sleepBtn.textContent !== label) this.sleepBtn.textContent = label;
+    this.sleepBtn.classList.toggle('skill-sleep-on', p.sleepOn);
+    this.sleepBtn.title = `${p.sleepOn ? 'Switch off' : 'Switch on'} (${boundKey('sleep_bonus')}).`;
+    const note = `On: skill gain ×${SLEEP_BONUS_MULT} while any is stored; drains 1 s per s on the island. Off: kept. `
+      + `Gained logged off asleep in a bed: +${sleepHm(3600 * SLEEP_BONUS_RATE)} per hour asleep (bed, QL 0; QL +${percent(1 / SLEEP_BONUS_QL)} per point), max ${sleepHm(SLEEP_BONUS_CAP)}.`;
+    if (this.sleepNote.textContent !== note) this.sleepNote.textContent = note;
   }
 
   /** The Rune tablet buttons: on every skill under `TABLET_BELOW` while one is carried. */

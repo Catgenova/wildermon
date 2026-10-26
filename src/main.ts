@@ -50,6 +50,7 @@ import { FLOAT_LIFE, FLOAT_RISE, Floaters, MERGE_WINDOW } from './render/floater
 import { HAZE_MAX, HAZE_REACH, skyAt, unknownInk } from './render/sky';
 import { Asker } from './ui/ask';
 import { mountRespawn } from './ui/respawn';
+import { asleepIn } from './game/sleep';
 import { UI } from './ui/ui';
 import { dragging } from './ui/dragdrop';
 // Debug surface only. These come last on purpose: main is the entry point, so
@@ -205,6 +206,8 @@ boot.say('frame');
 await new Promise<void>((done) => requestAnimationFrame(() => setTimeout(done, 0)));
 
 const canvas = new FullscreenCanvas(canvasEl);
+/** Logged off asleep in a bed (`island.hooks.asleep`): nothing runs again until Wake. */
+let loggedOff = false;
 // The fast graphics, and Low power on a phone, draw a pixel for every screen pixel (`dprCapOf`); sized again whenever either changes.
 const fitGraphics = (): void => {
   const most = dprCapOf(game.settings, onPhone());
@@ -419,6 +422,7 @@ const PRESSES: Record<string, () => void> = {
   win_help: () => ui.toggleJournal('help'),
   win_news: () => ui.toggleJournal('news'),
   walk_home: () => game.walkHome(),
+  sleep_bonus: () => game.toggleSleepBonus(),
   carry_on: () => {
     if (!game.resumeQueue()) game.logMsg('There is nothing waiting to be taken up.', 'info');
   },
@@ -448,6 +452,8 @@ const PRESSES: Record<string, () => void> = {
 ui.presses = PRESSES;
 
 input.onKey = (code, ev) => {
+  // Logged off asleep: the keys are the boot card's (Wake), not the game's.
+  if (loggedOff) return;
   /*
    * A key the Keys tab is listening for never reaches the game — and never
    * reaches the browser either. Binding F1 must not open the browser's help,
@@ -597,7 +603,7 @@ setInterval(() => {
 // Nothing drawn while the page is out of sight, and started again, from a fresh clock, when it is back.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) loop.stop();
-  else loop.start();
+  else if (!loggedOff) loop.start();
 });
 // The island is up and the first frame is drawn; the notice can go.
 /*
@@ -650,6 +656,40 @@ warmMeadow();
  */
 const onExit = (): void => island.fogOnExit();
 window.addEventListener('beforeunload', onExit);
+/*
+ * Sleep (`src/game/sleep.ts`): the island has logged the body off asleep in a bed. The page logs off as it is when
+ * it cannot reach the island: the world stops, the island is let go, and the boot card says where the body sleeps,
+ * with Wake, which comes ashore again (`rpc_join` wakes it beside the bed).
+ */
+island.hooks.asleep = (what) => {
+  if (loggedOff) return;
+  loggedOff = true;
+  loop.stop();
+  onExit();
+  void island.leave();
+  const root = document.createElement('div');
+  root.id = 'boot';
+  const card = document.createElement('div');
+  card.className = 'boot-card';
+  const name = document.createElement('div');
+  name.className = 'boot-name';
+  name.textContent = 'Wildermon';
+  const now = document.createElement('div');
+  now.className = 'boot-now';
+  const line = document.createElement('span');
+  line.textContent = asleepIn(what);
+  now.append(line);
+  const wake = document.createElement('button');
+  wake.className = 'boot-retry';
+  wake.type = 'button';
+  wake.textContent = 'Wake';
+  wake.addEventListener('click', () => location.reload());
+  card.append(name, now, wake);
+  root.append(card);
+  uiRoot.hidden = true;
+  document.body.append(root);
+  wake.focus();
+};
 window.addEventListener('pagehide', onExit);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) onExit();

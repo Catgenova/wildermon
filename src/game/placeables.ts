@@ -32,7 +32,7 @@ import {
 import type { Game } from './game';
 import { describeWith, itemDef, litresOf, markOf, type Item } from './items';
 import type { CraftStock } from './recipes';
-import { swingEnchant } from './enchant';
+import { SLEEP_SAID, sleepNotYours } from './sleep';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } from './dyestuffs';
 
 /**
@@ -873,10 +873,15 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     },
   },
   // ---- The bed. ----
+  /*
+   * Sleep (`sleep.ts`): logged off asleep in it, gaining sleep bonus until the next join. A bed of yours, or one on
+   * a settlement of yours; not in a fight, mounted or with another job going. The island's `last_refusal` and
+   * `sleep_fall`, in the same order.
+   */
   {
     id: 'sleep',
-    label: 'Sleep until morning',
-    verb: 'sleeping',
+    label: 'Sleep',
+    verb: 'lying down',
     stamina: 0,
     baseTime: 4,
     applies: (t, g) => {
@@ -887,24 +892,23 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f || !isBed(f)) return 'Not a bed.';
       if (!nearPiece(g, f)) return 'Stand next to it.';
-      if (!g.isNight()) return `${g.clock()}: night only.`;
+      if (f.mine === false && !g.deedOfMineAt(Math.floor(f.x), Math.floor(f.y))) return sleepNotYours(furnitureName(f));
+      if (g.action && g.action.def.id !== 'sleep') return SLEEP_SAID.busy;
+      if (g.inAFight()) return SLEEP_SAID.fight;
+      if (g.mounted()) return SLEEP_SAID.mounted;
       return null;
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return;
       const def = furnitureDef(f.kind);
-      // A well-made bed is a better night than a cot with a thin mattress —
-      // and a bed under a roof, in a room with walls all round it, is a better
-      // night again than the same bed standing in a field in the weather.
-      // A bed down in a cellar is in a room too: a cellar is always indoors.
+      // Health back on lying down: the bed's worth, its QL, and a room round it (a cellar is always one).
       const inside = g.buildings.indoors(f.level ?? 0, Math.floor(f.x), Math.floor(f.y));
       const rest = (def.bed ?? 1) * (0.6 + f.ql / 250) * (inside ? INDOORS_REST : 1);
       g.note('slept');
-      // In a bed of your own making, for the journal: playing by yourself, every one is (the island's `perform_last` asks who made it).
+      // In a bed of your own making, for the journal (the island's `perform_last` asks who made it).
       if (f.mine !== false) g.note('slept:own');
-      // And a Dreamweave set into it banks more of the night (`bankRest`).
-      g.sleepUntilMorning(rest, furnitureName(f).toLowerCase(), swingEnchant(f, 'dream'));
+      g.fallAsleep(rest, furnitureName(f));
     },
   },
   {

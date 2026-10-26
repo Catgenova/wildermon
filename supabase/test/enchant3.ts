@@ -32,7 +32,7 @@ import { sameStack } from '../../src/game/items';
 import { tackEnchant, tackSpeed } from '../../src/game/creatures';
 import { tameChance } from '../../src/game/creatureActions';
 import { DAY_SECONDS } from '../../src/game/game';
-import { REST_CAP } from '../../src/game/boons';
+import { SLEEP_BONUS_CAP, sleepBanked, sleepRate } from '../../src/game/sleep';
 import type { Creature } from '../../src/game/creatures';
 import { DAMAGE_MAX } from '../../src/game/limits';
 import { enchantSays } from '../../src/game/enchanting';
@@ -372,14 +372,12 @@ begin
   perform wear_tool(v_net, 1.4);
   insert into said select 'WEAR', v_d0 || '|' || dmg from item where id = v_net;
   insert into said values ('HAULSRC', (pg_get_functiondef('perform_fish(uuid, uuid, text, jsonb)'::regprocedure) like '%* (1 + v_mend)%')::text);
-  -- A night with rest already at the most banked: plain, it stays there; in a Dreamweave at QL 100, it goes that much past; plain again, nothing is lost.
-  update player set rested = rest_cap(), rested_at = now() where world_id = w and uid = u;
-  perform sleep_until_morning(w, u, 1, 'bed');
-  insert into said select 'REST0', rested::text from player where world_id = w and uid = u;
-  perform sleep_until_morning(w, u, 1, 'bed', enchant_hit_chance('dreamweave', 100));
-  insert into said select 'REST100', rested::text from player where world_id = w and uid = u;
-  perform sleep_until_morning(w, u, 1, 'bed');
-  insert into said select 'RESTKEPT', rested::text from player where world_id = w and uid = u;
+  -- Eight hours asleep with the sleep bonus already at the most stored: plain, it stays there; in a Dreamweave at QL 100, it goes that much past; plain again, nothing is lost.
+  insert into said select 'REST0', sleep_banked(sleep_bonus_cap(), 8 * 3600, sleep_rate(1, 100, 0), 0)::text;
+  insert into said select 'REST100', sleep_banked(sleep_bonus_cap(), 8 * 3600,
+    sleep_rate(1, 100, enchant_hit_chance('dreamweave', 100)), enchant_hit_chance('dreamweave', 100))::text;
+  insert into said select 'RESTKEPT', sleep_banked(sleep_banked(sleep_bonus_cap(), 8 * 3600,
+    sleep_rate(1, 100, enchant_hit_chance('dreamweave', 100)), enchant_hit_chance('dreamweave', 100)), 8 * 3600, sleep_rate(1, 100, 0), 0)::text;
   -- 11. Fleetfoot and Tamer's Bridle: the refusals, a pile of its own, taming, and the tack on a mount and off it.
   insert into skill (world_id, uid, id, value) values (w, u, 'taming', 60) on conflict (world_id, uid, id) do update set value = excluded.value;
   v_sad := give(w, u, 'saddle', 1, 50);
@@ -413,7 +411,7 @@ begin
       from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def in ('saddle', 'bridle'))
     || '|' || coalesce((select tack_enchant::text from creature where world_id = w and id = v_mount), 'none');
   insert into said values ('LEASHSRC', (pg_get_functiondef('companion_target(uuid, creature, player)'::regprocedure) like '%c.tacked and tack_enchant_of(c, ''tame'') > 0%')::text);
-  insert into said values ('DREAMSRC', (pg_get_functiondef('perform_last(uuid, uuid, text, jsonb)'::regprocedure) like '%placed_enchant(pc, ''dream'')%')::text);
+  insert into said values ('DREAMSRC', (pg_get_functiondef('sleep_fall(uuid, uuid, placed)'::regprocedure) like '%placed_enchant(pc, ''dream'')%')::text);
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -697,15 +695,13 @@ const wear100 = net.dmg ?? 0;
 check(`a Netmender at QL 100 on a net: a drag wears it ${enchantValue(MEND, 100) * NETMENDER_WEAR * 100}% less, the same on both sides, and brings up ${enchantValue(MEND, 100) * 100}% more fish in the island's perform_fish`,
   wear0 > 0 && near(wear100, wear0 * (1 - enchantValue(MEND, 100) * NETMENDER_WEAR)) && near(num('WEAR', 0), wear0, 1e-4) && near(num('WEAR', 1), wear100, 1e-4)
     && isle.get('HAULSRC') === 'true', `${isle.get('WEAR')} ${isle.get('HAULSRC')} / ${wear0} ${wear100}`);
-g.player.rested = REST_CAP;
 const night = 8 * 3600;
-g.bankRest(night, 1);
-const rest0 = g.player.rested;
-g.bankRest(night, 1, enchantValue(DREAM, 100));
-const rest100 = g.player.rested;
-g.bankRest(night, 1);
-check(`a night in a bed with a Dreamweave at QL 100 banks ${enchantValue(DREAM, 100) * 100}% more rest, past the most a night otherwise banks, and a plain night after takes none of it away, on both sides`,
-  rest0 === REST_CAP && near(rest100, REST_CAP * (1 + enchantValue(DREAM, 100))) && g.player.rested === rest100
+const dream = enchantValue(DREAM, 100);
+const rest0 = sleepBanked(SLEEP_BONUS_CAP, night, sleepRate(1, 100));
+const rest100 = sleepBanked(SLEEP_BONUS_CAP, night, sleepRate(1, 100, dream), dream);
+g.player.rested = sleepBanked(rest100, night, sleepRate(1, 100));
+check(`asleep in a bed with a Dreamweave at QL 100 gains ${dream * 100}% more sleep bonus, past the most otherwise stored, and a plain sleep after takes none of it away, on both sides`,
+  rest0 === SLEEP_BONUS_CAP && near(rest100, SLEEP_BONUS_CAP * (1 + dream)) && g.player.rested === rest100
     && near(num('REST0'), rest0) && near(num('REST100'), rest100) && near(num('RESTKEPT'), rest100) && isle.get('DREAMSRC') === 'true',
   `${isle.get('REST0')} ${isle.get('REST100')} ${isle.get('RESTKEPT')} ${isle.get('DREAMSRC')} / ${rest0} ${rest100} ${g.player.rested}`);
 

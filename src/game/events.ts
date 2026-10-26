@@ -110,6 +110,8 @@ export type GameEvents = {
   goals: [];
   action: [];
   stats: [];
+  /** Lain down in a bed and logged off asleep in it, by its name (`Game.fallAsleep`). */
+  asleep: [what: string];
   world: [x: number, y: number];
   /** The island's word on the spots near us that are picked over came in (`Game.foragedFromIsland`). */
   foraged: [];

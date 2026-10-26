@@ -3975,7 +3975,7 @@ select '514. ' || (select text from event where uid = :'ivar' order by n desc li
      || ' — and there are ' || (select count(*) from bridge where world_id = :'world2')
      || ' bridges left on the island';
 
--- A bed, and the night that goes past whether anybody is awake for it.
+-- A bed, Sleep in it at any hour, logged off asleep, and woken by the next join with the sleep bonus of the time asleep.
 select give(:'world2', :'ivar', 'bed', 1, 60, 'Oak') \g /dev/null
 update player set x = 5.5, y = 7.5 where world_id = :'world2' and uid = :'ivar';
 select act_perform(:'world2', :'ivar', 'place_furniture',
@@ -3987,37 +3987,25 @@ update world set epoch = now() - make_interval(secs => 12 / 24.0 * day_seconds()
   where id = :'world2';
 select '515. at ' || world_clock(:'world2') || ': ' || coalesce(act_refusal(:'world2', :'ivar', 'sleep',
        ('{"kind":"furniture","id":' || :'bed' || '}')::jsonb), 'allowed');
-update world set epoch = now() - make_interval(secs => 22 / 24.0 * day_seconds())
-  where id = :'world2';
-select give(:'world2', :'ivar', 'plank', 1, 40) as fresh \gset
-update item set made_at = now() where id = :'fresh';
-insert into crop (world_id, x, y, id, stage, stage_at, ql, tended)
-  values (:'world2', 12, 12, 'wheat', 0, now(), 40, 0)
-  on conflict (world_id, x, y) do update set stage = 0, stage_at = now();
-update player set favour = 0, favour_at = now(), prayed_at = now(), rested = 0, rested_at = now(),
+update player set rested = 0, rested_at = now(), sleep_on = false,
     stats = jsonb_set(jsonb_set(stats, '{health}', '0.5'), '{hunger}', '0.9')
   where world_id = :'world2' and uid = :'ivar';
 delete from event where uid = :'ivar';
 select act_perform(:'world2', :'ivar', 'sleep', ('{"kind":"furniture","id":' || :'bed' || '}')::jsonb) \g /dev/null
-select '516. ' || (select text from event where uid = :'ivar' order by n desc limit 1);
-/*
- * And the night happened to everything else as well — not by being walked
- * forward, but by every one of them being told it was longer ago than it was.
- * The wheat has to be *looked at* before it shows, which is the whole of how
- * this island has worked since the first campfire.
- */
-select crop_settle(:'world2', 12, 12) \g /dev/null
-select '517. sown at bedtime, and nobody watched it: the wheat is at stage '
-     || (select stage from crop where world_id = :'world2' and x = 12 and y = 12)
-     || ' of ' || crop_ripe() || ' at ' || (select stage_seconds from crop_def where id = 'wheat')
-     || ' seconds a stage, a plank made at bedtime is ' || round((extract(epoch from (now() -
-        (select made_at from item where id = :'fresh'))) / 60)::numeric) || ' minutes old, '
-     || 'and favour has come back to ' || round(favour_settle(:'world2', :'ivar')::numeric, 1)
-     || ' — all of it out of one night that took no time at all';
-select '518. what a night is worth: ' || round(rest_left((select p from player p
-       where p.world_id = :'world2' and p.uid = :'ivar'))::numeric) || ' seconds of rest, '
-     || 'while which everything teaches you ' || round(rest_bonus(:'world2', :'ivar')::numeric)
-     || ' times as much — and the bed is now home: '
+select '516. ' || (select text from event where uid = :'ivar' order by n desc limit 1)
+     || ' — logged off: ' || (select away from player where world_id = :'world2' and uid = :'ivar')
+     || ', and asked anything: ' || coalesce(act_refusal(:'world2', :'ivar', 'set_home',
+        ('{"kind":"furniture","id":' || :'bed' || '}')::jsonb), 'allowed');
+-- Three hours asleep, by moving when it lay down.
+update private.asleep set at = now() - interval '3 hours' where world_id = :'world2' and uid = :'ivar';
+delete from event where uid = :'ivar';
+select private.sleep_wake(:'world2', :'ivar') \g /dev/null
+update player set away = false, sleep_on = true where world_id = :'world2' and uid = :'ivar';
+select '517. ' || (select text from event where uid = :'ivar' order by n desc limit 1);
+select '518. what three hours asleep is worth: ' || round(rest_left((select p from player p
+       where p.world_id = :'world2' and p.uid = :'ivar'))::numeric) || ' seconds of sleep bonus, '
+     || 'switched on: skill gain ×' || round(rest_bonus(:'world2', :'ivar')::numeric)
+     || ' — and the bed is now home: '
      || coalesce(act_refusal(:'world2', :'ivar', 'set_home',
         ('{"kind":"furniture","id":' || :'bed' || '}')::jsonb), 'allowed');
 delete from event where uid = :'ivar';
@@ -6148,7 +6136,7 @@ select set_config('request.jwt.claims', json_build_object('sub', :'ivar')::text,
 update player set rested = 0, boons = '[]'::jsonb, knacks = '{}'::jsonb, titles = '[]'::jsonb,
     title = null, nutrition = '{}'::jsonb, way = null where world_id = :'world2' and uid = :'ivar' \g /dev/null
 select round(skill_mult(:'world2', :'ivar', 'mining')::numeric, 2) as plain \gset
-update player set rested = 600 where world_id = :'world2' and uid = :'ivar' \g /dev/null
+update player set rested = 600, sleep_on = true where world_id = :'world2' and uid = :'ivar' \g /dev/null
 select round(skill_mult(:'world2', :'ivar', 'mining')::numeric, 2) as slept \gset
 update player set knacks = '{"mining": 3}'::jsonb where world_id = :'world2' and uid = :'ivar' \g /dev/null
 select round(skill_mult(:'world2', :'ivar', 'mining')::numeric, 2) as knacked \gset

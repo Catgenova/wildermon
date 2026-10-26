@@ -250,7 +250,7 @@ export const SNARECRAFT_PER_QL = 0.0025;
 /** Netmender: a drag of the net brings up QL/10 percent more fish, and the net wears `NETMENDER_WEAR` times that share slower: QL/2 percent. */
 export const NETMENDER_PER_QL = 0.001;
 export const NETMENDER_WEAR = 5;
-/** Dreamweave: a night in the bed banks QL/4 percent more rest, and holds that much more past the most rest otherwise banked. */
+/** Dreamweave: asleep in the bed gains QL/4 percent more sleep bonus, and stores that much more past `SLEEP_BONUS_CAP` (`sleepRate`, `sleepCap`). */
 export const DREAMWEAVE_PER_QL = 0.0025;
 /** Fleetfoot: a mount wearing the saddle carries you QL/10 percent faster. */
 export const FLEETFOOT_PER_QL = 0.001;

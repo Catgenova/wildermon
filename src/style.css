@@ -1010,6 +1010,7 @@ kbd {
 /* Under the bars: the stance and Eat, the two things the bars ask of you. */
 .hud-acts {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 6px 0 2px;
 }
@@ -1024,6 +1025,16 @@ kbd {
 .hud-acts .hud-mini:not(.hud-stance) {
   flex: 0 0 auto;
   min-width: 56px;
+}
+
+/* The sleep bonus switch, on a line of its own under the stance and Eat: its label is long. */
+.hud-acts .hud-mini.hud-sleep {
+  flex: 1 1 100%;
+  text-align: left;
+}
+
+.hud-sleep.hud-sleep-on {
+  color: var(--t-good, #9fd18b);
 }
 
 .hud-bar-label {
@@ -4090,6 +4101,22 @@ button.goal-row:focus-visible {
   border: 1px solid var(--t-line-2, #3c4642);
   white-space: nowrap;
 }
+
+/* The sleep bonus switch and what it does, over the titles. */
+.skill-sleep {
+  font: inherit;
+  font-size: 12px;
+  margin: 4px 6px 2px;
+  padding: 4px 8px;
+  border: 1px solid var(--t-line-2, #4a5550);
+  border-radius: 3px;
+  color: var(--t-text, #b9c6bc);
+  background: var(--t-card, rgba(0, 0, 0, 0.26));
+  cursor: pointer;
+  text-align: left;
+}
+.skill-sleep.skill-sleep-on { color: var(--t-good, #9fd18b); border-color: var(--t-good-line, #6f8f5f); }
+.skill-sleep-note { color: var(--t-dim, #7c8a80); font-size: 11px; padding: 0 6px 6px; }
 
 /* Titles earned from the trades, worn one at a time. */
 .title-box { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px 6px; }

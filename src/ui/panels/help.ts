@@ -20,7 +20,8 @@ import { ARCHAEOLOGY_ACTION_BY_ID, FIND_DAMAGE, FIND_DAMAGE_SPREAD, LECTERN_GAIN
 import { BELT_MAX, QL_PER_LOOP } from '../../game/belt';
 import { HUNGER_RATE, staminaBarAbove, SWIM_LEARN } from '../../game/body';
 import { HEAL_FED } from '../../game/body';
-import { BOON_BONUS, BOON_FOODS, boonTime, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
+import { BOON_BONUS, BOON_FOODS, boonTime, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
+import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, sleepHm } from '../../game/sleep';
 import { TINCTURE_NAMES } from '../../game/remedies';
 import { BREW_BY_ID, BREWS, isBrew } from '../../game/brewing';
 import { AGEING_GROUPS, CELLAR_AGEING, keepsQl } from '../../game/ageing';
@@ -478,8 +479,8 @@ function enchantingHelp(): string {
       Creel: multiplies fish chance after maker's mark. Enchanted in place or in the pack; kept through pickup and set-down.</li>
       <li>Netmender: multiplies a drag's average haul after a Fisher's Full Net and the net's maker's mark; its fish % × ${NETMENDER_WEAR} off
       drag wear on the net, alongside Truesteel and perks.</li>
-      <li>Dreamweave: multiplies a night's banked rest after bed QL and roof; raises max rest held after that night by the same %.
-      A later night in a plain bed never takes rest away.</li>
+      <li>Dreamweave: sleep bonus per hour asleep in the bed × (1 + its %), after bed QL; max stored after that sleep × the same.
+      A later sleep in a plain bed never takes sleep bonus away.</li>
     </ul>
     <h4>Tack</h4>
     <ul>
@@ -1236,6 +1237,7 @@ export function helpText(): string {
       <li><b>Swimming</b>: deep-water speed and wind cost. Learned while out of your depth.</li>
       <li>Both log only whole points. Current value: Skills window (<kbd>K</kbd>).</li>
       <li>Skills window: click a skill for a slider per effect. Left end: the skill's starting value. Right end: ${SKILL_TOP}. Marker: your level.</li>
+      <li>Skills window, top: <b>Sleep bonus</b> on/off and stored (also <b>${keyName(BIND_BY_ID.get('sleep_bonus')?.keys[0] ?? '')}</b> and the status panel). On: skill gain ${mul(SLEEP_BONUS_MULT)} on every skill while any is stored, drains 1 s per s. Gained by Sleep in a bed (<i>Beds</i>).</li>
     </ul>
     <h3>What you can see</h3>
     <table>
@@ -1834,7 +1836,7 @@ export function helpText(): string {
     <h4>Inside</h4>
     <ul>
       <li>Always indoors, no walls needed, roof or none. Rot: ${frac(CELLAR_DECAY)} of the open-air rate (closed room: ${frac(INDOORS_DECAY)}); the slowest anywhere.</li>
-      <li>Bed: +${percent(INDOORS_REST - 1)} rest over the same bed outdoors, as in a closed room.</li>
+      <li>Bed: +${percent(INDOORS_REST - 1)} health back on Sleep over the same bed outdoors, as in a closed room.</li>
       <li>All furniture goes down except ${listed(CELLAR_BURNS)} (open fires), anything on wheels or afloat, and ${listed(CELLAR_NOT_DOWN)}.</li>
       <li>Always dark; counts as deep night for Awareness learned in the dark. Sight: what a carried lantern or torch lights. A lantern or torch can be lit there only
       from another alight in your hands.</li>
@@ -2247,10 +2249,10 @@ export function helpText(): string {
       One liquid per barrel.</li>
       <li><b>Pour</b> a full bucket in: empty bucket back; on a stack, all of them in turn. Filling a bucket beside a barrel draws from the barrel.</li>
     </ul>
-    <h3>Rest, and what the cooking is for</h3>
+    <h3>Sleep bonus, and what the cooking is for</h3>
     <ul>
-      <li>Sleeping in a bed banks <b>rest</b>: ${frac(REST_PER_SECOND)} the night in a perfect bed, less in poorer ones; max ${dur(REST_CAP)} held.</li>
-      <li>Burns only while working; skill gain <b>${mul(REST_MULT)}</b> while it burns. Shown on the hud.</li>
+      <li><b>Sleep bonus</b>: +${sleepHm(3600 * SLEEP_BONUS_RATE)} per hour logged off asleep in a bed (QL 0), × (1 + QL/${SLEEP_BONUS_QL}); max ${sleepHm(SLEEP_BONUS_CAP)} stored. See <i>Beds</i>.</li>
+      <li>On (<b>${keyName(BIND_BY_ID.get('sleep_bonus')?.keys[0] ?? '')}</b>, Skills window, status panel): skill gain <b>${mul(SLEEP_BONUS_MULT)}</b> while any is stored; drains 1 s per s while on the island. Off: kept.</li>
       <li>Every cooked dish <b>favours one skill</b>: eating it gives a <b>meal boost</b>: skill gain ${mul(1 + BOON_BONUS)} in that skill for ${dur(DISH_SHORTEST)} to
       ${dur(DISH_LONGEST)}, by fill and quality (QL). A meal boost expires; a knack earned at work does not.</li>
       <li>Dish-to-skill pairings are fixed per island, different on each: <b>examine</b> a dish to see its skill.</li>
@@ -2487,9 +2489,10 @@ export function helpText(): string {
     <h4>Beds</h4>
     <ul>
       <li><b>Make this your home</b> (bed or cot): where you wake, whatever happens.</li>
-      <li><b>Sleep until morning</b> (after dark): wind restored, some damage mended; better bed, better night.</li>
-      <li>Island: the night cannot be skipped; you wake rested at the same clock time.</li>
-      <li>You wake hungry and thirsty.</li>
+      <li><b>Sleep</b>, any hour: <b>logs you off</b>. A bed of yours, or one on a settlement of yours; not in a fight, mounted, or with another action going.</li>
+      <li>On lying down: stamina full; health +${percent(0.25)} × bed worth × (0.6 + QL/250), +${percent(INDOORS_REST - 1)} indoors; food −${percent(0.2)}, water −${percent(0.25)}.</li>
+      <li>Asleep: <b>sleep bonus +${sleepHm(3600 * SLEEP_BONUS_RATE)} per hour</b> in a bed of QL 0, × (1 + QL/${SLEEP_BONUS_QL}), × bed worth (cot ${percent(furnitureDef('cot').bed ?? 0)}, tent ${percent(furnitureDef('tent').bed ?? 0)}); max ${sleepHm(SLEEP_BONUS_CAP)} stored. Logged off anywhere else: none.</li>
+      <li>Next login: you wake standing beside the bed (where it stood, if it is gone), with the time slept and the sleep bonus gained in the event log.</li>
       <li>Tailor: <b>tent</b>, ${bill('make_tent')}, with a needle. Set down anywhere; sleeps as a bed: ${percent((furnitureDef('tent').bed ?? 0) / (furnitureDef('bed').bed ?? 1))} of a bed
       of its quality (QL).</li>
     </ul>

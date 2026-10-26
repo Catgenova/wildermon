@@ -564,20 +564,24 @@ ${NET_DICE.map((r, i) => `
   -- Noon, by moving the island's memory rather than waiting for it.
   update world set epoch = now() - make_interval(secs => 12 / 24.0 * day_seconds()) where id = w;
   insert into said values ('NOON', coalesce(act_refusal(w, u, 'sleep', jsonb_build_object('kind', 'furniture', 'id', v_p)), 'ALLOWED'));
-  -- Ten at night, rested to nothing, and asleep in the tent.
-  update world set epoch = now() - make_interval(secs => 22 / 24.0 * day_seconds()) where id = w;
+  -- No sleep bonus stored, an hour asleep in the tent, and woken.
   update player set rested = 0, rested_at = now() where world_id = w and uid = u;
   perform act_perform(w, u, 'sleep', jsonb_build_object('kind', 'furniture', 'id', v_p));
+  update private.asleep set at = now() - interval '1 hour' where world_id = w and uid = u;
+  perform private.sleep_wake(w, u);
+  update player set away = false where world_id = w and uid = u;
   v_t := (select round(rested::numeric, 4)::text from player where world_id = w and uid = u)
-    || '|' || coalesce(${last('Slept in the %')}, 'unsaid');
+    || '|' || coalesce(${last('Slept %')}, 'unsaid');
   -- And the same night in a bed of the same QL beside it.
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, material, made_by)
     values (w, 'furniture', 'bed', 8, 9, 0, 0, 8.5, 10, ${HANDS}, 'Pine', u) returning id into v_bed;
-  update world set epoch = now() - make_interval(secs => 22 / 24.0 * day_seconds()) where id = w;
   update player set rested = 0, rested_at = now() where world_id = w and uid = u;
   perform act_perform(w, u, 'sleep', jsonb_build_object('kind', 'furniture', 'id', v_bed));
+  update private.asleep set at = now() - interval '1 hour' where world_id = w and uid = u;
+  perform private.sleep_wake(w, u);
+  update player set away = false where world_id = w and uid = u;
   insert into said values ('NIGHT', v_t || '|' || (select round(rested::numeric, 4)::text from player where world_id = w and uid = u)
-    || '|' || coalesce(${last('Slept in the %')}, 'unsaid'));
+    || '|' || coalesce(${last('Slept %')}, 'unsaid'));
   delete from placed where id in (v_p, v_bed);
   ${clear('needle', 'tent')};
 
@@ -751,11 +755,11 @@ const [tentNo, tentYes] = tentAsk.split('#');
 check(`${P('Tent').name}: refused without it in the browser's words, and allowed with it`,
   tentNo === RECIPE_PERK_SAYS.tent && tentYes === 'ALLOWED', tentAsk);
 check('and made of its bill, and set down', tentMade === `1:0:${HANDS.toFixed(2)}` && tentPlaced === `tent:${HANDS.toFixed(2)}`, `${tentMade} | ${tentPlaced}`);
-check('at noon it will not be slept in, as a bed will not', say('NOON').includes('night only'), say('NOON'));
+check('at noon it is slept in, as a bed is (Sleep, any hour)', say('NOON') === 'ALLOWED', say('NOON'));
 const [tentRest, tentSaid, bedRest, bedSaid] = say('NIGHT').split('|');
 const ofBed = (furnitureDef('tent').bed ?? 0) / (furnitureDef('bed').bed ?? 1);
-check(`and a night in it rests ${ofBed} of what the same night in a bed of its QL does`,
-  Number(bedRest) > 0 && near(Number(tentRest) / Number(bedRest), ofBed, 1e-3) && tentSaid.startsWith('Slept in the tent') && bedSaid.startsWith('Slept in the bed'),
+check(`and an hour asleep in it gains ${ofBed} of the sleep bonus the same hour in a bed of its QL does`,
+  Number(bedRest) > 0 && near(Number(tentRest) / Number(bedRest), ofBed, 1e-3) && tentSaid.startsWith('Slept 1 h 0 m: sleep bonus +') && bedSaid.startsWith('Slept 1 h 0 m: sleep bonus +'),
   say('NIGHT'));
 check('and the Tailor\'s tree is gone', say('NODES') === '0:0', say('NODES'));
 
