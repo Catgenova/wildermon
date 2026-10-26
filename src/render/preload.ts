@@ -1,5 +1,5 @@
 /**
- * The solid trees and bushes round where you come ashore, baked while the island is
+ * The solid trees, bushes and stumps round where you come ashore, baked while the island is
  * still being read (`preloadTreesAt`), so the first frame finds them made:
  * as the camera will first see them, at the scale it first draws at, under
  * the sun as it is and then its next step.
@@ -55,16 +55,16 @@ export function preloadTreesAt(
     // The low-end graphics draw every tree and bush flat: nothing to bake.
     const settings = liveSettings();
     if (drawsLow(settings, onPhone())) return DONE;
-    const tiles: Array<{ bush: boolean; species: number; variant: number; x: number; y: number; d: number }> = [];
+    const tiles: Array<{ bush: boolean; stump: boolean; species: number; variant: number; x: number; y: number; d: number }> = [];
     const cx = Math.floor(x), cy = Math.floor(y);
     for (let ty = cy - REACH; ty <= cy + REACH; ty++) {
       for (let tx = cx - REACH; tx <= cx + REACH; tx++) {
         if (!world.inBounds(tx, ty)) continue;
         const t = world.getTile(tx, ty);
-        if (t !== TileType.Tree && t !== TileType.Bush) continue;
+        if (t !== TileType.Tree && t !== TileType.Bush && t !== TileType.Stump) continue;
         const data = world.getData(tx, ty);
-        const bush = t === TileType.Bush;
-        tiles.push({ bush, species: bush ? bushSpecies(data) : treeSpecies(data), variant: bush ? 0 : treeVariant(data), x: tx, y: ty, d: (tx - x) ** 2 + (ty - y) ** 2 });
+        const bush = t === TileType.Bush, stump = t === TileType.Stump;
+        tiles.push({ bush, stump, species: bush ? bushSpecies(data) : treeSpecies(data), variant: bush || stump ? 0 : treeVariant(data), x: tx, y: ty, d: (tx - x) ** 2 + (ty - y) ** 2 });
       }
     }
     const hour = ((((islandSeconds % DAY_SECONDS) + DAY_SECONDS) % DAY_SECONDS) / DAY_SECONDS) * 24;

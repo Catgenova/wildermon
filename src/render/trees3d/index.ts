@@ -24,6 +24,10 @@
  * The bushes in `BUSH3D` are drawn the same way, by the same bakes, budget,
  * stand-ins and shade: a bush species grows its own model and paints it
  * (`Bush3D`); every other bush is drawn flat (`bushSprite`).
+ *
+ * So are the stumps and felled logs of the species in `STUMP3D_SPECIES`
+ * (`./stump`): each in its own species' bark (`SPECIES`), its foot that
+ * species' foot; every other is drawn flat (`stumpSprite`, `lyingSprite`).
  */
 import type { Season } from '../../world/calendar';
 import { hash2 } from '../../world/noise';
@@ -58,6 +62,7 @@ import { quince } from './species/quince';
 import { rose } from './species/rose';
 import { thorn } from './species/thorn';
 import { willow } from './species/willow';
+import { logsOf, paintLogs3d, paintStump3d, STUMP_SHAPES, stumpOf, thrown, woodOf, woodSpec, type StumpModel, type StumpShape } from './stump';
 import type { Build, Bush3D, Dress, Skeleton, Species3D, V3 } from './types';
 
 export { nextSunStep, sunStepOf, SUN_STEPS } from './light';
@@ -715,7 +720,7 @@ function lookAhead(look: { season: Season; day: number; step: number }, far: (j:
  * the page keeps answering, and stops once the renderer draws its first frame.
  */
 export async function preloadTrees3d(
-  tiles: ReadonlyArray<{ bush: boolean; species: number; variant: number; x: number; y: number }>,
+  tiles: ReadonlyArray<{ bush: boolean; stump?: boolean; species: number; variant: number; x: number; y: number }>,
   at: { season: Season; day: number; hour: number; dark: number; turn: number; scale: number; next: number | null },
 ): Promise<void> {
   await openStore();
@@ -730,8 +735,13 @@ export async function preloadTrees3d(
     t0 = performance.now();
   };
   const makers = tiles
-    .filter((t) => (t.bush ? BUSH3D_SPECIES : TREE3D_SPECIES).has(t.species))
-    .map((t) => ({ t, m: t.bush ? bushMaker(t.species, at.season, at.day, t.x, t.y, at.turn, at.scale) : treeMaker(t.species, t.variant, at.season, at.day, t.x, t.y, at.turn, at.scale) }));
+    .filter((t) => (t.bush ? BUSH3D_SPECIES : t.stump ? STUMP3D_SPECIES : TREE3D_SPECIES).has(t.species))
+    .map((t) => ({
+      t,
+      m: t.bush ? bushMaker(t.species, at.season, at.day, t.x, t.y, at.turn, at.scale)
+        : t.stump ? stumpMaker(t.species, at.season, t.x, t.y, at.turn, at.scale)
+        : treeMaker(t.species, t.variant, at.season, at.day, t.x, t.y, at.turn, at.scale),
+    }));
   for (const s of at.next === null ? [step] : [step, at.next]) {
     const jobs = new Map<string, Job>();
     const shades: Array<[ShadeJob, string]> = [];
@@ -997,4 +1007,129 @@ const BUSH_WOOD_DISCS = 720;
 /** How far round a tile's bush's foot its own shade reaches, as `tree3dFoot`. */
 export function bush3dFoot(species: number, x: number, y: number): number {
   return footReach(bushModelOf(species, formAt(x, y)));
+}
+
+/* ---- stumps and felled logs ----------------------------------------------------------- */
+
+/** The species whose stumps and felled logs are drawn as solids, by their `TREE_DEFS` index: take one out and it is drawn flat again. */
+export const STUMP3D_SPECIES: Set<number> = new Set(SPECIES.keys());
+/** The age a stump is the foot of: a stump keeps its species and not its age (`packTreeData`), and what is felled for its timber is mostly old. */
+const STUMP_AGE = Math.max(0, TREE_AGES.findIndex((a) => a.name === 'Old'));
+
+/** A species' kind of stump, by how its tree grows. */
+function shapeOf(spec: Species3D): StumpShape {
+  const b = spec.build;
+  return STUMP_SHAPES[b.whorls ? 'conifer' : b.habit === 'spreading' || b.habit === 'upright' || b.habit === 'orchard' ? b.habit : 'dome'];
+}
+
+const stumpModels = new Map<string, StumpModel>();
+function stumpModelOf(species: number, form: number): StumpModel {
+  const k = `${species}|${form}`;
+  let m = stumpModels.get(k);
+  if (!m) stumpModels.set(k, (m = stumpOf(skeletonOf(species, STUMP_AGE, form), shapeOf(SPECIES.get(species) ?? maple), seedOf(species, STUMP_AGE, form))));
+  return m;
+}
+/** A day's dress for wood with no leaf on it. */
+const bareOf = (season: Season): Dress => ({ season, step: 0, full: 0, turned: 0, litter: 0, keys: false });
+/** A species' flat stump's wood (`TREE_DEFS` trunk). */
+const trunkOf = (species: number): string => (TREE_DEFS[species] ?? TREE_DEFS[0]).trunk;
+/** Whether a stump of a species wears its bark's moss in a season: outside the summer, where its bark has any. */
+const dampFor = (species: number, season: Season): boolean => !!(SPECIES.get(species) ?? maple).bark.moss && season !== 'summer';
+/** A stump's look in a season, for a bake's key. */
+const stumpLook = (species: number, season: Season): string => `${season === 'winter' ? 'w' : 'x'}${dampFor(species, season) ? 'm' : ''}`;
+
+/** A stump of a species painted under a light: its model with its shade's reach (`thrown`), and how to paint it. */
+function stumpPainter(species: number, form: number, season: Season, light: Light, scale: number): { sk: Skeleton; paint: (g: CanvasRenderingContext2D, e: Eye) => void } {
+  const m = stumpModelOf(species, form);
+  const sk = thrown(m, light);
+  const trunk = trunkOf(species);
+  const job = { sk, spec: woodSpec(SPECIES.get(species) ?? maple, trunk, dampFor(species, season)), dress: bareOf(season), light, seed: seedOf(species, STUMP_AGE, form), frame: 0, scale };
+  return { sk, paint: (g, e) => paintStump3d(g, { ...job, e }, m, woodOf(trunk)) };
+}
+
+function stumpMaker(species: number, season: Season, x: number, y: number, turn: number, scale: number): Maker {
+  const form = formOf(species, x, y);
+  return {
+    lookAt: (s) => stumpMaker(species, s, x, y, turn, scale),
+    head: `${scale}|stump${species}|${form}|${stumpLook(species, season)}`,
+    leafy: false,
+    makeAt: (step) => {
+      const p = stumpPainter(species, form, season, lightOf(step), scale);
+      // Its shade, at its foot and thrown, is in its picture (`paintStump3d`).
+      return bake(scale, p.sk, turn, p.paint, false);
+    },
+    // It throws none with the trees' (`Renderer.solidFrame`): its own is in its picture.
+    shadeHead: `stump${species}|${form}|`,
+    throwOf: () => {},
+  };
+}
+
+/**
+ * The picture of a stump drawn as a solid, as `tree3dSprite` makes a tree's:
+ * the foot of its species' tree on that tile, sawn off, and its shade.
+ * Moss over its rim outside the summer where its bark has moss, and snow on
+ * its top in winter. Null to be drawn flat this frame.
+ */
+export function stump3dSprite(species: number, season: Season, _day: number, at: TreeView, scale: number): TreeSprite | null {
+  return baked(stumpMaker(species, season, at.x, at.y, at.turn, scale), at.turn, sunStepOf(at.hour, at.dark), 0, at.x, at.y);
+}
+
+/** The ways a felled log lies, round the compass: it keeps none of its own, so its tile picks one. */
+const LOG_WAYS = 4;
+/** A log's length, in model units: over half a tile. */
+const LOG_LONG = 23;
+const logModels = new Map<string, ReturnType<typeof logsOf>>();
+
+function logMaker(species: number, n: number, season: Season, x: number, y: number, turn: number, scale: number, beside: boolean): Maker {
+  const way = Math.floor(hash2(Math.round(x), Math.round(y), 6271) * LOG_WAYS) % LOG_WAYS;
+  const count = Math.max(1, Math.min(3, Math.round(n)));
+  const spec = SPECIES.get(species) ?? maple;
+  const angle = (way / LOG_WAYS) * Math.PI + Math.PI / 8;
+  // Beside a stump: the stump that tile's tree left, painted in the same picture, the logs to one side of it in the world.
+  const form = formOf(species, x, y);
+  const kind = `${species}|${way}|${count}|${beside ? form : -1}`;
+  const model = (): ReturnType<typeof logsOf> => {
+    let m = logModels.get(kind);
+    if (!m) {
+      // As thick as its kind of stump, a little less.
+      const r = shapeOf(spec).radius * 0.66;
+      const off = beside ? Math.max(...stumpModelOf(species, form).cuts.map((c) => Math.hypot(c.c[0], c.c[1]) + c.r)) * 1.3 + r * (count > 1 ? 2.1 : 1.15) : 0;
+      logModels.set(kind, (m = logsOf(r, LOG_LONG, count, angle, off, species * 31 + way * 7 + count)));
+    }
+    return m;
+  };
+  return {
+    lookAt: (s) => logMaker(species, n, s, x, y, turn, scale, beside),
+    head: `${scale}|log${kind}|${beside ? stumpLook(species, season) : season === 'winter' ? 'w' : 'x'}`,
+    leafy: false,
+    makeAt: (step) => {
+      const m = model();
+      const light = lightOf(step);
+      const trunk = trunkOf(species);
+      const job = { sk: m.sk, spec: woodSpec(spec, trunk, false, true), dress: bareOf(season), light, seed: seedOf(species, STUMP_AGE, way), frame: 0, scale };
+      const logs = (g: CanvasRenderingContext2D, e: Eye): void => paintLogs3d(g, { ...job, e }, m.logs, woodOf(trunk));
+      if (!beside) return bake(scale, m.sk, turn, logs, false);
+      // With the stump: the nearer of the two laid over the other.
+      const s = stumpPainter(species, form, season, light, scale);
+      const both: Skeleton = { ...m.sk, limbs: [...m.sk.limbs, ...s.sk.limbs], crown: s.sk.crown.r > m.sk.crown.r ? s.sk.crown : m.sk.crown };
+      const toward = eyeOf(0, turn).toward;
+      const mid = m.logs.reduce((d, l) => d + (l.a[0] + l.b[0]) * toward[0] + (l.a[1] + l.b[1]) * toward[1], 0);
+      return bake(scale, both, turn, (g, e) => {
+        if (mid >= 0) { s.paint(g, e); logs(g, e); } else { logs(g, e); s.paint(g, e); }
+      }, false);
+    },
+    // Lying, it throws no more than the shade under it, which is its own (`paintLogs3d`).
+    shadeHead: `log${kind}|`,
+    throwOf: () => {},
+  };
+}
+
+/**
+ * The picture of felled logs of a species lying on a tile, drawn as solids:
+ * one to three of them (`n`), lying a way the tile picks. On a stump's tile
+ * (`beside`), the stump with them, the logs to one side of it. Each a length
+ * of its kind of stump's stem, both ends sawn. Null to be drawn flat this frame.
+ */
+export function log3dSprite(species: number, n: number, season: Season, at: TreeView, scale: number, beside: boolean): TreeSprite | null {
+  return baked(logMaker(species, n, season, at.x, at.y, at.turn, scale, beside), at.turn, sunStepOf(at.hour, at.dark), 0, at.x, at.y);
 }

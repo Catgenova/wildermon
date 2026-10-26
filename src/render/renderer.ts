@@ -44,7 +44,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
-import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, formAt, nextSunStep, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, formAt, nextSunStep, STUMP3D_SPECIES, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -440,7 +440,7 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, sprigOf, topEdges, type Face } from './outcrops';
-import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { inkOf } from './ink';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
@@ -3916,7 +3916,7 @@ export class Renderer {
 
   /** The fast graphics this frame (`Settings.graphics`, or Low power): no swell, no haze, no small life. */
   private fast = false;
-  /** The low-end graphics this frame (`drawsLow`, or Low power): no wakes and no dust either, and the solid trees and bushes drawn flat. */
+  /** The low-end graphics this frame (`drawsLow`, or Low power): no wakes and no dust either, and the solid trees, bushes, stumps and logs drawn flat. */
   private still = false;
   /** Less motion this frame (`lessMotion`): no sway in trees, bushes and flowers, no bob or pulse in the markers, steady lights. */
   private calm = false;
@@ -4598,7 +4598,7 @@ export class Renderer {
           if (stoneMem && !aloft) this.takeStone(stoneMem, x, y, V);
           if (!stoneMem && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
             const data = world.viewData(x, y, false);
-            const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day, this.bushAt(bushSpecies(data), x, y)) : stumpSprite(treeSpecies(data));
+            const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day, this.bushAt(bushSpecies(data), x, y)) : stumpSprite(treeSpecies(data), this.year.season, this.year.day, this.stumpAt(treeSpecies(data), x, y));
             const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
             this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid ? solidX : 0), baseY + hh - avg * hs + (spr.solid ? solidY : 0), spr);
           }
@@ -4613,15 +4613,19 @@ export class Renderer {
         // A Runestone's nine tiles: the stone is taken on its front one, and nothing that grows there is drawn under it.
         const stone = world.solid !== null && world.solid.has(y * world.w + x) ? runestoneAt(x, y, world.w) : null;
         if (stone && !aloft) this.takeStone(stone, x, y, V);
-        if (!stone && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
+        // A stump with felled logs on its tile drawn as solids is drawn with them, in their picture (`log3dSprite`).
+        const logged = t === TileType.Stump && !cutHere && !aloft && this.game.ground.size > 0 && this.game.groundAt(x, y).length > 0
+          && !this.still && lyingSprite(this.game.groundAt(x, y), x, y, this.solidAt(x, y), this.year.season, true).solid === true;
+        if (!stone && !logged && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
           const data = world.getData(x, y);
-          const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day, this.bushAt(bushSpecies(data), x, y)) : stumpSprite(treeSpecies(data));
+          const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day, this.bushAt(bushSpecies(data), x, y)) : stumpSprite(treeSpecies(data), this.year.season, this.year.day, this.stumpAt(treeSpecies(data), x, y));
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
           this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid ? solidX : 0), baseY + hh - avg * hs + (spr.solid ? solidY : 0), spr);
         }
         if (!cutHere && !aloft && this.game.ground.size && this.game.groundAt(x, y).length) {
           const avg = (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(x, y) : null) ?? (c[0] + c[1] + c[2] + c[3]) / 4;
-          const pile = this.take('pile', x, y, baseX, baseY + hh - avg * hs, lyingSprite(this.game.groundAt(x, y), x, y));
+          const lying = lyingSprite(this.game.groundAt(x, y), x, y, this.logsAt(x, y), this.year.season, t === TileType.Stump);
+          const pile = this.take('pile', x, y, baseX + (lying.solid ? solidX : 0), baseY + hh - avg * hs + (lying.solid ? solidY : 0), lying);
           // A heap shines for the best thing in it: one fantastic hatchet under
           // a hundred rocks is still a fantastic hatchet lying in the grass.
           let best = 0;
@@ -7229,7 +7233,8 @@ export class Renderer {
        * as big or better, one in four is half size or less, and the rest
        * fill the middle. That is what puts a top and a floor on a canopy.
        */
-      const grew = ent.kind === 'tree' || ent.kind === 'bush' ? grownAt(ent.x, ent.y) : 1;
+      // A stump drawn as a solid is the foot of the tree that grew there: bigger or smaller with it, by less (`stumpGrown`).
+      const grew = ent.kind === 'tree' || ent.kind === 'bush' ? grownAt(ent.x, ent.y) : ent.kind === 'stump' && spr.solid ? stumpGrown(ent.x, ent.y) : 1;
       const dw = spr.w * zoom * grew;
       const dh = spr.h * zoom * grew;
       const left = ent.sx - spr.ax * zoom * grew;
@@ -7243,10 +7248,11 @@ export class Renderer {
         this.drawTree(ctx, ent, spr, zoom, grew);
         continue;
       }
-      if (this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
+      // A solid stump or log has its shade, at its foot and thrown, in its own picture (`paintStump3d`, `paintLogs3d`).
+      if (this.shadow.alpha > 0.012 && !spr.solid) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
       const ready = this.atSize(spr.canvas, dw, dh);
-      this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => g.drawImage(ready, px - spr.ax * zoom, py - spr.ay * zoom, dw, dh), undefined,
-        [ent.sx - spr.ax * zoom, ent.sy - spr.ay * zoom, dw, dh]);
+      this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => g.drawImage(ready, px - spr.ax * zoom * grew, py - spr.ay * zoom * grew, dw, dh), undefined,
+        [left, top, dw, dh]);
       /*
        * And the shine, over the top of whatever it is, because the light comes
        * off the thing rather than out from behind it. The seed is the tile, so
@@ -7272,6 +7278,16 @@ export class Renderer {
   /** And a bush's. */
   private bushAt(species: number, x: number, y: number): TreeView | undefined {
     return BUSH3D_SPECIES.has(species) && !this.still ? this.solidAt(x, y) : undefined;
+  }
+
+  /** And a stump's. */
+  private stumpAt(species: number, x: number, y: number): TreeView | undefined {
+    return STUMP3D_SPECIES.has(species) && !this.still ? this.solidAt(x, y) : undefined;
+  }
+
+  /** And felled logs': none on the low-end graphics, which draw them in the heap. */
+  private logsAt(x: number, y: number): TreeView | undefined {
+    return this.still ? undefined : this.solidAt(x, y);
   }
 
   private solidAt(x: number, y: number): TreeView {
@@ -8467,7 +8483,7 @@ export class Renderer {
     const cam = this.camera;
     const pile = g.groundAt(x, y, CELLAR_LEVEL);
     if (pile.length) {
-      const e = this.take('pile', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, floor), lyingSprite(pile, x, y));
+      const e = this.take('pile', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, floor), lyingSprite(pile, x, y, this.logsAt(x, y), this.year.season));
       let best = 0;
       for (const it of pile) if ((it.rare ?? 0) > best) best = it.rare ?? 0;
       if (best) e.rare = best;

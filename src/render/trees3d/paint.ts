@@ -242,7 +242,7 @@ function barkAt(job: Job, L: Limb, n: V3, snow: boolean): string {
  * (the two pieces either side of a point agreeing on it, so the limb bends
  * without a kink), and its colours across its width.
  */
-interface Chain {
+export interface Chain {
   pieces: number[];
   q: Pt[];
   r: number[];
@@ -256,10 +256,12 @@ interface Chain {
   skip: number;
   order: number;
   thin: boolean;
+  /** Sawn off square at its end (a stump's top, a log's ends): not rounded off (`paintStump3d`). */
+  cut?: boolean;
 }
 
 /** The cool blue-grey shade a snow line on pale bark is edged in. */
-const SNOW_EDGE = '#8e9fbd';
+export const SNOW_EDGE = '#8e9fbd';
 
 /** Bands across a limb, from one side to the other: the shade side, the middle, the lit side. */
 const CHAIN_BANDS: ReadonlyArray<[number, number, number]> = [[-1, -0.36, -0.7], [-0.36, 0.34, 0], [0.34, 1, 0.66]];
@@ -267,7 +269,7 @@ const CHAIN_BANDS: ReadonlyArray<[number, number, number]> = [[-1, -0.36, -0.7],
 /** Anything in leaf or in flower on it: a fruit tree in flower, or an evergreen, whatever its leaf is doing. */
 const inLeaf = (job: Job): boolean => job.dress.full > 0 || !!job.dress.bloom || !!job.spec.evergreen;
 
-function chainsOf(job: Job, leafy: boolean): Chain[] {
+export function chainsOf(job: Job, leafy: boolean): Chain[] {
   const { sk, e } = job;
   const limbs = sk.limbs;
   // A piece goes on from its parent when it starts where its parent ends, at the same order.
@@ -351,7 +353,7 @@ function chainsOf(job: Job, leafy: boolean): Chain[] {
 }
 
 /** Part of a chain, points `j0` to `j1`: a band of it from `s0` to `s1` across, as a path. */
-function bandPath(c: Chain, j0: number, j1: number, s0: number, s1: number): Path2D {
+export function bandPath(c: Chain, j0: number, j1: number, s0: number, s1: number): Path2D {
   const p = new Path2D();
   for (let j = j0; j <= j1; j++) {
     const x = c.q[j][0] + c.n[j][0] * c.r[j] * s1, y = c.q[j][1] + c.n[j][1] * c.r[j] * s1;
@@ -363,7 +365,7 @@ function bandPath(c: Chain, j0: number, j1: number, s0: number, s1: number): Pat
 }
 
 /** Points `j0` to `j1` of a chain (its pieces `j0` to `j1 - 1`): banded, ink down its sides, furrowed. */
-function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () => number): void {
+export function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () => number): void {
   if (c.thin) {
     // Among the masses of a hazy crown a thin limb carries its own ink: what was laid under the whole tree is under them.
     if (job.spec.haze && c.order <= 2) {
@@ -441,7 +443,7 @@ function paintChain(g: Ctx, job: Job, c: Chain, j0: number, j1: number, R: () =>
     }
   }
   // The open end of a limb rounded off.
-  if (j1 === c.q.length - 1) {
+  if (j1 === c.q.length - 1 && !c.cut) {
     g.fillStyle = c.cols[1];
     g.beginPath();
     g.arc(c.q[j1][0], c.q[j1][1], c.r[j1], 0, TAU);
@@ -786,7 +788,10 @@ function paintMarks(g: Ctx, job: Job, c: Chain, j0: number, j1: number): void {
       // Spread evenly up it and round it, each a little off its place.
       const t = (k + 0.2 + 0.6 * R()) / n, a = k * 2.4 + R() * 0.8, w = (0.8 + 1.4 * R() * R()) * Math.min(1, 2.4 / Math.max(0.5, r)) + 0.35, th = (0.42 + 0.4 * R() * R()) * Math.min(1.6, 0.7 + r * 0.25);
       if (L.a[2] + (L.b[2] - L.a[2]) * t < rough * 0.9) continue;
-      band(skin, t, a, a + w, th, th * 0.3);
+      // Finer where the marks ask it (`Species3D.bark.marks.fine`): a stump's, close to.
+      const f = marks.fine;
+      if (f === undefined) band(skin, t, a, a + w, th, th * 0.3);
+      else band(skin, t, a, a + w * f, th * f, th * f * 0.3);
     }
     // A scar under each limb that leaves it.
     for (const q of below.get(i) ?? []) {
@@ -1757,7 +1762,7 @@ function paintCarving(g: Ctx, job: Job): void {
 
 /* ---- a weeping crown's curtains (`Weep`) ------------------------------------------------ */
 
-type Item = { d: number; draw: () => void };
+export type Item = { d: number; draw: () => void };
 
 /** A strand's middle line on the screen: its points, its half-width at each, and its way across at each. */
 interface SLine { x: number[]; y: number[]; r: number[]; nx: number[]; ny: number[] }
@@ -2256,13 +2261,13 @@ function footPath(job: Job, lobes: Array<[number, number]>, at = 0): Path2D {
 }
 
 /** A trunk's foot on the screen: its round base on the ground, and the buttresses standing out of it. */
-interface Foot { base: Path2D; lobes: Array<[number, number]> }
-function footOf(job: Job, at = 0): Foot {
+export interface Foot { base: Path2D; lobes: Array<[number, number]> }
+export function footOf(job: Job, at = 0): Foot {
   return { base: footPath(job, [], at), lobes: at === 0 ? lobesOf(job) : [] };
 }
 
 /** The foot's base filled in the trunk's own bands, carried down across it, so the two are one piece of wood. */
-function paintFoot(g: Ctx, foot: Foot, c: Chain): void {
+export function paintFoot(g: Ctx, foot: Foot, c: Chain): void {
   const [x, y] = c.q[0];
   const [nx, ny] = c.n[0];
   const ax = c.q[1][0] - x, ay = c.q[1][1] - y;
@@ -2293,7 +2298,7 @@ function paintFoot(g: Ctx, foot: Foot, c: Chain): void {
  * along the ground and round its end. Where it stands, for its depth, and
  * how to draw it.
  */
-function buttress(job: Job, a: number, out: number, k: number): { at: V3; draw: (g: Ctx) => void } {
+export function buttress(job: Job, a: number, out: number, k: number, blunt = 0): { at: V3; draw: (g: Ctx) => void } {
   const { sk, spec, light, e } = job;
   const base = sk.limbs[0].a;
   const rT = sk.limbs[0].ra * 1.02;
@@ -2308,7 +2313,8 @@ function buttress(job: Job, a: number, out: number, k: number): { at: V3; draw: 
     const c = add(base, mul(dir, r0 + (r1 - r0) * s));
     // Falling steeply off the trunk and running out low; rounded off at its end.
     const z = h0 * Math.pow(1 - s, 2.2) + rT * 0.08 * (1 - s * s);
-    const w = w0 * Math.sqrt(Math.max(0, 1 - s * s * s)) * (1 - 0.3 * s);
+    // Blunt (a stump's): still that share of its width at its end.
+    const w = w0 * Math.sqrt(Math.max(0, 1 - s * s * s * (1 - blunt))) * (1 - 0.3 * s);
     ridge.push([c[0], c[1], c[2] + z]);
     left.push(add(c, mul(perp, w)));
     right.push(add(c, mul(perp, -w)));

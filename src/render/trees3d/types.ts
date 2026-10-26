@@ -237,8 +237,8 @@ export interface Species3D {
     lit: string; shade: string; dead: string; furrow: string; moss?: string; ridged?: boolean; twist?: boolean; strands?: string; rope?: string; deadShade?: string;
     /** The fine twigs, where they differ from the bark. */
     twig?: string;
-    /** Pale bark marked in `ink` with dashes across it and scars where limbs leave, over a cracked band of `base` at its foot. */
-    marks?: { ink: string; base: string };
+    /** Pale bark marked in `ink` with dashes across it and scars where limbs leave, over a cracked band of `base` at its foot; its dashes `fine` times as long and as thick, where given. */
+    marks?: { ink: string; base: string; fine?: number };
   };
   /**
    * The leaf a mass is edged in and that falls: 'maple' five-pointed (the default), 'oak' round-lobed, 'birch' small and pointed, 'willow' narrow and
