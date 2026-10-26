@@ -58,7 +58,8 @@ import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
 import { LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { FLOWER_COLOURS } from '../../render/flowers';
-import { BUSH3D_SPECIES, SUN_STEPS, SWAY_MS, TREE3D_SPECIES } from '../../render/trees3d';
+import { BUSH3D_SPECIES, LOGS_DRAWN, STUMP3D_SPECIES, SUN_STEPS, SWAY_MS, TREE3D_SPECIES } from '../../render/trees3d';
+import { FIELD_LAYOUTS } from '../../render/crops';
 import { TURNS } from '../../render/view';
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
@@ -95,7 +96,7 @@ import { blockSays, reachSays } from '../../game/fight';
 import { BLOOMS, BUSH_FLOWER_FROM, evergreen, LEAF_DAYS, SHED_DAYS, TURN_DAYS } from '../../render/foliage';
 import { lifeSeasons } from '../../render/life';
 import { LAYERS, TRIAL_SECONDS } from '../../render/timings';
-import { SWELL_RATE } from '../../render/water';
+import { SHORE_ROCK, SURGE_PERIOD, SURGE_UP, SWELL_RATE, WATER_STOPS, WET_ROCK, WET_SAND } from '../../render/water';
 import { WALK_FRAMES } from '../../render/figure';
 import { BEARD_ODDS } from '../../game/look';
 import { EMOTE_BY_ID } from '../../game/emotes';
@@ -190,7 +191,7 @@ import { BAY_PAST_HEFT, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBr
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, TILE_METRES } from '../../world/aqueducts';
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
-import { CROPS, growthWords } from '../../game/farming';
+import { CROP_LIST, CROP_STAGES, CROPS, growthWords } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS } from '../../game/growth';
 import { STONES_DEPTH, STONES_SLABS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
@@ -3893,6 +3894,41 @@ export const NEWS: News[] = [
         `Changed: butchered, ${d.name} line gives no fur.`,
       ];
     },
+  },
+  {
+    n: 329,
+    day: '2026-10-26',
+    lines: () => [
+      `Changed: stumps drawn solid: ${num(STUMP3D_SPECIES.size)} tree kinds, each its own bark and foot. Own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; shade on the ground away from the sun. Size: by the tree that stood there.`,
+      'Changed: stumps: moss on the rim outside summer (kinds with mossy bark); snow on top in winter.',
+      `Changed: felled logs on the ground drawn solid: 1 to ${num(LOGS_DRAWN)} by count, in their kind's bark; on a stump's tile, beside the stump. Anything else on the tile: the heap.`,
+      'Changed: Graphics, Low-end: stumps and felled logs flat.',
+    ],
+  },
+  {
+    n: 330,
+    day: '2026-10-26',
+    lines: () => {
+      const herbs = CROP_LIST.filter((c) => c.look === 'herb').map((c) => c.name.toLowerCase());
+      return [
+        `Changed: fields drawn solid: ${num(CROP_LIST.length)} crops, ${num(CROP_STAGES)} stages each. Own shape from each of the ${num(TURNS)} camera turns; lit by the sun, ${num(SUN_STEPS + 1)} lights a day; plant shade on the furrows. ${num(FIELD_LAYOUTS)} layouts of a tile.`,
+        'Changed: fallow field: ridges and furrows. Winter: snow in the furrows (none under glass). Ripe grain: gold, with awns.',
+        `Changed: herbs each their own shape and colour: ${listed(herbs)}.`,
+        'Changed: field on a slope: laid on the slope. Field edge against other ground: a lip of turned soil.',
+        "Changed: planter plants: the field's.",
+        'Changed: Graphics, Low-end: crops flat, fallow fields bare.',
+      ];
+    },
+  },
+  {
+    n: 331,
+    day: '2026-10-26',
+    lines: () => [
+      `Changed: water colour by depth: ${num(WATER_STOPS.length)} colours, shallow to deep, blended across each tile from its corners.`,
+      `Changed: foam line on every shore: up the shore ${SURGE_UP} tile and back every ${SURGE_PERIOD} s on sand, rock ${percent(SHORE_ROCK)} of that. Wet band: ${WET_SAND} tile up sand, ${WET_ROCK} up rock.`,
+      `Changed: sea drawn once under the ground, its picture painted ${num(SWELL_RATE)} times a second. Boat wake: foam.`,
+      'Changed: remembered sea: grey, still. No swell under decks. Sea-floor weed: seen through deep water.',
+    ],
   },
 ];
 

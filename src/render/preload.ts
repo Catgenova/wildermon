@@ -52,7 +52,7 @@ export function preloadTreesAt(
 ): TreePreload {
   try {
     if (!TREE3D_SPECIES.size && !BUSH3D_SPECIES.size) return DONE;
-    // The low-end graphics draw every tree and bush flat: nothing to bake.
+    // The low-end graphics draw every tree, bush and stump flat: nothing to bake.
     const settings = liveSettings();
     if (drawsLow(settings, onPhone())) return DONE;
     const tiles: Array<{ bush: boolean; stump: boolean; species: number; variant: number; x: number; y: number; d: number }> = [];

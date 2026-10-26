@@ -117,7 +117,7 @@ export const SETTING_DEFAULTS = {
    * How much is drawn: everything; the fast set (`drawsFast`), which draws one
    * pixel for every screen pixel and leaves out the swell, the haze and the
    * small life; or the low-end set (`drawsLow`), the fast set with the solid
-   * trees and bushes drawn flat, at most `LOW_POWER_FPS` frames a second, and
+   * trees, bushes, stumps, logs and crops drawn flat, at most `LOW_POWER_FPS` frames a second, and
    * no wakes or dust.
    */
   graphics: 'full' as Graphics,
@@ -194,8 +194,8 @@ export type Graphics = (typeof GRAPHICS)[number];
 
 /**
  * Whether the low-end graphics are drawn: chosen, or put on by Low power. The
- * fast set, and the solid trees and bushes flat (`TREE3D_SPECIES`,
- * `BUSH3D_SPECIES`), at most `LOW_POWER_FPS` frames a second, no wakes or dust.
+ * fast set, and the solid trees, bushes, stumps, logs and crops flat (`TREE3D_SPECIES`,
+ * `BUSH3D_SPECIES`, `STUMP3D_SPECIES`, `cropFlatSprite`), at most `LOW_POWER_FPS` frames a second, no wakes or dust.
  */
 export const drawsLow = (s: { graphics: string; lowPower: boolean }, phone: boolean): boolean =>
   s.graphics === 'low' || lowPowerOn(s, phone);

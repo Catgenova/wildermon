@@ -13,7 +13,7 @@ import { fixed, html, setMarkup, type Markup } from '../html';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS, uiSizeShown } from '../screen';
 import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type Graphics, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
 import type { Motion } from '../../engine/motion';
-import { BUSH3D_SPECIES, TREE3D_SPECIES } from '../../render/trees3d';
+import { BUSH3D_SPECIES, STUMP3D_SPECIES, TREE3D_SPECIES } from '../../render/trees3d';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
 import { lifeWords } from '../runecut-life';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
@@ -385,7 +385,7 @@ export class SettingsPanel {
       `Fast: ${FAST_DPR} pixel per screen pixel on high-density screens (Full: up to ${FULL_DPR}), `
         + `${Math.round((1 - (FAST_DPR / FULL_DPR) ** 2) * 100)}% fewer pixels at ${FULL_DPR}×; no sea swell, `
         + 'distance haze, butterflies, dragonflies, fireflies, petals, falling leaves or frame life. '
-        + `Low-end: Fast, plus solid trees (${TREE3D_SPECIES.size} kinds) and bushes (${BUSH3D_SPECIES.size} kinds) drawn flat, `
+        + `Low-end: Fast, plus solid trees (${TREE3D_SPECIES.size} kinds), bushes (${BUSH3D_SPECIES.size} kinds), stumps and logs (${STUMP3D_SPECIES.size} kinds) and crops drawn flat, `
         + `frame limit ${LOW_POWER_FPS}/s, no wakes or work dust.`,
       [['full', 'Full'], ['fast', 'Fast'], ['low', 'Low-end']],
       () => game.settings.graphics,
@@ -436,7 +436,7 @@ export class SettingsPanel {
       add(
         'Low power',
         `Low-end graphics: frame limit ${LOW_POWER_FPS}/s; ${FAST_DPR} pixel per screen pixel; no sea swell, haze or small life; `
-          + 'solid trees and bushes flat; no wakes or dust. Overrides Graphics and a higher frame limit.',
+          + 'solid trees, bushes, stumps, logs and crops flat; no wakes or dust. Overrides Graphics and a higher frame limit.',
         () => game.settings.lowPower,
         (v) => {
           game.settings.lowPower = v;

@@ -1074,6 +1074,8 @@ export function stump3dSprite(species: number, season: Season, _day: number, at:
   return baked(stumpMaker(species, season, at.x, at.y, at.turn, scale), at.turn, sunStepOf(at.hour, at.dark), 0, at.x, at.y);
 }
 
+/** The most felled logs drawn on a tile: one for each, up to this many. */
+export const LOGS_DRAWN = 3;
 /** The ways a felled log lies, round the compass: it keeps none of its own, so its tile picks one. */
 const LOG_WAYS = 4;
 /** A log's length, in model units: over half a tile. */
@@ -1082,7 +1084,7 @@ const logModels = new Map<string, ReturnType<typeof logsOf>>();
 
 function logMaker(species: number, n: number, season: Season, x: number, y: number, turn: number, scale: number, beside: boolean): Maker {
   const way = Math.floor(hash2(Math.round(x), Math.round(y), 6271) * LOG_WAYS) % LOG_WAYS;
-  const count = Math.max(1, Math.min(3, Math.round(n)));
+  const count = Math.max(1, Math.min(LOGS_DRAWN, Math.round(n)));
   const spec = SPECIES.get(species) ?? maple;
   const angle = (way / LOG_WAYS) * Math.PI + Math.PI / 8;
   // Beside a stump: the stump that tile's tree left, painted in the same picture, the logs to one side of it in the world.
