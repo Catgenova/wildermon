@@ -70,7 +70,7 @@ import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
 import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
-import { ARCH, BAY, DOOR, DOUBLE, FENCE_GAP, STAINED_OPENING, STAINED_PANEL, WINDOW, type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
+import { ARCH, BAY, DOOR, DOUBLE, FENCE_GAP, WINDOW, type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
 import { CAP_D, CAP_W, capMoss, hashOf, ivyLayout, mossStrip, PAVE_STAGES, pavingMoss, PPM, slabTopMoss, strandPic, vigour, type Keep } from './ivy';
 import { bridgeGreen, greenNow, greenShows, GREEN_WET_REACH, mossyPiece, pavingGreen, pieceGreen, slabGreen, wallGreen, wetFrom } from '../game/greening';
 import { ANVIL_SUBTILES, anvilCentre, type PlacedAnvil } from '../game/anvil';
@@ -12516,26 +12516,6 @@ export class Renderer {
     return (k2?.thick ?? 1) >= (kind?.thick ?? 1) && !k2?.railed;
   }
 
-  /**
-   * The masonry a section of stained glass is set in: that of the finished
-   * wall carrying on in line from it either side, or two along, or of the
-   * storey under or over it -- whichever is found first, and none if it is
-   * all glass. A garden wall is not one, nor more glass.
-   */
-  private dressOf(wall: Wall, border: Border): Masonry | undefined {
-    const bld = this.game.buildings;
-    const along = (i: number): Border => (border.dir === 'h' ? { dir: 'h', x: border.x + i, y: border.y } : { dir: 'v', x: border.x, y: border.y + i });
-    const round: Array<[number, Border]> = [[wall.level, along(-1)], [wall.level, along(1)], [wall.level - 1, border], [wall.level + 1, border], [wall.level, along(-2)], [wall.level, along(2)]];
-    for (const [level, b] of round) {
-      if (level < 0) continue;
-      const w = bld.wallOnBorder(level, b);
-      if (!w || !isDone(w) || WALL_TYPE_BY_ID.get(w.type)?.low) continue;
-      const m = this.masonryOf(w);
-      if (m && !m.stained) return m;
-    }
-    return undefined;
-  }
-
   private masonryOf(wall: { material: string; dye?: string }): Masonry | undefined {
     return wall.dye ? undefined
       : wall.material === 'cobblestone' ? cobble()
@@ -13563,8 +13543,6 @@ export class Renderer {
       const C0 = capEnd(-1), C1 = capEnd(1);
       /** A garden wall's pictures, at the height it stands to, and whether a gate hangs in it. */
       const lw = kind?.low ? cob.low(tall) : undefined;
-      /** On stained glass, the masonry of the run it is set in, whose face round the glass, head, foot and light it takes (`dressOf`). */
-      const dress = cob.stained ? this.dressOf(wall, border) : undefined;
       const hung = wall.type === 'fence_gate' || wall.type === 'iron_gate';
       /*
        * The head of the wall, on a masonry laid by hand, where nothing stands
@@ -13971,9 +13949,8 @@ export class Renderer {
       };
       const light = (k: number): void => {
         if (k >= 0.999) return;
-        const lit = dress ?? cob;
-        const [sr, sg, sb] = lit.shade;
-        ctx.fillStyle = `rgba(${sr}, ${sg}, ${sb}, ${lit.shadow(k).toFixed(3)})`;
+        const [sr, sg, sb] = cob.shade;
+        ctx.fillStyle = `rgba(${sr}, ${sg}, ${sb}, ${cob.shadow(k).toFixed(3)})`;
         ctx.fill();
       };
       /**
@@ -14185,59 +14162,25 @@ export class Renderer {
       /** gates: the face's picture with a portcullis's gateway in it. */
       const gatePic = (img: HTMLCanvasElement): HTMLCanvasElement =>
         gatewayPicture(img, WALL_HEIGHT, cob.reveal.map((c) => c * 1.3) as unknown as [number, number, number], cob.line);
-      /*
-       * Stained glass set in a run of another masonry is a window of it
-       * (`dress`): the run's own face, with the opening its windows are cut
-       * and dressed as -- sill, jambs, head -- made wide enough for a panel
-       * (`STAINED_OPENING`, `Masonry.glazed`), and the panel of glass set in
-       * it; and the run's cap and foot over and under it, so its band, cap
-       * and plinth go on across. In its own ivory every panel stepped the
-       * lines of a marble wall from grey to cream and stood in a cream frame.
-       */
-      const O = STAINED_OPENING;
-      /** All of the face but the opening the glass is set in, as a path to clip even-odd to. */
-      const glassOut = (): void => {
-        quad(-1, 2, -0.1, 1.002);
-        ctx.moveTo(px(O.t0, O.k0), py(O.t0, O.k0)); ctx.lineTo(px(O.t0, O.k1), py(O.t0, O.k1));
-        ctx.lineTo(px(O.t1, O.k1), py(O.t1, O.k1)); ctx.lineTo(px(O.t1, O.k0), py(O.t1, O.k0));
-        ctx.closePath();
-      };
-      if (dress) {
-        // The panel (`STAINED_PANEL` of its own picture) drawn into the opening, and the run's face round it over its edges.
-        const G = STAINED_PANEL, img = cob.face[v];
-        const sx = (O.t1 - O.t0) / (G.t1 - G.t0), sk = (O.k1 - O.k0) / (G.k1 - G.k0);
-        const ta = O.t0 - G.t0 * sx, tb = O.t0 + (1 - G.t0) * sx, kt = O.k0 + (1 - G.k0) * sk, kb = O.k0 - G.k0 * sk;
-        ctx.save();
-        quad(O.t0 - 0.02, O.t1 + 0.02, O.k0 - 0.02, O.k1 + 0.02);
-        ctx.clip();
-        const tlx = px(ta, kt), tly = py(ta, kt);
-        ctx.transform((px(tb, kt) - tlx) / img.width, (py(tb, kt) - tly) / img.width, (px(ta, kb) - tlx) / img.height, (py(ta, kb) - tly) / img.height, tlx, tly);
-        ctx.drawImage(img, 0, 0);
-        ctx.restore();
-        blit(dress.glazed(v), 0, 1, 1, false, 0, 0, !!dress.handed && px(1, 0) < px(0, 0));
-      } else {
-        blit(gateway ? gatePic(cob.face[v])
-          : arched ? cob.arch[v]
-          : windowed ? cob.window[v]
-          : doored ? cob.door[v]
-          : gated ? cob.gate[v]
-          : bayed ? cob.bay[v]
-          : cob.face[v], 0, 1, 1, false, 0, 0, turned);
-      }
+      blit(gateway ? gatePic(cob.face[v])
+        : arched ? cob.arch[v]
+        : windowed ? cob.window[v]
+        : doored ? cob.door[v]
+        : gated ? cob.gate[v]
+        : bayed ? cob.bay[v]
+        : cob.face[v], 0, 1, 1, false, 0, 0, turned);
       /*
        * Quoins, where the run stops or turns a corner: the masonry's own
        * dressing of a free end, toothed into the face. Out of doors only --
        * the end of a partition inside a room is plaster and furniture.
        */
       if (!indoors) {
-        const q = dress ?? cob;
-        for (const [img, i] of [[q.quoinL, -1], [q.quoinR, 1]] as Array<[HTMLCanvasElement | undefined, -1 | 1]>) {
+        for (const [img, i] of [[cob.quoinL, -1], [cob.quoinR, 1]] as Array<[HTMLCanvasElement | undefined, -1 | 1]>) {
           const { n, P, up } = joinAt(i);
           // Not where the run carries on, nor in an angle the face runs into.
           if (!img || n || P || up) continue;
-          // At an arris a corner has carried the face out to, the stones go out with it -- and round stained glass, off the glass.
+          // At an arris a corner has carried the face out to, the stones go out with it.
           ctx.save(); strip(snapX(T0), snapX(T1)); ctx.clip();
-          if (dress) { glassOut(); ctx.clip('evenodd'); }
           lay(img, 0, 1, 1, false, 0, 0, i < 0 ? T0 : T1 - 1);
           ctx.restore();
         }
@@ -14343,7 +14286,7 @@ export class Renderer {
       }
       if (wall.level === 0 && !indoors && !aloft) {
         onStone();
-        blit(dress ? dress.foot[v % dress.foot.length] : cob.foot[v], 0, 1, 1, false, 0, cob.under ? 0.004 : 0, turned);
+        blit(cob.foot[v], 0, 1, 1, false, 0, cob.under ? 0.004 : 0, turned);
         // The face's half of the hedge, where a doorway took the other half
         // round the corner with it.
         if (cob.growth && arched) blit(cob.base[v], 0, 1);
@@ -14452,9 +14395,9 @@ export class Renderer {
         cap(C0, C1, 1);
         ctx.fillStyle = rgb(mat.color, topLit);
         ctx.fill();
-        blit((dress ?? cob).cap, 1, 1, 1, true);
+        blit(cob.cap, 1, 1, 1, true);
         // At a corner this wall carries the top over, the corner's own stone, which the cap of the wall square to it stops at.
-        const corner = (dress ?? cob).corner;
+        const corner = cob.corner;
         if (corner) {
           for (const i of [-1, 1] as const) {
             const { stone } = joinAt(i);
