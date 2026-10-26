@@ -4059,6 +4059,12 @@ export const NEWS: News[] = [
     lines: () => ['Fixed: hover boxes over the world stop after a while (was: gone until reload after an item left the pack or a store under the pointer; '
       + 'a pinned Tile i note now closes on a press anywhere else).'],
   },
+  {
+    n: 349,
+    day: '2026-10-26',
+    lines: () => ['Fixed: fences, gates and half walls on a shore or waterway border: allowed where both corners of the border are at or above '
+      + 'the water (was: \'Not in water.\' when either tile beside it had water).'],
+  },
 ];
 
 /**

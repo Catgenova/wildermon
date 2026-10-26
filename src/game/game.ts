@@ -1772,6 +1772,8 @@ export class Game {
     if (!def || !this.world.inBounds(x1, y1)) return null;
     // No hull goes in under a deck on piers, among its posts (`pier_step`).
     if (this.buildings.pierTiles.size && this.buildings.onPiers(x1, y1)) return null;
+    // Nor over a fence on a shore's border (`plan_fence`), as a swimmer is not (`stepRule`).
+    if (this.buildings.blocksAt(0, x0, y0, x1, y1)) return null;
     return -this.world.centerHeight(x1, y1) >= def.draught ? 0 : null;
   };
 

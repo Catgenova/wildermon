@@ -81,6 +81,20 @@ export { buildReach, buildWork, consumeUnit, nextAvailable, takeUnit, toHand } f
 export const fenceScale = (g: Game, type: WallType): number =>
   WALL_TYPE_BY_ID.get(type)?.standalone ? g.perk('bill:fence', 1) : 1;
 
+/**
+ * Whether a corner of a tile's border is under the water: below the sea's
+ * nothing, or below a pond or pool on either tile beside it (`surfaceAt`).
+ * What refuses a fence on a shore; a tile that is wet by one low corner of its
+ * own does not. The island asks the same (`fence_border_wet`).
+ */
+export function fenceBorderWet(g: Game, x: number, y: number, side: Side): boolean {
+  const [ax, ay] = side === 'n' ? [x, y - 1] : side === 's' ? [x, y + 1] : side === 'w' ? [x - 1, y] : [x + 1, y];
+  const level = Math.max(g.world.surfaceAt(x, y), g.world.surfaceAt(ax, ay));
+  const [c0, c1]: Array<[number, number]> = side === 'n' ? [[x, y], [x + 1, y]] : side === 's' ? [[x, y + 1], [x + 1, y + 1]]
+    : side === 'w' ? [[x, y], [x, y + 1]] : [[x + 1, y], [x + 1, y + 1]];
+  return g.world.getHeight(c0[0], c0[1]) < level || g.world.getHeight(c1[0], c1[1]) < level;
+}
+
 export const REPOINT_BACK = 0.5;
 export const REPOINT_TIME = 30;
 /** What a wall of `mat` is laid in, without its fittings: the bill a Repoint pays. */
@@ -430,8 +444,12 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const [ax, ay] = t.side === 'n' ? [t.x, t.y - 1] : t.side === 's' ? [t.x, t.y + 1] : t.side === 'w' ? [t.x - 1, t.y] : [t.x + 1, t.y];
       if (g.buildings.buildingAt(ax, ay)) return 'Building on the other side of that border.';
       if (!g.world.inBounds(ax, ay)) return 'Map edge.';
-      if (g.world.hasWater(t.x, t.y) || g.world.hasWater(ax, ay)) return 'Not in water.';
-      if (!g.world.isPassable(t.x, t.y) || !g.world.isPassable(ax, ay)) return 'No room for posts.';
+      // A shore or a waterway's edge takes one: refused only where a corner of the border itself is under the water.
+      if (fenceBorderWet(g, t.x, t.y, t.side)) return 'Not in water.';
+      // Posts on the dry side; the wet side need not be walkable, but one of the two must.
+      const here = g.world.isPassable(t.x, t.y);
+      const there = g.world.isPassable(ax, ay);
+      if ((!here && !g.world.hasWater(t.x, t.y)) || (!there && !g.world.hasWater(ax, ay)) || (!here && !there)) return 'No room for posts.';
       if (g.buildings.wallOnBorder(0, border)) return 'Border already taken.';
       return null;
     },
