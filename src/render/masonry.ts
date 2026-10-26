@@ -1,4 +1,4 @@
-import { WALL_HEIGHT } from '../game/building';
+import { WALL_HEIGHT, WALL_THICK } from '../game/building';
 import { HEIGHT_SCALE, TILE_H } from './iso';
 import { STAINED_OPACITY } from './flooring';
 import { LOG as LOG_HUE, MARBLE as MARBLE_HUE, PLANK as PLANK_HUE } from './materials';
@@ -125,6 +125,22 @@ export const DOUBLE = { t0: 0.2, t1: 0.8, k1: 0.7 } as const;
  * else. The head comes down for the same reason the window's did -- the
  * lintel and the wedges over it have to fit under the band.
  */
+/**
+ * And where the glass of a section of stained glass is, in the same
+ * fractions: inside a pilaster at each end and a fillet over and under it.
+ * What is round it is stone, and in a run of another masonry the renderer
+ * lays that masonry there (`Renderer.dressOf`).
+ */
+export const STAINED_PANEL = { t0: 18 / 512, t1: 1 - 18 / 512, k0: 6 / 384, k1: 1 - (48 + 6) / 384 } as const;
+
+/**
+ * And the opening a panel of stained glass is set in where it stands in a
+ * run of another masonry (`Masonry.glazed`): wider than a window and as
+ * tall, so there is room over it for the lintel under the band, and under it
+ * for the sill over the plinth.
+ */
+export const STAINED_OPENING = { t0: 0.17, t1: 0.83, k0: 0.24, k1: 0.7 } as const;
+
 export const BAY = { t0: 0.24, t1: 0.76, k0: 0.33, k1: 0.72 } as const;
 
 /**
@@ -150,6 +166,8 @@ export interface Low {
   cap: HTMLCanvasElement[];
   /** The same with the gate's opening taken out of it, and a flat stone on each pier. */
   gateCap: HTMLCanvasElement[];
+  /** On a coping of stones, the one over a corner or a junction, which the copes either side stop at. */
+  corner?: HTMLCanvasElement;
   ends: HTMLCanvasElement;
   h: number;
   /** How far the face and the cap are painted past the wall, so a cope stone can stand over the run. */
@@ -221,6 +239,18 @@ export interface Masonry {
   foot: HTMLCanvasElement[];
   /** The cap along the top of a wall, and the end grain where a run stops. */
   cap: HTMLCanvasElement;
+  /**
+   * On a masonry whose cap is a course of stones, the one stone over the
+   * square where two walls meet at a corner, front edge at the bottom, a
+   * joint all round it: each wall's cap stops at it. Without it one wall's
+   * cap ran on over the corner and the other's stopped against it, and the
+   * joints of the two met anywhere.
+   */
+  corner?: HTMLCanvasElement;
+  /** Whether it is stained glass, which takes the head and foot of the masonry it is set in. */
+  stained?: boolean;
+  /** Variant `v`'s face with the opening stained glass is set in (`STAINED_OPENING`), dressed as its windows are. */
+  glazed: (v: number) => HTMLCanvasElement;
   ends: HTMLCanvasElement;
   /** On a masonry whose foot goes round a free end as it runs along the face, the ground storey's end. */
   endsFoot?: HTMLCanvasElement;
@@ -4148,7 +4178,8 @@ function paint(S: Stock): Masonry {
    * comes near a seam; the pilaster is what two sections share.
    */
   function glassField(g: Ctx, y0: number, y1: number, R: Rand): void {
-    const F = 6, x0 = PILASTER / 2 + 4, x1 = TW - PILASTER / 2 - 4, gy0 = y0 + F, gy1 = y1 - F;
+    // Where `STAINED_PANEL` says, which the renderer lays the stone of the run round.
+    const F = STAINED_PANEL.k0 * TH, x0 = STAINED_PANEL.t0 * TW, x1 = STAINED_PANEL.t1 * TW, gy0 = y0 + F, gy1 = y1 - F;
     // The fillet of marble the panel is set in, and nothing where the panel goes: it is seen through.
     g.fillStyle = TONES.dress.lit; g.fillRect(0, y0, TW, y1 - y0);
     g.clearRect(x0, gy0, x1 - x0, gy1 - gy0);
@@ -6605,6 +6636,27 @@ function paint(S: Stock): Masonry {
     return c;
   });
   /**
+   * The same section with the opening a panel of stained glass is set in
+   * (`STAINED_OPENING`), sill, jambs and head as a window's: painted when a
+   * panel is first set in this masonry, and kept.
+   */
+  const GLAZED: HTMLCanvasElement[] = [];
+  const glazed = (i: number): HTMLCanvasElement => {
+    const vi = ((i % VARIANTS.length) + VARIANTS.length) % VARIANTS.length;
+    const had = GLAZED[vi];
+    if (had) return had;
+    const v = VARIANTS[vi], O = STAINED_OPENING;
+    const x0 = TW * O.t0, x1 = TW * O.t1, head = TH * (1 - O.k1), sill = TH * (1 - O.k0);
+    const c = cnv(TW, TH), g = ctxOf(c);
+    paintCourses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true, vi);
+    surround(g, rand(v.seed * 197 + 67), x0, x1, head, sill, 66, 0);
+    g.fillStyle = '#000';
+    g.globalCompositeOperation = 'destination-out';
+    g.fillRect(x0, head, x1 - x0, sill - head);
+    g.globalCompositeOperation = 'source-over';
+    return (GLAZED[vi] = c);
+  };
+  /**
    * What grows at a window: ivy over the head of it, and whatever has seeded
    * in the joint behind the sill, which is where the rain that runs off the
    * glass ends up.
@@ -6927,6 +6979,14 @@ function paint(S: Stock): Masonry {
     // On a bond the top is the band course seen from above, and a face
     // turned up at the sky is a step lighter than the same stone on the side.
     slabs(g, 0, CAP_H, rand(99), S.lay === 'bond' ? 'top' : 'flat');
+    return c;
+  })();
+  /** The stone at a corner (`Masonry.corner`): as deep as the cap, as long as a wall is thick, cut as the cap's are. */
+  const CORNER_STONE = (() => {
+    if (S.lay !== 'bond' && S.lay !== 'rubble') return undefined;
+    const CW = Math.round(2 * WALL_THICK * TW), c = cnv(CW, CAP_H), g = ctxOf(c);
+    g.fillStyle = PASTEL.joint; g.fillRect(0, 0, CW, CAP_H);
+    stone(g, MORTAR / 2, MORTAR / 2, CW - MORTAR, CAP_H - MORTAR, rand(97), S.lay === 'bond' ? 'top' : 'flat', S.lay === 'bond' ? 'unit' : 'sawn');
     return c;
   })();
   const ENDS = (() => {
@@ -7486,7 +7546,16 @@ function paint(S: Stock): Masonry {
         : S.lay === 'plank' ? { img: plankCorner(fh - LOW_FOOT), foot: LOW_FOOT }
           : S.lay === 'gild' ? { img: silverCorner(fh - LOW_FOOT), foot: LOW_FOOT }
             : undefined;
-    const made: Low = { face, gate, cap, gateCap, ends, h: fh, proud: PROUD, crest, gateCrest, post };
+    /** The cope stone over a corner or a junction (`Low.corner`), laid across the run's thickness as the cap's are. */
+    const corner = S.lay === 'bond' || S.lay === 'rubble' ? (() => {
+      const CW = Math.round(2 * WALL_THICK * 1.25 * TW), c = cnv(CW, CAP_H + PROUD), g = ctxOf(c), R = rand(331);
+      g.translate(0, PROUD);
+      g.fillStyle = PASTEL.joint; g.fillRect(0, 0, CW, CAP_H);
+      if (S.lay === 'bond') void stone(g, MORTAR / 2, MORTAR / 2, CW - MORTAR, CAP_H - MORTAR, R, 'dress', 'unit', 0, 1.2, false);
+      else void stone(g, MORTAR / 2, MORTAR / 2, CW - MORTAR, CAP_H - MORTAR, R, '', 'laid', (R() - 0.5) * 0.1, 1.05, false);
+      return c;
+    })() : undefined;
+    const made: Low = { face, gate, cap, gateCap, ends, h: fh, proud: PROUD, crest, gateCrest, post, corner };
     LOWS.set(k, made);
     return made;
   };
@@ -7780,6 +7849,9 @@ function paint(S: Stock): Masonry {
     base: BASE,
     foot: FOOT,
     cap: CAP_STONE,
+    corner: CORNER_STONE,
+    stained: !!S.stained,
+    glazed,
     ends: ENDS,
     endsFoot: ENDS_FOOT,
     gleam: S.lay === 'gild' ? gleamOf : undefined,
