@@ -4470,6 +4470,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/eighthands.mjs --log-level=error
           node node_modules/.cache/eighthands.mjs
 
+      - name: A spinner, a nail smith and a ribbon smith, and no worker needs a tool
+        if: matrix.shard == 6
+        run: |
+          # An ulva spins yarn at a spindle, a dowse smiths nails and a siffa
+          # metal ribbons at an anvil; every crafting worker works with no tool
+          # in the stores and wears none that is there: each the same on both sides.
+          npx esbuild supabase/test/workertools.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/workertools.mjs --log-level=error
+          node node_modules/.cache/workertools.mjs
+
       - name: Seven that fight
         if: matrix.shard == 6
         run: |

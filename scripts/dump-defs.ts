@@ -35,7 +35,7 @@ import { COAX_LAPSE, COAX_STEP, HERD_REACH, WILD_STAY, HUNT_HOME, HUNT_LEASH, HU
 import { FAMILY_OF, KNACK_BONUS, KNACK_BY_LEARNING, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLES } from '../src/game/titles';
 import { KEPT_BEST, NUTRIENT_DECAY, TABLE_BEST } from '../src/game/nutrition';
 import { SPECIES, WILD_SPECIES, MONSTERS, MONSTER_CAP, MONSTER_SHARE, AGES,
-         GATHER_SKILL, GATHER_VERB, GATHER_DO } from '../src/game/creatures';
+         GATHER_SKILL, GATHER_VERB, GATHER_DO, SMITH_TRADES, smithLumps, type GatherKind } from '../src/game/creatures';
 import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, SLOTS_PER_STAGE, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP, TIERS } from '../src/game/traits';
 import { BOARD_TOP } from '../src/game/boards';
 import { CRAFT_HEAD, CRAFT_REACH } from '../src/game/recipes';
@@ -1408,6 +1408,12 @@ for (const d of POTTERY) out.push(`insert into pottery_def values (${q(d.unfired
 for (const d of MOULDS) {
   out.push(`insert into mould_def values (${q(d.id)}, ${q(d.name)}, ${q(d.makes)}, ${q(d.skill)}, ${q(d.sand)}, ${q(d.difficulty)}, ${q(d.lumps)}, ${q(d.per ?? 1)});`);
 }
+// What a dowse and a siffa smith at an anvil of yours (`SMITH_TRADES`): the mould whose piece and count a lump makes,
+// and the lumps each takes, in the order it takes them. Read by `errand_step` and `errand_do`.
+out.push(`create or replace function smith_mould(p_kind text) returns text language sql immutable as $fn$ select case p_kind ${
+  Object.entries(SMITH_TRADES).map(([k, t]) => `when ${q(k)} then ${q(t!.mould)} `).join('')}end $fn$;`);
+out.push(`create or replace function smith_lumps(p_kind text) returns text[] language sql immutable as $fn$ select case p_kind ${
+  Object.keys(SMITH_TRADES).map((k) => `when ${q(k)} then array[${smithLumps(k as GatherKind).map(q).join(', ')}]::text[] `).join('')}end $fn$;`);
 for (const [kind, d] of Object.entries(CRATE_DEFS)) {
   out.push(`insert into crate_def values (${q(kind)}, ${q(d.name)}, ${q(d.item)}, ${q(d.capacity)});`);
 }

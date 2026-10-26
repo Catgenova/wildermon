@@ -17,7 +17,7 @@
  */
 
 import type { GatherKind } from './creatures';
-import { STORE_RECIPES, LYE_RECIPES, PAPER_RECIPES } from './creatures';
+import { STORE_RECIPES, LYE_RECIPES, smithLumps, STATION_TRADES } from './creatures';
 import { countOf, itemDef } from './items';
 import { RECIPE_BY_ID } from './recipes';
 import { SKEP_IDLE } from './bees';
@@ -88,7 +88,8 @@ const IDLE_SOURCE: Partial<Record<GatherKind, string>> = {
   smelt: 'smelter of yours with room for ore, or with metal to take out',
   kiln: 'kiln of yours with room for pottery, or with pottery to take out', ash: 'ashes to rake out',
   brew: 'barrel of water of yours with nothing working in it', cook: 'lit campfire or oven of yours',
-  patch: 'planter of yours wanting work', paper: 'paper press of yours',
+  patch: 'planter of yours wanting work', paper: 'paper press of yours', spin: 'spindle of yours',
+  nail: 'anvil of yours', ribbon: 'anvil of yours',
 };
 
 /** What it would do with what the stores do not hold: "nothing in your stores on the settlement to mend". */
@@ -96,7 +97,8 @@ const IDLE_STOCK: Partial<Record<GatherKind, string>> = {
   mend: 'mend', butcher: 'butcher', tan: 'tan', mill: 'mill', saw: 'saw', chisel: 'chisel', brick: 'shape', rope: 'lay up',
   fletch: 'fletch', paper: 'press', glaze: 'glaze', restore: 'restore', brew: 'brew', cook: 'cook', smelt: 'smelt',
   kiln: 'fire', stoke: 'burn', plant: 'plant', hod: 'build with', fill: 'fill', lamp: 'put in a lantern', patch: 'sow',
-  heal: 'dress a hurt with', dairy: 'milk into', ash: 'leach into lye',
+  heal: 'dress a hurt with', dairy: 'milk into', ash: 'leach into lye', spin: 'spin', nail: 'smith into nails',
+  ribbon: 'smith into ribbons',
 };
 
 /**
@@ -116,19 +118,16 @@ const IDLE_ROOM: Partial<Record<GatherKind, readonly [string, string]>> = {
 
 /**
  * What a trade worked off a recipe at the stores wants there, read off the
- * recipes it tries: "a hide and a lye, with a carving knife", or one of
- * several such.
+ * recipes it tries: "a hide and a lye", or one of several such. A worker needs
+ * no tool, so none is named. A smithing trade wants a lump of one of its metals.
  */
 function recipeWants(kind: GatherKind): string {
-  const ids = STORE_RECIPES[kind] ?? (kind === 'paper' ? PAPER_RECIPES : kind === 'ash' ? LYE_RECIPES : []);
+  const lumps = smithLumps(kind);
+  if (lumps.length) return listedOr(lumps.map((id) => countOf(id, 1, true)));
+  const ids = STORE_RECIPES[kind] ?? STATION_TRADES[kind]?.recipes ?? (kind === 'ash' ? LYE_RECIPES : []);
   const recipes = ids.map((id) => RECIPE_BY_ID.get(id)).filter((r) => !!r);
   const bill = (r: (typeof recipes)[number]): string => listed(r!.inputs.map((i) => countOf(i.item, i.count ?? 1, true)));
-  const toolOf = (r: (typeof recipes)[number]): string => (r!.tool ? itemDef(r!.tool).name.toLowerCase() : '');
-  const withTool = (what: string, tool: string): string => (tool ? `${what}, with ${article(tool)} ${tool}` : what);
-  // One tool for all of them is said once: "2 wheat, 2 corn or 10 olives, with a quern".
-  const tools = new Set(recipes.map(toolOf));
-  if (tools.size === 1) return withTool(listedOr(recipes.map(bill)), [...tools][0]);
-  return listedOr(recipes.map((r) => withTool(bill(r), toolOf(r))));
+  return listedOr(recipes.map(bill));
 }
 
 /** Seconds left, whole and never under one: "1 more second", "37 more seconds". */

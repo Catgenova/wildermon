@@ -87,7 +87,7 @@ import { GATHER_SKILL, LEARN_PACE as PACE_258, sparTaskSays } from '../../game/c
 import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
-import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH } from '../../game/creatures';
+import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH, workerSkipsTools } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { ORDER_STANCES, VISIT_KEEP_DAYS } from '../../game/visitors';
@@ -3944,6 +3944,15 @@ export const NEWS: News[] = [
     lines: () => [
       'Changed: every go of a job checked again before it is done: tool, materials, target, stamina and reach. Refused: not done, no stamina spent, logged as "<job>: <reason> Left: <goes>.", queue goes on (was done anyway). Fights: unchanged.',
       `Changed: storey jobs (${[...new Set([...STOREY_JOBS].map((id) => ACTION_BY_ID.get(id)?.label).filter((l): l is string => !!l))].join(', ')}): done on the storey asked on (was the storey being worked when the go came).`,
+    ],
+  },
+  {
+    n: 333,
+    day: '2026-10-26',
+    lines: () => [
+      ...(['ulva', 'dowse', 'siffa'] as const).map((id) => `Changed: ${SPECIES[id].name}: settlement task ${GATHER_DO[SPECIES[id].gathers!]}.`),
+      `Changed: ${SPECIES.ulva.name}: no longer guards; wild, no longer hunts on sight. ${SPECIES.dowse.name}: no longer prospects. ${SPECIES.siffa.name}: no longer pans.`,
+      `Changed: settlement workers need no tools in the stores: no ${listedOr(workerSkipsTools())}. Stations still needed.`,
     ],
   },
 ];

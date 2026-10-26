@@ -51,7 +51,8 @@ const saidBy = (out: string) => (key: string): string =>
 /* ---- a herd is a shared home --------------------------------------------- */
 
 const grazer = Object.values(SPECIES).find((s) => !s.hunter)?.id ?? 'rabba';
-const hunter = Object.values(SPECIES).find((s) => s.hunter)?.id ?? 'orse';
+// A hunter that keeps its own ground: one whose kind runs in no pack (an ulva was the one, before it took to spinning).
+const hunter = Object.values(SPECIES).find((s) => s.hunter && !s.pack)?.id ?? 'orse';
 check('there is a grazer and a hunter to tell apart', grazer !== hunter, `${grazer} against ${hunter}`);
 
 {

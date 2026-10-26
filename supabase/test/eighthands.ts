@@ -45,13 +45,13 @@ const HANDS: Array<[string, GatherKind]> = [
   ['rippa', 'saw'], ['chissa', 'chisel'], ['mudda', 'brick'], ['cordra', 'rope'],
   ['flecha', 'fletch'], ['papra', 'paper'], ['glossa', 'glaze'], ['dippa', 'fill'],
 ];
-/** What each of the five at the stores is given, and what the stores hold after. */
+/** What each of the five at the stores is given, and what the stores hold after: its makings and no tool, which a worker needs none of. */
 const AT_STORES: Array<[string, Array<[string, number]>, string]> = [
-  ['rippa', [['log', 1], ['saw', 1]], 'plank 3,saw 1'],
-  ['chissa', [['rock_shards', 1], ['chisel', 1]], 'chisel 1,stone_brick 2'],
+  ['rippa', [['log', 1]], 'plank 3'],
+  ['chissa', [['rock_shards', 1]], 'stone_brick 2'],
   ['mudda', [['clay', 1]], 'unfired_clay_brick 1'],
-  ['cordra', [['wemp', 4], ['rope_tool', 1]], 'rope 1,rope_tool 1'],
-  ['flecha', [['shaft', 1], ['arrow_head', 3], ['feather', 3], ['carving_knife', 1]], 'arrow 3,carving_knife 1'],
+  ['cordra', [['wemp', 4]], 'rope 1'],
+  ['flecha', [['shaft', 1], ['arrow_head', 3], ['feather', 3]], 'arrow 3'],
 ];
 const PAPER: Array<[string, number]> = [['reed', 4], ['water_bucket', 1]];
 
@@ -99,7 +99,7 @@ begin
   insert into said select 'RECIPES:' || k, coalesce(array_to_string(tend_recipes(k), ','), '-')
     from unnest(array['tan', 'mill', 'saw', 'chisel', 'brick', 'rope', 'fletch', 'paper']) k;
 
-  -- The five at the stores, each given its makings and its tool.
+  -- The five at the stores, each given its makings and no tool.
 ${AT_STORES.map(([id, items]) => `  ${put(items)}${work(id)}
   insert into said select 'MADE:${id}', ${held};${done()}`).join('\n')}
 

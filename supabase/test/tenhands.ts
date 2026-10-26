@@ -5,7 +5,7 @@
  * herd, a sheela milks and shears it, a salva dresses its hurts, a carra
  * butchers the carcasses in the stores, a tanna tans the hides, a grista
  * mills, a wicka keeps the lanterns, a brambo picks the bushes, a grazza cuts
- * grass and moss, and a siffa pans the sand at the water's edge. This asks,
+ * grass and moss (a siffa panned the sand at the water's edge; it smiths ribbons now, `workertools.ts`). This asks,
  * of both sides:
  *
  *   * each is a species with that trade, may be set to work a settlement, and
@@ -22,10 +22,9 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { deedJobLine } from '../../src/game/creaturecrate';
-import { CARE_WANTING, DAIRY_FULL, GATHER_DO, HEAL_BELOW, MILL_RECIPES, PAN_FIND, panFind, SPECIES, TAN_RECIPES, TEND_JOBS, type Creature } from '../../src/game/creatures';
+import { CARE_WANTING, DAIRY_FULL, GATHER_DO, HEAL_BELOW, MILL_RECIPES, SPECIES, TAN_RECIPES, TEND_JOBS, type Creature } from '../../src/game/creatures';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { TileType } from '../../src/world/tiles';
-import { percent } from '../../src/game/words';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -49,7 +48,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 
 const HANDS: Array<[string, string]> = [
   ['kemma', 'groom'], ['sheela', 'dairy'], ['salva', 'heal'], ['carra', 'butcher'], ['tanna', 'tan'],
-  ['grista', 'mill'], ['wicka', 'lamp'], ['brambo', 'bush'], ['grazza', 'grass'], ['siffa', 'pan'],
+  ['grista', 'mill'], ['wicka', 'lamp'], ['brambo', 'bush'], ['grazza', 'grass'],
 ];
 
 /* ---- on the island --------------------------------------------------------------- */
@@ -74,12 +73,12 @@ begin
 
   -- Every one of them a trade the island works, and the words it says.
   insert into said select 'TRADE:' || s.id, coalesce(s.gathers, '-') || '|' || worker_job_ported(coalesce(s.gathers, '-'))
-    from species_def s where s.id in ('kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa');
+    from species_def s where s.id in ('kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza');
 
   -- A worker of each, its own row to read the line off.
   create temp table hand (species text, id int);
   insert into hand select s, creature_spawn(w, s, 16.6, 16.6, 'active', now() - interval '60 days', u)
-    from unnest(array['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa']) s;
+    from unnest(array['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza']) s;
   insert into said select 'ASK:' || h.species, coalesce(act_refusal(w, u, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', h.id)), 'none') from hand h;
   update creature set mode = 'deed', stance = 'passive', hunger = 1, settled_at = now(), until = now(), leg_at = now(), leg_ends = now(),
          from_x = to_x, from_y = to_y
@@ -137,8 +136,8 @@ begin
   update creature set mode = 'stored' where world_id = w and id = v_id;
   delete from item where world_id = w and holder = 'crate' and crate = 7101;
 
-  -- Tanna: a hide, a bucket of lye and a carving knife.
-  insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7101, 'hide', 30, 1), (w, 'crate', 7101, 'lye_bucket', 30, 1), (w, 'crate', 7101, 'carving_knife', 30, 1);
+  -- Tanna: a hide and a bucket of lye, and no carving knife: a worker needs no tool.
+  insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7101, 'hide', 30, 1), (w, 'crate', 7101, 'lye_bucket', 30, 1);
   select id into v_id from hand where species = 'tanna';
   update creature set mode = 'deed', until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle'
    where world_id = w and id = v_id;
@@ -147,14 +146,14 @@ begin
   update creature set mode = 'stored' where world_id = w and id = v_id;
   delete from item where world_id = w and holder = 'crate' and crate = 7101;
 
-  -- Grista: four wheat and no quern, then a quern.
+  -- Grista: four wheat and no quern, then two more wheat and still no quern.
   insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7101, 'wheat', 30, 4);
   select id into v_id from hand where species = 'grista';
   update creature set mode = 'deed', until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle'
    where world_id = w and id = v_id;
   perform worker_settle(w, v_id);
   insert into said select 'NOQUERN', coalesce(string_agg(def || ' ' || count, ',' order by def), '-') from item where world_id = w and holder = 'crate' and crate = 7101;
-  insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7101, 'quern', 30, 1);
+  insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7101, 'wheat', 30, 2);
   update creature set until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle'
    where world_id = w and id = v_id;
   perform worker_settle(w, v_id);
@@ -176,7 +175,7 @@ begin
     from placed p where p.id = v_lamp;
   update creature set mode = 'stored' where world_id = w and id = v_id;
 
-  -- Brambo, grazza and siffa: the tile, and what one go on it brings home.
+  -- Brambo and grazza: the tile, and what one go on it brings home.
   select b.id into v_bush from bush_def b where b.yields is not null and fruits_now(b.yields) order by b.id limit 1;
   insert into said values ('BUSHSEASON', coalesce(v_bush::text, 'none'));
   perform land_set_tile(w, 19, 16, tile_id('Bush'));
@@ -204,17 +203,6 @@ begin
   insert into said select 'HAY', coalesce(sum(count), 0)::text from item where world_id = w and holder = 'crate' and crate = 7101 and def = 'mixed_grass';
   update creature set mode = 'stored' where world_id = w and id = c.id;
 
-  perform land_set_tile(w, 23, 16, tile_id('Sand'));
-  perform land_set_tile(w, 23, 18, tile_id('Sand'));
-  perform land_set_height(w, 24, 17, -3);
-  select * into c from creature where world_id = w and id = (select id from hand where species = 'siffa');
-  insert into said values ('PANTILE', worker_gatherable(w, 23, 16, 'pan', c)::text || '|' || worker_gatherable(w, 23, 18, 'pan', c)::text);
-  update creature set mode = 'deed', work_x = 23, work_y = 16, skills = jsonb_build_object('prospecting', 100) where world_id = w and id = c.id;
-  for v_n in 1..60 loop
-    v_load := worker_do(w, c.id);
-    if v_load is not null then v_got := v_got || (v_load->>'def') || ','; end if;
-  end loop;
-  insert into said values ('PAN', v_got);
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -240,16 +228,14 @@ for (const [id] of HANDS) {
 }
 check('the words carry the numbers the rules use',
   GATHER_DO.groom.includes(`${Math.round(CARE_WANTING * 100)}%`) && GATHER_DO.dairy.includes(`${Math.round(DAIRY_FULL * 100)}%`)
-  && GATHER_DO.heal.includes(`${Math.round(HEAL_BELOW * 100)}%`)
-  && SPECIES.siffa.description.includes(percent(PAN_FIND[0])) && SPECIES.siffa.description.includes(percent(PAN_FIND[1])),
-  `${GATHER_DO.groom} / ${GATHER_DO.dairy} / ${GATHER_DO.heal} / ${SPECIES.siffa.description}`);
+  && GATHER_DO.heal.includes(`${Math.round(HEAL_BELOW * 100)}%`),
+  `${GATHER_DO.groom} / ${GATHER_DO.dairy} / ${GATHER_DO.heal}`);
 // The words for the two recipe trades name what the recipes take, so a recipe added to either has to be said.
 const takes = (ids: readonly string[]): string[] => [...new Set(ids.flatMap((r) => RECIPE_BY_ID.get(r)?.inputs.map((i) => i.item) ?? []))].sort();
-check('a grista grinds wheat and corn and presses olives, which is what its recipes take, on a quern',
+check('a grista grinds wheat and corn and presses olives, which is what its recipes take (your own hands on a quern)',
   takes(MILL_RECIPES).join(',') === 'corn,olive,wheat' && MILL_RECIPES.every((r) => RECIPE_BY_ID.get(r)?.tool === 'quern'), takes(MILL_RECIPES).join(','));
-check('a tanna tans a hide in lye with a carving knife, which is what its recipe takes',
+check('a tanna tans a hide in lye, which is what its recipe takes (your own hands with a carving knife)',
   takes(TAN_RECIPES).join(',') === 'hide,lye_bucket' && RECIPE_BY_ID.get(TAN_RECIPES[0])?.tool === 'carving_knife', takes(TAN_RECIPES).join(','));
-check(`a siffa's pan finds something ${PAN_FIND[0]} of the time at no skill and ${PAN_FIND[1]} at a hundred`, panFind(0) === PAN_FIND[0] && panFind(100) === PAN_FIND[1]);
 
 /* ---- what each does, on the island --------------------------------------------------- */
 
@@ -262,10 +248,10 @@ const [healed, bleeding, bandages] = at('HEAL').split('|');
 check('a salva dresses a bleeding woola of yours with the bandage out of the stores: the bleeding stops and its health comes up',
   Number(healed) > 1 && bleeding === 'stopped' && bandages === '0', at('HEAL'));
 check('a carra butchers the rabba in the stores and puts its meat back in', !at('BUTCHER').includes('corpse') && at('BUTCHER').includes('meat'), at('BUTCHER'));
-check('a tanna tans the hide in the lye, and the leather goes back in beside the knife and what lye is left',
-  at('TAN') === 'carving_knife 1,leather 1,lye_bucket 1', at('TAN'));
-check('a grista with no quern in the stores grinds nothing', at('NOQUERN') === 'wheat 4', at('NOQUERN'));
-check('and with one, grinds the wheat into flour, two to a flour', at('MILL') === 'flour 2,quern 1', at('MILL'));
+check('a tanna tans the hide in the lye with no carving knife in the stores, and the leather goes back in beside what lye is left',
+  at('TAN') === 'leather 1,lye_bucket 1', at('TAN'));
+check('a grista with no quern in the stores grinds the wheat into flour, two to a flour', at('NOQUERN') === 'flour 2', at('NOQUERN'));
+check('and the next two as they come in', at('MILL') === 'flour 3', at('MILL'));
 const [fuelled, litRight, candlesLeft] = at('LAMP').split('|');
 check('a wicka puts a candle out of the stores in a post that has none, lit if it is dark', fuelled === 'true' && litRight === 'true' && candlesLeft === '1', at('LAMP'));
 const [bushTile, grassBeside] = at('BUSHTILE').split('|');
@@ -281,9 +267,6 @@ check('a grazza cuts mixed grass off grass, marks the settlement\'s grass as cut
 const [mossLoad, mossAgain] = at('MOSS').split('|');
 check('and moss off moss, leaving it short', mossLoad === 'moss 2' && mossAgain === 'false', at('MOSS'));
 check('and set to it for an afternoon, carries its cuts home to the crate', Number(at('HAY')) >= 2, at('HAY'));
-check('a siffa pans sand with the water at a corner, and not dry sand', at('PANTILE') === 'true|false', at('PANTILE'));
-const pans = at('PAN').split(',').filter(Boolean);
-check('and what settles in its pan is what a person\'s does', pans.length > 0 && pans.every((p) => ['copper_ore', 'tin_ore', 'silver_ore'].includes(p)), at('PAN'));
 
 /* ---- what each does, in the browser -------------------------------------------------- */
 
@@ -356,20 +339,17 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
 }
 {
   const g = body();
-  const crate = stock(g, 21, 20, [['hide', 1], ['lye_bucket', 1], ['carving_knife', 1]]);
+  const crate = stock(g, 21, 20, [['hide', 1], ['lye_bucket', 1]]);
   worker(g, 'tanna');
   run(g, 60);
-  check('a tanna tans the hide in the lye, and the leather goes back in beside the knife and what lye is left', held(crate) === 'carving_knife 1,leather 1,lye_bucket 1', held(crate));
+  check('a tanna tans the hide in the lye with no carving knife in the stores, and the leather goes back in beside what lye is left', held(crate) === 'leather 1,lye_bucket 1', held(crate));
 }
 {
   const g = body();
   const crate = stock(g, 21, 20, [['wheat', 4]]);
   worker(g, 'grista');
   run(g, 60);
-  check('a grista with no quern in the stores grinds nothing', held(crate) === 'wheat 4', held(crate));
-  crate.items.push({ uid: g.inventory.nextUid++, id: 'quern', ql: 30, dmg: 0, count: 1 });
-  run(g, 120);
-  check('and with one, grinds the wheat into flour, two to a flour', held(crate) === 'flour 2,quern 1', held(crate));
+  check('a grista with no quern in the stores grinds the wheat into flour, two to a flour', held(crate) === 'flour 2', held(crate));
 }
 {
   const g = body();
@@ -391,15 +371,6 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   run(g, 120);
   const hay = crate.items.filter((i) => i.id === 'mixed_grass' || i.id === 'moss').reduce((n, i) => n + i.count, 0);
   check('a grazza cuts grass and moss and carries its cuts home to the crate', hay >= 2, held(crate));
-}
-{
-  const g = body();
-  g.world.setTile(23, 22, TileType.Sand, 0);
-  g.world.setTile(23, 24, TileType.Sand, 0);
-  g.world.setHeight(24, 23, -3);
-  const c = worker(g, 'siffa');
-  check('in the browser, a siffa pans sand with the water at a corner, and not dry sand',
-    g.creatures.gatherable(g, 23, 22, 'pan', c) && !g.creatures.gatherable(g, 23, 24, 'pan', c));
 }
 
 for (const line of [...ok, ...bad]) console.log(line);

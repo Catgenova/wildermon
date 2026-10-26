@@ -63,7 +63,7 @@ import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP } from '../../game/creatures';
 import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import {
-  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
   BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
@@ -900,7 +900,7 @@ const pedigreeSources = (): string => {
 const SHOWN_QL = 50;
 const HANDS = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa',
   'forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra',
-  'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa'];
+  'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa', 'ulva', 'dowse'];
 /** A kind's two evolutions and the levels they come at: "Reedweaver at 30, Reedlord at 60". */
 const evolves = (id: string): string => {
   const st = SPECIES[id]?.stages;
@@ -916,7 +916,6 @@ const HAND_NUMBERS: Record<string, string> = {
   sheela: `a full fleece gives ${SHEAR_WOOL} wool and a full crop of feathers ${SHEAR_FEATHERS}, and a cudda a bucket of milk`,
   salva: `a QL ${SHOWN_QL} dressing puts back ${percent(healAmount(1, SHOWN_QL))} of a life at no first aid and ${percent(healAmount(SKILL_TOP, SHOWN_QL))} at ${SKILL_TOP}`,
   carra: `it keeps ${percent(butcherYield(1, 1))} of a carcass at no butchering and ${percent(butcherYield(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}`,
-  siffa: `something is in the pan ${percent(panFind(0))} of the time at no prospecting and ${percent(panFind(SKILL_TOP))} at ${SKILL_TOP}`,
   hoppa: `it tries ${listed(BREWS.map((b) => b.name.toLowerCase()))} in that order`,
   simma: `it tries ${cookRecipes().length} recipes in the order the recipes are listed, from ${itemDef(RECIPE_BY_ID.get(cookRecipes()[0])!.result).name.toLowerCase()} on`,
   relka: `a relic comes out at what its pieces were worth less their damage, times ${percent(restoredMul(1))} at no restoration and ${percent(restoredMul(SKILL_TOP))} at ${SKILL_TOP}`,
@@ -2935,8 +2934,7 @@ export function helpText(): string {
       and not off a work post. Card when idle: &ldquo;${idleSays({ why: 'range', n: SPECIES.magga.workRange }, 'fetch')}&rdquo; Wild ones steal items left near their trees. Evolves: ${evolves('magga')}.</td></tr>
       <tr><td><b>${SPECIES.woola.name}</b> (was Woola)</td><td>No task. <b>Shear</b> with a knife for <b>wool</b> once grown; regrows in ${dur(1 / (SPECIES.woola.fleece ?? 1))}.
       Evolves: ${evolves('woola')}.</td></tr>
-      <tr><td><b>Ulva</b></td><td>Hunts by scent from ${SPECIES.ulva.notice ?? HUNT_SIGHT} tiles, until you are well away or it is badly hurt. Taming ${SPECIES.ulva.tameLevel}.
-      Tamed: guards the settlement, attacking anything wild crossing the border.</td></tr>
+      <tr><td><b>Ulva</b></td><td>Fights back when struck. Taming ${SPECIES.ulva.tameLevel}. Settlement task: ${GATHER_VERB.spin} at your spindles (<b>The settlement's hands</b>).</td></tr>
       <tr><td><b>${SPECIES.roxxen.name}</b> (was Roxxen)</td><td>Draught ox: +${percent(SPECIES.roxxen.pull!)} team pace (speed multiplier) in the traces. No settlement task. Level = <b>driving</b>, learned
       ${LEARNS_SAYS.pull}; counts in the traces where another wildermon's climbing does (speed and steepest step). Largest carcass. Evolves: ${evolves('roxxen')}.</td></tr>
       <tr><td><b>${SPECIES.orse.name}</b> (was Orse)</td><td>Mount; learns <b>climbing</b> in the traces or ridden. Fit a <b>saddle</b> and <b>bridle</b> from its menu, then <b>mount</b>.
@@ -2984,7 +2982,7 @@ export function helpText(): string {
       <li><b>${SPECIES.bogga.name}</b>: marshes; cuts <b>peat and tar</b>.</li>
       <li><b>${SPECIES.sedra.name}</b> (was Sedra): cuts <b>reeds</b>, ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} a cut at ${SKILL_TOP} foraging. Evolves: ${evolves('sedra')}.</li>
       <li><b>${SPECIES.holla.name}</b> (was Holla): carries <b>water</b> from the shore or a well into your barrels. Evolves: ${evolves('holla')}.</li>
-      <li><b>Dowse</b>: only over metal; on a settlement <b>reads the ground</b> and marks ore.</li>
+      <li><b>Dowse</b>: only over metal; on a settlement <b>${GATHER_VERB.nail}</b> at your anvils (<b>The settlement's hands</b>).</li>
       <li><b>${SPECIES.sappa.name}</b>: <b>plants sprouts</b> where trees were felled.</li>
       <li><b>${SPECIES.cobbe.name}</b> (was Cobbe): <b>hod</b>: carries what a planned wall (any storey), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
       still needs from your settlement stores, crates and furniture, and fits it, one piece a trip. Evolves: ${evolves('cobbe')}.</li>
@@ -3009,7 +3007,8 @@ export function helpText(): string {
     <h4>The settlement's hands</h4>
     <ul>
       <li>${HANDS.length} chore workers, set to a settlement as usual, working within their reach of the totem. ${HANDS.filter((id) => TEND_JOBS.has(SPECIES[id].gathers!)).length} work at the settlement stores
-      or at one of your stations: output goes into that store, else any settlement store that takes it, else onto the ground there.</li>
+      or at one of your stations: output goes into that store, else any settlement store that takes it, else onto the ground there.
+      No tools: no ${listedOr(workerSkipsTools())} needed in the stores, none worn. Stations still needed: spindle, paper press, anvil, lit campfire or oven, smelter, kiln, barrel.</li>
       ${HANDS.map((id) => {
         const d = SPECIES[id];
         return `<li><b>${d.name}</b> (taming ${d.tameLevel}): ${GATHER_DO[d.gathers!]}${HAND_NUMBERS[id] ? `; ${HAND_NUMBERS[id]}` : ''}.</li>`;

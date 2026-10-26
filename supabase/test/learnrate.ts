@@ -182,6 +182,10 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   // At a fire or a press of yours, its makings out of the stores where they are.
   cook: errand('cook', [[0, 'work', 0.25]]),
   paper: errand('paper', [[0, 'work', 0.25]]),
+  spin: errand('spin', [[0, 'work', 0.25]]),
+  // At an anvil of yours, a lump out of the stores where it is.
+  nail: errand('nail', [[0, 'work', 0.25]]),
+  ribbon: errand('ribbon', [[0, 'work', 0.25]]),
   // A hearth raked, and the ashes leached into lye at the stores.
   ash: errand('ash', [[NEAR, 'work', 0.2], [NEAR, 'work', 0.25]]),
   // A barrel set going, and on to the next.
@@ -317,7 +321,7 @@ check('the island\'s learn_pace_def is LEARN_PACE, every trade and way of learni
 const CASES: Array<[species: string, skill: string]> = [
   ['tinka', 'repair'], ['tinka', 'foraging'], ['holla', 'carrying'], ['sedra', 'foraging'], ['cobbe', 'masonry'], ['magga', 'foraging'],
   ['warda', 'awareness'], ['lume', 'awareness'], ['woola', 'animal_husbandry'], ['roxxen', 'driving'], ['roxxen', 'climbing'],
-  ['sparra', 'fighting'], ['ulva', 'body_strength'], ['embra', 'smelting'], ['crawler', 'digging'],
+  ['sparra', 'fighting'], ['ulva', 'tailoring'], ['testa', 'body_strength'], ['dowse', 'blacksmithing'], ['embra', 'smelting'], ['crawler', 'digging'],
 ];
 const MIRA = '7e5b0000-0000-4000-8000-0000000000e1';
 const out = psql(`

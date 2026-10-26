@@ -428,14 +428,14 @@ async function main(): Promise<void> {
      * hunt reads, and the columns it is kept in.
      */
     const { data: hunters, error: huntErr } = await supabase()
-      .from('species_def').select('id,hunter,monster,notice').in('id', ['ulva', 'goblin', 'dragon']);
+      .from('species_def').select('id,hunter,monster,notice').in('id', ['rowl', 'goblin', 'dragon']);
     const byHunter = new Map(((hunters ?? []) as Array<{ id: string; hunter: boolean; monster: boolean; notice: number | null }>)
       .map((h) => [h.id, h]));
     check('what hunts, and how far off it sees you, is on the project',
-      !huntErr && byHunter.size === 3 && byHunter.get('ulva')!.hunter
+      !huntErr && byHunter.size === 3 && byHunter.get('rowl')!.hunter
         && (byHunter.get('dragon')!.notice ?? 0) > (byHunter.get('goblin')!.notice ?? 0),
       huntErr ? huntErr.message : byHunter.size
-        ? `an ulva sees the seven everything else does, a goblin ${byHunter.get('goblin')!.notice}, a dragon ${byHunter.get('dragon')!.notice}`
+        ? `a rowl sees the seven everything else does, a goblin ${byHunter.get('goblin')!.notice}, a dragon ${byHunter.get('dragon')!.notice}`
         : 'no rows came back at all');
     const { error: legErr } = await supabase().from('creature').select('id,hunting,enemy,hurt_by').eq('world_id', id).limit(1);
     check('a creature carries what it is set on', !legErr,

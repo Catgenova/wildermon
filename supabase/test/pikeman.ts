@@ -242,9 +242,9 @@ begin
     from creature cr where world_id = w.world_id and id in (t, a, b, k, n);
   delete from creature where world_id = w.world_id and id in (t, a, b, k, n);
 
-  /* ---- Warning Thrust: a hunter warned off does not come for you, alone or with its pack ---- */
-  a := creature_spawn(w.world_id, 'ulva', v_px + 2, v_py, 'wild', now() - interval '2 hours', null);
-  b := creature_spawn(w.world_id, 'ulva', v_px - 2, v_py, 'wild', now() - interval '2 hours', null);
+  /* ---- Warning Thrust: a hunter (a rowl: an ulva hunts no more) warned off does not come for you, alone or with its pack ---- */
+  a := creature_spawn(w.world_id, 'rowl', v_px + 2, v_py, 'wild', now() - interval '2 hours', null);
+  b := creature_spawn(w.world_id, 'rowl', v_px - 2, v_py, 'wild', now() - interval '2 hours', null);
   t := creature_spawn(w.world_id, 'bura', v_px, v_py + 2, 'wild', now() - interval '2 hours', null);
   update creature set traits = '{}', rare = null, hunting = null, hunt_again = null, settled_at = now(), until = now() + interval '1 hour',
          home_x = to_x, home_y = to_y where world_id = w.world_id and id in (a, b, t);
@@ -533,7 +533,7 @@ for (const bl of BLOWS) {
     who.split(',')[0] === 'true' && who.split(',').slice(2).every((x) => x === 'false') && / Through: 1 more hit\.$/.test(line),
     island('SKEWER'));
 }
-check('Warning Thrust is refused on a creature already fighting you', island('WARN:FIGHTING') === 'The ulva: already fighting you.', island('WARN:FIGHTING'));
+check('Warning Thrust is refused on a creature already fighting you', island('WARN:FIGHTING') === 'The snarepup: already fighting you.', island('WARN:FIGHTING'));
 check('and on one that never goes looking for a fight', island('WARN:PREY') === 'The bura: not aggressive.', island('WARN:PREY'));
 {
   const [who, secs, line] = parts('WARN');

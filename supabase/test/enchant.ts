@@ -172,8 +172,9 @@ do $t$
 declare w uuid; u uuid := '${MIRA}'; v_reed bigint; v_pap bigint; v_s bigint; v_sw bigint; v_x bigint; v_pl bigint;
         v_e record; v_before double precision; v_p player; v_c creature; v_ground jsonb;
 begin
-  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting', 118, 64, 10, 10, true) returning id into w;
-  perform land_blank(w, 64);
+  -- Big enough that a rowl turning tail at 41,40 (section 12) runs its whole leg on the land.
+  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting', 118, 96, 10, 10, true) returning id into w;
+  perform land_blank(w, 96);
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
@@ -428,16 +429,16 @@ begin
   insert into said select 'REFRESH', round(extract(epoch from (m.until - now()))::numeric, 3)::text from class_mark m
     where m.world_id = w and m.creature_id = 9120 and m.kind = 'stun';
 
-  -- 12. A hunter whose nerve has gone, beside Mira: one unstunned turns tail at once; one stunned does not move, nor give up
+  -- 12. A hunter (a rowl: an ulva hunts no more) whose nerve has gone, beside Mira: one unstunned turns tail at once; one stunned does not move, nor give up
   --     on her, until the stun is over, and then it turns tail.
   delete from creature where world_id = w;
   delete from event where world_id = w and uid = u;
   update player set stats = stats || jsonb_build_object('health', 1), wounds = '[]'::jsonb where world_id = w and uid = u;
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex, hunting, hunt_x, hunt_y, home_x, home_y,
                         until, settled_at, leg_at, leg_ends)
-    values (w, 9130, 'ulva', 'Ulva', 'wild', 41.5, 40.5, 41.5, 40.5, 2, 'male', u, 41.5, 40.5, 41.5, 40.5,
+    values (w, 9130, 'rowl', 'Snarepup', 'wild', 41.5, 40.5, 41.5, 40.5, 2, 'male', u, 41.5, 40.5, 41.5, 40.5,
             now() - interval '1 second', now() - interval '1 second', now() - interval '1 second', now() - interval '1 second'),
-           (w, 9131, 'ulva', 'Ulva', 'wild', 40.5, 41.5, 40.5, 41.5, 2, 'female', u, 40.5, 41.5, 40.5, 41.5,
+           (w, 9131, 'rowl', 'Snarepup', 'wild', 40.5, 41.5, 40.5, 41.5, 2, 'female', u, 40.5, 41.5, 40.5, 41.5,
             now() - interval '1 second', now() - interval '1 second', now() - interval '1 second', now() - interval '1 second');
   insert into said select 'NERVEAT', (c.health < max_health(c) * turns_at(d))::text from creature c join species_def d on d.id = c.species
     where c.world_id = w and c.id = 9130;
@@ -447,7 +448,7 @@ begin
   insert into said select 'NERVE', (select (c.hunting is not distinct from u)::text || ',' || (creature_x(c) = 41.5 and creature_y(c) = 40.5 and c.to_x = 41.5 and c.to_y = 40.5)::text
                                       from creature c where c.world_id = w and c.id = 9130)
     || '|' || (select (c.hunting is null)::text || ',' || (c.to_x <> 40.5 or c.to_y <> 41.5)::text from creature c where c.world_id = w and c.id = 9131)
-    || '|' || (select count(*) from event e where e.world_id = w and e.uid = u and e.text = 'Ulva fled.');
+    || '|' || (select count(*) from event e where e.world_id = w and e.uid = u and e.text = 'Snarepup fled.');
   update class_mark set until = until - make_interval(secs => stun_secs() + 1) where world_id = w and creature_id = 9130;
   update creature set until = until - make_interval(secs => stun_secs() + 1), settled_at = settled_at - make_interval(secs => stun_secs() + 1),
          leg_at = leg_at - make_interval(secs => stun_secs() + 1), leg_ends = leg_ends - make_interval(secs => stun_secs() + 1)
@@ -455,7 +456,7 @@ begin
   perform creature_settle(w, 9130);
   insert into said select 'NERVEOVER', (select (c.hunting is null)::text || ',' || (c.to_x <> 41.5 or c.to_y <> 40.5)::text
                                           from creature c where c.world_id = w and c.id = 9130)
-    || '|' || (select count(*) from event e where e.world_id = w and e.uid = u and e.text = 'Ulva fled.');
+    || '|' || (select count(*) from event e where e.world_id = w and e.uid = u and e.text = 'Snarepup fled.');
 
   -- 13. A fright on one stunned: it runs once the stun is over, not before.
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
@@ -805,7 +806,7 @@ check(`and stunned, it neither moves nor gives up on you for its ${STUN_SECS} se
   for (const id of [...g.creatures.list.keys()]) g.creatures.list.delete(id);
   g.putBody(40.5, 40.5, 0);
   g.player.stats.health = 1;
-  const c = g.creatures.spawn('ulva', 41.5, 40.5, 'wild', () => 0.5, 0);
+  const c = g.creatures.spawn('rowl', 41.5, 40.5, 'wild', () => 0.5, 0);
   c.health = 2;
   g.rand = () => 0.5;
   g.creatures.engage(g, c);
