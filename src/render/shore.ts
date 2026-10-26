@@ -15,13 +15,18 @@
  * The foam runs up the shore and back with a slow wave, a little later the
  * further along the shore, and is filled from a picture of soft broken
  * flecks laid on the ground, so it is a broken line rather than a stripe.
+ *
+ * All of that is the sea's: water joined to the open sea (`SeaReach`). Still
+ * water -- a pool or a lake walled in from the sea, and a spring's pond -- has
+ * neither foam nor a wet band, only a thin edge at its waterline (`calm`).
  */
 import type { Camera } from '../engine/camera';
 import { hash2 } from '../world/noise';
 import { TileType } from '../world/tiles';
 import type { World } from '../world/world';
 import {
-  FOAM, FOAM_ALPHA, FOAM_WIDE, POND_FOAM, POND_SURGE, WET_POND, SHORE_FAR, SHORE_ROCK, SURGE_BACK, SURGE_PERIOD, SURGE_UP, WET_ALPHA, WET_GROUND, WET_ROCK, WET_SAND,
+  FOAM, FOAM_ALPHA, FOAM_WIDE, SHORE_FAR, SHORE_ROCK, STILL_EDGE, STILL_EDGE_ALPHA, STILL_GLINT, STILL_GLINT_ALPHA, SURGE_BACK, SURGE_PERIOD, SURGE_UP,
+  WET_ALPHA, WET_GROUND, WET_ROCK, WET_SAND,
 } from './water';
 
 /** How far out the second line of foam is, in tiles from the waterline on sand, and how far behind the first it comes in, as a share of a wave. */
@@ -31,6 +36,14 @@ const OUT_LAG = 0.4;
 /** The foam's colour, unbroken; and the wet ground's tint. */
 const FOAM_CSS = `rgb(${FOAM.join(',')})`;
 const WET_CSS = `rgb(${WET_GROUND.join(',')})`;
+/** Still water's edge: the darker line at the waterline and the paler one just inside it. */
+const STILL_EDGE_CSS = `rgb(${STILL_EDGE.join(',')})`;
+const STILL_GLINT_CSS = `rgb(${STILL_GLINT.join(',')})`;
+/** How wide still water's darker edge is, in tiles from the waterline, how far it is laid over the bank, and where its paler line runs. */
+const STILL_WIDE = 0.05;
+const STILL_OVER = 0.01;
+const GLINT_FROM = 0.09;
+const GLINT_TO = 0.15;
 /** What each of the gathered bands (`ShorePainter.flush`) is filled with: the foam's core, its lace, what it leaves, the line out and its core; the wet band, in two; and the core's flecks, which are flecks wherever they are laid. */
 const SLOT_STYLE = [FOAM_CSS, 'flecks', 'flecks', 'flecks', FOAM_CSS, WET_CSS, WET_CSS, 'broken'] as const;
 /** A tile's corners, in the order they are walked round. */
@@ -82,15 +95,14 @@ const ease = (a: number, b: number, v: number): number => {
 /**
  * The sea's shore, a block of corners at a time: how far each corner is from
  * the waterline, how sandy its shore is, and which tiles have any of the shore
- * on them. Made when first drawn and again when the ground under it changes.
+ * on them. Made when first drawn and again when the ground under it changes,
+ * or the water near it turns from the sea's to still or back (`touchBox`).
  */
 export class ShoreField {
   private blocks = new Map<number, Block>();
 
-  constructor(private readonly world: World) {}
-
-  /** Whether the sea is on a corner. */
-  private readonly sea = (cx: number, cy: number): boolean => this.world.getHeight(cx, cy) < 0;
+  /** `sea` says which corners the water is on: the sea's, or the still water walled in from it (`SeaReach`). */
+  constructor(private readonly world: World, private readonly sea: (cx: number, cy: number) => boolean) {}
 
   private lastKey = NaN;
   private last: Block | null = null;
@@ -100,6 +112,14 @@ export class ShoreField {
     // A corner's distance reads the corners round it, so the change reaches a corner further than the tile's own.
     for (let by = Math.floor((y - 2) / BLOCK); by <= Math.floor((y + 2) / BLOCK); by++) {
       for (let bx = Math.floor((x - 2) / BLOCK); bx <= Math.floor((x + 2) / BLOCK); bx++) this.blocks.delete(by * 65536 + bx);
+    }
+  }
+
+  /** The water in a box of tiles changed what it is (`SeaReach.settle`). */
+  touchBox(x0: number, y0: number, x1: number, y1: number): void {
+    this.last = null;
+    for (let by = Math.floor((y0 - 2) / BLOCK); by <= Math.floor((y1 + 2) / BLOCK); by++) {
+      for (let bx = Math.floor((x0 - 2) / BLOCK); bx <= Math.floor((x1 + 2) / BLOCK); bx++) this.blocks.delete(by * 65536 + bx);
     }
   }
 
@@ -189,7 +209,8 @@ export class ShoreField {
  * the shore stays at the water and is not drawn over the whole flat.
  */
 export function cornerShore(w: World, cx: number, cy: number, level: number, wet: (cx: number, cy: number) => boolean): [number, number] {
-  const h = w.getHeight(cx, cy) - level;
+  // Water that is not this water is ground to it.
+  const h = wet(cx, cy) ? w.getHeight(cx, cy) - level : Math.max(0, w.getHeight(cx, cy) - level);
   const gx = (w.getHeight(cx + 1, cy) - w.getHeight(cx - 1, cy)) / 2;
   const gy = (w.getHeight(cx, cy + 1) - w.getHeight(cx, cy - 1)) / 2;
   const rise = Math.max(RISE_LEAST, Math.hypot(gx, gy));
@@ -313,11 +334,10 @@ export class ShorePainter {
   }
 
   /** The surge at a corner, in tiles up the shore from the waterline: up fast, back slow. */
-  private surge(cx: number, cy: number, pond: boolean, lag = 0): number {
+  private surge(cx: number, cy: number, lag = 0): number {
     const s = this.s!;
     const along = (cx * s.dirX + cy * s.dirY) / 9.5 + 0.12 * Math.sin(cx * 0.53 + cy * 0.37);
-    const period = pond ? SURGE_PERIOD * 1.6 : SURGE_PERIOD;
-    let u = (s.t / period - along - lag) % 1;
+    let u = (s.t / SURGE_PERIOD - along - lag) % 1;
     if (u < 0) u += 1;
     const up = u < 0.35 ? Math.sin((u / 0.35) * Math.PI * 0.5) : 0.5 + 0.5 * Math.cos(((u - 0.35) / 0.65) * Math.PI);
     return -SURGE_BACK + (SURGE_UP + SURGE_BACK) * up;
@@ -353,7 +373,7 @@ export class ShorePainter {
     return p;
   }
 
-  /** Read a tile's corners: from the sea's field, or worked out for a pond's level. */
+  /** Read a tile's corners: from a field (`ShoreField`), or worked out for a pond's level. */
   load(w: World, field: ShoreField | null, x: number, y: number, co: readonly (readonly [number, number])[], c: readonly number[], level: number, wet: (cx: number, cy: number) => boolean = NONE_WET): boolean {
     const cs = this.cs;
     let lo = Infinity, hi = -Infinity;
@@ -387,7 +407,7 @@ export class ShorePainter {
     const cs = this.cs;
     const cam = this.s!.cam;
     for (let i = 0; i < 4; i++) {
-      const sh = !shared || this.still ? 1 : SHORE_ROCK + (1 - SHORE_ROCK) * cs[i * 5 + 4];
+      const sh = !shared ? 1 : SHORE_ROCK + (1 - SHORE_ROCK) * cs[i * 5 + 4];
       const sg = this.sgUse[i];
       const lo = sh * (loA + loB * sg), hi = sh * (hiA + hiB * sg);
       bufA[i * ATTRS] = cs[i * 5];
@@ -425,22 +445,22 @@ export class ShorePainter {
   /** Which side of the waterline the bands being cut are kept to: both, the land's (drawn with the ground), or the water's (in the sea's picture). */
   private part: 'all' | 'land' | 'water' = 'all';
 
-  /** The wet band on the land side of the loaded tile's shore: darkest at the water, gone by its top, in steps one inside another. */
-  wet(ctx: CanvasRenderingContext2D, level: number, pond: boolean): void {
+  /** The wet band on the land side of the loaded tile of the sea's shore: darkest at the water, gone by its top, in steps one inside another. */
+  wet(ctx: CanvasRenderingContext2D, level: number): void {
     const cs = this.cs;
     let kk = 0;
     for (let i = 0; i < 4; i++) kk += cs[i * 5 + 4] / 4;
-    const top = (WET_ROCK + (WET_SAND - WET_ROCK) * kk) * (pond ? WET_POND : 1);
+    const top = WET_ROCK + (WET_SAND - WET_ROCK) * kk;
     if (Math.min(cs[3], cs[8], cs[13], cs[18]) > top || Math.max(cs[3], cs[8], cs[13], cs[18]) < 0) return;
     if (!this.batching) {
-      this.wetSmooth(ctx, level, top, WET_ALPHA * (pond ? 0.8 : 1));
+      this.wetSmooth(ctx, level, top, WET_ALPHA);
       return;
     }
     const was = ctx.globalAlpha;
     ctx.fillStyle = WET_CSS;
     for (let i = 0; i < WET_STEPS; i++) {
       const reach = top * (1 - i / WET_STEPS);
-      const alpha = (WET_ALPHA * (pond ? 0.8 : 1)) / WET_STEPS;
+      const alpha = WET_ALPHA / WET_STEPS;
       if (this.batching) this.slotBand(5, i, alpha, level, -0.02, 0, reach, 0, false);
       else {
         ctx.globalAlpha = alpha;
@@ -452,8 +472,7 @@ export class ShorePainter {
 
   /**
    * The wet band in one fill shaded from the waterline up, where it is drawn
-   * once rather than every frame -- into a block of the ground's picture, or on
-   * a pond's bank: a gradient laid across the tile along the flat slope that
+   * once rather than every frame, into a block of the ground's picture: a gradient laid across the tile along the flat slope that
    * best fits its corners' distances from the water on the screen.
    */
   private wetSmooth(ctx: CanvasRenderingContext2D, level: number, top: number, alpha: number): void {
@@ -519,9 +538,6 @@ export class ShorePainter {
       }
     }
   }
-
-  /** A pond's foam is not drawn wider on sand than on rock: still water leaves a line, whatever the bank. */
-  private still = false;
 
   /**
    * The sea's shore is gathered a line of the ground at a time and laid when
@@ -605,29 +621,89 @@ export class ShorePainter {
   /** The wet band on the loaded tile of the sea's shore, gathered for its line (`flush`). */
   wetLand(ctx: CanvasRenderingContext2D): void {
     this.batching = true;
-    this.wet(ctx, 0, false);
+    this.wet(ctx, 0);
     this.batching = false;
   }
 
-  /** The foam on the loaded tile of a pond's bank, laid now. */
-  foam(ctx: CanvasRenderingContext2D, level: number): void {
-    this.foamBands(ctx, level, 'pond');
+  /**
+   * The edge of still water on a tile, laid now: water walled in from the sea
+   * (`SeaReach`) and a spring's pond. Nothing breaks on it and nothing wets
+   * its bank: a thin darker line along the waterline and a fainter paler one
+   * just inside it, the same whatever the bank.
+   *
+   * Cut from the water's own edge on the tile -- where its corners' heights
+   * cross `level`, as the water is cut (`Renderer.seaLand`,
+   * `Renderer.drawPonds`) -- and measured in along each of the tile's sides
+   * from where the edge crosses it, so two tiles cut the same side alike and
+   * the lines run on from one to the next.
+   */
+  calm(ctx: CanvasRenderingContext2D, x: number, y: number, co: readonly (readonly [number, number])[], c: readonly number[], level: number): void {
+    const cross = this.cross;
+    let n = 0;
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) & 3;
+      const a = c[i] - level, b = c[j] - level;
+      if (a < 0 === b < 0) continue;
+      const t = a / (a - b);
+      const dx = co[j][0] - co[i][0], dy = co[j][1] - co[i][1];
+      // Where it crosses this side, which way along it the water is, and how much of the side is under water.
+      const o = n * 5;
+      cross[o] = x + co[i][0] + dx * t;
+      cross[o + 1] = y + co[i][1] + dy * t;
+      cross[o + 2] = a < 0 ? -dx : dx;
+      cross[o + 3] = a < 0 ? -dy : dy;
+      cross[o + 4] = a < 0 ? t : 1 - t;
+      n++;
+    }
+    if (n !== 2 && n !== 4) return;
+    const was = ctx.globalAlpha;
+    for (let p = 0; p < n; p += 2) {
+      ctx.fillStyle = STILL_GLINT_CSS;
+      ctx.globalAlpha = STILL_GLINT_ALPHA * this.far;
+      this.calmBand(ctx, p, p + 1, GLINT_FROM, GLINT_TO, level);
+      ctx.fillStyle = STILL_EDGE_CSS;
+      ctx.globalAlpha = STILL_EDGE_ALPHA * this.far;
+      this.calmBand(ctx, p, p + 1, -STILL_OVER, STILL_WIDE, level);
+    }
+    ctx.globalAlpha = was;
+  }
+
+  /** Where still water's edge crosses each side of a tile (`calm`): the point, the way in to the water, and how far the water goes. */
+  private readonly cross = new Float64Array(20);
+
+  /** The band between two of still water's crossings, from `from` to `to` tiles in from the edge along the sides they are on. */
+  private calmBand(ctx: CanvasRenderingContext2D, p: number, q: number, from: number, to: number, level: number): void {
+    const cr = this.cross;
+    const cam = this.s!.cam;
+    const at = (k: number, u: number, first: boolean): void => {
+      const o = k * 5;
+      const d = Math.min(u, cr[o + 4]);
+      const wx = cr[o] + cr[o + 2] * d, wy = cr[o + 1] + cr[o + 3] * d;
+      const sx = cam.worldToScreenX(wx, wy), sy = cam.worldToScreenY(wx, wy, level);
+      if (first) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    };
+    if (Math.min(from, cr[p * 5 + 4]) >= Math.min(to, cr[p * 5 + 4]) && Math.min(from, cr[q * 5 + 4]) >= Math.min(to, cr[q * 5 + 4])) return;
+    ctx.beginPath();
+    at(p, from, true);
+    at(q, from, false);
+    at(q, to, false);
+    at(p, to, false);
+    ctx.closePath();
+    ctx.fill();
   }
 
   /** The foam's bands: a lace line along the waterline running up the shore and back, the lace it leaves going back, and a second line out in the shallows that comes in behind it. */
-  private foamBands(ctx: CanvasRenderingContext2D, level: number, mode: 'pond' | 'picture' | 'tile'): void {
-    const pond = mode === 'pond';
+  private foamBands(ctx: CanvasRenderingContext2D, level: number, mode: 'picture' | 'tile'): void {
     const cs = this.cs;
     for (let i = 0; i < 4; i++) {
-      const sg = this.surge(cs[i * 5], cs[i * 5 + 1], pond);
-      this.surgeAt[i] = pond ? sg * POND_SURGE : sg;
-      this.outAt[i] = this.surge(cs[i * 5], cs[i * 5 + 1], pond, OUT_LAG);
+      this.surgeAt[i] = this.surge(cs[i * 5], cs[i * 5 + 1]);
+      this.outAt[i] = this.surge(cs[i * 5], cs[i * 5 + 1], OUT_LAG);
     }
     this.sgUse = this.surgeAt;
-    this.still = pond;
-    const strength = FOAM_ALPHA * this.far * (pond ? POND_FOAM : 1);
+    const strength = FOAM_ALPHA * this.far;
     // How wide the line is, before a corner's share of a sand shore's.
-    const W = FOAM_WIDE * (pond ? POND_SURGE * 1.6 : 1);
+    const W = FOAM_WIDE;
     const was = ctx.globalAlpha;
     /*
      * The line's core, unbroken: drawn with the ground at the screen's own
@@ -646,7 +722,6 @@ export class ShorePainter {
     }
     // With the ground, that is all: the lace is in the sea's picture.
     if (mode === 'tile') {
-      this.still = false;
       this.part = 'all';
       ctx.globalAlpha = was;
       return;
@@ -665,7 +740,6 @@ export class ShorePainter {
       this.soft(ctx, level, 4, strength * 0.25, -OUT_AT - W * 0.25, 0.6, -OUT_AT, 0.6);
       this.sgUse = this.surgeAt;
     }
-    this.still = false;
     this.part = 'all';
     ctx.globalAlpha = was;
   }

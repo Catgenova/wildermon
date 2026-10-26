@@ -208,6 +208,15 @@ export class World {
     return this.ready ? this.grown / this.ready.length : 1;
   }
 
+  /** Whether the ground under a tile or corner has been worked out, without working it out. */
+  grownAt(x: number, y: number): boolean {
+    const r = this.ready;
+    if (r === null) return true;
+    const cx = x < 0 ? 0 : x >= this.w ? this.across - 1 : (x / CHUNK) | 0;
+    const cy = y < 0 ? 0 : y >= this.h ? this.down - 1 : (y / CHUNK) | 0;
+    return r[cy * this.across + cx] !== 0;
+  }
+
   /** The ground under a tile, worked out if it has not been yet. */
   ensure(x: number, y: number): void {
     const r = this.ready;
