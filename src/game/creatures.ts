@@ -7900,7 +7900,7 @@ export class Creatures {
         return true;
       }
       if (!goto(st.centre[0], st.centre[1])) return true;
-      this.intoStores(game, held, st, st.x, st.y);
+      this.intoStores(game, held, st, st.x, st.y, false);
       c.carrying = null;
       return true;
     }
@@ -8109,9 +8109,12 @@ export class Creatures {
    * Something made at the stores, put into them: the store it was made at
    * while that has room, then whichever on the settlement will take it, and
    * failing all of them on the ground where it was made. The island's
-   * `worker_put`.
+   * `worker_put`. Counted to an errand's go as made (`making`) unless `made`
+   * is false: a load carried back, or what a recipe hands back. The island's
+   * `worker_put_back`.
    */
-  private intoStores(game: Game, item: Item, at: DeedStore | null, x: number, y: number): void {
+  private intoStores(game: Game, item: Item, at: DeedStore | null, x: number, y: number, made = true): void {
+    if (made && this.making) this.making.push([item.id, item.count]);
     const to = at && at.room(item) ? at : game.deedStores().find((st) => st.room(item));
     if (to && to.add(item)) {
       to.changed();
@@ -8393,7 +8396,7 @@ export class Creatures {
     const kind = this.species(c).gathers ?? 'mill';
     const skill = c.skills[GATHER_SKILL[kind]] ?? 1;
     this.intoStores(game, { uid: game.inventory.nextUid++, id: r.result, ql: this.madeQl(game, c, skill), dmg: 0, count: r.count ?? 1 }, at, x, y);
-    for (const [id, n] of r.returns ?? []) this.intoStores(game, { uid: game.inventory.nextUid++, id, ql: 40, dmg: 0, count: n }, at, x, y);
+    for (const [id, n] of r.returns ?? []) this.intoStores(game, { uid: game.inventory.nextUid++, id, ql: 40, dmg: 0, count: n }, at, x, y, false);
     if (!go) return;
     this.gainSkill(game, c, GATHER_SKILL[kind], 0.25);
     this.errandWork(game, c, kind);
@@ -8526,7 +8529,7 @@ export class Creatures {
       const st = this.storeFor(game, c, held);
       if (!st) return this.why(c, 'full');
       if (!goto(st.centre[0], st.centre[1])) return true;
-      this.intoStores(game, held, st, st.x, st.y);
+      this.intoStores(game, held, st, st.x, st.y, false);
       c.carrying = null;
       this.errandWork(game, c, 'hod');
       return true;
@@ -9847,6 +9850,12 @@ export class Creatures {
   /** Set when a worker's step has just counted a go to its ledger, for what was in its arms to be counted with it. */
   private went = false;
 
+  /**
+   * What an errand's step put into the stores as its work (`intoStores`), while one is being stepped, for its go to
+   * count to its ledger; null otherwise. The island's `wurm.made` (`worker_made_take`).
+   */
+  private making: Array<[string, number]> | null = null;
+
   private updateWorker(c: Creature, dt: number, game: Game): void {
     // The time onto its lifetime, by why it stood about for it, or at work for nothing (`workTime`).
     if (c.mode === 'deed') c.work = workTime(c.work, dt, c.idle?.why);
@@ -9915,12 +9924,22 @@ export class Creatures {
       c.idle = null;
       const held = c.carrying ? { id: c.carrying.id, n: c.carrying.count } : null;
       this.went = false;
-      const busy = this.errandStep(game, c, dt, kind, deed);
+      this.making = [];
+      let busy: boolean;
+      let made: Array<[string, number]>;
+      try {
+        busy = this.errandStep(game, c, dt, kind, deed);
+      } finally {
+        made = this.making ?? [];
+        this.making = null;
+      }
       // What was in its arms and went into a go is what it handled, as the island's `worker_settle` counts it.
       if (this.went && held) {
         const left = c.carrying?.id === held.id ? c.carrying.count : 0;
         if (left < held.n) this.toLedger(game, c, { item: held.id, n: held.n - left });
       }
+      // And what the go made and put into the stores (`intoStores`), as the island's counts it (`worker_made_take`).
+      if (this.went) for (const [id, n] of made) this.toLedger(game, c, { item: id, n });
       if (busy) return;
     }
     if (c.state === 'forage') {

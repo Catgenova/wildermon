@@ -4480,6 +4480,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/workertools.mjs --log-level=error
           node node_modules/.cache/workertools.mjs
 
+      - name: What a worker makes in place, on its work log
+        if: matrix.shard == 6
+        run: |
+          # A dowse's nails, an ulva's yarn, a rippa's planks and a simma's
+          # cooking counted as handled on the day's log; a load carried back
+          # counted once: each the same on both sides.
+          npx esbuild supabase/test/madelog.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/madelog.mjs --log-level=error
+          node node_modules/.cache/madelog.mjs
+
       - name: Seven that fight
         if: matrix.shard == 6
         run: |

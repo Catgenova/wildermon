@@ -3968,6 +3968,13 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => ['Changed: storey arrows and the wall cutaway: on the toolbar (was: right edge).'],
   },
+  {
+    n: 336,
+    day: '2026-10-26',
+    lines: () => [
+      `Fixed: work log of settlement workers making into the stores (${(['dowse', 'ulva', 'rippa', 'simma'] as const).map((id) => SPECIES[id].name).join(', ')} and the rest): handled counts what each cycle made (was: cycles only).`,
+    ],
+  },
 ];
 
 /**
