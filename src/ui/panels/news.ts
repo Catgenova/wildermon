@@ -3881,6 +3881,19 @@ export const NEWS: News[] = [
       'Fixed: an ask the island raised on (too many requests, a bad request): logged as "Not done: <reason>" (was not logged).',
     ],
   },
+  {
+    n: 327,
+    day: '2026-10-26',
+    lines: () => {
+      const d = SPECIES.relka, [one, two] = d.stages!;
+      return [
+        `Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats.`,
+        `Each stage: own model, animations and voice. Stage 2: ${stageSays(1)}; stage 3: ${stageSays(2)}.`,
+        `Added: stage 3 skill: ${two.name} ${perkSays('relka')}.`,
+        `Changed: butchered, ${d.name} line gives no fur.`,
+      ];
+    },
+  },
 ];
 
 /**

@@ -41,7 +41,8 @@ import { BRAMBO, CARRA, KEMMA, SALVA, SHEELA, SIFFA, TANNA } from './wild-hands'
 import { BLOOMREAPER, PETALBLADE, SPRIGMANT } from './wild-mantis';
 import { WHEATCHEEKS, WHEATLEY, WHEATWHIRL } from './wild-hamster';
 import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
-import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA } from './wild-hands2';
+import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, SCURRA, SIMMA } from './wild-hands2';
+import { AURELIAX, KINTSU, RELICRAWLER } from './wild-relic';
 import { PEBBLEBEAK, SOILWHISTLE, WORMHERON } from './wild-curlew';
 import { CHISSA, CORDRA, FLECHA, GLOSSA, PAPRA, RIPPA } from './wild-hands3';
 import { CASKYBARA, PAILBARA, RESERVARA } from './wild-capy';
@@ -121,7 +122,7 @@ export const WILDERMON: Record<string, Kind> = {
   cindra: CINDRA,
   hoppa: HOPPA,
   simma: SIMMA,
-  relka: RELKA,
+  relka: KINTSU,
   bedda: BEDDA,
   wurla: PEBBLEBEAK,
   sprigga: LEMLET,
@@ -205,6 +206,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   sparra: [DUMMIBEAR, DUMMITITAN],
   plucka: [ORCHIBELLE, ARBOANARI],
   grista: [WHEATWHIRL, WHEATCHEEKS],
+  relka: [RELICRAWLER, AURELIAX],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

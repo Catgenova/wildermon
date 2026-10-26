@@ -155,7 +155,7 @@ begin
   delete from item where world_id = w and holder = 'crate' and crate = 7201;
   delete from placed where id = v_p;
 
-  -- Relka: both pieces of a bone comb.
+  -- Kintsu (was Relka): both pieces of a bone comb.
   insert into item (world_id, holder, crate, def, ql, count, extra) values (w, 'crate', 7201, 'fragment', 40, 1, 'bone comb 1/2'), (w, 'crate', 7201, 'fragment', 40, 1, 'bone comb 2/2');
   select id into v_id from hand where species = 'relka';
   update creature set mode = 'deed', until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle' where world_id = w and id = v_id;
@@ -254,7 +254,7 @@ check('a cindra rakes the two whole ashes out of a campfire and leaches them wit
 const [brewLiquid, brewLitres, brewWorking, wheatLeft] = at('BREW').split('|');
 check('a hoppa sets ale going in a barrel of water with the wheat from the stores', brewLiquid === 'ale' && Number(brewLitres) === 15 && brewWorking === 'true' && wheatLeft === '0', at('BREW'));
 check('a simma cooks the meat at a lit campfire and puts it back in the stores', at('COOK') === 'cooked_meat 1', at('COOK'));
-check('a relka puts a bone comb back together out of both its pieces', at('RESTORE') === 'ancient_comb 1', at('RESTORE'));
+check('a Kintsu (was relka) puts a bone comb back together out of both its pieces', at('RESTORE') === 'ancient_comb 1', at('RESTORE'));
 const [sown, ripeLeft, planterStores] = at('PLANTER').split('|');
 // Two seeds in the stores: one a harvest at most now (`SEED_CHANCE`), so the second sowing need not wait on the roll.
 check('a bedda sows an empty planter with the seed from the stores, harvests the ripe one into them, and sows that again',
@@ -351,7 +351,7 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   const crate = stock(g, [['fragment', 1, 'bone comb 1/2'], ['fragment', 1, 'bone comb 2/2']]);
   worker(g, 'relka');
   run(g, 60);
-  check('a relka puts a bone comb back together out of both its pieces', held(crate) === 'ancient_comb 1', held(crate));
+  check('a Kintsu (was relka) puts a bone comb back together out of both its pieces', held(crate) === 'ancient_comb 1', held(crate));
 }
 {
   const g = body();

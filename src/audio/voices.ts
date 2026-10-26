@@ -30,6 +30,7 @@ import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
 import { PIP_VOICE } from './voice-pip';
 import { REED_VOICE } from './voice-reed';
+import { RELIC_VOICE } from './voice-relic';
 import { SAND_VOICE } from './voice-sand';
 import { SKY_VOICE } from './voice-sky';
 import { SNAIL_VOICE } from './voice-snail';
@@ -127,4 +128,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   sparra: DUMMY_VOICE,
   // The Wheatley, the Wheatwhirl and the Wheatcheeks.
   grista: HAMSTER_VOICE,
+  // The Kintsu, the Relicrawler and the Aureliax.
+  relka: RELIC_VOICE,
 };
