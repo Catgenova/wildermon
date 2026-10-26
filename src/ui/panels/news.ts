@@ -4071,7 +4071,7 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => [
       `Changed: beds: Sleep (any hour) logs you off; sleep bonus +${sleepHm(3600 * SLEEP_BONUS_RATE)} per hour asleep (QL +${percent(1 / SLEEP_BONUS_QL)} per point), `
-        + `max ${sleepHm(SLEEP_BONUS_CAP)}; on: skill gain ×${SLEEP_BONUS_MULT}, drains 1 s per s (Skills window, status panel, ${defaultKey('sleep_bonus')}); replaces rest.`,
+        + `max ${sleepHm(SLEEP_BONUS_CAP)}; on: skill gain ×${SLEEP_BONUS_MULT}, drains in real time (Skills window, status panel, ${defaultKey('sleep_bonus')}); replaces rest.`,
     ],
   },
   {

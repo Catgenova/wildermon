@@ -111,7 +111,7 @@ export const BINDS: BindDef[] = [
   })),
 
   // The backslash was nobody's.
-  { id: 'sleep_bonus', label: 'Sleep bonus on/off', hint: `Switch the sleep bonus: on, skill gain ×${SLEEP_BONUS_MULT} while any is stored, draining 1 s per s on the island; off, kept.`, group: 'Doing things', keys: ['Backslash'] },
+  { id: 'sleep_bonus', label: 'Sleep bonus on/off', hint: `Switch the sleep bonus: on, skill gain ×${SLEEP_BONUS_MULT} while any is stored, draining in real time on the island; off, kept.`, group: 'Doing things', keys: ['Backslash'] },
   { id: 'walk_home', label: 'Walk home', hint: 'Walk to your settlement totem or bed.', group: 'Doing things', keys: ['Home'] },
   /*
    * One key for all of them rather than one each. Two emotes is a pair of

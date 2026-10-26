@@ -19,7 +19,7 @@
 import type { Game } from '../game/game';
 import { CARRY_STOP, overDrag } from '../game/game';
 import type { CastSeen } from '../game/events';
-import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_RATE, sleepBonusLabel, sleepHm } from '../game/sleep';
+import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, sleepBonusLabel, sleepHm, sleepRate } from '../game/sleep';
 import { boundKey } from '../game/keybinds';
 import { SKILL_BY_ID } from '../game/skills';
 import { FAITH, favourCap } from '../game/faith';
@@ -357,9 +357,9 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     add({
       id: 'rest', good: true, glyph: 'rest', name: p.sleepOn ? 'Sleep bonus' : 'Sleep bonus (off)', caption: shortLeft(p.rested),
       does: [sleepBonusLabel(p.sleepOn, p.rested),
-        `On: skill gain ×${SLEEP_BONUS_MULT} base, other bonuses added; drains 1 s per s while on the island. Off: kept.`,
+        `On: skill gain ×${SLEEP_BONUS_MULT} base, other bonuses added; drains in real time while on the island. Off: kept.`,
         `Switch: ${boundKey('sleep_bonus')}, Skills window or status panel.`],
-      from: `Sleep in a bed: +${sleepHm(3600 * SLEEP_BONUS_RATE)} per hour asleep (bed, QL 0), max ${sleepHm(SLEEP_BONUS_CAP)}.`,
+      from: `Sleep in a bed: +${sleepHm(3600 * sleepRate(1, 0))} to +${sleepHm(3600 * sleepRate(1, 100))} per hour asleep, by QL, max ${sleepHm(SLEEP_BONUS_CAP)}.`,
     });
   }
   // What a dish or a tincture favours, while it lasts.

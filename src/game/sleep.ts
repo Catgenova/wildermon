@@ -28,6 +28,15 @@ export const SLEEP_BONUS_CAP = 5 * 3600;
 export const SLEEP_BONUS_MULT = 2;
 /** A bed's QL adds this share of the rate per point: × (1 + QL / `SLEEP_BONUS_QL`). */
 export const SLEEP_BONUS_QL = 200;
+/** Health back on lying down, × the bed's rest (`bedRest`). */
+export const SLEEP_HEAL = 0.25;
+/** Food used up by lying down. */
+export const SLEEP_FOOD = 0.2;
+/** Water used up by lying down. */
+export const SLEEP_WATER = 0.25;
+
+/** A bed's rest on lying down, by its worth (`FurnitureDef.bed`) and QL: × `SLEEP_HEAL` health. */
+export const bedRest = (bed: number, ql: number): number => bed * (0.6 + ql / 250);
 
 /**
  * Sleep bonus gained per second asleep: the bed's own worth (`FurnitureDef.bed`: a bed 1, a cot and a tent less),

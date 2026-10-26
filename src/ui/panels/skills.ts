@@ -155,7 +155,7 @@ export class SkillsPanel {
     if (this.sleepBtn.textContent !== label) this.sleepBtn.textContent = label;
     this.sleepBtn.classList.toggle('skill-sleep-on', p.sleepOn);
     this.sleepBtn.title = `${p.sleepOn ? 'Switch off' : 'Switch on'} (${boundKey('sleep_bonus')}).`;
-    const note = `On: skill gain ×${SLEEP_BONUS_MULT} while any is stored; drains 1 s per s on the island. Off: kept. `
+    const note = `On: skill gain ×${SLEEP_BONUS_MULT} while any is stored; drains in real time on the island. Off: kept. `
       + `Gained logged off asleep in a bed: +${sleepHm(3600 * SLEEP_BONUS_RATE)} per hour asleep (bed, QL 0; QL +${percent(1 / SLEEP_BONUS_QL)} per point), max ${sleepHm(SLEEP_BONUS_CAP)}.`;
     if (this.sleepNote.textContent !== note) this.sleepNote.textContent = note;
   }

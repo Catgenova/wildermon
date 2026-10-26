@@ -50,7 +50,7 @@ import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
 import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS } from './pace';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, bagCarry, HIT_LOCATIONS, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
-import { asleepIn, SLEEP_BONUS_MULT } from './sleep';
+import { asleepIn, SLEEP_BONUS_MULT, SLEEP_FOOD, SLEEP_HEAL, SLEEP_WATER } from './sleep';
 import { boonOf, boonTime, BOON_BONUS, clockLeft, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
 import { cleanSaid } from './chat';
 import { cleanText, nameRefusal, NAMES_ASKED } from './playertext';
@@ -4393,9 +4393,9 @@ export class Game {
   fallAsleep(rest: number, what: string): void {
     const s = this.player.stats;
     s.stamina = 1;
-    s.health = Math.min(1, s.health + 0.25 * rest);
-    s.hunger = Math.max(0, s.hunger - 0.2);
-    s.thirst = Math.max(0, s.thirst - 0.25);
+    s.health = Math.min(1, s.health + SLEEP_HEAL * rest);
+    s.hunger = Math.max(0, s.hunger - SLEEP_FOOD);
+    s.thirst = Math.max(0, s.thirst - SLEEP_WATER);
     this.gainSkill('body_stamina', 0.3 * rest);
     this.action = null;
     this.clearQueue(true);

@@ -32,7 +32,7 @@ import {
 import type { Game } from './game';
 import { describeWith, itemDef, litresOf, markOf, type Item } from './items';
 import type { CraftStock } from './recipes';
-import { SLEEP_SAID, sleepNotYours } from './sleep';
+import { bedRest, SLEEP_SAID, sleepNotYours } from './sleep';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } from './dyestuffs';
 
 /**
@@ -904,7 +904,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const def = furnitureDef(f.kind);
       // Health back on lying down: the bed's worth, its QL, and a room round it (a cellar is always one).
       const inside = g.buildings.indoors(f.level ?? 0, Math.floor(f.x), Math.floor(f.y));
-      const rest = (def.bed ?? 1) * (0.6 + f.ql / 250) * (inside ? INDOORS_REST : 1);
+      const rest = bedRest(def.bed ?? 1, f.ql) * (inside ? INDOORS_REST : 1);
       g.note('slept');
       // In a bed of your own making, for the journal (the island's `perform_last` asks who made it).
       if (f.mine !== false) g.note('slept:own');

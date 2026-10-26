@@ -845,7 +845,7 @@ export class Hud {
     this.say(this.posEl, `${p.tileX}, ${p.tileY}  ·  h ${metres(h)} m  ·  ${this.game.clock()}  ·  ${seasonLine(this.game.wallNow())}${p.swimming ? '  ·  swimming' : ''}${deed}${title ? `  ·  ${title}` : ''}`);
     // The sleep bonus switch, and what it does.
     this.say(this.sleepBtn, sleepBonusLabel(p.sleepOn, p.rested));
-    const sleepTip = `${p.sleepOn ? 'Switch off' : 'Switch on'} (${boundKey('sleep_bonus')}). On: skill gain ×${SLEEP_BONUS_MULT} while any is stored; drains 1 s per s on the island. Gained logged off asleep in a bed.`;
+    const sleepTip = `${p.sleepOn ? 'Switch off' : 'Switch on'} (${boundKey('sleep_bonus')}). On: skill gain ×${SLEEP_BONUS_MULT} while any is stored; drains in real time on the island. Gained logged off asleep in a bed.`;
     if (this.sleepBtn.title !== sleepTip) this.sleepBtn.title = sleepTip;
     this.sleepBtn.classList.toggle('hud-sleep-on', p.sleepOn);
     // What is on you: a mark each, written only where a mark has changed.
