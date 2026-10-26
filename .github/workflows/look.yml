@@ -352,6 +352,26 @@ jobs:
           ask "smiths: nails and ribbons in the keeper's stores, by metal" "select (s.it).def, (s.it).extra, sum((s.it).count) as n
              from player p cross join lateral deed_store_items(p.world_id, p.uid) s
             where p.name = 'catgenova' and (s.it).def in ('nail', 'ribbon', 'iron_lump') group by 1, 2 order by 1, 2"
+          # Asked: "Slugember stating idle due to no fuel, not the case". The keeper's stokers, the fuel in their
+          # settlement stores by where it is and whether it is locked, and the hearths they tend. Reads only.
+          ask "stokers: the keeper's embra" "select c.id, c.name, c.mode, c.phase, c.idle_why, c.idle_n, c.carrying, work_range(c) as rng, left(c.skills::text, 80) as skills
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+            where c.keeper = p.uid and c.species = 'embra' order by c.id"
+          ask "stokers: fuel in the keeper's stores" "select s.kind, (s.it).def, sum((s.it).count) as n, bool_or(coalesce((s.it).locked, false)) as any_locked,
+                 count(distinct s.sid) as stores
+             from player p cross join lateral deed_store_items(p.world_id, p.uid) s
+            where p.name = 'catgenova' and fuel_value((s.it).def) is not null group by 1, 2 order by 1, 2"
+          ask "stokers: fuel in crates on the deed, as the old look read it" "select i.def, sum(i.count) as n, bool_or(coalesce(i.locked, false)) as any_locked
+             from player p join deed d on d.world_id = p.world_id and d.founded_by = p.uid
+             join crate cr on cr.world_id = p.world_id and on_my_deed(p.world_id, p.uid, cr.x, cr.y)
+             join item i on i.world_id = cr.world_id and i.crate = cr.id and i.holder = 'crate'
+            where p.name = 'catgenova' and fuel_value(i.def) is not null group by 1 order by 1"
+          ask "stokers: hearths on the keeper's settlement" "select q.id, q.kind, q.sub, q.x, q.y, round(q.fuel::numeric) as fuel, q.lit,
+                 greatest(abs(q.x - d.x), abs(q.y - d.y)) as from_token
+             from player p join deed d on d.world_id = p.world_id and d.founded_by = p.uid
+             join placed q on q.world_id = p.world_id and on_my_deed(p.world_id, p.uid, q.x, q.y)
+              and q.fuel is not null
+            where p.name = 'catgenova' order by q.kind, q.id"
           ask "smiths: where the island sends each next" "select c.id, c.species, s.* from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
              cross join lateral errand_step(c.world_id, c.id) s
             where c.keeper = p.uid and c.mode = 'deed' and c.species in ('dowse', 'siffa', 'ulva') order by c.id"
