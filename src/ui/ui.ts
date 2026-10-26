@@ -2691,7 +2691,8 @@ export class UI {
           children: CASTS.map((c) => {
             const wantsItem = c.on === 'item';
             const targets = wantsItem ? g.inventory.items.filter((it) => canImprove(it.id) || it.dmg > 0) : [];
-            const plain: Target = { kind: 'tile', x: f.x, y: f.y, cx: 0, cy: 0, spell: c.id };
+            // Called on where you stand: the call needs the altar's menu, not a walk to its corner tile (a big altar's far side was out of reach).
+            const plain: Target = { kind: 'tile', x: g.player.tileX, y: g.player.tileY, cx: 0, cy: 0, spell: c.id };
             const why = cast.check?.(wantsItem ? { kind: 'item', uid: targets[0]?.uid ?? -1, spell: c.id } : plain, g) ?? null;
             return {
               label: c.name,

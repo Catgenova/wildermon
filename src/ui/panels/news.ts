@@ -4055,7 +4055,12 @@ const SIX_RELICS = RELICS.filter((r) => [WHETSTONE, SEED_JAR, STAMP, TABLET, 'an
 
 /** The wildermon with an ability of their own, as What's new 177 gives them. */
 const ABLE_NEWS = ['lungra', 'hamma', 'crakka', 'bashka', 'executa', 'whirla', 'scorcha', 'frosta', 'rootle', 'dulla', 'brittla', 'shova',
-  'howla', 'marka', 'wardo', 'stona', 'leecha'];
+  'howla', 'marka', 'wardo', 'stona', 'leecha'  {
+    n: 341,
+    day: '2026-10-26',
+    lines: () => ['Fixed: altar casts (Light of the dawn and the rest): cast where you stand at the altar (was: "too far" from its far side).'],
+  },
+];
 
 /** The highest entry this browser has shown. */
 const SEEN = 'wurm.news.seen';
