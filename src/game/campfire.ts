@@ -90,6 +90,7 @@ export const FUELS: Array<{ id: string; secs: number; said: string }> = [
   { id: 'plank', secs: 120, said: 'planks' },
   { id: 'peat', secs: 180, said: 'peat' },
   { id: 'timber', secs: 240, said: 'timbers' },
+  { id: 'tar', secs: 300, said: 'tar' },
   { id: 'log', secs: 600, said: 'logs' },
   { id: 'coal', secs: 900, said: 'coal' },
 ];

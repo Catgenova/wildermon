@@ -2282,7 +2282,7 @@ insert into species_diet values ('noot', 'onion');
 insert into species_diet values ('noot', 'potato');
 insert into species_diet values ('noot', 'mixed_grass');
 update species_def set favourite = 'carrot' where id = 'noot';
-insert into species_def values ('embra', 'Sluglow', 'Settlement task: keep your campfires, smelters and kilns fuelled and lit, within 10 tiles of the totem, +10 per 10 levels: under 10 minutes of fuel, it carries 1 piece of fuel from your settlement stores to the nearest, and relights it if out. Eats only cooked food. Level: smelting. Evolves at level 25: Slugember.', 24, 4, 1.5, 1, 0.1, 'something cooked', true, 'stoke', 10, 4, false, false, false, false, false, true, false, false, false, false, false, false, null, null, null, null, 'burn', null, null);
+insert into species_def values ('embra', 'Sluglow', 'Settlement task: keep your campfires, ovens, braziers, smelters and kilns fuelled and lit, within 10 tiles of the totem, +10 per 10 levels: under 10 minutes of fuel, it carries 1 piece of fuel from your settlement stores to the nearest, whole pieces that fit only, and relights it if out (brazier: after dark). Fuel order: tar, peat, coal, then any other. Eats only cooked food. Level: smelting. Evolves at level 25: Slugember.', 24, 4, 1.5, 1, 0.1, 'something cooked', true, 'stoke', 10, 4, false, false, false, false, false, true, false, false, false, false, false, false, null, null, null, null, 'burn', null, null);
 update species_def set stages = array['Slugember', 'Slugferno']::text[] where id = 'embra';
 update species_def set perk = 'loads', perk_n = 1, perk_channel = null where id = 'embra';
 update species_def set was = array['Embra']::text[] where id = 'embra';
@@ -4657,7 +4657,7 @@ insert into gather_def values ('mine', 'mining', 'mining ore', 'mine ore');
 insert into gather_def values ('sand', 'digging', 'digging sand', 'dig sand');
 insert into gather_def values ('clay', 'digging', 'digging clay', 'dig clay');
 insert into gather_def values ('quarry', 'mining', 'cutting stone', 'cut stone');
-insert into gather_def values ('stoke', 'smelting', 'stoking', 'keep fires and furnaces fuelled');
+insert into gather_def values ('stoke', 'smelting', 'stoking', 'keep your campfires, ovens, braziers, smelters and kilns fuelled');
 insert into gather_def values ('fetch', 'foraging', 'fetching', 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins');
 insert into gather_def values ('guard', 'body_strength', 'guarding', 'guard the settlement');
 insert into gather_def values ('hunt', 'fighting', 'hunting', 'hunt round the settlement and bring carcasses home');
@@ -5915,11 +5915,20 @@ create or replace function fuel_value(p_item text) returns double precision lang
     when 'plank' then 120
     when 'peat' then 180
     when 'timber' then 240
+    when 'tar' then 300
     when 'log' then 600
     when 'coal' then 900
   end::double precision
 $fn$;
-create or replace function fuel_said() returns text language sql immutable as $fn$ select 'thatch, shafts, planks, peat, timbers, logs or coal' $fn$;
+create or replace function fuel_said() returns text language sql immutable as $fn$ select 'thatch, shafts, planks, peat, timbers, tar, logs or coal' $fn$;
+create or replace function stoke_rank(p_item text) returns int language sql immutable as $fn$
+  select case p_item
+    when 'tar' then 0
+    when 'peat' then 1
+    when 'coal' then 2
+    else 3 end
+$fn$;
+create or replace function stoke_smelts_at() returns int language sql immutable as $fn$ select 1 $fn$;
 create or replace function grave_keeps() returns double precision language sql immutable as $fn$ select 3600::double precision $fn$;
 create or replace function grave_reach() returns int language sql immutable as $fn$ select 3::int $fn$;
 create or replace function grave_keeps_said() returns text language sql immutable as $fn$ select '1 hour' $fn$;

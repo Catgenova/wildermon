@@ -50,8 +50,8 @@ import { skillGain } from './skills';
 import { DRIVING, DRIVING_LEARN } from './travel';
 import { BARDING_CUT, gearGoneSays, gearOn, gearShare, HARNESS_PACE, PACK_LOADS, wearGear, type GearSlot } from './wildgear';
 import { keyX, keyY, tileKey } from './tileindex';
-import { ASH_QL, fireCentre, FIRE_CAPACITY, FUEL_VALUES, isFuel } from './campfire';
-import { BUCKET_LITRES, furnitureCentre, type PlacedFurniture } from './furniture';
+import { ASH_QL, fireCentre, FIRE_CAPACITY, FUELS, FUEL_VALUES, isFuel } from './campfire';
+import { BUCKET_LITRES, furnitureCentre, hearthCapacity, type PlacedFurniture } from './furniture';
 import type { WoundKind } from './wounds';
 import { WORKER_REST_FIRST } from './keep';
 import { auraMul, BLOOD_CHANNELS, bredLine, breedTraits, channelOf, LAMP_TIER_ODDS, lineMul, lineSaid, mirrorTrait, mutationOf, pct, rollTraits, slotDraw, SLOTS_PER_STAGE, stageSlots, TIERS, traitList, traitMul, traitName, traitAdd, traitSays, traitOf, traitTier, TRAIT_SLOTS, type Line, type PairBlood, type TraitChannel, type TraitSource } from './traits';
@@ -404,7 +404,7 @@ const STONE_FACES: ReadonlySet<number> = new Set([TileType.Rock, TileType.Snow])
 export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', butcher: 'butchering', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', rope: 'ropemaking', fletch: 'fletching', paper: 'papyrusmaking', glaze: 'pottery', fill: 'carrying', spin: 'tailoring', nail: 'blacksmithing', ribbon: 'blacksmithing' };
 export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'farming', mine: 'mining ore', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'stoking', fetch: 'fetching', guard: 'guarding', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'prospecting', plant: 'planting', hod: 'hod carrying', mend: 'mending', compost: 'composting', seek: 'seeking relics', fish: 'fishing', prune: 'pruning', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending hives', groom: 'grooming', dairy: 'milking and shearing', heal: 'healing', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'lamplighting', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging smelters', kiln: 'loading kilns', ash: 'raking ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'tending planters', worm: 'digging worms', sprout: 'picking sprouts', resin: 'tapping pines', flower: 'picking wildflowers', scrub: 'scrubbing stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'making rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets', spin: 'spinning yarn', nail: 'smithing nails', ribbon: 'smithing ribbons' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'dig sand', clay: 'dig clay', quarry: 'cut stone', stoke: 'keep fires and furnaces fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'cut peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'dig sand', clay: 'dig clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'cut peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
   get saw() { return `saw logs in your settlement stores into planks, ${recipeMakes('make_planks')} a log`; },
   get chisel() { return `chisel rock shards in your settlement stores into stone brick, ${recipeMakes('make_stone_brick')} a shard`; },
@@ -1343,7 +1343,7 @@ export function stageSays(stage: number, task = true, fleece = false): string {
  * The words of a kind that evolves, at each stage: what it does, what its level is, and what each stage is and adds,
  * every number read off the rule it describes.
  */
-function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean, kind: GatherKind | null = null, id = ''): string {
+function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean, kind: GatherKind | null = null, id = '', staged = ''): string {
   if (stage === 0) return `${job} ${level} Evolves at level ${EVOLVE_AT[0]}: ${names[1]}.`;
   const next = stage === 1 ? ` Evolves at level ${EVOLVE_AT[1]}: ${names[2]}.` : '';
   // And what its stage lets it do at once (`STAGE_LOADS`), for a trade that has something to do more of, its line's
@@ -1353,7 +1353,7 @@ function lineSays(names: readonly [string, string, string], job: string, level: 
   const more = work ? ` It ${work[0]} ${work[1]} (${names[0]}: ${STAGE_LOADS[0]}).` : '';
   // And its line's own skill, at the stage it comes in at (`STAGE_PERKS`).
   const skill = stage >= PERK_STAGE && STAGE_PERKS[id] ? ` ${perkLine(id)}.` : '';
-  return `Evolution stage ${stage + 1}, level ${EVOLVE_AT[stage - 1]}+. Over ${article(names[0])} ${names[0]}: ${stageSays(stage, task, fleece)}.${more}${skill} ${job}${next}`;
+  return `Evolution stage ${stage + 1}, level ${EVOLVE_AT[stage - 1]}+. Over ${article(names[0])} ${names[0]}: ${stageSays(stage, task, fleece)}.${more}${skill} ${job}${staged ? ` ${staged}` : ''}${next}`;
 }
 
 /** Seconds between chances for an unruly companion to turn on its keeper. */
@@ -1364,8 +1364,11 @@ export const DIG_QL: readonly [number, number] = [0.6, 1.4];
 /** A reed cutter's armful: one reed a cut, and one more for every this many levels of its foraging (`finishReed`). */
 export const REED_LEVELS = 35;
 
-/** Writes a line's words onto its kind and its two stages, once every number they read is here. */
-function sayLine(id: string, job: string, level: string): void {
+/**
+ * Writes a line's words onto its kind and its two stages, once every number they read is here; `staged`, what its
+ * second and third stages do over its first.
+ */
+function sayLine(id: string, job: string, level: string, staged = ''): void {
   const d = SPECIES[id];
   const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
   // Its stages work faster only at a task, so a kind with none is not told they do; a guard's spar is timed as a task's go.
@@ -1373,8 +1376,8 @@ function sayLine(id: string, job: string, level: string): void {
   const fleece = !!d.fleece;
   d.description = lineSays(names, job, level, 0, task, fleece);
   d.stages = [
-    { name: names[1], description: lineSays(names, job, level, 1, task, fleece, d.gathers) },
-    { name: names[2], description: lineSays(names, job, level, 2, task, fleece, d.gathers, id) },
+    { name: names[1], description: lineSays(names, job, level, 1, task, fleece, d.gathers, '', staged) },
+    { name: names[2], description: lineSays(names, job, level, 2, task, fleece, d.gathers, id, staged) },
   ];
 }
 
@@ -4220,6 +4223,21 @@ export const HUNT_HOME = WILD_RANGE + 12;
 export const HUNT_REST = world(60);
 /** Fuel in a hearth above which a stoker leaves it alone: ten minutes' worth. */
 export const HEARTH_FULL = 600;
+/**
+ * The fuel a stoker takes first, best first, out of all your settlement stores; any other fuel after these, nearest
+ * store first (`stokeRank`). The island's `stoke_rank`.
+ */
+export const STOKE_FIRST = ['tar', 'peat', 'coal'] as const;
+export const stokeRank = (id: string): number => {
+  const i = (STOKE_FIRST as readonly string[]).indexOf(id);
+  return i < 0 ? STOKE_FIRST.length : i;
+};
+/**
+ * The stage (`stageOf`) from which a stoker also does a smelter worker's work when no hearth wants fuel (or there is no
+ * fuel for it): your smelters emptied into your settlement stores, then charged with ore from them (`furnaceStep`).
+ * Its second. The island's `stoke_smelts_at`.
+ */
+export const STOKE_SMELTS_AT = 1;
 /** A deed worker goes looking for a meal once its belly is down to this. */
 export const HUNGRY = 0.25;
 /** What a clearer takes off the ground to turn into compost: a carcass, or anything this damaged or worse. */
@@ -4326,6 +4344,10 @@ export function taskSkill(c: Creature, species: SpeciesDef): number {
 /** A guard's level line: what teaches it, wild creatures and a Sparra's line on the settlement. */
 export const GUARD_LEVEL = `Level: ${GATHER_SKILL.guard.replace(/_/g, ' ')}, learned per attack on a wild creature while guarding a settlement or sparring with ${article(SPECIES.sparra.name)} ${SPECIES.sparra.name} on the settlement.`;
 // The words of each line that evolves, and its stages', now that every number they read is here.
+/** A stoker's fuel order (`STOKE_FIRST`), as its words and What's new say it. */
+export const STOKE_SAYS = `Fuel order: ${STOKE_FIRST.map((id) => FUELS.find((f) => f.id === id)!.said).join(', ')}, then any other.`;
+/** What a stoker does from `STOKE_SMELTS_AT` on, as its stages' words say it. */
+export const STOKE_SMELT_SAYS = 'No hearth to fuel, or no fuel: empties your smelters into your settlement stores, then charges them with ore from your settlement stores.';
 const reach = (id: string): string =>
   `within ${SPECIES[id].workRange} tiles of the totem, +${SPECIES[id].rangePerStep ?? RANGE_PER_STEP} per ${SKILL_STEP} levels`;
 const yieldQl = (skill: string): string => `${percent(DIG_QL[0])}–${percent(DIG_QL[1])} of its ${skill}, raised by yield traits, max 100`;
@@ -4352,8 +4374,8 @@ sayLine('sedra', `Settlement task: cut reed beds ${reach('sedra')}, from the ban
   'Level: foraging.');
 sayLine('cobbe', `Settlement task: carry what planned building work still wants from your settlement stores, crates and furniture, ${reach('cobbe')}, 1 piece a trip, and fit it as a builder's action: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations. Order: where the carried piece is wanted, else the nearest work wanting something in your settlement stores; of that work's wants, the one furthest behind its bill. Carried piece no work in range wants: back to your settlement stores.`,
   'Level: masonry.');
-sayLine('embra', `Settlement task: keep your campfires, smelters and kilns fuelled and lit, ${reach('embra')}: under ${HEARTH_FULL / 60} minutes of fuel, it carries 1 piece of fuel from your settlement stores to the nearest, and relights it if out. Eats only cooked food.`,
-  'Level: smelting.');
+sayLine('embra', `Settlement task: keep your campfires, ovens, braziers, smelters and kilns fuelled and lit, ${reach('embra')}: under ${HEARTH_FULL / 60} minutes of fuel, it carries 1 piece of fuel from your settlement stores to the nearest, whole pieces that fit only, and relights it if out (brazier: after dark). ${STOKE_SAYS} Eats only cooked food.`,
+  'Level: smelting.', STOKE_SMELT_SAYS);
 sayLine('noot', `Settlement task: dig clay off clay ground ${reach('noot')}, 1 lump a dig. QL: ${yieldQl('digging')}. Output to the crate.`,
   'Level: digging.');
 sayLine('crawler', `Settlement task: dig sand off sandy ground ${reach('crawler')}, 1 heap a dig. QL: ${yieldQl('digging')}. Output to the crate. Wild bite: venom, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless dressed. Kept: ${percent(SPECIES.crawler.unruly!)} chance every ${NIP_EVERY} seconds to attack you when beside you. Strikes back every time.`,
@@ -5212,8 +5234,10 @@ export interface Creature {
 }
 
 export type FarmJob = 'sow' | 'tend' | 'harvest';
-/** The three things a stoker keeps alight. */
-export type Hearth = 'campfire' | 'smelter' | 'kiln';
+/** What a stoker keeps alight: campfires, smelters, kilns, and furniture that burns (an oven, a brazier: `hearth`). */
+export type Hearth = 'campfire' | 'smelter' | 'kiln' | 'furniture';
+/** A hearth a stoker may feed (`coldHearth`): where, its fuel and its room for fuel (`cap`). */
+interface StokeHearth { x: number; y: number; fuel: number; lit: boolean; kind: Hearth; id: number; cap: number }
 
 export interface CreatureJSON {
   id: number;
@@ -7486,26 +7510,51 @@ export class Creatures {
   }
 
   /**
-   * A fire, furnace or kiln on the deed that is running low, nearest first.
-   * Anything with less than a few minutes in it counts as wanting wood.
+   * A fire, furnace, kiln, oven or brazier on the deed under `HEARTH_FULL` of fuel, nearest first, that no other worker
+   * is carrying fuel to; with `fuel`, only one with room for a whole piece of it. The island's `stoke_hearth`.
    */
-  private coldHearth(game: Game, c: Creature, range: number): { x: number; y: number; fuel: number; lit: boolean; kind: Hearth; id: number } | null {
+  private coldHearth(game: Game, c: Creature, range: number, fuel: string | null): StokeHearth | null {
     const deed = game.deed;
     if (!deed) return null;
-    let best: { x: number; y: number; fuel: number; lit: boolean; kind: Hearth; id: number } | null = null;
+    let best: StokeHearth | null = null;
     let bestD = Infinity;
-    const consider = (x: number, y: number, fuel: number, lit: boolean, kind: Hearth, id: number): void => {
-      if (fuel >= HEARTH_FULL) return;
+    const busy = (x: number, y: number): boolean => {
+      for (const o of this.list.values()) {
+        if (o !== c && o.mode === 'deed' && o.carrying && isFuel(o.carrying.id) && o.job && o.workX === x && o.workY === y) return true;
+      }
+      return false;
+    };
+    const consider = (x: number, y: number, now: number, lit: boolean, kind: Hearth, id: number, cap: number): void => {
+      if (now >= HEARTH_FULL) return;
       if (Math.max(Math.abs(x - deed.x), Math.abs(y - deed.y)) > range) return;
+      if (fuel !== null && cap - now < (FUEL_VALUES[fuel] ?? Infinity)) return;
       const d = Math.hypot(x + 0.5 - c.x, y + 0.5 - c.y);
-      if (d < bestD) {
+      if (d < bestD && !busy(x, y)) {
         bestD = d;
-        best = { x, y, fuel, lit, kind, id };
+        best = { x, y, fuel: now, lit, kind, id, cap };
       }
     };
-    for (const f of game.campfires.values()) consider(...(fireCentre(f).map(Math.floor) as [number, number]), f.fuel, f.lit, 'campfire', f.id);
-    for (const sm of game.smelters.values()) consider(sm.x, sm.y, sm.fuel, sm.lit, 'smelter', sm.id);
-    for (const k of game.kilns.values()) consider(k.x, k.y, k.fuel, k.lit, 'kiln', k.id);
+    for (const f of game.campfires.values()) consider(...(fireCentre(f).map(Math.floor) as [number, number]), f.fuel, f.lit, 'campfire', f.id, FIRE_CAPACITY);
+    for (const sm of game.smelters.values()) consider(sm.x, sm.y, sm.fuel, sm.lit, 'smelter', sm.id, FIRE_CAPACITY);
+    for (const k of game.kilns.values()) consider(k.x, k.y, k.fuel, k.lit, 'kiln', k.id, FIRE_CAPACITY);
+    for (const f of game.furniture.values()) if (furnitureDef(f.kind).hearth) consider(f.x, f.y, f.fuel ?? 0, !!f.lit, 'furniture', f.id, hearthCapacity(f));
+    return best;
+  }
+
+  /**
+   * The fuel a stoker fetches for a hearth with `room` seconds of room in it: the best by `stokeRank` of what a whole
+   * piece fits, out of whichever of your settlement stores holds it nearest. The island's `stoke_fuel`.
+   */
+  private stokeFuel(game: Game, c: Creature, room: number): { store: DeedStore; item: Item } | null {
+    let best: { store: DeedStore; item: Item; rank: number; d: number } | null = null;
+    for (const store of game.deedStores()) {
+      const d = Math.hypot(store.centre[0] - c.x, store.centre[1] - c.y);
+      for (const item of store.items) {
+        if (!isFuel(item.id) || item.count <= 0 || item.locked || FUEL_VALUES[item.id] > room) continue;
+        const rank = stokeRank(item.id);
+        if (!best || rank < best.rank || (rank === best.rank && d < best.d)) best = { store, item, rank, d };
+      }
+    }
     return best;
   }
 
@@ -8660,16 +8709,40 @@ export class Creatures {
 
   /** Nothing else to do: walk the border, and look again in a moment. */
 
+  /**
+   * A stoker's step, for whatever is not fuel on its way to a hearth (`feedFire`): fuel for the nearest hearth under
+   * `HEARTH_FULL`, the best there is (`stokeFuel`), as many whole pieces as fit in it and its stage carries
+   * (`stageLoads`); fuel in its arms with no hearth to take it to, back into the stores; and from `STOKE_SMELTS_AT` on,
+   * with no hearth wanting fuel or no fuel for it, a smelter worker's work (`furnaceStep`). The island's `errand_step`
+   * for `stoke`.
+   */
   private stokeStep(game: Game, c: Creature, dt: number, site: WorkSite): boolean {
-    const def = this.species(c);
-    const hearth = this.coldHearth(game, c, siteRange(c, def, site));
-    if (!hearth) return this.why(c, 'range', siteRange(c, def, site));
-    // Nothing to carry: go to whichever store has wood in it and take a piece -- its stage's pieces (`stageLoads`), as
-    // many as the hearth has room for and one at the least.
-    const store = game.deedStores().find((st) => st.items.some((it: Item) => isFuel(it.id)));
-    const fuel = store?.items.find((it: Item) => isFuel(it.id));
-    if (!store || !fuel) return this.why(c, 'stock');
+    const range = siteRange(c, this.species(c), site);
+    const smelts = stageOf(c) >= STOKE_SMELTS_AT;
+    const held = c.carrying;
+    if (held) {
+      // Ore, at a stage that charges smelters: into one, or back to the stores when none has room.
+      if (smelts && !isFuel(held.id) && this.stokeSmelt(game, c, dt, site)) return true;
+      // Fuel: to the nearest hearth with room for a piece of it, or back to the stores.
+      const to = isFuel(held.id) ? this.coldHearth(game, c, range, held.id) : null;
+      if (to) {
+        c.workX = to.x;
+        c.workY = to.y;
+        c.job = to.kind;
+        return true;
+      }
+      return this.stokeBack(game, c, dt);
+    }
+    const hearth = this.coldHearth(game, c, range, null);
+    const fuel = hearth && this.stokeFuel(game, c, hearth.cap - hearth.fuel);
+    if (!hearth || !fuel) {
+      if (smelts && this.stokeSmelt(game, c, dt, site)) return true;
+      // No hearth wanting fuel: why the smelter work found nothing, at a stage that does it.
+      if (!hearth) return smelts ? false : this.why(c, 'range', range);
+      return this.why(c, 'stock');
+    }
     c.idle = null;
+    const { store, item } = fuel;
     const [cx, cy] = store.centre;
     if (Math.hypot(cx - c.x, cy - c.y) > 1.3) {
       if (this.stepToward(game, c, cx, cy, dt) === 'blocked') {
@@ -8678,11 +8751,12 @@ export class Creatures {
       }
       return true;
     }
-    const n = Math.max(1, Math.min(stageLoads(c), fuel.count, Math.floor((FIRE_CAPACITY - hearth.fuel) / (FUEL_VALUES[fuel.id] ?? 1))));
-    fuel.count -= n;
-    if (fuel.count <= 0) store.items.splice(store.items.indexOf(fuel), 1);
+    // Its stage's pieces (`stageLoads`), and no more whole pieces than the hearth has room for.
+    const n = Math.min(stageLoads(c), item.count, Math.floor((hearth.cap - hearth.fuel) / FUEL_VALUES[item.id]));
+    item.count -= n;
+    if (item.count <= 0) store.items.splice(store.items.indexOf(item), 1);
     store.changed();
-    c.carrying = { uid: game.inventory.nextUid++, id: fuel.id, ql: fuel.ql, dmg: 0, count: n };
+    c.carrying = { uid: game.inventory.nextUid++, id: item.id, ql: item.ql, dmg: 0, count: n };
     c.workX = hearth.x;
     c.workY = hearth.y;
     c.job = hearth.kind;
@@ -8690,7 +8764,57 @@ export class Creatures {
     return true;
   }
 
-  /** Carry the wood to the hearth it was fetched for, feed it and light it. */
+  /**
+   * A stoker's smelter work: `furnaceStep` for `smelt`, through `errandStep`, with what went in and what it made
+   * (`making`) counted to its ledger as an errand's go is. The island's `errand_step` and `errand_do` asked for `smelt`.
+   */
+  private stokeSmelt(game: Game, c: Creature, dt: number, site: WorkSite): boolean {
+    c.idle = null;
+    const held = c.carrying ? { id: c.carrying.id, n: c.carrying.count } : null;
+    this.went = false;
+    this.making = [];
+    let busy: boolean;
+    let made: Array<[string, number]>;
+    try {
+      busy = this.errandStep(game, c, dt, 'smelt', site);
+    } finally {
+      made = this.making ?? [];
+      this.making = null;
+    }
+    if (this.went && held) {
+      const left = c.carrying?.id === held.id ? c.carrying.count : 0;
+      if (left < held.n) this.toLedger(game, c, { item: held.id, n: held.n - left });
+    }
+    if (this.went) for (const [id, n] of made) this.toLedger(game, c, { item: id, n });
+    return busy;
+  }
+
+  /** What a stoker has in its arms and nowhere to take, back into the nearest store with room (`storeFor`): a go. */
+  private stokeBack(game: Game, c: Creature, dt: number): boolean {
+    const held = c.carrying!;
+    const st = this.storeFor(game, c, held);
+    if (!st) return this.why(c, 'full');
+    c.idle = null;
+    c.job = null;
+    if (Math.hypot(st.centre[0] - c.x, st.centre[1] - c.y) > 1.3) {
+      if (this.stepToward(game, c, st.centre[0], st.centre[1], dt) === 'blocked') {
+        c.state = 'idle';
+        c.until = game.time + 2;
+      }
+      return true;
+    }
+    this.intoStores(game, held, st, st.x, st.y, false);
+    c.carrying = null;
+    this.toLedger(game, c, { item: held.id, n: held.count });
+    this.errandWork(game, c, 'stoke');
+    return true;
+  }
+
+  /**
+   * Carry the fuel to the hearth it was fetched for, feed it as many whole pieces as it has room for while it is under
+   * `HEARTH_FULL`, and light it if out (a brazier lights itself after dark). Pieces left over stay in its arms for the
+   * next hearth or the stores (`stokeStep`).
+   */
   private feedFire(game: Game, c: Creature, dt: number): void {
     const carrying = c.carrying;
     if (!carrying) return;
@@ -8703,34 +8827,42 @@ export class Creatures {
       }
       return;
     }
-    // Every piece it carries, fed in the one go.
-    const per = (FUEL_VALUES[carrying.id] ?? 0) * carrying.count;
-    const light = (fuel: number, lit: boolean, set: (f: number, l: boolean) => void, what: string): void => {
-      const now = Math.min(FIRE_CAPACITY, fuel + per);
-      set(now, lit || now > 0);
+    const per = FUEL_VALUES[carrying.id] ?? 0;
+    let fed = 0;
+    const light = (fuel: number, lit: boolean, cap: number, set: (f: number, l: boolean) => void, what: string, lights = true): void => {
+      if (fuel >= HEARTH_FULL || per <= 0) return;
+      fed = Math.max(0, Math.min(carrying.count, Math.floor((cap - fuel) / per)));
+      if (fed <= 0) return;
+      set(fuel + per * fed, lit || lights);
       this.gainSkill(game, c, GATHER_SKILL.stoke, 0.2);
-      if (!lit) game.logMsg(`${c.name} relit the ${what}.`, 'wildermon');
+      if (!lit && lights) game.logMsg(`${c.name} relit the ${what}.`, 'wildermon');
     };
     if (c.job === 'campfire') {
       const f = [...game.campfires.values()].find((k) => Math.floor(fireCentre(k)[0]) === c.workX && Math.floor(fireCentre(k)[1]) === c.workY);
-      if (f) light(f.fuel, f.lit, (fuel, lit) => { f.fuel = fuel; f.lit = lit; }, 'campfire');
+      if (f) light(f.fuel, f.lit, FIRE_CAPACITY, (fuel, lit) => { f.fuel = fuel; f.lit = lit; }, 'campfire');
     } else if (c.job === 'smelter') {
       const sm = [...game.smelters.values()].find((k) => k.x === c.workX && k.y === c.workY);
-      if (sm) light(sm.fuel, sm.lit, (fuel, lit) => { sm.fuel = fuel; sm.lit = lit; }, 'smelter');
+      if (sm) light(sm.fuel, sm.lit, FIRE_CAPACITY, (fuel, lit) => { sm.fuel = fuel; sm.lit = lit; }, 'smelter');
     } else if (c.job === 'kiln') {
       const k = [...game.kilns.values()].find((n) => n.x === c.workX && n.y === c.workY);
-      if (k) light(k.fuel, k.lit, (fuel, lit) => { k.fuel = fuel; k.lit = lit; }, 'kiln');
+      if (k) light(k.fuel, k.lit, FIRE_CAPACITY, (fuel, lit) => { k.fuel = fuel; k.lit = lit; }, 'kiln');
+    } else if (c.job === 'furniture') {
+      const f = [...game.furniture.values()].find((n) => n.x === c.workX && n.y === c.workY && furnitureDef(n.kind).hearth);
+      if (f) light(f.fuel ?? 0, !!f.lit, hearthCapacity(f), (fuel, lit) => { f.fuel = fuel; f.lit = lit; }, furnitureDef(f.kind).name.toLowerCase(), f.kind !== 'brazier');
     }
-    game.events.emit('smelter');
-    game.events.emit('world', c.workX, c.workY);
-    // A go, timed as the island's errand times one (`workDuration`), and the piece it fed in handled, as the island's
-    // `worker_settle` counts a stoker's.
-    this.toLedger(game, c, { item: carrying.id, n: carrying.count });
-    this.errandWork(game, c, 'stoke');
-    c.carrying = null;
     c.job = null;
     c.state = 'idle';
     c.until = game.time + 1;
+    // Nothing fed (full by now, or gone): the fuel goes on to the next hearth or back to the stores (`stokeStep`).
+    if (fed <= 0) return;
+    game.events.emit('smelter');
+    game.events.emit('world', c.workX, c.workY);
+    // A go, timed as the island's errand times one (`workDuration`), and the pieces it fed in handled, as the island's
+    // `worker_settle` counts a stoker's.
+    this.toLedger(game, c, { item: carrying.id, n: fed });
+    this.errandWork(game, c, 'stoke');
+    carrying.count -= fed;
+    if (carrying.count <= 0) c.carrying = null;
   }
 
   /**
@@ -9913,7 +10045,8 @@ export class Creatures {
     }
     // A Sparra on the settlement spars with a guard of yours there (`sparTaskSays`), or eats and potters about as any.
     if (def.style === 'spar' && c.post === null && this.sparraStep(game, c, deed)) return;
-    if (kind === 'stoke' && !c.carrying && c.state !== 'forage') {
+    // A stoker with fuel for a hearth in its arms feeds it (`feedFire`); otherwise its own step (`stokeStep`).
+    if (kind === 'stoke' && !(c.carrying && c.job) && c.state !== 'forage') {
       if (this.stokeStep(game, c, dt, deed)) return;
     }
     if (kind === 'hunt' && !c.carrying && c.state !== 'forage') {
@@ -9960,7 +10093,7 @@ export class Creatures {
       return;
     }
     if (c.carrying && kind === 'stoke') {
-      this.feedFire(game, c, dt);
+      if (c.job) this.feedFire(game, c, dt);
       return;
     }
     // A Vesp with what it gathered flies it to its hive, not to the stores (`vespHome`).

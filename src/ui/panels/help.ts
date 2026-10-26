@@ -49,7 +49,7 @@ import { flameSources } from '../../game/lantern';
 import { LAMP_INTO_WALL } from '../../game/lamps';
 import { STORE_REACH } from '../../game/crates';
 import { GREEN_ACTIONS, GREEN_DAY, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET, GREEN_WET_REACH } from '../../game/greening';
-import { FIRE_COST, FIRE_SUBTILES } from '../../game/campfire';
+import { FIRE_COST, FIRE_SUBTILES, FUELS } from '../../game/campfire';
 import {
   CHANNELS, CLASS_AT, CLASS_CHANGE_COST, CLASS_COLUMNS, CLASS_NODES, CLASS_TIER_AT, CLASSES, channelSays, NODES_PER_TRADE, PERK_CLASSES,
   PERK_TIER_AT, PERKS_PER_TIER, riteDef, RITES, type Channel,
@@ -191,7 +191,7 @@ import { HUNGRY_AT, HURT_AT } from './wildermon';
 import { NEED_KINDS, NEED_LABEL } from './care';
 import { ORDER_HINTS } from './deed';
 import { ORDER_STANCES, VISIT_KEEP_DAYS } from '../../game/visitors';
-import { STANCE_NAMES } from '../../game/creatures';
+import { STANCE_NAMES, STOKE_SAYS, STOKE_SMELT_SAYS, STOKE_SMELTS_AT } from '../../game/creatures';
 import {
   ENCHANTMENTS, enchantFigure, enchantValue, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTERS_PLINTH, enchantChance, ENCHANTMENT_LIST, enchantPct, FROST_PACE, FROST_SECS, GRACE_TILES, NETMENDER_WEAR, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
 } from '../../game/enchant';
@@ -1611,7 +1611,7 @@ export function helpText(): string {
     <h3>Campfires and cooking</h3>
     <ul>
       <li><b>Build campfire</b> on any dry, open spot: ${FIRE_COST} shafts; fills a ${FIRE_SUBTILES} by ${FIRE_SUBTILES} block of the tile's spots.</li>
-      <li>Fuel: thatch, shafts, planks, peat, timbers, logs or coal, each worth so many minutes. Then <b>Light</b>.</li>
+      <li>Fuel, burn time a piece: ${FUELS.map((f) => `${f.said} ${dur(f.secs)}`).join(', ')}. Then <b>Light</b>.</li>
       <li>Peat: dug off a peat bed with a shovel; free.</li>
       <li><b>Cook</b> at a lit fire: cooked meat fills ${percent(itemDef('cooked_meat').food ?? 0)} of the food bar (raw ${percent(itemDef('meat').food ?? 0)}); baked potatoes;
       roast onions and nuts; with a <b>clay bowl</b>: berry compote, meat and vegetable stew.</li>
@@ -2927,7 +2927,7 @@ export function helpText(): string {
       <tr><td><b>${SPECIES.crawler.name}</b> (was Crawler)</td><td>On sand; eats vegetables. Digs sand (a clawful from the highest corner) to the crate. Defensive: always hits back;
       tamed ones still sometimes attack whoever stands beside them (a helm stops the worst). Evolves: ${evolves('crawler')}.</td></tr>
       <tr><td><b>${SPECIES.quarra.name}</b> (was Quarra)</td><td>On bare rock; eats clay. Cuts rock, slate, marble and sandstone shards. Evolves: ${evolves('quarra')}.</td></tr>
-      <tr><td><b>${SPECIES.embra.name}</b> (was Embra)</td><td>Marsh peat and tar; eats cooked food only. Keeps every fire, smelter and kiln on the settlement fuelled and lit from the crate.
+      <tr><td><b>${SPECIES.embra.name}</b> (was Embra)</td><td>Marsh peat and tar; eats cooked food only. Keeps every campfire, oven, brazier, smelter and kiln on the settlement fuelled and lit from the stores, whole pieces that fit only. ${STOKE_SAYS} ${SPECIES.embra.stages![STOKE_SMELTS_AT - 1].name} on: ${STOKE_SMELT_SAYS}
       Evolves: ${evolves('embra')}.</td></tr>
       <tr><td><b>${SPECIES.magga.name}</b> (was Magga)</td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range, sorts: a stack a load
       from a settlement crate, chest or other store into the raw or craft material bin that takes it, up to the bin's room; not from bins, padlocked or marked stores or locked items,

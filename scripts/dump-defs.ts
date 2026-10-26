@@ -35,7 +35,7 @@ import { COAX_LAPSE, COAX_STEP, HERD_REACH, WILD_STAY, HUNT_HOME, HUNT_LEASH, HU
 import { FAMILY_OF, KNACK_BONUS, KNACK_BY_LEARNING, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLES } from '../src/game/titles';
 import { KEPT_BEST, NUTRIENT_DECAY, TABLE_BEST } from '../src/game/nutrition';
 import { SPECIES, WILD_SPECIES, MONSTERS, MONSTER_CAP, MONSTER_SHARE, AGES,
-         GATHER_SKILL, GATHER_VERB, GATHER_DO, SMITH_TRADES, smithLumps, type GatherKind } from '../src/game/creatures';
+         GATHER_SKILL, GATHER_VERB, GATHER_DO, SMITH_TRADES, smithLumps, STOKE_FIRST, STOKE_SMELTS_AT, type GatherKind } from '../src/game/creatures';
 import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, SLOTS_PER_STAGE, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP, TIERS } from '../src/game/traits';
 import { BOARD_TOP } from '../src/game/boards';
 import { CRAFT_HEAD, CRAFT_REACH } from '../src/game/recipes';
@@ -2013,6 +2013,16 @@ ${FUELS.map((f) => `    when ${q(f.id)} then ${q(f.secs)}`).join('\n')}
   end::double precision
 $fn$;`);
 out.push(`create or replace function fuel_said() returns text language sql immutable as $fn$ select ${q(FUEL_SAID)} $fn$;`);
+/*
+ * A stoker's fuel order, best first (`STOKE_FIRST`): anything else a fire takes ranks after these. And the stage from
+ * which a stoker also works your smelters (`STOKE_SMELTS_AT`).
+ */
+out.push(`create or replace function stoke_rank(p_item text) returns int language sql immutable as $fn$
+  select case p_item
+${STOKE_FIRST.map((id, i) => `    when ${q(id)} then ${i}`).join('\n')}
+    else ${STOKE_FIRST.length} end
+$fn$;`);
+out.push(`create or replace function stoke_smelts_at() returns int language sql immutable as $fn$ select ${STOKE_SMELTS_AT} $fn$;`);
 /*
  * A grave: how long it keeps what you carried for you, how far from deep
  * water it looks for dry ground, and the words the first is said in -- the

@@ -4490,6 +4490,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/madelog.mjs --log-level=error
           node node_modules/.cache/madelog.mjs
 
+      - name: A stoker burns tar first, never overfills, and from its second stage works the smelters
+        if: matrix.shard == 6
+        run: |
+          # A stoker fetches tar, then peat, then coal, then any other fuel,
+          # from whichever store holds it; only whole pieces that fit, the rest
+          # back to the stores; ovens and braziers too; and a Slugember empties
+          # your smelters and charges them with ore when no hearth wants fuel:
+          # each the same on both sides.
+          npx esbuild supabase/test/slugember.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/slugember.mjs --log-level=error
+          node node_modules/.cache/slugember.mjs
+
       - name: Seven that fight
         if: matrix.shard == 6
         run: |

@@ -170,6 +170,8 @@ import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as
 import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
 import { CHANNELS, FIGHTING, gradeId, traitOf, traitSays, type TraitDef } from '../../game/traits';
 import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
+import { STOKE_SAYS, STOKE_SMELT_SAYS, STOKE_SMELTS_AT } from '../../game/creatures';
+import { FUEL_VALUES as FUEL_VALUES_337 } from '../../game/campfire';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
 import { MAX_STAND, SWIM_DEPTH } from '../../game/player';
@@ -3973,6 +3975,15 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => [
       `Fixed: work log of settlement workers making into the stores (${(['dowse', 'ulva', 'rippa', 'simma'] as const).map((id) => SPECIES[id].name).join(', ')} and the rest): handled counts what each cycle made (was: cycles only).`,
+    ],
+  },
+  {
+    n: 337,
+    day: '2026-10-26',
+    lines: () => [
+      `Changed: ${SPECIES.embra.stages![STOKE_SMELTS_AT - 1].name} and ${SPECIES.embra.stages![1].name}: ${STOKE_SMELT_SAYS}`,
+      `Changed: stokers: ${STOKE_SAYS} Pieces a trip: whole pieces that fit only (was: at least 1, past full). Also fuel ovens and braziers.`,
+      `Changed: tar: fuel, ${FUEL_VALUES_337.tar} seconds a piece.`,
     ],
   },
 ];
