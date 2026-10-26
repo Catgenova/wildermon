@@ -4053,6 +4053,12 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => ['Changed: pools, ponds and lakes not joined to the sea: still edge, no foam, waves or wet band.'],
   },
+  {
+    n: 348,
+    day: '2026-10-26',
+    lines: () => ['Fixed: hover boxes over the world stop after a while (was: gone until reload after an item left the pack or a store under the pointer; '
+      + 'a pinned Tile i note now closes on a press anywhere else).'],
+  },
 ];
 
 /**

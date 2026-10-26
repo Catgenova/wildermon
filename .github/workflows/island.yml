@@ -1068,6 +1068,23 @@ jobs:
           npx esbuild supabase/test/saddle.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/saddle.mjs --log-level=error
           node node_modules/.cache/saddle.mjs
+      - name: The world's hover box comes back
+        if: matrix.shard == 1
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          HOVER_STRICT: '1'
+        run: |
+          # "After playing for a bit, mouseovers go away and don't return
+          # until refresh": a thing's card in the pack held the tooltip until
+          # its row's mouseleave, which a row taken from under the pointer
+          # never has; a note pinned by the Tile window's i held it until the
+          # i was pressed again. Drawn in Chrome with the real mouse: the
+          # ground said, a row's card, the logs taken from the pack under the
+          # pointer and the ground said again at two places, and a pinned
+          # note put away by a press on the world.
+          npx esbuild supabase/test/hoverkeep.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/hoverkeep.mjs --log-level=error
+          node node_modules/.cache/hoverkeep.mjs
       - name: The Wildermon window's Care tab
         if: matrix.shard == 1
         env:

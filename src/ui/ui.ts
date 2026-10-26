@@ -1,6 +1,7 @@
 import type { Bill } from '../game/building';
 import { drawsFast } from '../game/settings';
 import { onPhone } from '../engine/device';
+import type { Pointer } from '../engine/input';
 import { buildRow } from './buildCounts';
 import type { Game } from '../game/game';
 import { EMOTES } from '../game/emotes';
@@ -764,7 +765,7 @@ export class UI {
     const sold = item ? priceLine(this.market.prices[item.id]) : null;
     const lines = item ? compareLines(this.game, item) ?? itemCard(this.game, item) : null;
     if (lines && sold) lines.push(sold);
-    if (lines) this.tooltip.show(x, y, lines, this.compareHolder);
+    if (lines) this.tooltip.show(x, y, lines, this.compareHolder, false, true);
     else this.tooltip.hide(this.compareHolder);
   }
 
@@ -1432,6 +1433,31 @@ export class UI {
     }
     if (def) this.game.requestAction(def, target);
     this.cancelPlacing();
+  }
+
+  /**
+   * The world under the pointer, every frame (`main.ts`): outlined, said in the
+   * tooltip, and the ghost of what is being placed put on it. `drop` is a drag
+   * out of the pack held over a store, asked of the drag because the browser's
+   * drag holds the pointer's own events back.
+   */
+  hoverFrame(pointer: Pointer, dragging: boolean, drop: { pick: Pick; x: number; y: number } | null): void {
+    // On the world, the pointer is on no row of a window (`Tooltip.pointerOnWorld`).
+    if (drop || pointer.overCanvas) this.tooltip.pointerOnWorld();
+    if (drop) {
+      this.renderer.hover = drop.pick;
+      this.setHover(drop.pick, drop.x, drop.y);
+      this.syncGhost(null);
+    } else if (pointer.overCanvas && !dragging && !this.menu.isOpen) {
+      this.renderer.hover = this.renderer.hoverPick(pointer.x, pointer.y);
+      this.setHover(this.renderer.hover, pointer.x, pointer.y);
+      this.syncGhost(this.renderer.hover);
+    } else {
+      this.renderer.hover = null;
+      this.renderer.forgetPick();
+      this.setHover(null, 0, 0);
+      this.syncGhost(null);
+    }
   }
 
   setHover(pick: Pick | null, sx: number, sy: number): void {

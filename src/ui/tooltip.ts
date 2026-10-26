@@ -17,6 +17,15 @@ export class Tooltip {
    * can take it down.
    */
   private holder: unknown = null;
+  /**
+   * Whether the holder holds it only while the pointer rests on something of
+   * its own -- a row of the pack or a store -- rather than pinned open. Such a
+   * hold is let go of by `pointerOnWorld` as well as by its holder: the row
+   * can go from under the pointer without a `mouseleave` (the thing eaten,
+   * dragged off, used up or taken by the island), and with nothing else to let
+   * go of it the world under the pointer was refused the tooltip until reload.
+   */
+  private hovering = false;
 
   constructor(root: HTMLElement) {
     this.el = document.createElement('div');
@@ -30,10 +39,14 @@ export class Tooltip {
    * under the pointer is one short line and reads best on one line; a note
    * about what a thing is *for* is a sentence, and a sentence six hundred
    * pixels long is not a tooltip.
+   *
+   * `hover`: held only while the pointer is on what the holder showed it for
+   * (`hovering`).
    */
-  show(x: number, y: number, lines: readonly TipLine[], holder: unknown = null, wide = false): void {
+  show(x: number, y: number, lines: readonly TipLine[], holder: unknown = null, wide = false, hover = false): void {
     if (this.holder && this.holder !== holder) return;
     this.holder = holder;
+    this.hovering = holder !== null && hover;
     /*
      * Built again, and measured, only when what it says has changed. The world
      * under the pointer asks for it every frame, and building it every frame
@@ -91,6 +104,18 @@ export class Tooltip {
   hide(holder: unknown = null): void {
     if (this.holder && this.holder !== holder) return;
     this.holder = null;
+    this.hovering = false;
     this.el.hidden = true;
+  }
+
+  /**
+   * The pointer is over the world, so it is on no row of a window: a hold made
+   * for the pointer resting on one is over, and the world's hover has the
+   * tooltip again. A note pinned open keeps it.
+   */
+  pointerOnWorld(): void {
+    if (!this.hovering) return;
+    this.hovering = false;
+    this.holder = null;
   }
 }
