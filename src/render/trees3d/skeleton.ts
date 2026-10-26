@@ -38,28 +38,38 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
   const r0 = H * b.girth;
 
   /* ---- the trunk: leaning, with a bend in it, to where it splits ---- */
-  const bend = (R() - 0.5) * 2 * b.gnarl * r0 * 2.2;
+  // No more of a bend than a fifth of its height: past that a short, thick trunk folds back over itself.
+  const bend = (R() - 0.5) * 2 * Math.min(b.gnarl * r0 * 2.2, stemZ * 0.2);
   const trunkAt = (f: number): V3 => {
     const s = Math.sin(f * Math.PI * 1.15) * bend;
     return [leanD[0] * b.lean * Math.pow(f, 1.4) + sideD[0] * s, leanD[1] * b.lean * Math.pow(f, 1.4) + sideD[1] * s, stemZ * f];
   };
   const trunkR = (f: number): number => r0 * (1 - 0.32 * f);
-  const TRUNK = 4;
+  // Enough pieces that its bend is a curve, not corners.
+  const TRUNK = 8;
   for (let i = 0; i < TRUNK; i++) {
     const f0 = i / TRUNK, f1 = (i + 1) / TRUNK;
-    limbs.push({ a: trunkAt(f0), b: trunkAt(f1), ra: trunkR(f0), rb: trunkR(f1), order: 0, parent: i - 1, bough: -1 });
+    // Its last piece narrowing into the fork, so its rounded end stays inside the limbs it splits into.
+    const rb = i === TRUNK - 1 ? trunkR(f1) * 0.55 : trunkR(f1);
+    // A shrivelled tree's trunk is dead wood as its limbs are: the one wood, in the one colour.
+    limbs.push({ a: trunkAt(f0), b: trunkAt(f1), ra: trunkR(f0), rb, order: 0, parent: i - 1, bough: -1, dead: b.bare });
   }
-  /* ---- the root flare ---- */
+  /* ---- the root flare: buttresses, as the spreading grower's, out of the trunk's foot to a knee and down along the ground ---- */
   const roots = b.flare > 1.15 ? 4 + Math.round(R()) : 0;
   const rootA = R() * TAU;
+  const frac = (x: number): number => x - Math.floor(x);
   for (let i = 0; i < roots; i++) {
-    const a = rootA + (i / roots) * TAU + (R() - 0.5) * 0.7;
-    const reach = r0 * b.flare * (0.7 + 0.25 * R());
-    limbs.push({
-      a: [Math.cos(a) * r0 * 0.5, Math.sin(a) * r0 * 0.5, r0 * (1.1 + 0.4 * R())],
-      b: [Math.cos(a) * reach, Math.sin(a) * reach, r0 * 0.08],
-      ra: r0 * 0.55, rb: r0 * 0.3, order: -1, parent: 0, bough: -1,
-    });
+    // Three rolls a root, as ever, so the crown grown after them is the same tree.
+    const u = R(), v = R(), w = R();
+    const a = rootA + (i / roots) * TAU + (u - 0.5) * 0.7;
+    const bendA = a + (frac(u * 7.31) - 0.5) * 0.4;
+    const reach = r0 * b.flare * (0.7 + 0.25 * v);
+    const top: V3 = [Math.cos(a) * r0 * 0.7, Math.sin(a) * r0 * 0.7, Math.min(r0 * (1.1 + 0.3 * w), stemZ * 0.5)];
+    const knee: V3 = [Math.cos(a) * r0 * 1.15, Math.sin(a) * r0 * 1.15, r0 * (0.25 + 0.1 * frac(w * 5.17))];
+    const end: V3 = [Math.cos(bendA) * reach, Math.sin(bendA) * reach, r0 * 0.03];
+    const first = limbs.length;
+    limbs.push({ a: top, b: knee, ra: r0 * 0.7, rb: r0 * 0.5, order: -1, parent: 0, bough: -1 });
+    limbs.push({ a: knee, b: end, ra: r0 * 0.5, rb: r0 * 0.24, order: -1, parent: first, bough: -1 });
   }
 
   /* ---- limbs, branches and twigs ---- */
@@ -145,6 +155,8 @@ export function grow(b: Build, height: number, seed: number): Skeleton {
     const pts = [0, 0.17, 0.34, 0.5, 0.67, 0.83, 1].map((t) => bezier(B, C1, C2, T, t));
     const rb = trunkR(f) * (0.46 + 0.1 * R());
     const pieces = run(pts, rb, rb * 0.36, 1, Math.min(TRUNK - 1, Math.floor(f * TRUNK - 1e-6)), i, dead);
+    // Swelling where it leaves the trunk, as a fork does: most of the trunk's girth there, down to its own over its first piece.
+    limbs[pieces[0]].ra = Math.max(limbs[pieces[0]].ra, trunkR(f) * 0.8);
     branch(pieces, 2, i, dead);
   }
   for (let i = 0; i < limbs.length; i++) {
