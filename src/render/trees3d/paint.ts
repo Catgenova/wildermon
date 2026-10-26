@@ -2420,24 +2420,8 @@ export function boundsOf(sk: Skeleton, e: Eye): [number, number, number, number]
   return [Math.floor(x0 - 4), Math.floor(y0 - 8), Math.ceil(x1 + 4), Math.ceil(y1 + 6)];
 }
 
-/** How far round its foot a tree's own shade reaches, in pixels at zoom one across: under it, the shade it throws is not laid. */
+/** How far round its foot a tree stands over the ground, in pixels at zoom one across: the shade laid after it is laid there before it instead (`Renderer.solidFoot`). */
 export const footReach = (sk: Skeleton): number => sk.foot ?? Math.max(4, (sk.limbs[0]?.ra ?? 2) * ACROSS * 2.6);
-
-/**
- * The shade right at its foot, laid under everything else, in the colour and
- * strength the shade it throws is laid at by day (`Renderer.solidFrame`),
- * which leaves this much round its foot to it.
- */
-export function footShade(g: Ctx, sk: Skeleton): void {
-  const r = footReach(sk);
-  g.save();
-  g.globalCompositeOperation = 'destination-over';
-  g.fillStyle = 'rgba(30,56,66,0.27)';
-  g.beginPath();
-  g.ellipse(0, 0.5, r, r * 0.5, 0, 0, TAU);
-  g.fill();
-  g.restore();
-}
 
 /* ---- a conifer's whorls (`growWhorls`) ------------------------------------------------ */
 

@@ -175,6 +175,11 @@ const SHADE_PARTS = 20;
 const SOLID_PICTURE_PX = 250_000;
 /** The solid trees' shade pictures' resolution against the screen's: the screen's, as a picture blown up is dear to lay. */
 const SHADE_RES = 1;
+/** How dark the solid trees' shade is laid in full day: six steps of 0.045 (`solidFrame`). */
+const SOLID_ALPHA_DAY = 0.27;
+/** How far round a solid tree's foot the darkening right at it reaches, against how far round its foot it stands (`tree3dFoot`), and how dark it is out from the middle (`solidFoot`). */
+const FOOT_CONTACT = 0.8;
+const FOOT_CONTACT_RAMP: ReadonlyArray<[number, number]> = [[0, 0.45], [0.4, 0.24], [0.75, 0.07], [1, 0]];
 /** How long, in milliseconds, a frame may spend making pictures of blocks of the ground (`bakeChunk`); the rest is drawn as it always was. */
 const GROUND_BAKE_MS = 4;
 /** How many screens' worth of device pixels the ground's pictures keep between them (`GroundChunks`), and the most in all. */
@@ -1323,15 +1328,19 @@ export class Renderer {
     top0: number;
     /** The lowest foot on the screen of the trees on each line: the next line's shade starts no higher, so it is never laid over one. */
     feet: Map<number, number>;
-    /** And where each of those trees stands and how far its own foot shade reaches: the next line's shade is not laid there either. */
+    /** And where each of those trees stands and how far round its foot it stands over the ground (`tree3dFoot`): the next line's shade is laid there before it, not after (`solidFoot`). */
     footAt: Map<number, Array<[number, number, number]>>;
+    /** The same by tile (`x * 65536 + y`), with its line. */
+    footOf: Map<number, [number, number, number, number]>;
     linesKey: string;
     lines: Map<number, Array<{ cv: HTMLCanvasElement; x: number; y: number; w: number; h: number }>>;
-  } = { key: '', trees: [], top0: 0, feet: new Map(), footAt: new Map(), linesKey: '', lines: new Map() };
+  } = { key: '', trees: [], top0: 0, feet: new Map(), footAt: new Map(), footOf: new Map(), linesKey: '', lines: new Map() };
   /** How dark the solid trees' and bushes' shade is laid this frame (`solidFrame`): 0 when none is. */
   private solidAlpha = 0;
-  /** This frame's shade from them, a picture a line, where each is laid (`solidShadeLine`). */
-  private solidShade: { strips: Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number; sx: number; sw: number; sh: number }> } | null = null;
+  /** This frame's shade from them, a picture a line, where each is laid (`solidShadeLine`); and the screen's device pixels for a point of the ground's picture, `x * kx + ox`, `y * ky + oy`. */
+  private solidShade: { strips: Map<number, { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number; sx: number; sw: number; sh: number }>; kx: number; ox: number; ky: number; oy: number } | null = null;
+  /** The darkening right at a solid tree's foot, laid under it (`solidFoot`): one picture, stretched to each. */
+  private contactPic: HTMLCanvasElement | null = null;
   /** Each line's picture of that shade, what it shows, and where; and pictures put by to be used again. */
   private solidStripsKept = new Map<number, { sig: string; cv: HTMLCanvasElement; x0: number; top: number; wIso: number; k: number; band: number }>();
   private solidStripsFree: HTMLCanvasElement[] = [];
@@ -7495,6 +7504,7 @@ export class Renderer {
       let href = 0;
       const feet = new Map<number, number>();
       const footAt = new Map<number, Array<[number, number, number]>>();
+      const footOf = new Map<number, [number, number, number, number]>();
       for (let d = d0; d <= d1; d++) {
         let e = e0;
         if (V.staggered && ((e + d) & 1) !== 0) e++;
@@ -7515,12 +7525,14 @@ export class Renderer {
           feet.set(d, Math.max(feet.get(d) ?? -Infinity, iy));
           let at = footAt.get(d);
           if (!at) footAt.set(d, (at = []));
-          at.push([(u - v) * HALF_W, iy, (bush ? bush3dFoot(species, x, y) : tree3dFoot(species, variant, x, y)) * g]);
+          const reach = (bush ? bush3dFoot(species, x, y) : tree3dFoot(species, variant, x, y)) * g;
+          at.push([(u - v) * HALF_W, iy, reach]);
+          footOf.set(x * 65536 + y, [d, (u - v) * HALF_W, iy, reach]);
           href += h;
         }
       }
       // Rows of the screen to lines of ground, at about the height the trees stand at.
-      this.solidScan = { key: scanKey, trees, top0: -(href / Math.max(1, trees.length)) * HEIGHT_SCALE, feet, footAt, lines: new Map(), linesKey: '' };
+      this.solidScan = { key: scanKey, trees, top0: -(href / Math.max(1, trees.length)) * HEIGHT_SCALE, feet, footAt, footOf, lines: new Map(), linesKey: '' };
     }
     const scan = this.solidScan;
     // Where line d's band of shade starts: a step down for each line, and never above a foot on the line behind it.
@@ -7629,20 +7641,6 @@ export class Renderer {
         g.globalCompositeOperation = 'source-in';
         g.fillStyle = `rgba(30,56,66,${alpha})`;
         g.fillRect(from, 0, to - from, H1);
-        // Not round the foot of a tree on this line or the one behind: its own foot shade is laid with it, over the ground and under the tree.
-        const behind = [...(scan.footAt.get(d - 1) ?? []), ...(scan.footAt.get(d) ?? [])];
-        if (behind.length) {
-          g.globalCompositeOperation = 'destination-out';
-          g.fillStyle = '#000';
-          g.beginPath();
-          for (const [fx, fy, r] of behind) {
-            const x = (fx - wx0) * k, y = (fy - top) * k;
-            // A hair inside the foot shade's own edge, so the two meet with no light seam.
-            g.moveTo(x + r * k * 0.985, y);
-            g.ellipse(x, y, r * k * 0.985, r * k * 0.4925, 0, 0, Math.PI * 2);
-          }
-          g.fill();
-        }
         g.restore();
         if (had) remade += n * zoom * zoom;
         had = { sig, cv: g.canvas, x0: wx0, top, wIso, k, band: bottom - top };
@@ -7662,7 +7660,7 @@ export class Renderer {
     }
     // Lines well off the screen are let go.
     this.dropStrips(dLo - 8, dHi + 8);
-    if (strips.size) this.solidShade = { strips };
+    if (strips.size) this.solidShade = { strips, kx: t.a * zoom, ox: t.a * (W / 2 - cam.cx * zoom) + t.e, ky: t.d * zoom, oy: t.d * (H / 2 - cam.cy * zoom) + t.f };
   }
 
   /** A line's kept shade picture put back to be used again. */
@@ -7676,14 +7674,82 @@ export class Renderer {
     for (const [d, s] of this.solidStripsKept) if (d < lo || d > hi) this.dropStrip(d, s);
   }
 
-  /** The band of the solid trees' shade that line `d` of the ground lays (`solidFrame`). */
+  /**
+   * The band of the solid trees' shade that line `d` of the ground lays
+   * (`solidFrame`): not round the foot of a tree on the line behind, drawn
+   * already, which had that much of it laid under it (`solidFoot`).
+   */
   private solidShadeLine(ctx: CanvasRenderingContext2D, d: number): void {
-    const strip = this.solidShade!.strips.get(d);
+    const shade = this.solidShade!;
+    const strip = shade.strips.get(d);
     if (!strip) return;
     const t = ctx.getTransform();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const behind = this.solidScan.footAt.get(d - 1);
+    let cut = false;
+    if (behind) {
+      const path = new Path2D();
+      for (const [fx, fy, r] of behind) {
+        const x = fx * shade.kx + shade.ox, y = fy * shade.ky + shade.oy, rx = r * shade.kx;
+        if (x + rx < strip.x || x - rx > strip.x + strip.w || y + rx < strip.y || y - rx > strip.y + strip.h) continue;
+        if (!cut) path.rect(strip.x, strip.y, strip.w, strip.h);
+        cut = true;
+        path.moveTo(x + rx, y);
+        path.ellipse(x, y, rx, rx / 2, 0, 0, Math.PI * 2);
+      }
+      if (cut) {
+        ctx.save();
+        ctx.clip(path, 'evenodd');
+      }
+    }
     ctx.drawImage(strip.cv, strip.sx, 0, strip.sw, strip.sh, strip.x, strip.y, strip.w, strip.h);
+    if (cut) ctx.restore();
     ctx.setTransform(t);
+  }
+
+  /**
+   * The ground round a solid tree's or bush's foot, laid just before it: the
+   * next line's shade there, which that line leaves out (`solidShadeLine`), so
+   * the shade runs on under the tree with no edge; and a little darker still
+   * right at the foot, fading to nothing.
+   */
+  private solidFoot(ctx: CanvasRenderingContext2D, ent: Entity, zoom: number): void {
+    const shade = this.solidShade;
+    const at = shade ? this.solidScan.footOf.get(ent.x * 65536 + ent.y) : undefined;
+    if (!shade || !at) return;
+    const [d, fx, fy, r] = at;
+    const strip = shade.strips.get(d + 1);
+    if (strip) {
+      const t = ctx.getTransform();
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const x = fx * shade.kx + shade.ox, y = fy * shade.ky + shade.oy, rx = r * shade.kx;
+      ctx.beginPath();
+      ctx.ellipse(x, y, rx, rx / 2, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(strip.cv, strip.sx, 0, strip.sw, strip.sh, strip.x, strip.y, strip.w, strip.h);
+      ctx.restore();
+      ctx.setTransform(t);
+    }
+    const c = r * FOOT_CONTACT * zoom;
+    ctx.globalAlpha = Math.min(1, this.solidAlpha / SOLID_ALPHA_DAY);
+    ctx.drawImage(this.contactPicture(), ent.sx - c, ent.sy - c / 2, c * 2, c);
+    ctx.globalAlpha = 1;
+  }
+
+  /** `contactPic`, made once: the ground shade's tone, darkest in the middle and gone at the rim. */
+  private contactPicture(): HTMLCanvasElement {
+    if (this.contactPic) return this.contactPic;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 128;
+    const g = cv.getContext('2d');
+    if (g) {
+      const ramp = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      for (const [at, a] of FOOT_CONTACT_RAMP) ramp.addColorStop(at, `rgba(30,56,66,${a})`);
+      g.fillStyle = ramp;
+      g.fillRect(0, 0, 128, 128);
+    }
+    return (this.contactPic = cv);
   }
 
 
@@ -7710,14 +7776,8 @@ export class Renderer {
     const top = ent.sy - spr.ay * zoom * grew;
     // A tree drawn as a solid throws its own shade, laid with the ground (`solidFrame`).
     if (!spr.solid && this.shadow.alpha > 0.012) this.castShadow(ctx, ent.sx, ent.sy, (spr.ay - (spr.h - spr.ay)) * 0.5 * zoom + dh * 0.12);
-    // A solid bush's shade at its foot: the hole its line's shade leaves round it (`footAt`), filled in that shade's own tone, so the two are one.
-    if (spr.foot && this.solidAlpha > 0) {
-      const r = spr.foot * zoom * grew * 0.985 + 0.2;
-      ctx.fillStyle = `rgba(30,56,66,${this.solidAlpha})`;
-      ctx.beginPath();
-      ctx.ellipse(ent.sx, ent.sy, r, r / 2, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // A solid one stands in the shade laid with the ground, which runs on under it (`solidFoot`).
+    if (spr.solid && this.solidShade) this.solidFoot(ctx, ent, zoom);
     /*
      * Air between here and the back of the wood.
      *

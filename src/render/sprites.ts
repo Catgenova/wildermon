@@ -25,8 +25,6 @@ export interface Sprite {
   ay: number;
   /** A tree or a bush drawn as a solid (`./trees3d`): a bake of one view of it, which its tile's pictures follow from bake to bake. */
   solid?: boolean;
-  /** A solid bush's shade at its foot, laid by the renderer in the tone of the ground's shade: its reach across, in pixels at zoom one (`Renderer.drawTree`). */
-  foot?: number;
   /** Where in it there is anything, as `inkOf` reads it, when that is already known. */
   ink?: [number, number, number, number];
 }

@@ -27,8 +27,6 @@ export interface Stored {
   ax: number;
   ay: number;
   ink: [number, number, number, number];
-  /** A bush's foot shade, laid by the renderer (`Sprite.foot`). */
-  foot?: number;
 }
 
 interface Meta {
@@ -114,7 +112,7 @@ export async function fetchStored(key: string): Promise<Stored | null> {
   if (!isStored(key) || !db) return null;
   try {
     const got = (await req(db.transaction('pics', 'readonly').objectStore('pics').get(key))) as
-      | { blob: Blob; w: number; h: number; ax: number; ay: number; ink: [number, number, number, number]; foot?: number }
+      | { blob: Blob; w: number; h: number; ax: number; ay: number; ink: [number, number, number, number] }
       | undefined;
     if (!got) {
       forget(key);
@@ -133,7 +131,7 @@ export async function fetchStored(key: string): Promise<Stored | null> {
       m.at = Date.now();
       touched.add(key);
     }
-    return { canvas, w: got.w, h: got.h, ax: got.ax, ay: got.ay, ink: got.ink, foot: got.foot };
+    return { canvas, w: got.w, h: got.h, ax: got.ax, ay: got.ay, ink: got.ink };
   } catch {
     forget(key);
     return null;
@@ -178,7 +176,7 @@ export async function putStored(key: string, s: Stored): Promise<void> {
       w.objectStore('pics').delete(k);
       w.objectStore('meta').delete(k);
     }
-    w.objectStore('pics').put({ blob, w: s.w, h: s.h, ax: s.ax, ay: s.ay, ink: s.ink, foot: s.foot }, key);
+    w.objectStore('pics').put({ blob, w: s.w, h: s.h, ax: s.ax, ay: s.ay, ink: s.ink }, key);
     w.objectStore('meta').put(meta, key);
     for (const k of touched) {
       const m = index.get(k);

@@ -3993,6 +3993,13 @@ export const NEWS: News[] = [
       `Fixed: most fuel a fire holds: ${FIRE_CAPACITY_338} seconds, an oven ${OVEN_CAPACITY}, on the island as shown (was: island held less).`,
     ],
   },
+  {
+    n: 339,
+    day: '2026-10-26',
+    lines: () => [
+      'Fixed: trees and bushes: no pale disc at the foot; shade runs to the trunk.',
+    ],
+  },
 ];
 
 /**

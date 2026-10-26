@@ -37,7 +37,7 @@ import { eyeOf, proj, type Eye } from '../runestone';
 import { ageKeyOf } from '../trees/tree';
 import type { AgeKey } from '../trees/types';
 import { lightOf, SUN_STEPS, sunStepOf, type Light } from './light';
-import { ACROSS, boundsOf, footReach, footShade, paintTree3d, shownOf } from './paint';
+import { ACROSS, boundsOf, footReach, paintTree3d, shownOf } from './paint';
 import { growOrchard } from './orchard';
 import { grow, swayed } from './skeleton';
 import { fetchStored, isStored, openStore, putStored } from './store';
@@ -132,8 +132,6 @@ export interface TreeSprite {
   ay: number;
   /** Drawn here: its pictures are its tile's, whichever bake it is (`Renderer.treePicture`). */
   solid: true;
-  /** A bush's shade at its foot, which the renderer lays (`Sprite.foot`); a tree's is in its bake (`footShade`). */
-  foot?: number;
   /** Where in it there is anything (`inkOf`). */
   ink: [number, number, number, number];
 }
@@ -406,8 +404,8 @@ function roomAhead(px: number): boolean {
   return left <= 0;
 }
 
-/** A model seen from a turn, painted at a scale onto a canvas just its size, its own shade at its foot under it unless the renderer lays that; and read back once for where in it there is anything. */
-function bake(scale: number, sk: Skeleton, turn: number, paint: (g: CanvasRenderingContext2D, e: Eye) => void, ownFoot = true): TreeSprite {
+/** A model seen from a turn, painted at a scale onto a canvas just its size; and read back once for where in it there is anything. Its shade on the ground is laid by the renderer (`Renderer.solidFrame`). */
+function bake(scale: number, sk: Skeleton, turn: number, paint: (g: CanvasRenderingContext2D, e: Eye) => void): TreeSprite {
   const t0 = performance.now();
   const e = eyeOf(0, turn);
   const [x0, y0, x1, y1] = boundsOf(sk, e);
@@ -422,11 +420,10 @@ function bake(scale: number, sk: Skeleton, turn: number, paint: (g: CanvasRender
   const t1 = performance.now();
   paint(g, e);
   tree3dStats.paintMs += performance.now() - t1;
-  if (ownFoot) footShade(g, sk);
   const ink = inkOf(canvas);
   tree3dStats.bakes++;
   tree3dStats.ms += performance.now() - t0;
-  return { canvas, w, h, ax: -x0, ay: -y0, solid: true, foot: ownFoot ? undefined : footReach(sk), ink };
+  return { canvas, w, h, ax: -x0, ay: -y0, solid: true, ink };
 }
 
 /** A job's bake made and kept, and put by to be kept in the browser too. Made ahead, it is kept only if that puts away nothing on the screen. */
@@ -489,16 +486,10 @@ function treeMaker(species: number, variant: number, season: Season, day: number
     throwOf: (light, e, disc) => {
       const sk = skeletonOf(species, variant, form);
       const spec = SPECIES.get(species) ?? maple;
-      // The trunk's shade starts clear of the trunk and its roots: what is right at its foot is the tree's own (`footShade`), drawn with it.
-      const r0 = sk.limbs[0]?.ra ?? 0;
-      const clear = r0 * 2.6;
+      // The trunk's shade runs from the trunk itself.
       for (const L of sk.limbs) {
         if (L.order < 0 || L.order > (dress.full > 0 ? 2 : 3)) continue;
-        alongLimb(L, light, (p, r) => {
-          const z = Math.max(0, p[2]);
-          if (L.order === 0 && Math.hypot(p[0] + light.dx * z, p[1] + light.dy * z) < clear + r) return;
-          disc(p, r);
-        });
+        alongLimb(L, light, disc);
       }
       const job = { sk, spec, dress, light, e, seed: 0, frame: 0 };
       for (const s of shownOf(job)) lumpyDisc(disc, s.c.c, s.c.r * s.grown, s.c.k);
@@ -966,23 +957,16 @@ function bushMaker(species: number, season: Season, day: number, x: number, y: n
       const seed = bushSeedOf(species, form);
       const sk = swayed(bushModelOf(species, form), frame, SWAY_FRAMES, seed);
       const spec = BUSH3D.get(species) ?? rose;
-      // Its foot's shade is laid by the renderer, in the ground shade's tone (`Sprite.foot`).
-      return bake(scale, sk, turn, (g, e) => spec.paint(g, { sk, look, season, def, light: lightOf(step), e, seed, frame }), false);
+      return bake(scale, sk, turn, (g, e) => spec.paint(g, { sk, look, season, def, light: lightOf(step), e, seed, frame }));
     },
     shadeHead: `bush${species}|${form}|${season}${look.key}|`,
     throwOf: (light, _e, disc) => {
       const sk = bushModelOf(species, form);
-      // Clear of its foot, which is its own shade laid with it (`Sprite.foot`).
-      const clear = footReach(sk) / ACROSS;
       // Its canes and the shoots off them, not the finest twigs; and no more than `BUSH_WOOD_DISCS` discs along them, spread over their length.
       const wood = sk.limbs.filter((L) => L.order >= 0 && L.order <= 2);
       const spread = Math.max(1, wood.reduce((n, L) => n + stepsAlong(L, light) + 1, 0) / BUSH_WOOD_DISCS);
       for (const L of wood) {
-        alongLimb(L, light, (p, r) => {
-          const z = Math.max(0, p[2]);
-          if (Math.hypot(p[0] + light.dx * z, p[1] + light.dy * z) < clear - r) return;
-          disc(p, r);
-        }, spread);
+        alongLimb(L, light, disc, spread);
       }
       if (look.full > 0) for (const c of sk.clumps) lumpyDisc(disc, c.c, c.r * (0.4 + 0.6 * look.full), c.k);
     },
@@ -1056,7 +1040,7 @@ function stumpMaker(species: number, season: Season, x: number, y: number, turn:
     makeAt: (step) => {
       const p = stumpPainter(species, form, season, lightOf(step), scale);
       // Its shade, at its foot and thrown, is in its picture (`paintStump3d`).
-      return bake(scale, p.sk, turn, p.paint, false);
+      return bake(scale, p.sk, turn, p.paint);
     },
     // It throws none with the trees' (`Renderer.solidFrame`): its own is in its picture.
     shadeHead: `stump${species}|${form}|`,
@@ -1110,7 +1094,7 @@ function logMaker(species: number, n: number, season: Season, x: number, y: numb
       const trunk = trunkOf(species);
       const job = { sk: m.sk, spec: woodSpec(spec, trunk, false, true), dress: bareOf(season), light, seed: seedOf(species, STUMP_AGE, way), frame: 0, scale };
       const logs = (g: CanvasRenderingContext2D, e: Eye): void => paintLogs3d(g, { ...job, e }, m.logs, woodOf(trunk));
-      if (!beside) return bake(scale, m.sk, turn, logs, false);
+      if (!beside) return bake(scale, m.sk, turn, logs);
       // With the stump: the nearer of the two laid over the other.
       const s = stumpPainter(species, form, season, light, scale);
       const both: Skeleton = { ...m.sk, limbs: [...m.sk.limbs, ...s.sk.limbs], crown: s.sk.crown.r > m.sk.crown.r ? s.sk.crown : m.sk.crown };
@@ -1118,7 +1102,7 @@ function logMaker(species: number, n: number, season: Season, x: number, y: numb
       const mid = m.logs.reduce((d, l) => d + (l.a[0] + l.b[0]) * toward[0] + (l.a[1] + l.b[1]) * toward[1], 0);
       return bake(scale, both, turn, (g, e) => {
         if (mid >= 0) { s.paint(g, e); logs(g, e); } else { logs(g, e); s.paint(g, e); }
-      }, false);
+      });
     },
     // Lying, it throws no more than the shade under it, which is its own (`paintLogs3d`).
     shadeHead: `log${kind}|`,
