@@ -5294,7 +5294,8 @@ export class Game {
     const lined = this.queue.length;
     // Out of the fight as well as the job: nothing goes after it again.
     this.fightTarget = null;
-    this.clearQueue(silent || !a);
+    // The island says what it stopped and cleared (`rpc_cancel`), which is what was really in hand.
+    this.clearQueue(silent || !a || !!this.stop);
     if (!a && !lined) return;
     /*
      * And wherever the job really is.
@@ -5308,7 +5309,7 @@ export class Game {
     if (!silent) this.stop?.();
     if (!a) return;
     this.action = null;
-    if (!silent && a.state === 'performing') this.logMsg(`Stopped ${a.def.verb}.`, 'info');
+    if (!silent && a.state === 'performing' && !this.stop) this.logMsg(`Stopped ${a.def.verb}.`, 'info');
     this.events.emit('action');
   }
 

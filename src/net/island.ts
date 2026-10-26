@@ -2,13 +2,14 @@ import type { Prices, Sale } from '../game/prices';
 import type { WornWire } from '../game/worn';
 import type { Enchant } from '../game/enchant';
 import { firedIn, toldIn, type FiredWire, type ToldWire } from './told';
+import { HeardLines } from './heardlines';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { ErrorReport } from './errors';
 import { CHUNK, World } from '../world/world';
 import { PAVED } from '../world/tiles';
 import { blankWorld, layChange, layHistory, layRows, rowsOf, type LandRow, type TileChange } from './landpack';
 import { generateAtlasWindow, loadAtlas, type Atlas } from '../world/atlas-world';
-import { PROJECT, supabase, signIn } from './supabase';
+import { CANNOT_SAVE, PROJECT, supabase, signIn } from './supabase';
 import type { IslandCreature } from '../game/creatures';
 import type { IslandSpring } from '../game/springs';
 import type { BredRecord } from '../game/boards';
@@ -237,6 +238,18 @@ const heardBody = (m: unknown): HeardBody => {
   const p = (m as { payload?: unknown } | null)?.payload;
   return p && typeof p === 'object' ? (p as HeardBody) : {};
 };
+
+/**
+ * A call to a door that raised, or never reached the island, as its line in the log: whatever the island
+ * said, after what became of the ask. A raise rolls back the line the island would have told with it, so
+ * this is the only line there is (`Island.act`). Exported for `supabase/test/eventlog.ts`.
+ */
+export function refusedSaid(message: string): string {
+  const m = message.trim();
+  if (/read-only transaction/i.test(m)) return CANNOT_SAVE;
+  if (!m || /failed to fetch|networkerror|load failed|fetch failed/i.test(m)) return 'Not sent: no answer from the island.';
+  return `Not done: ${m}${/[.!?]$/.test(m) ? '' : '.'}`;
+}
 
 /** Seconds between history reads a message may ask for, when it says only that there is more land than it carried. */
 const LAND_ASKED_EVERY = 2;
@@ -1328,15 +1341,16 @@ export class Island {
   /** The block of country the channel is listening to, as `rx,ry`. */
   private block = '';
   /**
-   * The highest line of talk we have heard, from either road.
+   * The lines of talk we have heard, from every road, by number.
    *
    * Realtime is the fast one and is not a promise: a channel that dropped for
    * a moment loses whatever was said while it was down, and `event` was the
-   * one table with no way to catch up. The beat carries this and gets back
-   * anything newer, so a dropped line arrives late rather than never — and
-   * because both roads are counted here, nothing arrives twice.
+   * one table with no way to catch up. The beat carries the floor of these and
+   * gets back anything above it, so a dropped line arrives late rather than
+   * never — and because every road is counted here, nothing arrives twice.
+   * A floor and not the highest heard: lines come in either order (`HeardLines`).
    */
-  private said = 0;
+  private readonly lines = new HeardLines();
   /**
    * Whether the next ground read should bring the things that hardly move.
    *
@@ -1530,6 +1544,9 @@ export class Island {
     this.me = got.you;
     this.away = (got as { away?: Away | null }).away ?? null;
     this.hears = (got as { hears?: boolean }).hears === true;
+    // Where the island's lines stood when we came ashore: the beat counts from there (`HeardLines`).
+    const saidTo = (got as { saidTo?: unknown }).saidTo;
+    this.lines.from(typeof saidTo === 'number' ? saidTo : 0);
 
     const size = got.world.size;
     const seed = got.world.seed;
@@ -2123,10 +2140,12 @@ export class Island {
        * door of its own: there is never any hurry about a tick.
        */
       const ticking = this.ticked.length ? this.ticked.slice() : null;
+      // When it was asked, for how far the floor of the lines heard may move once it answers (`HeardLines.settled`).
+      const asked = performance.now();
       const { data, error } = await supabase().rpc('rpc_settle', {
         p_seen: this.seenChange,
         p_world: this.info.id,
-        p_said: this.said,
+        p_said: this.lines.floor,
         p_book: !this.booked,
         p_ticked: ticking,
       });
@@ -2158,14 +2177,14 @@ export class Island {
       /*
        * Anything said while nobody was listening.
        *
-       * Only ever lines we have not heard — the cursor moves with both roads —
+       * Only ever lines we have not heard — every road is counted by number —
        * so this is a catch-up and not an echo. Said before the rest of the
-       * answer is applied, so the log reads in the order it happened.
+       * answer is applied, so the log reads in the order it happened, and
+       * through `hearLine`, so a map studied or a trail read while the channel
+       * was down is a square and an arrow rather than a line of numbers.
        */
-      for (const line of said.said ?? []) {
-        if (line.n <= this.said) continue;
-        this.said = line.n;
-        this.sayLine(line.text, line.kind, line.at);
+      for (const line of Array.isArray(said.said) ? said.said : []) {
+        if (line && typeof line.text === 'string') this.hearLine({ ...line, uid: null });
       }
       /*
        * And, on the first beat, where the talk had got to before we arrived.
@@ -2174,9 +2193,12 @@ export class Island {
        * island" and handed a refreshed page its own first sixty lines back.
        * The island now reads a nought as "just got here" and sends the mark
        * instead, so the catch-up starts from the moment somebody opened the
-       * page rather than from the day they washed ashore.
+       * page rather than from the day they washed ashore. An island that says
+       * where its lines stood at the join (`saidTo` there) is never sent a nought.
        */
-      if (typeof said.saidTo === 'number') this.said = Math.max(this.said, said.saidTo);
+      if (typeof said.saidTo === 'number') this.lines.mark(said.saidTo);
+      // And the floor up past what has had time to commit under it, once the island has answered.
+      if (!error) this.lines.settled(asked);
       // The book has landed, so stop asking for it and take the deltas.
       if (said.skills) this.booked = true;
       this.pinClock(said.time);
@@ -2315,6 +2337,8 @@ export class Island {
         this.refreshMobs(now).catch(() => undefined),
         this.refreshGround(now).catch(() => undefined),
       ]);
+      // And the lines told while the channels were joining again, which the settle above was sent too soon to read.
+      if (cut) this.armBeat(0.5);
     }
     return (await answered) && joined;
   }
@@ -2703,7 +2727,7 @@ export class Island {
   private heardLines(body: HeardBody): void {
     if (Array.isArray(body.lines)) {
       for (const e of body.lines as HeardLine[]) this.hearLine(e);
-    } else if (typeof body.upto === 'number' && body.upto > this.said) {
+    } else if (typeof body.upto === 'number' && body.upto > this.lines.top) {
       this.armBeat(0.5);
     }
   }
@@ -2800,14 +2824,13 @@ export class Island {
      * "You eat the onion." and "It is gone." printed twice apiece, from
      * an island that measurably said each of them once.
      *
-     * So the rule is the same rule on both paths: a line at or below the
-     * cursor has been said. One statement of it, and neither can say
-     * what the other already has.
+     * So the rule is the same rule on every path: a line is said the
+     * first time its number is heard, and never again. One statement of
+     * it, and none can say what another already has. By number rather
+     * than by the highest heard: a line can come after one numbered above
+     * it, and is still said (`HeardLines`).
      */
-    if (typeof e.n === 'number') {
-      if (e.n <= this.said) return;
-      this.said = e.n;
-    }
+    if (typeof e.n === 'number' && !this.lines.first(e.n)) return;
     // A map studied (`cartography.ts`): a square for the map, not a line for the log.
     if (e.kind === 'charted') {
       const c = chartedSquare(e.text);
@@ -4245,8 +4268,20 @@ export class Island {
       : await supabase().rpc('rpc_act', {
         p_world: this.info.id, p_action: action, p_target: target, p_times: times,
       });
-    if (error) return { started: false, why: error.message };
-    const result = data as ActResult;
+    /*
+     * An ask the island would not take at all.
+     *
+     * A refusal is told, and comes down with the lines; a call that raised
+     * rolled back everything it did, the line with it, and came back here as
+     * an error that nothing read: "Too many requests", a target that does not
+     * pass `check_args`, a performer that fell over on an instant job. So it
+     * is said here, in the island's words, or it is said nowhere.
+     */
+    if (error) {
+      this.hooks.say(refusedSaid(error.message), 'error');
+      return { started: false, why: error.message };
+    }
+    const result = (data ?? {}) as ActResult;
     /*
      * What the ask did, laid down before anything else in the answer.
      *
@@ -4308,6 +4343,13 @@ export class Island {
      * budget they do.
      */
     if (result.done) this.armBeat(0.5);
+    /*
+     * And one it refused, or one sent again whose first answer was lost
+     * (`ONCE_TAKEN` answers `{}`): the beat goes now, so a line the channel
+     * did not bring is read off the island in half a second rather than at
+     * the next heartbeat.
+     */
+    if (!result.started && !result.queued) this.armBeat(0.5);
     // Our own work is the one thing that can put a wall up, so the next ground
     // read after it brings the half that holds walls.
     this.groundSlow = true;
@@ -4323,7 +4365,11 @@ export class Island {
   async planArea(asks: Array<{ action: string; target: unknown }>): Promise<{ planned?: number; refused?: number; why?: string }> {
     if (!this.info) return { why: 'You are not on an island.' };
     const { data, error } = await supabase().rpc('rpc_plan_area', { p_world: this.info.id, p_asks: asks });
-    if (error) return { why: error.message };
+    // Raised rather than refused, so told nowhere else (`act`).
+    if (error) {
+      this.hooks.say(refusedSaid(error.message), 'error');
+      return { why: error.message };
+    }
     this.stirred = true;
     this.groundSlow = true;
     this.armBeat(0.5);
@@ -4334,7 +4380,11 @@ export class Island {
   async undoPlan(): Promise<{ removed?: number; why?: string }> {
     if (!this.info) return { why: 'You are not on an island.' };
     const { data, error } = await supabase().rpc('rpc_plan_undo', { p_world: this.info.id });
-    if (error) return { why: error.message };
+    // Raised rather than refused, so told nowhere else (`act`).
+    if (error) {
+      this.hooks.say(refusedSaid(error.message), 'error');
+      return { why: error.message };
+    }
     this.stirred = true;
     this.groundSlow = true;
     this.armBeat(0.5);
@@ -4359,7 +4409,9 @@ export class Island {
     if (!this.info) return;
     if (this.beat) clearTimeout(this.beat);
     this.beat = null;
-    await supabase().rpc('rpc_cancel', { p_world: this.info.id });
+    const { error } = await supabase().rpc('rpc_cancel', { p_world: this.info.id });
+    // The island says what was stopped; a stop it would not take says why here, or nowhere (`act`).
+    if (error) this.hooks.say(refusedSaid(error.message), 'error');
     await this.pulse();
   }
 
@@ -4377,7 +4429,9 @@ export class Island {
     if (!this.info) return;
     if (this.beat) clearTimeout(this.beat);
     this.beat = null;
-    await supabase().rpc('rpc_hold', { p_world: this.info.id });
+    const { error } = await supabase().rpc('rpc_hold', { p_world: this.info.id });
+    // The island says what was put down; a hold it would not take says why here, or nowhere (`act`).
+    if (error) this.hooks.say(refusedSaid(error.message), 'error');
     await this.pulse();
   }
 
@@ -4389,7 +4443,11 @@ export class Island {
   async queueOrder(seen: Lined[], order: number[]): Promise<void> {
     if (!this.info) return;
     const { data, error } = await supabase().rpc('rpc_queue_order', { p_world: this.info.id, p_seen: seen, p_order: order });
-    if (error) return;
+    // Raised rather than refused, so told nowhere else (`act`); the next beat puts the queue back as the island has it.
+    if (error) {
+      this.hooks.say(refusedSaid(error.message), 'error');
+      return;
+    }
     const said = (data ?? {}) as { queue?: unknown; capacity?: number | null };
     this.hooks.mine?.({ queue: lineUp(said.queue), cap: said.capacity ?? null });
   }
@@ -4420,7 +4478,9 @@ export class Island {
     if (!this.info) return [];
     const { data } = await supabase().rpc('rpc_chat', { p_world: this.info.id, p_limit: limit });
     // `rpc_chat` has sent `at` since the day it was written and nothing read it.
+    // Only what was said before we came ashore: anything after it comes down with the other lines (`HeardLines`).
     return rowsIn<{ n: number; text: string; at?: string }>(data)
+      .filter((l) => !(typeof l.n === 'number' && l.n > this.lines.floor && this.lines.floor > 0))
       .map((l) => ({ n: l.n, text: l.text, at: whenSaid(l.at) }));
   }
 

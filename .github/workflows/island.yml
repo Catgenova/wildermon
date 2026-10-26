@@ -4789,6 +4789,23 @@ jobs:
             --outfile=node_modules/.cache/playertext.mjs --log-level=error
           node node_modules/.cache/playertext.mjs
 
+      - name: Every job says how it ended, and the log hears it
+        if: matrix.shard == 6
+        run: |
+          # Reported: "Sometimes an action completes or fails with no
+          # description in the event log." Every action in action_def with its
+          # go come round, against a tile, an empty pack, a tile out of reach,
+          # a thing held, a thing, a wildermon and a piece gone, and a person:
+          # every go tells whoever did it what it did or why it was not done.
+          # A run stopped, no wind, a go that says nothing, the queue, stop,
+          # walking off, a refusal, a raise, a hushed plan over an area and the
+          # mark at the join. And the browser: a line said the first time its
+          # number comes, in any order, the beat asking from a floor that waits
+          # for late lines, and an ask the island raised on said in the log.
+          npx esbuild supabase/test/eventlog.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/eventlog.mjs --log-level=error
+          node node_modules/.cache/eventlog.mjs
+
   migrate:
     name: Push the migrations to the project
     # On the rules having passed here, or over the same code already (`already`).

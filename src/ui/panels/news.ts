@@ -119,6 +119,7 @@ import { cropYield, RIPE, seedSays } from '../../game/farming';
 import { HEARTBEAT, IDLE_LOGOUT, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { VIA_MAX } from '../../net/island';
+import { SAID_LAG_MS } from '../../net/heardlines';
 import { CATCH_UP, MAX_STEP as CLOCK_STEP } from '../../engine/loop';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { NEED_KINDS, NEED_LABEL } from './care';
@@ -3867,6 +3868,17 @@ export const NEWS: News[] = [
       "Fixed: other players' wildermon drawn and named at their own level and stage (was level 1, first stage).",
       `Fixed: Change tile on packed dirt: "${PACKED_FIRST}"`,
       `Changed: small cart ${recipeBill('make_cart')} (no nails).`,
+    ],
+  },
+  {
+    n: 326,
+    day: '2026-10-26',
+    lines: () => [
+      'Fixed: a go whose tool, materials or target went after the job was asked for: logged with its job and why, e.g. "Eat: It is gone." (was not logged); one with no reason logged as "<job>: nothing done."',
+      'Changed: a run stopped for a refusal names its job: "Dig: Need a shovel. Left: 4."',
+      'Added: Stop and walking off logged: "Stopped digging. Queue cleared: 2 actions.", "Stopped digging. Queue held: 3."',
+      `Fixed: lines missing from the event log when another line came first: every line kept by its number, and the island asked again for lines up to ${SAID_LAG_MS / 1000} s late.`,
+      'Fixed: an ask the island raised on (too many requests, a bad request): logged as "Not done: <reason>" (was not logged).',
     ],
   },
 ];
