@@ -83,7 +83,7 @@ export const groundFloorAt = (w: World, x: number, y: number): number => w.getHe
  */
 export function cellarOutdoor(): readonly string[] {
   outdoor ??= FURNITURE.filter((d) => d.stall || d.post || d.trash || d.hive || d.skep || d.pond || d.planter
-    || d.well || d.roses || d.vine || d.grave || d.lamp || d.runes || d.id === 'flagpole' || d.id === 'creature_crate').map((d) => d.id);
+    || d.well || d.climber || d.vine || d.grave || d.lamp || d.runes || d.id === 'flagpole' || d.id === 'creature_crate').map((d) => d.id);
   return outdoor;
 }
 let outdoor: readonly string[] | undefined;

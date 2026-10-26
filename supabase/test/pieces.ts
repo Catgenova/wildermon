@@ -1,5 +1,6 @@
 /**
  * A flag flies its colour and an arch its roses, the same on both sides.
+ * And the lavender arches, its lavender, the same way (`FurnitureDef.climber`).
  *
  * Three new pieces -- a flagpole and two rose arches -- and one old gap: a
  * piece set down on an island kept its wood, its rarity and its maker's mark
@@ -26,7 +27,7 @@ import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { FURNITURE_BY_ID } from '../../src/game/furniture';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { DYEABLE_ITEMS } from '../../src/game/dyes';
-import { ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, roseStage } from '../../src/game/roses';
+import { ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, roseSays, roseStage } from '../../src/game/roses';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { SEASON_DAYS, SEASONS, YEAR_FROM } from '../../src/world/calendar';
 
@@ -52,7 +53,9 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 const said = (lines: string, tag: string): string =>
   lines.split('\n').map((l) => l.trim()).find((l) => l.startsWith(`${tag}|`))?.slice(tag.length + 1) ?? '(nothing)';
 
-const PIECES = ['flagpole', 'rose_arch', 'stone_rose_arch'];
+const PIECES = ['flagpole', 'rose_arch', 'stone_rose_arch', 'lavender_arch', 'stone_lavender_arch'];
+/** The arches set down, read and slept past on the island: a rose arch, and both lavender arches. */
+const ARCHES = ['rose_arch', 'lavender_arch', 'stone_lavender_arch'];
 const X = 50, Y = 20;
 /** A day of the island's year, which an arch's roses count in: a day and night of its clock. */
 const DAY = DAY_SECONDS;
@@ -69,9 +72,13 @@ const mine = PIECES.slice().sort().map((id) => {
   const f = FURNITURE_BY_ID.get(id);
   const r = RECIPE_BY_ID.get(`make_${id}`);
   const bill = (r?.inputs ?? []).map((i) => `${i.item}:${i.count ?? 1}`).sort().join(',');
-  return `${id} ${f?.w}x${f?.h} ${!!f?.roses} ${r?.skill} ${r?.tool ?? '-'} ${bill} ${DYEABLE_ITEMS.has(id)}`;
+  return `${id} ${f?.w}x${f?.h} ${!!f?.climber} ${r?.skill} ${r?.tool ?? '-'} ${bill} ${DYEABLE_ITEMS.has(id)}`;
 }).join('|');
-check('the flagpole and the two rose arches are the same pieces, built the same way, on both sides', defs === mine, `browser ${mine}, island ${defs}`);
+check('the flagpole, the two rose arches and the two lavender arches are the same pieces, built the same way, on both sides', defs === mine, `browser ${mine}, island ${defs}`);
+check('a lavender arch is a rose arch with lavender for the petals, on both sides',
+  ['', 'stone_'].every((s) => defs.split('|').find((l) => l.startsWith(`${s}lavender_arch `))?.replace(/^\S+/, '').replace('lavender:16', 'rose_petals:16')
+    .split(' ').map((w) => w.split(',').sort().join(',')).join(' ')
+    === defs.split('|').find((l) => l.startsWith(`${s}rose_arch `))?.replace(/^\S+/, '').split(' ').map((w) => w.split(',').sort().join(',')).join(' ')), defs);
 
 /* ---- set down dyed, read dyed, picked up dyed ---------------------------- */
 
@@ -101,25 +108,28 @@ begin
       where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def = v_kind), 'gone'));
   end loop;
 
-  -- An arch: set down, read, slept past, and read again.
-  v_it := give(w, u, 'rose_arch', 1, 40, 'Oak');
+  -- Each arch: set down, read, slept past, and read again.
+  foreach v_kind in array array[${ARCHES.map((a) => `'${a}'`).join(', ')}] loop
+  delete from placed where world_id = w and x between ${X - 1} and ${X + 3} and y between ${Y - 1} and ${Y + 1};
+  v_it := give(w, u, v_kind, 1, 40, 'Oak');
   perform act_perform(w, u, 'place_furniture', jsonb_build_object('kind', 'tile', 'x', ${X}, 'y', ${Y}, 'sx', 0, 'sy', 1, 'facing', 'e', 'itemUid', v_it));
-  select id into v_id from placed where world_id = w and sub = 'rose_arch' order by id desc limit 1;
-  insert into said values ('ARCH_MADE|' || extract(epoch from (select made_at from placed where id = v_id)));
+  select id into v_id from placed where world_id = w and sub = v_kind order by id desc limit 1;
+  insert into said values (v_kind || '_ARCH_MADE|' || extract(epoch from (select made_at from placed where id = v_id)));
   v_row := (select e from jsonb_array_elements(rpc_ground(w, 40, false)->'placed') e where (e->>'id')::bigint = v_id);
-  insert into said values ('ARCH_ROW|' || v_row::text);
+  insert into said values (v_kind || '_ARCH_ROW|' || v_row::text);
   -- Two and a half days ago, as far as its roses know.
   update placed set made_at = now() - interval '${2.5 * DAY} seconds' where id = v_id;
   perform sleep_forward(w, u, 36000);
   v_row := (select e from jsonb_array_elements(rpc_ground(w, 40, false)->'placed') e where (e->>'id')::bigint = v_id);
-  insert into said values ('ARCH_OLD|' || (v_row->>'set') || ' ' || extract(epoch from now()));
+  insert into said values (v_kind || '_ARCH_OLD|' || (v_row->>'set') || ' ' || extract(epoch from now()));
   -- Picked up and set down again: planted again.
   perform act_perform(w, u, 'pick_up_furniture', jsonb_build_object('kind', 'furniture', 'id', v_id));
-  select id into v_it from item where world_id = w and holder = 'player' and holder_uid = u and def = 'rose_arch' order by id desc limit 1;
+  select id into v_it from item where world_id = w and holder = 'player' and holder_uid = u and def = v_kind order by id desc limit 1;
   perform act_perform(w, u, 'place_furniture', jsonb_build_object('kind', 'tile', 'x', ${X}, 'y', ${Y}, 'sx', 0, 'sy', 1, 'facing', 'e', 'itemUid', v_it));
-  select id into v_id from placed where world_id = w and sub = 'rose_arch' order by id desc limit 1;
+  select id into v_id from placed where world_id = w and sub = v_kind order by id desc limit 1;
   v_row := (select e from jsonb_array_elements(rpc_ground(w, 40, false)->'placed') e where (e->>'id')::bigint = v_id);
-  insert into said values ('ARCH_AGAIN|' || (v_row->>'set') || ' ' || extract(epoch from now()) || ' ' || coalesce(v_row->>'material', '-'));
+  insert into said values (v_kind || '_ARCH_AGAIN|' || (v_row->>'set') || ' ' || extract(epoch from now()) || ' ' || coalesce(v_row->>'material', '-'));
+  end loop;
 end $$;
 select k from said;
 rollback;`);
@@ -157,27 +167,32 @@ for (const kind of ['flagpole', 'banner']) {
   check(`picked up again it is still dyed, on both sides`, b.back === 'woad' && said(island, `BACK_${kind}`) === 'woad', `browser ${b.back}, island ${said(island, `BACK_${kind}`)}`);
 }
 
-/* ---- an arch's roses ------------------------------------------------------ */
+/* ---- an arch's roses, or its lavender -------------------------------------- */
 
-const made = Number(said(island, 'ARCH_MADE'));
-const archRow = JSON.parse(said(island, 'ARCH_ROW'));
-check('the ground read hands a rose arch over with the moment it was set down', Math.abs(Number(archRow.set) - made) < 1e-3, `set ${archRow.set}, made_at ${made}`);
-const reader = Game.create(4242);
-reader.sawGround({ placed: [archRow] } as unknown as IslandGround);
-const arch = [...reader.furniture.values()][0];
-check('and the browser plants its roses at that moment', arch?.setAt !== undefined && Math.abs((arch?.setAt ?? 0) - made) < 1e-3, `browser ${arch?.setAt}`);
-check('just set down, its roses are bare', roseStage(arch?.setAt, made + 60).stage === 'bare');
-const [oldSet, oldNow] = said(island, 'ARCH_OLD').split(' ').map(Number);
-check('a night slept on the island does not move it', Math.abs(oldNow - oldSet - 2.5 * DAY) < 5, `${((oldNow - oldSet) / DAY).toFixed(3)} days`);
-const grown = roseStage(oldSet, oldNow);
-check(`two and a half days on, between ${ROSE_BUD} and ${ROSE_FLOWER}, they are in bud in their season and in leaf out of it`,
-  grown.stage === (grown.blooms ? 'bud' : 'leafy'), `${grown.stage}, ${grown.blooms ? 'in season' : 'out of season'}`);
-const [againSet, againNow, wood] = said(island, 'ARCH_AGAIN').split(' ');
-check('picked up and set down again, its roses are planted again, and it is still of its wood', Math.abs(Number(againNow) - Number(againSet)) < 5 && wood === 'Oak',
-  `set ${againSet}, now ${againNow}, ${wood}`);
-const b = place('rose_arch', undefined, 'Oak');
-const browserSet = Number(b.set.split(' set ')[1]);
-check('and the browser plants the roses on an arch it sets down at the moment it does', Math.abs(browserSet - Date.now() / 1000) < 5, b.set);
+for (const kind of ARCHES) {
+  const made = Number(said(island, `${kind}_ARCH_MADE`));
+  const archRow = JSON.parse(said(island, `${kind}_ARCH_ROW`));
+  check(`${kind}: the ground read hands it over with the moment it was set down`, Math.abs(Number(archRow.set) - made) < 1e-3, `set ${archRow.set}, made_at ${made}`);
+  const reader = Game.create(4242);
+  reader.sawGround({ placed: [archRow] } as unknown as IslandGround);
+  const arch = [...reader.furniture.values()][0];
+  check(`${kind}: and the browser plants what climbs it at that moment`, arch?.setAt !== undefined && Math.abs((arch?.setAt ?? 0) - made) < 1e-3, `browser ${arch?.setAt}`);
+  check(`${kind}: just set down, it is bare`, roseStage(arch?.setAt, made + 60).stage === 'bare');
+  const [oldSet, oldNow] = said(island, `${kind}_ARCH_OLD`).split(' ').map(Number);
+  check(`${kind}: a night slept on the island does not move it`, Math.abs(oldNow - oldSet - 2.5 * DAY) < 5, `${((oldNow - oldSet) / DAY).toFixed(3)} days`);
+  const grown = roseStage(oldSet, oldNow);
+  check(`${kind}: two and a half days on, between ${ROSE_BUD} and ${ROSE_FLOWER}, they are in bud in their season and in leaf out of it`,
+    grown.stage === (grown.blooms ? 'bud' : 'leafy'), `${grown.stage}, ${grown.blooms ? 'in season' : 'out of season'}`);
+  const [againSet, againNow, wood] = said(island, `${kind}_ARCH_AGAIN`).split(' ');
+  check(`${kind}: picked up and set down again, it is planted again, and it is still of its wood`, Math.abs(Number(againNow) - Number(againSet)) < 5 && wood === 'Oak',
+    `set ${againSet}, now ${againNow}, ${wood}`);
+  const b = place(kind, undefined, 'Oak');
+  const browserSet = Number(b.set.split(' set ')[1]);
+  check(`${kind}: and the browser plants an arch it sets down at the moment it does`, Math.abs(browserSet - Date.now() / 1000) < 5, b.set);
+  // What pointing at it says names what grows on it.
+  const word = FURNITURE_BY_ID.get(kind)?.climber === 'lavender' ? 'lavender' : 'roses';
+  check(`${kind}: pointing at it names its ${word}`, roseSays(made, made + 60, FURNITURE_BY_ID.get(kind)?.climber).startsWith(`${word} bare`), roseSays(made, made + 60, FURNITURE_BY_ID.get(kind)?.climber));
+}
 // And the stages turn where the rule says they do: halfway through the eleventh day of the first spring, and of the first autumn.
 const at = YEAR_FROM + (SEASONS.indexOf('spring') * SEASON_DAYS + 10.5) * DAY;
 check(`in spring: bare, in leaf at ${ROSE_LEAFY} day, in bud at ${ROSE_BUD}, in flower at ${ROSE_FLOWER}`,

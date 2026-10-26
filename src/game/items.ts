@@ -490,6 +490,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   flagpole: { name: 'Flagpole', category: 'misc', weight: 8, decay: 5, description: 'Flag flies downwind: straight out in a gale, hanging in a calm. Dyed: your colour. On a settlement: the settlement\'s device.' },
   rose_arch: { name: 'Rose arch', category: 'misc', weight: 30, decay: 5, description: 'One tile across; walk through it. {rule}' },
   stone_rose_arch: { name: 'Stone rose arch', category: 'misc', weight: 60, decay: 3, description: 'One tile across; walk through it. {rule}' },
+  lavender_arch: { name: 'Lavender arch', category: 'misc', weight: 30, decay: 5, description: 'One tile across; walk through it. {rule}' },
+  stone_lavender_arch: { name: 'Stone lavender arch', category: 'misc', weight: 60, decay: 3, description: 'One tile across; walk through it. {rule}' },
   rope: { name: 'Rope', category: 'material', weight: 0.6, stackable: true, decay: 6, description: '{recipe.make_rope.wemp} wemp fibres, laid on a rope tool.' },
   thick_rope: { name: 'Thick rope', category: 'material', weight: 2.4, stackable: true, decay: 4, description: '{recipe.make_thick_rope.rope} ropes. Moors a hull, hangs a bucket down a shaft, carries a bridge span.' },
   onion: { name: 'Onion', category: 'food', weight: 0.15, stackable: true, food: 0.06, feeds: { greens: 0.04 } },

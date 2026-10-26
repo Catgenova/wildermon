@@ -1,5 +1,7 @@
 /**
- * The climbing roses on a rose arch, and how far they have grown.
+ * What climbs an arch -- roses on a rose arch, lavender on a lavender arch
+ * (`Climber`, `FurnitureDef.climber`) -- and how far it has grown. Both grow
+ * by the one rule here, the same days and the same seasons.
  *
  * Asked for with the pictures: an arch over a path that fills in over the days
  * after it goes up -- bare, then leafy, then in bud, then in flower, flowering
@@ -13,13 +15,18 @@
  */
 import { seasonAt, type Season } from '../world/calendar';
 import { DAY_SECONDS } from './pace';
-import { spanWords } from './words';
+import { capital, listed, spanWords } from './words';
+
+/** What is planted at an arch's feet and climbs it. */
+export type Climber = 'rose' | 'lavender';
+/** What it is called on the arch, for the line under its name and the rule. */
+export const CLIMBER_NAME: Record<Climber, string> = { rose: 'roses', lavender: 'lavender' };
 
 /** Days of the island's year after it is set down that an arch's roses are in leaf, in bud and in flower. */
 export const ROSE_LEAFY = 1;
 export const ROSE_BUD = 2;
 export const ROSE_FLOWER = 3;
-/** The seasons roses bud and flower in; the rest of the year a grown arch is in leaf. */
+/** The seasons roses and lavender bud and flower in (`FRUITING`, both cut in the same two); the rest of the year a grown arch is in leaf. */
 export const ROSE_SEASONS: readonly Season[] = ['spring', 'summer'];
 
 const DAY = DAY_SECONDS;
@@ -42,17 +49,25 @@ export function roseStage(setAt: number | undefined, now: number): { stage: Rose
   return { stage, days, blooms };
 }
 
-/** What the roses are doing and what they do next, for the line under an arch's name. */
-export function roseSays(setAt: number | undefined, now: number): string {
+const BLOOM_SEASONS = listed(ROSE_SEASONS);
+
+/** What an arch's roses (or its lavender) are doing and what they do next, for the line under its name. */
+export function roseSays(setAt: number | undefined, now: number, climber: Climber = 'rose'): string {
   const { stage, blooms } = roseStage(setAt, now);
   const at = setAt ?? now - ROSE_FLOWER * 10 * DAY;
+  const name = CLIMBER_NAME[climber];
   const next = (d: number, word: string): string => ` · ${word} in ${spanWords(at + d * DAY - now)}`;
-  if (stage === 'bare') return `roses bare${next(ROSE_LEAFY, 'in leaf')}`;
-  if (stage === 'leafy' && blooms) return `roses in leaf${next(ROSE_BUD, 'in bud')}`;
-  if (stage === 'leafy') return 'roses in leaf · they bud and flower in spring and summer';
-  if (stage === 'bud') return `roses in bud${next(ROSE_FLOWER, 'in flower')}`;
-  return 'roses in flower';
+  if (stage === 'bare') return `${name} bare${next(ROSE_LEAFY, 'in leaf')}`;
+  if (stage === 'leafy' && blooms) return `${name} in leaf${next(ROSE_BUD, 'in bud')}`;
+  if (stage === 'leafy') return `${name} in leaf · bud and flower in ${BLOOM_SEASONS}`;
+  if (stage === 'bud') return `${name} in bud${next(ROSE_FLOWER, 'in flower')}`;
+  return `${name} in flower`;
 }
 
-/** The rule, said once: for a piece's description and the help. */
-export const ROSES_RULE = `Roses: in leaf ${ROSE_LEAFY} ${ROSE_LEAFY === 1 ? 'day' : 'days'} after it is set down, in bud after ${ROSE_BUD} days, in flower after ${ROSE_FLOWER} days, in spring and summer; in leaf the rest of the year. Picking it up and setting it down restarts its roses.`;
+/** The rule for what climbs an arch, said once: for a piece's description and the help. */
+export const climberRule = (climber: Climber): string => {
+  const name = CLIMBER_NAME[climber];
+  return `${capital(name)}: in leaf ${ROSE_LEAFY} ${ROSE_LEAFY === 1 ? 'day' : 'days'} after it is set down, in bud after ${ROSE_BUD} days, in flower after ${ROSE_FLOWER} days, in ${BLOOM_SEASONS}; in leaf the rest of the year. Picking it up and setting it down restarts its ${name}.`;
+};
+export const ROSES_RULE = climberRule('rose');
+export const LAVENDER_RULE = climberRule('lavender');

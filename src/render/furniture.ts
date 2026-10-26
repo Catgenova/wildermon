@@ -1658,7 +1658,7 @@ const ARCH_X = 17.4;
 const ARCH_H = 21.5;
 const ARCH_RISE = 8;
 /** The leaves of a climbing rose, lit, mid and deep; its canes; and what it flowers in, by variety: the petals, their shade and the bud. */
-const ROSE_LEAF: RGB[] = [hex('#a6d49a'), hex('#6aa66e'), hex('#3d7250')];
+const ROSE_LEAF_GREEN: RGB[] = [hex('#a6d49a'), hex('#6aa66e'), hex('#3d7250')];
 /** A grapevine's leaves, lit, mid and deep; its wood; its grapes, and the bloom on them (`trellis`). */
 const VINE_LEAF: RGB[] = [hex('#a3cf73'), hex('#679f4f'), hex('#3c6a38')];
 const VINE_STEM: Paint = paintOf(hex('#6b5238'), 0.5);
@@ -1684,7 +1684,16 @@ export const vineTrim = (stage: 'none' | 'young' | 'waiting' | 'picked' | 'ripe'
  * as one (`trellis`).
  */
 const VINE_JOIN = 4 * VINE_VARIANTS;
-const ROSE_CANE: Paint = paintOf(hex('#7a8a52'), 0.5);
+const ROSE_CANE_GREEN: Paint = paintOf(hex('#7a8a52'), 0.5);
+/** Lavender trained up an arch instead: its leaves, greyed, its stems, and its spikes by variety, as the kit has them (`kit/rosearch.ts`). */
+const LAV_LEAF: RGB[] = [hex('#c4d6bf'), hex('#8aa892'), hex('#587462')];
+const LAV_STEM: Paint = paintOf(hex('#8b8466'), 0.5);
+const LAV_BLOOMS: Array<[RGB, RGB, RGB]> = [
+  [hex('#8a6fc4'), hex('#54418e'), hex('#cdc4da')],
+  [hex('#6c52b4'), hex('#3f2e80'), hex('#cdc4da')],
+  [hex('#8f84d6'), hex('#5850a2'), hex('#cdc4da')],
+  [hex('#9c70c8'), hex('#633f92'), hex('#cdc4da')],
+];
 const ROSE_BLOOMS: Array<[RGB, RGB, RGB]> = [
   [hex('#f4a3b8'), hex('#c8607c'), hex('#d4557a')],
   [hex('#dd5566'), hex('#9b2b3c'), hex('#a8283e')],
@@ -1712,14 +1721,16 @@ const roseOfTrim = (trim: number): { variety: number; days: number; blooms: bool
  * fill in from the foot up; the third, in their season, the buds come; and
  * then the flowers (`roses.ts`). Out of season a grown arch is in leaf.
  */
-function climbingRoses(sc: Scene, side: (q: number) => V3, face: number, trim: number): void {
+function climbingRoses(sc: Scene, side: (q: number) => V3, face: number, trim: number, lav = false): void {
   const { variety, days, blooms } = roseOfTrim(trim);
+  const ROSE_LEAF = lav ? LAV_LEAF : ROSE_LEAF_GREEN;
+  const ROSE_CANE = lav ? LAV_STEM : ROSE_CANE_GREEN;
   // How far up each side the leaves have come, and the canes ahead of them; then the buds, then the flowers.
   const leafTo = days < ROSE_LEAFY ? 0 : Math.min(1, 0.25 + (0.75 * (days - ROSE_LEAFY)) / (ROSE_BUD - ROSE_LEAFY));
   const caneTo = Math.min(1, 0.15 + (0.85 * days) / ROSE_LEAFY);
   const buds = blooms && days >= ROSE_BUD ? Math.min(1, 0.3 + (0.7 * (days - ROSE_BUD)) / (ROSE_FLOWER - ROSE_BUD)) : 0;
   const flowers = blooms && days >= ROSE_FLOWER;
-  const [petal, shade, bud] = ROSE_BLOOMS[variety];
+  const [petal, shade, bud] = (lav ? LAV_BLOOMS : ROSE_BLOOMS)[variety];
   const unit = Math.hypot(sc.v.ux, sc.v.vx);
   /** A number in 0..1 for a place on the arch, the same every time it is baked. */
   const jit = (i: number, k: number): number => {
@@ -2532,6 +2543,70 @@ interface Build {
   frame: number;
   /** Somebody is at her helm, with her tiller in hand: the tiller is drawn with them (`Seat.pivot` in `./figure`), not in her. */
   manned?: boolean;
+}
+
+/** A timber rose arch (`rose_arch`), or the same frame with lavender up it (`lavender_arch`). */
+function roseArch({ sc, wood, trim }: Build, lav: boolean): void {
+  sc.shadows = [[-18.6, 18.6, -3.8, 3.8]];
+  const X = ARCH_X, H = ARCH_H, R = ARCH_RISE, D = 2.8;
+  for (const x of [-X, X]) {
+    for (const y of [-D, D]) sc.box(x - 0.7, x + 0.7, y - 0.7, y + 0.7, 0, H + 0.4, wood);
+    // A trellis up the side: rails across between the posts, and two laths up it.
+    for (let k = 0; k < 6; k++) sc.rod([x, -D, 2.2 + k * 3.6], [x, D, 2.2 + k * 3.6], k === 0 || k === 5 ? 0.26 : 0.15, wood);
+    for (const y of [-D / 3, D / 3]) sc.rod([x, y, 1], [x, y, H], 0.15, wood);
+  }
+  const arc = (th: number): [number, number] => [X * Math.cos(th), H + R * Math.sin(th)];
+  const SEG = 12;
+  for (const y of [-D, D]) {
+    for (let k = 0; k < SEG; k++) {
+      const [x0, z0] = arc(Math.PI * (1 - k / SEG)), [x1, z1] = arc(Math.PI * (1 - (k + 1) / SEG));
+      sc.rod([x0, y, z0], [x1, y, z1], 0.55, wood);
+    }
+  }
+  for (let k = 0; k <= 10; k++) {
+    const [x, z] = arc(Math.PI * (1 - k / 10));
+    sc.rod([x, -D - 0.7, z + 0.55], [x, D + 0.7, z + 0.55], 0.28, wood);
+  }
+  climbingRoses(sc, (q) => {
+    if (q < 0.62) return [-X, 0, 1 + ((H - 1) * q) / 0.62];
+    const [x, z] = arc(Math.PI - (Math.PI / 2) * ((q - 0.62) / 0.38));
+    return [x, 0, z + 0.6];
+  }, D + 0.5, trim ?? roseTrim(0, 10, true), lav);
+}
+
+/** A stone rose arch (`stone_rose_arch`), or the same with lavender up it (`stone_lavender_arch`). */
+function stoneRoseArch({ sc, trim }: Build, lav: boolean): void {
+  sc.shadows = [[-20.2, 20.2, -3.8, 3.8]];
+  const dressed = bricks(sc, STONE, 1.7);
+  const P0 = 14.2, P1 = 19.6, D = 3, HP = 18.6;
+  for (const s of [-1, 1]) {
+    const [a, b] = s < 0 ? [-P1, -P0] : [P0, P1];
+    sc.box(a, b, -D, D, 0, HP, STONE, { front: dressed, back: dressed, left: dressed, right: dressed });
+    // The impost the arch springs from, a hand wider than the pier.
+    sc.box(a - 0.45, b + 0.45, -D - 0.45, D + 0.45, HP, HP + 1.3, STONE);
+  }
+  // The ring: eleven voussoirs from impost to impost, the middle one the keystone.
+  const z0 = HP + 1.3, ri = P0, ro = P0 + 3, rise = 9.6, riseO = rise + 3;
+  const inner = (th: number): [number, number] => [ri * Math.cos(th), z0 + rise * Math.sin(th)];
+  const outer = (th: number): [number, number] => [ro * Math.cos(th), z0 + riseO * Math.sin(th)];
+  const N = 11;
+  for (let k = 0; k < N; k++) {
+    const t0 = Math.PI * (1 - k / N), t1 = Math.PI * (1 - (k + 1) / N);
+    const key = k === (N - 1) / 2;
+    const d = key ? D + 0.35 : D, lift = key ? 0.8 : 0;
+    const [ix0, iz0] = inner(t0), [ix1, iz1] = inner(t1), [ox0, oz0] = outer(t0), [ox1, oz1] = outer(t1);
+    const tm = (t0 + t1) / 2;
+    // Each face only where it looks at you: the ring's two faces, its back, and under it where it turns toward you.
+    if (sc.sees(0, 1)) sc.panel([[ix0, d, iz0], [ix1, d, iz1], [ox1, d, oz1 + lift], [ox0, d, oz0 + lift]], STONE);
+    if (sc.sees(0, -1)) sc.panel([[ix0, -d, iz0], [ix1, -d, iz1], [ox1, -d, oz1 + lift], [ox0, -d, oz0 + lift]], STONE);
+    if (sc.faces(Math.cos(tm), 0, Math.sin(tm))) sc.panel([[ox0, -d, oz0 + lift], [ox1, -d, oz1 + lift], [ox1, d, oz1 + lift], [ox0, d, oz0 + lift]], STONE);
+    if (sc.faces(-Math.cos(tm), 0, -Math.sin(tm))) sc.panel([[ix0, -d, iz0], [ix1, -d, iz1], [ix1, d, iz1], [ix0, d, iz0]], STONE);
+  }
+  climbingRoses(sc, (q) => {
+    if (q < 0.6) return [-(P0 + P1) / 2, 0, 1 + ((HP - 1) * q) / 0.6];
+    const th = Math.PI - (Math.PI / 2) * ((q - 0.6) / 0.4);
+    return [((ri + ro) / 2) * Math.cos(th), 0, z0 + (rise + 1.5) * Math.sin(th) + 0.4];
+  }, D + 0.5, trim ?? roseTrim(0, 10, true), lav);
 }
 
 type Model = (b: Build) => void;
@@ -3558,66 +3633,10 @@ const MODELS: Record<string, Model> = {
     for (const z of [0.9, H * 0.5, H - 0.1]) sc.box(X0, X1, LY - 0.38, LY + 0.38, z - 0.4, z + 0.4, wood);
     grapevine(sc, t % VINE_JOIN, X0, X1, LY - 0.5, H);
   },
-  rose_arch: ({ sc, wood, trim }) => {
-    sc.shadows = [[-18.6, 18.6, -3.8, 3.8]];
-    const X = ARCH_X, H = ARCH_H, R = ARCH_RISE, D = 2.8;
-    for (const x of [-X, X]) {
-      for (const y of [-D, D]) sc.box(x - 0.7, x + 0.7, y - 0.7, y + 0.7, 0, H + 0.4, wood);
-      // A trellis up the side: rails across between the posts, and two laths up it.
-      for (let k = 0; k < 6; k++) sc.rod([x, -D, 2.2 + k * 3.6], [x, D, 2.2 + k * 3.6], k === 0 || k === 5 ? 0.26 : 0.15, wood);
-      for (const y of [-D / 3, D / 3]) sc.rod([x, y, 1], [x, y, H], 0.15, wood);
-    }
-    const arc = (th: number): [number, number] => [X * Math.cos(th), H + R * Math.sin(th)];
-    const SEG = 12;
-    for (const y of [-D, D]) {
-      for (let k = 0; k < SEG; k++) {
-        const [x0, z0] = arc(Math.PI * (1 - k / SEG)), [x1, z1] = arc(Math.PI * (1 - (k + 1) / SEG));
-        sc.rod([x0, y, z0], [x1, y, z1], 0.55, wood);
-      }
-    }
-    for (let k = 0; k <= 10; k++) {
-      const [x, z] = arc(Math.PI * (1 - k / 10));
-      sc.rod([x, -D - 0.7, z + 0.55], [x, D + 0.7, z + 0.55], 0.28, wood);
-    }
-    climbingRoses(sc, (q) => {
-      if (q < 0.62) return [-X, 0, 1 + ((H - 1) * q) / 0.62];
-      const [x, z] = arc(Math.PI - (Math.PI / 2) * ((q - 0.62) / 0.38));
-      return [x, 0, z + 0.6];
-    }, D + 0.5, trim ?? roseTrim(0, 10, true));
-  },
-  stone_rose_arch: ({ sc, trim }) => {
-    sc.shadows = [[-20.2, 20.2, -3.8, 3.8]];
-    const dressed = bricks(sc, STONE, 1.7);
-    const P0 = 14.2, P1 = 19.6, D = 3, HP = 18.6;
-    for (const s of [-1, 1]) {
-      const [a, b] = s < 0 ? [-P1, -P0] : [P0, P1];
-      sc.box(a, b, -D, D, 0, HP, STONE, { front: dressed, back: dressed, left: dressed, right: dressed });
-      // The impost the arch springs from, a hand wider than the pier.
-      sc.box(a - 0.45, b + 0.45, -D - 0.45, D + 0.45, HP, HP + 1.3, STONE);
-    }
-    // The ring: eleven voussoirs from impost to impost, the middle one the keystone.
-    const z0 = HP + 1.3, ri = P0, ro = P0 + 3, rise = 9.6, riseO = rise + 3;
-    const inner = (th: number): [number, number] => [ri * Math.cos(th), z0 + rise * Math.sin(th)];
-    const outer = (th: number): [number, number] => [ro * Math.cos(th), z0 + riseO * Math.sin(th)];
-    const N = 11;
-    for (let k = 0; k < N; k++) {
-      const t0 = Math.PI * (1 - k / N), t1 = Math.PI * (1 - (k + 1) / N);
-      const key = k === (N - 1) / 2;
-      const d = key ? D + 0.35 : D, lift = key ? 0.8 : 0;
-      const [ix0, iz0] = inner(t0), [ix1, iz1] = inner(t1), [ox0, oz0] = outer(t0), [ox1, oz1] = outer(t1);
-      const tm = (t0 + t1) / 2;
-      // Each face only where it looks at you: the ring's two faces, its back, and under it where it turns toward you.
-      if (sc.sees(0, 1)) sc.panel([[ix0, d, iz0], [ix1, d, iz1], [ox1, d, oz1 + lift], [ox0, d, oz0 + lift]], STONE);
-      if (sc.sees(0, -1)) sc.panel([[ix0, -d, iz0], [ix1, -d, iz1], [ox1, -d, oz1 + lift], [ox0, -d, oz0 + lift]], STONE);
-      if (sc.faces(Math.cos(tm), 0, Math.sin(tm))) sc.panel([[ox0, -d, oz0 + lift], [ox1, -d, oz1 + lift], [ox1, d, oz1 + lift], [ox0, d, oz0 + lift]], STONE);
-      if (sc.faces(-Math.cos(tm), 0, -Math.sin(tm))) sc.panel([[ix0, -d, iz0], [ix1, -d, iz1], [ix1, d, iz1], [ix0, d, iz0]], STONE);
-    }
-    climbingRoses(sc, (q) => {
-      if (q < 0.6) return [-(P0 + P1) / 2, 0, 1 + ((HP - 1) * q) / 0.6];
-      const th = Math.PI - (Math.PI / 2) * ((q - 0.6) / 0.4);
-      return [((ri + ro) / 2) * Math.cos(th), 0, z0 + (rise + 1.5) * Math.sin(th) + 0.4];
-    }, D + 0.5, trim ?? roseTrim(0, 10, true));
-  },
+  rose_arch: (a) => roseArch(a, false),
+  lavender_arch: (a) => roseArch(a, true),
+  stone_rose_arch: (a) => stoneRoseArch(a, false),
+  stone_lavender_arch: (a) => stoneRoseArch(a, true),
 
   /*
    * The cloth trade. The spindle is a great wheel: a bench on three legs with

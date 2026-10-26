@@ -603,7 +603,7 @@ out.push(`alter table furniture_def add column if not exists bed real;`);
 out.push(`alter table furniture_def add column if not exists den int;`);
 /* Crate spots on a rack's deck: its footprint is what it carries. */
 out.push(`alter table furniture_def add column if not exists crates int;`);
-/* Climbing roses grow on it from the moment it is set down, which the ground read hands over for it. */
+/* Climbing roses or lavender grow on it (`FurnitureDef.climber`) from the moment it is set down, which the ground read hands over for it. */
 out.push(`alter table furniture_def add column if not exists roses boolean not null default false;`);
 /* What a barrel of water becomes if you leave it alone. */
 out.push(`create table if not exists brew_def (
@@ -2281,7 +2281,7 @@ for (const f of FURNITURE as unknown as A[]) {
   if (f.trash !== undefined) out.push(`update furniture_def set trash = ${q(f.trash)} where id = ${q(f.id)};`);
   if (f.bed !== undefined) out.push(`update furniture_def set bed = ${q(f.bed)} where id = ${q(f.id)};`);
   if (f.den !== undefined) out.push(`update furniture_def set den = ${q(f.den)} where id = ${q(f.id)};`);
-  if (f.roses) out.push(`update furniture_def set roses = true where id = ${q(f.id)};`);
+  if (f.climber) out.push(`update furniture_def set roses = true where id = ${q(f.id)};`);
   if (f.crates !== undefined) out.push(`update furniture_def set crates = ${q(f.crates)} where id = ${q(f.id)};`);
   if (f.cart) out.push(`update furniture_def set cart = true where id = ${q(f.id)};`);
   const pace = f.pace as { skill: string; by: number; reach: number } | undefined;
