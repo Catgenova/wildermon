@@ -26,9 +26,11 @@
  *   * `Island.firstJoin` says first only when the island has no body of this
  *     account and says how big it is, and says not first when a read fails;
  *   * in Chromium (`stonestart-page.ts`), the chooser on the boot card shows
- *     the five, by name and where each stands, for a first join only, and
- *     answers with the one clicked. Needs a Chromium as `noplan.ts` does;
- *     without one that part is skipped, unless `STONESTART_STRICT` is set.
+ *     the five, by name and where each stands, each with its picture as the
+ *     renderer draws it (a stone on its grass, no two alike), for a first
+ *     join only, and answers with the one clicked. Needs a Chromium as
+ *     `noplan.ts` does; without one that part is skipped, unless
+ *     `STONESTART_STRICT` is set.
  *
  * Runs against the database the suite leaves behind; the island half is
  * rolled back.
@@ -46,7 +48,7 @@ import {
 } from '../../src/game/runestones';
 import { Island } from '../../src/net/island';
 import { supabase } from '../../src/net/supabase';
-import type { StoneCard } from './stonestart-page';
+import type { StoneCard, StonePictures } from './stonestart-page';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -253,7 +255,7 @@ if (!browser) {
     tab.on('pageerror', (e) => thrown.push(e.message));
     await tab.setContent('<html><body></body></html>');
     await tab.addScriptTag({ content: bundled.outputFiles[0].text });
-    type Page = { show: (first: boolean, size: number) => Promise<StoneCard>; pick: (id: string) => Promise<{ answered: string | null; left: number }> };
+    type Page = { show: (first: boolean, size: number) => Promise<StoneCard>; pictures: () => Promise<StonePictures>; pick: (id: string) => Promise<{ answered: string | null; left: number }> };
     const show = (first: boolean, size: number): Promise<StoneCard> =>
       tab.evaluate(([f, n]) => (window as unknown as { stonestart: Page }).stonestart.show(f as boolean, n as number), [first, size]);
     const back = await show(false, 4096);
@@ -265,6 +267,10 @@ if (!browser) {
     check(`drawn: a first join, the ${RUNESTONES.length} stones on the boot card, by name and where each stands`,
       JSON.stringify(first.stones) === JSON.stringify(want) && !first.at_once, first.stones.join('; '));
     check(`drawn: headed with the gap, ${START_GAP} tiles`, first.head === `Starting Runestone: ${START_GAP} tiles from it`, first.head ?? '');
+    const pics = await tab.evaluate(() => (window as unknown as { stonestart: Page }).stonestart.pictures());
+    const shares = pics.painted.map((p) => Number(p.split('|')[1]));
+    check(`drawn: each of the ${RUNESTONES.length} with its picture, a stone on its grass, no two alike`,
+      pics.painted.length === RUNESTONES.length && shares.every((k) => k >= 0.01 && k < 0.9) && pics.distinct, `${pics.painted.join('; ')} distinct ${pics.distinct}`);
     const picked = await tab.evaluate(() => (window as unknown as { stonestart: Page }).stonestart.pick('wardenfall'));
     check('drawn: a stone clicked is the answer, and the chooser goes', picked.answered === 'wardenfall' && picked.left === 0, JSON.stringify(picked));
     check('drawn: nothing thrown', thrown.length === 0, thrown.join('; '));

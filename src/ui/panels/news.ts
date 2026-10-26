@@ -4012,6 +4012,11 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => ['Fixed: altar casts (Light of the dawn and the rest): cast where you stand at the altar (was: "too far" from its far side).'],
   },
+  {
+    n: 342,
+    day: '2026-10-26',
+    lines: () => ['Changed: Runestone picker: a picture of each stone.'],
+  },
 ];
 
 /**
