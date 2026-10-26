@@ -278,7 +278,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_input_note(uuid,jsonb)",
     "rpc_invite(uuid,uuid,uuid)",
     "rpc_invite_answer(uuid,uuid,boolean)",
-    "rpc_join(uuid,text)",
+    "rpc_join(uuid,text,text)",
     "rpc_join_answer(uuid,uuid,uuid,boolean)",
     "rpc_join_ask(uuid,integer,integer)",
     "rpc_join_withdraw(uuid,uuid)",

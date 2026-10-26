@@ -3331,6 +3331,24 @@ jobs:
           npx esbuild supabase/test/telestone.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/telestone.mjs --log-level=error
           node node_modules/.cache/telestone.mjs
+      - name: A first join picks a Runestone and starts 2 tiles from it
+        if: matrix.shard == 4
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          STONESTART_STRICT: '1'
+        run: |
+          # "new players should select between the 5 runestones for spawning,
+          # and spawn 2 tiles away from that stone on selection". A newcomer
+          # naming each stone starts on the first free tile of the ring 2 tiles
+          # out from its edge, the browser's ring in the browser's order, on a
+          # tile a body stands on; that ring built on, the next ring out. A
+          # stone that is not one is refused at the door; somebody already on
+          # the island stays where they were; no stone, or a test's world, is
+          # the spawn. Drawn in Chrome: the five on the boot card, by name and
+          # where each stands, for a first join only.
+          npx esbuild supabase/test/stonestart.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/stonestart.mjs --log-level=error
+          node node_modules/.cache/stonestart.mjs
       - name: Enchanting, the paper press and three melee enchantments, the same on both sides
         if: matrix.shard == 4
         run: |

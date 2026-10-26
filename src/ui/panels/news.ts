@@ -64,7 +64,7 @@ import { FIELD_LAYOUTS } from '../../render/crops';
 import { TURNS } from '../../render/view';
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
-import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
+import { RUNESTONES, START_GAP, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { BAG_CARRY as BAG_CARRY_293 } from '../../game/gear';
 import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
@@ -3998,6 +3998,13 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => [
       'Fixed: trees and bushes: no pale disc at the foot; shade runs to the trunk.',
+    ],
+  },
+  {
+    n: 340,
+    day: '2026-10-26',
+    lines: () => [
+      `New: first join: pick one of the ${num(RUNESTONES.length)} Runestones; you start ${num(START_GAP)} tiles from it (was: the island's spawn).`,
     ],
   },
 ];

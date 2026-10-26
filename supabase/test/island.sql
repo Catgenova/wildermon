@@ -4267,7 +4267,7 @@ reset role;
 select '554. what a stranger may call: '
      || string_agg(f || ' ' || case when has_function_privilege('anon', f, 'execute') then 'yes' else 'no' end,
                    ', ' order by f)
-  from unnest(array['rpc_name_free(text)', 'rpc_my_name()', 'rpc_join(uuid,text)', 'rpc_act(uuid,text,jsonb,int)']) f;
+  from unnest(array['rpc_name_free(text)', 'rpc_my_name()', 'rpc_join(uuid,text,text)', 'rpc_act(uuid,text,jsonb,int)']) f;
 
 /*
  * And what a stranger may read, which is the question this file did not think

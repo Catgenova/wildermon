@@ -166,7 +166,7 @@ import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
-import { LANDING_STAND, RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
+import { LANDING_STAND, RUNESTONES, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
   BUSH_DEFS, groundRoll, ROCK_VARIANTS, SLAB_VARIANTS, STEPS_BRICKS, STEPS_LEAST, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS, STEPS_TWIST, TILE_DEFS, TileType,
   TREE_DAWN_UTC, TREE_DEFS, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS,
@@ -2185,6 +2185,9 @@ export function helpText(): string {
     <ul>
       <li>${RUNESTONES.length} <b>Runestones</b> on the Crescent's inner bay shore, ${STONE_SPAN} by ${STONE_SPAN} tiles each:
       ${listed(RUNESTONES.map((r) => `<b>${r.name}</b> (${r.x}, ${r.y})`))}. On the map from the start.</li>
+      <li>First join on the island: pick a Runestone (${listed(RUNESTONES.map((r) => `${r.name}, ${r.place.toLowerCase()}`))}); you start ${START_GAP} tiles from its edge,
+      on the nearest ring ${START_GAP} to ${START_GAP + START_SPARE} tiles out with a free tile (as a Telestone's: dry, no building, no more than ${metres(LANDING_STAND)} m between highest and lowest corner).
+      Never asked again.</li>
       <li>Impassable; nothing dug, built, planted or set down on its ${STONE_SPAN * STONE_SPAN} tiles. Hover or Examine names it.</li>
       <li>Meditation gain ${mul(SIT_WORTH.stone)} on a rug within ${SIT_WORTH.stoneReach} tiles (Meditation, below).</li>
       <li><b>Telestone</b>: ${bill('make_telestone')}, ${workedAt('make_telestone')}. <b>Travel to a Runestone</b> on it in the pack, pick a stone: instant, onto a free tile beside it
