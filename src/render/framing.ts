@@ -630,6 +630,10 @@ function coursesOn(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy: n
 export const PILASTER_PROUD = 0.025;
 /** How much further out than its shaft a pilaster's base and head stand, in tiles. */
 const PILASTER_DRESS = 0.016;
+/** A pilaster's head in a material: how much further out than its shaft it stands, and how deep it is. */
+export function pilasterHead(material: string): { reach: number; deep: number } {
+  return stony(material) ? { reach: PILASTER_DRESS, deep: 1.6 } : { reach: 0.014, deep: 2.4 };
+}
 /** How far out from its corner the widest piece of a column standing free reaches, in tiles: a pillar's abacus. */
 const COLUMN_REACH = 0.088;
 
@@ -693,7 +697,8 @@ function pilasterBody(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy
     else block(ctx, cam, cx, cy, r + 0.012, h0, h0 + 1.2, pal.dark, pal.body, pal.line, zoom);
     block(ctx, cam, cx, cy, r, h0 + 1.2, h1 - 2.4, pal.body, pal.hi, pal.line, zoom);
     chamferLights(ctx, cam, cx, cy, r, h0 + 1.6, h1 - 2.8, pal);
-    block(ctx, cam, cx, cy, r + 0.014, h1 - 2.4, h1, pal.dark, pal.body, pal.line, zoom);
+    const head = pilasterHead(material);
+    block(ctx, cam, cx, cy, r + head.reach, h1 - head.deep, h1, pal.dark, pal.body, pal.line, zoom);
     return;
   }
   if (ROUND.has(material)) {
@@ -714,13 +719,15 @@ function pilasterBody(ctx: CanvasRenderingContext2D, cam: Camera, cx: number, cy
         }
       }
     }
-    block(ctx, cam, cx, cy, r + 0.008, h1 - 3, h1 - 1.6, pal.dress, pal.dressHi, pal.line, zoom);
-    block(ctx, cam, cx, cy, r + PILASTER_DRESS, h1 - 1.6, h1, pal.dress, pal.dress, pal.line, zoom);
+    const head = pilasterHead(material);
+    block(ctx, cam, cx, cy, r + 0.008, h1 - 3, h1 - head.deep, pal.dress, pal.dressHi, pal.line, zoom);
+    block(ctx, cam, cx, cy, r + head.reach, h1 - head.deep, h1, pal.dress, pal.dress, pal.line, zoom);
   } else {
     block(ctx, cam, cx, cy, r + PILASTER_DRESS, h0, h0 + 1.4, pal.dress, pal.dressHi, pal.line, zoom);
     block(ctx, cam, cx, cy, r, h0 + 1.4, h1 - 1.6, pal.body, pal.hi, pal.line, zoom);
     coursesOn(ctx, cam, cx, cy, r, h0 + 2.4, h1 - 2, material, pal);
-    block(ctx, cam, cx, cy, r + PILASTER_DRESS, h1 - 1.6, h1, pal.dress, pal.dressHi, pal.line, zoom);
+    const head = pilasterHead(material);
+    block(ctx, cam, cx, cy, r + head.reach, h1 - head.deep, h1, pal.dress, pal.dressHi, pal.line, zoom);
   }
 }
 

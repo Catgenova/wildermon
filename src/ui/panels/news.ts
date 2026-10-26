@@ -4053,6 +4053,15 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => ['Changed: pools, ponds and lakes not joined to the sea: still edge, no foam, waves or wet band.'],
   },
+  {
+    n: 348,
+    day: '2026-10-26',
+    lines: () => [
+      'Fixed: walls: corners, caps and window joins close cleanly: one corner stone where two caps meet, no hole at the corner of a storey set back, '
+        + 'a pilaster\'s head level with the caps, stained glass set in the band, cap and plinth of the wall beside it '
+        + '(was: caps overlapped, gaps at corners, a pale strip down corners, a cream frame round stained glass).',
+    ],
+  },
 ];
 
 /**
