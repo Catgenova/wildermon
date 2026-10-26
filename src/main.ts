@@ -69,6 +69,7 @@ import { smeltSeconds } from './game/metal';
 import { needsIron } from './world/ore';
 import { tileUses } from './ui/tileinfo';
 import { startIsland } from './net/play';
+import { pickStone } from './ui/stonestart';
 import { watchErrors } from './net/errors';
 import { mountSavingBanner } from './ui/saving';
 import type { Island } from './net/island';
@@ -190,7 +191,7 @@ function cannotReach(why: string, stale = false): void {
 }
 // Before anything that could throw: what goes wrong from here on is written down (see `errors.ts`).
 watchErrors();
-const started = await startIsland(params, boot.say).catch((e: unknown) => {
+const started = await startIsland(params, boot.say, (stones) => pickStone(document.querySelector('#boot .boot-card'), stones)).catch((e: unknown) => {
   boot.stop();
   cannotReach(e instanceof Error ? e.message : 'The island keeper did not answer.', e instanceof StaleBuild);
   // Nothing past here runs without an island: the page stays on its Retry.

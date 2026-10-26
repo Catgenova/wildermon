@@ -17,7 +17,7 @@ import { generateAtlasWorld, loadAtlas } from '../world/atlas-world';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../game/actions';
 import { hiddenAsk } from '../game/gates';
 import { swirlIn, type Swirl } from '../game/motes';
-import { TELESTONE_KEY } from '../game/runestones';
+import { startChoices, TELESTONE_KEY, type Runestone, type RunestoneId } from '../game/runestones';
 import { runeGatesHeld, sawGateFolk } from '../game/runegate';
 import { isFightJob, isFightStance } from '../game/fight';
 import { FIGHT_BACK_GOES } from '../game/creatures';
@@ -96,7 +96,10 @@ async function homeIsland(): Promise<string | null> {
   return ((data ?? {}) as { island?: string | null }).island ?? null;
 }
 
-export async function startIsland(params: URLSearchParams, tell: Telling): Promise<Started> {
+/** How a first join is shown the Runestones and answers with the one it starts beside (`pickStone`). */
+export type StonePick = (stones: readonly Runestone[]) => Promise<RunestoneId | null>;
+
+export async function startIsland(params: URLSearchParams, tell: Telling, pick?: StonePick): Promise<Started> {
   const founding = params.get('found');
   tell('auth');
   /*
@@ -223,8 +226,21 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   }
 
   tell('join');
+  /*
+   * A first join on an island the stones stand on picks the Runestone it
+   * starts beside (`startChoices`); somebody coming back never sees it.
+   */
+  let stone: RunestoneId | null = null;
+  if (pick) {
+    const { first, size } = await island.firstJoin(id);
+    const stones = startChoices(first, size);
+    if (stones.length) {
+      tell('join', 'Runestone');
+      stone = await pick(stones);
+    }
+  }
   try {
-    await island.join(id, name);
+    await island.join(id, name, stone);
   } catch (e) {
     // Barred: the landing page says until when, rather than a Retry that cannot work.
     if (e instanceof Error && isBarred(e.message.replace(/^The island would not have us: /, ''))) return sentOff(id);

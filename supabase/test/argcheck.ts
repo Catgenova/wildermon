@@ -117,6 +117,7 @@ const refused: Array<[string, string, string]> = [
   ['rpc_set_look', `rpc_set_look(${lit({ skin: 5 })})`, 'Bad request: rpc_set_look p_look.skin: want text.'],
   ['rpc_settle', `rpc_settle(null, $1, null, false, ${lit(Array.from({ length: 501 }, (_, i) => `goal${i}`))})`, 'Bad request: rpc_settle p_ticked: too many.'],
   ['rpc_settle', `rpc_settle(null, $1, null, false, ${lit({ goal: true })})`, 'Bad request: rpc_settle p_ticked: want a list.'],
+  ['rpc_join', `rpc_join($1, 'Arjen', 'atlantis')`, 'Bad request: rpc_join p_stone: not a Runestone.'],
 ];
 
 /* ---- the island ----------------------------------------------------------------------------------- */

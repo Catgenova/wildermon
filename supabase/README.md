@@ -912,7 +912,7 @@ execute away from everybody and hands it back to four:
 
 | | |
 |---|---|
-| `rpc_join(world, name)` | come ashore, or come back to the body you left |
+| `rpc_join(world, name, stone)` | come ashore (a first join starts 2 tiles from the Runestone `stone`, or at the spawn without one), or come back to the body you left |
 | `rpc_move(world, x, y, level)` | say where you have walked to, believed only as far as the clock allows |
 | `rpc_act(world, action, target, times)` | ask to do something |
 | `rpc_sweep()` | finish what people walked away from |

@@ -1526,7 +1526,31 @@ export class Island {
    * from psql. It was `rpc_land` until the `rpc_` prefix handed every account
    * a grant to pull a hundred and thirty-eight megabytes of it in a loop.
    */
-  async join(worldId: string, name: string): Promise<void> {
+  /**
+   * Whether this account has no body on the island yet, and the island how
+   * many tiles across it is: what says whether a first join picks its
+   * Runestone (`startChoices`). Two reads the account may make (a body's own
+   * row on `player`, the island's on `world`), side by side; either one that
+   * cannot be read says nothing is known, and the join goes on as before.
+   */
+  async firstJoin(worldId: string): Promise<{ first: boolean; size: number }> {
+    const uid = await signIn();
+    const sb = supabase();
+    const [body, isle] = await Promise.all([
+      sb.from('player').select('uid').eq('world_id', worldId).eq('uid', uid).limit(1),
+      sb.from('world').select('size').eq('id', worldId).limit(1),
+    ]);
+    const size = Number((isle.data as Array<{ size?: unknown }> | null)?.[0]?.size) || 0;
+    if (body.error || isle.error || !Array.isArray(body.data) || !size) return { first: false, size };
+    return { first: body.data.length === 0, size };
+  }
+
+  /**
+   * `stone`: the Runestone a first join starts beside (`rpc_join`'s `p_stone`,
+   * `START_GAP` tiles from its edge); left out, or for somebody already on the
+   * island, the island's own spawn or where the body stands.
+   */
+  async join(worldId: string, name: string, stone: string | null = null): Promise<void> {
     this.uid = await signIn();
     const sb = supabase();
     /*
@@ -1537,7 +1561,7 @@ export class Island {
     const early = this.buildEarly ? await this.buildEarly : 'unasked';
     this.buildEarly = null;
     if ((early === 'unasked' ? await this.buildSaid() : early) === 'stale') throw new StaleBuild();
-    const { data, error } = await sb.rpc('rpc_join', { p_world: worldId, p_name: name });
+    const { data, error } = await sb.rpc('rpc_join', stone ? { p_world: worldId, p_name: name, p_stone: stone } : { p_world: worldId, p_name: name });
     if (error) throw new Error(`The island would not have us: ${error.message}`);
     const got = data as { world: WorldRow; you: PlayerRow; new: boolean };
     this.info = got.world;

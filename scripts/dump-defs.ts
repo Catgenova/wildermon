@@ -166,7 +166,7 @@ import {
   TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
 } from '../src/game/tracking';
 import {
-  LANDING, LANDING_STAND, RUNESTONES, STONE_CHART, STONE_GUARDED, STONE_HALF, STONE_LEAST, TELE_FAR, TELE_FAST, TELE_GRACE, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW,
+  LANDING, LANDING_STAND, RUNESTONES, START_RING, STONE_CHART, STONE_GUARDED, STONE_HALF, STONE_LEAST, TELE_FAR, TELE_FAST, TELE_GRACE, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW,
   TELESTONE, TELESTONE_SAID, TRAVEL,
 } from '../src/game/runestones';
 
@@ -2155,6 +2155,8 @@ out.push(`create or replace function track_point(p_points int, p_i int) returns 
  */
 out.push(`create or replace function runestones() returns table (ord int, id text, name text, x int, y int) language sql immutable as $fn$ values ${RUNESTONES.map((r, i) => `(${i}, ${q(r.id)}, ${q(r.name)}, ${r.x}, ${r.y})`).join(', ')} $fn$;`);
 out.push(`create or replace function landing_ring() returns table (k int, dx int, dy int) language sql immutable as $fn$ values ${LANDING.map(([dx, dy], i) => `(${i}, ${dx}, ${dy})`).join(', ')} $fn$;`);
+// Where a body joining for the first time starts round the stone it picked (`START_RING`), ring by ring.
+out.push(`create or replace function start_ring() returns table (k int, dx int, dy int) language sql immutable as $fn$ values ${START_RING.map(([dx, dy], i) => `(${i}, ${dx}, ${dy})`).join(', ')} $fn$;`);
 out.push(`create or replace function stone_guarded(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${[...STONE_GUARDED].sort().map(q).join(', ')}]::text[]) $fn$;`);
 out.push(`create or replace function telestone_item() returns text language sql immutable as $fn$ select ${q(TELESTONE)} $fn$;`);
 out.push(`create or replace function telestone_action() returns text language sql immutable as $fn$ select ${q(TRAVEL)} $fn$;`);

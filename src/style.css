@@ -418,6 +418,51 @@ body {
   cursor: pointer;
 }
 
+/* A first join's Runestone (src/ui/stonestart.ts): the five, a button each, name and where it stands. */
+.boot-stones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.boot-stones-head {
+  opacity: 0.8;
+  margin-bottom: 0.15rem;
+}
+
+.boot-stone {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.45rem 0.8rem;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(233, 225, 207, 0.3);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.boot-stone:hover,
+.boot-stone:focus-visible {
+  background: rgba(158, 195, 122, 0.18);
+  border-color: #9ec37a;
+  outline: none;
+}
+
+.boot-stone b {
+  font-weight: 600;
+}
+
+.boot-stone span {
+  opacity: 0.7;
+  font-size: 0.9em;
+}
+
 .boot-done {
   margin: 0;
   padding: 0;

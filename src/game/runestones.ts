@@ -45,6 +45,8 @@ export type RunestoneId = (typeof RUNESTONE_IDS)[number];
 export interface Runestone {
   id: RunestoneId;
   name: string;
+  /** Where on the inner bay it stands, as the first-join chooser labels it. */
+  place: string;
   /** The centre tile of its three by three, on the chart's 4096 island. */
   x: number;
   y: number;
@@ -53,15 +55,11 @@ export interface Runestone {
 /** Where they stand on the island, 4096 tiles a side: each on the shore of the Crescent's inner bay. */
 export const RUNESTONES: readonly Runestone[] = [
   // The north shore, between the two inlets.
-  { id: 'crownstone', name: 'The Crownstone', x: 2152, y: 2948 },
-  // The west shore.
-  { id: 'mossmere', name: 'Mossmere Stone', x: 1606, y: 3004 },
-  // The east shore.
-  { id: 'harrowmark', name: 'Harrowmark', x: 2550, y: 3000 },
-  // The southwest point.
-  { id: 'wardenfall', name: 'The Wardenfall', x: 1462, y: 3182 },
-  // The southeast point.
-  { id: 'sunreach', name: 'Sunreach Stone', x: 2768, y: 3175 },
+  { id: 'crownstone', name: 'The Crownstone', place: 'North shore', x: 2152, y: 2948 },
+  { id: 'mossmere', name: 'Mossmere Stone', place: 'West shore', x: 1606, y: 3004 },
+  { id: 'harrowmark', name: 'Harrowmark', place: 'East shore', x: 2550, y: 3000 },
+  { id: 'wardenfall', name: 'The Wardenfall', place: 'Southwest point', x: 1462, y: 3182 },
+  { id: 'sunreach', name: 'Sunreach Stone', place: 'Southeast point', x: 2768, y: 3175 },
 ];
 export const RUNESTONE_BY_ID: ReadonlyMap<string, Runestone> = new Map(RUNESTONES.map((s) => [s.id, s]));
 
@@ -170,14 +168,46 @@ export const TELE_REST_STEP = (TELE_SLOW - TELE_FAST) / (TELE_QL_HIGH - TELE_QL_
  * the side nearest the screen's foot (south) first. The island's
  * `landing_ring`, which the defs dump writes from this.
  */
-export const LANDING: ReadonlyArray<readonly [number, number]> = (() => {
+export const LANDING: ReadonlyArray<readonly [number, number]> = rings(1, 3);
+
+/**
+ * The square rings `from` to `to` tiles out from a stone's edge, as offsets
+ * from its centre, in the order they are tried: ring by ring outwards, within
+ * a ring the middles of its sides first, the south side first.
+ */
+function rings(from: number, to: number): ReadonlyArray<readonly [number, number]> {
   const out: Array<[number, number, number]> = [];
-  for (let r = STONE_HALF + 1; r <= STONE_HALF + 3; r++) {
+  for (let r = STONE_HALF + from; r <= STONE_HALF + to; r++) {
     for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r) out.push([dx, dy, r]);
   }
   out.sort((a, b) => a[2] - b[2] || (Math.abs(a[0]) + Math.abs(a[1])) - (Math.abs(b[0]) + Math.abs(b[1])) || b[1] - a[1] || a[0] - b[0]);
   return out.map(([dx, dy]) => [dx, dy] as const);
-})();
+}
+
+/* ---- Where a newcomer starts ------------------------------------------------------------------- */
+
+/**
+ * Tiles from a stone's edge that a body joining an island for the first time
+ * starts, at the stone it picked: the ring `START_GAP` out (Chebyshev, so
+ * `STONE_HALF + START_GAP` from its centre tile), and when nothing on it is
+ * free, the next ring out, up to `START_SPARE` rings further. The island's
+ * `start_ring`, which the defs dump writes from `START_RING`; `rpc_join`'s
+ * `p_stone`.
+ */
+export const START_GAP = 2;
+/** Rings past `START_GAP` tried when nothing on it is free; past them all, the island's spawn. */
+export const START_SPARE = 4;
+/** The tiles a newcomer may start on round its stone, in the order they are tried, as offsets from its centre. */
+export const START_RING: ReadonlyArray<readonly [number, number]> = rings(START_GAP, START_GAP + START_SPARE);
+
+/**
+ * The stones a body joining an island picks between: every one, for a first
+ * join on a world the stones stand on; none for somebody already on it, or on
+ * a test's world.
+ */
+export function startChoices(first: boolean, size: number): readonly Runestone[] {
+  return first && hasRunestones(size) ? RUNESTONES : [];
+}
 
 /**
  * How near a stone's centre tile, each way, counts as standing beside it for
