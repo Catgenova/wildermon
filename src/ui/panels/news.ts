@@ -4092,8 +4092,8 @@ export const NEWS: News[] = [
   {
     n: 353,
     day: '2026-10-27',
-    lines: () => ['Changed: work post fallen, pulled up or stood down: its worker goes 1. empty wildermon crate in your pack; 2. follows you, set down beside you; '
-      + '3. your settlement, if a working slot is free; 4. wild (was: followed you from the post, left where it stood; settlement over its worker cap).'],
+    lines: () => ['Changed: work post fallen, pulled up or stood down: its worker goes, first that applies: empty wildermon crate in your pack; follows you, set down beside you; '
+      + 'your settlement, if a working slot is free; wild (was: followed you from the post, left where it stood; settlement over its worker cap).'],
   },
 ];
 
