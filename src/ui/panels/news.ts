@@ -4089,6 +4089,12 @@ export const NEWS: News[] = [
     lines: () => ['Fixed: ponds: water meets the bank at every edge and corner; ground above the water shaded by its own slope '
       + '(was: a rock-coloured gap between the water and the land at the near edges and corners).'],
   },
+  {
+    n: 353,
+    day: '2026-10-27',
+    lines: () => ['Changed: work post fallen, pulled up or stood down: its worker goes 1. empty wildermon crate in your pack; 2. follows you, set down beside you; '
+      + '3. your settlement; 4. wild (was: followed you from the post when nothing did, left wherever the post stood).'],
+  },
 ];
 
 /**

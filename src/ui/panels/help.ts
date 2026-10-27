@@ -1975,8 +1975,8 @@ export function helpText(): string {
       <li>Loads go into anything with room inside that circle; with nothing there, all the way home.</li>
       <li>Hungry: it eats the lowest-QL thing of its diet from a container <b>you made</b> inside that circle, as a settlement worker does from its settlement's.</li>
       <li><b>Rots where it stands</b>: <b>${dur(POST_LIFE_MIN)}</b> (roughest) to <b>${dur(POST_LIFE_MAX)}</b> (best); leans as it goes; one warning near the end.</li>
-      <li>When it falls, its worker: <b>returns to you</b> if you walk alone; otherwise <b>goes to work on your settlement</b>; with no settlement, into an empty
-      <b>wildermon crate</b> in your pack; with neither, back to the wild.</li>
+      <li>Fallen, pulled up or stood down, its worker goes, first that applies: 1. an empty <b>wildermon crate</b> in your pack; 2. <b>follows you</b>,
+      set down beside you, if nothing does; 3. <b>works on your settlement</b>; 4. back to the wild.</li>
       <li>Can be pulled up early; comes up as worn as it was.</li>
       <li>A post's worker is <b>not</b> counted against your settlement level's working slots.</li>
     </ul>
