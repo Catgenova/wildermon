@@ -159,6 +159,21 @@ jobs:
           ask "anything placed on a token tile near 2559,3018" "select d.name, p.id, p.kind, p.sub, p.x, p.y, p.sx, p.sy from deed d
             join placed p on p.world_id = d.world_id and p.x = d.x and p.y = d.y
            where abs(d.x - 2559) <= 200 and abs(d.y - 3018) <= 200"
+          # Asked: "I have sacrificed hundreds of items at the altar and never seen the rare reward."
+          ask "the sacrifice rule as the island has it: the soul draw and its chance" "select soul_chance() as chance,
+                 position('soul_chance()' in pg_get_functiondef('perform_sacrifice'::regproc)) > 0 as draws_soul,
+                 substring(pg_get_functiondef('perform_sacrifice'::regproc) from 'if random\(\)[^\n]*') as the_draw"
+          ask "sacrifices and souls said to each player, all time" "select pl.name,
+                 count(*) filter (where e.text like 'Sacrificed:%' or e.text like 'You give up the %') as sacrificed,
+                 count(*) filter (where e.text like 'Got: % soul.%' or e.text like 'A % mote is left%' or e.text like 'A % soul is left%') as souls,
+                 min(e.at)::date as first, max(e.at)::date as last
+            from event e join player pl on pl.world_id = e.world_id and pl.uid = e.uid
+           where e.text like 'Sacrificed:%' or e.text like 'You give up the %' or e.text like 'Got: % soul.%'
+              or e.text like 'A % mote is left%' or e.text like 'A % soul is left%'
+           group by pl.name order by 2 desc"
+          ask "how long the event log keeps lines" "select min(at)::date as oldest, count(*) as lines from event"
+          ask "souls held, by player and rarity" "select pl.name, i.rare, sum(i.count) from item i join player pl on pl.world_id = i.world_id and pl.uid = i.holder_uid
+           where i.def = 'soul' and i.holder = 'player' group by 1, 2 order by 1, 2"
           # Asked: "Last night I lost 2 chiplings on an island 2000 tiles from my settlement. Return them to my crates."
           ask "catgenova's chiptail line: mode, where, age, crate" "select c.id, c.species, c.name, c.mode, c.phase, c.post, c.hitched_to,
                  round(creature_x(c)::numeric) as x, round(creature_y(c)::numeric) as y, age_of(c.born, old_of(c), age_pace(c)) as age,
