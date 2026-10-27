@@ -171,6 +171,11 @@ jobs:
            where e.text like 'Sacrificed:%' or e.text like 'You give up the %' or e.text like 'Got: % soul.%'
               or e.text like 'A % mote is left%' or e.text like 'A % soul is left%'
            group by pl.name order by 2 desc"
+          ask "sacrifices by the journal tally (all time since it was kept), and souls anywhere" "select pl.name, (pl.tally->>'sacrificed')::int as sacrificed,
+                 (select coalesce(sum(i.count), 0) from item i where i.world_id = pl.world_id and i.def = 'soul'
+                   and (i.holder_uid = pl.uid or i.holder in ('placed', 'crate'))) as souls_anywhere
+            from player pl where pl.tally ? 'sacrificed' order by 2 desc"
+          ask "souls ever made or used, by the ledger of item ids" "select def, count(*) as rows, sum(count) as n, min(rare), max(rare) from item where def = 'soul' group by def"
           ask "how long the event log keeps lines" "select min(at)::date as oldest, count(*) as lines from event"
           ask "souls held, by player and rarity" "select pl.name, i.rare, sum(i.count) from item i join player pl on pl.world_id = i.world_id and pl.uid = i.holder_uid
            where i.def = 'soul' and i.holder = 'player' group by 1, 2 order by 1, 2"
