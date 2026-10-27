@@ -3,8 +3,10 @@
 -- Asked for: "Removing a workpost needs to put the wildermon into crate > follow > settlement > wild in that order. Last
 -- night I lost 2 chiplings on an island 2000 tiles from my settlement." Pulled up, rotted away or called off
 -- (`post_release`), a post let its worker follow you when nothing did, from where the post stood: a follower left
--- 2000 tiles from you. Now: into the first empty wildermon crate in your pack; else to follow you, set down beside
--- you; else back to work at your settlement; else wild. Each said in the browser's words, as kind `wildermon`.
+-- 2000 tiles from you; and back to work at your settlement whether or not it had room, which put Solara at 7 workers
+-- of 5. Now: into the first empty wildermon crate in your pack; else to follow you, set down beside you; else back to
+-- work at your settlement if it has a working slot free (`workers_on_deed` under `worker_cap`); else wild. Each said in
+-- the browser's words, as kind `wildermon`.
 
 set local lock_timeout = '3s';
 
@@ -34,7 +36,7 @@ begin
       continue;
     end if;
     select * into dd from my_deed(p_world, c.keeper) md where md.world_id is not null;
-    if dd.world_id is not null then
+    if dd.world_id is not null and workers_on_deed(p_world, c.keeper) < worker_cap(p_world, c.keeper) then
       update creature set post = null, mode = 'deed', phase = 'idle', enemy = null, hunting = null,
           from_x = dd.x + 0.5, from_y = dd.y + 1.5, to_x = dd.x + 0.5, to_y = dd.y + 1.5,
           leg_at = now(), leg_ends = now(), until = now(), settled_at = now()
@@ -42,7 +44,7 @@ begin
       perform wtell(p_world, c.keeper, 'Post ' || p_why || ': ' || c.name || ' back to work at ' || dd.name || '.', 'system');
     else
       update creature set post = null, mode = 'wild', phase = 'idle' where world_id = p_world and id = c.id;
-      perform wtell(p_world, c.keeper, 'Post ' || p_why || ': no empty wildermon crate, active slot taken, no settlement. '
+      perform wtell(p_world, c.keeper, 'Post ' || p_why || ': no empty wildermon crate, active slot taken, no settlement slot free. '
         || c.name || ' went wild.', 'error');
     end if;
   end loop;

@@ -7132,7 +7132,7 @@ export class Game {
    * Take a worker off its post and send it where it belongs, as the island's
    * `post_release` has it: into an empty wildermon crate in your pack; else to
    * your side, set down beside you, if you are walking alone; else to the
-   * settlement's keeping; else back to the wild.
+   * settlement's keeping if it has a working slot free; else back to the wild.
    */
   leavePost(p: PlacedPost, why: string): void {
     const c = p.worker !== null ? this.creatures.get(p.worker) : undefined;
@@ -7151,13 +7151,13 @@ export class Game {
       c.x = this.player.x;
       c.y = this.player.y;
       this.logMsg(`Post ${why}: ${c.name} returns to you.`, 'wildermon');
-    } else if (this.deed) {
+    } else if (this.deed && this.creatures.workers().filter((w) => w !== c).length < this.workerCap) {
       // Back to the settlement it came from, as the island has it.
       c.mode = 'deed';
       this.logMsg(`Post ${why}: ${c.name} back to work at ${this.deed.name}.`, 'wildermon');
     } else {
       c.mode = 'wild';
-      this.logMsg(`Post ${why}: no empty wildermon crate, active slot taken, no settlement. ${c.name} went wild.`, 'error');
+      this.logMsg(`Post ${why}: no empty wildermon crate, active slot taken, no settlement slot free. ${c.name} went wild.`, 'error');
     }
     this.events.emit('creature');
   }
