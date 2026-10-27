@@ -159,6 +159,18 @@ jobs:
           ask "anything placed on a token tile near 2559,3018" "select d.name, p.id, p.kind, p.sub, p.x, p.y, p.sx, p.sy from deed d
             join placed p on p.world_id = d.world_id and p.x = d.x and p.y = d.y
            where abs(d.x - 2559) <= 200 and abs(d.y - 3018) <= 200"
+          # Asked: "Last night I lost 2 chiplings on an island 2000 tiles from my settlement. Return them to my crates."
+          ask "catgenova's chiptail line: mode, where, age, crate" "select c.id, c.species, c.name, c.mode, c.phase, c.post, c.hitched_to,
+                 round(creature_x(c)::numeric) as x, round(creature_y(c)::numeric) as y, age_of(c.born, old_of(c), age_pace(c)) as age,
+                 round(pl.x::numeric) as px, round(pl.y::numeric) as py, companion_of(c.world_id, c.keeper) = c.id as companion
+            from creature c join player pl on pl.world_id = c.world_id and pl.uid = c.keeper
+           where pl.name = 'catgenova' and c.species = 'quarra' order by c.id"
+          ask "catgenova's post and wildermon messages, last 24 hours" "select to_char(e.at, 'MM-DD HH24:MI') as at, e.kind, left(e.text, 160) as text
+            from event e join player pl on pl.world_id = e.world_id and pl.uid = e.uid
+           where pl.name = 'catgenova' and e.at > now() - interval '24 hours'
+             and (e.text like 'Post %' or e.text ilike '%chip%' or e.text ilike '%went wild%') order by e.at"
+          ask "catgenova's empty wildermon crates in pack" "select count(*) from item i join player pl on pl.world_id = i.world_id and pl.uid = i.holder_uid
+           where pl.name = 'catgenova' and i.holder = 'player' and i.def = 'creature_crate'"
           ask "Farce: where they stand and which settlements they belong to" "select pl.name, round(pl.x::numeric, 1) as x, round(pl.y::numeric, 1) as y, pl.away,
                  (select string_agg(d.name, ', ') from deed d where d.world_id = pl.world_id and d.founded_by = pl.uid) as founded
             from player pl where pl.name ilike 'farce%'"
