@@ -124,6 +124,9 @@ begin
   insert into said values ('RESTS:STAMINA', ${STAMINA_OF});
   -- A minute on, the wounds brought up to date (\`wounds_settle\`, as a job's or a fight's settle does) and the next beat:
   -- the stitched burn goes on closing from where the stitch left it.
+  -- A cloth-dressed burn festers by chance (\`fester_chance\`, about one minute in sixty here), and a festered wound
+  -- stops closing: the draw is seeded so the beat is the same every run.
+  perform setseed(0.25);
   update player set stats = jsonb_set(stats, '{hurtSettled}', to_jsonb(now() - interval '60 seconds')) where world_id = w and uid = '${A}';
   perform wounds_settle(w, '${A}');
   delete from caller where uid = '${A}';
