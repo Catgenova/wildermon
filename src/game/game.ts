@@ -5858,8 +5858,9 @@ export class Game {
     if (!quiet && !keepFollowing && ground && away > TRAVEL_LEG) return this.travelTo(x, y, `(${x}, ${y})`, false);
     const free = this.world.isPassable(x, y) && (floor === undefined || this.standable(x, y, floor));
     // On the ground, a tile you cannot stand on is walked to the nearest free tile beside it in one search (`near`); and
-    // a search that runs out short of the place walks as far as it got, then looks again from there (`partial`).
-    const how = { near: ground && !free, partial: keepFollowing ? undefined : { reached: true } };
+    // a search that runs out short of the place walks as far as it got, then looks again from there (`partial`). Not to
+    // a storey or a cellar: a way that does not reach it is no way there (a mount at a ladder's hatch is refused).
+    const how = { near: ground && !free, partial: keepFollowing || !ground ? undefined : { reached: true } };
     if ((free || how.near) && p.walkTo(this.world, x, y, rule, levels, below, aim, lift, how)) {
       if (!quiet && how.partial && !how.partial.reached) this.travel = { x, y, name: `(${x}, ${y})`, best: away, stuck: 0, said: false };
       return true;
