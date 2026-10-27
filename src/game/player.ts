@@ -5,7 +5,7 @@ import type { BeltPin } from './belt';
 import { emptyNutrition, type Nutrient } from './nutrition';
 import { BELT_MAX } from './belt';
 import { UNITS_PER_TILE } from '../render/iso';
-import { findPath, type PathPoint } from '../world/pathfinding';
+import { findPath, type PathOptions, type PathPoint } from '../world/pathfinding';
 import { groundRoll, ROAD_TILES, standCap, TILE_DEFS, TileType } from '../world/tiles';
 import type { World } from '../world/world';
 import { cleanLook, DEFAULT_LOOK, type Look } from './look';
@@ -365,9 +365,10 @@ export class Player {
    * storeys under the ground the walk may use (a cellar), and `goalLevel` the
    * storey it has to arrive on, when that matters.
    */
-  walkTo(world: World, tx: number, ty: number, rule?: StepRule, levels = 1, below = 0, goalLevel?: number, lift?: LiftRule): boolean {
+  walkTo(world: World, tx: number, ty: number, rule?: StepRule, levels = 1, below = 0, goalLevel?: number, lift?: LiftRule,
+    how?: Pick<PathOptions, 'near' | 'partial'>): boolean {
     const path = findPath(world, this.tileX, this.tileY, this.level, tx, ty,
-      { ...pathOptions(world, rule, levels, this.wheelLoad, this.speedMul === 1 ? this.tilePace : undefined), lift, below, goalLevel });
+      { ...pathOptions(world, rule, levels, this.wheelLoad, this.speedMul === 1 ? this.tilePace : undefined), lift, below, goalLevel, ...how });
     if (!path) return false;
     this.path = path.length ? path : null;
     return true;

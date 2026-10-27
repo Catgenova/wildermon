@@ -29,7 +29,30 @@ export interface PathOptions {
    */
   goalLevel?: number;
   maxNodes?: number;
+  /**
+   * Any free tile beside the goal does as well as the goal: one search to a
+   * tile you cannot stand on, not one to each of its eight neighbours.
+   */
+  near?: boolean;
+  /**
+   * When the search runs out of nodes or of ways, the path to the tile it got
+   * nearest the goal, `reached` set false; null only when that is no nearer
+   * than the start by `PARTIAL_GAIN`.
+   */
+  partial?: { reached: boolean };
 }
+
+/**
+ * How hard a long search leans toward the goal: the heuristic times this
+ * beyond `GREEDY_FROM` tiles. Slow ground costs a step more than the straight
+ * distance counts it (bush 2, marsh 1.7, a swim 3.5 times), so a fair search
+ * spread round the start until it ran out of nodes; leaning, a route comes out
+ * at most this much longer than the best.
+ */
+export const GREED = 1.4;
+export const GREEDY_FROM = 24;
+/** How much nearer, in tiles, the end of a partial path has to be than the start to be worth walking. */
+export const PARTIAL_GAIN = 2;
 
 export interface PathPoint {
   x: number;
@@ -106,8 +129,9 @@ function getBuffers(cap: number): Buffers {
  */
 export function findPath(world: World, sx: number, sy: number, sl: number, tx: number, ty: number, opts: PathOptions): PathPoint[] | null {
   if (!world.inBounds(sx, sy) || !world.inBounds(tx, ty)) return null;
-  if (!opts.passable(tx, ty)) return null;
+  if (!opts.near && !opts.passable(tx, ty)) return null;
   if (sx === tx && sy === ty && (opts.goalLevel === undefined || opts.goalLevel === sl)) return [];
+  if (opts.partial) opts.partial.reached = true;
 
   const w = world.w;
   const layer = w * world.h;
@@ -180,15 +204,27 @@ export function findPath(world: World, sx: number, sy: number, sl: number, tx: n
     return top;
   };
 
-  const heuristic = (x: number, y: number): number => {
+  const distance = (x: number, y: number): number => {
     const dx = Math.abs(x - tx);
     const dy = Math.abs(y - ty);
     return Math.max(dx, dy) + (Math.SQRT2 - 1) * Math.min(dx, dy);
+  };
+  const greed = distance(sx, sy) > GREEDY_FROM ? GREED : 1;
+  const heuristic = (x: number, y: number): number => greed * distance(x, y);
+  /** Whether a tile ends the search: the goal, or with `near` any tile beside it. */
+  const atGoal = (tile: number): boolean => {
+    if (tile === goalTile) return true;
+    if (!opts.near) return false;
+    const x = tile % w, y = (tile - x) / w;
+    return Math.abs(x - tx) <= 1 && Math.abs(y - ty) <= 1;
   };
 
   const start = slotOf((Math.max(-below, Math.min(levels - 1, sl)) + below) * layer + sy * w + sx);
   const goalTile = ty * w + tx;
   let goal = -1;
+  // The node nearest the goal so far, for a partial path.
+  let best = start;
+  let bestD = distance(sx, sy);
   b.g[start] = 0;
   b.parent[start] = -1;
   b.state[start] = OPEN;
@@ -199,17 +235,22 @@ export function findPath(world: World, sx: number, sy: number, sl: number, tx: n
     const cur = pop();
     if (b.state[cur] === CLOSED) continue;
     const curIdx = b.node[cur];
-    if (curIdx % layer === goalTile && (goalAt === undefined || Math.floor(curIdx / layer) - below === goalAt)) {
+    if (atGoal(curIdx % layer) && (goalAt === undefined || Math.floor(curIdx / layer) - below === goalAt)) {
       goal = cur;
       break;
     }
     b.state[cur] = CLOSED;
-    if (++expanded > maxNodes) return null;
+    if (++expanded > maxNodes) break;
     const filed = Math.floor(curIdx / layer);
     const cl = filed - below;
     const tileIdx = curIdx - filed * layer;
     const cx = tileIdx % w;
     const cy = (tileIdx - cx) / w;
+    const d = distance(cx, cy);
+    if (d < bestD) {
+      best = cur;
+      bestD = d;
+    }
     for (let k = 0; k < 8; k++) {
       const nx = cx + DIRS[k][0];
       const ny = cy + DIRS[k][1];
@@ -246,7 +287,11 @@ export function findPath(world: World, sx: number, sy: number, sl: number, tx: n
     }
   }
 
-  if (goal < 0) return null;
+  if (goal < 0) {
+    if (!opts.partial || bestD > distance(sx, sy) - PARTIAL_GAIN) return null;
+    opts.partial.reached = false;
+    goal = best;
+  }
   // Walked back slot by slot, and turned into tiles on the way out: `parent`
   // holds the slot a node was reached from, not the tile.
   const path: PathPoint[] = [];

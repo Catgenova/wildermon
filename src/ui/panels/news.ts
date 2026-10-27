@@ -4095,6 +4095,12 @@ export const NEWS: News[] = [
     lines: () => ['Changed: work post fallen, pulled up or stood down: its worker goes, first that applies: empty wildermon crate in your pack; follows you, set down beside you; '
       + 'your settlement, if a working slot is free; wild (was: followed you from the post, left where it stood; settlement over its worker cap).'],
   },
+  {
+    n: 354,
+    day: '2026-10-27',
+    lines: () => [`Fixed: long walks: a click over ${TRAVEL_LEG} tiles away walked in legs, as a map pin; a search that runs short walks as far as it got and looks again; `
+      + 'a tile you cannot stand on walked to the nearest free tile beside it (was: "No path there." on most long walks).'],
+  },
 ];
 
 /**

@@ -5852,11 +5852,24 @@ export class Game {
     if (!quiet && !lift && (this.mounted() || this.driving()) && this.spiralTile(x, y)) this.logMsg(SPIRAL_FOOT_SAID, 'error');
     // Clicked in the cellar's view, the cellar is where you mean; up top, the ground (`walkFloor`); on a pinned storey, that storey.
     const aim = floor ?? this.walkFloor(x, y);
-    if (this.world.isPassable(x, y) && (floor === undefined || this.standable(x, y, floor)) && p.walkTo(this.world, x, y, rule, levels, below, aim, lift)) return true;
+    const ground = floor === undefined && aim === undefined;
+    const away = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y);
+    // Further than a leg: walked a leg at a time, as a map pin is (`travelTo`).
+    if (!quiet && !keepFollowing && ground && away > TRAVEL_LEG) return this.travelTo(x, y, `(${x}, ${y})`, false);
+    const free = this.world.isPassable(x, y) && (floor === undefined || this.standable(x, y, floor));
+    // On the ground, a tile you cannot stand on is walked to the nearest free tile beside it in one search (`near`); and
+    // a search that runs out short of the place walks as far as it got, then looks again from there (`partial`).
+    const how = { near: ground && !free, partial: keepFollowing ? undefined : { reached: true } };
+    if ((free || how.near) && p.walkTo(this.world, x, y, rule, levels, below, aim, lift, how)) {
+      if (!quiet && how.partial && !how.partial.reached) this.travel = { x, y, name: `(${x}, ${y})`, best: away, stuck: 0, said: false };
+      return true;
+    }
     // Beside it, on the storey asked for: a storey's floor, not the ground under it.
     const candidates = this.neighbours(x, y).filter((c) => this.world.isPassable(c.x, c.y) && (floor === undefined || this.standable(c.x, c.y, floor)));
     candidates.sort((a, b) => this.distanceToPlayer(a.x, a.y) - this.distanceToPlayer(b.x, b.y));
-    for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim, lift)) return true;
+    if (!how.near) {
+      for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim, lift)) return true;
+    }
     if (!quiet) {
       if (floor !== undefined && floor > 0 && !candidates.length) this.logMsg(`No floor on storey ${floor + 1}.`, 'error');
       // Mounted, where your own feet would get there: a single staircase, a ladder or a narrow doorway in the way (`rideRule`).
@@ -5872,28 +5885,30 @@ export class Game {
    * click on the far side of a bay said "You can't find a way there." This
    * walks it a leg at a time, each up to `TRAVEL_LEG` tiles toward the place
    * and shorter where a leg that long finds no way, and sets off on the next
-   * as each ends. Any other order -- a click, a job, Stop -- ends it.
+   * as each ends. Any other order -- a click, a job, Stop -- ends it. A click
+   * further than a leg goes the same way, without the heading and arrival
+   * lines (`said`).
    */
-  private travel: { x: number; y: number; name: string; best: number; stuck: number } | null = null;
+  private travel: { x: number; y: number; name: string; best: number; stuck: number; said: boolean } | null = null;
 
   /** Where a long walk is headed, while one is under way. */
   get travelling(): { x: number; y: number; name: string } | null {
     return this.travel;
   }
 
-  travelTo(x: number, y: number, name: string): boolean {
+  travelTo(x: number, y: number, name: string, said = true): boolean {
     this.travel = null;
     const away = Math.round(Math.hypot(x + 0.5 - this.player.x, y + 0.5 - this.player.y));
     if (away < 2) {
-      this.logMsg(`Already at ${name}.`, 'info');
+      if (said) this.logMsg(`Already at ${name}.`, 'info');
       return true;
     }
     if (!this.legToward(x, y)) {
       this.logMsg(`No path to ${name} from here.`, 'error');
       return false;
     }
-    this.travel = { x, y, name, best: away, stuck: 0 };
-    this.logMsg(`Heading to ${name}: ${away} tiles.`, 'info');
+    this.travel = { x, y, name, best: away, stuck: 0, said };
+    if (said) this.logMsg(`Heading to ${name}: ${away} tiles.`, 'info');
     return true;
   }
 
@@ -5916,7 +5931,7 @@ export class Game {
     const away = Math.hypot(t.x + 0.5 - this.player.x, t.y + 0.5 - this.player.y);
     if (away < 1.5) {
       this.travel = null;
-      this.logMsg(`Arrived: ${t.name}.`, 'info');
+      if (t.said) this.logMsg(`Arrived: ${t.name}.`, 'info');
       return;
     }
     // Getting no nearer, leg after leg, is a way round that does not go round.
