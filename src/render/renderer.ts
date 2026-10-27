@@ -134,6 +134,8 @@ import { css, HAZE_REACH, rgba, skyAt, unknownInk, type Sky } from './sky';
 
 /** Ground higher than this at every corner, in height units, is never within reach of the sea's shore: a quick test before `ShoreField` is asked. */
 const SHORE_HIGH = 40;
+/** A tile's corners in the world's order, north, east, south and west (`World.corners`), as steps from its own. */
+const SQUARE = [[0, 0], [1, 0], [1, 1], [0, 1]] as const;
 
 /**
  * How many steps the distance is mixed in. Enough that the banding is under
@@ -1622,6 +1624,10 @@ export class Renderer {
   private pondsHereN = 0;
   /** The highest of them. */
   private pondTop = 0;
+  /** The highest pond the ground on the tile being drawn was laid again beside (`pondBank`), and so is dressed by the slope it has there; -Infinity where none. */
+  private bankLevel = -Infinity;
+  /** The colour and slope of each tile's ground beside a pond's water, by `y * width + x`, with the level and corner heights they were worked out for (`bankColour`). */
+  private bankColours = new Map<number, { pages: ColourPages; level: number; h: number[]; gx: number; gy: number; colour: string }>();
   /** Whether a poured slab stands over a tile, for the water running past it. */
   private readonly slabOver = (x: number, y: number): boolean => !!this.game.slabAt(x, y);
   /** The corner a spring wells up at, for the drawing, by the spring's id. */
@@ -2196,6 +2202,7 @@ export class Renderer {
           this.trailShapes.delete(yy * w.w + xx);
           this.flowerMarks.forget(xx, yy);
           this.faces.delete(yy * w.w + xx);
+          this.bankColours.delete(yy * w.w + xx);
           this.forgetHem(this.hemCache, yy * w.w + xx);
           this.forgetHem(this.hemMemCache, yy * w.w + xx);
         }
@@ -2787,8 +2794,8 @@ export class Renderer {
     return night;
   }
 
-  /** Flat-shaded colour for a tile: base colour, slope lighting, per-tile variation and depth tint under water. */
-  private computeColor(x: number, y: number, type: TileType, data: number, light: [number, number, number], lit = true, own = false): string {
+  /** Flat-shaded colour for a tile: base colour, slope lighting, per-tile variation and depth tint under water; shaded by `heights` in place of its corners' where given. */
+  private computeColor(x: number, y: number, type: TileType, data: number, light: [number, number, number], lit = true, own = false, heights?: readonly number[]): string {
     const w = this.game.world;
     // A wood is a field with trees in it and a kelp bed is sand with weed
     // in it, not soils of their own: see `groundAt`. Worked out here, so it
@@ -2799,7 +2806,7 @@ export class Renderer {
     // the ground they were laid over, under the water with the stones on it.
     const ground = own ? type : COVERED.has(type) || type === TileType.Trail || type === TileType.SteppingStones ? this.groundAt(x, y, lit) : type;
     const def = TILE_DEFS[ground];
-    const c = w.corners(x, y, this.colorBuf);
+    const c = heights ?? w.corners(x, y, this.colorBuf);
     const gx = (c[1] + c[2] - (c[0] + c[3])) / 2 / UNITS_PER_TILE;
     const gy = (c[2] + c[3] - (c[0] + c[1])) / 2 / UNITS_PER_TILE;
     const len = Math.hypot(gx, gy, 1);
@@ -3532,8 +3539,10 @@ export class Renderer {
     h[1] = w.getHeight(x + 1, y);
     h[2] = w.getHeight(x + 1, y + 1);
     h[3] = w.getHeight(x, y + 1);
-    const gx = (h[1] + h[2] - h[0] - h[3]) / 2 / UNITS_PER_TILE;
-    const gy = (h[2] + h[3] - h[0] - h[1]) / 2 / UNITS_PER_TILE;
+    // A pond's bank as steep as its ground beside the water is, as it is coloured (`pondBank`).
+    const banked = pond && this.bankLevel > -Infinity;
+    const gx = banked ? this.bankGx : (h[1] + h[2] - h[0] - h[3]) / 2 / UNITS_PER_TILE;
+    const gy = banked ? this.bankGy : (h[2] + h[3] - h[0] - h[1]) / 2 / UNITS_PER_TILE;
     const bare = bareRock(Math.hypot(gx, gy));
     if (bare <= 0) return;
     const face = this.faceAt(x, y, gx, gy);
@@ -16927,6 +16936,9 @@ export class Renderer {
     // The water under a deck on piers is in its shade, and no wake runs there (`layWater`).
     const wakes = this.pondPath && this.wetPierLines && this.game.buildings.onPiers(x, y) ? null : this.pondPath;
     const bare = this.shoreBare(x, y);
+    // The ground each pond's water leaves first, so none of it is laid over another pond's water.
+    this.bankLevel = -Infinity;
+    for (let q = 0; q < this.pondsHereN; q++) this.pondBank(V, x, y, c, q, lit);
     for (let q = 0; q < this.pondsHereN; q++) {
       const level = this.pondsHereLevel[q];
       const mask = this.pondsHereMask[q];
@@ -16979,6 +16991,125 @@ export class Renderer {
       if (banked) this.shore.calm(ctx, x, y, cs, c, level);
     }
   }
+
+  /**
+   * The ground of a tile a pond's edge crosses that its water leaves bare,
+   * laid again in the colour of that ground (`bankColour`) rather than the
+   * tile's: a tile with a corner at the bottom of a deep pond is shaded as a
+   * cliff, bare rock, and the strip of it beside the water was a dark wedge
+   * between the water and the land. The ground where the water is cut,
+   * walked round the other way from the water's (`drawPonds`).
+   */
+  private pondBank(V: View, x: number, y: number, c: number[], q: number, lit: boolean): void {
+    const level = this.pondsHereLevel[q];
+    const mask = this.pondsHereMask[q];
+    if (mask === 15) return;
+    const ctx = this.canvas.ctx;
+    const cam = this.camera;
+    const cs = V.corners;
+    ctx.beginPath();
+    let n = 0;
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) & 3;
+      const wa = (mask >> i) & 1;
+      const ax = x + cs[i][0], ay = y + cs[i][1];
+      if (!wa) {
+        const sx = cam.worldToScreenX(ax, ay), sy = cam.worldToScreenY(ax, ay, c[i]);
+        if (n++ === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      if (wa !== ((mask >> j) & 1)) {
+        const t = (wa ? c[j] : c[i]) >= level ? (level - c[i]) / (c[j] - c[i]) : 0.5;
+        const px = ax + (x + cs[j][0] - ax) * t, py = ay + (y + cs[j][1] - ay) * t;
+        const sx = cam.worldToScreenX(px, py), sy = cam.worldToScreenY(px, py, level);
+        if (n++ === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+    }
+    ctx.closePath();
+    const colour = this.bankColour(x, y, this.pondsHere[q], level, lit);
+    ctx.fillStyle = colour;
+    ctx.fill();
+    // Edged a pixel out all round, over the half pixel the tile's own colour was laid out past its edge (`outsetTile`).
+    const edge = ctx.lineWidth;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = colour;
+    ctx.stroke();
+    ctx.lineWidth = edge;
+    if (level > this.bankLevel) this.bankLevel = level;
+  }
+
+  /**
+   * The colour of a tile's ground beside a pond's water, shaded by the slope
+   * that ground has: the mean of it over the part the water leaves (its
+   * corners clear of the water and where the water is cut on its sides), not
+   * the tile's from corner to corner. Kept with the slope, for its dressing
+   * (`dressFace`), in `bankGx` and `bankGy`.
+   */
+  private bankColour(x: number, y: number, p: PondWater, level: number, lit: boolean): string {
+    const w = this.game.world;
+    const cw = w.w + 1;
+    const h = w.corners(x, y, this.bankBuf);
+    const pages = lit ? this.colors : this.memColors;
+    const key = y * w.w + x;
+    const had = this.bankColours.get(key);
+    if (had && had.pages === pages && had.level === level && had.h[0] === h[0] && had.h[1] === h[1] && had.h[2] === h[2] && had.h[3] === h[3]) {
+      this.bankGx = had.gx;
+      this.bankGy = had.gy;
+      return had.colour;
+    }
+    // Round the part the water leaves, in the tile's own square, by Green's theorem: its area, and its height's rise along x and along y.
+    let area = 0, rx = 0, ry = 0;
+    let n = 0;
+    const pt = this.bankPts;
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) & 3;
+      const ui = SQUARE[i][0], vi = SQUARE[i][1];
+      const wi = h[i] < level && p.wet.has((y + vi) * cw + x + ui);
+      const wj = h[j] < level && p.wet.has((y + SQUARE[j][1]) * cw + x + SQUARE[j][0]);
+      if (!wi) {
+        pt[n++] = ui;
+        pt[n++] = vi;
+        pt[n++] = h[i];
+      }
+      if (wi !== wj) {
+        const t = (wi ? h[j] : h[i]) >= level ? (level - h[i]) / (h[j] - h[i]) : 0.5;
+        pt[n++] = ui + (SQUARE[j][0] - ui) * t;
+        pt[n++] = vi + (SQUARE[j][1] - vi) * t;
+        pt[n++] = level;
+      }
+    }
+    for (let a = 0; a < n; a += 3) {
+      const b = (a + 3) % n;
+      const z = (pt[a + 2] + pt[b + 2]) / 2;
+      area += pt[a] * pt[b + 1] - pt[b] * pt[a + 1];
+      rx += z * (pt[b + 1] - pt[a + 1]);
+      ry -= z * (pt[b] - pt[a]);
+    }
+    area /= 2;
+    // A sliver with no width to speak of is as steep as its tile.
+    const gu = Math.abs(area) > 1e-3 ? rx / area : (h[1] + h[2] - h[0] - h[3]) / 2;
+    const gv = Math.abs(area) > 1e-3 ? ry / area : (h[2] + h[3] - h[0] - h[1]) / 2;
+    // Four corners with that slope, for the shading (`computeColor`).
+    const m = level - (gu + gv) / 2;
+    const slope = this.bankSlope;
+    slope[0] = m;
+    slope[1] = m + gu;
+    slope[2] = m + gu + gv;
+    slope[3] = m + gv;
+    const colour = this.computeColor(x, y, w.viewTile(x, y, lit), w.viewData(x, y, lit), this.sunNow, lit, false, slope);
+    this.bankGx = gu / UNITS_PER_TILE;
+    this.bankGy = gv / UNITS_PER_TILE;
+    if (this.bankColours.size > 16384) this.bankColours.clear();
+    this.bankColours.set(key, { pages, level, h: [h[0], h[1], h[2], h[3]], gx: this.bankGx, gy: this.bankGy, colour });
+    return colour;
+  }
+  private readonly bankBuf = [0, 0, 0, 0];
+  private readonly bankSlope = [0, 0, 0, 0];
+  private readonly bankPts = new Float64Array(24);
+  /** The slope of the ground beside the water on the tile `pondBank` last laid, in the units `dressFace` measures in. */
+  private bankGx = 0;
+  private bankGy = 0;
 
 
   /** Whether a tile is kept clear of the shore's wet band and foam: a slab poured over it, or a deck on piers. */
