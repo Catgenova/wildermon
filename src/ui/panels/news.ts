@@ -4083,6 +4083,12 @@ export const NEWS: News[] = [
         + '(was: caps overlapped, gaps at corners, a pale strip down corners).',
     ],
   },
+  {
+    n: 352,
+    day: '2026-10-27',
+    lines: () => ['Fixed: ponds: water meets the bank at every edge and corner; ground above the water shaded by its own slope '
+      + '(was: a rock-coloured gap between the water and the land at the near edges and corners).'],
+  },
 ];
 
 /**
