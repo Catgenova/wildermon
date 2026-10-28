@@ -340,7 +340,9 @@ if (!options) {
     check('a click on a floor tile of storey 2 picks that tile, on storey 2', up.pick?.x === tx && up.pick?.y === ty && up.pick?.level === 1 && up.pick?.furniture === undefined,
       JSON.stringify(up.pick));
     check('and its menu is storey 2\'s', up.title === `Hall · storey 2 (${tx}, ${ty})` && up.rows.some((r) => r.startsWith('Plan wall')), `${up.title}: ${up.rows.join(' / ')}`);
-    const groundOnly = [...up.ground, 'Build bridge from here', 'Found a settlement here', 'Dig out the cellar', 'Remove from plan', 'Work on storey 2', 'Pick up'];
+    // Build bridge from here is on both: storey to storey, roof to roof (What's new 355).
+    check('and Build bridge from here is on it, as on the ground\'s', up.rows.includes('Build bridge from here'), up.rows.join(' / '));
+    const groundOnly = [...up.ground.filter((r) => r !== 'Build bridge from here'), 'Found a settlement here', 'Dig out the cellar', 'Remove from plan', 'Work on storey 2', 'Pick up'];
     const leaked = up.rows.filter((r) => groundOnly.includes(r));
     check('with none of the ground\'s jobs in it', up.ground.length > 0 && leaked.length === 0, leaked.join(' / ') || `${up.ground.length} ground jobs left out`);
     check('the ground floor\'s menu, pinned, is the ground\'s, on the ground floor', down.pick?.level === 0 && down.rows.some((r) => up.ground.includes(r)),
