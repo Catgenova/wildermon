@@ -325,7 +325,7 @@ if (!options) {
         && upkeep[1].includes(`fed 80% · unfed in ${waitWords(UPKEEP_FOR * 0.1)}`), upkeep.join(' / '));
     const trades = shown.trades;
     check(`each trade against ${SPECIALTY_AT}: a specialty at three, and two short of one`,
-      trades.some((r) => r.startsWith('Felling trees') && r.includes('3 · +10%')) && trades.some((r) => r.startsWith('Digging clay') && r.includes(`1/${SPECIALTY_AT}`)),
+      trades.some((r) => r.startsWith('Felling trees') && r.includes('3 · +10%')) && trades.some((r) => r.startsWith('Collecting clay') && r.includes(`1/${SPECIALTY_AT}`)),
       trades.join(' / '));
     check('with the wildermon following you that would add to it', shown.assign.join(',') === 'Loam · following:on', shown.assign.join(','));
     await drive(tab, (c) => c.click('.deed-candidate button', 'Assign'));
