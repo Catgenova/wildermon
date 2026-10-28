@@ -171,6 +171,21 @@ jobs:
                  round(water_surface(t.world_id, t.x, t.y)::numeric, 1) as water, passable(t.world_id, t.x, t.y) as passable
             from deed d, lateral (select d.world_id, gx as x, gy as y from generate_series(d.x - 12, d.x + 12) gx, generate_series(d.y - 12, d.y + 12) gy) t
            where d.name = 'Solara' and land_tile(t.world_id, t.x, t.y) = 8 order by 1, 2 limit 60"
+          # Asked: "Bridge is completed, but walking on it is bugged. Impossible to walk on or under."
+          ask "catgenova's bridges: ends, storeys, height, rise, width, spans done" "select b.id, b.kind, b.ax, b.ay, b.bx, b.by, b.level, b.level_b, b.height, b.rise,
+                 b.width, b.side, b.raised, (select count(*) from bridge_span s where s.world_id = b.world_id and s.bridge = b.id) as spans,
+                 (select count(*) from bridge_span s where s.world_id = b.world_id and s.bridge = b.id and bill_done(s.needed)) as done,
+                 to_char(b.made_at, 'MM-DD HH24:MI') as made
+            from bridge b join player pl on pl.world_id = b.world_id and pl.uid = b.made_by
+           where pl.name = 'catgenova' and b.kind <> 'aqueduct' order by b.made_at desc limit 6"
+          ask "the newest bridge's ends: building, its storeys, top deck, ground height" "select e.which, e.x, e.y, bl.name, bl.levels, bl.deck, top_deck(b.world_id, e.x, e.y) as top_level,
+                 round(land_height(b.world_id, e.x, e.y)::numeric, 1) as ground
+            from (select b.* from bridge b join player pl on pl.world_id = b.world_id and pl.uid = b.made_by
+                   where pl.name = 'catgenova' and b.kind <> 'aqueduct' order by b.made_at desc limit 1) b
+            cross join lateral (values ('a', b.ax, b.ay), ('b', b.bx, b.by)) e(which, x, y)
+            left join building_tile bt on bt.world_id = b.world_id and bt.x = e.x and bt.y = e.y
+            left join building bl on bl.world_id = bt.world_id and bl.id = bt.building"
+          ask "catgenova now: where, storey" "select round(pl.x::numeric, 2) as x, round(pl.y::numeric, 2) as y, pl.level, pl.act from player pl where pl.name = 'catgenova'"
           # Asked: "I have sacrificed hundreds of items at the altar and never seen the rare reward."
           ask "the sacrifice rule as the island has it: the soul draw and its chance" "select soul_chance() as chance,
                  position('soul_chance()' in pg_get_functiondef('perform_sacrifice'::regproc)) > 0 as draws_soul,
