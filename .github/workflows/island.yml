@@ -2850,6 +2850,17 @@ jobs:
             --outfile=node_modules/.cache/spiral.mjs --log-level=error
           node node_modules/.cache/spiral.mjs
 
+      - name: A bridge up a storey is walked across and under, every lane, on both sides
+        if: matrix.shard == 3
+        run: |
+          # A marble bridge three lanes wide, both ends on storey 4: every lane
+          # holds a body at storey 4 and nobody at storey 3, a walk along each
+          # lane stays on storey 4 (`rpc_move`), a walk on the ground under it
+          # is drawn under it, and a pinned storey's click on the deck ends on it.
+          npx esbuild supabase/test/storeybridge.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/storeybridge.mjs --log-level=error
+          node node_modules/.cache/storeybridge.mjs
+
       - name: Storey mode
         if: matrix.shard == 3
         env:

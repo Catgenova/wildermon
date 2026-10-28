@@ -1483,8 +1483,18 @@ export class Game {
   private standsUp(x: number, y: number, level: number): boolean {
     const f = this.buildings.floor(level, x, y);
     if (f && isDone(f) && (walkableKind(floorKind(f)) || roofShapeDef(this.buildings.list.get(f.building)).walkable)) return true;
+    return this.deckOnStorey(x, y, level);
+  }
+
+  /** Whether a bridge's deck, any lane of it, or any lane's end is walked at this storey on this tile: the storey either end lands on. */
+  deckOnStorey(x: number, y: number, level: number): boolean {
     if (!this.bridges.size) return false;
-    return [this.bridgeAt(x, y), this.bridgeEndAt(x, y)].some((b) => !!b && bridgeLevels(b).includes(level));
+    return [this.bridgeAt(x, y), this.bridgeEndAt(x, y)].some((b) => !!b && deckDown(b) && b.kind !== 'aqueduct' && bridgeLevels(b).includes(level));
+  }
+
+  /** Whether a walk may end on a tile at a storey: where you may stand (`standable`), and a storey up on a bridge's deck at that storey too. */
+  private walkEnd(x: number, y: number, level: number): boolean {
+    return this.standable(x, y, level) || (level > 0 && this.deckOnStorey(x, y, level));
   }
 
   /** A finished staircase or ladder occupying a tile's floor slot at a storey. */
@@ -2252,22 +2262,36 @@ export class Game {
 
   /**
    * Whether the player is on the ground under a bridge's deck rather than on
-   * it: walked in under it from beside it, and still under it. A body on a
-   * tile of deck is on the deck unless it came in under it (`walksUnder`).
-   * What is drawn and where the feet are, nothing more: a walk is the same
-   * either way.
+   * it. A deck up a storey is that storey's: on its storey you are on it, on
+   * any other under it. A deck on the ground is under you once you walked in
+   * under it from beside it, and still are (`walksUnder`). What is drawn and
+   * where the feet are, nothing more: a walk is the same either way.
    */
   underDeck = false;
 
   /** Whether a step from one tile to the next leaves the player under a bridge's deck. */
   walksUnder(x0: number, y0: number, x1: number, y1: number): boolean {
-    return this.underAfter(x0, y0, x1, y1, this.underDeck);
+    return this.underAfter(x0, y0, x1, y1, this.underDeck, this.player.level);
   }
 
-  /** Whether a step from one tile to the next leaves a body under a bridge's deck, it having been under one before it (`was`) or not. */
-  underAfter(x0: number, y0: number, x1: number, y1: number, was: boolean): boolean {
+  /** The player under a bridge's deck now: off the walk (`underDeck`), and always under a deck walked at another storey. */
+  underNow(): boolean {
+    const p = this.player;
+    const b = this.bridges.size ? this.bridgeAt(p.tileX, p.tileY) : undefined;
+    if (b && b.kind !== 'aqueduct' && !bridgeLevels(b).includes(p.level)) return true;
+    return this.underDeck;
+  }
+
+  /**
+   * Whether a step from one tile to the next leaves a body at a storey (`level`) under a bridge's deck, it having been
+   * under one before it (`was`) or not.
+   */
+  underAfter(x0: number, y0: number, x1: number, y1: number, was: boolean, level = 0): boolean {
     if (!this.onWalkedDeck(x1, y1)) return false;
     const b = this.bridgeAt(x1, y1);
+    // A deck walked at another storey is over you; one walked at your storey up a storey is under your feet.
+    if (b && !bridgeLevels(b).includes(level)) return true;
+    if (level > 0) return false;
     // From a tile of the same deck, as it was; from one of its ends, onto it; from anywhere else, in under it.
     if (b && this.bridgeAt(x0, y0) === b) return was;
     return !(b && this.onBridge(b, x0, y0));
@@ -2280,7 +2304,7 @@ export class Game {
     const jetty = p.level > 0 && this.buildings.jettyAt(p.tileX, p.tileY);
     const base = jetty ? jettyBase(this, jetty, p.tileX, p.tileY) : this.deckBase(p.tileX, p.tileY, p.level);
     // On a bridge's deck, at its height there, up a ramp's slope too, as the body is drawn (`deckHeightAt`).
-    const deck = base === null && this.bridges.size && !this.afloat() && !this.underDeck ? this.deckHeightAt(p.x, p.y) : null;
+    const deck = base === null && this.bridges.size && !this.afloat() && !this.underNow() ? this.deckHeightAt(p.x, p.y) : null;
     if (deck !== null) return deck;
     return (base ?? this.world.heightAt(p.x, p.y)) + p.visualLevel * 30;
   }
@@ -5856,7 +5880,7 @@ export class Game {
     const away = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y);
     // Further than a leg: walked a leg at a time, as a map pin is (`travelTo`).
     if (!quiet && !keepFollowing && ground && away > TRAVEL_LEG) return this.travelTo(x, y, `(${x}, ${y})`, false);
-    const free = this.world.isPassable(x, y) && (floor === undefined || this.standable(x, y, floor));
+    const free = this.world.isPassable(x, y) && (floor === undefined || this.walkEnd(x, y, floor));
     // On the ground, a tile you cannot stand on is walked to the nearest free tile beside it in one search (`near`); and
     // a search that runs out short of the place walks as far as it got, then looks again from there (`partial`). Not to
     // a storey or a cellar: a way that does not reach it is no way there (a mount at a ladder's hatch is refused).
@@ -5866,7 +5890,7 @@ export class Game {
       return true;
     }
     // Beside it, on the storey asked for: a storey's floor, not the ground under it.
-    const candidates = this.neighbours(x, y).filter((c) => this.world.isPassable(c.x, c.y) && (floor === undefined || this.standable(c.x, c.y, floor)));
+    const candidates = this.neighbours(x, y).filter((c) => this.world.isPassable(c.x, c.y) && (floor === undefined || this.walkEnd(c.x, c.y, floor)));
     candidates.sort((a, b) => this.distanceToPlayer(a.x, a.y) - this.distanceToPlayer(b.x, b.y));
     if (!how.near) {
       for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim, lift)) return true;

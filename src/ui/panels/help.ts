@@ -2012,7 +2012,7 @@ export function helpText(): string {
       <li><b>Ramp</b> (ends further apart): rises evenly, at most <b>${metres(RAMP_SLOPE)} m</b> per tile of deck, or refused with the tiles needed. A storey is ${metres(WALL_HEIGHT)} m:
       one storey needs at least ${rampTiles(WALL_HEIGHT)} tiles of deck;
       ${((up: number) => `${up} storeys (ground to storey ${up + 1}) at least ${rampTiles(up * WALL_HEIGHT)}`)(2)}.
-      Ends may be on different storeys or one on the ground; you walk it at the storey you stepped on from and step off at the far end's storey.
+      Ends may be on different storeys or one on the ground; you walk it at the storey you stepped on from and step off at the far end's storey. On any other storey, or the ground, you walk under it.
       Cost: a span's bill per tile of deck, fitted piece by piece: a go fits any one material it needs that is to hand. Carries a cart only with both ends on the ground. Drawbridges are always level.</li>
       <li>Ends may also be a finished upper floor (jetty floors included) or a finished deck on piers. Not inside a building on a ground floor laid on the ground,
       not on another bridge's end, never through a wall (out through a doorway, archway or open side). Nothing is built on a landing tile.</li>

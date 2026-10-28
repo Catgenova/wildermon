@@ -5052,7 +5052,7 @@ export class Renderer {
             const lift = cr.ridden ? player.visualLevel : up;
             // Under a bridge's deck rather than on it, as whoever rides it is (`bodyUnder`).
             // Every one kept track of where there are bridges, so the tile it came from is known when it steps under one.
-            const under = this.game.bridges.size > 0 && lift <= 0 && (cr.ridden ? this.game.underDeck : this.bodyUnder(`c${cr.id}`, x, y)) && deckHere !== null;
+            const under = this.game.bridges.size > 0 && lift <= 0 && (cr.ridden ? this.game.underNow() : this.bodyUnder(`c${cr.id}`, x, y)) && deckHere !== null;
             const stand = under ? null : deckHere;
             const ce = this.take('creature', x, y, cam.worldToScreenX(cr.x, cr.y),
               cam.worldToScreenY(cr.x, cr.y, lift > 0 ? this.footOn(cr.x, cr.y, up) + lift * WALL_HEIGHT : stand ?? this.footAt(cr.x, cr.y)), null);
@@ -5092,7 +5092,7 @@ export class Renderer {
         // On the deck unless you are in a hull passing under it.
         // In a building on piers, on its deck and the storeys over it (`piers.ts`).
         const piered = this.game.afloat() ? null : this.game.deckBase(player.tileX, player.tileY, player.level);
-        const deck = this.game.afloat() || piered !== null || this.game.underDeck ? null : this.game.laidOver(player.tileX, player.tileY, player);
+        const deck = this.game.afloat() || piered !== null || this.game.underNow() ? null : this.game.laidOver(player.tileX, player.tileY, player);
         // A driver is drawn on the seat, which is a lift in screen pixels
         // rather than in world height: the cart is under them, not the ground.
         const drivenBy = this.game.driving();
@@ -5119,7 +5119,7 @@ export class Renderer {
         this.spiralSeen = spiral ? { tx: player.tileX, ty: player.tileY, x: pe.sx, y: pe.sy, key: spiral.key } : null;
         pe.lift = this.driverSeat() * zoom;
         // On a bridge's deck: after its deck and before its near parapet, not under it (`deckKey`).
-        if ((deck !== null || drivenBy) && !this.game.underDeck) this.onBridgeDeck(pe, vx, vy);
+        if ((deck !== null || drivenBy) && !this.game.underNow()) this.onBridgeDeck(pe, vx, vy);
         if (flight) pe.clip = flight.clip;
         // At a helm on a deck of its own the driver stands there, not in her middle.
         if (drivenBy && furnitureDef(drivenBy.kind).boat?.helm) this.onDeck(pe, drivenBy, this.game.helmSpot(drivenBy), pe.lift, true);

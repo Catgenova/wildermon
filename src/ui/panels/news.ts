@@ -4121,6 +4121,15 @@ export const NEWS: News[] = [
         + 'Crafting rows: litres to one decimal.',
     ],
   },
+  {
+    n: 357,
+    day: '2026-10-28',
+    lines: () => [
+      'Fixed: bridge up a storey: walked on at the storey its ends land on, under on any other, every lane '
+        + '(was: outer lanes of a wide one let you down to the ground; on the ground, drawn on the deck coming in under its end).',
+      'Fixed: storey pinned: a click on its bridge deck walks onto the deck (was: to the floor beside it, or "No floor on storey").',
+    ],
+  },
 ];
 
 /**
