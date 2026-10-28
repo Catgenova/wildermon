@@ -2013,7 +2013,7 @@ export function helpText(): string {
       one storey needs at least ${rampTiles(WALL_HEIGHT)} tiles of deck;
       ${((up: number) => `${up} storeys (ground to storey ${up + 1}) at least ${rampTiles(up * WALL_HEIGHT)}`)(2)}.
       Ends may be on different storeys or one on the ground; you walk it at the storey you stepped on from and step off at the far end's storey.
-      Cost: a span's bill per tile of deck. Carries a cart only with both ends on the ground. Drawbridges are always level.</li>
+      Cost: a span's bill per tile of deck, fitted piece by piece: a go fits any one material it needs that is to hand. Carries a cart only with both ends on the ground. Drawbridges are always level.</li>
       <li>Ends may also be a finished upper floor (jetty floors included) or a finished deck on piers. Not inside a building on a ground floor laid on the ground,
       not on another bridge's end, never through a wall (out through a doorway, archway or open side). Nothing is built on a landing tile.</li>
       <li>Built a span at a time like a wall, one unit an action. Nothing crosses until the last span is decked.</li>
@@ -2937,7 +2937,7 @@ export function helpText(): string {
       (iron from mining ${METAL_LEVEL('iron')}); quality (QL) = its mining, capped by the seam. Works ${metres(MINE_DEPTH)} m of water deep, as you do; a face it cannot stand on is worked from the bank
       (shore seams, seabed under wading depth; the ${SPECIES.quarra.name} likewise for plain rock). Range +${SPECIES.mola.rangePerStep ?? RANGE_PER_STEP} tiles per ${SKILL_STEP} levels
       (usual ${RANGE_PER_STEP}). Evolves: ${evolves('mola')}.</td></tr>
-      <tr><td><b>${SPECIES.crawler.name}</b> (was Crawler)</td><td>On sand; eats vegetables. Digs sand (a clawful from the highest corner) to the crate. Defensive: always hits back;
+      <tr><td><b>${SPECIES.crawler.name}</b> (was Crawler)</td><td>On sand; eats vegetables. Collects <b>sand</b> off the bed to the crate (ground height unchanged). Defensive: always hits back;
       tamed ones still sometimes attack whoever stands beside them (a helm stops the worst). Evolves: ${evolves('crawler')}.</td></tr>
       <tr><td><b>${SPECIES.quarra.name}</b> (was Quarra)</td><td>On bare rock; eats clay. Cuts rock, slate, marble and sandstone shards. Evolves: ${evolves('quarra')}.</td></tr>
       <tr><td><b>${SPECIES.embra.name}</b> (was Embra)</td><td>Marsh peat and tar; eats cooked food only. Keeps every campfire, oven, brazier, smelter and kiln on the settlement fuelled and lit from the stores, whole pieces that fit only. ${STOKE_SAYS} ${SPECIES.embra.stages![STOKE_SMELTS_AT - 1].name} on: ${STOKE_SMELT_SAYS}
@@ -2957,7 +2957,7 @@ export function helpText(): string {
       <tr><td><b>${SPECIES.rowl.name}</b></td><td>Hunts on sight; taming ${SPECIES.rowl.tameLevel}; unruly when tamed. On a settlement: patrols round the totem, kills anything wild inside,
       carcasses to storage. <b>Fighting</b> sets damage (${mul(trainedHit(TOP_SKILL))} at mastery) and patrol radius (${SPECIES.rowl.workRange} to
       ${SPECIES.rowl.workRange + rangeSteps(TOP_SKILL) * (SPECIES.rowl.rangePerStep ?? RANGE_PER_STEP)} tiles).</td></tr>
-      <tr><td><b>${SPECIES.noot.name}</b> (was Noot)</td><td>Beside clay pits; eats root vegetables. Digs <b>clay</b> to the crate. Evolves: ${evolves('noot')}.</td></tr>
+      <tr><td><b>${SPECIES.noot.name}</b> (was Noot)</td><td>Beside clay pits; eats root vegetables. Collects <b>clay</b> off the bed to the crate (ground height unchanged). Evolves: ${evolves('noot')}.</td></tr>
     </table>
     <h4>Taming</h4>
     <ul>
@@ -2992,7 +2992,7 @@ export function helpText(): string {
     </ul>
     <h4>The working sorts</h4>
     <ul>
-      <li><b>${SPECIES.bogga.name}</b>: marshes; cuts <b>peat and tar</b>.</li>
+      <li><b>${SPECIES.bogga.name}</b>: marshes; collects <b>peat and tar</b>.</li>
       <li><b>${SPECIES.sedra.name}</b> (was Sedra): cuts <b>reeds</b>, ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} a cut at ${SKILL_TOP} foraging. Evolves: ${evolves('sedra')}.</li>
       <li><b>${SPECIES.holla.name}</b> (was Holla): carries <b>water</b> from the shore or a well into your barrels. Evolves: ${evolves('holla')}.</li>
       <li><b>Dowse</b>: only over metal; on a settlement <b>${GATHER_VERB.nail}</b> at your anvils (<b>The settlement's hands</b>).</li>

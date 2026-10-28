@@ -402,9 +402,9 @@ export const RESIN_TAPPED = 1;
 /** The faces a quarry cuts: bare rock, and rock under snow (a mountain top's marble). The island's `worker_gatherable`. */
 const STONE_FACES: ReadonlySet<number> = new Set([TileType.Rock, TileType.Snow]);
 export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', butcher: 'butchering', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', rope: 'ropemaking', fletch: 'fletching', paper: 'papyrusmaking', glaze: 'pottery', fill: 'carrying', spin: 'tailoring', nail: 'blacksmithing', ribbon: 'blacksmithing' };
-export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'farming', mine: 'mining ore', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'stoking', fetch: 'fetching', guard: 'guarding', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'prospecting', plant: 'planting', hod: 'hod carrying', mend: 'mending', compost: 'composting', seek: 'seeking relics', fish: 'fishing', prune: 'pruning', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending hives', groom: 'grooming', dairy: 'milking and shearing', heal: 'healing', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'lamplighting', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging smelters', kiln: 'loading kilns', ash: 'raking ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'tending planters', worm: 'digging worms', sprout: 'picking sprouts', resin: 'tapping pines', flower: 'picking wildflowers', scrub: 'scrubbing stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'making rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets', spin: 'spinning yarn', nail: 'smithing nails', ribbon: 'smithing ribbons' };
+export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'farming', mine: 'mining ore', sand: 'collecting sand', clay: 'collecting clay', quarry: 'cutting stone', stoke: 'stoking', fetch: 'fetching', guard: 'guarding', hunt: 'hunting', peat: 'collecting peat and tar', reed: 'cutting reeds', water: 'carrying water', prospect: 'prospecting', plant: 'planting', hod: 'hod carrying', mend: 'mending', compost: 'composting', seek: 'seeking relics', fish: 'fishing', prune: 'pruning', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending hives', groom: 'grooming', dairy: 'milking and shearing', heal: 'healing', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'lamplighting', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging smelters', kiln: 'loading kilns', ash: 'raking ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'tending planters', worm: 'digging worms', sprout: 'picking sprouts', resin: 'tapping pines', flower: 'picking wildflowers', scrub: 'scrubbing stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'making rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets', spin: 'spinning yarn', nail: 'smithing nails', ribbon: 'smithing ribbons' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'dig sand', clay: 'dig clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'cut peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'collect sand', clay: 'collect clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'collect peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
   get saw() { return `saw logs in your settlement stores into planks, ${recipeMakes('make_planks')} a log`; },
   get chisel() { return `chisel rock shards in your settlement stores into stone brick, ${recipeMakes('make_stone_brick')} a shard`; },
@@ -4376,16 +4376,16 @@ sayLine('cobbe', `Settlement task: carry what planned building work still wants 
   'Level: masonry.');
 sayLine('embra', `Settlement task: keep your campfires, ovens, braziers, smelters and kilns fuelled and lit, ${reach('embra')}: under ${HEARTH_FULL / 60} minutes of fuel, it carries 1 piece of fuel from your settlement stores to the nearest, whole pieces that fit only, and relights it if out (brazier: after dark). ${STOKE_SAYS} Eats only cooked food.`,
   'Level: smelting.', STOKE_SMELT_SAYS);
-sayLine('noot', `Settlement task: dig clay off clay ground ${reach('noot')}, 1 lump a dig. QL: ${yieldQl('digging')}. Output to the crate.`,
+sayLine('noot', `Settlement task: collect clay off clay ground ${reach('noot')}, 1 lump a collect. QL: ${yieldQl('digging')}. Output to the crate.`,
   'Level: digging.');
-sayLine('crawler', `Settlement task: dig sand off sandy ground ${reach('crawler')}, 1 heap a dig. QL: ${yieldQl('digging')}. Output to the crate. Wild bite: venom, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless dressed. Kept: ${percent(SPECIES.crawler.unruly!)} chance every ${NIP_EVERY} seconds to attack you when beside you. Strikes back every time.`,
+sayLine('crawler', `Settlement task: collect sand off sandy ground ${reach('crawler')}, 1 heap a collect. QL: ${yieldQl('digging')}. Output to the crate. Wild bite: venom, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless dressed. Kept: ${percent(SPECIES.crawler.unruly!)} chance every ${NIP_EVERY} seconds to attack you when beside you. Strikes back every time.`,
   'Level: digging.');
 sayLine('whispet', `Tamed, ${abilityName('fear')}: ${abilitySays('fear')}. Strikes back every time. Wild: after dark only, ${seasonSays(SPECIES.whispet.season!)} (UTC); none wild on other days. Tamed, kept or bred ones stay all year.`,
   GUARD_LEVEL);
 sayLine('warda', `Sight for you, at your heel or keeping a settlement: ${SPECIES.warda.sight} tiles (most: ${KEPT_SIGHT}), −${percent(KEPT_NIGHT_LOSS / 2)} at the dead of night. Strikes back every time.`,
   `Level: awareness, learned ${LEARNS_SAYS.out}.`);
 sayLine('rowl', `Wild: attacks on sight. Settlement task: hunt ${reach('rowl')}; carcasses home.`, 'Level: fighting.');
-sayLine('bogga', `Settlement task: cut peat and tar from the bog ${reach('bogga')}; output home.`, 'Level: digging.');
+sayLine('bogga', `Settlement task: collect peat and tar from the bog ${reach('bogga')}; output home.`, 'Level: digging.');
 sayLine('sappa', `Settlement task: plant sprouts where trees were cut, ${reach('sappa')}.`, 'Level: forestry.');
 sayLine('wicka', `Settlement task: put a candle from your settlement stores in each of your lantern posts and pillars without one, ${reach('wicka')}; lights them after dark, puts them out by day.`,
   'Level: carrying.');
@@ -6857,9 +6857,9 @@ export class Creatures {
       return game.world.rockHeight(x, y) > -MINE_DEPTH && this.reachableFace(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'sand' || kind === 'clay') {
-      // Soft ground left on a corner of the right sort of tile, and one digger to it.
+      // A bed of the right sort, collected off the top as a player's Collect does (ground left as it was).
       if (game.world.getTile(x, y) !== (kind === 'sand' ? TileType.Sand : TileType.Clay)) return false;
-      return this.sandCorner(game, x, y) !== null && this.tileOk(game, x, y) && !this.claimed(x, y, c);
+      return this.tileOk(game, x, y) && !game.isForaged(x, y, 'dig') && !this.claimed(x, y, c);
     }
     // Stoking and guarding are not tile work; they never send a worker walking to one.
     if (kind === 'stoke' || kind === 'guard') return false;
@@ -6968,31 +6968,6 @@ export class Creatures {
   }
 
   /**
-   * The corner of a tile there is still a load to be had from: above the water,
-   * with soil over the rock. The highest goes first, so the pit a digger leaves
-   * comes out level rather than ragged.
-   */
-  private sandCorner(game: Game, x: number, y: number): [number, number] | null {
-    const w = game.world;
-    let best: [number, number] | null = null;
-    let bestH = -Infinity;
-    for (const [cx, cy] of [
-      [x, y],
-      [x + 1, y],
-      [x, y + 1],
-      [x + 1, y + 1],
-    ]) {
-      const h = w.getHeight(cx, cy);
-      if (h <= 0 || w.getDirt(cx, cy) <= 0) continue;
-      if (h > bestH) {
-        bestH = h;
-        best = [cx, cy];
-      }
-    }
-    return best;
-  }
-
-  /**
    * A tree blocks movement, so a feller works from a tile beside it: the one
    * nearest whoever is walking there, since it cannot path around the trunk.
    */
@@ -7079,7 +7054,7 @@ export class Creatures {
     if (kind === 'stump') return this.finishStumping(game, c);
     if (kind === 'farm') return this.finishFarming(game, c, x, y);
     if (kind === 'mine') return this.finishMining(game, c);
-    if (kind === 'sand' || kind === 'clay') return this.finishDigging(game, c, kind === 'sand' ? 'sand' : 'clay');
+    if (kind === 'sand' || kind === 'clay') return this.finishCollect(game, c, kind === 'sand' ? 'sand' : 'clay');
     if (kind === 'stoke' || kind === 'guard') return null;
     // A Vesp works the flower and flies back to its hive with what it gathered (`vespTrip`), the island's `worker_do`.
     if (kind === 'hive') return this.finishNectar(game, c);
@@ -7301,20 +7276,12 @@ export class Creatures {
     return { uid: game.inventory.nextUid++, id: ore.yields, ql, dmg: 0, count: 1 };
   }
 
-  /** Dig out the ground a worker walked to, and hand it the load it carries home. */
-  private finishDigging(game: Game, c: Creature, yields: 'sand' | 'clay'): Item | null {
-    const corner = this.sandCorner(game, c.workX, c.workY);
-    if (!corner) return null;
-    const [cx, cy] = corner;
-    const w = game.world;
+  /** Collect a load off the bed a worker walked to, as a player's Collect does: the ground is left as it was. */
+  private finishCollect(game: Game, c: Creature, yields: 'sand' | 'clay'): Item | null {
+    if (game.world.getTile(c.workX, c.workY) !== (yields === 'sand' ? TileType.Sand : TileType.Clay)) return null;
     const skill = c.skills.digging ?? 1;
     this.gainSkill(game, c, 'digging', 0.225);
-    // Claws take the ground down the same way a shovel does.
-    w.setHeight(cx, cy, w.getHeight(cx, cy) - 1);
-    const left = w.getDirt(cx, cy) - 1;
-    w.setDirt(cx, cy, left);
-    if (left <= 0) game.exposeRock(cx, cy);
-    game.events.emit('world', c.workX, c.workY);
+    game.markForaged(c.workX, c.workY, 'dig');
     // Times what its yield traits bring, as the island's `worker_do` has it.
     const ql = Math.min(100, Math.max(1, skill * (DIG_QL[0] + game.rand() * (DIG_QL[1] - DIG_QL[0])) + 1) * this.yieldMul(c));
     return { uid: game.inventory.nextUid++, id: yields, ql, dmg: 0, count: 1 };

@@ -190,7 +190,7 @@ import {
 import { BOIL_LITRES, boilCountPlain, gramsOf } from '../../game/dyes';
 import { GREEN_ACTIONS, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET } from '../../game/greening';
 import { BUCKET_LITRES, FURNITURE, WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
-import { BAY_PAST_HEFT, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBridge, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, STONE_ARCH, THROWN, WAGON_WIDTH, WIDEST } from '../../game/bridges';
+import { BAY_PAST_HEFT, BRIDGE_BILL_TIMES, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBridge, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, STONE_ARCH, THROWN, WAGON_WIDTH, WIDEST } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, TILE_METRES } from '../../world/aqueducts';
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
@@ -4105,6 +4105,21 @@ export const NEWS: News[] = [
     n: 355,
     day: '2026-10-28',
     lines: () => ['Fixed: Build bridge from here on a pinned storey\'s menu: storey to storey, roof to roof (was: on the ground\'s menu only).'],
+  },
+  {
+    n: 356,
+    day: '2026-10-28',
+    lines: () => [
+      'Changed: bridge and aqueduct spans built piece by piece, as a wall: each go fits any one material the span needs that is to hand '
+        + '(was: refused unless every material was to hand).',
+      'Changed: sand, clay, peat and tar workers (Mudlet, Sandpip, Mosskip lines) Collect off the bed, as your Collect: ground height unchanged '
+        + '(was: Dig, lowering a corner, and only where a corner had soil left).',
+      `Changed: bridge materials ×${BRIDGE_BILL_TIMES} per span (rope, every material, drawbridge deck; winch and aqueducts unchanged), `
+        + `e.g. marble ${BRIDGES.marble.bill.map(([id, n]) => `${n} ${id.replace('_', ' ')}`).join(', ')} a lane (was: ${BRIDGES.marble.bill.map(([id, n]) => `${n / BRIDGE_BILL_TIMES}`).join(', ')}). `
+        + 'Spans already set out keep their bill.',
+      'Fixed: wells and fountains: water level sent as it stands now, refill included (was: as at the last draw; a drawn well read near empty, e.g. "0.00098 L stored"). '
+        + 'Crafting rows: litres to one decimal.',
+    ],
   },
 ];
 

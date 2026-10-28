@@ -75,7 +75,7 @@ export const IDLE_WANTS = 3;
 const IDLE_SOURCE: Partial<Record<GatherKind, string>> = {
   forage: 'ground left to forage', botanize: 'ground left to botanize', woodcut: 'trees to fell', prune: 'trees worth pruning',
   fruit: 'fruit on the bough', stump: 'stumps to dig out', mine: 'bare rock with a seam in it', quarry: 'bare rock to cut',
-  sand: 'sand to dig', clay: 'clay to dig', peat: 'peat to cut', reed: 'reed bed', fish: 'water worth a rod',
+  sand: 'sand to collect', clay: 'clay to collect', peat: 'peat to collect', reed: 'reed bed', fish: 'water worth a rod',
   seek: 'ground worth turning over', farm: 'fields wanting work', hive: 'hive to tend', bush: 'bushes or vines to pick',
   grass: 'grass or moss to cut', pan: 'sand at the water to pan', worm: 'ground to dig for worms',
   sprout: 'trees to pick a sprout off', resin: 'pines to tap', flower: 'wildflowers to pick', scrub: 'moss or ivy on your stone',

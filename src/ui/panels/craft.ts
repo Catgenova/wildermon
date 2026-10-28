@@ -447,13 +447,15 @@ export class CraftPanel {
       span.textContent = i.litres ? `${i.need} L ${liquidWord(i.item)}` : `${i.need} ${lower(i.item)}`;
       // Where they are, so a crate that empties itself into a chest is never
       // a surprise: what is on you goes first, then the nearest store.
-      const stored = i.have - i.carried;
+      // Litres to the tenth below, so a well part refilled reads "0.4 L", never a float's tail.
+      const n = (v: number): number => (i.litres ? Math.floor(v * 10 + 1e-9) / 10 : v);
+      const stored = n(i.have - i.carried);
       span.title = stored > 0
-        ? `Have ${i.have}${l}: ${i.carried}${l} carried, ${stored}${l} in stores${i.litres ? ', barrels, wells and fountains' : ''} within ${reachFor(this.game, r)} tiles. Carried used first.`
-        : `Have ${i.have}${l}, carried`;
+        ? `Have ${n(i.have)}${l}: ${n(i.carried)}${l} carried, ${stored}${l} in stores${i.litres ? ', barrels, wells and fountains' : ''} within ${reachFor(this.game, r)} tiles. Carried used first.`
+        : `Have ${n(i.have)}${l}, carried`;
       // How many, and how many of those are in a store rather than on you.
       const have = document.createElement('em');
-      have.textContent = stored <= 0 ? ` (${i.have}${l})` : i.carried ? ` (${i.carried}${l} + ${stored}${l} stored)` : ` (${stored}${l} stored)`;
+      have.textContent = stored <= 0 ? ` (${n(i.have)}${l})` : i.carried ? ` (${n(i.carried)}${l} + ${stored}${l} stored)` : ` (${stored}${l} stored)`;
       span.append(have);
       /*
        * Short of something: click it to see what makes it. Asked for as "click

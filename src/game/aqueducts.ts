@@ -366,9 +366,10 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
       if (!s) return 'Finished.';
       if (!g.inventory.has(AQUEDUCT.tool)) return `Need a ${itemDef(AQUEDUCT.tool).name.toLowerCase()}.`;
       if (Math.hypot(s.x + 0.5 - g.player.x, s.y + 0.5 - g.player.y) > 4.5) return 'Stand by the open span.';
-      // Out of the pack, a crate on the span or the stores within reach, as a wall's does (`toHand`).
-      const short = Object.keys(s.needed).sort().filter((id) => s.needed[id] > 0 && toHand(g, id, undefined, s) < 1);
-      if (short.length) return `Span needs ${spanWants(s)}; no ${itemDef(short[0]).name.toLowerCase()} to hand.`;
+      // Piece by piece, as a bridge: any one thing it wants, out of the pack, a crate on the span or the stores within
+      // reach (`toHand`).
+      const want = Object.keys(s.needed).filter((id) => s.needed[id] > 0);
+      if (!want.some((id) => toHand(g, id, undefined, s) > 0)) return `Span needs ${spanWants(s)}; none to hand.`;
       return null;
     },
     perform: (t, g) => {

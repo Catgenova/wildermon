@@ -81,7 +81,8 @@ const wagon = game.addFurniture('wagon', px + 2, py, 0, 0, 40, [stack('log', 3),
 wagon.mine = false;
 const bridge = {
   id: 9001, kind: 'plank', ax: px, ay: py + 3, bx: px + 3, by: py + 3, height: 40, level: 0,
-  spans: [{ x: px + 1, y: py + 3, needed: { plank: 2 }, total: { plank: 2 } }],
+  // Rope too, none of it to hand: built piece by piece, a go still fits a plank.
+  spans: [{ x: px + 1, y: py + 3, needed: { plank: 2, rope: 1 }, total: { plank: 2, rope: 1 } }],
 } as unknown as Bridge;
 game.bridges.set(bridge.id, bridge);
 
@@ -115,10 +116,10 @@ const LOGS = wall.total.log;
 check('the reach is the three tiles asked for, on both sides', Number(sim.REACH) === CRAFT_REACH && CRAFT_REACH === 3, sim.REACH);
 check('in the browser: a go at the wall is allowed and lays a log out of somebody else\'s wagon two tiles off',
   sim.WALL_ASK === 'ALLOWED' && sim.WALL === `2,${LOGS - 1}`, `${sim.WALL_ASK} ${sim.WALL}`);
-check('and a go at a bridge\'s span decks a plank out of it',
+check('and a go at a bridge\'s span decks a plank out of it, piece by piece: its rope not to hand',
   sim.SPAN_ASK === 'ALLOWED' && sim.SPAN === '1,1', `${sim.SPAN_ASK} ${sim.SPAN}`);
 check('with stores turned off, both are refused, the span having no plank to hand',
-  sim.WALL_OFF.startsWith('Need ') && sim.SPAN_OFF === 'Span needs 1 plank; no plank to hand.', `${sim.WALL_OFF} / ${sim.SPAN_OFF}`);
+  sim.WALL_OFF.startsWith('Need ') && sim.SPAN_OFF === 'Span needs 1 plank, 1 rope; none to hand.', `${sim.WALL_OFF} / ${sim.SPAN_OFF}`);
 check('a wagon four tiles off is past reach: the wall is refused and nothing is taken',
   sim.WALL_FAR.startsWith('Need ') && sim.FAR === `2,${LOGS - 1}`, `${sim.WALL_FAR} ${sim.FAR}`);
 
@@ -163,7 +164,7 @@ begin
   insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level)
     values (w, 'plank', v_x, v_y + 3, v_x + 3, v_y + 3, 40, me, 0) returning id into v_bridge;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
-    values (w, v_bridge, 1, v_x + 1, v_y + 3, '{"plank": 2}', '{"plank": 2}');
+    values (w, v_bridge, 1, v_x + 1, v_y + 3, '{"plank": 2, "rope": 1}', '{"plank": 2, "rope": 1}');
 
   insert into said values ('WALL_ASK', coalesce(act_refusal(w, me, 'build_wall',
     jsonb_build_object('kind', 'tile', 'x', v_x, 'y', v_y, 'side', 'n')), 'ALLOWED'));

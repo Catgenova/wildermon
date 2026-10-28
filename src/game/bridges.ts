@@ -101,7 +101,14 @@ export const STONE_ARCH = {
   difficulty: 44,
 };
 
-/** A material bridge, off its wall material: every number in it is the material's. */
+/**
+ * Times a bridge's deck bill over what it was: rope, the materials and the drawbridge (its winch not). Asked for:
+ * "Bridges should require 10x more materials than they currently do". An aqueduct's stone arch is not a bridge's.
+ */
+export const BRIDGE_BILL_TIMES = 10;
+const timesBill = (bill: Array<[string, number]>): Array<[string, number]> => bill.map(([item, n]) => [item, n * BRIDGE_BILL_TIMES]);
+
+/** A material bridge, off its wall material: every number in it is the material's, times `BRIDGE_BILL_TIMES`. */
 function materialBridge(id: MaterialBridgeKind): BridgeDef {
   const m = MATERIAL_BY_ID.get(id)!;
   const span = m.storeys + BRIDGE_REACH;
@@ -110,7 +117,7 @@ function materialBridge(id: MaterialBridgeKind): BridgeDef {
   return {
     id,
     name: `${m.name} bridge`,
-    bill: m.bill.map(([item, n]) => [item, n]),
+    bill: timesBill(m.bill),
     span,
     tool: m.tool,
     skill: m.skill,
@@ -130,7 +137,7 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
   rope: {
     id: 'rope',
     name: 'Rope bridge',
-    bill: [['thick_rope', 6], ['plank', 12], ['nail', 8]],
+    bill: timesBill([['thick_rope', 6], ['plank', 12], ['nail', 8]]),
     span: 14,
     tool: 'mallet',
     skill: 'carpentry',
@@ -163,7 +170,7 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
   draw: {
     id: 'draw',
     name: 'Drawbridge',
-    bill: [['plank', 24], ['timber', 8], ['nail', 24]],
+    bill: timesBill([['plank', 24], ['timber', 8], ['nail', 24]]),
     span: 2,
     tool: 'mallet',
     skill: 'carpentry',
@@ -631,9 +638,10 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       if (!s) return 'Finished.';
       if (!g.inventory.has(def.tool)) return `Need a ${itemDef(def.tool).name.toLowerCase()}.`;
       if (Math.hypot(s.x + 0.5 - g.player.x, s.y + 0.5 - g.player.y) > 4.5) return 'Stand by the open span.';
-      // What it wants comes out of the pack, a crate on the span or the stores within reach, as a wall's does (`toHand`).
-      const short = Object.keys(s.needed).sort().filter((id) => s.needed[id] > 0 && toHand(g, id, undefined, s) < 1);
-      if (short.length) return `Span needs ${spanWants(s)}; no ${itemDef(short[0]).name.toLowerCase()} to hand.`;
+      // Piece by piece, as a wall: any one thing it wants, out of the pack, a crate on the span or the stores within
+      // reach (`toHand`).
+      const want = Object.keys(s.needed).filter((id) => s.needed[id] > 0);
+      if (!want.some((id) => toHand(g, id, undefined, s) > 0)) return `Span needs ${spanWants(s)}; none to hand.`;
       return null;
     },
     perform: (t, g) => {

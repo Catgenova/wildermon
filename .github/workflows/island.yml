@@ -1640,6 +1640,25 @@ jobs:
             --outfile=node_modules/.cache/fruiting.mjs --log-level=error
           node node_modules/.cache/fruiting.mjs
 
+      - name: Sand, clay, peat and tar workers collect, the same on both sides
+        if: matrix.shard == 2
+        run: |
+          # A Mudlet on clay at water level with no soil left: it would work
+          # it, a go gives clay and leaves the ground as it was, and the tile
+          # is not worked again straight after -- on both sides.
+          npx esbuild supabase/test/collectwork.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/collectwork.mjs --log-level=error
+          node node_modules/.cache/collectwork.mjs
+
+      - name: A well's water reaches the browser as it stands
+        if: matrix.shard == 2
+        run: |
+          # A well drawn dry a hundred seconds ago is sent with what it has
+          # drawn since, and one drawn dry a day ago is sent full (`rpc_ground`).
+          npx esbuild supabase/test/wellwater.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/wellwater.mjs --log-level=error
+          node node_modules/.cache/wellwater.mjs
+
       - name: A glasshouse grows its crops the year round, the same on both sides
         if: matrix.shard == 2
         run: |
