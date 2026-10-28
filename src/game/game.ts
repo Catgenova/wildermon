@@ -8929,7 +8929,8 @@ export class Game {
           // When the moss on a statue began, on this machine's clock (`greening.ts`).
           greenSince: sinceAgo(r.green_ago),
           fuel: r.fuel ?? undefined, lit: r.lit ?? undefined, ash: r.ash ?? undefined,
-          litres: r.litres ?? undefined, liquid: (r.liquid ?? undefined) as PlacedFurniture['liquid'],
+          // A well's or a fountain's is water, whatever is left in it, as the island's `placed_liquid` has it.
+          litres: r.litres ?? undefined, liquid: ((furnitureDef(r.sub ?? 'chest').well ?? 0) > 0 ? 'water' : r.liquid ?? undefined) as PlacedFurniture['liquid'],
           ferment: r.ferment ?? undefined,
           // When a wine in it stops working, and a trellis's vine (`ageing.ts`, `vineyard.ts`).
           agedFrom: r.aged_from ?? undefined,

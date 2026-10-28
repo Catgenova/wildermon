@@ -4130,6 +4130,11 @@ export const NEWS: News[] = [
       'Fixed: storey pinned: a click on its bridge deck walks onto the deck (was: to the floor beside it, or "No floor on storey").',
     ],
   },
+  {
+    n: 358,
+    day: '2026-10-28',
+    lines: () => ['Fixed: a well or fountain drawn dry, refilled: water, counted toward a recipe\'s litres (was: "litres of empty", not counted).'],
+  },
 ];
 
 /**
