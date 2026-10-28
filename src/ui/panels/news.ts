@@ -4101,6 +4101,11 @@ export const NEWS: News[] = [
     lines: () => [`Fixed: long walks: a click over ${TRAVEL_LEG} tiles away walked in legs, as a map pin; a search that runs short walks as far as it got and looks again; `
       + 'a tile you cannot stand on walked to the nearest free tile beside it (was: "No path there." on most long walks).'],
   },
+  {
+    n: 355,
+    day: '2026-10-28',
+    lines: () => ['Fixed: Build bridge from here on a pinned storey\'s menu: storey to storey, roof to roof (was: on the ground\'s menu only).'],
+  },
 ];
 
 /**

@@ -1924,55 +1924,7 @@ export class UI {
       }
     }
     // Throwing a bridge from where you are standing to the tile under the cursor.
-    const planBridge = ACTION_BY_ID.get('plan_bridge');
-    if (planBridge && (pick.x !== this.game.player.tileX || pick.y !== this.game.player.tileY)) {
-      // An aqueduct is not thrown from a bank but led to where it pours (`aqueductMenu`).
-      const g = this.game;
-      const billSaid = (bill: Array<[string, number]>, k = 1): string => bill.map(([id, n]) => `${n * k} ${itemName({ uid: 0, id, ql: 1, dmg: 0, count: 1 }).toLowerCase()}`).join(', ');
-      const [ax, ay] = [g.player.tileX, g.player.tileY];
-      // Lanes on offer: one; two, the second either side of the line; three. Labels, and what each lets over.
-      const widths: Array<{ width: number; side?: Side; label: string; crosses: string }> = [
-        { width: 1, label: '1 lane', crosses: 'carts' },
-        ...[1, -1].map((k) => ({ width: WAGON_WIDTH, side: laneSide(ax, ay, pick.x, pick.y, k), label: `${WAGON_WIDTH} lanes, ${SIDE_NAMES[laneSide(ax, ay, pick.x, pick.y, k)]}`, crosses: 'carts, wagons' })),
-        { width: STALL_WIDTH, label: `${STALL_WIDTH} lanes`, crosses: 'carts, wagons, outer-lane furniture' },
-      ];
-      const hidden = (reason: string | null): boolean => reason !== null && /runs straight|nothing between|a gap, it is ground|dry, solid ground/.test(reason);
-      const options = THROWN.map((kind) => {
-        const def = BRIDGES[kind];
-        if (!isMaterialBridge(kind)) {
-          const reason = planBridge.check?.({ ...target, material: kind }, g) ?? null;
-          return hidden(reason) ? null : {
-            label: def.name,
-            note: reason ? undefined : `${billSaid(def.bill)} a span${def.winch ? ` · the first also ${billSaid(def.winch)}` : ''} · ${def.carts ? 'carts cross' : 'foot only'}`,
-            hint: reason ?? undefined,
-            disabled: !!reason,
-            onSelect: () => g.requestAction(planBridge, { ...target, material: kind }),
-          };
-        }
-        const lanes = widths.map((w) => {
-          const t: Target = { ...target, material: kind, width: w.width, ...(w.side ? { side: w.side } : {}) };
-          return { w, t, reason: planBridge.check?.(t, g) ?? null };
-        });
-        if (lanes.every((l) => hidden(l.reason))) return null;
-        return {
-          label: def.name,
-          note: `max ${def.span} tiles · bay ${def.bay} · max drop ${def.storeys} storeys`,
-          children: lanes.map(({ w, t, reason }) => ({
-            label: w.label,
-            note: reason ? undefined : `${billSaid(def.bill, w.width)} a span · a pier ${billSaid(def.bill)} a storey of drop · ${w.crosses}`,
-            hint: reason ?? undefined,
-            disabled: !!reason,
-            onSelect: () => g.requestAction(planBridge, t),
-          })),
-        };
-      }).filter((o): o is NonNullable<typeof o> => o !== null);
-      if (options.length) {
-        entries.push({
-          label: 'Build bridge from here',
-          children: options,
-        });
-      }
-    }
+    entries.push(...this.bridgeFromHere(pick, target));
     // Leading an aqueduct to the pool, pond, fountain or hollow under the cursor, from water straight out from it.
     entries.push(...aqueductMenu(this.game, pick.x, pick.y, target));
     // Setting a carried trap on the spot under the cursor.
@@ -2228,10 +2180,63 @@ export class UI {
     const host = g.buildings.buildingAt(pick.x, pick.y) ?? storeyHost(g, pick.x, pick.y, level);
     const onRoof = !!host && g.buildings.buildingAt(pick.x, pick.y) === host && level >= host.levels;
     const entries: MenuItem[] = [...this.buildingEntries(pick, level)];
+    entries.push(...this.bridgeFromHere(pick, { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy }));
     if (!onRoof && g.standable(pick.x, pick.y, level)) entries.push(...this.furnitureDownEntries());
     entries.push(...this.markEntries(pick));
     const where = onRoof ? 'roof' : `storey ${level + 1}`;
     return { title: `${host ? `${host.name} · ` : ''}${where} (${pick.x}, ${pick.y})`, entries };
+  }
+
+  /**
+   * A bridge from where you are standing to the tile under the cursor, by material and lanes: on the ground's list and
+   * on a pinned storey's (`storeyMenu`), where a walkway between two towers is thrown from one roof to the other.
+   */
+  private bridgeFromHere(pick: Pick, target: Extract<Target, { kind: 'tile' }>): MenuItem[] {
+    const planBridge = ACTION_BY_ID.get('plan_bridge');
+    if (planBridge && (pick.x !== this.game.player.tileX || pick.y !== this.game.player.tileY)) {
+      // An aqueduct is not thrown from a bank but led to where it pours (`aqueductMenu`).
+      const g = this.game;
+      const billSaid = (bill: Array<[string, number]>, k = 1): string => bill.map(([id, n]) => `${n * k} ${itemName({ uid: 0, id, ql: 1, dmg: 0, count: 1 }).toLowerCase()}`).join(', ');
+      const [ax, ay] = [g.player.tileX, g.player.tileY];
+      // Lanes on offer: one; two, the second either side of the line; three. Labels, and what each lets over.
+      const widths: Array<{ width: number; side?: Side; label: string; crosses: string }> = [
+        { width: 1, label: '1 lane', crosses: 'carts' },
+        ...[1, -1].map((k) => ({ width: WAGON_WIDTH, side: laneSide(ax, ay, pick.x, pick.y, k), label: `${WAGON_WIDTH} lanes, ${SIDE_NAMES[laneSide(ax, ay, pick.x, pick.y, k)]}`, crosses: 'carts, wagons' })),
+        { width: STALL_WIDTH, label: `${STALL_WIDTH} lanes`, crosses: 'carts, wagons, outer-lane furniture' },
+      ];
+      const hidden = (reason: string | null): boolean => reason !== null && /runs straight|nothing between|a gap, it is ground|dry, solid ground/.test(reason);
+      const options = THROWN.map((kind) => {
+        const def = BRIDGES[kind];
+        if (!isMaterialBridge(kind)) {
+          const reason = planBridge.check?.({ ...target, material: kind }, g) ?? null;
+          return hidden(reason) ? null : {
+            label: def.name,
+            note: reason ? undefined : `${billSaid(def.bill)} a span${def.winch ? ` · the first also ${billSaid(def.winch)}` : ''} · ${def.carts ? 'carts cross' : 'foot only'}`,
+            hint: reason ?? undefined,
+            disabled: !!reason,
+            onSelect: () => g.requestAction(planBridge, { ...target, material: kind }),
+          };
+        }
+        const lanes = widths.map((w) => {
+          const t: Target = { ...target, material: kind, width: w.width, ...(w.side ? { side: w.side } : {}) };
+          return { w, t, reason: planBridge.check?.(t, g) ?? null };
+        });
+        if (lanes.every((l) => hidden(l.reason))) return null;
+        return {
+          label: def.name,
+          note: `max ${def.span} tiles · bay ${def.bay} · max drop ${def.storeys} storeys`,
+          children: lanes.map(({ w, t, reason }) => ({
+            label: w.label,
+            note: reason ? undefined : `${billSaid(def.bill, w.width)} a span · a pier ${billSaid(def.bill)} a storey of drop · ${w.crosses}`,
+            hint: reason ?? undefined,
+            disabled: !!reason,
+            onSelect: () => g.requestAction(planBridge, t),
+          })),
+        };
+      }).filter((o): o is NonNullable<typeof o> => o !== null);
+      if (options.length) return [{ label: 'Build bridge from here', children: options }];
+    }
+    return [];
   }
 
   /** Setting a carried piece of furniture down: it follows the cursor from here, Q and E turn it, a click sets it down. */
