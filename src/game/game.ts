@@ -8648,6 +8648,18 @@ export class Game {
     this.events.emit('world', f.x, f.y);
   }
 
+  /**
+   * Where the one at a yoke of a team stands, from the vehicle's middle and the way it is going (`fx`, `fy`, of length
+   * one): abreast of one another, a pace and a half ahead of the shafts; on the vehicle where that is no ground to stand
+   * on. For your own team (`haulVehicle`) and the team of a vehicle somebody else drives (`Creatures.walkLegs`).
+   */
+  traceSpot(cx: number, cy: number, fx: number, fy: number, i: number, n: number): [number, number] {
+    const off = n === 1 ? 0 : (i / (n - 1) - 0.5) * 1.6;
+    const tx = cx + fx * TRACE_LENGTH - fy * off;
+    const ty = cy + fy * TRACE_LENGTH + fx * off;
+    return this.world.inBounds(Math.floor(tx), Math.floor(ty)) && this.world.isPassable(Math.floor(tx), Math.floor(ty)) ? [tx, ty] : [cx, cy];
+  }
+
   private haulVehicle(f: PlacedFurniture, dt: number, moved: number): void {
     const team = this.team(f);
     // Anything that died or was let go in the meantime leaves its yoke empty.
@@ -8683,17 +8695,7 @@ export class Game {
     const fy = this.player.dirY / len;
     for (let i = 0; i < team.length; i++) {
       const c = team[i];
-      // Abreast of one another, a pace and a half ahead of the shafts.
-      const off = team.length === 1 ? 0 : (i / (team.length - 1) - 0.5) * 1.6;
-      const tx = cx + fx * TRACE_LENGTH - fy * off;
-      const ty = cy + fy * TRACE_LENGTH + fx * off;
-      if (this.world.inBounds(Math.floor(tx), Math.floor(ty)) && this.world.isPassable(Math.floor(tx), Math.floor(ty))) {
-        c.x = tx;
-        c.y = ty;
-      } else {
-        c.x = cx;
-        c.y = cy;
-      }
+      [c.x, c.y] = this.traceSpot(cx, cy, fx, fy, i, team.length);
       c.moving = moving;
       if (moving) {
         c.dirX = fx;

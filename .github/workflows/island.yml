@@ -2875,12 +2875,14 @@ jobs:
             --outfile=node_modules/.cache/ownsettlement.mjs --log-level=error
           node node_modules/.cache/ownsettlement.mjs
 
-      - name: A mount under you walks as you walk
+      - name: A mount under you walks as you walk, and a team in the traces with its cart
         if: matrix.shard == 3
         run: |
           # A saddled Thistlekit ridden across open ground with the wildlife
           # the island's: going, facing your way and its gait stepping every
-          # frame, under you, and stopped when you stop.
+          # frame, under you, and stopped when you stop. And two in the traces
+          # of a large cart, driven by you and by somebody else: going every
+          # frame, the way the cart goes, ahead of it.
           npx esbuild supabase/test/ridewalk.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/ridewalk.mjs --log-level=error
           node node_modules/.cache/ridewalk.mjs

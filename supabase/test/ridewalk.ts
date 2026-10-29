@@ -1,5 +1,5 @@
 /**
- * A mount under you walks as you walk, on the island.
+ * A mount under you walks as you walk, on the island; and so does a team in the traces, yours or anybody's.
  *
  * Reported: "mounts when ridden do no animations like walking". Your own mount is carried under you each frame
  * (`Game.carryRider`), which sets it going and steps its gait; on the island the creatures are then walked along the
@@ -9,9 +9,16 @@
  *   * every frame of the ride, it is going, facing the way you go, and its gait steps on;
  *   * it is where you are;
  *   * and once you stop, it stops.
+ *
+ * And asked: "Make sure that fix also applies to hitched mons". A team in the traces of a vehicle you drive is put
+ * ahead of it each frame (`Game.haulVehicle`) and was stopped the same way; and the island drags the team of a vehicle
+ * somebody else drives to their feet on a leg of no length (`drag_along`), so everybody else saw it stand under the
+ * driver. So the same is asked of two Thistlekits in the traces of a large cart, driven by you and then by somebody
+ * else, and of where they stand: ahead of the cart, the way it goes.
  */
 import { Game } from '../../src/game/game';
 import { TileType } from '../../src/world/tiles';
+import type { Creature } from '../../src/game/creatures';
 
 const ok: string[] = [];
 const bad: string[] = [];
@@ -47,6 +54,60 @@ g.player.stop();
 g.update(1 / 30);
 g.update(1 / 30);
 check('and once you stop, it stops', !mount.moving);
+
+/* ---- a team in the traces -------------------------------------------------------- */
+
+g.dismount();
+g.player.x = 24.5;
+g.player.y = 36.5;
+g.player.stop();
+for (const f of [...g.furniture.values()]) g.removeFurniture(f.id);
+const cart = g.addFurniture('large_cart', 24, 36, 0, 0, 40, [], 'Pine');
+const team: Creature[] = [0, 1].map(() => {
+  const c = g.creatures.spawn('orse', 25.5, 36.5, 'active', g.rand, g.time - 3600 * 24 * 60);
+  c.hunger = 1;
+  return c;
+});
+check('two Thistlekits go into the traces of a large cart', team.every((c) => g.hitch(c, cart)));
+cart.driven = true;
+for (const c of team) {
+  c.legAt = Date.now();
+  c.legEnds = c.legAt;
+}
+const drive = (what: string, step: () => void, ahead: () => [number, number]): void => {
+  const seen: Array<{ moving: boolean; phase: number; dx: number; off: number }> = [];
+  for (let i = 0; i < 45; i++) {
+    step();
+    const [ax] = ahead();
+    for (const c of team) seen.push({ moving: c.moving, phase: c.walkPhase, dx: c.dirX, off: c.x - ax });
+  }
+  const mid = seen.slice(team.length * 2, team.length * 35);
+  check(`${what}: every frame of the drive, each of the team is going`, mid.every((f) => f.moving), `${mid.filter((f) => !f.moving).length} of ${mid.length} still`);
+  check(`${what}: facing the way it goes, east, its gait stepping on`,
+    mid.every((f) => f.dx > 0) && team.every((c, k) => mid[mid.length - team.length + k].phase > mid[k].phase));
+  check(`${what}: ahead of the cart, not under it`, mid.every((f) => f.off > 0.5), `${Math.min(...mid.map((f) => f.off)).toFixed(2)} tiles ahead at the least`);
+};
+g.moveTo(40, 36);
+drive('your own cart', () => g.update(1 / 30), () => [g.player.x, g.player.y]);
+
+// Somebody else on the box: the island drags the cart and its team to their feet, a walk of theirs at a time.
+g.player.stop();
+cart.driven = false;
+cart.helm = 'driver-uid';
+let dx = 30.5;
+const seenAs = (x: number): void => g.roster.saw({ id: 9001, uid: 'driver-uid', name: 'Drover', x, y: 36.5, dirX: 1, dirY: 0, level: 0,
+  moving: true, swimming: false, working: false } as never);
+seenAs(dx);
+drive("somebody else's cart", () => {
+  dx += 0.12;
+  seenAs(dx);
+  for (const c of team) {
+    c.legAt = Date.now();
+    c.legEnds = c.legAt;
+  }
+  g.roster.ease(1 / 30);
+  g.update(1 / 30);
+}, () => g.roster.drawnAt(g.roster.byUid('driver-uid')!));
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

@@ -4177,6 +4177,14 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => ['Fixed: a mount you ride walks and runs under you (was: drawn standing still).'],
   },
+  {
+    n: 365,
+    day: '2026-10-29',
+    lines: () => [
+      'Fixed: a team in the traces of a cart or wagon you drive walks with it (was: drawn standing still).',
+      'Fixed: a team in the traces of a cart or wagon somebody else drives walks ahead of it, the way it goes (was: drawn standing still at the driver\'s feet).',
+    ],
+  },
 ];
 
 /**

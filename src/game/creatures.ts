@@ -5939,6 +5939,8 @@ export class Creatures {
    * word arrives, which is a body standing still rather than a body in the
    * wrong place.
    */
+  /** Where the driver of the vehicle each creature is in the traces of was drawn last frame, for the way they are going. */
+  private driverAt = new Map<number, [number, number]>();
   private walkLegs(game: Game): void {
     const now = Date.now();
     for (const c of this.list.values()) {
@@ -5952,10 +5954,36 @@ export class Creatures {
        * Reported: "mounts when ridden do no animations like walking": the island's leg for it, a leg of no length,
        * stopped it here every frame after.
        */
-      if (c.ridden) {
+      // And in the traces of a vehicle you drive: where `Game.haulVehicle` put it, going as you go.
+      const cart = c.hitchedTo !== null ? game.furniture.get(c.hitchedTo) : undefined;
+      if (c.ridden || cart?.driven) {
         this.place(c);
         continue;
       }
+      /*
+       * In the traces of one somebody else drives: a length ahead of where they are drawn, the way they are going,
+       * going as they go. The island drags it to their feet (`drag_along`) on a leg of no length, which stood it still
+       * under them.
+       */
+      const driver = cart?.helm ? game.roster.byUid(cart.helm) : undefined;
+      if (cart && driver && driver.level >= 0) {
+        const [dx, dy] = game.roster.drawnAt(driver);
+        const was = this.driverAt.get(c.id);
+        this.driverAt.set(c.id, [dx, dy]);
+        const gone = was ? Math.hypot(dx - was[0], dy - was[1]) : 0;
+        c.moving = driver.moving && gone > 0.002;
+        if (c.moving) {
+          c.dirX = (dx - was![0]) / gone;
+          c.dirY = (dy - was![1]) / gone;
+          c.walkPhase += gone * 6;
+        }
+        const len = Math.hypot(c.dirX, c.dirY) || 1;
+        const team = cart.team ?? [];
+        [c.x, c.y] = game.traceSpot(dx, dy, c.dirX / len, c.dirY / len, Math.max(0, team.indexOf(c.id)), Math.max(1, team.length));
+        this.place(c);
+        continue;
+      }
+      this.driverAt.delete(c.id);
       const rider = c.riderUid ? game.roster.byUid(c.riderUid) : undefined;
       // On the ground or a storey up a wide staircase (`Game.rideRule`); never down a cellar.
       if (rider && rider.level >= 0) {
