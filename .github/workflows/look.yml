@@ -186,6 +186,17 @@ jobs:
             left join building_tile bt on bt.world_id = b.world_id and bt.x = e.x and bt.y = e.y
             left join building bl on bl.world_id = bt.world_id and bl.id = bt.building"
           ask "catgenova now: where, storey" "select round(pl.x::numeric, 2) as x, round(pl.y::numeric, 2) as y, pl.level, pl.act from player pl where pl.name = 'catgenova'"
+          # Asked: "nothing but pathing errors when trying to walk a bridge" (the marble bridge on Solara Manor's storey 4)
+          ask "round the bridge, 2571..2581 x 3003..3009: building, floors by storey, top deck" "select t.x, t.y, bt.building,
+                 (select string_agg(f.level || ':' || f.kind || case when bill_done(f.needed) then '' else '(plan)' end, ' ' order by f.level)
+                    from floor_tile f where f.world_id = d.world_id and f.x = t.x and f.y = t.y) as floors,
+                 top_deck(d.world_id, t.x, t.y) as top, bridge_at(d.world_id, t.x, t.y) as deck
+            from deed d cross join lateral (select gx as x, gy as y from generate_series(2571, 2581) gx, generate_series(3003, 3009) gy) t
+            left join building_tile bt on bt.world_id = d.world_id and bt.x = t.x and bt.y = t.y
+           where d.name = 'Solara' and (bt.building is not null or bridge_at(d.world_id, t.x, t.y) is not null) order by t.y, t.x"
+          ask "walls on storey 4 (level 3) round the bridge" "select w.x, w.y, w.dir, w.type, w.material, bill_done(w.needed) as done
+            from wall w join deed d on d.world_id = w.world_id and d.name = 'Solara'
+           where w.level = 3 and w.x between 2571 and 2581 and w.y between 3003 and 3009 order by w.y, w.x, w.dir"
           # Asked: "I have sacrificed hundreds of items at the altar and never seen the rare reward."
           ask "the sacrifice rule as the island has it: the soul draw and its chance" "select soul_chance() as chance,
                  position('soul_chance()' in pg_get_functiondef('perform_sacrifice'::regproc)) > 0 as draws_soul,
