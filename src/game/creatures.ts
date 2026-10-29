@@ -7662,7 +7662,7 @@ export class Creatures {
 
     if (kind === 'water') return this.waterStep(game, c, dt, range, goto, near);
     // Building work on its keeper's settlement only: its reach runs onto the next one's (the island's `on_my_deed`).
-    if (kind === 'hod') return this.hodStep(game, c, dt, goto, (x, y) => near(x, y) && game.onDeed(x, y), deed, range);
+    if (kind === 'hod') return this.hodStep(game, c, dt, goto, (x, y, dir) => near(x, y) && game.workOnDeed(x, y, dir), deed, range);
     if (kind === 'mend') return this.mendStep(game, c, goto);
     if (kind === 'plant') return this.plantStep(game, c, goto, near, range, deed);
     if (kind === 'prospect') return this.prospectStep(game, c, goto, near, range, deed);
@@ -8641,7 +8641,7 @@ export class Creatures {
     c: Creature,
     dt: number,
     goto: (x: number, y: number, reach?: number) => boolean,
-    near: (x: number, y: number) => boolean,
+    near: (x: number, y: number, dir?: string) => boolean,
     deed: { x: number; y: number },
     range: number,
   ): boolean {

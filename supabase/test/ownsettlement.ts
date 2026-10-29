@@ -16,13 +16,16 @@
  *   * planned work a tile past Ivarholm's edge, within an Ivarholm Brickling's reach, is not its work on the island,
  *     whether asked for what it holds or what the stores hold, and is not counted as wanted;
  *   * the same work a tile inside the edge is;
- *   * and in the browser the same: a hod carrier fits a plank into a wall inside its settlement, not one past its edge.
+ *   * and in the browser the same: a hod carrier fits a plank into a wall inside its settlement, not one past its edge;
+ *   * and the east wall of the edge tile, keyed by its line a tile past the edge, is its work on both sides (asked:
+ *     "Bastiondrake is still not moving despite all materials being on my deed": Solara Manor's east wall).
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { TileType } from '../../src/world/tiles';
+import type { Side } from '../../src/game/building';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -93,6 +96,16 @@ begin
   insert into said select 'IN:holding', coalesce((select h.x || ',' || h.y from hod_needing(w, ${IX}, ${IY}, work_range(c), 'plank', c.keeper) h), '-');
   insert into said select 'IN:stocked', coalesce((select h.x || ',' || h.y from hod_needing_stocked(w, c.keeper, ${IX}, ${IY}, work_range(c)) h), '-');
   insert into said select 'IN:wanted', coalesce((select h.n from hod_wanted(w, ${IX}, ${IY}, work_range(c), c.keeper) h), 0)::text;
+  -- The east wall of that tile, keyed by its line one tile past the edge ('v' at x is between x - 1 and x).
+  update wall set dir = 'v', x = ${OUT} where world_id = w and building = v_b;
+  insert into said select 'EDGE:holding', coalesce((select h.x || ',' || h.y from hod_needing(w, ${IX}, ${IY}, work_range(c), 'plank', c.keeper) h), '-');
+  insert into said select 'EDGE:stocked', coalesce((select h.x || ',' || h.y from hod_needing_stocked(w, c.keeper, ${IX}, ${IY}, work_range(c)) h), '-');
+  insert into said select 'EDGE:wanted', coalesce((select h.n from hod_wanted(w, ${IX}, ${IY}, work_range(c), c.keeper) h), 0)::text;
+  -- And the east wall of the tile past the edge: between two tiles neither on Ivarholm.
+  update wall set x = ${OUT} + 1 where world_id = w and building = v_b;
+  update building_tile set x = ${OUT} where world_id = w and building = v_b;
+  insert into said select 'PAST:holding', coalesce((select h.x || ',' || h.y from hod_needing(w, ${IX}, ${IY}, work_range(c), 'plank', c.keeper) h), '-');
+  insert into said select 'PAST:stocked', coalesce((select h.x || ',' || h.y from hod_needing_stocked(w, c.keeper, ${IX}, ${IY}, work_range(c)) h), '-');
 end $t$;
 select k || '|' || v from said;
 rollback;`);
@@ -113,11 +126,16 @@ check('and is not its work: not for the plank it holds, not for the stores\' pla
 check('the same wall a tile inside the edge is its work, both ways, and counted',
   at('IN:holding') === `${IN},${IY}` && at('IN:stocked') === `${IN},${IY}` && Number(at('IN:wanted')) > 0,
   `${at('IN:holding')} ${at('IN:stocked')} ${at('IN:wanted')}`);
+check('the east wall of the edge tile, keyed a tile past the edge, is its work too, both ways, and counted',
+  at('EDGE:holding') === `${OUT},${IY}` && at('EDGE:stocked') === `${OUT},${IY}` && Number(at('EDGE:wanted')) > 0,
+  `${at('EDGE:holding')} ${at('EDGE:stocked')} ${at('EDGE:wanted')}`);
+check('and the east wall of the tile past the edge is not', at('PAST:holding') === '-' && at('PAST:stocked') === '-',
+  `${at('PAST:holding')} ${at('PAST:stocked')}`);
 
 /* ---- in the browser ------------------------------------------------------------------ */
 
 /** A settlement of radius 5 round 20,20, a crate of planks on it, a plank wall planned at a column: what a Brickling does in a minute. */
-const hodded = (wx: number): number => {
+const hodded = (wx: number, side: Side = 'n'): number => {
   const g = Game.create(4261);
   for (let y = 10; y <= 32; y++) for (let x = 10; x <= 32; x++) { g.world.setHeight(x, y, 4); g.world.setTile(x, y, TileType.Grass, 0); }
   g.player.x = 20.5;
@@ -126,7 +144,7 @@ const hodded = (wx: number): number => {
   for (const c of [...g.creatures.list.values()]) g.creatures.list.delete(c.id);
   g.addCrate('plank', 21, 20, 0, 0, [{ uid: g.inventory.nextUid++, id: 'plank', ql: 30, dmg: 0, count: 5 }], true);
   const b = g.buildings.create('Shed', wx, 20);
-  const wall = g.buildings.setWall(b, 0, wx, 20, 'n', 'solid', 'plank');
+  const wall = g.buildings.setWall(b, 0, wx, 20, side, 'solid', 'plank');
   for (const k of Object.keys(wall.needed)) wall.needed[k] = k === 'plank' ? 2 : 0;
   const c = g.creatures.spawn('cobbe', 20.5, 20.5, 'active', g.rand, g.time - 3600 * 24 * 30);
   c.mode = 'deed';
@@ -142,6 +160,10 @@ const inside = hodded(20 + R);
 const outside = hodded(20 + R + 1);
 check('in the browser, a Brickling fits planks into a wall a tile inside its settlement\'s edge', inside > 0, `${inside} fitted`);
 check('and none into one a tile past it, though within its reach', outside === 0, `${outside} fitted`);
+const edge = hodded(20 + R, 'e');
+const past = hodded(20 + R + 1, 'e');
+check('in the browser, planks go into the east wall of the edge tile, keyed a tile past the edge', edge > 0, `${edge} fitted`);
+check('and none into the east wall of the tile past it', past === 0, `${past} fitted`);
 
 /** Its keeper a citizen of a second settlement, with a crate of planks on it: what the workers' stores are. */
 {

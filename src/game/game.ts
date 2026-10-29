@@ -2393,6 +2393,15 @@ export class Game {
   }
 
   /**
+   * Whether a piece of work is on a settlement of yours: a wall keyed by the line it stands on ('v' at x between tiles
+   * x - 1 and x, 'h' at y between y - 1 and y: `borderOf`) when either tile it stands between is. The island's
+   * `hod_work_mine`.
+   */
+  workOnDeed(x: number, y: number, dir?: string): boolean {
+    return this.onDeed(x, y) || (dir === 'v' && this.onDeed(x - 1, y)) || (dir === 'h' && this.onDeed(x, y - 1));
+  }
+
+  /**
    * Whether the stores standing on this tile that somebody else made are
    * yours to use: on a settlement you founded, or one your rank on holds
    * Crates and stores. The island's `crate_yours` and `craft_stock`.
@@ -8249,7 +8258,7 @@ export class Game {
    * `hod_needing` and `hod_needing_stocked`, in the same order.
    */
   hodNeeding(
-    near: (x: number, y: number) => boolean,
+    near: (x: number, y: number, dir?: string) => boolean,
     holding?: string,
     from?: { x: number; y: number },
     stocked?: (item: string) => boolean,
@@ -8268,7 +8277,7 @@ export class Game {
     };
     let best: (Key & { target: HodTarget }) | undefined;
     const consider = (target: HodTarget, bill: Bill, x: number, y: number, level: number, dir: string): void => {
-      if (!near(x, y)) return;
+      if (!near(x, y, dir)) return;
       const d = from ? (x - from.x) ** 2 + (y - from.y) ** 2 : 0;
       for (const [item, n] of Object.entries(bill.needed)) {
         if (n <= 0) continue;
@@ -8297,14 +8306,14 @@ export class Game {
    * carrier with nothing it can fetch names as wanted (`Idle.what`). The
    * island's `hod_wanted`.
    */
-  hodWanted(near: (x: number, y: number) => boolean, from: { x: number; y: number }): { items: string[]; n: number } {
+  hodWanted(near: (x: number, y: number, dir?: string) => boolean, from: { x: number; y: number }): { items: string[]; n: number } {
     const nearest = new Map<string, number>();
-    const consider = (bill: Bill, x: number, y: number): void => {
-      if (!near(x, y)) return;
+    const consider = (bill: Bill, x: number, y: number, dir?: string): void => {
+      if (!near(x, y, dir)) return;
       const d = (x - from.x) ** 2 + (y - from.y) ** 2;
       for (const [item, n] of Object.entries(bill.needed)) if (n > 0 && d < (nearest.get(item) ?? Infinity)) nearest.set(item, d);
     };
-    for (const wall of this.buildings.walls.values()) if (!isDone(wall)) consider(wall, wall.x, wall.y);
+    for (const wall of this.buildings.walls.values()) if (!isDone(wall)) consider(wall, wall.x, wall.y, wall.dir);
     for (const floor of this.buildings.floors.values()) if (!isDone(floor)) consider(floor, floor.x, floor.y);
     for (const column of this.buildings.columns.values()) if (!isDone(column)) consider(column, column.x, column.y);
     for (const bridge of this.bridges.values()) {
