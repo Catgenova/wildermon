@@ -2850,6 +2850,21 @@ jobs:
             --outfile=node_modules/.cache/spiral.mjs --log-level=error
           node node_modules/.cache/spiral.mjs
 
+      - name: A walk onto Solara Manor's storey-4 bridge finds its way, from the ground and every storey
+        if: matrix.shard == 3
+        run: |
+          # The island's own layout of the manor's two buildings, their floors,
+          # walls and the ground round them (manorbridge.json), with its
+          # three-lane bridge at storey 4: from the ground east of it and from
+          # each building on each storey, pinned on storey 4 and on Auto, a walk
+          # reaches every tile of the deck. Before the deck counted as somewhere
+          # a walk on a pinned storey ends, every one past its first column was
+          # "No path there.".
+          npx esbuild supabase/test/manorbridge.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/manorbridge.mjs --log-level=error
+          cp supabase/test/manorbridge.json node_modules/.cache/
+          node node_modules/.cache/manorbridge.mjs
+
       - name: A bridge up a storey is walked across and under, every lane, on both sides
         if: matrix.shard == 3
         run: |
