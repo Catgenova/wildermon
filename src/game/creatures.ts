@@ -7554,7 +7554,8 @@ export class Creatures {
     const near = (x: number, y: number): boolean => Math.max(Math.abs(x - deed.x), Math.abs(y - deed.y)) <= range;
 
     if (kind === 'water') return this.waterStep(game, c, dt, range, goto, near);
-    if (kind === 'hod') return this.hodStep(game, c, dt, goto, near, deed, range);
+    // Building work on its keeper's settlement only: its reach runs onto the next one's (the island's `on_my_deed`).
+    if (kind === 'hod') return this.hodStep(game, c, dt, goto, (x, y) => near(x, y) && game.onDeed(x, y), deed, range);
     if (kind === 'mend') return this.mendStep(game, c, goto);
     if (kind === 'plant') return this.plantStep(game, c, goto, near, range, deed);
     if (kind === 'prospect') return this.prospectStep(game, c, goto, near, range, deed);

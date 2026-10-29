@@ -266,6 +266,9 @@ begin
   insert into said values ('GONE|' || (select count(*) from placed where id = v_c.id));
 
   -- A hod worker laying the last of a second counter, on the other shop tile: its store opens as one laid by hand does.
+  -- Its keeper's settlement round the shop for it, as a hod worker's always is: it fits only its own settlement's work.
+  insert into said select 'DEEDWAS|' || x || ',' || y from deed where world_id = w and founded_by = a;
+  update deed set x = ${X}, y = ${Y} where world_id = w and founded_by = a;
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by)
     values (w, 0, 'h', ${X + 1}, ${Y}, 91, 'counter', 'plank', '{"plank":1,"timber":0,"hinge":0}', '{"plank":18,"timber":3,"hinge":2}', a);
   insert into creature (world_id, id, species, name, from_x, from_y, to_x, to_y, health, sex, mode, job, work_x, work_y, keeper, carrying)
@@ -276,6 +279,8 @@ begin
   insert into said values ('HOD_DID|' || errand_do(w, v_pip));
   insert into said values ('HOD|' || (select substr(k, 9) from said where k like 'HOD_DID|%') || ',' || (select bill_done(needed) from wall where world_id = w and level = 0 and dir = 'h' and x = ${X + 1} and y = ${Y})
     || ',' || (select count(*) from placed where world_id = w and kind = 'counter' and x = ${X + 1} and y = ${Y} and sub = 'n' and made_by = a));
+  update deed set x = split_part(substr(k, 9), ',', 1)::int, y = split_part(substr(k, 9), ',', 2)::int
+    from said where k like 'DEEDWAS|%' and deed.world_id = w and deed.founded_by = a;
 
   -- And the reach rule itself, point by point, against the browser's.
   insert into said values ('REACH|' || (select string_agg(coalesce(sells_reach_refusal(v_c, px, py, st), 'ok'), ';' order by n)

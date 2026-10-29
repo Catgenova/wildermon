@@ -4141,6 +4141,14 @@ export const NEWS: News[] = [
     lines: () => [`Fixed: ${SPECIES.embra.name} line: fuels only the campfires, ovens, braziers, smelters and kilns on your own settlement `
       + '(was: any within its reach, a neighbouring settlement\'s too).'],
   },
+  {
+    n: 360,
+    day: '2026-10-29',
+    lines: () => [
+      'Fixed: settlement workers eat only from your own settlement\'s stores (was: from the stores of whatever settlement they stood on).',
+      `Fixed: ${SPECIES.cobbe.name} line: fits only building work on your own settlement (was: any planned work within its reach, a neighbour\'s too).`,
+    ],
+  },
 ];
 
 /**

@@ -2865,6 +2865,16 @@ jobs:
           cp supabase/test/manorbridge.json node_modules/.cache/
           node node_modules/.cache/manorbridge.mjs
 
+      - name: A settlement's workers eat from its own stores and carry the hod to its own work
+        if: matrix.shard == 3
+        run: |
+          # An Ivarholm worker on Hildstead is not fed from Hildstead's crate,
+          # and is from Ivarholm's; planned work a tile past Ivarholm's edge,
+          # within its Brickling's reach, is not its work on either side.
+          npx esbuild supabase/test/ownsettlement.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/ownsettlement.mjs --log-level=error
+          node node_modules/.cache/ownsettlement.mjs
+
       - name: A bridge up a storey is walked across and under, every lane, on both sides
         if: matrix.shard == 3
         run: |

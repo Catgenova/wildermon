@@ -207,6 +207,16 @@ jobs:
                  'land', (select jsonb_agg(jsonb_build_array(gx, gy, land_height(d.world_id, gx, gy), land_tile(d.world_id, gx, gy)))
                             from generate_series(2560, 2597) gx, generate_series(2996, 3017) gy)))::text
             from deed d where d.name = 'Solara'"
+          # Asked: "my wildermon are travelling 200 tiles to eat from my neighbor's deed"
+          ask "catgenova's workers and followers more than 20 tiles from Solara's totem: where, doing what, whose ground" "select c.id, c.species, c.name, c.mode, c.phase, c.job, c.post,
+                 round(creature_x(c)::numeric) as x, round(creature_y(c)::numeric) as y,
+                 round(greatest(abs(creature_x(c) - d.x), abs(creature_y(c) - d.y))::numeric) as off,
+                 c.work_x, c.work_y, c.idle_why, round(c.hunger::numeric, 2) as hunger, c.hitched_to,
+                 (select o.name from deed o where o.world_id = c.world_id and deed_covers(o, floor(creature_x(c))::int, floor(creature_y(c))::int) limit 1) as on_deed
+            from creature c join player pl on pl.world_id = c.world_id and pl.uid = c.keeper
+            join deed d on d.world_id = c.world_id and d.founded_by = c.keeper
+           where pl.name = 'catgenova' and c.mode in ('deed', 'active')
+             and greatest(abs(creature_x(c) - d.x), abs(creature_y(c) - d.y)) > 20 order by off desc limit 40"
           # Asked: "I have sacrificed hundreds of items at the altar and never seen the rare reward."
           ask "the sacrifice rule as the island has it: the soul draw and its chance" "select soul_chance() as chance,
                  position('soul_chance()' in pg_get_functiondef('perform_sacrifice'::regproc)) > 0 as draws_soul,
