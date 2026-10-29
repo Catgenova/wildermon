@@ -418,6 +418,37 @@ jobs:
             where p.name = 'catgenova' and (s.it).def in ('marble_brick', 'mortar', 'marble_shards') group by 1"
           ask "hods: the stocked work the island finds" "select * from hod_needing_stocked((select world_id from player where name = 'catgenova'), (select uid from player where name = 'catgenova'), 2584, 3026, 30)"
           ask "hods: hod work near, any" "select w.kind, w.level, w.x, w.y, w.needed from hod_work((select world_id from player where name = 'catgenova'), 2584, 3026, 30) w limit 15"
+          # Asked: "Diagnose why my bastiondrakes aren't building marble walls when I have marble bricks and mortar available".
+          # Each carrier's phase and errand now, the keeper's own settlement its stores and work are read off (`my_deed`),
+          # and what the island hands a carrier from there, with its own reach. Reads only.
+          ask "hods now: each carrier, phase, errand, why idle" "select c.id, c.name, c.phase, c.job, c.idle_why, c.idle_n, to_char(c.idle_since, 'MM-DD HH24:MI') as idle_since,
+                 c.carrying->>'def' as holds, (c.carrying->>'count') as n, round(creature_x(c)::numeric, 1) as cx, round(creature_y(c)::numeric, 1) as cy,
+                 c.work_x, c.work_y, round(c.to_x::numeric, 1) as to_x, round(c.to_y::numeric, 1) as to_y, work_range(c) as rng, c.worn, round(c.hunger::numeric, 2) as hunger,
+                 to_char(c.settled_at, 'HH24:MI:SS') as settled
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+            where c.keeper = p.uid and c.mode = 'deed' and c.species = 'cobbe' order by c.id"
+          ask "hods now: the keeper's own settlement (my_deed) and every one of theirs (deeds_of)" "select 'my_deed' as which, d.name, d.x, d.y, d.radius from player p cross join lateral my_deed(p.world_id, p.uid) d where p.name = 'catgenova'
+           union all select 'deeds_of', d.name, d.x, d.y, d.radius from player p cross join lateral deeds_of(p.world_id, p.uid) d where p.name = 'catgenova'"
+          ask "hods now: building material in the keeper's settlement stores" "select (s.it).def, sum((s.it).count) as n, count(distinct s.sid) as stores, bool_or(coalesce((s.it).locked, false)) as any_locked
+             from player p cross join lateral deed_store_items(p.world_id, p.uid) s
+            where p.name = 'catgenova' and (s.it).def in ('marble_brick', 'mortar', 'slate_brick', 'stone_brick', 'plank', 'nail') group by 1 order by 1"
+          ask "hods now: planned work in a carrier's reach of the totem, on the keeper's settlement or not" "select w.kind, w.level, w.dir, w.x, w.y, w.needed,
+                 on_my_deed(p.world_id, p.uid, w.x, w.y) as on_mine
+             from player p cross join lateral my_deed(p.world_id, p.uid) dd
+             cross join lateral hod_work(p.world_id, dd.x, dd.y, (select max(work_range(c)) from creature c where c.keeper = p.uid and c.mode = 'deed' and c.species = 'cobbe')) w
+            where p.name = 'catgenova' order by w.level, w.y, w.x limit 30"
+          ask "hods now: what the island hands a carrier, from the stores and for what it holds" "select 'stocked' as asked, h.* from player p cross join lateral my_deed(p.world_id, p.uid) dd
+             cross join lateral hod_needing_stocked(p.world_id, p.uid, dd.x, dd.y, (select max(work_range(c)) from creature c where c.keeper = p.uid and c.mode = 'deed' and c.species = 'cobbe')) h
+            where p.name = 'catgenova'
+           union all select 'holding marble_brick', h.* from player p cross join lateral my_deed(p.world_id, p.uid) dd
+             cross join lateral hod_needing(p.world_id, dd.x, dd.y, (select max(work_range(c)) from creature c where c.keeper = p.uid and c.mode = 'deed' and c.species = 'cobbe'), 'marble_brick', p.uid) h
+            where p.name = 'catgenova'
+           union all select 'holding mortar', h.* from player p cross join lateral my_deed(p.world_id, p.uid) dd
+             cross join lateral hod_needing(p.world_id, dd.x, dd.y, (select max(work_range(c)) from creature c where c.keeper = p.uid and c.mode = 'deed' and c.species = 'cobbe'), 'mortar', p.uid) h
+            where p.name = 'catgenova'"
+          ask "hods now: the carriers' messages, last 12 hours" "select to_char(e.at, 'MM-DD HH24:MI') as at, left(e.text, 170) as text from event e join player p on p.world_id = e.world_id and p.uid = e.uid
+            where p.name = 'catgenova' and e.at > now() - interval '12 hours' and (e.text ilike '%bastiondrake%' or e.text ilike '%mortarback%' or e.text ilike '%brickling%' or e.text ilike '%hod%')
+            order by e.at desc limit 25"
           # Asked: "Dowse does not appear to be making nails or giving an error". The keeper's dowse, siffa and ulva,
           # their trade on the island, the anvils and spindles in reach of the token, the lumps in the stores, and
           # what the island would send each to next. Reads only.
