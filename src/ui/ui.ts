@@ -3186,7 +3186,8 @@ export class UI {
     const g = this.game;
     const d = g.deed!;
     const level = g.deedLevel;
-    const kept = [...g.creatures.list.values()].filter((c) => c.mode === 'deed');
+    // Yours only: the island shows a neighbour's settlement workers too (`mine` false).
+    const kept = g.creatures.working();
     const children: MenuItem[] = [];
     const workers = g.creatures.workers().length;
     children.push({

@@ -4154,6 +4154,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => ['Fixed: settlement workers fetch from your own settlement\'s stores only (was: from any settlement you are a citizen of, however far).'],
   },
+  {
+    n: 362,
+    day: '2026-10-29',
+    lines: () => ['Fixed: settlement menu, Wildermon: your own workers only (was: a neighbouring settlement\'s workers in view too).'],
+  },
 ];
 
 /**
