@@ -15,7 +15,6 @@ import { BUNNYCOURSER, HARE_TACKED, HARE_TUCK, hareGrip, hareSeat, MOONHARE, THI
 import { CHESTKIT, HOARDBACK, LOOTVENT } from './wild-chest';
 import { CLAYBURROW, MUDLET, TERRAMOLE } from './wild-clay';
 import { SANDPINCHER, SANDPINNACLE, SANDPIP } from './wild-sand';
-import { ULVA } from './wild-hunters';
 import { HARVESTUSK, PIGROOT, PLOWHOG } from './wild-pig';
 import { CLOUDBORNE, CLOUDLET, CLOUDRAM } from './wild-cloud';
 import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
@@ -50,6 +49,7 @@ import { HAMMERTIN, NAILSPROUT, NAILWRIGHT } from './wild-nail';
 import { BLOOMWHISK, FLORAMANE, SPRIGKIT } from './wild-calico';
 import { METALLOCURL, RIBBONIP, STRIPFORGE } from './wild-ribbon';
 import { MAPLETAP, SAPLET, TAPSYLVAN } from './wild-maple';
+import { SILKWARD, SPRINDLE, WEBLOOM } from './wild-spider';
 import { AWLA, GASHA, SKULKA, SPITTA, TESTA } from './wild-fighters';
 import { DUMMIBEAR, DUMMICUB, DUMMITITAN } from './wild-dummy';
 import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
@@ -76,7 +76,7 @@ export const WILDERMON: Record<string, Kind> = {
   magga: CHESTKIT,
   noot: MUDLET,
   crawler: SANDPIP,
-  ulva: ULVA,
+  ulva: SPRINDLE,
   seavic: PIGROOT,
   vola: SPORELING,
   mola: IRONEMOLE,
@@ -217,6 +217,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   bedda: [BLOOMWHISK, FLORAMANE],
   siffa: [STRIPFORGE, METALLOCURL],
   ambra: [MAPLETAP, TAPSYLVAN],
+  ulva: [WEBLOOM, SILKWARD],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

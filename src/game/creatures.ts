@@ -726,6 +726,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   vesp: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   siffa: { kind: 'loads', n: 1, what: 'lumps per cycle' },
   ambra: { kind: 'more', n: 1, what: 'tar per pine' },
+  ulva: { kind: 'loads', n: 1, what: 'batches per cycle' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -1653,8 +1654,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   ulva: {
     id: 'ulva',
     wound: 'cut',
-    name: 'Ulva',
+    name: 'Sprindle',
+    was: ['Ulva'],
+    // Asked for, with a reference sheet: Sprindle, Webloom, Silkward.
     description: '',
+    stages: [
+      { name: 'Webloom', description: '' },
+      { name: 'Silkward', description: '' },
+    ],
     health: 34,
     attack: 9,
     speed: 2.1,
@@ -1665,11 +1672,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'spin',
     workRange: 12,
+    // [fur, face]: the sheet's brown with cream, chocolate with pale gold, ash with white, and russet with peach.
     variants: [
-      ['#6b6a66', '#cfcac0'],
-      ['#4c4a47', '#b2ada4'],
-      ['#7d7263', '#d9d2c4'],
-      ['#5a5f66', '#bcc2c8'],
+      ['#80522f', '#f2e2c2'],
+      ['#5a3a2c', '#ecd59e'],
+      ['#7a726c', '#f4f0e6'],
+      ['#a0542c', '#f6dcc4'],
     ],
     butcher: { meat: 5, fur: 4, leather: 4, bone: 4, gland: 2 },
     defensive: true,
@@ -4094,6 +4102,7 @@ function sayLineLater(id: string, level: string): void {
 }
 sayLineLater('dowse', 'Level: blacksmithing.');
 sayLineLater('siffa', 'Level: blacksmithing.');
+sayLineLater('ulva', 'Level: tailoring.');
 
 /** Which species roam wild, by weight. */
 /**

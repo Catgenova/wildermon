@@ -2947,7 +2947,7 @@ export function helpText(): string {
       and not off a work post. Card when idle: &ldquo;${idleSays({ why: 'range', n: SPECIES.magga.workRange }, 'fetch')}&rdquo; Wild ones steal items left near their trees. Evolves: ${evolves('magga')}.</td></tr>
       <tr><td><b>${SPECIES.woola.name}</b> (was Woola)</td><td>No task. <b>Shear</b> with a knife for <b>wool</b> once grown; regrows in ${dur(1 / (SPECIES.woola.fleece ?? 1))}.
       Evolves: ${evolves('woola')}.</td></tr>
-      <tr><td><b>Ulva</b></td><td>Fights back when struck. Taming ${SPECIES.ulva.tameLevel}. Settlement task: ${GATHER_VERB.spin} at your spindles (<b>The settlement's hands</b>).</td></tr>
+      <tr><td><b>${SPECIES.ulva.name}</b> (was Ulva)</td><td>Fights back when struck. Taming ${SPECIES.ulva.tameLevel}. Settlement task: ${GATHER_VERB.spin} at your spindles (<b>The settlement's hands</b>). Evolves: ${evolves('ulva')}.</td></tr>
       <tr><td><b>${SPECIES.roxxen.name}</b> (was Roxxen)</td><td>Draught ox: +${percent(SPECIES.roxxen.pull!)} team pace (speed multiplier) in the traces. No settlement task. Level = <b>driving</b>, learned
       ${LEARNS_SAYS.pull}; counts in the traces where another wildermon's climbing does (speed and steepest step). Largest carcass. Evolves: ${evolves('roxxen')}.</td></tr>
       <tr><td><b>${SPECIES.orse.name}</b> (was Orse)</td><td>Mount; learns <b>climbing</b> in the traces or ridden. Fit a <b>saddle</b> and <b>bridle</b> from its menu, then <b>mount</b>.

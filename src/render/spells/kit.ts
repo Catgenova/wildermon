@@ -314,14 +314,21 @@ function headOfKind(species: string): { ahead: number; up: number; tall: number 
 }
 
 /**
+ * How far ahead of its feet the head of a creature five wide is, in height units: a wolf's, which is what the ulva was
+ * drawn as when this was measured off it.
+ */
+const FIVE_WIDE = 4.55;
+
+/**
  * How wide a creature of a kind stands, as `Body.wide` (height units from its middle out to its side), at its own
- * size: from the length of its own model -- how far ahead of its feet its head is -- measured against the ulva's,
- * which stands five wide. A rabbit-sized thing is narrower, an ogre or a bear broader; a kind with no model is five.
+ * size: from the length of its own model -- how far ahead of its feet its head is -- measured against a wolf's
+ * (`FIVE_WIDE`), which stands five wide. A rabbit-sized thing is narrower, an ogre or a bear broader; a kind with no
+ * model is five.
  */
 export function creatureWide(species: string): number {
-  const h = headOfKind(species), ref = headOfKind('ulva');
-  if (!h || !ref || Math.abs(ref.ahead) < 0.5) return 5;
-  return 5 * clamp(Math.max(Math.abs(h.ahead), h.tall * 0.35) / Math.max(Math.abs(ref.ahead), ref.tall * 0.35), 0.5, 4);
+  const h = headOfKind(species);
+  if (!h) return 5;
+  return 5 * clamp(Math.max(Math.abs(h.ahead), h.tall * 0.35) / FIVE_WIDE, 0.5, 4);
 }
 
 /* ---- the pools ---------------------------------------------------------------- */

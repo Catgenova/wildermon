@@ -41,6 +41,7 @@ import { SAND_VOICE } from './voice-sand';
 import { SKY_VOICE } from './voice-sky';
 import { SNAIL_VOICE } from './voice-snail';
 import { SNUFF_VOICE } from './voice-snuff';
+import { SPIDER_VOICE } from './voice-spider';
 import { SPORE_VOICE } from './voice-spore';
 import { ZEPHYR_VOICE } from './voice-zephyr';
 
@@ -148,4 +149,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   siffa: RIBBON_VOICE,
   // The Saplet, the Mapletap and the Tapsylvan.
   ambra: MAPLE_VOICE,
+  // The Sprindle, the Webloom and the Silkward.
+  ulva: SPIDER_VOICE,
 };
