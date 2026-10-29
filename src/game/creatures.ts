@@ -7494,6 +7494,8 @@ export class Creatures {
     const consider = (x: number, y: number, now: number, lit: boolean, kind: Hearth, id: number, cap: number): void => {
       if (now >= HEARTH_FULL) return;
       if (Math.max(Math.abs(x - deed.x), Math.abs(y - deed.y)) > range) return;
+      // On its keeper's settlement only: its reach runs onto the next one's (the island's `on_my_deed`).
+      if (!game.onDeed(x, y)) return;
       if (fuel !== null && cap - now < (FUEL_VALUES[fuel] ?? Infinity)) return;
       const d = Math.hypot(x + 0.5 - c.x, y + 0.5 - c.y);
       if (d < bestD && !busy(x, y)) {

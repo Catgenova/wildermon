@@ -4135,6 +4135,12 @@ export const NEWS: News[] = [
     day: '2026-10-28',
     lines: () => ['Fixed: a well or fountain drawn dry, refilled: water, counted toward a recipe\'s litres (was: "litres of empty", not counted).'],
   },
+  {
+    n: 359,
+    day: '2026-10-29',
+    lines: () => [`Fixed: ${SPECIES.embra.name} line: fuels only the campfires, ovens, braziers, smelters and kilns on your own settlement `
+      + '(was: any within its reach, a neighbouring settlement\'s too).'],
+  },
 ];
 
 /**

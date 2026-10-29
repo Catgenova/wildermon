@@ -17,7 +17,9 @@
  *   * it fuels ovens, lit, and braziers, left to light themselves;
  *   * a Sluglow leaves a smelter alone; a Slugember empties it into the stores and charges it with the ore, also when a
  *     hearth wants fuel and there is none;
- *   * and says why it stands about.
+ *   * and says why it stands about;
+ *   * and leaves a hearth past its settlement's edge alone, though within its reach ("my slugferno is lighting campfires
+ *     on other peoples deeds").
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
@@ -188,6 +190,15 @@ begin
   insert into said values ('WHY:stock', ${why});${done}
   ${stoker(EMBER)}${settle}
   insert into said values ('WHY:range', ${why});${done}
+
+  -- A cold campfire a tile past the settlement's edge, within the stoker's reach of its totem, and coal in the stores.
+  ${put(7501, [['coal', 5]])}
+  insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, ash, lit, since, made_by)
+    values (w, 'campfire', 16 + 9, 16, 0, 0, 25.25, 16.25, 30, 0, 0, false, now(), u) returning id into v_p;
+  ${stoker(LOW)}
+  insert into said values ('OFFDEED', ${step});
+  ${settle}
+  insert into said select 'OFFDEED:fuel', placed_fuel(p)::text from placed p where p.id = v_p;${done}
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -227,6 +238,8 @@ check('on the island, a brazier is fed a log and left to light itself after dark
 check('on the island, a Sluglow leaves a smelter alone, and says nothing is in range', at('SMELT:low') === 'copper_ore 3|0|1|range', at('SMELT:low'));
 check('on the island, a Slugember takes the lumps out of a smelter into the stores and charges it with the ore', at('SMELT:ember') === 'copper_lump 2|3|0', at('SMELT:ember'));
 check('on the island, and so with a cold campfire and no fuel for it', at('SMELT:nofuel') === 'copper_lump 2|3|0', at('SMELT:nofuel'));
+check('on the island, a campfire a tile past the settlement\'s edge, within its reach, is left alone: nothing in range, nothing fed',
+  at('OFFDEED') === '-|-|range' && at('OFFDEED:fuel') === '0', `${at('OFFDEED')} ${at('OFFDEED:fuel')}`);
 check('on the island, a Sluglow with a cold campfire and no fuel says the stores hold none; a Slugember with nothing to do, nothing in range',
   at('WHY:stock') === 'stock' && at('WHY:range') === 'range', `${at('WHY:stock')} ${at('WHY:range')}`);
 
@@ -289,6 +302,16 @@ for (const [want, near, far] of [
   const c = worker(g, LOW);
   const got = [250, 100, 50].map((r) => inner(g).stokeFuel(g, c, r)?.item.id ?? '-').join(',');
   check('in the browser, only a fuel a whole piece of fits: peat in 250 seconds of room, thatch in 100, none in 50', got === 'peat,thatch,-', got);
+}
+{
+  // A cold campfire a tile past the settlement's edge (radius 8 round 20,20), within a stoker's reach (`workRange`).
+  const g = body();
+  stock(g, 21, [['coal', 5]]);
+  const f = g.addCampfire(20 + 9, 20, 0, 0, 0, false);
+  const c = worker(g, LOW);
+  run(g, 60);
+  check('in the browser, a campfire a tile past the settlement\'s edge, within its reach, is left alone',
+    f.fuel === 0 && !f.lit && c.idle?.why === 'range', `${f.fuel} ${f.lit} ${c.idle?.why}`);
 }
 {
   const g = body();
