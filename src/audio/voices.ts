@@ -2,6 +2,7 @@ import type { BeastAct } from '../game/events';
 import { BADGER_VOICE } from './voice-badger';
 import { BRICK_VOICE } from './voice-brick';
 import { CHEST_VOICE } from './voice-chest';
+import { CALICO_VOICE } from './voice-calico';
 import { CAPY_VOICE } from './voice-capy';
 import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
@@ -25,8 +26,10 @@ import { LEMUR_VOICE } from './voice-lemur';
 import { MANTIS_VOICE } from './voice-mantis';
 import { MEND_VOICE } from './voice-mend';
 import { MOTH_VOICE } from './voice-moth';
+import { NAIL_VOICE } from './voice-nail';
 import { SLUG_VOICE } from './voice-slug';
 import { PENGUIN_VOICE } from './voice-penguin';
+import { BEE_VOICE } from './voice-bee';
 import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
 import { PIP_VOICE } from './voice-pip';
@@ -133,4 +136,10 @@ export const VOICES: Partial<Record<string, Voice>> = {
   relka: RELIC_VOICE,
   // The Finlet, the Reeffin and the Tideharvest.
   wadd: PENGUIN_VOICE,
+  // The Nailsprout, the Hammertin and the Nailwright.
+  dowse: NAIL_VOICE,
+  // The Buzzlet, the Combworker and the Hivemaster.
+  vesp: BEE_VOICE,
+  // The Sprigkit, the Bloomwhisk and the Floramane.
+  bedda: CALICO_VOICE,
 };

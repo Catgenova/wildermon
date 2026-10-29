@@ -4185,6 +4185,14 @@ export const NEWS: News[] = [
       'Fixed: a team in the traces of a cart or wagon somebody else drives walks ahead of it, the way it goes (was: drawn standing still at the driver\'s feet).',
     ],
   },
+  {
+    n: 366,
+    day: '2026-10-29',
+    lines: () => [...['dowse', 'vesp', 'bedda'].map((id) => {
+      const d = SPECIES[id], [one, two] = d.stages!;
+      return `Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays(id)}.`;
+    }), `Each stage: own model, animations and voice. Stage 2: ${stageSays(1)}; stage 3: ${stageSays(2)}.`],
+  },
 ];
 
 /**

@@ -721,6 +721,9 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   grista: { kind: 'loads', n: 1, what: 'batches per cycle' },
   relka: { kind: 'loads', n: 1, what: 'relics per cycle' },
   wadd: { kind: 'more', n: 1, what: 'fish per catch' },
+  dowse: { kind: 'loads', n: 1, what: 'lumps per cycle' },
+  bedda: { kind: 'loads', n: 1, what: 'seed per trip' },
+  vesp: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -1963,8 +1966,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   dowse: {
     id: 'dowse',
-    name: 'Dowse',
+    name: 'Nailsprout',
+    was: ['Dowse'],
+    // Asked for, with a reference sheet: Nailsprout, Hammertin, Nailwright. Its words, and each stage's, are written once
+    // every number they read is here (`sayLine`).
     description: '',
+    stages: [
+      { name: 'Hammertin', description: '' },
+      { name: 'Nailwright', description: '' },
+    ],
     health: 20,
     attack: 3,
     speed: 1.8,
@@ -1977,10 +1987,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     workRange: 8,
     rangePerStep: 12,
     variants: [
-      ['#6d6357', '#c3b49a'],
-      ['#8a7a5e', '#ded0ae'],
-      ['#514b44', '#a49a8a'],
-      ['#7c6a6a', '#cbb9b4'],
+      ['#5f554e', '#f2dfc3'],
+      ['#3f3a3a', '#eadccb'],
+      ['#7a5a44', '#f3e2c6'],
+      ['#4e5862', '#efe6d6'],
     ],
     butcher: { meat: 2, fur: 3, leather: 2, bone: 2, gland: 2 },
     onOre: true,
@@ -2581,8 +2591,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   bedda: {
     id: 'bedda',
-    name: 'Bedda',
+    name: 'Sprigkit',
+    was: ['Bedda'],
+    // Asked for, with a reference sheet: Sprigkit, Bloomwhisk, Floramane.
     description: 'Settlement task: harvest ripe crops in your planters into your settlement stores, tend growing ones, sow empty ones with seed from your settlement stores.',
+    stages: [{ name: 'Bloomwhisk', description: '' }, { name: 'Floramane', description: '' }],
     health: 18,
     attack: 2,
     speed: 1.8,
@@ -2594,10 +2607,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'patch',
     workRange: 8,
     variants: [
-      ['#7a8a5a', '#d8e2b8'],
-      ['#8a7a5a', '#e2d6b0'],
-      ['#6a8070', '#ccdcd0'],
-      ['#8c8064', '#e4dcc0'],
+      ['#d98a3e', '#f6ecd8'],
+      ['#dba062', '#f8f0e2'],
+      ['#b5602c', '#f1e0c4'],
+      ['#8e8a98', '#f3efe8'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 1 },
   },
@@ -3792,8 +3805,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'vesp',
     wound: 'pierce',
     venom: true,
-    name: 'Vesp',
+    name: 'Buzzlet',
+    was: ['Vesp'],
+    // Asked for, with a reference sheet: Buzzlet, Combworker, Hivemaster.
     description: 'Settlement task: the nearest hive with room within its reach of the totem. Per go: one wildflower tile within {skepReach} tiles of the hive, in turn, and back. Honey into the hive: a honey per {skepHours} hours worked per wildflower clump within {skepReach} tiles, as a skep there; a beeswax per {skepWax} honey; none in {skepIdle}. Defends it.',
+    stages: [{ name: 'Combworker', description: '' }, { name: 'Hivemaster', description: '' }],
     health: 12,
     attack: 3,
     speed: 2.4,
@@ -3806,10 +3822,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'hive',
     workRange: 8,
     variants: [
-      ['#c8a03a', '#3a3128'],
-      ['#a8862e', '#2e2820'],
-      ['#d8b858', '#4a3f30'],
-      ['#8a6a24', '#241f18'],
+      ['#f4c22c', '#5e3a1c'],
+      ['#f6dc84', '#3a3433'],
+      ['#eaa040', '#53301f'],
+      ['#efe6cf', '#7b5236'],
     ],
     butcher: { meat: 1, gland: 3 },
     defensive: true,
@@ -4046,6 +4062,22 @@ const STORE_WORDS: Record<string, () => string> = {
   simma: () => `Settlement task: cook from your settlement stores at your lit campfires and ovens, recipes tried in list order. No ${listedOr(cookTools())} needed. Output: your settlement stores. Never burns.`,
 };
 for (const [id, words] of Object.entries(STORE_WORDS)) Object.defineProperty(SPECIES[id], 'description', { get: words, enumerable: true, configurable: true });
+/**
+ * A line whose words read a mould or a recipe: its words and each stage's, written when asked for, as `STORE_WORDS`
+ * are, and the way `sayLine` writes them.
+ */
+function sayLineLater(id: string, level: string): void {
+  const d = SPECIES[id];
+  const words = STORE_WORDS[id];
+  const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
+  const at = (stage: 0 | 1 | 2): PropertyDescriptor => ({
+    get: () => lineSays(names, words(), level, stage, true, !!d.fleece, stage ? d.gathers : null, stage === 2 ? id : ''),
+    enumerable: true, configurable: true,
+  });
+  Object.defineProperty(d, 'description', at(0));
+  d.stages!.forEach((st, i) => Object.defineProperty(st, 'description', at((i + 1) as 1 | 2)));
+}
+sayLineLater('dowse', 'Level: blacksmithing.');
 
 /** Which species roam wild, by weight. */
 /**
@@ -4409,6 +4441,8 @@ sayLine('stona', `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('ward
 for (const [id, level] of [['magga', 'foraging'], ['grazza', 'foraging'], ['grubba', 'digging'], ['wurla', 'digging'],
   ['mudda', 'pottery'], ['dippa', 'carrying'], ['middun', 'farming']] as const) sayLine(id, SPECIES[id].description, `Level: ${level}.`);
 for (const id of ['plucka', 'grista', 'relka']) sayLine(id, SPECIES[id].description, `Level: ${GATHER_SKILL[SPECIES[id].gathers!]}.`);
+sayLine('vesp', SPECIES.vesp.description, 'Level: animal husbandry.');
+sayLine('bedda', SPECIES.bedda.description, 'Level: farming.');
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });
 // And the Sparra, which does not evolve: how it fights, its settlement task, and its level (`sparTaskSays`).
 sayLine('sparra', `Tamed: ${STYLE_SAYS.spar}. ${sparTaskSays()}`, `Level: fighting, learned ${LEARNS_SAYS.spar}.`);

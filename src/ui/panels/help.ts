@@ -2171,7 +2171,7 @@ export function helpText(): string {
       <li>Who may take: whoever set it down, and anybody of the settlement it stands on.</li>
       <li><b>Examine</b>: clumps in reach this season, honey an hour, contents, capacity.</li>
       <li>Picked up and set down: restarts empty. Not allowed in a cellar.</li>
-      <li><b>Hive</b> worked by a Vesp (its settlement task): the skep's rate for the clumps within ${SKEP_REACH} tiles of the hive, per Vesp, for its hours at work; take out like a store.</li>
+      <li><b>Hive</b> worked by a ${SPECIES.vesp.name} (its settlement task): the skep's rate for the clumps within ${SKEP_REACH} tiles of the hive, per ${SPECIES.vesp.name}, for its hours at work; take out like a store.</li>
     </ul>
     <h3>Mote swirls and elementalism</h3>
     <ul>
@@ -2995,7 +2995,7 @@ export function helpText(): string {
       <li><b>${SPECIES.bogga.name}</b>: marshes; collects <b>peat and tar</b>.</li>
       <li><b>${SPECIES.sedra.name}</b> (was Sedra): cuts <b>reeds</b>, ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} a cut at ${SKILL_TOP} foraging. Evolves: ${evolves('sedra')}.</li>
       <li><b>${SPECIES.holla.name}</b> (was Holla): carries <b>water</b> from the shore or a well into your barrels. Evolves: ${evolves('holla')}.</li>
-      <li><b>Dowse</b>: only over metal; on a settlement <b>${GATHER_VERB.nail}</b> at your anvils (<b>The settlement's hands</b>).</li>
+      <li><b>${SPECIES.dowse.name}</b> (was Dowse): only over metal; on a settlement <b>${GATHER_VERB.nail}</b> at your anvils (<b>The settlement's hands</b>). Evolves: ${evolves('dowse')}.</li>
       <li><b>${SPECIES.sappa.name}</b>: <b>plants sprouts</b> where trees were felled.</li>
       <li><b>${SPECIES.cobbe.name}</b> (was Cobbe): <b>hod</b>: carries what a planned wall (any storey), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
       still needs from your settlement stores, crates and furniture, and fits it, one piece a trip. Evolves: ${evolves('cobbe')}.</li>
@@ -3011,10 +3011,10 @@ export function helpText(): string {
       <li><b>${SPECIES.warda.name}</b> (was Warda): sees ${SPECIES.warda.sight} tiles for you wherever it stands. Evolves: ${evolves('warda')}.</li>
       <li><b>Quill</b>: <b>pluck</b> for <b>feathers</b>.</li>
       <li><b>Cudda</b>: <b>milked</b> into an empty bucket; a bucket of milk makes ${made('make_cheese')} <b>cheeses</b>.</li>
-      <li><b>Vesp</b>: a swarm. Build a <b>hive</b> (${bill('make_hive', true)}) on your settlement. Task <b>${GATHER_VERB.hive}</b>: the nearest hive with room within its reach of the totem;
+      <li><b>${SPECIES.vesp.name}</b> (was Vesp). Build a <b>hive</b> (${bill('make_hive', true)}) on your settlement. Task <b>${GATHER_VERB.hive}</b>: the nearest hive with room within its reach of the totem;
       per go, out to one wildflower tile within ${SKEP_REACH} tiles of the hive, in turn, and back. <b>Honey</b> into the hive: a skep's rate there, a honey per ${SKEP_CLUMP_HOURS} hours worked
-      per clump within ${SKEP_REACH} tiles, per Vesp; a <b>beeswax</b> per ${SKEP_WAX_EVERY} honey; none in ${SKEP_IDLE}. Quality (QL): as a gathered load, its ${SKILL_NAME(GATHER_SKILL.hive).toLowerCase()}.
-      Idle: no hive in reach, hives full, no wildflowers within ${SKEP_REACH} tiles of its hive, ${SKEP_IDLE}. Following you: fills no hive. ${capital(bill('make_candle'))}: ${made('make_candle')} <b>candles</b>.</li>
+      per clump within ${SKEP_REACH} tiles, per ${SPECIES.vesp.name}; a <b>beeswax</b> per ${SKEP_WAX_EVERY} honey; none in ${SKEP_IDLE}. Quality (QL): as a gathered load, its ${SKILL_NAME(GATHER_SKILL.hive).toLowerCase()}.
+      Idle: no hive in reach, hives full, no wildflowers within ${SKEP_REACH} tiles of its hive, ${SKEP_IDLE}. Following you: fills no hive. Evolves: ${evolves('vesp')}. ${capital(bill('make_candle'))}: ${made('make_candle')} <b>candles</b>.</li>
       <li><b>Lume</b>: out only after dark; lights ${SPECIES.lume.glow ?? 0} tiles round itself.</li>
     </ul>
     <h4>The settlement's hands</h4>

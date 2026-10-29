@@ -100,7 +100,7 @@ begin
   insert into said select 'CHIPTAIL', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Quarra')).id from species_def where id = 'quarra';
   insert into said values ('NUMBERS', evolve_at_1() || '|' || evolve_at_2() || '|' || stage_mul_hardy() || '|' || stage_mul_tough() || '|' || stage_mul_speed() || '|' || stage_mul_work() || '|' || stage_mul_grow());
   a := creature_spawn(w, 'rabba', 17, 16.5, 'deed', now() - interval '60 days', u);
-  v := creature_spawn(w, 'dowse', 18, 16.5, 'deed', now() - interval '60 days', u);
+  v := creature_spawn(w, 'ulva', 18, 16.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null where world_id = w and id in (a, v);
   for i in 0..2 loop
     update creature set skills = jsonb_build_object('foraging', case i when 0 then ${AT1} - 0.01 when 1 then ${AT1} else ${AT2} end) where world_id = w and id = a;
@@ -108,7 +108,7 @@ begin
     insert into said values ('STAGE:' || i, stage_of(c) || '|' || max_health(c) || '|' || round(attack_of(c)::numeric, 4)
       || '|' || round(beast_mul(c, 'speed')::numeric, 4) || '|' || round(beast_mul(c, 'work')::numeric, 4));
   end loop;
-  update creature set skills = jsonb_build_object('prospecting', 80) where world_id = w and id = v;
+  update creature set skills = jsonb_build_object('tailoring', 80) where world_id = w and id = v;
   select * into c from creature where world_id = w and id = v;
   insert into said values ('STILL', stage_of(c) || '|' || round(beast_mul(c, 'speed')::numeric, 4));
   -- A Cloudborne grows its fleece back sooner by its stage (asked for: "Yes, faster regrowth").
@@ -288,7 +288,7 @@ for (let i = 0; i < 3; i++) {
       && near(speed, Number((S ** k).toFixed(4))) && near(work, Number((W ** k).toFixed(4))), at(`STAGE:${i}`));
 }
 check(`on the island, a Cloudborne grows its fleece back ${G} squared as fast`, at('FLEECE') === `2|${(G ** 2).toFixed(4)}`, at('FLEECE'));
-check('a dowse, which does not evolve, is not touched at any level', at('STILL') === '0|1.0000' || at('STILL') === '0|1', at('STILL'));
+check('an ulva, which does not evolve, is not touched at any level', at('STILL') === '0|1.0000' || at('STILL') === '0|1', at('STILL'));
 const [crossed, healthAfter] = at('CROSSED').split('|');
 check(`learning across ${AT1}, it evolves, says so, and its health grows with it`,
   crossed === '1' && near(Number(healthAfter), 10 * H) && at('TOLD').includes('evolved: Snuffroot.'), `${at('CROSSED')} ${at('TOLD')}`);
@@ -321,9 +321,9 @@ for (const [skill, stage, name] of [[AT1 - 0.01, 0, 'Snufflet'], [AT1, 1, 'Snuff
   sheep.skills = { animal_husbandry: AT2 };
   check(`in the browser, a Cloudborne grows its fleece back ${G} squared as fast`, stageOf(sheep) === 2 && near(bloodMul(sheep, 'grow'), G ** 2), `${stageOf(sheep)} ${bloodMul(sheep, 'grow')}`);
 }
-const still = mine('dowse');
-still.skills = { prospecting: 80 };
-check('a dowse is not touched at any level', stageOf(still) === 0 && kindName(still) === SPECIES.dowse.name && near(g.creatures.speedMul(still), 1));
+const still = mine('ulva');
+still.skills = { tailoring: 80 };
+check('an ulva is not touched at any level', stageOf(still) === 0 && kindName(still) === SPECIES.ulva.name && near(g.creatures.speedMul(still), 1));
 {
   r.skills = { foraging: AT1 - 0.0001 };
   r.health = 10;

@@ -9,8 +9,8 @@ import { links, snout } from './wild-hands';
 
 /**
  * More of the settlement's hands: the forga, the potta, the cindra,
- * the hoppa, the simma, the bedda, the ambra, the petta and the scurra (the
- * relka is the Kintsu now, `./wild-relic`, the sprigga the Lemlet,
+ * the hoppa, the simma, the ambra, the petta and the scurra (the bedda is
+ * the Sprigkit now, `./wild-calico`, the relka the Kintsu, `./wild-relic`, the sprigga the Lemlet,
  * `./wild-lemur`, and the wurla the Pebblebeak, `./wild-curlew`). As with
  * the first ten (`./wild-hands`), each wears the tool of its trade: tongs
  * for a tail, a spoon, a trowel, a scrubbing brush.
@@ -25,14 +25,6 @@ export function barrel(len: number, w: number, h: number, rise = 0.12): QuadLook
   const ys = [-0.5, -0.4, -0.2, 0.04, 0.26, 0.42, 0.5].map((f) => f * len);
   const k = [0.25, 0.82, 0.96, 1, 0.95, 0.8, 0.26];
   return { y: ys, z: ys.map((_, q) => 0.08 + rise * (q / 6)), w: k.map((f) => f * w), h: k.map((f) => f * h), belly: true };
-}
-
-/** A leaf on a short stalk, for an ear: turned to show its face. */
-function leafEar(len: number, w: number, mat: Mat = 'leaf'): Mesh {
-  return merge(
-    tube([[0, 0, -0.05], [0, 0, 0.12]], 0.05, 0.05, 5, 'stem', { seam: 'start' }),
-    blade(curve([0, 0, 0.1], [0, -0.04, 0.1 + len * 0.45], [0, 0, 0.1 + len], 4), [0.06, w, w * 1.1, w * 0.7, 0.02], [0, 1, 0], { twist: -0.8, fold: 0.26, mat, rib: 'leafDark' }),
-  );
 }
 
 /** The usual four paws, `r` across, the legs `legs` long and `thick` thick. */
@@ -254,48 +246,6 @@ export const SIMMA: Kind = {
   shadow: [1.5, 1.3],
   stride: 1.35,
   size: 1.6,
-};
-
-/* ---- the bedda: seedlings on its back, a trowel for a nose -------------------------- */
-
-const BEDDA_SPEC: QuadSpec = { ...pawed({ high: 1.15, len: 2.1, legs: 0.6, neck: 0.3, lean: 60, swing: [20, 34], ears: [40, 20], tail: [0.35, 8, 4] }), nose: 10 };
-const BEDDA_HEAD = { c: [0, 0.35, 0.1] as V3, r: [1.0, 0.95, 0.88] as V3 };
-
-function beddaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = BEDDA_HEAD;
-  // A trowel's blade for a nose: a pointed steel leaf, flat side up.
-  const trowel = tube([[0, 1.0, -0.12], [0, 1.35, -0.2], [0, 1.7, -0.3]], [0.18, 0.2, 0.01], [0.03, 0.03, 0.01], 6, 'metal', { up: [0, 0, 1] });
-  // A bed of moss along its back, and seedlings growing out of it, two leaves each.
-  const moss = tube([[0, -0.75, 0.68], [0, -0.2, 0.8], [0, 0.4, 0.78], [0, 0.7, 0.7]], [0.4, 0.62, 0.6, 0.38], [0.08, 0.1, 0.1, 0.08], 9, 'moss', { up: [0, 0, 1] });
-  const shoots = merge(...([[-0.2, -0.4], [0.18, -0.05], [-0.12, 0.35], [0.2, 0.5]] as Array<[number, number]>).map(([x, y]) => merge(
-    tube([[x, y, 0.85], [x, y, 1.1]], 0.025, 0.02, 4, 'stem'),
-    blade(curve([x, y, 1.08], [x + 0.12, y, 1.15], [x + 0.22, y, 1.12], 3), [0.02, 0.07, 0.05, 0.01], [0, 1, 0.3], { mat: 'leaf' }),
-    blade(curve([x, y, 1.08], [x - 0.12, y, 1.15], [x - 0.22, y, 1.12], 3), [0.02, 0.07, 0.05, 0.01], [0, 1, 0.3], { mat: 'leaf' }),
-  )));
-  return thinEars(quadPieces({
-    n, k,
-    body: barrel(2.2, 1.05, 0.82),
-    neck: { w: 0.6, h: 0.58, len: 0.3 },
-    head: { c: H.c, r: H.r, face: merge(snout(0.98, -0.18, [0.36, 0.28, 0.32], 0.1, n, k), trowel), eye: { dir: [0.74, 0.52, 0.32], size: 0.31, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.18] },
-    ear: leafEar(0.5, 0.18),
-    earTurn: 25,
-    tail: [taper([[0, 0.05, 0], [0, -0.3, 0]], 0.12, 0.05, n, 'coat')],
-    ...paws(n, k, 0.6, 0.24, 0.21, 'bark'),
-    extras: [
-      { key: 'moss', mesh: moss, bone: 'trunk', bias: 0.04, after: ['body'] },
-      { key: 'shoots', mesh: shoots, bone: 'trunk', bias: 0.05, after: ['body', 'moss'], thin: true, airy: true },
-    ],
-  }));
-}
-
-export const BEDDA: Kind = {
-  bones: quadBonesOf(BEDDA_SPEC, trot),
-  build: beddaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ metal: [190, 196, 204], moss: [120, 160, 90], leaf: [150, 210, 110], leafDark: [100, 160, 80], stem: [120, 150, 90], bark: [120, 96, 70] }), 100),
-  shadow: [1.4, 1.15],
-  stride: 1.4,
-  size: 1.5,
 };
 
 /* ---- the ambra: amber on its back, a pine cone for a tail --------------------------- */

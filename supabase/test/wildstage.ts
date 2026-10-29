@@ -37,7 +37,7 @@ import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { tameChance } from '../../src/game/creatureActions';
 import {
   EVOLVE_AT, kindName, levelSkill, maxHealth, SPECIES, stageLevels, stageOf, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS,
-  WILD_STAGE_SPAN, WILD_STAGE_TAME, wildStageRoll, type Creature, type IslandCreature,
+  WILD_SPECIES, WILD_STAGE_SPAN, WILD_STAGE_TAME, wildStageRoll, type Creature, type IslandCreature,
 } from '../../src/game/creatures';
 
 const psql = (sql: string): string =>
@@ -76,7 +76,8 @@ const seeded = (seed: number): (() => number) => {
 const KIND = 'sedra';
 const def = SPECIES[KIND];
 const SKILL = levelSkill(def)!;
-const STILL = 'dowse';
+/** A wild kind that does not evolve: the first of the wild's that has no stages. */
+const STILL = WILD_SPECIES.map(([id]) => id).find((id) => !SPECIES[id].stages)!;
 const ROLLS = [0, 0.001, 1 / WILD_STAGE_ODDS[1] - 1e-9, 1 / WILD_STAGE_ODDS[1], 0.03, 1 / WILD_STAGE_ODDS[1] + 1 / WILD_STAGE_ODDS[0] - 1e-9,
   1 / WILD_STAGE_ODDS[1] + 1 / WILD_STAGE_ODDS[0], 0.5, 0.999];
 const N = 20000;
