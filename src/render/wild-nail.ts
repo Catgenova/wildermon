@@ -78,8 +78,8 @@ interface Smith {
   hammer: { butt: number; len: number; head: [number, number, number]; sledge: boolean };
   /**
    * What it carries on its back: its foot's middle in the chest's frame, tipped back how far (degrees); a basket's radius at its
-   * foot and at its rim, or a crate's half across and half deep; how tall; and the nails standing in it, how many and how long,
-   * and the metal bits or the ore heaped in it, how many.
+   * foot and at its rim, or a crate's half across and half deep; how tall; and the sheaf of nails standing in it, how many and
+   * each one's whole length (a third of it out over the top), and the metal bits or the ore heaped in it, how many.
    */
   pack: { at: V3; r: [number, number]; h: number; tip: number; nails: number; nail: number; bits: number };
   crate: boolean;
@@ -120,7 +120,7 @@ const NAILSPROUT_LOOK: Smith = {
   plates: 0,
   harness: 0,
   hammer: { butt: 0.05, len: 0.25, head: [0.15, 0.085, 0.085], sledge: false },
-  pack: { at: [0, -0.38, 0.17], r: [0.17, 0.23], h: 0.3, tip: 20, nails: 5, nail: 0.27, bits: 4 },
+  pack: { at: [0, -0.38, 0.17], r: [0.17, 0.23], h: 0.3, tip: 20, nails: 5, nail: 0.36, bits: 4 },
   crate: false,
   back: 0,
   tail: 0.17,
@@ -152,7 +152,7 @@ const HAMMERTIN_LOOK: Smith = {
   plates: 3,
   harness: 1,
   hammer: { butt: 0.1, len: 0.42, head: [0.26, 0.14, 0.14], sledge: false },
-  pack: { at: [0, -0.66, 0.16], r: [0.27, 0.34], h: 0.62, tip: 12, nails: 8, nail: 0.5, bits: 0 },
+  pack: { at: [0, -0.66, 0.16], r: [0.27, 0.34], h: 0.62, tip: 12, nails: 7, nail: 0.74, bits: 0 },
   crate: false,
   back: 0,
   tail: 0.27,
@@ -184,7 +184,7 @@ const NAILWRIGHT_LOOK: Smith = {
   plates: 4,
   harness: 2,
   hammer: { butt: 0.16, len: 1.0, head: [0.7, 0.4, 0.4], sledge: true },
-  pack: { at: [0, -1.2, 0.1], r: [0.78, 0.48], h: 1.22, tip: -6, nails: 7, nail: 0.95, bits: 12 },
+  pack: { at: [0, -1.2, 0.1], r: [0.78, 0.48], h: 1.22, tip: -6, nails: 7, nail: 1.5, bits: 12 },
   crate: true,
   back: 3,
   tail: 0.36,
@@ -947,10 +947,11 @@ function smithBones(s: Smith): (a: Anim) => Bones {
       const on = place(X, [-billetLen(s) * 0.3, 0, A.top]);
       b.billet = scaled({ m: X.m, t: on }, k);
       if (P.flip > 0 && P.flip < 1) {
-        const to = place(b.pack, [0, 0, s.pack.h * 1.05]), u = P.flip, e = smooth(u);
+        // Up over its shoulder turning end over end, and down onto the ore in the crate, laid along it where it lands.
+        const to = place(b.pack, landAt(s)), u = P.flip, e = smooth(u);
         const at: V3 = [lerp(on[0], to[0], e), lerp(on[1], to[1], e), lerp(on[2], to[2], e) + (s.pack.h * 0.9 + 0.6) * Math.sin(Math.PI * u)];
-        const spin = u * TAU * 1.5;
-        b.flung = along([Math.sin(spin) * 0.3, Math.cos(spin), Math.sin(spin)], [0, 0, 1], at);
+        const spin = u * TAU * 1.5, lie = ramp(u, 0.7, 0.95);
+        b.flung = along(mixV([Math.sin(spin) * 0.3, Math.cos(spin), Math.sin(spin)], turn(b.pack, [1, 0, 0]), lie), mixV([0, 0, 1], turn(b.pack, [0, 0, 1]), lie), at);
       }
     }
     return b;
@@ -1266,6 +1267,16 @@ function nailMesh(L: number, w: number, mat: Mat = 'metal', headMat: Mat = 'meta
     tube([[0, 0, -w * 0.25], [0, 0, w * 0.55]], w * 2.1, w * 2.1, 6, headMat),
   );
 }
+/** The head and the top of a nail's shank, `len` of it, square in section: what shows of one stood in something. */
+const stubMesh = (len: number, w: number): Mesh => merge(
+  tube([[0, 0, 0], [0, 0, -len]], w, w, 4, 'metal', { start: false }),
+  tube([[0, 0, -w * 0.25], [0, 0, w * 0.55]], w * 2.1, w * 2.1, 6, 'metalDark'),
+);
+/** That, its head at `c` and its shank going the way `dir`, in the frame of whatever it stands in. */
+function stubAt(c: V3, dir: V3, len: number, w: number): Mesh {
+  const m = stubMesh(len, w), [X, Y, Z] = frameOf(scale(unit(dir), -1), Math.abs(dir[2]) > 0.9 ? [0, 1, 0] : [0, 0, 1]);
+  return mesh(m.v.map((p) => add(c, add(add(scale(X, p[0]), scale(Y, p[1])), scale(Z, p[2])))), m.f);
+}
 /** A nail with its head at `c` and its point the way `dir` from there, in the frame of whatever it is in. */
 function nailAt(c: V3, dir: V3, L: number, w: number, mat?: Mat, headMat?: Mat): Mesh {
   const m = nailMesh(L, w, mat, headMat), [X, Y, Z] = frameOf(scale(unit(dir), -1), Math.abs(dir[2]) > 0.9 ? [0, 1, 0] : [0, 0, 1]);
@@ -1274,7 +1285,7 @@ function nailAt(c: V3, dir: V3, L: number, w: number, mat?: Mat, headMat?: Mat):
 
 /**
  * The basket, in its own frame from the middle of its foot up its axis: woven in two shades, wider at its rim, a thick rim; the
- * Hammertin's bound round with leather and studded with brass. Dark inside, under what is in it.
+ * Hammertin's bound round with leather and studded with brass. Full to just under its rim.
  */
 function basketOf(s: Smith, n: number): Mesh {
   const B = s.pack, [r0, r1] = B.r, h = B.h, out: Mesh[] = [];
@@ -1284,7 +1295,8 @@ function basketOf(s: Smith, n: number): Mesh {
   out.push(tube(zs.map((z) => [0, 0, z] as V3), rs, rs, sides, (ring, j) => ((ring + j) % 2 ? 'wood' : 'woodDark'), { end: false }));
   const lip: V3[] = Array.from({ length: sides + 1 }, (_, q) => [Math.cos((q / sides) * TAU) * r1 * 1.04, Math.sin((q / sides) * TAU) * r1 * 1.04, h]);
   out.push(tube(lip, r1 * 0.08, r1 * 0.08, 5, s.stage ? 'leather' : 'woodDark', { start: false, end: false }));
-  out.push(tube([[0, 0, h * 0.86], [0, 0, h * 0.88]], r1 * 0.97, r1 * 0.97, sides, 'bark'));
+  // Full to the top: the dark of what is packed in it just under the rim, what stands in it coming up out of that.
+  out.push(tube([[0, 0, fillOf(s) - 0.02], [0, 0, fillOf(s)]], r1 * 0.97, r1 * 0.97, sides, 'bark'));
   if (s.stage === 1) {
     // Two bands of leather round it, brass studs on them.
     for (const f of [0.22, 0.66]) {
@@ -1297,50 +1309,65 @@ function basketOf(s: Smith, n: number): Mesh {
   return merge(...out);
 }
 
+/** How high in the pack's frame what is packed in it comes: a basket's just under its rim, a crate's its lid of ore. */
+const fillOf = (s: Smith): number => (s.crate ? s.pack.h : s.pack.h * 0.97);
+/** A crate's sheaf of nails: where its middle stands on the crate's top, in the pack's frame. */
+const SHEAF_AT: V3 = [-0.24, 0, 0];
+/** How far each nail of a sheaf but the middle one leans out from it (degrees), so the sheaf fans. */
+const FAN = [14, 14, 11];
+/** How far out from the sheaf's middle its ring of nails goes in, as a share of the room there is (`roomOf`). */
+const RING = 0.48;
+/** How much room a sheaf has, out from its middle to the inside of the rim or the walls, short of their thickness. */
+const roomOf = (s: Smith): number => (s.crate ? Math.min(s.pack.r[0] + SHEAF_AT[0], s.pack.r[1]) * 0.85 : s.pack.r[1] * 0.92);
+/** Where the flipped nail comes to lie in the crate, on its ore, in the pack's frame, clear of the sheaf and the ore. */
+const landAt = (s: Smith): V3 => [s.pack.r[0] * 0.42, s.pack.r[1] * 0.15, s.pack.h + nailThick(s) * 1.2];
+
 /**
- * What stands in the pack, in its frame, and how its nails are laid out so they can rattle (`rattled`): the Nailsprout's few
- * nails and bits of metal, a lump of iron, a bar, a brass offcut; the Hammertin's big nails standing up heads out every way; the
- * Nailwright's ore heaped in its crate and a sheaf of giant nails bound together standing up out of it.
+ * What stands in the pack, in its frame, and how its nails are laid out so they can rattle (`rattled`): a sheaf of nails, one
+ * in the middle and a ring round it, each going down into the pack through its open top and leaning out a little from the
+ * middle so they fan, only the head and the top third of each drawn, from where it goes in (the rest is down in the pack, out of
+ * sight); with the Nailsprout's a lump of iron, a bar, a brass offcut and a scrap among them, and round the Nailwright's a strap,
+ * and ore heaped on the crate clear of it.
  */
 interface Load { nails: Mesh; spans: Array<[number, number, V3]>; heap: Mesh }
-function loadOf(s: Smith, fine: boolean): Load {
-  const B = s.pack, h = s.crate ? B.h : B.h * 0.84, nails: Mesh[] = [], spans: Array<[number, number, V3]> = [], heap: Mesh[] = [];
+function loadOf(s: Smith): Load {
+  const B = s.pack, top = fillOf(s), nails: Mesh[] = [], spans: Array<[number, number, V3]> = [], heap: Mesh[] = [];
+  const mid: V3 = s.crate ? [SHEAF_AT[0], SHEAF_AT[1], top] : [0, 0, top], room = roomOf(s), ring = room * RING, fan = FAN[s.stage] * DEG;
   let count = 0;
-  const N = s.crate ? B.nails : fine ? B.nails + 1 : B.nails;
-  for (let q = 0; q < N; q++) {
-    const L = B.nail * (0.8 + 0.3 * jitter(q + 5)), w = L * (s.crate ? 0.045 : 0.055);
-    let foot: V3, dir: V3;
-    if (s.crate) {
-      // A sheaf: close together toward the back of the crate, fanned a little, half their length down in it.
-      const a = (q / N) * TAU + 0.4, r = B.r[1] * 0.28 * (q ? 1 : 0);
-      foot = [-B.r[0] * 0.25 + Math.cos(a) * r, -B.r[1] * 0.2 + Math.sin(a) * r * 0.8, h - L * 0.35];
-      dir = unit([Math.cos(a) * 0.12 + (jitter(q) - 0.5) * 0.06, Math.sin(a) * 0.1, 1]);
-    } else {
-      const a = (q / N) * TAU + 0.5 + jitter(q + 3) * 0.5, r = B.r[1] * 0.45;
-      foot = [Math.cos(a) * r * 0.6, Math.sin(a) * r * 0.6, h * 0.25];
-      dir = unit([Math.cos(a) * (0.25 + 0.25 * jitter(q + 11)), Math.sin(a) * (0.25 + 0.25 * jitter(q + 11)), 1]);
-    }
-    const m = nailAt(add(foot, scale(dir, L)), scale(dir, -1), L, w);
-    spans.push([count, count + m.v.length, foot]);
+  for (let q = 0; q < B.nails; q++) {
+    const a = ((q - 1) / (B.nails - 1)) * TAU + 0.4, centre = q === 0;
+    const L = B.nail * (centre ? 1.08 : 0.92 + 0.12 * jitter(q + 5)), out = L / 3, w = L * (s.crate ? 0.032 : 0.05);
+    const at: V3 = centre ? mid : add(mid, [Math.cos(a) * ring, Math.sin(a) * ring, 0]);
+    const dir: V3 = centre ? [0, 0, 1] : [Math.cos(a) * Math.sin(fan), Math.sin(a) * Math.sin(fan), Math.cos(fan)];
+    // From its head down to a hair under where it goes in.
+    const m = stubAt(add(at, scale(dir, out)), scale(dir, -1), out + 0.012, w);
+    spans.push([count, count + m.v.length, at]);
     count += m.v.length;
     nails.push(m);
   }
   if (s.crate) {
-    // A strap of leather round the sheaf.
-    const c: V3 = [-B.r[0] * 0.25, -B.r[1] * 0.2, h + B.nail * 0.22];
-    heap.push(hoop(c, [0, 0, 1], B.r[1] * 0.34, 0.03, 'leather', 10));
-    // Ore heaped in the crate, round the sheaf.
-    for (let q = 0; q < B.bits; q++) {
-      const x = (jitter(q + 31) - 0.5) * 1.6 * B.r[0], y = (jitter(q + 37) - 0.5) * 1.5 * B.r[1], r = 0.1 + 0.06 * jitter(q + 41);
-      heap.push(rock([x, y, h + r * 0.3], [r, r * 0.85, r * 0.7], { n: 5, seed: 200 + q, mat: jitter(q + 43) < 0.55 ? 'shell' : jitter(q + 47) < 0.6 ? 'shellDark' : 'stoneDark', bevel: 0.35 }));
+    // A strap of leather round the sheaf, a little over where it goes in, clear of every shank.
+    const up = B.nail * 0.12, hold = ring + up * Math.tan(fan) + B.nail * 0.032 + 0.03;
+    heap.push(hoop(add(mid, [0, 0, up]), [0, 0, 1], hold, 0.03, 'leather', 12));
+    // Ore heaped on the crate: lumps sat on it, each inside its edges and clear of the sheaf, the strap and where the flipped
+    // nail lands, and of each other.
+    const keep: Array<[V3, number]> = [[mid, hold + 0.04], [landAt(s), billetLen(s) * 0.55]];
+    for (let q = 0, tries = 0; q < B.bits && tries < 300; tries++) {
+      const r = 0.08 + 0.05 * jitter(tries * 1.7 + 41), x = (jitter(tries * 3.1 + 31) - 0.5) * 2 * (B.r[0] - r - 0.05), y = (jitter(tries * 5.3 + 37) - 0.5) * 2 * (B.r[1] - r - 0.05);
+      const c: V3 = [x, y, top + r * 0.8];
+      if (keep.some(([k, kr]) => Math.hypot(c[0] - k[0], c[1] - k[1]) < kr + r)) continue;
+      keep.push([c, r * 0.75]);
+      heap.push(rock(c, [r, r * 0.85, r * 0.7], { n: 5, seed: 200 + q, mat: jitter(q + 43) < 0.55 ? 'shell' : jitter(q + 47) < 0.6 ? 'shellDark' : 'stoneDark', bevel: 0.35, rough: 0.08 }));
+      q++;
     }
   } else if (B.bits) {
-    // A lump of iron, a bar, a brass offcut and a scrap, among the nails.
-    const r = B.r[1];
-    heap.push(rock([r * 0.32, -r * 0.3, h * 1.02], [0.065, 0.055, 0.05], { n: 5, seed: 230, mat: 'metalDark', bevel: 0.35 }));
-    heap.push(rock([-r * 0.35, -r * 0.15, h * 1.04], [0.055, 0.05, 0.045], { n: 5, seed: 233, mat: 'metal', bevel: 0.35 }));
-    heap.push(rock([-r * 0.05, r * 0.35, h * 1.06], [0.05, 0.045, 0.07], { n: 4, seed: 231, mat: 'fitting', bevel: 0.2, rough: 0.05 }));
-    heap.push(rock([r * 0.2, r * 0.1, h * 1.0], [0.05, 0.045, 0.04], { n: 5, seed: 232, mat: 'shell', bevel: 0.35 }));
+    // A lump of iron, a bar, a brass offcut and a scrap, in the gaps between the ring's nails, sat in the top of the basket.
+    const r = room * 0.72, k = 0.044;
+    const gap = (q: number): number => ((q + 0.5) / (B.nails - 1)) * TAU + 0.4;
+    heap.push(rock([Math.cos(gap(0)) * r, Math.sin(gap(0)) * r, top + k * 0.55], [k, k * 0.85, k * 0.65], { n: 5, seed: 230, mat: 'metalDark', bevel: 0.35, rough: 0.08 }));
+    heap.push(box([Math.cos(gap(1)) * r, Math.sin(gap(1)) * r, top + k * 0.5], [k * 0.55, k * 1.0, k * 0.5], 'metal'));
+    heap.push(rock([Math.cos(gap(2)) * r, Math.sin(gap(2)) * r, top + k * 0.7], [k * 0.9, k * 0.8, k], { n: 4, seed: 231, mat: 'fitting', bevel: 0.2, rough: 0.05 }));
+    heap.push(rock([Math.cos(gap(3)) * r, Math.sin(gap(3)) * r, top + k * 0.5], [k * 0.9, k * 0.8, k * 0.6], { n: 5, seed: 232, mat: 'shell', bevel: 0.35, rough: 0.08 }));
   }
   return { nails: merge(...nails), spans, heap: merge(...heap) };
 }
@@ -1516,10 +1543,12 @@ function smithBuild(s: Smith, lod: number, P: (a: Anim) => Plan): Piece[] {
   if (s.back) pieces.push({ key: 'back', mesh: backOf(s), bone: 'chest', bias: 0.015, after: 'torso', hide: body });
   pieces.push({ key: 'harness', mesh: harnessOf(s, n), bone: 'chest', bias: 0.03, after: ['torso', 'fluff', 'back'], hide: body });
   // The pack on its back, and what is in it.
-  const load = loadOf(s, fine), packFront: V3 = [0, -1, 0.2];
+  const load = loadOf(s), packFront: V3 = [0, -1, 0.2];
   pieces.push({ key: 'pack', mesh: s.crate ? crateOf(s, fine) : basketOf(s, n), bone: 'pack', bias: 0.25, after: ['torso', 'harness', 'back', 'cap'], front: packFront });
-  if (load.heap.v.length) pieces.push({ key: 'heap', mesh: load.heap, bone: 'pack', bias: 0.255, after: 'pack', front: packFront });
-  pieces.push({ key: 'nails', mesh: load.nails, bone: 'pack', bias: 0.26, after: load.heap.v.length ? ['pack', 'heap'] : 'pack', front: packFront, bent: rattled(load.spans, P) });
+  // What is in it on the pack's own bone, and always straight after it from every side: what stands up out of the top of a
+  // thing is on it whichever way round it is seen, and goes under the body with it where the body is in front.
+  if (load.heap.v.length) pieces.push({ key: 'heap', mesh: load.heap, bone: 'pack', bias: 0.003, after: 'pack' });
+  pieces.push({ key: 'nails', mesh: load.nails, bone: 'pack', bias: 0.003, after: load.heap.v.length ? ['pack', 'heap'] : 'pack', bent: rattled(load.spans, P) });
   // The tail, from under the pack whatever side it is seen from.
   pieces.push({ key: 'tail', mesh: tailOf(s), bone: 'tail', bias: -0.05, under: 'pack' });
   // Legs: a short thigh lost in the body, a short shin, a clawed foot.
