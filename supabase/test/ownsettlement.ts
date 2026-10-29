@@ -10,6 +10,9 @@
  *
  *   * an Ivarholm worker standing on Hildstead, hungry, with bread in a Hildstead crate and none at home, is not fed;
  *   * and with bread in an Ivarholm crate, wherever it stands, it is fed from that;
+ *   * with Ivar a citizen of Hildstead too, its workers' stores are Ivarholm's alone (asked: "Bastiondrakes were
+ *     travelling to Marcaronis house to eat": a hod carrier fetched from the nearest store on any settlement its keeper
+ *     belonged to, and ate there), on the island (`deed_store_items`) and in the browser (`deedStores`);
  *   * planned work a tile past Ivarholm's edge, within an Ivarholm Brickling's reach, is not its work on the island,
  *     whether asked for what it holds or what the stores hold, and is not counted as wanted;
  *   * the same work a tile inside the edge is;
@@ -63,6 +66,10 @@ begin
   insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 9702, 'bread', 30, 3);
   insert into said values ('FED:own', coalesce(worker_feed(w, v_c), '-'));
   insert into said select 'LEFT:own', coalesce(sum(count), 0)::text from item where world_id = w and crate = 9702;
+  -- Ivar a citizen of Hildstead too: its workers' stores are still Ivarholm's alone.
+  insert into deed_member (world_id, founder, uid, role) values (w, '${HILD}', '${IVAR}', 'guest');
+  insert into said select 'NEAREST', coalesce((select s.sid::text from store_holding(w, '${IVAR}', array['bread'], 2070.5, 2070.5) s), '-');
+  insert into said select 'COUNT', stores_count(w, '${IVAR}', 'bread')::text;
 
   -- An Ivarholm Brickling's work: a planned plank wall a tile past the edge, then one a tile inside it.
   update creature set mode = 'deed', job = 'hod' where world_id = w and id = v_c;
@@ -96,6 +103,9 @@ check('on the island, an Ivarholm worker standing on Hildstead, with bread in a 
   at('FED:theirs') === '-' && at('LEFT:theirs') === '3', `${at('FED:theirs')} ${at('LEFT:theirs')}`);
 check('and with bread in an Ivarholm crate, it is fed from that, wherever it stands', at('FED:own') === 'bread' && at('LEFT:own') === '2',
   `${at('FED:own')} ${at('LEFT:own')}`);
+check('with its keeper a citizen of Hildstead too, the nearest store holding bread to a worker on Hildstead is Ivarholm\'s crate, not Hildstead\'s',
+  at('NEAREST') === '9702', at('NEAREST'));
+check('and the stores count only Ivarholm\'s bread', at('COUNT') === '2', at('COUNT'));
 check(`the wall a tile past Ivarholm's edge is within an Ivarholm Brickling's reach (${at('REACH')} tiles)`,
   Number(at('REACH')) > R + 1 && at('OUT:anyone') === `${OUT},${IY}`, at('OUT:anyone'));
 check('and is not its work: not for the plank it holds, not for the stores\' planks, and not counted as wanted',
@@ -132,6 +142,18 @@ const inside = hodded(20 + R);
 const outside = hodded(20 + R + 1);
 check('in the browser, a Brickling fits planks into a wall a tile inside its settlement\'s edge', inside > 0, `${inside} fitted`);
 check('and none into one a tile past it, though within its reach', outside === 0, `${outside} fitted`);
+
+/** Its keeper a citizen of a second settlement, with a crate of planks on it: what the workers' stores are. */
+{
+  const g = Game.create(4262);
+  g.deed = { name: 'Plankend', x: 20, y: 20, radius: R, level: 3 };
+  g.neighbourDeeds = [{ name: 'Faraway', x: 60, y: 60, radius: R, level: 3, holder: null, mine: true, role: 'guest' as never }];
+  g.addCrate('plank', 21, 20, 0, 0, [{ uid: g.inventory.nextUid++, id: 'plank', ql: 30, dmg: 0, count: 5 }], true);
+  g.addCrate('plank', 61, 60, 0, 0, [{ uid: g.inventory.nextUid++, id: 'plank', ql: 30, dmg: 0, count: 5 }], true);
+  const at = g.deedStores().map((s) => s.centre.map(Math.floor).join(',')).join(' ');
+  check('in the browser, with its keeper a citizen of a second settlement, the workers\' stores are its own settlement\'s alone',
+    g.deedStores().some((s) => Math.floor(s.centre[0]) === 21) && !g.deedStores().some((s) => s.centre[0] > 40), at);
+}
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

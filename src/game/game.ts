@@ -9683,10 +9683,13 @@ export class Game {
     // is inside them is always current; only the set of them is cached.
     const stamp = this.crates.size * 1000 + this.furniture.size;
     if (this.storeCache && this.storeCache.at === this.time && this.storeCache.stamp === stamp) return this.storeCache.stores;
+    // The worker's own settlement only, not every one its keeper is a citizen of (the island's `deed_store_items`).
+    const d = this.deed;
+    const own = (x: number, y: number): boolean => !!d && Math.abs(x - d.x) <= d.radius && Math.abs(y - d.y) <= d.radius;
     const out: DeedStore[] = [];
-    for (const c of this.crates.values()) if (this.onDeed(c.x, c.y)) out.push(this.crateStore(c));
+    for (const c of this.crates.values()) if (own(c.x, c.y)) out.push(this.crateStore(c));
     for (const f of this.furniture.values()) {
-      if (!this.onDeed(f.x, f.y)) continue;
+      if (!own(f.x, f.y)) continue;
       const store = this.furnitureStore(f);
       if (store) out.push(store);
     }

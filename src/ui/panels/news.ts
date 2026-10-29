@@ -4149,6 +4149,11 @@ export const NEWS: News[] = [
       `Fixed: ${SPECIES.cobbe.name} line: fits only building work on your own settlement (was: any planned work within its reach, a neighbour\'s too).`,
     ],
   },
+  {
+    n: 361,
+    day: '2026-10-29',
+    lines: () => ['Fixed: settlement workers fetch from your own settlement\'s stores only (was: from any settlement you are a citizen of, however far).'],
+  },
 ];
 
 /**
