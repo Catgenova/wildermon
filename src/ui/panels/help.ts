@@ -1528,7 +1528,7 @@ export function helpText(): string {
       about ${Math.round(HOUR / CHECK_EVERY * creelOdds(TOP_QL))} fish an hour.</li>
       <li>Tailor with Fisher's Friend: their nets haul ${percent((tailor("Fisher's Friend")['catch:fishing_net'] ?? 1) - 1)} more on average; their creels
       ${percent((tailor("Fisher's Friend")['catch:creel'] ?? 1) - 1)} likelier to catch per check.</li>
-      <li><b>Wadd</b>: set to a settlement or work post, fishes the banks in its range and carries the catch home.</li>
+      <li><b>${SPECIES.wadd.name}</b> (was Wadd): set to a settlement or work post, fishes the banks in its range and carries the catch home.</li>
     </ul>
     <h4>Fisher</h4>
     <ul>
@@ -3004,7 +3004,7 @@ export function helpText(): string {
       <li><b>${SPECIES.snout.name}</b>: finds <b>buried relics</b> and marks where to dig. Taming ${SPECIES.snout.tameLevel}.</li>
       <li><b>Bura</b>: no task; panniers hold <b>${SPECIES.bura.pannier} things</b> (open from its menu).</li>
       <li><b>Gorral</b>: saddle mount; climbs ground ${article(SPECIES.orse.name)} ${SPECIES.orse.name} refuses.</li>
-      <li><b>Wadd</b>: the only mount that swims deep water with a rider.</li>
+      <li><b>${SPECIES.wadd.name}</b>: the only mount that swims deep water with a rider. Evolves: ${evolves('wadd')}.</li>
       <li>Mounted, indoors: through an <b>arch</b>, <b>double door</b> or <b>gate</b>; no plain door, hidden door or iron-bound gate. Up a finished <b>wide staircase</b>
       from its foot, onto finished floors of that storey; no ${SINGLE_STAIRS_NAME}, ladder or roof; never over a staircase's rails. Mount and dismount on the ground floor only.</li>
       <li><b>Shaggan</b>: slowest in the traces; +${percent(SPECIES.shaggan.pull ?? PULL_DEFAULT)} team pull each (most add ${percent(PULL_DEFAULT)}).</li>

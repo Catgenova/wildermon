@@ -26,6 +26,7 @@ import { MANTIS_VOICE } from './voice-mantis';
 import { MEND_VOICE } from './voice-mend';
 import { MOTH_VOICE } from './voice-moth';
 import { SLUG_VOICE } from './voice-slug';
+import { PENGUIN_VOICE } from './voice-penguin';
 import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
 import { PIP_VOICE } from './voice-pip';
@@ -130,4 +131,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   grista: HAMSTER_VOICE,
   // The Kintsu, the Relicrawler and the Aureliax.
   relka: RELIC_VOICE,
+  // The Finlet, the Reeffin and the Tideharvest.
+  wadd: PENGUIN_VOICE,
 };

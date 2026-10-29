@@ -4159,6 +4159,19 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => ['Fixed: settlement menu, Wildermon: your own workers only (was: a neighbouring settlement\'s workers in view too).'],
   },
+  {
+    n: 363,
+    day: '2026-10-29',
+    lines: () => {
+      const d = SPECIES.wadd, [one, two] = d.stages!;
+      return [
+        `Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task, mount and stats.`,
+        `Each stage: own model, animations and voice. Stage 2: ${stageSays(1)}; stage 3: ${stageSays(2)}.`,
+        `Added: stage 3 skill: ${two.name} ${perkSays('wadd')}.`,
+        `Changed: butchered, ${d.name} line gives feathers (was: fur).`,
+      ];
+    },
+  },
 ];
 
 /**

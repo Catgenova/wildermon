@@ -720,6 +720,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   plucka: { kind: 'more', n: 1, what: 'fruit per pick' },
   grista: { kind: 'loads', n: 1, what: 'batches per cycle' },
   relka: { kind: 'loads', n: 1, what: 'relics per cycle' },
+  wadd: { kind: 'more', n: 1, what: 'fish per catch' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -3640,8 +3641,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   wadd: {
     id: 'wadd',
     wound: 'crush',
-    name: 'Wadd',
-    description: 'Mount: crosses deep water with a rider.',
+    name: 'Finlet',
+    was: ['Wadd'],
+    // Asked for, with a reference sheet: Finlet, Reeffin, Tideharvest. Its words, and each stage's, are written once
+    // every number they read is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Reeffin', description: '' },
+      { name: 'Tideharvest', description: '' },
+    ],
     health: 40,
     attack: 6,
     speed: 2.2,
@@ -3651,12 +3659,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     baitHint: 'meat or reeds',
     timid: false,
     variants: [
-      ['#4a5a52', '#a8bcae'],
-      ['#3c4a58', '#9cb0c0'],
-      ['#5f5142', '#c0ab90'],
-      ['#2e3a38', '#84968e'],
+      ['#2c3a66', '#f4ead6'],
+      ['#3e4a58', '#eef0ee'],
+      ['#22545c', '#f2e6cc'],
+      ['#4c3c5e', '#f6e4da'],
     ],
-    butcher: { meat: 9, fur: 6, leather: 6, bone: 7, gland: 2 },
+    butcher: { meat: 9, feather: 6, leather: 6, bone: 7, gland: 2 },
     nearWater: true,
     defensive: true,
     draught: true,
@@ -4364,6 +4372,8 @@ sayLine('bevere', `Settlement task: fell trees ${reach('bevere')}, as many bites
   'Level: woodcutting.');
 sayLine('orse', `Mount, saddled and bridled: ${+(SPECIES.orse.speed * footing(0)).toFixed(2)} tiles a second grown and fed at 0 climbing, +${percent(1 / 140 / footing(0))} per climbing level, max ${MAX_MOUNT_SPEED} tiles a second before a Saddler's tack. Higher climbing: steeper ground. Traces of a large cart or wagon: team pace +${percent(SPECIES.orse.pull ?? PULL_DEFAULT)}.`,
   'Level: climbing, learned under a rider and in the traces.');
+sayLine('wadd', `Settlement task: fish ${reach('wadd')}; the catch home. Mount, saddled and bridled: crosses deep water with a rider. Traces of a large cart or wagon: team pace +${percent(SPECIES.wadd.pull ?? PULL_DEFAULT)}.`,
+  'Level: fishing.');
 sayLine('roxxen', `No settlement task. Traces of a large cart or wagon: team pace +${percent(SPECIES.roxxen.pull!)} (wildermon not bred for it: +${percent(PULL_DEFAULT)}); its driving counts as climbing for team pace and the steepest step the wheels take.`,
   `Level: driving, learned ${LEARNS_SAYS.pull}.`);
 sayLine('tinka', `Settlement task: mend damaged gear in your settlement stores, most damaged first. Time per action: ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}, less for care. Per action: damage −${MEND_DMG}, 1 more per ${MEND_DMG_LEVELS} levels; QL −${MEND_QL}, 0.1 less per ${MEND_QL_LEVELS / 10} levels, min ${MEND_QL_LEAST}.`,

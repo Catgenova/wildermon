@@ -1,7 +1,7 @@
 import { beat, cyc, TAU, type Anim, type QuadPose, type QuadSpec } from './beasts';
 
 /**
- * What the kinds on four paws in `./wild-brook` are built from: a body on
+ * What the kinds on four paws are built from: a body on
  * four paws from a few numbers, and a trot.
  */
 

@@ -22,7 +22,6 @@ import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
 import { SPOREKIN, SPORELING, SPORELORD } from './wild-spore';
 import { GOBLIN, OGRE, ORC } from './wild-upright';
 import { MENDERMASK, PATCHCOON, STITCHKIT } from './wild-mend';
-import { WADD } from './wild-brook';
 import { HEARTHSNAIL, SNAILEAF, MIDDUNSNAIL } from './wild-snail';
 import { BASTIONTOAD, CRAGHOPPER, MOSSKIP } from './wild-toad';
 import { ROLLTERRA, SLIPLET, WHEELMOTE } from './wild-clayroll';
@@ -46,6 +45,7 @@ import { AURELIAX, KINTSU, RELICRAWLER } from './wild-relic';
 import { PEBBLEBEAK, SOILWHISTLE, WORMHERON } from './wild-curlew';
 import { CHISSA, CORDRA, FLECHA, GLOSSA, PAPRA, RIPPA } from './wild-hands3';
 import { CASKYBARA, PAILBARA, RESERVARA } from './wild-capy';
+import { FINLET, REEFFIN, TIDEHARVEST } from './wild-penguin';
 import { AWLA, GASHA, SKULKA, SPITTA, TESTA } from './wild-fighters';
 import { DUMMIBEAR, DUMMICUB, DUMMITITAN } from './wild-dummy';
 import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
@@ -93,7 +93,7 @@ export const WILDERMON: Record<string, Kind> = {
   embra: SLUGLOW,
   bogga: MOSSKIP,
   bevere: SAPGNAW,
-  wadd: WADD,
+  wadd: FINLET,
   holla: PUDDLEHOP,
   plucka: VANARI,
   middun: SNAILEAF,
@@ -207,6 +207,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   plucka: [ORCHIBELLE, ARBOANARI],
   grista: [WHEATWHIRL, WHEATCHEEKS],
   relka: [RELICRAWLER, AURELIAX],
+  wadd: [REEFFIN, TIDEHARVEST],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */
