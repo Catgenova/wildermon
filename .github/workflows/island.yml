@@ -2875,6 +2875,16 @@ jobs:
             --outfile=node_modules/.cache/ownsettlement.mjs --log-level=error
           node node_modules/.cache/ownsettlement.mjs
 
+      - name: A mount under you walks as you walk
+        if: matrix.shard == 3
+        run: |
+          # A saddled Thistlekit ridden across open ground with the wildlife
+          # the island's: going, facing your way and its gait stepping every
+          # frame, under you, and stopped when you stop.
+          npx esbuild supabase/test/ridewalk.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/ridewalk.mjs --log-level=error
+          node node_modules/.cache/ridewalk.mjs
+
       - name: A bridge up a storey is walked across and under, every lane, on both sides
         if: matrix.shard == 3
         run: |

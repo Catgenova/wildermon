@@ -5947,7 +5947,16 @@ export class Creatures {
        * zipping around with a wildermon in tow": the rider came on every beat of their body and the mount on the
        * slower one of the wildlife, behind them.
        */
-      const rider = c.riderUid && !c.ridden ? game.roster.byUid(c.riderUid) : undefined;
+      /*
+       * Under you: where you are, going as you go (`Game.carryRider`), which already set it walking this frame.
+       * Reported: "mounts when ridden do no animations like walking": the island's leg for it, a leg of no length,
+       * stopped it here every frame after.
+       */
+      if (c.ridden) {
+        this.place(c);
+        continue;
+      }
+      const rider = c.riderUid ? game.roster.byUid(c.riderUid) : undefined;
       // On the ground or a storey up a wide staircase (`Game.rideRule`); never down a cellar.
       if (rider && rider.level >= 0) {
         const [nx, ny] = game.roster.drawnAt(rider);

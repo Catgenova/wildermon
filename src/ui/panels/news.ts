@@ -4172,6 +4172,11 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 364,
+    day: '2026-10-29',
+    lines: () => ['Fixed: a mount you ride walks and runs under you (was: drawn standing still).'],
+  },
 ];
 
 /**
