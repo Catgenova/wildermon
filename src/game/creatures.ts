@@ -724,6 +724,8 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   dowse: { kind: 'loads', n: 1, what: 'lumps per cycle' },
   bedda: { kind: 'loads', n: 1, what: 'seed per trip' },
   vesp: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  siffa: { kind: 'loads', n: 1, what: 'lumps per cycle' },
+  ambra: { kind: 'more', n: 1, what: 'tar per pine' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2423,8 +2425,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   siffa: {
     id: 'siffa',
-    name: 'Siffa',
+    name: 'Ribbonip',
+    was: ['Siffa'],
+    // Asked for, with a reference sheet: Ribbonip, Stripforge, Metallocurl. Its words, and each stage's, are written once every
+    // number they read is here (`sayLine`).
     description: '',
+    stages: [
+      { name: 'Stripforge', description: '' },
+      { name: 'Metallocurl', description: '' },
+    ],
     health: 16,
     attack: 2,
     speed: 2.2,
@@ -2436,12 +2445,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'ribbon',
     workRange: 8,
     variants: [
-      ['#b9a27a', '#efe2c4'],
-      ['#8f9aa0', '#dde5ea'],
-      ['#a68d6a', '#e8d6b6'],
-      ['#7f8b7a', '#d4dccd'],
+      ['#8a6446', '#efd3a2'],
+      ['#585a62', '#dcdcd4'],
+      ['#a0502e', '#f4c98a'],
+      ['#4a3428', '#efe6d0'],
     ],
-    butcher: { meat: 2, fur: 1, leather: 1, bone: 2, feather: 5 },
+    butcher: { meat: 2, fur: 1, leather: 1, bone: 2, scale: 5 },
     onSand: true,
     nearWater: true,
   },
@@ -2674,8 +2683,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   ambra: {
     id: 'ambra',
-    name: 'Ambra',
+    name: 'Saplet',
+    was: ['Ambra'],
+    // Asked for, with a reference sheet: Saplet, Mapletap, Tapsylvan.
     description: 'Settlement task: tap each pine big enough to tap, {resinTapped} tar per pine per day; output home.',
+    stages: [
+      { name: 'Mapletap', description: '' },
+      { name: 'Tapsylvan', description: '' },
+    ],
     health: 18,
     attack: 2,
     speed: 2,
@@ -2687,10 +2702,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'resin',
     workRange: 8,
     variants: [
-      ['#c08a3a', '#f2d8a0'],
-      ['#a8762e', '#e6c890'],
-      ['#c89848', '#f6e0b0'],
-      ['#946a2c', '#dcbc84'],
+      ['#8c5a38', '#f2dcb8'],
+      ['#6e6a68', '#ece8e0'],
+      ['#a8542c', '#f6e2c6'],
+      ['#4e3a30', '#e2cca6'],
     ],
     butcher: { meat: 2, fur: 3, leather: 1, bone: 1 },
     nearTrees: true,
@@ -4078,6 +4093,7 @@ function sayLineLater(id: string, level: string): void {
   d.stages!.forEach((st, i) => Object.defineProperty(st, 'description', at((i + 1) as 1 | 2)));
 }
 sayLineLater('dowse', 'Level: blacksmithing.');
+sayLineLater('siffa', 'Level: blacksmithing.');
 
 /** Which species roam wild, by weight. */
 /**
@@ -4443,6 +4459,7 @@ for (const [id, level] of [['magga', 'foraging'], ['grazza', 'foraging'], ['grub
 for (const id of ['plucka', 'grista', 'relka']) sayLine(id, SPECIES[id].description, `Level: ${GATHER_SKILL[SPECIES[id].gathers!]}.`);
 sayLine('vesp', SPECIES.vesp.description, 'Level: animal husbandry.');
 sayLine('bedda', SPECIES.bedda.description, 'Level: farming.');
+sayLine('ambra', SPECIES.ambra.description, 'Level: forestry.');
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });
 // And the Sparra, which does not evolve: how it fights, its settlement task, and its level (`sparTaskSays`).
 sayLine('sparra', `Tamed: ${STYLE_SAYS.spar}. ${sparTaskSays()}`, `Level: fighting, learned ${LEARNS_SAYS.spar}.`);

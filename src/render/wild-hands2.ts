@@ -9,9 +9,10 @@ import { links, snout } from './wild-hands';
 
 /**
  * More of the settlement's hands: the forga, the potta, the cindra,
- * the hoppa, the simma, the ambra, the petta and the scurra (the bedda is
- * the Sprigkit now, `./wild-calico`, the relka the Kintsu, `./wild-relic`, the sprigga the Lemlet,
- * `./wild-lemur`, and the wurla the Pebblebeak, `./wild-curlew`). As with
+ * the hoppa, the simma, the petta and the scurra (the bedda is the Sprigkit
+ * now, `./wild-calico`, the ambra the Saplet, `./wild-maple`, the relka the
+ * Kintsu, `./wild-relic`, the sprigga the Lemlet, `./wild-lemur`, and the
+ * wurla the Pebblebeak, `./wild-curlew`). As with
  * the first ten (`./wild-hands`), each wears the tool of its trade: tongs
  * for a tail, a spoon, a trowel, a scrubbing brush.
  */
@@ -246,46 +247,6 @@ export const SIMMA: Kind = {
   shadow: [1.5, 1.3],
   stride: 1.35,
   size: 1.6,
-};
-
-/* ---- the ambra: amber on its back, a pine cone for a tail --------------------------- */
-
-const AMBRA_SPEC: QuadSpec = { ...pawed({ high: 1.35, len: 2.1, legs: 0.8, neck: 0.35, lean: 40, swing: [24, 40], ears: [30, 22], tail: [0.45, 30, 16] }), nose: 12 };
-const AMBRA_HEAD = { c: [0, 0.3, 0.18] as V3, r: [1.0, 0.95, 0.9] as V3 };
-
-function ambraBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = AMBRA_HEAD;
-  // Drops of amber caught in its coat along the back, each catching the light.
-  const drops = merge(...([[0, -0.5, 0.82], [0.28, -0.1, 0.8], [-0.26, 0.15, 0.8], [0.12, 0.5, 0.76]] as V3[]).map((c) => orbAlong(c, [0, 0, 1], [0.12, 0.12, 0.16], 6, 4, 'crystal')));
-  // A pine cone for a tail: rings of scales, wide in the middle.
-  const cone = merge(
-    taper([[0, 0.05, 0], [0, -0.25, 0]], 0.12, 0.09, n, 'coat'),
-    ...[0, 1, 2, 3, 4].map((q) => {
-      const y = -0.3 - q * 0.13, r = 0.12 + 0.1 * Math.sin(((q + 0.5) / 5) * Math.PI);
-      return tube([[0, y, 0], [0, y - 0.12, 0]], [r, r * 0.7], [r, r * 0.7], 8, q % 2 ? 'bark' : 'barkDark' as Mat);
-    }),
-  );
-  return quadPieces({
-    n, k,
-    body: barrel(2.15, 0.95, 0.85, 0.15),
-    neck: { w: 0.58, h: 0.58, len: 0.35 },
-    head: { c: H.c, r: H.r, face: snout(1.0, -0.22, [0.36, 0.28, 0.34], 0.11, n, k), eye: { dir: [0.74, 0.52, 0.34], size: 0.31, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.18] },
-    ear: earMesh(0.42, 0.26, n, { point: true }),
-    earTurn: 30,
-    tail: [cone],
-    ...paws(n, k, 0.8, 0.22, 0.21, 'coatDark'),
-    extras: [{ key: 'drops', mesh: drops, bone: 'trunk', bias: 0.05, after: ['body'] }],
-  });
-}
-
-export const AMBRA: Kind = {
-  bones: quadBonesOf(AMBRA_SPEC, trot),
-  build: ambraBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ crystal: [244, 170, 60], bark: [150, 104, 64], ['barkDark' as Mat]: [110, 76, 48] }), 40),
-  shadow: [1.3, 1.05],
-  stride: 1.3,
-  size: 1.55,
 };
 
 /* ---- the petta: petals for ears and a flower for a crown ---------------------------- */

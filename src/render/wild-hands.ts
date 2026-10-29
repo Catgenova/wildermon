@@ -1,17 +1,17 @@
 import {
-  add, beat, birdBones, coatPalette, curve, cyc, disc, eyes, lerp, merge, mirrored, moved, orb, orbAlong, paint, quadBonesOf, scale, smile, taper, TAU, tube,
-  type BirdSpec, type Kind, type Piece, type QuadSpec,
+  add, beat, coatPalette, curve, cyc, disc, merge, moved, orb, orbAlong, paint, quadBonesOf, scale, smile, taper, TAU, tube,
+  type Kind, type Piece, type QuadSpec,
 } from './beasts';
-import { birdLegPieces, blade, cut, earMesh, pawMesh, quadPieces, under } from './beastkit';
+import { blade, cut, earMesh, pawMesh, quadPieces } from './beastkit';
 import { type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
  * The settlement's own hands: the kemma, the sheela, the salva, the carra,
- * the tanna, the brambo and the siffa.
+ * the tanna and the brambo.
  * Each carries the tool of its trade on its body, as every wildermon carries
  * something no field guide has: a brush for a tail, shears for teeth, a
- * cleaver for a beak, a pan for a bill.
+ * cleaver for a beak.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -356,82 +356,4 @@ export const BRAMBO: Kind = {
   shadow: [1.5, 1.25],
   stride: 1.4,
   size: 1.65,
-};
-
-/* ---- the siffa: a pan for a bill ---------------------------------------------------- */
-
-/**
- * A siffa: a long-legged shore wader whose bill ends in a shallow pan, a
- * round dish it swirls the wet sand in; a nugget of something bright sits
- * in the bottom of it more often than not. A crest of three plumes sweeps
- * back from its head.
- */
-const SIFFA_SPEC: BirdSpec = {
-  high: 2.6,
-  leg: { at: [0.3, 0.05, -0.42], len: [0.28, 1.75, 0.08], rest: [18, -36] },
-  neck: { at: [0, 0.7, 0.32], len: 1.1, lean: 18 },
-  head: { pitch: -8 },
-  wing: { at: [0.58, 0.32, 0.26] },
-  tail: { at: [0, -1.0, 0.05], lift: -8 },
-  swing: [22, 34],
-  thrust: 12,
-  peck: 100,
-  tip: 44,
-  nose: 12,
-  crouch: 0.8,
-  stance: 1.4,
-};
-const SIFFA_HEAD = { c: [0, 0.12, 0.22] as V3, r: [0.62, 0.7, 0.58] as V3 };
-
-function siffaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 11), k = cut(lod, 5, 7);
-  const ys = [-1.05, -0.8, -0.3, 0.25, 0.65, 0.9];
-  const body = tube(ys.map((y, q) => [0, y, [0.0, 0.04, 0.08, 0.14, 0.24, 0.32][q]] as V3), [0.2, 0.6, 0.74, 0.72, 0.54, 0.2], [0.2, 0.56, 0.68, 0.64, 0.48, 0.2], n,
-    (ring, j) => (ring > 0 && under(n, j, 1.2) ? 'mark' : 'coat'));
-  const neck = tube([[0, 0, -0.2], [0, -0.08, 0.4], [0, 0.1, 0.8], [0, 0.04, 1.1]], [0.32, 0.26, 0.24, 0.26], [0.32, 0.26, 0.24, 0.26], n,
-    (ring, j) => (under(n, (j + n / 4) % n, 1.0) ? 'mark' : 'coat'), { seam: 'both' });
-  const H = SIFFA_HEAD;
-  const skull = orb(H.c, H.r, n + 1, k, 'coat');
-  const look = (shut: boolean): Mesh => eyes(H.c, H.r, [0.85, 0.42, 0.3], 0.25, { tall: 1.12, shut, rim: 0.16 });
-  // The bill: a long straight shank, and at its end the pan, a shallow round dish tipped up, a bright nugget in the bottom.
-  const pan = merge(
-    tube([[0, 0.55, 0.12], [0, 1.1, 0.06], [0, 1.45, 0.02]], [0.1, 0.07, 0.06], [0.07, 0.05, 0.05], n, 'bill', { up: [1, 0, 0] }),
-    tube([[0, 1.75, -0.02], [0, 1.75, 0.08]], [0.26, 0.36], [0.26, 0.36], 10, 'billDark', { up: [0, 1, 0], seam: 'end' }),
-    paint([disc([0, 1.75, -0.015], [0, 0, 1], 0.25, 0.25, 10, 'bill')]),
-    orb([0.06, 1.72, 0.03], 0.07, 5, 3, 'crystal'),
-  );
-  const plumes = merge(...([[-0.12, 0.25, -0.75], [0.0, 0.45, -1.0], [0.12, 0.2, -1.25]] as V3[]).map(([x, up, back]) =>
-    blade(curve([x, -0.2, 0.5], [x * 1.4, back * 0.5, 0.9 + up], [x * 2, back, 0.6 + up], 3), [0.04, 0.1, 0.08, 0.01], [1, 0, 0], { mat: 'featherDark' })));
-  const tail = merge(...[-0.3, 0, 0.3].map((sp) => blade(curve([0, 0, 0], [sp * 0.3, -0.45, -0.02], [sp * 0.6, -0.85, -0.12], 3), [0.05, 0.16, 0.14, 0.02], [0, 0.2, 1], { mat: 'featherDark' })));
-  const wing = (): Mesh => tube([[0, 0.1, 0.05], [0, -0.3, 0.02], [0, -0.75, -0.06], [0, -1.2, -0.12], [0, -1.45, -0.14]], [0.28, 0.4, 0.36, 0.22, 0.03], 0.08, n, (ring) => (ring === 0 ? 'coat' : 'feather'), { up: [1, 0, 0] });
-  const hide = [{ c: H.c, r: H.r }];
-  return [
-    { key: 'body', mesh: body, bone: 'body', bias: 0, breathes: { c: [0, 0, 0.1], k: 0.05 } },
-    { key: 'tail', mesh: tail, bone: 'tail0', bias: -0.05 },
-    { key: 'neck', mesh: neck, bone: 'neck', bias: 0, under: 'head' },
-    { key: 'head', mesh: merge(skull, look(false)), shut: merge(skull, look(true)), bone: 'head', bias: 0.2 },
-    { key: 'pan', mesh: pan, bone: 'head', bias: 0.21, after: 'head', hide },
-    { key: 'plumes', mesh: plumes, bone: 'head', bias: 0.19, hide },
-    { key: 'wing0', mesh: mirrored(wing()), bone: 'wing0', bias: 0.03, after: 'body', front: [-1, 0, 0] },
-    { key: 'wing1', mesh: wing(), bone: 'wing1', bias: 0.03, after: 'body', front: [1, 0, 0] },
-    ...birdLegPieces('bl', -1, 1.75, 0.09, 5),
-    ...birdLegPieces('br', 1, 1.75, 0.09, 5),
-  ];
-}
-
-export const SIFFA: Kind = {
-  bones: (a) => birdBones(SIFFA_SPEC, a, (p) => {
-    // Foraging, it swirls the pan: the head going round in a small circle over the sand.
-    if (a.graze > 0) {
-      p.head[1] += 10 * Math.sin(a.t * TAU * 1.2) * a.graze;
-      p.head[2] += 10 * Math.cos(a.t * TAU * 1.2) * a.graze;
-    } else if (a.go <= 0) {
-      p.head[1] = lerp(p.head[1], p.head[1] * 0.6, 1);
-    }
-  }),
-  build: siffaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ bill: [206, 196, 176], billDark: [150, 140, 120], crystal: [250, 214, 96], claw: [214, 150, 120] }), 200),
-  shadow: [1.4, 1.0],
-  stride: 1.1,
-  size: 2.4,
 };

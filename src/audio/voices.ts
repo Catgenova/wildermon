@@ -24,6 +24,7 @@ import { HARE_VOICE } from './voice-hare';
 import { IRON_VOICE } from './voice-iron';
 import { LEMUR_VOICE } from './voice-lemur';
 import { MANTIS_VOICE } from './voice-mantis';
+import { MAPLE_VOICE } from './voice-maple';
 import { MEND_VOICE } from './voice-mend';
 import { MOTH_VOICE } from './voice-moth';
 import { NAIL_VOICE } from './voice-nail';
@@ -35,6 +36,7 @@ import { PIG_VOICE } from './voice-pig';
 import { PIP_VOICE } from './voice-pip';
 import { REED_VOICE } from './voice-reed';
 import { RELIC_VOICE } from './voice-relic';
+import { RIBBON_VOICE } from './voice-ribbon';
 import { SAND_VOICE } from './voice-sand';
 import { SKY_VOICE } from './voice-sky';
 import { SNAIL_VOICE } from './voice-snail';
@@ -142,4 +144,8 @@ export const VOICES: Partial<Record<string, Voice>> = {
   vesp: BEE_VOICE,
   // The Sprigkit, the Bloomwhisk and the Floramane.
   bedda: CALICO_VOICE,
+  // The Ribbonip, the Stripforge and the Metallocurl.
+  siffa: RIBBON_VOICE,
+  // The Saplet, the Mapletap and the Tapsylvan.
+  ambra: MAPLE_VOICE,
 };
