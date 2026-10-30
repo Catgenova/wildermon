@@ -84,7 +84,8 @@ begin
   insert into item (world_id, holder, placed, def, ql, count) values
     ${STOCK.map(([id, n]) => `(w, 'furniture', v_chest, '${id}', 30, ${n})`).join(', ')};
   v_id := creature_spawn(w, 'cobbe', ${T} + 1.6, ${T} - 0.4, 'deed', now() - interval '60 days', u);
-  update creature set traits = '{}', stance = 'passive', hunger = 1, phase = 'idle', carrying = null, job = null, post = null,
+  -- Ordinary blood: a rare one's range is its blood's (beast_mul), and one in a hundred spawns rare.
+  update creature set traits = '{}', rare = null, stance = 'passive', hunger = 1, phase = 'idle', carrying = null, job = null, post = null,
          from_x = to_x, from_y = to_y, until = now() - interval '1 second', leg_at = now() - interval '1 second',
          leg_ends = now() - interval '1 second'
    where world_id = w and id = v_id;

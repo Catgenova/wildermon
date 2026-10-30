@@ -70,6 +70,10 @@ begin
    where not exists (select 1 from deed d where d.world_id = w
                       and abs(d.x - gx) <= d.radius + 14 and abs(d.y - gy) <= d.radius + 8)
    order by gx, gy limit 1;
+  -- Level ground under it all, so the slope it is dug or dropped on is the test's and not the run's: the island's wild
+  -- rolls come in a fixed order off the suite's seed, and a kind added to the wild moves where the ground was worked.
+  h0 := greatest(land_height(w, v_x, v_y), 20);
+  perform land_set_height(w, gx, gy, h0) from generate_series(v_x - 5, v_x + 12) gx, generate_series(v_y - 3, v_y + 4) gy;
   update player set body_at = now(), x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb,
       away = false, seen_at = now(), stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1')
    where world_id = w and uid = me;
