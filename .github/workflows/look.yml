@@ -496,6 +496,17 @@ jobs:
              cross join lateral (select dd.x + gx as x, dd.y + gy as y from generate_series(-10, 10) gx, generate_series(-10, 10) gy) t
             where p.name = 'catgenova' and land_tile(p.world_id, t.x, t.y) = tile_id('Sand') order by from_token, t.y, t.x"
           ask "sand: the token" "select dd.x, dd.y, dd.name from player p, my_deed(p.world_id, p.uid) dd where p.name = 'catgenova'"
+          ask "sand2: the Sandpip's state" "select c.id, c.phase, c.idle_why, c.idle_what, c.idle_n, to_char(c.idle_since, 'HH24:MI:SS') as idle_since, to_char(c.until, 'HH24:MI:SS') as until,
+                  c.work_x, c.work_y, round(c.to_x::numeric, 1) as to_x, round(c.to_y::numeric, 1) as to_y, c.carrying, c.worn, c.post, to_char(now(), 'HH24:MI:SS') as now
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova' where c.keeper = p.uid and c.species = 'crawler'"
+          ask "sand2: who claims 2576,3013 or works it" "select c.id, c.species, c.name, c.mode, c.phase, c.keeper = p.uid as mine, c.work_x, c.work_y
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova' where c.work_x = 2576 and c.work_y = 3013"
+          ask "sand2: the tile now" "select worker_gatherable(p.world_id, 2576, 3013, 'sand', c) as gatherable, claimed(p.world_id, 2576, 3013, c.id) as claimed,
+                  is_foraged(p.world_id, 2576, 3013, 'dig') as foraged, round(foraged_left(p.world_id, 2576, 3013, 'dig')::numeric) as left_s,
+                  creature_tile_ok(p.world_id, 2576, 3013) as tile_ok, land_tile(p.world_id, 2576, 3013) = tile_id('Sand') as sand
+             from player p cross join lateral (select * from creature c where c.world_id = p.world_id and c.keeper = p.uid and c.species = 'crawler' limit 1) c where p.name = 'catgenova'"
+          ask "sand2: the Sandpip's last 20 messages" "select to_char(e.at, 'HH24:MI:SS') as at, e.text from event e join player p on p.world_id = e.world_id and p.uid = e.uid
+             where p.name = 'catgenova' and e.text ilike '%sandpip%' order by e.n desc limit 20"
           ask "slate: the planned pieces and who planned them" "select 'floor' as what, f.level, f.x, f.y, f.kind, f.material, f.needed, f.total, f.building, b.name as building_name, b.levels, pb.name as building_by, pf.name as planned_by
              from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova' left join building b on b.world_id = f.world_id and b.id = f.building
              left join player pb on pb.world_id = f.world_id and pb.uid = b.planned_by left join player pf on pf.world_id = f.world_id and pf.uid = f.planned_by
