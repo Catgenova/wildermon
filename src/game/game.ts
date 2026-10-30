@@ -5918,6 +5918,8 @@ export class Game {
       if (floor !== undefined && floor > 0 && !candidates.length) this.logMsg(`No floor on storey ${floor + 1}.`, 'error');
       // Mounted, where your own feet would get there: a single staircase, a ladder or a narrow doorway in the way (`rideRule`).
       else if (floor !== undefined && floor > 0 && this.mounted() && this.onFootTo(x, y, floor)) this.logMsg(MOUNT_STAIRS_SAID, 'error');
+      // Pinned on another storey than yours: every click is a walk to that one (`pinnedStorey`).
+      else if (floor !== undefined && floor !== p.level && floor === this.pinnedStorey()) this.logMsg(`No path to storey ${floor + 1} (pinned on the storey control).`, 'error');
       else this.logMsg(aim === CELLAR_LEVEL ? this.noWay(x, y, 'No path there.') : 'No path there.', 'error');
     }
     return false;

@@ -4215,6 +4215,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 387,
+    day: '2026-10-30',
+    lines: () => ['Changed: a walk refused on a pinned storey other than your own says "No path to storey N (pinned on the storey control)." (was: "No path there.").'],
+  },
+  {
     n: 386,
     day: '2026-10-30',
     lines: () => ['Fixed: a window resized to the bottom or right edge of the screen, text size other than 100%: holds its size (was: changed by up to 1 px every frame). Runecut at every such size, Classic at some.'],
