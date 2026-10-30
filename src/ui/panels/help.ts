@@ -3090,7 +3090,7 @@ export function helpText(): string {
       its range, with the distance; no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
       Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
       <li><b>Storeys</b>: a store, station or planned work a storey up is walked to by the building's finished staircases: wide or ${SINGLE_STAIRS_NAME} onto it from
-      its foot, off at its head, down off its foot; ${SPIRAL_STAIRS_NAME} on its own tile. Over finished floors only, and a finished bridge's deck between two floors
+      its foot, off at its head, down off its foot; ${SPIRAL_STAIRS_NAME} on its own tile. Over finished floors only, and a finished bridge's deck between floors
       of that storey, end to end; through a door, double door, gate, arch or gap, no
       hidden door or iron-bound gate; no ladders. Up or down one flight or spiral: ${FLIGHT_TILES} tile's walk. A store a storey up with no staircase to it: not used.
       Floor removed under it: down to the storey under it; no way down left: down where it stands. Assigned elsewhere, crated or let go: back on the ground.</li>
