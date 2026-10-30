@@ -227,6 +227,7 @@ export const TABLES: Record<string, Read> = {
   player_spell: { authenticated: "(uid = ( SELECT auth.uid() AS uid))" },
   skill: { authenticated: "(uid = ( SELECT auth.uid() AS uid))" },
   tile_change: { authenticated: "(world_id = ANY (private.my_islands()))" },
+  wall_change: { authenticated: "(world_id = ANY (private.my_islands()))" },
   wall: { authenticated: "(world_id = ANY (private.my_islands())) [columns: world_id, level, dir, x, y, building, material, needed, total, planned_by, dye, lowered]" },
   world: { authenticated: "((id = ANY (private.my_islands())) OR (id IN ( SELECT h.island\n   FROM home h)))" },
 };
@@ -363,6 +364,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_treasure_warm(uuid,bigint)",
     "rpc_tree(uuid)",
     "rpc_unfriend(uuid,uuid)",
+    "rpc_unstick(uuid)",
     "rpc_unported()",
     "rpc_wear_title(uuid,text)",
     "rpc_work_deliver(uuid,uuid,bigint)",
