@@ -28,7 +28,10 @@ export const CREATURE_CRATE = 'creature_crate';
 
 /** The name of the wildermon in a crate, carried or standing, for the lists that show one; undefined when it is empty. */
 export const occupantOf = (g: Game, crate: { creature?: number; occupant?: string }): string | undefined =>
-  crate.creature === undefined ? undefined : (g.creatures.get(crate.creature)?.name ?? crate.occupant ?? 'A wildermon');
+  crate.creature === undefined ? undefined : (g.creatures.get(crate.creature)?.name ?? nameNow(crate.occupant) ?? 'A wildermon');
+/** A name the island sends as words alone: one a kind went by before (`was`) is that kind's name now. */
+const nameNow = (name: string | undefined): string | undefined =>
+  name === undefined ? undefined : (Object.values(SPECIES).find((d) => d.was?.includes(name))?.name ?? name);
 
 /** What a standing crate says after its quality: who is in it, or that it is empty. */
 export function crateLine(g: Game, crate: { creature?: number }): string {

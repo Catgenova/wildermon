@@ -6073,6 +6073,8 @@ export class Creatures {
         if (c.islandSeen && stageOf(c) > was) this.acted(c, 'evolve', time);
         c.islandSeen = true;
       }
+      // And one nobody has named called what its kind is now, whatever name the island still keeps for it (`renamedKind`).
+      c.name = renamedKind(c);
       if (r.phase !== undefined) {
         c.state = STATE_OF[r.phase] ?? 'idle';
         // Struck or set to work there since it was last heard of: drawn and heard here as it would be in a game of your own.
