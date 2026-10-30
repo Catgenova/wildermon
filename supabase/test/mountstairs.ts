@@ -32,7 +32,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { TOP_LEVELS, type Side, type WallType } from '../../src/game/building';
-import { MOUNT_STAIRS_SAID, MOUNT_STOREY_SAID, type IslandCreature } from '../../src/game/creatures';
+import { MOUNT_STAIRS_SAID, MOUNT_STOREY_SAID, mountGroundSaid, type IslandCreature } from '../../src/game/creatures';
 import { pathOptions } from '../../src/game/player';
 import { findPath } from '../../src/world/pathfinding';
 import { TileType } from '../../src/world/tiles';
@@ -280,7 +280,7 @@ check('off the edge of storey 2\'s floor it is held back, as in the browser', sa
 check('no getting down a storey up, in the same words on both sides',
   mine.dismount === MOUNT_STOREY_SAID && say('dismountUp') === MOUNT_STOREY_SAID, `browser "${mine.dismount}", island "${say('dismountUp')}"`);
 check('and no mounting from a storey up, in the same words on both sides',
-  mine.mount === `Stand next to ${brindle.name}.` && say('mountUp2') === 'Stand next to Brindle.', `browser "${mine.mount}", island "${say('mountUp2')}"`);
+  mine.mount === mountGroundSaid('You', 1) && say('mountUp2') === 'Mount: ground floor only. You: storey 2.', `browser "${mine.mount}", island "${say('mountUp2')}"`);
 
 // Somebody else's browser, from what the island sends them.
 {

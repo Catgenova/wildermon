@@ -1506,6 +1506,12 @@ export class Game {
     return !!f && isDone(f) && connectsDown(floorKind(f));
   }
 
+  /** Whether a step goes off a finished flight (not a spiral one, not a ladder) at a storey across its foot. */
+  private footStep(x0: number, y0: number, level: number, x1: number, y1: number): boolean {
+    const f = this.buildings.floor(level, x0, y0);
+    return !!f && isDone(f) && floorKind(f) === 'stairs' && !isSpiral(f) && acrossSide(f.facing ?? 's', x0, y0, x1, y1);
+  }
+
   /** A finished spiral staircase in a tile's floor slot at a storey: up to it from the storey under it, on its own tile. */
   spiralAt(x: number, y: number, level: number): boolean {
     const f = this.buildings.floor(level, x, y);
@@ -1571,6 +1577,11 @@ export class Game {
       const deck = this.bridgeStepLevel(x0, y0, x1, y1, level);
       // gates: and a wall on the border is still a wall, a portcullis let down among them (`gates.ts`): at the storey of the end it is on.
       if (deck !== null) return b.blocksAt(deck, x0, y0, x1, y1) ? null : deck;
+    }
+    // Off a flight across its foot, the side it is climbed from: down onto the storey under it, a floor over the foot
+    // or none, as wheels and workers go (`driveStorey`, the island's `worker_way_leg`).
+    if (level > 0 && this.footStep(x0, y0, level, x1, y1)) {
+      return this.standable(x1, y1, level - 1) && !b.blocksAt(level - 1, x0, y0, x1, y1) ? level - 1 : null;
     }
     if (this.standable(x1, y1, level) && !b.blocksAt(level, x0, y0, x1, y1)) {
       if (level === 0) {

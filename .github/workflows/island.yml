@@ -2784,6 +2784,15 @@ jobs:
             --outfile=node_modules/.cache/stairs.mjs --log-level=error
           node node_modules/.cache/stairs.mjs
 
+      - name: Down a staircase off its foot, with the storey over it floored
+        if: matrix.shard == 3
+        run: |
+          # Off a flight across its foot is down to the storey under it, a
+          # floor over the foot or none; off its head or sides, the storey.
+          npx esbuild supabase/test/stairfoot.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/stairfoot.mjs --log-level=error
+          node node_modules/.cache/stairfoot.mjs
+
       - name: The builds the island takes, input timing on the watch, and the doors around them
         if: matrix.shard == 3
         env:

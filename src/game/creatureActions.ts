@@ -3,7 +3,7 @@ import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting'
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { perkN } from './creatures';
-import { fedOn, tameLearn, tameNeeds, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, MOUNT_STOREY_SAID, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
+import { fedOn, tameLearn, tameNeeds, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, MOUNT_STOREY_SAID, mountGroundSaid, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
 import { studBook } from './husbandry';
 import { article, capital, percent } from './words';
 import { bestTier, LAMP_TIER_ODDS, mirrorTrait, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
@@ -1127,8 +1127,10 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c.tacked) return `${c.name}: no saddle and bridle.`;
       if (!ageDef(c, g.time).works) return `${c.name} is not grown.`;
       if (c.hitchedTo !== null) return `${c.name} is in the traces.`;
+      if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
       // From the ground floor only, you and it: a worker gone up a building's staircases is not mounted up there (`Game.creatureStorey`).
-      if (!nearPlayer(g, c) || g.player.level !== 0 || g.creatureStorey(c) !== 0) return `Stand next to ${c.name}.`;
+      if (g.player.level !== 0) return mountGroundSaid('You', g.player.level);
+      if (g.creatureStorey(c) !== 0) return mountGroundSaid(c.name, g.creatureStorey(c));
       if (g.driving()) return 'Stop driving first.';
       if (g.player.aboard !== null) return 'Step ashore first.';
       return null;

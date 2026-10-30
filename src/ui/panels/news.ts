@@ -4215,6 +4215,14 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 388,
+    day: '2026-10-30',
+    lines: () => [
+      'Fixed: staircase down from a storey with floor over its foot: off the flight across its foot, down to the storey under it (was: onto that floor, no way down).',
+      'Changed: Mount from a storey up: "Mount: ground floor only. You: storey N." (was: "Stand next to …").',
+    ],
+  },
+  {
     n: 387,
     day: '2026-10-30',
     lines: () => ['Changed: a walk refused on a pinned storey other than your own says "No path to storey N (pinned on the storey control)." (was: "No path there.").'],

@@ -4136,6 +4136,9 @@ export const PULL_DEFAULT = 0.25;
 export const MAX_MOUNT_SPEED = 5;
 /** Why a rider a storey up does not get down there: mounted and dismounted on the ground floor only. The island's `ride_refusal`. */
 export const MOUNT_STOREY_SAID = 'Ride to the ground floor first: mount and dismount on the ground only.';
+/** Why a mount is not mounted: you, or it, off the ground floor (the island's `mount_ground_said`). */
+export const mountGroundSaid = (who: string, level: number): string =>
+  `Mount: ground floor only. ${who}: ${level < 0 ? 'cellar' : `storey ${level + 1}`}.`;
 /** What a mounted walk to a storey your own feet would reach says (`Game.rideRule`). */
 export const MOUNT_STAIRS_SAID = 'Dismount first: mounts take wide staircases and wide doorways only.';
 /** What practice on bad ground is worth to a beast's pace, from its climbing. */
