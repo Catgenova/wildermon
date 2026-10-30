@@ -7,38 +7,35 @@ import { HEIGHT_SCALE } from './iso';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
- * The tide line: the Springlet, a small sleek cream creature on four short
- * legs, otter and axolotl both, with a crown of petal-fins standing up and
- * back off its head and a feathery fin of a tail; which grows into the
- * Springsail, longer in the leg and sleeker, its crown fanned bigger and
- * running on down its neck as a mane, fins along its back and down its fore
- * legs, and a long fin of a tail curled round; and then the Tidecourser,
- * large and tall in the neck, a great swept-back crown and mane, fins down
- * its back and on all four legs, and a long sweeping tail of several lobes.
- * All three are cream, with faint gold flecks along them; every fin is
- * pale yellow at its root going to its variant's markings at its tip, a gold
- * vein down it; a short snout with a pink nose, amber eyes, a closed smile,
- * and webbed feet with pink toes. The species is `springlet`: a mount, slow
- * on land and fast in deep water, ridden saddled and bridled.
+ * The tide line: axolotls. The Springlet, small and low on short splayed legs,
+ * a broad flat head with a wide smile and three feathery gills either side of
+ * it standing back and up, a paddle of a tail finned top and bottom; which
+ * grows into the Springsail, longer and plumper and still as low, four gills
+ * a side fanned into a crown, frills trailing from its elbows and hocks, a
+ * long paddle of a tail; and then the Tidecourser, the longest and heaviest,
+ * a great crown of five gills a side, and a long heavy tail finned into two
+ * lobes, one sweeping up over the other. Each grows longer and fatter, not
+ * taller: a swimmer on short sprawling legs. All three are smooth
+ * pale cream with faint gold flecks; every gill and fin is pale gold at its
+ * root going to its variant's markings at its tips; small amber eyes set wide,
+ * pink nostrils, long thin fingers with pink tips. The species is `springlet`:
+ * a mount, slow on land and fast in deep water, ridden saddled and bridled.
  *
  * Built the way the hare line is (`./wild-hare`): one set of functions from
  * a description of each stage (`Tide`), every foot given a point to be at
- * and its leg bent to reach it. On land it walks slowly and carefully, its
- * feet lifted high and set down flat, rolling a little from side to side, its
- * fins trailing; going fast -- swimming -- it glides in long bounds, its back
- * drawn up and let out, its crown and fins streamed back and its tail
- * rippling up and down behind it. Its fins are bent as it goes (`Piece.bent`),
- * each petal fluttering on its own beat standing, streamed back going, and
- * flared at a strike.
+ * and its leg bent to reach it, the elbows and knees turned out as far as the
+ * stage sprawls. On land it walks as a salamander does, a fore foot with the
+ * hind foot across from it, its body bending from side to side with the
+ * stride; going fast -- swimming -- its legs are tucked back along it,
+ * paddling a little, and a wave goes from its head down its body and along
+ * its tail, side to side. Its gills and fins are bent as it goes
+ * (`Piece.bent`): fluttering standing, streamed back going, flared at a strike.
  */
 
 /* ---- a stage, as numbers ------------------------------------------------------------- */
 
 /** Rings along a body: where each is along it and how high, how wide and how deep. */
 interface Rings { y: number[]; z: number[]; w: number[]; h: number[] }
-
-/** A row of petal-fins: how many, how far up from straight back (degrees), how far round to either side, how long and how wide. */
-interface Row { n: number; el: number; spread: number; len: number; w: number }
 
 interface Tide {
   stage: 0 | 1 | 2;
@@ -65,18 +62,21 @@ interface Tide {
   seat: number;
   /** The neck's root on the body, its length, its girth and how far forward of upright it leans. */
   neck: { at: V3; len: number; w: number; lean: number };
-  /** The skull's half-sizes; the snout's (across, up, along); how far up the skull sits; its pitch. */
-  head: { r: V3; snout: V3; up: number; pitch: number };
+  /** The head's half-sizes -- broad, flat, round in front -- how far up it sits, and its pitch. */
+  head: { r: V3; up: number; pitch: number };
   eye: { dir: V3; size: number };
-  /** The crown's rows of petals off the back of its skull, innermost first. */
-  crown: Row[];
-  /** The mane: petals in rows down the back of its neck, how many rows and how long; nought for none. */
-  mane: { rows: number; len: number; w: number };
-  /** Petals along its back, how many and how long: over the withers and over the croup, clear of where the saddle goes. */
-  back: { n: number; len: number; w: number };
+  /**
+   * Its gills: how many stalks either side of the head, how long, how far up the top one stands and down the bottom one hangs
+   * (the way out of the head's back, up), and on each stalk how many fronds to a side and how long, against the stalk.
+   */
+  gills: { n: number; len: number; up: number; down: number; fronds: number; frond: number };
+  /** The fin along its back: how tall, at its tallest, over the croup. */
+  dorsal: number;
+  /** How far its elbows and knees are turned out and its feet set wide: a salamander's sprawl, nought for legs under it. */
+  sprawl: number;
   /** Petals down the back of each fore leg and at each hock: how many, and how long. */
   legFin: { n: number; len: number };
-  /** The tail's root, each link's length and girth, how far it is lifted and curled at each link, and its petals' length. */
+  /** The tail's root, each link's length and half-width (it is twice as deep), how far it is lifted and curled at each link, how tall its fins are, and the fan at its end. */
   tail: { at: V3; links: number[]; w: number[]; lift: number; curl: number; fin: number; fan: number };
   /** A second, lower lobe of the tail trailing behind: its links' lengths, lifted, curled; none for a single tail. */
   lobe: { links: number[]; lift: number; curl: number; fin: number } | null;
@@ -91,82 +91,70 @@ interface Tide {
   size: number;
 }
 
-/** A Springlet: small and round on short legs, a big round head, a tall crown of petals and a petal plume of a tail held up. */
+/** A Springlet: small, long and low on short splayed legs, a big broad head, three short gills a side, a finned paddle of a tail. */
 const SPRINGLET_LOOK: Tide = {
   stage: 0,
-  body: { y: [-0.84, -0.74, -0.42, 0, 0.4, 0.7, 0.84], z: [0.08, 0.06, 0.04, 0.04, 0.05, 0.08, 0.12], w: [0.2, 0.34, 0.42, 0.47, 0.5, 0.46, 0.3], h: [0.18, 0.3, 0.39, 0.44, 0.47, 0.44, 0.3] },
-  len: 1.22, hip: 0.66, drop: 0.3,
-  fore: [0.28, 0.27, 0.11], hind: [0.3, 0.26, 0.24], thick: 0.2, rake: [8, 24], paw: 0.17, stance: [0.04, 0.08],
-  high: 0.74,
+  body: { y: [-0.9, -0.78, -0.42, 0, 0.42, 0.72, 0.86], z: [0.04, 0.04, 0.04, 0.05, 0.06, 0.08, 0.1], w: [0.2, 0.36, 0.45, 0.49, 0.5, 0.46, 0.32], h: [0.16, 0.28, 0.34, 0.36, 0.37, 0.35, 0.26] },
+  len: 1.24, hip: 0.66, drop: 0.25,
+  fore: [0.24, 0.22, 0.1], hind: [0.26, 0.22, 0.18], thick: 0.15, rake: [8, 22], paw: 0.13, stance: [0.02, 0.04],
+  high: 0.56,
   seat: -0.12,
-  neck: { at: [0, 0.66, 0.22], len: 0.34, w: 0.29, lean: 18 },
-  head: { r: [0.5, 0.5, 0.46], snout: [0.25, 0.2, 0.3], up: 0.14, pitch: 8 },
-  eye: { dir: [0.6, 0.62, 0.3], size: 0.09 },
-  crown: [
-    { n: 5, el: 60, spread: 28, len: 1.0, w: 0.132 },
-    { n: 6, el: 38, spread: 44, len: 1.15, w: 0.139 },
-    { n: 6, el: 16, spread: 56, len: 1.05, w: 0.132 },
-  ],
-  mane: { rows: 0, len: 0, w: 0 },
-  back: { n: 0, len: 0, w: 0 },
-  legFin: { n: 1, len: 0.32 },
-  tail: { at: [0, -0.82, 0.2], links: [0.3, 0.28, 0.26], w: [0.13, 0.11, 0.08], lift: 8, curl: 28, fin: 0.82, fan: 1.0 },
+  neck: { at: [0, 0.72, 0.14], len: 0.18, w: 0.3, lean: 40 },
+  head: { r: [0.52, 0.46, 0.34], up: 0.1, pitch: 10 },
+  eye: { dir: [0.8, 0.44, 0.4], size: 0.075 },
+  gills: { n: 3, len: 0.95, up: 0.4, down: -0.25, fronds: 7, frond: 0.44 },
+  dorsal: 0.16,
+  sprawl: 0.9,
+  legFin: { n: 1, len: 0.22 },
+  tail: { at: [0, -0.86, 0.1], links: [0.3, 0.3, 0.28, 0.25], w: [0.12, 0.1, 0.08, 0.06], lift: 14, curl: 12, fin: 0.42, fan: 0.62 },
   lobe: null,
   flecks: 10,
-  gait: { duty: [0.7, 0.32], swing: [0.24, 0.36], step: 0.26, bob: 0.05, flex: 10 },
-  size: 4.6,
+  gait: { duty: [0.68, 0.4], swing: [0.22, 0.14], step: 0.22, bob: 0.03, flex: 10 },
+  size: 5.0,
 };
 
-/** A Springsail: longer in the leg and sleeker, a bigger crown running on down its neck, fins along its back and fore legs, a long curled tail. */
+/** A Springsail: a Springlet grown longer and plumper, still low on splayed legs, four gills a side, a long paddle of a tail. */
 const SPRINGSAIL_LOOK: Tide = {
   stage: 1,
-  body: { y: [-1.24, -1.1, -0.74, -0.06, 0.54, 0.94, 1.18, 1.28], z: [0.12, 0.1, 0.12, 0.13, 0.06, -0.02, 0, 0.05], w: [0.26, 0.4, 0.42, 0.38, 0.46, 0.52, 0.48, 0.3], h: [0.25, 0.4, 0.43, 0.39, 0.54, 0.62, 0.56, 0.32] },
-  len: 1.66, hip: 0.64, drop: 0.3,
-  fore: [0.66, 0.64, 0.18], hind: [0.68, 0.56, 0.5], thick: 0.25, rake: [8, 26], paw: 0.15, stance: [0.06, 0.16],
-  high: 1.6,
-  seat: -0.26,
-  neck: { at: [0, 1.06, 0.34], len: 1.08, w: 0.3, lean: 24 },
-  head: { r: [0.42, 0.52, 0.4], snout: [0.22, 0.18, 0.36], up: 0.1, pitch: 6 },
-  eye: { dir: [0.6, 0.62, 0.3], size: 0.085 },
-  crown: [
-    { n: 5, el: 60, spread: 26, len: 1.35, w: 0.155 },
-    { n: 6, el: 38, spread: 42, len: 1.55, w: 0.171 },
-    { n: 7, el: 16, spread: 54, len: 1.45, w: 0.155 },
-  ],
-  mane: { rows: 4, len: 1.1, w: 0.15 },
-  back: { n: 6, len: 0.95, w: 0.14 },
-  legFin: { n: 3, len: 0.8 },
-  tail: { at: [0, -1.24, 0.3], links: [0.36, 0.36, 0.35, 0.34, 0.32, 0.3, 0.27], w: [0.15, 0.14, 0.12, 0.1, 0.08, 0.07], lift: 10, curl: -20, fin: 0.82, fan: 1.05 },
+  body: { y: [-1.22, -1.05, -0.57, 0, 0.57, 0.97, 1.16], z: [0.05, 0.05, 0.05, 0.06, 0.07, 0.09, 0.11], w: [0.22, 0.41, 0.52, 0.56, 0.57, 0.52, 0.36], h: [0.18, 0.32, 0.4, 0.42, 0.43, 0.4, 0.3] },
+  len: 1.67, hip: 0.66, drop: 0.25,
+  fore: [0.25, 0.23, 0.1], hind: [0.27, 0.23, 0.19], thick: 0.17, rake: [8, 22], paw: 0.14, stance: [0.03, 0.05],
+  high: 0.6,
+  seat: -0.16,
+  neck: { at: [0, 0.98, 0.14], len: 0.2, w: 0.34, lean: 40 },
+  head: { r: [0.55, 0.48, 0.35], up: 0.1, pitch: 10 },
+  eye: { dir: [0.8, 0.44, 0.4], size: 0.075 },
+  gills: { n: 4, len: 1.45, up: 0.36, down: -0.35, fronds: 9, frond: 0.42 },
+  dorsal: 0.2,
+  sprawl: 0.85,
+  legFin: { n: 2, len: 0.3 },
+  tail: { at: [0, -1.16, 0.1], links: [0.36, 0.36, 0.34, 0.32, 0.29, 0.26], w: [0.14, 0.13, 0.11, 0.09, 0.07, 0.05], lift: 10, curl: 5, fin: 0.5, fan: 0.75 },
   lobe: null,
   flecks: 18,
-  gait: { duty: [0.72, 0.3], swing: [0.24, 0.38], step: 0.24, bob: 0.05, flex: 12 },
-  size: 4.0,
+  gait: { duty: [0.68, 0.4], swing: [0.22, 0.14], step: 0.22, bob: 0.03, flex: 11 },
+  size: 5.4,
 };
 
-/** A Tidecourser: large, tall in the neck, a great crown and mane, fins on its back and all four legs, a long tail of several lobes. */
+/** A Tidecourser: the longest and heaviest, a great low axolotl, five gills a side in a full crown, a long heavy tail finned into two lobes. */
 const TIDECOURSER_LOOK: Tide = {
   stage: 2,
-  body: { y: [-1.62, -1.46, -0.98, -0.1, 0.64, 1.2, 1.54, 1.68], z: [0.16, 0.14, 0.16, 0.16, 0.06, -0.08, -0.04, 0.06], w: [0.42, 0.64, 0.68, 0.62, 0.74, 0.84, 0.76, 0.46], h: [0.42, 0.64, 0.68, 0.62, 0.86, 1.02, 0.92, 0.52] },
-  len: 2.25, hip: 0.64, drop: 0.3,
-  fore: [1.02, 1.0, 0.26], hind: [1.04, 0.86, 0.8], thick: 0.34, rake: [8, 26], paw: 0.21, stance: [0.08, 0.22],
-  high: 2.45,
-  seat: -0.38,
-  neck: { at: [0, 1.44, 0.6], len: 1.8, w: 0.44, lean: 20 },
-  head: { r: [0.52, 0.66, 0.48], snout: [0.27, 0.21, 0.46], up: 0.12, pitch: 12 },
-  eye: { dir: [0.6, 0.62, 0.3], size: 0.1 },
-  crown: [
-    { n: 6, el: 60, spread: 26, len: 1.95, w: 0.202 },
-    { n: 7, el: 38, spread: 42, len: 2.25, w: 0.217 },
-    { n: 7, el: 16, spread: 54, len: 2.1, w: 0.202 },
-  ],
-  mane: { rows: 6, len: 1.6, w: 0.19 },
-  back: { n: 8, len: 1.4, w: 0.19 },
-  legFin: { n: 4, len: 1.15 },
-  tail: { at: [0, -1.62, 0.44], links: [0.55, 0.55, 0.52, 0.5, 0.46, 0.42, 0.38], w: [0.22, 0.2, 0.18, 0.15, 0.12, 0.1, 0.08], lift: 64, curl: -15, fin: 1.3, fan: 1.7 },
-  lobe: { links: [0.55, 0.52, 0.48, 0.44, 0.4], lift: -30, curl: -4, fin: 1.15 },
+  body: { y: [-1.44, -1.25, -0.67, 0, 0.67, 1.15, 1.38], z: [0.05, 0.05, 0.05, 0.06, 0.07, 0.1, 0.12], w: [0.27, 0.48, 0.6, 0.65, 0.66, 0.61, 0.42], h: [0.21, 0.36, 0.45, 0.48, 0.49, 0.46, 0.34] },
+  len: 1.98, hip: 0.66, drop: 0.25,
+  fore: [0.28, 0.26, 0.11], hind: [0.3, 0.26, 0.21], thick: 0.21, rake: [8, 22], paw: 0.16, stance: [0.03, 0.05],
+  high: 0.68,
+  seat: -0.2,
+  neck: { at: [0, 1.16, 0.16], len: 0.22, w: 0.42, lean: 40 },
+  head: { r: [0.63, 0.54, 0.4], up: 0.1, pitch: 10 },
+  eye: { dir: [0.8, 0.44, 0.4], size: 0.085 },
+  gills: { n: 5, len: 1.85, up: 0.4, down: -0.4, fronds: 9, frond: 0.42 },
+  dorsal: 0.26,
+  sprawl: 0.8,
+  legFin: { n: 3, len: 0.4 },
+  tail: { at: [0, -1.38, 0.12], links: [0.42, 0.42, 0.4, 0.38, 0.35, 0.32, 0.28], w: [0.18, 0.17, 0.15, 0.13, 0.1, 0.08, 0.06], lift: 8, curl: 3, fin: 0.62, fan: 0.95 },
+  lobe: { links: [0.4, 0.38, 0.35, 0.32, 0.28], lift: 16, curl: 4, fin: 0.5 },
   flecks: 26,
-  gait: { duty: [0.72, 0.28], swing: [0.22, 0.36], step: 0.22, bob: 0.05, flex: 11 },
-  size: 3.7,
+  gait: { duty: [0.68, 0.4], swing: [0.22, 0.14], step: 0.22, bob: 0.03, flex: 11 },
+  size: 6.4,
 };
 
 /* ---- helpers ------------------------------------------------------------------------- */
@@ -285,7 +273,7 @@ function restOf(s: Tide): Rest {
     const fore = i < 2, y = (fore ? 0.5 : -0.5) * s.len, r = ringAt(B, y), L = fore ? s.fore : s.hind;
     hip.push([SIDE[i] * r.w * s.hip, y, r.z - r.h * s.drop]);
     // Under the body and a little wider than the hips, splayed as a swimmer's are on land.
-    paw.push([SIDE[i] * r.w * s.hip * 1.05, y - s.stance[fore ? 0 : 1] - s.seat, s.paw * 0.5]);
+    paw.push([SIDE[i] * r.w * s.hip * (1.05 + 0.75 * s.sprawl), y - s.stance[fore ? 0 : 1] - s.seat, s.paw * 0.5]);
     reach.push(L[0] + L[1] + L[2]);
   }
   const R = { hip, paw, reach };
@@ -335,80 +323,79 @@ function hermite(a: number, b: number, m0: number, m1: number, s: number): numbe
 }
 
 /**
- * When each foot comes down in a stride, the left fore, right fore, left hind and right hind: at a walk one at a time, each hind
- * foot followed by the fore on its side; at a run in bounds, both hind feet a moment apart and then both fore.
+ * When each foot comes down in a stride, the left fore, right fore, left hind and right hind: at a walk as a salamander goes,
+ * each fore foot with the hind foot across from it, the hind a moment after; swimming, each leg's paddle the same way round.
  */
-const WALK_DOWN = [0.25, 0.75, 0, 0.5];
-const RUN_DOWN = [0.42, 0.5, 0, 0.08];
+const WALK_DOWN = [0, 0.5, 0.55, 0.05];
+const RUN_DOWN = [0, 0.5, 0.55, 0.05];
 /** How much of a swing at either end a foot goes straight up off the ground or down onto it. */
 const EDGE = 0.12;
 
-/** How far its back is drawn up this moment in degrees at either end of it, the ends down (`flexPt`): at a run only. */
+/**
+ * How far its body is bent to one side this moment, in degrees at either end of it, the ends swung one way (`flexPt`): at a
+ * walk with every stride, as far as it sprawls, its shoulders swung toward the fore foot that is reaching; swimming, a wave.
+ */
 function flexOf(s: Tide, a: Anim): number {
   if (a.act || a.go <= 0) return 0;
-  return smooth(Math.min(1, a.go)) * a.gait * s.gait.flex * Math.cos(TAU * (frac(a.u) - 0.87));
+  const g = a.gait, w = frac(a.u);
+  return smooth(Math.min(1, a.go)) * (lerp(4 + 8 * s.sprawl, s.gait.flex, g) * Math.sin(TAU * (w + 0.25)));
 }
-/** How far the back is turned at `y` along it, drawn up `deg` at either end: nose-down ahead of the middle, tail-down behind it. */
-const flexAt = (s: Tide, y: number, deg: number): number => -deg * clamp(y / s.body.y[s.body.y.length - 1], -1, 1);
-/** A point in the trunk's frame where the back's flex puts it: turned about the middle across, by the flex where it is. */
+/** How far the body is turned at `y` along it, bent `deg` at either end: the front one way and the back the other. */
+const flexAt = (s: Tide, y: number, deg: number): number => deg * clamp(y / s.body.y[s.body.y.length - 1], -1, 1);
+/** A point in the trunk's frame where the body's bend puts it: turned about the up through its middle, by the bend where it is. */
 function flexPt(s: Tide, p: V3, deg: number): V3 {
   if (!deg) return p;
   const a = flexAt(s, p[1], deg) * DEG, c = Math.cos(a), sn = Math.sin(a);
-  return [p[0], p[1] * c - p[2] * sn, p[1] * sn + p[2] * c];
+  return [p[0] * c - p[1] * sn, p[0] * sn + p[1] * c, p[2]];
 }
 
 /**
- * Going. At a walk, slow and careful: each foot down for most of a stride and swept back under the body at the ground's own
- * speed, then lifted high and set down flat ahead, the body rolled over onto the feet that are down and sinking at each step,
- * the head nodding and the tail swinging from side to side behind. At a run -- swimming -- a long gliding bound: both hind feet
- * down and pushing off, the body stretched out, both fore feet reaching and down, then drawn up with its hind feet swung
- * forward under it; the neck reaching, the head held level, and a wave going down its tail, up and down.
+ * Going. At a walk, a salamander's: each foot down for most of a stride and swept back under the body at the ground's own speed,
+ * then lifted and set down ahead, a fore foot with the hind foot across from it, the body bending from side to side with the
+ * stride (`flexOf`) and rolling onto the feet that are down, the head held steady against the bend and the tail swinging the
+ * other way. Swimming, the legs tucked back along its sides and paddling a little, the body level and a wave going from its head
+ * to the end of its tail, side to side, the gills and fins streamed back.
  */
 function goingPlan(s: Tide, R: Rest, a: Anim): Plan {
   const G = s.gait, g = a.gait, w = frac(a.u);
-  const p = restPlan(s, R);
-  const duty = lerp(G.duty[0], G.duty[1], g), amp = lerp(G.swing[0], G.swing[1], g);
+  const walk = restPlan(s, R), swim = restPlan(s, R);
+  const duty = G.duty[0], amp = G.swing[0];
   for (let i = 0; i < 4; i++) {
     const fore = i < 2, L = R.reach[i], half = amp * (R.reach[0] + R.reach[2]) / 2, A = R.paw[i];
-    const ph = frac(a.u - lerp(WALK_DOWN[i], RUN_DOWN[i], g));
+    const ph = frac(a.u - WALK_DOWN[i]);
     if (ph < duty) {
       const k = ph / duty;
-      p.at[i] = [A[0], A[1] + half * (1 - 2 * k), A[2]];
-      const off = ramp(k, 0.6, 1);
-      p.rake[i] = -(fore ? lerp(18, 45, g) : lerp(26, 55, g)) * off;
-      p.foot[i] = p.rake[i];
-      continue;
-    }
-    const E = lerp(EDGE, 0.2, g), u = (ph - duty) / (1 - duty), v = ((2 * half) / duty) * (1 - duty);
-    const y0 = A[1] - half - v * E, y1 = A[1] + half + v * E;
-    const y = u < E ? A[1] - half - v * u : u > 1 - E ? A[1] + half + v * (1 - u) : hermite(y0, y1, -v * (1 - 2 * E), -v * (1 - 2 * E), (u - E) / (1 - 2 * E));
-    // Lifted high and carefully at a walk, as a swimmer goes on land; tucked up under it in a bound.
-    const lift = G.step * L * (1 + 0.2 * g) * Math.sin(Math.PI * u) ** 0.7;
-    p.at[i] = [A[0], y, A[2] + lift];
-    if (fore) {
-      p.rake[i] = -lerp(60, 100, g) * Math.sin(Math.PI * clamp(u / 0.8)) + 6 * hump(u, 0.92, 0.1);
-      p.foot[i] = p.rake[i] * 0.8 + lerp(14, 0, g) * hump(u, 0.85, 0.15);
+      walk.at[i] = [A[0], A[1] + half * (1 - 2 * k), A[2]];
+      walk.rake[i] = -(fore ? 18 : 26) * ramp(k, 0.6, 1);
+      walk.foot[i] = walk.rake[i];
     } else {
-      p.rake[i] = -lerp(30, 46, g) * Math.sin(Math.PI * clamp(u / 0.45)) + lerp(16, 30, g) * Math.sin(Math.PI * clamp((u - 0.35) / 0.65));
-      p.foot[i] = p.rake[i] * 0.7;
+      const E = EDGE, u = (ph - duty) / (1 - duty), v = ((2 * half) / duty) * (1 - duty);
+      const y0 = A[1] - half - v * E, y1 = A[1] + half + v * E;
+      const y = u < E ? A[1] - half - v * u : u > 1 - E ? A[1] + half + v * (1 - u) : hermite(y0, y1, -v * (1 - 2 * E), -v * (1 - 2 * E), (u - E) / (1 - 2 * E));
+      walk.at[i] = [A[0], y, A[2] + G.step * L * Math.sin(Math.PI * u) ** 0.7];
+      walk.rake[i] = fore ? -60 * Math.sin(Math.PI * clamp(u / 0.8)) : -30 * Math.sin(Math.PI * clamp(u / 0.45)) + 16 * Math.sin(Math.PI * clamp((u - 0.35) / 0.65));
+      walk.foot[i] = walk.rake[i] * 0.8;
     }
+    // Swimming: drawn back and in along its side, up off the ground, each paddling round a small loop, down and back.
+    const sp = TAU * frac(a.u - RUN_DOWN[i]), pad = G.swing[1] * L;
+    const tuck: V3 = [A[0] * 0.75, A[1] - (fore ? 0.22 : 0.3) * s.len, A[2] + L * 0.32];
+    swim.at[i] = [tuck[0], tuck[1] + pad * Math.cos(sp), tuck[2] + pad * 0.6 * Math.sin(sp)];
+    swim.rake[i] = -70 - 20 * Math.cos(sp);
+    swim.foot[i] = -50;
   }
-  // A walk sinks at each footfall and rolls over onto the side that is down; a bound is lowest on its feet and highest in the air.
-  const walkBob = -G.bob * s.len * (0.5 + 0.5 * Math.cos(4 * TAU * (w - 0.05)));
-  const bound = 0.07 * s.len * Math.cos(2 * TAU * (w - 0.37)) - 0.06 * s.len;
-  p.H += lerp(walkBob, bound, g);
-  p.pitch = g * 7 * Math.sin(TAU * (w - 0.12)) + (1 - g) * 1.5 * Math.sin(2 * TAU * w);
-  p.roll = (1 - g) * 4 * Math.sin(TAU * (w - 0.1));
-  p.yaw = (1 - g) * 2.5 * Math.sin(TAU * (w - 0.2));
-  p.side = -(1 - g) * 0.025 * s.len * Math.sin(TAU * (w - 0.1));
-  p.neck[0] = g * (22 + 6 * Math.sin(TAU * (w - 0.6))) + (1 - g) * 4;
-  p.head[0] = (1 - g) * 5 * Math.cos(2 * TAU * (w - 0.15)) - g * (12 + 6 * Math.sin(TAU * (w - 0.12)));
-  p.head[1] = (1 - g) * 4 * Math.sin(TAU * w);
-  p.head[2] = (1 - g) * -3 * Math.sin(TAU * (w - 0.1));
-  // The tail let down and swung from side to side at a walk; at a run streamed out behind with a wave going down it, up and down.
-  p.tail = [-(1 - g) * 10 - g * (s.tail.lift * 0.8 + 6 * Math.sin(TAU * (w - 0.5))), (1 - g) * 12 * Math.sin(TAU * (w - 0.3)), -g * s.tail.curl * 0.8];
-  p.wave = [(1 - g) * 5, g * 7, TAU * w];
-  return p;
+  walk.H += -G.bob * s.len * (0.5 + 0.5 * Math.cos(4 * TAU * (w - 0.05)));
+  walk.roll = 3 * Math.sin(TAU * (w - 0.1)) * (0.5 + s.sprawl);
+  walk.neck = [4, -6 * s.sprawl * Math.sin(TAU * (w + 0.25))];
+  walk.head = [3 * Math.cos(2 * TAU * (w - 0.15)), -4 * s.sprawl * Math.sin(TAU * (w + 0.25)), 0];
+  walk.tail = [-6, 10 * Math.sin(TAU * (w - 0.25)), 0];
+  walk.wave = [6, 0, TAU * w];
+  // Swimming level and a little low, the neck stretched out ahead and the head steady against the wave; the tail streamed out.
+  swim.H -= 0.08 * s.high;
+  swim.neck = [18, -8 * Math.sin(TAU * (w + 0.25))];
+  swim.head = [-12, -6 * Math.sin(TAU * (w + 0.25)), 0];
+  swim.tail = [-s.tail.lift * 0.85, 8 * Math.sin(TAU * (w - 0.25)), -s.tail.curl * 0.85];
+  swim.wave = [14, 0, TAU * w];
+  return mixPlan(walk, swim, smooth(g));
 }
 
 /**
@@ -425,10 +412,14 @@ function stillPlan(s: Tide, R: Rest, a: Anim): Plan {
   const tilt = beat(t, [5.6, 17.4], 2.4);
   p.head[2] += 18 * tilt * (frac(t / 12) < 0.5 ? 1 : -1);
   p.head[1] += 8 * tilt;
-  p.tail = [-2 * (1 - Math.cos((TAU * 3 * t) / 24)), 8 * cyc(t, 4), 0];
-  p.wave = [4, 3, (TAU * 8 * t) / 24];
+  // Its tail lying curved round to its left, as an axolotl's does at rest, stirring.
+  p.tail = [-2 * (1 - Math.cos((TAU * 3 * t) / 24)), TAIL_REST + 8 * cyc(t, 4), 0];
+  p.wave = [5, 1.5, (TAU * 8 * t) / 24];
   return p;
 }
+
+/** How far round to its left its tail lies standing, in degrees down the whole of it. */
+const TAIL_REST = 95;
 
 /** The body pitched nose-up by `deg` about its hips or nose-down about its shoulders, `at` along it, so they stay where they stood. */
 function pivot(s: Tide, p: Plan, deg: number, at: number): void {
@@ -629,7 +620,8 @@ function legOf(s: Tide, body: Xf, i: number, rootLocal: V3, paw: V3, rake: numbe
   d = scale(d, 1 / (D || 1));
   const at = add(root, scale(d, Dc));
   const out = turn(body, [SIDE[i], 0, 0]);
-  const hint = add(add(scale(fwd, fore ? -1 : 1), scale(out, 0.08)), [0, 0, -0.35 - 2.5 * Math.max(0, d[2])]);
+  // Turned out from the body as far as it sprawls, the elbow and the knee out over the foot as a salamander's are.
+  const hint = add(add(scale(fwd, fore ? -1 : 1), scale(out, 0.08 + 2.2 * s.sprawl)), [0, 0, -0.35 - 2.5 * Math.max(0, d[2])]);
   const v = unit(sub(hint, scale(d, dot(hint, d))));
   const along = (l0 * l0 - l1 * l1 + Dc * Dc) / (2 * Dc), h = Math.sqrt(Math.max(0, l0 * l0 - along * along));
   const knee = add(add(root, scale(d, along)), scale(v, h));
@@ -645,7 +637,7 @@ function legOf(s: Tide, body: Xf, i: number, rootLocal: V3, paw: V3, rake: numbe
 function tailBones(s: Tide, body: Xf, P: Plan, flex: number, links: readonly number[], at: V3, lift: number, curl: number, lag: number): Xf[] {
   const n = links.length, out: Xf[] = [];
   const W = P.wave;
-  let prev = joint(body, flexPt(s, at, flex), -(lift + P.tail[0]) - flexAt(s, at[1], flex), 0, P.tail[1] * 0.4);
+  let prev = joint(body, flexPt(s, at, flex), -(lift + P.tail[0]), 0, P.tail[1] * 0.4 + flexAt(s, at[1], flex));
   out.push(prev);
   for (let q = 1; q < n; q++) {
     // The wave goes down the tail a link at a time, each a little behind the one before, so it travels to the tip.
@@ -656,27 +648,11 @@ function tailBones(s: Tide, body: Xf, P: Plan, flex: number, links: readonly num
   return out;
 }
 
-/** The middle of the skull, in the head's frame; the middle of the snout. */
+/** The middle of the head, in its own frame. */
 const skullAt = (s: Tide): V3 => [0, 0, s.head.up];
-/**
- * The snout: a tube out of the front of the skull, sloping a little down, tapering to a round end -- how far along it each ring is
- * (a share of its length) and how wide and deep there (against the snout's own sizes) -- so the face runs smoothly into it.
- */
-const SNOUT: ReadonlyArray<readonly [number, number]> = [[0, 1.6], [0.45, 1.25], [0.75, 0.96], [0.92, 0.66], [1, 0.18]];
-const SNOUT_DIR: V3 = unit([0, 1, -0.3]);
-const snoutRoot = (s: Tide): V3 => { const H = s.head; return [0, H.r[1] * 0.1, H.up - H.r[2] * 0.12]; };
-const snoutLen = (s: Tide): number => s.head.r[1] * 0.55 + s.head.snout[2];
-/** A point on the snout `k` of the way along it and `th` round it from its right side (up positive), and the way out of it there. */
-function onSnout(s: Tide, k: number, th: number): { p: V3; n: V3 } {
-  const sn = s.head.snout, kk = clamp(k);
-  let q = 0;
-  while (q < SNOUT.length - 2 && SNOUT[q + 1][0] < kk) q++;
-  const f = clamp((kk - SNOUT[q][0]) / (SNOUT[q + 1][0] - SNOUT[q][0])), m = lerp(SNOUT[q][1], SNOUT[q + 1][1], f);
-  const up = unit(cross([1, 0, 0], SNOUT_DIR)), side: V3 = [1, 0, 0];
-  const c = add(snoutRoot(s), scale(SNOUT_DIR, snoutLen(s) * kk));
-  const w = sn[0] * m, h = sn[1] * m, ct = Math.cos(th), st = Math.sin(th);
-  return { p: add(c, add(scale(side, ct * w), scale(up, st * h))), n: unit(add(scale(side, ct / w), scale(up, st / h))) };
-}
+/** The chin: a broad flat egg under the front of the head, so the mouth is a wide line across it. */
+const chinAt = (s: Tide): V3 => { const H = s.head; return [0, H.r[1] * 0.18, H.up - H.r[2] * 0.3]; };
+const chinR = (s: Tide): V3 => { const H = s.head; return [H.r[0] * 0.88, H.r[1] * 0.72, H.r[2] * 0.6]; };
 /** The point on the neck `k` of the way up it, in its frame: straight up from the withers, then arched forward under the head. */
 const neckEnd = (s: Tide, k: number): V3 => { const L = s.neck.len, u = clamp((k - 0.4) / 0.6); return [0, L * 0.26 * u * u, L * k]; };
 
@@ -692,8 +668,8 @@ function tideBones(s: Tide): (a: Anim) => Bones {
     b.trunk = trunkOf(body, P.squash);
     const lean = s.neck.lean + P.neck[0];
     const nf = flexAt(s, s.neck.at[1], flex);
-    b.neck = joint(body, flexPt(s, s.neck.at, flex), -lean + nf, 0, P.neck[1]);
-    b.head = joint(b.neck, neckEnd(s, 1), lean + s.head.pitch + P.head[0] - nf * 0.5, P.head[2], P.head[1]);
+    b.neck = joint(body, flexPt(s, s.neck.at, flex), -lean, 0, P.neck[1] + nf);
+    b.head = joint(b.neck, neckEnd(s, 1), lean + s.head.pitch + P.head[0], P.head[2], P.head[1] - nf * 0.7);
     const T = s.tail;
     tailBones(s, body, P, flex, T.links, T.at, T.lift, T.curl, 0).forEach((x, q) => { b[`tail${q}`] = x; });
     if (s.lobe) tailBones(s, body, P, flex, s.lobe.links, add(T.at, [0, 0.04, -T.w[0] * 0.7]), s.lobe.lift, s.lobe.curl, 0.9).forEach((x, q) => { b[`lobe${q}`] = x; });
@@ -828,97 +804,100 @@ function neckOf(s: Tide, n: number): Mesh {
 }
 
 /**
- * The head: a smooth round skull and a short snout out of the front of it, cream, a small pink nose on its end and a closed
- * smile under it; amber eyes ringed dark; two gold flecks over each eye; and, saddled, a bridle.
+ * The head: broad, flat and round in front, wider than the neck; a broad chin under it and a wide smile across the front between
+ * them, turned up at the ends; small amber eyes set wide on its sides; two pink nostrils; gold flecks over its crown; and,
+ * saddled, a bridle.
  */
 function headOf(s: Tide, n: number, k: number, shut: boolean, tack: boolean): Mesh {
-  const H = s.head, C = skullAt(s), sn = H.snout;
-  const skull = orb(C, H.r, n + 2, k + 2, 'coat');
-  const L = snoutLen(s), root = snoutRoot(s);
-  const muzzle = tube(SNOUT.map(([k]) => add(root, scale(SNOUT_DIR, L * k))), SNOUT.map(([, m]) => sn[0] * m), SNOUT.map(([, m]) => sn[1] * m), n, 'muzzle', { start: false });
-  const nt = onSnout(s, 0.95, 1.1);
-  const nose = orbAlong(add(nt.p, scale(nt.n, -0.01)), [0, 1, 0.4], [sn[0] * 0.3, sn[0] * 0.2, sn[0] * 0.22], 8, 4, 'nose');
-  // The smile: a soft line round the end of the snout under the nose and back along each side of it, turned up at its ends.
-  const mouth = paint(strapsOn(Array.from({ length: 11 }, (_, q) => { const a = lerp(-1, 1, q / 10); return onSnout(s, 0.99 - 0.3 * Math.abs(a), -Math.PI / 2 + a * (Math.PI / 2 - 0.5) + Math.sign(a) * 0.3 * a * a); }), sn[0] * 0.1, 'lid'));
-  const eye = eyes(C, H.r, s.eye.dir, s.eye.size, { tall: 1.15, iris: 'bill', pupil: 0.55, glint: 0.4, rim: 0.24, shut });
-  const flecks = paint([1, -1].flatMap((sd) => [0, 1].map((q) => {
-    const e = onEgg2(C, H.r, [sd * (0.42 + 0.14 * q), 0.42 - 0.2 * q, 0.78 - 0.06 * q]);
-    return disc(add(e.p, scale(e.n, 0.012)), e.n, s.eye.size * 0.34, s.eye.size * 0.24, 6, 'spot', { up: [0, 1, 0] });
+  const H = s.head, C = skullAt(s);
+  const skull = orb(C, H.r, n + 4, k + 2, 'coat');
+  const chin = orb(chinAt(s), chinR(s), n + 2, k + 1, 'muzzle');
+  // The smile, across the front of the head just over the chin and round to either side of it.
+  const mouth = paint(strapsOn(Array.from({ length: 13 }, (_, q) => {
+    const a = lerp(-1, 1, q / 12);
+    return onEgg2(C, H.r, [Math.sin(a * 1.25), Math.cos(a * 1.25), -0.36 + 0.22 * a * a]);
+  }), H.r[0] * 0.022, 'lid'));
+  const nostrils = merge(...[1, -1].map((sd) => {
+    const e = onEgg2(C, H.r, [sd * 0.2, 0.95, 0.22]);
+    return orbAlong(add(e.p, scale(e.n, -0.005)), e.n, [H.r[0] * 0.045, H.r[0] * 0.035, H.r[0] * 0.02], 6, 3, 'nose');
+  }));
+  const eye = eyes(C, H.r, s.eye.dir, s.eye.size, { tall: 1.1, iris: 'bill', pupil: 0.6, glint: 0.42, rim: 0.32, shut });
+  const flecks = paint([1, -1].flatMap((sd) => [0, 1, 2].map((q) => {
+    const e = onEgg2(C, H.r, [sd * (0.2 + 0.14 * q), 0.2 - 0.22 * q, 0.95]);
+    return disc(add(e.p, scale(e.n, 0.01)), e.n, H.r[0] * 0.05, H.r[0] * 0.035, 6, 'spot', { up: [0, 1, 0] });
   })));
-  return merge(skull, muzzle, nose, mouth, eye, flecks, tack && bridleOf(s));
+  return merge(skull, chin, mouth, nostrils, eye, flecks, tack && bridleOf(s));
 }
 
-/** Solids inside the head that hide what is round the far side of them: the skull and the snout. */
+/** Solids inside the head that hide what is round the far side of them: the head and the chin. */
 function headSolids(s: Tide): Array<{ c: V3; r: V3 }> {
-  const H = s.head, sn = H.snout;
-  return [{ c: skullAt(s), r: scale(H.r, 0.86) }, { c: add(snoutRoot(s), scale(SNOUT_DIR, snoutLen(s) * 0.45)), r: [sn[0] * 0.75, snoutLen(s) * 0.3, sn[1] * 0.75] }];
+  return [{ c: skullAt(s), r: scale(s.head.r, 0.86) }, { c: chinAt(s), r: scale(chinR(s), 0.8) }];
 }
 
 /**
- * The crown: rows of petal-fins off the back of its skull, the innermost short and standing up, each row further out longer and
- * swept further back and round, the last fanned out to either side behind its cheeks; each lying on a cone standing back and up
- * off the head, its face out from it, so from any side it frames the face and never crosses it. In the head's frame.
+ * Its gills: stalks either side of the head behind the jaw, the top one standing back and up, the bottom one hanging back and
+ * down, each a fine stalk curving back with fronds along both sides of it lying back along it, longest along its middle, so
+ * each is a feather -- pale gold at the root and pink to its tips. They frame the head from its sides and back and never come in
+ * front of the face. In the head's frame.
  */
-function crownOf(s: Tide, lod: number): Fan {
-  const H = s.head, C = skullAt(s), petals: PetalOf[] = [];
-  s.crown.forEach((row, q) => {
-    const count = lod ? row.n : Math.max(3, row.n - 2);
-    for (let j = 0; j < count; j++) {
-      const u = count > 1 ? (j / (count - 1)) * 2 - 1 : 0, az = u * row.spread * DEG, el = (row.el - 8 * u * u) * DEG;
-      const id = q * 17 + j;
-      // Out of the top and the back of the skull, behind the eyes, each tier further back down it.
-      const root = onEgg2(C, scale(H.r, 0.88), [Math.sin(az) * 0.75, -0.25 - 0.32 * q, 0.95 - 0.28 * q]).p;
-      const dir: V3 = [Math.sin(az) * Math.cos(el) * 0.85, -Math.cos(el) - 0.3, Math.sin(el)];
-      // Its face to the side, so side on it is a long feather, from in front a blade rising behind the face; curving back.
-      const sx = Math.abs(u) > 0.01 ? Math.sign(u) : j % 2 ? 1 : -1;
-      const L = row.len * (0.88 + 0.24 * jitter(id)), W = row.w * (0.9 + 0.2 * jitter(id + 5));
-      petals.push(petalFin(root, dir, [sx, 0.15, 0.3], L, W, [0, -0.36, -0.2], { twist: 0.35 * sx }));
-    }
-  });
-  return fanOf(s, petals, [0, -0.5, -0.2]);
-}
-
-/**
- * The mane: rows of petal-fins down the back of its neck from the crown to the withers, falling back and down over the sides of
- * it, longest at the top, so the crown flows on down the neck. In the neck's frame.
- */
-function maneOf(s: Tide, lod: number): Fan {
-  const N = s.neck, M = s.mane, petals: PetalOf[] = [];
-  const rows = lod ? M.rows : Math.max(1, M.rows - 1);
-  for (let row = 0; row < rows; row++) {
-    const v = rows > 1 ? row / (rows - 1) : 0, z = lerp(N.len * 0.85, N.len * 0.12, v);
-    for (const a of lod ? [-0.9, -0.4, 0, 0.4, 0.9] : [-0.8, 0, 0.8]) {
-      // Under the crown only the feathers down its crest, so none stands out beside the jaw.
-      if ((!lod && a === 0 && row % 2) || (Math.abs(a) > 0.5 && v < 0.3)) continue;
-      const id = 60 + row * 5 + Math.round(a * 10);
-      const nrm: V3 = [Math.sin(a), -Math.cos(a), 0];
-      const root: V3 = add(neckEnd(s, z / N.len), [nrm[0] * N.w * 0.8, nrm[1] * N.w * 0.85, 0]);
-      const L = M.len * (1 - 0.35 * v) * (0.9 + 0.2 * jitter(id));
-      const dir = unit(add(scale(nrm, 0.45), [0, -0.85, -0.4]));
-      petals.push(petalFin(root, dir, a ? [Math.sign(a), 0, 0.3] : [1, 0, 0.3], L, M.w * (1 - 0.2 * v), [0, -0.1, -0.12], { twist: 0.25 * (a ? Math.sign(a) : 1) }));
+function gillsOf(s: Tide, lod: number): Fan {
+  const H = s.head, C = skullAt(s), G = s.gills, petals: PetalOf[] = [];
+  const fronds = lod ? G.fronds : Math.max(3, G.fronds - 2);
+  for (const sd of [-1, 1]) {
+    for (let j = 0; j < G.n; j++) {
+      const t = G.n > 1 ? j / (G.n - 1) : 0.5, id = (sd > 0 ? 40 : 0) + j * 7;
+      const root = onEgg2(C, scale(H.r, 0.9), [sd * 0.85, -0.5 - 0.1 * t, lerp(0.45, -0.25, t)]).p;
+      const up = lerp(G.up, G.down, t);
+      const dir = unit([sd * lerp(1.0, 0.7, t), lerp(-0.45, -0.75, t), up]);
+      const L = G.len * (1 - 0.5 * Math.abs(t - 0.5) - 0.15 * (t < 0.5 ? 1 : 0)) * (0.92 + 0.16 * jitter(id));
+      // Curving back along its length, the tip falling a little.
+      const at = (u: number): V3 => add(root, add(scale(dir, L * u), scale([-sd * 0.12, -0.4, -0.1], L * u * u)));
+      const ring = [0, 0.3, 0.6, 0.85, 1].map(at);
+      const rachis = tube(ring, [L * 0.035, L * 0.028, L * 0.02, L * 0.014, L * 0.006], [L * 0.035, L * 0.028, L * 0.02, L * 0.014, L * 0.006], 4,
+        (r) => (['cap', 'bloom', 'leaf', 'mark', 'mark'] as const)[r], { end: false });
+      // The fronds spread in a plane facing out, forward and up from the stalk, so the gill is a fan from in front as from the side.
+      const face = unit([sd * 0.6, 0.35, 0.7]), side = unit(cross(dir, face));
+      const parts: Mesh[] = [rachis];
+      for (let f = 0; f < fronds; f++) {
+        const u = 0.16 + 0.8 * (f / Math.max(1, fronds - 1)), p0 = at(u), tan = unit(sub(at(Math.min(1, u + 0.05)), at(Math.max(0, u - 0.05))));
+        const lf = L * G.frond * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, u * 1.15))) * (1 - 0.25 * u);
+        const mats: readonly Mat[] = u < 0.35 ? ['cap', 'bloom', 'leaf'] : u < 0.7 ? ['stem', 'leaf', 'mark', 'mark'] : ['bloom', 'mark', 'mark', 'petal'];
+        for (const fs of [-1, 1]) {
+          const fd = unit(add(scale(tan, 0.75), scale(side, fs * 0.65)));
+          parts.push(frond(p0, fd, face, lf, lf * 0.24, mats));
+        }
+      }
+      // And a frond off its tip, along it.
+      parts.push(frond(at(0.96), unit(sub(at(1), at(0.9))), face, L * G.frond * 0.8, L * G.frond * 0.13, ['leaf', 'mark', 'petal']));
+      petals.push({ mesh: merge(...parts), root, n: unit([sd, 0.1, 0.4]), len: L });
     }
   }
-  return fanOf(s, petals, [0, -0.6, -0.4]);
+  return fanOf(s, petals, [0, -0.6, -0.1]);
+}
+
+/** A frond of a gill: a narrow feather-petal from `root` along `dir`, its face toward `face`, coloured along it by `mats`. */
+function frond(root: V3, dir: V3, face: V3, len: number, w: number, mats: readonly Mat[]): Mesh {
+  const shape = finePetals ? [[0, 0.4], [0.3, 1], [0.65, 0.75], [1, 0.05]] : [[0, 0.4], [0.45, 1], [1, 0.05]];
+  const pts = shape.map(([u]) => add(root, add(scale(dir, len * u), [0, -0.04 * len * u * u, 0])));
+  const n = unit(sub(face, scale(dir, dot(face, dir))));
+  return vane(pts, shape.map(([, k]) => w * k), n, mats, { thick: Math.min(0.015, w * 0.25), fold: 0.15 });
 }
 
 /**
- * The fins along its back: a row of petals over the withers and another over the croup, each lying back along the spine with
- * one either side of it flowing back down over the flank; none where the saddle goes, so a saddle sits on cream. In the
+ * The fin along its back: a low frill of lobes standing up along the spine and lying back, from over its shoulders to its tail,
+ * where it runs on into the tail's fin, tallest over the croup; with a gap where the saddle goes, when it is saddled. In the
  * trunk's frame.
  */
-function backFinsOf(s: Tide, lod: number): Fan {
-  const B = s.body, F = s.back, petals: PetalOf[] = [];
-  const front = B.y[B.y.length - 2] - 0.1, saddle0 = s.seat - s.len * 0.32, saddle1 = s.seat + s.len * 0.3;
-  const spots = [...Array.from({ length: Math.ceil(F.n / 2) }, (_, q) => lerp(front, saddle1, q / Math.max(1, Math.ceil(F.n / 2)))),
-    ...Array.from({ length: Math.floor(F.n / 2) }, (_, q) => lerp(saddle0, B.y[1] + 0.1, (q + 0.3) / Math.max(1, Math.floor(F.n / 2))))];
-  spots.forEach((y, q) => {
-    for (const sd of lod ? [-1, 0, 1] : [-1, 1]) {
-      const id = 120 + q * 7 + sd, th = Math.PI / 2 - sd * 0.75, e = onRings(B, y, th);
-      const L = F.len * (0.85 + 0.3 * jitter(id)) * (sd ? 1 : 0.8);
-      const dir = unit(add(scale(e.n, sd ? 0.3 : 0.45), [0, -1, sd ? -0.2 : 0.15]));
-      petals.push(petalFin(sub(e.p, scale(e.n, 0.03)), dir, unit(add(e.n, [sd * 0.8, 0, 0])), L, F.w, [0, -0.05, -0.1], { twist: 0.15 * sd }));
-    }
-  });
+function dorsalOf(s: Tide, lod: number, tack: boolean): Fan {
+  const B = s.body, petals: PetalOf[] = [];
+  const y0 = B.y[B.y.length - 2] - 0.1, y1 = B.y[0] + 0.05, n = Math.round((lod ? 14 : 9) + 4 * s.stage);
+  const saddle0 = s.seat - s.len * 0.26, saddle1 = s.seat + s.len * 0.26;
+  for (let q = 0; q < n; q++) {
+    const u = q / (n - 1), y = lerp(y0, y1, u);
+    if (tack && y > saddle0 && y < saddle1) continue;
+    const e = onRings(B, y, Math.PI / 2), L = s.dorsal * (0.45 + 0.55 * Math.sin(Math.PI * Math.min(1, 0.2 + u))) * (0.9 + 0.2 * jitter(q + 120));
+    petals.push(petalFin(sub(e.p, [0, 0, 0.03]), unit([0, -1, 0.45]), [1, 0, 0], L * 1.4, L * 0.5, [0, -0.1, -0.05], { twist: 0.05, mats: ['cap', 'bloom', 'leaf', 'mark'] }));
+  }
   return fanOf(s, petals, [0, -0.7, -0.2]);
 }
 
@@ -937,61 +916,52 @@ function legFinOf(s: Tide, length: number, w: number, count: number, from: numbe
 }
 
 /**
- * A webbed foot: a soft cream pad, four long toes fanned out in front with pink tips, and the web between them pale gold going
- * to pink. In the foot's frame, its sole on the ground under the ankle.
+ * A foot: a small soft palm and long thin fingers splayed out in front of it, four on a fore foot and five on a hind, pink at
+ * their tips. In the foot's frame, its sole on the ground under the ankle.
  */
 function footOf(s: Tide, fore: boolean, n: number): Mesh {
-  const r = s.paw * (fore ? 1 : 1.1), long = 1.15 + 0.3 * s.stage;
-  const pad = orbAlong([0, r * 0.2, -r * 0.1], [0, 1, 0], [r * 0.8, r * 1.1, r * 0.5], n, 4, 'pad');
-  const toes: Mesh[] = [], web: Mesh[] = [];
-  const tips: V3[] = [];
-  for (let q = 0; q < 4; q++) {
-    const a = (q - 1.5) * 0.36, l = r * (1.25 + 0.15 * (1.5 - Math.abs(q - 1.5))) * long;
-    const root: V3 = [Math.sin(a) * r * 0.5, r * 0.6, -r * 0.25], tip: V3 = add(root, [Math.sin(a) * l, Math.cos(a) * l, -r * 0.18]);
-    tips.push(tip);
-    toes.push(tube([root, mixV(root, tip, 0.6), tip], [r * 0.2, r * 0.17, r * 0.13], [r * 0.16, r * 0.14, r * 0.11], 5, (ring) => (ring >= 1 ? 'mark' : 'pad'), {}));
+  const r = s.paw * (fore ? 1 : 1.1), long = 1.3 + 0.3 * s.stage, count = fore ? 4 : 5;
+  const palm = orbAlong([0, r * 0.25, -r * 0.1], [0, 1, 0], [r * 0.75, r * 0.85, r * 0.42], n, 4, 'pad');
+  const fingers: Mesh[] = [];
+  for (let q = 0; q < count; q++) {
+    const c = q - (count - 1) / 2, a = c * (fore ? 0.5 : 0.42), l = r * (1.2 + 0.2 * (1 - Math.abs(c) / count)) * long;
+    const root: V3 = [Math.sin(a) * r * 0.45, r * 0.55, -r * 0.2], tip: V3 = add(root, [Math.sin(a) * l, Math.cos(a) * l, -r * 0.2]);
+    fingers.push(tube([root, mixV(root, tip, 0.55), tip], [r * 0.15, r * 0.12, r * 0.1], [r * 0.12, r * 0.1, r * 0.08], 4, (ring) => (ring >= 1 ? 'mark' : 'pad'), {}));
+    fingers.push(orb(tip, r * 0.13, 5, 3, 'mark'));
   }
-  // The web: a thin fan from the pad out to each pair of toe tips, drawn short of the tips so the toes stand out of it.
-  for (let q = 0; q < 3; q++) {
-    const a = mixV([0, r * 0.55, -r * 0.3], tips[q], 0.82), b = mixV([0, r * 0.55, -r * 0.3], tips[q + 1], 0.82), c: V3 = [0, r * 0.55, -r * 0.3];
-    const mid = scale(add(a, b), 0.5);
-    web.push(vane([c, mixV(c, mid, 0.55), mid], [len3(sub(a, b)) * 0.25, len3(sub(a, b)) * 0.42, len3(sub(a, b)) * 0.5], [0, 0, 1], ['bloom', 'mark'], { fold: -0.1, thick: 0.01 }));
-  }
-  return merge(pad, ...toes, ...web);
+  return merge(palm, ...fingers);
 }
 
 /**
- * A link of the tail: a cream core tapering along it, and petal-fins off it all round lying back along it and standing out of
- * it, longest to either side, so the tail is a plume of petals; the last link a fan of long ones off its end. Along its own
- * `-y`, from its root.
+ * A link of the tail: a smooth cream core twice as deep as it is wide, and its fins over and under it -- lobes standing up and down
+ * out of it and lying back, overlapping, so side on the tail is a tall paddle frilled at its edge, pale gold at the root and pink
+ * at the tips; the last link a fan of long lobes off its end. Along its own `-y`, from its root.
  */
 function tailLinkOf(s: Tide, q: number, links: readonly number[], ws: readonly number[], fin: number, fan: number, seed: number): Fan {
   const L = links[q], w0 = ws[Math.min(q, ws.length - 1)], w1 = ws[Math.min(q + 1, ws.length - 1)];
-  const core = tube([[0, 0.04, 0], [0, -L * 0.5, 0], [0, -L - 0.03, 0]], [w0, (w0 + w1) * 0.5, w1], [w0 * 0.95, (w0 + w1) * 0.48, w1 * 0.95], finePetals ? 7 : 5, 'coat', { start: q === 0 ? false : undefined, end: false });
+  const core = tube([[0, 0.04, 0], [0, -L * 0.5, 0], [0, -L - 0.03, 0]], [w0, (w0 + w1) * 0.5, w1], [w0 * 1.9, (w0 + w1) * 0.95, w1 * 1.9], finePetals ? 8 : 6, 'coat', { start: q === 0 ? false : undefined, end: false });
   const petals: PetalOf[] = [];
   const last = q === links.length - 1, k = (q + 1) / links.length;
-  // Feathers fanned out along both sides of it and lying back along it, the row on each link over the one before: from the side
-  // a long plume, from behind and above a fan. One more over its top, and on a tail that is not curled under, one under it.
-  const curled = s.stage === 1;
-  const around = finePetals ? [-1.45, -0.95, 0.95, 1.45, q % 2 ? 0.35 : -0.35, ...(curled ? [] : [Math.PI])] : [-1.3, 1.3, q % 2 ? 0.3 : -0.3];
-  around.forEach((a, c) => {
-    const id = seed + q * 13 + c, upright = Math.abs(Math.cos(a)) > 0.8;
-    const nrm: V3 = [Math.sin(a), 0, Math.cos(a)];
-    const Lk = fin * (0.9 + 0.55 * k) * (upright ? 0.8 : 1.1) * (Math.abs(a) < 1.2 && !upright ? 0.9 : 1) * (0.88 + 0.24 * jitter(id));
-    const root: V3 = [nrm[0] * w0 * 0.6, -L * 0.05, nrm[2] * w0 * 0.6];
-    const face: V3 = upright ? [1, 0, 0] : [nrm[0] * 0.25, 0, 1];
-    petals.push(petalFin(root, unit(add(scale(nrm, upright ? 0.45 : Math.abs(a) > 1.2 ? 1.35 : 0.85), [0, -1, 0])), face, Lk, Lk * 0.17, add(scale(nrm, 0.06), [0, 0, 0.04]), { twist: 0.2 * (c % 2 ? 1 : -1) }));
-  });
-  if (last) {
-    // The end: a fan of long feathers spread flat out either side of the tip and two lifted over it.
-    const m = finePetals ? 7 : 4;
-    for (let c = 0; c < m; c++) {
-      const a = lerp(-1.05, 1.05, c / (m - 1)), up = c % 2 ? 0.25 : 0;
-      const Lk = fan * (1 - 0.18 * Math.abs(a)) * (0.9 + 0.2 * jitter(seed + 90 + c));
-      petals.push(petalFin([0, -L * 0.6, 0], [Math.sin(a), -Math.cos(a), up], [Math.sin(a) * 0.2, 0, 1], Lk, Lk * 0.18, [0, -0.04, 0.06], { twist: 0.2 * a }));
+  // Taller toward its end, and the lower fin a little shorter than the upper.
+  const tall = fin * (0.55 + 0.6 * Math.sin(Math.PI * Math.min(1, 0.25 + 0.7 * k)));
+  const at = finePetals ? [0.05, 0.55] : [0.25];
+  for (const [c, y] of at.entries()) {
+    for (const ud of [1, -1]) {
+      const id = seed + q * 13 + c * 3 + ud, Lk = tall * (ud > 0 ? 1 : 0.75) * (0.9 + 0.2 * jitter(id));
+      const root: V3 = [0, -L * y, ud * w0 * 1.6];
+      petals.push(petalFin(root, unit([0.08 * ud * (c ? 1 : -1), -0.75, ud]), [1, 0, 0], Lk, Lk * 0.42, [0, -0.25, -0.05 * ud], { twist: 0.15 }));
     }
   }
-  const f = fanOf(s, petals, [0, -0.3, 0.3], 0.8);
+  if (last) {
+    // The end: a fan of long lobes spread up and down off the tip.
+    const m = finePetals ? 5 : 3;
+    for (let c = 0; c < m; c++) {
+      const z = lerp(-0.7, 0.6, c / (m - 1));
+      const Lk = fan * (1 - 0.2 * Math.abs(z)) * (0.9 + 0.2 * jitter(seed + 90 + c));
+      petals.push(petalFin([0, -L * 0.6, 0], unit([0, -1, z]), [1, 0, 0], Lk, Lk * 0.3, [0, -0.05, 0.05], { twist: 0.2 * z }));
+    }
+  }
+  const f = fanOf(s, petals, [0, -0.3, 0], 0.8);
   return { mesh: merge(core, f.mesh), bend: (v, a) => [...v.slice(0, core.v.length), ...f.bend(v.slice(core.v.length), a)] };
 }
 
@@ -1042,19 +1012,19 @@ function strapOn(pts: ReadonlyArray<{ p: V3; n: V3 }>, w: number, m: Mat): Disc 
   return facing([...pts.map((q, i) => up(q, 1, dirs[i])), ...[...pts].reverse().map((q, i) => up(q, -1, dirs[pts.length - 1 - i]))], pts.reduce((t, q) => add(t, q.n), [0, 0, 0] as V3), m);
 }
 
-/** The bridle: a noseband round the snout, a cheek strap up each side of the face to a band behind the crown, and a bit ring at each corner of the mouth. */
+/** The bridle: a noseband round the front of the head behind the smile, a cheek strap up each side to a band behind the eyes, and a bit ring at each corner of the mouth. */
 function bridleOf(s: Tide): Mesh {
-  const H = s.head, C = skullAt(s), sn = H.snout;
-  const w = H.r[0] * 0.07;
-  const band = Array.from({ length: 11 }, (_, q) => onSnout(s, 0.62, -0.35 * Math.PI + (q / 10) * 1.7 * Math.PI));
-  const cheek = (sd: number): Disc => strapOn(Array.from({ length: 6 }, (_, q) => onEgg2(C, H.r, [sd * 0.95, lerp(0.3, -0.45, q / 5), lerp(-0.55, 0.7, q / 5)])), w, 'leather');
-  const crown = Array.from({ length: 7 }, (_, q) => onEgg2(C, H.r, [lerp(-0.9, 0.9, q / 6), -0.45, 0.75]));
-  const bits = merge(...[1, -1].map((sd) => orb(bitAt(s, sd), sn[0] * 0.2, 5, 3, 'metal')));
+  const H = s.head, C = skullAt(s);
+  const w = H.r[0] * 0.06;
+  const band = Array.from({ length: 11 }, (_, q) => { const a = -0.3 * Math.PI + (q / 10) * 1.6 * Math.PI; return onEgg2(C, H.r, [Math.cos(a), 0.62, Math.sin(a) * 0.9]); });
+  const cheek = (sd: number): Disc => strapOn(Array.from({ length: 5 }, (_, q) => onEgg2(C, H.r, [sd * 0.95, lerp(0.35, -0.3, q / 4), lerp(-0.3, 0.6, q / 4)])), w, 'leather');
+  const crown = Array.from({ length: 7 }, (_, q) => onEgg2(C, H.r, [lerp(-0.85, 0.85, q / 6), -0.35, 0.9]));
+  const bits = merge(...[1, -1].map((sd) => orb(bitAt(s, sd), H.r[0] * 0.08, 5, 3, 'metal')));
   return merge(paint([...strapsOn(band, w, 'leatherDark'), cheek(1), cheek(-1), ...strapsOn(crown, w, 'leather')]), bits);
 }
 
 /** Where the bit is, in the head's frame, on the side `sd`; and where the reins come to on the saddle, in the trunk's. */
-const bitAt = (s: Tide, sd: number): V3 => add(onSnout(s, 0.78, sd > 0 ? -0.35 : Math.PI + 0.35).p, [sd * 0.02, 0, 0]);
+const bitAt = (s: Tide, sd: number): V3 => add(onEgg2(skullAt(s), s.head.r, [sd * 0.9, 0.45, -0.42]).p, [sd * 0.02, 0, 0]);
 const pommelAt = (s: Tide, sd: number): V3 => { const r = ringAt(s.body, s.seat); return [sd * r.w * 0.3, s.seat + s.len * 0.19, r.z + r.h + SADDLE_H]; };
 
 /* ---- pieces ------------------------------------------------------------------------------------------- */
@@ -1068,16 +1038,10 @@ function tideBuild(s: Tide, lod: number, tack: boolean): Piece[] {
   pieces.push({ key: 'body', mesh: barrelOf(s, cut(lod, 14, 22)), bone: 'trunk', bias: 0, breathes: { c: [0, 0, 0], k: 0.04 } });
   pieces.push({ key: 'neck', mesh: neckOf(s, n), bone: 'neck', bias: 0, under: ['head', 'body'] });
   pieces.push({ key: 'head', mesh: headOf(s, n, k, false, tack), shut: headOf(s, n, k, true, tack), bone: 'head', bias: 0.2, after: 'neck', hide });
-  const crown = crownOf(s, lod);
-  pieces.push({ key: 'crown', mesh: crown.mesh, bent: crown.bend, bone: 'head', bias: 0.19, after: ['head', 'neck'], hide, hideIn: 'head' });
-  if (s.mane.rows) {
-    const mane = maneOf(s, lod);
-    pieces.push({ key: 'mane', mesh: mane.mesh, bent: mane.bend, bone: 'neck', bias: 0.03, after: ['neck', 'body'], front: [0, -1, 0], hide, hideIn: 'head' });
-  }
-  if (s.back.n) {
-    const fins = backFinsOf(s, lod);
-    pieces.push({ key: 'backFins', mesh: fins.mesh, bent: fins.bend, bone: 'trunk', bias: 0.05, after: ['body'] });
-  }
+  const gills = gillsOf(s, lod);
+  pieces.push({ key: 'gills', mesh: gills.mesh, bent: gills.bend, bone: 'head', bias: 0.19, after: ['head', 'neck'], hide, hideIn: 'head' });
+  const fins = dorsalOf(s, lod, tack);
+  pieces.push({ key: 'backFins', mesh: fins.mesh, bent: fins.bend, bone: 'trunk', bias: 0.05, after: ['body'] });
   s.tail.links.forEach((_, q) => {
     const f = tailLinkOf(s, q, s.tail.links, s.tail.w, s.tail.fin, s.tail.fan, 900);
     pieces.push({ key: `tail${q}`, mesh: f.mesh, bent: f.bend, bone: `tail${q}`, bias: -0.05 + q * 0.01, chain: 'tail' });
@@ -1355,8 +1319,8 @@ export const tideSeat = (stage: number): number => {
   return seatOf(s) * HEIGHT_SCALE * s.size;
 };
 
-/** How far its rider's legs are drawn up on each stage (`Seat.tuck`): knees high on the Springlet, a little on the Springsail, not at all on the Tidecourser. */
-export const TIDE_TUCK: readonly number[] = [0.9, 0.4, 0];
+/** How far its rider's legs are drawn up on each stage (`Seat.tuck`): knees high on every stage, a low mount, a little less as it grows. */
+export const TIDE_TUCK: readonly number[] = [0.9, 0.85, 0.75];
 
 /** Where its rider's reins go to on each stage: its bit, standing, in the rider's own units from the top of the saddle (`Seat.grip`), grown. */
 export const tideGrip = (stage: number): V3 => {

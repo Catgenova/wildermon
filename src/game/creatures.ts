@@ -3790,7 +3790,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     ],
     butcher: { meat: 10, leather: 8, bone: 7, gland: 2 },
     defensive: true,
-    mount: 13,
+    mount: 12,
     swims: true,
     deepWater: true,
   },

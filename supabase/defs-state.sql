@@ -2908,7 +2908,7 @@ insert into species_diet values ('wadd', 'reed');
 insert into species_diet values ('wadd', 'nuts');
 update species_def set favourite = 'meat' where id = 'wadd';
 insert into species_def values ('springlet', 'Springlet', 'Mount, saddled and bridled: on land 0.33 tiles a second, flat; in water 2.7 tiles a second grown and fed at 0 climbing, +0.8% per climbing level, max 5 tiles a second before a Saddler''s tack. Crosses deep water with a rider. Wild: only in deep water. Level: climbing, learned under a rider. Evolves at level 25: Springsail.', 45, 6, 0.32626763333838543, 40, 0.05, 'fish', false, null, 6, 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, 'bite', null, null);
-update species_def set mount = 13 where id = 'springlet';
+update species_def set mount = 12 where id = 'springlet';
 update species_def set swims = true where id = 'springlet';
 update species_def set swim_speed = 3 where id = 'springlet';
 update species_def set deep_water = true where id = 'springlet';
