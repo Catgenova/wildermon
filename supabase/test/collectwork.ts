@@ -15,7 +15,8 @@
  * Runs against the database the suite leaves behind: Faraway, and Ivar on it.
  */
 import { execFileSync } from 'node:child_process';
-import { Game } from '../../src/game/game';
+import { FORAGE_COOLDOWN, Game } from '../../src/game/game';
+import { idleSays } from '../../src/game/workerlog';
 import type { Creature } from '../../src/game/creatures';
 import type { Item } from '../../src/game/items';
 import { TileType } from '../../src/world/tiles';
@@ -63,6 +64,8 @@ select 'GOT|' || coalesce((worker_do(${W}, :'digger'))->>'def', '-');
 select 'GROUND|' || string_agg(land_height(${W}, cx, cy) || '/' || land_dirt(${W}, cx, cy), ' ' order by k)
   from unnest(array[${CORNERS.map(([cx]) => cx).join(', ')}], array[${CORNERS.map(([, cy]) => cy).join(', ')}]) with ordinality u(cx, cy, k);
 select 'AGAIN|' || worker_gatherable(${W}, ${X}, ${Y}, 'clay', (select c from creature c where c.world_id = ${W} and c.id = :'digger'));
+select 'WAIT|' || coalesce(ceil(worker_wait_left(${W}, ${X}, ${Y}, 2, 'clay'))::text, 'none');
+select 'WAITSAND|' || coalesce(ceil(worker_wait_left(${W}, ${X}, ${Y}, 2, 'sand'))::text, 'none');
 rollback;`));
 const get = (k: string): string => island.get(k) ?? 'MISSING';
 
@@ -88,6 +91,11 @@ check('a go at it gives a lump of clay, on both sides', got?.id === 'clay' && ge
 check('and leaves every corner\'s height and soil as they were (collected, not dug), on both sides',
   ground === '0/0 0/0 0/0 0/0' && get('GROUND') === ground, `island ${get('GROUND')}, browser ${ground}`);
 check('and it is not worked again straight after, on both sides', !again && get('AGAIN') === 'false', `island ${get('AGAIN')}, browser ${again}`);
+// Its only clay on the cooldown: the wait till it is back, and the card says so (`worker_wait_left`, `idleSays` 'waiting').
+check(`and the island's wait on it is the whole ${FORAGE_COOLDOWN} s cooldown, for clay and not for sand`,
+  Math.abs(Number(get('WAIT')) - FORAGE_COOLDOWN) <= 2 && get('WAITSAND') === 'none', `clay ${get('WAIT')}, sand ${get('WAITSAND')}`);
+check('and a worker waiting on it says when it is back', idleSays({ why: 'waiting', n: FORAGE_COOLDOWN }, 'clay') === `Idle: all in reach worked; next clay to collect in ${FORAGE_COOLDOWN} s.`,
+  idleSays({ why: 'waiting', n: FORAGE_COOLDOWN }, 'clay'));
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

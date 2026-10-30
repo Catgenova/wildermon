@@ -103,7 +103,7 @@ export const IDLE_LABEL: Record<IdleWhy, string> = {
   range: 'nothing in range', stock: 'stores empty', room: 'no room to store', full: 'storage full', far: 'walking home',
   away: 'not settled: keeper away or nobody near', unswept: 'not settled: nobody near', rest: 'resting', bed: 'asleep', tired: 'walking to bed',
   nospar: 'no guard free to spar', yielded: 'yielded a spar', season: 'out of season', flowers: 'no wildflowers by its hive',
-  stairs: 'no stairs up to its work', stranded: 'no stairs down',
+  stairs: 'no stairs up to its work', stranded: 'no stairs down', waiting: 'work in reach on its wait',
 };
 
 /** The reason it has been idle longest for, and how long; null with no idle time. */

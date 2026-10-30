@@ -147,7 +147,7 @@ import {
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POND_MOST, POOL_DEPTH, POOL_LIP, RUN_MOST, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { CLEAR_OF_BUILDINGS, CONCRETE_PER_STEP, LIFT_PER_MASONRY, POOL_FILL } from '../../game/foundations';
 import { AWARENESS, awarenessReach, BASE_SIGHT, LIGHT_GIVES_BACK, NIGHT_LOSS, TREE_OPACITY } from '../../game/vision';
-import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase } from '../../game/game';
+import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, FORAGE_COOLDOWN } from '../../game/game';
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
@@ -3096,7 +3096,8 @@ export function helpText(): string {
       <li><b>Range</b>: starts at ${WORK_RANGES[0]} to ${WORK_RANGES[WORK_RANGES.length - 1]} tiles from the totem by sort; +${RANGE_PER_STEP} tiles per ${SKILL_STEP} levels of its task skill
       (${RANGE_STEPS_SAID}). Its card shows current range and the skill for the next step.</li>
       <li><b>Idle reasons</b> (card and hover, until it next sets out): nothing of its task in range of the totem or post at its level
-      (&ldquo;${idleSays({ why: 'range', n: SPECIES.sedra.workRange }, 'reed')}&rdquo; for a new ${SPECIES.sedra.name}); nothing in your settlement stores to work, naming what it needs
+      (&ldquo;${idleSays({ why: 'range', n: SPECIES.sedra.workRange }, 'reed')}&rdquo; for a new ${SPECIES.sedra.name}); all of it in range worked, until the soonest is off its ${FORAGE_COOLDOWN} s cooldown
+      (&ldquo;${idleSays({ why: 'waiting', n: FORAGE_COOLDOWN }, 'sand')}&rdquo;); nothing in your settlement stores to work, naming what it needs
       (&ldquo;${idleSays({ why: 'stock', n: 0 }, 'mend')}&rdquo;); no barrel with room for its water; a load with nowhere to put it; walking home when over ${HOME_SLACK} tiles past
       its range, with the distance; no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
       Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
