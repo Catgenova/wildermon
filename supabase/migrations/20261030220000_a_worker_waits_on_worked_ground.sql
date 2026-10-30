@@ -7,7 +7,8 @@ set local lock_timeout = '3s';
 
 /*
  * Seconds until the soonest tile of a trade's work within `p_range` of (`p_cx`, `p_cy`) is off its forage cooldown,
- * or null where none of its kind is on one: the marks `worker_gatherable` asks of each trade (`is_foraged`).
+ * or null where none of its kind is on one: the marks `worker_gatherable` asks of each trade (`is_foraged`), on ground
+ * still of the kind it works.
  */
 create or replace function worker_wait_left(p_world uuid, p_cx int, p_cy int, p_range int, p_kind text)
   returns double precision language sql stable as $fn$
@@ -21,13 +22,14 @@ create or replace function worker_wait_left(p_world uuid, p_cx int, p_cy int, p_
        when 'clay' then f.kind = 'dig' and land_tile(p_world, f.x, f.y) = tile_id('Clay')
        when 'peat' then f.kind = 'dig' and land_tile(p_world, f.x, f.y) in (tile_id('Peat'), tile_id('Tar'))
        when 'seek' then f.kind = 'dig'
-       when 'reed' then f.kind = 'reed'
-       when 'grass' then f.kind in ('grass', 'moss')
+       when 'reed' then f.kind = 'reed' and land_tile(p_world, f.x, f.y) = tile_id('Reed')
+       when 'grass' then (f.kind = 'moss' and land_tile(p_world, f.x, f.y) = tile_id('Moss'))
+         or (f.kind = 'grass' and land_tile(p_world, f.x, f.y) in (tile_id('Grass'), tile_id('Steppe'), tile_id('Lawn'), tile_id('Tundra')))
        when 'worm' then f.kind = 'worm'
        when 'sprout' then f.kind = 'sprout'
        when 'bush' then f.kind = 'forage' and land_tile(p_world, f.x, f.y) = tile_id('Bush')
-       when 'forage' then f.kind = 'forage'
-       when 'botanize' then f.kind = 'botanize'
+       when 'forage' then f.kind = 'forage' and coalesce((select t.forage from tile_def t where t.id = land_tile(p_world, f.x, f.y)), false)
+       when 'botanize' then f.kind = 'botanize' and coalesce((select t.botanize from tile_def t where t.id = land_tile(p_world, f.x, f.y)), false)
        else false end
 $fn$;
 revoke all on function worker_wait_left(uuid, int, int, int, text) from public, anon, authenticated;

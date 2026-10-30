@@ -155,7 +155,8 @@ begin
   insert into item (world_id, holder, placed, def, ql, count, locked) values (w, 'furniture', v_shelf, 'log', 30, 4, true);
   perform drop_on_ground(w, ${HATCHET[0]}, ${HATCHET[1]}, 'hatchet', 30, null, 1);
   m := creature_spawn(w, 'magga', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
-  update creature set traits = '{}', keeper = u, phase = 'idle', carrying = null, job = null, post = null, hunger = 1,
+  -- Plain: no rarity or size form rolled at its spawn, either of which stretches its reach (beast_mul).
+  update creature set traits = '{}', rare = null, form_size = null, keeper = u, phase = 'idle', carrying = null, job = null, post = null, hunger = 1,
          from_x = ${T} + 0.5, from_y = ${T} + 0.5, to_x = ${T} + 0.5, to_y = ${T} + 0.5
    where world_id = w and id = m;
   insert into said values ('CRATEXY', crate_centre_x((select cr from crate cr where world_id = w and id = v_crate)) || ', '
