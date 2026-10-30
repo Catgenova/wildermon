@@ -29,12 +29,10 @@ const READY_WAIT = 6;
  * meadow a fresh summer green rather than the island's grey-mint, down to the
  * water's edge; the beach a strand of warm sand `STRAND` tiles wide drawn
  * along the waterline, so its inner edge follows the bay's curve rather than
- * the tiles' edges; the sea floor warmed to match, and the clay a warm grey-rose.
+ * the tiles' edges; and the sea floor warmed to match.
  */
 const MEADOW: readonly [number, number, number] = [128, 176, 104];
 const SAND_WARM: readonly [number, number, number] = [238, 218, 176];
-/** The clay bank on the west arm, a warm grey-rose beside the sand rather than the island's grey. */
-const CLAY_WARM: readonly [number, number, number] = [188, 160, 138];
 const STRAND = { reach: 0.6, css: `rgb(${SAND_WARM.join(',')})` };
 const SAND_BASE = TILE_DEFS[TileType.Sand].color;
 
@@ -96,10 +94,6 @@ export function startBackdrop(el: HTMLCanvasElement, room: () => Room): () => vo
   const world = cove.game.world;
   const corners = [0, 0, 0, 0];
   renderer.groundTint = (x, y, ground, c) => {
-    if (ground === TileType.Clay) {
-      for (let i = 0; i < 3; i++) c[i] = CLAY_WARM[i];
-      return;
-    }
     if (ground !== TileType.Sand && ground !== TileType.Grass) return;
     world.corners(x, y, corners);
     // Under the water, warm sand; anything of the tile above it, meadow, with the strand drawn over it.
