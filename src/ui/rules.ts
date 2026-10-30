@@ -9,7 +9,7 @@ export const RULES_TITLE = 'Game Rules';
 const RULES: Array<{ h: string; items: string[] }> = [
   { h: '1. Be Respectful', items: [
     'No harassment, hate speech, threats, doxxing, or spam in chat.',
-    'No sexual, graphic, or otherwise offensive content in chat, usernames, or guild names.',
+    'No sexual, graphic, or otherwise offensive content in chat, usernames, or settlement names.',
   ] },
   { h: '2. No Cheating', items: [
     'Do not modify the client, or run bots, scripts, or external automation (beyond the game’s own opt-in auto features).',
@@ -19,11 +19,11 @@ const RULES: Array<{ h: string; items: string[] }> = [
     'If you find a duplication or economy exploit, stop and report it. Knowingly exploiting a bug may result in a rollback or ban.',
   ] },
   { h: '4. Play Fair in Shared Systems', items: [
-    'Use the Auction House, guild banks, and dungeons in good faith, no scamming, impersonation, or deliberate market manipulation.',
+    'Use market stalls and settlements in good faith, no scamming, impersonation, or deliberate market manipulation.',
     'Do not trade accounts, items, or gold for real money or outside goods.',
   ] },
   { h: '5. Names & Accounts', items: [
-    'Usernames and guild names must not impersonate other players or staff, or be offensive.',
+    'Usernames and settlement names must not impersonate other players or staff, or be offensive.',
     'You are responsible for your own account and password.',
   ] },
 ];
