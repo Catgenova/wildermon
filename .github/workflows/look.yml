@@ -452,6 +452,33 @@ jobs:
           # Asked: "Dowse does not appear to be making nails or giving an error". The keeper's dowse, siffa and ulva,
           # their trade on the island, the anvils and spindles in reach of the token, the lumps in the stores, and
           # what the island would send each to next. Reads only.
+          # Asked: "What even needs slate brick on my deed? I didnt intentionally late any slate plans". The planned
+          # slate floor at 2580,3027 on level 2 and the hinged wall at 2580,3006: whose building, who planned them,
+          # and what else of that building is planned on that level.
+          ask "slate: the planned pieces and who planned them" "select 'floor' as what, f.level, f.x, f.y, f.kind, f.material, f.needed, f.total, f.building, b.name as building_name, b.levels, pb.name as building_by, pf.name as planned_by
+             from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova' left join building b on b.world_id = f.world_id and b.id = f.building
+             left join player pb on pb.world_id = f.world_id and pb.uid = b.planned_by left join player pf on pf.world_id = f.world_id and pf.uid = f.planned_by
+            where f.level = 2 and f.x = 2580 and f.y = 3027
+           union all
+           select 'wall ' || w.type, w.level, w.x, w.y, w.dir, w.material, w.needed, w.total, w.building, b.name, b.levels, pb.name, pw.name
+             from wall w join player p on p.world_id = w.world_id and p.name = 'catgenova' left join building b on b.world_id = w.world_id and b.id = w.building
+             left join player pb on pb.world_id = w.world_id and pb.uid = b.planned_by left join player pw on pw.world_id = w.world_id and pw.uid = w.planned_by
+            where w.level = 2 and w.x = 2580 and w.y = 3006"
+          ask "slate: that floor's building, every floor tile by level, kind and material, done or not" "select f.level, f.kind, f.material, count(*) as tiles,
+                 count(*) filter (where exists (select 1 from jsonb_each_text(f.needed) e where e.value::numeric > 0)) as unfinished,
+                 min(f.x) as x0, max(f.x) as x1, min(f.y) as y0, max(f.y) as y1, string_agg(distinct coalesce(pf.name, '-'), ',') as planned_by
+             from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova'
+             left join player pf on pf.world_id = f.world_id and pf.uid = f.planned_by
+            where f.building = (select f2.building from floor_tile f2 where f2.world_id = f.world_id and f2.level = 2 and f2.x = 2580 and f2.y = 3027)
+            group by f.level, f.kind, f.material order by f.level, f.kind, f.material"
+          ask "slate: every slate piece planned on the island near Solara, finished or not" "select 'floor' as what, f.level, f.x, f.y, f.kind, f.needed, f.building, pf.name as planned_by
+             from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova' left join player pf on pf.world_id = f.world_id and pf.uid = f.planned_by
+            where f.material ilike '%slate%' and abs(f.x - 2576) <= 30 and abs(f.y - 3018) <= 30
+           union all
+           select 'wall ' || w.type, w.level, w.x, w.y, w.dir, w.needed, w.building, pw.name
+             from wall w join player p on p.world_id = w.world_id and p.name = 'catgenova' left join player pw on pw.world_id = w.world_id and pw.uid = w.planned_by
+            where w.material ilike '%slate%' and abs(w.x - 2576) <= 30 and abs(w.y - 3018) <= 30
+            order by 2, 4, 3 limit 40"
           ask "smiths: the trades on the island" "select id, gathers, work_range from species_def where id in ('dowse', 'siffa', 'ulva')"
           ask "smiths: the keeper's dowse, siffa and ulva" "select c.id, c.species, c.mode, c.phase, c.job, c.idle_why, c.idle_n, c.idle_since, c.carrying, c.post,
                  round(extract(epoch from now() - c.until)::numeric) as overdue_s, to_char(c.settled_at, 'HH24:MI:SS') as settled,
