@@ -40,6 +40,7 @@ import {
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
+import { WATER_MOTE_NEED } from '../../game/motes';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
@@ -109,7 +110,7 @@ import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_
 import { meltLumps } from '../../game/melt';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
-import { ACTION_BY_ID, PACKED_FIRST, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT } from '../../game/actions';
+import { ACTION_BY_ID, PACKED_FIRST, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
@@ -4215,6 +4216,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 393,
+    day: '2026-10-30',
+    lines: () => [`Changed: water mote cost: ${WATER_MOTE_USES.map(([what, n]) => `${what} ${n}`).join(', ')}. Used up when dug or built. Without: "${WATER_MOTE_NEED}"`],
+  },
+  {
     n: 392,
     day: '2026-10-30',
     lines: () => [`Changed: a worker with all of its work in range worked and on the ${FORAGE_COOLDOWN} s cooldown says "Idle: all in reach worked; next sand to collect in N s." (was: "Idle: no sand to collect within N tiles of the totem."). Every trade that works the ground.`],

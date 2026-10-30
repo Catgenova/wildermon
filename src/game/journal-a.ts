@@ -22,6 +22,7 @@ import { isRuneLantern } from './runelantern';
 import { MEMORIAL } from './memorial';
 import { WATER_PLANTS } from '../world/waterplants';
 import { listed, listedOr, percent } from './words';
+import { WATER_MOTES_EACH } from './motes';
 import { itemDef } from './items';
 
 /*
@@ -267,7 +268,7 @@ export const STANDING_A: Goal[] = [
   {
     id: 'spring',
     text: 'Dig a spring',
-    get how() { return late(() => 'Right-click a tile with a shovel in your pack: "Dig a spring". Not inside a building; the refusal names what else the ground lacks.'); },
+    get how() { return late(() => `Right-click a tile with a shovel and ${WATER_MOTES_EACH} water mote in your pack: "Dig a spring". Not inside a building; the refusal names what else the ground lacks.`); },
     met: did('spring'),
   },
   {

@@ -5116,6 +5116,20 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/eventlog.mjs --log-level=error
           node node_modules/.cache/eventlog.mjs
 
+      - name: A water mote for a spring, a pool, a fish pond, a well and a fountain
+        if: matrix.shard == 6
+        run: |
+          # Asked for: digging a spring takes 1 water mote, and the fountain,
+          # pool, pond and well take 1 as well. Dig a spring and Dig a pool
+          # refused without one in the same words on both sides, allowed with
+          # one, and the mote used up when dug; the fish pond, the well and the
+          # tiered fountain have one in their bills, refused without it as a
+          # craft is, built with it, and the mote used up. The water mote says
+          # what it is spent on.
+          npx esbuild supabase/test/watermote.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/watermote.mjs --log-level=error
+          node node_modules/.cache/watermote.mjs
+
   migrate:
     name: Push the migrations to the project
     # On the rules having passed here, or over the same code already (`already`).

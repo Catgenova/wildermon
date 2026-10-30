@@ -196,6 +196,8 @@ begin
   update player set body_at = now(), x = 48.5, y = 12.5, act = null, act_queue = '[]'::jsonb, level = 0 where world_id = w and uid in (me, them);
   delete from spring where world_id = w;
   insert into item (world_id, def, holder, holder_uid, ql, count) select w, 'shovel', 'player', u, 40, 1 from unnest(array[me, them]) u;
+  -- A water mote for each spring dug below, and one over for the last refusal.
+  insert into item (world_id, def, holder, holder_uid, ql, count) values (w, 'water_mote', 'player', me, 30, 3);
   -- The plateau, and the bowl in it: its middle corner 2 m down, the ring round it 1 m down.
   perform land_set_height(w, x, y, ${PLATEAU}) from generate_series(42, 58) x, generate_series(6, 20) y;
   perform land_set_height(w, x, y, ${PLATEAU - 10}) from generate_series(49, 51) x, generate_series(11, 13) y;
@@ -281,6 +283,8 @@ async function browser(): Promise<void> {
   const act = (id: string): ActionDef => ACTIONS.find((a) => a.id === id) as ActionDef;
   const tile = (x: number, y: number): Target => ({ kind: 'tile', x, y, cx: x, cy: y });
   if (!g.inventory.has('shovel')) g.inventory.add('shovel', { ql: 40 });
+  // A water mote for each spring dug below, and one over.
+  g.inventory.add('water_mote', { count: 3, ql: 30 });
   const flat = act('dig_spring').check?.(tile(bx - 4, by - 4), g) ?? null;
   const here = tile(bx - 1, by - 1);
   const ok = act('dig_spring').check?.(here, g) ?? null;

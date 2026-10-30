@@ -3,7 +3,7 @@ import { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 import { PROSPECT_HEAD, tryGain } from './learn';
 import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TileType, bushSpecies, packTreeData, slabVariant, treeAge, treeSpecies, treeVariant, lastDawn, nextDawn, type TreeAge, LAWN_AFTER, MOWN_TODAY, MOWING, mownDays, mownToday } from '../world/tiles';
 import { FLOWER_ACTIONS, groundSays } from './wildflowers';
-import { MOTE_ACTIONS } from './motes';
+import { MOTE_ACTIONS, WATER_MOTE, WATER_MOTES_EACH } from './motes';
 import { STONE_GUARDED, stoneGroundRefusal, TELESTONE, TELESTONE_ACTIONS, telestoneSays } from './runestones';
 import { DAILY_RESET, isSeam, metres } from '../world/tiles';
 import type { World } from '../world/world';
@@ -19,7 +19,7 @@ import { BREWING_ACTIONS } from './brewing';
 import { CAMPFIRE_ACTIONS } from './campfire';
 import { SMELTER_ACTIONS } from './smelter';
 import { KILN_ACTIONS } from './kiln';
-import { BUCKET_LITRES, FURNITURE_ACTIONS, furnitureCentre, isWell, LIQUID_NAME } from './furniture';
+import { BUCKET_LITRES, FURNITURE, FURNITURE_ACTIONS, furnitureCentre, isWell, LIQUID_NAME } from './furniture';
 import { crateCentre } from './crates';
 import { GEAR_ACTIONS } from './gear';
 import { IMPROVE_ACTIONS, improvable } from './improve';
@@ -834,6 +834,15 @@ describeFrom('moss', { moss: { cut: MOSS_PER_CUT, plant: MOSS_PLANT } });
 export const GRASS_PLANT = MOSS_PLANT;
 describeFrom('mixed_grass', { grass: { cut: GRASS_PER_CUT, plant: GRASS_PLANT } });
 describeFrom('repair_kit', { mend: KIT_MEND });
+/**
+ * What takes a water mote, and how many: Dig a spring and Dig a pool, and
+ * every piece with one in its bill. Said on the water mote and in the help.
+ */
+export const WATER_MOTE_USES: ReadonlyArray<readonly [string, number]> = [
+  ...[...SPRING_ACTIONS, ...FOUNDATION_ACTIONS].filter((a) => a.id === 'dig_spring' || a.id === 'dig_pool').map((a) => [a.label, WATER_MOTES_EACH] as const),
+  ...FURNITURE.flatMap((d) => d.bill.filter(([i]) => i === WATER_MOTE).map(([, n]) => [d.name, n] as const)),
+];
+describeFrom(WATER_MOTE, { waterUses: WATER_MOTE_USES.map(([what, n]) => `${what} ${n}`).join(', ') });
 /** Whether a thing could take a seal: anything but the sealant itself, and nothing sealed already. */
 const sealable = (item: Item): boolean => item.id !== 'sealant' && item.mark?.seal === undefined;
 

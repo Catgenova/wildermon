@@ -72,6 +72,16 @@ export const ISLAND_ELEMENT: Readonly<Record<string, LandElement>> = {
 export const moteItem = (e: MoteElement): string => `${e}_mote`;
 /** And what it is called: "Fire mote". */
 export const moteName = (e: MoteElement): string => `${capital(e)} mote`;
+/**
+ * The water mote, and how many of them digging a spring or a pool takes, used
+ * up when it is dug. A fish pond, a well and a tiered fountain have as many in
+ * their bills (`furniture.ts`). The island's `water_mote`, `water_motes_each`
+ * and `water_mote_need`.
+ */
+export const WATER_MOTE = moteItem('water');
+export const WATER_MOTES_EACH = 1;
+/** What a dig is refused without them: "Need 1 water mote." */
+export const WATER_MOTE_NEED = `Need ${WATER_MOTES_EACH} ${moteName('water').toLowerCase()}${WATER_MOTES_EACH === 1 ? '' : 's'}.`;
 /** What a swirl is called on the ground: "Fire mote swirl". */
 export const swirlName = (e: MoteElement): string => `${capital(e)} mote swirl`;
 

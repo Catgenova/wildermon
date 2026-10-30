@@ -318,6 +318,7 @@ begin
   perform land_set_height(w, x, y, 200) from generate_series(v_x + 4, v_x + 16) x, generate_series(v_y + 4, v_y + 16) y;
   perform land_set_height(w, x, y, 190) from generate_series(v_x + 9, v_x + 11) x, generate_series(v_y + 9, v_y + 11) y;
   perform land_set_height(w, v_x + 10, v_y + 10, 180);
+  perform give(w, me, 'water_mote', 1, 30);
   perform perform_spring(w, me, 'dig_spring', jsonb_build_object('kind', 'tile', 'x', v_x + 9, 'y', v_y + 9));
 
   -- A crop grown under glass, harvested.
