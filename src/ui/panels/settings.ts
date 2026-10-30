@@ -627,7 +627,11 @@ export class SettingsPanel {
       const row = document.createElement('div');
       row.className = 'setting-row setting-look';
       const text = document.createElement('span');
-      setMarkup(text, fixed('<b>I\'m stuck</b><small>Moves you to the ground floor, same tile. From any storey or a cellar.</small>'));
+      const name = document.createElement('b');
+      name.textContent = 'I\'m stuck';
+      const says = document.createElement('small');
+      says.textContent = 'Moves you to the ground floor, same tile. From any storey or a cellar.';
+      text.append(name, says);
       const go = document.createElement('button');
       go.type = 'button';
       go.className = 'tb-btn tb-small';
