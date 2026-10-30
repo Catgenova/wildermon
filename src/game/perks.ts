@@ -12,9 +12,8 @@
  * tier, and at each tier its holder takes one of the three. The first tier
  * opens with the trade; the other five open at sixty to ninety-nine in the
  * trade's main skill (`PERK_TIER_AT`). A perk taken is taken: the way to
- * choose again is to put the trade down, which clears it, and costs what
- * putting a trade down always has -- `CLASS_CHANGE_COST` in silver, or a
- * Bauble of Regret.
+ * choose again is to put the trade down, which clears it, and takes what
+ * putting a trade down always takes: a Bauble of Regret.
  *
  * ## Which perk is in which tier
  *

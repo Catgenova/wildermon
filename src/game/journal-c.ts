@@ -122,7 +122,7 @@ export const ISLAND_GOALS: Goal[] = [
 export const WILDERMON_GOALS_C: Goal[] = [
   {
     id: 'fighter', text: 'Choose a fighting trade',
-    how: 'Trades window (F): pick a fighting class and confirm. A fighting class asks for no skill level. Changing it later costs silver.',
+    how: 'Trades window (F): pick a fighting class and confirm. A fighting class asks for no skill level. Changing it later: a Bauble of Regret.',
     met: did('fighter'),
   },
   {
@@ -164,7 +164,7 @@ export const WILDERMON_GOALS_C: Goal[] = [
   {
     id: 'patron', text: 'Take a patron and cast a faith spell',
     hint: `Patron at faith ${PATRON_AT}`,
-    how: `At faith ${PATRON_AT}: Faith window, pick ${listedOr(PATRONS.map((p) => p.name))} (permanent), then take a spell at the first faith tier, put it on the spell bar and cast it (Shift + slot number). It costs favour.`,
+    how: `At faith ${PATRON_AT}: Faith window, pick ${listedOr(PATRONS.map((p) => p.name))} (undo: Bauble of Regret), then take a spell at the first faith tier, put it on the spell bar and cast it (Shift + slot number). It costs favour.`,
     met: (g) => FAITH_SPELLS.some((s) => (g.tally[`cast:${s.id}`] ?? 0) > 0),
   },
   {

@@ -140,9 +140,8 @@ begin
              union all
              select c.value->>'id' || ':skills is ' || jsonb_typeof(c.value->'skills')
              where jsonb_typeof(c.value->'skills') not in ('array')) z;
-  -- The three the header line is built from.
-  insert into said values ('HEAD|' || (v->>'at') || '|' || (v->>'change_cost')
-    || '|' || jsonb_typeof(v->'purse'));
+  -- The one number the header line is built from.
+  insert into said values ('HEAD|' || (v->>'at'));
   -- What the cards say, so the browser can be asked the same question.
   insert into said select 'CARDS|' || string_agg(
       (c.value->>'id') || '~' || (c.value->>'name') || '~' || (c.value->>'note')
@@ -223,17 +222,14 @@ const say = (key: string): string =>
 
 /* ---- the Trades tab ------------------------------------------------- */
 
-check('the classes door answers the five things the tab is built from',
-  say('KEYS') === 'at,change_cost,classes,purse,taken', say('KEYS'));
+check('the classes door answers the three things the tab is built from, and no price',
+  say('KEYS') === 'at,classes,taken', say('KEYS'));
 check('a card for every trade there is',
   say('COUNT') === String(CLASSES.length), `${say('COUNT')} island, ${CLASSES.length} browser`);
 check('and every field the panel reads is on every one of them',
   say('FIELDS') === 'all there', say('FIELDS'));
 check('with the types it reads them as', say('TYPES') === 'all right', say('TYPES'));
-const [at, change, purse] = say('HEAD').split('|');
-check('the header line has its three numbers',
-  Number(at) > 0 && Number(change) > 0 && purse === 'number',
-  `opens at ${at}, changing costs ${change}, purse is a ${purse}`);
+check('the header line has its number', Number(say('HEAD')) > 0, `opens at ${say('HEAD')}`);
 
 /*
  * The two sides agree on what a trade is. The island's rows were generated

@@ -8,9 +8,10 @@ import { listedOr, percent } from './words';
 /**
  * Patrons, and the spells they give.
  *
- * At `PATRON_AT` faith a person may take one of three patrons, once and for
- * good: **Blessing**, who is good; **Justice**, who is neither; and **Chaos**,
- * who is evil. A patron is what the faith spells come from. Each one offers
+ * At `PATRON_AT` faith a person may take one of three patrons, and keeps it
+ * until a Bauble of Regret undoes it (`rpc_regret_patron`, which clears its
+ * spells with it): **Blessing**, who is good; **Justice**, who is neither; and
+ * **Chaos**, who is evil. A patron is what the faith spells come from. Each one offers
  * `SPELLS_PER_TIER` spells at each of the tiers in `FAITH_TIER_AT`, the first
  * with the patron itself and the last at ninety-nine, and one of the three is
  * taken at each tier, the way a trade's perks are. Each spell says what it can
@@ -323,7 +324,7 @@ const faithName = (): string => (SKILL_BY_ID.get(FAITH)?.name ?? 'Faith').toLowe
 export function patronRefusal(id: string, mine: PatronId | null, faith: number): string | null {
   const p = PATRON_BY_ID.get(id as PatronId);
   if (!p) return 'No such patron.';
-  if (mine) return `Patron already ${PATRON_BY_ID.get(mine)?.name ?? mine}; permanent.`;
+  if (mine) return `Patron already ${PATRON_BY_ID.get(mine)?.name ?? mine}. Undo: Bauble of Regret.`;
   if (faith < PATRON_AT) return `Needs ${faithName()} ${PATRON_AT}; have ${Math.floor(faith)}.`;
   return null;
 }

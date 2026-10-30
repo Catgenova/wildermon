@@ -198,7 +198,7 @@ export class Player {
   boons: Boon[] = [];
   /** What is actually in you, by nutrient. Eating well holds hunger off and teaches you more. */
   nutrition: Record<Nutrient, number> = emptyNutrition();
-  /** The path chosen at the rug, once and for good, and when you last sat. */
+  /** The path chosen at the rug, until a Bauble of Regret undoes it, and when you last sat. */
   way: PathId | null = null;
   satAt = -1e9;
   /** The picks of a moved path taken, one a tier (`meditation.ts`). */

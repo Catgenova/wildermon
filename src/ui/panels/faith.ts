@@ -10,6 +10,7 @@ import { listed } from '../../game/words';
 import { SKILL_BY_ID } from '../../game/skills';
 import { FAITH } from '../../game/faith';
 import { durationSaid } from '../../game/boons';
+import { carriesRegret } from '../../game/baubles';
 import type { FaithBook } from '../faithbook';
 import { reveal, sharedWhy } from './trades';
 import type { UIWindow } from '../windows';
@@ -23,9 +24,10 @@ const devotion = DEVOTION.toLowerCase();
  *
  * A tab for each of the three patrons, each laying open its tiers of spells,
  * so any of them can be read before one is taken; your own patron's tab is
- * the one that opens. Taking a patron and taking a spell are both for good,
- * so neither happens on one press: the first says what the second will do,
- * as the Trades window does.
+ * the one that opens. Taking a patron and taking a spell are both kept until
+ * a Bauble of Regret undoes the patron, and so is undoing one, so none of
+ * them happens on one press: the first says what the second will do, as the
+ * Trades window does.
  *
  * As there, nothing about you is worked out here. The island keeps your
  * patron, your spells and your bar (`faith_said`), and every refusal under a
@@ -51,7 +53,7 @@ export class FaithPanel {
   private viewing: Tab = PATRONS[0].id;
   /** Whether a tab was clicked, after which your own patron no longer takes the window back. */
   private chose = false;
-  /** The one choice waiting on its second press: `patron:<id>` or `spell:<id>`. */
+  /** The one choice waiting on its second press: `patron:<id>`, `spell:<id>`, `pick:<id>`, `undo:patron` or `undo:path`. */
   private confirming: string | null = null;
   /** The island's last refusal of a press in this window. */
   private why: string | null = null;
@@ -111,7 +113,7 @@ export class FaithPanel {
   private draw(): void {
     const s = this.book.said;
     if (!this.chose && s?.patron && PATRON_BY_ID.has(s.patron as PatronId)) this.viewing = s.patron as PatronId;
-    const key = JSON.stringify([s, this.book.island ? null : this.path(), this.viewing, this.confirming, this.why]);
+    const key = JSON.stringify([s, this.book.island ? null : this.path(), this.viewing, this.confirming, this.why, carriesRegret(this.game.inventory.items)]);
     if (key === this.seen) return;
     this.seen = key;
     for (const [id, b] of this.tabs) {
@@ -181,13 +183,18 @@ export class FaithPanel {
     if (!s) return card;
     if (s.patron === p.id) {
       card.append(cardNote('Your patron. Spells below.'));
+      const undo = this.undoActs('patron', `Undo ${p.name} as your patron?`, [
+        `Removes ${p.name} and its ${s.taken.length} ${s.taken.length === 1 ? 'spell' : 'spells'}, off the spell bar. Uses a Bauble of Regret.`,
+        `Then: any patron at ${devotion} ${PATRON_AT}.`,
+      ], () => this.book.regretPatron());
+      if (undo) card.append(undo);
       return card;
     }
     if (s.patron) return card;
     const ask = `patron:${p.id}`;
     if (this.confirming === ask) {
       card.append(this.confirm(`Take ${p.name} as your patron?`, [
-        'Permanent: no other patron after it.',
+        'Undo: Bauble of Regret, with its spells.',
         `Faith tier 1 opens with it; later faith tiers at ${devotion} ${listed(FAITH_TIER_AT.slice(1).map(String))}.`,
       ], `Take ${p.name}`, () => this.book.takePatron(p.id)));
       return card;
@@ -265,7 +272,7 @@ export class FaithPanel {
     const ask = `spell:${sp.id}`;
     if (this.confirming === ask) {
       card.append(this.confirm(`Take ${sp.name} at faith tier ${sp.tier}?`, [
-        `Permanent: the other ${SPELLS_PER_TIER - 1} at this faith tier close.`,
+        `The other ${SPELLS_PER_TIER - 1} at this faith tier close while you hold ${p.name}.`,
       ], `Take ${sp.name}`, () => this.book.takeSpell(sp.id)));
       return card;
     }
@@ -345,10 +352,19 @@ export class FaithPanel {
     name.textContent = path.name;
     top.append(name);
     card.append(top, cardNote(path.note));
-    card.append(cardNote(`Path tiers at meditation ${listed(PATH_TIER_AT.map(String))}: 1 technique and ${PICKS_PER_TIER - 1} disciplines each; pick 1 per path tier, permanent. `
+    card.append(cardNote(`Path tiers at meditation ${listed(PATH_TIER_AT.map(String))}: 1 technique and ${PICKS_PER_TIER - 1} disciplines each; pick 1 per path tier, kept while you hold the path. `
       + 'Technique: spell bar path slot, costs Calm. Discipline: always on once taken.'));
-    if (ps?.way === path.id) card.append(cardNote('Your path. Picks below.'));
-    else if (!ps?.way) card.append(cardNote(`Chosen at the rug from meditation ${CHOOSE_AT}. Permanent.`));
+    if (ps?.way === path.id) {
+      card.append(cardNote('Your path. Picks below.'));
+      const picks = ps.taken.length;
+      const undo = this.undoActs('path', `Undo ${path.name} as your path?`, [
+        `Removes ${path.name} and its ${picks} ${picks === 1 ? 'pick' : 'picks'}, techniques off the spell bar. Uses a Bauble of Regret.`,
+        `Then: any path at the rug from meditation ${CHOOSE_AT}.`,
+      ], () => this.book.regretPath());
+      if (undo) card.append(undo);
+    } else if (!ps?.way) {
+      card.append(cardNote(`Chosen at the rug from meditation ${CHOOSE_AT}. Undo: Bauble of Regret.`));
+    }
     return card;
   }
 
@@ -393,7 +409,7 @@ export class FaithPanel {
     const ask = `pick:${k.id}`;
     if (this.confirming === ask) {
       card.append(this.confirm(`Take ${k.name} at path tier ${k.tier}?`, [
-        `Permanent: the other ${PICKS_PER_TIER - 1} at this path tier close.`,
+        `The other ${PICKS_PER_TIER - 1} at this path tier close while you hold ${PATHS[k.path]?.name ?? k.path}.`,
       ], `Take ${k.name}`, () => this.takePick(k.id)));
       return card;
     }
@@ -405,6 +421,28 @@ export class FaithPanel {
     }
     card.append(this.takeActs(ask));
     return card;
+  }
+
+  /**
+   * Undo on your own patron or path, for somebody on an island carrying a
+   * Bauble of Regret, loose or in a bag: the first press asks, the second
+   * breaks the bauble. One put by shows the button too, and the island says
+   * why it will not break. Nothing without one.
+   */
+  private undoActs(what: 'patron' | 'path', ask: string, lines: string[], act: () => Promise<string | null>): HTMLDivElement | null {
+    if (!this.book.island || !carriesRegret(this.game.inventory.items)) return null;
+    const key = `undo:${what}`;
+    if (this.confirming === key) return this.confirm(ask, lines, 'Undo', act);
+    const acts = document.createElement('div');
+    acts.className = 'trade-acts';
+    const undo = button('Undo (uses Bauble of Regret)', 'trade-take');
+    undo.addEventListener('click', () => {
+      this.confirming = key;
+      this.why = null;
+      this.draw();
+    });
+    acts.append(undo);
+    return acts;
   }
 
   /** The first press of a spell or a pick: it asks, and the second press does it. */

@@ -133,7 +133,7 @@ import { LYE_USE, SHORE_REACH } from '../../game/placeables';
 import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
 import { DRESSING_RANK } from '../../game/wounds';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
-import { CLASS_AT, CLASS_CHANGE_COST, CLASS_TIER_AT, CLASSES, PERK_CLASSES, PERK_TIER_AT, PERKS_PER_TIER, tiersAtFor } from '../../game/classes';
+import { CLASS_AT, CLASS_TIER_AT, CLASSES, PERK_CLASSES, PERK_TIER_AT, PERKS_PER_TIER, tiersAtFor } from '../../game/classes';
 import { spellDef, spellForce, spellsOf } from '../../game/arcane';
 import { PERK_BY_ID, perksOf } from '../../game/perks';
 import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_ID, CLASS_SPELLS, classSpellsOf, FIRE_LOW, FIRE_TOP, skinOf, spellTerms } from '../../game/talents';
@@ -583,7 +583,7 @@ export const NEWS: News[] = [
     day: '2026-09-26',
     lines: () => [
       `Added: Bauble of Regret: ${percent(REGRET_SHARE)} of archaeology finds, already whole. Tarnished bauble still ${percent(BAUBLE_SHARE)}.`,
-      `Added: with one in your pack, Undo on a held trade (Trades window) breaks the bauble and drops the trade with its bought nodes or perks. The next trade in that slot costs nothing (normally ${CLASS_CHANGE_COST} silver).`,
+      `Added: with one in your pack, Undo on a held trade (Trades window) breaks the bauble and drops the trade with its bought nodes or perks. The next trade in that slot costs nothing.`,
     ],
   },
   {
@@ -4214,6 +4214,15 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 382,
+    day: '2026-10-30',
+    lines: () => [
+      'Changed: taking another class in a slot already held uses a Bauble of Regret from the pack ("Take (Bauble of Regret)"); refused without one.',
+      'Added: Undo on your patron and on your path (Faith window), with a Bauble of Regret in the pack: removes the patron with its spells, or the path with its picks, off the spell bar. Then a patron or path may be taken again.',
+      'Removed: the silver price of a class change.',
+    ],
+  },
+  {
     n: 381,
     day: '2026-10-30',
     lines: () => [`Changed: shaping clay takes a trowel: ${listed(RECIPES.filter((r) => r.tool === 'trowel' && r.skill === 'pottery').map((r) => r.label))}.`],

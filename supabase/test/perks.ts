@@ -442,7 +442,7 @@ begin
   perform pg_temp.hold(w, u, ${arr(EACH)});
   insert into skill (world_id, uid, id, value) values (w, u, 'mining', class_at())
     on conflict (world_id, uid, id) do update set value = excluded.value;
-  perform give_coins(w, u, class_change_cost()::bigint * 2);
+  perform give(w, u, 'bauble_regret', 1, 40);
   delete from caller where uid = u;
   j := rpc_take_class(w, 'miner');
   insert into said select 'DOWN', coalesce(j->>'took', '-') || '|' || coalesce(j->>'why', '-') || '|'

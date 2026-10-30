@@ -21,11 +21,10 @@
  * The two lists are deliberately disjoint, so no skill gates two cards and
  * nobody can take the same lever twice.
  *
- * **Locked in, but not for ever.** Changing a trade costs `CLASS_CHANGE_COST`
- * in silver, which is deliberately a great deal of it: a lump of gold strikes
- * twenty coins worth ten silver apiece, so the price is two and a half lumps
- * of gold out of the ground, through a smelter and over an anvil. It is a
- * decision you can undo and will not undo twice in an afternoon.
+ * **Locked in, but not for ever.** Changing a trade takes a Bauble of Regret
+ * (`baubles.ts`), and nothing else does: no silver buys a change. Taking up
+ * another trade in a slot already held breaks one, as Undo on the held trade
+ * does, so the change is as rare as the bauble.
  *
  * Every one of the forty craft skills belongs to exactly one class. That
  * is checked, not hoped for: `craft.ts` asks both sides for the list and adds
@@ -36,15 +35,6 @@ import { SKILL_BY_ID } from './skills';
 
 /** Fifty in any skill a craft trade covers, and its card is on the table. A fighting trade asks nothing. */
 export const CLASS_AT = 50;
-
-/**
- * What it costs in silver to put a trade down and take another up.
- *
- * Five hundred, against a gold coin worth ten and twenty coins to the lump:
- * two and a half lumps of gold, mined, smelted and struck. Expensive on
- * purpose -- a class you can swap cheaply is a menu, not a trade.
- */
-export const CLASS_CHANGE_COST = 500;
 
 /**
  * The trades that have been moved from a tree of nodes to perks.
@@ -616,7 +606,7 @@ const skillWords = (id: string): string => id.replace(/_/g, ' ');
  * Both lines used to be prose -- "works wood, from a plank to a storey" and
  * "builds higher, wastes less timber, and the fine joinery comes off the bench
  * better" -- which is a mood rather than a number, on a card somebody is
- * reading to decide where five hundred silver goes.
+ * reading to decide which trade to take.
  *
  * `note` is the scope: which skills the trade's nodes tell on, and nothing
  * else decides that. `lever` is what the whole tree is worth bought out, which
@@ -698,13 +688,12 @@ export const classSpent = (taken: readonly string[]): number =>
  * Four refusals and no fifth: it is not your trade's, you have it, the one
  * under it is not taken, or you cannot afford it. There is deliberately no
  * "put it down" -- a node taken is taken, and the only way to clear a tree is
- * to put the whole trade down, which costs `CLASS_CHANGE_COST`. That is the
- * expensive undo, and it is the same one the trade already had.
+ * to put the whole trade down, which takes a Bauble of Regret. That is the
+ * only undo, and it is the same one the trade already had.
  *
  * Spending a point badly is survivable and is meant to be: twelve points buys
  * two whole columns and two over, so one wasted still leaves two columns and
- * one. It is only at the top that the tree is tight, and by then nobody is
- * short of five hundred silver.
+ * one. It is only at the top that the tree is tight.
  */
 export function nodeRefusal(
   n: NodeDef, mine: string | null, taken: readonly string[], points: number,

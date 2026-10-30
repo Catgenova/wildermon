@@ -169,7 +169,7 @@ begin
   -- another fighting trade, open at sixty in its main skill.
   insert into skill (world_id, uid, id, value) values (w.world_id, w.uid, '${DOWN.main}', 60)
     on conflict (world_id, uid, id) do update set value = 60;
-  perform give_coins(w.world_id, w.uid, class_change_cost()::bigint * 3);
+  perform give(w.world_id, w.uid, 'bauble_regret', 1, 40);
   perform rpc_take_class(w.world_id, '${DOWN.id}');
   insert into said select 'CLEARED|' || count(*) || '|'
     || coalesce((select class_mul->>'${CH}' from player

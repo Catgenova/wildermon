@@ -42,6 +42,14 @@ export class FaithBook {
     return this.answer(this.island ? await this.island.takePatron(id) : null);
   }
 
+  async regretPatron(): Promise<string | null> {
+    return this.answer(this.island ? await this.island.regretPatron() : null);
+  }
+
+  async regretPath(): Promise<string | null> {
+    return this.answer(this.island ? await this.island.regretPath() : null);
+  }
+
   async takeSpell(id: string): Promise<string | null> {
     return this.answer(this.island ? await this.island.takeFaithSpell(id) : null);
   }

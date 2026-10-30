@@ -224,7 +224,7 @@ ${KNIT ? `
   delete from player_node where world_id = w.world_id and uid = w.uid;
   insert into skill (world_id, uid, id, value) values (w.world_id, w.uid, '${KNIT.c.main}', 60)
     on conflict (world_id, uid, id) do update set value = 60;
-  perform give_coins(w.world_id, w.uid, class_change_cost()::bigint);
+  perform give(w.world_id, w.uid, 'bauble_regret', 1, 40);
   perform rpc_take_class(w.world_id, '${KNIT.c.id}');
   perform rpc_take_node(w.world_id, '${KNIT.node}');
   insert into said values ('KNIT|' || class_mul(w.world_id, w.uid, 'knit', '${KNIT.c.main}')
@@ -254,7 +254,7 @@ ${KNIT ? `
     insert into skill (world_id, uid, id, value) values (w.world_id, w.uid, 'soul_strength', 60)
       on conflict (world_id, uid, id) do update set value = 60;
 ${FANG && HIDE ? `
-    perform give_coins(w.world_id, w.uid, class_change_cost()::bigint);
+    perform give(w.world_id, w.uid, 'bauble_regret', 1, 40);
     perform rpc_take_class(w.world_id, '${FANG.c.id}');
     perform rpc_take_node(w.world_id, '${FANG.node}');
     perform rpc_take_node(w.world_id, '${HIDE.node}');

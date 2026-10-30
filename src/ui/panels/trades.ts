@@ -4,9 +4,9 @@ import type {
 } from '../../net/island';
 import { SKILL_BY_ID, SKILL_DEFS } from '../../game/skills';
 import { FAITH } from '../../game/faith';
-import { REGRET } from '../../game/baubles';
+import { carriesRegret } from '../../game/baubles';
 import {
-  CHANNELS, CLASS_CHANGE_COST, CLASS_COLUMNS, CLASS_NODES, CLASS_POINTS_MAX, CLASS_TIER_AT, CLASSES, classDef, classOpen,
+  CHANNELS, CLASS_COLUMNS, CLASS_NODES, CLASS_POINTS_MAX, CLASS_TIER_AT, CLASSES, classDef, classOpen,
   classPoints, PERK_CLASSES, RITES, tiersAtFor,
 } from '../../game/classes';
 import type { ClassDef } from '../../game/classes';
@@ -47,9 +47,9 @@ import type { UIWindow } from '../windows';
  *
  * ## Asked twice where it cannot be taken back
  *
- * Taking up a trade and taking a perk are undone only by silver or by a Bauble
- * of Regret, so neither happens on one press. The first press says what the
- * second will do in so many words: what is put down, what it costs, and which
+ * Taking up a trade and taking a perk are undone only by a Bauble of Regret,
+ * so neither happens on one press. The first press says what the second will
+ * do in so many words: what is put down, that a bauble is used, and which
  * perks close. The second does it.
  *
  * ## Two tabs, because there are two questions
@@ -232,7 +232,7 @@ export class TradesPanel {
     head.className = 'trade-head';
     const taken = [said.taken.craft, said.taken.combat].filter(Boolean).length;
     head.textContent = taken === 2
-      ? `Both classes held. Class change: ${said.change_cost} silver (have ${Math.floor(said.purse)}).`
+      ? 'Both classes held. Class change: Bauble of Regret.'
       : `Craft class: opens at ${said.at} in any of its skills. Fighting class: open from the start. Max: 1 craft + 1 fighting.`;
     this.page.append(head);
 
@@ -327,14 +327,13 @@ export class TradesPanel {
       /*
        * And the way back out of it, for somebody carrying a Bauble of Regret,
        * loose or in a bag: the island breaks the bauble and puts the trade
-       * down as though it had never been taken up, so the next one taken up
-       * in its place is free. One that is put by shows the button too, and
-       * the island says why it will not break.
+       * down as though it had never been taken up, leaving the slot empty.
+       * One that is put by shows the button too, and the island says why it
+       * will not break.
        */
-      const carried = this.game.inventory.items.some((it) => it.id === REGRET || it.inside?.some((b) => b.id === REGRET));
-      if (carried && said) {
+      if (carriesRegret(this.game.inventory.items) && said) {
         const undo = button('Undo (uses Bauble of Regret)', 'trade-take');
-        undo.title = `Removes ${c.name} and ${PERK_CLASSES.has(c.id) ? 'its perks' : 'its tree'}. Next class in this slot: free (base ${said.change_cost} silver).`;
+        undo.title = `Removes ${c.name} and ${PERK_CLASSES.has(c.id) ? 'its perks' : 'its tree'}. Slot left empty.`;
         undo.addEventListener('click', () => void this.doorway(this.island!.regretClass(c.kind)));
         acts.append(undo);
       }
@@ -355,14 +354,14 @@ export class TradesPanel {
     const asking = this.confirming === `class:${c.id}` && !c.why;
     if (said && !asking) {
       const had = c.kind === 'craft' ? said.taken.craft : said.taken.combat;
-      const take = button(had ? `Take (${said.change_cost} silver)` : 'Take', 'trade-take');
+      const take = button(had ? 'Take (Bauble of Regret)' : 'Take', 'trade-take');
       take.disabled = !!c.why;
       take.addEventListener('click', () => this.ask2(`class:${c.id}`));
       acts.append(take);
     }
     /*
-     * The island's sentence, not ours. It knows the level you are at, what is
-     * in your purse and how long ago you last changed your mind; repeating any
+     * The island's sentence, not ours. It knows the level you are at and
+     * whether a Bauble of Regret is in your pack for a change; repeating any
      * of that reasoning here would be a second place for it to be wrong.
      */
     if (said && c.why) row.append(this.why(c.why));
@@ -414,9 +413,9 @@ export class TradesPanel {
     const lines: string[] = [];
     if (had) {
       lines.push(`Removes ${classDef(had)?.name ?? had} and all its ${PERK_CLASSES.has(had) ? 'perks' : 'nodes'}. `
-        + `Cost: ${said.change_cost} silver (have ${Math.floor(said.purse)}).`);
+        + 'Uses a Bauble of Regret.');
     } else {
-      lines.push(`Later class change: ${said.change_cost} silver or a Bauble of Regret.`);
+      lines.push('Later class change: a Bauble of Regret.');
     }
     if (PERK_CLASSES.has(c.id)) {
       const first = perksOf(c.id).filter((p) => p.tier === 1).map((p) => p.name);
@@ -701,11 +700,10 @@ export class TradesPanel {
   /** What taking a perk will do: the other two close, and only putting the trade down opens them again. */
   private confirmPerk(p: TreePerk, tier: TreeTier, t: TreeTrade): HTMLDivElement {
     const others = tier.perks.filter((x) => x.id !== p.id).map((x) => x.name);
-    const cost = this.said?.change_cost ?? CLASS_CHANGE_COST;
     return this.confirm(`Take ${p.name}?`, [
       p.note,
       `One perk per ${t.kind === 'combat' ? 'class' : 'perk'} tier: ${listed(others)} ${others.length === 1 ? 'closes' : 'close'} while you hold ${t.name}.`,
-      `To choose again: remove the class and all its perks (Bauble of Regret, or a class change for ${cost} silver).`,
+      'To choose again: remove the class and all its perks (Bauble of Regret).',
     ], `Take ${p.name}`, () => this.island!.takePerk(p.id));
   }
 

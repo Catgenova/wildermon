@@ -3488,7 +3488,7 @@ update item_def set description = 'papyrus: a square of the island centred on th
 update item_def set description = 'No effect until restored. Restoration difficulty by grade: minor 15, major 30, ancient 45; effect and rarity set at random then. Cannot be repaired before then; gone if it breaks.' where id = 'tarnished_bauble';
 update item_def set description = 'Set in one of the 21 minor sockets of your settlement''s altar. Citizens working there get its effect on that one skill: less time per action, or more skill gained.' where id = 'bauble_minor';
 update item_def set description = 'Set in one of the 5 major sockets of your settlement''s altar. Citizens working there get its chance of 2× the yield per action in that one skill.' where id = 'bauble_major';
-update item_def set description = 'Undoes a trade or class. Trades window, Undo on your crafting trade or fighting class: as if never taken, tree cleared, this used up. Next trade or class in its place: free (a change costs 500 silver). Island only.' where id = 'bauble_regret';
+update item_def set description = 'Undoes a class, patron or path, this used up. Undo on your class (Trades window): removed with its perks or tree. Take on another class in a held slot: uses one. Undo on your patron or path (Faith window): removed with its spells or picks, off the spell bar.' where id = 'bauble_regret';
 update item_def set description = 'Left by 1% of altar sacrifices, at the rarity of what was given. Absorb into (on the soul): an ordinary thing in your pack, or one of a stack, takes its rarity. Used up.' where id = 'soul';
 update item_def set description = 'Set in one of the 3 ancient sockets of your settlement''s altar. Citizens working there get its bonus added to every yield of that one action.' where id = 'bauble_ancient';
 update item_def set description = 'Use on your wildermon (its menu): its next covering''s young get its best trait (highest rarity; first listed on a tie) at that rarity, in place of a draw. One mark at a time, used up at that covering. Used up.' where id = 'bronze_mirror';
@@ -5914,7 +5914,6 @@ create or replace function jetty_reach() returns double precision language sql i
 create or replace function outside_stair_level() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
 create or replace function wall_height() returns double precision language sql immutable as $fn$ select 30::double precision $fn$;
 create or replace function class_at() returns double precision language sql immutable as $fn$ select 50::double precision $fn$;
-create or replace function class_change_cost() returns double precision language sql immutable as $fn$ select 500::double precision $fn$;
 create or replace function class_point_floor() returns double precision language sql immutable as $fn$ select 40::double precision $fn$;
 create or replace function class_point_step() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
 create or replace function craft_head() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;

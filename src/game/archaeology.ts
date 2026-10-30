@@ -260,7 +260,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       if (kind === 'regret') {
         const found = g.gather(REGRET, { ql: Math.max(1, g.productQl('archaeology', toolQl) * (0.55 + g.rand() * 0.35)) });
         g.events.emit('inventory');
-        g.logMsg(`Found: Bauble of Regret, QL ${found.ql.toFixed(1)}. Undoes one class (Trades window).`, 'event');
+        g.logMsg(`Found: Bauble of Regret, QL ${found.ql.toFixed(1)}. Undoes a class, patron or path.`, 'event');
         return;
       }
       if (kind === 'bauble') {

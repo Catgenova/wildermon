@@ -95,7 +95,7 @@ import {
 import { WELL_BASE, WELL_PER } from '../src/game/wells';
 import { GUST_PERIOD, TURN_PERIOD } from '../src/game/wind';
 import {
-  CLASSES, CLASS_AT, CLASS_CHANGE_COST, CLASS_NODES, CHANNELS as CLASS_CHANNELS, RITES,
+  CLASSES, CLASS_AT, CLASS_NODES, CHANNELS as CLASS_CHANNELS, RITES,
   CLASS_POINT_FLOOR, CLASS_POINT_STEP, CLASS_TIER_AT, PERK_TIER_AT,
 } from '../src/game/classes';
 import { FX_RULE, PERKS } from '../src/game/perks';
@@ -1901,8 +1901,8 @@ for (const [fn, v] of [
   ['outside_stair_level', OUTSIDE_STAIR_LEVEL],
   /* And how high one storey stands, which a bridge landing on one has to know. */
   ['wall_height', WALL_HEIGHT],
-  /* What a trade asks before its card is on the table, and what changing one costs. */
-  ['class_at', CLASS_AT], ['class_change_cost', CLASS_CHANGE_COST],
+  /* What a trade asks before its card is on the table. */
+  ['class_at', CLASS_AT],
   /* And what a trade is worth in points: nothing under forty, one more every five. */
   ['class_point_floor', CLASS_POINT_FLOOR], ['class_point_step', CLASS_POINT_STEP],
 ] as Array<[string, number]>) {

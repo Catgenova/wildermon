@@ -796,9 +796,6 @@ export interface ClassesSaid {
   taken: { craft: string | null; combat: string | null };
   /** The skill level a trade opens at. */
   at: number;
-  /** What putting one down and taking another costs in silver. */
-  change_cost: number;
-  purse: number;
   classes: ClassCard[];
   why?: string;
 }
@@ -3597,15 +3594,15 @@ export class Island {
     return data as TreeSaid;
   }
 
-  /** Take up a trade, or put one down for another and pay for the change. */
+  /** Take up a trade, or put one down for another with a Bauble of Regret. */
   async takeClass(id: string): Promise<string | null> {
     return this.door('rpc_take_class', { p_class: id });
   }
 
   /**
    * Break a Bauble of Regret to undo one of your two trades: it is put down as
-   * though it had never been taken up, its perks or its tree with it, and
-   * taking up another costs nothing.
+   * though it had never been taken up, its perks or its tree with it, and the
+   * slot is left empty.
    */
   async regretClass(kind: 'craft' | 'combat'): Promise<string | null> {
     return this.door('rpc_regret_class', { p_kind: kind });
@@ -3627,17 +3624,27 @@ export class Island {
     return this.faithDoor('rpc_faith', {});
   }
 
-  /** Take a patron, once and for good. */
+  /** Take a patron, kept until a Bauble of Regret undoes it. */
   async takePatron(id: string): Promise<FaithSaid | null> {
     return this.faithDoor('rpc_take_patron', { p_patron: id });
   }
 
-  /** Take one spell of a tier: one of the three, for good. */
+  /** Break a Bauble of Regret to undo your patron: its spells go with it, and off the spell bar. */
+  async regretPatron(): Promise<FaithSaid | null> {
+    return this.faithDoor('rpc_regret_patron', {});
+  }
+
+  /** Break a Bauble of Regret to undo your path: its picks go with it, and its techniques off the spell bar. */
+  async regretPath(): Promise<FaithSaid | null> {
+    return this.faithDoor('rpc_regret_path', {});
+  }
+
+  /** Take one spell of a tier: one of the three, until the patron is undone. */
   async takeFaithSpell(id: string): Promise<FaithSaid | null> {
     return this.faithDoor('rpc_take_faith_spell', { p_spell: id });
   }
 
-  /** Take one pick of a tier of your path: one of the three, for good. */
+  /** Take one pick of a tier of your path: one of the three, until the path is undone. */
   async takePathPick(id: string): Promise<FaithSaid | null> {
     return this.faithDoor('rpc_take_path_pick', { p_pick: id });
   }

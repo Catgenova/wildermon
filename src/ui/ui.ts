@@ -1862,7 +1862,7 @@ export class UI {
         const ready = med >= CHOOSE_AT;
         entries.push({
           label: 'Choose a path',
-          hint: ready ? 'Permanent.' : `Need meditation ${CHOOSE_AT}.`,
+          hint: ready ? 'Undo: Bauble of Regret.' : `Need meditation ${CHOOSE_AT}.`,
           disabled: !ready,
           children: ready
             ? PATH_LIST.map((path) => ({

@@ -495,7 +495,7 @@ begin
       when s.school = 'class' then to_jsonb('blade_measured_cut'::text) else 'null'::jsonb end order by s.slot) from spell_slot s)
     where world_id = w.world_id and uid = w.uid;
   perform spell_bar_put(w.world_id, w.uid, ${FIRST_CLASS_SLOT + 1}, 'blade_lunge');
-  perform give_coins(w.world_id, w.uid, class_change_cost()::bigint);
+  perform give(w.world_id, w.uid, 'bauble_regret', 1, 40);
   insert into skill (world_id, uid, id, value) values (w.world_id, w.uid, 'axes', 60)
     on conflict (world_id, uid, id) do update set value = 60;
   r := rpc_take_class(w.world_id, 'berserker');

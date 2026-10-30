@@ -194,7 +194,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'post', text: 'Set a wildermon to a work post', met: did('posted') },
       { id: 'worms', text: 'Dig up worms with a shovel', met: did('worms') },
       { id: 'sat', text: 'Sit on a rug and meditate', hint: 'Rug: weave on a loom', met: did('sat') },
-      { id: 'path', text: 'Choose a meditation path', hint: `At meditation ${CHOOSE_AT}, on the rug. Permanent`, met: (g) => !!g.player.way },
+      { id: 'path', text: 'Choose a meditation path', hint: `At meditation ${CHOOSE_AT}, on the rug. Undo: Bauble of Regret`, met: (g) => !!g.player.way },
       { id: 'walked', text: `Walk your path to its end: meditation ${listed(PATH_ENDS)}`, met: (g) => !!g.player.way && g.skills.get('meditation') >= pathEnd(g.player.way) },
       {
         id: 'tiered', text: 'Take a pick at every path tier',

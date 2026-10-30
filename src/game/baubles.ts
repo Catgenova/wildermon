@@ -4,7 +4,6 @@ import type { Deed, Game } from './game';
 import { deedMay, lacks } from './ranks';
 import { furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
 import { describeWith, itemName, rarityOf, rarityStep, type Item } from './items';
-import { CLASS_CHANGE_COST } from './classes';
 import { times } from './words';
 
 /**
@@ -53,17 +52,23 @@ export const BAUBLE_SHARE = 0.3;
  * bauble, and the rest pieces of relics.
  *
  * Asked for: "Add a 3% chance for Bauble of Regret in archaeology. Bauble of
- * regret allows for the undoing of Class selection." It comes out of the
- * ground whole, and is broken in the Trades window to put one of your trades
- * down as though it had never been taken up (`rpc_regret_class`): its tree
- * cleared with it, and nothing to pay for taking up another, where changing
- * one otherwise costs `CLASS_CHANGE_COST` silver. Trades are the island's, so
- * that is where it is broken.
+ * regret allows for the undoing of Class selection." And then, with the
+ * silver price of a change of trade taken away: "baubles of regret only for
+ * changes to professions, faiths, paths, etc". It comes out of the ground
+ * whole, and one is broken for every change of a choice made for good:
+ *
+ *   * a trade: Undo in the Trades window puts it down with its tree or perks
+ *     (`rpc_regret_class`), and taking up another in a slot already held
+ *     breaks one too (`rpc_take_class`); no silver buys a change;
+ *   * a patron: Undo in the Faith window clears it with its spells, off the
+ *     spell bar (`rpc_regret_patron`);
+ *   * a path: Undo on the Path tab clears it with its picks, techniques off the
+ *     spell bar (`rpc_regret_path`).
+ *
+ * All three are the island's, so that is where it is broken.
  */
 export const REGRET_SHARE = 0.03;
 export const REGRET = 'bauble_regret';
-// What breaking one saves, for its description: the silver a change otherwise costs.
-describeWith({ regret: { saves: CLASS_CHANGE_COST } });
 
 /**
  * Which of these a find is, off one roll: a Bauble of Regret, a tarnished
@@ -73,23 +78,29 @@ describeWith({ regret: { saves: CLASS_CHANGE_COST } });
 export const findKind = (roll: number, baubles = BAUBLE_SHARE): 'regret' | 'bauble' | 'relic' =>
   roll < REGRET_SHARE ? 'regret' : roll < REGRET_SHARE + baubles ? 'bauble' : 'relic';
 
-/** What the island says when a trade cannot be undone: `rpc_regret_class`. */
+/** What the island says when a Bauble of Regret is not broken: `regret_refusal`, `rpc_regret_class`. */
 export const REGRET_SAID = {
   none: 'Need a Bauble of Regret.',
   locked: 'Bauble of Regret is kept back: return it to the pack.',
   kind: 'No such class.',
+  patron: 'No patron to undo.',
+  path: 'No path to undo.',
 } as const;
 const slotWord = (kind: 'craft' | 'combat'): string => (kind === 'craft' ? 'crafting' : 'fighting');
 /** Why there is nothing to undo in one of the two slots. */
 export const regretEmpty = (kind: 'craft' | 'combat'): string => `No ${slotWord(kind)} class to undo.`;
-/**
- * And what it says when one is undone: the trade by name, what goes with it --
- * the perks taken in it, or the tree of a trade not moved to perks yet -- and
- * what the next one in its slot costs.
- */
-export const regretDone = (trade: string, kind: 'craft' | 'combat', perks = false): string =>
-  `Bauble of Regret used: ${trade} removed, with its ${perks ? 'perks' : 'tree'}. `
-  + `Next ${slotWord(kind)} class: free (base ${CLASS_CHANGE_COST} silver).`;
+/** What it says when a trade is undone: the trade by name, and what goes with it -- its perks, or the tree of a trade not moved to perks yet. */
+export const regretDone = (trade: string, perks = false): string =>
+  `Bauble of Regret used: ${trade} removed, with its ${perks ? 'perks' : 'tree'}.`;
+/** And when a trade is put down for another in the same slot (`rpc_take_class`). */
+export const classChanged = (was: string, now: string): string => `Class changed: ${was} to ${now}. Bauble of Regret used.`;
+/** And a patron, with the faith spells taken from it. */
+export const regretPatronDone = (patron: string): string => `Bauble of Regret used: patron ${patron} removed, with its spells.`;
+/** And a path, with its picks. */
+export const regretPathDone = (path: string): string => `Bauble of Regret used: path ${path} removed, with its picks.`;
+/** Whether a Bauble of Regret is carried, loose or in a bag: where `consume` would take one from. */
+export const carriesRegret = (items: readonly Pick<Item, 'id' | 'inside'>[]): boolean =>
+  items.some((it) => it.id === REGRET || it.inside?.some((b) => b.id === REGRET));
 
 export type BaubleTier = 'minor' | 'major' | 'ancient';
 export type BaubleKind = 'time' | 'learn' | 'double' | 'plus';

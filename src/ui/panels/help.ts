@@ -52,7 +52,7 @@ import { STORE_REACH } from '../../game/crates';
 import { GREEN_ACTIONS, GREEN_DAY, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET, GREEN_WET_REACH } from '../../game/greening';
 import { FIRE_COST, FIRE_SUBTILES, FUELS } from '../../game/campfire';
 import {
-  CHANNELS, CLASS_AT, CLASS_CHANGE_COST, CLASS_COLUMNS, CLASS_NODES, CLASS_TIER_AT, CLASSES, channelSays, NODES_PER_TRADE, PERK_CLASSES,
+  CHANNELS, CLASS_AT, CLASS_COLUMNS, CLASS_NODES, CLASS_TIER_AT, CLASSES, channelSays, NODES_PER_TRADE, PERK_CLASSES,
   PERK_TIER_AT, PERKS_PER_TIER, riteDef, RITES, type Channel,
 } from '../../game/classes';
 import { PERK_BY_ID, PERKS, perksOf } from '../../game/perks';
@@ -1345,9 +1345,9 @@ export function helpText(): string {
       rite${COLUMNS ? `, or its ${COLUMNS} columns with each node's cost and effect` : ''}. Read from the rulebook.</li>
       <li><b>Take up</b> and <b>Take this one</b> confirm first, listing what goes, the cost and which perks close.</li>
       <li>Spent points, purse and altar state are the island's answer; a disabled button's reason is the island's own.</li>
-      <li>Changing a trade or class: <b>${CLASS_CHANGE_COST} silver</b>; ${BOUGHT} for the old one are lost. The other slot is unchanged.</li>
+      <li>Changing a trade or class: one <b>Bauble of Regret</b> (<i>Take (Bauble of Regret)</i> on another card in a held slot); ${BOUGHT} for the old one are lost. The other slot is unchanged. No silver.</li>
       <li><b>Bauble of Regret</b>: ${percent(REGRET_SHARE)} of trowel finds, whole. In the pack, a held trade's or class's card shows <i>Undo</i>: breaks the bauble,
-      removes it and ${BOUGHT} for it, leaves the slot empty; the next trade or class in that slot is free. The other slot is unchanged.</li>
+      removes it and ${BOUGHT} for it, leaves the slot empty. The other slot is unchanged. Also undoes a patron or a path (<b>Faith</b> window).</li>
     </ul>
     <h4>Window layout</h4>
     <ul>
@@ -2914,7 +2914,7 @@ export function helpText(): string {
       <li>${percent(BAUBLE_SHARE)} of trowel finds: a whole <b>tarnished bauble</b>, by grade: ${listed(BAUBLE_TIERS.map((t) => `${percent(t.odds)} ${t.name.toLowerCase()}`))}. No effect until restored.</li>
       <li><b>Restore</b> alone, restoration difficulty ${listed(BAUBLE_TIERS.map((t) => `${t.difficulty} ${t.name.toLowerCase()}`))}; failure damages it like relic pieces.</li>
       <li>Effect drawn on restoring, with rarity, and written on it: rare ${mul(baubleTimes(1))} an ordinary one's, supreme ${mul(baubleTimes(2))}, fantastic ${mul(baubleTimes(3))}.</li>
-      <li>Another ${percent(REGRET_SHARE)}: a whole <b>Bauble of Regret</b> (undoes a trade or class; see <b>Trades</b>).</li>
+      <li>Another ${percent(REGRET_SHARE)}: a whole <b>Bauble of Regret</b> (undoes a class, patron or path; see <b>Trades</b> and <b>Faith</b>).</li>
     </ul>
     <table>
       ${BAUBLE_TIERS.map((t) => `<tr><td><b>${t.name}</b></td><td>${t.slots} sockets. ${
@@ -3190,8 +3190,9 @@ export function helpText(): string {
       <li>All multiply (Runestone + feet in water: ${mul(SIT_WORTH.stone * SIT_WORTH.water)}). A blow landing on you ends the sitting with nothing.</li>
       <li><b>Calm</b> per sitting: ${SIT_CALM} Calm × the spot's multiplier, ${SOUL_RATE}. Cap follows the favour curve, off meditation: ${listed(PATH_TIER_AT.filter((_, i) => i % 2 === 0).map((m) => `${Math.floor(calmCap(m))} at ${m}`))}.
       No regeneration; spent on techniques.</li>
-      <li>At ${CHOOSE_AT} meditation: choose <b>one</b> of ${PATH_LIST.length} paths at the rug, permanent; earlier choices stand.</li>
-      <li>Tiered paths: ${PICKS_PER_TIER} picks at each path tier (${listed(PATH_TIER_AT.map(String))} meditation): a <b>technique</b> and ${PICKS_PER_TIER - 1} <b>disciplines</b>; take one, permanently,
+      <li>At ${CHOOSE_AT} meditation: choose <b>one</b> of ${PATH_LIST.length} paths at the rug; earlier choices stand.</li>
+      <li><b>Undo</b> on your path (Faith window, Path tab, with a <b>Bauble of Regret</b> in the pack): breaks the bauble, removes the path and its picks, techniques off the spell bar. Calm and meditation stay. Then any path at the rug again.</li>
+      <li>Tiered paths: ${PICKS_PER_TIER} picks at each path tier (${listed(PATH_TIER_AT.map(String))} meditation): a <b>technique</b> and ${PICKS_PER_TIER - 1} <b>disciplines</b>; take one, kept while you hold the path,
       in the <b>Faith</b> window's Path tab. Technique: the spell bar's path slot; costs Calm; cooldown. Discipline: always on.</li>
     </ul>
     <table>
@@ -3222,7 +3223,8 @@ export function helpText(): string {
     </table>
     <h3>Patrons and the spell bar</h3>
     <ul>
-      <li>At <b>${PATRON_AT} ${SKILL_NAME('prayer')}</b>: take a <b>patron</b> in the <b>Faith</b> window: ${listed(PATRONS.map((p) => `<b>${p.name}</b> (${ALIGNMENT_NAMES[p.alignment].toLowerCase()})`))}. Permanent.</li>
+      <li>At <b>${PATRON_AT} ${SKILL_NAME('prayer')}</b>: take a <b>patron</b> in the <b>Faith</b> window: ${listed(PATRONS.map((p) => `<b>${p.name}</b> (${ALIGNMENT_NAMES[p.alignment].toLowerCase()})`))}.</li>
+      <li><b>Undo</b> on your patron (Faith window, with a <b>Bauble of Regret</b> in the pack): breaks the bauble, removes the patron and its spells, off the spell bar. Favour and ${SKILL_NAME('prayer')} stay. Then any patron again.</li>
       <li>${SPELLS_PER_TIER} spells at each of ${FAITH_TIER_AT.length} faith tiers (${listed(FAITH_TIER_AT.map(String))} ${SKILL_NAME('prayer')}); take one per faith tier: ${FAITH_TIER_AT.length} of
       ${FAITH_TIER_AT.length * SPELLS_PER_TIER}. Every patron's faith tiers are readable beforehand. Patron and spell choices need confirming.</li>
       <li>Spells cost favour and have their own cooldown in seconds.</li>

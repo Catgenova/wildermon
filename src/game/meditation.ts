@@ -22,8 +22,9 @@ import { runestoneWithin } from './runestones';
  *
  * Sitting still on a rug and thinking about nothing is not obviously work,
  * and it is the slowest thing anybody does here. What comes of it is a
- * **path**: one of three ways of looking at the island, chosen once at
- * `CHOOSE_AT` meditation and never changed, and **Calm**, banked by every
+ * **path**: one of three ways of looking at the island, chosen at
+ * `CHOOSE_AT` meditation and kept until a Bauble of Regret undoes it
+ * (`rpc_regret_path`, which clears its picks with it), and **Calm**, banked by every
  * sitting and spent on what the path teaches.
  *
  * **Love** is the living island's path -- companions, taming, breeding and
@@ -39,7 +40,7 @@ import { runestoneWithin } from './runestones';
  * onto perks one at a time (`MOVED_TO_PERKS`). A moved path keeps no steps and
  * no old abilities. It offers, at each of `PATH_TIER_AT`, one **technique**
  * and two **disciplines** (`PATH_PICKS`), and its walker takes one of the
- * three at each tier, for good:
+ * three at each tier, until the path is undone:
  *
  *   - a technique goes in the spell bar's one path slot (`SPELL_BAR`), is
  *     cast through the same door a faith spell is (`rpc_cast_spell`), costs
