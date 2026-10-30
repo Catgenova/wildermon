@@ -478,6 +478,13 @@ jobs:
                  'walls', (select json_agg(json_build_array(w.x, w.y, w.dir, w.type, (select coalesce(sum(e.value::numeric), 0) from jsonb_each_text(w.needed) e)))
                    from wall w where w.world_id = p.world_id and w.level = 1 and abs(w.x - floor(p.x)) <= 11 and abs(w.y - floor(p.y)) <= 11))
              from player p where p.name = 'catgenova'"
+          ask "kiln: catgenova's Kilnlets, where they stand and their reach" "select c.id, c.name, c.mode, c.storey, round(creature_x(c)::numeric, 1) as x, round(creature_y(c)::numeric, 1) as y, work_range(c) as reach, c.hunger
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova' where c.keeper = p.uid and c.species = 'potta'"
+          ask "kiln: the settlement token" "select dd.id, dd.name, dd.x, dd.y from player p, my_deed(p.world_id, p.uid) dd where p.name = 'catgenova'"
+          ask "kiln: every kiln within 40 tiles of the token, its distance from it, and why it is or is not worked" "select k.id, k.x, k.y, greatest(abs(k.x - dd.x), abs(k.y - dd.y)) as from_token, on_my_deed(p.world_id, p.uid, k.x, k.y) as on_deed,
+                  jsonb_array_length(furnace_jobs(k)) as jobs, furnace_capacity(k) as room, jsonb_array_length(furnace_output(k)) as made
+             from player p, my_deed(p.world_id, p.uid) dd, placed k
+            where p.name = 'catgenova' and k.world_id = p.world_id and k.kind = 'kiln' and greatest(abs(k.x - dd.x), abs(k.y - dd.y)) <= 40 order by from_token"
           ask "slate: the planned pieces and who planned them" "select 'floor' as what, f.level, f.x, f.y, f.kind, f.material, f.needed, f.total, f.building, b.name as building_name, b.levels, pb.name as building_by, pf.name as planned_by
              from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova' left join building b on b.world_id = f.world_id and b.id = f.building
              left join player pb on pb.world_id = f.world_id and pb.uid = b.planned_by left join player pf on pf.world_id = f.world_id and pf.uid = f.planned_by
