@@ -2255,7 +2255,7 @@ insert into species_diet values ('vola', 'rosemary');
 insert into species_diet values ('vola', 'potato');
 insert into species_diet values ('vola', 'onion');
 update species_def set favourite = 'sage' where id = 'vola';
-insert into species_def values ('bevere', 'Sapgnaw', 'Settlement task: fell trees within 8 tiles of the totem, +10 per 10 levels, as many bites a tree as a person''s swings; a stump is left where the tree had timber. Log QL: 60%–140% of its woodcutting, raised by yield traits, max 100. 1 log to the crate, the rest left at the stump. Level: woodcutting. Evolves at level 25: Logchewer.', 26, 3, 1.8, 1, 0.1, 'a vegetable or something starchy', true, 'woodcut', 8, 4, true, false, false, false, false, false, false, false, false, false, false, false, null, null, 'passive', null, null, null, null);
+insert into species_def values ('bevere', 'Sapgnaw', 'Settlement task: fell trees within 8 tiles of the totem, +10 per 10 levels, as many bites a tree as a person''s swings; a stump is left where the tree had timber. Log QL: 60%–140% of its woodcutting, raised by yield traits, max 100. Every log of the tree to your settlement stores. Level: woodcutting. Evolves at level 25: Logchewer.', 26, 3, 1.8, 1, 0.1, 'a vegetable or something starchy', true, 'woodcut', 8, 4, true, false, false, false, false, false, false, false, false, false, false, false, null, null, 'passive', null, null, null, null);
 update species_def set stages = array['Logchewer', 'Timberlord']::text[] where id = 'bevere';
 update species_def set perk = 'more', perk_n = 1, perk_channel = null where id = 'bevere';
 update species_def set was = array['Bevere']::text[] where id = 'bevere';
