@@ -468,6 +468,16 @@ jobs:
                  (select coalesce(sum(e.value::numeric), 0) from jsonb_each_text(f.needed) e) as still_needed
              from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova'
             where abs(f.x - floor(p.x)) <= 3 and abs(f.y - floor(p.y)) <= 3 order by f.level, f.y, f.x"
+          ask "stuck: every staircase and ladder within 15 tiles, every level" "select f.level, f.x, f.y, f.kind, f.facing, f.hand, f.material,
+                 (select coalesce(sum(e.value::numeric), 0) from jsonb_each_text(f.needed) e) as still_needed
+             from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova'
+            where f.kind not in ('floor', 'roof') and abs(f.x - floor(p.x)) <= 15 and abs(f.y - floor(p.y)) <= 15 order by f.level, f.y, f.x"
+          ask "stuck: storey-2 floors and walls within 10 tiles, as JSON" "select json_build_object(
+                 'floors', (select json_agg(json_build_array(f.x, f.y, f.kind, (select coalesce(sum(e.value::numeric), 0) from jsonb_each_text(f.needed) e)))
+                   from floor_tile f where f.world_id = p.world_id and f.level = 1 and abs(f.x - floor(p.x)) <= 10 and abs(f.y - floor(p.y)) <= 10),
+                 'walls', (select json_agg(json_build_array(w.x, w.y, w.dir, w.type, (select coalesce(sum(e.value::numeric), 0) from jsonb_each_text(w.needed) e)))
+                   from wall w where w.world_id = p.world_id and w.level = 1 and abs(w.x - floor(p.x)) <= 11 and abs(w.y - floor(p.y)) <= 11))
+             from player p where p.name = 'catgenova'"
           ask "slate: the planned pieces and who planned them" "select 'floor' as what, f.level, f.x, f.y, f.kind, f.material, f.needed, f.total, f.building, b.name as building_name, b.levels, pb.name as building_by, pf.name as planned_by
              from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova' left join building b on b.world_id = f.world_id and b.id = f.building
              left join player pb on pb.world_id = f.world_id and pb.uid = b.planned_by left join player pf on pf.world_id = f.world_id and pf.uid = f.planned_by
