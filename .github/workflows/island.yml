@@ -2875,6 +2875,15 @@ jobs:
             --outfile=node_modules/.cache/ownsettlement.mjs --log-level=error
           node node_modules/.cache/ownsettlement.mjs
 
+      - name: A felling worker carries every log of the tree home
+        if: matrix.shard == 3
+        run: |
+          # The tree of the most logs, felled by a Sapgnaw on both sides: the
+          # load is every log, and none is left at the stump.
+          npx esbuild supabase/test/fellall.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/fellall.mjs --log-level=error
+          node node_modules/.cache/fellall.mjs
+
       - name: A mount under you walks as you walk, and a team in the traces with its cart
         if: matrix.shard == 3
         run: |

@@ -4425,7 +4425,7 @@ sayLine('seavic', `Settlement task: sow, tend and harvest your tilled fields ${r
 sayLine('quarra', `Settlement task: cut rock shards from bare rock with no seam ${reach('quarra')}; output home.`, 'Level: mining.');
 sayLine('mola', `Settlement task: mine the nearest ore seam ${reach('mola')}, QL up to its mining and the seam's; output home. Skips metals above its mining: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} ${m.level}`))}.`,
   'Level: mining.');
-sayLine('bevere', `Settlement task: fell trees ${reach('bevere')}, as many bites a tree as a person's swings; a stump is left where the tree had timber. Log QL: ${yieldQl('woodcutting')}. 1 log to the crate, the rest left at the stump.`,
+sayLine('bevere', `Settlement task: fell trees ${reach('bevere')}, as many bites a tree as a person's swings; a stump is left where the tree had timber. Log QL: ${yieldQl('woodcutting')}. Every log of the tree to your settlement stores.`,
   'Level: woodcutting.');
 sayLine('orse', `Mount, saddled and bridled: ${+(SPECIES.orse.speed * footing(0)).toFixed(2)} tiles a second grown and fed at 0 climbing, +${percent(1 / 140 / footing(0))} per climbing level, max ${MAX_MOUNT_SPEED} tiles a second before a Saddler's tack. Higher climbing: steeper ground. Traces of a large cart or wagon: team pace +${percent(SPECIES.orse.pull ?? PULL_DEFAULT)}.`,
   'Level: climbing, learned under a rider and in the traces.');
@@ -7311,7 +7311,7 @@ export class Creatures {
     return load(PAN_ORES[Math.floor(game.rand() * PAN_ORES.length)], 1);
   }
 
-  /** Fell the tree a worker walked to, and hand it the log it carries home. */
+  /** Fell the tree a worker walked to, and hand it the logs it carries home. */
   private finishFelling(game: Game, c: Creature): Item | null {
     const tx = c.workX;
     const ty = c.workY;
@@ -7334,11 +7334,8 @@ export class Creatures {
     if (!logs) return null;
     // The same spread as a dig, raised by its yield traits, as on an island.
     const ql = Math.min(100, Math.max(1, skill * (DIG_QL[0] + game.rand() * (DIG_QL[1] - DIG_QL[0])) + 1) * this.yieldMul(c));
-    // The rest of the tree is left at the stump; it can only carry one at a time.
-    if (logs > 1) {
-      game.dropOnGround(tx, ty, { uid: game.inventory.nextUid++, id: 'log', ql, dmg: 0, count: logs - 1, extra: def.name });
-    }
-    return { uid: game.inventory.nextUid++, id: 'log', ql, dmg: 0, count: 1, extra: def.name };
+    // Every log of the tree home in one trip. Asked for: "carry all logs to storage on cut down instead of just 1".
+    return { uid: game.inventory.nextUid++, id: 'log', ql, dmg: 0, count: logs, extra: def.name };
   }
 
   /** Prune the tree a forester walked to back a stage. It carries nothing home. */

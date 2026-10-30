@@ -4213,6 +4213,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 372,
+    day: '2026-10-30',
+    lines: () => [`Fixed: ${SPECIES.bevere.name} line: every log of a felled tree to your settlement stores (was: 1, the rest left at the stump).`],
+  },
+  {
     n: 371,
     day: '2026-10-30',
     lines: () => [`Fixed: names capitalised and weights set (was: 1 kg each): ${['altar', 'stall', 'mailbox', 'bell', 'statue', 'brazier']
