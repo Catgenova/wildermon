@@ -485,6 +485,17 @@ jobs:
                   jsonb_array_length(furnace_jobs(k)) as jobs, furnace_capacity(k) as room, jsonb_array_length(furnace_output(k)) as made
              from player p, my_deed(p.world_id, p.uid) dd, placed k
             where p.name = 'catgenova' and k.world_id = p.world_id and k.kind = 'kiln' and greatest(abs(k.x - dd.x), abs(k.y - dd.y)) <= 40 order by from_token"
+          ask "sand: catgenova's Sandpips, where they stand and their reach" "select c.id, c.name, c.mode, round(creature_x(c)::numeric, 1) as x, round(creature_y(c)::numeric, 1) as y, work_range(c) as reach
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova' where c.keeper = p.uid and c.species = 'crawler'"
+          ask "sand: every sand tile within 10 of the token, and why a Sandpip may or may not collect it" "select t.x, t.y, greatest(abs(t.x - dd.x), abs(t.y - dd.y)) as from_token,
+                  worker_gatherable(p.world_id, t.x, t.y, 'sand', c) as gatherable, claimed(p.world_id, t.x, t.y, c.id) as claimed,
+                  is_foraged(p.world_id, t.x, t.y, 'dig') as foraged, round(foraged_left(p.world_id, t.x, t.y, 'dig')::numeric) as left_s,
+                  creature_tile_ok(p.world_id, t.x, t.y) as tile_ok, on_my_deed(p.world_id, p.uid, t.x, t.y) as on_deed
+             from player p cross join lateral (select * from my_deed(p.world_id, p.uid)) dd
+             cross join lateral (select * from creature c where c.world_id = p.world_id and c.keeper = p.uid and c.species = 'crawler' limit 1) c
+             cross join lateral (select dd.x + gx as x, dd.y + gy as y from generate_series(-10, 10) gx, generate_series(-10, 10) gy) t
+            where p.name = 'catgenova' and land_tile(p.world_id, t.x, t.y) = tile_id('Sand') order by from_token, t.y, t.x"
+          ask "sand: the token" "select dd.x, dd.y, dd.name from player p, my_deed(p.world_id, p.uid) dd where p.name = 'catgenova'"
           ask "slate: the planned pieces and who planned them" "select 'floor' as what, f.level, f.x, f.y, f.kind, f.material, f.needed, f.total, f.building, b.name as building_name, b.levels, pb.name as building_by, pf.name as planned_by
              from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova' left join building b on b.world_id = f.world_id and b.id = f.building
              left join player pb on pb.world_id = f.world_id and pb.uid = b.planned_by left join player pf on pf.world_id = f.world_id and pf.uid = f.planned_by
