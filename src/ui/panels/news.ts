@@ -4215,6 +4215,14 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 390,
+    day: '2026-10-30',
+    lines: () => [
+      'Added: Change wall (side), on a wall of a building, whether or not it can be removed: wall type, then material, at its bill; mallet. Finished wall: stands, shut and carrying, until the change is built (Build change, as Build wall); with the last material, the new wall. Still going up: replanned in place, new bill.',
+      'Change wall refused: fence, half wall or railing on a wall a storey, jetty or roof rests on; a material lighter than the heaviest wall above; a counter with goods or takings; a padlocked portcullis. The standing type and material again: change dropped.',
+    ],
+  },
+  {
     n: 389,
     day: '2026-10-30',
     lines: () => ['New: Settings, Display: I\'m stuck. Moves you to the ground floor, same tile, from any storey or a cellar.'],

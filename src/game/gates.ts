@@ -176,12 +176,25 @@ export function planHiddenDoor(g: Game, planWall: ActionDef, t: TileTarget): voi
  * `plan_line`.
  */
 export function planLine(type: WallType, material: string, side: string): string {
+  return `Planned: ${wallWords(type, material)}, ${side} side.`;
+}
+
+/** A wall by its type and material, as a plan names it: "solid stone brick wall", "log railing", "door, marble". */
+export function wallWords(type: WallType, material: string): string {
   const name = (WALL_TYPE_BY_ID.get(type)?.name ?? type).toLowerCase();
   const mat = material.toLowerCase();
-  if (type === 'solid') return `Planned: ${name} ${mat} wall, ${side} side.`;
-  if (type === 'railing') return `Planned: ${mat} railing, ${side} side.`;
-  return `Planned: ${name}, ${mat}, ${side} side.`;
+  if (type === 'solid') return `${name} ${mat} wall`;
+  if (type === 'railing') return `${mat} railing`;
+  return `${name}, ${mat}`;
 }
+
+/**
+ * The line a change planned for a finished wall says (`change_wall`), named
+ * as a plan is: "Change planned: door, marble, west side.". The island's
+ * `change_line`.
+ */
+export const changeLine = (type: WallType, material: string, side: string): string =>
+  `Change planned: ${wallWords(type, material)}, ${side} side.`;
 
 /** What planning one says when the padlock or the hinges went before the wall was planned: it is the solid wall it was asked as. */
 export const HIDDEN_DOOR_SHORT = `No padlock and ${HIDDEN_DOOR_HINGES} hinges in pack: solid wall.`;

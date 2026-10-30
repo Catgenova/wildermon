@@ -346,6 +346,23 @@ export function wallFrameReason(g: Game, t: TileTarget, b: Building): string | n
   return null;
 }
 
+/**
+ * Why a finished wall may not be changed to the type a target asks, by what
+ * stands round it, or null: what `wallFrameReason` asks of a wall planned
+ * there, and a railing changed to a full-height wall shutting a roofed jetty
+ * out of its storey, as a wall planned on a bare side would. The island's
+ * `change_frame_refusal`.
+ */
+export function changeFrameReason(g: Game, t: TileTarget, b: Building, wall: Wall): string | null {
+  const frame = wallFrameReason(g, t, b);
+  if (frame) return frame;
+  if (!t.terrace && t.side && t.wallType && !isLowWall(t.wallType) && isLowWall(wall.type) && wall.level === b.levels - 1
+      && roofCutOff(g, b, borderOf(t.x, t.y, t.side))) {
+    return 'Roof over that jetty: remove it first. Balconies take no roof.';
+  }
+  return null;
+}
+
 /** Whether a wall on a border of the top storey would shut a jetty with the roof over it out of the storey. */
 function roofCutOff(g: Game, b: Building, border: Border): boolean {
   const bld = g.buildings;

@@ -1694,6 +1694,20 @@ jobs:
           npx esbuild supabase/test/glasswall.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/glasswall.mjs --log-level=error
           node node_modules/.cache/glasswall.mjs
+      - name: A wall changed where it stands
+        if: matrix.shard == 2
+        run: |
+          # Change wall: another type or material planned on a wall of a
+          # building, offered and allowed on the wall storey 3 rests on, which
+          # Remove refuses. The wall standing stays finished, shut and carrying
+          # while the change is built a unit a go, and is the new wall with the
+          # last of it; a type that carries nothing is refused in Remove's
+          # words, a material too light for the walls above as a Repoint is,
+          # and the rest as Plan wall refuses them, all in the same words on
+          # both sides. A wall still going up is planned again in place.
+          npx esbuild supabase/test/changewall.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/changewall.mjs --log-level=error
+          node node_modules/.cache/changewall.mjs
 
       - name: A team stays in the traces until it is taken out
         if: matrix.shard == 2

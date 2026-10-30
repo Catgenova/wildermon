@@ -25,8 +25,11 @@ import {
   type Building,
   type Side,
   type Wall,
+  type WallChange,
   type WallType,
   type FloorKind,
+  isLowWall,
+  wallBill,
   type MaterialDef,
   jobLevel,
   NO_PLAN_FROM,
@@ -35,7 +38,7 @@ import { dyeChoice, dyeEnough, dyeReason, litresWord, paneTint, pickDye, spendDy
 import { capital } from './words';
 import { colourWord, DYE_LITRES } from './dyestuffs';
 import type { Game } from './game';
-import { gatePlanRefusal, gateRemoveRefusal, planGate, planLine } from './gates';
+import { changeLine, gatePlanRefusal, gateRemoveRefusal, planGate, planLine } from './gates';
 import { greenNow } from './greening';
 import { glassPlanRefusal, glassResync } from './glasshouse';
 import { counterGone, counterPlanRefusal, counterRemoveRefusal, counterStreetRefusal } from './counters';
@@ -43,7 +46,7 @@ import { lampWallRefusal } from './lamps';
 import { itemDef } from './items';
 import { billPlus, deckBears, deckCarries, metres, pierBill, pierDrop } from './piers';
 import { TileType } from '../world/tiles';
-import { floorHolds, jettyOnWall, jettyOver, jettyReason, jettyRoofOnWall, storeyOf, storeyOnWall, terraceRailed, wallFrameReason, wallLevelOf } from './frame';
+import { changeFrameReason, floorHolds, jettyOnWall, jettyOver, jettyReason, jettyRoofOnWall, storeyOf, storeyOnWall, terraceRailed, wallFrameReason, wallLevelOf } from './frame';
 
 type TileTarget = Extract<Target, { kind: 'tile' }>;
 const isTile = (t: Target): t is TileTarget => t.kind === 'tile';
@@ -62,6 +65,127 @@ export const needsText = (bill: Bill): string => describeNeeds(bill, materialNam
 
 import { buildWork, consumeUnit, nextAvailable, takeUnit, toHand } from './buildstock';
 export { buildReach, buildWork, consumeUnit, nextAvailable, takeUnit, toHand } from './buildstock';
+
+/**
+ * What rests on a finished wall and on nothing else there, as taking it down
+ * would leave it, or null: a jetty, a roof over one, or the storey over it
+ * (`frame.ts`). What to do first.
+ */
+function restsOnWall(g: Game, wall: Wall): string | null {
+  const jetty = jettyOnWall(g, wall);
+  if (jetty !== null) return `Storey ${jetty + 1} jetty rests on this wall: add a column at each end, or remove the jetty, first.`;
+  return jettyRoofOnWall(g, wall) ?? storeyOnWall(g, wall);
+}
+
+/**
+ * Why a wall may not go, taken down or changed into another, by what it is,
+ * or null: a shop counter goes empty, till and all (`counters.ts`), and a
+ * padlock on a portcullis keeps it from going as from being worked (`gates.ts`).
+ */
+const wallGoesRefusal = (g: Game, wall: Wall): string | null => counterRemoveRefusal(g, wall) ?? gateRemoveRefusal(g, wall);
+
+/** The wall type and material standing on a border, as the body asking sees it (`seenType`). */
+const standsAs = (g: Game, wall: Wall, type: WallType, mat: string): boolean => g.buildings.seenType(wall) === type && wall.material === mat;
+
+/**
+ * Why a wall may not be changed to the type and material a target asks
+ * (`change_wall`), or null. Asked as a wall planned on the border is
+ * (`plan_wall`): the glass rule, a mallet, what stands round it, a counter's
+ * street, a lantern post's arm, the deck and what is under it carrying the
+ * new material, a portcullis's ground floor and stone. And as a Repoint is:
+ * the new material carrying what stands on it and standing as many storeys
+ * as the building has. And as a wall taken down is, of the one standing: a
+ * full-height wall that something rests on changes only to another
+ * full-height wall, which carries it as the old one did; a counter with
+ * anything on it, or a padlocked portcullis, not at all. The standing wall
+ * asked again with a change planned drops the change. The island's
+ * `change_wall_refusal`, word for word.
+ */
+export function changeWallReason(g: Game, t: TileTarget): string | null {
+  if (!t.side || !t.wallType || !t.material) return 'Choose a side, wall type and material.';
+  const b = storeyOf(g, t);
+  if (!b) return 'No building here.';
+  const wall = wallAt(g, t);
+  if (!wall || !wall.building) return 'No wall there.';
+  if (standsAs(g, wall, t.wallType, t.material)) return wall.change ? null : 'Already that wall.';
+  if (wall.change?.type === t.wallType && wall.change.material === t.material) return 'Change already planned.';
+  const glass = glassPlanRefusal(g, t, 'plan_wall');
+  if (glass) return glass;
+  const tool = needTool(g, 'mallet');
+  if (tool) return tool;
+  const frame = changeFrameReason(g, t, b, wall);
+  if (frame) return frame;
+  const level = wall.level;
+  if (t.wallType === 'counter') {
+    const street = counterPlanRefusal(g, b, level, t.x, t.y, t.side);
+    if (street) return street;
+  }
+  const arm = lampWallRefusal(g, level, t.x, t.y, t.side, t.wallType);
+  if (arm) return arm;
+  const mat = material(t.material);
+  if (mat) {
+    const deck = b.deck != null ? deckCarries(mat, g.buildings.deckUnder(b), b.name) : null;
+    if (deck) return deck;
+    const bears = g.buildings.bearing(b, level);
+    if (mat.heft > bears) return `${mat.name} too heavy for what is under it: this storey carries ${heftWord(bears)} at most.`;
+    let over = 0;
+    for (const w of g.buildings.walls.values()) {
+      if (w.building === b.id && w.level > level) over = Math.max(over, material(w.material)?.heft ?? 0);
+    }
+    if (mat.heft < over) return `${mat.name} cannot carry the ${heftWord(over)} above it.`;
+    const stands = mat.storeys + g.perk(`storeys:${buildWork(mat)}`, 0);
+    if (b.levels > stands) return `${mat.name}: max ${stands} storeys; this is ${b.levels}.`;
+  }
+  const gate = gatePlanRefusal(t.wallType, mat, level, !g.buildings.buildingAt(t.x, t.y));
+  if (gate) return gate;
+  // A fence, a half wall or a railing carries nothing (`frame.ts`).
+  if (isLowWall(t.wallType)) {
+    const rests = restsOnWall(g, wall);
+    if (rests) return rests;
+  }
+  return wallGoesRefusal(g, wall);
+}
+
+/**
+ * A go of building a change planned for a finished wall (`change_wall`): a
+ * unit into the change's bill, the wall standing as it is. With the last of
+ * it the wall is the new one in that go -- its type, material and bill, bare
+ * of paint, its ivy from nothing, no padlock and no pane's colour -- the
+ * standing one's counter shut and the new one's opened (`counters.ts`), and
+ * said as a wall finished is. Whether to go again, as `build_wall` returns.
+ */
+function buildChange(g: Game, t: TileTarget, wall: Wall, change: WallChange): boolean {
+  if (isDone(change)) return false;
+  const mat = material(change.material);
+  const used = consumeUnit(g, change, t);
+  if (!used || !mat) return false;
+  g.gainSkill(mat.skill, 0.4);
+  if (!isDone(change)) {
+    g.logMsg(`Added: ${materialName(used, 1)}. Still needed: ${needsText(change)}.`, 'event');
+    g.events.emit('world', t.x, t.y);
+    return nextAvailable(g, change, t) !== null;
+  }
+  counterGone(g, wall);
+  // The ivy starts from nothing on another material, and stays on the same one (the island's `green_wall`).
+  const green = wall.material === change.material ? wall.greenSince : undefined;
+  wall.type = change.type;
+  wall.material = change.material;
+  wall.needed = { ...change.needed };
+  wall.total = { ...change.total };
+  delete wall.change;
+  delete wall.dye;
+  delete wall.glass;
+  delete wall.lock;
+  delete wall.lowered;
+  g.wallFitted(wall);
+  if (green !== undefined) wall.greenSince = green;
+  const low = WALL_TYPE_BY_ID.get(wall.type)?.low;
+  if (!low) g.note('walled');
+  g.note(`built:${wall.type}`);
+  g.logMsg(`Built: ${mat.name.toLowerCase()} ${low ? WALL_TYPE_BY_ID.get(wall.type)?.name.toLowerCase() : 'wall'}.`, 'event');
+  g.events.emit('world', t.x, t.y);
+  return false;
+}
 
 /**
  * A Mason's Repoint.
@@ -475,19 +599,25 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!isTile(t) || !t.side) return 'Choose a side.';
       const wall = wallAt(g, t);
       if (!wall) return 'No wall planned there.';
-      if (isDone(wall)) return 'Wall finished.';
+      // A change planned for a finished wall is built as a wall is, the wall standing till it is done (`change_wall`).
+      const bill = wall.change ?? wall;
+      if (isDone(bill)) return 'Wall finished.';
+      // And the standing one goes with the last of it: not a counter with anything on it, nor a padlocked portcullis.
+      const goes = wall.change ? wallGoesRefusal(g, wall) : null;
+      if (goes) return goes;
       // Nor is one raised over a lantern post's arm (`lamps.ts`).
-      const arm = lampWallRefusal(g, wall.level, t.x, t.y, t.side, wall.type);
+      const arm = lampWallRefusal(g, wall.level, t.x, t.y, t.side, bill.type);
       if (arm) return arm;
-      const mat = material(wall.material);
+      const mat = material(bill.material);
       const tool = mat ? needTool(g, mat.tool) : null;
       if (tool) return tool;
-      if (!nextAvailable(g, wall, t)) return `Need ${needsText(wall)}.`;
+      if (!nextAvailable(g, bill, t)) return `Need ${needsText(bill)}.`;
       return null;
     },
     perform: (t, g) => {
       if (!isTile(t) || !t.side) return false;
       const wall = wallAt(g, t);
+      if (wall?.change) return buildChange(g, t, wall, wall.change);
       if (!wall || isDone(wall)) return false;
       const mat = material(wall.material);
       // A pane fitted into a window or a bay window gives its glass the pane's colour (`TINTED_PANE`).
@@ -674,16 +804,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!isTile(t) || !t.side) return 'Choose a side.';
       const wall = wallAt(g, t);
       if (!wall) return 'No wall there.';
-      // A jetty resting on it alone would be left in the air, and so would a roof over one, or the storey over it (`frame.ts`).
-      const jetty = jettyOnWall(g, wall);
-      if (jetty !== null) return `Storey ${jetty + 1} jetty rests on this wall: add a column at each end, or remove the jetty, first.`;
-      const over = jettyRoofOnWall(g, wall) ?? storeyOnWall(g, wall);
-      if (over) return over;
-      // And a shop counter comes down empty, till and all (`counters.ts`).
-      const counter = counterRemoveRefusal(g, wall);
-      if (counter) return counter;
-      // gates: a padlock on a portcullis keeps it from being taken down as from being worked (`gates.ts`).
-      return gateRemoveRefusal(g, wall);
+      return restsOnWall(g, wall) ?? wallGoesRefusal(g, wall);
     },
     perform: (t, g) => {
       if (!isTile(t) || !t.side) return;
@@ -695,6 +816,57 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // A glasshouse with a wall down is open to the weather (`glasshouse.ts`).
       glassResync(g);
       g.logMsg(`Removed: ${what}, ${SIDE_NAMES[t.side]} side.`, 'event');
+      g.events.emit('world', t.x, t.y);
+    },
+  },
+  /*
+   * Change a wall: a wall of a building planned anew as another type or
+   * material where it stands, without taking it down. A wall still going up
+   * is planned again in place, at the new bill. A finished one stands as it
+   * is -- shut, carrying what rests on it -- with the change planned on it
+   * (`Wall.change`), built as a wall is (`build_wall`), and becomes the new
+   * wall with the last of it. Asked as `changeWallReason` says.
+   */
+  {
+    id: 'change_wall',
+    label: 'Change wall',
+    verb: 'planning a change',
+    hidden: true,
+    stamina: 0.02,
+    baseTime: 2,
+    applies: (t, g) => isTile(t) && !!storeyOf(g, t) && !!wallAt(g, t)?.building,
+    check: (t, g) => (isTile(t) ? changeWallReason(g, t) : 'Choose a side, wall type and material.'),
+    perform: (t, g) => {
+      if (!isTile(t) || !t.side || !t.wallType || !t.material || changeWallReason(g, t)) return;
+      const wall = wallAt(g, t);
+      if (!wall) return;
+      const side = SIDE_NAMES[t.side];
+      if (standsAs(g, wall, t.wallType, t.material)) {
+        delete wall.change;
+        g.buildings.changed();
+        g.logMsg(`Change dropped: ${side} side.`, 'event');
+        g.events.emit('world', t.x, t.y);
+        return;
+      }
+      const bill = wallBill(t.material, t.wallType, fenceScale(g, t.wallType));
+      const name = material(t.material)?.name ?? t.material;
+      if (isDone(wall)) {
+        wall.change = { type: t.wallType, material: t.material, needed: { ...bill.needed }, total: { ...bill.total } };
+        g.logMsg(`${changeLine(t.wallType, name, side)} Needs ${needsText(bill)}.`, 'event');
+      } else {
+        // Nothing stands yet: the plan is the new one, from nothing in.
+        wall.type = t.wallType;
+        wall.material = t.material;
+        wall.needed = { ...bill.needed };
+        wall.total = { ...bill.total };
+        delete wall.change;
+        delete wall.lock;
+        delete wall.lowered;
+        delete wall.glass;
+        g.logMsg(`${planLine(t.wallType, name, side)} Needs ${needsText(bill)}.`, 'event');
+      }
+      g.buildings.changed();
+      glassResync(g);
       g.events.emit('world', t.x, t.y);
     },
   },

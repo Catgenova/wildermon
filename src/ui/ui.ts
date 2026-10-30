@@ -110,7 +110,7 @@ import { ContextMenu, type MenuItem } from './contextmenu';
 import { AutoEat } from '../game/autoeat';
 import { ShoppingPanel } from './panels/shopping';
 import { rotLine, rotSaid, rotSeconds } from '../game/rot';
-import { frameFootprintEntries, frameHoverLines, frameJettyEntries, frameRoofEntries } from './frameMenu';
+import { changeWallRows, frameFootprintEntries, frameHoverLines, frameJettyEntries, frameRoofEntries } from './frameMenu';
 import { storeyHost, wallAcross } from '../game/storeyview';
 import { areaAsk, areaCount, areaPieces, areaRefusals, areaTotals, passing, PLAN_UNDO_SECONDS, UNDONE_PLANS, type AreaPlan, type AreaPiece } from '../game/planarea';
 import { PlanBar } from './planbar';
@@ -3780,6 +3780,8 @@ export class UI {
     if (wall) {
       if (!isDone(wall)) entries.push(build(act('build_wall'), withSide, `Build wall (${sideName}) · needs ${describeNeeds(wall, materialName)}`, wall));
       entries.push(item(act('remove_wall'), withSide, `Remove wall (${sideName})`));
+      // Another type or material where it stands, whether or not it may come down (`change_wall`).
+      entries.push(...changeWallRows(g, wall, withSide, (def, t) => cellarReason(g, def, t)));
       entries.push(...repoint(wall, withSide, `Repoint wall (${sideName})`));
     } else {
       const plan = act('plan_wall');

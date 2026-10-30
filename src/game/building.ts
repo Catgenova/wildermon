@@ -464,6 +464,19 @@ export interface Wall extends Bill {
   lowered?: boolean;
   /** The padlock on a portcullis or a hidden door, by the number it shares with its key (`locks.ts`). */
   lock?: number;
+  /**
+   * A change planned for a finished wall (`change_wall`): the wall it is to
+   * become and its bill. The wall standing stays what it is -- shut, carrying
+   * what rests on it -- until the last of this bill goes in, and then becomes
+   * the new wall in that one go. On the island, the `wall_change` row.
+   */
+  change?: WallChange;
+}
+
+/** The wall a finished wall is to become, and what is left to build of it (`Wall.change`). */
+export interface WallChange extends Bill {
+  type: WallType;
+  material: string;
 }
 
 /**
@@ -634,7 +647,7 @@ export function jobLevel(b: Building, t: { level?: number }): number {
 /** The jobs done on one storey of a building, whose storey a target names: the island's `private.storey_job`. */
 export const STOREY_JOBS: ReadonlySet<string> = new Set([
   'plan_wall', 'plan_fence', 'build_wall', 'remove_wall', 'plan_floor', 'build_floor', 'remove_floor',
-  'paint_wall', 'strip_wall_paint', 'paint_floor', 'repoint_wall', 'no_plan', 'mark_out',
+  'paint_wall', 'strip_wall_paint', 'paint_floor', 'repoint_wall', 'no_plan', 'mark_out', 'change_wall',
   'plan_column', 'build_column', 'remove_column',
 ]);
 

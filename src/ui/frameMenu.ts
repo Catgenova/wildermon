@@ -8,7 +8,7 @@
 import type { Bill } from '../game/building';
 import { buildRow } from './buildCounts';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../game/actions';
-import { materialName } from '../game/buildActions';
+import { fenceScale, materialName } from '../game/buildActions';
 import {
   columnBill,
   describeNeeds,
@@ -36,9 +36,10 @@ import {
   type RoofShape,
   type Side,
   type StairHand,
+  type Wall,
 } from '../game/building';
 import { cornerName } from '../game/frame';
-import { fitsMaterial, hiddenDoorIronWords, hiddenDoorWants, planHiddenDoor } from '../game/gates';
+import { fitsMaterial, hiddenDoorIronWords, hiddenDoorWants, planHiddenDoor, wallWords } from '../game/gates';
 import type { Game } from '../game/game';
 import { nearestSide, type Pick } from '../render/renderer';
 import type { MenuItem } from './contextmenu';
@@ -75,6 +76,55 @@ const materials = (g: Game, def: ActionDef, target: TileTarget, label: string, b
     }),
   };
 };
+
+/**
+ * A wall of a building's change (`change_wall`): every wall type and
+ * material it may be planned as where it stands, each with its bill and, if
+ * refused, why (`why`, the menu's own refusal); not the wall standing, nor a
+ * change already planned on it. With a change planned, the row building it
+ * comes first, and the wall standing is offered too, which drops the change.
+ */
+export function changeWallRows(g: Game, wall: Wall, target: TileTarget, why: (def: ActionDef, t: TileTarget) => string | null): MenuItem[] {
+  const def = act('change_wall');
+  if (!target.side || !def.applies(target, g)) return [];
+  const side = SIDE_NAMES[target.side];
+  const rows: MenuItem[] = [];
+  const ch = wall.change;
+  if (ch) {
+    const plan = wallWords(ch.type, MATERIAL_BY_ID.get(ch.material)?.name ?? ch.material);
+    const buildDef = act('build_wall');
+    rows.push(buildRow(g, buildDef, target, `Build change (${side}): ${plan} · needs ${describeNeeds(ch, materialName)}`, ch, why(buildDef, target)));
+  }
+  const standing = g.buildings.seenType(wall);
+  const types: MenuItem[] = [];
+  for (const wt of WALL_TYPES) {
+    // A hidden door is planned on a bare side (`HIDDEN_DOOR_ALONE`); a railing only off the ground (`frame.ts`).
+    if (wt.id === 'hidden_door' || (wt.id === 'railing' && wall.level < 1 && !g.buildings.onPiers(target.x, target.y))) continue;
+    const kids: MenuItem[] = [];
+    for (const m of MATERIALS_WITH_GLASS) {
+      if (!fitsMaterial(wt.id, m) || !takesAs(m, { wall: wt.id })) continue;
+      const stands = wt.id === standing && m.id === wall.material;
+      if ((stands && !ch) || (ch?.type === wt.id && ch.material === m.id)) continue;
+      const t: TileTarget = { ...target, wallType: wt.id, material: m.id };
+      const no = why(def, t);
+      kids.push({
+        label: m.name,
+        note: stands ? 'standing wall: drops the change' : describeNeeds(wallBill(m.id, wt.id, fenceScale(g, wt.id)), materialName),
+        hint: no ?? undefined,
+        disabled: !!no,
+        onSelect: () => g.requestAction(def, t),
+      });
+    }
+    if (!kids.length) continue;
+    // Refused alike in every material: said on the type.
+    const one = kids.every((k) => k.disabled && k.hint === kids[0].hint);
+    types.push(one ? { label: wt.name, hint: kids[0].hint, disabled: true } : { label: wt.name, children: kids });
+  }
+  const label = `Change wall (${side})`;
+  const all = types.length > 0 && types.every((k) => k.disabled && k.hint === types[0].hint);
+  rows.push(all ? { label, hint: types[0].hint, disabled: true } : { label, children: types });
+  return rows;
+}
 
 /**
  * The roof planned over a jetty of a building that has no roof yet is planned
@@ -247,6 +297,7 @@ export function frameJettyEntries(g: Game, pick: Pick, place?: PlaceStairs, stor
         const name = WALL_TYPE_BY_ID.get(wall.type)?.name.toLowerCase() ?? 'wall';
         if (!isDone(wall)) rows.push(build(g, act('build_wall'), withSide, `Build ${name} (${SIDE_NAMES[side]}) · needs ${describeNeeds(wall, materialName)}`, wall));
         rows.push(entry(g, act('remove_wall'), withSide, `Remove ${name} (${SIDE_NAMES[side]})`));
+        rows.push(...changeWallRows(g, wall, withSide, (def, t) => def.check?.(t, g) ?? null));
       } else {
         const plan = act('plan_wall');
         const probe = plan.check?.({ ...withSide, wallType: 'railing', material: 'log' }, g) ?? null;
