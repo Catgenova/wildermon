@@ -4214,6 +4214,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 377,
+    day: '2026-10-30',
+    lines: () => ['Fixed: wall tops in storey view: a wall under a hidden storey keeps its cap (was: an open slot, a joining wall\'s cap standing in it); moss on a cap only where no floor or roof of the storey above covers it; cap joints drawn solid (was: dotted).'],
+  },
+  {
     n: 376,
     day: '2026-10-30',
     lines: () => ['Removed: the first-steps card over the action bar and its setting. The journal keeps every goal.'],

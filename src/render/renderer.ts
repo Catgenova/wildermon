@@ -12511,13 +12511,23 @@ export class Renderer {
    * Whether a finished wall's top is covered by the storey stood on it, and so
    * draws no cap of its own, as `drawWallBody` has it (`lidded`): a painted
    * masonry's under a wall of the storey over it at least as thick and not a
-   * railing; one whose coat goes over its head under any.
+   * railing; one whose coat goes over its head under any. A storey that is
+   * not drawn (`storeyHidden`) covers nothing.
    */
   private capHidden(w: Wall, b: Border): boolean {
     const kind = WALL_TYPE_BY_ID.get(w.type);
     if (kind?.low || kind?.railed) return false;
     const cob = this.masonryOf(w);
     if (!cob) return false;
+    /*
+     * Reported: "some wall tops still glitched." Looking at one storey lifts
+     * the one over it off, and a wall that storey stood on was left with no
+     * cap at all -- its head an open slot, the cap of a partition coming up
+     * to it standing in the slot as a slab of its own. Its top is in sight,
+     * so it is capped, and its corners and junctions laid, as a wall with
+     * nothing on it is.
+     */
+    if (this.storeyHidden(w.level + 1)) return false;
     const up = this.game.buildings.wallOnBorder(w.level + 1, b);
     if (!up || !isDone(up)) return false;
     if (cob.wrap) return true;
@@ -13503,6 +13513,13 @@ export class Renderer {
         : Math.abs(border.x * 31 + border.y * 17 + wall.level * 7) % cob.face.length;
       const up = bld.wallOnBorder(wall.level + 1, border);
       const roofed = !!up && isDone(up);
+      /**
+       * And that storey's wall where it is drawn over this one's head: not
+       * where looking at one storey lifts it off (`storeyHidden`), which
+       * leaves the top in sight to be capped (`capHidden`). What grows on the
+       * head and how the head is shaped go by `roofed`, the wall as built.
+       */
+      const over = roofed && !this.storeyHidden(wall.level + 1) ? up : undefined;
       /*
        * The tile the camera is on this side of. A border runs along the top of
        * its own tile or down its left, so which tile that is depends on the
@@ -13610,6 +13627,16 @@ export class Renderer {
           : [px(t1, k1, s), py(t1, k1, s)];
         const [blx, bly] = across ? [px(a0, k1, 1), py(a0, k1, 1)] : [px(t0, k0, s), py(t0, k0, s)];
         ctx.save();
+        /*
+         * Reported: "some wall tops still glitched." A dotted edge down the
+         * back of a cap and a ladder of dots for every joint across it: a
+         * cap's picture is `capH` pixels from its back edge to its front,
+         * put down in a few pixels of the screen, its joints a pixel or two
+         * wide, and sampled straight off the picture that far down a joint
+         * came out on one pixel in two. Laid over the top, a picture is
+         * taken down with every pixel of it counted, as a shrunk picture is.
+         */
+        if (across) ctx.imageSmoothingQuality = 'high';
         ctx.transform(
           (trx - tlx) / img.width, (try_ - tly) / img.width,
           (blx - tlx) / img.height, (bly - tly) / img.height,
@@ -13636,6 +13663,8 @@ export class Renderer {
       const capStone = (img: HTMLCanvasElement, a: number, b: number, far = -1): void => {
         const tlx = px(a, 1, far), tly = py(a, 1, far);
         ctx.save();
+        // Taken down with every pixel of it counted, as a cap's picture is (`lay`).
+        ctx.imageSmoothingQuality = 'high';
         ctx.transform((px(b, 1, far) - tlx) / img.width, (py(b, 1, far) - tly) / img.width,
           (px(a, 1, 1) - tlx) / img.height, (py(a, 1, 1) - tly) / img.height, tlx, tly);
         ctx.drawImage(img, 0, 0);
@@ -14399,8 +14428,9 @@ export class Renderer {
       // came out past the face above. So is the cope of any other masonry
       // under a storey as thick as it is: drawn from a tile later than the
       // storey over the corner, its end came out over that storey's foot.
-      const lidded = roofed && (WALL_TYPE_BY_ID.get(up.type)?.thick ?? 1) >= (kind?.thick ?? 1) && !WALL_TYPE_BY_ID.get(up.type)?.railed;
-      if (cob.wrap) { if (!roofed) top(C0, C1, topLit); } else if (!lidded) {
+      // Only under a storey that is drawn (`over`), as `capHidden` has it.
+      const lidded = !!over && (WALL_TYPE_BY_ID.get(over.type)?.thick ?? 1) >= (kind?.thick ?? 1) && !WALL_TYPE_BY_ID.get(over.type)?.railed;
+      if (cob.wrap) { if (!over) top(C0, C1, topLit); } else if (!lidded) {
         cap(C0, C1, 1);
         ctx.fillStyle = rgb(mat.color, topLit);
         ctx.fill();
@@ -14506,6 +14536,17 @@ export class Renderer {
     ctx.globalAlpha = 1;
   }
 
+  /** Whether a wall's top is open to the sky: no finished floor, deck or roof of the storey over it on the tile either side of it. */
+  private openOver(wall: Wall): boolean {
+    const bld = this.game.buildings;
+    const [ox, oy] = wall.dir === 'h' ? [wall.x, wall.y - 1] : [wall.x - 1, wall.y];
+    for (const [tx, ty] of [[wall.x, wall.y], [ox, oy]]) {
+      const f = bld.floor(wall.level + 1, tx, ty);
+      if (f && isDone(f)) return false;
+    }
+    return true;
+  }
+
   /**
    * The ivy a wall has grown (`greening.ts`), on the face the camera is on.
    *
@@ -14529,8 +14570,14 @@ export class Renderer {
      * Moss along its coping first, where nothing stands on it, so the clumps
      * of any trail over the top lie over the moss: seen from indoors as well,
      * since a top is a top from either side.
+     *
+     * Reported: "some wall tops still glitched." Green specks on the cap of
+     * every partition of a house with a storey over it, its floor lifted off
+     * to look into the room. Out of the weather under a floor, a deck or a
+     * roof of the storey over it, on either side, a top grows none
+     * (`openOver`).
      */
-    if (!roofed) {
+    if (!roofed && this.openOver(wall)) {
       const g = greenShows(days, 0, this.wetness(wall.x, wall.y));
       const cm = capMoss(Math.floor(hashOf(wall.x, wall.y, wall.level, wall.dir === 'h' ? 3 : 4) * 3), Math.round(g * PAVE_STAGES));
       if (cm) {
