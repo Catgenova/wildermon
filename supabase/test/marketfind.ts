@@ -140,9 +140,10 @@ begin
   insert into said values ('LONG', jsonb_array_length(rpc_sales(w, repeat('x', 100))->'sales')::text);
   insert into said values ('NONE', jsonb_array_length(rpc_sales(w, 'pickaxe')->'sales')::text);
 
-  -- A settlement of Fenna's, ten tiles from where Bryn will stand away from the board.
+  -- A settlement of Fenna's, three tiles from where Bryn will stand away from the board: nearer than the suite's own
+  -- (Latecomer, staked over a hoard buried where the rolls put it, as near as ten tiles some runs).
   insert into player (world_id, uid, name, x, y) values (w, fenna, 'Fenna', ox, ay);
-  insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Findhold', floor(ox)::int, floor(ay)::int + 10, 3, 1, fenna);
+  insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Findhold', floor(ox)::int, floor(ay)::int + 3, 3, 1, fenna);
   v_got := rpc_market(w);
   insert into said values ('ATBOARD', (v_got->>'board') || ',' || coalesce(v_got->>'token', 'none'));
   update player set body_at = now(), x = ox where world_id = w and uid = bryn;
@@ -150,7 +151,7 @@ begin
   insert into said values ('AWAY', (v_got->>'board') || ',' || coalesce(v_got->'token'->>'deed', 'none'));
   insert into said values ('NEAREST', (select name from deed d where d.world_id = w
     order by (d.x + 0.5 - ox) ^ 2 + (d.y + 0.5 - ay) ^ 2 limit 1) || ',' || (v_got->'token'->>'x') || ',' || (v_got->'token'->>'y')
-    || ',' || floor(ox)::int || ',' || (floor(ay)::int + 10));
+    || ',' || floor(ox)::int || ',' || (floor(ay)::int + 3));
   insert into said values ('PACE', private.pace_class('rpc_sales'));
   insert into said values ('DAYS', sale_days()::text);
 end $b$;

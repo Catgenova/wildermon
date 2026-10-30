@@ -171,7 +171,7 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   // of, which is the one place the material of the thing and the noise of
   // making it genuinely part company.
   plan_building: 'wood', add_to_building: 'wood', remove_from_plan: 'wood',
-  plan_wall: 'wood', plan_fence: 'wood', build_wall: 'wood', remove_wall: 'wood',
+  plan_wall: 'wood', plan_fence: 'wood', build_wall: 'wood', change_wall: 'wood', remove_wall: 'wood',
   add_floor: 'wood', plan_floor: 'wood', build_floor: 'wood', remove_floor: 'wood', remove_storey: 'wood', no_plan: 'wood', mark_out: 'wood',
   plan_column: 'wood', build_column: 'wood', remove_column: 'wood',
   plan_bridge: 'wood', build_bridge: 'wood', demolish_bridge: 'wood', plan_aqueduct: 'wood',
