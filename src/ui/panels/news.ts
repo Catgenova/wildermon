@@ -172,6 +172,7 @@ import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
 import { CHANNELS, FIGHTING, gradeId, traitOf, traitSays, type TraitDef } from '../../game/traits';
 import { footing, PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import { STOKE_SAYS, STOKE_SMELT_SAYS, STOKE_SMELTS_AT } from '../../game/creatures';
+import { POTTERY } from '../../game/kiln';
 import { FIRE_CAPACITY as FIRE_CAPACITY_338, FUEL_VALUES as FUEL_VALUES_337 } from '../../game/campfire';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
@@ -4214,6 +4215,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 385,
+    day: '2026-10-30',
+    lines: () => [`Changed: ${SPECIES.potta.name} line, task words: loads ${listed(POTTERY.map((p) => itemDef(p.unfired).name.toLowerCase()))} (was: "unfired pottery"). Same task.`],
+  },
+  {
     n: 384,
     day: '2026-10-30',
     lines: () => {

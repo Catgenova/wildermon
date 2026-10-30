@@ -2889,6 +2889,7 @@ export function helpText(): string {
       <li><b>Kiln</b>: ${bill('make_kiln')}, trowel; carried; set down on dry flat ground; picked up when cold and empty.</li>
       <li>Fuel as a fire (peat and coal included); load the ware; light. Fire time per piece; a better kiln is faster and keeps more of the potter's quality (QL).</li>
       <li>Fired: bowl (cooking), pot (pottage), jar (preserves), brick (building).</li>
+      <li><b>${SPECIES.potta.name}</b> line (settlement worker): ${GATHER_DO.kiln}. Does not light or fuel them.</li>
       <li>Artisan <b>amphora</b> (${bill('make_amphora')}, fired like a pot): holds ${itemDef('amphora').holds} of one food or drink; contents rot at ${frac(itemDef('amphora').shelter ?? 1)} the rate on the ground.</li>
       <li>Artisan <b>potter's wheel</b> (${bill('make_potters_wheel')}): anybody shaping clay within ${furnitureDef('potters_wheel').pace?.reach} tiles takes ${percent(1 - (furnitureDef('potters_wheel').pace?.by ?? 1))} less time per action.</li>
       <li>Artisan <b>glaze</b>: a fired pot, bowl, jar or amphora + ${GLAZE_ASH} lot of ashes: never decays.</li>

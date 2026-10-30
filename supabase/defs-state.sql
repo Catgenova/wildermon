@@ -2576,7 +2576,7 @@ insert into species_diet values ('forga', 'bread');
 insert into species_diet values ('forga', 'nuts');
 insert into species_diet values ('forga', 'cooked_meat');
 update species_def set favourite = 'meat' where id = 'forga';
-insert into species_def values ('potta', 'Kilnlet', 'Settlement task: empty your kilns into your settlement stores and load them with unfired pottery from your settlement stores, up to capacity. Does not light or fuel them. Level: pottery. Evolves at level 25: Terrabrick.', 22, 2, 1.8, 14, 0.11, 'a vegetable or bread', true, 'kiln', 6, 4, false, false, false, false, true, false, false, false, false, false, false, false, null, null, null, null, null, null, null);
+insert into species_def values ('potta', 'Kilnlet', 'Settlement task: empty your kilns into your settlement stores and load them from your settlement stores, up to capacity. Loads: unfired clay bricks, unfired clay bowls, unfired clay pots, unfired clay jars and unfired amphoras. Does not light or fuel them. Level: pottery. Evolves at level 25: Terrabrick.', 22, 2, 1.8, 14, 0.11, 'a vegetable or bread', true, 'kiln', 6, 4, false, false, false, false, true, false, false, false, false, false, false, false, null, null, null, null, null, null, null);
 update species_def set stages = array['Terrabrick', 'Kilnspire']::text[] where id = 'potta';
 update species_def set perk = 'blood', perk_n = 1.2, perk_channel = 'range' where id = 'potta';
 update species_def set was = array['Potta']::text[] where id = 'potta';
@@ -4746,7 +4746,7 @@ insert into gather_def values ('bush', 'forestry', 'picking bushes and vines', '
 insert into gather_def values ('grass', 'foraging', 'cutting grass and moss', 'cut grass and moss');
 insert into gather_def values ('pan', 'prospecting', 'panning', 'pan sand at the water''s edge');
 insert into gather_def values ('smelt', 'smelting', 'charging smelters', 'charge your smelters with ore from your settlement stores and empty them');
-insert into gather_def values ('kiln', 'pottery', 'loading kilns', 'load your kilns with unfired pottery from your settlement stores and empty them');
+insert into gather_def values ('kiln', 'pottery', 'loading kilns', 'load your kilns with unfired clay bricks, unfired clay bowls, unfired clay pots, unfired clay jars and unfired amphoras from your settlement stores and empty them');
 insert into gather_def values ('ash', 'alchemy', 'raking ashes', 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye');
 insert into gather_def values ('brew', 'brewing', 'brewing', 'start a brew in each idle water barrel of yours from makings in your settlement stores');
 insert into gather_def values ('cook', 'cooking', 'cooking', 'cook from your settlement stores at your lit campfires and ovens');

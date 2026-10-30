@@ -24,6 +24,8 @@ import { greenOnTile, greenNow, GREEN_DAY } from '../../src/game/greening';
 import { flowerSeason, flowersOn } from '../../src/world/flowers';
 import { flowersHere } from '../../src/game/wildflowers';
 import { SKEP, SKEP_REACH } from '../../src/game/bees';
+import { POTTERY } from '../../src/game/kiln';
+import { itemDef } from '../../src/game/items';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -112,6 +114,23 @@ begin
   perform worker_settle(w, v_id);
   insert into said select 'KILN', coalesce((select string_agg(def || ' ' || count, ',' order by def) from item where world_id = w and holder = 'crate' and crate = 7201), '-')
     || '|' || jsonb_array_length(furnace_jobs(p)) || '|' || jsonb_array_length(furnace_output(p)) from placed p where p.id = v_p;
+  update creature set mode = 'stored' where world_id = w and id = v_id;
+  delete from item where world_id = w and holder = 'crate' and crate = 7201;
+  delete from placed where id = v_p;
+
+  -- Potta again: an empty kiln, and one of every piece of unfired clay a kiln fires in the crate.
+  insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, lit, since, state, made_by)
+    values (w, 'kiln', 19, 16, 0, 0, 19.5, 16.5, 50, 0, false, now(), jsonb_build_object('jobs', '[]'::jsonb, 'output', '[]'::jsonb), u)
+    returning id into v_p;
+  insert into item (world_id, holder, crate, def, ql, count) select w, 'crate', 7201, pd.unfired, 30, 1 from pottery_def pd;
+  insert into said select 'WARES', string_agg(pd.unfired || '>' || pd.fired, ',' order by pd.unfired) from pottery_def pd;
+  select id into v_id from hand where species = 'potta';
+  update creature set mode = 'deed', until = now() - interval '3600 seconds', settled_at = now() - interval '3600 seconds', phase = 'idle',
+         carrying = null where world_id = w and id = v_id;
+  perform worker_settle(w, v_id);
+  insert into said select 'KILNWARES', coalesce((select string_agg(j->>'makes', ',' order by j->>'makes') from jsonb_array_elements(furnace_jobs(p)) j), '-')
+    || '|' || coalesce((select string_agg(def, ',' order by def) from item where world_id = w and holder = 'crate' and crate = 7201), '-')
+    from placed p where p.id = v_p;
   update creature set mode = 'stored' where world_id = w and id = v_id;
   delete from item where world_id = w and holder = 'crate' and crate = 7201;
   delete from placed where id = v_p;
@@ -249,6 +268,12 @@ const [smeltStores, smeltJobs, smeltOut] = at('SMELT').split('|');
 check('on the island, a forga takes the lumps out of a smelter into the stores and charges it with the ore', smeltStores === 'copper_lump 2' && smeltJobs === '3' && smeltOut === '0', at('SMELT'));
 const [kilnStores, kilnJobs, kilnOut] = at('KILN').split('|');
 check('a potta takes a fired brick out of a kiln into the stores and packs it with the unfired ones', kilnStores === 'clay_brick 1' && kilnJobs === '2' && kilnOut === '0', at('KILN'));
+const WARES = [...POTTERY].sort((a, b) => a.unfired.localeCompare(b.unfired));
+check('the island fires the same unfired clay into the same ware as the browser', at('WARES') === WARES.map((p) => `${p.unfired}>${p.fired}`).join(','), at('WARES'));
+check('a potta loads every piece of unfired clay a kiln fires, clay bricks among them, and leaves none in the stores',
+  at('KILNWARES') === `${POTTERY.map((p) => p.fired).sort().join(',')}|-` && at('KILNWARES').split(',').includes('clay_brick'), at('KILNWARES'));
+check('and its words name each one', POTTERY.every((p) => SPECIES.potta.description.includes(itemDef(p.unfired).name.toLowerCase()) && GATHER_DO.kiln.includes(itemDef(p.unfired).name.toLowerCase())),
+  `${SPECIES.potta.description} / ${GATHER_DO.kiln}`);
 const [ashStores, ashLeft] = at('ASH').split('|');
 check('a cindra rakes the two whole ashes out of a campfire and leaches them with the bucket of water into lye', ashStores === 'lye_bucket 1' && ashLeft === '0.50', at('ASH'));
 const [brewLiquid, brewLitres, brewWorking, wheatLeft] = at('BREW').split('|');
@@ -318,6 +343,16 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   worker(g, 'potta');
   run(g, 90);
   check('a potta takes a fired brick out of a kiln and packs it with the unfired ones', held(crate) === 'clay_brick 1' && k.jobs.length === 2 && k.output.length === 0, `${held(crate)} ${k.jobs.length}`);
+}
+{
+  const g = body();
+  const crate = stock(g, POTTERY.map((p) => [p.unfired, 1] as [string, number]));
+  const k = g.addKiln(23, 21, 0, 0, 50);
+  worker(g, 'potta');
+  run(g, 300);
+  const makes = k.jobs.map((j) => j.makes).sort().join(',');
+  check('in the browser, a potta loads every piece of unfired clay a kiln fires, clay bricks among them, and leaves none in the stores',
+    makes === POTTERY.map((p) => p.fired).sort().join(',') && held(crate) === '-', `${makes} / ${held(crate)}`);
 }
 {
   const g = body();
