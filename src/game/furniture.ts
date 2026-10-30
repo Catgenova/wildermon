@@ -15,6 +15,7 @@ import { colourWord, dyeHex, readDye } from './dyestuffs';
 import { ENCHANTERS_PLINTH } from './enchant';
 import { lanternReach } from './light';
 import { storeMoveRefusal, storeUse } from './stores';
+import { WATER_MOTE, WATER_MOTES_EACH } from './motes';
 
 /**
  * What a store takes, for the five that take one sort of thing: raw materials,
@@ -396,7 +397,7 @@ export const FURNITURE: FurnitureDef[] = [
     '',
     undefined, { skill: 'ropemaking', tool: 'carving_knife', skep: true }),
   // A Fisher's pond: dug and puddled with clay, a ring of stones round it and reeds at the edge. It stocks itself.
-  piece('fish_pond', 'Fish pond', 2, 2, [['clay', 20], ['rock_shards', 12], ['reed', 8]], 20, 20, '', undefined, { pond: 10, skill: 'fishing', tool: 'shovel', perk: 'fish_pond', deed: true }),
+  piece('fish_pond', 'Fish pond', 2, 2, [['clay', 20], ['rock_shards', 12], ['reed', 8], [WATER_MOTE, WATER_MOTES_EACH]], 20, 20, '', undefined, { pond: 10, skill: 'fishing', tool: 'shovel', perk: 'fish_pond', deed: true }),
   // An Artisan's potter's wheel: a stone flywheel on a spindle in a plank frame, and anybody's pottery near it goes quicker.
   piece('potters_wheel', 'Potter\'s wheel', 1, 1, [['plank', 12], ['shaft', 2], ['stone_slab', 1], ['nail', 12]], 18, 12,
     '', undefined,
@@ -500,7 +501,7 @@ export const FURNITURE: FurnitureDef[] = [
         { skill: 'masonry', tool: 'trowel', climber }),
     ];
   }),
-  piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16]], 30, 24, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
+  piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16], [WATER_MOTE, WATER_MOTES_EACH]], 30, 24, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
   /*
    * A tiered fountain: basins of cut slab, each smaller than the one under
    * it, on a coursed column, the water welling over the top one and spilling
@@ -510,7 +511,7 @@ export const FURNITURE: FurnitureDef[] = [
    * the whole of what makes a thing a well, on both sides. Its cost is a
    * well's, in dressed stone rather than a windlass.
    */
-  piece('fountain', 'Tiered fountain', 3, 3, [['stone_brick', 32], ['stone_slab', 3], ['mortar', 16]], 32, 26, '', undefined, { skill: 'masonry', tool: 'trowel', well: FOUNTAIN_HOLDS }),
+  piece('fountain', 'Tiered fountain', 3, 3, [['stone_brick', 32], ['stone_slab', 3], ['mortar', 16], [WATER_MOTE, WATER_MOTES_EACH]], 32, 26, '', undefined, { skill: 'masonry', tool: 'trowel', well: FOUNTAIN_HOLDS }),
   // Storage of a different sort: raw materials, rubbish, and something to pull it in.
   piece('bulk_bin', 'Raw material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', 400, { takes: 'raw' }),
   /*

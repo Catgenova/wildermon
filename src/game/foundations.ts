@@ -4,6 +4,7 @@ import { isDone, progressOf, type Bill } from './building';
 import { metres, TileType } from '../world/tiles';
 import { POOL_DEPTH, POOL_LIP, poolFloor, poolLevel } from '../world/springs';
 import { greenNow } from './greening';
+import { WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH } from './motes';
 
 /**
  * Foundations.
@@ -217,12 +218,13 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!isTile(t)) return null;
       if (!g.inventory.has('pickaxe')) return 'Need a pickaxe.';
+      if (g.inventory.count(WATER_MOTE) < WATER_MOTES_EACH) return WATER_MOTE_NEED;
       return g.poolReason(t.x, t.y);
     },
     perform: (t, g) => {
       if (!isTile(t) || g.poolReason(t.x, t.y)) return;
       const f = g.slabAt(t.x, t.y);
-      if (!f) return;
+      if (!f || !g.inventory.consume(WATER_MOTE, WATER_MOTES_EACH)) return;
       f.pool = true;
       g.poolsChanged(f.x, f.y);
       g.logMsg(

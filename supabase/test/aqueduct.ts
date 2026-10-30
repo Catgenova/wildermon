@@ -896,6 +896,7 @@ begin
   insert into bridge_span (world_id, bridge, n, x, y, needed, total)
     select w, v_b, t.n, t.x, t.y, '{}'::jsonb, '{"mortar":1}'::jsonb from span_tiles(${POOL[0]}, ${POOL[1]}, ${TO[0]}, ${TO[1]}) t;
   update player set body_at = now(), x = ${POOL[0] + 1}.5, y = ${POOL[1] + 1}.5 where world_id = w and uid = me;
+  perform give(w, me, 'water_mote', 1, 30);
   perform act_perform(w, me, 'dig_spring', '${DIG}');
   insert into said values ('dug', (select text from event where world_id = w and uid = me order by n desc limit 1));
   delete from spring where world_id = w;
@@ -926,6 +927,7 @@ rollback;`));
   g.springs.lay();
   g.player.x = POOL[0] + 1.5;
   g.player.y = POOL[1] + 1.5;
+  g.inventory.add('water_mote', { ql: 30 });
   act('dig_spring').perform(tile(POOL[0], POOL[1]), g);
   const dug = g.log[g.log.length - 1]?.text ?? '';
   say(dug === r('dug') && dug.includes(`along the aqueduct from ${POOL[0]}, ${POOL[1]}`),

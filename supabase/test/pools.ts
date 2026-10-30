@@ -123,7 +123,9 @@ begin
   insert into foundation (world_id, id, x, y, top, needed, total, made_by) values
     (w, 1, 10, 40, ${TOP}, '{"concrete":0}', '{"concrete":1}', me), (w, 2, 11, 40, ${TOP}, '{"concrete":0}', '{"concrete":1}', me);
   insert into item (world_id, def, holder, holder_uid, ql, count) values
-    (w, 'pickaxe', 'player', me, 40, 1), (w, 'trowel', 'player', me, 40, 1), (w, 'shovel', 'player', me, 40, 1);
+    (w, 'pickaxe', 'player', me, 40, 1), (w, 'trowel', 'player', me, 40, 1), (w, 'shovel', 'player', me, 40, 1),
+    -- A water mote for each pool and the spring dug below, and one over for the last refusal.
+    (w, 'water_mote', 'player', me, 30, 4);
 
   insert into said values ('nopick', coalesce(act_refusal(w, me, 'fill_pool', '{"kind":"tile","x":10,"y":40}'), 'none'));
   insert into said values ('dig', coalesce(act_refusal(w, me, 'dig_pool', '{"kind":"tile","x":10,"y":40}'), 'none'));
@@ -188,6 +190,8 @@ function browser(): void {
     f.needed.concrete = 0;
   }
   for (const t of ['pickaxe', 'trowel', 'shovel']) if (!g.inventory.has(t)) g.inventory.add(t, { ql: 40 });
+  // A water mote for each pool and the spring dug below, and one over.
+  g.inventory.add('water_mote', { count: 4, ql: 30 });
   g.update(0.01);
   const dig = act('dig_pool');
   const could = dig.applies(tile(bx, by), g) && (dig.check?.(tile(bx, by), g) ?? null) === null;

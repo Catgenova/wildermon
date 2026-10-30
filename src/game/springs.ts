@@ -18,6 +18,7 @@ import {
 } from '../world/springs';
 import { AQUEDUCT_FLOW, pondRate, settleWater, type Channel } from '../world/aqueducts';
 import { metres } from '../world/tiles';
+import { WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH } from './motes';
 
 /** One spring, and what its water does. */
 export interface Spring {
@@ -407,15 +408,17 @@ export const SPRING_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
       if (!g.inventory.has('shovel')) return 'Need a shovel.';
+      if (g.inventory.count(WATER_MOTE) < WATER_MOTES_EACH) return WATER_MOTE_NEED;
       if (g.buildings.buildingAt(t.x, t.y)) return 'Not inside a building.';
       // On an island the island counts whose springs are whose; here every one is yours.
       if (!g.springs.fromIsland && g.springs.keptBy(null) >= SPRINGS_EACH) return `Max ${SPRINGS_EACH} springs: stop one up first.`;
       return g.springs.refusal(t.x, t.y);
     },
     perform: (t, g) => {
-      if (t.kind !== 'tile') return;
+      if (t.kind !== 'tile' || g.inventory.count(WATER_MOTE) < WATER_MOTES_EACH) return;
       const s = g.springs.dig(t.x, t.y, null, Date.now());
       if (!s) return;
+      g.inventory.consume(WATER_MOTE, WATER_MOTES_EACH);
       g.gainSkill('digging');
       // For the journal (the island's `perform_spring` the same).
       g.note('spring');

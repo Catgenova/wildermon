@@ -161,6 +161,7 @@ import {
 import { CANDLE_BURN, TORCH_BURN } from '../src/game/light';
 import {
   ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, MOTE_ELEMENTS, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRL_DRAWS, SWIRL_SAID, SWIRL_TRIES, SWIRLS_A_DAY,
+  WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH,
 } from '../src/game/motes';
 import {
   TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
@@ -2136,6 +2137,10 @@ for (const [fn, v] of [
 out.push(`create or replace function mote_elements() returns text[] language sql immutable as $fn$ select array[${MOTE_ELEMENTS.map(q).join(', ')}]::text[] $fn$;`);
 out.push(`create or replace function land_elements() returns text[] language sql immutable as $fn$ select array[${LAND_ELEMENTS.map(q).join(', ')}]::text[] $fn$;`);
 out.push(`create or replace function region_element(p_region int) returns text language sql immutable as $fn$ select case p_region ${REGIONS.map((R, i) => (ISLAND_ELEMENT[R.key] ? `when ${i} then ${q(ISLAND_ELEMENT[R.key])} ` : '')).join('')}end $fn$;`);
+/* What digging a spring or a pool takes and uses up, and what it is refused without (`WATER_MOTE_NEED`). */
+out.push(`create or replace function water_mote() returns text language sql immutable as $fn$ select ${q(WATER_MOTE)} $fn$;`);
+out.push(`create or replace function water_motes_each() returns int language sql immutable as $fn$ select ${q(WATER_MOTES_EACH)} $fn$;`);
+out.push(`create or replace function water_mote_need() returns text language sql immutable as $fn$ select ${q(WATER_MOTE_NEED)} $fn$;`);
 out.push(`create or replace function swirl_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${Object.entries(SWIRL_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
 /*
  * Tracking (`tracking.ts`): the job and its skill, how far a track reaches and

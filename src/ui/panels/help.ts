@@ -9,7 +9,7 @@ import { lifeWords } from '../runecut-life';
 import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import {
   ACTION_BY_ID, CHIP_CHANCE, CLEARED_TO, FRUIT_MATURE, FRUIT_OLD, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MINE_COLLAPSE, MINE_DEPTH, MOSS_PER_CUT, MOSS_PLANT,
-  PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE,
+  PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE, WATER_MOTE_USES,
 } from '../../game/actions';
 import { CODE_DIGITS, CODE_SECONDS } from '../../game/keeper';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEM_ODDS, GEMS, JEWEL_BONUS, tradeName } from '../../game/gems';
@@ -167,7 +167,7 @@ import {
 import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
-import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
+import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
 import { LANDING_STAND, RUNESTONES, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
@@ -2194,6 +2194,7 @@ export function helpText(): string {
       ${listed(MOTE_COUNTS.map((n) => `${n} at elementalism ${n === MOTES_LEAST ? `under ${MOTES_STEP}` : `${(n - MOTES_LEAST) * MOTES_STEP}${n === MOTES_MOST ? ' and up' : ''}`}`))};
       Quality (QL) = your elementalism.</li>
       <li>Then gone for everybody: the first to finish gets it; others are told it is gone.</li>
+      <li><b>Water mote</b> spent on: ${WATER_MOTE_USES.map(([what, n]) => `${what} ${n}`).join(', ')}.</li>
       <li>Trains <b>elementalism</b> (only source): about ${listed([1, 20, 50].map((v) => `+${skillGain(v, 1, 1).toFixed(2)} at ${v}`))}.</li>
     </ul>
     <h3>Runestones and the Telestone</h3>
@@ -3444,7 +3445,7 @@ export function helpText(): string {
     </ul>
     <h3>Springs, ponds and streams</h3>
     <ul>
-      <li><b>Dig a spring</b> (shovel, right-click the bottom of a hollow): fills the hollow to its lowest rim point at <b>${metres(FILL_RATE)} m a second</b>.
+      <li><b>Dig a spring</b> (shovel, ${WATER_MOTES_EACH} water mote used up; right-click the bottom of a hollow): fills the hollow to its lowest rim point at <b>${metres(FILL_RATE)} m a second</b>.
       The hollow must hold at least <b>${metres(SPRING_DEPTH)} m</b>; one spreading over more than <b>${POND_MOST} corners</b> never fills.</li>
       <li>Full: <b>spills</b> over the lowest point, runs downhill the steepest way to the next hollow, fills it, and so on: into the sea, or into the ground after
       <b>${RUN_MOST} tiles</b> with nothing to fill, a hollow too wide, or <b>${CHAIN_MOST} ponds</b>. Crosses level ground to the nearest way down.
@@ -3452,7 +3453,7 @@ export function helpText(): string {
       <li>A pond is water for everything (buckets, skins, drinking, fishing). Nothing built or planted in one; no launching. Deeper than <b>${metres(SWIM_DEPTH)} m</b>: swim.</li>
       <li>Follows the ground: a notch in the rim lowers it; deeper digging deepens it; filling the hollow stops the spring. <b>Stop up the spring</b> removes it and its water.</li>
       <li>Max <b>${SPRINGS_EACH}</b> springs per person. Off a settlement only the digger may stop one; on one, whoever may shape its ground may dig or stop any, nobody else.</li>
-      <li><b>Dig a pool</b> (pickaxe, in a poured foundation): water <b>${metres(POOL_DEPTH - POOL_LIP)} m</b> deep, <b>${metres(POOL_LIP)} m</b> under the slab top, spring or not.
+      <li><b>Dig a pool</b> (pickaxe, ${WATER_MOTES_EACH} water mote used up; in a poured foundation): water <b>${metres(POOL_DEPTH - POOL_LIP)} m</b> deep, <b>${metres(POOL_LIP)} m</b> under the slab top, spring or not.
       Adjacent pools in foundations of the same top join. Clear the slab first.</li>
       <li>Spring in a pool: overflows its lowest edge, down the slab face (falling at <b>${metres(FALL_DROP)} m</b> or more) or into a lower neighbouring pool, then downhill as usual.
       No lower neighbour: it keeps its water.</li>

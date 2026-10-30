@@ -695,7 +695,9 @@ for (const e of MOTE_ELEMENTS) {
     description: `Collect motes on ${article(e)} ${e} mote swirl, found ${where}. `
       + `Per swirl: ${MOTES_LEAST} at Elementalism under ${MOTES_STEP}, one more per ${MOTES_STEP} points, ${MOTES_MOST} from ${MOTES_MOST_AT}.`
       // A light mote is what a rune gate's pillars are lit by (`runegate.ts`).
-      + (e === 'light' ? ' Rune gate: {wall.rune_gate.light_mote} over its stone, one per pillar.' : ''),
+      + (e === 'light' ? ' Rune gate: {wall.rune_gate.light_mote} over its stone, one per pillar.' : '')
+      // A water mote is spent on a spring, a pool, and the pieces that hold water (`WATER_MOTE_USES`).
+      + (e === 'water' ? ' Spent on: {waterUses}.' : ''),
   };
 }
 
