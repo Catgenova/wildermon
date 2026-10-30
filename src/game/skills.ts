@@ -29,7 +29,8 @@ export const SKILL_DEFS: SkillDef[] = [
    * Reading a trail back to the nearest wild one of a kind in your field guide
    * (`tracking.ts`): it sets how far a track reaches, how far off the way it
    * reads can be, and how finely the way and the distance are said, and only a
-   * track trains it.
+   * track trains it. And which wild ones in view are said as sighted, rare or
+   * in a form, and as how finely (`sighted.ts`).
    */
   { id: 'tracking', name: 'Tracking', group: 'Skills', start: 1 },
   { id: 'fishing', name: 'Fishing', group: 'Skills', start: 1 },

@@ -13,6 +13,7 @@ import { breedChance, groomGain } from './husbandry';
 import { inheritChance } from './traits';
 import { calmCap } from './meditation';
 import { motesFor } from './motes';
+import { sightedAt } from './sighted';
 import { trackErr, trackLevel, trackRange } from './tracking';
 import { grapesFor } from './vineyard';
 import { woundClose, type Wound } from './wounds';
@@ -299,6 +300,7 @@ function buildEffects(): Record<string, SkillEffect[]> {
     tracking: [
       { label: 'Track reach', at: (g) => trackRange(trackLevel(g.skills.get('tracking'))), say: (v) => `${v} tiles` },
       { label: 'Bearing error', at: (g) => trackErr(trackLevel(g.skills.get('tracking'))), say: (v) => `±${v.toFixed(0)}°` },
+      { label: 'Wild ones sighted in view', at: (g) => trackLevel(g.skills.get('tracking')), say: sightedAt },
     ],
     fishing: [{ label: 'Fish stays on the hook', at: (g) => staysOn(g.skills.get('fishing'), EXAMPLE_QL, false), say: percent, note: `Rod QL ${EXAMPLE_QL}, no bait` }],
     masonry: [{ label: 'Steepest rock you may raise', at: (g) => maxMasonSlope(g), say: height }],

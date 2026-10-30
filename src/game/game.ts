@@ -88,7 +88,7 @@ import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { laySwirls, swirlLight, type Swirl } from './motes';
-import type { Trail } from './tracking';
+import { TRACKING, trackLevel, type Trail } from './tracking';
 import { hasRunestones, runestoneAt, RUNESTONES, stonePoint, stoneTiles } from './runestones';
 import { AWARENESS, Vision } from './vision';
 import { blessBonus, favourCap, FAITH, FAVOUR_TRICKLE } from './faith';
@@ -916,10 +916,13 @@ export class Game {
     let asked: Set<string> | null = null;
     for (const c of this.creatures.list.values()) {
       if (c.mode === 'stored') continue;
-      // A wild one that is rare or in a wild form, said once as it comes into view.
+      // A wild one that is rare or in a wild form, said once as it comes into view, if your Tracking notices it.
       if (c.mode === 'wild' && (c.rare || formsOf(c).length) && !this.sighted.has(c.id) && this.vision.isWatched(c.x, c.y)) {
-        this.sighted.add(c.id);
-        this.logMsg(sightedLine(c, this.player.x, this.player.y), 'wildermon');
+        const line = sightedLine(c, this.player.x, this.player.y, trackLevel(this.skills.get(TRACKING)));
+        if (line) {
+          this.sighted.add(c.id);
+          this.logMsg(line, 'wildermon');
+        }
       }
       // Its kind's page, and its stage's where it is past its first (`stageKey`).
       // And each wild form it is in (`formKey`).

@@ -118,7 +118,8 @@ import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
 import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { guideEntries, guidePages, keepable } from '../../game/guide';
-import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
+import { TRACK_BANDS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
+import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { MOBS_RANGE } from '../../game/keep';
 import { KILN_CAPACITY } from '../../game/kiln';
 import { candleBurn, FIRE_REACH, HELD_LIGHTS, lanternReach, MEMORIAL_REACH, OVEN_REACH, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn, torchReach } from '../../game/light';
@@ -2408,6 +2409,11 @@ export function helpText(): string {
       <li>Detail by Tracking: ${trackBandsSays().join('; ')}. North is up the map.</li>
       <li>An on-screen arrow points the read direction from where you stood for ${TRACK_SHOW} seconds.</li>
       <li>Trains Tracking: an action's worth when it finds one; ${percent(TRY_LEARN)} of one when it finds no sign.</li>
+    </ul>
+    <h4>Sighted</h4>
+    <ul>
+      <li>A wild one in view that is rare or in a form: one log line, of what your Tracking notices of it. Noticed from Tracking level: ${RARITIES.flatMap((r, step) => (step ? [`${r.name} ${SIGHT_RARITY_AT[step]}`] : [])).join(', ')}; large and small form ${SIGHT_FORM_AT.large}; pale and dark form ${SIGHT_FORM_AT.colour}.</li>
+      <li>Detail by Tracking, as a track's: the way to it to ${TRACK_BANDS.map((b) => (b.points === 360 ? 'the degree' : `${b.points} points`)).join(', ')}; distance from level ${TRACK_BANDS.find((b) => b.round !== null)!.at}; its level from ${TRACK_BANDS.find((b) => b.detail)!.at}.</li>
     </ul>
     <h3>What the island will not tell you</h3>
     <ul>

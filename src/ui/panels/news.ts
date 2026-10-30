@@ -152,6 +152,7 @@ import { awayFor } from '../../game/away';
 import { ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
 import { itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid } from '../../game/items';
+import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable } from '../../game/improve';
 import { weaponCarry } from '../../render/figure';
 import { TRY_LEARN } from '../../game/learn';
@@ -4213,6 +4214,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 373,
+    day: '2026-10-30',
+    lines: () => [`Sighted (log line for a rare or form wild one in view): by Tracking level. ${RARITIES.flatMap((r, step) => (step ? [`${r.name} from ${SIGHT_RARITY_AT[step]}`] : [])).join(', ')}; large and small form from ${SIGHT_FORM_AT.large}; pale and dark form from ${SIGHT_FORM_AT.colour}. Way and distance as finely as a track reads.`],
+  },
+  {
     n: 372,
     day: '2026-10-30',
     lines: () => [`Fixed: ${SPECIES.bevere.name} line: every log of a felled tree to your settlement stores (was: 1, the rest left at the stump).`],

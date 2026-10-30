@@ -26,7 +26,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
-import { sightedLine } from '../../src/game/sighted';
+import { SIGHT_FORM_AT, SIGHT_RARITY_AT, sightedAt, sightedLine } from '../../src/game/sighted';
 import { RARITIES } from '../../src/game/items';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { bloodMul, Creatures, maxHealth, SPECIES, type IslandCreature } from '../../src/game/creatures';
@@ -414,12 +414,25 @@ check('island: and out of a trap', answer('TRAPPED') === 'active|small', answer(
 check('island: and born with them, at its health', answer('BORN') === 'true/small/true', answer('BORN'));
 
 // "Add a text line when the player comes into view of a rare or variant wild wildermon": what the log says of one.
+// And "dependent on tracking skill levels, tiered for rarity, variations": only what your Tracking notices, as finely as its band reads.
 {
   const def = SPECIES.sparra;
-  const said = sightedLine({ species: 'sparra', skills: {}, rare: 2, formColour: true, formSize: 'large', x: 20, y: 0 }, 10, 10);
-  check(`a rare one in a form in view is said with what it is, how far and which way: ${said}`,
-    said === `Sighted: ${def.name} (${RARITIES[2].name.toLowerCase()}, ${formName(def, 'colour').toLowerCase()}, ${formName(def, 'large').toLowerCase()}), 14 tiles north-east.`);
-  check('and one straight below you is south', sightedLine({ species: 'sparra', skills: {}, rare: 0, formSize: 'small', x: 10, y: 15 }, 10, 10).endsWith('5 tiles south.'));
+  const one = { species: 'sparra', skills: {}, rare: 2, formColour: true, formSize: 'large' as const, x: 20, y: 0 };
+  const top = sightedLine(one, 10, 10, 100);
+  check(`at Tracking 100, a supreme one in two forms is said with all of it, its level, how far and the bearing: ${top}`,
+    top === `Sighted: ${def.name} (${RARITIES[2].name}, ${formName(def, 'colour').toLowerCase()}, ${formName(def, 'large').toLowerCase()}), level 1, 14 tiles bearing 45°.`);
+  const mid = sightedLine(one, 10, 10, SIGHT_RARITY_AT[2] - 1);
+  check(`a level under ${SIGHT_RARITY_AT[2]}, its forms but not that it is supreme, to eight points: ${mid}`,
+    mid === `Sighted: ${def.name} (${formName(def, 'colour').toLowerCase()}, ${formName(def, 'large').toLowerCase()}), 14 tiles north-east.`);
+  check(`under ${SIGHT_FORM_AT.large}, nothing about it is noticed and nothing is said`, sightedLine(one, 10, 10, SIGHT_FORM_AT.large - 1) === null);
+  const low = sightedLine({ ...one, rare: 1, formColour: false, formSize: null, x: 10, y: 15 }, 10, 10, SIGHT_RARITY_AT[1]);
+  check(`at ${SIGHT_RARITY_AT[1]}, a rare one is said, to four points and with no distance: ${low}`, low === `Sighted: ${def.name} (${RARITIES[1].name}), south.`);
+  check(`under ${SIGHT_RARITY_AT[1]}, it is not`, sightedLine({ ...one, rare: 1, formColour: false, formSize: null }, 10, 10, SIGHT_RARITY_AT[1] - 1) === null);
+  const fant = { ...one, rare: 3, formColour: false, formSize: null };
+  check(`a fantastic one only from ${SIGHT_RARITY_AT[3]}`, sightedLine(fant, 10, 10, SIGHT_RARITY_AT[3] - 1) === null && !!sightedLine(fant, 10, 10, SIGHT_RARITY_AT[3]));
+  check('each step of rarity and each form noticed later the rarer it is',
+    SIGHT_RARITY_AT[1] < SIGHT_FORM_AT.large && SIGHT_FORM_AT.large < SIGHT_FORM_AT.colour && SIGHT_FORM_AT.colour < SIGHT_RARITY_AT[2] && SIGHT_RARITY_AT[2] < SIGHT_RARITY_AT[3]);
+  check(`the Skills window: ${sightedAt(0)} at nought, ${sightedAt(100)} at 100`, sightedAt(0) === 'nothing' && sightedAt(100) === 'rare, supreme, fantastic, large and small forms, pale and dark forms');
 }
 
 for (const line of [...ok, ...bad]) console.log(line);
