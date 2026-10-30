@@ -57,8 +57,8 @@ import { article, listed, listedOr } from './words';
  */
 export const FLIGHT_TILES = 1;
 
-export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded' | 'season' | 'flowers' | 'stairs';
-export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded', 'season', 'flowers', 'stairs'];
+export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded' | 'season' | 'flowers' | 'stairs' | 'stranded';
+export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded', 'season', 'flowers', 'stairs', 'stranded'];
 
 /**
  * Why a worker is idle, as kept on it: the code, its number, and whether it works off a post rather than the token;
@@ -202,6 +202,8 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
       return `Idle: no wildflowers within ${n} tiles of its hive.`;
     case 'stairs':
       return `Idle: no stairs up to storey ${n}.`;
+    case 'stranded':
+      return `Idle: no stairs down from storey ${n}.`;
   }
 }
 

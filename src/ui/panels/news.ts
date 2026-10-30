@@ -4216,7 +4216,7 @@ export const NEWS: News[] = [
   },  {
     n: 378,
     day: '2026-10-30',
-    lines: () => ['Added: settlement workers walk up a building\'s finished staircases, on at the foot and off at the head, to a store, a station or building work on an upper storey, through doors and gaps but not walls, and back down. Not ladders. Hod carriers fit a wall standing beside it on its storey, a floor or roof from the storey under it. No staircase up: "Idle: no stairs up to storey N."'],
+    lines: () => ['Added: settlement workers walk up a building\'s finished staircases, on at the foot and off at the head, to a store, a station or building work on an upper storey, through doors and gaps but not walls, and back down. Not ladders. Hod carriers fit a wall standing beside it on its storey, a floor or roof from the storey under it. No staircase up: "Idle: no stairs up to storey N." Its staircase down taken away: stays on that storey, "Idle: no stairs down from storey N.", until one is built.'],
   },
   {
     n: 377,

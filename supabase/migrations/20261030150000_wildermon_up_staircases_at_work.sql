@@ -285,7 +285,7 @@ end $$;
  * A leg a worker has just been given, from `p_x, p_y` at its storey to `to_x, to_y` at `p_lv` (or the storey of
  * what is there, `worker_spot_storey`, for a leg home, out, to fetch or to a bed): straight on the ground, as ever;
  * to or from a storey, by the stairs (`creature_way`), its first leg now and the rest its way. No way: it stands, and
- * says the storey it cannot get to (`stairs`). No way down at all from where it stands: let down there first.
+ * says the storey it cannot get to (`stairs`). No way down at all from where it stands: it stays there (`stranded`).
  */
 create or replace function worker_way_leg(p_world uuid, c creature, p_x double precision, p_y double precision,
                                           p_pace double precision, p_lv int)
@@ -298,16 +298,17 @@ begin
                                        then worker_spot_storey(p_world, c.to_x, c.to_y) else 0 end));
   if s = 0 and t = 0 then return c; end if;
   v_way := creature_way(p_world, floor(p_x)::int, floor(p_y)::int, s, floor(c.to_x)::int, floor(c.to_y)::int, t);
-  if v_way is null and s > 0 and creature_way(p_world, floor(p_x)::int, floor(p_y)::int, s, floor(p_x)::int, floor(p_y)::int, 0) is null then
-    -- Its stairs gone from under it: let down where it stands.
-    c.storey := 0; c.storey_from := 0; s := 0;
-    if t = 0 then return c; end if;
-    v_way := creature_way(p_world, floor(p_x)::int, floor(p_y)::int, 0, floor(c.to_x)::int, floor(c.to_y)::int, t);
-  end if;
   if v_way is null then
     c.from_x := p_x; c.from_y := p_y; c.to_x := p_x; c.to_y := p_y; c.way := null;
     c.leg_ends := c.leg_at; c.until := c.leg_at + interval '4 seconds';
-    c.phase := 'idle'; c.idle_what := null; c.idle_why := 'stairs'; c.idle_n := greatest(s, t) + 1;
+    c.phase := 'idle'; c.idle_what := null;
+    -- Its stairs gone from under it: it stays up there, and says so, until a staircase down is built. Asked for:
+    -- "Leave it stuck upstairs until stairs are built".
+    if s > 0 and creature_way(p_world, floor(p_x)::int, floor(p_y)::int, s, floor(p_x)::int, floor(p_y)::int, 0) is null then
+      c.idle_why := 'stranded'; c.idle_n := s + 1;
+    else
+      c.idle_why := 'stairs'; c.idle_n := greatest(s, t) + 1;
+    end if;
     return c;
   end if;
   m := coalesce(array_length(v_way, 1), 0) / 3;

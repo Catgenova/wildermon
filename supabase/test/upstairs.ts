@@ -158,6 +158,17 @@ begin
   c := worker_way_leg(w, c, ${T - 3} + 0.5, ${T} + 0.5, 1.0, null);
   insert into said values ('SHED_LEG', c.idle_why || '|' || c.idle_n || '|' || c.to_x || ',' || c.to_y || '|' || c.phase);
 
+  /* Its staircases taken away while it is up there: it stays up, and says it has no way down. */
+  create temp table kept_stairs on commit drop as select * from floor_tile where world_id = w and kind = 'stairs';
+  delete from floor_tile f where f.world_id = w and f.kind = 'stairs';
+  select * into c from creature where world_id = w and id = v_id;
+  c.storey := 1; c.storey_from := 1; c.way := null; c.phase := 'out';
+  c.from_x := ${CHEST[0]} + 0.5; c.from_y := ${CHEST[1]} + 0.5; c.to_x := ${T - 3} + 0.5; c.to_y := ${T} + 0.5;
+  c.leg_at := now(); c.leg_ends := now() + interval '5 seconds'; c.until := c.leg_ends;
+  c := worker_way_leg(w, c, ${CHEST[0]} + 0.5, ${CHEST[1]} + 0.5, 1.0, 0);
+  insert into said values ('STRANDED', c.idle_why || '|' || c.idle_n || '|' || c.storey || '|' || c.phase);
+  insert into floor_tile select * from kept_stairs;
+
   /* Falls: a floor taken from under it, a storey up with nothing under it, and let off the settlement. */
   update creature set storey = 1, storey_from = 1, way = null, phase = 'idle',
          from_x = ${T + 5} + 0.5, from_y = ${T + 5} + 0.5, to_x = ${T + 5} + 0.5, to_y = ${T + 5} + 0.5
@@ -291,6 +302,8 @@ const throughWalls = (l: Leg): string[] => {
 
 check('a leg to the chest in the shed with no staircase: none, and why: storey 2',
   at('SHED_LEG') === `stairs|2|${T - 3 + 0.5},${T + 0.5}|idle`, at('SHED_LEG'));
+check(`its staircases taken away while it is up there: it stays on its storey and says "${idleSays({ why: 'stranded', n: 2 }, 'hod')}"`,
+  at('STRANDED') === 'stranded|2|1|idle', at('STRANDED'));
 check('a floor taken away from under it: let down to the ground', at('ON_FLOOR') === '1' && at('FLOOR_GONE') === '0|0', `${at('ON_FLOOR')} → ${at('FLOOR_GONE')}`);
 check('nothing stands a storey up with nothing under it', at('NO_FLOOR') === '0|0', at('NO_FLOOR'));
 check('let off the settlement, it comes down', at('LET_GO') === '0|0|null', at('LET_GO'));
