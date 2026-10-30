@@ -455,6 +455,19 @@ jobs:
           # Asked: "What even needs slate brick on my deed? I didnt intentionally late any slate plans". The planned
           # slate floor at 2580,3027 on level 2 and the hinged wall at 2580,3006: whose building, who planned them,
           # and what else of that building is planned on that level.
+          # Reported: "i appear to be completely stuck and can't move anywhere, just errors" ("No path there."), in Solara
+          # Manor about 2587,3007. Where the body is, whether aboard or riding, and the walls, floors and stairs round it.
+          ask "stuck: the body" "select p.x, p.y, p.level, p.level_h, p.aboard, p.seat, to_char(p.moved_at, 'HH24:MI:SS') as moved,
+                 (select c.id || ' ' || c.species from creature c where c.world_id = p.world_id and c.rider = p.uid limit 1) as riding
+             from player p where p.name = 'catgenova'"
+          ask "stuck: walls within 3 tiles, every level" "select w.level, w.x, w.y, w.dir, w.type, w.material,
+                 (select coalesce(sum(e.value::numeric), 0) from jsonb_each_text(w.needed) e) as still_needed
+             from wall w join player p on p.world_id = w.world_id and p.name = 'catgenova'
+            where abs(w.x - floor(p.x)) <= 3 and abs(w.y - floor(p.y)) <= 3 order by w.level, w.y, w.x, w.dir"
+          ask "stuck: floors within 3 tiles, every level" "select f.level, f.x, f.y, f.kind, f.material,
+                 (select coalesce(sum(e.value::numeric), 0) from jsonb_each_text(f.needed) e) as still_needed
+             from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova'
+            where abs(f.x - floor(p.x)) <= 3 and abs(f.y - floor(p.y)) <= 3 order by f.level, f.y, f.x"
           ask "slate: the planned pieces and who planned them" "select 'floor' as what, f.level, f.x, f.y, f.kind, f.material, f.needed, f.total, f.building, b.name as building_name, b.levels, pb.name as building_by, pf.name as planned_by
              from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova' left join building b on b.world_id = f.world_id and b.id = f.building
              left join player pb on pb.world_id = f.world_id and pb.uid = b.planned_by left join player pf on pf.world_id = f.world_id and pf.uid = f.planned_by
