@@ -237,7 +237,7 @@ import{$C as e,$h as t,$i as n,$j as r,$l as i,$p as a,$u as o,$v as s,$w as ee,
       <tr><td>Combat</td><td>Blows given and taken, what has your scent, kills</td></tr>
       <tr><td>Wildermon</td><td>Taming, crates, posts, tack, gear, relics used, breeding, births, evolving, sightings. Each settlement worker's finished work: <i>${mt(E.bevere.name,{stored:{log:12}})}</i> (stored: into settlement storage or a hive; handled: used on an errand)</td></tr>
       <tr><td>Skills</td><td>Skill gains</td></tr>
-      <tr><td>Talk</td><td>Chat</td></tr>
+      <tr><td>Social</td><td>Chat</td></tr>
       <tr><td>Trouble</td><td>Failures and refusals, with the reason</td></tr>
     </table>
     <ul>
@@ -379,7 +379,7 @@ import{$C as e,$h as t,$i as n,$j as r,$l as i,$p as a,$u as o,$v as s,$w as ee,
     <ul>
       <li>Somebody logs on: their name and <i>Logged on</i> for ${bd/1e3} seconds; logs off: <i>Logged off</i> for ${Od/1e3} seconds.
       Off switch: Settings, Interface.</li>
-      <li>Talk, either way: <i>Logged on: name</i> or <i>Logged off: name</i>.</li>
+      <li>Social, either way: <i>Logged on: name</i> or <i>Logged off: name</i>.</li>
       <li>Logged off: ${af()} after their browser was last heard from.</li>
     </ul>
     <h3>What a tool is worth</h3>
