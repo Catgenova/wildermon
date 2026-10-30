@@ -450,10 +450,25 @@ export class UIWindow implements Piece {
    * the size a window is given rather than taken out of it, so a window's
    * content is as big in either look and a saved layout keeps its content's
    * size (`.win` in src/style.css). What fits the screen is the whole box.
+   *
+   * Read from its padding and border as laid, never as its offset size less
+   * the size it was given: offsets are whole pixels and that size need not
+   * be. On an interface of a fractional height (a text size other than 100%)
+   * a window put flush against the bottom edge is given a fractional height,
+   * and a rim measured off a rounded offset came out up to half a pixel out
+   * the other way each time it was measured: the box put on it was a little
+   * taller or shorter, its size changed, it was put back on the grid
+   * (`WindowManager.create`) against the rim measured wrong again, and the
+   * window shook by a pixel every frame for as long as it lay there.
    */
   private frame(): [number, number] {
-    const w = parseFloat(this.el.style.width), h = parseFloat(this.el.style.height);
-    return [w ? Math.max(0, this.el.offsetWidth - w) : 0, h ? Math.max(0, this.el.offsetHeight - h) : 0];
+    const s = getComputedStyle(this.el);
+    if (s.boxSizing === 'border-box') return [0, 0];
+    const px = (...v: string[]): number => v.reduce((sum, x) => sum + (parseFloat(x) || 0), 0);
+    return [
+      px(s.paddingLeft, s.paddingRight, s.borderLeftWidth, s.borderRightWidth),
+      px(s.paddingTop, s.paddingBottom, s.borderTopWidth, s.borderBottomWidth),
+    ];
   }
 
   private applyGeometry(g: Geometry): void {

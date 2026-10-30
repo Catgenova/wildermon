@@ -4215,6 +4215,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 386,
+    day: '2026-10-30',
+    lines: () => ['Fixed: a window resized to the bottom or right edge of the screen, text size other than 100%: holds its size (was: changed by up to 1 px every frame). Runecut at every such size, Classic at some.'],
+  },
+  {
     n: 385,
     day: '2026-10-30',
     lines: () => [`Changed: ${SPECIES.potta.name} line, task words: loads ${listed(POTTERY.map((p) => itemDef(p.unfired).name.toLowerCase()))} (was: "unfired pottery"). Same task.`],
