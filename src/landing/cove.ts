@@ -69,13 +69,14 @@ const BAY_R = 4.7;
 const SEA_A = 13.2;
 const ARM = 5.2;
 /** How far the bay's rim and the sea's coast are blended where they meet: the arms' tips are rounded by about this many tiles. */
-const ROUND = 1.1;
+const ROUND = 1.25;
 
 /** How far a point is out in the water from the nearest shore, in tiles: below nought on land, by as far inland as it is. */
 function waterAt(a: number, b: number): number {
   const bay = BAY_R - Math.hypot(a - BAY_A, b - BAY_B);
   const off = Math.max(0, Math.abs(b - BAY_B) - ARM);
-  const sea = a - (SEA_A - 1.15 * off ** 1.3);
+  // The outer coast bows back from the bay's mouth, so the arms end in rounded points rather than square ends.
+  const sea = a - (SEA_A - 0.045 * (b - BAY_B) ** 2 - 1.15 * off ** 1.3);
   // A smooth maximum of the two: water where either is.
   return ROUND * Math.log(Math.exp(bay / ROUND) + Math.exp(sea / ROUND));
 }

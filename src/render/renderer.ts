@@ -2850,6 +2850,14 @@ export class Renderer {
         b = DAMP_SAND[2];
       }
     }
+    if (this.groundTint) {
+      const t = this.tintBuf;
+      t[0] = r;
+      t[1] = g;
+      t[2] = b;
+      this.groundTint(x, y, ground, t);
+      [r, g, b] = t;
+    }
     // Steep ground wears through to the rock under it. A cliff face used to be
     // whatever was growing on the top of it, stretched down the drop, which is
     // the one thing a cliff never looks like.
@@ -4082,6 +4090,20 @@ export class Renderer {
    * a few dozen tiles drawn whole, which the band only greyed.
    */
   hazeOn = true;
+  /**
+   * A view's own colour for its ground, laid over each tile's base colour
+   * before it is lit: given the tile and what it is, it changes `rgb` in
+   * place. Null everywhere but the landing page's cove (src/landing/backdrop.ts),
+   * whose meadow is drawn a summer green and its sand blended into it by how
+   * far each tile is from the water. Read when a tile's colour is worked out
+   * and cached with it, so it is set before the first frame.
+   */
+  groundTint: ((x: number, y: number, ground: TileType, rgb: [number, number, number]) => void) | null = null;
+  private readonly tintBuf: [number, number, number] = [0, 0, 0];
+  /** A strand of sand drawn along the sea's shore (`ShorePainter.beach`): null but for the landing page's cove. */
+  set beach(strand: { reach: number; css: string } | null) {
+    this.shore.beach = strand;
+  }
 
   /** Frames drawn, for anything worked out once a frame and asked for more than once in it. */
   private frameNo = 0;

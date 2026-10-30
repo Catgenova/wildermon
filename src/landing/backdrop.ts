@@ -1,6 +1,7 @@
 import { FullscreenCanvas } from '../engine/canvas';
 import { lessMotion } from '../engine/motion';
 import { Renderer } from '../render/renderer';
+import { TileType, TILE_DEFS } from '../world/tiles';
 import { buildCove } from './cove';
 
 /**
@@ -23,6 +24,20 @@ const DRIFT_SECONDS = 70;
 /** The cove is faded in once this share of the trees in view are drawn as solids, or after this many seconds whatever: not while they are coming in one by one. */
 const READY_SHARE = 0.9;
 const READY_WAIT = 6;
+/**
+ * The cove's own colours (`Renderer.groundTint`, `Renderer.beach`): the
+ * meadow a fresh summer green rather than the island's grey-mint, down to the
+ * water's edge; the beach a strand of warm sand `STRAND` tiles wide drawn
+ * along the waterline, so its inner edge follows the bay's curve rather than
+ * the tiles' edges; the sea floor warmed to match, and the clay a warm grey-rose.
+ */
+const MEADOW: readonly [number, number, number] = [128, 176, 104];
+const SAND_WARM: readonly [number, number, number] = [238, 218, 176];
+/** The clay bank on the west arm, a warm grey-rose beside the sand rather than the island's grey. */
+const CLAY_WARM: readonly [number, number, number] = [188, 160, 138];
+const STRAND = { reach: 0.6, css: `rgb(${SAND_WARM.join(',')})` };
+const SAND_BASE = TILE_DEFS[TileType.Sand].color;
+
 /** A screen this wide or wider has the box beside the cove; a narrower one has it under the stone (src/account.css). */
 export const WIDE = 900;
 /** The most device pixels drawn a frame, and the most to a CSS pixel. */
@@ -46,20 +61,21 @@ export interface Room {
 /**
  * The view, framed on the room: on a wide screen the whole bay -- both arms,
  * the water between and the sea beyond -- with the stone at its head; on a
- * narrow one the stone and the bay off to its side, over the box, the view turned an eighth round for it.
+ * narrow one the stone over the head of the bay, over the box.
  */
-function framing(wide: boolean, room: Room): { a: number; b: number; fx: number; fy: number; zoom: number; turn: number } {
+function framing(wide: boolean, room: Room): { a: number; b: number; fx: number; fy: number; zoom: number } {
   const w = room.x1 - room.x0, h = room.y1 - room.y0;
   const mid = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
   if (wide) {
     // The cove is some fourteen tiles across its arms and twenty-six from the wood's edge to the open sea.
     const zoom = mid(Math.min(w / (14 * 68), h / (26 * 34)), 0.7, 1.25);
-    return { a: 3, b: -0.5, fx: (room.x0 + w / 2) / room.x1, fy: 0.55, zoom, turn: 0 };
+    return { a: 3, b: -0.5, fx: (room.x0 + w / 2) / room.x1, fy: 0.55, zoom };
   }
-  // An eighth of a turn round, so the bay lies off to the stone's side rather than straight below it, where the box is.
-  // Not under 0.6, where the wildflowers are drawn as specks.
+  // The stone in the middle, the head of the bay under it and the box under that: the waterline at the bay's head
+  // is some 4.3 tiles in front of the stone (`BAY_A` less `BAY_R`), a line of water shown above the box.
   const zoom = mid(room.x1 / 620, 0.62, 0.8);
-  return { a: 0, b: 0, fx: 0.24, fy: (room.y1 * 0.64) / innerHeight, zoom, turn: 1 };
+  const base = room.y1 - 56 - zoom * (4.3 * 34 + 14);
+  return { a: 0, b: 0, fx: 0.5, fy: base / innerHeight, zoom };
 }
 
 export function startBackdrop(el: HTMLCanvasElement, room: () => Room): () => void {
@@ -77,10 +93,24 @@ export function startBackdrop(el: HTMLCanvasElement, room: () => Room): () => vo
   const cam = renderer.camera;
   cam.follow = false;
   renderer.hazeOn = false;
+  const world = cove.game.world;
+  const corners = [0, 0, 0, 0];
+  renderer.groundTint = (x, y, ground, c) => {
+    if (ground === TileType.Clay) {
+      for (let i = 0; i < 3; i++) c[i] = CLAY_WARM[i];
+      return;
+    }
+    if (ground !== TileType.Sand && ground !== TileType.Grass) return;
+    world.corners(x, y, corners);
+    // Under the water, warm sand; anything of the tile above it, meadow, with the strand drawn over it.
+    if (Math.max(...corners) < 0) {
+      for (let i = 0; i < 3; i++) c[i] *= SAND_WARM[i] / SAND_BASE[i];
+    } else for (let i = 0; i < 3; i++) c[i] = MEADOW[i];
+  };
+  renderer.beach = STRAND;
   const place = (t: number): void => {
     const W = canvas.width, H = canvas.height;
-    const { a, b, fx, fy, zoom, turn } = framing(W >= WIDE, room());
-    if (cam.rotation !== turn) cam.rotation = turn;
+    const { a, b, fx, fy, zoom } = framing(W >= WIDE, room());
     cam.zoom = zoom;
     const sway = Math.sin((t / DRIFT_SECONDS) * Math.PI * 2) * DRIFT_TILES;
     const at = cove.spot(a, b + sway);

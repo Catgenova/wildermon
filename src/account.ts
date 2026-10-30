@@ -1,7 +1,7 @@
 // First: out of another site's frame, and the page's Trusted Types policy (src/page-guard.ts).
 import './page-guard';
 import {
-  PASSWORD_MIN, Unchecked, breachCount, breachWord, createAccount, foldName, writtenName,
+  Unchecked, breachCount, breachWord, createAccount, foldName, writtenName,
   myLook, nameEmail, nameFree, nameTrouble, passwordTrouble, passwordVerdict,
   sentOffLine, setLook, signInAs, signOut, whoAmI,
 } from './net/accounts';
@@ -44,9 +44,6 @@ const lede = $<HTMLParagraphElement>('lede');
 const maker = $<HTMLElement>('maker');
 const ashore = $<HTMLButtonElement>('ashore');
 
-const NAME_HELP = 'Three to twenty characters: a letter first, then letters, numbers, underscore or hyphen. It is what everybody on the island will see over your head, with the capitals you type. Signing in ignores capitals, so alice and Alice are one account, and signing in with different capitals changes them.';
-const PW_HELP_NEW = `${PASSWORD_MIN} characters at the very least, and checked against the list of passwords already known to have leaked. Neither it nor its full fingerprint leaves this page.`;
-const PW_HELP_BACK = 'The one you chose when you made the account.';
 
 /**
  * Whatever island this page was sent here on behalf of, carried through.
@@ -93,8 +90,9 @@ function setMode(next: Mode): void {
   tabBack.setAttribute('aria-selected', String(next === 'back'));
   go.textContent = next === 'new' ? 'Make the account' : 'Come back in';
   pwBox.autocomplete = next === 'new' ? 'new-password' : 'current-password';
-  note(nameNote, NAME_HELP);
-  note(pwNote, next === 'new' ? PW_HELP_NEW : PW_HELP_BACK);
+  // Under each field nothing until there is something to say: what is wrong with what was typed, or how it stands.
+  note(nameNote, '');
+  note(pwNote, '');
   say('');
   checkName();
 }
@@ -124,7 +122,7 @@ let timer = 0;
 function checkName(): void {
   window.clearTimeout(timer);
   const typed = writtenName(nameBox.value);
-  if (!typed) return note(nameNote, NAME_HELP);
+  if (!typed) return note(nameNote, '');
   const bad = nameTrouble(typed);
   if (bad) return note(nameNote, bad, 'bad');
   if (mode === 'back') return note(nameNote, `Signing in as ${typed}.`);
@@ -151,12 +149,9 @@ function checkName(): void {
 nameBox.addEventListener('input', () => checkName());
 
 pwBox.addEventListener('input', () => {
-  if (mode === 'back') return note(pwNote, PW_HELP_BACK);
-  const pw = pwBox.value;
-  if (!pw) return note(pwNote, PW_HELP_NEW);
-  const bad = passwordTrouble(pw);
-  if (bad) return note(pwNote, bad, 'bad');
-  note(pwNote, `${pw.length} characters. The breach list is asked when you press the button.`);
+  if (mode === 'back') return note(pwNote, '');
+  const bad = pwBox.value ? passwordTrouble(pwBox.value) : null;
+  note(pwNote, bad ?? '', bad ? 'bad' : '');
 });
 
 /**

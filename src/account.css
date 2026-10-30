@@ -185,11 +185,26 @@ body {
 .card {
   position: relative;
   z-index: 1;
+  /* No title: the box opens on its tabs, set in from the frame's band as the title would be. */
+  padding-top: calc(var(--rim) + 12px);
   width: 100%;
   max-width: 470px;
 }
 
 .lede { margin: 0 0 14px; color: var(--rc-carve); }
+.lede:empty { display: none; }
+
+/* Named for the page's outline and for screen readers, not shown: the box opens on its tabs. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 /* Tabs: set into the foot of the lintel, the open one a step down and lit along its foot (`.log-tab`). */
 .tabs {
@@ -279,6 +294,7 @@ input:focus-visible { outline: none; }
   font-size: 13px;
 }
 
+.note:empty { min-height: 0; margin: 0 0 12px; }
 .note.bad { color: var(--ui-bad); }
 .note.good { color: var(--ui-good); }
 
@@ -490,7 +506,7 @@ a { color: var(--rc-rune-ink); }
   body {
     justify-content: center;
     align-items: flex-start;
-    padding: max(38vh, 250px) 14px 28px;
+    padding: max(42vh, 270px) 14px 28px;
   }
 
   .card { max-width: 520px; }
