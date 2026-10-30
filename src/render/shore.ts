@@ -445,9 +445,24 @@ export class ShorePainter {
   /** Which side of the waterline the bands being cut are kept to: both, the land's (drawn with the ground), or the water's (in the sea's picture). */
   private part: 'all' | 'land' | 'water' = 'all';
 
+  /**
+   * A strand of sand along the sea's shore, from the waterline up to `reach`
+   * tiles (at most `REACH_LAND`), cut from each tile as the wet band is, so
+   * its inner edge follows the waterline's own curve rather than the tiles'
+   * edges. Laid under the wet band and the foam. Null everywhere but the
+   * landing page's cove (src/landing/backdrop.ts); the island's beaches are
+   * their sand tiles.
+   */
+  beach: { reach: number; css: string } | null = null;
+
   /** The wet band on the land side of the loaded tile of the sea's shore: darkest at the water, gone by its top, in steps one inside another. */
   wet(ctx: CanvasRenderingContext2D, level: number): void {
     const cs = this.cs;
+    const strand = this.beach;
+    if (strand && Math.min(cs[3], cs[8], cs[13], cs[18]) < strand.reach && Math.max(cs[3], cs[8], cs[13], cs[18]) > -0.02) {
+      ctx.fillStyle = strand.css;
+      this.band(ctx, level, -0.02, 0, Math.min(strand.reach, REACH_LAND), 0, false);
+    }
     let kk = 0;
     for (let i = 0; i < 4; i++) kk += cs[i * 5 + 4] / 4;
     const top = WET_ROCK + (WET_SAND - WET_ROCK) * kk;

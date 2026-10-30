@@ -1,7 +1,7 @@
 // First: out of another site's frame, and the page's Trusted Types policy (src/page-guard.ts).
 import './page-guard';
 import {
-  PASSWORD_MIN, Unchecked, breachCount, breachWord, createAccount, foldName, writtenName,
+  Unchecked, breachCount, breachWord, createAccount, foldName, writtenName,
   myLook, nameEmail, nameFree, nameTrouble, passwordTrouble, passwordVerdict,
   sentOffLine, setLook, signInAs, signOut, whoAmI,
 } from './net/accounts';
@@ -9,6 +9,8 @@ import { LOOK_TABLES, cleanLook, randomLook, type Look } from './game/look';
 import { Creator } from './ui/creator';
 import { CODE_DIGITS, CODE_SECONDS, finishEnrol, myFactor, removeFactor, startEnrol } from './net/mfa';
 import { nameRefusal } from './game/playertext';
+import { PRIVACY_TITLE, privacyPolicy } from './ui/privacy';
+import { RULES_TITLE, gameRules } from './ui/rules';
 
 /**
  * The landing page: a username, a password, and a way back in.
@@ -42,9 +44,6 @@ const lede = $<HTMLParagraphElement>('lede');
 const maker = $<HTMLElement>('maker');
 const ashore = $<HTMLButtonElement>('ashore');
 
-const NAME_HELP = 'Three to twenty characters: a letter first, then letters, numbers, underscore or hyphen. It is what everybody on the island will see over your head, with the capitals you type. Signing in ignores capitals, so alice and Alice are one account, and signing in with different capitals changes them.';
-const PW_HELP_NEW = `${PASSWORD_MIN} characters at the very least, and checked against the list of passwords already known to have leaked. Neither it nor its full fingerprint leaves this page.`;
-const PW_HELP_BACK = 'The one you chose when you made the account.';
 
 /**
  * Whatever island this page was sent here on behalf of, carried through.
@@ -91,8 +90,9 @@ function setMode(next: Mode): void {
   tabBack.setAttribute('aria-selected', String(next === 'back'));
   go.textContent = next === 'new' ? 'Make the account' : 'Come back in';
   pwBox.autocomplete = next === 'new' ? 'new-password' : 'current-password';
-  note(nameNote, NAME_HELP);
-  note(pwNote, next === 'new' ? PW_HELP_NEW : PW_HELP_BACK);
+  // Under each field nothing until there is something to say: what is wrong with what was typed, or how it stands.
+  note(nameNote, '');
+  note(pwNote, '');
   say('');
   checkName();
 }
@@ -122,7 +122,7 @@ let timer = 0;
 function checkName(): void {
   window.clearTimeout(timer);
   const typed = writtenName(nameBox.value);
-  if (!typed) return note(nameNote, NAME_HELP);
+  if (!typed) return note(nameNote, '');
   const bad = nameTrouble(typed);
   if (bad) return note(nameNote, bad, 'bad');
   if (mode === 'back') return note(nameNote, `Signing in as ${typed}.`);
@@ -149,12 +149,9 @@ function checkName(): void {
 nameBox.addEventListener('input', () => checkName());
 
 pwBox.addEventListener('input', () => {
-  if (mode === 'back') return note(pwNote, PW_HELP_BACK);
-  const pw = pwBox.value;
-  if (!pw) return note(pwNote, PW_HELP_NEW);
-  const bad = passwordTrouble(pw);
-  if (bad) return note(pwNote, bad, 'bad');
-  note(pwNote, `${pw.length} characters. The breach list is asked when you press the button.`);
+  if (mode === 'back') return note(pwNote, '');
+  const bad = pwBox.value ? passwordTrouble(pwBox.value) : null;
+  note(pwNote, bad ?? '', bad ? 'bad' : '');
 });
 
 /**
@@ -479,6 +476,57 @@ mfaCancel.addEventListener('click', () => {
 mfaCode.addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter') { ev.preventDefault(); mfaGo.click(); }
 });
+
+/* ---- The papers: the Privacy Policy and the Game Rules --------------------- */
+
+const paper = $<HTMLDialogElement>('paper');
+const paperTitle = $<HTMLHeadingElement>('paper-title');
+const paperBody = $<HTMLDivElement>('paper-body');
+const paperBox = paper.querySelector('.paper') as HTMLElement;
+const PAPERS: Record<string, { title: string; build: () => HTMLElement }> = {
+  'open-privacy': { title: PRIVACY_TITLE, build: privacyPolicy },
+  'open-rules': { title: RULES_TITLE, build: gameRules },
+};
+
+/** One of the papers, over the cove in a box of its own: closed by its button, by Esc (the dialog's own), or by a click on the dimmed cove round it. */
+function openPaper(title: string, build: () => HTMLElement): void {
+  paperTitle.textContent = title;
+  paperBody.replaceChildren(build());
+  paperBody.scrollTop = 0;
+  if (!paper.open) paper.showModal();
+  $<HTMLButtonElement>('paper-close').focus();
+}
+
+for (const [id, p] of Object.entries(PAPERS)) $<HTMLButtonElement>(id).addEventListener('click', () => openPaper(p.title, p.build));
+$<HTMLButtonElement>('paper-close').addEventListener('click', () => paper.close());
+paper.addEventListener('click', (ev) => {
+  if (ev.target === paper) paper.close();
+});
+paper.addEventListener('close', () => paperBody.replaceChildren());
+
+/* ---- The Faith box's dress, and the cove behind it -------------------------- */
+
+/*
+ * Neither is in this page's first script. The dress is Runecut's painters
+ * (src/landing/faithbox.ts); until they are in, the boxes are the plain stone
+ * plate src/account.css draws. The cove is the game's renderer and the
+ * world it draws (src/landing/backdrop.ts), asked for once the form has been
+ * on the screen for a frame, so nothing about signing in waits on it; if it
+ * cannot be drawn, the sea under it stays.
+ */
+void import('./landing/faithbox').then(({ dressFaith }) => {
+  dressFaith(card);
+  dressFaith(paperBox);
+}).catch(() => {});
+requestAnimationFrame(() => window.setTimeout(() => {
+  void import('./landing/backdrop').then(({ startBackdrop, WIDE }) => startBackdrop($<HTMLCanvasElement>('cove'), () => {
+    // The screen less the box: right of it on a wide screen, over it on a narrow one; the whole of it while the creator fills the middle.
+    const W = innerWidth, H = innerHeight;
+    if (card.classList.contains('making')) return { x0: 0, y0: 0, x1: W, y1: H };
+    if (W >= WIDE) return { x0: Math.min(W * 0.6, card.offsetLeft + card.offsetWidth + 24), y0: 0, x1: W, y1: H };
+    return { x0: 0, y0: 0, x1: W, y1: Math.max(120, card.offsetTop) };
+  })).catch(() => {});
+}, 0));
 
 setMode('new');
 void onArrival();

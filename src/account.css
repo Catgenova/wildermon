@@ -1,129 +1,273 @@
 /*
  * The landing page stands on its own.
  *
- * It does not pull in the game's stylesheet: that is seventeen hundred lines
- * about windows, toolbars and an inventory grid, none of which is on this
- * page, and all of which starts by nailing the body down at `overflow: hidden`
- * so that a canvas can have the screen. A sign-up form wants to scroll on a
- * phone. So the half-dozen colours are restated here and the rest is left
- * behind.
+ * It does not pull in the game's stylesheet: that is ten thousand lines about
+ * windows, toolbars and an inventory grid, none of which is on this page, and
+ * all of which starts by nailing the body down at `overflow: hidden` so that a
+ * canvas can have the screen. A sign-up form wants to scroll on a phone.
+ *
+ * So the page wears Runecut by day, the game's own look: the colours below
+ * are src/style.css's `--rc-*` tokens and its answers for the `--ui-*` and
+ * `--t-*` names that src/ui/creator.css reads, restated; the box is the Faith
+ * window, its slab, frame and niche painted by Runecut's own painters
+ * (src/landing/faithbox.ts); its title, tabs, fields and buttons are cut as
+ * the game's lintel, `.log-tab` and `.tb-btn` are. Behind it all is the cove,
+ * drawn by the game's renderer (src/landing/backdrop.ts).
  */
 :root {
-  --ui-bg: rgba(22, 20, 17, 0.9);
-  --ui-bg-2: rgba(34, 30, 25, 0.95);
-  --ui-border: #6b5836;
-  --ui-border-light: #9a7f4c;
-  --ui-text: #d9d0bd;
-  --ui-dim: #8f8574;
-  --ui-accent: #e3b657;
-  --ui-bad: #d98b6a;
-  --ui-good: #8fbf6a;
-  color-scheme: dark;
+  --rc-stone: #f2e7d3;
+  --rc-stone-2: #e8dcc6;
+  --rc-stone-hi: #fffcf4;
+  --rc-shade: #aa9fac;
+  --rc-shade-2: #8f879c;
+  --rc-carve: #5d5464;
+  --rc-ink: #463d50;
+  --rc-edge-ink: #5f5148;
+  --rc-rune: #d68c34;
+  --rc-rune-deep: #a7631a;
+  --rc-rune-ink: #824c0f;
+  --rc-rune-gold: #ffd98c;
+  --rc-moss-ink: #3f6632;
+  --rc-ember: #933f30;
+  --rc-deep: #d8cbb5;
+  --rc-field: #fbf6ec;
+  --rc-shadow: rgba(70, 61, 80, 0.3);
+  --rc-strong: #2b2333;
+  --rc-title-font: 'Cormorant Unicase', 'Cormorant SC', Georgia, 'Times New Roman', serif;
+  --rc-label-font: 'Alegreya Sans SC', 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+
+  --ui-bg: color-mix(in srgb, var(--rc-stone) 94%, transparent);
+  --ui-bg-2: var(--rc-stone-2);
+  --ui-border: var(--rc-shade);
+  --ui-border-light: var(--rc-shade-2);
+  --ui-text: var(--rc-ink);
+  --ui-dim: var(--rc-carve);
+  --ui-accent: var(--rc-rune-ink);
+  --ui-bad: var(--rc-ember);
+  --ui-good: var(--rc-moss-ink);
+  --t-strong: var(--rc-strong);
+  --t-btn-flat: var(--rc-stone-2);
+
+  /* The Faith frame's band (`FRAME_RIM.altar`) and how far it stands out (`FRAME_REACHES.altar`); written again by faithbox.ts from those. */
+  --rim: 22px;
+  --reach: 8px;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
 
 html, body {
   margin: 0;
-  background: #12395f;
   color: var(--ui-text);
-  font: 14px/1.5 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font: 14px/1.45 'Alegreya Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-feature-settings: 'lnum' 1;
 }
 
 /*
- * The island under the water line, so that the page is plainly the same place
- * as the game.
+ * The sea under the cove, until the cove is drawn over it, and wherever it is
+ * not drawn at all.
  *
- * `100dvh` rather than `100%`: a percentage height resolves against the parent,
- * `html` has no height of its own, and the whole thing collapses to the height
- * of the card — which leaves the gradient stopping halfway down the screen and
- * the centring doing nothing at all. `dvh` is also the one that copes with a
- * phone's address bar sliding in and out.
+ * `100dvh` rather than `100%`: a percentage height resolves against the
+ * parent, `html` has no height of its own, and the whole thing collapses to
+ * the height of the card. `dvh` is also the one that copes with a phone's
+ * address bar sliding in and out.
  */
 body {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100dvh;
-  padding: 24px 16px;
-  background:
-    radial-gradient(120% 90% at 50% 8%, rgba(92, 154, 62, 0.18), transparent 62%),
-    linear-gradient(#0e2c4a, #12395f 45%, #164a75);
+  padding: 40px 16px 40px max(40px, 6vw);
+  background: linear-gradient(#2f8c96, #1d6a87 55%, #17507a);
   background-attachment: fixed;
 }
 
-.card {
+/* The cove: fixed under everything, faded in once its first frame is drawn. */
+#cove {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+}
+
+#cove.up { opacity: 1; }
+
+:root[data-motion='less'] #cove { transition: none; }
+
+/* ---- The Faith box ---------------------------------------------------------- */
+
+/*
+ * Until its slab is painted (`.dressed`) the box is the game's plate drawn in
+ * CSS: the stone with its corners cut, as src/style.css draws a Runecut window
+ * before its picture comes.
+ */
+.faith {
+  --cut: 7px;
+  position: relative;
+  isolation: isolate;
+  padding: calc(var(--rim) + 2px - 7px) calc(var(--rim) + 12px) calc(var(--rim) + 8px);
+  background: var(--rc-stone);
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+  filter: drop-shadow(0 12px 22px rgba(30, 26, 40, 0.35));
+}
+
+.faith.dressed {
+  background: none;
+  clip-path: none;
+}
+
+/* The slab, under the content; the frame over the box's edge, out past it by its reach. Neither takes a click. */
+.fb-plate,
+.fb-frame {
+  position: absolute;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.fb-plate {
+  inset: 0;
   width: 100%;
-  max-width: 420px;
-  padding: 26px 24px 20px;
-  background: var(--ui-bg);
-  border: 1px solid var(--ui-border);
-  border-radius: 6px;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  height: 100%;
+  z-index: -1;
 }
 
-h1 {
-  margin: 0 0 6px;
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--ui-accent);
+.fb-frame {
+  inset: calc(-1 * var(--reach));
+  width: calc(100% + 2 * var(--reach));
+  height: calc(100% + 2 * var(--reach));
+  z-index: 3;
 }
 
-.lede { margin: 0 0 18px; color: var(--ui-dim); }
+.dressed > :is(.fb-plate, .fb-frame) { visibility: visible; }
 
+/* The niche at the head of the title, set into the frame's top as the game's is. */
+.fb-niche {
+  display: block;
+  position: relative;
+  z-index: 4;
+  flex: 0 0 auto;
+  margin: -12px 0 -12px -6px;
+}
+
+/* The lintel: the title cut across the head of the box, a double groove under it (`.win-title`). */
+.win-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -10px 12px;
+  padding: 7px 7px 9px 12px;
+}
+
+.win-head::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 0;
+  height: 5px;
+  background: linear-gradient(var(--rc-shade) 0 1px, var(--rc-stone-hi) 1px 2px, transparent 2px 3px, color-mix(in srgb, var(--rc-rune) 70%, var(--rc-shade)) 3px 4px, var(--rc-stone-hi) 4px 5px);
+  pointer-events: none;
+}
+
+.win-title {
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--rc-ink);
+  font: 700 17px/1.1 var(--rc-title-font);
+  letter-spacing: 0.02em;
+}
+
+/* ---- The sign-in box -------------------------------------------------------- */
+
+.card {
+  position: relative;
+  z-index: 1;
+  /* No title: the box opens on its tabs, set in from the frame's band as the title would be. */
+  padding-top: calc(var(--rim) + 12px);
+  width: 100%;
+  max-width: 470px;
+}
+
+.lede { margin: 0 0 14px; color: var(--rc-carve); }
+.lede:empty { display: none; }
+
+/* Named for the page's outline and for screen readers, not shown: the box opens on its tabs. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Tabs: set into the foot of the lintel, the open one a step down and lit along its foot (`.log-tab`). */
 .tabs {
   display: flex;
   gap: 2px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid var(--ui-border);
+  margin-bottom: 16px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--rc-shade);
+  box-shadow: 0 1px 0 var(--rc-stone-hi);
 }
 
 .tab {
-  flex: 1;
-  padding: 8px 6px;
-  border: 1px solid transparent;
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
-  background: none;
-  color: var(--ui-dim);
-  font: inherit;
+  padding: 7px 9px 8px;
+  white-space: nowrap;
+  border: 0;
+  background: transparent;
+  color: var(--rc-carve);
+  font: 500 14px/1.2 var(--rc-label-font);
+  letter-spacing: 0.04em;
   cursor: pointer;
 }
 
-.tab:hover { color: var(--ui-text); }
+.tab:hover { box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--rc-rune) 45%, transparent); color: var(--rc-ink); }
 
 .tab.on {
-  border-color: var(--ui-border);
-  background: var(--ui-bg-2);
-  color: var(--ui-accent);
-  margin-bottom: -1px;
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 -2px 0 var(--rc-rune), inset 1px 0 0 var(--rc-shade), inset -1px 0 0 var(--rc-shade);
+  color: var(--rc-ink);
 }
 
 label {
   display: block;
-  margin-bottom: 5px;
-  color: var(--ui-dim);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  margin-bottom: 4px;
+  color: var(--rc-carve);
+  font: 700 12px/1.3 var(--rc-label-font);
+  letter-spacing: 0.06em;
 }
 
 input {
   width: 100%;
-  padding: 10px 11px;
-  border: 1px solid var(--ui-border);
-  border-radius: 4px;
-  background: rgba(10, 9, 7, 0.55);
-  color: var(--ui-text);
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-field);
+  box-shadow: inset 0 0 0 1px var(--rc-shade), inset 0 2px 3px rgba(70, 61, 80, 0.12);
+  color: var(--rc-ink);
   font: inherit;
+  font-size: 15px;
+  accent-color: var(--rc-rune-deep);
 }
 
 input:focus {
   outline: none;
-  border-color: var(--ui-border-light);
-  box-shadow: 0 0 0 2px rgba(227, 182, 87, 0.18);
+  background: var(--rc-stone-hi);
+  box-shadow: inset 0 0 0 1px var(--rc-shade-2), inset 0 -2px 0 var(--rc-rune);
 }
+
+:focus-visible {
+  outline: 2px solid var(--rc-rune-deep);
+  outline-offset: 1px;
+}
+
+input:focus-visible { outline: none; }
 
 .pw { position: relative; }
 
@@ -132,66 +276,109 @@ input:focus {
   top: 50%;
   right: 6px;
   transform: translateY(-50%);
-  padding: 5px 8px;
-  border: 1px solid transparent;
-  border-radius: 3px;
+  padding: 4px 8px;
+  border: 0;
   background: none;
-  color: var(--ui-dim);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-#peek:hover { color: var(--ui-accent); border-color: var(--ui-border); }
-
-.note {
-  margin: 6px 0 16px;
-  min-height: 2.6em;
-  color: var(--ui-dim);
-  font-size: 12px;
-}
-
-.note.bad { color: var(--ui-bad); }
-.note.good { color: var(--ui-good); }
-
-#go {
-  width: 100%;
-  margin-top: 2px;
-  padding: 11px;
-  border: 1px solid var(--ui-border-light);
-  border-radius: 4px;
-  background: linear-gradient(rgba(90, 74, 44, 0.95), rgba(62, 51, 31, 0.95));
-  color: var(--ui-text);
-  font: inherit;
-  font-size: 15px;
+  color: var(--rc-carve);
+  font: 500 13px/1 var(--rc-label-font);
   letter-spacing: 0.04em;
   cursor: pointer;
 }
 
-#go:hover:not(:disabled) { border-color: var(--ui-accent); color: #fff; }
+#peek:hover { color: var(--rc-rune-ink); }
 
-#go:disabled { opacity: 0.55; cursor: progress; }
+.note {
+  margin: 5px 0 14px;
+  min-height: 2.6em;
+  color: var(--rc-carve);
+  font-size: 13px;
+}
+
+.note:empty { min-height: 0; margin: 0 0 12px; }
+.note.bad { color: var(--ui-bad); }
+.note.good { color: var(--ui-good); }
+
+/* A button: a tile cut from the stone, its edge a line of shade, the groove along its foot lit when pointed at (`.tb-btn`); the one that sends the form is warmed by the rune's gold. */
+#go,
+#ashore,
+.mfa-row button {
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(var(--rc-stone-hi), var(--rc-stone-2) 30%);
+  box-shadow: inset 0 0 0 1px var(--rc-shade);
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+  color: var(--rc-ink);
+  font: 700 15px/1.2 var(--rc-label-font);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+#go,
+#ashore {
+  margin-top: 2px;
+  background: linear-gradient(var(--rc-stone-hi), color-mix(in srgb, var(--rc-rune-gold) 30%, var(--rc-stone-2)) 80%);
+  box-shadow: inset 0 0 0 1px var(--rc-shade), inset 0 -2px 0 var(--rc-rune);
+}
+
+:is(#go, #ashore, .mfa-row button):hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--rc-shade-2), inset 0 -3px 0 var(--rc-rune);
+  color: var(--rc-strong);
+}
+
+:is(#go, #ashore, .mfa-row button):focus-visible { outline-offset: -4px; }
+
+:is(#go, #ashore, .mfa-row button):disabled { opacity: 0.55; cursor: progress; }
 
 .say {
-  margin: 14px 0 0;
-  min-height: 1.5em;
-  font-size: 13px;
+  margin: 10px 0 0;
+  min-height: 1.4em;
+  font-size: 14px;
 }
 
 .say.bad { color: var(--ui-bad); }
 .say.good { color: var(--ui-good); }
 
+/* Nothing to say: no blank line held open for it. */
+.say:empty { min-height: 0; margin: 0; }
+
 .fine {
-  margin: 16px 0 0;
-  padding-top: 14px;
-  border-top: 1px solid rgba(107, 88, 54, 0.4);
-  color: var(--ui-dim);
-  font-size: 12px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--rc-shade) 60%, transparent);
+  color: var(--rc-carve);
+  font-size: 13px;
 }
 
-.fine b { color: var(--ui-text); font-weight: 600; }
+.fine b { color: var(--rc-ink); font-weight: 700; }
 
-a { color: var(--ui-accent); }
+a { color: var(--rc-rune-ink); }
+
+/* The papers: the Privacy Policy and the Game Rules, along the foot of the box. */
+.papers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--rc-shade) 60%, transparent);
+}
+
+.paper-open {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--rc-rune-ink);
+  font: 500 14px/1.3 var(--rc-label-font);
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--rc-rune) 55%, transparent);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.paper-open:hover { color: var(--rc-strong); text-decoration-color: var(--rc-rune); }
 
 /* Whoever is signed in already does not need a form. */
 .card.settled form, .card.settled .tabs, .card.settled #warn { display: none; }
@@ -200,51 +387,131 @@ a { color: var(--ui-accent); }
  *
  * The card grows for it. A sign-up is two fields and wants to be narrow; a
  * character creator is a mirror and eight rows of choices and wants not to be.
+ * It takes the middle of the screen: the cove is the background to it.
  */
-.card.making { max-width: 920px; }
+.card.making { max-width: 960px; margin-inline: auto; }
 .card.making form, .card.making .tabs { display: none; }
 
 /* The creator's own rules are in src/ui/creator.css, with the game's window. */
 
-#ashore {
-  width: 100%;
-  margin-top: 16px;
-  padding: 11px;
-  border: 1px solid var(--ui-border-light);
-  border-radius: 4px;
-  background: linear-gradient(rgba(90, 74, 44, 0.95), rgba(62, 51, 31, 0.95));
-  color: var(--ui-text);
-  font: inherit;
-  font-size: 15px;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-}
-
-#ashore:hover:not(:disabled) { border-color: var(--ui-accent); color: #fff; }
-#ashore:disabled { opacity: 0.55; cursor: progress; }
-#ashore:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+#ashore { margin-top: 16px; }
 
 /* ---- Two-step sign-in ------------------------------------------------------ */
 #mfa {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(107, 88, 54, 0.4);
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--rc-shade) 60%, transparent);
 }
-#mfa h2 { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--ui-accent); }
-#mfa-qr img { display: block; width: 180px; height: 180px; margin: 8px 0; padding: 6px; background: #fff; border-radius: 4px; }
-#mfa-secret { word-break: break-all; color: var(--ui-text); }
+#mfa h2 { margin: 0 0 6px; color: var(--rc-ink); font: 700 16px/1.2 var(--rc-title-font); }
+#mfa-qr img { display: block; width: 180px; height: 180px; margin: 8px 0; padding: 6px; background: #fff; }
+#mfa-secret { word-break: break-all; color: var(--rc-ink); }
 #mfa-code { margin-bottom: 8px; letter-spacing: 0.2em; }
 .mfa-row { display: flex; gap: 8px; }
-.mfa-row button {
-  flex: 1;
-  padding: 9px;
-  border: 1px solid var(--ui-border-light);
-  border-radius: 4px;
-  background: linear-gradient(rgba(90, 74, 44, 0.95), rgba(62, 51, 31, 0.95));
-  color: var(--ui-text);
-  font: inherit;
+.mfa-row button { flex: 1; }
+.card.making #mfa { display: none; }
+
+/* ---- A paper, over the cove ------------------------------------------------ */
+
+/*
+ * The dialog itself is only the room the box stands in, the whole screen with
+ * the cove dimmed behind it; the box is a Faith box like the sign-in one, its
+ * writing scrolling inside it and its frame standing still round it.
+ */
+.paper-veil {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 24px 16px;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.paper-veil[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paper-veil::backdrop { background: rgba(28, 34, 52, 0.42); }
+
+.paper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 680px;
+  max-height: 100%;
+}
+
+.paper .win-head { flex: 0 0 auto; }
+
+.paper-close {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: linear-gradient(var(--rc-stone-hi), var(--rc-stone-2) 30%);
+  box-shadow: inset 0 0 0 1px var(--rc-shade);
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+  color: var(--rc-carve);
+  font: 20px/1 'Segoe UI', system-ui, sans-serif;
   cursor: pointer;
 }
-.mfa-row button:hover:not(:disabled) { border-color: var(--ui-accent); color: #fff; }
-.mfa-row button:disabled { opacity: 0.55; cursor: progress; }
-.card.making #mfa { display: none; }
+
+.paper-close:hover { box-shadow: inset 0 0 0 1px var(--rc-shade), inset 0 -2px 0 var(--rc-rune); color: var(--rc-strong); }
+.paper-close:focus-visible { outline-offset: -4px; }
+
+.paper-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 6px 4px 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rc-shade) transparent;
+}
+
+.paper-body:focus-visible { outline-offset: -2px; }
+
+/* The policy and the rules (src/ui/privacy.ts, src/ui/rules.ts), whose root is `.privacy-policy`: set as writing on the stone. */
+.paper-body .privacy-policy { color: var(--rc-ink); font-size: 15px; line-height: 1.55; }
+.paper-body .privacy-policy :is(h1, h2, h3, h4) { margin: 1.1em 0 0.35em; color: var(--rc-ink); font-family: var(--rc-title-font); font-weight: 700; line-height: 1.2; letter-spacing: 0.02em; }
+.paper-body .privacy-policy h1 { font-size: 21px; }
+.paper-body .privacy-policy h2 { font-size: 18px; }
+.paper-body .privacy-policy :is(h3, h4) { font-size: 16px; }
+.paper-body .privacy-policy > :first-child { margin-top: 0; }
+/* Its own heading is the box's title, already over it. */
+.paper-body .privacy-policy > h1:first-child { display: none; }
+.paper-body .privacy-policy > h1:first-child + * { margin-top: 0; }
+.paper-body .privacy-policy :is(p, ul, ol, dl, table) { margin: 0 0 0.75em; }
+.paper-body .privacy-policy :is(ul, ol) { padding-left: 1.3em; }
+.paper-body .privacy-policy li { margin-bottom: 0.25em; }
+.paper-body .privacy-policy :is(b, strong, dt) { color: var(--rc-strong); }
+.paper-body .privacy-policy :is(small, .muted, time) { color: var(--rc-carve); }
+.paper-body .privacy-policy table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.paper-body .privacy-policy :is(th, td) { padding: 5px 8px; border-bottom: 1px solid color-mix(in srgb, var(--rc-shade) 60%, transparent); text-align: left; vertical-align: top; }
+.paper-body .privacy-policy code { font-size: 0.92em; overflow-wrap: anywhere; }
+.paper-body .privacy-policy a { overflow-wrap: anywhere; }
+
+/* ---- Narrow screens ---------------------------------------------------------- */
+
+/*
+ * A phone: the box across the screen's width, under the head of the cove,
+ * with the stone standing over it (src/landing/backdrop.ts puts it there).
+ */
+@media (max-width: 899px) {
+  body {
+    justify-content: center;
+    align-items: flex-start;
+    padding: max(42vh, 270px) 14px 28px;
+  }
+
+  .card { max-width: 520px; }
+}
+
+@media (max-width: 420px) {
+  .paper-veil { padding: 12px 10px; }
+}

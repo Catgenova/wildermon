@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-ui="runecut" data-rc="day">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light" />
     <!-- What the page may load and talk to: itself, the island (src/net/supabase.ts PROJECT.url, https and wss), Google Fonts,
          Cloudflare Turnstile (script and frame), the leaked-password list (src/net/accounts.ts), and images this page made
          itself (blob:, the window frames' pictures in src/ui/runecut-dress.ts). No inline or eval'd script.
@@ -15,17 +15,22 @@
     <title>Wildermon — your account</title>
     <meta name="description" content="A username and a password, and nothing else." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 30 11 16 19 2 11z' fill='%235c9a3e'/%3E%3Cpath d='M2 11v8l14 8v-8z' fill='%23795c3c'/%3E%3Cpath d='M30 11v8l-14 8v-8z' fill='%234f3c27'/%3E%3C/svg%3E" />
+    <!-- Runecut's faces, as the game loads them (src/index.html): Cormorant Unicase for titles, Alegreya Sans for writing, its small capitals for labels. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans+SC:wght@500;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Cormorant+Unicase:wght@600;700&display=swap" />
     <link rel="stylesheet" href="./account.css" />
     <link rel="stylesheet" href="./ui/creator.css" />
   </head>
   <body>
     <!-- Edit src/account.html, not the generated account.html at the repository root. -->
-    <main class="card">
-      <h1>Wildermon</h1>
-      <p class="lede" id="lede">
-        A name and a password. That is the whole of it — there is no e-mail address to
-        give, and nothing will ever be sent to you.
-      </p>
+    <!-- The cove behind the page, drawn by the game's renderer once the form is up (src/landing/backdrop.ts). -->
+    <canvas id="cove" aria-hidden="true"></canvas>
+    <!-- The box is the Faith window: its slab, frame and niche are painted in by src/landing/faithbox.ts. -->
+    <main class="card faith">
+      <h1 class="sr-only">Wildermon</h1>
+      <!-- Empty but in the creator, which says what it is for here (src/account.ts). -->
+      <p class="lede" id="lede"></p>
 
       <div class="tabs" role="tablist" aria-label="Account">
         <button type="button" id="tab-new" class="tab on" role="tab" aria-selected="true">Make an account</button>
@@ -38,23 +43,15 @@
           id="name" name="username" type="text" autocomplete="username"
           autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="20"
           placeholder="Alice" aria-describedby="name-note" />
-        <p class="note" id="name-note">
-          Three to twenty characters: a letter first, then letters, numbers, underscore
-          or hyphen. It is what everybody on the island will see over your head, with the
-          capitals you type. Signing in ignores capitals, so alice and Alice are one account,
-          and signing in with different capitals changes them.
-        </p>
+        <!-- What is wrong with the name, or whether it is taken, as it is typed (src/account.ts). -->
+        <p class="note" id="name-note"></p>
 
         <label for="pw">Password</label>
         <div class="pw">
           <input id="pw" name="password" type="password" autocomplete="new-password" aria-describedby="pw-note" />
           <button type="button" id="peek" aria-label="Show the password">show</button>
         </div>
-        <p class="note" id="pw-note">
-          Eight characters at the very least, and checked against the list of passwords
-          already known to have leaked. Neither it nor its full fingerprint leaves this
-          page.
-        </p>
+        <p class="note" id="pw-note"></p>
 
         <button id="go" type="submit">Make the account</button>
       </form>
@@ -92,13 +89,21 @@
         reset link either. <b>A forgotten password is a lost account.</b> Write it down
         somewhere, or let the browser keep it.
       </p>
-      <p class="fine">
-        The island wants a name it can put on a roster, so this is the way in. A name
-        also keeps what you earn: every skill, every tool and the ground under your
-        settlement hang off the account, and a Wanderer's hangs off a session this browser
-        may tidy away.
-      </p>
+      <nav class="papers" aria-label="The island's papers">
+        <button type="button" class="paper-open" id="open-privacy">Privacy Policy</button>
+        <button type="button" class="paper-open" id="open-rules">Game Rules</button>
+      </nav>
     </main>
+    <!-- The Privacy Policy and the Game Rules, each opened over the cove in a box like the one above (src/account.ts). -->
+    <dialog id="paper" class="paper-veil" aria-labelledby="paper-title">
+      <section class="faith paper">
+        <div class="win-head">
+          <h2 class="win-title" id="paper-title"></h2>
+          <button type="button" class="paper-close" id="paper-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="paper-body" id="paper-body" tabindex="0"></div>
+      </section>
+    </dialog>
     <script type="module" src="./account.ts"></script>
   </body>
 </html>

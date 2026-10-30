@@ -4216,6 +4216,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 394,
+    day: '2026-10-30',
+    lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
     n: 393,
     day: '2026-10-30',
     lines: () => [`Changed: water mote cost: ${WATER_MOTE_USES.map(([what, n]) => `${what} ${n}`).join(', ')}. Used up when dug or built. Without: "${WATER_MOTE_NEED}"`],

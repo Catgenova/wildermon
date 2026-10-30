@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-ui="runecut" data-rc="day">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light" />
     <!-- What the page may load and talk to: itself, the island (src/net/supabase.ts PROJECT.url, https and wss), Google Fonts,
          Cloudflare Turnstile (script and frame), the leaked-password list (src/net/accounts.ts), and images this page made
          itself (blob:, the window frames' pictures in src/ui/runecut-dress.ts). No inline or eval'd script.
@@ -11,25 +11,32 @@
          HTML sinks take only Trusted Types from the one policy, `default` (src/page-guard.ts). http requests go out as https.
          No frame-ancestors in a <meta>: src/page-guard.ts refuses another site's frame instead. scripts/sri.mjs adds the
          hash of the built page's import map to script-src. scripts/boot-check.mjs fails on any violation. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-iStMEleaz7e43RrsFAl6tgSmtMbAO4M4TFKx6jPmZ6M=' https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://glebtboagnafcgwjjvfy.supabase.co wss://glebtboagnafcgwjjvfy.supabase.co https://api.pwnedpasswords.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; require-trusted-types-for 'script'; trusted-types default; upgrade-insecure-requests" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-5aJOK4clXQgxHX/iXm7efc07jMs+4yh51/ygDnK3xq8=' https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://glebtboagnafcgwjjvfy.supabase.co wss://glebtboagnafcgwjjvfy.supabase.co https://api.pwnedpasswords.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; require-trusted-types-for 'script'; trusted-types default; upgrade-insecure-requests" />
     <title>Wildermon — your account</title>
     <meta name="description" content="A username and a password, and nothing else." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 30 11 16 19 2 11z' fill='%235c9a3e'/%3E%3Cpath d='M2 11v8l14 8v-8z' fill='%23795c3c'/%3E%3Cpath d='M30 11v8l-14 8v-8z' fill='%234f3c27'/%3E%3C/svg%3E" />
-    <script type="importmap">{"imports":{"./assets/account.js":"./assets/account.js?v=16b91f2b","./assets/help.js":"./assets/help.js?v=5cdac5f5","./assets/keeper.js":"./assets/keeper.js?v=4315799d","./assets/main.js":"./assets/main.js?v=4ba942d6","./assets/mfa.js":"./assets/mfa.js?v=f95c8a52","./assets/watch.js":"./assets/watch.js?v=49382d8a"},"integrity":{"./assets/account.js?v=16b91f2b":"sha384-kvvsJI4vvTrNPOjPcUPZBePvovFH9VEKCf0qqr+4JaZGcXlMJVj7rZDJE3zOlrxU","./assets/help.js?v=5cdac5f5":"sha384-/eCh0IpGhbr06ABFEsZX0VqHlT1ts7ES6DzEFcDWy797nOe5qEU19hcxrrWXj3fx","./assets/keeper.js?v=4315799d":"sha384-/R3LU/tdZBJzcJg1RI5fz8LGQJPEAWUHqHnl7KDRKAH4mZ430xwCN0zXiGJRwAeV","./assets/main.js?v=4ba942d6":"sha384-6nf27H7drbWrg+7n+SE9run7PSGUkT2c5YGDGBE2VsTZwI0ZmNj88OrDMYQDF2av","./assets/mfa.js?v=f95c8a52":"sha384-VvFUsSMNJN5HegxEX1k5dQpMQtXjZoKswyPX0M+fi72EuAITc1M9yJ4+RQiirQ0d","./assets/watch.js?v=49382d8a":"sha384-q1d2GCXwCy+7G2vs50peMvW5k13lbLyV1/V0fHSP3bjxBXQqWOTSh7LiwmCWPpXD"}}</script>
-    <script type="module" crossorigin src="./assets/account.js?v=16b91f2b" integrity="sha384-kvvsJI4vvTrNPOjPcUPZBePvovFH9VEKCf0qqr+4JaZGcXlMJVj7rZDJE3zOlrxU"></script>
-    <link rel="modulepreload" crossorigin href="./assets/keeper.js?v=4315799d" integrity="sha384-/R3LU/tdZBJzcJg1RI5fz8LGQJPEAWUHqHnl7KDRKAH4mZ430xwCN0zXiGJRwAeV">
-    <link rel="modulepreload" crossorigin href="./assets/mfa.js?v=f95c8a52" integrity="sha384-VvFUsSMNJN5HegxEX1k5dQpMQtXjZoKswyPX0M+fi72EuAITc1M9yJ4+RQiirQ0d">
-    <link rel="stylesheet" crossorigin href="./assets/mfa.css?v=71b4cb54" integrity="sha384-OICpRbxDE2AHp4ZBTZpIvtAOEKlPi3NQU14d/1wbd4P88p6ltBwEvUh53+8Kr6gb">
-    <link rel="stylesheet" crossorigin href="./assets/account.css?v=b1830582" integrity="sha384-RnDEY8ySdHWi3eMCdTB9gUCgmURNaniL138IX+Bbjy2Ri9eudaDKRJof5+nW/yYi">
+    <!-- Runecut's faces, as the game loads them (src/index.html): Cormorant Unicase for titles, Alegreya Sans for writing, its small capitals for labels. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans+SC:wght@500;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Cormorant+Unicase:wght@600;700&display=swap" />
+    <script type="importmap">{"imports":{"./assets/account.js":"./assets/account.js?v=b8e421b8","./assets/backdrop.js":"./assets/backdrop.js?v=b5938c4d","./assets/faithbox.js":"./assets/faithbox.js?v=9a40aa68","./assets/help.js":"./assets/help.js?v=a4289792","./assets/keeper.js":"./assets/keeper.js?v=0d83b6ae","./assets/life.js":"./assets/life.js?v=e2d3ad8c","./assets/main.js":"./assets/main.js?v=fcafff5d","./assets/nightwash.js":"./assets/nightwash.js?v=4d8d1021","./assets/preload-helper.js":"./assets/preload-helper.js?v=8bd5df21","./assets/renderer.js":"./assets/renderer.js?v=6d4b7a8b","./assets/runecut-art.js":"./assets/runecut-art.js?v=5aa87022","./assets/runestone.js":"./assets/runestone.js?v=22707f48","./assets/sprites.js":"./assets/sprites.js?v=20072762","./assets/watch.js":"./assets/watch.js?v=9722c7af"},"integrity":{"./assets/account.js?v=b8e421b8":"sha384-Ay/OF1FO9eHMcBO0WeDNGsn/HAHiQjhv9hrs0iiMvVspCnxcekQe9RFGRhbwxQUN","./assets/backdrop.js?v=b5938c4d":"sha384-fa/2mQefN8iYy7nKm6tEqIOQdoAesYbKDQZw23kXX/mUqVwsjVjRFt2iqPhTj7Qs","./assets/faithbox.js?v=9a40aa68":"sha384-LsjETFsy9bt36tnwwBQGma64N4yx20HSi9r1v3mdc+fTFRK2y/qzbxDghcFfYnZi","./assets/help.js?v=a4289792":"sha384-3jbpr13Q2nIF92DNpy6DAbiYIeGsgvQXtgV68nUGAthUyPRqqHodgArjVh1RjbKP","./assets/keeper.js?v=0d83b6ae":"sha384-B+K3B6JwUuGoBRty2fRxQZdjue+kb40rOCN7coL7hxK6M0tivVx90NlQnK1ArkbS","./assets/life.js?v=e2d3ad8c":"sha384-1DfBs1qlnp5jVHoxK5daP/21/uNNFzjDLhnuHZOqj7vhvVfQAtCelf5kBGGfpHke","./assets/main.js?v=fcafff5d":"sha384-YbV5S23WYotUTsxrhJZpRaOGO713octN7S+emJhZRdaHikXRctbewLaQ23Y49lew","./assets/nightwash.js?v=4d8d1021":"sha384-8qGkN+IhP/kYL8z4NK7QbLUxao97/D+N6GJ+hcdvVZpRqS8kpGDwuTRj8Q5AsR/+","./assets/preload-helper.js?v=8bd5df21":"sha384-vYZAHGEvOrj2+wLKYGvZmC34rrYDlZSbj6+HRAdroUBnqe9RgiGEBk2NhHu/2B7t","./assets/renderer.js?v=6d4b7a8b":"sha384-rIlnSBNpRj07gsgtCfu/rRA0d2XPZvK961oRm0yjuGZv/pgrvZG519xFG6iWeWSv","./assets/runecut-art.js?v=5aa87022":"sha384-zc1LBj5yE117pROhMg980Wm6W4CYJ9gYNNR4zRElqEZvbJmudZhXcbrNfiehQxw2","./assets/runestone.js?v=22707f48":"sha384-G/AOIK78NRdjSYa5WkLbJzWNHVqMeuIIZ8Q6yUbbAKgSAoRKA4rfSAk4g6N/PDSN","./assets/sprites.js?v=20072762":"sha384-BdcicG4T/qulj1vwkoNwQn57GAAzfB4oDZ5G4TUmj9LT1fF5t04gvj5JQZ8hhJFg","./assets/watch.js?v=9722c7af":"sha384-9DcBZI5Z+pFtAcm8ZsJTFrXrFCWc6Ev8UcEmt9mVFFBcXVOzFEMVwHYugHjZty2z"}}</script>
+    <script type="module" crossorigin src="./assets/account.js?v=b8e421b8" integrity="sha384-Ay/OF1FO9eHMcBO0WeDNGsn/HAHiQjhv9hrs0iiMvVspCnxcekQe9RFGRhbwxQUN"></script>
+    <link rel="modulepreload" crossorigin href="./assets/runestone.js?v=22707f48" integrity="sha384-G/AOIK78NRdjSYa5WkLbJzWNHVqMeuIIZ8Q6yUbbAKgSAoRKA4rfSAk4g6N/PDSN">
+    <link rel="modulepreload" crossorigin href="./assets/sprites.js?v=20072762" integrity="sha384-BdcicG4T/qulj1vwkoNwQn57GAAzfB4oDZ5G4TUmj9LT1fF5t04gvj5JQZ8hhJFg">
+    <link rel="modulepreload" crossorigin href="./assets/keeper.js?v=0d83b6ae" integrity="sha384-B+K3B6JwUuGoBRty2fRxQZdjue+kb40rOCN7coL7hxK6M0tivVx90NlQnK1ArkbS">
+    <link rel="modulepreload" crossorigin href="./assets/preload-helper.js?v=8bd5df21" integrity="sha384-vYZAHGEvOrj2+wLKYGvZmC34rrYDlZSbj6+HRAdroUBnqe9RgiGEBk2NhHu/2B7t">
+    <link rel="stylesheet" crossorigin href="./assets/preload-helper.css?v=71b4cb54" integrity="sha384-OICpRbxDE2AHp4ZBTZpIvtAOEKlPi3NQU14d/1wbd4P88p6ltBwEvUh53+8Kr6gb">
+    <link rel="stylesheet" crossorigin href="./assets/account.css?v=b6c56817" integrity="sha384-vu/fPWdWkK+tV7gfJAMZPq2S/saN7b2stpWC3rJuDBxX0M2ZqvX63rUpxujrUFGn">
   </head>
   <body>
     <!-- Edit src/account.html, not the generated account.html at the repository root. -->
-    <main class="card">
-      <h1>Wildermon</h1>
-      <p class="lede" id="lede">
-        A name and a password. That is the whole of it — there is no e-mail address to
-        give, and nothing will ever be sent to you.
-      </p>
+    <!-- The cove behind the page, drawn by the game's renderer once the form is up (src/landing/backdrop.ts). -->
+    <canvas id="cove" aria-hidden="true"></canvas>
+    <!-- The box is the Faith window: its slab, frame and niche are painted in by src/landing/faithbox.ts. -->
+    <main class="card faith">
+      <h1 class="sr-only">Wildermon</h1>
+      <!-- Empty but in the creator, which says what it is for here (src/account.ts). -->
+      <p class="lede" id="lede"></p>
 
       <div class="tabs" role="tablist" aria-label="Account">
         <button type="button" id="tab-new" class="tab on" role="tab" aria-selected="true">Make an account</button>
@@ -42,23 +49,15 @@
           id="name" name="username" type="text" autocomplete="username"
           autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="20"
           placeholder="Alice" aria-describedby="name-note" />
-        <p class="note" id="name-note">
-          Three to twenty characters: a letter first, then letters, numbers, underscore
-          or hyphen. It is what everybody on the island will see over your head, with the
-          capitals you type. Signing in ignores capitals, so alice and Alice are one account,
-          and signing in with different capitals changes them.
-        </p>
+        <!-- What is wrong with the name, or whether it is taken, as it is typed (src/account.ts). -->
+        <p class="note" id="name-note"></p>
 
         <label for="pw">Password</label>
         <div class="pw">
           <input id="pw" name="password" type="password" autocomplete="new-password" aria-describedby="pw-note" />
           <button type="button" id="peek" aria-label="Show the password">show</button>
         </div>
-        <p class="note" id="pw-note">
-          Eight characters at the very least, and checked against the list of passwords
-          already known to have leaked. Neither it nor its full fingerprint leaves this
-          page.
-        </p>
+        <p class="note" id="pw-note"></p>
 
         <button id="go" type="submit">Make the account</button>
       </form>
@@ -96,12 +95,20 @@
         reset link either. <b>A forgotten password is a lost account.</b> Write it down
         somewhere, or let the browser keep it.
       </p>
-      <p class="fine">
-        The island wants a name it can put on a roster, so this is the way in. A name
-        also keeps what you earn: every skill, every tool and the ground under your
-        settlement hang off the account, and a Wanderer's hangs off a session this browser
-        may tidy away.
-      </p>
+      <nav class="papers" aria-label="The island's papers">
+        <button type="button" class="paper-open" id="open-privacy">Privacy Policy</button>
+        <button type="button" class="paper-open" id="open-rules">Game Rules</button>
+      </nav>
     </main>
+    <!-- The Privacy Policy and the Game Rules, each opened over the cove in a box like the one above (src/account.ts). -->
+    <dialog id="paper" class="paper-veil" aria-labelledby="paper-title">
+      <section class="faith paper">
+        <div class="win-head">
+          <h2 class="win-title" id="paper-title"></h2>
+          <button type="button" class="paper-close" id="paper-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="paper-body" id="paper-body" tabindex="0"></div>
+      </section>
+    </dialog>
   </body>
 </html>
