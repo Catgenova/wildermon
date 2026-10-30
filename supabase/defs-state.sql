@@ -3691,7 +3691,7 @@ update item_def set description = 'Shaping clay within 2.4 tiles: 30% less time 
 update item_def set description = 'Use on anything damaged: -50 damage, no QL lost. Used up.' where id = 'repair_kit';
 update item_def set description = 'Seals a thing: it never decays. One per thing; a stack takes one per item.' where id = 'sealant';
 update item_def set description = 'Set down: one honey every 50 hours per wildflower clump within 3 tiles; one beeswax per 4 honey; up to 12 honey. Nothing in winter. Take honey empties it.' where id = 'skep';
-update item_def set description = 'Set on your settlement. Vesp set to tend it: a honey per 50 hours worked per wildflower clump within 3 tiles, as a skep; a beeswax per 4 honey; none in winter. Holds 40.' where id = 'hive';
+update item_def set description = 'Set on your settlement. Buzzlet set to tend it: a honey per 50 hours worked per wildflower clump within 3 tiles, as a skep; a beeswax per 4 honey; none in winter. Holds 40.' where id = 'hive';
 update item_def set description = 'Needed to make rope.' where id = 'rope_tool';
 update item_def set description = 'Spins wool, cotton and wemp into yarn. Stand at it.' where id = 'spindle';
 update item_def set description = 'Weaves yarn into cloth. Stand at it.' where id = 'loom';

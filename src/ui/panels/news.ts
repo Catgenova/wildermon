@@ -758,7 +758,7 @@ export const NEWS: News[] = [
         `Added (made by a Naturalist who has learned them, usable by anyone): herb tea: +${percent(itemDef('herb_tea').stamina ?? 0)} stamina a cup; `
           + `salve: a dressed wound cannot go bad; tincture: ${TINCTURE_NAMES} each action ${percent(TINCTURE_BONUS)} faster for ${dur(TINCTURE_SECONDS)}.`,
         'Added: Field Medic: dress another person\'s wounds from their menu.',
-        'Fixed: island hives fill with honey and beeswax for Vesp kept on their settlement, as offline. First island source of beeswax.',
+        `Fixed: island hives fill with honey and beeswax for ${SPECIES.vesp.name} kept on their settlement, as offline. First island source of beeswax.`,
         'Fixed: offline, a rare item made at a bench made its whole stack rare.',
       ];
     },
@@ -2288,7 +2288,7 @@ export const NEWS: News[] = [
     n: 163,
     day: '2026-10-16',
     lines: () => [
-      `Added: Vesp settlement task: ${GATHER_VERB.hive}. Set from its menu or crate; goes to the nearest hive in reach `
+      `Added: ${SPECIES.vesp.name} settlement task: ${GATHER_VERB.hive}. Set from its menu or crate; goes to the nearest hive in reach `
         + 'and works it; the hive fills with honey and beeswax meanwhile. Brings nothing to the crate; no hive in reach: reports it after an hour.',
     ],
   },
@@ -2606,7 +2606,7 @@ export const NEWS: News[] = [
       return [
         `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}. New models for all 3: snail with a fire-lit shell, larger and hotter per stage (glide, strike, stoking, voice).`,
         `Fixed: description now states its settlement task: keeps every campfire, smelter and kiln in reach fuelled from your settlement stores when under ${HEARTH_FULL / 60} min of fuel, relighting if out.`,
-        `Fixed: help listed Embra as silver-vulnerable. Silver damage ${mult(BANE_BONUS)} only on light-carrying kinds: ${listedOr(Object.values(SPECIES).filter((s) => s.glow).map((s) => `${article(s.name)} ${s.name}`))}.`,
+        `Fixed: help listed ${SPECIES.embra.name} as silver-vulnerable. Silver damage ${mult(BANE_BONUS)} only on light-carrying kinds: ${listedOr(Object.values(SPECIES).filter((s) => s.glow).map((s) => `${article(s.name)} ${s.name}`))}.`,
       ];
     },
   },
@@ -2893,7 +2893,7 @@ export const NEWS: News[] = [
       const [one, two] = d.stages!;
       return [
         `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}.`,
-        `Changed: reeds per cut: 1 +1 per ${REED_LEVELS} foraging levels (${1 + Math.floor(SKILL_TOP / REED_LEVELS)} at ${SKILL_TOP}). Carcass gives fur instead of the Sedra's feathers.`,
+        `Changed: reeds per cut: 1 +1 per ${REED_LEVELS} foraging levels (${1 + Math.floor(SKILL_TOP / REED_LEVELS)} at ${SKILL_TOP}). Carcass gives fur instead of the ${SPECIES.sedra.name}'s feathers.`,
         'Added: new models for all 3: marsh otter with reeds down its back; upright Reedweaver with a pampas bundle; great Marshreaper with reed mantle, plume fan and sickle (walk, strike, reed cutting, voice).',
       ];
     },
@@ -3424,18 +3424,18 @@ export const NEWS: News[] = [
     n: 271,
     day: '2026-10-23',
     lines: () => [
-      'Fixed: a guard after something wild stopping at the edge of its reach, never striking, never letting go; with it, a Sparra on the settlement idle, no guard free to spar. Its chase now ends half its reach off.',
+      `Fixed: a guard after something wild stopping at the edge of its reach, never striking, never letting go; with it, a ${SPECIES.sparra.name} on the settlement idle, no guard free to spar. Its chase now ends half its reach off.`,
     ],
   },
   {
     n: 272,
     day: '2026-10-23',
     lines: () => [
-      `Changed: Vesp task ${GATHER_VERB.hive}: the nearest hive with room in its reach of the totem; per go, out to one wildflower tile within ${SKEP_REACH} tiles of the hive, in turn, and back.`,
-      `Changed: Vesp honey into the hive: a skep's rate there, a honey per ${SKEP_CLUMP_HOURS} hours worked per clump within ${SKEP_REACH} tiles, per Vesp; a beeswax per ${SKEP_WAX_EVERY} honey; none in ${SKEP_IDLE}. Was comb every second, whatever was in flower.`,
-      `Changed: Vesp ledger: trips as goes, honey and beeswax made. Learning factor ${percent(PACE_258.hive)} on ${GATHER_SKILL.hive.replace(/_/g, ' ')}, for its trips.`,
-      'Changed: a Vesp following you fills no hive. Was comb every second on your settlement.',
-      `Added: Vesp idle reasons: hives full; no wildflowers within ${SKEP_REACH} tiles of its hive; ${SKEP_IDLE}.`,
+      `Changed: ${SPECIES.vesp.name} task ${GATHER_VERB.hive}: the nearest hive with room in its reach of the totem; per go, out to one wildflower tile within ${SKEP_REACH} tiles of the hive, in turn, and back.`,
+      `Changed: ${SPECIES.vesp.name} honey into the hive: a skep's rate there, a honey per ${SKEP_CLUMP_HOURS} hours worked per clump within ${SKEP_REACH} tiles, per ${SPECIES.vesp.name}; a beeswax per ${SKEP_WAX_EVERY} honey; none in ${SKEP_IDLE}. Was comb every second, whatever was in flower.`,
+      `Changed: ${SPECIES.vesp.name} ledger: trips as goes, honey and beeswax made. Learning factor ${percent(PACE_258.hive)} on ${GATHER_SKILL.hive.replace(/_/g, ' ')}, for its trips.`,
+      `Changed: a ${SPECIES.vesp.name} following you fills no hive. Was comb every second on your settlement.`,
+      `Added: ${SPECIES.vesp.name} idle reasons: hives full; no wildflowers within ${SKEP_REACH} tiles of its hive; ${SKEP_IDLE}.`,
       `Changed: wildflower pickers leave tiles within ${SKEP_REACH} of a hive, as of a skep.`,
     ],
   },
@@ -4214,6 +4214,14 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 380,
+    day: '2026-10-30',
+    lines: () => [
+      'Fixed: wildermon nobody named, carcasses and stud book records under a kind\'s old name: called by the kind\'s name now, and at every rename to come.',
+      'Removed: old kind names in help ("was ...").',
+    ],
+  },
+  {
     n: 379,
     day: '2026-10-30',
     lines: () => ['Changed: event log tab Talk is now Social.'],

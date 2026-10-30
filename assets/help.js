@@ -737,7 +737,7 @@ import{$C as e,$h as t,$i as n,$j as r,$l as i,$p as a,$u as o,$v as s,$w as ee,
       about ${Math.round(Pf/45*$r(q))} fish an hour.</li>
       <li>Tailor with Fisher's Friend: their nets haul ${k((am(`Fisher's Friend`)[`catch:fishing_net`]??1)-1)} more on average; their creels
       ${k((am(`Fisher's Friend`)[`catch:creel`]??1)-1)} likelier to catch per check.</li>
-      <li><b>${E.wadd.name}</b> (was Wadd): set to a settlement or work post, fishes the banks in its range and carries the catch home.</li>
+      <li><b>${E.wadd.name}</b>: set to a settlement or work post, fishes the banks in its range and carries the catch home.</li>
     </ul>
     <h4>Fisher</h4>
     <ul>
@@ -754,7 +754,7 @@ import{$C as e,$h as t,$i as n,$j as r,$l as i,$p as a,$u as o,$v as s,$w as ee,
       ${Ms.filter(e=>e.treeless).map(e=>`<li>${v(Um(e.name))}: no trees grow or seed on their own.</li>`).join(``)}
       <li>Spring flowers: ${Km.map(([e,t])=>`${e} on ${m(t)}`).join(`; `)}.</li>
       <li>A <b>sprout</b> (forestry) planted anywhere grows the tree.</li>
-      <li><b>Plucka</b> on a settlement: picks bearing trees into the crate.</li>
+      <li><b>${E.plucka.name}</b> on a settlement: picks bearing trees into the crate.</li>
       <li><b>Seasons</b>: ${zm.join(`; `)}. Out of season, <b>Pick fruit</b> gives nothing and names the next season; a plucka skips the tree;
       <b>Examine</b> gives its seasons and whether it is in season.</li>
       <li>Bushes: <b>Harvest</b> with a sickle cuts ${Rm.map(e=>`${Lm(e.yields??``)} off a ${e.name.toLowerCase()} only in ${m(we(e.yields??``))}`).join(`; `)}.</li>
@@ -2141,35 +2141,35 @@ import{$C as e,$h as t,$i as n,$j as r,$l as i,$p as a,$u as o,$v as s,$w as ee,
     <table>
       <tr><td><b>Kind</b></td><td><b>Habitat, food, evolution, settlement task</b></td></tr>
       <tr><td><b>Snufflet</b></td><td>Forages berries.</td></tr>
-      <tr><td><b>${E.vola.name}</b> (was Vola)</td><td>Botanizes herbs and roots. Evolves: ${$(`vola`)}.</td></tr>
-      <tr><td><b>${E.bevere.name}</b> (was Bevere)</td><td>Near water; eats vegetables and starches; placid. Fells trees, logs to the crate. Evolves: ${$(`bevere`)}.</td></tr>
-      <tr><td><b>${E.seavic.name}</b> (was Seavic)</td><td>Among trees; eats acorns and nuts; placid. Farms: sows seed from the crate, tends every growth stage, carries the harvest back;
+      <tr><td><b>${E.vola.name}</b></td><td>Botanizes herbs and roots. Evolves: ${$(`vola`)}.</td></tr>
+      <tr><td><b>${E.bevere.name}</b></td><td>Near water; eats vegetables and starches; placid. Fells trees, logs to the crate. Evolves: ${$(`bevere`)}.</td></tr>
+      <tr><td><b>${E.seavic.name}</b></td><td>Among trees; eats acorns and nuts; placid. Farms: sows seed from the crate, tends every growth stage, carries the harvest back;
       unsown seed goes back to the settlement stores. Only works ground you tilled. Evolves: ${$(`seavic`)}.</td></tr>
-      <tr><td><b>${E.mola.name}</b> (was Mola)</td><td>On metal; eats spices. Mines the nearest ore no other ${E.mola.name} has claimed, within its mining level
+      <tr><td><b>${E.mola.name}</b></td><td>On metal; eats spices. Mines the nearest ore no other ${E.mola.name} has claimed, within its mining level
       (iron from mining ${xp(`iron`)}); quality (QL) = its mining, capped by the seam. Works ${D(10)} m of water deep, as you do; a face it cannot stand on is worked from the bank
       (shore seams, seabed under wading depth; the ${E.quarra.name} likewise for plain rock). Range +${E.mola.rangePerStep??10} tiles per 10 levels
       (usual 10). Evolves: ${$(`mola`)}.</td></tr>
-      <tr><td><b>${E.crawler.name}</b> (was Crawler)</td><td>On sand; eats vegetables. Collects <b>sand</b> off the bed to the crate (ground height unchanged). Defensive: always hits back;
+      <tr><td><b>${E.crawler.name}</b></td><td>On sand; eats vegetables. Collects <b>sand</b> off the bed to the crate (ground height unchanged). Defensive: always hits back;
       tamed ones still sometimes attack whoever stands beside them (a helm stops the worst). Evolves: ${$(`crawler`)}.</td></tr>
-      <tr><td><b>${E.quarra.name}</b> (was Quarra)</td><td>On bare rock; eats clay. Cuts rock, slate, marble and sandstone shards. Evolves: ${$(`quarra`)}.</td></tr>
-      <tr><td><b>${E.embra.name}</b> (was Embra)</td><td>Marsh peat and tar; eats cooked food only. Keeps every campfire, oven, brazier, smelter and kiln on the settlement fuelled and lit from the stores, whole pieces that fit only. ${Su} ${E.embra.stages[0].name} on: ${Qu}
+      <tr><td><b>${E.quarra.name}</b></td><td>On bare rock; eats clay. Cuts rock, slate, marble and sandstone shards. Evolves: ${$(`quarra`)}.</td></tr>
+      <tr><td><b>${E.embra.name}</b></td><td>Marsh peat and tar; eats cooked food only. Keeps every campfire, oven, brazier, smelter and kiln on the settlement fuelled and lit from the stores, whole pieces that fit only. ${Su} ${E.embra.stages[0].name} on: ${Qu}
       Evolves: ${$(`embra`)}.</td></tr>
-      <tr><td><b>${E.magga.name}</b> (was Magga)</td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range, sorts: a stack a load
+      <tr><td><b>${E.magga.name}</b></td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range, sorts: a stack a load
       from a settlement crate, chest or other store into the raw or craft material bin that takes it, up to the bin's room; not from bins, padlocked or marked stores or locked items,
       and not off a work post. Card when idle: &ldquo;${ei({why:`range`,n:E.magga.workRange},`fetch`)}&rdquo; Wild ones steal items left near their trees. Evolves: ${$(`magga`)}.</td></tr>
-      <tr><td><b>${E.woola.name}</b> (was Woola)</td><td>No task. <b>Shear</b> with a knife for <b>wool</b> once grown; regrows in ${F(1/(E.woola.fleece??1))}.
+      <tr><td><b>${E.woola.name}</b></td><td>No task. <b>Shear</b> with a knife for <b>wool</b> once grown; regrows in ${F(1/(E.woola.fleece??1))}.
       Evolves: ${$(`woola`)}.</td></tr>
-      <tr><td><b>${E.ulva.name}</b> (was Ulva)</td><td>Fights back when struck. Taming ${E.ulva.tameLevel}. Settlement task: ${Tt.spin} at your spindles (<b>The settlement's hands</b>). Evolves: ${$(`ulva`)}.</td></tr>
-      <tr><td><b>${E.roxxen.name}</b> (was Roxxen)</td><td>Draught ox: +${k(E.roxxen.pull)} team pace (speed multiplier) in the traces. No settlement task. Level = <b>driving</b>, learned
+      <tr><td><b>${E.ulva.name}</b></td><td>Fights back when struck. Taming ${E.ulva.tameLevel}. Settlement task: ${Tt.spin} at your spindles (<b>The settlement's hands</b>). Evolves: ${$(`ulva`)}.</td></tr>
+      <tr><td><b>${E.roxxen.name}</b></td><td>Draught ox: +${k(E.roxxen.pull)} team pace (speed multiplier) in the traces. No settlement task. Level = <b>driving</b>, learned
       ${zi.pull}; counts in the traces where another wildermon's climbing does (speed and steepest step). Largest carcass. Evolves: ${$(`roxxen`)}.</td></tr>
-      <tr><td><b>${E.orse.name}</b> (was Orse)</td><td>Mount; learns <b>climbing</b> in the traces or ridden. Fit a <b>saddle</b> and <b>bridle</b> from its menu, then <b>mount</b>.
+      <tr><td><b>${E.orse.name}</b></td><td>Mount; learns <b>climbing</b> in the traces or ridden. Fit a <b>saddle</b> and <b>bridle</b> from its menu, then <b>mount</b>.
       Green: ${N(Sp/it)} your pace on the same ground; climbing maxed: ${N(Cp/Sp)} a green one, up slopes you must walk round.
       Tailor Saddler tack: +${k((am(`Saddler`)[`speed:saddle`]??1)-1)} mount speed, past the usual 5 tiles a second; their yokes do the same for carts
       and wagons. Evolves: ${$(`orse`)}.</td></tr>
       <tr><td><b>${E.rowl.name}</b></td><td>Hunts on sight; taming ${E.rowl.tameLevel}; unruly when tamed. On a settlement: patrols round the totem, kills anything wild inside,
       carcasses to storage. <b>Fighting</b> sets damage (${N(or(X))} at mastery) and patrol radius (${E.rowl.workRange} to
       ${E.rowl.workRange+Ys(X)*(E.rowl.rangePerStep??10)} tiles).</td></tr>
-      <tr><td><b>${E.noot.name}</b> (was Noot)</td><td>Beside clay pits; eats root vegetables. Collects <b>clay</b> off the bed to the crate (ground height unchanged). Evolves: ${$(`noot`)}.</td></tr>
+      <tr><td><b>${E.noot.name}</b></td><td>Beside clay pits; eats root vegetables. Collects <b>clay</b> off the bed to the crate (ground height unchanged). Evolves: ${$(`noot`)}.</td></tr>
     </table>
     <h4>Taming</h4>
     <ul>
@@ -2199,15 +2199,15 @@ import{$C as e,$h as t,$i as n,$j as r,$l as i,$p as a,$u as o,$v as s,$w as ee,
     <h4>The working sorts</h4>
     <ul>
       <li><b>${E.bogga.name}</b>: marshes; collects <b>peat and tar</b>.</li>
-      <li><b>${E.sedra.name}</b> (was Sedra): cuts <b>reeds</b>, 3 a cut at 100 foraging. Evolves: ${$(`sedra`)}.</li>
-      <li><b>${E.holla.name}</b> (was Holla): carries <b>water</b> from the shore or a well into your barrels. Evolves: ${$(`holla`)}.</li>
-      <li><b>${E.dowse.name}</b> (was Dowse): only over metal; on a settlement <b>${Tt.nail}</b> at your anvils (<b>The settlement's hands</b>). Evolves: ${$(`dowse`)}.</li>
+      <li><b>${E.sedra.name}</b>: cuts <b>reeds</b>, 3 a cut at 100 foraging. Evolves: ${$(`sedra`)}.</li>
+      <li><b>${E.holla.name}</b>: carries <b>water</b> from the shore or a well into your barrels. Evolves: ${$(`holla`)}.</li>
+      <li><b>${E.dowse.name}</b>: only over metal; on a settlement <b>${Tt.nail}</b> at your anvils (<b>The settlement's hands</b>). Evolves: ${$(`dowse`)}.</li>
       <li><b>${E.sappa.name}</b>: <b>plants sprouts</b> where trees were felled.</li>
-      <li><b>${E.cobbe.name}</b> (was Cobbe): <b>hod</b>: carries what a planned wall (any storey), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
+      <li><b>${E.cobbe.name}</b>: <b>hod</b>: carries what a planned wall (any storey), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
       still needs from your settlement stores, crates and furniture, and fits it, one piece a trip: a wall or column standing on its storey, beside it; a floor, roof, staircase
       or ladder from the storey under it. Evolves: ${$(`cobbe`)}.</li>
-      <li><b>${E.tinka.name}</b> (was Tinka): <b>mends</b> damaged gear in your settlement stores, most damaged first. Evolves: ${$(`tinka`)}.</li>
-      <li><b>${E.middun.name}</b> (was Middun): turns rotting things on the ground into <b>compost</b>. Evolves: ${$(`middun`)}.</li>
+      <li><b>${E.tinka.name}</b>: <b>mends</b> damaged gear in your settlement stores, most damaged first. Evolves: ${$(`tinka`)}.</li>
+      <li><b>${E.middun.name}</b>: turns rotting things on the ground into <b>compost</b>. Evolves: ${$(`middun`)}.</li>
       <li><b>${E.snout.name}</b>: finds <b>buried relics</b> and marks where to dig. Taming ${E.snout.tameLevel}.</li>
       <li><b>Bura</b>: no task; panniers hold <b>${E.bura.pannier} things</b> (open from its menu).</li>
       <li><b>Gorral</b>: saddle mount; climbs ground ${u(E.orse.name)} ${E.orse.name} refuses.</li>
@@ -2219,10 +2219,10 @@ import{$C as e,$h as t,$i as n,$j as r,$l as i,$p as a,$u as o,$v as s,$w as ee,
       <li>Mounted, indoors: through an <b>arch</b>, <b>double door</b> or <b>gate</b>; no plain door, hidden door or iron-bound gate. Up a finished <b>wide staircase</b>
       from its foot, onto finished floors of that storey; no ${Kr}, ladder or roof; never over a staircase's rails. Mount and dismount on the ground floor only.</li>
       <li><b>Shaggan</b>: slowest in the traces; +${k(E.shaggan.pull??.25)} team pull each (most add ${k(Jc)}).</li>
-      <li><b>${E.warda.name}</b> (was Warda): sees ${E.warda.sight} tiles for you wherever it stands. Evolves: ${$(`warda`)}.</li>
+      <li><b>${E.warda.name}</b>: sees ${E.warda.sight} tiles for you wherever it stands. Evolves: ${$(`warda`)}.</li>
       <li><b>Quill</b>: <b>pluck</b> for <b>feathers</b>.</li>
       <li><b>Cudda</b>: <b>milked</b> into an empty bucket; a bucket of milk makes ${H(`make_cheese`)} <b>cheeses</b>.</li>
-      <li><b>${E.vesp.name}</b> (was Vesp). Build a <b>hive</b> (${B(`make_hive`,!0)}) on your settlement. Task <b>${Tt.hive}</b>: the nearest hive with room within its reach of the totem;
+      <li><b>${E.vesp.name}</b>. Build a <b>hive</b> (${B(`make_hive`,!0)}) on your settlement. Task <b>${Tt.hive}</b>: the nearest hive with room within its reach of the totem;
       per go, out to one wildflower tile within 3 tiles of the hive, in turn, and back. <b>Honey</b> into the hive: a skep's rate there, a honey per 50 hours worked
       per clump within 3 tiles, per ${E.vesp.name}; a <b>beeswax</b> per 4 honey; none in ${Rs}. Quality (QL): as a gathered load, its ${z(gi.hive).toLowerCase()}.
       Idle: no hive in reach, hives full, no wildflowers within 3 tiles of its hive, ${Rs}. Following you: fills no hive. Evolves: ${$(`vesp`)}. ${v(B(`make_candle`))}: ${H(`make_candle`)} <b>candles</b>.</li>

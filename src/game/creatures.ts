@@ -1,3 +1,4 @@
+import { describeGoals } from './journal';
 import { TileType, TILE_DEFS, TREE_DEFS, treeAge, treeSpecies, packTreeData, TREE_AGES } from '../world/tiles';
 import { isSeam } from '../world/tiles';
 import { mapFromBeast } from './treasure';
@@ -4583,6 +4584,8 @@ sayLine('petta', SPECIES.petta.description, 'Level: foraging.');
 sayLine('potta', SPECIES.potta.description, 'Level: pottery.');
 sayLine('papra', SPECIES.papra.description, 'Level: papyrusmaking.');
 sayLine('ambra', SPECIES.ambra.description, 'Level: forestry.');
+describeFrom('hive', { vesp: SPECIES.vesp.name });
+describeGoals({ vesp: SPECIES.vesp.name });
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });
 // And the Sparra, which does not evolve: how it fights, its settlement task, and its level (`sparTaskSays`).
 sayLine('sparra', `Tamed: ${STYLE_SAYS.spar}. ${sparTaskSays()}`, `Level: fighting, learned ${LEARNS_SAYS.spar}.`);
