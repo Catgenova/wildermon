@@ -157,10 +157,7 @@ export function privacyPolicy(): HTMLElement {
       root.append(ul);
     }
   }
-  const contact = el('p', 'If you have any questions about this Privacy Policy, You can contact us by email: ');
-  const mail = el('a', CONTACT);
-  mail.href = `mailto:${CONTACT}`;
-  contact.append(mail);
-  root.append(contact);
+  // The address as text: a link in the game is to this site or https: only (`panels-page.ts`).
+  root.append(el('p', `If you have any questions about this Privacy Policy, You can contact us by email: ${CONTACT}`));
   return root;
 }
