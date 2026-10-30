@@ -4215,6 +4215,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 392,
+    day: '2026-10-30',
+    lines: () => [`Changed: a worker with all of its work in range worked and on the ${FORAGE_COOLDOWN} s cooldown says "Idle: all in reach worked; next sand to collect in N s." (was: "Idle: no sand to collect within N tiles of the totem."). Every trade that works the ground.`],
+  },
+  {
     n: 391,
     day: '2026-10-30',
     lines: () => ['New: Settings: Rules (Game Rules) and Privacy (Privacy Policy) tabs.'],
