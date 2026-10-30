@@ -246,10 +246,10 @@ export const RECIPES: Recipe[] = [
   { id: 'mix_concrete', category: 'Stonework', result: 'concrete', inputs: [{ item: 'mortar' }, { item: 'ash' }], skill: 'masonry', label: 'Mix concrete', verb: 'mixing concrete', baseTime: 4, stamina: 0.03, done: '' },
   { id: 'make_mortar', category: 'Stonework', result: 'mortar', count: 5, inputs: [{ item: 'clay' }, { item: 'sand' }], skill: 'masonry', label: 'Mix mortar', verb: 'mixing mortar', baseTime: 4, stamina: 0.03, done: '' },
   // Clay & thatch
-  { id: 'make_clay_brick', category: 'Clay & thatch', result: 'unfired_clay_brick', inputs: [{ item: 'clay' }], skill: 'pottery', label: 'Shape clay brick', verb: 'shaping clay', baseTime: 4, stamina: 0.02, difficulty: 6, done: 'Fire in a kiln.' },
-  { id: 'make_clay_pot', category: 'Clay & thatch', result: 'unfired_clay_pot', inputs: [{ item: 'clay', count: 2 }], skill: 'pottery', label: 'Shape a pot', verb: 'shaping a pot', baseTime: 8, stamina: 0.03, difficulty: 12, done: 'Fire in a kiln.' },
-  { id: 'make_clay_jar', category: 'Clay & thatch', result: 'unfired_clay_jar', inputs: [{ item: 'clay' }], skill: 'pottery', label: 'Shape a jar', verb: 'shaping a jar', baseTime: 7, stamina: 0.02, difficulty: 10, done: 'Fire in a kiln.' },
-  { id: 'make_adobe', category: 'Clay & thatch', result: 'adobe', inputs: [{ item: 'clay' }, { item: 'mixed_grass' }], skill: 'pottery', label: 'Make adobe', verb: 'making adobe', baseTime: 4, stamina: 0.02, done: '' },
+  { id: 'make_clay_brick', category: 'Clay & thatch', result: 'unfired_clay_brick', inputs: [{ item: 'clay' }], tool: 'trowel', skill: 'pottery', label: 'Shape clay brick', verb: 'shaping clay', baseTime: 4, stamina: 0.02, difficulty: 6, done: 'Fire in a kiln.' },
+  { id: 'make_clay_pot', category: 'Clay & thatch', result: 'unfired_clay_pot', inputs: [{ item: 'clay', count: 2 }], tool: 'trowel', skill: 'pottery', label: 'Shape a pot', verb: 'shaping a pot', baseTime: 8, stamina: 0.03, difficulty: 12, done: 'Fire in a kiln.' },
+  { id: 'make_clay_jar', category: 'Clay & thatch', result: 'unfired_clay_jar', inputs: [{ item: 'clay' }], tool: 'trowel', skill: 'pottery', label: 'Shape a jar', verb: 'shaping a jar', baseTime: 7, stamina: 0.02, difficulty: 10, done: 'Fire in a kiln.' },
+  { id: 'make_adobe', category: 'Clay & thatch', result: 'adobe', inputs: [{ item: 'clay' }, { item: 'mixed_grass' }], tool: 'trowel', skill: 'pottery', label: 'Make adobe', verb: 'making adobe', baseTime: 4, stamina: 0.02, done: '' },
   { id: 'fit_rake_head', category: 'Woodwork', result: 'rake', inputs: [{ item: 'rake_head' }, { item: 'shaft' }, { item: 'nail', count: 2 }], skill: 'carpentry', qlFromInputs: true,  material: 'metal', label: 'Fit a shaft', verb: 'fitting a shaft', baseTime: 5, stamina: 0.02, done: '' },
   { id: 'fit_shovel_head', category: 'Woodwork', result: 'shovel', inputs: [{ item: 'shovel_head' }, { item: 'shaft' }, { item: 'nail', count: 2 }], skill: 'carpentry', qlFromInputs: true,  material: 'metal', label: 'Fit a shaft', verb: 'fitting a shaft', baseTime: 5, stamina: 0.02, done: '' },
   { id: 'fit_hatchet_head', category: 'Woodwork', result: 'hatchet', inputs: [{ item: 'hatchet_head' }, { item: 'shaft' }, { item: 'nail', count: 2 }], skill: 'carpentry', qlFromInputs: true,  material: 'metal', label: 'Fit a shaft', verb: 'fitting a shaft', baseTime: 5, stamina: 0.02, done: '' },
@@ -365,7 +365,7 @@ export const RECIPES: Recipe[] = [
   })),
   { id: 'make_book', category: 'Writing', result: 'book', inputs: [{ item: 'papyrus', count: 6 }, { item: 'leather', count: 2 }, { item: 'ink' }], tool: 'needle', skill: 'papyrusmaking', label: 'Write and bind a book', verb: 'binding a book', baseTime: 26, stamina: 0.07, difficulty: 28, done: '', consumeOnFail: true },
   { id: 'make_thatch', category: 'Clay & thatch', result: 'thatch', inputs: [{ item: 'mixed_grass', count: 2 }], skill: 'carpentry', label: 'Bundle into thatch', verb: 'bundling thatch', baseTime: 3, stamina: 0.02, done: '' },
-  { id: 'make_clay_bowl', category: 'Clay & thatch', result: 'unfired_clay_bowl', inputs: [{ item: 'clay' }], skill: 'pottery', label: 'Shape a bowl', verb: 'shaping a bowl', baseTime: 6, stamina: 0.02, difficulty: 8, done: 'Fire in a kiln.' },
+  { id: 'make_clay_bowl', category: 'Clay & thatch', result: 'unfired_clay_bowl', inputs: [{ item: 'clay' }], tool: 'trowel', skill: 'pottery', label: 'Shape a bowl', verb: 'shaping a bowl', baseTime: 6, stamina: 0.02, difficulty: 8, done: 'Fire in a kiln.' },
   // Cooking. Everything here needs a lit campfire to work at.
   { id: 'cook_meat', category: 'Cooking', result: 'cooked_meat', inputs: [{ item: 'meat' }], station: 'campfire', skill: 'cooking', label: 'Cook over the fire', verb: 'cooking', baseTime: 8, stamina: 0.02, difficulty: 6, done: '', consumeOnFail: true },
   { id: 'bake_potato', category: 'Cooking', result: 'baked_potato', inputs: [{ item: 'potato' }], station: 'campfire', skill: 'cooking', label: 'Bake in the embers', verb: 'baking', baseTime: 7, stamina: 0.02, done: '' },
@@ -635,7 +635,7 @@ RECIPES.push(
   },
   {
     id: 'make_amphora', category: 'Clay & thatch', result: 'unfired_amphora',
-    inputs: [{ item: 'clay', count: 4 }], skill: 'pottery',
+    inputs: [{ item: 'clay', count: 4 }], tool: 'trowel', skill: 'pottery',
     label: 'Shape an amphora', verb: 'shaping an amphora', baseTime: 12, stamina: 0.04, difficulty: 18,
     done: 'Fire in a kiln.', perk: 'amphora',
   },
@@ -806,6 +806,9 @@ for (const r of RECIPES) {
 }
 const RECIPE_SAID = { recipe: Object.fromEntries(RECIPES.map((r) => [r.id, { count: r.count ?? 1, ...inputsOf(r) }])) };
 describeWith(RECIPE_SAID);
+// What a trowel shapes: every pottery recipe that asks for one, by what it makes.
+describeFrom('trowel', { clayShapes: listed(RECIPES.filter((r) => r.tool === 'trowel' && r.skill === 'pottery')
+  .map((r) => itemDef(r.result).name.replace(/^Unfired /i, '').toLowerCase())) });
 describeGoals(RECIPE_SAID);
 // What the journal counts as cooking on a campfire: whatever Crafting cooks at one.
 campfireFood(RECIPES.filter((r) => r.station === 'campfire' && r.category === 'Cooking').map((r) => r.result));

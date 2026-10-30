@@ -147,7 +147,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   needle: { name: 'Needle', category: 'tool', weight: 0.05, description: 'Needed to improve cloth and leather.' },
   awl: { name: 'Awl', category: 'tool', weight: 0.2, description: 'Needed to improve leather.' },
   mallet: { name: 'Mallet', category: 'tool', weight: 1.5, description: 'Plans buildings; builds wooden walls.' },
-  trowel: { name: 'Trowel', category: 'tool', weight: 1, description: 'Lays bricks, mortar and stone floors.' },
+  trowel: { name: 'Trowel', category: 'tool', weight: 1, description: 'Lays bricks, mortar and stone floors. Shapes clay: {clayShapes}.' },
   saw: { name: 'Saw', category: 'tool', weight: 1.5, description: 'Cuts logs into planks and timbers.' },
   rake: { name: 'Rake', category: 'tool', weight: 1.5, description: 'Tills grass and dirt into a field.' },
   brush: { name: 'Brush', category: 'tool', weight: 0.6, description: 'Brush a wildermon: it works better, learns faster and breeds better young.' },

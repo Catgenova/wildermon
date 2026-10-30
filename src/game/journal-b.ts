@@ -98,7 +98,7 @@ export const CRAFTS_B: Goal[] = [
   },
   {
     id: 'bricks', text: `Fire ${BRICKS} clay bricks in a kiln`, met: did('fired:clay_brick', BRICKS),
-    how: 'Crafting (R): "Shape clay brick" ({recipe.make_clay_brick.clay} clay each). At a kiln: "Fire in the kiln". Counts as they go in.',
+    how: 'Crafting (R): "Shape clay brick" ({recipe.make_clay_brick.clay} clay each, a trowel). At a kiln: "Fire in the kiln". Counts as they go in.',
   },
   {
     id: 'signed', text: 'Sign a masterwork', hint: `A single item you made at QL ${SIGN_QL}+`, met: did('signed'),

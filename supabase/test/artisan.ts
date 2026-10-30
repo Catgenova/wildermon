@@ -250,6 +250,7 @@ begin
   ${checks(true)};
   ${hold('Deep Pot')};
   perform give(w, u, 'clay', 2, 30);
+  perform give(w, u, 'trowel', 1, 30);
   ${craft('make_clay_pot')};
   v_t := ${markOfNewest('unfired_clay_pot')};
   insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, made_by, state)
@@ -275,6 +276,7 @@ begin
   /* ---- Sealed Jar: a jar shaped with it, and preserves put up in it by anybody, and in a plain one. ---- */
   ${hold('Sealed Jar')};
   perform give(w, u, 'clay', 1, 30);
+  perform give(w, u, 'trowel', 1, 30);
   ${craft('make_clay_jar')};
   v_t := ${markOfNewest('unfired_clay_jar')};
   perform pg_temp.hold(w, u, '{}');
@@ -398,6 +400,7 @@ begin
   /* ---- The amphora: refused without it, shaped with it; what it will hold; what is in it set down. ---- */
   perform pg_temp.hold(w, u, '{}');
   perform give(w, u, 'clay', 4, 30);
+  perform give(w, u, 'trowel', 1, 30);
   v_t := ${craftRefused('make_amphora')};
   ${hold('Amphora')};
   v_t := v_t || '#' || ${craftRefused('make_amphora')};
@@ -436,6 +439,7 @@ begin
   perform pg_temp.hold(w, u, '{}');
   ${clearAll};
   perform give(w, u, 'clay', 2, 30);
+  perform give(w, u, 'trowel', 1, 30);
   v_it := ${newest('clay')};
   v_t := v_t || '#' || pg_temp.secs(w, u, 'make_clay_pot', ${itemT('v_it')}) || '#' || piece_pace(w, u, 'pottery');
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
