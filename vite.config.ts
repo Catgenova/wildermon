@@ -57,8 +57,9 @@ function trees3d(): string {
  *
  * Two pages, not one: `index.html` is the game and `account.html` is where a
  * username and a password are set up. They share the Supabase client and the
- * account rules and nothing else — the landing page does not drag in a
- * renderer, and the game does not drag in a sign-up form.
+ * account rules and nothing else up front -- the game does not drag in a
+ * sign-up form, and the landing page asks for the renderer (src/landing/backdrop.ts,
+ * its cove behind the form) only once the form is up, as a chunk of its own.
  */
 const deployed = deploy();
 

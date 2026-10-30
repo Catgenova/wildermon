@@ -9,6 +9,8 @@ import { LOOK_TABLES, cleanLook, randomLook, type Look } from './game/look';
 import { Creator } from './ui/creator';
 import { CODE_DIGITS, CODE_SECONDS, finishEnrol, myFactor, removeFactor, startEnrol } from './net/mfa';
 import { nameRefusal } from './game/playertext';
+import { PRIVACY_TITLE, privacyPolicy } from './ui/privacy';
+import { RULES_TITLE, gameRules } from './ui/rules';
 
 /**
  * The landing page: a username, a password, and a way back in.
@@ -479,6 +481,51 @@ mfaCancel.addEventListener('click', () => {
 mfaCode.addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter') { ev.preventDefault(); mfaGo.click(); }
 });
+
+/* ---- The papers: the Privacy Policy and the Game Rules --------------------- */
+
+const paper = $<HTMLDialogElement>('paper');
+const paperTitle = $<HTMLHeadingElement>('paper-title');
+const paperBody = $<HTMLDivElement>('paper-body');
+const paperBox = paper.querySelector('.paper') as HTMLElement;
+const PAPERS: Record<string, { title: string; build: () => HTMLElement }> = {
+  'open-privacy': { title: PRIVACY_TITLE, build: privacyPolicy },
+  'open-rules': { title: RULES_TITLE, build: gameRules },
+};
+
+/** One of the papers, over the cove in a box of its own: closed by its button, by Esc (the dialog's own), or by a click on the dimmed cove round it. */
+function openPaper(title: string, build: () => HTMLElement): void {
+  paperTitle.textContent = title;
+  paperBody.replaceChildren(build());
+  paperBody.scrollTop = 0;
+  if (!paper.open) paper.showModal();
+  $<HTMLButtonElement>('paper-close').focus();
+}
+
+for (const [id, p] of Object.entries(PAPERS)) $<HTMLButtonElement>(id).addEventListener('click', () => openPaper(p.title, p.build));
+$<HTMLButtonElement>('paper-close').addEventListener('click', () => paper.close());
+paper.addEventListener('click', (ev) => {
+  if (ev.target === paper) paper.close();
+});
+paper.addEventListener('close', () => paperBody.replaceChildren());
+
+/* ---- The Faith box's dress, and the cove behind it -------------------------- */
+
+/*
+ * Neither is in this page's first script. The dress is Runecut's painters
+ * (src/landing/faithbox.ts); until they are in, the boxes are the plain stone
+ * plate src/account.css draws. The cove is the game's renderer and the
+ * world it draws (src/landing/backdrop.ts), asked for once the form has been
+ * on the screen for a frame, so nothing about signing in waits on it; if it
+ * cannot be drawn, the sea under it stays.
+ */
+void import('./landing/faithbox').then(({ dressFaith }) => {
+  dressFaith(card);
+  dressFaith(paperBox);
+}).catch(() => {});
+requestAnimationFrame(() => window.setTimeout(() => {
+  void import('./landing/backdrop').then(({ startBackdrop }) => startBackdrop($<HTMLCanvasElement>('cove'))).catch(() => {});
+}, 0));
 
 setMode('new');
 void onArrival();
