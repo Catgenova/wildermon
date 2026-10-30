@@ -4213,6 +4213,12 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 371,
+    day: '2026-10-30',
+    lines: () => [`Fixed: names capitalised and weights set (was: 1 kg each): ${['altar', 'stall', 'mailbox', 'bell', 'statue', 'brazier']
+      .map((id) => `${itemDef(id).name} ${itemDef(id).weight} kg`).join(', ')}.`],
+  },
+  {
     n: 370,
     day: '2026-10-30',
     lines: () => [`Fixed: ${SPECIES.dowse.name} line: the nails stand in its basket and crate (was: drawn through the sides, or sunk below the rim).`],

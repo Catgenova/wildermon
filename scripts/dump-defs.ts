@@ -1144,8 +1144,8 @@ out.push('');
 
 /*
  * Things this game can make and has no definition for: once seventeen moulds
- * and the altar, and the moulds are named off their own table now, so the
- * altar alone. The browser does not notice, because `itemDef()` hands
+ * and six pieces of furniture, and the moulds are named off their own table
+ * now and the pieces have their rows (a piece without one stops this). The browser does not notice, because `itemDef()` hands
  * back `{ name: id, category: 'misc', weight: 1 }` for anything it has never
  * heard of — so a mould is called `arrow_head_mould` on screen and weighs a
  * kilo, which is wrong and harmless.
@@ -1165,6 +1165,9 @@ for (const r of RECIPES) {
   if (!NAMED.has(r.result)) unnamed.add(r.result);
   for (const i of r.inputs) if (i.item && !NAMED.has(i.item)) unnamed.add(i.item);
 }
+// A piece of furniture with no row was called by its id and weighed a kilo in a pack: "altar needs a capital".
+const unnamedPieces = FURNITURE.filter((f) => !NAMED.has(f.id) && !f.grave).map((f) => f.id);
+if (unnamedPieces.length) throw new Error(`furniture with no item definition: ${unnamedPieces.join(', ')}`);
 for (const [id, d] of Object.entries(ITEM_DEFS)) {
   out.push(`insert into item_def values (${q(id)}, ${q(d.name)}, ${q(d.category)}, ${q(d.weight)}, ${q(!!d.stackable)}, ${q(d.decay)}, ${q(d.charges)});`);
   if (d.raw) out.push(`update item_def set raw = true where id = ${q(id)};`);
