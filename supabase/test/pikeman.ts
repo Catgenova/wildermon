@@ -21,10 +21,14 @@
 import { execFileSync } from 'node:child_process';
 import { CLASS_TIER_AT } from '../../src/game/classes';
 import { HUNT_REACH, reachOf, STAGGER_POLE } from '../../src/game/fight';
+import { SPECIES } from '../../src/game/creatures';
 import { WEAPON_BY_ID } from '../../src/game/gear';
 import { SPELL_BAR } from '../../src/game/patrons';
 import { foldPerks, perksOf, PERK_BY_ID, TIERS } from '../../src/game/perks';
 import { CLASS_SPELL_BY_ID, classSpellsOf, type ClassSpellDef } from '../../src/game/talents';
+
+/** What the creature these blows land on is called in a line: its kind is `ulva`, its name its line's. */
+const ULVA = SPECIES.ulva.name.toLowerCase();
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -332,7 +336,7 @@ begin
   perform creature_settle(w.world_id, a);
   insert into said select 'FEND', (1 - (stats->>'health')::double precision)
       || '|' || (select sqrt((cr.to_x - v_px) ^ 2 + (cr.to_y - v_py) ^ 2) from creature cr where cr.world_id = w.world_id and cr.id = a)
-      || '|' || (select count(*) from event e where e.world_id = w.world_id and e.uid = w.uid and e.text = '${spell('fend_off').name}: you push the ulva back.')
+      || '|' || (select count(*) from event e where e.world_id = w.world_id and e.uid = w.uid and e.text = '${spell('fend_off').name}: you push the ${ULVA} back.')
       || '|' || (r->>'said')
     from player where world_id = w.world_id and uid = w.uid;
   update player set blessings = '{}'::jsonb, stats = jsonb_set(stats, '{health}', '1'), wounds = '[]'::jsonb where world_id = w.world_id and uid = w.uid;
@@ -541,11 +545,11 @@ check('and on one that never goes looking for a fight', island('WARN:PREY') === 
     who === 'none,true' && near(Number(secs), fx('warning_thrust', 'secs'), 1e-6) && / will not attack you for 30 s, until you strike it\.$/.test(line), island('WARN'));
 }
 check(`Hook is refused past ${fx('hook', 'reach')} tiles`, island('HOOK:FAR') === `Too far: max ${fx('hook', 'reach')} tiles.`, island('HOOK:FAR'));
-check('and on a creature at your feet', island('HOOK:FEET') === 'The ulva: already adjacent.', island('HOOK:FEET'));
+check('and on a creature at your feet', island('HOOK:FEET') === `The ${ULVA}: already adjacent.`, island('HOOK:FEET'));
 {
   const [dist, on, line] = parts('HOOK');
   check(`Hook drags it ${fx('hook', 'pull')} tiles towards you, and it turns on you`,
-    near(Number(dist), 3.5 - fx('hook', 'pull'), 1e-6) && on === 'true' && line === `Hook: ulva pulled ${fx('hook', 'pull')} tiles toward you.`, island('HOOK'));
+    near(Number(dist), 3.5 - fx('hook', 'pull'), 1e-6) && on === 'true' && line === `Hook: ${ULVA} pulled ${fx('hook', 'pull')} tiles toward you.`, island('HOOK'));
   const [least] = parts('HOOK:LEAST');
   check(`and never nearer than ${fx('hook', 'least')} tile`, near(Number(least), fx('hook', 'least'), 1e-6), island('HOOK:LEAST'));
 }

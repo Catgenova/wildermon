@@ -9,7 +9,7 @@
  * one is no fight; and the log says so on the Combat tab.
  */
 import { ACTION_BY_ID } from '../../src/game/actions';
-import { FIGHT_BACK_GOES } from '../../src/game/creatures';
+import { FIGHT_BACK_GOES, SPECIES } from '../../src/game/creatures';
 import { Game } from '../../src/game/game';
 import { TileType } from '../../src/world/tiles';
 
@@ -44,7 +44,7 @@ check('bitten, he turns on it', game.action?.def.id === 'attack_creature' && gam
 check(`with ${FIGHT_BACK_GOES} swings in hand`, game.action?.goes === FIGHT_BACK_GOES, String(game.action?.goes));
 check('and the hole first in line behind it', game.queue[0]?.def.id === 'dig' && game.queue[0]?.goes === 3, `${game.queue[0]?.def.id} ×${game.queue[0]?.goes}`);
 const said = game.log.filter((l) => l.text.startsWith('Fighting back: '));
-check('and says so on the Combat tab', said.length === 1 && said[0].kind === 'fight' && said[0].text === 'Fighting back: ulva.', JSON.stringify(said.map((l) => [l.kind, l.text])));
+check('and says so on the Combat tab', said.length === 1 && said[0].kind === 'fight' && said[0].text === `Fighting back: ${SPECIES.ulva.name.toLowerCase()}.`, JSON.stringify(said.map((l) => [l.kind, l.text])));
 
 game.hurtPlayer(0.05, 'The ulva is on you');
 check('a second bite changes nothing', game.action?.def.id === 'attack_creature' && game.queue.length === 1 && game.log.filter((l) => l.text.startsWith('Fighting back: ')).length === 1,
