@@ -2933,6 +2933,22 @@ jobs:
             --outfile=node_modules/.cache/storeybridge.mjs --log-level=error
           node node_modules/.cache/storeybridge.mjs
 
+      - name: A bridge between two buildings' storey 4 is crossed at storey 4, and its end's wall planned
+        if: matrix.shard == 3
+        run: |
+          # Two buildings five storeys high, wide staircases up to storey 4 and
+          # a marble bridge three lanes wide between their storey-4 floors: on
+          # foot and mounted, storey 4 pinned, a walk from one floor to the
+          # other crosses the deck at storey 4 every step (`stepRule`,
+          # `rideRule`; was down the staircases and back up, mounted), every
+          # word of it answered at storey 4 by `rpc_move`; a worker's way
+          # (`creature_way`) crosses it too; and the wall on a lane's end
+          # border, picked from the deck's side (`wallAcross`), is planned on
+          # both sides in the same words.
+          npx esbuild supabase/test/bridgeend.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/bridgeend.mjs --log-level=error
+          node node_modules/.cache/bridgeend.mjs
+
       - name: Storey mode
         if: matrix.shard == 3
         env:

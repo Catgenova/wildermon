@@ -3017,7 +3017,8 @@ export function helpText(): string {
       ${+((SPECIES.springlet.swimSpeed ?? 0) * footing(0)).toFixed(2)} tiles a second green. Wild: only in deep water. Eats ${SPECIES.springlet.baitHint}. Level: <b>climbing</b>, ridden.
       Evolves: ${evolves('springlet')}.</li>
       <li>Mounted, indoors: through an <b>arch</b>, <b>double door</b> or <b>gate</b>; no plain door, hidden door or iron-bound gate. Up a finished <b>wide staircase</b>
-      from its foot, onto finished floors of that storey; no ${SINGLE_STAIRS_NAME}, ladder or roof; never over a staircase's rails. Mount and dismount on the ground floor only.</li>
+      from its foot, onto finished floors of that storey; no ${SINGLE_STAIRS_NAME}, ladder or roof; never over a staircase's rails. Mount and dismount on the ground floor only.
+      A bridge's deck: end to end, on the ground and up a storey; not a rope bridge.</li>
       <li><b>Shaggan</b>: slowest in the traces; +${percent(SPECIES.shaggan.pull ?? PULL_DEFAULT)} team pull each (most add ${percent(PULL_DEFAULT)}).</li>
       <li><b>${SPECIES.warda.name}</b>: sees ${SPECIES.warda.sight} tiles for you wherever it stands. Evolves: ${evolves('warda')}.</li>
       <li><b>Quill</b>: <b>pluck</b> for <b>feathers</b>.</li>
@@ -3089,7 +3090,8 @@ export function helpText(): string {
       its range, with the distance; no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
       Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
       <li><b>Storeys</b>: a store, station or planned work a storey up is walked to by the building's finished staircases: wide or ${SINGLE_STAIRS_NAME} onto it from
-      its foot, off at its head, down off its foot; ${SPIRAL_STAIRS_NAME} on its own tile. Over finished floors only; through a door, double door, gate, arch or gap, no
+      its foot, off at its head, down off its foot; ${SPIRAL_STAIRS_NAME} on its own tile. Over finished floors only, and a finished bridge's deck between two floors
+      of that storey, end to end; through a door, double door, gate, arch or gap, no
       hidden door or iron-bound gate; no ladders. Up or down one flight or spiral: ${FLIGHT_TILES} tile's walk. A store a storey up with no staircase to it: not used.
       Floor removed under it: down to the storey under it; no way down left: down where it stands. Assigned elsewhere, crated or let go: back on the ground.</li>
       <li><b>Ledger</b> (card): this island day and the previous (a day = ${dur(DAY_SECONDS)}): cycles at its task, skill gained, the ${LEDGER_SHOWN} items it handled most

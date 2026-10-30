@@ -4214,6 +4214,15 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 383,
+    day: '2026-10-30',
+    lines: () => [
+      'Fixed: mounted, a bridge\'s deck is ridden end to end where a cart may cross it (not a rope bridge), on the ground and up a storey. Was: under it on the ground; up a storey, down the wide staircases, across the ground and back up.',
+      'Fixed: settlement workers cross a finished bridge between two floors of one storey (was: down the staircases and back up). Not a bridge between two storeys.',
+      'Fixed: storey mode, a bridge\'s deck beside a building: its menu has the wall on its border with the building\'s floor. A click on the floor beside a bridge\'s end is the floor\'s (was: the bridge\'s).',
+    ],
+  },
+  {
     n: 382,
     day: '2026-10-30',
     lines: () => [

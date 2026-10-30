@@ -24,11 +24,13 @@
  * click on a pitched roof chooses the tile and walks nowhere
  * (`pitchedRoofAt`): a flat one is a terrace, walked on.
  */
-import { roofShapeDef, WALL_HEIGHT, type Building } from './building';
+import { OPPOSITE_SIDE, roofShapeDef, WALL_HEIGHT, type Building, type Side } from './building';
 import { jettyBase } from './frame';
 import type { Game } from './game';
 
 const ROUND: ReadonlyArray<readonly [number, number]> = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+/** The sides `ROUND` steps across, in its order. */
+const SIDES: readonly Side[] = ['n', 'e', 's', 'w'];
 
 /** The building a tile answers for on storey `level`, or undefined where nothing of that storey is, or could be. */
 export function storeyHost(g: Game, x: number, y: number, level: number): Building | undefined {
@@ -46,6 +48,20 @@ export function storeyHost(g: Game, x: number, y: number, level: number): Buildi
     if (b && b.levels > level) return b;
   }
   return undefined;
+}
+
+/**
+ * A border a tile out past a building shares with one of its tiles on storey `level` -- open air, a bridge's deck --
+ * on the tile's side `side`: that tile of the building and its own side facing back, where the wall on the border is
+ * planned (`plan_wall`); null where none is, or a jetty of the building's floors the tile and has the wall itself.
+ */
+export function wallAcross(g: Game, x: number, y: number, side: Side, level: number): { building: Building; x: number; y: number; side: Side } | null {
+  const bld = g.buildings;
+  if (level < 1 || bld.buildingAt(x, y)) return null;
+  const [dx, dy] = ROUND[SIDES.indexOf(side)];
+  const b = bld.buildingAt(x + dx, y + dy);
+  if (!b || level >= b.levels || bld.floor(level, x, y)?.building === b.id) return null;
+  return { building: b, x: x + dx, y: y + dy, side: OPPOSITE_SIDE[side] };
 }
 
 /** Whether a tile answers a click on storey `level` (`storeyHost`). */

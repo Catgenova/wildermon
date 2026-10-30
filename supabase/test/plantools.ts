@@ -30,7 +30,7 @@
  * does; without one the drawing is skipped, unless `STOREY_STRICT` is set.
  *
  * Runs against the database the suite leaves behind: Hoarding, and Dane on it. The tower is building 9401 at
- * (30, 15), on Dane's settlement, taken down after, the ground put back and Dane put back where he was.
+ * four tiles from the middle of Dane's settlement, taken down after, the ground put back and Dane put back where he was.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -65,8 +65,14 @@ const lit = (v: unknown): string => `'${JSON.stringify(v).replace(/'/g, "''")}':
 const W = `(select id from world where name = 'Hoarding')`;
 const DANE = `(select uid from player where world_id = ${W} and name = 'Dane')`;
 const ID = 9401;
-/** On Dane's settlement (Latecomer, round (34, 19)), clear of its totem. */
-const [TX, TY] = [30, 15];
+/**
+ * Dane's settlement, Latecomer: staked in island.sql over a hoard buried where the suite's rolls put it, so read here
+ * rather than written in: anything rolled before it moves it.
+ */
+const [DX, DY] = psql(`select x || ',' || y from deed where name = 'Latecomer'
+  and world_id = (select id from world where name = 'Hoarding');`).split(',').map(Number);
+/** On it, clear of its totem: four tiles up and to the west of its middle. */
+const [TX, TY] = [DX - 4, DY - 4];
 const TOWER: Array<[number, number]> = [[TX, TY], [TX + 1, TY], [TX + 2, TY], [TX, TY + 1], [TX + 1, TY + 1], [TX + 2, TY + 1]];
 /** The rectangle a footprint is dragged over: south of the tower, a tile's gap between. */
 const [FX, FY] = [TX, TY + 3];
@@ -131,7 +137,7 @@ const bld = game.buildings;
 const world = game.world;
 for (let y = Y0; y <= Y1 + 1; y++) for (let x = X0; x <= X1 + 1; x++) world.setHeight(x, y, BASE);
 for (let y = Y0; y <= Y1; y++) for (let x = X0; x <= X1; x++) world.setTile(x, y, TileType.PackedDirt, 0);
-(game as unknown as { deed: unknown }).deed = { name: 'Latecomer', x: 34, y: 19, radius: 5, level: 1, mine: true };
+(game as unknown as { deed: unknown }).deed = { name: 'Latecomer', x: DX, y: DY, radius: 5, level: 1, mine: true };
 game.player.x = TX + 1.5;
 game.player.y = TY + 2.5;
 game.player.level = 0;

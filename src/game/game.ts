@@ -1756,6 +1756,13 @@ export class Game {
     // Up a wide staircase, from its foot, onto the storey over the one you are on (`wideFlightUp`).
     const flight = this.wideFlightUp(x0, y0, level, x1, y1, true);
     if (flight !== undefined) return flight;
+    // On and along a bridge's deck at the storey it is walked at, as feet go (`bridgeStepLevel`), where a cart may cross
+    // it: any but a rope bridge. A storey up, its deck is that storey's floor between the floors its ends land on.
+    if (this.bridges.size) {
+      const deck = this.bridgeStepLevel(x0, y0, x1, y1, level);
+      const b = deck === null ? undefined : this.bridgeAt(x1, y1) ?? this.bridgeAt(x0, y0);
+      if (deck !== null && b && BRIDGES[b.kind]?.carts) return this.mountBlocks(x0, y0, x1, y1, deck) ? null : deck;
+    }
     // Up there, on the building's own floors (`driveStorey`).
     if (level > 0) return this.driveStorey(x0, y0, level, x1, y1, true);
     if (!this.world.inBounds(x1, y1) || !this.world.isPassable(x1, y1)) return null;

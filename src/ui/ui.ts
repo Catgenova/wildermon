@@ -110,7 +110,7 @@ import { AutoEat } from '../game/autoeat';
 import { ShoppingPanel } from './panels/shopping';
 import { rotLine, rotSaid, rotSeconds } from '../game/rot';
 import { frameFootprintEntries, frameHoverLines, frameJettyEntries, frameRoofEntries } from './frameMenu';
-import { storeyHost } from '../game/storeyview';
+import { storeyHost, wallAcross } from '../game/storeyview';
 import { areaAsk, areaCount, areaPieces, areaRefusals, areaTotals, passing, PLAN_UNDO_SECONDS, UNDONE_PLANS, type AreaPlan, type AreaPiece } from '../game/planarea';
 import { PlanBar } from './planbar';
 import { jobEntry, pinEntry, pinnable } from './beltmenu';
@@ -1784,7 +1784,11 @@ export class UI {
     const trapHere = pick.trap !== undefined ? this.game.traps.get(pick.trap) : undefined;
     if (trapHere) return { title: `${trapName(trapHere)} (${trapState(trapHere, this.game)})`, entries: [...this.trapEntries(trapHere), ...this.nameEntry({ kind: 'trap', id: trapHere.id })] };
     const bridgeHere = pick.bridge !== undefined ? this.game.bridges.get(pick.bridge) : undefined;
-    if (bridgeHere) return { title: `${bridgeName(bridgeHere)} (${bridgeState(bridgeHere)})`, entries: this.bridgeEntries(bridgeHere) };
+    // On a pinned storey, the wall on its border with a building's tile there too (`borderWallRows`).
+    if (bridgeHere) {
+      return { title: `${bridgeName(bridgeHere)} (${bridgeState(bridgeHere)})`,
+        entries: [...this.bridgeEntries(bridgeHere), ...((pick.level ?? 0) > 0 ? this.borderWallRows(pick, pick.level ?? 0) : [])] };
+    }
     // Picked on a cellar's floor, looking into it: the cellar's own list.
     if (pick.down) return this.cellarMenu(pick);
     // Picked on the floor of a pinned storey over the ground: that storey's own list (`storeyview.ts`).
@@ -3595,11 +3599,23 @@ export class UI {
   }
 
   /**
+   * On a pinned storey, a tile out past a building -- open air, a jetty, a bridge's deck -- and the side of it nearest
+   * the click on the border with a tile of the building that has the storey: the wall on that border, as the
+   * building's tile has it (`buildingEntries`). A wall across a bridge's end is the player's to plan.
+   */
+  private borderWallRows(pick: Pick, level: number): MenuItem[] {
+    const at = wallAcross(this.game, pick.x, pick.y, nearestSide(pick.x, pick.y, pick.wx, pick.wy), level);
+    if (!at) return [];
+    const rows = this.buildingEntries({ ...pick, x: at.x, y: at.y, wx: at.x + 0.5, wy: at.y + 0.5, cx: at.x, cy: at.y }, level, at.side);
+    return rows.length ? [{ label: `${at.building.name} (${at.x}, ${at.y}) · ${SIDE_NAMES[at.side]} side`, children: rows }] : [];
+  }
+
+  /**
    * Planning and construction entries for a tile: footprint, walls on the nearest side, floors, storeys. On the storey
    * being worked, or pinned (`Game.storeyFor`); `storey` is the storey a pinned storey's own menu is for (`storeyMenu`),
-   * which has that storey's work and nothing of the ground's.
+   * which has that storey's work and nothing of the ground's. With `wallOn`, only the wall on that side of the tile.
    */
-  private buildingEntries(pick: Pick, storey?: number): MenuItem[] {
+  private buildingEntries(pick: Pick, storey?: number, wallOn?: Side): MenuItem[] {
     /** What a tile going on piers adds to an entry: to its label, and a note of the deck and the drop. */
     type PierNote = { on: string; note?: string };
     const g = this.game;
@@ -3648,8 +3664,9 @@ export class UI {
     if (!b) {
       // Out past a building: the jetty that goes there, or is there (`frameMenu.ts`).
       entries.push(...frameJettyEntries(g, pick, (base, level, material, side, hand) => this.startPlacingStairs(base, level, material, 'stairs', side, false, hand), storey));
-      // Up on a pinned storey, nothing else: what follows is the ground's.
-      if (storey !== undefined) return entries;
+      // Up on a pinned storey, the wall on the border it shares with a building's tile (`borderWallRows`), and nothing
+      // else: what follows is the ground's.
+      if (storey !== undefined) return [...entries, ...this.borderWallRows(pick, storey)];
       // No building here: a fence or a half wall still goes on any border,
       // and the border is decided by which edge of the tile was clicked.
       const side = nearestSide(x, y, pick.wx, pick.wy);
@@ -3713,11 +3730,11 @@ export class UI {
     const level = storey ?? g.storeyFor(b);
     // Every storey job asked from here names the storey it was shown for (`jobLevel`), which is how the island knows it.
     base.level = level;
-    const side = nearestSide(x, y, pick.wx, pick.wy);
+    const side = wallOn ?? nearestSide(x, y, pick.wx, pick.wy);
     const sideName = SIDE_NAMES[side];
     const withSide: Extract<Target, { kind: 'tile' }> = { ...base, side };
     // How near a building roofed in glass is to being a glasshouse (`glasshouse.ts`).
-    if (glazing(bld, b)) {
+    if (glazing(bld, b) && !wallOn) {
       entries.push({
         label: isGlasshouse(bld, b)
           ? `Glasshouse: tilled ground, crop growth speed ×${GLASSHOUSE_GROWTH}, every season`
@@ -3730,7 +3747,7 @@ export class UI {
       });
     }
     // Pinned on a storey, the storey control says which.
-    if (b.levels > 1 && pinned === null) {
+    if (b.levels > 1 && pinned === null && !wallOn) {
       entries.push({
         label: `Work on storey ${level + 1}`,
         children: Array.from({ length: b.levels }, (_, i) => ({
@@ -3787,6 +3804,7 @@ export class UI {
           : item(act('no_plan'), withSide, `No plan (${sideName})`));
       }
     }
+    if (wallOn) return entries;
     // Every storey's wall on this side, whichever storey is being worked on.
     entries.push(...ivy(withSide));
     // Every bare outside side of the storey at once, laid out before it is asked for (`planarea.ts`).

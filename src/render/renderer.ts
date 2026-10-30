@@ -5055,8 +5055,10 @@ export class Renderer {
             // Every one kept track of where there are bridges, so the tile it came from is known when it steps under one.
             const under = this.game.bridges.size > 0 && lift <= 0 && (cr.ridden ? this.game.underNow() : this.bodyUnder(`c${cr.id}`, x, y)) && deckHere !== null;
             const stand = under ? null : deckHere;
+            // Ridden along a bridge's deck up a storey: at the deck's height there, as its rider is (`playerHeight`).
+            const upDeck = lift > 0 && deckHere !== null && this.game.deckOnStorey(x, y, up) ? this.game.deckHeightAt(cr.x, cr.y) : null;
             const ce = this.take('creature', x, y, cam.worldToScreenX(cr.x, cr.y),
-              cam.worldToScreenY(cr.x, cr.y, lift > 0 ? this.footOn(cr.x, cr.y, up) + lift * WALL_HEIGHT : stand ?? this.footAt(cr.x, cr.y)), null);
+              cam.worldToScreenY(cr.x, cr.y, upDeck ?? (lift > 0 ? this.footOn(cr.x, cr.y, up) + lift * WALL_HEIGHT : stand ?? this.footAt(cr.x, cr.y))), null);
             ce.creature = cr;
             if (stand !== null && lift <= 0) this.onBridgeDeck(ce, cr.x, cr.y);
             // Somebody else up on it: on its saddle, a hair in front of it, as I am on mine.
@@ -17727,13 +17729,22 @@ export class Renderer {
       if (h.anvil !== undefined) return { ...at, anvil: h.anvil };
       return { ...at, fire: h.fire };
     }
+    /*
+     * Pinned on a storey over the ground, a building's own floor under the point is that storey's: a bridge piece's
+     * hit is the box round its balustrades and arches, which reaches over the floor its end meets, and took every
+     * click on the edge between them.
+     */
+    const aloft = this.deckHits.length ? this.game.pinnedStorey() : null;
+    const floorUp = aloft !== null && aloft > 0 ? this.storeyPick(sx, sy, aloft) : null;
+    if (floorUp && this.game.buildings.buildingAt(floorUp.x, floorUp.y)) return floorUp;
     for (let i = this.deckHits.length - 1; i >= 0; i--) {
       const h = this.deckHits[i];
       if (sx < h.left || sx > h.left + h.w || sy < h.top || sy > h.top + h.h) continue;
       if (h.poly && !h.poly.some((o) => inPolygon(o, o.length, sx, sy))) continue;
       // An aqueduct's bay takes the click where its masonry is drawn and nothing drawn after it stands over that point.
       if (h.aq && (!this.aqueducts.hits(h.aq, sx, sy) || this.coveredAfter(sx, sy, h.x, h.y, h.bridge))) continue;
-      return { ...this.makePick(h.x, h.y, sx, sy), bridge: h.bridge };
+      // Where on the tile, at the deck's height: the side nearest the click is the side under it (`nearestSide`).
+      return { ...this.makePick(h.x, h.y, sx, sy, this.game.deckAt(h.x, h.y) ?? undefined), bridge: h.bridge };
     }
     // A Runestone or a settlement's token, by the stone standing up off its footprint: its centre tile, whose hover and Examine name it.
     for (let i = this.stoneHits.length - 1; i >= 0; i--) {
