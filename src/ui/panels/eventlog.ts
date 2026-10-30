@@ -33,7 +33,7 @@ export const TABS: Array<{ id: string; label: string; title: string; kinds: LogK
   { id: 'fight', label: 'Combat', title: 'Combat: blows dealt and taken, threats', kinds: ['fight'] },
   { id: 'wildermon', label: 'Wildermon', title: 'Wildermon: taming, crates, posts, tack, gear, breeding, evolving, settlement work, sightings', kinds: ['wildermon'] },
   { id: 'skill', label: 'Skills', title: 'Skill gains', kinds: ['skill'] },
-  { id: 'chat', label: 'Talk', title: 'Chat and system messages', kinds: ['chat', 'system'] },
+  { id: 'chat', label: 'Social', title: 'Chat and system messages', kinds: ['chat', 'system'] },
   { id: 'error', label: 'Trouble', title: 'Errors and refusals', kinds: ['error'] },
 ];
 

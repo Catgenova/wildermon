@@ -362,7 +362,7 @@ export class SettingsPanel {
     add(
       'Players logging on and off',
       `Name at screen top: ${BANNER_MS / 1000} s on logging on, ${LEAVING_MS / 1000} s on logging off. `
-        + 'The line in Talk either way.',
+        + 'The line in Social either way.',
       () => game.settings.presenceBanner,
       (v) => (game.settings.presenceBanner = v),
     );

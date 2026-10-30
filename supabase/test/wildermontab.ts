@@ -50,8 +50,8 @@ check('the log has a Wildermon tab keeping kind wildermon', tab?.label === 'Wild
   JSON.stringify(tab));
 const keepers = TABS.filter((t) => !t.kinds || t.kinds.includes('wildermon')).map((t) => t.label);
 check('and only it and All keep it', keepers.join(',') === 'All,Wildermon', keepers.join(','));
-const talk = TABS.find((t) => t.label === 'Talk');
-check('Talk keeps chat and system lines still', JSON.stringify(talk?.kinds) === '["chat","system"]', JSON.stringify(talk?.kinds));
+const talk = TABS.find((t) => t.id === 'chat');
+check('Social keeps chat and system lines still', talk?.label === 'Social' && JSON.stringify(talk?.kinds) === '["chat","system"]', JSON.stringify(talk?.kinds));
 
 /* ---- the browser ----------------------------------------------------------- */
 
