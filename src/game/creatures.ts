@@ -405,7 +405,7 @@ const STONE_FACES: ReadonlySet<number> = new Set([TileType.Rock, TileType.Snow])
 export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', butcher: 'butchering', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', rope: 'ropemaking', fletch: 'fletching', paper: 'papyrusmaking', glaze: 'pottery', fill: 'carrying', spin: 'tailoring', nail: 'blacksmithing', ribbon: 'blacksmithing' };
 export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'farming', mine: 'mining ore', sand: 'collecting sand', clay: 'collecting clay', quarry: 'cutting stone', stoke: 'stoking', fetch: 'fetching', guard: 'guarding', hunt: 'hunting', peat: 'collecting peat and tar', reed: 'cutting reeds', water: 'carrying water', prospect: 'prospecting', plant: 'planting', hod: 'hod carrying', mend: 'mending', compost: 'composting', seek: 'seeking relics', fish: 'fishing', prune: 'pruning', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending hives', groom: 'grooming', dairy: 'milking and shearing', heal: 'healing', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'lamplighting', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging smelters', kiln: 'loading kilns', ash: 'raking ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'tending planters', worm: 'digging worms', sprout: 'picking sprouts', resin: 'tapping pines', flower: 'picking wildflowers', scrub: 'scrubbing stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'making rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets', spin: 'spinning yarn', nail: 'smithing nails', ribbon: 'smithing ribbons' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'collect sand', clay: 'collect clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'collect peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'collect sand', clay: 'collect clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'collect peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls and columns on their storey; floors, roofs, staircases and ladders from the storey under; bridge or aqueduct spans, foundations; storeys up by staircase, not ladder', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
   get saw() { return `saw logs in your settlement stores into planks, ${recipeMakes('make_planks')} a log`; },
   get chisel() { return `chisel rock shards in your settlement stores into stone brick, ${recipeMakes('make_stone_brick')} a shard`; },
@@ -4550,7 +4550,7 @@ sayLine('holla', `Settlement task: fill a bladder at the shore or a well ${reach
   'Level: carrying.');
 sayLine('sedra', `Settlement task: cut reed beds ${reach('sedra')}, from the bank. Reeds per cut: 1, +1 per ${REED_LEVELS} levels. QL: ${percent(DIG_QL[0])}–${percent(DIG_QL[1])} of its foraging +1, max 100. Output to the crate.`,
   'Level: foraging.');
-sayLine('cobbe', `Settlement task: carry what planned building work still wants from your settlement stores, crates and furniture, ${reach('cobbe')}, 1 piece a trip, and fit it as a builder's action: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations. Order: where the carried piece is wanted, else the nearest work wanting something in your settlement stores; of that work's wants, the one furthest behind its bill. Carried piece no work in range wants: back to your settlement stores.`,
+sayLine('cobbe', `Settlement task: carry what planned building work still wants from your settlement stores, crates and furniture, ${reach('cobbe')}, 1 piece a trip, and fit it as a builder's action: walls and columns standing on their storey; floors, roofs, staircases and ladders from the storey under; bridge or aqueduct spans, foundations. A storey up: by finished staircases from their foot, over finished floors, through doorways; no ladders. Order: where the carried piece is wanted, else the nearest work wanting something in your settlement stores; of that work's wants, the one furthest behind its bill. Carried piece no work in range wants: back to your settlement stores.`,
   'Level: masonry.');
 sayLine('embra', `Settlement task: keep your campfires, ovens, braziers, smelters and kilns fuelled and lit, ${reach('embra')}: under ${HEARTH_FULL / 60} minutes of fuel, it carries 1 piece of fuel from your settlement stores to the nearest, whole pieces that fit only, and relights it if out (brazier: after dark). ${STOKE_SAYS} Eats only cooked food.`,
   'Level: smelting.', STOKE_SMELT_SAYS);
@@ -5098,8 +5098,15 @@ export interface IslandCreature {
   ridden?: boolean;
   /** Who is up on it, by their uid, whoever they are: somebody else's is drawn on it and it goes where they go. */
   rider?: string | null;
-  /** The storey its rider is on, sent only under a rider: a mount goes up wide staircases (`Game.rideRule`). */
+  /**
+   * The storey its rider is on, under a rider: a mount goes up wide staircases (`Game.rideRule`). Otherwise a
+   * worker's own, at the end of the leg it is on, up a building's staircases to its work (`creature_way`); sent with
+   * `storeyFrom`, at the leg's start, and its `way`, only off the ground.
+   */
   storey?: number | null;
+  storeyFrom?: number | null;
+  /** The legs of a worker's way still to walk after this one, each `[x, y, storey, seconds]` (`worker_way_leg`). */
+  way?: [number, number, number, number][] | null;
   /** What the tack on it carries of its makers' marks, when anything (a Tailor's Saddler). */
   tack?: Record<string, Mark> | null;
   /** The enchantments in the tack on it, by the piece, when any (Fleetfoot, Tamer's Bridle). */
@@ -5403,8 +5410,14 @@ export interface Creature {
   ridden: boolean;
   /** Who is up on its back by the island's word, by their uid, whoever they are. */
   riderUid?: string;
-  /** The storey its rider is on, by the island's word, for one under somebody else (`Game.creatureStorey`). */
+  /**
+   * The storey its rider is on, by the island's word, for one under somebody else (`Game.creatureStorey`); for a
+   * worker, its own at the end of the leg it is on, and `storeyFrom` at its start (`Game.creatureLift`).
+   */
   storey?: number;
+  storeyFrom?: number;
+  /** A worker's legs still to walk after this one, up or down a building's stairs, each `[x, y, storey, seconds]` (`walkLegs`). */
+  way?: [number, number, number, number][];
   /** The hour it was born, which is all that age is. */
   born: number;
   /** When a wild one was put out, which its stay in the wild is counted from (`WILD_STAY`); its birth where it is not kept. */
@@ -6012,9 +6025,18 @@ export class Creatures {
       if (r.ridden !== undefined) c.ridden = r.ridden;
       // And who, which anybody else's screen draws on it (`walkLegs`, `Renderer`).
       if (r.rider !== undefined) c.riderUid = r.rider ?? undefined;
-      // And the storey they ride it on, up a wide staircase (`Game.creatureStorey`).
-      if (r.storey) c.storey = r.storey;
-      else delete c.storey;
+      // And the storey they ride it on, up a wide staircase (`Game.creatureStorey`); or a worker's own, up a
+      // building's staircases to its work, at each end of its leg, and the legs of its way after it (`creature_way`).
+      if (r.storey || r.storeyFrom) {
+        c.storey = r.storey ?? 0;
+        if (r.storeyFrom !== undefined && r.storeyFrom !== null) c.storeyFrom = r.storeyFrom;
+        else delete c.storeyFrom;
+      } else {
+        delete c.storey;
+        delete c.storeyFrom;
+      }
+      if (r.way?.length) c.way = r.way.map((p) => [...p] as [number, number, number, number]);
+      else delete c.way;
       if (r.tack !== undefined) {
         if (r.tack) c.tack = r.tack;
         else delete c.tack;
@@ -6194,6 +6216,18 @@ export class Creatures {
         c.moving = false;
         this.place(c);
         continue;
+      }
+      // Off the end of a leg up or down a building's stairs: on along the way the island gave it, leg by leg, until it says more.
+      while (c.way?.length && now >= c.legEnds) {
+        const [wx, wy, wl, secs] = c.way.shift()!;
+        c.legFromX = c.legToX;
+        c.legFromY = c.legToY;
+        c.legToX = wx;
+        c.legToY = wy;
+        c.storeyFrom = c.storey ?? 0;
+        c.storey = wl;
+        c.legAt = c.legEnds;
+        c.legEnds = c.legAt + Math.max(1, secs * 1000);
       }
       const t = Math.max(0, Math.min(1, (now - c.legAt) / (c.legEnds - c.legAt)));
       const nx = c.legFromX + (c.legToX - c.legFromX) * t;

@@ -2884,6 +2884,20 @@ jobs:
             --outfile=node_modules/.cache/fellall.mjs --log-level=error
           node node_modules/.cache/fellall.mjs
 
+      - name: Workers walk up a building's staircases to their work
+        if: matrix.shard == 3
+        run: |
+          # A house of two storeys, a staircase up and a wall with a door
+          # across the upper storey: a worker with a load for a chest up there
+          # walks to the flight's foot, up it, through the door and back down;
+          # every leg a storey up on a floor and through no wall; a hod carrier
+          # fits a wall a storey up standing on that storey; a building with no
+          # staircase says "no stairs up to storey 2"; a floor taken from under
+          # one lets it down; and the browser draws it on its storey.
+          npx esbuild supabase/test/upstairs.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/upstairs.mjs --log-level=error
+          node node_modules/.cache/upstairs.mjs
+
       - name: The Springlet, slow on land and a hare's pace in water, found only in deep water
         if: matrix.shard == 3
         run: |

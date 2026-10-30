@@ -8104,14 +8104,30 @@ export class Game {
 
   /**
    * The storey a creature stands on: a wagon's it is in the traces of, its
-   * rider's under a rider (`rideRule`), and otherwise the ground. A mount is
-   * mounted and dismounted on the ground floor only (`MOUNT_STOREY_SAID`).
+   * rider's under a rider (`rideRule`), a worker's own up a building's
+   * staircases (`creature_way`), the nearer end's of a leg up or down a
+   * flight; and otherwise the ground. A mount is mounted and dismounted on
+   * the ground floor only (`MOUNT_STOREY_SAID`).
    */
   creatureStorey(c: Creature): number {
     if (c.hitchedTo !== null) return Math.max(0, this.furniture.get(c.hitchedTo)?.level ?? 0);
     if (c.ridden) return Math.max(0, this.player.level);
     if (c.riderUid) return Math.max(0, this.roster.byUid(c.riderUid)?.level ?? c.storey ?? 0);
-    return 0;
+    return Math.round(this.creatureLift(c));
+  }
+
+  /**
+   * How many storeys up a creature is drawn: its storey (`creatureStorey`),
+   * and a worker on a leg up or down a flight a share of the way from the
+   * storey at its start to the storey at its end, as far along it as it is.
+   */
+  creatureLift(c: Creature): number {
+    if (c.hitchedTo !== null || c.ridden || c.riderUid) return this.creatureStorey(c);
+    const to = Math.max(0, c.storey ?? 0);
+    const from = Math.max(0, c.storeyFrom ?? to);
+    if (from === to) return to;
+    const t = c.legEnds > c.legAt ? Math.max(0, Math.min(1, (Date.now() - c.legAt) / (c.legEnds - c.legAt))) : 1;
+    return from + (to - from) * t;
   }
 
   /** The wildermon the player is up on, if any. */

@@ -5,8 +5,9 @@
  * slabs". It worked only on planned walls on the ground floor. One settlement, set out the same on both sides from the
  * browser's own bills: a stone wall a storey up, a stone floor, a stone roof two storeys up, a plank staircase and a
  * plank ladder, a stone column, a stone bridge of two spans, an aqueduct of two spans, a foundation wanting three
- * barrowfuls of concrete, a log wall nobody has logs for, and a stone wall past the worker's reach. One chest holds
- * everything the reachable work wants except the logs.
+ * barrowfuls of concrete, a log wall nobody has logs for, and a stone wall past the worker's reach; and built, a floor
+ * a storey up and a staircase up to it, the storey a hod carrier fits the wall a storey up and the roof from. One chest
+ * holds everything the reachable work wants except the logs.
  *
  *   * Chosen and fitted a piece at a time until nothing more can be (`hod_needing_stocked` and `hod_fit` on the island,
  *     `Game.hodNeeding` and `Game.fitPiece` in the browser), the two sides take the same work in the same order, piece
@@ -73,6 +74,11 @@ const aqueduct = g.addBridge('aqueduct', T, T + 6, T, T + 9, 10);
 const slab = g.addFoundation(T - 2, T - 4, 6, 3);
 const walls = [upper, logs, far];
 const floors = [floor, roof, stairs, ladder];
+// And built: a floor a storey up over the hall's first tile and a staircase up to it from the east, the storey the
+// wall a storey up is fitted standing on and the roof from (`hod_stand`), a staircase going up to it (`hod_reached`).
+const deck = g.buildings.setFloor(hall, 1, T + 3, T + 3, 'plank', 'floor');
+const flight = g.buildings.setFloor(hall, 1, T + 4, T + 3, 'plank', 'stairs', 'e');
+for (const f of [deck, flight]) for (const k of Object.keys(f.needed)) f.needed[k] = 0;
 
 // The chest: everything the reachable work wants but the logs.
 const reachable: Bill[] = [upper, floor, roof, stairs, ladder, column, ...bridge.spans, ...aqueduct.spans, slab];
@@ -95,7 +101,7 @@ const setOut = (w: string, u: string): string => `
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by) values
     ${walls.map((wl) => `(${w}, ${wl.level}, '${wl.dir}', ${wl.x}, ${wl.y}, ${wl.building}, '${wl.type}', '${wl.material}', ${j(wl.needed)}, ${j(wl.total)}, ${u})`).join(',\n    ')};
   insert into floor_tile (world_id, level, x, y, building, material, kind, facing, needed, total, planned_by) values
-    ${floors.map((f) => `(${w}, ${f.level}, ${f.x}, ${f.y}, 1, '${f.material}', '${f.kind}', ${f.facing ? `'${f.facing}'` : 'null'}, ${j(f.needed)}, ${j(f.total)}, ${u})`).join(',\n    ')};
+    ${[...floors, deck, flight].map((f) => `(${w}, ${f.level}, ${f.x}, ${f.y}, 1, '${f.material}', '${f.kind}', ${f.facing ? `'${f.facing}'` : 'null'}, ${j(f.needed)}, ${j(f.total)}, ${u})`).join(',\n    ')};
   insert into building_column (world_id, level, x, y, building, material, needed, total, planned_by)
     values (${w}, ${column.level}, ${column.x}, ${column.y}, 1, '${column.material}', ${j(column.needed)}, ${j(column.total)}, ${u});
   ${[bridge, aqueduct].map((b) => `
@@ -140,7 +146,7 @@ begin
       from wall wl where wl.world_id = w) q;
   insert into said select 'FLOORS', string_agg(needed::text, ';' order by ord) from (
     select f.needed, array_position(array[${floors.map((f) => `'${f.level}|${f.x}|${f.y}'`).join(',')}], f.level || '|' || f.x || '|' || f.y) as ord
-      from floor_tile f where f.world_id = w) q;
+      from floor_tile f where f.world_id = w) q where ord is not null;
   insert into said select 'COLUMN', needed::text from building_column where world_id = w;
   insert into said select 'SPANS', string_agg(sp.needed::text, ';' order by b.kind desc, sp.n) from bridge_span sp join bridge b on b.world_id = sp.world_id and b.id = sp.bridge where sp.world_id = w;
   insert into said select 'SLAB', needed::text from foundation where world_id = w;
@@ -231,6 +237,10 @@ g2.deed = { name: 'Hodstead', x: T, y: T, radius: 10, level: 1 };
 const shed = g2.buildings.create('Shed', FLOOR[0], FLOOR[1]);
 const floor2 = g2.buildings.setFloor(shed, 0, FLOOR[0], FLOOR[1], 'stone_brick', 'floor');
 const wall2 = g2.buildings.setWall(shed, 1, WALL[0], WALL[1], 'n', 'solid', 'stone_brick');
+// Built: the floor a storey up the wall is fitted standing on, and a staircase up to it from the south (`hod_stand`).
+const deck2 = g2.buildings.setFloor(shed, 1, WALL[0], WALL[1], 'plank', 'floor');
+const flight2 = g2.buildings.setFloor(shed, 1, WALL[0], WALL[1] + 1, 'plank', 'stairs', 's');
+for (const f of [deck2, flight2]) for (const k of Object.keys(f.needed)) f.needed[k] = 0;
 const want2 = new Map<string, number>();
 for (const b of [floor2, wall2]) for (const [id, n] of Object.entries(b.needed)) want2.set(id, (want2.get(id) ?? 0) + n);
 const all2 = [...want2.values()].reduce((a, b) => a + b, 0);
@@ -259,6 +269,8 @@ begin
   insert into building (world_id, id, name, levels, planned_by) values (w, 1, 'Shed', 2, u);
   insert into floor_tile (world_id, level, x, y, building, material, kind, needed, total, planned_by)
     values (w, 0, ${FLOOR[0]}, ${FLOOR[1]}, 1, 'stone_brick', 'floor', ${j(floor2.needed)}, ${j(floor2.total)}, u);
+  insert into floor_tile (world_id, level, x, y, building, material, kind, facing, needed, total, planned_by) values
+    ${[deck2, flight2].map((f) => `(w, 1, ${f.x}, ${f.y}, 1, 'plank', '${f.kind}', ${f.facing ? `'${f.facing}'` : 'null'}, ${j(f.needed)}, ${j(f.total)}, u)`).join(', ')};
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by)
     values (w, 1, '${wall2.dir}', ${wall2.x}, ${wall2.y}, 1, 'solid', 'stone_brick', ${j(wall2.needed)}, ${j(wall2.total)}, u);
   v_id := creature_spawn(w, 'cobbe', ${T} + 0.6, ${T} + 0.6, 'active', now() - interval '60 days', u);

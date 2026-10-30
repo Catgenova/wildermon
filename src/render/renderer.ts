@@ -5044,12 +5044,13 @@ export class Renderer {
           for (const cr of this.game.creatures.atTile(x, y)) {
             // One shut in a crate is drawn in the crate, by the crate.
             if (cr.mode === 'stored') continue;
-            // One in the traces of a wagon a storey up is up there with it (`driveStorey`), and a mount ridden up a wide staircase (`rideRule`).
+            // One in the traces of a wagon a storey up is up there with it (`driveStorey`), a mount ridden up a wide staircase (`rideRule`),
+            // and a worker gone up a building's staircases to its work (`creature_way`).
             const up = this.game.creatureStorey(cr);
             // Pinned on a storey, those on it; and the one you ride or drive, under you whatever is pinned.
             if (this.pinned !== null && up !== this.pinned && !cr.ridden && !(cr.hitchedTo !== null && this.game.furniture.get(cr.hitchedTo)?.driven)) continue;
-            // Under you, as high as you are drawn, on the way up a flight too.
-            const lift = cr.ridden ? player.visualLevel : up;
+            // Under you, as high as you are drawn, on the way up a flight too; a worker as far up its flight as it is (`creatureLift`).
+            const lift = cr.ridden ? player.visualLevel : this.game.creatureLift(cr);
             // Under a bridge's deck rather than on it, as whoever rides it is (`bodyUnder`).
             // Every one kept track of where there are bridges, so the tile it came from is known when it steps under one.
             const under = this.game.bridges.size > 0 && lift <= 0 && (cr.ridden ? this.game.underNow() : this.bodyUnder(`c${cr.id}`, x, y)) && deckHere !== null;

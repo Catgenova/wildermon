@@ -1127,8 +1127,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c.tacked) return `${c.name}: no saddle and bridle.`;
       if (!ageDef(c, g.time).works) return `${c.name} is not grown.`;
       if (c.hitchedTo !== null) return `${c.name} is in the traces.`;
-      // From the ground floor only: nothing unridden stands a storey up (`Game.creatureStorey`).
-      if (!nearPlayer(g, c) || g.player.level !== 0) return `Stand next to ${c.name}.`;
+      // From the ground floor only, you and it: a worker gone up a building's staircases is not mounted up there (`Game.creatureStorey`).
+      if (!nearPlayer(g, c) || g.player.level !== 0 || g.creatureStorey(c) !== 0) return `Stand next to ${c.name}.`;
       if (g.driving()) return 'Stop driving first.';
       if (g.player.aboard !== null) return 'Step ashore first.';
       return null;
@@ -1153,7 +1153,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       return !!c && (c.ridden || (!!c.mine && c.tacked && c.mode !== 'wild' && c.mode !== 'stored'));
     },
-    // Not a storey up a wide staircase: nothing unridden stands up there (`Game.creatureStorey`).
+    // Not a storey up a wide staircase: a mount is mounted and dismounted on the ground floor only (`Game.creatureStorey`).
     check: (t, g) => {
       const c = creatureOf(g, t);
       return c && g.creatureStorey(c) > 0 ? MOUNT_STOREY_SAID : null;

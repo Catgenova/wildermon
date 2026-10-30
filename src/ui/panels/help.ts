@@ -69,7 +69,7 @@ import {
   BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
-import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
+import { FLIGHT_TILES, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
 import { IDLE_STALE, WORK_ITEMS, WORK_SHOWN } from '../../game/workstats';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, PALE_AT, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -3004,7 +3004,8 @@ export function helpText(): string {
       <li><b>${SPECIES.dowse.name}</b> (was Dowse): only over metal; on a settlement <b>${GATHER_VERB.nail}</b> at your anvils (<b>The settlement's hands</b>). Evolves: ${evolves('dowse')}.</li>
       <li><b>${SPECIES.sappa.name}</b>: <b>plants sprouts</b> where trees were felled.</li>
       <li><b>${SPECIES.cobbe.name}</b> (was Cobbe): <b>hod</b>: carries what a planned wall (any storey), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
-      still needs from your settlement stores, crates and furniture, and fits it, one piece a trip. Evolves: ${evolves('cobbe')}.</li>
+      still needs from your settlement stores, crates and furniture, and fits it, one piece a trip: a wall or column standing on its storey, beside it; a floor, roof, staircase
+      or ladder from the storey under it. Evolves: ${evolves('cobbe')}.</li>
       <li><b>${SPECIES.tinka.name}</b> (was Tinka): <b>mends</b> damaged gear in your settlement stores, most damaged first. Evolves: ${evolves('tinka')}.</li>
       <li><b>${SPECIES.middun.name}</b> (was Middun): turns rotting things on the ground into <b>compost</b>. Evolves: ${evolves('middun')}.</li>
       <li><b>${SPECIES.snout.name}</b>: finds <b>buried relics</b> and marks where to dig. Taming ${SPECIES.snout.tameLevel}.</li>
@@ -3085,7 +3086,12 @@ export function helpText(): string {
       <li><b>Idle reasons</b> (card and hover, until it next sets out): nothing of its task in range of the totem or post at its level
       (&ldquo;${idleSays({ why: 'range', n: SPECIES.sedra.workRange }, 'reed')}&rdquo; for a new ${SPECIES.sedra.name}); nothing in your settlement stores to work, naming what it needs
       (&ldquo;${idleSays({ why: 'stock', n: 0 }, 'mend')}&rdquo;); no barrel with room for its water; a load with nowhere to put it; walking home when over ${HOME_SLACK} tiles past
-      its range, with the distance. Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
+      its range, with the distance; no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;, storey 2 the first over the ground).
+      Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
+      <li><b>Storeys</b>: a store, station or planned work a storey up is walked to by the building's finished staircases: wide or ${SINGLE_STAIRS_NAME} onto it from
+      its foot, off at its head, down off its foot; ${SPIRAL_STAIRS_NAME} on its own tile. Over finished floors only; through a door, double door, gate, arch or gap, no
+      hidden door or iron-bound gate; no ladders. Up or down one flight or spiral: ${FLIGHT_TILES} tile's walk. A store a storey up with no staircase to it: not used.
+      Floor removed under it: down to the storey under it; no way down left: down where it stands. Assigned elsewhere, crated or let go: back on the ground.</li>
       <li><b>Ledger</b> (card): this island day and the previous (a day = ${dur(DAY_SECONDS)}): cycles at its task, skill gained, the ${LEDGER_SHOWN} items it handled most
       (up to ${LEDGER_ITEMS} kinds counted a day).</li>
       <li><b>Work</b> (card, your own wildermon only): lifetime cycles, skill gained and things handled (top ${WORK_SHOWN}; up to ${WORK_ITEMS} kinds counted), best island day by things handled,

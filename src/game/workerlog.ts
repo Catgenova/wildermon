@@ -40,7 +40,9 @@ import { article, listed, listedOr } from './words';
  *   * `unswept`: on the island, nobody awake is within the number of tiles of it, so nothing works it;
  *   * `nospar`: a Sparra on a settlement with no guard of yours there free to spar with (`sparsAsGuard`);
  *   * `season`: a Vesp at its hive in `SKEP_IDLE`, when nothing is in flower for it (`vespTrip`);
- *   * `flowers`: a Vesp whose hive has no wildflowers within the number of tiles (`SKEP_REACH`) of it.
+ *   * `flowers`: a Vesp whose hive has no wildflowers within the number of tiles (`SKEP_REACH`) of it;
+ *   * `stairs`: its store, station or planned work a storey up, the number that storey counted from 1 for the ground,
+ *     with no finished staircase going up to it (`creature_way`, `hod_unreached`).
  *
  * And three that are not idleness but rest, which its card says in the same place (`TIRE_GOES`, `REST_FOR`):
  *
@@ -49,8 +51,14 @@ import { article, listed, listedOr } from './words';
  *   * `tired`: walking to a wildermon bed (`bed`) to rest in it;
  *   * `yielded`: a Sparra or a guard that has yielded a spar, standing until it is above the number in health (`sparBack`).
  */
-export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded' | 'season' | 'flowers';
-export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded', 'season', 'flowers'];
+/**
+ * How long a worker takes up or down one flight or round one spiral staircase to the next storey, in tiles of its
+ * walk: a flight's head and foot are a tile apart, and a spiral is climbed on its own tile. The island's `worker_way_leg`.
+ */
+export const FLIGHT_TILES = 1;
+
+export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded' | 'season' | 'flowers' | 'stairs';
+export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded', 'season', 'flowers', 'stairs'];
 
 /**
  * Why a worker is idle, as kept on it: the code, its number, and whether it works off a post rather than the token;
@@ -192,6 +200,8 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
       return `Idle: ${SKEP_IDLE}, no honey until ${SEASONS[(SEASONS.indexOf(SKEP_IDLE) + 1) % SEASONS.length]}.`;
     case 'flowers':
       return `Idle: no wildflowers within ${n} tiles of its hive.`;
+    case 'stairs':
+      return `Idle: no stairs up to storey ${n}.`;
   }
 }
 
