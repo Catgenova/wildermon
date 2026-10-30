@@ -12,7 +12,6 @@ import { itemName } from '../game/items';
 import { ACTION_BY_ID } from '../game/actions';
 import { BELT_MAX, pinLabel } from '../game/belt';
 import type { Renderer } from '../render/renderer';
-import { ashore, JOURNAL, nextGoals } from '../game/journal';
 import { VERSION } from '../version';
 import { updateButton } from './update';
 import { fixed, html, setMarkup } from './html';
@@ -144,7 +143,7 @@ export class Hud {
   /** The status panel and the toolbar, which the target panel keeps out from under. */
   private statusEl: HTMLDivElement;
   private toolbarEl: HTMLDivElement;
-  /** Bottom and middle: the first-steps card over the action bar, stacked so neither can lie across the other. */
+  /** Bottom and middle: the target and the action bar, stacked so neither can lie across the other. */
   private stackEl = document.createElement('div');
   private posEl: HTMLDivElement;
   private fpsEl: HTMLDivElement;
@@ -153,13 +152,6 @@ export class Hud {
   private actionFill: HTMLDivElement;
   private queueEl: HTMLDivElement;
   private goBtn: HTMLButtonElement;
-  private guideEl: HTMLDivElement;
-  private guideTitle: HTMLDivElement;
-  private guideBody: HTMLDivElement;
-  /** Which goal the guide is showing, so it is only rewritten when it changes. */
-  private guideOn = '';
-  /** Opens the journal window; filled in by the UI that owns the windows. */
-  openJournal: (() => void) | null = null;
   private hintEl: HTMLDivElement;
   private gridBtn: HTMLButtonElement | null = null;
   private compass: HTMLSpanElement;
@@ -196,8 +188,6 @@ export class Hud {
   private beltEl: HTMLDivElement;
   private loopEls: HTMLButtonElement[] = [];
   private stopBtn: HTMLButtonElement;
-  /** The first-steps card's "Put it away", whose tooltip names the journal's key. */
-  private hushBtn: HTMLButtonElement | null = null;
   private beltDue = 0;
   private foodEl: HTMLDivElement;
   private foodBars = new Map<string, HTMLDivElement>();
@@ -460,52 +450,7 @@ export class Hud {
     this.targetConsider.className = 'hud-target-consider';
     this.targetEl.append(this.targetName, targetRow, this.targetIntent, this.targetConsider, this.targetNote);
 
-    /*
-     * What to do next, for somebody who came ashore ninety seconds ago.
-     *
-     * There is no tutorial on this island and never has been. The journal is
-     * eighty-five goals in eleven chapters, all on screen at once, which is a
-     * fine list and a poor answer to the only question a new arrival has,
-     * which is "what now": a list says everything at the same volume and
-     * leaves the reading to you.
-     *
-     * So the first chapter is read out, one goal at a time, in as many words
-     * as it takes — and then it stands down for good, because by the time the
-     * stake is in the ground the question has changed to "what else" and the
-     * journal is the right answer to that one. It can be put away sooner, and
-     * once put away it stays away.
-     */
-    this.guideEl = document.createElement('div');
-    this.guideEl.className = 'guide';
-    this.guideEl.hidden = true;
-    this.guideTitle = document.createElement('div');
-    this.guideTitle.className = 'steps-title';
-    this.guideBody = document.createElement('div');
-    this.guideBody.className = 'steps-body';
-    const guideBar = document.createElement('div');
-    guideBar.className = 'steps-bar';
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = 'tb-btn tb-small';
-    more.textContent = 'All goals';
-    more.title = 'Open the journal goals';
-    more.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.openJournal?.();
-    });
-    const hush = document.createElement('button');
-    hush.type = 'button';
-    hush.className = 'tb-btn tb-small';
-    hush.textContent = 'Hide';
-    this.hushBtn = hush;
-    hush.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.game.settings.guide = false;
-      this.guideEl.hidden = true;
-    });
-    guideBar.append(more, hush);
-    this.guideEl.append(this.guideTitle, this.guideBody, guideBar);
-    this.stackEl.append(this.targetEl, this.guideEl, this.actionEl);
+    this.stackEl.append(this.targetEl, this.actionEl);
     this.drawKeys();
 
     /*
@@ -704,9 +649,7 @@ export class Hud {
       setMarkup(k.btn, codes.length ? html`${k.label} <kbd>${keyName(codes[0])}</kbd>` : html`${k.label}`);
     }
     const stop = this.keyWord('stop');
-    const journal = this.keyWord('win_journal');
     if (this.stopBtn) this.stopBtn.title = `Stop and clear the queue${stop ? ` (${stop})` : ''}`;
-    if (this.hushBtn) this.hushBtn.title = `Hide. All goals in the journal${journal ? ` (${journal})` : ''}.`;
   }
 
   /** The key a binding answers to just now, by name, or null when it is left unbound. */
@@ -823,7 +766,6 @@ export class Hud {
     if (now - this.lastAt < HUD_EVERY) return;
     this.lastAt = now;
     this.refreshStorey();
-    this.refreshGuide();
     const p = this.game.player;
     this.say(this.nameEl, p.name);
     for (const [id, bar] of Object.entries(this.bars)) {
@@ -1005,30 +947,6 @@ export class Hud {
       this.queueEl.hidden = false;
       this.queueEl.textContent = `Then: ${this.queueWords(waiting)} (${waiting.length + 1} of ${this.game.queueCapacity()} actions held)`;
     } else this.queueEl.hidden = true;
-  }
-
-  /**
-   * The next thing to do, while there is still a first thing.
-   *
-   * Only rewritten when the goal changes, since this runs every frame and the
-   * answer is the same from one to the next for minutes at a time.
-   */
-  private refreshGuide(): void {
-    if (!this.game.settings.guide || ashore(this.game.ticked)) {
-      if (!this.guideEl.hidden) this.guideEl.hidden = true;
-      return;
-    }
-    const next = nextGoals(this.game.ticked, 1)[0];
-    if (!next) {
-      this.guideEl.hidden = true;
-      return;
-    }
-    if (next.id === this.guideOn) return;
-    this.guideOn = next.id;
-    this.guideEl.hidden = false;
-    const done = JOURNAL[0].goals.filter((g) => this.game.ticked.has(g.id)).length;
-    this.guideTitle.textContent = `${next.text} \u00b7 ${done + 1} of ${JOURNAL[0].goals.length}`;
-    this.guideBody.textContent = next.how ?? next.hint ?? '';
   }
 
   /**

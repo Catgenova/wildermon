@@ -1569,45 +1569,6 @@ button.goal-row:focus-visible {
   font-size: 11px;
 }
 
-/*
- * The first-steps card. It sits above the action bar, in the same column, and
- * takes itself away once the first chapter of the journal is done.
- */
-.guide {
-  width: min(430px, calc(100% - 32px));
-  padding: 9px 11px 8px;
-  border: 1px solid var(--t-line-2, #5e4a2c);
-  border-radius: 4px;
-  background: var(--t-panel, rgba(26, 22, 18, 0.94));
-  pointer-events: auto;
-}
-
-/* Its own names, apart from the Field guide's (`.guide-title` and the rest, src/ui/panels/guide.ts). */
-.steps-title {
-  color: var(--ui-accent);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-[data-ui='runecut'] .steps-title {
-  font-family: var(--rc-title-font);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.steps-body {
-  margin-top: 4px;
-  color: var(--ui-text);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.steps-bar {
-  display: flex;
-  gap: 6px;
-  margin-top: 7px;
-}
-
 /* And the same list, in the journal, above the whole of it. */
 .goal-next {
   margin: 2px 0 8px;

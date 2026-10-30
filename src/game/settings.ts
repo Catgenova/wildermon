@@ -70,16 +70,6 @@ export const SETTING_DEFAULTS = {
    */
   uiSize: 1,
   /**
-   * Whether the first-steps card is shown.
-   *
-   * It stands down on its own once the first chapter of the journal is
-   * behind you, so this is only about putting it away sooner — and it is a
-   * fact about the person rather than about the island, like everything else
-   * here: somebody who knows the game does not want to be told how to fell a
-   * tree on every island they ever open.
-   */
-  guide: true,
-  /**
    * Whether a craft, and work at a station that uses something up, may take
    * it from your stores within reach as well as from what you carry.
    *

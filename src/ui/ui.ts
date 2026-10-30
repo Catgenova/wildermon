@@ -518,8 +518,6 @@ export class UI {
     // The trades you are watching: the journal's Tracker tab, redrawn as skills move only while it shows.
     this.tracker = new TrackerPanel(this.journalPanel.trackerPage, game, (x, y, title, items) => this.menu.show(x, y, title, items), () => journal.isOpen && this.journalPanel.tab === 'tracker');
     this.ledgerPanel = this.journalPanel.ledger;
-    // "The rest of it" on the first-steps card opens the whole list.
-    this.hud.openJournal = () => journal.open();
     const pals = this.windows.create({ id: 'wildermon', title: 'Wildermon', x: 364, y: 330, width: 330, height: 416, anchor: 'tr', open: false });
     this.wildermon = new WildermonPanel(
       pals,

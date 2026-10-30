@@ -4214,6 +4214,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 376,
+    day: '2026-10-30',
+    lines: () => ['Removed: the first-steps card over the action bar and its setting. The journal keeps every goal.'],
+  },
+  {
     n: 374,
     day: '2026-10-30',
     lines: () => [...['petta', 'potta', 'rippa', 'papra'].map((id) => {

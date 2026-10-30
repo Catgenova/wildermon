@@ -70,7 +70,7 @@ export const SNAP = 10;
 const BAR_DRAG = 6;
 /** On a phone, the least room between the toolbar and the status panel under it (`WindowManager.stackBars`). */
 const BAR_GAP = 4;
-/** On a phone, the room left between a window's foot and the event log, the first-steps card or the spell bar under it. */
+/** On a phone, the room left between a window's foot and the event log or the spell bar under it. */
 const FOOT_GAP = 8;
 /** On a phone, the least height worth keeping windows to between the bars and the foot (a title and four rows); with less, they may lie over the foot's things. */
 const MIN_BAND = 160;
@@ -816,8 +816,7 @@ export class WindowManager {
    * bottom by src/style.css), the spell bar, the belt, the log's bar, and the
    * action bar's stack. Written as `--foot-*` on the interface, in its own
    * pixels from its bottom edge; and `--sheet-foot`, where a sheet stops: over
-   * the log's bar, and over the first-steps card while that leaves a sheet
-   * `MIN_BAND` of room.
+   * the log's bar.
    */
   layFoot(): void {
     const s = this.root.style;
@@ -864,10 +863,7 @@ export class WindowManager {
       put('--foot-log', log?.el ?? null, this.logBar);
     }
     s.setProperty('--foot-stack', `${Math.round(y)}px`);
-    let sheet = y;
-    const guide = this.root.querySelector<HTMLElement>('.hud-stack .guide');
-    if (shown(guide) && h - (y + guide.offsetHeight + PHONE_GAP) >= MIN_BAND) sheet = h - topOf(guide) + PHONE_GAP;
-    s.setProperty('--sheet-foot', `${Math.round(sheet)}px`);
+    s.setProperty('--sheet-foot', `${Math.round(y)}px`);
   }
 
   /** The height of the log's bar folded, kept while it is open taller. */
@@ -1178,20 +1174,19 @@ export class WindowManager {
     this.settleAll();
   }
 
-  /** Things laid along the foot of a phone's screen that are not windows: the first-steps card and the spell bar. */
-  private static readonly FOOT = '.hud-stack .guide, .spell-bar';
+  /** Things laid along the foot of a phone's screen that are not windows: the spell bar. */
+  private static readonly FOOT = '.spell-bar';
   /** Those already watched for showing, hiding or changing height. */
   private readonly footWatched = new WeakSet<HTMLElement>();
 
   /**
    * On a phone, how far down a window may reach, in interface pixels. A window
    * at the foot (the event log) may reach the bottom of the screen; any other
-   * stops `FOOT_GAP` above the highest of that window, the first-steps card
-   * and the spell bar, so it neither lies partly over the log nor goes under
-   * the card. Where that leaves less than `MIN_BAND` under the bars (a small
-   * phone, a large text size), it lies over the log but stops above the card
-   * and the spell bar; and where even that is too little, it reaches the
-   * bottom of the screen.
+   * stops `FOOT_GAP` above the highest of that window and the spell bar, so it
+   * neither lies partly over the log nor goes under the bar. Where that leaves
+   * less than `MIN_BAND` under the bars (a small phone, a large text size), it
+   * lies over the log but stops above the spell bar; and where even that is
+   * too little, it reaches the bottom of the screen.
    */
   footFor(win: UIWindow): number {
     const { h } = uiBox();

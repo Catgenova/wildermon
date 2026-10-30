@@ -447,12 +447,6 @@ export class SettingsPanel {
     head('World view');
     add('Show tile grid', html`Tile outlines. Toggle: ${kbd('grid')}.`, () => game.settings.grid, (v) => (game.settings.grid = v));
     add(
-      'Show the first-steps card',
-      'Next-step card above the action bar while the first journal chapter is unfinished. Hidden once your settlement is founded.',
-      () => game.settings.guide,
-      (v) => (game.settings.guide = v),
-    );
-    add(
       'Cut away walls facing you',
       html`Hide walls between you and building interiors. Toggle: ${kbd('cutaway')} or ◪.`,
       () => game.settings.cutaway,
