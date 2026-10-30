@@ -4215,6 +4215,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 391,
+    day: '2026-10-30',
+    lines: () => ['New: Settings: Rules (Game Rules) and Privacy (Privacy Policy) tabs.'],
+  },
+  {
     n: 390,
     day: '2026-10-30',
     lines: () => [

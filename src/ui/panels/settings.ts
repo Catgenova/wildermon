@@ -1,3 +1,5 @@
+import { gameRules, RULES_TITLE } from '../rules';
+import { privacyPolicy, PRIVACY_TITLE } from '../privacy';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { HEAL_FED } from '../../game/body';
 import { ROT_LOOK, ROT_SOON } from '../../game/rot';
@@ -78,6 +80,8 @@ export class SettingsPanel {
       ['display', 'Display', 'Graphics and interface'],
       ['windows', 'Windows', 'Window layouts and see-through windows'],
       ['keys', 'Keys', 'Key bindings'],
+      ['rules', 'Rules', RULES_TITLE],
+      ['privacy', 'Privacy', PRIVACY_TITLE],
     ] as Array<[string, string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -101,7 +105,18 @@ export class SettingsPanel {
     this.pages.set('display', display);
     this.pages.set('windows', winPage);
     this.pages.set('keys', keyPage);
-    win.body.append(display, winPage, keyPage);
+    // The Game Rules and the Privacy Policy, word for word (`rules.ts`, `privacy.ts`), as on the landing page.
+    const rulesPage = document.createElement('div');
+    rulesPage.className = 'settings-page';
+    rulesPage.hidden = true;
+    rulesPage.append(gameRules());
+    const privacyPage = document.createElement('div');
+    privacyPage.className = 'settings-page';
+    privacyPage.hidden = true;
+    privacyPage.append(privacyPolicy());
+    this.pages.set('rules', rulesPage);
+    this.pages.set('privacy', privacyPage);
+    win.body.append(display, winPage, keyPage, rulesPage, privacyPage);
     this.buildWindows(winPage);
 
     /** A key as it is bound now, kept in step by `drawKeys`. */
