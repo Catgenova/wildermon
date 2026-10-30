@@ -18,6 +18,7 @@ import {
   isDone,
   MATERIAL_BY_ID,
   MATERIALS,
+  MATERIALS_WITH_GLASS,
   OPPOSITE_SIDE,
   OUTSIDE_STAIR_LEVEL,
   SINGLE_STAIRS_NAME,
@@ -256,7 +257,7 @@ export function frameJettyEntries(g: Game, pick: Pick, place?: PlaceStairs, stor
             children: WALL_TYPES.filter((wt) => !wt.standalone).map((wt) => ({
               label: wt.name,
               // gates: a portcullis only in stone or brick, and a hidden door asked for with a solid wall's plan, its iron in hand (`gates.ts`).
-              children: MATERIALS.filter((m) => fitsMaterial(wt.id, m) && takesAs(m, { wall: wt.id })).map((m) => {
+              children: MATERIALS_WITH_GLASS.filter((m) => fitsMaterial(wt.id, m) && takesAs(m, { wall: wt.id })).map((m) => {
                 const hidden = wt.id === 'hidden_door';
                 const t: TileTarget = { ...withSide, wallType: hidden ? 'solid' : wt.id, material: m.id };
                 const why = (hidden ? hiddenDoorWants(g) : null) ?? plan.check?.(t, g) ?? null;

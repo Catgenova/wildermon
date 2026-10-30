@@ -57,6 +57,7 @@ import { depthOf, type View } from './view';
 import { FALLS, roofModel, type Fall, type RoofGable, type RoofModel, type RoofPt } from './roofshape';
 import { COVER_PPT, covering } from './roofing';
 import { glass, glassBack, glassFace, glassReflects } from './glazing';
+import { drawGlassWall } from './glasswall';
 import { GLASS, isGlasshouse } from '../game/glasshouse';
 import type { LightSource } from '../game/light';
 import { FLOOR_PPT, FLOOR_TILES, concrete, flooring, slabbing } from './flooring';
@@ -14476,6 +14477,49 @@ export class Renderer {
       if (countered) this.drawCounterPart('front', wall, border, { px, py, quad }, zoom, lit, { line: cob.line, reveal: cob.reveal, wood: cob.beam, woodLine: cob.beamLine });
       if (!cut) this.wallOpenings(wall, mat, lit, { px, py, quad }, zoom, border);
       if (wall.type === 'hidden_door' && this.game.buildings.seenType(wall) === 'hidden_door') drawHiddenMark(ctx, { px, py }, zoom, cob.line);
+      ctx.globalAlpha = 1;
+      return;
+    }
+    /*
+     * A solid wall of glass is a slab between a timber sill and head
+     * (`glasswall.ts`): drawn in the same box as any wall -- its near face, its
+     * top and its ends stopping where this wall's do -- and its far face too,
+     * which is seen through it, stopping where the near face would on the far
+     * side of the wall.
+     */
+    if (wall.material === GLASS) {
+      const backEnd = (i: -1 | 1): number => {
+        const edge = i < 0 ? 0 : 1, { n, P, Q, up, past } = joinAt(i);
+        if (past) return edge + i * past;
+        if (up) return edge - i * up;
+        if (n) return edge;
+        if (Q) return edge - i * Q.h;
+        if (P) return edge + i * P.h;
+        return edge;
+      };
+      /** Glass carrying on in line past the `i` end, finished and as tall: a joint between two panes there. */
+      const pane = (i: -1 | 1): boolean => {
+        const b: Border = border.dir === 'h' ? { dir: 'h', x: border.x + i, y: border.y } : { dir: 'v', x: border.x, y: border.y + i };
+        const w = this.game.buildings.wallOnBorder(wall.level, b);
+        return !!w && w.material === GLASS && isDone(w) && this.standing(w, b) >= tall - 1e-6;
+      };
+      /** Glass turning the corner at the `i` end, square to this wall on either side of it. */
+      const turns = (i: -1 | 1): boolean => {
+        const t = i < 0 ? 0 : 1;
+        const cx = border.dir === 'h' ? border.x + t : border.x, cy = border.dir === 'h' ? border.y : border.y + t;
+        const round: Border[] = border.dir === 'h'
+          ? [{ dir: 'v', x: cx, y: cy }, { dir: 'v', x: cx, y: cy - 1 }]
+          : [{ dir: 'h', x: cx, y: cy }, { dir: 'h', x: cx - 1, y: cy }];
+        return round.some((b) => {
+          const w = this.game.buildings.wallOnBorder(wall.level, b);
+          return !!w && w.material === GLASS && isDone(w);
+        });
+      };
+      drawGlassWall(ctx, { px, py }, {
+        near: [faceEnd(-1), faceEnd(1)], far: [backEnd(-1), backEnd(1)], top: [capEnd(-1), capEnd(1)],
+        ends: [endShows(-1), endShows(1)], joints: [pane(-1), pane(1)], corners: [turns(-1), turns(1)], capped: true,
+        lit, topLit, endLit, zoom, glow: this.lampBehind(wall, border), seed: border.x * 31 + border.y * 17 + wall.level * 7,
+      });
       ctx.globalAlpha = 1;
       return;
     }

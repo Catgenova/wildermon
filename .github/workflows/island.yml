@@ -1681,6 +1681,20 @@ jobs:
             --outfile=node_modules/.cache/glasshouse.mjs --log-level=error
           node node_modules/.cache/glasshouse.mjs
 
+      - name: A solid wall is laid in glass, and nothing else of glass but a roof
+        if: matrix.shard == 2
+        run: |
+          # Glass is a solid wall and a pitched roof and nothing else. A solid
+          # wall of it is planned on both sides at a solid wall's bill; every
+          # other wall type, fence, floor kind and a column refused in glass in
+          # the same words; a hod carrier holding glass is sent to it; and a
+          # one-storey building walled all round in glass, each wall built a
+          # unit a go through the doors, under a glass roof, is a glasshouse
+          # on both sides, and not while its last wall is going up.
+          npx esbuild supabase/test/glasswall.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/glasswall.mjs --log-level=error
+          node node_modules/.cache/glasswall.mjs
+
       - name: A team stays in the traces until it is taken out
         if: matrix.shard == 2
         run: |

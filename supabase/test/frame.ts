@@ -28,7 +28,7 @@ import { CELLAR_DEPTH, COLUMN_SHARE, columnBill, floorKind, gapText, INDOORS_DEC
 import { needsText } from '../../src/game/buildActions';
 import { AQ_OVER, aqueductPlan } from '../../src/game/aqueducts';
 import { COUNTER_EMPTY_FIRST } from '../../src/game/counters';
-import { GLASS_PITCHED, GLASS_ROOF_ONLY } from '../../src/game/glasshouse';
+import { GLASS_PITCHED, GLASS_ONLY } from '../../src/game/glasshouse';
 import { deckBears, deckCarries } from '../../src/game/piers';
 import { numberWord } from '../../src/game/words';
 import { metres, TileType } from '../../src/world/tiles';
@@ -990,7 +990,7 @@ same('no glass over a jetty under a flat roof', 'plan_floor', { ...STILTS_JETTY,
 bld.list.get(12)!.roof = undefined;
 sql(`update building set roof = null where world_id = w and id = 12;`);
 same('and glass is no floor out on a jetty, which is said before the storey the job is on', 'plan_floor',
-  { ...STILTS_JETTY, material: 'glass', level: 0 }, GLASS_ROOF_ONLY);
+  { ...STILTS_JETTY, material: 'glass', level: 0 }, GLASS_ONLY);
 
 // An aqueduct is not set out under a jetty, as a bridge is not; with the jetty up, the same one is.
 {
@@ -1019,7 +1019,7 @@ same('and glass is no floor out on a jetty, which is said before the storey the 
 // A column on piers stands on a built deck, carried by the lightest deck under the building; none is glass.
 same('a column on a tile on piers wants its deck built first', 'plan_column', { x: 16, y: 31, cx: 16, cy: 31, material: 'plank', level: 0 },
   'Build this storey\'s floor first.');
-same('and no column is glass', 'plan_column', { x: 17, y: 31, cx: 18, cy: 31, material: 'glass', level: 0 }, GLASS_ROOF_ONLY);
+same('and no column is glass', 'plan_column', { x: 17, y: 31, cx: 18, cy: 31, material: 'glass', level: 0 }, GLASS_ONLY);
 same('a marble column stands on a stone-brick deck', 'plan_column', { x: 17, y: 31, cx: 18, cy: 31, material: 'marble', level: 0 }, 'ALLOWED');
 column(12, 0, 18, 31, 'marble');
 const marble = MATERIAL_BY_ID.get('marble')!;
@@ -1050,7 +1050,7 @@ bld.setCellar(13, 19, 31, CELLAR_DEPTH);
 sql(`insert into cellar_tile (world_id, x, y, building, dug) values (w, 19, 31, 13, ${CELLAR_DEPTH});`);
 same('a building over a cellar says the cellar first, its columns after', 'remove_from_plan', { x: 19, y: 31 }, 'Fill in the cellar first.');
 same('and glass is no railing, which is said before where a railing goes', 'plan_wall',
-  { x: 19, y: 31, side: 'n', wallType: 'railing', material: 'glass' }, GLASS_ROOF_ONLY);
+  { x: 19, y: 31, side: 'n', wallType: 'railing', material: 'glass' }, GLASS_ONLY);
 bld.setCellar(13, 19, 31, 0);
 sql(`delete from cellar_tile where world_id = w;`);
 

@@ -241,19 +241,24 @@ export const MATERIALS: MaterialDef[] = [
 ];
 export const MATERIAL_BY_ID = new Map(MATERIALS.map((m) => [m.id, m]));
 /**
- * Glass, for a roof: panes laid on timber glazing bars, put up with the mallet
- * and trained as carpentry. A roof covering and nothing else, so it is not in
- * `MATERIALS`, which every menu of walls, fences and floors offers -- but it is
- * looked up by id like any of them, and its bill is a solid wall's worth that a
- * roof shape takes its share of, as every material's is. See `glasshouse.ts`.
+ * Glass: panes set in timber, put up with the mallet and trained as carpentry.
+ * A solid wall -- the panes between a timber sill and head -- and a pitched
+ * roof's covering, and nothing else (`only`): no window, door, fence, half
+ * wall, railing, floor, stair or column. So it is not in `MATERIALS`, which
+ * every menu of fences, floors and columns offers; the wall menus offer it
+ * (`MATERIALS_WITH_GLASS`) and the roof menus add it. It is looked up by id
+ * like any of them, and its bill is a solid wall's, which a roof shape takes
+ * its share of, as every material's is. See `glasshouse.ts`.
  */
 export const GLASS_ROOF: MaterialDef = {
   id: 'glass', name: 'Glass', kind: 'wood', tool: 'mallet', skill: 'carpentry',
   color: [190, 222, 214], trim: [238, 236, 226], floor: [190, 222, 214], courses: 6,
-  // A roof is not a wall: neither how high it stands nor how heavy it is is ever asked of it.
   bill: [['glass', 24], ['timber', 8]], storeys: 10, heft: 1,
+  only: { walls: ['solid'], floors: ['roof'] }, seeThrough: true,
 };
 MATERIAL_BY_ID.set(GLASS_ROOF.id, GLASS_ROOF);
+/** Every material a wall menu offers: `MATERIALS` and glass, which takes a solid wall and no other type (`takesAs`). */
+export const MATERIALS_WITH_GLASS: readonly MaterialDef[] = [...MATERIALS, GLASS_ROOF];
 
 /** A floor kind as the sentence below names it. */
 const FLOOR_WORDS: Record<FloorKind, string> = { floor: 'a floor', stairs: 'a flight of stairs', ladder: 'a ladder', roof: 'a roof' };

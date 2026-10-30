@@ -10,7 +10,6 @@ import { SUBTILES } from './crates';
 import { furnitureCovers } from './furniture';
 import type { Game } from './game';
 import { columnAt, columnCarries, columnFooting, cornerName, cornerOf, storeyOf } from './frame';
-import { GLASS, GLASS_ROOF_ONLY } from './glasshouse';
 import { deckCarries } from './piers';
 
 type TileTarget = Extract<Target, { kind: 'tile' }>;
@@ -30,8 +29,7 @@ export const FRAME_ACTIONS: ActionDef[] = [
       if (!isTile(t) || !t.material || !MATERIAL_BY_ID.get(t.material)) return 'Choose a material.';
       const corner = cornerOf(t);
       if (!corner) return 'Choose a corner.';
-      // Glass goes on a roof and nowhere else (`glasshouse.ts`), and no material with an `only` makes a column.
-      if (t.material === GLASS) return GLASS_ROOF_ONLY;
+      // No material with an `only` makes a column: glass and stained glass among them.
       const only = onlyRefusal(t.material, { column: true });
       if (only) return only;
       const tool = needTool(g, 'mallet');

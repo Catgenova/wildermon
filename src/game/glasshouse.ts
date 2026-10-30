@@ -1,15 +1,19 @@
 /**
  * Glasshouses.
  *
- * A roof tile may be laid in glass (`GLASS_ROOF` in building.ts): panes on
- * timber glazing bars, put up with a mallet and trained as carpentry, at a
- * roof shape's share of a solid wall's bill as every roof is -- a hipped tile
- * `floorBill('glass', 'roof', 'hip')`. It goes on a pitched roof, gabled or
- * hipped, and on nothing else: no wall, floor, fence or stair is laid in
- * glass, and a flat roof is a deck for walking on.
+ * Glass (`GLASS_ROOF` in building.ts) is panes in timber, put up with a mallet
+ * and trained as carpentry, and it is laid as two things and nothing else
+ * (`only`, so `onlyRefusal`, the island's `material_only_refusal`): a solid
+ * wall, at a solid wall's bill `wallBill('glass', 'solid')`, panes between a
+ * timber sill and head and seen through as a window is (`seeThrough`); and a
+ * pitched roof, gabled or hipped, at a roof shape's share of that bill as
+ * every roof is -- a hipped tile `floorBill('glass', 'roof', 'hip')`. No
+ * window, door, arch, half wall, fence, railing, floor, stair or column is
+ * laid in glass, and a flat roof is a deck for walking on.
  *
  * A building of one storey, walled all round -- a finished full-height wall,
- * door, window or arch on every border of its footprint's outline
+ * door, window or arch on every border of its footprint's outline, a solid
+ * wall of glass as much as one of stone
  * (`walledRound`); a fence, a gate or a half wall is low and does not do -- with
  * every tile of its footprint under a finished roof of glass is a glasshouse
  * (`isGlasshouse`), and it is the one building whose ground is tilled: a
@@ -39,18 +43,18 @@
  * at `INDOORS_DECAY` of the rate outside.
  */
 import type { Target } from './actions';
-import { floorKind, GLASS_ROOF, isDone, onlyRefusal, WALL_TYPE_BY_ID, workLevel, type Building, type Buildings } from './building';
+import { floorKind, GLASS_ROOF, isDone, onlyRefusal, onlySaid, WALL_TYPE_BY_ID, workLevel, type Building, type Buildings } from './building';
 import type { Game } from './game';
 import { rebaseStage } from './growth';
 import { TileType } from '../world/tiles';
 
 type TileTarget = Extract<Target, { kind: 'tile' }>;
 
-/** The material a glass roof is laid in, by its id. */
+/** The material a glass wall and a glass roof are laid in, by its id. */
 export const GLASS = GLASS_ROOF.id;
 
-/** Why glass is not laid as a wall, a fence, a floor or a stair. */
-export const GLASS_ROOF_ONLY = 'Glass: roofs only.';
+/** Why glass is not laid as any wall type but a solid wall, nor as a fence, a floor, a stair or a column: its `only` (`onlySaid`). */
+export const GLASS_ONLY = onlySaid(GLASS_ROOF);
 /** Why a flat roof is not laid in glass. */
 export const GLASS_PITCHED = 'Glass roofs: pitched, gabled or hipped only (flat roofs are walkable decks).';
 /** Why a floor is not planned over a field. */
@@ -162,22 +166,21 @@ export function glassTillRefusal(g: Game, x: number, y: number, tillable: Readon
 
 /**
  * Why a wall, a fence, a floor slot or a storey will not be planned for glass
- * or over a field, or null: glass goes on a pitched roof and nowhere else; no
- * floor is planned on the ground floor over a field; and while a building has
- * a field in it, no roof but glass is planned on it and no storey raised over
- * it. Asked once the job knows its side, type and material (a storey, before
- * anything else); the island's `glass_refusal`, asked at the same point of
- * `build_refusal`.
+ * or over a field, or null: glass goes on a solid wall and a pitched roof and
+ * nowhere else; no floor is planned on the ground floor over a field; and
+ * while a building has a field in it, no roof but glass is planned on it and
+ * no storey raised over it. Asked once the job knows its side, type and
+ * material (a storey, before anything else); the island's `glass_refusal`,
+ * asked at the same point of `build_refusal`.
  */
 export function glassPlanRefusal(g: Game, t: TileTarget, action: 'plan_wall' | 'plan_fence' | 'plan_floor' | 'add_floor'): string | null {
   if (action === 'add_floor') {
     const b = g.buildings.buildingAt(t.x, t.y);
     return b && fieldIn(g, b) ? FIELD_NO_STOREY : null;
   }
-  // Glass on a roof only, and a material with an `only` as that and nothing else (`onlyRefusal`).
-  if (action !== 'plan_floor') return t.material === GLASS ? GLASS_ROOF_ONLY : onlyRefusal(t.material, { wall: t.wallType });
+  // A material with an `only` as that and nothing else (`onlyRefusal`): glass as a solid wall or a roof.
+  if (action !== 'plan_floor') return onlyRefusal(t.material, { wall: t.wallType });
   const kind = t.floorKind ?? 'floor';
-  if (t.material === GLASS && kind !== 'roof') return GLASS_ROOF_ONLY;
   const only = onlyRefusal(t.material, { floor: kind });
   if (only) return only;
   const b = g.buildings.buildingAt(t.x, t.y);

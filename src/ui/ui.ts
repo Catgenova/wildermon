@@ -25,6 +25,7 @@ import {
   MATERIAL_BY_ID,
   isDone,
   MATERIALS,
+  MATERIALS_WITH_GLASS,
   takesAs,
   progressOf,
   ROOF_SHAPES,
@@ -1177,7 +1178,7 @@ export class UI {
       note: `${bare} sides`,
       children: types.map((wt) => ({
         label: wt.name,
-        children: MATERIALS.filter((m) => fitsMaterial(wt.id, m) && takesAs(m, { wall: wt.id })).map((m) => ({
+        children: MATERIALS_WITH_GLASS.filter((m) => fitsMaterial(wt.id, m) && takesAs(m, { wall: wt.id })).map((m) => ({
           label: m.name,
           note: `${describeNeeds(wallBill(m.id, wt.id), materialName)} each`,
           onSelect: () => this.startPlanArea({ kind: 'walls', buildingId: b.id, level, wallType: wt.id as WallType, material: m.id, anchor: { x, y } }),
@@ -3784,7 +3785,7 @@ export class UI {
               hint: lacks ?? undefined,
               disabled: !!lacks,
               // A portcullis is laid only in stone or brick (`gates.ts`).
-              children: MATERIALS.filter((m) => fitsMaterial(wt.id, m) && takesAs(m, { wall: wt.id })).map((m) => ({
+              children: MATERIALS_WITH_GLASS.filter((m) => fitsMaterial(wt.id, m) && takesAs(m, { wall: wt.id })).map((m) => ({
                 label: m.name,
                 note: describeNeeds(wallBill(m.id, wt.id), materialName)
                   + (hidden ? `, and ${hiddenDoorIronWords()} as it is planned` : ''),

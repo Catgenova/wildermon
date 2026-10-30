@@ -150,7 +150,7 @@ import { GLASSHOUSE_GROWTH, HAND_WINTER, PLANTER_GROWTH, SEASON_GROWTH, SEASON_S
 import { SEASON_DAYS, SEASONS, YEAR_DAYS, YEAR_FROM } from '../src/world/calendar';
 import { OVEN_CAPACITY, PLANTER_GROWING } from '../src/game/furniture';
 import { FRUITING, fruitingSays, fruitingSeasons, outOfSeasonSaid } from '../src/game/fruiting';
-import { FIELD_GLASS_ONLY, FIELD_NO_STOREY, FIELD_PACKED, GLASS, GLASS_FLOORED, GLASS_PITCHED, GLASS_ROOF_ONLY, GLASS_SLAB, FIELD_UNFLOORED, NOT_A_GLASSHOUSE, NOT_TILLABLE } from '../src/game/glasshouse';
+import { FIELD_GLASS_ONLY, FIELD_NO_STOREY, FIELD_PACKED, GLASS, GLASS_FLOORED, GLASS_PITCHED, GLASS_SLAB, FIELD_UNFLOORED, NOT_A_GLASSHOUSE, NOT_TILLABLE } from '../src/game/glasshouse';
 import {
   COUNTER_BOUGHT_NOT_TAKEN, COUNTER_EMPTY_FIRST, COUNTER_FROM_STREET, COUNTER_FULL, COUNTER_GROUND, COUNTER_HOLDS, COUNTER_NO_PIECES,
   COUNTER_NOT_KEEPER, COUNTER_REACH, COUNTER_SEEN, COUNTER_STREET_ONLY, COUNTER_STREET_TAKEN, sellsTooFar,
@@ -2526,18 +2526,19 @@ out.push(`create or replace function is_planter(p_sub text) returns boolean lang
 out.push(`create or replace function cellar_outdoor(p_sub text) returns boolean language sql immutable as $fn$ select coalesce(p_sub = any(${arr(cellarOutdoor())}), false) $fn$;`);
 out.push(`create or replace function planter_growing_said() returns text language sql immutable as $fn$ select ${q(PLANTER_GROWING)} $fn$;`);
 /*
- * Glasshouses (`src/game/glasshouse.ts`): glass, the roof covering that is no
- * other kind of material, with its bill a solid wall's worth as every
- * material's is; the share of a crop's pace that grows under it in every
+ * Glasshouses (`src/game/glasshouse.ts`): glass, laid as a solid wall and a
+ * pitched roof and nothing else (its `only`, which `material_only_refusal`
+ * reads), with its bill a solid wall's as every material's is; the share of a crop's pace that grows under it in every
  * season; what the doors say when glass or a field is asked for where it
  * does not go; and what Examine says of a glasshouse.
  */
 out.push(`insert into build_material_def (id, name, kind, tool, skill, storeys, heft) values (${q(GLASS_ROOF.id)}, ${q(GLASS_ROOF.name)}, ${q(GLASS_ROOF.kind)}, ${q(GLASS_ROOF.tool)}, ${q(GLASS_ROOF.skill)}, ${q(GLASS_ROOF.storeys)}, ${q(GLASS_ROOF.heft)});`);
 GLASS_ROOF.bill.forEach(([item, n], ord) => out.push(`insert into build_material_bill values (${q(GLASS_ROOF.id)}, ${q(ord)}, ${q(item)}, ${q(n)});`));
+if (GLASS_ROOF.only) out.push(`update build_material_def set only_walls = ${arr(GLASS_ROOF.only.walls)}, only_floors = ${arr(GLASS_ROOF.only.floors)}, only_said = ${q(onlySaid(GLASS_ROOF))} where id = ${q(GLASS_ROOF.id)};`);
 out.push(`create or replace function glass_material() returns text language sql immutable as $fn$ select ${q(GLASS)} $fn$;`);
 out.push(`create or replace function glasshouse_growth() returns double precision language sql immutable as $fn$ select ${q(GLASSHOUSE_GROWTH)}::double precision $fn$;`);
 for (const [fn, v] of [
-  ['glass_roof_only_said', GLASS_ROOF_ONLY], ['glass_pitched_said', GLASS_PITCHED], ['field_unfloored_said', FIELD_UNFLOORED],
+  ['glass_pitched_said', GLASS_PITCHED], ['field_unfloored_said', FIELD_UNFLOORED],
   ['not_a_glasshouse_said', NOT_A_GLASSHOUSE], ['glass_floored_said', GLASS_FLOORED], ['not_tillable_said', NOT_TILLABLE],
   ['field_glass_only_said', FIELD_GLASS_ONLY], ['field_no_storey_said', FIELD_NO_STOREY], ['glass_examine_said', glassExamine()],
   ['field_packed_said', FIELD_PACKED], ['glass_slab_said', GLASS_SLAB],

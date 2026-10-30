@@ -8927,9 +8927,9 @@ create or replace function planter_growing_said() returns text language sql immu
 insert into build_material_def (id, name, kind, tool, skill, storeys, heft) values ('glass', 'Glass', 'wood', 'mallet', 'carpentry', 10, 1);
 insert into build_material_bill values ('glass', 0, 'glass', 24);
 insert into build_material_bill values ('glass', 1, 'timber', 8);
+update build_material_def set only_walls = array['solid']::text[], only_floors = array['roof']::text[], only_said = 'Glass: only as a solid wall or a roof.' where id = 'glass';
 create or replace function glass_material() returns text language sql immutable as $fn$ select 'glass' $fn$;
 create or replace function glasshouse_growth() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
-create or replace function glass_roof_only_said() returns text language sql immutable as $fn$ select 'Glass: roofs only.' $fn$;
 create or replace function glass_pitched_said() returns text language sql immutable as $fn$ select 'Glass roofs: pitched, gabled or hipped only (flat roofs are walkable decks).' $fn$;
 create or replace function field_unfloored_said() returns text language sql immutable as $fn$ select 'Field here: clear it first.' $fn$;
 create or replace function not_a_glasshouse_said() returns text language sql immutable as $fn$ select 'Indoors, glasshouses only: 1 storey, full-height walls all round, every tile under finished glass roof.' $fn$;

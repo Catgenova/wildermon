@@ -4214,6 +4214,17 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 384,
+    day: '2026-10-30',
+    lines: () => {
+      const wall = listed(Object.entries(typeBill(GLASS_ROOF.id, 'solid').total).map(([id, n]) => `${n} ${materialName(id, n)}`));
+      return [
+        `Added: glass solid walls: Plan wall, Solid, Glass: ${wall} a wall; mallet, carpentry. Seen through. Count toward a glasshouse's walls all round.`,
+        `Changed: glass refused elsewhere as "${onlySaid(GLASS_ROOF)}" (was: roofs only).`,
+      ];
+    },
+  },
+  {
     n: 383,
     day: '2026-10-30',
     lines: () => [

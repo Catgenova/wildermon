@@ -20,8 +20,8 @@
  *     back, at moments all round the year, to the microsecond, and never
  *     losing or gaining a second of what the crop had grown;
  *   * the words a sowing and a wait are said in;
- *   * a glasshouse built through the doors on both sides -- glass refused on a
- *     wall, a fence, a floor and a flat roof, its ground refused a till until
+ *   * a glasshouse built through the doors on both sides -- glass refused as a
+ *     window, a fence, a floor and a flat roof, its ground refused a till until
  *     the last pane is in, then tilled, sown, tended, carried off the glass
  *     clock when a roof tile comes off and back on when it is laid again, and
  *     when a tile joins the footprint and leaves it, and when a wall comes down
@@ -47,7 +47,7 @@ import {
   SPRING_GROWTH, YEAR_SECONDS,
 } from '../../src/game/growth';
 import {
-  clearedSaid, FIELD_GLASS_ONLY, FIELD_NO_STOREY, FIELD_UNFLOORED, GLASS, GLASS_FLOORED, GLASS_PITCHED, GLASS_ROOF_ONLY, GLASS_SLAB, isGlasshouse, NOT_A_GLASSHOUSE, underGlass,
+  clearedSaid, FIELD_GLASS_ONLY, FIELD_NO_STOREY, FIELD_UNFLOORED, GLASS, GLASS_FLOORED, GLASS_PITCHED, GLASS_ONLY, GLASS_SLAB, isGlasshouse, NOT_A_GLASSHOUSE, underGlass,
 } from '../../src/game/glasshouse';
 import { perksOf } from '../../src/game/perks';
 import { packLand, packWorld, unpack } from '../../src/game/save';
@@ -381,8 +381,8 @@ begin
   perform give(w, u, 'mallet', 1, 40);
   perform give(w, u, 'rake', 1, 40);
 
-  -- Glass is refused on a wall, a fence, a floor and a flat roof, and the ground until the last pane is in.
-  insert into said values ('WALL', coalesce(act_refusal(w, u, 'plan_wall', ${tileT(20, 26, { side: 'n', wallType: 'solid', material: 'glass' })}), 'ALLOWED'));
+  -- Glass is refused as a window, a fence, a floor and a flat roof, and the ground until the last pane is in.
+  insert into said values ('WALL', coalesce(act_refusal(w, u, 'plan_wall', ${tileT(20, 26, { side: 'n', wallType: 'window', material: 'glass' })}), 'ALLOWED'));
   update player set body_at = now(), x = 24.5, y = 25.5 where world_id = w and uid = u;
   insert into said values ('FENCE', coalesce(act_refusal(w, u, 'plan_fence', ${tileT(24, 25, { side: 'n', wallType: 'fence', material: 'glass' })}), 'ALLOWED'));
   update player set body_at = now(), x = ${FLAT[0] + 0.5}, y = ${FLAT[1] + 0.5} where world_id = w and uid = u;
@@ -595,8 +595,8 @@ const isaid = new Map(island.split('\n').filter(Boolean).map((l) => {
 }));
 const say = (k: string): string => isaid.get(k) ?? 'unsaid';
 
-check('the island refuses glass on a wall, a fence and a floor, in so many words',
-  say('WALL') === GLASS_ROOF_ONLY && say('FENCE') === GLASS_ROOF_ONLY && say('FLOOR') === GLASS_ROOF_ONLY, `${say('WALL')} / ${say('FENCE')} / ${say('FLOOR')}`);
+check('the island refuses glass as a window, a fence and a floor, in so many words',
+  say('WALL') === GLASS_ONLY && say('FENCE') === GLASS_ONLY && say('FLOOR') === GLASS_ONLY, `${say('WALL')} / ${say('FENCE')} / ${say('FLOOR')}`);
 check('and on a flat roof', say('FLAT') === GLASS_PITCHED, say('FLAT'));
 check('and a till in a building roofed in glass until the last of it is in', say('NOTYET') === `${NOT_A_GLASSHOUSE}|false`, say('NOTYET'));
 {
@@ -702,14 +702,14 @@ const run = (id: string, t: Target): unknown => ACTION_BY_ID.get(id)!.perform(t,
 const stand = (x: number, y: number): void => { game.player.x = x + 0.5; game.player.y = y + 0.5; };
 
 stand(20, 26);
-const wallSaid = ask('plan_wall', at(20, 26, { side: 'n', wallType: 'solid', material: GLASS }));
+const wallSaid = ask('plan_wall', at(20, 26, { side: 'n', wallType: 'window', material: GLASS }));
 stand(24, 25);
 const fenceSaid = ask('plan_fence', at(24, 25, { side: 'n', wallType: 'fence', material: GLASS }));
 stand(FLAT[0], FLAT[1]);
 const flatSaid = ask('plan_floor', at(FLAT[0], FLAT[1], { material: GLASS, floorKind: 'roof' }));
 stand(20, 26);
 const floorSaid = ask('plan_floor', at(20, 26, { material: GLASS, floorKind: 'floor' }));
-check('the browser refuses glass on a wall, a fence, a floor and a flat roof in the island\'s words',
+check('the browser refuses glass as a window, a fence, a floor and a flat roof in the island\'s words',
   wallSaid === say('WALL') && fenceSaid === say('FENCE') && floorSaid === say('FLOOR') && flatSaid === say('FLAT'),
   `${wallSaid} / ${fenceSaid} / ${floorSaid} / ${flatSaid}`);
 check('and Till is offered in a building being roofed in glass, and refused until it is a glasshouse, as the island refuses it',

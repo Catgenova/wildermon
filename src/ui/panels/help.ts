@@ -267,6 +267,11 @@ const lowWalls = (): string => {
 /** What a tile of glass roof takes, on the shape Plan roof lays: "12 glass panes and 4 timbers". */
 const glassTile = (): string =>
   listed(Object.entries(floorBill(GLASS_ROOF.id, 'roof', roofShapeOf(undefined)).total).map(([id, n]) => `${n} ${materialName(id, n)}`));
+/** What a solid wall of glass takes: "24 glass panes and 8 timbers". */
+const glassWall = (): string =>
+  listed(Object.entries(wallBill(GLASS_ROOF.id, 'solid').total).map(([id, n]) => `${n} ${materialName(id, n)}`));
+/** The wall types that close in a glasshouse and are laid in glass, from `only`: "solid wall". */
+const glassWallTypes = (): string => listed(WALL_TYPES.filter((w) => takesAs(GLASS_ROOF, { wall: w.id })).map((w) => (w.id === 'solid' ? 'solid wall' : w.name.toLowerCase())));
 /** The Farmer's perks that work on a planter as on a field: whatever a sowing or a harvest reads, but for Crop Rotation, which a planter keys to itself. */
 const planterPerks = () => perksOf('farmer').filter((p) => !('rotate:plant_seed' in p.fx)
   && Object.keys(p.fx).some((k) => /:(plant_seed|harvest_crop)$/.test(k) || k.startsWith('plus:')));
@@ -1672,7 +1677,7 @@ export function helpText(): string {
     <h3>Glass</h3>
     <ul>
       <li><b>Glassblowing</b> (Artisan), at a hot smelter: ${listed(['make_glass', 'make_glass_panel', 'make_bottle', 'make_stained_glass'].map(glassJob))}.</li>
-      <li>Glazing: window ${glazing('window')} glass panels; bay window ${glazing('bay')}; glasshouse roofs are laid in them.</li>
+      <li>Glazing: window ${glazing('window')} glass panels; bay window ${glazing('bay')}; glass solid wall ${glassWall()}; glass roof ${glassTile()} a tile.</li>
       <li>Failed stained glass keeps the gem and sand; other failures lose the inputs.</li>
       <li><b>Bottle</b>: holds ${itemDef('bottle').holds ?? 0} of one food or drink; contents rot at ${frac(itemDef('bottle').shelter ?? 1)} of the rate on the ground.</li>
       <li>Solid <b>stained glass</b> wall: ${billIn(WALL_MATERIALS.find((m) => m.id === 'stained_glass')?.bill ?? [])}; trowel; trains masonry. One firing glazes one wall.
@@ -1715,6 +1720,7 @@ export function helpText(): string {
       <li>Flatten and pack a tile; with a mallet, <b>Plan building</b> on it and <b>Add to building</b> on neighbouring flat packed tiles.</li>
       <li><b>Plan wall</b> on a tile edge: solid, window, bay window, door or double door; in log, plank, timbercraft, cobblestone, slate, marble, sandstone, stone brick,
       clay adobe, clay bricks, ornate silver or ornate gold.</li>
+      <li><b>Glass</b>: ${glassWall()} a wall; mallet; trains carpentry; seen through. ${onlySaid(GLASS_ROOF)}</li>
       <li><b>Build wall</b>: one material an action, from the pack, then a crate on the tile, then crates, carts, wagons and containers within ${CRAFT_REACH} tiles
       (<i>Use stores within reach</i> unticked: pack and the crate on the tile only). Floors, frames, and bridge and aqueduct spans draw the same way.</li>
       <li>Actions per click: one, ${listed(BUILD_COUNTS.map(String))} (where the piece still needs more), or all it needs (max ${MOST_GOES}); stops when finished or out of materials.</li>
@@ -1746,11 +1752,11 @@ export function helpText(): string {
       <li>Enter from the ground; leave its head onto storey ${OUTSIDE_STAIR_LEVEL + 1} through a door, double door, arch or wall gap; leave its sides or foot onto the ground.</li>
       <li>Not part of the storey: needs no walls, no roof, no wall below; nothing else planned on its tile.</li>
     </ul>
-    <h4>Glass roofs and glasshouses</h4>
+    <h4>Glass walls, glass roofs and glasshouses</h4>
     <ul>
-      <li><b>Plan roof</b> offers <b>glass</b>: ${glassTile()} per tile of the ${roofShapeDef(undefined).name.toLowerCase()} roof Plan roof lays; mallet; trains carpentry.
-      Glass goes on roofs only.</li>
-      <li><b>Glasshouse</b>: one storey, <b>walled all round to full height</b> (door, window, arch count; ${lowWalls()} too low), every footprint tile under finished glass.
+      <li><b>Plan roof</b> offers <b>glass</b>: ${glassTile()} per tile of the ${roofShapeDef(undefined).name.toLowerCase()} roof Plan roof lays; mallet; trains carpentry.</li>
+      <li><b>Plan wall</b>, <b>Solid</b> offers <b>glass</b>: ${glassWall()} a wall; mallet; trains carpentry. Seen through. ${onlySaid(GLASS_ROOF)}</li>
+      <li><b>Glasshouse</b>: one storey, <b>walled all round to full height</b> (door, window, arch, glass ${glassWallTypes()} count; ${lowWalls()} too low), every footprint tile under finished glass.
       Its menu lists what is missing.</li>
       <li>Ground-floor tiles with no floor planned and no slab poured: <b>Till</b> with a rake into fields (all field rules, Farmer patches, perks and Bounty included).</li>
       <li>With a field inside: no floor over the field, no roof but glass, no storey above. <b>Clear the field</b> packs it flat again.</li>
