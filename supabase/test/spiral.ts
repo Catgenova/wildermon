@@ -336,6 +336,7 @@ const pathText = path.map((p) => `${p.x},${p.y}:${p.level}`).join(' ');
 check('pinned on storey 4, a walk from the ground outside to a floor of storey 4 sets off and ends on storey 4',
   went && path.length > 0 && path[path.length - 1].level === 3 && path[path.length - 1].x === 22, pathText);
 check('up the stack on its tile, storey by storey', ['21,25:0', '21,25:1', '21,25:2', '21,25:3'].every((s) => pathText.includes(s)), pathText);
+// Each step asks rpc_move afresh, its pace (`private.pace`) cleared: the test asks faster than a walk does.
 const replay = (steps: Array<{ x: number; y: number; level: number }>, from: [number, number, number]): { held: string; at: string } => {
   psql(`update player set x = ${from[0]}, y = ${from[1]}, level = ${from[2]}, moved_at = now() - interval '10 seconds', away = false
     where world_id = ${W} and uid = ${DANE};`);
@@ -344,6 +345,7 @@ const replay = (steps: Array<{ x: number; y: number; level: number }>, from: [nu
   for (const p of steps) {
     const answer = psql(`
       update player set moved_at = now() - interval '10 seconds', away = false where world_id = ${W} and uid = ${DANE};
+      delete from caller where uid = ${DANE};
       select set_config('request.jwt.claims', json_build_object('sub', ${DANE})::text, false) \\g /dev/null
       select rpc_move(${W}, ${p.x + 0.5}, ${p.y + 0.5}, ${p.level})::text;`).split('\n').pop() ?? '{}';
     const a = JSON.parse(answer) as { x: number; y: number; level: number; blocked?: boolean };
@@ -389,7 +391,8 @@ const replay = (steps: Array<{ x: number; y: number; level: number }>, from: [nu
 /* ---- walked on the island, a step at a time --------------------------------------- */
 const move = (x0: number, y0: number, l0: number, x1: number, y1: number, level: number): { x: number; y: number; level: number; blocked: boolean } => {
   psql(`update player set x = ${x0}, y = ${y0}, level = ${l0}, moved_at = now() - interval '10 seconds', away = false
-          where world_id = ${W} and uid = ${DANE};`);
+          where world_id = ${W} and uid = ${DANE};
+        delete from caller where uid = ${DANE};`);
   const said = psql(`
     select set_config('request.jwt.claims', json_build_object('sub', ${DANE})::text, false) \\g /dev/null
     select rpc_move(${W}, ${x1}, ${y1}, ${level})::text;`).split('\n').pop() ?? '{}';
@@ -449,6 +452,7 @@ const at = (a: { x: number; y: number; level: number; blocked: boolean }): strin
       select uid into me from player where world_id = w and name = 'Dane';
       perform set_config('request.jwt.claims', json_build_object('sub', me)::text, true);
       update player set x = 24.5, y = 25.5, level = 0, aboard = null, away = false, moved_at = now() - interval '10 seconds' where world_id = w and uid = me;
+      delete from caller where uid = me;
       v_c := creature_spawn(w, 'orse', 24.5, 25.5, 'active', now() - interval '60 days', me);
       update creature set keeper = me, hunger = 1, tacked = true where world_id = w and id = v_c;
       perform perform_ride(w, me, 'mount_creature', jsonb_build_object('kind', 'creature', 'id', v_c));
