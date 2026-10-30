@@ -66,6 +66,7 @@ export class SettingsPanel {
     private readonly keys: Keybinds,
     openLook: (() => void) | null,
     private readonly windows: WindowManager,
+    unstick: (() => void) | null = null,
   ) {
     win.body.classList.add('settings-body');
     this.root = win.body;
@@ -618,6 +619,21 @@ export class SettingsPanel {
       open.textContent = 'Customize character';
       open.addEventListener('click', openLook);
       row.append(text, open);
+      display.append(row);
+    }
+
+    // Your body to the ground floor of the tile it stands on, on the island (`rpc_unstick`).
+    if (unstick) {
+      const row = document.createElement('div');
+      row.className = 'setting-row setting-look';
+      const text = document.createElement('span');
+      setMarkup(text, fixed('<b>I\'m stuck</b><small>Moves you to the ground floor, same tile. From any storey or a cellar.</small>'));
+      const go = document.createElement('button');
+      go.type = 'button';
+      go.className = 'tb-btn tb-small';
+      go.textContent = 'I\'m stuck';
+      go.addEventListener('click', unstick);
+      row.append(text, go);
       display.append(row);
     }
 

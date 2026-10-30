@@ -3634,6 +3634,11 @@ export class Island {
     return this.faithDoor('rpc_regret_patron', {});
   }
 
+  /** "I'm stuck": your body to the ground floor of the tile it stands on (`rpc_unstick`). */
+  async unstick(): Promise<string | null> {
+    return this.door('rpc_unstick', {});
+  }
+
   /** Break a Bauble of Regret to undo your path: its picks go with it, and its techniques off the spell bar. */
   async regretPath(): Promise<FaithSaid | null> {
     return this.faithDoor('rpc_regret_path', {});

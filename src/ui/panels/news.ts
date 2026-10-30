@@ -4215,6 +4215,11 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 389,
+    day: '2026-10-30',
+    lines: () => ['New: Settings, Display: I\'m stuck. Moves you to the ground floor, same tile, from any storey or a cellar.'],
+  },
+  {
     n: 388,
     day: '2026-10-30',
     lines: () => [

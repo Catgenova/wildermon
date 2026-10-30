@@ -506,7 +506,8 @@ export class UI {
     const settings = this.windows.create({ id: 'settings', title: 'Settings', x: 12, y: 56, width: 380, height: 520, anchor: 'tr', open: false });
     // How you look: back to the character creator on the account page, for
     // somebody on an island, who has an account to keep a look with.
-    this.settings = new SettingsPanel(settings, game, cb.keys, this.island ? () => location.assign(creatorPage()) : null, this.windows);
+    this.settings = new SettingsPanel(settings, game, cb.keys, this.island ? () => location.assign(creatorPage()) : null, this.windows,
+      this.island ? () => void this.unstick() : null);
     const crate = this.windows.create({ id: 'crate', title: 'Settlement crate', x: 364, y: 56, width: 320, height: 348, anchor: 'tr', open: false });
     this.cratePanel = new CratePanel(crate, game, (p) => this.moveDragged(p, 'store'),
       (x, y, title, items) => this.menu.show(x, y, title, items), (item, x, y) => this.compareCard(item, x, y));
@@ -3174,6 +3175,20 @@ export class UI {
   }
 
   /** Off the roll of one you were asked onto, once you have said you mean it. */
+  /** "I'm stuck" (Settings): to the ground floor of the tile you stand on, the island first (`rpc_unstick`). */
+  private async unstick(): Promise<void> {
+    if (!this.island) return;
+    const why = await this.island.unstick();
+    if (why) {
+      this.game.logMsg(why, 'error');
+      return;
+    }
+    this.game.player.stop();
+    this.game.player.level = 0;
+    // Every click after it a walk on the ground floor, not a storey pinned before (`pinnedStorey`).
+    this.game.settings.viewLevel = null;
+  }
+
   private async leaveSettlement(d: Deed): Promise<void> {
     const isle = this.island;
     if (!isle) return;
