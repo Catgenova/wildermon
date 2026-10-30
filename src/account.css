@@ -490,7 +490,7 @@ a { color: var(--rc-rune-ink); }
   body {
     justify-content: center;
     align-items: flex-start;
-    padding: max(30vh, 190px) 14px 28px;
+    padding: max(38vh, 250px) 14px 28px;
   }
 
   .card { max-width: 520px; }

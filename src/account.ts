@@ -524,7 +524,13 @@ void import('./landing/faithbox').then(({ dressFaith }) => {
   dressFaith(paperBox);
 }).catch(() => {});
 requestAnimationFrame(() => window.setTimeout(() => {
-  void import('./landing/backdrop').then(({ startBackdrop }) => startBackdrop($<HTMLCanvasElement>('cove'))).catch(() => {});
+  void import('./landing/backdrop').then(({ startBackdrop, WIDE }) => startBackdrop($<HTMLCanvasElement>('cove'), () => {
+    // The screen less the box: right of it on a wide screen, over it on a narrow one; the whole of it while the creator fills the middle.
+    const W = innerWidth, H = innerHeight;
+    if (card.classList.contains('making')) return { x0: 0, y0: 0, x1: W, y1: H };
+    if (W >= WIDE) return { x0: Math.min(W * 0.6, card.offsetLeft + card.offsetWidth + 24), y0: 0, x1: W, y1: H };
+    return { x0: 0, y0: 0, x1: W, y1: Math.max(120, card.offsetTop) };
+  })).catch(() => {});
 }, 0));
 
 setMode('new');

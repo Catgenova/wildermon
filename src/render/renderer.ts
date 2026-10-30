@@ -4076,6 +4076,12 @@ export class Renderer {
   private still = false;
   /** Less motion this frame (`lessMotion`): no sway in trees, bushes and flowers, no bob or pulse in the markers, steady lights. */
   private calm = false;
+  /**
+   * Whether the distance is hazed over (`drawHaze`). Off for a view with no
+   * distance in it to speak of: the landing page's cove (src/landing/backdrop.ts),
+   * a few dozen tiles drawn whole, which the band only greyed.
+   */
+  hazeOn = true;
 
   /** Frames drawn, for anything worked out once a frame and asked for more than once in it. */
   private frameNo = 0;
@@ -5255,7 +5261,7 @@ export class Renderer {
     // What crossed the water, clipped to it, so no wake washes up over a beach standing in front of it.
     this.drawWakes(ctx, zoom);
     this.drawAir(ctx, zoom);
-    if (!this.fast) this.drawHaze(ctx, zoom);
+    if (!this.fast && this.hazeOn) this.drawHaze(ctx, zoom);
     if (this.game.settings.stationRings) this.drawStationRings(ctx, zoom);
     this.drawFloaters(ctx, zoom);
 
