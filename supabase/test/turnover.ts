@@ -124,8 +124,9 @@ begin
 
   -- Its stretch stocked, seeded again here: the seed above has been drawn on by the join and the spawns, by as many
   -- calls as the database left behind them makes, so the stocking saw a different roll in the suite (43 of 87 owed,
-  -- push runs 1414 and 1444) than on its own (87).
-  perform setseed(0.5);
+  -- push runs 1414 and 1444) than on its own (87). Every row of the wild table is a draw on it, so a kind added to the
+  -- table moves the roll: at 0.5 the Springlet's row made it 43 of 87, a monster at its cap ending it early; at 0.25, 87.
+  perform setseed(0.25);
   perform creature_stock_block(w, 0, 0);
   insert into said select 'GONE', string_agg(q.n::text, ',' order by q.n) from unnest(array[v_old, v_out] || v_stays) q(n)
     where not exists (select 1 from creature c where c.world_id = w and c.id = q.n);
@@ -149,7 +150,7 @@ begin
   select max(id) into v_top from creature where world_id = w;
   -- Seeded again, as above: what the passes before it drew (the wild forms' two rolls a spawn among them) moves this
   -- one's roll, and a monster rolled at its cap eight times ends a stocking early.
-  perform setseed(0.5);
+  perform setseed(0.25);
   perform creature_stock_block(w, 0, 0);
   insert into said select 'REFILLED', count(*) filter (where id > v_top) || '|' || count(*) from creature where world_id = w and mode = 'wild';
 

@@ -46,7 +46,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import {
-  EVOLVE_AT, HERD_REACH, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
+  EVOLVE_AT, footing, HERD_REACH, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
 } from '../../src/game/creatures';
 import {
   countsLine, FieldGuide, guideCounts, guideEntries, guideEntry, guideMarks, guidePage, guidePages, seenLine, stageKey, whereItLives, wildShare,
@@ -104,7 +104,8 @@ for (const d of KINDS) {
     ['over a seam', !!d.onOre, lines.includes('vein or coal seam')],
     ['on sand', !!d.onSand, /on: sand/.test(lines)],
     ['on bare rock', !!d.onStone, lines.includes('bare rock')],
-    ['on the grazing ground', !d.onOre && !d.onSand && !d.onStone, GRAZING.every((t) => lines.includes(t))],
+    ['on the grazing ground', !d.onOre && !d.onSand && !d.onStone && !d.deepWater, GRAZING.every((t) => lines.includes(t))],
+    ['in deep water', !!d.deepWater, lines.includes('Spawns in: water over')],
     [`within ${WATER_RANGE} tiles of something`, !!(d.nearWater || d.nearTrees || d.nearClay || d.nearTar), lines.includes(`Within ${WATER_RANGE} tiles of:`)],
     ['by water', !!d.nearWater, /tiles of[^|]*water/.test(lines)],
     ['by trees', !!d.nearTrees, /tiles of[^|]*tree/.test(lines)],
@@ -138,6 +139,7 @@ for (const d of KINDS) {
     ['milk', !!d.milk, text.includes('Milk a female into an empty bucket')],
     ['a saddle', !!d.mount, text.includes('Mount: needs a saddle and a bridle')],
     ['deep water', !!d.swims, text.includes('crosses deep water')],
+    ['its pace in water', d.swimSpeed !== undefined, text.includes(`; in water ${+((d.swimSpeed ?? 0) * footing(0)).toFixed(2)} at 0 climbing`)],
     ['the traces', !!d.draught, text.includes(`Traces: team pull +${percent(d.pull ?? PULL_DEFAULT)}`)],
     ['a watcher\'s eyes', !!d.sight, text.includes(`Sight for you: ${d.sight} tiles`)],
     ['a light', !!d.glow, text.includes(`Lights ${d.glow} tiles round itself`)],

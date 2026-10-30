@@ -17,11 +17,13 @@ import { VANARI_VOICE } from './voice-vanari';
 import { VINE_VOICE } from './voice-vine';
 import { BRIAR_VOICE } from './voice-briar';
 import { GNAW_VOICE } from './voice-gnaw';
+import { GOAT_VOICE } from './voice-goat';
 import { GHOST_VOICE } from './voice-ghost';
 import { HAUL_VOICE } from './voice-haul';
 import { HAMSTER_VOICE } from './voice-hamster';
 import { HARE_VOICE } from './voice-hare';
 import { IRON_VOICE } from './voice-iron';
+import { KILN_VOICE } from './voice-kiln';
 import { LEMUR_VOICE } from './voice-lemur';
 import { MANTIS_VOICE } from './voice-mantis';
 import { MAPLE_VOICE } from './voice-maple';
@@ -31,6 +33,7 @@ import { NAIL_VOICE } from './voice-nail';
 import { SLUG_VOICE } from './voice-slug';
 import { PENGUIN_VOICE } from './voice-penguin';
 import { BEE_VOICE } from './voice-bee';
+import { PAPYRUS_VOICE } from './voice-papyrus';
 import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
 import { PIP_VOICE } from './voice-pip';
@@ -42,7 +45,9 @@ import { SKY_VOICE } from './voice-sky';
 import { SNAIL_VOICE } from './voice-snail';
 import { SNUFF_VOICE } from './voice-snuff';
 import { SPIDER_VOICE } from './voice-spider';
+import { TIDE_VOICE } from './voice-tide';
 import { SPORE_VOICE } from './voice-spore';
+import { TIMBER_VOICE } from './voice-timber';
 import { ZEPHYR_VOICE } from './voice-zephyr';
 
 /**
@@ -151,4 +156,14 @@ export const VOICES: Partial<Record<string, Voice>> = {
   ambra: MAPLE_VOICE,
   // The Sprindle, the Webloom and the Silkward.
   ulva: SPIDER_VOICE,
+  // The Briarling, the Meadowtide and the Floracrux.
+  petta: GOAT_VOICE,
+  // The Kilnlet, the Terrabrick and the Kilnspire.
+  potta: KILN_VOICE,
+  // The Logkit, the Sawquill and the Timberback.
+  rippa: TIMBER_VOICE,
+  // The Reedling, the Papyruskin and the Pressmere.
+  papra: PAPYRUS_VOICE,
+  // The Springlet, the Springsail and the Tidecourser.
+  springlet: TIDE_VOICE,
 };

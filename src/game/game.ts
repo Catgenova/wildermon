@@ -36,7 +36,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { glassResync, underGlass } from './glasshouse';
-import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON } from './creatures';
+import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -8120,13 +8120,20 @@ export class Game {
     return undefined;
   }
 
-  /** How fast a mount carries a rider: its own pace, steadied by practice. */
+  /** How fast a mount carries a rider: its own pace, steadied by practice. The island's `travel_speed`. */
   mountSpeed(c: Creature): number {
     const def = this.creatures.species(c);
+    const x = this.player.tileX, y = this.player.tileY;
+    /*
+     * A kind with a pace of its own in water (`swimSpeed`; asked for: a Springlet "walks very slowly on land (unmounted
+     * player walking speed .5) but operates same speed as a hare mount when swimming in water"): on land its own
+     * `speed`, flat, whatever its age, blood, climbing, belly, shoes or tack; in water, the rule below on `swimSpeed`.
+     */
+    if (landRidden(def, this.world, x, y)) return def.speed;
     // Shod, it goes quicker on laid stone.
-    const shod = isShod(this.time, c) && !!TILE_DEFS[this.world.getTile(this.player.tileX, this.player.tileY)].paved ? SHOE_PACE : 1;
+    const shod = isShod(this.time, c) && !!TILE_DEFS[this.world.getTile(x, y)].paved ? SHOE_PACE : 1;
     // And quicker again in tack its maker's hand is in (a Tailor's Saddler), past the cap, as a vehicle's mark is.
-    return Math.min(MAX_MOUNT_SPEED, def.speed * ageDef(c, this.time).speed * this.creatures.speedMul(c) * footing(c.skills[HAUL_SKILL] ?? 0) * (0.6 + 0.4 * c.hunger) * shod) * tackSpeed(c);
+    return Math.min(MAX_MOUNT_SPEED, (def.swimSpeed ?? def.speed) * ageDef(c, this.time).speed * this.creatures.speedMul(c) * footing(c.skills[HAUL_SKILL] ?? 0) * (0.6 + 0.4 * c.hunger) * shod) * tackSpeed(c);
   }
 
   /**

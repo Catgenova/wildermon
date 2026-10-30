@@ -39,17 +39,22 @@ import { BRAMBO, CARRA, KEMMA, SALVA, SHEELA, TANNA } from './wild-hands';
 import { BLOOMREAPER, PETALBLADE, SPRIGMANT } from './wild-mantis';
 import { WHEATCHEEKS, WHEATLEY, WHEATWHIRL } from './wild-hamster';
 import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
-import { CINDRA, FORGA, HOPPA, PETTA, POTTA, SCURRA, SIMMA } from './wild-hands2';
+import { CINDRA, FORGA, HOPPA, SCURRA, SIMMA } from './wild-hands2';
 import { AURELIAX, KINTSU, RELICRAWLER } from './wild-relic';
 import { PEBBLEBEAK, SOILWHISTLE, WORMHERON } from './wild-curlew';
-import { CHISSA, CORDRA, FLECHA, GLOSSA, PAPRA, RIPPA } from './wild-hands3';
+import { CHISSA, CORDRA, FLECHA, GLOSSA } from './wild-hands3';
 import { CASKYBARA, PAILBARA, RESERVARA } from './wild-capy';
 import { FINLET, REEFFIN, TIDEHARVEST } from './wild-penguin';
+import { SPRINGLET, SPRINGSAIL, TIDE_TACKED, TIDE_TUCK, TIDECOURSER, tideGrip, tideSeat } from './wild-tide';
 import { HAMMERTIN, NAILSPROUT, NAILWRIGHT } from './wild-nail';
 import { BLOOMWHISK, FLORAMANE, SPRIGKIT } from './wild-calico';
 import { METALLOCURL, RIBBONIP, STRIPFORGE } from './wild-ribbon';
 import { MAPLETAP, SAPLET, TAPSYLVAN } from './wild-maple';
 import { SILKWARD, SPRINDLE, WEBLOOM } from './wild-spider';
+import { BRIARLING, FLORACRUX, MEADOWTIDE } from './wild-goat';
+import { KILNLET, KILNSPIRE, TERRABRICK } from './wild-kiln';
+import { LOGKIT, SAWQUILL, TIMBERBACK } from './wild-timber';
+import { PAPYRUSKIN, PRESSMERE, REEDLING } from './wild-papyrus';
 import { AWLA, GASHA, SKULKA, SPITTA, TESTA } from './wild-fighters';
 import { DUMMIBEAR, DUMMICUB, DUMMITITAN } from './wild-dummy';
 import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
@@ -122,7 +127,7 @@ export const WILDERMON: Record<string, Kind> = {
   grazza: SPRIGMANT,
   siffa: RIBBONIP,
   forga: FORGA,
-  potta: POTTA,
+  potta: KILNLET,
   cindra: CINDRA,
   hoppa: HOPPA,
   simma: SIMMA,
@@ -131,14 +136,14 @@ export const WILDERMON: Record<string, Kind> = {
   wurla: PEBBLEBEAK,
   sprigga: LEMLET,
   ambra: SAPLET,
-  petta: PETTA,
+  petta: BRIARLING,
   scurra: SCURRA,
-  rippa: RIPPA,
+  rippa: LOGKIT,
   chissa: CHISSA,
   mudda: SLIPLET,
   cordra: CORDRA,
   flecha: FLECHA,
-  papra: PAPRA,
+  papra: REEDLING,
   glossa: GLOSSA,
   dippa: PAILBARA,
   testa: TESTA,
@@ -166,6 +171,7 @@ export const WILDERMON: Record<string, Kind> = {
   stona: ZEPHLET,
   leecha: LEECHA,
   whispet: WHISPET,
+  springlet: SPRINGLET,
 };
 
 /**
@@ -218,11 +224,17 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   siffa: [STRIPFORGE, METALLOCURL],
   ambra: [MAPLETAP, TAPSYLVAN],
   ulva: [WEBLOOM, SILKWARD],
+  petta: [MEADOWTIDE, FLORACRUX],
+  potta: [TERRABRICK, KILNSPIRE],
+  rippa: [SAWQUILL, TIMBERBACK],
+  papra: [PAPYRUSKIN, PRESSMERE],
+  springlet: [SPRINGSAIL, TIDECOURSER],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */
 const TACKED: Partial<Record<string, { kinds: readonly Kind[]; seat: (stage: number) => number; grip: (stage: number) => V3; tuck: readonly number[] }>> = {
   orse: { kinds: HARE_TACKED, seat: hareSeat, grip: hareGrip, tuck: HARE_TUCK },
+  springlet: { kinds: TIDE_TACKED, seat: tideSeat, grip: tideGrip, tuck: TIDE_TUCK },
 };
 
 /** Whether a kind is drawn as a model here, or still by hand. */
@@ -255,7 +267,7 @@ export function wildermonTop(species: string, stage = 0): number | undefined {
  * The kinds whose name and health bar go over the highest they reach standing about or at their acts, not only standing still and
  * going: a beast that rears, or whose tall ears swivel, would otherwise come up through its own name.
  */
-const CLEARS = new Set(['orse']);
+const CLEARS = new Set(['orse', 'springlet']);
 /** Over the feet the highest any part of a kind comes, in screen units at zoom one, through its loop standing and its strike and task, with a margin. */
 const clears = new Map<string, number>();
 function clearOf(key: string, kind: Kind): number {

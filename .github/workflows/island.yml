@@ -2884,6 +2884,18 @@ jobs:
             --outfile=node_modules/.cache/fellall.mjs --log-level=error
           node node_modules/.cache/fellall.mjs
 
+      - name: The Springlet, slow on land and a hare's pace in water, found only in deep water
+        if: matrix.shard == 3
+        run: |
+          # Ridden on land half a walker's pace, flat; ridden in water a
+          # Thistlekit's pace in the same state, and the walk check holds a
+          # rider to each; it takes a rider into deep water; the wild puts it
+          # down in deep water only and its legs keep to it, at the rarest
+          # weight in the table; it eats fish and needs a saddle and a bridle.
+          npx esbuild supabase/test/springlet.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/springlet.mjs --log-level=error
+          node node_modules/.cache/springlet.mjs
+
       - name: A mount under you walks as you walk, and a team in the traces with its cart
         if: matrix.shard == 3
         run: |

@@ -565,6 +565,9 @@ out.push(`alter table species_def add column if not exists was text[];`);
 /* The days of the year it is put down wild on, as `month * 100 + day` in UTC, both in (`SpeciesDef.season`): null for all year. */
 out.push(`alter table species_def add column if not exists season_from int;`);
 out.push(`alter table species_def add column if not exists season_to int;`);
+/* Its pace in water, for a kind with one of its own (`SpeciesDef.swimSpeed`), and whether it lives only in deep water (`deepWater`). */
+out.push(`alter table species_def add column if not exists swim_speed real;`);
+out.push(`alter table species_def add column if not exists deep_water boolean not null default false;`);
 /* A cart is pulled by hand; a vehicle is driven from a seat with a team in
  * front of it; a boat is neither and wants water under it. */
 out.push(`alter table furniture_def add column if not exists cart boolean not null default false;`);
@@ -1312,6 +1315,8 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   }
   if (d.draught) out.push(`update species_def set draught = true where id = ${q(d.id)};`);
   if (d.swims) out.push(`update species_def set swims = true where id = ${q(d.id)};`);
+  if (d.swimSpeed !== undefined) out.push(`update species_def set swim_speed = ${q(d.swimSpeed)} where id = ${q(d.id)};`);
+  if (d.deepWater) out.push(`update species_def set deep_water = true where id = ${q(d.id)};`);
   if (d.hives) out.push(`update species_def set hives = true where id = ${q(d.id)};`);
   if (d.hide) out.push(`update species_def set hide = ${q(d.hide)} where id = ${q(d.id)};`);
   if (d.heavy) out.push(`update species_def set heavy = true where id = ${q(d.id)};`);

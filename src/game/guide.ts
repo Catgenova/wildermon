@@ -29,14 +29,14 @@
  * thing the rules do not do. A kind nobody has seen yet is its shape and
  * nothing else.
  */
-import { TILE_DEFS, TileType } from '../world/tiles';
+import { metres, TILE_DEFS, TileType } from '../world/tiles';
 import { BUTCHER_PARTS, HOARD_LUMPS, HOARD_MORE } from './butcher';
 import { TACK } from './creatureActions';
 import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
   EVOLVE_AT, favouriteSays, GATHER_DO, GATHER_SKILL, STAGE_MUL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS,
-  HAUL_SKILL, LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef, LEARN_PACE,
+  footing, HAUL_SKILL, LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef, LEARN_PACE,
 } from './creatures';
 import { BANE_BONUS } from './gear';
 import { HOARD_METALS, itemDef } from './items';
@@ -52,6 +52,7 @@ import { lairOf, REGIONS } from '../world/regions';
 import { FORM_IDS, formGives, formKey, formName, formOdds, formOfKey } from './wildforms';
 import { PERK_STAGE, STAGE_PERKS } from './creatures';
 import { stageSlots } from './traits';
+import { SWIM_DEPTH } from './player';
 
 export type GuideMark = 'seen' | 'tamed' | 'bred';
 export const GUIDE_MARKS: GuideMark[] = ['seen', 'tamed', 'bred'];
@@ -267,7 +268,9 @@ export function wildShare(def: SpeciesDef): number {
  */
 export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
   const lines: string[] = [];
-  if (def.onOre) lines.push('Spawns on: a vein or coal seam, bare or buried');
+  // A kind of the deep water, out of a swimmer's depth (`deepTile`).
+  if (def.deepWater) lines.push(`Spawns in: water over ${metres(SWIM_DEPTH)} m deep; keeps to it`);
+  else if (def.onOre) lines.push('Spawns on: a vein or coal seam, bare or buried');
   else if (def.onSand) lines.push(`Spawns on: ${tileName(TileType.Sand)}`);
   else if (def.onStone) lines.push(`Spawns on: bare ${tileName(TileType.Rock)}, no vein or seam`);
   else lines.push(`Spawns on: ${either(Object.values(TILE_DEFS).filter((t) => t.forage).map((t) => t.name.toLowerCase()))}`);
@@ -355,6 +358,10 @@ function keeping(def: SpeciesDef): string[] {
   if (def.mount) lines.push(`Mount: needs ${listed(TACK.map((id) => `${article(itemName(id))} ${itemName(id)}`))}`);
   if (def.pitch) lines.push(`Under a rider: climbing counts ×${def.pitch} toward the steepest step`);
   if (def.swims) lines.push('Mount: crosses deep water');
+  // On land its own pace, flat; in water a rider gets the mount rule on its water pace (`Game.mountSpeed`).
+  if (def.swimSpeed !== undefined) {
+    lines.push(`Under a rider: on land ${+def.speed.toFixed(2)} tiles a second, flat; in water ${+(def.swimSpeed * footing(0)).toFixed(2)} at 0 climbing`);
+  }
   if (def.draught) {
     // A kind that learns its own skill by pulling has that skill in the traces where the rest have climbing (`tracesSkill`).
     const traces = tracesSkill(def);
@@ -381,7 +388,9 @@ function fighting(def: SpeciesDef, stage = 0): string[] {
   const health = Math.round(def.health * at('hardy'));
   const blow = +(def.attack * at('tough')).toFixed(1);
   const speed = +(def.speed * at('speed')).toFixed(2);
-  const lines = [`Grown: ${health} health, blow ${blow} damage, speed ${speed} ${speed === 1 ? 'tile' : 'tiles'} a second`];
+  // And its pace in water, for a kind with one of its own (`swimSpeed`).
+  const swim = def.swimSpeed !== undefined ? `, ${+(def.swimSpeed * at('speed')).toFixed(2)} in water` : '';
+  const lines = [`Grown: ${health} health, blow ${blow} damage, speed ${speed} ${speed === 1 ? 'tile' : 'tiles'} a second${swim}`];
   if (def.hunter) lines.push(`${def.monster ? 'Attacks' : 'Wild: attacks'} on sight from ${def.notice ?? HUNT_SIGHT} tiles`);
   if (def.timid) lines.push('Wild: flees when struck');
   if (def.defensive) lines.push('Strikes back every time');

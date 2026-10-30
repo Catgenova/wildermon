@@ -1,5 +1,5 @@
 import {
-  beat, coatPalette, curve, disc, merge, moved, orb, paint, quadBonesOf, taper, TAU, tube,
+  beat, coatPalette, curve, merge, orb, quadBonesOf, taper, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { blade, cut, earMesh, quadPieces } from './beastkit';
@@ -9,58 +9,16 @@ import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Six more of the settlement's hands: the rippa, the chissa, the cordra, the
- * flecha, the papra and the glossa. As with the others (`./wild-hands`,
- * `./wild-hands2`), each wears the tool of its trade: a saw for a tail, a
- * chisel, a rope, an arrow, a scroll and a glazing brush. The mudda is the
- * Sliplet now (`./wild-clayroll`) and the dippa the Pailbara (`./wild-capy`).
+ * Four more of the settlement's hands: the chissa, the cordra, the flecha
+ * and the glossa. As with the others (`./wild-hands`, `./wild-hands2`), each
+ * wears the tool of its trade: a chisel, a rope, an arrow and a glazing brush.
+ * The mudda is the Sliplet now (`./wild-clayroll`), the dippa the Pailbara
+ * (`./wild-capy`), the rippa the Logkit (`./wild-timber`) and the papra the
+ * Reedling (`./wild-papyrus`).
  */
 
 /** A tail's root, out of the body, before the tool on the end of it. */
 const root = (n: number): ReturnType<typeof taper> => taper([[0, 0.05, 0], [0, -0.25, 0]], 0.12, 0.09, n, 'coat');
-
-/* ---- the rippa: a saw for a tail, teeth down its back -------------------------------- */
-
-const RIPPA_SPEC: QuadSpec = { ...pawed({ high: 1.5, len: 2.4, legs: 0.85, neck: 0.35, lean: 50, swing: [22, 38], ears: [35, 20], tail: [0.5, 10, 4] }), nose: 12 };
-const RIPPA_HEAD = { c: [0, 0.32, 0.15] as V3, r: [1.02, 0.98, 0.9] as V3 };
-
-function rippaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = RIPPA_HEAD;
-  // A ridge of teeth down its spine.
-  const ridge = merge(...[-0.95, -0.65, -0.35, -0.05, 0.25, 0.55].map((y) => taper([[0, y, 0.72], [0, y - 0.08, 0.98]], 0.07, 0.01, 4, 'coatDark', 0.4)));
-  // The saw: a handle off the tail and a blade behind it, teeth along its lower edge.
-  const saw = merge(
-    root(n),
-    tube([[0, -0.22, 0.04], [0, -0.36, 0.04]], 0.1, 0.18, 6, 'wood'),
-    tube([[0, -0.34, 0], [0, -0.75, -0.01], [0, -1.15, -0.02]], [0.03, 0.03, 0.025], [0.24, 0.2, 0.13], 6, 'metal', { up: [0, 0, 1] }),
-    ...[-0.42, -0.56, -0.7, -0.84, -0.98, -1.1].map((y) => taper([[0, y, -0.14], [0, y - 0.04, -0.27]], 0.035, 0.005, 3, 'metalDark')),
-  );
-  return quadPieces({
-    n, k,
-    body: barrel(2.5, 1.1, 0.9),
-    neck: { w: 0.64, h: 0.64, len: 0.35 },
-    head: { c: H.c, r: H.r, face: snout(1.02, -0.2, [0.42, 0.32, 0.36], 0.12, n, k), eye: { dir: [0.74, 0.52, 0.34], size: 0.3, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.17] },
-    ear: earMesh(0.36, 0.24, n),
-    earTurn: 35,
-    tail: [saw],
-    ...paws(n, k, 0.85, 0.27, 0.24, 'coatDark'),
-    extras: [{ key: 'ridge', mesh: ridge, bone: 'trunk', bias: 0.05, after: ['body'], thin: true }],
-  });
-}
-
-export const RIPPA: Kind = {
-  bones: quadBonesOf(RIPPA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it saws: the tail going back and forth along its length.
-    if (a.go <= 0) p.tail[0] += 14 * Math.sin(a.t * TAU * 2.2) * beat(a.t, [3.8, 12.6, 19.4], 1.8);
-  }),
-  build: rippaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ metal: [176, 178, 186], metalDark: [110, 112, 122], wood: [150, 104, 70] }), 30),
-  shadow: [1.6, 1.25],
-  stride: 1.45,
-  size: 1.75,
-};
 
 /* ---- the chissa: a chisel of a tooth, a mallet for a tail ---------------------------- */
 
@@ -179,44 +137,6 @@ export const FLECHA: Kind = {
   shadow: [1.4, 1.1],
   stride: 1.5,
   size: 1.6,
-};
-
-/* ---- the papra: sheets laid over its back, a scroll for a tail ------------------------ */
-
-const PAPRA_SPEC: QuadSpec = { ...pawed({ high: 1.05, len: 2.3, legs: 0.6, neck: 0.3, lean: 60, swing: [20, 32], ears: [50, 20], tail: [0.4, 4, 2] }), nose: 10 };
-const PAPRA_HEAD = { c: [0, 0.35, 0.08] as V3, r: [1.02, 0.98, 0.84] as V3 };
-
-function papraBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = PAPRA_HEAD;
-  // Three sheets laid over its back, each a little askew of the last.
-  const sheets = merge(...[0, 1, 2].map((q) => moved(tube([[0, -0.45, 0], [0, 0.45, 0]], 0.56, 0.015, 4, 'cloth', { up: [0, 0, 1] }), [0, -0.15, 0.68 + q * 0.035], (q - 1) * 9)));
-  // A rolled sheet for a tail, its ends showing.
-  const scroll = merge(
-    root(n),
-    tube([[-0.28, -0.42, 0.02], [0.28, -0.42, 0.02]], 0.12, 0.12, 8, 'cloth'),
-    paint([disc([-0.285, -0.42, 0.02], [-1, 0, 0], 0.08, 0.08, 8, 'clothDark'), disc([0.285, -0.42, 0.02], [1, 0, 0], 0.08, 0.08, 8, 'clothDark')]),
-  );
-  return quadPieces({
-    n, k,
-    body: barrel(2.3, 1.25, 0.7, 0.04),
-    neck: { w: 0.62, h: 0.56, len: 0.3 },
-    head: { c: H.c, r: H.r, face: snout(1.0, -0.18, [0.42, 0.3, 0.3], 0.11, n, k), eye: { dir: [0.74, 0.54, 0.3], size: 0.3, rim: 0.12 } },
-    ear: earMesh(0.36, 0.28, n),
-    earTurn: 45,
-    tail: [scroll],
-    ...paws(n, k, 0.6, 0.25, 0.24, 'coatLight'),
-    extras: [{ key: 'sheets', mesh: sheets, bone: 'trunk', bias: 0.05, after: ['body'], thin: true }],
-  });
-}
-
-export const PAPRA: Kind = {
-  bones: quadBonesOf(PAPRA_SPEC, trot),
-  build: papraBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ cloth: [244, 236, 212], clothDark: [200, 186, 150] }), 40),
-  shadow: [1.55, 1.25],
-  stride: 1.3,
-  size: 1.55,
 };
 
 /* ---- the glossa: a glazed bowl for a hat, a brush for a tail -------------------------- */

@@ -146,7 +146,7 @@ import { RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
 import { CARRY_BASE, CARRY_PER_STRENGTH, DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, deedWorkersAt, goSeconds, MAX_DEED_LEVEL, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
 import { UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS } from '../screen';
 import { defaultKey } from '../../game/keybinds';
-import { guideEntries, guidePages } from '../../game/guide';
+import { guideEntries, guidePages, wildShare } from '../../game/guide';
 import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY } from '../../game/keeper';
 import { awayFor } from '../../game/away';
 import { ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
@@ -170,7 +170,7 @@ import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErr
 import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
 import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
 import { CHANNELS, FIGHTING, gradeId, traitOf, traitSays, type TraitDef } from '../../game/traits';
-import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
+import { footing, PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import { STOKE_SAYS, STOKE_SMELT_SAYS, STOKE_SMELTS_AT } from '../../game/creatures';
 import { FIRE_CAPACITY as FIRE_CAPACITY_338, FUEL_VALUES as FUEL_VALUES_337 } from '../../game/campfire';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
@@ -4214,6 +4214,22 @@ export const NEWS: News[] = [
     day: '2026-10-29',
     lines: () => [`Fixed: ${SPECIES.cobbe.name} line: builds the walls on your settlement's edge, a wall on the line between your settlement and the next tile out (was: left them as off your settlement).`],
   },  {
+    n: 374,
+    day: '2026-10-30',
+    lines: () => [...['petta', 'potta', 'rippa', 'papra'].map((id) => {
+      const d = SPECIES[id], [one, two] = d.stages!;
+      return `Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays(id)}.`;
+    }), 'Each stage: own model, animations and voice.', `Changed: butchered, ${SPECIES.potta.name} line gives scales (was: fur).`],
+  },
+  {
+    n: 375,
+    day: '2026-10-30',
+    lines: () => {
+      const d = SPECIES.springlet, [one, two] = d.stages!;
+      return [`Added: the ${d.name} line, a water mount: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Saddle and bridle. Ridden: ${+d.speed.toFixed(2)} tiles a second on land; in water ${+(d.swimSpeed! * footing(0)).toFixed(2)} at 0 climbing, as a ${SPECIES.orse.name} line on land. Crosses deep water. Wild: only in deep water, ${(100 * wildShare(SPECIES.springlet)).toFixed(1)}% of wild spawns. Eats fish. Stage 3 skill: ${two.name} ${perkSays('springlet')}.`];
+    },
+  },
+  {
     n: 373,
     day: '2026-10-30',
     lines: () => [`Sighted (log line for a rare or form wild one in view): by Tracking level. ${RARITIES.flatMap((r, step) => (step ? [`${r.name} from ${SIGHT_RARITY_AT[step]}`] : [])).join(', ')}; large and small form from ${SIGHT_FORM_AT.large}; pale and dark form from ${SIGHT_FORM_AT.colour}. Way and distance as finely as a track reads.`],

@@ -3010,7 +3010,11 @@ export function helpText(): string {
       <li><b>${SPECIES.snout.name}</b>: finds <b>buried relics</b> and marks where to dig. Taming ${SPECIES.snout.tameLevel}.</li>
       <li><b>Bura</b>: no task; panniers hold <b>${SPECIES.bura.pannier} things</b> (open from its menu).</li>
       <li><b>Gorral</b>: saddle mount; climbs ground ${article(SPECIES.orse.name)} ${SPECIES.orse.name} refuses.</li>
-      <li><b>${SPECIES.wadd.name}</b>: the only mount that swims deep water with a rider. Evolves: ${evolves('wadd')}.</li>
+      <li><b>${SPECIES.wadd.name}</b>: mount; swims deep water with a rider. Evolves: ${evolves('wadd')}.</li>
+      <li><b>${SPECIES.springlet.name}</b>: saddle mount; swims deep water with a rider. Ridden on land: ${+SPECIES.springlet.speed.toFixed(2)} tiles a second
+      (${mul(SPECIES.springlet.speed / BASE_SPEED)} your walking pace), flat. Ridden in water (any water over the tile's bed): ${article(SPECIES.orse.name)} ${SPECIES.orse.name}'s pace,
+      ${+((SPECIES.springlet.swimSpeed ?? 0) * footing(0)).toFixed(2)} tiles a second green. Wild: only in deep water. Eats ${SPECIES.springlet.baitHint}. Level: <b>climbing</b>, ridden.
+      Evolves: ${evolves('springlet')}.</li>
       <li>Mounted, indoors: through an <b>arch</b>, <b>double door</b> or <b>gate</b>; no plain door, hidden door or iron-bound gate. Up a finished <b>wide staircase</b>
       from its foot, onto finished floors of that storey; no ${SINGLE_STAIRS_NAME}, ladder or roof; never over a staircase's rails. Mount and dismount on the ground floor only.</li>
       <li><b>Shaggan</b>: slowest in the traces; +${percent(SPECIES.shaggan.pull ?? PULL_DEFAULT)} team pull each (most add ${percent(PULL_DEFAULT)}).</li>

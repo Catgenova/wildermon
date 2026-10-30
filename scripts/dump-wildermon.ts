@@ -11,7 +11,7 @@
  * the only things invented are the words a chip is printed with.
  */
 import {
-  AGES, COMPANION_SIGHT, GATHER_DO, GATHER_SKILL, GATHER_VERB, MONSTERS, MONSTER_CAP, MONSTER_SHARE,
+  AGES, COMPANION_SIGHT, footing, GATHER_DO, GATHER_SKILL, GATHER_VERB, MONSTERS, MONSTER_CAP, MONSTER_SHARE,
   OLD_AT, RANGE_PER_STEP, SPECIES, WILD_SPECIES, YOUNG_FOR,
   type GatherKind, type SpeciesDef,
 } from '../src/game/creatures';
@@ -46,6 +46,7 @@ const HABITAT: Array<[keyof SpeciesDef, string]> = [
   ['nearClay', 'by clay'],
   ['nearTar', 'on the black ground'],
   ['onStone', 'on bare rock'],
+  ['deepWater', 'in deep water'],
 ];
 
 /**
@@ -62,6 +63,8 @@ function roles(d: SpeciesDef): Array<{ id: string; name: string; note: string }>
   if (d.draught) add('draught', 'Draught', 'It goes in the traces and learns the hills as it pulls.');
   if (d.pannier) add('pannier', 'Packbeast', `Panniers on its own back: ${d.pannier} kg.`);
   if (d.swims) add('swims', 'Swimmer', 'It crosses deep water with a rider on its back.');
+  // On land its own pace, flat under a rider; in water its water pace (`swimSpeed`, `Game.mountSpeed`).
+  if (d.swimSpeed !== undefined) add('swims', 'Water pace', `Ridden: ${+d.speed.toFixed(2)} tiles a second on land, ${+(d.swimSpeed * footing(0)).toFixed(2)} in water at 0 climbing.`);
   if (d.fleece) add('fleece', d.shearYield === 'feather' ? 'Feathers' : 'Fleece', `Shear it every ${Math.round(1 / d.fleece / 60)} minutes.`);
   if (d.milk) add('milk', 'Dairy', 'It can be milked into an empty bucket.');
   if (d.hives) add('hives', 'Bees', `Honey into a hive: a honey per ${SKEP_CLUMP_HOURS} hours worked per wildflower clump within ${SKEP_REACH} tiles of it, as a skep.`);

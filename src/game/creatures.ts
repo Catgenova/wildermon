@@ -38,14 +38,15 @@ import { bedrockAt, oreAt } from '../world/ore';
 import { chartRegion } from '../world/chart';
 import { lairOf, REGIONS } from '../world/regions';
 import { DIGGABLE, findChance, relicsWithin } from './archaeology';
-import { fishable, fishHere, waterDepth } from './fishing';
+import { FISH, fishable, fishHere, waterDepth } from './fishing';
 import { describeFrom, describeWith, itemDef, litresOf, markOf, TAN_LYE, RARITIES, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
 import { drainVessel } from './placeables';
 import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { CLASS_SPELL_BY_ID } from './talents';
 import type { BeastAct } from './events';
 import { article, capital, daySays, fill, listed, listedOr, percent, share, timeWords } from './words';
-import { groundStep, standsOn } from './player';
+import { BASE_SPEED, groundStep, standsOn, SWIM_DEPTH } from './player';
+import type { World } from '../world/world';
 import { skillGain } from './skills';
 import { DRIVING, DRIVING_LEARN } from './travel';
 import { BARDING_CUT, gearGoneSays, gearOn, gearShare, HARNESS_PACE, PACK_LOADS, wearGear, type GearSlot } from './wildgear';
@@ -526,6 +527,13 @@ export interface SpeciesDef {
   pitch?: number;
   /** Crosses deep water with a rider on its back. */
   swims?: boolean;
+  /**
+   * Its pace in water (`waterOver`), for a kind bred for it: in water a rider gets `Game.mountSpeed`'s rule on this in
+   * place of `speed`, and on land its `speed` flat (`landRidden`). The island's `species_def.swim_speed`.
+   */
+  swimSpeed?: number;
+  /** Only put down wild in deep water (`deepWater`), and keeps to it in the wild. The island's `species_def.deep_water`. */
+  deepWater?: boolean;
   /** Its share of a team's pull; `PULL_DEFAULT` unless it was bred for the traces. */
   pull?: number;
   /** Things it carries on its own back, for the ones that take panniers. */
@@ -701,6 +709,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   wicka: { kind: 'loads', n: 1, what: 'candles per trip' },
   woola: { kind: 'wool', n: 1, what: 'wool per shearing' },
   orse: { kind: 'blood', n: 1.05, channel: 'speed', what: 'speed' },
+  springlet: { kind: 'blood', n: 1.05, channel: 'speed', what: 'speed' },
   roxxen: { kind: 'blood', n: 1.1, channel: 'haul', what: 'hauling' },
   rowl: { kind: 'blood', n: 1.1, channel: 'tough', what: 'blow' },
   warda: { kind: 'blood', n: 1.1, channel: 'sight', what: 'sight' },
@@ -727,6 +736,10 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   siffa: { kind: 'loads', n: 1, what: 'lumps per cycle' },
   ambra: { kind: 'more', n: 1, what: 'tar per pine' },
   ulva: { kind: 'loads', n: 1, what: 'batches per cycle' },
+  petta: { kind: 'more', n: 1, what: 'flowers per pick' },
+  potta: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  rippa: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  papra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -989,10 +1002,10 @@ export const stageLevels = (stage: 1 | 2): readonly [number, number] =>
   (stage === 1 ? [EVOLVE_AT[0], EVOLVE_AT[1]] : [EVOLVE_AT[1], EVOLVE_AT[1] + WILD_STAGE_SPAN]);
 /**
  * The skill a kind's level is (`creatureLevel`): its trade's, or its own for one with none, or what a draught beast
- * keeps in the traces. The island's `level_skill`.
+ * keeps in the traces, or the climbing a mount learns under a rider. The island's `level_skill`.
  */
 export const levelSkill = (def: SpeciesDef): string | null =>
-  workSkill(def) ?? def.learns?.skill ?? (def.draught ? tracesSkill(def) : null);
+  workSkill(def) ?? def.learns?.skill ?? (def.draught || def.mount ? tracesSkill(def) : null);
 /**
  * What it takes to win one over at the stage it is at: its kind's taming and `WILD_STAGE_TAME` more for each stage past
  * its first, and its kind's base chance an offering times `WILD_STAGE_CHANCE` for each. Every check of taming reads
@@ -1375,6 +1388,12 @@ export const REED_LEVELS = 35;
  * Writes a line's words onto its kind and its two stages, once every number they read is here; `staged`, what its
  * second and third stages do over its first.
  */
+/**
+ * Asked for: "walks very slowly on land (unmounted player walking speed .5)". A Springlet's pace on land, under a rider
+ * or not, as a share of a walker's (`BASE_SPEED`): its `speed`. Under a rider on land that is flat (`landRidden`).
+ */
+export const SPRINGLET_LAND = 0.5;
+
 function sayLine(id: string, job: string, level: string, staged = ''): void {
   const d = SPECIES[id];
   const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
@@ -2488,8 +2507,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   potta: {
     id: 'potta',
-    name: 'Potta',
+    name: 'Kilnlet',
+    was: ['Potta'],
+    // Asked for, with a reference sheet: Kilnlet, Terrabrick, Kilnspire.
     description: 'Settlement task: empty your kilns into your settlement stores and load them with unfired pottery from your settlement stores, up to capacity. Does not light or fuel them.',
+    stages: [
+      { name: 'Terrabrick', description: '' },
+      { name: 'Kilnspire', description: '' },
+    ],
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -2500,13 +2525,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'kiln',
     workRange: 6,
+    // [coat, markings]: the sheet's terracotta with cream, umber with pale gold, ash with white, and ochre with peach.
     variants: [
-      ['#b5855e', '#e8cdb0'],
-      ['#a07454', '#dbc0a0'],
-      ['#c09070', '#f0d8bc'],
-      ['#8c6a50', '#d0b498'],
+      ['#c8664a', '#f6e0c2'],
+      ['#8e4a36', '#ecd3a2'],
+      ['#968a84', '#f4eee4'],
+      ['#c48a3e', '#f8e0c6'],
     ],
-    butcher: { meat: 3, fur: 2, leather: 2, bone: 2 },
+    butcher: { meat: 3, scale: 2, leather: 2, bone: 2 },
     nearClay: true,
   },
   cindra: {
@@ -2720,8 +2746,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   petta: {
     id: 'petta',
-    name: 'Petta',
+    name: 'Briarling',
+    was: ['Petta'],
+    // Asked for, with a reference sheet: Briarling, Meadowtide, Floracrux.
     description: 'Settlement task: pick wildflowers, a flower per clump on a tile; output home. Not within {skepReach} tiles of a skep or a hive.',
+    stages: [
+      { name: 'Meadowtide', description: '' },
+      { name: 'Floracrux', description: '' },
+    ],
     health: 12,
     attack: 1,
     speed: 2.4,
@@ -2732,11 +2764,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'flower',
     workRange: 8,
+    // [coat, markings]: the sheet's tan with cream, chocolate with oatmeal, ash with white, and russet with peach.
     variants: [
-      ['#d6a0c0', '#f8e4f0'],
-      ['#c0a0d6', '#ece4f8'],
-      ['#e0b0a0', '#fae8e0'],
-      ['#a0c0d6', '#e4f0f8'],
+      ['#b4875c', '#f6e8d0'],
+      ['#6e4a32', '#eedcbc'],
+      ['#8a847c', '#f4f2ec'],
+      ['#a65a32', '#f8dcc2'],
     ],
     butcher: { meat: 1, fur: 2, leather: 1 },
   },
@@ -2765,8 +2798,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   rippa: {
     id: 'rippa',
-    name: 'Rippa',
+    name: 'Logkit',
+    was: ['Rippa'],
+    // Asked for, with a reference sheet: Logkit, Sawquill, Timberback.
     description: '',
+    stages: [
+      { name: 'Sawquill', description: '' },
+      { name: 'Timberback', description: '' },
+    ],
     health: 24,
     attack: 3,
     speed: 1.8,
@@ -2777,11 +2816,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'saw',
     workRange: 6,
+    // [fur, face]: the sheet's russet with cream, chestnut with honey, ash brown with white, and ginger with peach.
     variants: [
-      ['#c8a070', '#f0dcbc'],
-      ['#b48c5c', '#e6ccaa'],
-      ['#d4ac7c', '#f6e4c8'],
-      ['#a07c50', '#dcc0a0'],
+      ['#a8562a', '#f4e0bc'],
+      ['#6a3c24', '#e8c88e'],
+      ['#7a6656', '#f2ece0'],
+      ['#c27a36', '#f8dcc0'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 2 },
   },
@@ -2881,8 +2921,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   papra: {
     id: 'papra',
-    name: 'Papra',
+    name: 'Reedling',
+    was: ['Papra'],
+    // Asked for, with a reference sheet: Reedling, Papyruskin, Pressmere.
     description: 'Settlement task: press reeds and buckets of water from your settlement stores into papyrus at your paper presses. Output: sheets and the empty bucket to your settlement stores. Never fails.',
+    stages: [
+      { name: 'Papyruskin', description: '' },
+      { name: 'Pressmere', description: '' },
+    ],
     health: 16,
     attack: 1,
     speed: 1.8,
@@ -2893,11 +2939,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'paper',
     workRange: 6,
+    // [leaf-feathers, face]: the sheet's olive with cream, moss with pale gold, straw with white, and sage with peach.
     variants: [
-      ['#e4dcc0', '#faf6e8'],
-      ['#d8ccac', '#f4ecd8'],
-      ['#ece4cc', '#fcfaf0'],
-      ['#ccc0a0', '#ece4cc'],
+      ['#8aa052', '#f2e2c0'],
+      ['#5e7c3a', '#ecd8a0'],
+      ['#a89c4c', '#f6f0e0'],
+      ['#5f8c76', '#f4dcc4'],
     ],
     butcher: { meat: 2, fur: 2, leather: 2, bone: 1 },
   },
@@ -3709,6 +3756,44 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'fish',
     workRange: 10,
   },
+  springlet: {
+    id: 'springlet',
+    wound: 'bite',
+    name: 'Springlet',
+    // Asked for, with a reference sheet: Springlet, Springsail, Tidecourser. "A water mount that walks very slowly on land
+    // (unmounted player walking speed .5) but operates same speed as a hare mount when swimming in water. Rarely found,
+    // only spawns in deep water. Eats fish. Requires saddle and bridle to mount like land mount". Its words, and each
+    // stage's, are written once every number they read is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Springsail', description: '' },
+      { name: 'Tidecourser', description: '' },
+    ],
+    health: 45,
+    attack: 6,
+    // On land, under a rider or not, half a walker's pace (`SPRINGLET_LAND`); in water a Thistlekit's (`swimSpeed`, set below).
+    speed: SPRINGLET_LAND * BASE_SPEED,
+    tameLevel: 40,
+    tameChance: 0.05,
+    // Every fish a line brings up, raw, and cooked fish.
+    diet: [...FISH.map((f) => f.id), 'cooked_fish'],
+    baitHint: 'fish',
+    timid: false,
+    gathers: null,
+    workRange: 6,
+    variants: [
+      // Cream with pink fins, as drawn; pearl with sea-blue, warm cream with coral, and pearl with lavender.
+      ['#f6ecdc', '#f2a0b4'],
+      ['#eef0f0', '#86bfdc'],
+      ['#f8ead2', '#f2a07a'],
+      ['#f0eaf2', '#b49ad8'],
+    ],
+    butcher: { meat: 10, leather: 8, bone: 7, gland: 2 },
+    defensive: true,
+    mount: 13,
+    swims: true,
+    deepWater: true,
+  },
   shaggan: {
     id: 'shaggan',
     hide: 'thick',
@@ -4037,6 +4122,8 @@ export const SPECIES: Record<string, SpeciesDef> = {
     defaultStance: 'aggressive',
   },
 };
+// Asked for: a Springlet "operates same speed as a hare mount when swimming in water": in water, a Thistlekit's pace.
+SPECIES.springlet.swimSpeed = SPECIES.orse.speed;
 // The journal's goals name kinds by what they are called (`journal-b.ts`).
 kindNames(SPECIES);
 
@@ -4050,6 +4137,25 @@ export const MOUNT_STOREY_SAID = 'Ride to the ground floor first: mount and dism
 export const MOUNT_STAIRS_SAID = 'Dismount first: mounts take wide staircases and wide doorways only.';
 /** What practice on bad ground is worth to a beast's pace, from its climbing. */
 export const footing = (climb: number): number => 0.9 + climb / 140;
+/**
+ * Whether a tile is in water, for a kind with a pace of its own there (`swimSpeed`): water stands over the middle of its
+ * bed, the sea's or a pond's, however shallow. The island's `water_over`.
+ */
+export const waterOver = (w: World, x: number, y: number): boolean => w.bedCenter(x, y) < w.surfaceAt(x, y);
+/** Whether a kind with a pace of its own in water goes at its land pace here, flat under a rider (`Game.mountSpeed`). */
+export const landRidden = (def: SpeciesDef, w: World, x: number, y: number): boolean =>
+  def.swimSpeed !== undefined && !waterOver(w, x, y);
+/**
+ * Whether a tile is ground a kind of the deep water (`deepWater`) is put down on, and keeps to in the wild: on the
+ * island, not on piers, and water over it deeper than a swimmer's depth (`SWIM_DEPTH`), measured at its middle. The
+ * island's `deep_tile`.
+ */
+export function deepTile(game: Game, x: number, y: number): boolean {
+  const w = game.world;
+  if (!w.inBounds(x, y)) return false;
+  if (game.buildings.pierTiles.size && game.buildings.onPiers(x, y)) return false;
+  return w.bedCenter(x, y) < w.surfaceAt(x, y) - SWIM_DEPTH;
+}
 
 /**
  * A mender's go at a damaged thing in the stores (`mendStep`): this much damage off it and one more for every
@@ -4103,6 +4209,7 @@ function sayLineLater(id: string, level: string): void {
 sayLineLater('dowse', 'Level: blacksmithing.');
 sayLineLater('siffa', 'Level: blacksmithing.');
 sayLineLater('ulva', 'Level: tailoring.');
+sayLineLater('rippa', 'Level: carpentry.');
 
 /** Which species roam wild, by weight. */
 /**
@@ -4178,6 +4285,8 @@ export const WILD_SPECIES: Array<[string, number]> = [
   ['tinka', 4],
   ['gorral', 4],
   ['wadd', 4],
+  // Asked for: "Rarely found, only spawns in deep water" (`deepWater`).
+  ['springlet', 1],
   ['shaggan', 4],
   ['snout', 2],
   ['lume', 2],
@@ -4431,6 +4540,8 @@ sayLine('orse', `Mount, saddled and bridled: ${+(SPECIES.orse.speed * footing(0)
   'Level: climbing, learned under a rider and in the traces.');
 sayLine('wadd', `Settlement task: fish ${reach('wadd')}; the catch home. Mount, saddled and bridled: crosses deep water with a rider. Traces of a large cart or wagon: team pace +${percent(SPECIES.wadd.pull ?? PULL_DEFAULT)}.`,
   'Level: fishing.');
+sayLine('springlet', `Mount, saddled and bridled: on land ${+SPECIES.springlet.speed.toFixed(2)} tiles a second, flat; in water ${+(SPECIES.springlet.swimSpeed! * footing(0)).toFixed(2)} tiles a second grown and fed at 0 climbing, +${percent(1 / 140 / footing(0))} per climbing level, max ${MAX_MOUNT_SPEED} tiles a second before a Saddler's tack. Crosses deep water with a rider. Wild: only in deep water.`,
+  'Level: climbing, learned under a rider.');
 sayLine('roxxen', `No settlement task. Traces of a large cart or wagon: team pace +${percent(SPECIES.roxxen.pull!)} (wildermon not bred for it: +${percent(PULL_DEFAULT)}); its driving counts as climbing for team pace and the steepest step the wheels take.`,
   `Level: driving, learned ${LEARNS_SAYS.pull}.`);
 sayLine('tinka', `Settlement task: mend damaged gear in your settlement stores, most damaged first. Time per action: ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}, less for care. Per action: damage −${MEND_DMG}, 1 more per ${MEND_DMG_LEVELS} levels; QL −${MEND_QL}, 0.1 less per ${MEND_QL_LEVELS / 10} levels, min ${MEND_QL_LEAST}.`,
@@ -4468,6 +4579,9 @@ for (const [id, level] of [['magga', 'foraging'], ['grazza', 'foraging'], ['grub
 for (const id of ['plucka', 'grista', 'relka']) sayLine(id, SPECIES[id].description, `Level: ${GATHER_SKILL[SPECIES[id].gathers!]}.`);
 sayLine('vesp', SPECIES.vesp.description, 'Level: animal husbandry.');
 sayLine('bedda', SPECIES.bedda.description, 'Level: farming.');
+sayLine('petta', SPECIES.petta.description, 'Level: foraging.');
+sayLine('potta', SPECIES.potta.description, 'Level: pottery.');
+sayLine('papra', SPECIES.papra.description, 'Level: papyrusmaking.');
 sayLine('ambra', SPECIES.ambra.description, 'Level: forestry.');
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });
 // And the Sparra, which does not evolve: how it fights, its settlement task, and its level (`sparTaskSays`).
@@ -4506,6 +4620,8 @@ const startSkills = (species: SpeciesDef): Record<string, number> => {
   // traces, which is what decides the pace of everything it is put in front of
   // (or, for a kind that learns by pulling, its own skill does: `tracesSkill`).
   if (species.draught) skills[tracesSkill(species)] = 1;
+  // And a mount that is no draught beast learns climbing under a rider.
+  else if (species.mount) skills[HAUL_SKILL] = 1;
   return skills;
 };
 
@@ -6353,7 +6469,10 @@ export class Creatures {
   suits(game: Game, def: SpeciesDef | undefined, x: number, y: number): boolean {
     if (!def) return false;
     const w = game.world;
-    if (def.onOre) {
+    // A kind of the deep water, only there (`deepTile`; asked for: "only spawns in deep water").
+    if (def.deepWater) {
+      if (!deepTile(game, x, y)) return false;
+    } else if (def.onOre) {
       if (!isSeam(bedrockAt(w, x, y))) return false;
     } else if (def.onSand) {
       if (w.getTile(x, y) !== TileType.Sand) return false;
@@ -6417,17 +6536,25 @@ export class Creatures {
     return Math.hypot(x + 0.5 - game.player.x, y + 0.5 - game.player.y) >= minDistance;
   }
 
+  /** As `groundOk`, for a kind of the deep water: deep water (`deepTile`), off a deed and out of the player's sight. */
+  private waterOk(game: Game, x: number, y: number, minDistance: number): boolean {
+    if (!deepTile(game, x, y) || game.onDeed(x, y)) return false;
+    return Math.hypot(x + 0.5 - game.player.x, y + 0.5 - game.player.y) >= minDistance;
+  }
+
   /**
    * Ground that suits a species, or nothing: `SITE_LOOKS` looks at ground a
    * creature could stand on, given three times that many throws to find them.
    */
   private siteFor(game: Game, id: string, minDistance: number): { x: number; y: number } | null {
     const w = game.world;
+    // A kind of the deep water looks at deep water rather than at ground (`deepTile`), as the island's `site_for` does.
+    const deep = !!SPECIES[id]?.deepWater;
     let looks = 0;
     for (let i = 0; i < SITE_LOOKS * 3 && looks < SITE_LOOKS; i++) {
       const x = Math.floor(game.rand() * w.w);
       const y = Math.floor(game.rand() * w.h);
-      if (!this.groundOk(game, x, y, minDistance)) continue;
+      if (deep ? !this.waterOk(game, x, y, minDistance) : !this.groundOk(game, x, y, minDistance)) continue;
       looks++;
       if (this.suits(game, SPECIES[id], x, y)) return { x, y };
     }

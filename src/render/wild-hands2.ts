@@ -1,5 +1,5 @@
 import {
-  add, beat, coatPalette, curve, cyc, disc, lighter, merge, moved, orb, orbAlong, paint, pastel, quadBonesOf, scale, taper, TAU, tube,
+  add, beat, coatPalette, curve, cyc, disc, merge, moved, orb, orbAlong, paint, quadBonesOf, taper, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { blade, cut, earMesh, pawMesh, quadPieces, type QuadLook } from './beastkit';
@@ -8,11 +8,13 @@ import { pawed, trot } from './wild-paws';
 import { links, snout } from './wild-hands';
 
 /**
- * More of the settlement's hands: the forga, the potta, the cindra,
- * the hoppa, the simma, the petta and the scurra (the bedda is the Sprigkit
- * now, `./wild-calico`, the ambra the Saplet, `./wild-maple`, the relka the
- * Kintsu, `./wild-relic`, the sprigga the Lemlet, `./wild-lemur`, and the
- * wurla the Pebblebeak, `./wild-curlew`). As with
+ * More of the settlement's hands: the forga, the cindra, the hoppa,
+ * the simma and the scurra (the bedda is the Sprigkit now,
+ * `./wild-calico`, the petta the Briarling, `./wild-goat`, the potta the
+ * Kilnlet, `./wild-kiln`, the
+ * ambra the Saplet, `./wild-maple`, the relka the Kintsu, `./wild-relic`,
+ * the sprigga the Lemlet, `./wild-lemur`, and the wurla the Pebblebeak,
+ * `./wild-curlew`). As with
  * the first ten (`./wild-hands`), each wears the tool of its trade: tongs
  * for a tail, a spoon, a trowel, a scrubbing brush.
  */
@@ -35,8 +37,6 @@ export function paws(n: number, k: number, legs: number, thick: number, r: numbe
     hind: { upper: [0.28, -legs * 0.52, thick * 1.1, thick * 0.94], lower: [0, -legs * 0.48, thick * 0.86, thick * 0.78], foot: pawMesh(r, n, k, mat) },
   };
 }
-
-const thinEars = (pieces: Piece[]): Piece[] => pieces.map((pc) => (pc.key === 'ear0' || pc.key === 'ear1' ? { ...pc, thin: true, airy: true } : pc));
 
 /* ---- the forga: tongs for a tail, a bellows for a chest ----------------------------- */
 
@@ -83,42 +83,6 @@ export const FORGA: Kind = {
   shadow: [1.6, 1.3],
   stride: 1.35,
   size: 1.75,
-};
-
-/* ---- the potta: a little pot for a hat, a paddle for a tail ------------------------- */
-
-const POTTA_SPEC: QuadSpec = { ...pawed({ high: 1.3, len: 2.2, legs: 0.7, neck: 0.3, lean: 60, swing: [20, 34], ears: [45, 20], tail: [0.5, 2, 2] }), nose: 10 };
-const POTTA_HEAD = { c: [0, 0.35, 0.12] as V3, r: [1.08, 1.0, 0.92] as V3 };
-
-function pottaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = POTTA_HEAD;
-  // A small clay pot sitting on its head, its mouth open to the sky.
-  const pot = merge(
-    tube([[0, 0.1, 0.85], [0, 0.1, 1.05], [0, 0.1, 1.25], [0, 0.1, 1.33]], [0.26, 0.36, 0.3, 0.24], [0.26, 0.36, 0.3, 0.24], 10, 'stone', { seam: 'end' }),
-    paint([disc([0, 0.1, 1.335], [0, 0, 1], 0.2, 0.2, 10, 'stoneDark')]),
-  );
-  // A flat paddle of a tail, for smoothing.
-  const paddle = merge(taper([[0, 0.05, 0], [0, -0.3, 0]], 0.12, 0.09, n, 'coat'), tube([[0, -0.28, 0], [0, -0.55, 0], [0, -0.9, 0.02]], [0.12, 0.28, 0.26], [0.04, 0.05, 0.04], 8, 'wood', { up: [0, 0, 1] }));
-  return quadPieces({
-    n, k,
-    body: barrel(2.5, 1.2, 0.95),
-    neck: { w: 0.66, h: 0.66, len: 0.3 },
-    head: { c: H.c, r: H.r, face: merge(snout(1.05, -0.2, [0.42, 0.32, 0.36], 0.12, n, k), pot), eye: { dir: [0.74, 0.52, 0.32], size: 0.31, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.19] },
-    ear: earMesh(0.34, 0.26, n),
-    earTurn: 35,
-    tail: [paddle],
-    ...paws(n, k, 0.7, 0.28, 0.24, 'stone'),
-  });
-}
-
-export const POTTA: Kind = {
-  bones: quadBonesOf(POTTA_SPEC, trot),
-  build: pottaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ stone: [196, 120, 84], stoneDark: [120, 70, 52], wood: [160, 116, 76] }), 30),
-  shadow: [1.5, 1.25],
-  stride: 1.35,
-  size: 1.65,
 };
 
 /* ---- the cindra: a dustpan for a tail ----------------------------------------------- */
@@ -247,49 +211,6 @@ export const SIMMA: Kind = {
   shadow: [1.5, 1.3],
   stride: 1.35,
   size: 1.6,
-};
-
-/* ---- the petta: petals for ears and a flower for a crown ---------------------------- */
-
-const PETTA_SPEC: QuadSpec = { ...pawed({ high: 1.3, len: 1.7, legs: 0.8, neck: 0.35, lean: 30, swing: [26, 42], ears: [20, 30], tail: [0.4, 30, 24] }), nose: 12 };
-const PETTA_HEAD = { c: [0, 0.28, 0.22] as V3, r: [0.98, 0.94, 0.9] as V3 };
-
-function pettaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = PETTA_HEAD;
-  // A flower on its crown: five petals round a yellow heart.
-  const crown = merge(
-    ...[0, 1, 2, 3, 4].map((q) => {
-      const a = (q / 5) * TAU, d: V3 = [Math.cos(a), Math.sin(a) * 0.6, 0];
-      return blade(curve(add([0, 0.05, 1.18], scale(d, 0.05)), add([0, 0.05, 1.26], scale(d, 0.22)), add([0, 0.05, 1.24], scale(d, 0.38)), 3), [0.05, 0.14, 0.12, 0.02], [0, 0, 1], { mat: 'petal' });
-    }),
-    orb([0, 0.05, 1.22], 0.1, 6, 4, 'bloom'),
-  );
-  const petal = blade(curve([0, 0, 0], [0, -0.04, 0.3], [0, 0, 0.6], 4), [0.06, 0.2, 0.22, 0.14, 0.02], [0, 1, 0], { twist: -0.6, fold: 0.3, mat: 'petal' });
-  return thinEars(quadPieces({
-    n, k,
-    body: barrel(1.75, 0.82, 0.76, 0.18),
-    neck: { w: 0.52, h: 0.52, len: 0.35 },
-    head: { c: H.c, r: H.r, face: merge(snout(0.96, -0.22, [0.32, 0.26, 0.3], 0.1, n, k), crown), eye: { dir: [0.74, 0.52, 0.34], size: 0.34, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.2] },
-    ear: petal,
-    earTurn: 20,
-    tail: links([0.14, 0.12, 0.09, 0.04], 0.28, n, 'coat'),
-    ...paws(n, k, 0.8, 0.18, 0.17, 'coatLight'),
-  }));
-}
-
-export const PETTA: Kind = {
-  bones: quadBonesOf(PETTA_SPEC, (p, a) => {
-    trot(p, a);
-    // Light on its feet: a little lift at every step, and standing, a bob as if it would float off.
-    p.lift += a.go * 0.06 * Math.abs(Math.sin((a.u % 1) * TAU));
-    if (a.go <= 0) p.lift += 0.04 * (1 + cyc(a.t, 4));
-  }),
-  build: pettaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ petal: lighter(pastel(mark), 0.1), bloom: [250, 214, 110] }), 320),
-  shadow: [1.0, 0.85],
-  stride: 1.2,
-  size: 1.4,
 };
 
 /* ---- the scurra: bristles down its back, a scrubbing brush for a tail --------------- */
