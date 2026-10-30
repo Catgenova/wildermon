@@ -4219,7 +4219,7 @@ export const NEWS: News[] = [
     day: '2026-10-30',
     lines: () => [
       'Added: Change wall (side), on a wall of a building, whether or not it can be removed: wall type, then material, at its bill; mallet. Finished wall: stands, shut and carrying, until the change is built (Build change, as Build wall); with the last material, the new wall. Still going up: replanned in place, new bill.',
-      'Change wall refused: fence, half wall or railing on a wall a storey, jetty or roof rests on; a material lighter than the heaviest wall above; a counter with goods or takings; a padlocked portcullis. The standing type and material again: change dropped.',
+      'Change wall refused: fence, half wall or railing on a wall a storey, jetty or roof rests on; a material lighter than the heaviest wall above, glass excepted; a counter with goods or takings; a padlocked portcullis. The standing type and material again: change dropped.',
     ],
   },
   {

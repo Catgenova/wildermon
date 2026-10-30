@@ -228,8 +228,7 @@ for (const wt of ['railing', 'half_wall', 'fence'] as WallType[]) {
 }
 same('a material too light for the marble over it is refused, as a Repoint is', 'change_wall', to('door', 'log'),
   `Log cannot carry the ${heftWord(MATERIAL_BY_ID.get('marble')!.heft)} above it.`);
-same('glass as a solid wall under marble too', 'change_wall', to('solid', 'glass'),
-  `Glass cannot carry the ${heftWord(MATERIAL_BY_ID.get('marble')!.heft)} above it.`);
+same('but glass as a solid wall goes in under the marble (`GLASS_UNDER_ANY`)', 'change_wall', to('solid', 'glass'), 'ALLOWED');
 same('the wall it already is is refused', 'change_wall', to('solid', 'marble'), 'Already that wall.');
 same('a portcullis up a storey is refused as Plan wall refuses it', 'change_wall', to('portcullis', 'marble'),
   'Portcullis: ground floor only. Switch to storey 1.');

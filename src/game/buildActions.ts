@@ -87,6 +87,9 @@ const wallGoesRefusal = (g: Game, wall: Wall): string | null => counterRemoveRef
 /** The wall type and material standing on a border, as the body asking sees it (`seenType`). */
 const standsAs = (g: Game, wall: Wall, type: WallType, mat: string): boolean => g.buildings.seenType(wall) === type && wall.material === mat;
 
+/** Glass: changed to under any storey, however heavy, as it is planned there (`change_wall_refusal`). */
+export const GLASS_UNDER_ANY = 'glass';
+
 /**
  * Why a wall may not be changed to the type and material a target asks
  * (`change_wall`), or null. Asked as a wall planned on the border is
@@ -132,7 +135,8 @@ export function changeWallReason(g: Game, t: TileTarget): string | null {
     for (const w of g.buildings.walls.values()) {
       if (w.building === b.id && w.level > level) over = Math.max(over, material(w.material)?.heft ?? 0);
     }
-    if (mat.heft < over) return `${mat.name} cannot carry the ${heftWord(over)} above it.`;
+    // A glass wall goes in under any storey, as a planned one does (`GLASS_UNDER_ANY`).
+    if (mat.heft < over && mat.id !== GLASS_UNDER_ANY) return `${mat.name} cannot carry the ${heftWord(over)} above it.`;
     const stands = mat.storeys + g.perk(`storeys:${buildWork(mat)}`, 0);
     if (b.levels > stands) return `${mat.name}: max ${stands} storeys; this is ${b.levels}.`;
   }

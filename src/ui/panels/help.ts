@@ -1733,7 +1733,7 @@ export function helpText(): string {
       wall does, or a finished column stands at each end; likewise the last wall a jetty rests on. To turn one into a door: <b>Change wall</b>.</li>
       <li><b>Change wall</b> on a wall of a building: wall type, then material, at its bill; mallet. Finished wall: stands, shut and carrying, until the change is
       built (<b>Build change</b>, as Build wall); with the last material, the new wall. Still going up: replanned in place, new bill. Refused: fence, half wall or
-      railing on a wall something rests on; a material lighter than the heaviest wall above; a counter with goods or takings; a padlocked portcullis. The standing
+      railing on a wall something rests on; a material lighter than the heaviest wall above, glass excepted; a counter with goods or takings; a padlocked portcullis. The standing
       type and material again: change dropped.</li>
       <li>Roof: <b>Plan roof</b> tile by tile once the top storey's walls are done; neighbours join into ridges and hips.</li>
       <li>Plans over an area, max ${PLAN_AREA_MOST} pieces: <b>Plan walls all round</b>, <b>Plan floor: every tile</b> (the storey shown), <b>Plan roof: every tile</b>;

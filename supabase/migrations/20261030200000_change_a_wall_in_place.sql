@@ -141,7 +141,8 @@ begin
   end if;
   select max(m2.heft) into v_over from wall w2 join build_material_def m2 on m2.id = w2.material
    where w2.world_id = p_world and w2.building = p_b.id and w2.level > lvl;
-  if mat.heft < coalesce(v_over, 0) then
+  -- Glass under any storey, however heavy, as it is planned there (`GLASS_UNDER_ANY`).
+  if mat.heft < coalesce(v_over, 0) and mat.id <> 'glass' then
     return mat.name || ' cannot carry the ' || heft_word(v_over) || ' above it.';
   end if;
   v_stands := mat.storeys + floor(pk(p_world, p_uid, 'storeys:' || build_work(mat.kind), 0))::int;
