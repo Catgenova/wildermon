@@ -1,5 +1,5 @@
 import {
-  add, beat, coatPalette, curve, cyc, disc, merge, moved, orb, orbAlong, paint, quadBonesOf, scale, smile, taper, TAU, tube,
+  add, beat, coatPalette, curve, cyc, merge, moved, orb, orbAlong, quadBonesOf, scale, smile, taper, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { blade, cut, earMesh, pawMesh, quadPieces } from './beastkit';
@@ -7,9 +7,9 @@ import { type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
- * The settlement's own hands: the salva, the carra, the tanna and the brambo
- * (the kemma is the Whispling now, `./wild-owl`; the sheela the Shearling,
- * `./wild-shear`).
+ * The settlement's own hands: the salva, the carra and the brambo (the kemma
+ * is the Whispling now, `./wild-owl`; the sheela the Shearling, `./wild-shear`;
+ * the tanna the Peltling, `./wild-pelt`).
  * Each carries the tool of its trade on its body, as every wildermon carries
  * something no field guide has: a cleaver for a beak.
  */
@@ -148,62 +148,6 @@ export const CARRA: Kind = {
   shadow: [1.8, 1.3],
   stride: 1.2,
   size: 1.9,
-};
-
-/* ---- the tanna: a saddle of leather on its back ------------------------------------ */
-
-/**
- * A tanna: a sleek, bark-brown wader, an otter's shape, with hands stained
- * to the wrist. A patch of tanned leather, stitched at its edges, lies on its
- * back like a saddle, and its paddle of a tail is leather too.
- */
-const TANNA_SPEC: QuadSpec = { ...pawed({ high: 1.15, len: 2.8, legs: 0.62, neck: 0.5, lean: 55, swing: [22, 36], ears: [50, 20], tail: [0.55, 4, 4] }), nose: 12 };
-const TANNA_HEAD = { c: [0, 0.4, 0.1] as V3, r: [0.95, 0.95, 0.82] as V3 };
-
-function tannaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = TANNA_HEAD;
-  const face = merge(snout(1.0, -0.12, [0.5, 0.34, 0.42], 0.13, n, k), paint([-1, 1].map((s) => disc([s * 0.28, 1.25, -0.2], [s * 0.3, 1, -0.2], 0.04, 0.12, 5, 'lid'))));
-  // The saddle: a thick leather shape lying along the top of the back, with a stitch line round it.
-  const saddle = merge(
-    tube([[0, -0.75, 0.82], [0, -0.3, 0.92], [0, 0.25, 0.92], [0, 0.65, 0.84]], [0.5, 0.78, 0.8, 0.5], [0.06, 0.08, 0.08, 0.06], n, 'leather', { up: [0, 0, 1] }),
-    paint(Array.from({ length: 10 }, (_, q) => {
-      const y = -0.6 + q * 0.13;
-      return disc([0, y, 0.97], [0, 0, 1], 0.03, 0.05, 4, 'cap');
-    })),
-  );
-  // A paddle of a tail, flat and leather.
-  const tail = links([0.22, 0.24, 0.26, 0.04], 0.32, n, 'leather').map((m) => moved(m, [0, 0, 0]));
-  return quadPieces({
-    n, k,
-    body: { y: [-1.5, -1.25, -0.6, 0.0, 0.6, 1.15, 1.4], z: [0.05, 0.08, 0.1, 0.12, 0.14, 0.17, 0.2], w: [0.25, 0.82, 0.92, 0.95, 0.92, 0.8, 0.28], h: [0.22, 0.66, 0.76, 0.78, 0.74, 0.62, 0.22], belly: true },
-    neck: { w: 0.6, h: 0.58, len: 0.5 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.74, 0.55, 0.3], size: 0.3, rim: 0.12 }, blush: [[0.86, 0.38, -0.28], 0.17] },
-    ear: earMesh(0.28, 0.22, n),
-    earTurn: 40,
-    tail,
-    fore: { upper: [0.25, -0.32, 0.22, 0.2], lower: [0, -0.3, 0.2, 0.18], foot: pawMesh(0.22, n, k, 'bark'), mat: 'coatDark' },
-    hind: { upper: [0.25, -0.34, 0.26, 0.22], lower: [0, -0.32, 0.22, 0.2], foot: pawMesh(0.22, n, k, 'bark'), mat: 'coatDark' },
-    extras: [{ key: 'saddle', mesh: saddle, bone: 'trunk', bias: 0.04, after: ['body'] }],
-  });
-}
-
-export const TANNA: Kind = {
-  bones: quadBonesOf(TANNA_SPEC, (p, a) => {
-    trot(p, a);
-    // A low, flowing gait, the body rolling more than a dog's; standing, up on its haunches to look round now and then.
-    p.roll += a.go * 2 * Math.sin((a.u % 1) * TAU);
-    if (a.go <= 0) {
-      const up = beat(a.t, [9.1, 21.3], 2.0) * (1 - a.graze);
-      p.pitch += 22 * up;
-      p.neck[0] -= 16 * up;
-    }
-  }),
-  build: tannaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ leather: [168, 110, 62], cap: [240, 226, 196], bark: [104, 70, 46] }), 30),
-  shadow: [1.9, 1.0],
-  stride: 1.4,
-  size: 1.7,
 };
 
 /* ---- the brambo: a coat of burrs and berries --------------------------------------- */

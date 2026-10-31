@@ -62,7 +62,7 @@ import { BARDING_CUT, gearBill, gearSays, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZE_B
 import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP } from '../../game/creatures';
-import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
+import { PERK_STAGE, perkLine, perkSays, STAGE_PERKS } from '../../game/creatures';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
@@ -115,7 +115,7 @@ import {
 import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES, PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
-import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor } from '../../game/items';
+import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor, TAN_LYE } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { guideEntries, guidePages, keepable } from '../../game/guide';
 import { TRACK_BANDS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
@@ -930,6 +930,7 @@ const HAND_NUMBERS: Record<string, string> = {
   relka: `a relic comes out at what its pieces were worth less their damage, times ${percent(restoredMul(1))} at no restoration and ${percent(restoredMul(SKILL_TOP))} at ${SKILL_TOP}`,
   ambra: `${RESIN_TAPPED} tar a pine a day`,
   petta: `it leaves every tile within ${SKEP_REACH} of a skep or a hive to the bees`,
+  tanna: `a hide and ${TAN_LYE} L lye per leather. Evolves: ${evolves('tanna')}; ${perkLine('tanna').toLowerCase()}`,
 };
 
 /**

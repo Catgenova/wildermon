@@ -371,6 +371,8 @@ export interface Piece {
   airy?: boolean;
   /** Not inked at all, not even round the outside: the fine spokes of a seed head. */
   rim?: boolean;
+  /** Each separate piece of it lit in one step, by how it faces on the whole: a spray of feathers (`Part.even`). */
+  even?: boolean;
   /** Outlined at half the width: a leg so thin a full outline would be most of it. */
   thin?: boolean;
   /** One link of something in links, named for the whole of it: lined as one thing, with no ring at each joint (`Part.chain`). */
@@ -977,7 +979,7 @@ export function partsOf(kit: readonly Piece[], b: Bones, a: Anim, breath: number
     const xf = b[pc.bone];
     if (!xf) continue;
     const mesh = a.blink && pc.shut ? pc.shut : pc.mesh;
-    const part: Part = { mesh, xf, bias: pc.bias ?? 0, convex: pc.convex, front: pc.front, hide: pc.hide, hideIn: pc.hideIn ? b[pc.hideIn] : undefined, toon: true, lines: pc.lines, airy: pc.airy, rim: pc.rim, sheen: pc.sheen, thin: pc.thin, chain: pc.chain };
+    const part: Part = { mesh, xf, bias: pc.bias ?? 0, convex: pc.convex, front: pc.front, hide: pc.hide, hideIn: pc.hideIn ? b[pc.hideIn] : undefined, toon: true, lines: pc.lines, airy: pc.airy, rim: pc.rim, sheen: pc.sheen, thin: pc.thin, chain: pc.chain, even: pc.even };
     // A rare body shines the whole of it, as a rare thing worn does: every piece of it one rarity, so one glint crosses it all.
     if (shine?.rare) {
       part.rare = shine.rare;
