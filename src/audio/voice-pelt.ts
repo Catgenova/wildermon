@@ -4,7 +4,7 @@ import { burst, ring } from './kit';
 import type { Voice } from './voices';
 
 /**
- * The Peltling's voice, and its stages' (the species is `tanna`): a weasel's chuckle, quick soft clucks in a run, over the dry
+ * The Peltling's voice, and its stages' (the species is `tanna`): a soft chitter, quick clicking clucks in a run, over the dry
  * rustle of its feather plates; the Hideweaver's lower and slower. At its work, the soft slap of a paw pressed into the hide,
  * the creak of leather drawn and stretched, and on the Hideweaver the whump of a big hide shaken out.
  *

@@ -1,34 +1,34 @@
 import {
-  add, beat, clamp, coatPalette, cross, cyc, DEG, disc, dot, drift, frac, lerp, merge, mix, onEgg, orb, orbAlong, paint,
-  scale, smile, smooth, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
+  add, beat, clamp, curve, coatPalette, cross, cyc, DEG, disc, dot, drift, frac, lerp, merge, mix, moved, onEgg, orb, orbAlong, paint,
+  scale, smooth, sub, taper, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
 import { cut } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
- * The tanner's line: the Peltling, a small low creature of many short legs, a caterpillar's length of body in rings, shingled all
- * over in rows of leaf-shaped feather plates -- sage green along its back, cream at the root and brown at the tip, standing up in
- * crests over its shoulders and in a fan over its tail; cream fleece down its flanks, patched with brown -- a small cream weasel's
- * head with a green blaze, brown eyes and a pink nose, crested with leaf feathers; five pairs of stubby legs, brown and cream, on
- * dark brown paws; and a small pale hide spread on the ground under its front paws. It grows into the Peltipede, longer by two
- * rings and two pairs of legs, its crests taller, its head lifted on a short neck, kneading a bigger hide with its two front
- * pairs; and then the Hideweaver, big and long, its front reared up off the ground so that its front pair of legs are arms,
- * holding up a large hide stretched between them, a tall crest on its head, huge layered plates down its back, and many thick
- * legs on big dark paws. The species is still `tanna` underneath, as saves and the database know it: it tans the hides in the
+ * The tanner's line: the Peltling, a small low centipede of many short legs, its body in rings, shingled all over in rows of
+ * leaf-shaped feather plates -- a third cream, a third sage green, a third brown -- standing up in big swept-back crests over its
+ * shoulders and in a fan over its tail, cream fleece down its flanks patched with brown; a wide flat centipede's head, plated,
+ * cream and brown with a green cap, curved forcipules under its front, small dark eyes at its sides and two long leaf-feathered
+ * antennae; five pairs of stubby legs on dark brown paws. It grows into the Peltipede, longer by two rings and two pairs of legs,
+ * its head lifted on two short segments of neck; and then the Hideweaver, big and long, ten rings, its front reared up off the
+ * ground so that its front pair of legs are arms, held folded before its chest, a bigger head with a crest fan behind it and
+ * longer antennae. The species is still `tanna` underneath, as saves and the database know it: it tans the hides in the
  * settlement's stores.
  *
  * Its variant's coat is the green of its feather plates, its markings the cream of its fleece; the brown of its plates' tips,
- * its patches and its legs, and its hide, are the same on every variant. All three are built by one set of functions from a
- * description of the stage (`Pede`): a spine of rings (`spineOf`), each ring a bone with its plates on it and a pair of legs
- * bent to put each paw where it is to be, a neck and the head on the front one, and the hide in a frame of its own laid between
- * the paws that hold it, so it stretches as they spread.
+ * its patches and its legs are the same on every variant. All three are built by one set of functions from a description of
+ * the stage (`Pede`): a spine of rings (`spineOf`), each ring a bone with its plates on it and a pair of legs bent to put each
+ * paw where it is to be, a neck and the head on the front one.
  *
  * It walks with its legs in a wave: each pair a little after the one behind it, the two of a pair opposite, so a ripple of
  * lifted paws runs from its tail to its head, its body swaying a little from side to side as it goes.
  *
- * At its task the Peltling grips its hide and kneads it, a front paw at a time, three times, and then stretches it out between
- * them; the Peltipede the same with its two front pairs, the ripple of paws running down them; the Hideweaver lifts its hide in
- * its arms, stretches it wide, works it up and down a side at a time, and shakes it out (`PELT_WORK`).
+ * Only at its task does it have a hide, laid in a frame of its own between the paws that hold it so it stretches as they
+ * spread, unfolding as it sets to and gone as it stops: the Peltling grips it and kneads it, a front paw at a time, three times,
+ * and then stretches it out between them; the Peltipede the same with its two front pairs, the ripple of paws running down them;
+ * the Hideweaver reaches out its arms and holds it up, stretches it wide, works it up and down a side at a time, and shakes it
+ * out (`PELT_WORK`).
  */
 
 /* ---- a stage, as numbers ------------------------------------------------------------- */
@@ -51,8 +51,8 @@ interface Pede {
   leg: { len: [number, number]; w: number; paw: number; out: number; ahead: number };
   /** The arms, on the Hideweaver: two lengths, thickness, paw; how far apart its hands are, how high and how far ahead of its chest. */
   arm: { len: [number, number]; w: number; paw: number; out: number; up: number; ahead: number } | null;
-  /** The head's half-sizes (across, along, up), how far out of the front ring it is and how high over it, its pitch; its eye. */
-  head: { r: V3; out: number; lift: number; pitch: number; eye: number };
+  /** The head capsule's half-sizes (across, along, up), how far out of the front ring it is and how high over it, its pitch; its eye; its antennae's reach. */
+  head: { r: V3; out: number; lift: number; pitch: number; eye: number; ant: number };
   /** The neck between the front ring and the head, as thick as this share of the front ring; none for none. */
   neck: number;
   /**
@@ -79,9 +79,9 @@ const PELTLING_LOOK: Pede = {
   rise: [4, 1],
   leg: { len: [0.2, 0.19], w: 0.1, paw: 0.09, out: 0.44, ahead: 0.02 },
   arm: null,
-  head: { r: [0.17, 0.27, 0.16], out: 0.14, lift: 0.1, pitch: -10, eye: 0.026 },
+  head: { r: [0.32, 0.22, 0.13], out: 0.06, lift: 0.0, pitch: -6, eye: 0.034, ant: 0.42 },
   neck: 0,
-  plate: { len: 0.22, w: 0.07, crest: [0, 1.35, 0, 0.85, 0], tail: 1.35, tailCount: 5, cap: 2.1, capCount: 4 },
+  plate: { len: 0.22, w: 0.07, crest: [0, 1.35, 0, 0.85, 0], tail: 1.35, tailCount: 5, cap: 1.6, capCount: 3 },
   hide: { w: 0.2, fwd: 0.45, back: 0.22 },
   patches: [[1.2, 116, 26], [2.4, 98, 28], [3.6, 128, 24]],
   gait: { duty: [0.62, 0.52], swing: [0.32, 0.4], step: 0.36, lag: 0.17, sway: 0.025, bob: 0.012 },
@@ -99,9 +99,9 @@ const PELTIPEDE_LOOK: Pede = {
   rise: [14, 5, 1],
   leg: { len: [0.25, 0.24], w: 0.11, paw: 0.1, out: 0.52, ahead: 0.03 },
   arm: null,
-  head: { r: [0.18, 0.29, 0.17], out: 0.2, lift: 0.18, pitch: -14, eye: 0.027 },
+  head: { r: [0.35, 0.24, 0.14], out: 0.12, lift: 0.12, pitch: -8, eye: 0.036, ant: 0.5 },
   neck: 0.55,
-  plate: { len: 0.25, w: 0.075, crest: [0, 1.45, 0, 0, 0.95, 0, 0], tail: 1.45, tailCount: 6, cap: 2.3, capCount: 5 },
+  plate: { len: 0.25, w: 0.075, crest: [0, 1.45, 0, 0, 0.95, 0, 0], tail: 1.45, tailCount: 6, cap: 1.8, capCount: 4 },
   hide: { w: 0.26, fwd: 0.62, back: 0.32 },
   patches: [[1.4, 112, 26], [2.6, 132, 24], [3.6, 100, 28], [4.8, 125, 26], [5.8, 105, 22]],
   gait: { duty: [0.64, 0.54], swing: [0.3, 0.38], step: 0.3, lag: 0.14, sway: 0.03, bob: 0.012 },
@@ -119,9 +119,9 @@ const HIDEWEAVER_LOOK: Pede = {
   rise: [60, 34, 10, 2],
   leg: { len: [0.42, 0.4], w: 0.16, paw: 0.15, out: 0.7, ahead: 0.04 },
   arm: { len: [0.36, 0.36], w: 0.15, paw: 0.21, out: 0.42, up: 0.86, ahead: 0.5 },
-  head: { r: [0.37, 0.6, 0.34], out: 0.26, lift: 0.5, pitch: -10, eye: 0.052 },
+  head: { r: [0.5, 0.36, 0.21], out: 0.14, lift: 0.36, pitch: -10, eye: 0.048, ant: 0.85 },
   neck: 0.78,
-  plate: { len: 0.34, w: 0.1, crest: [0, 0, 1.15, 0, 0, 1.25, 0, 0, 1.05, 0], tail: 1.2, tailCount: 6, cap: 2.3, capCount: 6 },
+  plate: { len: 0.34, w: 0.1, crest: [0, 0, 1.15, 0, 0, 1.25, 0, 0, 1.05, 0], tail: 1.2, tailCount: 6, cap: 2.4, capCount: 5 },
   hide: { w: 0.5, fwd: 0.7, back: 0.0 },
   patches: [[0.6, 120, 26], [1.9, 98, 30], [3.0, 128, 26], [4.2, 104, 30], [5.4, 122, 26], [6.5, 100, 24], [7.6, 126, 26], [8.6, 104, 24]],
   gait: { duty: [0.66, 0.56], swing: [0.28, 0.34], step: 0.26, lag: 0.13, sway: 0.03, bob: 0.01 },
@@ -269,7 +269,7 @@ function spineOf(s: Pede, P: Plan): V3[] {
 const SOLE = 0.004;
 
 /** Each foot standing, on the ground out round it; the Hideweaver's hands up before its chest, apart. */
-function restFeet(s: Pede): V3[] {
+function restFeet(s: Pede, holding = false): V3[] {
   const N = s.rings, out: V3[] = [];
   // Its rings as they rest, worked out without the feet (`spineOf` reads none of them).
   const rings = spineOf(s, { ...blankPlan(s) });
@@ -277,7 +277,8 @@ function restFeet(s: Pede): V3[] {
     const i = ringOf(q), sd = sideOf(q), r = rings[i];
     if (!grounded(s, q)) {
       const A = s.arm!;
-      out.push([sd * A.out, r[1] + A.ahead, A.up]);
+      // Held up and folded before its chest; at its work, out apart, holding its hide at chest height.
+      out.push(holding ? [sd * A.out, r[1] + A.ahead, A.up] : [sd * A.out * 0.62, r[1] + A.ahead * 0.42, A.up * 0.86]);
       continue;
     }
     const k = s.sizes[i], g = (i - (s.arm ? 1 : 0)) / Math.max(1, N - 1 - (s.arm ? 1 : 0)) - 0.5;
@@ -304,7 +305,6 @@ function restPlan(s: Pede): Plan {
   if (had) return zip(had, had, (x) => x);
   const p = blankPlan(s);
   p.at = restFeet(s);
-  p.hide = 1;
   restCache.set(s, p);
   return zip(p, p, (x) => x);
 }
@@ -353,11 +353,8 @@ function goingPlan(s: Pede, a: Anim): Plan {
   p.head = [3 + 2 * Math.sin(2 * TAU * w), -4 * Math.sin(TAU * w), 0];
   p.fan = 6 * Math.sin(TAU * (w - 0.3)) - 4 * g;
   p.cap = -6 * g;
-  // The Peltling and the Peltipede fold their hide away as they go; the Hideweaver lifts its own clear of the ground.
-  if (s.arm) {
-    for (const q of [0, 1]) p.at[q] = add(p.at[q], [0, 0.06, 0.08 + 0.015 * Math.sin(TAU * w * 2 + q)]);
-    p.hide = 1;
-  } else p.hide = 0;
+  // The Hideweaver's front pair held folded up before it as it goes, bobbing a little.
+  if (s.arm) for (const q of [0, 1]) p.at[q] = add(p.at[q], [0, 0.03, 0.03 * Math.sin(TAU * w * 2 + q)]);
   return p;
 }
 
@@ -412,7 +409,6 @@ function strikePlan(s: Pede, t: number): Plan {
   p.puff = p.puff.map(() => 0.25 * rear + 0.1 * blow);
   p.fan = 20 * rear;
   p.cap = 24 * rear;
-  p.hide = s.arm ? 1 : 1 - ramp(t, 0, 0.15) * (1 - ramp(t, 0.85, 1));
   return p;
 }
 
@@ -428,6 +424,7 @@ const downOf = (t: number, graze: number): number => Math.max(graze, ramp(t, 0, 
  */
 function kneadPlan(s: Pede, t: number, p: Plan): void {
   const W = PELT_WORK, L = reachOf(s);
+  p.hide = 1;
   const lean = ramp(t, 0.04, 0.14) * (1 - ramp(t, 0.86, 0.96));
   W.knead.forEach((c, n) => {
     const q = n % 2 ? 1 : 0, sd = sideOf(q);
@@ -458,7 +455,10 @@ function kneadPlan(s: Pede, t: number, p: Plan): void {
  * shakes it out with a snap of both arms (`PELT_WORK`).
  */
 function weavePlan(s: Pede, t: number, p: Plan): void {
-  const W = PELT_WORK, A = s.arm!;
+  const W = PELT_WORK, A = s.arm!, hold = restFeet(s, true);
+  p.at[0] = hold[0];
+  p.at[1] = hold[1];
+  p.hide = 1;
   const up = ramp(t, 0.04, W.lift) * (1 - ramp(t, 0.86, 0.96));
   const wide = ramp(t, W.lift, W.wide) * (1 - ramp(t, W.work[1] + 0.1, W.shake - 0.02));
   const shake = hump(t, W.shake, 0.08) * Math.sin((t - W.shake) * 70);
@@ -489,7 +489,6 @@ function grazePlan(s: Pede, a: Anim): Plan {
   p.rear = -8;
   p.head = [-26 - 6 * nib, 8 * drift(t, 2), 0];
   p.H -= 0.05 * reachOf(s);
-  p.hide = s.arm ? 1 : 0;
   return p;
 }
 
@@ -508,7 +507,6 @@ function evolvePlan(s: Pede, t: number): Plan {
   for (let i = 0; i < s.rings; i++) p.sway[i] = 0.02 * shake * (i % 2 ? 1 : -1);
   const front = s.arm ? [0, 1, 2, 3] : [0, 1];
   for (const q of front) p.at[q] = add(p.at[q], [sideOf(q) * 0.15 * L * up, 0.2 * L * up, 1.0 * L * up * (ringOf(q) === 0 ? 1 : 0.5)]);
-  p.hide = s.arm ? 1 : 1 - ramp(t, 0.02, 0.2) * (1 - ramp(t, 0.86, 1));
   return p;
 }
 
@@ -545,7 +543,7 @@ const ringR = (s: Pede, i: number): V3 => scale(s.ring, s.sizes[i]);
 const hipOn = (s: Pede, i: number): V3 => { const R = ringR(s, i); return [R[0] * 0.6, R[1] * 0.05, -R[2] * 0.55]; };
 /** Where the neck leaves the front ring, and where the head is on it, in the front ring's frame. */
 const neckRoot = (s: Pede): V3 => { const R = ringR(s, 0); return [0, R[1] * 0.55, R[2] * 0.15]; };
-const headAt = (s: Pede): V3 => add(neckRoot(s), [0, s.head.out + s.head.r[1] * 0.3, s.head.lift]);
+const headAt = (s: Pede): V3 => add(neckRoot(s), [0, s.head.out + s.head.r[1] * 0.85, s.head.lift]);
 /** The neck's egg, in its own frame: its middle halfway from its root to the head, its length along y, as thick as `Pede.neck` of the front ring. */
 const neckEgg = (s: Pede): { r: V3; len: number } => {
   const d = sub(headAt(s), neckRoot(s)), R = ringR(s, 0), len = len3(d);
@@ -580,7 +578,14 @@ function pedeBones(s: Pede): (a: Anim) => Bones {
     const [NX, NY, NZ] = frameOf(turn(f0, cross(cross(sub(at, root), [0, 0, 1]), sub(at, root))), turn(f0, sub(at, root)));
     b.neck = scaled(xfOf(NX, NY, NZ, place(f0, mid)), 1 + P.puff[0] * 0.6);
     b.head = joint({ m: level.m, t: place(f0, at) }, [0, 0, 0], s.head.pitch + P.head[0], P.head[2] - P.roll * 0.5, P.head[1]);
-    b.cap = joint(b.head, [0, -s.head.r[1] * 0.38, s.head.r[2] * 0.8], P.cap, 0, 0);
+    b.cap = joint(b.head, [0, -s.head.r[1] * 0.55, s.head.r[2] * 0.6], P.cap, 0, 0);
+    // The antennae: waving slowly as it stands, now and then one flicked, swept back in a strike and forward at its work.
+    const t = a.t, act = a.act, back = act?.kind === 'strike' ? hump(act.t, 0.3, 0.3) : 0, busy = act?.kind === 'work' ? 1 : 0;
+    for (let q = 0; q < 2; q++) {
+      const sd = q ? 1 : -1, r = antRoot(s), flick = beat(t, q ? [4.6, 15.2] : [9.8, 20.4], 0.5);
+      const pitch = 6 * cyc(t, 3, q * 1.7) - 14 * flick + 22 * back - 8 * busy + 5 * Math.sin(TAU * frac(a.u) * 2 + q) * smooth(a.go);
+      b[`ant${q}`] = joint(b.head, [sd * r[0], r[1], r[2]], pitch, 0, sd * (8 * cyc(t, 2, q * 2.3) - 10 * back + 6 * busy));
+    }
     // Legs: the knee out and forward, a short thick leg's.
     for (let q = 0; q < N * 2; q++) {
       const i = ringOf(q), sd = sideOf(q), key = legKey(s, q), arm = !grounded(s, q);
@@ -602,7 +607,7 @@ function pedeBones(s: Pede): (a: Anim) => Bones {
     const fwd = turn(level, [0, 1, 0]);
     if (s.arm) {
       const hz = Math.max(0.05, c[2]);
-      b.hide = { m: [across[0], fwd[0], 0, across[1], fwd[1], 0, across[2], fwd[2], hz], t: c };
+      b.hide = scaled({ m: [across[0], fwd[0], 0, across[1], fwd[1], 0, across[2], fwd[2], hz], t: c }, clamp(P.hide));
     } else {
       const flat: V3 = [across[0], across[1], 0], k = clamp(P.hide);
       b.hide = { m: [flat[0] * k, fwd[0] * k, 0, flat[1] * k, fwd[1] * k, 0, 0, 0, Math.max(0.001, k)], t: [c[0], c[1], 0] };
@@ -766,83 +771,105 @@ const ringMesh = (s: Pede, i: number, fine: boolean): Mesh => {
 };
 
 /**
- * The neck, in its own frame: a cream egg along it, feathered all round, green over its top and cream fleece down its sides and
- * its front; and a mane of long plates down the back of it from behind the head.
+ * The neck, in its own frame: two short segments along it, as its rings are but smaller, feathered all round, green over their
+ * tops and cream fleece down their sides and under them.
  */
 function neckOf(s: Pede, fine: boolean): Mesh {
-  const E = neckEgg(s), L = s.plate.len, W = s.plate.w;
-  const out: Mesh[] = [orb([0, 0, 0], E.r, fine ? 10 : 7, fine ? 6 : 4, 'mark'), featherCoat(E.r, L * 0.8, W * 0.9, fine, 91, () => false, 180)];
-  out.push(fan(E.r, fine ? 5 : 3, L * 2.4, W * 1.9, fine, 93, { from: 50, to: 75, y0: 0.7, y1: -0.6, side: 0.4 }));
+  const E = neckEgg(s), R0 = ringR(s, 0), L = s.plate.len, W = s.plate.w, out: Mesh[] = [];
+  for (const [y, k] of [[-E.len * 0.2, 0.9], [E.len * 0.24, 0.8]] as Array<[number, number]>) {
+    const R: V3 = [R0[0] * k, E.len * 0.34, R0[2] * k];
+    out.push(moved(merge(orb([0, 0, 0], R, fine ? 10 : 7, fine ? 6 : 4, 'mark'), featherCoat(R, L * 0.8 * k, W * 0.9 * k, fine, 91 + y * 10, () => false, 180)), [0, y, 0]));
+  }
   return merge(...out);
 }
 
 /* ---- its head ------------------------------------------------------------------------- */
 
-/** The skull's middle and half-sizes in the head's frame (across, along, up): the back of the head. */
-const skullOf = (s: Pede): { c: V3; r: V3 } => ({ c: [0, -s.head.r[1] * 0.3, 0], r: [s.head.r[0], s.head.r[1] * 0.62, s.head.r[2]] });
+/** The head capsule's middle and half-sizes in the head's frame (across, along, up): wide, low and flat. */
+const skullOf = (s: Pede): { c: V3; r: V3 } => ({ c: [0, 0, 0], r: s.head.r });
 
 /**
- * The head, in its own frame: a weasel's, slim, its skull an egg longer than it is wide going forward into a narrow tapering
- * muzzle with a pink nose and a small mouth; cream, with a cap of green over its crown edged in brown and a green blaze down the
- * bridge of its nose; small dark eyes; a few brown freckles on its cheeks.
+ * The head, in its own frame: a centipede's, a broad flat shovel of a capsule as wide as its first ring, cream under it, a rim of
+ * brown round its top and a green cap over its crown, a cream plate lying over its front edged in brown; a pair of curved
+ * forcipules under its front, brown going dark at the tips, closing in toward each other; small glossy dark eyes at its sides
+ * with two tiny ocelli behind each; a pink blush under each eye.
  */
 function headOf(s: Pede, fine: boolean, shut: boolean): Mesh {
-  const R = s.head.r, S = skullOf(s), n = fine ? 12 : 9, k = fine ? 8 : 5;
-  const cap = (d: V3): Mat => (d[2] > 0.48 && d[1] < 0.6 ? 'leaf' : d[2] > 0.3 && d[1] < 0.1 ? 'coat' : 'mark');
-  const out: Mesh[] = [painted(orbAlong(S.c, [0, 1, 0], [S.r[0], S.r[2], S.r[1]], n, k, 'mark'), (c) => cap(dirIn(S.c, S.r, c)))];
-  // The muzzle: forward and a little down, tapering; the blaze down its top.
-  const mz: V3 = [0, R[1] * 0.42, -R[2] * 0.26], MR: V3 = [R[0] * 0.5, R[1] * 0.58, R[2] * 0.52];
-  out.push(painted(orbAlong(mz, [0, 1, -0.14], [MR[0], MR[2], MR[1]], n - 2, k - 1, 'mark'), (c) => {
-    const d = dirIn(mz, MR, c);
-    return d[2] > 0.5 && Math.abs(d[0]) < 0.34 && d[1] < 0.45 ? 'leaf' : 'mark';
+  const R = s.head.r, n = fine ? 14 : 9, k = fine ? 8 : 5;
+  const cap = (d: V3): Mat => (d[2] > 0.5 && Math.abs(d[0]) < 0.62 ? 'leaf' : d[2] > 0.12 ? 'coat' : 'mark');
+  const out: Mesh[] = [painted(orbAlong([0, 0, 0], [0, 1, 0], [R[0], R[2], R[1]], n, k, 'mark'), (c) => cap(dirIn([0, 0, 0], R, c)))];
+  // The plate over its front: a flatter shell lying forward of its cap, cream, its back edge brown.
+  const fc: V3 = [0, R[1] * 0.48, R[2] * 0.22], FR: V3 = [R[0] * 0.72, R[1] * 0.56, R[2] * 0.62];
+  out.push(painted(orbAlong(fc, [0, 1, -0.25], [FR[0], FR[2], FR[1]], n - 2, k - 1, 'mark'), (c) => {
+    const d = dirIn(fc, FR, c);
+    return d[1] < -0.35 && d[2] > 0 ? 'coat' : d[2] > 0.55 && Math.abs(d[0]) < 0.3 ? 'leaf' : 'mark';
   }));
-  const tip: V3 = add(mz, [0, MR[1] * 0.96, MR[2] * 0.1]);
-  out.push(orbAlong(tip, [0, 1, 0.1], [R[0] * 0.17, R[0] * 0.13, R[0] * 0.13], 6, 3, 'nose'));
-  out.push(smile(add(mz, [0, MR[1] * 0.7, -MR[2] * 0.62]), [0, 1, -0.7], R[0] * 0.26));
-  const paints: Disc[] = [];
+  // The forcipules: from under its front, curving forward and in, closing toward each other.
   for (const sd of [1, -1]) {
-    for (const [x, y, z, r] of [[0.5, 0.75, -0.2, 0.06], [0.62, 0.6, -0.4, 0.05], [0.7, 0.35, -0.5, 0.055]] as Array<[number, number, number, number]>) {
-      const e = onEgg(mz, MR, [sd * x, y, z]);
-      paints.push(disc(add(e.p, scale(e.n, 0.006)), e.n, R[0] * r, R[0] * r, 6, 'coat', { at: add(e.p, scale(e.n, -0.02)) }));
-    }
+    const pts = curve([sd * R[0] * 0.42, R[1] * 0.45, -R[2] * 0.55], [sd * R[0] * 0.72, R[1] * 1.15, -R[2] * 0.62], [sd * R[0] * 0.16, R[1] * 1.32, -R[2] * 0.5], fine ? 6 : 4);
+    out.push(taper(pts, R[0] * 0.15, R[0] * 0.025, fine ? 6 : 4, (ring) => (ring >= pts.length - 2 ? 'coatDark' : 'coat'), 0.75));
   }
-  out.push(paint(paints));
   out.push(eyesOf(s, shut));
   return merge(...out);
 }
 
-/** The way out of the skull to the right eye: forward, out and a little up. */
-const EYE_DIR: V3 = [0.6, 0.66, 0.3];
+/** The way out of the head capsule to the right eye: at its side, forward and up a little. */
+const EYE_DIR: V3 = [0.86, 0.42, 0.32];
 
-/** The eyes: each a dark rim, a dark brown eye and a glint, laid onto the skull's curve; a lid's line, shut. */
+/** The eyes: each a small glossy dark eye with a glint, two tiny ocelli behind it and a blush under it; a lid's line, shut. */
 function eyesOf(s: Pede, shut: boolean): Mesh {
   const E = s.head.eye, { c: C, r: R } = skullOf(s), out: Disc[] = [];
+  const onto = (d: Disc, lift: number): Disc => ({ ...d, v: d.v.map((v) => { const e = onEgg(C, R, sub(v, C)); return add(e.p, scale(e.n, lift)); }) });
   for (const side of [1, -1]) {
     const q = onEgg(C, R, [side * EYE_DIR[0], EYE_DIR[1], EYE_DIR[2]]);
     const n = q.n, p = add(q.p, scale(n, 0.006)), at = add(p, scale(n, -0.04));
     const up = unit(cross(cross(n, [0, 0, 1]), n)), across = unit(cross(up, n));
     const o = { at, up: [0, 0, 1] as V3 };
-    const onto = (d: Disc, lift: number): Disc => ({ ...d, v: d.v.map((v) => { const e = onEgg(C, R, sub(v, C)); return add(e.p, scale(e.n, lift)); }) });
+    const b = onEgg(C, R, [side * 0.8, 0.5, -0.1]);
+    out.push(onto(disc(b.p, b.n, E * 1.1, E * 0.6, 8, 'inner', { at: add(b.p, scale(b.n, -0.04)) }), 0.005));
+    for (const [dy, dz, r] of [[-0.22, 0.12, 0.42], [-0.3, -0.06, 0.34]] as Array<[number, number, number]>) {
+      const e = onEgg(C, R, [side * EYE_DIR[0], EYE_DIR[1] + dy, EYE_DIR[2] + dz]);
+      out.push(onto(disc(e.p, e.n, E * r, E * r, 6, 'eye', { at: add(e.p, scale(e.n, -0.04)) }), 0.008));
+    }
     if (shut) {
-      out.push(onto(disc(add(p, scale(up, -E * 0.1)), n, E * 1.2, E * 0.34, 8, 'lid', o), 0.008));
+      out.push(onto(disc(add(p, scale(up, -E * 0.1)), n, E * 1.15, E * 0.34, 8, 'lid', o), 0.008));
       continue;
     }
-    out.push(onto(disc(p, n, E * 1.3, E * 1.15, 10, 'lid', o), 0.006));
-    out.push(onto(disc(p, n, E, E * 0.92, 10, 'eye', o), 0.009));
-    out.push(onto(disc(add(add(p, scale(up, E * 0.32)), scale(across, side * E * 0.22)), n, E * 0.36, E * 0.36, 6, 'glint', { ...o, lit: true }), 0.012));
+    out.push(onto(disc(p, n, E * 1.18, E * 1.1, 10, 'lid', o), 0.006));
+    out.push(onto(disc(p, n, E, E * 0.95, 10, 'eye', o), 0.009));
+    out.push(onto(disc(add(add(p, scale(up, E * 0.34)), scale(across, side * E * 0.2)), n, E * 0.38, E * 0.38, 6, 'glint', { ...o, lit: true }), 0.012));
   }
   return paint(out);
 }
 
+/** Where an antenna's root is on the head (right side), in the head's frame: on the front of its cap. */
+const antRoot = (s: Pede): V3 => { const R = s.head.r; return [R[0] * 0.3, R[1] * 0.62, R[2] * 0.55]; };
+
 /**
- * The crest on its head, in its own frame on its crown: a fan of plates swept up and back off the back of its head, of different
- * lengths, brown over their outer third; two small ones lying back over its crown.
+ * An antenna, right, in its own bone's frame from its root: long and segmented, sweeping forward, out and up and curving down at
+ * its tip, in green beads going brown at the tip, with small leaf-feathers along its outer side.
+ */
+function antennaOf(s: Pede, fine: boolean): Mesh {
+  const A = s.head.ant, r = s.head.r[0] * 0.1, K = fine ? 10 : 6;
+  const pts = curve([0, 0, 0], [A * 0.32, A * 0.55, A * 0.62], [A * 0.78, A * 1.0, A * 0.3], K);
+  const out: Mesh[] = [tube(pts, pts.map((_, q) => r * (1 - 0.45 * q / K) * (q % 2 ? 0.82 : 1)), pts.map((_, q) => r * (1 - 0.45 * q / K) * (q % 2 ? 0.82 : 1)),
+    fine ? 6 : 4, (ring) => (ring >= K - 2 ? 'bark' : ring % 2 ? 'leafDark' : 'leaf'))];
+  const leaves = fine ? [3, 5, 7, 9] : [3, 5];
+  for (const q of leaves) {
+    const p = pts[q], d = unit(sub(pts[Math.min(K, q + 1)], pts[q - 1])), outward = unit(cross(d, [0, 0, 1]));
+    const dir = unit(add(scale(d, 0.6), scale(outward, 0.8)));
+    out.push(feather(p, dir, [0, 0, 1], A * 0.22 * (1.1 - q / K * 0.4), A * 0.07, 'leaf', { ...plateCut(fine), cup: 0.2, curl: 0.05 }));
+  }
+  return merge(...out);
+}
+
+/**
+ * The crest behind its head, in its own frame on the back of its crown: a fan of plates swept up and back, of different lengths,
+ * brown over their outer third.
  */
 function capOf(s: Pede, fine: boolean): Mesh {
   const R = s.head.r, L = s.plate.len * s.plate.cap, W = s.plate.w * 1.5;
-  const out: Mesh[] = [fan([R[0] * 0.5, R[1] * 0.35, R[2] * 0.2], s.plate.capCount, L, W, fine, 70, { from: 18, to: 68, y0: 0.6, y1: -0.8, side: 0.4 })];
-  for (const sd of [1, -1]) out.push(feather([sd * R[0] * 0.2, R[1] * 0.25, -R[2] * 0.12], unit([sd * 0.2, -1, 0.35]), unit([sd * 0.3, 0.2, 1]), L * 0.4, W * 0.6, 'leaf', plateCut(fine)));
-  return merge(...out);
+  return fan([R[0] * 0.5, R[1] * 0.5, R[2] * 0.4], s.plate.capCount, L, W, fine, 70, { from: 25, to: 72, y0: 0.6, y1: -0.6, side: 0.45 });
 }
 
 /* ---- legs ------------------------------------------------------------------------------- */
@@ -1058,8 +1085,10 @@ function pedeGlow(s: Pede, b: Bones, a: Anim): Array<{ p: V3; r: number; c: RGB;
 function pedeBuild(s: Pede, lod: number): Piece[] {
   const fine = lod > 0, n = cut(lod, 6, 10), pieces: Piece[] = [], N = s.rings;
   const sk = skullOf(s), headHide = [{ c: sk.c, r: scale(sk.r, 0.9) }];
-  if (s.arm) pieces.push({ key: 'hide', mesh: hangingHideOf(s, fine), bone: 'hide', bias: 0.05, after: ['ring0', 'plates0', 'ring1', 'plates1', 'neck', 'head'], front: [0, 1, 0], bent: hideBent(s) });
-  else pieces.push({ key: 'hide', mesh: groundHideOf(s, fine), bone: 'hide', bias: -4, bent: hideBent(s), lines: false });
+  // The hide only at its work.
+  const working = (a: Anim): boolean => a.act?.kind === 'work';
+  if (s.arm) pieces.push({ key: 'hide', mesh: hangingHideOf(s, fine), bone: 'hide', bias: 0.05, after: ['ring0', 'plates0', 'ring1', 'plates1', 'neck', 'head'], front: [0, 1, 0], bent: hideBent(s), shown: working });
+  else pieces.push({ key: 'hide', mesh: groundHideOf(s, fine), bone: 'hide', bias: -4, bent: hideBent(s), lines: false, shown: working });
   for (let i = 0; i < N; i++) {
     const R = ringR(s, i);
     pieces.push({ key: `ring${i}`, mesh: ringMesh(s, i, fine), bone: `ring${i}`, bias: 0, lines: false, breathes: { c: [0, 0, 0], k: 0.04 } });
@@ -1070,6 +1099,10 @@ function pedeBuild(s: Pede, lod: number): Piece[] {
   if (s.neck) pieces.push({ key: 'neck', mesh: neckOf(s, fine), bone: 'neck', bias: 0.04, after: ['ring0', 'plates0'], front: [0, 1, 0] });
   pieces.push({ key: 'head', mesh: headOf(s, fine, false), shut: headOf(s, fine, true), bone: 'head', bias: 0.1, lines: false });
   pieces.push({ key: 'cap', mesh: capOf(s, fine), bone: 'cap', bias: 0.11, after: ['head'], hide: headHide, hideIn: 'head' });
+  for (let q = 0; q < 2; q++) {
+    const m = antennaOf(s, fine);
+    pieces.push({ key: `ant${q}`, mesh: q ? m : mirror(m), bone: `ant${q}`, bias: 0.12, after: ['head'], thin: true });
+  }
   for (let q = 0; q < N * 2; q++) {
     const i = ringOf(q), sd = sideOf(q), key = legKey(s, q), arm = !grounded(s, q);
     const L = arm ? s.arm! : s.leg, front: V3 = [sd, 0.2, 0], m = (x: Mesh): Mesh => (sd > 0 ? x : mirror(x));
@@ -1089,7 +1122,7 @@ function pedeKind(s: Pede): Kind {
   return {
     bones: pedeBones(s),
     build: (lod) => pedeBuild(s, lod),
-    // The variant's coat is the green of its plates; its markings the cream of its fleece. Its brown, its hide, its pink nose and
+    // The variant's coat is the green of its plates; its markings the cream of its fleece. Its brown, its hide, its blush and
     // its brown eyes are the same on every variant.
     palette: (coat, mark) => {
       const green = mix(coat, [110, 120, 62], 0.3), cream = mix([238, 204, 166], mark, 0.4);
