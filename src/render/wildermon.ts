@@ -55,6 +55,7 @@ import { BRIARLING, FLORACRUX, MEADOWTIDE } from './wild-goat';
 import { KILNLET, KILNSPIRE, TERRABRICK } from './wild-kiln';
 import { LOGKIT, SAWQUILL, TIMBERBACK } from './wild-timber';
 import { PAPYRUSKIN, PRESSMERE, REEDLING } from './wild-papyrus';
+import { GLASCADE, GLIMMIP, PRISMETAIL } from './wild-glass';
 import { AWLA, GASHA, SKULKA, SPITTA, TESTA } from './wild-fighters';
 import { DUMMIBEAR, DUMMICUB, DUMMITITAN } from './wild-dummy';
 import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
@@ -172,6 +173,7 @@ export const WILDERMON: Record<string, Kind> = {
   leecha: LEECHA,
   whispet: WHISPET,
   springlet: SPRINGLET,
+  glimmip: GLIMMIP,
 };
 
 /**
@@ -229,6 +231,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   rippa: [SAWQUILL, TIMBERBACK],
   papra: [PAPYRUSKIN, PRESSMERE],
   springlet: [SPRINGSAIL, TIDECOURSER],
+  glimmip: [GLASCADE, PRISMETAIL],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

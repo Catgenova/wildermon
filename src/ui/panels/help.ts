@@ -908,7 +908,7 @@ const pedigreeSources = (): string => {
 const SHOWN_QL = 50;
 const HANDS = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa',
   'forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra',
-  'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa', 'ulva', 'dowse'];
+  'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa', 'ulva', 'dowse', 'glimmip'];
 /** A kind's two evolutions and the levels they come at: "Reedweaver at 30, Reedlord at 60". */
 const evolves = (id: string): string => {
   const st = SPECIES[id]?.stages;
@@ -1679,6 +1679,8 @@ export function helpText(): string {
       <li><b>Glassblowing</b> (Artisan), at a hot smelter: ${listed(['make_glass', 'make_glass_panel', 'make_bottle', 'make_stained_glass'].map(glassJob))}.</li>
       <li>Glazing: window ${glazing('window')} glass panels; bay window ${glazing('bay')}; glass solid wall ${glassWall()}; glass roof ${glassTile()} a tile.</li>
       <li>Failed stained glass keeps the gem and sand; other failures lose the inputs.</li>
+      <li><b>${SPECIES.glimmip.name}</b> line (settlement worker): ${GATHER_DO.glass}. Any lit smelter, charged or not; does not light or fuel it. Lumps only.
+      Evolves: ${evolves('glimmip')}.</li>
       <li><b>Bottle</b>: holds ${itemDef('bottle').holds ?? 0} of one food or drink; contents rot at ${frac(itemDef('bottle').shelter ?? 1)} of the rate on the ground.</li>
       <li>Solid <b>stained glass</b> wall: ${billIn(WALL_MATERIALS.find((m) => m.id === 'stained_glass')?.bill ?? [])}; trowel; trains masonry. One firing glazes one wall.
       ${stainedOnly()}</li>
@@ -3046,7 +3048,7 @@ export function helpText(): string {
     <ul>
       <li>${HANDS.length} chore workers, set to a settlement as usual, working within their reach of the totem. ${HANDS.filter((id) => TEND_JOBS.has(SPECIES[id].gathers!)).length} work at the settlement stores
       or at one of your stations: output goes into that store, else any settlement store that takes it, else onto the ground there.
-      No tools: no ${listedOr(workerSkipsTools())} needed in the stores, none worn. Stations still needed: spindle, paper press, anvil, lit campfire or oven, smelter, kiln, barrel.</li>
+      No tools: no ${listedOr(workerSkipsTools())} needed in the stores, none worn. Stations still needed: spindle, paper press, anvil, lit campfire or oven, smelter (lit, for glass), kiln, barrel.</li>
       ${HANDS.map((id) => {
         const d = SPECIES[id];
         return `<li><b>${d.name}</b> (taming ${d.tameLevel}): ${GATHER_DO[d.gathers!]}${HAND_NUMBERS[id] ? `; ${HAND_NUMBERS[id]}` : ''}.</li>`;

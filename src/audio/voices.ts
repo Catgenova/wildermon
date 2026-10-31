@@ -17,6 +17,7 @@ import { VANARI_VOICE } from './voice-vanari';
 import { VINE_VOICE } from './voice-vine';
 import { BRIAR_VOICE } from './voice-briar';
 import { GNAW_VOICE } from './voice-gnaw';
+import { GLASS_VOICE } from './voice-glass';
 import { GOAT_VOICE } from './voice-goat';
 import { GHOST_VOICE } from './voice-ghost';
 import { HAUL_VOICE } from './voice-haul';
@@ -166,4 +167,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   papra: PAPYRUS_VOICE,
   // The Springlet, the Springsail and the Tidecourser.
   springlet: TIDE_VOICE,
+  // The Glimmip, the Glascade and the Prismetail.
+  glimmip: GLASS_VOICE,
 };
