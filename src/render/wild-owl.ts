@@ -42,7 +42,7 @@ interface Pinion { at: number; len: number; w: number; fold: number; open: numbe
 type Plume = readonly [number, number, number, number, Mat, Mat];
 
 /** How far its wings are spread (nought folded, one fanned open), rolled up and out about the shoulder (degrees), and swept forward. */
-interface WingSet { spread: number; raise: number; sweep: number }
+interface WingSet { spread: number; raise: number; sweep: number; turn?: number; tilt?: number }
 
 interface Owl {
   stage: 0 | 1 | 2;
@@ -126,25 +126,25 @@ const WHISPLING_LOOK: Owl = {
     peck: 30, tip: 24, nose: 26, crouch: 0.3, stance: 1,
   },
   body: { c: [0, 0, -0.14], r: [1.12, 0.98, 0.86], green: 0.1 },
-  mantle: { rows: 4, count: 11, len: 0.3, w: 0.15, from: 0.72, to: 0.2, round: 150 },
+  mantle: { rows: 5, count: 14, len: 0.3, w: 0.15, from: 0.74, to: 0.16, round: 150 },
   ruff: { n: 13, len: 0.46, w: 0.17, round: 132, at: 0.78 },
   bib: { rows: 5, len: 0.24 },
   head: { c: [0, 0.04, 0.36], r: [0.72, 0.64, 0.62] },
   eye: { dir: [0.37, 0.88, 0.22], size: 0.145 },
   beak: { len: 0.19, w: 0.075 },
   ear: { at: [0.46, -0.02, 0.8], len: 0.5, w: 0.3, out: 40, back: 6 },
-  tuft: fan(9, 1.2, 0.27, 0, 112),
+  tuft: fan(11, 1.15, 0.2, -4, 112),
   wing: {
     at: [1.0, 0.04, 0.42],
     arm: [0, -0.4, -1],
     reach: 30,
     pinions: [
       // The flight feathers, peach and cream, round the side from the front of the flank to the back, nearly to its feet.
-      ...row(8, { at: [0.2, 0.3], len: [1.12, 1.24], w: 0.27, fold: [-96, -66], open: [-40, 40], layer: 0, flare: 0.42, yaw: [-48, 62], mats: PEACHES }),
+      ...row(11, { at: [0.2, 0.3], len: [1.12, 1.24], w: 0.27, fold: [-96, -66], open: [-40, 40], layer: 0, flare: 0.42, yaw: [-48, 62], mats: PEACHES }),
       // Rows of green coverts over them, shorter row by row, the top one the scale-feathers of the shoulder.
-      ...row(8, { at: [0.06, 0.12], len: [0.8, 0.86], w: 0.25, fold: [-96, -64], open: [-30, 34], layer: 0.08, flare: 0.36, yaw: [-52, 58], mats: GREENS }),
-      ...row(7, { at: [0.0, 0.04], len: [0.52, 0.56], w: 0.23, fold: [-94, -62], open: [-20, 30], layer: 0.15, flare: 0.3, yaw: [-50, 54], mats: GREENS }),
-      ...row(6, { at: [-0.04, 0], len: [0.32, 0.34], w: 0.2, fold: [-92, -60], open: [-10, 24], layer: 0.21, flare: 0.24, yaw: [-44, 50], mats: GREENS }),
+      ...row(11, { at: [0.06, 0.12], len: [0.8, 0.86], w: 0.25, fold: [-96, -64], open: [-30, 34], layer: 0.08, flare: 0.36, yaw: [-52, 58], mats: GREENS }),
+      ...row(10, { at: [0.0, 0.04], len: [0.52, 0.56], w: 0.23, fold: [-94, -62], open: [-20, 30], layer: 0.15, flare: 0.3, yaw: [-50, 54], mats: GREENS }),
+      ...row(9, { at: [-0.04, 0], len: [0.32, 0.34], w: 0.2, fold: [-92, -60], open: [-10, 24], layer: 0.21, flare: 0.24, yaw: [-44, 50], mats: GREENS }),
     ],
     rest: { spread: 0, raise: 0, sweep: 0 },
   },
@@ -159,7 +159,7 @@ const HUSHWING_LOOK: Owl = {
   spec: {
     high: 1.7,
     leg: { at: [0.32, 0.22, -0.56], len: [0.48, 0.5, 0.06], rest: [-14, -30] },
-    neck: { at: [0, 0.6, 0.56], len: 0.3, lean: 10 },
+    neck: { at: [0, 0.66, 0.62], len: 0.3, lean: 10 },
     head: { pitch: -10 },
     wing: { at: [0.5, 0.3, 0.32] },
     tail: { at: [0, -0.9, -0.1], lift: -58 },
@@ -169,29 +169,29 @@ const HUSHWING_LOOK: Owl = {
     waddle: 3,
     peck: 34, tip: 22, nose: 24, crouch: 0.4, stance: 1,
   },
-  body: { c: [0, 0, 0], r: [0.8, 1.04, 0.86], green: 0.45 },
-  mantle: { rows: 5, count: 9, len: 0.38, w: 0.16, from: 0.66, to: -0.1, round: 115 },
+  body: { c: [0, 0, 0], r: [0.94, 1.14, 0.98], green: 0.45 },
+  mantle: { rows: 6, count: 12, len: 0.4, w: 0.17, from: 0.7, to: -0.3, round: 128 },
   ruff: { n: 14, len: 0.6, w: 0.18, round: 140, at: 0.68 },
   bib: { rows: 6, len: 0.3 },
-  head: { c: [0, 0.06, 0.44], r: [0.82, 0.74, 0.7] },
+  head: { c: [0, 0.06, 0.46], r: [0.9, 0.8, 0.76] },
   eye: { dir: [0.38, 0.87, 0.24], size: 0.14 },
   beak: { len: 0.2, w: 0.075 },
-  ear: { at: [0.54, -0.02, 0.92], len: 0.54, w: 0.34, out: 42, back: 8 },
-  tuft: fan(10, 1.35, 0.28, 0, 108),
+  ear: { at: [0.6, -0.02, 1.0], len: 0.58, w: 0.36, out: 42, back: 8 },
+  tuft: fan(12, 1.3, 0.21, -4, 108),
   wing: {
-    at: [0.74, 0.42, 0.56],
-    arm: [0, -1, -0.1],
-    reach: 100,
+    at: [0.84, 0.4, 0.56],
+    arm: [0, -1, -0.06],
+    reach: 40,
     pinions: [
-      // The flight feathers, cream and peach, broad and long, rooted along the arm and fanned so their tips stand apart.
-      ...row(10, { at: [0.15, 2.1], len: [2.0, 3.0], w: 0.38, fold: [-6, -2], open: [4, 136], layer: 0, mats: PEACHES }),
-      // The coverts: green, in two rows along the leading edge, over and under the roots of the flight feathers.
-      ...row(10, { at: [0.05, 2.1], len: [2.0, 1.6], w: 0.34, fold: [-4, -4], open: [50, 112], layer: 0.16, mats: GREENS }),
-      ...row(9, { at: [0.05, 2.1], len: [0.9, 0.8], w: 0.28, fold: [-4, -4], open: [84, 112], layer: 0.22, mats: GREENS }),
-      ...row(10, { at: [0.05, 2.1], len: [2.0, 1.6], w: 0.34, fold: [-4, -4], open: [50, 112], layer: -0.09, mats: GREENS }),
-      ...row(9, { at: [0.05, 2.1], len: [0.9, 0.8], w: 0.28, fold: [-4, -4], open: [84, 112], layer: -0.14, mats: GREENS }),
+      // Built folded back along the flank and spread out to the side (`WingSet.turn`): the arm up and out at its reach, and the flight
+      // feathers, cream and peach, fanned from hanging down by the body to reaching out past its tip, their tips apart.
+      ...row(13, { at: [0.12, 2.3], len: [1.35, 2.9], w: 0.4, fold: [-4, -2], open: [-58, 46], layer: 0, mats: PEACHES }),
+      // The coverts, green, over the upper third of the wing's face in two rows along the arm, and on its back.
+      ...row(13, { at: [0.06, 2.3], len: [1.0, 1.1], w: 0.36, fold: [-4, -2], open: [-48, 42], layer: 0.1, mats: GREENS }),
+      ...row(12, { at: [0.0, 2.25], len: [0.6, 0.6], w: 0.3, fold: [-4, -2], open: [-36, 40], layer: 0.16, mats: GREENS }),
+      ...row(13, { at: [0.06, 2.3], len: [1.0, 1.1], w: 0.36, fold: [-4, -2], open: [-48, 42], layer: -0.08, mats: GREENS }),
     ],
-    rest: { spread: 0.92, raise: 60, sweep: 66 },
+    rest: { spread: 1, raise: 0, sweep: 0, turn: 90, tilt: 35 },
   },
   tail: [
     [2.3, 0.22, 0, 0, 'bloom', 'petal'], [2.2, 0.21, 4, -10, 'petal', 'bloom'], [2.2, 0.21, 4, 10, 'bloom', 'petal'],
@@ -218,7 +218,7 @@ const SONGROOST_LOOK: Owl = {
     peck: 40, tip: 18, nose: 20, crouch: 0.35, stance: 1,
   },
   body: { c: [0, 0, 0.1], r: [1.04, 0.84, 1.44], green: 0.35 },
-  mantle: { rows: 7, count: 11, len: 0.46, w: 0.18, from: 0.86, to: -0.4, round: 140 },
+  mantle: { rows: 7, count: 14, len: 0.46, w: 0.18, from: 0.86, to: -0.4, round: 150 },
   ruff: { n: 15, len: 0.72, w: 0.2, round: 145, at: 0.86 },
   bib: { rows: 8, len: 0.3 },
   collar: { rows: 3, len: 0.5, w: 0.17 },
@@ -226,22 +226,23 @@ const SONGROOST_LOOK: Owl = {
   eye: { dir: [0.4, 0.86, 0.22], size: 0.11 },
   beak: { len: 0.2, w: 0.075 },
   ear: { at: [0.38, -0.02, 0.72], len: 0.5, w: 0.26, out: 24, back: 6 },
-  tuft: fan(8, 1.55, 0.26, -6, 48),
+  tuft: fan(9, 1.5, 0.2, -8, 50),
   crest: [
     [1.3, 0.2, 0, 0, 'leaf', 'leafDark'], [1.15, 0.19, 24, 0, 'moss', 'leaf'], [1.0, 0.18, 48, 0, 'leaf', 'moss'],
     [0.85, 0.17, 72, 0, 'leafDark', 'leaf'], [1.05, 0.18, -20, 0, 'petal', 'feather'],
   ],
   wing: {
-    at: [1.0, 0.02, 1.0],
+    at: [1.08, 0.04, 1.06],
     arm: [0, -0.3, -1],
     reach: 30,
     pinions: [
       // The cloak: long flight feathers, cream and peach, hanging close from the shoulder round to the back, the back ones longest and
       // trailing behind it to the ground; long green ones over them; rows of green coverts over the shoulder.
-      ...row(8, { at: [0.3, 0.3], len: [2.5, 3.9], w: 0.34, fold: [-92, -58], open: [30, -16], layer: 0, flare: 0.12, yaw: [-4, 90], mats: PEACHES }),
-      ...row(7, { at: [0.16, 0.16], len: [2.2, 3.5], w: 0.28, fold: [-92, -60], open: [26, -8], layer: 0.07, flare: 0.12, yaw: [-8, 86], mats: GREENS }),
-      ...row(7, { at: [0.04, 0.04], len: [1.4, 1.8], w: 0.26, fold: [-88, -66], open: [20, 10], layer: 0.14, flare: 0.1, yaw: [-10, 84], mats: GREENS }),
-      ...row(6, { at: [0.0, 0.0], len: [0.86, 0.94], w: 0.23, fold: [-84, -70], open: [10, 10], layer: 0.21, flare: 0.08, yaw: [-8, 82], mats: GREENS }),
+      ...row(12, { at: [0.3, 0.3], len: [2.0, 4.0], w: 0.36, fold: [-96, -58], open: [30, -16], layer: 0, flare: 0.34, yaw: [-72, 90], mats: PEACHES }),
+      ...row(11, { at: [0.16, 0.16], len: [1.8, 3.6], w: 0.3, fold: [-96, -60], open: [26, -8], layer: 0.07, flare: 0.32, yaw: [-76, 86], mats: GREENS }),
+      ...row(11, { at: [0.04, 0.04], len: [1.2, 1.8], w: 0.28, fold: [-92, -66], open: [20, 10], layer: 0.14, flare: 0.28, yaw: [-78, 84], mats: GREENS }),
+      ...row(10, { at: [0.0, 0.0], len: [0.8, 0.94], w: 0.25, fold: [-88, -70], open: [10, 10], layer: 0.21, flare: 0.22, yaw: [-80, 82], mats: GREENS }),
+      ...row(9, { at: [-0.04, -0.04], len: [0.48, 0.52], w: 0.22, fold: [-84, -70], open: [10, 10], layer: 0.27, flare: 0.18, yaw: [-80, 80], mats: GREENS }),
     ],
     rest: { spread: 0, raise: -4, sweep: 0 },
   },
@@ -300,21 +301,27 @@ function onShell(c: V3, r: V3, d: V3): { p: V3; n: V3 } {
   return { p: [c[0] + u[0] * r[0], c[1] + u[1] * r[1], c[2] + u[2] * r[2]], n: unit([u[0] / r[0], u[1] / r[1], u[2] / r[2]]) };
 }
 
+/** The darker line down a feather's middle, by the colour of its face: a dark green on a green one, a deeper peach on the rest. */
+const ribOf = (m: Mat): Mat => (m === 'leaf' || m === 'moss' || m === 'leafDark' ? 'spot' : m === 'coat' || m === 'coatLight' ? 'coatDark' : 'featherDark');
+
 /**
- * A leaf-feather from `root` along `dir`, `len` long and `w` across each side of its shaft, its face turned along `face`: two halves
- * either side of a shaft that bows a little toward its face, each its own colour, cupped, and pointed at the tip.
+ * A leaf-feather from `root` along `dir`, `len` long and `w` across each side of its shaft, its face turned along `face`: a long oval,
+ * narrow at its root and rounded at its tip, two halves either side of a shaft that bows a little toward its face, each its own
+ * colour, cupped, and a darker line painted down the shaft on its face.
  */
 function vane(root: V3, dir: V3, face: V3, len: number, w: number, mats: readonly [Mat, Mat], o: { curl?: number; cup?: number; back?: Mat } = {}): Mesh {
   const d = unit(dir), f = unit(sub(face, scale(d, dot(face, d)))), side = unit(cross(d, f));
-  const K = 5, curl = o.curl ?? 0.1, cup = o.cup ?? 0.2;
+  const K = 8, curl = o.curl ?? 0.1, cup = o.cup ?? 0.2;
   const rib: V3[] = [], L: V3[] = [], R: V3[] = [];
   for (let k = 0; k <= K; k++) {
-    const u = k / K, bow = Math.sin(Math.PI * u) * len * curl;
+    // Closer together toward the tip, where it rounds off.
+    const u = 1 - (1 - k / K) ** 1.5, bow = Math.sin(Math.PI * u) * len * curl;
     const p = add(add(root, scale(d, len * u)), scale(f, bow - len * curl * 0.6 * u * u));
     rib.push(p);
     if (k === 0 || k === K) continue;
-    // Broadest a little past its middle, as a feather is.
-    const ww = w * Math.sin(Math.PI * u ** 0.75);
+    // An oval broadest past its middle: narrow at the root, full nearly to the end, and rounded off over the last of it.
+    const x = (u - 0.58) / (u < 0.58 ? 0.6 : 0.44);
+    const ww = w * Math.sqrt(Math.max(0, 1 - x * x));
     L.push(add(add(p, scale(side, -ww)), scale(f, -ww * cup)));
     R.push(add(add(p, scale(side, ww)), scale(f, -ww * cup)));
   }
@@ -323,7 +330,16 @@ function vane(root: V3, dir: V3, face: V3, len: number, w: number, mats: readonl
   const halfL = [...ribI, ...[...LI].reverse()], halfR = [...ribI, ...[...RI].reverse()];
   const back = o.back ?? mats[1];
   const faces: Face[] = [{ i: halfL, m: mats[0] }, { i: [...halfR], m: mats[1] }, { i: [...halfL], m: back }, { i: [...halfR], m: back }];
-  return mesh(v, woundTo(v, faces, [f, f, scale(f, -1), scale(f, -1)]));
+  const blade = mesh(v, woundTo(v, faces, [f, f, scale(f, -1), scale(f, -1)]));
+  // The shaft: a strip down the middle of its face, narrowing to nothing short of the tip.
+  const vw = w * 0.08, end = K - 1;
+  const strip = [
+    ...rib.slice(0, end + 1).map((p, k) => add(add(p, scale(side, vw * (1 - k / end))), scale(f, 0.006))),
+    ...rib.slice(0, end + 1).reverse().map((p, k) => add(add(p, scale(side, -vw * (k / end))), scale(f, 0.006))),
+  ];
+  const sv = strip.slice();
+  const shaft = mesh(sv, woundTo(sv, [{ i: sv.map((_, q) => q), m: ribOf(mats[0]), decal: true }], [f]));
+  return merge(blade, shaft);
 }
 
 /** Leaf-feathers from a root, each `up` degrees from `axis` toward `toward` and `out` to the side, faced along `face`. */
@@ -383,14 +399,14 @@ function wingsOf(s: Owl, a: Anim): [WingSet, WingSet] {
     const fwd = ramp(act.t, hit - 0.12, hit) * (1 - ramp(act.t, hit + 0.12, 0.96));
     for (const w of [L, Rt]) {
       w.spread = lerp(w.spread, 0.95, k);
-      w.raise = lerp(w.raise, out * [70, 76, 56][s.stage], k);
+      w.raise = lerp(w.raise, [-70, -26, -56][s.stage], k);
       w.sweep = lerp(w.sweep, 34, fwd);
     }
   } else if (act?.kind === 'evolve') {
     const k = ramp(act.t, 0.18, 0.46) * (1 - ramp(act.t, 0.64, 0.95));
     for (const w of [L, Rt]) {
       w.spread = lerp(w.spread, 1, k);
-      w.raise = lerp(w.raise, out * [80, 74, 64][s.stage], k);
+      w.raise = lerp(w.raise, [-80, -34, -64][s.stage], k);
       w.sweep = lerp(w.sweep, 10, k);
     }
   } else if (act?.kind === 'work') {
@@ -398,12 +414,12 @@ function wingsOf(s: Owl, a: Anim): [WingSet, WingSet] {
     const B = brushOf(act.t);
     const w = BRUSH_SIDE > 0 ? Rt : L;
     w.spread = lerp(w.spread, [0.7, 0.7, 0.6][s.stage], B.on);
-    w.raise = lerp(w.raise, out * ([72, 96, 62][s.stage] + 8 * B.stroke), B.on);
+    w.raise = lerp(w.raise, [-72, 34, -62][s.stage] + out * 8 * B.stroke, B.on);
     w.sweep = lerp(w.sweep, -20 + 60 * B.stroke, B.on);
     // The other held a little out for balance, the Hushwing's lowered a little.
     const o = BRUSH_SIDE > 0 ? L : Rt;
-    o.spread = lerp(o.spread, s.stage === 1 ? 0.6 : 0.15, B.on);
-    o.raise = lerp(o.raise, out * (s.stage === 1 ? 44 : 12), B.on);
+    o.spread = lerp(o.spread, s.stage === 1 ? 1 : 0.15, B.on);
+    o.raise = lerp(o.raise, s.stage === 1 ? -10 : -12, B.on);
   } else {
     const g = a.go, w = frac(a.u);
     if (s.stage === 1) {
@@ -608,7 +624,18 @@ type Span = [number, number, V3, number, V3, number];
 
 /** A wing's corners as it is this moment (`wingsOf`), on the left (`sd` -1) or the right: fanned, rolled up and out, swept forward. */
 function wingBent(v: readonly V3[], spans: readonly Span[], W: WingSet, sd: number): V3[] {
-  const out = fanned(v, spans, W.spread, sd);
+  let out = fanned(v, spans, W.spread, sd);
+  // Turned about the upright at the shoulder first, for a wing spread out to the side rather than back: what lay back along the
+  // flank points out from it, and the wing's face turns to the front.
+  if (W.turn) {
+    const t = sd * W.turn * DEG, ct = Math.cos(t), st = Math.sin(t);
+    out = out.map(([x0, y0, z0]) => [x0 * ct - y0 * st, x0 * st + y0 * ct, z0] as V3);
+  }
+  // And leant back about the line across the shoulders, so its face looks up as well as forward.
+  if (W.tilt) {
+    const t = W.tilt * DEG, ct = Math.cos(t), st = Math.sin(t);
+    out = out.map(([x0, y0, z0]) => [x0, y0 * ct - z0 * st, y0 * st + z0 * ct] as V3);
+  }
   if (Math.abs(W.raise) < 0.01 && Math.abs(W.sweep) < 0.01) return out;
   const r = sd * W.raise * DEG, y = -sd * W.sweep * DEG;
   const cr = Math.cos(r), sr = Math.sin(r), cy = Math.cos(y), sy = Math.sin(y);
@@ -798,7 +825,7 @@ function owlBuild(s: Owl, lod: number): Piece[] {
         { key: `ear${q}`, mesh: mine(ear), bone: `tuft${q}`, bias: 0.22, after: ['head', `tuft${q}`], front: [sd * 0.3, 1, 0.2], thin: true },
         { key: `tuft${q}`, mesh: mine(tuft), bone: `tuft${q}`, bias: 0.19, after: ['head'], front: [sd, -0.3, 0.3], hide: [{ c: H.c, r: scale(H.r, 0.92) }], hideIn: 'head', thin: true },
         {
-          key: `wing${q}`, mesh: mine(wing.mesh), bone: `wing${q}`, bias: 0.05, after: ['body', 'mantle'], front: [sd, 0, 0], thin: true,
+          key: `wing${q}`, mesh: mine(wing.mesh), bone: `wing${q}`, bias: 0.05, after: ['body', 'mantle'], front: [sd, 0, 0], ...(s.stage === 1 ? { thin: true } : { airy: true }),
           bent: (v, a) => wingBent(v, wing.spans, wingsOf(s, a)[q], sd),
         },
         // The owlet's thighs are lost in its body; the others' are a cream fluff.
@@ -874,7 +901,7 @@ function owlKind(s: Owl): Kind {
     // The variant's coat is the green of its leaf-feathers, its markings their peach; the cream, the eyes, the beak and the talons are
     // the same on every variant.
     palette: (coat, mark) => {
-      const sage = mix([132, 164, 100], coat, 0.4);
+      const sage = mix([157, 184, 112], coat, 0.4);
       const peach = mix([246, 174, 128], mark, 0.45);
       const cream: RGB = [255, 240, 216];
       return coatPalette(coat, mark, {
@@ -883,7 +910,7 @@ function owlKind(s: Owl): Kind {
         coatDark: [244, 226, 200],
         belly: [252, 238, 214],
         leaf: sage,
-        leafDark: mix(sage, [70, 104, 62], 0.45),
+        leafDark: mix(sage, [68, 100, 56], 0.5),
         moss: mix(sage, [184, 198, 112], 0.42),
         petal: peach,
         bloom: mix(peach, [238, 138, 156], 0.7),

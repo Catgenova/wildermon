@@ -2263,7 +2263,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     workRange: 8,
     // [leaf-feathers, peach]: the sheet's olive sage with peach, moss with rose, straw with apricot, and sea-sage with pink.
     variants: [
-      ['#8fae6a', '#f4b48a'],
+      ['#9db870', '#f4b48a'],
       ['#6c9a6c', '#f0a4a8'],
       ['#b4a45a', '#f6c084'],
       ['#78a092', '#eeb0c4'],
