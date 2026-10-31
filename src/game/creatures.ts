@@ -755,6 +755,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   rippa: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   papra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   glimmip: { kind: 'more', n: 1, what: 'glass lumps per batch' },
+  tanna: { kind: 'loads', n: 1, what: 'hides per cycle' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2332,8 +2333,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   tanna: {
     id: 'tanna',
-    name: 'Tanna',
+    name: 'Peltling',
+    was: ['Tanna'],
+    // Asked for, with a reference sheet: Peltling, Peltipede, Hideweaver.
     description: 'Settlement task: tan hides in your settlement stores, a hide and {tanLye} L lye per leather. No carving knife needed. Output: your settlement stores.',
+    stages: [
+      { name: 'Peltipede', description: '' },
+      { name: 'Hideweaver', description: '' },
+    ],
     health: 22,
     attack: 3,
     speed: 2,
@@ -2344,11 +2351,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'tan',
     workRange: 6,
+    // [feather plates, fleece]: the sheet's sage with cream, moss with oatmeal, sea sage with white, and olive with peach.
     variants: [
-      ['#7a5634', '#d9b98e'],
-      ['#5e4630', '#c7a982'],
-      ['#8c6a43', '#e6cba2'],
-      ['#4d3b2c', '#b39878'],
+      ['#8f9a58', '#f4dcbc'],
+      ['#6f8a4c', '#eed8b4'],
+      ['#7f9a84', '#f4ece0'],
+      ['#aaa052', '#f8dcc4'],
     ],
     butcher: { meat: 3, fur: 3, leather: 3, bone: 2 },
     nearWater: true,
@@ -4631,7 +4639,7 @@ sayLine('stona', `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('ward
 // The seven lines asked for on 22–23 October: each one's words as its kind already says them, at every stage.
 for (const [id, level] of [['magga', 'foraging'], ['grazza', 'foraging'], ['grubba', 'digging'], ['wurla', 'digging'],
   ['mudda', 'pottery'], ['dippa', 'carrying'], ['middun', 'farming']] as const) sayLine(id, SPECIES[id].description, `Level: ${level}.`);
-for (const id of ['plucka', 'grista', 'relka']) sayLine(id, SPECIES[id].description, `Level: ${GATHER_SKILL[SPECIES[id].gathers!]}.`);
+for (const id of ['plucka', 'grista', 'relka', 'tanna']) sayLine(id, SPECIES[id].description, `Level: ${GATHER_SKILL[SPECIES[id].gathers!]}.`);
 sayLine('vesp', SPECIES.vesp.description, 'Level: animal husbandry.');
 sayLine('bedda', SPECIES.bedda.description, 'Level: farming.');
 sayLine('petta', SPECIES.petta.description, 'Level: foraging.');

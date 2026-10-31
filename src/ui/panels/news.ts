@@ -4229,6 +4229,15 @@ export const NEWS: News[] = [
       'Changes at a phrase end, over a harp bridge. Sign-in page: Music on/off button. Melody softer on every track.'],
   },
   {
+    n: 402,
+    day: '2026-10-31',
+    lines: () => {
+      const d = SPECIES.tanna, [one, two] = d.stages!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Tans ${STAGE_LOADS[0]}, ${STAGE_LOADS[1]} and ${STAGE_LOADS[2] + STAGE_PERKS.tanna.n} hides a cycle by stage. Stage 3 skill: ${two.name} ${perkSays('tanna')}.`,
+        'Each stage: own model, animations and voice.'];
+    },
+  },
+  {
     n: 397,
     day: '2026-10-31',
     lines: () => {
