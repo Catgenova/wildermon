@@ -7,6 +7,7 @@ import type { Track } from '../score';
  */
 export const BLOSSOM: Track = {
   id: 'blossom',
+  name: 'Blossom',
   bpm: 52,
   beats: 4,
   sections: {

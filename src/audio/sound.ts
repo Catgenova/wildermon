@@ -309,6 +309,11 @@ export class Sound {
     this.master.connect(this.ctx.destination);
   }
 
+  /** The audio context once armed, for the soundtrack (`music/music.ts`) to play through as well. */
+  get audio(): AudioContext | null {
+    return this.ctx;
+  }
+
   get volume(): number {
     return Math.max(0, Math.min(1, this.game.settings.volume));
   }

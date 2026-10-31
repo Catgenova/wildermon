@@ -173,6 +173,29 @@ export class SettingsPanel {
       row.append(input, text);
       display.append(row);
     }
+    // The soundtrack's own level, beside the effects'.
+    {
+      const row = document.createElement('label');
+      row.className = 'setting-row setting-pick';
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.min = '0';
+      input.max = '100';
+      input.step = '5';
+      input.value = String(Math.round(game.settings.music * 100));
+      const text = document.createElement('span');
+      const say = (): void => {
+        const pc = Math.round(game.settings.music * 100);
+        setMarkup(text, html`<b>Music &mdash; ${pc === 0 ? 'off' : `${pc}%`}</b><small>Piano soundtrack volume.</small>`);
+      };
+      say();
+      input.addEventListener('input', () => {
+        game.settings.music = Number(input.value) / 100;
+        say();
+      });
+      row.append(input, text);
+      display.append(row);
+    }
     /*
      * How big the interface is drawn: "Text and window size. There's no
      * setting for it, and that matters on a phone."

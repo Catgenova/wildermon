@@ -62,6 +62,8 @@ export const SETTING_DEFAULTS = {
    * somebody else's world.
    */
   volume: 0.55,
+  /** How loud the piano soundtrack is, 0 for none (`src/audio/music/music.ts`). Kept here for the same reason as `volume`. */
+  music: 0.4,
   /**
    * How big every window, menu and bar is drawn, and the writing in them, as
    * a share of the size the screen would give them anyway (`setUiSize` in

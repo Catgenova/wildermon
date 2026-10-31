@@ -44,6 +44,7 @@ import { warmMasonry } from './render/masonry';
 import { warmMeadow } from './render/meadow';
 import { Renderer, skyWash, sunAt, type Pick } from './render/renderer';
 import { Sound } from './audio/sound';
+import { Music } from './audio/music/music';
 import { PUFFS, PUFF_LIFE, PUFF_RISE, puffAge, puffOf } from './render/smoke';
 import { DUST_LIFE } from './render/dust';
 import { FLOAT_LIFE, FLOAT_RISE, Floaters, MERGE_WINDOW } from './render/floaters';
@@ -251,6 +252,8 @@ const sound = new Sound(game, camera);
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) {
   window.addEventListener(ev, () => sound.arm(), { passive: true });
 }
+// The soundtrack plays through the same context, so it starts off the same click.
+const music = new Music(game, () => sound.audio);
 
 const ui = new UI(game, renderer, uiRoot, canvasEl, { turn: turnView, keys, island });
 // A window or bar moved or resized against another clicks as they join.
@@ -580,6 +583,7 @@ const loop = new GameLoop(
     }
 
     sound.step();
+    music.step();
 
     ui.hoverFrame(input.pointer, input.dragging, dropOver);
   },

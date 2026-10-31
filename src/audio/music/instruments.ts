@@ -100,7 +100,7 @@ export const pianoRing = (m: number): number => 14 * 2 ** (-((m - 33) / 12) * 0.
  *   tail after it, the way a real string hands its energy to the soundboard.
  * - `vel` (0..1) sets how hard: harder is brighter and has a sharper start.
  */
-export function feltPiano(sr: number, m: number, vel: number): Float32Array {
+export function* feltPiano(sr: number, m: number, vel: number): Making {
   vel = clamp01(vel);
   const f0 = midiHz(m);
   const t60 = pianoRing(m);
@@ -129,13 +129,19 @@ export function feltPiano(sr: number, m: number, vel: number): Float32Array {
     const ph2 = rnd() * Math.PI * 2;
     // First string, then the second slightly sharp and a little quieter so the beat never cancels out.
     partial(out, sr, hz, a * prompt, fast, ph);
+    yield;
     partial(out, sr, hz, a * (1 - prompt), slow, ph);
+    yield;
     partial(out, sr, hz * detune, a * prompt * 0.7, fast, ph2);
+    yield;
     partial(out, sr, hz * detune, a * (1 - prompt) * 0.7, slow * 1.08, ph2);
+    yield;
   }
   // The hammer itself, through the felt, and the knock of the action under it.
   knock(out, sr, rnd, 0.05 + 0.06 * vel, 0.011, 500 + 900 * vel, 160);
+  yield;
   partial(out, sr, 118 + 12 * rnd(), 0.008 + 0.006 * vel, 0.03, 0);
+  yield;
   shape(out, sr, 0.0035 + 0.007 * (1 - vel), Math.min(0.6, secs * 0.2));
   return level(out, 0.9);
 }
@@ -146,7 +152,7 @@ export function feltPiano(sr: number, m: number, vel: number): Float32Array {
  * scale; the high two die within a fraction of a second, which is the ting.
  * Each note is two tines a hair apart, as a comb doubles its tunes.
  */
-export function musicBox(sr: number, m: number, vel: number): Float32Array {
+export function* musicBox(sr: number, m: number, vel: number): Making {
   vel = clamp01(vel);
   const f0 = midiHz(m);
   const t60 = 3.4 * 2 ** (-((m - 84) / 12) * 0.5);
@@ -155,10 +161,15 @@ export function musicBox(sr: number, m: number, vel: number): Float32Array {
   const rnd = seq(m * 104729 + 3);
   const tau = t60 / 6.91;
   partial(out, sr, f0, 1, tau, 0);
+  yield;
   partial(out, sr, f0 * 2 ** (1.6 / 1200), 0.45, tau * 0.9, rnd() * 6.28);
+  yield;
   partial(out, sr, f0 * 6.27, 0.3 * (0.5 + vel), 0.055, rnd() * 6.28);
+  yield;
   partial(out, sr, f0 * 17.55, 0.1 * (0.5 + vel), 0.011, rnd() * 6.28);
+  yield;
   knock(out, sr, rnd, 0.12 * (0.4 + vel), 0.0025, 9000, 2500);
+  yield;
   shape(out, sr, 0.0008, 0.3);
   return level(out, 0.85);
 }
@@ -168,7 +179,7 @@ export function musicBox(sr: number, m: number, vel: number): Float32Array {
  * resonators bring the note forward and leave little else, so it is nearly
  * a pure tone with a faint bell above it and a soft thunk below.
  */
-export function celesta(sr: number, m: number, vel: number): Float32Array {
+export function* celesta(sr: number, m: number, vel: number): Making {
   vel = clamp01(vel);
   const f0 = midiHz(m);
   const t60 = 2.8 * 2 ** (-((m - 72) / 12) * 0.55);
@@ -177,10 +188,15 @@ export function celesta(sr: number, m: number, vel: number): Float32Array {
   const rnd = seq(m * 15485863 + 11);
   const tau = t60 / 6.91;
   partial(out, sr, f0, 1, tau, 0);
+  yield;
   partial(out, sr, f0 * 2, 0.09 + 0.06 * vel, tau / 3, rnd() * 6.28);
+  yield;
   partial(out, sr, f0 * 2.76, 0.06 + 0.05 * vel, tau / 6, rnd() * 6.28);
+  yield;
   partial(out, sr, f0 * 5.4, 0.025 * (0.5 + vel), tau / 14, rnd() * 6.28);
+  yield;
   knock(out, sr, rnd, 0.05, 0.007, 900, 180);
+  yield;
   shape(out, sr, 0.0025, 0.3);
   return level(out, 0.85);
 }
@@ -190,7 +206,7 @@ export function celesta(sr: number, m: number, vel: number): Float32Array {
  * Gut and nylon are warm: harmonic partials falling away quickly above the
  * fourth, and the upper ones dying first.
  */
-export function harp(sr: number, m: number, vel: number): Float32Array {
+export function* harp(sr: number, m: number, vel: number): Making {
   vel = clamp01(vel);
   const f0 = midiHz(m);
   const t60 = 6 * 2 ** (-((m - 48) / 12) * 0.6);
@@ -204,15 +220,24 @@ export function harp(sr: number, m: number, vel: number): Float32Array {
     if (hz > Math.min(8000, sr * 0.45)) break;
     const a = Math.abs(Math.sin(Math.PI * n * 0.29)) / n ** tilt;
     partial(out, sr, hz, a, tau / (1 + 0.45 * (n - 1)), rnd() * 6.28);
+    yield;
   }
   knock(out, sr, rnd, 0.012 + 0.012 * vel, 0.003, 2200, 400);
+  yield;
   shape(out, sr, 0.0015, 0.4);
   return level(out, 0.85);
 }
 
+/**
+ * A note being worked out, a partial at a time. Each step is one partial of
+ * one string — a millisecond or two — so the making can be spread over frames
+ * (`Maker`) instead of holding one up for the tens of milliseconds a low note takes.
+ */
+export type Making = Generator<void, Float32Array, void>;
+
 export type Struck = 'piano' | 'musicbox' | 'celesta' | 'harp';
 
-const MAKERS: Record<Struck, (sr: number, m: number, vel: number) => Float32Array> = {
+const MAKERS: Record<Struck, (sr: number, m: number, vel: number) => Making> = {
   piano: feltPiano,
   musicbox: musicBox,
   celesta,
@@ -250,18 +275,51 @@ export function isMade(ctx: BaseAudioContext, kind: Struck, m: number, vel: numb
   return MADE.get(ctx)?.has(madeFor(kind, m, vel).key) ?? false;
 }
 
-export function note(ctx: BaseAudioContext, kind: Struck, m: number, vel: number): Sounded {
+function keep(ctx: BaseAudioContext, key: string, data: Float32Array): AudioBuffer {
   let made = MADE.get(ctx);
   if (!made) MADE.set(ctx, (made = new Map()));
+  const buf = ctx.createBuffer(1, data.length, NOTE_RATE);
+  buf.getChannelData(0).set(data);
+  made.set(key, buf);
+  return buf;
+}
+
+/** A note to play, made there and then if it has not been. */
+export function note(ctx: BaseAudioContext, kind: Struck, m: number, vel: number): Sounded {
   const { key, root, touch } = madeFor(kind, m, vel);
-  let buf = made.get(key);
+  let buf = MADE.get(ctx)?.get(key);
   if (!buf) {
-    const data = MAKERS[kind](NOTE_RATE, root, touch);
-    buf = ctx.createBuffer(1, data.length, NOTE_RATE);
-    buf.getChannelData(0).set(data);
-    made.set(key, buf);
+    const it = MAKERS[kind](NOTE_RATE, root, touch);
+    let r = it.next();
+    while (!r.done) r = it.next();
+    buf = keep(ctx, key, r.value);
   }
   return { buf, rate: 2 ** ((m - root) / 12) };
+}
+
+/** Makes one note a step at a time, for as long as it is given. */
+export class Maker {
+  private readonly key: string;
+  private readonly it: Making | null;
+
+  constructor(private readonly ctx: BaseAudioContext, kind: Struck, m: number, vel: number) {
+    const { key, root, touch } = madeFor(kind, m, vel);
+    this.key = key;
+    this.it = MADE.get(ctx)?.has(key) ? null : MAKERS[kind](NOTE_RATE, root, touch);
+  }
+
+  /** Works until `until` (a `performance.now()` time) or the note is made; true once it is. */
+  work(until: number): boolean {
+    if (!this.it || MADE.get(this.ctx)?.has(this.key)) return true;
+    for (;;) {
+      const r = this.it.next();
+      if (r.done) {
+        keep(this.ctx, this.key, r.value);
+        return true;
+      }
+      if (performance.now() >= until) return false;
+    }
+  }
 }
 
 /**
@@ -269,7 +327,7 @@ export function note(ctx: BaseAudioContext, kind: Struck, m: number, vel: number
  * decaying noise, darker as it dies, after a few early reflections. Made in
  * code once per context, the same each time.
  */
-export function room(ctx: BaseAudioContext, t60 = 2.4): AudioBuffer {
+export function* roomMaking(ctx: BaseAudioContext, t60 = 2.4): Generator<void, AudioBuffer, void> {
   const sr = ctx.sampleRate;
   const len = Math.ceil((t60 + 0.3) * sr);
   const buf = ctx.createBuffer(2, len, sr);
@@ -278,14 +336,18 @@ export function room(ctx: BaseAudioContext, t60 = 2.4): AudioBuffer {
     const d = new Float32Array(len);
     const rnd = seq(0x51ed + ch * 977);
     let y = 0;
+    // Running products rather than a power and an exponential a sample: this is made on the first frame of music.
+    let env = 1;
+    const fall = Math.exp(-6.91 / (t60 * sr));
+    let a = 0;
     for (let i = pre; i < len; i += 1) {
       const t = (i - pre) / sr;
-      // From 7 kHz at the start down to 1.2 kHz at the end: walls take the top first.
-      const cut = 7000 * (1200 / 7000) ** Math.min(1, t / t60);
-      const a = Math.exp((-2 * Math.PI * cut) / sr);
+      // From 7 kHz at the start down to 1.2 kHz at the end, worked out every 64 samples: walls take the top first.
+      if ((i - pre) % 64 === 0) a = Math.exp((-2 * Math.PI * 7000 * (1200 / 7000) ** Math.min(1, t / t60)) / sr);
       y = (1 - a) * (rnd() * 2 - 1) + a * y;
-      const onset = Math.min(1, t / 0.02);
-      d[i] = y * Math.exp((-6.91 * t) / t60) * onset;
+      d[i] = y * env * Math.min(1, t / 0.02);
+      env *= fall;
+      if (i % 16384 === 0) yield;
     }
     const taps = [0.017, 0.023, 0.031, 0.041, 0.053, 0.067];
     taps.forEach((s, k) => {
@@ -295,6 +357,14 @@ export function room(ctx: BaseAudioContext, t60 = 2.4): AudioBuffer {
     buf.getChannelData(ch).set(d);
   }
   return buf;
+}
+
+/** The room, made all at once. */
+export function room(ctx: BaseAudioContext, t60 = 2.4): AudioBuffer {
+  const it = roomMaking(ctx, t60);
+  let r = it.next();
+  while (!r.done) r = it.next();
+  return r.value;
 }
 
 /** How a struck note is played back: where it sits, how loud, and when its damper comes down. */
@@ -394,12 +464,12 @@ export interface Bus {
   stop(at: number): void;
 }
 
-export function bus(ctx: BaseAudioContext, opts: { wet?: number; wowCents?: number } = {}): Bus {
+export function bus(ctx: BaseAudioContext, opts: { wet?: number; wowCents?: number; room?: AudioBuffer } = {}): Bus {
   const input = ctx.createGain();
   const dry = ctx.createGain();
   dry.gain.value = 0.82;
   const verb = ctx.createConvolver();
-  verb.buffer = room(ctx);
+  verb.buffer = opts.room ?? room(ctx);
   const wet = ctx.createGain();
   wet.gain.value = opts.wet ?? 0.42;
   const warm = ctx.createBiquadFilter();

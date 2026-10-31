@@ -50,6 +50,8 @@ export interface Pass {
 
 export interface Track {
   id: string;
+  /** What it is called where a player can read it. */
+  name: string;
   bpm: number;
   /** Beats to a bar. */
   beats: number;

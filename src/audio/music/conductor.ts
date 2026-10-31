@@ -53,15 +53,31 @@ export class Conductor {
     this.out.connect(bus.input);
   }
 
-  /** Plays `track` from its first bar, starting at context time `at`. */
-  start(track: Track, at: number): void {
+  /** Readies `track` from its first bar, to `begin` once its first notes are made. */
+  cue(track: Track): void {
     this.track = track;
     this.n = 0;
+    this.next = Infinity;
+  }
+
+  /** Starts what is cued at context time `at`. */
+  begin(at: number): void {
     this.next = at;
+  }
+
+  /** Plays `track` from its first bar, starting at context time `at`. */
+  start(track: Track, at: number): void {
+    this.cue(track);
+    this.begin(at);
   }
 
   get playing(): Track | null {
     return this.track;
+  }
+
+  /** Bars put on the clock so far. */
+  get bars(): number {
+    return this.n;
   }
 
   /** Seconds a beat lasts in bar `n` of the current track. */
@@ -76,6 +92,10 @@ export class Conductor {
   fill(horizon: number): void {
     const t = this.track;
     if (!t) return;
+    // Fallen behind the clock (the tab was out of sight, or the music turned
+    // down to nothing): carry on from the bar it stopped at, a moment from now.
+    const now = this.ctx.currentTime;
+    if (this.next < now) this.next = now + 0.25;
     while (this.next < horizon) {
       const { pass, bar } = locate(t, this.n);
       const round = Math.floor(this.n / formBars(t));

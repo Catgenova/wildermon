@@ -2463,6 +2463,7 @@ export function helpText(): string {
       <li>Positional, with the <b>camera as the ear</b>: pan and volume from the screen; zooming out lowers everything.</li>
       <li>Generated live from noise and oscillators; nothing downloaded.</li>
       <li>Volume: top of the Display tab in <b>Settings</b> (<kbd>O</kbd>); zero turns sound off.</li>
+      <li><b>Music</b>: piano soundtrack, generated live; its own volume under Volume (${Math.round(SETTING_DEFAULTS.music * 100)}% to start); zero turns it off.</li>
     </ul>
     <h3>Light after dark</h3>
     <ul>

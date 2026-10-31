@@ -3,7 +3,8 @@ import { COLOUR_FORM_ODDS, FORM_PASS, formGives, SIZE_FORM_ODDS } from '../../ga
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
-import { FAST_DPR, LOW_POWER_FPS } from '../../game/settings';
+import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
+import { BLOSSOM } from '../../audio/music/tracks/blossom';
 import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
 import { BOOT_PHASES, NEAR_REACH, TREE_WAIT_MS } from '../bootsteps';
 import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
@@ -4219,6 +4220,11 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 395,
+    day: '2026-10-31',
+    lines: () => [`Added: music: piano soundtrack, generated live. First track: ${BLOSSOM.name} (${BLOSSOM.bpm} BPM). Settings, Display tab: Music volume, ${Math.round(SETTING_DEFAULTS.music * 100)}% to start; 0 turns it off.`],
   },
   {
     n: 393,

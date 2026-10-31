@@ -1117,6 +1117,17 @@ jobs:
           npx esbuild supabase/test/heard.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/heard.mjs --log-level=error
           node node_modules/.cache/heard.mjs
+      - name: The soundtrack reads, makes and loops
+        if: matrix.shard == 1
+        run: |
+          # A piano soundtrack generated in the browser (src/audio/music).
+          # Every bar of every track reads and ends inside its bar, every note
+          # is on its instrument's keys, every instrument makes finite notes
+          # with no click in and no cut-off out, and a pass is the same each
+          # time it is played but different each time round.
+          npx esbuild supabase/test/music.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/music.mjs --log-level=error
+          node node_modules/.cache/music.mjs
       - name: A walk puts the work down, and a piece can be asked for a quality
         if: matrix.shard == 1
         run: |
