@@ -7136,9 +7136,9 @@ export class Creatures {
       return game.world.rockHeight(x, y) > -MINE_DEPTH && this.reachableFace(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'sand' || kind === 'clay') {
-      // A bed of the right sort, collected off the top as a player's Collect does (ground left as it was).
+      // A bed of the right sort, collected off the top as a player's Collect does (ground left as it was, no timer).
       if (game.world.getTile(x, y) !== (kind === 'sand' ? TileType.Sand : TileType.Clay)) return false;
-      return this.tileOk(game, x, y) && !game.isForaged(x, y, 'dig') && !this.claimed(x, y, c);
+      return this.tileOk(game, x, y) && !this.claimed(x, y, c);
     }
     // Stoking and guarding are not tile work; they never send a worker walking to one.
     if (kind === 'stoke' || kind === 'guard') return false;
@@ -7196,7 +7196,7 @@ export class Creatures {
       // A bed of the black stuff, taken off the top and left as it was.
       const t = game.world.getTile(x, y);
       if (t !== TileType.Peat && t !== TileType.Tar) return false;
-      return this.tileOk(game, x, y) && !game.isForaged(x, y, 'dig') && !this.claimed(x, y, c);
+      return this.tileOk(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'reed') {
       if (game.world.getTile(x, y) !== TileType.Reed) return false;
@@ -7557,7 +7557,6 @@ export class Creatures {
     if (game.world.getTile(c.workX, c.workY) !== (yields === 'sand' ? TileType.Sand : TileType.Clay)) return null;
     const skill = c.skills.digging ?? 1;
     this.gainSkill(game, c, 'digging', 0.225);
-    game.markForaged(c.workX, c.workY, 'dig');
     // Times what its yield traits bring, as the island's `worker_do` has it.
     const ql = Math.min(100, Math.max(1, skill * (DIG_QL[0] + game.rand() * (DIG_QL[1] - DIG_QL[0])) + 1) * this.yieldMul(c));
     return { uid: game.inventory.nextUid++, id: yields, ql, dmg: 0, count: 1 };
@@ -7587,7 +7586,6 @@ export class Creatures {
     if (!id) return null;
     const skill = c.skills[GATHER_SKILL.peat] ?? 1;
     this.gainSkill(game, c, GATHER_SKILL.peat, 0.225);
-    game.markForaged(c.workX, c.workY, 'dig');
     return { uid: game.inventory.nextUid++, id, ql: Math.min(100, Math.max(1, skill * (0.6 + game.rand() * 0.8) + 1)), dmg: 0, count: 1 };
   }
 

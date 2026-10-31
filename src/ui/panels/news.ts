@@ -4222,6 +4222,11 @@ export const NEWS: News[] = [
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
   },
   {
+    n: 396,
+    day: '2026-10-31',
+    lines: () => [`Fixed: sand, clay, peat and tar workers: no wait on a bed between goes, as with your own Collect (was: ${timeWords(FORAGE_COOLDOWN)}, and the tile refused Investigate for that long).`],
+  },
+  {
     n: 395,
     day: '2026-10-31',
     lines: () => [`Added: music: piano soundtrack, generated live. First track: ${BLOSSOM.name} (${BLOSSOM.bpm} BPM). Settings, Display tab: Music volume, ${Math.round(SETTING_DEFAULTS.music * 100)}% to start; 0 turns it off.`],

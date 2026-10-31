@@ -4,13 +4,18 @@
  * Asked for: "wildermon that gather peat sand clay etc should be doing the Collect action not the Dig action". A Mudlet
  * dug a corner of its clay down a step and wanted soil left on a corner above the water to do it (`sandCorner` in the
  * browser, `land_dirt` on the island), so clay beside a pond kept it idle. Now it collects off the top as a player's
- * Collect does: the ground left as it was, the tile worked again after the forage cooldown, as a peat cutter's is.
+ * Collect does: the ground left as it was.
+ *
+ * Reported: "Sandpip should be collecting sand which should have no timer. It is tripping the investigation timer on
+ * the sand." A go marked the tile 'dig', Investigate's mark, and the bed waited out the forage cooldown. Now a bed has
+ * no timer for a worker, as it has none for a player's Collect, and leaves no mark.
  *
  * So this asks, on both sides, of a clay tile at water level with no soil left on it:
  *
  *   * a Mudlet would work it;
  *   * a go at it gives a lump of clay and leaves every corner's height and soil as they were;
- *   * and it is not worked again straight after.
+ *   * it leaves no mark, and is worked again straight after;
+ *   * and ground a player has investigated is collected all the same.
  *
  * Runs against the database the suite leaves behind: Faraway, and Ivar on it.
  */
@@ -63,7 +68,10 @@ update creature set work_x = ${X}, work_y = ${Y}, job = 'clay' where world_id = 
 select 'GOT|' || coalesce((worker_do(${W}, :'digger'))->>'def', '-');
 select 'GROUND|' || string_agg(land_height(${W}, cx, cy) || '/' || land_dirt(${W}, cx, cy), ' ' order by k)
   from unnest(array[${CORNERS.map(([cx]) => cx).join(', ')}], array[${CORNERS.map(([, cy]) => cy).join(', ')}]) with ordinality u(cx, cy, k);
+select 'MARKED|' || exists (select 1 from foraged where world_id = ${W} and x = ${X} and y = ${Y});
 select 'AGAIN|' || worker_gatherable(${W}, ${X}, ${Y}, 'clay', (select c from creature c where c.world_id = ${W} and c.id = :'digger'));
+insert into foraged (world_id, x, y, kind, at) values (${W}, ${X}, ${Y}, 'dig', now());
+select 'INVESTIGATED|' || worker_gatherable(${W}, ${X}, ${Y}, 'clay', (select c from creature c where c.world_id = ${W} and c.id = :'digger'));
 select 'WAIT|' || coalesce(ceil(worker_wait_left(${W}, ${X}, ${Y}, 2, 'clay'))::text, 'none');
 select 'WAITSAND|' || coalesce(ceil(worker_wait_left(${W}, ${X}, ${Y}, 2, 'sand'))::text, 'none');
 rollback;`));
@@ -84,18 +92,24 @@ c.workY = Y;
 const finish = (g.creatures as unknown as { finishCollect(game: Game, c: Creature, y: 'clay'): Item | null }).finishCollect.bind(g.creatures);
 const got = finish(g, c, 'clay');
 const ground = CORNERS.map(([cx, cy]) => `${g.world.getHeight(cx, cy)}/${g.world.getDirt(cx, cy)}`).join(' ');
+const marked = g.isForaged(X, Y, 'dig');
 const again = g.creatures.gatherable(g, X, Y, 'clay', c);
+g.markForaged(X, Y, 'dig');
+const investigated = g.creatures.gatherable(g, X, Y, 'clay', c);
 
 check('a Mudlet would work clay at water level with no soil left, on both sides', would && get('WOULD') === 'true', `island ${get('WOULD')}, browser ${would}`);
 check('a go at it gives a lump of clay, on both sides', got?.id === 'clay' && get('GOT') === 'clay', `island ${get('GOT')}, browser ${got?.id}`);
 check('and leaves every corner\'s height and soil as they were (collected, not dug), on both sides',
   ground === '0/0 0/0 0/0 0/0' && get('GROUND') === ground, `island ${get('GROUND')}, browser ${ground}`);
-check('and it is not worked again straight after, on both sides', !again && get('AGAIN') === 'false', `island ${get('AGAIN')}, browser ${again}`);
-// Its only clay on the cooldown: the wait till it is back, and the card says so (`worker_wait_left`, `idleSays` 'waiting').
-check(`and the island's wait on it is the whole ${FORAGE_COOLDOWN} s cooldown, for clay and not for sand`,
-  Math.abs(Number(get('WAIT')) - FORAGE_COOLDOWN) <= 2 && get('WAITSAND') === 'none', `clay ${get('WAIT')}, sand ${get('WAITSAND')}`);
-check('and a worker waiting on it says when it is back', idleSays({ why: 'waiting', n: FORAGE_COOLDOWN }, 'clay') === `Idle: all in reach worked; next clay to collect in ${FORAGE_COOLDOWN} s.`,
-  idleSays({ why: 'waiting', n: FORAGE_COOLDOWN }, 'clay'));
+check('it leaves no mark on the tile, on both sides', !marked && get('MARKED') === 'false', `island ${get('MARKED')}, browser ${marked}`);
+check('and it is worked again straight after: no timer on a bed, on both sides', again && get('AGAIN') === 'true', `island ${get('AGAIN')}, browser ${again}`);
+check('and ground a player has just investigated is collected all the same, on both sides',
+  investigated && get('INVESTIGATED') === 'true', `island ${get('INVESTIGATED')}, browser ${investigated}`);
+check('and the island never has a bed worker waiting on one, clay or sand', get('WAIT') === 'none' && get('WAITSAND') === 'none',
+  `clay ${get('WAIT')}, sand ${get('WAITSAND')}`);
+// A reed bed still has its cooldown: the wait till it is back, and the card says so (`worker_wait_left`, `idleSays` 'waiting').
+check('and a worker waiting on a reed bed says when it is back', idleSays({ why: 'waiting', n: FORAGE_COOLDOWN }, 'reed') === `Idle: all in reach worked; next reed bed in ${FORAGE_COOLDOWN} s.`,
+  idleSays({ why: 'waiting', n: FORAGE_COOLDOWN }, 'reed'));
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {
