@@ -6255,6 +6255,12 @@ export interface Part {
   /** Every facet lit as the darkest of them: one wet piece only just up out of the water (`waterline`), not a clump of facets. */
   flat?: boolean;
   /**
+   * For a `toon` part made of separate pieces, a feather or a leaf each: every piece lit in one step, by the way the side of it
+   * that is seen faces on the whole, rather than in steps across it. A cupped feather is one soft shade, not a wedge of light
+   * and a wedge of shade (`evenSteps`).
+   */
+  even?: boolean;
+  /**
    * One of the links of something in links -- a tail -- named for the whole
    * of it: the lines round every link that follows another in the drawing go
    * down together before any of them, fattened, so each link covers the
@@ -10936,6 +10942,37 @@ function toonSplit(mesh: Mesh, s: readonly Pt[], vis: readonly boolean[], k: num
   return out;
 }
 
+/** Which piece each facet of a mesh is in, pieces being facets joined by their corners, worked out once for it. */
+const piecesOf = new WeakMap<object, Int32Array>();
+function pieceOf(mesh: Mesh): Int32Array {
+  let id = piecesOf.get(mesh.f);
+  if (!id) {
+    const up = mesh.v.map((_, q) => q);
+    const root = (q: number): number => { while (up[q] !== q) q = up[q] = up[up[q]]; return q; };
+    for (const face of mesh.f) for (let q = 1; q < face.i.length; q++) up[root(face.i[q])] = root(face.i[0]);
+    id = Int32Array.from(mesh.f, (face) => root(face.i[0]));
+    piecesOf.set(mesh.f, id);
+  }
+  return id;
+}
+
+/** A `toon` part lit a piece at a time (`Part.even`): each piece in the one step its seen facets face, on the whole. */
+function evenSteps(mesh: Mesh, vis: readonly boolean[], k: number[], normals: readonly V3[], areas: readonly number[], L: V3): undefined {
+  const id = pieceOf(mesh), sum = new Map<number, V3>();
+  mesh.f.forEach((face, fi) => {
+    if (!vis[fi] || face.decal) return;
+    const u = normals[fi], a = areas[fi], m = sum.get(id[fi]);
+    if (m) { m[0] += u[0] * a; m[1] += u[1] * a; m[2] += u[2] * a; } else sum.set(id[fi], [u[0] * a, u[1] * a, u[2] * a]);
+  });
+  const step = new Map<number, number>();
+  for (const [p, m] of sum) {
+    const l = Math.hypot(m[0], m[1], m[2]) || 1;
+    step.set(p, toonStep(toonD([m[0] / l, m[1] / l, m[2] / l], L)));
+  }
+  mesh.f.forEach((face, fi) => { if (vis[fi] && !face.decal) k[fi] = step.get(id[fi]) ?? k[fi]; });
+  return undefined;
+}
+
 /** Room for the outward squares of a facet's edges, kept between facets rather than made for each. */
 let EDGE_X = new Float64Array(32), EDGE_Y = new Float64Array(32);
 /** Room for a part's corners placed on its bone, three numbers each, kept between parts rather than made for each corner. */
@@ -10992,7 +11029,7 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
     let cx = 0, cy = 0, cz = 0;
     for (let q = 0; q < nv * 3; q += 3) { cx += pv[q]; cy += pv[q + 1]; cz += pv[q + 2]; }
     cx /= nv; cy /= nv; cz /= nv;
-    const split = part.toon ? toonSplit(part.mesh, s, vis, k, normals, areas, L, part.sheen ? t : undefined) : undefined;
+    const split = part.toon && part.even ? evenSteps(part.mesh, vis, k, normals, areas, L) : part.toon ? toonSplit(part.mesh, s, vis, k, normals, areas, L, part.sheen ? t : undefined) : undefined;
     normals.length = 0;
     areas.length = 0;
     const across = part.toon ? acrossOf(part.mesh) / px : Infinity;
