@@ -105,7 +105,7 @@ export class Conductor {
       for (const h of hits) {
         const { buf, rate } = note(this.ctx, h.kind, h.m, h.vel);
         strike(this.ctx, this.out, at + h.beat * beat, buf, {
-          gain: GAIN[h.kind](h.vel),
+          gain: GAIN[h.kind](h.vel) * (h.level ?? 1),
           pan: PAN[h.kind](h.m),
           rate,
           wow: this.bus.wow,

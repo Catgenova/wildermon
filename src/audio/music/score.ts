@@ -59,6 +59,8 @@ export interface Track {
   form: readonly Pass[];
   /** The right hand's touch, as a share of the usual: under 1 sets the melody back in the texture, softer and darker. */
   melody?: number;
+  /** The right hand's level, as a share of what its touch gives: 0.5 is half as loud. */
+  melodyLevel?: number;
 }
 
 /** One note of a bar, in beats from the bar's start. */
@@ -69,6 +71,8 @@ export interface Hit {
   /** When it is let go, in beats from the bar's start: its own length or the end of its chord under the pedal, whichever is later. */
   off: number;
   vel: number;
+  /** Its level as a share of what its touch gives, when the track sets one (`melodyLevel`). */
+  level?: number;
 }
 
 /** A held chord of pad, in beats from the bar's start. */
@@ -154,8 +158,8 @@ export function play(t: Track, pass: number, bar: number, round: number): { hits
   };
 
   const hits: Hit[] = [];
-  const add = (kind: Struck, m: number, beat: number, dur: number, vel: number): void => {
-    hits.push({ kind, m, beat: Math.max(0, beat + wob(0.02)), off: Math.max(beat + dur, pedal(beat)), vel: Math.max(0.05, Math.min(1, vel * dyn + wob(0.03))) });
+  const add = (kind: Struck, m: number, beat: number, dur: number, vel: number, level?: number): void => {
+    hits.push({ kind, m, beat: Math.max(0, beat + wob(0.02)), off: Math.max(beat + dur, pedal(beat)), vel: Math.max(0.05, Math.min(1, vel * dyn + wob(0.03))), ...(level === undefined ? {} : { level }) });
   };
 
   const left = line(b.l, t.beats);
@@ -170,7 +174,7 @@ export function play(t: Track, pass: number, bar: number, round: number): { hits
   const lifted = p.lift?.includes(bar) ? 12 : 0;
   const right = line(b.r, t.beats);
   const tune = t.melody ?? 1;
-  for (const n of right) for (const m of n.ms) add('piano', m + lifted, n.beat, n.dur, (n.beat === 0 ? 0.55 : 0.5) * tune);
+  for (const n of right) for (const m of n.ms) add('piano', m + lifted, n.beat, n.dur, (n.beat === 0 ? 0.55 : 0.5) * tune, t.melodyLevel);
 
   if (b.b) for (const n of line(b.b, t.beats)) for (const m of n.ms) add('musicbox', m, n.beat, n.dur, 0.4);
   else if (round % 2 === 1 && bar % 4 === 1 && right[0]?.beat === 0) {
