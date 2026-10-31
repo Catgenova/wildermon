@@ -57,6 +57,8 @@ export interface Track {
   beats: number;
   sections: Readonly<Record<string, readonly Bar[]>>;
   form: readonly Pass[];
+  /** The right hand's touch, as a share of the usual: under 1 sets the melody back in the texture, softer and darker. */
+  melody?: number;
 }
 
 /** One note of a bar, in beats from the bar's start. */
@@ -167,7 +169,8 @@ export function play(t: Track, pass: number, bar: number, round: number): { hits
 
   const lifted = p.lift?.includes(bar) ? 12 : 0;
   const right = line(b.r, t.beats);
-  for (const n of right) for (const m of n.ms) add('piano', m + lifted, n.beat, n.dur, n.beat === 0 ? 0.55 : 0.5);
+  const tune = t.melody ?? 1;
+  for (const n of right) for (const m of n.ms) add('piano', m + lifted, n.beat, n.dur, (n.beat === 0 ? 0.55 : 0.5) * tune);
 
   if (b.b) for (const n of line(b.b, t.beats)) for (const m of n.ms) add('musicbox', m, n.beat, n.dur, 0.4);
   else if (round % 2 === 1 && bar % 4 === 1 && right[0]?.beat === 0) {
