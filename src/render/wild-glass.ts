@@ -82,8 +82,10 @@ interface Gecko {
     at: V3;
     links: number[];
     w: number[];
-    /** Lifted at the root (degrees up from straight back), curled up at each link, curled further at the last three. */
-    lift: number; curl: number; tip: number;
+    /** Lifted at the root (degrees up from straight back), and how far each link after the first is curled up past the one before. */
+    lift: number; bend: number[];
+    /** How many of its last links are glass: the tail turning clear and swelling out into its bubble (`glassBubbles`). */
+    glass: number;
     /** How far it is carried round to its left, in degrees. */
     side?: number;
     /** How many droplets stand along the outside of its curl, from which link on, and how long the longest. */
@@ -117,7 +119,7 @@ const GLIMMIP_LOOK: Gecko = {
   nape: { count: 0, len: 0, rows: 0 },
   ridge: { count: 6, len: [0.07, 0.1], glass: false },
   frill: { count: 0, len: 0, fore: false },
-  tail: { at: [0, -0.8, 0.06], links: [0.18, 0.17, 0.16, 0.15, 0.14, 0.13, 0.12], w: [0.2, 0.175, 0.15, 0.13, 0.11, 0.095, 0.08], lift: 4, curl: 21, tip: 8, side: 18, drops: 0, from: 0, dropLen: 0 },
+  tail: { at: [0, -0.8, 0.06], links: [0.18, 0.17, 0.16, 0.15, 0.14, 0.13, 0.12], w: [0.2, 0.175, 0.15, 0.13, 0.11, 0.095, 0.08], lift: 6, bend: [6, 14, 22, 26, 22, 14], glass: 3, side: 18, drops: 0, from: 0, dropLen: 0 },
   bubble: { r: 0.48, buds: [[-36, 1.08, 0.26], [-60, 1.12, 0.16]] },
   spots: 34,
   smelter: { r: 0.6, lump: 0.15, blow: 0.62 },
@@ -139,7 +141,7 @@ const GLASCADE_LOOK: Gecko = {
   nape: { count: 4, len: 0.38, rows: 1 },
   ridge: { count: 7, len: [0.18, 0.3], glass: true },
   frill: { count: 2, len: 0.2, fore: false },
-  tail: { at: [0, -1.36, 0.08], links: [0.27, 0.26, 0.25, 0.24, 0.23, 0.22, 0.21, 0.2, 0.19, 0.18], w: [0.3, 0.27, 0.245, 0.22, 0.2, 0.18, 0.165, 0.15, 0.135, 0.12], lift: 0, curl: 15, tip: 4, side: 28, drops: 6, from: 3, dropLen: 0.2 },
+  tail: { at: [0, -1.36, 0.08], links: [0.27, 0.26, 0.25, 0.24, 0.23, 0.22, 0.21, 0.2, 0.19, 0.18], w: [0.3, 0.27, 0.245, 0.22, 0.2, 0.18, 0.165, 0.15, 0.135, 0.12], lift: 2, bend: [-10, -6, 6, 18, 26, 28, 24, 16, 8], glass: 3, side: -30, drops: 5, from: 2, dropLen: 0.2 },
   bubble: { r: 0.92, buds: [[-30, 1.1, 0.24], [-56, 1.1, 0.15], [56, 1.08, 0.18], [82, 1.08, 0.11]] },
   spots: 54,
   smelter: { r: 0.95, lump: 0.2, blow: 0.5 },
@@ -161,7 +163,7 @@ const PRISMETAIL_LOOK: Gecko = {
   nape: { count: 5, len: 0.62, rows: 2 },
   ridge: { count: 8, len: [0.3, 0.52], glass: true },
   frill: { count: 3, len: 0.5, fore: true },
-  tail: { at: [0, -1.84, 0.1], links: [0.4, 0.39, 0.38, 0.37, 0.36, 0.35, 0.34, 0.33, 0.32, 0.31, 0.3, 0.29], w: [0.5, 0.46, 0.42, 0.39, 0.36, 0.33, 0.3, 0.28, 0.26, 0.24, 0.22, 0.2], lift: -2, curl: 10.5, tip: 3, side: 30, drops: 12, from: 2, dropLen: 0.46 },
+  tail: { at: [0, -1.84, 0.1], links: [0.4, 0.39, 0.38, 0.37, 0.36, 0.35, 0.34, 0.33, 0.32, 0.31, 0.3, 0.29], w: [0.5, 0.46, 0.42, 0.39, 0.36, 0.33, 0.3, 0.28, 0.26, 0.24, 0.22, 0.2], lift: 6, bend: [-12, -8, 0, 12, 22, 28, 26, 16, 6, -4, -8], glass: 4, side: -34, drops: 9, from: 2, dropLen: 0.46 },
   bubble: { r: 2.1, buds: [[-18, 1.1, 0.2], [-40, 1.1, 0.13], [-64, 1.08, 0.1], [28, 1.09, 0.16], [52, 1.08, 0.11], [84, 1.07, 0.13], [116, 1.06, 0.08], [-98, 1.06, 0.09]] },
   spots: 76,
   smelter: { r: 1.5, lump: 0.3, blow: 0.36 },
@@ -588,7 +590,7 @@ function workPlan(s: Gecko, R: Rest, t: number): Plan {
   p.head[0] += 4 * puff * Math.sin((t - K.puff) * 70);
   p.squash = 0.03 * puff * (0.5 + 0.5 * Math.sin((t - K.puff) * 70));
   p.swell = 0.14 * blownOf(t);
-  p.tail = [6 * puff, -0.35 * yaw, 6 * puff];
+  p.tail = [3 * puff, -0.35 * yaw, -4 * puff];
   const i = 1, A = R.ankle[i], step = Math.abs(yaw) / turnBy;
   p.at[i] = [A[0], A[1] + s.len * 0.04 * step, A[2] + R.reach[i] * 0.12 * Math.sin(Math.PI * step)];
   return p;
@@ -654,14 +656,14 @@ function tailBones(s: Gecko, body: Xf, lift: number, yaw: number, curl: number, 
   let prev = joint(body, bendPt(s, T.at, wave), -(T.lift + lift), 0, yaw * 0.4 + bendAt(s, T.at[1], wave) + (T.side ?? 0));
   out.push(prev);
   for (let q = 1; q < n; q++) {
-    prev = joint(prev, [0, -T.links[q - 1], 0], -(T.curl * (0.1 + 2.2 * (q / n) ** 2) + curl + (q >= n - 3 ? T.tip : 0)), 0, (yaw * 0.6) / (n - 1) + (q >= n - 3 ? lag / 3 : 0));
+    prev = joint(prev, [0, -T.links[q - 1], 0], -(T.bend[q - 1] + (curl * 2 * q) / n), 0, (yaw * 0.6) / (n - 1) + (q >= n - 3 ? lag / 3 : 0));
     out.push(prev);
   }
   return out;
 }
 
-/** Where the bubble's middle is, in the last link's frame: on out past its end by most of its radius, so the tail runs into it. */
-const bubbleAt = (s: Gecko): V3 => [0, -s.tail.links[s.tail.links.length - 1] - s.bubble.r * 0.82, s.bubble.r * 0.12];
+/** Where the bubble's middle is, in the last link's frame: on out past its end by most of its radius, so the glass of the tail swells into it. */
+const bubbleAt = (s: Gecko): V3 => [0, -s.tail.links[s.tail.links.length - 1] - s.bubble.r * 0.96, 0];
 
 /**
  * The bones of a stage: its pose, every leg bent to put its foot where the pose says, the neck and head on the body, the tail in
@@ -804,7 +806,7 @@ function dropsOf(s: Gecko): Drop[] {
   // Along the outside of its tail's curl, from its middle on: droplets standing up off it, the longest toward the bubble.
   const T = s.tail;
   for (let q = 0; q < T.drops; q++) {
-    const link = Math.min(T.links.length - 1, T.from + Math.floor((q / T.drops) * (T.links.length - T.from)));
+    const scaled = T.links.length - T.glass, link = Math.min(scaled - 1, T.from + Math.floor((q / T.drops) * (scaled - T.from)));
     const f = q / Math.max(1, T.drops - 1), sd = q % 2 ? -1 : 1;
     const L = T.dropLen * (0.6 + 0.4 * f) * (0.9 + 0.2 * jitter(q + 80));
     out.push({ bone: 'tail', link, root: [sd * T.w[link] * 0.4, -T.links[link] * (0.25 + 0.5 * (q % 2)), T.w[link] * 0.7], dir: unit([sd * 0.55, -0.35, 1]), len: L, r: L * 0.3, m: dropTint(q + 90), glass: true });
@@ -977,11 +979,13 @@ function footOf(s: Gecko, fore: boolean, n: number, k: number): Mesh {
 function tailOf(s: Gecko, lod: number): Mesh[] {
   const T = s.tail, drops = dropsOf(s).filter((D) => D.bone === 'tail');
   return T.links.map((L, q) => {
-    const w0 = T.w[q], w1 = T.w[Math.min(q + 1, T.w.length - 1)] * (q === T.links.length - 1 ? 0.7 : 1);
+    // Its last links are glass, drawn by hand with its bubble (`glassBubbles`): here only where they reach.
+    if (q >= T.links.length - T.glass) return mesh([[T.w[q], 0, 0], [-T.w[q], 0, 0], [0, -L, T.w[q]]], []);
+    const w0 = T.w[q], w1 = T.w[Math.min(q + 1, T.w.length - 1)];
     // Its underside ivory; on the bigger ones its top coral over its root, as its rump is.
     const top: Mat = s.stage && q < 3 ? 'shell' : 'coat';
     const core = tube([[0, 0.04, 0], [0, -L * 0.5, 0], [0, -L - 0.02, 0]], [w0, (w0 + w1) / 2, w1], [w0 * 0.92, (w0 + w1) * 0.45, w1 * 0.92], 7,
-      (ring, j) => (Math.abs(((j + 1) / 7) * TAU - Math.PI * 1.5) < 1.3 ? 'belly' : top), { seam: q === T.links.length - 1 ? 'start' : 'both' });
+      (ring, j) => (Math.abs(((j + 1) / 7) * TAU - Math.PI * 1.5) < 1.3 ? 'belly' : top), { seam: 'both' });
     const spots = paint([1, -1].map((sd) => disc([sd * w0 * 0.97, -L * (0.3 + 0.4 * (q % 2)), w0 * 0.15], [sd, 0, 0.3], w0 * 0.2, w0 * 0.15, 6, q % 3 ? 'spot' : 'coatDark', { spin: q })));
     const own = drops.filter((D) => D.link === q).map((D) => dropOf(D, !!lod));
     return merge(core, lod ? spots : null, ...own);
@@ -1119,9 +1123,10 @@ const FILM: readonly RGB[] = [[255, 140, 186], [255, 178, 132], [255, 226, 120],
  * A ball of glass `R` across at (x, y) on the canvas, drawn so it reads as clear: the backdrop through its middle, a soap film's
  * colour toward its rim, swirls of pink, peach, butter, teal and lilac curving round inside it, a thin warm rim, a crisp white
  * highlight high on its left, a spot over it and a soft reflection low on its right. `turn` turns the swirls; `k` is how much of
- * it there is, nought to one; `fine` leaves out the swirls on a little one.
+ * it there is, nought to one; `fine` leaves out the swirls on a little one; `gap`, where the tail's glass swells into it, has no
+ * rim across it (an angle on the canvas and how far either side of it).
  */
-function glassBall(g: CanvasRenderingContext2D, x: number, y: number, R: number, turn: number, k = 1, fine = true): void {
+function glassBall(g: CanvasRenderingContext2D, x: number, y: number, R: number, turn: number, k = 1, fine = true, gap?: { at: number; half: number }): void {
   if (R <= 0 || k <= 0.01) return;
   const tr = g.getTransform(), px = Math.hypot(tr.a, tr.b) || 1, hair = 1 / px;
   g.save();
@@ -1161,13 +1166,14 @@ function glassBall(g: CanvasRenderingContext2D, x: number, y: number, R: number,
   [...FILM, FILM[0]].forEach((c, q) => ring.addColorStop(q / FILM.length, css(c, 0.55 * k)));
   g.strokeStyle = ring;
   g.lineWidth = R * 0.16;
+  const a0 = gap ? gap.at + gap.half : 0, a1 = gap ? gap.at - gap.half + TAU : TAU;
   g.beginPath();
-  g.arc(x, y, R * 0.9, 0, TAU);
+  g.arc(x, y, R * 0.9, a0 + (gap ? 0.12 : 0), a1 - (gap ? 0.12 : 0));
   g.stroke();
   g.strokeStyle = css([236, 150, 112], 0.8 * k);
   g.lineWidth = Math.max(hair, R * 0.035);
   g.beginPath();
-  g.arc(x, y, R, 0, TAU);
+  g.arc(x, y, R, a0, a1);
   g.stroke();
   g.fillStyle = css([255, 255, 255], 0.95 * k);
   g.beginPath();
@@ -1184,6 +1190,138 @@ function glassBall(g: CanvasRenderingContext2D, x: number, y: number, R: number,
   g.restore();
 }
 
+/** A Catmull-Rom curve through `pts`, `per` points a span, ends and all. */
+function smoothed(pts: ReadonlyArray<readonly [number, number]>, per: number): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    for (let j = 0; j < per; j++) {
+      const t = j / per, t2 = t * t, t3 = t2 * t;
+      const f = (a: number, b: number, c: number, d: number): number => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+      out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+    }
+  }
+  out.push([pts[pts.length - 1][0], pts[pts.length - 1][1]]);
+  return out;
+}
+
+/** The colours that run up out of its tail into the glass: coral, peach and teal. */
+const RUN: readonly RGB[] = [[248, 132, 120], [255, 182, 132], [96, 206, 196]];
+
+/** Each point of a line moved `k` of its width (`width(i)`) square to the line, to its left on the canvas. */
+function offsetLine(pts: ReadonlyArray<[number, number]>, width: (i: number) => number, k: number): Array<[number, number]> {
+  return pts.map((p, i) => {
+    const a = pts[Math.max(0, i - 1)], c = pts[Math.min(pts.length - 1, i + 1)];
+    let nx = -(c[1] - a[1]), ny = c[0] - a[0];
+    const l = Math.hypot(nx, ny) || 1;
+    nx /= l;
+    ny /= l;
+    const w = width(i) * k;
+    return [p[0] + nx * w, p[1] + ny * w];
+  });
+}
+
+/** A line through `pts` on the canvas, from its start. */
+function lineThrough(g: CanvasRenderingContext2D, pts: ReadonlyArray<[number, number]>): void {
+  pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+}
+
+/**
+ * The tail turning to glass and swelling out into the bubble, as a glassblower's gather at the end of the pipe: from where its
+ * scales end, along the bones of its glass links, a clear neck widening into the bubble's rim, with the bubble's film, rim and
+ * sheen down its sides and the tail's coral, peach and teal running up it into the bubble's swirls. Drawn outside the bubble
+ * only, so the two are one glass with no seam; says where on the bubble's rim it joins, which the bubble leaves open.
+ */
+function glassNeck(g: CanvasRenderingContext2D, view: View, s: Gecko, b: Bones, x: number, y: number, R: number): { at: number; half: number } | undefined {
+  const T = s.tail, n = T.links.length, first = n - T.glass;
+  const from = b[`tail${first}`];
+  if (!from) return undefined;
+  // From half way down its last scaled link, so its scales go on under the glass and turn into it rather than ending.
+  const before = b[`tail${first - 1}`];
+  const world: V3[] = [...(before ? [place(before, [0, -T.links[first - 1] * 0.45, 0])] : []), from.t];
+  for (let q = first + 1; q < n; q++) world.push(b[`tail${q}`].t);
+  world.push(place(b[`tail${n - 1}`], [0, -T.links[n - 1], 0]));
+  const pts = smoothed([...world.map((p) => onScreen(view, p)), [x, y]], 6);
+  // Its width along it: the tail's where the scales end, flaring out to most of the bubble's as it reaches it.
+  const w0 = screenR(view, from.t, T.w[first - 1] ?? T.w[first]), wEnd = R * 0.7;
+  const lens = [0];
+  for (let i = 1; i < pts.length; i++) lens.push(lens[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = lens[lens.length - 1] || 1;
+  const width = (i: number): number => lerp(w0, wEnd, (lens[i] / total) ** 2.6);
+  const left = offsetLine(pts, width, 1), right = offsetLine(pts, width, -1);
+  const tr = g.getTransform(), px = Math.hypot(tr.a, tr.b) || 1, hair = 1 / px;
+  const outline = (): void => {
+    lineThrough(g, left);
+    for (let i = right.length - 1; i >= 0; i--) g.lineTo(right[i][0], right[i][1]);
+    g.closePath();
+  };
+  // Up to where it is inside the bubble's rim, which the bubble draws.
+  const inside = pts.findIndex(([px2, py2]) => Math.hypot(px2 - x, py2 - y) < R * 0.98);
+  const upto = inside < 0 ? pts.length : inside + 3;
+  g.save();
+  g.lineCap = 'round';
+  // Only outside the bubble: the canvas but for the bubble's disc.
+  g.beginPath();
+  g.rect(x - R * 40, y - R * 40, R * 80, R * 80);
+  g.arc(x, y, R, 0, TAU, true);
+  g.clip();
+  g.beginPath();
+  outline();
+  g.fillStyle = css([255, 236, 242], 0.3);
+  g.fill();
+  // Its film down both sides, and its warm rim.
+  g.lineWidth = Math.max(hair, w0 * 0.5);
+  g.strokeStyle = css(FILM[1], 0.5);
+  g.beginPath();
+  lineThrough(g, offsetLine(pts, width, 0.8).slice(0, upto));
+  g.stroke();
+  g.strokeStyle = css(FILM[3], 0.45);
+  g.beginPath();
+  lineThrough(g, offsetLine(pts, width, -0.8).slice(0, upto));
+  g.stroke();
+  g.strokeStyle = css([236, 150, 112], 0.8);
+  g.lineWidth = Math.max(hair, R * 0.035);
+  for (const edge of [left, right]) {
+    g.beginPath();
+    lineThrough(g, edge.slice(0, upto));
+    g.stroke();
+  }
+  // A sheen down its near side.
+  g.strokeStyle = css([255, 255, 255], 0.6);
+  g.lineWidth = Math.max(hair, w0 * 0.16);
+  g.beginPath();
+  lineThrough(g, offsetLine(pts, width, 0.45).slice(0, upto));
+  g.stroke();
+  g.restore();
+  // The tail's colours running up out of its scales and on into the bubble, curling round as its swirls do.
+  g.save();
+  g.beginPath();
+  outline();
+  g.moveTo(x + R * 0.97, y);
+  g.arc(x, y, R * 0.97, 0, TAU);
+  g.clip();
+  g.lineCap = 'round';
+  const end = pts[Math.max(0, pts.length - 3)], into = Math.atan2(y - end[1], x - end[0]);
+  RUN.forEach((c, q) => {
+    const line = offsetLine(pts, width, (q - 1) * 0.42);
+    const tail = line[line.length - 1];
+    const turn = q % 2 ? -1 : 1;
+    for (let j = 1; j <= 10; j++) {
+      const u = j / 10, ang = into + turn * u * (1.6 + 0.4 * q), rr = R * (0.15 + 0.5 * u);
+      line.push([tail[0] + Math.cos(ang) * rr - Math.cos(into) * R * 0.1 * u, tail[1] + Math.sin(ang) * rr - Math.sin(into) * R * 0.1 * u]);
+    }
+    g.strokeStyle = css(c, 0.5);
+    g.lineWidth = Math.max(hair, w0 * 0.45);
+    g.beginPath();
+    lineThrough(g, line);
+    g.stroke();
+  });
+  g.restore();
+  // Where it joins the bubble's rim, and how wide it is there.
+  const at = inside < 0 ? Math.atan2(end[1] - y, end[0] - x) : Math.atan2(pts[inside][1] - y, pts[inside][0] - x);
+  return { at, half: Math.asin(Math.min(0.95, width(inside < 0 ? pts.length - 1 : inside) / R)) };
+}
+
 /**
  * The bubble on its tail and the little ones budding off it round its rim as seen, each glass (`glassBall`): under the body when
  * it is on the far side of it, over it when on the near side, so the body hides it or is seen through it. Its swirls turn slowly
@@ -1195,7 +1333,8 @@ function glassBubbles(g: CanvasRenderingContext2D, view: View, s: Gecko, b: Bone
   if (nearSide(p, b.body.t, view) !== front) return;
   const [x, y] = onScreen(view, p), R = screenR(view, p, s.bubble.r * b.bubble.m[0]);
   const turn = [0.3, 1.4, 2.6][s.stage] + 0.35 * cyc(a.t, 1, s.stage);
-  glassBall(g, x, y, R, turn);
+  const gap = glassNeck(g, view, s, b, x, y, R);
+  glassBall(g, x, y, R, turn, 1, true, gap);
   s.bubble.buds.forEach(([deg, out, size], q) => {
     const ang = (deg + 4 * cyc(a.t, 2 + q, q * 1.3)) * DEG, r = R * size * (1 + 0.06 * cyc(a.t, 3 + q, q));
     glassBall(g, x + Math.sin(ang) * R * out, y - Math.cos(ang) * R * out, r, turn + q, 1, false);
