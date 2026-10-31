@@ -1,6 +1,6 @@
 import {
   add, beat, clamp, coatPalette, cross, cyc, DEG, disc, dot, drift, frac, lerp, merge, mix, onEgg, orb, orbAlong, paint,
-  scale, smile, smooth, sub, TAU, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
+  scale, smile, smooth, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
 import { cut } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
@@ -56,8 +56,8 @@ interface Pede {
   /** The neck between the front ring and the head, as thick as this share of the front ring; none for none. */
   neck: number;
   /**
-   * Its plates: a plate's length and half-width; each ring's crest, how much longer the plates along its spine are there; the
-   * tail fan's plates against an ordinary one, and how many; the head crest's.
+   * Its plates: a plate's length and half-width; each ring's crest, its longest plate against how tall it stands (`bodyHigh`),
+   * nought for none; the tail fan's the same, and how many plates in it; the head crest's against a plate, and how many.
    */
   plate: { len: number; w: number; crest: readonly number[]; tail: number; tailCount: number; cap: number; capCount: number };
   /** The hide: how far it reaches out to each side of the paws that hold it, how far forward, and back under it. */
@@ -81,7 +81,7 @@ const PELTLING_LOOK: Pede = {
   arm: null,
   head: { r: [0.17, 0.27, 0.16], out: 0.14, lift: 0.1, pitch: -10, eye: 0.026 },
   neck: 0,
-  plate: { len: 0.22, w: 0.07, crest: [1.0, 1.95, 1.0, 1.75, 1.0], tail: 2.5, tailCount: 7, cap: 1.9, capCount: 3 },
+  plate: { len: 0.22, w: 0.07, crest: [0, 1.35, 0, 0.85, 0], tail: 1.35, tailCount: 5, cap: 2.1, capCount: 4 },
   hide: { w: 0.2, fwd: 0.45, back: 0.22 },
   patches: [[1.2, 116, 26], [2.4, 98, 28], [3.6, 128, 24]],
   gait: { duty: [0.62, 0.52], swing: [0.32, 0.4], step: 0.36, lag: 0.17, sway: 0.025, bob: 0.012 },
@@ -101,7 +101,7 @@ const PELTIPEDE_LOOK: Pede = {
   arm: null,
   head: { r: [0.18, 0.29, 0.17], out: 0.2, lift: 0.18, pitch: -14, eye: 0.027 },
   neck: 0.55,
-  plate: { len: 0.25, w: 0.075, crest: [1.0, 2.0, 1.0, 1.65, 1.0, 1.0, 1.55], tail: 2.7, tailCount: 7, cap: 2.1, capCount: 5 },
+  plate: { len: 0.25, w: 0.075, crest: [0, 1.45, 0, 0, 0.95, 0, 0], tail: 1.45, tailCount: 6, cap: 2.3, capCount: 5 },
   hide: { w: 0.26, fwd: 0.62, back: 0.32 },
   patches: [[1.4, 112, 26], [2.6, 132, 24], [3.6, 100, 28], [4.8, 125, 26], [5.8, 105, 22]],
   gait: { duty: [0.64, 0.54], swing: [0.3, 0.38], step: 0.3, lag: 0.14, sway: 0.03, bob: 0.012 },
@@ -118,10 +118,10 @@ const HIDEWEAVER_LOOK: Pede = {
   high: 0.66,
   rise: [60, 34, 10, 2],
   leg: { len: [0.42, 0.4], w: 0.16, paw: 0.15, out: 0.7, ahead: 0.04 },
-  arm: { len: [0.36, 0.36], w: 0.15, paw: 0.16, out: 0.42, up: 0.86, ahead: 0.5 },
-  head: { r: [0.26, 0.42, 0.24], out: 0.22, lift: 0.42, pitch: -10, eye: 0.036 },
+  arm: { len: [0.36, 0.36], w: 0.15, paw: 0.21, out: 0.42, up: 0.86, ahead: 0.5 },
+  head: { r: [0.37, 0.6, 0.34], out: 0.26, lift: 0.5, pitch: -10, eye: 0.052 },
   neck: 0.78,
-  plate: { len: 0.34, w: 0.1, crest: [1.6, 1.0, 1.9, 1.0, 1.0, 1.85, 1.0, 1.0, 1.8, 1.1], tail: 2.5, tailCount: 8, cap: 2.5, capCount: 7 },
+  plate: { len: 0.34, w: 0.1, crest: [0, 0, 1.15, 0, 0, 1.25, 0, 0, 1.05, 0], tail: 1.2, tailCount: 6, cap: 2.3, capCount: 6 },
   hide: { w: 0.5, fwd: 0.7, back: 0.0 },
   patches: [[0.6, 120, 26], [1.9, 98, 30], [3.0, 128, 26], [4.2, 104, 30], [5.4, 122, 26], [6.5, 100, 24], [7.6, 126, 26], [8.6, 104, 24]],
   gait: { duty: [0.66, 0.56], swing: [0.28, 0.34], step: 0.26, lag: 0.13, sway: 0.03, bob: 0.01 },
@@ -614,32 +614,44 @@ function pedeBones(s: Pede): (a: Anim) => Bones {
 
 /* ---- its plates ------------------------------------------------------------------------- */
 
-/** A plate's colours along it, root to middle to tip: a cream root, a green middle and a brown tip; cream fleece; brown fleece. */
-type Dress = 'leaf' | 'leafPale' | 'crest' | 'cream' | 'brown';
-const DRESS: Record<Dress, [Mat, Mat, Mat]> = {
-  leaf: ['mark', 'leaf', 'bark'],
-  leafPale: ['mark', 'moss', 'bark'],
-  crest: ['mark', 'leaf', 'coat'],
-  cream: ['mark', 'mark', 'coatLight'],
-  brown: ['coat', 'coat', 'coat'],
+/**
+ * A plate's colours along it, root to middle to tip, and whether its middle has cream edges and a brown splotch: green with a
+ * cream root, cream edges and a brown tip; the same with a brown splotch; cream with a brown tip; a crest's, brown over its outer
+ * third; cream fleece; brown fleece.
+ */
+type Dress = 'leaf' | 'leafSpot' | 'creamTip' | 'crest' | 'cream' | 'brown';
+const DRESS: Record<Dress, { m: [Mat, Mat, Mat]; edge: boolean; spot: boolean }> = {
+  leaf: { m: ['mark', 'leaf', 'bark'], edge: true, spot: false },
+  leafSpot: { m: ['mark', 'leaf', 'coat'], edge: true, spot: true },
+  creamTip: { m: ['mark', 'mark', 'coat'], edge: false, spot: false },
+  crest: { m: ['mark', 'leaf', 'coat'], edge: true, spot: false },
+  cream: { m: ['mark', 'mark', 'mark'], edge: false, spot: false },
+  brown: { m: ['coat', 'coat', 'coat'], edge: false, spot: false },
 };
 
 /** How a plate is shaped: how much its edges cup up, its tip curls off what it lies on, how much of it is tip, how thick, how finely cut. */
 interface Shape { cup?: number; curl?: number; tip?: number; thick?: number; n: number; k: number }
+/** How finely a plate is cut: finely drawn big, and four facets round and three bands long, sixteen faces, at the island's sizes. */
+const plateCut = (fine: boolean): { n: number; k: number } => (fine ? { n: 7, k: 4 } : { n: 4, k: 3 });
 
 /**
  * A leaf-feather plate from `root` along `dir`, its outer face toward `face`, `len` long and `w` across at its widest: a long
  * flat oval with a rounded tip, narrower at its root, its edges cupped a little up toward `face` and its tip curled off what it
- * lies on; coloured by its dress from its root to its tip.
+ * lies on; coloured by its dress: about a third root, a third middle, a third tip.
  */
 function feather(root: V3, dir: V3, face: V3, len: number, w: number, dress: Dress, o: Shape): Mesh {
   const d = unit(dir), nr = unit(sub(face, scale(d, dot(face, d)))), side = cross(nr, d);
   const b = orb([0, 0, 0], [w, w * (o.thick ?? 0.16), len / 2], o.n, o.k, 'leaf');
-  const [m0, m1, m2] = DRESS[dress], tip = o.tip ?? 0.26, cup = o.cup ?? 0.3, curl = o.curl ?? 0.06;
+  const D = DRESS[dress], [m0, m1, m2] = D.m, tip = o.tip ?? 0.34, cup = o.cup ?? 0.3, curl = o.curl ?? 0.06;
   const uOf = (p: V3): number => p[2] / len + 0.5;
   const f = b.f.map((face0) => {
-    const u = face0.i.reduce((t, q) => t + uOf(b.v[q]), 0) / face0.i.length;
-    return { ...face0, m: u < 0.2 ? m0 : u < 1 - tip ? m1 : m2 };
+    let u = 0, x = 0;
+    for (const q of face0.i) { u += uOf(b.v[q]); x += b.v[q][0]; }
+    u /= face0.i.length; x /= face0.i.length * w;
+    let m = u < 0.3 ? m0 : u < 1 - tip ? m1 : m2;
+    if (m === m1 && D.edge && Math.abs(x) > 0.62) m = 'mark';
+    if (m === m1 && D.spot && x > 0.05 && u > 0.38) m = 'coat';
+    return { ...face0, m };
   });
   const v = b.v.map((p): V3 => {
     const u = uOf(p), x = p[0] * lerp(0.6, 1, Math.min(1, u * 1.8));
@@ -652,33 +664,33 @@ function feather(root: V3, dir: V3, face: V3, len: number, w: number, dress: Dre
 /** Whether a fleece scale on a ring is in one of its brown patches (`Pede.patches`), the left side's set a little apart from the right's. */
 const patched = (s: Pede, i: number, sd: number) => (phi: number, back: number): boolean => s.patches.some(([ri, pi, r]) => {
   const ring = sd > 0 ? ri : ri + 0.6, at = sd > 0 ? pi : pi + 8;
-  return Math.hypot((i + back - ring) * 44, phi - at) < r * 0.7;
+  return Math.hypot((i + back - ring) * 40, phi - at) < r;
 });
 
 /**
  * The feathering of an egg (`R`, about its middle, its front along y), in its frame: rows of plates round it from its spine
- * (`phi` nought) down each side, each rooted toward its front and lying back over what is behind, in two layers, the second
- * rooted further back between the first's. Over its back the green leaf-feathers, lying back and a little up, those along its
- * spine a little higher; down its flanks soft rounded scales of cream fleece lying back and down, brown where `brown` says.
+ * (`phi` nought) down each side, each rooted toward its front and lying back over what is behind; drawn big, in two layers, the
+ * second rooted further back between the first's. Over its back leaf-feathers lying back and a little up, those along its spine
+ * a little higher: green with cream roots and edges and brown tips, some brown-splotched, some cream with brown tips. Down its
+ * flanks, and under it to `lowest`, soft rounded scales of cream fleece lying back and down, brown where `brown` says.
  */
 function featherCoat(R: V3, L: number, W: number, fine: boolean, seed: number, brown: (phi: number, back: number, sd: number) => boolean, lowest = 160): Mesh {
-  const out: Mesh[] = [], C: V3 = [0, 0, 0], sh = { n: fine ? 7 : 5, k: fine ? 4 : 3 };
-  const back = fine ? [0, 17, 34, 51, 68] : [0, 28, 56, 80];
-  const flank = fine ? [86, 104, 122, 140, 158] : [104, 132, 158];
+  const out: Mesh[] = [], C: V3 = [0, 0, 0], sh = plateCut(fine);
+  const back = fine ? [0, 18, 36, 54, 72] : [0, 32, 64];
+  const flank = (fine ? [90, 108, 126, 144, 162, 178] : [100, 135, 170]).filter((p) => p <= lowest);
   const layers = fine ? [0.55, -0.05] : [0.3];
   for (let ly = layers.length - 1; ly >= 0; ly--) {
-    const half = ly ? 8 : 0;
+    const half = ly ? 9 : 0;
     // The flank's lowest row first and the spine's last, so what is higher lies over what is lower.
     for (const phi0 of [...flank].reverse()) {
-      const phi = phi0 + half;
-      if (phi > lowest) continue;
-      for (const sd of [1, -1]) {
+      const phi = Math.min(178, phi0 + half);
+      for (const sd of phi >= 176 ? [1] : [1, -1]) {
         const j = jitter(seed + phi0 * 3 + ly * 13 + sd * 7), ph = phi * DEG * sd;
         const e = onEgg(C, R, [Math.sin(ph), layers[ly], Math.cos(ph)]);
         const down: V3 = [sd * Math.cos(phi * DEG), 0, -Math.sin(phi * DEG)];
         const dir = unit(add(add([0, -0.6, 0], scale(down, 0.8)), scale(e.n, 0.14)));
-        const dress: Dress = brown(phi, ly ? 0.5 : 0, sd) ? 'brown' : 'cream';
-        out.push(feather(add(e.p, scale(e.n, -R[2] * 0.06)), dir, e.n, L * 0.6 * (0.9 + 0.2 * j), W * 1.3, dress, { ...sh, cup: 0.12, curl: 0.05, tip: 0.18, thick: 0.22 }));
+        const dress: Dress = brown(phi, ly ? 0.5 : 0, sd) ? 'brown' : phi < 110 && j > 0.6 ? 'creamTip' : 'cream';
+        out.push(feather(add(e.p, scale(e.n, -R[2] * 0.06)), dir, e.n, L * 0.62 * (0.9 + 0.2 * j), W * 1.35, dress, { ...sh, cup: 0.12, curl: 0.05, tip: 0.24, thick: 0.22 }));
       }
     }
     for (const phi0 of [...back].reverse()) {
@@ -687,10 +699,12 @@ function featherCoat(R: V3, L: number, W: number, fine: boolean, seed: number, b
         const j = jitter(seed + phi0 * 5 + ly * 11 + sd * 3), j2 = jitter(seed * 7 + phi0 + ly * 5 + sd);
         const ph = phi * DEG * sd, e = onEgg(C, R, [Math.sin(ph), layers[ly], Math.cos(ph)]);
         const down: V3 = [sd * Math.cos(phi * DEG), 0, -Math.sin(phi * DEG)];
-        const up = phi0 === 0 ? 0.55 : 0.36;
+        const up = phi0 === 0 ? 0.6 : 0.38;
         const dir = unit(add(add([0, -1, 0], scale(e.n, up)), scale(down, 0.35 * phi / 90)));
-        out.push(feather(add(e.p, scale(e.n, -R[2] * 0.08)), dir, e.n, L * 1.25 * (1 - 0.15 * phi / 90) * (0.9 + 0.2 * j), W * 0.8 * (0.9 + 0.2 * j2),
-          j2 > 0.62 ? 'leafPale' : 'leaf', { ...sh, cup: 0.35, curl: 0.22, tip: 0.3 }));
+        // A third green, a third brown-splotched, a third cream with brown tips; more cream the lower it lies.
+        const dress: Dress = j2 < 0.38 - 0.2 * (phi / 72) ? 'leaf' : j2 < 0.68 ? 'leafSpot' : 'creamTip';
+        out.push(feather(add(e.p, scale(e.n, -R[2] * 0.08)), dir, e.n, L * 1.25 * (1 - 0.15 * phi / 90) * (0.9 + 0.2 * j), W * 0.85 * (0.9 + 0.2 * j2),
+          dress, { ...sh, cup: 0.35, curl: 0.22 }));
       }
     }
   }
@@ -698,54 +712,47 @@ function featherCoat(R: V3, L: number, W: number, fine: boolean, seed: number, b
 }
 
 /**
- * A fan of `N` plates rooted along `y0` to `y1` over the top of an egg (`R`), spread from standing up (and a little forward) at
- * `from` degrees to lying back at `to`, each a little to one side or the other, faces to the sides; the longest a third of the way
- * along. Brown over their outer third: a crest.
+ * A crest: a fan of `N` broad plates rooted along the top of an egg (`R`) from `y0` to `y1` of it, swept back between `from` and
+ * `to` degrees off upright (about 45 on the whole), splayed a little to either side by turns, of different lengths, the longest
+ * `len` about a third of the way along; faces to the sides; brown over their outer third.
  */
-function fan(R: V3, N: number, from: number, to: number, y0: number, y1: number, len: number, w: number, fine: boolean, seed: number, side = 0.22): Mesh {
-  const out: Mesh[] = [], sh = { n: fine ? 7 : 5, k: fine ? 4 : 3, tip: 0.34, cup: 0.18, curl: 0 };
+function fan(R: V3, N: number, len: number, w: number, fine: boolean, seed: number, o: { from?: number; to?: number; y0?: number; y1?: number; side?: number } = {}): Mesh {
+  const out: Mesh[] = [], sh = { ...plateCut(fine), tip: 0.38, cup: 0.2, curl: -0.03 };
+  const from = o.from ?? 22, to = o.to ?? 70, y0 = o.y0 ?? 0.6, y1 = o.y1 ?? -0.5, side = o.side ?? 0.3;
   for (let q = 0; q < N; q++) {
-    const t = N === 1 ? 0.4 : q / (N - 1), sd = q % 2 ? 1 : -1, j = jitter(seed + q), ang = lerp(from, to, t) * DEG;
-    const e = onEgg([0, 0, 0], R, [sd * 0.12, lerp(y0, y1, t), 1]);
-    const dir = unit([sd * side * (0.6 + 0.6 * j), -Math.sin(ang), Math.cos(ang)]);
-    out.push(feather(add(e.p, scale(e.n, -R[2] * 0.15)), dir, [1, 0, 0.15 * sd], len * (1 - 0.5 * (t - 0.35) ** 2) * (0.92 + 0.16 * j), w, 'crest', sh));
+    const t = N === 1 ? 0.35 : q / (N - 1), sd = q % 2 ? 1 : -1, j = jitter(seed + q), ang = lerp(from, to, t) * DEG;
+    const e = onEgg([0, 0, 0], R, [sd * 0.14, lerp(y0, y1, t), 1]);
+    const dir = unit([sd * side * (0.5 + 0.7 * j), -Math.sin(ang), Math.cos(ang)]);
+    const long = (1 - 1.3 * (t - 0.35) ** 2) * (0.82 + 0.3 * jitter(seed * 3 + q));
+    out.push(feather(add(e.p, scale(e.n, -R[2] * 0.15)), dir, [1, 0, 0.15 * sd], len * Math.min(1, long), w * (0.9 + 0.2 * j), 'crest', sh));
   }
   return merge(...out);
 }
 
+/** How tall a stage stands at its back: from the ground to the top of a middle ring. What its crests are measured against. */
+const bodyHigh = (s: Pede): number => s.high + s.ring[2];
+
 /**
- * The plates on one ring, in its frame: its feathering (`featherCoat`), and where its stage has a crest there (`Pede.plate.crest`),
- * a tall fan of three to five plates standing up and back off its spine, their faces to the sides, brown over their outer third.
+ * The plates on one ring, in its frame: its feathering (`featherCoat`), down under it on the rings that rear; and where its stage
+ * has a crest there (`Pede.plate.crest`, its longest plate against how tall it stands), a big swept-back fan of plates, five
+ * drawn big and four small.
  */
 function platesOf(s: Pede, i: number, fine: boolean): Mesh {
-  const R = ringR(s, i), L = s.plate.len * s.sizes[i], W = s.plate.w * s.sizes[i], crest = s.plate.crest[i] ?? 1;
-  const out: Mesh[] = [featherCoat(R, L, W, fine, i * 31 + 1, (phi, back, sd) => patched(s, i, sd)(phi, back))];
-  if (crest >= 1.5) out.push(fan(R, crest >= 1.85 ? 5 : crest >= 1.65 ? 4 : 3, -8, 58, 0.55, -0.35, L * crest * 1.3, W * 1.5, fine, i * 13));
+  const R = ringR(s, i), L = s.plate.len * s.sizes[i], W = s.plate.w * s.sizes[i], crest = s.plate.crest[i] ?? 0;
+  const out: Mesh[] = [featherCoat(R, L, W, fine, i * 31 + 1, (phi, back, sd) => patched(s, i, sd)(phi, back), s.arm && i < 2 ? 180 : 160)];
+  if (crest > 0) out.push(fan(R, fine ? 5 : 4, bodyHigh(s) * crest, W * 2.3, fine, i * 13));
   return merge(...out);
 }
 
 /**
- * The tail fan, in its own frame on the last ring: long plates fanning up and back from the end of its spine, the middle
- * longest, a shorter layer in front of them, and cream scales under them at the end of its body.
+ * The tail fan, in its own frame on the last ring: a big fan of plates swept up and back from the end of its spine, splayed wide,
+ * and cream scales under them at the end of its body.
  */
 function fanOf(s: Pede, fine: boolean): Mesh {
-  const N = s.plate.tailCount, out: Mesh[] = [], R = ringR(s, s.rings - 1);
-  const L = s.plate.len * s.plate.tail, W = s.plate.w * 1.2, sh = { n: fine ? 7 : 5, k: fine ? 4 : 3, tip: 0.34, cup: 0.2, curl: -0.04 };
-  out.push(fan(R, N, 12, 82, 0.2, -0.6, L, W * 1.3, fine, 40, 0.45));
-  for (let q = 0; q < (fine ? 4 : 2); q++) {
-    const a = q % 2 ? 1 : -1, j = jitter(q + 50), spread = a * (40 + 25 * Math.floor(q / 2)) * DEG;
-    const dir = unit([Math.sin(spread) * 0.95, -0.9, Math.cos(spread) * 0.7]);
-    out.push(feather([a * R[0] * 0.3, 0, -0.02], dir, [Math.cos(spread), 0, -Math.sin(spread)], L * 0.75 * (0.9 + 0.2 * j), W * 1.1, 'crest', sh));
-  }
-  const M = fine ? 5 : 3;
-  for (let q = 0; q < M; q++) {
-    const a = lerp(-1, 1, q / (M - 1)), spread = a * 50 * DEG;
-    out.push(feather([a * R[0] * 0.3, R[1] * 0.3, 0], unit([Math.sin(spread), -0.7, Math.cos(spread) * 0.8]), [Math.cos(spread), 0, -Math.sin(spread)], L * 0.55, W * 0.95, q % 2 ? 'leaf' : 'leafPale', sh));
-  }
+  const R = ringR(s, s.rings - 1), W = s.plate.w * 2.2, sh = { ...plateCut(fine), tip: 0.3, cup: 0.12 };
+  const out: Mesh[] = [fan(R, s.plate.tailCount, bodyHigh(s) * s.plate.tail, W, fine, 40, { from: 30, to: 78, y0: 0.3, y1: -0.6, side: 0.55 })];
   for (const sd of [1, -1]) {
-    for (let q = 0; q < (fine ? 3 : 2); q++) {
-      out.push(feather([sd * R[0] * (0.2 + 0.25 * q), -0.02, -R[2] * (0.2 + 0.3 * q)], unit([sd * 0.35, -1, -0.2 * q]), unit([sd * 0.5, 0, 1]), L * 0.32, W * 1.2, q ? 'cream' : 'leaf', { ...sh, tip: 0.2, cup: 0.12 }));
-    }
+    out.push(feather([sd * R[0] * 0.25, -0.02, -R[2] * 0.25], unit([sd * 0.35, -1, -0.1]), unit([sd * 0.5, 0, 1]), s.plate.len * 0.9, s.plate.w * 1.4, 'cream', sh));
   }
   return merge(...out);
 }
@@ -753,22 +760,19 @@ function fanOf(s: Pede, fine: boolean): Mesh {
 /* ---- its body ------------------------------------------------------------------------ */
 
 /** A ring, in its frame: an egg, the green of its back over its top, cream down its sides, darker under it; its plates feather it. */
-const ringMesh = (s: Pede, i: number, n: number, k: number): Mesh => {
+const ringMesh = (s: Pede, i: number, fine: boolean): Mesh => {
   const R = ringR(s, i), C: V3 = [0, 0, 0];
-  return painted(orb(C, R, n + 3, k + 2, 'mark'), (c) => { const z = dirIn(C, R, c)[2]; return z > 0.3 ? 'leaf' : z < -0.55 ? 'belly' : 'mark'; });
+  return painted(orb(C, R, fine ? 12 : 8, fine ? 8 : 4, 'mark'), (c) => { const z = dirIn(C, R, c)[2]; return z > 0.3 ? 'leaf' : z < -0.55 ? 'belly' : 'mark'; });
 };
 
-/** The neck, in its own frame: a cream egg along it, feathered green over its top and cream under it, a little finer than its body. */
-function neckOf(s: Pede, n: number, k: number, fine: boolean): Mesh {
-  const E = neckEgg(s), L = s.plate.len, W = s.plate.w, out: Mesh[] = [orb([0, 0, 0], E.r, n + 2, k + 1, 'mark'), featherCoat(E.r, L * 0.85, W * 0.9, fine, 91, () => false, 130)];
-  // A mane down the top of it: long plates lying back from behind the head.
-  const M = fine ? 4 : 3;
-  for (let q = 0; q < M; q++) {
-    for (const sd of [-1, 1]) {
-      const e = onEgg([0, 0, 0], E.r, [sd * 0.35, 0.6 - (1.1 * q) / M, 0.9]);
-      out.push(feather(add(e.p, scale(e.n, -E.r[2] * 0.1)), unit(add([sd * 0.3, -1, 0], scale(e.n, 0.6))), unit([sd, 0, 0.6]), L * (1.7 - 0.2 * q), W * 1.3, 'crest', { n: fine ? 7 : 5, k: fine ? 4 : 3, tip: 0.34, cup: 0.2, curl: 0.1 }));
-    }
-  }
+/**
+ * The neck, in its own frame: a cream egg along it, feathered all round, green over its top and cream fleece down its sides and
+ * its front; and a mane of long plates down the back of it from behind the head.
+ */
+function neckOf(s: Pede, fine: boolean): Mesh {
+  const E = neckEgg(s), L = s.plate.len, W = s.plate.w;
+  const out: Mesh[] = [orb([0, 0, 0], E.r, fine ? 10 : 7, fine ? 6 : 4, 'mark'), featherCoat(E.r, L * 0.8, W * 0.9, fine, 91, () => false, 180)];
+  out.push(fan(E.r, fine ? 5 : 3, L * 2.4, W * 1.9, fine, 93, { from: 50, to: 75, y0: 0.7, y1: -0.6, side: 0.4 }));
   return merge(...out);
 }
 
@@ -782,13 +786,13 @@ const skullOf = (s: Pede): { c: V3; r: V3 } => ({ c: [0, -s.head.r[1] * 0.3, 0],
  * muzzle with a pink nose and a small mouth; cream, with a cap of green over its crown edged in brown and a green blaze down the
  * bridge of its nose; small dark eyes; a few brown freckles on its cheeks.
  */
-function headOf(s: Pede, n: number, k: number, shut: boolean): Mesh {
-  const R = s.head.r, S = skullOf(s);
+function headOf(s: Pede, fine: boolean, shut: boolean): Mesh {
+  const R = s.head.r, S = skullOf(s), n = fine ? 12 : 9, k = fine ? 8 : 5;
   const cap = (d: V3): Mat => (d[2] > 0.48 && d[1] < 0.6 ? 'leaf' : d[2] > 0.3 && d[1] < 0.1 ? 'coat' : 'mark');
-  const out: Mesh[] = [painted(orbAlong(S.c, [0, 1, 0], [S.r[0], S.r[2], S.r[1]], n + 4, k + 2, 'mark'), (c) => cap(dirIn(S.c, S.r, c)))];
+  const out: Mesh[] = [painted(orbAlong(S.c, [0, 1, 0], [S.r[0], S.r[2], S.r[1]], n, k, 'mark'), (c) => cap(dirIn(S.c, S.r, c)))];
   // The muzzle: forward and a little down, tapering; the blaze down its top.
   const mz: V3 = [0, R[1] * 0.42, -R[2] * 0.26], MR: V3 = [R[0] * 0.5, R[1] * 0.58, R[2] * 0.52];
-  out.push(painted(orbAlong(mz, [0, 1, -0.14], [MR[0], MR[2], MR[1]], n + 2, k + 1, 'mark'), (c) => {
+  out.push(painted(orbAlong(mz, [0, 1, -0.14], [MR[0], MR[2], MR[1]], n - 2, k - 1, 'mark'), (c) => {
     const d = dirIn(mz, MR, c);
     return d[2] > 0.5 && Math.abs(d[0]) < 0.34 && d[1] < 0.45 ? 'leaf' : 'mark';
   }));
@@ -831,58 +835,58 @@ function eyesOf(s: Pede, shut: boolean): Mesh {
 }
 
 /**
- * The crest on its head, in its own frame on its crown: plates fanned up and back off the back of its head, the middle the
- * tallest, green with a cream root and brown over their outer third; two small ones lying back over its crown.
+ * The crest on its head, in its own frame on its crown: a fan of plates swept up and back off the back of its head, of different
+ * lengths, brown over their outer third; two small ones lying back over its crown.
  */
 function capOf(s: Pede, fine: boolean): Mesh {
-  const N = s.plate.capCount, out: Mesh[] = [], R = s.head.r, sh = { n: fine ? 7 : 5, k: fine ? 4 : 3, tip: 0.34, cup: 0.2, curl: -0.05 };
-  const L = s.plate.len * s.plate.cap, W = s.plate.w * 1.05;
-  out.push(fan([R[0] * 0.5, R[1] * 0.35, R[2] * 0.2], N, 8, 70, 0.6, -0.8, L, W * 1.35, fine, 70, 0.35));
-  for (const sd of [1, -1]) out.push(feather([sd * R[0] * 0.2, R[1] * 0.25, -R[2] * 0.12], unit([sd * 0.2, -1, 0.35]), unit([sd * 0.3, 0.2, 1]), L * 0.4, W * 0.8, 'leaf', sh));
+  const R = s.head.r, L = s.plate.len * s.plate.cap, W = s.plate.w * 1.5;
+  const out: Mesh[] = [fan([R[0] * 0.5, R[1] * 0.35, R[2] * 0.2], s.plate.capCount, L, W, fine, 70, { from: 18, to: 68, y0: 0.6, y1: -0.8, side: 0.4 })];
+  for (const sd of [1, -1]) out.push(feather([sd * R[0] * 0.2, R[1] * 0.25, -R[2] * 0.12], unit([sd * 0.2, -1, 0.35]), unit([sd * 0.3, 0.2, 1]), L * 0.4, W * 0.6, 'leaf', plateCut(fine)));
   return merge(...out);
 }
 
 /* ---- legs ------------------------------------------------------------------------------- */
 
+/** Whether facet `j` of `n` round a leg's tube faces out and forward, where its patch is (the tube's corners run from -x round through +y). */
+const patchFacet = (n: number, j: number): boolean => Math.abs(((j + 1) / n) * TAU - TAU * 0.4) < 1.0;
+
 /**
- * A leg's upper part, along -z from its hip: a plump rounded thigh of fleece, cream with a brown patch down its outer side, or
- * brown with a cream one, by turns.
+ * A leg's upper part, along -z from up inside its hip: one smooth tapered thigh, thickest just under the body and narrowing to a
+ * rounded knee; cream with a brown patch down its outer side, or brown with a cream one, by turns.
  */
-function thighOf(len: number, w: number, n: number, k: number, brown: boolean): Mesh {
-  const c: V3 = [0, 0, -len * 0.42], r: V3 = [w * 1.32, w * 1.24, len * 0.68];
-  return painted(orbAlong(c, [0, 0, -1], r, n + 2, k + 1, 'mark'), (p) => {
-    const d = dirIn(c, r, p), patch = d[0] > 0.25 && d[2] > -0.1;
-    return brown ? (patch ? 'mark' : 'coat') : patch ? 'coat' : 'mark';
-  });
+function thighOf(len: number, w: number, n: number, brown: boolean): Mesh {
+  const zs = [w * 0.9, 0, -len * 0.3, -len * 0.6, -len * 0.85, -len], ws = [w * 1.0, w * 1.5, w * 1.52, w * 1.38, w * 1.18, w * 1.05];
+  const [a, b]: Mat[] = brown ? ['coat', 'mark'] : ['mark', 'coat'];
+  return merge(
+    tube(zs.map((z) => [0, 0, z] as V3), ws, ws, n, (ring, j) => (ring >= 2 && ring <= 3 && patchFacet(n, j) ? b : a), { seam: 'start', end: false }),
+    orb([0, 0, -len], w * 1.05, n, 4, 'coat'),
+  );
 }
 
-/** A leg's lower part, along -z from its knee: rounded, brown, a cream patch down its front on some. */
-function shinOf(len: number, w: number, n: number, k: number, patch: boolean): Mesh {
-  const c: V3 = [0, 0, -len * 0.48], r: V3 = [w * 1.06, w * 1.0, len * 0.62];
-  return painted(orbAlong(c, [0, 0, -1], r, n + 1, k + 1, 'coat'), (p) => {
-    const d = dirIn(c, r, p);
-    return patch && d[0] > 0.35 && Math.abs(d[2]) < 0.45 ? 'mark' : 'coat';
-  });
+/** A leg's lower part, along -z from inside its knee: shorter, a smooth taper to the ankle, brown, a cream patch down its front on some. */
+function shinOf(len: number, w: number, n: number, patch: boolean): Mesh {
+  const zs = [w * 0.6, -len * 0.3, -len * 0.65, -len * 0.92], ws = [w * 1.04, w * 0.95, w * 0.86, w * 0.95];
+  return tube(zs.map((z) => [0, 0, z] as V3), ws, ws, n, (ring, j) => (patch && ring === 1 && patchFacet(n, j) ? 'mark' : 'coat'), { seam: 'start' });
 }
 
 /** A paw, in its bone's frame (its sole on the ground, forward along y): a dark round foot and its toes. */
-function pawOf(r: number, n: number, k: number, fine: boolean): Mesh {
-  const out: Mesh[] = [orbAlong([0, r * 0.1, r * 0.55], [0, 1, 0.2], [r * 1.02, r * 0.78, r * 1.08], n + 2, k + 1, 'coatDark')];
+function pawOf(r: number, fine: boolean): Mesh {
+  const out: Mesh[] = [orbAlong([0, r * 0.1, r * 0.55], [0, 1, 0.2], [r * 1.02, r * 0.78, r * 1.08], fine ? 9 : 6, fine ? 5 : 3, 'coatDark')];
   const T = fine ? 4 : 3;
   for (let q = 0; q < T; q++) {
     const a = lerp(-0.85, 0.85, q / (T - 1));
-    out.push(orbAlong([Math.sin(a) * r * 0.66, r * 0.82 + Math.cos(a) * r * 0.2, r * 0.3], [Math.sin(a) * 0.4, 1, -0.2], [r * 0.32, r * 0.29, r * 0.36], 6, 3, 'coatDark'));
+    out.push(orbAlong([Math.sin(a) * r * 0.66, r * 0.82 + Math.cos(a) * r * 0.2, r * 0.3], [Math.sin(a) * 0.4, 1, -0.2], [r * 0.32, r * 0.29, r * 0.36], fine ? 6 : 5, 3, 'coatDark'));
   }
   return merge(...out);
 }
 
-/** A hand, gripping: a dark paw curled over the top of the hide, its fingers down the front of it. */
-function handOf(r: number, n: number, k: number, fine: boolean): Mesh {
-  const out: Mesh[] = [orbAlong([0, -r * 0.1, 0.02], [0, 0.3, 1], [r * 1.0, r * 0.8, r * 1.05], n + 2, k + 1, 'coatDark')];
+/** A hand, gripping: a big dark paw curled over the top of the hide, its fingers down the front of it. */
+function handOf(r: number, fine: boolean): Mesh {
+  const out: Mesh[] = [orbAlong([0, -r * 0.1, 0.02], [0, 0.3, 1], [r * 1.0, r * 0.8, r * 1.05], fine ? 9 : 6, fine ? 5 : 3, 'coatDark')];
   const T = fine ? 4 : 3;
   for (let q = 0; q < T; q++) {
     const a = lerp(-0.75, 0.75, q / (T - 1));
-    out.push(orbAlong([Math.sin(a) * r * 0.64, r * 0.5, -r * 0.3], [Math.sin(a) * 0.2, 0.4, -1], [r * 0.3, r * 0.28, r * 0.46], 6, 3, 'coatDark'));
+    out.push(orbAlong([Math.sin(a) * r * 0.64, r * 0.5, -r * 0.3], [Math.sin(a) * 0.2, 0.4, -1], [r * 0.3, r * 0.28, r * 0.46], fine ? 6 : 5, 3, 'coatDark'));
   }
   return merge(...out);
 }
@@ -1052,28 +1056,28 @@ function pedeGlow(s: Pede, b: Bones, a: Anim): Array<{ p: V3; r: number; c: RGB;
 /* ---- its pieces ------------------------------------------------------------------------------ */
 
 function pedeBuild(s: Pede, lod: number): Piece[] {
-  const fine = lod > 0, n = cut(lod, 7, 9), k = cut(lod, 4, 6), pieces: Piece[] = [], N = s.rings;
+  const fine = lod > 0, n = cut(lod, 6, 10), pieces: Piece[] = [], N = s.rings;
   const sk = skullOf(s), headHide = [{ c: sk.c, r: scale(sk.r, 0.9) }];
   if (s.arm) pieces.push({ key: 'hide', mesh: hangingHideOf(s, fine), bone: 'hide', bias: 0.05, after: ['ring0', 'plates0', 'ring1', 'plates1', 'neck', 'head'], front: [0, 1, 0], bent: hideBent(s) });
   else pieces.push({ key: 'hide', mesh: groundHideOf(s, fine), bone: 'hide', bias: -4, bent: hideBent(s), lines: false });
   for (let i = 0; i < N; i++) {
     const R = ringR(s, i);
-    pieces.push({ key: `ring${i}`, mesh: ringMesh(s, i, n, k), bone: `ring${i}`, bias: 0, lines: false, breathes: { c: [0, 0, 0], k: 0.04 } });
+    pieces.push({ key: `ring${i}`, mesh: ringMesh(s, i, fine), bone: `ring${i}`, bias: 0, lines: false, breathes: { c: [0, 0, 0], k: 0.04 } });
     const legs = [legKey(s, i * 2), legKey(s, i * 2 + 1)].map((key) => `${key}0`);
     pieces.push({ key: `plates${i}`, mesh: platesOf(s, i, fine), bone: `plates${i}`, bias: 0.02, after: [`ring${i}`, ...legs], hide: [{ c: [0, 0, 0], r: scale(R, 0.8) }] });
   }
   pieces.push({ key: 'fan', mesh: fanOf(s, fine), bone: 'fan', bias: 0.03, after: [`ring${N - 1}`, `plates${N - 1}`], front: [0, -1, 0] });
-  if (s.neck) pieces.push({ key: 'neck', mesh: neckOf(s, n, k, fine), bone: 'neck', bias: 0.04, after: ['ring0', 'plates0'], front: [0, 1, 0] });
-  pieces.push({ key: 'head', mesh: headOf(s, n, k, false), shut: headOf(s, n, k, true), bone: 'head', bias: 0.1, lines: false });
+  if (s.neck) pieces.push({ key: 'neck', mesh: neckOf(s, fine), bone: 'neck', bias: 0.04, after: ['ring0', 'plates0'], front: [0, 1, 0] });
+  pieces.push({ key: 'head', mesh: headOf(s, fine, false), shut: headOf(s, fine, true), bone: 'head', bias: 0.1, lines: false });
   pieces.push({ key: 'cap', mesh: capOf(s, fine), bone: 'cap', bias: 0.11, after: ['head'], hide: headHide, hideIn: 'head' });
   for (let q = 0; q < N * 2; q++) {
     const i = ringOf(q), sd = sideOf(q), key = legKey(s, q), arm = !grounded(s, q);
     const L = arm ? s.arm! : s.leg, front: V3 = [sd, 0.2, 0], m = (x: Mesh): Mesh => (sd > 0 ? x : mirror(x));
-    const brown = (i + (sd > 0 ? 0 : 1)) % (s.arm ? 4 : 3) === 0;
+    const brown = arm || (i + (sd > 0 ? 0 : 1)) % (s.arm ? 4 : 3) === 0;
     pieces.push(
-      { key: `${key}0`, mesh: m(thighOf(L.len[0], L.w, n, k, brown)), bone: `${key}0`, bias: 0.01, after: `ring${i}`, front, lines: false },
-      { key: `${key}1`, mesh: m(shinOf(L.len[1], L.w, n, k, !brown && (s.arm !== null || i % 2 === 1))), bone: `${key}1`, bias: 0.015, after: [`ring${i}`, `${key}0`], front, convex: true, lines: false },
-      { key: `${key}2`, mesh: m(arm ? handOf(L.paw, n, k, fine) : pawOf(L.paw, n, k, fine)), bone: `${key}2`, bias: 0.02, after: [`${key}1`, 'hide'], front: arm ? [0, 1, 0] : front },
+      { key: `${key}0`, mesh: m(thighOf(L.len[0], L.w, n, brown)), bone: `${key}0`, bias: 0.01, after: `ring${i}`, front, lines: false },
+      { key: `${key}1`, mesh: m(shinOf(L.len[1], L.w, n, arm || (!brown && (s.arm !== null || i % 2 === 1)))), bone: `${key}1`, bias: 0.015, after: [`ring${i}`, `${key}0`], front, convex: true, lines: false },
+      { key: `${key}2`, mesh: m(arm ? handOf(L.paw, fine) : pawOf(L.paw, fine)), bone: `${key}2`, bias: 0.02, after: [`${key}1`, 'hide'], front: arm ? [0, 1, 0] : front },
     );
   }
   return pieces;
