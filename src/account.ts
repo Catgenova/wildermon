@@ -515,8 +515,9 @@ paper.addEventListener('close', () => paperBody.replaceChildren());
  * on the screen for a frame, so nothing about signing in waits on it; if it
  * cannot be drawn, the sea under it stays.
  */
-void import('./landing/faithbox').then(({ dressFaith }) => {
-  dressFaith(card);
+void import('./landing/faithbox').then(({ dressAs, dressFaith }) => {
+  // The box wears the Faith window's dress; holding the character creator, the Trades window's.
+  dressAs(card, () => (card.classList.contains('making') ? 'trades' : 'faith'));
   dressFaith(paperBox);
 }).catch(() => {});
 requestAnimationFrame(() => window.setTimeout(() => {

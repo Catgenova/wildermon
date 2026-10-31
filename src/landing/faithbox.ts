@@ -3,11 +3,13 @@ import { FRAME_RIM, frameFor } from '../ui/runecut-frames';
 import { runeFor } from '../ui/theme';
 
 /**
- * The Faith window's dress, on a box of the landing page: its slab, its frame
- * of marble, pearl and sea glass, and the crescent in the niche at the head of
- * its title, painted by Runecut's own painters (`src/ui/runecut-art.ts`,
- * `src/ui/runecut-frames.ts`) with the Faith window's own seed, so the box
- * and the window in the game are the same piece of stone.
+ * A window's dress, on a box of the landing page: the Faith window's (marble,
+ * pearl and sea glass, the crescent in its niche), or the Trades window's
+ * (iron-bound planks) on the box while it holds the character creator. Its
+ * slab, its frame and the rune in the niche at the head of its title, painted
+ * by Runecut's own painters (`src/ui/runecut-art.ts`, `src/ui/runecut-frames.ts`)
+ * with that window's own seed, so the box and the window in the game are the
+ * same piece of stone or wood.
  *
  * In the game `src/ui/runecut-dress.ts` lays these over a window in the
  * interface's layer; a box on this page is in the page's flow and scrolls
@@ -17,12 +19,10 @@ import { runeFor } from '../ui/theme';
  * has stopped; until then the last picture is stretched to the box (src/account.css).
  */
 
-/** The window whose dress this is. */
+/** The window whose dress the boxes wear unless told otherwise. */
 const WINDOW = 'faith';
-/** The frame it wears, its band's width and how far it stands out past the box. */
-const KIND = frameFor(WINDOW);
-export const FAITH_RIM = FRAME_RIM[KIND] ?? 16;
-const REACH = reachOf(KIND);
+/** The Faith window's frame band, which the page's stylesheet starts from. */
+export const FAITH_RIM = FRAME_RIM[frameFor(WINDOW)] ?? 16;
 /** How long a resize has to have stopped for before the box is painted again, in ms (as the game's `Dressed`). */
 const SETTLE_MS = 150;
 
@@ -35,23 +35,51 @@ const layer = (cls: string): HTMLCanvasElement => {
 
 /** Dress a box as the Faith window. Its title's head (`.win-head`) takes the niche. */
 export function dressFaith(box: HTMLElement): void {
-  const seed = seedOf(WINDOW);
-  const o: ArtOpts = { seed, night: false, side: sideOf(seed), rim: FAITH_RIM, frame: KIND };
+  dressAs(box, () => WINDOW);
+}
+
+/**
+ * Dress a box as the window `which` names: its slab, its frame and the rune in
+ * its niche, all with that window's seed. Asked again whenever the box's class
+ * changes, so a box that becomes another window's (the creator, which wears
+ * the Trades window's dress) is painted again as that window at once.
+ */
+export function dressAs(box: HTMLElement, which: () => string): void {
   const plate = layer('fb-plate');
   const frame = layer('fb-frame');
   const niche = layer('fb-niche');
-  box.style.setProperty('--rim', `${FAITH_RIM}px`);
-  box.style.setProperty('--reach', `${REACH}px`);
   box.prepend(plate);
   box.append(frame);
   box.querySelector('.win-head')?.prepend(niche);
 
   let size = '';
+  let worn = '';
   const paint = (): void => {
+    const win = which();
+    const kind = frameFor(win);
+    const rim = FRAME_RIM[kind] ?? 16;
+    const reach = reachOf(kind);
+    const seed = seedOf(win);
+    const o: ArtOpts = { seed, night: false, side: sideOf(seed), rim, frame: kind };
+    if (win !== worn) {
+      worn = win;
+      box.style.setProperty('--rim', `${rim}px`);
+      box.style.setProperty('--reach', `${reach}px`);
+      const k = window.devicePixelRatio || 1;
+      niche.width = Math.ceil(NICHE_W * k);
+      niche.height = Math.ceil(NICHE_H * k);
+      niche.style.width = `${NICHE_W}px`;
+      niche.style.height = `${NICHE_H}px`;
+      const gn = niche.getContext('2d');
+      if (gn) {
+        gn.setTransform(k, 0, 0, k, 0, 0);
+        paintNiche(gn, runeFor(win), o, k);
+      }
+    }
     const w = box.offsetWidth, h = box.offsetHeight;
     const k = window.devicePixelRatio || 1;
-    if (!w || !h || `${w}x${h}@${k}` === size) return;
-    size = `${w}x${h}@${k}`;
+    if (!w || !h || `${win}:${w}x${h}@${k}` === size) return;
+    size = `${win}:${w}x${h}@${k}`;
     const fit = (c: HTMLCanvasElement, cw: number, ch: number): CanvasRenderingContext2D | null => {
       c.width = Math.ceil(cw * k);
       c.height = Math.ceil(ch * k);
@@ -61,32 +89,28 @@ export function dressFaith(box: HTMLElement): void {
     };
     const gp = fit(plate, w, h);
     if (gp) paintPlate(gp, w, h, o);
-    const gf = fit(frame, w + 2 * REACH, h + 2 * REACH);
+    const gf = fit(frame, w + 2 * reach, h + 2 * reach);
     if (gf) {
-      gf.translate(REACH, REACH);
-      paintFrame(gf, w, h, KIND, { seed, night: false, rim: FAITH_RIM });
+      gf.translate(reach, reach);
+      paintFrame(gf, w, h, kind, { seed, night: false, rim });
     }
     box.classList.add('dressed');
   };
-  const gn = (() => {
-    niche.width = Math.ceil(NICHE_W * (window.devicePixelRatio || 1));
-    niche.height = Math.ceil(NICHE_H * (window.devicePixelRatio || 1));
-    niche.style.width = `${NICHE_W}px`;
-    niche.style.height = `${NICHE_H}px`;
-    return niche.getContext('2d');
-  })();
-  if (gn) {
-    const k = window.devicePixelRatio || 1;
-    gn.setTransform(k, 0, 0, k, 0, 0);
-    paintNiche(gn, runeFor(WINDOW), o, k);
-  }
   paint();
   let due: ReturnType<typeof setTimeout> | null = null;
-  new ResizeObserver(() => {
+  const later = (): void => {
     if (due) clearTimeout(due);
     due = setTimeout(() => {
       due = null;
       paint();
     }, size ? SETTLE_MS : 0);
-  }).observe(box);
+  };
+  new ResizeObserver(later).observe(box);
+  // Another window's dress: painted again straight away, and again once the box has settled at its new size.
+  new MutationObserver(() => {
+    if (which() !== worn) {
+      paint();
+      later();
+    }
+  }).observe(box, { attributes: true, attributeFilter: ['class'] });
 }
