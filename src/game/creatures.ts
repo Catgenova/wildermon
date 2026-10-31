@@ -755,6 +755,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   rippa: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   papra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   glimmip: { kind: 'more', n: 1, what: 'glass lumps per batch' },
+  kemma: { kind: 'loads', n: 1, what: 'wildermon brushed per cycle' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2242,8 +2243,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   // Each says what it does on a settlement in the game's own terms; the numbers are the trades' (`TEND_JOBS`, `GATHER_DO`).
   kemma: {
     id: 'kemma',
-    name: 'Kemma',
+    name: 'Whispling',
+    was: ['Kemma'],
+    // Asked for, with a reference sheet: Whispling, Hushwing, Songroost.
     description: 'Settlement task: brush your wildermon within its reach under {careWanting:pct} care, as a keeper of its skill with a brush of QL equal to its skill. No brush needed.',
+    stages: [
+      { name: 'Hushwing', description: '' },
+      { name: 'Songroost', description: '' },
+    ],
     health: 18,
     attack: 2,
     speed: 2,
@@ -2254,13 +2261,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'groom',
     workRange: 8,
+    // [leaf-feathers, peach]: the sheet's olive sage with peach, moss with rose, straw with apricot, and sea-sage with pink.
     variants: [
-      ['#c9b48e', '#f3e7cf'],
-      ['#a89c8c', '#e6ddd1'],
-      ['#b98f6e', '#f0d3b8'],
-      ['#8f9a86', '#d8e0cf'],
+      ['#a2aa6a', '#f2b48c'],
+      ['#6c9a6c', '#f0a4a8'],
+      ['#b4a45a', '#f6c084'],
+      ['#78a092', '#eeb0c4'],
     ],
-    butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
+    butcher: { meat: 3, feather: 3, leather: 2, bone: 2 },
   },
   sheela: {
     id: 'sheela',
@@ -4635,6 +4643,7 @@ for (const id of ['plucka', 'grista', 'relka']) sayLine(id, SPECIES[id].descript
 sayLine('vesp', SPECIES.vesp.description, 'Level: animal husbandry.');
 sayLine('bedda', SPECIES.bedda.description, 'Level: farming.');
 sayLine('petta', SPECIES.petta.description, 'Level: foraging.');
+sayLine('kemma', SPECIES.kemma.description, 'Level: animal husbandry.');
 sayLine('papra', SPECIES.papra.description, 'Level: papyrusmaking.');
 sayLine('ambra', SPECIES.ambra.description, 'Level: forestry.');
 describeFrom('hive', { vesp: SPECIES.vesp.name });

@@ -4223,6 +4223,15 @@ export const NEWS: News[] = [
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
   },
   {
+    n: 400,
+    day: '2026-10-31',
+    lines: () => {
+      const d = SPECIES.kemma, [one, two] = d.stages!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('kemma')}.`,
+        'Each stage: own model, animations and voice.', `Changed: butchered, ${d.name} line gives feathers (was: fur).`];
+    },
+  },
+  {
     n: 398,
     day: '2026-10-31',
     lines: () => [`Added: music by the island's hour and season, ${ALL_TRACKS.length} tracks: ${playlistSays()}.`,
