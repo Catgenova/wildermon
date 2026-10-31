@@ -2654,7 +2654,7 @@ export function helpText(): string {
     <ul>
       <li><b>Improve</b> (right-click a finished item): each pass uses a little stock; success raises quality (QL), by a lot at first and very little near the top.
       Failure damages it; past ${IMPROVE_DAMAGE} damage it must be <b>Repair</b>ed before more work.</li>
-      <li><b>Starting kit</b>: one of each of ${STARTER_KIT.length - 1} tools at QL ${KIT_QL}, and a water skin. <b>Cannot be improved</b> (repairable only). Kept on death; a missing piece given again on coming ashore and on waking after a death.</li>
+      <li><b>Starting kit</b>: one of each of ${STARTER_KIT.length - 1} tools at QL ${KIT_QL}, and a water skin. Named <b>Starter (tool)</b>. <b>Cannot be improved</b> (repairable only), <b>sold or traded</b> (barter, deal, parcel, stall price, order). Kept on death; a missing piece given again on coming ashore and on waking after a death.</li>
     </ul>
     <table>
       <tr><td><b>Metal</b></td><td><b>File</b> + <b>whetstone</b>; a lump of metal per pass</td></tr>

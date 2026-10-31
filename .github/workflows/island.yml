@@ -3409,7 +3409,9 @@ jobs:
           # The kit is one of every tool the island asks for, QL 20, issued, the
           # browser's list; coming ashore gives it and the stake; issued cannot
           # be improved; a death leaves it on the body; a missing piece is given
-          # again on coming ashore, once; a player cannot call the top-up.
+          # again on coming ashore, once; a player cannot call the top-up; a
+          # Starter tool is refused on a barter side, in a deal, on a stall price
+          # and for an order, in the browser's words.
           npx esbuild supabase/test/kit.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/kit.mjs --log-level=error
           node node_modules/.cache/kit.mjs

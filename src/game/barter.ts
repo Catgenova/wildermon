@@ -69,6 +69,8 @@ export const BARTER_SAID = {
   locked: 'Set aside by {who}: {what}. Return it to the pack first.',
   /** Coins go by the sum, not by the stack. */
   coin: 'Coins go in as a silver sum, not as a stack.',
+  /** Starting kit: not sold, bartered, offered in a deal or priced on a stall (`issued`). */
+  starter: 'Starter tools cannot be sold or traded.',
   /** More silver on a side than its owner carries. */
   coins: '{who} lacks {n} silver.',
   /** Too many things on one side. */
@@ -150,10 +152,11 @@ export interface Barter {
  * can see them. Null when it may go.
  */
 export function barterPutRefusal(
-  it: { id: string; locked?: boolean; count: number },
+  it: { id: string; locked?: boolean; issued?: boolean; count: number },
   worn: boolean, count: number, who: string,
 ): string | null {
   if (it.id === 'coin') return barterSaid('coin');
+  if (it.issued) return barterSaid('starter');
   if (worn) return barterSaid('worn', { who, what: barterThing(it.id) });
   if (it.locked) return barterSaid('locked', { who, what: barterThing(it.id) });
   if (count > it.count) return barterSaid('fewer', { who, what: barterThing(it.id) });

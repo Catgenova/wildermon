@@ -1509,6 +1509,9 @@ export const padlockToFit = (items: readonly Item[]): Item | undefined =>
 /** The goes a fresh ancient stamp is good for, for its name: `relicuse.ts` has the rule, and reads this. */
 export const STAMP_GOES_NAMED = 5;
 
+/** The word in front of a starting-kit item's name (\`issued\`): a Starter hatchet. */
+export const STARTER_WORD = 'Starter';
+
 export function itemName(item: Item): string {
   const def = itemDef(item.id);
   const rare = rarityOf(item).name;
@@ -1521,7 +1524,9 @@ export function itemName(item: Item): string {
   // A casting is named for the piece it is of: a shovel head casting, not a casting.
   const plain = item.piece ? `${itemDef(item.piece).name} casting`
     : held ? `${def.name.replace(/ dye$/, '')} ${colourWord(dyeHex(held.liquid))} dye` : def.name;
-  const base = words ? `${words.charAt(0).toUpperCase()}${words.slice(1)} ${plain.toLowerCase()}` : plain;
+  const named = words ? `${words.charAt(0).toUpperCase()}${words.slice(1)} ${plain.toLowerCase()}` : plain;
+  // Starting kit is a Starter hatchet: what cannot be sold, traded or improved says so in its name.
+  const base = item.issued ? `${STARTER_WORD} ${named.charAt(0).toLowerCase()}${named.slice(1)}` : named;
   let name = item.extra ? `${base} (${item.extra.toLowerCase()})` : base;
   // What a vessel holds, in litres: a Bucket of water (3 L).
   if (held) name += ` (${held.litres} L)`;

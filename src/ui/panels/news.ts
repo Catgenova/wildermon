@@ -73,7 +73,7 @@ import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_28
 import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
 import { ENCHANT_HEAD, HOARD_HEAD, MIND_GAIN, PROSPECT_HEAD, SOUL_GAIN, TAME_HEAD } from '../../game/learn';
-import { BARTER_IDLE, BARTER_REACH } from '../../game/barter';
+import { BARTER_IDLE, BARTER_REACH, BARTER_SAID } from '../../game/barter';
 import { GOALS_B } from '../../game/journal-b';
 import { FRUITING } from '../../game/fruiting';
 import { SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY } from '../../game/bees';
@@ -4221,6 +4221,12 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 404,
+    day: '2026-10-31',
+    lines: () => ['Changed: starting-kit tools named Starter (tool): a Starter hatchet.',
+      `Changed: starter tools cannot be sold or traded: barter, deal, parcel, stall price or order ("${BARTER_SAID.starter}").`],
   },
   {
     n: 403,

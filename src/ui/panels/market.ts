@@ -817,8 +817,8 @@ export class MarketPanel {
 
   /** A tick list of what is in your pack, to offer or to post. A crate with a wildermon in it is on it too. */
   private pick(into: Set<number>, doing: string): void {
-    // Nothing put by and no coin: coins go by the number in the box, not by the stack.
-    const pack = this.game.inventory.items.filter((it) => !it.locked && it.id !== 'coin');
+    // Nothing put by, no coin (coins go by the number in the box, not by the stack) and no starter tool: those are not sold or traded.
+    const pack = this.game.inventory.items.filter((it) => !it.locked && !it.issued && it.id !== 'coin');
     const list = document.createElement('div');
     list.className = 'market-pick';
     for (const it of pack.slice(0, PICK_SHOWN)) {

@@ -17,7 +17,10 @@
  * Everything the island does is rolled back.
  */
 import { execFileSync } from 'node:child_process';
+import { barterPutRefusal, barterSaid } from '../../src/game/barter';
 import { KIT_QL, STARTER_KIT } from '../../src/game/game';
+import { Inventory, itemName } from '../../src/game/items';
+import { fitsOrder } from '../../src/game/orders';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -87,6 +90,17 @@ begin
     from item where world_id = w and holder_uid = u and def = 'saw';
   insert into said select 'TOTAL', count(*)::text from item where world_id = w and holder_uid = u and issued;
   insert into said select 'DOOR', has_function_privilege('authenticated', 'kit_topup(uuid,uuid)', 'execute')::text;
+
+  -- Not sold or traded: a barter side, a deal, a stall price, an order.
+  select id into v_id from item where world_id = w and holder_uid = u and def = 'hatchet' and issued;
+  insert into said values ('BARTER', coalesce(barter_thing_refusal(w, u, v_id, 1, null), '-'));
+  insert into player (world_id, uid, name, x, y, stats) values (w, '00000000-0000-4000-8000-00000000a1c2', 'Otto', 16.5, 16.5, '{}');
+  insert into said values ('DEAL', coalesce(rpc_deal(w, '00000000-0000-4000-8000-00000000a1c2', array[v_id], 0, 0)->>'why', '-'));
+  insert into said values ('PRICE', coalesce(rpc_price(w, v_id, 5)->>'why', '-'));
+  insert into said select 'FITS', count(*)::text from order_fits(w, u, 'hatchet', 1);
+  insert into item (world_id, holder, holder_uid, def, ql) values (w, 'player', u, 'hatchet', 25);
+  insert into said select 'FITS2', count(*)::text || '|' || bool_or(issued)::text from order_fits(w, u, 'hatchet', 1);
+  insert into said values ('SAID', barter_said('starter'));
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -102,6 +116,22 @@ check('the grave holds the log and the stake, and no kit tool', at('GRAVE').spli
 check(`a lost kit tool is given again on coming ashore, once, at QL ${KIT_QL}, issued`, at('SAW') === `1|${KIT_QL}|true`, at('SAW'));
 check('nothing given twice', at('TOTAL') === String(STARTER_KIT.length), at('TOTAL'));
 check('a player cannot call the top-up', at('DOOR') === 'false', at('DOOR'));
+
+const STARTER = barterSaid('starter');
+check('the island says it in the browser\'s words', at('SAID') === STARTER, at('SAID'));
+check('a starter tool does not go on a side of a barter', at('BARTER') === STARTER, at('BARTER'));
+check('or in a deal', at('DEAL') === STARTER, at('DEAL'));
+check('or take a price on a stall', at('PRICE') === STARTER, at('PRICE'));
+check('or fill an order; one of your own making does', at('FITS') === '0' && at('FITS2') === '1|false', `${at('FITS')} / ${at('FITS2')}`);
+
+/* ---- the browser's side -------------------------------------------------------- */
+const inv = new Inventory();
+const kitHatchet = inv.add('hatchet', { ql: 20, issued: true, extra: 'Copper' });
+const made = inv.add('hatchet', { ql: 25, extra: 'Copper' });
+check('a starting-kit tool is called a Starter (tool)', itemName(kitHatchet).startsWith('Starter hatchet') && !itemName(made).startsWith('Starter'),
+  `${itemName(kitHatchet)} / ${itemName(made)}`);
+check('the browser keeps it off a barter side in the same words', barterPutRefusal(kitHatchet, false, 1, 'Mira') === STARTER);
+check('and off an order', !fitsOrder(kitHatchet, { def: 'hatchet', ql: 1 }, false) && fitsOrder(made, { def: 'hatchet', ql: 1 }, false));
 
 for (const l of [...ok, ...bad]) console.log(l);
 console.log(`one of every tool — ${ok.length} of ${ok.length + bad.length}`);

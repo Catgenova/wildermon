@@ -44,7 +44,7 @@ export const orderWords = (def: string, n: number, ql: number): string =>
  * holds cannot see; the island counts without it.
  */
 export const fitsOrder = (it: Item, order: { def: string; ql: number }, worn: boolean): boolean =>
-  it.id === order.def && it.ql >= order.ql && !it.locked && !worn
+  it.id === order.def && it.ql >= order.ql && !it.locked && !it.issued && !worn
   && it.creature === undefined && !(it.inside?.length);
 
 /** How many of what an order wants a pack could bring to it, counted by the unit. */
