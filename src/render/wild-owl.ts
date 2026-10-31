@@ -64,6 +64,8 @@ interface Owl {
   ear: { at: V3; len: number; w: number; out: number; back: number };
   /** The leaf-feathers round each ear: up and back of upright toward out (degrees, as `Plume`). */
   tuft: Plume[];
+  /** A crest of leaf-feathers up the middle of its crown, fanned from upright (0) back (degrees, as `Plume`); none for most. */
+  crest?: Plume[];
   /** The wing: its shoulder, its feathers, and how it is held standing. */
   /** The wing: its shoulder, the way its arm runs back from it folded, how far the arm swings up spread (degrees), its feathers, and how it is held standing. */
   wing: { at: V3; arm: V3; reach: number; pinions: Pinion[]; rest: WingSet };
@@ -86,171 +88,126 @@ function fan(n: number, len: number, w: number, from: number, to: number): Plume
   });
 }
 
-/** A Whispling: small and round, a big head, pink-lined ears in green leaf tufts, a cloak of green and peach feathers. */
+/**
+ * A row of `n` feathers of a wing, the first to the last: how far along the arm each is rooted, how long, how wide, the way each
+ * points folded and spread, how far round from the flank toward the back it is rooted (`Pinion.yaw`), how far out it flares, its
+ * layer, and the colours it cycles through.
+ */
+function row(n: number, o: {
+  at: readonly [number, number]; len: readonly [number, number]; w: number; fold: readonly [number, number]; open: readonly [number, number];
+  layer: number; flare?: number; yaw?: readonly [number, number]; mats: ReadonlyArray<readonly [Mat, Mat]>;
+}): Pinion[] {
+  return Array.from({ length: n }, (_, q) => {
+    const u = n > 1 ? q / (n - 1) : 0;
+    return {
+      at: lerp(o.at[0], o.at[1], u), len: lerp(o.len[0], o.len[1], u), w: o.w, fold: lerp(o.fold[0], o.fold[1], u), open: lerp(o.open[0], o.open[1], u),
+      layer: o.layer + 0.004 * q, flare: o.flare ?? 0, yaw: o.yaw ? lerp(o.yaw[0], o.yaw[1], u) : 0, mats: o.mats[q % o.mats.length],
+    };
+  });
+}
+
+/** The colours a row of feathers cycles through: green ones, peach ones. */
+const GREENS: ReadonlyArray<readonly [Mat, Mat]> = [['leaf', 'leafDark'], ['moss', 'leaf'], ['leafDark', 'leaf'], ['leaf', 'moss']];
+const PEACHES: ReadonlyArray<readonly [Mat, Mat]> = [['petal', 'feather'], ['feather', 'featherDark'], ['featherDark', 'petal'], ['feather', 'petal']];
+
+/** A Whispling: small and pear-shaped, a big head, pink-lined ears in fans of leaf-feathers, its wings a cloak of green over peach. */
 const WHISPLING_LOOK: Owl = {
   stage: 0,
   spec: {
     high: 1.0,
-    leg: { at: [0.32, 0.1, -0.52], len: [0.2, 0.16, 0.05], rest: [6, -16] },
-    neck: { at: [0, 0.06, 0.58], len: 0.2, lean: 4 },
+    leg: { at: [0.34, 0.14, -0.6], len: [0.2, 0.16, 0.05], rest: [6, -16] },
+    neck: { at: [0, 0.06, 0.6], len: 0.16, lean: 4 },
     head: { pitch: -4 },
     wing: { at: [0.66, 0.0, 0.3] },
-    tail: { at: [0, -0.62, -0.35], lift: -30 },
+    tail: { at: [0, -0.7, -0.45], lift: -30 },
     swing: [30, 40],
     thrust: 2,
     waddle: 7,
     peck: 30, tip: 24, nose: 26, crouch: 0.3, stance: 1,
   },
-  body: { c: [0, 0, -0.08], r: [1.12, 0.96, 0.82], green: 0.1 },
-  mantle: { rows: 5, count: 11, len: 0.32, w: 0.15, from: 0.64, to: -0.3, round: 112 },
-  ruff: { n: 12, len: 0.5, w: 0.18, round: 128, at: 0.74 },
-  bib: { rows: 5, len: 0.22 },
-  head: { c: [0, 0.04, 0.38], r: [0.76, 0.66, 0.64] },
-  eye: { dir: [0.4, 0.86, 0.24], size: 0.19 },
-  beak: { len: 0.2, w: 0.08 },
-  ear: { at: [0.5, -0.02, 0.84], len: 0.44, w: 0.34, out: 52, back: 6 },
-  tuft: fan(12, 1.12, 0.29, -18, 124),
+  body: { c: [0, 0, -0.14], r: [1.12, 0.98, 0.86], green: 0.1 },
+  mantle: { rows: 4, count: 11, len: 0.3, w: 0.15, from: 0.72, to: 0.2, round: 150 },
+  ruff: { n: 13, len: 0.46, w: 0.17, round: 132, at: 0.78 },
+  bib: { rows: 5, len: 0.24 },
+  head: { c: [0, 0.04, 0.36], r: [0.72, 0.64, 0.62] },
+  eye: { dir: [0.37, 0.88, 0.22], size: 0.145 },
+  beak: { len: 0.19, w: 0.075 },
+  ear: { at: [0.46, -0.02, 0.8], len: 0.5, w: 0.3, out: 40, back: 6 },
+  tuft: fan(9, 1.2, 0.27, 0, 112),
   wing: {
-    at: [1.02, 0.06, 0.4],
+    at: [1.0, 0.04, 0.42],
     arm: [0, -0.4, -1],
     reach: 30,
     pinions: [
-      // The flight feathers, peach and cream, flaring out at the bottom, round from the flank toward the back.
-      { at: 0.06, len: 1.16, w: 0.27, fold: -58, open: 40, layer: 0, flare: 0.6, yaw: 46, mats: ['petal', 'feather'] },
-      { at: 0.1, len: 1.16, w: 0.28, fold: -66, open: 22, layer: 0.01, flare: 0.62, yaw: 30, mats: ['feather', 'featherDark'] },
-      { at: 0.14, len: 1.14, w: 0.29, fold: -74, open: 4, layer: 0.02, flare: 0.64, yaw: 16, mats: ['petal', 'feather'] },
-      { at: 0.2, len: 1.08, w: 0.29, fold: -84, open: -16, layer: 0.03, flare: 0.66, yaw: 2, mats: ['featherDark', 'petal'] },
-      { at: 0.26, len: 1.0, w: 0.28, fold: -94, open: -36, layer: 0.04, flare: 0.68, yaw: -12, mats: ['petal', 'feather'] },
-      { at: 0.3, len: 0.86, w: 0.26, fold: -100, open: -50, layer: 0.05, flare: 0.7, yaw: -26, mats: ['feather', 'leaf'] },
-      // The green coverts over them.
-      { at: 0.0, len: 0.72, w: 0.23, fold: -56, open: 30, layer: 0.09, flare: 0.5, yaw: 40, mats: ['leaf', 'leafDark'] },
-      { at: 0.04, len: 0.7, w: 0.23, fold: -66, open: 14, layer: 0.1, flare: 0.5, yaw: 24, mats: ['moss', 'leaf'] },
-      { at: 0.1, len: 0.66, w: 0.23, fold: -78, open: -4, layer: 0.11, flare: 0.5, yaw: 8, mats: ['leaf', 'leafDark'] },
-      { at: 0.16, len: 0.6, w: 0.22, fold: -90, open: -24, layer: 0.12, flare: 0.5, yaw: -6, mats: ['leafDark', 'leaf'] },
-      { at: 0.0, len: 0.44, w: 0.2, fold: -54, open: 20, layer: 0.17, flare: 0.4, yaw: 30, mats: ['leaf', 'moss'] },
-      { at: 0.06, len: 0.42, w: 0.2, fold: -72, open: 0, layer: 0.18, flare: 0.4, yaw: 12, mats: ['moss', 'leaf'] },
-      { at: 0.12, len: 0.4, w: 0.19, fold: -88, open: -14, layer: 0.19, flare: 0.4, yaw: -4, mats: ['leaf', 'leafDark'] },
+      // The flight feathers, peach and cream, round the side from the front of the flank to the back, nearly to its feet.
+      ...row(8, { at: [0.2, 0.3], len: [1.12, 1.24], w: 0.27, fold: [-96, -66], open: [-40, 40], layer: 0, flare: 0.42, yaw: [-48, 62], mats: PEACHES }),
+      // Rows of green coverts over them, shorter row by row, the top one the scale-feathers of the shoulder.
+      ...row(8, { at: [0.06, 0.12], len: [0.8, 0.86], w: 0.25, fold: [-96, -64], open: [-30, 34], layer: 0.08, flare: 0.36, yaw: [-52, 58], mats: GREENS }),
+      ...row(7, { at: [0.0, 0.04], len: [0.52, 0.56], w: 0.23, fold: [-94, -62], open: [-20, 30], layer: 0.15, flare: 0.3, yaw: [-50, 54], mats: GREENS }),
+      ...row(6, { at: [-0.04, 0], len: [0.32, 0.34], w: 0.2, fold: [-92, -60], open: [-10, 24], layer: 0.21, flare: 0.24, yaw: [-44, 50], mats: GREENS }),
     ],
     rest: { spread: 0, raise: 0, sweep: 0 },
   },
   tail: [[0.5, 0.14, 0, 0, 'leaf', 'leafDark'], [0.46, 0.13, 6, -22, 'petal', 'leaf'], [0.46, 0.13, 6, 22, 'leaf', 'petal']],
-  leg: { fluff: 0.1, w: 0.085, talon: 0.18, shag: [0, 0] },
+  leg: { fluff: 0.1, w: 0.09, talon: 0.19, shag: [0, 0] },
   size: 1.9,
 };
 
-/** A Hushwing: lighter and longer, broad wings held spread, bigger leafy ear tufts, a long green and pink tail. */
+/** A Hushwing: lighter and longer, hovering on broad wings raised in a V, bigger leafy ear tufts, a long green and pink tail. */
 const HUSHWING_LOOK: Owl = {
   stage: 1,
   spec: {
     high: 1.7,
-    leg: { at: [0.3, 0.16, -0.5], len: [0.42, 0.42, 0.06], rest: [-14, -30] },
-    neck: { at: [0, 0.52, 0.58], len: 0.3, lean: 6 },
-    head: { pitch: -18 },
+    leg: { at: [0.32, 0.22, -0.56], len: [0.48, 0.5, 0.06], rest: [-14, -30] },
+    neck: { at: [0, 0.6, 0.56], len: 0.3, lean: 10 },
+    head: { pitch: -10 },
     wing: { at: [0.5, 0.3, 0.32] },
-    tail: { at: [0, -0.86, -0.16], lift: -50 },
+    tail: { at: [0, -0.9, -0.1], lift: -58 },
     swing: [30, 40],
     hop: true,
     thrust: 4,
     waddle: 3,
     peck: 34, tip: 22, nose: 24, crouch: 0.4, stance: 1,
   },
-  body: { c: [0, 0, 0], r: [0.8, 1.04, 0.84], green: 0.45 },
-  mantle: { rows: 5, count: 9, len: 0.38, w: 0.16, from: 0.62, to: -0.2, round: 105 },
-  ruff: { n: 14, len: 0.6, w: 0.18, round: 140, at: 0.66 },
-  bib: { rows: 5, len: 0.28 },
-  head: { c: [0, 0.06, 0.42], r: [0.76, 0.68, 0.64] },
-  eye: { dir: [0.4, 0.86, 0.24], size: 0.15 },
+  body: { c: [0, 0, 0], r: [0.8, 1.04, 0.86], green: 0.45 },
+  mantle: { rows: 5, count: 9, len: 0.38, w: 0.16, from: 0.66, to: -0.1, round: 115 },
+  ruff: { n: 14, len: 0.6, w: 0.18, round: 140, at: 0.68 },
+  bib: { rows: 6, len: 0.3 },
+  head: { c: [0, 0.06, 0.44], r: [0.82, 0.74, 0.7] },
+  eye: { dir: [0.38, 0.87, 0.24], size: 0.14 },
   beak: { len: 0.2, w: 0.075 },
-  ear: { at: [0.5, -0.02, 0.86], len: 0.46, w: 0.32, out: 48, back: 8 },
-  tuft: fan(11, 0.92, 0.24, -16, 116),
+  ear: { at: [0.54, -0.02, 0.92], len: 0.54, w: 0.34, out: 42, back: 8 },
+  tuft: fan(10, 1.35, 0.28, 0, 108),
   wing: {
-    at: [0.7, 0.42, 0.5],
+    at: [0.74, 0.42, 0.56],
     arm: [0, -1, -0.1],
     reach: 100,
     pinions: [
-      // The flight feathers, cream and peach, broad and long, rooted along the arm: spread, the outer ones fan out past its tip.
-      { at: 0.10, len: 1.49, w: 0.33, fold: -6, open: 6, layer: 0.000, mats: ['feather', 'petal'] },
-      { at: 0.26, len: 1.60, w: 0.33, fold: -6, open: 14, layer: 0.012, mats: ['petal', 'feather'] },
-      { at: 0.39, len: 1.70, w: 0.34, fold: -5, open: 23, layer: 0.024, mats: ['feather', 'featherDark'] },
-      { at: 0.54, len: 1.79, w: 0.34, fold: -5, open: 34, layer: 0.036, mats: ['feather', 'petal'] },
-      { at: 0.69, len: 1.88, w: 0.34, fold: -5, open: 45, layer: 0.048, mats: ['petal', 'feather'] },
-      { at: 0.83, len: 1.95, w: 0.35, fold: -4, open: 56, layer: 0.060, mats: ['feather', 'featherDark'] },
-      { at: 0.98, len: 2.03, w: 0.35, fold: -4, open: 68, layer: 0.072, mats: ['feather', 'petal'] },
-      { at: 1.11, len: 2.08, w: 0.36, fold: -3, open: 80, layer: 0.084, mats: ['petal', 'feather'] },
-      { at: 1.27, len: 2.13, w: 0.36, fold: -3, open: 92, layer: 0.096, mats: ['feather', 'featherDark'] },
-      { at: 1.41, len: 2.18, w: 0.36, fold: -3, open: 104, layer: 0.108, mats: ['feather', 'petal'] },
-      { at: 1.55, len: 2.21, w: 0.37, fold: -2, open: 117, layer: 0.120, mats: ['petal', 'feather'] },
-      { at: 1.70, len: 2.23, w: 0.37, fold: -2, open: 130, layer: 0.132, mats: ['feather', 'featherDark'] },
-      // The coverts: green, along the arm in rows over the roots of the flight feathers.
-      { at: 0.04, len: 1.44, w: 0.30, fold: -4, open: 30, layer: 0.170, mats: ['leaf', 'leafDark'] },
-      { at: 0.20, len: 1.41, w: 0.30, fold: -4, open: 38, layer: 0.175, mats: ['moss', 'leaf'] },
-      { at: 0.37, len: 1.39, w: 0.30, fold: -4, open: 46, layer: 0.180, mats: ['leafDark', 'leaf'] },
-      { at: 0.52, len: 1.37, w: 0.30, fold: -4, open: 54, layer: 0.185, mats: ['leaf', 'moss'] },
-      { at: 0.68, len: 1.35, w: 0.30, fold: -4, open: 62, layer: 0.190, mats: ['leaf', 'leafDark'] },
-      { at: 0.84, len: 1.33, w: 0.30, fold: -4, open: 70, layer: 0.195, mats: ['moss', 'leaf'] },
-      { at: 0.99, len: 1.31, w: 0.30, fold: -4, open: 78, layer: 0.200, mats: ['leafDark', 'leaf'] },
-      { at: 1.16, len: 1.28, w: 0.30, fold: -4, open: 86, layer: 0.205, mats: ['leaf', 'moss'] },
-      { at: 1.32, len: 1.27, w: 0.30, fold: -4, open: 94, layer: 0.210, mats: ['leaf', 'leafDark'] },
-      { at: 1.48, len: 1.24, w: 0.30, fold: -4, open: 102, layer: 0.215, mats: ['moss', 'leaf'] },
-      { at: 1.64, len: 1.22, w: 0.30, fold: -4, open: 110, layer: 0.220, mats: ['leafDark', 'leaf'] },
-      { at: 0.04, len: 1.01, w: 0.26, fold: -4, open: 60, layer: 0.220, mats: ['moss', 'leaf'] },
-      { at: 0.22, len: 0.99, w: 0.26, fold: -4, open: 66, layer: 0.225, mats: ['leafDark', 'leaf'] },
-      { at: 0.39, len: 0.98, w: 0.26, fold: -4, open: 72, layer: 0.230, mats: ['leaf', 'moss'] },
-      { at: 0.58, len: 0.95, w: 0.26, fold: -4, open: 78, layer: 0.235, mats: ['leaf', 'leafDark'] },
-      { at: 0.76, len: 0.94, w: 0.26, fold: -4, open: 84, layer: 0.240, mats: ['moss', 'leaf'] },
-      { at: 0.93, len: 0.93, w: 0.26, fold: -4, open: 91, layer: 0.245, mats: ['leafDark', 'leaf'] },
-      { at: 1.10, len: 0.90, w: 0.26, fold: -4, open: 97, layer: 0.250, mats: ['leaf', 'moss'] },
-      { at: 1.28, len: 0.89, w: 0.26, fold: -4, open: 103, layer: 0.255, mats: ['leaf', 'leafDark'] },
-      { at: 1.45, len: 0.87, w: 0.26, fold: -4, open: 109, layer: 0.260, mats: ['moss', 'leaf'] },
-      { at: 1.64, len: 0.86, w: 0.26, fold: -4, open: 115, layer: 0.265, mats: ['leafDark', 'leaf'] },
-      { at: 0.04, len: 0.59, w: 0.22, fold: -4, open: 80, layer: 0.270, mats: ['leafDark', 'leaf'] },
-      { at: 0.25, len: 0.58, w: 0.22, fold: -4, open: 84, layer: 0.275, mats: ['leaf', 'moss'] },
-      { at: 0.43, len: 0.56, w: 0.22, fold: -4, open: 89, layer: 0.280, mats: ['leaf', 'leafDark'] },
-      { at: 0.64, len: 0.55, w: 0.22, fold: -4, open: 93, layer: 0.285, mats: ['moss', 'leaf'] },
-      { at: 0.84, len: 0.54, w: 0.22, fold: -4, open: 98, layer: 0.290, mats: ['leafDark', 'leaf'] },
-      { at: 1.05, len: 0.53, w: 0.22, fold: -4, open: 102, layer: 0.295, mats: ['leaf', 'moss'] },
-      { at: 1.24, len: 0.52, w: 0.22, fold: -4, open: 106, layer: 0.300, mats: ['leaf', 'leafDark'] },
-      { at: 1.44, len: 0.51, w: 0.22, fold: -4, open: 111, layer: 0.305, mats: ['moss', 'leaf'] },
-      { at: 1.64, len: 0.50, w: 0.22, fold: -4, open: 115, layer: 0.310, mats: ['leafDark', 'leaf'] },
-      // And under the wing, green coverts along the arm on its inner face.
-      { at: 0.04, len: 1.44, w: 0.30, fold: -4, open: 30, layer: -0.080, mats: ['leaf', 'leafDark'] },
-      { at: 0.20, len: 1.41, w: 0.30, fold: -4, open: 38, layer: -0.085, mats: ['moss', 'leaf'] },
-      { at: 0.37, len: 1.39, w: 0.30, fold: -4, open: 46, layer: -0.090, mats: ['leafDark', 'leaf'] },
-      { at: 0.52, len: 1.37, w: 0.30, fold: -4, open: 54, layer: -0.095, mats: ['leaf', 'moss'] },
-      { at: 0.68, len: 1.35, w: 0.30, fold: -4, open: 62, layer: -0.100, mats: ['leaf', 'leafDark'] },
-      { at: 0.84, len: 1.33, w: 0.30, fold: -4, open: 70, layer: -0.105, mats: ['moss', 'leaf'] },
-      { at: 0.99, len: 1.31, w: 0.30, fold: -4, open: 78, layer: -0.110, mats: ['leafDark', 'leaf'] },
-      { at: 1.16, len: 1.28, w: 0.30, fold: -4, open: 86, layer: -0.115, mats: ['leaf', 'moss'] },
-      { at: 1.32, len: 1.27, w: 0.30, fold: -4, open: 94, layer: -0.120, mats: ['leaf', 'leafDark'] },
-      { at: 1.48, len: 1.24, w: 0.30, fold: -4, open: 102, layer: -0.125, mats: ['moss', 'leaf'] },
-      { at: 1.64, len: 1.22, w: 0.30, fold: -4, open: 110, layer: -0.130, mats: ['leafDark', 'leaf'] },
-      { at: 0.04, len: 1.01, w: 0.26, fold: -4, open: 60, layer: -0.130, mats: ['moss', 'leaf'] },
-      { at: 0.22, len: 0.99, w: 0.26, fold: -4, open: 66, layer: -0.135, mats: ['leafDark', 'leaf'] },
-      { at: 0.39, len: 0.98, w: 0.26, fold: -4, open: 72, layer: -0.140, mats: ['leaf', 'moss'] },
-      { at: 0.58, len: 0.95, w: 0.26, fold: -4, open: 78, layer: -0.145, mats: ['leaf', 'leafDark'] },
-      { at: 0.76, len: 0.94, w: 0.26, fold: -4, open: 84, layer: -0.150, mats: ['moss', 'leaf'] },
-      { at: 0.93, len: 0.93, w: 0.26, fold: -4, open: 91, layer: -0.155, mats: ['leafDark', 'leaf'] },
-      { at: 1.10, len: 0.90, w: 0.26, fold: -4, open: 97, layer: -0.160, mats: ['leaf', 'moss'] },
-      { at: 1.28, len: 0.89, w: 0.26, fold: -4, open: 103, layer: -0.165, mats: ['leaf', 'leafDark'] },
-      { at: 1.45, len: 0.87, w: 0.26, fold: -4, open: 109, layer: -0.170, mats: ['moss', 'leaf'] },
+      // The flight feathers, cream and peach, broad and long, rooted along the arm and fanned so their tips stand apart.
+      ...row(10, { at: [0.15, 2.1], len: [2.0, 3.0], w: 0.38, fold: [-6, -2], open: [4, 136], layer: 0, mats: PEACHES }),
+      // The coverts: green, in two rows along the leading edge, over and under the roots of the flight feathers.
+      ...row(10, { at: [0.05, 2.1], len: [2.0, 1.6], w: 0.34, fold: [-4, -4], open: [50, 112], layer: 0.16, mats: GREENS }),
+      ...row(9, { at: [0.05, 2.1], len: [0.9, 0.8], w: 0.28, fold: [-4, -4], open: [84, 112], layer: 0.22, mats: GREENS }),
+      ...row(10, { at: [0.05, 2.1], len: [2.0, 1.6], w: 0.34, fold: [-4, -4], open: [50, 112], layer: -0.09, mats: GREENS }),
+      ...row(9, { at: [0.05, 2.1], len: [0.9, 0.8], w: 0.28, fold: [-4, -4], open: [84, 112], layer: -0.14, mats: GREENS }),
     ],
-    rest: { spread: 0.88, raise: 52, sweep: 40 },
+    rest: { spread: 0.92, raise: 60, sweep: 66 },
   },
   tail: [
-    [2.0, 0.22, 0, 0, 'bloom', 'petal'], [1.9, 0.21, 4, -10, 'petal', 'bloom'], [1.9, 0.21, 4, 10, 'bloom', 'petal'],
-    [1.75, 0.21, 8, -22, 'leaf', 'leafDark'], [1.75, 0.21, 8, 22, 'leafDark', 'leaf'], [1.5, 0.2, 12, -34, 'moss', 'leaf'],
-    [1.5, 0.2, 12, 34, 'leaf', 'moss'], [1.2, 0.19, 16, -46, 'leaf', 'leafDark'], [1.2, 0.19, 16, 46, 'leafDark', 'leaf'],
+    [2.3, 0.22, 0, 0, 'bloom', 'petal'], [2.2, 0.21, 4, -10, 'petal', 'bloom'], [2.2, 0.21, 4, 10, 'bloom', 'petal'],
+    [2.0, 0.21, 8, -22, 'leaf', 'leafDark'], [2.0, 0.21, 8, 22, 'leafDark', 'leaf'], [1.75, 0.2, 12, -34, 'moss', 'leaf'],
+    [1.75, 0.2, 12, 34, 'leaf', 'moss'], [1.45, 0.19, 16, -46, 'leaf', 'leafDark'], [1.45, 0.19, 16, 46, 'leafDark', 'leaf'],
   ],
-  leg: { fluff: 0.22, w: 0.065, talon: 0.16, shag: [0, 0] },
+  leg: { fluff: 0.24, w: 0.085, talon: 0.24, shag: [0, 0] },
   size: 2.1,
 };
 
-/** A Songroost: tall and upright on long feathered legs, a tall crest of feather tufts, its wings a cloak of feathers to the ground. */
+/** A Songroost: tall and upright on long shaggy legs, two tall ear tufts and a crest, its wings a cloak of long feathers to the ground. */
 const SONGROOST_LOOK: Owl = {
   stage: 2,
   spec: {
     high: 2.85,
-    leg: { at: [0.5, 0.04, -1.0], len: [0.78, 0.74, 0.08], rest: [4, -14] },
+    leg: { at: [0.46, 0.1, -1.0], len: [0.82, 0.78, 0.08], rest: [4, -14] },
     neck: { at: [0, 0.1, 1.24], len: 0.5, lean: -2 },
     head: { pitch: 0 },
     wing: { at: [0.7, 0.02, 0.8] },
@@ -260,51 +217,31 @@ const SONGROOST_LOOK: Owl = {
     waddle: 2,
     peck: 40, tip: 18, nose: 20, crouch: 0.35, stance: 1,
   },
-  body: { c: [0, 0, 0.1], r: [1.14, 0.84, 1.44], green: 0.35 },
-  mantle: { rows: 7, count: 11, len: 0.46, w: 0.18, from: 0.86, to: -0.5, round: 140 },
+  body: { c: [0, 0, 0.1], r: [1.04, 0.84, 1.44], green: 0.35 },
+  mantle: { rows: 7, count: 11, len: 0.46, w: 0.18, from: 0.86, to: -0.4, round: 140 },
   ruff: { n: 15, len: 0.72, w: 0.2, round: 145, at: 0.86 },
   bib: { rows: 8, len: 0.3 },
   collar: { rows: 3, len: 0.5, w: 0.17 },
-  head: { c: [0, 0.06, 0.38], r: [0.7, 0.62, 0.6] },
-  eye: { dir: [0.42, 0.85, 0.22], size: 0.13 },
-  beak: { len: 0.22, w: 0.08 },
-  ear: { at: [0.42, -0.02, 0.8], len: 0.5, w: 0.28, out: 30, back: 6 },
-  tuft: fan(12, 1.6, 0.27, -24, 78),
+  head: { c: [0, 0.06, 0.34], r: [0.62, 0.56, 0.54] },
+  eye: { dir: [0.4, 0.86, 0.22], size: 0.11 },
+  beak: { len: 0.2, w: 0.075 },
+  ear: { at: [0.38, -0.02, 0.72], len: 0.5, w: 0.26, out: 24, back: 6 },
+  tuft: fan(8, 1.55, 0.26, -6, 48),
+  crest: [
+    [1.3, 0.2, 0, 0, 'leaf', 'leafDark'], [1.15, 0.19, 24, 0, 'moss', 'leaf'], [1.0, 0.18, 48, 0, 'leaf', 'moss'],
+    [0.85, 0.17, 72, 0, 'leafDark', 'leaf'], [1.05, 0.18, -20, 0, 'petal', 'feather'],
+  ],
   wing: {
-    at: [1.1, 0.08, 1.08],
+    at: [1.0, 0.02, 1.0],
     arm: [0, -0.3, -1],
     reach: 30,
     pinions: [
-      // The cloak: long flight feathers, cream and peach, from the flank round to the back, reaching the ground and spreading as they go;
-      // long green ones over them; and rows of green coverts over the shoulder.
-      { at: 0.3, len: 2.2, w: 0.34, fold: -86, open: 30, layer: -0.02, flare: 0.46, yaw: -40, mats: ['feather', 'petal'] },
-      { at: 0.3, len: 2.4, w: 0.35, fold: -82, open: 30, layer: -0.01, flare: 0.43, yaw: -22, mats: ['petal', 'feather'] },
-      { at: 0.3, len: 2.6, w: 0.36, fold: -76, open: 22, layer: 0, flare: 0.38, yaw: -6, mats: ['feather', 'petal'] },
-      { at: 0.3, len: 3.0, w: 0.36, fold: -74, open: 16, layer: 0, flare: 0.38, yaw: 10, mats: ['petal', 'feather'] },
-      { at: 0.3, len: 3.3, w: 0.36, fold: -71, open: 9, layer: 0, flare: 0.38, yaw: 26, mats: ['feather', 'featherDark'] },
-      { at: 0.3, len: 3.5, w: 0.36, fold: -69, open: 3, layer: 0, flare: 0.38, yaw: 42, mats: ['bloom', 'feather'] },
-      { at: 0.3, len: 3.6, w: 0.36, fold: -66, open: -3, layer: 0, flare: 0.38, yaw: 58, mats: ['feather', 'petal'] },
-      { at: 0.3, len: 3.7, w: 0.36, fold: -64, open: -9, layer: 0, flare: 0.38, yaw: 74, mats: ['petal', 'feather'] },
-      { at: 0.3, len: 3.7, w: 0.36, fold: -62, open: -15, layer: 0, flare: 0.38, yaw: 88, mats: ['feather', 'petal'] },
-      { at: 0.16, len: 2.1, w: 0.27, fold: -84, open: 30, layer: 0.06, flare: 0.45, yaw: -30, mats: ['moss', 'leaf'] },
-      { at: 0.16, len: 2.6, w: 0.28, fold: -75, open: 26, layer: 0.08, flare: 0.35, yaw: 0, mats: ['leaf', 'leafDark'] },
-      { at: 0.16, len: 2.9, w: 0.28, fold: -72, open: 18, layer: 0.08, flare: 0.35, yaw: 18, mats: ['moss', 'leaf'] },
-      { at: 0.16, len: 3.1, w: 0.28, fold: -70, open: 11, layer: 0.08, flare: 0.35, yaw: 36, mats: ['leaf', 'leafDark'] },
-      { at: 0.16, len: 3.2, w: 0.28, fold: -68, open: 4, layer: 0.08, flare: 0.35, yaw: 54, mats: ['leafDark', 'leaf'] },
-      { at: 0.16, len: 3.3, w: 0.28, fold: -66, open: -2, layer: 0.08, flare: 0.35, yaw: 72, mats: ['leaf', 'moss'] },
-      { at: 0.16, len: 3.3, w: 0.28, fold: -64, open: -8, layer: 0.08, flare: 0.35, yaw: 86, mats: ['leaf', 'leafDark'] },
-      { at: 0.04, len: 1.4, w: 0.25, fold: -76, open: 20, layer: 0.14, flare: 0.37, yaw: -26, mats: ['leaf', 'leafDark'] },
-      { at: 0.04, len: 1.6, w: 0.26, fold: -70, open: 20, layer: 0.16, flare: 0.27, yaw: -4, mats: ['leaf', 'moss'] },
-      { at: 0.04, len: 1.7, w: 0.26, fold: -70, open: 20, layer: 0.16, flare: 0.27, yaw: 14, mats: ['leaf', 'leafDark'] },
-      { at: 0.04, len: 1.75, w: 0.26, fold: -70, open: 20, layer: 0.16, flare: 0.27, yaw: 32, mats: ['moss', 'leaf'] },
-      { at: 0.04, len: 1.8, w: 0.26, fold: -70, open: 20, layer: 0.16, flare: 0.27, yaw: 50, mats: ['leaf', 'leafDark'] },
-      { at: 0.04, len: 1.8, w: 0.26, fold: -70, open: 20, layer: 0.16, flare: 0.27, yaw: 68, mats: ['leafDark', 'leaf'] },
-      { at: 0.04, len: 1.8, w: 0.26, fold: -70, open: 20, layer: 0.16, flare: 0.27, yaw: 84, mats: ['leaf', 'moss'] },
-      { at: 0.0, len: 0.9, w: 0.23, fold: -72, open: 10, layer: 0.24, flare: 0.19, yaw: 4, mats: ['leafDark', 'leaf'] },
-      { at: 0.0, len: 0.92, w: 0.23, fold: -72, open: 10, layer: 0.24, flare: 0.19, yaw: 24, mats: ['leaf', 'moss'] },
-      { at: 0.0, len: 0.94, w: 0.23, fold: -72, open: 10, layer: 0.24, flare: 0.19, yaw: 44, mats: ['leaf', 'leafDark'] },
-      { at: 0.0, len: 0.94, w: 0.23, fold: -72, open: 10, layer: 0.24, flare: 0.19, yaw: 64, mats: ['moss', 'leaf'] },
-      { at: 0.0, len: 0.94, w: 0.23, fold: -72, open: 10, layer: 0.24, flare: 0.19, yaw: 82, mats: ['leaf', 'leafDark'] },
+      // The cloak: long flight feathers, cream and peach, hanging close from the shoulder round to the back, the back ones longest and
+      // trailing behind it to the ground; long green ones over them; rows of green coverts over the shoulder.
+      ...row(8, { at: [0.3, 0.3], len: [2.5, 3.9], w: 0.34, fold: [-92, -58], open: [30, -16], layer: 0, flare: 0.12, yaw: [-4, 90], mats: PEACHES }),
+      ...row(7, { at: [0.16, 0.16], len: [2.2, 3.5], w: 0.28, fold: [-92, -60], open: [26, -8], layer: 0.07, flare: 0.12, yaw: [-8, 86], mats: GREENS }),
+      ...row(7, { at: [0.04, 0.04], len: [1.4, 1.8], w: 0.26, fold: [-88, -66], open: [20, 10], layer: 0.14, flare: 0.1, yaw: [-10, 84], mats: GREENS }),
+      ...row(6, { at: [0.0, 0.0], len: [0.86, 0.94], w: 0.23, fold: [-84, -70], open: [10, 10], layer: 0.21, flare: 0.08, yaw: [-8, 82], mats: GREENS }),
     ],
     rest: { spread: 0, raise: -4, sweep: 0 },
   },
@@ -312,7 +249,7 @@ const SONGROOST_LOOK: Owl = {
     [2.0, 0.24, 0, 0, 'feather', 'petal'], [1.9, 0.23, 6, -16, 'leaf', 'leafDark'], [1.9, 0.23, 6, 16, 'leafDark', 'leaf'],
     [1.7, 0.22, 12, -30, 'petal', 'feather'], [1.7, 0.22, 12, 30, 'feather', 'petal'],
   ],
-  leg: { fluff: 0.46, w: 0.15, talon: 0.26, shag: [11, 0.74] },
+  leg: { fluff: 0.42, w: 0.16, talon: 0.32, shag: [16, 0.8] },
   size: 2.3,
 };
 
@@ -558,9 +495,11 @@ function poseOwl(s: Owl, p: BirdPose, a: Anim): void {
     // its talons held forward; going, it bounds along under them.
     const st = act?.kind === 'evolve' ? 1 : 1 - a.go;
     p.lift += 0.5 + 0.08 * Math.sin((t * TAU * 30) / LOOP - 1.2) * st;
+    p.pitch -= 12;
+    p.head[0] += 10;
     for (const l of p.legs) {
-      l[0] -= 22;
-      l[1] += 0.25;
+      l[0] -= 44;
+      l[1] += 0.3;
       l[2] += 0.2;
     }
   }
@@ -705,7 +644,7 @@ function fanned(v: readonly V3[], spans: readonly Span[], k: number, sd: number)
 /** The body's egg: cream, with green over its back down to `green` of its height. */
 function bodyOf(s: Owl, n: number, k: number): Mesh {
   const B = s.body;
-  return ballBy(B.c, B.r, n + 4, k + 3, (d) => ((d[1] < 0.1 && d[2] > -0.1 - B.green + 0.5 * d[1]) || Math.abs(d[0]) > 0.7 ? 'leafDark' : d[2] < -0.55 ? 'belly' : 'coat'));
+  return ballBy(B.c, B.r, n + 4, k + 3, (d) => ((d[1] < 0.1 && d[2] > -0.1 - B.green + 0.5 * d[1]) || Math.abs(d[0]) > 0.62 ? 'leaf' : d[2] < -0.55 ? 'belly' : 'coat'));
 }
 
 /** A way out of the body's middle, `round` degrees round from straight back toward the right, at `h` up it (nought its middle, one its top). */
@@ -819,25 +758,23 @@ function owlBuild(s: Owl, lod: number): Piece[] {
   const Bk = s.beak;
   const upper = taper(curve(root, add(root, [0, Bk.len * 0.6, 0.0]), add(root, [0, Bk.len * 0.62, -Bk.len * 0.85]), 4), Bk.w, Bk.w * 0.1, 6, 'bill', 0.85);
   const lower = taper([add(root, [0, -0.02, -Bk.w * 0.6]), add(root, [0, Bk.len * 0.3, -Bk.w * 0.9])], Bk.w * 0.7, Bk.w * 0.2, 5, 'billDark', 0.6);
-  // Each ear: pink inside, cream outside, pointed, turned out and back; the leaf-feathers of its tuft fanned behind it.
+  // Each ear: pink inside, peach outside, pointed, turned out and back; the leaf-feathers of its tuft fanned behind it.
   const E = s.ear;
   const ear = moved(earMesh(E.len, E.w, 6, { mat: 'petal', point: true }), [0, 0, 0], 0, -E.back, E.out);
   // Three fans of leaf-feathers: one faced forward round the ear, one turned out and back behind it, and a short one turned in over
   // the crown, so the tuft is full from every side.
-  const back = s.tuft.filter((_, q) => q % 2).map(([l, w, up, o, m0, m1]) => [l * 0.9, w, up, o, m1, m0] as const);
-  const inner = s.tuft.filter((_, q) => q % 3 === 0 && q < 6).map(([l, w, up, o, m0, m1]) => [l * 0.7, w, up, o, m0, m1] as const);
+  const back = s.tuft.filter((_, q) => q % 2).map(([l, w, up, o, m0, m1]) => [l * 0.8, w, up, o, m1, m0] as const);
   const tuft = merge(
-    plumes([0, -0.04, 0], s.tuft, unit([0.15, -0.1, 1]), unit([1, -0.15, 0.1]), [0.2, 1, 0.3], { curl: 0.12 }),
-    moved(plumes([0, -0.1, -0.02], back, unit([0.1, -0.2, 1]), unit([1, -0.1, 0.1]), [0.2, 1, 0.3], { curl: 0.12 }), [0, 0, 0], 52),
-    moved(plumes([-0.04, -0.12, 0], inner, unit([-0.2, -0.3, 1]), unit([-1, -0.3, 0.2]), [0, 1, 0.3], { curl: 0.12 }), [0, 0, 0], -30),
+    plumes([0, -0.04, 0], s.tuft, unit([0.25, -0.1, 1]), unit([1, -0.15, -0.1]), [0.2, 1, 0.3], { curl: 0.12 }),
+    moved(plumes([0, -0.1, -0.02], back, unit([0.25, -0.2, 1]), unit([1, -0.1, -0.1]), [0.2, 1, 0.3], { curl: 0.12 }), [0, 0, 0], 40),
   );
   // The tail: a fan of leaf-feathers.
   const tail = plumes([0, 0, 0], s.tail, [0, -1, 0], [0, 0, -1], [0, -0.2, 1], { curl: 0.06 });
   const wing = wingOf(s);
   // The legs: a cream fluff of a thigh, a feathered shank, and dark toes with long talons.
   const L = s.spec.leg.len, Lg = s.leg;
-  const thigh = orbAlong([0, 0.02, -L[0] * 0.45], [0, 0, 1], [Lg.fluff, Lg.fluff * 1.1, Math.max(Lg.fluff * 1.1, L[0] * 0.62)], n, k, 'coat');
-  const shank = tube([[0, 0, 0.04], [0, 0.01, -L[1] * 0.5], [0, 0.02, -L[1] - 0.02]], [Lg.w * 1.5, Lg.w * 1.35, Lg.w * 1.2], [Lg.w * 1.5, Lg.w * 1.35, Lg.w * 1.2], 6, 'coat', { seam: 'start' });
+  const thigh = orbAlong([0, 0.02, -L[0] * 0.45], [0, 0, 1], [Lg.fluff, Lg.fluff * 1.1, Math.max(Lg.fluff * 1.1, L[0] * 0.62)], n, k, Lg.shag[0] ? 'leaf' : 'coat');
+  const shank = tube([[0, 0, 0.04], [0, 0.01, -L[1] * 0.5], [0, 0.02, -L[1] - 0.02]], [Lg.w * 1.5, Lg.w * 1.35, Lg.w * 1.2], [Lg.w * 1.5, Lg.w * 1.35, Lg.w * 1.2], 6, Lg.shag[0] ? 'leafDark' : 'coat', { seam: 'start' });
   const T = Lg.talon;
   const toe = (yaw: number, len: number): Mesh => moved(merge(
     tube([[0, -0.02, 0.02], [0, len * 0.55, -0.01], [0, len, -0.03]], [Lg.w * 0.9, Lg.w * 0.75, Lg.w * 0.55], [Lg.w * 0.8, Lg.w * 0.65, Lg.w * 0.5], 5, 'claw'),
@@ -846,10 +783,10 @@ function owlBuild(s: Owl, lod: number): Piece[] {
   const foot = moved(merge(toe(-24, T * 1.6), toe(2, T * 1.9), toe(26, T * 1.6), toe(180, T * 1.1)), [0, 0, -L[2] + Lg.w * 0.7]);
   const pieces: Piece[] = [
     { key: 'body', mesh: body, bone: 'body', bias: 0, breathes: { c: B.c, k: 0.04 } },
-    { key: 'mantle', mesh: mantleOf(s, fine), bone: 'body', bias: 0.03, after: ['body'], hide: [solid], thin: true, breathes: { c: B.c, k: 0.04 } },
+    { key: 'mantle', mesh: mantleOf(s, fine), bone: 'body', bias: 0.03, after: ['body'], hide: [solid], airy: true, breathes: { c: B.c, k: 0.04 } },
     { key: 'bib', mesh: bibOf(s), bone: 'body', bias: 0.02, after: ['body'], hide: [solid], airy: true, breathes: { c: B.c, k: 0.04 } },
-    { key: 'ruff', mesh: ruffOf(s), bone: 'body', bias: 0.06, after: ['body', 'mantle'], hide: [solid], thin: true, breathes: { c: B.c, k: 0.04 } },
-    { key: 'tail', mesh: tail, bone: 'tail0', bias: -0.06, thin: true },
+    { key: 'ruff', mesh: ruffOf(s), bone: 'body', bias: 0.06, after: ['body', 'mantle'], hide: [solid], airy: true, breathes: { c: B.c, k: 0.04 } },
+    { key: 'tail', mesh: tail, bone: 'tail0', bias: -0.06, airy: true },
     { key: 'neck', mesh: tube([[0, 0, -0.2], [0, 0.02, s.spec.neck.len + 0.1]], H.r[0] * 0.62, H.r[1] * 0.62, n, (_r, j) => (Math.sin(((j + 1) / n) * TAU) < -0.2 ? 'leaf' : 'coat'), { seam: 'both' }), bone: 'neck', bias: 0, under: 'head', convex: true, lines: false },
     { key: 'head', mesh: headMesh(false), shut: headMesh(true), bone: 'head', bias: 0.2 },
     { key: 'beak', mesh: upper, bone: 'head', bias: 0.215, after: ['head'], thin: true },
@@ -871,8 +808,17 @@ function owlBuild(s: Owl, lod: number): Piece[] {
       ];
     }),
   ];
+  if (s.crest) {
+    // Up the middle of the crown and back over it, faced to either side.
+    const top: V3 = [0, H.c[1] - H.r[1] * 0.2, H.c[2] + H.r[2] * 0.82];
+    const crest = merge(
+      plumes(top, s.crest, [0, 0.1, 1], [0, -1, 0.1], [1, 0, 0.2], { curl: 0.1 }),
+      plumes(add(top, [0, -0.08, -0.02]), s.crest.slice(1).map(([l, w, up, o, m0, m1]) => [l * 0.85, w, up + 10, o, m1, m0] as const), [0, 0.1, 1], [0, -1, 0.1], [-1, 0, 0.2], { curl: 0.1 }),
+    );
+    pieces.push({ key: 'crest', mesh: crest, bone: 'head', bias: 0.195, after: ['head'], hide: [{ c: H.c, r: scale(H.r, 0.92) }], hideIn: 'head', thin: true });
+  }
   if (s.collar) {
-    pieces.push({ key: 'collar', mesh: collarOf(s), bone: 'neck', bias: 0.07, after: ['neck', 'body', 'ruff'], under: ['head'], hide: [{ c: [0, 0, s.spec.neck.len / 2], r: [H.r[0] * 0.6, H.r[0] * 0.6, s.spec.neck.len] }], thin: true });
+    pieces.push({ key: 'collar', mesh: collarOf(s), bone: 'neck', bias: 0.07, after: ['neck', 'body', 'ruff'], under: ['head'], hide: [{ c: [0, 0, s.spec.neck.len / 2], r: [H.r[0] * 0.6, H.r[0] * 0.6, s.spec.neck.len] }], airy: true });
   }
   if (Lg.shag[0]) {
     // The Songroost's legs: green leaf-feathers hanging down the outside of each, over the cream.
@@ -884,16 +830,16 @@ function owlBuild(s: Owl, lod: number): Piece[] {
       return vane(add(scale(out, Lg.fluff * 0.8), [0, 0, z]), unit(add([0, 0, -1], scale(out, 0.22))), out, len * (0.85 + 0.3 * jitter(q)), 0.2,
         q % 3 === 1 ? ['moss', 'leaf'] : q % 3 === 2 ? ['leafDark', 'leaf'] : ['leaf', 'leafDark'], { curl: 0.1 });
     }));
-    const shinShag = merge(...Array.from({ length: 5 }, (_, q) => {
-      const a = lerp(-60, 110, q / 4) * DEG, z = -L[1] * (0.05 + 0.12 * (q % 2));
+    const shinShag = merge(...Array.from({ length: 8 }, (_, q) => {
+      const a = lerp(-70, 120, q / 7) * DEG, z = -L[1] * (0.05 + 0.3 * (q % 3) / 2);
       const out: V3 = [Math.cos(a), Math.sin(a), 0];
       return vane(add(scale(out, Lg.w * 1.2), [0, 0, z]), unit(add([0, 0, -1], scale(out, 0.2))), out, len * 0.75, 0.15, q % 2 ? ['leaf', 'moss'] : ['leafDark', 'leaf'], { curl: 0.1 });
     }));
     for (let q = 0; q < 2; q++) {
       const sd = q ? 1 : -1, mine = (m: Mesh): Mesh => (q ? m : mirrored(m));
       pieces.push(
-        { key: `shag${q}`, mesh: mine(shag), bone: `${['bl', 'br'][q]}0`, bias: 0.016, after: [`thigh${q}`, 'body'], front: [sd, 0, 0], thin: true },
-        { key: `shin${q}`, mesh: mine(shinShag), bone: `${['bl', 'br'][q]}1`, bias: 0.022, after: [`shank${q}`], front: [sd, 0, 0], thin: true },
+        { key: `shag${q}`, mesh: mine(shag), bone: `${['bl', 'br'][q]}0`, bias: 0.016, after: [`thigh${q}`, 'body'], front: [sd, 0, 0], airy: true },
+        { key: `shin${q}`, mesh: mine(shinShag), bone: `${['bl', 'br'][q]}1`, bias: 0.022, after: [`shank${q}`], front: [sd, 0, 0], airy: true },
       );
     }
   }
@@ -928,22 +874,22 @@ function owlKind(s: Owl): Kind {
     // The variant's coat is the green of its leaf-feathers, its markings their peach; the cream, the eyes, the beak and the talons are
     // the same on every variant.
     palette: (coat, mark) => {
-      const sage = mix([172, 182, 114], coat, 0.42);
-      const peach = mix([242, 182, 138], mark, 0.55);
-      const cream: RGB = [252, 228, 198];
+      const sage = mix([132, 164, 100], coat, 0.4);
+      const peach = mix([246, 174, 128], mark, 0.45);
+      const cream: RGB = [255, 240, 216];
       return coatPalette(coat, mark, {
         coat: cream,
-        coatLight: [255, 244, 228],
-        coatDark: [238, 214, 184],
-        belly: [246, 226, 200],
+        coatLight: [255, 250, 238],
+        coatDark: [244, 226, 200],
+        belly: [252, 238, 214],
         leaf: sage,
-        leafDark: mix(sage, [96, 114, 70], 0.34),
-        moss: mix(sage, [196, 186, 106], 0.45),
+        leafDark: mix(sage, [70, 104, 62], 0.45),
+        moss: mix(sage, [184, 198, 112], 0.42),
         petal: peach,
-        bloom: mix(peach, [240, 150, 160], 0.45),
+        bloom: mix(peach, [238, 138, 156], 0.7),
         feather: mix(cream, peach, 0.28),
         featherDark: mix(peach, [214, 140, 112], 0.3),
-        inner: mix(peach, [244, 178, 176], 0.6),
+        inner: mix(peach, [244, 160, 170], 0.7),
         mark: [238, 170, 160],
         spot: mix(sage, [70, 92, 60], 0.45),
         bill: [236, 168, 128],
