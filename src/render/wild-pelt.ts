@@ -659,8 +659,8 @@ function feather(root: V3, dir: V3, face: V3, len: number, w: number, dress: Dre
   const mat = (ring: number, j: number): Mat => {
     const u = (us[ring] + us[ring + 1]) / 2, a = at(j), top = Math.abs(a - TAU / 4) < TAU / n * 0.6;
     if (dress === 'crest') {
-      if (top && u > 0.18 && u < 0.62) return 'leafDark';
-      return u < 0.2 ? 'mark' : u < 0.4 ? 'moss' : u < 0.64 ? 'leaf' : 'coat';
+      if (top && u > 0.16 && u < 0.58) return 'leafDark';
+      return u < 0.16 ? 'mark' : u < 0.6 ? 'leaf' : 'coat';
     }
     let m: Mat = u < 0.28 ? m0 : u < 1 - tip ? m1 : m2;
     if (m === m1 && D.spot && Math.cos(a) > 0 && u > 0.4) m = 'coat';
@@ -755,7 +755,7 @@ function platesOf(s: Pede, i: number, fine: boolean): Mesh {
   const R = ringR(s, i), L = s.plate.len * s.sizes[i], W = s.plate.w * s.sizes[i], crest = s.plate.crest[i] ?? 0;
   // The first ring's plates lie low, so its head shows over them.
   const out: Mesh[] = [featherCoat(R, L, W, fine, i * 31 + 1, (phi, back, sd) => patched(s, i, sd)(phi, back), s.arm && i < 2 ? 180 : 160, i === 0 && !s.arm, !!s.arm && i < 2)];
-  if (crest > 0) out.push(fan(R, 3, bodyHigh(s) * crest, W * 3.3, fine, i * 13, { from: i < 2 ? 34 : 24, to: 70 }));
+  if (crest > 0) out.push(fan(R, 4, bodyHigh(s) * crest, W * 2.5, fine, i * 13, { from: i < 2 ? 32 : 22, to: 74, side: 0.42 }));
   return merge(...out);
 }
 
@@ -854,7 +854,7 @@ function eyesOf(s: Pede, shut: boolean): Mesh {
 }
 
 /** Where an antenna's root is on the head (right side), in the head's frame: on the front of its cap. */
-const antRoot = (s: Pede): V3 => { const R = s.head.r; return [R[0] * 0.34, R[1] * 0.42, R[2] * 0.86]; };
+const antRoot = (s: Pede): V3 => { const R = s.head.r; return [R[0] * 0.46, R[1] * 0.4, R[2] * 0.78]; };
 
 /**
  * An antenna, right, in its own bone's frame from its root: long and segmented, sweeping forward, out and up and curving down at
