@@ -35,7 +35,8 @@ import { LASHRUNNER, SNAREPUP, VINEHUNTER } from './wild-vine';
 import { BLUSHKIT, BRIARPOUNCE, THORNLANCE } from './wild-briar';
 import { BASTIONDRAKE, BRICKLING, MORTARBACK } from './wild-brick';
 import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
-import { BRAMBO, CARRA, SALVA, SHEELA, TANNA } from './wild-hands';
+import { BRAMBO, CARRA, SALVA, TANNA } from './wild-hands';
+import { CLIPPEROO, SHEARLING, SHEARLORD } from './wild-shear';
 import { BLOOMREAPER, PETALBLADE, SPRIGMANT } from './wild-mantis';
 import { WHEATCHEEKS, WHEATLEY, WHEATWHIRL } from './wild-hamster';
 import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
@@ -120,7 +121,7 @@ export const WILDERMON: Record<string, Kind> = {
   lume: LUME,
   dragon: DRAGON,
   kemma: WHISPLING,
-  sheela: SHEELA,
+  sheela: SHEARLING,
   salva: SALVA,
   carra: CARRA,
   tanna: TANNA,
@@ -230,6 +231,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   ulva: [WEBLOOM, SILKWARD],
   petta: [MEADOWTIDE, FLORACRUX],
   kemma: [HUSHWING, SONGROOST],
+  sheela: [CLIPPEROO, SHEARLORD],
   potta: [TERRABRICK, KILNSPIRE],
   rippa: [SAWQUILL, TIMBERBACK],
   papra: [PAPYRUSKIN, PRESSMERE],
