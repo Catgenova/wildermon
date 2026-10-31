@@ -8,7 +8,7 @@ import { SKYLOOKLET, SKYRANGE, SKYWARDEN } from './wild-sky';
 import { DRAGON } from './wild-dragon';
 import { DIRTLET, EARTHREND, TUNNELCLAW } from './wild-badger';
 import { FERRODRILL, IRONEMOLE, OREMANDER } from './wild-iron';
-import { BURA, CUDDA, GORRAL, SHAGGAN, SNEDDA } from './wild-herd';
+import { BURA, CUDDA, GORRAL, SHAGGAN } from './wild-herd';
 import { ARBORCREST, PIPSEED, SPRIGWING } from './wild-pip';
 import { CARTLING, HAULHORN, WAGONOX } from './wild-haul';
 import { BUNNYCOURSER, HARE_TACKED, HARE_TUCK, hareGrip, hareSeat, MOONHARE, THISTLEKIT } from './wild-hare';
@@ -52,6 +52,7 @@ import { METALLOCURL, RIBBONIP, STRIPFORGE } from './wild-ribbon';
 import { MAPLETAP, SAPLET, TAPSYLVAN } from './wild-maple';
 import { SILKWARD, SPRINDLE, WEBLOOM } from './wild-spider';
 import { BRIARLING, FLORACRUX, MEADOWTIDE } from './wild-goat';
+import { CANOPYSHAPER, GROVEMASTER, SAPLINGREACH } from './wild-giraffe';
 import { KILNLET, KILNSPIRE, TERRABRICK } from './wild-kiln';
 import { LOGKIT, SAWQUILL, TIMBERBACK } from './wild-timber';
 import { PAPYRUSKIN, PRESSMERE, REEDLING } from './wild-papyrus';
@@ -94,7 +95,7 @@ export const WILDERMON: Record<string, Kind> = {
   bura: BURA,
   gorral: GORRAL,
   shaggan: SHAGGAN,
-  snedda: SNEDDA,
+  snedda: SAPLINGREACH,
   sappa: PIPSEED,
   rowl: SNAREPUP,
   grubba: BUDSCARAB,
@@ -232,6 +233,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   papra: [PAPYRUSKIN, PRESSMERE],
   springlet: [SPRINGSAIL, TIDECOURSER],
   glimmip: [GLASCADE, PRISMETAIL],
+  snedda: [CANOPYSHAPER, GROVEMASTER],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

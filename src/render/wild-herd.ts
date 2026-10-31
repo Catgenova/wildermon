@@ -7,8 +7,9 @@ import { mesh, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
 
 /**
  * The herd: the big grazers and beasts of burden -- the cudda, the bura,
- * the gorral, the shaggan and the snedda (the roxxen is its own line now,
- * `./wild-haul`, the orse `./wild-hare`, and the sappa `./wild-pip`).
+ * the gorral and the shaggan (the roxxen is its own line now, `./wild-haul`,
+ * the orse `./wild-hare`, the sappa `./wild-pip`, and the snedda the
+ * Saplingreach, `./wild-giraffe`).
  * Hooves, deep bodies, and heads still a size too big for them.
  */
 
@@ -496,84 +497,3 @@ export const SHAGGAN: Kind = {
   size: 1.72,
 };
 
-/* ---- the snedda ---------------------------------------------------------------------- */
-
-/**
- * A snedda: a long-necked browser of the wood's edge that crops the new
- * leaves off anything it can reach. Two twig antlers grow from its head with
- * new leaves on them, its ears are leaves, and bark rings its legs.
- */
-const SNEDDA_SPEC: QuadSpec = {
-  ...hoofed({ high: 2.8, len: 2.9, legs: 2.4, neck: 2.4, lean: 22, swing: [20, 36], ears: [30, 10], crop: [100, 8, 16] }),
-  // The neck from high on the chest, so the whole length of it shows.
-  neck: { at: [0, 1.6, 0.6], len: 2.4, lean: 22 },
-  // The leaf ears up on the crown, where they frame the antlers, rather than on the cheeks: splayed only a little, so that side
-  // on the near one is not pointed at the viewer.
-  ears: { at: [0.7, -0.15, 0.65], out: 30, back: 10 },
-};
-const SNEDDA_HEAD = { c: [0, 0.45, 0.12] as V3, r: [0.92, 1.04, 0.83] as V3 };
-
-function sneddaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = SNEDDA_HEAD;
-  // A soft muzzle out in front of the eyes, so side on there is a face ahead of the eye: a ball with its poles up and down, so
-  // that pale as it is, its steps of light are bands round it -- a lit top and a shaded chin -- and not a crumple of facets
-  // meeting at a point on the end of the nose.
-  const muzzle = merge(
-    orb([0, 1.3, -0.18], [0.5, 0.44, 0.6], n + 2, k, 'muzzle'),
-    paint([disc([0.18, 1.72, -0.18], [0.2, 1, 0.1], 0.07, 0.05, 6, 'nose'), disc([-0.18, 1.72, -0.18], [-0.2, 1, 0.1], 0.07, 0.05, 6, 'nose')]),
-    smile([0, 1.68, -0.46], [0, 1, -0.3], 0.24),
-  );
-  // Each antler a forked twig standing well up and out over the head -- the beam forward at its tip and a tine swept back off
-  // it, so side on the pair is a spread of branches and not one sprig -- with new leaves on each point, the brightest green it
-  // has: three together at the tip of the beam and two on the tine.
-  const leaf = (at: V3, dir: V3): Mesh => orbAlong(add(at, scale(unit(dir), 0.26)), dir, [0.24, 0.08, 0.3], 6, 3, 'leaf');
-  const antler = (s: number): Mesh => {
-    const tip: V3 = [s * 1.15, 0.3, 1.9], tine: V3 = [s * 0.85, -0.7, 1.7];
-    return merge(
-      taper(curve([s * 0.32, 0.15, 0.7], [s * 0.7, 0.2, 1.35], tip, 3), 0.13, 0.06, 5, 'bark'),
-      taper(curve([s * 0.55, 0.12, 1.15], [s * 0.75, -0.3, 1.35], tine, 2), 0.08, 0.045, 5, 'bark'),
-      ...([[s * 0.3, 0.1, 1], [s * 1, 0.5, 0.3], [-s * 0.1, 0.6, 0.7]] as V3[]).map((d) => leaf(tip, d)),
-      ...([[s * 0.3, -0.6, 1], [s * 0.5, -1, 0.2]] as V3[]).map((d) => leaf(tine, d)),
-    );
-  };
-  // Bark round the lower legs in three rings, painted all the way round in overlapping pieces, so from every side it is a band
-  // of bark and not a row of stitches.
-  const bark = (zs: number[]): Mesh => paint(zs.flatMap((z) => Array.from({ length: 6 }, (_, q): V3 => [Math.cos((q * TAU) / 6), Math.sin((q * TAU) / 6), 0]).map((d) => disc([d[0] * 0.25, d[1] * 0.25 + 0.01, z], d, 0.15, 0.05, 6, 'bark'))));
-  const rings = (['fl', 'fr', 'hl', 'hr'] as const).map((leg): Piece => ({
-    key: `bark${leg}`, mesh: bark(leg[0] === 'f' ? [-0.25, -0.55, -0.85] : [-0.3, -0.65, -1.0]), bone: `${leg}1`, bias: 0.025, after: `${leg}1`,
-    front: [leg[1] === 'l' ? -0.7 : 0.7, leg[0] === 'f' ? 0.7 : -0.7, 0],
-  }));
-  return quadPieces({
-    n, k,
-    // Round at the rump and the chest rather than cut square.
-    body: { y: [-2.05, -1.9, -1.65, -0.8, 0, 0.9, 1.55, 1.8, 1.95], z: [0.3, 0.25, 0.25, 0.3, 0.28, 0.35, 0.45, 0.48, 0.5], w: [0.25, 0.65, 0.85, 1.0, 1.0, 1.05, 0.92, 0.7, 0.25], h: [0.25, 0.62, 0.85, 0.95, 0.92, 1.0, 0.92, 0.7, 0.28], belly: true },
-    neck: { w: 0.52, h: 0.56, len: 2.4 },
-    head: { c: H.c, r: H.r, face: muzzle, eye: { dir: [0.8, 0.5, 0.24], size: 0.32, rim: 0.12 }, blush: [[0.8, 0.45, -0.3], 0.2] },
-    ear: earMesh(0.66, 0.33, n, { mat: 'leaf' }),
-    // Turned well out, a leaf's face to the side rather than its edge.
-    earTurn: 55,
-    tail: [taper([[0, 0, 0], [0, -0.3, 0]], 0.1, 0.08, 5, 'coat'), merge(taper([[0, 0, 0], [0, -0.2, 0]], 0.08, 0.06, 5, 'coat'), orbAlong([0, -0.35, 0], [0, -1, 0], [0.14, 0.14, 0.2], 6, 3, 'mark'))],
-    fore: { upper: [0.3, -1.25, 0.36, 0.27], lower: [0, -1.15, 0.25, 0.22], foot: hoofMesh(0.26, 0.2, n) },
-    hind: { upper: [0.3, -1.3, 0.42, 0.28], lower: [0, -1.3, 0.25, 0.22], foot: hoofMesh(0.26, 0.2, n) },
-    extras: [{ key: 'antlers', mesh: merge(antler(1), antler(-1)), bone: 'head', bias: 0.25, after: ['head', 'ear0', 'ear1'] }, ...rings],
-  });
-}
-
-export const SNEDDA: Kind = {
-  bones: quadBonesOf(SNEDDA_SPEC, (p, a) => {
-    plod(p, a);
-    // Browsing, standing with its head up: the long neck swaying, reaching up now and then to nip at something over its head.
-    if (a.go <= 0) {
-      const up = 1 - a.graze, reach = beat(a.t, [4.2, 15.5], 2.5) * up;
-      p.neck[0] -= 25 * reach;
-      p.head[0] += 25 * reach;
-      p.neck[1] += 10 * cyc(a.t, 2) * up;
-    }
-  }),
-  build: sneddaBuild,
-  palette: (coat, mark) => coatPalette(lit(coat, 60), mark, { leaf: [176, 226, 120], bark: [150, 112, 86], inner: [238, 180, 170] }, 60),
-  shadow: [2.2, 1.2],
-  stride: 0.8,
-  size: 1.3,
-};

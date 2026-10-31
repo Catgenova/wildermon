@@ -4223,6 +4223,16 @@ export const NEWS: News[] = [
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
   },
   {
+    n: 399,
+    day: '2026-10-31',
+    lines: () => {
+      const d = SPECIES.snedda, [one, two] = d.stages!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line; evolves to ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]} (was: no evolution). Same task and base stats.`,
+        `Stage 2: ${stageSays(1)}; stage 3: ${stageSays(2)}. Stage 3 skill: ${two.name} ${perkSays('snedda')}.`,
+        'Each stage: own model, animations and voice.'];
+    },
+  },
+  {
     n: 398,
     day: '2026-10-31',
     lines: () => [`Added: music by the island's hour and season, ${ALL_TRACKS.length} tracks: ${playlistSays()}.`,

@@ -2214,6 +2214,7 @@ import{$C as e,$D as t,$E as n,$T as r,$d as i,$h as a,$n as o,$p as s,$r as ee,
       <li><b>${D.holla.name}</b>: carries <b>water</b> from the shore or a well into your barrels. Evolves: ${$(`holla`)}.</li>
       <li><b>${D.dowse.name}</b>: only over metal; on a settlement <b>${vr.nail}</b> at your anvils (<b>The settlement's hands</b>). Evolves: ${$(`dowse`)}.</li>
       <li><b>${D.sappa.name}</b>: <b>plants sprouts</b> where trees were felled.</li>
+      <li><b>${D.snedda.name}</b>: <b>prunes</b> trees whose next growth stage is dead; nothing else. Level: forestry. Evolves: ${$(`snedda`)}.</li>
       <li><b>${D.cobbe.name}</b>: <b>hod</b>: carries what a planned wall (any storey), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
       still needs from your settlement stores, crates and furniture, and fits it, one piece a trip: a wall or column standing on its storey, beside it; a floor, roof, staircase
       or ladder from the storey under it. Evolves: ${$(`cobbe`)}.</li>
