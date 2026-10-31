@@ -81,6 +81,11 @@ interface Roo {
   curl: { size: number };
   /** The leaf-feathers: how long and wide one is, the mane's rows on the neck, and how far down the back the cape comes (a share of the torso). */
   feather: { len: number; w: number; mane: number; cape: number };
+  /**
+   * The Shearlord's own: a shawl of fleece round its neck and chest, a crest between its ears, a cape of feathers hanging over its
+   * flanks, a fan of a tail, feather trousers, great claws and a deeper cream.
+   */
+  grand?: boolean;
   gait: {
     /** How much of a stride a foot is down at a walk and a run; how far it swings, as a share of the leg's reach. */
     duty: [number, number]; swing: [number, number];
@@ -149,24 +154,25 @@ const CLIPPEROO_LOOK: Roo = {
 const SHEARLORD_LOOK: Roo = {
   stage: 2,
   quad: null,
-  leg: { at: [0.34, 0.02, -0.02], len: [0.5, 0.72], w: [0.45, 0.088], heel: 0.1, foot: [0.62, 0.105], stance: 0.31, ahead: 0.08 },
+  leg: { at: [0.4, 0.02, -0.02], len: [0.5, 0.72], w: [0.45, 0.09], heel: 0.1, foot: [0.66, 0.12], stance: 0.42, ahead: 0.1 },
   high: 1.3,
-  hips: { c: [0, -0.1, 0.12], r: [0.4, 0.46, 0.42] },
+  hips: { c: [0, -0.1, 0.12], r: [0.42, 0.46, 0.42] },
   chest: [0, 0.08, 0.3],
-  lean: 32,
+  lean: 30,
   tilt: 0,
-  torso: { z: [-0.22, 0.06, 0.34, 0.58, 0.72], y: [0.15, 0.19, 0.13, 0.05, 0], w: [0.42, 0.48, 0.42, 0.27, 0.17], h: [0.45, 0.52, 0.42, 0.27, 0.17] },
-  shoulder: [0.24, 0.1, 0.55],
-  arm: [0.24, 0.28], armW: [0.088, 0.074], hand: 0.088,
+  torso: { z: [-0.22, 0.06, 0.34, 0.58, 0.72], y: [0.15, 0.2, 0.16, 0.08, 0], w: [0.42, 0.5, 0.52, 0.4, 0.22], h: [0.45, 0.54, 0.5, 0.36, 0.2] },
+  shoulder: [0.32, 0.12, 0.56],
+  arm: [0.26, 0.3], armW: [0.095, 0.08], hand: 0.095,
   elbow: [0.7, -0.4, -0.6],
-  neck: { at: [0, 0.02, 0.62], len: 0.4, w: [0.18, 0.13], bend: 22 },
+  neck: { at: [0, 0.02, 0.66], len: 0.42, w: [0.24, 0.15], bend: 22 },
   head: { r: [0.16, 0.235, 0.165], up: 0.1, fwd: 0.04, pitch: 5 },
   snout: { r: [0.085, 0.17, 0.078], at: [0, 0.21, -0.065] },
   eye: { dir: [0.62, 0.6, 0.32], size: 0.047 },
-  ear: { len: 1.2, w: 0.24, dir: [0.4, -0.38, 0.84], back: 76, out: 28, fan: 0, face: 0.85 },
-  tail: { at: [0, -0.34, -0.24], links: [0.25, 0.25, 0.24, 0.22, 0.2], w: [0.17, 0.19, 0.18, 0.15, 0.12, 0.09], bend: [-64, 5, 30, 25, 15], plume: 0.85 },
-  curl: { size: 0.062 },
-  feather: { len: 0.2, w: 0.065, mane: 9, cape: 1.0 },
+  ear: { len: 1.4, w: 0.27, dir: [0.4, -0.38, 0.84], back: 84, out: 22, fan: 0, face: 0.85 },
+  tail: { at: [0, -0.36, -0.24], links: [0.22, 0.22, 0.2, 0.18, 0.15], w: [0.17, 0.19, 0.17, 0.14, 0.11, 0.08], bend: [-60, 5, 26, 24, 14], plume: 1.25 },
+  curl: { size: 0.064 },
+  feather: { len: 0.24, w: 0.075, mane: 11, cape: 1.0 },
+  grand: true,
   gait: { duty: [0.44, 0.36], swing: [0.42, 0.5], step: 0.35, hop: [0.42, 0.64], tuck: 0.42 },
   size: 3.6,
 };
@@ -825,7 +831,7 @@ function underCape(s: Roo, p: V3): boolean {
   const a = Math.atan2((p[1] - r.y) / r.h, p[0] / r.w);
   if (s.quad) return p[2] > top - s.feather.len * 1.0;
   const bottom = lerp(top, T.z[0], s.feather.cape), u = clamp((top - p[2]) / Math.max(0.01, top - bottom));
-  const span = lerp(0.72, 0.5, u) * Math.PI * 0.5;
+  const span = lerp(s.grand ? 1.05 : 0.72, s.grand ? 0.85 : 0.5, u) * Math.PI * 0.5;
   return p[2] > bottom - s.feather.len * 0.4 && Math.abs(a + Math.PI / 2) < span;
 }
 
@@ -855,13 +861,34 @@ function capeOf(s: Roo, fine: boolean): Mesh {
   // the shoulders onto the chest.
   const bottom = lerp(top, T.z[0], F.cape), rows = Math.max(2, Math.round((top - bottom) / (F.len * 0.5)));
   for (let row = rows - 1; row >= 0; row--) {
-    const u = row / Math.max(1, rows - 1), z0 = lerp(top, bottom, u), span = lerp(0.72, 0.5, u) * Math.PI;
+    const u = row / Math.max(1, rows - 1), z0 = lerp(top, bottom, u), span = lerp(s.grand ? 1.05 : 0.72, s.grand ? 0.85 : 0.5, u) * Math.PI;
     const count = Math.round((fine ? 16 : 10) * lerp(1, 0.7, u));
     for (let q = 0; q < count; q++) {
       const a = -Math.PI / 2 + ((q + 0.5) / count - 0.5) * span + (row % 2) * 0.08;
       const e = onTorso(s, z0, a, s.curl.size * 0.6 + 0.01);
-      const L = F.len * (0.9 + 0.3 * jitter(q * 5 + row)) * lerp(1.1, 0.9, u), dir = unit(add(scale(e.n, 0.12), [0, 0, -1]));
+      // The Shearlord's hangs in long layers, longest at its sides, over its flanks.
+      const side = Math.abs(Math.cos(a)), long = s.grand ? 1.25 + 0.45 * side : 1;
+      const L = F.len * long * (0.9 + 0.3 * jitter(q * 5 + row)) * lerp(1.1, 0.9, u), dir = unit(add(scale(e.n, 0.12), [0, 0, -1]));
       out.push(featherOf(e.p, dir, e.n, L, F.w * (0.9 + 0.3 * jitter(q + row * 3)), GREENS[(q + row) % 3], fine, 0.18));
+    }
+  }
+  return merge(...out);
+}
+
+/**
+ * The Shearlord's shawl, in the chest's frame: a thick collar of big curls round the root of its neck, deepest over its chest,
+ * standing out from the torso so its chest and shoulders are heavier than the Clipperoo's.
+ */
+function shawlOf(s: Roo, fine: boolean): Mesh {
+  const T = s.torso, top = T.z[T.z.length - 1], out: Mesh[] = [], size = s.curl.size * 1.5 * (fine ? 1 : 1.3);
+  for (let r = 0; r < 3; r++) {
+    const z = top - 0.16 - r * size * 1.2, tr = torsoAt(s, z), round = Math.round((Math.PI * (tr.w + tr.h)) / (size * 1.25));
+    for (let q = 0; q < round; q++) {
+      const a = ((q + 0.5 * (r % 2)) / round) * TAU, front = Math.max(0, Math.sin(a));
+      // Round the back the cape lies over it; the shawl is at the front and the sides, and lower at the front.
+      if (Math.sin(a) < -0.55) continue;
+      const e = onTorso(s, z - front * size * 0.5 * r, a, size * (0.15 + 0.25 * front));
+      out.push(clump(e.p, e.n, size * curlSize(q * 5 + r * 13) * (0.85 + 0.35 * front), fine ? 8 : 6, q + r * 41 + 900));
     }
   }
   return merge(...out);
@@ -936,6 +963,13 @@ function crownOf(s: Roo, fine: boolean): Mesh {
       out.push(featherOf(add(e.p, scale(e.n, -0.005)), back, e.n, L * row.k * (0.85 + 0.3 * jitter(q + ri * 7)), w, GREENS[(q + ri) % 3], fine, 0.15));
     }
   });
+  // The Shearlord's crest: a tall fan of olive leaf-feathers between its ears, swept back.
+  if (s.grand) {
+    for (let q = 0; q < (fine ? 7 : 4); q++) {
+      const t = q / ((fine ? 7 : 4) - 1) - 0.5, e = onEgg(C, R, [t * 0.5, 0.2 - Math.abs(t) * 0.3, 0.95]);
+      out.push(featherOf(e.p, unit([t * 0.6, -0.75, 1]), [0, 1, 0.3], L * (2.0 - 1.2 * Math.abs(t)), w * 1.3, GREENS[q % 3], fine, -0.15, { at: 0.75, mat: 'feather' }));
+    }
+  }
   // The tuft standing up on its brow, between the ears.
   for (let q = 0; q < 3; q++) {
     const e = onEgg(C, R, [(q - 1) * 0.2, 0.35, 0.92]);
@@ -961,7 +995,7 @@ function earOf(s: Roo, sd: number, fine: boolean, n: number): Mesh {
   const ws = [0.5, 0.8, 0.96, 1, 0.95, 0.82, 0.62, 0.42, 0.22, 0.01].map((x) => x * E.w);
   const bow = (u: number): number => -0.1 * E.len * u * u;
   const cup = (p: V3): V3 => { const u = clamp(p[2] / E.len), w = Math.max(0.01, lerp(E.w, E.w * 0.4, u)); return [p[0], p[1] + bow(u) + 0.6 * w * Math.min(1.2, (p[0] / w) ** 2), p[2]]; };
-  const band = (u: number): Mat => (u < 0.74 ? 'mark' : 'feather');
+  const band = (u: number): Mat => (u < (s.grand ? 0.62 : 0.74) ? 'mark' : 'feather');
   const shell = tube(us.map((u) => [0, 0, E.len * u] as V3), ws, ws.map((x) => Math.max(0.008, x * 0.16)), Math.max(8, n + 2), (ring) => band(us[Math.min(ring, us.length - 1)]), { up: [0, 1, 0] });
   // Its back green over the root, going to cream.
   out.push(painted(mesh(shell.v.map(cup), shell.f), (c, was) => (c[2] < E.len * 0.3 && c[1] < bow(clamp(c[2] / E.len)) + 0.005 ? 'coat' : was)));
@@ -972,9 +1006,9 @@ function earOf(s: Roo, sd: number, fine: boolean, n: number): Mesh {
   for (const u of [...uu].reverse()) lin.push([half(u), 0, E.len * u]);
   out.push(paint([{ v: lin.map((q) => add(cup(q), [0, E.w * 0.18, 0])), m: 'inner' }]));
   // The feathering: small leaf-feathers lying along the outer edge from the root, and round the root, green, overlapping.
-  const per = fine ? 7 : 4;
+  const per = (fine ? 7 : 4) + (s.grand ? (fine ? 5 : 2) : 0);
   for (let q = 0; q < per; q++) {
-    const u = 0.02 + (q / per) * 0.52, w = lerp(0.5, 0.95, u * 2) * E.w;
+    const reach = s.grand ? 0.78 : 0.52, u = 0.02 + (q / per) * reach, w = lerp(0.5, 0.95, Math.min(1, u * 2)) * E.w * (u > 0.5 ? lerp(1, 0.5, (u - 0.5) / 0.4) : 1);
     const root = cup([sd * w * 0.82, 0, E.len * u]);
     out.push(featherOf(add(root, [0, -0.006, 0]), [sd * 0.22, -0.05, 1], [0, 1, 0.05], E.len * lerp(0.2, 0.15, u * 2), E.w * 0.3, GREENS[q % 3], fine, 0.05));
   }
@@ -1043,7 +1077,8 @@ function footOf(s: Roo, n: number, k: number): Mesh {
     const a = q * 0.22, len = fl * (q ? 0.32 : 0.42), d: V3 = [Math.sin(a), Math.cos(a), 0];
     const root: V3 = [q * fw * 0.4, fl * 0.58, -h * 0.84], mid = add(root, scale(d, len * 0.62)), tip = add(root, scale(d, len));
     out.push(tube([root, add(mid, [0, 0, 0.004]), tip], [fw * 0.3, fw * 0.24, fw * 0.2], [fw * 0.3, fw * 0.26, fw * 0.2], Math.max(5, n - 2), 'hoof', { seam: 'start' }));
-    out.push(tube([add(tip, scale(d, -len * 0.08)), add(add(tip, scale(d, len * 0.18)), [0, 0, -h * 0.02]), add(add(tip, scale(d, len * 0.32)), [0, 0, -h * 0.13])], [fw * 0.24, fw * 0.16, fw * 0.03], [fw * 0.2, fw * 0.14, fw * 0.03], 5, 'claw'));
+    const cl = s.grand ? 1.6 : 1;
+    out.push(tube([add(tip, scale(d, -len * 0.08)), add(add(tip, scale(d, len * 0.18 * cl)), [0, 0, -h * 0.02]), add(add(tip, scale(d, len * 0.34 * cl)), [0, 0, -h * 0.16 * cl])], [fw * 0.24 * cl, fw * 0.16 * cl, fw * 0.03], [fw * 0.2 * cl, fw * 0.14 * cl, fw * 0.03], 5, 'claw'));
   }
   return merge(...out);
 }
@@ -1106,11 +1141,13 @@ function plumeOf(s: Roo, fine: boolean): Mesh {
   // A fan of long feathers out of the tail's end, spread up and down in its own plane, sweeping up at their ends, the middle ones
   // longest, green tipped dark brown; and a layer either side of it, shorter, so it is a plume and not a fan from in front.
   const layers = fine ? [0, -1, 1] : [0];
+  // The Shearlord's is a great fan: more of them, splayed wide up and down and out to either side.
+  const splay = s.grand ? 1.9 : 0.9, out3 = s.grand ? 0.85 : 0.3;
   for (const side of layers) {
-    const count = (fine ? 7 : 5) - Math.abs(side) * 2, k = side ? 0.8 : 1;
+    const count = (fine ? 7 : 5) + (s.grand ? (fine ? 6 : 3) : 0) - Math.abs(side) * 2, k = side ? 0.8 : 1;
     for (let q = 0; q < count; q++) {
-      const t = count > 1 ? q / (count - 1) - 0.5 : 0, a = t * 0.9 + 0.1;
-      const d = unit([side * 0.3, -Math.cos(a), Math.sin(a) + 0.2]);
+      const t = count > 1 ? q / (count - 1) - 0.5 : 0, a = t * splay + 0.15;
+      const d = unit([side * out3, -Math.cos(a), Math.sin(a) + 0.2]);
       const L = P * k * (1 - 0.5 * Math.abs(t)) * (0.9 + 0.2 * jitter(q * 3 + side + 4));
       out.push(featherOf([side * r0 * 0.5, 0.06 + 0.04 * Math.abs(side), Math.sin(a) * r0 * 0.5], d, [1, 0, side * 0.6], L, w * k * (0.9 + 0.2 * jitter(q + 9)), GREENS[(q + side + 3) % 3], fine, 0.18, { at: 0.6, mat: q % 2 ? 'featherDark' : 'feather' }));
     }
@@ -1144,6 +1181,7 @@ function rooBuild(s: Roo, lod: number): Piece[] {
   pieces.push({ key: 'hips', mesh: hipsOf(s, n, k, fine), bone: 'trunk', bias: 0, sheen: 'eyeWhite' });
   if (s.quad) pieces.push({ key: 'patches', mesh: patchesOf(s, fine), bone: 'trunk', bias: 0.005, after: ['hips'], hide: [hipsSolid] });
   pieces.push({ key: 'torso', mesh: torsoOf(s, n + 8, fine), bone: 'chest', bias: 0.01, ...(s.quad ? {} : { after: 'hips' }), breathes: { c: [0, 0, T.z[2]], k: 0.04 }, sheen: 'eyeWhite' });
+  if (s.grand) pieces.push({ key: 'shawl', mesh: shawlOf(s, fine), bone: 'chest', bias: 0.035, after: ['torso', 'cape', 'arm0', 'arm1'], sheen: 'eyeWhite' });
   pieces.push({ key: 'cape', mesh: capeOf(s, fine), bone: 'chest', bias: 0.03, after: ['torso', 'arm0', 'arm1'], hide: chestSolids, airy: true });
   // The neck: cream in front, green feathers behind, rows of them lying down it.
   const N = s.neck;
@@ -1183,11 +1221,14 @@ function rooBuild(s: Roo, lod: number): Piece[] {
     const shinMat = (u: number): Mat => (u > (s.quad ? 0.7 : 0.78) ? 'hoof' : 'muzzle');
     const shin = s.quad ? limb(L.len[1], L.w[1] * 1.15, L.w[1] * 0.85, n, k, shinMat) : shinOf(s, L.len[1], L.w[1], n + 4, fine, i);
     const cuff = merge(cuffOf(-L.len[1] * (s.quad ? 0.4 : 0.8), L.w[1] * (s.quad ? 1.1 : 1), s.feather.len * (s.quad ? 0.8 : 0.55), s.feather.w * (s.quad ? 1.1 : 0.9), fine ? 9 : 5, fine, 101 + i),
-      s.quad ? null : cuffOf(-L.len[1] * 0.42, L.w[1] * 0.95, s.feather.len * 0.6, s.feather.w * 0.9, fine ? 7 : 4, fine, 141 + i));
+      s.quad ? null : cuffOf(-L.len[1] * 0.42, L.w[1] * 0.95, s.feather.len * 0.6, s.feather.w * 0.9, fine ? 7 : 4, fine, 141 + i),
+      s.grand ? cuffOf(-L.len[1] * 0.12, L.w[1] * 1.3, s.feather.len * 0.85, s.feather.w * 1.1, fine ? 9 : 5, fine, 161 + i) : null,
+      s.grand ? cuffOf(-L.len[1] * 0.62, L.w[1] * 1.0, s.feather.len * 0.7, s.feather.w, fine ? 8 : 5, fine, 181 + i) : null);
+    const trousers = s.grand ? merge(...[0.25, 0.5, 0.72].map((u, r) => moved(cuffOf(-L.len[0] * u, L.w[0] * (1.05 - 0.15 * r), s.feather.len * 1.15, s.feather.w * 1.25, fine ? 12 : 7, fine, 171 + i * 7 + r, r * 0.3), [sd * L.w[0] * 0.4, -0.05, 0]))) : null;
     const knee = s.quad ? cuffOf(-L.len[0] * 0.75, L.w[0] * 0.9, s.feather.len * 0.75, s.feather.w, fine ? 7 : 4, fine, 111 + i) : moved(cuffOf(-L.len[0] * 0.78, L.w[0] * 1.05, s.feather.len * 1.1, s.feather.w * 1.2, fine ? 10 : 6, fine, 111 + i), [sd * L.w[0] * 0.4, -0.03, 0]);
     pieces.push(
       { key: `${key}0`, mesh: merge(thigh, patch), bone: `${key}0`, bias: 0.012, after: ['hips', ...(s.quad ? [] : ['torso'])], front, ...(s.quad ? FLUFF : { sheen: 'eyeWhite' as Mat }) },
-      { key: `${key}k`, mesh: knee, bone: `${key}0`, bias: 0.012, after: ['hips', `${key}0`], front },
+      { key: `${key}k`, mesh: merge(knee, trousers), bone: `${key}0`, bias: 0.012, after: ['hips', `${key}0`], front },
       { key: `${key}1`, mesh: shin, bone: `${key}1`, bias: 0.015, after: ['hips', `${key}k`], front },
       { key: `${key}c`, mesh: cuff, bone: `${key}1`, bias: 0.017, after: [`${key}1`], front },
       { key: `${key}2`, mesh: footOf(s, n, k), bone: `${key}2`, bias: 0.02, after: ['hips', `${key}1`, `${key}c`], front },
@@ -1329,7 +1370,7 @@ function rooKind(s: Roo): Kind {
     build: (lod) => rooBuild(s, lod),
     // The variant's coat is its leaf-feathers, its markings its fleece and face; the rest the same on every variant.
     palette: (coat, mark) => {
-      const sage = mix(coat, [126, 140, 64], 0.55), cream = mix(mark, [232, 190, 156], 0.62);
+      const sage = mix(coat, [126, 140, 64], 0.55), cream = s.grand ? mix(mark, [222, 168, 124], 0.72) : mix(mark, [232, 190, 156], 0.62);
       green = sage;
       return coatPalette(coat, mark, {
         coat: sage,
@@ -1344,7 +1385,7 @@ function rooKind(s: Roo): Kind {
         nose: [176, 112, 100],
         lid: [70, 46, 36],
         eye: [134, 86, 46],
-        claw: [46, 30, 24],
+        claw: s.grand ? [30, 20, 16] : [46, 30, 24],
         pad: HOOF,
         hoof: HOOF,
         feather: TIP,
