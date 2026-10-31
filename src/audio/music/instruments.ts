@@ -220,24 +220,48 @@ const MAKERS: Record<Struck, (sr: number, m: number, vel: number) => Float32Arra
 };
 
 /**
- * The notes made so far, per context. A touch is kept to five steps
- * (`TOUCHES`) so a phrase of thirty notes is a handful of buffers, not thirty.
+ * The rate notes are made at. Nothing in them is above 10 kHz (the felt and
+ * the caps on the partials see to that), so half the usual rate holds all of
+ * it in half the memory; the context resamples on playback.
  */
-const MADE = new WeakMap<BaseAudioContext, Map<string, AudioBuffer>>();
+export const NOTE_RATE = 24000;
+/** A note is made every `STEP` semitones and the ones between are played from the nearest, at most a semitone off. */
+export const STEP = 3;
+/** Touches are kept to five steps, so a track is a few dozen buffers rather than one per note played. */
 const TOUCHES = 5;
 
-export function note(ctx: BaseAudioContext, kind: Struck, m: number, vel: number): AudioBuffer {
+/** A made note and the playback rate that turns it into the one asked for. */
+export interface Sounded {
+  buf: AudioBuffer;
+  rate: number;
+}
+
+const MADE = new WeakMap<BaseAudioContext, Map<string, AudioBuffer>>();
+
+/** Which made note plays `m` at `vel`: its key, root and touch. */
+export function madeFor(kind: Struck, m: number, vel: number): { key: string; root: number; touch: number } {
+  const root = STEP * Math.round(m / STEP);
+  const touch = Math.round(clamp01(vel) * (TOUCHES - 1)) / (TOUCHES - 1);
+  return { key: `${kind}:${root}:${touch}`, root, touch };
+}
+
+/** Whether `note` would have to make a buffer for this, which is the costly part. */
+export function isMade(ctx: BaseAudioContext, kind: Struck, m: number, vel: number): boolean {
+  return MADE.get(ctx)?.has(madeFor(kind, m, vel).key) ?? false;
+}
+
+export function note(ctx: BaseAudioContext, kind: Struck, m: number, vel: number): Sounded {
   let made = MADE.get(ctx);
   if (!made) MADE.set(ctx, (made = new Map()));
-  const touch = Math.round(clamp01(vel) * (TOUCHES - 1)) / (TOUCHES - 1);
-  const key = `${kind}:${m}:${touch}`;
-  const had = made.get(key);
-  if (had) return had;
-  const data = MAKERS[kind](ctx.sampleRate, m, touch);
-  const buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
-  buf.getChannelData(0).set(data);
-  made.set(key, buf);
-  return buf;
+  const { key, root, touch } = madeFor(kind, m, vel);
+  let buf = made.get(key);
+  if (!buf) {
+    const data = MAKERS[kind](NOTE_RATE, root, touch);
+    buf = ctx.createBuffer(1, data.length, NOTE_RATE);
+    buf.getChannelData(0).set(data);
+    made.set(key, buf);
+  }
+  return { buf, rate: 2 ** ((m - root) / 12) };
 }
 
 /**
@@ -284,15 +308,18 @@ export interface Strike {
   damp?: number;
   /** A param to wobble the pitch with, in cents (the shared tape wow). */
   wow?: AudioNode;
+  /** Playback rate, from `note`. */
+  rate?: number;
 }
 
 export function strike(ctx: BaseAudioContext, dest: AudioNode, at: number, buf: AudioBuffer, s: Strike): void {
   const src = ctx.createBufferSource();
   src.buffer = buf;
+  src.playbackRate.value = s.rate ?? 1;
   if (s.wow) s.wow.connect(src.detune);
   const g = ctx.createGain();
   g.gain.setValueAtTime(s.gain, at);
-  let end = at + buf.duration;
+  let end = at + buf.duration / (s.rate ?? 1);
   if (s.until !== undefined && s.until < end) {
     const damp = s.damp ?? 0.08;
     g.gain.setTargetAtTime(0, s.until, damp);
