@@ -207,6 +207,7 @@ import { ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, MEMORIAL } from '../../game/m
 import { HOUR as SKEP_HOUR, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SKILL, SKEP_WAX_EVERY, skepRate, skepRateSaid, skepWax } from '../../game/bees';
 import { keepControlKeys } from '../controlkeys';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
+import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
 import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
 import { WATCH_AWAKE_HOURS, WATCH_BREAK_MINS, WATCH_KEEP_DAYS, WATCH_SKILL_MINS, WATCH_SKILL_TIMES, WATCH_STOCK_PER_MILLE } from '../../game/watch';
 import { fixed, setMarkup } from '../html';
@@ -2463,7 +2464,8 @@ export function helpText(): string {
       <li>Positional, with the <b>camera as the ear</b>: pan and volume from the screen; zooming out lowers everything.</li>
       <li>Generated live from noise and oscillators; nothing downloaded.</li>
       <li>Volume: top of the Display tab in <b>Settings</b> (<kbd>O</kbd>); zero turns sound off.</li>
-      <li><b>Music</b>: piano soundtrack, generated live; its own volume under Volume (${Math.round(SETTING_DEFAULTS.music * 100)}% to start); zero turns it off.</li>
+      <li><b>Music</b>: piano soundtrack, generated live, ${ALL_TRACKS.length} tracks, by the island's hour and season: ${playlistSays()}. Changes at a phrase end, over a harp bridge.</li>
+      <li>Music volume: under Volume (${Math.round(SETTING_DEFAULTS.music * 100)}% to start); zero turns it off. Sign-in page: Music on/off button.</li>
     </ul>
     <h3>Light after dark</h3>
     <ul>

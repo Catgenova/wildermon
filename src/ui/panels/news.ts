@@ -5,6 +5,7 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
+import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
 import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
 import { BOOT_PHASES, NEAR_REACH, TREE_WAIT_MS } from '../bootsteps';
 import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
@@ -4220,6 +4221,12 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 398,
+    day: '2026-10-31',
+    lines: () => [`Added: music by the island's hour and season, ${ALL_TRACKS.length} tracks: ${playlistSays()}.`,
+      'Changes at a phrase end, over a harp bridge. Sign-in page: Music on/off button. Melody softer on every track.'],
   },
   {
     n: 396,

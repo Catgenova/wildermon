@@ -17,7 +17,7 @@ import { isMade, madeFor, note, pad, strike, type Bus, type Struck } from './ins
 import { formBars, locate, play, type Track } from './score';
 
 /** How loud each instrument is for a touch. */
-const GAIN: Readonly<Record<Struck, (vel: number) => number>> = {
+export const GAIN: Readonly<Record<Struck, (vel: number) => number>> = {
   piano: (v) => 0.07 + 0.45 * v ** 1.5,
   harp: (v) => 0.035 + 0.15 * v,
   musicbox: (v) => 0.03 + 0.14 * v,
@@ -25,7 +25,7 @@ const GAIN: Readonly<Record<Struck, (vel: number) => number>> = {
 };
 
 /** Where each instrument sits: the piano low to the left and high to the right, as from the bench. */
-const PAN: Readonly<Record<Struck, (m: number) => number>> = {
+export const PAN: Readonly<Record<Struck, (m: number) => number>> = {
   piano: (m) => ((m - 60) / 48) * 0.55,
   harp: (m) => ((m - 55) / 36) * 0.6 - 0.15,
   musicbox: () => 0.35,
@@ -47,6 +47,8 @@ export class Conductor {
   private n = 0;
   /** When the next bar starts, in context seconds. */
   private next = 0;
+  /** The chord under the end of the last bar put on the clock, for a bridge out of it. */
+  last: number[] = [];
 
   constructor(private readonly ctx: BaseAudioContext, private readonly bus: Bus) {
     this.out = ctx.createGain();
@@ -80,6 +82,18 @@ export class Conductor {
     return this.n;
   }
 
+  /** Whether bar `n` (from `start`) opens a phrase of its pass: every eighth bar of a pass, the first included. */
+  phraseAt(n: number): boolean {
+    const t = this.track;
+    return !!t && locate(t, n).bar % 8 === 0;
+  }
+
+  /** Whether bar `n` is the top of the form again, after at least one time round. */
+  topAt(n: number): boolean {
+    const t = this.track;
+    return !!t && n > 0 && n % formBars(t) === 0;
+  }
+
   /** Seconds a beat lasts in bar `n` of the current track. */
   private beatSecs(n: number): number {
     const t = this.track;
@@ -88,15 +102,24 @@ export class Conductor {
     return (60 / t.bpm) * (last ? LAST_BAR : 1);
   }
 
-  /** Puts every bar that starts before `horizon` on the clock. */
-  fill(horizon: number): void {
+  /**
+   * Puts every bar that starts before `horizon` on the clock, unless `stop`
+   * says to stop before one: then nothing more is put on the clock, and the
+   * time that bar would have started is returned, for what comes next.
+   */
+  fill(horizon: number, stop?: (n: number) => boolean): number | null {
     const t = this.track;
-    if (!t) return;
+    if (!t) return null;
     // Fallen behind the clock (the tab was out of sight, or the music turned
     // down to nothing): carry on from the bar it stopped at, a moment from now.
     const now = this.ctx.currentTime;
     if (this.next < now) this.next = now + 0.25;
     while (this.next < horizon) {
+      if (stop?.(this.n)) {
+        const at = this.next;
+        this.track = null;
+        return at;
+      }
       const { pass, bar } = locate(t, this.n);
       const round = Math.floor(this.n / formBars(t));
       const beat = this.beatSecs(this.n);
@@ -115,9 +138,11 @@ export class Conductor {
         });
       }
       for (const p of holds) pad(this.ctx, this.out, at + p.beat * beat, p.beats * beat, p.notes, PAD_GAIN, 1.5, 2);
+      this.last = holds[holds.length - 1]?.notes ?? this.last;
       this.next += t.beats * beat;
       this.n += 1;
     }
+    return null;
   }
 
   /** Notes the next `bars` bars will strike that are not made yet. */

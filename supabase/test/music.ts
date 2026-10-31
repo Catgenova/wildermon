@@ -20,7 +20,10 @@
  */
 import { celesta, feltPiano, harp, musicBox, NOTE_RATE, STEP, madeFor, type Making } from '../../src/audio/music/instruments';
 import { formBars, line, locate, play, type Track } from '../../src/audio/music/score';
-import { BLOSSOM } from '../../src/audio/music/tracks/blossom';
+import { ALL_TRACKS, DAY_TRACKS, MOMENTS, momentAt, tracksFor } from '../../src/audio/music/playlist';
+import { SIGN_IN_TRACKS } from '../../src/audio/music/playlist-sign-in';
+import { BRIDGE_NOTES, harpRoll } from '../../src/audio/music/bridge';
+import { SEASONS } from '../../src/world/calendar';
 
 const ok: string[] = [];
 const bad: string[] = [];
@@ -28,7 +31,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
   (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
-const TRACKS: Track[] = [BLOSSOM];
+const TRACKS: readonly Track[] = ALL_TRACKS;
 /** The keys each instrument has, low and high, MIDI. */
 const RANGE = { piano: [28, 96], musicbox: [72, 100], celesta: [60, 96], harp: [36, 91] } as const;
 
@@ -87,6 +90,38 @@ for (const t of TRACKS) {
   })();
   check(`${t.name}: a loop runs long enough not to wear thin`, secs > 180, `${(secs / 60).toFixed(1)} min at ${t.bpm} BPM`);
 }
+
+/* ---- which plays when ------------------------------------------------------ */
+
+const hours = Array.from({ length: 96 }, (_, i) => i / 4);
+const seen = new Map<string, number>();
+for (const h of hours) seen.set(momentAt(h), (seen.get(momentAt(h)) ?? 0) + 1);
+check('the island\'s day has all four parts, each some of it', MOMENTS.every((m) => (seen.get(m) ?? 0) > 0),
+  MOMENTS.map((m) => `${m} ${((seen.get(m) ?? 0) / 4).toFixed(2)} h`).join(', '));
+const played = new Set<string>();
+let empty = '';
+for (const season of SEASONS) for (const h of hours) {
+  const pool = tracksFor(season, h);
+  if (!pool.length) empty = `${season} ${h}`;
+  for (const t of pool) played.add(t.id);
+}
+for (const t of SIGN_IN_TRACKS) played.add(t.id);
+check('every hour of every season has something to play, and every track is played somewhere',
+  !empty && ALL_TRACKS.every((t) => played.has(t.id)), empty ? `nothing at ${empty}` : `${ALL_TRACKS.length} tracks`);
+check('each season\'s day has two tracks, to take turns', SEASONS.every((s) => DAY_TRACKS[s].length === 2 && DAY_TRACKS[s][0] !== DAY_TRACKS[s][1]));
+check('track names and ids are each one track\'s', new Set(ALL_TRACKS.map((t) => t.id)).size === ALL_TRACKS.length && new Set(ALL_TRACKS.map((t) => t.name)).size === ALL_TRACKS.length);
+
+/* ---- a bridge joins any two ------------------------------------------------- */
+
+const bridgeBad: string[] = [];
+for (const a of ALL_TRACKS) for (const b of ALL_TRACKS) {
+  const last = play(a, a.form.length - 1, a.sections[a.form[a.form.length - 1].s].length - 1, 0).holds.at(-1)?.notes ?? [];
+  const first = play(b, 0, 0, 0).holds[0]?.notes ?? [];
+  for (const m of [...harpRoll(last), ...harpRoll(first)]) if (!BRIDGE_NOTES.includes(m)) bridgeBad.push(`${a.id}→${b.id} harp ${m}`);
+  if (!harpRoll(last).length || !harpRoll(first).length) bridgeBad.push(`${a.id}→${b.id} has an empty roll`);
+}
+check('a bridge between any two tracks rolls notes the harp has made for it', bridgeBad.length === 0,
+  bridgeBad.slice(0, 3).join('; ') || `${ALL_TRACKS.length * ALL_TRACKS.length} pairs`);
 
 /* ---- every note makes, and makes something sane ------------------------- */
 

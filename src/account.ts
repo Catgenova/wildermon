@@ -11,6 +11,7 @@ import { CODE_DIGITS, CODE_SECONDS, finishEnrol, myFactor, removeFactor, startEn
 import { nameRefusal } from './game/playertext';
 import { PRIVACY_TITLE, privacyPolicy } from './ui/privacy';
 import { RULES_TITLE, gameRules } from './ui/rules';
+import { SETTING_DEFAULTS, liveSettings } from './game/settings';
 
 /**
  * The landing page: a username, a password, and a way back in.
@@ -527,6 +528,52 @@ requestAnimationFrame(() => window.setTimeout(() => {
     return { x0: 0, y0: 0, x1: W, y1: Math.max(120, card.offsetTop) };
   })).catch(() => {});
 }, 0));
+
+/* ---- Cove: the sign-in page's music ----------------------------------------- */
+
+/*
+ * The same soundtrack as the island's, playing its own track over the cove. A
+ * browser starts audio only off something the person did, so it begins on the
+ * first click or key, and its notes are made a little each frame as in the
+ * game (src/audio/music/music.ts). Its level is the game's Music setting, kept
+ * in this browser, so off here is off on the island and the other way about.
+ */
+const musicToggle = $<HTMLButtonElement>('music-toggle');
+const kept = liveSettings();
+let musicWas = kept.music > 0 ? kept.music : SETTING_DEFAULTS.music;
+const sayMusic = (): void => {
+  const on = kept.music > 0;
+  musicToggle.textContent = on ? 'Music: on' : 'Music: off';
+  musicToggle.setAttribute('aria-pressed', String(on));
+};
+sayMusic();
+musicToggle.addEventListener('click', () => {
+  if (kept.music > 0) {
+    musicWas = kept.music;
+    kept.music = 0;
+  } else kept.music = musicWas;
+  sayMusic();
+});
+let musicCtx: AudioContext | null = null;
+const startMusic = (): void => {
+  if (musicCtx) {
+    if (musicCtx.state === 'suspended') void musicCtx.resume();
+    return;
+  }
+  type WithLegacy = typeof globalThis & { webkitAudioContext?: typeof AudioContext };
+  const Ctor = window.AudioContext ?? (globalThis as WithLegacy).webkitAudioContext;
+  if (!Ctor) return;
+  musicCtx = new Ctor();
+  void Promise.all([import('./audio/music/music'), import('./audio/music/playlist-sign-in')]).then(([{ Music }, { SIGN_IN_TRACKS }]) => {
+    const music = new Music({ audio: () => musicCtx, volume: () => kept.music, pick: () => SIGN_IN_TRACKS });
+    const tick = (): void => {
+      music.step();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }).catch(() => {});
+};
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, startMusic, { passive: true });
 
 setMode('new');
 void onArrival();

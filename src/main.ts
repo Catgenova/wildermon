@@ -45,6 +45,8 @@ import { warmMeadow } from './render/meadow';
 import { Renderer, skyWash, sunAt, type Pick } from './render/renderer';
 import { Sound } from './audio/sound';
 import { Music } from './audio/music/music';
+import { tracksFor } from './audio/music/playlist';
+import { seasonAt } from './world/calendar';
 import { PUFFS, PUFF_LIFE, PUFF_RISE, puffAge, puffOf } from './render/smoke';
 import { DUST_LIFE } from './render/dust';
 import { FLOAT_LIFE, FLOAT_RISE, Floaters, MERGE_WINDOW } from './render/floaters';
@@ -252,8 +254,12 @@ const sound = new Sound(game, camera);
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) {
   window.addEventListener(ev, () => sound.arm(), { passive: true });
 }
-// The soundtrack plays through the same context, so it starts off the same click.
-const music = new Music(game, () => sound.audio);
+// The soundtrack plays through the same context, so it starts off the same click; by the island's hour and season.
+const music = new Music({
+  audio: () => sound.audio,
+  volume: () => game.settings.music,
+  pick: () => tracksFor(seasonAt(game.wallNow()).season, game.hourOfDay()),
+});
 
 const ui = new UI(game, renderer, uiRoot, canvasEl, { turn: turnView, keys, island });
 // A window or bar moved or resized against another clicks as they join.
