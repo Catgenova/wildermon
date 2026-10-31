@@ -7,11 +7,10 @@ import { type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
- * The settlement's own hands: the kemma, the sheela, the salva, the carra,
- * the tanna and the brambo.
+ * The settlement's own hands: the sheela, the salva, the carra, the tanna
+ * and the brambo (the kemma is the Whispling now, `./wild-owl`).
  * Each carries the tool of its trade on its body, as every wildermon carries
- * something no field guide has: a brush for a tail, shears for teeth, a
- * cleaver for a beak.
+ * something no field guide has: shears for teeth, a cleaver for a beak.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -32,57 +31,6 @@ export function links(r: readonly number[], len: number, n: number, mat: Mat | (
 }
 
 const OWN = (own: Partial<Record<Mat, RGB>>) => own;
-
-/* ---- the kemma: a brush for a tail -------------------------------------------------- */
-
-/**
- * A kemma: a soft, round grazer that is always clean, with a broad pink
- * tongue it keeps a little out. Its tail is a hairbrush -- a polished wooden
- * back with rows of bristles under it -- and it grooms with that too.
- */
-const KEMMA_SPEC: QuadSpec = { ...pawed({ high: 1.35, len: 2.3, legs: 0.75, neck: 0.4, lean: 55, swing: [22, 36], ears: [40, 20], tail: [0.45, 30, 4] }), nose: 12 };
-const KEMMA_HEAD = { c: [0, 0.35, 0.15] as V3, r: [1.08, 1.0, 0.92] as V3 };
-
-function kemmaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = KEMMA_HEAD;
-  const face = merge(
-    snout(1.05, -0.2, [0.46, 0.34, 0.4], 0.12, n, k),
-    // The tongue, a broad pink lick out of the side of the mouth.
-    orbAlong([0.12, 1.38, -0.52], [0.25, 1, -0.6], [0.16, 0.06, 0.2], 6, 3, 'tongue'),
-  );
-  // The brush: a wooden back, long and flat, and two rows of bristles hanging under it.
-  const back = tube([[0, 0.05, 0.05], [0, -0.45, 0.1], [0, -1.0, 0.08]], [0.1, 0.32, 0.28], [0.09, 0.11, 0.1], 6, 'wood');
-  const bristles = merge(...[-0.18, 0, 0.18].flatMap((x) => [-0.25, -0.45, -0.65, -0.85].map((y) => taper([[x, y, 0], [x * 1.3, y, -0.32]], 0.06, 0.035, 4, 'coatLight'))));
-  return quadPieces({
-    n, k,
-    body: { y: [-1.3, -1.05, -0.5, 0.1, 0.65, 1.0, 1.2], z: [0.1, 0.12, 0.16, 0.18, 0.2, 0.22, 0.24], w: [0.3, 1.0, 1.18, 1.2, 1.12, 0.95, 0.3], h: [0.28, 0.82, 0.95, 0.98, 0.92, 0.8, 0.28], belly: true },
-    neck: { w: 0.66, h: 0.66, len: 0.4 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.76, 0.5, 0.32], size: 0.32, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.2] },
-    ear: earMesh(0.55, 0.3, n),
-    earTurn: 30,
-    tail: [merge(taper([[0, 0.05, 0], [0, -0.2, 0]], 0.16, 0.1, n, 'coat'), moved(merge(back, bristles), [0, -0.15, 0]))],
-    fore: { upper: [0.28, -0.4, 0.28, 0.24], lower: [0, -0.36, 0.24, 0.22], foot: pawMesh(0.24, n, k, 'coatLight') },
-    hind: { upper: [0.3, -0.42, 0.3, 0.26], lower: [0, -0.4, 0.24, 0.22], foot: pawMesh(0.24, n, k, 'coatLight') },
-  });
-}
-
-export const KEMMA: Kind = {
-  bones: quadBonesOf(KEMMA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, now and then it turns its head and licks its own shoulder clean.
-    if (a.go <= 0) {
-      const lick = beat(a.t, [5.5, 16.8], 2.2) * (1 - a.graze);
-      p.neck[1] += 55 * lick;
-      p.head[0] += 18 * lick;
-    }
-  }),
-  build: kemmaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ wood: [176, 122, 78], tongue: [236, 132, 150] }), 30),
-  shadow: [1.6, 1.25],
-  stride: 1.3,
-  size: 1.7,
-};
 
 /* ---- the sheela: shears for teeth, and a pail at the throat ------------------------- */
 

@@ -19,6 +19,7 @@ import { BRIAR_VOICE } from './voice-briar';
 import { GNAW_VOICE } from './voice-gnaw';
 import { GLASS_VOICE } from './voice-glass';
 import { GOAT_VOICE } from './voice-goat';
+import { OWL_VOICE } from './voice-owl';
 import { GHOST_VOICE } from './voice-ghost';
 import { HAUL_VOICE } from './voice-haul';
 import { HAMSTER_VOICE } from './voice-hamster';
@@ -159,6 +160,8 @@ export const VOICES: Partial<Record<string, Voice>> = {
   ulva: SPIDER_VOICE,
   // The Briarling, the Meadowtide and the Floracrux.
   petta: GOAT_VOICE,
+  // The Whispling, the Hushwing and the Songroost.
+  kemma: OWL_VOICE,
   // The Kilnlet, the Terrabrick and the Kilnspire.
   potta: KILN_VOICE,
   // The Logkit, the Sawquill and the Timberback.
