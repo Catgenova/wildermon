@@ -144,7 +144,7 @@ psql(`${asDane} select rpc_act(${W}, 'store_in_crate', jsonb_build_object('kind'
 const theirNeedles = psql(`select coalesce(sum(count) filter (where holder = 'crate' and crate = 2), 0) || '/'
   || coalesce(sum(count) filter (where holder = 'player'), 0) from item i
   where i.world_id = ${W} and i.def = 'needle' and (i.crate = 2 or i.holder_uid = ${DANE})`);
-const mineNeedles = `${roomy.items.filter((it) => it.id === 'needle').reduce((n, it) => n + it.count, 0)}/${game.inventory.countAll('needle')}`;
+const mineNeedles = `${roomy.items.filter((it) => it.id === 'needle').reduce((n, it) => n + it.count, 0)}/${game.inventory.items.filter((it) => it.id === 'needle' && !it.issued).reduce((n, it) => n + it.count, 0)}`; // the starter needle is not one of the three
 check('one needle of three into a crate: one goes in, two stay in the pack',
   theirNeedles === '1/2' && mineNeedles === '1/2', `crate/pack: browser ${mineNeedles}, island ${theirNeedles}`);
 

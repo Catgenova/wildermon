@@ -195,7 +195,7 @@ begin
     floor(v_px) + 50.5, floor(v_py) + 0.5, w.uid) returning id into v_grave;
   insert into item (world_id, holder, placed, def, ql) values (w.world_id, 'furniture', v_grave, 'log', 20), (w.world_id, 'furniture', v_grave, 'mallet', 20);
   r := faith_spell_cast(w.world_id, w.uid, 'justice_restitution', spell_target(w.world_id, w.uid, 'justice_restitution', '{}'::jsonb));
-  insert into said values ('REST', (select count(*) from item where world_id = w.world_id and holder = 'player' and holder_uid = w.uid and def in ('log', 'mallet') and ql = 20)
+  insert into said values ('REST', (select count(*) from item where world_id = w.world_id and holder = 'player' and holder_uid = w.uid and def in ('log', 'mallet') and ql = 20 and not issued)
     || '|' || (select count(*) from placed where id = v_grave) || '|' || coalesce(r->>'said', r->>'why'));
 
   -- Oath: refused on a stranger; between friends, a blow on either is split.
