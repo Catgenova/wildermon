@@ -965,20 +965,28 @@ function headOf(s: Reach, n: number, k: number, shut: boolean): Mesh {
   return merge(skull, paint(spots), eyesOf(s, shut));
 }
 
-/** The muzzle: a long egg out of the front of the skull, cream, its end orange-peach, a smile under it. */
-function muzzleMesh(s: Reach, n: number, k: number): Mesh {
-  const M = s.head.muzzle;
-  const [, , z] = muzzleFrame(s);
-  const muzzle = painted(orbAlong(M.c, M.dir, M.r, n + 2, k + 1, 'coat'), (c) => {
-    const along = dot(sub(c, M.c), z) / M.r[2];
-    return along > 0.3 ? 'nose' : 'coat';
-  });
-  const mouth = onMuzzle(s, [0, -0.5, 0.85]);
-  const nostrils = [1, -1].map((sd) => {
-    const q = onMuzzle(s, [sd * 0.45, 0.25, 0.86]);
-    return disc(add(q.p, scale(q.n, 0.008)), q.n, M.r[0] * 0.12, M.r[0] * 0.08, 6, 'lid');
-  });
-  return merge(muzzle, paint(nostrils), smile(add(mouth.p, scale(mouth.n, -0.01)), mouth.n, M.r[0] * 0.7, 'lid'));
+/**
+ * The muzzle: cream, out of the front of the skull and tapering to a small,
+ * soft, rounded tip, turned up a little at its end; on the tip a small peach
+ * nose pad with two tiny dark nostrils, and a smile line under it.
+ */
+function muzzleMesh(s: Reach, n: number): Mesh {
+  const M = s.head.muzzle, [x, y, z] = muzzleFrame(s);
+  const at = (t: number, lift: number): V3 => add(M.c, add(scale(z, t * M.r[2]), scale(y, lift * M.r[1])));
+  // Down its length: full where it leaves the skull, narrowing to a soft round end, the last of it turned up.
+  const ts = [-0.9, -0.55, -0.1, 0.35, 0.68, 0.84, 0.93, 0.99, 1.03];
+  const ks = [0.86, 1, 0.98, 0.86, 0.72, 0.62, 0.52, 0.36, 0.08];
+  const lift = (t: number): number => 0.34 * Math.max(0, t - 0.3) ** 2 / 0.5;
+  // Cream, but for the soft end of it, the nose pad: the last three bands and the cap.
+  const muzzle = tube(ts.map((t) => at(t, lift(t))), ks.map((q) => q * M.r[0]), ks.map((q) => q * M.r[1]), n + 5, (ring) => (ring >= ts.length - 4 ? 'nose' : 'coat'));
+  // The two tiny nostrils on the front of the pad, facing forward and a little up.
+  const face = unit(add(z, scale(y, 0.35))), r = M.r[0];
+  const pad = add(at(1.0, lift(1.0)), scale(face, r * 0.16));
+  const nose: Disc[] = [];
+  for (const sd of [1, -1]) nose.push(disc(add(add(pad, scale(x, sd * r * 0.1)), scale(face, 0.006)), face, r * 0.055, r * 0.04, 6, 'lid', { up: y }));
+  // The smile: under the end, along the lip.
+  const lip = add(at(0.7, lift(0.7)), scale(y, -M.r[1] * 0.62)), down = unit(add(scale(y, -0.75), scale(z, 0.65)));
+  return merge(muzzle, paint(nose), smile(add(lip, scale(down, 0.01)), down, r * 0.62, 'lid'));
 }
 
 /** The chin, on the jaw's bone, so a chew or a nip shows: a small egg under the end of the muzzle. */
@@ -1452,7 +1460,7 @@ function reachBuild(s: Reach, drops: readonly Drop[], T: () => Pruned, lod: numb
   const n = cut(lod, 7, 10), k = cut(lod, 5, 6);
   const skull = skullOf(s);
   const extras: Piece[] = [
-    { key: 'muzzle', mesh: muzzleMesh(s, n, k), bone: 'head', bias: 0.205, after: ['head'], front: [0, 1, 0], lines: false },
+    { key: 'muzzle', mesh: muzzleMesh(s, n), bone: 'head', bias: 0.205, after: ['head'], front: [0, 1, 0], lines: false },
     { key: 'chin', mesh: chinOf(s, n - 1, k - 1), bone: 'jaw', bias: 0.2, after: ['head'], under: ['muzzle'], lines: false },
     { key: 'crown', mesh: crownLeaves(s), bone: 'head', bias: 0.215, after: ['head', 'neck', 'crest'], hide: [skull], ...LEAVES },
     { key: 'earLeaves', mesh: earLeaves(s, fine), bone: 'head', bias: 0.212, after: ['head', 'crest'], hide: [skull], ...LEAVES },
