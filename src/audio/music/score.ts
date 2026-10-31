@@ -57,11 +57,18 @@ export interface Track {
   beats: number;
   sections: Readonly<Record<string, readonly Bar[]>>;
   form: readonly Pass[];
-  /** The right hand's touch, as a share of the usual: under 1 sets the melody back in the texture, softer and darker. */
+  /** The right hand's touch, as a share of the written one (`MELODY_TOUCH` unless set): lower is softer and darker. */
   melody?: number;
-  /** The right hand's level, as a share of what its touch gives: 0.5 is half as loud. */
+  /** The right hand's level, as a share of what its touch gives (`MELODY_LEVEL` unless set): 0.5 is half as loud. */
   melodyLevel?: number;
 }
+
+/**
+ * The melody, set back in every track. Asked for: "the melody very subdued and muted" at 0.3 of its touch, then
+ * "Reduce the melody volume by 50%", then "Apply that 0.3 and 50% across all the tracks".
+ */
+export const MELODY_TOUCH = 0.3;
+export const MELODY_LEVEL = 0.5;
 
 /** One note of a bar, in beats from the bar's start. */
 export interface Hit {
@@ -173,8 +180,8 @@ export function play(t: Track, pass: number, bar: number, round: number): { hits
 
   const lifted = p.lift?.includes(bar) ? 12 : 0;
   const right = line(b.r, t.beats);
-  const tune = t.melody ?? 1;
-  for (const n of right) for (const m of n.ms) add('piano', m + lifted, n.beat, n.dur, (n.beat === 0 ? 0.55 : 0.5) * tune, t.melodyLevel);
+  const tune = t.melody ?? MELODY_TOUCH;
+  for (const n of right) for (const m of n.ms) add('piano', m + lifted, n.beat, n.dur, (n.beat === 0 ? 0.55 : 0.5) * tune, t.melodyLevel ?? MELODY_LEVEL);
 
   if (b.b) for (const n of line(b.b, t.beats)) for (const m of n.ms) add('musicbox', m, n.beat, n.dur, 0.4);
   else if (round % 2 === 1 && bar % 4 === 1 && right[0]?.beat === 0) {
