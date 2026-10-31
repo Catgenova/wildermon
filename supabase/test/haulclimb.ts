@@ -121,6 +121,9 @@ begin
   v_tk := creature_spawn(w, 'orse', 22.5, 18.5, 'active', now() - interval '60 days', u);
   v_cart := creature_spawn(w, 'roxxen', 22.5, 19.5, 'active', now() - interval '60 days', u);
   update creature set hitched_to = v_hauled, hunger = 1, traits = '{}', skills = '{}' where world_id = w and id in (v_tk, v_cart);
+  -- Its own bounds: a spawn's rarity and size (beast_mul) are its own, not the ridden one's.
+  insert into said select 'TKBOUNDS', skill_gain_of(1, haul_learn_of(0) * beast_mul(c, 'learn') * learn_pace(c, 'climbing'), 0.6)
+    || '|' || skill_gain_of(1, haul_learn_of(0) * beast_mul(c, 'learn') * learn_pace(c, 'climbing'), 1.4) from creature c where c.world_id = w and c.id = v_tk;
   insert into said values ('SPEED', vehicle_speed(w, v_hauled)::text);
   perform rpc_move(w, 24.5, 18.5, 0);
   insert into said select 'PULLX', x::text from player where world_id = w and uid = u;
@@ -150,8 +153,10 @@ check(`on the island the same four tiles up the rise teach about ×${steep.toFix
   `climbing ${say('UP')} vs ${say('FLAT')} on the flat`);
 check('on the island the large cart is pulled the four tiles', Number(say('SPEED')) > 0 && Number(say('PULLX')) === 24.5,
   `team pace ${say('SPEED')}, to ${say('PULLX')}`);
+const [tlo, thi] = say('TKBOUNDS').split('|').map(Number);
 check('on the island a Thistlekit in the traces learns four goes of climbing',
-  gained('PULLED') >= 4 * lo * 0.999 && gained('PULLED') <= 4 * hi * 1.001, `climbing ${say('PULLED')}`);
+  gained('PULLED') >= 4 * tlo * 0.999 && gained('PULLED') <= 4 * thi * 1.001,
+  `climbing ${say('PULLED')} (+${(4 * tlo).toFixed(5)} to +${(4 * thi).toFixed(5)})`);
 const [cc, cd] = say('CARTLING').split('|');
 check('on the island a Cartling beside it learns driving and no climbing', cc === '-' && Number(cd) > 1, say('CARTLING'));
 
