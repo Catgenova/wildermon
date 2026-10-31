@@ -114,12 +114,12 @@ const HIDEWEAVER_LOOK: Pede = {
   rings: 10,
   gap: 0.3,
   ring: [0.44, 0.27, 0.4],
-  sizes: [0.9, 0.98, 1.02, 1.04, 1.05, 1.05, 1.03, 1.0, 0.95, 0.86],
+  sizes: [1.18, 1.2, 1.14, 1.06, 1.05, 1.05, 1.03, 1.0, 0.95, 0.86],
   high: 0.66,
   rise: [60, 34, 10, 2],
   leg: { len: [0.42, 0.4], w: 0.16, paw: 0.15, out: 0.7, ahead: 0.04 },
-  arm: { len: [0.36, 0.36], w: 0.15, paw: 0.21, out: 0.42, up: 0.86, ahead: 0.5 },
-  head: { r: [0.78, 0.56, 0.32], out: 0.18, lift: 0.42, pitch: -8, eye: 0.072, ant: 1.2 },
+  arm: { len: [0.38, 0.38], w: 0.17, paw: 0.22, out: 0.6, up: 0.86, ahead: 0.58 },
+  head: { r: [0.78, 0.56, 0.32], out: 0.42, lift: 0.36, pitch: -8, eye: 0.072, ant: 1.2 },
   neck: 0.78,
   plate: { len: 0.34, w: 0.1, crest: [0, 0, 1.15, 0, 0, 1.25, 0, 0, 1.05, 0], tail: 1.2, tailCount: 6, cap: 2.4, capCount: 5 },
   hide: { w: 0.5, fwd: 0.7, back: 0.0 },
@@ -636,7 +636,7 @@ const DRESS: Record<Dress, { m: [Mat, Mat, Mat]; edge: boolean; spot: boolean }>
 };
 
 /** How a plate is shaped: how much its edges cup up, its tip curls off what it lies on, how much of it is tip, how thick, how finely cut. */
-interface Shape { cup?: number; crease?: number; curl?: number; tip?: number; thick?: number; root?: number; n: number; k: number }
+interface Shape { cup?: number; crease?: number; curl?: number; tip?: number; thick?: number; root?: number; twist?: number; bow?: number; n: number; k: number }
 /** How finely a plate is cut: finely drawn big, and four facets round and three bands long, sixteen faces, at the island's sizes. */
 const plateCut = (fine: boolean): { n: number; k: number } => (fine ? { n: 7, k: 4 } : { n: 4, k: 3 });
 
@@ -659,8 +659,8 @@ function feather(root: V3, dir: V3, face: V3, len: number, w: number, dress: Dre
   const mat = (ring: number, j: number): Mat => {
     const u = (us[ring] + us[ring + 1]) / 2, a = at(j), top = Math.abs(a - TAU / 4) < TAU / n * 0.6;
     if (dress === 'crest') {
-      if (top && u > 0.16 && u < 0.58) return 'leafDark';
-      return u < 0.16 ? 'mark' : u < 0.6 ? 'leaf' : 'coat';
+      if (top && u > 0.24 && u < 0.62) return 'leafDark';
+      return u < 0.12 ? 'mark' : u < 0.24 ? 'moss' : u < 0.36 ? 'stem' : u < 0.62 ? 'leaf' : u < 0.76 ? 'bark' : 'coat';
     }
     let m: Mat = u < 0.28 ? m0 : u < 1 - tip ? m1 : m2;
     if (m === m1 && D.spot && Math.cos(a) > 0 && u > 0.4) m = 'coat';
@@ -668,8 +668,10 @@ function feather(root: V3, dir: V3, face: V3, len: number, w: number, dress: Dre
   };
   const b = tube(us.map((u) => [0, 0, u * len] as V3), ws, ws.map((x) => Math.max(0.002, x * th)), n, mat, { up: [0, 1, 0] });
   const v = b.v.map((p): V3 => {
-    const u = p[2] / len, y = p[1] + cup * w * (p[0] / w) ** 2 + (o.crease ?? 0) * Math.abs(p[0]) + curl * len * u * u;
-    return add(add(add(root, scale(d, p[2])), scale(side, p[0])), scale(nr, y));
+    const u = p[2] / len, y0 = p[1] + cup * w * (p[0] / w) ** 2 + (o.crease ?? 0) * Math.abs(p[0]) + curl * len * u * u;
+    // Turned about its own length more toward its tip, and bowed to one side.
+    const a = (o.twist ?? 0) * u, x = p[0] * Math.cos(a) - y0 * Math.sin(a) + (o.bow ?? 0) * len * u * u, y = p[0] * Math.sin(a) + y0 * Math.cos(a);
+    return add(add(add(root, scale(d, p[2])), scale(side, x)), scale(nr, y));
   });
   return mesh(v, b.f);
 }
@@ -738,7 +740,7 @@ function fan(R: V3, N: number, len: number, w: number, fine: boolean, seed: numb
     const e = onEgg([0, 0, 0], R, [sd * 0.14, lerp(y0, y1, t), 1]);
     const dir = unit([sd * side * (0.5 + 0.7 * j), -Math.sin(ang), Math.cos(ang)]);
     const long = (1 - 1.3 * (t - 0.35) ** 2) * (0.82 + 0.3 * jitter(seed * 3 + q));
-    out.push(feather(add(e.p, scale(e.n, -R[2] * 0.15)), dir, [1, 0, 0.15 * sd], len * Math.min(1, long), w * (0.9 + 0.2 * j), 'crest', sh));
+    out.push(feather(add(e.p, scale(e.n, -R[2] * 0.15)), dir, [1, 0, 0.15 * sd], len * Math.min(1, long), w * (0.9 + 0.2 * j), 'crest', { ...sh, twist: sd * (0.35 + 0.3 * j), bow: -sd * 0.07 }));
   }
   return merge(...out);
 }
@@ -755,7 +757,7 @@ function platesOf(s: Pede, i: number, fine: boolean): Mesh {
   const R = ringR(s, i), L = s.plate.len * s.sizes[i], W = s.plate.w * s.sizes[i], crest = s.plate.crest[i] ?? 0;
   // The first ring's plates lie low, so its head shows over them.
   const out: Mesh[] = [featherCoat(R, L, W, fine, i * 31 + 1, (phi, back, sd) => patched(s, i, sd)(phi, back), s.arm && i < 2 ? 180 : 160, i === 0 && !s.arm, !!s.arm && i < 2)];
-  if (crest > 0) out.push(fan(R, 4, bodyHigh(s) * crest, W * 2.5, fine, i * 13, { from: i < 2 ? 32 : 22, to: 74, side: 0.42 }));
+  if (crest > 0) out.push(fan(R, fine ? 5 : 4, bodyHigh(s) * crest, W * 2.15, fine, i * 13, { from: i < 2 ? 32 : 22, to: 76, side: 0.42 }));
   return merge(...out);
 }
 
@@ -861,15 +863,15 @@ const antRoot = (s: Pede): V3 => { const R = s.head.r; return [R[0] * 0.46, R[1]
  * its tip, in green beads going brown at the tip, with small leaf-feathers along its outer side.
  */
 function antennaOf(s: Pede, fine: boolean): Mesh {
-  const A = s.head.ant, r = s.head.r[0] * 0.13, K = fine ? 10 : 6;
-  const pts = curve([0, 0, 0], [A * 0.34, A * 0.5, A * 0.5], [A * 0.9, A * 0.84, A * 0.4], K);
-  const out: Mesh[] = [tube(pts, pts.map((_, q) => r * (1 - 0.45 * q / K) * (q % 2 ? 0.82 : 1)), pts.map((_, q) => r * (1 - 0.45 * q / K) * (q % 2 ? 0.82 : 1)),
-    fine ? 6 : 4, (ring) => (ring >= K - 2 ? 'bark' : ring % 2 ? 'leafDark' : 'leaf'))];
+  const A = s.head.ant, r = s.head.r[0] * 0.1, K = fine ? 10 : 6;
+  const pts = curve([0, 0, 0], [A * 0.55, A * 0.42, A * 0.42], [A * 1.0, A * 0.62, A * 0.3], K);
+  const rr = pts.map((_, q) => r * (1 - 0.72 * q / K) * (q % 2 ? 0.92 : 1));
+  const out: Mesh[] = [tube(pts, rr, rr, fine ? 6 : 4, (ring) => (ring >= K - 2 ? 'bark' : ring % 2 ? 'stem' : 'leaf'))];
   const leaves = fine ? [3, 5, 7, 9] : [3, 5];
   for (const q of leaves) {
     const p = pts[q], d = unit(sub(pts[Math.min(K, q + 1)], pts[q - 1])), outward = unit(cross(d, [0, 0, 1]));
     const dir = unit(add(scale(d, 0.6), scale(outward, 0.8)));
-    out.push(feather(p, dir, [0, 0, 1], A * 0.22 * (1.1 - q / K * 0.4), A * 0.07, 'leaf', { ...plateCut(fine), cup: 0.2, curl: 0.05 }));
+    out.push(feather(p, dir, [0, 0, 1], A * 0.18 * (1.1 - q / K * 0.5), A * 0.055, 'leaf', { ...plateCut(fine), cup: 0.2, curl: 0.05 }));
   }
   return merge(...out);
 }
@@ -1143,15 +1145,16 @@ function pedeKind(s: Pede): Kind {
       return coatPalette(coat, mark, {
         leaf: green,
         leafDark: mix(green, [40, 50, 30], 0.32),
-        moss: mix(green, cream, 0.5),
-        stem: mix(green, cream, 0.4),
+        moss: mix(green, cream, 0.62),
+        stem: mix(green, cream, 0.3),
         mark: cream,
         belly: mix(cream, [214, 186, 150], 0.4),
         muzzle: mix(cream, [255, 252, 246], 0.4),
         coat: [166, 110, 68],
         coatLight: [196, 146, 100],
         coatDark: [100, 64, 46],
-        bark: [146, 96, 60],
+        // Olive going to brown, between the green of a plate and its brown tip.
+        bark: mix(green, [166, 110, 68], 0.55),
         nose: [214, 126, 128],
         inner: [236, 160, 164],
         lid: [86, 54, 42],
