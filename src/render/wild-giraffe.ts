@@ -104,10 +104,10 @@ const SAPLINGREACH_LOOK: Reach = {
   eye: { dir: [0.66, 0.58, 0.42], size: 0.066, lid: 0.18 },
   ear: { len: 0.48, w: 0.2, out: 66, back: 26, leaves: 3 },
   antler: { kind: 0, len: 0.5, r: 0.035, out: 12, leaf: 0.2 },
-  crest: { n: 30, len: 0.24, w: 0.12, back: 0.45, orange: 1 },
+  crest: { n: 46, len: 0.24, w: 0.12, back: 0.45, orange: 1 },
   dapples: { n: 90, r: 0.05, neck: 46 },
   tail: { links: 3, len: 0.4, r: 0.045, lift: 0, curl: -22, leaves: 2, leaf: 0.26, droop: 1, clumps: 0 },
-  cuffs: { n: 6, len: 0.12, knee: false },
+  cuffs: { n: 6, len: 0.12, knee: true },
   vines: { n: 0, len: 0 },
   moss: 0,
   trees: [],
@@ -126,10 +126,10 @@ const CANOPYSHAPER_LOOK: Reach = {
   eye: { dir: [0.66, 0.58, 0.42], size: 0.066, lid: 0.2 },
   ear: { len: 0.55, w: 0.22, out: 74, back: 26, leaves: 4 },
   antler: { kind: 1, len: 0.85, r: 0.05, out: 14, leaf: 0.26 },
-  crest: { n: 64, len: 0.34, w: 0.19, back: 0.65, orange: 3 },
+  crest: { n: 96, len: 0.34, w: 0.19, back: 0.65, orange: 3 },
   dapples: { n: 150, r: 0.062, neck: 110 },
   tail: { links: 4, len: 0.46, r: 0.06, lift: 4, curl: -16, leaves: 2, leaf: 0.36, droop: 1.3, clumps: 0 },
-  cuffs: { n: 7, len: 0.16, knee: false },
+  cuffs: { n: 7, len: 0.16, knee: true },
   vines: { n: 2, len: 0.3 },
   moss: 0,
   trees: [],
@@ -148,18 +148,18 @@ const GROVEMASTER_LOOK: Reach = {
   head: sized(1.38, { skull: { c: [0, 0, 0.15], r: [0.26, 0.33, 0.25] }, muzzle: { c: [0, 0.36, -0.01], dir: [0, 1, -0.38], r: [0.14, 0.13, 0.31] }, pitch: 2 }),
   eye: { dir: [0.66, 0.58, 0.42], size: 0.066, lid: 0.24 },
   ear: { len: 0.6, w: 0.22, out: 76, back: 30, leaves: 4 },
-  antler: { kind: 2, len: 2.0, r: 0.2, out: 18, leaf: 1.08 },
-  crest: { n: 76, len: 0.46, w: 0.26, back: 0.95, orange: 3 },
+  antler: { kind: 2, len: 2.3, r: 0.2, out: 18, leaf: 0.78 },
+  crest: { n: 110, len: 0.46, w: 0.26, back: 0.95, orange: 3 },
   dapples: { n: 220, r: 0.085, neck: 150 },
   tail: { links: 4, len: 0.66, r: 0.15, lift: 12, curl: -10, leaves: 2, leaf: 0.5, droop: 1.5, clumps: 2 },
   cuffs: { n: 8, len: 0.26, knee: true },
-  vines: { n: 6, len: 0.4 },
+  vines: { n: 3, len: 0.3 },
   moss: 14,
   trees: [
     // Lower and smaller than the antlers' trees: out of its near shoulder, up and out forward; and out of the far side of its back,
     // up and back.
-    { u: 0.86, th: 1.15, dir: [0.4, 0.3, 1], len: 1.5, r: 0.16, pads: 2, pad: 0.88, side: 1, ways: [[0.7, 0.8, 0]] },
-    { u: 0.22, th: 1.3, dir: [-0.2, -0.3, 1], len: 1.3, r: 0.14, pads: 2, pad: 0.78, side: -1, ways: [[-0.4, -1, 0]] },
+    { u: 0.86, th: 1.15, dir: [0.4, 0.3, 1], len: 1.6, r: 0.16, pads: 4, pad: 0.6, side: 1, ways: [[0.7, 0.8, 0]] },
+    { u: 0.22, th: 1.3, dir: [-0.2, -0.3, 1], len: 1.4, r: 0.14, pads: 4, pad: 0.55, side: -1, ways: [[-0.4, -1, 0]] },
   ],
   gait: { bounce: [0, 0.26], nod: 2.5, swing: [16, 25], duty: [0.65, 0.44] },
   strike: 2,
@@ -846,8 +846,8 @@ const twig = (pts: readonly V3[], r0: number, r1: number, n: number, mat: Mat = 
  * A flat canopy, as a bonsai's is clipped, and as the conifers' boughs are
  * (`../trees3d`): a broad lens of leaves, much wider than it is deep, shaded
  * dark underneath and lit on top; tufts over its top and round its rim, lit
- * where they face up; and a ragged hem of dark leaf tips hanging under its
- * edge, so it is a mass of foliage and not a cap. `R` across, `T` deep.
+ * where they face up; and dark lumps along the under side of its rim, so its
+ * underside is ragged rather than a clean cap. `R` across, `T` deep.
  */
 function padOf(c: V3, R: number, T: number, seed: number, fine: boolean): Mesh {
   const lit = (z: number, top: Mat): ((p: V3) => Mat) => (p) => (p[2] > c[2] + z ? top : 'leafDark');
@@ -861,49 +861,44 @@ function padOf(c: V3, R: number, T: number, seed: number, fine: boolean): Mesh {
     const a = (q / 6) * TAU + 0.5 + jitter(seed + q + 9) * 0.6, rr = R * 0.38 * jitter(seed + q + 11), k = R * 0.26;
     out.push(painted(orb(add(c, [Math.cos(a) * rr, Math.sin(a) * rr * 0.84, T * 0.3]), [k, k, T * 0.3], fine ? 6 : 5, 3, 'moss'), lit(T * 0.36, q % 2 ? 'moss' : 'leaf')));
   }
-  // The hem: leaf tips hanging under the rim, each its own length.
-  const H = fine ? 14 : 9;
-  for (let q = 0; q < H; q++) {
-    const a = (q / H) * TAU + jitter(seed + q + 21) * 0.3, o: V3 = [Math.cos(a), Math.sin(a) * 0.84, 0];
-    const root = add(c, [o[0] * R * 0.86, o[1] * R * 0.86, -T * 0.12]), l = R * (0.18 + 0.16 * jitter(seed + q + 23));
-    out.push(leafOf(root, [o[0] * 0.6, o[1] * 0.6, -1], [o[0], o[1], 0.2], l, l * 0.45, ['leafDark', 'leafDark', 'leafDark'], 0.1, 0.2));
+  // The ragged underside: dark lumps hanging a little under the rim, each its own size.
+  for (let q = 0; q < (fine ? 7 : 5); q++) {
+    const a = (q / 7) * TAU + 0.2 + jitter(seed + q + 21) * 0.5, rr = R * (0.55 + 0.2 * jitter(seed + q + 23)), k = R * (0.2 + 0.08 * jitter(seed + q + 25));
+    out.push(orb(add(c, [Math.cos(a) * rr, Math.sin(a) * rr * 0.84, -T * 0.3]), [k, k, T * 0.28], fine ? 6 : 5, 3, 'leafDark'));
   }
   return merge(...out);
 }
 
 /**
- * A bonsai grown out of it: a thick bark limb out of `root`, rising along
- * `dir` in an S -- up and back against its sweep, then over and out along it
- * (`ways[0]`) -- to a fork, where it splits into `pads` branches fanned out
- * either side of the sweep at heights of their own, each carrying a flat
- * canopy (`padOf`), the middle one the biggest. As its antlers and the trees
- * on its back are.
+ * A bonsai grown out of it, as the sheet draws them: a thick bark limb out of
+ * `root` that rises only a little along `dir` before it sweeps out near level
+ * the way of `ways[0]`, twisting to one side and back as it goes; its canopies
+ * (`padOf`), `pads` of them, overlapping in tiers along its outer half and on
+ * short branches fanned out either side, at and a little over the height it
+ * levels out at, the outermost the lowest. As its antlers and the trees on its
+ * back are.
  */
 function bonsaiOf(root: V3, dir: V3, len: number, r: number, pads: number, pad: number, seed: number, fine: boolean, n: number, ways?: readonly V3[]): Mesh {
   const up = unit(dir), sweep = unit(ways?.[0] ? [ways[0][0], ways[0][1], 0.0001] : [up[0], up[1], 0.0001]);
-  const side = unit(cross([0, 0, 1], sweep)), out: Mesh[] = [];
-  const a1 = add(root, add(scale(up, len * 0.3), scale(sweep, -len * 0.14)));
-  const a2 = add(root, add(scale(up, len * 0.48), scale(sweep, len * 0.1)));
-  const a3 = add(root, add(scale(up, len * 0.56), scale(sweep, len * 0.58)));
+  const side = unit(cross([0, 0, 1], sweep)), out: Mesh[] = [], twist = jitter(seed) > 0.5 ? 1 : -1;
+  const a1 = add(root, add(scale(up, len * 0.1), add(scale(sweep, -len * 0.04), scale(side, twist * len * 0.04))));
+  const a2 = add(root, add(scale(up, len * 0.15), add(scale(sweep, len * 0.3), scale(side, -twist * len * 0.08))));
+  const a3 = add(root, add(scale(up, len * 0.17), add(scale(sweep, len * 0.78), scale(side, twist * len * 0.06))));
   const limb = [...curve(root, a1, a2, fine ? 5 : 3), ...curve(a2, add(a2, scale(sub(a2, a1), 0.5)), a3, fine ? 5 : 3).slice(1)];
-  out.push(twig(limb, r, r * 0.6, n, 'bark'));
-  const fan = pads === 1 ? [0] : pads === 2 ? [-0.65, 0.6] : [-0.95, 0.05, 0.9];
-  fan.forEach((a, q) => {
-    const way = unit(add(scale(sweep, Math.cos(a)), scale(side, Math.sin(a))));
-    const mid = pads === 1 || (pads === 3 && q === 1);
-    const reach = len * (mid ? 0.3 : 0.26) * (0.9 + 0.2 * jitter(seed + q));
-    const rise = len * (mid ? 0.2 : 0.02 + 0.08 * jitter(seed + q + 2));
-    const el = add(a3, add(scale(way, reach * 0.45), [0, 0, reach * 0.16 + rise * 0.3]));
-    const end = add(a3, add(scale(way, reach), [0, 0, rise]));
-    out.push(twig(curve(a3, el, end, fine ? 4 : 3), r * 0.6, r * 0.32, Math.max(4, n - 1), 'bark'));
-    const R = pad * (mid ? 1 : 0.8) * (0.9 + 0.2 * jitter(seed + q + 4));
-    out.push(padOf(add(end, [0, 0, R * 0.06]), R, R * 0.3, seed + q * 13, fine));
-  });
-  // A short bare stub off the limb, as a clipped bonsai has.
-  const stub = limb[Math.round(limb.length * 0.35)];
-  out.push(twig([stub, add(stub, add(scale(sweep, -len * 0.14), [0, 0, len * 0.06]))], r * 0.45, r * 0.22, 4, 'bark'));
+  out.push(twig(limb, r, r * 0.55, n, 'bark'));
+  // Where each canopy sits: out along the limb, and on short branches off it to either side, tier on tier.
+  for (let q = 0; q < pads; q++) {
+    const u = pads > 1 ? q / (pads - 1) : 1, at = limb[Math.round(lerp(limb.length * 0.3, limb.length - 1, u))];
+    const sd = q % 2 ? 1 : -1, off = q === pads - 1 ? 0 : len * (0.2 + 0.1 * jitter(seed + q + 3));
+    const rise = len * (0.07 - 0.04 * u + 0.04 * jitter(seed + q + 5));
+    const end = add(at, add(scale(side, sd * off), add(scale(sweep, len * 0.06 * (1 - u)), [0, 0, rise])));
+    if (off || rise > len * 0.04) out.push(twig(curve(at, add(mixV(at, end, 0.5), [0, 0, rise * 0.4]), end, 3), r * 0.5, r * 0.3, Math.max(4, n - 1), 'bark'));
+    const R = pad * (0.72 + 0.28 * jitter(seed + q + 7)) * (q === pads - 1 ? 1.1 : 1);
+    out.push(padOf(add(end, [0, 0, R * 0.08]), R, R * 0.28, seed + q * 13, fine));
+  }
   return merge(...out);
 }
+
 
 /* ---- the head ------------------------------------------------------------------------------- */
 
@@ -1058,7 +1053,7 @@ function antlerOf(s: Reach, fine: boolean, n: number, side = 1): Mesh {
   // little across the head so the two stand apart three quarters round as well as side on.
   if (A.kind === 2) {
     const fwd = side > 0;
-    return bonsaiOf(sub(root, [0, 0, 0.04]), [Math.sin(out) * 0.3, fwd ? 0.35 : -0.45, 1], A.len * (fwd ? 1 : 0.94), A.r, 3, A.leaf * (fwd ? 1 : 0.94), fwd ? 11 : 17, fine, n, [[-0.15, fwd ? 1 : -1, 0]]);
+    return bonsaiOf(sub(root, [0, 0, 0.04]), [Math.sin(out) * 0.3, fwd ? 0.35 : -0.45, 1], A.len * (fwd ? 1 : 0.94), A.r, 5, A.leaf * (fwd ? 1 : 0.94), fwd ? 11 : 17, fine, n, [[-0.12, fwd ? 1 : -1, 0]]);
   }
   const tip = add(root, add(scale(up, A.len), [0.04, -A.len * 0.12, 0]));
   const mid = add(root, add(scale(up, A.len * 0.55), [0.06, A.len * 0.06, 0]));
@@ -1137,8 +1132,8 @@ function crestOf(s: Reach): Mesh {
     const j = jitter(q + 60), j2 = jitter(q + 63), k = 0.7 + 0.6 * jitter(q + 62), len = C.len * k * (0.8 + 0.5 * u);
     const th = ridge ? sd * 0.2 : sd * (0.55 + 0.4 * j);
     const root: V3 = [Math.sin(th) * w * 0.86, -Math.cos(th) * w * 0.86, z];
-    const dir: V3 = ridge ? [sd * 0.3 * j, -1, -0.15 + 0.5 * (j2 - 0.5)] : [sd * (0.9 + 0.4 * j), -0.55 - 0.3 * j2, 0.15 + 0.6 * (j2 - 0.5)];
-    const face: V3 = ridge ? [sd, -0.1, 0.5] : [sd * 0.35, -0.3, 1];
+    const dir: V3 = ridge ? [sd * 0.3 * j, -1, -0.15 + 0.5 * (j2 - 0.5)] : [sd * (0.5 + 0.4 * j), -0.75 - 0.3 * j2, 0.35 + 0.6 * (j2 - 0.5)];
+    const face: V3 = ridge ? [sd, -0.1, 0.5] : [sd, -0.2, 0.6];
     out.push(leafOf(root, dir, face, len, len * 0.44, crestMats(s, q), 0.16, 0.3));
   }
   return merge(...out);
@@ -1194,7 +1189,7 @@ function bodyMesh(s: Reach, lod: number): Mesh {
       const id = q * 2 + (sd > 0 ? 0 : 1);
       // Spread along the body evenly, each at its own height round it: most over the back and the upper flank, fewer lower down.
       const u = (q + 0.5) / D.n + 0.04 * (jitter(id + 1) - 0.5);
-      const th = lerp(-0.55, 1.5, jitter(id + 2) ** 0.7);
+      const th = lerp(-0.85, 1.5, jitter(id + 2) ** 0.8);
       const e = onBody(s, alongBody(s, lerp(-0.04, 1.04, u)), th);
       const r = D.r * (0.75 + 0.45 * jitter(id + 3)) * (th < 0 ? 0.8 : 1);
       const m: Mat = jitter(id + 4) > 0.4 ? 'mark' : 'spot';
@@ -1254,13 +1249,23 @@ function legDapples(s: Reach, fore: boolean, seed: number): Mesh {
   return paint(out);
 }
 
+/** A few small dapples down the outside of a lower leg, in its bone's frame, between the knee or hock and the fetlock. */
+function cannonDapples(s: Reach, fore: boolean, seed: number): Mesh {
+  const L = fore ? foreLen(s) : hindLen(s), w = s.thick * 0.5, out: Disc[] = [];
+  for (let q = 0; q < 3 + s.stage; q++) {
+    const f = 0.2 + 0.45 * ((q + 0.5) / (3 + s.stage)), th = (fore ? -0.6 : -1.2) + 2.4 * jitter(seed * 7 + q + 1), nrm: V3 = [Math.cos(th), Math.sin(th), 0];
+    out.push(blotch([Math.cos(th) * w * 1.02, Math.sin(th) * w * 1.04, -L * f], nrm, s.dapples.r * 0.55, seed * 5 + q, jitter(seed + q * 3) > 0.45 ? 'mark' : 'spot', 0.9));
+  }
+  return paint(out);
+}
+
 /** The leaf tufts round a lower leg, in its bone's frame: a ring of leaves pointing down and out over the hoof; a second at the knee on the Grovemaster. */
 function cuffOf(s: Reach, lower: number, seed: number): Mesh {
   const out: Mesh[] = [], C = s.cuffs, R = s.thick * 0.4;
   const rings: Array<[number, number]> = [[lower * 0.7, 1]];
-  if (C.knee) rings.push([lower * 0.06, 0.8]);
-  // On the Grovemaster a thin lumpy ring of moss round each, under the leaves.
-  if (s.stage === 2) {
+  if (C.knee) rings.push([lower * 0.06, s.stage === 2 ? 0.8 : 0.6]);
+  // A thin lumpy ring of moss round each, under the leaves.
+  {
     for (const [z0] of rings) {
       const pts = Array.from({ length: 11 }, (_, q): V3 => { const a = (q / 10) * TAU; return [Math.cos(a) * R * 1.05, Math.sin(a) * R * 1.05, -z0 + 0.02 * Math.sin(a * 3 + seed)]; });
       out.push(tube(pts, R * 0.28, R * 0.22, 5, (ring, j) => ((ring + j) % 3 ? 'moss' : 'leafDark'), { start: false, end: false }));
@@ -1279,22 +1284,28 @@ function cuffOf(s: Reach, lower: number, seed: number): Mesh {
   return merge(...out);
 }
 
+/** Where a draped vine starts along the body: over the shoulders, the first nearest the neck. */
+const drapeY = (s: Reach, q: number): number => alongBody(s, lerp(0.95, 0.62, s.vines.n > 1 ? q / (s.vines.n - 1) : 0) + 0.04 * (jitter(q + 900) - 0.5));
+/** Where along the body a draped vine is `f` of the way down it: running diagonally back across the shoulder and the flank. */
+const drapeAt = (s: Reach, y0: number, f: number, q: number): number => y0 - s.len * 0.32 * f + 0.05 * Math.sin(f * 4 + q);
+
 /**
  * The vines draped over one flank, in the trunk's frame: from the top of its
- * back down its side to under its belly line, each one a braid of green with
- * small leaves along it, laid on the coat.
+ * back over the shoulder, diagonally down and back across its side to under
+ * its belly line, each one a braid of green with small leaves along it, laid
+ * on the coat.
  */
 function drapedOf(s: Reach, side: number): Mesh {
   const out: Mesh[] = [], V = s.vines;
   for (let q = 0; q < V.n; q++) {
-    const u = 0.12 + 0.76 * ((q + 0.5) / V.n) + 0.05 * (jitter(q + 900) - 0.5), y0 = alongBody(s, u), K = 10, pts: V3[] = [];
+    const y0 = drapeY(s, q), K = 10, pts: V3[] = [];
     for (let k = 0; k <= K; k++) {
-      const f = k / K, th = lerp(1.45, -0.5, f), e = onBody(s, y0 + 0.12 * Math.sin(f * 3 + q), th);
+      const f = k / K, th = lerp(1.45, -0.5, f), e = onBody(s, drapeAt(s, y0, f, q), th);
       pts.push(add(e.p, scale(e.n, 0.035)));
     }
     out.push(tube(pts, 0.03 + 0.012 * s.stage, 0.03 + 0.012 * s.stage, 4, (ring, j) => ((ring + j) % 3 === 0 ? 'leafDark' : s.stage === 2 ? 'moss' : 'stem')));
     for (let k = 2; k < K; k += 2) {
-      const e = onBody(s, y0 + 0.12 * Math.sin((k / K) * 3 + q), lerp(1.45, -0.5, k / K));
+      const e = onBody(s, drapeAt(s, y0, k / K, q), lerp(1.45, -0.5, k / K));
       out.push(leafOf(add(e.p, scale(e.n, 0.04)), add(scale(e.n, 0.6), [0, (k % 4 ? 0.5 : -0.5), -0.6]), e.n, 0.16 + 0.04 * s.stage, 0.06 + 0.015 * s.stage, greens(q + k)));
     }
   }
@@ -1321,7 +1332,7 @@ function clusterOf(at: V3, len: number, n: number, seed: number, orange = 0, dow
   for (let q = 0; q < n; q++) {
     const a = (q / n) * TAU + jitter(seed + q) * 0.6, spread = 0.55 + 0.45 * jitter(seed + q + 1);
     const dir: V3 = [Math.cos(a) * spread, Math.sin(a) * spread * 0.8 - 0.2, -down * (0.55 + 0.45 * jitter(seed + q + 2))];
-    const root = add(at, [Math.cos(a) * len * 0.08, Math.sin(a) * len * 0.08, 0]);
+    const root = add(at, [Math.cos(a) * len * 0.3 * jitter(seed + q + 7), Math.sin(a) * len * 0.3 * jitter(seed + q + 7), -len * 0.25 * jitter(seed + q + 8)]);
     const l = len * (0.8 + 0.4 * jitter(seed + q + 3));
     out.push(leafOf(root, dir, [Math.cos(a), Math.sin(a), 0.6], l, l * 0.5, q < orange ? TINT : greens(seed + q), 0.18, 0.3));
   }
@@ -1348,14 +1359,14 @@ function tailOf(s: Reach, fine: boolean, n: number): Mesh[] {
     if (l > 0) {
       // A side twig off this link, out and down, a cluster hanging off its end.
       const sd = l % 2 ? 1 : -1, from: V3 = [0, -T.len * 0.35, 0], to: V3 = [sd * T.len * 0.5, -T.len * 0.8, -T.len * 0.15 * T.droop];
-      parts.push(twig(curve(from, [sd * T.len * 0.25, -T.len * 0.55, T.len * 0.05], to, 3), r0 * 0.6, r0 * 0.3, 4), clusterOf(to, T.leaf * 1.35, fine ? 7 : 6, l * 7 + 1, s.stage ? 1 : 0, T.droop));
+      parts.push(twig(curve(from, [sd * T.len * 0.25, -T.len * 0.55, T.len * 0.05], to, 3), r0 * 0.6, r0 * 0.3, 4), clusterOf(to, T.leaf * 0.72, fine ? 13 : 10, l * 7 + 1, 0, T.droop));
     }
     if (last) {
-      parts.push(clusterOf([0, -T.len - 0.02, 0], T.leaf * 1.15, fine ? 10 : 8, 61, s.stage ? 2 : 0, T.droop));
+      parts.push(clusterOf([0, -T.len - 0.02, 0], T.leaf * 0.72, fine ? 18 : 13, 61, 0, T.droop));
       for (let q = 0; q < T.clumps; q++) {
         const sd = q % 2 ? -1 : 1, from: V3 = [0, -T.len * (0.2 + 0.45 * q), 0], at: V3 = [sd * T.len * 0.45, -T.len * (0.45 + 0.5 * q), T.len * 0.5];
         const R = s.antler.leaf * (0.62 - 0.08 * q);
-        parts.push(twig(curve(from, [sd * T.len * 0.2, -T.len * (0.35 + 0.45 * q), T.len * 0.3], at, 3), r1 * 0.8, r1 * 0.5, 4), padOf(add(at, [0, 0, R * 0.12]), R, R * 0.42, 70 + q * 13, fine), clusterOf(add(at, [0, 0, -R * 0.08]), T.leaf * 0.85, fine ? 6 : 5, 80 + q * 9, 1, 1.4));
+        parts.push(twig(curve(from, [sd * T.len * 0.2, -T.len * (0.35 + 0.45 * q), T.len * 0.3], at, 3), r1 * 0.8, r1 * 0.5, 4), padOf(add(at, [0, 0, R * 0.12]), R, R * 0.42, 70 + q * 13, fine), clusterOf(add(at, [0, 0, -R * 0.08]), T.leaf * 0.6, fine ? 12 : 9, 80 + q * 9, 0, 1.4));
       }
     }
     out.push(merge(...parts));
@@ -1415,10 +1426,9 @@ function dropsOf(s: Reach): Drop[] {
   const out: Drop[] = [], V = s.vines;
   for (const sd of [1, -1]) {
     for (let q = 0; q < V.n; q++) {
-      // Every other draped vine hangs on below the flank; more were a curtain over the legs.
-      if (V.n > 3 && q % 2) continue;
-      const u = 0.12 + 0.76 * ((q + 0.5) / V.n) + 0.05 * (jitter(q + 900) - 0.5), y0 = alongBody(s, u);
-      const e = onBody(s, y0 + 0.12 * Math.sin(3 + q), -0.5);
+      // Only the first draped vine on each side hangs on below the flank; more were a curtain over the legs.
+      if (q) continue;
+      const e = onBody(s, drapeAt(s, drapeY(s, q), 1, q), -0.5);
       const p = add(e.p, scale(e.n, 0.03));
       out.push({ at: [sd * p[0], p[1], p[2]], len: V.len * (0.7 + 0.5 * jitter(q + 950 + (sd > 0 ? 0 : 3))), side: sd, id: out.length + 1 });
     }
@@ -1498,7 +1508,7 @@ function reachBuild(s: Reach, drops: readonly Drop[], T: () => Pruned, lod: numb
     if (pc.key.startsWith('tail')) return { ...pc, ...LEAVES };
     if (pc.key === 'ear0' || pc.key === 'ear1') return { ...pc, bias: 0.214, after: ['head', 'earLeaves'] };
     if (/^[fh][lr]0$/.test(pc.key)) return { ...pc, mesh: merge(legMeshes(s, pc.key[0] === 'f', n).upper, legDapples(s, pc.key[0] === 'f', pc.key.charCodeAt(1))) };
-    if (/^[fh][lr]1$/.test(pc.key)) return { ...pc, mesh: legMeshes(s, pc.key[0] === 'f', n).lower };
+    if (/^[fh][lr]1$/.test(pc.key)) return { ...pc, mesh: merge(legMeshes(s, pc.key[0] === 'f', n).lower, cannonDapples(s, pc.key[0] === 'f', pc.key.charCodeAt(1))) };
     return pc;
   });
 }
@@ -1688,15 +1698,16 @@ function reachKind(s: Reach): Kind {
     palette: (coat0, mark0) => {
       // The sheet's own colours, unsoftened: a warm cream, a strong sage wash over its topline, neck and upper flanks, and over it
       // dapples of a deeper green and of peach; only the belly, the muzzle and the insides of its legs pale.
-      const coat = coat0, wash = mix(mark0, coat0, 0.22), mark = mix(mark0, [62, 92, 36], 0.18);
+      // Its cream a shade deeper than drawn, as the light lifts it: lit, it comes out the sheet's cream and never white.
+      const coat = mix(coat0, [214, 182, 128], 0.22), wash = mix(mark0, coat0, 0.22), mark = mix(mark0, [62, 92, 36], 0.18);
       return coatPalette(coat0, mark0, {
         coat,
         coatDark: wash,
         // The outsides of its ears: the cream warmed toward peach.
-        coatLight: mix(coat, [233, 164, 106], 0.3),
+        coatLight: mix(coat, [233, 164, 106], 0.42),
         mark,
-        belly: mix(coat, [255, 250, 238], 0.3),
-        muzzle: mix(coat, [255, 248, 236], 0.25),
+        belly: mix(coat, [246, 230, 196], 0.35),
+        muzzle: mix(coat, [246, 228, 194], 0.3),
         nose: [232, 146, 84],
         spot: [233, 164, 106],
         inner: [240, 172, 168],
