@@ -284,8 +284,9 @@ begin
   insert into said values ('BAG', (select holder || ',' || coalesce(holder_uid::text, 'nobody') || ',' || (inside = v_bag)
     from item where id = v_in));
   insert into said values ('LIGHT', (select lit || ',' || (charges < 600) from item where id = v_torch));
+  -- The starting kit is given again on waking (\`kit_topup\`, kit.ts); what is asked here is what else stays.
   insert into said values ('KEPT', (select string_agg(def, ',' order by def) from item
-    where world_id = w and holder = 'player' and holder_uid = '${ANNA}'));
+    where world_id = w and holder = 'player' and holder_uid = '${ANNA}' and not issued));
   insert into said values ('WORN', (select string_agg(k, ',' order by k) from player, jsonb_object_keys(equipped) k
     where world_id = w and uid = '${ANNA}'));
   insert into said values ('SAID', (select text from event where world_id = w and uid = '${ANNA}' order by n desc limit 1));
@@ -334,7 +335,7 @@ begin
   insert into said values ('A_ALL', coalesce(act_refusal(w, '${ANNA}', 'furniture_take_all', t), 'ALLOWED'));
   perform act_perform(w, '${ANNA}', 'furniture_take_all', t);
   insert into said values ('BACK', (select count(*) from item where placed = v_g) || ',' || (select string_agg(def, ',' order by def)
-    from item where world_id = w and holder = 'player' and holder_uid = '${ANNA}') || ','
+    from item where world_id = w and holder = 'player' and holder_uid = '${ANNA}' and not issued) || ','
     || (select holder || ':' || (holder_uid = '${ANNA}') from item where id = v_in));
   insert into said values ('STANDS', (select count(*) from placed where id = v_g)::text);
 

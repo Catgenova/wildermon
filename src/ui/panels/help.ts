@@ -108,7 +108,7 @@ import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import {
   ASH_RATE, BASE_QUEUE, BOAT_LOAD_DRAG, boatHands, MIND_EASE_PER_LEVEL, MIND_EASED_SKILLS, mindEaseAt, queueCapAt, SOUL_PER_LEVEL, SOUL_TAME_PER_LEVEL, soulAbove, soulTameAbove, controlPaceAbove, staminaCostAbove, windRegenAbove, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP, CHAR_START, DAMAGE_MAX, DAMAGE_WARN,
   DAMAGE_WARN_STEP, DAWN, DAY_SECONDS, DEED_RADIUS, DEED_RADIUS_PER_LEVEL, DEEDS_JOINED, deedWorkersAt, DUSK,
-  footing, Game, goSeconds, hullSpeed, kitQl, MAX_DEED_LEVEL, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
+  footing, Game, goSeconds, hullSpeed, KIT_QL, kitQl, MAX_DEED_LEVEL, STARTER_KIT, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
   QL_SPAN, QUEUE_PER_MIND, TWILIGHT, wearPerUse,
   QL_TOP,
 } from '../../game/game';
@@ -2615,7 +2615,7 @@ export function helpText(): string {
       no more than ${metres(LANDING_STAND)} m between highest and lowest corner). Each card: distance in tiles from where you fell.
       <b>${STAY_SAID}</b>, a step or a closed tab: the spawn.</li>
       <li><b>What you carried stays</b> in a <b>grave</b> where you fell: pack, held items, toolbelt, every bag and its contents.</li>
-      <li>Kept on you: clothing, armour, jewel, a crate with a wildermon in it, anything offered in a deal.</li>
+      <li>Kept on you: clothing, armour, jewel, starting kit, a crate with a wildermon in it, anything offered in a deal.</li>
       <li>Died in water too deep to stand: grave on the nearest dry ground within <b>${GRAVE_REACH} tiles</b>, else where you fell. Carrying nothing: no grave.</li>
       <li>For <b>${dur(GRAVE_KEEPS)}</b> real time (online or not): yours only; nobody else opens, takes from, picks up or breaks it; they are told whose it is.</li>
       <li>Open like a chest; take one at a time or <b>Take everything</b>; nothing goes back in.</li>
@@ -2654,7 +2654,7 @@ export function helpText(): string {
     <ul>
       <li><b>Improve</b> (right-click a finished item): each pass uses a little stock; success raises quality (QL), by a lot at first and very little near the top.
       Failure damages it; past ${IMPROVE_DAMAGE} damage it must be <b>Repair</b>ed before more work.</li>
-      <li><b>Starting kit cannot be improved</b> (repairable only).</li>
+      <li><b>Starting kit</b>: one of each of ${STARTER_KIT.length - 1} tools at QL ${KIT_QL}, and a water skin. <b>Cannot be improved</b> (repairable only). Kept on death; a missing piece given again on coming ashore and on waking after a death.</li>
     </ul>
     <table>
       <tr><td><b>Metal</b></td><td><b>File</b> + <b>whetstone</b>; a lump of metal per pass</td></tr>

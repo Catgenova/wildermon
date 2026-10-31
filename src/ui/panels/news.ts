@@ -12,7 +12,7 @@ import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
-import { DAMAGE_WARN, FORAGE_COOLDOWN, SPROUT_COOLDOWN, TRAVEL_LEG } from '../../game/game';
+import { DAMAGE_WARN, FORAGE_COOLDOWN, KIT_QL, SPROUT_COOLDOWN, STARTER_KIT, TRAVEL_LEG } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
@@ -4221,6 +4221,13 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 403,
+    day: '2026-10-31',
+    lines: () => [`Changed: starting kit: one of each of ${STARTER_KIT.length - 1} tools at QL ${KIT_QL} (was: 10 tools), and a water skin. Cannot be improved.`,
+      'Changed: on death, the starting kit stays on you (was: into the grave).',
+      'Added: a missing starting-kit piece is given again on coming ashore and on waking after a death.'],
   },
   {
     n: 402,

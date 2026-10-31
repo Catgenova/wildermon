@@ -627,23 +627,40 @@ export const TOOL_QL_SPAN = 400;
 export { QL_TOP };
 
 /**
- * What you wash ashore with: each tool, the quality it comes at and what its
- * head or handle is. Everything here is marked as issued: rough gear off the
- * beach, good enough to get a first tool made with and not worth working on.
- * Copper heads on pine handles, which is the poorest of everything: the first
- * bronze tool you cast for yourself is already better than any of it.
+ * What you wash ashore with, and wake with after a death: one of every tool an
+ * action, recipe, build or improvement asks for, each at the quality given and
+ * with what its head or handle is. Everything here is marked as issued: it
+ * cannot be improved, and it stays on the body when you die (`bury`); a kit
+ * tool you hold no issued copy of is given again when you come ashore or wake
+ * (`starter_kit`). Copper heads on pine handles, the poorest of everything.
  */
+export const KIT_QL = 20;
 export const STARTER_KIT: ReadonlyArray<readonly [string, number, string]> = [
-  ['hatchet', 20, 'Copper'],
-  ['shovel', 20, 'Copper'],
-  ['pickaxe', 20, 'Copper'],
-  ['carving_knife', 20, 'Copper'],
-  ['chisel', 15, 'Copper'],
-  ['mallet', 20, 'Pine'],
-  ['trowel', 20, 'Copper'],
-  ['saw', 20, 'Copper'],
-  ['butchering_knife', 20, 'Copper'],
-  ['rake', 20, 'Copper'],
+  ['hatchet', KIT_QL, 'Copper'],
+  ['shovel', KIT_QL, 'Copper'],
+  ['pickaxe', KIT_QL, 'Copper'],
+  ['carving_knife', KIT_QL, 'Copper'],
+  ['chisel', KIT_QL, 'Copper'],
+  ['mallet', KIT_QL, 'Pine'],
+  ['trowel', KIT_QL, 'Copper'],
+  ['saw', KIT_QL, 'Copper'],
+  ['butchering_knife', KIT_QL, 'Copper'],
+  ['rake', KIT_QL, 'Copper'],
+  ['sickle', KIT_QL, 'Copper'],
+  ['hammer', KIT_QL, 'Copper'],
+  ['file', KIT_QL, ''],
+  ['whetstone', KIT_QL, ''],
+  ['awl', KIT_QL, ''],
+  ['needle', KIT_QL, ''],
+  ['rope_tool', KIT_QL, ''],
+  ['brush', KIT_QL, ''],
+  ['fishing_rod', KIT_QL, ''],
+  ['fishing_net', KIT_QL, ''],
+  ['frying_pan', KIT_QL, ''],
+  ['clay_bowl', KIT_QL, ''],
+  ['clay_pot', KIT_QL, ''],
+  ['clay_jar', KIT_QL, ''],
+  ['quern', KIT_QL, ''],
   ['water_skin', 30, ''],
 ];
 /** The quality a tool in the kit comes ashore at, for the text that says why to better it. */

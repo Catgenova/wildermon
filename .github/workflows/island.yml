@@ -3403,6 +3403,17 @@ jobs:
             --outfile=node_modules/.cache/purse.mjs --log-level=error
           node node_modules/.cache/purse.mjs
 
+      - name: One of every tool to come ashore with, kept through a death
+        if: matrix.shard == 4
+        run: |
+          # The kit is one of every tool the island asks for, QL 20, issued, the
+          # browser's list; coming ashore gives it and the stake; issued cannot
+          # be improved; a death leaves it on the body; a missing piece is given
+          # again on coming ashore, once; a player cannot call the top-up.
+          npx esbuild supabase/test/kit.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/kit.mjs --log-level=error
+          node node_modules/.cache/kit.mjs
+
       - name: A grave where you fell
         if: matrix.shard == 4
         run: |
