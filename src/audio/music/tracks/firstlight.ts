@@ -14,6 +14,8 @@ export const FIRST_LIGHT: Track = {
   name: 'First Light',
   bpm: 46,
   beats: 3,
+  // Asked for: the melody very subdued and muted, at 0.3 of the usual touch.
+  melody: 0.3,
   sections: {
     A: [
       { c: 'D3 F#3 A3 C#4', l: 'D2:1 A2:2', r: 'D5:1 E5:1 F#5:1' },
