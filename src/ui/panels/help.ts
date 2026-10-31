@@ -3020,6 +3020,7 @@ export function helpText(): string {
       <li><b>${SPECIES.holla.name}</b>: carries <b>water</b> from the shore or a well into your barrels. Evolves: ${evolves('holla')}.</li>
       <li><b>${SPECIES.dowse.name}</b>: only over metal; on a settlement <b>${GATHER_VERB.nail}</b> at your anvils (<b>The settlement's hands</b>). Evolves: ${evolves('dowse')}.</li>
       <li><b>${SPECIES.sappa.name}</b>: <b>plants sprouts</b> where trees were felled.</li>
+      <li><b>${SPECIES.snedda.name}</b>: <b>prunes</b> trees whose next growth stage is dead; nothing else. Level: forestry. Evolves: ${evolves('snedda')}.</li>
       <li><b>${SPECIES.cobbe.name}</b>: <b>hod</b>: carries what a planned wall (any storey), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
       still needs from your settlement stores, crates and furniture, and fits it, one piece a trip: a wall or column standing on its storey, beside it; a floor, roof, staircase
       or ladder from the storey under it. Evolves: ${evolves('cobbe')}.</li>

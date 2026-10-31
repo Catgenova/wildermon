@@ -20,6 +20,7 @@ import { GNAW_VOICE } from './voice-gnaw';
 import { GLASS_VOICE } from './voice-glass';
 import { GOAT_VOICE } from './voice-goat';
 import { OWL_VOICE } from './voice-owl';
+import { GIRAFFE_VOICE } from './voice-giraffe';
 import { GHOST_VOICE } from './voice-ghost';
 import { HAUL_VOICE } from './voice-haul';
 import { HAMSTER_VOICE } from './voice-hamster';
@@ -172,4 +173,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   springlet: TIDE_VOICE,
   // The Glimmip, the Glascade and the Prismetail.
   glimmip: GLASS_VOICE,
+  // The Saplingreach, the Canopyshaper and the Grovemaster.
+  snedda: GIRAFFE_VOICE,
 };

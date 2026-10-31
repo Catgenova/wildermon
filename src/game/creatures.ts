@@ -150,7 +150,7 @@ export type GatherKind =
   | 'compost'
   | 'seek'
   | 'fish'
-  // A snedda prunes what would otherwise die; a grubba digs out stumps.
+  // A snedda (a Saplingreach) prunes what would otherwise die; a grubba digs out stumps.
   | 'prune'
   | 'stump'
   // A plucka picks what a bearing tree has on it and carries it home.
@@ -756,6 +756,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   papra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   glimmip: { kind: 'more', n: 1, what: 'glass lumps per batch' },
   kemma: { kind: 'loads', n: 1, what: 'wildermon brushed per cycle' },
+  snedda: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2071,8 +2072,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   snedda: {
     id: 'snedda',
-    name: 'Snedda',
+    name: 'Saplingreach',
+    was: ['Snedda'],
+    // Asked for, with a reference sheet: Saplingreach, Canopyshaper, Grovemaster.
     description: 'Settlement task: prune trees whose next growth stage is dead; nothing else.',
+    stages: [
+      { name: 'Canopyshaper', description: '' },
+      { name: 'Grovemaster', description: '' },
+    ],
     health: 24,
     attack: 2,
     speed: 1.6,
@@ -2083,11 +2090,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'prune',
     workRange: 8,
+    // [coat, dapples]: the sheet's warm cream with sage, fawn with moss, ivory with lime, and tan with deep green.
     variants: [
-      ['#6e7d4a', '#c9cf9a'],
-      ['#807a52', '#d9d2a4'],
-      ['#556343', '#a9b58c'],
-      ['#8a7f5c', '#e2d8b2'],
+      ['#f2e2bf', '#8fae55'],
+      ['#e8d0a4', '#7c9c48'],
+      ['#f6ecd8', '#a2bb5a'],
+      ['#e0c294', '#6c8c4a'],
     ],
     butcher: { meat: 2, fur: 2, leather: 2, bone: 2, gland: 1 },
     nearTrees: true,
@@ -4646,6 +4654,7 @@ sayLine('petta', SPECIES.petta.description, 'Level: foraging.');
 sayLine('kemma', SPECIES.kemma.description, 'Level: animal husbandry.');
 sayLine('papra', SPECIES.papra.description, 'Level: papyrusmaking.');
 sayLine('ambra', SPECIES.ambra.description, 'Level: forestry.');
+sayLine('snedda', SPECIES.snedda.description, 'Level: forestry.');
 describeFrom('hive', { vesp: SPECIES.vesp.name });
 describeGoals({ vesp: SPECIES.vesp.name });
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });
