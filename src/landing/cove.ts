@@ -70,6 +70,8 @@ const SEA_A = 13.2;
 const ARM = 5.2;
 /** How far the bay's rim and the sea's coast are blended where they meet: the arms' tips are rounded by about this many tiles. */
 const ROUND = 1.25;
+/** How far out from the waterline the shallows run before the bay's floor falls away, in tiles. */
+const SHELF = 2.6;
 
 /** How far a point is out in the water from the nearest shore, in tiles: below nought on land, by as far inland as it is. */
 function waterAt(a: number, b: number): number {
@@ -107,8 +109,8 @@ export function buildCove(): Cove {
   /** The ground's height at a corner, from how far inland it is. */
   const heightAt = (x: number, y: number): number => {
     const t = inland(x, y);
-    // A shelf of shallows, then the bay's floor falling away.
-    if (t < 0) return Math.max(DEEP, -1 + t * 3 + Math.min(0, t + 2) * 4);
+    // A wide shelf of shallows along the strand, light water two and a half tiles out, then the floor falling away.
+    if (t < 0) return Math.max(DEEP, -0.5 + t * 1.1 + Math.min(0, t + SHELF) * 4.5);
     // A strand, a meadow rising gently from it, and hills climbing in folds behind.
     const fold = hills.fbm(x * 0.07, y * 0.07, 3);
     const strand = Math.min(t, 2.2) * 1.5;
@@ -142,18 +144,12 @@ export function buildCove(): Cove {
    * tiles was a staircase across every curve of the bay.
    */
   const STRAND = 0.7;
-  // A bank of clay on the west arm, from the water's edge up into the meadow: one patch, not a scatter.
-  const CLAY: Array<[number, number, number]> = [[8, -6.6, 1.8]];
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
       world.corners(x, y, c);
       const max = Math.max(c[0], c[1], c[2], c[3]);
-      const [a, b] = ab(x + 0.5, y + 0.5);
       const t = inland(x + 0.5, y + 0.5);
-      let tile: TileType = TileType.Grass;
-      if (max >= 0 && t < 3.2 && CLAY.some(([ca, cb, cr]) => Math.hypot(a - ca, b - cb) <= cr)) tile = TileType.Clay;
-      else if (max < 0 || t < STRAND) tile = TileType.Sand;
-      world.tiles[y * w + x] = tile;
+      world.tiles[y * w + x] = max < 0 || t < STRAND ? TileType.Sand : TileType.Grass;
     }
   }
   for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) world.rock[y * w + x] = y >= y0 && y <= y1 && x >= x0 && x <= x1 ? stoneKindAt(SEED, x, y) : 0;
@@ -182,22 +178,26 @@ export function buildCove(): Cove {
     plant(x, y, TileType.Bush, bush(name));
   };
   /*
-   * Birch and cherry and nothing else, as asked: birch up the hills behind
-   * and on the arms' roots, cherry nearer the meadow and the stone. Each grove
+   * Birch and cherry and nothing else, as asked, and plenty of both: birch up
+   * the hills behind and on the arms' roots, cherry nearer the meadow and the
+   * stone and down the arms. Each grove
    * is a drift of trees round a middle, thrown out from it by a roll of the
    * seed, of mixed ages so a grove is not one tree repeated.
    */
   const BIRCH = species('Birch');
   const CHERRY = species('Cherry');
   const groves: Array<[a: number, b: number, reach: number, trees: number, kind: number]> = [
-    // The birch wood up the hill.
-    [-6.5, -5, 2.6, 7, BIRCH], [-7.5, 3, 2.8, 8, BIRCH], [-11.5, -1, 3.4, 10, BIRCH], [-12.5, 7, 3, 7, BIRCH],
-    [-10.5, -9, 2.8, 6, BIRCH], [-16, 2.5, 3.6, 9, BIRCH], [-15.5, -6.5, 3.2, 7, BIRCH], [-18, 10, 3, 5, BIRCH],
-    // Birch on the arms' roots.
-    [1.5, -10.5, 1.9, 4, BIRCH], [0, 11.5, 1.9, 4, BIRCH],
-    // Cherry in the meadow either side of the stone, and down toward the water.
-    [-3.2, -5.6, 1.7, 4, CHERRY], [-3, 5.6, 1.7, 4, CHERRY], [2.4, -7.4, 1.4, 3, CHERRY], [2.2, 7.8, 1.4, 3, CHERRY],
-    [-5.2, 0.4, 1.3, 2, CHERRY], [-8.5, 8.5, 1.6, 3, CHERRY], [-9, -12, 1.6, 3, CHERRY],
+    // The birch wood up the hill, thick.
+    [-6.5, -5, 2.6, 9, BIRCH], [-7.5, 3, 2.8, 10, BIRCH], [-9.5, -1.5, 2.2, 6, BIRCH], [-11.5, -1, 3.4, 13, BIRCH],
+    [-12.5, 7, 3, 10, BIRCH], [-10.5, -9, 2.8, 9, BIRCH], [-16, 2.5, 3.6, 13, BIRCH], [-15.5, -6.5, 3.2, 11, BIRCH],
+    [-18, 10, 3, 8, BIRCH], [-14, -12, 3, 8, BIRCH], [-19.5, -3, 3.5, 11, BIRCH], [-20, 5, 3.5, 10, BIRCH], [-13.5, 12.5, 2.6, 7, BIRCH],
+    // The arms: birch at their roots, cherry down toward their points.
+    [1.5, -10.5, 2.2, 7, BIRCH], [-1, -13.5, 2.4, 7, BIRCH], [4, -9, 1.6, 4, CHERRY], [0, -8.4, 1.4, 3, CHERRY],
+    [0, 11.5, 2.2, 7, BIRCH], [-1.5, 14, 2.4, 7, BIRCH], [3, 8.8, 1.5, 4, CHERRY], [-1.8, 9.2, 1.4, 3, CHERRY],
+    // Cherry through the meadow round the stone: either side and behind, none in front of it.
+    [-3.2, -5.6, 1.9, 6, CHERRY], [-3, 5.6, 1.9, 6, CHERRY], [-5.6, -2.6, 1.3, 3, CHERRY], [-5.6, 2.8, 1.3, 3, CHERRY],
+    [0.6, -6.6, 1.3, 3, CHERRY], [0.6, 6.8, 1.3, 3, CHERRY], [-5.2, 0.4, 1.3, 2, CHERRY],
+    [-8.5, 8.5, 1.8, 5, CHERRY], [-9, -12, 1.8, 5, CHERRY], [-8, -6.5, 1.4, 3, CHERRY], [-8.5, 5, 1.4, 3, CHERRY],
   ];
   const roll = mulberry32(SEED + 17);
   for (const [ga, gb, reach, n, kind] of groves) {
@@ -214,7 +214,7 @@ export function buildCove(): Cove {
   // A lone tree here and there between the groves, so they thin out into the meadow rather than stop.
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
-      if (world.tiles[y * w + x] !== TileType.Grass || r(x, y, 9) > 0.018) continue;
+      if (world.tiles[y * w + x] !== TileType.Grass || r(x, y, 9) > 0.03) continue;
       const [a, b] = ab(x + 0.5, y + 0.5);
       if (open(a, b) || near(x, y, s.x, s.y, 4)) continue;
       plant(x, y, TileType.Tree, packTreeData(inland(x + 0.5, y + 0.5) > 7 ? BIRCH : CHERRY, r(x, y, 11) < 0.4 ? YOUNG : MATURE));
