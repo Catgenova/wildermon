@@ -2089,12 +2089,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'prune',
     workRange: 8,
-    // [coat, dapples]: the sheet's cream with sage, fawn with moss, ivory with lime, and tan with deep green.
+    // [coat, dapples]: the sheet's warm cream with sage, fawn with moss, ivory with lime, and tan with deep green.
     variants: [
-      ['#f4e4c4', '#9cbc62'],
-      ['#e6cda2', '#78a052'],
-      ['#f6efe2', '#b2c86a'],
-      ['#dcc09a', '#5f8c5a'],
+      ['#f2e2bf', '#8fae55'],
+      ['#e8d0a4', '#7c9c48'],
+      ['#f6ecd8', '#a2bb5a'],
+      ['#e0c294', '#6c8c4a'],
     ],
     butcher: { meat: 2, fur: 2, leather: 2, bone: 2, gland: 1 },
     nearTrees: true,
