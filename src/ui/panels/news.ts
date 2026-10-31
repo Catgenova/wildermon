@@ -4229,6 +4229,15 @@ export const NEWS: News[] = [
       'Changes at a phrase end, over a harp bridge. Sign-in page: Music on/off button. Melody softer on every track.'],
   },
   {
+    n: 401,
+    day: '2026-10-31',
+    lines: () => {
+      const d = SPECIES.sheela, [one, two] = d.stages!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('sheela')}.`,
+        'Each stage: own model, animations and voice.'];
+    },
+  },
+  {
     n: 397,
     day: '2026-10-31',
     lines: () => {

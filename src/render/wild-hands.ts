@@ -7,10 +7,10 @@ import { type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
- * The settlement's own hands: the kemma, the sheela, the salva, the carra,
- * the tanna and the brambo.
+ * The settlement's own hands: the kemma, the salva, the carra, the tanna and
+ * the brambo (the sheela is the Shearling now, `./wild-shear`).
  * Each carries the tool of its trade on its body, as every wildermon carries
- * something no field guide has: a brush for a tail, shears for teeth, a
+ * something no field guide has: a brush for a tail, a
  * cleaver for a beak.
  */
 
@@ -82,56 +82,6 @@ export const KEMMA: Kind = {
   shadow: [1.6, 1.25],
   stride: 1.3,
   size: 1.7,
-};
-
-/* ---- the sheela: shears for teeth, and a pail at the throat ------------------------- */
-
-/**
- * A sheela: a short, deft creature with clever forepaws. Its two front teeth
- * are the blades of a pair of shears, and a little milk pail hangs at its
- * throat like a bell; a curl of wool sits on its head.
- */
-const SHEELA_SPEC: QuadSpec = { ...pawed({ high: 1.3, len: 2.0, legs: 0.75, neck: 0.35, lean: 40, swing: [24, 40], ears: [30, 18], tail: [0.35, 25, 10] }), nose: 12 };
-const SHEELA_HEAD = { c: [0, 0.3, 0.2] as V3, r: [1.0, 0.95, 0.9] as V3 };
-
-function sheelaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = SHEELA_HEAD;
-  // The shears: two narrow steel blades for front teeth, crossed a little at their tips.
-  const shears = merge(...[-1, 1].map((s) => tube([[s * 0.07, 1.22, -0.48], [s * 0.04, 1.3, -0.72], [-s * 0.03, 1.34, -0.9]], [0.07, 0.06, 0.01], [0.025, 0.025, 0.01], 4, 'blade', { up: [1, 0, 0] })));
-  const curl = merge(...([[0, 0.05, 0.95], [-0.22, 0.12, 0.88], [0.22, 0.12, 0.88], [0, 0.3, 0.9]] as V3[]).map((c) => orb(c, 0.2, 6, 4, 'coatLight')));
-  const face = merge(snout(1.0, -0.22, [0.42, 0.32, 0.36], 0.11, n, k), shears, curl);
-  // The pail: a little metal bucket hanging at the throat on a strap, milk-white inside.
-  const pail = merge(
-    tube([[0, 0, 0], [0, 0, -0.38]], [0.2, 0.17], [0.2, 0.17], 8, 'metal', { seam: 'end' }),
-    paint([disc([0, 0, 0.005], [0, 0, 1], 0.17, 0.17, 8, 'cap')]),
-    tube(curve([-0.2, 0, 0.0], [0, 0, 0.26], [0.2, 0, 0.0], 4), 0.025, 0.025, 4, 'metalDark'),
-  );
-  return quadPieces({
-    n, k,
-    body: { y: [-1.1, -0.9, -0.4, 0.1, 0.55, 0.88, 1.05], z: [0.1, 0.12, 0.16, 0.2, 0.24, 0.27, 0.3], w: [0.28, 0.9, 1.04, 1.06, 1.0, 0.86, 0.28], h: [0.26, 0.78, 0.9, 0.92, 0.86, 0.74, 0.26], belly: true },
-    neck: { w: 0.62, h: 0.62, len: 0.35 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.76, 0.5, 0.3], size: 0.31, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.19] },
-    ear: earMesh(0.5, 0.26, n, { point: true }),
-    earTurn: 35,
-    tail: links([0.18, 0.15, 0.08], 0.3, n, 'coat'),
-    fore: { upper: [0.28, -0.4, 0.24, 0.2], lower: [0, -0.36, 0.2, 0.18], foot: pawMesh(0.2, n, k, 'mark') },
-    hind: { upper: [0.3, -0.42, 0.28, 0.24], lower: [0, -0.4, 0.22, 0.2], foot: pawMesh(0.22, n, k, 'mark') },
-    extras: [{ key: 'pail', mesh: moved(pail, [0, 0.55, -0.45]), bone: 'neck', bias: 0.05, after: ['body', 'neck'] }],
-  });
-}
-
-export const SHEELA: Kind = {
-  bones: quadBonesOf(SHEELA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, a snip of its teeth at nothing now and then, the head nodding to it.
-    if (a.go <= 0) p.head[0] += 6 * Math.sin(a.t * TAU * 3) * beat(a.t, [4.2, 13.6, 20.1], 0.8) * (1 - a.graze);
-  }),
-  build: sheelaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ blade: [206, 212, 220], metal: [178, 186, 196], metalDark: [120, 128, 140], cap: [250, 248, 238] }), 30),
-  shadow: [1.4, 1.1],
-  stride: 1.3,
-  size: 1.6,
 };
 
 /* ---- the salva: a bandaged tail and mint for ears ----------------------------------- */

@@ -755,6 +755,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   rippa: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   papra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   glimmip: { kind: 'more', n: 1, what: 'glass lumps per batch' },
+  sheela: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2264,8 +2265,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   sheela: {
     id: 'sheela',
-    name: 'Sheela',
+    name: 'Shearling',
+    was: ['Sheela'],
+    // Asked for, with a reference sheet: Shearling, Clipperoo, Shearlord.
     description: 'Settlement task: milk your cudda into empty buckets in your settlement stores; shear or pluck your other fleeced or feathered wildermon at {dairyFull:pct} regrowth. Output: your settlement stores.',
+    stages: [
+      { name: 'Clipperoo', description: '' },
+      { name: 'Shearlord', description: '' },
+    ],
     health: 20,
     attack: 2,
     speed: 2.2,
@@ -2276,11 +2283,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'dairy',
     workRange: 8,
+    // [leaf-feathers, fleece]: the sheet's sage with cream, moss with oatmeal, olive with white, and teal with peach.
     variants: [
-      ['#d6c7a6', '#7a6248'],
-      ['#b8b2a8', '#5d564e'],
-      ['#c9a77f', '#6e4f36'],
-      ['#e1d9c8', '#857462'],
+      ['#8c9c5c', '#f4e6d0'],
+      ['#5e7a3e', '#e8d6b4'],
+      ['#a09a4c', '#f6f2ea'],
+      ['#5f8a78', '#f6dcc6'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
   },
@@ -4635,6 +4643,7 @@ for (const id of ['plucka', 'grista', 'relka']) sayLine(id, SPECIES[id].descript
 sayLine('vesp', SPECIES.vesp.description, 'Level: animal husbandry.');
 sayLine('bedda', SPECIES.bedda.description, 'Level: farming.');
 sayLine('petta', SPECIES.petta.description, 'Level: foraging.');
+sayLine('sheela', SPECIES.sheela.description, 'Level: animal husbandry.');
 sayLine('papra', SPECIES.papra.description, 'Level: papyrusmaking.');
 sayLine('ambra', SPECIES.ambra.description, 'Level: forestry.');
 describeFrom('hive', { vesp: SPECIES.vesp.name });

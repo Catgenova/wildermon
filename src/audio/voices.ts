@@ -43,6 +43,7 @@ import { RELIC_VOICE } from './voice-relic';
 import { RIBBON_VOICE } from './voice-ribbon';
 import { SAND_VOICE } from './voice-sand';
 import { SKY_VOICE } from './voice-sky';
+import { SHEAR_VOICE } from './voice-shear';
 import { SNAIL_VOICE } from './voice-snail';
 import { SNUFF_VOICE } from './voice-snuff';
 import { SPIDER_VOICE } from './voice-spider';
@@ -169,4 +170,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   springlet: TIDE_VOICE,
   // The Glimmip, the Glascade and the Prismetail.
   glimmip: GLASS_VOICE,
+  // The Shearling, the Clipperoo and the Shearlord.
+  sheela: SHEAR_VOICE,
 };
