@@ -25,6 +25,7 @@ import { EMPTY_CHANCE, FIND_CHECK } from '../../src/game/forage';
 import { FISH, fishable, staysOn, waterDepth } from '../../src/game/fishing';
 import { cropYield, describeCrop, RIPE, seedSays } from '../../src/game/farming';
 import { fruitsAt } from '../../src/game/fruiting';
+import { seasonAt } from '../../src/world/calendar';
 import { itemDef } from '../../src/game/items';
 import { findChance, qlCap, searchPasses, seasonWindow } from '../../src/game/yields';
 import { readyIn, waitWords } from '../../src/game/words';
@@ -139,7 +140,9 @@ for (const c of CASES) {
   check(`${c.action}: and allowed on both sides before`, fresh === 'null' && island(`${c.action}:fresh`) === 'null',
     `browser ${fresh}, island ${island(`${c.action}:fresh`)}`);
 }
-check('a tree and a bush in season were found to try', tree >= 0 && bush >= 0, `tree ${tree}, bush ${bush}`);
+// A tree fruits in every season and a bush only in spring and summer, so the bush is tried when one is in season.
+check('a fruit tree in season was found to try, and a bush whenever one is in season', tree >= 0,
+  `tree ${tree}, bush ${bush >= 0 ? bush : `none in season in ${seasonAt(now).season}`}`);
 
 /* ---- the numbers behind the labels ---- */
 const set = (id: string, v: number): void => {
