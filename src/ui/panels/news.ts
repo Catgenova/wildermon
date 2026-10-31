@@ -173,7 +173,7 @@ import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErr
 import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
 import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
 import { CHANNELS, FIGHTING, gradeId, traitOf, traitSays, type TraitDef } from '../../game/traits';
-import { footing, PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
+import { footing, PERK_STAGE, perkSays, STAGE_PERKS, WATER_RANGE } from '../../game/creatures';
 import { STOKE_SAYS, STOKE_SMELT_SAYS, STOKE_SMELTS_AT } from '../../game/creatures';
 import { POTTERY } from '../../game/kiln';
 import { FIRE_CAPACITY as FIRE_CAPACITY_338, FUEL_VALUES as FUEL_VALUES_337 } from '../../game/campfire';
@@ -4227,6 +4227,15 @@ export const NEWS: News[] = [
     day: '2026-10-31',
     lines: () => [`Added: music by the island's hour and season, ${ALL_TRACKS.length} tracks: ${playlistSays()}.`,
       'Changes at a phrase end, over a harp bridge. Sign-in page: Music on/off button. Melody softer on every track.'],
+  },
+  {
+    n: 397,
+    day: '2026-10-31',
+    lines: () => {
+      const d = SPECIES.glimmip, [one, two] = d.stages!;
+      return [`Added: the ${d.name} line, a settlement worker: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Settlement task: ${GATHER_DO.glass}. Any lit smelter of yours in reach, charged or not; does not light or fuel it. Lumps only. Level: ${GATHER_SKILL.glass}. Taming ${d.tameLevel}. Wild: on sand within ${WATER_RANGE} tiles of water, ${(100 * wildShare(d)).toFixed(1)}% of wild spawns. Eats ${d.baitHint}. Butchered: scales. Stage 3 skill: ${two.name} ${perkSays('glimmip')}.`,
+        'Each stage: own model, animations and voice.'];
+    },
   },
   {
     n: 396,

@@ -6,7 +6,7 @@
  * at an errand counted only what left the worker's arms, and a trade worked in place carries nothing.
  *
  * Asked of both sides: after a go, the log's handled counts what the go put into the stores -- a dowse's nails, a
- * smithing's worth (`smithPer`); an ulva's yarn; a rippa's planks; a simma's cooking -- and onto its lifetime with it
+ * smithing's worth (`smithPer`); an ulva's yarn; a rippa's planks; a simma's cooking; a glimmip's glass lumps -- and onto its lifetime with it
  * (`work_stats`); and a load carried back into the stores -- a cobbe's with no work for it, a dippa's full buckets --
  * is counted once at most, as what left its arms, and not again as made.
  *
@@ -39,7 +39,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
   (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
-type Station = 'spindle' | 'anvil' | 'campfire' | null;
+type Station = 'spindle' | 'anvil' | 'campfire' | 'smelter' | null;
 const recipeMakes = (id: string): Record<string, number> => ({ [RECIPE_BY_ID.get(id)!.result]: RECIPE_BY_ID.get(id)!.count ?? 1 });
 /** Each worker, what its stores are given, the station it works at, and what its log should say it handled. */
 const CASES: Array<{ id: string; items: Array<[string, number]>; at: Station; made: Record<string, number> }> = [
@@ -47,6 +47,7 @@ const CASES: Array<{ id: string; items: Array<[string, number]>; at: Station; ma
   { id: 'ulva', items: [['wool', 2], ['cotton', 2], ['wemp', 2]], at: 'spindle', made: { yarn: SPIN_RECIPES.reduce((n, r) => n + (RECIPE_BY_ID.get(r)!.count ?? 1), 0) } },
   { id: 'rippa', items: [['log', 1]], at: null, made: recipeMakes('make_planks') },
   { id: 'simma', items: [['blueberry', 3]], at: 'campfire', made: recipeMakes('make_compote') },
+  { id: 'glimmip', items: [['sand', 3]], at: 'smelter', made: recipeMakes('make_glass') },
 ];
 /** A cobbe holding planks no work wants, and how many. */
 const HOD_HELD = 3;
@@ -72,7 +73,9 @@ const station = (at: Station): string =>
       ? `insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, made_by) values (w, 'anvil', 19, 16, 0, 0, 19.5, 16.5, 30, u) returning id into v_p;`
       : at === 'campfire'
         ? `insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, ash, lit, since, made_by) values (w, 'campfire', 19, 16, 0, 0, 19.25, 16.25, 30, 3000, 0, true, now(), u) returning id into v_p;`
-        : '';
+        : at === 'smelter'
+          ? `insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, lit, since, state, made_by) values (w, 'smelter', 19, 16, 0, 0, 19.75, 16.5, 30, 100000, true, now(), '{"jobs": [], "output": []}'::jsonb, u) returning id into v_p;`
+          : '';
 const work = (species: string, carrying = 'null'): string => `
   select id into v_id from hand where species = '${species}';
   update creature set mode = 'deed', carrying = ${carrying}, ledger = null, work_stats = null, until = now() - interval '600 seconds',
@@ -193,6 +196,7 @@ const place = (g: Game, st: Station): void => {
   if (st === 'spindle') g.addFurniture('spindle', 23, 21, 0, 0, 30);
   else if (st === 'anvil') g.addAnvil(23, 21, 0, 0, 'iron', 30);
   else if (st === 'campfire') g.addCampfire(23, 21, 0, 0, 3000, true);
+  else if (st === 'smelter') Object.assign(g.addSmelter(23, 21, 0, 0, 30), { lit: true, fuel: 100000 });
 };
 const count = (crate: ReturnType<Game['addCrate']>, id: string): number => crate.items.filter((i) => i.id === id).reduce((n, i) => n + i.count, 0);
 

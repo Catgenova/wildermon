@@ -17,7 +17,7 @@
  */
 
 import type { GatherKind } from './creatures';
-import { STORE_RECIPES, LYE_RECIPES, smithLumps, STATION_TRADES } from './creatures';
+import { GLASS_RECIPES, STORE_RECIPES, LYE_RECIPES, smithLumps, STATION_TRADES } from './creatures';
 import { countOf, itemDef } from './items';
 import { RECIPE_BY_ID } from './recipes';
 import { SKEP_IDLE } from './bees';
@@ -97,7 +97,7 @@ const IDLE_SOURCE: Partial<Record<GatherKind, string>> = {
   kiln: 'kiln of yours with room for pottery, or with pottery to take out', ash: 'ashes to rake out',
   brew: 'barrel of water of yours with nothing working in it', cook: 'lit campfire or oven of yours',
   patch: 'planter of yours wanting work', paper: 'paper press of yours', spin: 'spindle of yours',
-  nail: 'anvil of yours', ribbon: 'anvil of yours',
+  nail: 'anvil of yours', ribbon: 'anvil of yours', glass: 'lit smelter of yours',
 };
 
 /** What it would do with what the stores do not hold: "nothing in your stores on the settlement to mend". */
@@ -106,7 +106,7 @@ const IDLE_STOCK: Partial<Record<GatherKind, string>> = {
   fletch: 'fletch', paper: 'press', glaze: 'glaze', restore: 'restore', brew: 'brew', cook: 'cook', smelt: 'smelt',
   kiln: 'fire', stoke: 'burn', plant: 'plant', hod: 'build with', fill: 'fill', lamp: 'put in a lantern', patch: 'sow',
   heal: 'dress a hurt with', dairy: 'milk into', ash: 'leach into lye', spin: 'spin', nail: 'smith into nails',
-  ribbon: 'smith into ribbons',
+  ribbon: 'smith into ribbons', glass: 'melt into glass',
 };
 
 /**
@@ -132,7 +132,7 @@ const IDLE_ROOM: Partial<Record<GatherKind, readonly [string, string]>> = {
 function recipeWants(kind: GatherKind): string {
   const lumps = smithLumps(kind);
   if (lumps.length) return listedOr(lumps.map((id) => countOf(id, 1, true)));
-  const ids = STORE_RECIPES[kind] ?? STATION_TRADES[kind]?.recipes ?? (kind === 'ash' ? LYE_RECIPES : []);
+  const ids = STORE_RECIPES[kind] ?? STATION_TRADES[kind]?.recipes ?? (kind === 'ash' ? LYE_RECIPES : kind === 'glass' ? GLASS_RECIPES : []);
   const recipes = ids.map((id) => RECIPE_BY_ID.get(id)).filter((r) => !!r);
   const bill = (r: (typeof recipes)[number]): string => listed(r!.inputs.map((i) => countOf(i.item, i.count ?? 1, true)));
   return listedOr(recipes.map(bill));

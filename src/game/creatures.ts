@@ -202,7 +202,9 @@ export type GatherKind =
   // And three more at your own: an ulva spins yarn at a spindle, a dowse smiths nails and a siffa metal ribbons at an anvil.
   | 'spin'
   | 'nail'
-  | 'ribbon';
+  | 'ribbon'
+  // And a glimmip melts sand from the stores into glass lumps at a lit smelter of yours.
+  | 'glass';
 /**
  * How far a wild thing will drift from where it stands, and how long it stands.
  *
@@ -337,6 +339,8 @@ export const STORE_RECIPES: Partial<Record<GatherKind, readonly string[]>> = {
 export const PAPER_RECIPES = ['make_papyrus'];
 /** What an ulva spins at a spindle of yours, in the order it tries them: the recipes your own hands spin at one. The island's `tend_recipes('spin')`. */
 export const SPIN_RECIPES = ['spin_wool', 'spin_cotton', 'spin_wemp'];
+/** What a glimmip makes at a lit smelter of yours: glass lumps, as your own hands melt them there. The island's `tend_recipes('glass')`. */
+export const GLASS_RECIPES = ['make_glass'];
 /** The furniture each trade worked off a recipe at a piece of yours works at: a papra's press and an ulva's spindle. The island's `station_target`. */
 export const STATION_TRADES: Partial<Record<GatherKind, { piece: string; recipes: readonly string[] }>> = {
   paper: { piece: PAPER_PRESS, recipes: PAPER_RECIPES },
@@ -376,6 +380,12 @@ const spinSays = (): string => {
   const each = SPIN_RECIPES.map((id) => `${recipeMakes(id)} yarn per ${RECIPE_BY_ID.get(id)!.inputs[0].count ?? 1}`);
   return new Set(each).size === 1 ? `${each[0]} fibres` : listed(each.map((e, i) => `${e} ${itemDef(RECIPE_BY_ID.get(SPIN_RECIPES[i])!.inputs[0].item).name.toLowerCase()}`));
 };
+/** What a glimmip makes of what, off the recipe: "make glass lumps from sand in your settlement stores at your lit smelters, 2 per 3 sand". */
+const glassSays = (): string => {
+  const r = RECIPE_BY_ID.get(GLASS_RECIPES[0])!;
+  const sand = itemDef(r.inputs[0].item).name.toLowerCase();
+  return `make ${plural(itemDef(r.result).name.toLowerCase())} from ${sand} in your settlement stores at your lit smelters, ${recipeMakes(r.id)} per ${r.inputs[0].count ?? 1} ${sand}`;
+};
 /** How many a recipe makes, and how many of one of its inputs it takes: the numbers a trade's words give. */
 const recipeMakes = (id: string): number => RECIPE_BY_ID.get(id)?.count ?? 1;
 const recipeTakes = (id: string, item: string): number => RECIPE_BY_ID.get(id)?.inputs.find((i) => i.item === item)?.count ?? 1;
@@ -392,9 +402,9 @@ const toolsOf = (ids: readonly string[]): string[] => [...new Set(ids.map((id) =
 const cookTools = (): string[] => toolsOf(cookRecipes());
 /** Every tool a recipe a worker works wants in your own hands, by name, once each: none of which a worker needs. */
 export const workerSkipsTools = (): string[] =>
-  toolsOf([...Object.values(STORE_RECIPES).flat(), ...cookRecipes(), ...Object.values(STATION_TRADES).flatMap((t) => t.recipes), ...LYE_RECIPES]);
+  toolsOf([...Object.values(STORE_RECIPES).flat(), ...cookRecipes(), ...Object.values(STATION_TRADES).flatMap((t) => t.recipes), ...LYE_RECIPES, ...GLASS_RECIPES]);
 /** The trades that work at the stores or at one of your own rather than walking out to a tile, and bring nothing home in their arms. */
-export const TEND_JOBS = new Set<GatherKind>(['groom', 'dairy', 'heal', 'butcher', 'tan', 'mill', 'lamp', 'smelt', 'kiln', 'ash', 'brew', 'cook', 'restore', 'patch', 'saw', 'chisel', 'brick', 'rope', 'fletch', 'paper', 'glaze', 'fill', 'spin', 'nail', 'ribbon']);
+export const TEND_JOBS = new Set<GatherKind>(['groom', 'dairy', 'heal', 'butcher', 'tan', 'mill', 'lamp', 'smelt', 'kiln', 'ash', 'brew', 'cook', 'restore', 'patch', 'saw', 'chisel', 'brick', 'rope', 'fletch', 'paper', 'glaze', 'fill', 'spin', 'nail', 'ribbon', 'glass']);
 /** The recipe a cindra leaches its ashes into. */
 export const LYE_RECIPES = ['make_lye'];
 /** What restoring brings out of what the pieces were worth, at a restoration: a person's hands' (`restoredQl`), with no perk. The island's `errand_do`. */
@@ -405,8 +415,8 @@ export const RESIN_TAPPED = 1;
 
 /** The faces a quarry cuts: bare rock, and rock under snow (a mountain top's marble). The island's `worker_gatherable`. */
 const STONE_FACES: ReadonlySet<number> = new Set([TileType.Rock, TileType.Snow]);
-export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', butcher: 'butchering', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', rope: 'ropemaking', fletch: 'fletching', paper: 'papyrusmaking', glaze: 'pottery', fill: 'carrying', spin: 'tailoring', nail: 'blacksmithing', ribbon: 'blacksmithing' };
-export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'farming', mine: 'mining ore', sand: 'collecting sand', clay: 'collecting clay', quarry: 'cutting stone', stoke: 'stoking', fetch: 'fetching', guard: 'guarding', hunt: 'hunting', peat: 'collecting peat and tar', reed: 'cutting reeds', water: 'carrying water', prospect: 'prospecting', plant: 'planting', hod: 'hod carrying', mend: 'mending', compost: 'composting', seek: 'seeking relics', fish: 'fishing', prune: 'pruning', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending hives', groom: 'grooming', dairy: 'milking and shearing', heal: 'healing', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'lamplighting', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging smelters', kiln: 'loading kilns', ash: 'raking ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'tending planters', worm: 'digging worms', sprout: 'picking sprouts', resin: 'tapping pines', flower: 'picking wildflowers', scrub: 'scrubbing stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'making rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets', spin: 'spinning yarn', nail: 'smithing nails', ribbon: 'smithing ribbons' };
+export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', butcher: 'butchering', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', rope: 'ropemaking', fletch: 'fletching', paper: 'papyrusmaking', glaze: 'pottery', fill: 'carrying', spin: 'tailoring', nail: 'blacksmithing', ribbon: 'blacksmithing', glass: 'glassblowing' };
+export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'farming', mine: 'mining ore', sand: 'collecting sand', clay: 'collecting clay', quarry: 'cutting stone', stoke: 'stoking', fetch: 'fetching', guard: 'guarding', hunt: 'hunting', peat: 'collecting peat and tar', reed: 'cutting reeds', water: 'carrying water', prospect: 'prospecting', plant: 'planting', hod: 'hod carrying', mend: 'mending', compost: 'composting', seek: 'seeking relics', fish: 'fishing', prune: 'pruning', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending hives', groom: 'grooming', dairy: 'milking and shearing', heal: 'healing', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'lamplighting', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging smelters', kiln: 'loading kilns', ash: 'raking ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'tending planters', worm: 'digging worms', sprout: 'picking sprouts', resin: 'tapping pines', flower: 'picking wildflowers', scrub: 'scrubbing stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'making rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets', spin: 'spinning yarn', nail: 'smithing nails', ribbon: 'smithing ribbons', glass: 'making glass lumps' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
 export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'collect sand', clay: 'collect clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'collect peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls and columns on their storey; floors, roofs, staircases and ladders from the storey under; bridge or aqueduct spans, foundations; storeys up by staircase, not ladder', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', get kiln() { return `load your kilns with ${kilnLoads()} from your settlement stores and empty them`; }, ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
@@ -421,8 +431,9 @@ export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botaniz
   get spin() { return `spin ${spinFibres()} in your settlement stores into yarn at your spindles, ${spinSays()}; output to your settlement stores`; },
   get nail() { return `${smithSays('nail')}; output to your settlement stores`; },
   get ribbon() { return `${smithSays('ribbon')}; output to your settlement stores`; },
+  get glass() { return `${glassSays()}; output to your settlement stores`; },
 };
-const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] , hive: [], groom: [], dairy: [], heal: [], butcher: [], tan: [], mill: [], lamp: [], bush: [], grass: [], pan: [], smelt: [], kiln: [], ash: [], brew: [], cook: [], restore: [], patch: [], worm: [], sprout: [], resin: [], flower: [], scrub: [], saw: [], chisel: [], brick: [], rope: [], fletch: [], paper: [], glaze: [], fill: [], spin: [], nail: [], ribbon: [] };
+const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] , hive: [], groom: [], dairy: [], heal: [], butcher: [], tan: [], mill: [], lamp: [], bush: [], grass: [], pan: [], smelt: [], kiln: [], ash: [], brew: [], cook: [], restore: [], patch: [], worm: [], sprout: [], resin: [], flower: [], scrub: [], saw: [], chisel: [], brick: [], rope: [], fletch: [], paper: [], glaze: [], fill: [], spin: [], nail: [], ribbon: [], glass: [] };
 export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'clay' | 'tusk' | 'sinew' | 'scale' | 'hoard';
 /** Marks a creature as last hurt by the player rather than another creature. */
 export const PLAYER_ATTACKER = -1;
@@ -743,6 +754,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   potta: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   rippa: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   papra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  glimmip: { kind: 'more', n: 1, what: 'glass lumps per batch' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -921,7 +933,7 @@ export const LOAD_TRADES: ReadonlySet<GatherKind> = new Set<GatherKind>([
  */
 export const HANDS_TRADES: ReadonlySet<GatherKind> = new Set<GatherKind>([
   'mend', 'butcher', 'restore', 'glaze', 'tan', 'mill', 'saw', 'chisel', 'brick', 'rope', 'fletch', 'cook', 'paper', 'ash',
-  'groom', 'dairy', 'heal', 'spin', 'nail', 'ribbon',
+  'groom', 'dairy', 'heal', 'spin', 'nail', 'ribbon', 'glass',
 ]);
 /** How far from it the others a herd trade sees to in the same go may stand, in tiles: the island's `errand_do` reads 3. */
 export const TEND_REACH = 3;
@@ -951,7 +963,7 @@ export function stageWorkSays(kind: GatherKind | null | undefined, n: number): [
   if (!kind) return null;
   const own = STAGE_WORK[kind];
   if (own) return [own[0], own[1](n)];
-  if (STORE_RECIPES[kind] || kind === 'cook' || STATION_TRADES[kind]) return ['works', `${n} ${n === 1 ? 'batch' : 'batches'} a cycle, while the settlement stores hold the makings`];
+  if (STORE_RECIPES[kind] || kind === 'cook' || kind === 'glass' || STATION_TRADES[kind]) return ['works', `${n} ${n === 1 ? 'batch' : 'batches'} a cycle, while the settlement stores hold the makings`];
   if (SMITH_TRADES[kind]) return ['smiths', `${n} ${n === 1 ? 'lump' : 'lumps'} a cycle, while the settlement stores hold them`];
   if (LOAD_TRADES.has(kind)) return ['carries', `${n} ${n === 1 ? 'load' : 'loads'} a trip`];
   return null;
@@ -1144,7 +1156,7 @@ export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   worm: 0.98, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 0.95, hive: 1.01,
   // At the stores, a fire, a press or a barrel, one thing after another.
   mend: 1, butcher: 0.7, restore: 0.7, glaze: 1.05, tan: 0.84, mill: 0.81, saw: 0.84, chisel: 0.84, brick: 0.84,
-  rope: 0.84, fletch: 0.84, cook: 0.84, paper: 0.84, spin: 0.86, nail: 0.86, ribbon: 0.86, ash: 0.97, brew: 0.71,
+  rope: 0.84, fletch: 0.84, cook: 0.84, paper: 0.84, spin: 0.86, nail: 0.86, ribbon: 0.86, glass: 0.84, ash: 0.97, brew: 0.71,
   // To one of yours, or to a piece of yours, with something out of the stores for some.
   groom: 0.87, dairy: 0.87, heal: 1.75, lamp: 2.16, smelt: 1.32, kiln: 1.32, patch: 1.04,
   // Carrying between the stores, the water and the work.
@@ -2951,6 +2963,37 @@ export const SPECIES: Record<string, SpeciesDef> = {
     ],
     butcher: { meat: 2, fur: 2, leather: 2, bone: 1 },
   },
+  glimmip: {
+    id: 'glimmip',
+    wound: 'cut',
+    name: 'Glimmip',
+    // Asked for, with a reference sheet: Glimmip, Glascade, Prismetail. Its words are written once the recipe is here (`STORE_WORDS`).
+    description: '',
+    stages: [
+      { name: 'Glascade', description: '' },
+      { name: 'Prismetail', description: '' },
+    ],
+    health: 18,
+    attack: 2,
+    speed: 2,
+    tameLevel: 20,
+    tameChance: 0.09,
+    diet: ['worm', 'honey', 'peach', 'apricot'],
+    baitHint: 'worms, honey, peaches or apricots',
+    timid: true,
+    gathers: 'glass',
+    workRange: 6,
+    // [scales, belly]: the sheet's mint with ivory, seafoam with cream, sky with pale peach, and sage with white.
+    variants: [
+      ['#9fd8c4', '#fbf0de'],
+      ['#86ccb8', '#f6e6cc'],
+      ['#a8cfe4', '#fbe8d8'],
+      ['#b4d4a8', '#f8f4ea'],
+    ],
+    butcher: { meat: 2, scale: 4, leather: 1, bone: 2 },
+    onSand: true,
+    nearWater: true,
+  },
   glossa: {
     id: 'glossa',
     name: 'Glossa',
@@ -4196,6 +4239,7 @@ const STORE_WORDS: Record<string, () => string> = {
   flecha: () => `Settlement task: fletch arrows from shafts, arrowheads and feathers in your settlement stores, ${recipeMakes('make_arrows')} a shaft, ${recipeTakes('make_arrows', 'arrow_head')} heads and ${recipeTakes('make_arrows', 'feather')} feathers. No carving knife needed. Output: your settlement stores. Never spoils a shaft.`,
   potta: () => `Settlement task: empty your kilns into your settlement stores and load them from your settlement stores, up to capacity. Loads: ${kilnLoads()}. Does not light or fuel them.`,
   simma: () => `Settlement task: cook from your settlement stores at your lit campfires and ovens, recipes tried in list order. No ${listedOr(cookTools())} needed. Output: your settlement stores. Never burns.`,
+  glimmip: () => `Settlement task: ${glassSays()}. Any lit smelter, charged or not. Does not light or fuel it. Output: your settlement stores. Never fails.`,
 };
 for (const [id, words] of Object.entries(STORE_WORDS)) Object.defineProperty(SPECIES[id], 'description', { get: words, enumerable: true, configurable: true });
 /**
@@ -4218,6 +4262,7 @@ sayLineLater('siffa', 'Level: blacksmithing.');
 sayLineLater('ulva', 'Level: tailoring.');
 sayLineLater('rippa', 'Level: carpentry.');
 sayLineLater('potta', 'Level: pottery.');
+sayLineLater('glimmip', 'Level: glassblowing.');
 
 /** Which species roam wild, by weight. */
 /**
@@ -4326,6 +4371,8 @@ export const WILD_SPECIES: Array<[string, number]> = [
   ['cordra', 5],
   ['flecha', 4],
   ['papra', 4],
+  // Asked for: a glass gecko found on sand near water.
+  ['glimmip', 4],
   ['glossa', 3],
   ['dippa', 6],
   ['testa', 3],
@@ -7845,6 +7892,7 @@ export class Creatures {
     if (kind === 'restore') return this.restoreStep(game, c, goto);
     if (kind === 'patch') return this.planterStep(game, c, goto, near, range);
     if (kind === 'paper' || kind === 'spin') return this.pressStep(game, c, kind, goto, near, range);
+    if (kind === 'glass') return this.glassStep(game, c, goto, near, range);
     if (SMITH_TRADES[kind]) return this.anvilStep(game, c, kind, goto, near, range);
     if (kind === 'glaze') return this.glazeStep(game, c, goto);
     if (kind === 'fill') return this.fillStep(game, c, range, goto, near);
@@ -8078,6 +8126,37 @@ export class Creatures {
     if (!goto(spot[0], spot[1], 1.8)) return true;
     this.workRecipe(game, c, job.recipe, null, Math.floor(spot[0]), Math.floor(spot[1]));
     this.moreRecipes(game, c, recipes, null, Math.floor(spot[0]), Math.floor(spot[1]));
+    return true;
+  }
+
+  /**
+   * Making glass: the makings of a glass lump (`GLASS_RECIPES`) out of the
+   * stores, melted at the nearest lit smelter of yours -- lit and fuelled, as
+   * your own hands want one, charged or not -- and the lumps, with its line's
+   * third-stage `more` on each batch, put in the stores. It neither lights nor
+   * fuels one. The island's `errand_step` and `errand_do`.
+   */
+  private glassStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
+    if (c.carrying) return this.why(c, 'full');
+    const job = this.recipeInStores(game, GLASS_RECIPES);
+    if (!job) return this.why(c, 'stock');
+    let at: [number, number] | undefined;
+    let bestD = Infinity;
+    for (const sm of game.smelters.values()) {
+      if (!sm.lit || sm.fuel <= 0 || !near(sm.x, sm.y) || !game.onDeed(sm.x, sm.y)) continue;
+      const p = smelterCentre(sm);
+      const d = Math.hypot(p[0] - c.x, p[1] - c.y);
+      if (d < bestD) {
+        bestD = d;
+        at = p;
+      }
+    }
+    if (!at) return this.why(c, 'range', range);
+    const spot = at as [number, number];
+    if (!goto(spot[0], spot[1], 1.8)) return true;
+    const more = perkN(c, 'more');
+    this.workRecipe(game, c, job.recipe, null, Math.floor(spot[0]), Math.floor(spot[1]), true, more);
+    this.moreRecipes(game, c, GLASS_RECIPES, null, Math.floor(spot[0]), Math.floor(spot[1]), more);
     return true;
   }
 
@@ -8669,26 +8748,27 @@ export class Creatures {
    * stores hold the makings of one: taken out of them as the first's were, and made where it stands. The island's
    * `errand_go`.
    */
-  private moreRecipes(game: Game, c: Creature, recipes: readonly string[], at: DeedStore | null, x: number, y: number): void {
+  private moreRecipes(game: Game, c: Creature, recipes: readonly string[], at: DeedStore | null, x: number, y: number, more = 0): void {
     for (let n = 1; n < stageLoads(c); n++) {
       const next = this.recipeInStores(game, recipes);
       if (!next) return;
-      this.workRecipe(game, c, next.recipe, at, x, y, false);
+      this.workRecipe(game, c, next.recipe, at, x, y, false, more);
     }
   }
 
   /**
    * One go at a recipe out of the stores: its inputs taken, and what it makes and hands back put in them. `go` false
-   * for a batch after the first in the same go, which teaches nothing more and takes no more time.
+   * for a batch after the first in the same go, which teaches nothing more and takes no more time; `more`, what its
+   * line's third stage adds to what a batch makes (a glimmip's lumps).
    */
-  private workRecipe(game: Game, c: Creature, r: Recipe, at: DeedStore | null, x: number, y: number, go = true): void {
+  private workRecipe(game: Game, c: Creature, r: Recipe, at: DeedStore | null, x: number, y: number, go = true, more = 0): void {
     for (const i of r.inputs) {
       if (i.litres) this.takeLitres(game, i.item, i.litres);
       else for (let n = 0; n < (i.count ?? 1); n++) this.takeOne(game, [i.item], at ?? undefined);
     }
     const kind = this.species(c).gathers ?? 'mill';
     const skill = c.skills[GATHER_SKILL[kind]] ?? 1;
-    this.intoStores(game, { uid: game.inventory.nextUid++, id: r.result, ql: this.madeQl(game, c, skill), dmg: 0, count: r.count ?? 1 }, at, x, y);
+    this.intoStores(game, { uid: game.inventory.nextUid++, id: r.result, ql: this.madeQl(game, c, skill), dmg: 0, count: (r.count ?? 1) + more }, at, x, y);
     for (const [id, n] of r.returns ?? []) this.intoStores(game, { uid: game.inventory.nextUid++, id, ql: 40, dmg: 0, count: n }, at, x, y, false);
     if (!go) return;
     this.gainSkill(game, c, GATHER_SKILL[kind], 0.25);

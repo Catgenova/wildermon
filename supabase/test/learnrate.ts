@@ -186,6 +186,8 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   // At an anvil of yours, a lump out of the stores where it is.
   nail: errand('nail', [[0, 'work', 0.25]]),
   ribbon: errand('ribbon', [[0, 'work', 0.25]]),
+  // At a lit smelter of yours, its sand out of the stores where it is.
+  glass: errand('glass', [[0, 'work', 0.25]]),
   // A hearth raked, and the ashes leached into lye at the stores.
   ash: errand('ash', [[NEAR, 'work', 0.2], [NEAR, 'work', 0.25]]),
   // A barrel set going, and on to the next.

@@ -4749,6 +4749,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/workertools.mjs --log-level=error
           node node_modules/.cache/workertools.mjs
 
+      - name: A glimmip makes glass lumps at a lit smelter
+        if: matrix.shard == 6
+        run: |
+          # The Glimmip line melts sand from the stores into glass lumps at a
+          # lit smelter of yours in reach, charged or not, and not at an unlit
+          # one or one out of reach; idle with no sand or no smelter, and says
+          # why; learns glassblowing; its third stage makes a lump more a
+          # batch: each the same on both sides.
+          npx esbuild supabase/test/glassblower.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/glassblower.mjs --log-level=error
+          node node_modules/.cache/glassblower.mjs
+
       - name: What a worker makes in place, on its work log
         if: matrix.shard == 6
         run: |
