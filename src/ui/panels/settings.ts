@@ -1,5 +1,6 @@
 import { gameRules, RULES_TITLE } from '../rules';
 import { privacyPolicy, PRIVACY_TITLE } from '../privacy';
+import { DISCORD_LABEL, DISCORD_URL } from '../discord';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { HEAL_FED } from '../../game/body';
 import { ROT_LOOK, ROT_SOON } from '../../game/rot';
@@ -92,6 +93,15 @@ export class SettingsPanel {
       this.tabs.set(id, b);
       bar.append(b);
     }
+    // The island's Discord server, opened in a new tab.
+    const discord = document.createElement('a');
+    discord.className = 'tb-btn tb-small log-tab';
+    discord.href = DISCORD_URL;
+    discord.target = '_blank';
+    discord.rel = 'noopener noreferrer';
+    discord.textContent = DISCORD_LABEL;
+    discord.title = `${DISCORD_LABEL} server (new tab)`;
+    bar.append(discord);
     win.body.append(bar);
 
     const display = document.createElement('div');

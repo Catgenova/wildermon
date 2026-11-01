@@ -380,6 +380,10 @@ a { color: var(--rc-rune-ink); }
 
 .paper-open:hover { color: var(--rc-strong); text-decoration-color: var(--rc-rune); }
 
+/* Pere Games, the studio, under the papers. */
+.studio { display: flex; justify-content: center; margin-top: 10px; }
+.studio img { width: 96px; height: 96px; border-radius: 12px; }
+
 /* Whoever is signed in already does not need a form. */
 .card.settled form, .card.settled .tabs, .card.settled #warn { display: none; }
 

@@ -92,8 +92,15 @@
       <nav class="papers" aria-label="The island's papers">
         <button type="button" class="paper-open" id="open-privacy">Privacy Policy</button>
         <button type="button" class="paper-open" id="open-rules">Game Rules</button>
+        <!-- The island's Discord server: the same address as DISCORD_URL (src/ui/discord.ts), which Settings links to. -->
+        <a class="paper-open" id="discord-link" href="https://discord.gg/rDK6zpM2dm" target="_blank" rel="noopener noreferrer">Discord</a>
         <button type="button" class="paper-open" id="music-toggle" aria-pressed="true">Music: on</button>
       </nav>
+      <!-- The studio's mark: Pere Games, animated (a still of its first frame with reduced motion). -->
+      <picture class="studio">
+        <source srcset="./brand/pere-games.png" media="(prefers-reduced-motion: reduce)" />
+        <img src="./brand/pere-games.webp" width="96" height="96" alt="Pere Games" decoding="async" />
+      </picture>
     </main>
     <!-- The Privacy Policy and the Game Rules, each opened over the cove in a box like the one above (src/account.ts). -->
     <dialog id="paper" class="paper-veil" aria-labelledby="paper-title">
