@@ -1,17 +1,17 @@
 import {
-  add, beat, coatPalette, curve, cyc, merge, moved, orb, orbAlong, quadBonesOf, scale, smile, taper, TAU, tube,
+  add, beat, coatPalette, curve, cyc, merge, orb, orbAlong, quadBonesOf, scale, smile, taper, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
-import { blade, cut, earMesh, pawMesh, quadPieces } from './beastkit';
+import { blade, cut, pawMesh, quadPieces } from './beastkit';
 import { type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
- * The settlement's own hands: the salva, the carra and the brambo (the kemma
+ * The settlement's own hands: the salva and the brambo (the kemma
  * is the Whispling now, `./wild-owl`; the sheela the Shearling, `./wild-shear`;
- * the tanna the Peltling, `./wild-pelt`).
+ * the tanna the Peltling, `./wild-pelt`; the carra the Lognib, `./wild-log`).
  * Each carries the tool of its trade on its body, as every wildermon carries
- * something no field guide has: a cleaver for a beak.
+ * something no field guide has: a bandaged tail.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -96,58 +96,6 @@ export const SALVA: Kind = {
   shadow: [1.3, 1.0],
   stride: 1.25,
   size: 1.6,
-};
-
-/* ---- the carra: a cleaver for a beak ----------------------------------------------- */
-
-/**
- * A carra: a heavy-jawed scavenger on four legs with a ruff of dark feathers
- * round its neck and a beak that is a cleaver -- a broad flat steel blade
- * with a wooden grip for a brow -- and a fan of feathers for a tail.
- */
-const CARRA_SPEC: QuadSpec = { ...pawed({ high: 1.75, len: 2.6, legs: 1.0, neck: 0.5, lean: 30, swing: [24, 40], ears: [10, 10], tail: [0.4, 25, -10] }), nose: 16 };
-const CARRA_HEAD = { c: [0, 0.25, 0.2] as V3, r: [1.0, 1.0, 0.95] as V3 };
-
-function carraBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = CARRA_HEAD;
-  // The cleaver: a deep flat blade standing on its edge, down from a wooden spine along the top of the face.
-  const blade0 = tube([[0, 0.75, 0.2], [0, 1.25, 0.12], [0, 1.75, -0.02], [0, 1.95, -0.2]], [0.08, 0.07, 0.06, 0.02], [0.62, 0.66, 0.6, 0.3], n, 'blade', { up: [1, 0, 0] });
-  const spine = tube([[0, 0.7, 0.5], [0, 1.3, 0.44], [0, 1.85, 0.3]], 0.1, 0.08, 6, 'wood');
-  const ruff = merge(...Array.from({ length: 9 }, (_, q) => {
-    const a = (q / 9) * TAU;
-    const d: V3 = [Math.cos(a), 0, Math.sin(a)];
-    return blade(curve(scale(d, 0.5), add(scale(d, 0.85), [0, -0.1, 0]), add(scale(d, 1.05), [0, -0.3, 0]), 3), [0.12, 0.2, 0.14, 0.02], [0, 1, 0], { mat: q % 2 ? 'feather' : 'featherDark' });
-  }));
-  const fan = merge(...[-0.5, -0.25, 0, 0.25, 0.5].map((s) => blade(curve([0, 0, 0], [s * 0.3, -0.45, 0.1], [s * 0.7, -0.95, 0.2], 3), [0.06, 0.18, 0.16, 0.03], [0, 0.2, 1], { mat: 'featherDark', rib: 'feather' })));
-  return quadPieces({
-    n, k,
-    body: { y: [-1.35, -1.1, -0.5, 0.1, 0.7, 1.1, 1.3], z: [0.05, 0.08, 0.14, 0.2, 0.28, 0.34, 0.38], w: [0.28, 0.95, 1.1, 1.12, 1.08, 0.92, 0.3], h: [0.26, 0.8, 0.94, 0.98, 0.96, 0.84, 0.3], belly: true },
-    neck: { w: 0.66, h: 0.7, len: 0.5 },
-    head: { c: H.c, r: H.r, face: merge(blade0, spine), eye: { dir: [0.72, 0.55, 0.35], size: 0.28, rim: 0.14 } },
-    ear: earMesh(0.3, 0.2, n, { point: true }),
-    earTurn: 45,
-    tail: [fan],
-    fore: { upper: [0.3, -0.55, 0.28, 0.24], lower: [0, -0.5, 0.22, 0.2], foot: pawMesh(0.24, n, k, 'claw') },
-    hind: { upper: [0.32, -0.55, 0.32, 0.26], lower: [0, -0.52, 0.24, 0.2], foot: pawMesh(0.24, n, k, 'claw') },
-    extras: [{ key: 'ruff', mesh: moved(ruff, [0, 0.15, 0.3]), bone: 'neck', bias: 0.1, after: ['body', 'neck'] }],
-  });
-}
-
-export const CARRA: Kind = {
-  bones: quadBonesOf(CARRA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, the head cocked and the cleaver brought down at nothing, once in a while.
-    if (a.go <= 0) {
-      const chop = beat(a.t, [6.3, 17.7], 0.7) * (1 - a.graze);
-      p.head[0] += 24 * chop;
-    }
-  }),
-  build: carraBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ blade: [214, 220, 228], wood: [150, 104, 70], claw: [90, 84, 80] }), 260),
-  shadow: [1.8, 1.3],
-  stride: 1.2,
-  size: 1.9,
 };
 
 /* ---- the brambo: a coat of burrs and berries --------------------------------------- */
