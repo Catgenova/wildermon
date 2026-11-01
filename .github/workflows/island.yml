@@ -4150,6 +4150,17 @@ jobs:
             --outfile=node_modules/.cache/tooldamage.mjs --log-level=error
           node node_modules/.cache/tooldamage.mjs
 
+      - name: A pack beast's panniers are a store
+        if: matrix.shard == 5
+        run: |
+          # The Packlet line's panniers by stage (200, 500, 1000, and a hauling trait) on both sides; put in, full and taken
+          # out as a chest's are; counted by a craft and by building within reach and not past it; whose they are, by the
+          # keeper's settlement and its ranks; and crated, released, culled or swapped into a crate only once empty, in the
+          # same words on both sides. On the island, turned loose they are set down and dead they go with it.
+          npx esbuild supabase/test/panniers.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/panniers.mjs --log-level=error
+          node node_modules/.cache/panniers.mjs
+
       - name: The Smith's perks, each where its rule is
         if: matrix.shard == 5
         run: |

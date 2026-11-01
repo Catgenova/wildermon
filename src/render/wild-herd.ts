@@ -2,11 +2,11 @@ import {
   add, beat, clamp, coatPalette, cross, curve, cyc, disc, lighter, merge, mix, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, smooth, taper,
   TAU, tube, unit, type Anim, type Kind, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
-import { blade, cut, earMesh, hoofMesh, quadPieces, type QuadLook } from './beastkit';
+import { cut, earMesh, hoofMesh, quadPieces, type QuadLook } from './beastkit';
 import { mesh, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
 
 /**
- * The herd: the big grazers and beasts of burden -- the cudda, the bura,
+ * The herd: the big grazers and beasts of burden -- the cudda,
  * the gorral and the shaggan (the roxxen is its own line now, `./wild-haul`,
  * the orse `./wild-hare`, the sappa `./wild-pip`, and the snedda the
  * Saplingreach, `./wild-giraffe`).
@@ -195,84 +195,6 @@ export const CUDDA: Kind = {
   shadow: [2.8, 1.8],
   stride: 0.8,
   size: 2.1,
-};
-
-/* ---- the bura ------------------------------------------------------------------------ */
-
-/**
- * A bura: broad, slow and endlessly patient, made to have things strapped
- * to it. Its back is flat as a table and grown over with grass, a little
- * bush and a fern on it; two small stubby horns, and legs like posts.
- */
-const BURA_SPEC: QuadSpec = {
-  // A neck just long enough that grazing, the chest let down only a little, the muzzle reaches the grass with all four feet on it.
-  ...hoofed({ high: 2.4, len: 3.8, legs: 1.6, neck: 1.0, lean: 72, swing: [16, 26], ears: [80, 20], crop: [64, 10, 12] }),
-  tail: curledTail(3.8),
-};
-const BURA_HEAD = { c: [0, 0.35, 0.0] as V3, r: [1.1, 1.0, 0.9] as V3 };
-
-function buraBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = BURA_HEAD;
-  // A broad soft muzzle standing out in front of the eyes, so side on there is a face ahead of the eye.
-  const muzzle = merge(
-    orbAlong([0, 1.35, -0.2], [0, 1, -0.2], [0.66, 0.58, 0.46], n, k, 'muzzle'),
-    paint([disc([0.24, 1.8, -0.12], [0.2, 1, 0.2], 0.09, 0.07, 6, 'nose'), disc([-0.24, 1.8, -0.12], [-0.2, 1, 0.2], 0.09, 0.07, 6, 'nose')]),
-    smile([0, 1.82, -0.4], [0, 1, -0.3], 0.3),
-  );
-  const horns = merge(taper([[0.45, 0.3, 0.72], [0.55, 0.35, 1.05]], 0.16, 0.08, 6, 'horn'), taper([[-0.45, 0.3, 0.72], [-0.55, 0.35, 1.05]], 0.16, 0.08, 6, 'horn'));
-  // The table of its back: a slab of turf cut from a meadow -- a deep band of soil under a mat of grass a little wider than it,
-  // grass standing up in tufts all along both edges -- and a bush, a fern and a flower growing on it.
-  const table = merge(
-    tube([[0, -2.0, 1.02], [0, 2.0, 1.02]], [1.4, 1.45], 0.38, n, 'bark', { up: [0, 0, 1] }),
-    tube([[0, -2.06, 1.42], [0, 2.06, 1.42]], [1.48, 1.53], 0.09, n, 'moss', { up: [0, 0, 1] }),
-    orb([0.5, -1.0, 1.78], [0.55, 0.55, 0.48], n, k, 'leaf'),
-    orb([0.22, -1.35, 1.64], [0.36, 0.36, 0.32], n, k, 'leafDark'),
-    orb([-0.9, -0.3, 1.58], 0.2, 6, 3, 'bloom'),
-  );
-  // Each blade of grass an open three-sided cone: its root is in the turf and its tip a point, so neither end needs closing.
-  const grass = (from: V3, to: V3, r: number): Mesh => tube([from, to], [r, 0.01], [r, 0.01], 3, 'stem', { start: false, end: false });
-  const tufts = merge(...[-1.75, -1.15, -0.55, 0.05, 0.65, 1.25, 1.8].flatMap((y, q) => [1, -1].flatMap((s) => {
-    const x = s * (1.44 - 0.04 * (q % 2)), lean = s * (0.08 + 0.04 * (q % 3));
-    return [grass([x, y, 1.42], [x + lean, y + 0.06, 1.8], 0.1), grass([x, y + 0.16, 1.42], [x + lean * 1.5, y + 0.22, 1.7], 0.08)];
-  })));
-  // The fern: five fronds sprung from one heart, each a broad blade creased down its middle, arching out and over.
-  const fern = merge(...[0, 1, 2, 3, 4].map((q) => {
-    const a = q * (TAU / 5) + 0.4, c = Math.cos(a), sn = Math.sin(a);
-    return blade(curve([-0.5, 0.8, 1.48], [-0.5 + c * 0.28, 0.8 + sn * 0.28, 1.86], [-0.5 + c * 0.6, 0.8 + sn * 0.6, 1.74], 3), [0.04, 0.15, 0.12, 0.02], [c * 0.6, sn * 0.6, 1], { twist: 0.5, fold: 0.3, mat: 'leaf', rib: 'leafDark' });
-  }));
-  return quadPieces({
-    n, k,
-    body: { y: [-2.6, -2.45, -2.2, -1.2, 0, 1.2, 2.1, 2.35, 2.55], z: [0.2, 0.15, 0.2, 0.3, 0.3, 0.3, 0.35, 0.33, 0.3], w: [0.3, 1.0, 1.35, 1.6, 1.65, 1.6, 1.4, 1.05, 0.35], h: [0.3, 0.72, 0.95, 1.05, 1.08, 1.05, 0.95, 0.72, 0.35], belly: true },
-    neck: { w: 0.95, h: 0.85, len: 1.0 },
-    head: { c: H.c, r: H.r, face: muzzle, eye: { dir: [0.8, 0.52, 0.2], size: 0.34, rim: 0.12 }, blush: [[0.82, 0.45, -0.35], 0.22] },
-    ear: earMesh(0.5, 0.32, n),
-    tail: tuftTail(n),
-    fore: { upper: [0.35, -0.85, 0.55, 0.48], lower: [0, -0.75, 0.46, 0.44], foot: hoofMesh(0.48, 0.2, n) },
-    hind: { upper: [0.35, -0.9, 0.58, 0.5], lower: [0, -0.9, 0.46, 0.44], foot: hoofMesh(0.48, 0.2, n) },
-    extras: [
-      { key: 'horns', mesh: horns, bone: 'head', bias: 0.25, after: ['head', 'ear0', 'ear1'] },
-      { key: 'table', mesh: table, bone: 'trunk', bias: 0.04, after: 'body' },
-      // The grass and the fern each lined only round the outside, so they are a tuft and a frond and not a scribble of lines.
-      { key: 'tufts', mesh: tufts, bone: 'trunk', bias: 0.045, after: 'table', lines: false },
-      { key: 'fern', mesh: fern, bone: 'trunk', bias: 0.05, after: 'table', lines: false },
-    ],
-    breath: 0.03,
-  });
-}
-
-export const BURA: Kind = {
-  bones: quadBonesOf(BURA_SPEC, plod),
-  build: buraBuild,
-  // A turf deeper and yellower than the grass it walks on, over a band of soil, so the table does not read as the ground through it;
-  // a grey bura the blue-grey of a rain cloud.
-  palette: (coat, mark) => {
-    const grey = greyFor(coat, 32, 215);
-    return coatPalette(lit(coat, grey), mark, { moss: [138, 176, 88], stem: [164, 204, 98], bark: [140, 110, 84], leaf: [124, 184, 96], leafDark: [92, 150, 82], horn: [230, 216, 188], bloom: [250, 206, 120] }, grey);
-  },
-  shadow: [3.0, 2.0],
-  stride: 0.65,
-  size: 2.2,
 };
 
 /* ---- the gorral ---------------------------------------------------------------------- */
