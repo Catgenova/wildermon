@@ -128,7 +128,7 @@ export const VIA_MAX = 64;
 /** The most things one `rpc_act_many` moves: the island's `act_many_most()`. */
 export const ACT_MANY_MOST = 30;
 /** The jobs `rpc_act_many` does: the island's `private.act_many_job`. */
-export const ACT_MANY_JOBS: ReadonlySet<string> = new Set(['store_in_crate', 'store_in_furniture', 'rack_put', 'stow_item', 'take_from_store']);
+export const ACT_MANY_JOBS: ReadonlySet<string> = new Set(['store_in_crate', 'store_in_furniture', 'rack_put', 'stow_item', 'take_from_store', 'store_in_pannier']);
 
 /**
  * The turns of a walk from `from` through `steps` to `to`: the steps where the

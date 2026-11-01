@@ -3059,7 +3059,9 @@ export function helpText(): string {
       <li><b>${SPECIES.tinka.name}</b>: <b>mends</b> damaged gear in your settlement stores, most damaged first. Evolves: ${evolves('tinka')}.</li>
       <li><b>${SPECIES.middun.name}</b>: turns rotting things on the ground into <b>compost</b>. Evolves: ${evolves('middun')}.</li>
       <li><b>${SPECIES.snout.name}</b>: finds <b>buried relics</b> and marks where to dig. Taming ${SPECIES.snout.tameLevel}.</li>
-      <li><b>Bura</b>: no task; panniers hold <b>${SPECIES.bura.pannier} things</b> (open from its menu).</li>
+      <li><b>${SPECIES.bura.name}</b>: no task. Panniers: <b>${SPECIES.bura.pannier!.join(' / ')} items</b> by stage, × its hauling blood. Open from its menu (keeper, and ranks with
+      ${POWER.stores.label} where it stands on its keeper's settlement); a store within ${CRAFT_REACH} tiles for crafting and building. Crate, release, cull: panniers empty only.
+      Evolves: ${evolves('bura')}; ${perkLine('bura').toLowerCase()}.</li>
       <li><b>Gorral</b>: saddle mount; climbs ground ${article(SPECIES.orse.name)} ${SPECIES.orse.name} refuses.</li>
       <li><b>${SPECIES.wadd.name}</b>: mount; swims deep water with a rider. Evolves: ${evolves('wadd')}.</li>
       <li><b>${SPECIES.springlet.name}</b>: saddle mount; swims deep water with a rider. Ridden on land: ${+SPECIES.springlet.speed.toFixed(2)} tiles a second

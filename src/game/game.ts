@@ -36,6 +36,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { glassResync, underGlass } from './glasshouse';
+import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
 import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
@@ -7393,7 +7394,7 @@ export class Game {
    * Crates and the chests and barrels that hold things are shown through the
    * same window, and had the same hole in them, so both are looked in.
    */
-  storeWith(uid: number): { what: string; at: [number, number]; take: (id: number, count?: number) => Item | null; piece?: PlacedFurniture; crate?: PlacedCrate; level?: number } | null {
+  storeWith(uid: number): { what: string; at: [number, number]; take: (id: number, count?: number) => Item | null; piece?: PlacedFurniture; crate?: PlacedCrate; beast?: Creature; shut?: () => string | null; level?: number } | null {
     /*
      * A bag on your back is the third of these, and was missing.
      *
@@ -7442,6 +7443,11 @@ export class Game {
         piece: f,
         level: f.level ?? 0,
       };
+    }
+    // A pack beast's panniers (`panniers.ts`), standing where it stands.
+    for (const c of this.creatures.list.values()) {
+      if (!c.pannier.some((it) => it.uid === uid)) continue;
+      return { what: pannierName(c), at: [c.x, c.y], take: part(c.pannier, (id) => pannierTake(this, c, id)), beast: c, shut: () => pannierRefusal(this, c) };
     }
     return null;
   }
@@ -7580,6 +7586,15 @@ export class Game {
       // After the crates at the same distance, to the same rule as the island.
       found.push({ items: f.items, name: furnitureName(f), d: far(cx, cy), order: 1e9 + f.id });
     }, this.player.level);
+    /*
+     * And a pack beast's panniers (`panniers.ts`): asked for, "Its panniers count as nearby storage". Any that open for
+     * you, within reach by the tile it stands on as a crate is, after the crates and pieces at the same distance, as
+     * the island's `craft_stock` and `hod_stock` take them.
+     */
+    for (const c of this.creatures.list.values()) {
+      if (!c.pannier.length || !panniersOffered(c) || (this.player.level ?? 0) < 0 || !within(Math.floor(c.x), Math.floor(c.y))) continue;
+      found.push({ items: c.pannier, name: pannierName(c), d: far(c.x, c.y), order: 2e9 + c.id });
+    }
     return found.sort((a, b) => a.d - b.d || a.order - b.order);
   }
 
@@ -9793,30 +9808,6 @@ export class Game {
   }
 
   private storeCache: { at: number; stamp: number; stores: DeedStore[] } | null = null;
-
-  /** Load something onto a pack beast's back; false when it will not fit. */
-  pannierAdd(c: Creature, item: Item): boolean {
-    const cap = Math.round((this.creatures.species(c).pannier ?? 0) * bloodMul(c, 'haul'));
-    const used = c.pannier.reduce((n, it) => n + it.count, 0);
-    if (!cap || used + item.count > cap) return false;
-    const def = ITEM_DEFS[item.id];
-    const stack = def?.stackable ? c.pannier.find((it) => it.id === item.id && it.extra === item.extra && it.piece === item.piece) : undefined;
-    if (stack) {
-      stack.ql = (stack.ql * stack.count + item.ql * item.count) / (stack.count + item.count);
-      stack.count += item.count;
-    } else c.pannier.push(item);
-    this.events.emit('crate');
-    return true;
-  }
-
-  /** Take something back off a pack beast. */
-  pannierTake(c: Creature, uid: number): Item | null {
-    const i = c.pannier.findIndex((it) => it.uid === uid);
-    if (i < 0) return null;
-    const [item] = c.pannier.splice(i, 1);
-    this.events.emit('crate');
-    return item;
-  }
 
   /** Put something away; false when it would not fit. */
   furnitureAdd(f: PlacedFurniture, item: Item): boolean {

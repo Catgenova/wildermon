@@ -347,7 +347,7 @@ footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line);
       st.append(statRow('Taming', String(s.stats.tameLevel), Math.round(s.stats.tameChance * 100) + '% a try'));
       if (s.trade) st.append(statRow('Range', String(s.stats.workRange), 'tiles, +' + s.stats.rangePerStep + '/10 skill'));
     }
-    if (s.stats.pannier) st.append(statRow('Panniers', String(s.stats.pannier), 'kg'));
+    if (s.stats.pannier) st.append(statRow('Panniers', String(s.stats.pannier), 'items'));
     if (s.stats.pull !== null) st.append(statRow('Pull', s.stats.pull.toFixed(2), 'of a team'));
     if (s.stats.pitch !== null) st.append(statRow('Footing', '×' + s.stats.pitch, 'on a slope'));
     if (s.stats.sight > 5) st.append(statRow('Sight', String(s.stats.sight), 'tiles'));

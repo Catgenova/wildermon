@@ -18,6 +18,7 @@ import { ARROWS, armsRefusal, beastReach, BLINDSIDE, blowOf, bowReach, critMul, 
 import { matOfItem } from './materials';
 import { takeGear } from './wildgearActions';
 import { boundKey } from './keybinds';
+import { pannierExitRefusal } from './panniers';
 
 /**
  * What one offering and one blow teach, landed or not.
@@ -148,7 +149,11 @@ export function companionSwap(g: Game, taking: Creature): { current: Creature; t
   // What the deed counts once the one being taken is off it and this one is on it.
   const freed = taking.mode === 'deed' && taking.post === null ? 1 : 0;
   if (g.deed && g.creatures.workers().length - freed + 1 <= g.workerCap) return { current, to: 'deed' };
-  if (emptyCrate(g)) return { current, to: 'crate' };
+  // Into a crate only with its panniers empty (`panniers.ts`).
+  if (emptyCrate(g)) {
+    const full = pannierExitRefusal(current);
+    return full ? { current, refused: full } : { current, to: 'crate' };
+  }
   return {
     current,
     refused: g.deed
@@ -1276,7 +1281,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c) return 'Gone.';
       if (c.mode === 'wild') return 'Not yours.';
-      return null;
+      // Not with its panniers full (`panniers.ts`).
+      return pannierExitRefusal(c);
     },
     perform: (t, g) => {
       const c = creatureOf(g, t);
@@ -1320,6 +1326,13 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     applies: (t, g) => {
       const c = creatureOf(g, t);
       return !!c && c.mode !== 'wild' && c.hitchedTo === null && !c.ridden;
+    },
+    check: (t, g) => {
+      const c = creatureOf(g, t);
+      if (!c) return 'Gone.';
+      if (c.mode === 'wild') return 'Already wild.';
+      // Not with its panniers full (`panniers.ts`).
+      return pannierExitRefusal(c);
     },
     perform: (t, g) => {
       const c = creatureOf(g, t);

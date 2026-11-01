@@ -40,6 +40,7 @@ import { PAPYRUS_VOICE } from './voice-papyrus';
 import { MOSS_VOICE } from './voice-moss';
 import { LOG_VOICE } from './voice-log';
 import { SPIRAL_VOICE } from './voice-spiral';
+import { PACK_VOICE } from './voice-pack';
 import { PELT_VOICE } from './voice-pelt';
 import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
@@ -190,4 +191,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   carra: LOG_VOICE,
   // The Spiralcalf, the Spiraltrunk and the Spiralphant.
   awla: SPIRAL_VOICE,
+  // The Packlet, the Haulbud and the Cargocrest.
+  bura: PACK_VOICE,
 };

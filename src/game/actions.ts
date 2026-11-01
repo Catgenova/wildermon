@@ -39,6 +39,7 @@ import { DYE_BUCKET, dyeIn, dyeSays, dyeHexOf, recipeOf } from './dyestuffs';
 import { WHEY_BUCKET } from './dairy';
 import { DEED_ACTIONS, deedAimed } from './deed';
 import { CRATE_ACTIONS } from './crates';
+import { PANNIER_ACTIONS } from './panniers';
 import { CREATURE_ACTIONS } from './creatureActions';
 import { CREATURE_CRATE_ACTIONS } from './creaturecrate';
 import { HUSBANDRY_ACTIONS } from './husbandry';
@@ -330,7 +331,7 @@ export const TEACHES_NOTHING = new Set<string>([
   // Carrying things about, in and out of whatever holds them.
   'pick_up', 'pick_up_all', 'drop', 'crate_take_all', 'furniture_take_all',
   'kiln_take_all', 'smelter_take_all', 'store_in_crate', 'store_in_furniture', 'rack_put',
-  'take_from_store', 'stow_item', 'empty_bag', 'throw_away', 'equip', 'unequip',
+  'take_from_store', 'stow_item', 'empty_bag', 'throw_away', 'equip', 'unequip', 'store_in_pannier',
   // And pouring, which is carrying by another name.
   'fill_bucket', 'fill_skin', 'empty_bucket', 'empty_vessel', 'pour_into_barrel',
 ]);
@@ -3274,6 +3275,8 @@ export const ACTIONS: ActionDef[] = [
   ...REMEDY_ACTIONS,
   ...PLACEABLE_ACTIONS,
   ...CRATE_ACTIONS,
+  // A pack beast's panniers (`panniers.ts`).
+  ...PANNIER_ACTIONS,
   ...LOCK_ACTIONS,
   // Raising and lowering a portcullis and a drawbridge (`gates.ts`).
   ...GATE_ACTIONS,

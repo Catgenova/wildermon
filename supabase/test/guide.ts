@@ -141,6 +141,8 @@ for (const d of KINDS) {
     ['deep water', !!d.swims, text.includes('crosses deep water')],
     ['its pace in water', d.swimSpeed !== undefined, text.includes(`; in water ${+((d.swimSpeed ?? 0) * footing(0)).toFixed(2)} at 0 climbing`)],
     ['the traces', !!d.draught, text.includes(`Traces: team pull +${percent(d.pull ?? PULL_DEFAULT)}`)],
+    // A pack beast's panniers by stage, number for number (`panniers.ts`).
+    ['panniers', !!d.pannier, !!d.pannier && text.includes(`Panniers: ${d.pannier.map((n, s) => `${[d.name, ...(d.stages ?? []).map((st) => st.name)][s]} ${n}`).join(', ')} items`)],
     ['a watcher\'s eyes', !!d.sight, text.includes(`Sight for you: ${d.sight} tiles`)],
     ['a light', !!d.glow, text.includes(`Lights ${d.glow} tiles round itself`)],
     ['its taming', !d.monster, text.includes(`Taming ${d.tameLevel}, base chance ${percent(d.tameChance)} per offering`)],
@@ -154,11 +156,11 @@ check('what a kind is for, and what it is like to meet, is what its definition s
   !kept.length, kept.slice(0, 6).join('; '));
 
 /*
- * And the three kept rules the island does not run -- a hive filled from a
- * kept one, panniers, a temper -- are on no page.
+ * And the two kept rules the island does not run -- a hive filled from a
+ * kept one, a temper -- are on no page. Panniers it runs (`panniers.ts`).
  */
-const unrun = KINDS.filter((d) => /fills a hive|Panniers: |chance every/.test(says(d, true))).map((d) => d.id);
-check('no page promises a hive, panniers or a temper, which the island does not run', !unrun.length, unrun.slice(0, 4).join(', '));
+const unrun = KINDS.filter((d) => /fills a hive|chance every/.test(says(d, true))).map((d) => d.id);
+check('no page promises a hive or a temper, which the island does not run', !unrun.length, unrun.slice(0, 4).join(', '));
 
 /* ---- the browser ------------------------------------------------------------ */
 console.log('--- the browser');

@@ -537,6 +537,8 @@ out.push(`alter table species_def add column if not exists swims boolean not nul
 /* Kept on a settlement, it fills a hive standing there with honey and wax: a Vesp. */
 out.push(`alter table species_def add column if not exists hives boolean not null default false;`);
 out.push(`alter table species_def add column if not exists pannier real;`);
+/* What its panniers hold at each of its three stages (`SpeciesDef.pannier`); `pannier` is its first. */
+out.push(`alter table species_def add column if not exists panniers real[];`);
 /* What it wears against a blow, and whether it hits heavy (`fight.ts`). */
 out.push(`alter table species_def add column if not exists hide text;`);
 out.push(`alter table species_def add column if not exists heavy boolean not null default false;`);
@@ -1311,9 +1313,11 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
     q(d.defaultStance ?? null), q(d.shearYield ?? null), q(d.wound ?? null),
     q(d.notice ?? null), q(d.sight ?? null)].join(', ') + `);`);
   if (d.glow !== undefined) out.push(`update species_def set glow = ${q(d.glow)} where id = ${q(d.id)};`);
-  for (const [col, v] of [['mount', d.mount], ['pull', d.pull], ['pitch', d.pitch], ['pannier', d.pannier]] as Array<[string, unknown]>) {
+  for (const [col, v] of [['mount', d.mount], ['pull', d.pull], ['pitch', d.pitch]] as Array<[string, unknown]>) {
     if (v !== undefined) out.push(`update species_def set ${col} = ${q(v)} where id = ${q(d.id)};`);
   }
+  const panniers = (d as unknown as { pannier?: readonly number[] }).pannier;
+  if (panniers) out.push(`update species_def set pannier = ${q(panniers[0])}, panniers = array[${panniers.map(q).join(', ')}]::real[] where id = ${q(d.id)};`);
   if (d.draught) out.push(`update species_def set draught = true where id = ${q(d.id)};`);
   if (d.swims) out.push(`update species_def set swims = true where id = ${q(d.id)};`);
   if (d.swimSpeed !== undefined) out.push(`update species_def set swim_speed = ${q(d.swimSpeed)} where id = ${q(d.id)};`);

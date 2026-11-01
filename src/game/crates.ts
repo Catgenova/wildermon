@@ -563,6 +563,8 @@ CRATE_ACTIONS.push({
     if (t.kind !== 'item') return null;
     const where = g.storeWith(t.uid);
     if (!where) return 'It is gone.';
+    // A pack beast's panniers answer for themselves: whose they are and how near it stands (`pannierRefusal`).
+    if (where.shut) return where.shut();
     const dx = where.at[0] - g.player.x;
     const dy = where.at[1] - g.player.y;
     if (Math.hypot(dx, dy) > STORE_REACH) return `Stand next to the ${where.what}.`;

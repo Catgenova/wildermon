@@ -10,7 +10,7 @@ import { CROP_BY_SEED, cropDef, cropReady, cropYield, harvestSeeds } from './far
 import { MINE_COLLAPSE, MINE_DEPTH } from './actions';
 import { groomGain, GROOM_HEAL } from './husbandry';
 import { healAmount } from './firstaid';
-import { RECIPE_BY_ID, RECIPE_PERK_SAYS, RECIPES, type Recipe } from './recipes';
+import { CRAFT_REACH, RECIPE_BY_ID, RECIPE_PERK_SAYS, RECIPES, type Recipe } from './recipes';
 import { anvilCentre, type PlacedAnvil } from './anvil';
 import { isOreItem, METAL_BY_ID, METAL_BY_LUMP, METAL_BY_ORE, METALS, MOULD_BY_ID, RARE_METALS, smeltSeconds } from './metal';
 import { smelterCapacity, smelterCentre, type PlacedSmelter } from './smelter';
@@ -650,8 +650,11 @@ export interface SpeciesDef {
   deepWater?: boolean;
   /** Its share of a team's pull; `PULL_DEFAULT` unless it was bred for the traces. */
   pull?: number;
-  /** Things it carries on its own back, for the ones that take panniers. */
-  pannier?: number;
+  /**
+   * Things its panniers hold at each of its stages (`stageOf`), for the ones that take panniers, before its blood
+   * (`pannierCap`). The island's `species_def.panniers`.
+   */
+  pannier?: readonly [number, number, number];
   /** What shearing takes off it; wool unless it says otherwise. */
   shearYield?: string;
   /** Can be milked into an empty bucket. */
@@ -862,6 +865,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   dulla: { kind: 'more', n: 1, what: 'moss per cut' },
   carra: { kind: 'more', n: 1, what: 'timbers per log' },
   awla: { kind: 'more', n: 1, what: 'shafts per log' },
+  bura: { kind: 'blood', n: 1.05, channel: 'speed', what: 'speed' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -3622,8 +3626,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'bura',
     hide: 'thick',
     wound: 'crush',
-    name: 'Bura',
-    description: 'Panniers: {pannier} items on its back.',
+    name: 'Packlet',
+    was: ['Bura'],
+    // Asked for, with a reference sheet: Packlet, Haulbud, Cargocrest. Its words, and each stage's, are written once
+    // every number they read is here (`sayPacks`).
+    description: '',
+    stages: [
+      { name: 'Haulbud', description: '' },
+      { name: 'Cargocrest', description: '' },
+    ],
     health: 55,
     attack: 6,
     speed: 1.5,
@@ -3634,15 +3645,18 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: null,
     workRange: 6,
+    // [coat, ruff, belly and paws]: the sheet's cocoa with cream, a darker walnut with oatmeal, a fawn with ivory, and a
+    // grey-brown with a pale biscuit.
     variants: [
-      ['#9c8a6a', '#ded0b0'],
-      ['#7a6a54', '#c0b090'],
-      ['#6a6f74', '#b4bcc2'],
-      ['#8a6a58', '#cfae99'],
+      ['#8a6248', '#f2e2c2'],
+      ['#6e4c3a', '#e8d4b2'],
+      ['#a07a58', '#f6eacc'],
+      ['#6c5c52', '#e6d6bc'],
     ],
     butcher: { meat: 14, fur: 4, leather: 9, bone: 10, gland: 1 },
     defensive: true,
-    pannier: 200,
+    // Asked for: "200 items at stage 1, 500 at stage 2, 1000 at stage 3".
+    pannier: [200, 500, 1000],
     learns: { skill: 'body_strength', by: 'out' },
   },
   gorral: {
@@ -4188,6 +4202,26 @@ sayLineLater('glimmip', 'Level: glassblowing.');
 sayLineLater('dulla', `Level: ${GATHER_SKILL.moss.replace(/_/g, ' ')}.`);
 sayLineLater('carra', `Level: ${GATHER_SKILL.timber.replace(/_/g, ' ')}.`);
 sayLineLater('awla', `Level: ${GATHER_SKILL.shaft}.`);
+
+/**
+ * The Packlet line's words: no task, and its panniers at each stage (`SpeciesDef.pannier`), opened from its menu as a
+ * store and a store within `CRAFT_REACH` tiles for crafting and building (`panniers.ts`). Read when asked for, as a
+ * stored line's are (`sayLineLater`), so that what they read from the recipes is there.
+ */
+function sayPacks(id: string, level: string): void {
+  const d = SPECIES[id];
+  const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
+  const room = d.pannier!;
+  const job = (s: 0 | 1 | 2): string => `No settlement task. Panniers: ${room[s]} items${s ? ` (${names[0]}: ${room[0]})` : ''}, `
+    + `opened from its menu; a store within ${CRAFT_REACH} tiles for crafting and building. Crate, release, cull: panniers empty only.`;
+  const at = (s: 0 | 1 | 2): PropertyDescriptor => ({
+    get: () => lineSays(names, job(s), level, s, false, false, null, s === 2 ? id : ''),
+    enumerable: true, configurable: true,
+  });
+  Object.defineProperty(d, 'description', at(0));
+  d.stages!.forEach((st, i) => Object.defineProperty(st, 'description', at((i + 1) as 1 | 2)));
+}
+sayPacks('bura', `Level: body strength, learned ${LEARNS_SAYS.out}.`);
 
 /** Which species roam wild, by weight. */
 /**
@@ -5110,6 +5144,8 @@ export interface IslandCreature {
   tack_enchant?: Record<string, Enchant> | null;
   /** What its keeper's perks make of keeping it (a Herdsman's), when anything. */
   kept?: Record<string, number> | null;
+  /** What is in its panniers, to whoever they open for (`pannier_sent`); absent to anybody else and on a kind without. */
+  pannier?: Array<{ id: number; def: string; ql: number; dmg: number; count: number; extra: string | null; rare?: string | null; dye?: string | null; enchant?: unknown }>;
   /** The vehicle it is in the traces of; absent from older islands. */
   hitchedTo?: number | null;
   /** The work post it works out of, when it does; absent from older islands. */
@@ -5401,8 +5437,13 @@ export interface Creature {
   tackEnchant?: Record<string, Enchant>;
   /** When it was last shod; shoes hold `SHOE_DAYS`. Long ago when it never was. */
   shodAt: number;
-  /** What is riding on its back, for the sorts that carry panniers. */
+  /** What is riding on its back, for the sorts that carry panniers: on an island, what the island sends (`pannier_sent`). */
   pannier: Item[];
+  /**
+   * The island sent its panniers, so they open for you: your own, or one of your settlement's keeping where your rank
+   * may use its stores (`pannier_shut`). Unset where it sent none.
+   */
+  panniersOpen?: boolean;
   /** Set while the player is up on its back. */
   ridden: boolean;
   /** Who is up on its back by the island's word, by their uid, whoever they are. */
@@ -6017,6 +6058,12 @@ export class Creatures {
       c.brawl = r.brawl ?? null;
       // Whose it is, which the island says and the journal has to know.
       c.mine = r.mine;
+      // And what is in its panniers, when they open for you (`pannier_sent`): the same rows a chest's window shows.
+      c.panniersOpen = r.pannier !== undefined || undefined;
+      c.pannier = (r.pannier ?? []).map((it) => ({
+        uid: it.id, id: it.def, ql: it.ql, dmg: it.dmg, count: it.count, extra: it.extra ?? undefined,
+        rare: rarityStep(it.rare), dye: it.dye ?? undefined, enchant: (it.enchant ?? undefined) as Item['enchant'],
+      }));
       // And what it was set to, if that is not what its kind does anyway.
       if (r.job !== undefined) c.trade = r.job && r.job !== SPECIES[c.species]?.gathers && (SPECIES[c.species]?.trades ?? []).includes(r.job as GatherKind) ? (r.job as GatherKind) : null;
       // Shod or not is the island's word; the browser keeps its own clock of it.

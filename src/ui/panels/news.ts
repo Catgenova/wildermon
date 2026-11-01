@@ -4229,6 +4229,19 @@ export const NEWS: News[] = [
     lines: () => [`Changed: goblins, orcs, ogres and dragons drawn ${MONSTER_GROWTH}× their size (was: 1×).`],
   },
   {
+    n: 414,
+    day: '2026-11-01',
+    lines: () => {
+      const d = SPECIES.bura, [one, two] = d.stages!, [p1, p2, p3] = d.pannier!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same stats. Stage 3 skill: ${two.name} ${perkSays('bura')}.`,
+        'Each stage: own model, animations and voice.',
+        `Changed: panniers: ${p1} items (${d.name}), ${p2} (${one.name}), ${p3} (${two.name}), × hauling blood (was: ${p1} at every stage).`,
+        `Added: panniers on islands: open from its menu, the same window as a chest; keeper, and ranks with ${POWER.stores.label} on the keeper's settlement where it stands.`,
+        `Added: panniers count as a store within ${CRAFT_REACH} tiles: crafting, station work, building, the Stores window.`,
+        'Added: crate, release, cull, or a swap into a crate: refused until its panniers are empty. Turned loose by a settlement, post or work ending: panniers emptied onto the ground.'];
+    },
+  },
+  {
     n: 413,
     day: '2026-11-01',
     lines: () => {
