@@ -85,49 +85,6 @@ export const FORGA: Kind = {
   size: 1.75,
 };
 
-/* ---- the cindra: a dustpan for a tail ----------------------------------------------- */
-
-const CINDRA_SPEC: QuadSpec = { ...pawed({ high: 1.2, len: 1.9, legs: 0.65, neck: 0.3, lean: 45, swing: [24, 40], ears: [30, 25], tail: [0.4, 12, 10] }), nose: 12 };
-const CINDRA_HEAD = { c: [0, 0.3, 0.2] as V3, r: [1.02, 0.96, 0.92] as V3 };
-
-function cindraBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = CINDRA_HEAD;
-  // A dustpan: a short handle and a broad tin scoop, its lip turned up at the back.
-  const pan = merge(
-    taper([[0, 0.05, 0], [0, -0.3, 0]], 0.11, 0.08, n, 'coat'),
-    tube([[0, -0.28, 0], [0, -0.45, 0]], 0.05, 0.05, 5, 'wood'),
-    tube([[0, -0.45, 0], [0, -0.95, -0.05]], [0.3, 0.38], [0.03, 0.03], 8, 'metal', { up: [0, 0, 1] }),
-    tube([[0, -0.45, 0.04], [0, -0.45, 0.18]], 0.32, 0.03, 8, 'metalDark', { up: [0, 1, 0] }),
-  );
-  // Fluff like ash, in tufts on its back.
-  const fluff = merge(...([[0, -0.4, 0.85], [0.3, 0.1, 0.82], [-0.3, 0.1, 0.82], [0, 0.45, 0.8]] as V3[]).map((c) => orb(c, 0.26, 6, 4, 'coatLight')));
-  return quadPieces({
-    n, k,
-    body: barrel(2.0, 0.95, 0.85),
-    neck: { w: 0.58, h: 0.58, len: 0.3 },
-    head: { c: H.c, r: H.r, face: snout(0.98, -0.22, [0.36, 0.28, 0.32], 0.1, n, k), eye: { dir: [0.74, 0.52, 0.34], size: 0.33, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.18] },
-    ear: earMesh(0.42, 0.26, n, { point: true }),
-    earTurn: 30,
-    tail: [pan],
-    ...paws(n, k, 0.65, 0.22, 0.2, 'coatDark'),
-    extras: [{ key: 'fluff', mesh: fluff, bone: 'trunk', bias: 0.04, after: ['body'], lines: false }],
-  });
-}
-
-export const CINDRA: Kind = {
-  bones: quadBonesOf(CINDRA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it sweeps with its pan now and then.
-    if (a.go <= 0) p.tail[1] += 24 * Math.sin(a.t * TAU * 1.5) * beat(a.t, [6.1, 17.4], 1.8);
-  }),
-  build: cindraBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ metal: [176, 180, 186], metalDark: [120, 124, 132], wood: [150, 110, 76] }), 250),
-  shadow: [1.2, 1.0],
-  stride: 1.3,
-  size: 1.45,
-};
-
 /* ---- the hoppa: a cork for a nose and hops for a crown ------------------------------ */
 
 const HOPPA_SPEC: QuadSpec = { ...pawed({ high: 1.3, len: 2.2, legs: 0.7, neck: 0.3, lean: 50, swing: [22, 36], ears: [40, 20], tail: [0.35, 30, 10] }), nose: 12 };
