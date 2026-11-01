@@ -63,7 +63,8 @@ import { GLASCADE, GLIMMIP, PRISMETAIL } from './wild-glass';
 import { AWLA, SPITTA } from './wild-fighters';
 import { DUMMIBEAR, DUMMICUB, DUMMITITAN } from './wild-dummy';
 import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
-import { BRITTLA, CRAKKA, DULLA, FROSTA, LEECHA, ROOTLE, SCORCHA, WHIRLA } from './wild-abilities';
+import { BRITTLA, CRAKKA, FROSTA, LEECHA, ROOTLE, SCORCHA, WHIRLA } from './wild-abilities';
+import { MOSSNIB, MOSSREAVER, MOSSSHEAR } from './wild-moss';
 import { GALECREST, TEMPESTWYRM, ZEPHLET } from './wild-zephyr';
 
 /**
@@ -161,7 +162,7 @@ export const WILDERMON: Record<string, Kind> = {
   scorcha: SCORCHA,
   frosta: FROSTA,
   rootle: ROOTLE,
-  dulla: DULLA,
+  dulla: MOSSNIB,
   brittla: BRITTLA,
   stona: ZEPHLET,
   leecha: LEECHA,
@@ -230,6 +231,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   glimmip: [GLASCADE, PRISMETAIL],
   snedda: [CANOPYSHAPER, GROVEMASTER],
   tanna: [PELTIPEDE, HIDEWEAVER],
+  dulla: [MOSSSHEAR, MOSSREAVER],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

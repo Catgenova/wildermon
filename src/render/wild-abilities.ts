@@ -9,9 +9,9 @@ import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Eight that had an ability of their own (`AbilityId`), settlement workers now: each wears what it
+ * Seven that had an ability of their own (`AbilityId`), settlement workers now: each wears what it
  * did -- a boulder of a skull for a skull crack,
- * a whirl of blades, embers, icicles, tendrils, a dull clawed paw, a brittle shell,
+ * a whirl of blades, embers, icicles, tendrils, a brittle shell,
  * a round sucking mouth for a leech.
  */
 
@@ -132,16 +132,6 @@ export const ROOTLE = kindOf({
   thin: true,
   tail: (n) => merge(root(n), tube(curve([0, -0.2, 0], [0.1, -0.6, -0.2], [-0.05, -0.85, -0.5], 4), [0.08, 0.05, 0.02], [0.08, 0.05, 0.02], 5, 'stem')),
   own: { bark: [96, 76, 50], stem: [120, 96, 60] }, mark: 30, shadow: [1.6, 1.3], stride: 1.25, size: 1.65,
-});
-
-/* ---- the dulla: soft round paws and a puff of a tail ---------------------------------- */
-
-export const DULLA = kindOf({
-  spec: { ...pawed({ high: 1.2, len: 2.1, legs: 0.62, neck: 0.32, lean: 55, swing: [18, 30], ears: [55, 20], tail: [0.3, 8, 4] }), nose: 10 },
-  head: HEAD(0.34, 0.12, [1.08, 1.0, 0.92]), body: [2.1, 1.2, 0.95, 0.06], neck: [0.68, 0.66, 0.32], ear: [0.3, 0.32, 55], legs: [0.62, 0.3, 0.36, 'coatLight'],
-  snout: [1.0, -0.2, [0.42, 0.32, 0.34], 0.11],
-  tail: (n, k) => merge(root(n), orb([0, -0.42, 0.06], 0.28, n, k, 'coatLight')),
-  own: {}, mark: 30, shadow: [1.55, 1.3], stride: 1.25, size: 1.6,
 });
 
 /* ---- the brittla: glassy shards along its back --------------------------------------- */

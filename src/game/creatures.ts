@@ -859,6 +859,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   snedda: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   sheela: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   tanna: { kind: 'loads', n: 1, what: 'hides per cycle' },
+  dulla: { kind: 'more', n: 1, what: 'moss per cut' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -3452,9 +3453,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   dulla: {
     id: 'dulla',
-    name: 'Dulla',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Mossnib',
+    was: ['Dulla'],
+    // Asked for, with a reference sheet: Mossnib, Mossshear, Mossreaver. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Mossshear', description: '' },
+      { name: 'Mossreaver', description: '' },
+    ],
     health: 30,
     attack: 5,
     speed: 1.8,
@@ -3465,11 +3472,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'moss',
     workRange: 10,
+    // [shell, plates' edges and face]: the sheet's olive with cream, moss with oatmeal, straw olive with ivory, and sea sage with peach.
     variants: [
-      ['#6c7c8c', '#c8d4e0'],
-      ['#5c6c7c', '#b8c4d4'],
-      ['#7c8c9c', '#d4e0ec'],
-      ['#4c5c6c', '#a8b8c8'],
+      ['#6e7e38', '#f0d0a2'],
+      ['#5e7432', '#e8c898'],
+      ['#86883a', '#f4dcb8'],
+      ['#5a7450', '#f0cca8'],
     ],
     butcher: { meat: 4, fur: 4, leather: 3, bone: 2 },
     wound: 'bite',
@@ -4161,6 +4169,7 @@ sayLineLater('ulva', 'Level: tailoring.');
 sayLineLater('rippa', 'Level: carpentry.');
 sayLineLater('potta', 'Level: pottery.');
 sayLineLater('glimmip', 'Level: glassblowing.');
+sayLineLater('dulla', `Level: ${GATHER_SKILL.moss.replace(/_/g, ' ')}.`);
 
 /** Which species roam wild, by weight. */
 /**
