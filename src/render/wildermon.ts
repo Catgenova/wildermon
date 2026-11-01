@@ -41,7 +41,7 @@ import { HIDEWEAVER, PELTIPEDE, PELTLING } from './wild-pelt';
 import { BLOOMREAPER, PETALBLADE, SPRIGMANT } from './wild-mantis';
 import { WHEATCHEEKS, WHEATLEY, WHEATWHIRL } from './wild-hamster';
 import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
-import { CINDRA, FORGA, HOPPA, SCURRA, SIMMA } from './wild-hands2';
+import { CINDRA, FORGA, HOPPA, SIMMA } from './wild-hands2';
 import { AURELIAX, KINTSU, RELICRAWLER } from './wild-relic';
 import { PEBBLEBEAK, SOILWHISTLE, WORMHERON } from './wild-curlew';
 import { CHISSA, CORDRA, FLECHA, GLOSSA } from './wild-hands3';
@@ -66,6 +66,7 @@ import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
 import { BRITTLA, CRAKKA, FROSTA, LEECHA, ROOTLE, SCORCHA, WHIRLA } from './wild-abilities';
 import { MOSSNIB, MOSSREAVER, MOSSSHEAR } from './wild-moss';
 import { BEAMMASTER, LOGNIB, TIMBERSPLIT } from './wild-log';
+import { BRISTLEWARD, STONEPOLISH, WALLKIT } from './wild-wall';
 import { GALECREST, TEMPESTWYRM, ZEPHLET } from './wild-zephyr';
 
 /**
@@ -144,7 +145,7 @@ export const WILDERMON: Record<string, Kind> = {
   sprigga: LEMLET,
   ambra: SAPLET,
   petta: BRIARLING,
-  scurra: SCURRA,
+  scurra: WALLKIT,
   rippa: LOGKIT,
   chissa: CHISSA,
   mudda: SLIPLET,
@@ -234,6 +235,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   tanna: [PELTIPEDE, HIDEWEAVER],
   dulla: [MOSSSHEAR, MOSSREAVER],
   carra: [TIMBERSPLIT, BEAMMASTER],
+  scurra: [BRISTLEWARD, STONEPOLISH],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

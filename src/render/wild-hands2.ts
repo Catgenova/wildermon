@@ -9,14 +9,14 @@ import { links, snout } from './wild-hands';
 
 /**
  * More of the settlement's hands: the forga, the cindra, the hoppa,
- * the simma and the scurra (the bedda is the Sprigkit now,
- * `./wild-calico`, the petta the Briarling, `./wild-goat`, the potta the
+ * and the simma (the scurra is the Wallkit now, `./wild-wall`, the bedda
+ * the Sprigkit, `./wild-calico`, the petta the Briarling, `./wild-goat`, the potta the
  * Kilnlet, `./wild-kiln`, the
  * ambra the Saplet, `./wild-maple`, the relka the Kintsu, `./wild-relic`,
  * the sprigga the Lemlet, `./wild-lemur`, and the wurla the Pebblebeak,
  * `./wild-curlew`). As with
  * the first ten (`./wild-hands`), each wears the tool of its trade: tongs
- * for a tail, a spoon, a trowel, a scrubbing brush.
+ * for a tail, a spoon, a trowel.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -212,46 +212,3 @@ export const SIMMA: Kind = {
   stride: 1.35,
   size: 1.6,
 };
-
-/* ---- the scurra: bristles down its back, a scrubbing brush for a tail --------------- */
-
-const SCURRA_SPEC: QuadSpec = { ...pawed({ high: 1.25, len: 2.4, legs: 0.65, neck: 0.3, lean: 60, swing: [20, 34], ears: [40, 20], tail: [0.4, 6, 2] }), nose: 10 };
-const SCURRA_HEAD = { c: [0, 0.35, 0.1] as V3, r: [1.05, 0.98, 0.9] as V3 };
-
-function scurraBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = SCURRA_HEAD;
-  // Stiff bristles down its spine, in tufts.
-  const bristles = merge(...[-0.9, -0.55, -0.2, 0.15, 0.5].flatMap((y) => [-0.12, 0, 0.12].map((x) => taper([[x, y, 0.75], [x * 1.4, y - 0.05, 1.05]], 0.05, 0.015, 4, 'coatDark'))));
-  // A scrubbing brush for a tail: a wooden block and bristles under it.
-  const brush = merge(
-    taper([[0, 0.05, 0], [0, -0.25, 0]], 0.12, 0.09, n, 'coat'),
-    tube([[0, -0.25, 0.04], [0, -0.75, 0.04]], 0.2, 0.08, 6, 'wood', { up: [0, 0, 1] }),
-    ...[-0.12, 0, 0.12].flatMap((x) => [-0.35, -0.5, -0.65].map((y) => taper([[x, y, -0.02], [x, y, -0.18]], 0.04, 0.03, 4, 'stem'))),
-  );
-  return quadPieces({
-    n, k,
-    body: barrel(2.45, 1.1, 0.88),
-    neck: { w: 0.64, h: 0.62, len: 0.3 },
-    head: { c: H.c, r: H.r, face: snout(1.02, -0.18, [0.4, 0.3, 0.36], 0.12, n, k), eye: { dir: [0.72, 0.54, 0.34], size: 0.29, rim: 0.12 } },
-    ear: earMesh(0.34, 0.24, n),
-    earTurn: 35,
-    tail: [brush],
-    ...paws(n, k, 0.65, 0.26, 0.23, 'coatDark'),
-    extras: [{ key: 'bristles', mesh: bristles, bone: 'trunk', bias: 0.05, after: ['body'], thin: true }],
-  });
-}
-
-export const SCURRA: Kind = {
-  bones: quadBonesOf(SCURRA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it scrubs: the brush going hard from side to side.
-    if (a.go <= 0) p.tail[1] += 26 * Math.sin(a.t * TAU * 3) * beat(a.t, [4.4, 13.9, 20.5], 1.6);
-  }),
-  build: scurraBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ wood: [160, 116, 76], stem: [214, 196, 150] }), 220),
-  shadow: [1.5, 1.2],
-  stride: 1.35,
-  size: 1.6,
-};
-
