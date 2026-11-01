@@ -8,7 +8,7 @@ import { pressStamp } from './relicuse';
 import { itemDef, makersMark, rareInputSaid, rarityOf, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD } from './items';
 import { matOf, matOfItem, workingQl } from './materials';
 import { metalOfItem } from './melt';
-import { COIN_DIFFICULTY, COIN_METALS, COIN_REFUSAL, coinPurity, COINS_PER_LUMP, DIE_WEAR, isCasting, isMetalStock, METAL_BY_ID, METAL_BY_LUMP, metalOfBar, MOULD_BY_MAKES, type MouldDef } from './metal';
+import { COIN_DIFFICULTY, COIN_METALS, COIN_REFUSAL, coinPurity, COINS_PER_LUMP, DIE_WEAR, isCasting, isMetalStock, METAL_BY_ID, METAL_BY_LUMP, metalOfBar, MOULD_BY_MAKES, SMITH_TOOL, type MouldDef } from './metal';
 import type { CraftStock } from './recipes';
 
 /**
@@ -172,6 +172,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       if (!a) return 'It is gone.';
       const [cx, cy] = anvilCentre(a);
       if (Math.hypot(cx - g.player.x, cy - g.player.y) > 2.4) return 'Stand at the anvil.';
+      if (!g.inventory.has(SMITH_TOOL)) return `Need a ${itemDef(SMITH_TOOL).name.toLowerCase()}.`;
       if (!g.inventory.has('coin_die')) return 'Need a coin die.';
       const lump = lumpFor(g, t.kind === 'anvil' ? t.itemUid : undefined)?.item;
       if (!lump) return 'Need metal.';
@@ -243,6 +244,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       if (!a) return 'It is gone.';
       const [cx, cy] = anvilCentre(a);
       if (Math.hypot(cx - g.player.x, cy - g.player.y) > 2.4) return 'Stand at the anvil.';
+      if (!g.inventory.has(SMITH_TOOL)) return `Need a ${itemDef(SMITH_TOOL).name.toLowerCase()}.`;
       // A casting poured at the smelter, which is the only thing an anvil takes.
       const named = t.kind === 'anvil' ? t.itemUid : undefined;
       const casting = castingFor(g, named)?.item;

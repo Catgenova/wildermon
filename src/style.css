@@ -2963,7 +2963,7 @@ button.goal-row:focus-visible {
   display: inline-block;
   width: 0.8em;
   height: 0.8em;
-  margin-right: 4px;
+  margin-left: 6px;
   vertical-align: -0.05em;
   border: 1px solid var(--t-ring, rgba(255, 255, 255, 0.35));
   border-radius: 2px;

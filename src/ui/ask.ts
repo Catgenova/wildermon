@@ -128,13 +128,13 @@ export class Asker {
           const b = document.createElement('button');
           b.type = 'button';
           b.className = 'tb-btn ask-choice';
+          b.append(document.createTextNode(c.text));
           if (c.colour) {
             const sw = document.createElement('span');
             sw.className = 'inv-swatch';
             sw.style.background = c.colour;
             b.append(sw);
           }
-          b.append(document.createTextNode(c.text));
           b.addEventListener('click', () => this.close(c.key));
           picks.push(b);
           list.append(b);

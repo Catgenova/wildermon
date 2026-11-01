@@ -163,6 +163,11 @@ export interface MouldDef {
 
 /** The trade that forms every mould and pours it, whatever it casts (`pour_mould`). */
 export const MOULD_SKILL = 'blacksmithing';
+/**
+ * What every blacksmithing job is done with: firing a mould, pouring one, casting an anvil, smithing
+ * a casting, striking coins and fitting a padlock. Asked: "All smithing" needs a hammer.
+ */
+export const SMITH_TOOL = 'hammer';
 
 export const MOULDS: MouldDef[] = [
   { id: 'anvil_mould', name: 'Anvil mould', makes: 'anvil', skill: 'blacksmithing', sand: 4, difficulty: 10, lumps: 80 },

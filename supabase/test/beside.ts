@@ -246,6 +246,10 @@ begin
     and (i.def in ('iron_lump', 'iron_ore', 'log', 'shovel_head_mould', 'anvil_mould', 'casting', 'gold_lump',
                    'coin_die', 'file', 'whetstone', 'hatchet', 'apple', 'unfired_clay_bowl', 'shovel', 'coin',
                    'plank', 'shaft', 'thatch', 'peat', 'coal', 'timber') or is_bag(i.def));
+  -- The hammer every smithing job takes (smith_tool()), as the starting kit gives one.
+  insert into item (world_id, holder, holder_uid, def, ql, extra)
+    select w, 'player', me, smith_tool(), 20, 'Copper'
+     where not exists (select 1 from item where world_id = w and holder = 'player' and holder_uid = me and def = smith_tool());
 
   insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, lit, state, made_by)
     values (w, 'smelter', v_x + 1, v_y, 0, 0, v_x + 1.375, v_y + 0.25, 50, 600, true,

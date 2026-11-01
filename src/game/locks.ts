@@ -1,6 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
-import { keyFromPadlock, padlockFromKey, padlockToFit, type Item } from './items';
+import { itemDef, keyFromPadlock, padlockFromKey, padlockToFit, type Item } from './items';
+import { SMITH_TOOL } from './metal';
 import { gateLockable } from './gates';
 
 /**
@@ -95,6 +96,7 @@ export const LOCK_ACTIONS: ActionDef[] = [
       if (!store) return 'It is gone.';
       if (isLocked(store)) return 'Already padlocked.';
       if (!padlockToFit(g.inventory.items)) return 'Need a padlock: forge one at a smelter.';
+      if (!g.inventory.has(SMITH_TOOL)) return `Need a ${itemDef(SMITH_TOOL).name.toLowerCase()}.`;
       return null;
     },
     perform: (t, g) => {

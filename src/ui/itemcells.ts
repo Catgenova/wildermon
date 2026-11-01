@@ -41,13 +41,13 @@ export function nameCell(item: Item, opts: { worn?: boolean; occupant?: string }
   name.textContent = full;
   // The column is narrow and some of these names are long.
   name.title = item.locked ? `${full}. Kept back: never spent, dropped or fed away.` : full;
-  // A swatch of its colour, for a thing dyed and a bucket of dye, and the hex beside the name on hover.
+  // A swatch of its colour after the name, for a thing dyed and a bucket of dye, so names line up; the hex on hover.
   const hex = dyeHexOf(item.dye);
   if (hex) {
     const swatch = document.createElement('span');
     swatch.className = 'inv-swatch';
     swatch.style.backgroundColor = hex;
-    name.prepend(swatch);
+    name.append(swatch);
     name.title += ` · ${hex}`;
   }
   const rare = rarityOf(item);

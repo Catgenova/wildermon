@@ -4105,6 +4105,17 @@ jobs:
             --outfile=node_modules/.cache/carpenter.mjs --log-level=error
           node node_modules/.cache/carpenter.mjs
 
+      - name: Every smithing job takes a hammer
+        if: matrix.shard == 5
+        run: |
+          # The island's smith_tool() is the browser's SMITH_TOOL; every mould
+          # is fired with it on both sides; pouring, casting an anvil, smithing,
+          # striking coins and fitting a padlock each refuse without it, in the
+          # browser's words; no other blacksmithing job goes without it.
+          npx esbuild supabase/test/hammer.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/hammer.mjs --log-level=error
+          node node_modules/.cache/hammer.mjs
+
       - name: The Smith's perks, each where its rule is
         if: matrix.shard == 5
         run: |

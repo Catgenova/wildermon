@@ -163,6 +163,8 @@ begin
   insert into deed (world_id, name, x, y, radius, founded_by) values (w, 'Gatehold', 7, 10, 5, '${WHO.gil}');
   insert into deed (world_id, name, x, y, radius, founded_by) values (w, 'Annhold', 15, 16, 1, '${WHO.ann}');
   insert into deed_member (world_id, founder, uid, role) values (w, '${WHO.gil}', '${WHO.ben}', 'builder');
+  -- Gil, who fits the padlocks, has the hammer every smithing job takes, as the browser's kit gives him.
+  insert into item (world_id, holder, holder_uid, def, ql, extra) values (w, 'player', '${WHO.gil}', smith_tool(), 20, 'Copper');
   -- Kay holds a key to the portcullis and one to the hidden door, and Gil nothing: the ground is his.
   insert into item (world_id, holder, holder_uid, def, ql, count, keyed) values
     (w, 'player', '${WHO.kay}', 'key', 40, 1, ${LOCK_P}), (w, 'player', '${WHO.kay}', 'key', 40, 1, ${LOCK_H});

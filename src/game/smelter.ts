@@ -10,7 +10,7 @@ import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltLumps, meltQl, meltRefusal, metal
 import { matOf } from './materials';
 import {
   castSeconds, castWhole, INGOT_LUMPS, ingotOf, isMetalStock, isOreItem, lumpsIn, METAL_BY_LUMP, METAL_BY_ORE, metalOfBar, MOULD_BY_ID,
-  MOULD_DENT, MOULD_SKILL, mouldLumps, mouldUsesLeft, mouldWear, ORE_PER_LUMP, pourSeconds, smeltSeconds,
+  MOULD_DENT, MOULD_SKILL, mouldLumps, SMITH_TOOL, mouldUsesLeft, mouldWear, ORE_PER_LUMP, pourSeconds, smeltSeconds,
 } from './metal';
 
 /**
@@ -368,6 +368,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       if (!nearSmelter(g, s)) return 'Stand next to the smelter.';
       const mould = g.inventory.find('anvil_mould');
       if (!mould) return 'Need an anvil mould.';
+      if (!g.inventory.has(SMITH_TOOL)) return `Need a ${itemDef(SMITH_TOOL).name.toLowerCase()}.`;
       const def = MOULD_BY_ID.get('anvil_mould');
       const lump = t.kind === 'smelter' && t.itemUid !== undefined ? g.stockEntry(t.itemUid, g.forgeReach())?.item : undefined;
       if (!lump || !isMetalStock(lump.id)) return 'Choose the metal to pour.';
@@ -416,6 +417,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const def = mould && MOULD_BY_ID.get(mould.id);
       if (!mould || !def) return 'Choose a mould.';
       if (def.makes === 'anvil') return 'Use Cast an anvil.';
+      if (!g.inventory.has(SMITH_TOOL)) return `Need a ${itemDef(SMITH_TOOL).name.toLowerCase()}.`;
       const lump = t.kind === 'smelter' && t.itemUid !== undefined ? g.stockEntry(t.itemUid, g.forgeReach())?.item : undefined;
       const metal = lump && metalOfBar(lump.id);
       if (!lump || !metal) return 'Need metal.';

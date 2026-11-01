@@ -145,6 +145,8 @@ begin
   end loop; end loop;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
   delete from player_node where world_id = w and uid = u;
+  -- Every smithing job takes a hammer (SMITH_TOOL, the island's smith_tool()).
+  insert into item (world_id, holder, holder_uid, def, ql, extra) values (w, 'player', u, smith_tool(), 50, 'Iron');
   delete from placed where world_id = w and x between 6 and 15 and y between 6 and 13;
   update player set x = 9.5, y = 9.5, act = null, act_target = null, act_started = null, act_ends = null,
          act_left = null, act_goes = null, act_queue = '[]', craft_class = 'smith', combat_class = null,

@@ -16,7 +16,7 @@ import { FURNITURE, LIQUID_NAME, ONE_ALTAR, VESSELS } from './furniture';
 import { litresAtHand, litreSources, takeLitres } from './placeables';
 import { trellisWallWords } from './building';
 import { SUBTILES } from './crates';
-import { castWhole, INGOT_LUMPS, ingotOf, METAL_BY_LUMP, MOULD_BY_MAKES, MOULD_SKILL, MOULDS } from './metal';
+import { castWhole, INGOT_LUMPS, ingotOf, METAL_BY_LUMP, MOULD_BY_MAKES, MOULD_SKILL, MOULDS, SMITH_TOOL } from './metal';
 import { FISH } from './fishing';
 import { BOIL_IN, boilCount, boilCountPlain, boiledDye, boilRefusal, BOIL_LITRES, isBoilStuff } from './dyes';
 import { DYE_BUCKET, DYESTUFFS, dyeRecipeId } from './dyestuffs';
@@ -419,6 +419,7 @@ const MOULD_RECIPES: Recipe[] = MOULDS.map((m) => ({
   result: m.id,
   inputs: [{ item: 'sand', count: m.sand }],
   station: 'smelter' as Station,
+  tool: SMITH_TOOL,
   skill: MOULD_SKILL,
   label: `Fire ${/^[aeiou]/i.test(m.name) ? 'an' : 'a'} ${m.name.toLowerCase()}`,
   note: `Casts ${(m.per ?? 1) > 1 ? `${m.per} × ` : ''}${lower(m.makes)} from ${m.lumps} × metal lump, poured at a smelter${castWhole(m) ? '' : ', smithed at an anvil'}`,
