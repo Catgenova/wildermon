@@ -538,7 +538,7 @@ for (const bl of BLOWS) {
     island('SKEWER'));
 }
 check('Warning Thrust is refused on a creature already fighting you', island('WARN:FIGHTING') === 'The snarepup: already fighting you.', island('WARN:FIGHTING'));
-check('and on one that never goes looking for a fight', island('WARN:PREY') === 'The bura: not aggressive.', island('WARN:PREY'));
+check('and on one that never goes looking for a fight', island('WARN:PREY') === `The ${SPECIES.bura.name.toLowerCase()}: not aggressive.`, island('WARN:PREY'));
 {
   const [who, secs, line] = parts('WARN');
   check(`and a hunter warned off does not come for you for ${fx('warning_thrust', 'secs')} s, where one alike does`,

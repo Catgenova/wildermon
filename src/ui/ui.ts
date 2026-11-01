@@ -88,6 +88,7 @@ import { runestoneAt } from '../game/runestones';
 import { cornerReading, groundReading, yieldLines } from './tileinfo';
 import { deedWorkersAt, MAX_DEED_LEVEL, type Deed } from '../game/game';
 import { isFounder, lacks } from '../game/ranks';
+import { pannierRefusal, panniersOffered } from '../game/panniers';
 import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, skillName, type CraftStock, type Recipe } from '../game/recipes';
 import { CraftPanel } from './panels/craft';
 import { unseenNews } from './panels/news';
@@ -539,6 +540,7 @@ export class UI {
       game,
       (id) => this.cratePanel.open(id),
       (id) => this.cratePanel.openFurniture(id),
+      (id) => this.cratePanel.openPannier(id),
     );
     const deedWin = this.windows.create({ id: 'deed', title: 'Settlement', x: 12, y: 56, width: 360, height: 480, anchor: 'tr', open: false });
     this.deedPanel = new DeedPanel(deedWin, game, (x, y) => {
@@ -968,7 +970,7 @@ export class UI {
       if (held) store.takeN(p.uid, Math.min(n ?? Infinity, held.count));
       return;
     }
-    if ((g.ask || store.doors) && store.kind !== 'carried') {
+    if (g.ask || store.doors) {
       const id = store.doors ? (to === 'inventory' ? store.doors.out : store.doors.in)
         : to === 'inventory' ? 'take_from_store'
         : store.kind === 'crate' ? 'store_in_crate'
@@ -3323,8 +3325,16 @@ export class UI {
         });
       } else push(item('feed'));
     }
-    if ((SPECIES[c.species].pannier ?? 0) > 0 && c.mode !== 'wild' && c.mode !== 'stored') {
-      entries.push({ label: 'Open panniers', onSelect: () => this.cratePanel.openPannier(c.id) });
+    // A pack beast's panniers, opened as a chest is (`panniers.ts`): yours, or one whose keeper's stores your rank may use.
+    if (panniersOffered(c)) {
+      entries.push({
+        label: 'Open panniers',
+        onSelect: () => {
+          const why = pannierRefusal(g, c);
+          if (why) g.logMsg(why, 'error');
+          else this.cratePanel.openPannier(c.id);
+        },
+      });
     }
     /*
      * Brushing, pairing and looking one over: the husbandry, which the rules

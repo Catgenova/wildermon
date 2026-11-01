@@ -4,6 +4,7 @@ import type { Game } from '../../game/game';
 import { itemDef, itemName, type Item } from '../../game/items';
 import { STORE_SEEN } from '../../game/keep';
 import { CRAFT_REACH } from '../../game/recipes';
+import { pannierCap, pannierName, panniersOffered, pannierUnits } from '../../game/panniers';
 import type { UIWindow } from '../windows';
 
 /**
@@ -30,9 +31,10 @@ interface Holder {
    */
   kg?: number;
   heft?: number;
-  /** A crate id or a furniture id, for opening it. */
+  /** A crate id, a furniture id or a pack beast's id, for opening it. */
   crate?: number;
   piece?: number;
+  beast?: number;
 }
 
 /** Whether a store has nothing left, whichever way it is measured. */
@@ -53,6 +55,8 @@ export class StoresPanel {
     private readonly game: Game,
     private readonly openCrate: (id: number) => void,
     private readonly openFurniture: (id: number) => void,
+    /** A pack beast's panniers (`panniers.ts`). */
+    private readonly openPannier?: (id: number) => void,
   ) {
     win.body.classList.add('inv-body');
     this.search = document.createElement('input');
@@ -133,6 +137,11 @@ export class StoresPanel {
         units: furnitureUnits(f), capacity: furnitureCapacity(f),
         kg: furnitureKg(f), heft: furnitureHeft(f) || undefined, piece: f.id,
       });
+    }
+    // And a pack beast's panniers that open for you, where it stands (`panniers.ts`).
+    for (const c of g.creatures.list.values()) {
+      if (!panniersOffered(c)) continue;
+      out.push({ name: pannierName(c), centre: [c.x, c.y], items: c.pannier, units: pannierUnits(c), capacity: pannierCap(c), beast: c.id });
     }
     return out;
   }
@@ -218,6 +227,7 @@ export class StoresPanel {
       if (d < 2.4) {
         if (h.crate !== undefined) this.openCrate(h.crate);
         else if (h.piece !== undefined) this.openFurniture(h.piece);
+        else if (h.beast !== undefined) this.openPannier?.(h.beast);
         return;
       }
       this.game.moveTo(Math.floor(h.centre[0]), Math.floor(h.centre[1]));

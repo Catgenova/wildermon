@@ -61,7 +61,7 @@ function roles(d: SpeciesDef): Array<{ id: string; name: string; note: string }>
   for (const k of d.trades ?? []) if (k !== d.gathers) add('work', GATHER_VERB[k], `It may be set instead to ${GATHER_DO[k]}.`);
   if (d.mount) add('mount', 'Mount', 'Saddle and bridle it and ride.');
   if (d.draught) add('draught', 'Draught', 'It goes in the traces and learns the hills as it pulls.');
-  if (d.pannier) add('pannier', 'Packbeast', `Panniers on its own back: ${d.pannier} kg.`);
+  if (d.pannier) add('pannier', 'Packbeast', `Panniers: ${d.pannier.join(' / ')} items by stage.`);
   if (d.swims) add('swims', 'Swimmer', 'It crosses deep water with a rider on its back.');
   // On land its own pace, flat under a rider; in water its water pace (`swimSpeed`, `Game.mountSpeed`).
   if (d.swimSpeed !== undefined) add('swims', 'Water pace', `Ridden: ${+d.speed.toFixed(2)} tiles a second on land, ${+(d.swimSpeed * footing(0)).toFixed(2)} in water at 0 climbing.`);
@@ -107,7 +107,7 @@ const species = Object.values(SPECIES).map((d) => {
       mount: d.mount ?? null,
       pull: d.draught || d.pull !== undefined ? d.pull ?? 0.25 : null,
       pitch: d.pitch ?? null,
-      pannier: d.pannier ?? null,
+      pannier: d.pannier?.[0] ?? null,
       fleeceSeconds: d.fleece ? Math.round(1 / d.fleece) : null,
       glow: d.glow ?? null,
       unruly: d.unruly ?? null,

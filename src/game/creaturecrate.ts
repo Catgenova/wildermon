@@ -5,6 +5,7 @@ import { facingOf, furnitureCentre, furnitureDef, type PlacedFurniture } from '.
 import type { Side } from './building';
 import type { Game } from './game';
 import type { Item } from './items';
+import { pannierExitRefusal } from './panniers';
 
 /**
  * A wildermon crate: the one place a wildermon goes when it is neither
@@ -256,7 +257,8 @@ function swapRefusal(g: Game): string | null {
   const current = g.creatures.active();
   if (!current) return null;
   if (current.ridden) return `Get down off ${current.name} first.`;
-  return null;
+  // It goes into the crate this one leaves, and nothing goes into a crate with its panniers full (`panniers.ts`).
+  return pannierExitRefusal(current);
 }
 
 /** What a worker set to the deed will do, said the same way whether it came off a leash or out of a crate. */
@@ -286,7 +288,8 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
       const c = t.kind === 'creature' ? g.creatures.get(t.id) : undefined;
       if (!c) return 'Gone.';
       if (!emptyCrate(g)) return 'Need an empty wildermon crate in your pack.';
-      return null;
+      // Nothing goes into a crate with its panniers full (`panniers.ts`).
+      return pannierExitRefusal(c);
     },
     perform: (t, g) => {
       const c = t.kind === 'creature' ? g.creatures.get(t.id) : undefined;

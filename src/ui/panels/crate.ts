@@ -1,8 +1,8 @@
 import { capital } from '../../game/words';
-import { crateCentre, crateName, crateCapacity, crateShut, crateSpare, rackStock, rackTakes, STORE_REACH } from '../../game/crates';
+import { crateCentre, crateName, crateCapacity, crateKindOfItem, crateShut, crateSpare, rackStock, rackTakes, STORE_REACH } from '../../game/crates';
 import { furnitureCapacity, furnitureCentre, furnitureDef, furnitureHeft, furnitureName, furnitureRefuses, furnitureRoom, furnitureUnits, rackSpots, type PlacedFurniture } from '../../game/furniture';
 import { graveLine, graveName, graveSays, isGrave } from '../../game/graves';
-import { bloodMul } from '../../game/creatures';
+import { pannierAdd, pannierCap, pannierFullSaid, pannierName, panniersOffered, pannierSpare, pannierTake } from '../../game/panniers';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { bagAdd, bagRefuses, bagRoom, bagSpare, bagTake, itemDef, type Item, itemName } from '../../game/items';
@@ -52,12 +52,10 @@ export interface Store {
   /**
    * Which of the island's doors this one is behind, when it is behind one.
    *
-   * A pannier is carried in your own copy and has no door of its own, so a
-   * drag into or out of one stays where it always was. A crate, a chest and —
-   * since the bag work — a bag on your back are the island's, and a drag has
-   * to ask: `take_from_store` knows about all three.
+   * A crate, a chest, a bag on your back and a pack beast's panniers are the
+   * island's, and a drag has to ask: `take_from_store` knows about all four.
    */
-  kind: 'crate' | 'furniture' | 'bag' | 'carried' | 'counter' | 'rack';
+  kind: 'crate' | 'furniture' | 'bag' | 'pannier' | 'counter' | 'rack';
   /**
    * How `count` of a line is taken out, for a store whose lines are not one
    * row apiece: everything on a rack, where a line is a pile across several
@@ -289,22 +287,25 @@ export class CratePanel {
         add: (item) => this.game.crateAdd(crate, item),
       };
     }
+    /*
+     * A pack beast's panniers (`panniers.ts`), through the same window and the same doors as a chest: in by
+     * `store_in_pannier`, out by `take_from_store`, a row at a time, as the island has them. They stand where it stands.
+     */
     const beast = this.creatureId !== null ? this.game.creatures.get(this.creatureId) : undefined;
-    if (beast) {
-      const cap = Math.round((this.game.creatures.species(beast).pannier ?? 0) * bloodMul(beast, 'haul'));
-      const units = (): number => beast.pannier.reduce((n, it) => n + it.count, 0);
+    if (beast && panniersOffered(beast)) {
       return {
-        title: `${beast.name}'s panniers`,
+        title: pannierName(beast),
         id: beast.id,
         items: beast.pannier,
-        capacity: cap,
+        capacity: pannierCap(beast),
         centre: [beast.x, beast.y],
         what: 'panniers',
-        kind: 'carried',
-        take: (uid) => this.game.pannierTake(beast, uid),
-        refuses: () => (units() >= cap ? `${beast.name}: full.` : null),
-        fits: (item) => Math.min(item.count, Math.max(0, cap - units())),
-        add: (item) => this.game.pannierAdd(beast, item),
+        kind: 'pannier',
+        doors: { in: 'store_in_pannier', out: 'take_from_store' },
+        take: (uid) => pannierTake(this.game, beast, uid),
+        refuses: (item) => (crateKindOfItem(item.id) ? 'No crates in panniers.' : pannierSpare(beast) <= 0 ? pannierFullSaid(beast) : null),
+        fits: (item) => (crateKindOfItem(item.id) ? 0 : Math.min(item.count, pannierSpare(beast))),
+        add: (item) => pannierAdd(this.game, beast, item),
       };
     }
     // A bag carried in the pack, seen through the same window as a crate.
@@ -442,7 +443,7 @@ export class CratePanel {
    */
   private door(store: Store, what: 'in' | 'out'): ActionDef | undefined {
     if (store.doors) return ACTION_BY_ID.get(what === 'in' ? store.doors.in : store.doors.out);
-    if (!this.game.ask || store.kind === 'carried') return undefined;
+    if (!this.game.ask) return undefined;
     const id = what === 'out'
       ? store.kind === 'crate' || store.kind === 'rack' ? 'crate_take_all' : store.kind === 'bag' ? 'empty_bag' : 'furniture_take_all'
       : store.kind === 'crate' ? 'store_in_crate' : store.kind === 'rack' ? 'rack_put' : store.kind === 'bag' ? 'stow_item' : 'store_in_furniture';
@@ -535,7 +536,7 @@ export class CratePanel {
     const store = this.store();
     if (!store) return;
     const def = ACTION_BY_ID.get('take_from_store');
-    if (!this.game.ask || store.takeN || store.doors || store.kind === 'carried' || !def || items.length < 2) {
+    if (!this.game.ask || store.takeN || store.doors || !def || items.length < 2) {
       for (const it of items) this.takeOne(it);
       return;
     }
@@ -558,7 +559,7 @@ export class CratePanel {
       return;
     }
     const def = ACTION_BY_ID.get(store.doors?.out ?? 'take_from_store');
-    if ((this.game.ask || store.doors) && def && store.kind !== 'carried') {
+    if ((this.game.ask || store.doors) && def) {
       this.game.requestAction(def, { kind: 'item', uid: item.uid, count });
       return;
     }
@@ -836,7 +837,7 @@ export class CratePanel {
          * back — "it still rubber bands from crate to inventory".
          */
         const def = ACTION_BY_ID.get(store.doors?.out ?? 'take_from_store');
-        if ((this.game.ask || store.doors) && def && store.kind !== 'carried') {
+        if ((this.game.ask || store.doors) && def) {
           this.game.requestAction(def, { kind: 'item', uid: item.uid, count: item.count });
           return;
         }

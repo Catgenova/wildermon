@@ -53,6 +53,7 @@ import { FORM_IDS, formGives, formKey, formName, formOdds, formOfKey } from './w
 import { PERK_STAGE, STAGE_PERKS } from './creatures';
 import { stageSlots } from './traits';
 import { SWIM_DEPTH } from './player';
+import { CRAFT_REACH } from './recipes';
 
 export type GuideMark = 'seen' | 'tamed' | 'bred';
 export const GUIDE_MARKS: GuideMark[] = ['seen', 'tamed', 'bred'];
@@ -371,6 +372,11 @@ function keeping(def: SpeciesDef): string[] {
         : `; its ${SKILL_BY_ID.get(traces)?.name.toLowerCase() ?? traces} counts as climbing for team pace and the steepest step`));
   }
   if (def.sight) lines.push(`Sight for you: ${def.sight} tiles (most: ${KEPT_EYES})`);
+  // A pack beast's panniers by stage (`panniers.ts`), and where they count as a store.
+  if (def.pannier) {
+    const names = [def.name, ...(def.stages ?? []).map((s) => s.name)];
+    lines.push(`Panniers: ${def.pannier.map((n, s) => `${names[s] ?? names[0]} ${n}`).join(', ')} items; a store within ${CRAFT_REACH} tiles for crafting and building`);
+  }
   if (def.learns) {
     // And at its own pace, which evens out every trade's time to level (`LEARN_PACE`); pulling says its own.
     const pace = LEARN_PACE[def.learns.by];
