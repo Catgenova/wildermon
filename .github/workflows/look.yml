@@ -130,6 +130,15 @@ jobs:
                  (select string_agg(k || ' ' || round((v::text)::numeric), ', ' order by (v::text)::numeric desc)
                     from (select * from jsonb_each(t.stages) order by (value::text)::numeric desc limit 6) e(k, v)) as stages
                  from tick_time t where t.at > now() - interval '1 hour' order by t.ms desc limit 12"
+          # And which step inside a round: the clock's stages each run many functions, and one that took 20 s of a
+          # round's stir is a single worker's or creature's turn. What the database kept of its own timings.
+          ask "the worst single runs of a statement (pg_stat_statements)" "select left(regexp_replace(query, '\s+', ' ', 'g'), 110) as statement,
+                 calls, round(max_exec_time) as ms_worst, round(mean_exec_time::numeric, 2) as ms_each
+                 from pg_stat_statements where query not like '%pg_stat%' order by max_exec_time desc limit 15"
+          ask "functions by their own time (pg_stat_user_functions; track_functions)" "select current_setting('track_functions') as tracking,
+                 f.funcname, f.calls, round(f.total_time) as ms_total, round(f.self_time) as ms_self,
+                 round((f.total_time / greatest(f.calls, 1))::numeric, 2) as ms_each
+                 from pg_stat_user_functions f order by f.self_time desc limit 25"
           ask "rounds over 2 s, by 5 minutes, last 3 hours" "select to_char(date_trunc('hour', at) + floor(extract(minute from at) / 5) * interval '5 minutes', 'HH24:MI') as at,
                  count(*) filter (where ms > 2000) as over_2s, round(max(ms)::numeric) as worst, round(avg(ms)::numeric) as avg
                  from tick_time where at > now() - interval '3 hours' group by 1 order by 1"
