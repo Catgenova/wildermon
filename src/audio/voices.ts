@@ -37,6 +37,7 @@ import { SLUG_VOICE } from './voice-slug';
 import { PENGUIN_VOICE } from './voice-penguin';
 import { BEE_VOICE } from './voice-bee';
 import { PAPYRUS_VOICE } from './voice-papyrus';
+import { MOSS_VOICE } from './voice-moss';
 import { PELT_VOICE } from './voice-pelt';
 import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
@@ -181,4 +182,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   sheela: SHEAR_VOICE,
   // The Peltling, the Peltipede and the Hideweaver.
   tanna: PELT_VOICE,
+  // The Mossnib, the Mossshear and the Mossreaver.
+  dulla: MOSS_VOICE,
 };

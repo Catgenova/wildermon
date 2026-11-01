@@ -859,6 +859,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   snedda: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   sheela: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   tanna: { kind: 'loads', n: 1, what: 'hides per cycle' },
+  dulla: { kind: 'more', n: 1, what: 'moss per cut' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -1258,7 +1259,7 @@ export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // Out to the ground and home with a load.
   forage: 0.99, botanize: 1, woodcut: 0.97, farm: 0.96, mine: 1.01, quarry: 1.04, sand: 1.05, clay: 1.01, peat: 1.04,
   reed: 1.04, fetch: 1, compost: 1.03, fruit: 1.01, bush: 1.12, grass: 1.01, sprout: 0.99, resin: 1.06, flower: 1.04,
-  worm: 0.98, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 1.01, hive: 1.01, moss: 1.14,
+  worm: 0.98, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 1.01, hive: 1.01, moss: 1.05,
   // At the stores, a fire, a press or a barrel, one thing after another.
   mend: 1.05, restore: 0.7, tan: 0.84, mill: 0.81, saw: 0.84, chisel: 0.88, brick: 0.84,
   rope: 0.88, fletch: 0.88, cook: 0.88, paper: 0.84, spin: 0.86, nail: 0.86, ribbon: 0.86, glass: 0.84, ash: 1.02, brew: 0.75,
@@ -3452,9 +3453,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   dulla: {
     id: 'dulla',
-    name: 'Dulla',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Mossnib',
+    was: ['Dulla'],
+    // Asked for, with a reference sheet: Mossnib, Mossshear, Mossreaver. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Mossshear', description: '' },
+      { name: 'Mossreaver', description: '' },
+    ],
     health: 30,
     attack: 5,
     speed: 1.8,
@@ -3465,11 +3472,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'moss',
     workRange: 10,
+    // [shell, plates' edges and face]: the sheet's olive with cream, moss with oatmeal, straw olive with ivory, and sea sage with peach.
     variants: [
-      ['#6c7c8c', '#c8d4e0'],
-      ['#5c6c7c', '#b8c4d4'],
-      ['#7c8c9c', '#d4e0ec'],
-      ['#4c5c6c', '#a8b8c8'],
+      ['#6e7e38', '#f0d0a2'],
+      ['#5e7432', '#e8c898'],
+      ['#86883a', '#f4dcb8'],
+      ['#5a7450', '#f0cca8'],
     ],
     butcher: { meat: 4, fur: 4, leather: 3, bone: 2 },
     wound: 'bite',
@@ -4161,6 +4169,7 @@ sayLineLater('ulva', 'Level: tailoring.');
 sayLineLater('rippa', 'Level: carpentry.');
 sayLineLater('potta', 'Level: pottery.');
 sayLineLater('glimmip', 'Level: glassblowing.');
+sayLineLater('dulla', `Level: ${GATHER_SKILL.moss.replace(/_/g, ' ')}.`);
 
 /** Which species roam wild, by weight. */
 /**
