@@ -15,7 +15,8 @@
  * station is (a butter churn, a lit smelter, a lit campfire), and says why it stands idle where it is not; an alloy
  * comes out at its lumps' quality as your own hands' does; moss is cut and carried home; a grape cutting is planted at
  * a trellis with no vine on soil, and no other; a water lily root and lotus seeds are planted in still water deep
- * enough; a carcass and a bare pot are left as they are.
+ * enough; a carcass and a bare pot are left as they are. And a Spiralphant, an awla at its third stage, carves its line's
+ * one more shaft from each log (`STAGE_PERKS`), on both sides.
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
@@ -23,8 +24,8 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { deedJobLine } from '../../src/game/creaturecrate';
 import {
-  ALLOY_QL, EVOLVE_AT, GATHER_DO, GATHER_SKILL, HANDS_TRADES, kindNow, LEARN_PACE, LOAD_TRADES, REMOVED_KINDS, sparsAsGuard, SPECIES, TEND_JOBS, tradeRecipes, WILD_SPECIES,
-  STAGE_PERKS, workerSkipsTools, type Creature, type GatherKind,
+  ALLOY_QL, EVOLVE_AT, GATHER_DO, perkN, stageLoads, STAGE_PERKS, GATHER_SKILL, HANDS_TRADES, kindNow, LEARN_PACE, LOAD_TRADES, REMOVED_KINDS, sparsAsGuard, SPECIES, TEND_JOBS, tradeRecipes, WILD_SPECIES,
+  workerSkipsTools, type Creature, type GatherKind,
 } from '../../src/game/creatures';
 import { idleSays } from '../../src/game/workerlog';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
@@ -242,6 +243,11 @@ ${CASES.map((c) => `
   ${ready('carra').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(BEAM_SKILLS)}'::jsonb`)}
   insert into said select 'BEAM', ${held};
   ${after('carra')}
+  -- SPIRALPHANT: an awla at its third stage carves its line's more shafts from each log, two logs in one go.
+  ${stocked([['log', 2]])}
+  ${ready('awla').replace("skills = '{}'::jsonb", `skills = '{"${GATHER_SKILL.shaft}": ${EVOLVE_AT[1] + 5}}'::jsonb`)}
+  insert into said select 'SPIRALPHANT', ${held} || '|' || (select stage_of(c2) from creature c2 where c2.world_id = w and c2.id = (select id from hand where species = 'awla'));
+  ${after('awla')}
 
   -- VINE: a trellis on grass with no vine, one with a vine already, one on sand; three cuttings.
   perform land_set_tile(w, 21, 14, tile_id('Sand'));
@@ -359,6 +365,13 @@ for (const c of CASES) {
     stores === `moss ${2 * MOSS_PER_CUT}` && cut === 'true,true' && Number(skill) > 1, at('MOSS'));
 }
 check(`on the island, a Beammaster saws a log into ${beamWants()}`, at('BEAM') === beamWants(), at('BEAM'));
+{
+  // Two logs, both carved in the one go at its stage's batches, each its recipe's shafts and its line's one more.
+  const each = RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n;
+  const [stores, stage] = at('SPIRALPHANT').split('|');
+  check(`on the island, a ${SPECIES.awla.stages![1].name} carves ${each} shafts from a log (its recipe's ${RECIPE_BY_ID.get('make_shafts')!.count} and ${STAGE_PERKS.awla.n} more)`,
+    STAGE_PERKS.awla.kind === 'more' && stores === `shaft ${2 * each}` && stage === '2', at('SPIRALPHANT'));
+}
 {
   const [stores, vines] = at('VINE').split('|');
   check('on the island, a rootle plants a cutting at the trellis on grass with no vine, and none at the one with a vine or the one on sand',
@@ -526,6 +539,16 @@ for (const k of CASES) {
   c.skills = { ...BEAM_SKILLS };
   run(g, 120);
   check(`in the browser, a Beammaster saws a log into ${beamWants()}`, inCrate(crate) === beamWants(), inCrate(crate));
+}
+{
+  const g = body();
+  const crate = stock(g, [['log', 2]]);
+  const c = worker(g, 'awla');
+  c.skills = { [GATHER_SKILL.shaft]: EVOLVE_AT[1] + 5 };
+  run(g, 120);
+  const each = RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n;
+  check(`in the browser, a ${SPECIES.awla.stages![1].name} carves ${each} shafts from a log, both logs in one go`,
+    perkN(c, 'more') === STAGE_PERKS.awla.n && stageLoads(c) >= 2 && inCrate(crate) === `shaft ${2 * each}`, inCrate(crate));
 }
 {
   const g = body();

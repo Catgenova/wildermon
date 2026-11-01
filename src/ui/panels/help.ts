@@ -939,6 +939,7 @@ const HAND_NUMBERS: Record<string, string> = {
   tanna: `a hide and ${TAN_LYE} L lye per leather. Evolves: ${evolves('tanna')}; ${perkLine('tanna').toLowerCase()}`,
   dulla: `evolves: ${evolves('dulla')}; ${perkLine('dulla').toLowerCase()}`,
   carra: `evolves: ${evolves('carra')}; ${perkLine('carra').toLowerCase()}`,
+  awla: `evolves: ${evolves('awla')}; ${perkLine('awla').toLowerCase()} (${RECIPE_BY_ID.get('make_shafts')!.count} to ${RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n})`,
 };
 
 /**

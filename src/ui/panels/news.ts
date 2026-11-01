@@ -4229,6 +4229,15 @@ export const NEWS: News[] = [
     lines: () => [`Changed: goblins, orcs, ogres and dragons drawn ${MONSTER_GROWTH}× their size (was: 1×).`],
   },
   {
+    n: 413,
+    day: '2026-11-01',
+    lines: () => {
+      const d = SPECIES.awla, [one, two] = d.stages!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('awla')} (${RECIPE_BY_ID.get('make_shafts')!.count} to ${RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n}).`,
+        'Each stage: own model, animations and voice.'];
+    },
+  },
+  {
     n: 412,
     day: '2026-11-01',
     lines: () => {
