@@ -12,7 +12,8 @@
  * makes, on every batch, as a Glimmip's glass does at a smelter: a
  * Spiralphant carves five shafts from a log where the recipe makes four. No
  * other kind that works at the stores has a `more` (`perk_n` is nought for
- * it), so nothing else changes. The browser's `recipeStep`.
+ * it), so nothing else changes. The browser's `recipeStep`. Left as it is
+ * where that change is already made.
  *
  * A definitions migration does not lock the doors; this one does.
  */
@@ -27,6 +28,9 @@ begin
     select pg_get_functiondef(p.oid) into v_def from pg_proc p join pg_namespace s on s.oid = p.pronamespace
      where s.nspname = r.sch and p.proname = r.fn;
     if v_def is null then raise exception '%.% is not on this island', r.sch, r.fn; end if;
+    -- Another line's migration may have made the same change already (the Carra's Lognib line does): then there is
+    -- nothing to do.
+    continue when (length(v_def) - length(replace(v_def, r.new, ''))) / length(r.new) = 1;
     v_n := (length(v_def) - length(replace(v_def, r.old, ''))) / length(r.old);
     if v_n <> 1 then raise exception '%.% has % of the lines to change, not 1', r.sch, r.fn, v_n; end if;
     execute replace(v_def, r.old, r.new);
