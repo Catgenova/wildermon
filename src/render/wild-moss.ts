@@ -403,7 +403,7 @@ function frond(root: V3, dir: V3, face: V3, L: number, w: number, mat: Mat, fine
  * A clump of moss: a low lumpy mound, bright on top and darker round its foot, ringed with fronds lying out over the shell
  * around it.
  */
-function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: boolean, hang = false): Mesh {
+export function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: boolean, hang = false): Mesh {
   const z = unit(n);
   let x = cross([0, 1, 0], z);
   if (len3(x) < 1e-4) x = [1, 0, 0];

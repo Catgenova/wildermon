@@ -860,6 +860,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   sheela: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   tanna: { kind: 'loads', n: 1, what: 'hides per cycle' },
   dulla: { kind: 'more', n: 1, what: 'moss per cut' },
+  awla: { kind: 'more', n: 1, what: 'shafts per log' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -3239,9 +3240,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   awla: {
     id: 'awla',
-    name: 'Awla',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Spiralcalf',
+    was: ['Awla'],
+    // Asked for, with a reference sheet: Spiralcalf, Spiraltrunk, Spiralphant. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Spiraltrunk', description: '' },
+      { name: 'Spiralphant', description: '' },
+    ],
     health: 30,
     attack: 8,
     speed: 1.9,
@@ -3252,11 +3259,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'shaft',
     workRange: 10,
+    // [hide, coat and spiral]: the sheet's grey-lavender with cream, slate lilac with oatmeal, dove with ivory, and storm with wheat.
     variants: [
-      ['#8c7c64', '#dcd0bc'],
-      ['#7c6c5c', '#d0c4b4'],
-      ['#948468', '#e4d8c0'],
-      ['#6c6050', '#c4b8a4'],
+      ['#958b8f', '#f2d8ac'],
+      ['#878086', '#e8cc9e'],
+      ['#a49a9e', '#f6e2bc'],
+      ['#7e767a', '#ecc894'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 3, tusk: 1 },
     wound: 'pierce',
@@ -4170,6 +4178,7 @@ sayLineLater('rippa', 'Level: carpentry.');
 sayLineLater('potta', 'Level: pottery.');
 sayLineLater('glimmip', 'Level: glassblowing.');
 sayLineLater('dulla', `Level: ${GATHER_SKILL.moss.replace(/_/g, ' ')}.`);
+sayLineLater('awla', `Level: ${GATHER_SKILL.shaft}.`);
 
 /** Which species roam wild, by weight. */
 /**
@@ -7823,7 +7832,7 @@ export class Creatures {
     if (kind === 'prospect') return this.prospectStep(game, c, goto, near, range, deed);
     if (kind === 'groom' || kind === 'dairy' || kind === 'heal') return this.herdStep(game, c, kind, goto, near, range);
     const atStores = STORE_RECIPES[kind];
-    if (atStores) return this.recipeStep(game, c, atStores, goto);
+    if (atStores) return this.recipeStep(game, c, atStores, goto, perkN(c, 'more'));
     if (kind === 'lamp') return this.lampStep(game, c, goto, near, range);
     if (kind === 'smelt' || kind === 'kiln') return this.furnaceStep(game, c, kind, goto, near, range);
     if (kind === 'ash') return this.ashStep(game, c, goto, near) || this.recipeStep(game, c, LYE_RECIPES, goto) || this.why(c, 'range', range);
@@ -8684,17 +8693,18 @@ export class Creatures {
   /**
    * Tanning and milling: a recipe worked at the stores, its inputs taken out
    * of them, no tool needed, and what it makes -- with what it
-   * hands back, a bucket after the lye -- put back in. The island's
-   * `errand_do`.
+   * hands back, a bucket after the lye -- put back in; `more`, what its
+   * line's third stage adds to what each batch makes (a Spiralphant's
+   * shafts). The island's `errand_do`.
    */
-  private recipeStep(game: Game, c: Creature, recipes: readonly string[], goto: (x: number, y: number, reach?: number) => boolean): boolean {
+  private recipeStep(game: Game, c: Creature, recipes: readonly string[], goto: (x: number, y: number, reach?: number) => boolean, more = 0): boolean {
     if (c.carrying) return false;
     const job = this.recipeInStores(game, recipes);
     if (!job) return this.why(c, 'stock');
     const { recipe: r, at } = job;
     if (!goto(at.centre[0], at.centre[1])) return true;
-    this.workRecipe(game, c, r, at, at.x, at.y);
-    this.moreRecipes(game, c, recipes, at, at.x, at.y);
+    this.workRecipe(game, c, r, at, at.x, at.y, true, more);
+    this.moreRecipes(game, c, recipes, at, at.x, at.y, more);
     return true;
   }
 
