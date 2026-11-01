@@ -860,6 +860,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   sheela: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   tanna: { kind: 'loads', n: 1, what: 'hides per cycle' },
   dulla: { kind: 'more', n: 1, what: 'moss per cut' },
+  cindra: { kind: 'loads', n: 1, what: 'actions per cycle' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2688,8 +2689,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   cindra: {
     id: 'cindra',
-    name: 'Cindra',
+    name: 'Emberkit',
+    was: ['Cindra'],
+    // Asked for, with a reference sheet: Emberkit, Emberbrush, Ashsweeper. Its words, and each stage's, are written from
+    // these once the rule's numbers are here (`sayLine`).
     description: 'Settlement task: rake whole ashes from your campfires, ovens, smelters and kilns into your settlement stores; with none to rake, leach ash and a bucket of water from your settlement stores into lye, per the lye recipe.',
+    stages: [
+      { name: 'Emberbrush', description: '' },
+      { name: 'Ashsweeper', description: '' },
+    ],
     health: 18,
     attack: 2,
     speed: 2,
@@ -2700,11 +2708,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'ash',
     workRange: 8,
+    // [fur, ruff and plumes]: the sheet's ember red with cream, rust with oatmeal, crimson with ivory, and flame orange with straw.
     variants: [
-      ['#9a9894', '#e4e2dc'],
-      ['#8a8478', '#d8d2c4'],
-      ['#a4a0a8', '#e8e4ec'],
-      ['#7c7a74', '#cac6bc'],
+      ['#b8402c', '#f2dcb8'],
+      ['#9c4a2e', '#e8d0a8'],
+      ['#a8302e', '#f6e6cc'],
+      ['#c8642c', '#f0d8a0'],
     ],
     butcher: { meat: 2, fur: 3, leather: 1, bone: 1 },
     nearTar: true,
@@ -4560,6 +4569,7 @@ sayLine('sheela', SPECIES.sheela.description, 'Level: animal husbandry.');
 sayLine('papra', SPECIES.papra.description, 'Level: papyrusmaking.');
 sayLine('ambra', SPECIES.ambra.description, 'Level: forestry.');
 sayLine('snedda', SPECIES.snedda.description, 'Level: forestry.');
+sayLine('cindra', SPECIES.cindra.description, `Level: ${GATHER_SKILL.ash}.`);
 describeFrom('hive', { vesp: SPECIES.vesp.name });
 describeGoals({ vesp: SPECIES.vesp.name });
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });

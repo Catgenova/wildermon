@@ -41,7 +41,8 @@ import { HIDEWEAVER, PELTIPEDE, PELTLING } from './wild-pelt';
 import { BLOOMREAPER, PETALBLADE, SPRIGMANT } from './wild-mantis';
 import { WHEATCHEEKS, WHEATLEY, WHEATWHIRL } from './wild-hamster';
 import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
-import { CINDRA, FORGA, HOPPA, SCURRA, SIMMA } from './wild-hands2';
+import { FORGA, HOPPA, SCURRA, SIMMA } from './wild-hands2';
+import { ASHSWEEPER, EMBERBRUSH, EMBERKIT } from './wild-ember';
 import { AURELIAX, KINTSU, RELICRAWLER } from './wild-relic';
 import { PEBBLEBEAK, SOILWHISTLE, WORMHERON } from './wild-curlew';
 import { CHISSA, CORDRA, FLECHA, GLOSSA } from './wild-hands3';
@@ -134,7 +135,7 @@ export const WILDERMON: Record<string, Kind> = {
   siffa: RIBBONIP,
   forga: FORGA,
   potta: KILNLET,
-  cindra: CINDRA,
+  cindra: EMBERKIT,
   hoppa: HOPPA,
   simma: SIMMA,
   relka: KINTSU,
@@ -232,6 +233,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   snedda: [CANOPYSHAPER, GROVEMASTER],
   tanna: [PELTIPEDE, HIDEWEAVER],
   dulla: [MOSSSHEAR, MOSSREAVER],
+  cindra: [EMBERBRUSH, ASHSWEEPER],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

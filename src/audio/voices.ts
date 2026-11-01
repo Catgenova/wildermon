@@ -38,6 +38,7 @@ import { PENGUIN_VOICE } from './voice-penguin';
 import { BEE_VOICE } from './voice-bee';
 import { PAPYRUS_VOICE } from './voice-papyrus';
 import { MOSS_VOICE } from './voice-moss';
+import { EMBER_VOICE } from './voice-ember';
 import { PELT_VOICE } from './voice-pelt';
 import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
@@ -184,4 +185,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   tanna: PELT_VOICE,
   // The Mossnib, the Mossshear and the Mossreaver.
   dulla: MOSS_VOICE,
+  // The Emberkit, the Emberbrush and the Ashsweeper.
+  cindra: EMBER_VOICE,
 };

@@ -938,6 +938,7 @@ const HAND_NUMBERS: Record<string, string> = {
   petta: `it leaves every tile within ${SKEP_REACH} of a skep or a hive to the bees`,
   tanna: `a hide and ${TAN_LYE} L lye per leather. Evolves: ${evolves('tanna')}; ${perkLine('tanna').toLowerCase()}`,
   dulla: `evolves: ${evolves('dulla')}; ${perkLine('dulla').toLowerCase()}`,
+  cindra: `evolves: ${evolves('cindra')}; ${perkLine('cindra').toLowerCase()}`,
 };
 
 /**
