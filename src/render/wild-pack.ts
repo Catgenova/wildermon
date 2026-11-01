@@ -558,7 +558,12 @@ function packBones(s: Pack): (a: Anim) => Bones {
 
 /** The barrel: brown over its back and flanks, cream under its belly. */
 function barrelOf(s: Pack, n: number): Mesh {
-  const F = smoothRings(s.body, 3);
+  // Rounded off at the rump and the chest: a ring a third the size a little past each end, so neither end is a flat cap.
+  const B = s.body, last = B.y.length - 1, d = 0.1 * s.len;
+  const F = smoothRings({
+    y: [B.y[0] - d, ...B.y, B.y[last] + d], z: [B.z[0], ...B.z, B.z[last]],
+    w: [B.w[0] * 0.35, ...B.w, B.w[last] * 0.35], h: [B.h[0] * 0.35, ...B.h, B.h[last] * 0.35],
+  }, 3);
   return tube(F.y.map((y, q) => [0, y, F.z[q]] as V3), F.w, F.h, n, (_ring, j) => (under(n, j, 0.9) ? 'belly' : 'coat'));
 }
 
@@ -757,7 +762,9 @@ function mantleOf(s: Pack): Mesh {
       const dir = unit(sub(down, scale(e.n, dot(down, e.n) - 0.08)));
       const L = M.leaf * (0.9 + 0.25 * jitter(id + 1)) * (1 - 0.3 * Math.abs(a) / M.wide);
       const mat: Mat = jitter(id + 2) < 0.22 ? 'coat' : jitter(id + 2) < 0.55 ? 'leafDark' : 'leaf';
-      out.push(leafOf(add(e.p, scale(e.n, 0.02 + 0.012 * row)), dir, scale(e.n, -0.25), e.n, L * 1.15, L * 0.62, mat, 'leafDark', undefined, 0.18,
+      // Raised over the middle of its back and lower toward the edges and the ends, a hump of leaves.
+      const hump = M.deep * 0.7 * Math.sin(Math.PI * clamp(k * 0.9 + 0.05)) * (1 - Math.abs(a) / (M.wide * 1.1));
+      out.push(leafOf(add(e.p, scale(e.n, 0.02 + 0.012 * row + hump)), dir, scale(e.n, -0.25), e.n, L * 1.15, L * 0.62, mat, 'leafDark', undefined, 0.18,
         (row + q) % 2 === 0 ? 'bloom' : undefined));
     }
   }
@@ -769,7 +776,7 @@ function mantleOf(s: Pack): Mesh {
     for (const a of s.stage ? [-0.45, 0, 0.45] : [-0.3, 0.3]) {
       const e = onBack(B, y, a + (jitter(id) - 0.5) * 0.15);
       const R = M.deep * (0.8 + 0.5 * swell) * (a ? 0.85 : 1);
-      out.push(clumpOf(add(e.p, scale(e.n, 0.03 + 0.015 * rows)), e.n, R, id * 3 + Math.round(a * 4), 5));
+      out.push(clumpOf(add(e.p, scale(e.n, 0.03 + 0.015 * rows + M.deep * 0.45 * swell)), e.n, R * 1.15, id * 3 + Math.round(a * 4), 5));
     }
   }
   // The rump's fall: leaves fanned out back and down over its tail.
