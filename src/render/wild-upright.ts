@@ -223,6 +223,9 @@ function goblinBuild(lod: number): Piece[] {
   ];
 }
 
+/** How much bigger the monsters are drawn than they were built to be. Asked: "Increase the base size of goblins, orcs, trolls, and dragons 5x". */
+export const MONSTER_GROWTH = 5;
+
 export const GOBLIN: Kind = {
   bones: (a) => bipedBones(GOBLIN_SPEC, a, (p: BipedPose) => {
     // The blade held out ahead of it at the belly, point forward and out, going or standing: low enough that seen side on it is
@@ -256,7 +259,7 @@ export const GOBLIN: Kind = {
   },
   shadow: [1.1, 1.0],
   stride: 1.7,
-  size: 2.0,
+  size: 2.0 * MONSTER_GROWTH,
   blinks: 3,
 };
 
@@ -366,7 +369,7 @@ export const ORC: Kind = {
   },
   shadow: [1.6, 1.3],
   stride: 1.5,
-  size: 4.1,
+  size: 4.1 * MONSTER_GROWTH,
   blinks: 5,
 };
 
@@ -512,6 +515,6 @@ export const OGRE: Kind = {
   },
   shadow: [2.1, 1.7],
   stride: 1.3,
-  size: 6.0,
+  size: 6.0 * MONSTER_GROWTH,
   blinks: 6,
 };

@@ -1,4 +1,5 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
+import { MONSTER_GROWTH } from '../../render/wild-upright';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
@@ -4221,6 +4222,11 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 418,
+    day: '2026-11-01',
+    lines: () => [`Changed: goblins, orcs, ogres and dragons drawn ${MONSTER_GROWTH}× their size (was: 1×).`],
   },
   {
     n: 412,

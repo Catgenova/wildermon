@@ -4,7 +4,7 @@ import {
 } from './beasts';
 import { joint, mesh, type Face, type Mat, type Mesh, type V3 } from './figure';
 import { blade, cut, earMesh, pawMesh, quadPieces, under } from './beastkit';
-import { glower } from './wild-upright';
+import { glower, MONSTER_GROWTH } from './wild-upright';
 
 /**
  * The dragon: there is one. A great body on four legs with a ridge of slate
@@ -196,7 +196,7 @@ export const DRAGON: Kind = {
   },
   shadow: [4.6, 2.3],
   stride: 0.7,
-  size: 4.2,
+  size: 4.2 * MONSTER_GROWTH,
   blinks: 6,
   glow: (b, a) => {
     const t = b.trunk ?? b.body;
