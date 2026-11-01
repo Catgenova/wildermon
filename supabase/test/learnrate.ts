@@ -335,7 +335,7 @@ check('the island\'s learn_pace_def is LEARN_PACE, every trade and way of learni
 const CASES: Array<[species: string, skill: string]> = [
   ['tinka', 'repair'], ['tinka', 'foraging'], ['holla', 'carrying'], ['sedra', 'foraging'], ['cobbe', 'masonry'], ['magga', 'foraging'],
   ['warda', 'awareness'], ['lume', 'awareness'], ['woola', 'animal_husbandry'], ['roxxen', 'driving'], ['roxxen', 'climbing'],
-  ['sparra', 'fighting'], ['ulva', 'tailoring'], ['testa', 'body_strength'], ['dowse', 'blacksmithing'], ['embra', 'smelting'], ['crawler', 'digging'],
+  ['sparra', 'fighting'], ['ulva', 'tailoring'], ['thumpa', 'body_strength'], ['dowse', 'blacksmithing'], ['embra', 'smelting'], ['crawler', 'digging'],
 ];
 const MIRA = '7e5b0000-0000-4000-8000-0000000000e1';
 const out = psql(`

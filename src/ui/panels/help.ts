@@ -916,9 +916,9 @@ const evolves = (id: string): string => {
   return st ? `${st[0].name} at ${EVOLVE_AT[0]}, ${st[1].name} at ${EVOLVE_AT[1]}` : 'none';
 };
 /** The wildermon that fight in a way of their own (`FightStyle`), in the order the help gives them. */
-const FIGHTERS = ['testa', 'skulka', 'gasha', 'thumpa', 'sparra'];
+const FIGHTERS = ['thumpa', 'sparra'];
 /** The wildermon with an ability of their own (`AbilityId`), in the order the help gives them. */
-const ABLE = ['lungra', 'hamma', 'bashka', 'executa', 'shova', 'howla', 'marka', 'wardo', 'stona', 'whispet'];
+const ABLE = ['lungra', 'stona', 'whispet'];
 const HAND_NUMBERS: Record<string, string> = {
   kemma: `a brushing puts in ${percent(groomGain(1, 1))} care (${CARE_SAID}) at no husbandry and ${percent(groomGain(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}, as a keeper of its skill with a brush as good. Evolves: ${evolves('kemma')}`,
   sheela: `a full fleece gives ${SHEAR_WOOL} wool and a full crop of feathers ${SHEAR_FEATHERS}, and a cudda a bucket of milk; evolves: ${evolves('sheela')}`,

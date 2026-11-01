@@ -24,7 +24,7 @@
  * No worker glazes or butchers any more: those two trades go, and their
  * branches with them. The ten of these that kept watch no longer do, and
  * have no ability or fighting style: that comes in with the definitions
- * (`20261101100000_defs.sql`), which are the species, the trades' skills and
+ * (`20261101100002_defs.sql`, after the guards that are gone go), which are the species, the trades' skills and
  * words, and their learning paces. One of yours keeps its level: its new
  * trade's skill is put at least at its old one's, whatever it had in its arms
  * goes into your stores, and a spar it was in is over.

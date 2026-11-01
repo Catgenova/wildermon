@@ -1,5 +1,5 @@
 import type { ActionDef, Target } from './actions';
-import { SPECIES, type ButcherPart } from './creatures';
+import { REMOVED_KINDS, SPECIES, type ButcherPart } from './creatures';
 import { productQlRange, type Game } from './game';
 import { HOARD_METALS, itemDef, itemName, type Item } from './items';
 
@@ -53,7 +53,9 @@ const GLAND_CHANCE = 0.35;
 /** The kind a carcass is of, by the name it carries: the kind's, a stage's, or one it used to have (`SpeciesDef.was`). */
 export const corpseSpecies = (item: Item): (typeof SPECIES)[string] | undefined => {
   const name = (item.extra ?? '').toLowerCase();
-  return Object.values(SPECIES).find((s) => [s.name, ...(s.stages ?? []).map((x) => x.name), ...(s.was ?? [])].some((n) => n.toLowerCase() === name));
+  const kind = Object.values(SPECIES).find((s) => [s.name, ...(s.stages ?? []).map((x) => x.name), ...(s.was ?? [])].some((n) => n.toLowerCase() === name));
+  // A carcass of a kind taken out of the game is one of the kind it became (`REMOVED_KINDS`).
+  return kind ?? SPECIES[Object.values(REMOVED_KINDS).find((r) => r.name.toLowerCase() === name)?.becomes ?? ''];
 };
 
 /**

@@ -246,8 +246,8 @@ check(`the numbers are the same on both sides: ${TIRE_GOES} goes, ${REST_FOR} se
 check('a kind that evolves sleeps in the bed of its stage: small, medium, large',
   LEVELS.every((lv, i) => denClass({ species: 'sedra', skills: { foraging: lv } }) === i));
 check(`a kind that does not evolve sleeps by its health: under ${DEN_HEALTH[0]} small, under ${DEN_HEALTH[1]} medium, else large`,
-  denClass({ species: SMALL, skills: {} }) === 0 && denClass({ species: 'carra', skills: {} }) === 1 && denClass({ species: 'testa', skills: {} }) === 2
-  && SPECIES[SMALL].health < DEN_HEALTH[0] && SPECIES.carra.health >= DEN_HEALTH[0] && SPECIES.carra.health < DEN_HEALTH[1] && SPECIES.testa.health >= DEN_HEALTH[1]);
+  denClass({ species: SMALL, skills: {} }) === 0 && denClass({ species: 'carra', skills: {} }) === 1 && denClass({ species: 'crakka', skills: {} }) === 2
+  && SPECIES[SMALL].health < DEN_HEALTH[0] && SPECIES.carra.health >= DEN_HEALTH[0] && SPECIES.carra.health < DEN_HEALTH[1] && SPECIES.crakka.health >= DEN_HEALTH[1]);
 
 /* ---- on the island ----------------------------------------------------------------------------------------------- */
 

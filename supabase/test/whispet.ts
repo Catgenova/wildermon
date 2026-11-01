@@ -176,7 +176,7 @@ ${MOMENTS.map(([m], i) => `  insert into said select 'HOLDS:${i}', season_holds(
 
   -- A wild one fights as any other does.
   a := creature_spawn(w, 'whispet', 16.5, 16.5, 'wild', now() - interval '60 days', null);
-  t := creature_spawn(w, 'gasha', 17.5, 16.5, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'thumpa', 17.5, 16.5, 'active', now() - interval '60 days', u);
   update creature set health = 5000 where world_id = w and id = t;
   perform creature_attack(w, a, t);
   insert into said select 'WILD', (health < 5000)::text from creature where world_id = w and id = t;
@@ -362,7 +362,7 @@ const wildOne = (id: string, health = 5000): Creature => {
 }
 {
   const a = g.creatures.spawn('whispet', px + 2, py, 'wild', g.rand, g.time - 3600 * 24 * 30);
-  const t = g.creatures.spawn('gasha', px + 3, py, 'active', g.rand, g.time - 3600 * 24 * 30);
+  const t = g.creatures.spawn('thumpa', px + 3, py, 'active', g.rand, g.time - 3600 * 24 * 30);
   t.health = 5000;
   g.creatures.attack(g, a, t);
   check('a wild Whispet strikes as any other wild thing, and frightens nothing', t.health < 5000 && markOn(g, t, 'fear', 0) === 0 && markOn(g, a, 'ability', 0) === 0);
