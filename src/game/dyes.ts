@@ -2,7 +2,8 @@ import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { ARMOUR_BY_ID } from './gear';
 import { describeFrom, describeWith, ITEM_DEFS, itemDef, type Item } from './items';
-import { BUCKET_LITRES, furnitureCentre, furnitureName, holdsLiquid, isWell, litresIn, type PlacedFurniture } from './furniture';
+import { BUCKET_LITRES, furnitureCentre, furnitureDef, furnitureName, holdsLiquid, isWell, litresIn, type PlacedFurniture } from './furniture';
+import { BRUSH_TOOL, lacksTool } from './jobtools';
 import { drawFrom, dyeInPiece, litresAtHand, lyeCarried, LYE_USE, NEED_LYE, takeLitres, vesselBecomes } from './placeables';
 import { bestSheet, CHART_SHEET } from './cartography';
 import { MIND_GAIN, tryGain } from './learn';
@@ -398,6 +399,48 @@ type ItemTarget = Extract<Target, { kind: 'item' }>;
 const isItem = (t: Target): t is ItemTarget => t.kind === 'item';
 const itemOf = (g: Game, t: Target): Item | undefined => (isItem(t) ? g.inventory.get(t.uid) : undefined);
 
+/*
+ * Scrubbed off with a brush, the other way to remove a dye than boiling it out in lye (`strip_dye`, `strip_wall_paint`):
+ * no lye, and no skill, so a go is worked at 50 as every job without one is. On a thing in the pack, a piece set down
+ * that took a dye (a banner, a flagpole, a boat), a painted side of a wall and a painted floor (`buildActions.ts`).
+ * The island's `private.scrub_refusal` and `private.perform_scrub`, and `build_refusal`'s and `perform_building`'s own.
+ */
+/** What it is scrubbed with, worn a go's worth every go as every job's tool is. */
+export const SCRUB_TOOL = BRUSH_TOOL;
+/** Seconds a go at skill 1, at no skill worked at 50: twice a lye removal's (`strip_dye`) at alchemy 50. */
+export const SCRUB_TIME = 12;
+/** Wind a go: twice a lye removal's. */
+export const SCRUB_WIND = 0.04;
+/** What every removal says of a thing with no dye on it. */
+export const NO_COLOUR = 'No colour to remove.';
+/** What a removal off a thing says: "Dye removed: plain banner." */
+export const dyeRemovedSaid = (name: string): string => `Dye removed: plain ${name.toLowerCase()}.`;
+
+type PieceTarget = Extract<Target, { kind: 'furniture' }>;
+/** A piece set down, aimed at. */
+const pieceAt = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.furniture.get((t as PieceTarget).id) : undefined);
+/** Whether a thing carries a colour of its own to remove: dyed, and of a kind that takes a dye (not a barrel's dye). */
+const coloured = (thing: { dye?: string } | undefined, kind: string | undefined): boolean => !!thing?.dye && !!kind && takesDye(kind);
+
+/**
+ * Why a scrubbing off a thing in the pack or a piece set down will not go, or null: the brush, first, as the island's
+ * tool check comes first; a piece's padlock, as lifting it asks (`pick_up_furniture`); and a colour to remove. The
+ * reach is the walk's business here and the island's there (`private.scrub_refusal`).
+ */
+export function scrubRefusal(g: Game, t: Target): string | null {
+  const brush = lacksTool(g, SCRUB_TOOL);
+  if (brush) return brush;
+  if (t.kind === 'furniture') {
+    const f = pieceAt(g, t);
+    if (!f) return 'It is gone.';
+    const shut = g.lockRefusal(f);
+    if (shut) return shut;
+    return coloured(f, f.kind) ? null : NO_COLOUR;
+  }
+  const it = itemOf(g, t);
+  return coloured(it, it?.id) ? null : NO_COLOUR;
+}
+
 export const DYE_ACTIONS: ActionDef[] = [
   {
     id: 'dye_item',
@@ -519,7 +562,7 @@ export const DYE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const it = itemOf(g, t);
-      if (!it?.dye || !takesDye(it.id)) return 'No colour to remove.';
+      if (!it?.dye || !takesDye(it.id)) return NO_COLOUR;
       if (litresAtHand(lyeCarried(g)) < LYE_USE) return NEED_LYE;
       return null;
     },
@@ -528,7 +571,37 @@ export const DYE_ACTIONS: ActionDef[] = [
       if (!it || !takeLitres(lyeCarried(g), LYE_USE)) return;
       delete it.dye;
       g.gainSkill('alchemy', 0.2);
-      g.logMsg(`Dye removed: plain ${itemDef(it.id).name.toLowerCase()}.`, 'event');
+      g.logMsg(dyeRemovedSaid(itemDef(it.id).name), 'event');
+      g.events.emit('inventory');
+    },
+  },
+  {
+    id: 'scrub_dye',
+    label: 'Scrub off dye',
+    verb: 'scrubbing off dye',
+    tool: SCRUB_TOOL,
+    stamina: SCRUB_WIND,
+    baseTime: SCRUB_TIME,
+    applies: (t, g) => {
+      const it = itemOf(g, t);
+      const f = pieceAt(g, t);
+      return coloured(it, it?.id) || coloured(f, f?.kind);
+    },
+    check: (t, g) => scrubRefusal(g, t),
+    perform: (t, g) => {
+      if (scrubRefusal(g, t)) return;
+      const f = pieceAt(g, t);
+      if (f) {
+        delete f.dye;
+        g.logMsg(dyeRemovedSaid(furnitureDef(f.kind).name), 'event');
+        g.events.emit('world', f.x, f.y);
+        return;
+      }
+      const it = itemOf(g, t);
+      if (!it) return;
+      delete it.dye;
+      g.inventory.onChange?.();
+      g.logMsg(dyeRemovedSaid(itemDef(it.id).name), 'event');
       g.events.emit('inventory');
     },
   },

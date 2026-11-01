@@ -3554,6 +3554,16 @@ jobs:
           npx esbuild supabase/test/dyerecipes.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/dyerecipes.mjs --log-level=error
           node node_modules/.cache/dyerecipes.mjs
+      - name: Dye is scrubbed off with a brush, the same on both sides
+        if: matrix.shard == 4
+        run: |
+          # Scrub off dye on a dyed cloth in the pack and a dyed banner set down, Scrub off paint on a painted side,
+          # Scrub off floor paint on a painted floor: each refused without a brush in the general tool words, with
+          # nothing to remove, padlocked against you or out of reach in the same words on both sides; a go of each comes
+          # out plain, says the lye removals' words, wears the brush a go's worth once and uses no lye.
+          npx esbuild supabase/test/scrubdye.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/scrubdye.mjs --log-level=error
+          node node_modules/.cache/scrubdye.mjs
       - name: A failed craft damages what it would have used, by its QL, the same on both sides
         if: matrix.shard == 6
         run: |
