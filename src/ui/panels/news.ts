@@ -83,7 +83,7 @@ import { GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
 import { ARTIFACT_FOR, SHEAR_FROM, SHEAR_WOOL } from '../../game/creatureActions';
 import { GRAPE_WINE_GRAPES } from '../../game/brewing';
-import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
+import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
 import { GATHER_SKILL, LEARN_PACE as PACE_258, sparTaskSays } from '../../game/creatures';
@@ -190,9 +190,9 @@ import { DEVICE_COUNT } from '../../render/furniture';
 import { FLOWER_MOST, FLOWER_SEASONS } from '../../world/flowers';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFFS, dyeHex, kgSaid, LEGACY_DYES, LEGACY_POT_LITRES,
-  LEGACY_POTS, legacyLiquid, PRIMARIES, pureDye, mixDye, sharesSaid,
+  LEGACY_POTS, legacyLiquid, PRIMARIES, pureDye, mixDye, sharesSaid, DYE_PARTS, DYE_RECIPE, RECIPE_STUFF, qlSaid,
 } from '../../game/dyestuffs';
-import { BOIL_LITRES, boilCountPlain, gramsOf } from '../../game/dyes';
+import { BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, boilCountPlain, gramsOf, MAKE_DYE_RECIPE, recipeShares, shareGrams } from '../../game/dyes';
 import { GREEN_ACTIONS, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET } from '../../game/greening';
 import { BUCKET_LITRES, FURNITURE, WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { BAY_PAST_HEFT, BRIDGE_BILL_TIMES, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBridge, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, STONE_ARCH, THROWN, WAGON_WIDTH, WIDEST } from '../../game/bridges';
@@ -4220,6 +4220,20 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 410,
+    day: '2026-11-01',
+    lines: () => {
+      // The one the help shows too: equal red and blue, a quarter of the way down to black.
+      const l = mixDye(pureDye('red', Math.round((DYE_QL_BLACK + DYE_QL_PURE * 3) / 4)), 1, pureDye('blue', Math.round((DYE_QL_BLACK + DYE_QL_PURE * 3) / 4)), 1);
+      const name = (id: string): string => itemDef(id).name.toLowerCase();
+      return [`Added: ${ACTION_BY_ID.get(MAKE_DYE_RECIPE)?.label} on a bucket of dye or a dye barrel: one sheet of ${name(CHART_SHEET)} becomes a ${name(DYE_RECIPE)} of the dye's mix and QL. `
+        + `Name: colour and hex. Examine: per ${BOIL_LITRES} L of lye, each primary's share of ${kgSaid(shareGrams(DYE_PARTS))} kg of ${listed(PRIMARIES.map((p) => `${name(RECIPE_STUFF[p])} (${p})`))}.`,
+        `Added: ${ACTION_BY_ID.get(BOIL_DYE_RECIPE)?.label}: a ${name(BOIL_IN)} and the dyestuffs listed; ${BOIL_LITRES} L of exactly the recipe's mix. QL: your alchemy's roll, at most the recipe's. `
+          + 'Alchemy, time, stamina and failure as a dyestuff boil. Recipe kept.',
+        `Example: ${colourWord(dyeHex(l))} (${dyeHex(l)}) at QL ${qlSaid(l.ql)}, ${sharesSaid(l)}: ${recipeShares(l).map((s) => `${kgSaid(s.grams)} kg of ${name(s.from)} (${s.count})`).join(', ')}.`];
+    },
   },
   {
     n: 409,

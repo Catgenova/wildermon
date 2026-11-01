@@ -118,6 +118,13 @@ export const DYESTUFF_OF = new Map(DYESTUFFS.map((d) => [d.from, d]));
 /** The recipe that boils a dyestuff. */
 export const dyeRecipeId = (from: string): string => `make_dye_${from}`;
 
+/**
+ * The dyestuff a dye recipe names for each primary (`dyes.ts`, Boil from recipe):
+ * the easiest of that primary to boil, the first of them on a tie.
+ */
+export const RECIPE_STUFF: Readonly<Record<Primary, string>> = Object.fromEntries(PRIMARIES.map((p) => [p,
+  DYESTUFFS.filter((d) => d.primary === p).reduce((a, b) => (b.difficulty < a.difficulty ? b : a)).from])) as Record<Primary, string>;
+
 /* ---- the liquid --------------------------------------------------------- */
 
 /** A QL kept to the hundredth, between 1 and 100. */
@@ -155,6 +162,16 @@ export const isDyeText = (text: string | null | undefined): boolean => !!text &&
 
 /** The one thing in a pack that carries dye: a bucket of it. */
 export const DYE_BUCKET = 'dye_bucket';
+/**
+ * A dye written down on papyrus (`dyes.ts`, Make a recipe): its `dye` is the
+ * dye's text with no litres, `r500y0b500q4000`, and it is named by its colour
+ * like anything dyed.
+ */
+export const DYE_RECIPE = 'dye_recipe';
+/** The dye a recipe records, or null for anything that is not one. */
+export const recipeOf = (item: { id: string; dye?: string | null } | null | undefined): DyeLiquid | null =>
+  (item?.id === DYE_RECIPE ? readDye(item.dye)?.liquid ?? null : null);
+
 /** The dye in a bucket of it, and how many litres. */
 export const dyeIn = (item: { id: string; dye?: string | null } | null | undefined): { liquid: DyeLiquid; litres: number } | null =>
   (item?.id === DYE_BUCKET ? readDye(item.dye) : null);
@@ -287,7 +304,7 @@ export interface Tint {
 /** Parts out of a thousand as a share: "60%", "33.3%". */
 const partsSaid = (p: number): string => `${Math.floor(p / 10)}${p % 10 ? `.${p % 10}` : ''}%`;
 /** A QL to the hundredth: "41.25", "7.00". */
-const qlSaid = (ql: number): string => {
+export const qlSaid = (ql: number): string => {
   const q = Math.floor(ql * 100 + 0.5);
   return `${Math.floor(q / 100)}.${String(q % 100).padStart(2, '0')}`;
 };

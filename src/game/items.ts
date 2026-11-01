@@ -1,6 +1,6 @@
 import { matOfItem, workingQl } from './materials';
 import { COINS_PER_LUMP, INGOT_LUMPS, INGOT_WEIGHT, ingotOf, METALS, MOULDS, RARE_LUMP_FACTOR } from './metal';
-import { dyeIn, dyeHex, colourWord, dyeWord } from './dyestuffs';
+import { dyeIn, dyeHex, colourWord, dyeWord, recipeOf } from './dyestuffs';
 import { MATERIAL_BY_ID, WALL_TYPES } from './building';
 import { candleBurn, lanternReach, torchBurn, torchReach } from './light';
 import { CLOSE_CLOTH, CLOSE_RIGHT } from './wounds';
@@ -486,6 +486,9 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
     description: 'Up to {bucketLitres} litres of one mix of red, yellow and blue at one QL, in the lye bucket it was boiled in. A boil: {dyeBoil} litres of one primary, {perKg} litre per kg of dyestuff. '
       + 'Poured into an empty or dye barrel: mixes; each primary\'s percentage and the QL average by litres. QL is brightness: black at {qlBlack}, the mix at {qlPure}, white at {qlWhite}. '
       + 'Litres per dyeing: garment, cloth, bag, saddle or bridle {dye.garment}; banner or flag {dye.banner}; sailing boat {dye.sail}; caravel {dye.ship}; wall side or floor tile {dye.wall}. From one bucket in your pack or one dye barrel within reach.' },
+  // A dye written down (`dyes.ts`, Make a recipe and Boil from recipe): the mix and QL are its `dye`.
+  dye_recipe: { name: 'Dye recipe', category: 'misc', weight: 0.05, decay: 14,
+    description: 'On {sheet}: one dye\'s mix and QL. Boil from recipe: a bucket of lye ({litres} L) and the dyestuffs listed; output {litres} L of exactly that mix, QL as a boil and at most the recipe\'s. Recipe not used up.' },
   banner: { name: 'Banner', category: 'misc', weight: 4, decay: 5, description: 'Plant on the settlement: flies your colour.' },
   flagpole: { name: 'Flagpole', category: 'misc', weight: 8, decay: 5, description: 'Flag flies downwind: straight out in a gale, hanging in a calm. Dyed: your colour. On a settlement: the settlement\'s device.' },
   rose_arch: { name: 'Rose arch', category: 'misc', weight: 30, decay: 5, description: 'One tile across; walk through it. {rule}' },
@@ -1533,6 +1536,8 @@ export function itemName(item: Item): string {
   else if (def.charges || def.fills) name += ` (${litresOf(item)} L)`;
   // And the goes an ancient stamp has left in it (`relicuse.ts`): an Ancient stamp (3 goes).
   else if (item.id === 'ancient_stamp') name += ` (${Math.max(0, item.charges ?? STAMP_GOES_NAMED)} goes)`;
+  // And the hex of the dye a recipe records: a Purple dye recipe (#660066).
+  else if (recipeOf(item)) name += ` (${dyeHex(recipeOf(item)!)})`;
   // And who is in it, for a wildermon crate in a store: a Wildermon crate (Biscuit).
   if (item.occupant) name += ` (${item.occupant})`;
   // And what is enchanted into it: a Sword (iron) (Emberbrand).

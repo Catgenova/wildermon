@@ -1,12 +1,15 @@
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { ARMOUR_BY_ID } from './gear';
-import { describeWith, ITEM_DEFS, itemDef, type Item } from './items';
-import { BUCKET_LITRES, furnitureName, holdsLiquid, isWell, litresIn, type PlacedFurniture } from './furniture';
+import { describeFrom, describeWith, ITEM_DEFS, itemDef, type Item } from './items';
+import { BUCKET_LITRES, furnitureCentre, furnitureName, holdsLiquid, isWell, litresIn, type PlacedFurniture } from './furniture';
 import { drawFrom, dyeInPiece, litresAtHand, lyeCarried, LYE_USE, NEED_LYE, takeLitres, vesselBecomes } from './placeables';
+import { bestSheet, CHART_SHEET } from './cartography';
+import { MIND_GAIN, tryGain } from './learn';
 import {
-  colourWord, DYE_BUCKET, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PANE_LITRES, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, dyeHex, dyeIn, dyeLitresFor,
-  dyeRecipeId, dyeSays, DYESTUFF_OF, DYESTUFFS, dyeText, isHex, kgSaid, pureDye, type DyeLiquid, type Dyestuff,
+  colourWord, DYE_BUCKET, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PANE_LITRES, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, DYE_RECIPE, dyeGrams, dyeHex, dyeIn,
+  dyeLitresFor, dyeQl, dyeRecipeId, dyeSays, DYESTUFF_OF, DYESTUFFS, dyeText, isHex, kgSaid, PRIMARIES, pureDye, qlSaid, RECIPE_STUFF, recipeOf, sharesSaid,
+  type DyeLiquid, type Dyestuff, type Primary,
 } from './dyestuffs';
 
 /**
@@ -66,6 +69,11 @@ export function takesDye(id: string): boolean {
 export const BOIL_IN = 'lye_bucket';
 export const BOIL_LITRES = BUCKET_LITRES;
 
+/** The trade a boil is worked on, and the seconds and wind a go takes: from a dyestuff (`recipes.ts`) or from a recipe. */
+export const DYE_SKILL = 'alchemy';
+export const DYE_BOIL_TIME = 12;
+export const DYE_BOIL_WIND = 0.04;
+
 /** One of a dyestuff, in grams: what a boil weighs it by. */
 export const gramsOf = (id: string): number => Math.round(itemDef(id).weight * 1000);
 /** The fewest whole items of a dyestuff that weigh `grams` or more. */
@@ -100,10 +108,13 @@ export const boilCountPlain = (item: string): number => countForGrams(item, dyeG
  * you have 3.2 kg." The island's `dye_boil_refusal`.
  */
 export function boilRefusal(g: Game, recipe: string, item: string, have: number): string | null {
-  const grams = boilGrams(g, recipe);
-  if (have * gramsOf(item) >= grams) return null;
-  return `Need ${kgSaid(grams)} kg of ${stuffName(item)} per ${BOIL_LITRES} litres of lye; have ${kgSaid(have * gramsOf(item))} kg.`;
+  return weightRefusal(item, boilGrams(g, recipe), have);
 }
+
+/** Why `have` of a dyestuff is short of `grams` of it for a boil, or null. The island's `dye_weight_refusal`. */
+export const weightRefusal = (item: string, grams: number, have: number): string | null =>
+  (have * gramsOf(item) >= grams ? null
+    : `Need ${kgSaid(grams)} kg of ${stuffName(item)} per ${BOIL_LITRES} litres of lye; have ${kgSaid(have * gramsOf(item))} kg.`);
 
 /** What a dyestuff's card says it is for, off the boil itself. */
 export const dyestuffUse = (d: Dyestuff): string =>
@@ -128,6 +139,141 @@ export function boiledDye(g: Game, made: Item, from: string, used: number): void
   made.dye = dyeText(pureDye(stuff.primary, made.ql), BOIL_LITRES);
   g.inventory.onChange?.();
   g.logMsg(boilSaid(from, used), 'event');
+}
+
+/* ---- a dye written down, and boiled again -------------------------------- */
+
+/**
+ * A recipe: a dye written down, to boil again.
+ *
+ * **Make a recipe**, on a bucket of dye in the pack or a barrel of dye beside
+ * you, turns a sheet of papyrus (the best in the pack, as a map is copied onto)
+ * into a dye recipe that records the dye's parts and QL (`DYE_RECIPE`, its
+ * `dye`). Nothing is taken out of the dye.
+ *
+ * **Boil from recipe**, on the recipe, is a boil as a dyestuff's is (the trade,
+ * the seconds, the wind, the roll and what a failed one loses), done in one
+ * bucket of lye with each primary of the mix's dyestuff (`RECIPE_STUFF`) by its
+ * share of a whole boil's weight (`shareGrams`): the bucket comes off as
+ * `BOIL_LITRES` of exactly the recipe's parts, at the QL the boil rolls and
+ * never above the recipe's. The recipe is kept. The island's `dye_recipe_*`.
+ */
+export const MAKE_DYE_RECIPE = 'make_dye_recipe';
+export const BOIL_DYE_RECIPE = 'boil_dye_recipe';
+/** Seconds and wind writing one takes. */
+export const RECIPE_TIME = 6;
+export const RECIPE_WIND = 0.01;
+
+/**
+ * Grams of a primary's dyestuff a boil from a recipe takes for `parts` of it:
+ * its share of a whole boil's weight, under the litres a kilo makes and the
+ * share of the weight asked (`dyeGrams`). Whole grams, rounded up. The
+ * island's `dye_share_grams`.
+ */
+export const shareGrams = (parts: number, perKg = DYE_LITRES_PER_KG, need = 1): number =>
+  Math.ceil((BOIL_LITRES * 1000 * parts / DYE_PARTS / perKg) * need - 1e-6);
+
+/** One primary of a recipe's mix: its dyestuff, the grams of it and the fewest whole items over them. */
+export interface RecipeShare {
+  primary: Primary;
+  from: string;
+  grams: number;
+  count: number;
+}
+
+/** Each primary in the mix, in order, at the grams `grams` gives: with no perk, what a recipe is written down as. */
+export const recipeShares = (l: DyeLiquid, grams: (p: Primary, from: string) => number = (p) => shareGrams(l[p])): RecipeShare[] =>
+  PRIMARIES.filter((p) => l[p] > 0).map((p) => {
+    const from = RECIPE_STUFF[p];
+    const n = grams(p, from);
+    return { primary: p, from, grams: n, count: countForGrams(from, n) };
+  });
+
+/** And what a boil from it takes from you, under your perks: a Naturalist's Double Boil and Thrifty Dyer, as on the dyestuff's own boil. */
+export const sharesFor = (g: Game, l: DyeLiquid): RecipeShare[] =>
+  recipeShares(l, (p, from) => shareGrams(l[p], g.perk('litres:dye', DYE_LITRES_PER_KG), g.perk(`need:${dyeRecipeId(from)}`, 1)));
+
+/** How hard a boil from it is: the hardest boil of the dyestuffs it takes. The island's `dye_recipe_hard`. */
+export const recipeDifficulty = (l: DyeLiquid): number =>
+  Math.max(0, ...recipeShares(l).map((s) => DYESTUFF_OF.get(s.from)?.difficulty ?? 0));
+/**
+ * And the dyestuff's boil it is rolled as, the hardest of them and the first on a tie, so that what is surer
+ * on a boil is surer on this (a Naturalist's Sure Boil, `fail:` and the recipe). The island's `dye_recipe_job`.
+ */
+export const recipeBoilOf = (l: DyeLiquid): string => {
+  const hard = recipeDifficulty(l);
+  const s = recipeShares(l).find((x) => (DYESTUFF_OF.get(x.from)?.difficulty ?? 0) === hard);
+  return s ? dyeRecipeId(s.from) : BOIL_DYE_RECIPE;
+};
+
+/** One share said: "2.5 kg of raspberries (25)". */
+const shareSaid = (s: RecipeShare): string => `${kgSaid(s.grams)} kg of ${stuffName(s.from)} (${s.count})`;
+
+/**
+ * What Examine adds of a recipe: the colour, the mix, and per bucket of lye
+ * the kilos of each dyestuff and what comes off. The island's `dye_recipe_says`.
+ */
+export const recipeSays = (l: DyeLiquid): string =>
+  ` Recipe: ${colourWord(dyeHex(l))}, ${dyeHex(l)}: ${sharesSaid(l)}. Per ${BOIL_LITRES} L of lye: ${recipeShares(l).map(shareSaid).join(', ')}.`
+  + ` Output: ${BOIL_LITRES} L, QL at most ${qlSaid(l.ql)}.`;
+
+/** What making and boiling one say. The island's `dye_recipe_said` and the rest. */
+export const DYE_RECIPE_SAID = {
+  gone: 'It is gone.',
+  noDye: 'No dye in it.',
+  far: 'Stand next to it.',
+  noSheet: `Need a sheet of ${itemDef(CHART_SHEET).name.toLowerCase()}.`,
+  blank: 'Recipe is blank.',
+  noLye: `Need ${/^[aeiou]/i.test(itemDef(BOIL_IN).name) ? 'an' : 'a'} ${itemDef(BOIL_IN).name.toLowerCase()}.`,
+  failed: `Failed: ${itemDef(DYE_BUCKET).name.toLowerCase()}.`,
+};
+export const recipeWrittenSaid = (l: DyeLiquid): string =>
+  `Recipe written: ${colourWord(dyeHex(l))}, ${dyeHex(l)} at QL ${qlSaid(l.ql)}: ${sharesSaid(l)}.`;
+export const recipeBoiledSaid = (shares: readonly RecipeShare[], made: DyeLiquid): string =>
+  `Boiled from recipe: ${shares.map(shareSaid).join(', ')}, in ${BOIL_LITRES} litres of lye. Made: ${dyeSays(made, BOIL_LITRES)}`;
+
+const nearPiece = (g: Game, f: PlacedFurniture, range = 2.4): boolean => {
+  const [cx, cy] = furnitureCentre(f);
+  return Math.hypot(cx - g.player.x, cy - g.player.y) <= range;
+};
+const pieceOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.furniture.get(t.id) : undefined);
+
+/** The dye a recipe would be written from: a bucket of it in the pack, or a barrel of it. */
+const recipeSource = (g: Game, t: Target): DyeLiquid | null => {
+  if (t.kind === 'furniture') {
+    const f = pieceOf(g, t);
+    return f ? dyeInPiece(f) : null;
+  }
+  return dyeIn(itemOf(g, t))?.liquid ?? null;
+};
+
+/** Why a recipe will not be written from this, or null. The island's `dye_recipe_refusal`, question for question. */
+export function makeRecipeRefusal(g: Game, t: Target): string | null {
+  if (t.kind === 'furniture') {
+    const f = pieceOf(g, t);
+    if (!f) return DYE_RECIPE_SAID.gone;
+    if (!nearPiece(g, f)) return DYE_RECIPE_SAID.far;
+    if (!dyeInPiece(f)) return DYE_RECIPE_SAID.noDye;
+  } else {
+    const it = itemOf(g, t);
+    if (!it) return DYE_RECIPE_SAID.gone;
+    if (!dyeIn(it)) return DYE_RECIPE_SAID.noDye;
+  }
+  return bestSheet(g) ? null : DYE_RECIPE_SAID.noSheet;
+}
+
+/** Why a boil from this recipe will not go, or null: the lye, then each dyestuff by its weight. The island's `dye_recipe_refusal`. */
+export function boilRecipeRefusal(g: Game, t: Target): string | null {
+  const it = itemOf(g, t);
+  if (!it) return DYE_RECIPE_SAID.gone;
+  const l = recipeOf(it);
+  if (!l) return DYE_RECIPE_SAID.blank;
+  if (g.inventory.count(BOIL_IN) < 1) return DYE_RECIPE_SAID.noLye;
+  for (const s of sharesFor(g, l)) {
+    const short = weightRefusal(s.from, s.grams, g.inventory.count(s.from));
+    if (short) return short;
+  }
+  return null;
 }
 
 /* ---- what a dyeing draws from ---------------------------------------------- */
@@ -297,6 +443,68 @@ export const DYE_ACTIONS: ActionDef[] = [
     },
   },
   {
+    id: MAKE_DYE_RECIPE,
+    label: 'Make a recipe',
+    verb: 'writing a dye recipe',
+    stamina: RECIPE_WIND,
+    baseTime: RECIPE_TIME,
+    applies: (t, g) => !!recipeSource(g, t),
+    check: (t, g) => makeRecipeRefusal(g, t),
+    perform: (t, g) => {
+      const l = recipeSource(g, t);
+      const sheet = bestSheet(g);
+      if (!l || !sheet || makeRecipeRefusal(g, t)) return;
+      g.inventory.remove(sheet.uid, 1);
+      const it = g.inventory.add(DYE_RECIPE, { ql: l.ql });
+      it.dye = dyeText(l);
+      g.inventory.onChange?.();
+      g.logMsg(recipeWrittenSaid(l), 'event');
+      g.events.emit('inventory');
+    },
+  },
+  {
+    id: BOIL_DYE_RECIPE,
+    label: 'Boil from recipe',
+    verb: 'boiling dye from a recipe',
+    skill: DYE_SKILL,
+    stamina: DYE_BOIL_WIND,
+    baseTime: DYE_BOIL_TIME,
+    repeat: true,
+    applies: (t, g) => !!recipeOf(itemOf(g, t)),
+    check: (t, g) => boilRecipeRefusal(g, t),
+    perform: (t, g) => {
+      const l = recipeOf(itemOf(g, t));
+      if (!l || boilRecipeRefusal(g, t)) return false;
+      const shares = sharesFor(g, l);
+      const spend = (): void => {
+        for (const s of shares) g.inventory.consume(s.from, s.count);
+        g.inventory.consume(BOIL_IN, 1);
+      };
+      // A boil that does not come off loses what went into it, and the bucket is tipped out and kept, as a dyestuff's does.
+      if (!g.sureCheck(recipeBoilOf(l), DYE_SKILL, recipeDifficulty(l), 0, g.mindEase())) {
+        spend();
+        g.inventory.add('bucket', { ql: 20 });
+        g.missed();
+        g.gainSkill('mind_logic', tryGain(false, MIND_GAIN));
+        g.logMsg(DYE_RECIPE_SAID.failed, 'event');
+        g.events.emit('inventory');
+        return boilRecipeRefusal(g, t) === null;
+      }
+      // What the boil rolls, never above the recipe's.
+      const ql = Math.min(g.productQl(DYE_SKILL), l.ql);
+      spend();
+      const made: DyeLiquid = { red: l.red, yellow: l.yellow, blue: l.blue, ql: dyeQl(ql) };
+      const bucket = g.inventory.add(DYE_BUCKET, { ql });
+      bucket.dye = dyeText(made, BOIL_LITRES);
+      g.inventory.onChange?.();
+      g.madeIt(DYE_BUCKET, bucket.ql, 1);
+      g.gainSkill('mind_logic', tryGain(true, MIND_GAIN));
+      g.logMsg(recipeBoiledSaid(shares, made), 'event');
+      g.events.emit('inventory');
+      return boilRecipeRefusal(g, t) === null;
+    },
+  },
+  {
     id: 'strip_dye',
     label: 'Remove dye',
     verb: 'boiling the colour out',
@@ -329,6 +537,9 @@ for (const s of DYESTUFFS) {
   const d = ITEM_DEFS[s.from];
   if (d) d.description = [d.description, dyestuffUse(s)].filter(Boolean).join(' ');
 }
+
+// What a recipe is written on and how much lye it is boiled in, into its own text.
+describeFrom(DYE_RECIPE, { sheet: itemDef(CHART_SHEET).name.toLowerCase(), litres: BOIL_LITRES });
 
 // The litres a dyeing takes and a boil makes, into the text of a bucket of dye.
 describeWith({ dye: DYE_LITRES, paneDye: DYE_PANE_LITRES, dyeBoil: BOIL_LITRES, perKg: DYE_LITRES_PER_KG, qlBlack: DYE_QL_BLACK, qlPure: DYE_QL_PURE, qlWhite: DYE_QL_WHITE });

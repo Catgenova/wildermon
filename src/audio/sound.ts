@@ -214,6 +214,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   crate_take_all: 'cloth', smelter_take_all: 'cloth', kiln_take_all: 'cloth', furniture_take_all: 'cloth',
   // Leaves torn off a wall, and a brush over stone, as a groom's brush over a coat sounds.
   clear_ivy: 'cloth', scrub_moss: 'cloth',
+  // A dye written down on a sheet of papyrus, as a map is (`dyes.ts`).
+  make_dye_recipe: 'cloth',
 };
 
 const BY_SKILL: Record<string, Stroke> = {

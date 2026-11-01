@@ -69,8 +69,8 @@ import { CROWD_HIDES, DEEDS_JOINED, PLANTABLE } from '../src/game/game';
 import { FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SPELL_BAR, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../src/game/patrons';
 import { RARITIES, RARITY_LIFT, RARITY_ODDS, RARITY_WORD } from '../src/game/items';
 import {
-  DYE_SIZES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, DYE_SIZE_OF, DYE_WORDS, DYESTUFFS, dyeRecipeId, dyeText,
-  LEGACY_DYES, LEGACY_POT_LITRES, legacyLiquid, RYB_CUBE,
+  DYE_SIZES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, DYE_RECIPE, DYE_SIZE_OF, DYE_WORDS, DYESTUFFS, dyeRecipeId, dyeText,
+  LEGACY_DYES, LEGACY_POT_LITRES, legacyLiquid, PRIMARIES, RECIPE_STUFF, RYB_CUBE,
 } from '../src/game/dyestuffs';
 import { SLAB_VARIANTS } from '../src/world/tiles';
 import { FLOWERS_PICKED, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS } from '../src/world/tiles';
@@ -102,7 +102,7 @@ import { FX_RULE, PERKS } from '../src/game/perks';
 import { SCHOOLS, SPELLS } from '../src/game/arcane';
 import { BRIDGES, CLEARANCE, END_SLOP, HEAD_ROOM, RAMP_SLOPE, STALL_WIDTH, WAGON_WIDTH, WIDEST } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
-import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
+import { BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, DYE_RECIPE_SAID, DYE_SKILL, DYEABLE_ITEMS, MAKE_DYE_RECIPE } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
 import { ALLOY_QL, BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason, GUARD_LEARN, SPAR_REACH } from '../src/game/creatures';
 import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, SLEEP_SAID } from '../src/game/sleep';
@@ -2123,6 +2123,20 @@ for (const [fn, v] of [
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }
 out.push(`create or replace function dye_boil_in() returns text language sql immutable as $fn$ select ${q(BOIL_IN)} $fn$;`);
+/*
+ * A dye written down (`dyes.ts`): its two jobs, the recipe and the sheet it is
+ * written on, the dyestuff it names for each primary, and what a refused or
+ * failed one says.
+ */
+out.push(`create or replace function dye_recipe_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in (${q(MAKE_DYE_RECIPE)}, ${q(BOIL_DYE_RECIPE)}) $fn$;`);
+for (const [fn, v] of [['dye_recipe_make', MAKE_DYE_RECIPE], ['dye_recipe_boil', BOIL_DYE_RECIPE], ['dye_recipe_item', DYE_RECIPE],
+  ['dye_recipe_sheet', CHART_SHEET], ['dye_skill', DYE_SKILL]] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+out.push(`create or replace function dye_recipe_stuff(p_primary text) returns text language sql immutable as $fn$ select case p_primary ${
+  PRIMARIES.map((p) => `when ${q(p)} then ${q(RECIPE_STUFF[p])} `).join('')}end $fn$;`);
+out.push(`create or replace function dye_recipe_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (Object.keys(DYE_RECIPE_SAID) as Array<keyof typeof DYE_RECIPE_SAID>).map((k) => `when ${q(k)} then ${q(DYE_RECIPE_SAID[k])} `).join('')}end $fn$;`);
 out.push(`create or replace function ryb_cube() returns double precision[] language sql immutable as $fn$ select array[${RYB_CUBE.map((v) => q(v)).join(', ')}]::double precision[] $fn$;`);
 /* The chance one raise leaves a knack behind: the browser's `knackChance`. A
    tick of a trade taught on the move rolls at the share of a go it teaches. */
