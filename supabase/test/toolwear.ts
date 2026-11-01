@@ -11,6 +11,10 @@
  * every action's tool before it branches at all; a recipe is the crafting performer's, which wears the recipe's tool;
  * and a few are a performer's without its naming them (`WHOLE`). `butchery` asks the knife's wear by the number.
  *
+ * And then "Enforce that any task that requires a tool also damages that tool": every go goes through
+ * `private.act_go`, which wears the job's tool wherever its performer did not (`tooldamage.ts` asks it by the number).
+ * So an action whose branch wears nothing is worn by the go, and is listed as such.
+ *
  * Runs against the database the suite leaves behind.
  */
 import { execFileSync } from 'node:child_process';
@@ -108,7 +112,13 @@ for (const a of tooled) {
   const bs = branches(a.id);
   if (!bs.length || !bs.some(branchWears)) missing.push(`${a.id} (${a.tool}${bs.length ? `, ${[...new Set(bs.map((b) => b.fn))].join(', ')}` : ', no branch'})`);
 }
-check(`every action with a tool wears it on the island as in the browser (${tooled.length} actions)`, !missing.length, missing.join('; ') || 'all');
+// The go wears what a performer does not: every go is `private.act_go`'s, from the clock and from a plan over an area.
+const goes = psql(`select string_agg(p.proname || ':' || (pg_get_functiondef(p.oid) like '%private.act_go(%')::text, ',' order by p.proname)
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace where (n.nspname, p.proname) in (('public', 'settle'), ('private', 'area_go'));`);
+const goWears = psql(`select (pg_get_functiondef('private.act_go(uuid, uuid, text, jsonb)'::regprocedure) like '%wear_tool(held_tool(p_world, p_uid, v_tool)%')::text;`);
+check('every go is the go\'s, which wears the job\'s tool (`private.act_go`)', goes === 'area_go:true,settle:true' && goWears === 'true', `${goes} ${goWears}`);
+check(`every action with a tool wears it on the island as in the browser (${tooled.length} actions): its own branch, or the go`, goes === 'area_go:true,settle:true',
+  missing.length ? `worn by the go: ${missing.join('; ')}` : 'all in their branches');
 // The ten the sweep found wearing nothing, each by name.
 for (const id of ['butcher', 'shear', 'till', 'investigate', 'repoint_wall', 'clear_ivy', 'plan_foundation', 'dig_pool', 'fill_pool']) {
   check(`${id}: its branch wears its tool`, branches(id).some(branchWears));

@@ -79,7 +79,7 @@ import { FRUITING } from '../../game/fruiting';
 import { SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY } from '../../game/bees';
 import { BUTTER_PATS, GORRAL_MILK } from '../../game/dairy';
 import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
-import { GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
+import { CUT_VINE, GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
 import { ARTIFACT_FOR, SHEAR_FROM, SHEAR_WOOL } from '../../game/creatureActions';
 import { GRAPE_WINE_GRAPES } from '../../game/brewing';
@@ -110,6 +110,7 @@ import { billWords, countOf, DRINK_LITRES, LITRE_KG, TAN_LYE, type Item } from '
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
 import { meltLumps } from '../../game/melt';
+import { TOOL_JOBS } from '../../game/jobtools';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
 import { ACTION_BY_ID, PACKED_FIRST, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES } from '../../game/actions';
@@ -4220,6 +4221,18 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 411,
+    day: '2026-11-01',
+    lines: () => [
+      // Cutting a vine took its sickle already (`CUTTING_TOOL`); it is newly worn, below.
+      ...Object.entries(TOOL_JOBS).map(([tool, ids]) => `Changed: ${itemDef(tool).name.toLowerCase()} needed for ${listed([...new Set(ids.filter((id) => id !== CUT_VINE)
+        .map((id) => ACTION_BY_ID.get(id)?.verb ?? id))])} (was: none).`),
+      `Changed: tool wear on every go of a job that needs one, success or failure; improving: each tool its material needs. Newly worn: ${listed([...new Set(['smith', 'strike_coins',
+        'pour_mould', 'cast_anvil', 'fit_lock', 'shoe_creature', 'cut_vine', 'plan_building', 'add_to_building', 'plan_wall', 'plan_fence', 'build_wall', 'change_wall',
+        'add_floor', 'plan_floor', 'build_floor', 'plan_column', 'build_column', 'improve_item'].map((id) => ACTION_BY_ID.get(id)?.verb ?? id))])} (was: no wear).`,
+    ],
   },
   {
     n: 410,

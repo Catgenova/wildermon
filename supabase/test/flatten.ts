@@ -101,8 +101,10 @@ const idle = jobs.filter(([job]) => {
   const b = branch(job);
   return b === null || !/wear_tool\(|perform perform_[a-z_]+\(/.test(b);
 });
-check(`on the island, every one of the ${jobs.length} jobs on the ground with a tool wears it`, jobs.length > 5 && !idle.length,
-  idle.map(([j, t]) => `${j} (${t})`).join(', ') || 'all of them');
+// And whatever its branch does not wear, the go does (\`private.act_go\`, which \`tooldamage.ts\` asks by the number).
+const byGo = psql(`select (pg_get_functiondef('settle'::regproc) like '%private.act_go(%')::text`) === 'true';
+check(`on the island, every one of the ${jobs.length} jobs on the ground with a tool wears it: its branch, or the go`, jobs.length > 5 && (!idle.length || byGo),
+  idle.length ? `worn by the go: ${idle.map(([j, t]) => `${j} (${t})`).join(', ')}` : 'all of them in their branches');
 
 /* ---- in the browser ---------------------------------------------------------------- */
 

@@ -38,6 +38,7 @@ import { bagRefuses, groundDecayRate, markSays, partsMark, type Item } from '../
 import { perksOf, type PerkDef } from '../../src/game/perks';
 import { RECIPE_BY_ID, RECIPE_PERK_SAYS, recipeAction, recipeReason, STONE_KEPT, TRADE_BOOK_AT } from '../../src/game/recipes';
 import { gearFrom } from '../../src/game/worn';
+import { BRUSH_TOOL } from '../../src/game/jobtools';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -454,6 +455,8 @@ begin
   perform pg_temp.hold(w, u, '{}');
   v_it := ${thing('clay_pot', QL, 0)};
   perform give(w, u, 'ash', ${GLAZE_ASH}, 30);
+  -- A glaze is brushed on (\`BRUSH_TOOL\`).
+  perform give(w, u, '${BRUSH_TOOL}', 1, 30);
   v_t := ${refused('glaze_item', 'v_it')};
   ${hold('Glaze')};
   v_t := v_t || '#' || ${refused('glaze_item', 'v_it')};
@@ -703,6 +706,7 @@ game.setPerks({});
 const glazeDef = ACTION_BY_ID.get('glaze_item')!;
 const setDef = ACTION_BY_ID.get('set_in_circlet')!;
 const plainPot = game.inventory.add('clay_pot', { ql: QL });
+if (!game.inventory.has(BRUSH_TOOL)) game.inventory.add(BRUSH_TOOL, { ql: 30 });
 check('its glaze is refused in the island\'s words without the perk', glazeDef.check?.(itemTarget(plainPot), game) === glaze[0]);
 game.setPerks(P('Glaze').fx);
 game.inventory.add('ash', { ql: 30, count: GLAZE_ASH });

@@ -4,7 +4,7 @@
  * island's are `frame_refusal` and `perform_frame`, in the same words.
  */
 import type { ActionDef, Target } from './actions';
-import { consumeUnit, materialName, needsText, needTool, nextAvailable } from './buildActions';
+import { consumeUnit, materialName, needsText, needTool, nextAvailable, PLAN_TOOL } from './buildActions';
 import { floorKind, heftWord, INDOORS_DECAY, INDOORS_REST, isDone, isSpiral, jobLevel, MATERIAL_BY_ID, onlyRefusal, SIDE_NAMES, SPIRAL_STAIRS_NAME, TOP_LEVELS } from './building';
 import { SUBTILES } from './crates';
 import { furnitureCovers } from './furniture';
@@ -18,6 +18,7 @@ const isTile = (t: Target): t is TileTarget => t.kind === 'tile';
 export const FRAME_ACTIONS: ActionDef[] = [
   {
     id: 'plan_column',
+    toolFor: () => PLAN_TOOL,
     label: 'Plan column',
     verb: 'planning a column',
     hidden: true,
@@ -62,6 +63,10 @@ export const FRAME_ACTIONS: ActionDef[] = [
   },
   {
     id: 'build_column',
+    toolFor: (t, g) => {
+      const c = isTile(t) && cornerOf(t) ? columnAt(g, t) : undefined;
+      return c ? MATERIAL_BY_ID.get(c.material)?.tool : undefined;
+    },
     label: 'Build column',
     verb: 'building',
     hidden: true,

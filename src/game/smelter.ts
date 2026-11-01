@@ -358,6 +358,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
     label: 'Cast an anvil',
     verb: 'filling the anvil mould',
     skill: 'blacksmithing',
+    tool: SMITH_TOOL,
     hidden: true,
     stamina: 0.04,
     baseTime: 6,
@@ -405,6 +406,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
     verb: 'pouring the mould',
     // Teaches the trade that formed the mould: asked, "pouring moulds should give blacksmithing experience".
     skill: MOULD_SKILL,
+    tool: SMITH_TOOL,
     hidden: true,
     stamina: 0.04,
     baseTime: 5,

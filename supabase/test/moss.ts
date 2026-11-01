@@ -31,6 +31,7 @@ import { readyIn } from '../../src/game/words';
 import { ACTION_BY_ID, GRASS_PER_CUT, GRASS_PLANT, MOSS_PER_CUT, MOSS_PLANT, type Target } from '../../src/game/actions';
 import { itemDef } from '../../src/game/items';
 import { TILE_DEFS, TileType } from '../../src/world/tiles';
+import { REAP_TOOL } from '../../src/game/jobtools';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -89,6 +90,8 @@ begin
   select p.uid into u from player p where p.world_id = w order by p.uid limit 1;
   delete from deed where world_id = w;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
+  -- Cutting moss and grass takes a sickle (\`REAP_TOOL\`).
+  perform give(w, u, '${REAP_TOOL}', 1, 20);
   delete from foraged where world_id = w;
   update player set act = null, act_queue = '[]', stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb
     where world_id = w and uid = u;
@@ -223,6 +226,7 @@ check('and it says so', say('G_SAID') === `Planted: ${GRASS_PLANT} mixed grass. 
 /* ---- the browser ----------------------------------------------------------- */
 const game = Game.create(4405);
 game.inventory.items.splice(0);
+game.inventory.add(REAP_TOOL, { ql: 20 });
 (game as unknown as { skillCheck: () => boolean }).skillCheck = () => true;
 const w = game.world;
 for (let x = 0; x <= 12; x++) for (let y = 0; y <= 6; y++) w.setHeight(x, y, LEVEL);

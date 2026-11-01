@@ -41,6 +41,7 @@ import { packLand, packWorld, unpack } from '../../src/game/save';
 import { SEASONS, YEAR_FROM, seasonAt, type Season } from '../../src/world/calendar';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { timeWords } from '../../src/game/words';
+import { REAP_TOOL, TEND_TOOL } from '../../src/game/jobtools';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -367,6 +368,8 @@ begin
   delete from crop where world_id = w;
   delete from deed where world_id = w;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
+  -- Harvesting takes a sickle and tending and pulling up a rake (\`REAP_TOOL\`, \`TEND_TOOL\`).
+  perform give(w, u, '${REAP_TOOL}', 1, 20); perform give(w, u, '${TEND_TOOL}', 1, 20);
   update player set way = null where world_id = w;
   update player set x = 9.5, y = 9.5, act = null, act_target = null, act_started = null, act_ends = null,
          act_left = null, act_goes = null, act_queue = '[]', craft_class = 'farmer', class_mul = null,
@@ -525,6 +528,7 @@ check('Bounty brings on every crop on the caster\'s settlement, the planter stan
 /* ---- and the same planter in the browser --------------------------------------------------------- */
 
 const game = Game.create(3141);
+for (const t of [REAP_TOOL, TEND_TOOL]) if (!game.inventory.has(t)) game.inventory.add(t, { ql: 20 });
 const heard = (prefix: string): string => [...game.log].reverse().find((l) => l.text.startsWith(prefix))?.text ?? 'unsaid';
 const box = game.addFurniture('planter', BOX.x, BOX.y, BOX.sx, BOX.sy, 40, [], 'Oak');
 game.player.x = 9.5;
