@@ -43,8 +43,8 @@ interface Spike { root: V3; mid: V3; tip: V3; w: number }
  */
 interface Crescent { c: V3; R: number; a0: number; a1: number; w: number; teeth: number; root: V3; stem: number }
 
-/** The crest up off its back: how far along the shell its foot is, how high it stands, how long back, how wide its foot. */
-interface Crest { u: number; h: number; back: number; foot: number }
+/** The crest off its back: how far along the shell its root is, how high it stands over the shell, and how long it runs back. */
+interface Crest { u: number; h: number; back: number }
 
 /** The log it works: lying across before it (the Lognib's) or along (the bigger two's); a log or a squared beam; its radius or half-side; its length. */
 interface Prop { across: boolean; beam: boolean; r: number; len: number }
@@ -98,10 +98,10 @@ const TIMBERSPLIT_LOOK: Log = {
   high: 0.4,
   shell: { y0: -0.88, y1: 0.9, cut: 0.88, w: 0.82, h: 0.5, z0: 0.06, segs: 4, step: 0.07, lo: 0.14, flare: 0.45, p: 2.1 },
   belly: { c: [0, 0.04, -0.05], r: [0.56, 0.72, 0.22] },
-  head: { at: [0, 0.98, -0.02], r: [0.24, 0.3, 0.22], eye: [0.62, 0.6, 0.12], size: 0.045 },
+  head: { at: [0, 0.98, 0.06], r: [0.24, 0.3, 0.22], eye: [0.62, 0.6, 0.12], size: 0.063 },
   spike: null,
   crescent: { c: [0, 0.28, 0.16], R: 0.54, a0: -22, a1: 150, w: 0.36, teeth: 6, root: [0, 0.24, -0.02], stem: 0.1 },
-  crest: { u: 0.78, h: 0.55, back: 0.72, foot: 0.44 },
+  crest: { u: 0.62, h: 0.42, back: 1.0 },
   moss: { from: 0.08, to: 0.9, wide: 0.7, deep: 0.12, clumps: 10 },
   patches: { n: 2, big: 0.17 },
   band: false,
@@ -117,10 +117,10 @@ const BEAMMASTER_LOOK: Log = {
   high: 0.48,
   shell: { y0: -1.18, y1: 1.12, cut: 0.88, w: 1.24, h: 0.84, z0: 0.06, segs: 4, step: 0.07, lo: 0.14, flare: 0.45, p: 2.1 },
   belly: { c: [0, 0.04, -0.06], r: [0.84, 0.92, 0.3] },
-  head: { at: [0, 1.22, 0.0], r: [0.32, 0.38, 0.28], eye: [0.62, 0.6, 0.12], size: 0.055 },
+  head: { at: [0, 1.22, 0.08], r: [0.32, 0.38, 0.28], eye: [0.62, 0.6, 0.12], size: 0.077 },
   spike: null,
   crescent: { c: [0, 0.36, 0.24], R: 0.96, a0: -24, a1: 150, w: 0.64, teeth: 10, root: [0, 0.3, -0.02], stem: 0.14 },
-  crest: { u: 0.76, h: 0.8, back: 1.08, foot: 0.64 },
+  crest: { u: 0.62, h: 0.58, back: 1.36 },
   moss: { from: 0.06, to: 0.9, wide: 0.66, deep: 0.15, clumps: 12 },
   patches: { n: 1, big: 0.2 },
   band: true,
@@ -294,68 +294,43 @@ function mossOf(s: Log, fine: boolean): Mesh {
 }
 
 /**
- * A blade from lines along it (along, up; in the plane square to `x`), `t` thick: a band of its own colour between each line and
- * the next, on both faces, and its edges along the first and the last lines.
+ * The crest off its back: a broad flat blade lying back over the rear of the shell, rising off a raised dark ridge near the top
+ * of the dome and sweeping back toward the tail a little over the shell's surface; its foot wide, its leading edge hollowed,
+ * three deep notches cut into its upper edge, a long point at its back. Gold, cream over its face, an olive wash at its root.
  */
-function ribbon(lines: Array<Array<[number, number]>>, mats: Mat[], t: number, edge: Mat): Mesh {
-  const L = lines.length, N = lines[0].length, v: V3[] = [], f: Face[] = [], want: V3[] = [];
-  for (const sd of [1, -1]) for (const line of lines) for (const [y, z] of line) v.push([sd * t / 2, y, z]);
-  const at = (sd: number, b: number, q: number): number => (sd > 0 ? 0 : L * N) + b * N + q;
-  for (const sd of [1, -1]) for (let b = 0; b < L - 1; b++) for (let q = 0; q < N - 1; q++) {
-    f.push({ i: [at(sd, b, q), at(sd, b, q + 1), at(sd, b + 1, q + 1), at(sd, b + 1, q)], m: mats[b] });
-    want.push([sd, 0, 0]);
-  }
-  for (let q = 0; q < N - 1; q++) {
-    for (const [b, inward] of [[0, 1], [L - 1, L - 2]] as Array<[number, number]>) {
-      const [y0, z0] = lines[b][q], [y1, z1] = lines[b][q + 1], [yi, zi] = lines[inward][q];
-      f.push({ i: [at(1, b, q), at(1, b, q + 1), at(-1, b, q + 1), at(-1, b, q)], m: edge });
-      want.push([0, (y0 + y1) / 2 - yi, (z0 + z1) / 2 - zi]);
-    }
-  }
-  // Its foot, closed.
-  f.push({ i: [at(1, 0, 0), at(1, L - 1, 0), at(-1, L - 1, 0), at(-1, 0, 0)], m: edge });
-  want.push([0, 0, -1]);
-  return mesh(v, wound(v, f, want));
-}
-
-/**
- * The crest up off its back: a broad curved blade like a scythe's, rising off a dark ridge along the top of its dome and
- * sweeping back over the shell to a point, gold along its leading edge, cream over the rest of its face, its trailing edge
- * notched; set on a raised dark ridge.
- */
-function crestOf(s: Log, fine: boolean): Mesh {
+function crestOf(s: Log): Mesh {
   const C = s.crest!, S = s.shell;
   const at = onShell(S, C.u * S.cut, Math.PI / 2);
-  const H = C.h, B = C.back, W = C.foot;
+  // `back` is how long it is, front to back; `h` how high it stands over the shell at its highest.
+  const Lc = C.back, Hc = C.h;
   const ridge = (y: number): number => onShell(S, clamp((y - S.y0) / (S.y1 - S.y0), 0.01, S.cut), Math.PI / 2).p[2];
-  const P0: [number, number] = [at.p[1], at.p[2] - 0.05], P1: [number, number] = [at.p[1] + W * 0.25, at.p[2] + H * 0.75], P2: [number, number] = [at.p[1] - B, at.p[2] + H];
-  const bez = (k: number): [number, number] => [0, 1].map((i) => (1 - k) ** 2 * P0[i] + 2 * k * (1 - k) * P1[i] + k * k * P2[i]) as [number, number];
-  const N = fine ? 18 : 11, lead: Array<[number, number]> = [], gold: Array<[number, number]> = [], trail: Array<[number, number]> = [];
-  for (let q = 0; q <= N; q++) {
-    const k = q / N, p = bez(k), a = bez(Math.max(0, k - 0.01)), b = bez(Math.min(1, k + 0.01));
-    const d = unit([0, b[0] - a[0], b[1] - a[1]]), n: [number, number] = [d[2], -d[1]];
-    const w = W * (0.75 + 0.45 * Math.sin(Math.PI * Math.min(1, k * 1.15))) * (1 - k ** 3.5) + 0.004;
-    const tooth = k > 0.28 && k < 0.92 ? frac(k * 3.6) : 0, wt = w * (1 - 0.4 * tooth);
-    const keep = (y: number, z: number): [number, number] => [y, k < 0.12 ? z : Math.max(z, ridge(y) + 0.02)];
-    lead.push(keep(p[0] + n[0] * w * 0.5, p[1] + n[1] * w * 0.5));
-    gold.push(keep(p[0] + n[0] * w * 0.12, p[1] + n[1] * w * 0.12));
-    trail.push(keep(p[0] - n[0] * wt * 0.5, p[1] - n[1] * wt * 0.5));
-  }
-  const blade0 = ribbon([lead, gold, trail], ['coat', 'mark'], 0.06 + 0.03 * s.stage, 'coatDark');
-  // An olive wash low on its cream face, toward its foot.
-  const marks: Disc[] = [];
-  const wash = [...gold.slice(1, Math.round(N * 0.45)), ...trail.slice(1, Math.round(N * 0.45)).reverse()];
+  // Along it (nought its front, one its back point) and up off the shell's ridge under it (nought to one).
+  const shape: Array<[number, number]> = [
+    [0.02, -0.25], [0.02, 0], [0.07, 0.38], [-0.06, 0.76],
+    [0.14, 0.82], [0.2, 0.6], [0.3, 0.88], [0.36, 0.66], [0.5, 0.94], [0.56, 0.72], [0.74, 0.92], [1, 0.82],
+    [0.82, 0.6], [0.6, 0.4], [0.4, 0.22], [0.3, 0.08], [0.28, 0], [0.28, -0.25],
+  ];
+  // Clear of the moss, rising as it goes back, so it stands off the shell's surface the more toward its point.
+  const moss = s.moss ? s.moss.deep : 0, root = ridge(at.p[1]) + moss * 0.7;
+  const put = ([k, z]: [number, number]): [number, number] => {
+    const y = at.p[1] - k * Lc;
+    // Following the dome down toward its tail, but less steeply, so it lifts off the surface toward its point.
+    return [y, z < 0 ? ridge(y) - 0.02 : root + (ridge(y) - ridge(at.p[1])) * 0.7 + z * Hc];
+  };
+  const outline = shape.map(put);
   const t = 0.06 + 0.03 * s.stage;
-  onSlab(wash.map(([y, z]) => [y, z]), t + 0.004, 'spot', marks);
-  // The raised dark ridge it stands on, along the top of the dome.
+  const body = slab(outline, t, 'coat', 'coatDark');
+  const marks: Disc[] = [];
+  const face: Array<[number, number]> = [[0.06, 0.08], [0.09, 0.5], [0.2, 0.54], [0.36, 0.6], [0.55, 0.66], [0.8, 0.76], [0.92, 0.79], [0.8, 0.64], [0.58, 0.44], [0.4, 0.26], [0.27, 0.06]];
+  onSlab(face.map(put), t, 'mark', marks);
+  const wash: Array<[number, number]> = [[0.05, 0.02], [0.07, 0.32], [0.18, 0.36], [0.3, 0.16], [0.27, 0.02]];
+  for (const sd of [1, -1]) marks.push(facing(wash.map(put).map(([y, z]) => [sd * (t / 2 + 0.006), y, z] as V3), [sd, 0, 0], 'spot'));
+  // The raised dark ridge it stands on, along the top of the dome under its root.
   const spine: V3[] = [];
-  for (let q = 0; q <= 6; q++) {
-    const o = onShell(S, clamp(C.u - 0.3 + 0.42 * (q / 6), 0.02, 0.98) * S.cut, Math.PI / 2);
-    spine.push(add(o.p, [0, 0, 0.02]));
-  }
+  for (let q = 0; q <= 6; q++) spine.push(add(onShell(S, clamp(C.u + 0.08 - 0.42 * (q / 6), 0.02, 0.98) * S.cut, Math.PI / 2).p, [0, 0, 0.02]));
   const r = 0.05 + 0.025 * s.stage;
   const rib = tube(spine, spine.map((_, q) => r * (0.5 + Math.sin(Math.PI * q / 6) * 0.6)), spine.map((_, q) => r * (0.6 + Math.sin(Math.PI * q / 6) * 0.7)), 7, (ring) => (ring % 2 ? 'hornDark' : 'bark'));
-  return merge(rib, blade0, paint(marks));
+  return merge(rib, body, paint(marks));
 }
 
 /* ---- the head ------------------------------------------------------------------------- */
@@ -399,8 +374,9 @@ function armourHead(s: Log, n: number, k: number, shut: boolean): Mesh {
   const face = orb(fc, fr, n + 2, k, 'bark');
   // A snout out in front, dark.
   const snout = orbAlong([0, r[1] * 0.7, -r[2] * 0.2], [0, 1, -0.1], [r[0] * 0.5, r[1] * 0.45, r[2] * 0.45], n, k, 'bark');
-  // The plate: an egg over the top, its front pulled forward and down to a point, cut away below its middle.
-  const b = orb([0, 0, 0], r, n + 4, k + 2, 'coat');
+  // The plate: an egg over its top and sides, cream, its front pulled forward and down to a beak of a point; the dark left only
+  // at the neck behind it and under the jaw.
+  const b = orb([0, 0, 0], r, n + 4, k + 2, 'mark');
   const v = b.v.map((p): V3 => {
     const d: V3 = [p[0] / r[0], p[1] / r[1], p[2] / r[2]];
     const fwd = Math.max(0, d[1]) ** 2 * Math.max(0, 1 - Math.abs(d[0]) * 1.2);
@@ -411,10 +387,19 @@ function armourHead(s: Log, n: number, k: number, shut: boolean): Mesh {
   for (const f of b.f) {
     const mid = scale(f.i.reduce((t, i) => add(t, b.v[i]), [0, 0, 0] as V3), 1 / f.i.length);
     const d: V3 = [mid[0] / r[0], mid[1] / r[1], mid[2] / r[2]];
-    if (d[2] < 0.12 && !(d[1] > 0.6 && Math.abs(d[0]) < 0.45 && d[2] > -0.3)) continue;
+    if (d[2] < -0.42 || d[1] < -0.72) continue;
     kept.push(f);
   }
   const plate = mesh(v, kept);
+  // A gold ridge between the eyes, from the crown down to the point of the beak.
+  const ridgeAt = (k2: number): V3 => {
+    const o = onEgg([0, 0, 0], r, [0, lerp(-0.3, 0.92, k2), lerp(1, 0.25, k2)]);
+    const d: V3 = [0, o.p[1] / r[1], o.p[2] / r[2]];
+    const fwd = Math.max(0, d[1]) ** 2;
+    return [0, o.p[1] + r[1] * 0.75 * fwd, o.p[2] - r[2] * 0.5 * fwd + r[2] * 0.22 * Math.max(0, d[2]) + r[2] * 0.06];
+  };
+  const crestLine = Array.from({ length: 6 }, (_, q) => ridgeAt(q / 5));
+  const brow = tube(crestLine, crestLine.map((_, q) => r[0] * (0.14 - 0.02 * q)), crestLine.map((_, q) => r[0] * (0.1 - 0.012 * q)), 5, 'coat');
   const bits: Mesh[] = [];
   // Two spikes up off its back edge, and a ridge of a third over its brow.
   for (const sd of [1, -1]) {
@@ -444,12 +429,13 @@ function armourHead(s: Log, n: number, k: number, shut: boolean): Mesh {
   marks.push(disc(add(top.p, scale(top.n, 0.012)), top.n, r[0] * 0.3, r[1] * 0.22, 8, 'spot', { up: [0, 1, 0] }));
   const eyes: Disc[] = [];
   for (const sd of [1, -1]) {
-    const e = onEgg(fc, fr, [sd * H.eye[0], H.eye[1], H.eye[2]]);
-    const p = add(e.p, scale(e.n, 0.01));
+    // In the plate: amber, a dark middle and a glint, in a dark rim.
+    const e = onEgg([0, 0, 0], [r[0] * 1.06, r[1] * 1.02, r[2] * 1.02], [sd * H.eye[0], H.eye[1], H.eye[2]]);
+    const p = add(e.p, scale(e.n, 0.014));
     if (shut) eyes.push(disc(p, e.n, H.size * 1.2, H.size * 0.3, 8, 'hornDark', { up: [0, 0, 1] }));
     else eyeOf(p, e.n, H.size, eyes, true);
   }
-  return merge(face, snout, paint(eyes), plate, paint(marks), ...bits);
+  return merge(face, snout, plate, brow, paint(marks), paint(eyes), ...bits);
 }
 
 /** The Lognib's horn: thick at its root on the top of its head, curving up and back to a point; dark brown, its tip gold. */
@@ -936,7 +922,7 @@ function logBuild(s: Log, lod: number): Piece[] {
   pieces.push({ key: 'shell', mesh: merge(plated(S, domeOf(S, nb, fine), s.stage === 0), shellMarks(s)), bone: 'body', bias: 0 });
   pieces.push({ key: 'belly', mesh: bellyOf(s, n, k), bone: 'body', bias: -0.02, under: ['shell'] });
   if (s.moss) pieces.push({ key: 'moss', mesh: mossOf(s, fine), bone: 'body', bias: 0.02, after: ['shell'] });
-  if (s.crest) pieces.push({ key: 'crest', mesh: crestOf(s, fine), bone: 'body', bias: 0.025, after: ['shell', 'moss'] });
+  if (s.crest) pieces.push({ key: 'crest', mesh: crestOf(s), bone: 'body', bias: 0.025, after: ['shell', 'moss'] });
   const headSolid = { c: [0, 0, 0] as V3, r: scale(s.head.r, 0.85) };
   if (s.crescent) {
     // A dark neck the head is set into, under the shell's front edge.
