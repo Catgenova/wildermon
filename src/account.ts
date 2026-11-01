@@ -519,6 +519,9 @@ void import('./landing/faithbox').then(({ dressAs, dressFaith }) => {
   // The box wears the Faith window's dress; holding the character creator, the Trades window's.
   dressAs(card, () => (card.classList.contains('making') ? 'trades' : 'faith'));
   dressFaith(paperBox);
+  // Pere Games' box at the top right, in the same dress.
+  const studio = document.querySelector<HTMLElement>('.studio');
+  if (studio) dressFaith(studio);
 }).catch(() => {});
 requestAnimationFrame(() => window.setTimeout(() => {
   void import('./landing/backdrop').then(({ startBackdrop, WIDE }) => startBackdrop($<HTMLCanvasElement>('cove'), () => {

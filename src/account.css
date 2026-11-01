@@ -380,9 +380,19 @@ a { color: var(--rc-rune-ink); }
 
 .paper-open:hover { color: var(--rc-strong); text-decoration-color: var(--rc-rune); }
 
-/* Pere Games, the studio, under the papers. */
-.studio { display: flex; justify-content: center; margin-top: 10px; }
-.studio img { width: 96px; height: 96px; border-radius: 12px; }
+/* Pere Games, the studio: a small box of its own at the top right, in the Faith window's dress. */
+.faith.studio {
+  position: fixed;
+  top: calc(18px + env(safe-area-inset-top, 0px));
+  right: calc(18px + env(safe-area-inset-right, 0px));
+  z-index: 5;
+  padding: calc(var(--rim) - 4px);
+  line-height: 0;
+}
+.studio img { display: block; width: 112px; height: 112px; border-radius: 6px; }
+@media (max-width: 700px) {
+  .studio img { width: 64px; height: 64px; }
+}
 
 /* Whoever is signed in already does not need a form. */
 .card.settled form, .card.settled .tabs, .card.settled #warn { display: none; }

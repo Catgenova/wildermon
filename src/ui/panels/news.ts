@@ -4241,7 +4241,7 @@ export const NEWS: News[] = [
     lines: () => [`Changed: ${itemDef(SMITH_TOOL).name.toLowerCase()} needed for firing a mould, pouring one, casting an anvil, smithing a casting, striking coins and fitting a padlock (was: none).`,
       'Changed: dye swatch after the item name (was: before).',
       'Added: Discord link on the sign-in page and in Settings.',
-      'Added: Pere Games logo on the sign-in page; a still with reduced motion.',
+      'Added: Pere Games logo at the top right of the sign-in page, in a Faith-window frame; a still with reduced motion.',
       'Changed: craft window and craft queue: tools, ingredients, stations and materials capitalised: Hammer, 2 Sand, Hot smelter, Pine (was: hammer, 2 sand, hot smelter, of pine).'],
   },
   {
