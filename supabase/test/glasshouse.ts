@@ -54,6 +54,7 @@ import { packLand, packWorld, unpack } from '../../src/game/save';
 import { SEASONS, YEAR_FROM, type Season } from '../../src/world/calendar';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { TileType } from '../../src/world/tiles';
+import { REAP_TOOL, TEND_TOOL } from '../../src/game/jobtools';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -353,6 +354,8 @@ begin
   delete from crop where world_id = w;
   delete from crop_last where world_id = w;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
+  -- Harvesting takes a sickle and tending a rake (\`REAP_TOOL\`, \`TEND_TOOL\`).
+  perform give(w, u, '${REAP_TOOL}', 1, 20); perform give(w, u, '${TEND_TOOL}', 1, 20);
   update player set body_at = now(), x = 20.5, y = 26.5, level = 0, act = null, act_target = null, act_started = null, act_ends = null,
          act_left = null, act_goes = null, act_queue = '[]', craft_class = 'farmer', class_mul = null, way = null,
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('hunger', 1, 'thirst', 1, 'health', 1, 'stamina', 1)
@@ -658,6 +661,7 @@ check('a poured slab under a tile of a glasshouse is refused a Till, in so many 
 /* ---- and the same glasshouse in the browser -------------------------------------------------------- */
 
 const game = Game.create(4242);
+for (const t of [REAP_TOOL, TEND_TOOL]) if (!game.inventory.has(t)) game.inventory.add(t, { ql: 20 });
 /*
  * No wildlife, and none coming: this game is run on in steps of minutes at a
  * time, and a beast walking that far in one step asks the walls about a stride

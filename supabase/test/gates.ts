@@ -65,6 +65,7 @@ import type { Pick } from '../../src/render/renderer';
 import { metres, TileType } from '../../src/world/tiles';
 import { numberWord, spanWords } from '../../src/game/words';
 import { lacksSaid } from '../../src/game/ranks';
+import { PLAN_TOOL } from '../../src/game/buildActions';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -815,6 +816,8 @@ const islandPlan = (who: Who, hidden: boolean, between = '', t: TileTarget = ST)
   const bd = borderOf(t.x, t.y, t.side as Side);
   const [pads, c0, r0, answer, r1, row, wind, c1, wall, told, pack, key] = psql(`${fresh('', who, [t.x + 0.5, t.y + 0.5])}
 delete from wall where world_id = ${W} and level = 0 and dir = '${bd.dir}' and x = ${bd.x} and y = ${bd.y};
+-- A plan wears the mallet (\`PLAN_TOOL\`): each asked with an unworn one, so that two answers' packs are alike.
+update item set dmg = 0 where world_id = ${W} and holder_uid = '${WHO[who]}' and def = '${PLAN_TOOL}';
 select coalesce((select string_agg(id::text, ',' order by id) from item where world_id = ${W} and holder_uid = '${WHO[who]}' and def = 'padlock'), 'none');
 ${COUNTERS}
 select to_jsonb(p)::text from player p where world_id = ${W} and uid = '${WHO[who]}';

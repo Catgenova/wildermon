@@ -87,6 +87,7 @@ export const LOCK_ACTIONS: ActionDef[] = [
     label: 'Fit a padlock',
     verb: 'fitting a padlock',
     skill: 'blacksmithing',
+    tool: SMITH_TOOL,
     stamina: 0.02,
     baseTime: 6,
     // gates: a padlock locked against use is not one to fit (`padlockToFit`).

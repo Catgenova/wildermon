@@ -79,10 +79,11 @@ import {
   describeFrom, DRINK_LITRES, itemDef, itemName, itemWeight, litresOf, markOf, VESSELS, markSays, rarityOf, bagAdd, bagRefuses, bagSpare, isBag, storedLine, RARITIES, RARITY_WORD, rollRarity,
   NOT_RESTORED, unrestored, type Item,
 } from './items';
-import { capital } from './words';
+import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
 import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
 import { knackable, RECIPE_ACTIONS } from './recipes';
+import { BRUSH_TOOL, lacksTool, MORTAR_TOOL, REAP_TOOL, TOOL_JOBS } from './jobtools';
 
 /**
  * What an action acts upon. Tile targets carry the corner nearest to the click
@@ -237,6 +238,11 @@ export interface ActionDef {
   skill?: string;
   /** Item id of the tool that must be carried. */
   tool?: string;
+  /**
+   * The tool a go asks for where it is not always the same (`tool`): a wall's is its material's. Asked before the go,
+   * and worn after it as `tool` is; the island's `private.job_tool`.
+   */
+  toolFor?(t: Target, g: Game): string | undefined;
   /** Tiles away the action can be done from; one (arm's length) by default. */
   range?: number;
   /** The same for whoever is doing it, where a perk reaches further (a Fisher's Long Cast): `range` otherwise. */
@@ -2257,10 +2263,13 @@ export const ACTIONS: ActionDef[] = [
     label: 'Pave (cobblestone)',
     verb: 'paving',
     skill: 'paving',
+    tool: MORTAR_TOOL,
     stamina: 0.03,
     baseTime: 5,
     applies: (t, g) => tile(t, g) === TileType.PackedDirt,
-    check: (t, g) => (t.kind === 'tile' && underBuilding(g, t.x, t.y)) || unpacked(t, g) || (g.inventory.has('stone_brick') ? null : 'Need a stone brick.'),
+    // The trowel first, as the island's general tool check comes before `terrain_refusal`.
+    check: (t, g) => lacksTool(g, MORTAR_TOOL) ?? ((t.kind === 'tile' && underBuilding(g, t.x, t.y)) || unpacked(t, g)
+      || (g.inventory.has('stone_brick') ? null : 'Need a stone brick.')),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       if (!g.inventory.consume('stone_brick')) return;
@@ -2692,6 +2701,7 @@ export const ACTIONS: ActionDef[] = [
     label: 'Glaze',
     verb: 'glazing',
     skill: 'pottery',
+    tool: BRUSH_TOOL,
     stamina: 0.02,
     baseTime: 6,
     applies: (t, g) => {
@@ -2706,6 +2716,8 @@ export const ACTIONS: ActionDef[] = [
       if (!item) return 'It is gone.';
       if (!GLAZEABLE.has(item.id)) return 'Fired pot, bowl, jar or amphora only.';
       if (item.mark?.glaze !== undefined) return 'Already glazed.';
+      const brush = lacksTool(g, BRUSH_TOOL);
+      if (brush) return brush;
       if (g.inventory.count('ash') < GLAZE_ASH) return `Need ${GLAZE_ASH} ash.`;
       return null;
     },
@@ -3146,10 +3158,12 @@ export const ACTIONS: ActionDef[] = [
     label: 'Cut grass',
     verb: 'cutting grass',
     skill: 'foraging',
+    tool: REAP_TOOL,
     stamina: 0.02,
     baseTime: 3,
     applies: (t, g) => CUT_GRASS.has(tile(t, g)),
-    check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'grass') ? `Grass too short. ${pickedSaid(g, t.x, t.y, 'grass')}` : null),
+    check: (t, g) => lacksTool(g, REAP_TOOL)
+      ?? (t.kind === 'tile' && g.isForaged(t.x, t.y, 'grass') ? `Grass too short. ${pickedSaid(g, t.x, t.y, 'grass')}` : null),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       g.markForaged(t.x, t.y, 'grass');
@@ -3176,10 +3190,12 @@ export const ACTIONS: ActionDef[] = [
     label: 'Cut moss',
     verb: 'cutting moss',
     skill: 'foraging',
+    tool: REAP_TOOL,
     stamina: 0.02,
     baseTime: 3,
     applies: (t, g) => tile(t, g) === TileType.Moss,
-    check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'moss') ? `Moss too short. ${pickedSaid(g, t.x, t.y, 'moss')}` : null),
+    check: (t, g) => lacksTool(g, REAP_TOOL)
+      ?? (t.kind === 'tile' && g.isForaged(t.x, t.y, 'moss') ? `Moss too short. ${pickedSaid(g, t.x, t.y, 'moss')}` : null),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       g.markForaged(t.x, t.y, 'moss');
@@ -3341,4 +3357,6 @@ for (const def of ACTIONS) {
 }
 
 export const ACTION_BY_ID = new Map(ACTIONS.map((a) => [a.id, a]));
+// What each tool of the jobs that went without one is also for, by those jobs' own words (`TOOL_JOBS`).
+for (const [tool, ids] of Object.entries(TOOL_JOBS)) describeFrom(tool, { jobs: listed([...new Set(ids.map((id) => ACTION_BY_ID.get(id)?.verb ?? id))]) });
 knowJobs(() => ACTIONS);

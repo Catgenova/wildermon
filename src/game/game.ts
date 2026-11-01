@@ -5212,13 +5212,16 @@ export class Game {
       if (c) this.events.emit('strike', c.x, c.y);
     }
     this.soundOfWork(a.def, a.target);
+    // The tool the go asks for, asked before the go changes what it is asked of (a wall's material, as it is finished).
+    const worn = a.def.tool ?? a.def.toolFor?.(a.target, this);
     this.baubleGo = { job: a.def, made: [] };
     this.foreknown = false;
     const again = a.def.perform(a.target, this) === true;
     if (this.foreknown) this.player.foreknow = Math.max(0, this.player.foreknow - 1);
     this.foreknown = false;
     this.sayBaubleGo();
-    if (a.def.tool) this.wearTool(a.def.tool, a.def.wear ?? 1);
+    // Every job with a tool wears it a go's worth, whether the go came off or not; the island's `private.act_go`.
+    if (worn) this.wearTool(worn, a.def.wear ?? 1);
     // A swing costs what is swung: more for every kilogram in the hand (`fightWind`).
     const cost = this.staminaCost(fightWind(this, a.def) ?? a.def.stamina);
     this.player.stats.stamina = Math.max(0, this.player.stats.stamina - cost / this.staminaBar());

@@ -123,6 +123,7 @@ import { MOBS_RANGE } from '../../game/keep';
 import { KILN_CAPACITY } from '../../game/kiln';
 import { candleBurn, FIRE_REACH, HELD_LIGHTS, lanternReach, MEMORIAL_REACH, OVEN_REACH, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn, torchReach } from '../../game/light';
 import { MARK_CAP } from '../../game/marks';
+import { TOOL_JOBS } from '../../game/jobtools';
 import { MATERIAL_BY_ID, type MaterialDef } from '../../game/materials';
 import { calmCap, CHOOSE_AT, PATH_LIST, PATH_TIER_AT, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_REST, SIT_WORTH } from '../../game/meditation';
 import { COIN_METALS, COIN_QL_WEIGHT, COINS_PER_LUMP, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, METALS, MOULD_SKILL, MOULDS, NAILS_PER_LUMP, PRECIOUS_METALS, RARE_METALS, SMITH_TOOL } from '../../game/metal';
@@ -2554,6 +2555,13 @@ export function helpText(): string {
       <li>Every use damages the tool the action needs; low quality (QL) wears far faster. Copper tool: about ${jobsAt(LOW_QL)} actions at QL ${LOW_QL}, ${jobsAt(TOP_QL)} at
       ${TOP_QL}; the material lengthens or shortens that.</li>
       <li>Damage lowers working value. Past <b>${DAMAGE_WARN} damage</b>: red warning, again every ${DAMAGE_WARN_STEP} points; at ${DAMAGE_MAX}: breaks.</li>
+      <li>Worn: every job that needs a tool, every go, success or failure; the best copy in the pack. Improve: each tool its material needs.
+      Uses a go: 1; ${listed([...ACTION_BY_ID.values()].filter((a) => a.tool && a.wear !== undefined && a.wear !== 1).map((a) => `${a.label.toLowerCase()} ${a.wear}`))}.
+      Settlement workers: no tools, no wear.</li>
+    </ul>
+    <h4>Tools needed</h4>
+    <ul>
+      ${Object.entries(TOOL_JOBS).map(([tool, ids]) => `<li><b>${itemDef(tool).name}</b>: ${listed([...new Set(ids.map((id) => ACTION_BY_ID.get(id)?.verb ?? id))])}.</li>`).join('\n      ')}
     </ul>
     <h4>Repair</h4>
     <ul>

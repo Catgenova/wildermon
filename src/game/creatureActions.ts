@@ -1062,6 +1062,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     id: 'shoe_creature',
     label: 'Shoe it',
     verb: 'shoeing',
+    tool: 'mallet',
     stamina: 0.03,
     baseTime: 6,
     applies: (t, g) => {

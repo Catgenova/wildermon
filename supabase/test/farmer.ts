@@ -32,6 +32,7 @@ import { RECIPES } from '../../src/game/recipes';
 import { TileType } from '../../src/world/tiles';
 import { YEAR_FROM } from '../../src/world/calendar';
 import { DAY_SECONDS } from '../../src/game/pace';
+import { REAP_TOOL, TEND_TOOL } from '../../src/game/jobtools';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -160,6 +161,8 @@ begin
   delete from crop where world_id = w and x between 0 and 15 and y between 0 and 15;
   delete from crop_last where world_id = w and x between 0 and 15 and y between 0 and 15;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
+  -- Harvesting takes a sickle and tending a rake (\`REAP_TOOL\`, \`TEND_TOOL\`).
+  perform give(w, u, '${REAP_TOOL}', 1, 20); perform give(w, u, '${TEND_TOOL}', 1, 20);
   delete from item where world_id = w and holder = 'ground' and gx between 0 and 15 and gy between 0 and 15;
   delete from player_node where world_id = w and uid = u;
   delete from placed where world_id = w and x ${SPACE} and y ${SPACE};
@@ -380,6 +383,7 @@ begin
   ${hold('Sack Porter')};
   insert into said values ('SACK', v_t || '|' || carried_weight(w, u));
   ${clear('potato')};
+  perform give(w, u, '${REAP_TOOL}', 1, 20);
 
   /* ---- Worn-in Rake: Till's time with a rake of QL 50, and one of 90, on grass. ---- */
   perform land_set_tile(w, 10, 9, tile_id('Grass'));
@@ -395,6 +399,7 @@ begin
   ${hold('Worn-in Rake')};
   insert into said values ('RAKE', v_t || '|' || pg_temp.secs(w, u, 'till', ${at(10, 9)}));
   ${clear('rake')};
+  perform give(w, u, '${TEND_TOOL}', 1, 20);
 
   /* ---- Sow a Patch: the three by three around (10, 9), with grass at one corner and a crop in another. ---- */
   for tx in 9..11 loop for ty in 8..10 loop perform land_set_tile(w, tx, ty, tile_id('Field')); end loop; end loop;
@@ -617,6 +622,8 @@ const run = (id: string, x: number, y: number, itemUid?: number): void => {
 };
 for (let x = 20; x <= 22; x++) for (let y = 20; y <= 22; y++) game.world.setTile(x, y, TileType.Field);
 const seeds = game.inventory.add('wheat_seed', { count: 20, ql: 50 });
+// Harvesting takes a sickle and tending a rake.
+for (const t of [REAP_TOOL, TEND_TOOL]) if (!game.inventory.has(t)) game.inventory.add(t, { ql: 20 });
 check('the browser refuses the three patch jobs without the perks in the island\'s words',
   ask('sow_patch', 21, 21, seeds.uid) === sowNoPerk && ask('tend_patch', 21, 21) === tendNoPerk && ask('harvest_patch', 21, 21) === harvNoPerk);
 game.setPerks({ ...P('Sow a Patch').fx, ...P('Tend a Patch').fx, ...P('Harvest a Patch').fx });

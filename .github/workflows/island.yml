@@ -4116,6 +4116,26 @@ jobs:
             --outfile=node_modules/.cache/hammer.mjs --log-level=error
           node node_modules/.cache/hammer.mjs
 
+      - name: Jobs that went without a tool take one
+        if: matrix.shard == 5
+        run: |
+          # Sewing (needle), fitting (hammer), cutting and harvesting (sickle), tending and clearing (rake), paving and
+          # mixing (trowel), glazing and painting (brush): each job's tool on the browser's recipe or action and the
+          # island's, and each refused without it in the same words on both sides; workers still need none.
+          npx esbuild supabase/test/jobtools.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/jobtools.mjs --log-level=error
+          node node_modules/.cache/jobtools.mjs
+
+      - name: Every job with a tool wears it
+        if: matrix.shard == 5
+        run: |
+          # Every job with a tool in the browser has it on the island with the same `wear`; a go of each wears its best
+          # copy once in the browser; every go on the island is private.act_go's, and a go of one job of each family
+          # wears by the browser's amount, once; improving wears each tool; a worker's errand wears nothing.
+          npx esbuild supabase/test/tooldamage.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/tooldamage.mjs --log-level=error
+          node node_modules/.cache/tooldamage.mjs
+
       - name: The Smith's perks, each where its rule is
         if: matrix.shard == 5
         run: |

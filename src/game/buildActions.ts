@@ -44,6 +44,7 @@ import { glassPlanRefusal, glassResync } from './glasshouse';
 import { counterGone, counterPlanRefusal, counterRemoveRefusal, counterStreetRefusal } from './counters';
 import { lampWallRefusal } from './lamps';
 import { itemDef } from './items';
+import { BRUSH_TOOL, lacksTool } from './jobtools';
 import { billPlus, deckBears, deckCarries, metres, pierBill, pierDrop } from './piers';
 import { TileType } from '../world/tiles';
 import { changeFrameReason, floorHolds, jettyOnWall, jettyOver, jettyReason, jettyRoofOnWall, storeyOf, storeyOnWall, terraceRailed, wallFrameReason, wallLevelOf } from './frame';
@@ -52,6 +53,8 @@ type TileTarget = Extract<Target, { kind: 'tile' }>;
 const isTile = (t: Target): t is TileTarget => t.kind === 'tile';
 
 const TOOL_NAMES: Record<string, string> = { mallet: 'a mallet', trowel: 'a trowel' };
+/** What a building is planned with, a storey added with and a ladder built with: the island's `need_tool(…, 'mallet')`. */
+export const PLAN_TOOL = 'mallet';
 export const needTool = (g: Game, tool: string): string | null => (g.inventory.has(tool) ? null : `Need ${TOOL_NAMES[tool] ?? tool}.`);
 
 /** Plural-ish item names for material lists. */
@@ -379,6 +382,7 @@ export function noPlanReason(g: Game, t: TileTarget, id: 'no_plan' | 'mark_out')
 export const BUILD_ACTIONS: ActionDef[] = [
   {
     id: 'plan_building',
+    toolFor: () => PLAN_TOOL,
     label: 'Plan building',
     verb: 'planning a building',
     hidden: true,
@@ -412,6 +416,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
   },
   {
     id: 'add_to_building',
+    toolFor: () => PLAN_TOOL,
     label: 'Add to building',
     verb: 'extending the plan',
     hidden: true,
@@ -482,6 +487,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
   },
   {
     id: 'plan_wall',
+    toolFor: () => PLAN_TOOL,
     label: 'Plan wall',
     verb: 'planning a wall',
     hidden: true,
@@ -551,6 +557,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
   },
   {
     id: 'plan_fence',
+    toolFor: (t) => (isTile(t) ? material(t.material)?.tool : undefined),
     label: 'Plan fence',
     verb: 'planning a fence',
     hidden: true,
@@ -592,6 +599,10 @@ export const BUILD_ACTIONS: ActionDef[] = [
   },
   {
     id: 'build_wall',
+    toolFor: (t, g) => {
+      const wall = isTile(t) && t.side ? wallAt(g, t) : undefined;
+      return wall ? material((wall.change ?? wall).material)?.tool : undefined;
+    },
     label: 'Build wall',
     verb: 'building',
     hidden: true,
@@ -667,6 +678,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
     verb: 'painting',
     hidden: true,
     skill: 'alchemy',
+    tool: BRUSH_TOOL,
     stamina: 0.02,
     baseTime: 6,
     applies: (t, g) => isTile(t) && !!wallAt(g, t),
@@ -676,6 +688,9 @@ export const BUILD_ACTIONS: ActionDef[] = [
       return all.length === 1 ? `Paint wall ${colourWord(all[0].hex)}` : 'Paint wall';
     },
     check: (t, g) => {
+      // The brush first, as the island's general tool check comes before `build_refusal`.
+      const brush = lacksTool(g, BRUSH_TOOL);
+      if (brush) return brush;
       if (!isTile(t) || !t.side) return 'Choose a side.';
       const wall = wallAt(g, t);
       if (!wall) return 'No wall there.';
@@ -764,6 +779,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
     verb: 'painting',
     hidden: true,
     skill: 'alchemy',
+    tool: BRUSH_TOOL,
     stamina: 0.02,
     baseTime: 6,
     applies: (t, g) => {
@@ -777,6 +793,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       return all.length === 1 ? `Paint floor ${colourWord(all[0].hex)}` : 'Paint floor';
     },
     check: (t, g) => {
+      const brush = lacksTool(g, BRUSH_TOOL);
+      if (brush) return brush;
       if (!isTile(t)) return null;
       const b = storeyOf(g, t);
       const floor = b && g.buildings.floor(topLevel(b, t), t.x, t.y);
@@ -833,6 +851,11 @@ export const BUILD_ACTIONS: ActionDef[] = [
    */
   {
     id: 'change_wall',
+    // Not when asked for what stands, which drops the change and asks for no mallet (`changeWallReason`).
+    toolFor: (t, g) => {
+      const wall = isTile(t) && t.side ? wallAt(g, t) : undefined;
+      return isTile(t) && wall && t.wallType && t.material && standsAs(g, wall, t.wallType, t.material) ? undefined : PLAN_TOOL;
+    },
     label: 'Change wall',
     verb: 'planning a change',
     hidden: true,
@@ -919,6 +942,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
   },
   {
     id: 'add_floor',
+    toolFor: () => PLAN_TOOL,
     label: 'Plan another storey',
     verb: 'planning a storey',
     hidden: true,
@@ -980,6 +1004,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
   },
   {
     id: 'plan_floor',
+    toolFor: () => PLAN_TOOL,
     label: 'Plan floor',
     verb: 'planning a floor',
     hidden: true,
@@ -1058,6 +1083,11 @@ export const BUILD_ACTIONS: ActionDef[] = [
   },
   {
     id: 'build_floor',
+    toolFor: (t, g) => {
+      const b = isTile(t) ? storeyOf(g, t) : undefined;
+      const floor = b && isTile(t) ? g.buildings.floor(slotLevel(t, b), t.x, t.y) : undefined;
+      return !floor ? undefined : floorKind(floor) === 'ladder' ? PLAN_TOOL : material(floor.material)?.tool;
+    },
     label: 'Build floor',
     verb: 'building',
     hidden: true,

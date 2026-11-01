@@ -350,6 +350,7 @@ export const VINEYARD_ACTIONS: ActionDef[] = [
     label: 'Cut a grape cutting',
     verb: 'cutting a vine',
     skill: VINE_SKILL,
+    tool: CUTTING_TOOL,
     stamina: 0.02,
     baseTime: 4,
     applies: (t, g) => t.kind === 'tile' && wildVineAt(g, t.x, t.y),

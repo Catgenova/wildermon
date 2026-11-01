@@ -9,6 +9,7 @@ import { clockNamed, cropClockOf, fieldClock, fieldMoment, fieldRate, fieldStops
 import { clearedSaid, clearedTo, glassTillRefusal, glazing, isGlasshouse } from './glasshouse';
 import type { Building, Buildings } from './building';
 import { capital, timeWords } from './words';
+import { lacksTool, REAP_TOOL, TEND_TOOL } from './jobtools';
 
 /**
  * Farming: rake a field out of grass or dirt, sow a seed, tend it through
@@ -495,12 +496,15 @@ export const FARM_ACTIONS: ActionDef[] = [
     label: 'Tend',
     verb: 'tending the field',
     skill: 'farming',
+    tool: TEND_TOOL,
     ...TEND,
     applies: (t, g) => cropOf(g, t) !== undefined,
     check: (t, g) => {
       const box = planterOf(g, t);
       const far = box ? planterReach(g, box) : null;
       if (far) return far;
+      const rake = lacksTool(g, TEND_TOOL);
+      if (rake) return rake;
       const c = cropOf(g, t);
       if (!c) return 'No crop there.';
       if (cropReady(c)) return 'Ripe: harvest it.';
@@ -521,12 +525,15 @@ export const FARM_ACTIONS: ActionDef[] = [
     label: 'Harvest',
     verb: 'harvesting',
     skill: 'farming',
+    tool: REAP_TOOL,
     ...HARVEST,
     applies: (t, g) => cropOf(g, t) !== undefined,
     check: (t, g) => {
       const box = planterOf(g, t);
       const far = box ? planterReach(g, box) : null;
       if (far) return far;
+      const sickle = lacksTool(g, REAP_TOOL);
+      if (sickle) return sickle;
       const c = cropOf(g, t);
       if (!c) return 'No crop there.';
       if (!cropReady(c)) return `Not ripe: ${cropStageName(c)}.`;
@@ -550,13 +557,14 @@ export const FARM_ACTIONS: ActionDef[] = [
     labelFor: (t, g) => (planterOf(g, t) ? 'Pull up crop' : 'Clear field'),
     verb: 'clearing the field',
     skill: 'farming',
+    tool: TEND_TOOL,
     stamina: 0.03,
     baseTime: 3,
     applies: (t, g) => (t.kind === 'tile' && g.world.getTile(t.x, t.y) === TileType.Field) || (t.kind === 'furniture' && !!planterOf(g, t) && g.planted.has(t.id)),
     check: (t, g) => {
       const box = planterOf(g, t);
-      if (!box) return null;
-      return planterReach(g, box) ?? (g.planted.has(box.id) ? null : 'No crop there.');
+      const far = box ? planterReach(g, box) : null;
+      return far ?? lacksTool(g, TEND_TOOL) ?? (!box || g.planted.has(box.id) ? null : 'No crop there.');
     },
     perform: (t, g) => {
       const box = planterOf(g, t);
@@ -620,9 +628,12 @@ export const FARM_ACTIONS: ActionDef[] = [
     label: 'Tend patch',
     verb: 'tending a patch',
     skill: 'farming',
+    tool: TEND_TOOL,
     ...patchOf(TEND),
     applies: (t, g) => t.kind === 'tile' && g.perk('tend_patch', 0) > 0 && g.cropAt(t.x, t.y) !== undefined,
     check: (t, g) => {
+      const rake = lacksTool(g, TEND_TOOL);
+      if (rake) return rake;
       if (t.kind !== 'tile') return 'Choose a field.';
       if (g.perk('tend_patch', 0) <= 0) return unlearned('Tend a Patch');
       if (!wantTending(g, t.x, t.y, g.perk('tend_patch', 0)).length) return 'Nothing in the patch needs tending.';
@@ -640,9 +651,12 @@ export const FARM_ACTIONS: ActionDef[] = [
     label: 'Harvest patch',
     verb: 'harvesting a patch',
     skill: 'farming',
+    tool: REAP_TOOL,
     ...patchOf(HARVEST),
     applies: (t, g) => t.kind === 'tile' && g.perk('harvest_patch', 0) > 0 && g.cropAt(t.x, t.y) !== undefined,
     check: (t, g) => {
+      const sickle = lacksTool(g, REAP_TOOL);
+      if (sickle) return sickle;
       if (t.kind !== 'tile') return 'Choose a field.';
       if (g.perk('harvest_patch', 0) <= 0) return unlearned('Harvest a Patch');
       if (!ripeIn(g, t.x, t.y, g.perk('harvest_patch', 0)).length) return 'Nothing in the patch is ripe.';

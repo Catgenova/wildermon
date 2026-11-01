@@ -212,6 +212,8 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       const made = madeOf(item);
       const stock = stockFor(g, what.material, made);
       if (!stock || !stock.spend(1)) return;
+      // Every tool the material asks for wears a go's worth (`missingTool`), as the island's `perform_item` has it.
+      for (const id of what.material.tools) g.wearTool(id);
       const toolQl = Math.max(...what.material.tools.map((id) => g.toolQl(id)));
       // A failed pass marks the piece rather than spoiling it outright. Oak
       // and the deep metals are stubborn under the file as under the saw.
