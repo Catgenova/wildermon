@@ -4728,7 +4728,7 @@ insert into learn_pace_def values ('prune', 0.95);
 insert into learn_pace_def values ('stump', 0.96);
 insert into learn_pace_def values ('scrub', 1.01);
 insert into learn_pace_def values ('hive', 1.01);
-insert into learn_pace_def values ('moss', 1.14);
+insert into learn_pace_def values ('moss', 1.05);
 insert into learn_pace_def values ('mend', 1.05);
 insert into learn_pace_def values ('restore', 0.7);
 insert into learn_pace_def values ('tan', 0.84);
