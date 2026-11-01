@@ -6,7 +6,8 @@
  *
  * Asked of both sides:
  *   * the kit is one of every tool an action, recipe, build, bridge or
- *     improvement asks for, at QL 20 (the water skin at 30), the same list in
+ *     improvement asks for but the frying pan and clay vessels ("Remove clay
+ *     bowl, pot, jar, frying pan from starter tools."), at QL 20 (the water skin at 30), the same list in
  *     the browser and on the island;
  *   * coming ashore gives all of it, issued, and the stake;
  *   * an issued tool cannot be improved;
@@ -18,7 +19,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { barterPutRefusal, barterSaid } from '../../src/game/barter';
-import { KIT_QL, STARTER_KIT } from '../../src/game/game';
+import { KIT_LEFT_OUT, KIT_QL, STARTER_KIT } from '../../src/game/game';
 import { Inventory, itemName } from '../../src/game/items';
 import { fitsOrder } from '../../src/game/orders';
 
@@ -48,8 +49,10 @@ const asked = psql(`select string_agg(distinct t, ',' order by t) from (
   select tool t from build_material_def union select tool from improve_tool union select tool from action_def
   union select tool from recipe union select tool from bridge_def) x where t is not null;`).split(',');
 const kitIds = STARTER_KIT.map(([id]) => id);
-check('the browser kit has one of every tool the island asks for', asked.every((t) => kitIds.includes(t)),
-  asked.filter((t) => !kitIds.includes(t)).join(',') || `${asked.length} tools`);
+const wanted = asked.filter((t) => !KIT_LEFT_OUT.includes(t));
+check('the browser kit has one of every tool the island asks for but the cooking vessels', wanted.every((t) => kitIds.includes(t)),
+  wanted.filter((t) => !kitIds.includes(t)).join(',') || `${wanted.length} tools`);
+check('and none of the cooking vessels', KIT_LEFT_OUT.every((t) => asked.includes(t) && !kitIds.includes(t)), KIT_LEFT_OUT.join(','));
 check('and one of each only', new Set(kitIds).size === kitIds.length);
 check(`every tool at QL ${KIT_QL}, the water skin at 30`,
   STARTER_KIT.every(([id, ql]) => ql === (id === 'water_skin' ? 30 : 20)) && KIT_QL === 20);

@@ -12,7 +12,7 @@ import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
-import { DAMAGE_WARN, FORAGE_COOLDOWN, KIT_QL, SPROUT_COOLDOWN, STARTER_KIT, TRAVEL_LEG } from '../../game/game';
+import { DAMAGE_WARN, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_KIT, TRAVEL_LEG } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
@@ -4221,6 +4221,11 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 407,
+    day: '2026-11-01',
+    lines: () => [`Changed: starting kit: no ${KIT_LEFT_OUT.map((id) => itemDef(id).name.toLowerCase()).join(', ')} (was: one of each). ${STARTER_KIT.length - 1} tools and a water skin.`],
   },
   {
     n: 406,

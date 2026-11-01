@@ -633,8 +633,11 @@ export { QL_TOP };
  * cannot be improved, and it stays on the body when you die (`bury`); a kit
  * tool you hold no issued copy of is given again when you come ashore or wake
  * (`starter_kit`). Copper heads on pine handles, the poorest of everything.
+ * Not the cooking vessels (`KIT_LEFT_OUT`).
  */
 export const KIT_QL = 20;
+/** Tools the island asks for that the kit does not hold: the frying pan and the clay vessels. */
+export const KIT_LEFT_OUT: readonly string[] = ['frying_pan', 'clay_bowl', 'clay_pot', 'clay_jar'];
 export const STARTER_KIT: ReadonlyArray<readonly [string, number, string]> = [
   ['hatchet', KIT_QL, 'Copper'],
   ['shovel', KIT_QL, 'Copper'],
@@ -656,10 +659,6 @@ export const STARTER_KIT: ReadonlyArray<readonly [string, number, string]> = [
   ['brush', KIT_QL, ''],
   ['fishing_rod', KIT_QL, ''],
   ['fishing_net', KIT_QL, ''],
-  ['frying_pan', KIT_QL, ''],
-  ['clay_bowl', KIT_QL, ''],
-  ['clay_pot', KIT_QL, ''],
-  ['clay_jar', KIT_QL, ''],
   ['quern', KIT_QL, ''],
   ['water_skin', 30, ''],
 ];
