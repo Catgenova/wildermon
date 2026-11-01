@@ -49,14 +49,14 @@ const QL = 30;
 /** One go's wear on a plain tool at `QL`, by a job's `wear`: the browser's `wearPerUse`, the island's `wear_tool`. */
 const goWear = (wear = 1): number => wearPerUse(QL) * wear;
 
-// ---- The lists.
+// ---- The lists. Ordered by code point on both sides (`collate "C"`, as JavaScript's sort): CI's Postgres sorts '_' by its locale.
 const tooled = ACTIONS.filter((a) => a.tool);
 const fitted = ACTIONS.filter((a) => a.toolFor);
-const island = psql(`select coalesce(string_agg(id || '=' || tool, ',' order by id), '') from action_def where tool is not null;`);
+const island = psql(`select coalesce(string_agg(id || '=' || tool, ',' order by id collate "C"), '') from action_def where tool is not null;`);
 const browser = tooled.map((a) => `${a.id}=${a.tool}`).sort().join(',');
 check(`every job with a tool in the browser has it on the island, and none more (${tooled.length})`, island === browser,
   island === browser ? '' : `island only: ${island.split(',').filter((x) => !browser.split(',').includes(x)).join(' ')}; browser only: ${browser.split(',').filter((x) => !island.split(',').includes(x)).join(' ')}`);
-const wears = psql(`select string_agg(id || '=' || private.job_wear(id), ',' order by id) from action_def;`);
+const wears = psql(`select string_agg(id || '=' || private.job_wear(id), ',' order by id collate "C") from action_def;`);
 const wantWears = ACTIONS.map((a) => `${a.id}=${a.wear ?? 1}`).sort().join(',');
 check('a go wears it by the browser\'s `wear` on the island (`private.job_wear`)', wears === wantWears,
   wears === wantWears ? '' : wears.split(',').filter((x) => !wantWears.split(',').includes(x)).join(' '));

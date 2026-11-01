@@ -60,11 +60,11 @@ const wrongAction = ACTION_TOOLS.filter(([id, tool]) => ACTION_BY_ID.get(id)?.to
 check(`each action's tool in the browser (${ACTION_TOOLS.length})`, !wrongAction.length, wrongAction.join(', ') || 'all');
 check('cutting a vine and cutting grass take the same tool', CUTTING_TOOL === REAP_TOOL, `${CUTTING_TOOL} / ${REAP_TOOL}`);
 const sqlList = (xs: readonly string[]): string => xs.map((x) => `'${x}'`).join(', ');
-const islandRecipes = psql(`select coalesce(string_agg(id || '=' || coalesce(tool, '-'), ',' order by id), '') from recipe
+const islandRecipes = psql(`select coalesce(string_agg(id || '=' || coalesce(tool, '-'), ',' order by id collate "C"), '') from recipe
   where id in (${sqlList(recipes.map(([id]) => id))});`);
 const wantRecipes = recipes.map(([id, tool]) => `${id}=${tool}`).sort().join(',');
 check('and on the island (`recipe.tool`)', islandRecipes === wantRecipes, islandRecipes === wantRecipes ? '' : islandRecipes);
-const islandActions = psql(`select coalesce(string_agg(id || '=' || coalesce(tool, '-'), ',' order by id), '') from action_def
+const islandActions = psql(`select coalesce(string_agg(id || '=' || coalesce(tool, '-'), ',' order by id collate "C"), '') from action_def
   where id in (${sqlList(ACTION_TOOLS.map(([id]) => id))});`);
 const wantActions = ACTION_TOOLS.map(([id, tool]) => `${id}=${tool}`).sort().join(',');
 check('and on the island (`action_def.tool`)', islandActions === wantActions, islandActions === wantActions ? '' : islandActions);
