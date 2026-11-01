@@ -76,19 +76,19 @@ interface Log {
 /** A Lognib: small, a high dome of three plates, one horn up and back off its head, a big-eyed cream face, short legs. */
 const LOGNIB_LOOK: Log = {
   stage: 0,
-  high: 0.2,
-  shell: { y0: -0.58, y1: 0.66, cut: 0.9, w: 0.56, h: 0.4, z0: 0.0, segs: 3, step: 0.1, lo: 0.3, flare: 0.5, p: 2.0 },
-  belly: { c: [0, 0.04, -0.03], r: [0.33, 0.48, 0.16] },
-  head: { at: [0, 0.6, -0.04], r: [0.2, 0.18, 0.17], eye: [0.42, 0.85, 0.1], size: 0.05 },
-  spike: { root: [0, 0.08, 0.12], mid: [0, 0.38, 0.6], tip: [0, -0.16, 0.7], w: 0.13 },
+  high: 0.24,
+  shell: { y0: -0.6, y1: 0.6, cut: 0.9, w: 0.5, h: 0.28, z0: 0.06, segs: 4, step: 0.1, lo: 0.16, flare: 0.35, p: 2.0 },
+  belly: { c: [0, 0.04, -0.02], r: [0.34, 0.52, 0.17] },
+  head: { at: [0, 0.66, -0.1], r: [0.19, 0.17, 0.16], eye: [0.42, 0.85, 0.12], size: 0.048 },
+  spike: { root: [0, 0.06, 0.11], mid: [0, 0.2, 0.3], tip: [0, 0.02, 0.42], w: 0.065 },
   crescent: null,
   crest: null,
   moss: null,
-  patches: { n: 2, big: 0.16 },
+  patches: { n: 1, big: 0.26 },
   band: false,
-  legs: { x: 0.3, z: -0.05, ys: [0.26, 0.0, -0.26], fan: [52, 6, -48], upper: 0.17, lower: 0.21, reach: 0.35, thick: 0.07, fore: 1 },
+  legs: { x: 0.3, z: -0.02, ys: [0.28, 0.02, -0.26], fan: [62, 6, -48], upper: 0.17, lower: 0.21, reach: 0.34, thick: 0.07, fore: 1 },
   gait: { sweep: [0.2, 0.28], duty: [0.58, 0.5], lift: [0.06, 0.08], bob: 0.018, sway: 3 },
-  prop: { across: true, beam: false, r: 0.11, len: 0.56 },
+  prop: { across: true, beam: false, r: 0.1, len: 0.5 },
   size: 5.4,
 };
 
@@ -101,7 +101,7 @@ const TIMBERSPLIT_LOOK: Log = {
   head: { at: [0, 0.98, -0.02], r: [0.24, 0.3, 0.22], eye: [0.62, 0.6, 0.12], size: 0.045 },
   spike: null,
   crescent: { c: [0, 0.28, 0.16], R: 0.54, a0: -22, a1: 150, w: 0.36, teeth: 6, root: [0, 0.24, -0.02], stem: 0.1 },
-  crest: { u: 0.8, h: 0.46, back: 0.62, foot: 0.3 },
+  crest: { u: 0.78, h: 0.55, back: 0.72, foot: 0.44 },
   moss: { from: 0.08, to: 0.9, wide: 0.7, deep: 0.12, clumps: 10 },
   patches: { n: 2, big: 0.17 },
   band: false,
@@ -115,16 +115,16 @@ const TIMBERSPLIT_LOOK: Log = {
 const BEAMMASTER_LOOK: Log = {
   stage: 2,
   high: 0.48,
-  shell: { y0: -1.18, y1: 1.12, cut: 0.88, w: 1.1, h: 0.7, z0: 0.06, segs: 4, step: 0.07, lo: 0.14, flare: 0.45, p: 2.1 },
-  belly: { c: [0, 0.04, -0.06], r: [0.74, 0.92, 0.28] },
+  shell: { y0: -1.18, y1: 1.12, cut: 0.88, w: 1.24, h: 0.84, z0: 0.06, segs: 4, step: 0.07, lo: 0.14, flare: 0.45, p: 2.1 },
+  belly: { c: [0, 0.04, -0.06], r: [0.84, 0.92, 0.3] },
   head: { at: [0, 1.22, 0.0], r: [0.32, 0.38, 0.28], eye: [0.62, 0.6, 0.12], size: 0.055 },
   spike: null,
-  crescent: { c: [0, 0.36, 0.22], R: 0.86, a0: -24, a1: 150, w: 0.58, teeth: 7, root: [0, 0.3, -0.02], stem: 0.14 },
-  crest: { u: 0.78, h: 0.74, back: 1.0, foot: 0.5 },
+  crescent: { c: [0, 0.36, 0.24], R: 0.96, a0: -24, a1: 150, w: 0.64, teeth: 10, root: [0, 0.3, -0.02], stem: 0.14 },
+  crest: { u: 0.76, h: 0.8, back: 1.08, foot: 0.64 },
   moss: { from: 0.06, to: 0.9, wide: 0.66, deep: 0.15, clumps: 12 },
   patches: { n: 1, big: 0.2 },
   band: true,
-  legs: { x: 0.6, z: -0.1, ys: [0.48, -0.06, -0.6], fan: [48, 4, -50], upper: 0.5, lower: 0.56, reach: 0.86, thick: 0.15, fore: 1.3 },
+  legs: { x: 0.68, z: -0.1, ys: [0.48, -0.06, -0.6], fan: [48, 4, -50], upper: 0.5, lower: 0.56, reach: 0.9, thick: 0.15, fore: 1.65 },
   gait: { sweep: [0.3, 0.42], duty: [0.64, 0.54], lift: [0.07, 0.1], bob: 0.028, sway: 2 },
   prop: { across: false, beam: true, r: 0.2, len: 1.2 },
   size: 5.2,
@@ -158,11 +158,11 @@ function onSlab(outline: Array<[number, number]>, t: number, m: Mat, out: Disc[]
 
 /* ---- the shell and what is on it ---------------------------------------------------------- */
 
-/** The moss line's dome, cream only round its rim: the band along each plate's back edge gold as the rest. */
-function plated(S: Shell, m: Mesh): Mesh {
+/** The moss line's dome, its plates' lips cream; cream round its rim, and the band along each plate's back edge gold as the rest unless `bands`. */
+function plated(S: Shell, m: Mesh, bands = false): Mesh {
   return mesh(m.v, m.f.map((f) => {
     if (f.m === 'shellDark') return { ...f, m: 'mark' as Mat };
-    if (f.m !== 'mark') return f;
+    if (f.m !== 'mark' || bands) return f;
     const z = f.i.reduce((t, i) => t + m.v[i][2], 0) / f.i.length;
     return z > S.z0 + S.h * 0.16 ? { ...f, m: 'coat' as Mat } : f;
   }));
@@ -198,8 +198,9 @@ function shellMarks(s: Log): Mesh {
         const c = onShell(S, (u0 + u1) / 2, (lo + hi) / 2);
         out.push(facing(ring.map((p) => add(p, scale(unit(sub(p, [0, p[1], S.z0])), 0.006))), c.n, 'mark'));
       }
-      const ph = sd > 0 ? 0.44 : Math.PI - 0.44;
-      swirlOn(S, S.cut * 0.42, ph, 0.36, 0.06, sd, out, 'spot');
+      // Mirrored, one on each flank, forward of the middle so it is seen from either front corner.
+      const ph = sd > 0 ? 0.48 : Math.PI - 0.48;
+      swirlOn(S, S.cut * 0.54, ph, 0.46, 0.07, sd, out, 'spot');
     }
   }
   // Olive patches on each plate, each side, high on it; on the Beammaster's above its band.
@@ -210,15 +211,20 @@ function shellMarks(s: Log): Mesh {
         const u = (j + 0.4 + 0.35 * jitter(id)) * L;
         const ph0 = s.band ? 1.08 : s.moss ? 0.55 + 0.4 * e : 0.45 + 0.55 * e;
         const ph = ph0 + 0.25 * (jitter(id + 1) - 0.5);
-        const ru = L * s.patches.big * 2.2, rp = s.patches.big * (1.2 + 0.6 * jitter(id + 2));
-        blobOn(S, u, sd > 0 ? ph : Math.PI - ph, ru, rp, id, 'spot', out, j * L + L * 0.17, (j + 1) * L - 0.01);
-        // A lighter mottle in it.
-        if (jitter(id + 9) < 0.6) blobOn(S, u + ru * 0.2, sd > 0 ? ph + rp * 0.2 : Math.PI - ph - rp * 0.2, ru * 0.4, rp * 0.4, id + 50, 'stone', out, j * L + L * 0.17, (j + 1) * L - 0.01);
+        const ru = L * s.patches.big * 2.2, rp = s.patches.big * (1.2 + 0.6 * jitter(id + 2)), lo = j * L + L * 0.17, hi = (j + 1) * L - 0.01;
+        const at = sd > 0 ? ph : Math.PI - ph, off = sd * rp * 0.15;
+        // A blotch blending from the gold into olive: an olive-gold wash, and the olive within it.
+        blobOn(S, u, at, ru * 1.05, rp * 1.1, id, 'stone', out, lo, hi);
+        blobOn(S, u + ru * 0.1, at + off, ru * 0.75, rp * 0.75, id + 50, 'spot', out, lo, hi);
       }
     }
   }
   // The Lognib's: a patch over the top of each plate too.
-  if (!s.moss) for (let j = 0; j < S.segs; j++) blobOn(S, (j + 0.6) * L, Math.PI / 2 + 0.2 * (jitter(j + 40) - 0.5), L * 0.25, 0.3, 60 + j, 'spot', out, j * L + L * 0.17, (j + 1) * L - 0.01);
+  if (!s.moss) for (let j = 0; j < S.segs; j++) {
+    const u = (j + 0.6) * L, ph = Math.PI / 2 + 0.5 * (jitter(j + 40) - 0.5), lo = j * L + L * 0.17, hi = (j + 1) * L - 0.01;
+    blobOn(S, u, ph, L * 0.32, 0.42, 60 + j, 'stone', out, lo, hi);
+    if (j % 2 === 0) blobOn(S, u, ph + 0.1, L * 0.18, 0.24, 70 + j, 'spot', out, lo, hi);
+  }
   return paint(out);
 }
 
@@ -231,7 +237,7 @@ function bellyOf(s: Log, n: number, k: number): Mesh {
     const y = B.c[1] + B.r[1] * lerp(-0.75, 0.7, q / 5);
     for (const sd of [1, -1]) {
       const e = onEgg(B.c, B.r, [sd * 0.9, (y - B.c[1]) / B.r[1], -0.2]);
-      out.push(disc(add(e.p, scale(e.n, 0.008)), e.n, B.r[0] * 0.08, B.r[2] * 0.7, 6, 'hornDark'));
+      out.push(disc(add(e.p, scale(e.n, 0.008)), e.n, B.r[0] * 0.07, B.r[2] * 0.4, 6, 'belly'));
     }
   }
   return merge(m, paint(out));
@@ -288,37 +294,68 @@ function mossOf(s: Log, fine: boolean): Mesh {
 }
 
 /**
- * The crest up off its back: a broad leaf of a fin standing along its middle, its foot in the moss, rising to a tip swept far
- * back and a lesser one forward, its top edge between them notched; gold, edged cream, a green patch in it.
+ * A blade from lines along it (along, up; in the plane square to `x`), `t` thick: a band of its own colour between each line and
+ * the next, on both faces, and its edges along the first and the last lines.
  */
-function crestOf(s: Log): Mesh {
+function ribbon(lines: Array<Array<[number, number]>>, mats: Mat[], t: number, edge: Mat): Mesh {
+  const L = lines.length, N = lines[0].length, v: V3[] = [], f: Face[] = [], want: V3[] = [];
+  for (const sd of [1, -1]) for (const line of lines) for (const [y, z] of line) v.push([sd * t / 2, y, z]);
+  const at = (sd: number, b: number, q: number): number => (sd > 0 ? 0 : L * N) + b * N + q;
+  for (const sd of [1, -1]) for (let b = 0; b < L - 1; b++) for (let q = 0; q < N - 1; q++) {
+    f.push({ i: [at(sd, b, q), at(sd, b, q + 1), at(sd, b + 1, q + 1), at(sd, b + 1, q)], m: mats[b] });
+    want.push([sd, 0, 0]);
+  }
+  for (let q = 0; q < N - 1; q++) {
+    for (const [b, inward] of [[0, 1], [L - 1, L - 2]] as Array<[number, number]>) {
+      const [y0, z0] = lines[b][q], [y1, z1] = lines[b][q + 1], [yi, zi] = lines[inward][q];
+      f.push({ i: [at(1, b, q), at(1, b, q + 1), at(-1, b, q + 1), at(-1, b, q)], m: edge });
+      want.push([0, (y0 + y1) / 2 - yi, (z0 + z1) / 2 - zi]);
+    }
+  }
+  // Its foot, closed.
+  f.push({ i: [at(1, 0, 0), at(1, L - 1, 0), at(-1, L - 1, 0), at(-1, 0, 0)], m: edge });
+  want.push([0, 0, -1]);
+  return mesh(v, wound(v, f, want));
+}
+
+/**
+ * The crest up off its back: a broad curved blade like a scythe's, rising off a dark ridge along the top of its dome and
+ * sweeping back over the shell to a point, gold along its leading edge, cream over the rest of its face, its trailing edge
+ * notched; set on a raised dark ridge.
+ */
+function crestOf(s: Log, fine: boolean): Mesh {
   const C = s.crest!, S = s.shell;
   const at = onShell(S, C.u * S.cut, Math.PI / 2);
-  const H = C.h, B = C.back, F = C.foot, top = S.z0 + S.h;
-  // How high the shell's ridge is at `y`.
+  const H = C.h, B = C.back, W = C.foot;
   const ridge = (y: number): number => onShell(S, clamp((y - S.y0) / (S.y1 - S.y0), 0.01, S.cut), Math.PI / 2).p[2];
-  // The outline: a sickle of a fin up off the shell, leaning back, its leading edge rising to a short hooked tip forward and two
-  // notches over it, its top running back to a long point (along from its foot, up from the top of the shell).
-  const o: Array<[number, number]> = [
-    [F * 0.34, -9], [F * 0.3, H * 0.34], [F * 0.2, H * 0.6], [F * 0.62, H * 0.94], [F * 0.22, H * 0.84], [F * 0.16, H * 0.98],
-    [-B * 0.04, H * 0.9], [-B * 0.12, H * 1.03], [-B * 0.36, H * 1.08], [-B * 0.7, H * 1.04], [-B, H * 0.92],
-    [-B * 0.74, H * 0.8], [-B * 0.5, H * 0.62], [-B * 0.32, H * 0.4], [-B * 0.24, -9],
-  ];
-  const outline = o.map(([y, z]): [number, number] => {
-    // Leaning back the higher it goes.
-    const yy = at.p[1] + y - (z === -9 ? 0 : z) * 0.35;
-    return [yy, z === -9 ? at.p[2] - 0.05 : Math.max(top + z, ridge(yy) + 0.02)];
-  });
-  const t = 0.035 + 0.02 * s.stage;
-  const body = slab(outline, t, 'mark', 'shellDark');
+  const P0: [number, number] = [at.p[1], at.p[2] - 0.05], P1: [number, number] = [at.p[1] + W * 0.25, at.p[2] + H * 0.75], P2: [number, number] = [at.p[1] - B, at.p[2] + H];
+  const bez = (k: number): [number, number] => [0, 1].map((i) => (1 - k) ** 2 * P0[i] + 2 * k * (1 - k) * P1[i] + k * k * P2[i]) as [number, number];
+  const N = fine ? 18 : 11, lead: Array<[number, number]> = [], gold: Array<[number, number]> = [], trail: Array<[number, number]> = [];
+  for (let q = 0; q <= N; q++) {
+    const k = q / N, p = bez(k), a = bez(Math.max(0, k - 0.01)), b = bez(Math.min(1, k + 0.01));
+    const d = unit([0, b[0] - a[0], b[1] - a[1]]), n: [number, number] = [d[2], -d[1]];
+    const w = W * (0.75 + 0.45 * Math.sin(Math.PI * Math.min(1, k * 1.15))) * (1 - k ** 3.5) + 0.004;
+    const tooth = k > 0.28 && k < 0.92 ? frac(k * 3.6) : 0, wt = w * (1 - 0.4 * tooth);
+    const keep = (y: number, z: number): [number, number] => [y, k < 0.12 ? z : Math.max(z, ridge(y) + 0.02)];
+    lead.push(keep(p[0] + n[0] * w * 0.5, p[1] + n[1] * w * 0.5));
+    gold.push(keep(p[0] + n[0] * w * 0.12, p[1] + n[1] * w * 0.12));
+    trail.push(keep(p[0] - n[0] * wt * 0.5, p[1] - n[1] * wt * 0.5));
+  }
+  const blade0 = ribbon([lead, gold, trail], ['coat', 'mark'], 0.06 + 0.03 * s.stage, 'coatDark');
+  // An olive wash low on its cream face, toward its foot.
   const marks: Disc[] = [];
-  // Gold within a cream edge, and an olive patch in the middle of it.
-  const mid: [number, number] = [at.p[1] - B * 0.15 - H * 0.2, top + H * 0.6];
-  const inset = (k: number): Array<[number, number]> => outline.map(([y, z]) => [lerp(y, mid[0], k), lerp(z, mid[1], k)]);
-  onSlab(inset(0.14).map(([y, z]) => [y, Math.max(z, at.p[2] + 0.02)]), t, 'coatLight', marks);
-  const low = outline.filter(([, z]) => z < top + H * 0.55).map(([y, z]): [number, number] => [lerp(y, mid[0], 0.2), Math.max(z, at.p[2] + 0.02)]);
-  if (low.length > 2) for (const sd of [1, -1]) marks.push(facing(low.map(([y, z]) => [sd * (t / 2 + 0.006), y, z] as V3), [sd, 0, 0], 'spot'));
-  return merge(body, paint(marks));
+  const wash = [...gold.slice(1, Math.round(N * 0.45)), ...trail.slice(1, Math.round(N * 0.45)).reverse()];
+  const t = 0.06 + 0.03 * s.stage;
+  onSlab(wash.map(([y, z]) => [y, z]), t + 0.004, 'spot', marks);
+  // The raised dark ridge it stands on, along the top of the dome.
+  const spine: V3[] = [];
+  for (let q = 0; q <= 6; q++) {
+    const o = onShell(S, clamp(C.u - 0.3 + 0.42 * (q / 6), 0.02, 0.98) * S.cut, Math.PI / 2);
+    spine.push(add(o.p, [0, 0, 0.02]));
+  }
+  const r = 0.05 + 0.025 * s.stage;
+  const rib = tube(spine, spine.map((_, q) => r * (0.5 + Math.sin(Math.PI * q / 6) * 0.6)), spine.map((_, q) => r * (0.6 + Math.sin(Math.PI * q / 6) * 0.7)), 7, (ring) => (ring % 2 ? 'hornDark' : 'bark'));
+  return merge(rib, blade0, paint(marks));
 }
 
 /* ---- the head ------------------------------------------------------------------------- */
@@ -434,7 +471,7 @@ function moonOf(C: Crescent): Moon {
     const k = q / N, a = lerp(C.a1, C.a0, k) * DEG;
     const w = C.w * Math.sin(Math.PI * Math.min(1, 0.03 + k * 0.97)) ** 0.75 + 0.004;
     const tooth = k > 0.18 && k < 0.9 ? frac(k * C.teeth * 1.25) : 0;
-    const bite = w * (1 - 0.34 * tooth * Math.min(1, w / (C.w * 0.4)));
+    const bite = w * (1 - (C.teeth > 8 ? 0.46 : 0.34) * tooth * Math.min(1, w / (C.w * 0.4)));
     const at = (d: number): [number, number] => [C.c[1] + (C.R - d) * Math.cos(a), C.c[2] + (C.R - d) * Math.sin(a)];
     out.outer.push(at(0));
     out.gold.push(at(w * 0.13));
@@ -668,11 +705,20 @@ interface Pose {
 function standPose(s: Log, a: Anim): Pose {
   const t = a.t, still = 1 - a.go;
   const look = beat(t, LOG_LOOKS as number[], 1.6) * still;
-  return {
+  const p: Pose = {
     y: 0, z: s.high + 0.008 * cyc(t, 6) + 0.006 * (a.breath - 0.5), pitch: 0.8 * cyc(t, 6, 1), roll: 0.6 * cyc(t, 3), yaw: 4 * drift(t) * still,
     head: [4 * cyc(t, 5) * still - 8 * look, 14 * drift(t, 1.3) * still * (1 - look) + 20 * look * Math.sin((t - LOG_LOOKS[0]) * 2.4), 5 * drift(t, 2) * still],
     reach: 0, grip: 0, drag: 0,
   };
+  if (s.spike) {
+    // Still, the Lognib keeps a log hugged before it, forelegs over it, its chin on it.
+    const g = smooth(clamp(1 - 2 * a.go));
+    p.grip = g;
+    p.z += 0.05 * g;
+    p.pitch += 2 * g;
+    p.head[0] += 6 * g;
+  }
+  return p;
 }
 
 /** Going: bobbing a little at each set of three coming down, rolling over them; the head forward. */
@@ -719,17 +765,16 @@ interface Chop { look: number; reared: number; bite: number; through: number }
 function workPose(s: Log, chop: Chop | null, p: Pose, t: number, graze: number): void {
   const d = downOf(t, graze), W = LOG_WORK;
   if (!chop) {
-    const grip = ramp(t, 0.03, W.grip) * (1 - ramp(t, W.gone - 0.06, W.gone));
+    // Its chin on the log, it leans back into each heave and the log comes with it; then it rolls the log back before it.
     const heave = W.drags.reduce((k, [a, b]) => k + ramp(t, a, b) * (1 - ramp(t, b + 0.04, b + 0.14)), 0);
-    const drag = W.drags.reduce((k, [a, b]) => k + ramp(t, a, b), 0) / W.drags.length;
+    const back = W.drags.reduce((k, [a, b]) => k + ramp(t, a, b), 0) * 0.07 - 0.14 * ramp(t, W.gone - 0.1, W.gone + 0.04);
     p.y += d * -0.07 * heave;
-    // Up over the log, its chin on it, leaning back into each heave.
-    p.z += d * (0.05 * grip + 0.01 * heave);
-    p.pitch += d * (2 * grip + 4 * heave);
-    p.head[0] = lerp(p.head[0], 6 * grip + 6 * heave, d);
+    p.z += d * 0.01 * heave;
+    p.pitch += d * 4 * heave;
+    p.head[0] += d * 6 * heave;
     p.head[1] *= 1 - d;
-    p.grip = d * grip;
-    p.drag = d * drag;
+    p.grip = Math.max(p.grip, d);
+    p.drag = d * back;
     return;
   }
   const raise = ramp(t, W.raise[0], W.raise[1]), down = ramp(t, W.raise[1] + 0.02, W.bite);
@@ -761,6 +806,7 @@ function poseOf(s: Log, chop: Chop | null, a: Anim): Pose {
   const p = standPose(s, a);
   goPose(s, p, a);
   const act = a.act;
+  if (act?.kind === 'strike' || act?.kind === 'evolve') p.grip = 0;
   if (act?.kind === 'strike') strikePose(s, p, act.t);
   else if (act?.kind === 'work') workPose(s, chop, p, act.t, a.graze);
   else if (act?.kind === 'evolve') evolvePose(s, p, act.t);
@@ -834,7 +880,8 @@ function logBones(s: Log): (a: Anim) => Bones {
     b.shadow = shadowOf(body, Math.max(0, p.z - s.high) * 2);
     const flat = joint(ROOT, [0, 0, 0], 0, 0, p.yaw);
     // Where the Lognib's log lies: before it, drawn back with it as it heaves.
-    const logAt = place(flat, [0, spot - p.drag * 0.14, 0]);
+    const logAt = place(flat, [0, spot - p.drag, 0]);
+    if (s.spike) b.prop = { m: scale9(flat.m, Math.max(0.02, smooth(clamp(p.grip * 2)))), t: logAt };
     const up: V3 = [0, 0, 1];
     for (let q = 0; q < 2; q++) {
       const sd = q ? 1 : -1;
@@ -863,8 +910,7 @@ function logBones(s: Log): (a: Anim) => Bones {
       const t = working, d = act?.kind === 'work' ? downOf(act.t, a.graze) : a.graze;
       const there = smooth((d - 0.05) / 0.35) * (t > W.gone ? 1 - ramp(t, W.gone, 1) : 1) * (act ? ramp(t, 0, 0.08) : 1);
       const k = Math.max(0.02, there);
-      if (s.spike) b.prop = { m: scale9(flat.m, k), t: logAt };
-      else {
+      if (!s.spike) {
         const apart = ramp(t, W.split, W.split + 0.08);
         const at = place(flat, [0, spot, 0]);
         for (const [key, sd] of [['propR', 1], ['propL', -1]] as Array<[string, number]>) {
@@ -887,10 +933,10 @@ function logBuild(s: Log, lod: number): Piece[] {
   const pieces: Piece[] = [];
   const S = s.shell;
   const shellSolid = { c: [0, lerp(S.y0, S.y1, S.cut / 2), S.z0] as V3, r: [S.w * 0.9, (S.y1 - S.y0) * 0.42, S.h * 0.88] as V3 };
-  pieces.push({ key: 'shell', mesh: merge(plated(S, domeOf(S, nb, fine)), shellMarks(s)), bone: 'body', bias: 0 });
+  pieces.push({ key: 'shell', mesh: merge(plated(S, domeOf(S, nb, fine), s.stage === 0), shellMarks(s)), bone: 'body', bias: 0 });
   pieces.push({ key: 'belly', mesh: bellyOf(s, n, k), bone: 'body', bias: -0.02, under: ['shell'] });
   if (s.moss) pieces.push({ key: 'moss', mesh: mossOf(s, fine), bone: 'body', bias: 0.02, after: ['shell'] });
-  if (s.crest) pieces.push({ key: 'crest', mesh: crestOf(s), bone: 'body', bias: 0.025, after: ['shell', 'moss'] });
+  if (s.crest) pieces.push({ key: 'crest', mesh: crestOf(s, fine), bone: 'body', bias: 0.025, after: ['shell', 'moss'] });
   const headSolid = { c: [0, 0, 0] as V3, r: scale(s.head.r, 0.85) };
   if (s.crescent) {
     // A dark neck the head is set into, under the shell's front edge.
@@ -916,7 +962,8 @@ function logBuild(s: Log, lod: number): Piece[] {
   }
   // What it works.
   const shown = (a: Anim): boolean => a.act?.kind === 'work' || (a.graze > 0 && a.go < 1);
-  if (s.spike) pieces.push({ key: 'prop', mesh: wholeLog(s.prop, fine), bone: 'prop', bias: 0.06, shown });
+  // The Lognib's log is before it whenever it stands, not only at its task.
+  if (s.spike) pieces.push({ key: 'prop', mesh: wholeLog(s.prop, fine), bone: 'prop', bias: 0.06, shown: (a) => a.go < 0.5 && a.act?.kind !== 'strike' && a.act?.kind !== 'evolve' });
   else {
     const half = s.prop.beam ? halfBeam(s.prop) : halfLog(s.prop, fine);
     pieces.push({ key: 'propR', mesh: half, bone: 'propR', bias: 0.06, shown });
@@ -1044,7 +1091,7 @@ function logKind(s: Log): Kind {
     // brown, its horn and the wood it works the same on every variant.
     palette: (coat, mark) => {
       // Deeper than the variant's own, as the light lifts it: the sheet's orange gold, and its peach cream.
-      const shell = mix(coat, [226, 138, 0], 0.85), cream = mix(mark, [238, 188, 124], 0.7);
+      const shell = mix(coat, [214, 122, 0], 0.9), cream = mix(mark, [238, 188, 124], 0.7);
       return coatPalette(coat, mark, {
         coat: shell,
         coatDark: mix(shell, [120, 80, 30], 0.35),
@@ -1052,7 +1099,7 @@ function logKind(s: Log): Kind {
         mark: cream,
         shellDark: mix(shell, [110, 70, 30], 0.4),
         spot: [112, 112, 38],
-        stone: [150, 158, 58],
+        stone: [186, 138, 16],
         belly: [58, 38, 26],
         bark: [86, 58, 38],
         horn: [104, 66, 42],
