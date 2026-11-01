@@ -70,79 +70,85 @@ interface Pack {
   size: number;
 }
 
-/** A Packlet: small and long in the body on short legs, a big head, tall ears, drooping flaps, a mossy back and one pod on its left flank. */
+/**
+ * A Packlet: long and low, a deep barrel on short sturdy legs, its head held forward at its shoulder on a short thick neck,
+ * its ears swept back and drooping, a cape of leaves over its back and one pod hung on its left flank below the cape's edge.
+ */
 const PACKLET_LOOK: Pack = {
   stage: 0,
-  body: { y: [-1.12, -1.0, -0.6, 0, 0.55, 0.88, 1.04], z: [0.1, 0.1, 0.08, 0.04, 0.0, 0.02, 0.08], w: [0.36, 0.58, 0.66, 0.66, 0.64, 0.56, 0.32], h: [0.38, 0.6, 0.7, 0.7, 0.68, 0.6, 0.36] },
-  len: 1.55, hip: 0.62, drop: 0.3,
-  fore: [0.33, 0.3, 0.1], hind: [0.36, 0.3, 0.24], thick: 0.2, rake: [10, 18], paw: 0.13, stance: [0.02, 0.06],
-  high: 0.97,
-  neck: { at: [0, 0.86, 0.3], len: 0.26, w: 0.36, lean: 24 },
-  head: { r: [0.46, 0.5, 0.42], snout: [0.28, 0.2, 0.28], up: 0.14, pitch: -4 },
-  eye: { dir: [0.62, 0.66, 0.26], size: 0.13 },
-  ear: { at: [0.3, -0.1, 0.3], len: 1.0, w: 0.27, hang: [0.62, -0.28, -0.74], hollow: [0.75, 0.55, 0.1] },
-  crest: { n: 5, len: 0.85, w: 0.18, back: 30 },
-  ruff: { c: [0, 0.86, -0.02], r: [0.42, 0.32, 0.44], len: 0.2, rows: 3, across: 6 },
+  body: { y: [-1.3, -1.16, -0.7, 0, 0.65, 1.02, 1.2], z: [0.06, 0.06, 0.04, 0.02, 0.0, 0.02, 0.06], w: [0.4, 0.62, 0.7, 0.7, 0.68, 0.6, 0.36], h: [0.42, 0.64, 0.74, 0.74, 0.72, 0.64, 0.38] },
+  len: 1.8, hip: 0.62, drop: 0.5,
+  fore: [0.27, 0.24, 0.11], hind: [0.27, 0.23, 0.2], thick: 0.25, rake: [8, 16], paw: 0.15, stance: [0.02, 0.06],
+  high: 1.06,
+  neck: { at: [0, 1.0, 0.24], len: 0.36, w: 0.42, lean: 58 },
+  head: { r: [0.42, 0.52, 0.38], snout: [0.24, 0.19, 0.36], up: 0.08, pitch: -2 },
+  eye: { dir: [0.6, 0.6, 0.3], size: 0.12 },
+  ear: { at: [0.26, -0.26, 0.24], len: 1.1, w: 0.29, hang: [0.3, -0.62, -0.72], hollow: [1, 0.2, 0.15] },
+  crest: { n: 7, len: 0.9, w: 0.17, back: 6 },
+  ruff: { c: [0, 1.18, -0.08], r: [0.44, 0.36, 0.5], len: 0.24, rows: 3, across: 6 },
   feather: 0.12,
-  mantle: { from: -1.0, to: 0.6, wide: 0.75, deep: 0.24, rows: 4, leaves: 6, leaf: 0.4 },
-  pods: [{ y: -0.3, th: -1.68, r: [0.4, 0.66, 0.56], out: 0.04 }],
+  mantle: { from: -1.25, to: 0.85, wide: 1.36, deep: 0.16, rows: 5, leaves: 8, leaf: 0.46 },
+  pods: [{ y: -0.15, th: -1.98, r: [0.38, 0.6, 0.5], out: 0.02 }],
   nets: false,
   cage: null,
   armour: false,
-  gait: { duty: [0.62, 0.3], swing: [0.32, 0.38], step: 0.22, bob: 0.05, flex: 9 },
-  size: 4.0,
+  gait: { duty: [0.62, 0.3], swing: [0.3, 0.36], step: 0.22, bob: 0.04, flex: 7 },
+  size: 3.5,
 };
 
-/** A Haulbud: taller and longer, bigger ears and crest, a thicker mantle, long cream fur on its legs, two pods in nets each side. */
+/** A Haulbud: bigger and longer, bigger ears and crest, a shaggier cape, long cream fur on its legs, two pods in nets each side. */
 const HAULBUD_LOOK: Pack = {
   stage: 1,
-  body: { y: [-1.5, -1.38, -0.9, -0.1, 0.65, 1.22, 1.45], z: [0.12, 0.12, 0.1, 0.06, 0.02, 0.02, 0.08], w: [0.42, 0.7, 0.78, 0.76, 0.76, 0.7, 0.42], h: [0.42, 0.7, 0.82, 0.8, 0.8, 0.74, 0.44] },
-  len: 2.1, hip: 0.62, drop: 0.3,
-  fore: [0.6, 0.54, 0.16], hind: [0.64, 0.54, 0.42], thick: 0.27, rake: [10, 18], paw: 0.17, stance: [0.04, 0.1],
-  high: 1.52,
-  neck: { at: [0, 1.24, 0.42], len: 0.5, w: 0.44, lean: 26 },
-  head: { r: [0.54, 0.6, 0.48], snout: [0.3, 0.22, 0.34], up: 0.12, pitch: -6 },
-  eye: { dir: [0.62, 0.64, 0.26], size: 0.13 },
-  ear: { at: [0.32, -0.12, 0.28], len: 1.25, w: 0.31, hang: [0.58, -0.3, -0.76], hollow: [0.75, 0.55, 0.1] },
-  crest: { n: 7, len: 1.15, w: 0.22, back: 32 },
-  ruff: { c: [0, 1.3, 0.04], r: [0.52, 0.4, 0.6], len: 0.3, rows: 3, across: 6 },
+  body: { y: [-1.75, -1.58, -1.0, -0.1, 0.8, 1.36, 1.6], z: [0.08, 0.08, 0.06, 0.03, 0.0, 0.02, 0.07], w: [0.46, 0.76, 0.86, 0.86, 0.84, 0.74, 0.44], h: [0.46, 0.76, 0.88, 0.88, 0.86, 0.78, 0.46] },
+  len: 2.4, hip: 0.62, drop: 0.5,
+  fore: [0.31, 0.28, 0.14], hind: [0.31, 0.26, 0.24], thick: 0.3, rake: [8, 16], paw: 0.18, stance: [0.03, 0.08],
+  high: 1.27,
+  neck: { at: [0, 1.36, 0.3], len: 0.44, w: 0.5, lean: 55 },
+  head: { r: [0.48, 0.6, 0.44], snout: [0.27, 0.22, 0.42], up: 0.08, pitch: -4 },
+  eye: { dir: [0.6, 0.6, 0.3], size: 0.12 },
+  ear: { at: [0.3, -0.28, 0.24], len: 1.4, w: 0.34, hang: [0.3, -0.55, -0.78], hollow: [1, 0.2, 0.15] },
+  crest: { n: 9, len: 1.2, w: 0.21, back: 6 },
+  ruff: { c: [0, 1.58, -0.04], r: [0.54, 0.44, 0.62], len: 0.32, rows: 3, across: 7 },
   feather: 0.24,
-  mantle: { from: -1.45, to: 0.95, wide: 0.8, deep: 0.3, rows: 5, leaves: 8, leaf: 0.5 },
+  mantle: { from: -1.7, to: 1.15, wide: 1.4, deep: 0.2, rows: 6, leaves: 10, leaf: 0.56 },
   pods: [
-    { y: -0.78, th: -1.45, r: [0.36, 0.48, 0.45], out: 0.08 }, { y: 0.18, th: -2.0, r: [0.36, 0.48, 0.45], out: 0.04 },
-    { y: -0.78, th: 1.45, r: [0.36, 0.48, 0.45], out: 0.08 }, { y: 0.18, th: 2.0, r: [0.36, 0.48, 0.45], out: 0.04 },
+    { y: -0.9, th: -1.85, r: [0.36, 0.48, 0.45], out: 0.04 }, { y: 0.22, th: -2.15, r: [0.36, 0.48, 0.45], out: 0.02 },
+    { y: -0.9, th: 1.85, r: [0.36, 0.48, 0.45], out: 0.04 }, { y: 0.22, th: 2.15, r: [0.36, 0.48, 0.45], out: 0.02 },
   ],
   nets: true,
   cage: null,
   armour: false,
-  gait: { duty: [0.64, 0.3], swing: [0.3, 0.38], step: 0.2, bob: 0.05, flex: 9 },
+  gait: { duty: [0.64, 0.3], swing: [0.28, 0.36], step: 0.2, bob: 0.04, flex: 7 },
   size: 3.4,
 };
 
-/** A Cargocrest: big and tall, an upright neck, a great crest and ruff, drooping ears, leaf armour, a cage of roots full of pods. */
+/**
+ * A Cargocrest: big and heavy, a short furred neck, a great leafy plume of a crest, long drooping ears, leaf plates on its
+ * shoulders and thighs, thick legs on big paws, and a cage of roots over its whole back holding big pods at its sides.
+ */
 const CARGOCREST_LOOK: Pack = {
   stage: 2,
-  body: { y: [-1.95, -1.8, -1.2, -0.2, 0.75, 1.45, 1.85, 2.0], z: [0.1, 0.09, 0.1, 0.08, 0.06, 0.06, 0.12, 0.16], w: [0.52, 0.9, 1.0, 0.98, 0.96, 0.92, 0.76, 0.46], h: [0.48, 0.82, 0.94, 0.92, 0.92, 0.92, 0.8, 0.46] },
-  len: 2.7, hip: 0.62, drop: 0.3,
-  fore: [0.74, 0.66, 0.2], hind: [0.78, 0.66, 0.5], thick: 0.46, rake: [8, 16], paw: 0.28, stance: [0.04, 0.12],
-  high: 1.86,
-  neck: { at: [0, 1.7, 0.6], len: 1.05, w: 0.56, lean: 12 },
-  head: { r: [0.64, 0.72, 0.54], snout: [0.32, 0.25, 0.44], up: 0.12, pitch: -8 },
-  eye: { dir: [0.62, 0.62, 0.3], size: 0.12 },
-  ear: { at: [0.34, -0.16, 0.26], len: 1.65, w: 0.36, hang: [0.42, -0.3, -0.86], hollow: [0.8, 0.5, 0.1] },
-  crest: { n: 9, len: 1.7, w: 0.28, back: 34 },
-  ruff: { c: [0, 1.82, 0.3], r: [0.74, 0.56, 0.95], len: 0.5, rows: 4, across: 7 },
-  feather: 0.34,
-  mantle: { from: -1.9, to: 1.3, wide: 1.0, deep: 0.3, rows: 5, leaves: 9, leaf: 0.62 },
+  body: { y: [-2.4, -2.2, -1.4, -0.2, 1.0, 1.8, 2.2, 2.35], z: [0.1, 0.1, 0.08, 0.04, 0.02, 0.04, 0.1, 0.14], w: [0.62, 1.1, 1.26, 1.26, 1.24, 1.16, 0.92, 0.56], h: [0.6, 1.0, 1.2, 1.22, 1.2, 1.12, 0.94, 0.56] },
+  len: 3.2, hip: 0.6, drop: 0.5,
+  fore: [0.5, 0.44, 0.2], hind: [0.48, 0.42, 0.34], thick: 0.56, rake: [6, 14], paw: 0.32, stance: [0.04, 0.1],
+  high: 1.98,
+  neck: { at: [0, 1.98, 0.52], len: 0.62, w: 0.72, lean: 40 },
+  head: { r: [0.6, 0.74, 0.54], snout: [0.33, 0.27, 0.5], up: 0.1, pitch: -6 },
+  eye: { dir: [0.6, 0.6, 0.3], size: 0.12 },
+  ear: { at: [0.34, -0.3, 0.22], len: 1.85, w: 0.42, hang: [0.3, -0.42, -0.86], hollow: [1, 0.2, 0.15] },
+  crest: { n: 11, len: 1.95, w: 0.32, back: 2 },
+  ruff: { c: [0, 2.1, 0.1], r: [0.82, 0.62, 0.92], len: 0.56, rows: 4, across: 7 },
+  feather: 0.36,
+  mantle: { from: -2.3, to: 1.7, wide: 1.6, deep: 0.24, rows: 6, leaves: 12, leaf: 0.66 },
   pods: [
-    { y: -0.92, th: -1.3, r: [0.5, 0.62, 0.6], out: 0.02 }, { y: 0.42, th: -1.32, r: [0.5, 0.6, 0.58], out: 0.02 },
-    { y: -0.92, th: 1.3, r: [0.5, 0.62, 0.6], out: 0.02 }, { y: 0.42, th: 1.32, r: [0.5, 0.6, 0.58], out: 0.02 },
+    { y: -1.15, th: -1.3, r: [0.6, 0.78, 0.74], out: 0.0 }, { y: 0.55, th: -1.32, r: [0.58, 0.76, 0.72], out: 0.0 },
+    { y: -1.15, th: 1.3, r: [0.6, 0.78, 0.74], out: 0.0 }, { y: 0.55, th: 1.32, r: [0.58, 0.76, 0.72], out: 0.0 },
   ],
   nets: false,
-  cage: { arches: 3, high: 0.55, w: 1.55 },
+  cage: { arches: 3, high: 0.5, w: 1.38 },
   armour: true,
-  gait: { duty: [0.66, 0.32], swing: [0.26, 0.36], step: 0.18, bob: 0.05, flex: 7 },
-  size: 3.2,
+  gait: { duty: [0.66, 0.32], swing: [0.24, 0.34], step: 0.18, bob: 0.04, flex: 5 },
+  size: 3.7,
 };
 
 /* ---- helpers ------------------------------------------------------------------------- */
@@ -496,7 +502,7 @@ function legOf(s: Pack, body: Xf, i: number, rootLocal: V3, paw: V3, rake: numbe
 }
 
 const skullAt = (s: Pack): V3 => [0, 0, s.head.up];
-const snoutAt = (s: Pack): V3 => { const H = s.head; return [0, H.r[1] * 0.62 + H.snout[2] * 0.42, H.up - H.r[2] * 0.42]; };
+const snoutAt = (s: Pack): V3 => { const H = s.head; return [0, H.r[1] * 0.7 + H.snout[2] * 0.3, H.up - H.r[2] * 0.4]; };
 const earRoot = (s: Pack, side: number): V3 => [side * s.ear.at[0], s.ear.at[1], s.head.up + s.ear.at[2]];
 /** Where the crest springs from on the skull: the crown, between the ears. */
 const crestRoot = (s: Pack): V3 => [0, s.ear.at[1] * 0.5 + s.head.r[1] * 0.05, s.head.up + s.head.r[2] * 0.88];
@@ -531,7 +537,8 @@ function packBones(s: Pack): (a: Anim) => Bones {
       const Y = unit(sub(h, scale(Z, dot(h, Z))));
       b[`ear${k}`] = xfOf(cross(Y, Z), Y, Z, place(b.head, earRoot(s, side)));
     }
-    b.crest = joint(b.head, crestRoot(s), -(s.crest.back + P.crest[0]), 0, P.crest[1]);
+    // Swept back off the crown: a pitch about its across turns its tips toward its tail.
+    b.crest = joint(b.head, crestRoot(s), s.crest.back + P.crest[0], 0, P.crest[1]);
     // Each pod hung where it rides, swung forward and out with the stride about the top of it.
     s.pods.forEach((pod, q) => {
       const at = podOn(s, pod), sd = pod.th < 0 ? -1 : 1;
@@ -597,7 +604,7 @@ const neckEnd = (s: Pack, k: number): V3 => { const L = s.neck.len, u = clamp((k
 /** Cream locks down the front and sides of its neck, carrying the ruff up to the jaw; on the Cargocrest a great fall of them. */
 function neckFurOf(s: Pack): Mesh {
   const N = s.neck, out: Mesh[] = [];
-  const rows = s.stage === 2 ? 4 : 2;
+  const rows = s.stage === 2 ? 3 : 2;
   for (let row = 0; row < rows; row++) {
     const z = lerp(N.len * (s.stage ? 0.85 : 0.8), N.len * 0.05, row / Math.max(1, rows - 1));
     for (let q = 0; q < 6; q++) {
@@ -626,7 +633,9 @@ function headOf(s: Pack, n: number, k: number, shut: boolean): Mesh {
     const cream = d[2] / H.r[2] < -0.05 + 0.35 * (d[1] / H.r[1]) - 0.25 * Math.abs(d[0] / H.r[0]);
     return { ...f, m: cream ? 'muzzle' : 'coat' as Mat };
   }));
-  const muzzle = orb(mc, mr, n, k + 1, 'muzzle');
+  // Tapering forward from the cheeks: an egg pointed along the nose, and a bridge from the brow down to it.
+  const muzzle = merge(orbAlong(mc, [0, 1, -0.15], [sn[0], sn[1], sn[2]], n, k + 1, 'muzzle'),
+    orbAlong([0, H.r[1] * 0.45, H.up + H.r[2] * 0.15], [0, 1, -0.5], [H.r[0] * 0.55, H.r[2] * 0.5, H.r[1] * 0.6], n, k, 'coat'));
   const nt = onEgg2(mc, mr, [0, 0.8, 0.55]);
   const nose = paint([disc(add(nt.p, scale(nt.n, 0.012)), nt.n, sn[0] * 0.5, sn[0] * 0.34, 3, 'nose', { up: [0, 0, 1], spin: Math.PI / 2 })]);
   const mouth = smile(onEgg2(mc, mr, [0, 0.9, -0.32]).p, [0, 1, -0.35], sn[0] * 0.7, 'lid');
@@ -659,10 +668,10 @@ function earOf(s: Pack, n: number): Mesh {
   const ws = [0.5, 0.88, 1, 0.96, 0.78, 0.46, 0.02].map((x) => x * w);
   const line = zs.map((z, q) => [0, -0.05 * Math.sin((q / 6) * Math.PI) * L * 0.2, z] as V3);
   const cup = (p: V3): V3 => [p[0], p[1] + 0.2 * w * Math.min(1, (p[0] / w) ** 2), p[2]];
-  const shell = tube(line, ws, ws.map((x) => Math.max(0.025, x * 0.13)), Math.max(6, n), (ring) => (ring <= 1 ? 'coat' : ring >= 5 ? 'coatDark' : 'belly'), { up: [0, 1, 0] });
+  const shell = tube(line, ws, ws.map((x) => Math.max(0.025, x * 0.13)), Math.max(6, n), (ring) => (ring >= 5 ? 'coatDark' : 'coat'), { up: [0, 1, 0] });
   const cupped = mesh(shell.v.map(cup), shell.f);
   const rim = (sd: number, k: number): V3[] => [1, 2, 3, 4].map((q) => cup([sd * ws[q] * k, line[q][1] + ws[q] * 0.22 + 0.014, zs[q]]));
-  const lining: V3[] = [cup([0, line[0][1] + ws[0] * 0.22 + 0.014, zs[0] + L * 0.06]), ...rim(-1, 0.7), cup([0, line[5][1] + 0.02, L * 0.84]), ...rim(1, 0.7).reverse()];
+  const lining: V3[] = [cup([0, line[0][1] + ws[0] * 0.22 + 0.014, zs[0] + L * 0.06]), ...rim(-1, 0.62), cup([0, line[5][1] + 0.02, L * 0.8]), ...rim(1, 0.62).reverse()];
   // A brown patch on its back near the root, as the sheet's ears have.
   const patch = paint([1, 2].map((q) => disc([0, line[q][1] - ws[q] * 0.22 - 0.012, zs[q]], [0, -1, 0], ws[q] * 0.6, L * 0.12, 7, 'coat', { up: [0, 0, 1] })));
   return merge(cupped, patch, paint([facing(lining, [0, 1, 0], 'inner')]));
@@ -695,21 +704,12 @@ function crestOf(s: Pack): Mesh {
   const C = s.crest, out: Mesh[] = [];
   for (let q = 0; q < C.n; q++) {
     const k = C.n > 1 ? q / (C.n - 1) - 0.5 : 0, mid = Math.abs(k) < 0.2;
-    const fan = k * 1.25;
-    const dir = unit([Math.sin(fan) * 0.75, -0.1 - 0.3 * Math.abs(k), Math.cos(fan)]);
+    const fan = k * 1.35;
+    const dir = unit([Math.sin(fan) * 0.7, -0.35 - 0.35 * Math.abs(k), Math.cos(fan)]);
     const L = C.len * (1 - 0.5 * Math.abs(k)) * (0.9 + 0.2 * jitter(q + 40));
     const face = unit([Math.sin(fan) * 0.4, 1, 0.15]);
     const centre = q === (C.n - 1) / 2;
-    out.push(leafOf([k * 0.06, 0, 0], dir, [0, -1, 0.15], face, L, C.w * (mid ? 1.2 : 1.05), centre ? 'petal' : 'leaf', centre ? 'horn' : 'leafDark', 'petal', 0.42, centre ? undefined : 'bloom'));
-  }
-  // The two upright ears, standing out of the crest's sides.
-  for (const sd of [1, -1]) {
-    const root: V3 = [sd * C.w * 1.3, C.w * 0.4, -C.w * 0.4];
-    const dir = unit([sd * 0.32, -0.2, 1]);
-    const L = C.len * 0.92;
-    out.push(leafOf(root, dir, [0, -1, 0.1], unit([sd * 0.25, 1, 0.1]), L, C.w * 1.35, 'coat', 'belly', 'coat', 0.3));
-    // Its cream inside: a narrower blade a hair in front, and the dark tip over it.
-    out.push(leafOf(add(root, [0, 0.03, 0.02]), dir, [0, -1, 0.1], unit([sd * 0.25, 1, 0.1]), L * 0.78, C.w * 0.7, 'belly', 'muzzle', 'belly', 0.3));
+    out.push(leafOf([k * 0.06, 0, 0], dir, [0, -1, -0.2], face, L, C.w * (mid ? 1.25 : 1.1), centre ? 'petal' : q % 2 ? 'leafDark' : 'leaf', centre ? 'horn' : 'leafDark', centre ? undefined : 'petal', 0.5, centre ? undefined : 'bloom'));
   }
   return merge(...out);
 }
@@ -741,55 +741,55 @@ function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number): Mesh {
 }
 
 /**
- * The mantle: broad leaves laid over its back in overlapping rows like a bird's feathers, rump to withers, each pointing back
- * and down, dark green with a pale rib and a bright tip; soft moss cushions along its top; and a fall of longer leaves over
- * its rump.
+ * The mantle: a cape of leaves over the whole back from the rump to the withers and down the flanks, overlapping as feathers
+ * do -- each row along the spine over the row below it, each leaf over the one behind -- pointing back and down and lying on
+ * the body, olive with a bright yellow-green tip, brown leaves among them; the lowest row longer, a shaggy edge hanging off
+ * the flank; a few soft moss cushions along the spine; and a fall of longer leaves over its rump.
  */
 function mantleOf(s: Pack): Mesh {
   const B = s.body, M = s.mantle, out: Mesh[] = [];
-  const rows = M.rows + 2;
-  for (let row = 0; row < rows; row++) {
-    // Front rows first and the back rows over them, as feathers lie: each row's roots ahead of the tips of the row behind.
-    const k = rows > 1 ? row / (rows - 1) : 0.5;
-    const y = lerp(M.to, M.from + 0.25, k);
-    const across = 5;
-    for (let q = 0; q < across; q++) {
-      const id = 90 + row * 17 + q;
-      const a = lerp(-1, 1, q / (across - 1)) * M.wide * (0.9 + 0.08 * jitter(id));
-      const e = onBack(B, y, a);
-      // Back along the body and down the slope of its back there, lying flat on it.
-      const down: V3 = unit(add([0, -1, 0], scale(sub(e.n, [0, 0, 1]), 0.6)));
-      const dir = unit(sub(down, scale(e.n, dot(down, e.n) - 0.08)));
-      const L = M.leaf * (0.9 + 0.25 * jitter(id + 1)) * (1 - 0.3 * Math.abs(a) / M.wide);
-      const mat: Mat = jitter(id + 2) < 0.22 ? 'coat' : jitter(id + 2) < 0.55 ? 'leafDark' : 'leaf';
-      // Raised over the middle of its back and lower toward the edges and the ends, a hump of leaves.
-      const hump = M.deep * 0.7 * Math.sin(Math.PI * clamp(k * 0.9 + 0.05)) * (1 - Math.abs(a) / (M.wide * 1.1));
-      out.push(leafOf(add(e.p, scale(e.n, 0.02 + 0.012 * row + hump)), dir, scale(e.n, -0.25), e.n, L * 1.15, L * 0.62, mat, 'leafDark', undefined, 0.18,
-        (row + q) % 2 === 0 ? 'bloom' : undefined));
+  const rows = M.rows;
+  for (let row = rows - 1; row >= 0; row--) {
+    // Row nought along the spine, the last down at the cape's edge; drawn from the edge up, each row lying over the last.
+    const v = rows > 1 ? row / (rows - 1) : 0;
+    const a = v * M.wide;
+    const cols = Math.round(5 + 4 * s.stage + 2 * (1 - v));
+    for (const sd of row === 0 ? [0] : [1, -1]) {
+      for (let q = 0; q < cols; q++) {
+        const id = 90 + row * 31 + q * 3 + (sd > 0 ? 1 : 0);
+        const y = lerp(M.to, M.from + 0.1, (q + 0.5 * (row % 2)) / cols) + (jitter(id) - 0.5) * 0.08;
+        const e = onBack(B, y, sd * a + (jitter(id + 1) - 0.5) * 0.08);
+        // Back along the body and down its side, lying flat on it.
+        const down: V3 = [sd * 0.9 * v, -1, -0.6 * v];
+        const dir = unit(sub(down, scale(e.n, dot(down, e.n) - 0.1)));
+        const edge = row === rows - 1;
+        const L = M.leaf * (0.85 + 0.3 * jitter(id + 2)) * (edge ? 1.35 : 1);
+        const mat: Mat = jitter(id + 3) < 0.08 ? 'coat' : jitter(id + 3) < 0.45 ? 'leafDark' : 'leaf';
+        const lift = 0.025 + 0.022 * (rows - row) + 0.004 * q;
+        out.push(leafOf(add(e.p, scale(e.n, lift)), dir, scale(e.n, edge ? 0.1 : -0.15), e.n, L, L * 0.5, mat, 'leafDark', undefined, edge ? 0.25 : 0.12, 'bloom'));
+      }
     }
   }
-  // The moss along its spine: a row of soft cushions.
-  const cushions = Math.round(4 + 2 * s.stage);
+  // Soft moss cushions along the spine.
+  const cushions = Math.round(3 + 2 * s.stage);
   for (let q = 0; q < cushions; q++) {
     const k = q / Math.max(1, cushions - 1), id = 60 + q;
-    const y = lerp(M.from + 0.3, M.to - 0.1, k), swell = Math.sin(Math.PI * lerp(0.15, 0.85, k));
-    for (const a of s.stage ? [-0.45, 0, 0.45] : [-0.3, 0.3]) {
-      const e = onBack(B, y, a + (jitter(id) - 0.5) * 0.15);
-      const R = M.deep * (0.8 + 0.5 * swell) * (a ? 0.85 : 1);
-      out.push(clumpOf(add(e.p, scale(e.n, 0.03 + 0.015 * rows + M.deep * 0.45 * swell)), e.n, R * 1.15, id * 3 + Math.round(a * 4), 5));
-    }
+    const e = onBack(B, lerp(M.from + 0.35, M.to - 0.2, k), (jitter(id) - 0.5) * 0.3);
+    const R = M.deep * (0.8 + 0.3 * Math.sin(Math.PI * k));
+    out.push(clumpOf(add(e.p, scale(e.n, 0.04 + 0.022 * rows)), e.n, R, id * 3, 4));
   }
-  // The rump's fall: leaves fanned out back and down over its tail.
+  // The rump's fall: longer leaves fanned out back and down over its tail.
   const tail = Math.round(5 + 2 * s.stage);
   for (let q = 0; q < tail; q++) {
     const a = lerp(-1.0, 1.0, tail > 1 ? q / (tail - 1) : 0.5), id = 260 + q;
-    const e = onBack(B, M.from + 0.12, a * 0.85);
-    const dir = unit([Math.sin(a) * 0.55, -1, 0.1 - 0.75 * Math.abs(a)]);
-    const L = M.leaf * 1.3 * (0.85 + 0.3 * jitter(id)) * (1 - 0.2 * Math.abs(a));
-    out.push(leafOf(add(e.p, scale(e.n, 0.04)), dir, [0, -0.2, -1], unit([Math.sin(a) * 0.7, 0, 1]), L, L * 0.36, q % 2 ? 'leaf' : 'leafDark', 'leafDark', undefined, 0.35));
+    const e = onBack(B, M.from + 0.1, a * 0.9);
+    const dir = unit([Math.sin(a) * 0.55, -1, -0.15 - 0.7 * Math.abs(a)]);
+    const L = M.leaf * 1.45 * (0.85 + 0.3 * jitter(id)) * (1 - 0.2 * Math.abs(a));
+    out.push(leafOf(add(e.p, scale(e.n, 0.06)), dir, [0, -0.2, -1], unit([Math.sin(a) * 0.7, 0, 1]), L, L * 0.38, q % 2 ? 'leaf' : 'leafDark', 'leafDark', undefined, 0.35, 'bloom'));
   }
   return merge(...out);
 }
+
 /**
  * A pod: a big pale pearly egg, its surface crazed with fine gold lines and a soft shine on its upper side, in the pod's own
  * frame (`+x` out from the flank, `+y` forward, `+z` up).
@@ -938,12 +938,16 @@ function cageOf(s: Pack, n: number, hollow = false): Mesh {
  * Leaf armour: a curved plate of leaf, green with a cream rim and a cream rib, over a shoulder or down the front of a leg,
  * in the bone's own frame.
  */
-function plateOf(L: number, W: number, sd: number, down = false): Mesh {
+function plateOf(c: V3, R: number, sd: number, n: number): Mesh {
   const out: Mesh[] = [];
-  for (const [q, off] of [[0, 0], [1, 0.3]] as const) {
-    const root: V3 = [sd * W * 0.25 * q, 0, down ? -L * 0.05 - off * L * 0.4 : L * 0.3 - off * L * 0.25];
-    const dir: V3 = down ? [sd * 0.25, 0.4, -1] : [sd * 0.6, 0.15, -1];
-    out.push(leafOf(root, dir, [sd * 0.25, 0.5, 0], unit([sd, 0.6, 0.1]), L * (1 - 0.25 * q), W * (1 - 0.15 * q), q ? 'leafDark' : 'leaf', 'horn', 'horn', 0.3));
+  // Three plates down the outside of the shoulder or the thigh, each over the one below and a little behind it.
+  for (const [q, up, back, k] of [[2, -0.55, 0.12, 0.8], [1, -0.1, 0.06, 0.92], [0, 0.32, 0, 1]] as const) {
+    const at = add(c, [sd * R * (0.9 - 0.08 * Math.abs(up)), -R * back, R * up]);
+    const axis: V3 = [sd * 0.25, -0.35, -1];
+    const r: V3 = [R * 0.09, R * 0.62 * k, R * 0.5 * k];
+    // The cream rim: the same plate a size larger, a little in under it.
+    out.push(orbAlong(add(at, [-sd * R * 0.04, 0, 0]), axis, [r[0], r[1] * 1.13, r[2] * 1.13], n, 4, 'horn'));
+    out.push(orbAlong(add(at, [sd * R * 0.01 * q, 0, 0]), axis, r, n, 4, q === 1 ? 'leafDark' : 'leaf'));
   }
   return merge(...out);
 }
@@ -956,7 +960,7 @@ function pawOf(s: Pack, fore: boolean, n: number): Mesh {
   for (let q = 0; q < 4; q++) {
     const x = (q - 1.5) * r * 0.5, y = r * 1.12 - Math.abs(q - 1.5) * r * 0.16;
     toes.push(orbAlong([x, y, -r * 0.55], [0, 1, -0.3], [r * 0.24, r * 0.3, r * 0.22], 5, 3, 'belly'));
-    toes.push(orbAlong([x, y + r * 0.3, -r * 0.62], [0, 1, -0.5], [r * 0.1, r * 0.16, r * 0.08], 4, 3, 'claw'));
+    toes.push(orbAlong([x, y + r * 0.3, -r * 0.62], [0, 1, -0.5], [r * 0.1, r * 0.16, r * (0.08 + 0.05 * s.stage)], 4, 3, 'claw'));
   }
   return merge(pad, ...toes);
 }
@@ -1023,9 +1027,10 @@ function packBuild(s: Pack, lod: number): Piece[] {
       { key: `${key}f`, mesh: featherOf(s, L[0], w * 0.9, s.stage + 2, fore ? 0.35 : 0.5, 500 + i * 20), bone: `${key}0`, bias: 0.022, after: [`${key}0`, `${key}1`], front: [0, -1, 0], lines: false },
     );
     if (s.stage > 0) pieces.push({ key: `${key}g`, mesh: featherOf(s, L[1], w * 0.75, s.stage, 0.25, 700 + i * 20), bone: `${key}1`, bias: 0.027, after: [`${key}1`, `${key}3`], front: [0, -1, 0], lines: false });
+    // Leaf plates on the shoulder and on the thigh, lying on the round of it.
     if (s.armour) {
-      pieces.push({ key: `${key}a`, mesh: plateOf(L[1] * 0.75, w * 1.1, side, true), bone: `${key}1`, bias: 0.035, after: [`${key}1`, `${key}0`, `${key}f`], front: [side, 0.6, 0], lines: false });
-      if (fore) pieces.push({ key: `${key}s`, mesh: plateOf(L[0] * 0.9, w * 1.6, side), bone: `${key}0`, bias: 0.06, after: [`${key}0`, 'body', 'ruff', 'mantle', 'straps', `${key}f`], front: sideV, lines: false });
+      const c: V3 = fore ? [0, 0, 0] : [0, -w * 0.15, -w * 0.2];
+      pieces.push({ key: `${key}s`, mesh: plateOf(c, hw * (fore ? 0.95 : 0.72), side, n), bone: `${key}0`, bias: 0.06, after: [`${key}0`, 'body', 'ruff', 'mantle', 'straps', `${key}f`], front: sideV });
     }
   }
   const bend = (v: readonly V3[], a: Anim): V3[] => { const f = flexOf(s, a); return f ? v.map((p) => flexPt(s, p, f)) : [...v]; };
