@@ -34,7 +34,7 @@ import {
   jobLevel,
   NO_PLAN_FROM,
 } from './building';
-import { dyeChoice, dyeEnough, dyeReason, litresWord, paneTint, pickDye, spendDye, TINTED_PANE } from './dyes';
+import { dyeChoice, dyeEnough, dyeReason, litresWord, NO_COLOUR, paneTint, pickDye, SCRUB_TIME, SCRUB_TOOL, SCRUB_WIND, spendDye, TINTED_PANE } from './dyes';
 import { capital } from './words';
 import { colourWord, DYE_LITRES } from './dyestuffs';
 import type { Game } from './game';
@@ -355,6 +355,15 @@ const wallLevel = (g: Game, t: TileTarget): number => wallLevelOf(g, t);
 /** The wall or fence on the side of a tile that is being worked on. */
 const wallAt = (g: Game, t: TileTarget) => (t.side ? g.buildings.wall(wallLevel(g, t), t.x, t.y, t.side) : undefined);
 const material = (id: string | undefined): MaterialDef | undefined => (id ? MATERIAL_BY_ID.get(id) : undefined);
+
+/** What a removal off a side of a wall or a floor says: "Paint removed: bare oak." */
+const paintRemovedSaid = (mat: string): string => `Paint removed: bare ${material(mat)?.name.toLowerCase() ?? 'stone'}.`;
+/** The floor a floor's paint job is aimed at, on the storey the job names (`topLevel`), as `paint_floor` finds it. */
+const paintedFloor = (g: Game, t: Target) => {
+  if (!isTile(t)) return undefined;
+  const b = storeyOf(g, t);
+  return b ? g.buildings.floor(topLevel(b, t), t.x, t.y) : undefined;
+};
 
 const SIDES: readonly Side[] = ['n', 'e', 's', 'w'];
 /**
@@ -720,7 +729,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!isTile(t) || !t.side) return 'Choose a side.';
       const wall = wallAt(g, t);
-      if (!wall?.dye) return 'No colour to remove.';
+      if (!wall?.dye) return NO_COLOUR;
       if (litresAtHand(lyeCarried(g)) < LYE_USE) return NEED_LYE;
       return null;
     },
@@ -730,7 +739,38 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!wall || !takeLitres(lyeCarried(g), LYE_USE)) return;
       delete wall.dye;
       g.gainSkill('alchemy', 0.2);
-      g.logMsg(`Paint removed: bare ${material(wall.material)?.name.toLowerCase() ?? 'stone'}.`, 'event');
+      g.logMsg(paintRemovedSaid(wall.material), 'event');
+      g.events.emit('world', t.x, t.y);
+    },
+  },
+  /*
+   * The paint scrubbed off with a brush, where Remove paint takes it off with lye: no lye, no skill, and slower
+   * (`SCRUB_TIME`, `dyes.ts`). The island's `build_refusal` and `perform_building` say the same.
+   */
+  {
+    id: 'scrub_wall_paint',
+    label: 'Scrub off paint',
+    verb: 'scrubbing off paint',
+    hidden: true,
+    tool: SCRUB_TOOL,
+    stamina: SCRUB_WIND,
+    baseTime: SCRUB_TIME,
+    applies: (t, g) => isTile(t) && !!wallAt(g, t)?.dye,
+    check: (t, g) => {
+      // The brush first, as the island's general tool check comes before `build_refusal`.
+      const brush = lacksTool(g, SCRUB_TOOL);
+      if (brush) return brush;
+      if (!isTile(t) || !t.side) return 'Choose a side.';
+      const wall = wallAt(g, t);
+      if (!wall) return 'No wall there.';
+      return wall.dye ? null : NO_COLOUR;
+    },
+    perform: (t, g) => {
+      if (!isTile(t) || !t.side) return;
+      const wall = wallAt(g, t);
+      if (!wall?.dye) return;
+      delete wall.dye;
+      g.logMsg(paintRemovedSaid(wall.material), 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -811,6 +851,30 @@ export const BUILD_ACTIONS: ActionDef[] = [
       floor.dye = d.hex;
       g.gainSkill('alchemy', 0.3);
       g.logMsg(`Painted: floor, ${colourWord(d.hex)} (${d.hex}). Dye used: ${litresWord(DYE_LITRES.floor)}.`, 'event');
+      g.events.emit('world', t.x, t.y);
+    },
+  },
+  {
+    id: 'scrub_floor_paint',
+    label: 'Scrub off floor paint',
+    verb: 'scrubbing off paint',
+    hidden: true,
+    tool: SCRUB_TOOL,
+    stamina: SCRUB_WIND,
+    baseTime: SCRUB_TIME,
+    applies: (t, g) => !!paintedFloor(g, t)?.dye,
+    check: (t, g) => {
+      const brush = lacksTool(g, SCRUB_TOOL);
+      if (brush) return brush;
+      const floor = paintedFloor(g, t);
+      if (!floor) return 'No floor here.';
+      return floor.dye ? null : NO_COLOUR;
+    },
+    perform: (t, g) => {
+      const floor = paintedFloor(g, t);
+      if (!isTile(t) || !floor?.dye) return;
+      delete floor.dye;
+      g.logMsg(paintRemovedSaid(floor.material), 'event');
       g.events.emit('world', t.x, t.y);
     },
   },

@@ -649,6 +649,8 @@ export const STOREY_JOBS: ReadonlySet<string> = new Set([
   'plan_wall', 'plan_fence', 'build_wall', 'remove_wall', 'plan_floor', 'build_floor', 'remove_floor',
   'paint_wall', 'strip_wall_paint', 'paint_floor', 'repoint_wall', 'no_plan', 'mark_out', 'change_wall',
   'plan_column', 'build_column', 'remove_column',
+  // The paint scrubbed off a side or a floor with a brush (`buildActions.ts`).
+  'scrub_wall_paint', 'scrub_floor_paint',
 ]);
 
 /**

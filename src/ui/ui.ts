@@ -55,6 +55,7 @@ import { crateLine, crateOf, CREATURE_CRATE, CREATURE_CRATE_ACTION_BY_ID, occupi
 import { graveLine, graveName, graveSays, graveUnits, isGrave } from '../game/graves';
 import { COMPANION_STANCES, isBaitFor, SPECIES, tameNeeds, STANCE_HINTS, STANCE_NAMES, GATHER_VERB, GATHER_DO } from '../game/creatures';
 import { itemDef, itemName, markOf, storedLine, type Item } from '../game/items';
+import { LYE_USE } from '../game/placeables';
 import { nearestSide } from '../render/renderer';
 import { crateHolds, crateKindOfItem, crateName, crateCapacity, crateUnits, rackSpotOf, subtileOf } from '../game/crates';
 import { trellisFacing } from '../game/vineyard';
@@ -2881,7 +2882,7 @@ export class UI {
     }
     // A lantern post: its lantern, its candle and its light.
     entries.push(...lampEntries(g, f));
-    for (const id of ['light_oven', 'put_out_oven', 'take_ashes_oven', 'sleep', 'set_home', 'pull_cart', 'drop_cart', 'board_vehicle', 'board_passenger', 'leave_vehicle', 'leave_passenger', 'unhitch_team', 'examine_vessel', 'drink_from_vessel', 'empty_vessel', 'furniture_take_all', 'crate_follow', 'crate_work', 'scrub_moss', 'pick_up_furniture']) {
+    for (const id of ['light_oven', 'put_out_oven', 'take_ashes_oven', 'sleep', 'set_home', 'pull_cart', 'drop_cart', 'board_vehicle', 'board_passenger', 'leave_vehicle', 'leave_passenger', 'unhitch_team', 'examine_vessel', 'drink_from_vessel', 'empty_vessel', 'furniture_take_all', 'crate_follow', 'crate_work', 'scrub_moss', 'scrub_dye', 'pick_up_furniture']) {
       const def = ACTION_BY_ID.get(id);
       if (!def || !def.applies(ft, g)) continue;
       const reason = def.check?.(ft, g) ?? null;
@@ -3686,6 +3687,14 @@ export class UI {
       if (!def || !def.applies(target, g)) return [];
       return [item(def, target, def.labelFor?.(target, g) ?? def.label)];
     };
+    // Paint on a finished side or floor, and off it again: with lye, or scrubbed off with a brush (`buildActions.ts`).
+    const paint = (ids: readonly string[], target: Extract<Target, { kind: 'tile' }>, on = ''): MenuItem[] => ids.map(act)
+      .filter((def) => def.applies(target, g))
+      .map((def) => ({
+        ...item(def, target, `${def.labelFor?.(target, g) ?? def.label}${on}`),
+        note: def.tool ? itemDef(def.tool).name.toLowerCase() : `${LYE_USE} L lye`,
+      }));
+    const SIDE_PAINT = ['paint_wall', 'strip_wall_paint', 'scrub_wall_paint'] as const;
     const b = bld.buildingAt(x, y);
     if (!b) {
       // Out past a building: the jetty that goes there, or is there (`frameMenu.ts`).
@@ -3704,6 +3713,7 @@ export class UI {
         if (!isDone(standing)) entries.push(build(act('build_wall'), withSide, `Build ${what.toLowerCase()} (${SIDE_NAMES[side]}) · needs ${describeNeeds(standing, materialName)}`, standing));
         entries.push(item(act('remove_wall'), withSide, `Remove ${what.toLowerCase()} (${SIDE_NAMES[side]})`));
         entries.push(...repoint(standing, withSide, `Repoint ${what.toLowerCase()} (${SIDE_NAMES[side]})`));
+        if (isDone(standing)) entries.push(...paint(SIDE_PAINT, withSide, ` (${SIDE_NAMES[side]})`));
         entries.push(...ivy(withSide));
       } else {
         const fence = act('plan_fence');
@@ -3793,6 +3803,7 @@ export class UI {
       // Another type or material where it stands, whether or not it may come down (`change_wall`).
       entries.push(...changeWallRows(g, wall, withSide, (def, t) => cellarReason(g, def, t)));
       entries.push(...repoint(wall, withSide, `Repoint wall (${sideName})`));
+      if (isDone(wall)) entries.push(...paint(SIDE_PAINT, withSide, ` (${sideName})`));
     } else {
       const plan = act('plan_wall');
       const probe = cellarReason(g, plan, { ...withSide, wallType: 'solid', material: 'log' });
@@ -3851,6 +3862,7 @@ export class UI {
       const what = deck ? 'deck' : floorKind(floor) === 'floor' && level === 0 ? 'flooring' : floorName(floor);
       if (!isDone(floor)) entries.push(build(act('build_floor'), base, `Build ${what} · needs ${describeNeeds(floor, materialName)}`, floor));
       entries.push(item(act('remove_floor'), base, `Remove ${what}`));
+      if (isDone(floor)) entries.push(...paint(['paint_floor', 'scrub_floor_paint'], base));
     } else {
       const floorLabel = deck ? 'deck' : level > 0 ? 'floor' : 'flooring';
       /*

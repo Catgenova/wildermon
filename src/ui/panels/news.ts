@@ -115,7 +115,7 @@ import { meltLumps } from '../../game/melt';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
-import { ACTION_BY_ID, PACKED_FIRST, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES } from '../../game/actions';
+import { ACTION_BY_ID, PACKED_FIRST, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
@@ -195,7 +195,7 @@ import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFFS, dyeHex, kgSaid, LEGACY_DYES, LEGACY_POT_LITRES,
   LEGACY_POTS, legacyLiquid, PRIMARIES, pureDye, mixDye, sharesSaid, DYE_PARTS, DYE_RECIPE, RECIPE_STUFF, qlSaid,
 } from '../../game/dyestuffs';
-import { BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, boilCountPlain, gramsOf, MAKE_DYE_RECIPE, recipeShares, shareGrams } from '../../game/dyes';
+import { BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, boilCountPlain, DYEABLE_ITEMS, gramsOf, MAKE_DYE_RECIPE, recipeShares, SCRUB_TIME, SCRUB_TOOL, SCRUB_WIND, shareGrams } from '../../game/dyes';
 import { GREEN_ACTIONS, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET } from '../../game/greening';
 import { BUCKET_LITRES, FURNITURE, WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { BAY_PAST_HEFT, BRIDGE_BILL_TIMES, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBridge, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, STONE_ARCH, THROWN, WAGON_WIDTH, WIDEST } from '../../game/bridges';
@@ -282,6 +282,8 @@ const RESET = `daily reset (${hudHour(TREE_DAWN_UTC)} UTC)`;
 
 /** What a boil made and a dyeing took the day dye became a liquid (111), before it went by weight (117). */
 const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, floor: 1 } as const;
+/** The jobs that scrub paint off with a brush (423), which came after the storey jobs were named (332). */
+const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
   {
@@ -3953,7 +3955,7 @@ export const NEWS: News[] = [
     day: '2026-10-26',
     lines: () => [
       'Changed: every go of a job checked again before it is done: tool, materials, target, stamina and reach. Refused: not done, no stamina spent, logged as "<job>: <reason> Left: <goes>.", queue goes on (was done anyway). Fights: unchanged.',
-      `Changed: storey jobs (${[...new Set([...STOREY_JOBS].map((id) => ACTION_BY_ID.get(id)?.label).filter((l): l is string => !!l))].join(', ')}): done on the storey asked on (was the storey being worked when the go came).`,
+      `Changed: storey jobs (${[...new Set([...STOREY_JOBS].filter((id) => !SCRUBS_LATER.has(id)).map((id) => ACTION_BY_ID.get(id)?.label).filter((l): l is string => !!l))].join(', ')}): done on the storey asked on (was the storey being worked when the go came).`,
     ],
   },
   {
@@ -4223,6 +4225,22 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 423,
+    day: '2026-11-01',
+    lines: () => {
+      const act = (id: string): string => ACTION_BY_ID.get(id)?.label ?? id;
+      const brush = itemDef(SCRUB_TOOL).name.toLowerCase();
+      const pieces = listedOr(FURNITURE.filter((f) => DYEABLE_ITEMS.has(f.id)).map((f) => `${article(f.name)} ${f.name.toLowerCase()}`));
+      return [
+        `Added: ${act('scrub_dye')} (a dyed thing in your pack, or ${pieces} set down; its padlock must admit you), ${act('scrub_wall_paint')} (a painted side), `
+          + `${act('scrub_floor_paint')} (a painted floor): ${article(brush)} ${brush}, no lye, no skill; ${dur(goSeconds(SCRUB_TIME))} an action with a brush of no quality, `
+          + `less with better; ${percent(SCRUB_WIND)} stamina; brush wear ${WEAR_PER_GO} an action.`,
+        `Added: building menu of a finished side: ${act('paint_wall')}, ${act('strip_wall_paint')}, ${act('scrub_wall_paint')}; of a finished floor: ${act('paint_floor')}, `
+          + `${act('scrub_floor_paint')} (was: not offered). Piece's menu: ${act('scrub_dye')}.`,
+      ];
+    },
   },
   {
     n: 422,

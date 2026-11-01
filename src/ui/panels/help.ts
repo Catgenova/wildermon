@@ -83,7 +83,8 @@ import {
   PRIMARIES, pureDye, qlSaid, RECIPE_STUFF, sharesSaid, type DyeLiquid, type Primary,
 } from '../../game/dyestuffs';
 import {
-  BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, boilCountPlain, DYE_RECIPE_SAID, gramsOf, litresWord, MAKE_DYE_RECIPE, recipeDifficulty, recipeShares, shareGrams, TINTED_PANE,
+  BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, boilCountPlain, DYE_RECIPE_SAID, DYEABLE_ITEMS, gramsOf, litresWord, MAKE_DYE_RECIPE, recipeDifficulty, recipeShares, SCRUB_TIME,
+  SCRUB_TOOL, SCRUB_WIND, shareGrams, TINTED_PANE,
 } from '../../game/dyes';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
 import { CROP_BY_SEED, CROP_LIST, CROPS, cropYield, seedSays, growthWords, PATCH_TIME, RIPE, STAGE_NAMES } from '../../game/farming';
@@ -687,6 +688,8 @@ const AQUEDUCT_PULL = ACTION_BY_ID.get('demolish_aqueduct');
 const coveredBy = (pace: number): number => Math.ceil(GREEN_DAYS / pace);
 /** A name as the middle of a sentence has it, with its article: "a statue". */
 const aOrAn = (name: string): string => `${article(name)} ${name.toLowerCase()}`;
+/** An action's label, off the action (`ACTION_BY_ID`). */
+const act = (id: string): string => ACTION_BY_ID.get(id)?.label ?? id;
 /** A mix of dye as its hex and plain word, at QL 50 where it is the mix itself. */
 const mixSaid = (l: DyeLiquid): string => `${colourWord(dyeHex(l))} (${dyeHex(l)})`;
 /** Equal parts of the primaries named, at the QL a dye is the mix itself at; the first takes what does not divide. */
@@ -2708,7 +2711,7 @@ export function helpText(): string {
       then barrels, wells and fountains within its reach; a bucket at its last litre is an empty bucket. <b>Fill with water</b> tops up a part bucket of water.</li>
       <li><b>Bucket of lye</b>: ${need('make_lye', 'ash')} lots of ashes + a full bucket of water; <b>Alchemy</b>. ${BUCKET_LITRES} L.</li>
       <li><b>Tanning</b> (leatherworking): raw <b>hide</b> + ${litresOf('tan_hide')} + carving knife: <b>leather</b>. Failure: hide damaged and lye lost by their QL.</li>
-      <li>Cleaning a wound, removing dye or paint: ${LYE_USE} L lye.</li>
+      <li>Cleaning a wound, ${act('strip_dye')}, ${act('strip_wall_paint')}: ${LYE_USE} L lye (${act('scrub_dye')}, ${act('scrub_wall_paint')}: a ${itemDef(SCRUB_TOOL).name.toLowerCase()}, no lye).</li>
       <li>Leather: cap, jerkin, sleeves, trousers, boots; improving leather pieces.</li>
     </ul>
     <h3>Reeds, papyrus and books</h3>
@@ -2799,7 +2802,12 @@ export function helpText(): string {
       <b>sailing boat</b>'s or <b>caravel</b>'s sail, and a <b>${itemDef(TINTED_PANE).name.toLowerCase()}</b> (colours its window or bay; see Glass).</li>
       <li>Dyed chest and leg pieces show on your figure.</li>
       <li><b>Banner</b>: ${bill('make_banner')}; planted anywhere; flies its dyed colour.</li>
-      <li>Boiling in lye removes dye.</li>
+      <li><b>${act('paint_wall')}</b> (a finished side), <b>${act('paint_floor')}</b> (a finished floor): building menu; ${aOrAn(itemDef(ACTION_BY_ID.get('paint_wall')?.tool ?? '').name.toLowerCase())}.</li>
+      <li><b>${act('strip_dye')}</b> (in your pack), <b>${act('strip_wall_paint')}</b> (a side): ${LYE_USE} L lye; alchemy; an action at alchemy ${startOf('alchemy')}:
+      ${(['strip_dye', 'strip_wall_paint'] as const).map((id) => `${act(id)} ${dur(goSeconds(ACTION_BY_ID.get(id)?.baseTime ?? 0, startOf('alchemy')))}`).join(', ')}; less with more.</li>
+      <li><b>${act('scrub_dye')}</b> (in your pack, or ${listedOr(FURNITURE.filter((f) => DYEABLE_ITEMS.has(f.id)).map((f) => aOrAn(f.name.toLowerCase())))} set down; its padlock
+      must admit you), <b>${act('scrub_wall_paint')}</b> (a side), <b>${act('scrub_floor_paint')}</b>: ${aOrAn(itemDef(SCRUB_TOOL).name.toLowerCase())}, no lye, no skill;
+      ${dur(goSeconds(SCRUB_TIME))} an action with a brush of no quality, less with better; ${percent(SCRUB_WIND)} stamina; brush wear ${WEAR_PER_GO} an action.</li>
     </ul>
     <h3>Rope</h3>
     <ul>
