@@ -101,7 +101,7 @@ const MOSSSHEAR_LOOK: Moss = {
   high: 0.3,
   shell: { y0: -0.86, y1: 0.92, cut: 0.88, w: 0.76, h: 0.5, z0: 0.02, segs: 4, step: 0.045, lo: 0.2, flare: 0.45, p: 2.1 },
   belly: { c: [0, 0.02, -0.05], r: [0.56, 0.7, 0.22] },
-  head: { at: [0, 0.82, -0.02], r: [0.28, 0.3, 0.23], eye: [0.6, 0.7, -0.12], size: 0.058 },
+  head: { at: [0, 0.82, -0.02], r: [0.28, 0.3, 0.23], eye: [0.44, 0.84, -0.1], size: 0.058 },
   feelers: null,
   horns: { root: [0.18, 0.1, 0.0], mid: [0.32, 0.26, 0.2], tip: [0.27, 0.16, 0.38], w: 0.035 },
   moss: { from: 0.04, to: 0.92, wide: 0.6, deep: 0.13, clumps: 12 },
@@ -114,7 +114,7 @@ const MOSSSHEAR_LOOK: Moss = {
   ],
   skirt: 0,
   legs: { x: 0.44, z: -0.08, ys: [0.32, -0.06, -0.44], fan: [50, 4, -50], upper: 0.22, lower: 0.27, reach: 0.46, thick: 0.12 },
-  scythes: { at: [0.3, 0.62, -0.12], arm: [0.34, 0.32], thick: 0.095, len: 0.85, teeth: 4, rest: { w: [0.56, 0.98, 0.16], pitch: 0, yaw: 14, roll: 0 } },
+  scythes: { at: [0.3, 0.62, -0.12], arm: [0.42, 0.4], thick: 0.095, len: 0.85, teeth: 4, rest: { w: [0.96, 0.9, 0.4], pitch: 0, yaw: 4, roll: 0 } },
   gait: { sweep: [0.26, 0.36], duty: [0.6, 0.52], lift: [0.06, 0.09], bob: 0.022, sway: 2.5 },
   patch: 0.26,
   size: 5.0,
@@ -126,7 +126,7 @@ const MOSSREAVER_LOOK: Moss = {
   high: 0.36,
   shell: { y0: -1.12, y1: 1.12, cut: 0.88, w: 1.0, h: 0.68, z0: 0.02, segs: 5, step: 0.05, lo: 0.2, flare: 0.45, p: 2.1 },
   belly: { c: [0, 0.02, -0.06], r: [0.74, 0.92, 0.27] },
-  head: { at: [0, 1.04, -0.02], r: [0.34, 0.36, 0.27], eye: [0.6, 0.7, -0.12], size: 0.066 },
+  head: { at: [0, 1.04, -0.02], r: [0.34, 0.36, 0.27], eye: [0.44, 0.84, -0.1], size: 0.066 },
   feelers: null,
   horns: { root: [0.23, 0.12, 0.0], mid: [0.4, 0.32, 0.24], tip: [0.33, 0.2, 0.48], w: 0.045 },
   moss: { from: 0.03, to: 0.92, wide: 0.64, deep: 0.16, clumps: 15 },
@@ -141,7 +141,7 @@ const MOSSREAVER_LOOK: Moss = {
   ],
   skirt: 7,
   legs: { x: 0.58, z: -0.1, ys: [0.42, -0.08, -0.6], fan: [50, 4, -50], upper: 0.27, lower: 0.33, reach: 0.58, thick: 0.16 },
-  scythes: { at: [0.4, 0.8, -0.14], arm: [0.44, 0.4], thick: 0.125, len: 1.3, teeth: 6, rest: { w: [0.74, 1.2, 0.22], pitch: 0, yaw: 14, roll: 0 } },
+  scythes: { at: [0.4, 0.8, -0.14], arm: [0.54, 0.5], thick: 0.125, len: 1.3, teeth: 6, rest: { w: [1.24, 1.1, 0.48], pitch: 0, yaw: 4, roll: 0 } },
   gait: { sweep: [0.3, 0.42], duty: [0.64, 0.54], lift: [0.07, 0.1], bob: 0.028, sway: 2 },
   patch: 0.34,
   size: 5.2,
@@ -386,7 +386,7 @@ function bellyOf(s: Moss, n: number, k: number): Mesh {
 /* ---- moss, leaves and flowers ----------------------------------------------------------------- */
 
 /** A frond of moss: a short blade with a zigzag edge, from `root` along `dir`, lying on `face`. */
-function frond(root: V3, dir: V3, face: V3, L: number, w: number, mat: Mat, fine: boolean): Mesh {
+function frond(root: V3, dir: V3, face: V3, L: number, w: number, mat: Mat, fine: boolean, pinch = 0.6): Mesh {
   const d = unit(dir);
   const steps = fine ? 9 : 5;
   const pts: V3[] = [], ws: number[] = [];
@@ -394,7 +394,7 @@ function frond(root: V3, dir: V3, face: V3, L: number, w: number, mat: Mat, fine
     const k = q / steps;
     pts.push(add(add(root, scale(d, L * k)), scale(face, -L * 0.3 * k * k)));
     // A stem with leaflets along it: wide at each leaflet, pinched to the stem between.
-    ws.push(q === steps ? 0.004 : w * (1 - 0.45 * k) * (q % 2 ? 1 : 0.6));
+    ws.push(q === steps ? 0.004 : w * (1 - 0.45 * k) * (q % 2 ? 1 : pinch));
   }
   return blade(pts, ws, face, { mat, rib: 'leafDark', fold: 0.15, thick: 0.008 });
 }
@@ -420,8 +420,17 @@ function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: bool
     const d = unit(add(scale(z, Math.cos(lean)), scale(out1, Math.sin(lean))));
     const face = unit(sub(z, scale(d, dot(z, d))));
     const root = add(c, add(scale(out1, R * 0.25 * jitter(id * 7 + q)), scale(z, R * 0.05)));
-    const mat: Mat = jitter(id * 11 + q) < 0.4 ? 'leaf' : 'moss';
+    const mat: Mat = jitter(id * 11 + q) < 0.55 ? 'leaf' : 'moss';
     out.push(frond(root, d, len3(face) > 1e-3 ? face : z, R * (0.7 + 0.35 * jitter(id * 3 + q)) * (hang ? 1.35 : 1), R * 0.5, mat, fine));
+  }
+  // And a few feathery fern tips standing out past the cushion's edge, bright, their leaflets fine.
+  for (let q = 0; q < (fine ? 3 : 2); q++) {
+    const a = jitter(id * 13 + q) * TAU;
+    const out1 = add(scale(x, Math.cos(a)), scale(y, Math.sin(a)));
+    const lean = hang ? 1.5 : lerp(0.95, 1.25, jitter(id * 17 + q));
+    const d = unit(add(scale(z, Math.cos(lean)), scale(out1, Math.sin(lean))));
+    const face = unit(sub(z, scale(d, dot(z, d))));
+    out.push(frond(add(c, scale(out1, R * 0.4)), d, len3(face) > 1e-3 ? face : z, R * (1.25 + 0.3 * jitter(id * 19 + q)), R * 0.34, 'leaf', fine, 0.2));
   }
   return merge(...out);
 }
@@ -1253,7 +1262,7 @@ function mossKind(s: Moss): Kind {
         hornDark: [72, 50, 36],
         claw: [92, 62, 42],
         moss: hex('#6f8f2a'),
-        leaf: hex('#a9c43c'),
+        leaf: hex('#b5cc3a'),
         leafDark: [70, 94, 26],
         eye: [44, 40, 22],
         crystal: [150, 146, 46],
