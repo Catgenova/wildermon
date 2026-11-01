@@ -35,14 +35,14 @@ import { GATE_ACTIONS } from './gates';
 import { FIRST_AID_ACTIONS } from './firstaid';
 import { REMEDY_ACTIONS } from './remedies';
 import { drawDye, dyeSourceFor, fillFromSource, PLACEABLE_ACTIONS, sourceFor, vesselBecomes, waterNear } from './placeables';
-import { DYE_BUCKET, dyeIn, dyeSays, dyeHexOf } from './dyestuffs';
+import { DYE_BUCKET, dyeIn, dyeSays, dyeHexOf, recipeOf } from './dyestuffs';
 import { WHEY_BUCKET } from './dairy';
 import { DEED_ACTIONS, deedAimed } from './deed';
 import { CRATE_ACTIONS } from './crates';
 import { CREATURE_ACTIONS } from './creatureActions';
 import { CREATURE_CRATE_ACTIONS } from './creaturecrate';
 import { HUSBANDRY_ACTIONS } from './husbandry';
-import { DYE_ACTIONS } from './dyes';
+import { DYE_ACTIONS, recipeSays } from './dyes';
 import { TRAP_ACTIONS } from './traps';
 import { BRIDGE_ACTIONS } from './bridges';
 import { AQ_OVER, AQUEDUCT_ACTIONS } from './aqueducts';
@@ -2373,9 +2373,11 @@ export const ACTIONS: ActionDef[] = [
       // And to a Cook's tongue, what a helping of it does (a Cook's Taste).
       const taste = g.perk('taste', 0) > 0 ? tasteSays(g, item) : '';
       // What dye is in it, or what colour it was dyed (`dyestuffs.ts`): the island's `dye_item_says`.
+      // And a recipe, what it records and boils into (`recipeSays`).
       const held = dyeIn(item);
-      const hex = held ? null : dyeHexOf(item.dye);
-      const dyed = held ? ` Holds: ${dyeSays(held.liquid, held.litres)}` : hex ? ` Dyed: ${hex}.` : '';
+      const written = recipeOf(item);
+      const hex = held || written ? null : dyeHexOf(item.dye);
+      const dyed = held ? ` Holds: ${dyeSays(held.liquid, held.litres)}` : written ? recipeSays(written) : hex ? ` Dyed: ${hex}.` : '';
       g.logMsg(`${itemName(item)}: Quality ${item.ql.toFixed(2)}, damage ${item.dmg.toFixed(2)}%, weight ${itemWeight(item).toFixed(2)} kg.${at}${desc}${dyed}${rare}${by}${favours}${stuff}${taste}`, 'event');
     },
   },

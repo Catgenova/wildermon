@@ -15,7 +15,7 @@ import { CODE_DIGITS, CODE_SECONDS } from '../../game/keeper';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEM_ODDS, GEMS, JEWEL_BONUS, tradeName } from '../../game/gems';
 import { ANVIL_SUBTILES } from '../../game/anvil';
 import { SKILL_DEFS } from '../../game/skills';
-import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SKILL, chartReach, chartSide, COPY_TIME, DRAW_TIME, STUDY_MAP_TIME } from '../../game/cartography';
+import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET, CHART_SKILL, chartReach, chartSide, COPY_TIME, DRAW_TIME, STUDY_MAP_TIME } from '../../game/cartography';
 import { ARCHAEOLOGY_ACTION_BY_ID, FIND_DAMAGE, FIND_DAMAGE_SPREAD, LECTERN_GAIN, RELICS, RESTORE_AGE, RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
 import { BELT_MAX, QL_PER_LOOP } from '../../game/belt';
 import { HUNGER_RATE, staminaBarAbove, SWIM_LEARN } from '../../game/body';
@@ -80,9 +80,11 @@ import {
 } from '../../game/noticeboard';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PANE_LITRES, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFF_OF, DYESTUFFS, dyeHex, dyeRecipeId, kgSaid, mixDye,
-  PRIMARIES, pureDye, type DyeLiquid, type Primary,
+  PRIMARIES, pureDye, qlSaid, RECIPE_STUFF, sharesSaid, type DyeLiquid, type Primary,
 } from '../../game/dyestuffs';
-import { BOIL_LITRES, boilCountPlain, gramsOf, litresWord, TINTED_PANE } from '../../game/dyes';
+import {
+  BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, boilCountPlain, DYE_RECIPE_SAID, gramsOf, litresWord, MAKE_DYE_RECIPE, recipeDifficulty, recipeShares, shareGrams, TINTED_PANE,
+} from '../../game/dyes';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
 import { CROP_BY_SEED, CROP_LIST, CROPS, cropYield, seedSays, growthWords, PATCH_TIME, RIPE, STAGE_NAMES } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS, YEARLESS_GROWTH } from '../../game/growth';
@@ -692,6 +694,11 @@ const equalParts = (ps: readonly Primary[]): DyeLiquid => {
   ps.forEach((p, i) => { l[p] = i === 0 ? DYE_PARTS - each * (ps.length - 1) : each; });
   return l;
 };
+/** The recipe the help shows: equal red and blue, at the QL a quarter of the way from the mix to black (`dyes.ts`). */
+const RECIPE_SHOWN: DyeLiquid = { ...equalParts(['red', 'blue']), ql: Math.round((DYE_QL_BLACK + DYE_QL_PURE * 3) / 4) };
+/** A recipe's shares, as the help lists them: "2.5 kg of raspberries (25)". */
+const sharesShown = (l: DyeLiquid): string =>
+  listed(recipeShares(l).map((s) => `${kgSaid(s.grams)} kg of ${itemDef(s.from).name.toLowerCase()} (${s.count})`));
 /** The litres of each that the help pours together to show a mix. */
 const MIX_SHOWN = 2;
 /** The QLs the help shows red at, a quarter of the way up and three quarters. */
@@ -2741,6 +2748,19 @@ export function helpText(): string {
       <li><b>QL = brightness</b> only: black at QL ${DYE_QL_BLACK}, the mix at ${DYE_QL_PURE}, white at ${DYE_QL_WHITE}, linear between. Red at QL ${DARK_SHOWN}: ${mixSaid(pureDye('red', DARK_SHOWN))};
       at QL ${LIGHT_SHOWN}: ${mixSaid(pureDye('red', LIGHT_SHOWN))}. Low alchemy gives dark dye; mix in brighter dye to raise it.</li>
       <li><b>Examine</b> a bucket or barrel of dye: hex colour, QL, litres, mix.</li>
+    </ul>
+    <h4>Recipes</h4>
+    <ul>
+      <li><b>${ACTION_BY_ID.get(MAKE_DYE_RECIPE)?.label}</b> on a bucket of dye in your pack or a dye barrel beside you: one sheet of
+      ${itemDef(CHART_SHEET).name.toLowerCase()} (the best in the pack) becomes a <b>dye recipe</b>: the dye's mix and QL. Dye used: none.</li>
+      <li>Name: colour word and hex. Examine: the mix; per ${BOIL_LITRES} L of lye, each primary's share of ${kgSaid(shareGrams(DYE_PARTS))} kg of
+      ${listed(PRIMARIES.map((p) => `${itemDef(RECIPE_STUFF[p]).name.toLowerCase()} (${p})`))}; output QL at most the recipe's.</li>
+      <li>Example: ${mixSaid(RECIPE_SHOWN)} at QL ${qlSaid(RECIPE_SHOWN.ql)} (${sharesSaid(RECIPE_SHOWN)}): ${sharesShown(RECIPE_SHOWN)} per ${BOIL_LITRES} L of lye.</li>
+      <li><b>${ACTION_BY_ID.get(BOIL_DYE_RECIPE)?.label}</b> on the recipe: ${aOrAn(itemDef(BOIL_IN).name)} and the dyestuffs listed, from your pack;
+      ${BOIL_LITRES} litres of exactly the recipe's mix. QL: your alchemy's roll, at most the recipe's.</li>
+      <li>Alchemy, time and stamina: as a dyestuff boil. Difficulty: the hardest of its dyestuffs' boils (the example: alchemy ${recipeDifficulty(RECIPE_SHOWN)}).
+      ${listed(['double_boil', 'thrifty_dyer', 'sure_boil'].map((k) => `Naturalist ${PERK_BY_ID.get(`naturalist_${k}`)?.name}`))}: as on a dyestuff boil. Failed: dyestuffs and lye lost, bucket kept. Recipe kept.</li>
+      <li>Short: "${DYE_RECIPE_SAID.noLye}", or the weight needed and held.</li>
     </ul>
     <h4>Dyeing</h4>
     <ul>

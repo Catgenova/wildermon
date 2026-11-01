@@ -3539,6 +3539,20 @@ jobs:
           npx esbuild supabase/test/dyes.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/dyes.mjs --log-level=error
           node node_modules/.cache/dyes.mjs
+      - name: A dye is written down on papyrus and boiled again at its QL and not higher, the same on both sides
+        if: matrix.shard == 4
+        run: |
+          # Make a recipe on a bucket or a barrel of dye takes one sheet of
+          # papyrus and records the dye's parts and QL; its name and Examine
+          # say the colour, the hex and, per bucket of lye, the kilos of each
+          # primary's dyestuff, held against the browser over hundreds of
+          # seeded mixes. Boil from recipe gives exactly the recipe's parts at
+          # the boil's QL capped at the recipe's, takes each share and the
+          # lye, keeps the recipe, halves the weight for a Double Boil and
+          # loses it all on a failed boil. Every refusal in the same words.
+          npx esbuild supabase/test/dyerecipes.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/dyerecipes.mjs --log-level=error
+          node node_modules/.cache/dyerecipes.mjs
       - name: Five Runestones stand on the shore, and a Telestone takes you to them
         if: matrix.shard == 4
         run: |

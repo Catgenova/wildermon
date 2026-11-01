@@ -18,7 +18,7 @@ import { trellisWallWords } from './building';
 import { SUBTILES } from './crates';
 import { castWhole, INGOT_LUMPS, ingotOf, METAL_BY_LUMP, MOULD_BY_MAKES, MOULD_SKILL, MOULDS } from './metal';
 import { FISH } from './fishing';
-import { BOIL_IN, boilCount, boilCountPlain, boiledDye, boilRefusal, BOIL_LITRES, isBoilStuff } from './dyes';
+import { BOIL_IN, boilCount, boilCountPlain, boiledDye, boilRefusal, BOIL_LITRES, DYE_BOIL_TIME, DYE_BOIL_WIND, DYE_SKILL, isBoilStuff } from './dyes';
 import { DYE_BUCKET, DYESTUFFS, dyeRecipeId } from './dyestuffs';
 import { HERBS, WOUND_KINDS } from './wounds';
 import { TRAPS } from './traps';
@@ -662,12 +662,12 @@ const DYE_RECIPES: Recipe[] = DYESTUFFS.map((d) => ({
   category: 'Alchemy' as RecipeCategory,
   result: DYE_BUCKET,
   inputs: [{ item: d.from, count: boilCountPlain(d.from) }, { item: BOIL_IN }],
-  skill: 'alchemy',
+  skill: DYE_SKILL,
   salvage: [['bucket', 1]] as Array<[string, number]>,
   label: `Boil ${itemDef(d.from).name.toLowerCase()} for ${d.primary} dye`,
   verb: `boiling ${d.primary} dye`,
-  baseTime: 12,
-  stamina: 0.04,
+  baseTime: DYE_BOIL_TIME,
+  stamina: DYE_BOIL_WIND,
   difficulty: d.difficulty,
   done: `${BOIL_LITRES} litres of ${d.primary} dye.`,
   consumeOnFail: true,
