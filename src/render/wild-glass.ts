@@ -1149,7 +1149,8 @@ function glassBall(g: CanvasRenderingContext2D, x: number, y: number, R: number,
     g.lineCap = 'round';
     for (let q = 0; q < FILM.length + 2; q++) {
       const rr = R * (0.6 + 0.13 * q), a0 = -0.35 + 0.25 * Math.sin(turn + q), a1 = 2.0 + 0.3 * Math.cos(turn * 1.3 + q * 2);
-      g.strokeStyle = css(FILM[(q + Math.floor(turn)) % FILM.length], 0.56 * k);
+      // Round down from a turn that may be a little below nought (a first-stage bubble's sway): the band's colour by a modulus that stays positive.
+      g.strokeStyle = css(FILM[(((q + Math.floor(turn)) % FILM.length) + FILM.length) % FILM.length], 0.56 * k);
       g.lineWidth = R * (0.12 + 0.04 * Math.sin(turn + q * 1.7));
       g.beginPath();
       for (let j = 0; j <= 12; j++) {
