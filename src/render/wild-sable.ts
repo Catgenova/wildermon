@@ -184,8 +184,8 @@ const FLETCHERCREST_LOOK: Sable = {
     at: 1.5, up: 0.9,
     tiers: [
       { n: 6, rise: [22, 56], out: [6, 18], len: 6.2, w: 0.5 },
-      { n: 6, rise: [2, 26], out: [16, 30], len: 7.6, w: 0.5 },
-      { n: 5, rise: [-18, 2], out: [28, 42], len: 5.4, w: 0.46 },
+      { n: 6, rise: [2, 26], out: [10, 22], len: 7.6, w: 0.5 },
+      { n: 5, rise: [-18, 2], out: [20, 32], len: 5.4, w: 0.46 },
     ],
   },
   pack: { kind: 'quiver', at: -0.3, r: [0.85, 1.55, 0.52], tilt: 6 },
@@ -652,6 +652,15 @@ function headOf(s: Sable, n: number, k: number, shut: boolean): Mesh {
     return { ...line(pts, H.w[2] * 0.025, 'lid'), at: sub(pts[3].p, scale(pts[3].n, 0.05)) };
   })));
   parts.push(eyesOf(s, shut));
+  // Tufts of cream fur off the back of each cheek, below the ear, swept back and down: three a side.
+  for (const sd of [1, -1]) {
+    for (let q = 0; q < 3; q++) {
+      const at0 = onRings(H, lerp(H.y[1], H.y[2], 0.3 + 0.3 * q), 0.15 - 0.22 * q), at = sd > 0 ? at0 : left(at0);
+      const root = sub(at.p, scale(at.n, H.w[2] * 0.05));
+      const dir = unit(add(add([0, -1, 0], scale(at.n, 0.5)), [0, 0, -0.1 - 0.12 * q]));
+      parts.push(featherMesh(root, dir, at.n, H.w[2] * (0.56 - 0.1 * q), H.w[2] * 0.1, 'cream', 0.04, 0.02));
+    }
+  }
   void k;
   return merge(...parts);
 }
@@ -916,14 +925,14 @@ function workBits(g: CanvasRenderingContext2D, view: View, s: Sable, b: Bones, a
     const from = place(b.shaft, end);
     for (let q = 0; q < 6; q++) {
       const id = k * 17 + q * 5;
-      const v: V3 = [(jitter(id) - 0.5) * 1.4 * big, (jitter(id + 1) - 0.3) * 1.0 * big, (0.4 + 0.8 * jitter(id + 2)) * big];
+      const v: V3 = [(jitter(id) - 0.3) * 2.2 * big, (jitter(id + 1) - 0.2) * 1.4 * big, (0.1 + 0.5 * jitter(id + 2)) * big];
       // Falling slowly, as a feather does, and drifting from side to side.
-      const p = thrown(from, v, since, 2.2 * big);
+      const p = thrown(from, v, since, 7 * big);
       p[0] += Math.sin(since * 9 + id) * 0.12 * big;
       if (nearSide(p, mid, view) !== front) continue;
       const [x, y] = onScreen(view, p);
       const gone = 1 - ramp(since, 0.55, 0.8);
-      sliver(g, x, y, (0.16 + 0.08 * jitter(id + 3)) * big * gone * up, since * 7 + id, BIT_RGB[(q + k) % BIT_RGB.length]);
+      sliver(g, x, y, (0.42 + 0.16 * jitter(id + 3)) * big * gone * up, since * 7 + id, BIT_RGB[(q + k) % BIT_RGB.length]);
     }
   });
   // The thread going round as it binds: a few turns drawn round the fletching's foot.
