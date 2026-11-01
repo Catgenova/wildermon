@@ -76,6 +76,7 @@ import {
   mouldUsesLeft,
 } from './metal';
 import { MAP_ODDS } from './treasure';
+import { FAIL_DAMAGE_SAID } from './faildamage';
 import { CRAFT_REACH, DISTIL_BUCKETS, isDish, RECIPES, TAILOR_SKILLS, TRADE_BOOK_AT, TRADE_BOOK_SKILLS, type Recipe } from './recipes';
 import { BUSH_DEFS, ROAD_TILES, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../world/tiles';
 import { walkKey } from './player';
@@ -415,8 +416,8 @@ const STONECUTTING = RECIPES.filter((r) => r.skill === 'stonecutting');
 const CHISELLED = STONECUTTING.filter((r) => r.result.endsWith('_brick'));
 /** What comes off the chisel as bricks and slabs, which Brick Porter lightens. */
 const CUT_STONE = [...new Set(STONECUTTING.map((r) => r.result).filter((id) => /_(brick|slab)$/.test(id)))];
-/** The masonry a failed go pulls down with its materials in it. */
-const LOST_ON_FAIL = RECIPES.filter((r) => r.skill === 'masonry' && r.consumeOnFail);
+/** The masonry whose failed go a Mason's Careful Builder spares the damage of. */
+const LOST_ON_FAIL = RECIPES.filter((r) => r.skill === 'masonry' && r.spareOnFail);
 /** What a building is made of that is not stone: the timber a Mason's perks leave as they find it. */
 const TIMBER = MATERIALS.filter((m) => m.kind !== 'stone').map((m) => m.name.toLowerCase());
 const STONE_WORK = `stone, anything but ${either(TIMBER)}`;
@@ -530,7 +531,7 @@ const MASON: Seed[] = [
   {
     num: 24, name: 'Careful Builder', key: 'nothing_wasted',
     fx: each(LOST_ON_FAIL.map((r) => `spare:${r.id}`), 1),
-    note: () => `Failed ${either(LOST_ON_FAIL.map((r) => itemName(r.result)))}: materials kept (base: lost).`,
+    note: () => `Failed ${either(LOST_ON_FAIL.map((r) => itemName(r.result)))}: no input damage (base: ${FAIL_DAMAGE_SAID}).`,
   },
   {
     num: 29, name: 'Bridge Mason',
@@ -817,8 +818,8 @@ const SMITH: Seed[] = [
   {
     num: 20, name: 'Second Heat',
     fx: { 'spare:smith': 1 },
-    note: (fx) => `Failed ${label('smith')}: casting kept for another try${fx['spare:smith'] >= 1 ? '' : ` on ${oneIn(fx['spare:smith'])}`} `
-      + '(base: metal lost).',
+    note: (fx) => `Failed ${label('smith')}: no casting damage${fx['spare:smith'] >= 1 ? '' : ` on ${oneIn(fx['spare:smith'])}`} `
+      + `(base: ${FAIL_DAMAGE_SAID}).`,
   },
   {
     num: 22, name: 'Nail Maker',
@@ -1292,7 +1293,7 @@ const WEAVE = recipeOf('weave_cloth');
 const TAILORED = RECIPES.filter((r) => r.skill === 'tailoring' && r.difficulty !== undefined);
 const LEATHERED = RECIPES.filter((r) => r.skill === 'leatherworking' && r.difficulty !== undefined);
 const TAILOR_RARE = RECIPES.filter((r) => r.skill === 'tailoring');
-const TAILOR_LOST = RECIPES.filter((r) => TAILOR_SKILLS.has(r.skill) && r.consumeOnFail);
+const TAILOR_LOST = RECIPES.filter((r) => TAILOR_SKILLS.has(r.skill) && r.spareOnFail);
 /** What a Tailor's Light Pack lightens, and the tack a Saddler's hand is in. */
 const LIGHT = ['cloth', 'leather', 'yarn', 'hide'];
 const TACKED = ['saddle', 'bridle', 'yoke'];
@@ -1378,8 +1379,8 @@ const TAILOR: Seed[] = [
   {
     num: 34, name: 'Nothing Wasted',
     fx: each(TAILOR_LOST.map((r) => `spare:${r.id}`), 1),
-    note: () => `Failed tailoring, leatherworking and ropemaking: materials kept (base: lost), on all `
-      + `${TAILOR_LOST.length} recipes that lose them.`,
+    note: () => `Failed tailoring, leatherworking and ropemaking: no input damage (base: ${FAIL_DAMAGE_SAID}), on `
+      + `${TAILOR_LOST.length} recipes.`,
   },
   {
     num: 35, name: 'Light Pack',
@@ -1928,7 +1929,7 @@ const ARTISAN: Seed[] = [
   {
     num: 3, name: 'Keep the Stone',
     fx: { 'stone:set_focus': 1 },
-    note: () => 'Failed focus setting: stone returned whole, only the silver lost (base: stone splits).',
+    note: () => `Failed focus setting: no gem damage (base: ${FAIL_DAMAGE_SAID}).`,
   },
   {
     num: 26, name: 'Deep Pot',

@@ -1,4 +1,5 @@
 import { tryGain } from './learn';
+import { damageDrawn, failDamagedSaid } from './faildamage';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
@@ -111,6 +112,9 @@ function sureHand(g: Game, job: string, ok: boolean): boolean {
   return ok || (fail < 1 && g.rand() >= fail);
 }
 
+/** What a Smith's Second Heat says when it spares a failed casting its damage. The island says the same. */
+export const SECOND_HEAT = 'Second Heat: casting undamaged.';
+
 export const ANVIL_ACTIONS: ActionDef[] = [
   {
     id: 'place_anvil',
@@ -193,7 +197,6 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       // the whole of it, for what it puts on the chance of rare coins (`rarityBands`).
       const used = rarityTally();
       used[lump.rare ?? 0] += 1;
-      if (!stack.spend(1)) return;
       // The die wears with every strike, good or bad, and no die can be mended.
       const dieQl = Math.max(1, die.ql - die.dmg / 2);
       die.dmg = Math.min(100, die.dmg + DIE_WEAR);
@@ -204,11 +207,15 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       // The smith's hand, and then the gold itself: poor metal will not take the die however well it is struck.
       const struck = g.skillCheck('blacksmithing', hard, anvilQl(a), g.mindEase());
       const pure = g.rand() < coinPurity(lumpQl);
+      // A strike that does not come off uses no metal: the lump is damaged by its QL (`faildamage.ts`).
       if (!sureHand(g, 'strike_coins', struck && pure)) {
+        const hurt = damageDrawn([stack], 1);
+        g.events.emit('inventory');
         g.gainSkill('blacksmithing', tryGain(false, SMITH_GAIN));
-        g.logMsg(`Failed: coins, ${struck ? 'gold too poor for the die' : 'skill check'}. Lump lost.${broke ? ' Coin die worn out.' : ''}`, 'event');
+        g.logMsg(`${failDamagedSaid(`Failed: coins, ${struck ? 'gold too poor for the die' : 'skill check'}.`, hurt)}${broke ? ' Coin die worn out.' : ''}`, 'event');
         return;
       }
+      if (!stack.spend(1)) return;
       // And higher for a Masterwork on the anvil (`enchanting.ts`).
       const ql = Math.min(100, smithQl(g, { skill: 'blacksmithing' } as MouldDef, dieQl, lump.ql, a) + swingEnchant(a, 'master'));
       g.gainSkill('blacksmithing', tryGain(true, SMITH_GAIN));
@@ -268,11 +275,13 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       // Heat has a casting to keep; the island rolls in the same order.
       const hard = def.difficulty + matOf(casting.extra).difficulty;
       if (!sureHand(g, 'smith', g.skillCheck(def.skill, hard, anvilQl(a), g.mindEase()))) {
+        // The casting is not used up: it is damaged by its QL (`faildamage.ts`), and not at all for a Smith's Second Heat.
         const kept = g.perk('spare:smith', 0) > 0 && g.rand() < g.perk('spare:smith', 0);
-        if (!kept && !stack.spend(1)) return;
+        const hurt = kept ? [] : damageDrawn([stack], 1);
         g.events.emit('inventory');
         g.gainSkill(def.skill, tryGain(false, SMITH_GAIN));
-        g.logMsg(`Failed: ${itemDef(def.makes).name.toLowerCase()}. ${kept ? 'Second Heat: casting kept.' : 'Casting lost.'}`, 'event');
+        const head = `Failed: ${itemDef(def.makes).name.toLowerCase()}.`;
+        g.logMsg(kept ? `${head} ${SECOND_HEAT}` : failDamagedSaid(head, hurt), 'event');
         return;
       }
       // The one casting is all that goes into it, for what a rare one puts on

@@ -5,7 +5,7 @@ import type { Game } from './game';
 import { pressStamp } from './relicuse';
 import { GEAR_RECIPES } from './wildgear';
 import {
-  countOf, describeFrom, describeWith, itemDef, litresOf, TAN_LYE, makersMark, markOf, overParts, partsMark, rareInputSaid, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD,
+  describeFrom, describeWith, itemDef, litresOf, TAN_LYE, makersMark, markOf, overParts, partsMark, rareInputSaid, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD,
   serveOf, type Item,
 } from './items';
 import { QL_PER_LOOP } from './belt';
@@ -32,6 +32,7 @@ import { SKILL_DEFS } from './skills';
 import { CANDLE_DRAWN } from './light';
 import { ENCHANTERS_PLINTH, ENCHANTING, ENCHANTMENT_LIST, PAPER_PRESS, PLINTH_NAME, SCROLL_DIFFICULTY, SCROLL_HARM, SCROLL_SHEETS, scrollOf } from './enchant';
 import { DAMAGE_MAX } from './limits';
+import { damageDrawn, failDamagedSaid, failLitres, failLitresSaid } from './faildamage';
 import { BUTTER_CHURN, BUTTER_PATS, CHURN_BUTTER, WHEY_BUCKET } from './dairy';
 
 /** What working a thing out with your hands teaches the head. */
@@ -133,8 +134,13 @@ export interface Recipe {
   stamina: number;
   /** When set, a skill check can fail. */
   difficulty?: number;
-  /** Food burns: a failed attempt eats the ingredients anyway. */
-  consumeOnFail?: boolean;
+  /**
+   * On the list a Mason's or a Tailor's Nothing Wasted spares a failed go's
+   * damage on (`spare:<recipe>`), by the trade: the recipes that lost every
+   * input on a fail, before every failed go damaged its inputs instead
+   * (`faildamage.ts`). Nothing else reads it.
+   */
+  spareOnFail?: boolean;
   /**
    * The product's quality comes from what went into it rather than from the
    * worker's hands. Mixing two fine lumps gives fine metal; skill only decides
@@ -156,14 +162,8 @@ export interface Recipe {
    * apart when they are all one item.
    */
   extra?: string;
-  /** Things handed back when it succeeds, such as the bucket the lye was in. */
+  /** Things handed back when it succeeds, such as the bucket the lye was in. A failed go uses nothing up, so hands nothing back. */
   returns?: Array<[string, number]>;
-  /**
-   * What you are left holding when it fails, if that is not simply what a
-   * success hands back. A spoiled batch wastes what went into it; it does not
-   * eat the bucket it was mixed in.
-   */
-  salvage?: Array<[string, number]>;
   done: string;
   fail?: string;
   /**
@@ -215,8 +215,8 @@ export const RECIPE_PERK_SAYS: Record<string, string> = {
  */
 export const isDish = (id: string): boolean => itemDef(id).category === 'food' && !itemDef(id).charges;
 
-/** What a failed focus says when an Artisan's Keep the Stone has the stone out of it whole. The island says the same. */
-export const STONE_KEPT = 'Failed: focus. Silver lost; gem kept.';
+/** What a failed focus says when an Artisan's Keep the Stone spares the stone its damage. The island says the same. */
+export const STONE_KEPT = 'Keep the Stone: gem undamaged.';
 
 export const RECIPES: Recipe[] = [
   // Woodwork
@@ -234,9 +234,9 @@ export const RECIPES: Recipe[] = [
   { id: 'make_sandstone_brick', category: 'Stonework', result: 'sandstone_brick', count: 2, inputs: [{ item: 'sandstone_shards' }], tool: 'chisel', skill: 'stonecutting', label: 'Chisel sandstone brick', verb: 'chiselling', baseTime: 6, stamina: 0.04, difficulty: 12, done: '' },
   { id: 'make_whetstone', category: 'Stonework', result: 'whetstone', inputs: [{ item: 'rock_shards', count: 2 }], tool: 'chisel', skill: 'stonecutting', label: 'Shape a whetstone', verb: 'shaping a whetstone', baseTime: 8, stamina: 0.04, difficulty: 10, done: '' },
   // The two brick-built workshops, carried flat-packed like any other piece.
-  { id: 'make_smelter', category: 'Stonework', result: 'smelter', inputs: [{ item: 'stone_brick', count: 48 }, { item: 'mortar', count: 24 }], tool: 'trowel', skill: 'masonry', label: 'Build a smelter', verb: 'building a smelter', baseTime: 20, stamina: 0.07, difficulty: 22, done: 'Set down on your settlement.', consumeOnFail: true },
-  { id: 'make_kiln', category: 'Stonework', result: 'kiln', inputs: [{ item: 'stone_brick', count: 24 }, { item: 'mortar', count: 8 }], tool: 'trowel', skill: 'masonry', label: 'Build a kiln', verb: 'building a kiln', baseTime: 14, stamina: 0.05, difficulty: 16, done: 'Set down on dry, flat ground.', consumeOnFail: true },
-  { id: 'make_quern', category: 'Stonework', result: 'quern', inputs: [{ item: 'rock_shards', count: 3 }], tool: 'chisel', skill: 'stonecutting', label: 'Dress a quern', verb: 'dressing a quern', baseTime: 16, stamina: 0.06, difficulty: 24, done: '', consumeOnFail: true },
+  { id: 'make_smelter', category: 'Stonework', result: 'smelter', inputs: [{ item: 'stone_brick', count: 48 }, { item: 'mortar', count: 24 }], tool: 'trowel', skill: 'masonry', label: 'Build a smelter', verb: 'building a smelter', baseTime: 20, stamina: 0.07, difficulty: 22, done: 'Set down on your settlement.', spareOnFail: true },
+  { id: 'make_kiln', category: 'Stonework', result: 'kiln', inputs: [{ item: 'stone_brick', count: 24 }, { item: 'mortar', count: 8 }], tool: 'trowel', skill: 'masonry', label: 'Build a kiln', verb: 'building a kiln', baseTime: 14, stamina: 0.05, difficulty: 16, done: 'Set down on dry, flat ground.', spareOnFail: true },
+  { id: 'make_quern', category: 'Stonework', result: 'quern', inputs: [{ item: 'rock_shards', count: 3 }], tool: 'chisel', skill: 'stonecutting', label: 'Dress a quern', verb: 'dressing a quern', baseTime: 16, stamina: 0.06, difficulty: 24, done: '', spareOnFail: true },
   // Slabs: two shards squared off into one flat stone, for paving.
   // A Telestone (`runestones.ts`): the motes worked into a brick, which takes you to a Runestone.
   { id: 'make_telestone', category: 'Stonework', result: 'telestone', inputs: [{ item: 'earth_mote', count: 5 }, { item: 'stone_brick' }], tool: 'chisel', skill: 'stonecutting', label: 'Cut a Telestone', verb: 'cutting a Telestone', baseTime: 20, stamina: 0.06, difficulty: 30, done: '' },
@@ -260,32 +260,32 @@ export const RECIPES: Recipe[] = [
   { id: 'fit_knife_blade', category: 'Woodwork', result: 'butchering_knife', inputs: [{ item: 'knife_blade' }, { item: 'shaft' }, { item: 'nail', count: 2 }], tool: FIT_TOOL, skill: 'carpentry', qlFromInputs: true,  material: 'metal', label: 'Fit a shaft', verb: 'fitting a shaft', baseTime: 5, stamina: 0.02, done: '' },
   { id: 'fit_sword_blade', category: 'Woodwork', result: 'sword', inputs: [{ item: 'sword_blade' }, { item: 'shaft' }, { item: 'nail', count: 2 }], tool: FIT_TOOL, skill: 'carpentry', qlFromInputs: true,  material: 'metal', label: 'Fit a shaft', verb: 'fitting a shaft', baseTime: 5, stamina: 0.02, done: '' },
   // Fibre is spun on a spindle and woven on a loom; nothing shortcuts either.
-  { id: 'make_toolbelt', category: 'Cloth', result: 'toolbelt', inputs: [{ item: 'leather', count: 4 }, { item: 'ribbon', count: 2 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a toolbelt', verb: 'stitching a toolbelt', baseTime: 16, stamina: 0.04, difficulty: 22, done: `One loop per ${QL_PER_LOOP} QL.`, consumeOnFail: true },
-  { id: 'make_rug', category: 'Cloth', result: 'rug', inputs: [{ item: 'cloth', count: 4 }, { item: 'yarn', count: 6 }], tool: 'needle', station: 'loom', skill: 'tailoring', label: 'Weave a rug', verb: 'weaving a rug', baseTime: 20, stamina: 0.04, difficulty: 20, done: '', consumeOnFail: true },
-  { id: 'make_composite_bow', category: 'Cloth', result: 'composite_bow', inputs: [{ item: 'tusk', count: 2 }, { item: 'sinew', count: 4 }, { item: 'shaft', count: 2 }, { item: 'rope', count: 1 }], tool: 'carving_knife', skill: 'bowyery', label: 'Lay up a composite bow', verb: 'laying up a composite bow', baseTime: 30, stamina: 0.06, difficulty: 46, done: '', consumeOnFail: true },
-  { id: 'make_scale_helm', category: 'Cloth', result: 'scale_helm', inputs: [{ item: 'dragon_scale', count: 3 }, { item: 'leather', count: 2 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet a scale helm', verb: 'riveting scale', baseTime: 22, stamina: 0.05, difficulty: 50, done: '', consumeOnFail: true },
-  { id: 'make_scale_cuirass', category: 'Cloth', result: 'scale_cuirass', inputs: [{ item: 'dragon_scale', count: 8 }, { item: 'leather', count: 5 }, { item: 'ribbon', count: 2 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet a scale cuirass', verb: 'riveting scale', baseTime: 40, stamina: 0.08, difficulty: 58, done: '', consumeOnFail: true },
-  { id: 'make_scale_sleeves', category: 'Cloth', result: 'scale_sleeves', inputs: [{ item: 'dragon_scale', count: 5 }, { item: 'leather', count: 3 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet scale sleeves', verb: 'riveting scale', baseTime: 30, stamina: 0.06, difficulty: 54, done: '', consumeOnFail: true },
-  { id: 'make_scale_leggings', category: 'Cloth', result: 'scale_leggings', inputs: [{ item: 'dragon_scale', count: 6 }, { item: 'leather', count: 4 }, { item: 'ribbon', count: 2 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet scale leggings', verb: 'riveting scale', baseTime: 34, stamina: 0.07, difficulty: 56, done: '', consumeOnFail: true },
-  { id: 'make_scale_boots', category: 'Cloth', result: 'scale_boots', inputs: [{ item: 'dragon_scale', count: 4 }, { item: 'leather', count: 3 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet scale boots', verb: 'riveting scale', baseTime: 26, stamina: 0.05, difficulty: 52, done: '', consumeOnFail: true },
-  { id: 'make_net', category: 'Cloth', result: 'fishing_net', inputs: [{ item: 'yarn', count: 12 }, { item: 'rope', count: 2 }], tool: 'needle', skill: 'ropemaking', label: 'Knot a net', verb: 'knotting a net', baseTime: 22, stamina: 0.05, difficulty: 24, done: '', consumeOnFail: true },
+  { id: 'make_toolbelt', category: 'Cloth', result: 'toolbelt', inputs: [{ item: 'leather', count: 4 }, { item: 'ribbon', count: 2 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a toolbelt', verb: 'stitching a toolbelt', baseTime: 16, stamina: 0.04, difficulty: 22, done: `One loop per ${QL_PER_LOOP} QL.`, spareOnFail: true },
+  { id: 'make_rug', category: 'Cloth', result: 'rug', inputs: [{ item: 'cloth', count: 4 }, { item: 'yarn', count: 6 }], tool: 'needle', station: 'loom', skill: 'tailoring', label: 'Weave a rug', verb: 'weaving a rug', baseTime: 20, stamina: 0.04, difficulty: 20, done: '', spareOnFail: true },
+  { id: 'make_composite_bow', category: 'Cloth', result: 'composite_bow', inputs: [{ item: 'tusk', count: 2 }, { item: 'sinew', count: 4 }, { item: 'shaft', count: 2 }, { item: 'rope', count: 1 }], tool: 'carving_knife', skill: 'bowyery', label: 'Lay up a composite bow', verb: 'laying up a composite bow', baseTime: 30, stamina: 0.06, difficulty: 46, done: '', spareOnFail: true },
+  { id: 'make_scale_helm', category: 'Cloth', result: 'scale_helm', inputs: [{ item: 'dragon_scale', count: 3 }, { item: 'leather', count: 2 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet a scale helm', verb: 'riveting scale', baseTime: 22, stamina: 0.05, difficulty: 50, done: '', spareOnFail: true },
+  { id: 'make_scale_cuirass', category: 'Cloth', result: 'scale_cuirass', inputs: [{ item: 'dragon_scale', count: 8 }, { item: 'leather', count: 5 }, { item: 'ribbon', count: 2 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet a scale cuirass', verb: 'riveting scale', baseTime: 40, stamina: 0.08, difficulty: 58, done: '', spareOnFail: true },
+  { id: 'make_scale_sleeves', category: 'Cloth', result: 'scale_sleeves', inputs: [{ item: 'dragon_scale', count: 5 }, { item: 'leather', count: 3 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet scale sleeves', verb: 'riveting scale', baseTime: 30, stamina: 0.06, difficulty: 54, done: '', spareOnFail: true },
+  { id: 'make_scale_leggings', category: 'Cloth', result: 'scale_leggings', inputs: [{ item: 'dragon_scale', count: 6 }, { item: 'leather', count: 4 }, { item: 'ribbon', count: 2 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet scale leggings', verb: 'riveting scale', baseTime: 34, stamina: 0.07, difficulty: 56, done: '', spareOnFail: true },
+  { id: 'make_scale_boots', category: 'Cloth', result: 'scale_boots', inputs: [{ item: 'dragon_scale', count: 4 }, { item: 'leather', count: 3 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet scale boots', verb: 'riveting scale', baseTime: 26, stamina: 0.05, difficulty: 52, done: '', spareOnFail: true },
+  { id: 'make_net', category: 'Cloth', result: 'fishing_net', inputs: [{ item: 'yarn', count: 12 }, { item: 'rope', count: 2 }], tool: 'needle', skill: 'ropemaking', label: 'Knot a net', verb: 'knotting a net', baseTime: 22, stamina: 0.05, difficulty: 24, done: '', spareOnFail: true },
   // Off the creel's own bill in `traps.ts`, which is what the help reads, so the two cannot differ.
-  { id: 'make_creel', category: 'Cloth', result: 'creel', inputs: TRAPS.creel.bill.map(([item, count]) => ({ item, count })), skill: 'ropemaking', label: 'Weave a creel', verb: 'weaving a creel', baseTime: 16, stamina: 0.04, difficulty: 16, done: '', consumeOnFail: true },
+  { id: 'make_creel', category: 'Cloth', result: 'creel', inputs: TRAPS.creel.bill.map(([item, count]) => ({ item, count })), skill: 'ropemaking', label: 'Weave a creel', verb: 'weaving a creel', baseTime: 16, stamina: 0.04, difficulty: 16, done: '', spareOnFail: true },
   { id: 'make_rope_tool', category: 'Woodwork', result: 'rope_tool', inputs: [{ item: 'plank' }, { item: 'shaft' }], tool: 'carving_knife', skill: 'carpentry', material: 'wood', label: 'Carve a rope tool', verb: 'carving a rope tool', baseTime: 7, stamina: 0.02, difficulty: 6, done: '' },
-  { id: 'make_rope', category: 'Cloth', result: 'rope', inputs: [{ item: 'wemp', count: 4 }], tool: 'rope_tool', skill: 'ropemaking', label: 'Lay up a rope', verb: 'laying up a rope', baseTime: 9, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true },
-  { id: 'make_thick_rope', category: 'Cloth', result: 'thick_rope', inputs: [{ item: 'rope', count: 3 }], tool: 'rope_tool', skill: 'ropemaking', label: 'Lay up thick rope', verb: 'laying up thick rope', baseTime: 16, stamina: 0.05, difficulty: 28, done: '', consumeOnFail: true },
-  { id: 'spin_wool', category: 'Cloth', result: 'yarn', count: 2, inputs: [{ item: 'wool', count: 2 }], station: 'spindle', skill: 'tailoring', label: 'Spin into yarn', verb: 'spinning', baseTime: 6, stamina: 0.02, difficulty: 8, done: '', consumeOnFail: true },
-  { id: 'spin_cotton', category: 'Cloth', result: 'yarn', count: 2, inputs: [{ item: 'cotton', count: 2 }], station: 'spindle', skill: 'tailoring', label: 'Spin into yarn', verb: 'spinning', baseTime: 6, stamina: 0.02, difficulty: 10, done: '', consumeOnFail: true },
-  { id: 'spin_wemp', category: 'Cloth', result: 'yarn', count: 2, inputs: [{ item: 'wemp', count: 2 }], station: 'spindle', skill: 'tailoring', label: 'Spin into yarn', verb: 'spinning', baseTime: 6, stamina: 0.02, difficulty: 12, done: '', consumeOnFail: true },
-  { id: 'weave_cloth', category: 'Cloth', result: 'cloth', inputs: [{ item: 'yarn', count: 3 }], station: 'loom', skill: 'tailoring', label: 'Weave cloth', verb: 'weaving', baseTime: 9, stamina: 0.03, difficulty: 12, done: '', consumeOnFail: true },
-  { id: 'make_brush', category: 'Woodwork', result: 'brush', inputs: [{ item: 'plank' }, { item: 'nail', count: 3 }], tool: 'carving_knife', skill: 'animal_husbandry', material: 'wood', label: 'Set a brush', verb: 'setting a brush', baseTime: 8, stamina: 0.03, difficulty: 8, done: '', consumeOnFail: true },
-  { id: 'make_needle', category: 'Cloth', result: 'needle', count: 2, inputs: [{ item: 'bone' }], tool: 'carving_knife', skill: 'tailoring', label: 'Carve needles', verb: 'carving needles', baseTime: 6, stamina: 0.02, difficulty: 12, done: '', consumeOnFail: true },
-  { id: 'make_sack', category: 'Cloth', result: 'sack', inputs: [{ item: 'cloth', count: 2 }], tool: 'needle', skill: 'tailoring', label: 'Stitch a sack', verb: 'stitching a sack', baseTime: 7, stamina: 0.02, difficulty: 10, done: '', consumeOnFail: true },
-  { id: 'make_satchel', category: 'Cloth', result: 'satchel', inputs: [{ item: 'leather', count: 3 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a satchel', verb: 'stitching a satchel', baseTime: 12, stamina: 0.03, difficulty: 18, done: '', consumeOnFail: true },
-  { id: 'make_backpack', category: 'Cloth', result: 'backpack', inputs: [{ item: 'leather', count: 6 }, { item: 'ribbon', count: 2 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a backpack', verb: 'stitching a backpack', baseTime: 18, stamina: 0.05, difficulty: 26, done: '', consumeOnFail: true },
-  { id: 'make_bandage', category: 'Cloth', result: 'bandage', count: 3, inputs: [{ item: 'cloth' }], tool: 'carving_knife', skill: 'first_aid', label: 'Cut into bandages', verb: 'cutting bandages', baseTime: 6, stamina: 0.02, difficulty: 8, done: '', consumeOnFail: true },
-  { id: 'make_awl', category: 'Cloth', result: 'awl', inputs: [{ item: 'bone' }], tool: 'carving_knife', skill: 'leatherworking', label: 'Carve an awl', verb: 'carving an awl', baseTime: 6, stamina: 0.02, difficulty: 12, done: '', consumeOnFail: true },
-  { id: 'make_bow_string', category: 'Cloth', result: 'bow_string', inputs: [{ item: 'yarn', count: 2 }], skill: 'bowyery', label: 'Twist a bowstring', verb: 'twisting a string', baseTime: 6, stamina: 0.02, difficulty: 14, done: '', consumeOnFail: true },
+  { id: 'make_rope', category: 'Cloth', result: 'rope', inputs: [{ item: 'wemp', count: 4 }], tool: 'rope_tool', skill: 'ropemaking', label: 'Lay up a rope', verb: 'laying up a rope', baseTime: 9, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true },
+  { id: 'make_thick_rope', category: 'Cloth', result: 'thick_rope', inputs: [{ item: 'rope', count: 3 }], tool: 'rope_tool', skill: 'ropemaking', label: 'Lay up thick rope', verb: 'laying up thick rope', baseTime: 16, stamina: 0.05, difficulty: 28, done: '', spareOnFail: true },
+  { id: 'spin_wool', category: 'Cloth', result: 'yarn', count: 2, inputs: [{ item: 'wool', count: 2 }], station: 'spindle', skill: 'tailoring', label: 'Spin into yarn', verb: 'spinning', baseTime: 6, stamina: 0.02, difficulty: 8, done: '', spareOnFail: true },
+  { id: 'spin_cotton', category: 'Cloth', result: 'yarn', count: 2, inputs: [{ item: 'cotton', count: 2 }], station: 'spindle', skill: 'tailoring', label: 'Spin into yarn', verb: 'spinning', baseTime: 6, stamina: 0.02, difficulty: 10, done: '', spareOnFail: true },
+  { id: 'spin_wemp', category: 'Cloth', result: 'yarn', count: 2, inputs: [{ item: 'wemp', count: 2 }], station: 'spindle', skill: 'tailoring', label: 'Spin into yarn', verb: 'spinning', baseTime: 6, stamina: 0.02, difficulty: 12, done: '', spareOnFail: true },
+  { id: 'weave_cloth', category: 'Cloth', result: 'cloth', inputs: [{ item: 'yarn', count: 3 }], station: 'loom', skill: 'tailoring', label: 'Weave cloth', verb: 'weaving', baseTime: 9, stamina: 0.03, difficulty: 12, done: '', spareOnFail: true },
+  { id: 'make_brush', category: 'Woodwork', result: 'brush', inputs: [{ item: 'plank' }, { item: 'nail', count: 3 }], tool: 'carving_knife', skill: 'animal_husbandry', material: 'wood', label: 'Set a brush', verb: 'setting a brush', baseTime: 8, stamina: 0.03, difficulty: 8, done: '', spareOnFail: true },
+  { id: 'make_needle', category: 'Cloth', result: 'needle', count: 2, inputs: [{ item: 'bone' }], tool: 'carving_knife', skill: 'tailoring', label: 'Carve needles', verb: 'carving needles', baseTime: 6, stamina: 0.02, difficulty: 12, done: '', spareOnFail: true },
+  { id: 'make_sack', category: 'Cloth', result: 'sack', inputs: [{ item: 'cloth', count: 2 }], tool: 'needle', skill: 'tailoring', label: 'Stitch a sack', verb: 'stitching a sack', baseTime: 7, stamina: 0.02, difficulty: 10, done: '', spareOnFail: true },
+  { id: 'make_satchel', category: 'Cloth', result: 'satchel', inputs: [{ item: 'leather', count: 3 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a satchel', verb: 'stitching a satchel', baseTime: 12, stamina: 0.03, difficulty: 18, done: '', spareOnFail: true },
+  { id: 'make_backpack', category: 'Cloth', result: 'backpack', inputs: [{ item: 'leather', count: 6 }, { item: 'ribbon', count: 2 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a backpack', verb: 'stitching a backpack', baseTime: 18, stamina: 0.05, difficulty: 26, done: '', spareOnFail: true },
+  { id: 'make_bandage', category: 'Cloth', result: 'bandage', count: 3, inputs: [{ item: 'cloth' }], tool: 'carving_knife', skill: 'first_aid', label: 'Cut into bandages', verb: 'cutting bandages', baseTime: 6, stamina: 0.02, difficulty: 8, done: '', spareOnFail: true },
+  { id: 'make_awl', category: 'Cloth', result: 'awl', inputs: [{ item: 'bone' }], tool: 'carving_knife', skill: 'leatherworking', label: 'Carve an awl', verb: 'carving an awl', baseTime: 6, stamina: 0.02, difficulty: 12, done: '', spareOnFail: true },
+  { id: 'make_bow_string', category: 'Cloth', result: 'bow_string', inputs: [{ item: 'yarn', count: 2 }], skill: 'bowyery', label: 'Twist a bowstring', verb: 'twisting a string', baseTime: 6, stamina: 0.02, difficulty: 14, done: '', spareOnFail: true },
   // Cloth armour: sewn from what the loom gives you.
   { id: 'make_wool_cap', category: 'Cloth', result: 'wool_cap', inputs: [{ item: 'cloth', count: 2 }], tool: SEW_TOOL, skill: 'tailoring', label: 'Sew a wool cap', verb: 'sewing a cap', baseTime: 10, stamina: 0.03, difficulty: 14, done: '' },
   { id: 'make_cloth_tunic', category: 'Cloth', result: 'cloth_tunic', inputs: [{ item: 'cloth', count: 4 }], tool: SEW_TOOL, skill: 'tailoring', label: 'Sew a cloth tunic', verb: 'sewing a tunic', baseTime: 14, stamina: 0.04, difficulty: 18, done: '' },
@@ -293,25 +293,25 @@ export const RECIPES: Recipe[] = [
   { id: 'make_cloth_trousers', category: 'Cloth', result: 'cloth_trousers', inputs: [{ item: 'cloth', count: 3 }], tool: SEW_TOOL, skill: 'tailoring', label: 'Sew cloth trousers', verb: 'sewing trousers', baseTime: 12, stamina: 0.03, difficulty: 16, done: '' },
   { id: 'make_cloth_shoes', category: 'Cloth', result: 'cloth_shoes', inputs: [{ item: 'cloth', count: 2 }], tool: SEW_TOOL, skill: 'tailoring', label: 'Sew cloth shoes', verb: 'sewing shoes', baseTime: 9, stamina: 0.03, difficulty: 14, done: '' },
   // Leather, cut from hide with a knife.
-  { id: 'make_leather_cap', category: 'Cloth', result: 'leather_cap', inputs: [{ item: 'leather', count: 2 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut a leather cap', verb: 'working leather', baseTime: 11, stamina: 0.04, difficulty: 16, done: '', consumeOnFail: true },
-  { id: 'make_leather_jerkin', category: 'Cloth', result: 'leather_jerkin', inputs: [{ item: 'leather', count: 5 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut a leather jerkin', verb: 'working leather', baseTime: 16, stamina: 0.05, difficulty: 22, done: '', consumeOnFail: true },
-  { id: 'make_leather_sleeves', category: 'Cloth', result: 'leather_sleeves', inputs: [{ item: 'leather', count: 3 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut leather sleeves', verb: 'working leather', baseTime: 12, stamina: 0.04, difficulty: 19, done: '', consumeOnFail: true },
-  { id: 'make_leather_trousers', category: 'Cloth', result: 'leather_trousers', inputs: [{ item: 'leather', count: 4 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut leather trousers', verb: 'working leather', baseTime: 14, stamina: 0.05, difficulty: 20, done: '', consumeOnFail: true },
-  { id: 'make_leather_boots', category: 'Cloth', result: 'leather_boots', inputs: [{ item: 'leather', count: 3 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut leather boots', verb: 'working leather', baseTime: 13, stamina: 0.04, difficulty: 18, done: '', consumeOnFail: true },
+  { id: 'make_leather_cap', category: 'Cloth', result: 'leather_cap', inputs: [{ item: 'leather', count: 2 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut a leather cap', verb: 'working leather', baseTime: 11, stamina: 0.04, difficulty: 16, done: '', spareOnFail: true },
+  { id: 'make_leather_jerkin', category: 'Cloth', result: 'leather_jerkin', inputs: [{ item: 'leather', count: 5 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut a leather jerkin', verb: 'working leather', baseTime: 16, stamina: 0.05, difficulty: 22, done: '', spareOnFail: true },
+  { id: 'make_leather_sleeves', category: 'Cloth', result: 'leather_sleeves', inputs: [{ item: 'leather', count: 3 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut leather sleeves', verb: 'working leather', baseTime: 12, stamina: 0.04, difficulty: 19, done: '', spareOnFail: true },
+  { id: 'make_leather_trousers', category: 'Cloth', result: 'leather_trousers', inputs: [{ item: 'leather', count: 4 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut leather trousers', verb: 'working leather', baseTime: 14, stamina: 0.05, difficulty: 20, done: '', spareOnFail: true },
+  { id: 'make_leather_boots', category: 'Cloth', result: 'leather_boots', inputs: [{ item: 'leather', count: 3 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut leather boots', verb: 'working leather', baseTime: 13, stamina: 0.04, difficulty: 18, done: '', spareOnFail: true },
   // Vehicle parts. A wheel is a carpenter's piece; the metal in it is banded on.
-  { id: 'make_large_wheel', category: 'Woodwork', result: 'large_wheel', inputs: [{ item: 'plank', count: 4 }, { item: 'shaft', count: 6 }, { item: 'ribbon', count: 1 }, { item: 'nail', count: 12 }], tool: 'mallet', skill: 'carpentry', material: 'wood', label: 'Build a large wheel', verb: 'building a wheel', baseTime: 16, stamina: 0.05, difficulty: 28, done: '', consumeOnFail: true },
-  { id: 'make_saddle', category: 'Cloth', result: 'saddle', inputs: [{ item: 'leather', count: 6 }, { item: 'plank', count: 2 }, { item: 'ribbon', count: 1 }, { item: 'nail', count: 8 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a saddle', verb: 'stitching a saddle', baseTime: 18, stamina: 0.05, difficulty: 26, done: '', consumeOnFail: true },
-  { id: 'make_bridle', category: 'Cloth', result: 'bridle', inputs: [{ item: 'leather', count: 3 }, { item: 'rope', count: 1 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a bridle', verb: 'stitching a bridle', baseTime: 10, stamina: 0.03, difficulty: 18, done: '', consumeOnFail: true },
-  { id: 'make_yoke', category: 'Cloth', result: 'yoke', inputs: [{ item: 'shaft', count: 1 }, { item: 'leather', count: 2 }, { item: 'nail', count: 4 }], tool: 'awl', skill: 'leatherworking', material: 'wood', label: 'Stitch a yoke', verb: 'stitching a yoke', baseTime: 12, stamina: 0.04, difficulty: 18, done: '', consumeOnFail: true },
+  { id: 'make_large_wheel', category: 'Woodwork', result: 'large_wheel', inputs: [{ item: 'plank', count: 4 }, { item: 'shaft', count: 6 }, { item: 'ribbon', count: 1 }, { item: 'nail', count: 12 }], tool: 'mallet', skill: 'carpentry', material: 'wood', label: 'Build a large wheel', verb: 'building a wheel', baseTime: 16, stamina: 0.05, difficulty: 28, done: '', spareOnFail: true },
+  { id: 'make_saddle', category: 'Cloth', result: 'saddle', inputs: [{ item: 'leather', count: 6 }, { item: 'plank', count: 2 }, { item: 'ribbon', count: 1 }, { item: 'nail', count: 8 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a saddle', verb: 'stitching a saddle', baseTime: 18, stamina: 0.05, difficulty: 26, done: '', spareOnFail: true },
+  { id: 'make_bridle', category: 'Cloth', result: 'bridle', inputs: [{ item: 'leather', count: 3 }, { item: 'rope', count: 1 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a bridle', verb: 'stitching a bridle', baseTime: 10, stamina: 0.03, difficulty: 18, done: '', spareOnFail: true },
+  { id: 'make_yoke', category: 'Cloth', result: 'yoke', inputs: [{ item: 'shaft', count: 1 }, { item: 'leather', count: 2 }, { item: 'nail', count: 4 }], tool: 'awl', skill: 'leatherworking', material: 'wood', label: 'Stitch a yoke', verb: 'stitching a yoke', baseTime: 12, stamina: 0.04, difficulty: 18, done: '', spareOnFail: true },
   // Wildermon gear: a pack, a harness and barding in each of three sizes (`wildgear.ts`).
   ...GEAR_RECIPES,
-  { id: 'make_cheese', category: 'Cooking', result: 'cheese', count: 3, inputs: [{ item: 'milk_bucket' }], tool: 'clay_bowl', skill: 'cooking', returns: [[WHEY_BUCKET, 1]], salvage: [['bucket', 1]], label: 'Press into cheese', verb: 'pressing cheese', baseTime: 14, stamina: 0.03, difficulty: 14, done: 'Whey left in the bucket.', consumeOnFail: true },
+  { id: 'make_cheese', category: 'Cooking', result: 'cheese', count: 3, inputs: [{ item: 'milk_bucket' }], tool: 'clay_bowl', skill: 'cooking', returns: [[WHEY_BUCKET, 1]], label: 'Press into cheese', verb: 'pressing cheese', baseTime: 14, stamina: 0.03, difficulty: 14, done: 'Whey left in the bucket.', spareOnFail: true },
   // Churned standing at a butter churn (`dairy.ts`), and the bucket comes back.
-  { id: CHURN_BUTTER, category: 'Cooking', result: 'butter', count: BUTTER_PATS, inputs: [{ item: 'milk_bucket' }], station: BUTTER_CHURN, skill: 'cooking', returns: [['bucket', 1]], label: 'Churn butter', verb: 'churning butter', baseTime: 12, stamina: 0.04, difficulty: 12, done: '', consumeOnFail: true },
-  { id: 'make_padlock', category: 'Smelting', result: 'padlock', inputs: [{ item: 'ribbon', count: 2 }, { item: 'nail', count: 4 }], tool: 'hammer', station: 'smelter', skill: 'blacksmithing', material: 'metal', label: 'Forge a padlock', verb: 'forging a padlock', baseTime: 16, stamina: 0.05, difficulty: 28, done: 'Key cut when fitted.', consumeOnFail: true },
-  { id: 'make_lantern', category: 'Cloth', result: 'lantern', inputs: [{ item: 'ribbon', count: 4 }, { item: 'cloth', count: 2 }, { item: 'shaft' }], tool: 'hammer', skill: 'blacksmithing', label: 'Build a lantern', verb: 'building a lantern', baseTime: 18, stamina: 0.04, difficulty: 24, done: '', consumeOnFail: true },
-  { id: 'make_torch', category: 'Cloth', result: 'torch', inputs: [{ item: 'shaft' }, { item: 'cloth' }], skill: 'ropemaking', material: 'wood', label: 'Wind a torch', verb: 'winding a torch', baseTime: 5, stamina: 0.02, difficulty: 6, done: '', consumeOnFail: true },
-  { id: 'make_candle', category: 'Cloth', result: 'candle', count: CANDLE_DRAWN.count, inputs: CANDLE_DRAWN.inputs, skill: 'alchemy', label: 'Draw candles', verb: 'drawing candles', baseTime: 9, stamina: 0.02, difficulty: 10, done: '', consumeOnFail: true },
+  { id: CHURN_BUTTER, category: 'Cooking', result: 'butter', count: BUTTER_PATS, inputs: [{ item: 'milk_bucket' }], station: BUTTER_CHURN, skill: 'cooking', returns: [['bucket', 1]], label: 'Churn butter', verb: 'churning butter', baseTime: 12, stamina: 0.04, difficulty: 12, done: '', spareOnFail: true },
+  { id: 'make_padlock', category: 'Smelting', result: 'padlock', inputs: [{ item: 'ribbon', count: 2 }, { item: 'nail', count: 4 }], tool: 'hammer', station: 'smelter', skill: 'blacksmithing', material: 'metal', label: 'Forge a padlock', verb: 'forging a padlock', baseTime: 16, stamina: 0.05, difficulty: 28, done: 'Key cut when fitted.', spareOnFail: true },
+  { id: 'make_lantern', category: 'Cloth', result: 'lantern', inputs: [{ item: 'ribbon', count: 4 }, { item: 'cloth', count: 2 }, { item: 'shaft' }], tool: 'hammer', skill: 'blacksmithing', label: 'Build a lantern', verb: 'building a lantern', baseTime: 18, stamina: 0.04, difficulty: 24, done: '', spareOnFail: true },
+  { id: 'make_torch', category: 'Cloth', result: 'torch', inputs: [{ item: 'shaft' }, { item: 'cloth' }], skill: 'ropemaking', material: 'wood', label: 'Wind a torch', verb: 'winding a torch', baseTime: 5, stamina: 0.02, difficulty: 6, done: '', spareOnFail: true },
+  { id: 'make_candle', category: 'Cloth', result: 'candle', count: CANDLE_DRAWN.count, inputs: CANDLE_DRAWN.inputs, skill: 'alchemy', label: 'Draw candles', verb: 'drawing candles', baseTime: 9, stamina: 0.02, difficulty: 10, done: '', spareOnFail: true },
   { id: 'make_work_post', category: 'Woodwork', result: 'work_post', inputs: [{ item: 'plank', count: 2 }, { item: 'shaft', count: 2 }, { item: 'nail', count: 4 }, { item: 'ribbon', count: 1 }], tool: 'mallet', skill: 'carpentry', material: 'wood', label: 'Build a work post', verb: 'building a work post', baseTime: 9, stamina: 0.04, difficulty: 16, done: '' },
   { id: 'make_bucket', category: 'Woodwork', result: 'bucket', inputs: [{ item: 'plank', count: 3 }, { item: 'nail', count: 6 }], tool: 'mallet', skill: 'carpentry', material: 'wood', label: 'Build a bucket', verb: 'building a bucket', baseTime: 7, stamina: 0.03, difficulty: 12, done: '' },
   // Weapons: a head from the anvil and a length of wood to put it on.
@@ -334,22 +334,22 @@ export const RECIPES: Recipe[] = [
   { id: 'make_wooden_shield', category: 'Woodwork', result: 'wooden_shield', inputs: [{ item: 'plank', count: 4 }, { item: 'nail', count: 8 }], tool: 'mallet', skill: 'carpentry', material: 'wood', label: 'Build a wooden shield', verb: 'building a shield', baseTime: 11, stamina: 0.05, difficulty: 16, done: '' },
   { id: 'make_metal_shield', category: 'Woodwork', result: 'metal_shield', inputs: [{ item: 'shield_boss' }, { item: 'plank', count: 3 }, { item: 'nail', count: 8 }], tool: 'mallet', skill: 'carpentry', material: 'metal', label: 'Build a metal shield', verb: 'building a shield', baseTime: 13, stamina: 0.06, difficulty: 20, done: '' },
   // Bows and arrows.
-  { id: 'make_short_bow', category: 'Woodwork', result: 'short_bow', inputs: [{ item: 'shaft', count: 2 }, { item: 'bow_string' }], tool: 'carving_knife', skill: 'bowyery', material: 'wood', wood: 'Willow', label: 'Tiller a short bow', verb: 'tillering a bow', baseTime: 12, stamina: 0.04, difficulty: 16, done: '', consumeOnFail: true },
-  { id: 'make_medium_bow', category: 'Woodwork', result: 'medium_bow', inputs: [{ item: 'shaft', count: 3 }, { item: 'bow_string' }], tool: 'carving_knife', skill: 'bowyery', material: 'wood', wood: 'Birch', label: 'Tiller a medium bow', verb: 'tillering a bow', baseTime: 15, stamina: 0.05, difficulty: 22, done: '', consumeOnFail: true },
-  { id: 'make_long_bow', category: 'Woodwork', result: 'long_bow', inputs: [{ item: 'shaft', count: 4 }, { item: 'bow_string' }], tool: 'carving_knife', skill: 'bowyery', material: 'wood', wood: 'Oak', label: 'Tiller a long bow', verb: 'tillering a bow', baseTime: 18, stamina: 0.06, difficulty: 30, done: '', consumeOnFail: true },
-  { id: 'make_javelin', category: 'Woodwork', result: 'javelin', inputs: [{ item: 'shaft', count: 2 }, { item: 'arrow_head', count: 1 }], tool: 'carving_knife', skill: 'fletching', material: 'metal', label: 'Shave a javelin', verb: 'shaving a javelin', baseTime: 7, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true },
+  { id: 'make_short_bow', category: 'Woodwork', result: 'short_bow', inputs: [{ item: 'shaft', count: 2 }, { item: 'bow_string' }], tool: 'carving_knife', skill: 'bowyery', material: 'wood', wood: 'Willow', label: 'Tiller a short bow', verb: 'tillering a bow', baseTime: 12, stamina: 0.04, difficulty: 16, done: '', spareOnFail: true },
+  { id: 'make_medium_bow', category: 'Woodwork', result: 'medium_bow', inputs: [{ item: 'shaft', count: 3 }, { item: 'bow_string' }], tool: 'carving_knife', skill: 'bowyery', material: 'wood', wood: 'Birch', label: 'Tiller a medium bow', verb: 'tillering a bow', baseTime: 15, stamina: 0.05, difficulty: 22, done: '', spareOnFail: true },
+  { id: 'make_long_bow', category: 'Woodwork', result: 'long_bow', inputs: [{ item: 'shaft', count: 4 }, { item: 'bow_string' }], tool: 'carving_knife', skill: 'bowyery', material: 'wood', wood: 'Oak', label: 'Tiller a long bow', verb: 'tillering a bow', baseTime: 18, stamina: 0.06, difficulty: 30, done: '', spareOnFail: true },
+  { id: 'make_javelin', category: 'Woodwork', result: 'javelin', inputs: [{ item: 'shaft', count: 2 }, { item: 'arrow_head', count: 1 }], tool: 'carving_knife', skill: 'fletching', material: 'metal', label: 'Shave a javelin', verb: 'shaving a javelin', baseTime: 7, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true },
   { id: 'fit_throwing_axe', category: 'Woodwork', result: 'throwing_axe', inputs: [{ item: 'hatchet_head' }, { item: 'shaft' }, { item: 'nail' }], tool: FIT_TOOL, skill: 'carpentry', qlFromInputs: true,  material: 'metal', label: 'Fit a short haft', verb: 'fitting a short haft', baseTime: 6, stamina: 0.03, done: '' },
-  { id: 'make_arrows', category: 'Woodwork', result: 'arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'arrow_head', count: 3 }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'metal', label: 'Fletch arrows', verb: 'fletching', baseTime: 8, stamina: 0.03, difficulty: 12, done: '', consumeOnFail: true },
-  { id: 'make_broadhead_arrows', category: 'Woodwork', result: 'broadhead_arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'arrow_head', count: 6 }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'metal', label: 'Fletch broadhead arrows', verb: 'fletching', baseTime: 10, stamina: 0.03, difficulty: 18, done: '', consumeOnFail: true },
-  { id: 'make_bodkin_arrows', category: 'Woodwork', result: 'bodkin_arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'arrow_head', count: 3 }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'metal', label: 'Fletch bodkin arrows', verb: 'fletching', baseTime: 10, stamina: 0.03, difficulty: 26, done: '', consumeOnFail: true },
-  { id: 'make_blunt_arrows', category: 'Woodwork', result: 'blunt_arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'wood', label: 'Fletch blunt arrows', verb: 'fletching', baseTime: 6, stamina: 0.02, difficulty: 6, done: '', consumeOnFail: true },
+  { id: 'make_arrows', category: 'Woodwork', result: 'arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'arrow_head', count: 3 }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'metal', label: 'Fletch arrows', verb: 'fletching', baseTime: 8, stamina: 0.03, difficulty: 12, done: '', spareOnFail: true },
+  { id: 'make_broadhead_arrows', category: 'Woodwork', result: 'broadhead_arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'arrow_head', count: 6 }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'metal', label: 'Fletch broadhead arrows', verb: 'fletching', baseTime: 10, stamina: 0.03, difficulty: 18, done: '', spareOnFail: true },
+  { id: 'make_bodkin_arrows', category: 'Woodwork', result: 'bodkin_arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'arrow_head', count: 3 }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'metal', label: 'Fletch bodkin arrows', verb: 'fletching', baseTime: 10, stamina: 0.03, difficulty: 26, done: '', spareOnFail: true },
+  { id: 'make_blunt_arrows', category: 'Woodwork', result: 'blunt_arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'wood', label: 'Fletch blunt arrows', verb: 'fletching', baseTime: 6, stamina: 0.02, difficulty: 6, done: '', spareOnFail: true },
   // Alchemy: ashes leached in water, and what lye is for.
-  { id: 'make_lye', category: 'Alchemy', result: 'lye_bucket', inputs: [{ item: 'water_bucket' }, { item: 'ash', count: 2 }], skill: 'alchemy', label: 'Leach into lye', verb: 'making lye', baseTime: 12, stamina: 0.03, difficulty: 14, done: '', consumeOnFail: true, salvage: [['bucket', 1]] },
-  { id: 'tan_hide', category: 'Alchemy', result: 'leather', inputs: [{ item: 'hide' }, { item: 'lye_bucket', litres: TAN_LYE }], tool: 'carving_knife', skill: 'leatherworking', label: 'Tan in lye', verb: 'tanning a hide', baseTime: 14, stamina: 0.05, difficulty: 16, done: '', consumeOnFail: true },
+  { id: 'make_lye', category: 'Alchemy', result: 'lye_bucket', inputs: [{ item: 'water_bucket' }, { item: 'ash', count: 2 }], skill: 'alchemy', label: 'Leach into lye', verb: 'making lye', baseTime: 12, stamina: 0.03, difficulty: 14, done: '', spareOnFail: true },
+  { id: 'tan_hide', category: 'Alchemy', result: 'leather', inputs: [{ item: 'hide' }, { item: 'lye_bucket', litres: TAN_LYE }], tool: 'carving_knife', skill: 'leatherworking', label: 'Tan in lye', verb: 'tanning a hide', baseTime: 14, stamina: 0.05, difficulty: 16, done: '', spareOnFail: true },
   // Writing: reed beds into paper, and what is written on it.
   // Pressed standing at a paper press, as cloth is woven at a loom (`enchant.ts`).
-  { id: 'make_papyrus', category: 'Writing', result: 'papyrus', count: 3, inputs: [{ item: 'reed', count: 4 }, { item: 'water_bucket', litres: 3 }], station: PAPER_PRESS, skill: 'papyrusmaking', label: 'Press into papyrus', verb: 'pressing papyrus', baseTime: 13, stamina: 0.04, difficulty: 16, done: '', consumeOnFail: true },
-  { id: 'make_ink', category: 'Writing', result: 'ink', count: 2, inputs: [{ item: 'gland' }, { item: 'ash', count: 2 }, { item: 'water_bucket', litres: 2 }], skill: 'alchemy', label: 'Grind into ink', verb: 'grinding ink', baseTime: 11, stamina: 0.03, difficulty: 20, done: '', consumeOnFail: true },
+  { id: 'make_papyrus', category: 'Writing', result: 'papyrus', count: 3, inputs: [{ item: 'reed', count: 4 }, { item: 'water_bucket', litres: 3 }], station: PAPER_PRESS, skill: 'papyrusmaking', label: 'Press into papyrus', verb: 'pressing papyrus', baseTime: 13, stamina: 0.04, difficulty: 16, done: '', spareOnFail: true },
+  { id: 'make_ink', category: 'Writing', result: 'ink', count: 2, inputs: [{ item: 'gland' }, { item: 'ash', count: 2 }, { item: 'water_bucket', litres: 2 }], skill: 'alchemy', label: 'Grind into ink', verb: 'grinding ink', baseTime: 11, stamina: 0.03, difficulty: 20, done: '', spareOnFail: true },
   /*
    * An enchantment scroll, one to each enchantment there is (`enchant.ts`):
    * papyrus and motes, rolled on enchanting. A scroll that fails loses its
@@ -364,11 +364,11 @@ export const RECIPES: Recipe[] = [
     done: '',
     fail: `${e.motes.reduce((n, [, k]) => n + k, 0)} motes lost.`,
   })),
-  { id: 'make_book', category: 'Writing', result: 'book', inputs: [{ item: 'papyrus', count: 6 }, { item: 'leather', count: 2 }, { item: 'ink' }], tool: 'needle', skill: 'papyrusmaking', label: 'Write and bind a book', verb: 'binding a book', baseTime: 26, stamina: 0.07, difficulty: 28, done: '', consumeOnFail: true },
+  { id: 'make_book', category: 'Writing', result: 'book', inputs: [{ item: 'papyrus', count: 6 }, { item: 'leather', count: 2 }, { item: 'ink' }], tool: 'needle', skill: 'papyrusmaking', label: 'Write and bind a book', verb: 'binding a book', baseTime: 26, stamina: 0.07, difficulty: 28, done: '', spareOnFail: true },
   { id: 'make_thatch', category: 'Clay & thatch', result: 'thatch', inputs: [{ item: 'mixed_grass', count: 2 }], skill: 'carpentry', label: 'Bundle into thatch', verb: 'bundling thatch', baseTime: 3, stamina: 0.02, done: '' },
   { id: 'make_clay_bowl', category: 'Clay & thatch', result: 'unfired_clay_bowl', inputs: [{ item: 'clay' }], tool: 'trowel', skill: 'pottery', label: 'Shape a bowl', verb: 'shaping a bowl', baseTime: 6, stamina: 0.02, difficulty: 8, done: 'Fire in a kiln.' },
   // Cooking. Everything here needs a lit campfire to work at.
-  { id: 'cook_meat', category: 'Cooking', result: 'cooked_meat', inputs: [{ item: 'meat' }], station: 'campfire', skill: 'cooking', label: 'Cook over the fire', verb: 'cooking', baseTime: 8, stamina: 0.02, difficulty: 6, done: '', consumeOnFail: true },
+  { id: 'cook_meat', category: 'Cooking', result: 'cooked_meat', inputs: [{ item: 'meat' }], station: 'campfire', skill: 'cooking', label: 'Cook over the fire', verb: 'cooking', baseTime: 8, stamina: 0.02, difficulty: 6, done: '', spareOnFail: true },
   { id: 'bake_potato', category: 'Cooking', result: 'baked_potato', inputs: [{ item: 'potato' }], station: 'campfire', skill: 'cooking', label: 'Bake in the embers', verb: 'baking', baseTime: 7, stamina: 0.02, done: '' },
   { id: 'roast_onion', category: 'Cooking', result: 'roast_onion', inputs: [{ item: 'onion' }], station: 'campfire', skill: 'cooking', label: 'Roast over the fire', verb: 'roasting', baseTime: 6, stamina: 0.02, done: '' },
   { id: 'roast_nuts', category: 'Cooking', result: 'roast_nuts', inputs: [{ item: 'nuts' }], station: 'campfire', skill: 'cooking', label: 'Roast the nuts', verb: 'roasting nuts', baseTime: 4, stamina: 0.01, done: '' },
@@ -376,23 +376,23 @@ export const RECIPES: Recipe[] = [
   { id: 'roast_lotus_seeds', category: 'Cooking', result: 'roast_lotus_seeds', inputs: [{ item: 'lotus_seed', count: 3 }], station: 'campfire', skill: 'cooking', label: 'Roast lotus seeds', verb: 'roasting lotus seeds', baseTime: 4, stamina: 0.01, done: '' },
   { id: 'make_compote', category: 'Cooking', result: 'berry_compote', inputs: [{ item: 'blueberry', count: 3 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Stew into compote', verb: 'stewing berries', baseTime: 10, stamina: 0.02, done: '' },
   { id: 'fry_meat', category: 'Cooking', result: 'cooked_meat', count: 2, inputs: [{ item: 'meat', count: 2 }], tool: 'frying_pan', station: 'campfire', skill: 'cooking', label: 'Fry in the pan', verb: 'frying', baseTime: 9, stamina: 0.02, done: '' },
-  { id: 'make_pottage', category: 'Cooking', result: 'pottage', count: 2, inputs: [{ item: 'cabbage' }, { item: 'carrot' }, { item: 'wheat' }], tool: 'clay_pot', station: 'campfire', skill: 'cooking', label: 'Simmer a pottage', verb: 'simmering a pottage', baseTime: 14, stamina: 0.03, difficulty: 8, done: '', consumeOnFail: true },
-  { id: 'make_preserves', category: 'Cooking', result: 'preserves', count: 2, inputs: [{ item: 'strawberry', count: 2 }, { item: 'raspberry', count: 2 }], tool: 'clay_jar', station: 'campfire', skill: 'cooking', label: 'Put up preserves', verb: 'putting up preserves', baseTime: 12, stamina: 0.02, difficulty: 10, done: '', consumeOnFail: true },
-  { id: 'make_flour', category: 'Cooking', result: 'flour', inputs: [{ item: 'wheat', count: 2 }], tool: 'quern', skill: 'milling', label: 'Grind into flour', verb: 'grinding flour', baseTime: 9, stamina: 0.05, difficulty: 10, done: '', consumeOnFail: true },
-  { id: 'make_cornmeal', category: 'Cooking', result: 'cornmeal', inputs: [{ item: 'corn', count: 2 }], tool: 'quern', skill: 'milling', label: 'Grind into cornmeal', verb: 'grinding cornmeal', baseTime: 9, stamina: 0.05, difficulty: 12, done: '', consumeOnFail: true },
-  { id: 'make_dough', category: 'Cooking', result: 'dough', count: 2, inputs: [{ item: 'flour', count: 2 }, { item: 'water_bucket', litres: 2 }], skill: 'cooking', label: 'Work into dough', verb: 'working dough', baseTime: 8, stamina: 0.04, difficulty: 6, done: '', consumeOnFail: true },
-  { id: 'bake_bread', category: 'Cooking', result: 'bread', inputs: [{ item: 'dough' }], station: 'campfire', skill: 'cooking', label: 'Bake on the stone', verb: 'baking bread', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true },
-  { id: 'make_porridge', category: 'Cooking', result: 'porridge', count: 2, inputs: [{ item: 'cornmeal' }, { item: 'water_bucket', litres: 2 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Boil into porridge', verb: 'boiling porridge', baseTime: 10, stamina: 0.03, difficulty: 8, done: '', consumeOnFail: true },
+  { id: 'make_pottage', category: 'Cooking', result: 'pottage', count: 2, inputs: [{ item: 'cabbage' }, { item: 'carrot' }, { item: 'wheat' }], tool: 'clay_pot', station: 'campfire', skill: 'cooking', label: 'Simmer a pottage', verb: 'simmering a pottage', baseTime: 14, stamina: 0.03, difficulty: 8, done: '', spareOnFail: true },
+  { id: 'make_preserves', category: 'Cooking', result: 'preserves', count: 2, inputs: [{ item: 'strawberry', count: 2 }, { item: 'raspberry', count: 2 }], tool: 'clay_jar', station: 'campfire', skill: 'cooking', label: 'Put up preserves', verb: 'putting up preserves', baseTime: 12, stamina: 0.02, difficulty: 10, done: '', spareOnFail: true },
+  { id: 'make_flour', category: 'Cooking', result: 'flour', inputs: [{ item: 'wheat', count: 2 }], tool: 'quern', skill: 'milling', label: 'Grind into flour', verb: 'grinding flour', baseTime: 9, stamina: 0.05, difficulty: 10, done: '', spareOnFail: true },
+  { id: 'make_cornmeal', category: 'Cooking', result: 'cornmeal', inputs: [{ item: 'corn', count: 2 }], tool: 'quern', skill: 'milling', label: 'Grind into cornmeal', verb: 'grinding cornmeal', baseTime: 9, stamina: 0.05, difficulty: 12, done: '', spareOnFail: true },
+  { id: 'make_dough', category: 'Cooking', result: 'dough', count: 2, inputs: [{ item: 'flour', count: 2 }, { item: 'water_bucket', litres: 2 }], skill: 'cooking', label: 'Work into dough', verb: 'working dough', baseTime: 8, stamina: 0.04, difficulty: 6, done: '', spareOnFail: true },
+  { id: 'bake_bread', category: 'Cooking', result: 'bread', inputs: [{ item: 'dough' }], station: 'campfire', skill: 'cooking', label: 'Bake on the stone', verb: 'baking bread', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true },
+  { id: 'make_porridge', category: 'Cooking', result: 'porridge', count: 2, inputs: [{ item: 'cornmeal' }, { item: 'water_bucket', litres: 2 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Boil into porridge', verb: 'boiling porridge', baseTime: 10, stamina: 0.03, difficulty: 8, done: '', spareOnFail: true },
   { id: 'make_fishing_rod', category: 'Woodwork', result: 'fishing_rod', inputs: [{ item: 'shaft', count: 2 }, { item: 'bow_string' }, { item: 'ribbon' }], tool: 'carving_knife', skill: 'carpentry', material: 'wood', label: 'Splice a fishing rod', verb: 'splicing a rod', baseTime: 10, stamina: 0.03, difficulty: 14, done: '' },
-  { id: 'bake_pastry', category: 'Cooking', result: 'pastry', count: 2, inputs: [{ item: 'dough' }, { item: 'butter', count: 2 }], station: 'campfire', skill: 'cooking', label: 'Bake pastry', verb: 'baking pastry', baseTime: 12, stamina: 0.03, difficulty: 14, done: '', consumeOnFail: true },
-  { id: 'make_apple_pie', category: 'Cooking', result: 'apple_pie', count: 2, inputs: [{ item: 'dough' }, { item: 'apple', count: 4 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Bake an apple pie', verb: 'baking a pie', baseTime: 18, stamina: 0.03, difficulty: 20, done: '', consumeOnFail: true },
-  { id: 'make_cherry_preserves', category: 'Cooking', result: 'preserves', count: 2, inputs: [{ item: 'cherry', count: 12 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Preserve cherries', verb: 'preserving cherries', baseTime: 14, stamina: 0.03, difficulty: 14, done: '', consumeOnFail: true },
-  { id: 'press_olives', category: 'Cooking', result: 'olive_oil', count: 2, inputs: [{ item: 'olive', count: 10 }], tool: 'quern', skill: 'milling', label: 'Press into oil', verb: 'pressing olives', baseTime: 16, stamina: 0.05, difficulty: 18, done: '', consumeOnFail: true },
-  { id: 'make_broth', category: 'Cooking', result: 'broth', count: 2, inputs: [{ item: 'bone', count: 2 }, { item: 'water_bucket', litres: 2 }], tool: 'clay_pot', station: 'campfire', skill: 'cooking', label: 'Boil a broth', verb: 'boiling a broth', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true, perk: 'broth' },
-  { id: 'make_cottage_pie', category: 'Cooking', result: 'cottage_pie', count: 2, inputs: [{ item: 'meat', count: 2 }, { item: 'potato', count: 2 }, { item: 'carrot' }, { item: 'onion' }, { item: 'corn' }, { item: 'flour' }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Bake a cottage pie', verb: 'baking a cottage pie', baseTime: 20, stamina: 0.03, difficulty: 22, done: '', consumeOnFail: true },
-  { id: 'make_stew', category: 'Cooking', result: 'stew', inputs: [{ item: 'cooked_meat' }, { item: 'potato' }, { item: 'onion' }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Simmer a stew', verb: 'simmering a stew', baseTime: 16, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true },
+  { id: 'bake_pastry', category: 'Cooking', result: 'pastry', count: 2, inputs: [{ item: 'dough' }, { item: 'butter', count: 2 }], station: 'campfire', skill: 'cooking', label: 'Bake pastry', verb: 'baking pastry', baseTime: 12, stamina: 0.03, difficulty: 14, done: '', spareOnFail: true },
+  { id: 'make_apple_pie', category: 'Cooking', result: 'apple_pie', count: 2, inputs: [{ item: 'dough' }, { item: 'apple', count: 4 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Bake an apple pie', verb: 'baking a pie', baseTime: 18, stamina: 0.03, difficulty: 20, done: '', spareOnFail: true },
+  { id: 'make_cherry_preserves', category: 'Cooking', result: 'preserves', count: 2, inputs: [{ item: 'cherry', count: 12 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Preserve cherries', verb: 'preserving cherries', baseTime: 14, stamina: 0.03, difficulty: 14, done: '', spareOnFail: true },
+  { id: 'press_olives', category: 'Cooking', result: 'olive_oil', count: 2, inputs: [{ item: 'olive', count: 10 }], tool: 'quern', skill: 'milling', label: 'Press into oil', verb: 'pressing olives', baseTime: 16, stamina: 0.05, difficulty: 18, done: '', spareOnFail: true },
+  { id: 'make_broth', category: 'Cooking', result: 'broth', count: 2, inputs: [{ item: 'bone', count: 2 }, { item: 'water_bucket', litres: 2 }], tool: 'clay_pot', station: 'campfire', skill: 'cooking', label: 'Boil a broth', verb: 'boiling a broth', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true, perk: 'broth' },
+  { id: 'make_cottage_pie', category: 'Cooking', result: 'cottage_pie', count: 2, inputs: [{ item: 'meat', count: 2 }, { item: 'potato', count: 2 }, { item: 'carrot' }, { item: 'onion' }, { item: 'corn' }, { item: 'flour' }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Bake a cottage pie', verb: 'baking a cottage pie', baseTime: 20, stamina: 0.03, difficulty: 22, done: '', spareOnFail: true },
+  { id: 'make_stew', category: 'Cooking', result: 'stew', inputs: [{ item: 'cooked_meat' }, { item: 'potato' }, { item: 'onion' }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Simmer a stew', verb: 'simmering a stew', baseTime: 16, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true },
   // A stone goes into a plain casting with a file. The piece takes the stone's name, the way a chest takes its wood, and the rarer the stone the harder the seating.
-  { id: 'set_focus', category: 'Jewellery', result: 'focus', inputs: [{ item: 'gem' }, { item: 'silver_lump' }], tool: 'file', skill: 'jewellery', material: 'gem', label: 'Set a focus', verb: 'setting a focus', baseTime: 14, stamina: 0.04, difficulty: 20, done: '', consumeOnFail: true },
+  { id: 'set_focus', category: 'Jewellery', result: 'focus', inputs: [{ item: 'gem' }, { item: 'silver_lump' }], tool: 'file', skill: 'jewellery', material: 'gem', label: 'Set a focus', verb: 'setting a focus', baseTime: 14, stamina: 0.04, difficulty: 20, done: '', spareOnFail: true },
   { id: 'set_ring', category: 'Jewellery', result: 'jewelled_ring', inputs: [{ item: 'gem' }, { item: 'ring' }], tool: 'file', skill: 'jewellery', material: 'gem', label: 'Set in a ring', verb: 'setting a stone', baseTime: 10, stamina: 0.03, difficulty: 10, done: '' },
   { id: 'set_pendant', category: 'Jewellery', result: 'jewelled_pendant', inputs: [{ item: 'gem' }, { item: 'pendant' }], tool: 'file', skill: 'jewellery', material: 'gem', label: 'Set in a pendant', verb: 'setting a stone', baseTime: 10, stamina: 0.03, difficulty: 12, done: '' },
   ...[],
@@ -429,7 +429,7 @@ const MOULD_RECIPES: Recipe[] = MOULDS.map((m) => ({
   stamina: 0.03,
   difficulty: Math.round(m.difficulty * 0.6),
   done: '',
-  consumeOnFail: true,
+  spareOnFail: true,
 }));
 
 const SMELTER_RECIPES: Recipe[] = [
@@ -438,18 +438,18 @@ const SMELTER_RECIPES: Recipe[] = [
    * lumps; a lump is blown and flattened into the panel a window, a bay and a
    * glasshouse roof are glazed with; sand goes straight to a bottle; and a gem
    * ground into the melt colours a batch of the panes stained glass is laid in.
-   * Nothing is lost when the panes fail but the time: a gem is one stone in
-   * hundreds out of the rock.
+   * A failed go damages what went in, the gem with the rest, as every
+   * failed go does (`faildamage.ts`).
    */
-  { id: 'make_glass', category: 'Glassblowing', result: 'glass_lump', count: 2, inputs: [{ item: 'sand', count: 3 }], station: 'smelter', skill: 'glassblowing', label: 'Melt into glass', verb: 'melting glass', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true },
-  { id: 'make_glass_panel', category: 'Glassblowing', result: 'glass', inputs: [{ item: 'glass_lump' }], station: 'smelter', skill: 'glassblowing', label: 'Blow a glass panel', verb: 'blowing a panel', baseTime: 10, stamina: 0.03, difficulty: 16, done: '', consumeOnFail: true },
-  { id: 'make_bottle', category: 'Glassblowing', result: 'bottle', inputs: [{ item: 'sand', count: 2 }], station: 'smelter', skill: 'glassblowing', label: 'Blow a bottle', verb: 'blowing a bottle', baseTime: 10, stamina: 0.03, difficulty: 20, done: '', consumeOnFail: true },
+  { id: 'make_glass', category: 'Glassblowing', result: 'glass_lump', count: 2, inputs: [{ item: 'sand', count: 3 }], station: 'smelter', skill: 'glassblowing', label: 'Melt into glass', verb: 'melting glass', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true },
+  { id: 'make_glass_panel', category: 'Glassblowing', result: 'glass', inputs: [{ item: 'glass_lump' }], station: 'smelter', skill: 'glassblowing', label: 'Blow a glass panel', verb: 'blowing a panel', baseTime: 10, stamina: 0.03, difficulty: 16, done: '', spareOnFail: true },
+  { id: 'make_bottle', category: 'Glassblowing', result: 'bottle', inputs: [{ item: 'sand', count: 2 }], station: 'smelter', skill: 'glassblowing', label: 'Blow a bottle', verb: 'blowing a bottle', baseTime: 10, stamina: 0.03, difficulty: 20, done: '', spareOnFail: true },
   { id: 'make_stained_glass', category: 'Glassblowing', result: 'stained_glass_pane', count: 20, inputs: [{ item: 'gem' }, { item: 'sand', count: 4 }], station: 'smelter', skill: 'glassblowing', label: 'Make stained glass', verb: 'making stained glass', baseTime: 16, stamina: 0.04, difficulty: 26, done: '' },
-  { id: 'make_bronze', category: 'Smelting', result: 'bronze_lump', count: 4, inputs: [{ item: 'copper_lump', count: 3 }, { item: 'tin_lump', count: 1 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix bronze', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 12, done: '', consumeOnFail: true },
-  { id: 'make_steel', category: 'Smelting', result: 'steel_lump', count: 3, inputs: [{ item: 'iron_lump', count: 3 }, { item: 'coal', count: 1 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Make steel', verb: 'making steel', baseTime: 14, stamina: 0.04, difficulty: 20, done: '', consumeOnFail: true },
-  { id: 'make_brass', category: 'Smelting', result: 'brass_lump', count: 4, inputs: [{ item: 'copper_lump', count: 3 }, { item: 'zinc_lump', count: 1 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix brass', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 12, done: '', consumeOnFail: true },
-  { id: 'make_pewter', category: 'Smelting', result: 'pewter_lump', count: 4, inputs: [{ item: 'tin_lump', count: 3 }, { item: 'lead_lump', count: 1 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix pewter', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true },
-  { id: 'make_electrum', category: 'Smelting', result: 'electrum_lump', count: 4, inputs: [{ item: 'silver_lump', count: 2 }, { item: 'gold_lump', count: 2 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix electrum', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 18, done: '', consumeOnFail: true },
+  { id: 'make_bronze', category: 'Smelting', result: 'bronze_lump', count: 4, inputs: [{ item: 'copper_lump', count: 3 }, { item: 'tin_lump', count: 1 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix bronze', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 12, done: '', spareOnFail: true },
+  { id: 'make_steel', category: 'Smelting', result: 'steel_lump', count: 3, inputs: [{ item: 'iron_lump', count: 3 }, { item: 'coal', count: 1 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Make steel', verb: 'making steel', baseTime: 14, stamina: 0.04, difficulty: 20, done: '', spareOnFail: true },
+  { id: 'make_brass', category: 'Smelting', result: 'brass_lump', count: 4, inputs: [{ item: 'copper_lump', count: 3 }, { item: 'zinc_lump', count: 1 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix brass', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 12, done: '', spareOnFail: true },
+  { id: 'make_pewter', category: 'Smelting', result: 'pewter_lump', count: 4, inputs: [{ item: 'tin_lump', count: 3 }, { item: 'lead_lump', count: 1 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix pewter', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true },
+  { id: 'make_electrum', category: 'Smelting', result: 'electrum_lump', count: 4, inputs: [{ item: 'silver_lump', count: 2 }, { item: 'gold_lump', count: 2 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix electrum', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 18, done: '', spareOnFail: true },
 ];
 
 /**
@@ -475,8 +475,7 @@ const PRESS_RECIPES: Recipe[] = [
     stamina: 0.04,
     difficulty: 10,
     done: '',
-    consumeOnFail: true,
-    salvage: [['bucket', 1]],
+    spareOnFail: true,
   })),
   ...['apple', 'pear'].map((fruit): Recipe => ({
     id: `press_${fruit}_cider`,
@@ -491,8 +490,7 @@ const PRESS_RECIPES: Recipe[] = [
     stamina: 0.05,
     difficulty: 18,
     done: '',
-    consumeOnFail: true,
-    salvage: [['bucket', 1]],
+    spareOnFail: true,
   })),
 ];
 
@@ -517,8 +515,7 @@ const DISTIL_RECIPES: Recipe[] = BREWS.map((b): Recipe => ({
   stamina: 0.04,
   difficulty: 20,
   done: '',
-  consumeOnFail: true,
-  salvage: [['bucket', DISTIL_BUCKETS]],
+  spareOnFail: true,
   perk: 'distil',
 }));
 RECIPES.push(...MOULD_RECIPES, ...SMELTER_RECIPES, ...PRESS_RECIPES, ...DISTIL_RECIPES);
@@ -646,7 +643,7 @@ RECIPES.push(
     inputs: [{ item: 'papyrus', count: 6 }, { item: 'leather', count: 2 }, { item: 'ink', count: 2 }], tool: 'needle', skill: 'papyrusmaking',
     label: `Write a book on ${skillName(skill).toLowerCase()}`, verb: 'writing a book', baseTime: 30, stamina: 0.07, difficulty: 32,
     extra: skillName(skill), writes: skill,
-    done: '', consumeOnFail: true, perk: 'trade_book',
+    done: '', spareOnFail: true, perk: 'trade_book',
   })),
 );
 
@@ -665,14 +662,13 @@ const DYE_RECIPES: Recipe[] = DYESTUFFS.map((d) => ({
   result: DYE_BUCKET,
   inputs: [{ item: d.from, count: boilCountPlain(d.from) }, { item: BOIL_IN }],
   skill: DYE_SKILL,
-  salvage: [['bucket', 1]] as Array<[string, number]>,
   label: `Boil ${itemDef(d.from).name.toLowerCase()} for ${d.primary} dye`,
   verb: `boiling ${d.primary} dye`,
   baseTime: DYE_BOIL_TIME,
   stamina: DYE_BOIL_WIND,
   difficulty: d.difficulty,
   done: `${BOIL_LITRES} litres of ${d.primary} dye.`,
-  consumeOnFail: true,
+  spareOnFail: true,
 }));
 
 RECIPES.push(...DYE_RECIPES);
@@ -696,7 +692,7 @@ const COVER_RECIPES: Recipe[] = Object.values(WOUND_KINDS).map((k) => ({
   difficulty: 12,
   extra: k.herb.charAt(0).toUpperCase() + k.herb.slice(1),
   done: `For ${k.name}s.`,
-  consumeOnFail: true,
+  spareOnFail: true,
 }));
 
 RECIPES.push(...COVER_RECIPES);
@@ -712,19 +708,19 @@ const REMEDY_RECIPES: Recipe[] = HERBS.flatMap((herb): Recipe[] => [
     id: `brew_tea_${herb}`, category: 'Alchemy', result: 'herb_tea', count: 3,
     inputs: [{ item: herb, count: 2 }, { item: 'water_bucket', litres: 3 }], skill: 'alchemy',
     label: `Steep ${herb} into tea`, verb: 'steeping tea', baseTime: 8, stamina: 0.02, difficulty: 10,
-    done: '', consumeOnFail: true, perk: 'herb_tea',
+    done: '', spareOnFail: true, perk: 'herb_tea',
   },
   {
     id: `make_salve_${herb}`, category: 'Alchemy', result: 'salve',
     inputs: [{ item: herb, count: 2 }, { item: 'wax' }], skill: 'first_aid',
     label: `Work ${herb} into a salve`, verb: 'working a salve', baseTime: 9, stamina: 0.02, difficulty: 14,
-    done: '', consumeOnFail: true, perk: 'salve',
+    done: '', spareOnFail: true, perk: 'salve',
   },
   {
     id: `make_tincture_${herb}`, category: 'Alchemy', result: 'tincture',
     inputs: [{ item: herb, count: 3 }], skill: 'alchemy',
     label: `Steep ${herb} into a tincture`, verb: 'steeping a tincture', baseTime: 12, stamina: 0.03, difficulty: 16,
-    done: '', consumeOnFail: true, perk: 'tincture',
+    done: '', spareOnFail: true, perk: 'tincture',
   },
 ]);
 
@@ -785,20 +781,13 @@ export const madeSaid = (result: string, n: number, mat: string | undefined, ql:
   `Made: ${n > 1 ? `${n} × ` : ''}${lower(result)}${mat ? `, ${mat.toLowerCase()}` : ''}, QL ${ql.toFixed(1)}.${note ? ` ${note}` : ''}`;
 
 /**
- * What a failed go says: what failed, then what was lost, off the recipe --
- * everything that went in when it is lost on a fail, with what comes back
- * (`salvage`, or `returns`), and nothing otherwise -- or the recipe's own
- * word on it (`fail`), for a scroll, whose motes go and whose sheet stays.
+ * What a failed go says first: what failed, and the recipe's own word on it
+ * (`fail`) where it has one -- a scroll's, whose motes go and whose sheet is
+ * harmed. What a go damaged follows it, as the go finds it (`failDamagedSaid`).
  */
-const failSaid = (r: Recipe, own?: string): string => {
-  const back = r.salvage ?? r.returns ?? [];
-  const lost = r.consumeOnFail
-    ? `Inputs lost${back.length ? `; ${listed(back.map(([id, n]) => countOf(id, n, true)))} returned` : ''}.`
-    : 'Inputs kept.';
-  return `Failed: ${lower(r.result)}. ${own || lost}`;
-};
-/** What a Mason's or a Tailor's Nothing Wasted says when it keeps what a failed go would have lost. The island says the same. */
-export const SPARED = 'Nothing Wasted: inputs kept.';
+const failSaid = (r: Recipe, own?: string): string => `Failed: ${lower(r.result)}.${own ? ` ${own}` : ''}`;
+/** What a Mason's or a Tailor's Nothing Wasted says when it spares a failed go's damage. The island says the same. */
+export const SPARED = 'Nothing Wasted: inputs undamaged.';
 
 const inputsOf = (r: Recipe): Record<string, number> => Object.fromEntries(r.inputs.map((i) => [i.item, i.litres ?? i.count ?? 1]));
 for (const r of RECIPES) {
@@ -1292,27 +1281,34 @@ export function recipeAction(r: Recipe): ActionDef {
           g.logMsg([r.fail, scrollHarmSaid(harm)].filter(Boolean).join(' '), 'event');
           return more(t, g);
         }
-        // And nothing lost of what went into it, now and then, for a perk on
-        // the recipe (a Mason's or a Tailor's Nothing Wasted), as the island has it.
-        const keep = r.consumeOnFail ? g.perk(`spare:${r.id}`, 0) : 0;
+        // Nothing used up: what it would have used is damaged, by its own QL
+        // (`faildamage.ts`), off the stacks a go would have spent and in that
+        // order -- but not, now and then, for a perk on the recipe (a Mason's
+        // or a Tailor's Nothing Wasted), as the island has it.
+        const keep = g.perk(`spare:${r.id}`, 0);
         const spared = keep > 0 && g.rand() < keep;
-        // And the stone out of it whole, whatever else is lost, for an Artisan's Keep the Stone.
-        const stone = r.consumeOnFail && !spared && g.perk(`stone:${r.id}`, 0) > 0 && r.inputs.some((i) => i.item === 'gem');
-        if (r.consumeOnFail && !spared) {
+        // And the stone spared, whatever else is damaged, for an Artisan's Keep the Stone.
+        const stone = !spared && g.perk(`stone:${r.id}`, 0) > 0 && r.inputs.some((i) => i.item === 'gem');
+        const hurt: string[] = [];
+        if (!spared) {
           for (const i of r.inputs) {
             if (stone && i.item === 'gem') continue;
-            if (i.litres) takeLitres(litreSources(g, i.item, reachFor(g, r), stock), needOf(g, r, i));
-            else consumeAcross(stock, i.item, needOf(g, r, i), t.uid, mat, strict.get(i.item));
+            const need = needOf(g, r, i);
+            if (i.litres) {
+              const from = litreSources(g, i.item, reachFor(g, r), stock);
+              if (litresAtHand(from) >= need) hurt.push(failLitresSaid(liquidWord(i.item), need, failLitres(from, need)));
+              continue;
+            }
+            hurt.push(...damageDrawn(drawFor(stock, i.item, need, t.uid, mat, strict.get(i.item)) ?? [], need));
           }
-          // The batch is wasted, not the vessel: you tip the ruin out and keep
-          // the bucket.
-          for (const [id, n] of r.salvage ?? r.returns ?? []) g.inventory.add(id, { count: n, ql: 20 });
+          g.events.emit('inventory');
           carryOn(t, g, was, mat);
         }
         g.missed();
         g.gainSkill('mind_logic', tryGain(false, CRAFT_HEAD));
-        g.logMsg(stone ? STONE_KEPT : r.fail ?? `Failed: ${lower(r.result)}.`, 'event');
+        g.logMsg(failDamagedSaid(r.fail ?? `Failed: ${lower(r.result)}.`, hurt), 'event');
         if (spared) g.logMsg(SPARED, 'event');
+        if (stone) g.logMsg(STONE_KEPT, 'event');
         return more(t, g);
       }
       const fromInputs = r.qlFromInputs ? inputQl(stock, r, t.uid, mat) : 0;

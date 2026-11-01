@@ -166,6 +166,6 @@ export const GEAR_RECIPES: Recipe[] = GEAR_SLOTS.flatMap((slot) => ([0, 1, 2] as
     stamina: 0.04,
     difficulty: m.difficulty + GEAR_SIZE_DIFFICULTY * size,
     done: '',
-    consumeOnFail: true,
+    spareOnFail: true,
   };
 }));

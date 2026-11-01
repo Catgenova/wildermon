@@ -36,6 +36,7 @@ import { furnitureDef } from '../../src/game/furniture';
 import { slotOf } from '../../src/game/gear';
 import { bagRefuses, groundDecayRate, markSays, partsMark, type Item } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
+import { failDamage } from '../../src/game/faildamage';
 import { RECIPE_BY_ID, RECIPE_PERK_SAYS, recipeAction, recipeReason, STONE_KEPT, TRADE_BOOK_AT } from '../../src/game/recipes';
 import { gearFrom } from '../../src/game/worn';
 import { BRUSH_TOOL } from '../../src/game/jobtools';
@@ -239,12 +240,15 @@ begin
   perform ${thing('gem', QL, 0, `'${RUBY.name}'`)};
   perform give(w, u, 'silver_lump', 1, 30);
   ${craft('set_focus')};
-  v_t := ${count('gem')} || ':' || ${count('silver_lump')} || ':' || ${last('Failed: focus.%')};
+  v_t := ${count('gem')} || ':' || ${count('silver_lump')} || ':' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'gem') || ':' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'silver_lump') || ':' || ${last('Failed: focus.%')};
+  ${clearAll};
   ${hold('Keep the Stone')};
+  perform give(w, u, 'file', 1, 30);
   perform ${thing('gem', QL, 0, `'${RUBY.name}'`)};
   perform give(w, u, 'silver_lump', 1, 30);
   ${craft('set_focus')};
-  insert into said values ('STONE', v_t || '|' || ${count('gem')} || ':' || ${count('silver_lump')} || ':' || ${last('Failed: focus.%')});
+  insert into said values ('STONE', v_t || '|' || ${count('gem')} || ':' || ${count('silver_lump')} || ':' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'gem') || ':' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'silver_lump')
+    || ':' || ${last('Keep the Stone:%')});
   ${clearAll};
 
   /* ---- Deep Pot: a pot shaped with it, carried through the kiln, and a pottage cooked in it by anybody. ---- */
@@ -541,10 +545,10 @@ check(`${P('Sure Setting').name}: dice of ${SURE_ROLL} fail a ring without it an
 check('and a stone in a circlet the same', circletPlain === 'empty' && circletSure === RUBY.name, say('SURE'));
 const [stonePlain, stoneKept] = say('STONE').split('|');
 const focusFail = RECIPE_BY_ID.get('set_focus')?.fail;
-check('a focus that fails loses the stone and the silver',
-  stonePlain === `0:0:${focusFail}`, stonePlain);
-check(`${P('Keep the Stone').name}: with it the stone comes out whole, the silver does not, and it says so in the browser's words`,
-  stoneKept === `1:0:${STONE_KEPT}`, stoneKept);
+check('a focus that fails damages the stone and the silver by their QL, and uses neither',
+  stonePlain === `1:1:${failDamage(QL)}:${failDamage(30)}:${focusFail} Inputs damaged: gem ×1, +${failDamage(QL)} damage; silver lump ×1, +${failDamage(30)} damage.`, stonePlain);
+check(`${P('Keep the Stone').name}: with it the stone is undamaged, the silver damaged, and it says so in the browser's words`,
+  stoneKept === `1:1:0:${failDamage(30)}:${STONE_KEPT}`, stoneKept);
 
 /* ---- a pot, a bowl and a jar ------------------------------------------------------------- */
 
@@ -758,7 +762,9 @@ game.inventory.add('silver_lump', { ql: 30 });
 const gemsBefore = game.inventory.count('gem');
 game.log.length = 0;
 recipeAction(setFocus).perform({ kind: 'item', uid: game.inventory.find('silver_lump')!.uid }, game);
-check('its Keep the Stone keeps the stone and says the same', game.inventory.count('gem') === gemsBefore && game.inventory.count('silver_lump') === 0
+check('its Keep the Stone leaves the stone undamaged, damages the silver and says the same', game.inventory.count('gem') === gemsBefore
+  && game.inventory.items.filter((i) => i.id === 'gem').every((i) => i.dmg === 0) && game.inventory.count('silver_lump') === 1
+  && game.inventory.items.some((i) => i.id === 'silver_lump' && i.dmg === failDamage(30))
   && game.log.some((l) => l.text === STONE_KEPT), game.log.map((l) => l.text).join(' | '));
 game.setPerks({});
 

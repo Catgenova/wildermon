@@ -1,6 +1,7 @@
 import { tryGain } from './learn';
+import { damageDrawn, failDamagedSaid, failLitresOf, failLitresSaid } from './faildamage';
 import type { ActionDef, Target } from './actions';
-import { furnitureName, holdsLiquid, litresIn, type LiquidKind, type PlacedFurniture } from './furniture';
+import { furnitureName, holdsLiquid, LIQUID_NAME, litresIn, type LiquidKind, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
 import { describeWith, itemDef } from './items';
 import { world } from './pace';
@@ -124,17 +125,21 @@ export const BREWING_ACTIONS: ActionDef[] = [
       // What goes in decides most of what comes out; the hand only decides
       // how much of it survives the working.
       const stockQl = g.stockOf((it) => it.id === brew.input)[0]?.item.ql ?? 20;
-      if (!g.spendStock(brew.input, brew.count)) return;
+      // A brew that does not take uses nothing up: what would have gone in is
+      // damaged by its QL, and the barrel loses that share of the water, by
+      // the water's (`faildamage.ts`). The island's `perform_last` the same.
       if (!g.skillCheck('brewing', brew.difficulty, 0, g.mindEase())) {
-        f.litres = Math.max(0, litresIn(f) - brew.litres);
+        const hurt = damageDrawn(g.stockOf((it) => it.id === brew.input), brew.count);
+        const lost = Math.min(litresIn(f), failLitresOf(brew.litres, f.ql));
+        f.litres = litresIn(f) - lost;
         if (f.litres <= 0) f.liquid = undefined;
-        delete f.knack;
-        delete f.agedFrom;
         g.gainSkill('brewing', tryGain(false, BREW_GAIN));
-        g.logMsg(`Brew failed: ${furnitureName(f).toLowerCase()} emptied.`, 'event');
+        g.logMsg(failDamagedSaid(`Failed: ${brew.name.toLowerCase()}.`, [...hurt, failLitresSaid(LIQUID_NAME.water, brew.litres, lost)]), 'event');
         g.events.emit('crate');
+        g.events.emit('inventory');
         return;
       }
+      if (!g.spendStock(brew.input, brew.count)) return;
       f.litres = brew.litres;
       f.liquid = brew.id;
       f.ferment = brew.time;

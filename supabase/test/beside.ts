@@ -114,7 +114,7 @@ barrel.litres = 20;
 
 const wagon = game.addFurniture('wagon', px + 2, py, 0, 0, 40, [
   stack('iron_lump', LUMPS, 45, 'Iron'), stack('iron_ore', 5, 35), stack('shovel', 1, 30, 'Iron'),
-  stack('casting', 2, 50, 'Iron', 'shovel_head'), stack('gold_lump', 2, 40, 'Gold'),
+  stack('casting', 2, 50, 'Iron', 'shovel_head'), stack('gold_lump', 2, 100, 'Gold'),
   stack('unfired_clay_bowl', 3, 30), stack('apple', 20, 30),
 ], 'Pine');
 // Somebody else's, off any settlement: a vehicle is anybody's all the same.
@@ -146,6 +146,9 @@ const go = (id: string, t: Target): string => {
   return 'done';
 };
 
+// Every check comes off, and the gold is fine enough to take the die every time: a failed go uses
+// nothing up now (`faildamage.ts`), and what is asked here is where a go takes its stock from.
+game.skillCheck = () => true;
 console.log('--- the browser');
 check(`at hand: the ${LUMPS} lumps in the wagon, and none of the chest's, the padlocked wagon's or the far wagon's`,
   game.stockCount('iron_lump') === LUMPS, `${game.stockCount('iron_lump')}`);
@@ -224,6 +227,10 @@ check('and a pour aimed at any of them says there is no metal', aimed.every((a) 
 const isle = psql(`
 begin;
 create temp table said (k text);
+-- Every check comes off: a failed go uses nothing up, and what is asked is where a go takes its stock from.
+create or replace function skill_check(p_skill double precision, p_difficulty double precision,
+   p_tool_ql double precision default 0, p_ease double precision default 0)
+   returns boolean language sql as 'select true';
 do $$
 declare w uuid; me uuid; them uuid := gen_random_uuid(); v_x int; v_y int;
         v_smelter bigint; v_kiln bigint; v_anvil bigint; v_fire bigint; v_oven bigint; v_barrel bigint;
@@ -275,7 +282,7 @@ begin
     (w, 'furniture', v_wagon, 'iron_ore', 35, 5, null, null),
     (w, 'furniture', v_wagon, 'shovel', 30, 1, 'Iron', null),
     (w, 'furniture', v_wagon, 'casting', 50, 2, 'Iron', 'shovel_head'),
-    (w, 'furniture', v_wagon, 'gold_lump', 40, 2, 'Gold', null),
+    (w, 'furniture', v_wagon, 'gold_lump', 100, 2, 'Gold', null),
     (w, 'furniture', v_wagon, 'unfired_clay_bowl', 30, 3, null, null),
     (w, 'furniture', v_wagon, 'apple', 30, 20, null, null);
   select coalesce(max(id), 0) + 1 into v_crate from crate where world_id = w;

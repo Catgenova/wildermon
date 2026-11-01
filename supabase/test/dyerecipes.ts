@@ -16,7 +16,7 @@
  *     are refused in the browser's words; a boil from it with no lye, or short of a dyestuff, is refused in kilos;
  *     a boil gives exactly the recipe's parts at the hands' QL under the recipe's, and at the recipe's when the
  *     hands are better, takes each share's items and the lye, and keeps the recipe; a Double Boil takes half the
- *     weight; a failed boil loses the dyestuffs and the lye and gives the bucket back.
+ *     weight; a failed boil damages the dyestuffs and the lye by their QL and hands nothing back.
  *
  * Everything random is seeded, and the island's dice are taken out of it (a check that passes or fails as asked,
  * a product QL that is fixed). The island half is rolled back.
@@ -29,6 +29,7 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { itemName, type Item } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
+import { failDamage, failDamagedSaid, failPartSaid } from '../../src/game/faildamage';
 import {
   colourWord, DYE_PARTS, DYE_QL_BLACK, DYE_QL_WHITE, DYE_RECIPE, dyeHex, dyeRecipeId, dyeText, PRIMARIES, pureDye, mixDye, RECIPE_STUFF, type DyeLiquid,
   DYESTUFFS,
@@ -224,7 +225,7 @@ begin
   ${giveShares(SHARES)}
   delete from event where world_id = w and uid = u;
   perform act_perform(w, u, '${BOIL_DYE_RECIPE}', jsonb_build_object('kind', 'item', 'uid', v_rec));
-  insert into said select 'FAILED', string_agg(i.def || ':' || coalesce(i.dye, '-') || ':' || i.count, ',' order by i.def, i.id) from item i where i.world_id = w and i.holder_uid = u;
+  insert into said select 'FAILED', string_agg(i.def || ':' || coalesce(i.dye, '-') || ':' || i.count || ':' || i.dmg, ',' order by i.def, i.id) from item i where i.world_id = w and i.holder_uid = u;
   insert into said select 'FAILED_SAID', string_agg(e.text, '#' order by e.n) from event e where e.world_id = w and e.uid = u and e.kind = 'event';
 end $t$;
 select k || '=' || v from said order by k;
@@ -361,11 +362,16 @@ let dimRec: Item | undefined;
   give(BOIL_IN, 30);
   giveShares2(SHARES);
   const failed = act(BOIL_DYE_RECIPE, itemT(rec!));
-  check('a boil that fails loses the dyestuffs and the lye and gives the bucket back, the recipe kept, on both sides',
-    pack(false) === at('FAILED') && g.inventory.items.some((i) => i.id === 'bucket') && g.inventory.items.filter((i) => i.id === DYE_RECIPE).length === 2
-      && !g.inventory.items.some((i) => i.id === 'dye_bucket' || i.id === BOIL_IN),
-    `island ${at('FAILED')}, browser ${pack(false)}`);
-  check('and says so in the same words', failed === at('FAILED_SAID') && failed === DYE_RECIPE_SAID.failed, `island "${at('FAILED_SAID')}", browser "${failed}"`);
+  const hurt = [...g.inventory.items].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : a.uid - b.uid))
+    .map((i) => `${i.id}:${i.dye ?? '-'}:${i.count}:${i.dmg}`).join(',');
+  const spoilt = (id: string): boolean => g.inventory.items.some((i) => i.id === id && i.dmg === failDamage(30));
+  check(`a boil that fails damages the dyestuffs and the lye by ${failDamage(30)} and hands nothing back, the recipe kept, on both sides`,
+    hurt === at('FAILED') && !g.inventory.items.some((i) => i.id === 'bucket' || i.id === 'dye_bucket')
+      && g.inventory.items.filter((i) => i.id === DYE_RECIPE).length === 2 && spoilt(BOIL_IN) && SHARES.every((x) => spoilt(x.from)),
+    `island ${at('FAILED')}, browser ${hurt}`);
+  const words = failDamagedSaid(DYE_RECIPE_SAID.failed, [...SHARES.map((x) => failPartSaid(x.from, x.count, failDamage(30), false)),
+    failPartSaid(BOIL_IN, 1, failDamage(30), false)]);
+  check('and says so in the same words', failed === at('FAILED_SAID') && failed === words, `island "${at('FAILED_SAID')}", browser "${failed}", wanted "${words}"`);
   fails = false;
 }
 check(`a bucket of lye is ${BUCKET_LITRES} litres, what a recipe is written per`, BOIL_LITRES === BUCKET_LITRES);

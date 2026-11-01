@@ -32,7 +32,8 @@ import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOdditie
 import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
 import { RECENT } from './craft';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
-import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
+import { DAMAGE_MAX as NEWS_DAMAGE_MAX, PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
+import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { SPIRAL_TREADS } from '../../game/spiral';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
 import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW, armourSwingSays, overburdenSwingSays } from '../../game/fight';
@@ -4222,6 +4223,15 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 422,
+    day: '2026-11-01',
+    lines: () => [
+      `Changed: failed craft: each input it would have used damaged by its own QL, ${FAIL_DAMAGE_SAID}, straight line between; only the units it would have used; ${NEWS_DAMAGE_MAX} damage: gone; litre inputs: that share of the litres lost; nothing used up or handed back (was: every input kept, or on smelting, alloys, cooking, kilns and the rest every input lost and the bucket returned).`,
+      `Changed: anvil: failed piece damages its casting (was: casting lost); failed strike damages its lump, spent only on a strike that comes off (was: lump lost). Failed brew: ingredients damaged, that share of the water lost (was: barrel emptied, ingredients lost). Failed dye recipe boil: dyestuffs and lye damaged (was: lost, bucket returned).`,
+      'Changed: Nothing Wasted, Careful Builder, Second Heat, Keep the Stone: no damage on what they cover (was: inputs kept).',
+    ],
   },
   {
     n: 421,

@@ -34,6 +34,7 @@ import { tackSpeed } from '../../src/game/creatures';
 import { furnitureDef } from '../../src/game/furniture';
 import { bagRoom, ITEM_DEFS, markSays, RARITY_ODDS, TAN_LYE, type Item, type Mark } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
+import { failDamage } from '../../src/game/faildamage';
 import { CRAFT_REACH, madeSaid, SPARED, VESSEL_KEPT, needOf, RECIPE_BY_ID, RECIPE_PERK_SAYS, reachFor, recipeReason } from '../../src/game/recipes';
 import { creelOdds, TRAPS } from '../../src/game/traps';
 
@@ -315,7 +316,7 @@ ${SURE.map(([name, recipe, makes], i) => `
   perform give(w, u, 'cloth', 2, 30);
   ${dice(0.99)};
   ${craft('make_sack')};
-  v_t := ${count('cloth')}::text;
+  v_t := ${count('cloth')} || ':' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'cloth');
   ${nodice};
   ${clear('cloth')};
   ${hold('Nothing Wasted')};
@@ -323,6 +324,7 @@ ${SURE.map(([name, recipe, makes], i) => `
   ${dice(0.99)};
   ${craft('make_sack')};
   insert into said values ('SPARE', v_t || '|' || ${count('cloth')} || ':' || ${count('sack')}
+    || ':' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'cloth')
     || '|' || coalesce(${last('Nothing Wasted:%')}, 'unsaid'));
   ${nodice};
   ${clear('cloth', 'sack')};
@@ -649,8 +651,8 @@ SURE.forEach(([name, recipe, makes], i) => {
     plain === '0' && at !== '0' && under === '0', say(`SURE${i}`));
 });
 const [sparePlain, spareKept, spareSaid] = say('SPARE').split('|');
-check(`${P('Nothing Wasted').name}: a failed sack loses its cloth without it and keeps it with it, and says so`,
-  sparePlain === '0' && spareKept === '2:0' && spareSaid === SPARED, say('SPARE'));
+check(`${P('Nothing Wasted').name}: a failed sack damages its cloth by ${failDamage(30)} without it and not at all with it, and says so`,
+  sparePlain === `2:${failDamage(30)}` && spareKept === '2:0:0' && spareSaid === SPARED, say('SPARE'));
 const [rarePlain, rarePerk] = say('RARE').split('|');
 check(`${P('Master Tailor').name}: with the dice at ${RARE_AT}, a wool cap is plain without it and rare with it`,
   rarePlain === 'plain' && rarePerk === 'rare', say('RARE'));
