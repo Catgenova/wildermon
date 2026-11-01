@@ -183,9 +183,9 @@ const FLETCHERCREST_LOOK: Sable = {
   fan: {
     at: 1.5, up: 0.9,
     tiers: [
-      { n: 6, rise: [22, 56], out: [6, 18], len: 6.2, w: 0.5 },
-      { n: 6, rise: [2, 26], out: [10, 22], len: 7.6, w: 0.5 },
-      { n: 5, rise: [-18, 2], out: [20, 32], len: 5.4, w: 0.46 },
+      { n: 6, rise: [22, 56], out: [6, 18], len: 6.2, w: 0.66 },
+      { n: 6, rise: [2, 26], out: [10, 22], len: 7.6, w: 0.7 },
+      { n: 5, rise: [-18, 2], out: [20, 32], len: 5.4, w: 0.62 },
     ],
   },
   pack: { kind: 'quiver', at: -0.3, r: [0.85, 1.55, 0.52], tilt: 6 },
@@ -467,9 +467,10 @@ function basketOf(s: Sable, n: number): { mesh: Mesh; plumes: Plume[] } {
  */
 function chestOf(s: Sable, n: number): Mesh {
   const F = packFrame(s), r = s.pack.r;
-  // The box: a tube along its back, its section a rounded square, banded brass at its ends and twice between.
+  // The box: a tube along its back, banded brass at its ends and twice between.
   const ys = [-r[1], -r[1] * 0.9, -r[1] * 0.8, -r[1] * 0.2, -r[1] * 0.1, r[1] * 0.1, r[1] * 0.2, r[1] * 0.8, r[1] * 0.9, r[1]];
-  const box = tube(ys.map((y) => [0, y, 0] as V3), r[0], r[2], 8, (ring) => (ring === 1 || ring === 4 || ring === 7 ? 'metal' : ring === 0 || ring === 8 ? 'woodDark' : 'wood'), { up: [0, 0, 1], turn: 0 });
+  // Four-sided, its corners at the diagonals, so its top and sides are flat: a chest and not a barrel.
+  const box = tube(ys.map((y) => [0, y, 0] as V3), r[0] * Math.SQRT2, r[2] * Math.SQRT2, 4, (ring) => (ring === 1 || ring === 4 || ring === 7 ? 'metal' : ring === 0 || ring === 8 ? 'woodDark' : 'wood'), { up: [0, 0, 1] });
   // The roll on top: cream cloth, its ends red, a strap round it at either end.
   const rr = r[2] * 0.4, rl = r[1] * 0.95;
   const roll = tube([-rl, -rl * 0.8, -rl * 0.62, -rl * 0.5, rl * 0.5, rl * 0.62, rl * 0.8, rl].map((y) => [0, y, r[2] + rr * 0.85] as V3), rr, rr, n,
