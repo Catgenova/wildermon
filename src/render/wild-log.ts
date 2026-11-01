@@ -77,14 +77,14 @@ interface Log {
 const LOGNIB_LOOK: Log = {
   stage: 0,
   high: 0.2,
-  shell: { y0: -0.58, y1: 0.66, cut: 0.9, w: 0.56, h: 0.4, z0: 0.0, segs: 3, step: 0.07, lo: 0.3, flare: 0.5, p: 2.0 },
+  shell: { y0: -0.58, y1: 0.66, cut: 0.9, w: 0.56, h: 0.4, z0: 0.0, segs: 3, step: 0.1, lo: 0.3, flare: 0.5, p: 2.0 },
   belly: { c: [0, 0.04, -0.03], r: [0.33, 0.48, 0.16] },
   head: { at: [0, 0.6, -0.04], r: [0.2, 0.18, 0.17], eye: [0.42, 0.85, 0.1], size: 0.05 },
-  spike: { root: [0, 0.08, 0.12], mid: [0, 0.36, 0.58], tip: [0, -0.14, 0.68], w: 0.11 },
+  spike: { root: [0, 0.08, 0.12], mid: [0, 0.38, 0.6], tip: [0, -0.16, 0.7], w: 0.13 },
   crescent: null,
   crest: null,
   moss: null,
-  patches: { n: 2, big: 0.13 },
+  patches: { n: 2, big: 0.16 },
   band: false,
   legs: { x: 0.3, z: -0.05, ys: [0.26, 0.0, -0.26], fan: [52, 6, -48], upper: 0.17, lower: 0.21, reach: 0.35, thick: 0.07, fore: 1 },
   gait: { sweep: [0.2, 0.28], duty: [0.58, 0.5], lift: [0.06, 0.08], bob: 0.018, sway: 3 },
@@ -96,7 +96,7 @@ const LOGNIB_LOOK: Log = {
 const TIMBERSPLIT_LOOK: Log = {
   stage: 1,
   high: 0.4,
-  shell: { y0: -0.88, y1: 0.9, cut: 0.88, w: 0.82, h: 0.5, z0: 0.04, segs: 4, step: 0.05, lo: 0.22, flare: 0.45, p: 2.1 },
+  shell: { y0: -0.88, y1: 0.9, cut: 0.88, w: 0.82, h: 0.5, z0: 0.06, segs: 4, step: 0.07, lo: 0.14, flare: 0.45, p: 2.1 },
   belly: { c: [0, 0.04, -0.05], r: [0.56, 0.72, 0.22] },
   head: { at: [0, 0.98, -0.02], r: [0.24, 0.3, 0.22], eye: [0.62, 0.6, 0.12], size: 0.045 },
   spike: null,
@@ -105,7 +105,7 @@ const TIMBERSPLIT_LOOK: Log = {
   moss: { from: 0.08, to: 0.9, wide: 0.7, deep: 0.12, clumps: 10 },
   patches: { n: 2, big: 0.17 },
   band: false,
-  legs: { x: 0.46, z: -0.06, ys: [0.36, -0.04, -0.44], fan: [48, 4, -50], upper: 0.32, lower: 0.42, reach: 0.64, thick: 0.11, fore: 1.1 },
+  legs: { x: 0.46, z: -0.06, ys: [0.36, -0.04, -0.44], fan: [48, 4, -50], upper: 0.4, lower: 0.46, reach: 0.7, thick: 0.11, fore: 1.1 },
   gait: { sweep: [0.26, 0.36], duty: [0.6, 0.52], lift: [0.06, 0.09], bob: 0.022, sway: 2.5 },
   prop: { across: false, beam: false, r: 0.17, len: 1.0 },
   size: 5.0,
@@ -115,16 +115,16 @@ const TIMBERSPLIT_LOOK: Log = {
 const BEAMMASTER_LOOK: Log = {
   stage: 2,
   high: 0.48,
-  shell: { y0: -1.18, y1: 1.12, cut: 0.88, w: 1.1, h: 0.7, z0: 0.04, segs: 4, step: 0.05, lo: 0.2, flare: 0.45, p: 2.1 },
+  shell: { y0: -1.18, y1: 1.12, cut: 0.88, w: 1.1, h: 0.7, z0: 0.06, segs: 4, step: 0.07, lo: 0.14, flare: 0.45, p: 2.1 },
   belly: { c: [0, 0.04, -0.06], r: [0.74, 0.92, 0.28] },
   head: { at: [0, 1.22, 0.0], r: [0.32, 0.38, 0.28], eye: [0.62, 0.6, 0.12], size: 0.055 },
   spike: null,
-  crescent: { c: [0, 0.36, 0.22], R: 0.8, a0: -24, a1: 150, w: 0.54, teeth: 8, root: [0, 0.3, -0.02], stem: 0.14 },
-  crest: { u: 0.78, h: 0.62, back: 0.86, foot: 0.42 },
+  crescent: { c: [0, 0.36, 0.22], R: 0.86, a0: -24, a1: 150, w: 0.58, teeth: 7, root: [0, 0.3, -0.02], stem: 0.14 },
+  crest: { u: 0.78, h: 0.74, back: 1.0, foot: 0.5 },
   moss: { from: 0.06, to: 0.9, wide: 0.66, deep: 0.15, clumps: 12 },
   patches: { n: 1, big: 0.2 },
   band: true,
-  legs: { x: 0.6, z: -0.1, ys: [0.48, -0.06, -0.6], fan: [48, 4, -50], upper: 0.38, lower: 0.5, reach: 0.78, thick: 0.15, fore: 1.3 },
+  legs: { x: 0.6, z: -0.1, ys: [0.48, -0.06, -0.6], fan: [48, 4, -50], upper: 0.5, lower: 0.56, reach: 0.86, thick: 0.15, fore: 1.3 },
   gait: { sweep: [0.3, 0.42], duty: [0.64, 0.54], lift: [0.07, 0.1], bob: 0.028, sway: 2 },
   prop: { across: false, beam: true, r: 0.2, len: 1.2 },
   size: 5.2,
@@ -210,7 +210,10 @@ function shellMarks(s: Log): Mesh {
         const u = (j + 0.4 + 0.35 * jitter(id)) * L;
         const ph0 = s.band ? 1.08 : s.moss ? 0.55 + 0.4 * e : 0.45 + 0.55 * e;
         const ph = ph0 + 0.25 * (jitter(id + 1) - 0.5);
-        blobOn(S, u, sd > 0 ? ph : Math.PI - ph, L * s.patches.big * 2.2, s.patches.big * (1.2 + 0.6 * jitter(id + 2)), id, 'spot', out, j * L + L * 0.17, (j + 1) * L - 0.01);
+        const ru = L * s.patches.big * 2.2, rp = s.patches.big * (1.2 + 0.6 * jitter(id + 2));
+        blobOn(S, u, sd > 0 ? ph : Math.PI - ph, ru, rp, id, 'spot', out, j * L + L * 0.17, (j + 1) * L - 0.01);
+        // A lighter mottle in it.
+        if (jitter(id + 9) < 0.6) blobOn(S, u + ru * 0.2, sd > 0 ? ph + rp * 0.2 : Math.PI - ph - rp * 0.2, ru * 0.4, rp * 0.4, id + 50, 'stone', out, j * L + L * 0.17, (j + 1) * L - 0.01);
       }
     }
   }
@@ -418,7 +421,9 @@ function spikeOf(s: Log, n: number): Mesh {
   const N = 8;
   const pts = curve(H.root, H.mid, H.tip, N);
   const ws = pts.map((_, q) => H.w * (1 - 0.9 * (q / N) ** 1.1) + 0.004);
-  return tube(pts, ws, ws.map((x) => x * 1.15), Math.max(6, n - 2), (ring) => (ring >= N - 2 ? 'coat' : ring >= N - 3 ? 'horn' : 'hornDark'));
+  // Dark, its tip gold, and a gold streak up its back (the facets on its outside of the curve, toward its tip).
+  const m = Math.max(6, n - 2);
+  return tube(pts, ws, ws.map((x) => x * 1.15), m, (ring, j) => (ring >= N - 2 ? 'coat' : ring >= 3 && Math.abs(j - m / 4) < m / 8 ? 'coat' : ring >= N - 3 ? 'horn' : 'hornDark'));
 }
 
 /** The crescent's outline, head frame (along, up): its outer edge from upper tip to lower, and its inner edge, toothed. */
@@ -718,9 +723,10 @@ function workPose(s: Log, chop: Chop | null, p: Pose, t: number, graze: number):
     const heave = W.drags.reduce((k, [a, b]) => k + ramp(t, a, b) * (1 - ramp(t, b + 0.04, b + 0.14)), 0);
     const drag = W.drags.reduce((k, [a, b]) => k + ramp(t, a, b), 0) / W.drags.length;
     p.y += d * -0.07 * heave;
-    p.z -= d * (0.03 * grip - 0.01 * heave);
-    p.pitch += d * (-5 * grip + 4 * heave);
-    p.head[0] = lerp(p.head[0], -18 * grip + 6 * heave, d);
+    // Up over the log, its chin on it, leaning back into each heave.
+    p.z += d * (0.05 * grip + 0.01 * heave);
+    p.pitch += d * (2 * grip + 4 * heave);
+    p.head[0] = lerp(p.head[0], 6 * grip + 6 * heave, d);
     p.head[1] *= 1 - d;
     p.grip = d * grip;
     p.drag = d * drag;
@@ -787,7 +793,7 @@ function footOf(s: Log, i: number, sd: number, a: Anim, reach: number): V3 {
 }
 
 /** Where the log lies before the Lognib, along (body frame), when it takes hold of it. */
-const logSpot = (s: Log): number => s.head.at[1] + s.head.r[1] * 0.75 + s.prop.r * 0.9;
+const logSpot = (s: Log): number => s.head.at[1] + s.head.r[1] * 0.5 + s.prop.r * 0.9;
 
 /** The head's frame at a pose, for working out where its blade comes down. */
 function headAt(s: Log, z: number, pitch: number, hp: number): Xf {
@@ -1046,8 +1052,9 @@ function logKind(s: Log): Kind {
         mark: cream,
         shellDark: mix(shell, [110, 70, 30], 0.4),
         spot: [112, 112, 38],
-        belly: [46, 30, 22],
-        bark: [64, 42, 30],
+        stone: [150, 158, 58],
+        belly: [58, 38, 26],
+        bark: [86, 58, 38],
         horn: [104, 66, 42],
         hornDark: [62, 40, 28],
         claw: [60, 40, 28],
