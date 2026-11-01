@@ -113,7 +113,7 @@ const EMBERKIT_LOOK: Ember = {
   bands: 0,
   dapples: 10,
   gait: { duty: [0.62, 0.42], swing: [0.3, 0.36], step: 0.2, bob: 0.04 },
-  size: 4.0,
+  size: 3.4,
 };
 
 /** An Emberbrush: taller and longer, a beak, crests of feathers swept back, a feathered ruff and mantle, a fan of plumes, a rake of a paw. */
@@ -124,7 +124,7 @@ const EMBERBRUSH_LOOK: Ember = {
   fore: [0.52, 0.54, 0.16], hind: [0.58, 0.52, 0.42], thick: 0.28, slope: [12, 22], paw: 0.15, stance: [-0.04, 0.16],
   high: 1.4,
   neck: { at: [0, 1.08, 0.4], len: 0.46, w: 0.36, lean: 30 },
-  head: { r: [0.46, 0.52, 0.44], up: 0.1, pitch: 0 },
+  head: { r: [0.5, 0.56, 0.47], up: 0.1, pitch: 0 },
   snout: null,
   beak: { len: 0.64, w: 0.17, h: 0.22, hook: 0.13 },
   eye: { dir: [0.62, 0.6, 0.32], size: 0.1 },
@@ -143,7 +143,7 @@ const EMBERBRUSH_LOOK: Ember = {
   bands: 0,
   dapples: 14,
   gait: { duty: [0.64, 0.42], swing: [0.28, 0.38], step: 0.2, bob: 0.05 },
-  size: 3.0,
+  size: 2.6,
 };
 
 /** An Ashsweeper: large and long, a raptor's beak, a red crest with a rune on its brow, an enormous fan, armour, and a great rake. */
@@ -159,7 +159,7 @@ const ASHSWEEPER_LOOK: Ember = {
   beak: { len: 1.0, w: 0.25, h: 0.34, hook: 0.26 },
   eye: { dir: [0.64, 0.58, 0.36], size: 0.13 },
   ear: null,
-  crest: { at: [0.26, -0.3, 0.42], len: 1.7, w: 0.46, n: 4, back: 42, splay: 18 },
+  crest: { at: [0.26, -0.3, 0.42], len: 1.85, w: 0.5, n: 4, back: 32, splay: 16 },
   rune: 0.2,
   ruff: { c: [0, 1.56, 0.2], r: [0.6, 0.5, 0.66], len: 0.4, rows: 3, across: 7 },
   cape: 0.72,
@@ -173,7 +173,7 @@ const ASHSWEEPER_LOOK: Ember = {
   bands: 3,
   dapples: 18,
   gait: { duty: [0.66, 0.44], swing: [0.24, 0.34], step: 0.18, bob: 0.05 },
-  size: 3.1,
+  size: 2.85,
 };
 
 /* ---- helpers ------------------------------------------------------------------------- */
@@ -859,8 +859,8 @@ function capeOf(s: Ember): Mesh {
       const th = lerp(0.1, Math.PI - 0.1, q / 6), id = 600 + row * 11 + q;
       const e = onRings(B, y, th + (row % 2 ? 0.12 : 0));
       const L = s.cape * (1 - 0.18 * row) * (0.85 + 0.3 * jitter(id));
-      const dir = unit(add(add([0, -0.8, 0], scale(e.n, 0.35)), [0, 0, -0.35 * Math.abs(Math.cos(th))]));
-      out.push(feather(sub(e.p, scale(e.n, 0.03)), dir, e.n, [0, 0, -1], L, L * 0.55, 0.06, ['mark', 'mark', 'muzzle'], 0.02));
+      const dir = unit(add(add([0, -0.8, 0], scale(e.n, 0.45)), [0, 0, -0.35 * Math.abs(Math.cos(th))]));
+      out.push(feather(add(e.p, scale(e.n, 0.02)), dir, e.n, scale(e.n, -1), L, L * 0.6, 0.12, ['mark', 'mark', 'muzzle'], 0.02, 0.18));
     }
   }
   return merge(...out);
@@ -1044,7 +1044,7 @@ function handOf(s: Ember, n: number): Mesh {
     const L = H.len * (1 - 0.12 * Math.abs(f) * 2);
     // Each an arch: up off the toe, out, and hooked down to its point on the ground.
     const pts: V3[] = [[x, r * 0.6, -r * 0.2], [x * 1.3, r + L * 0.3, r + L * 0.12], [x * 1.5, r + L * 0.66, r + L * 0.08], [x * 1.6, r + L * 0.9, -r * 0.2], [x * 1.6, r + L * 0.94, -r * 1.0]];
-    out.push(tube(pts, [r * 0.42, r * 0.38, r * 0.28, r * 0.14, 0.006], [r * 0.36, r * 0.32, r * 0.24, r * 0.12, 0.006], 6,
+    out.push(tube(pts, [r * 0.55, r * 0.5, r * 0.36, r * 0.18, 0.006], [r * 0.46, r * 0.42, r * 0.3, r * 0.15, 0.006], 6,
       (ring) => (ring < 2 ? 'hornDark' : 'horn'), { start: false }));
   }
   return merge(...out);
@@ -1123,7 +1123,7 @@ function plumesOf(s: Ember, root: boolean): Plume[] {
   const F = s.fan!, out: Plume[] = [];
   const count = root ? Math.round(F.n * 0.7) : F.n;
   for (let q = 0; q < count; q++) {
-    const u = count > 1 ? q / (count - 1) : 0.5, id = (root ? 97 : 0) + q, cream = !root && q % 3 === 1;
+    const u = count > 1 ? q / (count - 1) : 0.5, id = (root ? 97 : 0) + q, cream = !root && (s.stage === 1 ? q % 4 === 1 || q % 4 === 2 : q % 3 === 1);
     const th = (root ? lerp(F.from - 5, F.to + 10, u) : lerp(F.from, F.to, u)) * DEG;
     // Out to the sides by turns; the cream nearer the middle, lying over the red either side of it.
     const sd = q % 2 ? 1 : -1;
@@ -1135,7 +1135,7 @@ function plumesOf(s: Ember, root: boolean): Plume[] {
     const normal = unit(add(scale(flat, Math.cos(twist)), scale(unit(cross(dir, flat)), Math.sin(twist))));
     const len = F.len * (root ? 0.3 : (cream ? 0.86 : 0.8) + 0.26 * Math.sin(Math.PI * u)) * (0.92 + 0.16 * jitter(id + 5));
     const at: V3 = add([sd * F.wide * 0.12, cream ? F.wide * 0.12 : 0, 0], scale(tan, (u - 0.5) * F.wide * 0.4));
-    out.push({ root: at, dir, normal, bend: scale(tan, -1), len, wide: F.wide * (root ? 0.5 : 1) * (0.9 + 0.2 * jitter(id + 7)), curve: root ? 0.05 : 0.34, cream });
+    out.push({ root: at, dir, normal, bend: scale(tan, -1), len, wide: F.wide * (root ? 0.5 : cream ? 1.12 : 1) * (0.9 + 0.2 * jitter(id + 7)), curve: root ? 0.05 : 0.34, cream });
   }
   return out;
 }
@@ -1170,7 +1170,7 @@ function emberBuild(s: Ember, lod: number): Piece[] {
   const barrel = { c: [0, (B.y[0] + B.y[B.y.length - 1]) / 2, mid.z] as V3, r: [mid.w * 0.95, (B.y[B.y.length - 1] - B.y[0]) * 0.47, mid.h * 0.95] as V3 };
   pieces.push({ key: 'body', mesh: barrelOf(s, n + 9), bone: 'trunk', bias: 0, breathes: { c: [0, 0, 0], k: 0.04 } });
   pieces.push({ key: 'ruff', mesh: ruffOf(s, n), bone: 'trunk', bias: 0.06, after: ['body', 'fl0', 'fr0', ...(s.armour ? ['flp', 'frp'] : [])], front: [0, 1, 0], lines: false, hide: [barrel] });
-  if (s.cape) pieces.push({ key: 'cape', mesh: capeOf(s), bone: 'trunk', bias: 0.05, after: ['body', 'fl0', 'fr0', 'ruff'], lines: false, hide: [barrel] });
+  if (s.cape) pieces.push({ key: 'cape', mesh: capeOf(s), bone: 'trunk', bias: 0.05, after: ['body', 'fl0', 'fr0', 'ruff'], lines: false });
   pieces.push({ key: 'neck', mesh: neckOf(s, n), bone: 'neck', bias: 0, under: ['head', 'body', 'ruff', 'neckFur'] });
   pieces.push({ key: 'neckFur', mesh: neckFurOf(s), bone: 'neck', bias: 0.02, after: ['neck', 'ruff'], lines: false });
   const hide = headSolids(s);
@@ -1226,8 +1226,8 @@ function emberBuild(s: Ember, lod: number): Piece[] {
       const tuft: Mesh[] = [];
       for (let q = 0; q < 7; q++) {
         const a = lerp(-0.9, 0.9, q / 6), nrm: V3 = [side * Math.cos(a) * 0.8, -Math.sin(a) * 0.4 - 0.4, -0.2];
-        const root: V3 = add([0, 0, -L[0] * (0.5 + 0.12 * (q % 2))], scale(unit(nrm), w * 0.9));
-        const Lf = s.ruff.len * 0.9 * (0.85 + 0.3 * jitter(700 + q + i * 9));
+        const root: V3 = add([0, 0, -L[0] * (0.22 + 0.1 * (q % 2))], scale(unit(nrm), w * 1.1));
+        const Lf = s.ruff.len * 0.75 * (0.85 + 0.3 * jitter(700 + q + i * 9));
         tuft.push(feather(root, add(scale(unit(nrm), 0.35), [0, -0.2, -1]), nrm, [0, -1, 0], Lf, Lf * 0.55, 0.06, ['mark', 'mark', 'muzzle'], 0.02));
       }
       pieces.push({ key: `${key}f`, mesh: merge(...tuft), bone: `${key}0`, bias: 0.022, after: [`${key}0`, `${key}1`], front: sideV, lines: false });
@@ -1432,7 +1432,7 @@ function emberKind(s: Ember): Kind {
         feather: mix([178, 36, 28], coat, 0.15),
         featherDark: [110, 46, 38],
         petal: [255, 184, 92],
-        ember: EMBER,
+        ember: [255, 112, 24],
         flame: GOLD,
         shell: [196, 54, 40],
         shellDark: [124, 34, 30],
