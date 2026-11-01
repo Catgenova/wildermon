@@ -101,20 +101,20 @@ const sized = (k: number, H: Cow['head']): Cow['head'] => ({
 
 /** A cow's head: a broad skull, a long face down to a broad round muzzle. */
 const COW_HEAD = (pitch: number): Cow['head'] => ({
-  skull: { c: [0, 0, 0.3], r: [0.45, 0.56, 0.42] },
-  muzzle: { c: [0, 0.66, -0.1], dir: [0, 1, -0.55], r: [0.36, 0.25, 0.19] },
+  skull: { c: [0, 0, 0.3], r: [0.47, 0.5, 0.45] },
+  muzzle: { c: [0, 0.56, -0.1], dir: [0, 1, -0.6], r: [0.27, 0.2, 0.16] },
   pitch,
 });
 
 /** A Creamcalf: a small calf, a big head and eyes, a tuft on its poll, a garland of leaves and flowers round its neck. */
 const CREAMCALF_LOOK: Cow = {
   stage: 0,
-  body: { y: [-0.92, -0.8, -0.42, 0.02, 0.44, 0.74, 0.88], z: [0.2, 0.14, 0.1, 0.1, 0.12, 0.18, 0.24], w: [0.24, 0.44, 0.5, 0.52, 0.5, 0.44, 0.24], h: [0.28, 0.5, 0.56, 0.57, 0.57, 0.52, 0.3] },
-  len: 1.5, legs: 1.0, thick: 0.4, hoof: 0.15,
+  body: { y: [-0.92, -0.8, -0.42, 0.02, 0.44, 0.74, 0.9], z: [0.22, 0.17, 0.11, 0.08, 0.095, 0.19, 0.25], w: [0.27, 0.47, 0.53, 0.55, 0.53, 0.47, 0.27], h: [0.28, 0.51, 0.57, 0.58, 0.555, 0.55, 0.31] },
+  len: 1.5, legs: 0.84, thick: 0.34, hoof: 0.15,
   neck: { at: [0, 0.72, 0.36], len: 0.5, w: 0.38, lean: 36 },
-  head: sized(1.3, COW_HEAD(-2)),
+  head: sized(1.24, COW_HEAD(-2)),
   eye: { dir: [0.62, 0.58, 0.42], size: 0.17, lid: 0 },
-  ear: { len: 0.46, w: 0.18, out: 100, back: 8, droop: 0.16 },
+  ear: { len: 0.46, w: 0.2, out: 108, back: 2, droop: 0.06 },
   horn: null,
   tuft: 0.17,
   crown: null,
@@ -134,18 +134,18 @@ const CREAMCALF_LOOK: Cow = {
 /** A Milkmere: a grown cow, short curved horns, a crown, a braided mane, a vine along its back, shaggy legs and an udder. */
 const MILKMERE_LOOK: Cow = {
   stage: 1,
-  body: { y: [-1.78, -1.6, -0.9, 0, 0.86, 1.46, 1.66], z: [0.22, 0.16, 0.06, 0.04, 0.1, 0.2, 0.28], w: [0.42, 0.68, 0.78, 0.8, 0.78, 0.7, 0.4], h: [0.46, 0.72, 0.8, 0.82, 0.82, 0.78, 0.48] },
-  len: 3.0, legs: 1.6, thick: 0.56, hoof: 0.2,
+  body: { y: [-1.78, -1.58, -0.9, 0, 0.82, 1.44, 1.68], z: [0.16, 0.175, 0.06, 0, 0.02, 0.16, 0.21], w: [0.44, 0.72, 0.8, 0.84, 0.8, 0.72, 0.42], h: [0.46, 0.725, 0.84, 0.86, 0.82, 0.82, 0.51] },
+  len: 3.0, legs: 1.36, thick: 0.48, hoof: 0.2,
   neck: { at: [0, 1.4, 0.32], len: 0.78, w: 0.62, lean: 48 },
-  head: sized(1.38, COW_HEAD(4)),
+  head: sized(1.3, COW_HEAD(4)),
   eye: { dir: [0.62, 0.58, 0.44], size: 0.13, lid: 0.12 },
-  ear: { len: 0.46, w: 0.19, out: 100, back: 12, droop: 0.2 },
-  horn: { r: 0.16, len: 0.95, d: [[0.8, -0.35, 0.45], [0.3, -0.3, 1], [-0.25, 0.6, 0.5]] },
+  ear: { len: 0.46, w: 0.2, out: 106, back: 4, droop: 0.08 },
+  horn: { r: 0.23, len: 1.05, d: [[1, -0.15, 0.15], [0.25, 0.05, 1], [-0.7, 0.45, 0.45]] },
   tuft: 0.16,
   crown: { n: 3, r: 0.27 },
   garland: null,
   braid: { len: 1.4, w: 0.24 }, mane: 0.32,
-  shag: { chest: 0.3, leg: 0.34 },
+  shag: { chest: 0.22, leg: 0.34 },
   patches: [[0.1, 0.7, 0.5], [0.5, 1.05, 0.42], [0.42, 0.15, 0.36], [0.82, 0.5, 0.32]],
   udder: 0.62,
   vine: { leaves: 24, flowers: 7 },
@@ -159,22 +159,22 @@ const MILKMERE_LOOK: Cow = {
 /** A Lactisovereign: large and tall, great crescent horns, a long braided mane, a mantle of fern moss with lily of the valley, gold tendrils. */
 const LACTISOVEREIGN_LOOK: Cow = {
   stage: 2,
-  body: { y: [-2.2, -2.0, -1.16, 0, 1.1, 1.84, 2.08], z: [0.22, 0.16, 0.06, 0.06, 0.16, 0.3, 0.4], w: [0.56, 0.92, 1.04, 1.08, 1.08, 0.98, 0.56], h: [0.6, 0.94, 1.04, 1.08, 1.1, 1.06, 0.62] },
-  len: 3.8, legs: 2.1, thick: 0.72, hoof: 0.26,
+  body: { y: [-2.2, -1.98, -1.16, 0, 1.08, 1.84, 2.1], z: [0.24, 0.2, 0.06, -0.01, 0.02, 0.23, 0.36], w: [0.58, 0.96, 1.06, 1.1, 1.08, 0.98, 0.58], h: [0.6, 0.94, 1.08, 1.11, 1.06, 1.07, 0.66] },
+  len: 3.8, legs: 1.8, thick: 0.62, hoof: 0.26,
   neck: { at: [0, 1.8, 0.5], len: 1.05, w: 0.86, lean: 40 },
-  head: sized(1.9, COW_HEAD(8)),
+  head: sized(1.78, COW_HEAD(8)),
   eye: { dir: [0.6, 0.6, 0.46], size: 0.13, lid: 0.2 },
-  ear: { len: 0.5, w: 0.2, out: 96, back: 16, droop: 0.2 },
-  horn: { r: 0.34, len: 2.6, d: [[0.35, -1, -0.1], [0.18, -0.2, 1.3], [-0.12, 1, -0.35]] },
+  ear: { len: 0.5, w: 0.21, out: 104, back: 6, droop: 0.1 },
+  horn: { r: 0.4, len: 2.9, d: [[0.45, -1, -0.05], [0.2, -0.15, 1.3], [-0.12, 1, -0.2]] },
   tuft: 0.15,
   crown: { n: 4, r: 0.25 },
   garland: null,
-  braid: { len: 2.3, w: 0.32 }, mane: 0.9,
-  shag: { chest: 0.7, leg: 0.5 },
+  braid: { len: 2.3, w: 0.3 }, mane: 0.55,
+  shag: { chest: 0.42, leg: 0.5 },
   patches: [[0.1, 0.3, 0.66], [0.56, 0.25, 0.58], [0.34, -0.25, 0.4], [0.86, 0.55, 0.36]],
   udder: 0.9,
   vine: null,
-  mantle: { clumps: 10, r: 0.46, bells: 5, bell: 0.4, arch: 1.9 },
+  mantle: { clumps: 10, r: 0.5, bells: 5, bell: 0.34, arch: 2.6 },
   tail: { len: 2.1, tuft: 0.5, lift: -48, curl: -9 },
   gait: { bounce: [0, 0.28], nod: 2.5, swing: [18, 27], duty: [0.64, 0.42], skip: false },
   strike: 1,
@@ -295,12 +295,12 @@ function painted(m: Mesh, by: (c: V3) => Mat): Mesh {
 /* ---- its legs and its stride ------------------------------------------------------------ */
 
 /** Where each ear is rooted on the head (the right one): on the side of the skull, behind the eye. */
-const earRoot = (s: Cow): V3 => onSkull(s, [0.9, -0.3, 0.32]).p;
+const earRoot = (s: Cow): V3 => onSkull(s, [0.9, -0.22, 0.42]).p;
 /** Where the horns' root is on the skull (the right one): high on the crown toward the side, behind the eyes. */
 const hornRoot = (s: Cow): V3 => onSkull(s, [0.55, -0.05, 0.83]).p;
 
 /** How the legs hang from the body standing: the hips and shoulders, and each leg's two parts' pitch (degrees, forward positive). */
-const FORE_REST: [number, number, number] = [-4, 8, 0], HIND_REST: [number, number, number] = [14, -26, 0];
+const FORE_REST: [number, number, number] = [-6, 13, 0], HIND_REST: [number, number, number] = [18, -34, 0];
 const foreLen = (s: Cow): number => s.legs * 0.5;
 /** How far down the barrel the shoulder and the hip are: lower the deeper the barrel, so a deep body stands on short legs. */
 const foreAt = (s: Cow): number => -0.34 * s.body.h[4];
@@ -806,9 +806,12 @@ function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: bool
  */
 function bellOf(r: number, n: number): Mesh {
   const N = Math.max(12, n * 2);
-  const zs = [0, -r * 0.16, -r * 0.46, -r * 0.8, -r * 1.04, -r * 1.2, -r * 1.28];
-  const ws = [r * 0.26, r * 0.74, r * 0.96, r * 0.96, r * 0.84, r * 1.06, r * 1.34];
-  const cup = tube(zs.map((z) => [0, 0, z] as V3), ws, ws, N, (ring) => (ring >= 5 ? 'featherDark' : 'feather'), { end: false });
+  const zs = [0, -r * 0.18, -r * 0.52, -r * 0.92, -r * 1.22, -r * 1.42, -r * 1.5];
+  const ws = [r * 0.24, r * 0.72, r * 0.92, r * 0.9, r * 0.84, r * 1.12, r * 1.46];
+  const cup = tube(zs.map((z) => [0, 0, z] as V3), ws, ws, N, 'feather', { end: false });
+  // Its inside, a shade darker, seen through its mouth: the same rings a little in, facing inward.
+  const ins = tube(zs.slice(2).map((z) => [0, 0, z] as V3), ws.slice(2).map((x) => x * 0.9), ws.slice(2).map((x) => x * 0.9), N, 'featherDark', { start: false, end: false });
+  const inside = mesh(ins.v, ins.f.map((f) => ({ ...f, i: [...f.i].reverse() })));
   // The lip: six corners of its last ring pulled out and curled up to points, so it is scalloped.
   const last = zs.length - 1;
   const v = cup.v.map((p, i): V3 => {
@@ -817,7 +820,7 @@ function bellOf(r: number, n: number): Mesh {
     const tip = j % (N / 6) === 0, k = tip ? 1.24 : 0.9;
     return [p[0] * k, p[1] * k, p[2] + (tip ? r * 0.1 : -r * 0.04)];
   });
-  return merge(mesh(v, cup.f), orb([0, 0, -r * 0.02], [r * 0.32, r * 0.32, r * 0.2], 6, 3, 'leaf'));
+  return merge(inside, mesh(v, cup.f), orb([0, 0, -r * 0.02], [r * 0.3, r * 0.3, r * 0.2], 6, 3, 'leaf'));
 }
 
 /* ---- the head ------------------------------------------------------------------------------- */
@@ -901,7 +904,7 @@ function muzzleMesh(s: Cow, n: number, k: number): Mesh {
   const muzzle = painted(orbAlong(M.c, M.dir, M.r, n + 2, k + 1, 'muzzle'), (c) => (dot(sub(c, M.c), z) / M.r[2] < -0.55 ? 'coat' : 'muzzle'));
   // The long face between the eyes and the muzzle: a cream egg from the front of the skull down to it.
   const S = s.head.skull, from = add(S.c, [0, S.r[1] * 0.45, -S.r[2] * 0.15]), to = add(M.c, scale(z, -M.r[2] * 0.5));
-  const bridge = orbAlong(scale(add(from, to), 0.5), sub(to, from), [M.r[0] * 1.02, M.r[1] * 1.15, len3(sub(to, from)) * 0.62], n + 2, k + 1, 'coat');
+  const bridge = orbAlong(scale(add(from, to), 0.5), sub(to, from), [M.r[0] * 0.88, M.r[1] * 1.05, len3(sub(to, from)) * 0.6], n + 2, k + 1, 'coat');
   const nostrils: Disc[] = [];
   for (const sd of [1, -1]) {
     const q = onMuzzle(s, [sd * 0.42, 0.3, 0.86]);
@@ -959,10 +962,10 @@ function hornLine(s: Cow, N: number): { pts: V3[]; r: number[] } {
 /** Where it butts with, in the head's frame: the brow between the roots of its horns, a little ahead of it. */
 const browOf = (s: Cow): V3 => add(onSkull(s, [0, 0.75, 0.66]).p, [0, 0.1, 0]);
 
-/** The right horn: cream, ringed in gold at its root. The left is its mirror. */
+/** The right horn: cream, its tip gold. The left is its mirror. */
 function hornOf(s: Cow, n: number, fine: boolean): Mesh {
   const N = s.horn!.len > 1 ? (fine ? 22 : 14) : (fine ? 10 : 7), L = hornLine(s, N);
-  return tube(L.pts, L.r, L.r, n, (ring) => (ring < 3 && ring % 2 === 0 ? 'hornDark' : 'horn'), { seam: 'start' });
+  return tube(L.pts, L.r, L.r, n, (ring) => (ring >= N * 0.78 ? 'hornDark' : 'horn'), { seam: 'start' });
 }
 
 /* ---- what it wears --------------------------------------------------------------------------- */
@@ -1035,15 +1038,15 @@ function garlandOf(s: Cow, fine: boolean, n: number): Mesh {
  */
 function braidOf(s: Cow, fine: boolean, n: number): Mesh {
   const B = s.braid!, out: Mesh[] = [], w = s.neck.w, L = s.neck.len, lean = s.neck.lean * DEG;
-  // Along the side of the neck from behind the ear to its root, then on down over the shoulder: a curve through four points.
-  const down: V3 = [0, Math.sin(lean), -Math.cos(lean)];
-  const P0: V3 = [w * 0.82, -w * 0.15, L * 1.0], P1: V3 = [w * 1.0 + B.w * 0.5, w * 0.05, L * 0.45];
-  const P2: V3 = [w * 1.0 + B.w * 0.6, w * 0.3, -L * 0.1], P3: V3 = add(P2, scale(down, Math.max(0.1, B.len - L * 1.1)));
+  // Along the side of the neck from behind the ear to its root and on back onto the shoulder: a curve through four points
+  // lying on the neck, the braid's middle half its thickness out of it.
+  const down: V3 = [0, Math.sin(lean), -Math.cos(lean)], o = w + B.w * 0.45;
+  const P0: V3 = [w * 0.78, -w * 0.32, L * 1.02], P1: V3 = [o, -w * 0.12, L * 0.55], P2: V3 = [o, -w * 0.02, L * 0.05], P3: V3 = [o + B.w * 0.1, -w * 0.08, -L * 0.42];
   const path = (u: number): V3 => {
     const v = 1 - u;
     return add(add(scale(P0, v * v * v), scale(P1, 3 * v * v * u)), add(scale(P2, 3 * v * u * u), scale(P3, u * u * u)));
   };
-  const N = Math.max(5, Math.round(B.len / (B.w * 0.95)));
+  const N = Math.max(5, Math.round((len3(sub(P1, P0)) + len3(sub(P2, P1)) + len3(sub(P3, P2))) / (B.w * 0.95)));
   for (let q = 0; q < N; q++) {
     const u0 = q / N, u1 = (q + 1) / N, a = path(u0), b = path(u1), d = unit(sub(b, a)), side = unit(cross(d, [1, 0, 0]));
     const alt = q % 2 ? 1 : -1, c = add(scale(add(a, b), 0.5), scale(side, alt * B.w * 0.32));
@@ -1069,9 +1072,9 @@ function braidOf(s: Cow, fine: boolean, n: number): Mesh {
 }
 
 /**
- * The loose mane, in the neck's frame: long cream locks down the crest of the
- * neck behind the braids and at the throat, longer toward the chest, on the
- * Lactisovereign long and flowing into the fur of its chest.
+ * The loose mane, in the neck's frame: a fringe of cream locks along the
+ * crest of the neck from the poll to the withers, falling to either side,
+ * longer on the Lactisovereign.
  */
 function maneOf(s: Cow, n: number): Mesh {
   const out: Mesh[] = [], w = s.neck.w, len = s.neck.len, L = s.mane;
@@ -1079,12 +1082,12 @@ function maneOf(s: Cow, n: number): Mesh {
   const rows = 3 + s.stage + (n > 3 ? 1 : 0);
   for (let r = 0; r < rows; r++) {
     const z = len * lerp(1.0, 0.1, r / (rows - 1));
-    // Over the crest and down its sides, and at the throat.
-    for (const th of [-Math.PI / 2 - 0.5, -Math.PI / 2, -Math.PI / 2 + 0.5, Math.PI / 2 - 0.3, Math.PI / 2 + 0.3, 0.25, Math.PI - 0.25]) {
+    // A fringe along the crest, falling to either side of it.
+    for (const th of [-Math.PI / 2 - 0.4, -Math.PI / 2, -Math.PI / 2 + 0.4]) {
       const x = Math.cos(th), y = Math.sin(th), id = r * 11 + Math.round(th * 10);
-      const crest = y < -0.5;
-      const root: V3 = [x * w * 0.85, y * w * 0.85, z];
-      out.push(tuftOf(root, add(down, [x * 0.4, y * 0.3, 0]), L * (crest ? 0.8 : 1) * (0.6 + 0.3 * r / rows + 0.3 * jitter(id)), w * 0.3, jitter(id + 2) > 0.3 ? 'mark' : 'coatLight', down, n));
+      const root: V3 = [x * w * 0.88, y * w * 0.88, z];
+      const fall = add(scale(down, 0.6), [x * 1.2 + (Math.abs(x) < 0.2 ? (r % 2 ? 0.6 : -0.6) : 0), y * 0.4, 0]);
+      out.push(tuftOf(root, fall, L * (0.7 + 0.25 * r / rows + 0.3 * jitter(id)), w * 0.2, jitter(id + 2) > 0.3 ? 'mark' : 'belly', down, n));
     }
   }
   return merge(...out);
@@ -1106,30 +1109,45 @@ function chestOf(s: Cow, n: number): Mesh {
 }
 
 /**
- * The shaggy fur on a lower leg, in its bone's frame: a fringe of long soft
- * locks down the back and sides of it from below the knee, hanging to the
- * hoof, and a ring of short ones round the top of the hoof; cream, a warmer
- * lock here and there. On the Lactisovereign the fringe starts higher.
+ * The shaggy fur on a lower leg, in its bone's frame: feathering, a fringe of
+ * many thin soft locks from the knee down round the back and sides of it,
+ * each hanging close along the leg to the top of the hoof, and a few short
+ * ones round the top of the hoof; cream, a warmer lock here and there.
  */
 function legFur(s: Cow, lower: number, seed: number, n: number): Mesh {
-  const out: Mesh[] = [], R = s.thick * 0.5, L = s.shag.leg;
-  const fine = n > 3, back = fine ? 7 : 5, ring = fine ? 7 : 5;
-  const from = s.stage === 2 ? 0.25 : 0.45;
+  const out: Mesh[] = [], R = s.thick * 0.42;
+  const fine = n > 3, back = fine ? 10 : 7, ring = fine ? 7 : 5;
+  const from = s.stage === 2 ? 0.1 : 0.22;
   for (let q = 0; q < back; q++) {
     const id = seed + q, f = back > 1 ? q / (back - 1) : 0.5;
-    // Round the back of the leg from one side to the other, the middle ones the longest and rooted highest.
-    const th = -Math.PI / 2 + lerp(-1.5, 1.5, f), mid = 1 - Math.abs(2 * f - 1);
-    const h = lerp(0.72, from, mid) + 0.06 * (jitter(id) - 0.5);
-    const root: V3 = [Math.cos(th) * R * 0.92, Math.sin(th) * R * 0.92, -lower * h];
-    const reach = (lower * (1 - h) + s.hoof * 0.2) * 0.95;
-    out.push(tuftOf(root, [Math.cos(th) * 0.12, Math.sin(th) * 0.16 - 0.06, -1], reach * (0.95 + 0.1 * jitter(id + 3)), s.thick * 0.2, jitter(id + 5) > 0.3 ? 'mark' : 'belly', [0, -0.1, -1], n));
+    // Round the back of the leg from one side to the other, the middle ones rooted highest.
+    const th = -Math.PI / 2 + lerp(-1.7, 1.7, f), mid = 1 - Math.abs(2 * f - 1);
+    const h = lerp(0.55, from, mid) + 0.08 * (jitter(id) - 0.5);
+    const root: V3 = [Math.cos(th) * R, Math.sin(th) * R, -lower * h];
+    const reach = lower * (1 - h) + s.hoof * 0.3;
+    out.push(tuftOf(root, [Math.cos(th) * 0.1, Math.sin(th) * 0.14, -1], reach * (0.92 + 0.12 * jitter(id + 3)), s.thick * 0.2, jitter(id + 5) > 0.35 ? 'mark' : 'belly', [Math.cos(th) * 0.15, Math.sin(th) * 0.2 - 0.1, -1], n));
   }
   for (let q = 0; q < ring; q++) {
     const id = seed + 40 + q, th = (q / ring) * TAU + 0.5 * jitter(id);
-    const root: V3 = [Math.cos(th) * R * 0.95, Math.sin(th) * R * 0.95, -lower * 0.8];
-    out.push(tuftOf(root, [Math.cos(th) * 0.15, Math.sin(th) * 0.15, -1], L * (0.6 + 0.25 * jitter(id + 3)), s.thick * 0.2, jitter(id + 5) > 0.35 ? 'mark' : 'belly', [0, 0, -1], n));
+    const root: V3 = [Math.cos(th) * R * 0.85, Math.sin(th) * R * 0.85, -lower * 0.86];
+    out.push(tuftOf(root, [Math.cos(th) * 0.3, Math.sin(th) * 0.3, -1], s.shag.leg * (0.5 + 0.2 * jitter(id + 3)), s.thick * 0.12, jitter(id + 5) > 0.35 ? 'mark' : 'belly', [0, 0, -1], n));
   }
   return merge(...out);
+}
+
+/**
+ * A leg's two parts, in their bones' frames: the upper a rounded thigh or
+ * forearm going up into the barrel, broad at the top and narrowing to the
+ * knee or hock; the lower swelling a little at the joint and tapering to a
+ * slim fetlock over the hoof, flaring a touch where it meets it.
+ */
+function legMeshes(s: Cow, L0: number, L1: number, fore: boolean, n: number): [Mesh, Mesh] {
+  const w = s.thick, deep = fore ? 1.05 : 1.2;
+  const uz = [0.24, 0, -L0 * 0.45, -L0 * 0.85, -L0], uw = [w * 1.15, w * 1.12, w * 0.98, w * 0.8, w * 0.74];
+  const upper = tube(uz.map((z) => [0, 0, z] as V3), uw, uw.map((x) => x * deep), n, 'coat', { seam: 'both' });
+  const lz = [w * 0.4, 0, -L1 * 0.12, -L1 * 0.5, -L1 * 0.84, -L1], lw = [w * 0.7, w * 0.74, w * 0.66, w * 0.5, w * 0.42, w * 0.5];
+  const lower = tube(lz.map((z, q) => [0, 0.02 * (q / (lz.length - 1)), z] as V3), lw, lw.map((x) => x * 1.08), n, 'coat', { seam: 'both' });
+  return [upper, lower];
 }
 
 /**
@@ -1213,19 +1231,22 @@ function fernOf(rib: readonly V3[], ns: readonly V3[], w: number, fine: boolean)
  */
 function mantleOf(s: Cow, fine: boolean): Mesh {
   const M = s.mantle!, B = s.body, out: Mesh[] = [];
-  const y0 = B.y[5] - 0.1, y1 = B.y[1] + 0.2, F = fine ? 8 : 7, K = fine ? 11 : 6;
-  for (const sd of [1, -1]) {
-    for (let q = 0; q < F; q++) {
-      const u = (q + 0.5 * (sd > 0 ? 0 : 1)) / F, id = 300 + q * 3 + (sd > 0 ? 0 : 1), y = lerp(y0, y1, u);
-      const reach = (1.05 + 0.2 * jitter(id)) * (0.8 + 0.25 * Math.sin(Math.PI * lerp(0.1, 0.9, u)));
-      const rib: V3[] = [], ns: V3[] = [];
-      for (let k = 0; k <= K; k++) {
-        const f = k / K, e = onBody(s, y - 0.3 * f, Math.PI / 2 - sd * (0.1 + reach * f));
-        // Lying on the coat, and lifting off it toward its tip, which curls out.
-        rib.push(add(e.p, scale(e.n, 0.05 + 0.12 * f * f)));
-        ns.push(e.n);
+  const y0 = B.y[5] - 0.05, y1 = B.y[1] + 0.12, F = fine ? 10 : 8, K = fine ? 11 : 6;
+  // Two layers down each flank: the long lower one first, reaching past the side, and a shorter one over it, between.
+  for (const [layer, reach0, lift] of [[0, 1.42, 0.05], [1, 0.95, 0.12]] as const) {
+    for (const sd of [1, -1]) {
+      for (let q = 0; q < F - layer; q++) {
+        const u = (q + 0.5 * layer + 0.25 * (sd > 0 ? 0 : 1)) / F, id = 300 + q * 3 + layer * 101 + (sd > 0 ? 0 : 1), y = lerp(y0, y1, u);
+        const reach = (reach0 + 0.18 * jitter(id)) * (0.82 + 0.22 * Math.sin(Math.PI * lerp(0.1, 0.9, u)));
+        const rib: V3[] = [], ns: V3[] = [];
+        for (let k = 0; k <= K; k++) {
+          const f = k / K, e = onBody(s, y - 0.35 * f, Math.PI / 2 - sd * (0.05 + reach * f));
+          // Lying on the coat, and lifting off it toward its tip, which curls out.
+          rib.push(add(e.p, scale(e.n, lift + 0.16 * f * f)));
+          ns.push(e.n);
+        }
+        out.push(fernOf(rib, ns, M.r * (layer ? 1.0 : 1.2), fine));
       }
-      out.push(fernOf(rib, ns, M.r * 1.0, fine));
     }
   }
   for (let q = 0; q < M.clumps; q++) {
@@ -1298,8 +1319,8 @@ function tendrilOf(s: Cow): Mesh {
     }
     out.push(tube(pts, pts.map((_, k) => r * (1 - 0.6 * k / pts.length)), pts.map((_, k) => r * (1 - 0.6 * k / pts.length)), 5, (ring) => (ring % 4 === 1 ? 'metalLit' : 'metal')));
   };
-  trail(alongBody(s, 0.82), alongBody(s, 0.62), 1.05, 0.05, 0.3, 0.04, 1.4);
-  trail(alongBody(s, 0.45), alongBody(s, 0.2), 0.95, 0.25, 0.2, 0.03, 1.2);
+  trail(alongBody(s, 0.82), alongBody(s, 0.62), 1.05, 0.05, 0.34, 0.075, 1.4);
+  trail(alongBody(s, 0.45), alongBody(s, 0.2), 0.95, 0.25, 0.24, 0.06, 1.2);
   return merge(...out);
 }
 
@@ -1401,7 +1422,14 @@ function cowBuild(s: Cow, lod: number): Piece[] {
     const lower = fore ? foreLen(s) : hindLen(s);
     pieces.push({ key: `${key}fur`, mesh: legFur(s, lower, key.charCodeAt(0) * 7 + key.charCodeAt(1), tn), bone: `${key}1`, bias: 0.04, after: [`${key}1`, 'body', 'udder'], front: [side * 0.7, fore ? 0.7 : -0.7, 0], ...FLUFF });
   }
+  const fine12 = cut(lod, 9, 12);
+  const [fu, fl] = legMeshes(s, foreLen(s), foreLen(s), true, fine12), [hu, hl] = legMeshes(s, hindLen(s), hindLen(s), false, fine12);
   return pieces.map((pc) => {
+    const leg = /^(f|h)[lr]([01])$/.exec(pc.key);
+    if (leg) {
+      const m = leg[1] === 'f' ? (leg[2] === '0' ? fu : fl) : (leg[2] === '0' ? hu : hl);
+      return { ...pc, mesh: pc.key[1] === 'l' ? mirrorX(m) : m };
+    }
     if (pc.key === 'head') return { ...pc, mesh: headOf(s, n, k, false), shut: headOf(s, n, k, true), hide: [skull, muzzleOf(s)] };
     if (pc.key === 'tail3') return { ...pc, ...FLUFF };
     if (pc.key === 'body') return { ...pc, mesh: bodyMesh(s, lod) };
@@ -1431,7 +1459,7 @@ function bodyMesh(s: Cow, lod: number): Mesh {
     }
   }
   Y.push(ys[ys.length - 1]); Z.push(zs[zs.length - 1]); Wd.push(ws[ws.length - 1]); H.push(hs[hs.length - 1]);
-  const N = cut(lod, 10, 14);
+  const N = cut(lod, 14, 20);
   const barrel = tube(Y.map((y, q) => [0, y, Z[q]] as V3), Wd, H, N, 'coat');
   // The patches: a ragged round of the darker colour on each side, laid on the barrel; the left side's turned a little, so the
   // two sides are not one another's mirror.
@@ -1605,7 +1633,7 @@ function cowKind(s: Cow): Kind {
         coatLight: mix(cream, [236, 214, 176], 0.5),
         mark: mix(cream, [255, 252, 246], 0.4),
         belly: [238, 214, 178],
-        muzzle: [248, 212, 204],
+        muzzle: [250, 220, 212],
         inner: [244, 176, 184],
         nose: [196, 120, 128],
         lid: mix(patch, [50, 36, 36], 0.5),
@@ -1618,14 +1646,14 @@ function cowKind(s: Cow): Kind {
         hoof: [82, 62, 54],
         shell: [246, 186, 190],
         shellDark: [232, 160, 168],
-        leaf: [150, 190, 82],
+        leaf: [156, 196, 84],
         leafDark: [90, 132, 64],
         moss: [104, 140, 58],
         stem: [118, 158, 74],
         petal: [255, 253, 248],
         bloom: [250, 206, 70],
         feather: [253, 251, 240],
-        featherDark: [222, 234, 168],
+        featherDark: [196, 212, 150],
         metal: [226, 184, 84],
         metalLit: [255, 230, 150],
         metalDark: [176, 132, 60],
