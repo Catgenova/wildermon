@@ -67,6 +67,7 @@ begin
   insert into said select 'IRONEMOLE', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Mola')).id from species_def where id = 'mola';
   insert into said select 'SPORELING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Vola')).id from species_def where id = 'vola';
   insert into said select 'CLOUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Woola')).id from species_def where id = 'woola';
+  insert into said select 'PEACHICK', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Quill')).id from species_def where id = 'quill';
   insert into said select 'PIGROOT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Seavic')).id from species_def where id = 'seavic';
   insert into said select 'MUDCUT', string_agg(b.item || ':' || sb.n, ',' order by b.ord) from butcher_part b join species_butcher sb on sb.part = b.part where sb.species = 'noot';
   insert into said select 'SAPGNAW', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Bevere')).id from species_def where id = 'bevere';
@@ -163,6 +164,10 @@ const cloud = SPECIES.woola;
 check('the Woola is the Cloudlet now, a Cloudram and a Cloudborne after, and an old Woola carcass is still one, on both sides',
   cloud.name === 'Cloudlet' && cloud.stages?.map((x) => x.name).join(',') === 'Cloudram,Cloudborne'
     && at('CLOUDLET') === 'Cloudlet|Cloudram,Cloudborne|Woola|woola', at('CLOUDLET'));
+const pea = SPECIES.quill;
+check('the Quill is the Peachick now, a Plumecrest and a Featherbourne after, and an old Quill carcass is still one, on both sides',
+  pea.name === 'Peachick' && pea.stages?.map((x) => x.name).join(',') === 'Plumecrest,Featherbourne'
+    && at('PEACHICK') === 'Peachick|Plumecrest,Featherbourne|Quill|quill', at('PEACHICK'));
 const pig = SPECIES.seavic;
 check('the Seavic is the Pigroot now, a Plowhog and a Harvestusk after, and an old Seavic carcass is still one, on both sides',
   pig.name === 'Pigroot' && pig.stages?.map((x) => x.name).join(',') === 'Plowhog,Harvestusk'

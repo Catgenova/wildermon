@@ -1,11 +1,11 @@
 import {
-  add, beat, birdBones, blush, clamp, coatPalette, cross, curve, darker, DEG, disc, dot, eyes, frac, lighter, LOOP, merge, mirrored, moved, onEgg, orb,
-  orbAlong, paint, pastel, scale, taper, TAU, tube, unit, type Anim, type BirdSpec, type Bones, type Disc, type Kind, type Piece,
+  add, beat, birdBones, clamp, coatPalette, cross, curve, DEG, disc, dot, frac, LOOP, merge, mirrored, moved, onEgg, orb,
+  orbAlong, paint, scale, taper, TAU, tube, unit, type Anim, type BirdSpec, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
 import { joint, onScreen, place, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
 import { birdLegPieces, blade, cut } from './beastkit';
 
-/** The birds that stand tall or heavy: the sedra, the warda and the quill. */
+/** The birds that stand tall or heavy: the sedra and the warda. */
 
 /** A folded wing: a long feather-shaped flap down the flank, `len` long. */
 function foldedWing(len: number, w: number, n: number, o: { mat?: 'feather' | 'coat' } = {}): Mesh {
@@ -225,126 +225,4 @@ export const WARDA: Kind = {
       shine(g, view, place(h, add(p, scale(n, WARDA_PROUD + 0.05))), 0.7, [255, 196, 90], 0.45 * toward);
     }
   },
-};
-
-/* ---- the quill --------------------------------------------------------------------- */
-
-/**
- * A quill: a heavy, round ground-bird that would rather run than fly and
- * rather eat than run. Its tail is a bundle of arrows standing up out of its
- * rump like a full quiver, each fletched at the top in red or white, and the
- * long feathers of its wings are the red of the fletching too.
- */
-const QUILL_SPEC: BirdSpec = {
-  high: 1.35,
-  leg: { at: [0.42, 0.05, -0.6], len: [0.38, 0.5, 0.08], rest: [16, -30] },
-  neck: { at: [0, 0.9, 0.3], len: 0.35, lean: 20 },
-  head: { pitch: 0 },
-  wing: { at: [0.95, 0.35, 0.2] },
-  tail: { at: [0, -0.9, 0.45], lift: -6 },
-  swing: [26, 40],
-  thrust: 12,
-  // Foraging, tipped well over and a little crouched, so that the beak meets the ground with the face still to be seen; the legs swung
-  // forward by as much as the bend would slant them back, so they stay straight under it.
-  peck: 105,
-  tip: 46,
-  nose: 17,
-  crouch: 0.5,
-  stance: 1.33,
-  waddle: 6,
-};
-
-const QUILL_HEAD = { c: [0, 0.18, 0.34] as V3, r: [0.72, 0.8, 0.66] as V3 };
-const QUILL_BODY = { c: [0, -0.05, 0.1] as V3, r: [1.12, 1.3, 1.0] as V3 };
-/** When it shows off, shaking out its quiver: seconds into the loop, and how long for. */
-const QUILL_SHOW = [7.7, 18.9], QUILL_SHOW_LEN = 1.6;
-
-function quillBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 11), k = cut(lod, 5, 7);
-  const B = QUILL_BODY;
-  // A round body, and a pale bib painted down the front of it.
-  const body = merge(orb(B.c, B.r, n + 2, k + 1, 'coat'), patch(B.c, B.r, [0, 1, -0.28], 0.56, 0.62, 'mark', { sides: 16 }));
-  const H = QUILL_HEAD;
-  const skull = orb(H.c, H.r, n + 1, k, 'coat');
-  const look = (shut: boolean): Mesh => eyes(H.c, H.r, [0.84, 0.44, 0.3], 0.24, { tall: 1.12, shut, rim: 0.16 });
-  // A short beak, and a red wattle hung from the side of it.
-  const beak = merge(orbAlong([0, 1.0, 0.17], [0, 1, -0.45], [0.15, 0.14, 0.22], 6, 3, 'bill'), orbAlong([0.2, 0.9, -0.06], [0.4, 0.2, -1], [0.07, 0.06, 0.17], 6, 3, 'petal'));
-  const cheeks = blush(H.c, H.r, [0.7, 0.55, -0.1], 0.15);
-  // A short tuft on the crown.
-  const tuft = merge(...[-1, 1].map((s) => taper(curve([s * 0.08, -0.05, 0.92], [s * 0.1, -0.1, 1.14], [s * 0.14, -0.25, 1.22], 2), 0.07, 0.02, 4, 'coatDark')));
-  // The quiver: arrows standing up out of the rump, fanned across and every other one leaning further back, so that it is a spread
-  // bundle from the side as well as a fan from behind; each a pale shaft fletched over its top quarter, red and white by turns.
-  const fan = [-50, -30, -10, 10, 30, 50];
-  const spreads: Array<[number, number, number]> = [];
-  let count = 0;
-  const arrows = merge(...fan.map((deg, q) => {
-    const a = deg * DEG, len = 1.7 - Math.abs(deg) * 0.006;
-    const d = unit([Math.sin(a) * 0.8, -0.1 - 0.5 * (q % 2), Math.cos(a)]);
-    const at = (u: number): V3 => scale(d, len * u);
-    const side: V3 = [Math.cos(a), 0, -Math.sin(a)];
-    const one = merge(
-      taper([at(0), at(1.04)], 0.065, 0.052, 5, 'bark'),
-      blade([at(0.74), at(0.87), at(1.0)], [0.05, 0.15, 0.12], [side[0] * 0.3, 0.95, side[2] * 0.3], { mat: q % 2 ? 'white' : 'fletch', rib: 'bark', fold: 0.1, thick: 0.03 }),
-    );
-    spreads.push([count, count + one.v.length, deg / 50]);
-    count += one.v.length;
-    return one;
-  }));
-  // The wing, its three long feathers the red of the fletching, pale-shafted and standing out past the edge of the wing to points, so
-  // they read as the tips of a wing rather than a striped patch on the flank.
-  const wing = merge(
-    foldedWing(1.25, 0.55, n, { mat: 'feather' }),
-    ...[0, 1, 2].map((q) => blade([[0.06, -0.75 - q * 0.05, 0.02 - q * 0.07], [0.08, -1.15 - q * 0.07, 0.04 - q * 0.09], [0.08, -1.5 - q * 0.08, 0.06 - q * 0.11]], [0.09, 0.12, 0.015], [1, 0, 0.25], { mat: 'fletch', rib: 'bark', thick: 0.03 })),
-  );
-  const hide = [{ c: H.c, r: H.r }];
-  return [
-    { key: 'body', mesh: body, bone: 'body', bias: 0, breathes: { c: [0, 0, 0.1], k: 0.05 } },
-    {
-      key: 'tail', mesh: arrows, bone: 'tail0', bias: -0.06,
-      // Shown off, the arrows are spread wide, the outer ones out to seventy degrees.
-      bent: (v, a) => {
-        const show = beat(a.t, QUILL_SHOW, QUILL_SHOW_LEN) * (1 - a.go);
-        if (show <= 0) return v as V3[];
-        const out = v.slice() as V3[];
-        for (const [s, e, k2] of spreads) {
-          const c = Math.cos(k2 * 20 * DEG * show), sn = Math.sin(k2 * 20 * DEG * show);
-          for (let i = s; i < e; i++) out[i] = [v[i][0] * c + v[i][2] * sn, v[i][1], -v[i][0] * sn + v[i][2] * c];
-        }
-        return out;
-      },
-    },
-    { key: 'neck', mesh: tube([[0, 0, -0.3], [0, 0, 0.35]], 0.42, 0.4, n, 'coat', { seam: 'both' }), bone: 'neck', bias: 0, under: 'head', convex: true },
-    { key: 'head', mesh: merge(skull, beak, cheeks, look(false)), shut: merge(skull, beak, cheeks, look(true)), bone: 'head', bias: 0.2 },
-    { key: 'tuft', mesh: tuft, bone: 'head', bias: 0.21, after: 'head', hide },
-    { key: 'wing0', mesh: mirrored(wing), bone: 'wing0', bias: 0.03, after: 'body', front: [-1, 0, 0] },
-    { key: 'wing1', mesh: wing, bone: 'wing1', bias: 0.03, after: 'body', front: [1, 0, 0] },
-    ...birdLegPieces('bl', -1, 0.5, 0.1, 5),
-    ...birdLegPieces('br', 1, 0.5, 0.1, 5),
-  ];
-}
-
-export const QUILL: Kind = {
-  bones: (a) => birdBones(QUILL_SPEC, a, (p) => {
-    if (a.go > 0) {
-      // A run with the wings half out for balance, the quiver swaying.
-      p.wings = [[0.25 + 0.35 * a.gait, 0.35 * a.gait], [0.25 + 0.35 * a.gait, 0.35 * a.gait]];
-      return;
-    }
-    // Its looks about kept small, so that its face stays turned to whoever is looking at it.
-    p.head[1] *= 0.6;
-    p.head[2] *= 0.6;
-    // Now and then the quiver lifted, spread and shaken out, rattling, and the wings dropped: showing off.
-    const show = beat(a.t, QUILL_SHOW, QUILL_SHOW_LEN);
-    p.tail[0] += 16 * show + 7 * show * Math.sin(a.t * TAU * 5);
-    p.wings = [[0.15 * show, -0.2 * show], [0.15 * show, -0.2 * show]];
-    p.head[0] += 8 * show;
-  }),
-  build: quillBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, {
-    feather: lighter(pastel(coat), 0.12), featherDark: darker(pastel(coat), 0.18), bark: [240, 228, 204],
-    fletch: [214, 92, 84], white: [244, 240, 230], bill: [236, 196, 140], petal: [232, 120, 128], claw: [224, 170, 120],
-  }),
-  shadow: [1.6, 1.3],
-  stride: 1.2,
-  size: 2.9,
 };

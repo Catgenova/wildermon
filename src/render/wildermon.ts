@@ -2,7 +2,7 @@ import { darker, drawBeast, drawBeastPortrait, extentOf, headOf, kitOf, topOf, t
 import type { V3 } from './figure';
 import { LUME } from './wild-air';
 import { BUZZLET, COMBWORKER, HIVEMASTER } from './wild-bee';
-import { QUILL } from './wild-birds';
+import { FEATHERBOURNE, PEACHICK, PLUMECREST } from './wild-peafowl';
 import { MARSHREAPER, REEDPUP, REEDWEAVER } from './wild-reed';
 import { SKYLOOKLET, SKYRANGE, SKYWARDEN } from './wild-sky';
 import { DRAGON } from './wild-dragon';
@@ -115,7 +115,7 @@ export const WILDERMON: Record<string, Kind> = {
   middun: SNAILEAF,
   sedra: REEDPUP,
   warda: SKYLOOKLET,
-  quill: QUILL,
+  quill: PEACHICK,
   tinka: STITCHKIT,
   goblin: GOBLIN,
   orc: ORC,
@@ -234,6 +234,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   tanna: [PELTIPEDE, HIDEWEAVER],
   dulla: [MOSSSHEAR, MOSSREAVER],
   carra: [TIMBERSPLIT, BEAMMASTER],
+  quill: [PLUMECREST, FEATHERBOURNE],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

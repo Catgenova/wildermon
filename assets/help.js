@@ -2256,7 +2256,7 @@ import{$E as e,$_ as t,$d as n,$g as r,$h as i,$i as a,$k as o,$n as s,$o as c,$
       A bridge's deck: end to end, on the ground and up a storey; not a rope bridge.</li>
       <li><b>Shaggan</b>: slowest in the traces; +${E(O.shaggan.pull??.25)} team pull each (most add ${E(ea)}).</li>
       <li><b>${O.warda.name}</b>: sees ${O.warda.sight} tiles for you wherever it stands. Evolves: ${$(`warda`)}.</li>
-      <li><b>Quill</b>: <b>pluck</b> for <b>feathers</b>.</li>
+      <li><b>${O.quill.name}</b>: <b>pluck</b> with a carving knife for <b>feathers</b>: up to 6 when full. Evolves: ${$(`quill`)}; ${Li(`quill`).toLowerCase()}.</li>
       <li><b>Cudda</b>: <b>milked</b> into an empty bucket; a bucket of milk makes ${U(`make_cheese`)} <b>cheeses</b>.</li>
       <li><b>${O.vesp.name}</b>. Build a <b>hive</b> (${V(`make_hive`,!0)}) on your settlement. Task <b>${Hs.hive}</b>: the nearest hive with room within its reach of the totem;
       per go, out to one wildflower tile within 3 tiles of the hive, in turn, and back. <b>Honey</b> into the hive: a skep's rate there, a honey per 50 hours worked

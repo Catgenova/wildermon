@@ -861,6 +861,8 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   tanna: { kind: 'loads', n: 1, what: 'hides per cycle' },
   dulla: { kind: 'more', n: 1, what: 'moss per cut' },
   carra: { kind: 'more', n: 1, what: 'timbers per log' },
+  // Plucked by you or a worker: its `wool` adds to the feathers, as a Cloudlet's does to its wool.
+  quill: { kind: 'wool', n: 1, what: 'feathers per pluck' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -1474,11 +1476,12 @@ export function sparTaskSays(): string {
  * What a stage adds over a kind's first, in words: its health, its blow, its pace and, for a kind with a task, its task,
  * and for one with a fleece, how fast that grows back, each as a share.
  */
-export function stageSays(stage: number, task = true, fleece = false): string {
+export function stageSays(stage: number, task = true, fleece: boolean | string = false): string {
   const more = (ch: TraitChannel): string => percent((STAGE_MUL[ch] ?? 1) ** stage - 1);
   const parts = [`health +${more('hardy')}`, `blow +${more('tough')}`, `speed +${more('speed')}`];
   if (task) parts.push(`task speed +${more('work')}`);
-  if (fleece) parts.push(`fleece regrowth +${more('grow')}`);
+  // What grows back on it: a fleece, or its feathers on a kind that is plucked.
+  if (fleece) parts.push(`${typeof fleece === 'string' ? fleece : 'fleece'} regrowth +${more('grow')}`);
   return parts.join(', ');
 }
 
@@ -1486,7 +1489,7 @@ export function stageSays(stage: number, task = true, fleece = false): string {
  * The words of a kind that evolves, at each stage: what it does, what its level is, and what each stage is and adds,
  * every number read off the rule it describes.
  */
-function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean, kind: GatherKind | null = null, id = '', staged = ''): string {
+function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean | string, kind: GatherKind | null = null, id = '', staged = ''): string {
   if (stage === 0) return `${job} ${level} Evolves at level ${EVOLVE_AT[0]}: ${names[1]}.`;
   const next = stage === 1 ? ` Evolves at level ${EVOLVE_AT[1]}: ${names[2]}.` : '';
   // And what its stage lets it do at once (`STAGE_LOADS`), for a trade that has something to do more of, its line's
@@ -1522,7 +1525,7 @@ function sayLine(id: string, job: string, level: string, staged = ''): void {
   const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
   // Its stages work faster only at a task, so a kind with none is not told they do; a guard's spar is timed as a task's go.
   const task = !!d.gathers;
-  const fleece = !!d.fleece;
+  const fleece = d.fleece ? (d.shearYield === 'feather' ? 'feather' : true) : false;
   d.description = lineSays(names, job, level, 0, task, fleece);
   d.stages = [
     { name: names[1], description: lineSays(names, job, level, 1, task, fleece, d.gathers, '', staged) },
@@ -3807,8 +3810,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   quill: {
     id: 'quill',
     wound: 'pierce',
-    name: 'Quill',
-    description: 'Pluck with a carving knife for feathers.',
+    name: 'Peachick',
+    was: ['Quill'],
+    // Asked for, with a reference sheet: Peachick, Plumecrest, Featherbourne. Its words are written with every number they
+    // read (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Plumecrest', description: '' },
+      { name: 'Featherbourne', description: '' },
+    ],
     health: 26,
     attack: 4,
     speed: 1.9,
@@ -3819,11 +3829,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: null,
     workRange: 6,
+    // [head, neck and breast; body]: the sheet's royal blue on cream, a green peafowl's green on cream, indigo on ivory, and a
+    // pale blue on white. Its eye-spots, train and wing coverts are its own, the same on every one.
     variants: [
-      ['#8a6a44', '#e0c08a'],
-      ['#6a5a4a', '#c2ae94'],
-      ['#96585a', '#e2a8a4'],
-      ['#4f5a44', '#a8b894'],
+      ['#2c56b4', '#f6e4c4'],
+      ['#2a8a70', '#f2e0b8'],
+      ['#4a3c9c', '#f6ead8'],
+      ['#7c9cd0', '#fbf6ec'],
     ],
     butcher: { meat: 5, feather: 8, leather: 2, bone: 3 },
     fleece: 1 / 700,
@@ -4512,6 +4524,8 @@ const yieldQl = (skill: string): string => `${percent(DIG_QL[0])}–${percent(DI
 sayLine('rabba', `Settlement task: forage ${reach('rabba')}; output to the crate.`, 'Level: foraging.');
 sayLine('vola', `Settlement task: botanize ${reach('vola')}; output to the crate.`, 'Level: botanizing.');
 sayLine('woola', `Shear with a carving knife from ${percent(SHEAR_FROM)} fleece regrowth: up to ${SHEAR_WOOL} wool when full. Regrowth, grown: ${Math.round(1 / SPECIES.woola.fleece! / 60)} minutes.`,
+  `Level: animal husbandry, learned ${LEARNS_SAYS.tended}.`);
+sayLine('quill', `Pluck with a carving knife from ${percent(SHEAR_FROM)} feather regrowth: up to ${SHEAR_FEATHERS} feathers when full. Regrowth, grown: ${Math.round(1 / SPECIES.quill.fleece! / 60)} minutes.`,
   `Level: animal husbandry, learned ${LEARNS_SAYS.tended}.`);
 sayLine('seavic', `Settlement task: sow, tend and harvest your tilled fields ${reach('seavic')}; seed from the crate, harvest and unused seed back to it. Does not till.`,
   'Level: farming.');

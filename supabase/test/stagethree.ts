@@ -8,7 +8,7 @@
  *     comes to is the same on both sides for every line, just below its third stage (nothing) and at it;
  *   * that each kind of skill is applied where its trade is worked, on both sides, at the third stage and not below:
  *     a reed cutter's cut (`more`), a water carrier's buckets (`loads`), a Zephlet's Stoneskin rest (`rest`), a
- *     Pebbletooth's stun (`stun`), a Cloudlet's fleece (`wool`), a Snarepup's blow (`blood`);
+ *     Pebbletooth's stun (`stun`), a Cloudlet's fleece and a Featherbourne's feathers (`wool`), a Snarepup's blow (`blood`);
  *   * that the words say what the rule does, with its numbers: each line's third-stage words, the Field guide's stage
  *     page, the help, and the island's own numbers in them;
  *   * that the slots are 3, 4 and 5 by stage on both sides; that one gains a trait as it evolves into each stage, drawn
@@ -27,7 +27,7 @@ import {
 } from '../../src/game/creatures';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { STUN_SECS, HEAVY_EVERY } from '../../src/game/fight';
-import { SHEAR_WOOL } from '../../src/game/limits';
+import { SHEAR_FEATHERS, SHEAR_WOOL } from '../../src/game/limits';
 import { guidePage } from '../../src/game/guide';
 import { helpText } from '../../src/ui/panels/help';
 import {
@@ -174,6 +174,19 @@ begin
     delete from creature where world_id = w and id = a;
   end loop;
 
+  -- A Plumecrest and a Featherbourne, just below its third stage and at it, plucked full.
+  for i in 0..1 loop
+    a := creature_spawn(w, 'quill', ${T} + 0.5, ${T - 1} + 0.5, 'active', now() - interval '10 days', u);
+    update creature set mode = 'active', keeper = u, traits = '{}', rare = null, fleece = 1, leg_at = now(), leg_ends = now(),
+           from_x = ${T} + 0.5, from_y = ${T - 1} + 0.5, to_x = ${T} + 0.5, to_y = ${T - 1} + 0.5, until = now() + interval '1 hour', settled_at = now(),
+           skills = jsonb_build_object('animal_husbandry', case i when 0 then ${LEVELS[0]} else ${LEVELS[1]} end)
+     where world_id = w and id = a;
+    delete from item where world_id = w and holder_uid = u and def = 'feather';
+    perform act_perform(w, u, 'shear', jsonb_build_object('kind', 'creature', 'id', a));
+    insert into said values ('FEATHER' || i, coalesce((select sum(count) from item where world_id = w and holder_uid = u and def = 'feather'), 0)::text);
+    delete from creature where world_id = w and id = a;
+  end loop;
+
   /* ---- slots ---- */
 
   -- Evolving into each stage: a trait more each time, by its keeper's husbandry, its pedigree saying where it came from.
@@ -299,6 +312,8 @@ check(`on the island, a Pebbletooth stuns ${STUN_SECS} seconds below its third s
   near(Number(at('STUN0')), STUN_SECS, 0.05) && near(Number(at('STUN1')), STUN_SECS + STAGE_PERKS.thumpa.n, 0.05), `${at('STUN0')} / ${at('STUN1')}`);
 check(`on the island, a full Cloudlet gives ${SHEAR_WOOL} wool below its third stage and ${SHEAR_WOOL + STAGE_PERKS.woola.n} at it`,
   at('WOOL0') === String(SHEAR_WOOL) && at('WOOL1') === String(SHEAR_WOOL + STAGE_PERKS.woola.n), `${at('WOOL0')} / ${at('WOOL1')}`);
+check(`on the island, a full ${SPECIES.quill.stages![0].name} gives ${SHEAR_FEATHERS} feathers plucked and a ${SPECIES.quill.stages![1].name} ${SHEAR_FEATHERS + STAGE_PERKS.quill.n}`,
+  at('FEATHER0') === String(SHEAR_FEATHERS) && at('FEATHER1') === String(SHEAR_FEATHERS + STAGE_PERKS.quill.n), `${at('FEATHER0')} / ${at('FEATHER1')}`);
 
 /* ---- and in the browser ------------------------------------------------------------------------------------------ */
 
@@ -391,6 +406,16 @@ const wool = LEVELS.map((lv) => {
 });
 check(`in the browser, a full Cloudlet gives ${SHEAR_WOOL} wool below its third stage and ${SHEAR_WOOL + STAGE_PERKS.woola.n} at it`,
   wool[0] === SHEAR_WOOL && wool[1] === SHEAR_WOOL + STAGE_PERKS.woola.n, wool.join(' / '));
+const feathers = LEVELS.map((lv) => {
+  for (const it of g.inventory.items.filter((i) => i.id === 'feather')) g.inventory.remove(it.uid, it.count);
+  const c = spawn('quill', lv, 'active', g.player.x, g.player.y - 1);
+  c.fleece = 1;
+  shear.perform!({ kind: 'creature', id: c.id }, g);
+  clear();
+  return g.inventory.items.filter((i) => i.id === 'feather').reduce((n, i) => n + i.count, 0);
+});
+check(`in the browser, a full ${SPECIES.quill.stages![0].name} gives ${SHEAR_FEATHERS} feathers plucked and a ${SPECIES.quill.stages![1].name} ${SHEAR_FEATHERS + STAGE_PERKS.quill.n}`,
+  feathers[0] === SHEAR_FEATHERS && feathers[1] === SHEAR_FEATHERS + STAGE_PERKS.quill.n, feathers.join(' / '));
 const blows = LEVELS.map((lv) => {
   const a = spawn('rowl', lv, 'active');
   const b = attackOf(a, SPECIES.rowl);
