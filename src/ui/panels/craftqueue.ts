@@ -14,7 +14,6 @@ import { uiPoint } from '../screen';
 
 /** Where the list is kept folded or open, in this browser. */
 const FOLD_KEY = 'wurm-iso-queue-folded';
-const lower = (id: string): string => itemDef(id).name.toLowerCase();
 const reduced = lessMotion;
 
 /** Seconds as the crafting window says a job's time: "40 s", "3 min 20 s", "1 h 5 min". */
@@ -279,13 +278,13 @@ export class QueueView {
     if (use?.tool) {
       const t = document.createElement('span');
       t.className = 'lack';
-      t.textContent = `no ${lower(use.tool)} carried`;
+      t.textContent = `${itemDef(use.tool).name}: not carried`;
       parts.push(t);
     }
     for (const u of use?.uses ?? []) {
       const s = document.createElement('span');
       s.className = u.short ? 'lack' : 'have';
-      s.textContent = `${u.need} ${lower(u.item)}`;
+      s.textContent = `${u.need} ${itemDef(u.item).name}`;
       const where = document.createElement('em');
       const bits = u.from.map((f) => `${f.n} in ${f.where}`);
       if (u.short) bits.push(`${u.short} short`);

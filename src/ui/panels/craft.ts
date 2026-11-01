@@ -405,21 +405,21 @@ export class CraftPanel {
        * the row said "spindle" in red, and "Not within reach of one" to anybody
        * who hovered, which on a phone is nobody.
        */
-      const name = stationName(r.station);
+      const name = capital(stationName(r.station));
       const carried = !st.station && isFurniture(r.station) && this.game.inventory.has(r.station);
       station.textContent = st.station ? name : carried ? `${name}: place yours` : `${name}: needed`;
       station.title = st.station
         ? 'At one'
         : carried
           ? `In your pack: place it (right-click the ground, Set furniture down) and stand beside it.`
-          : `Stand beside a placed ${name}.`;
+          : `Stand beside a placed ${name.toLowerCase()}.`;
       parts.push(station);
     }
     // Where it may be built at all: an altar goes up on a settlement of yours or nowhere.
     if (r.deed) {
       const deed = document.createElement('span');
       deed.className = st.deed ? 'have' : 'lack';
-      deed.textContent = 'on your settlement';
+      deed.textContent = 'On your settlement';
       deed.title = st.deed ? 'On your settlement' : DEED_ONLY;
       parts.push(deed);
     }
@@ -427,14 +427,14 @@ export class CraftPanel {
     if (st.second) {
       const second = document.createElement('span');
       second.className = 'lack';
-      second.textContent = 'one to a settlement';
+      second.textContent = 'One to a settlement';
       second.title = ONE_ALTAR;
       parts.push(second);
     }
     if (r.tool) {
       const tool = document.createElement('span');
       tool.className = st.tool ? 'have' : 'lack';
-      tool.textContent = lower(r.tool);
+      tool.textContent = itemDef(r.tool).name;
       tool.title = st.tool ? 'Carried' : 'Not carried';
       if (!st.tool) this.findable(tool, r.tool, { need: 1, tool: true, r });
       parts.push(tool);
@@ -444,7 +444,7 @@ export class CraftPanel {
       span.className = i.have >= i.need ? 'have' : 'lack';
       // Litres of a liquid by the litre: "2 L water (12 L)".
       const l = i.litres ? ' L' : '';
-      span.textContent = i.litres ? `${i.need} L ${liquidWord(i.item)}` : `${i.need} ${lower(i.item)}`;
+      span.textContent = i.litres ? `${i.need} L ${capital(liquidWord(i.item))}` : `${i.need} ${itemDef(i.item).name}`;
       // Where they are, so a crate that empties itself into a chest is never
       // a surprise: what is on you goes first, then the nearest store.
       // Litres to the tenth below, so a well part refilled reads "0.4 L", never a float's tail.
@@ -478,7 +478,7 @@ export class CraftPanel {
       for (const m of choices) {
         const o = document.createElement('option');
         o.value = m;
-        o.textContent = `of ${m.toLowerCase()}`;
+        o.textContent = capital(m.toLowerCase());
         o.selected = m === st.material;
         pick.append(o);
       }
@@ -490,7 +490,7 @@ export class CraftPanel {
     } else if (st.material) {
       const made = document.createElement('span');
       made.className = 'have';
-      made.textContent = `of ${st.material.toLowerCase()}`;
+      made.textContent = capital(st.material.toLowerCase());
       made.title = r.wood ? `${capital(lower(r.result))}: ${r.wood.toLowerCase()} only` : `Choice appears with another kind carried or in a store within ${reachFor(this.game, r)} tiles`;
       parts.push(made);
     }
