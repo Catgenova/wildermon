@@ -21,7 +21,7 @@ import { fitsDen, furnitureDef, furnitureRefuses, furnitureRoom, holdsLiquid, is
 import { crateCentre } from './crates';
 import { storeMarkable } from './stores';
 
-import { milkLitres } from './dairy';
+import { MILK_READY, milkLitres } from './dairy';
 import { COMPANION_SIGHT as KEPT_SIGHT, NIGHT_LOSS as KEPT_NIGHT_LOSS, SHEAR_FEATHERS, SHEAR_FROM, SHEAR_WOOL } from './limits';
 import { candleBurn } from './light';
 import { isLampPiece } from './lamps';
@@ -327,6 +327,13 @@ const TILE_SLACK = 4096;
 export const CARE_WANTING = 0.4;
 /** How far grown back a fleece, a crop of feathers or a cudda's milk is before a sheela takes it: the more there is, the more and the better comes off. */
 export const DAIRY_FULL = 0.9;
+/**
+ * The kinds a dairy hand milks (`Creatures.milker`), by their names at every stage, for its words: "Creamcalfs, Milkmeres and Lactisovereigns".
+ * Read when the words are written, once the kinds are all here.
+ */
+function milkers(): string {
+  return listed(Object.values(SPECIES).filter((d) => !!d.milk && milkLitres(d.id) >= BUCKET_LITRES).flatMap((d) => [d.name, ...(d.stages ?? []).map((st) => st.name)]).map((n) => `${n}s`));
+}
 /** The share of its health under which a salva dresses one of yours; a bleeding one it dresses whatever its health. */
 export const HEAL_BELOW = 0.75;
 /** What a salva puts a dressing on: cloth, or a herb cover. */
@@ -506,7 +513,7 @@ export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', bot
   moss: 'cutting moss', vine: 'planting vines', lily: 'planting water lilies and lotus', concrete: 'mixing concrete', mortar: 'mixing mortar', timber: 'sawing timbers',
   shaft: 'carving shafts', bandage: 'making bandages, covers and salves', cheese: 'pressing cheese', churn: 'churning butter', alloy: 'mixing alloys', distil: 'distilling' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'collect sand', clay: 'collect clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'collect peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls and columns on their storey; floors, roofs, staircases and ladders from the storey under; bridge or aqueduct spans, foundations; storeys up by staircase, not ladder', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', get kiln() { return `load your kilns with ${kilnLoads()} from your settlement stores and empty them`; }, ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'collect sand', clay: 'collect clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'collect peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls and columns on their storey; floors, roofs, staircases and ladders from the storey under; bridge or aqueduct spans, foundations; storeys up by staircase, not ladder', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, get dairy() { return `milk your ${milkers()} into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`; }, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', get kiln() { return `load your kilns with ${kilnLoads()} from your settlement stores and empty them`; }, ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
   get saw() { return `saw logs in your settlement stores into planks, ${recipeMakes('make_planks')} a log`; },
   get chisel() { return `chisel rock shards in your settlement stores into stone brick, ${recipeMakes('make_stone_brick')} a shard`; },
@@ -860,6 +867,8 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   sheela: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   tanna: { kind: 'loads', n: 1, what: 'hides per cycle' },
   dulla: { kind: 'more', n: 1, what: 'moss per cut' },
+  // A dam of the line's: the chance of a second calf at a covering (`twinChance`), which its blood's `twins` scales.
+  cudda: { kind: 'blood', n: 1.2, channel: 'twins', what: 'twin chance' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -1473,11 +1482,12 @@ export function sparTaskSays(): string {
  * What a stage adds over a kind's first, in words: its health, its blow, its pace and, for a kind with a task, its task,
  * and for one with a fleece, how fast that grows back, each as a share.
  */
-export function stageSays(stage: number, task = true, fleece = false): string {
+export function stageSays(stage: number, task = true, fleece: boolean | string = false): string {
   const more = (ch: TraitChannel): string => percent((STAGE_MUL[ch] ?? 1) ** stage - 1);
   const parts = [`health +${more('hardy')}`, `blow +${more('tough')}`, `speed +${more('speed')}`];
   if (task) parts.push(`task speed +${more('work')}`);
-  if (fleece) parts.push(`fleece regrowth +${more('grow')}`);
+  // What grows back on it: a fleece, or milk and a fleece both on a kind that is milked.
+  if (fleece) parts.push(`${typeof fleece === 'string' ? fleece : 'fleece'} regrowth +${more('grow')}`);
   return parts.join(', ');
 }
 
@@ -1485,7 +1495,7 @@ export function stageSays(stage: number, task = true, fleece = false): string {
  * The words of a kind that evolves, at each stage: what it does, what its level is, and what each stage is and adds,
  * every number read off the rule it describes.
  */
-function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean, kind: GatherKind | null = null, id = '', staged = ''): string {
+function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean | string, kind: GatherKind | null = null, id = '', staged = ''): string {
   if (stage === 0) return `${job} ${level} Evolves at level ${EVOLVE_AT[0]}: ${names[1]}.`;
   const next = stage === 1 ? ` Evolves at level ${EVOLVE_AT[1]}: ${names[2]}.` : '';
   // And what its stage lets it do at once (`STAGE_LOADS`), for a trade that has something to do more of, its line's
@@ -1521,7 +1531,7 @@ function sayLine(id: string, job: string, level: string, staged = ''): void {
   const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
   // Its stages work faster only at a task, so a kind with none is not told they do; a guard's spar is timed as a task's go.
   const task = !!d.gathers;
-  const fleece = !!d.fleece;
+  const fleece = d.fleece ? (d.milk ? 'milk and fleece' : true) : false;
   d.description = lineSays(names, job, level, 0, task, fleece);
   d.stages = [
     { name: names[1], description: lineSays(names, job, level, 1, task, fleece, d.gathers, '', staged) },
@@ -2388,7 +2398,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     name: 'Shearling',
     was: ['Sheela'],
     // Asked for, with a reference sheet: Shearling, Clipperoo, Shearlord.
-    description: 'Settlement task: milk your cudda into empty buckets in your settlement stores; shear or pluck your other fleeced or feathered wildermon at {dairyFull:pct} regrowth. Output: your settlement stores.',
+    description: 'Settlement task: milk your {milkers} into empty buckets in your settlement stores; shear or pluck your other fleeced or feathered wildermon at {dairyFull:pct} regrowth. Output: your settlement stores.',
     stages: [
       { name: 'Clipperoo', description: '' },
       { name: 'Shearlord', description: '' },
@@ -3825,8 +3835,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   cudda: {
     id: 'cudda',
     wound: 'crush',
-    name: 'Cudda',
-    description: 'Milk a female into an empty bucket.',
+    name: 'Creamcalf',
+    was: ['Cudda'],
+    // Asked for, with a reference sheet: Creamcalf, Milkmere, Lactisovereign. Its words are written with every number they
+    // read (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Milkmere', description: '' },
+      { name: 'Lactisovereign', description: '' },
+    ],
     health: 48,
     attack: 4,
     speed: 1.2,
@@ -3837,11 +3854,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: null,
     workRange: 6,
+    // [patches, cream]: the sheet's brown-grey on cream, near-black on ivory, red-brown on cream, and dove grey on ivory.
     variants: [
-      ['#a89880', '#eee3cf'],
-      ['#7d6a58', '#c8b49a'],
-      ['#5e5a55', '#aaa49c'],
-      ['#b0705a', '#e8bfa6'],
+      ['#6e5a58', '#f6e8dc'],
+      ['#3e3634', '#f8f2e8'],
+      ['#8a5440', '#f6e6d4'],
+      ['#8a8486', '#f4eee6'],
     ],
     butcher: { meat: 18, fur: 4, leather: 10, bone: 12, gland: 1 },
     fleece: 1 / 600,
@@ -4113,7 +4131,7 @@ export const MEND_QL_LEAST = 0.05;
 for (const s of Object.values(SPECIES)) {
   s.description = fill(s.description, {
     ...s, pullDefault: PULL_DEFAULT, careWanting: CARE_WANTING, dairyFull: DAIRY_FULL, healBelow: HEAL_BELOW, tanLye: TAN_LYE,
-    grassPerCut: GRASS_PER_CUT, mossPerCut: MOSS_PER_CUT, panLeast: PAN_FIND[0], panMost: PAN_FIND[1], skillTop: SKILL_TOP, resinTapped: RESIN_TAPPED,
+    milkers: milkers(), grassPerCut: GRASS_PER_CUT, mossPerCut: MOSS_PER_CUT, panLeast: PAN_FIND[0], panMost: PAN_FIND[1], skillTop: SKILL_TOP, resinTapped: RESIN_TAPPED,
     skepReach: SKEP_REACH, skepHours: SKEP_CLUMP_HOURS, skepWax: SKEP_WAX_EVERY, skepIdle: SKEP_IDLE,
   });
 }
@@ -4502,6 +4520,8 @@ const reach = (id: string): string =>
 const yieldQl = (skill: string): string => `${percent(DIG_QL[0])}–${percent(DIG_QL[1])} of its ${skill}, raised by yield traits, max 100`;
 sayLine('rabba', `Settlement task: forage ${reach('rabba')}; output to the crate.`, 'Level: foraging.');
 sayLine('vola', `Settlement task: botanize ${reach('vola')}; output to the crate.`, 'Level: botanizing.');
+sayLine('cudda', `Milk a female into an empty bucket: ${milkLitres('cudda')} litres, from ${percent(MILK_READY)} milk regrowth. Regrowth, grown: ${Math.round(1 / SPECIES.cudda.fleece! / 60)} minutes.`,
+  `Level: animal husbandry, learned ${LEARNS_SAYS.tended}.`);
 sayLine('woola', `Shear with a carving knife from ${percent(SHEAR_FROM)} fleece regrowth: up to ${SHEAR_WOOL} wool when full. Regrowth, grown: ${Math.round(1 / SPECIES.woola.fleece! / 60)} minutes.`,
   `Level: animal husbandry, learned ${LEARNS_SAYS.tended}.`);
 sayLine('seavic', `Settlement task: sow, tend and harvest your tilled fields ${reach('seavic')}; seed from the crate, harvest and unused seed back to it. Does not till.`,

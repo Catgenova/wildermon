@@ -1,13 +1,14 @@
 import {
-  add, beat, clamp, coatPalette, cross, curve, cyc, disc, lighter, merge, mix, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, smooth, taper,
+  add, beat, clamp, coatPalette, cross, curve, cyc, disc, lighter, merge, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, smooth, taper,
   TAU, tube, unit, type Anim, type Kind, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
 import { blade, cut, earMesh, hoofMesh, quadPieces, type QuadLook } from './beastkit';
 import { mesh, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
 
 /**
- * The herd: the big grazers and beasts of burden -- the cudda, the bura,
- * the gorral and the shaggan (the roxxen is its own line now, `./wild-haul`,
+ * The herd: the big grazers and beasts of burden -- the bura, the gorral
+ * and the shaggan (the cudda is its own line now, `./wild-cow`, the roxxen
+ * `./wild-haul`,
  * the orse `./wild-hare`, the sappa `./wild-pip`, and the snedda the
  * Saplingreach, `./wild-giraffe`).
  * Hooves, deep bodies, and heads still a size too big for them.
@@ -125,77 +126,6 @@ const tuftTail = (n: number): Mesh[] => [
   taper([[0, 0, 0], [0, -0.5, 0]], 0.1, 0.08, 5, 'coat'),
   merge(taper([[0, 0, 0], [0, -0.2, 0]], 0.08, 0.1, 5, 'coat'), orbAlong([0, -0.45, 0], [0, -1, 0], [0.22, 0.22, 0.34], n, 4, 'mark')),
 ];
-
-/* ---- the cudda ----------------------------------------------------------------------- */
-
-/**
- * A cudda: a placid, deep-bellied grazer that chews whatever it is given and
- * gives milk back for it. Its patches are clouds, it wears a crown of flowers
- * between its little horns, and a bell hangs at its throat.
- */
-const CUDDA_SPEC: QuadSpec = {
-  // A neck just long enough that grazing, the chest let down only a little, the muzzle reaches the grass with all four feet on it.
-  ...hoofed({ high: 2.4, len: 3.4, legs: 1.7, neck: 1.1, lean: 70, swing: [18, 30], ears: [72, 22], crop: [68, 10, 12] }),
-  tail: curledTail(3.4),
-};
-const CUDDA_HEAD = { c: [0, 0.35, 0.05] as V3, r: [1.1, 1.0, 0.92] as V3 };
-
-function cuddaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = CUDDA_HEAD;
-  // A soft pink muzzle standing out in front of the eyes, its top up at their height, so side on there is a face ahead of the eye.
-  const muzzle = merge(
-    orbAlong([0, 1.36, -0.14], [0, 1, -0.2], [0.66, 0.56, 0.46], n, k, 'inner'),
-    paint([disc([0.24, 1.82, -0.06], [0.2, 1, 0.2], 0.1, 0.08, 6, 'nose'), disc([-0.24, 1.82, -0.06], [-0.2, 1, 0.2], 0.1, 0.08, 6, 'nose')]),
-    smile([0, 1.84, -0.34], [0, 1, -0.3], 0.3),
-  );
-  // The clouds: three little heaps of cloud sitting on its back, apart from one another, each three puffs in a row with the middle
-  // one highest -- one tube swelling and pinching along its length, which is a cloud's lumpy top at a fraction of what three
-  // balls cost; lined only round the outside, with a silver edge (`sheen`). Each to one side of the back or the other and sat up
-  // on it, so from in front or behind they are clouds apart and not one plume over its head, and side on they still stand up
-  // out of the line of the back.
-  const PUFF = { d: [-1.0, -0.78, -0.42, 0, 0.42, 0.78, 1.0], h: [0.12, 0.56, 0.4, 0.72, 0.4, 0.56, 0.12], w: [0.2, 0.62, 0.56, 0.72, 0.56, 0.62, 0.2], z: [0, 0.02, 0.05, 0.14, 0.05, 0.02, 0] };
-  const clouds = merge(...([[0.5, -1.55, 1.5, 0.48], [0.46, 1.2, 1.58, 0.44], [-0.46, -0.2, 1.68, 0.42]] as number[][]).map(([x, y, z, r]) =>
-    tube(PUFF.d.map((d, q) => [x, y + d * r * 1.25, z + PUFF.z[q] * r] as V3), PUFF.w.map((w) => w * r), PUFF.h.map((h) => h * r), n, 'spot')));
-  const horns = merge(taper(curve([0.5, 0.2, 0.7], [0.75, 0.25, 0.95], [0.7, 0.4, 1.1], 2), 0.13, 0.04, 6, 'horn'), taper(curve([-0.5, 0.2, 0.7], [-0.75, 0.25, 0.95], [-0.7, 0.4, 1.1], 2), 0.13, 0.04, 6, 'horn'));
-  // The crown: five flowers big enough to stand up out of the line of the head.
-  const crown = merge(...Array.from({ length: 5 }, (_, q) => {
-    const a = -Math.PI * 0.9 + (q / 4) * Math.PI * 0.8;
-    return orb([Math.cos(a) * 0.55, 0.35 + Math.sin(a) * -0.5, 1.0], 0.2, 6, 3, q % 2 ? 'petal' : 'bloom');
-  }));
-  // The bell, on the throat under the jaw (in the neck's frame, whose forward is down the throat at the neck's lean), drawn before
-  // the head so that the face is never behind it.
-  const bell = merge(taper([[0, 0.8, 0.6], [0, 1.25, 0.63]], 0.16, 0.28, 7, 'fitting'), orb([0, 1.32, 0.63], 0.08, 5, 3, 'fitting'));
-  return shortNecked({
-    n, k,
-    // Deep in the belly: the middle of the trunk let down, round at the rump and the chest.
-    body: { y: [-2.45, -2.3, -2.05, -1.1, 0, 1.1, 1.9, 2.15, 2.35], z: [0.3, 0.25, 0.25, 0.2, 0.1, 0.25, 0.45, 0.45, 0.42], w: [0.3, 0.9, 1.2, 1.5, 1.6, 1.55, 1.3, 1.0, 0.4], h: [0.3, 0.8, 1.02, 1.3, 1.45, 1.35, 1.1, 0.85, 0.35] },
-    neck: { w: 0.9, h: 0.9, len: 1.1 },
-    head: { c: H.c, r: H.r, face: muzzle, eye: { dir: [0.8, 0.52, 0.2], size: 0.34, rim: 0.12 }, blush: [[0.84, 0.42, -0.35], 0.24] },
-    ear: earMesh(0.55, 0.34, n),
-    tail: tuftTail(n),
-    fore: { upper: [0.35, -0.9, 0.46, 0.36], lower: [0, -0.8, 0.32, 0.3], foot: hoofMesh(0.34, 0.2, n) },
-    hind: { upper: [0.35, -0.95, 0.52, 0.38], lower: [0, -0.95, 0.32, 0.3], foot: hoofMesh(0.34, 0.2, n) },
-    extras: [
-      { key: 'clouds', mesh: clouds, bone: 'trunk', bias: 0.01, after: 'body', lines: false, sheen: 'glint' },
-      { key: 'horns', mesh: merge(horns, crown), bone: 'head', bias: 0.25, after: ['head', 'ear0', 'ear1'] },
-      { key: 'bell', mesh: bell, bone: 'neck', bias: 0.19, after: 'neck', under: 'head' },
-    ],
-  });
-}
-
-export const CUDDA: Kind = {
-  bones: quadBonesOf(CUDDA_SPEC, plod),
-  build: cuddaBuild,
-  // Its clouds a cool white, a sky's rather than a fleece's, so they stand off a cream coat; a grey cudda a dove's grey.
-  palette: (coat, mark) => {
-    const grey = greyFor(coat, 24, 250);
-    return coatPalette(lit(coat, grey), mark, { spot: mix(lighter(pastel(mark), 0.55), [236, 244, 255], 0.6), inner: [240, 176, 184], nose: [196, 110, 126], horn: [244, 232, 206], bloom: [250, 222, 120], petal: [246, 176, 204], fitting: [232, 192, 104] }, grey);
-  },
-  shadow: [2.8, 1.8],
-  stride: 0.8,
-  size: 2.1,
-};
 
 /* ---- the bura ------------------------------------------------------------------------ */
 

@@ -8,7 +8,8 @@ import { SKYLOOKLET, SKYRANGE, SKYWARDEN } from './wild-sky';
 import { DRAGON } from './wild-dragon';
 import { DIRTLET, EARTHREND, TUNNELCLAW } from './wild-badger';
 import { FERRODRILL, IRONEMOLE, OREMANDER } from './wild-iron';
-import { BURA, CUDDA, GORRAL, SHAGGAN } from './wild-herd';
+import { BURA, GORRAL, SHAGGAN } from './wild-herd';
+import { CREAMCALF, LACTISOVEREIGN, MILKMERE } from './wild-cow';
 import { ARBORCREST, PIPSEED, SPRIGWING } from './wild-pip';
 import { CARTLING, HAULHORN, WAGONOX } from './wild-haul';
 import { BUNNYCOURSER, HARE_TACKED, HARE_TUCK, hareGrip, hareSeat, MOONHARE, THISTLEKIT } from './wild-hare';
@@ -95,7 +96,7 @@ export const WILDERMON: Record<string, Kind> = {
   snout: DIRTLET,
   roxxen: CARTLING,
   orse: THISTLEKIT,
-  cudda: CUDDA,
+  cudda: CREAMCALF,
   bura: BURA,
   gorral: GORRAL,
   shaggan: SHAGGAN,
@@ -232,6 +233,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   snedda: [CANOPYSHAPER, GROVEMASTER],
   tanna: [PELTIPEDE, HIDEWEAVER],
   dulla: [MOSSSHEAR, MOSSREAVER],
+  cudda: [MILKMERE, LACTISOVEREIGN],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

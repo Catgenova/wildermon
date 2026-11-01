@@ -6,6 +6,7 @@ import { CALICO_VOICE } from './voice-calico';
 import { CAPY_VOICE } from './voice-capy';
 import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
+import { COW_VOICE } from './voice-cow';
 import { CLAY_VOICE } from './voice-clay';
 import { CLAYROLL_VOICE } from './voice-clayroll';
 import { CRAG_VOICE } from './voice-crag';
@@ -184,4 +185,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   tanna: PELT_VOICE,
   // The Mossnib, the Mossshear and the Mossreaver.
   dulla: MOSS_VOICE,
+  // The Creamcalf, the Milkmere and the Lactisovereign.
+  cudda: COW_VOICE,
 };

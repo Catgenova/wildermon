@@ -19,7 +19,7 @@ import { execFileSync } from 'node:child_process';
 import { packLand, packWorld, unpack } from '../../src/game/save';
 import { Game } from '../../src/game/game';
 import { BUTCHER_PARTS } from '../../src/game/butcher';
-import { attackOf, bloodMul, EVOLVE_AT, kindName, levelSkill, maxHealth, SPECIES, STAGE_MUL, stageOf, type Creature } from '../../src/game/creatures';
+import { attackOf, bloodMul, EVOLVE_AT, kindName, levelSkill, maxHealth, SPECIES, STAGE_MUL, STAGE_PERKS, stageOf, type Creature } from '../../src/game/creatures';
 
 /** A kind that does not evolve, and the skill it levels by: the first with no stages that levels at all. */
 const STILL = Object.values(SPECIES).find((d) => !d.stages && !d.monster && levelSkill(d))!;
@@ -67,6 +67,7 @@ begin
   insert into said select 'IRONEMOLE', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Mola')).id from species_def where id = 'mola';
   insert into said select 'SPORELING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Vola')).id from species_def where id = 'vola';
   insert into said select 'CLOUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Woola')).id from species_def where id = 'woola';
+  insert into said select 'CREAMCALF', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Cudda')).id from species_def where id = 'cudda';
   insert into said select 'PIGROOT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Seavic')).id from species_def where id = 'seavic';
   insert into said select 'MUDCUT', string_agg(b.item || ':' || sb.n, ',' order by b.ord) from butcher_part b join species_butcher sb on sb.part = b.part where sb.species = 'noot';
   insert into said select 'SAPGNAW', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Bevere')).id from species_def where id = 'bevere';
@@ -120,6 +121,14 @@ begin
   update creature set traits = '{}', rare = null, skills = jsonb_build_object('animal_husbandry', ${AT2}) where world_id = w and id = v;
   select * into c from creature where world_id = w and id = v;
   insert into said values ('FLEECE', stage_of(c) || '|' || round(beast_mul(c, 'grow')::numeric, 4));
+  -- A Lactisovereign dam's chance of twins, its line's own skill, against a Milkmere's.
+  for i in 0..1 loop
+    v := creature_spawn(w, 'cudda', 20, 16.5, 'deed', now() - interval '60 days', u);
+    update creature set traits = '{}', rare = null, skills = jsonb_build_object('animal_husbandry', case i when 0 then ${AT2} - 1 else ${AT2} end) where world_id = w and id = v;
+    select * into c from creature where world_id = w and id = v;
+    insert into said values ('TWINS' || i, stage_of(c) || '|' || round(twin_chance(0, c)::numeric, 4));
+    delete from creature where world_id = w and id = v;
+  end loop;
   -- Learning across the line: it says so, and is as full of health as it was.
   update creature set mode = 'active', skills = jsonb_build_object('foraging', ${AT1} - 0.0001), health = 10, name = '${SPECIES.rabba.name}' where world_id = w and id = a;
   for i in 1..50 loop
@@ -163,6 +172,17 @@ const cloud = SPECIES.woola;
 check('the Woola is the Cloudlet now, a Cloudram and a Cloudborne after, and an old Woola carcass is still one, on both sides',
   cloud.name === 'Cloudlet' && cloud.stages?.map((x) => x.name).join(',') === 'Cloudram,Cloudborne'
     && at('CLOUDLET') === 'Cloudlet|Cloudram,Cloudborne|Woola|woola', at('CLOUDLET'));
+const cow = SPECIES.cudda;
+check('the Cudda is the Creamcalf now, a Milkmere and a Lactisovereign after, and an old Cudda carcass is still one, on both sides',
+  cow.name === 'Creamcalf' && cow.stages?.map((x) => x.name).join(',') === 'Milkmere,Lactisovereign'
+    && at('CREAMCALF') === 'Creamcalf|Milkmere,Lactisovereign|Cudda|cudda', at('CREAMCALF'));
+{
+  // Its line's own skill: a dam's twin chance, its blood's `twins` at its third stage, the same on both sides.
+  const dam = (lv: number): Creature => ({ species: 'cudda', skills: { animal_husbandry: lv }, traits: [] } as unknown as Creature);
+  const here = [AT2 - 1, AT2].map((lv) => `${stageOf(dam(lv))}|${(Math.round((bloodMul(dam(lv), 'twins') - 1) * 1e4) / 1e4).toFixed(4)}`);
+  check(`a ${cow.stages![1].name} dam has twins one time in ${Math.round(1 / (STAGE_PERKS.cudda.n - 1))}, a ${cow.stages![0].name} never, on both sides`,
+    at('TWINS0') === here[0] && at('TWINS1') === here[1] && here[1] === `2|${(STAGE_PERKS.cudda.n - 1).toFixed(4)}`, `browser ${here.join(' / ')}, island ${at('TWINS0')} / ${at('TWINS1')}`);
+}
 const pig = SPECIES.seavic;
 check('the Seavic is the Pigroot now, a Plowhog and a Harvestusk after, and an old Seavic carcass is still one, on both sides',
   pig.name === 'Pigroot' && pig.stages?.map((x) => x.name).join(',') === 'Plowhog,Harvestusk'
