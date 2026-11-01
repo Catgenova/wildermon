@@ -47,8 +47,11 @@ interface Tusk { root: V3; mid: V3; tip: V3; r: number }
 
 interface Spiral {
   stage: 0 | 1 | 2;
-  /** The barrel's rings, rump to chest: where each is along it and up, how wide and how deep (halves). */
-  body: { y: number[]; z: number[]; w: number[]; h: number[] };
+  /**
+   * The barrel's rings, rump to chest: where each is along it and up, how wide and how deep (halves); and how high its back
+   * is domed over its shoulders, as a share of its depth (its rump slopes down to its tail by a set share).
+   */
+  body: { y: number[]; z: number[]; w: number[]; h: number[]; hump: number };
   fore: Leg;
   hind: Leg;
   neck: { at: V3; len: number; lean: number; w: number };
@@ -83,10 +86,10 @@ interface Spiral {
 /** A Spiralcalf: small and round under a shaggy cream coat, a big head with big ears, a short trunk in a tight spiral, short stout legs. */
 const SPIRALCALF_LOOK: Spiral = {
   stage: 0,
-  body: { y: [-0.42, -0.27, -0.14, 0, 0.16, 0.29, 0.43], z: [0.03, 0.04, 0.05, 0.06, 0.07, 0.07, 0.07], w: [0.06, 0.3, 0.32, 0.33, 0.32, 0.29, 0.1], h: [0.06, 0.3, 0.33, 0.33, 0.34, 0.31, 0.12] },
-  fore: { at: [0.17, 0.24, -0.1], len: [0.17, 0.15, 0.07], w: [0.145, 0.135, 0.145] },
-  hind: { at: [0.18, -0.25, -0.08], len: [0.18, 0.15, 0.07], w: [0.15, 0.135, 0.145] },
-  neck: { at: [0, 0.38, 0.14], len: 0.12, lean: 55, w: 0.24 },
+  body: { y: [-0.42, -0.27, -0.14, 0, 0.16, 0.29, 0.43], z: [0.03, 0.04, 0.05, 0.06, 0.07, 0.07, 0.07], w: [0.06, 0.32, 0.35, 0.36, 0.35, 0.31, 0.1], h: [0.06, 0.28, 0.31, 0.31, 0.32, 0.29, 0.12], hump: 0.1 },
+  fore: { at: [0.18, 0.24, -0.1], len: [0.14, 0.13, 0.07], w: [0.15, 0.13, 0.145] },
+  hind: { at: [0.17, -0.23, -0.08], len: [0.15, 0.13, 0.07], w: [0.155, 0.13, 0.145] },
+  neck: { at: [0, 0.36, 0.03], len: 0.12, lean: 70, w: 0.25 },
   skull: { c: [0, 0.04, 0.08], r: [0.27, 0.27, 0.28] },
   face: { c: [0, 0.2, -0.06], r: [0.17, 0.18, 0.17] },
   eye: { dir: [0.56, 0.78, 0.2], size: 0.05 },
@@ -108,10 +111,10 @@ const SPIRALCALF_LOOK: Spiral = {
 /** A Spiraltrunk: a bigger young mammoth, short tusks, a long trunk in a big spiral, a crested headpiece, bracers, moss and fern on its back. */
 const SPIRALTRUNK_LOOK: Spiral = {
   stage: 1,
-  body: { y: [-0.76, -0.5, -0.28, 0, 0.3, 0.52, 0.72], z: [0.02, 0.05, 0.08, 0.1, 0.13, 0.14, 0.14], w: [0.08, 0.45, 0.49, 0.5, 0.49, 0.45, 0.14], h: [0.08, 0.48, 0.52, 0.53, 0.55, 0.51, 0.18] },
-  fore: { at: [0.28, 0.4, -0.2], len: [0.27, 0.24, 0.09], w: [0.23, 0.21, 0.22] },
-  hind: { at: [0.29, -0.42, -0.18], len: [0.28, 0.24, 0.09], w: [0.24, 0.21, 0.22] },
-  neck: { at: [0, 0.64, 0.2], len: 0.14, lean: 60, w: 0.34 },
+  body: { y: [-0.76, -0.5, -0.28, 0, 0.3, 0.52, 0.72], z: [0.02, 0.05, 0.08, 0.1, 0.13, 0.14, 0.14], w: [0.08, 0.48, 0.53, 0.55, 0.54, 0.48, 0.14], h: [0.08, 0.45, 0.49, 0.5, 0.52, 0.49, 0.18], hump: 0.16 },
+  fore: { at: [0.25, 0.4, -0.2], len: [0.27, 0.24, 0.09], w: [0.23, 0.21, 0.22] },
+  hind: { at: [0.25, -0.38, -0.18], len: [0.28, 0.24, 0.09], w: [0.24, 0.21, 0.22] },
+  neck: { at: [0, 0.6, 0.08], len: 0.16, lean: 72, w: 0.36 },
   skull: { c: [0, 0.04, 0.1], r: [0.3, 0.3, 0.31] },
   face: { c: [0, 0.22, -0.08], r: [0.2, 0.2, 0.2] },
   eye: { dir: [0.6, 0.74, 0.22], size: 0.05 },
@@ -121,7 +124,7 @@ const SPIRALTRUNK_LOOK: Spiral = {
   coat: false,
   crown: 1,
   armour: 1,
-  moss: { from: 0.1, to: 1.0, wide: 0.85, deep: 0.1, rows: 9, ferns: 6 },
+  moss: { from: 0.1, to: 1.0, wide: 0.85, deep: 0.1, rows: 12, ferns: 6 },
   logs: null,
   mark: { y: -0.4, th: 0.1, r: 0.2 },
   tail: { links: 3, len: 0.12, w: 0.04, tuft: 0.08 },
@@ -133,15 +136,15 @@ const SPIRALTRUNK_LOOK: Spiral = {
 /** A Spiralphant: huge, logs strapped on its back under moss, a great helm, long tusks and a second pair, heavy plates. */
 const SPIRALPHANT_LOOK: Spiral = {
   stage: 2,
-  body: { y: [-1.12, -0.78, -0.42, 0, 0.46, 0.78, 1.08], z: [0.06, 0.1, 0.15, 0.2, 0.26, 0.28, 0.28], w: [0.1, 0.7, 0.76, 0.78, 0.78, 0.71, 0.2], h: [0.1, 0.72, 0.78, 0.8, 0.84, 0.77, 0.26] },
-  fore: { at: [0.46, 0.6, -0.3], len: [0.42, 0.36, 0.13], w: [0.4, 0.36, 0.38] },
-  hind: { at: [0.48, -0.62, -0.28], len: [0.43, 0.36, 0.13], w: [0.41, 0.36, 0.38] },
-  neck: { at: [0, 1.02, 0.34], len: 0.18, lean: 55, w: 0.46 },
+  body: { y: [-1.12, -0.78, -0.42, 0, 0.46, 0.78, 1.08], z: [0.06, 0.1, 0.15, 0.2, 0.26, 0.28, 0.28], w: [0.1, 0.74, 0.82, 0.85, 0.85, 0.76, 0.2], h: [0.1, 0.68, 0.74, 0.76, 0.8, 0.74, 0.26], hump: 0.16 },
+  fore: { at: [0.4, 0.6, -0.3], len: [0.42, 0.36, 0.13], w: [0.4, 0.36, 0.38] },
+  hind: { at: [0.38, -0.56, -0.28], len: [0.43, 0.36, 0.13], w: [0.41, 0.36, 0.38] },
+  neck: { at: [0, 0.95, 0.2], len: 0.2, lean: 72, w: 0.5 },
   skull: { c: [0, 0.04, 0.16], r: [0.52, 0.52, 0.54] },
   face: { c: [0, 0.34, -0.12], r: [0.31, 0.31, 0.31] },
   eye: { dir: [0.62, 0.72, 0.24], size: 0.06 },
   ear: { dir: [0.88, -0.22, 0.3], len: 1.05, w: 0.86, out: 38 },
-  trunk: { root: [0, 0.56, -0.24], phi: -5, segs: 14, len: 0.34, ratio: 0.9, w: [0.28, 0.08], curl: 450, hook: 0.17 },
+  trunk: { root: [0, 0.6, -0.26], phi: 12, segs: 14, len: 0.36, ratio: 0.9, w: [0.28, 0.08], curl: 420, hook: 0.17 },
   tusks: [
     { root: [0.24, 0.44, -0.3], mid: [0.56, 1.0, -0.95], tip: [0.52, 1.45, -0.42], r: 0.085 },
     { root: [0.28, 0.34, -0.36], mid: [0.5, 0.62, -0.8], tip: [0.52, 0.8, -1.02], r: 0.05 },
@@ -149,7 +152,7 @@ const SPIRALPHANT_LOOK: Spiral = {
   coat: false,
   crown: 2,
   armour: 2,
-  moss: { from: 0.05, to: 1.0, wide: 1.0, deep: 0.13, rows: 11, ferns: 8 },
+  moss: { from: 0.05, to: 1.0, wide: 1.0, deep: 0.13, rows: 14, ferns: 8 },
   logs: { r: 0.3, len: 1.3 },
   mark: { y: -0.6, th: 0.1, r: 0.26 },
   tail: { links: 4, len: 0.15, w: 0.055, tuft: 0.11 },
@@ -231,14 +234,21 @@ function ringAt(s: Spiral, y: number): { z: number; w: number; h: number } {
   }
   return { z: B.z[n], w: B.w[n], h: B.h[n] };
 }
-/** A point on the barrel at `y` along it and `th` round it (nought at the right waist, a quarter turn the top), and the way out of it. */
+/**
+ * A point on the barrel at `y` along it and `th` round it (nought at the right waist, a quarter turn the top): its top domed up
+ * over its shoulders and let down over its rump, its lower half a little wider than its upper, as an elephant's belly is.
+ */
+function surf(s: Spiral, y: number, th: number): V3 {
+  const R = ringAt(s, y), B = s.body, n = B.y.length - 2;
+  const u = clamp((y - B.y[1]) / (B.y[n] - B.y[1]));
+  const sn = Math.sin(th);
+  const up = sn > 0 ? 1 + B.hump * Math.exp(-(((u - 0.8) / 0.26) ** 2)) - 0.12 * smooth(1 - u / 0.4) : 1;
+  return [R.w * Math.cos(th) * (1 + 0.1 * Math.max(0, -sn)), y, R.z + R.h * sn * up];
+}
+/** A point on the barrel and the way out of it there, `out` off it. */
 function onBody(s: Spiral, y: number, th: number, out = 0): { p: V3; n: V3 } {
-  const R = ringAt(s, y), e = 0.01;
-  const a = ringAt(s, y - e), b = ringAt(s, y + e);
-  const p: V3 = [R.w * Math.cos(th), y, R.z + R.h * Math.sin(th)];
-  // The slope along it, from the rings either side.
-  const dy: V3 = [(b.w - a.w) * Math.cos(th), 2 * e, b.z - a.z + (b.h - a.h) * Math.sin(th)];
-  const dth: V3 = [-R.w * Math.sin(th), 0, R.h * Math.cos(th)];
+  const e = 0.004, p = surf(s, y, th);
+  const dy = sub(surf(s, y + e, th), surf(s, y - e, th)), dth = sub(surf(s, y, th + e), surf(s, y, th - e));
   let n = unit(cross(dth, dy));
   if (dot(n, [Math.cos(th), 0, Math.sin(th)]) < 0) n = scale(n, -1);
   return { p: add(p, scale(n, out)), n };
@@ -540,10 +550,17 @@ function spiralBones(s: Spiral): (a: Anim) => Bones {
 
 /** The barrel, grey. */
 function bodyMesh(s: Spiral, n: number): Mesh {
-  // Its rings closer together toward its ends, where it rounds off.
-  const Y = s.body.y, ys = Array.from({ length: 17 }, (_, q) => lerp(Y[0], Y[Y.length - 1], 0.5 - 0.5 * Math.cos((Math.PI * q) / 16)));
-  const R = ys.map((y) => ringAt(s, y));
-  return tube(ys.map((y, q) => [0, y, R[q].z] as V3), R.map((r) => r.w), R.map((r) => r.h), n, 'coat');
+  // Its rings closer together toward its ends, where it rounds off; round each, from under its belly up and over.
+  const Y = s.body.y, rows = 22, ys = Array.from({ length: rows + 1 }, (_, q) => lerp(Y[0], Y[Y.length - 1], 0.5 - 0.5 * Math.cos((Math.PI * q) / rows)));
+  const ths = Array.from({ length: n + 1 }, (_, c) => -Math.PI / 2 + (c / n) * TAU);
+  const grid = ys.map((y) => ths.map((th) => surf(s, y, th)));
+  const side = sheet(grid, () => 'coat', (r, c) => onBody(s, (ys[r] + ys[r + 1]) / 2, (ths[c] + ths[c + 1]) / 2).n);
+  // Its two ends closed.
+  const caps = [0, rows].map((r) => {
+    const v = grid[r].slice(0, n), want: V3 = [0, r ? 1 : -1, 0];
+    return mesh(v, wound(v, [{ i: v.map((_, k) => k), m: 'coat' }], [want]));
+  });
+  return merge(side, ...caps);
 }
 
 /** A swirl painted on a surface about `c`, facing `nn`, `R` across: a curl of a turn and a half from its middle out, cream. */
@@ -591,14 +608,14 @@ function lock(root: V3, dir: V3, face: V3, L: number, W: number, mat: Mat = 'mar
  * spine behind its head, and a bib under its chin.
  */
 function coatMesh(s: Spiral, fine: boolean): Mesh {
-  const Y0 = alongBody(s, -0.05), Y1 = s.body.y[s.body.y.length - 2] + 0.03;
+  const Y0 = alongBody(s, 0.12), Y1 = s.body.y[s.body.y.length - 2] + 0.03;
   const rows = fine ? 16 : 10, cols = fine ? 12 : 8;
   // How far down its flanks the coat comes along it: to below the waist at the shoulder, only the top at the rump.
-  const lo = (u: number): number => lerp(0.5, -0.5, smooth(u * 1.4));
+  const lo = (u: number): number => lerp(0.8, -0.55, smooth(u * 1.35));
   const H = s.body.h[3], thick = H * 0.09;
   const shag = (r: number, c: number): number => thick * (0.8 + 0.4 * jitter(r * 31 + c));
   // The hem's tufts, a point at every other row, and the back edge's, a point at every other column.
-  const hem = (r: number): number => (r % 2 ? 0.42 : 0.08) * (0.8 + 0.4 * jitter(r * 3 + 1));
+  const hem = (r: number): number => (r % 2 ? 0.55 : 0.1) * (0.75 + 0.5 * jitter(r * 3 + 1));
   const tail = (c: number): number => (c % 2 ? 0.2 : 0.03) * H * (0.8 + 0.4 * jitter(c * 5 + 2));
   const ths = (u: number, r: number): number[] => {
     const l = lo(u), hm = hem(r);
@@ -680,22 +697,22 @@ function mossMesh(s: Spiral, fine: boolean): Mesh {
       const u = lerp(M.from, M.to, k + (jitter(id) - 0.5) * 0.6 / M.rows);
       const side = x * M.wide * (0.8 + 0.25 * jitter(id + 1)) + (q % 2 ? 0.06 : -0.06);
       const at = onBody(s, alongBody(s, u), Math.PI / 2 - side, -M.deep * 0.25);
-      const R = M.deep * (0.85 + 0.35 * jitter(id + 2)) * (1 - 0.25 * Math.abs(x));
+      const R = M.deep * (0.6 + 0.25 * jitter(id + 2)) * (1 - 0.25 * Math.abs(x));
       out.push(cushion(at.p, at.n, R, id, fine));
     });
   }
-  // Fern leaves off the edges of the moss, out over its sides and up.
-  for (let q = 0; q < M.ferns; q++) {
+  // Fern fronds off the edge of the moss, drooping down over its sides and its shoulders, two to a step, long and short.
+  for (let q = 0; q < M.ferns * 2; q++) {
     for (const sd of [1, -1]) {
       const id = 300 + q * 5 + (sd > 0 ? 0 : 2);
-      const u = lerp(M.from + 0.05, M.to - 0.02, (q + 0.3 + 0.4 * jitter(id)) / M.ferns);
-      const th = sd > 0 ? Math.PI / 2 - M.wide * 1.05 : Math.PI / 2 + M.wide * 1.05;
-      const at = onBody(s, alongBody(s, u), th, 0.0);
-      const droop = s.stage === 2 ? 0.8 : 0.35 + 0.4 * jitter(id + 7);
-      const out1 = unit(add(scale(at.n, 1), [0, (jitter(id + 1) - 0.6) * 0.8, -droop]));
-      const L = s.body.h[3] * (s.stage === 2 ? 0.5 : 0.42) * (0.75 + 0.4 * jitter(id + 3));
-      const face = unit(cross(out1, [0, 1, 0]));
-      out.push(fern(at.p, out1, dot(face, [0, 0, 1]) < 0 ? scale(face, -1) : face, L, L * 0.24, fine, id));
+      const u = lerp(M.from + 0.04, M.to, (q + 0.2 + 0.6 * jitter(id)) / (M.ferns * 2));
+      const y = alongBody(s, u), th = sd > 0 ? Math.PI / 2 - M.wide * 0.95 : Math.PI / 2 + M.wide * 0.95;
+      const at = onBody(s, y, th, M.deep * 0.15);
+      // Down the side along its surface, a little out from it and back or forward by turns.
+      const down = unit(sub(onBody(s, y, th + (sd > 0 ? -0.2 : 0.2)).p, onBody(s, y, th).p));
+      const dir = unit(add(add(down, scale(at.n, 0.25)), [0, (jitter(id + 1) - 0.5) * 0.5, 0]));
+      const L = s.body.h[3] * (s.stage === 2 ? 0.5 : 0.44) * (q % 2 ? 0.7 : 1) * (0.85 + 0.3 * jitter(id + 3));
+      out.push(fern(at.p, dir, at.n, L, L * 0.26, fine, id, 0.12));
     }
   }
   // Brown spikes standing up along its spine out of the moss, swept back.
@@ -709,13 +726,13 @@ function mossMesh(s: Spiral, fine: boolean): Mesh {
 }
 
 /** A fern leaf from `root` along `dir`, its face toward `face`: a stem with leaflets either side, darker at its root, bright to its tip. */
-function fern(root: V3, dir: V3, face: V3, L: number, W: number, fine: boolean, id: number): Mesh {
+function fern(root: V3, dir: V3, face: V3, L: number, W: number, fine: boolean, id: number, curl = -0.2): Mesh {
   const d = unit(dir);
   const N = fine ? 9 : 5;
   const pts: V3[] = [], ws: number[] = [];
   for (let q = 0; q <= N; q++) {
     const k = q / N;
-    pts.push(add(add(root, scale(d, L * k)), scale(face, -L * 0.2 * k * k)));
+    pts.push(add(add(root, scale(d, L * k)), scale(face, L * curl * k * k)));
     ws.push(q === N ? 0.003 : W * Math.sin(Math.PI * Math.min(1, 0.12 + k * 0.92)) * (q % 2 ? 1 : 0.6));
   }
   const half = Math.floor(N / 3);
@@ -751,7 +768,8 @@ function plateOn(s: Spiral, y0: number, y1: number, th0: number, th1: number, li
   const m = sheet(grid, (r, c) => (trimmedAt(r) || trimmedAt(c) ? 'fitting' : 'wood'), (r, c) => onBody(s, lerp(y0, y1, TRIMMED[c]), thOf(r, c)).n);
   if (!swirlR) return m;
   const mid = onBody(s, (y0 + y1) / 2, thOf(3, 3), lift * 1.8 + 0.006);
-  return merge(m, paint(swirl(mid.p, mid.n, [0, 0, 1], swirlR, swirlR * 0.13, right ? 1 : -1, 'woodDark')));
+  // Cream, as the swirl on its haunch, edged in dark wood so it stands off the pale plate.
+  return merge(m, paint([...swirl(mid.p, mid.n, [0, 0, 1], swirlR, swirlR * 0.2, right ? 1 : -1, 'woodDark'), ...swirl(add(mid.p, scale(mid.n, 0.004)), mid.n, [0, 0, 1], swirlR, swirlR * 0.12, right ? 1 : -1, 'mark')]));
 }
 
 /** Its armour on the body: plates over its shoulders, and on the Spiralphant over its flanks too. */
@@ -763,7 +781,7 @@ function armourMesh(s: Spiral): Mesh {
     const T = (a: number): number => (right ? a : Math.PI - a);
     // The shoulder: over the fore leg, from high on its side down to a point over the elbow.
     const lo = T(big ? -0.2 : 0.0), hi = T(big ? 1.0 : 1.0);
-    out.push(plateOn(s, Yf - H * (big ? 0.95 : 0.7), Yf + 0.04, Math.min(lo, hi), Math.max(lo, hi), lift, 0.45, big ? H * 0.2 : 0, right));
+    out.push(plateOn(s, Yf - H * (big ? 0.95 : 0.7), Yf + 0.04, Math.min(lo, hi), Math.max(lo, hi), lift, 0.45, big ? H * 0.26 : 0, right));
     if (big) {
       // The flank, over its ribs, and the haunch above its spiral.
       const f0 = T(-0.3), f1 = T(0.7);
@@ -811,17 +829,15 @@ function kneePlate(r: number, z0: number, z1: number, wide: number): Mesh {
   return sheet(grid, (q, j) => (trimmedAt(q) || trimmedAt(j) ? 'fitting' : 'wood'), (_q, j) => { const a = Math.PI / 2 + lerp(-wide, wide, TRIMMED[j]); return [Math.cos(a), Math.sin(a), 0]; });
 }
 
-/** A column of a leg: the upper, grey; the lower, grey or the calf's cream with a ruff of locks at the knee; bracers on the bigger two. */
+/** A column of a leg, grey: the calf's with a shaggy cream fringe over its foot; plates and bracers on the bigger two. */
 function legMeshes(s: Spiral, L: Leg, fore: boolean, n: number): { upper: Mesh; lower: Mesh; foot: Mesh } {
   const [u, l, f] = L.len, [wu, wl, wf] = L.w;
-  // The calf's fore legs cream all the way down, its hind legs grey to the hock.
-  const upper = tube([[0, 0, 0.12], [0, 0, -u * 0.5], [0, 0, -u - wl * 0.3]], [wu * 1.1, wu, wl * 1.05], [wu * 1.1, wu, wl * 1.05], n, s.coat && fore ? 'mark' : 'coat', { seam: 'both' });
-  const shin = tube([[0, 0, wl * 0.6], [0, 0, -l * 0.5], [0, 0.005, -l - 0.01]], [wl, wl * 0.97, wf * 0.98], [wl, wl * 0.97, wf * 0.98], n, s.coat ? 'mark' : 'coat', { seam: 'both' });
+  // A column, widest where it goes up into the body, narrowing to the knee and down the shin, out again at the foot.
+  const uw = [wu * 1.16, wu * 1.12, wu * 1.0, wl * 1.04], lw = [wl * 1.02, wl * 0.94, wl * 0.92, wf * 0.98];
+  // Its top a round mass of thigh or shoulder going up into the body, so where it shows past the barrel it is round.
+  const upper = merge(tube([[0, 0, 0.0], [0, 0, -u * 0.25], [0, 0, -u * 0.6], [0, 0, -u - wl * 0.3]], uw, uw, n, 'coat', { seam: 'both' }), orb([0, 0, -u * 0.05], [wu * 1.16, wu * 1.16, wu * 1.3], n, 4, 'coat'));
+  const shin = tube([[0, 0, wl * 0.6], [0, 0, -l * 0.35], [0, 0.004, -l * 0.75], [0, 0.005, -l - 0.01]], lw, lw, n, 'coat', { seam: 'both' });
   const parts: Mesh[] = [shin];
-  if (s.coat && !fore) {
-    // A ruff of cream fur round the hock, hanging in tufts over the shin.
-    parts.push(cuff([0, 0, 0], wl, wl * 0.3, l * 0.32, 6));
-  }
   if (s.armour) {
     const r = wl, big = s.armour === 2;
     // A plate over the knee, moss under its point, and a band round the shin below it.
@@ -829,16 +845,16 @@ function legMeshes(s: Spiral, L: Leg, fore: boolean, n: number): { upper: Mesh; 
     parts.push(bracer(r, -l * 0.42, -l * (big ? 0.76 : 0.7), r * 0.45, n + 2, big));
     parts.push(cushion([0, r * 1.14, -l * 0.36], [0, 1, 0.2], r * 0.36, 61, false), cushion([r * 0.95, r * 0.55, -l * 0.38], [1, 0.4, 0.2], r * 0.3, 63, false));
   }
-  // The foot: a round pad, a little wider at the ground, cream toenails round its front; the calf's in a fringe of cream locks.
-  const foot = tube([[0, 0.01, 0.02], [0, 0.015, -f * 0.6], [0, 0.02, -f]], [wf, wf * 1.06, wf * 1.08], [wf, wf * 1.06, wf * 1.08], n, s.coat ? 'mark' : 'coat', { seam: 'start' });
+  // The foot: a round pad spread wider at the ground, cream toenails round its front; the calf's in a shaggy fringe of cream.
+  const foot = tube([[0, 0.01, 0.02], [0, 0.015, -f * 0.55], [0, 0.02, -f]], [wf, wf * 1.1, wf * 1.16], [wf, wf * 1.1, wf * 1.16], n, 'coat', { seam: 'start' });
   const nails: Mesh[] = [];
   for (const a of [-0.6, 0, 0.6]) {
     const d: V3 = [Math.sin(a), Math.cos(a), 0];
-    nails.push(orbAlong(add(scale(d, wf * 1.0), [0, 0.01, -f * 0.62]), d, [wf * 0.36, wf * 0.28, wf * 0.24], 6, 3, 'claw'));
+    nails.push(orbAlong(add(scale(d, wf * 1.1), [0, 0.01, -f * 0.66]), d, [wf * 0.36, wf * 0.28, wf * 0.24], 6, 3, 'claw'));
   }
   if (s.armour === 2) nails.push(bracer(wf * 0.98, f * 1.4, f * 0.1, wf * 0.3, n + 2, false));
   // The calf's in a fringe of cream fur.
-  if (s.coat) nails.push(cuff([0, 0.01, 0], wf * 0.96, f * 1.2, f * 1.0, 7));
+  if (s.coat) nails.push(cuff([0, 0.01, 0], wf * 0.98, f * 1.9, f * 1.6, 8));
   return { upper, lower: merge(...parts), foot: merge(foot, ...nails) };
 }
 
@@ -914,27 +930,20 @@ function spike(at: V3, d: V3, len: number, r: number, n: number): Mesh {
 function crownMesh(s: Spiral, n: number, fine: boolean): Mesh {
   const S = s.skull, out: Mesh[] = [];
   if (s.crown === 0) {
-    // A cap of cream shag over its crown, its edge cut in tufts, and a forelock over its brow.
-    const R: V3 = scale(S.r, 1.08);
-    const cap = orb(S.c, R, n + 8, 8, 'mark');
-    const kept: Face[] = [];
-    for (const f of cap.f) {
-      const mid = scale(f.i.reduce((t, i) => add(t, cap.v[i]), [0, 0, 0] as V3), 1 / f.i.length);
-      const d: V3 = [(mid[0] - S.c[0]) / R[0], (mid[1] - S.c[1]) / R[1], (mid[2] - S.c[2]) / R[2]];
-      const az = Math.atan2(d[1], d[0]), tuft = Math.floor(((az + Math.PI) / TAU) * 16) % 2;
-      // Lower behind, over the nape, than over its brow.
-      if (d[2] > 0.66 + 0.12 * d[1] - 0.14 * tuft) kept.push(f);
+    // A tuft of cream shag on its crown; its head grey under it.
+    const R: V3 = scale(S.r, 1.04);
+    const top = onEgg(S.c, R, [0, 0.05, 1]);
+    out.push(orbAlong(add(top.p, scale(top.n, -S.r[2] * 0.05)), top.n, [S.r[0] * 0.42, S.r[1] * 0.4, S.r[2] * 0.22], n, 4, 'mark'));
+    // Soft puffs of it, swept back off the crown toward the nape.
+    for (let q = 0; q < 6; q++) {
+      const a = (q / 6) * TAU, e = onEgg(S.c, R, [Math.cos(a) * 0.32, -0.05 + Math.sin(a) * 0.32, 1]);
+      out.push(orbAlong(add(e.p, scale(e.n, S.r[2] * 0.05)), [Math.cos(a) * 0.4, -1, 0.5], [S.r[0] * 0.17, S.r[0] * 0.15, S.r[0] * (0.3 + 0.1 * jitter(q + 5))], 7, 3, 'mark'));
     }
-    out.push(mesh(cap.v.map((p) => add(p, scale(sub(p, S.c), 0.02 * jitter(p[0] * 91 + p[1] * 37)))), kept));
-    for (const x of [-0.25, 0.05, 0.3]) {
-      const e = onEgg(S.c, R, [x, 0.55, 0.8]);
-      out.push(lock(e.p, add(scale(e.n, 0.3), [x * 0.5, 0.4, -1]), e.n, S.r[2] * 0.4, S.r[0] * 0.26, 'mark', 0.15));
-    }
-    out.push(clumpOf(onEgg(S.c, R, [0.1, -0.2, 1]).p, [0.1, -0.3, 1], S.r[0] * 0.34, 11, fine ? 7 : 5, fine));
+    out.push(clumpOf(add(onEgg(S.c, R, [0.08, -0.15, 1]).p, [0, 0, S.r[2] * 0.12]), [0.1, -0.3, 1], S.r[0] * 0.3, 11, fine ? 7 : 5, fine));
     // Small brown spikes standing up out of it, swept back.
-    for (const [x, y, len] of [[0.2, 0.2, 0.42], [-0.22, 0.05, 0.36], [0.02, -0.25, 0.3]] as Array<[number, number, number]>) {
+    for (const [x, y, len] of [[0.16, 0.12, 0.42], [-0.18, 0.0, 0.36], [0.02, -0.22, 0.3]] as Array<[number, number, number]>) {
       const e = onEgg(S.c, S.r, [x, y, 1]);
-      out.push(spike(add(e.p, scale(e.n, S.r[2] * 0.08)), add(e.n, [x * 0.4, -0.45, 0.2]), S.r[2] * len, S.r[0] * 0.09, 6));
+      out.push(spike(add(e.p, scale(e.n, S.r[2] * 0.14)), add(e.n, [x * 0.4, -0.45, 0.2]), S.r[2] * len, S.r[0] * 0.09, 6));
     }
     return merge(...out);
   }
@@ -984,23 +993,24 @@ function crownMesh(s: Spiral, n: number, fine: boolean): Mesh {
 /** Two cut logs strapped along its back either side of its spine, under the moss, a band of wood over them and round under it. */
 function logsMesh(s: Spiral, n: number, fine: boolean): Mesh {
   const L = s.logs!, out: Mesh[] = [];
-  const y = alongBody(s, 0.55), top = ringAt(s, y);
-  for (const sd of [1, -1]) {
-    const x = sd * L.r * 1.02, z = top.z + top.h * 0.94 + L.r * 0.82 + (sd > 0 ? 0 : L.r * 0.15);
-    const id = sd > 0 ? 3 : 9;
-    out.push(logMesh(L.r, L.len, [x, y + sd * L.len * 0.06, z], n, fine, id));
-  }
-  // The straps: from high on one side over both logs and down to high on the other, lying on its back between.
-  const zc = top.z + top.h * 0.94 + L.r * 0.82;
-  for (const yy of [y - L.len * 0.24, y + L.len * 0.24]) {
+  // Two logs lying across its back, one behind the other, sunk a little into the moss; their cut ends out over its sides.
+  const y0 = alongBody(s, 0.5), ys = [y0 - L.r * 1.04, y0 + L.r * 1.04];
+  const zs = ys.map((y) => surf(s, y, Math.PI / 2)[2] + L.r * 0.6);
+  ys.forEach((y, q) => out.push(logMesh(L.r, L.len, [q ? L.len * 0.04 : -L.len * 0.04, y, zs[q]], n, fine, q ? 3 : 9, [1, 0, 0])));
+  // Two straps, front to back over both logs and down onto its back either side of them.
+  for (const x of [-L.len * 0.27, L.len * 0.27]) {
     const pts: V3[] = [];
-    for (let q = 0; q <= 16; q++) {
-      const p = onBody(s, yy, lerp(0.45, Math.PI - 0.45, q / 16), s.moss.deep * 0.6).p;
-      const dx = Math.abs(p[0]) - L.r * 1.02, over = L.r * 1.08;
-      const zl = Math.abs(dx) < over ? zc + Math.sqrt(over * over - dx * dx) : -Infinity;
-      pts.push([p[0], yy, Math.max(p[2], zl)]);
+    for (let q = 0; q <= 24; q++) {
+      const y = lerp(ys[0] - L.r * 2.2, ys[1] + L.r * 2.2, q / 24), Rg = ringAt(s, y);
+      const back = onBody(s, y, Math.acos(clamp(x / Math.max(1e-3, Rg.w), -1, 1)), s.moss.deep * 0.5).p;
+      let z = back[2];
+      ys.forEach((yc, k) => {
+        const dy = y - yc, over = L.r * 1.06;
+        if (Math.abs(dy) < over) z = Math.max(z, zs[k] + Math.sqrt(over * over - dy * dy));
+      });
+      pts.push([x, y, z]);
     }
-    out.push(tube(pts, L.r * 0.3, L.r * 0.07, 4, 'stem', { up: [0, 1, 0] }));
+    out.push(tube(pts, L.r * 0.3, L.r * 0.07, 4, 'stem', { up: [1, 0, 0] }));
   }
   return merge(...out);
 }
@@ -1051,7 +1061,7 @@ function spiralBuild(s: Spiral, lod: number): Piece[] {
   const pieces: Piece[] = [];
   const B = s.body;
   const bodySolid = { c: [0, (B.y[1] + B.y[5]) / 2, B.z[3]] as V3, r: [B.w[3] * 0.92, (B.y[5] - B.y[1]) * 0.5, B.h[3] * 0.9] as V3 };
-  pieces.push({ key: 'body', mesh: merge(bodyMesh(s, n + 4), haunchMarks(s)), bone: 'trunk', bias: 0, breathes: { c: [0, 0, 0], k: 0.03 } });
+  pieces.push({ key: 'body', mesh: merge(bodyMesh(s, n * 2 + 2), haunchMarks(s)), bone: 'trunk', bias: 0, breathes: { c: [0, 0, 0], k: 0.03 } });
   if (s.coat) pieces.push({ key: 'coat', mesh: coatMesh(s, fine), bone: 'trunk', bias: 0.01, after: 'body' });
   if (s.armour) pieces.push({ key: 'armour', mesh: armourMesh(s), bone: 'trunk', bias: 0.012, after: 'body' });
   pieces.push({ key: 'moss', mesh: mossMesh(s, fine), bone: 'trunk', bias: 0.02, after: s.coat ? ['body', 'coat'] : ['body', 'armour'], thin: true });
@@ -1084,7 +1094,7 @@ function spiralBuild(s: Spiral, lod: number): Piece[] {
     const front: V3 = [side * 0.7, fore ? 0.7 : -0.7, 0];
     const flip = (x: Mesh): Mesh => (side < 0 ? mirrored(x) : x);
     pieces.push(
-      { key: `${key}0`, mesh: m.upper, bone: `${key}0`, bias: 0.01, under: 'body', convex: true, hide: [bodySolid], hideIn: 'body' },
+      { key: `${key}0`, mesh: m.upper, bone: `${key}0`, bias: 0.01, under: 'body', hide: [bodySolid], hideIn: 'body' },
       { key: `${key}1`, mesh: flip(m.lower), bone: `${key}1`, bias: 0.02, after: 'body', front },
       { key: `${key}2`, mesh: flip(m.foot), bone: `${key}2`, bias: 0.03, after: ['body', `${key}1`], front },
     );
