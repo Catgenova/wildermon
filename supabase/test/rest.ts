@@ -58,6 +58,8 @@ const KINDS = Object.values(SPECIES).filter((d) => !d.monster).map((d) => d.id);
 const LEVELS = [10, AT1, AT2];
 /** A worker kind that does not evolve and is small (once the papra; it evolves now). */
 const SMALL = Object.values(SPECIES).find((d) => !d.stages && !d.monster && d.gathers && d.health < DEN_HEALTH[0])!.id;
+// And one that does not evolve with a medium bed's health.
+const MEDIUM = Object.values(SPECIES).find((d) => !d.stages && !d.monster && d.gathers && d.health >= DEN_HEALTH[0] && d.health < DEN_HEALTH[1])!.id;
 
 /* ---- on the island ----------------------------------------------------------------------------------------------- */
 
@@ -212,8 +214,8 @@ begin
   insert into said select 'STAGE2', phase || ',' || coalesce(bed::text, '-') || ',' || extract(epoch from until - leg_at) from creature where world_id = w and id = a;
   delete from creature where world_id = w and id = a;
 
-  -- A kind that does not evolve sleeps by its health: a Carra in the medium bed, a Papra in the small one.
-  ${[['carra', 'MEDIUM'], [SMALL, 'SMALL']].map(([sp, k]) => `
+  -- A kind that does not evolve sleeps by its health: one in the medium bed, one in the small.
+  ${[[MEDIUM, 'MEDIUM'], [SMALL, 'SMALL']].map(([sp, k]) => `
   a := creature_spawn(w, '${sp}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', carrying = null, worn = ${TIRE_GOES},
          phase = 'idle', from_x = ${T} + 0.5, from_y = ${T} + 0.5, to_x = ${T} + 0.5, to_y = ${T} + 0.5,
@@ -246,8 +248,8 @@ check(`the numbers are the same on both sides: ${TIRE_GOES} goes, ${REST_FOR} se
 check('a kind that evolves sleeps in the bed of its stage: small, medium, large',
   LEVELS.every((lv, i) => denClass({ species: 'sedra', skills: { foraging: lv } }) === i));
 check(`a kind that does not evolve sleeps by its health: under ${DEN_HEALTH[0]} small, under ${DEN_HEALTH[1]} medium, else large`,
-  denClass({ species: SMALL, skills: {} }) === 0 && denClass({ species: 'carra', skills: {} }) === 1 && denClass({ species: 'crakka', skills: {} }) === 2
-  && SPECIES[SMALL].health < DEN_HEALTH[0] && SPECIES.carra.health >= DEN_HEALTH[0] && SPECIES.carra.health < DEN_HEALTH[1] && SPECIES.crakka.health >= DEN_HEALTH[1]);
+  denClass({ species: SMALL, skills: {} }) === 0 && denClass({ species: MEDIUM, skills: {} }) === 1 && denClass({ species: 'crakka', skills: {} }) === 2
+  && SPECIES[SMALL].health < DEN_HEALTH[0] && SPECIES[MEDIUM].health >= DEN_HEALTH[0] && SPECIES[MEDIUM].health < DEN_HEALTH[1] && SPECIES.crakka.health >= DEN_HEALTH[1]);
 
 /* ---- on the island ----------------------------------------------------------------------------------------------- */
 
@@ -290,8 +292,8 @@ check('at its second stage the small bed is not its size and the medium one is',
   const [phase, bed, secs] = at('STAGE2').split(',');
   check('at its third, with no large bed, it rests where it stands', phase === 'rest' && bed === '-' && near(Number(secs), REST_FOR), at('STAGE2'));
 }
-check('a kind that does not evolve goes to the bed of its health: a Carra to the medium, a Papra to the small',
-  at('KIND_carra') === 'bed,den_medium' && at(`KIND_${SMALL}`) === 'bed,den_small', `${at('KIND_carra')} / ${at(`KIND_${SMALL}`)}`);
+check(`a kind that does not evolve goes to the bed of its health: a ${SPECIES[MEDIUM].name} to the medium, a ${SPECIES[SMALL].name} to the small`,
+  at(`KIND_${MEDIUM}`) === 'bed,den_medium' && at(`KIND_${SMALL}`) === 'bed,den_small', `${at(`KIND_${MEDIUM}`)} / ${at(`KIND_${SMALL}`)}`);
 
 /* ---- in the browser ---------------------------------------------------------------------------------------------- */
 
@@ -419,7 +421,7 @@ const walkTo = (c: Creature, f: PlacedFurniture): void => {
   check('and at its third, with no large bed, it rests where it stands', c.state === 'rest' && c.bed === undefined, `${c.state} ${c.bed}`);
   g.creatures.remove(c.id);
 }
-for (const [sp, f] of [['carra', medium], [SMALL, small]] as const) {
+for (const [sp, f] of [[MEDIUM, medium], [SMALL, small]] as const) {
   const c = tired(sp, {});
   step(c);
   check(`in the browser, a ${SPECIES[sp].name}, which does not evolve, goes to the ${f.kind === 'den_small' ? 'small' : 'medium'} bed by its health`, c.state === 'toBed' && c.bed === f.id, `${c.state} ${c.bed}`);
