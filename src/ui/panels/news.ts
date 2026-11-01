@@ -4227,6 +4227,7 @@ export const NEWS: News[] = [
     lines: () => {
       const d = SPECIES.dulla, [one, two] = d.stages!;
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('dulla')}.`,
+        `Changed: learning factor for cutting moss ${percent(PACE_258.moss)} (was 114%).`,
         'Each stage: own model, animations and voice.'];
     },
   },
