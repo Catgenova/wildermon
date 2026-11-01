@@ -17,7 +17,7 @@
  */
 
 import type { GatherKind } from './creatures';
-import { GLASS_RECIPES, STORE_RECIPES, LYE_RECIPES, smithLumps, STATION_TRADES } from './creatures';
+import { smithLumps, tradeRecipes } from './creatures';
 import { countOf, itemDef } from './items';
 import { RECIPE_BY_ID } from './recipes';
 import { SKEP_IDLE } from './bees';
@@ -97,16 +97,20 @@ const IDLE_SOURCE: Partial<Record<GatherKind, string>> = {
   kiln: 'kiln of yours with room for pottery, or with pottery to take out', ash: 'ashes to rake out',
   brew: 'barrel of water of yours with nothing working in it', cook: 'lit campfire or oven of yours',
   patch: 'planter of yours wanting work', paper: 'paper press of yours', spin: 'spindle of yours',
-  nail: 'anvil of yours', ribbon: 'anvil of yours', glass: 'lit smelter of yours',
+  nail: 'anvil of yours', ribbon: 'anvil of yours', glass: 'lit smelter of yours', moss: 'moss to cut',
+  vine: 'trellis of yours with no vine, at ground level on soil', lily: 'still water on your settlement for a water plant',
+  churn: 'butter churn of yours', alloy: 'lit smelter of yours', distil: 'lit campfire or oven of yours',
 };
 
 /** What it would do with what the stores do not hold: "nothing in your stores on the settlement to mend". */
 const IDLE_STOCK: Partial<Record<GatherKind, string>> = {
-  mend: 'mend', butcher: 'butcher', tan: 'tan', mill: 'mill', saw: 'saw', chisel: 'chisel', brick: 'shape', rope: 'lay up',
-  fletch: 'fletch', paper: 'press', glaze: 'glaze', restore: 'restore', brew: 'brew', cook: 'cook', smelt: 'smelt',
+  mend: 'mend', tan: 'tan', mill: 'mill', saw: 'saw', chisel: 'chisel', brick: 'shape', rope: 'lay up',
+  fletch: 'fletch', paper: 'press', restore: 'restore', brew: 'brew', cook: 'cook', smelt: 'smelt',
   kiln: 'fire', stoke: 'burn', plant: 'plant', hod: 'build with', fill: 'fill', lamp: 'put in a lantern', patch: 'sow',
   heal: 'dress a hurt with', dairy: 'milk into', ash: 'leach into lye', spin: 'spin', nail: 'smith into nails',
-  ribbon: 'smith into ribbons', glass: 'melt into glass',
+  ribbon: 'smith into ribbons', glass: 'melt into glass', vine: 'plant', lily: 'plant', concrete: 'mix into concrete',
+  mortar: 'mix into mortar', timber: 'saw into timbers', shaft: 'carve into shafts', bandage: 'make into a dressing or salve',
+  cheese: 'press into cheese', churn: 'churn', alloy: 'mix into an alloy', distil: 'distil',
 };
 
 /**
@@ -115,7 +119,8 @@ const IDLE_STOCK: Partial<Record<GatherKind, string>> = {
  */
 const IDLE_STOCK_THING: Partial<Record<GatherKind, string>> = {
   plant: 'a sprout', lamp: 'a candle', fill: 'an empty bucket', dairy: 'an empty bucket', patch: 'seed',
-  heal: 'a bandage or a cover', stoke: 'fuel', restore: 'every piece of one relic', glaze: 'a bare pot and the ash for its glaze',
+  heal: 'a bandage or a cover', stoke: 'fuel', restore: 'every piece of one relic', vine: 'a grape cutting',
+  lily: 'a water lily root or lotus seeds',
 };
 
 /** Where what it brings would go, and what it brings, for a trade whose work ends somewhere other than a store. */
@@ -132,7 +137,7 @@ const IDLE_ROOM: Partial<Record<GatherKind, readonly [string, string]>> = {
 function recipeWants(kind: GatherKind): string {
   const lumps = smithLumps(kind);
   if (lumps.length) return listedOr(lumps.map((id) => countOf(id, 1, true)));
-  const ids = STORE_RECIPES[kind] ?? STATION_TRADES[kind]?.recipes ?? (kind === 'ash' ? LYE_RECIPES : kind === 'glass' ? GLASS_RECIPES : []);
+  const ids = tradeRecipes(kind);
   const recipes = ids.map((id) => RECIPE_BY_ID.get(id)).filter((r) => !!r);
   const bill = (r: (typeof recipes)[number]): string => listed(r!.inputs.map((i) => countOf(i.item, i.count ?? 1, true)));
   return listedOr(recipes.map(bill));

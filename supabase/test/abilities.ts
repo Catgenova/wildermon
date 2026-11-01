@@ -2,10 +2,13 @@
  * Abilities on a cooldown.
  *
  * Asked for off a list of combat wildermon, each with an ability it uses on a
- * cooldown. This asks, of both sides, that each of the seventeen uses its
- * fighting trade's spell -- or a frost breath -- at that spell's numbers, the
- * first time it strikes and not again until its rest is out, and that a wild
- * one of its kind does not.
+ * cooldown. This asks, of both sides, that each of the nine that keep one uses
+ * its fighting trade's spell at that spell's numbers, the first time it
+ * strikes and not again until its rest is out, and that a wild one of its kind
+ * does not. The eight that took up a settlement task (What's new 405,
+ * `repurpose.ts`) have none: a crakka holds nothing, a whirla strikes only what
+ * it strikes, a scorcha burns nothing, a frosta slows nothing, a rootle, a
+ * dulla and a brittla put no mark on it, and a leecha gets nothing back.
  *
  * Runs against the database the suite leaves behind, in one transaction that
  * is rolled back.
@@ -13,7 +16,6 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { abilityFx, abilityRest, COMPANION_REACH, FROST_BREATH_REST, maxHealth, markOn, SPECIES, WARD_SKIN, type AbilityId, type Creature } from '../../src/game/creatures';
-import { FROST_PACE } from '../../src/game/enchant';
 import { CLASS_SPELL_BY_ID } from '../../src/game/talents';
 import { TileType } from '../../src/world/tiles';
 
@@ -38,11 +40,14 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 };
 
 const KINDS: Array<[string, AbilityId]> = [
-  ['lungra', 'beastmaster_pounce'], ['hamma', 'blade_hamstring'], ['crakka', 'berserker_skull_crack'], ['bashka', 'blade_shield_bash'],
-  ['executa', 'berserker_execute'], ['whirla', 'berserker_whirlwind'], ['scorcha', 'kindler_scorch'], ['frosta', 'frost_breath'],
-  ['rootle', 'binder_root'], ['dulla', 'binder_dull_claws'], ['brittla', 'binder_brittle'], ['shova', 'pikeman_keep_away'],
-  ['howla', 'blade_guardians_call'], ['marka', 'skirmisher_marked_for_death'], ['wardo', 'warder_ward'], ['stona', 'warder_stoneskin'],
-  ['leecha', 'chirurgeon_leech'],
+  ['lungra', 'beastmaster_pounce'], ['hamma', 'blade_hamstring'], ['bashka', 'blade_shield_bash'], ['executa', 'berserker_execute'],
+  ['shova', 'pikeman_keep_away'], ['howla', 'blade_guardians_call'], ['marka', 'skirmisher_marked_for_death'], ['wardo', 'warder_ward'],
+  ['stona', 'warder_stoneskin'],
+];
+/** The eight that had an ability until they took up a settlement task, and the ability each had. */
+const RETIRED: Array<[string, AbilityId]> = [
+  ['crakka', 'berserker_skull_crack'], ['whirla', 'berserker_whirlwind'], ['scorcha', 'kindler_scorch'], ['frosta', 'frost_breath'],
+  ['rootle', 'binder_root'], ['dulla', 'binder_dull_claws'], ['brittla', 'binder_brittle'], ['leecha', 'chirurgeon_leech'],
 ];
 const f = abilityFx;
 
@@ -77,7 +82,7 @@ begin
   perform rpc_join(w, 'Mira');
   update player set x = 14.5, y = 14.5, body_at = now(), swim_at = now() where world_id = w and uid = u;
   insert into said select 'AB:' || s.id, coalesce(s.ability, '-') || '|' || coalesce(ability_rest(s.ability)::text, '-')
-    from species_def s where s.id in (${KINDS.map(([id]) => `'${id}'`).join(', ')});
+    from species_def s where s.id in (${[...KINDS, ...RETIRED].map(([id]) => `'${id}'`).join(', ')});
 
   -- Lungra: three tiles off, a pounce.
   ${pair('lungra', 3)}
@@ -102,10 +107,11 @@ begin
   insert into said select 'HAMAGAIN', coalesce(slow::text, '-') from creature where world_id = w and id = t;
   ${tidy}
 
-  -- Crakka: held.
+  -- Crakka: nothing held.
   ${pair('crakka')}
   perform creature_attack(w, a, t);
   ${mark('HOLD', 'hold')}
+  ${ready('HOLDREADY')}
   ${tidy}
 
   -- Bashka: its next blow put back.
@@ -124,7 +130,7 @@ begin
   ${ready('EXECLOW')}
   ${tidy}
 
-  -- Whirla: two beside it, one further off.
+  -- Whirla: two beside it, one further off; only the one it strikes is struck.
   ${pair('whirla')}
   t2 := creature_spawn(w, 'ulva', 16.5, 17.5, 'wild', now() - interval '60 days', null);
   t3 := creature_spawn(w, 'ulva', 16.5 + ${f('berserker_whirlwind', 'reach')} + 2, 16.5, 'wild', now() - interval '60 days', null);
@@ -133,21 +139,21 @@ begin
   insert into said select 'WHIRL', string_agg((health < 5000)::text, ',' order by id) from creature where world_id = w and id in (t, t2, t3);
   ${tidy}
 
-  -- Scorcha: burning.
+  -- Scorcha: nothing burning.
   ${pair('scorcha')}
   perform creature_attack(w, a, t);
   select * into q from creature where world_id = w and id = t;
-  insert into said values ('SCORCH', round((q.bleed_rate / max_health(q))::numeric, 4) || '|' || round(extract(epoch from q.bleed_until - now())::numeric));
+  insert into said values ('SCORCH', coalesce(round((q.bleed_rate / max_health(q))::numeric, 4) || '|' || round(extract(epoch from q.bleed_until - now())::numeric), '-'));
   ${tidy}
 
-  -- Frosta: slowed as a Frostbite slows.
+  -- Frosta: nothing slowed.
   ${pair('frosta')}
   perform creature_attack(w, a, t);
-  insert into said select 'FROST', round(slow::numeric, 2)::text from creature where world_id = w and id = t;
+  insert into said select 'FROST', coalesce(round(slow::numeric, 2)::text, '-') from creature where world_id = w and id = t;
   ${ready('FROSTREADY')}
   ${tidy}
 
-  -- Rootle, Dulla, Brittla, Marka: a mark, and no blow.
+  -- Rootle, Dulla, Brittla: no mark. Marka: a mark, and no blow.
 ${(['rootle:root', 'dulla:dull', 'brittla:brittle', 'marka:marked'] as const).map((s) => {
   const [k, m] = s.split(':');
   return `  ${pair(k)}
@@ -188,7 +194,7 @@ ${(['rootle:root', 'dulla:dull', 'brittla:brittle', 'marka:marked'] as const).ma
   insert into said values ('STONETAKEN', round(class_brittle(w, a)::numeric, 4)::text);
   ${tidy}
 
-  -- Leecha: some of its health back.
+  -- Leecha: none of its health back.
   ${pair('leecha')}
   update creature set health = max_health(creature) / 2 where world_id = w and id = a;
   select health into v_h from creature where world_id = w and id = a;
@@ -211,6 +217,9 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 
 /* ---- the species --------------------------------------------------------------------- */
 
+for (const [id, ab] of RETIRED) {
+  check(`a ${id} has no ability on either side (it had ${ab})`, !SPECIES[id]?.ability && at(`AB:${id}`) === '-|-' && !SPECIES[id].description.includes('cooldown'), at(`AB:${id}`));
+}
 for (const [id, ab] of KINDS) {
   const rest = abilityRest(ab);
   check(`a ${id} uses ${ab} once every ${rest} seconds on both sides`,
@@ -226,17 +235,21 @@ check(`on the island, a lungra pounces from 3 tiles, lands within its reach, str
 check(`and not again for ${abilityRest('beastmaster_pounce')} seconds`, at('POUNCEREADY') === String(abilityRest('beastmaster_pounce')), at('POUNCEREADY'));
 check(`a hamma slows what it strikes to ${f('blade_hamstring', 'pace')} for ${f('blade_hamstring', 'secs')} s`, at('HAMSTRING') === `${f('blade_hamstring', 'pace').toFixed(2)}|${f('blade_hamstring', 'secs')}`, at('HAMSTRING'));
 check(`and its next blow inside its rest is a plain one`, at('HAMREADY') === String(abilityRest('blade_hamstring')) && at('HAMAGAIN') === '-', `${at('HAMREADY')} ${at('HAMAGAIN')}`);
-check(`a crakka holds it for ${f('berserker_skull_crack', 'hold')} s`, at('HOLD').endsWith(`|${f('berserker_skull_crack', 'hold')}`), at('HOLD'));
+check('a crakka holds nothing, and has no ability to rest from', at('HOLD') === '-' && at('HOLDREADY') === '(not said)', `${at('HOLD')} ${at('HOLDREADY')}`);
 check(`a bashka puts its next blow back ${f('blade_shield_bash', 'back')} s and knocks off its stroke`, at('BASH') === `${f('blade_shield_bash', 'back')}|true`, at('BASH'));
 check(`an executa holds its blow at full health and lands it below ${f('berserker_execute', 'low')}`, at('EXECFULL') === '(not said)' && at('EXECLOW') === String(abilityRest('berserker_execute')), `${at('EXECFULL')} ${at('EXECLOW')}`);
-check(`a whirla strikes both within ${f('berserker_whirlwind', 'reach')} tiles and not the one further off`, at('WHIRL') === 'true,true,false', at('WHIRL'));
-check(`a scorcha sets it burning at ${f('kindler_scorch', 'each')} a second for ${f('kindler_scorch', 'secs')} s`, at('SCORCH') === `${f('kindler_scorch', 'each').toFixed(4)}|${f('kindler_scorch', 'secs')}`, at('SCORCH'));
-check(`a frosta leaves it at ${FROST_PACE} of its pace, once every ${FROST_BREATH_REST} s`, at('FROST') === FROST_PACE.toFixed(2) && at('FROSTREADY') === String(FROST_BREATH_REST), `${at('FROST')} ${at('FROSTREADY')}`);
+check('a whirla strikes only what it strikes, not the one beside it', at('WHIRL').endsWith(',false,false'), at('WHIRL'));
+check('a scorcha sets nothing burning', at('SCORCH') === '-', at('SCORCH'));
+check('a frosta slows nothing, and has no ability to rest from', at('FROST') === '-' && at('FROSTREADY') === '(not said)', `${at('FROST')} ${at('FROSTREADY')}`);
 const marks: Array<[string, AbilityId, string, number]> = [
   ['rootle', 'binder_root', 'root', 0], ['dulla', 'binder_dull_claws', 'dull', f('binder_dull_claws', 'dealt')],
   ['brittla', 'binder_brittle', 'brittle', f('binder_brittle', 'taken')], ['marka', 'skirmisher_marked_for_death', 'marked', f('skirmisher_marked_for_death', 'crit')],
 ];
 for (const [k, ab, m, val] of marks) {
+  if (RETIRED.some(([id]) => id === k)) {
+    check(`a ${k} puts no ${m} on it`, at(`MARK:${k}`) === '-', at(`MARK:${k}`));
+    continue;
+  }
   check(`a ${k} puts ${m} on it at ${val} for ${f(ab, 'secs')} s, and does not strike that go`,
     at(`MARK:${k}`) === `${val.toFixed(4)}|${f(ab, 'secs')}` && at(`UNHURT:${k}`) === 'true', `${at(`MARK:${k}`)} ${at(`UNHURT:${k}`)}`);
 }
@@ -247,7 +260,7 @@ check(`a howla turns both hunters after you onto it, held for ${f('blade_guardia
 check(`a wardo lays a skin of ${WARD_SKIN} over you`, Number(at('WARD')) === WARD_SKIN, at('WARD'));
 check(`a stona takes ${f('warder_stoneskin', 'cut')} less for ${f('warder_stoneskin', 'secs')} s`,
   at('STONE') === `${(1 - f('warder_stoneskin', 'cut')).toFixed(4)}|${f('warder_stoneskin', 'secs')}` && at('STONETAKEN') === (1 - f('warder_stoneskin', 'cut')).toFixed(4), `${at('STONE')} ${at('STONETAKEN')}`);
-check('a leecha gets some of its health back', at('LEECH') === 'true', at('LEECH'));
+check('a leecha gets none of its health back', at('LEECH') === 'false', at('LEECH'));
 check('a wild hamma uses no ability', at('WILD') === '-' && at('WILDREADY') === '(not said)', `${at('WILD')} ${at('WILDREADY')}`);
 
 /* ---- in the browser ---------------------------------------------------------------- */
@@ -302,7 +315,7 @@ const near = (x: number, y: number): boolean => Math.abs(x - y) < 1e-6;
   const a = mine('crakka');
   const t = wild('ulva');
   g.creatures.attack(g, a, t);
-  check(`a crakka holds it for ${f('berserker_skull_crack', 'hold')} s`, near((t.stunUntil ?? 0) - g.time, f('berserker_skull_crack', 'hold')));
+  check('in the browser, a crakka holds nothing', (t.stunUntil ?? 0) <= g.time && markOn(g, a, 'ability', 0) === 0);
   clear();
 }
 {
@@ -328,21 +341,21 @@ const near = (x: number, y: number): boolean => Math.abs(x - y) < 1e-6;
   const a = mine('whirla');
   const ts = [wild('ulva'), wild('ulva', 0, 1), wild('ulva', f('berserker_whirlwind', 'reach') + 2)];
   g.creatures.attack(g, a, ts[0]);
-  check('a whirla strikes both beside it and not the one further off', ts.map((t) => t.health < 5000).join(',') === 'true,true,false');
+  check('in the browser, a whirla strikes only what it strikes, not the one beside it', ts.slice(1).every((t) => t.health === 5000));
   clear();
 }
 {
   const a = mine('scorcha');
   const t = wild('ulva');
   g.creatures.attack(g, a, t);
-  check('a scorcha sets it burning', near(t.bleedRate / maxHealth(t, SPECIES.ulva), f('kindler_scorch', 'each')) && near(t.bleedUntil - g.time, f('kindler_scorch', 'secs')));
+  check('in the browser, a scorcha sets nothing burning', !(t.bleedUntil > g.time && t.bleedRate > 0));
   clear();
 }
 {
   const a = mine('frosta');
   const t = wild('ulva');
   g.creatures.attack(g, a, t);
-  check('a frosta slows it as a Frostbite does', t.slowPace === FROST_PACE && near(markOn(g, a, 'ability', 0) && (a.marks!.ability!.until - g.time), FROST_BREATH_REST));
+  check('in the browser, a frosta slows nothing', t.slowPace === undefined && markOn(g, a, 'ability', 0) === 0);
   clear();
 }
 for (const [k, ab, m, val] of marks) {
@@ -350,18 +363,13 @@ for (const [k, ab, m, val] of marks) {
   const t = wild('ulva');
   g.creatures.attack(g, a, t);
   const kind = m as 'root' | 'dull' | 'brittle' | 'marked';
+  if (RETIRED.some(([id]) => id === k)) {
+    check(`in the browser, a ${k} puts no ${m} on it`, !t.marks?.[kind]);
+    clear();
+    continue;
+  }
   check(`a ${k} puts ${m} on it and does not strike that go`, near(t.marks?.[kind]?.val ?? -1, kind === 'root' ? 1 : val)
     && near((t.marks?.[kind]?.until ?? 0) - g.time, f(ab, 'secs')) && t.health === 5000);
-  clear();
-}
-{
-  const a = mine('rootle');
-  const t = wild('ulva');
-  g.creatures.attack(g, a, t);
-  const [x, y] = [t.x, t.y];
-  t.enemy = -1;
-  for (let i = 0; i < 20; i++) g.creatures.update(0.1, g);
-  check('and a rooted thing stays where it is', t.x === x && t.y === y, `${t.x - x}`);
   clear();
 }
 {
@@ -407,7 +415,7 @@ for (const [k, ab, m, val] of marks) {
   const before = a.health;
   const t = wild('ulva');
   g.creatures.attack(g, a, t);
-  check('a leecha gets some of its health back', a.health > before);
+  check('in the browser, a leecha gets none of its health back', a.health <= before);
   clear();
 }
 {

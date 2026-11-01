@@ -90,7 +90,7 @@ import { GATHER_SKILL, LEARN_PACE as PACE_258, sparTaskSays } from '../../game/c
 import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
-import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH, workerSkipsTools } from '../../game/creatures';
+import { type AbilityId, type FightStyle, abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH, workerSkipsTools } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { ORDER_STANCES, VISIT_KEEP_DAYS } from '../../game/visitors';
@@ -2424,10 +2424,9 @@ export const NEWS: News[] = [
     n: 176,
     day: '2026-10-18',
     lines: () => {
-      const ids = ['testa', 'skulka', 'gasha', 'thumpa', 'spitta', 'awla', 'sparra'];
       return [
-        `Added: ${num(ids.length)} wildermon with their own fighting style, as companion or settlement guard:`,
-        ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${STYLE_SAYS[SPECIES[id].style!]}.`),
+        `Added: ${num(STYLE_NEWS.length)} wildermon with their own fighting style, as companion or settlement guard:`,
+        ...STYLE_NEWS.map(([id, style]) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${STYLE_SAYS[style]}.`),
       ];
     },
   },
@@ -2437,7 +2436,7 @@ export const NEWS: News[] = [
     lines: () => [
       `Added: ${num(ABLE_NEWS.length)} wildermon that use an ability instead of a blow in a fight, then rest:`,
       ...ABLE_NEWS
-        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}), ${abilityName(SPECIES[id].ability!)}: ${abilitySays(SPECIES[id].ability!)}.`),
+        .map(([id, ab]) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}), ${abilityName(ab)}: ${abilitySays(ab)}.`),
       'Fixed: offline, a skin over you now absorbs incoming blows, as on an island.',
     ],
   },
@@ -4223,6 +4222,17 @@ export const NEWS: News[] = [
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
   },
   {
+    n: 405,
+    day: '2026-11-01',
+    lines: () => [
+      ...RETRADED.map(([id, was]) => `Changed: ${SPECIES[id].name} settlement task: ${GATHER_DO[SPECIES[id].gathers!]} (was: ${was}).`),
+      `Changed: ${listed(RETRADED.filter(([, was]) => was === 'guarding').map(([id]) => SPECIES[id].name))}: no longer guard; no fight style or ability `
+        + `(was: ${listed([...STYLE_NEWS.filter(([id]) => !SPECIES[id].style).map(([, st]) => st), ...ABLE_NEWS.filter(([id]) => !SPECIES[id].ability).map(([, ab]) => abilityName(ab))])}).`,
+      'Removed: glazing and butchering as settlement tasks: by hand only.',
+      `Changed: no ${listedOr(workerSkipsTools())} needed in the settlement stores. No perk needed for distilling or salves.`,
+    ],
+  },
+  {
     n: 404,
     day: '2026-10-31',
     lines: () => ['Changed: starting-kit tools named Starter (tool): a Starter hatchet.',
@@ -4493,9 +4503,24 @@ const BRACE = RELICS.find((r) => r.result === 'ancient_brace') ?? { parts: 0, di
 const SIX_RELICS = RELICS.filter((r) => [WHETSTONE, SEED_JAR, STAMP, TABLET, 'ancient_collar', 'ancient_bridle'].includes(r.result));
 
 
-/** The wildermon with an ability of their own, as What's new 177 gives them. */
-const ABLE_NEWS = ['lungra', 'hamma', 'crakka', 'bashka', 'executa', 'whirla', 'scorcha', 'frosta', 'rootle', 'dulla', 'brittla', 'shova',
-  'howla', 'marka', 'wardo', 'stona', 'leecha'];
+/** The wildermon with an ability of their own, and the ability, as What's new 177 gives them: eight took up a settlement task in 405. */
+const ABLE_NEWS: ReadonlyArray<readonly [string, AbilityId]> = [
+  ['lungra', 'beastmaster_pounce'], ['hamma', 'blade_hamstring'], ['crakka', 'berserker_skull_crack'], ['bashka', 'blade_shield_bash'],
+  ['executa', 'berserker_execute'], ['whirla', 'berserker_whirlwind'], ['scorcha', 'kindler_scorch'], ['frosta', 'frost_breath'],
+  ['rootle', 'binder_root'], ['dulla', 'binder_dull_claws'], ['brittla', 'binder_brittle'], ['shova', 'pikeman_keep_away'],
+  ['howla', 'blade_guardians_call'], ['marka', 'skirmisher_marked_for_death'], ['wardo', 'warder_ward'], ['stona', 'warder_stoneskin'],
+  ['leecha', 'chirurgeon_leech'],
+];
+/** The wildermon with a fighting style of their own, and the style, as What's new 176 gives them: two took up a settlement task in 405. */
+const STYLE_NEWS: ReadonlyArray<readonly [string, FightStyle]> = [
+  ['testa', 'shield'], ['skulka', 'flank'], ['gasha', 'bleed'], ['thumpa', 'stun'], ['spitta', 'venom'], ['awla', 'bore'], ['sparra', 'spar'],
+];
+/** The twelve kinds What's new 405 gives a new settlement task, and what each did before. */
+const RETRADED: ReadonlyArray<readonly [string, string]> = [
+  ['dulla', 'guarding'], ['rootle', 'guarding'], ['spitta', 'guarding'], ['crakka', 'guarding'], ['glossa', 'glazing pottery'],
+  ['carra', 'butchering'], ['awla', 'guarding'], ['scorcha', 'guarding'], ['leecha', 'guarding'], ['frosta', 'guarding'],
+  ['whirla', 'guarding'], ['brittla', 'guarding'],
+];
 
 /** The highest entry this browser has shown. */
 const SEEN = 'wurm.news.seen';

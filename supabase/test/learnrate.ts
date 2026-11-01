@@ -153,6 +153,7 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   fruit: gathers('fruit', 0.225, () => 1),
   bush: gathers('bush', 0.225, () => 1),
   grass: gathers('grass', 0.225, () => 1),
+  moss: gathers('moss', 0.225, () => 1),
   sprout: gathers('sprout', 0.225, () => 1),
   resin: gathers('resin', 0.225, () => 1),
   flower: gathers('flower', 0.225, () => 1),
@@ -169,9 +170,7 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   hive: (skill, stage) => [{ secs: walk('hive', 2 * HIVE_FLOWER, skill, stage) + work(skill, stage) + REST, base: 0.225, go: true }],
   // At the stores, one thing after another where it stands.
   mend: errand('mend', [[0, 'work', 0.2]]),
-  butcher: errand('butcher', [[0, 'work', 0.3]]),
   restore: errand('restore', [[0, 'work', 0.3]]),
-  glaze: errand('glaze', [[0, 'work', 0.2]]),
   tan: errand('tan', [[0, 'work', 0.25]]),
   mill: errand('mill', [[0, 'work', 0.25]]),
   saw: errand('saw', [[0, 'work', 0.25]]),
@@ -179,15 +178,25 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   brick: errand('brick', [[0, 'work', 0.25]]),
   rope: errand('rope', [[0, 'work', 0.25]]),
   fletch: errand('fletch', [[0, 'work', 0.25]]),
+  concrete: errand('concrete', [[0, 'work', 0.25]]),
+  mortar: errand('mortar', [[0, 'work', 0.25]]),
+  timber: errand('timber', [[0, 'work', 0.25]]),
+  shaft: errand('shaft', [[0, 'work', 0.25]]),
+  bandage: errand('bandage', [[0, 'work', 0.25]]),
+  cheese: errand('cheese', [[0, 'work', 0.25]]),
   // At a fire or a press of yours, its makings out of the stores where they are.
   cook: errand('cook', [[0, 'work', 0.25]]),
   paper: errand('paper', [[0, 'work', 0.25]]),
   spin: errand('spin', [[0, 'work', 0.25]]),
+  churn: errand('churn', [[0, 'work', 0.25]]),
+  // At a lit campfire or oven of yours, its brew out of the stores where it is.
+  distil: errand('distil', [[0, 'work', 0.25]]),
   // At an anvil of yours, a lump out of the stores where it is.
   nail: errand('nail', [[0, 'work', 0.25]]),
   ribbon: errand('ribbon', [[0, 'work', 0.25]]),
   // At a lit smelter of yours, its sand out of the stores where it is.
   glass: errand('glass', [[0, 'work', 0.25]]),
+  alloy: errand('alloy', [[0, 'work', 0.25]]),
   // A hearth raked, and the ashes leached into lye at the stores.
   ash: errand('ash', [[NEAR, 'work', 0.2], [NEAR, 'work', 0.25]]),
   // A barrel set going, and on to the next.
@@ -202,6 +211,9 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   smelt: errand('smelt', [[NEAR, 'work', 0.25], [NEAR, 'work', 0], [NEAR, 'work', 0.25]]),
   kiln: errand('kiln', [[NEAR, 'work', 0.25], [NEAR, 'work', 0], [NEAR, 'work', 0.25]]),
   // A seed out of the stores, sown, tended once a stage, and harvested.
+  // A grape cutting, or a lily root or lotus seeds, out of the stores, and planted.
+  vine: errand('vine', [[NEAR, 'work', 0], [NEAR, 'work', 0.25]]),
+  lily: errand('lily', [[NEAR, 'work', 0], [NEAR, 'work', 0.25]]),
   patch: errand('patch', [[NEAR, 'work', 0], [NEAR, 'work', 0.25], ...Array.from({ length: RIPE }, () => [NEXT, 'work', 0.25] as [number, 'work', number]), [0, 'work', 0.25]]),
   // An empty bucket out of the stores, filled at the water, and put back.
   fill: errand('fill', [[0, 'work', 0], [SHORE, 'work', 0.2], [SHORE, 'work', 0]]),
