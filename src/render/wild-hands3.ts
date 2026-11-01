@@ -1,20 +1,20 @@
 import {
-  beat, coatPalette, curve, merge, orb, quadBonesOf, taper, TAU, tube,
+  beat, coatPalette, merge, orb, quadBonesOf, taper, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
-import { blade, cut, earMesh, quadPieces } from './beastkit';
+import { cut, earMesh, quadPieces } from './beastkit';
 import { type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Four more of the settlement's hands: the chissa, the cordra, the flecha
- * and the glossa. As with the others (`./wild-hands`, `./wild-hands2`), each
- * wears the tool of its trade: a chisel, a rope, an arrow and a glazing brush.
- * The mudda is the Sliplet now (`./wild-clayroll`), the dippa the Pailbara
- * (`./wild-capy`), the rippa the Logkit (`./wild-timber`) and the papra the
- * Reedling (`./wild-papyrus`).
+ * Three more of the settlement's hands: the chissa, the cordra and the
+ * glossa. As with the others (`./wild-hands`, `./wild-hands2`), each wears
+ * the tool of its trade: a chisel, a rope and a glazing brush. The mudda is
+ * the Sliplet now (`./wild-clayroll`), the dippa the Pailbara (`./wild-capy`),
+ * the rippa the Logkit (`./wild-timber`), the papra the Reedling
+ * (`./wild-papyrus`) and the flecha the Sablekit (`./wild-sable`).
  */
 
 /** A tail's root, out of the body, before the tool on the end of it. */
@@ -95,48 +95,6 @@ export const CORDRA: Kind = {
   shadow: [1.5, 1.15],
   stride: 1.4,
   size: 1.65,
-};
-
-/* ---- the flecha: a crest of barred feathers, an arrow for a tail ---------------------- */
-
-const FLECHA_SPEC: QuadSpec = { ...pawed({ high: 1.45, len: 2.0, legs: 0.9, neck: 0.4, lean: 30, swing: [26, 42], ears: [25, 25], tail: [0.4, 14, 8] }), nose: 12 };
-const FLECHA_HEAD = { c: [0, 0.28, 0.22] as V3, r: [0.96, 0.94, 0.88] as V3 };
-
-function flechaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = FLECHA_HEAD;
-  // A crest of stiff feathers swept back off the crown, each barred.
-  const crest = merge(...[-0.16, 0, 0.16].map((x, q) => blade(
-    curve([x, 0.15, 0.95], [x * 1.3, -0.15, 1.3], [x * 1.6, -0.55, 1.5 - q % 2 * 0.08], 4), [0.04, 0.1, 0.09, 0.05, 0.01], [1, 0, 0],
-    { fold: 0.1, mat: q % 2 ? 'featherDark' : 'feather', rib: 'featherDark' })));
-  // An arrow for a tail: the shaft, a head at the root and the fletching at the far end.
-  const arrow = merge(
-    root(n),
-    tube([[0, -0.2, 0], [0, -1.35, 0.02]], 0.04, 0.04, 5, 'wood'),
-    ...[0, TAU / 3, (2 * TAU) / 3].map((a) => blade(
-      curve([0, -1.0, 0.02], [Math.cos(a) * 0.12, -1.18, 0.02 + Math.sin(a) * 0.12], [Math.cos(a) * 0.04, -1.38, 0.02 + Math.sin(a) * 0.04], 3),
-      [0.02, 0.07, 0.05, 0.01], [Math.sin(a), 0, -Math.cos(a)], { mat: 'feather' })),
-  );
-  return quadPieces({
-    n, k,
-    body: barrel(2.1, 0.95, 0.82),
-    neck: { w: 0.56, h: 0.58, len: 0.4 },
-    head: { c: H.c, r: H.r, face: snout(0.98, -0.16, [0.36, 0.34, 0.3], 0.1, n, k), eye: { dir: [0.72, 0.56, 0.36], size: 0.33, rim: 0.12 } },
-    ear: earMesh(0.3, 0.2, n),
-    earTurn: 35,
-    tail: [arrow],
-    ...paws(n, k, 0.9, 0.23, 0.21, 'coatDark'),
-    extras: [{ key: 'crest', mesh: crest, bone: 'head', bias: 0.05, after: ['head'], thin: true }],
-  });
-}
-
-export const FLECHA: Kind = {
-  bones: quadBonesOf(FLECHA_SPEC, trot),
-  build: flechaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ wood: [176, 140, 96], feather: [236, 228, 214], featherDark: [92, 72, 60] }), 30),
-  shadow: [1.4, 1.1],
-  stride: 1.5,
-  size: 1.6,
 };
 
 /* ---- the glossa: a glazed bowl for a hat, a brush for a tail -------------------------- */

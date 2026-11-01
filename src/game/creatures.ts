@@ -861,6 +861,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   tanna: { kind: 'loads', n: 1, what: 'hides per cycle' },
   dulla: { kind: 'more', n: 1, what: 'moss per cut' },
   carra: { kind: 'more', n: 1, what: 'timbers per log' },
+  flecha: { kind: 'more', n: 1, what: 'arrows per fletch' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -3058,8 +3059,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   flecha: {
     id: 'flecha',
-    name: 'Flecha',
+    name: 'Sablekit',
+    was: ['Flecha'],
+    // Asked for, with a reference sheet: Sablekit, Sableplume, Fletchercrest. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Sableplume', description: '' },
+      { name: 'Fletchercrest', description: '' },
+    ],
     health: 18,
     attack: 3,
     speed: 1.8,
@@ -3070,11 +3078,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'fletch',
     workRange: 6,
+    // [fur, face]: the sheet's dark brown with cream, a redder brown with ivory, a deep umber with oatmeal, and a cocoa with buff.
     variants: [
-      ['#8c7058', '#dcc8b4'],
-      ['#6c6460', '#c8c0b8'],
-      ['#9c7c5c', '#e4d0b8'],
-      ['#5c5450', '#bcb4ac'],
+      ['#5a3a2a', '#f2dcb4'],
+      ['#6a3c28', '#f6e4c4'],
+      ['#4a3226', '#ead2a8'],
+      ['#5e4232', '#eed8b0'],
     ],
     butcher: { meat: 3, feather: 4, leather: 2, bone: 2 },
   },
@@ -4179,6 +4188,7 @@ sayLineLater('potta', 'Level: pottery.');
 sayLineLater('glimmip', 'Level: glassblowing.');
 sayLineLater('dulla', `Level: ${GATHER_SKILL.moss.replace(/_/g, ' ')}.`);
 sayLineLater('carra', `Level: ${GATHER_SKILL.timber.replace(/_/g, ' ')}.`);
+sayLineLater('flecha', `Level: ${GATHER_SKILL.fletch.replace(/_/g, ' ')}.`);
 
 /** Which species roam wild, by weight. */
 /**

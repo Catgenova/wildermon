@@ -107,6 +107,11 @@ const beamWants = (): string => {
   const r = RECIPE_BY_ID.get(tradeRecipes('timber')[0])!;
   return `${r.result} ${(r.count ?? 1) + STAGE_PERKS.carra.n}`;
 };
+/** A Fletchercrest's go at the makings of one batch of arrows: what the recipe makes, and its line's third-stage arrows on top. */
+const FLETCH_SKILLS = { [GATHER_SKILL.fletch]: EVOLVE_AT[1] };
+const FLETCH_RECIPE = RECIPE_BY_ID.get(tradeRecipes('fletch')[0])!;
+const FLETCH_PUT: Array<[string, number]> = FLETCH_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
+const fletchWants = (): string => `${FLETCH_RECIPE.result} ${(FLETCH_RECIPE.count ?? 1) + STAGE_PERKS.flecha.n}`;
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
 const listed = (m: Map<string, number>): string => [...m].filter(([, n]) => n > 0).map(([id, n]) => `${id} ${n}`).sort().join(',') || '-';
@@ -243,6 +248,13 @@ ${CASES.map((c) => `
   insert into said select 'BEAM', ${held};
   ${after('carra')}
 
+  -- FLETCH: a Fletchercrest fletches the makings of one batch, and makes its line's third-stage arrows on top.
+  insert into hand values ('flecha', creature_spawn(w, 'flecha', 16.6, 16.6, 'active', now() - interval '60 days', u));
+  ${stocked(FLETCH_PUT)}
+  ${ready('flecha').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(FLETCH_SKILLS)}'::jsonb`)}
+  insert into said select 'FLETCH', ${held};
+  ${after('flecha')}
+
   -- VINE: a trellis on grass with no vine, one with a vine already, one on sand; three cuttings.
   perform land_set_tile(w, 21, 14, tile_id('Sand'));
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, material) values
@@ -359,6 +371,7 @@ for (const c of CASES) {
     stores === `moss ${2 * MOSS_PER_CUT}` && cut === 'true,true' && Number(skill) > 1, at('MOSS'));
 }
 check(`on the island, a Beammaster saws a log into ${beamWants()}`, at('BEAM') === beamWants(), at('BEAM'));
+check(`on the island, a Fletchercrest fletches one batch into ${fletchWants()}`, at('FLETCH') === fletchWants(), at('FLETCH'));
 {
   const [stores, vines] = at('VINE').split('|');
   check('on the island, a rootle plants a cutting at the trellis on grass with no vine, and none at the one with a vine or the one on sand',
@@ -526,6 +539,14 @@ for (const k of CASES) {
   c.skills = { ...BEAM_SKILLS };
   run(g, 120);
   check(`in the browser, a Beammaster saws a log into ${beamWants()}`, inCrate(crate) === beamWants(), inCrate(crate));
+}
+{
+  const g = body();
+  const crate = stock(g, FLETCH_PUT);
+  const c = worker(g, 'flecha');
+  c.skills = { ...FLETCH_SKILLS };
+  run(g, 120);
+  check(`in the browser, a Fletchercrest fletches one batch into ${fletchWants()}`, inCrate(crate) === fletchWants(), inCrate(crate));
 }
 {
   const g = body();
