@@ -54,8 +54,8 @@ const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by
 const T = 16;
 const U = '7e5b0000-0000-4000-8000-0000000000e9';
 /** The guard each side sets to spar, and its level skill, at a level of its first stage. */
-const GUARD = 'testa';
-const OTHER = 'skulka';
+const GUARD = 'thumpa';
+const OTHER = 'lungra';
 const LEVEL = 10;
 const SKILL = GATHER_SKILL.guard;
 

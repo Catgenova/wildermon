@@ -2,17 +2,17 @@ import {
   coatPalette, curve, disc, merge, moved, orb, paint, quadBonesOf, taper, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
-import { blade, cut, earMesh, quadPieces } from './beastkit';
+import { cut, earMesh, quadPieces } from './beastkit';
 import { type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Fifteen with an ability of their own (`AbilityId`): each wears what it
- * does -- a boulder of a skull for a skull crack, a scythe for an execute,
- * sickles, embers, icicles, tendrils, a ring of
- * shimmer for a ward, a round sucking mouth for a leech.
+ * Eight that had an ability of their own (`AbilityId`), settlement workers now: each wears what it
+ * did -- a boulder of a skull for a skull crack,
+ * a whirl of blades, embers, icicles, tendrils, a dull clawed paw, a brittle shell,
+ * a round sucking mouth for a leech.
  */
 
 /** A tail's root, out of the body, before what is on the end of it. */
@@ -73,17 +73,6 @@ function kindOf(l: Look): Kind {
 
 const HEAD = (y: number, z: number, r: V3): { c: V3; r: V3 } => ({ c: [0, y, z], r });
 
-/* ---- the hamma: sickle hooks on its tail --------------------------------------------- */
-
-export const HAMMA = kindOf({
-  spec: { ...pawed({ high: 1.05, len: 2.5, legs: 0.6, neck: 0.38, lean: 70, swing: [24, 40], ears: [20, 30], tail: [0.55, 2, 4] }), nose: 12 },
-  head: HEAD(0.34, 0.08, [0.9, 1.0, 0.8]), body: [2.5, 0.95, 0.75, 0.04], neck: [0.54, 0.52, 0.38], ear: [0.34, 0.2, 20], legs: [0.6, 0.24, 0.22, 'coatDark'],
-  snout: [1.04, -0.16, [0.36, 0.36, 0.3], 0.1],
-  tail: (n) => merge(root(n), tube([[0, -0.2, 0], [0, -0.8, 0.04]], 0.08, 0.08, 5, 'coat'),
-    ...[-1, 1].map((s) => tube(curve([0, -0.8, 0.04], [s * 0.25, -1.0, 0.0], [s * 0.1, -1.2, -0.12], 4), [0.06, 0.04, 0.01], [0.03, 0.02, 0.01], 4, 'hornDark'))),
-  own: { hornDark: [70, 66, 60] }, mark: 30, shadow: [1.55, 1.05], stride: 1.5, size: 1.6,
-});
-
 /* ---- the crakka: a boulder of a skull ------------------------------------------------ */
 
 export const CRAKKA = kindOf({
@@ -93,28 +82,6 @@ export const CRAKKA = kindOf({
   face: (n, k) => merge(orb([0, 0.45, 0.72], [0.72, 0.62, 0.42], n, k, 'stone'), orb([0.25, 0.75, 0.82], 0.12, 5, 3, 'stoneDark')),
   tail: (n) => taper([[0, 0.05, 0], [0, -0.45, 0.05]], 0.15, 0.05, n, 'coat'),
   own: { stone: [150, 140, 126], stoneDark: [104, 96, 86] }, mark: 30, shadow: [1.7, 1.35], stride: 1.3, size: 1.8,
-});
-
-/* ---- the bashka: a plate of bone across its brow ------------------------------------- */
-
-export const BASHKA = kindOf({
-  spec: { ...pawed({ high: 1.3, len: 2.4, legs: 0.7, neck: 0.32, lean: 55, swing: [18, 30], ears: [45, 18], tail: [0.4, 6, 2] }), nose: 10 },
-  head: HEAD(0.35, 0.1, [1.08, 1.0, 0.92]), body: [2.4, 1.35, 1.0, 0.15], neck: [0.76, 0.74, 0.32], ear: [0.28, 0.24, 45], legs: [0.7, 0.32, 0.29, 'coatDark'],
-  snout: [1.02, -0.24, [0.44, 0.3, 0.36], 0.12],
-  face: (n, k) => orb([0, 0.62, 0.62], [0.82, 0.32, 0.36], n, k, 'horn'),
-  tail: (n) => taper([[0, 0.05, 0], [0, -0.45, 0.05]], 0.14, 0.05, n, 'coat'),
-  own: { horn: [222, 212, 190] }, mark: 30, shadow: [1.7, 1.35], stride: 1.3, size: 1.75,
-});
-
-/* ---- the executa: a scythe for a tail ------------------------------------------------ */
-
-export const EXECUTA = kindOf({
-  spec: { ...pawed({ high: 1.4, len: 2.2, legs: 0.85, neck: 0.42, lean: 40, swing: [22, 38], ears: [25, 25], tail: [0.55, 30, 10] }), nose: 12 },
-  head: HEAD(0.3, 0.16, [0.92, 0.98, 0.84]), body: [2.2, 0.9, 0.8], neck: [0.52, 0.54, 0.42], ear: [0.4, 0.2, 25], legs: [0.85, 0.22, 0.21, 'coatDark'],
-  snout: [1.02, -0.18, [0.36, 0.34, 0.3], 0.1],
-  tail: (n) => merge(root(n), tube([[0, -0.2, 0], [0, -0.9, 0.2]], 0.07, 0.07, 5, 'coat'),
-    blade(curve([0, -0.9, 0.2], [0, -0.75, 0.55], [0, -0.35, 0.7], 4), [0.02, 0.14, 0.12, 0.01], [1, 0, 0], { mat: 'metal' })),
-  own: { metal: [196, 198, 206] }, mark: 210, shadow: [1.45, 1.05], stride: 1.5, size: 1.65,
 });
 
 /* ---- the whirla: a whip of a tail --------------------------------------------------- */
@@ -188,56 +155,6 @@ export const BRITTLA = kindOf({
   thin: true,
   tail: (n) => merge(root(n), taper([[0, -0.2, 0], [0, -0.75, 0.15], [0, -1.0, 0.2]], 0.09, 0.02, n, 'crystalDark')),
   own: { crystal: [200, 226, 240], crystalDark: [140, 176, 196] }, mark: 30, shadow: [1.45, 1.15], stride: 1.45, size: 1.6,
-});
-
-/* ---- the shova: curled ram's horns ---------------------------------------------------- */
-
-export const SHOVA = kindOf({
-  spec: { ...pawed({ high: 1.35, len: 2.4, legs: 0.72, neck: 0.3, lean: 55, swing: [18, 30], ears: [55, 15], tail: [0.35, 6, 2] }), nose: 10 },
-  head: HEAD(0.35, 0.1, [1.06, 1.0, 0.92]), body: [2.4, 1.35, 1.05, 0.18], neck: [0.8, 0.78, 0.3], ear: [0.24, 0.22, 55], legs: [0.72, 0.33, 0.3, 'coatDark'],
-  snout: [1.02, -0.24, [0.44, 0.3, 0.36], 0.12],
-  face: () => merge(...[-1, 1].map((s) => tube([[s * 0.6, 0.3, 0.75], [s * 1.2, 0.0, 0.7], [s * 1.25, 0.2, 0.15], [s * 1.0, 0.55, 0.05]],
-    [0.18, 0.15, 0.1, 0.05], [0.18, 0.15, 0.1, 0.05], 6, 'horn'))),
-  tail: (n) => taper([[0, 0.05, 0], [0, -0.35, 0.02]], 0.14, 0.05, n, 'coat'),
-  own: { horn: [200, 182, 150] }, mark: 30, shadow: [1.7, 1.4], stride: 1.3, size: 1.8,
-});
-
-/* ---- the howla: a shaggy mane ---------------------------------------------------------- */
-
-export const HOWLA = kindOf({
-  spec: { ...pawed({ high: 1.45, len: 2.4, legs: 0.82, neck: 0.36, lean: 45, swing: [22, 36], ears: [25, 25], tail: [0.55, 24, 10] }), nose: 12 },
-  head: HEAD(0.32, 0.15, [1.0, 0.98, 0.9]), body: [2.4, 1.15, 0.98, 0.16], neck: [0.68, 0.68, 0.36], ear: [0.38, 0.22, 25], legs: [0.82, 0.28, 0.26, 'coatDark'],
-  snout: [1.04, -0.18, [0.38, 0.36, 0.32], 0.11],
-  back: () => merge(...[0.45, 0.65, 0.85].flatMap((y) => [-0.5, -0.25, 0, 0.25, 0.5].map((x) =>
-    taper([[x, y, 0.55], [x * 1.5, y - 0.25, 0.95 - Math.abs(x) * 0.4]], 0.09, 0.02, 4, 'coatDark')))),
-  thin: true,
-  tail: (n) => merge(root(n), taper([[0, -0.2, 0], [0, -0.6, 0.25], [0, -1.0, 0.35]], 0.16, 0.05, n, 'coatDark')),
-  own: {}, mark: 30, shadow: [1.65, 1.3], stride: 1.45, size: 1.8,
-});
-
-/* ---- the marka: red stripes down its flanks ------------------------------------------ */
-
-export const MARKA = kindOf({
-  spec: { ...pawed({ high: 1.3, len: 2.1, legs: 0.8, neck: 0.38, lean: 40, swing: [24, 40], ears: [20, 30], tail: [0.45, 18, 8] }), nose: 12 },
-  head: HEAD(0.3, 0.16, [0.94, 0.98, 0.86]), body: [2.1, 0.95, 0.82], neck: [0.54, 0.56, 0.38], ear: [0.42, 0.2, 20], legs: [0.8, 0.23, 0.21, 'coatDark'],
-  snout: [1.02, -0.17, [0.36, 0.34, 0.3], 0.1],
-  back: () => merge(...[-0.55, -0.15, 0.25].flatMap((y) => [-1, 1].map((s) =>
-    moved(tube([[0, -0.08, 0], [0, 0.08, 0]], 0.03, 0.34, 4, 'spot', { up: [0, 0, 1] }), [s * 0.5, y, 0.45], 0, 0, s * 30)))),
-  thin: true,
-  tail: (n) => merge(root(n), taper([[0, -0.2, 0], [0, -0.7, 0.2]], 0.1, 0.03, n, 'coat')),
-  own: { spot: [196, 40, 40] }, mark: 30, shadow: [1.45, 1.1], stride: 1.5, size: 1.6,
-});
-
-/* ---- the wardo: a ring of shimmer about it -------------------------------------------- */
-
-export const WARDO = kindOf({
-  spec: { ...pawed({ high: 1.3, len: 2.1, legs: 0.74, neck: 0.34, lean: 45, swing: [22, 36], ears: [30, 24], tail: [0.45, 20, 8] }), nose: 12 },
-  head: HEAD(0.32, 0.16, [1.0, 0.98, 0.9]), body: [2.1, 1.05, 0.9], neck: [0.6, 0.6, 0.34], ear: [0.34, 0.24, 30], legs: [0.74, 0.25, 0.23, 'coatLight'],
-  snout: [1.0, -0.18, [0.4, 0.32, 0.34], 0.11],
-  back: () => tube(Array.from({ length: 17 }, (_, i): V3 => [Math.cos((i / 16) * TAU) * 1.0, Math.sin((i / 16) * TAU) * 1.35, 0.45]), 0.04, 0.04, 4, 'crystal'),
-  thin: true,
-  tail: (n, k) => merge(root(n), taper([[0, -0.2, 0], [0, -0.65, 0.2]], 0.12, 0.04, n, 'coat'), orb([0, -0.7, 0.24], 0.1, n, k, 'crystal')),
-  own: { crystal: [200, 186, 250] }, mark: 30, shadow: [1.5, 1.2], stride: 1.4, size: 1.65,
 });
 
 /* ---- the leecha: a round sucking mouth ------------------------------------------------- */

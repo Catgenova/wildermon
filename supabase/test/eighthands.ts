@@ -6,8 +6,8 @@
  * work a settlement and says what it does in the island's words; and that
  * set to work it does it: planks sawn, stone brick chiselled, clay brick
  * shaped, rope laid up and arrows fletched at the stores, papyrus pressed at
- * a paper press, a pot glazed, and an empty bucket filled at a well and put
- * back.
+ * a paper press, and an empty bucket filled at a well and put back. A
+ * glossa mixes mortar now (`repurpose.ts`): no worker glazes a pot.
  *
  * Runs against the database the suite leaves behind, in one transaction that
  * is rolled back.
@@ -18,7 +18,6 @@ import { deedJobLine } from '../../src/game/creaturecrate';
 import { GATHER_DO, PAPER_RECIPES, SPECIES, STORE_RECIPES, TEND_JOBS, type Creature, type GatherKind } from '../../src/game/creatures';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { PAPER_PRESS } from '../../src/game/enchant';
-import { GLAZE_ASH } from '../../src/game/actions';
 import { TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -43,7 +42,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 
 const HANDS: Array<[string, GatherKind]> = [
   ['rippa', 'saw'], ['chissa', 'chisel'], ['mudda', 'brick'], ['cordra', 'rope'],
-  ['flecha', 'fletch'], ['papra', 'paper'], ['glossa', 'glaze'], ['dippa', 'fill'],
+  ['flecha', 'fletch'], ['papra', 'paper'], ['glossa', 'mortar'], ['dippa', 'fill'],
 ];
 /** What each of the five at the stores is given, and what the stores hold after: its makings and no tool, which a worker needs none of. */
 const AT_STORES: Array<[string, Array<[string, number]>, string]> = [
@@ -97,7 +96,7 @@ begin
   insert into said select 'LINE:' || h.species, deed_job_line(c2) from hand h join creature c2 on c2.world_id = w and c2.id = h.id;
   update creature set mode = 'stored' where world_id = w and id in (select id from hand);
   insert into said select 'RECIPES:' || k, coalesce(array_to_string(tend_recipes(k), ','), '-')
-    from unnest(array['tan', 'mill', 'saw', 'chisel', 'brick', 'rope', 'fletch', 'paper']) k;
+    from unnest(array[${[...Object.keys(STORE_RECIPES), 'paper'].map((k) => `'${k}'`).join(', ')}]) k;
 
   -- The five at the stores, each given its makings and no tool.
 ${AT_STORES.map(([id, items]) => `  ${put(items)}${work(id)}
@@ -111,7 +110,7 @@ ${AT_STORES.map(([id, items]) => `  ${put(items)}${work(id)}
   insert into said select 'PAPER', ${held};${done()}
   delete from placed where id = v_p;
 
-  -- Glossa: two pots, one glazed already, and one ash.
+  -- Glossa: two pots, one glazed already, and one ash, which it leaves as they are: no worker glazes.
   insert into item (world_id, holder, crate, def, ql, count, mark) values (w, 'crate', 7301, 'clay_pot', 30, 1, null), (w, 'crate', 7301, 'clay_bowl', 30, 1, '{"glaze": 0}');
   ${put([['ash', 1]])}${work('glossa')}
   insert into said select 'GLAZE', ${held} || '|' || (select string_agg(def || ':' || coalesce(mark->>'glaze', 'none'), ',' order by def) from item where world_id = w and holder = 'crate' and crate = 7301 and def like 'clay_%');${done()}
@@ -154,8 +153,7 @@ check('the words give the numbers the recipes use',
   && GATHER_DO.chisel.includes(`${made('make_stone_brick')} a shard`)
   && GATHER_DO.rope.includes(`${takes('make_rope', 'wemp')} fibres a rope`)
   && GATHER_DO.fletch.includes(`${made('make_arrows')} a shaft, ${takes('make_arrows', 'arrow_head')} heads`)
-  && GATHER_DO.paper.includes(`${made('make_papyrus')} sheets per ${takes('make_papyrus', 'reed')} reeds`)
-  && GATHER_DO.glaze.includes(`${GLAZE_ASH} ${GLAZE_ASH === 1 ? 'ash' : 'ashes'} each`),
+  && GATHER_DO.paper.includes(`${made('make_papyrus')} sheets per ${takes('make_papyrus', 'reed')} reeds`),
   [GATHER_DO.saw, GATHER_DO.fletch, GATHER_DO.paper].join(' / '));
 
 /* ---- what each does, on the island --------------------------------------------------- */
@@ -163,7 +161,7 @@ check('the words give the numbers the recipes use',
 for (const [id, , after] of AT_STORES) check(`on the island, a ${id} works its makings into what the recipe makes: ${after}`, at(`MADE:${id}`) === after, at(`MADE:${id}`));
 check('a papra presses nothing with no paper press on the settlement', at('NOPRESS') === 'reed 4,water_bucket 1', at('NOPRESS'));
 check('and at one, presses the reeds into papyrus, its water out of the bucket', at('PAPER') === 'papyrus 3,water_bucket 1', at('PAPER'));
-check('a glossa glazes the bare pot with the ash and leaves the glazed bowl as it was', at('GLAZE') === 'clay_bowl 1,clay_pot 1|clay_bowl:0,clay_pot:0', at('GLAZE'));
+check('a glossa leaves the bare pot bare and the ash in the stores: no worker glazes', at('GLAZE') === 'ash 1,clay_bowl 1,clay_pot 1|clay_bowl:0,clay_pot:none', at('GLAZE'));
 const [fillStores, wellDrawn, fillHeld] = at('FILL').split('|');
 check('a dippa fills the empty bucket at the well and puts it back full', fillStores === 'water_bucket 1' && wellDrawn === 'true' && fillHeld === 'empty-handed', at('FILL'));
 
@@ -227,8 +225,8 @@ for (const [id, items, after] of AT_STORES) {
   worker(g, 'glossa');
   run(g, 60);
   const pot = crate.items.find((i) => i.id === 'clay_pot');
-  check('a glossa glazes the bare pot with the ash and leaves the glazed bowl as it was',
-    pot?.mark?.glaze === 0 && bowl.mark?.glaze === 0 && inCrate(crate) === 'clay_bowl 1,clay_pot 1', `${inCrate(crate)} ${JSON.stringify(pot?.mark)}`);
+  check('a glossa leaves the bare pot bare and the ash in the stores: no worker glazes',
+    pot?.mark?.glaze === undefined && bowl.mark?.glaze === 0 && inCrate(crate) === 'ash 1,clay_bowl 1,clay_pot 1', `${inCrate(crate)} ${JSON.stringify(pot?.mark)}`);
 }
 {
   const g = body();

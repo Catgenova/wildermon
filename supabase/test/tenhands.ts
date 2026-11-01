@@ -3,7 +3,7 @@
  *
  * Asked for off a list of work nobody but a player did: a kemma brushes the
  * herd, a sheela milks and shears it, a salva dresses its hurts, a carra
- * butchers the carcasses in the stores, a tanna tans the hides, a grista
+ * saws timbers now and no worker butchers the carcasses in the stores (`repurpose.ts`), a tanna tans the hides, a grista
  * mills, a wicka keeps the lanterns, a brambo picks the bushes, a grazza cuts
  * grass and moss (a siffa panned the sand at the water's edge; it smiths ribbons now, `workertools.ts`). This asks,
  * of both sides:
@@ -47,7 +47,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 };
 
 const HANDS: Array<[string, string]> = [
-  ['kemma', 'groom'], ['sheela', 'dairy'], ['salva', 'heal'], ['carra', 'butcher'], ['tanna', 'tan'],
+  ['kemma', 'groom'], ['sheela', 'dairy'], ['salva', 'heal'], ['carra', 'timber'], ['tanna', 'tan'],
   ['grista', 'mill'], ['wicka', 'lamp'], ['brambo', 'bush'], ['grazza', 'grass'],
 ];
 
@@ -126,7 +126,7 @@ begin
   update creature set mode = 'stored' where world_id = w and id in (v_o, v_o2);
   delete from item where world_id = w and holder = 'crate' and crate = 7101;
 
-  -- Carra: a rabba carcass in the crate.
+  -- Carra: a rabba carcass in the crate, which it leaves where it is: no worker butchers.
   insert into item (world_id, holder, crate, def, ql, count, extra) values (w, 'crate', 7101, 'corpse', 30, 1, 'Rabba');
   select id into v_id from hand where species = 'carra';
   update creature set mode = 'deed', until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle'
@@ -247,7 +247,7 @@ check('a sheela shears a woola of yours and milks a cudda into the bucket in the
 const [healed, bleeding, bandages] = at('HEAL').split('|');
 check('a salva dresses a bleeding woola of yours with the bandage out of the stores: the bleeding stops and its health comes up',
   Number(healed) > 1 && bleeding === 'stopped' && bandages === '0', at('HEAL'));
-check('a carra butchers the rabba in the stores and puts its meat back in', !at('BUTCHER').includes('corpse') && at('BUTCHER').includes('meat'), at('BUTCHER'));
+check('a carra leaves the rabba in the stores as it is: no worker butchers', at('BUTCHER') === 'corpse 1', at('BUTCHER'));
 check('a tanna tans the hide in the lye with no carving knife in the stores, and the leather goes back in beside what lye is left',
   at('TAN') === 'leather 1,lye_bucket 1', at('TAN'));
 check('a grista with no quern in the stores grinds the wheat into flour, two to a flour', at('NOQUERN') === 'flour 2', at('NOQUERN'));
@@ -335,7 +335,7 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   const crate = stock(g, 21, 20, [['corpse', 1, 'Rabba']]);
   worker(g, 'carra');
   run(g, 60);
-  check('a carra butchers the rabba in the stores and puts its meat back in', !held(crate).includes('corpse') && held(crate).includes('meat'), held(crate));
+  check('a carra leaves the rabba in the stores as it is: no worker butchers', held(crate) === 'corpse 1', held(crate));
 }
 {
   const g = body();

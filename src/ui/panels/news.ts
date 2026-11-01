@@ -90,7 +90,7 @@ import { GATHER_SKILL, LEARN_PACE as PACE_258, sparTaskSays } from '../../game/c
 import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
-import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH, workerSkipsTools } from '../../game/creatures';
+import { type AbilityId, type FightStyle, abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH, workerSkipsTools } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { ORDER_STANCES, VISIT_KEEP_DAYS } from '../../game/visitors';
@@ -168,7 +168,7 @@ import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
 import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
-import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
+import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
 import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
 import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
@@ -2424,10 +2424,9 @@ export const NEWS: News[] = [
     n: 176,
     day: '2026-10-18',
     lines: () => {
-      const ids = ['testa', 'skulka', 'gasha', 'thumpa', 'spitta', 'awla', 'sparra'];
       return [
-        `Added: ${num(ids.length)} wildermon with their own fighting style, as companion or settlement guard:`,
-        ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${STYLE_SAYS[SPECIES[id].style!]}.`),
+        `Added: ${num(STYLE_NEWS.length)} wildermon with their own fighting style, as companion or settlement guard:`,
+        ...STYLE_NEWS.map(([id, style]) => `${kindNameOf(id)} (taming ${tamingOf(id)}): ${STYLE_SAYS[style]}.`),
       ];
     },
   },
@@ -2437,7 +2436,7 @@ export const NEWS: News[] = [
     lines: () => [
       `Added: ${num(ABLE_NEWS.length)} wildermon that use an ability instead of a blow in a fight, then rest:`,
       ...ABLE_NEWS
-        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}), ${abilityName(SPECIES[id].ability!)}: ${abilitySays(SPECIES[id].ability!)}.`),
+        .map(([id, ab]) => `${kindNameOf(id)} (taming ${tamingOf(id)}), ${abilityName(ab)}: ${abilitySays(ab)}.`),
       'Fixed: offline, a skin over you now absorbs incoming blows, as on an island.',
     ],
   },
@@ -3407,7 +3406,7 @@ export const NEWS: News[] = [
     n: 268,
     day: '2026-10-23',
     lines: () => [
-      `Changed: dragon scales from a dragon only; none from ${listed(UNSCALED.map((id) => SPECIES[id].name))}.`,
+      `Changed: dragon scales from a dragon only; none from ${listed(UNSCALED.map(kindNameOf))}.`,
     ],
   },
   {
@@ -4234,6 +4233,21 @@ export const NEWS: News[] = [
     lines: () => [`Added: wild reset: every ${WILD_RESET_DAYS} days at the tree rollover, every wild wildermon goes (not tamed, in a fight, held, trapped, ridden or a monster) and every region restocks. First reset: today.`],
   },
   {
+    n: 405,
+    day: '2026-11-01',
+    lines: () => [
+      ...RETRADED.map(([id, was]) => `Changed: ${SPECIES[id].name} settlement task: ${GATHER_DO[SPECIES[id].gathers!]} (was: ${was}).`),
+      `Changed: ${listed(RETRADED.filter(([, was]) => was === 'guarding').map(([id]) => SPECIES[id].name))}: no longer guard; no fight style or ability `
+        + `(was: ${listed([...STYLE_NEWS.filter(([id]) => RETRADED.some(([r]) => r === id)).map(([, st]) => st),
+          ...ABLE_NEWS.filter(([id]) => RETRADED.some(([r]) => r === id)).map(([, ab]) => abilityName(ab))])}).`,
+      'Removed: glazing and butchering as settlement tasks: by hand only.',
+      `Removed: ${listed(Object.values(REMOVED_KINDS).map((r) => r.name))}. Wild ones: gone. None spawn or breed.`,
+      ...[...new Set(Object.values(REMOVED_KINDS).map((r) => r.becomes))].map((to) =>
+        `Changed: owned ${listed(Object.values(REMOVED_KINDS).filter((r) => r.becomes === to).map((r) => r.name))} now ${SPECIES[to].name}: name, keeper, level, skills, traits and age kept.`),
+      `Changed: no ${listedOr(workerSkipsTools())} needed in the settlement stores. No perk needed for distilling or salves.`,
+    ],
+  },
+  {
     n: 404,
     day: '2026-10-31',
     lines: () => ['Changed: starting-kit tools named Starter (tool): a Starter hatchet.',
@@ -4504,9 +4518,26 @@ const BRACE = RELICS.find((r) => r.result === 'ancient_brace') ?? { parts: 0, di
 const SIX_RELICS = RELICS.filter((r) => [WHETSTONE, SEED_JAR, STAMP, TABLET, 'ancient_collar', 'ancient_bridle'].includes(r.result));
 
 
-/** The wildermon with an ability of their own, as What's new 177 gives them. */
-const ABLE_NEWS = ['lungra', 'hamma', 'crakka', 'bashka', 'executa', 'whirla', 'scorcha', 'frosta', 'rootle', 'dulla', 'brittla', 'shova',
-  'howla', 'marka', 'wardo', 'stona', 'leecha'];
+/** The wildermon with an ability of their own, and the ability, as What's new 177 gives them: eight took up a settlement task in 405. */
+const ABLE_NEWS: ReadonlyArray<readonly [string, AbilityId]> = [
+  ['lungra', 'beastmaster_pounce'], ['hamma', 'blade_hamstring'], ['crakka', 'berserker_skull_crack'], ['bashka', 'blade_shield_bash'],
+  ['executa', 'berserker_execute'], ['whirla', 'berserker_whirlwind'], ['scorcha', 'kindler_scorch'], ['frosta', 'frost_breath'],
+  ['rootle', 'binder_root'], ['dulla', 'binder_dull_claws'], ['brittla', 'binder_brittle'], ['shova', 'pikeman_keep_away'],
+  ['howla', 'blade_guardians_call'], ['marka', 'skirmisher_marked_for_death'], ['wardo', 'warder_ward'], ['stona', 'warder_stoneskin'],
+  ['leecha', 'chirurgeon_leech'],
+];
+/** The wildermon with a fighting style of their own, and the style, as What's new 176 gives them: two took up a settlement task in 405. */
+const STYLE_NEWS: ReadonlyArray<readonly [string, FightStyle]> = [
+  ['testa', 'shield'], ['skulka', 'flank'], ['gasha', 'bleed'], ['thumpa', 'stun'], ['spitta', 'venom'], ['awla', 'bore'], ['sparra', 'spar'],
+];
+/** What a kind asked of your taming when it was put in: a removed one's (`REMOVED_KINDS`) as it was. */
+const tamingOf = (id: string): number => SPECIES[id]?.tameLevel ?? REMOVED_KINDS[id]?.tameLevel ?? 0;
+/** The twelve kinds What's new 405 gives a new settlement task, and what each did before. */
+const RETRADED: ReadonlyArray<readonly [string, string]> = [
+  ['dulla', 'guarding'], ['rootle', 'guarding'], ['spitta', 'guarding'], ['crakka', 'guarding'], ['glossa', 'glazing pottery'],
+  ['carra', 'butchering'], ['awla', 'guarding'], ['scorcha', 'guarding'], ['leecha', 'guarding'], ['frosta', 'guarding'],
+  ['whirla', 'guarding'], ['brittla', 'guarding'],
+];
 
 /** The highest entry this browser has shown. */
 const SEEN = 'wurm.news.seen';

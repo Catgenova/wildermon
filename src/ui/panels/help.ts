@@ -64,7 +64,7 @@ import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP } from '../../game/creatures';
 import { PERK_STAGE, perkLine, perkSays, STAGE_PERKS } from '../../game/creatures';
 import {
-  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  ALLOY_QL, AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
   BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_RESET_DAYS, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
@@ -96,7 +96,6 @@ import { groomGain } from '../../game/husbandry';
 import { ARTIFACT_FOR, SHEAR_FEATHERS, SHEAR_WOOL } from '../../game/creatureActions';
 import { OLD_FOR } from '../../game/creatures';
 import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
-import { butcherYield } from '../../game/butcher';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
 import { FRUITING, fruitingSeasons, fruitsIn } from '../../game/fruiting';
@@ -909,22 +908,21 @@ const pedigreeSources = (): string => {
 const SHOWN_QL = 50;
 const HANDS = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa',
   'forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra',
-  'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa', 'ulva', 'dowse', 'glimmip'];
+  'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa', 'ulva', 'dowse', 'glimmip',
+  'dulla', 'rootle', 'spitta', 'crakka', 'awla', 'scorcha', 'leecha', 'frosta', 'whirla', 'brittla'];
 /** A kind's two evolutions and the levels they come at: "Reedweaver at 30, Reedlord at 60". */
 const evolves = (id: string): string => {
   const st = SPECIES[id]?.stages;
   return st ? `${st[0].name} at ${EVOLVE_AT[0]}, ${st[1].name} at ${EVOLVE_AT[1]}` : 'none';
 };
 /** The wildermon that fight in a way of their own (`FightStyle`), in the order the help gives them. */
-const FIGHTERS = ['testa', 'skulka', 'gasha', 'thumpa', 'spitta', 'awla', 'sparra'];
+const FIGHTERS = ['thumpa', 'sparra'];
 /** The wildermon with an ability of their own (`AbilityId`), in the order the help gives them. */
-const ABLE = ['lungra', 'hamma', 'crakka', 'bashka', 'executa', 'whirla', 'scorcha', 'frosta', 'rootle', 'dulla', 'brittla', 'shova',
-  'howla', 'marka', 'wardo', 'stona', 'leecha', 'whispet'];
+const ABLE = ['lungra', 'stona', 'whispet'];
 const HAND_NUMBERS: Record<string, string> = {
   kemma: `a brushing puts in ${percent(groomGain(1, 1))} care (${CARE_SAID}) at no husbandry and ${percent(groomGain(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}, as a keeper of its skill with a brush as good. Evolves: ${evolves('kemma')}`,
   sheela: `a full fleece gives ${SHEAR_WOOL} wool and a full crop of feathers ${SHEAR_FEATHERS}, and a cudda a bucket of milk; evolves: ${evolves('sheela')}`,
   salva: `a QL ${SHOWN_QL} dressing puts back ${percent(healAmount(1, SHOWN_QL))} of a life at no first aid and ${percent(healAmount(SKILL_TOP, SHOWN_QL))} at ${SKILL_TOP}`,
-  carra: `it keeps ${percent(butcherYield(1, 1))} of a carcass at no butchering and ${percent(butcherYield(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}`,
   hoppa: `it tries ${listed(BREWS.map((b) => b.name.toLowerCase()))} in that order`,
   simma: `it tries ${cookRecipes().length} recipes in the order the recipes are listed, from ${itemDef(RECIPE_BY_ID.get(cookRecipes()[0])!.result).name.toLowerCase()} on`,
   relka: `a relic comes out at what its pieces were worth less their damage, times ${percent(restoredMul(1))} at no restoration and ${percent(restoredMul(SKILL_TOP))} at ${SKILL_TOP}`,
@@ -3053,7 +3051,10 @@ export function helpText(): string {
     <ul>
       <li>${HANDS.length} chore workers, set to a settlement as usual, working within their reach of the totem. ${HANDS.filter((id) => TEND_JOBS.has(SPECIES[id].gathers!)).length} work at the settlement stores
       or at one of your stations: output goes into that store, else any settlement store that takes it, else onto the ground there.
-      No tools: no ${listedOr(workerSkipsTools())} needed in the stores, none worn. Stations still needed: spindle, paper press, anvil, lit campfire or oven, smelter (lit, for glass), kiln, barrel.</li>
+      No tools: no ${listedOr(workerSkipsTools())} needed in the stores, none worn. Stations still needed: spindle, paper press, butter churn, anvil, lit campfire or oven, smelter (lit, for glass and alloys), kiln, barrel, trellis.
+      No perk needed: distilling (${SPECIES.brittla.name}), salves (${SPECIES.leecha.name}).
+      Alloy QL (${SPECIES.scorcha.name}): the lumps' QL &times; (${ALLOY_QL[0]} + smelting &divide; ${ALLOY_QL[1]}), as your own hands.
+      Glazing and butchering: by hand only.</li>
       ${HANDS.map((id) => {
         const d = SPECIES[id];
         return `<li><b>${d.name}</b> (taming ${d.tameLevel}): ${GATHER_DO[d.gathers!]}${HAND_NUMBERS[id] ? `; ${HAND_NUMBERS[id]}` : ''}.</li>`;

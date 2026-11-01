@@ -60,10 +60,10 @@ import { KILNLET, KILNSPIRE, TERRABRICK } from './wild-kiln';
 import { LOGKIT, SAWQUILL, TIMBERBACK } from './wild-timber';
 import { PAPYRUSKIN, PRESSMERE, REEDLING } from './wild-papyrus';
 import { GLASCADE, GLIMMIP, PRISMETAIL } from './wild-glass';
-import { AWLA, GASHA, SKULKA, SPITTA, TESTA } from './wild-fighters';
+import { AWLA, SPITTA } from './wild-fighters';
 import { DUMMIBEAR, DUMMICUB, DUMMITITAN } from './wild-dummy';
 import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
-import { BASHKA, BRITTLA, CRAKKA, DULLA, EXECUTA, FROSTA, HAMMA, HOWLA, LEECHA, MARKA, ROOTLE, SCORCHA, SHOVA, WARDO, WHIRLA } from './wild-abilities';
+import { BRITTLA, CRAKKA, DULLA, FROSTA, LEECHA, ROOTLE, SCORCHA, WHIRLA } from './wild-abilities';
 import { GALECREST, TEMPESTWYRM, ZEPHLET } from './wild-zephyr';
 
 /**
@@ -151,28 +151,18 @@ export const WILDERMON: Record<string, Kind> = {
   papra: REEDLING,
   glossa: GLOSSA,
   dippa: PAILBARA,
-  testa: TESTA,
-  skulka: SKULKA,
-  gasha: GASHA,
   thumpa: PEBBLETOOTH,
   spitta: SPITTA,
   awla: AWLA,
   sparra: DUMMICUB,
   lungra: BLUSHKIT,
-  hamma: HAMMA,
   crakka: CRAKKA,
-  bashka: BASHKA,
-  executa: EXECUTA,
   whirla: WHIRLA,
   scorcha: SCORCHA,
   frosta: FROSTA,
   rootle: ROOTLE,
   dulla: DULLA,
   brittla: BRITTLA,
-  shova: SHOVA,
-  howla: HOWLA,
-  marka: MARKA,
-  wardo: WARDO,
   stona: ZEPHLET,
   leecha: LEECHA,
   whispet: WHISPET,

@@ -4786,6 +4786,24 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/glassblower.mjs --log-level=error
           node node_modules/.cache/glassblower.mjs
 
+      - name: Twelve kinds take up new settlement tasks; the ten old guards are gone
+        if: matrix.shard == 6
+        run: |
+          # A dulla cuts moss, a rootle plants vines, a spitta water lilies and
+          # lotus, a crakka mixes concrete, a glossa mortar, a carra saws
+          # timbers, an awla carves shafts, a scorcha mixes alloys at a lit
+          # smelter, a leecha makes bandages, covers and salves, a frosta
+          # presses cheese, a whirla churns butter and a brittla distils: each
+          # the player's own recipe or action, out of the stores and back in;
+          # no worker glazes or butchers; the ten former guards have no ability
+          # and do not guard; the testa, skulka, gasha, hamma, bashka, executa,
+          # shova, howla, marka and wardo are gone, an owned one turned into
+          # the kind it became with all else kept (the migration run twice), a
+          # wild one gone: each the same on both sides.
+          npx esbuild supabase/test/repurpose.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/repurpose.mjs --log-level=error
+          node node_modules/.cache/repurpose.mjs
+
       - name: What a worker makes in place, on its work log
         if: matrix.shard == 6
         run: |

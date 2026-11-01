@@ -1250,11 +1250,11 @@ select '193. the crate the token came with: '
      || coalesce((select 'a ' || kind || ' crate at ' || x || ',' || y || ', holding ' || crate_units(:'world2', id)
                   || ' of ' || crate_capacity(c) from crate c where world_id = :'world2' and deed), 'none');
 select creature_spawn(:'world2', 'rabba', 5.5, 8.5, 'stored', now() - interval '10 days', :'ivar') as forager \gset
-select creature_spawn(:'world2', 'testa', 5.5, 6.5, 'stored', now() - interval '10 days', :'ivar') as guard \gset
+select creature_spawn(:'world2', 'thumpa', 5.5, 6.5, 'stored', now() - interval '10 days', :'ivar') as guard \gset
 select creature_spawn(:'world2', 'bevere', 4.5, 8.5, 'stored', now() - interval '10 days', :'ivar') as feller \gset
-select '194. a rabba forages, a testa keeps watch, a bevere fells trees — and of the three this island knows '
+select '194. a rabba forages, a thumpa keeps watch, a bevere fells trees — and of the three this island knows '
      || (select count(*) from (values ('forage'), ('guard'), ('woodcut')) v(k) where worker_job_ported(v.k)) || ' trades';
-select '195. setting the testa to watch: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed', ('{"kind":"creature","id":' || :'guard' || '}')::jsonb), 'allowed');
+select '195. setting the thumpa to watch: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed', ('{"kind":"creature","id":' || :'guard' || '}')::jsonb), 'allowed');
 select '196. something wild: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed', ('{"kind":"creature","id":' || (select id from creature where world_id = :'world2' and mode = 'wild' order by id limit 1) || '}')::jsonb), 'allowed');
 select act_perform(:'world2', :'ivar', 'assign_deed', ('{"kind":"creature","id":' || :'forager' || '}')::jsonb) \g /dev/null
 select '197. ' || (select text from event where uid = :'ivar' order by n desc limit 1);
@@ -2045,7 +2045,7 @@ select '300. of the twenty-two trades a wildermon may be set to, this island now
      || ' — and nothing wild is left standing on the deed: '
      || (select count(*) from creature where world_id = :'world2' and mode = 'wild');
 
-select creature_spawn(:'world2', 'testa', 5.5, 7.5, 'deed', now() - interval '10 days', :'ivar') as warden \gset
+select creature_spawn(:'world2', 'thumpa', 5.5, 7.5, 'deed', now() - interval '10 days', :'ivar') as warden \gset
 select creature_spawn(:'world2', 'rabba', 9.5, 7.5, 'wild', now() - interval '2 hours') as trespass \gset
 update creature set from_x = to_x, from_y = to_y, leg_at = now(), leg_ends = now(),
     until = now() + interval '1 hour', settled_at = now() - interval '1 second'
@@ -2053,13 +2053,13 @@ update creature set from_x = to_x, from_y = to_y, leg_at = now(), leg_ends = now
 update creature set phase = 'idle', until = now() - interval '300 seconds',
     leg_at = now() - interval '300 seconds', leg_ends = now() - interval '300 seconds',
     settled_at = now() - interval '300 seconds' where id = :'warden';
-select '301. a rabba four tiles off, well inside a border thirteen tiles out, and a testa set to watch it — what it knows: '
+select '301. a rabba four tiles off, well inside a border thirteen tiles out, and a thumpa set to watch it — what it knows: '
      || (select round((skills->>'body_strength')::numeric, 2) from creature where id = :'warden') || ' of keeping watch';
 select worker_settle(:'world2', :'warden') as watched \gset
 select '302. five minutes of it: ' || :'watched' || ' killed, the rabba is '
      || case when exists (select 1 from creature where id = :'trespass') then 'still there' else 'gone' end
      || ', there is a corpse at ' || coalesce((select gx || ',' || gy from item where world_id = :'world2' and holder = 'ground' and def = 'corpse' limit 1), 'nowhere')
-     || ', and the testa is up to ' || (select round((skills->>'body_strength')::numeric, 2) from creature where id = :'warden');
+     || ', and the thumpa is up to ' || (select round((skills->>'body_strength')::numeric, 2) from creature where id = :'warden');
 
 -- A hunter does the same and then does what every other worker does with it.
 delete from creature where world_id = :'world2' and mode = 'wild';
@@ -2117,9 +2117,9 @@ select '310. aggressive, which needs no reason at all: ' ||
 -- the last ten sections, so it is paid off first.
 delete from creature where world_id = :'world2' and mode = 'deed';
 update player set x = 5.5, y = 7.5 where world_id = :'world2' and uid = :'ivar';
-select creature_spawn(:'world2', 'testa', 5.5, 6.5, 'stored', now() - interval '10 days', :'ivar') as recruit \gset
+select creature_spawn(:'world2', 'thumpa', 5.5, 6.5, 'stored', now() - interval '10 days', :'ivar') as recruit \gset
 select creature_spawn(:'world2', 'rowl', 5.5, 6.5, 'stored', now() - interval '10 days', :'ivar') as tracker \gset
-select '311. setting a testa to keep watch: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed',
+select '311. setting a thumpa to keep watch: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed',
        ('{"kind":"creature","id":' || :'recruit' || '}')::jsonb), 'allowed')
      || ' | and a rowl to hunt: ' || coalesce(act_refusal(:'world2', :'ivar', 'assign_deed',
        ('{"kind":"creature","id":' || :'tracker' || '}')::jsonb), 'allowed')

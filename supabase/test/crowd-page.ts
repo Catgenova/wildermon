@@ -77,7 +77,7 @@ beast('whispet', 'deed', cx + 6.5, cy + 6.5, 30);
 beast('sparra', 'deed', cx + 7.5, cy + 6.5, 30);
 // Thirty shut in crates, twenty-two kinds, in two rows of fifteen.
 const stored = ['quarra', 'quarra', 'quarra', 'quarra', 'orse', 'seavic', 'seavic', 'mola', 'mola', 'rabba', 'rabba', 'tinka', 'tinka', 'warda', 'warda',
-  'chissa', 'marka', 'noot', 'leecha', 'woola', 'holla', 'grazza', 'dowse', 'crawler', 'sheela', 'testa', 'ulva', 'simma', 'snedda', 'rippa'];
+  'chissa', 'lungra', 'noot', 'leecha', 'woola', 'holla', 'grazza', 'dowse', 'crawler', 'sheela', 'thumpa', 'ulva', 'simma', 'snedda', 'rippa'];
 stored.forEach((sp, i) => {
   const x = cx - 12 + (i % 15), y = cy - 6 + Math.floor(i / 15);
   put('furniture', 'creature_crate', x, y, { creature: beast(sp, 'stored', x + 0.5, y + 0.5, 30) });

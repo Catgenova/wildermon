@@ -104,7 +104,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, HEAD_ROOM, RAMP_SLOPE, STALL_WIDTH, WAGON
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason, GUARD_LEARN, SPAR_REACH } from '../src/game/creatures';
+import { ALLOY_QL, BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason, GUARD_LEARN, SPAR_REACH } from '../src/game/creatures';
 import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, SLEEP_SAID } from '../src/game/sleep';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -1808,6 +1808,8 @@ for (const [fn, v] of [
   ['lectern_gain', LECTERN_GAIN], ['lectern_reach', LECTERN_REACH], ['study_wear', STUDY_WEAR], ['study_wear_spread', STUDY_WEAR_SPREAD],
   /* What a lump costs in ore, and what a lump of the rare six is worth against one. */
   ['ore_per_lump', ORE_PER_LUMP], ['rare_lump_factor', RARE_LUMP_FACTOR],
+  /* What an alloy a scorcha mixes comes out at: the lumps' quality times the first plus its smelting over the second. */
+  ['alloy_ql_base', ALLOY_QL[0]], ['alloy_ql_span', ALLOY_QL[1]],
   ['tick_seconds', TICK_SECONDS], ['idle_logout', IDLE_LOGOUT], ['event_keep', EVENT_KEEP],
   ['change_keep', CHANGE_KEEP], ['island_keep', ISLAND_KEEP],
   /* And the two shorter keeps: a founding that never opened, and an island nobody came ashore on. */

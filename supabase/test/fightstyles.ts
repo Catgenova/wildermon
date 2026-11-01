@@ -1,16 +1,16 @@
 /**
- * Seven that fight.
+ * Seven that fought; two that still do.
  *
  * Asked for off a list of combat wildermon. This asks, of both sides, that
- * each of the seven fights by its style (`FightStyle`) wherever a blow of one
+ * each of the two fights by its style (`FightStyle`) wherever a blow of one
  * of yours lands on another creature, and a wild one does not:
  *
- *   * a testa turns what is after you or one of yours, near it, onto itself;
- *   * a skulka lands `BLINDSIDE` on what is fighting something else;
- *   * a gasha bleeds what it bites as a knife does;
+ *   * the testa, the skulka and the gasha are gone from the game (What's new
+ *     405, `repurpose.ts`);
  *   * a thumpa stuns with the last of every `HEAVY_EVERY` blows;
- *   * a spitta leaves venom;
- *   * an awla lands `BODKIN_HIDE` on anything with a hide;
+ *   * a spitta and an awla, which took up a settlement task (What's new 405,
+ *     `repurpose.ts`), fight by no style: a spitta's blow leaves no venom, an
+ *     awla's lands no harder on a hide;
  *   * a sparra of yours may be attacked, no lower than `SPAR_YIELD` of its
  *     health, where it yields and will not be sparred with until it is back
  *     above it; and a swing at it teaches as a swing at a wild thing does.
@@ -20,9 +20,9 @@
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
-import { maxHealth, SPAR_SLACK, SPAR_YIELD, SPECIES, type Creature } from '../../src/game/creatures';
+import { maxHealth, REMOVED_KINDS, SPAR_SLACK, SPAR_YIELD, SPECIES, type Creature } from '../../src/game/creatures';
 import { ACTION_BY_ID } from '../../src/game/actions';
-import { BLINDSIDE, BODKIN_HIDE, GUARD_RANGE, HEAVY_EVERY, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from '../../src/game/fight';
+import { BODKIN_HIDE, HEAVY_EVERY, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from '../../src/game/fight';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -44,9 +44,11 @@ const check = (what: string, passed: boolean, detail = ''): void => {
   (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
-const STYLES: Array<[string, string]> = [
-  ['testa', 'shield'], ['skulka', 'flank'], ['gasha', 'bleed'], ['thumpa', 'stun'], ['spitta', 'venom'], ['awla', 'bore'], ['sparra', 'spar'],
-];
+const STYLES: Array<[string, string]> = [['thumpa', 'stun'], ['sparra', 'spar']];
+/** The three that fought by a style and are gone from the game, and the style each had. */
+const GONE: Array<[string, string]> = [['testa', 'shield'], ['skulka', 'flank'], ['gasha', 'bleed']];
+/** The two that fought by a style until they took up a settlement task, and the style each had. */
+const RETIRED: Array<[string, string]> = [['spitta', 'venom'], ['awla', 'bore']];
 
 /* ---- on the island --------------------------------------------------------------- */
 
@@ -65,23 +67,11 @@ begin
   perform rpc_join(w, 'Mira');
   update player set x = 16.5, y = 16.5, body_at = now(), swim_at = now() where world_id = w and uid = u;
 
-  insert into said select 'STYLE:' || s.id, coalesce(s.style, '-') from species_def s where s.id in (${STYLES.map(([id]) => `'${id}'`).join(', ')});
+  insert into said select 'STYLE:' || s.id, coalesce(s.style, '-') from species_def s where s.id in (${[...STYLES, ...RETIRED].map(([id]) => `'${id}'`).join(', ')});
   insert into said values ('NUMBERS', spar_yield() || '|' || spar_slack());
+  insert into said select 'GONE', count(*)::text from species_def where id in (${GONE.map(([id]) => `'${id}'`).join(', ')});
 
-  -- Gasha: a bite on a wild rabba of no hide.
-  a := creature_spawn(w, 'gasha', 18.5, 16.5, 'active', now() - interval '60 days', u);
-  t := creature_spawn(w, 'ulva', 19, 16.5, 'wild', now() - interval '60 days', null);
-  update creature set health = 500 where world_id = w and id = t;
-  perform creature_attack(w, a, t);
-  insert into said select 'BLEED', (coalesce(bleed_rate, 0) > 0)::text || '|' || round(extract(epoch from bleed_until - now())::numeric) from creature where world_id = w and id = t;
-  -- And a wild one bites as any other does.
-  update creature set bleed_rate = null, bleed_until = null where world_id = w and id = t;
-  update creature set mode = 'wild', keeper = null where world_id = w and id = a;
-  perform creature_attack(w, a, t);
-  insert into said select 'WILDBLEED', coalesce(bleed_rate, 0)::text from creature where world_id = w and id = t;
-  delete from creature where world_id = w and id in (a, t);
-
-  -- Spitta: venom, a share of its health a second.
+  -- Spitta: no venom.
   a := creature_spawn(w, 'spitta', 18.5, 16.5, 'active', now() - interval '60 days', u);
   t := creature_spawn(w, 'ulva', 19, 16.5, 'wild', now() - interval '60 days', null);
   -- No blood and no rarity, which would lift the venom it takes (\`venom\`).
@@ -89,7 +79,7 @@ begin
   update creature set traits = '{}', rare = null where world_id = w and id = a;
   perform creature_attack(w, a, t);
   select * into c from creature where world_id = w and id = t;
-  insert into said values ('VENOM', round((c.bleed_rate / max_health(c))::numeric, 4) || '|' || round(extract(epoch from c.bleed_until - now())::numeric));
+  insert into said values ('VENOM', coalesce(round((c.bleed_rate / max_health(c))::numeric, 4) || '|' || round(extract(epoch from c.bleed_until - now())::numeric), '-'));
   delete from creature where world_id = w and id in (a, t);
 
   -- Thumpa: stunned on the last of every few blows, and not before.
@@ -102,32 +92,17 @@ begin
   insert into said select 'STUN', count(*)::text || '|' || coalesce(round(extract(epoch from max(until) - now())::numeric)::text, '-') from class_mark where world_id = w and creature_id = t and kind = 'stun' and until > now();
   delete from creature where world_id = w and id in (a, t);
 
-  -- Awla and skulka: what their blows are multiplied by.
+  -- Awla: what its blows are multiplied by.
   a := creature_spawn(w, 'awla', 18.5, 16.5, 'active', now() - interval '60 days', u);
   t := creature_spawn(w, 'bura', 19, 16.5, 'wild', now() - interval '60 days', null);
   t2 := creature_spawn(w, 'rabba', 19, 17.5, 'wild', now() - interval '60 days', null);
   insert into said select 'BORE', (select hide from species_def where id = 'bura') || '|' || style_dealt(a2, h) || '|' || style_dealt(a2, s)
     from creature a2, creature h, creature s where a2.world_id = w and a2.id = a and h.world_id = w and h.id = t and s.world_id = w and s.id = t2;
-  a := creature_spawn(w, 'skulka', 18.5, 17.5, 'active', now() - interval '60 days', u);
-  update creature set hunting = u where world_id = w and id = t;
-  update creature set brawl = a where world_id = w and id = t2;
-  insert into said select 'FLANK', style_dealt(a2, h) || '|' || style_dealt(a2, s)
-    from creature a2, creature h, creature s where a2.world_id = w and a2.id = a and h.world_id = w and h.id = t and s.world_id = w and s.id = t2;
   delete from creature where world_id = w and id in (a, t, t2) or world_id = w and species = 'awla';
-
-  -- Testa: two hunters after you beside it, and one too far off.
-  a := creature_spawn(w, 'testa', 17.5, 16.5, 'active', now() - interval '60 days', u);
-  t := creature_spawn(w, 'ulva', 18.5, 16.5, 'wild', now() - interval '60 days', null);
-  t2 := creature_spawn(w, 'ulva', 17.5, 18.5, 'wild', now() - interval '60 days', null);
-  t3 := creature_spawn(w, 'ulva', 17.5 + ${GUARD_RANGE} + 3, 16.5, 'wild', now() - interval '60 days', null);
-  update creature set hunting = u, health = 500 where world_id = w and id in (t, t2, t3);
-  perform creature_attack(w, a, t);
-  insert into said select 'SHIELD', string_agg(case when brawl = a then 'on' else 'off' end, ',' order by id) from creature where world_id = w and id in (t, t2, t3);
-  delete from creature where world_id = w and id in (a, t, t2, t3);
 
   -- Dummicub (was Sparra): yours may be sparred with, down to where it yields and no further; another tame thing may not.
   a := creature_spawn(w, 'sparra', 17.2, 16.5, 'active', now() - interval '60 days', u);
-  t := creature_spawn(w, 'gasha', 16.5, 17.2, 'active', now() - interval '60 days', u);
+  t := creature_spawn(w, 'thumpa', 16.5, 17.2, 'active', now() - interval '60 days', u);
   insert into said select 'SPARASK', coalesce(act_refusal(w, u, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', a)), 'none')
     || '|' || coalesce(act_refusal(w, u, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', t)), 'none');
   v_fight := skill_of(w, u, 'fighting');
@@ -150,19 +125,19 @@ for (const [id, style] of STYLES) {
   check(`a ${id} fights by ${style} on both sides`, SPECIES[id]?.style === style && at(`STYLE:${id}`) === style, at(`STYLE:${id}`));
   check(`a ${id}'s description is filled in`, !!SPECIES[id] && !/[{}]/.test(SPECIES[id].description), SPECIES[id]?.description);
 }
+for (const [id, style] of RETIRED) {
+  check(`a ${id} fights by no style on either side (it fought by ${style})`, !SPECIES[id]?.style && at(`STYLE:${id}`) === '-', at(`STYLE:${id}`));
+}
+check(`the ${GONE.length} that fought by ${GONE.map(([, st]) => st).join(', ')} are gone from both sides`,
+  GONE.every(([id]) => !SPECIES[id] && !!REMOVED_KINDS[id]) && at('GONE') === '0', at('GONE'));
 check(`a spar holds at ${SPAR_YIELD} of its health, give or take ${SPAR_SLACK}, on both sides`, at('NUMBERS') === `${SPAR_YIELD}|${SPAR_SLACK}`, at('NUMBERS'));
 
 /* ---- on the island ----------------------------------------------------------------- */
 
-const [bled, bleedSecs] = at('BLEED').split('|');
-check(`on the island, a gasha's bite bleeds what it bites for ${KNIFE_BLEED_SECS} seconds`, bled === 'true' && Number(bleedSecs) === KNIFE_BLEED_SECS, at('BLEED'));
-check('and a wild one\'s does not', at('WILDBLEED') === '0', at('WILDBLEED'));
-check(`a spitta's bite leaves venom of ${VENOM_DRAIN} of its health a second for ${VENOM_SECS} seconds`, at('VENOM') === `${VENOM_DRAIN.toFixed(4)}|${VENOM_SECS}`, at('VENOM'));
+check(`a spitta's bite leaves no venom (it left ${VENOM_DRAIN} of its health a second for ${VENOM_SECS} seconds)`, at('VENOM') === '-', at('VENOM'));
 check(`a thumpa stuns nothing on its first ${HEAVY_EVERY - 1} blows, and for ${STUN_SECS} seconds on the next`,
   at('STUNBEFORE') === '0' && at('STUN') === `1|${STUN_SECS}`, `${at('STUNBEFORE')} / ${at('STUN')}`);
-check(`an awla lands ${BODKIN_HIDE} on a bura's hide and 1 on a rabba`, at('BORE') === `thick|${BODKIN_HIDE}|1`, at('BORE'));
-check(`a skulka lands ${BLINDSIDE} on one after you and 1 on one fighting it`, at('FLANK') === `${BLINDSIDE}|1`, at('FLANK'));
-check(`a testa's blow turns the two hunters after you within ${GUARD_RANGE} tiles onto it, and not the one further off`, at('SHIELD') === 'on,on,off', at('SHIELD'));
+check(`an awla lands 1 on a bura's hide and 1 on a rabba (it landed ${BODKIN_HIDE} on a hide)`, at('BORE') === 'thick|1|1', at('BORE'));
 const [sparAsk, tameAsk] = at('SPARASK').split('|');
 check('a sparra of yours may be attacked; another of yours may not', sparAsk === 'none' && tameAsk.startsWith('Tame: release it first'), at('SPARASK'));
 const [sh, smax, shunt, slearnt, sAfter] = at('SPAR').split('|');
@@ -190,22 +165,10 @@ const wild = (id: string, dx = 1.5, dy = 0, health = 500): Creature => {
 };
 const clear = (): void => { for (const c of [...g.creatures.list.values()]) g.creatures.list.delete(c.id); };
 {
-  const a = mine('gasha');
-  const t = wild('ulva');
-  g.creatures.attack(g, a, t);
-  const tamed = t.bleedRate > 0 && Math.abs(t.bleedUntil - g.time - KNIFE_BLEED_SECS) < 1e-9;
-  t.bleedRate = 0;
-  t.bleedUntil = 0;
-  a.mode = 'wild';
-  g.creatures.attack(g, a, t);
-  check(`in the browser, a gasha's bite bleeds for ${KNIFE_BLEED_SECS} seconds, and a wild one's does not`, tamed && t.bleedRate === 0, `${t.bleedRate}`);
-  clear();
-}
-{
   const a = mine('spitta');
   const t = wild('ulva');
   g.creatures.attack(g, a, t);
-  check('a spitta leaves venom', Math.abs(t.bleedRate / maxHealth(t, SPECIES[t.species]) - VENOM_DRAIN) < 1e-9 && Math.abs(t.bleedUntil - g.time - VENOM_SECS) < 1e-9, `${t.bleedRate}`);
+  check('in the browser, a spitta leaves no venom', !(t.bleedRate > 0 && t.bleedUntil > g.time), `${t.bleedRate}`);
   clear();
 }
 {
@@ -232,24 +195,12 @@ const clear = (): void => { for (const c of [...g.creatures.list.values()]) g.cr
     return sum / 4000 / SPECIES[id].attack;
   };
   const hide = mean('awla', 'bura') / mean('awla', 'rabba');
-  check(`an awla lands ${BODKIN_HIDE} as hard on a bura's hide as on a rabba`, Math.abs(hide - BODKIN_HIDE) < 0.04, hide.toFixed(3));
-  const flank = mean('skulka', 'rabba', (t) => { t.enemy = -1; }) / mean('skulka', 'rabba', (t, a) => { t.brawl = a.id; });
-  check(`a skulka lands ${BLINDSIDE} as hard on one after you as on one fighting it`, Math.abs(flank - BLINDSIDE) < 0.04, flank.toFixed(3));
-}
-{
-  const a = mine('testa', 0, 0);
-  const near = [wild('ulva', 1, 0), wild('ulva', 0, 2)];
-  const far = wild('ulva', GUARD_RANGE + 3, 0);
-  for (const o of [...near, far]) o.enemy = -1;
-  g.creatures.attack(g, a, near[0]);
-  check(`a testa's blow turns the hunters after you within ${GUARD_RANGE} tiles onto it, and not one further off`,
-    near.every((o) => o.brawl === a.id) && far.brawl === null, [...near, far].map((o) => o.brawl).join(','));
-  clear();
+  check(`in the browser, an awla lands as hard on a bura's hide as on a rabba (it landed ${BODKIN_HIDE} as hard)`, Math.abs(hide - 1) < 0.04, hide.toFixed(3));
 }
 {
   const ATTACK = ACTION_BY_ID.get('attack_creature')!;
   const s = mine('sparra', 0.6, 0);
-  const other = mine('gasha', 0, 0.6);
+  const other = mine('thumpa', 0, 0.6);
   const target = (c: Creature) => ({ kind: 'creature' as const, id: c.id });
   check('a sparra of yours may be sparred with, and is offered as Spar; another of yours may not be attacked',
     ATTACK.applies(target(s), g) && ATTACK.labelFor?.(target(s), g) === 'Spar' && ATTACK.check?.(target(s), g) === null
@@ -264,5 +215,5 @@ const clear = (): void => { for (const c of [...g.creatures.list.values()]) g.cr
 }
 
 for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nseven that fight — ${ok.length} of ${ok.length + bad.length}`);
+console.log(`\ntwo that fight — ${ok.length} of ${ok.length + bad.length}`);
 if (bad.length) process.exit(1);
