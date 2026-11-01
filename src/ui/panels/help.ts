@@ -137,6 +137,7 @@ import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STE
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
+import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { TREE_DEPTH } from '../recipetree';
 import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
 import { SMELTER_H, SMELTER_W } from '../../game/smelter';
@@ -536,7 +537,7 @@ function dairyHelp(): string {
       <li>Butter: churned within ${STATION_REACH} tiles of a <b>butter churn</b> on the ground (${workedAt(CHURN_BUTTER)}): ${made(CHURN_BUTTER)}
       pats of <b>butter</b>. Returns the bucket empty. Churn: ${(SKILL_BY_ID.get(recipe(`make_${BUTTER_CHURN}`).skill)?.name ?? '').toLowerCase()},
       ${bill(`make_${BUTTER_CHURN}`)}.</li>
-      <li>Failed cheese or butter: milk lost, bucket returned empty.</li>
+      <li>Failed cheese or butter: bucket of milk damaged by its QL (see Crafting, <i>Failure</i>).</li>
       <li>Pastry: ${need('bake_pastry', 'butter')} pats of butter + ${need('bake_pastry', 'dough')} round of dough, at a lit fire or oven
       (${workedAt('bake_pastry')}): ${made('bake_pastry')} <b>pastries</b>.</li>
     </ul>
@@ -1437,6 +1438,15 @@ export function helpText(): string {
       up to ${TREE_DEPTH} recipes deep. Parts you have enough of are not expanded; with several recipes, the first makeable one is shown.
       Click a line for that thing's recipes.</li>
     </ul>
+    <h4>Failure</h4>
+    <ul>
+      <li>Failed craft: nothing used up, nothing handed back. Each unit it would have used, off the stacks it would have used: damage by that stack's QL,
+      ${FAIL_DAMAGE_SAID}, straight line between.</li>
+      <li>Only the units it would have used: a pile's damage rises by that over its count. Reaching ${BROKEN_AT} damage: those units gone.</li>
+      <li>Litre inputs: that damage as a share of the litres it would have taken, lost, to the whole litre; the vessel undamaged.</li>
+      <li>Every recipe with a skill check, smelting, alloys, cooking, kilns and glass included; the anvil, coins, brewing and dye recipes the same.
+      Scrolls: their own rule (Enchanting).</li>
+    </ul>
     <h4>What is at hand</h4>
     <ul>
       <li>Crafts and station work that use materials take from: pack, then bags on your back, then your stores within <b>${CRAFT_REACH} tiles</b>, nearest first.</li>
@@ -1485,7 +1495,7 @@ export function helpText(): string {
       ${listed(BREWS.map((b) => `<b>${b.name.toLowerCase()}</b>: ${countIn(b.input, b.count)} + ${b.litres} litres of water, ${dur(b.time)}`))}.</li>
       <li>Yield: litres of drink = litres of water.</li>
       <li>While working: cannot be drawn off; cannot be hurried. Then draw into a bucket and drink from that.</li>
-      <li>Brew quality (QL): half the ingredients' QL + half your <b>brewing</b>. A failed brew sours the barrel.</li>
+      <li>Brew quality (QL): half the ingredients' QL + half your <b>brewing</b>. Failed brew: ingredients damaged by their QL (${FAIL_DAMAGE_SAID}); water lost: that damage as a share of the brew's litres, by the barrel's QL, to the whole litre.</li>
     </ul>
     <h4>Ageing</h4>
     <ul>
@@ -1640,13 +1650,13 @@ export function helpText(): string {
       <li><b>Cook</b> at a lit fire: cooked meat fills ${percent(itemDef('cooked_meat').food ?? 0)} of the food bar (raw ${percent(itemDef('meat').food ?? 0)}); baked potatoes;
       roast onions and nuts; with a <b>clay bowl</b>: berry compote, meat and vegetable stew.</li>
       <li><b>Cottage pie</b> (${workedAt('make_cottage_pie')}, clay bowl, lit fire): ${bill('make_cottage_pie')}; makes ${made('make_cottage_pie')}, ${percent(itemDef('cottage_pie').food ?? 0)} food each.</li>
-      <li>Cooking recipes: in the crafting window, unlocked next to a lit fire. A failed dish loses the ingredients.</li>
+      <li>Cooking recipes: in the crafting window, unlocked next to a lit fire. Failed dish: ingredients damaged by their QL.</li>
       <li>Burns fuel in real time; goes cold when out. Unlit: take apart for the wood.</li>
     </ul>
     <h3>Grain, the quern and bread</h3>
     <ul>
       <li><b>Quern</b>: ${bill('make_quern')}, stonecutting. Use trains <b>Milling</b>.</li>
-      <li>${capital(countIn('wheat', need('make_flour', 'wheat')))}: a lot of <b>flour</b>. ${capital(countIn('corn', need('make_cornmeal', 'corn')))}: <b>cornmeal</b>. Failed grinding: grit.</li>
+      <li>${capital(countIn('wheat', need('make_flour', 'wheat')))}: a lot of <b>flour</b>. ${capital(countIn('corn', need('make_cornmeal', 'corn')))}: <b>cornmeal</b>. Failed grinding: grain damaged by its QL.</li>
       <li><b>Dough</b>: ${need('make_dough', 'flour')} flour + ${litresOf('make_dough')}: ${made('make_dough')} rounds.</li>
       <li><b>Bread</b>: a round of dough on a hot stone at a lit fire. Keeps and travels.</li>
       <li><b>Porridge</b>: cornmeal boiled in a clay bowl: ${made('make_porridge')} bowls.</li>
@@ -1680,7 +1690,7 @@ export function helpText(): string {
       <li><b>Anvil mould</b>, poured at the smelter: an anvil of that metal; set down on ${ANVIL_SUBTILES * ANVIL_SUBTILES} spots of a tile.</li>
       <li>Other moulds, <b>poured at the smelter</b> in any metal: a <b>casting</b> (shovel head casting, nail casting…) out with the lumps.</li>
       <li>Castings are finished at an <b>anvil</b> with <b>blacksmithing</b>, <b>weaponsmithing</b> or <b>armoursmithing</b> as the piece needs. Skill sets success and QL,
-      with the casting (mould and metal QL) and the anvil.</li>
+      with the casting (mould and metal QL) and the anvil. Failure: casting damaged by its QL (${FAIL_DAMAGE_SAID}), not used up.</li>
       <li>Tool heads and blades: fit a shaft. Swords hit far harder than tools. A helm stops most of a cornered wildermon's damage.</li>
     </ul>
     <h4>Smith</h4>
@@ -1694,7 +1704,7 @@ export function helpText(): string {
     <ul>
       <li><b>Glassblowing</b> (Artisan), at a hot smelter: ${listed(['make_glass', 'make_glass_panel', 'make_bottle', 'make_stained_glass'].map(glassJob))}.</li>
       <li>Glazing: window ${glazing('window')} glass panels; bay window ${glazing('bay')}; glass solid wall ${glassWall()}; glass roof ${glassTile()} a tile.</li>
-      <li>Failed stained glass keeps the gem and sand; other failures lose the inputs.</li>
+      <li>Failed glass, stained glass included: inputs damaged by their QL.</li>
       <li><b>${SPECIES.glimmip.name}</b> line (settlement worker): ${GATHER_DO.glass}. Any lit smelter, charged or not; does not light or fuel it. Lumps only.
       Evolves: ${evolves('glimmip')}.</li>
       <li><b>Bottle</b>: holds ${itemDef('bottle').holds ?? 0} of one food or drink; contents rot at ${frac(itemDef('bottle').shelter ?? 1)} of the rate on the ground.</li>
@@ -2311,7 +2321,7 @@ export function helpText(): string {
     <ul>
       <li><b>A gold coin = ${GOLD} silver</b>. Prices are in silver; change comes in silver.</li>
       <li>Paying uses your largest coins first (${GOLD + 1} silver from a gold and ${POCKET} silver leaves ${POCKET - 1}).</li>
-      <li><b>Struck from ${COIN_METALS.join(' or ')} only</b>, ${COINS_PER_LUMP} per lump, at an anvil with a coin die in the pack. The lump is spent every strike; a failure loses it.</li>
+      <li><b>Struck from ${COIN_METALS.join(' or ')} only</b>, ${COINS_PER_LUMP} per lump, at an anvil with a coin die in the pack. One lump spent a strike that comes off; a failure damages it by its QL (${FAIL_DAMAGE_SAID}).</li>
       <li>After the smith's check, gold quality (QL): takes the die every time at QL ${QL_TOP}, ${percent(coinPurity(QL_TOP / 2))} at QL ${QL_TOP / 2}, ${percent(1 - COIN_QL_WEIGHT)} at the bottom; linear between.</li>
       <li>Gold ore: only under the mountain of ${REGIONS.filter((R) => R.mountain?.includes('gold_ore')).map((R) => islandName(R.name)).join(' and ')}; never panned or in a hoard.</li>
       <li>Gold coins in the grass: a <b>foraging</b> action finds one one time in ${COIN_FIND_ONE_IN}, max ${COIN_FINDS_A_DAY} a day per person (daily reset (${hudHour(TREE_DAWN_UTC)} UTC) to the next).
@@ -2697,7 +2707,7 @@ export function helpText(): string {
       <li><b>Litres</b>: a bucket holds ${BUCKET_LITRES} L; weight ${itemDef('bucket').weight} kg + ${LITRE_KG} kg a litre. A recipe's liquid comes out of the buckets carried, then buckets in stores,
       then barrels, wells and fountains within its reach; a bucket at its last litre is an empty bucket. <b>Fill with water</b> tops up a part bucket of water.</li>
       <li><b>Bucket of lye</b>: ${need('make_lye', 'ash')} lots of ashes + a full bucket of water; <b>Alchemy</b>. ${BUCKET_LITRES} L.</li>
-      <li><b>Tanning</b> (leatherworking): raw <b>hide</b> + ${litresOf('tan_hide')} + carving knife: <b>leather</b>. Failure spoils the hide.</li>
+      <li><b>Tanning</b> (leatherworking): raw <b>hide</b> + ${litresOf('tan_hide')} + carving knife: <b>leather</b>. Failure: hide damaged and lye lost by their QL.</li>
       <li>Cleaning a wound, removing dye or paint: ${LYE_USE} L lye.</li>
       <li>Leather: cap, jerkin, sleeves, trousers, boots; improving leather pieces.</li>
     </ul>
@@ -2773,7 +2783,7 @@ export function helpText(): string {
       <li><b>${ACTION_BY_ID.get(BOIL_DYE_RECIPE)?.label}</b> on the recipe: ${aOrAn(itemDef(BOIL_IN).name)} and the dyestuffs listed, from your pack;
       ${BOIL_LITRES} litres of exactly the recipe's mix. QL: your alchemy's roll, at most the recipe's.</li>
       <li>Alchemy, time and stamina: as a dyestuff boil. Difficulty: the hardest of its dyestuffs' boils (the example: alchemy ${recipeDifficulty(RECIPE_SHOWN)}).
-      ${listed(['double_boil', 'thrifty_dyer', 'sure_boil'].map((k) => `Naturalist ${PERK_BY_ID.get(`naturalist_${k}`)?.name}`))}: as on a dyestuff boil. Failed: dyestuffs and lye lost, bucket kept. Recipe kept.</li>
+      ${listed(['double_boil', 'thrifty_dyer', 'sure_boil'].map((k) => `Naturalist ${PERK_BY_ID.get(`naturalist_${k}`)?.name}`))}: as on a dyestuff boil. Failed: dyestuffs and lye damaged by their QL. Recipe kept.</li>
       <li>Short: "${DYE_RECIPE_SAID.noLye}", or the weight needed and held.</li>
     </ul>
     <h4>Dyeing</h4>

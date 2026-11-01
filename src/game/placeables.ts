@@ -203,6 +203,8 @@ export function drawFrom(g: Game, f: PlacedFurniture, litres: number): boolean {
 export interface LitreSource {
   litres: number;
   carried: boolean;
+  /** The QL of what is in it: a vessel's own, a barrel's as it stands now (`brewQl`), which a failed go's loss is by (`failLitres`). */
+  ql: number;
   take(n: number): boolean;
 }
 
@@ -253,6 +255,7 @@ export function litreSources(g: Game, vessel: string, reach: number | null, stoc
     out.push({
       litres: litresOf(item) * item.count,
       carried: s.carried,
+      ql: item.ql,
       order: (s.carried ? 0 : 1000) + litresOf(item),
       take: (n) => {
         let left = n;
@@ -271,7 +274,7 @@ export function litreSources(g: Game, vessel: string, reach: number | null, stoc
   const placed = g.furnitureWithin(Math.ceil(reach) + 1)
     .filter((f) => holdsLiquid(f) && f.liquid === liquid && !isWorking(f) && litresIn(f) > 0 && nearPiece(g, f, reach))
     .sort((a, b) => litresIn(b) - litresIn(a));
-  for (const f of placed) out.push({ litres: litresIn(f), carried: false, order: 2000, take: (n) => drawFrom(g, f, n) });
+  for (const f of placed) out.push({ litres: litresIn(f), carried: false, ql: brewQl(f, g.wallNow()), order: 2000, take: (n) => drawFrom(g, f, n) });
   return out;
 }
 

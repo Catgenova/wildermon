@@ -32,6 +32,8 @@ import { ITEM_DEFS, makersMark, markSays, partsMark, RARITY_ODDS, rarityStep, ro
 import { MELT_KEEP, MELT_SHARE, meltLumps, meltQl } from '../../src/game/melt';
 import { COIN_REFUSAL, COINS_PER_LUMP, coinPurity, FORGE_WORK, INGOT_LUMPS, INGOT_WEIGHT, ingotOf, lumpsIn, METAL_BY_ID, MOULD_BY_ID, MOULD_DENT, mouldUsesLeft } from '../../src/game/metal';
 import { perksOf, type PerkDef } from '../../src/game/perks';
+import { failDamage } from '../../src/game/faildamage';
+import { SECOND_HEAT } from '../../src/game/anvil';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, recipeStatus } from '../../src/game/recipes';
 
 const psql = (sql: string): string =>
@@ -255,7 +257,7 @@ begin
   insert into said values ('HAMMER', v_t || '|' || ${count('rake_head')} || ':' || ${count('coin')});
   ${clear('rake_head', 'casting', 'coin', 'gold_lump')};
 
-  /* ---- Second Heat: a failed go keeps its casting. ---- */
+  /* ---- Second Heat: a failed go leaves its casting undamaged. ---- */
   ${hold('Second Heat')};
   ${casting('rake_head', 1)};
   perform act_perform(w, u, 'smith', ${atAnvil('v_cast')});
@@ -380,7 +382,7 @@ begin
   perform give(w, u, 'silver_lump', 1, 50);
   insert into said values ('SILVERNO', ${refused('strike_coins', atAnvil(newest('silver_lump')))} || '|' || ${count('silver_lump')});
   ${clear('silver_lump')};
-  -- The gold decides, past a hand that never misses: always at QL 100, about half the time at QL 0, and the lump gone either way.
+  -- The gold decides, past a hand that never misses: always at QL 100, about half the time at QL 0; a lump spent only on a strike that comes off.
   perform give(w, u, 'coin_die', 2, 100);
   perform give(w, u, 'gold_lump', 20, 100);
   perform act_perform(w, u, 'strike_coins', ${atAnvil(newest('gold_lump'))}) from generate_series(1, 20);
@@ -488,11 +490,11 @@ check(`${P('Clean Pour').name}: a QL 60 mould at 40 damage pours as ${60 - 40 * 
 /* ---- the anvil ---------------------------------------------------------------------------- */
 
 const [hamA, hamB] = say('HAMMER').split('|').map((s) => s.split(':').map(Number));
-check(`${P('Sure Hammer').name}: Smith and Strike coins fail every time without it, and come off with it (its failure put at none)`,
-  hamA[0] === 0 && hamA[1] === 1 && hamA[2] === 0 && hamB[0] === 1 && hamB[1] > 0, say('HAMMER'));
+check(`${P('Sure Hammer').name}: Smith and Strike coins fail every time without it, the casting damaged and kept, and come off with it (its failure put at none)`,
+  hamA[0] === 0 && hamA[1] === 2 && hamA[2] === 0 && hamB[0] === 1 && hamB[1] > 0, say('HAMMER'));
 const [heatLeft, heatSaid] = say('HEAT').split('|');
-check(`${P('Second Heat').name}: a failed go keeps its casting, and says so`,
-  Number(heatLeft) === 1 && heatSaid.includes('Second Heat: casting kept.'), say('HEAT'));
+check(`${P('Second Heat').name}: a failed go leaves its casting undamaged, and says so`,
+  Number(heatLeft) === 1 && heatSaid.includes(SECOND_HEAT), say('HEAT'));
 const nailMould = MOULD_BY_ID.get('nail_mould')!;
 const [nailsA, nailsB, nailsSaid] = say('NAILS').split('|');
 check(`${P('Nail Maker').name}: a filling of nails is ${P('Nail Maker').fx['count:nail']} with it, ${nailMould.per} without, and the go says so`,
@@ -560,9 +562,10 @@ const [pureTop, pureLow, pureSaid] = say('PURE').split('|');
 const [topCoins, topLeft] = pureTop.split(':').map(Number);
 const [lowCoins, lowLeft] = pureLow.split(':').map(Number);
 const lowShare = lowCoins / COINS_PER_LUMP / 60;
-check(`gold at QL 100 takes the die every time, at QL 0 about ${coinPurity(0)} of the time (${lowShare.toFixed(2)}), and a strike that fails loses the lump`,
-  topCoins === 20 * COINS_PER_LUMP && topLeft === 0 && lowLeft === 0 && lowShare > coinPurity(0) - 0.2 && lowShare < coinPurity(0) + 0.2
-    && pureSaid.endsWith('Lump lost.'), say('PURE'));
+check(`gold at QL 100 takes the die every time, at QL 0 about ${coinPurity(0)} of the time (${lowShare.toFixed(2)}), and a strike that fails damages the lump and spends none`,
+  topCoins === 20 * COINS_PER_LUMP && topLeft === 0 && lowLeft === 60 - lowCoins / COINS_PER_LUMP
+    && lowShare > coinPurity(0) - 0.2 && lowShare < coinPurity(0) + 0.2
+    && pureSaid.startsWith(`Failed: coins, gold too poor for the die. Inputs damaged: gold lump ×1, +${failDamage(0)} damage.`), say('PURE'));
 const kgs = say('KG').split(',').map((s) => s.split(':'));
 check('every metal has an ingot on the island, weighing what the browser says',
   kgs.length === Object.keys(ITEM_DEFS).filter((id) => id.endsWith('_ingot')).length

@@ -3549,10 +3549,25 @@ jobs:
           # seeded mixes. Boil from recipe gives exactly the recipe's parts at
           # the boil's QL capped at the recipe's, takes each share and the
           # lye, keeps the recipe, halves the weight for a Double Boil and
-          # loses it all on a failed boil. Every refusal in the same words.
+          # damages the dyestuffs and the lye by their QL on a failed boil.
+          # Every refusal in the same words.
           npx esbuild supabase/test/dyerecipes.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/dyerecipes.mjs --log-level=error
           node node_modules/.cache/dyerecipes.mjs
+      - name: A failed craft damages what it would have used, by its QL, the same on both sides
+        if: matrix.shard == 6
+        run: |
+          # The damage at QL 0 to 100; only the units a go would have used,
+          # the pile's damage up by that over its count; units taken to the
+          # most there is gone; a litre input losing that share of its litres;
+          # a smelting and a cooking recipe that used to lose everything
+          # damaging instead and handing nothing back; Nothing Wasted, Keep
+          # the Stone and Second Heat sparing it; the anvil's casting and
+          # lump, and a brew's ingredients and water. Every line in the same
+          # words.
+          npx esbuild supabase/test/faildamage.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/faildamage.mjs --log-level=error
+          node node_modules/.cache/faildamage.mjs
       - name: Five Runestones stand on the shore, and a Telestone takes you to them
         if: matrix.shard == 4
         run: |

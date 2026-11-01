@@ -182,6 +182,7 @@ import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
 import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP } from '../src/game/game';
 import { DARK_WALK, DARK_WORK, TRACK_AWARE } from '../src/game/learn';
 import { DAMAGE_MAX, QL_TOP } from '../src/game/limits';
+import { FAIL_DAMAGE_AT_HIGH, FAIL_DAMAGE_AT_LOW, FAIL_DAMAGE_QL_HIGH, FAIL_DAMAGE_QL_LOW } from '../src/game/faildamage';
 import { BARTER_IDLE, BARTER_MOST, BARTER_REACH, BARTER_SAID } from '../src/game/barter';
 import {
   DELIVER_REACH, LEDGER_KEEP, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, SETTLE_SAID, WORK_COUNT_MAX, WORK_DONE_KEEP, WORK_OPEN_MAX, WORK_QL_TOP,
@@ -912,7 +913,7 @@ out.push(`create table if not exists recipe (
   id text primary key, result text not null, count int not null default 1,
   tool text, station text, skill text not null, label text not null, verb text not null,
   base_time real not null, stamina real not null default 0, difficulty real,
-  consume_on_fail boolean not null default false, ql_from_inputs boolean not null default false,
+  ql_from_inputs boolean not null default false,
   material text, wood text, extra text, done text not null, fail text
 );`);
 /* Worked only by somebody standing on a settlement of theirs: `Recipe.deed`, which `craft_refusal` reads. */
@@ -1024,7 +1025,8 @@ out.push(`create table if not exists recipe_input (
 /* Litres of a liquid rather than whole things, out of any vessel or barrel of it at hand (`RecipeInput.litres`). */
 out.push(`alter table recipe_input add column if not exists litres int;`);
 /* What a craft hands back besides the thing itself: the bucket the lye was
- * mixed in on success, and what is left of a spoiled batch on failure. */
+ * mixed in, on success. A failed go uses nothing up and hands nothing back, so
+ * no 'salvage' row is written any more (`faildamage.ts`). */
 out.push(`create table if not exists recipe_gives (
   recipe text not null references recipe on delete cascade,
   item text not null, count int not null default 1,
@@ -2237,6 +2239,8 @@ for (const [fn, v] of [
   ['enchant_harm', ENCHANT_HARM], ['enchant_break', ENCHANT_BREAK], ['stun_secs', STUN_SECS],
   ['enchant_burn_each', ENCHANT_BURN.each], ['enchant_burn_secs', ENCHANT_BURN.secs], ['frost_pace', FROST_PACE], ['frost_secs', FROST_SECS], ['grace_tiles', GRACE_TILES],
   ['ql_low', QL_LOW], ['ql_span', QL_SPAN], ['ql_bare', QL_BARE], ['ql_top', QL_TOP], ['damage_max', DAMAGE_MAX],
+  ['fail_damage_at_low', FAIL_DAMAGE_AT_LOW], ['fail_damage_at_high', FAIL_DAMAGE_AT_HIGH],
+  ['fail_damage_ql_low', FAIL_DAMAGE_QL_LOW], ['fail_damage_ql_high', FAIL_DAMAGE_QL_HIGH],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }
@@ -2443,19 +2447,16 @@ PATH_PICKS.forEach((k, num) => {
     q(k.cost), q(k.rest), q(JSON.stringify(k.fx))].join(', ') + `);`);
 });
 for (const r of RECIPES) {
-  out.push(`insert into recipe (id, result, count, tool, station, skill, label, verb, base_time, stamina, difficulty, consume_on_fail, ql_from_inputs, material, wood, extra, done, fail) values (` +
+  out.push(`insert into recipe (id, result, count, tool, station, skill, label, verb, base_time, stamina, difficulty, ql_from_inputs, material, wood, extra, done, fail) values (` +
     [q(r.id), q(r.result), q(r.count ?? 1), q(r.tool), q(r.station), q(r.skill), q(r.label), q(r.verb),
      q(r.baseTime), q(r.stamina), q(r.difficulty === undefined ? null : r.difficulty),
-     q(!!r.consumeOnFail), q(!!r.qlFromInputs), q(r.material), q(r.wood), q(r.extra), q(r.done), q(r.fail)].join(', ') + `);`);
+     q(!!r.qlFromInputs), q(r.material), q(r.wood), q(r.extra), q(r.done), q(r.fail)].join(', ') + `);`);
   if (r.deed) out.push(`update recipe set deed = true where id = ${q(r.id)};`);
   r.inputs.forEach((i, n) => {
     out.push(`insert into recipe_input (recipe, ord, item, count, litres) values (${q(r.id)}, ${n}, ${q(i.item)}, ${q(i.count ?? 1)}, ${q(i.litres ?? null)});`);
   });
   for (const [item, count] of r.returns ?? []) {
     out.push(`insert into recipe_gives values (${q(r.id)}, ${q(item)}, ${q(count)}, 'return');`);
-  }
-  for (const [item, count] of r.salvage ?? []) {
-    out.push(`insert into recipe_gives values (${q(r.id)}, ${q(item)}, ${q(count)}, 'salvage');`);
   }
 }
 /* The baubles, and their few loose numbers. */

@@ -6,6 +6,7 @@ import { BUCKET_LITRES, furnitureCentre, furnitureName, holdsLiquid, isWell, lit
 import { drawFrom, dyeInPiece, litresAtHand, lyeCarried, LYE_USE, NEED_LYE, takeLitres, vesselBecomes } from './placeables';
 import { bestSheet, CHART_SHEET } from './cartography';
 import { MIND_GAIN, tryGain } from './learn';
+import { damageDrawn, failDamagedSaid, type FailStack } from './faildamage';
 import {
   colourWord, DYE_BUCKET, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PANE_LITRES, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, DYE_RECIPE, dyeGrams, dyeHex, dyeIn,
   dyeLitresFor, dyeQl, dyeRecipeId, dyeSays, DYESTUFF_OF, DYESTUFFS, dyeText, isHex, kgSaid, PRIMARIES, pureDye, qlSaid, RECIPE_STUFF, recipeOf, sharesSaid,
@@ -480,13 +481,14 @@ export const DYE_ACTIONS: ActionDef[] = [
         for (const s of shares) g.inventory.consume(s.from, s.count);
         g.inventory.consume(BOIL_IN, 1);
       };
-      // A boil that does not come off loses what went into it, and the bucket is tipped out and kept, as a dyestuff's does.
+      // A boil that does not come off uses nothing up: the dyestuffs and the lye are damaged by their QL, as a dyestuff's boil's are (`faildamage.ts`).
       if (!g.sureCheck(recipeBoilOf(l), DYE_SKILL, recipeDifficulty(l), 0, g.mindEase())) {
-        spend();
-        g.inventory.add('bucket', { ql: 20 });
+        const pack = (id: string): FailStack[] => g.inventory.items.filter((it) => it.id === id && !it.locked)
+          .map((it) => ({ item: it, spend: (n: number) => g.inventory.remove(it.uid, n), touched: () => g.inventory.onChange?.() }));
+        const hurt = [...shares.flatMap((s) => damageDrawn(pack(s.from), s.count)), ...damageDrawn(pack(BOIL_IN), 1)];
         g.missed();
         g.gainSkill('mind_logic', tryGain(false, MIND_GAIN));
-        g.logMsg(DYE_RECIPE_SAID.failed, 'event');
+        g.logMsg(failDamagedSaid(DYE_RECIPE_SAID.failed, hurt), 'event');
         g.events.emit('inventory');
         return boilRecipeRefusal(g, t) === null;
       }

@@ -29,6 +29,8 @@ import { describeNeeds, MATERIAL_BY_ID, MAX_LEVELS, TALL_STOREYS, TOP_LEVELS } f
 import { BRIDGES } from '../../src/game/bridges';
 import { ITEM_DEFS } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
+import { failDamage } from '../../src/game/faildamage';
+import { SPARED } from '../../src/game/recipes';
 import { metres } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -190,18 +192,18 @@ begin
   update item set ql = 100 where world_id = w and holder = 'player' and holder_uid = u and def = 'chisel';
   update skill set value = 60 where world_id = w and uid = u and id = 'stonecutting';
 
-  /* ---- Careful Builder: a kiln that fails, its bricks and mortar kept with it and lost without. ---- */
+  /* ---- Careful Builder: a kiln that fails, its bricks and mortar undamaged with it and damaged without. ---- */
   ${checks(false)};
   perform pg_temp.hold(w, u, '{}');
   perform give(w, u, 'stone_brick', 24, 30); perform give(w, u, 'mortar', 8, 30);
   perform perform_craft(w, u, 'make_kiln', '{}'::jsonb);
-  v_t := ${count('stone_brick')} || ',' || ${count('mortar')};
+  v_t := ${count('stone_brick')} || ',' || ${count('mortar')} || ',' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'stone_brick') || ',' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'mortar');
   ${clear('stone_brick', 'mortar')};
   ${hold('Careful Builder')};
   perform give(w, u, 'stone_brick', 24, 30); perform give(w, u, 'mortar', 8, 30);
   perform perform_craft(w, u, 'make_kiln', '{}'::jsonb);
   insert into said values ('KILN', v_t || '|' || ${count('stone_brick')} || ',' || ${count('mortar')}
-    || '|' || coalesce(${last('Nothing Wasted:%')}, 'unsaid'));
+    || ',' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'stone_brick') || ',' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'mortar') || '|' || coalesce(${last('Nothing Wasted:%')}, 'unsaid'));
   ${clear('stone_brick', 'mortar', 'kiln')};
 
   /* ---- From here every check passes: what is measured is what a go makes. ---- */
@@ -457,8 +459,8 @@ const [chiselA, chiselB] = say('CHISEL').split('|').map(Number);
 check(`${P('Sure Chisel').name}: thirty goes at no skill with the worst chisel all come off with its failures at nought, and not without`,
   chiselB === 60 && chiselA < 60, `${chiselA / 2} of 30 without, ${chiselB / 2} of 30 with`);
 const [kilnA, kilnB, kilnSaid] = say('KILN').split('|');
-check(`${P('Careful Builder').name}: a kiln that fails keeps its 24 bricks and 8 mortar with it, and loses them without`,
-  kilnA === '0,0' && kilnB === '24,8' && kilnSaid !== 'unsaid', say('KILN'));
+check(`${P('Careful Builder').name}: a kiln that fails leaves its 24 bricks and 8 mortar undamaged with it, and damages them by ${failDamage(30)} without`,
+  kilnA === `24,8,${failDamage(30)},${failDamage(30)}` && kilnB === '24,8,0,0' && kilnSaid === SPARED, say('KILN'));
 const three = P('Three from a Shard').fx['count:stone_brick'];
 const [shardA, shardB] = say('SHARD').split('|');
 check(`${P('Three from a Shard').name}: a shard chisels into ${three} stone bricks with it, and two without, and the go says so`,

@@ -6,7 +6,7 @@
  *     into a panel, sand blown into a bottle, a gem and sand fired into a
  *     batch of stained glass panes -- the same bill, count and trade on both sides,
  *     and each made on the island, the skill going up as it is worked;
- *   * a firing of stained glass that fails keeps the gem and the sand;
+ *   * a firing of stained glass that fails damages the gem and the sand by their QL and uses neither;
  *   * a window and a bay are glazed with panels, and a pane is called one;
  *   * the stained glass wall: the same bill, weight and height on both sides;
  *   * a bottle is a bag of one food or drink, and turns away a log in the
@@ -14,6 +14,7 @@
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
+import { failDamage } from '../../src/game/faildamage';
 import { execFileSync } from 'node:child_process';
 // First, so the rules load in the order the game loads them: building and items lean on each other.
 import { ACTIONS } from '../../src/game/actions';
@@ -64,10 +65,10 @@ check('and the Artisan’s trade on both sides',
   psql(`select coalesce(string_agg(class, ','), 'nobody') from class_skill where skill = 'glassblowing';`));
 
 /* ---- the four jobs, as each side holds them ---------------------------------- */
-const said = (r: Recipe): string => [r.result, r.count ?? 1, r.skill, r.station ?? '', !!r.consumeOnFail,
+const said = (r: Recipe): string => [r.result, r.count ?? 1, r.skill, r.station ?? '', !!r.qlFromInputs,
   r.inputs.map((i) => `${i.item}x${i.count ?? 1}`).join(',')].join('|');
 for (const r of JOBS) {
-  const theirs = psql(`select r.result || '|' || r.count || '|' || r.skill || '|' || coalesce(r.station, '') || '|' || r.consume_on_fail
+  const theirs = psql(`select r.result || '|' || r.count || '|' || r.skill || '|' || coalesce(r.station, '') || '|' || r.ql_from_inputs
       || '|' || (select string_agg(i.item || 'x' || i.count, ',' order by i.ord) from recipe_input i where i.recipe = r.id)
     from recipe r where r.id = '${r.id}';`).replace(/\|t\|/, '|true|').replace(/\|f\|/, '|false|');
   check(`${r.label}: the same job on both sides`, theirs === said(r), `browser ${said(r)}, island ${theirs || 'nothing'}`);
@@ -135,7 +136,8 @@ begin
   perform give(w, u, 'gem', 1, 40, 'Ruby', null, null, null, null);
   perform give(w, u, 'sand', ${n(PANES, 'sand')}, 30, null, null, null, null, null);
   ${craft(PANES.id, newest('gem'))};
-  insert into said values ('SPOILT', ${count(PANES.result)}::text || '|' || ${count('gem')} || '|' || ${count('sand')});
+  insert into said values ('SPOILT', ${count(PANES.result)}::text || '|' || ${count('gem')} || '|' || ${count('sand')}
+    || '|' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'gem') || '|' || (select max(dmg) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'sand'));
 
   v_b := give(w, u, 'bottle', 1, 30, null, null, null, null, null);
   insert into said values ('REFUSE', coalesce(bag_refuses((select i from item i where i.id = v_b), 'log', 1), 'ALLOWED'));
@@ -160,7 +162,8 @@ check(`${PANEL.label}: a lump makes a ${ITEM_DEFS[PANEL.result].name.toLowerCase
 check(`${BOTTLE.label}: ${n(BOTTLE, 'sand')} sand make a bottle`, got('BOTTLE') === '1|0', got('BOTTLE'));
 check(`${PANES.label}: a gem and ${n(PANES, 'sand')} sand make ${PANES.count} panes`, got('PANES') === `${PANES.count}|0|0`, got('PANES'));
 check('and glassblowing goes up for the work', got('LEARNT') === 'true', got('LEARNT'));
-check('a firing that fails keeps the gem and the sand', got('SPOILT') === `0|1|${n(PANES, 'sand')}`, got('SPOILT'));
+check(`a firing that fails damages the gem by ${failDamage(40)} and the sand by ${failDamage(30)}, and uses neither`,
+  got('SPOILT') === `0|1|${n(PANES, 'sand')}|${failDamage(40)}|${failDamage(30)}`, got('SPOILT'));
 
 /* ---- what glass goes into ---------------------------------------------------- */
 check('a pane is a glass panel on both sides',

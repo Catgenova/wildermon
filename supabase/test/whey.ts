@@ -2,7 +2,7 @@
  * Whey (`dairy.ts`), on both sides.
  *
  * A bucket of milk pressed into cheese hands the bucket back full of whey,
- * and a failure hands it back empty. A bucket of whey is a vessel like any
+ * and a failure damages the bucket of milk and hands nothing back. A bucket of whey is a vessel like any
  * other bucket of something (`VESSELS`, `vessel_def`), and a creature you
  * keep, of any kind, is fed it: it fills `WHEY_FEED` of its hunger and the
  * bucket comes back empty, at the bucket's own quality. A thing of its own
@@ -12,7 +12,7 @@
  *   * the bucket of whey, its vessel row, the recipe's returns and the two
  *     constants are the same rows on both sides;
  *   * pressing cheese gives the cheeses and a bucket of whey, and a failure
- *     an empty bucket, on the island and in the browser alike;
+ *     the bucket of milk damaged by its QL, on the island and in the browser alike;
  *   * Feed with whey, with the creature's diet, with whey asked for over the
  *     diet, and with nothing it takes, comes to the same hunger, the same
  *     pack and the same words on both sides;
@@ -34,6 +34,7 @@ import { WHEY_BUCKET, WHEY_FEED, wheyFedSays } from '../../src/game/dairy';
 import { VESSELS } from '../../src/game/furniture';
 import { ITEM_DEFS, type Item } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
+import { failDamage } from '../../src/game/faildamage';
 import { TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -67,10 +68,10 @@ const vesselIsle = psql(`select liquid || '|' || empty from vessel_def where ite
 const vessel = VESSELS[WHEY_BUCKET];
 check('it is a bucket of whey, emptied into a bucket, on both sides', !!vessel && vesselIsle === `${vessel.liquid}|${vessel.empty}`, `${vesselIsle} / ${vessel?.liquid}|${vessel?.empty}`);
 const cheese = RECIPE_BY_ID.get('make_cheese');
-const givesHere = [...(cheese?.returns ?? []).map(([i, n]) => `return:${i}:${n}`), ...(cheese?.salvage ?? []).map(([i, n]) => `salvage:${i}:${n}`)].sort().join(',');
+const givesHere = (cheese?.returns ?? []).map(([i, n]) => `return:${i}:${n}`).sort().join(',');
 const givesIsle = psql(`select string_agg(kind || ':' || item || ':' || count, ',' order by kind || ':' || item || ':' || count) from recipe_gives where recipe = 'make_cheese'`);
-check(`pressing cheese hands back a bucket of whey, and an empty bucket when it fails, on both sides: ${givesHere}`,
-  givesIsle === givesHere && givesHere === `return:${WHEY_BUCKET}:1,salvage:bucket:1`, `${givesIsle} / ${givesHere}`);
+check(`pressing cheese hands back a bucket of whey, and nothing when it fails, on both sides: ${givesHere}`,
+  givesIsle === givesHere && givesHere === `return:${WHEY_BUCKET}:1`, `${givesIsle} / ${givesHere}`);
 const constsIsle = psql(`select concat_ws('|', whey_bucket(), whey_feed(), graze_fill())`);
 check(`whey_bucket(), whey_feed() and graze_fill() are the browser's ${WHEY_BUCKET}, ${WHEY_FEED} and ${GRAZE_FILL}`,
   constsIsle === [WHEY_BUCKET, WHEY_FEED, GRAZE_FILL].join('|'), constsIsle);
@@ -113,14 +114,15 @@ begin
     on conflict (world_id, uid, id) do update set value = excluded.value;
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Wheyholt', 10, 10, 5, 1, u);
 
-  -- 1. Cheese that fails: the milk is lost and the bucket comes back empty.
+  -- 1. Cheese that fails: the bucket of milk damaged by its QL, nothing handed back.
   create or replace function skill_check(p_skill double precision, p_difficulty double precision,
     p_tool_ql double precision default 0, p_ease double precision default 0) returns boolean language sql as 'select false';
   perform give(w, u, 'milk_bucket', 1, 40);
   perform give(w, u, 'clay_bowl', 1, 40);
   perform perform_craft(w, u, 'make_cheese', jsonb_build_object('kind', 'item', 'uid', null));
-  insert into said values ('FAIL', ${count('cheese')} || '|' || ${count('bucket')} || '|' || ${count(WHEY_BUCKET)} || '|' || ${count('milk_bucket')});
-  delete from item where world_id = w and holder_uid = u and def in ('bucket', '${WHEY_BUCKET}');
+  insert into said values ('FAIL', ${count('cheese')} || '|' || ${count('bucket')} || '|' || ${count(WHEY_BUCKET)} || '|' || ${count('milk_bucket')}
+    || '|' || (select max(dmg) from item where world_id = w and holder_uid = u and def = 'milk_bucket'));
+  delete from item where world_id = w and holder_uid = u and def in ('bucket', '${WHEY_BUCKET}', 'milk_bucket');
 
   -- 2. Cheese that takes: the cheeses, and the bucket back full of whey.
   create or replace function skill_check(p_skill double precision, p_difficulty double precision,
@@ -192,9 +194,9 @@ const pressCheese = (): void => {
 thing('clay_bowl', 40);
 g.rand = () => 0.99;
 pressCheese();
-const failHere = `${held('cheese')}|${held('bucket')}|${held(WHEY_BUCKET)}|${held('milk_bucket')}`;
-check(`pressing cheese that fails loses the milk and hands back an empty bucket, on both sides: ${failHere}`,
-  isle.get('FAIL') === failHere && failHere === '0|1|0|0', `${isle.get('FAIL')} / ${failHere}`);
+const failHere = `${held('cheese')}|${held('bucket')}|${held(WHEY_BUCKET)}|${held('milk_bucket')}|${Math.max(...g.inventory.items.filter((it) => it.id === 'milk_bucket').map((it) => it.dmg))}`;
+check(`pressing cheese that fails damages the bucket of milk by ${failDamage(40)} and hands nothing back, on both sides: ${failHere}`,
+  isle.get('FAIL') === failHere && failHere === `0|0|0|1|${failDamage(40)}`, `${isle.get('FAIL')} / ${failHere}`);
 g.inventory.items = g.inventory.items.filter((it) => it.id === 'clay_bowl');
 g.rand = () => 0.01;
 pressCheese();
