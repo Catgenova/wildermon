@@ -4224,6 +4224,11 @@ export const NEWS: News[] = [
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
   },
   {
+    n: 421,
+    day: '2026-11-01',
+    lines: () => ['Fixed: starting kit: a tool put in a store or on the ground stays yours and is not given again on coming ashore (was: a new one at every coming ashore). One worn out is given again.'],
+  },
+  {
     n: 420,
     day: '2026-11-01',
     lines: () => {

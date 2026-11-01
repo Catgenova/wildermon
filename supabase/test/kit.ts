@@ -92,6 +92,21 @@ begin
   insert into said select 'SAW', count(*)::text || '|' || min(ql)::int::text || '|' || bool_and(issued)::text
     from item where world_id = w and holder_uid = u and def = 'saw';
   insert into said select 'TOTAL', count(*)::text from item where world_id = w and holder_uid = u and issued;
+  -- A kit tool put down out of the pack (a store, the ground) and coming ashore again: not given again.
+  update item set holder = 'ground', holder_uid = null, gx = 16, gy = 16 where world_id = w and holder_uid = u and def = 'pickaxe';
+  perform rpc_join(w, 'Mira');
+  perform rpc_join(w, 'Mira');
+  insert into said select 'PUTDOWN', count(*) filter (where holder_uid = u)::text || '|' || count(*)::text
+    from item where world_id = w and def = 'pickaxe' and issued;
+  -- And one given with nobody calling (a death on the clock) says whose it is.
+  perform set_config('request.jwt.claims', '', true);
+  delete from item where world_id = w and holder_uid = u and def = 'awl';
+  perform kit_topup(w, u);
+  insert into said select 'WHOSE', bool_and(origin_uid = u)::text from item where world_id = w and def = 'awl' and issued;
+  update item set holder = 'ground', holder_uid = null, gx = 16, gy = 16 where world_id = w and holder_uid = u and def = 'awl';
+  perform kit_topup(w, u);
+  insert into said select 'AWL', count(*)::text from item where world_id = w and def = 'awl' and issued;
+  perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   insert into said select 'DOOR', has_function_privilege('authenticated', 'kit_topup(uuid,uuid)', 'execute')::text;
 
   -- Not sold or traded: a barter side, a deal, a stall price, an order.
@@ -118,6 +133,8 @@ check('a death leaves every issued tool on the body and buries the rest', at('AF
 check('the grave holds the log and the stake, and no kit tool', at('GRAVE').split(',').sort().join(',') === 'deed_stake,log', at('GRAVE'));
 check(`a lost kit tool is given again on coming ashore, once, at QL ${KIT_QL}, issued`, at('SAW') === `1|${KIT_QL}|true`, at('SAW'));
 check('nothing given twice', at('TOTAL') === String(STARTER_KIT.length), at('TOTAL'));
+check('a kit tool put down out of the pack is still yours: coming ashore twice gives no other', at('PUTDOWN') === '0|1', at('PUTDOWN'));
+check('one given with nobody calling is marked as yours, and put down is not given again', at('WHOSE') === 'true' && at('AWL') === '1', `${at('WHOSE')} / ${at('AWL')}`);
 check('a player cannot call the top-up', at('DOOR') === 'false', at('DOOR'));
 
 const STARTER = barterSaid('starter');
