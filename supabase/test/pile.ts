@@ -82,8 +82,16 @@ const lit = (v: unknown): string =>
     : typeof v === 'boolean' ? (v ? 'true' : 'false')
     : typeof v === 'object' ? `'${JSON.stringify(v)}'::jsonb`
     : String(v);
-const asRow = (it: Partial<Item> & { id?: string }): string =>
-  `(null, null, 'player', null, null, null, ${lit(it.inside ?? null)}, ${lit(it.id ?? base.id)},`
+// How many columns the item row has now: a column added after these (a pack beast's `pannier`) is null on every row here.
+const ITEM_COLS = Number(psql(`select count(*) from pg_attribute where attrelid = 'item'::regclass and attnum > 0 and not attisdropped;`).trim());
+const padded = (row: string): string => {
+  // Its fields, counting only the commas outside a quoted literal (a jsonb `extra` has its own).
+  let have = 1, quoted = false;
+  for (const ch of row) if (ch === "'") quoted = !quoted; else if (ch === ',' && !quoted) have++;
+  return `(${row}${', null'.repeat(Math.max(0, ITEM_COLS - have))})::item`;
+};
+const asRow = (it: Partial<Item> & { id?: string }): string => padded(
+  `null, null, 'player', null, null, null, ${lit(it.inside ?? null)}, ${lit(it.id ?? base.id)},`
   + ` ${lit(it.ql ?? base.ql)}, ${lit(it.dmg ?? base.dmg)}, ${lit(it.count ?? base.count)},`
   + ` ${lit(it.extra ?? null)}, ${lit(it.rare ?? null)}, ${lit(it.dye ?? null)}, ${lit(it.bless ?? null)},`
   + ` ${lit(it.charges ?? null)}, ${lit(it.locked ?? false)}, ${lit(it.issued ?? false)}, now(), null,`
@@ -91,8 +99,8 @@ const asRow = (it: Partial<Item> & { id?: string }): string =>
   + ` null, null, null, null, null, ${lit(it.mark ?? null)}, ${lit(it.cool ?? null)},`
   // The enchantment a thing carries (`item.enchant`), a memorial stone's line
   // (`item.engraving`), then where it came from (`origin`, `origin_fn`,
-  // `origin_uid`), the last columns the item row has.
-  + ` ${lit(it.enchant ?? null)}, null, null, null, null)::item`;
+  // `origin_uid`); any later column null (`padded`).
+  + ` ${lit(it.enchant ?? null)}, null, null, null, null`);
 
 const out = psql(`
 begin;
