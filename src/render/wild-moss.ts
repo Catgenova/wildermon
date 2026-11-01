@@ -80,10 +80,10 @@ const MOSSNIB_LOOK: Moss = {
   high: 0.2,
   shell: { y0: -0.56, y1: 0.64, cut: 0.88, w: 0.5, h: 0.31, z0: 0.0, segs: 4, step: 0.045, lo: 0.26, flare: 0.55, p: 2.0 },
   belly: { c: [0, 0.02, -0.02], r: [0.32, 0.46, 0.15] },
-  head: { at: [0, 0.52, 0.0], r: [0.29, 0.23, 0.2], eye: [0.3, 0.94, 0.14], size: 0.08 },
+  head: { at: [0, 0.52, -0.05], r: [0.22, 0.19, 0.17], eye: [0.36, 0.9, 0.1], size: 0.046 },
   feelers: { root: [0.09, -0.04, 0.17], mid: [0.17, 0.0, 0.46], tip: [0.2, -0.3, 0.68], wide: 0.13 },
   horns: null,
-  moss: { from: 0.08, to: 0.8, wide: 0.55, deep: 0.1, clumps: 10 },
+  moss: { from: 0.06, to: 0.82, wide: 0.44, deep: 0.11, clumps: 9 },
   flowers: 0,
   swirls: { n: 3, big: 0.085 },
   fins: [],
@@ -104,7 +104,7 @@ const MOSSSHEAR_LOOK: Moss = {
   head: { at: [0, 0.78, 0.02], r: [0.28, 0.3, 0.23], eye: [0.6, 0.7, -0.12], size: 0.058 },
   feelers: null,
   horns: { root: [0.18, 0.1, 0.0], mid: [0.32, 0.26, 0.2], tip: [0.27, 0.16, 0.38], w: 0.035 },
-  moss: { from: 0.04, to: 0.92, wide: 0.66, deep: 0.15, clumps: 15 },
+  moss: { from: 0.04, to: 0.92, wide: 0.72, deep: 0.13, clumps: 12 },
   flowers: 0,
   swirls: { n: 3, big: 0.12 },
   fins: [
@@ -114,7 +114,7 @@ const MOSSSHEAR_LOOK: Moss = {
   ],
   skirt: 0,
   legs: { x: 0.38, z: -0.1, ys: [0.3, -0.06, -0.42], fan: [50, 4, -50], upper: 0.27, lower: 0.34, reach: 0.5, thick: 0.1 },
-  scythes: { at: [0.2, 0.72, -0.1], arm: [0.2, 0.2], thick: 0.06, len: 0.8, teeth: 4, rest: { w: [0.44, 0.88, -0.08], pitch: -6, yaw: 10, roll: -10 } },
+  scythes: { at: [0.22, 0.6, -0.16], arm: [0.34, 0.34], thick: 0.08, len: 1.0, teeth: 4, rest: { w: [0.5, 1.12, -0.04], pitch: -8, yaw: 6, roll: 0 } },
   gait: { sweep: [0.28, 0.38], duty: [0.6, 0.52], lift: [0.07, 0.1], bob: 0.022, sway: 2.5 },
   patch: 0.26,
   size: 5.5,
@@ -129,19 +129,19 @@ const MOSSREAVER_LOOK: Moss = {
   head: { at: [0, 0.98, 0.02], r: [0.34, 0.36, 0.27], eye: [0.6, 0.7, -0.12], size: 0.066 },
   feelers: null,
   horns: { root: [0.23, 0.12, 0.0], mid: [0.4, 0.32, 0.24], tip: [0.33, 0.2, 0.48], w: 0.045 },
-  moss: { from: 0.03, to: 0.92, wide: 0.82, deep: 0.19, clumps: 18 },
+  moss: { from: 0.03, to: 0.92, wide: 0.74, deep: 0.16, clumps: 14 },
   flowers: 4,
-  swirls: { n: 2, big: 0.22 },
+  swirls: { n: 1, big: 0.3 },
   fins: [
-    { u: 0.7, side: -0.1, len: 1.1, wide: 0.36, back: 30, out: -10 },
-    { u: 0.52, side: 0.24, len: 1.2, wide: 0.38, back: 42, out: 16 },
-    { u: 0.34, side: -0.32, len: 1.0, wide: 0.34, back: 54, out: -28 },
-    { u: 0.2, side: 0.36, len: 0.85, wide: 0.3, back: 62, out: 32 },
-    { u: 0.84, side: 0.36, len: 0.62, wide: 0.22, back: 22, out: 34 },
+    { u: 0.66, side: -0.06, len: 1.45, wide: 0.3, back: 26, out: -4 },
+    { u: 0.58, side: 0.22, len: 1.35, wide: 0.28, back: 34, out: 22 },
+    { u: 0.56, side: -0.3, len: 1.25, wide: 0.27, back: 36, out: -30 },
+    { u: 0.46, side: 0.4, len: 1.05, wide: 0.24, back: 44, out: 44 },
+    { u: 0.44, side: -0.46, len: 0.95, wide: 0.22, back: 46, out: -48 },
   ],
   skirt: 7,
   legs: { x: 0.5, z: -0.12, ys: [0.38, -0.08, -0.54], fan: [50, 4, -50], upper: 0.36, lower: 0.44, reach: 0.64, thick: 0.13 },
-  scythes: { at: [0.26, 0.92, -0.12], arm: [0.26, 0.26], thick: 0.075, len: 1.2, teeth: 6, rest: { w: [0.58, 1.1, -0.08], pitch: -6, yaw: 10, roll: -10 } },
+  scythes: { at: [0.3, 0.78, -0.18], arm: [0.44, 0.44], thick: 0.105, len: 1.6, teeth: 6, rest: { w: [0.66, 1.42, -0.04], pitch: -8, yaw: 6, roll: 0 } },
   gait: { sweep: [0.34, 0.46], duty: [0.64, 0.54], lift: [0.08, 0.11], bob: 0.028, sway: 2 },
   patch: 0.34,
   size: 5.8,
@@ -358,7 +358,7 @@ function shellMarks(s: Moss): Mesh {
   }
   // The swirls: on the near plates' flanks, the biggest on the middle plate.
   const spots: Array<[number, number, number]> = s.stage === 2
-    ? [[0.5, 0.52, 1], [0.5, Math.PI - 0.52, 1], [0.78, 0.4, 0.45], [0.78, Math.PI - 0.4, 0.45]]
+    ? [[0.5, 0.62, 1], [0.5, Math.PI - 0.62, 1]]
     : [[0.45, 0.62, 1], [0.45, Math.PI - 0.62, 1], [0.72, 0.42, 0.75], [0.72, Math.PI - 0.42, 0.75], [0.2, 0.55, 0.7], [0.2, Math.PI - 0.55, 0.7]];
   for (const [uu, ph, k] of spots.slice(0, s.swirls.n * 2)) {
     const { j } = plateAt(S, uu * S.cut);
@@ -393,7 +393,7 @@ function frond(root: V3, dir: V3, face: V3, L: number, w: number, mat: Mat, fine
   for (let q = 0; q <= steps; q++) {
     const k = q / steps;
     pts.push(add(add(root, scale(d, L * k)), scale(face, -L * 0.3 * k * k)));
-    ws.push(q === steps ? 0.004 : w * (1 - 0.6 * k) * (q % 2 ? 1 : 0.35));
+    ws.push(q === steps ? 0.004 : w * (1 - 0.55 * k) * (q % 2 ? 1 : 0.62));
   }
   return blade(pts, ws, face, { mat, rib: 'leafDark', fold: 0.15, thick: 0.008 });
 }
@@ -402,14 +402,14 @@ function frond(root: V3, dir: V3, face: V3, L: number, w: number, mat: Mat, fine
  * A clump of moss: a low lumpy mound, bright on top and darker round its foot, ringed with fronds lying out over the shell
  * around it.
  */
-function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: boolean): Mesh {
+function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: boolean, hang = false): Mesh {
   const z = unit(n);
   let x = cross([0, 1, 0], z);
   if (len3(x) < 1e-4) x = [1, 0, 0];
   x = unit(x);
   const y = cross(z, x);
   // A dark low cushion under it all, half sunk.
-  const b = orbAlong([0, 0, 0], z, [R * 0.62, R * 0.56, R * 0.42], fine ? 8 : 6, 3, 'moss');
+  const b = orbAlong([0, 0, 0], z, [R * 0.8, R * 0.72, R * (0.6 + 0.3 * jitter(id + 7))], fine ? 8 : 6, 3, 'moss');
   const bv = b.v.map((p, i) => add(c, scale(p, 0.88 + 0.24 * jitter(id * 31 + i))) as V3);
   const out: Mesh[] = [mesh(bv, b.f.map((face) => {
     const mid = scale(face.i.reduce((t, i) => add(t, bv[i]), [0, 0, 0] as V3), 1 / face.i.length);
@@ -419,12 +419,12 @@ function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: bool
   for (let q = 0; q < fronds; q++) {
     const a = (q / fronds) * TAU + jitter(id + q) * 0.9;
     const out1 = add(scale(x, Math.cos(a)), scale(y, Math.sin(a)));
-    const lean = lerp(0.5, 1.4, jitter(id * 5 + q));
+    const lean = hang ? lerp(1.2, 1.9, jitter(id * 5 + q)) : lerp(0.75, 1.45, jitter(id * 5 + q));
     const d = unit(add(scale(z, Math.cos(lean)), scale(out1, Math.sin(lean))));
     const face = unit(sub(z, scale(d, dot(z, d))));
     const root = add(c, add(scale(out1, R * 0.25 * jitter(id * 7 + q)), scale(z, R * 0.05)));
     const mat: Mat = jitter(id * 11 + q) < 0.45 ? 'leaf' : 'moss';
-    out.push(frond(root, d, len3(face) > 1e-3 ? face : z, R * (0.85 + 0.45 * jitter(id * 3 + q)), R * 0.5, mat, fine));
+    out.push(frond(root, d, len3(face) > 1e-3 ? face : z, R * (0.6 + 0.3 * jitter(id * 3 + q)) * (hang ? 1.3 : 1), R * 0.7, mat, fine));
   }
   return merge(...out);
 }
@@ -432,20 +432,23 @@ function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: bool
 /** The moss along its top: clumps from `from` to `to`, the widest over its middle, set either side of the ridge by turns. */
 function mossOf(s: Moss, fine: boolean): Mesh {
   const S = s.shell, M = s.moss, out: Mesh[] = [];
+  // Rows across the top: the middle one along the ridge, and as many again either side out to `wide`; the bigger two's outer
+  // rows further, hanging down over the shell's shoulders.
+  const across = s.stage === 0 ? [-1, -0.5, 0, 0.5, 1] : [-1.35, -1, -0.66, -0.33, 0, 0.33, 0.66, 1, 1.35];
   for (let q = 0; q < M.clumps; q++) {
     const k = M.clumps > 1 ? q / (M.clumps - 1) : 0.5;
-    const u = lerp(M.from, M.to, k) * S.cut;
-    const swell = Math.sin(Math.PI * clamp(lerp(0.15, 0.85, k)));
-    const side = (q % 2 ? 1 : -1) * M.wide * (0.3 + 0.35 * jitter(q + 40)) * swell;
-    const at = onShell(S, u, Math.PI / 2 - side);
-    const R = M.deep * (0.8 + 0.9 * swell) * (0.7 + 0.6 * jitter(q + 41));
-    out.push(clumpOf(add(at.p, scale(at.n, R * 0.05)), at.n, R, 70 + q, fine ? 15 : 9, fine));
-    // The wider moss of the bigger two: a second clump out on the flank.
-    if (q % 2 === 0 && swell > 0.4) {
-      // Spilling down its left flank, as the sheet has it, clear of the swirl on its right.
-      const at2 = onShell(S, u + 0.03, Math.PI / 2 + Math.abs(side) * 1.8 + 0.18 * s.stage);
-      out.push(clumpOf(add(at2.p, scale(at2.n, R * 0.02)), at2.n, R * 0.72, 140 + q, fine ? 10 : 6, fine));
-    }
+    const swell = Math.sin(Math.PI * clamp(lerp(0.1, 0.9, k)));
+    across.forEach((a, j) => {
+      const id = 70 + q * 11 + j;
+      // Thinner toward its ends and its edges, and now and then a gap.
+      if (Math.abs(a) > 0.6 + 0.6 * swell || jitter(id + 3) < 0.08) return;
+      const u = clamp(lerp(M.from, M.to, k + (jitter(id) - 0.5) * 0.6 / M.clumps), 0.02, 0.98) * S.cut;
+      const side = a * M.wide * (0.85 + 0.2 * jitter(id + 1)) * (0.65 + 0.35 * swell);
+      const at = onShell(S, u, Math.PI / 2 - side);
+      const edge = Math.abs(a) > 1.1;
+      const R = M.deep * (0.75 + 0.5 * swell) * (0.8 + 0.4 * jitter(id + 2)) * (edge ? 0.85 : 1);
+      out.push(clumpOf(add(at.p, scale(at.n, R * 0.04)), at.n, R, id, fine ? 12 : 7, fine, edge));
+    });
   }
   return merge(...out);
 }
@@ -457,7 +460,7 @@ function flowersOf(s: Moss): Mesh {
   for (let q = 0; q < s.flowers; q++) {
     const [uu, side] = spots[q];
     const at = onShell(S, uu * S.cut, Math.PI / 2 - side);
-    const lift = s.moss.deep * 0.75;
+    const lift = s.moss.deep * 0.55;
     const c = add(at.p, scale(at.n, lift)), nn = unit(add(at.n, [0.25, 0.2, 0.3]));
     const r = 0.085;
     for (let e = 0; e < 5; e++) {
@@ -537,9 +540,10 @@ function skirtOf(s: Moss, fine: boolean): Mesh {
 /** An eye at `p` looking out along `nn`, `sz` big: a dark rim, the olive of it, the dark middle and its glints. */
 function eyeOf(p: V3, nn: V3, sz: number, out: Disc[], socket = false): void {
   if (socket) out.push(disc(p, nn, sz * 1.55, sz * 1.25, 10, 'hornDark', { up: [0, 0, 1] }));
-  out.push(disc(add(p, scale(nn, 0.002)), nn, sz * 1.18, sz * 1.12, 12, 'eye', { up: [0, 0, 1] }));
-  out.push(disc(add(p, scale(nn, 0.004)), nn, sz * 0.92, sz * 0.88, 12, 'crystal', { up: [0, 0, 1] }));
-  out.push(disc(add(p, scale(nn, 0.006)), nn, sz * 0.56, sz * 0.56, 10, 'eye', { up: [0, 0, 1] }));
+  // A dark olive eye, lighter low in it, its middle dark.
+  out.push(disc(add(p, scale(nn, 0.002)), nn, sz, sz * 1.06, 12, 'eye', { up: [0, 0, 1] }));
+  out.push(disc(add(add(p, scale(nn, 0.004)), [0, 0, -sz * 0.18]), nn, sz * 0.72, sz * 0.66, 10, 'crystal', { up: [0, 0, 1] }));
+  out.push(disc(add(add(p, scale(nn, 0.006)), [0, 0, sz * 0.06]), nn, sz * 0.5, sz * 0.52, 10, 'eye', { up: [0, 0, 1] }));
   const side = unit(cross([0, 0, 1], nn));
   out.push(disc(add(add(add(p, scale(nn, 0.009)), [0, 0, sz * 0.38]), scale(side, sz * 0.28)), nn, sz * 0.3, sz * 0.3, 6, 'glint', { lit: true, up: [0, 0, 1] }));
   out.push(disc(add(add(add(p, scale(nn, 0.009)), [0, 0, -sz * 0.36]), scale(side, -sz * 0.3)), nn, sz * 0.12, sz * 0.12, 5, 'glint', { lit: true, up: [0, 0, 1] }));
@@ -616,7 +620,7 @@ function feelersOf(s: Moss, n: number, fine: boolean): Mesh {
     const pts = curve(mixV(F.root, F.mid, 0.45), F.mid, F.tip, fine ? 7 : 4);
     const N = pts.length - 1;
     const ws = pts.map((_, q) => (q === N ? 0.004 : F.wide * Math.sin(Math.PI * Math.min(1, 0.1 + (q / N) * 0.95)) ** 0.7));
-    const face = unit([0.42, 0.9, 0.2]);
+    const face = unit([0.22, 1, 0.3]);
     const lo = Math.max(1, Math.round(N * 0.18));
     const leaf = merge(
       blade(pts.slice(0, lo + 1), ws.slice(0, lo + 1), face, { mat: 'mark', rib: 'shellDark', fold: 0.25, thick: 0.01 }),
@@ -688,12 +692,12 @@ function lowerOf(s: Moss): Mesh {
  */
 interface Blade { outer: Array<[number, number]>; inner: Array<[number, number]> }
 function bladeShape(L: number, teeth: number): Blade {
-  const R = L * 0.55, E = 0.9, a0 = 162 * DEG, a1 = 338 * DEG, N = 18;
+  const R = L * 0.6, E = 0.62, a0 = 170 * DEG, a1 = 322 * DEG, N = 18;
   const C: [number, number] = [-R * Math.cos(a0), -R * E * Math.sin(a0)];
   const outer: Array<[number, number]> = [], inner: Array<[number, number]> = [];
   for (let q = 0; q <= N; q++) {
     const k = q / N, a = lerp(a0, a1, k);
-    const wout = R * 0.1 * (1 - k ** 2.5), win = R * (0.6 * (1 - k ** 2.8) + 0.012);
+    const wout = R * 0.1 * (1 - k ** 2.5), win = R * (0.72 * (1 - k ** 2.6) + 0.014);
     const tooth = k > 0.2 && k < 0.88 ? frac(k * teeth * 1.35) : 0;
     const bite = win * (1 - 0.3 * tooth);
     outer.push([C[0] + (R + wout) * Math.cos(a), C[1] + (R + wout) * E * Math.sin(a)]);
@@ -794,13 +798,18 @@ export const MOSS_LOOKS: readonly number[] = [5.2, 16.4];
 /** A scythe's pose: where its wrist is (body frame), how its blade is turned. */
 interface Claw { w: V3; pitch: number; yaw: number; roll: number }
 const mixClaw = (a: Claw, b: Claw, t: number): Claw => ({ w: mixV(a.w, b.w, t), pitch: lerp(a.pitch, b.pitch, t), yaw: lerp(a.yaw, b.yaw, t), roll: lerp(a.roll, b.roll, t) });
+/**
+ * How far a blade is rolled over from upright (degrees, the right one's): nearly flat, so it is held out like a scythe, its
+ * back to the outside and its toothed edge in toward the other.
+ */
+const BLADE_ROLL = -84;
 /** A scythe at rest, on its side (`sd` one the right). */
 function restClaw(s: Moss, sd: number): Claw {
   const R = s.scythes!.rest;
-  return { w: [sd * R.w[0], R.w[1], R.w[2]], pitch: R.pitch, yaw: sd * R.yaw, roll: sd * R.roll };
+  return { w: [sd * R.w[0], R.w[1], R.w[2]], pitch: R.pitch, yaw: sd * R.yaw, roll: sd * (BLADE_ROLL + R.roll) };
 }
-/** A scythe at `w` (right side's), turned so, on its side. */
-const clawAt = (sd: number, w: V3, pitch: number, yaw: number, roll: number): Claw => ({ w: [sd * w[0], w[1], w[2]], pitch, yaw: sd * yaw, roll: sd * roll });
+/** A scythe at `w` (right side's), turned so, on its side; `roll` over and above its flat. */
+const clawAt = (sd: number, w: V3, pitch: number, yaw: number, roll: number): Claw => ({ w: [sd * w[0], w[1], w[2]], pitch, yaw: sd * yaw, roll: sd * (BLADE_ROLL + roll) });
 
 interface Pose {
   /** The body over the ground: along, up, and its turns (degrees). */
@@ -873,7 +882,8 @@ function strikePose(s: Moss, p: Pose, t: number): void {
   const c = p.claws;
   for (let q = 0; q < 2; q++) {
     const sd = q ? 1 : -1;
-    const up = clawAt(sd, [0.5, 0.92, 0.46], 30, -26, 28), shut = clawAt(sd, [0.12, 1.3, 0.12], -14, 34, 6);
+    const R = s.scythes!.rest.w;
+    const up = clawAt(sd, [R[0] * 1.05, R[1] * 0.85, R[2] + 0.4], 24, -28, 0), shut = clawAt(sd, [R[0] * 0.3, R[1] * 1.15, R[2] + (q ? 0.04 : 0)], -6, 38, 0);
     c[q] = t < G ? mixClaw(c[q], up, gather) : t < hit ? mixClaw(up, shut, ramp(t, G, hit) ** 1.6) : mixClaw(shut, c[q], ramp(t, hit + 0.12, 0.98));
   }
 }
@@ -906,10 +916,11 @@ function workPose(s: Moss, p: Pose, t: number, graze: number): void {
   for (let q = 0; q < 2; q++) {
     const sd = q ? 1 : -1;
     const R = s.scythes!.rest.w;
-    const low = clawAt(sd, [R[0] * 0.7, R[1] + 0.06, -0.3], 0, 16, -8);
-    const wide = clawAt(sd, [R[0] * 1.05, R[1], -0.3], 0, -14, -16);
-    const cross = clawAt(sd, [R[0] * 0.3, R[1] + 0.12, -0.3], 0, 40, -4);
-    const up = clawAt(sd, [R[0] * 0.5, R[1], R[2] + 0.25], 18, 30, 8);
+    // Down to the patch, opened out, and shut across each other, the right blade riding over the left.
+    const low = clawAt(sd, [R[0] * 0.8, R[1] + 0.04, -0.3], -6, 10, 0);
+    const wide = clawAt(sd, [R[0] * 1.1, R[1], -0.3], -6, -26, 0);
+    const cross = clawAt(sd, [R[0] * 0.32, R[1] + 0.1, -0.3 + (q ? 0.05 : 0)], -6, 40, 0);
+    const up = clawAt(sd, [R[0] * 0.55, R[1], R[2] + 0.25], 18, 26, 0);
     let k = mixClaw(low, wide, opened);
     k = mixClaw(k, cross, clamp(shut));
     k = mixClaw(k, up, lift);
@@ -929,7 +940,10 @@ function evolvePose(s: Moss, p: Pose, t: number): void {
   p.roll += 3 * shake * Math.sin(t * 60);
   p.head[0] += -12 * crouch + 18 * up;
   p.jaw = Math.max(p.jaw, 0.6 * up);
-  if (p.claws) for (let q = 0; q < 2; q++) p.claws[q] = mixClaw(p.claws[q], clawAt(q ? 1 : -1, [0.5, 0.92, 0.5], 30, -24, 26), up);
+  if (p.claws) {
+    const R = s.scythes!.rest.w;
+    for (let q = 0; q < 2; q++) p.claws[q] = mixClaw(p.claws[q], clawAt(q ? 1 : -1, [R[0], R[1] * 0.85, R[2] + 0.45], 26, -24, 0), up);
+  }
 }
 
 function poseOf(s: Moss, a: Anim): Pose {
@@ -1055,7 +1069,12 @@ function mossBuild(s: Moss, lod: number): Piece[] {
   if (s.fins.length) pieces.push({ key: 'fins', mesh: finsOf(s, fine), bone: 'body', bias: 0.025, after: ['shell', 'moss'] });
   if (s.skirt) pieces.push({ key: 'skirt', mesh: skirtOf(s, fine), bone: 'body', bias: -0.01, under: ['shell'] });
   const headSolid = { c: [0, 0, 0] as V3, r: scale(s.head.r, 0.9) };
-  if (s.scythes) pieces.push({ key: 'head', mesh: plateHead(s, n, k, false), shut: plateHead(s, n, k, true), bone: 'head', bias: 0.04, front: [0, 1, 0], after: ['belly'] });
+  if (s.scythes) {
+    // A dark neck the head plate is set into, under the shell's front edge.
+    const H = s.head;
+    pieces.push({ key: 'neck', mesh: orb([0, H.at[1] - H.r[1] * 0.55, H.at[2] - H.r[2] * 0.15], [H.r[0] * 1.3, H.r[1] * 0.8, H.r[2] * 1.05], n + 2, k, 'bark'), bone: 'body', bias: 0.01, after: ['belly'], under: ['head'] });
+    pieces.push({ key: 'head', mesh: plateHead(s, n, k, false), shut: plateHead(s, n, k, true), bone: 'head', bias: 0.04, front: [0, 1, 0], after: ['belly', 'neck'] });
+  }
   else pieces.push({ key: 'head', mesh: roundHead(s, n, k, false), shut: roundHead(s, n, k, true), bone: 'head', bias: 0.04, front: [0, 1, 0], after: ['belly'] });
   if (s.feelers) pieces.push({ key: 'feelers', mesh: feelersOf(s, n, fine), bone: 'head', bias: 0.05, after: ['head', 'shell'], hide: [headSolid], hideIn: 'head' });
   if (s.horns) pieces.push({ key: 'horns', mesh: hornsOf(s, n), bone: 'head', bias: 0.05, after: ['head'], hide: [headSolid], hideIn: 'head' });
@@ -1223,9 +1242,9 @@ function mossKind(s: Moss): Kind {
         bark: [104, 74, 52],
         hornDark: [72, 50, 36],
         claw: [92, 62, 42],
-        moss: [162, 164, 30],
-        leaf: [200, 192, 46],
-        leafDark: [96, 104, 22],
+        moss: [158, 158, 22],
+        leaf: [192, 182, 36],
+        leafDark: [86, 98, 22],
         eye: [44, 40, 22],
         crystal: [150, 146, 46],
         glint: [255, 254, 244],
