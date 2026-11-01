@@ -51,8 +51,12 @@ interface Cow {
   hoof: number;
   /** The neck's root on the body, its length, width and how far forward of upright it is carried (degrees). */
   neck: { at: V3; len: number; w: number; lean: number };
-  /** The skull, an egg; the muzzle out of the front of it (its middle, the way it points, its half-sizes across, up and along); how far nose-up it is carried. */
-  head: { skull: { c: V3; r: V3 }; muzzle: { c: V3; dir: V3; r: V3 }; pitch: number };
+  /**
+   * The skull, an egg; the snout out of the front of it, one form running down the face to the nose (`snout`: how long, how
+   * far it points down from straight ahead, how much it droops at its end, and how wide it is across the nose pad); how far
+   * nose-up it is carried.
+   */
+  head: { skull: { c: V3; r: V3 }; snout: { len: number; down: number; droop: number; pad: number }; pitch: number };
   /** The way out of the skull to the right eye, how big, and how far a calm lid comes down over it. */
   eye: { dir: V3; size: number; lid: number };
   /** Each ear: held out to the side (degrees) and laid back, its tip drooping by `droop` of its length. */
@@ -96,13 +100,13 @@ interface Cow {
 
 /** A head scaled by `k` about its neck, for a head drawn bigger or smaller against its body. */
 const sized = (k: number, H: Cow['head']): Cow['head'] => ({
-  skull: { c: scale(H.skull.c, k), r: scale(H.skull.r, k) }, muzzle: { c: scale(H.muzzle.c, k), dir: H.muzzle.dir, r: scale(H.muzzle.r, k) }, pitch: H.pitch,
+  skull: { c: scale(H.skull.c, k), r: scale(H.skull.r, k) }, snout: { ...H.snout, len: H.snout.len * k, droop: H.snout.droop * k, pad: H.snout.pad * k }, pitch: H.pitch,
 });
 
 /** A cow's head: a broad skull, a long face down to a broad round muzzle. */
 const COW_HEAD = (pitch: number): Cow['head'] => ({
   skull: { c: [0, 0, 0.3], r: [0.47, 0.5, 0.45] },
-  muzzle: { c: [0, 0.56, -0.1], dir: [0, 1, -0.6], r: [0.27, 0.2, 0.16] },
+  snout: { len: 0.5, down: 40, droop: 0.05, pad: 0.36 },
   pitch,
 });
 
@@ -205,19 +209,27 @@ const onBody = (s: Cow, y: number, th: number): { p: V3; n: V3 } => onRings(s.bo
 /** Along the body, nought at the rump's ring and one at the chest's. */
 const alongBody = (s: Cow, u: number): number => lerp(s.body.y[1], s.body.y[5], u);
 const onSkull = (s: Cow, dir: V3): { p: V3; n: V3 } => onEgg(s.head.skull.c, s.head.skull.r, dir);
-/** The muzzle's own frame: across it (to the left), up it, and along it. */
-function muzzleFrame(s: Cow): [V3, V3, V3] {
-  const z = unit(s.head.muzzle.dir), x = unit(cross([0, 0, 1], z));
-  return [x, cross(z, x), z];
+/**
+ * The snout, as a line down the face: where a point `t` along it is (nought inside the skull, one the face of the nose pad),
+ * the way it runs there, and its half-width and half-height there. One form from the brow down the bridge of the nose,
+ * narrowing, and broadening again into a soft, flattened nose pad.
+ */
+const SNOUT_T = [0, 0.22, 0.46, 0.66, 0.8, 0.9, 0.97, 1];
+const SNOUT_W = [0.98, 0.86, 0.76, 0.74, 0.8, 0.82, 0.78, 0.64];
+const SNOUT_H = [0.92, 0.74, 0.62, 0.58, 0.6, 0.58, 0.52, 0.38];
+function snoutAt(s: Cow, t: number): { p: V3; d: V3; w: number; h: number } {
+  const S = s.head.skull, N = s.head.snout, a = N.down * DEG;
+  const d: V3 = [0, Math.cos(a), -Math.sin(a)];
+  const at = (u: number): V3 => add(add(S.c, [0, S.r[1] * 0.22, -S.r[2] * 0.02]), add(scale(d, N.len * u), [0, 0, -N.droop * u * u]));
+  let k = 0;
+  while (k < SNOUT_T.length - 2 && SNOUT_T[k + 1] < t) k++;
+  const f = clamp((t - SNOUT_T[k]) / (SNOUT_T[k + 1] - SNOUT_T[k]));
+  return { p: at(t), d: unit(sub(at(Math.min(1, t + 0.01)), at(Math.max(0, t - 0.01)))), w: N.pad * lerp(SNOUT_W[k], SNOUT_W[k + 1], f), h: N.pad * lerp(SNOUT_H[k], SNOUT_H[k + 1], f) };
 }
-/** Where the way `dir` out of the middle of the muzzle, in its own frame, meets it, and the way out of it there. */
-function onMuzzle(s: Cow, dir: V3): { p: V3; n: V3 } {
-  const M = s.head.muzzle, [x, y, z] = muzzleFrame(s), q = onEgg([0, 0, 0], M.r, dir);
-  const to = (v: V3): V3 => add(add(scale(x, v[0]), scale(y, v[1])), scale(z, v[2]));
-  return { p: add(M.c, to(q.p)), n: unit(to(q.n)) };
-}
-/** The end of the muzzle, where the nose is. */
-const noseOf = (s: Cow): V3 => add(s.head.muzzle.c, scale(unit(s.head.muzzle.dir), s.head.muzzle.r[2]));
+/** The way up the snout, square to it, at a point along it. */
+const snoutUp = (d: V3): V3 => unit(cross([1, 0, 0], d));
+/** The end of the snout, where the nose is. */
+const noseOf = (s: Cow): V3 => snoutAt(s, 1).p;
 const left = (q: { p: V3; n: V3 }): { p: V3; n: V3 } => ({ p: [-q.p[0], q.p[1], q.p[2]], n: [-q.n[0], q.n[1], q.n[2]] });
 
 /** Solids the body is, in the trunk's frame, for what is on the far side of it to be hidden behind: its back half and its front. */
@@ -230,8 +242,8 @@ function bodySolids(s: Cow, k = 0.92): Array<{ c: V3; r: V3 }> {
 }
 const skullOf = (s: Cow): { c: V3; r: V3 } => ({ c: s.head.skull.c, r: scale(s.head.skull.r, 0.9) });
 function muzzleOf(s: Cow): { c: V3; r: V3 } {
-  const M = s.head.muzzle;
-  return { c: M.c, r: [M.r[0] * 0.85, M.r[2] * 0.85, M.r[1] * 0.85] };
+  const q = snoutAt(s, 0.7);
+  return { c: q.p, r: [q.w * 0.85, s.head.snout.len * 0.3, q.h * 0.85] };
 }
 
 /** A frame square to `n`: two ways across it. */
@@ -897,27 +909,29 @@ function headOf(s: Cow, n: number, k: number, shut: boolean): Mesh {
   return merge(skull, eyesOf(s, shut));
 }
 
-/** The muzzle: a broad soft egg out of the front of the face, cream going to pink at its end, two nostrils and a smile. */
-function muzzleMesh(s: Cow, n: number, k: number): Mesh {
-  const M = s.head.muzzle;
-  const [x, y, z] = muzzleFrame(s);
-  const muzzle = painted(orbAlong(M.c, M.dir, M.r, n + 2, k + 1, 'muzzle'), (c) => (dot(sub(c, M.c), z) / M.r[2] < -0.55 ? 'coat' : 'muzzle'));
-  // The long face between the eyes and the muzzle: a cream egg from the front of the skull down to it.
-  const S = s.head.skull, from = add(S.c, [0, S.r[1] * 0.45, -S.r[2] * 0.15]), to = add(M.c, scale(z, -M.r[2] * 0.5));
-  const bridge = orbAlong(scale(add(from, to), 0.5), sub(to, from), [M.r[0] * 0.88, M.r[1] * 1.05, len3(sub(to, from)) * 0.6], n + 2, k + 1, 'coat');
-  const nostrils: Disc[] = [];
-  for (const sd of [1, -1]) {
-    const q = onMuzzle(s, [sd * 0.42, 0.3, 0.86]);
-    nostrils.push(disc(add(q.p, scale(q.n, 0.012)), q.n, M.r[0] * 0.2, M.r[0] * 0.13, 7, 'nose', { up: add(y, scale(x, sd * 0.4)) }));
-  }
-  const mouth = onMuzzle(s, [0, -0.55, 0.8]);
-  return merge(bridge, muzzle, paint(nostrils), smile(add(mouth.p, scale(mouth.n, -0.01)), mouth.n, M.r[0] * 0.7, 'nose'));
+/**
+ * The snout: one form out of the front of the skull and down the face, its
+ * root inside the skull so there is no seam where they meet, narrowing down
+ * the bridge of the nose and broadening again into a soft nose pad, cream
+ * going to pale pink over the pad; its end a broad, flattened face with two
+ * nostrils on it, and a smile under it.
+ */
+function muzzleMesh(s: Cow, n: number): Mesh {
+  const K = 16, ts = Array.from({ length: K + 1 }, (_, q) => q / K), at = ts.map((t) => snoutAt(s, t));
+  const pink = Math.round(K * 0.7);
+  const snout = tube(at.map((q) => q.p), at.map((q) => q.w), at.map((q) => q.h), n + 4, (ring) => (ring >= pink ? 'muzzle' : 'coat'), { seam: 'start' });
+  const end = at[K], up = snoutUp(end.d), side: V3 = [1, 0, 0];
+  const face = add(end.p, scale(end.d, 0.006));
+  const nostrils: Disc[] = [1, -1].map((sd) => disc(add(add(face, scale(side, sd * end.w * 0.5)), scale(up, end.h * 0.15)), end.d, end.w * 0.24, end.w * 0.16, 7, 'nose', { up: add(up, scale(side, -sd * 0.6)) }));
+  const lip = snoutAt(s, 0.93), ln = unit(add(scale(snoutUp(lip.d), -1), scale(lip.d, 0.9)));
+  const mouth = add(add(lip.p, scale(snoutUp(lip.d), -lip.h * 0.9)), scale(lip.d, lip.h * 0.25));
+  return merge(snout, paint(nostrils), smile(mouth, ln, lip.w * 0.85, 'nose'));
 }
 
-/** The chin, on the jaw's bone, so a chew shows: a small egg under the end of the muzzle. */
+/** The chin, on the jaw's bone, so a chew shows: a soft egg under the end of the snout, tucked into it. */
 function chinOf(s: Cow, n: number, k: number): Mesh {
-  const c = onMuzzle(s, [0, -0.75, 0.15]).p;
-  return orbAlong(add(c, [0, -0.02, 0.05]), [0, 1, -0.3], [s.head.muzzle.r[0] * 0.62, s.head.muzzle.r[1] * 0.42, s.head.muzzle.r[2] * 0.5], n, k, 'muzzle');
+  const q = snoutAt(s, 0.82), up = snoutUp(q.d);
+  return orbAlong(add(q.p, scale(up, -q.h * 0.62)), q.d, [q.w * 0.66, q.h * 0.5, s.head.snout.len * 0.2], n, k, 'coat');
 }
 
 /**
@@ -1357,7 +1371,7 @@ function cowBuild(s: Cow, lod: number): Piece[] {
   const skull = skullOf(s);
   const B = s.body;
   const extras: Piece[] = [
-    { key: 'muzzle', mesh: muzzleMesh(s, n, k), bone: 'head', bias: 0.205, after: ['head'], front: [0, 1, 0], lines: false },
+    { key: 'muzzle', mesh: muzzleMesh(s, n), bone: 'head', bias: 0.205, after: ['head'], front: [0, 1, 0], hide: [skull], lines: false },
     { key: 'chin', mesh: chinOf(s, n - 1, k - 1), bone: 'jaw', bias: 0.2, after: ['head'], under: ['muzzle'], lines: false },
     { key: 'tuft', mesh: tuftMesh(s, tn), bone: 'head', bias: 0.23, after: ['head', 'ear0', 'ear1'], hide: [skull], ...FLUFF },
   ];
@@ -1633,7 +1647,7 @@ function cowKind(s: Cow): Kind {
         coatLight: mix(cream, [236, 214, 176], 0.5),
         mark: mix(cream, [255, 252, 246], 0.4),
         belly: [238, 214, 178],
-        muzzle: [250, 220, 212],
+        muzzle: [246, 202, 198],
         inner: [244, 176, 184],
         nose: [196, 120, 128],
         lid: mix(patch, [50, 36, 36], 0.5),
