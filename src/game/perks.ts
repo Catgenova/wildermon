@@ -1119,7 +1119,7 @@ const FARMER: Seed[] = [
     num: 25, name: 'Milkmaid',
     fx: { 'time:milk_creature': 0.6, 'more:milk_creature': 0.5 },
     note: (fx) => `${capital(ACTION_BY_ID.get('milk_creature')?.verb ?? 'milking')} time ${cut(fx['time:milk_creature'])} (base ${secs(base('milk_creature'))}). `
-      + `Cudda: second bucket of milk on ${oneIn(fx['more:milk_creature'])} actions, if you carry another empty bucket. `
+      + `${SPECIES.cudda.name} line: second bucket of milk on ${oneIn(fx['more:milk_creature'])} actions, if you carry another empty bucket. `
       + `Gorral: ${GORRAL_MILK} litres per milking either way.`,
   },
   {

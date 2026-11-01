@@ -4238,6 +4238,16 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 415,
+    day: '2026-11-01',
+    lines: () => {
+      const d = SPECIES.cudda, [one, two] = d.stages!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same milking and stats. `
+        + `Over ${article(d.name)} ${d.name}: ${one.name} ${stageSays(1, false, 'milk and fleece')}; ${two.name} ${stageSays(2, false, 'milk and fleece')}. Stage 3 skill: ${two.name} ${perkSays('cudda')}.`,
+        'Each stage: own model, animations and voice.'];
+    },
+  },
+  {
     n: 414,
     day: '2026-11-01',
     lines: () => {

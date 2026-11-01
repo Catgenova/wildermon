@@ -929,7 +929,7 @@ const FIGHTERS = ['thumpa', 'sparra'];
 const ABLE = ['lungra', 'stona', 'whispet'];
 const HAND_NUMBERS: Record<string, string> = {
   kemma: `a brushing puts in ${percent(groomGain(1, 1))} care (${CARE_SAID}) at no husbandry and ${percent(groomGain(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}, as a keeper of its skill with a brush as good. Evolves: ${evolves('kemma')}`,
-  sheela: `a full fleece gives ${SHEAR_WOOL} wool and a full crop of feathers ${SHEAR_FEATHERS}, and a cudda a bucket of milk; evolves: ${evolves('sheela')}`,
+  sheela: `a full fleece gives ${SHEAR_WOOL} wool and a full crop of feathers ${SHEAR_FEATHERS}, and a milking a bucket of milk; evolves: ${evolves('sheela')}`,
   salva: `a QL ${SHOWN_QL} dressing puts back ${percent(healAmount(1, SHOWN_QL))} of a life at no first aid and ${percent(healAmount(SKILL_TOP, SHOWN_QL))} at ${SKILL_TOP}`,
   hoppa: `it tries ${listed(BREWS.map((b) => b.name.toLowerCase()))} in that order`,
   simma: `it tries ${cookRecipes().length} recipes in the order the recipes are listed, from ${itemDef(RECIPE_BY_ID.get(cookRecipes()[0])!.result).name.toLowerCase()} on`,
@@ -3075,7 +3075,7 @@ export function helpText(): string {
       <li><b>Shaggan</b>: slowest in the traces; +${percent(SPECIES.shaggan.pull ?? PULL_DEFAULT)} team pull each (most add ${percent(PULL_DEFAULT)}).</li>
       <li><b>${SPECIES.warda.name}</b>: sees ${SPECIES.warda.sight} tiles for you wherever it stands. Evolves: ${evolves('warda')}.</li>
       <li><b>Quill</b>: <b>pluck</b> for <b>feathers</b>.</li>
-      <li><b>Cudda</b>: <b>milked</b> into an empty bucket; a bucket of milk makes ${made('make_cheese')} <b>cheeses</b>.</li>
+      <li><b>${SPECIES.cudda.name}</b>: <b>milked</b> into an empty bucket; a bucket of milk makes ${made('make_cheese')} <b>cheeses</b>. Evolves: ${evolves('cudda')}; ${perkLine('cudda').toLowerCase()}.</li>
       <li><b>${SPECIES.vesp.name}</b>. Build a <b>hive</b> (${bill('make_hive', true)}) on your settlement. Task <b>${GATHER_VERB.hive}</b>: the nearest hive with room within its reach of the totem;
       per go, out to one wildflower tile within ${SKEP_REACH} tiles of the hive, in turn, and back. <b>Honey</b> into the hive: a skep's rate there, a honey per ${SKEP_CLUMP_HOURS} hours worked
       per clump within ${SKEP_REACH} tiles, per ${SPECIES.vesp.name}; a <b>beeswax</b> per ${SKEP_WAX_EVERY} honey; none in ${SKEP_IDLE}. Quality (QL): as a gathered load, its ${SKILL_NAME(GATHER_SKILL.hive).toLowerCase()}.
