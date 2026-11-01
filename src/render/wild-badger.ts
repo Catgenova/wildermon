@@ -31,10 +31,10 @@ import { joint, mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB,
 
 /* ---- a stage, as numbers ------------------------------------------------------------- */
 
-interface Rings { y: number[]; z: number[]; w: number[]; h: number[] }
+export interface Rings { y: number[]; z: number[]; w: number[]; h: number[] }
 type HeadRings = Rings & { pitch: number };
 
-interface Badger {
+export interface Badger {
   stage: 0 | 1 | 2;
   /** The barrel's rings, rump to chest. */
   body: Rings;
@@ -194,14 +194,14 @@ const EARTHREND_LOOK: Badger = {
 };
 
 /** A number of its own for each thing, nought to one, so a pattern is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
+export const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
 /** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
+export const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
 /** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
+export const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 
 /** Where a point on a body of rings is, `y` along it and `th` round it from its right side (up positive), and the way out of it there. */
-function onRings(R: Rings, y: number, th: number): { p: V3; n: V3 } {
+export function onRings(R: Rings, y: number, th: number): { p: V3; n: V3 } {
   let k = 0;
   while (k < R.y.length - 2 && R.y[k + 1] < y) k++;
   const dy = R.y[k + 1] - R.y[k], f = clamp((y - R.y[k]) / dy);
@@ -210,7 +210,7 @@ function onRings(R: Rings, y: number, th: number): { p: V3; n: V3 } {
   const slope = -((c * c * (R.w[k + 1] - R.w[k])) / w + (s * (R.z[k + 1] - R.z[k])) / h + (s * s * (R.h[k + 1] - R.h[k])) / h) / dy;
   return { p: [w * c, y, z + h * s], n: unit([c / w, slope, s / h]) };
 }
-const left = (q: { p: V3; n: V3 }): { p: V3; n: V3 } => ({ p: [-q.p[0], q.p[1], q.p[2]], n: [-q.n[0], q.n[1], q.n[2]] });
+export const left = (q: { p: V3; n: V3 }): { p: V3; n: V3 } => ({ p: [-q.p[0], q.p[1], q.p[2]], n: [-q.n[0], q.n[1], q.n[2]] });
 
 /** `v` pitched about x by `deg` degrees, as a joint's pitch turns it. */
 function rotX(v: V3, deg: number): V3 {
@@ -250,7 +250,7 @@ const FOLD = 60;
 const SIDE = [-1, 1, -1, 1];
 
 /** A stage's body on four legs (`QuadSpec`). */
-const specOf = (s: Badger): QuadSpec => ({
+export const specOf = (s: Badger): QuadSpec => ({
   high: s.fore[0] + s.fore[1] + 0.5,
   fore: { at: [s.body.w[4] * s.hip, s.len * 0.5, -s.body.h[4] * 0.42], len: s.fore, rest: [s.stand.fore[0], s.stand.fore[1], 0], fold: [FOLD, FOLD], toe: [s.paw * 1.1, s.paw * 0.6] },
   hind: { at: [s.body.w[2] * s.hip * 1.04, -s.len * 0.5, -s.body.h[2] * 0.42], len: s.hind, rest: [s.stand.hind[0], s.stand.hind[1], 0], fold: [FOLD, FOLD], toe: [s.hindPaw * 1.1, s.hindPaw * 0.6] },
@@ -290,8 +290,8 @@ function legTo(spec: QuadSpec, i: number, pitch: number, T: V3): [number, number
 }
 
 /** A stage standing: how far its body is tipped to stand on all four feet, how high its middle is, and where each ankle is. */
-interface Rest { pitch: number; h: number; ankle: V3[]; tip: V3; nose: V3; sole: V3[][]; chin: V3[] }
-function restOf(s: Badger, spec: QuadSpec): Rest {
+export interface Rest { pitch: number; h: number; ankle: V3[]; tip: V3; nose: V3; sole: V3[][]; chin: V3[] }
+export function restOf(s: Badger, spec: QuadSpec): Rest {
   const ankle = (i: number, pitch: number): V3 => {
     const L = i < 2 ? spec.fore : spec.hind, r = L.rest ?? [0, 0, 0];
     return add(rotX([SIDE[i] * L.at[0], L.at[1], L.at[2]], pitch), rotX(ankleAt(L.len, r[0], r[1]), pitch));
@@ -326,7 +326,7 @@ function restOf(s: Badger, spec: QuadSpec): Rest {
  * under the body's middle along the ground, and its height over the ground) and how its foot is pitched past level; how high
  * the body's middle is, how far it is carried forward, and how far the barrel rolls and rocks over its legs.
  */
-interface Plan { at: V3[]; foot: number[]; H: number; surge: number; roll: number; rock: number }
+export interface Plan { at: V3[]; foot: number[]; H: number; surge: number; roll: number; rock: number }
 
 /** Where a fore paw's middle claw ends, in the foot's frame. */
 const clawTip = (s: Badger): V3 => [0, s.paw * 0.8 + s.claw.len * 0.95, -s.fore[2] + 0.02];
@@ -345,7 +345,7 @@ function arc(a: V3, b: V3, u: number, up: number): V3 {
 }
 
 /** Standing: every foot where it stands. */
-function stillPlan(R: Rest, p: QuadPose): Plan {
+export function stillPlan(R: Rest, p: QuadPose): Plan {
   return { at: R.ankle.map((a) => [...a] as V3), foot: [0, 0, 0, 0], H: R.h, surge: 0, roll: p.roll, rock: 0 };
 }
 
@@ -409,7 +409,7 @@ function mixPlan(a: Plan, b: Plan, k: number): Plan {
     H: lerp(a.H, b.H, k), surge: lerp(a.surge, b.surge, k), roll: lerp(a.roll, b.roll, k), rock: lerp(a.rock, b.rock, k),
   };
 }
-const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
+export const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 
 /* ---- the task ------------------------------------------------------------------------------- */
 
@@ -731,13 +731,13 @@ function earRoot(s: Badger): V3 {
 const noseTip = (s: Badger): V3 => { const H = s.head, last = H.y.length - 1; return [0, H.y[last] + s.nose * 0.9, H.z[last] - H.h[last] * 0.4]; };
 
 /** Its pose for what it is doing, over the one a body on four legs has (`quadPose`), and where its feet go. */
-function planOf(s: Badger, spec: QuadSpec, R: Rest, p: QuadPose, a: Anim): Plan {
+function planOf(s: Badger, spec: QuadSpec, R: Rest, p: QuadPose, a: Anim, work: WorkPlan): Plan {
   p.pitch += R.pitch;
   const act = a.act;
   if (act?.kind === 'strike') return s.strike === 0 ? pouncePlan(s, spec, R, p, act.t) : s.strike === 1 ? rakePlan(s, spec, R, p, act.t) : slamPlan(s, spec, R, p, act.t);
-  if (act?.kind === 'work') return workPlan(s, spec, R, p, a, act.t, downOf(act.t, a.graze));
+  if (act?.kind === 'work') return work(s, spec, R, p, a, act.t, downOf(act.t, a.graze));
   if (act?.kind === 'evolve') return evolvePlan(R, p, act.t);
-  if (a.graze > 0 && a.go <= 0) return workPlan(s, spec, R, p, a, 0, a.graze);
+  if (a.graze > 0 && a.go <= 0) return work(s, spec, R, p, a, 0, a.graze);
   if (a.go <= 0) return still(s, R, p, a);
   const going = goingPlan(s, spec, R, p, a), g = smooth(a.go);
   const G = s.gait, w = frac(a.u);
@@ -788,11 +788,18 @@ const LEGS4 = ['fl', 'fr', 'hl', 'hr'];
  * The bones of a stage: its pose, every leg bent to put its foot where the pose says (`legTo`), the body raised to the height
  * the pose says and carried forward as far, and the barrel rolled and rocked over its legs, so the feet stay where they are.
  */
-function badgerBones(s: Badger): (a: Anim) => Bones {
+/** A go at a task, as where its feet go and how the rest of it is carried (`Plan`): the badger's seeking, or a kind's own. */
+export type WorkPlan = (s: Badger, spec: QuadSpec, R: Rest, p: QuadPose, a: Anim, t: number, down: number) => Plan;
+
+/**
+ * Its bones, `work` its go at its task (the badger's seeking unless another is given); in `planted` acts its hind feet stay
+ * down on the ground whatever its shins do.
+ */
+export function badgerBones(s: Badger, work: WorkPlan = workPlan, planted: readonly string[] = ['strike', 'evolve']): (a: Anim) => Bones {
   const spec = specOf(s), R = restOf(s, spec);
   return (a) => {
     const p = quadPose(spec, { ...a, graze: 0, go: a.act ? 0 : a.go });
-    const plan = planOf(s, spec, R, p, a);
+    const plan = planOf(s, spec, R, p, a, work);
     // However it is posed, its head never down in the ground: its neck and head lifted together just as far as keeps it out.
     if (noseOver(spec, R, p, plan, 0) < 0.012) {
       let lo = -1.5, hi = 0;
@@ -822,14 +829,14 @@ function badgerBones(s: Badger): (a: Anim) => Bones {
     b = lifted(b, plan.H - b.body.t[2]);
     // Nor the shin or the knee: a leg whose shin would dip into the ground has its foot put up by as much, and is bent again.
     // In a strike, whose hind feet never leave the ground, the body is raised by as much instead, so they stay down.
-    const planted = a.act?.kind === 'strike' || a.act?.kind === 'evolve';
+    const plantedNow = !!a.act && planted.includes(a.act.kind);
     for (let pass = 0; pass < 3; pass++) {
       let again = false, rise = 0;
       for (let i = 0; i < 4; i++) {
         const dip = 0.012 - shinLow(s, b, i);
         if (dip <= 0) continue;
         again = true;
-        if (planted && i >= 2) rise = Math.max(rise, dip * 1.15);
+        if (plantedNow && i >= 2) rise = Math.max(rise, dip * 1.15);
         else plan.at[i][2] += dip * 1.15;
       }
       if (!again) break;
@@ -854,7 +861,7 @@ const TONES: Record<Tone, readonly [Mat, Mat, Mat]> = { moss: ['moss', 'leafDark
 interface Plate { root: V3; n: V3; back: V3; a: number; b: number; t: number; lift: number; tone: Tone; id: number }
 
 /** Each face wound so it faces the way it is meant to (`want`), whichever way round it was listed. */
-function wound(v: readonly V3[], f: Face[], want: readonly V3[]): Face[] {
+export function wound(v: readonly V3[], f: Face[], want: readonly V3[]): Face[] {
   f.forEach((face, q) => {
     const idx = face.i;
     let nx = 0, ny = 0, nz = 0;
@@ -1004,8 +1011,8 @@ function leafMesh(root: V3, dir: V3, face: V3, L: number, droop = 0.26, mat: Mat
 }
 
 /** What stirs on its back, as one mesh: each corner's root (what it sways on) and a phase of its own. */
-interface Stir { mesh: Mesh; root: V3[]; ph: number[]; k: number[] }
-function stirOf(parts: ReadonlyArray<{ mesh: Mesh; root: V3; id: number; k?: number }>): Stir {
+export interface Stir { mesh: Mesh; root: V3[]; ph: number[]; k: number[] }
+export function stirOf(parts: ReadonlyArray<{ mesh: Mesh; root: V3; id: number; k?: number }>): Stir {
   const root: V3[] = [], ph: number[] = [], k: number[] = [];
   for (const p of parts) for (let q = 0; q < p.mesh.v.length; q++) { root.push(p.root); ph.push(jitter(p.id + 31) * TAU); k.push(p.k ?? 1); }
   return { mesh: merge(...parts.map((p) => p.mesh)), root, ph, k };
@@ -1116,7 +1123,7 @@ function stirred(s: Badger, G: Stir, leaf: boolean): (v: readonly V3[], a: Anim)
 /* ---- the head ------------------------------------------------------------------------------- */
 
 /** A thin painted line along a run of points on a surface, `w` wide, each point's way out given: a mouth's line. */
-function line(pts: ReadonlyArray<{ p: V3; n: V3 }>, w: number, m: Mat): Disc {
+export function line(pts: ReadonlyArray<{ p: V3; n: V3 }>, w: number, m: Mat): Disc {
   const up = (q: { p: V3; n: V3 }, k: number): V3 => {
     const d = unit(cross(q.n, [1, 0, 0]));
     return add(add(q.p, scale(q.n, 0.012)), scale(d, k * w));
@@ -1180,7 +1187,7 @@ function bandOf(s: Badger, side: number): Disc {
  * Earthrend narrowed under a heavy dark brow, which is what makes the face determined. All of an eye goes out of sight
  * together behind the head.
  */
-function eyesOf(s: Badger, shut: boolean): Mesh {
+export function eyesOf(s: Badger, shut: boolean): Mesh {
   const E = s.eye, H = s.head, meshes: Mesh[] = [];
   const c0 = onRings(H, E.y, E.up), rho = Math.max(0.05, Math.hypot(c0.p[0], c0.p[2] - lerp(H.z[2], H.z[4], 0.5)));
   for (const side of [1, -1]) {
@@ -1261,7 +1268,7 @@ function headOf(s: Badger, n: number, k: number, shut: boolean): Mesh {
 }
 
 /** Solids inside the head that hide what is round the far side of them: the skull and the muzzle. */
-function headSolids(s: Badger): Array<{ c: V3; r: V3 }> {
+export function headSolids(s: Badger): Array<{ c: V3; r: V3 }> {
   const H = s.head;
   return [
     { c: [0, H.y[2], H.z[2]], r: [H.w[2] * 0.85, (H.y[3] - H.y[0]) * 0.5, H.h[2] * 0.85] },
@@ -1274,7 +1281,7 @@ function headSolids(s: Badger): Array<{ c: V3; r: V3 }> {
 }
 
 /** An ear: small and round, a thick cup of fur with a pale rim and a pink inside. */
-function earOf(s: Badger, n: number): Mesh {
+export function earOf(s: Badger, n: number): Mesh {
   const E = s.ear, L = E.len, w = E.w;
   return merge(
     tube(curve([0, 0, -0.03], [0, 0.03, L * 0.5], [0, -0.02, L], 4), [w * 0.8, w, w * 0.92, w * 0.6, 0.02], w * 0.42, n, (ring) => (ring >= 3 ? 'coatLight' : 'coat'), { up: [0, 1, 0], seam: 'start' }),
@@ -1312,7 +1319,7 @@ function hindPaw(s: Badger, n: number, k: number): Mesh {
 }
 
 /** A barrel's rings with its ends rounded, so the rump and the chest are domes rather than cut off flat. */
-function domed(B: Rings): Rings {
+export function domed(B: Rings): Rings {
   const out: Rings = { y: [], z: [], w: [], h: [] };
   const put = (y: number, z: number, w: number, h: number): void => { out.y.push(y); out.z.push(z); out.w.push(w); out.h.push(h); };
   const between = (a: number, b: number, f: number): void => {
@@ -1329,7 +1336,7 @@ function domed(B: Rings): Rings {
 }
 
 /** A blot painted on a body of rings, following its curve: `r` across along it and round it, ragged, in `m`. */
-function blot(R: Rings, y: number, th: number, r: number, m: Mat, id: number, side = 1): Disc {
+export function blot(R: Rings, y: number, th: number, r: number, m: Mat, id: number, side = 1): Disc {
   const c = onRings(R, y, th), q = side > 0 ? c : left(c);
   const n = 9, v: V3[] = [];
   const wAt = Math.max(0.05, Math.hypot(c.p[0], c.p[2] - lerp(R.z[0], R.z[R.z.length - 1], 0.5)));
@@ -1358,13 +1365,13 @@ function patches(s: Badger): Mesh {
 }
 
 /** The barrel as one solid, a little inside its skin: its middle and its half-sizes. */
-function barrelSolid(s: Badger): { c: V3; r: V3 } {
+export function barrelSolid(s: Badger): { c: V3; r: V3 } {
   const B = s.body, y0 = B.y[0], y1 = B.y[B.y.length - 1];
   return { c: [0, (y0 + y1) / 2, 0], r: [Math.max(...B.w) * 0.88, ((y1 - y0) / 2) * 0.88, Math.max(...B.h) * 0.88] };
 }
 
 /** The legs: thick and short, rooted up inside the body, the fur darker toward the paw; on the bigger two a stone on each forearm and thigh. */
-function legPieces(s: Badger, n: number, k: number): Piece[] {
+export function legPieces(s: Badger, n: number, k: number): Piece[] {
   const out: Piece[] = [];
   for (const [key, side, fore] of [['fl', -1, true], ['fr', 1, true], ['hl', -1, false], ['hr', 1, false]] as Array<[string, number, boolean]>) {
     const L = fore ? s.fore : s.hind, w = s.thick * (fore ? 1 : s.hindThick);
@@ -1482,12 +1489,12 @@ const PEBBLE_RGB: RGB = [168, 162, 150];
 const LEAF_RGB: RGB = [132, 176, 82];
 const GOLD_RGB: RGB = [255, 214, 110];
 const DUST_RGB: RGB = [222, 200, 168];
-const css = (c: RGB): string => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+export const css = (c: RGB): string => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
 
 /** Where something thrown from `p` with velocity `v` is `s` seconds on, falling; it lies where it lands. */
-const thrown = (p: V3, v: V3, s: number, fall = 9): V3 => [p[0] + v[0] * s, p[1] + v[1] * s, Math.max(0.02, p[2] + v[2] * s - 0.5 * fall * s * s)];
+export const thrown = (p: V3, v: V3, s: number, fall = 9): V3 => [p[0] + v[0] * s, p[1] + v[1] * s, Math.max(0.02, p[2] + v[2] * s - 0.5 * fall * s * s)];
 /** Whether a point is on the viewer's side of a body whose middle is at `c`: drawn over the body if so, under it if not. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
+export const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /** How big a stage's things in the air are drawn, against the Tunnelclaw's: less than in proportion on the small one, so they still read. */
 const bigness = (s: Badger): number => 0.25 + 0.75 * (s.len / 2.1);
 
@@ -1641,7 +1648,7 @@ const at0 = (b: Bones): Bones[string] => b.trunk;
  * up off the ground and a puff of dust; and for the Earthrend's slam, the ground cracked, a ring of dust going out over it, and
  * earth and leaves thrown up high, over its back so it is seen from behind. Each thing sorted in front of the body or behind it.
  */
-function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Badger, b: Bones, hits: Bones[], R: Rest, t: number, front: boolean): void {
+export function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Badger, b: Bones, hits: Bones[], R: Rest, t: number, front: boolean): void {
   const big = bigness(s), hs = BADGER_HITS[s.strike];
   const mid = b.body.t;
   hs.forEach((h, q) => {
@@ -1895,7 +1902,7 @@ function evolveSwirl(g: CanvasRenderingContext2D, view: View, s: Badger, b: Bone
  * The warm flash at the claws where each blow lands, drawn with the body rather than over all of it: in front of it when the
  * claws are on the viewer's side of it, and behind it, where the body covers it, when they are round the far side.
  */
-function blowFlash(g: CanvasRenderingContext2D, view: View, s: Badger, b: Bones, R: Rest, t: number, front: boolean): void {
+export function blowFlash(g: CanvasRenderingContext2D, view: View, s: Badger, b: Bones, R: Rest, t: number, front: boolean): void {
   const big = bigness(s), mid = b.body.t;
   g.save();
   g.globalCompositeOperation = 'lighter';

@@ -44,6 +44,7 @@ import { SPIRAL_VOICE } from './voice-spiral';
 import { PACK_VOICE } from './voice-pack';
 import { EMBER_VOICE } from './voice-ember';
 import { PEAFOWL_VOICE } from './voice-peafowl';
+import { SABLE_VOICE } from './voice-sable';
 import { PELT_VOICE } from './voice-pelt';
 import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
@@ -202,4 +203,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   cudda: COW_VOICE,
   // The Peachick, the Plumecrest and the Featherbourne.
   quill: PEAFOWL_VOICE,
+  // The Sablekit, the Sableplume and the Fletchercrest.
+  flecha: SABLE_VOICE,
 };
