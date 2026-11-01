@@ -119,7 +119,7 @@ const WALLKIT_LOOK: Wall = {
   mantle: { from: 0.56, to: -0.56, rows: 5, per: 5, spread: 1.0, len: 0.34, layers: 2, lift: 0.07, hang: 0.35 },
   blossoms: 0,
   plumes: { cheek: 0.24, head: 0, shoulder: 0, flank: 0 },
-  brush: { held: true, cuff: [0.09, 0.2], bands: 1, straw: 0.4, fan: 0.27 },
+  brush: { held: true, cuff: [0.1, 0.2], bands: 1, straw: 0.42, fan: 0.36 },
   pauldron: 0,
   tail: { len: 1.0, w: 0.3, lift: 18, curl: 1, leaves: 0 },
   gait: { bob: [0.05, 0.06], duty: [0.58, 0.44], swing: [38, 42], step: 0.5, roll: 9, nod: 4, sway: 6, jiggle: 0.5 },
@@ -147,10 +147,10 @@ const BRISTLEWARD_LOOK: Wall = {
   nose: 0.1,
   eye: { y: 0.18, up: 0.5, size: 0.1, tall: 1.0, lid: 0.18 },
   ear: { len: 0.44, w: 0.3, out: 48, back: 22, at: [0.52, 1.06] },
-  mantle: { from: 1.16, to: -1.3, rows: 6, per: 6, spread: 0.95, len: 0.66, layers: 2, lift: 0.22, hang: 0.25 },
+  mantle: { from: 1.16, to: -1.3, rows: 6, per: 5, spread: 0.85, len: 0.7, layers: 2, lift: 0.22, hang: 0.2 },
   blossoms: 3,
-  plumes: { cheek: 0.3, head: 0, shoulder: 0.66, flank: 0.6 },
-  brush: { held: false, cuff: [0.19, 0.36], bands: 1, straw: 0.52, fan: 0.34 },
+  plumes: { cheek: 0.34, head: 0, shoulder: 0.72, flank: 0.75 },
+  brush: { held: false, cuff: [0.25, 0.4], bands: 1, straw: 0.56, fan: 0.4 },
   pauldron: 0,
   tail: { len: 0.7, w: 0.22, lift: 6, curl: 0.2, leaves: 2 },
   gait: { bob: [0.07, 0.09], duty: [0.6, 0.5], swing: [34, 38], step: 0.4, roll: 8, nod: 3, sway: 5, jiggle: 0.45 },
@@ -168,7 +168,7 @@ const STONEPOLISH_LOOK: Wall = {
   stand: { fore: [14, 40], hind: [24, -58] },
   paw: 0.52, hindPaw: 0.48,
   claw: { n: 4, len: 0.2, w: 0.1 }, hindClaw: 0.2,
-  neck: { at: [0, 2.0, 0.72], len: 0.62, w: 1.5, lean: 74 },
+  neck: { at: [0, 1.95, 0.95], len: 0.7, w: 1.5, lean: 58 },
   head: {
     y: [-0.739, -0.561, -0.148, 0.311, 0.724, 1.065, 1.316, 1.478], z: [0.34, 0.4, 0.36, 0.2, 0.04, -0.06, -0.12, -0.14],
     w: [0.44, 1.36, 1.5, 1.32, 0.96, 0.64, 0.42, 0.25], h: [0.4, 1.2, 1.28, 1.02, 0.7, 0.44, 0.3, 0.18], pitch: -8,
@@ -177,10 +177,10 @@ const STONEPOLISH_LOOK: Wall = {
   nose: 0.17,
   eye: { y: 0.36, up: 0.5, size: 0.15, tall: 0.86, lid: 0.32 },
   ear: { len: 0.72, w: 0.48, out: 46, back: 26, at: [0.52, 1.08] },
-  mantle: { from: 2.15, to: -2.35, rows: 7, per: 7, spread: 1.05, len: 1.45, layers: 2, lift: 0.7, hang: 0.3 },
+  mantle: { from: 2.15, to: -2.35, rows: 7, per: 6, spread: 0.92, len: 1.55, layers: 2, lift: 0.7, hang: 0.25 },
   blossoms: 5,
-  plumes: { cheek: 0.7, head: 1.9, shoulder: 1.5, flank: 1.1 },
-  brush: { held: false, cuff: [0.66, 1.0], bands: 2, straw: 1.8, fan: 1.2 },
+  plumes: { cheek: 0.75, head: 1.9, shoulder: 1.6, flank: 1.5 },
+  brush: { held: false, cuff: [0.86, 1.2], bands: 2, straw: 1.8, fan: 1.3 },
   pauldron: 0.95,
   tail: { len: 1.5, w: 0.44, lift: -6, curl: 0, leaves: 4 },
   gait: { bob: [0.16, 0.2], duty: [0.64, 0.54], swing: [30, 34], step: 0.32, roll: 6, nod: 2, sway: 5, jiggle: 0.3 },
@@ -796,8 +796,10 @@ function wound(v: readonly V3[], f: Face[], want: readonly V3[]): Face[] {
 function leafMesh(root: V3, dir: V3, face: V3, L: number, droop: number, mat: Mat, tip: Mat): Mesh {
   const d = unit(dir), n0 = unit(sub(face, scale(d, dot(face, d)))), side = unit(cross(d, n0));
   const fall = (k: number): V3 => scale(n0, -L * droop * k);
-  const pts = [root, add(add(root, scale(d, L * 0.3)), fall(0.08)), add(add(root, scale(d, L * 0.62)), fall(0.4)), add(add(root, scale(d, L * 0.86)), fall(0.75)), add(add(root, scale(d, L)), fall(1))];
-  const ws = [L * 0.07, L * 0.36, L * 0.4, L * 0.26, L * 0.03], th = L * 0.02;
+  const at = [0, 0.2, 0.45, 0.7, 0.88, 1], falls = [0, 0.04, 0.2, 0.5, 0.78, 1];
+  const pts = at.map((k, q) => add(add(root, scale(d, L * k)), fall(falls[q])));
+  // An oval with a point: widest a little before its middle, rounding in to the tip.
+  const ws = [0.06, 0.25, 0.32, 0.28, 0.17, 0.015].map((w) => w * L), th = L * 0.02;
   const v: V3[] = [];
   // Each step along it: its left edge, its rib and its right edge, the edges lifted a little off the rib; and under them again.
   for (let k = 0; k < pts.length; k++) {
@@ -807,7 +809,7 @@ function leafMesh(root: V3, dir: V3, face: V3, L: number, droop: number, mat: Ma
   for (let k = 0; k < pts.length; k++) for (let j = 0; j < 3; j++) v.push(sub(v[k * 3 + j], scale(n0, th)));
   const f: Face[] = [], want: V3[] = [], B = pts.length * 3;
   for (let k = 0; k < pts.length - 1; k++) {
-    const m: Mat = k === 0 ? 'leafDark' : k >= 2 ? tip : mat;
+    const m: Mat = k === 0 ? 'leafDark' : k >= 3 ? tip : mat;
     for (const j of [0, 1]) {
       f.push({ i: [k * 3 + j, k * 3 + j + 1, (k + 1) * 3 + j + 1, (k + 1) * 3 + j], m: k === 1 && j === 0 ? mat : m });
       want.push(n0);
@@ -855,12 +857,12 @@ function mantleOf(s: Wall): Sway[] {
           const lid = id * 7 + e;
           // Fanned round from one side of downhill to the other, the middle leaf furthest down; tilted up off the back.
           const a = lerp(-1.9, 1.9, k > 1 ? e / (k - 1) : 0.5) + (jitter(lid) - 0.5) * 0.5;
-          const tilt = (edge > 0.8 ? 0.05 : 0.32 + 0.3 * jitter(lid + 1)) * (1 - 0.4 * Math.abs(a) / 1.9);
+          const tilt = (edge > 0.8 ? 0.1 : top ? 0.42 + 0.3 * jitter(lid + 1) : 0.3 + 0.2 * jitter(lid + 1)) * (1 - 0.4 * Math.abs(a) / 1.9);
           const flat = add(scale(fall, Math.cos(a)), scale(side, Math.sin(a)));
           const dir = unit(add(scale(flat, Math.cos(tilt)), scale(z, Math.sin(tilt))));
           const up = unit(add(z, [0, 0, 0.4]));
           const face = unit(sub(up, scale(dir, dot(up, dir))));
-          const L = M.len * (0.8 + 0.35 * jitter(lid + 2)) * (1 - 0.25 * Math.abs(a) / 1.9) * (1 + 0.2 * edge) * (1.08 - 0.18 * f);
+          const L = M.len * (0.95 + 0.4 * jitter(lid + 2)) * (1 - 0.25 * Math.abs(a) / 1.9) * (1 + 0.2 * edge) * (1.12 - 0.2 * f);
           const root = add(c0, scale(flat, M.len * 0.12));
           const droop = 0.1 + M.hang * edge ** 1.5 * Math.cos(a) ** 2;
           const tint = jitter(lid + 8);
@@ -1224,23 +1226,31 @@ function spiralOn(on: (a: number, b: number) => { p: V3; n: V3 }, R: number, tur
 
 /**
  * A fan of straw: bristles bound together at `root` and spreading out along `dir` to `L` long, `r0` across and through at the
- * root and `r1` at the ends, which are ragged; striped along its length so it reads as straw, the ends darker.
+ * root and `r1` at the ends: a full core, ragged at its end, and over and under it tufts fanned out across it, each a flat
+ * blade of straw with a darker line down it, so it reads as straw from above and from the side.
  */
 function strawOf(root: V3, dir: V3, r0: [number, number], r1: [number, number], L: number, n: number, id: number, fine: boolean): Mesh {
-  const d = unit(dir), pts = [0, 0.3, 0.65, 1].map((k) => add(root, scale(d, L * k)));
-  const ws = [r0[0], lerp(r0[0], r1[0], 0.45), lerp(r0[0], r1[0], 0.8), r1[0]], hs = [r0[1], lerp(r0[1], r1[1], 0.55), lerp(r0[1], r1[1], 0.85), r1[1]];
+  const d = unit(dir), pts = [0, 0.3, 0.65, 0.92].map((k) => add(root, scale(d, L * k)));
+  const ws = [r0[0], lerp(r0[0], r1[0], 0.45), lerp(r0[0], r1[0], 0.8), r1[0] * 0.92].map((w) => w * 0.86);
+  const hs = [r0[1], lerp(r0[1], r1[1], 0.55), lerp(r0[1], r1[1], 0.85), r1[1]].map((h) => h * 0.8);
   const sides = Math.max(10, n + 2);
-  const t = tube(pts, ws, hs, sides, (ring, j) => (ring >= 3 ? 'hornDark' : j % 3 === 0 ? 'hornDark' : 'horn'), { up: [0, 0, 1] });
-  // The ends ragged: every other corner of the last ring a little further out along it.
+  const t = tube(pts, ws, hs, sides, (ring, j) => (ring >= 3 ? 'hornDark' : j % 2 ? 'hornDark' : 'horn'), { up: [0, 0, 1] });
+  // The core's end ragged: every other corner of the last ring a little further out along it.
   const last = (pts.length - 1) * sides;
-  const v = t.v.map((p, i) => (i >= last ? add(p, scale(d, L * (i % 2 ? 0.07 : -0.03) * (0.6 + 0.8 * jitter(id + i)))) : p));
+  const v = t.v.map((p, i) => (i >= last ? add(p, scale(d, L * (i % 2 ? 0.06 : -0.03) * (0.6 + 0.8 * jitter(id + i)))) : p));
   const out: Mesh[] = [mesh(v, t.f)];
-  // A few loose straws standing out of the fan's end.
-  if (fine) {
-    for (let q = 0; q < 5; q++) {
-      const g = q / 4 - 0.5, a = add(pts[2], [g * ws[2] * 1.6, 0, (jitter(id + q * 7) - 0.4) * hs[2]]);
-      const b = add(add(pts[3], scale(d, L * (0.08 + 0.08 * jitter(id + q)))), [g * r1[0] * 1.9, 0, (jitter(id + q * 3) - 0.5) * r1[1]]);
-      out.push(tube([a, b], [r1[1] * 0.18, 0.004], [r1[1] * 0.18, 0.004], 4, 'horn'));
+  const across = unit(cross(d, [0, 0, 1])), up = unit(cross(across, d));
+  const tufts = fine ? 7 : 5;
+  for (const layer of [1, -0.55]) {
+    for (let q = 0; q < tufts; q++) {
+      const g = q / (tufts - 1) - 0.5;
+      const a = g * 2 * Math.atan2(r1[0] - r0[0], L) * 1.05;
+      const dd = unit(add(scale(d, Math.cos(a)), scale(across, Math.sin(a))));
+      const len = L * (1.02 + 0.08 * jitter(id + q * 3 + (layer > 0 ? 0 : 50)));
+      const base = add(add(root, scale(up, layer * r0[1] * 0.5)), scale(across, g * r0[0] * 1.2));
+      const tp: V3[] = [0, 0.35, 0.7, 1].map((k) => add(add(base, scale(dd, len * k)), scale(up, layer * r1[1] * 0.7 * k)));
+      const tw = (r1[0] / tufts) * 1.5;
+      out.push(blade(tp, [r0[0] * 0.3, tw * 0.75, tw, tw * 0.45], up, { mat: 'horn', rib: 'hornDark', fold: 0.12, thick: r1[1] * 0.06 }));
     }
   }
   return merge(...out);
@@ -1366,10 +1376,10 @@ const clawTip = (s: Wall): V3 => (s.brush.held ? [0, s.paw * 0.8 + s.claw.len * 
 function brushFoot(s: Wall, n: number, fine: boolean): Mesh {
   const [rc] = s.brush.cuff, d = s.fore[2], L = s.brush.straw, F = s.brush.fan;
   const root: V3 = [0, -rc * 0.1, -rc * 0.05];
-  const end: V3 = [0, L, -d + F * 0.3];
+  const end: V3 = [0, L, -d + F * 0.42];
   // A dark binding round the straw where it comes out of the cuff.
   const bind = tube([add(root, [0, -rc * 0.1, 0]), add(root, [0, rc * 0.45, -rc * 0.12])], [rc * 0.9, rc * 0.96], [rc * 0.8, rc * 0.86], Math.max(8, n), 'stem');
-  return merge(bind, strawOf(root, sub(end, root), [rc * 0.85, rc * 0.72], [F, F * 0.3], Math.hypot(end[1] - root[1], end[2] - root[2]), n, 77, fine));
+  return merge(bind, strawOf(root, sub(end, root), [rc * 0.85, rc * 0.72], [F, F * 0.42], Math.hypot(end[1] - root[1], end[2] - root[2]), n, 77, fine));
 }
 
 /** The Wallkit's little brush, held between its fore paws: a wooden cuff lying along the ground, its straw fanning out ahead. In the right fore foot's frame, `x0` its middle. */
@@ -2040,8 +2050,8 @@ function wallKind(s: Wall): Kind {
         bloom: [232, 150, 40],
         glint: [255, 253, 246],
         claw: [64, 46, 38],
-        horn: [238, 214, 150],
-        hornDark: [196, 160, 98],
+        horn: [234, 204, 128],
+        hornDark: [184, 144, 78],
         wood: [196, 156, 104],
         woodDark: [116, 84, 58],
         bark: [160, 120, 80],
