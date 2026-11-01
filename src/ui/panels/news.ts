@@ -4225,7 +4225,8 @@ export const NEWS: News[] = [
   {
     n: 407,
     day: '2026-11-01',
-    lines: () => [`Changed: starting kit: no ${KIT_LEFT_OUT.map((id) => itemDef(id).name.toLowerCase()).join(', ')} (was: one of each). ${STARTER_KIT.length - 1} tools and a water skin.`],
+    lines: () => [`Changed: starting kit: no ${KIT_LEFT_OUT.map((id) => itemDef(id).name.toLowerCase()).join(', ')} (was: one of each). ${STARTER_KIT.length - 1} tools and a water skin.`,
+      'Removed: Starter frying pans, clay bowls, clay pots and clay jars already held; what was in them stays where they were.'],
   },
   {
     n: 406,
