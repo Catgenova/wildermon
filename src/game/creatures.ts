@@ -860,6 +860,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   sheela: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   tanna: { kind: 'loads', n: 1, what: 'hides per cycle' },
   dulla: { kind: 'more', n: 1, what: 'moss per cut' },
+  carra: { kind: 'more', n: 1, what: 'timbers per log' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2437,9 +2438,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   carra: {
     id: 'carra',
-    name: 'Carra',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Lognib',
+    was: ['Carra'],
+    // Asked for, with a reference sheet: Lognib, Timbersplit, Beammaster. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Timbersplit', description: '' },
+      { name: 'Beammaster', description: '' },
+    ],
     health: 30,
     attack: 5,
     speed: 2,
@@ -2450,11 +2457,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'timber',
     workRange: 6,
+    // [shell, plates' edges and face]: the sheet's ochre with cream, honey with ivory, amber with oatmeal, and straw with buff.
     variants: [
-      ['#4a4440', '#c2b7a8'],
-      ['#5b4636', '#d1b79a'],
-      ['#3b3f45', '#aab3bb'],
-      ['#614a3f', '#d8c0ae'],
+      ['#d6a640', '#f4dcae'],
+      ['#e0b24e', '#f8e6c0'],
+      ['#c8923a', '#f0d2a0'],
+      ['#cfae52', '#f2deb6'],
     ],
     butcher: { meat: 4, fur: 2, leather: 2, bone: 3, feather: 4 },
     nearTrees: true,
@@ -4170,6 +4178,7 @@ sayLineLater('rippa', 'Level: carpentry.');
 sayLineLater('potta', 'Level: pottery.');
 sayLineLater('glimmip', 'Level: glassblowing.');
 sayLineLater('dulla', `Level: ${GATHER_SKILL.moss.replace(/_/g, ' ')}.`);
+sayLineLater('carra', `Level: ${GATHER_SKILL.timber.replace(/_/g, ' ')}.`);
 
 /** Which species roam wild, by weight. */
 /**
@@ -8693,8 +8702,10 @@ export class Creatures {
     if (!job) return this.why(c, 'stock');
     const { recipe: r, at } = job;
     if (!goto(at.centre[0], at.centre[1])) return true;
-    this.workRecipe(game, c, r, at, at.x, at.y);
-    this.moreRecipes(game, c, recipes, at, at.x, at.y);
+    // And its line's third-stage `more` on what each batch makes (a Beammaster's timbers).
+    const more = perkN(c, 'more');
+    this.workRecipe(game, c, r, at, at.x, at.y, true, more);
+    this.moreRecipes(game, c, recipes, at, at.x, at.y, more);
     return true;
   }
 

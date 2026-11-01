@@ -23,8 +23,8 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { deedJobLine } from '../../src/game/creaturecrate';
 import {
-  ALLOY_QL, GATHER_DO, GATHER_SKILL, HANDS_TRADES, kindNow, LEARN_PACE, LOAD_TRADES, REMOVED_KINDS, sparsAsGuard, SPECIES, TEND_JOBS, tradeRecipes, WILD_SPECIES,
-  workerSkipsTools, type Creature, type GatherKind,
+  ALLOY_QL, EVOLVE_AT, GATHER_DO, GATHER_SKILL, HANDS_TRADES, kindNow, LEARN_PACE, LOAD_TRADES, REMOVED_KINDS, sparsAsGuard, SPECIES, TEND_JOBS, tradeRecipes, WILD_SPECIES,
+  STAGE_PERKS, workerSkipsTools, type Creature, type GatherKind,
 } from '../../src/game/creatures';
 import { idleSays } from '../../src/game/workerlog';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
@@ -101,6 +101,12 @@ const CASES: Case[] = [
   { k: 'NOGLAZE', id: 'glossa', put: [['clay_pot', 1], ['ash', 1]], why: 'stock' },
 ];
 const tradeOf = (id: string): GatherKind => SPECIES[id].gathers!;
+/** A Beammaster's go at a log: what the recipe makes of it, and its line's third-stage timbers on top (`STAGE_PERKS`). */
+const BEAM_SKILLS = { [GATHER_SKILL.timber]: EVOLVE_AT[1] };
+const beamWants = (): string => {
+  const r = RECIPE_BY_ID.get(tradeRecipes('timber')[0])!;
+  return `${r.result} ${(r.count ?? 1) + STAGE_PERKS.carra.n}`;
+};
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
 const listed = (m: Map<string, number>): string => [...m].filter(([, n]) => n > 0).map(([id, n]) => `${id} ${n}`).sort().join(',') || '-';
@@ -231,6 +237,12 @@ ${CASES.map((c) => `
       || coalesce((select skills->>'${GATHER_SKILL.moss}' from creature where world_id = w and id = (select id from hand where species = 'dulla')), '-');
   ${after('dulla')}
 
+  -- BEAM: a Beammaster saws a log, and makes its line's third-stage timbers on top.
+  ${stocked([['log', 1]])}
+  ${ready('carra').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(BEAM_SKILLS)}'::jsonb`)}
+  insert into said select 'BEAM', ${held};
+  ${after('carra')}
+
   -- VINE: a trellis on grass with no vine, one with a vine already, one on sand; three cuttings.
   perform land_set_tile(w, 21, 14, tile_id('Sand'));
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, material) values
@@ -346,6 +358,7 @@ for (const c of CASES) {
   check(`on the island, a dulla cuts both moss tiles, ${MOSS_PER_CUT} a tile, and carries it home; no grass`,
     stores === `moss ${2 * MOSS_PER_CUT}` && cut === 'true,true' && Number(skill) > 1, at('MOSS'));
 }
+check(`on the island, a Beammaster saws a log into ${beamWants()}`, at('BEAM') === beamWants(), at('BEAM'));
 {
   const [stores, vines] = at('VINE').split('|');
   check('on the island, a rootle plants a cutting at the trellis on grass with no vine, and none at the one with a vine or the one on sand',
@@ -505,6 +518,14 @@ for (const k of CASES) {
   run(g, 180);
   check(`in the browser, a dulla cuts both moss tiles, ${MOSS_PER_CUT} a tile, and carries it home; no grass`,
     inCrate(crate) === `moss ${2 * MOSS_PER_CUT}` && g.isForaged(19, 18, 'moss') && g.isForaged(20, 18, 'moss') && (c.skills[GATHER_SKILL.moss] ?? 0) > 1, inCrate(crate));
+}
+{
+  const g = body();
+  const crate = stock(g, [['log', 1]]);
+  const c = worker(g, 'carra');
+  c.skills = { ...BEAM_SKILLS };
+  run(g, 120);
+  check(`in the browser, a Beammaster saws a log into ${beamWants()}`, inCrate(crate) === beamWants(), inCrate(crate));
 }
 {
   const g = body();

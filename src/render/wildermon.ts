@@ -35,7 +35,7 @@ import { LASHRUNNER, SNAREPUP, VINEHUNTER } from './wild-vine';
 import { BLUSHKIT, BRIARPOUNCE, THORNLANCE } from './wild-briar';
 import { BASTIONDRAKE, BRICKLING, MORTARBACK } from './wild-brick';
 import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
-import { BRAMBO, CARRA, SALVA } from './wild-hands';
+import { BRAMBO, SALVA } from './wild-hands';
 import { CLIPPEROO, SHEARLING, SHEARLORD } from './wild-shear';
 import { HIDEWEAVER, PELTIPEDE, PELTLING } from './wild-pelt';
 import { BLOOMREAPER, PETALBLADE, SPRIGMANT } from './wild-mantis';
@@ -65,6 +65,7 @@ import { DUMMIBEAR, DUMMICUB, DUMMITITAN } from './wild-dummy';
 import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
 import { BRITTLA, CRAKKA, FROSTA, LEECHA, ROOTLE, SCORCHA, WHIRLA } from './wild-abilities';
 import { MOSSNIB, MOSSREAVER, MOSSSHEAR } from './wild-moss';
+import { BEAMMASTER, LOGNIB, TIMBERSPLIT } from './wild-log';
 import { GALECREST, TEMPESTWYRM, ZEPHLET } from './wild-zephyr';
 
 /**
@@ -125,7 +126,7 @@ export const WILDERMON: Record<string, Kind> = {
   kemma: WHISPLING,
   sheela: SHEARLING,
   salva: SALVA,
-  carra: CARRA,
+  carra: LOGNIB,
   tanna: PELTLING,
   grista: WHEATLEY,
   wicka: GLIMMOTH,
@@ -232,6 +233,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   snedda: [CANOPYSHAPER, GROVEMASTER],
   tanna: [PELTIPEDE, HIDEWEAVER],
   dulla: [MOSSSHEAR, MOSSREAVER],
+  carra: [TIMBERSPLIT, BEAMMASTER],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

@@ -36,7 +36,7 @@ interface Legs { x: number; z: number; ys: number[]; fan: number[]; upper: numbe
  * the one behind it by `step`; how far under its waist the rim comes down (`lo`, radians) and flares out (`flare`); how square
  * its ends are (`p`).
  */
-interface Shell { y0: number; y1: number; cut: number; w: number; h: number; z0: number; segs: number; step: number; lo: number; flare: number; p: number }
+export interface Shell { y0: number; y1: number; cut: number; w: number; h: number; z0: number; segs: number; step: number; lo: number; flare: number; p: number }
 
 /** The scythes: the right shoulder on the body, the arm's two parts and how thick; how long the blade is; its teeth; and the wrist at rest (body frame, right side) and how the blade is turned. */
 interface Scythes { at: V3; arm: [number, number]; thick: number; len: number; teeth: number; rest: { w: V3; pitch: number; yaw: number; roll: number } }
@@ -150,18 +150,18 @@ const MOSSREAVER_LOOK: Moss = {
 /* ---- helpers ------------------------------------------------------------------------- */
 
 /** A number of its own for each thing, nought to one. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
+export const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
 /** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
+export const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
 /** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
-const len3 = (v: V3): number => Math.hypot(v[0], v[1], v[2]);
-const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
+export const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
+export const len3 = (v: V3): number => Math.hypot(v[0], v[1], v[2]);
+export const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 
 /** A frame from its three axes, as columns, at `t`. */
-const frame = (X: V3, Y: V3, Z: V3, t: V3): Xf => ({ m: [X[0], Y[0], Z[0], X[1], Y[1], Z[1], X[2], Y[2], Z[2]], t });
+export const frame = (X: V3, Y: V3, Z: V3, t: V3): Xf => ({ m: [X[0], Y[0], Z[0], X[1], Y[1], Z[1], X[2], Y[2], Z[2]], t });
 /** A bone at `o` whose length runs along `dir`, its up as near `up` as is square to that. */
-function aim(o: V3, dir: V3, up: V3): Xf {
+export function aim(o: V3, dir: V3, up: V3): Xf {
   const Y = unit(dir);
   let Z = sub(up, scale(Y, dot(up, Y)));
   if (len3(Z) < 1e-5) Z = sub([0, 1, 0], scale(Y, Y[1]));
@@ -169,12 +169,12 @@ function aim(o: V3, dir: V3, up: V3): Xf {
   return frame(cross(Y, Z), Y, Z, o);
 }
 /** A bone at `o` whose length runs along `dir`, lying in the plane square to `normal`. */
-function inPlane(o: V3, dir: V3, normal: V3): Xf {
+export function inPlane(o: V3, dir: V3, normal: V3): Xf {
   const Y = unit(dir), Z = unit(cross(normal, Y));
   return frame(cross(Y, Z), Y, Z, o);
 }
 /** Where the joint between two parts `a` and `b` long goes so the second ends at `goal`: always out on `pole`'s side. */
-function kneeOf(root: V3, goal: V3, a: number, b: number, pole: V3): V3 {
+export function kneeOf(root: V3, goal: V3, a: number, b: number, pole: V3): V3 {
   const d = sub(goal, root), L0 = Math.max(1e-6, len3(d)), u = scale(d, 1 / L0);
   const L = clamp(L0, Math.abs(a - b) + 1e-3, a + b - 1e-3);
   const along = (a * a - b * b + L * L) / (2 * L), up = Math.sqrt(Math.max(0, a * a - along * along));
@@ -182,7 +182,7 @@ function kneeOf(root: V3, goal: V3, a: number, b: number, pole: V3): V3 {
   return add(add(root, scale(u, along)), scale(p, up));
 }
 /** Each face wound so it faces the way it is meant to, whichever way round it was listed. */
-function wound(v: readonly V3[], f: Face[], want: readonly V3[]): Face[] {
+export function wound(v: readonly V3[], f: Face[], want: readonly V3[]): Face[] {
   f.forEach((face, q) => {
     const idx = face.i;
     let nx = 0, ny = 0, nz = 0;
@@ -197,7 +197,7 @@ function wound(v: readonly V3[], f: Face[], want: readonly V3[]): Face[] {
   return f;
 }
 /** A flat painted shape from its corners, wound to face along `n`. */
-function facing(pts: V3[], n: V3, m: Mat, lit?: boolean): Disc {
+export function facing(pts: V3[], n: V3, m: Mat, lit?: boolean): Disc {
   let nx = 0, ny = 0, nz = 0;
   for (let c = 0; c < pts.length; c++) {
     const p = pts[c], r = pts[(c + 1) % pts.length];
@@ -208,35 +208,35 @@ function facing(pts: V3[], n: V3, m: Mat, lit?: boolean): Disc {
   return { v: nx * n[0] + ny * n[1] + nz * n[2] < 0 ? [...pts].reverse() : pts, m, lit };
 }
 /** A thin painted strip from `a` to `b` on a surface facing `n`. */
-function strip(a: V3, b: V3, n: V3, w: number, m: Mat, lit?: boolean): Disc {
+export function strip(a: V3, b: V3, n: V3, w: number, m: Mat, lit?: boolean): Disc {
   const d = unit(sub(b, a)), side = scale(unit(cross(n, d)), w);
   return facing([add(a, side), add(b, side), sub(b, side), sub(a, side)], n, m, lit);
 }
-const mirroredMesh = (m: Mesh): Mesh => mesh(m.v.map((p) => [-p[0], p[1], p[2]] as V3), m.f.map((f) => ({ ...f, i: [...f.i].reverse() })));
+export const mirroredMesh = (m: Mesh): Mesh => mesh(m.v.map((p) => [-p[0], p[1], p[2]] as V3), m.f.map((f) => ({ ...f, i: [...f.i].reverse() })));
 /** `v` turned about the unit axis `d` by `a` radians. */
-const turned = (v: V3, d: V3, a: number): V3 => add(add(scale(v, Math.cos(a)), scale(cross(d, v), Math.sin(a))), scale(d, dot(d, v) * (1 - Math.cos(a))));
+export const turned = (v: V3, d: V3, a: number): V3 => add(add(scale(v, Math.cos(a)), scale(cross(d, v), Math.sin(a))), scale(d, dot(d, v) * (1 - Math.cos(a))));
 
 /* ---- the shell ------------------------------------------------------------------------- */
 
 /** How far each plate's edges bow back toward the rim, as a share of the shell's length. */
 const BOW = 0.11;
 /** How far round the dome is at `u` along it (nought at its back, one at its front): a squared-off oval. */
-function girth(S: Shell, u: number): number {
+export function girth(S: Shell, u: number): number {
   const x = Math.abs(2 * u - 1);
   return Math.pow(Math.max(0, 1 - Math.pow(x, S.p)), 1 / S.p);
 }
 /** Which plate `u` is on, and how far along it from its back edge, nought to one. */
-function plateAt(S: Shell, u: number): { j: number; f: number } {
+export function plateAt(S: Shell, u: number): { j: number; f: number } {
   const L = S.cut / S.segs, j = clamp(Math.floor(u / L), 0, S.segs - 1);
   return { j, f: clamp((u - j * L) / L) };
 }
 /** How far under its waist the rim comes on plate `f` of the way along: lowest at each plate's back corner, so each ends in a point. */
-const loAt = (S: Shell, f: number): number => S.lo * (1 + 0.9 * (1 - f) ** 4);
+export const loAt = (S: Shell, f: number): number => S.lo * (1 + 0.9 * (1 - f) ** 4);
 /**
  * A point on the shell, `u` along it on a plate `f` of the way from its back edge, `ph` round from its right rim (nought at
  * the waist on the right, pi on the left; under nought or over pi, the skirt below the waist, flaring out).
  */
-function shellAt(S: Shell, u: number, f: number, ph: number): V3 {
+export function shellAt(S: Shell, u: number, f: number, ph: number): V3 {
   const g = girth(S, u) * (1 + S.step * (1 - f));
   const y = lerp(S.y0, S.y1, u);
   if (ph >= 0 && ph <= Math.PI) return [S.w * g * Math.cos(ph), y, S.z0 + S.h * g * Math.sin(ph)];
@@ -244,7 +244,7 @@ function shellAt(S: Shell, u: number, f: number, ph: number): V3 {
   return [sd * S.w * g * (1 + S.flare * e), y, S.z0 - S.h * g * Math.sin(e) * 0.6];
 }
 /** A point on the shell and the way out of it there, at `u` along and `ph` round. */
-function onShell(S: Shell, u: number, ph: number): { p: V3; n: V3 } {
+export function onShell(S: Shell, u: number, ph: number): { p: V3; n: V3 } {
   const { f } = plateAt(S, u);
   const p = shellAt(S, u, f, ph), e = 0.004;
   const du = sub(shellAt(S, Math.min(S.cut, u + e), f, ph), shellAt(S, Math.max(0, u - e), f, ph));
@@ -260,7 +260,7 @@ function onShell(S: Shell, u: number, ph: number): { p: V3; n: V3 } {
  * darker cream lip; along each plate's back edge and down at its rim a band of cream, the rest green; its front edge, over
  * the head, cream too, and the inside of it there dark.
  */
-function domeOf(S: Shell, n: number, fine: boolean): Mesh {
+export function domeOf(S: Shell, n: number, fine: boolean): Mesh {
   const v: V3[] = [], f: Face[] = [];
   const fs = fine ? [0, 0.1, 0.22, 0.42, 0.62, 0.82, 1] : [0, 0.14, 0.45, 0.75, 1];
   const rings: Array<{ u: number; f: number; lip: boolean }> = [];
@@ -310,7 +310,7 @@ function domeOf(S: Shell, n: number, fine: boolean): Mesh {
 }
 
 /** A swirl painted on the shell round `u`, `ph`: a curl of a turn and a quarter with a tail out of it, `R` across. */
-function swirlOn(S: Shell, u0: number, ph0: number, R: number, w: number, turn: number, out: Disc[]): void {
+export function swirlOn(S: Shell, u0: number, ph0: number, R: number, w: number, turn: number, out: Disc[], m: Mat = 'mark'): void {
   const c = onShell(S, u0, ph0);
   const du = len3(sub(onShell(S, u0 + 0.01, ph0).p, c.p)) / 0.01, dp = len3(sub(onShell(S, u0, ph0 + 0.01).p, c.p)) / 0.01;
   const pts: V3[] = [];
@@ -332,8 +332,8 @@ function swirlOn(S: Shell, u0: number, ph0: number, R: number, w: number, turn: 
   }
   for (let q = 0; q < pts.length - 1; q++) {
     const k = q / (pts.length - 1), ww = w * (0.5 + 0.7 * Math.min(1, k * 2)) * (q > last ? 1 - (q - last) / 6 : 1);
-    out.push(strip(pts[q], pts[q + 1], unit(add(ns[q], ns[q + 1])), ww, 'mark'));
-    if (q > 0) out.push(disc(pts[q], ns[q], ww, ww, 6, 'mark'));
+    out.push(strip(pts[q], pts[q + 1], unit(add(ns[q], ns[q + 1])), ww, m));
+    if (q > 0) out.push(disc(pts[q], ns[q], ww, ww, 6, m));
   }
 }
 
@@ -386,7 +386,7 @@ function bellyOf(s: Moss, n: number, k: number): Mesh {
 /* ---- moss, leaves and flowers ----------------------------------------------------------------- */
 
 /** A frond of moss: a short blade with a zigzag edge, from `root` along `dir`, lying on `face`. */
-function frond(root: V3, dir: V3, face: V3, L: number, w: number, mat: Mat, fine: boolean, pinch = 0.6): Mesh {
+export function frond(root: V3, dir: V3, face: V3, L: number, w: number, mat: Mat, fine: boolean, pinch = 0.6): Mesh {
   const d = unit(dir);
   const steps = fine ? 9 : 5;
   const pts: V3[] = [], ws: number[] = [];
@@ -403,7 +403,7 @@ function frond(root: V3, dir: V3, face: V3, L: number, w: number, mat: Mat, fine
  * A clump of moss: a low lumpy mound, bright on top and darker round its foot, ringed with fronds lying out over the shell
  * around it.
  */
-function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: boolean, hang = false): Mesh {
+export function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: boolean, hang = false): Mesh {
   const z = unit(n);
   let x = cross([0, 1, 0], z);
   if (len3(x) < 1e-4) x = [1, 0, 0];
@@ -544,7 +544,7 @@ function skirtOf(s: Moss, fine: boolean): Mesh {
 /* ---- the head ------------------------------------------------------------------------- */
 
 /** An eye at `p` looking out along `nn`, `sz` big: a dark rim, the olive of it, the dark middle and its glints. */
-function eyeOf(p: V3, nn: V3, sz: number, out: Disc[], socket = false): void {
+export function eyeOf(p: V3, nn: V3, sz: number, out: Disc[], socket = false): void {
   if (socket) out.push(disc(p, nn, sz * 1.55, sz * 1.25, 10, 'hornDark', { up: [0, 0, 1] }));
   // A dark olive eye, lighter low in it, its middle dark.
   out.push(disc(add(p, scale(nn, 0.002)), nn, sz, sz * 1.06, 12, 'eye', { up: [0, 0, 1] }));
@@ -817,7 +817,7 @@ const BLADE_HOLD = ((): number[] => {
 })();
 /** The left one's, the mirror of the right's. */
 const BLADE_HOLD_L = BLADE_HOLD.map((v, i) => (i % 3 === 0) !== (i < 3) ? -v : v);
-const mul3x3 = (a: readonly number[], b: readonly number[]): number[] => Array.from({ length: 9 }, (_, i) => {
+export const mul3x3 = (a: readonly number[], b: readonly number[]): number[] => Array.from({ length: 9 }, (_, i) => {
   const r = Math.floor(i / 3), c = i % 3;
   return a[r * 3] * b[c] + a[r * 3 + 1] * b[3 + c] + a[r * 3 + 2] * b[6 + c];
 });
@@ -1133,15 +1133,15 @@ function mossBuild(s: Moss, lod: number): Piece[] {
 
 /* ---- what it throws about ----------------------------------------------------------------- */
 
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
+export const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 const MOSSY: readonly RGB[] = [[172, 190, 58], [128, 160, 52], [204, 214, 96]];
 const CREAM: RGB = [240, 226, 196];
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
-const pxOf = (g: CanvasRenderingContext2D): number => { const tr = g.getTransform(); return 1 / (Math.hypot(tr.a, tr.b) || 1); };
-const thrown = (p: V3, v: V3, t: number, fall = 9): V3 => [p[0] + v[0] * t, p[1] + v[1] * t, Math.max(0.02, p[2] + v[2] * t - 0.5 * fall * t * t)];
+export const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
+export const pxOf = (g: CanvasRenderingContext2D): number => { const tr = g.getTransform(); return 1 / (Math.hypot(tr.a, tr.b) || 1); };
+export const thrown = (p: V3, v: V3, t: number, fall = 9): V3 => [p[0] + v[0] * t, p[1] + v[1] * t, Math.max(0.02, p[2] + v[2] * t - 0.5 * fall * t * t)];
 
 /** A snip of moss in the air: a small inked frond. */
-function bit(g: CanvasRenderingContext2D, x: number, y: number, r: number, ang: number, c: RGB, al: number): void {
+export function bit(g: CanvasRenderingContext2D, x: number, y: number, r: number, ang: number, c: RGB, al: number): void {
   if (al <= 0.02) return;
   const px = pxOf(g);
   r = Math.max(r, 1.4 * px);
@@ -1165,7 +1165,7 @@ function bit(g: CanvasRenderingContext2D, x: number, y: number, r: number, ang: 
   g.restore();
 }
 /** A glint off a blade's edge as it shuts. */
-function glint(g: CanvasRenderingContext2D, x: number, y: number, r: number, al: number): void {
+export function glint(g: CanvasRenderingContext2D, x: number, y: number, r: number, al: number): void {
   if (al <= 0.02) return;
   const px = pxOf(g);
   r = Math.max(r, 3 * px);
