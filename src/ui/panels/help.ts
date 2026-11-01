@@ -3074,7 +3074,7 @@ export function helpText(): string {
       A bridge's deck: end to end, on the ground and up a storey; not a rope bridge.</li>
       <li><b>Shaggan</b>: slowest in the traces; +${percent(SPECIES.shaggan.pull ?? PULL_DEFAULT)} team pull each (most add ${percent(PULL_DEFAULT)}).</li>
       <li><b>${SPECIES.warda.name}</b>: sees ${SPECIES.warda.sight} tiles for you wherever it stands. Evolves: ${evolves('warda')}.</li>
-      <li><b>Quill</b>: <b>pluck</b> for <b>feathers</b>.</li>
+      <li><b>${SPECIES.quill.name}</b>: <b>pluck</b> with a carving knife for <b>feathers</b>: up to ${SHEAR_FEATHERS} when full. Evolves: ${evolves('quill')}; ${perkLine('quill').toLowerCase()}.</li>
       <li><b>${SPECIES.cudda.name}</b>: <b>milked</b> into an empty bucket; a bucket of milk makes ${made('make_cheese')} <b>cheeses</b>. Evolves: ${evolves('cudda')}; ${perkLine('cudda').toLowerCase()}.</li>
       <li><b>${SPECIES.vesp.name}</b>. Build a <b>hive</b> (${bill('make_hive', true)}) on your settlement. Task <b>${GATHER_VERB.hive}</b>: the nearest hive with room within its reach of the totem;
       per go, out to one wildflower tile within ${SKEP_REACH} tiles of the hive, in turn, and back. <b>Honey</b> into the hive: a skep's rate there, a honey per ${SKEP_CLUMP_HOURS} hours worked

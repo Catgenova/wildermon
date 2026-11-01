@@ -68,6 +68,7 @@ begin
   insert into said select 'SPORELING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Vola')).id from species_def where id = 'vola';
   insert into said select 'CLOUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Woola')).id from species_def where id = 'woola';
   insert into said select 'CREAMCALF', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Cudda')).id from species_def where id = 'cudda';
+  insert into said select 'PEACHICK', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Quill')).id from species_def where id = 'quill';
   insert into said select 'PIGROOT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Seavic')).id from species_def where id = 'seavic';
   insert into said select 'MUDCUT', string_agg(b.item || ':' || sb.n, ',' order by b.ord) from butcher_part b join species_butcher sb on sb.part = b.part where sb.species = 'noot';
   insert into said select 'SAPGNAW', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Bevere')).id from species_def where id = 'bevere';
@@ -183,6 +184,10 @@ check('the Cudda is the Creamcalf now, a Milkmere and a Lactisovereign after, an
   check(`a ${cow.stages![1].name} dam has twins one time in ${Math.round(1 / (STAGE_PERKS.cudda.n - 1))}, a ${cow.stages![0].name} never, on both sides`,
     at('TWINS0') === here[0] && at('TWINS1') === here[1] && here[1] === `2|${(STAGE_PERKS.cudda.n - 1).toFixed(4)}`, `browser ${here.join(' / ')}, island ${at('TWINS0')} / ${at('TWINS1')}`);
 }
+const pea = SPECIES.quill;
+check('the Quill is the Peachick now, a Plumecrest and a Featherbourne after, and an old Quill carcass is still one, on both sides',
+  pea.name === 'Peachick' && pea.stages?.map((x) => x.name).join(',') === 'Plumecrest,Featherbourne'
+    && at('PEACHICK') === 'Peachick|Plumecrest,Featherbourne|Quill|quill', at('PEACHICK'));
 const pig = SPECIES.seavic;
 check('the Seavic is the Pigroot now, a Plowhog and a Harvestusk after, and an old Seavic carcass is still one, on both sides',
   pig.name === 'Pigroot' && pig.stages?.map((x) => x.name).join(',') === 'Plowhog,Harvestusk'

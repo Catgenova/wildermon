@@ -43,6 +43,7 @@ import { LOG_VOICE } from './voice-log';
 import { SPIRAL_VOICE } from './voice-spiral';
 import { PACK_VOICE } from './voice-pack';
 import { EMBER_VOICE } from './voice-ember';
+import { PEAFOWL_VOICE } from './voice-peafowl';
 import { PELT_VOICE } from './voice-pelt';
 import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
@@ -199,4 +200,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   cindra: EMBER_VOICE,
   // The Creamcalf, the Milkmere and the Lactisovereign.
   cudda: COW_VOICE,
+  // The Peachick, the Plumecrest and the Featherbourne.
+  quill: PEAFOWL_VOICE,
 };

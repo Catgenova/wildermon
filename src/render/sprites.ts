@@ -3793,7 +3793,7 @@ interface BirdShape {
   beak: 'shear' | 'hook' | 'stub';
   /** Feathers standing up off the crown. */
   crest?: number;
-  /** Long feathers trailing behind, which is what a Quill is kept for. */
+  /** Long feathers trailing behind, which is what the Peachick line is kept for. */
   plume?: number;
   eye?: number;
   /** How quickly its legs go over. See `BeastShape.cadence`. */
@@ -3803,7 +3803,7 @@ interface BirdShape {
 const BIRDS: Record<string, BirdShape> = {
   sedra: { body: [5.5, 4.6], ride: 9, leg: 10, neck: 9, beak: 'shear', cadence: 1 },
   warda: { body: [6, 6], ride: 7.5, leg: 8.5, neck: 7, beak: 'hook', crest: 3, eye: 1.5, cadence: 0.9 },
-  quill: { body: [8, 7], ride: 4.5, leg: 5, neck: 4.5, beak: 'stub', plume: 9, cadence: 1.3 },
+  quill: { body: [8, 7], ride: 4.5, leg: 5, neck: 4.5, beak: 'stub', crest: 3, plume: 9, cadence: 1.3 },
 };
 
 /** A wildermon that stands on two legs, built to the numbers above. */
