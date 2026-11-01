@@ -4248,6 +4248,15 @@ export const NEWS: News[] = [
     lines: () => [`Changed: goblins, orcs, ogres and dragons drawn ${MONSTER_GROWTH}× their size (was: 1×).`],
   },
   {
+    n: 417,
+    day: '2026-11-01',
+    lines: () => {
+      const d = SPECIES.scurra, [one, two] = d.stages!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('scurra')}.`,
+        'Each stage: own model, animations and voice.'];
+    },
+  },
+  {
     n: 416,
     day: '2026-11-01',
     lines: () => {

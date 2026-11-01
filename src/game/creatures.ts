@@ -879,6 +879,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   // Plucked by you or a worker: its `wool` adds to the feathers, as a Cloudlet's does to its wool.
   quill: { kind: 'wool', n: 1, what: 'feathers per pluck' },
   flecha: { kind: 'more', n: 1, what: 'arrows per fletch' },
+  scurra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -1276,9 +1277,9 @@ export const LEARN_PACE_MOST = 4;
  */
 export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // Out to the ground and home with a load.
-  forage: 0.99, botanize: 1, woodcut: 0.97, farm: 0.96, mine: 1.01, quarry: 1.04, sand: 1.05, clay: 1.01, peat: 1.04,
+  forage: 0.99, botanize: 1, woodcut: 0.97, farm: 0.96, mine: 1.07, quarry: 1.1, sand: 1.05, clay: 1.07, peat: 1.04,
   reed: 1.04, fetch: 1, compost: 1.03, fruit: 1.01, bush: 1.12, grass: 1.01, sprout: 0.99, resin: 1.06, flower: 1.04,
-  worm: 0.98, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 1.01, hive: 1.01, moss: 1.05,
+  worm: 0.98, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 0.96, hive: 1.01, moss: 1.05,
   // At the stores, a fire, a press or a barrel, one thing after another.
   mend: 1.05, restore: 0.7, tan: 0.84, mill: 0.81, saw: 0.84, chisel: 0.88, brick: 0.84,
   rope: 0.88, fletch: 0.88, cook: 0.88, paper: 0.84, spin: 0.86, nail: 0.86, ribbon: 0.86, glass: 0.84, ash: 1.02, brew: 0.75,
@@ -1286,11 +1287,11 @@ export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // To one of yours, or to a piece of yours, with something out of the stores for some.
   groom: 0.87, dairy: 0.87, heal: 1.84, lamp: 2.16, smelt: 1.39, kiln: 1.32, patch: 1.04, vine: 1.86, lily: 1.84,
   // Carrying between the stores, the water and the work.
-  fill: 3.34, water: 2.32, hod: 0.96, stoke: 1.18, plant: 0.99, prospect: 1.01,
+  fill: 3.34, water: 2.32, hod: 1.01, stoke: 1.18, plant: 0.99, prospect: 1.01,
   // A spar with a Sparra on the settlement; and what wild things come onto the deed.
   guard: 2.02, hunt: 1,
   // A kind with no trade.
-  out: 1, dark: 3.86, tended: LEARN_PACE_MOST, spar: 0.26, pull: 1.62,
+  out: 1, dark: 3.86, tended: LEARN_PACE_MOST, spar: 0.27, pull: 1.62,
   // A Sparra's spar with a guard on a settlement.
   bout: LEARN_PACE_MOST,
 };
@@ -2961,7 +2962,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   scurra: {
     id: 'scurra',
-    name: 'Scurra',
+    name: 'Wallkit',
+    was: ['Scurra'],
+    // Asked for, with a reference sheet: Wallkit, Bristleward, Stonepolish. Each stage's words are written from its own
+    // (`sayLine`).
+    stages: [
+      { name: 'Bristleward', description: '' },
+      { name: 'Stonepolish', description: '' },
+    ],
     description: 'Settlement task: scrub moss off your paving, poured foundations and statues and ivy off your stone walls once greened a day, back to bare stone. Carries nothing home.',
     health: 22,
     attack: 3,
@@ -2973,11 +2981,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'scrub',
     workRange: 8,
+    // [coat, face and plumes]: the sheet's umber with cream, chestnut with oatmeal, walnut with ivory, and fawn with buff.
     variants: [
-      ['#8c8c88', '#d8d8d0'],
-      ['#7c7c84', '#cacad4'],
-      ['#948c80', '#ddd4c4'],
-      ['#747874', '#c4c8c0'],
+      ['#7a5638', '#f4e4c4'],
+      ['#8a5a36', '#f0dcb8'],
+      ['#5e4434', '#f6ead2'],
+      ['#96704c', '#f2e0bc'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
     onStone: true,
@@ -4665,6 +4674,7 @@ sayLine('papra', SPECIES.papra.description, 'Level: papyrusmaking.');
 sayLine('ambra', SPECIES.ambra.description, 'Level: forestry.');
 sayLine('snedda', SPECIES.snedda.description, 'Level: forestry.');
 sayLine('cindra', SPECIES.cindra.description, `Level: ${GATHER_SKILL.ash}.`);
+sayLine('scurra', SPECIES.scurra.description, `Level: ${GATHER_SKILL.scrub}.`);
 describeFrom('hive', { vesp: SPECIES.vesp.name });
 describeGoals({ vesp: SPECIES.vesp.name });
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });
