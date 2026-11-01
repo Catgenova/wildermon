@@ -98,53 +98,53 @@ const MOSSNIB_LOOK: Moss = {
 /** A Mossshear: longer, heavier moss along its ridge with two leaf blades up off its back, a pointed cream head plate with leaf horns, banded legs, and two scissor blades. */
 const MOSSSHEAR_LOOK: Moss = {
   stage: 1,
-  high: 0.34,
-  shell: { y0: -0.74, y1: 0.8, cut: 0.88, w: 0.6, h: 0.42, z0: 0.05, segs: 4, step: 0.045, lo: 0.14, flare: 0.45, p: 2.1 },
-  belly: { c: [0, 0.02, -0.04], r: [0.5, 0.66, 0.24] },
-  head: { at: [0, 0.78, 0.02], r: [0.28, 0.3, 0.23], eye: [0.6, 0.7, -0.12], size: 0.058 },
+  high: 0.3,
+  shell: { y0: -0.86, y1: 0.92, cut: 0.88, w: 0.76, h: 0.5, z0: 0.02, segs: 4, step: 0.045, lo: 0.2, flare: 0.45, p: 2.1 },
+  belly: { c: [0, 0.02, -0.05], r: [0.56, 0.7, 0.22] },
+  head: { at: [0, 0.82, -0.02], r: [0.28, 0.3, 0.23], eye: [0.6, 0.7, -0.12], size: 0.058 },
   feelers: null,
   horns: { root: [0.18, 0.1, 0.0], mid: [0.32, 0.26, 0.2], tip: [0.27, 0.16, 0.38], w: 0.035 },
-  moss: { from: 0.04, to: 0.92, wide: 0.72, deep: 0.13, clumps: 12 },
+  moss: { from: 0.04, to: 0.92, wide: 0.6, deep: 0.13, clumps: 12 },
   flowers: 0,
-  swirls: { n: 3, big: 0.12 },
+  swirls: { n: 3, big: 0.14 },
   fins: [
-    { u: 0.84, side: 0.06, len: 0.86, wide: 0.24, back: 26, out: 6 },
-    { u: 0.58, side: -0.2, len: 0.74, wide: 0.22, back: 36, out: -14 },
-    { u: 0.4, side: 0.26, len: 0.46, wide: 0.15, back: 44, out: 22 },
+    { u: 0.84, side: 0.06, len: 0.95, wide: 0.27, back: 30, out: 6 },
+    { u: 0.6, side: -0.2, len: 0.82, wide: 0.25, back: 40, out: -16 },
+    { u: 0.42, side: 0.26, len: 0.56, wide: 0.18, back: 48, out: 24 },
   ],
   skirt: 0,
-  legs: { x: 0.38, z: -0.1, ys: [0.3, -0.06, -0.42], fan: [50, 4, -50], upper: 0.27, lower: 0.34, reach: 0.5, thick: 0.1 },
-  scythes: { at: [0.22, 0.6, -0.16], arm: [0.34, 0.34], thick: 0.08, len: 1.0, teeth: 4, rest: { w: [0.5, 1.12, -0.04], pitch: -8, yaw: 6, roll: 0 } },
-  gait: { sweep: [0.28, 0.38], duty: [0.6, 0.52], lift: [0.07, 0.1], bob: 0.022, sway: 2.5 },
+  legs: { x: 0.44, z: -0.08, ys: [0.32, -0.06, -0.44], fan: [50, 4, -50], upper: 0.22, lower: 0.27, reach: 0.46, thick: 0.12 },
+  scythes: { at: [0.3, 0.62, -0.12], arm: [0.28, 0.26], thick: 0.095, len: 0.85, teeth: 4, rest: { w: [0.56, 1.0, -0.02], pitch: -12, yaw: 4, roll: 0 } },
+  gait: { sweep: [0.26, 0.36], duty: [0.6, 0.52], lift: [0.06, 0.09], bob: 0.022, sway: 2.5 },
   patch: 0.26,
-  size: 5.5,
+  size: 5.0,
 };
 
 /** A Mossreaver: big and heavy, a dome deep in moss with flowers in it, a big cream swirl, tall leaf blades fanned off its back, fins under its rim, two huge scythes. */
 const MOSSREAVER_LOOK: Moss = {
   stage: 2,
-  high: 0.42,
-  shell: { y0: -0.96, y1: 1.0, cut: 0.88, w: 0.8, h: 0.54, z0: 0.06, segs: 5, step: 0.05, lo: 0.14, flare: 0.45, p: 2.1 },
-  belly: { c: [0, 0.02, -0.06], r: [0.66, 0.84, 0.3] },
-  head: { at: [0, 0.98, 0.02], r: [0.34, 0.36, 0.27], eye: [0.6, 0.7, -0.12], size: 0.066 },
+  high: 0.36,
+  shell: { y0: -1.12, y1: 1.12, cut: 0.88, w: 1.0, h: 0.68, z0: 0.02, segs: 5, step: 0.05, lo: 0.2, flare: 0.45, p: 2.1 },
+  belly: { c: [0, 0.02, -0.06], r: [0.74, 0.92, 0.27] },
+  head: { at: [0, 1.04, -0.02], r: [0.34, 0.36, 0.27], eye: [0.6, 0.7, -0.12], size: 0.066 },
   feelers: null,
   horns: { root: [0.23, 0.12, 0.0], mid: [0.4, 0.32, 0.24], tip: [0.33, 0.2, 0.48], w: 0.045 },
-  moss: { from: 0.03, to: 0.92, wide: 0.74, deep: 0.16, clumps: 14 },
+  moss: { from: 0.03, to: 0.92, wide: 0.64, deep: 0.16, clumps: 15 },
   flowers: 4,
-  swirls: { n: 1, big: 0.3 },
+  swirls: { n: 1, big: 0.38 },
   fins: [
-    { u: 0.66, side: -0.06, len: 1.45, wide: 0.3, back: 26, out: -4 },
-    { u: 0.58, side: 0.22, len: 1.35, wide: 0.28, back: 34, out: 22 },
-    { u: 0.56, side: -0.3, len: 1.25, wide: 0.27, back: 36, out: -30 },
-    { u: 0.46, side: 0.4, len: 1.05, wide: 0.24, back: 44, out: 44 },
-    { u: 0.44, side: -0.46, len: 0.95, wide: 0.22, back: 46, out: -48 },
+    { u: 0.64, side: -0.04, len: 1.4, wide: 0.36, back: 30, out: -4 },
+    { u: 0.56, side: 0.24, len: 1.3, wide: 0.34, back: 38, out: 24 },
+    { u: 0.54, side: -0.32, len: 1.22, wide: 0.33, back: 40, out: -30 },
+    { u: 0.44, side: 0.44, len: 1.0, wide: 0.28, back: 48, out: 46 },
+    { u: 0.42, side: -0.5, len: 0.95, wide: 0.27, back: 50, out: -50 },
   ],
   skirt: 7,
-  legs: { x: 0.5, z: -0.12, ys: [0.38, -0.08, -0.54], fan: [50, 4, -50], upper: 0.36, lower: 0.44, reach: 0.64, thick: 0.13 },
-  scythes: { at: [0.3, 0.78, -0.18], arm: [0.44, 0.44], thick: 0.105, len: 1.6, teeth: 6, rest: { w: [0.66, 1.42, -0.04], pitch: -8, yaw: 6, roll: 0 } },
-  gait: { sweep: [0.34, 0.46], duty: [0.64, 0.54], lift: [0.08, 0.11], bob: 0.028, sway: 2 },
+  legs: { x: 0.58, z: -0.1, ys: [0.42, -0.08, -0.6], fan: [50, 4, -50], upper: 0.27, lower: 0.33, reach: 0.58, thick: 0.16 },
+  scythes: { at: [0.4, 0.8, -0.14], arm: [0.34, 0.32], thick: 0.125, len: 1.3, teeth: 6, rest: { w: [0.74, 1.28, -0.02], pitch: -12, yaw: 4, roll: 0 } },
+  gait: { sweep: [0.3, 0.42], duty: [0.64, 0.54], lift: [0.07, 0.1], bob: 0.028, sway: 2 },
   patch: 0.34,
-  size: 5.8,
+  size: 5.2,
 };
 
 /* ---- helpers ------------------------------------------------------------------------- */
@@ -393,7 +393,8 @@ function frond(root: V3, dir: V3, face: V3, L: number, w: number, mat: Mat, fine
   for (let q = 0; q <= steps; q++) {
     const k = q / steps;
     pts.push(add(add(root, scale(d, L * k)), scale(face, -L * 0.3 * k * k)));
-    ws.push(q === steps ? 0.004 : w * (1 - 0.55 * k) * (q % 2 ? 1 : 0.62));
+    // A stem with leaflets along it: wide at each leaflet, pinched to the stem between.
+    ws.push(q === steps ? 0.004 : w * (1 - 0.5 * k) * (q % 2 ? 1 : 0.18));
   }
   return blade(pts, ws, face, { mat, rib: 'leafDark', fold: 0.15, thick: 0.008 });
 }
@@ -408,23 +409,19 @@ function clumpOf(c: V3, n: V3, R: number, id: number, fronds: number, fine: bool
   if (len3(x) < 1e-4) x = [1, 0, 0];
   x = unit(x);
   const y = cross(z, x);
-  // A dark low cushion under it all, half sunk.
-  const b = orbAlong([0, 0, 0], z, [R * 0.8, R * 0.72, R * (0.6 + 0.3 * jitter(id + 7))], fine ? 8 : 6, 3, 'moss');
-  const bv = b.v.map((p, i) => add(c, scale(p, 0.88 + 0.24 * jitter(id * 31 + i))) as V3);
-  const out: Mesh[] = [mesh(bv, b.f.map((face) => {
-    const mid = scale(face.i.reduce((t, i) => add(t, bv[i]), [0, 0, 0] as V3), 1 / face.i.length);
-    return { ...face, m: (dot(unit(sub(mid, c)), z) < 0.35 ? 'leafDark' : 'moss') as Mat };
-  }))];
-  // Fronds out of it every way, leaning out from upright to lying over, the outer ones lowest; bright on top.
+  // A thin dark mat under it all, half sunk.
+  const b = orbAlong([0, 0, 0], z, [R * 0.75, R * 0.68, R * 0.2], fine ? 8 : 6, 3, 'leafDark');
+  const out: Mesh[] = [mesh(b.v.map((p, i) => add(c, scale(p, 0.88 + 0.24 * jitter(id * 31 + i))) as V3), b.f)];
+  // Fern fronds out of it every way, lying low over the shell, the edge ones hanging over; bright yellow-green.
   for (let q = 0; q < fronds; q++) {
     const a = (q / fronds) * TAU + jitter(id + q) * 0.9;
     const out1 = add(scale(x, Math.cos(a)), scale(y, Math.sin(a)));
-    const lean = hang ? lerp(1.2, 1.9, jitter(id * 5 + q)) : lerp(0.75, 1.45, jitter(id * 5 + q));
+    const lean = hang ? lerp(1.3, 2.0, jitter(id * 5 + q)) : lerp(0.85, 1.4, jitter(id * 5 + q));
     const d = unit(add(scale(z, Math.cos(lean)), scale(out1, Math.sin(lean))));
     const face = unit(sub(z, scale(d, dot(z, d))));
     const root = add(c, add(scale(out1, R * 0.25 * jitter(id * 7 + q)), scale(z, R * 0.05)));
     const mat: Mat = jitter(id * 11 + q) < 0.45 ? 'leaf' : 'moss';
-    out.push(frond(root, d, len3(face) > 1e-3 ? face : z, R * (0.6 + 0.3 * jitter(id * 3 + q)) * (hang ? 1.3 : 1), R * 0.7, mat, fine));
+    out.push(frond(root, d, len3(face) > 1e-3 ? face : z, R * (0.85 + 0.45 * jitter(id * 3 + q)) * (hang ? 1.35 : 1), R * 0.42, mat, fine));
   }
   return merge(...out);
 }
@@ -487,8 +484,8 @@ function leafOf(root: V3, dir: V3, back: V3, face: V3, L: number, W: number, fin
   const pts: V3[] = [], ws: number[] = [];
   for (let q = 0; q <= N; q++) {
     const k = q / N;
-    pts.push(add(add(root, scale(d, L * k)), scale(bk, L * 0.7 * k * k)));
-    ws.push(q === N ? 0.004 : W * Math.sin(Math.PI * Math.min(1, 0.12 + k * 0.95)) ** 0.8 * (1 - 0.25 * k));
+    pts.push(add(add(root, scale(d, L * k)), scale(bk, L * 0.55 * k ** 2.2)));
+    ws.push(q === N ? 0.004 : W * Math.sin(Math.PI * Math.min(1, 0.08 + k * 0.92)) ** 0.7 * (1 - 0.15 * k));
   }
   const cutAt = Math.max(1, Math.round(N * base));
   const low = blade(pts.slice(0, cutAt + 1), ws.slice(0, cutAt + 1), face, { mat: 'mark', rib: 'shellDark', fold: 0.24, thick: 0.012 });
@@ -692,12 +689,12 @@ function lowerOf(s: Moss): Mesh {
  */
 interface Blade { outer: Array<[number, number]>; inner: Array<[number, number]> }
 function bladeShape(L: number, teeth: number): Blade {
-  const R = L * 0.6, E = 0.62, a0 = 170 * DEG, a1 = 322 * DEG, N = 18;
+  const R = L * 0.5, E = 1, a0 = 176 * DEG, a1 = 322 * DEG, N = 20;
   const C: [number, number] = [-R * Math.cos(a0), -R * E * Math.sin(a0)];
   const outer: Array<[number, number]> = [], inner: Array<[number, number]> = [];
   for (let q = 0; q <= N; q++) {
     const k = q / N, a = lerp(a0, a1, k);
-    const wout = R * 0.1 * (1 - k ** 2.5), win = R * (0.72 * (1 - k ** 2.6) + 0.014);
+    const wout = R * 0.08 * (1 - k ** 2), win = R * (0.56 * Math.sin(Math.PI * (0.22 + 0.78 * k)) ** 0.7 + 0.01);
     const tooth = k > 0.2 && k < 0.88 ? frac(k * teeth * 1.35) : 0;
     const bite = win * (1 - 0.3 * tooth);
     outer.push([C[0] + (R + wout) * Math.cos(a), C[1] + (R + wout) * E * Math.sin(a)]);
@@ -802,7 +799,7 @@ const mixClaw = (a: Claw, b: Claw, t: number): Claw => ({ w: mixV(a.w, b.w, t), 
  * How far a blade is rolled over from upright (degrees, the right one's): nearly flat, so it is held out like a scythe, its
  * back to the outside and its toothed edge in toward the other.
  */
-const BLADE_ROLL = -84;
+const BLADE_ROLL = -78;
 /** A scythe at rest, on its side (`sd` one the right). */
 function restClaw(s: Moss, sd: number): Claw {
   const R = s.scythes!.rest;
@@ -1242,8 +1239,8 @@ function mossKind(s: Moss): Kind {
         bark: [104, 74, 52],
         hornDark: [72, 50, 36],
         claw: [92, 62, 42],
-        moss: [158, 158, 22],
-        leaf: [192, 182, 36],
+        moss: [166, 168, 30],
+        leaf: [200, 194, 44],
         leafDark: [86, 98, 22],
         eye: [44, 40, 22],
         crystal: [150, 146, 46],
