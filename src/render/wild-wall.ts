@@ -109,8 +109,8 @@ const WALLKIT_LOOK: Wall = {
   neck: { at: [0, 0.56, 0.12], len: 0.12, w: 0.42, lean: 72 },
   head: {
     // A round face, full cheeks, and a short pointed muzzle out of the front of them to a small dark nose.
-    y: [-0.4, -0.344, -0.21, -0.03, 0.142, 0.276, 0.39, 0.466, 0.516], z: [0.058, 0.068, 0.068, 0.04, 0, -0.04, -0.06, -0.076, -0.084],
-    w: [0.1, 0.4, 0.52, 0.55, 0.488, 0.37, 0.25, 0.156, 0.082], h: [0.104, 0.4, 0.49, 0.5, 0.4, 0.28, 0.196, 0.13, 0.068], pitch: -2,
+    y: [-0.4, -0.35, -0.22, -0.04, 0.13, 0.25, 0.35, 0.42, 0.465], z: [0.058, 0.068, 0.068, 0.04, 0, -0.04, -0.07, -0.088, -0.096],
+    w: [0.12, 0.43, 0.54, 0.57, 0.53, 0.42, 0.27, 0.16, 0.085], h: [0.12, 0.42, 0.5, 0.51, 0.44, 0.31, 0.2, 0.13, 0.07], pitch: -2,
   },
   mask: { crown: 0.86, back: 0.22, nose: 0.82, ear: 0.24, high: 0.42, rise: 0.22 },
   nose: 0.066,
@@ -118,7 +118,7 @@ const WALLKIT_LOOK: Wall = {
   ear: { len: 0.27, w: 0.2, out: 50, back: 14, at: [0.5, 1.02] },
   mantle: { from: 0.56, to: -0.56, rows: 5, per: 5, spread: 1.0, len: 0.34, layers: 2, lift: 0.07, hang: 0.35 },
   blossoms: 0,
-  plumes: { cheek: 0.24, head: 0, shoulder: 0, flank: 0 },
+  plumes: { cheek: 0.3, head: 0, shoulder: 0, flank: 0 },
   brush: { held: true, cuff: [0.1, 0.2], bands: 1, straw: 0.42, fan: 0.36 },
   pauldron: 0,
   tail: { len: 1.0, w: 0.3, lift: 18, curl: 1, leaves: 0 },
@@ -147,7 +147,7 @@ const BRISTLEWARD_LOOK: Wall = {
   nose: 0.1,
   eye: { y: 0.18, up: 0.5, size: 0.1, tall: 1.0, lid: 0.18 },
   ear: { len: 0.44, w: 0.3, out: 48, back: 22, at: [0.52, 1.06] },
-  mantle: { from: 1.16, to: -1.3, rows: 6, per: 5, spread: 0.85, len: 0.7, layers: 2, lift: 0.22, hang: 0.2 },
+  mantle: { from: 1.0, to: -1.05, rows: 5, per: 5, spread: 0.68, len: 0.56, layers: 2, lift: 0.18, hang: 0.15 },
   blossoms: 3,
   plumes: { cheek: 0.34, head: 0, shoulder: 0.72, flank: 0.75 },
   brush: { held: false, cuff: [0.25, 0.4], bands: 1, straw: 0.56, fan: 0.4 },
@@ -177,7 +177,7 @@ const STONEPOLISH_LOOK: Wall = {
   nose: 0.17,
   eye: { y: 0.36, up: 0.5, size: 0.15, tall: 0.86, lid: 0.32 },
   ear: { len: 0.72, w: 0.48, out: 46, back: 26, at: [0.52, 1.08] },
-  mantle: { from: 2.15, to: -2.35, rows: 7, per: 6, spread: 0.92, len: 1.55, layers: 2, lift: 0.7, hang: 0.25 },
+  mantle: { from: 1.95, to: -1.9, rows: 6, per: 5, spread: 0.72, len: 1.2, layers: 2, lift: 0.55, hang: 0.15 },
   blossoms: 5,
   plumes: { cheek: 0.75, head: 1.9, shoulder: 1.6, flank: 1.5 },
   brush: { held: false, cuff: [0.86, 1.2], bands: 2, straw: 1.8, fan: 1.3 },
@@ -975,7 +975,7 @@ function headPlumes(s: Wall, fine: boolean): Mesh {
   for (const sd of [1, -1]) {
     if (P.cheek) {
       const q0 = onRings(H, lerp(H.y[1], H.y[2], 0.7), -0.25), q = sd > 0 ? q0 : left(q0);
-      out.push(plumeOf(sub(q.p, scale(q.n, 0.02)), [sd * 0.6, -0.7, -0.25], [sd * 0.15, -0.1, -0.1], [sd * 0.2, 0.2, 1], P.cheek, P.cheek * 0.24, 3, 50 + sd, fine));
+      out.push(plumeOf(sub(q.p, scale(q.n, 0.02)), [sd * 0.75, -0.5, -0.35], [sd * 0.1, -0.15, -0.15], [sd * 0.2, 0.25, 1], P.cheek, P.cheek * 0.34, 4, 50 + sd, fine, ['mark', 'coatLight']));
     }
     if (P.head) {
       // Three tiers swept back from behind the cheeks, the jaw and the crown, the lowest longest, over the neck and shoulders.
@@ -1154,14 +1154,31 @@ function eyesOf(s: Wall, shut: boolean): Mesh {
  * the face cream; a brown stripe down the middle of the brow, a dark mask either side through each eye, a small dark nose on
  * the end, and a mouth line back along the muzzle, turned up in a small smile.
  */
-function headOf(s: Wall, n: number, k: number, shut: boolean): Mesh {
+/** A head's rings with one more between each two, on a smooth curve through them, so the head is round and not cut in steps. */
+function finer(H: HeadRings): Rings {
+  const out: Rings = { y: [], z: [], w: [], h: [] }, N = H.y.length;
+  const cr = (a: readonly number[], i: number, t: number): number => {
+    const p0 = a[Math.max(0, i - 1)], p1 = a[i], p2 = a[i + 1], p3 = a[Math.min(N - 1, i + 2)];
+    return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
+  };
+  for (let i = 0; i < N - 1; i++) {
+    for (const t of [0, 0.5]) {
+      out.y.push(cr(H.y, i, t)); out.z.push(cr(H.z, i, t)); out.w.push(Math.max(0.01, cr(H.w, i, t))); out.h.push(Math.max(0.01, cr(H.h, i, t)));
+    }
+  }
+  out.y.push(H.y[N - 1]); out.z.push(H.z[N - 1]); out.w.push(H.w[N - 1]); out.h.push(H.h[N - 1]);
+  return out;
+}
+
+function headOf(s: Wall, n0: number, k: number, shut: boolean): Mesh {
   const H = s.head, last = H.y.length - 1, M = s.mask, len = H.y[last] - H.y[0];
-  const skull = tube(H.y.map((y, q) => [0, y, H.z[q]] as V3), H.w, H.h, n, (ring, j) => {
-    const up = Math.sin(((j + 1) / n) * TAU), f = (H.y[Math.min(ring, last)] - H.y[0]) / len;
+  const F = finer(H), fl = F.y.length - 1, n = Math.round(n0 * 1.5);
+  const skull = tube(F.y.map((y, q) => [0, y, F.z[q]] as V3), F.w, F.h, n, (ring, j) => {
+    const up = Math.sin(((j + 1) / n) * TAU), f = (F.y[Math.min(ring, fl)] - F.y[0]) / len;
     if (f < M.back) return up < -0.3 ? 'mark' : 'coat';
     // The crown brown between the ears, back of the brow.
     if (up > M.crown && f < M.back + 0.22) return 'coat';
-    return ring >= last ? 'muzzle' : 'mark';
+    return ring >= fl - 1 ? 'muzzle' : 'mark';
   });
   const tipC: V3 = [0, H.y[last] + s.nose * 0.2, H.z[last] - H.h[last] * 0.1];
   const nose = orbAlong(tipC, [0, 1, 0.15], [s.nose * 1.3, s.nose * 0.9, s.nose * 0.95], 7, 4, 'nose');
@@ -1269,12 +1286,18 @@ function cuffOf(s: Wall, L1: number, n: number, fine: boolean): Mesh {
     zs.push(a, a + each * 0.12, a + each * 0.2, a + each * 0.8, a + each * 0.88, a + each);
     rs.push(rc * 1.02, rc * 1.1, rc, rc, rc * 1.1, rc * 1.02);
   }
+  // Its top drawn in round the forearm going into it, and left open there: a sleeve, not a log with a lid.
+  const arm = Math.max(s.thick * 0.66, rc * 0.62);
+  zs.push(z0 + cl + rc * 0.25);
+  rs.push(arm);
   const N = Math.max(10, n);
   const wood = tube(zs.map((z) => [0, 0, z] as V3), rs, rs, N, (ring) => {
+    if (ring >= zs.length - 2) return 'wood';
     const r = ring % 6;
-    return r === 0 || r === 4 ? 'bark' : r === 5 ? 'woodDark' : 'wood';
-  });
-  const parts: Mesh[] = [wood];
+    return r === 0 || r === 4 ? 'bark' : 'wood';
+  }, { seam: 'end', start: false });
+  // Its open mouth at the wrist: the bound ends of the straw in it, not a wooden lid.
+  const parts: Mesh[] = [wood, paint([disc([0, 0, z0 + rc * 0.05], [0, 0, -1], rc * 0.98, rc * 0.98, N, 'hornDark')])];
   // The spiral, on each band, facing out and toward the front.
   const face = 40 * DEG, discs: Disc[] = [];
   for (let b = 0; b < B; b++) {
@@ -1326,8 +1349,8 @@ function mossClump(c: V3, n: V3, R: number, id: number, fine: boolean): Mesh {
  * A pauldron: a domed plate of carved wood over the outside of the shoulder, `r` across, its spiral carved in the middle, a
  * darker rim, moss along its top edge.
  */
-function pauldronOf(r: number, n: number, fine: boolean): Mesh {
-  const ax = unit([1, 0.12, 0.42]);
+function pauldronOf(r: number, ax0: V3, n: number, fine: boolean): Mesh {
+  const ax = unit(ax0);
   const R: V3 = [r * 0.95, r * 0.82, r * 0.34];
   const dome = orbAlong([0, 0, 0], ax, R, Math.max(10, n), 5, 'wood');
   // Its frame: out along `ax`, across it `u` (forward) and `w` (up it).
@@ -1382,15 +1405,20 @@ function brushFoot(s: Wall, n: number, fine: boolean): Mesh {
   return merge(bind, strawOf(root, sub(end, root), [rc * 0.85, rc * 0.72], [F, F * 0.42], Math.hypot(end[1] - root[1], end[2] - root[2]), n, 77, fine));
 }
 
-/** The Wallkit's little brush, held between its fore paws: a wooden cuff lying along the ground, its straw fanning out ahead. In the right fore foot's frame, `x0` its middle. */
-function heldBrush(s: Wall, x0: number, n: number, fine: boolean): Mesh {
+/**
+ * The Wallkit's brush, held in its fore paws: a broad wooden cuff gripped between them, its ends under each paw, held up off
+ * the ground at the height of its wrists, and its straw fanning out ahead of it down to the stone. In the right fore foot's
+ * frame, `x0` its middle and `ax` how far either way its cuff reaches.
+ */
+function heldBrush(s: Wall, x0: number, ax: number, n: number, fine: boolean): Mesh {
   const [rc, cl] = s.brush.cuff, d = s.fore[2], L = s.brush.straw, F = s.brush.fan;
-  const y0 = s.paw * 0.55, z = -d + rc * 1.02;
-  const cuff = tube([[x0, y0, z], [x0, y0 + cl * 0.1, z], [x0, y0 + cl * 0.9, z], [x0, y0 + cl, z]], [rc * 0.96, rc * 1.08, rc * 1.08, rc * 0.96], [rc * 0.96, rc * 1.08, rc * 1.08, rc * 0.96], Math.max(8, n), (ring) => (ring === 1 ? 'wood' : 'bark'));
-  const band = tube([[x0, y0 + cl * 0.4, z], [x0, y0 + cl * 0.6, z]], rc * 1.12, rc * 1.12, Math.max(8, n), 'woodDark');
-  const root: V3 = [x0, y0 + cl * 0.85, z];
-  const end: V3 = [x0, y0 + cl + L, -d + F * 0.28];
-  return merge(cuff, band, strawOf(root, sub(end, root), [rc * 0.9, rc * 0.8], [F, F * 0.28], Math.hypot(end[1] - root[1], end[2] - root[2]), n, 71, fine));
+  const y0 = -s.paw * 0.25, z = -d + s.paw * 0.95;
+  const at = (k: number): V3 => [x0, y0 + cl * k, z - cl * k * 0.25];
+  const cuff = tube([at(0), at(0.12), at(0.88), at(1)], [ax * 0.96, ax, ax, ax * 0.96], [rc * 0.9, rc, rc, rc * 0.9], Math.max(10, n), (ring) => (ring === 1 ? 'wood' : 'bark'));
+  const band = tube([at(0.42), at(0.58)], ax * 1.04, rc * 1.08, Math.max(10, n), 'woodDark');
+  const root = at(0.9);
+  const end: V3 = [x0, y0 + cl + L, -d + F * 0.32];
+  return merge(cuff, band, strawOf(root, sub(end, root), [ax * 0.86, rc * 0.8], [F, F * 0.32], Math.hypot(end[1] - root[1], end[2] - root[2]), n, 71, fine));
 }
 
 /** A hind paw: smaller, dark, with short dark claws. */
@@ -1487,14 +1515,16 @@ function legPieces(s: Wall, n: number, k: number, fine: boolean): Piece[] {
       const pl = plumeOf([w * 0.72, -w * 0.05, w * 0.1], [0.6, -0.5, 0.75], [0.1, -0.55, -0.15], [1, 0.35, 0.1], P, P * 0.22, 4, 30, fine);
       out.push({ key: `${key}f`, mesh: side < 0 ? mirror(pl) : pl, bone: `${key}0`, bias: 0.08, after: ['body', `${key}0`], front });
     }
+    // A pauldron over the top of each shoulder, on the body above the fore leg, below the mantle's edge.
     if (fore && s.pauldron) {
-      const p = moved(pauldronOf(s.pauldron * w * 0.78, n, fine), [w * 0.6, w * 0.05, -L[0] * 0.12]);
-      out.push({ key: `${key}p`, mesh: side < 0 ? mirror(p) : p, bone: `${key}0`, bias: 0.06, after: ['body', `${key}0`], front });
+      const B = s.body, q = onRings(B, lerp(B.y[4], B.y[5], 0.55), 0.62);
+      const p = moved(pauldronOf(s.pauldron * w * 0.8, add(q.n, [0, 0.15, 0.25]), n, fine), add(q.p, scale(q.n, w * 0.06)));
+      out.push({ key: `${key}p`, mesh: side < 0 ? mirror(p) : p, bone: 'trunk', bias: 0.2, after: ['body', 'leaves'], front });
     }
   }
   // The Wallkit's brush, held between its fore paws: carried on its right paw, both paws on it as it scrubs.
   if (s.brush.held) {
-    out.push({ key: 'brush', mesh: heldBrush(s, -R.ankle[1][0], n, fine), bone: 'fr2', bias: 0.05, after: ['body', 'fr2', 'fl2'], front: [0, 1, 0] });
+    out.push({ key: 'brush', mesh: heldBrush(s, -R.ankle[1][0], R.ankle[1][0] - s.paw * 0.35, n, fine), bone: 'fr2', bias: 0.05, after: ['body', 'fr2', 'fl2'], front: [0, 1, 0] });
   }
   return out;
 }
@@ -1510,24 +1540,24 @@ function tailOf(s: Wall, n: number): Mesh {
   const curled: V3[] = [[0, 0.04, 0], [0, -0.26 * L, 0.12 * L], [0, -0.42 * L, 0.38 * L], [0, -0.42 * L, 0.66 * L], [0, -0.28 * L, 0.88 * L], [0, -0.1 * L, 0.96 * L], [0, 0.02 * L, 0.92 * L]];
   const pts = straight.map((p, q) => mixV(p, curled[q], c));
   const ws = [0.5, 0.92, 1.18, 1.2, 1.02, 0.7, 0.12].map((f) => f * w);
-  const N = Math.max(10, n), brown = s.stage === 2;
+  const N = Math.max(14, n), brown = s.stage === 2;
   const t = tube(pts, ws, ws, N, (ring, j) => (brown ? (ring >= 5 ? 'coatDark' : 'coat') : ring === 0 ? 'coat' : ring === 1 && j % 2 ? 'coat' : j % 3 === 0 ? 'belly' : ring >= 5 ? 'mark' : 'coatLight'));
   // Fluffed: every other corner round each ring pushed out, so its outline is tufted.
   const v = t.v.map((p, i) => {
     const ring = Math.floor(i / N), j = i % N;
     if (ring === 0 || ring >= pts.length - 1 || brown) return p;
-    return add(pts[ring], scale(sub(p, pts[ring]), j % 2 ? 1.2 : 0.86));
+    return add(pts[ring], scale(sub(p, pts[ring]), j % 2 ? 1.08 : 0.94));
   });
   const parts: Mesh[] = [mesh(v, t.f)];
   // A fluffy tail feathered all along with long soft locks lying toward its tip, either side and over the top.
   if (!brown) {
-    for (let k = 1; k < pts.length - 1; k++) {
+    for (let k = 2; k < pts.length - 1; k += 2) {
       const d = unit(sub(pts[k + 1], pts[k - 1])), up0 = unit(cross([1, 0, 0], d));
-      for (const [ox, oz, id] of [[1, 0.25, 1], [-1, 0.25, 2], [0, 1, 3], [0.7, -0.7, 4], [-0.7, -0.7, 5]] as Array<[number, number, number]>) {
+      for (const [ox, oz, id] of [[1, 0.2, 1], [-1, 0.2, 2], [0, 1, 3]] as Array<[number, number, number]>) {
         const o = unit(add(scale([1, 0, 0], ox), scale(up0, oz)));
         const root = add(pts[k], scale(o, ws[k] * 0.55));
         const face = unit(cross(d, cross(o, d)));
-        parts.push(plumeOf(root, add(d, scale(o, 0.3)), scale(o, 0.2), face, ws[k] * 1.6, ws[k] * 0.62, 2, k * 10 + id, true, ['coatLight', 'belly']));
+        parts.push(plumeOf(root, add(d, scale(o, 0.22)), scale(o, 0.12), face, ws[k] * 1.25, ws[k] * 0.85, 2, k * 10 + id, true, ['coatLight', 'belly']));
       }
     }
   }
@@ -1750,7 +1780,7 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Wall, b: Bones,
           const v: V3 = [Math.cos(th) * (1.2 + 1.6 * jitter(id + 1)), 0.8 + Math.sin(th) * 1.6 + 1.2 * jitter(id + 2), 2.6 + 2.2 * jitter(id + 3)];
           if (dot(v, view.T) > 0) v[2] += 1.5 + s.strike;
           const p = thrown([tip[0], tip[1], 0.1], scale(v, 0.8 + 0.3 * s.strike), since, 9);
-          if (nearSide(p, mid, view) !== front) continue;
+          if (p[2] <= 0.03 || nearSide(p, mid, view) !== front) continue;
           const [x, y] = onScreen(view, p);
           lump(g, x, y, (c % 4 === 3 ? 0.11 : 0.16 + 0.08 * jitter(id + 4)) * big * k, id, c % 4 === 3 ? GRIT_RGB : c % 2 ? MOSS_RGB : MOSS_DARK_RGB);
         }
@@ -1771,32 +1801,7 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Wall, b: Bones,
       }
     }
     if (s.strike !== 2 || since < 0) return;
-    // The slam: the ground cracked under the paws, a ring of dust going out over it, and earth and leaves thrown up high.
-    const ground = scale(add(place(at.fl2, R.tip), place(at.fr2, R.tip)), 0.5);
-    ground[2] = 0.02;
-    const [gx, gy] = onScreen(view, ground);
-    if (!front) {
-      const k = 1 - ramp(since, 0.3, 0.5);
-      g.save();
-      g.strokeStyle = 'rgb(84,58,40)';
-      g.lineCap = 'round';
-      for (let c = 0; c < 9; c++) {
-        const th = (c / 9) * TAU + jitter(c + 50) * 0.6, L = (1.0 + 0.9 * jitter(c + 51)) * big * ramp(since, 0, 0.05);
-        g.lineWidth = 0.14 * big * k;
-        g.beginPath();
-        g.moveTo(gx, gy);
-        g.lineTo(gx + Math.cos(th) * L * 0.5 + 0.1 * big, gy + Math.sin(th) * L * 0.28);
-        g.lineTo(gx + Math.cos(th) * L, gy + Math.sin(th) * L * 0.52);
-        g.stroke();
-      }
-      g.restore();
-      const out = ramp(since, 0, 0.32), rx = big * (2 + 5 * out);
-      g.lineWidth = 0.18 * big * (1 - out);
-      g.strokeStyle = css(DUST_RGB);
-      g.beginPath();
-      g.ellipse(gx, gy, rx, rx * 0.45, 0, 0, TAU);
-      g.stroke();
-    }
+    // The slam: moss and leaves thrown up high off the blow.
     if (since < 0.6) {
       const k = 1 - smooth((since - 0.3) / 0.3);
       for (let c = 0; c < 14; c++) {
@@ -1806,7 +1811,7 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Wall, b: Bones,
         const v: V3 = [sd * (5 + 5 * jitter(id + 1)), Math.sin(th) * (2.5 + 2 * jitter(id + 2)), 7 + 4 * jitter(id + 3)];
         if (dot(v, view.T) > 0) v[2] += 2;
         const p = thrown([paw[0], paw[1], 0.15], v, since, 13);
-        if (nearSide(p, mid, view) !== front) continue;
+        if (p[2] <= 0.03 || nearSide(p, mid, view) !== front) continue;
         const [x, y] = onScreen(view, p);
         if (c % 4 === 0) leafBit(g, x, y, 0.6 * big * k, id + since * 10);
         else lump(g, x, y, (0.2 + 0.1 * jitter(id + 4)) * big * k, id, c % 3 === 0 ? GRIT_RGB : c % 2 ? MOSS_RGB : MOSS_DARK_RGB);
@@ -1815,113 +1820,28 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Wall, b: Bones,
   });
 }
 
-/** Stone paving, its joints, and the moss on it: a cream-grey stone, darker joints, a dull green and a bright one. */
-const STONE_RGB: RGB = [208, 200, 182];
-const CLEAN_RGB: RGB = [226, 220, 204];
-const JOINT_RGB: RGB = [150, 140, 124];
+/** Moss coming off stone: a dull green, a bright one and a dark one. */
 const MOSSES: readonly RGB[] = [[118, 150, 58], [168, 192, 72], [96, 124, 50]];
 
-/** A flat shape on the ground, its corners given along the ground, filled `c` at `al`. */
-function ground(g: CanvasRenderingContext2D, view: View, pts: ReadonlyArray<[number, number]>, c: RGB, al: number, edge?: RGB): void {
-  g.beginPath();
-  pts.forEach(([x, y], q) => {
-    const [sx, sy] = onScreen(view, [x, y, 0.005]);
-    if (q) g.lineTo(sx, sy);
-    else g.moveTo(sx, sy);
-  });
-  g.closePath();
-  g.fillStyle = `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
-  g.fill();
-  if (edge) {
-    g.strokeStyle = `rgba(${edge[0] | 0},${edge[1] | 0},${edge[2] | 0},${clamp(al).toFixed(3)})`;
-    g.stroke();
-  }
-}
-
-/** A clump of moss lying on the ground: a ragged green mound, a brighter top, `r` across. */
-function lyingMoss(g: CanvasRenderingContext2D, view: View, at: V3, r: number, al: number, id: number): void {
-  if (r <= 0.01 || al <= 0.02) return;
-  const [x, y] = onScreen(view, [at[0], at[1], 0.01]);
-  for (const [k, c, dy] of [[1, MOSSES[2], 0], [0.78, MOSSES[0], -0.12], [0.5, MOSSES[1], -0.24]] as Array<[number, RGB, number]>) {
-    g.beginPath();
-    for (let q = 0; q < 9; q++) {
-      const a = (q / 9) * TAU, rr = r * k * (0.78 + 0.34 * jitter(id * 7 + q));
-      const px = x + Math.cos(a) * rr, py = y + dy * r + Math.sin(a) * rr * 0.55;
-      if (q) g.lineTo(px, py);
-      else g.moveTo(px, py);
-    }
-    g.closePath();
-    g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${al.toFixed(3)})`;
-    g.fill();
-  }
-}
-
-/** The stone it scrubs, as it lies before it: where it is and how big, and the lanes its brushes sweep. */
-interface Patch { x0: number; x1: number; y0: number; y1: number; lanes: Array<{ x: number; w: number; y0: number; y1: number }> }
-function patchOf(s: Wall, R: Rest): Patch {
-  const lanes = (s.brush.held ? [1] : [0, 1]).map((i) => {
-    const home = add(R.ankle[i], s.brush.held ? [-R.ankle[1][0], s.paw * 0.55 + s.brush.cuff[1] + s.brush.straw * 0.8, 0] : R.tip);
-    const far = add(home, reachOf(s, i));
-    return { x: (home[0] + far[0]) / 2, w: s.brush.fan * 1.1, y0: home[1] - s.brush.straw * 0.4, y1: far[1] + s.brush.fan * 0.4 };
-  });
-  const x = Math.max(...lanes.map((l) => Math.abs(l.x) + l.w)) * 1.35;
-  return { x0: -x, x1: x, y0: Math.min(...lanes.map((l) => l.y0)) - s.brush.fan * 0.6, y1: Math.max(...lanes.map((l) => l.y1)) + s.brush.fan * 0.9, lanes };
-}
-
 /**
- * Scrubbing: under its brushes the stone it scrubs, laid as paving, green with moss but for the lanes its brushes sweep clean;
- * at the end of every stroke green moss flying up off the stone ahead and out to the side, falling and lying where it lands;
- * and round the Bristleward's and the Stonepolish's feet the clumps it has scrubbed off already.
+ * Scrubbing: at the end of every stroke a spray of green moss flies up off the brush's end, ahead and out to the side, and is
+ * gone before it comes down. Nothing is drawn on the ground: the stone it scrubs is the island's own.
  */
-function scrubSpray(g: CanvasRenderingContext2D, view: View, s: Wall, b: Bones, R: Rest, P: Patch, ends: readonly V3[], a: Anim, t: number, front: boolean): void {
+function scrubSpray(g: CanvasRenderingContext2D, view: View, s: Wall, b: Bones, ends: readonly V3[], a: Anim, t: number, front: boolean): void {
   const big = bigness(s), down = downOf(t, a.graze), mid = b.body.t;
   if (down < 0.03) return;
-  if (!front) {
-    // The paving: two stones across (three on the bigger two), as many deep as it takes, the joints between them.
-    const cols = s.stage === 0 ? 2 : 3, side = (P.x1 - P.x0) / cols, rows = Math.max(2, Math.round((P.y1 - P.y0) / side));
-    const deep = (P.y1 - P.y0) / rows;
-    g.save();
-    g.lineWidth = 0.05 * big;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const off = r % 2 ? side * 0.5 : 0;
-        const xa = Math.max(P.x0, P.x0 + c * side - off), xb = Math.min(P.x1, P.x0 + (c + 1) * side - off + (c === cols - 1 && off ? side * 0.5 : 0));
-        const ya = P.y0 + r * deep, yb = ya + deep;
-        const gap = 0.025 * big;
-        ground(g, view, [[xa + gap, ya + gap], [xb - gap, ya + gap], [xb - gap, yb - gap], [xa + gap, yb - gap]], mix(STONE_RGB, JOINT_RGB, 0.12 * jitter(r * 5 + c)), down, JOINT_RGB);
-      }
-    }
-    // The lanes its brushes have swept: paler, clean stone.
-    for (const L of P.lanes) ground(g, view, [[L.x - L.w, L.y0], [L.x + L.w, L.y0], [L.x + L.w * 1.1, L.y1], [L.x - L.w * 1.1, L.y1]], CLEAN_RGB, down * 0.85);
-    // The moss still on it: ragged patches, none in the lanes.
-    for (let q = 0; q < 16; q++) {
-      const x = lerp(P.x0, P.x1, jitter(q * 3 + 1)), y = lerp(P.y0, P.y1, jitter(q * 3 + 2));
-      if (P.lanes.some((L) => Math.abs(x - L.x) < L.w * 1.15 && y > L.y0 - 0.1 * big && y < L.y1)) continue;
-      const r = (0.12 + 0.12 * jitter(q * 3 + 5)) * big * (s.stage ? 1.1 : 0.9);
-      lyingMoss(g, view, [x, y, 0], r, down, q + 40);
-    }
-    // Round the bigger two's feet, the moss it has scrubbed off already.
-    for (let q = 0; q < s.stage * 4; q++) {
-      const sd = q % 2 ? -1 : 1, i = sd > 0 ? 1 : 0;
-      const at = add(R.ankle[i], [sd * (s.brush.fan * (1.2 + 0.8 * jitter(q + 70))), s.brush.straw * (0.2 + 1.1 * jitter(q + 71)), 0]);
-      lyingMoss(g, view, at, (0.16 + 0.1 * jitter(q + 72)) * big, down, q + 80);
-    }
-  }
-  // The moss flying off the stone at the end of every stroke, from the brush's end: up, ahead and out, falling, and lying where it lands.
   wallScrubs(s.stage).forEach((h, k) => {
-    const since = frac(t - h + 1) * ACT_SECS.work;
-    if (since > 0.6 || (t < h && a.graze < 0.5)) return;
+    const since = (t - h) * ACT_SECS.work;
+    if (since < 0 || since > 0.4) return;
     const from = ends[k], sd = Math.sign(from[0]) || (k % 2 ? -1 : 1);
     for (let q = 0; q < 6 + 3 * s.stage; q++) {
       const id = q * 7 + k * 19;
-      const v: V3 = [sd * (0.6 + 1.6 * jitter(id)) * big + (jitter(id + 4) - 0.5) * big, (1.2 + 1.8 * jitter(id + 1)) * big, (2.2 + 2 * jitter(id + 2)) * Math.sqrt(big)];
-      const p = thrown([from[0], from[1], 0.06 * big], v, since, 9);
-      if (nearSide(p, mid, view) !== front) continue;
+      const v: V3 = [sd * (0.6 + 1.6 * jitter(id)) * big + (jitter(id + 4) - 0.5) * big, (1.2 + 1.8 * jitter(id + 1)) * big, (3 + 2 * jitter(id + 2)) * Math.sqrt(big)];
+      const p = thrown([from[0], from[1], 0.12 * big], v, since, 9);
+      // Only while it is in the air, well off the ground.
+      if (p[2] < 0.1 * big || nearSide(p, mid, view) !== front) continue;
       const [x, y] = onScreen(view, p);
-      const gone = 1 - ramp(since, 0.4, 0.6);
-      if (p[2] <= 0.025) {
-        if (!front) lyingMoss(g, view, p, 0.08 * big * gone, gone, id);
-      } else bit(g, x, y, (0.07 + 0.05 * jitter(id + 3)) * big, id + since * 9, MOSSES[q % 3], gone);
+      bit(g, x, y, (0.07 + 0.05 * jitter(id + 3)) * big, id + since * 9, MOSSES[q % 3], 1 - ramp(since, 0.25, 0.4));
     }
   });
 }
@@ -1940,7 +1860,7 @@ function evolveSwirl(g: CanvasRenderingContext2D, view: View, s: Wall, b: Bones,
       const from = place(b.trunk, [Math.cos(th) * s.body.w[3] * 0.4, s.body.y[3] + Math.sin(th) * s.len * 0.3, s.body.h[3] * 0.8]);
       const v: V3 = [Math.cos(th) * (2.2 + 2.2 * jitter(q + 3)), Math.sin(th) * (2.2 + 2.2 * jitter(q + 5)), 3 + 3.5 * jitter(q + 7)];
       const p = thrown(from, v, since, 5);
-      if (nearSide(p, mid, view) !== front) continue;
+      if (p[2] <= 0.03 || nearSide(p, mid, view) !== front) continue;
       const [x, y] = onScreen(view, p);
       if (q % 3 === 0) leafBit(g, x, y, 0.9 * big * burst, q * 1.3 + since * 8);
       else lump(g, x, y, 0.3 * big * burst, q * 1.3 + since * 8, q % 3 === 1 ? MOSS_RGB : GRIT_RGB);
@@ -2006,7 +1926,7 @@ function wallGlow(s: Wall, b: Bones, a: Anim): Array<{ p: V3; r: number; c: RGB;
 /** A stage as a kind: its bones, pieces and colours, and what it throws about as it strikes, scrubs and evolves. */
 function wallKind(s: Wall): Kind {
   const bones = wallBones(s);
-  const spec = specOf(s), R = restOf(s, spec), P = patchOf(s, R);
+  const spec = specOf(s), R = restOf(s, spec);
   const atHits = (a: Anim): Bones[] => WALL_HITS[s.strike].map((t) => bones({ ...a, act: { kind: 'strike', t } }));
   /**
    * Where each stroke's brush end is as it turns back and the moss flies, along the ground: the same every go, so worked out
@@ -2019,7 +1939,7 @@ function wallKind(s: Wall): Kind {
       const strokes = strokesOf(s);
       ends = wallScrubs(s.stage).map((h, k) => {
         const b = bones({ ...a0, act: { kind: 'work', t: h } });
-        if (s.brush.held) return place(b.fr2, [-R.ankle[1][0], s.paw * 0.55 + s.brush.cuff[1] + s.brush.straw * 0.9, -s.fore[2]]);
+        if (s.brush.held) return place(b.fr2, [-R.ankle[1][0], s.brush.cuff[1] + s.brush.straw * 0.8, -s.fore[2] + 0.05]);
         return place(b[strokes[k].paw ? 'fr2' : 'fl2'], R.tip);
       });
     }
@@ -2077,7 +1997,7 @@ function wallKind(s: Wall): Kind {
         strikeBurst(g, view, s, b, atHits(a), R, act.t, front);
         blowFlash(g, view, s, b, R, act.t, front);
       }
-      else if (act.kind === 'work') scrubSpray(g, view, s, b, R, P, endsOf(), a, act.t, front);
+      else if (act.kind === 'work') scrubSpray(g, view, s, b, endsOf(), a, act.t, front);
       else if (act.kind === 'evolve') evolveSwirl(g, view, s, b, act.t, front);
     },
   };
