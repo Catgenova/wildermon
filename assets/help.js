@@ -478,6 +478,7 @@ import{$D as e,$T as t,$c as n,$d as r,$h as i,$k as a,$l as o,$n as s,$p as ee,
       The island's total wildlife stays the same.</li>
       <li><b>Turnover</b>: a wild wildermon stays until between ${F(Ga)} and ${F(2*Ga)} old (set by its own number), then goes at
       its region's next restock; the region is refilled from every kind at current weights.</li>
+      <li><b>Reset</b>: every 3 days at the tree rollover, every wild wildermon that can turn over goes, whatever its age, and every region restocks at current weights.</li>
       <li>Never goes while tamed or kept, fighting or fought, struck in the last ${F(8)}, trapped, harnessed, ridden, tied to a post, stunned,
       marked, offered food in the last ${F(Me)}, or being acted on. Monsters do not turn over.</li>
     </ul>

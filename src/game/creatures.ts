@@ -5756,6 +5756,12 @@ export const wildTargetFor = (w: number, h: number): number =>
  */
 export const WILD_STAY = 24 * 60 * 60;
 /**
+ * Every this many tree rollovers (the woods' day, `tree_dawn_utc` on the island), every wild wildermon that would turn
+ * over goes at once, whatever its age, and the whole island is restocked off the current weights: the island's
+ * `wild_reset_days()` and `wild_reset`, run from `tree_tick`.
+ */
+export const WILD_RESET_DAYS = 3;
+/**
  * The most a new wild one's birth is dated back, so the wild holds every age: the island's `creature_stock_block`. Its
  * stay is counted from when it was put out (`putAt`, the island's `put_at`), not from its birth.
  */

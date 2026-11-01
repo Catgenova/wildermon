@@ -3416,6 +3416,18 @@ jobs:
             --outfile=node_modules/.cache/kit.mjs --log-level=error
           node node_modules/.cache/kit.mjs
 
+      - name: Every third tree rollover, the wild reset
+        if: matrix.shard == 4
+        run: |
+          # The island resets every as many rollovers as the browser says; a
+          # reset takes every wild one that can turn over and leaves a tamed one,
+          # one in a fight and a monster; every region is owed its stocking; an
+          # island is owed its reset with its woods done and that many rollovers
+          # on; tree_tick resets an owed island; a player cannot call any of it.
+          npx esbuild supabase/test/wildreset.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/wildreset.mjs --log-level=error
+          node node_modules/.cache/wildreset.mjs
+
       - name: A grave where you fell
         if: matrix.shard == 4
         run: |
