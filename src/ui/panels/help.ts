@@ -1081,8 +1081,8 @@ export function helpText(): string {
     <h3>The camera</h3>
     <ul>
       <li>Follows you by default. Dragging away detaches it; <kbd>C</kbd> or <b>Centre</b> reattaches.</li>
-      <li>Cursor at a screen edge: pans that way, faster nearer the edge; detaches the camera. Not while over a window or the toolbar.</li>
-      <li>Edge panning and drag panning can be turned off in Settings (<kbd>O</kbd>).</li>
+      <li>Edge panning, off by default (Settings, <kbd>O</kbd>: Push the view at the screen edge): cursor at a screen edge pans that way, faster nearer the edge; detaches the camera. Not while over a window or the toolbar.</li>
+      <li>Drag panning can be turned off in Settings (<kbd>O</kbd>).</li>
     </ul>
     <h3>Your wildermon, in order</h3>
     <ul>

@@ -4241,6 +4241,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 446,
+    day: '2026-11-02',
+    lines: () => ['Changed: edge panning off by default, and off for anyone who had not set it in Settings (Push the view at the screen edge). On: Settings, O.'],
+  },
+  {
     n: 445,
     day: '2026-11-02',
     lines: () => [`Added: hover card, wild ones and yours off work: settlement task (e.g. Settlement task: ${GATHER_VERB.forage}).`],

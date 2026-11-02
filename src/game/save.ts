@@ -388,7 +388,7 @@ function finish(world: World, m: SaveMeta): Game {
     game.settings.tileWindow = m.settings?.tileWindow ?? true;
     game.settings.fog = m.settings?.fog ?? true;
     game.settings.follow = m.settings?.follow ?? true;
-    game.settings.edgePan = m.settings?.edgePan ?? true;
+    game.settings.edgePan = m.settings?.edgePan ?? false;
   }
   game.logMsg('Resumed where you left off.', 'system');
   // Older saves predate building: hand out the tools they never got.

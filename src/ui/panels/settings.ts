@@ -526,7 +526,10 @@ export class SettingsPanel {
       'Push the view at the screen edge',
       'Cursor at the screen edge pans the view; faster nearer the edge. Off: drag only.',
       () => game.settings.edgePan,
-      (v) => (game.settings.edgePan = v),
+      (v) => {
+        game.settings.edgePan = v;
+        game.settings.edgePanChosen = true;
+      },
     );
     add(
       'Always show settlement border',

@@ -32,6 +32,7 @@ import '../../src/game/recipes';
 import { rotSeconds, rottingNear, ROT_SOON } from '../../src/game/rot';
 import { shoppingList } from '../../src/game/shopping';
 import { NAILS_PER_LUMP } from '../../src/game/metal';
+import { liveSettings, SETTING_DEFAULTS } from '../../src/game/settings';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -230,6 +231,28 @@ if (island.NONE) check('a wildermon of Dane\'s to ask about', false, 'the suite 
 else {
   check('the island says when her young are due, to her keeper', Math.abs(Number(island.MINE) - 600) < 30, island.MINE);
   check('and not to anybody else', island.THEIRS === 'absent' || island.THEIRS === 'null', island.THEIRS);
+}
+
+// Asked: "Turn edge scrolling off by default". Off with nothing kept, and off for a browser that kept the old default
+// without its being set in Settings; one set there (on or off) is kept.
+{
+  const kept = new Map<string, string>();
+  (globalThis as { localStorage?: unknown }).localStorage = {
+    getItem: (k: string) => kept.get(k) ?? null,
+    setItem: (k: string, v: string) => void kept.set(k, v),
+    removeItem: (k: string) => void kept.delete(k),
+  };
+  const KEY = 'wurm.settings.v1';
+  const edge = (stored: Record<string, unknown> | null): boolean => {
+    kept.clear();
+    if (stored) kept.set(KEY, JSON.stringify(stored));
+    return liveSettings().edgePan;
+  };
+  check('edge panning: off with nothing kept', edge(null) === false && SETTING_DEFAULTS.edgePan === false);
+  check('and off where the old default was kept but never set in Settings', edge({ edgePan: true, grid: true }) === false);
+  check('and on where it was set on in Settings, off where set off', edge({ edgePan: true, edgePanChosen: true }) === true
+    && edge({ edgePan: false, edgePanChosen: true }) === false);
+  delete (globalThis as { localStorage?: unknown }).localStorage;
 }
 
 for (const line of [...ok, ...bad]) console.log(line);

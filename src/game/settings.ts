@@ -51,8 +51,13 @@ export const SETTING_DEFAULTS = {
   fog: true,
   /** Keep the camera on the player rather than leaving it where it was dragged. */
   follow: true,
-  /** Push the view along when the cursor rests against the edge of the screen. */
-  edgePan: true,
+  /** Push the view along when the cursor rests against the edge of the screen. Off unless chosen. */
+  edgePan: false,
+  /**
+   * Whether `edgePan` was set in Settings. Asked for: "Turn edge scrolling off by default". Every browser that ever
+   * changed a setting kept `edgePan: true`, the old default, chosen or not; one never set there is read as the default.
+   */
+  edgePanChosen: false,
   /**
    * How loud the island is, 0 for silence.
    *
@@ -249,6 +254,8 @@ function read(): Partial<typeof SETTING_DEFAULTS> {
     // a browser's store is whatever was in a browser's store, including an
     // older build's idea of what these were.
     for (const k of KEPT) if (typeof got[k] === typeof SETTING_DEFAULTS[k]) out[k] = got[k];
+    // The edge pan as stored before it was off by default, unless set in Settings since (`edgePanChosen`).
+    if (out.edgePanChosen !== true) delete out.edgePan;
     // A stance is one of three words, not any word.
     if (!['aggressive', 'balanced', 'defensive'].includes(out.fightStance as string)) delete out.fightStance;
     if (!(GRAPHICS as readonly string[]).includes(out.graphics as string)) delete out.graphics;
