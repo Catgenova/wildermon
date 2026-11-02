@@ -1,1 +1,1 @@
-import{n as e,t}from"./wild-hands2.js";export{t as BRAMBO,e as SALVA};
+import{t as e}from"./wild-hands2.js";export{e as BRAMBO};

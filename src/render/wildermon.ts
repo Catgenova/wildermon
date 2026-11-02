@@ -76,7 +76,8 @@ const LINES: Record<string, () => Promise<Line>> = {
   dragon: () => import('./wild-dragon').then((m) => line(m.DRAGON)),
   kemma: () => import('./wild-owl').then((m) => line(m.WHISPLING, [m.HUSHWING, m.SONGROOST])),
   sheela: () => import('./wild-shear').then((m) => line(m.SHEARLING, [m.CLIPPEROO, m.SHEARLORD])),
-  salva: () => import('./wild-hands').then((m) => line(m.SALVA)),
+  // The Herbpup, the Herbfox and the Herbwarden.
+  salva: () => import('./wild-herbpup').then((m) => line(m.HERBPUP, [m.HERBFOX, m.HERBWARDEN])),
   carra: () => import('./wild-log').then((m) => line(m.LOGNIB, [m.TIMBERSPLIT, m.BEAMMASTER])),
   tanna: () => import('./wild-pelt').then((m) => line(m.PELTLING, [m.PELTIPEDE, m.HIDEWEAVER])),
   grista: () => import('./wild-hamster').then((m) => line(m.WHEATLEY, [m.WHEATWHIRL, m.WHEATCHEEKS])),

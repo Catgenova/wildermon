@@ -880,6 +880,9 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   quill: { kind: 'wool', n: 1, what: 'feathers per pluck' },
   flecha: { kind: 'more', n: 1, what: 'arrows per fletch' },
   scurra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  // Its dressings come out of the stores a go at a time, as many as it may see to in the go (`stageLoads`), as a Whispling's
+  // brushings are: the island's `hands_trade` takes as many as `stage_loads` says.
+  salva: { kind: 'loads', n: 1, what: 'wildermon dressed per cycle' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2435,7 +2438,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   salva: {
     id: 'salva',
-    name: 'Salva',
+    name: 'Herbpup',
+    was: ['Salva'],
+    // Asked for, with a reference sheet: Herbpup, Herbfox, Herbwarden. Each stage's words are written from its own
+    // (`sayLine`).
+    stages: [
+      { name: 'Herbfox', description: '' },
+      { name: 'Herbwarden', description: '' },
+    ],
     description: 'Settlement task: dress your wildermon within its reach that are bleeding or under {healBelow:pct} health, with a bandage or herb cover from your settlement stores: stops bleeding, heals as a dressing of that QL at its first aid.',
     health: 16,
     attack: 1,
@@ -2447,11 +2457,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'heal',
     workRange: 8,
+    // [coat, face and chest]: the sheet's moss green with cream, sage with ivory, olive with oatmeal, and fern with buff.
     variants: [
-      ['#7f9a7a', '#dfe9d6'],
-      ['#8d8a6c', '#e8e3c4'],
-      ['#6f8590', '#d2e0e6'],
-      ['#9a7f8c', '#eadbe2'],
+      ['#8fb04a', '#f6e6c4'],
+      ['#94ac58', '#f8eed8'],
+      ['#a2a844', '#efdcb6'],
+      ['#6e9a48', '#f4dcb8'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 1, gland: 2 },
     nearTrees: true,
@@ -4675,6 +4686,7 @@ sayLine('ambra', SPECIES.ambra.description, 'Level: forestry.');
 sayLine('snedda', SPECIES.snedda.description, 'Level: forestry.');
 sayLine('cindra', SPECIES.cindra.description, `Level: ${GATHER_SKILL.ash}.`);
 sayLine('scurra', SPECIES.scurra.description, `Level: ${GATHER_SKILL.scrub}.`);
+sayLine('salva', SPECIES.salva.description, `Level: ${GATHER_SKILL.heal.replace(/_/g, ' ')}.`);
 describeFrom('hive', { vesp: SPECIES.vesp.name });
 describeGoals({ vesp: SPECIES.vesp.name });
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });

@@ -144,6 +144,8 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   flecha: () => import('./voice-sable').then((m) => m.SABLE_VOICE),
   // The Wallkit, the Bristleward and the Stonepolish.
   scurra: () => import('./voice-wall').then((m) => m.WALL_VOICE),
+  // The Herbpup, the Herbfox and the Herbwarden.
+  salva: () => import('./voice-herb').then((m) => m.HERB_VOICE),
 };
 
 /** Each voice that is in, by species; nothing for one that failed to come, until it is asked for again. */
