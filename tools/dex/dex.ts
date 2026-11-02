@@ -6,7 +6,7 @@
  * Each stage's moves are drawn once, here, with the game's own renderer, as a strip of frames the page plays through;
  * everything written on the page is read off the rules, so a rebuild is all it takes to bring it up to date.
  */
-import { WILDERMON, WILDERMON_STAGES } from '../../src/render/wildermon';
+import { loadAllWildermon, wildermonKind } from '../../src/render/wildermon';
 import { ACT_SECS, drawKind, evolveBurst, extentOf, kitOf, paletteFor, type Anim, type Kind } from '../../src/render/beasts';
 import { abilityName, abilitySays, EVOLVE_AT, HUNT_SIGHT, NIP_EVERY, SPECIES, STAGE_MUL, STANCE_NAMES, STYLE_SAYS, type SpeciesDef } from '../../src/game/creatures';
 import { guidePage, keepable } from '../../src/game/guide';
@@ -76,9 +76,8 @@ function plan(kind: Kind, stage: number): Frame[] {
 
 /** A stage's model and the key its pieces and colours are kept under. */
 function modelOf(id: string, stage: number): { kind: Kind; key: string } | null {
-  if (stage === 0) return { kind: WILDERMON[id], key: id };
-  const kind = WILDERMON_STAGES[id]?.[stage - 1];
-  return kind ? { kind, key: `${id}@${stage}` } : null;
+  const m = wildermonKind(id, stage);
+  return m && (stage === 0 || m.key !== id) ? m : null;
 }
 
 /** The pixels a unit is drawn at for a whole line, off its biggest stage standing, so the stages show their sizes. */
@@ -179,7 +178,7 @@ function rows(): RowOut[] {
         speed: Math.round(def.speed * mul('speed') * 100) / 100,
       };
     });
-    const status = WILDERMON_STAGES[def.id] ? 'line' : def.stages ? 'named' : 'single';
+    const status = wildermonKind(def.id, 1)?.key === `${def.id}@1` ? 'line' : def.stages ? 'named' : 'single';
     return {
       id: def.id,
       name: def.name,
@@ -207,9 +206,12 @@ function traits(): TraitOut[] {
 }
 
 const w = window as unknown as { DEX?: unknown; DONE?: boolean; DEX_ERROR?: string };
+// Every line's models fetched first (`loadAllWildermon`).
+void loadAllWildermon().then(() => {
 try {
   w.DEX = { fps: FPS, side: SIDE, evolveAt: EVOLVE_AT, stageMul: STAGE_MUL, traitSlots: TRAIT_SLOTS, wildOdds: WILD_ODDS, rows: rows(), traits: traits() };
 } catch (e) {
   w.DEX_ERROR = String((e as Error).stack ?? e);
 }
 w.DONE = true;
+});

@@ -1,78 +1,5 @@
-import { darker, drawBeast, drawBeastPortrait, extentOf, headOf, kitOf, topOf, type Anim, type BeastPose, type Kind } from './beasts';
+import { darker, drawBeast, drawBeastPortrait, extentOf, forgetBeast, headOf, kitOf, topOf, type Anim, type BeastPose, type Kind } from './beasts';
 import type { V3 } from './figure';
-import { LUME } from './wild-air';
-import { BUZZLET, COMBWORKER, HIVEMASTER } from './wild-bee';
-import { FEATHERBOURNE, PEACHICK, PLUMECREST } from './wild-peafowl';
-import { MARSHREAPER, REEDPUP, REEDWEAVER } from './wild-reed';
-import { SKYLOOKLET, SKYRANGE, SKYWARDEN } from './wild-sky';
-import { DRAGON } from './wild-dragon';
-import { DIRTLET, EARTHREND, TUNNELCLAW } from './wild-badger';
-import { FERRODRILL, IRONEMOLE, OREMANDER } from './wild-iron';
-import { GORRAL, SHAGGAN } from './wild-herd';
-import { CARGOCREST, HAULBUD, PACKLET } from './wild-pack';
-import { CREAMCALF, LACTISOVEREIGN, MILKMERE } from './wild-cow';
-import { ARBORCREST, PIPSEED, SPRIGWING } from './wild-pip';
-import { CARTLING, HAULHORN, WAGONOX } from './wild-haul';
-import { BUNNYCOURSER, HARE_TACKED, HARE_TUCK, hareGrip, hareSeat, MOONHARE, THISTLEKIT } from './wild-hare';
-import { CHESTKIT, HOARDBACK, LOOTVENT } from './wild-chest';
-import { CLAYBURROW, MUDLET, TERRAMOLE } from './wild-clay';
-import { SANDPINCHER, SANDPINNACLE, SANDPIP } from './wild-sand';
-import { HARVESTUSK, PIGROOT, PLOWHOG } from './wild-pig';
-import { CLOUDBORNE, CLOUDLET, CLOUDRAM } from './wild-cloud';
-import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
-import { SPOREKIN, SPORELING, SPORELORD } from './wild-spore';
-import { GOBLIN, OGRE, ORC } from './wild-upright';
-import { MENDERMASK, PATCHCOON, STITCHKIT } from './wild-mend';
-import { HEARTHSNAIL, SNAILEAF, MIDDUNSNAIL } from './wild-snail';
-import { BASTIONTOAD, CRAGHOPPER, MOSSKIP } from './wild-toad';
-import { ROLLTERRA, SLIPLET, WHEELMOTE } from './wild-clayroll';
-import { ARBOANARI, ORCHIBELLE, VANARI } from './wild-vanari';
-import { AQUAVOYAGER, PUDDLEHOP, SPRINGCARRIER } from './wild-frog';
-import { LEMLEAF, LEMLET, LEMORIAN } from './wild-lemur';
-import { SLUGEMBER, SLUGFERNO, SLUGLOW } from './wild-slug';
-import { HALLOWMIRE, LANTERNVEIL, WHISPET } from './wild-ghost';
-import { LOGCHEWER, SAPGNAW, TIMBERLORD } from './wild-gnaw';
-import { BLOSSOMHORN, BUDSCARAB, FLORANTLER } from './wild-petal';
-import { LASHRUNNER, SNAREPUP, VINEHUNTER } from './wild-vine';
-import { BLUSHKIT, BRIARPOUNCE, THORNLANCE } from './wild-briar';
-import { BASTIONDRAKE, BRICKLING, MORTARBACK } from './wild-brick';
-import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
-import { BRAMBO, SALVA } from './wild-hands';
-import { CLIPPEROO, SHEARLING, SHEARLORD } from './wild-shear';
-import { HIDEWEAVER, PELTIPEDE, PELTLING } from './wild-pelt';
-import { BLOOMREAPER, PETALBLADE, SPRIGMANT } from './wild-mantis';
-import { WHEATCHEEKS, WHEATLEY, WHEATWHIRL } from './wild-hamster';
-import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
-import { FORGA, HOPPA, SIMMA } from './wild-hands2';
-import { ASHSWEEPER, EMBERBRUSH, EMBERKIT } from './wild-ember';
-import { AURELIAX, KINTSU, RELICRAWLER } from './wild-relic';
-import { PEBBLEBEAK, SOILWHISTLE, WORMHERON } from './wild-curlew';
-import { CHISSA, CORDRA, GLOSSA } from './wild-hands3';
-import { CASKYBARA, PAILBARA, RESERVARA } from './wild-capy';
-import { FINLET, REEFFIN, TIDEHARVEST } from './wild-penguin';
-import { SPRINGLET, SPRINGSAIL, TIDE_TACKED, TIDE_TUCK, TIDECOURSER, tideGrip, tideSeat } from './wild-tide';
-import { HAMMERTIN, NAILSPROUT, NAILWRIGHT } from './wild-nail';
-import { BLOOMWHISK, FLORAMANE, SPRIGKIT } from './wild-calico';
-import { METALLOCURL, RIBBONIP, STRIPFORGE } from './wild-ribbon';
-import { MAPLETAP, SAPLET, TAPSYLVAN } from './wild-maple';
-import { SILKWARD, SPRINDLE, WEBLOOM } from './wild-spider';
-import { BRIARLING, FLORACRUX, MEADOWTIDE } from './wild-goat';
-import { HUSHWING, SONGROOST, WHISPLING } from './wild-owl';
-import { CANOPYSHAPER, GROVEMASTER, SAPLINGREACH } from './wild-giraffe';
-import { KILNLET, KILNSPIRE, TERRABRICK } from './wild-kiln';
-import { LOGKIT, SAWQUILL, TIMBERBACK } from './wild-timber';
-import { PAPYRUSKIN, PRESSMERE, REEDLING } from './wild-papyrus';
-import { GLASCADE, GLIMMIP, PRISMETAIL } from './wild-glass';
-import { SPITTA } from './wild-fighters';
-import { SPIRALCALF, SPIRALPHANT, SPIRALTRUNK } from './wild-spiral';
-import { DUMMIBEAR, DUMMICUB, DUMMITITAN } from './wild-dummy';
-import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
-import { BRITTLA, CRAKKA, FROSTA, LEECHA, ROOTLE, SCORCHA, WHIRLA } from './wild-abilities';
-import { MOSSNIB, MOSSREAVER, MOSSSHEAR } from './wild-moss';
-import { BEAMMASTER, LOGNIB, TIMBERSPLIT } from './wild-log';
-import { FLETCHERCREST, SABLEKIT, SABLEPLUME } from './wild-sable';
-import { BRISTLEWARD, STONEPOLISH, WALLKIT } from './wild-wall';
-import { GALECREST, TEMPESTWYRM, ZEPHLET } from './wild-zephyr';
 
 /**
  * The wildermon, each as a body of its own (`./beasts` for what they are all
@@ -84,199 +11,240 @@ import { GALECREST, TEMPESTWYRM, ZEPHLET } from './wild-zephyr';
  * not in any field guide: a snufflet wears a mane of leaves, a woola's fleece is
  * cloud. What it is made of is its variant's two colours, the coat and the
  * markings, and its kind's own things.
+ *
+ * Each line's models are a module of their own (`./wild-<line>`), fetched the
+ * first time a body of that line is wanted (`LINES`), not with the page: the
+ * models are about a quarter of the game's code, and an island shows a handful
+ * of lines at a time. Until its module is in, a body is not drawn (its name
+ * and health bar still are), and a page's picture of it is put down once it
+ * is. A line not drawn for `FORGET_AFTER` lets go of its pieces and pictures
+ * (`forgetBeast`), so a long evening does not keep every line it has seen.
  */
+
+/** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */
+interface Tack { kinds: readonly Kind[]; seat: (stage: number) => number; grip: (stage: number) => V3; tuck: readonly number[] }
+/**
+ * A line's models: its first stage; what it is drawn as at its second stage and its third (`SpeciesDef.stages`), when it
+ * evolves -- with none, it is drawn as its first at every stage; and saddled, when it is ridden.
+ */
+interface Line { kind: Kind; stages?: readonly [Kind, Kind]; tacked?: Tack }
+const line = (kind: Kind, stages?: readonly [Kind, Kind], tacked?: Tack): Line => ({ kind, stages, tacked });
 
 /* ---- the kinds ----------------------------------------------------------------------- */
 
-export const WILDERMON: Record<string, Kind> = {
-  rabba: SNUFFLET,
-  woola: CLOUDLET,
-  magga: CHESTKIT,
-  noot: MUDLET,
-  crawler: SANDPIP,
-  ulva: SPRINDLE,
-  seavic: PIGROOT,
-  vola: SPORELING,
-  mola: IRONEMOLE,
-  dowse: NAILSPROUT,
-  snout: DIRTLET,
-  roxxen: CARTLING,
-  orse: THISTLEKIT,
-  cudda: CREAMCALF,
-  bura: PACKLET,
-  gorral: GORRAL,
-  shaggan: SHAGGAN,
-  snedda: SAPLINGREACH,
-  sappa: PIPSEED,
-  rowl: SNAREPUP,
-  grubba: BUDSCARAB,
-  cobbe: BRICKLING,
-  quarra: CHIPTAIL,
-  embra: SLUGLOW,
-  bogga: MOSSKIP,
-  bevere: SAPGNAW,
-  wadd: FINLET,
-  holla: PUDDLEHOP,
-  plucka: VANARI,
-  middun: SNAILEAF,
-  sedra: REEDPUP,
-  warda: SKYLOOKLET,
-  quill: PEACHICK,
-  tinka: STITCHKIT,
-  goblin: GOBLIN,
-  orc: ORC,
-  ogre: OGRE,
-  vesp: BUZZLET,
-  lume: LUME,
-  dragon: DRAGON,
-  kemma: WHISPLING,
-  sheela: SHEARLING,
-  salva: SALVA,
-  carra: LOGNIB,
-  tanna: PELTLING,
-  grista: WHEATLEY,
-  wicka: GLIMMOTH,
-  brambo: BRAMBO,
-  grazza: SPRIGMANT,
-  siffa: RIBBONIP,
-  forga: FORGA,
-  potta: KILNLET,
-  cindra: EMBERKIT,
-  hoppa: HOPPA,
-  simma: SIMMA,
-  relka: KINTSU,
-  bedda: SPRIGKIT,
-  wurla: PEBBLEBEAK,
-  sprigga: LEMLET,
-  ambra: SAPLET,
-  petta: BRIARLING,
-  scurra: WALLKIT,
-  rippa: LOGKIT,
-  chissa: CHISSA,
-  mudda: SLIPLET,
-  cordra: CORDRA,
-  flecha: SABLEKIT,
-  papra: REEDLING,
-  glossa: GLOSSA,
-  dippa: PAILBARA,
-  thumpa: PEBBLETOOTH,
-  spitta: SPITTA,
-  awla: SPIRALCALF,
-  sparra: DUMMICUB,
-  lungra: BLUSHKIT,
-  crakka: CRAKKA,
-  whirla: WHIRLA,
-  scorcha: SCORCHA,
-  frosta: FROSTA,
-  rootle: ROOTLE,
-  dulla: MOSSNIB,
-  brittla: BRITTLA,
-  stona: ZEPHLET,
-  leecha: LEECHA,
-  whispet: WHISPET,
-  springlet: SPRINGLET,
-  glimmip: GLIMMIP,
+/** Each kind's line, by species, as its module is fetched. */
+const LINES: Record<string, () => Promise<Line>> = {
+  rabba: () => import('./wild-snuff').then((m) => line(m.SNUFFLET, [m.SNUFFROOT, m.SNUFFTHORN])),
+  woola: () => import('./wild-cloud').then((m) => line(m.CLOUDLET, [m.CLOUDRAM, m.CLOUDBORNE])),
+  magga: () => import('./wild-chest').then((m) => line(m.CHESTKIT, [m.LOOTVENT, m.HOARDBACK])),
+  noot: () => import('./wild-clay').then((m) => line(m.MUDLET, [m.CLAYBURROW, m.TERRAMOLE])),
+  crawler: () => import('./wild-sand').then((m) => line(m.SANDPIP, [m.SANDPINCHER, m.SANDPINNACLE])),
+  ulva: () => import('./wild-spider').then((m) => line(m.SPRINDLE, [m.WEBLOOM, m.SILKWARD])),
+  seavic: () => import('./wild-pig').then((m) => line(m.PIGROOT, [m.PLOWHOG, m.HARVESTUSK])),
+  vola: () => import('./wild-spore').then((m) => line(m.SPORELING, [m.SPOREKIN, m.SPORELORD])),
+  mola: () => import('./wild-iron').then((m) => line(m.IRONEMOLE, [m.FERRODRILL, m.OREMANDER])),
+  dowse: () => import('./wild-nail').then((m) => line(m.NAILSPROUT, [m.HAMMERTIN, m.NAILWRIGHT])),
+  snout: () => import('./wild-badger').then((m) => line(m.DIRTLET, [m.TUNNELCLAW, m.EARTHREND])),
+  roxxen: () => import('./wild-haul').then((m) => line(m.CARTLING, [m.WAGONOX, m.HAULHORN])),
+  orse: () => import('./wild-hare').then((m) => line(m.THISTLEKIT, [m.BUNNYCOURSER, m.MOONHARE], { kinds: m.HARE_TACKED, seat: m.hareSeat, grip: m.hareGrip, tuck: m.HARE_TUCK })),
+  cudda: () => import('./wild-cow').then((m) => line(m.CREAMCALF, [m.MILKMERE, m.LACTISOVEREIGN])),
+  bura: () => import('./wild-pack').then((m) => line(m.PACKLET, [m.HAULBUD, m.CARGOCREST])),
+  gorral: () => import('./wild-herd').then((m) => line(m.GORRAL)),
+  shaggan: () => import('./wild-herd').then((m) => line(m.SHAGGAN)),
+  snedda: () => import('./wild-giraffe').then((m) => line(m.SAPLINGREACH, [m.CANOPYSHAPER, m.GROVEMASTER])),
+  sappa: () => import('./wild-pip').then((m) => line(m.PIPSEED, [m.SPRIGWING, m.ARBORCREST])),
+  rowl: () => import('./wild-vine').then((m) => line(m.SNAREPUP, [m.LASHRUNNER, m.VINEHUNTER])),
+  grubba: () => import('./wild-petal').then((m) => line(m.BUDSCARAB, [m.BLOSSOMHORN, m.FLORANTLER])),
+  cobbe: () => import('./wild-brick').then((m) => line(m.BRICKLING, [m.MORTARBACK, m.BASTIONDRAKE])),
+  quarra: () => import('./wild-chip').then((m) => line(m.CHIPTAIL, [m.QUARRYBASH, m.MONOLITHUMP])),
+  embra: () => import('./wild-slug').then((m) => line(m.SLUGLOW, [m.SLUGEMBER, m.SLUGFERNO])),
+  bogga: () => import('./wild-toad').then((m) => line(m.MOSSKIP, [m.CRAGHOPPER, m.BASTIONTOAD])),
+  bevere: () => import('./wild-gnaw').then((m) => line(m.SAPGNAW, [m.LOGCHEWER, m.TIMBERLORD])),
+  wadd: () => import('./wild-penguin').then((m) => line(m.FINLET, [m.REEFFIN, m.TIDEHARVEST])),
+  holla: () => import('./wild-frog').then((m) => line(m.PUDDLEHOP, [m.SPRINGCARRIER, m.AQUAVOYAGER])),
+  plucka: () => import('./wild-vanari').then((m) => line(m.VANARI, [m.ORCHIBELLE, m.ARBOANARI])),
+  middun: () => import('./wild-snail').then((m) => line(m.SNAILEAF, [m.MIDDUNSNAIL, m.HEARTHSNAIL])),
+  sedra: () => import('./wild-reed').then((m) => line(m.REEDPUP, [m.REEDWEAVER, m.MARSHREAPER])),
+  warda: () => import('./wild-sky').then((m) => line(m.SKYLOOKLET, [m.SKYWARDEN, m.SKYRANGE])),
+  quill: () => import('./wild-peafowl').then((m) => line(m.PEACHICK, [m.PLUMECREST, m.FEATHERBOURNE])),
+  tinka: () => import('./wild-mend').then((m) => line(m.STITCHKIT, [m.PATCHCOON, m.MENDERMASK])),
+  goblin: () => import('./wild-upright').then((m) => line(m.GOBLIN)),
+  orc: () => import('./wild-upright').then((m) => line(m.ORC)),
+  ogre: () => import('./wild-upright').then((m) => line(m.OGRE)),
+  vesp: () => import('./wild-bee').then((m) => line(m.BUZZLET, [m.COMBWORKER, m.HIVEMASTER])),
+  lume: () => import('./wild-air').then((m) => line(m.LUME)),
+  dragon: () => import('./wild-dragon').then((m) => line(m.DRAGON)),
+  kemma: () => import('./wild-owl').then((m) => line(m.WHISPLING, [m.HUSHWING, m.SONGROOST])),
+  sheela: () => import('./wild-shear').then((m) => line(m.SHEARLING, [m.CLIPPEROO, m.SHEARLORD])),
+  salva: () => import('./wild-hands').then((m) => line(m.SALVA)),
+  carra: () => import('./wild-log').then((m) => line(m.LOGNIB, [m.TIMBERSPLIT, m.BEAMMASTER])),
+  tanna: () => import('./wild-pelt').then((m) => line(m.PELTLING, [m.PELTIPEDE, m.HIDEWEAVER])),
+  grista: () => import('./wild-hamster').then((m) => line(m.WHEATLEY, [m.WHEATWHIRL, m.WHEATCHEEKS])),
+  wicka: () => import('./wild-moth').then((m) => line(m.GLIMMOTH, [m.LUREWING, m.NOCTILURE])),
+  brambo: () => import('./wild-hands').then((m) => line(m.BRAMBO)),
+  grazza: () => import('./wild-mantis').then((m) => line(m.SPRIGMANT, [m.PETALBLADE, m.BLOOMREAPER])),
+  siffa: () => import('./wild-ribbon').then((m) => line(m.RIBBONIP, [m.STRIPFORGE, m.METALLOCURL])),
+  forga: () => import('./wild-hands2').then((m) => line(m.FORGA)),
+  potta: () => import('./wild-kiln').then((m) => line(m.KILNLET, [m.TERRABRICK, m.KILNSPIRE])),
+  cindra: () => import('./wild-ember').then((m) => line(m.EMBERKIT, [m.EMBERBRUSH, m.ASHSWEEPER])),
+  hoppa: () => import('./wild-hands2').then((m) => line(m.HOPPA)),
+  simma: () => import('./wild-hands2').then((m) => line(m.SIMMA)),
+  relka: () => import('./wild-relic').then((m) => line(m.KINTSU, [m.RELICRAWLER, m.AURELIAX])),
+  bedda: () => import('./wild-calico').then((m) => line(m.SPRIGKIT, [m.BLOOMWHISK, m.FLORAMANE])),
+  wurla: () => import('./wild-curlew').then((m) => line(m.PEBBLEBEAK, [m.SOILWHISTLE, m.WORMHERON])),
+  sprigga: () => import('./wild-lemur').then((m) => line(m.LEMLET, [m.LEMLEAF, m.LEMORIAN])),
+  ambra: () => import('./wild-maple').then((m) => line(m.SAPLET, [m.MAPLETAP, m.TAPSYLVAN])),
+  petta: () => import('./wild-goat').then((m) => line(m.BRIARLING, [m.MEADOWTIDE, m.FLORACRUX])),
+  scurra: () => import('./wild-wall').then((m) => line(m.WALLKIT, [m.BRISTLEWARD, m.STONEPOLISH])),
+  rippa: () => import('./wild-timber').then((m) => line(m.LOGKIT, [m.SAWQUILL, m.TIMBERBACK])),
+  chissa: () => import('./wild-hands3').then((m) => line(m.CHISSA)),
+  mudda: () => import('./wild-clayroll').then((m) => line(m.SLIPLET, [m.WHEELMOTE, m.ROLLTERRA])),
+  cordra: () => import('./wild-hands3').then((m) => line(m.CORDRA)),
+  flecha: () => import('./wild-sable').then((m) => line(m.SABLEKIT, [m.SABLEPLUME, m.FLETCHERCREST])),
+  papra: () => import('./wild-papyrus').then((m) => line(m.REEDLING, [m.PAPYRUSKIN, m.PRESSMERE])),
+  glossa: () => import('./wild-hands3').then((m) => line(m.GLOSSA)),
+  dippa: () => import('./wild-capy').then((m) => line(m.PAILBARA, [m.CASKYBARA, m.RESERVARA])),
+  thumpa: () => import('./wild-crag').then((m) => line(m.PEBBLETOOTH, [m.SHALECLAW, m.CRAGJAWS])),
+  spitta: () => import('./wild-fighters').then((m) => line(m.SPITTA)),
+  awla: () => import('./wild-spiral').then((m) => line(m.SPIRALCALF, [m.SPIRALTRUNK, m.SPIRALPHANT])),
+  sparra: () => import('./wild-dummy').then((m) => line(m.DUMMICUB, [m.DUMMIBEAR, m.DUMMITITAN])),
+  lungra: () => import('./wild-briar').then((m) => line(m.BLUSHKIT, [m.BRIARPOUNCE, m.THORNLANCE])),
+  crakka: () => import('./wild-abilities').then((m) => line(m.CRAKKA)),
+  whirla: () => import('./wild-abilities').then((m) => line(m.WHIRLA)),
+  scorcha: () => import('./wild-abilities').then((m) => line(m.SCORCHA)),
+  frosta: () => import('./wild-abilities').then((m) => line(m.FROSTA)),
+  rootle: () => import('./wild-abilities').then((m) => line(m.ROOTLE)),
+  dulla: () => import('./wild-moss').then((m) => line(m.MOSSNIB, [m.MOSSSHEAR, m.MOSSREAVER])),
+  brittla: () => import('./wild-abilities').then((m) => line(m.BRITTLA)),
+  stona: () => import('./wild-zephyr').then((m) => line(m.ZEPHLET, [m.GALECREST, m.TEMPESTWYRM])),
+  leecha: () => import('./wild-abilities').then((m) => line(m.LEECHA)),
+  whispet: () => import('./wild-ghost').then((m) => line(m.WHISPET, [m.LANTERNVEIL, m.HALLOWMIRE])),
+  springlet: () => import('./wild-tide').then((m) => line(m.SPRINGLET, [m.SPRINGSAIL, m.TIDECOURSER], { kinds: m.TIDE_TACKED, seat: m.tideSeat, grip: m.tideGrip, tuck: m.TIDE_TUCK })),
+  glimmip: () => import('./wild-glass').then((m) => line(m.GLIMMIP, [m.GLASCADE, m.PRISMETAIL])),
 };
+
+/** The kinds drawn as a model here, rather than by hand. */
+export const WILDERMON_SPECIES: readonly string[] = Object.keys(LINES);
+
+/** Each line whose module is in, by species. */
+const lines = new Map<string, Line>();
+/** Each line whose module is on its way. */
+const fetching = new Map<string, Promise<Line | undefined>>();
+/** Pictures for a page asked for before their line was in, put down once it is (`drawWildermonPortrait`). */
+const owed = new Map<string, (() => void)[]>();
 
 /**
- * What a kind that evolves is drawn as at its second stage and its third (`SpeciesDef.stages`). A kind with none here
- * is drawn as its first at every stage.
+ * A line's models, fetched if they are not yet. Resolves to nothing for a kind with none, or when the fetch fails (asked
+ * again, it is tried again).
  */
-export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = {
-  rabba: [SNUFFROOT, SNUFFTHORN],
-  mola: [FERRODRILL, OREMANDER],
-  quarra: [QUARRYBASH, MONOLITHUMP],
-  vola: [SPOREKIN, SPORELORD],
-  warda: [SKYWARDEN, SKYRANGE],
-  woola: [CLOUDRAM, CLOUDBORNE],
-  seavic: [PLOWHOG, HARVESTUSK],
-  bevere: [LOGCHEWER, TIMBERLORD],
-  embra: [SLUGEMBER, SLUGFERNO],
-  whispet: [LANTERNVEIL, HALLOWMIRE],
-  noot: [CLAYBURROW, TERRAMOLE],
-  crawler: [SANDPINCHER, SANDPINNACLE],
-  cobbe: [MORTARBACK, BASTIONDRAKE],
-  roxxen: [WAGONOX, HAULHORN],
-  tinka: [PATCHCOON, MENDERMASK],
-  orse: [BUNNYCOURSER, MOONHARE],
-  sedra: [REEDWEAVER, MARSHREAPER],
-  holla: [SPRINGCARRIER, AQUAVOYAGER],
-  stona: [GALECREST, TEMPESTWYRM],
-  bogga: [CRAGHOPPER, BASTIONTOAD],
-  wicka: [LUREWING, NOCTILURE],
-  sappa: [SPRIGWING, ARBORCREST],
-  snout: [TUNNELCLAW, EARTHREND],
-  thumpa: [SHALECLAW, CRAGJAWS],
-  rowl: [LASHRUNNER, VINEHUNTER],
-  sprigga: [LEMLEAF, LEMORIAN],
-  lungra: [BRIARPOUNCE, THORNLANCE],
-  magga: [LOOTVENT, HOARDBACK],
-  grazza: [PETALBLADE, BLOOMREAPER],
-  wurla: [SOILWHISTLE, WORMHERON],
-  grubba: [BLOSSOMHORN, FLORANTLER],
-  mudda: [WHEELMOTE, ROLLTERRA],
-  dippa: [CASKYBARA, RESERVARA],
-  middun: [MIDDUNSNAIL, HEARTHSNAIL],
-  sparra: [DUMMIBEAR, DUMMITITAN],
-  plucka: [ORCHIBELLE, ARBOANARI],
-  grista: [WHEATWHIRL, WHEATCHEEKS],
-  relka: [RELICRAWLER, AURELIAX],
-  wadd: [REEFFIN, TIDEHARVEST],
-  dowse: [HAMMERTIN, NAILWRIGHT],
-  vesp: [COMBWORKER, HIVEMASTER],
-  bedda: [BLOOMWHISK, FLORAMANE],
-  siffa: [STRIPFORGE, METALLOCURL],
-  ambra: [MAPLETAP, TAPSYLVAN],
-  ulva: [WEBLOOM, SILKWARD],
-  petta: [MEADOWTIDE, FLORACRUX],
-  kemma: [HUSHWING, SONGROOST],
-  sheela: [CLIPPEROO, SHEARLORD],
-  potta: [TERRABRICK, KILNSPIRE],
-  rippa: [SAWQUILL, TIMBERBACK],
-  papra: [PAPYRUSKIN, PRESSMERE],
-  springlet: [SPRINGSAIL, TIDECOURSER],
-  glimmip: [GLASCADE, PRISMETAIL],
-  snedda: [CANOPYSHAPER, GROVEMASTER],
-  tanna: [PELTIPEDE, HIDEWEAVER],
-  dulla: [MOSSSHEAR, MOSSREAVER],
-  carra: [TIMBERSPLIT, BEAMMASTER],
-  awla: [SPIRALTRUNK, SPIRALPHANT],
-  bura: [HAULBUD, CARGOCREST],
-  cindra: [EMBERBRUSH, ASHSWEEPER],
-  cudda: [MILKMERE, LACTISOVEREIGN],
-  quill: [PLUMECREST, FEATHERBOURNE],
-  flecha: [SABLEPLUME, FLETCHERCREST],
-  scurra: [BRISTLEWARD, STONEPOLISH],
-};
+export function loadWildermon(species: string): Promise<Line | undefined> {
+  const had = lines.get(species);
+  if (had) return Promise.resolve(had);
+  const load = LINES[species];
+  if (!load) return Promise.resolve(undefined);
+  let p = fetching.get(species);
+  if (!p) {
+    p = load().then((l) => {
+      lines.set(species, l);
+      return l;
+    }, () => undefined).finally(() => {
+      fetching.delete(species);
+      const due = owed.get(species) ?? [];
+      owed.delete(species);
+      for (const draw of due) draw();
+    });
+    fetching.set(species, p);
+  }
+  return p;
+}
 
-/** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */
-const TACKED: Partial<Record<string, { kinds: readonly Kind[]; seat: (stage: number) => number; grip: (stage: number) => V3; tuck: readonly number[] }>> = {
-  orse: { kinds: HARE_TACKED, seat: hareSeat, grip: hareGrip, tuck: HARE_TUCK },
-  springlet: { kinds: TIDE_TACKED, seat: tideSeat, grip: tideGrip, tuck: TIDE_TUCK },
-};
+/** Every line's models, for a harness or a tool that draws them all. */
+export async function loadAllWildermon(): Promise<void> {
+  await Promise.all(WILDERMON_SPECIES.map(loadWildermon));
+}
+
+/* ---- letting go ------------------------------------------------------------------------ */
+
+/** How long a line goes undrawn before what is kept for it is let go, in milliseconds. */
+export const FORGET_AFTER = 5 * 60_000;
+/** How often the lines are looked over for that, in milliseconds. */
+const SWEEP_EVERY = 30_000;
+/** When each line was last wanted, by species, on `performance.now()`'s clock. */
+const used = new Map<string, number>();
+let swept = 0;
+/** Told each body's key let go, for whatever else keeps pictures under it. */
+const forgetters: ((key: string) => void)[] = [];
+
+/** Calls `f` with each body's key (the name its pictures are kept under) whose line has been let go. */
+export function onWildermonForgotten(f: (key: string) => void): void {
+  forgetters.push(f);
+}
+
+/** The keys a line's bodies are kept under: each stage, and saddled. */
+function keysOf(species: string, l: Line): { key: string; kind: Kind }[] {
+  const out = [{ key: species, kind: l.kind }];
+  l.stages?.forEach((kind, i) => out.push({ key: `${species}@${i + 1}`, kind }));
+  l.tacked?.kinds.forEach((kind, i) => out.push({ key: `${species}@${i}+tack`, kind }));
+  return out;
+}
+
+/**
+ * Let go of what is kept for every line not wanted since `FORGET_AFTER` before `now`. Its module stays in, so drawn
+ * again it is only its pictures that are made afresh. The keys let go.
+ */
+export function sweepWildermon(now = performance.now()): string[] {
+  swept = now;
+  const gone: string[] = [];
+  for (const [species, at] of used) {
+    if (now - at < FORGET_AFTER) continue;
+    used.delete(species);
+    const l = lines.get(species);
+    if (!l) continue;
+    for (const { key, kind } of keysOf(species, l)) {
+      forgetBeast(key, kind);
+      clears.delete(key);
+      for (const f of forgetters) f(key);
+      gone.push(key);
+    }
+  }
+  return gone;
+}
+
+/** A line wanted now: kept, and the lines not wanted for a while let go. */
+function want(species: string): Line | undefined {
+  const now = performance.now();
+  used.set(species, now);
+  if (now - swept > SWEEP_EVERY) sweepWildermon(now);
+  const l = lines.get(species);
+  if (!l && species in LINES) void loadWildermon(species);
+  return l;
+}
+
+/* ---- drawing them ---------------------------------------------------------------------- */
 
 /** Whether a kind is drawn as a model here, or still by hand. */
-export const modelled = (species: string | undefined): boolean => !!species && species in WILDERMON;
+export const modelled = (species: string | undefined): boolean => !!species && species in LINES;
 
-/** The model a kind is drawn as at a stage, and the name its pictures are kept under. */
-function modelAt(species: string, stage = 0, tacked = false): { key: string; kind: Kind } | null {
-  const saddled = tacked ? TACKED[species]?.kinds[Math.max(0, Math.min(2, stage))] : undefined;
+/** The model a kind is drawn as at a stage, and the name its pictures are kept under; nothing while its line is on its way. */
+export function wildermonKind(species: string, stage = 0, tacked = false): { key: string; kind: Kind } | null {
+  const l = want(species);
+  if (!l) return null;
+  const saddled = tacked ? l.tacked?.kinds[Math.max(0, Math.min(2, stage))] : undefined;
   if (saddled) return { key: `${species}@${stage}+tack`, kind: saddled };
-  const later = stage > 0 ? WILDERMON_STAGES[species]?.[stage - 1] : undefined;
+  const later = stage > 0 ? l.stages?.[stage - 1] : undefined;
   if (later) return { key: `${species}@${stage}`, kind: later };
-  const kind = WILDERMON[species];
-  return kind ? { key: species, kind } : null;
+  return { key: species, kind: l.kind };
 }
 
 /** A wildermon with its feet at (sx, sy), as it is drawn at its stage. */
 export function drawWildermon(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, species: string, colors: [string, string], p: BeastPose, stage = 0, tacked = false): void {
-  const m = modelAt(species, stage, tacked);
+  const m = wildermonKind(species, stage, tacked);
   if (m) drawBeast(ctx, sx, sy, zoom, m.key, m.kind, colors, p);
 }
 
 /** How far over its feet the top of a kind is, standing, at zoom one: where its name and health bar go. */
 export function wildermonTop(species: string, stage = 0): number | undefined {
-  const m = modelAt(species, stage);
+  const m = wildermonKind(species, stage);
   if (!m) return undefined;
   return CLEARS.has(species) ? Math.max(topOf(m.key, m.kind), clearOf(m.key, m.kind)) : topOf(m.key, m.kind);
 }
@@ -303,7 +271,7 @@ function clearOf(key: string, kind: Kind): number {
 
 /** How high a rider sits on a kind at its stage, in screen pixels at zoom one over its feet, grown: where its model's saddle is. */
 export function wildermonSeat(species: string, stage = 0): number | undefined {
-  return TACKED[species]?.seat(stage);
+  return want(species)?.tacked?.seat(stage);
 }
 
 /**
@@ -311,21 +279,39 @@ export function wildermonSeat(species: string, stage = 0): number | undefined {
  * (`Seat.grip`) -- and how far the legs are drawn up (`Seat.tuck`).
  */
 export function wildermonSaddle(species: string, stage = 0): { grip: V3; tuck: number } | undefined {
-  const t = TACKED[species];
+  const t = want(species)?.tacked;
   return t && { grip: t.grip(stage), tuck: t.tuck[Math.max(0, Math.min(t.tuck.length - 1, stage))] };
 }
 
 /** Where a kind's head is over its feet at a facing, at zoom one (`headOf`): where the reins of a team come to. */
 export function wildermonHead(species: string, facing: number, stage = 0): [number, number] | null {
-  const m = modelAt(species, stage);
+  const m = wildermonKind(species, stage);
   return m ? headOf(m.key, m.kind, facing) : null;
 }
 
-/** A kind on its own, for a page; posed, for one that shows it walking, striking or at its task. */
+/**
+ * A kind on its own, for a page; posed, for one that shows it walking, striking or at its task. Asked for before its line
+ * is in, it is put down on `ctx` once it is, as `ctx` stood when it was asked for.
+ */
 export function drawWildermonPortrait(ctx: CanvasRenderingContext2D, w: number, h: number, species: string, colors: [string, string], facing = 1, ink?: string,
   stage = 0, pose?: Partial<Anim>, t = 0): void {
-  const m = modelAt(species, stage);
-  if (m) drawBeastPortrait(ctx, w, h, m.key, m.kind, colors, facing, ink, t, pose);
+  const m = wildermonKind(species, stage);
+  if (m) {
+    drawBeastPortrait(ctx, w, h, m.key, m.kind, colors, facing, ink, t, pose);
+    return;
+  }
+  if (!(species in LINES)) return;
+  const at = ctx.getTransform();
+  const due = owed.get(species) ?? [];
+  due.push(() => {
+    const later = wildermonKind(species, stage);
+    if (!later) return;
+    ctx.save();
+    ctx.setTransform(at);
+    drawBeastPortrait(ctx, w, h, later.key, later.kind, colors, facing, ink, t, pose);
+    ctx.restore();
+  });
+  owed.set(species, due);
 }
 
 export type { Anim };

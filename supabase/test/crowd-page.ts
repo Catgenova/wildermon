@@ -16,6 +16,7 @@
 import { Game, type IslandGround, type IslandPlaced } from '../../src/game/game';
 import type { IslandCreature } from '../../src/game/creatures';
 import { Renderer } from '../../src/render/renderer';
+import { loadAllWildermon } from '../../src/render/wildermon';
 import { FullscreenCanvas } from '../../src/engine/canvas';
 import { TileType } from '../../src/world/tiles';
 import { DAY_SECONDS } from '../../src/game/pace';
@@ -230,4 +231,6 @@ function frames(n: number, step: number, zoom: number, at: number, move: { pan?:
     afresh: { walls: (afresh.walls - was.walls) / n, floors: (afresh.floors - was.floors) / n, shades: (afresh.shades - was.shades) / n } };
 }
 
-(window as unknown as { crowd: unknown }).crowd = { frames, renderer };
+// Every line's models in (`loadAllWildermon`), as they are a moment after a body of the line is first drawn on the island:
+// `frames` draws its frames without letting the page fetch anything between them.
+(window as unknown as { crowd: unknown }).crowd = { frames, renderer, ready: loadAllWildermon() };

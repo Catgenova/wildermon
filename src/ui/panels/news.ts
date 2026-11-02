@@ -1,5 +1,6 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
-import { MONSTER_GROWTH } from '../../render/wild-upright';
+import { MONSTER_GROWTH } from '../../render/monster-size';
+import { FORGET_AFTER } from '../../render/wildermon';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
@@ -4225,6 +4226,11 @@ export const NEWS: News[] = [
     n: 394,
     day: '2026-10-30',
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
+  },
+  {
+    n: 429,
+    day: '2026-11-02',
+    lines: () => [`Changed: game start: 2.5 MB less code to download (8.9 MB to 6.4 MB). Each wildermon line's models load when one is first in view, its voice when one is first in earshot; until then, its name and health bar only. Lines not drawn for ${FORGET_AFTER / 60_000} minutes free their pictures.`],
   },
   {
     n: 424,

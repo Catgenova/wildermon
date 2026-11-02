@@ -4,6 +4,7 @@ import {
 } from './beasts';
 import { joint, mesh, ROOT, type Mat, type Mesh, type V3 } from './figure';
 import { blade, cut } from './beastkit';
+import { MONSTER_GROWTH } from './monster-size';
 
 /**
  * The ones that stand up: the three bad things of the high ground -- the
@@ -223,8 +224,7 @@ function goblinBuild(lod: number): Piece[] {
   ];
 }
 
-/** How much bigger the monsters are drawn than they were built to be. Asked: "Increase the base size of goblins, orcs, trolls, and dragons 5x". */
-export const MONSTER_GROWTH = 5;
+export { MONSTER_GROWTH };
 
 export const GOBLIN: Kind = {
   bones: (a) => bipedBones(GOBLIN_SPEC, a, (p: BipedPose) => {
