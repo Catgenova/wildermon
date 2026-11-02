@@ -24,20 +24,20 @@ import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CEL
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
 import { UNDONE_PLANS, type PlanAnswer } from './planarea';
-import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
+import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateShut, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
 import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { hiveTakes } from './bees';
-import { crateTheRest, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
+import { crateTheRest, CREATURE_CRATE, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
-import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON } from './creatures';
+import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -7203,7 +7203,11 @@ export class Game {
    * both — only a post keeps its creature on a short rein, and a deed does
    * not.
    */
-  workSite(c: Creature): { x: number; y: number; radius: number; post?: number } | null {
+  workSite(c: Creature): WorkSite | null {
+    // Round its keeper: the tile you stand on now, and its own range (`around.ts`, the island's `work_site`).
+    if (c.around) {
+      return { x: Math.floor(this.player.x), y: Math.floor(this.player.y), radius: creatureRules.workRangeOf(c, this.creatures.species(c)), around: true };
+    }
     const p = this.postOf(c);
     return p ? postSite(p) : this.deed;
   }
@@ -7231,25 +7235,37 @@ export class Game {
     p.worker = null;
     if (!c) return;
     c.post = null;
+    this.sendHome(c, `Post ${why}`);
+  }
+
+  /**
+   * Where a worker taken off its ground goes when it has nowhere of its own, as the island's `worker_return` has it:
+   * into an empty wildermon crate in your pack; else to your side, set down beside you, if you are walking alone;
+   * else to the settlement's keeping if it has a working slot free; else back to the wild. `lead` begins what you are
+   * told: "Post pulled up", "Work around me stopped".
+   */
+  sendHome(c: Creature, lead: string): void {
+    c.post = null;
+    c.around = null;
     c.state = 'idle';
     c.until = this.time;
     c.enemy = null;
     const into = emptyCrate(this);
     if (into) {
       shutIn(this, c, into);
-      this.logMsg(`Post ${why}: ${c.name} into the wildermon crate in your pack.`, 'wildermon');
+      this.logMsg(`${lead}: ${c.name} into the wildermon crate in your pack.`, 'wildermon');
     } else if (!this.creatures.active()) {
       c.mode = 'active';
       c.x = this.player.x;
       c.y = this.player.y;
-      this.logMsg(`Post ${why}: ${c.name} returns to you.`, 'wildermon');
+      this.logMsg(`${lead}: ${c.name} returns to you.`, 'wildermon');
     } else if (this.deed && this.creatures.workers().filter((w) => w !== c).length < this.workerCap) {
       // Back to the settlement it came from, as the island has it.
       c.mode = 'deed';
-      this.logMsg(`Post ${why}: ${c.name} back to work at ${this.deed.name}.`, 'wildermon');
+      this.logMsg(`${lead}: ${c.name} back to work at ${this.deed.name}.`, 'wildermon');
     } else {
       c.mode = 'wild';
-      this.logMsg(`Post ${why}: no empty wildermon crate, active slot taken, no settlement slot free. ${c.name} went wild.`, 'error');
+      this.logMsg(`${lead}: no empty wildermon crate, active slot taken, no settlement slot free. ${c.name} went wild.`, 'error');
     }
     this.events.emit('creature');
   }
@@ -9769,6 +9785,8 @@ export class Game {
   }
 
   deedStores(): DeedStore[] {
+    // Round its keeper, a worker's stores are the storage in reach of them while it steps (the island's `wurm.around`).
+    if (this.storeScope) return this.aroundStores(this.storeScope);
     // A field worker asks this for every tile it looks at, so build the list
     // once a tick. The entries hold the crates and pieces themselves, so what
     // is inside them is always current; only the set of them is cached.
@@ -9808,6 +9826,74 @@ export class Game {
   }
 
   private storeCache: { at: number; stamp: number; stores: DeedStore[] } | null = null;
+
+  /** The ground of the worker round you being stepped (`Creature.around`), whose stores `deedStores` answers with; else null. */
+  storeScope: WorkSite | null = null;
+
+  /**
+   * Storage within a worker's range of you that you may put into, the island's `around_stores`: crates you may put
+   * into (`crateShut`) and furniture that holds things you may open (`pieceShut`), carts, wagons and boats among it,
+   * within `site.radius` tiles of your tile (a square, from its middle); and the cart you pull, what you drive and the
+   * boat you ride in wherever they are. Not a stall, a trash crate, a mailbox, a hive, a pond or a barrel.
+   */
+  aroundStores(site: WorkSite): DeedStore[] {
+    const within = ([cx, cy]: [number, number]): boolean => Math.max(Math.abs(cx - (site.x + 0.5)), Math.abs(cy - (site.y + 0.5))) <= site.radius;
+    const out: DeedStore[] = [];
+    for (const cr of this.crates.values()) {
+      if (within(crateCentre(cr)) && !crateShut(this, cr, ', nothing goes in')) out.push(this.crateStore(cr));
+    }
+    const held = new Set<number>();
+    for (const f of [this.driving(), this.aboardShip()]) if (f) held.add(f.id);
+    for (const f of this.furniture.values()) if (f.hitched) held.add(f.id);
+    for (const f of this.furniture.values()) {
+      const def = furnitureDef(f.kind);
+      if (!held.has(f.id) && !within(furnitureCentre(f))) continue;
+      if (def.stall || f.kind === 'mailbox' || def.hive || def.pond || holdsLiquid(f) || pieceShut(this, f)) continue;
+      const store = this.furnitureStore(f);
+      if (store) out.push(store);
+    }
+    return out;
+  }
+
+  /**
+   * A worker round you back where it came from, as the island's `around_end`: what is in its arms into storage in
+   * reach of you, else your pack; then into the crate it came out of while that is empty and in your pack or
+   * standing; or following you while nothing else does; or where a worker off a post goes (`sendHome`).
+   */
+  endAround(c: Creature, lead: string): void {
+    const was = c.around;
+    if (!was) return;
+    const site = this.workSite(c);
+    for (const it of creatureRules.takeArms(c)) {
+      const room = site ? this.aroundStores(site).filter((st) => st.room(it)) : [];
+      const to = room.find((st) => st.bin) ?? room.sort((a, b) => Math.hypot(a.centre[0] - c.x, a.centre[1] - c.y) - Math.hypot(b.centre[0] - c.x, b.centre[1] - c.y))[0];
+      if (!to?.add(it)) this.inventory.addItem(it);
+    }
+    c.around = null;
+    c.state = 'idle';
+    c.until = this.time;
+    c.enemy = null;
+    c.idle = null;
+    if (was.was === 'crate') {
+      const item = was.item !== undefined ? this.inventory.items.find((it) => it.uid === was.item && it.id === CREATURE_CRATE && it.creature === undefined) : undefined;
+      const piece = was.placed !== undefined ? this.furniture.get(was.placed) : undefined;
+      const crate = item ?? (piece && piece.kind === CREATURE_CRATE && piece.creature === undefined ? piece : undefined);
+      if (crate) {
+        shutIn(this, c, crate);
+        this.logMsg(`${lead}: ${c.name} into its crate.`, 'wildermon');
+        this.events.emit('creature');
+        return;
+      }
+    } else if (!this.creatures.active()) {
+      c.mode = 'active';
+      c.x = this.player.x;
+      c.y = this.player.y;
+      this.logMsg(`${lead}: ${c.name} follows you.`, 'wildermon');
+      this.events.emit('creature');
+      return;
+    }
+    this.sendHome(c, lead);
+  }
 
   /** Put something away; false when it would not fit. */
   furnitureAdd(f: PlacedFurniture, item: Item): boolean {

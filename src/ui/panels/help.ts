@@ -138,6 +138,7 @@ import { LYE_USE, OVEN_CAPACITY, SHORE_REACH } from '../../game/placeables';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STAND, MAX_STEP, SWIM_DEPTH } from '../../game/player';
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
+import { aroundStoreTrades } from '../../game/around';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { TREE_DEPTH } from '../recipetree';
@@ -2031,6 +2032,17 @@ export function helpText(): string {
       set down beside you, if nothing does; else <b>works on your settlement</b> if a working slot is free; else back to the wild.</li>
       <li>Can be pulled up early; comes up as worn as it was.</li>
       <li>A post's worker is <b>not</b> counted against your settlement level's working slots.</li>
+    </ul>
+    <h3>Work around me</h3>
+    <ul>
+      <li><b>Work around me</b> (a wildermon's menu, or its row in the Wildermon window): <b>one</b>, following you within ${POST_FOLLOW_REACH} tiles or in a crate in your pack or beside you.
+      Works its task within <b>its own work range of you</b>, measured from the tile you stand on as you move.</li>
+      <li>Storage: crates and storage furniture you may put into, carts, wagons and boats included, within that range; the cart you pull, what you drive and the boat you are in, wherever they are. Not stalls, trash crates, mailboxes, hives, ponds or barrels.</li>
+      <li>Loads: the bin that takes them first, then the nearest store with room. No storage in reach: &ldquo;${idleSays({ why: 'nostore', n: SPECIES.rabba.workRange, around: true }, 'forage')}&rdquo; Full: &ldquo;${idleSays({ why: 'full', n: 0, around: true }, 'forage')}&rdquo; Nothing is dropped.</li>
+      <li>Tasks: every gathering task, as on a post; and at the stores ${listed(aroundStoreTrades())}, makings out of storage in reach. Settlement only: guarding, stoking, sparring and every task at settlement stations, buildings or wildermon.</li>
+      <li><b>Stop</b> (status panel, or <b>Stop work around me</b> on its menu): each goes back, first that applies: into the crate it came out of, if still in your pack or standing and empty; following you, if it was and nothing else follows;
+      else as a post's worker goes. On the island it also stops when you go offline.</li>
+      <li>Not counted against your settlement level's working slots.</li>
     </ul>
     <h3>Raw materials, worked materials, seed, sprouts, rubbish, and something to pull it in</h3>
     <ul>

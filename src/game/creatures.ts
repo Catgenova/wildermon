@@ -4619,7 +4619,7 @@ export const mayEat = (species: SpeciesDef, item: Item): boolean =>
   isBaitFor(species, item.id) && !item.locked && item.price === undefined;
 /** What a wild one does to feed itself; felling trees puts no food in its belly. */
 /** The jobs that are errands rather than a walk out for a load of something. */
-const ERRAND_JOBS = new Set<GatherKind>(['water', 'hod', 'mend', 'plant', 'prospect', ...TEND_JOBS]);
+export const ERRAND_JOBS = new Set<GatherKind>(['water', 'hod', 'mend', 'plant', 'prospect', ...TEND_JOBS]);
 const INDOOR_JOBS = new Set<GatherKind>(['woodcut', 'farm', 'mine', 'sand', 'clay', 'quarry', 'stoke', 'fetch', 'guard', 'hunt', 'water', 'prospect', 'plant', 'hod', 'mend', 'compost', 'seek', 'prune', 'stump', ...TEND_JOBS, 'bush', 'grass', 'pan', 'worm', 'sprout', 'resin', 'flower', 'scrub', 'moss']);
 export const wildGather = (species: SpeciesDef): GatherKind | null => (species.gathers && INDOOR_JOBS.has(species.gathers) ? 'forage' : species.gathers);
 /** The task skill a species trains, if it has a job. */
@@ -4740,6 +4740,8 @@ export interface WorkSite {
   radius: number;
   /** Set when the site is a post rather than the settlement. */
   post?: number;
+  /** Set when the site is its keeper's tile: it works round them (`Creature.around`). */
+  around?: boolean;
 }
 
 /** How far this worker ranges from this site. */
@@ -5254,6 +5256,10 @@ export interface IslandCreature {
   hitchedTo?: number | null;
   /** The work post it works out of, when it does; absent from older islands. */
   post?: number | null;
+  /** Yours: where it came from while it works round you (`AroundFrom`), else null. */
+  around?: AroundFrom | null;
+  /** Whether a worker of yours idle (`idleWhy`) works round you. */
+  idleAround?: boolean;
   /** The trade a worker was set to, which is its species' own unless it was told otherwise. */
   job?: string | null;
   /*
@@ -5572,6 +5578,21 @@ export interface Creature {
    * rots through under it.
    */
   post: number | null;
+  /**
+   * Set while it works round its keeper (`around.ts`): where it came from, which is where it goes back to. Its ground
+   * is its keeper's tile, its stores the storage in reach of them (`Game.aroundStores`). The island's `around`.
+   */
+  around?: AroundFrom | null;
+}
+
+/**
+ * Where a wildermon working round its keeper came from: a crate in the pack (`item`, its uid) or standing (`placed`,
+ * the piece's id), or following them. The island's `creature.around`.
+ */
+export interface AroundFrom {
+  was: 'crate' | 'follow';
+  item?: number;
+  placed?: number;
 }
 
 export type FarmJob = 'sow' | 'tend' | 'harvest';
@@ -6210,6 +6231,8 @@ export class Creatures {
       if (r.hitchedTo !== undefined) c.hitchedTo = r.hitchedTo;
       // And which work post it works out of, which the island kept and never said: every worked post read as idle.
       if (r.post !== undefined) c.post = r.post;
+      // And where it came from while it works round you, for your own (`around`).
+      if (r.around !== undefined) c.around = r.around ?? null;
       // The working life, which comes for yours and for nobody else's.
       if (r.care !== undefined) {
         c.care = r.care;
@@ -6241,7 +6264,7 @@ export class Creatures {
       // Why it is standing about, and what it did yesterday: the island's words for both, said on its card here (`idleSays`).
       if (r.idleWhy !== undefined) {
         c.idle = r.idleWhy && (IDLE_WHYS as readonly string[]).includes(r.idleWhy)
-          ? { why: r.idleWhy as IdleWhy, n: r.idleN ?? 0, post: !!r.idlePost, ...(r.idleBed ? { bed: r.idleBed } : {}), ...(r.idleWhat?.length ? { what: r.idleWhat } : {}) }
+          ? { why: r.idleWhy as IdleWhy, n: r.idleN ?? 0, post: !!r.idlePost, ...(r.idleAround ? { around: true } : {}), ...(r.idleBed ? { bed: r.idleBed } : {}), ...(r.idleWhat?.length ? { what: r.idleWhat } : {}) }
           : null;
       }
       if (r.ledger !== undefined) c.ledger = r.ledger;
@@ -6521,7 +6544,12 @@ export class Creatures {
    * by keeper.
    */
   workers(): Creature[] {
-    return [...this.list.values()].filter((c) => c.mode === 'deed' && c.post === null && c.mine !== false);
+    return [...this.list.values()].filter((c) => c.mode === 'deed' && c.post === null && !c.around && c.mine !== false);
+  }
+
+  /** Yours working round you (`around.ts`), by id. */
+  aroundYou(): Creature[] {
+    return [...this.list.values()].filter((c) => c.mode === 'deed' && !!c.around && c.mine !== false).sort((a, b) => a.id - b.id);
   }
 
   /** Everything of yours at work anywhere, posts included. */
@@ -8665,9 +8693,15 @@ export class Creatures {
    */
   private intoStores(game: Game, item: Item, at: DeedStore | null, x: number, y: number, made = true): void {
     if (made && this.making) this.making.push([item.id, item.count]);
-    const to = at && at.room(item) ? at : game.deedStores().find((st) => st.room(item));
+    // Round its keeper, the bin that takes it, else the nearest store in reach with room, and the keeper's pack before
+    // the ground (the island's `worker_put`, off `worker_store`).
+    const to = game.storeScope ? this.nearestRoom(game.deedStores(), item, x + 0.5, y + 0.5) : at && at.room(item) ? at : game.deedStores().find((st) => st.room(item));
     if (to && to.add(item)) {
       to.changed();
+      return;
+    }
+    if (game.storeScope) {
+      game.inventory.addItem(item);
       return;
     }
     game.dropOnGround(x, y, item);
@@ -8862,6 +8896,8 @@ export class Creatures {
     const job = this.recipeInStores(game, recipes);
     if (!job) return this.why(c, 'stock');
     const { recipe: r, at } = job;
+    // Round its keeper, only with room in storage in reach for what it makes (the island's `around_room`).
+    if (c.around && !this.roomFor(game, c, { uid: 0, id: r.result, ql: 1, dmg: 0, count: (r.count ?? 1) + more })) return this.why(c, 'full');
     if (!goto(at.centre[0], at.centre[1])) return true;
     this.workRecipe(game, c, r, at, at.x, at.y, true, more);
     this.moreRecipes(game, c, recipes, at, at.x, at.y, more);
@@ -8877,6 +8913,7 @@ export class Creatures {
     for (let n = 1; n < stageLoads(c); n++) {
       const next = this.recipeInStores(game, recipes);
       if (!next) return;
+      if (c.around && !this.roomFor(game, c, { uid: 0, id: next.recipe.result, ql: 1, dmg: 0, count: (next.recipe.count ?? 1) + more })) return;
       this.workRecipe(game, c, next.recipe, at, x, y, false, more);
     }
   }
@@ -10304,7 +10341,7 @@ export class Creatures {
 
   /** Nothing to do, and why (`IdleWhy`): kept on it for its card, and false, for a step to return. The island's `idle_why`. */
   private why(c: Creature, why: IdleWhy, n = 0, what?: string[]): false {
-    c.idle = { why, n, post: c.post !== null, ...(what?.length ? { what } : {}) };
+    c.idle = { why, n, post: c.post !== null, ...(c.around ? { around: true } : {}), ...(what?.length ? { what } : {}) };
     return false;
   }
 
@@ -10453,7 +10490,13 @@ export class Creatures {
   private updateWorker(c: Creature, dt: number, game: Game): void {
     // The time onto its lifetime, by why it stood about for it, or at work for nothing (`workTime`).
     if (c.mode === 'deed') c.work = workTime(c.work, dt, c.idle?.why);
-    this.workerStep(c, dt, game);
+    // Round its keeper, the stores it reads are the storage in reach of them while it steps (the island's `wurm.around`).
+    game.storeScope = c.around ? game.workSite(c) : null;
+    try {
+      this.workerStep(c, dt, game);
+    } finally {
+      game.storeScope = null;
+    }
     /*
      * Off its ground, which is what its card says until it is back on it,
      * whatever else it is about: the island walks it home before anything
@@ -10464,7 +10507,7 @@ export class Creatures {
     const off = Math.max(Math.abs(site.x + 0.5 - c.x), Math.abs(site.y + 0.5 - c.y)) > siteRange(c, this.species(c), site) + HOME_SLACK;
     // Resting is what it is doing wherever it rests, as the island's rest comes before its walk home.
     if (c.state === 'rest' || c.state === 'toBed') return;
-    if (off) c.idle = { why: 'far', n: Math.hypot(site.x + 0.5 - c.x, site.y + 0.5 - c.y), post: c.post !== null };
+    if (off) c.idle = { why: 'far', n: Math.hypot(site.x + 0.5 - c.x, site.y + 0.5 - c.y), post: c.post !== null, ...(c.around ? { around: true } : {}) };
     else if (c.idle?.why === 'far') c.idle = null;
   }
 
@@ -10513,6 +10556,22 @@ export class Creatures {
     }
     if (kind === 'hunt' && !c.carrying && c.state !== 'forage') {
       if (this.packHunt(game, c, dt, deed)) return;
+    }
+    // Round its keeper and off its ground, its keeper having walked on: back toward them before anything else, between
+    // jobs, as the island's `worker_settle` walks one back that is past its range and `HOME_SLACK`.
+    if (c.around && (c.state === 'idle' || c.state === 'wander')
+      && Math.max(Math.abs(deed.x + 0.5 - c.x), Math.abs(deed.y + 0.5 - c.y)) > siteRange(c, def, deed) + HOME_SLACK) {
+      if (this.stepToward(game, c, deed.x + 0.5, deed.y + 0.5, dt) === 'blocked') c.until = game.time + 2;
+      return;
+    }
+    // Round its keeper with no storage in reach of them: it does not set out (the island's `nostore`).
+    if (c.around && !c.carrying && (c.state === 'idle' || c.state === 'wander') && !game.aroundStores(deed).length) {
+      this.why(c, 'nostore', deed.radius);
+      if (c.state !== 'wander' && game.time >= c.until) {
+        this.wanderTarget(game, c, 3, deed.x + 0.5, deed.y + 0.5);
+        c.until = game.time + this.idleRest(c);
+      }
+      return;
     }
     if (kind && ERRAND_JOBS.has(kind) && c.state !== 'forage') {
       // Whatever it finds to do clears why it had nothing; a step that finds nothing says why (`why`).
@@ -10580,7 +10639,7 @@ export class Creatures {
         this.why(c, 'full');
         if (game.time - c.noRoomAt > 60) {
           c.noRoomAt = game.time;
-          game.logMsg(`${c.name} holding ${itemDef(c.carrying.id).name.toLowerCase()}: settlement storage full.`, 'error');
+          game.logMsg(`${c.name} holding ${itemDef(c.carrying.id).name.toLowerCase()}: ${c.around ? 'storage in reach' : 'settlement storage'} full.`, 'error');
         }
         this.wanderTarget(game, c, 2, deed.x + 0.5, deed.y + 0.5);
         c.state = 'wander';
@@ -10711,7 +10770,7 @@ export class Creatures {
       }
       // Nothing lying about: a magga on its settlement sorts the stores into the bins (`sortStack`), the island's
       // `worker_settle` off `sort_stack`.
-      const sort = kind === 'fetch' && c.post === null ? this.sortStack(game, c) : null;
+      const sort = kind === 'fetch' && c.post === null && !c.around ? this.sortStack(game, c) : null;
       if (sort) {
         c.idle = null;
         c.job = null;
@@ -10785,9 +10844,33 @@ export class Creatures {
     // the load is.
     const bin = nearest(stores.filter((s) => s.bin));
     if (bin) return bin;
-    const own = near.length ? undefined : stores.find((s) => s.deed);
+    // Round its keeper there is no settlement crate to fill first: the bin, then the nearest (`around_stores`).
+    const own = near.length || c.around ? undefined : stores.find((s) => s.deed);
     if (own) return own;
     return nearest(stores) ?? stores[0];
+  }
+
+  /** Whether a store this worker would take this to has room for it (`storeFor`). */
+  private roomFor(game: Game, c: Creature, item: Item): boolean {
+    return !!this.storeFor(game, c, item);
+  }
+
+  /** Of these stores, the bin that takes this, else the nearest to (`x`, `y`) with room for it; null with none. */
+  private nearestRoom(stores: DeedStore[], item: Item, x: number, y: number): DeedStore | null {
+    const room = stores.filter((s) => s.room(item));
+    const near = (of: DeedStore[]): DeedStore | null => {
+      let best: DeedStore | null = null;
+      let bestD = Infinity;
+      for (const s of of) {
+        const d = Math.hypot(s.centre[0] - x, s.centre[1] - y);
+        if (d < bestD) {
+          bestD = d;
+          best = s;
+        }
+      }
+      return best;
+    };
+    return near(room.filter((s) => s.bin)) ?? near(room);
   }
 
   /**

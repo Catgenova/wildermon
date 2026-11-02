@@ -190,6 +190,7 @@ export function shutIn(g: Game, c: Creature, crate: Item | PlacedFurniture): voi
   // Every load of a trip in its arms, not only the last.
   for (const it of takeArms(c)) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), it);
   c.mode = 'stored';
+  c.around = null;
   c.enemy = null;
   c.state = 'idle';
   c.moving = false;

@@ -157,6 +157,10 @@ export class Hud {
   private gridBtn: HTMLButtonElement | null = null;
   private compass: HTMLSpanElement;
   private companionEl: HTMLDivElement;
+  /** Work around me, while any of yours works round you: how many, and Stop (`around.ts`). */
+  private aroundEl: HTMLDivElement;
+  private aroundText = document.createElement('span');
+  private aroundStop!: HTMLButtonElement;
   private gearEl: HTMLDivElement;
   private eatBtn!: HTMLButtonElement;
   private stanceBtn!: HTMLButtonElement;
@@ -325,6 +329,20 @@ export class Hud {
     this.feedBtn.addEventListener('click', () => this.feedCompanion());
     this.companionEl.append(this.feedBtn);
     status.append(this.companionEl);
+    /*
+     * Work around me, while it lasts: an action of yours that goes on while you walk, so it is shown here, beside your
+     * companion, rather than on the action bar, which is for the one job in your hands and is put down by a step.
+     */
+    this.aroundEl = document.createElement('div');
+    this.aroundEl.className = 'hud-companion hud-around';
+    this.aroundEl.hidden = true;
+    this.aroundStop = document.createElement('button');
+    this.aroundStop.type = 'button';
+    this.aroundStop.className = 'hud-mini';
+    this.aroundStop.textContent = 'Stop';
+    this.aroundStop.addEventListener('click', () => this.stopAround());
+    this.aroundEl.append(this.aroundText, this.aroundStop);
+    status.append(this.aroundEl);
     root.append(status);
     /*
      * On a phone the status panel is the bars at the foot of the screen, and a
@@ -701,6 +719,13 @@ export class Hud {
   }
 
   /** Feed your companion the poorest thing it will take, and keep the rest. */
+  /** Stop Work around me: every one of yours working round you back where it came from. */
+  private stopAround(): void {
+    const first = this.game.creatures.aroundYou()[0];
+    const def = ACTION_BY_ID.get('stop_work_around');
+    if (first && def) this.game.requestAction(def, { kind: 'creature', id: first.id });
+  }
+
   private feedCompanion(): void {
     const c = this.game.creatures.active();
     if (!c) return;
@@ -872,6 +897,14 @@ export class Hud {
         : `No food for ${companion.name}, no bucket of whey`);
       this.companionEl.hidden = false;
     } else this.companionEl.hidden = true;
+    const around = this.game.creatures.aroundYou();
+    if (around.length) {
+      const idle = around.filter((c) => c.idle && c.idle.why !== 'rest' && c.idle.why !== 'bed' && c.idle.why !== 'tired').length;
+      this.say(this.aroundText, `Work around me: ${around.length}${idle ? ` · ${idle} idle` : ''} `);
+      this.tip(this.aroundEl, around.map((c) => c.name).join(', '));
+      this.tip(this.aroundStop, `Stop work around me: ${around.length} back to crate or to following`);
+      this.aroundEl.hidden = false;
+    } else this.aroundEl.hidden = true;
     const food = this.game.bestFood();
     this.eatBtn.disabled = !food;
     this.tip(this.eatBtn, food ? `Eat ${itemName(food).toLowerCase()} (best food carried)` : 'No food');
