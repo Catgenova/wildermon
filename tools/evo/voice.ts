@@ -3,7 +3,7 @@
  * written out as a WAV and drawn as a spectrogram, for a reviewer who cannot
  * listen. `node tools/evo/voice.mjs <species> <outdir>`.
  */
-import { VOICES } from '../../src/audio/voices';
+import { loadAllVoices } from '../../src/audio/voices';
 import type { BeastAct } from '../../src/game/events';
 
 const species = (window as unknown as { SPECIES: string }).SPECIES;
@@ -60,7 +60,7 @@ function spectrogram(buf: AudioBuffer, label: string): string {
 }
 
 (async () => {
-  const voice = VOICES[species] ?? {};
+  const voice = (await loadAllVoices())[species] ?? {};
   for (const act of Object.keys(voice) as BeastAct[]) {
     for (const stage of [0, 1, 2]) {
       const ctx = new OfflineAudioContext(1, RATE * SECS, RATE);

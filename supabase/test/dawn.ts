@@ -16,12 +16,12 @@
  *
  * So this asks four things:
  *
- *   * `tree_day` still hands `select into` a line rather than a folded line,
+ *   * `tree_day_part` (the whole of a day, or a part of one) still hands `select into` a line rather than a folded line,
  *     which a future edit could undo in one character and nothing would say;
  *   * the cliff is real, measured here rather than asserted, and the appended
  *     read does not go over it;
  *   * the island's dawn is nine in the morning at UTC-4, and the tick is wound
- *     for that hour and no other;
+ *     every five seconds, a day under way carried on in parts (20261101320200);
  *   * and a day owed is still a day taken, on a real island, with the trees
  *     older at the end of it.
  *
@@ -86,19 +86,19 @@ select 'READ|' || case
   when body not like '%select t.tiles || ''''::bytea, t.data || ''''::bytea into v_tiles, v_data%'
     then 'neither, so somebody has moved the read'
   else 'unpacked' end
-from (select pg_get_functiondef('public.tree_day(uuid)'::regprocedure) as body) f;
+from (select pg_get_functiondef('public.tree_day_part(uuid, timestamp with time zone)'::regprocedure) as body) f;
 insert into said
 select 'CORNERS|' || case
   when body like '%join land_corner c0%' then 'joined a byte at a time'
   when body like '%select c.heights || ''''::bytea, c.dirt || ''''::bytea into v_h0, v_d0%' then 'unpacked'
   else 'neither, so somebody has moved the read' end
-from (select pg_get_functiondef('public.tree_day(uuid)'::regprocedure) as body) f;
+from (select pg_get_functiondef('public.tree_day_part(uuid, timestamp with time zone)'::regprocedure) as body) f;
 insert into said
 select 'GROUND|' || case
   when body like '%join land_tile t on t.world_id = p_world and t.y = c.gy%' then 'joined per candidate'
   when body like '%select string_agg(t.tiles, ''''::bytea order by t.y) into v_ground%' then 'a band read once'
   else 'neither, so somebody has moved the read' end
-from (select pg_get_functiondef('public.tree_day(uuid)'::regprocedure) as body) f;
+from (select pg_get_functiondef('public.tree_day_part(uuid, timestamp with time zone)'::regprocedure) as body) f;
 
 -- 1b. b_i16, inlined, and the same answer as ever for every value it can be handed.
 -- Asked of a column, because handed a constant the planner works the answer
@@ -402,8 +402,9 @@ check('and the last dawn is that hour, behind us, with the next one a day on',
   said('DAWN') === '13:00:00|behind us|a day on', said('DAWN'));
 check('the tick still asks whether a day is owed since that dawn',
   said('GATE') === 'last dawn', said('GATE'));
-check('and where there is a cron to wind, it is wound for every minute of that hour and no other, with five minutes a go',
-  said('CRON') === "* 13 * * *|set statement_timeout = '5min'; select public.tree_tick()" || said('CRON') === 'no cron here', said('CRON'));
+check('and where there is a cron to wind, it is wound every five seconds (every minute on a pg_cron that cannot count seconds), with a minute a go',
+  ["5 seconds|set statement_timeout = '1min'; select public.tree_tick()",
+   "* * * * *|set statement_timeout = '1min'; select public.tree_tick()", 'no cron here'].includes(said('CRON')), said('CRON'));
 
 const [before, after, marked, isles] = said('DAY').split('|');
 check('a day owed is a day taken: the tree is older',

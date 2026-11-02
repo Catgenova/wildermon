@@ -27,8 +27,9 @@ The island and the browser must agree: every rule lives on both sides, and tests
 - Add any new rpc or table readable by `authenticated` to `supabase/test/permissions.allow.ts`.
 
 ## Look and voice
-- Models: `src/render/wild-<kind>.ts`, one model per stage (idle, walk, work act, evolve), registered in `src/render/wildermon.ts`.
-- Voice: `src/audio/voice-<kind>.ts`, registered in `src/audio/voices.ts`.
+- Models: `src/render/wild-<kind>.ts`, one model per stage (idle, walk, work act, evolve), registered in `LINES` in `src/render/wildermon.ts` as an `import()` (each line is fetched when first drawn).
+- Voice: `src/audio/voice-<kind>.ts`, registered in `src/audio/voices.ts` as an `import()`.
+- Never import a `wild-*` or `voice-*` module by name from anywhere else (a constant other code needs goes in a module of its own, like `src/render/monster-size.ts`): `supabase/test/wildlines.ts` fails on it, as it would put the line back in the start bundle.
 - Render each stage to PNGs and rate it against the user's reference sheet, including at game zoom next to an existing line.
 - Iterate to at least 9/10, then send the PNGs.
 - **Never ship visuals until the user says "ship it".** Build the line in a worktree branch and merge it only after approval.

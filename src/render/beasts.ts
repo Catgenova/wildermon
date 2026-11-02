@@ -2453,3 +2453,25 @@ export function bipedBones(s: BipedSpec, a: Anim, own?: (p: BipedPose, a: Anim) 
   for (const key of ['ll', 'lr']) for (const y of [0.5, -0.3]) low = Math.min(low, place(b[`${key}2`], [0, y, -s.leg.len[2]])[2]);
   return lifted(b, -low + p.lift);
 }
+
+/**
+ * Everything kept for one body (`id`, the name its pictures are kept under), let go: its pieces, pictures, loops, measures and
+ * colours. For a kind not drawn for a while (`wildermon.ts`); drawn again, it is all made afresh.
+ */
+export function forgetBeast(id: string, kind: Kind): void {
+  const mine = (key: string): boolean => key === id || key.startsWith(`${id}|`);
+  for (const kept of [kits, heads, loops, standMaps, reach, palettes, portraits, setUsed] as Map<string, unknown>[]) {
+    for (const key of kept.keys()) if (mine(key)) kept.delete(key);
+  }
+  for (const [key, f] of frames) {
+    if (!mine(key)) continue;
+    frames.delete(key);
+    framePixels -= f.px;
+  }
+  shapes.delete(kind);
+}
+
+/** For a harness: how much is kept for the bodies drawn, all told. */
+export function beastsKept(): { kits: number; frames: number; framePixels: number; loops: number; portraits: number; palettes: number } {
+  return { kits: kits.size, frames: frames.size, framePixels, loops: loops.size, portraits: portraits.size, palettes: palettes.size };
+}
