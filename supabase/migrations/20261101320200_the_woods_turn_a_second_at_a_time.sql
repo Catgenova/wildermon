@@ -31,7 +31,9 @@ create or replace function tree_part_secs() returns double precision language sq
 
 /** A day in the woods under way: which part, where in it, and what it has found so far. */
 create table if not exists private.tree_run (
-  world_id uuid primary key references public.world(id) on delete cascade,
+  -- No key to `world`: adding one locks `world` against the stocking clock's stamp, and a deploy would wait on it.
+  -- A run whose island has gone is never picked (`tree_tick` asks `world`) and is cleared if it is asked for.
+  world_id uuid primary key,
   -- 1 the lines, 2 the seeding, 3 the rolls, 4 the planting, 5 the rest.
   phase int not null default 1,
   -- The next line (1, 2, 4) or the next pick (3).
