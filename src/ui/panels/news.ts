@@ -4242,6 +4242,15 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 454,
+    day: '2026-11-02',
+    lines: () => {
+      const d = SPECIES.simma, [one, two] = d.stages!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('simma')}.`,
+        'Each stage: own model, animations and voice.'];
+    },
+  },
+  {
     n: 453,
     day: '2026-11-02',
     lines: () => ['Added: field guide search: name, line or task of the kinds seen; kinds not seen hidden while searching.'],

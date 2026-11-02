@@ -2,14 +2,14 @@ import {
   add, beat, coatPalette, curve, cyc, disc, merge, moved, orb, orbAlong, paint, quadBonesOf, taper, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
-import { blade, cut, earMesh, pawMesh, quadPieces, type QuadLook } from './beastkit';
+import { cut, earMesh, pawMesh, quadPieces, type QuadLook } from './beastkit';
 import { place, type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 import { links, snout } from './wild-hands';
 
 /**
- * More of the settlement's hands: the forga, the cindra, the hoppa,
- * and the simma (the scurra is the Wallkit now, `./wild-wall`, the bedda
+ * More of the settlement's hands: the forga, the cindra and the hoppa
+ * (the simma is the Brothlet now, `./wild-broth`, the scurra is the Wallkit now, `./wild-wall`, the bedda
  * the Sprigkit, `./wild-calico`, the petta the Briarling, `./wild-goat`, the potta the
  * Kilnlet, `./wild-kiln`, the
  * ambra the Saplet, `./wild-maple`, the relka the Kintsu, `./wild-relic`,
@@ -123,49 +123,3 @@ export const HOPPA: Kind = {
   size: 1.6,
 };
 
-/* ---- the simma: a wooden spoon for a tail ------------------------------------------- */
-
-const SIMMA_SPEC: QuadSpec = { ...pawed({ high: 1.3, len: 2.3, legs: 0.7, neck: 0.3, lean: 50, swing: [22, 36], ears: [35, 20], tail: [0.5, 40, 12] }), nose: 12 };
-const SIMMA_HEAD = { c: [0, 0.3, 0.15] as V3, r: [1.08, 1.0, 0.92] as V3 };
-
-function simmaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = SIMMA_HEAD;
-  // A wooden spoon: a long handle and a round bowl at the end, held up behind.
-  const spoon = merge(
-    taper([[0, 0.05, 0], [0, -0.25, 0]], 0.13, 0.08, n, 'coat'),
-    tube([[0, -0.25, 0], [0, -0.75, 0.02]], 0.05, 0.045, 6, 'wood'),
-    orbAlong([0, -0.95, 0.03], [0, 1, 0], [0.2, 0.08, 0.26], 8, 4, 'wood'),
-    paint([disc([0, -0.95, 0.115], [0, 0, 1], 0.15, 0.2, 8, 'woodDark')]),
-  );
-  // A white kerchief tied round its neck.
-  const kerchief = merge(tube([[0, 0, 0.0], [0, 0, 0.12]], 0.4, 0.4, 10, 'cap', { seam: 'both' }), blade(curve([0, 0.3, -0.05], [0, 0.42, -0.25], [0, 0.4, -0.45], 3), [0.14, 0.2, 0.12, 0.02], [0, 1, -0.3], { mat: 'cap' }));
-  return quadPieces({
-    n, k,
-    body: barrel(2.4, 1.25, 1.0, 0.06),
-    neck: { w: 0.66, h: 0.66, len: 0.3 },
-    head: { c: H.c, r: H.r, face: snout(1.05, -0.22, [0.42, 0.32, 0.36], 0.12, n, k), eye: { dir: [0.74, 0.52, 0.34], size: 0.31, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.22] },
-    ear: earMesh(0.4, 0.28, n),
-    earTurn: 35,
-    tail: [spoon],
-    ...paws(n, k, 0.7, 0.28, 0.24, 'coatLight'),
-    extras: [{ key: 'kerchief', mesh: kerchief, bone: 'neck', bias: 0.05, after: ['body', 'neck'] }],
-  });
-}
-
-export const SIMMA: Kind = {
-  bones: quadBonesOf(SIMMA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it stirs: the spoon going round.
-    if (a.go <= 0) {
-      const stir = beat(a.t, [3.6, 12.2, 19.8], 2.4);
-      p.tail[1] += 18 * Math.sin(a.t * TAU * 1.2) * stir;
-      p.tail[0] += 10 * Math.cos(a.t * TAU * 1.2) * stir;
-    }
-  }),
-  build: simmaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ wood: [190, 140, 92], woodDark: [140, 100, 66], cap: [250, 248, 240] }), 30),
-  shadow: [1.5, 1.3],
-  stride: 1.35,
-  size: 1.6,
-};
