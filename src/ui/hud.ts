@@ -23,6 +23,7 @@ import { feedFill } from '../game/creatureActions';
 import { EffectRow } from './effects';
 import { TRACK_SHOW } from '../game/tracking';
 import type { Tooltip } from './tooltip';
+import { nextFrame } from './repaint';
 
 export interface HudCallbacks {
   toggle: (id: string) => void;
@@ -486,7 +487,8 @@ export class Hud {
     }
     root.append(this.beltEl);
     this.numbersTaken = cb.numbersTaken;
-    this.game.events.on('inventory', () => this.drawBelt());
+    // Once a frame however many words the pack had in it (`nextFrame`).
+    this.game.events.on('inventory', () => nextFrame.soon(this.beltEl, () => this.drawBelt()));
     this.drawBelt();
 
     /*

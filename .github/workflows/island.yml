@@ -1085,6 +1085,21 @@ jobs:
           npx esbuild supabase/test/hoverkeep.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/hoverkeep.mjs --log-level=error
           node node_modules/.cache/hoverkeep.mjs
+      - name: The pack, the skill book and the belt drawn once a frame
+        if: matrix.shard == 1
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          FRAMEBATCH_STRICT: '1'
+        run: |
+          # The island's words on the pack come a row at a time, and on the
+          # book a skill at a time: drawn once at the next frame, and not at
+          # all while the window is shut. Drawn in Chrome: a dozen words draw
+          # the Inventory list once; shut, none, and once as it opens; three
+          # skills rising show at the next frame, each row flashing; and the
+          # pack, the book and the belt show what each shows drawn afresh.
+          npx esbuild supabase/test/framebatch.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/framebatch.mjs --log-level=error
+          node node_modules/.cache/framebatch.mjs
       - name: The Wildermon window's Care tab
         if: matrix.shard == 1
         env:
@@ -1507,6 +1522,19 @@ jobs:
             --outfile=node_modules/.cache/stock.mjs --log-level=error
           node node_modules/.cache/stock.mjs
 
+      - name: The stocking clock, cheaper and the same
+        if: matrix.shard == 3
+        run: |
+          # `stock_tick` asks once whether any block round anybody is owed and
+          # stops there when none is; `near_tile` reads each line it looks at
+          # once. On an island of its own: `near_tile` gives the answer it gave
+          # before at every point sampled, and ninety minutes of the clock as
+          # it was and as it is put out the same blocks on the same turns, the
+          # same wildlife in the same places, with the same stamps.
+          npx esbuild supabase/test/stockclock.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/stockclock.mjs --log-level=error
+          node node_modules/.cache/stockclock.mjs
+
       - name: A spadeful you could not put down
         if: matrix.shard == 1
         run: |
@@ -1555,6 +1583,21 @@ jobs:
           npx esbuild supabase/test/dawn.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/dawn.mjs --log-level=error
           node node_modules/.cache/dawn.mjs
+
+      - name: A day in the woods in parts, the same day
+        if: matrix.shard == 3
+        run: |
+          # A go of `tree_tick` was a whole island's day in one transaction,
+          # 98 seconds at worst on the live island, holding every line it had
+          # written. It is parts of a second now, each committed, carried on
+          # from `private.tree_run`. On an island of its own: the day as it
+          # was, the day in the smallest parts there are and the day in one go
+          # leave the same ground byte for byte and the same record, from one
+          # seed; a spot built on between picking and planting takes no
+          # sapling; and the tick carries on a day under way first.
+          npx esbuild supabase/test/woodparts.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/woodparts.mjs --log-level=error
+          node node_modules/.cache/woodparts.mjs
 
       - name: The island's year is the same year on both sides
         if: matrix.shard == 1
@@ -2969,6 +3012,17 @@ jobs:
           npx esbuild supabase/test/ridewalk.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/ridewalk.mjs --log-level=error
           node node_modules/.cache/ridewalk.mjs
+
+      - name: The path search finds the same paths remembering what it asked of each tile
+        if: matrix.shard == 3
+        run: |
+          # The search as it was and as it is, from the same starts to the
+          # same goals on three rough islands: within a click and far past
+          # the square remembered, by the edge, near, partial and cut short.
+          # The same path, tile and storey, and the same verdict, every time.
+          npx esbuild supabase/test/pathmemo.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/pathmemo.mjs --log-level=error
+          node node_modules/.cache/pathmemo.mjs
 
       - name: A bridge up a storey is walked across and under, every lane, on both sides
         if: matrix.shard == 3
