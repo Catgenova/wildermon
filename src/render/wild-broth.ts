@@ -110,7 +110,7 @@ const BROTHLET_LOOK: Broth = {
   webs: 0,
   orb: { c: [0, 0.66, 0.66], r: [0.7, 0.5, 0.44], glass: false, fill: 0, mush: 0 },
   hat: { back: 0.4, lean: 14, band: [0.26, 0.12], top: [0.33, 0.28], puffs: 6 },
-  scarf: { y: 0.1, w: 0.075, knot: Math.PI * 0.62 },
+  scarf: { y: 0.14, w: 0.09, knot: Math.PI * 0.62 },
   cape: null,
   apron: { y: [0.12, -0.3], half: 0.62, emblem: false },
   pot: { at: [0.76, 0.84], r: 0.22, h: 0.24, spoon: 0.56 },
@@ -1137,7 +1137,7 @@ function bowOf(c: V3, out: V3, down: V3, size: number, K: number, mats: readonly
 
 /** Its neckerchief: a red band round its neck, knotted round at `knot`, two ends hanging from the knot. */
 function scarfOf(s: Broth, n: number, K: number): Mesh {
-  const S = s.scarf!, off = 0.03 * bigOf(s);
+  const S = s.scarf!, off = 0.06 * bigOf(s);
   const band = bandRound(s, S.y, S.w * bigOf(s), off, n + 6, 0, TAU, 'leather', Math.PI / 2);
   const q = onBody(s, levelY(s, S.y, Math.PI / 2, S.knot), S.knot, off * 2), down = dirToBody(s, [0, -0.35, -1]);
   return merge(band, bowOf(q.p, q.n, down, 0.2 * bigOf(s), K, ['leather', 'leather', 'leatherDark'], 1.1));
@@ -1224,8 +1224,8 @@ function capeOf(s: Broth, n: number, K: number): { cape: Mesh; bow: Mesh } {
   const cape = gridMesh(rows, (p) => { const r = ringAt(s.body, p[1]); return [p[0], 0, p[2] - r.z]; }, (r) => (r === V - 1 ? 'leatherDark' : 'leather'));
   // A white leaf on it at its right side.
   const leaf: Disc[] = [], lc = onBody(s, lerp(C.y[0], C.y[1], 0.5), 0.05, 0.05 * big + 0.02);
-  leaf.push(disc(lc.p, lc.n, 0.13 * big, 0.06 * big, 10, 'petal', { up: dirToBody(s, [0, 0.3, 1]), spin: 0.6 }));
-  leaf.push(disc(add(lc.p, scale(lc.n, 0.004)), lc.n, 0.11 * big, 0.008 * big, 4, 'leather', { up: dirToBody(s, [0, 0.3, 1]), spin: 0.6 }));
+  leaf.push(disc(lc.p, lc.n, 0.2 * big, 0.09 * big, 10, 'petal', { up: dirToBody(s, [0, 0.3, 1]), spin: 0.6 }));
+  leaf.push(disc(add(lc.p, scale(lc.n, 0.004)), lc.n, 0.17 * big, 0.012 * big, 4, 'leather', { up: dirToBody(s, [0, 0.3, 1]), spin: 0.6 }));
   const bq = onBody(s, C.y[0] - 0.12 * big, 0.2, 0.1 * big);
   const bow = bowOf(bq.p, unit(add(bq.n, dirToBody(s, [0, 0.9, 0]))), dirToBody(s, [0, -0.1, -1]), 0.3 * big, K, ['leather', 'leather', 'leatherDark'], 1.5);
   return { cape: merge(cape, paint(leaf)), bow };
