@@ -1,3 +1,4 @@
+import { formSays } from './wildforms';
 import { DARK_SHOT, DARK_SWING, SOUL_GAIN, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
@@ -405,14 +406,14 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         }
         const warm = coaxBonus(c, g.time, coaxStep(g));
         const used = warm > 0 ? ` Offerings taken: ${c.coaxed}, next +${(warm * 100).toFixed(0)}% chance.` : '';
-        g.logMsg(`Wild ${c.rare ? `${rarityOf(c).name} ` : ''}${def.name.toLowerCase()}: ${def.description ? `${def.description} ` : ''}Eats: ${dietText(c)}.${used}${raritySays(c)}`, 'wildermon');
+        g.logMsg(`Wild ${c.rare ? `${rarityOf(c).name} ` : ''}${def.name.toLowerCase()}: ${def.description ? `${def.description} ` : ''}Eats: ${dietText(c)}.${used}${raritySays(c)}${formSays(c, def)}`, 'wildermon');
         return;
       }
       const mood = c.hunger < 0.3 ? 'Hungry.' : c.hunger < 0.6 ? 'Peckish.' : 'Fed.';
       const skills = Object.entries(c.skills).map(([id, v]) => `${id} ${v.toFixed(1)}`).join(', ');
       const range = c.mode === 'deed' && def.gathers ? ` Range: ${workRangeOf(c, def)} tiles from the totem.` : '';
       const desc = kindDescription(c);
-      g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${g.creatures.describe(c)}): ${desc ? `${desc} ` : ''}Level ${creatureLevel(c)}: ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. Care: ${careWord(c.care)}. Traits: ${traitList(c.traits)}.${raritySays(c)}${range} ${mood} Eats: ${dietText(c)}.${studBook(g, c)}`, 'wildermon');
+      g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${g.creatures.describe(c)}): ${desc ? `${desc} ` : ''}Level ${creatureLevel(c)}: ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. Care: ${careWord(c.care)}. Traits: ${traitList(c.traits)}.${raritySays(c)}${formSays(c, def)}${range} ${mood} Eats: ${dietText(c)}.${studBook(g, c)}`, 'wildermon');
     },
   },
   {

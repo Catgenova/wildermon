@@ -26,6 +26,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
+import { creatureLines } from '../../src/ui/creatureinfo';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT, sightedAt, sightedLine } from '../../src/game/sighted';
 import { RARITIES } from '../../src/game/items';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
@@ -177,6 +178,20 @@ check('browser: tamed, it keeps its forms, and the book marks each tamed',
 check(`browser: its card names them: ${formLabels(pale, SPECIES.rabba).join(' / ')}`,
   formLabels(pale, SPECIES.rabba).join(' / ') === `${formName(SPECIES.rabba, 'colour')}: colours only / Large form: size +15%, health +10%`
     && formLabels({ formSize: 'small' }, SPECIES.rabba).join() === 'Small form: size −15%, speed +10%');
+// Reported: a small form caught, and nothing said it was small but the Sighted line.
+{
+  const small = game.creatures.spawn('rabba', px + 0.4, py + 0.4, 'wild', game.rand, 0);
+  small.formSize = 'small';
+  small.formColour = false;
+  const says = formLabels(small, SPECIES.rabba)[0];
+  check(`browser: a wild one's hover card names its form: ${says}`, creatureLines(game, small).includes(says), creatureLines(game, small).join(' / '));
+  ACTION_BY_ID.get('examine_creature')!.perform({ kind: 'creature', id: small.id } as Target, game);
+  check('browser: and Examine says it', (game.log[game.log.length - 1]?.text ?? '').includes(`${says}.`), game.log[game.log.length - 1]?.text ?? '');
+  small.mode = 'active';
+  small.mine = true;
+  check('browser: and one of your own, its hover card', creatureLines(game, small).includes(says), creatureLines(game, small).join(' / '));
+  game.creatures.list.delete(small.id);
+}
 
 /* ---- young ones, the browser ----------------------------------------------------------------- */
 

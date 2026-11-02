@@ -495,7 +495,10 @@ export class WildermonPanel {
     rarityName.className = 'pal-rarity-name';
     const rarityGives = document.createElement('span');
     rarityGives.className = 'pal-rarity-gives';
-    rarity.append(rarityName, rarityGives);
+    // Its wild forms on the same line, after its rarity: "Small form: size −15%, speed +10%".
+    const formLine = document.createElement('span');
+    formLine.className = 'pal-form';
+    rarity.append(rarityName, rarityGives, formLine);
     card.append(head, rarity);
 
     const bar = (label: string, cls: string): { row: HTMLDivElement; fill: HTMLDivElement; value: HTMLSpanElement } => {
@@ -568,7 +571,10 @@ export class WildermonPanel {
       if (rarityName.textContent !== named) rarityName.textContent = named;
       const figures = gives.length ? ` · ${gives.join(' · ')}` : '';
       if (rarityGives.textContent !== figures) rarityGives.textContent = figures;
-      hide(rarity, !what);
+      const forms = formLabels(c, def).join(' · ');
+      const formSaid = forms && what ? ` · ${forms}` : forms;
+      if (formLine.textContent !== formSaid) formLine.textContent = formSaid;
+      hide(rarity, !what && !forms);
       const hue = c.rare ? rarityOf(c).css : '';
       if (rarityName.style.color !== hue) rarityName.style.color = hue;
       // Age reads before anything else: a yearling cannot be worked at all.
@@ -648,8 +654,6 @@ export class WildermonPanel {
       }
 
       const parts: string[] = [];
-      // Its wild forms, and what each does (`formLabels`).
-      parts.push(...formLabels(c, def));
       // Which vehicle, since a herd can be spread over more than one.
       const vehicle = this.game.vehicleOfCreature(c);
       const place = placeOf(c);

@@ -156,6 +156,9 @@ export const formsOf = (c: Forms): FormId[] => [...(c.formColour ? ['colour' as 
 export const formLabels = (c: Forms, def: Pick<SpeciesDef, 'variants'>): string[] =>
   formsOf(c).map((f) => `${formName(def, f)}: ${formGives(f)}`);
 
+/** And for what is said when you look it over: " Small form: size −15%, speed +10%." */
+export const formSays = (c: Forms, def: Pick<SpeciesDef, 'variants'>): string => formLabels(c, def).map((l) => ` ${l}.`).join('');
+
 /** A form's key in the field guide, beside its kind's page: `species/form`. */
 export const formKey = (species: string, form: FormId): string => `${species}/${form}`;
 /** The kind and form a guide key is for, or null for a key that is not a form's. */
