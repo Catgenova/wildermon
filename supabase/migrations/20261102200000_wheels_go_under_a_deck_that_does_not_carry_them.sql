@@ -13,7 +13,7 @@
 
 set local lock_timeout = '3s';
 
-create function pg_temp.patch_fn(p_sig regprocedure, p_old text, p_new text, p_times int default 1) returns void
+create or replace function pg_temp.patch_fn(p_sig regprocedure, p_old text, p_new text, p_times int default 1) returns void
 language plpgsql as $p$
 declare v_def text; v_n int;
 begin

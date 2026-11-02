@@ -252,6 +252,21 @@ jobs:
             exit 1
           fi
           echo "and a migration that steps back from a wait steps back from a ring too"
+          # `supabase db push` applies every migration over one session, so a
+          # `pg_temp` helper made by one is still there for the next: a plain
+          # `create function pg_temp.patch_fn` in the second dies with 42723
+          # (live run 41514665853, at 20261102180001). Make them replaceable.
+          bad=""
+          for m in $added; do
+            [ -f "$m" ] || continue
+            grep -Eiq '^[[:space:]]*create[[:space:]]+function[[:space:]]+pg_temp\.' "$m" && bad="$bad $m"
+          done
+          if [ -n "$bad" ]; then
+            echo "::error::These migrations make a pg_temp function that an earlier one in the same push may have made:$bad"
+            echo "::error::Write \"create or replace function pg_temp.…\"."
+            exit 1
+          fi
+          echo "and a pg_temp helper may be made again in the same push"
       # `git diff` cannot see a file that is not tracked yet, and a fresh
       # `_defs.sql` is exactly that — so the old form of this check would have
       # let a brand new definitions migration through without noticing. Asking
