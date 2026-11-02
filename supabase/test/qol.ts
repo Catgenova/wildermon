@@ -183,6 +183,19 @@ if (target) {
   const left = Math.hypot(tx + 0.5 - walker.player.x, ty + 0.5 - walker.player.y);
   check(`a walk further than one leg (${Math.round(Math.hypot(tx - wx, ty - wy))} tiles, legs of ${TRAVEL_LEG}) gets there in legs`, set && left < 2, `${left.toFixed(1)} tiles left`);
 } else check('a far spot to walk to', false, 'none found');
+// Put back on the spawn by a death in the middle of a long walk: the walk ends there, and the body stays on the tile.
+if (target) {
+  const [tx, ty] = target;
+  walker.player.x = wx + 0.5;
+  walker.player.y = wy + 0.5;
+  walker.travelTo(tx, ty, 'the far spot');
+  for (let i = 0; i < 40; i++) walker.update(0.05);
+  walker.putBody(wx + 0.5, wy + 0.5, 0);
+  for (let i = 0; i < 200; i++) walker.update(0.05);
+  check('put back by the island (a death) halfway through a long walk: the walk ends and the body stays on its tile',
+    walker.travelling === null && Math.floor(walker.player.x) === wx && Math.floor(walker.player.y) === wy,
+    `travelling ${walker.travelling !== null}, at ${walker.player.x.toFixed(1)},${walker.player.y.toFixed(1)}`);
+}
 
 /* ---- the island: when her young are due ---- */
 const isle = psql(`

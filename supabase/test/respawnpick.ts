@@ -35,7 +35,7 @@
  *   * in Chromium (`respawnpick-page.ts`), over the world: the island's own
  *     offer shown as the five stones and the two settlements, each by name,
  *     place and distance in tiles, with its picture (no two alike), and a way
- *     to stay; the first card has the keys, which go round the cards and
+ *     to stay; no card chosen at first and no pick in its first moments; the keys go round the cards and
  *     never reach the game; a card clicked is what is sent, and the chooser
  *     goes; a refusal shows it again, with why; an offer withdrawn takes it
  *     away; and on a phone nothing is off the side of the screen.
@@ -61,6 +61,7 @@ import { RUNESTONES, START_RING, stoneCentre, stonePoint } from '../../src/game/
 import { Island } from '../../src/net/island';
 import { supabase } from '../../src/net/supabase';
 import type { Driven, Shown } from './respawnpick-page';
+import { RESPAWN_ARM_MS } from '../../src/ui/respawn';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -357,21 +358,24 @@ if (!browser || !offer) {
       JSON.stringify(shown.cards) === JSON.stringify(wantN), shown.cards.join('; '));
     check('drawn: headed, a row each', JSON.stringify(shown.heads) === JSON.stringify([STONES_HEAD, DEEDS_HEAD]) && shown.title === 'Respawn', `${shown.title} ${shown.heads.join(' / ')}`);
     check('drawn: a way to stay, with how far the spawn is', shown.stay === `${STAY_SAID}: ${tilesSaid(tilesBetween(offer, shown.spawn))}`, shown.stay ?? '');
-    check('drawn: the first card has the keys', shown.focus === RUNESTONES[0].id, shown.focus ?? '');
+    check('drawn: no card chosen at first (a key held from the fight picks nothing)', !shown.focus, shown.focus ?? '');
     const pics = await drive(tab, (c) => c.pictures());
     const shares = pics.painted.map((p) => Number(p.split('|')[1]));
     check('drawn: each card with its picture, a stone or a token on its grass, no two alike',
       pics.painted.length === RUNESTONES.length + 2 && shares.every((k) => k >= 0.01 && k < 0.9) && pics.distinct, `${pics.painted.join('; ')} distinct ${pics.distinct}`);
     if (shots) await tab.screenshot({ path: `${shots}/respawn-desktop.png` });
     const keys = await drive(tab, (c) => [c.key('ArrowRight'), c.key('ArrowRight'), c.key('ArrowLeft'), c.key('End'), c.key('Tab'), c.key('Tab', true), c.key('w')]);
-    check('drawn: the arrows go between the cards, Tab goes round, and nothing reaches the game',
-      keys.map((k) => k.focus).join(',') === `mossmere,harrowmark,mossmere,${RESPAWN_STAY},crownstone,${RESPAWN_STAY},${RESPAWN_STAY}` && keys.every((k) => k.game === 0),
+    check('drawn: the first arrow takes the first card, the arrows go between the cards, Tab goes round, and nothing reaches the game',
+      keys.map((k) => k.focus).join(',') === `${RUNESTONES[0].id},mossmere,${RUNESTONES[0].id},${RESPAWN_STAY},${RUNESTONES[0].id},${RESPAWN_STAY},${RESPAWN_STAY}` && keys.every((k) => k.game === 0),
       keys.map((k) => `${k.focus}:${k.game}`).join(','));
     await drive(tab, (c) => c.answer('Respawn: no free tile at Ashford.'));
+    await tab.waitForTimeout(RESPAWN_ARM_MS + 100);
     await drive(tab, (c, a) => c.click(a as string), `${DEED_AT}${ME}`);
     shown = await drive(tab, (c) => c.read());
     check('drawn: a card clicked is what is sent; refused, it is shown again with why',
       shown.sent.join(',') === `${DEED_AT}${ME}` && shown.open && shown.why === 'Respawn: no free tile at Ashford.', `${shown.sent.join(',')} ${shown.open} ${shown.why}`);
+    // Shown again: no pick in its first moments.
+    await tab.waitForTimeout(RESPAWN_ARM_MS + 100);
     await drive(tab, (c, a) => c.click(a as string), 'harrowmark');
     shown = await drive(tab, (c) => c.read());
     check('drawn: taken, the chooser goes', shown.sent.join(',') === `${DEED_AT}${ME},harrowmark` && !shown.open, `${shown.sent.join(',')} ${shown.open}`);
@@ -380,6 +384,7 @@ if (!browser || !offer) {
     shown = await drive(tab, (c) => c.read());
     check('drawn: an offer withdrawn takes the chooser away', !shown.open);
     await drive(tab, (c, a) => c.offer((a as [Fallen, number])[0], (a as [Fallen, number])[1]), [offer, N]);
+    await tab.waitForTimeout(RESPAWN_ARM_MS + 100);
     await drive(tab, (c) => c.click('stay'));
     shown = await drive(tab, (c) => c.read());
     check('drawn: stay is sent as stay', shown.sent.at(-1) === RESPAWN_STAY && !shown.open, shown.sent.join(','));

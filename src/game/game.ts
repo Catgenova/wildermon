@@ -5969,6 +5969,11 @@ export class Game {
   private travel: { x: number; y: number; name: string; best: number; stuck: number; said: boolean } | null = null;
 
   /** Where a long walk is headed, while one is under way. */
+  /** Give up a long walk, where it has got to. */
+  endTravel(): void {
+    this.travel = null;
+  }
+
   get travelling(): { x: number; y: number; name: string } | null {
     return this.travel;
   }
@@ -9428,6 +9433,12 @@ export class Game {
     const path = this.player.path;
     const goal = resume && path?.length ? path[path.length - 1] : null;
     this.player.stop();
+    /*
+     * Put somewhere by the island -- a death, a keeper's move -- and not held to a pace on the way: a long walk ends.
+     * It went on leg after leg from wherever it was put, and after a death that walked the body off the spawn tile,
+     * which takes the offer of where to wake away (`respawn_fall`): the chooser shut and the body stayed put.
+     */
+    if (!resume) this.travel = null;
     // The steps walked to where it was are not steps from where it is.
     this.player.turns.length = 0;
     this.player.x = x;

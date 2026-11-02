@@ -24,6 +24,9 @@ import { deedTotemVariant } from '../render/deedtotem';
 import { stoneCards, type StoneCard } from './stonestart';
 
 /** A chooser on the screen: the pick it answers with, and a way to take it off unanswered. */
+/** How long after it shows the chooser takes no pick, in ms. */
+export const RESPAWN_ARM_MS = 600;
+
 export interface RespawnShown {
   el: HTMLElement;
   done: Promise<string>;
@@ -58,7 +61,14 @@ export function showRespawn(root: HTMLElement, fell: Fallen, size: number, spawn
     card.append(no);
   }
 
+  /*
+   * Nothing is picked in the first `RESPAWN_ARM_MS`, nor by a key held down from before (a repeat). Death comes in the
+   * middle of a fight, with keys down and a pointer pressing: the first card had the focus the moment the chooser
+   * showed, and Enter or Space still down picked it before anybody had read the cards.
+   */
+  const armed = performance.now() + RESPAWN_ARM_MS;
   const pick = (at: string): void => {
+    if (performance.now() < armed) return;
     el.remove();
     settle(at);
   };
@@ -88,8 +98,18 @@ export function showRespawn(root: HTMLElement, fell: Fallen, size: number, spawn
   const stops = (): HTMLElement[] => [...card.querySelectorAll<HTMLElement>('button')];
   el.addEventListener('keydown', (e) => {
     e.stopPropagation();
+    if (e.repeat && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      return;
+    }
     const all = stops();
     const at = all.indexOf(document.activeElement as HTMLElement);
+    // From the card itself, the first move lands on the first choice.
+    if (at < 0 && ['Tab', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+      e.preventDefault();
+      all[e.key === 'End' || (e.key === 'Tab' && e.shiftKey) || e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? all.length - 1 : 0]?.focus();
+      return;
+    }
     const go = (i: number): void => {
       e.preventDefault();
       all[(i + all.length) % all.length]?.focus();
@@ -111,7 +131,9 @@ export function showRespawn(root: HTMLElement, fell: Fallen, size: number, spawn
   });
 
   root.append(el);
-  stops()[0]?.focus();
+  // The card has the focus, not a choice on it: Tab or an arrow goes to the first.
+  card.tabIndex = -1;
+  card.focus();
   return { el, done, close: () => el.remove() };
 }
 
@@ -146,6 +168,7 @@ export function mountRespawn(root: HTMLElement, game: Game, island: Island): voi
     }
     if (open && shownFor === `${fell.x},${fell.y}`) return;
     game.player.stop();
+    game.endTravel();
     show(fell, null);
   };
 }

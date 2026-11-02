@@ -6,6 +6,7 @@ import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
+import { RESPAWN_ARM_MS } from '../respawn';
 import { MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -4237,6 +4238,14 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 442,
+    day: '2026-11-02',
+    lines: () => [
+      'Fixed: dying on a long walk (a map pin, Walk home): the walk went on from the spawn and the chooser of where to wake shut before a pick. A death now ends the walk.',
+      `Fixed: the chooser of where to wake took a key held from the fight as a pick. No pick in its first ${RESPAWN_ARM_MS / 1000} s or from a held key; no card chosen until Tab or an arrow.`,
+    ],
   },
   {
     n: 440,

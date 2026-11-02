@@ -12,6 +12,7 @@
 import '../../src/page-guard';
 import { Game } from '../../src/game/game';
 import { Renderer } from '../../src/render/renderer';
+import { RESPAWN_ARM_MS, showRespawn } from '../../src/ui/respawn';
 import { FullscreenCanvas } from '../../src/engine/canvas';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { UI } from '../../src/ui/ui';
@@ -48,6 +49,8 @@ export interface HostileSeen {
   guideMs: number;
   /** In the 8 s after the field guide opens: frames drawn, the longest gap between two (ms), and gaps over 250 ms. */
   guideLong: [number, number, number];
+  /** The respawn chooser: picked by an Enter at once or a held one (should not be), and by a click after (should be). */
+  respawn: { atOnce: string; held: string; later: string };
   menu: Array<[string, string]>;
   menuTab: string;
   /** The map: tiles a click at the picture's corners landed on against the tiles shown there, and what the wheel, a drag and Fit did. */
@@ -59,7 +62,7 @@ export interface HostileSeen {
   done: boolean;
 }
 
-const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, guideMs: -1, guideLong: [0, 0, 0], menu: [], menuTab: '', map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
+const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, guideMs: -1, guideLong: [0, 0, 0], menu: [], menuTab: '', respawn: { atOnce: '', held: '', later: '' }, map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
 (window as unknown as { panels: HostileSeen }).panels = seen;
 
 document.getElementById('boot')?.remove();
@@ -164,6 +167,29 @@ try {
   cam.focus = was;
 } catch (e) {
   seen.map.error = String(e);
+}
+
+// The chooser after a death: nothing picked by a key down at once or held from the fight; a click after the pause picks.
+{
+  const fell = { x: 40, y: 40, deeds: [] };
+  const shown = showRespawn(uiRoot, fell, game.world.w, { x: 10.5, y: 10.5 });
+  let picked = '';
+  void shown.done.then((at) => { picked = at; });
+  const first = shown.el.querySelector<HTMLButtonElement>('button')!;
+  first.focus();
+  shown.el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  first.click();
+  await rest(0);
+  seen.respawn.atOnce = picked || 'nothing';
+  await rest(RESPAWN_ARM_MS + 100);
+  const held = new KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true, cancelable: true });
+  first.dispatchEvent(held);
+  await rest(0);
+  seen.respawn.held = picked || (held.defaultPrevented ? 'nothing' : 'not stopped');
+  first.click();
+  await rest(0);
+  seen.respawn.later = picked || 'nothing';
+  shown.close();
 }
 
 // The UI Menu: every window, the journal's tabs and Settings: Keys, each with its key.
