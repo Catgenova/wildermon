@@ -105,7 +105,7 @@ const burst = (c: string): number => budget.get(c)?.burst ?? NaN;
 const island = readFileSync('src/net/island.ts', 'utf8');
 const BEAT_FLOOR = 0.5;
 check('the beat is never armed closer than half a second, which the look budget counts on',
-  island.includes(`Math.max(${BEAT_FLOOR}, seconds) * 1000`));
+  island.includes(`const wanted = Math.max(${BEAT_FLOOR}, seconds);`) && /setTimeout\([\s\S]{0,80}\}, \(hidden \? Math\.max\(wanted, HEARTBEAT\) : wanted\) \* 1000\)/.test(island));
 const moveRate = 1 / MOVE_EVERY;
 // At a cellar's stairs: the word on the stairs up to STAIRS_AGAIN times, the change of storey said again, and the word itself.
 const stairWords = STAIRS_AGAIN + 2;

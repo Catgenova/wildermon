@@ -119,8 +119,11 @@ end $f$;
 create function pg_temp.snap(w uuid) returns jsonb language sql as $f$
   select jsonb_build_object(
     'creatures', (select jsonb_agg(to_jsonb(c) order by c.id) from creature c where c.world_id = w),
+    -- Ordered to the last column: two people's starting tools (the same thing, held, no place) tied, and came out
+    -- in either order, so the two islands parted on a row neither had changed.
     'items', (select jsonb_agg(to_jsonb(i) - 'id' - 'origin' - 'origin_fn' - 'origin_uid'
-                               order by i.holder, i.placed, i.crate, i.pannier, i.gx, i.gy, i.def, i.count, i.ql)
+                               order by i.holder, i.holder_uid, i.creature, i.inside, i.placed, i.crate, i.pannier, i.gx, i.gy, i.def, i.count, i.ql,
+                                        (to_jsonb(i) - 'id' - 'origin' - 'origin_fn' - 'origin_uid')::text)
                 from item i where i.world_id = w),
     'wall', (select jsonb_agg(needed order by x) from wall where world_id = w),
     'foraged', (select jsonb_agg(jsonb_build_array(x, y, kind) order by x, y, kind) from foraged where world_id = w))
