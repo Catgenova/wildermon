@@ -16,6 +16,9 @@
  *     whole answer says at that moment: the same creatures, every key the same, what counts down within a breath;
  *   * a cursor that is unreadable, too old, or comes without the ids is answered whole; and more ids than any answer
  *     holds are refused at the door;
+ *   * asked for packed (`p_pack`), every row is its values in the order of `cols` and one object of the rest, and
+ *     unpacks (`unpack`, the browser's own) to the object the whole answer says, key for key, to the keeper of a full
+ *     pannier and to somebody else; and a browser laying packed answers holds what the whole answer says too;
  *   * and the browser asks for the whole answer well within the time a cursor is good for.
  *
  * Every step is its own transaction, as a browser's asks are: a cursor is a snapshot, and only rows written by
@@ -24,7 +27,7 @@
 import { execFileSync } from 'node:child_process';
 import { RECONCILE_EVERY } from '../../src/game/keep';
 import type { IslandCreature } from '../../src/game/creatures';
-import { MobsHeld, type MobsAnswer } from '../../src/net/mobsync';
+import { MobsHeld, unpack, type MobsAnswer } from '../../src/net/mobsync';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -57,7 +60,7 @@ const W = `(select id from world where name = '${ISLE}')`;
  * settling the ones whose turn is due. The sweep's own writes are asked about on their own, below.
  */
 const READ = `do $r$
-declare d text := pg_get_functiondef('public.rpc_creatures(uuid,double precision,text,integer[])'::regprocedure);
+declare d text := pg_get_functiondef('public.rpc_creatures(uuid,double precision,text,integer[],boolean)'::regprocedure);
         s text := 'perform creature_sweep(p_world, p.x, p.y, p_range);';
 begin
   if (length(d) - length(replace(d, s, ''))) / length(s) <> 1 then raise exception 'the read has no sweep to leave out'; end if;
@@ -146,7 +149,7 @@ const sameSaid = psql(`
 begin;
 insert into class_mark (world_id, creature_id, kind, val, until) values (${W}, ${ID.W5}, 'stun', 1, now() + interval '30 seconds');
 do $t$
-declare d text := pg_get_functiondef('public.rpc_creatures(uuid,double precision,text,integer[])'::regprocedure); c text; n int;
+declare d text := pg_get_functiondef('public.rpc_creatures(uuid,double precision,text,integer[],boolean)'::regprocedure); c text; n int;
 begin
   d := replace(d, 'FUNCTION public.rpc_creatures(', 'FUNCTION pg_temp.rpc_creatures_whole(');
   foreach c in array array[${CUTS.map((c) => `$c$${c}$c$`).join(', ')}] loop
@@ -203,6 +206,30 @@ select jsonb_typeof(a) || '|' || (a = b)::text || '|' || (a = c->'rows')::text |
 rollback;
 `);
 check('a browser that says neither cursor nor ids gets the list it always got', oldSaid === 'array|true|true|true|string', oldSaid);
+
+/* ---- packed ---------------------------------------------------------------------------------------------------- */
+
+/** Two answers alike key for key, whatever order each names its keys in. */
+const sortedKeys = (v: unknown): unknown => Array.isArray(v) ? v.map(sortedKeys)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortedKeys((v as Record<string, unknown>)[k])])) : v;
+for (const [who, name] of [[ME, 'somebody else'], [YOU, 'the keeper of a full pannier']] as const) {
+  const [plainSaid, packedSaid] = psql(`select set_config('request.jwt.claims', json_build_object('sub', '${who}')::text, false) \\g /dev/null
+begin;
+delete from caller where uid = '${who}';
+select rpc_creatures(${W}, 40)::text;
+delete from caller where uid = '${who}';
+select rpc_creatures(${W}, 40, '', '{}', true)::text;
+rollback;`).split('\n');
+  const plain = JSON.parse(plainSaid) as IslandCreature[];
+  const packed = JSON.parse(packedSaid) as MobsAnswer & { rows: unknown[]; cols: string[] };
+  const opened = packed.rows.map((r) => unpack(r, packed.cols));
+  check(`packed, to ${name}: every row is its values and one object of the rest (${packed.rows.length} rows, ${packed.cols?.length} keys)`,
+    Array.isArray(packed.cols) && packed.rows.every((r) => Array.isArray(r)) && opened.every((r) => r !== null), JSON.stringify(packed.cols));
+  check(`and unpacked, the rows are the whole answer's, key for key`,
+    JSON.stringify(sortedKeys(opened)) === JSON.stringify(sortedKeys(plain)),
+    `${JSON.stringify(sortedKeys(opened)).length} / ${JSON.stringify(sortedKeys(plain)).length} characters`);
+  check('and fewer characters for it', packedSaid.length < plainSaid.length * 0.7, `${packedSaid.length} for ${plainSaid.length}`);
+}
 
 /* ---- only what changed ----------------------------------------------------------------------------------------- */
 
@@ -274,6 +301,8 @@ let rounds = 0;
 let worst = '';
 let sent = 0;
 let whole = 0;
+// And the same asked for packed, each body's held on its own.
+const packedHeld = new Map<string, MobsHeld>([[ME, new MobsHeld()], [YOU, new MobsHeld()]]);
 for (let round = 0; round < 6; round++) {
   // Some of them due, the clock turned, and what each body is told.
   psql(`update creature set until = now() where world_id = ${W} and mode = 'wild' and id % 3 = ${round % 3};
@@ -285,20 +314,25 @@ select world_tick() \\g /dev/null`);
     const said = (h.at === null ? ask(who, `, '', '{}'`) : delta(who, h)) as MobsAnswer & { rows: IslandCreature[] };
     if (lay(who, said) === null) worst ||= 'an answer that was not one';
     sent += said.rows.length;
+    const hp = packedHeld.get(who)!;
+    const saidPacked = ask(who, hp.at === null ? `, '', '{}', true` : `, '${hp.at}', ${sqlInts(hp.have())}, true`) as MobsAnswer;
+    if (hp.take(saidPacked, Date.now()) === null) worst ||= 'a packed answer that was not one';
     const t = Date.now();
     const full = ask(who, '') as IslandCreature[];
     whole += full.length;
-    const mine = h.all(Date.now() - (Date.now() - t) / 2);
-    if (!same(mine.map((r) => r.id), idsOf(full))) worst ||= `round ${round}: held ${mine.map((r) => r.id)} / whole ${idsOf(full)}`;
-    const byId = new Map(mine.map((r) => [r.id, r]));
-    for (const r of full) {
-      const why = byId.has(r.id) ? differs(byId.get(r.id)!, r) : 'missing';
-      if (why) worst ||= `round ${round}, creature ${r.id}: ${why}`;
+    for (const [kind, from] of [['', h], ['packed, ', hp]] as const) {
+      const mine = from.all(Date.now() - (Date.now() - t) / 2);
+      if (!same(mine.map((r) => r.id), idsOf(full))) worst ||= `${kind}round ${round}: held ${mine.map((r) => r.id)} / whole ${idsOf(full)}`;
+      const byId = new Map(mine.map((r) => [r.id, r]));
+      for (const r of full) {
+        const why = byId.has(r.id) ? differs(byId.get(r.id)!, r) : 'missing';
+        if (why) worst ||= `${kind}round ${round}, creature ${r.id}: ${why}`;
+      }
     }
     rounds++;
   }
 }
-check(`a browser laying only what changed holds what the whole answer says, after each of ${rounds} turns of the clock`,
+check(`a browser laying only what changed holds what the whole answer says, after each of ${rounds} turns of the clock, packed or not`,
   worst === '', worst);
 check('and was sent fewer rows than the whole answers held', sent < whole, `${sent} rows for ${whole}`);
 
