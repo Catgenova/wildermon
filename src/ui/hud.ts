@@ -719,7 +719,7 @@ export class Hud {
   }
 
   /** Feed your companion the poorest thing it will take, and keep the rest. */
-  /** Stop Work around me: every one of yours working round you back where it came from. */
+  /** Stop Work around me: the one of yours working round you back to following you. */
   private stopAround(): void {
     const first = this.game.creatures.aroundYou()[0];
     const def = ACTION_BY_ID.get('stop_work_around');
@@ -900,9 +900,10 @@ export class Hud {
     const around = this.game.creatures.aroundYou();
     if (around.length) {
       const idle = around.filter((c) => c.idle && c.idle.why !== 'rest' && c.idle.why !== 'bed' && c.idle.why !== 'tired').length;
-      this.say(this.aroundText, `Work around me: ${around.length}${idle ? ` · ${idle} idle` : ''} `);
-      this.tip(this.aroundEl, around.map((c) => c.name).join(', '));
-      this.tip(this.aroundStop, `Stop work around me: ${around.length} back to crate or to following`);
+      const names = around.map((c) => c.name).join(', ');
+      this.say(this.aroundText, `Work around me: ${names}${idle ? ' · idle' : ''} `);
+      this.tip(this.aroundEl, names);
+      this.tip(this.aroundStop, `Stop work around me: ${names} back to following you`);
       this.aroundEl.hidden = false;
     } else this.aroundEl.hidden = true;
     const food = this.game.bestFood();

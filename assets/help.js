@@ -1210,13 +1210,12 @@ import{$S as e,$_ as t,$b as n,$c as r,$d as i,$f as a,$g as o,$h as s,$l as ee,
     </ul>
     <h3>Work around me</h3>
     <ul>
-      <li><b>Work around me</b> (a wildermon's menu, or its row in the Wildermon window): <b>one</b>, following you within 4 tiles or in a crate in your pack or beside you.
+      <li><b>Work around me</b> (a wildermon's menu, or its row in the Wildermon window): the wildermon <b>following you</b>, within 4 tiles; <b>1</b> at a time. Not one in a crate.
       Works its task within <b>its own work range of you</b>, measured from the tile you stand on as you move.</li>
       <li>Storage: crates and storage furniture you may put into, carts, wagons and boats included, within that range; the cart you pull, what you drive and the boat you are in, wherever they are. Not stalls, trash crates, mailboxes, hives, ponds or barrels.</li>
       <li>Loads: the bin that takes them first, then the nearest store with room. No storage in reach: &ldquo;${v({why:`nostore`,n:p.rabba.workRange,around:!0},`forage`)}&rdquo; Full: &ldquo;${v({why:`full`,n:0,around:!0},`forage`)}&rdquo; Nothing is dropped.</li>
       <li>Tasks: every gathering task, as on a post; and at the stores ${A(ia())}, makings out of storage in reach. Settlement only: guarding, stoking, sparring and every task at settlement stations, buildings or wildermon.</li>
-      <li><b>Stop</b> (status panel, or <b>Stop work around me</b> on its menu): each goes back, first that applies: into the crate it came out of, if still in your pack or standing and empty; following you, if it was and nothing else follows;
-      else as a post's worker goes. On the island it also stops when you go offline.</li>
+      <li><b>Stop</b> (status panel, or <b>Stop work around me</b> on its menu): back to following you; with another following you by then, as a post's worker goes. On the island it also stops when you go offline.</li>
       <li>Not counted against your settlement level's working slots.</li>
     </ul>
     <h3>Raw materials, worked materials, seed, sprouts, rubbish, and something to pull it in</h3>

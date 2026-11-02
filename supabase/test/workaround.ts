@@ -4,7 +4,8 @@
  * Asked for: "Allow wildermon to Work Around Me, provided there is storage nearby (carts and wagons and accessible
  * boats included)", and "It is an action of the player. The player is the focal point, not a work post or the
  * settlement totem ... It ends when the player cancels the action, or goes offline ... Each wildermon that was working
- * around them then goes back to where it came from." Asked of the island and of the browser:
+ * around them then goes back to where it came from"; and then "Capped to only the wildermon following you". Asked of
+ * the island and of the browser:
  *
  *   * a forager round its keeper with a cart beside them puts its loads in the cart;
  *   * one with a boat its keeper owns puts them in the boat;
@@ -13,16 +14,17 @@
  *   * its keeper walks thirty tiles: its ground is their new tile, and it follows;
  *   * a trade at the stores (a rippa sawing) takes its logs out of a wagon and puts the planks back in it;
  *   * a crate its keeper may not put into is not used;
- *   * Stop: the one out of a crate in the pack back in that crate, the one that followed following;
+ *   * only the one following you, and one at a time: one in a crate, and a second while one works, refused;
+ *   * Stop: back to following;
  *   * its keeper offline (away, or not seen for `idle_logout`): the island does the same, in the clock and at its settle;
- *   * its crate gone meanwhile: the fallback a post's worker has, the empty crate in the pack;
+ *   * something else following by then: the fallback a post's worker has, the empty crate in the pack;
  *   * the trades worked round you, and the refusals, the same on both sides.
  *
  * The island half makes its own island and rolls it back.
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
-import { AROUND_ACTION_BY_ID, AROUND_STOPPED, aroundTrade } from '../../src/game/around';
+import { AROUND_ACTION_BY_ID, AROUND_MOST, AROUND_STOPPED, aroundTrade } from '../../src/game/around';
 import { GATHER_VERB, HOME_SLACK, SPECIES, workRangeOf, type Creature, type GatherKind } from '../../src/game/creatures';
 import { shutIn } from '../../src/game/creaturecrate';
 import { furnitureRoom } from '../../src/game/furniture';
@@ -190,67 +192,59 @@ begin
   insert into said select 'SHUT_CART', (select count(*) from item i where i.world_id = w and i.crate = 77001) || '|' || (pg_temp.inside(v_cart) <> 'empty');
   delete from creature where world_id = w and id = v_a;
 
-  -- Stop: the one out of a crate in the pack back in it, the following one following.
+  -- Stop: back to following. And one at a time: a second following it, refused while it works.
   perform pg_temp.at(w, u, 160.5, 100.5);
-  v_a := pg_temp.pet(w, u, 'rabba', 160.5, 100.5);
-  v_x := pg_temp.crated(w, u, v_a);
-  v_b := pg_temp.pet(w, u, 'rabba', 161.5, 100.5);
+  v_a := pg_temp.pet(w, u, 'rabba', 161.5, 100.5);
   v_cart := pg_temp.piece(w, u, 'cart', 163, 101);
   j := rpc_act(w, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_a));
-  insert into said values ('H_CRATED', coalesce(j->>'done', j->>'why') || '|' || (select coalesce(creature::text, 'empty') from item where id = v_x));
+  insert into said select 'H_ROW', coalesce(j->>'done', j->>'why') || '|' || mode || '|' || (around->>'was') from creature where world_id = w and id = v_a;
+  v_b := pg_temp.pet(w, u, 'rabba', 160.5, 101.5);
+  insert into said values ('H_CAP', regexp_replace(coalesce(act_refusal(w, u, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_b)), 'none'), 'Pip[0-9]+', 'Pip', 'g'));
   j := rpc_act(w, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_b));
-  insert into said select 'H_ROWS', string_agg(around->>'was', ',' order by id) from creature where world_id = w and id in (v_a, v_b);
+  insert into said select 'H_CAP_ROW', coalesce(j->>'done', j->>'why', 'null') || '|' || mode || '|' || coalesce(around::text, 'null') from creature where world_id = w and id = v_b;
+  delete from creature where world_id = w and id = v_b;
   perform pg_temp.run(w, v_a, 3);
-  perform pg_temp.run(w, v_b, 3);
   j := rpc_act(w, 'stop_work_around', jsonb_build_object('kind', 'creature', 'id', v_a));
   insert into said values ('H_STOP', coalesce(j->>'done', j->>'why'));
-  insert into said select 'H_A', mode || '|' || coalesce(around::text, 'null') || '|' || coalesce((select (creature = v_a)::text from item where id = v_x), 'gone')
-    || '|' || coalesce(carrying::text, 'empty') from creature where world_id = w and id = v_a;
-  insert into said select 'H_B', mode || '|' || coalesce(around::text, 'null') from creature where world_id = w and id = v_b;
+  insert into said select 'H_A', mode || '|' || coalesce(around::text, 'null') || '|' || coalesce(carrying::text, 'empty') from creature where world_id = w and id = v_a;
   insert into said select 'H_TOLD', string_agg(regexp_replace(text, 'Pip[0-9]+', 'Pip', 'g'), ' / ' order by n)
-    from (select text, n from event where world_id = w and uid = u and text like 'Work around me stopped:%' order by n desc limit 2) e;
+    from (select text, n from event where world_id = w and uid = u and text like 'Work around me stopped:%' order by n desc limit 1) e;
   insert into said select 'H_GROUND', (count(*) - v_ground)::text from item where world_id = w and holder = 'ground';
   insert into said values ('H_AGAIN', coalesce(act_refusal(w, u, 'stop_work_around', jsonb_build_object('kind', 'creature', 'id', v_a)), 'none'));
+  -- And with it back, the next may go.
+  v_b := pg_temp.pet(w, u, 'rabba', 160.5, 101.5);
+  update creature set mode = 'stored' where world_id = w and id = v_a;
+  insert into said values ('H_NEXT', coalesce(act_refusal(w, u, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_b)), 'none'));
   delete from creature where world_id = w and id in (v_a, v_b);
-  delete from item where id = v_x;
 
   -- Offline: the island does the same, in the clock.
   perform pg_temp.at(w, u, 40.5, 160.5);
-  v_a := pg_temp.pet(w, u, 'rabba', 40.5, 160.5);
-  v_x := pg_temp.crated(w, u, v_a);
-  v_b := pg_temp.pet(w, u, 'rabba', 41.5, 160.5);
+  v_a := pg_temp.pet(w, u, 'rabba', 41.5, 160.5);
   v_cart := pg_temp.piece(w, u, 'cart', 43, 161);
   j := rpc_act(w, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_a));
-  j := rpc_act(w, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_b));
   perform pg_temp.run(w, v_a, 2);
   update player set away = true where world_id = w and uid = u;
   insert into said values ('I_SWEPT', around_sweep(w)::text);
-  insert into said select 'I_A', mode || '|' || coalesce(around::text, 'null') || '|' || coalesce((select (creature = v_a)::text from item where id = v_x), 'gone')
-    from creature where world_id = w and id = v_a;
-  insert into said select 'I_B', mode || '|' || coalesce(around::text, 'null') from creature where world_id = w and id = v_b;
+  insert into said select 'I_A', mode || '|' || coalesce(around::text, 'null') from creature where world_id = w and id = v_a;
   insert into said values ('I_TICK', (position('around_sweep(w.id)' in pg_get_functiondef('world_tick'::regproc)) > 0)::text);
   -- Logged out (not seen for idle_logout), at its own settle.
   update player set away = false, seen_at = now() - make_interval(secs => idle_logout() + 5) where world_id = w and uid = u;
-  update creature set mode = 'deed', around = '{"was": "follow"}' where world_id = w and id = v_b;
-  perform pg_temp.run(w, v_b, 1);
-  insert into said select 'I_SETTLE', mode || '|' || coalesce(around::text, 'null') from creature where world_id = w and id = v_b;
-  delete from creature where world_id = w and id in (v_a, v_b);
-  delete from item where id = v_x;
+  update creature set mode = 'deed', around = '{"was": "follow"}' where world_id = w and id = v_a;
+  perform pg_temp.run(w, v_a, 1);
+  insert into said select 'I_SETTLE', mode || '|' || coalesce(around::text, 'null') from creature where world_id = w and id = v_a;
+  delete from creature where world_id = w and id = v_a;
 
-  -- Its crate gone meanwhile: the fallback, the empty crate in the pack.
+  -- Something else following you by then: the fallback, the empty crate in the pack.
   perform pg_temp.at(w, u, 100.5, 160.5);
-  v_a := pg_temp.pet(w, u, 'rabba', 100.5, 160.5);
-  v_x := pg_temp.crated(w, u, v_a);
-  v_b := pg_temp.pet(w, u, 'rabba', 101.5, 160.5);
+  v_a := pg_temp.pet(w, u, 'rabba', 101.5, 160.5);
   j := rpc_act(w, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_a));
-  j := rpc_act(w, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_b));
-  delete from item where id = v_x;
+  v_b := pg_temp.pet(w, u, 'rabba', 100.5, 161.5);
   v_y := give(w, u, 'creature_crate', 1, 40, null);
   j := rpc_act(w, 'stop_work_around', jsonb_build_object('kind', 'creature', 'id', v_a));
   insert into said select 'J_A', mode || '|' || coalesce((select (creature = v_a)::text from item where id = v_y), 'gone') from creature where world_id = w and id = v_a;
   insert into said select 'J_B', mode from creature where world_id = w and id = v_b;
   insert into said select 'J_TOLD', string_agg(regexp_replace(text, 'Pip[0-9]+', 'Pip', 'g'), ' / ' order by n)
-    from (select text, n from event where world_id = w and uid = u and text like 'Work around me stopped:%' order by n desc limit 2) e;
+    from (select text, n from event where world_id = w and uid = u and text like 'Work around me stopped:%' order by n desc limit 1) e;
   delete from creature where world_id = w and id in (v_a, v_b);
   delete from item where id = v_y;
 
@@ -265,8 +259,10 @@ begin
   insert into said values ('R_worker', coalesce(act_refusal(w, u, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_a)), 'none'));
   update creature set mode = 'active', from_x = 161.5 + ${POST_FOLLOW_REACH + 1}, to_x = 161.5 + ${POST_FOLLOW_REACH + 1} where world_id = w and id = v_a;
   insert into said values ('R_far', coalesce(act_refusal(w, u, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_a)), 'none'));
-  update creature set mode = 'stored' where world_id = w and id = v_a;
-  insert into said values ('R_lost', coalesce(act_refusal(w, u, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_a)), 'none'));
+  update creature set from_x = 161.5, to_x = 161.5 where world_id = w and id = v_a;
+  v_x := pg_temp.crated(w, u, v_a);
+  insert into said values ('R_crated', coalesce(act_refusal(w, u, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_a)), 'none'));
+  update item set creature = null where id = v_x;
   update creature set mode = 'deed', around = '{"was": "follow"}', from_x = 161.5, to_x = 161.5 where world_id = w and id = v_a;
   insert into said values ('R_already', coalesce(act_refusal(w, u, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_a)), 'none'));
   -- Assigned to the settlement: off work round its keeper, and on the roll.
@@ -439,52 +435,53 @@ const groundCount = (g: Game): number => [...g.ground.values()].reduce((n, pile)
     crate.items.length === 0 && inside(cart.items) > 0 && isle.get('SHUT_CART') === '0|true', `browser ${crate.items.length} / ${inside(cart.items)}; island ${isle.get('SHUT_CART')}`);
 }
 
-// Stop: back in its crate, back to following.
+// Stop: back to following; one at a time.
 {
   const { g, said } = fresh();
-  const a = pet(g, 'rabba', T + 0.5, T + 0.5);
-  const crate = crateIn(g, a);
-  const b = pet(g, 'rabba', T + 1.5, T + 0.5);
+  const a = pet(g, 'rabba', T + 1.5, T + 0.5);
   g.addFurniture('cart', T + 3, T + 1, 0, 0, 40, []);
   work.perform({ kind: 'creature', id: a.id }, g);
-  work.perform({ kind: 'creature', id: b.id }, g);
-  check('one out of a crate in your pack and one following, both set to work round you, on both sides',
-    a.around?.was === 'crate' && a.around.item === crate && b.around?.was === 'follow' && g.inventory.items.find((it) => it.uid === crate)?.creature === undefined
-      && isle.get('H_CRATED') === 'true|empty' && isle.get('H_ROWS') === 'crate,follow', `${isle.get('H_CRATED')} ${isle.get('H_ROWS')}`);
-  run(g, [a, b], 300);
+  check('the one following you set to work round you, on both sides',
+    a.mode === 'deed' && a.around?.was === 'follow' && isle.get('H_ROW') === 'true|deed|follow', `browser ${a.mode} ${a.around?.was} / island ${isle.get('H_ROW')}`);
+  const b = pet(g, 'rabba', T + 0.5, T + 1.5);
+  const cap = work.check?.({ kind: 'creature', id: b.id }, g) ?? null;
+  check(`one at a time (${AROUND_MOST}): the next one following you refused, "${cap}", on both sides`,
+    cap === 'Already working around you: Pip.' && isle.get('H_CAP') === cap, `browser "${cap}" / island "${isle.get('H_CAP')}"`);
+  check('and not set to work on the island: still following', /^Already working around you: Pip[0-9]+\.\|active\|null$/.test(isle.get('H_CAP_ROW') ?? ''), isle.get('H_CAP_ROW'));
+  g.creatures.remove(b.id);
+  run(g, [a], 300);
   stop.perform({ kind: 'creature', id: a.id }, g);
-  const back = g.inventory.items.find((it) => it.uid === crate);
-  check('Stop: the crate-born one back in its own crate, on both sides',
-    a.mode === 'stored' && !a.around && back?.creature === a.id && (isle.get('H_A') ?? '').startsWith('stored|null|true|empty'), `browser ${a.mode} / island ${isle.get('H_A')}`);
-  check('and the following one following, on both sides', b.mode === 'active' && !b.around && isle.get('H_B') === 'active|null', `browser ${b.mode} / island ${isle.get('H_B')}`);
+  check('Stop: back to following you, on both sides', a.mode === 'active' && !a.around && (isle.get('H_A') ?? '').startsWith('active|null|empty'),
+    `browser ${a.mode} / island ${isle.get('H_A')}`);
   const told = said.filter((m) => m.startsWith(`${AROUND_STOPPED}:`)).join(' / ');
-  check('told in the same words on both sides', told === isle.get('H_TOLD'), `browser "${told}" / island "${isle.get('H_TOLD')}"`);
+  check('told in the same words on both sides', told === isle.get('H_TOLD') && told === `${AROUND_STOPPED}: Pip follows you.`, `browser "${told}" / island "${isle.get('H_TOLD')}"`);
   check('nothing it held dropped, on both sides', groundCount(g) === 0 && isle.get('H_GROUND') === '0', `${groundCount(g)} / ${isle.get('H_GROUND')}`);
   check('and Stop again is refused in the same words', stop.check?.({ kind: 'creature', id: a.id }, g) === isle.get('H_AGAIN'),
     `${stop.check?.({ kind: 'creature', id: a.id }, g)} / ${isle.get('H_AGAIN')}`);
+  // Back and in a crate, the next one following may go.
+  crateIn(g, a);
+  const next = pet(g, 'rabba', T + 0.5, T + 1.5);
+  const nextWhy = work.check?.({ kind: 'creature', id: next.id }, g) ?? null;
+  check('with it stopped, the next one following may go, on both sides', nextWhy === null && isle.get('H_NEXT') === 'none', `${nextWhy} / ${isle.get('H_NEXT')}`);
 }
 
 // Offline: the island's.
-check('its keeper away: the clock sends both back, into its crate and to following',
-  isle.get('I_SWEPT') === '2' && isle.get('I_A') === 'stored|null|true' && isle.get('I_B') === 'active|null', `${isle.get('I_SWEPT')} ${isle.get('I_A')} ${isle.get('I_B')}`);
+check('its keeper away: the clock sends it back to following', isle.get('I_SWEPT') === '1' && isle.get('I_A') === 'active|null', `${isle.get('I_SWEPT')} ${isle.get('I_A')}`);
 check('the clock runs that sweep every round', isle.get('I_TICK') === 'true');
 check('its keeper not seen for the logout time: its own settle sends it back', isle.get('I_SETTLE') === 'active|null', isle.get('I_SETTLE'));
 
-// Its crate gone meanwhile.
+// Something else following by then.
 {
   const { g, said } = fresh();
-  const a = pet(g, 'rabba', T + 0.5, T + 0.5);
-  const crate = crateIn(g, a);
-  const b = pet(g, 'rabba', T + 1.5, T + 0.5);
+  const a = pet(g, 'rabba', T + 1.5, T + 0.5);
   work.perform({ kind: 'creature', id: a.id }, g);
-  work.perform({ kind: 'creature', id: b.id }, g);
-  g.inventory.remove(crate, 1);
+  const b = pet(g, 'rabba', T + 0.5, T + 1.5);
   const spare = { uid: g.inventory.nextUid++, id: 'creature_crate', ql: 40, dmg: 0, count: 1 };
   g.inventory.addItem(spare);
   stop.perform({ kind: 'creature', id: a.id }, g);
-  check('its crate gone: into the empty crate in your pack, as a post\'s worker goes, on both sides',
+  check('another following you by then: into the empty crate in your pack, as a post\'s worker goes, on both sides',
     a.mode === 'stored' && g.inventory.items.find((it) => it.uid === spare.uid)?.creature === a.id && isle.get('J_A') === 'stored|true', `browser ${a.mode} / island ${isle.get('J_A')}`);
-  check('and the following one following, on both sides', b.mode === 'active' && isle.get('J_B') === 'active', `${b.mode} / ${isle.get('J_B')}`);
+  check('and the other still following, on both sides', b.mode === 'active' && isle.get('J_B') === 'active', `${b.mode} / ${isle.get('J_B')}`);
   const told = said.filter((m) => m.startsWith(`${AROUND_STOPPED}:`)).join(' / ');
   check('told in the same words on both sides', told === isle.get('J_TOLD'), `browser "${told}" / island "${isle.get('J_TOLD')}"`);
 }
@@ -492,9 +489,10 @@ check('its keeper not seen for the logout time: its own settle sends it back', i
 // Refusals.
 {
   const { g } = fresh();
-  const say = (kind: string, c: Partial<Creature>): string | null => {
+  const say = (kind: string, c: Partial<Creature>, crated = false): string | null => {
     const one = pet(g, kind, T + 1.5, T + 0.5);
     Object.assign(one, c);
+    if (crated) crateIn(g, one);
     const why = work.check?.({ kind: 'creature', id: one.id }, g) ?? null;
     g.creatures.remove(one.id);
     return why;
@@ -504,7 +502,7 @@ check('its keeper not seen for the logout time: its own settle sends it back', i
     stranger: say('rabba', { mine: false }),
     worker: say('rabba', { mode: 'deed' }),
     far: say('rabba', { x: T + 1.5 + POST_FOLLOW_REACH + 1 }),
-    lost: say('rabba', { mode: 'stored' }),
+    crated: say('rabba', {}, true),
     already: say('rabba', { mode: 'deed', around: { was: 'follow' } }),
   };
   for (const [k, b] of Object.entries(browser)) {
