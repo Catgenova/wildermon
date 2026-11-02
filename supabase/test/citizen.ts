@@ -201,6 +201,9 @@ begin
     from my_deed(w, cit) d) || ',' || coalesce(deed_role(w, boss, cit), 'none');
   perform give(w, cit, 'deed_stake', 1, 50);
   insert into said values ('SECOND|' || coalesce(act_refusal(w, cit, 'found_settlement', aim), 'none'));
+  -- The boss stands beside the spot asked about: refused as the founder of a settlement, not as too far away.
+  update player set body_at = now(), x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb
+   where world_id = w and uid = boss;
   insert into said values ('FOUNDER|' || coalesce(act_refusal(w, boss, 'found_settlement', aim), 'none'));
   -- One tile short of the spacing east of the boss's settlement, called Oceanport here as in the browser's half.
   delete from deed where world_id = w and founded_by = cit;

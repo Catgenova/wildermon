@@ -4252,6 +4252,15 @@ export const NEWS: News[] = [
     lines: () => [`Changed: founding a settlement: its token at least ${DEED_STONE_GAP} tiles from every runestone. Settlements already standing stay.`],
   },
   {
+    n: 456,
+    day: '2026-11-02',
+    lines: () => [
+      `Fixed: cart or wagon under a bridge: under a ${BRIDGES.rope.name.toLowerCase()}, a wagon under a deck of fewer than ${WAGON_WIDTH} lanes, and under a bridge up a storey, `
+        + 'across its lanes and under its ends (was: held at the deck\'s edge).',
+      'Under a deck: ground, on foot, mounted or on wheels. Wheels onto a deck: at its end on the ground, where it carries them.',
+    ],
+  },
+  {
     n: 455,
     day: '2026-11-02',
     lines: () => [

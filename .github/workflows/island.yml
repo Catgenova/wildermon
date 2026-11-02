@@ -3048,6 +3048,20 @@ jobs:
             --outfile=node_modules/.cache/storeybridge.mjs --log-level=error
           node node_modules/.cache/storeybridge.mjs
 
+      - name: Under a bridge on foot, mounted, in a cart and in a wagon, on both sides
+        if: matrix.shard == 3
+        run: |
+          # One lane of marble, a rope bridge and three lanes of marble at
+          # storey 4, each over a sunken road: on foot, mounted, in a large cart
+          # and in a wagon, a walk down the road is found and walked under the
+          # deck on the ground, drawn under it (`driveRule`, `pieceOnDeck`), and
+          # every word to `rpc_move` along it is let through (`walk_share`).
+          # Across the decks as before: a cart over marble, not over rope; a
+          # wagon over neither.
+          npx esbuild supabase/test/underbridge.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/underbridge.mjs --log-level=error
+          node node_modules/.cache/underbridge.mjs
+
       - name: A bridge between two buildings' storey 4 is crossed at storey 4, and its end's wall planned
         if: matrix.shard == 3
         run: |

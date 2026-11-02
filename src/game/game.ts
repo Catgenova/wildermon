@@ -69,7 +69,7 @@ import {
   type TrapKind,
 } from './traps';
 import { BAIT_BY_ID, FISH, fishHere, pickFish, waterDepth } from './fishing';
-import { across, BRIDGES, sideStep, bridgeDone, deckLane, bridgeLevels, bridgeWheels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
+import { across, BRIDGES, sideStep, bridgeDone, deckLane, bridgeLevels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, deckWheels, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
 import { AQ_NOT_THROWN, AQ_OVER, channelOf, fitIntoChannel } from './aqueducts';
 import { AQUEDUCT_LPS, aqueductShut, type Channel } from '../world/aqueducts';
 import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hingeOf, isDrawbridge, keepHiddenAsks } from './gates';
@@ -1689,23 +1689,25 @@ export class Game {
     // A deck on piers takes feet, not wheels (`pier_step`).
     if (this.buildings.pierTiles.size && this.buildings.onPiers(x1, y1)) return null;
     if (this.bridges.size && this.pierBetween(x0, y0, x1, y1)) return null;
-    // Onto a bridge's end, any lane's, as onto its deck: only wheels that may cross it, as the island's `deck_wheels` has it.
     if (this.bridges.size) {
+      const kind = this.driving()?.kind ?? 'cart';
+      // Onto a bridge's end on the ground, any lane's, as onto its deck: only wheels its deck carries (`deckWheels`). An
+      // end up a storey is over the wheels: the ground under it is ground.
       const end = this.bridgeEndAt(x1, y1);
-      if (end && end.kind !== 'aqueduct' && deckDown(end) && (!bridgeWheels(end, this.driving()?.kind ?? 'cart') || end.level || end.levelB)) return null;
-    }
-    // A material bridge carries wheels, a wagon from `WAGON_WIDTH` lanes; a rope bridge does not.
-    if (this.bridges.size && this.bridgeStep(x0, y0, x1, y1)) {
-      const b = this.bridgeAt(x1, y1) ?? this.bridgeAt(x0, y0);
-      // A wagon only on a bridge `WAGON_WIDTH` lanes wide (`bridgeWheels`).
-      if (!b || !bridgeWheels(b, this.driving()?.kind ?? 'cart')) return null;
-      // A walkway between two upper storeys is a walkway, and so is a ramp up to one. Nobody drives it.
-      if (b.level || b.levelB) return null;
-      // Coming off the deck onto the bank: the bank still has to take wheels.
-      if (!this.bridgeAt(x1, y1) && !this.vehicleGround(x1, y1)) return null;
-      // gates: and through a gateway wide enough, as off any other ground (`gates.ts`).
-      if (this.buildings.blocksVehicle(x0, y0, x1, y1)) return null;
-      return 0;
+      if (end && end.kind !== 'aqueduct' && deckDown(end) && this.bridgeEndLevel(end, x1, y1) === 0 && !deckWheels(end, kind)) return null;
+      // Along a deck that carries them, on the ground storey (`bridgeStepLevel`).
+      const deck = this.bridgeStepLevel(x0, y0, x1, y1, 0);
+      const b = deck === null ? undefined : this.bridgeAt(x1, y1) ?? this.bridgeAt(x0, y0);
+      if (b && deckWheels(b, kind)) {
+        // Coming off the deck onto the bank: the bank still has to take wheels.
+        if (!this.bridgeAt(x1, y1) && !this.vehicleGround(x1, y1)) return null;
+        // gates: and through a gateway wide enough, as off any other ground (`gates.ts`).
+        if (this.buildings.blocksVehicle(x0, y0, x1, y1)) return null;
+        return 0;
+      }
+      // From its end on the ground onto a deck that does not carry them: onto that deck all the same, and held.
+      if (b && this.bridgeAt(x1, y1) === b && this.bridgeEndLevel(b, x0, y0) === 0) return null;
+      // Any other deck is over the wheels, lane to lane too: under it is the ground, driven as any ground is.
     }
     if (!this.vehicleGround(x1, y1)) return null;
     // A flight of garden steps is climbed, not driven: no wheel takes one.
@@ -2690,12 +2692,16 @@ export class Game {
   /**
    * Whether a piece standing on a tile stands on a bridge's deck there rather
    * than on the ground under it: wheels, which only come onto a deck from
-   * its end, and anything set down on an outer lane of a wide one
-   * (`deckLane`). What is drawn, nothing more.
+   * its end -- the ones you drive where you are (`underNow`), any other on
+   * a deck that carries them (`deckWheels`) -- and anything set down on an
+   * outer lane of a wide one (`deckLane`). What is drawn, nothing more.
    */
   pieceOnDeck(f: { kind: string; level?: number }, x: number, y: number): boolean {
     if (furnitureDef(f.kind).boat) return false;
-    return furnitureDef(f.kind).vehicle ? this.onWalkedDeck(x, y) : this.deckLaneAt(x, y);
+    if (!furnitureDef(f.kind).vehicle) return this.deckLaneAt(x, y);
+    const b = this.bridgeAt(x, y);
+    if (!b || b.kind === 'aqueduct') return false;
+    return f === this.driving() ? !this.underNow() : deckWheels(b, f.kind);
   }
 
   /** Whether a thing set down on a tile is on a bridge's deck there: an outer lane of a wide one (`deckLane`). */
@@ -6697,15 +6703,9 @@ export class Game {
   }
 
   /**
-   * Whether a step is a step along a bridge. You get onto a deck at an end
-   * and walk it; you do not climb onto one out of the water underneath.
-   */
-  bridgeStep(x0: number, y0: number, x1: number, y1: number): boolean {
-    return this.bridgeStepLevel(x0, y0, x1, y1) !== null;
-  }
-
-  /**
-   * The same step, and which storey it is walked on.
+   * Whether a step is a step along a bridge, and which storey it is walked
+   * on; null for none. You get onto a deck at an end and walk it; you do not
+   * climb onto one out of the water underneath.
    *
    * Nought for a bridge between two banks. A bridge that lands on a finished
    * floor is walked at that storey, so stepping onto it from the room it meets
