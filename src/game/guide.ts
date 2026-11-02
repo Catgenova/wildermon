@@ -36,7 +36,7 @@ import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
   EVOLVE_AT, favouriteSays, GATHER_DO, GATHER_SKILL, STAGE_MUL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS,
-  footing, HAUL_SKILL, LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef, LEARN_PACE,
+  footing, HAUL_LEARN, HAUL_LEARN_STEEP, HAUL_SKILL, HAUL_STEEP_AT, LEARNS_SAYS, levelSkill, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef, LEARN_PACE,
 } from './creatures';
 import { BANE_BONUS } from './gear';
 import { HOARD_METALS, itemDef } from './items';
@@ -368,7 +368,9 @@ function keeping(def: SpeciesDef): string[] {
     const traces = tracesSkill(def);
     lines.push(`Traces: team pull +${percent(def.pull ?? PULL_DEFAULT)}`
       + `${def.pull !== undefined && def.pull !== PULL_DEFAULT ? ` (most: +${percent(PULL_DEFAULT)})` : ''}`
-      + (traces === HAUL_SKILL ? '; learns climbing pulling'
+      // Climbing in the traces is its level only for a kind whose level skill it is (`creatureLevel`).
+      + (traces === HAUL_SKILL ? `; climbing base gain per tile pulled: ${HAUL_LEARN} flat, ${HAUL_LEARN + HAUL_LEARN_STEEP} at a rise of ${HAUL_STEEP_AT}+`
+        + (levelSkill(def) === HAUL_SKILL ? '' : ', not its level')
         : `; its ${SKILL_BY_ID.get(traces)?.name.toLowerCase() ?? traces} counts as climbing for team pace and the steepest step`));
   }
   if (def.sight) lines.push(`Sight for you: ${def.sight} tiles (most: ${KEPT_EYES})`);

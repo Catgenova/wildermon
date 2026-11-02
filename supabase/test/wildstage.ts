@@ -143,7 +143,7 @@ ${DICE.map(([d], k) => `
   s := creature_spawn(w, '${KIND}', px + 4, py + 4, 'active', now() - interval '10 days', u);
   perform wild_stage_put(w, s);
   perform set_config('search_path', '"$user", public', true);
-  insert into said select 'STILL', string_agg(cr.species || ':' || creature_level(cr.skills) || ':' || cr.name, ',' order by cr.id) from creature cr where cr.world_id = w and cr.id in (a, s);
+  insert into said select 'STILL', string_agg(cr.species || ':' || creature_level(cr.skills, cr.species) || ':' || cr.name, ',' order by cr.id) from creature cr where cr.world_id = w and cr.id in (a, s);
   delete from creature where world_id = w and id = s;
 
   -- In numbers, at the island's own dice.

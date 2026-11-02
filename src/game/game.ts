@@ -8704,9 +8704,10 @@ export class Game {
   }
 
   /**
-   * What a draught beast picks up from a stretch of ground: nothing on the
-   * flat, and something worth having on a slope, which is why a hill team is
-   * made on hills.
+   * What a beast in the traces or under a rider picks up from a stretch of
+   * ground: climbing at `haulLearn` of its rise, a Wagonox's base a tile pulled
+   * on the flat and up to `HAUL_STEEP_TIMES` more on a steep step. Its level
+   * only for a kind whose level skill climbing is (`creatureLevel`).
    */
   workClimb(c: Creature, moved: number): void {
     if (moved <= 0) return;

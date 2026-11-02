@@ -62,7 +62,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { BARDING_CUT, gearBill, gearSays, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZE_BILL, GEAR_SIZES, GEAR_SLOTS, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
-import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP } from '../../game/creatures';
+import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP, HAUL_SKILL } from '../../game/creatures';
 import { PERK_STAGE, perkLine, perkSays, STAGE_PERKS } from '../../game/creatures';
 import {
   ALLOY_QL, AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
@@ -2289,8 +2289,10 @@ export function helpText(): string {
       <li>Pace (speed multiplier): the team's speed and number, and hunger (a hungry one is slower).</li>
       <li><b>Driving</b> (the driver): team pace +${percent(drivingPace(TRAVEL_TOP_AT / 2) - 1)} at ${TRAVEL_TOP_AT / 2}, +${percent(DRIVING_TOP)} at ${TRAVEL_TOP_AT}; trained per tile entered
       on the seat. A ${SPECIES.seavic.name} pair outruns walking; ${WAGON.vehicle?.needs ?? 0} ${SPECIES.quarra.name}s do not, but shift ${WAGON.capacity ?? 0} bricks.</li>
-      <li>Draught wildermon and mounts train <b>climbing</b>, per tile pulled or ridden: ${HAUL_LEARN} base gain on the flat, to ${HAUL_LEARN + HAUL_LEARN_STEEP} at a rise
-      of ${HAUL_LEARN_STEEP * HAUL_LEARN_RISE} or more. The team's climbing sets wheel speed and the steepest step taken.</li>
+      <li>Wildermon in the traces and mounts train <b>climbing</b>, per tile pulled or ridden: ${HAUL_LEARN} base gain on the flat (${SPECIES.roxxen.name}'s driving base), to
+      ${HAUL_LEARN + HAUL_LEARN_STEEP} at a rise of ${HAUL_LEARN_STEEP * HAUL_LEARN_RISE} or more. The team's climbing sets wheel speed and the steepest step taken.</li>
+      <li>Climbing: level and evolution of a draught kind or a mount whose level skill it is (${listed(Object.values(SPECIES).filter((d) => levelSkill(d) === HAUL_SKILL && !d.monster).map((d) => d.name))});
+      for any other kind, no level or evolution.</li>
       <li><b>${SPECIES.roxxen.name}</b>: learns <b>driving</b> instead, ${LEARNS_SAYS.pull} (${percent((PULL_LEARN * LEARN_PACE.pull) / KNACK_GO)} of an action); its driving counts where
       another wildermon's climbing does. Standing still, in or out of the traces: no learning.</li>
       <li>Open ground only: no fords, garden steps or steep ground. Indoors through an <b>arch</b>, <b>double door</b> or <b>gate</b>, never a plain door.</li>
@@ -3199,7 +3201,9 @@ export function helpText(): string {
       time working, idle (with the reason idle longest) and resting. Island: time past its turn by over ${IDLE_STALE} s while the clock does not settle it counts as idle.</li>
       <li>A tamed wildermon: <b>travels with you</b> (one at a time; stance Passive, Defensive or Aggressive), <b>assigned to your settlement</b> (a Snufflet forages and drops finds in storage),
       or in a <b>wildermon crate</b>. Feed from your pack; settlement workers feed from storage.</li>
-      <li><b>Wildermon</b> window (<kbd>P</kbd>): condition, level and skills of every one you own (not wild ones). Level = its skill.</li>
+      <li><b>Wildermon</b> window (<kbd>P</kbd>): condition, level and skills of every one you own (not wild ones).</li>
+      <li><b>Level</b> and <b>evolution stage</b>: its level skill only: its task's, its own (no task), or climbing for a draught kind or mount with neither. Other skills
+      (climbing in the traces, fighting): no level, no evolution. A kind with no level skill: its highest skill.</li>
       <li>Settlement workers learn at half a player's pace and work at half a player's speed; higher skill: better finds, faster work.</li>
       <li>Kinds with no work learn their skill otherwise: ${listed(Object.values(SPECIES).filter((d) => d.learns).map((d) => `${d.name} its ${(SKILL_BY_ID.get(d.learns!.skill)?.name ?? d.learns!.skill).toLowerCase()}, ${LEARNS_SAYS[d.learns!.by]}`))}.</li>
       <li><b>Learning pace by task</b>: each gain at its level skill × its task's multiplier, set so every task reaches level ${EVOLVE_AT[0]} and then ${EVOLVE_AT[1]} in about the middle task's time:

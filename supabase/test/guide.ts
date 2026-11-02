@@ -46,8 +46,10 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import {
-  EVOLVE_AT, footing, HERD_REACH, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
+  EVOLVE_AT, footing, HERD_REACH, levelSkill, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
 } from '../../src/game/creatures';
+/** A Woolabee's level skill, which sets its stage (`creatureLevel`): a skill it does not level by sets none. */
+const WOOL_LEVEL = levelSkill(SPECIES.woola)!;
 import {
   countsLine, FieldGuide, guideCounts, guideEntries, guideEntry, guideMarks, guidePage, guidePages, seenLine, stageKey, whereItLives, wildShare,
 } from '../../src/game/guide';
@@ -232,7 +234,7 @@ check('the counts over the index are the book\'s', countsLine(game.guide) === `S
 
 // One at its second stage in view marks its stage's page seen as well, said as its stage.
 const cloudram = put('woola', px + 1, py - 1);
-cloudram.skills = { foraging: 30 };
+cloudram.skills = { [WOOL_LEVEL]: 30 };
 game.log.length = 0;
 game.update(1.1);
 check('one at its second stage in view marks its stage\'s page seen, and says so as its stage', game.guide.seen.has('woola:1')
@@ -307,7 +309,7 @@ begin
   insert into said values ('AGAIN', rpc_guide_seen(w, array['woola'])::text);
   -- A stage's page: taken while one at that stage stands near; then put back as it was.
   v_id := creature_spawn(w, 'woola', v_x + 2, v_y, 'wild', now() - interval '10 days');
-  update creature set skills = '{"foraging": 30}'::jsonb where world_id = w and id = v_id;
+  update creature set skills = '{"${WOOL_LEVEL}": 30}'::jsonb where world_id = w and id = v_id;
   insert into said values ('STAGE', rpc_guide_seen(w, array['woola:1', 'woola:2', 'woola:9'])::text);
   delete from guide where world_id = w and uid = dane and species = 'woola:1';
   delete from creature where world_id = w and id = v_id;
@@ -383,13 +385,13 @@ begin
 
   -- One of his evolving: each stage it reaches tamed in his book; a wild one evolving, nothing; bred never on a stage's page.
   v_id := creature_spawn(w, 'woola', v_x + 1, v_y, 'active', now() - interval '10 days', dane);
-  update creature set skills = '{"foraging": ${EVOLVE_AT[0]}}'::jsonb where world_id = w and id = v_id;
+  update creature set skills = '{"${WOOL_LEVEL}": ${EVOLVE_AT[0]}}'::jsonb where world_id = w and id = v_id;
   insert into said values ('EVOLVED1', coalesce((select string_agg(species || ':' || tamed, ',' order by species) from guide
     where world_id = w and uid = dane and species like 'woola:%'), 'none'));
-  update creature set skills = '{"foraging": ${EVOLVE_AT[1]}}'::jsonb where world_id = w and id = v_id;
+  update creature set skills = '{"${WOOL_LEVEL}": ${EVOLVE_AT[1]}}'::jsonb where world_id = w and id = v_id;
   delete from creature where world_id = w and id = v_id;
   v_id := creature_spawn(w, 'sedra', v_x - 1, v_y, 'wild', now() - interval '10 days');
-  update creature set skills = '{"foraging": ${EVOLVE_AT[1]}}'::jsonb where world_id = w and id = v_id;
+  update creature set skills = '{"${WOOL_LEVEL}": ${EVOLVE_AT[1]}}'::jsonb where world_id = w and id = v_id;
   delete from creature where world_id = w and id = v_id;
   perform guide_mark(w, dane, 'cudda:1', 'bred');
   insert into said values ('EVOLVED', coalesce((select string_agg(species || ':' || tamed || ':' || bred, ',' order by species) from guide
