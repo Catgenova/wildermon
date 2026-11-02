@@ -81,7 +81,10 @@ interface Broth {
   claws: boolean;
   /** Webbing between its toes: on the hind feet, or on all four. */
   webs: 0 | 1 | 2;
-  /** Its throat (`Stand`, its middle): a cream pouch, or a glass ball of broth and how full, and how many mushrooms in it. */
+  /**
+   * Its throat, a frog's sac swelled out from under its chin: its middle from the front of its chin, forward and up (its
+   * top tucked under the jaw), carried level; a cream pouch, or a glass ball of broth and how full, and how many mushrooms in it.
+   */
   orb: { c: V3; r: V3; glass: boolean; fill: number; mush: number };
   /** Its hat, in the head's frame: how far back on the skull, its band's radius and height, its top's radius and height, puffs round it. */
   hat: { back: number; lean: number; band: [number, number]; top: [number, number]; puffs: number };
@@ -101,16 +104,16 @@ interface Broth {
 const BROTHLET_LOOK: Broth = {
   stage: 0,
   body: { y: [-0.46, -0.38, -0.18, 0, 0.18, 0.32, 0.4], z: [0.02, 0.02, 0.01, 0, 0, 0.02, 0.04], w: [0.74, 1.0, 1.04, 0.98, 0.86, 0.68, 0.42], h: [0.44, 0.58, 0.6, 0.56, 0.5, 0.42, 0.28] },
-  high: 0.54, tilt: 46,
-  head: { at: [0, 0.24, 1.04], fwd: 0.12, up: 0.08, r: [0.74, 0.52, 0.42], mouth: 0.12, smile: 0.16, pitch: 10, gape: 14 },
+  high: 0.5, tilt: 40,
+  head: { at: [0, 0.24, 0.98], fwd: 0.12, up: 0.08, r: [0.74, 0.52, 0.42], mouth: 0.12, smile: 0.16, pitch: 10, gape: 14 },
   eye: { at: [0.5, 0.3, 0.62], dome: 0.19, size: 0.18, lid: 0.04, round: 0.9 },
   fore: { hip: [0.54, 0.5, 0.2], len: [0.13, 0.12], at: [0.62, 0.72], foot: 0.06, toe: 0.1, toes: 4, w: 0.09, turn: 26 },
-  hind: { hip: [0.66, -0.1, 0.28], len: [0.27, 0.25], at: [0.92, 0.22], foot: 0.1, toe: 0.12, toes: 4, w: 0.15, turn: 40 },
+  hind: { hip: [0.72, -0.1, 0.28], len: [0.27, 0.25], at: [0.98, 0.22], foot: 0.1, toe: 0.12, toes: 4, w: 0.15, turn: 40 },
   claws: false,
   webs: 0,
-  orb: { c: [0, 0.66, 0.66], r: [0.7, 0.5, 0.44], glass: false, fill: 0, mush: 0 },
+  orb: { c: [0, 0.06, -0.36], r: [0.74, 0.52, 0.44], glass: false, fill: 0, mush: 0 },
   hat: { back: 0.4, lean: 14, band: [0.26, 0.12], top: [0.33, 0.28], puffs: 6 },
-  scarf: { y: 0.14, w: 0.09, knot: Math.PI * 0.62 },
+  scarf: { y: 0.04, w: 0.09, knot: Math.PI * 0.62 },
   cape: null,
   apron: { y: [0.12, -0.3], half: 0.62, emblem: false },
   pot: { at: [0.76, 0.84], r: 0.22, h: 0.24, spoon: 0.56 },
@@ -122,16 +125,16 @@ const BROTHLET_LOOK: Broth = {
 const STOCKBELLY_LOOK: Broth = {
   stage: 1,
   body: { y: [-0.7, -0.58, -0.28, 0, 0.28, 0.48, 0.6], z: [0.02, 0.02, 0, 0, -0.02, 0, 0.02], w: [0.8, 1.18, 1.32, 1.3, 1.18, 0.96, 0.58], h: [0.62, 0.86, 0.92, 0.86, 0.76, 0.62, 0.4] },
-  high: 0.9, tilt: 55,
-  head: { at: [0, 0.35, 1.72], fwd: 0.16, up: 0.12, r: [0.98, 0.72, 0.54], mouth: 0.12, smile: 0.2, pitch: 10, gape: 13 },
+  high: 0.84, tilt: 44,
+  head: { at: [0, 0.35, 1.64], fwd: 0.16, up: 0.12, r: [0.98, 0.72, 0.54], mouth: 0.12, smile: 0.2, pitch: 10, gape: 13 },
   eye: { at: [0.5, 0.34, 0.62], dome: 0.25, size: 0.22, lid: 0.08, round: 0.9 },
   fore: { hip: [0.84, 0.72, 0.3], len: [0.24, 0.22], at: [1.0, 1.08], foot: 0.11, toe: 0.19, toes: 4, w: 0.15, turn: 26 },
-  hind: { hip: [0.92, -0.25, 0.42], len: [0.48, 0.44], at: [1.3, 0.2], foot: 0.18, toe: 0.19, toes: 4, w: 0.25, turn: 40 },
+  hind: { hip: [1.0, -0.25, 0.42], len: [0.48, 0.44], at: [1.4, 0.2], foot: 0.18, toe: 0.19, toes: 4, w: 0.25, turn: 40 },
   claws: false,
   webs: 1,
-  orb: { c: [0, 1.0, 1.12], r: [0.9, 0.72, 0.6], glass: true, fill: 0.68, mush: 0 },
+  orb: { c: [0, 0.08, -0.54], r: [1.18, 0.82, 0.64], glass: true, fill: 0.68, mush: 0 },
   hat: { back: 0.42, lean: 12, band: [0.44, 0.28], top: [0.58, 0.64], puffs: 8 },
-  scarf: { y: 0.36, w: 0.08, knot: -0.25 },
+  scarf: { y: 0.24, w: 0.08, knot: -0.25 },
   cape: null,
   apron: { y: [0.14, -0.5], half: 0.66, emblem: false },
   pot: { at: [1.15, 1.25], r: 0.36, h: 0.36, spoon: 0.86 },
@@ -143,14 +146,14 @@ const STOCKBELLY_LOOK: Broth = {
 const CAULDRONTHROAT_LOOK: Broth = {
   stage: 2,
   body: { y: [-1.0, -0.86, -0.42, 0, 0.42, 0.72, 0.88], z: [0.04, 0.04, 0.02, 0, 0, 0.02, 0.04], w: [1.1, 1.66, 1.9, 1.88, 1.72, 1.36, 0.8], h: [0.8, 1.1, 1.16, 1.06, 0.96, 0.8, 0.52] },
-  high: 1.15, tilt: 50,
-  head: { at: [0, 0.45, 2.4], fwd: 0.2, up: 0.12, r: [1.14, 0.84, 0.66], mouth: 0.12, smile: 0.22, pitch: 14, gape: 16 },
+  high: 1.1, tilt: 42,
+  head: { at: [0, 0.45, 2.3], fwd: 0.2, up: 0.12, r: [1.14, 0.84, 0.66], mouth: 0.12, smile: 0.22, pitch: 14, gape: 16 },
   eye: { at: [0.5, 0.36, 0.62], dome: 0.28, size: 0.25, lid: 0.16, round: 0.88 },
   fore: { hip: [1.2, 1.0, 0.4], len: [0.36, 0.32], at: [1.42, 1.5], foot: 0.15, toe: 0.24, toes: 4, w: 0.25, turn: 28 },
-  hind: { hip: [1.3, -0.36, 0.55], len: [0.64, 0.58], at: [1.85, 0.2], foot: 0.24, toe: 0.27, toes: 4, w: 0.38, turn: 42 },
+  hind: { hip: [1.4, -0.36, 0.55], len: [0.64, 0.58], at: [1.98, 0.2], foot: 0.24, toe: 0.27, toes: 4, w: 0.38, turn: 42 },
   claws: true,
   webs: 2,
-  orb: { c: [0, 1.36, 1.45], r: [1.12, 0.88, 0.74], glass: true, fill: 0.7, mush: 2 },
+  orb: { c: [0, 0.1, -0.68], r: [1.6, 1.04, 0.8], glass: true, fill: 0.7, mush: 2 },
   hat: { back: 0.42, lean: 10, band: [0.6, 0.34], top: [0.8, 0.86], puffs: 9 },
   scarf: null,
   cape: { y: [0.8, -0.86], drop: 0.95 },
@@ -708,6 +711,10 @@ function legOf(s: Broth, R: Rest, body: Xf, i: number, ankle: V3, heading: V3, l
 
 const skullAt = (s: Broth): V3 => [0, s.head.fwd, s.head.up];
 const hingeAt = (s: Broth): V3 => { const H = s.head; return [0, H.fwd - H.r[1] * 0.8, H.up - H.r[2] * H.mouth]; };
+/** The lower jaw's egg: the head's, narrower and flatter under the mouth line. */
+const jawR = (s: Broth): V3 => [s.head.r[0] * 0.95, s.head.r[1], s.head.r[2] * 0.72];
+/** The front of its chin, in the jaw's frame: where its throat swells out from. */
+const chinAt = (s: Broth): V3 => sub(onEgg(skullAt(s), jawR(s), [0, 0.55, -0.84]).p, hingeAt(s));
 
 /** The broth this moment, worked out once for an `Anim`. */
 const posed = new WeakMap<Anim, { s: Broth; w: ReturnType<typeof brothOf> }>();
@@ -727,9 +734,11 @@ function brothBones(s: Broth): (a: Anim) => Bones {
     b.trunk = P.squash >= 0 ? trunkOf(body, P.squash) : scaled(body, [1 + 0.35 * P.squash, 1 - 1.4 * P.squash, 1 + 0.35 * P.squash]);
     b.head = joint(body, s.head.at, s.head.pitch + P.head[0], P.head[2], P.head[1]);
     b.jaw = joint(b.head, hingeAt(s), -Math.max(0, s.head.gape + P.jaw));
-    // The throat: carried level in the world on the trunk, turned the way the body faces, swollen as it croaks and squashed as it wobbles.
-    const W = brothNow(s, a), c = place(b.trunk, s.orb.c), f = turn(body, [0, 1, 0]);
+    // The throat: hung from the front of its chin, so it goes where the head goes, but carried level in the world and turned
+    // the way the body faces; swollen as it croaks and squashed as it wobbles.
+    const W = brothNow(s, a), f = turn(body, [0, 1, 0]);
     const [X, Y, Z] = frameOf([0, 0, 1], [f[0], f[1], 0]), swell = 1 + (s.orb.glass ? 0.05 : 0.14) * P.throat;
+    const c = add(place(b.jaw, chinAt(s)), add(scale(Y, s.orb.c[1]), scale(Z, s.orb.c[2] * swell)));
     b.orb = scaled(xfOf(X, Y, Z, c), [swell * (1 + W.wobble * 0.6), swell * (1 + W.wobble * 0.6), swell * (1 - W.wobble)]);
     for (let i = 0; i < 4; i++) {
       const L = legOfI(s, i), g = P.at[i];
@@ -925,7 +934,7 @@ function headSolids(s: Broth): Array<{ c: V3; r: V3 }> {
  */
 function jawOf(s: Broth, n: number): Mesh {
   const H = s.head, C = skullAt(s), hg = hingeAt(s), N = n + 4;
-  const r: V3 = [H.r[0] * 0.95, H.r[1] * 1.0, H.r[2] * 0.72];
+  const r = jawR(s);
   const m = eggBand(C, r, N, 4, (phi) => mouthZ(s, phi), -0.98, (row, phi) => (Math.abs(phi) > 2.1 ? 'coat' : row === 0 ? 'muzzle' : 'belly'), true);
   // The floor: the jaw's open rim, drawn in a little, facing up.
   const rim: V3[] = m.v.slice(0, N).map((p) => [p[0] * 0.96, C[1] + (p[1] - C[1]) * 0.96, p[2] - H.r[2] * 0.04] as V3);
@@ -1531,7 +1540,6 @@ function brothKind(look: Broth): Kind {
     fore: { ...look.fore, hip: toBody(look, look.fore.hip) },
     hind: { ...look.hind, hip: toBody(look, look.hind.hip) },
     head: { ...look.head, at: toBody(look, look.head.at), pitch: look.head.pitch - look.tilt },
-    orb: { ...look.orb, c: toBody(look, look.orb.c) },
   };
   const bones = brothBones(s);
   return {
