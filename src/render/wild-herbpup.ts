@@ -120,19 +120,19 @@ const HERBFOX_LOOK: Herb = {
   snout: { len: 0.68, w: 0.2, h: 0.2 },
   eye: { dir: [0.58, 0.66, 0.34], size: 0.12 },
   ear: { at: [0.18, -0.2, 0.26], len: 1.04, w: 0.44, splay: 18, back: 20, turn: 26 },
-  ruff: { c: [0, 1.04, 0.16], r: [0.36, 0.28, 0.4], len: 0.24, rows: 3, across: 6 },
+  ruff: { c: [0, 1.04, 0.16], r: [0.38, 0.3, 0.42], len: 0.22, rows: 4, across: 7 },
   mouth: 0,
   top: 'sprig',
   garland: false,
   mane: 0,
   mantle: { from: 0.74, to: -0.86, rows: 6, len: 1.0, rise: 62 },
-  tails: { at: [0, -1.12, 0.32], n: 1, spread: 0, links: [0.46, 0.48, 0.48, 0.44, 0.38, 0.3], w: [0.22, 0.36, 0.44, 0.46, 0.4, 0.24], lift: -62, curl: 15 },
+  tails: { at: [0, -1.12, 0.32], n: 1, spread: 0, links: [0.46, 0.48, 0.48, 0.44, 0.38, 0.3], w: [0.22, 0.36, 0.44, 0.46, 0.4, 0.24], lift: -70, curl: 21 },
   bags: { y: -0.1, r: [0.15, 0.38, 0.25], both: false, small: false, flowers: 5, bouquet: false },
   vials: 0, banner: false, wraps: false,
   blossoms: 1, yellows: 3,
   mottles: 14,
   gait: { duty: [0.64, 0.42], swing: [0.28, 0.38], step: 0.2, bob: 0.05 },
-  size: 3.05,
+  size: 3.3,
 };
 
 /** A Herbwarden: large and stately, a crown, a leaf-edged ruff, a great mantle, bags with a bouquet, vials, a banner, wraps, three tails. */
@@ -152,8 +152,8 @@ const HERBWARDEN_LOOK: Herb = {
   top: 'crown',
   garland: false,
   mane: 0.62,
-  mantle: { from: 0.9, to: -1.24, rows: 7, len: 1.3, rise: 56 },
-  tails: { at: [0, -1.52, 0.42], n: 3, spread: 30, links: [0.58, 0.62, 0.62, 0.56, 0.48, 0.38], w: [0.26, 0.4, 0.5, 0.52, 0.46, 0.26], lift: -52, curl: 13 },
+  mantle: { from: 0.9, to: -1.42, rows: 7, len: 1.5, rise: 54 },
+  tails: { at: [0, -1.52, 0.42], n: 3, spread: 40, links: [0.58, 0.62, 0.62, 0.56, 0.48, 0.38], w: [0.26, 0.4, 0.5, 0.52, 0.46, 0.26], lift: -60, curl: 17 },
   bags: { y: -0.2, r: [0.27, 0.52, 0.42], both: true, small: true, flowers: 4, bouquet: true },
   vials: 2, banner: true, wraps: true,
   blossoms: 1, yellows: 3,
@@ -760,7 +760,7 @@ function ruffOf(s: Herb, n: number): Mesh {
       const L = F.len * (0.7 + 0.5 * v) * (0.85 + 0.3 * jitter(id));
       const way = unit(add(scale(e.n, 0.45), [0, 0.02, -1]));
       if (s.stage === 0) out.push(lock(sub(e.p, scale(e.n, 0.05)), way, L, L * 0.8, 'mark', e.n, 0.05));
-      else out.push(plume(sub(e.p, scale(e.n, 0.04)), way, e.n, [0, 0, -1], L, L * 0.6, 0.06, ['mark', 'mark', 'muzzle'], 0.22));
+      else out.push(plume(sub(e.p, scale(e.n, 0.04)), way, e.n, [0, 0, -1], L, L * 0.75, 0.06, row % 2 ? ['belly', 'mark', 'muzzle'] : ['mark', 'mark', 'muzzle'], 0.35));
     }
   }
   // The Herbwarden's ruff edged in green leaves, round its sides and over its shoulders.
@@ -999,9 +999,9 @@ function mantleOf(s: Herb): Sway[] {
   const rows = M.rows - 1;
   for (let r = 0; r < rows; r++) {
     const f = lerp(0.12, 1, r / Math.max(1, rows - 1)), hi = Math.sin(Math.PI * (0.1 + 0.85 * f));
-    for (let q = 0; q < 4; q++) {
-      const g = (q + (r % 2 ? 0.5 : 0)) / 3.5 - 0.5, id = 1500 + r * 13 + q;
-      put(f, g * 1.5, M.rise * (0.55 + 0.45 * hi) * (1 - 0.3 * Math.abs(g) * 2), M.len * (0.72 + 0.38 * hi) * (0.9 + 0.2 * jitter(id + 2)), 0.4, 0.2,
+    for (let q = 0; q < 5; q++) {
+      const g = (q + (r % 2 ? 0.5 : 0)) / 4.5 - 0.5, id = 1500 + r * 13 + q;
+      put(f, g * 2.1, M.rise * (0.55 + 0.45 * hi) * (1 - 0.35 * Math.abs(g) * 2), M.len * (0.72 + 0.38 * hi) * (0.9 + 0.2 * jitter(id + 2)), 0.4, 0.2,
         jitter(id + 3) < 0.2 ? 'moss' : 'leaf', 'moss', 0.04 * s.len, id, 0.25);
     }
   }
@@ -1530,9 +1530,9 @@ function herbKind(s: Herb): Kind {
         claw: [104, 68, 44],
         pad: [80, 50, 34],
         tongue: [238, 128, 128],
-        leaf: [100, 140, 30],
-        leafDark: [56, 90, 24],
-        moss: [172, 196, 48],
+        leaf: [118, 152, 34],
+        leafDark: [76, 108, 28],
+        moss: [184, 204, 60],
         stem: [118, 104, 58],
         petal: [248, 176, 182],
         bloom: [246, 184, 60],
