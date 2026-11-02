@@ -179,6 +179,11 @@ begin
   ${smelter}${stoker(EMBER)}${settle}
   insert into said select 'SMELT:ember', ${held(7501)} || '|' || jsonb_array_length(furnace_jobs(p)) || '|' || jsonb_array_length(furnace_output(p))
     from placed p where p.id = v_q;${done}
+  -- A smelter that poured a mould: the castings into the stores still castings of their piece, as a person takes them.
+  ${put(7501, [['copper_ore', 3]])}
+  ${smelter.replace("'def', 'copper_lump', 'count', 2, 'ql', 30", "'def', 'casting', 'count', 2, 'ql', 30, 'extra', 'Bronze', 'piece', 'shovel_head'")}${stoker(EMBER)}${settle}
+  insert into said select 'CASTING', coalesce((select string_agg(def || ' ' || count || ' ' || coalesce(extra, '-') || ' ' || coalesce(piece, '-'), ',' order by def)
+    from item where world_id = w and holder = 'crate' and crate = 7501 and def = 'casting'), '-');${done}
   -- And with a cold campfire and no fuel for it.
   ${put(7501, [['copper_ore', 3]])}
   ${fire(0)}${smelter}${stoker(EMBER)}${settle}
@@ -237,6 +242,7 @@ check('on the island, an oven is fed a log and lit, to its own capacity', at('OV
 check('on the island, a brazier is fed a log and left to light itself after dark, to its own capacity', at('BRAZIER') === `-|${FUEL_VALUES.log}|false|true`, at('BRAZIER'));
 check('on the island, a Sluglow leaves a smelter alone, and says nothing is in range', at('SMELT:low') === 'copper_ore 3|0|1|range', at('SMELT:low'));
 check('on the island, a Slugember takes the lumps out of a smelter into the stores and charges it with the ore', at('SMELT:ember') === 'copper_lump 2|3|0', at('SMELT:ember'));
+check('on the island, a Slugember takes a poured mould\'s castings into the stores as castings of their piece', at('CASTING') === 'casting 2 Bronze shovel_head', at('CASTING'));
 check('on the island, and so with a cold campfire and no fuel for it', at('SMELT:nofuel') === 'copper_lump 2|3|0', at('SMELT:nofuel'));
 check('on the island, a campfire a tile past the settlement\'s edge, within its reach, is left alone: nothing in range, nothing fed',
   at('OFFDEED') === '-|-|range' && at('OFFDEED:fuel') === '0', `${at('OFFDEED')} ${at('OFFDEED:fuel')}`);
