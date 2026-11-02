@@ -4242,6 +4242,17 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 452,
+    day: '2026-11-02',
+    lines: () => {
+      // What each needed before.
+      const was: Record<string, number> = { magga: 5, grazza: 6, dippa: 6, sedra: 8, grubba: 8, wurla: 8, bogga: 10, plucka: 10, brambo: 10,
+        sprigga: 10, petta: 10, holla: 12, snedda: 14, scurra: 14, ambra: 18, vesp: 18, dulla: 24, rowl: 35, wadd: 38 };
+      const lines = Object.entries(was).map(([id, n]) => `${SPECIES[id].name} line ${SPECIES[id].tameLevel} (was ${n})`);
+      return [`Changed: taming needed, lines that gather: ${lines.join(', ')}. A wild one evolved: +${WILD_STAGE_TAME} a stage.`];
+    },
+  },
+  {
     n: 451,
     day: '2026-11-02',
     lines: () => [`Changed: founding a settlement: its token at least ${DEED_SPACING} tiles from every other settlement's token on one axis (borders at level ${MAX_DEED_LEVEL} ${DEED_GAP} tiles apart; was: no overlap at level 1). Settlements already standing stay.`],
