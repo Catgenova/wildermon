@@ -4,7 +4,7 @@ import type { Island } from '../../net/island';
 import { recordSaid, RECORD_STATS, type BredRecord } from '../../game/boards';
 import { ACTION_BY_ID } from '../../game/actions';
 import { degreesSays, TRACK, trackable, trackErr, trackLevel, trackReach, trackTarget, TRACKING } from '../../game/tracking';
-import { CULL_RANGE } from '../../game/creatures';
+import { CULL_RANGE, GATHER_VERB } from '../../game/creatures';
 import { drawCreaturePortrait } from '../../render/sprites';
 import { drawSoon, drawWildermonPortrait } from '../../render/wildermon';
 
@@ -30,6 +30,13 @@ const SHADOW = '#4f4538';
  */
 export class GuidePanel {
   private readonly counts: HTMLDivElement;
+  /**
+   * Asked for: "add a search bar to field guide". Narrows the index to the kinds seen whose name, line or task has
+   * what is typed in it; a kind not yet seen is not shown while searching, since its name is not known. Outside the
+   * index's redraw, so typing keeps its place; the cards are hidden, not redrawn (`findCards`).
+   */
+  private readonly search: HTMLInputElement;
+  private readonly found: HTMLDivElement;
   private readonly bar: HTMLDivElement;
   private readonly view: HTMLDivElement;
   /** The page open (a kind, or `species:stage` for one of its stages), or null for the index. */
@@ -62,7 +69,16 @@ export class GuidePanel {
     this.bar = document.createElement('div');
     this.bar.className = 'panel-bar guide-bar';
     this.view = document.createElement('div');
-    host.append(this.counts, this.bar, this.view);
+    this.search = document.createElement('input');
+    this.search.type = 'search';
+    this.search.className = 'panel-search guide-search';
+    this.search.placeholder = 'Search: name, line or task';
+    this.search.setAttribute('aria-label', 'Search the field guide');
+    this.search.addEventListener('input', () => this.findCards());
+    this.found = document.createElement('div');
+    this.found.className = 'guide-how';
+    this.found.hidden = true;
+    host.append(this.counts, this.search, this.found, this.bar, this.view);
     game.events.on('guide', () => {
       if (this.showing()) this.draw();
     });
@@ -116,6 +132,7 @@ export class GuidePanel {
   /** Every kind, a card each: drawn and named once seen, a shadow until then. */
   private drawIndex(): void {
     this.bar.hidden = true;
+    this.search.hidden = false;
     const grid = document.createElement('div');
     grid.className = 'guide-grid';
     const g = this.game.guide;
@@ -149,9 +166,27 @@ export class GuidePanel {
       card.append(tags);
       card.title = seen ? `${entry.name}${entry.stage ? ` (${def.name}, stage ${entry.stage + 1})` : ''}: ${this.marksSaid(entry)}` : 'Not seen yet';
       card.addEventListener('click', () => this.turnTo(entry.key));
+      // What a search finds it by, once seen: its name, its line's, and its task.
+      card.dataset.find = seen ? [entry.name, def.name, def.gathers ? GATHER_VERB[def.gathers] : ''].join(' ').toLowerCase() : '';
       grid.append(card);
     });
     this.view.append(grid);
+    this.findCards();
+  }
+
+  /** The index narrowed to what the search has in it, and how many that leaves. */
+  private findCards(): void {
+    const q = this.search.value.trim().toLowerCase();
+    const cards = [...this.view.querySelectorAll<HTMLElement>('.guide-card')];
+    let shown = 0;
+    for (const card of cards) {
+      const hide = !!q && !(card.dataset.find ?? '').includes(q);
+      if (card.hidden !== hide) card.hidden = hide;
+      if (!hide) shown++;
+    }
+    for (const how of this.view.querySelectorAll<HTMLElement>(':scope > .guide-how')) how.hidden = !!q;
+    this.found.hidden = !q || this.page !== null;
+    this.found.textContent = shown ? `${shown} of ${cards.length}` : 'None seen by that name or task.';
   }
 
   /** One page: its picture and marks, and then what the book says of it, once it has been seen. */
@@ -160,6 +195,9 @@ export class GuidePanel {
     const pages = guideEntries();
     const at = pages.findIndex((e) => e.key === entry.key);
     this.bar.hidden = false;
+    // A page is not searched; the search waits for the index.
+    this.search.hidden = true;
+    this.found.hidden = true;
     const button = (text: string, title: string, go: () => void): HTMLButtonElement => {
       const b = document.createElement('button');
       b.type = 'button';

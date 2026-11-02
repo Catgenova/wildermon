@@ -9985,3 +9985,8 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
   opacity: 0.5;
   cursor: default;
 }
+
+/* The field guide's search (`GuidePanel.search`), above the index. */
+.guide-search {
+  margin: 0 2px 6px;
+}

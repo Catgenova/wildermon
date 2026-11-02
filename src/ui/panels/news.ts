@@ -4242,6 +4242,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 453,
+    day: '2026-11-02',
+    lines: () => ['Added: field guide search: name, line or task of the kinds seen; kinds not seen hidden while searching.'],
+  },
+  {
     n: 452,
     day: '2026-11-02',
     lines: () => {

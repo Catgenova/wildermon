@@ -15,6 +15,7 @@ import { Renderer } from '../../src/render/renderer';
 import { RESPAWN_ARM_MS, showRespawn } from '../../src/ui/respawn';
 import { FullscreenCanvas } from '../../src/engine/canvas';
 import { DAY_SECONDS } from '../../src/game/pace';
+import { SPECIES } from '../../src/game/creatures';
 import { UI } from '../../src/ui/ui';
 import { Keybinds } from '../../src/game/keybinds';
 import type { JournalTab } from '../../src/ui/panels/journal';
@@ -49,6 +50,8 @@ export interface HostileSeen {
   guideMs: number;
   /** In the 8 s after the field guide opens: frames drawn, the longest gap between two (ms), and gaps over 250 ms. */
   guideLong: [number, number, number];
+  /** The field guide's search: cards shown with nothing typed, and with a seen kind's name typed; and with a word nothing has. */
+  guideSearch: [number, number, number];
   /** The respawn chooser: picked by an Enter at once or a held one (should not be), and by a click after (should be). */
   respawn: { atOnce: string; held: string; later: string };
   menu: Array<[string, string]>;
@@ -62,7 +65,7 @@ export interface HostileSeen {
   done: boolean;
 }
 
-const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, guideMs: -1, guideLong: [0, 0, 0], menu: [], menuTab: '', respawn: { atOnce: '', held: '', later: '' }, map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
+const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, guideMs: -1, guideLong: [0, 0, 0], guideSearch: [-1, -1, -1], menu: [], menuTab: '', respawn: { atOnce: '', held: '', later: '' }, map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
 (window as unknown as { panels: HostileSeen }).panels = seen;
 
 document.getElementById('boot')?.remove();
@@ -122,6 +125,22 @@ for (const tab of TABS) {
     await rest(8000);
     on = false;
     seen.guideLong = [gaps.length, Math.round(Math.max(0, ...gaps)), gaps.filter((g) => g > 250).length];
+    // The search: one kind seen, its name typed, then a word nothing is called.
+    const search = uiRoot.querySelector<HTMLInputElement>('.guide-search');
+    const shown = (): number => [...uiRoot.querySelectorAll<HTMLElement>('.guide-card')].filter((c) => !c.hidden).length;
+    if (search) {
+      game.guideMark('rabba', 'seen');
+      frame();
+      const all = shown();
+      search.value = SPECIES.rabba.name.slice(0, 5);
+      search.dispatchEvent(new Event('input'));
+      const some = shown();
+      search.value = 'zzqx';
+      search.dispatchEvent(new Event('input'));
+      seen.guideSearch = [all, some, shown()];
+      search.value = '';
+      search.dispatchEvent(new Event('input'));
+    }
   }
   seen.tabs.push(tab);
 }

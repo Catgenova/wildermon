@@ -248,6 +248,8 @@ if (panels) {
     if (!m.panned) bad.push('in the game: a drag did not pan the map');
     if (!m.fit) bad.push('in the game: Fit did not put the map back');
   }
+  console.log(`field guide search: ${p.guideSearch[0]} cards, ${p.guideSearch[1]} by a seen kind's name, ${p.guideSearch[2]} by a word nothing has`);
+  if (!(p.guideSearch[0] > 1 && p.guideSearch[1] >= 1 && p.guideSearch[1] < p.guideSearch[0] && p.guideSearch[2] === 0)) bad.push(`in the game: the field guide's search did not narrow the index: ${p.guideSearch.join(', ')}`);
   if (p.menuTab !== 'Field guide') bad.push(`in the game: the UI Menu's Journal: Field guide row turned the journal to ${p.menuTab || 'nothing'}`);
 }
 
