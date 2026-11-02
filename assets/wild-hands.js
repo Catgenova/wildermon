@@ -1,0 +1,1 @@
+import{t as e}from"./wild-hands2.js";export{e as BRAMBO};

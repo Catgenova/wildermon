@@ -610,10 +610,15 @@ setInterval(() => {
   const note = cadence.take();
   if (note) void island.inputNote(note);
 }, INPUT_NOTE_MS);
-// Nothing drawn while the page is out of sight, and started again, from a fresh clock, when it is back.
+// Nothing drawn while the page is out of sight, and started again, from a fresh clock, when it is back. Nothing is
+// read while it is out of sight either (the reads go with the frames, `island.move`), and the beat goes at the
+// heartbeat at most (`Island.armBeat`); back in front, a beat put off goes now (`Island.shown`).
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) loop.stop();
-  else if (!loggedOff) loop.start();
+  else if (!loggedOff) {
+    loop.start();
+    island.shown();
+  }
 });
 // The island is up and the first frame is drawn; the notice can go.
 /*
