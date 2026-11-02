@@ -880,6 +880,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   quill: { kind: 'wool', n: 1, what: 'feathers per pluck' },
   flecha: { kind: 'more', n: 1, what: 'arrows per fletch' },
   scurra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  glossa: { kind: 'more', n: 1, what: 'mortar per mix' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -3184,9 +3185,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   glossa: {
     id: 'glossa',
-    name: 'Glossa',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Mortarshell',
+    was: ['Glossa'],
+    // Asked for, with a reference sheet: Mortarshell, Groutback, Mortoise. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Groutback', description: '' },
+      { name: 'Mortoise', description: '' },
+    ],
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -3197,11 +3204,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'mortar',
     workRange: 6,
+    // [skin, stone]: the sheet's olive with pale sandstone, a mossier green with a warmer sand, a yellower olive with a cream
+    // stone, and a grey-green with a rosier sand.
     variants: [
-      ['#4c7c9c', '#bcd8e8'],
-      ['#3c8070', '#b0dccc'],
-      ['#8c5c3c', '#e0c4a8'],
-      ['#6c6c8c', '#ccccdc'],
+      ['#94a85c', '#e4ccac'],
+      ['#7e9c58', '#dcc09c'],
+      ['#a4ac5c', '#ecdcbc'],
+      ['#88987a', '#e0c4b0'],
     ],
     butcher: { meat: 3, leather: 2, bone: 2 },
   },
@@ -4279,6 +4288,7 @@ function sayPacks(id: string, level: string): void {
 }
 sayPacks('bura', `Level: body strength, learned ${LEARNS_SAYS.out}.`);
 sayLineLater('flecha', `Level: ${GATHER_SKILL.fletch.replace(/_/g, ' ')}.`);
+sayLineLater('glossa', `Level: ${GATHER_SKILL.mortar}.`);
 
 /** Which species roam wild, by weight. */
 /**

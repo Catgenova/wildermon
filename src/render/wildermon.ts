@@ -47,7 +47,7 @@ import { FORGA, HOPPA, SIMMA } from './wild-hands2';
 import { ASHSWEEPER, EMBERBRUSH, EMBERKIT } from './wild-ember';
 import { AURELIAX, KINTSU, RELICRAWLER } from './wild-relic';
 import { PEBBLEBEAK, SOILWHISTLE, WORMHERON } from './wild-curlew';
-import { CHISSA, CORDRA, GLOSSA } from './wild-hands3';
+import { CHISSA, CORDRA } from './wild-hands3';
 import { CASKYBARA, PAILBARA, RESERVARA } from './wild-capy';
 import { FINLET, REEFFIN, TIDEHARVEST } from './wild-penguin';
 import { SPRINGLET, SPRINGSAIL, TIDE_TACKED, TIDE_TUCK, TIDECOURSER, tideGrip, tideSeat } from './wild-tide';
@@ -72,6 +72,7 @@ import { MOSSNIB, MOSSREAVER, MOSSSHEAR } from './wild-moss';
 import { BEAMMASTER, LOGNIB, TIMBERSPLIT } from './wild-log';
 import { FLETCHERCREST, SABLEKIT, SABLEPLUME } from './wild-sable';
 import { BRISTLEWARD, STONEPOLISH, WALLKIT } from './wild-wall';
+import { GROUTBACK, MORTARSHELL, MORTOISE } from './wild-mortoise';
 import { GALECREST, TEMPESTWYRM, ZEPHLET } from './wild-zephyr';
 
 /**
@@ -157,7 +158,7 @@ export const WILDERMON: Record<string, Kind> = {
   cordra: CORDRA,
   flecha: SABLEKIT,
   papra: REEDLING,
-  glossa: GLOSSA,
+  glossa: MORTARSHELL,
   dippa: PAILBARA,
   thumpa: PEBBLETOOTH,
   spitta: SPITTA,
@@ -247,6 +248,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   quill: [PLUMECREST, FEATHERBOURNE],
   flecha: [SABLEPLUME, FLETCHERCREST],
   scurra: [BRISTLEWARD, STONEPOLISH],
+  glossa: [GROUTBACK, MORTOISE],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */
