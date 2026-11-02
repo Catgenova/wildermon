@@ -68,6 +68,14 @@ const wrapList = (text: string, width = 64): string[] => {
   return lines;
 };
 
+/** Its settlement task in a few words: "Settlement task: foraging". Null for a kind with none. */
+export function taskLine(c: Pick<Creature, 'species' | 'trade'>): string | null {
+  const def = SPECIES[c.species] ?? SPECIES.rabba;
+  const kind = c.trade ?? def.gathers;
+  if (kind) return `Settlement task: ${GATHER_VERB[kind]}`;
+  return def.style === 'spar' ? 'Settlement task: sparring' : null;
+}
+
 /** How rare it is and how big that made it, then what that is worth, a line or two of figures. */
 const rarityLines = (c: Creature): string[] => {
   const [what = '', size = '', ...gives] = rarityLine(c).split(' · ');
@@ -102,6 +110,8 @@ export function creatureLines(g: Game, c: Creature): string[] {
     lines.push(`Wild ${kindName(c)} · ${age}${growing > 0 ? `, grown in ${clockLeft(growing)}` : ''}`);
     if (c.rare) lines.push(...rarityLines(c));
     lines.push(...formLabels(c, def));
+    const task = taskLine(c);
+    if (task) lines.push(task);
     lines.push(`Eats: ${baitHint(c)}`);
     // What taming it asks at its stage (`tameNeeds`), and for one past its first, what that adds over its kind's.
     const taming = g.skills.get('taming');
@@ -141,7 +151,8 @@ export function creatureLines(g: Game, c: Creature): string[] {
   } else if (c.mode === 'deed') {
     // A reach means nothing to something with no trade to range out and do.
     const role = c.around ? 'Working around you' : 'Settlement worker';
-    if (def.gathers) lines.push(`${role} · ${GATHER_VERB[def.gathers]} ${taskSkill(c, def).toFixed(1)} · range ${workRangeOf(c, def)} tiles`);
+    const doing = c.trade ?? def.gathers;
+    if (doing) lines.push(`${role} · ${GATHER_VERB[doing]} ${taskSkill(c, def).toFixed(1)} · range ${workRangeOf(c, def)} tiles`);
     else lines.push(`${role} · ${def.style === 'spar' ? 'sparring' : 'no task'}`);
     // Who it is sparring with on the settlement (`sparTaskSays`).
     const partner = c.sparWith != null ? g.creatures.get(c.sparWith) : undefined;
@@ -159,6 +170,11 @@ export function creatureLines(g: Game, c: Creature): string[] {
     if (c.idle) lines.push(idleSays(c.idle, c.trade ?? def.gathers, c.carrying ? itemDef(c.carrying.id).name : null));
     lines.push(...ledgerLines(c.ledger, g.islandDay()));
   } else lines.push(`Companion · ${STANCE_NAMES[c.stance].toLowerCase()} · blow ${attackOf(c, def).toFixed(0)} damage`);
+  // Not at work: the task it would do on a settlement.
+  if (c.mode !== 'deed') {
+    const task = taskLine(c);
+    if (task) lines.push(task);
+  }
 
   // Blood, which is the whole of what breeding is for.
   const husbandry = g.skills.get('animal_husbandry');

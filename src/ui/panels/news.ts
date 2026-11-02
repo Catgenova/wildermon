@@ -4241,6 +4241,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 445,
+    day: '2026-11-02',
+    lines: () => [`Added: hover card, wild ones and yours off work: settlement task (e.g. Settlement task: ${GATHER_VERB.forage}).`],
+  },
+  {
     n: 444,
     day: '2026-11-02',
     lines: () => [`Added: a wildermon's size and colour form (e.g. ${formName(SPECIES.rabba, 'small')}: ${formGives('small')}) in its hover card, on Examine, and on the Wildermon window's line under its name (was: only lower on its card).`],

@@ -26,11 +26,11 @@
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
-import { creatureLines } from '../../src/ui/creatureinfo';
+import { creatureLines, taskLine } from '../../src/ui/creatureinfo';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT, sightedAt, sightedLine } from '../../src/game/sighted';
 import { RARITIES } from '../../src/game/items';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
-import { bloodMul, Creatures, maxHealth, SPECIES, type IslandCreature } from '../../src/game/creatures';
+import { bloodMul, Creatures, GATHER_VERB, maxHealth, SPECIES, type IslandCreature } from '../../src/game/creatures';
 import { FieldGuide, formLines, guidePage } from '../../src/game/guide';
 import {
   bredForm, coatOf, COLOUR_FORM_ODDS, FORM_PASS, formCoat, formKey, formLabels, formMul, formName, formScale, LARGE_HEALTH, LARGE_SIZE, paleKind,
@@ -190,6 +190,14 @@ check(`browser: its card names them: ${formLabels(pale, SPECIES.rabba).join(' / 
   small.mode = 'active';
   small.mine = true;
   check('browser: and one of your own, its hover card', creatureLines(game, small).includes(says), creatureLines(game, small).join(' / '));
+  // Asked: "Hovering over a wildermon should display a few words about its settlement task".
+  const task = `Settlement task: ${GATHER_VERB[SPECIES.rabba.gathers!]}`;
+  check(`browser: a companion's hover card names its settlement task: ${task}`, creatureLines(game, small).includes(task), creatureLines(game, small).join(' / '));
+  small.mode = 'wild';
+  small.mine = false;
+  check('browser: and a wild one\'s', creatureLines(game, small).includes(task), creatureLines(game, small).join(' / '));
+  const sparra = taskLine({ species: 'sparra', trade: null });
+  check(`browser: a kind that spars: ${sparra}`, sparra === 'Settlement task: sparring', sparra ?? 'none');
   game.creatures.list.delete(small.id);
 }
 
