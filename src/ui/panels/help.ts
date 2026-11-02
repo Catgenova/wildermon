@@ -948,6 +948,7 @@ const HAND_NUMBERS: Record<string, string> = {
   flecha: `evolves: ${evolves('flecha')}; ${perkLine('flecha').toLowerCase()}`,
   scurra: `evolves: ${evolves('scurra')}; ${perkLine('scurra').toLowerCase()}`,
   glossa: `evolves: ${evolves('glossa')}; ${perkLine('glossa').toLowerCase()} (${RECIPE_BY_ID.get('make_mortar')!.count} to ${RECIPE_BY_ID.get('make_mortar')!.count! + STAGE_PERKS.glossa.n})`,
+  crakka: `evolves: ${evolves('crakka')}; ${perkLine('crakka').toLowerCase()} (${RECIPE_BY_ID.get('mix_concrete')!.count ?? 1} to ${(RECIPE_BY_ID.get('mix_concrete')!.count ?? 1) + STAGE_PERKS.crakka.n})`,
 };
 
 /**

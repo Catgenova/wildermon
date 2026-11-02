@@ -110,7 +110,7 @@ const LINES: Record<string, () => Promise<Line>> = {
   awla: () => import('./wild-spiral').then((m) => line(m.SPIRALCALF, [m.SPIRALTRUNK, m.SPIRALPHANT])),
   sparra: () => import('./wild-dummy').then((m) => line(m.DUMMICUB, [m.DUMMIBEAR, m.DUMMITITAN])),
   lungra: () => import('./wild-briar').then((m) => line(m.BLUSHKIT, [m.BRIARPOUNCE, m.THORNLANCE])),
-  crakka: () => import('./wild-abilities').then((m) => line(m.CRAKKA)),
+  crakka: () => import('./wild-pestlet').then((m) => line(m.PESTLET, [m.CHURNSCALE, m.MORTARIUM])),
   whirla: () => import('./wild-abilities').then((m) => line(m.WHIRLA)),
   scorcha: () => import('./wild-abilities').then((m) => line(m.SCORCHA)),
   frosta: () => import('./wild-abilities').then((m) => line(m.FROSTA)),

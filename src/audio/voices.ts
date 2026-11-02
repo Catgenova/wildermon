@@ -148,6 +148,8 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   salva: () => import('./voice-herb').then((m) => m.HERB_VOICE),
   // The Mortarshell, the Groutback and the Mortoise.
   glossa: () => import('./voice-mortoise').then((m) => m.MORTOISE_VOICE),
+  // The Pestlet, the Churnscale and the Mortarium.
+  crakka: () => import('./voice-pestlet').then((m) => m.PESTLET_VOICE),
 };
 
 /** Each voice that is in, by species; nothing for one that failed to come, until it is asked for again. */
