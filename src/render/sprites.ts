@@ -11,6 +11,7 @@ import { BUSH_WOOD, bushYear, leafageOf } from './foliage';
 import { LIT, contact, wob } from './trees/kit';
 import { paintTree } from './trees';
 import { BUSH3D_SPECIES, bush3dSprite, forgetTrees3d, log3dSprite, STUMP3D_SPECIES, stump3dSprite, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
+import { inkOf, READ_BACK } from './ink';
 import { woodOf } from './trees3d/stump';
 import type { Season } from '../world/calendar';
 import { cropPlant, DORMANT_FRUIT, DORMANT_LEAF, fieldBake } from './crops';
@@ -98,15 +99,18 @@ export const WORLD_SCALE = 1.5;
 const TAU = Math.PI * 2;
 const cache = new Map<string, Sprite>();
 
-function makeSprite(w: number, h: number, ax: number, ay: number, draw: (ctx: CanvasRenderingContext2D) => void, k = WORLD_SCALE): Sprite {
+function makeSprite(w: number, h: number, ax: number, ay: number, draw: (ctx: CanvasRenderingContext2D) => void, k = WORLD_SCALE, inked = false): Sprite {
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(w * k * SPRITE_SCALE);
   canvas.height = Math.ceil(h * k * SPRITE_SCALE);
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', inked ? READ_BACK : undefined);
   if (!ctx) throw new Error('no 2d context');
   ctx.scale(SPRITE_SCALE * k, SPRITE_SCALE * k);
   draw(ctx);
-  return { canvas, w: w * k, h: h * k, ax: ax * k, ay: ay * k };
+  const spr: Sprite = { canvas, w: w * k, h: h * k, ax: ax * k, ay: ay * k };
+  // A tree's or a bush's, whose pictures are cut to where there is anything in it (`Renderer.treePicture`): read here, off a canvas in memory, not later off the graphics chip.
+  if (inked) spr.ink = inkOf(canvas);
+  return spr;
 }
 
 /** The same, for everything that is not a tree. */
@@ -605,7 +609,7 @@ export function treeSprite(species: number, variant: number, season: Season = 's
   const def = TREE_DEFS[species] ?? TREE_DEFS[0];
   const age = TREE_AGES[variant] ?? TREE_AGES[0];
   const [BW, BH, BAX, BAY] = boxOf(def.size * age.size);
-  spr = makeSprite(BW, BH, BAX, BAY, (ctx) => paintTree(ctx, species, variant, season, look, { w: BW, h: BH, ax: BAX, ay: BAY }));
+  spr = makeSprite(BW, BH, BAX, BAY, (ctx) => paintTree(ctx, species, variant, season, look, { w: BW, h: BH, ax: BAX, ay: BAY }), WORLD_SCALE, true);
   cache.set(key, spr);
   return spr;
 }
@@ -714,7 +718,7 @@ export function bushSprite(species: number, season: Season = 'summer', day = 1, 
         ctx.fill();
       }
     }
-  });
+  }, WORLD_SCALE, true);
   cache.set(key, spr);
   return spr;
 }

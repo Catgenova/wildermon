@@ -41,7 +41,7 @@ import { ACROSS, boundsOf, footReach, paintTree3d, shownOf } from './paint';
 import { growOrchard } from './orchard';
 import { grow, swayed } from './skeleton';
 import { fetchStored, isStored, openStore, putStored } from './store';
-import { inkOf } from '../ink';
+import { inkOf, READ_BACK } from '../ink';
 import { apple } from './species/apple';
 import { apricot } from './species/apricot';
 import { birch } from './species/birch';
@@ -404,7 +404,15 @@ function roomAhead(px: number): boolean {
   return left <= 0;
 }
 
-/** A model seen from a turn, painted at a scale onto a canvas just its size; and read back once for where in it there is anything. Its shade on the ground is laid by the renderer (`Renderer.solidFrame`). */
+/**
+ * A model seen from a turn, painted at a scale onto a canvas just its size; and read back once for where in it there is
+ * anything. Its shade on the ground is laid by the renderer (`Renderer.solidFrame`).
+ *
+ * Painted in the computer's memory, not on the graphics chip (`READ_BACK`): it is read back here and again when it is
+ * put in the browser's store, and a picture on the chip read back holds the page until the chip has drawn everything
+ * asked of it before -- the frame so far, every bake and picture made in it. On the move through a wood that was a
+ * read-back for every bake and one for the store each frame, and frames of two seconds and more.
+ */
 function bake(scale: number, sk: Skeleton, turn: number, paint: (g: CanvasRenderingContext2D, e: Eye) => void): TreeSprite {
   const t0 = performance.now();
   const e = eyeOf(0, turn);
@@ -413,7 +421,7 @@ function bake(scale: number, sk: Skeleton, turn: number, paint: (g: CanvasRender
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(w * scale);
   canvas.height = Math.ceil(h * scale);
-  const g = canvas.getContext('2d');
+  const g = canvas.getContext('2d', READ_BACK);
   if (!g) throw new Error('no 2d context');
   g.scale(scale, scale);
   g.translate(-x0, -y0);

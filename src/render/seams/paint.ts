@@ -1,4 +1,5 @@
 import { hash2 } from '../../world/noise';
+import { READ_BACK } from '../ink';
 import type { Ctx, SeamLook, Stud } from './types';
 
 /**
@@ -125,11 +126,12 @@ export function rng(seed: number): () => number {
   };
 }
 
-function canvas(w: number, h: number): [HTMLCanvasElement, Ctx] {
+/** A canvas `w` by `h`, in memory where it is to be read back (`extent`). */
+function canvas(w: number, h: number, read = false): [HTMLCanvasElement, Ctx] {
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.ceil(w));
   c.height = Math.max(1, Math.ceil(h));
-  const g = c.getContext('2d');
+  const g = c.getContext('2d', read ? READ_BACK : undefined);
   if (!g) throw new Error('no 2d context');
   return [c, g];
 }
@@ -149,7 +151,7 @@ export function paintStrips(kind: number, look: SeamLook, res: number): { canvas
   for (let v = 0; v < look.variants; v++) {
     // A row of clear pixels top and bottom, so the filtering at the edge of
     // the band's fill has nothing to pick up.
-    const [c, g] = canvas(wide, look.half * 2 * res + 2);
+    const [c, g] = canvas(wide, look.half * 2 * res + 2, true);
     g.setTransform(sx, 0, 0, res, 0, 1 + look.half * res);
     g.lineJoin = 'round';
     g.lineCap = 'round';

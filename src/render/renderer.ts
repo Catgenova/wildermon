@@ -241,8 +241,13 @@ interface GroundFrame {
  * the whole of a zoom from closest in to furthest out.
  */
 const STAND_IN_MOST = 1.6;
-/** How many tiles' edge pictures (`hems`) may be made in a frame while the zoom moves, for tiles with none near enough the size wanted; the rest are drawn as they always were. */
-const HEM_MOVING_MOST = 48;
+/**
+ * How many tiles' edge pictures (`hems`) may be made in a frame, for tiles with none, or none near enough the size
+ * wanted while the zoom moves; the rest are drawn as they always were, and have theirs made in the frames after. On
+ * the move what is in sight changes with every step, and a block of the ground laid from its picture (`GroundChunks`)
+ * goes back to being drawn a tile at a time: up to 315 pictures made in one frame.
+ */
+export const HEMS_A_FRAME = 32;
 /** Device pixels of rescaled sprites (`atSize`) and their hazed copies (`hazed`) kept, across zooms: about sixty-four megabytes. */
 const SCALED_PIXELS = 16_000_000;
 /** How strongly a hostile creature is laid over in red on top of whatever is in front of it (`drawThreats`), and while it is hunting you. */
@@ -3130,8 +3135,8 @@ export class Renderer {
   private zoomSettled = true;
   /** Crated wildermon's pictures still to be made this frame where another size could stand in (`drawStill`). */
   private readonly stillsLeft = { left: 0 };
-  /** Tiles' edge pictures made this frame while the zoom moves (`HEM_MOVING_MOST`). */
-  private hemsMoving = 0;
+  /** Tiles' edge pictures made this frame (`HEMS_A_FRAME`). */
+  private hemsMade = 0;
 
   /** The ground kept as pictures a block of lines at a time (`GroundChunks`), and this frame's way of making and laying them. */
   private readonly chunks = new GroundChunks();
@@ -3201,9 +3206,8 @@ export class Renderer {
      * fraction of a pixel soft is not something anybody sees in the middle of
      * a zoom. Drawing them afresh was most of what a zoom cost on open
      * country, every frame of it. A tile with none, or with one too far from
-     * this size to stretch (`STAND_IN_MOST`), has one made at this size, up to
-     * `HEM_MOVING_MOST` a frame, and its edges drawn as they always were past
-     * that; a tile with no edges has none at any size.
+     * this size to stretch (`STAND_IN_MOST`), has one made at this size; a
+     * tile with no edges has none at any size.
      */
     if (!this.zoomSettled) {
       const r = had ? zoom / had.zoom : 0;
@@ -3212,8 +3216,6 @@ export class Renderer {
         if (had.cv) ctx.drawImage(had.cv, pts[0] + (had.bx - had.px) * r, pts[1] + (had.by - had.py) * r, (had.cv.width / dpr) * r, (had.cv.height / dpr) * r);
         return had.cv !== null;
       }
-      if (this.hemsMoving >= HEM_MOVING_MOST) return this.swardEdges(ctx, V, x, y, pts, zoom, lit);
-      this.hemsMoving++;
     } else if (had && had.zoom === zoom) {
       const dx = (pts[0] - had.px) * dpr;
       const dy = (pts[1] - had.py) * dpr;
@@ -3224,6 +3226,9 @@ export class Renderer {
         return had.cv !== null;
       }
     }
+    // Up to `HEMS_A_FRAME` made a frame, and the edges drawn as they always were past that.
+    if (this.hemsMade >= HEMS_A_FRAME) return this.swardEdges(ctx, V, x, y, pts, zoom, lit);
+    this.hemsMade++;
     if (had) {
       if (had.cv) this.hemPixels -= had.cv.width * had.cv.height;
       cache.delete(key);
@@ -4051,7 +4056,7 @@ export class Renderer {
     piecesFrame(this.zoomSettled);
     beastFrame();
     zoomHeld.left = this.zoomSettled ? 1 : 0;
-    this.hemsMoving = 0;
+    this.hemsMade = 0;
     if (fit !== this.hemFor) {
       this.hemFor = fit;
       this.forgetHems();

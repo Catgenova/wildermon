@@ -36,6 +36,8 @@
  *     chat in the log that is markup and links. No violation, nothing thrown,
  *     the chat shown as its own text and never as a link or an element, and no
  *     link in the windows to anything but this site or https:;
+ *   * a walk past trees (`supabase/test/treewalk-page.ts`): its frames, no
+ *     read-back of a canvas on the graphics chip, and the canvases made a frame;
  *   * a probe (`supabase/test/policy-probe-page.ts`) that tries what the policy
  *     is there to refuse -- a string into innerHTML, a script from another
  *     site, eval, a style attribute, a <style> -- and must be refused each time;
@@ -132,7 +134,7 @@ const SRC = new URL('..', import.meta.url).pathname;
 const builtHead = readFileSync(join(ROOT, 'index.html'), 'utf8')
   .replace(/\s*<script type="module"[^>]*><\/script>/g, '')
   .replace(/\s*<link rel="modulepreload"[^>]*>/g, '');
-for (const [name, entry] of [['__panels', 'supabase/test/panels-page.ts'], ['__probe', 'supabase/test/policy-probe-page.ts']]) {
+for (const [name, entry] of [['__panels', 'supabase/test/panels-page.ts'], ['__probe', 'supabase/test/policy-probe-page.ts'], ['__treewalk', 'supabase/test/treewalk-page.ts']]) {
   const bundled = await build({
     entryPoints: [join(SRC, entry)], bundle: true, format: 'esm', write: false, logLevel: 'error', target: 'es2022',
     loader: { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' },
@@ -253,6 +255,41 @@ if (panels) {
   if (p.menuTab !== 'Field guide') bad.push(`in the game: the UI Menu's Journal: Field guide row turned the journal to ${p.menuTab || 'nothing'}`);
 }
 
+/*
+ * A walk past trees: eight seconds at six tiles a second along the row of the island with the most trees beside it.
+ * Reported: "Getting a lot of 2000ms drawing <5fps while travelling near trees". On a browser drawing on the graphics
+ * chip, every read-back of a canvas there waits on everything drawn before it, and the walk read back each solid tree
+ * baked on the way (`inkOf`), the ferns drawn into it, the store's `toBlob` and new seams' strips: frames of 2.7 to 3.5
+ * s drawing on a software chip (SwiftShader), 0.09 s without them. None is allowed now -- this Chromium draws in memory,
+ * so they are counted by the canvas's own settings (`READ_BACK`) rather than timed -- and no more than `WALK_CANVASES`
+ * canvases made in a frame (the ground's edge pictures alone were up to 315, `HEMS_A_FRAME`). Frames counted over the
+ * walk and the longest gap, as the field guide's, for a slow machine.
+ */
+const WALK_CANVASES = 200;
+const walk = await open('__treewalk.html', async (page) => {
+  await page.waitForFunction(() => window.treewalk?.done, null, { timeout: BOOT_WAIT * 2 });
+  return page.evaluate(() => window.treewalk);
+});
+let walkClean = false;
+if (walk) {
+  const w = walk;
+  const before = bad.length;
+  if (w.error) bad.push(`walk past trees: threw ${w.error.split('\n')[0]}`);
+  else {
+    const sorted = [...w.frames].sort((a, b) => a - b);
+    const longest = Math.round(Math.max(0, ...w.gaps));
+    const most = Math.max(0, ...w.canvases);
+    const chipReads = w.chipReads.reduce((n, r) => n + r[1], 0);
+    console.log(`walk past trees: ${w.trees} trees, ${w.frames.length} frames in 8 s, drawing median ${Math.round(sorted[sorted.length >> 1] ?? 0)} ms, worst ${Math.round(sorted[sorted.length - 1] ?? 0)} ms, longest gap ${longest} ms; `
+      + `most canvases made in a frame ${most}; read-backs off the graphics chip ${chipReads}, in memory ${w.memReads[0]}`);
+    if (w.trees < 50) bad.push(`walk past trees: only ${w.trees} trees beside the walk`);
+    if (!(w.frames.length >= 10 && longest < 4000)) bad.push(`walk past trees: ${w.frames.length} frames in 8 s, longest gap ${longest} ms`);
+    if (chipReads) bad.push(`walk past trees: ${chipReads} read-back(s) of a canvas on the graphics chip, each a wait on everything drawn before it: ${w.chipReads.map(([by, n]) => `${by} ${n}x`).join('; ')}. Make it with READ_BACK (src/render/ink.ts)`);
+    if (most > WALK_CANVASES) bad.push(`walk past trees: ${most} canvases made in one frame (at most ${WALK_CANVASES})`);
+  }
+  walkClean = bad.length === before;
+}
+
 /* The policy refuses what it should, and reports it. */
 const probe = await open('__probe.html', async (page) => {
   await page.waitForFunction(() => window.probe?.done, null, { timeout: BOOT_WAIT });
@@ -328,6 +365,7 @@ const csp = bad.some((b) => b.includes('Content-Security-Policy'));
 console.log(`boot check: the game page ${game ? 'loads and says it cannot reach the island' : 'DOES NOT load'}; the landing page ${landing ? 'loads' : 'DOES NOT load'}`
   + `${book === null ? '' : `; the stud book ${book ? 'loads' : 'DOES NOT load'}`}; ${panels ? `in the game, ${panels.opened.length} windows and ${panels.tabs.length} journal tabs open with chat shown as text` : 'in the game, NOT every window opens cleanly'}`
   + `; ${csp ? 'Content-Security-Policy violations' : 'no Content-Security-Policy or Trusted Types violations'}; the policy ${probe ? 'refuses' : 'DOES NOT refuse'} raw HTML, foreign script, eval and inline style`
+  + `; a walk past trees ${walkClean ? 'draws with no read-back off the graphics chip' : 'DOES NOT draw cleanly'}`
   + `; in another site's frame it ${framed ? 'does not start' : 'STARTS'}; integrity ${sri && tampered ? 'holds' : 'DOES NOT hold'}.`);
 for (const b of bad) console.error(`  ${b}`);
 if (bad.length) process.exit(1);

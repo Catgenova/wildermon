@@ -1,4 +1,5 @@
 import { hash2 } from '../world/noise';
+import { READ_BACK } from './ink';
 import type { Green } from './meadow';
 
 /**
@@ -100,7 +101,8 @@ export function sprigOf(kind: 'fern' | 'tuft', variant: number): Sprig {
   const c = document.createElement('canvas');
   c.width = w * SCALE;
   c.height = h * SCALE;
-  const g = c.getContext('2d') as Ctx;
+  // In memory: a solid tree's bake lays these round its foot (`trees3d/paint.ts`), and one on the graphics chip laid into a bake in memory is read back off the chip.
+  const g = c.getContext('2d', READ_BACK) as Ctx;
   g.scale(SCALE, SCALE);
   g.lineCap = 'round';
   g.lineJoin = 'round';

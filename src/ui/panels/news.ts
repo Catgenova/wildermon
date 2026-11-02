@@ -67,7 +67,7 @@ import { BUSH_DEFS, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC
 import { REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
-import { LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
+import { HEMS_A_FRAME, LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { FLOWER_COLOURS } from '../../render/flowers';
 import { BUSH3D_SPECIES, LOGS_DRAWN, STUMP3D_SPECIES, SUN_STEPS, SWAY_MS, TREE3D_SPECIES } from '../../render/trees3d';
 import { FIELD_LAYOUTS } from '../../render/crops';
@@ -4240,6 +4240,15 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 455,
+    day: '2026-11-02',
+    lines: () => [
+      'Fixed: drawing time per frame on the move past trees, graphics chip on: solid tree bakes, their ferns, flat trees and bushes painted in memory; no read-back off the chip. '
+        + 'Bench, walk past 202 trees: median 0.92 s → 0.06 s, worst 3.5 s → 0.09 s.',
+      `Fixed: ground edge pictures made per frame on the move: at most ${num(HEMS_A_FRAME)} (was up to 291), the rest drawn direct.`,
+    ],
   },
   {
     n: 454,
