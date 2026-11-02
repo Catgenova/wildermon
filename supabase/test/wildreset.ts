@@ -66,6 +66,10 @@ begin
 
   -- Owed: woods done, never reset; then reset, not owed; a rollover short, not owed; that many ago, owed.
   update world set trees_at = now() where id = w;
+  -- Never reset counts from when the island was made: a new one keeps its first wild, an old one is owed.
+  update world set made_at = now() where id = w;
+  insert into said values ('DUE:NEW', wild_reset_due(w)::text);
+  update world set made_at = tree_last_dawn() - make_interval(days => wild_reset_days()) where id = w;
   insert into said values ('DUE:NEVER', wild_reset_due(w)::text);
   insert into said values ('GONE', wild_reset(w)::text);
   insert into said select 'LEFT', string_agg(id::text, ',' order by id) from creature where world_id = w;
@@ -98,7 +102,8 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 const [, , t, f1, f2, m] = at('IDS').split(',');
 
 check('the island resets every as many rollovers as the browser says', at('DAYS') === String(WILD_RESET_DAYS), at('DAYS'));
-check('an island never reset, its woods done, is owed one', at('DUE:NEVER') === 'true', at('DUE:NEVER'));
+check('an island made just now and never reset is not owed one: it keeps the wild it was stocked with', at('DUE:NEW') === 'false', at('DUE:NEW'));
+check(`an island made ${WILD_RESET_DAYS} rollovers ago and never reset, its woods done, is owed one`, at('DUE:NEVER') === 'true', at('DUE:NEVER'));
 check('a reset takes both wild ones put out just now', at('GONE') === '2', at('GONE'));
 check('and leaves the tamed one, the two in a fight and the monster', at('LEFT') === [t, f1, f2, m].sort((x, y) => +x - +y).join(','), `${at('LEFT')} of ${at('IDS')}`);
 check('every stretch of country is owed its stocking', at('STOCKED') === 'true', at('STOCKED'));
