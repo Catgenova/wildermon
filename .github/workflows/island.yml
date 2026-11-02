@@ -4066,6 +4066,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/bagcarry.mjs --log-level=error
           node node_modules/.cache/bagcarry.mjs
 
+      - name: What a step costs the island, and that it is the same step
+        if: matrix.shard == 4
+        run: |
+          # The pack weighed in one pass and the lookups a step asks planned
+          # once a session: the weight, the limit and the share the same
+          # numbers to the last bit as every thing weighs itself; no vehicle
+          # and no mount NULL, not a row of NULLs; every lookup plpgsql; and a
+          # step still goes where it is asked and stops short of the trees.
+          npx esbuild supabase/test/stepcost.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/stepcost.mjs --log-level=error
+          node node_modules/.cache/stepcost.mjs
+
       - name: Where things come from, impossible things swept, and work faster than its pace
         if: matrix.shard == 4
         run: |
