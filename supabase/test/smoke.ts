@@ -623,8 +623,13 @@ async function main(): Promise<void> {
     const { error: crateErr } = await supabase().from('crate').select('id,kind,deed').eq('world_id', id);
     check('the crates table answers a client', !crateErr, crateErr?.message ?? 'readable, and empty until a stake goes in');
     if (mob.length) {
-      const wild = mob[0];
-      const notMine = await island.act('assign_deed', { kind: 'creature', id: wild.id }, 1);
+      // The list is from a minute ago: one taken or turned over since says "Gone.", which is not this refusal; the
+      // next one is asked instead, up to five.
+      let notMine: Awaited<ReturnType<typeof island.act>> = { started: false, why: 'none of five still there' };
+      for (const wild of mob.slice(0, 5)) {
+        notMine = await island.act('assign_deed', { kind: 'creature', id: wild.id }, 1);
+        if (notMine.started || notMine.why !== 'Gone.') break;
+      }
       check('setting something wild to work is refused in its own words',
         !notMine.started && /yours|settlement/i.test(notMine.why ?? ''), notMine.why ?? 'IT STARTED');
     }
