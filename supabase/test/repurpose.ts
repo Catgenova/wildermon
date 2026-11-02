@@ -113,6 +113,12 @@ const FLETCH_SKILLS = { [GATHER_SKILL.fletch]: EVOLVE_AT[1] };
 const FLETCH_RECIPE = RECIPE_BY_ID.get(tradeRecipes('fletch')[0])!;
 const FLETCH_PUT: Array<[string, number]> = FLETCH_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
 const fletchWants = (): string => `${FLETCH_RECIPE.result} ${(FLETCH_RECIPE.count ?? 1) + STAGE_PERKS.flecha.n}`;
+/** A Mortarium's go at the makings of one batch of concrete: what the recipe makes, and its line's third-stage concrete on top. */
+const MIX_SKILLS = { [GATHER_SKILL.concrete]: EVOLVE_AT[1] };
+const MIX_RECIPE = RECIPE_BY_ID.get(tradeRecipes('concrete')[0])!;
+const MIX_PUT: Array<[string, number]> = MIX_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
+const mixWants = (): string => `${MIX_RECIPE.result} ${(MIX_RECIPE.count ?? 1) + STAGE_PERKS.crakka.n}`;
+const MORTARIUM = SPECIES.crakka.stages![1].name;
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
 const listed = (m: Map<string, number>): string => [...m].filter(([, n]) => n > 0).map(([id, n]) => `${id} ${n}`).sort().join(',') || '-';
@@ -261,6 +267,12 @@ ${CASES.map((c) => `
   insert into said select 'FLETCH', ${held};
   ${after('flecha')}
 
+  -- MIX: a Mortarium mixes the makings of one batch, and makes its line's third-stage concrete on top.
+  ${stocked(MIX_PUT)}
+  ${ready('crakka').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(MIX_SKILLS)}'::jsonb`)}
+  insert into said select 'MIX', ${held};
+  ${after('crakka')}
+
   -- VINE: a trellis on grass with no vine, one with a vine already, one on sand; three cuttings.
   perform land_set_tile(w, 21, 14, tile_id('Sand'));
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, material) values
@@ -378,6 +390,7 @@ for (const c of CASES) {
 }
 check(`on the island, a Beammaster saws a log into ${beamWants()}`, at('BEAM') === beamWants(), at('BEAM'));
 check(`on the island, a Fletchercrest fletches one batch into ${fletchWants()}`, at('FLETCH') === fletchWants(), at('FLETCH'));
+check(`on the island, a ${MORTARIUM} mixes one batch into ${mixWants()}`, at('MIX') === mixWants(), at('MIX'));
 {
   // Two logs, both carved in the one go at its stage's batches, each its recipe's shafts and its line's one more.
   const each = RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n;
@@ -463,7 +476,9 @@ for (const [id, to] of GONE) {
       && health === '17' && level === '31' && marks === '0', cv(`TURNED:${id}`));
 }
 check('a wild one is gone, and the crakka fighting it fights nothing', cv('WILD') === '0|-', cv('WILD'));
-check('a Testa carcass is a Crakka carcass', cv('CORPSE') === SPECIES.crakka.name, cv('CORPSE'));
+// Named as the kind was called then (the Pestlet line's `was`), and taken as one of it.
+check(`a Testa carcass is a ${SPECIES.crakka.name} carcass`,
+  corpseSpecies({ uid: 1, id: 'corpse', ql: 30, dmg: 0, count: 1, extra: cv('CORPSE') })?.id === 'crakka', cv('CORPSE'));
 check('the guide has seen a crakka and a carra and tamed a carra, and nothing of a testa or a gasha', cv('GUIDE') === 'carra:true,crakka:false', cv('GUIDE'));
 check('the stud book holds the testa\'s record as a crakka\'s, and the better of the gasha\'s and the executa\'s as a carra\'s',
   cv('STUD') === 'carra:tough:5:Exe,crakka:hardy:3:Old Testa', cv('STUD'));
@@ -570,6 +585,14 @@ for (const k of CASES) {
   c.skills = { ...FLETCH_SKILLS };
   run(g, 120);
   check(`in the browser, a Fletchercrest fletches one batch into ${fletchWants()}`, inCrate(crate) === fletchWants(), inCrate(crate));
+}
+{
+  const g = body();
+  const crate = stock(g, MIX_PUT);
+  const c = worker(g, 'crakka');
+  c.skills = { ...MIX_SKILLS };
+  run(g, 120);
+  check(`in the browser, a ${MORTARIUM} mixes one batch into ${mixWants()}`, inCrate(crate) === mixWants(), inCrate(crate));
 }
 {
   const g = body();

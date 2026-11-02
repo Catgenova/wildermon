@@ -4227,6 +4227,15 @@ export const NEWS: News[] = [
     lines: () => ['Changed: sign-in page: a live cove round a Runestone (birch, cherry, wildflowers, moving sea) behind a Faith-window box; Privacy Policy and Game Rules at its foot. Still frame with reduced motion.'],
   },
   {
+    n: 436,
+    day: '2026-11-02',
+    lines: () => {
+      const d = SPECIES.crakka, [one, two] = d.stages!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('crakka')}.`,
+        'Each stage: own model, animations and voice.'];
+    },
+  },
+  {
     n: 424,
     day: '2026-11-02',
     lines: () => ['Fixed: castings a smelter worker (Forga, Slugember, Slugferno) takes into the stores keep their piece, and can be smithed at an anvil (was: "Casting (bronze)", no anvil option).'],

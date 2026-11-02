@@ -9,9 +9,8 @@ import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Seven that had an ability of their own (`AbilityId`), settlement workers now: each wears what it
- * did -- a boulder of a skull for a skull crack,
- * a whirl of blades, embers, icicles, tendrils, a brittle shell,
+ * Six that had an ability of their own (`AbilityId`), settlement workers now: each wears what it
+ * did -- a whirl of blades, embers, icicles, tendrils, a brittle shell,
  * a round sucking mouth for a leech.
  */
 
@@ -72,17 +71,6 @@ function kindOf(l: Look): Kind {
 }
 
 const HEAD = (y: number, z: number, r: V3): { c: V3; r: V3 } => ({ c: [0, y, z], r });
-
-/* ---- the crakka: a boulder of a skull ------------------------------------------------ */
-
-export const CRAKKA = kindOf({
-  spec: { ...pawed({ high: 1.35, len: 2.4, legs: 0.72, neck: 0.32, lean: 55, swing: [18, 30], ears: [45, 15], tail: [0.4, 6, 2] }), nose: 10 },
-  head: HEAD(0.35, 0.1, [1.1, 1.0, 0.95]), body: [2.4, 1.35, 1.05, 0.2], neck: [0.78, 0.76, 0.32], ear: [0.26, 0.24, 45], legs: [0.72, 0.33, 0.3, 'coatDark'],
-  snout: [1.02, -0.24, [0.44, 0.3, 0.36], 0.12],
-  face: (n, k) => merge(orb([0, 0.45, 0.72], [0.72, 0.62, 0.42], n, k, 'stone'), orb([0.25, 0.75, 0.82], 0.12, 5, 3, 'stoneDark')),
-  tail: (n) => taper([[0, 0.05, 0], [0, -0.45, 0.05]], 0.15, 0.05, n, 'coat'),
-  own: { stone: [150, 140, 126], stoneDark: [104, 96, 86] }, mark: 30, shadow: [1.7, 1.35], stride: 1.3, size: 1.8,
-});
 
 /* ---- the whirla: a whip of a tail --------------------------------------------------- */
 

@@ -880,6 +880,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   quill: { kind: 'wool', n: 1, what: 'feathers per pluck' },
   flecha: { kind: 'more', n: 1, what: 'arrows per fletch' },
   scurra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  crakka: { kind: 'more', n: 1, what: 'concrete per mix' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -3387,9 +3388,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   crakka: {
     id: 'crakka',
-    name: 'Crakka',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Pestlet',
+    was: ['Crakka'],
+    // Asked for, with a reference sheet: Pestlet, Churnscale, Mortarium. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Churnscale', description: '' },
+      { name: 'Mortarium', description: '' },
+    ],
     health: 40,
     attack: 9,
     speed: 1.7,
@@ -3400,11 +3407,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'concrete',
     workRange: 10,
+    // [scales, face]: the sheet's burnt orange with cream, a rust with pale yellow, an ochre with ivory, and a red clay with buff.
     variants: [
-      ['#7c7064', '#d4cbc0'],
-      ['#6c6c68', '#c4c4c0'],
-      ['#8c7c68', '#e0d4c0'],
-      ['#5c5650', '#b4ada4'],
+      ['#c8743a', '#f6e2ae'],
+      ['#b05a34', '#f4dca4'],
+      ['#cc8a44', '#f8e8bc'],
+      ['#a8583c', '#f0d6a2'],
     ],
     butcher: { meat: 6, fur: 3, leather: 4, bone: 5 },
     wound: 'crush',
@@ -4279,6 +4287,7 @@ function sayPacks(id: string, level: string): void {
 }
 sayPacks('bura', `Level: body strength, learned ${LEARNS_SAYS.out}.`);
 sayLineLater('flecha', `Level: ${GATHER_SKILL.fletch.replace(/_/g, ' ')}.`);
+sayLineLater('crakka', `Level: ${GATHER_SKILL.concrete}.`);
 
 /** Which species roam wild, by weight. */
 /**

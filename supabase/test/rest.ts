@@ -60,6 +60,8 @@ const LEVELS = [10, AT1, AT2];
 const SMALL = Object.values(SPECIES).find((d) => !d.stages && !d.monster && d.gathers && d.health < DEN_HEALTH[0])!.id;
 // And one that does not evolve with a medium bed's health.
 const MEDIUM = Object.values(SPECIES).find((d) => !d.stages && !d.monster && d.gathers && d.health >= DEN_HEALTH[0] && d.health < DEN_HEALTH[1])!.id;
+// And one that does not evolve with a large bed's health (once the crakka; it evolves now): no worker kind is, so any kind.
+const LARGE = Object.values(SPECIES).find((d) => !d.stages && d.health >= DEN_HEALTH[1])!.id;
 
 /* ---- on the island ----------------------------------------------------------------------------------------------- */
 
@@ -248,8 +250,8 @@ check(`the numbers are the same on both sides: ${TIRE_GOES} goes, ${REST_FOR} se
 check('a kind that evolves sleeps in the bed of its stage: small, medium, large',
   LEVELS.every((lv, i) => denClass({ species: 'sedra', skills: { foraging: lv } }) === i));
 check(`a kind that does not evolve sleeps by its health: under ${DEN_HEALTH[0]} small, under ${DEN_HEALTH[1]} medium, else large`,
-  denClass({ species: SMALL, skills: {} }) === 0 && denClass({ species: MEDIUM, skills: {} }) === 1 && denClass({ species: 'crakka', skills: {} }) === 2
-  && SPECIES[SMALL].health < DEN_HEALTH[0] && SPECIES[MEDIUM].health >= DEN_HEALTH[0] && SPECIES[MEDIUM].health < DEN_HEALTH[1] && SPECIES.crakka.health >= DEN_HEALTH[1]);
+  denClass({ species: SMALL, skills: {} }) === 0 && denClass({ species: MEDIUM, skills: {} }) === 1 && denClass({ species: LARGE, skills: {} }) === 2
+  && SPECIES[SMALL].health < DEN_HEALTH[0] && SPECIES[MEDIUM].health >= DEN_HEALTH[0] && SPECIES[MEDIUM].health < DEN_HEALTH[1] && SPECIES[LARGE].health >= DEN_HEALTH[1]);
 
 /* ---- on the island ----------------------------------------------------------------------------------------------- */
 
