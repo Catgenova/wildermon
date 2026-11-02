@@ -84,7 +84,7 @@ interface Herb {
 /** A Herbpup: a small fox kit, a big head, very large ears, a tuft of leaves, a garland, a satchel and a bushy tail. */
 const HERBPUP_LOOK: Herb = {
   stage: 0,
-  body: { y: [-0.78, -0.68, -0.4, 0, 0.36, 0.62, 0.76], z: [0.08, 0.07, 0.04, 0, 0.04, 0.08, 0.12], w: [0.24, 0.38, 0.42, 0.4, 0.42, 0.4, 0.26], h: [0.26, 0.4, 0.44, 0.42, 0.46, 0.44, 0.3] },
+  body: { y: [-0.78, -0.68, -0.4, 0, 0.36, 0.62, 0.76], z: [0.08, 0.08, 0.07, 0.06, 0.02, 0.05, 0.12], w: [0.24, 0.36, 0.38, 0.35, 0.42, 0.4, 0.26], h: [0.26, 0.38, 0.4, 0.36, 0.47, 0.46, 0.3] },
   len: 1.1, hip: 0.64, drop: 0.3,
   fore: [0.3, 0.28, 0.11], hind: [0.36, 0.29, 0.24], thick: 0.16, slope: [12, 22], paw: 0.13, stance: [-0.08, 0.1],
   high: 0.76,
@@ -92,14 +92,14 @@ const HERBPUP_LOOK: Herb = {
   head: { r: [0.47, 0.49, 0.44], up: 0.12, pitch: 2 },
   snout: { len: 0.34, w: 0.19, h: 0.17 },
   eye: { dir: [0.5, 0.76, 0.3], size: 0.135 },
-  ear: { at: [0.24, -0.12, 0.28], len: 1.0, w: 0.52, splay: 38, back: 4, turn: 28 },
+  ear: { at: [0.24, -0.12, 0.28], len: 0.92, w: 0.6, splay: 38, back: 6, turn: 28 },
   ruff: { c: [0, 0.64, 0.08], r: [0.38, 0.3, 0.32], len: 0.2, rows: 2, across: 6 },
   mouth: 1,
   top: 'tuft',
   garland: true,
   mane: 0,
   mantle: null,
-  tails: { at: [0, -0.74, 0.3], n: 1, spread: 0, links: [0.32, 0.32, 0.32, 0.28, 0.22, 0.16], w: [0.18, 0.32, 0.4, 0.38, 0.26, 0.12], lift: 48, curl: 26 },
+  tails: { at: [0, -0.74, 0.3], n: 1, spread: 0, links: [0.32, 0.32, 0.32, 0.28, 0.22, 0.16], w: [0.18, 0.32, 0.4, 0.38, 0.26, 0.12], lift: 58, curl: 12 },
   bags: { y: -0.05, r: [0.11, 0.19, 0.15], both: false, small: false, flowers: 0, bouquet: false },
   vials: 0, banner: false, wraps: false,
   blossoms: 0, yellows: 0,
@@ -111,11 +111,11 @@ const HERBPUP_LOOK: Herb = {
 /** A Herbfox: slender and long, standing tall, a sprig between tall ears, a ruff, a mantle of long leaves, a saddle-bag, a great tail. */
 const HERBFOX_LOOK: Herb = {
   stage: 1,
-  body: { y: [-1.16, -1.04, -0.68, -0.1, 0.48, 0.86, 1.06, 1.16], z: [0.08, 0.08, 0.1, 0.1, 0.08, 0.02, 0.04, 0.08], w: [0.24, 0.36, 0.38, 0.34, 0.38, 0.42, 0.38, 0.24], h: [0.26, 0.4, 0.42, 0.36, 0.46, 0.52, 0.46, 0.28] },
+  body: { y: [-1.16, -1.04, -0.68, -0.1, 0.48, 0.86, 1.06, 1.16], z: [0.1, 0.1, 0.12, 0.15, 0.06, -0.04, 0.0, 0.06], w: [0.24, 0.34, 0.34, 0.27, 0.36, 0.42, 0.38, 0.24], h: [0.26, 0.37, 0.37, 0.28, 0.44, 0.58, 0.5, 0.3] },
   len: 1.7, hip: 0.62, drop: 0.3,
-  fore: [0.58, 0.58, 0.16], hind: [0.64, 0.54, 0.44], thick: 0.23, slope: [10, 22], paw: 0.13, stance: [-0.04, 0.14],
+  fore: [0.58, 0.58, 0.16], hind: [0.64, 0.54, 0.44], thick: 0.18, slope: [10, 22], paw: 0.13, stance: [-0.04, 0.14],
   high: 1.46,
-  neck: { at: [0, 0.98, 0.34], len: 0.76, w: 0.32, lean: 8 },
+  neck: { at: [0, 0.98, 0.38], len: 0.92, w: 0.3, lean: 6 },
   head: { r: [0.5, 0.58, 0.47], up: 0.08, pitch: 6 },
   snout: { len: 0.68, w: 0.2, h: 0.2 },
   eye: { dir: [0.58, 0.66, 0.34], size: 0.12 },
@@ -125,7 +125,7 @@ const HERBFOX_LOOK: Herb = {
   top: 'sprig',
   garland: false,
   mane: 0,
-  mantle: { from: 0.74, to: -0.86, rows: 6, len: 1.0, rise: 62 },
+  mantle: { from: 0.8, to: -0.95, rows: 5, len: 1.3, rise: 32 },
   tails: { at: [0, -1.12, 0.32], n: 1, spread: 0, links: [0.46, 0.48, 0.48, 0.44, 0.38, 0.3], w: [0.22, 0.36, 0.44, 0.46, 0.4, 0.24], lift: -70, curl: 21 },
   bags: { y: -0.1, r: [0.15, 0.38, 0.25], both: false, small: false, flowers: 5, bouquet: false },
   vials: 0, banner: false, wraps: false,
@@ -138,11 +138,11 @@ const HERBFOX_LOOK: Herb = {
 /** A Herbwarden: large and stately, a crown, a leaf-edged ruff, a great mantle, bags with a bouquet, vials, a banner, wraps, three tails. */
 const HERBWARDEN_LOOK: Herb = {
   stage: 2,
-  body: { y: [-1.56, -1.42, -0.92, -0.14, 0.68, 1.2, 1.5, 1.62], z: [0.1, 0.1, 0.12, 0.14, 0.1, 0.0, 0.02, 0.06], w: [0.4, 0.6, 0.64, 0.58, 0.64, 0.72, 0.64, 0.4], h: [0.38, 0.62, 0.66, 0.58, 0.72, 0.82, 0.72, 0.42] },
+  body: { y: [-1.56, -1.42, -0.92, -0.14, 0.68, 1.2, 1.5, 1.62], z: [0.12, 0.12, 0.16, 0.22, 0.1, -0.06, 0.0, 0.06], w: [0.38, 0.56, 0.58, 0.46, 0.6, 0.72, 0.64, 0.4], h: [0.38, 0.58, 0.6, 0.46, 0.68, 0.9, 0.78, 0.44] },
   len: 2.3, hip: 0.62, drop: 0.3,
-  fore: [0.74, 0.74, 0.21], hind: [0.82, 0.7, 0.56], thick: 0.3, slope: [10, 22], paw: 0.19, stance: [0.02, 0.2],
-  high: 1.92,
-  neck: { at: [0, 1.38, 0.5], len: 1.0, w: 0.42, lean: 6 },
+  fore: [0.88, 0.86, 0.24], hind: [0.96, 0.82, 0.64], thick: 0.25, slope: [10, 22], paw: 0.19, stance: [0.02, 0.2],
+  high: 2.28,
+  neck: { at: [0, 1.38, 0.56], len: 1.3, w: 0.42, lean: 2 },
   head: { r: [0.66, 0.78, 0.6], up: 0.1, pitch: 6 },
   snout: { len: 0.92, w: 0.27, h: 0.27 },
   eye: { dir: [0.6, 0.64, 0.36], size: 0.14 },
@@ -152,14 +152,14 @@ const HERBWARDEN_LOOK: Herb = {
   top: 'crown',
   garland: false,
   mane: 0.62,
-  mantle: { from: 0.9, to: -1.42, rows: 7, len: 1.5, rise: 54 },
-  tails: { at: [0, -1.52, 0.42], n: 3, spread: 40, links: [0.58, 0.62, 0.62, 0.56, 0.48, 0.38], w: [0.26, 0.4, 0.5, 0.52, 0.46, 0.26], lift: -60, curl: 17 },
+  mantle: { from: 1.0, to: -1.45, rows: 6, len: 1.75, rise: 30 },
+  tails: { at: [0, -1.52, 0.42], n: 3, spread: 70, links: [0.58, 0.62, 0.62, 0.56, 0.48, 0.38], w: [0.26, 0.4, 0.5, 0.52, 0.46, 0.26], lift: -60, curl: 17 },
   bags: { y: -0.2, r: [0.27, 0.52, 0.42], both: true, small: true, flowers: 4, bouquet: true },
   vials: 2, banner: true, wraps: true,
   blossoms: 1, yellows: 3,
   mottles: 18,
   gait: { duty: [0.66, 0.44], swing: [0.24, 0.34], step: 0.18, bob: 0.05 },
-  size: 3.3,
+  size: 3.4,
 };
 
 /* ---- helpers ------------------------------------------------------------------------- */
@@ -301,7 +301,7 @@ function leaf(root: V3, dir: V3, face: V3, L: number, W: number, droop: number, 
   const d = unit(dir), n0 = unit(sub(face, scale(d, dot(face, d)))), side = unit(cross(d, n0));
   const at = [0, 0.16, 0.38, 0.62, 0.84, 1], falls = [0, 0.03, 0.15, 0.4, 0.72, 1];
   const pts = at.map((k, q) => add(add(root, scale(d, L * k)), scale(n0, -L * droop * falls[q])));
-  const ws = [0.18, 0.8, 1, 0.84, 0.48, 0.03].map((w) => w * W * L * 0.5), th = Math.max(0.006, L * 0.018);
+  const ws = [0.26, 0.86, 1, 0.9, 0.58, 0.06].map((w) => w * W * L * 0.5), th = Math.max(0.006, L * 0.018);
   const v: V3[] = [];
   for (let k = 0; k < pts.length; k++) {
     const lift = scale(n0, ws[k] * 0.28);
@@ -318,7 +318,11 @@ function leaf(root: V3, dir: V3, face: V3, L: number, W: number, droop: number, 
       want.push(scale(n0, -1));
     }
   }
-  return mesh(v, wound(v, f, want));
+  // Its midrib: a thin darker line down its face, from its root to near its tip.
+  const rib: V3[] = [], rw = Math.max(0.005, W * L * 0.03);
+  for (let k = 0; k < pts.length - 1; k++) rib.push(add(add(pts[k], scale(side, -rw * (1 - k / pts.length))), scale(n0, 0.004 + ws[k] * 0.02)));
+  for (let k = pts.length - 2; k >= 0; k--) rib.push(add(add(pts[k], scale(side, rw * (1 - k / pts.length))), scale(n0, 0.004 + ws[k] * 0.02)));
+  return merge(mesh(v, wound(v, f, want)), paint([facing(rib, n0, 'leafDark')]));
 }
 
 /**
@@ -651,14 +655,14 @@ function legOf(s: Herb, body: Xf, i: number, rootLocal: V3, paw: V3, slope: numb
 /** How far round each tail is swung, out of the middle, and how much higher or lower it is carried. */
 const tailFan = (s: Herb, k: number): [number, number] => {
   const T = s.tails, g = T.n > 1 ? k - (T.n - 1) / 2 : 0;
-  return [g * T.spread, Math.abs(g) * -8 + (g < 0 ? 4 : 0)];
+  return [g * T.spread, g === 0 ? -16 : g < 0 ? 30 : 14];
 };
 
 /** A tail's bones from its root on the body, each link on from the one before it, lifted, curled and swung. */
 function tailBones(s: Herb, body: Xf, P: Plan, k: number): Xf[] {
   const T = s.tails, n = T.links.length, out: Xf[] = [], [yaw, lift] = tailFan(s, k);
   const lag = 1 + 0.25 * k;
-  let prev = joint(body, [T.at[0] + (T.n > 1 ? (k - (T.n - 1) / 2) * 0.08 * s.len : 0), T.at[1], T.at[2]], -(T.lift + lift + P.tail[0]), 0, yaw + P.tail[1] * 0.4 * lag);
+  let prev = joint(body, [T.at[0] + (T.n > 1 ? (k - (T.n - 1) / 2) * 0.12 * s.len : 0), T.at[1], T.at[2]], -(T.lift + lift + P.tail[0]), 0, yaw + P.tail[1] * 0.4 * lag);
   out.push(prev);
   for (let q = 1; q < n; q++) {
     prev = joint(prev, [0, -T.links[q - 1], 0], -(T.curl + P.tail[2]), 0, (P.tail[1] * 0.6 * lag) / (n - 1) + yaw * 0.08);
@@ -759,8 +763,7 @@ function ruffOf(s: Herb, n: number): Mesh {
       const e = onEgg2(F.c, F.r, dir), id = row * 31 + q;
       const L = F.len * (0.7 + 0.5 * v) * (0.85 + 0.3 * jitter(id));
       const way = unit(add(scale(e.n, 0.45), [0, 0.02, -1]));
-      if (s.stage === 0) out.push(lock(sub(e.p, scale(e.n, 0.05)), way, L, L * 0.8, 'mark', e.n, 0.05));
-      else out.push(plume(sub(e.p, scale(e.n, 0.04)), way, e.n, [0, 0, -1], L, L * 0.75, 0.06, row % 2 ? ['belly', 'mark', 'muzzle'] : ['mark', 'mark', 'muzzle'], 0.35));
+      out.push(tuftOf(sub(e.p, scale(e.n, 0.03)), way, e.n, L * (s.stage ? 1 : 1.2), (row + q) % 3 === 0 ? 'belly' : row % 2 ? 'muzzle' : 'mark'));
     }
   }
   // The Herbwarden's ruff edged in green leaves, round its sides and over its shoulders.
@@ -774,6 +777,17 @@ function ruffOf(s: Herb, n: number): Mesh {
     }
   }
   return merge(...out);
+}
+
+/**
+ * A tuft of soft fur: a rounded lobe hanging from `root` along `dir`, flattened against the surface it grows from (`out`),
+ * `L` long; overlapping one another they make a scalloped ruff.
+ */
+function tuftOf(root: V3, dir: V3, out: V3, L: number, mat: Mat): Mesh {
+  const d = unit(dir), o = unit(sub(out, scale(d, dot(out, d))));
+  const c = add(add(root, scale(d, L * 0.5)), scale(o, L * 0.08));
+  return blade([root, add(root, scale(d, L * 0.3)), c, add(root, scale(d, L * 0.78)), add(root, scale(d, L))], [L * 0.22, L * 0.34, L * 0.36, L * 0.28, L * 0.08],
+    o, { mat, rib: mat, fold: -0.35, thick: L * 0.2 });
 }
 
 /** The neck: green behind, cream down its throat. */
@@ -793,8 +807,7 @@ function neckFurOf(s: Herb): Mesh {
       const nrm: V3 = [Math.sin(a), Math.cos(a), 0];
       const root: V3 = add(neckEnd(s, z / N.len), [nrm[0] * N.w * 0.9, nrm[1] * N.w * 0.95, 0]);
       const L = s.ruff.len * (0.6 + 0.3 * row / 2) * (0.85 + 0.3 * jitter(id));
-      if (s.stage === 0) out.push(lock(sub(root, scale(nrm, 0.03)), add(scale(nrm, 0.8), [0, 0, -0.8]), L * 1.2, L * 0.75, 'mark', nrm, 0.1));
-      else out.push(plume(sub(root, scale(nrm, 0.03)), add(scale(nrm, 0.5), [0, 0, -1]), nrm, [0, 0, -1], L * 1.1, L * 0.62, 0.05, ['mark', 'mark', 'muzzle'], 0.22));
+      out.push(tuftOf(sub(root, scale(nrm, 0.03)), add(scale(nrm, 0.6), [0, 0, -1]), nrm, L * 1.1, (row + q) % 3 ? 'mark' : 'muzzle'));
     }
   }
   return merge(...out);
@@ -844,8 +857,8 @@ function skullOf(s: Herb, n: number, k: number): Mesh {
   const nn = n + 2;
   return tube(pts, ws, hs, nn, (ring, j) => {
     const up = upOf(j, nn), front = ring / rings;
-    if (s.stage === 0) return up > 0.3 || (front < 0.35 && up > -0.2) ? 'coat' : 'mark';
-    return up > 0.38 + 0.25 * front || (front < 0.3 && up > -0.1) ? 'coat' : 'mark';
+    const top = s.stage === 0 ? 0.8 : 0.58 + 0.2 * front, back = front < 0.3 ? -0.7 : 0;
+    return up > top + back ? 'coat' : up > top - 0.2 + back ? 'coatLight' : 'mark';
   }, { start: false, end: false });
 }
 
@@ -893,10 +906,10 @@ const headSolids = (s: Herb): Array<{ c: V3; r: V3 }> => [{ c: skullAt(s), r: sc
 function earOf(s: Herb, n: number): Mesh {
   const E = s.ear, L = E.len, w = E.w;
   const zs = [0, 0.12, 0.34, 0.58, 0.8, 0.94, 1].map((x) => x * L);
-  const ws = [0.86, 1, 0.98, 0.86, 0.62, 0.34, 0.03].map((x) => x * w);
+  const ws = [0.9, 1, 1, 0.92, 0.74, 0.42, 0.04].map((x) => x * w);
   const line = zs.map((z, q) => [0, -0.04 * Math.sin((q / 6) * Math.PI) * L * 0.2, z] as V3);
   const cup = (p: V3): V3 => [p[0], p[1] + 0.26 * w * Math.min(1, (p[0] / w) ** 2), p[2]];
-  const shell = tube(line, ws, ws.map((x) => Math.max(0.025, x * 0.2)), Math.max(6, n), (ring) => (ring >= 5 ? 'coatDark' : 'coat'), { up: [0, 1, 0] });
+  const shell = tube(line, ws, ws.map((x) => Math.max(0.025, x * 0.2)), Math.max(6, n), (ring) => (ring >= 5 ? 'pad' : ring >= 4 ? 'coatDark' : 'coat'), { up: [0, 1, 0] });
   const cupped = mesh(shell.v.map(cup), shell.f);
   const rim = (sd: number): V3[] => [1, 2, 3, 4].map((q) => cup([sd * ws[q] * 0.7, line[q][1] + ws[q] * 0.2 + 0.014, zs[q]]));
   const lining: V3[] = [cup([0, line[0][1] + ws[0] * 0.2 + 0.014, zs[0] + L * 0.04]), ...rim(-1), cup([0, line[5][1] + 0.02, L * 0.88]), ...rim(1).reverse()];
@@ -976,8 +989,9 @@ function mantleOf(s: Herb): Sway[] {
     const y = lerp(M.from, M.to, f) + (jitter(id + 1) - 0.5) * 0.04 * s.len;
     const at = onRings(B, y, Math.PI / 2 - phi * 0.6);
     const out3: V3 = [Math.sin(phi), 0, Math.cos(phi)];
-    const r = rise * DEG;
-    const dir = unit(add(scale([0, -1, 0], Math.cos(r)), scale(out3, Math.sin(r))));
+    // Rising, it lifts off the body; falling, it goes on down round the body over the flank, never into it.
+    const r = rise * DEG, down: V3 = scale([Math.cos(phi), 0, -Math.sin(phi)], Math.sign(phi) || 1);
+    const dir = unit(add(add(scale([0, -1, 0], Math.cos(r)), scale(r >= 0 ? out3 : down, Math.abs(Math.sin(r)))), scale(out3, 0.2)));
     // Its face: a crest leaf's turned to the side, as a fin's is; a leaf lying on the body, out from it.
     const across: V3 = [Math.cos(phi) * (phi < 0 ? -1 : 1), 0, -Math.abs(Math.sin(phi))];
     const want = add(scale(across, 1 - flat), scale(at.n, flat));
@@ -985,34 +999,24 @@ function mantleOf(s: Herb): Sway[] {
     const root = add(at.p, scale(at.n, lift));
     out.push({ mesh: leaf(root, dir, face, L, W, droop, mat, tip), root, id, k: 0.5 + Math.abs(phi) * 0.5 });
   };
-  // The cover: rows of broad leaves lying back over its back and down over its flanks, either side of the spine.
-  for (let r = 0; r < M.rows; r++) {
-    const f = r / Math.max(1, M.rows - 1);
-    for (let q = 0; q < 6; q++) {
-      const g = (q + (r % 2 ? 0.5 : 0)) / 5.5 - 0.5, id = 1300 + r * 17 + q;
-      const phi = g * 2.9;
-      put(f, phi, lerp(16, -28, Math.abs(g) * 2), M.len * 0.62 * (0.9 + 0.2 * jitter(id + 2)), 0.44, 0.12 + 0.3 * Math.abs(g),
-        jitter(id + 3) < 0.45 ? 'leafDark' : 'leaf', 'leaf', 0.01, id, 0.85);
+  // Three layers, each a row of broad leaves at every step down the back from the shoulders: the lowest hanging down over
+  // the flanks, darkest; the middle lying back and out; the top lying back along the spine, lifting a little, lightest.
+  const LAYERS: ReadonlyArray<{ phis: number[]; rise: number; len: number; droop: number; mat: Mat; tip: Mat; lift: number }> = [
+    { phis: [-1.6, -1.3, -1.0, 1.0, 1.3, 1.6], rise: -40, len: 0.62, droop: 0.3, mat: 'leafDark', tip: 'leaf', lift: 0.01 },
+    { phis: [-0.78, -0.5, 0.5, 0.78], rise: -12, len: 0.72, droop: 0.26, mat: 'leaf', tip: 'moss', lift: 0.03 },
+    { phis: [-0.26, 0, 0.26], rise: 6, len: 0.8, droop: 0.22, mat: 'moss', tip: 'moss', lift: 0.05 },
+  ];
+  LAYERS.forEach((Ly, layer) => {
+    for (let r = 0; r < M.rows; r++) {
+      const f = (r + (layer % 2 ? 0.5 : 0)) / M.rows, hi = Math.sin(Math.PI * (0.15 + 0.8 * f));
+      Ly.phis.forEach((phi0, q) => {
+        const id = 1300 + layer * 101 + r * 13 + q, phi = phi0 + (jitter(id) - 0.5) * 0.12;
+        const rise = Ly.rise >= 0 ? Ly.rise + M.rise * hi : Ly.rise;
+        put(f, phi, rise + (jitter(id + 4) - 0.5) * 14, M.len * Ly.len * (0.8 + 0.3 * hi) * (0.92 + 0.16 * jitter(id + 2)), 0.5, Ly.droop + 0.12,
+          jitter(id + 3) < 0.3 ? (layer === 2 ? 'leaf' : layer ? 'moss' : 'leaf') : Ly.mat, Ly.tip, Ly.lift * s.len, id, 0.45 + 0.4 * jitter(id + 5));
+      });
     }
-  }
-  // The crest: long leaves rising up and back off the spine and fanned out to either side, highest over the middle of its back.
-  const rows = M.rows - 1;
-  for (let r = 0; r < rows; r++) {
-    const f = lerp(0.12, 1, r / Math.max(1, rows - 1)), hi = Math.sin(Math.PI * (0.1 + 0.85 * f));
-    for (let q = 0; q < 5; q++) {
-      const g = (q + (r % 2 ? 0.5 : 0)) / 4.5 - 0.5, id = 1500 + r * 13 + q;
-      put(f, g * 2.1, M.rise * (0.55 + 0.45 * hi) * (1 - 0.35 * Math.abs(g) * 2), M.len * (0.72 + 0.38 * hi) * (0.9 + 0.2 * jitter(id + 2)), 0.4, 0.2,
-        jitter(id + 3) < 0.2 ? 'moss' : 'leaf', 'moss', 0.04 * s.len, id, 0.25);
-    }
-  }
-  // Big leaves standing up off its shoulders, behind its head, leaning back and out.
-  for (const sd of [1, -1]) for (let q = 0; q < 2; q++) {
-    const id = 1700 + q * 3 + (sd > 0 ? 0 : 1);
-    const at = onRings(B, M.from + 0.04 * s.len, Math.PI / 2 - sd * (0.3 + 0.35 * q));
-    const dir = unit([sd * (0.3 + 0.3 * q), -0.6, 0.75 - 0.2 * q]);
-    const up = unit([sd * 0.8, 0.3, 0.5]);
-    out.push({ mesh: leaf(at.p, dir, unit(sub(up, scale(dir, dot(up, dir)))), M.len * (0.8 - 0.1 * q), 0.36, 0.12, 'leaf', 'moss'), root: at.p, id, k: 1.2 });
-  }
+  });
   return out;
 }
 
@@ -1182,7 +1186,7 @@ function vialOf(top: V3, R: number, X: V3, cord: number): Mesh {
 function bannerOf(s: Herb, y: number, r: V3): Mesh {
   const { c, X, Y, Z } = bagFrame(s, MAIN, y, r);
   const at = (p: V3): V3 => inFrame(c, X, Y, Z, p);
-  const W = r[1] * 0.62, L = r[2] * 2.9, top = at([r[0] * 0.65, -r[1] * 0.1, -r[2] * 0.7]);
+  const W = r[1] * 0.82, L = r[2] * 3.4, top = at([r[0] * 0.65, -r[1] * 0.1, -r[2] * 0.7]);
   const pts: V3[] = [0, 0.3, 0.6, 0.85, 1].map((k) => add(top, add(scale(Z, -L * k), scale(X, -0.04 * L * k))));
   const cloth = blade(pts, [W, W, W, W * 0.6, 0.01], X, { mat: 'cloth', rib: 'cloth', fold: 0.04, thick: 0.02 });
   const rod = tube([add(top, scale(Y, -W * 1.2)), add(top, scale(Y, W * 1.2))], 0.025, 0.025, 4, 'wood', { up: [0, 0, 1] });
@@ -1205,7 +1209,7 @@ function bannerOf(s: Herb, y: number, r: V3): Mesh {
  */
 function tailLinkOf(s: Herb, q: number, k: number): Mesh {
   const T = s.tails, L = T.links[q], w0 = T.w[q], w1 = T.w[Math.min(q + 1, T.w.length - 1)], n = fine ? 8 : 6, last = T.links.length - 1;
-  const green = s.stage === 0 ? q < 4 : q < 2;
+  const green = s.stage === 0;
   const core = tube([[0, 0.05, 0], [0, -L * 0.5, 0], [0, -L - 0.03, 0]], [w0, (w0 + w1) * 0.5, w1], [w0, (w0 + w1) * 0.5, w1], n,
     (_ring, j) => (green && Math.sin(((j + 1) / n) * TAU) > -0.3 ? 'coat' : 'mark'), { start: q === 0 ? false : undefined, end: false });
   const out: Mesh[] = [core];
@@ -1215,20 +1219,27 @@ function tailLinkOf(s: Herb, q: number, k: number): Mesh {
     const id = 900 + q * 13 + c + k * 101;
     const Lk = L * (s.stage ? 1.45 : q >= 4 ? 1.5 : 1.6) * (q === 0 ? 0.6 : 1) * (0.9 + 0.2 * jitter(id));
     const root: V3 = [nrm[0] * w0 * 0.55, L * 0.15, nrm[2] * w0 * 0.55];
-    const g = green && Math.sin(a) > -0.5;
+    const g = green && (q >= 3 || Math.sin(a) > -0.3);
     const cream: Mat[] = c % 2 ? ['mark', 'mark', 'muzzle'] : ['belly', 'mark', 'muzzle'];
-    out.push(plume(root, add(scale(nrm, s.stage ? 0.3 : g ? 0.5 : 0.18), [0, -1, 0]), nrm, [0, -1, 0], Lk, w0 * (s.stage ? 1.2 : 1.5), 0.12, g ? ['coat', 'coat', 'coatLight'] : cream, s.stage ? 0.5 : 0.3));
+    if (g) {
+      // On the kit, where the fur is green it is leaves: broad ones lying back along the tail, overlapping.
+      out.push(leaf(root, add(scale(nrm, 0.3), [0, -1, 0]), nrm, Lk * 1.15, 0.62, 0.1, jitter(id + 2) < 0.4 ? 'moss' : 'leaf', 'moss'));
+      continue;
+    }
+    out.push(plume(root, add(scale(nrm, s.stage ? 0.28 : 0.4), [0, -1, 0]), nrm, [0, -1, 0], Lk, w0 * (s.stage ? 1.35 : 1.4), 0.12, g ? ['coat', 'coat', 'coatLight'] : cream, s.stage ? 0.6 : 0.4));
   }
   // Leaf fronds over the root of the tail and along its top, lying back along it.
-  if (q < (s.stage ? 3 : 2)) {
-    const fronds = s.stage ? 5 : 3;
+  if (s.stage && q < last - 1) {
+    const fronds = s.stage ? 3 : 3;
     for (let c = 0; c < fronds; c++) {
-      const a = lerp(0.35, Math.PI - 0.35, fronds > 1 ? c / (fronds - 1) : 0.5), nrm: V3 = [Math.cos(a), 0, Math.sin(a)], id = 1500 + q * 7 + c + k * 53;
-      const dir = unit(add(scale(nrm, 0.45), [0, -1, 0]));
-      out.push(leaf(add([nrm[0] * w0 * 0.7, 0, nrm[2] * w0 * 0.7], [0, -L * 0.1, 0]), dir, nrm, L * (s.stage ? 1.5 : 1.3) * (0.85 + 0.3 * jitter(id)), 0.36, 0.12, jitter(id + 1) < 0.35 ? 'moss' : 'leaf', 'moss'));
+      const a = lerp(0.6, Math.PI - 0.6, fronds > 1 ? c / (fronds - 1) : 0.5), nrm: V3 = [Math.cos(a), 0, Math.sin(a)], id = 1500 + q * 7 + c + k * 53;
+      const dir = unit(add(scale(nrm, 0.35), [0, -1, 0]));
+      out.push(leaf(add([nrm[0] * w0 * 0.75, 0, nrm[2] * w0 * 0.75], [0, -L * 0.05, 0]), dir, nrm, L * (s.stage ? 1.45 : 1.3) * (0.85 + 0.3 * jitter(id)), 0.48, 0.14, jitter(id + 1) < 0.35 ? 'moss' : 'leaf', 'moss'));
     }
   }
-  if (q === last) out.push(plume([0, -L * 0.3, 0], [0, -1, 0.15], [0, 0.15, 1], [0, 0, 1], w1 * (s.stage ? 2.4 : 1.6), w1 * (s.stage ? 2.2 : 1.4), 0.15, ['mark', 'muzzle'], 0.4));
+  if (q === last && s.stage) out.push(plume([0, -L * 0.3, 0], [0, -1, 0.15], [0, 0.15, 1], [0, 0, 1], w1 * 2.4, w1 * 2.2, 0.15, ['mark', 'muzzle'], 0.5));
+  // The kit's tail ends in a green point, a leaf curling up off its end.
+  if (q === last && !s.stage) out.push(leaf([0, -L * 0.2, w1 * 0.3], [0, -1, 0.45], [0, 0.4, 1], L * 2.2, 0.62, -0.18, 'leaf', 'moss'));
   // The kit's pink flower on top of its tail, and a green leaf at its tip.
   if (s.stage === 0 && q === 2) for (const sd of [1, -1]) out.push(flower([sd * w0 * 1.1, -L * 0.4, w0 * 0.5], [sd, 0.1, 0.5], w0 * 0.8, 5, 'petal', 'bloom', sd > 0 ? 77 : 78));
   return merge(...out);
@@ -1305,7 +1316,7 @@ function herbBuild(s: Herb, lod: number): Piece[] {
   const sways: Sway[] = [];
   if (s.mantle) sways.push(...mantleOf(s), ...blossomsOf(s));
   const G = sways.length ? stirOf(sways) : null;
-  if (G) pieces.push({ key: 'mantle', mesh: G.mesh, bone: 'trunk', bias: 0.09, after: ['body', 'ruff', 'cape'], hide: [barrel], bent: stirred(s, G), even: true });
+  if (G) pieces.push({ key: 'mantle', mesh: G.mesh, bone: 'trunk', bias: 0.09, after: ['body', 'ruff', 'cape'], hide: [barrel], bent: stirred(s, G) });
   const Bg = s.bags, bagMesh: Mesh[] = [bagOf(s, MAIN, Bg.y, Bg.r, n)];
   if (Bg.both) bagMesh.push(bagOf(s, -MAIN, Bg.y, Bg.r, n));
   if (Bg.small) bagMesh.push(bagOf(s, MAIN, Bg.y + Bg.r[1] * 1.7, scale(Bg.r, 0.62), n));
@@ -1321,7 +1332,7 @@ function herbBuild(s: Herb, lod: number): Piece[] {
     pieces.push({ key: 'spill', mesh: S.mesh, bone: 'trunk', bias: 0.14, after: ['bags', 'mantle'], lines: false, bent: stirred(s, S) });
   }
   if (s.vials) {
-    const { c, X, Y, Z } = bagFrame(s, MAIN, Bg.y, Bg.r), R = Bg.r[2] * 0.5;
+    const { c, X, Y, Z } = bagFrame(s, MAIN, Bg.y, Bg.r), R = Bg.r[2] * 0.68;
     const tops = [inFrame(c, X, Y, Z, [Bg.r[0] * 1.15, -Bg.r[1] * 0.45, -Bg.r[2] * 0.2]), inFrame(c, X, Y, Z, [Bg.r[0] * 1.15, Bg.r[1] * 0.1, -Bg.r[2] * 0.3])];
     const vials = tops.slice(0, s.vials).map((p, q) => vialOf(p, R * (q ? 1.1 : 0.95), X, Bg.r[2] * (0.25 + 0.2 * q)));
     const V = stirOf(vials.map((m, q) => ({ mesh: m, root: tops[q], id: 70 + q, k: 1.4 })));
@@ -1337,17 +1348,16 @@ function herbBuild(s: Herb, lod: number): Piece[] {
     const sideV: V3 = [side, 0, 0], out3: V3 = [side * 0.7, fore ? 0.7 : -0.7, 0];
     const hw = fore ? w * 1.35 : w * (s.stage ? 1.7 : 1.55);
     const hc: V3 = [0, fore ? 0 : -w * 0.15, fore ? 0 : -w * 0.2], hr: V3 = [hw, hw * (fore ? 1.1 : 1.15), hw * (fore ? 1.2 : 1.1)];
-    // The tops of its legs cream, a green mottle over the haunch; its lower legs cream into green socks over the dark paws.
+    // The tops of its legs cream, a light green mottle at the top; its lower legs warm grey-brown over its dark brown paws.
     const upperM = merge(
       orb(hc, hr, n, k, 'mark'),
       tube([[0, 0, -w * 0.3], [0, 0, -L[0]]], [hw * 0.8, w * 0.85], [hw * 0.8, w * 0.85], n, 'mark', { seam: 'start' }),
       orb([0, 0, -L[0]], w * 0.86, n, k, 'mark'),
-      paint([leafOn(onEgg2(hc, hr, [side, -0.3, 0.5]).p, onEgg2(hc, hr, [side, -0.3, 0.5]).n, hw * (fore ? 1.0 : 1.5), hw * (fore ? 0.7 : 1.1), 0.6, 'coat'),
-        leafOn(onEgg2(hc, hr, [side, 0.4, -0.3]).p, onEgg2(hc, hr, [side, 0.4, -0.3]).n, hw * 0.8, hw * 0.5, -0.4, 'coatLight')]),
+      paint([leafOn(onEgg2(hc, hr, [side, -0.3, 0.6]).p, onEgg2(hc, hr, [side, -0.3, 0.6]).n, hw * (fore ? 0.9 : 1.2), hw * (fore ? 0.55 : 0.8), 0.6, 'coatLight')]),
     );
     const lowerM = tube([[0, 0, w * 0.5], [0, 0, -L[1] * 0.45], [0, 0.01, -L[1]]], [w * 0.86, w * 0.64, w * 0.44], [w * 0.9, w * 0.68, w * 0.46], n,
-      (ring) => (ring >= 1 ? 'coat' : 'mark'), { seam: 'start' });
-    const lastM = tube([[0, 0, w * 0.35], [0, 0.01, -L[2] - s.paw * 0.2]], [w * 0.42, w * 0.36], [w * 0.44, w * 0.38], n, 'coat', { seam: 'start' });
+      (ring) => (ring >= 1 ? 'spot' : 'mark'), { seam: 'start' });
+    const lastM = tube([[0, 0, w * 0.35], [0, 0.01, -L[2] - s.paw * 0.2]], [w * 0.42, w * 0.36], [w * 0.44, w * 0.38], n, 'spot', { seam: 'start' });
     pieces.push(
       { key: `${key}0`, mesh: upperM, bone: `${key}0`, bias: 0.01, after: ['body'], front: sideV },
       { key: `${key}1`, mesh: merge(lowerM, fore && s.wraps ? legWrapOf(s, side, n) : false), bone: `${key}1`, bias: 0.02, after: ['body', `${key}0`], front: out3 },
@@ -1361,7 +1371,7 @@ function herbBuild(s: Herb, lod: number): Piece[] {
         const a = lerp(-0.9, 0.9, q / 6), nrm: V3 = [side * Math.cos(a) * 0.8, -Math.sin(a) * 0.4 - 0.4, -0.2];
         const root: V3 = add([0, 0, -L[0] * (0.22 + 0.1 * (q % 2))], scale(unit(nrm), w * 1.1));
         const Lf = s.ruff.len * 0.7 * (0.85 + 0.3 * jitter(700 + q + i * 9));
-        tuft.push(plume(root, add(scale(unit(nrm), 0.35), [0, -0.2, -1]), nrm, [0, -1, 0], Lf, Lf * 0.55, 0.06, ['mark', 'mark', 'muzzle'], 0.22));
+        tuft.push(tuftOf(root, add(scale(unit(nrm), 0.35), [0, -0.2, -1]), nrm, Lf, q % 3 ? 'mark' : 'belly'));
       }
       pieces.push({ key: `${key}f`, mesh: merge(...tuft), bone: `${key}0`, bias: 0.022, after: [`${key}0`, `${key}1`], front: sideV, lines: false });
     }
@@ -1549,6 +1559,7 @@ function herbKind(s: Herb): Kind {
         cloth: [248, 238, 214],
         string: [196, 150, 92],
         wood: [150, 104, 64],
+        spot: [150, 124, 100],
       } as Partial<ReturnType<Kind['palette']>>);
     },
     shadow: [s.len * 0.75 + 0.4, s.body.w[3] * 1.5],
