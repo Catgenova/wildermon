@@ -111,7 +111,7 @@ const BROTHLET_LOOK: Broth = {
   hind: { hip: [0.72, -0.1, 0.28], len: [0.27, 0.25], at: [0.98, 0.22], foot: 0.1, toe: 0.12, toes: 4, w: 0.15, turn: 40 },
   claws: false,
   webs: 0,
-  orb: { c: [0, 0.06, -0.36], r: [0.74, 0.52, 0.44], glass: false, fill: 0, mush: 0 },
+  orb: { c: [0, 0.11, -0.2], r: [0.74, 0.52, 0.44], glass: false, fill: 0, mush: 0 },
   hat: { back: 0.4, lean: 14, band: [0.26, 0.12], top: [0.33, 0.28], puffs: 6 },
   scarf: { y: 0.04, w: 0.09, knot: Math.PI * 0.62 },
   cape: null,
@@ -132,7 +132,7 @@ const STOCKBELLY_LOOK: Broth = {
   hind: { hip: [1.0, -0.25, 0.42], len: [0.48, 0.44], at: [1.4, 0.2], foot: 0.18, toe: 0.19, toes: 4, w: 0.25, turn: 40 },
   claws: false,
   webs: 1,
-  orb: { c: [0, 0.08, -0.54], r: [1.18, 0.82, 0.64], glass: true, fill: 0.68, mush: 0 },
+  orb: { c: [0, 0.16, -0.3], r: [1.18, 0.82, 0.64], glass: true, fill: 0.68, mush: 0 },
   hat: { back: 0.42, lean: 12, band: [0.44, 0.28], top: [0.58, 0.64], puffs: 8 },
   scarf: { y: 0.24, w: 0.08, knot: -0.25 },
   cape: null,
@@ -153,7 +153,7 @@ const CAULDRONTHROAT_LOOK: Broth = {
   hind: { hip: [1.4, -0.36, 0.55], len: [0.64, 0.58], at: [1.98, 0.2], foot: 0.24, toe: 0.27, toes: 4, w: 0.38, turn: 42 },
   claws: true,
   webs: 2,
-  orb: { c: [0, 0.1, -0.68], r: [1.6, 1.04, 0.8], glass: true, fill: 0.7, mush: 2 },
+  orb: { c: [0, 0.2, -0.38], r: [1.6, 1.04, 0.8], glass: true, fill: 0.7, mush: 2 },
   hat: { back: 0.42, lean: 10, band: [0.6, 0.34], top: [0.8, 0.86], puffs: 9 },
   scarf: null,
   cape: { y: [0.8, -0.86], drop: 0.95 },
@@ -1398,23 +1398,23 @@ function brothBuild(s: Broth, lod: number): Piece[] {
   pieces.push({ key: 'jaw', mesh: jawOf(s, n), bone: 'jaw', bias: 0.19, after: ['head'], lines: false, hide: [{ c: skullAt(s), r: scale(s.head.r, 0.9) }], hideIn: 'head' });
   pieces.push({ key: 'hat', mesh: hatOf(s, n, k), bone: 'head', bias: 0.23, after: ['head'], lines: false });
   // Its throat, over its chest and under its chin: over the body and all it wears while it is toward the viewer, under them from behind.
-  const onTop = { after: ['body', 'scarf', 'apron', 'cape', 'cloth', 'bow'], front: [0, 1, 0.2] as V3 };
-  if (!s.orb.glass) pieces.push({ key: 'throat', mesh: pouchOf(s, n, k), bone: 'orb', bias: 0.18, ...onTop, under: ['jaw', 'head'], lines: false });
+  const onTop = { after: ['body', 'head', 'jaw', 'scarf', 'apron', 'cape', 'cloth', 'bow'], front: [0, 1, 0.2] as V3 };
+  if (!s.orb.glass) pieces.push({ key: 'throat', mesh: pouchOf(s, n, k), bone: 'orb', bias: 0.18, ...onTop, lines: false });
   else {
     const r = s.orb.r;
-    pieces.push({ key: 'throat', mesh: orb([0, 0, 0], r, n + 6, k + 3, 'shell'), bone: 'orb', bias: 0.18, ...onTop, under: ['jaw', 'head'] });
+    pieces.push({ key: 'throat', mesh: orb([0, 0, 0], r, n + 6, k + 3, 'shell'), bone: 'orb', bias: 0.18, ...onTop });
     const level = (kk: number) => (_v: readonly V3[], a: Anim): V3[] => brothPos(r, s.orb.fill, brothNow(s, a).tilt, kk);
-    pieces.push({ key: 'brothW', mesh: brothMesh(r, 0.975, 'horn', 'water'), bone: 'orb', bias: 0.181, after: ['throat'], under: ['jaw', 'head'], lines: false, bent: level(0.975) });
-    pieces.push({ key: 'brothC', mesh: brothMesh(r, 0.66, 'shellDark', 'shellDark'), bone: 'orb', bias: 0.182, after: ['throat', 'brothW'], under: ['jaw', 'head'], lines: false, bent: level(0.66) });
+    pieces.push({ key: 'brothW', mesh: brothMesh(r, 0.975, 'horn', 'water'), bone: 'orb', bias: 0.181, after: ['throat'], lines: false, bent: level(0.975) });
+    pieces.push({ key: 'brothC', mesh: brothMesh(r, 0.66, 'shellDark', 'shellDark'), bone: 'orb', bias: 0.182, after: ['throat', 'brothW'], lines: false, bent: level(0.66) });
     // Its bits carried round after the broth's turn, and rocked with its top.
     pieces.push({
-      key: 'bits', mesh: bitsOf(s, K), bone: 'orb', bias: 0.183, after: ['throat', 'brothW', 'brothC'], under: ['jaw', 'head'], thin: true,
+      key: 'bits', mesh: bitsOf(s, K), bone: 'orb', bias: 0.183, after: ['throat', 'brothW', 'brothC'], thin: true,
       bent: (v, a) => {
         const W = brothNow(s, a), c = Math.cos(W.spin * 0.35), sn = Math.sin(W.spin * 0.35), dx = -W.tilt[1] * 0.004 * r[0], dy = -W.tilt[0] * 0.004 * r[1];
         return v.map((p) => [p[0] * c - p[1] * sn + dx, p[0] * sn + p[1] * c + dy, p[2]] as V3);
       },
     });
-    pieces.push({ key: 'shine', mesh: shineOf(r, 1, 'eyeWhite'), bone: 'orb', bias: 0.184, after: ['throat', 'brothW', 'brothC', 'bits'], under: ['jaw', 'head'], lines: false });
+    pieces.push({ key: 'shine', mesh: shineOf(r, 1, 'eyeWhite'), bone: 'orb', bias: 0.184, after: ['throat', 'brothW', 'brothC', 'bits'], lines: false });
   }
   if (s.scarf) pieces.push({ key: 'scarf', mesh: scarfOf(s, n, K), bone: 'trunk', bias: 0.05, after: ['body'], hide: [bodyHide] });
   pieces.push({ key: 'apron', mesh: apronOf(s, n), bone: 'trunk', bias: 0.03, after: ['body'], hide: [bodyHide] });
