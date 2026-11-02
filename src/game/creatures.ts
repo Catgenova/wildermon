@@ -880,6 +880,8 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   quill: { kind: 'wool', n: 1, what: 'feathers per pluck' },
   flecha: { kind: 'more', n: 1, what: 'arrows per fletch' },
   scurra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  // Cooking is worked at a fire rather than at the stores, and makes no `more` there: its line's skill is its reach.
+  simma: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2769,9 +2771,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   simma: {
     id: 'simma',
-    name: 'Simma',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Brothlet',
+    was: ['Simma'],
+    // Asked for, with a reference sheet: Brothlet, Stockbelly, Cauldronthroat. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Stockbelly', description: '' },
+      { name: 'Cauldronthroat', description: '' },
+    ],
     health: 20,
     attack: 2,
     speed: 1.8,
@@ -2782,11 +2790,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'cook',
     workRange: 6,
+    // [skin, spots]: the sheet's leaf green with moss spots, spring green with olive, sage with fern, and lime with pine.
     variants: [
-      ['#d4a07a', '#f6e0c8'],
-      ['#c08c68', '#ecd2b8'],
-      ['#dcb08c', '#f8e8d4'],
-      ['#b08060', '#e4c8ac'],
+      ['#8cb046', '#5c8a34'],
+      ['#a0b84c', '#687e30'],
+      ['#82a856', '#4e7a3c'],
+      ['#a8bc44', '#58803a'],
     ],
     butcher: { meat: 4, fur: 2, leather: 2, bone: 2 },
   },
@@ -4279,6 +4288,7 @@ function sayPacks(id: string, level: string): void {
 }
 sayPacks('bura', `Level: body strength, learned ${LEARNS_SAYS.out}.`);
 sayLineLater('flecha', `Level: ${GATHER_SKILL.fletch.replace(/_/g, ' ')}.`);
+sayLineLater('simma', `Level: ${GATHER_SKILL.cook}.`);
 
 /** Which species roam wild, by weight. */
 /**
