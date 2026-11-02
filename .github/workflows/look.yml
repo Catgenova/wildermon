@@ -163,6 +163,10 @@ jobs:
                  sum(calls) as calls, round(sum(total_exec_time) / 1000) as s_total, round((sum(total_exec_time) / greatest(sum(calls), 1))::numeric, 2) as ms_each,
                  round(100 * sum(total_exec_time) / (select sum(total_exec_time) from pg_stat_statements)) as pct
                  from pg_stat_statements where query not like '%pg_stat%' group by 1 order by sum(total_exec_time) desc limit 20"
+          ask "the busiest calls by the arguments they were asked with (an old browser's form apart from a new one's)" "select substring(query from '\"?public\"?\.\"?([a-z_0-9]+)\"?\(') as call,
+                 coalesce(nullif(array_to_string(array(select distinct m[1] from regexp_matches(query, '\"(p_[a-z_]+)\"', 'g') as m order by 1), ','), ''), '(none)') as args,
+                 sum(calls) as calls, round((sum(total_exec_time) / greatest(sum(calls), 1))::numeric, 2) as ms_each, round(max(max_exec_time)::numeric) as ms_worst
+                 from pg_stat_statements where query ~ '\"?public\"?\.\"?(rpc_creatures|rpc_ground|rpc_move|rpc_settle)\"?\(' group by 1, 2 order by 1, 3 desc"
           ask "rounds over 2 s, by 5 minutes, last 3 hours" "select to_char(date_trunc('hour', at) + floor(extract(minute from at) / 5) * interval '5 minutes', 'HH24:MI') as at,
                  count(*) filter (where ms > 2000) as over_2s, round(max(ms)::numeric) as worst, round(avg(ms)::numeric) as avg
                  from tick_time where at > now() - interval '3 hours' group by 1 order by 1"
