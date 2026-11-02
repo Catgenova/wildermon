@@ -9,6 +9,7 @@ import { occupantOf } from '../../game/creaturecrate';
 import type { ContextMenu, MenuItem } from '../contextmenu';
 import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
 import { Picking } from '../picking';
+import { nextFrame } from '../repaint';
 import type { UIWindow } from '../windows';
 import { COUNTS, pinEntry, pinnable } from '../beltmenu';
 import { orderBy, sortSelect, type SortKey } from '../sorting';
@@ -44,6 +45,8 @@ export class InventoryPanel {
   private pickBar: HTMLDivElement;
   /** The rows' uids in the order they are drawn, for a Shift-click's run. */
   private order: number[] = [];
+  /** The pack changed while the window was shut: drawn when it opens. */
+  private stale = false;
 
   constructor(
     private readonly win: UIWindow,
@@ -137,7 +140,16 @@ export class InventoryPanel {
       (p) => p.from === 'store',
       (p) => this.dropped?.(p),
     );
-    game.events.on('inventory', () => this.render());
+    // Once a frame however many words the pack had in it (`nextFrame`), and not at all while the window is shut.
+    game.events.on('inventory', () => {
+      this.stale = true;
+      nextFrame.soon(this, () => {
+        if (this.win.isOpen && this.stale) this.render();
+      });
+    });
+    win.onOpen = () => {
+      if (this.stale) this.render();
+    };
     this.render();
   }
 
@@ -154,6 +166,7 @@ export class InventoryPanel {
   }
 
   render(): void {
+    this.stale = false;
     const items = this.game.inventory.items;
     const shown = items.filter((it) => this.matches(it));
     this.picking.keep(new Set(shown.map((it) => it.uid)));

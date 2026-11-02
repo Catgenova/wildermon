@@ -130,6 +130,7 @@ import { DeedBanner } from './deedbanner';
 import type { HelpPages } from './panels/help';
 import { BINDS, keyName, type Keybinds } from '../game/keybinds';
 import { Hud, WINDOWS } from './hud';
+import { nextFrame } from './repaint';
 import { EventLogPanel } from './panels/eventlog';
 import { InventoryPanel } from './panels/inventory';
 import { MinimapPanel } from './panels/minimap';
@@ -1042,6 +1043,8 @@ export class UI {
   }
 
   update(fps: number): void {
+    // The redraws asked for since the last frame, once each (`nextFrame`).
+    nextFrame.flush();
     // Runecut's light on the island clock turns at dusk and dawn; set to Day or Night this writes nothing.
     applyLook(this.game.settings, this.game.isNight());
     this.notices.update(performance.now());

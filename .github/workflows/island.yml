@@ -1085,6 +1085,21 @@ jobs:
           npx esbuild supabase/test/hoverkeep.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/hoverkeep.mjs --log-level=error
           node node_modules/.cache/hoverkeep.mjs
+      - name: The pack, the skill book and the belt drawn once a frame
+        if: matrix.shard == 1
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          FRAMEBATCH_STRICT: '1'
+        run: |
+          # The island's words on the pack come a row at a time, and on the
+          # book a skill at a time: drawn once at the next frame, and not at
+          # all while the window is shut. Drawn in Chrome: a dozen words draw
+          # the Inventory list once; shut, none, and once as it opens; three
+          # skills rising show at the next frame, each row flashing; and the
+          # pack, the book and the belt show what each shows drawn afresh.
+          npx esbuild supabase/test/framebatch.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/framebatch.mjs --log-level=error
+          node node_modules/.cache/framebatch.mjs
       - name: The Wildermon window's Care tab
         if: matrix.shard == 1
         env:
@@ -2969,6 +2984,17 @@ jobs:
           npx esbuild supabase/test/ridewalk.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/ridewalk.mjs --log-level=error
           node node_modules/.cache/ridewalk.mjs
+
+      - name: The path search finds the same paths remembering what it asked of each tile
+        if: matrix.shard == 3
+        run: |
+          # The search as it was and as it is, from the same starts to the
+          # same goals on three rough islands: within a click and far past
+          # the square remembered, by the edge, near, partial and cut short.
+          # The same path, tile and storey, and the same verdict, every time.
+          npx esbuild supabase/test/pathmemo.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/pathmemo.mjs --log-level=error
+          node node_modules/.cache/pathmemo.mjs
 
       - name: A bridge up a storey is walked across and under, every lane, on both sides
         if: matrix.shard == 3

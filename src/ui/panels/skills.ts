@@ -6,6 +6,7 @@ import { SKILL_BY_ID, SKILL_DEFS } from '../../game/skills';
 import { effectTracks, hardestOre, hasEffects, type EffectTrack } from '../../game/skilleffects';
 import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
+import { nextFrame } from '../repaint';
 import { raisedBySays } from '../raisedBy';
 import { TRACKING, trackingSays } from '../../game/tracking';
 import { metres } from '../../game/piers';
@@ -37,8 +38,10 @@ export class SkillsPanel {
   /** The sleep bonus switch and what it does (`sleep.ts`). */
   private sleepBtn: HTMLButtonElement;
   private sleepNote: HTMLDivElement;
+  /** The skills that rose since the last frame, to flash their rows once it comes (`nextFrame`). */
+  private readonly risen = new Set<string>();
 
-  constructor(win: UIWindow, private readonly game: Game) {
+  constructor(private readonly win: UIWindow, private readonly game: Game) {
     win.body.classList.add('skills-body', 'skill-book');
     // The sleep bonus: how much is stored, and the switch.
     const sleepHead = document.createElement('div');
@@ -121,15 +124,27 @@ export class SkillsPanel {
     game.events.on('inventory', () => this.drawTablets());
     // The sleep bonus as the island last said it, and as it drains.
     game.events.on('stats', () => this.drawSleep());
+    // The book arrives whole each beat, a word for each skill that rose and one more: drawn once a frame for all of
+    // them (`nextFrame`), and while the window is shut not drawn at all -- it is drawn as it opens (`onOpen`).
     game.events.on('skill', (id) => {
-      this.refresh();
-      const row = this.rows.get(id);
-      if (row) {
-        row.classList.remove('flash');
-        void row.offsetWidth;
-        row.classList.add('flash');
-      }
+      if (this.rows.has(id)) this.risen.add(id);
+      nextFrame.soon(this, () => this.rose());
     });
+  }
+
+  /** The rows of the skills that rose flash, and the book is drawn again while it shows. */
+  private rose(): void {
+    const rows = [...this.risen].map((id) => this.rows.get(id)!);
+    this.risen.clear();
+    if (!this.win.isOpen) {
+      for (const row of rows) row.classList.add('flash');
+      return;
+    }
+    this.refresh();
+    // Started again from the top: off, one layout for all of them, and on.
+    for (const row of rows) row.classList.remove('flash');
+    if (rows.length) void rows[0].offsetWidth;
+    for (const row of rows) row.classList.add('flash');
   }
 
   refresh(): void {
