@@ -102,6 +102,26 @@ interface Buffers {
 }
 
 let buffers: Buffers | null = null;
+
+/**
+ * What a search has already asked of a tile: whether it can be stood on, and
+ * what entering it costs.
+ *
+ * Both are the tile's alone, whatever the storey and whichever way it is
+ * entered, and the search used to ask them again every time it looked at the
+ * tile: each of its eight neighbours asks whether it is free, a diagonal asks
+ * the two tiles beside it as well, and each neighbour that relaxes it asks the
+ * cost. Up to two dozen asks of the same tile in one search, each a lookup in
+ * the ground, the Runestones and the water. Asked once now, and kept for the
+ * rest of the search, in a square `MEMO_REACH` tiles each way from the start;
+ * a search that goes further than that asks out there as it always did.
+ *
+ * Bits in `memoKnown`: 1 free, 2 not free, 4 the cost is in `memoCost`.
+ */
+const MEMO_REACH = 160;
+const MEMO_SIDE = 2 * MEMO_REACH + 1;
+const memoKnown = new Uint8Array(MEMO_SIDE * MEMO_SIDE);
+const memoCost = new Float64Array(MEMO_SIDE * MEMO_SIDE);
 /** Tile index to slot, reused between searches and cleared at the start of each. */
 const slots = new Map<number, number>();
 
@@ -146,6 +166,29 @@ export function findPath(world: World, sx: number, sy: number, sl: number, tx: n
   const b = getBuffers(maxNodes * 10 + 2);
   const OPEN = 1;
   const CLOSED = 2;
+  // Whether a tile is free and what it costs to enter, each asked once a search (`memoKnown`).
+  const ox = sx - MEMO_REACH, oy = sy - MEMO_REACH;
+  memoKnown.fill(0);
+  const passable = (x: number, y: number): boolean => {
+    const mx = x - ox, my = y - oy;
+    if (mx < 0 || my < 0 || mx >= MEMO_SIDE || my >= MEMO_SIDE) return opts.passable(x, y);
+    const i = my * MEMO_SIDE + mx;
+    const known = memoKnown[i] & 3;
+    if (known) return known === 1;
+    const free = opts.passable(x, y);
+    memoKnown[i] |= free ? 1 : 2;
+    return free;
+  };
+  const cost = (x: number, y: number): number => {
+    const mx = x - ox, my = y - oy;
+    if (mx < 0 || my < 0 || mx >= MEMO_SIDE || my >= MEMO_SIDE) return opts.cost(x, y);
+    const i = my * MEMO_SIDE + mx;
+    if (memoKnown[i] & 4) return memoCost[i];
+    const c = opts.cost(x, y);
+    memoCost[i] = c;
+    memoKnown[i] |= 4;
+    return c;
+  };
 
   /**
    * The slot a tile is using, handed out on first sight.
@@ -254,16 +297,16 @@ export function findPath(world: World, sx: number, sy: number, sl: number, tx: n
     for (let k = 0; k < 8; k++) {
       const nx = cx + DIRS[k][0];
       const ny = cy + DIRS[k][1];
-      if (!world.inBounds(nx, ny) || !opts.passable(nx, ny)) continue;
+      if (!world.inBounds(nx, ny) || !passable(nx, ny)) continue;
       if (k >= 4) {
         // Never cut a blocked corner on a diagonal move.
-        if (!opts.passable(cx + DIRS[k][0], cy) || !opts.passable(cx, cy + DIRS[k][1])) continue;
+        if (!passable(cx + DIRS[k][0], cy) || !passable(cx, cy + DIRS[k][1])) continue;
       }
       const nl = opts.step(cx, cy, cl, nx, ny);
       if (nl === null || nl < -below || nl >= levels) continue;
       const n = slotOf((nl + below) * layer + ny * w + nx);
       if (n < 0 || b.state[n] === CLOSED) continue;
-      const stepCost = (k >= 4 ? Math.SQRT2 : 1) * opts.cost(nx, ny);
+      const stepCost = (k >= 4 ? Math.SQRT2 : 1) * cost(nx, ny);
       const ng = b.g[cur] + stepCost;
       if (b.state[n] === OPEN && ng >= b.g[n]) continue;
       b.g[n] = ng;
