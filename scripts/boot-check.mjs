@@ -235,6 +235,14 @@ if (panels) {
   const missing = wantRows.filter((r) => !menu.has(r));
   if (missing.length) bad.push(`in the game: the UI Menu has no ${missing.join(', ')} row`);
   else if (!menu.get('Journal: Help') || !menu.get('Journal: Field guide')) bad.push('in the game: the UI Menu\'s journal tabs do not say their keys');
+  const m = p.map ?? {};
+  if (m.error) bad.push(`in the game: the map test threw: ${m.error}`);
+  else {
+    if (!(m.corner >= 0 && m.corner < 1.5)) bad.push(`in the game: a click on the map's corners landed ${m.corner} tiles from the tile drawn there`);
+    if (!m.zoomed) bad.push('in the game: the wheel did not zoom the map');
+    if (!m.panned) bad.push('in the game: a drag did not pan the map');
+    if (!m.fit) bad.push('in the game: Fit did not put the map back');
+  }
   if (p.menuTab !== 'Field guide') bad.push(`in the game: the UI Menu's Journal: Field guide row turned the journal to ${p.menuTab || 'nothing'}`);
 }
 

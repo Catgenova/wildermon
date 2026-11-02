@@ -46,6 +46,8 @@ export interface HostileSeen {
   /** The UI Menu's rows, label and key, and the journal tab its Journal: Field guide row turned to. */
   menu: Array<[string, string]>;
   menuTab: string;
+  /** The map: tiles a click at the picture's corners landed on against the tiles shown there, and what the wheel, a drag and Fit did. */
+  map: { corner: number; zoomed: boolean; panned: boolean; fit: boolean; error: string };
   /** Whether a markup-in-`html` check put the text in as text. */
   escaped: boolean;
   /** Whether anything set `window.__pwned`. */
@@ -53,7 +55,7 @@ export interface HostileSeen {
   done: boolean;
 }
 
-const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, menu: [], menuTab: '' };
+const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, menu: [], menuTab: '', map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
 (window as unknown as { panels: HostileSeen }).panels = seen;
 
 document.getElementById('boot')?.remove();
@@ -100,6 +102,48 @@ for (const tab of TABS) {
 }
 for (let i = 0; i < 100 && !uiRoot.querySelector('.help-sec'); i++) await rest(50);
 seen.help = !!uiRoot.querySelector('.help-sec');
+// The map: a click lands on the tile under it in a window taller than it is wide, the wheel zooms, a drag pans, Fit lets go.
+try {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mm = (ui as any).minimap;
+  const view = uiRoot.querySelector<HTMLCanvasElement>('canvas.minimap')!;
+  const fitBtn = [...uiRoot.querySelectorAll<HTMLButtonElement>('.map-bar button')].find((b) => b.textContent === 'Fit')!;
+  const mapWin = view.closest<HTMLElement>('.win')!;
+  mapWin.style.width = '260px';
+  mapWin.style.height = '520px';
+  ui.update(60);
+  frame();
+  mm.lastDraw = -1e9;
+  mm.update();
+  const r = view.getBoundingClientRect();
+  const size = Math.min(r.width, r.height);
+  const left = r.left + (r.width - size) / 2, top = r.top + (r.height - size) / 2;
+  const cam = renderer.camera;
+  const was = cam.focus.bind(cam);
+  let got: [number, number] = [NaN, NaN];
+  cam.focus = (x: number, y: number, h: number, dt: number | null) => { got = [x, y]; was(x, y, h, dt); };
+  const win0 = { ...mm.win };
+  const err: number[] = [];
+  for (const [fx, fy] of [[0.05, 0.05], [0.95, 0.95], [0.05, 0.95]]) {
+    view.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: left + fx * size, clientY: top + fy * size }));
+    err.push(Math.hypot(got[0] - (win0.x + fx * win0.span), got[1] - (win0.y + fy * win0.span)));
+  }
+  seen.map.corner = Math.max(...err);
+  view.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: left + size / 2, clientY: top + size / 2, deltaY: -300 }));
+  seen.map.zoomed = mm.win.span < win0.span && !fitBtn.disabled;
+  const before = { ...mm.win };
+  const id = 7;
+  view.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: id, button: 0, pointerType: 'mouse', clientX: left + size / 2, clientY: top + size / 2 }));
+  view.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: id, pointerType: 'mouse', clientX: left + size / 2 - 40, clientY: top + size / 2 - 40 }));
+  view.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: id, pointerType: 'mouse', clientX: left + size / 2 - 40, clientY: top + size / 2 - 40 }));
+  seen.map.panned = mm.win.x > before.x && mm.win.y > before.y;
+  fitBtn.click();
+  seen.map.fit = fitBtn.disabled && mm.win.span === win0.span && mm.win.x === win0.x && mm.win.y === win0.y;
+  cam.focus = was;
+} catch (e) {
+  seen.map.error = String(e);
+}
+
 // The UI Menu: every window, the journal's tabs and Settings: Keys, each with its key.
 ui.showWindowMenu(10, 10);
 frame();

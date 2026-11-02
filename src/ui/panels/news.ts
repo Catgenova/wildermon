@@ -6,6 +6,7 @@ import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
+import { MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
 import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
@@ -4236,6 +4237,14 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 439,
+    day: '2026-11-02',
+    lines: () => [
+      `Added: map zoom (wheel or pinch, down to ${MAP_ZOOM_MIN} tiles across) and pan (drag). Fit: back to the land seen, following you.`,
+      'Fixed: map: a click, a mark or a double-click walk landing off the tile under the pointer when the map window is not square.',
+    ],
   },
   {
     n: 438,

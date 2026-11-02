@@ -1,3 +1,4 @@
+import { MAP_ZOOM_MIN, MAP_ZOOM_STEP } from './minimap';
 import { BAG_CARRY } from '../../game/gear';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
@@ -1073,6 +1074,7 @@ export function helpText(): string {
       <li>Marks: pins with names on the map; listed under it, nearest first. <b>Go</b> walks to one.</li>
       <li>In the list: click the dot to cycle colour, the name to rename, × to delete.</li>
       <li>Max ${MARK_CAP} marks; past that the oldest is removed.</li>
+      <li>Map zoom: wheel or pinch, down to ${MAP_ZOOM_MIN} tiles across; ×${MAP_ZOOM_STEP} a notch. Pan: drag. <b>Fit</b>: back to the land seen, following you.</li>
       <li><kbd>Home</kbd> or <b>Walk home</b>: walks to your settlement totem; with none, to your landing shore or the last bed you woke in.</li>
     </ul>
     <h3>The camera</h3>

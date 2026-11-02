@@ -39,6 +39,13 @@ const MAX_BASE = 1024;
 export const CONTOUR_STEP = 20;
 export const CONTOUR_INDEX = 5;
 
+/** The narrowest the map zooms in to, in tiles across. */
+export const MAP_ZOOM_MIN = 16;
+/** How much a notch of the wheel zooms the map: this many times wider or narrower. */
+export const MAP_ZOOM_STEP = 1.25;
+/** How far a press moves, in CSS pixels, before it is a drag rather than a click. */
+const MAP_DRAG_PX = 4;
+
 /** How high a name written on the map comes out on screen, in CSS pixels, whatever size the map is shown at. */
 const LABEL_PX = 11;
 
@@ -71,6 +78,13 @@ export class MinimapPanel {
   private lastFog = true;
   /** The window drawn last, in tiles: where it sits and how wide it is. */
   private win = { x: 0, y: 0, span: MIN_SPAN };
+  /**
+   * Where the map is panned and zoomed to, in tiles: the centre and how wide. Null: the map fits the land you have
+   * seen and follows you, as it always did; the wheel, a pinch or a drag sets it, and Fit lets it go again.
+   */
+  private held: { cx: number; cy: number; span: number } | null = null;
+  /** The Fit button, lit while the map is held where it was panned and zoomed to. */
+  private fitBtn!: HTMLButtonElement;
   /** The springs' water as the map last painted it, and the tiles its streams run through, by `y * width + x`. */
   private lastWater: WaterField | null = null;
   private streamTiles = new Set<number>();
@@ -131,7 +145,14 @@ export class MinimapPanel {
       this.names = !this.names;
       nameBtn.classList.toggle('tb-on', this.names);
     });
-    bar.append(dropBtn, homeBtn, nameBtn);
+    this.fitBtn = document.createElement('button');
+    this.fitBtn.type = 'button';
+    this.fitBtn.className = 'tb-btn tb-small';
+    this.fitBtn.textContent = 'Fit';
+    this.fitBtn.title = 'Fit the map to the land seen. Wheel or pinch: zoom. Drag: pan.';
+    this.fitBtn.disabled = true;
+    this.fitBtn.addEventListener('click', () => this.hold(null));
+    bar.append(dropBtn, homeBtn, nameBtn, this.fitBtn);
     this.marksEl = document.createElement('div');
     this.marksEl.className = 'map-marks';
     win.body.append(bar, this.view, this.marksEl);
@@ -162,7 +183,13 @@ export class MinimapPanel {
       const [x, y] = this.tileAt(e.clientX, e.clientY);
       this.drop(Math.floor(x), Math.floor(y));
     });
+    this.panAndZoom();
     this.view.addEventListener('click', (e) => {
+      // The end of a drag is not a click on where it ended.
+      if (this.dragged) {
+        this.dragged = false;
+        return;
+      }
       const [x, y] = this.tileAt(e.clientX, e.clientY);
       const cam = this.renderer.camera;
       cam.follow = false;
@@ -181,10 +208,107 @@ export class MinimapPanel {
     });
   }
 
+  /**
+   * Where the square picture is on the screen. The canvas is laid out to fill the window and the picture fitted into
+   * it (`object-fit: contain`), so a window wider or taller than it is square has bands either side of the picture:
+   * measured from the element's own box, every click landed off by the width of a band.
+   */
+  private onScreen(): { left: number; top: number; size: number } {
+    const r = this.view.getBoundingClientRect();
+    const size = Math.min(r.width, r.height);
+    return { left: r.left + (r.width - size) / 2, top: r.top + (r.height - size) / 2, size };
+  }
+
   /** Where on the island a point on the drawn map is. */
   private tileAt(sx: number, sy: number): [number, number] {
-    const rect = this.view.getBoundingClientRect();
-    return [this.win.x + ((sx - rect.left) / rect.width) * this.win.span, this.win.y + ((sy - rect.top) / rect.height) * this.win.span];
+    const pic = this.onScreen();
+    const k = this.win.span / Math.max(1, pic.size);
+    return [this.win.x + (sx - pic.left) * k, this.win.y + (sy - pic.top) * k];
+  }
+
+  /** A drag moved the map, so the click it ends with is not one. */
+  private dragged = false;
+
+  /** Hold the map at a centre and width, kept on the island; or let it go back to fitting the land seen (null). */
+  private hold(at: { cx: number; cy: number; span: number } | null): void {
+    if (at) {
+      const w = this.game.world;
+      const most = Math.max(w.w, w.h);
+      const span = Math.max(MAP_ZOOM_MIN, Math.min(most, at.span));
+      const half = span / 2;
+      const cx = span >= w.w ? w.w / 2 : Math.max(half, Math.min(w.w - half, at.cx));
+      const cy = span >= w.h ? w.h / 2 : Math.max(half, Math.min(w.h - half, at.cy));
+      this.held = { cx, cy, span };
+    } else {
+      this.held = null;
+    }
+    this.fitBtn.disabled = this.held === null;
+    this.fitBtn.classList.toggle('tb-on', this.held !== null);
+    this.lastDraw = -1e9;
+    this.update();
+  }
+
+  /** The wheel and a pinch zoom about the point under them; a drag, one finger or the left button, pans. */
+  private panAndZoom(): void {
+    const view = this.view;
+    const current = (): { cx: number; cy: number; span: number } =>
+      this.held ?? { cx: this.win.x + this.win.span / 2, cy: this.win.y + this.win.span / 2, span: this.win.span };
+    /** Zoom by a factor about a point on the screen, which stays over the same tile. */
+    const zoomAbout = (sx: number, sy: number, factor: number): void => {
+      const at = current();
+      const [tx, ty] = this.tileAt(sx, sy);
+      const span = Math.max(MAP_ZOOM_MIN, Math.min(Math.max(this.game.world.w, this.game.world.h), at.span * factor));
+      const k = span / at.span;
+      this.hold({ cx: tx + (at.cx - tx) * k, cy: ty + (at.cy - ty) * k, span });
+    };
+    view.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // A notch of a mouse wheel is about 100 pixels of delta; a trackpad sends many small ones.
+      const px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+      zoomAbout(e.clientX, e.clientY, MAP_ZOOM_STEP ** (px / 100));
+    }, { passive: false });
+    const down = new Map<number, { x: number; y: number }>();
+    let travel = 0;
+    view.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      down.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (down.size === 1) travel = 0;
+      // Held by the map while it drags, so a drag out over the window's edge keeps panning; a pointer the browser
+      // does not count as down (one made up by a script) cannot be held, and pans all the same while over the map.
+      try {
+        view.setPointerCapture(e.pointerId);
+      } catch {
+        /* not a live pointer */
+      }
+    });
+    view.addEventListener('pointermove', (e) => {
+      const was = down.get(e.pointerId);
+      if (!was) return;
+      const now = { x: e.clientX, y: e.clientY };
+      if (down.size >= 2) {
+        // Two fingers: the gap between them sets the zoom, about the point midway.
+        const [a, b] = [...down.entries()].map(([id, p]) => (id === e.pointerId ? now : p));
+        const [pa, pb] = [...down.entries()].map(([id, p]) => (id === e.pointerId ? was : p));
+        const before = Math.hypot(pa.x - pb.x, pa.y - pb.y), after = Math.hypot(a.x - b.x, a.y - b.y);
+        if (before > 0 && after > 0) zoomAbout((a.x + b.x) / 2, (a.y + b.y) / 2, before / after);
+        this.dragged = true;
+      } else {
+        travel += Math.hypot(now.x - was.x, now.y - was.y);
+        if (travel > MAP_DRAG_PX) {
+          const at = current();
+          const k = at.span / Math.max(1, this.onScreen().size);
+          this.hold({ cx: at.cx - (now.x - was.x) * k, cy: at.cy - (now.y - was.y) * k, span: at.span });
+          this.dragged = true;
+        }
+      }
+      down.set(e.pointerId, now);
+    });
+    const up = (e: PointerEvent): void => {
+      down.delete(e.pointerId);
+    };
+    view.addEventListener('pointerup', up);
+    view.addEventListener('pointercancel', up);
   }
 
   /** Ask for a name and pin it to a tile. An empty answer drops nothing. */
@@ -275,6 +399,7 @@ export class MinimapPanel {
    * settles rather than creeping as the fog rolls back.
    */
   private window(): { x: number; y: number; span: number } {
+    if (this.held) return { x: this.held.cx - this.held.span / 2, y: this.held.cy - this.held.span / 2, span: this.held.span };
     const w = this.game.world;
     const p = this.game.player;
     const b = w.knownBox;
@@ -487,6 +612,8 @@ export class MinimapPanel {
     const ox = view.x;
     const oy = view.y;
     ctx.imageSmoothingEnabled = false;
+    // Zoomed out past the island's edge, what is beyond it is blank, not the last picture.
+    if (this.held) ctx.clearRect(0, 0, this.view.width, this.view.height);
     ctx.drawImage(this.base, ox / this.step, oy / this.step, view.span / this.step, view.span / this.step,
                   0, 0, this.view.width, this.view.height);
     const cam = this.renderer.camera;
