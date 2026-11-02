@@ -118,7 +118,7 @@ const LINES: Record<string, () => Promise<Line>> = {
   dulla: () => import('./wild-moss').then((m) => line(m.MOSSNIB, [m.MOSSSHEAR, m.MOSSREAVER])),
   brittla: () => import('./wild-abilities').then((m) => line(m.BRITTLA)),
   stona: () => import('./wild-zephyr').then((m) => line(m.ZEPHLET, [m.GALECREST, m.TEMPESTWYRM])),
-  leecha: () => import('./wild-abilities').then((m) => line(m.LEECHA)),
+  leecha: () => import('./wild-loomhare').then((m) => line(m.CLOTHKIT, [m.LOOMHARE, m.BANDAGEWEAVER])),
   whispet: () => import('./wild-ghost').then((m) => line(m.WHISPET, [m.LANTERNVEIL, m.HALLOWMIRE])),
   springlet: () => import('./wild-tide').then((m) => line(m.SPRINGLET, [m.SPRINGSAIL, m.TIDECOURSER], { kinds: m.TIDE_TACKED, seat: m.tideSeat, grip: m.tideGrip, tuck: m.TIDE_TUCK })),
   glimmip: () => import('./wild-glass').then((m) => line(m.GLIMMIP, [m.GLASCADE, m.PRISMETAIL])),

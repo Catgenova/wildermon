@@ -166,7 +166,7 @@ import {
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import {
-  CLOSE_BARE, CLOSE_CLOTH, CLOSE_PACE, CLOSE_PER_SKILL, CLOSE_RIGHT, CLOSE_WRONG, DRESSING_RANK, FESTER_CLOTH, FESTER_WRONG, WOUND_KINDS,
+  CLOSE_BARE, CLOSE_CLOTH, CLOSE_PACE, CLOSE_PER_SKILL, CLOSE_RIGHT, CLOSE_WRONG, DRESSING_RANK, FESTER_CLOTH, FESTER_WRONG, HERBS, WOUND_KINDS,
 } from '../../game/wounds';
 import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
@@ -922,6 +922,11 @@ const HANDS = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 
   'forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra',
   'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa', 'ulva', 'dowse', 'glimmip',
   'dulla', 'rootle', 'spitta', 'crakka', 'awla', 'scorcha', 'leecha', 'frosta', 'whirla', 'brittla'];
+/** What a Bandageweaver's skill makes of each of its recipes, per make: "bandages 3 to 4, healing covers 3 to 4, salves 1 to 2". */
+const firstAidMore = (): string => ['make_bandage', `make_cover_${HERBS[0]}`, `make_salve_${HERBS[0]}`].map((id) => {
+  const r = RECIPE_BY_ID.get(id)!, n = r.count ?? 1;
+  return `${itemDef(r.result).name.toLowerCase()}s ${n} to ${n + STAGE_PERKS.leecha.n}`;
+}).join(', ');
 /** A kind's two evolutions and the levels they come at: "Reedweaver at 30, Reedlord at 60". */
 const evolves = (id: string): string => {
   const st = SPECIES[id]?.stages;
@@ -949,6 +954,7 @@ const HAND_NUMBERS: Record<string, string> = {
   scurra: `evolves: ${evolves('scurra')}; ${perkLine('scurra').toLowerCase()}`,
   glossa: `evolves: ${evolves('glossa')}; ${perkLine('glossa').toLowerCase()} (${RECIPE_BY_ID.get('make_mortar')!.count} to ${RECIPE_BY_ID.get('make_mortar')!.count! + STAGE_PERKS.glossa.n})`,
   crakka: `evolves: ${evolves('crakka')}; ${perkLine('crakka').toLowerCase()} (${RECIPE_BY_ID.get('mix_concrete')!.count ?? 1} to ${(RECIPE_BY_ID.get('mix_concrete')!.count ?? 1) + STAGE_PERKS.crakka.n})`,
+  leecha: `evolves: ${evolves('leecha')}; ${perkLine('leecha').toLowerCase()} (${firstAidMore()})`,
 };
 
 /**

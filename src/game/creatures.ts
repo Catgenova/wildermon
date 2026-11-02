@@ -885,6 +885,8 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   salva: { kind: 'loads', n: 1, what: 'wildermon dressed per cycle' },
   glossa: { kind: 'more', n: 1, what: 'mortar per mix' },
   crakka: { kind: 'more', n: 1, what: 'concrete per mix' },
+  // Its bandages, covers and salves are recipes worked at the stores, which the island's `errand_do` adds a line's 'more' to.
+  leecha: { kind: 'more', n: 1, what: 'bandages, covers or salves per make' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -3629,9 +3631,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   leecha: {
     id: 'leecha',
-    name: 'Leecha',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Clothkit',
+    was: ['Leecha'],
+    // Asked for, with a reference sheet: Clothkit, Loomhare, Bandageweaver. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Loomhare', description: '' },
+      { name: 'Bandageweaver', description: '' },
+    ],
     health: 28,
     attack: 6,
     speed: 2.0,
@@ -3642,11 +3650,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'bandage',
     workRange: 10,
+    // [patches, fur]: the sheet's warm grey-lavender on cream, a dove grey on ivory, a lilac-grey on oatmeal, and a slate on buff.
     variants: [
-      ['#3c2c3c', '#a08ca0'],
-      ['#2c2c3c', '#8c8ca8'],
-      ['#4c3444', '#b098a8'],
-      ['#2c242c', '#847484'],
+      ['#988fad', '#f6eedc'],
+      ['#a39dab', '#f4f0e6'],
+      ['#a497b4', '#f2e6d4'],
+      ['#8d889e', '#f0e6d2'],
     ],
     butcher: { meat: 3, leather: 4, bone: 2, gland: 2 },
     wound: 'pierce',
@@ -4309,6 +4318,7 @@ sayPacks('bura', `Level: body strength, learned ${LEARNS_SAYS.out}.`);
 sayLineLater('flecha', `Level: ${GATHER_SKILL.fletch.replace(/_/g, ' ')}.`);
 sayLineLater('glossa', `Level: ${GATHER_SKILL.mortar}.`);
 sayLineLater('crakka', `Level: ${GATHER_SKILL.concrete}.`);
+sayLineLater('leecha', `Level: ${GATHER_SKILL.bandage.replace(/_/g, ' ')}.`);
 
 /** Which species roam wild, by weight. */
 /**

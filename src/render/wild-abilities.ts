@@ -1,5 +1,5 @@
 import {
-  coatPalette, curve, disc, merge, moved, orb, paint, quadBonesOf, taper, TAU, tube,
+  coatPalette, curve, merge, moved, orb, quadBonesOf, taper, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { cut, earMesh, quadPieces } from './beastkit';
@@ -135,14 +135,3 @@ export const BRITTLA = kindOf({
   own: { crystal: [200, 226, 240], crystalDark: [140, 176, 196] }, mark: 30, shadow: [1.45, 1.15], stride: 1.45, size: 1.6,
 });
 
-/* ---- the leecha: a round sucking mouth ------------------------------------------------- */
-
-export const LEECHA = kindOf({
-  spec: { ...pawed({ high: 1.05, len: 2.5, legs: 0.55, neck: 0.42, lean: 70, swing: [24, 40], ears: [70, 6], tail: [0.6, -6, 4] }), nose: 10 },
-  head: HEAD(0.38, 0.05, [0.86, 1.0, 0.74]), body: [2.5, 0.95, 0.72, 0.02], neck: [0.5, 0.48, 0.42], ear: [0.16, 0.16, 70], legs: [0.55, 0.22, 0.2, 'coatDark'],
-  snout: [1.0, -0.16, [0.4, 0.3, 0.3], 0.06],
-  face: () => merge(tube([[0, 1.18, -0.16], [0, 1.32, -0.16]], 0.22, 0.22, 10, 'lip', { up: [0, 0, 1] }),
-    paint([disc([0, 1.325, -0.16], [0, 1, 0], 0.15, 0.15, 10, 'inner')])),
-  tail: (n) => tube(curve([0, 0.05, 0], [0.1, -0.7, -0.04], [-0.05, -1.4, 0], 5), [0.13, 0.09, 0.02], [0.12, 0.08, 0.02], 6, 'coat'),
-  own: { lip: [150, 80, 100], inner: [90, 30, 50] }, mark: 30, shadow: [1.5, 0.95], stride: 1.45, size: 1.55,
-});
