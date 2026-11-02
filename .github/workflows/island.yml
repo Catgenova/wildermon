@@ -1015,6 +1015,19 @@ jobs:
           npx esbuild supabase/test/turned.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/turned.mjs --log-level=error
           node node_modules/.cache/turned.mjs
+      - name: Each wildermon line's models and voice fetched when wanted, and let go of when not
+        if: matrix.shard == 1
+        run: |
+          # The models were a quarter of the game's code, all loaded before the
+          # island was asked for anything. Each line is fetched the first time
+          # a body of it is drawn, its voice the first time one is in earshot,
+          # and a line not drawn for a while lets go of its pieces and pictures.
+          # Checked: every line and voice comes, nothing imports one by name
+          # (which would put it back in what every player loads at the start),
+          # and a line let go of is made again the same.
+          npx esbuild supabase/test/wildlines.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/wildlines.mjs --log-level=error
+          node node_modules/.cache/wildlines.mjs
       - name: A settlement full of wildermon and walls draws them once, not every frame
         if: matrix.shard == 1
         env:
