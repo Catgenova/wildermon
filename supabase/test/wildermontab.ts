@@ -82,7 +82,9 @@ const DONE: WorkDone[] = [
   { stored: { onion_seeds: 1, acorn: 2, seed_potato: 1 } },
   {},
 ];
-const WHOLE = ['perform_creature', 'perform_crate_open', 'post_release', 'worker_settle', 'worker_nowhere', 'worker_learn_paced',
+// `post_release` says nothing itself since Work around me: its words are `worker_return`'s, which a worker sent home
+// from round its keeper shares.
+const WHOLE = ['perform_creature', 'perform_crate_open', 'worker_return', 'worker_settle', 'worker_nowhere', 'worker_learn_paced',
   'worker_idle', 'companion_settle', 'read_ground', 'gear_wear', 'perform_gear', 'gear_off', 'milk_go', 'pair_them', 'drop_young',
   'perform_artifact'];
 
