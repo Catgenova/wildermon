@@ -89,7 +89,7 @@ function setMode(next: Mode): void {
   tabBack.classList.toggle('on', next === 'back');
   tabNew.setAttribute('aria-selected', String(next === 'new'));
   tabBack.setAttribute('aria-selected', String(next === 'back'));
-  go.textContent = next === 'new' ? 'Make the account' : 'Come back in';
+  go.textContent = next === 'new' ? 'Sign up' : 'Sign in';
   pwBox.autocomplete = next === 'new' ? 'new-password' : 'current-password';
   // Under each field nothing until there is something to say: what is wrong with what was typed, or how it stands.
   note(nameNote, '');

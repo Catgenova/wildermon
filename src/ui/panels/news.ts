@@ -4240,6 +4240,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 443,
+    day: '2026-11-02',
+    lines: () => ['Changed: account page tabs: Sign up, Sign in (were: Make an account, I already have one). Their buttons: Sign up, Sign in.'],
+  },
+  {
     n: 442,
     day: '2026-11-02',
     lines: () => [
