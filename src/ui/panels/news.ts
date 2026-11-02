@@ -1,6 +1,6 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
 import { MONSTER_GROWTH } from '../../render/monster-size';
-import { FORGET_AFTER } from '../../render/wildermon';
+import { FORGET_AFTER, LOADING_AT_ONCE, SLICE_MS } from '../../render/wildermon';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
@@ -4237,6 +4237,11 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 440,
+    day: '2026-11-02',
+    lines: () => [`Fixed: field guide: a freeze of several seconds on opening. Pictures fill in a few a frame, ${SLICE_MS} ms of drawing a frame at most; wildermon models load ${LOADING_AT_ONCE} at a time, those in the world first.`],
   },
   {
     n: 439,

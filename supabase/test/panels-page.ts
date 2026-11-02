@@ -44,6 +44,10 @@ export interface HostileSeen {
   /** Links in the event log at all: chat is never linkified. */
   logLinks: number;
   /** The UI Menu's rows, label and key, and the journal tab its Journal: Field guide row turned to. */
+  /** How long turning to the field guide held the page, in ms: the longest single call. */
+  guideMs: number;
+  /** In the 8 s after the field guide opens: frames drawn, the longest gap between two (ms), and gaps over 250 ms. */
+  guideLong: [number, number, number];
   menu: Array<[string, string]>;
   menuTab: string;
   /** The map: tiles a click at the picture's corners landed on against the tiles shown there, and what the wheel, a drag and Fit did. */
@@ -55,7 +59,7 @@ export interface HostileSeen {
   done: boolean;
 }
 
-const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, menu: [], menuTab: '', map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
+const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, guideMs: -1, guideLong: [0, 0, 0], menu: [], menuTab: '', map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
 (window as unknown as { panels: HostileSeen }).panels = seen;
 
 document.getElementById('boot')?.remove();
@@ -96,8 +100,26 @@ for (const [id, win] of ui.windows.windows) {
 }
 const TABS: JournalTab[] = ['goals', 'ledger', 'news', 'boards', 'guide', 'tracker', 'help'];
 for (const tab of TABS) {
+  const t0 = performance.now();
   ui.toggleJournal(tab);
   frame();
+  if (tab === 'guide') seen.guideMs = performance.now() - t0;
+  if (tab === 'guide') {
+    // What a player sees as a freeze: the longest gap between two frames the page got to draw, the world not drawn meanwhile.
+    const gaps: number[] = [];
+    let last = performance.now();
+    let on = true;
+    const tick = (): void => {
+      const now = performance.now();
+      gaps.push(now - last);
+      last = now;
+      if (on) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    await rest(8000);
+    on = false;
+    seen.guideLong = [gaps.length, Math.round(Math.max(0, ...gaps)), gaps.filter((g) => g > 250).length];
+  }
   seen.tabs.push(tab);
 }
 for (let i = 0; i < 100 && !uiRoot.querySelector('.help-sec'); i++) await rest(50);

@@ -135,6 +135,43 @@ const fetching = new Map<string, Promise<Line | undefined>>();
 const owed = new Map<string, (() => void)[]>();
 
 /**
+ * Drawing put off to the next frames, a slice at a time.
+ *
+ * The field guide's index asks for a portrait of every kind and stage at once; with each line fetched when first
+ * wanted, its pictures were drawn as each line arrived, and the arrivals came back to back, so one task drew them all:
+ * 18 s in the boot check's software renderer, 3-5 s on a player's machine, with the page frozen. Drawn here, at most
+ * `SLICE_MS` a frame (always one at least), the window opens at once and fills in.
+ */
+export const SLICE_MS = 8;
+const soon: Array<() => void> = [];
+let pumping = false;
+function nextSlice(): void {
+  if (typeof requestAnimationFrame === 'function' && typeof document !== 'undefined' && document.visibilityState !== 'hidden') requestAnimationFrame(pump);
+  else setTimeout(pump, 16);
+}
+function pump(): void {
+  const end = performance.now() + SLICE_MS;
+  do {
+    const f = soon.shift();
+    if (!f) break;
+    try {
+      f();
+    } catch (e) {
+      console.error(e);
+    }
+  } while (soon.length && performance.now() < end);
+  if (soon.length) nextSlice();
+  else pumping = false;
+}
+/** Draw at the next frame with time to spare, in the order asked. */
+export function drawSoon(f: () => void): void {
+  soon.push(f);
+  if (pumping) return;
+  pumping = true;
+  nextSlice();
+}
+
+/**
  * A line's models, fetched if they are not yet. Resolves to nothing for a kind with none, or when the fetch fails (asked
  * again, it is tried again).
  */
@@ -145,19 +182,49 @@ export function loadWildermon(species: string): Promise<Line | undefined> {
   if (!load) return Promise.resolve(undefined);
   let p = fetching.get(species);
   if (!p) {
-    p = load().then((l) => {
+    p = inTurn(load, !asking).then((l) => {
       lines.set(species, l);
       return l;
     }, () => undefined).finally(() => {
       fetching.delete(species);
       const due = owed.get(species) ?? [];
       owed.delete(species);
-      for (const draw of due) draw();
+      for (const draw of due) drawSoon(draw);
     });
     fetching.set(species, p);
   }
   return p;
 }
+
+/**
+ * Lines fetched a few at a time.
+ *
+ * The field guide asks for every line at once; fetched together, they arrived together and the browser ran all of
+ * their code in one task, 4 s of the page held in the boot check. `LOADING_AT_ONCE` at a time, with a turn of the
+ * page between, and a line a creature in the world wants goes ahead of those a portrait wants.
+ */
+export const LOADING_AT_ONCE = 2;
+let loadingNow = 0;
+const waiting: Array<() => void> = [];
+function inTurn<T>(load: () => Promise<T>, urgent: boolean): Promise<T> {
+  return new Promise<T>((done, fail) => {
+    const go = (): void => {
+      loadingNow++;
+      load().then(done, fail).finally(() => {
+        loadingNow--;
+        setTimeout(nextLoad, 0);
+      });
+    };
+    if (loadingNow < LOADING_AT_ONCE && !waiting.length) go();
+    else if (urgent) waiting.unshift(go);
+    else waiting.push(go);
+  });
+}
+function nextLoad(): void {
+  while (loadingNow < LOADING_AT_ONCE && waiting.length) waiting.shift()!();
+}
+/** A portrait is asking (`drawWildermonPortrait`): its line can wait behind those the world wants. */
+let asking = false;
 
 /** Every line's models, for a harness or a tool that draws them all. */
 export async function loadAllWildermon(): Promise<void> {
@@ -296,7 +363,13 @@ export function wildermonHead(species: string, facing: number, stage = 0): [numb
  */
 export function drawWildermonPortrait(ctx: CanvasRenderingContext2D, w: number, h: number, species: string, colors: [string, string], facing = 1, ink?: string,
   stage = 0, pose?: Partial<Anim>, t = 0): void {
-  const m = wildermonKind(species, stage);
+  asking = true;
+  let m: ReturnType<typeof wildermonKind>;
+  try {
+    m = wildermonKind(species, stage);
+  } finally {
+    asking = false;
+  }
   if (m) {
     drawBeastPortrait(ctx, w, h, m.key, m.kind, colors, facing, ink, t, pose);
     return;

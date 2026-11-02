@@ -235,6 +235,9 @@ if (panels) {
   const missing = wantRows.filter((r) => !menu.has(r));
   if (missing.length) bad.push(`in the game: the UI Menu has no ${missing.join(', ')} row`);
   else if (!menu.get('Journal: Help') || !menu.get('Journal: Field guide')) bad.push('in the game: the UI Menu\'s journal tabs do not say their keys');
+  console.log(`field guide: turned to in ${Math.round(p.guideMs)} ms; then ${p.guideLong[0]} frames in 8 s, longest gap ${p.guideLong[1]} ms, ${p.guideLong[2]} gaps over 250 ms`);
+  // Before the portraits were drawn a slice a frame and the lines fetched two at a time: 1 frame in 8 s, a 12.6 s gap.
+  if (!(p.guideLong[0] >= 10 && p.guideLong[1] < 4000)) bad.push(`in the game: the field guide held the page: ${p.guideLong[0]} frames in 8 s, longest gap ${p.guideLong[1]} ms`);
   const m = p.map ?? {};
   if (m.error) bad.push(`in the game: the map test threw: ${m.error}`);
   else {

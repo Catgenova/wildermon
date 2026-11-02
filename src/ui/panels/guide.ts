@@ -6,7 +6,7 @@ import { ACTION_BY_ID } from '../../game/actions';
 import { degreesSays, TRACK, trackable, trackErr, trackLevel, trackReach, trackTarget, TRACKING } from '../../game/tracking';
 import { CULL_RANGE } from '../../game/creatures';
 import { drawCreaturePortrait } from '../../render/sprites';
-import { drawWildermonPortrait } from '../../render/wildermon';
+import { drawSoon, drawWildermonPortrait } from '../../render/wildermon';
 
 /** How big a kind is drawn on the index and on its own page, in CSS pixels. */
 const CARD = { w: 76, h: 56 };
@@ -285,9 +285,13 @@ export class GuidePanel {
       pic.style.height = `${h}px`;
       pic.className = 'guide-picture';
       const ctx = pic.getContext('2d');
-      // A stage is drawn as its stage's model (`WILDERMON_STAGES`).
-      if (ctx && entry.stage) drawWildermonPortrait(ctx, pic.width, pic.height, def.id, def.variants[0], FACING, seen ? undefined : SHADOW, entry.stage);
-      else if (ctx) drawCreaturePortrait(ctx, pic.width, pic.height, def.id, def.variants[0], FACING, seen ? undefined : SHADOW);
+      const p = pic;
+      // Drawn a few at a frame rather than all of them before the tab shows (`drawSoon`). A stage is drawn as its
+      // stage's model (`WILDERMON_STAGES`).
+      if (ctx) drawSoon(() => {
+        if (entry.stage) drawWildermonPortrait(ctx, p.width, p.height, def.id, def.variants[0], FACING, seen ? undefined : SHADOW, entry.stage);
+        else drawCreaturePortrait(ctx, p.width, p.height, def.id, def.variants[0], FACING, seen ? undefined : SHADOW);
+      });
       this.pictures.set(key, pic);
     }
     // Put in its new place, which takes it out of the old one: the index and a
