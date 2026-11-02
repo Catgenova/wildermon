@@ -110,7 +110,8 @@ const big = Game.create(4242, STONE_LEAST);
 big.inventory.add('deed_stake');
 const stone = RUNESTONES[0];
 const sc = stoneCentre(stone, STONE_LEAST);
-const dry = (dx: number): Target | null => {
+type TileTarget = Extract<Target, { kind: 'tile' }>;
+const dry = (dx: number): TileTarget | null => {
   for (let dy = 0; dy < 60; dy++) for (const sy of [1, -1]) {
     const x = sc.x + dx, y = sc.y + sy * dy;
     if (big.world.inBounds(x, y) && !big.world.hasWater(x, y) && big.world.isPassable(x, y)) return { kind: 'tile', x, y, cx: x, cy: y };
