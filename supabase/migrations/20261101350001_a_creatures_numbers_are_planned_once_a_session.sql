@@ -8,7 +8,7 @@
 --
 -- A SQL function the planner cannot fold into its caller (one that reads a table) keeps its plan only while the
 -- subtransaction that made it is open. The clock settles every worker and companion in a subtransaction of its own
--- (`kept_sweep`'s `exception when lock_not_available`), so every settle planned every one of them afresh, each time it
+-- (`kept_sweep`'s exception block round each settle), so every settle planned every one of them afresh, each time it
 -- was asked, and planned again whatever SQL function they asked in turn: `stage_of` planned `creature_level` twice a
 -- call. Measured on that island, a settle's `stage_of`, two `beast_mul`s and an `age_row` took 1.4 ms in a
 -- subtransaction each, against 0.35 ms planned once; and a round of the clock doing the same work (the same seed,
