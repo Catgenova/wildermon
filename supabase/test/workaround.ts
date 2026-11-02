@@ -104,7 +104,7 @@ $i$;
 do $t$
 declare w uuid; u uuid := '${U}'; s uuid := '${S}';
         v_a int; v_b int; v_cart bigint; v_boat bigint; v_wagon bigint; v_x bigint; v_y bigint; j jsonb; c creature;
-        v_ground int; v_was double precision;
+        v_ground int; v_was double precision; v_i int;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Around', 301, 240, 40, 40, true) returning id into w;
   perform land_blank(w, 240);
@@ -159,7 +159,13 @@ begin
   v_cart := pg_temp.piece(w, u, 'cart', 163, 41);
   perform furniture_add(w, v_cart, 'log', furniture_room((select p from placed p where p.id = v_cart), 'log'), 20, null);
   j := rpc_act(w, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_a));
-  perform pg_temp.run(w, v_a, 8);
+  -- Until it has a load and finds the cart full: how many rounds that takes is the forage's dice (8 fell short once,
+  -- live run 41527338387), so up to 40, seeded.
+  perform setseed(0.25);
+  for v_i in 1..40 loop
+    perform pg_temp.run(w, v_a, 1);
+    exit when (select idle_why from creature where world_id = w and id = v_a) = 'full';
+  end loop;
   insert into said select 'FULL', coalesce(idle_why, '') || '|' || coalesce(carrying->>'def', 'empty') || '|' || pg_temp.inside(v_cart)
     from creature where world_id = w and id = v_a;
   insert into said select 'FULL_GROUND', (count(*) - v_ground)::text from item where world_id = w and holder = 'ground';
