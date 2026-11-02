@@ -1569,6 +1569,21 @@ jobs:
             --outfile=node_modules/.cache/dawn.mjs --log-level=error
           node node_modules/.cache/dawn.mjs
 
+      - name: A day in the woods in parts, the same day
+        if: matrix.shard == 3
+        run: |
+          # A go of `tree_tick` was a whole island's day in one transaction,
+          # 98 seconds at worst on the live island, holding every line it had
+          # written. It is parts of a second now, each committed, carried on
+          # from `private.tree_run`. On an island of its own: the day as it
+          # was, the day in the smallest parts there are and the day in one go
+          # leave the same ground byte for byte and the same record, from one
+          # seed; a spot built on between picking and planting takes no
+          # sapling; and the tick carries on a day under way first.
+          npx esbuild supabase/test/woodparts.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/woodparts.mjs --log-level=error
+          node node_modules/.cache/woodparts.mjs
+
       - name: The island's year is the same year on both sides
         if: matrix.shard == 1
         run: |
