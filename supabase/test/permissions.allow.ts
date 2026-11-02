@@ -261,7 +261,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_clock()",
     "rpc_collect(uuid)",
     "rpc_craft_prefs(uuid,boolean,boolean)",
-    "rpc_creatures(uuid,double precision)",
+    "rpc_creatures(uuid,double precision,text,integer[])",
     "rpc_deal(uuid,uuid,bigint[],bigint,bigint)",
     "rpc_deal_answer(uuid,bigint,boolean)",
     "rpc_deals(uuid)",

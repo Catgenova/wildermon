@@ -3,6 +3,7 @@ import type { WornWire } from '../game/worn';
 import type { Enchant } from '../game/enchant';
 import { firedIn, toldIn, type FiredWire, type ToldWire } from './told';
 import { HeardLines } from './heardlines';
+import { MobsHeld, type MobsAnswer } from './mobsync';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { ErrorReport } from './errors';
 import { CHUNK, World } from '../world/world';
@@ -1239,6 +1240,18 @@ export class Island {
   private atlas: Atlas | null = null;
   private lastMove = 0;
   private lastMobs = 0;
+  /**
+   * The creatures as the island last said them, and the cursor to ask for only what changed since (`mobsync.ts`).
+   * `mobsWhole` asks for the whole answer next, after anything we do; `mobsWholeAt` is when the last whole one was
+   * asked; `mobsOld` an island a migration behind this page, asked the old way for the rest of the stay; and
+   * `mobsAsked` / `mobsLaid` number the asks, so an answer that comes after a newer one is not laid.
+   */
+  private mobs = new MobsHeld();
+  private mobsWhole = true;
+  private mobsWholeAt = -Infinity;
+  private mobsOld = false;
+  private mobsAsked = 0;
+  private mobsLaid = 0;
   private lastGround = 0;
   private lastSprings = 0;
   /** When the spots picked over near us were last read (`refreshForaged`), and where we were. */
@@ -1573,6 +1586,8 @@ export class Island {
     if (error) throw new Error(`The island would not have us: ${error.message}`);
     const got = data as { world: WorldRow; you: PlayerRow; new: boolean };
     this.info = got.world;
+    this.mobs.clear();
+    this.mobsOld = false;
     this.landFrom = Number(got.world.changes_from ?? 0) || 0;
     // The hour, straight away, so the first frame is drawn in the island's
     // light rather than in whatever this browser last believed.
@@ -2367,6 +2382,7 @@ export class Island {
       });
     }
     this.lastMobs = -Infinity;
+    this.mobsWhole = true;
     this.lastGround = -Infinity;
     this.groundSlow = true;
     this.swirlsOwed = true;
@@ -2939,7 +2955,26 @@ export class Island {
   async refreshMobs(now: number): Promise<void> {
     if (!this.info || !this.hooks.mobs || now - this.lastMobs < MOBS_EVERY * this.slower()) return;
     this.lastMobs = now;
-    const { data, error } = await supabase().rpc('rpc_creatures', { p_world: this.info.id, p_range: MOBS_RANGE });
+    /*
+     * Only what changed since the last answer, which is most of the island's work saved: five to ten in a hundred
+     * of the rows in view are written from one second to the next. The whole answer every `RECONCILE_EVERY`
+     * seconds and after anything we do, for what moves with the clock or our own hands without a row being
+     * written (an age, a shoe worn out, a settlement's trade counts).
+     */
+    const whole = this.mobsWhole || this.mobs.at === null || now - this.mobsWholeAt >= RECONCILE_EVERY;
+    if (whole) {
+      this.mobsWhole = false;
+      this.mobsWholeAt = now;
+    }
+    const seq = ++this.mobsAsked;
+    const plain = { p_world: this.info.id, p_range: MOBS_RANGE };
+    let { data, error } = this.mobsOld ? await supabase().rpc('rpc_creatures', plain)
+      : await supabase().rpc('rpc_creatures', { ...plain, p_since: whole ? '' : this.mobs.at, p_have: whole ? [] : this.mobs.have() });
+    // An island a migration behind this page has no `p_since` (PostgREST: no such function): asked as it used to be.
+    if (error && !this.mobsOld && (error.code === 'PGRST202' || /p_since|p_have/.test(error.message))) {
+      this.mobsOld = true;
+      ({ data, error } = await supabase().rpc('rpc_creatures', plain));
+    }
     /*
      * A call that failed is not an island with nothing on it.
      *
@@ -2950,8 +2985,24 @@ export class Island {
      * a second it is sixty chances a minute. What we last saw is a better
      * picture of the island than nothing at all.
      */
-    if (error || !Array.isArray(data)) return;
-    this.hooks.mobs(rowsIn<IslandCreature>(data));
+    if (error || !data || typeof data !== 'object') {
+      if (whole) this.mobsWhole = true;
+      return;
+    }
+    // An answer to an older ask than one already laid is older than what is on the screen.
+    if (seq < this.mobsLaid) {
+      if (whole) this.mobsWhole = true;
+      return;
+    }
+    this.mobsLaid = seq;
+    if (Array.isArray(data)) {
+      this.mobs.clear();
+      this.hooks.mobs(rowsIn<IslandCreature>(data));
+      return;
+    }
+    const all = this.mobs.take(data as MobsAnswer, Date.now());
+    if (all) this.hooks.mobs(all);
+    else if (whole) this.mobsWhole = true;
   }
 
   /**
@@ -4339,6 +4390,7 @@ export class Island {
   private async door(door: string, args: Record<string, unknown>): Promise<string | null> {
     if (!this.info) return 'You are not on an island.';
     const { data, error } = await supabase().rpc(door, { p_world: this.info.id, ...args });
+    this.mobsWhole = true;
     if (error) return error.message;
     return (data as { why?: string } | null)?.why ?? null;
   }
@@ -4391,6 +4443,8 @@ export class Island {
     }
     if (result.crates && newest) this.hooks.stored?.(result.crates);
     if (result.pack || result.crates) this.acted++;
+    // And what is about: a creature's answer can move without its row being written (`mobsync.ts`).
+    this.mobsWhole = true;
     // Anything done with your hands can have changed what is standing here,
     // so the ground goes back to being read at the quick pace. A flag rather
     // than a stamp because nothing down here is holding the clock; the next
@@ -4480,6 +4534,7 @@ export class Island {
       if (result.pack || result.crates) this.acted++;
     }
     this.stirred = true;
+    this.mobsWhole = true;
     this.armBeat(0.5);
     return { rest: [], busy: false };
   }
