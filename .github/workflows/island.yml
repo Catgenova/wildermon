@@ -3136,6 +3136,19 @@ jobs:
             --outfile=node_modules/.cache/stir.mjs --log-level=error
           node node_modules/.cache/stir.mjs
 
+      - name: A cheaper stir, the same island
+        if: matrix.shard == 3
+        run: |
+          # The search for a worker's next tile, its stores, its stations, its
+          # meals and a recipe its stores hold do less for the same answer, and
+          # a round settles each creature once. One island, run as it is and
+          # with the stir as it was (stirload-before.sql), from the same moment
+          # and seed: a round of the clock and an hour of nine workers' day
+          # leave it the same, creature for creature and item for item.
+          npx esbuild supabase/test/stirload.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/stirload.mjs --log-level=error
+          node node_modules/.cache/stirload.mjs
+
       - name: A queue put in order
         if: matrix.shard == 3
         run: |
