@@ -4,7 +4,7 @@ import type { Side } from '../game/building';
 import { VIEWS } from './view';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { drawKind, extentOf, kitOf, paletteFor, type Anim, type Kind } from './beasts';
-import { WILDERMON, WILDERMON_STAGES } from './wildermon';
+import { modelled, wildermonKind } from './wildermon';
 import { rand } from './ivy';
 import {
   add, BAKE_STEPS, canvasOf, CREASE_INK, css, dot, drawPads, eyeOfView, faceColour, glyphPath, grassTuft, hex, lightOf, mix, mul, proj, RUNE_GOLD, scaleFor, STONE_INK, TAU, toneOf,
@@ -1501,11 +1501,13 @@ function baked(stage: 0 | 1 | 2, view: DenView, zoom: number): Bake {
 
 function sleeperBaked(stage: 0 | 1 | 2, view: DenView, zoom: number, colors: [string, string], species?: string, its: number = stage): SleeperBake {
   const scale = scaleFor(zoom);
-  return sleepers.get(`${stage}|${viewKey(view)}|${scale}|${colors[0]}|${colors[1]}|${species ?? ''}|${its}`, () => {
+  // Its line's models (`wildermonKind`), or, while they are on their way, the plain sleeper, kept apart from it.
+  const m = species ? wildermonKind(species, its) : null;
+  const waiting = !m && modelled(species);
+  return sleepers.get(`${stage}|${viewKey(view)}|${scale}|${colors[0]}|${colors[1]}|${species ?? ''}|${its}${waiting ? '|waiting' : ''}`, () => {
     const e = eyeOfView(view);
-    const kind = species ? (its > 0 ? WILDERMON_STAGES[species]?.[its - 1] : undefined) ?? WILDERMON[species] : undefined;
-    // Kept under the name its pictures are kept under at that stage (\`modelAt\` in wildermon.ts): a later stage is its own body.
-    if (species && kind) return modelSleeper(stage, e, scale, its > 0 && WILDERMON_STAGES[species]?.[its - 1] ? `${species}@${its}` : species, kind, colors);
+    // Kept under the name its pictures are kept under at that stage: a later stage is its own body.
+    if (m) return modelSleeper(stage, e, scale, m.key, m.kind, colors);
     const s = sleeperOf(stage, colors);
     const pts = [...s.body, ...s.head].flatMap((f) => f.pts).concat(s.tail, [[s.headAt[0], s.headAt[1], s.top]]);
     const box = boxOf(e, pts, 3);
@@ -1763,11 +1765,11 @@ export function denBounds(kind: string, view: DenView, zoom = 1): [number, numbe
  */
 export function sleeperCover(kind: string, view: DenView, species: string, its: number, colors: [string, string]): { across: number; area: number; clear: number } {
   const stage = denStage(kind) ?? 0, m = modelOf(stage), e = eyeOfView(view);
-  const later = its > 0 ? WILDERMON_STAGES[species]?.[its - 1] : undefined;
-  const kindOf = later ?? WILDERMON[species];
-  if (!kindOf) return { across: 0, area: 0, clear: 0 };
+  // Its line's models, which a harness fetches first (`loadWildermon`).
+  const model = wildermonKind(species, its);
+  if (!model) return { across: 0, area: 0, clear: 0 };
   // Its own picture alone, without the shade and the pressed heart laid under it.
-  const s = modelSleeper(stage, e, 1, later ? `${species}@${its}` : species, kindOf, colors, true);
+  const s = modelSleeper(stage, e, 1, model.key, model.kind, colors, true);
   const { canvas } = s.sheet, k = canvas.width / s.sheet.w;
   const d = (canvas.getContext('2d') as Ctx).getImageData(0, 0, canvas.width, canvas.height).data;
   const at = (x: number, y: number): boolean => {

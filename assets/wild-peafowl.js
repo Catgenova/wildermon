@@ -1,0 +1,1 @@
+import{n as e,o as t,t as n}from"./wild-peafowl2.js";export{n as FEATHERBOURNE,e as PEACHICK,t as PLUMECREST};

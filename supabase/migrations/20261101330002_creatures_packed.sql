@@ -1,0 +1,255 @@
+-- The creatures read, packed: each row as its values in a fixed order rather than as named keys.
+--
+-- Every row of `rpc_creatures` named thirty-seven keys, `"tack_enchant": null` and `"hitchedTo": null` among them, for
+-- every creature in forty tiles: on a test island with 150 creatures about (120 wild, 15 following, 5 at work, 10 of
+-- somebody else's), the whole answer was 101 kB, of which the keys were more than half. A browser that asks for it
+-- packed (`p_pack`, with the cursor of 20261101290001) is sent each row as an array: its values in the order of
+-- `private.mob_cols()`, which the whole answer carries as `cols` (the browser holds them for the answers after it),
+-- and then one object with whatever else the row says (a worker's ledger, a pedigree, your own one's care). The
+-- browser lays the keys back on (`mobsync.ts`), so the game is handed the same object, key for key
+-- (`supabase/test/fetchdelta.ts`). 52 kB for the same answer; 7.1 kB gzipped rather than 9.4.
+--
+-- What each row says is worked out once for either shape (`cross join lateral`), and only for the rows sent: the
+-- planner folds it into the aggregate's arguments, which the filter skips. A browser that does not ask is sent what it
+-- always was.
+
+set local lock_timeout = '3s';
+
+/** The keys of a creature's row, in the order a packed row (`rpc_creatures` `p_pack`) gives its values. */
+create or replace function private.mob_cols() returns text[] language sql immutable as $fn$
+  select array['id', 'species', 'name', 'variant', 'mode', 'stance', 'job', 'shod', 'tacked', 'tack', 'tack_enchant',
+               'x', 'y', 'fromX', 'fromY', 'toX', 'toY', 'legFor', 'legLeft', 'health', 'max', 'hunger',
+               'sex', 'age', 'traits', 'hunting', 'mine', 'ridden', 'rider', 'windup', 'stunned', 'slowed', 'slowPace',
+               'lead', 'brawl', 'kept', 'hitchedTo']
+$fn$;
+revoke all on function private.mob_cols() from public, anon, authenticated;
+
+drop function if exists public.rpc_creatures(uuid, double precision, text, integer[]);
+
+CREATE OR REPLACE FUNCTION public.rpc_creatures(p_world uuid, p_range double precision DEFAULT 40, p_since text DEFAULT NULL::text, p_have integer[] DEFAULT NULL::integer[], p_pack boolean DEFAULT false)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare me uuid := auth.uid(); p player;
+        -- What the browser last saw (`since_snap`), or null for the whole answer.
+        v_snap bigint[];
+        v_rows jsonb; v_ids int[]; v_at text;
+        -- Each row packed (`p_pack`, in the new shape only): its values in the order of `private.mob_cols()`, and the
+        -- rest of what it says as one object after them.
+        v_pack boolean := p_pack and (p_since is not null or p_have is not null);
+begin
+  perform private.pace(auth.uid(), 'look');
+  p_range := least(greatest(coalesce(p_range, 0), 0), private.read_range_most());
+  if cardinality(p_have) > private.have_most() then
+    raise exception 'Bad request: rpc_creatures p_have: too many.' using errcode = '22023';
+  end if;
+  if me is null then raise exception 'not signed in'; end if;
+  if too_fast(me) then raise exception 'you are asking too quickly; slow down'; end if;
+  select * into p from player where world_id = p_world and uid = me;
+  if not found then raise exception 'you are not on this island'; end if;
+  /*
+   * And the wildlife is not moved from in here any more.
+   *
+   * This is a read. It ran `creature_sweep`, which settles every creature in
+   * forty tiles whose turn is due — up to a hundred and twenty of them, each
+   * one a piece of animal thinking, some of it pathing. On the call a browser
+   * makes every second, for every player, while the browser waits for the
+   * answer.
+   *
+   * And `world_tick` already does it. It takes the same list of live bodies,
+   * dedupes them onto their tiles, and sweeps forty tiles round each one, once
+   * a second, on a clock nobody is waiting for. So this was the same work a
+   * second time, on the worst possible thread to do it on: measured here at
+   * 257 to 466 ms a call against 2.7 ms for the ground read beside it, which
+   * is why an island would hand over a deed in a few seconds and its wildlife
+   * not at all — eight PostgREST slots, and this sitting in them.
+   *
+   * Where there is no `pg_cron` there is no other clock, so it still happens
+   * here: the suite's bare postgres and any project without the extension are
+   * exactly as they were. The guard is the one `world_tick` already uses for
+   * the stocking, for the same reason and with the same shape.
+   */
+  if not exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform creature_sweep(p_world, p.x, p.y, p_range);
+  end if;
+  -- A cursor is only answered with what changed when the browser says what it holds.
+  if p_have is not null then v_snap := private.since_snap(p_since); end if;
+  /*
+   * One statement, so the cursor handed back is the snapshot the rows were read in: a row written after it is
+   * newer than the cursor and goes in the next answer, and none is ever counted as seen that was not.
+   */
+  select coalesce(jsonb_agg(case when v_pack
+      then jsonb_build_array(c.id, c.species, c.name, c.variant, c.mode, c.stance, c.job, v.shod, c.tacked, c.tack, c.tack_enchant,
+        v.x, v.y, c.from_x, c.from_y, c.to_x, c.to_y, v.leg_for, v.leg_left, c.health, v.max, c.hunger,
+        c.sex, v.age, c.traits, v.hunting, v.mine, v.ridden, c.rider, v.windup, v.stunned, v.slowed, v.slow_pace,
+        c.pack_lead, c.brawl, c.kept, c.hitched_to, v.more)
+      else jsonb_build_object(
+      'id', c.id, 'species', c.species, 'name', c.name, 'variant', c.variant,
+      'mode', c.mode, 'stance', c.stance, 'job', c.job, 'shod', v.shod, 'tacked', c.tacked, 'tack', c.tack, 'tack_enchant', c.tack_enchant,
+      'x', v.x, 'y', v.y,
+      'fromX', c.from_x, 'fromY', c.from_y, 'toX', c.to_x, 'toY', c.to_y,
+      'legFor', v.leg_for, 'legLeft', v.leg_left,
+      'health', c.health, 'max', v.max, 'hunger', c.hunger,
+      'sex', c.sex, 'age', v.age, 'traits', c.traits,
+      'hunting', v.hunting, 'mine', v.mine, 'ridden', v.ridden, 'rider', c.rider,
+      'windup', v.windup, 'stunned', v.stunned, 'slowed', v.slowed, 'slowPace', v.slow_pace,
+      'lead', c.pack_lead, 'brawl', c.brawl, 'kept', c.kept, 'hitchedTo', c.hitched_to) || v.more end
+      order by c.id) filter (where v_snap is null
+        -- One it does not hold, or whose row was written since.
+        or not (c.id = any (p_have))
+        or private.since_new(c.xmin, v_snap)
+        or c.id = any (array(select m.creature_id from class_mark m where m.world_id = p_world and private.since_new(m.xmin, v_snap)))
+        -- And those whose answer moves without their row being written.
+        or (c.mode = 'deed' and (c.until < now() - make_interval(secs => idle_stale()) or c.phase in ('rest', 'bed')))
+        or c.rider is not null
+        or (c.keeper is not null and c.species = any (array(select d.id from species_def d where d.panniers is not null)))),
+      '[]'::jsonb),
+      coalesce(array_agg(c.id), '{}'),
+      'v1:' || floor(extract(epoch from now()) * 1000)::bigint || ':' || private.since_text(pg_current_snapshot())
+    into v_rows, v_ids, v_at
+    from creature c
+    /*
+     * What each row says, worked out once for either shape. Only for the rows the filter above lets through: the
+     * planner folds this into the aggregate's arguments, which are not worked out for a row it leaves out.
+     */
+    cross join lateral (select
+      shod(c) as shod, creature_x(c) as x, creature_y(c) as y,
+      /*
+       * How long the leg is and how much of it is left, in seconds.
+       *
+       * It used to hand over the two instants themselves, which asks a browser
+       * to agree with this database about what time it is. A phone whose clock
+       * is twenty seconds out pins every leg at one end or the other and then
+       * re-pins it on the next answer, which reads as a thing jumping about —
+       * and the action bar learnt this lesson already: "a browser whose clock
+       * is a minute out still draws the right bar".
+       */
+      case when c.leg_ends > c.leg_at then extract(epoch from (c.leg_ends - c.leg_at)) else 0 end as leg_for,
+      greatest(0, extract(epoch from (c.leg_ends - now()))) as leg_left,
+      max_health(c) as max, age_of(c.born, old_of(c), age_pace(c)) as age,
+      c.hunting = me as hunting, coalesce(c.keeper = me, false) as mine, coalesce(c.rider = me, false) as ridden,
+      -- How long is left of a heavy blow it is drawing back for, so it can be seen coming.
+      case when c.windup_at > now() then extract(epoch from (c.windup_at - now())) end as windup,
+      -- And how long is left of a stun on it (`enchant_stun`), for the target panel.
+      -- (Asked of a creature only while anything on the island is stunned at all, once an answer.)
+      case when exists (select 1 from class_mark m where m.world_id = p_world and m.kind = 'stun' and m.until > now())
+           then stun_left(p_world, c.id) end as stunned,
+      -- And how long is left of a slow on it, and the share of its pace it goes at (`enchant_frost`, a Hamstring's, a Binder's).
+      case when c.slow_until > now() and coalesce(c.slow, 1) < 1 then extract(epoch from (c.slow_until - now())) end as slowed,
+      case when c.slow_until > now() and coalesce(c.slow, 1) < 1 then c.slow end as slow_pace,
+      -- (`lead`: which one leads the pack it hunts with; `brawl`: the tame one it has turned on; `kept`: what its
+      -- keeper's perks make of keeping it; `hitchedTo`: which vehicle it is in the traces of.)
+      '{}'::jsonb
+      -- And the storey its rider rides it on, up a wide staircase (`Game.rideRule`).
+      || case when c.rider is null and c.storey = 0 and c.storey_from = 0 and c.way is null then '{}'::jsonb
+              when c.rider is null then jsonb_build_object('storey', c.storey, 'storeyFrom', c.storey_from, 'way', c.way)
+              else jsonb_build_object('storey', (select greatest(0, r.level) from player r where r.world_id = p_world and r.uid = c.rider)) end
+      /*
+       * And, for your own only, what the card has been making up.
+       *
+       * A worker's trade, its learning, its brushing and what is in its arms
+       * are all here and none of them have ever gone out, so the browser
+       * filled them in from the book: every wildermon on an island read
+       * Foraging 1.00, Experience 0.0, Care 0% and "Looking for work", however
+       * long it had been at it. Yours only, because it is a card you open
+       * about your own and nobody needs five numbers about a wild boar.
+       */
+      || case when c.keeper = me then jsonb_build_object(
+           'care', c.care, 'xp', c.xp, 'skills', c.skills,
+           -- What a meal is putting on its learning, and the seconds of it left (`beast_fed`).
+           'fed', case when c.fed_until > now() then c.fed_bonus end,
+           'fedLeft', case when c.fed_until > now() then extract(epoch from (c.fed_until - now())) end,
+           'phase', c.phase, 'carrying', c.carrying,
+           -- When its ability's rest runs out, which moves at each use of it: the browser plays it as it is used.
+           'cast', (select extract(epoch from m.until) from class_mark m
+                     where m.world_id = p_world and m.creature_id = c.id and m.kind = 'ability'),
+           -- How much fleece has grown back, for Shear and Milk to read before they ask.
+           'fleece', c.fleece,
+           -- What ancient pots have put into its base stats, which its card says beside each.
+           'boosts', c.boosts,
+           -- The wildermon gear on it, its QL and damage a slot (`gear_sent`).
+           'gear', gear_sent(c.gear),
+           -- When her young are due, in seconds from now: null when she carries none.
+           'dueIn', case when c.due > now() then extract(epoch from c.due - now()) end,
+           -- What it is fighting, for the line drawn to it.
+           'enemy', c.enemy)
+         else '{}'::jsonb end
+      -- And a wild one's skills, which are its level and so its stage (`wild_stage_put`).
+      || case when c.keeper is distinct from me then jsonb_build_object('skills', c.skills) else '{}'::jsonb end
+      /*
+       * And its pedigree, for anything bred: whole for your own, and for
+       * anybody else's saying where a trait came from only for the traits
+       * you can read, by the rule the card's chips keep.
+       */
+      || case when c.pedigree is null then '{}'::jsonb
+              when c.keeper = me then jsonb_build_object('pedigree', c.pedigree)
+              else jsonb_build_object('pedigree', pedigree_seen(p_world, me, c.pedigree)) end
+      -- And how rare it came into the world, for a rare one: the browser draws it bigger and shining, and reckons with it.
+      || case when c.rare is null then '{}'::jsonb else jsonb_build_object('rare', c.rare) end
+      -- And its wild forms (`formColour`, `formSize`), which the browser draws and its card names.
+      || case when c.form_colour or c.form_size is not null
+              then jsonb_build_object('formColour', c.form_colour, 'formSize', c.form_size) else '{}'::jsonb end
+      -- And its lifetime at work, for its keeper, without the island's own clock (`work_stats`).
+      || case when c.keeper = me and c.work_stats is not null then jsonb_build_object('work', c.work_stats - 'at') else '{}'::jsonb end
+      /*
+       * Why a worker is standing about, as its card says it (`idleSays`). One
+       * whose turn is long overdue is one the clock is not settling at all:
+       * its keeper is away, or nobody awake is near enough (`sweep_reach`).
+       */
+      || case when c.mode <> 'deed' then '{}'::jsonb
+              when c.until < now() - make_interval(secs => idle_stale()) then jsonb_build_object(
+                'idleWhy', case when exists (select 1 from player k where k.world_id = p_world and k.uid = c.keeper
+                                               and not k.away and k.seen_at > now() - make_interval(secs => idle_logout()))
+                                then 'unswept' else 'away' end,
+                'idleN', sweep_reach(), 'idlePost', c.post is not null)
+              -- Resting: in its bed while it lies in it, and the seconds left (`idleSays`); or on its way to a bed.
+              when c.phase = 'rest' then jsonb_build_object(
+                'idleWhy', case when exists (select 1 from placed b where b.id = c.bed and b.sleeper = c.id) then 'bed' else 'rest' end,
+                'idleN', greatest(0, extract(epoch from c.until - now())), 'idlePost', c.post is not null,
+                'idleBed', (select b.sub from placed b where b.id = c.bed and b.sleeper = c.id))
+              when c.phase = 'bed' then jsonb_build_object('idleWhy', 'tired', 'idleN', 0, 'idlePost', c.post is not null,
+                'idleBed', (select b.sub from placed b where b.id = c.bed))
+              else jsonb_build_object('idleWhy', c.idle_why, 'idleN', c.idle_n, 'idlePost', c.post is not null,
+                'idleWhat', case when c.idle_why = 'stock' then to_jsonb(c.idle_what) end) end
+      -- What is in its panniers, to whoever they open for (`pannier_sent`): only a kept one of a kind that carries any
+      -- can have them open to anybody (`pannier_shut`), so nothing else is asked, which was half of this read.
+      || case when c.keeper is not null and c.species = any (array(select d.id from species_def d where d.panniers is not null))
+              then pannier_sent(p_world, me, c) else '{}'::jsonb end
+      -- The work post it works out of, to anybody: the post is in the open.
+      || case when c.post is null then '{}'::jsonb else jsonb_build_object('post', c.post) end
+      -- And what it did this island day and the one before, for its keeper.
+      || case when c.keeper = me and c.mode = 'deed' then jsonb_build_object('ledger', c.ledger, 'worn', c.worn, 'unfed', c.unfed, 'sparWith', c.spar_with,
+           'specialty', coalesce(((select deed_trade_counts(p_world, me))->>coalesce(c.job, (select sd.gathers from species_def sd where sd.id = c.species)))::int, 0))
+         else '{}'::jsonb end
+      as more) v
+    -- Your own in crates, wherever the crates are; and everything within range.
+    where (c.world_id = p_world and c.keeper = me and c.mode in ('stored', 'deed'))
+       or (c.world_id = p_world
+      /*
+       * Where the leg ends, first, because that is what there is an index on.
+       *
+       * The exact answer below is where the thing is *now*, which is a point
+       * on the leg it is walking and so a function of four columns and the
+       * clock — nothing a btree can help with, and it was being worked out for
+       * every creature on the island before being thrown away. This narrows to
+       * the neighbourhood first, generously: `leg_slack` is far longer than
+       * any leg the rules make (the longest measured on a real island is 2.13
+       * tiles), and anything walking further than that in one leg was already
+       * invisible to `creature_sweep`, which has bounded itself this way since
+       * it was written.
+       */
+      and c.to_x between p.x - (p_range + leg_slack()) and p.x + (p_range + leg_slack())
+      and c.to_y between p.y - (p_range + leg_slack()) and p.y + (p_range + leg_slack())
+      and greatest(abs(creature_x(c) - p.x), abs(creature_y(c) - p.y)) <= p_range);
+  -- A browser that said neither is sent the list it always was.
+  if p_since is null and p_have is null then return v_rows; end if;
+  return jsonb_build_object('at', v_at, 'rows', v_rows, 'full', v_snap is null)
+    -- The keys of a packed row, on the whole answer: the browser holds them for the answers after it.
+    || case when v_pack and v_snap is null then jsonb_build_object('cols', private.mob_cols()) else '{}'::jsonb end
+    || jsonb_build_object(
+    'gone', coalesce((select jsonb_agg(h order by h) from unnest(p_have) h where not (h = any (v_ids))), '[]'::jsonb));
+end $function$;
+
+select private.lock_doors();

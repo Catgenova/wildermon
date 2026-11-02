@@ -8,6 +8,10 @@
  * along its leg worked out again as the island works it out (`creature_x`). What only moves with the clock and not
  * by the second (an age, a shoe worn out) waits for the whole answer, which the island is asked for every
  * `RECONCILE_EVERY` seconds and after anything we do.
+ *
+ * Asked for packed (`p_pack`), each row comes as an array: its values in the order of `cols`, which the whole answer
+ * carries, and then one object with whatever else it says. The keys are laid back on here, so a row is held as the
+ * object the whole answer in the old shape says (`unpack`).
  */
 import type { IslandCreature } from '../game/creatures';
 
@@ -17,6 +21,22 @@ export interface MobsAnswer {
   rows?: unknown;
   gone?: unknown;
   full?: unknown;
+  /** Packed: the keys of a row's values, in order; on the whole answer. */
+  cols?: unknown;
+}
+
+/**
+ * A packed row as the object it stands for: each of `cols` with the value in its place, and then what else it says
+ * (the last element); null for one that is not a packed row of these columns.
+ */
+export function unpack(row: unknown, cols: readonly string[]): IslandCreature | null {
+  if (!Array.isArray(row) || row.length !== cols.length + 1) return null;
+  const more = row[cols.length];
+  if (!more || typeof more !== 'object' || Array.isArray(more)) return null;
+  const out: Record<string, unknown> = {};
+  for (let i = 0; i < cols.length; i++) out[cols[i]] = row[i];
+  Object.assign(out, more);
+  return typeof out.id === 'number' ? (out as unknown as IslandCreature) : null;
 }
 
 /** Seconds off a count down, and null once it has run out, as the island says of one that has. */
@@ -52,6 +72,8 @@ export function agedMob(r: IslandCreature, secs: number): IslandCreature {
 export class MobsHeld {
   /** The cursor the last answer carried, to hand back; null until there is one. */
   at: string | null = null;
+  /** The keys of a packed row, as the last whole answer said them. */
+  private cols: string[] | null = null;
   /** Every row held, by id, with the moment (ms) it came. */
   private rows = new Map<number, { row: IslandCreature; t: number }>();
 
@@ -63,6 +85,7 @@ export class MobsHeld {
   /** Nothing held: the next answer asked for is the whole one. */
   clear(): void {
     this.at = null;
+    this.cols = null;
     this.rows.clear();
   }
 
@@ -72,13 +95,29 @@ export class MobsHeld {
    */
   take(said: MobsAnswer, t: number): IslandCreature[] | null {
     if (!said || typeof said !== 'object' || !Array.isArray(said.rows) || typeof said.at !== 'string') return null;
-    if (said.full === true) this.rows.clear();
-    if (Array.isArray(said.gone)) for (const id of said.gone) this.rows.delete(Number(id));
-    for (const r of said.rows as IslandCreature[]) {
-      if (r && typeof r === 'object' && typeof r.id === 'number') this.rows.set(r.id, { row: r, t });
+    const cols = Array.isArray(said.cols) && said.cols.every((c) => typeof c === 'string') ? said.cols as string[] : said.full === true ? null : this.cols;
+    // Every row as the object it stands for, before anything held is touched: one that will not unpack (packed with
+    // columns this side does not hold) leaves what is held as it was, and the whole answer is asked for next.
+    const rows: IslandCreature[] = [];
+    for (const r of said.rows as unknown[]) {
+      const row = Array.isArray(r) ? (cols ? unpack(r, cols) : null) : r as IslandCreature;
+      if (Array.isArray(r) && !row) return this.lost();
+      if (row && typeof row === 'object' && typeof row.id === 'number') rows.push(row);
     }
+    if (said.full === true) {
+      this.rows.clear();
+      this.cols = cols;
+    }
+    if (Array.isArray(said.gone)) for (const id of said.gone) this.rows.delete(Number(id));
+    for (const r of rows) this.rows.set(r.id, { row: r, t });
     this.at = said.at;
     return this.all(t);
+  }
+
+  /** This side has lost step with the island: nothing held, and the whole answer next. */
+  private lost(): null {
+    this.clear();
+    return null;
   }
 
   /** Every creature held, by id, as the whole answer would read it at `t` (ms). */
