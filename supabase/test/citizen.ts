@@ -39,7 +39,7 @@
 import { execFileSync } from 'node:child_process';
 import { Game, type DeedRole } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
-import { DEEDS_JOINED } from '../../src/game/game';
+import { DEED_GAP, DEED_SPACING, DEEDS_JOINED, deedRadiusAt, deedTooClose, MAX_DEED_LEVEL } from '../../src/game/game';
 import type { Social } from '../../src/net/island';
 import { inviteRefusal, moveInRefusal, rollFull } from '../../src/ui/panels/social';
 
@@ -73,8 +73,8 @@ game.player.x = sx + 0.5;
 game.player.y = sy + 0.5;
 game.inventory.add('deed_stake');
 const here: Target = { kind: 'tile', x: sx, y: sy, cx: sx, cy: sy };
-// Oceanport, somebody else's, far enough off that its border is not in the way.
-const oceanport = { name: 'Oceanport', x: sx + 20, y: sy, radius: 5, level: 1 };
+// Oceanport, somebody else's, as far off as a new token may stand (`DEED_SPACING`).
+const oceanport = { name: 'Oceanport', x: sx + DEED_SPACING, y: sy, radius: 5, level: 1 };
 const asked = (t: Target = here): string => found.check?.(t, game) ?? 'none';
 
 console.log('--- the browser');
@@ -91,9 +91,18 @@ for (const role of ['mayor', 'builder', 'guest'] as DeedRole[]) {
   game.neighbourDeeds = [{ ...oceanport, holder: 'Somebody', mine: true, role }];
   check(`a ${role} of somebody else's settlement is offered the stake`, asked() === 'none', asked());
 }
-const inside: Target = { kind: 'tile', x: sx + 18, y: sy, cx: sx + 18, cy: sy };
+const inside: Target = { kind: 'tile', x: oceanport.x - 2, y: sy, cx: oceanport.x - 2, cy: sy };
 check('the one refusal a citizen still meets is the border, and it says whose',
   asked(inside) === 'Oceanport, which is Somebody\'s, already reaches there. Found yours further out.', asked(inside));
+// Asked: a new settlement's border at the last level ${DEED_GAP} tiles from every other's at the last level.
+game.deed = null;
+game.neighbourDeeds = [{ ...oceanport, holder: 'Somebody', mine: false }];
+const near: Target = { kind: 'tile', x: sx + 1, y: sy, cx: sx + 1, cy: sy };
+check(`a token ${DEED_SPACING - 1} tiles from another settlement's is refused, and says how far it needs to be`,
+  asked(near) === deedTooClose('Oceanport', DEED_SPACING - 1), asked(near));
+check(`and one ${DEED_SPACING} tiles off is not (${DEED_SPACING} = 2 × ${deedRadiusAt(MAX_DEED_LEVEL)} + 1 + ${DEED_GAP})`,
+  asked() === 'none' && DEED_SPACING === 2 * deedRadiusAt(MAX_DEED_LEVEL) + 1 + DEED_GAP, asked());
+const browserNear = asked(near);
 
 /* ---- the island ------------------------------------------------------------ */
 
@@ -108,13 +117,15 @@ begin
   select p.uid into cit from player p where p.world_id = w and p.uid <> boss
      and not exists (select 1 from deed d where d.world_id = w and d.founded_by = p.uid)
    order by p.uid limit 1;
-  -- Somewhere a token may go: clear of every border, dry, open, and in from the edge.
+  -- The suite's island is 64 tiles across, and a token stands deed_spacing() off another's: the boss's goes to a
+  -- corner for this (rolled back), so there is room for one more.
+  update deed set x = 6, y = 6 where world_id = w and founded_by = boss;
+  -- Somewhere a token may go: deed_spacing() from every other on one axis, dry, open, and in from the edge.
   select gx, gy into v_x, v_y
     from generate_series(6, 250, 3) gx, generate_series(6, 250, 3) gy
    where in_bounds(w, gx + deed_radius(1), gy + deed_radius(1))
      and not exists (select 1 from deed d where d.world_id = w
-                      and abs(d.x - gx) <= d.radius + deed_radius(1) + 1
-                      and abs(d.y - gy) <= d.radius + deed_radius(1) + 1)
+                      and abs(d.x - gx) < deed_spacing() and abs(d.y - gy) < deed_spacing())
      and not has_water(w, gx, gy) and passable(w, gx, gy)
    order by gx, gy limit 1;
   update player set body_at = now(), x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb
@@ -139,6 +150,16 @@ begin
   perform give(w, cit, 'deed_stake', 1, 50);
   insert into said values ('SECOND|' || coalesce(act_refusal(w, cit, 'found_settlement', aim), 'none'));
   insert into said values ('FOUNDER|' || coalesce(act_refusal(w, boss, 'found_settlement', aim), 'none'));
+  -- One tile short of the spacing east of the boss's settlement, called Oceanport here as in the browser's half.
+  delete from deed where world_id = w and founded_by = cit;
+  update deed set name = 'Oceanport' where world_id = w and founded_by = boss;
+  insert into said values ('SPACING|' || deed_spacing());
+  update player set x = (select d.x from deed d where d.world_id = w and d.founded_by = boss) + deed_spacing() - 1 + 0.5,
+                    y = (select d.y from deed d where d.world_id = w and d.founded_by = boss) + 0.5
+   where world_id = w and uid = cit;
+  select jsonb_build_object('kind', 'tile', 'x', floor(p.x)::int, 'y', floor(p.y)::int, 'cx', floor(p.x)::int, 'cy', floor(p.y)::int, 'name', 'Newport')
+    into aim from player p where p.world_id = w and p.uid = cit;
+  insert into said values ('NEAR|' || coalesce(act_refusal(w, cit, 'found_settlement', aim), 'none'));
 end $$;
 select string_agg(k, E'\\n') from said;
 rollback;
@@ -155,6 +176,10 @@ check('the builder founds their own, which is then the settlement they are hande
 check('a second stake is refused', said('SECOND') === HELD, said('SECOND'));
 check('and the founder of the first is refused in the words the browser uses',
   said('FOUNDER') === browserHeld, `${said('FOUNDER')} / ${browserHeld}`);
+check(`the island's spacing is the browser's: ${DEED_SPACING}`, said('SPACING') === String(DEED_SPACING), said('SPACING'));
+check('a token one short of it is refused in the words the browser uses, or by the ground under it',
+  said('NEAR') === deedTooClose('Oceanport', DEED_SPACING - 1) || /^Totem needs|^Too close to the map edge/.test(said('NEAR')),
+  `${said('NEAR')} / ${browserNear}`);
 
 /* ---- asking somebody who already lives somewhere -------------------------- */
 

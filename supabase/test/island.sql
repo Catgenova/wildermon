@@ -5558,8 +5558,8 @@ values (:'big', 'player', :'hild', 'deed_stake', 50, 1) \g /dev/null
 update player set x = 2042.5, y = 2041.5 where world_id = :'big' and uid = :'hild' \g /dev/null
 select '701. hild tries to found inside ivar''s border: '
      || coalesce(deed_refusal(:'big', :'hild', 'found_settlement', '{"kind":"item"}'), 'ALLOWED');
--- And well clear of it.
-update player set x = 2070.5, y = 2070.5 where world_id = :'big' and uid = :'hild' \g /dev/null
+-- And well clear of it: deed_spacing() off his token on both axes (32 tiles), borders at the last level 5 apart.
+update player set x = 2072.5, y = 2072.5 where world_id = :'big' and uid = :'hild' \g /dev/null
 select '702. and well clear of it: '
      || coalesce(deed_refusal(:'big', :'hild', 'found_settlement', '{"kind":"item"}'), 'allowed');
 select act_perform(:'big', :'hild', 'found_settlement', '{"kind":"item","name":"Hildstead"}') \g /dev/null
@@ -5573,11 +5573,11 @@ select '703. so the island holds ' || (select count(*) from deed where world_id 
  * that the question means anything.
  */
 select '703b. ivar puts a shovel to hild''s ground: "'
-     || coalesce(ground_deed_refusal(:'big', :'ivar', 'dig', '{"kind":"tile","x":2070,"y":2070,"cx":2070,"cy":2070}'::jsonb), 'NOTHING')
-     || '" | packing it: "' || coalesce(ground_deed_refusal(:'big', :'ivar', 'pack', '{"kind":"tile","x":2070,"y":2070}'::jsonb), 'NOTHING')
-     || '" | mining it: "' || coalesce(ground_deed_refusal(:'big', :'ivar', 'mine', '{"kind":"tile","x":2070,"y":2070,"cx":2070,"cy":2070}'::jsonb), 'NOTHING')
-     || '" | cutting its grass, which shapes nothing: "' || coalesce(ground_deed_refusal(:'big', :'ivar', 'cut_grass', '{"kind":"tile","x":2070,"y":2070}'::jsonb), 'nothing')
-     || '" | hild on her own: "' || coalesce(ground_deed_refusal(:'big', :'hild', 'dig', '{"kind":"tile","x":2070,"y":2070,"cx":2070,"cy":2070}'::jsonb), 'nothing')
+     || coalesce(ground_deed_refusal(:'big', :'ivar', 'dig', '{"kind":"tile","x":2072,"y":2072,"cx":2072,"cy":2072}'::jsonb), 'NOTHING')
+     || '" | packing it: "' || coalesce(ground_deed_refusal(:'big', :'ivar', 'pack', '{"kind":"tile","x":2072,"y":2072}'::jsonb), 'NOTHING')
+     || '" | mining it: "' || coalesce(ground_deed_refusal(:'big', :'ivar', 'mine', '{"kind":"tile","x":2072,"y":2072,"cx":2072,"cy":2072}'::jsonb), 'NOTHING')
+     || '" | cutting its grass, which shapes nothing: "' || coalesce(ground_deed_refusal(:'big', :'ivar', 'cut_grass', '{"kind":"tile","x":2072,"y":2072}'::jsonb), 'nothing')
+     || '" | hild on her own: "' || coalesce(ground_deed_refusal(:'big', :'hild', 'dig', '{"kind":"tile","x":2072,"y":2072,"cx":2072,"cy":2072}'::jsonb), 'nothing')
      || '" | ivar at his own token: "' || coalesce(ground_deed_refusal(:'big', :'ivar', 'dig', '{"kind":"tile","x":2040,"y":2040,"cx":2040,"cy":2040}'::jsonb), 'nothing')
      || '" | and open country between them: "' || coalesce(ground_deed_refusal(:'big', :'ivar', 'dig', '{"kind":"tile","x":2055,"y":2055,"cx":2055,"cy":2055}'::jsonb), 'nothing')
      || '" — of the island''s ' || (select count(*) from action_def) || ' jobs, '
@@ -5647,14 +5647,14 @@ select '710. ivar''s building, to hild: '
 -- rather than hoped for: a crate on each, so every one is refused.
 select set_config('request.jwt.claims', json_build_object('sub', :'hild')::text, false) \g /dev/null
 insert into crate (world_id, id, kind, x, y, sx, sy) values
-  (:'big', 9101, 'plank', 2071, 2070, 1, 1), (:'big', 9102, 'plank', 2070, 2071, 1, 1),
-  (:'big', 9103, 'plank', 2069, 2070, 1, 1), (:'big', 9104, 'plank', 2070, 2069, 1, 1),
-  (:'big', 9105, 'plank', 2071, 2071, 1, 1) \g /dev/null
+  (:'big', 9101, 'plank', 2073, 2072, 1, 1), (:'big', 9102, 'plank', 2072, 2073, 1, 1),
+  (:'big', 9103, 'plank', 2071, 2072, 1, 1), (:'big', 9104, 'plank', 2072, 2071, 1, 1),
+  (:'big', 9105, 'plank', 2073, 2073, 1, 1) \g /dev/null
 delete from crate where world_id = :'big' and deed and id = 2 \g /dev/null
 select coalesce(place_deed_crate(:'big', :'hild')::text, 'nowhere') as penned \gset
 select '711. a token with all five of its old spots taken still gets a crate: ' || :'penned'
      || ' — at ' || coalesce((select x || ',' || y from crate where world_id = :'big' and id = :'penned'::int), 'nowhere')
-     || ', where the token is 2070,2070';
+     || ', where the token is 2072,2072';
 
 -- What is in a crate, which the browser was never told: `rpc_ground` sent the
 -- crate and not its contents, so every crate on an island was drawn empty and
@@ -5712,7 +5712,7 @@ select '712c. sella gives hers up, four hundred tiles from anybody: '
 -- she founded second, so the row a bare `select * from deed` hands back first
 -- is ivar's — thirty tiles from where she is standing.
 select set_config('request.jwt.claims', json_build_object('sub', :'hild')::text, false) \g /dev/null
-select creature_spawn(:'big', 'rabba', 2070.5, 2071.5, 'stored', now() - interval '10 days', :'hild') as hers \gset
+select creature_spawn(:'big', 'rabba', 2072.5, 2073.5, 'stored', now() - interval '10 days', :'hild') as hers \gset
 select act_perform(:'big', :'hild', 'assign_deed', ('{"kind":"creature","id":' || :'hers' || '}')::jsonb) \g /dev/null
 select '712d. hild sets a rabba to work and it stands at '
      || (select round(from_x::numeric, 1) || ', ' || round(from_y::numeric, 1)

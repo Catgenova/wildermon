@@ -71,7 +71,7 @@ import { SPECIES, type Stance, takeArms } from './creatures';
 import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollTable } from './forage';
 import { atWaterEdge, WATER_GARDEN_ACTIONS } from './watergarden';
 import { CELLAR_DEPTH, CELLAR_LEVEL, floorOf, type FloorKind, type RoofShape, type Side, type StairHand, type WallType } from './building';
-import { DEED_RADIUS, PROSPECT_MARK_TIME, type Game } from './game';
+import { DEED_RADIUS, DEED_SPACING, deedTooClose, PROSPECT_MARK_TIME, type Game } from './game';
 import { isFounder, lacks } from './ranks';
 import { materialOfItem } from './materials';
 import { boonOf, boonTime, clockLeft } from './boons';
@@ -3047,6 +3047,13 @@ export const ACTIONS: ActionDef[] = [
       if (g.deed && isFounder(g.deed)) return 'Already founded a settlement. Disband it first.';
       const w = g.world;
       if (x - DEED_RADIUS < 0 || y - DEED_RADIUS < 0 || x + DEED_RADIUS >= w.w || y + DEED_RADIUS >= w.h) return 'Too close to the map edge.';
+      // Another settlement's token closer than `DEED_SPACING` on both axes: the nearest of them, as the island says it.
+      let close: { name: string; apart: number } | null = null;
+      for (const d of g.neighbourDeeds) {
+        const apart = Math.max(Math.abs(x - d.x), Math.abs(y - d.y));
+        if (apart < DEED_SPACING && (!close || apart < close.apart)) close = { name: d.name, apart };
+      }
+      if (close) return deedTooClose(close.name, close.apart);
       // A poured slab is dry, level ground standing above whatever is under
       // it, which is exactly what a token wants and is sometimes the only
       // such tile on a hillside.
