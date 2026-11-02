@@ -45,6 +45,7 @@ import { PACK_VOICE } from './voice-pack';
 import { EMBER_VOICE } from './voice-ember';
 import { PEAFOWL_VOICE } from './voice-peafowl';
 import { SABLE_VOICE } from './voice-sable';
+import { LOOMHARE_VOICE } from './voice-loomhare';
 import { WALL_VOICE } from './voice-wall';
 import { PELT_VOICE } from './voice-pelt';
 import { PETAL_VOICE } from './voice-petal';
@@ -206,6 +207,8 @@ export const VOICES: Partial<Record<string, Voice>> = {
   quill: PEAFOWL_VOICE,
   // The Sablekit, the Sableplume and the Fletchercrest.
   flecha: SABLE_VOICE,
+  // The Clothkit, the Loomhare and the Bandageweaver.
+  leecha: LOOMHARE_VOICE,
   // The Wallkit, the Bristleward and the Stonepolish.
   scurra: WALL_VOICE,
 };

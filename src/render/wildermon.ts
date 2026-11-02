@@ -67,7 +67,8 @@ import { SPITTA } from './wild-fighters';
 import { SPIRALCALF, SPIRALPHANT, SPIRALTRUNK } from './wild-spiral';
 import { DUMMIBEAR, DUMMICUB, DUMMITITAN } from './wild-dummy';
 import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
-import { BRITTLA, CRAKKA, FROSTA, LEECHA, ROOTLE, SCORCHA, WHIRLA } from './wild-abilities';
+import { BRITTLA, CRAKKA, FROSTA, ROOTLE, SCORCHA, WHIRLA } from './wild-abilities';
+import { BANDAGEWEAVER, CLOTHKIT, LOOMHARE } from './wild-loomhare';
 import { MOSSNIB, MOSSREAVER, MOSSSHEAR } from './wild-moss';
 import { BEAMMASTER, LOGNIB, TIMBERSPLIT } from './wild-log';
 import { FLETCHERCREST, SABLEKIT, SABLEPLUME } from './wild-sable';
@@ -172,7 +173,7 @@ export const WILDERMON: Record<string, Kind> = {
   dulla: MOSSNIB,
   brittla: BRITTLA,
   stona: ZEPHLET,
-  leecha: LEECHA,
+  leecha: CLOTHKIT,
   whispet: WHISPET,
   springlet: SPRINGLET,
   glimmip: GLIMMIP,
@@ -246,6 +247,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   cudda: [MILKMERE, LACTISOVEREIGN],
   quill: [PLUMECREST, FEATHERBOURNE],
   flecha: [SABLEPLUME, FLETCHERCREST],
+  leecha: [LOOMHARE, BANDAGEWEAVER],
   scurra: [BRISTLEWARD, STONEPOLISH],
 };
 

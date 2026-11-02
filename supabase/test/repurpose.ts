@@ -16,7 +16,8 @@
  * comes out at its lumps' quality as your own hands' does; moss is cut and carried home; a grape cutting is planted at
  * a trellis with no vine on soil, and no other; a water lily root and lotus seeds are planted in still water deep
  * enough; a carcass and a bare pot are left as they are. And a Spiralphant, an awla at its third stage, carves its line's
- * one more shaft from each log (`STAGE_PERKS`), on both sides.
+ * one more shaft from each log (`STAGE_PERKS`), and a Bandageweaver, a leecha at its third stage, cuts its line's one more
+ * bandage from each cloth, on both sides.
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
@@ -113,6 +114,11 @@ const FLETCH_SKILLS = { [GATHER_SKILL.fletch]: EVOLVE_AT[1] };
 const FLETCH_RECIPE = RECIPE_BY_ID.get(tradeRecipes('fletch')[0])!;
 const FLETCH_PUT: Array<[string, number]> = FLETCH_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
 const fletchWants = (): string => `${FLETCH_RECIPE.result} ${(FLETCH_RECIPE.count ?? 1) + STAGE_PERKS.flecha.n}`;
+/** A Bandageweaver's go at one cloth: the bandages its recipe cuts from it, and its line's third-stage ones on top. */
+const WEAVE_SKILLS = { [GATHER_SKILL.bandage]: EVOLVE_AT[1] };
+const WEAVE_RECIPE = RECIPE_BY_ID.get(tradeRecipes('bandage')[0])!;
+const WEAVE_PUT: Array<[string, number]> = WEAVE_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
+const weaveWants = (): string => `${WEAVE_RECIPE.result} ${(WEAVE_RECIPE.count ?? 1) + STAGE_PERKS.leecha.n}`;
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
 const listed = (m: Map<string, number>): string => [...m].filter(([, n]) => n > 0).map(([id, n]) => `${id} ${n}`).sort().join(',') || '-';
@@ -261,6 +267,12 @@ ${CASES.map((c) => `
   insert into said select 'FLETCH', ${held};
   ${after('flecha')}
 
+  -- WEAVE: the leecha, at its third stage a Bandageweaver, cuts one cloth into bandages, and makes its line's third-stage bandages on top.
+  ${stocked(WEAVE_PUT)}
+  ${ready('leecha').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(WEAVE_SKILLS)}'::jsonb`)}
+  insert into said select 'WEAVE', ${held};
+  ${after('leecha')}
+
   -- VINE: a trellis on grass with no vine, one with a vine already, one on sand; three cuttings.
   perform land_set_tile(w, 21, 14, tile_id('Sand'));
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, material) values
@@ -378,6 +390,7 @@ for (const c of CASES) {
 }
 check(`on the island, a Beammaster saws a log into ${beamWants()}`, at('BEAM') === beamWants(), at('BEAM'));
 check(`on the island, a Fletchercrest fletches one batch into ${fletchWants()}`, at('FLETCH') === fletchWants(), at('FLETCH'));
+check(`on the island, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, at('WEAVE') === weaveWants(), at('WEAVE'));
 {
   // Two logs, both carved in the one go at its stage's batches, each its recipe's shafts and its line's one more.
   const each = RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n;
@@ -570,6 +583,14 @@ for (const k of CASES) {
   c.skills = { ...FLETCH_SKILLS };
   run(g, 120);
   check(`in the browser, a Fletchercrest fletches one batch into ${fletchWants()}`, inCrate(crate) === fletchWants(), inCrate(crate));
+}
+{
+  const g = body();
+  const crate = stock(g, WEAVE_PUT);
+  const c = worker(g, 'leecha');
+  c.skills = { ...WEAVE_SKILLS };
+  run(g, 120);
+  check(`in the browser, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, inCrate(crate) === weaveWants(), inCrate(crate));
 }
 {
   const g = body();
