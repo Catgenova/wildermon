@@ -3149,6 +3149,21 @@ jobs:
             --outfile=node_modules/.cache/stirload.mjs --log-level=error
           node node_modules/.cache/stirload.mjs
 
+      - name: A creature's numbers planned once, a settle writing what changed
+        if: matrix.shard == 3
+        run: |
+          # A creature's numbers and its stores' room are planned once a
+          # session, not once a settle; a worker's or companion's settle
+          # writes its row only when it changed; a step writes no index. Each
+          # function put back as the SQL it was: every number for every kind,
+          # stage, trait, gear and channel and every piece of furniture the
+          # same to the last bit, a round of the clock and an hour of work the
+          # same island, with fewer creature rows written and none that
+          # changed left unwritten.
+          npx esbuild supabase/test/writeload.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/writeload.mjs --log-level=error
+          node node_modules/.cache/writeload.mjs
+
       - name: A queue put in order
         if: matrix.shard == 3
         run: |
