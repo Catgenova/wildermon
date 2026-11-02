@@ -4241,6 +4241,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 447,
+    day: '2026-11-02',
+    lines: () => [`Changed: anvil mould: ${MOULD_BY_ID.get('anvil_mould')!.lumps} lumps (was: 80).`],
+  },
+  {
     n: 446,
     day: '2026-11-02',
     lines: () => ['Changed: edge panning off by default, and off for anyone who had not set it in Settings (Push the view at the screen edge). On: Settings, O.'],
