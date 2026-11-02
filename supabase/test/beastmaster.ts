@@ -81,6 +81,8 @@ const rowOf = (s: ClassSpellDef): string =>
 const ON_ME = `jsonb_build_object('kind', 'self', 'uid', w.uid)`;
 const ON = (id: string): string => `jsonb_build_object('kind', 'enemy', 'id', ${id})`;
 /** A wild creature put down at a spot, alike in everything that has a say in a fight, and doing nothing of its own. */
+/** A kind that still wants more taming than the test's 10, for the refusal: the Dirtlet line. */
+const HARD_TAME = 'snout';
 const SPAWN = (v: string, species: string, x: string, y: string): string => `
   ${v} := creature_spawn(w.world_id, '${species}', ${x}, ${y}, 'wild', now() - interval '2 hours', null);
   update creature set traits = '{}', rare = null, hunting = null, brawl = null, enemy = null, hunt_again = null,
@@ -106,7 +108,7 @@ begin;
 create temp table said (k text, v text);
 do $b$
 declare w record; v_px double precision; v_py double precision; r jsonb; kc creature; pl player;
-        k int; a int; b int; c int; e int; v_seed double precision;
+        k int; a int; b int; c int; e int; f int; v_seed double precision;
         h0 double precision; h1 double precision; d1 double precision; m0 double precision; m1 double precision;
 begin
   -- An island with land, and somebody on it.
@@ -430,10 +432,12 @@ begin
   ${SPAWN('b', 'rowl', 'v_px - 2', 'v_py')}
   ${SPAWN('c', 'ulva', 'v_px', 'v_py + 2')}
   ${SPAWN('e', 'rowl', `v_px + ${fx('call_of_the_wild', 'reach')} + 2`, 'v_py')}
+  -- A kind that wants more taming than 10 (the Snarepup line now wants 1).
+  ${SPAWN('f', HARD_TAME, 'v_px', 'v_py - 2')}
   insert into said values ('WILD:MONSTER', class_spell_cast(w.world_id, w.uid, 'beastmaster_call_of_the_wild', ${ON('a')})->>'why');
   insert into said values ('WILD:FAR', class_spell_cast(w.world_id, w.uid, 'beastmaster_call_of_the_wild', ${ON('e')})->>'why');
   update skill set value = 10 where world_id = w.world_id and uid = w.uid and id = 'taming';
-  insert into said values ('WILD:SKILL', class_spell_cast(w.world_id, w.uid, 'beastmaster_call_of_the_wild', ${ON('b')})->>'why');
+  insert into said values ('WILD:SKILL', class_spell_cast(w.world_id, w.uid, 'beastmaster_call_of_the_wild', ${ON('f')})->>'why');
   update skill set value = 100 where world_id = w.world_id and uid = w.uid and id = 'taming';
   insert into said values ('WILD:ROOM', class_spell_cast(w.world_id, w.uid, 'beastmaster_call_of_the_wild', ${ON('b')})->>'why');
   perform give(w.world_id, w.uid, 'creature_crate', 1, 50);
@@ -444,7 +448,7 @@ begin
   r := class_spell_cast(w.world_id, w.uid, 'beastmaster_call_of_the_wild', ${ON('c')});
   insert into said select 'WILD:FOLLOWS', cr.mode || '|' || (cr.keeper = w.uid)::text || '|' || coalesce(r->>'said', r->>'why')
     from creature cr where cr.world_id = w.world_id and cr.id = c;
-  delete from creature where world_id = w.world_id and id in (a, b, c, e);
+  delete from creature where world_id = w.world_id and id in (a, b, c, e, f);
   update creature set mode = 'active' where world_id = w.world_id and id = k;
   ${HEEL}
 
@@ -613,7 +617,7 @@ check('the six passives fold on the island to what they fold to in the browser',
 }
 check('Call of the Wild: never a monster', island('WILD:MONSTER') === 'The ogre: untameable.', island('WILD:MONSTER'));
 check(`and no further than ${fx('call_of_the_wild', 'reach')} tiles`, island('WILD:FAR') === 'Too far: max 4 tiles.', island('WILD:FAR'));
-check('and never above your taming', island('WILD:SKILL') === 'The snarepup: need 35 taming (have 10).', island('WILD:SKILL'));
+check('and never above your taming', island('WILD:SKILL') === `The ${SPECIES[HARD_TAME].name.toLowerCase()}: need ${SPECIES[HARD_TAME].tameLevel} taming (have 10).`, island('WILD:SKILL'));
 check('and never without room for it', /already follows you\. Need an empty wildermon crate\.$/.test(island('WILD:ROOM')),
   island('WILD:ROOM'));
 {
