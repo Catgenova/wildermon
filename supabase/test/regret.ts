@@ -111,6 +111,8 @@ begin
   perform give(w, u, 'trowel', 1, 90);
   insert into skill (world_id, uid, id, value) values (w, u, 'archaeology', 90)
     on conflict (world_id, uid, id) do update set value = excluded.value;
+  -- The island's dice, seeded: the share is the rule under test, not the luck of one run.
+  perform setseed(0.5);
   for tx in 1..${DIGS} loop
     perform perform_dig(w, u, 'investigate', jsonb_build_object('kind', 'tile', 'x', 9, 'y', 9));
   end loop;
