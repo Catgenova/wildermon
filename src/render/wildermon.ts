@@ -103,7 +103,7 @@ const LINES: Record<string, () => Promise<Line>> = {
   cordra: () => import('./wild-hands3').then((m) => line(m.CORDRA)),
   flecha: () => import('./wild-sable').then((m) => line(m.SABLEKIT, [m.SABLEPLUME, m.FLETCHERCREST])),
   papra: () => import('./wild-papyrus').then((m) => line(m.REEDLING, [m.PAPYRUSKIN, m.PRESSMERE])),
-  glossa: () => import('./wild-hands3').then((m) => line(m.GLOSSA)),
+  glossa: () => import('./wild-mortoise').then((m) => line(m.MORTARSHELL, [m.GROUTBACK, m.MORTOISE])),
   dippa: () => import('./wild-capy').then((m) => line(m.PAILBARA, [m.CASKYBARA, m.RESERVARA])),
   thumpa: () => import('./wild-crag').then((m) => line(m.PEBBLETOOTH, [m.SHALECLAW, m.CRAGJAWS])),
   spitta: () => import('./wild-fighters').then((m) => line(m.SPITTA)),

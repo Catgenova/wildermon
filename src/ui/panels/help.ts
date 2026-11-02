@@ -947,6 +947,7 @@ const HAND_NUMBERS: Record<string, string> = {
   cindra: `evolves: ${evolves('cindra')}; ${perkLine('cindra').toLowerCase()}`,
   flecha: `evolves: ${evolves('flecha')}; ${perkLine('flecha').toLowerCase()}`,
   scurra: `evolves: ${evolves('scurra')}; ${perkLine('scurra').toLowerCase()}`,
+  glossa: `evolves: ${evolves('glossa')}; ${perkLine('glossa').toLowerCase()} (${RECIPE_BY_ID.get('make_mortar')!.count} to ${RECIPE_BY_ID.get('make_mortar')!.count! + STAGE_PERKS.glossa.n})`,
 };
 
 /**

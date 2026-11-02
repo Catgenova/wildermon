@@ -9,12 +9,13 @@ import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Three more of the settlement's hands: the chissa, the cordra and the
- * glossa. As with the others (`./wild-hands`, `./wild-hands2`), each wears
- * the tool of its trade: a chisel, a rope and a glazing brush. The mudda is
- * the Sliplet now (`./wild-clayroll`), the dippa the Pailbara (`./wild-capy`),
- * the rippa the Logkit (`./wild-timber`), the papra the Reedling
- * (`./wild-papyrus`) and the flecha the Sablekit (`./wild-sable`).
+ * Two more of the settlement's hands: the chissa and the cordra. As with
+ * the others (`./wild-hands`, `./wild-hands2`), each wears the tool of its
+ * trade: a chisel and a rope. The mudda is the Sliplet now
+ * (`./wild-clayroll`), the dippa the Pailbara (`./wild-capy`), the rippa the
+ * Logkit (`./wild-timber`), the papra the Reedling (`./wild-papyrus`), the
+ * flecha the Sablekit (`./wild-sable`) and the glossa the Mortarshell
+ * (`./wild-mortoise`).
  */
 
 /** A tail's root, out of the body, before the tool on the end of it. */
@@ -94,49 +95,5 @@ export const CORDRA: Kind = {
   palette: (coat, mark) => coatPalette(coat, mark, OWN({}), 40),
   shadow: [1.5, 1.15],
   stride: 1.4,
-  size: 1.65,
-};
-
-/* ---- the glossa: a glazed bowl for a hat, a brush for a tail -------------------------- */
-
-const GLOSSA_SPEC: QuadSpec = { ...pawed({ high: 1.3, len: 2.1, legs: 0.7, neck: 0.32, lean: 50, swing: [22, 36], ears: [35, 22], tail: [0.45, 20, 10] }), nose: 12 };
-const GLOSSA_HEAD = { c: [0, 0.32, 0.14] as V3, r: [1.04, 0.98, 0.9] as V3 };
-
-function glossaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = GLOSSA_HEAD;
-  // A small glazed bowl upside down on its crown.
-  const bowl = merge(
-    tube([[0, 0.1, 0.86], [0, 0.1, 1.04], [0, 0.1, 1.16]], [0.36, 0.3, 0.12], [0.36, 0.3, 0.12], 10, 'crystal', { seam: 'end' }),
-    orb([0.12, 0.2, 1.06], 0.05, 4, 3, 'glint'),
-  );
-  // A glazing brush: a haft and a soft tuft dipped in the slip.
-  const brush = merge(
-    root(n),
-    tube([[0, -0.22, 0], [0, -0.75, 0.02]], 0.05, 0.05, 5, 'wood'),
-    taper([[0, -0.72, 0.02], [0, -0.92, 0.02], [0, -1.08, 0.03]], 0.13, 0.05, 6, 'crystalDark'),
-  );
-  return quadPieces({
-    n, k,
-    body: barrel(2.2, 1.1, 0.9),
-    neck: { w: 0.64, h: 0.64, len: 0.32 },
-    head: { c: H.c, r: H.r, face: merge(snout(1.02, -0.2, [0.42, 0.32, 0.36], 0.12, n, k), bowl), eye: { dir: [0.74, 0.52, 0.34], size: 0.31, rim: 0.12 } },
-    ear: earMesh(0.34, 0.24, n),
-    earTurn: 35,
-    tail: [brush],
-    ...paws(n, k, 0.7, 0.27, 0.24, 'coatDark'),
-  });
-}
-
-export const GLOSSA: Kind = {
-  bones: quadBonesOf(GLOSSA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it brushes: the tail drawn slowly across.
-    if (a.go <= 0) p.tail[1] += 18 * Math.sin(a.t * TAU * 0.9) * beat(a.t, [5.6, 16.3], 3);
-  }),
-  build: glossaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ crystal: [86, 140, 176], crystalDark: [60, 104, 136], glint: [236, 246, 255], wood: [160, 116, 76] }), 200),
-  shadow: [1.5, 1.2],
-  stride: 1.35,
   size: 1.65,
 };
