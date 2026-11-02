@@ -98,7 +98,7 @@ import { SOUL_CHANCE } from '../../game/sacrifice';
 import { HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
 import { groomGain } from '../../game/husbandry';
 import { ARTIFACT_FOR, SHEAR_FEATHERS, SHEAR_WOOL } from '../../game/creatureActions';
-import { OLD_FOR } from '../../game/creatures';
+import { COOKED_MEAT_TOO, OLD_FOR } from '../../game/creatures';
 import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
@@ -3413,6 +3413,7 @@ export function helpText(): string {
       left alone.</li>
       <li><b>Feeding</b>: each item of its diet eaten (from your hand or the stores): <b>+${percent(FED_CARE)} care</b> at quality (QL) ${QL_TOP}, proportionally less below; for ${dur(FED_FOR)}:
       <b>learns ${percent(FED_LEARN)} faster</b> at QL ${QL_TOP}, proportionally less; learning bonus ${mul(FED_FAVOURITE)} for its <b>favourite</b> (the first food on its field guide page).</li>
+      <li><b>Cooked meat</b> in a diet: also ${listed(COOKED_MEAT_TOO.map((id) => itemDef(id).name.toLowerCase()))}. Feeding and taming bait alike.</li>
       <li>No stacking: an equal or better meal replaces the effect and restarts the ${dur(FED_FOR)}; a lesser one does nothing. Grazing and whey give neither.
       The card shows its favourite's worth and the time left.</li>
     </ul>

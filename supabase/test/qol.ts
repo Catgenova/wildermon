@@ -32,6 +32,9 @@ import '../../src/game/recipes';
 import { rotSeconds, rottingNear, ROT_SOON } from '../../src/game/rot';
 import { shoppingList } from '../../src/game/shopping';
 import { NAILS_PER_LUMP } from '../../src/game/metal';
+import { COOKED_MEAT_TOO, isBaitFor, SPECIES } from '../../src/game/creatures';
+import { RECIPES } from '../../src/game/recipes';
+import { FISH } from '../../src/game/fishing';
 import { liveSettings, SETTING_DEFAULTS } from '../../src/game/settings';
 
 const psql = (sql: string): string =>
@@ -289,6 +292,27 @@ rollback;
   check('and on where it was set on in Settings, off where set off', edge({ edgePan: true, edgePanChosen: true }) === true
     && edge({ edgePan: false, edgePanChosen: true }) === false);
   delete (globalThis as { localStorage?: unknown }).localStorage;
+}
+
+// Asked: "For the purpose of feeding and taking wildermon, cooked meat should include cooked fish and meals
+// including either". The list is the cooking recipes that make a dish of meat or fish, and the island's diet rows agree.
+{
+  const FLESH = new Set(['meat', 'cooked_meat', 'cooked_fish', ...FISH.map((f) => f.id)]);
+  const made = [...new Set(RECIPES.filter((r) => r.category === 'Cooking' && r.result !== 'cooked_meat'
+    && r.inputs.some((i) => FLESH.has(i.item)) && !FISH.some((f) => f.id === r.result)).map((r) => r.result))].sort();
+  check('cooked meat takes in cooked fish and every dish cooked from meat or fish',
+    made.join() === [...COOKED_MEAT_TOO].sort().join(), `${made.join()} / ${COOKED_MEAT_TOO.join()}`);
+  const eaters = Object.values(SPECIES).filter((d) => d.diet.includes('cooked_meat'));
+  check('and every kind that eats cooked meat takes each as food and bait',
+    eaters.length > 0 && eaters.every((d) => COOKED_MEAT_TOO.every((id) => isBaitFor(d, id))), `${eaters.length} kinds`);
+  const fishOnly = Object.values(SPECIES).filter((d) => d.diet.includes('cooked_fish') && !d.diet.includes('cooked_meat'));
+  check('a kind that eats cooked fish but no cooked meat is not given the meat dishes',
+    fishOnly.length > 0 && fishOnly.every((d) => !isBaitFor(d, 'stew') && !isBaitFor(d, 'cottage_pie')), fishOnly.map((d) => d.id).join());
+  const want = eaters.flatMap((d) => COOKED_MEAT_TOO.map((id) => `${d.id}:${id}`)).sort().join(' ');
+  const island = psql(`select coalesce(string_agg(sd.species || ':' || sd.item, ' ' order by sd.species || ':' || sd.item), '')
+    from species_diet sd where sd.item in (${COOKED_MEAT_TOO.map((id) => `'${id}'`).join(', ')})
+      and exists (select 1 from species_diet c where c.species = sd.species and c.item = 'cooked_meat')`);
+  check('the island\'s diet rows say the same', island === want, `${island.split(' ').length} rows, browser ${want.split(' ').length}`);
 }
 
 for (const line of [...ok, ...bad]) console.log(line);

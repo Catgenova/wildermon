@@ -138,7 +138,7 @@ import { CATCH_UP, MAX_STEP as CLOCK_STEP } from '../../engine/loop';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { NEED_KINDS, NEED_LABEL } from './care';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
-import { CARE_WANTING as CARE_WANTING_317 } from '../../game/creatures';
+import { CARE_WANTING as CARE_WANTING_317, COOKED_MEAT_TOO } from '../../game/creatures';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
@@ -4240,6 +4240,11 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 458,
+    day: '2026-11-02',
+    lines: () => [`Changed: cooked meat in a wildermon's diet: also ${listed(COOKED_MEAT_TOO.map((id) => itemDef(id).name.toLowerCase()))}. Feeding and taming bait alike.`],
   },
   {
     n: 457,

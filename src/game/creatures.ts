@@ -4196,6 +4196,17 @@ export const SPECIES: Record<string, SpeciesDef> = {
 };
 // Asked for: a Springlet "operates same speed as a hare mount when swimming in water": in water, a Thistlekit's pace.
 SPECIES.springlet.swimSpeed = SPECIES.orse.speed;
+/**
+ * Cooked meat, to a kind that eats it, takes in cooked fish and the dishes
+ * cooked from meat or fish (stew, cottage pie): fed and offered alike. The
+ * list is the island's too, through `species_diet`; `qol.ts` holds it to the
+ * cooking recipes that make them.
+ */
+export const COOKED_MEAT_TOO = ['cooked_fish', 'stew', 'cottage_pie'];
+for (const def of Object.values(SPECIES)) {
+  if (!def.diet.includes('cooked_meat')) continue;
+  for (const id of COOKED_MEAT_TOO) if (!def.diet.includes(id)) def.diet.push(id);
+}
 // The journal's goals name kinds by what they are called (`journal-b.ts`).
 kindNames(SPECIES);
 
