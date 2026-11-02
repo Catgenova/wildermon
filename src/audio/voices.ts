@@ -46,6 +46,7 @@ import { EMBER_VOICE } from './voice-ember';
 import { PEAFOWL_VOICE } from './voice-peafowl';
 import { SABLE_VOICE } from './voice-sable';
 import { WALL_VOICE } from './voice-wall';
+import { HERB_VOICE } from './voice-herb';
 import { PELT_VOICE } from './voice-pelt';
 import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
@@ -208,4 +209,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   flecha: SABLE_VOICE,
   // The Wallkit, the Bristleward and the Stonepolish.
   scurra: WALL_VOICE,
+  // The Herbpup, the Herbfox and the Herbwarden.
+  salva: HERB_VOICE,
 };

@@ -1,5 +1,5 @@
 import {
-  add, beat, coatPalette, curve, cyc, merge, orb, orbAlong, quadBonesOf, scale, smile, taper, TAU, tube,
+  add, beat, coatPalette, curve, merge, orb, orbAlong, quadBonesOf, scale, smile, taper, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { blade, cut, pawMesh, quadPieces } from './beastkit';
@@ -7,8 +7,8 @@ import { type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
- * The settlement's own hands: the salva and the brambo (the kemma
- * is the Whispling now, `./wild-owl`; the sheela the Shearling, `./wild-shear`;
+ * The settlement's own hands: the brambo (the salva is the Herbpup now,
+ * `./wild-herbpup`; the kemma the Whispling, `./wild-owl`; the sheela the Shearling, `./wild-shear`;
  * the tanna the Peltling, `./wild-pelt`; the carra the Lognib, `./wild-log`).
  * Each carries the tool of its trade on its body, as every wildermon carries
  * something no field guide has: a bandaged tail.
@@ -33,70 +33,6 @@ export function links(r: readonly number[], len: number, n: number, mat: Mat | (
 
 const OWN = (own: Partial<Record<Mat, RGB>>) => own;
 
-
-/* ---- the salva: a bandaged tail and mint for ears ----------------------------------- */
-
-/**
- * A salva: a long-fingered, careful creature that smells of crushed leaves.
- * Its ears are mint leaves, a sprig of herbs grows on its head, and its tail
- * is wound round and round with a clean bandage.
- */
-const SALVA_BASE = pawed({ high: 1.45, len: 2.0, legs: 0.9, neck: 0.4, lean: 30, swing: [24, 40], ears: [35, 25], tail: [0.4, 18, 14] });
-const SALVA_SPEC: QuadSpec = { ...SALVA_BASE, tail: { ...SALVA_BASE.tail!, links: 4, len: 0.34 }, nose: 12 };
-const SALVA_HEAD = { c: [0, 0.3, 0.2] as V3, r: [0.98, 0.94, 0.92] as V3 };
-
-function salvaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = SALVA_HEAD;
-  const sprig = merge(
-    tube(curve([0, 0.1, 0.8], [0.05, 0.05, 1.15], [0.12, -0.1, 1.45], 3), 0.04, 0.04, 4, 'stem'),
-    ...([[0.06, 0.02, 1.12, 1], [0.1, -0.05, 1.3, -1], [0.12, -0.1, 1.45, 1]] as Array<[number, number, number, number]>).map(([x, y, z, s]) =>
-      blade(curve([x, y, z], [x + s * 0.15, y, z + 0.08], [x + s * 0.28, y - 0.02, z + 0.04], 3), [0.03, 0.09, 0.08, 0.01], [0, 1, 0.2], { mat: 'leaf', rib: 'leafDark' })),
-  );
-  const face = merge(snout(1.0, -0.2, [0.36, 0.3, 0.38], 0.1, n, k), sprig);
-  // An ear: a mint leaf on a short stalk, serrated by its ribs, turned to show its face.
-  const ear = merge(
-    tube([[0, 0, -0.05], [0, 0, 0.12]], 0.05, 0.05, 5, 'stem', { seam: 'start' }),
-    blade(curve([0, 0, 0.1], [0, -0.04, 0.38], [0, 0, 0.66], 4), [0.06, 0.2, 0.22, 0.14, 0.02], [0, 1, 0], { twist: -0.8, fold: 0.3, mat: 'leaf', rib: 'leafDark' }),
-  );
-  // The tail wound with bandage: cloth and coat by turns down its length, the tip left bare.
-  const wrap = (q: number): Mat => (q % 2 ? 'cap' : 'coatDark');
-  const tail = [
-    taper([[0, 0, 0], [0, -0.34, 0]], 0.16, 0.15, 7, (r) => wrap(r)),
-    taper([[0, 0, 0], [0, -0.34, 0]], 0.15, 0.14, 7, (r) => wrap(r + 1)),
-    taper([[0, 0, 0], [0, -0.34, 0]], 0.14, 0.12, 7, (r) => wrap(r)),
-    taper([[0, 0, 0], [0, -0.3, 0]], 0.12, 0.05, 6, 'coat'),
-  ];
-  // Long fingers: a narrow paw with three long fingers forward.
-  const hand = (lod2: number): Mesh => merge(
-    orbAlong([0, 0.08, -0.08], [0, 1, 0], [0.18, 0.14, 0.3], lod2, 4, 'mark'),
-    ...[-0.08, 0, 0.08].map((x) => taper([[x, 0.2, -0.1], [x * 1.4, 0.48, -0.12]], 0.05, 0.035, 4, 'mark')),
-  );
-  return quadPieces({
-    n, k,
-    body: { y: [-1.05, -0.85, -0.4, 0.1, 0.55, 0.85, 1.0], z: [0.1, 0.12, 0.17, 0.22, 0.28, 0.32, 0.35], w: [0.25, 0.8, 0.94, 0.96, 0.9, 0.78, 0.25], h: [0.24, 0.7, 0.82, 0.84, 0.8, 0.68, 0.24], belly: true },
-    neck: { w: 0.56, h: 0.56, len: 0.4 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.76, 0.5, 0.32], size: 0.3, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.18] },
-    ear,
-    earTurn: 25,
-    tail,
-    fore: { upper: [0.3, -0.5, 0.2, 0.17], lower: [0, -0.46, 0.16, 0.14], foot: hand(n) },
-    hind: { upper: [0.3, -0.5, 0.26, 0.22], lower: [0, -0.46, 0.2, 0.17], foot: pawMesh(0.2, n, k, 'mark') },
-  }).map((pc) => (pc.key === 'ear0' || pc.key === 'ear1' ? { ...pc, thin: true, airy: true } : pc));
-}
-
-export const SALVA: Kind = {
-  bones: quadBonesOf(SALVA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it looks you over: the head tipped one way and then the other, as somebody does looking for what is wrong.
-    if (a.go <= 0) p.head[2] += 14 * cyc(a.t, 2) * (1 - a.graze);
-  }),
-  build: salvaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ leaf: [150, 210, 150], leafDark: [96, 160, 104], stem: [120, 150, 96], cap: [250, 250, 244] }), 140),
-  shadow: [1.3, 1.0],
-  stride: 1.25,
-  size: 1.6,
-};
 
 /* ---- the brambo: a coat of burrs and berries --------------------------------------- */
 

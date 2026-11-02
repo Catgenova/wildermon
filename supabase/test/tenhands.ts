@@ -14,6 +14,8 @@
  *     the health, the carcass, the hide, the grain and the lantern changed as
  *     the words say, and what is made put in the stores;
  *   * the three that walk out find their tile and bring home what the tile gives;
+ *   * a salva at its third stage, a Herbwarden, takes its stage's dressings and its line's one more out of the stores
+ *     in a go (`stageLoads`, the island's `stage_loads`): four, one for each of yours it sees to in that go;
  *   * the words carry the numbers the rules use, and nothing is left unfilled.
  *
  * Runs against the database the suite leaves behind, in one transaction that
@@ -22,7 +24,10 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { deedJobLine } from '../../src/game/creaturecrate';
-import { CARE_WANTING, DAIRY_FULL, GATHER_DO, HEAL_BELOW, MILL_RECIPES, SPECIES, TAN_RECIPES, TEND_JOBS, type Creature } from '../../src/game/creatures';
+import {
+  CARE_WANTING, DAIRY_FULL, EVOLVE_AT, GATHER_DO, GATHER_SKILL, HEAL_BELOW, MILL_RECIPES, SPECIES, STAGE_LOADS, STAGE_PERKS, TAN_RECIPES, TEND_JOBS,
+  type Creature,
+} from '../../src/game/creatures';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { TileType } from '../../src/world/tiles';
 
@@ -124,6 +129,22 @@ begin
     from creature where world_id = w and id = v_o;
   update creature set mode = 'stored' where world_id = w and id = v_id;
   update creature set mode = 'stored' where world_id = w and id in (v_o, v_o2);
+  delete from item where world_id = w and holder = 'crate' and crate = 7101;
+
+  -- A Herbwarden: six of yours bleeding together, six bandages in the crate, and one go of it from the crate.
+  for v_n in 0..5 loop
+    v_o2 := creature_spawn(w, 'woola', 19.5 + (v_n % 3) * 0.6, 19.5 + (v_n / 3) * 0.6, 'active', now() - interval '60 days', u);
+    update creature set health = 1, bleed_until = now() + interval '1 hour', bleed_rate = 0.01, hurt_at = now() where world_id = w and id = v_o2;
+  end loop;
+  insert into item (world_id, holder, crate, gx, gy, def, ql, count) values (w, 'crate', 7101, 17, 16, 'bandage', 50, 6);
+  v_id := creature_spawn(w, 'salva', 17.5, 16.5, 'deed', now() - interval '60 days', u);
+  update creature set traits = '{}', rare = null, care = 0, carrying = null, hunger = 1, stance = 'passive', work_x = 17, work_y = 16,
+         skills = jsonb_build_object('${GATHER_SKILL.heal}', ${EVOLVE_AT[1]}) where world_id = w and id = v_id;
+  perform errand_go(w, v_id);
+  insert into said select 'WARDEN', coalesce(carrying->>'def', '-') || ' ' || coalesce(carrying->>'count', '0') || '|' || stage_loads(cr)
+    || '|' || (select coalesce(sum(count), 0) from item where world_id = w and holder = 'crate' and crate = 7101 and def = 'bandage')
+    from creature cr where cr.world_id = w and cr.id = v_id;
+  delete from creature where world_id = w and (id = v_id or (species = 'woola' and id <> v_o));
   delete from item where world_id = w and holder = 'crate' and crate = 7101;
 
   -- Carra: a rabba carcass in the crate, which it leaves where it is: no worker butchers.
@@ -247,6 +268,9 @@ check('a sheela shears a woola of yours and milks a cudda into the bucket in the
 const [healed, bleeding, bandages] = at('HEAL').split('|');
 check('a salva dresses a bleeding woola of yours with the bandage out of the stores: the bleeding stops and its health comes up',
   Number(healed) > 1 && bleeding === 'stopped' && bandages === '0', at('HEAL'));
+const WARDEN_TAKES = STAGE_LOADS[2] + STAGE_PERKS.salva.n;
+check(`on the island, a Herbwarden takes ${WARDEN_TAKES} bandages out of the stores in a go, its stage's and its line's one more, and leaves the rest`,
+  at('WARDEN') === `bandage ${WARDEN_TAKES}|${WARDEN_TAKES}|${6 - WARDEN_TAKES}`, at('WARDEN'));
 check('a carra leaves the rabba in the stores as it is: no worker butchers', at('BUTCHER') === 'corpse 1', at('BUTCHER'));
 check('a tanna tans the hide in the lye with no carving knife in the stores, and the leather goes back in beside what lye is left',
   at('TAN') === 'leather 1,lye_bucket 1', at('TAN'));
@@ -329,6 +353,25 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   worker(g, 'salva');
   run(g, 60);
   check('a salva dresses a bleeding woola of yours with the bandage out of the stores', woola.health > 1 && woola.bleedUntil <= g.time && held(crate) === '-', `${woola.health} ${held(crate)}`);
+}
+{
+  const g = body();
+  const crate = stock(g, 21, 20, [['bandage', 6]]);
+  for (let n = 0; n < 6; n++) {
+    const woola = g.creatures.spawn('woola', 23.5 + (n % 3) * 0.6, 23.5 + Math.floor(n / 3) * 0.6, 'active', g.rand, g.time - 3600 * 24 * 30);
+    woola.health = 1;
+    woola.bleedUntil = g.time + 3600;
+    woola.bleedRate = 0.01;
+  }
+  const c = worker(g, 'salva');
+  c.traits = [];
+  c.skills = { [GATHER_SKILL.heal]: EVOLVE_AT[1] };
+  let took = '-';
+  for (let i = 0; i < 600 && took === '-'; i++) {
+    run(g, 0.1);
+    if (c.carrying?.id === 'bandage') took = `${c.carrying.count}|${held(crate)}`;
+  }
+  check(`in the browser, a Herbwarden takes ${WARDEN_TAKES} bandages out of the stores in a go and leaves the rest`, took === `${WARDEN_TAKES}|bandage ${6 - WARDEN_TAKES}`, took);
 }
 {
   const g = body();
