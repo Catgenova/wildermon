@@ -481,7 +481,7 @@ declare w uuid := (select wld.w from wld); u uuid := (select wld.u from wld);
 begin
   insert into said select 'TURNED:' || k.was, c.species || '|' || c.name || '|' || (c.keeper = u) || '|' || (c.skills->>'body_strength') || '|' || (c.skills->>'fighting')
       || '|' || coalesce(c.skills->>(select g.skill from gather_def g join species_def sd on sd.gathers = g.id where sd.id = c.species), '-')
-      || '|' || array_to_string(c.traits, ',') || '|' || c.health || '|' || creature_level(c.skills)
+      || '|' || array_to_string(c.traits, ',') || '|' || c.health || '|' || creature_level(c.skills, c.species)
       || '|' || (select count(*) from class_mark m where m.world_id = w and m.creature_id = c.id)
     from kept k join creature c on c.world_id = w and c.id = k.id;
   insert into said select 'WILD', (select count(*) from creature where world_id = w and id = (select wild from wld)) || '|'

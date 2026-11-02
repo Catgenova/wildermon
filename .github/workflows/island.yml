@@ -4163,6 +4163,20 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/haulclimb.mjs --log-level=error
           node node_modules/.cache/haulclimb.mjs
 
+      - name: Climbing in the traces at a Wagonox's rate, level off the level skill
+        if: matrix.shard == 4
+        run: |
+          # Asked of a Chiptail line levelling far quicker than a Wagonox in
+          # the same wagon: a tile in the traces teaches climbing at a
+          # Wagonox's base a tile pulled (`haul_learn` = `learns_gain_pull`),
+          # a steeper step proportionally more; and a creature's level and
+          # stage are its level skill's, the highest skill only for a kind
+          # with none. Both sides, and the migration's one-off step keeps every
+          # creature at the stage it had.
+          npx esbuild supabase/test/haullevel.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/haullevel.mjs --log-level=error
+          node node_modules/.cache/haullevel.mjs
+
       - name: A bag worn carries more
         if: matrix.shard == 4
         run: |

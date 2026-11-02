@@ -5139,10 +5139,19 @@ export const HAUL_SKILL = 'climbing';
  * Climbing a tile ridden or pulled teaches a beast: `HAUL_LEARN` on the flat, and one more for every `HAUL_LEARN_RISE`
  * of height between the tile's centre and the last's, to `HAUL_LEARN_STEEP` more. The island's `haul_learn`,
  * `haul_learn_steep`, `haul_learn_rise` and `haul_learn_of`.
+ *
+ * A flat tile is what a tile pulled teaches a kind that learns its own skill by pulling (`PULL_LEARN`), so a Wagonox at
+ * its pace (`LEARN_PACE.pull`) learns its driving quicker than any other kind in the traces learns climbing. Asked for,
+ * of a Chiptail line levelling far quicker than a Wagonox in the same traces: "Climbing in the traces at the Wagonox's
+ * rate", a steeper step worth proportionally more. Was 0.05 on the flat and 0.5 more at a rise of 12.
  */
-export const HAUL_LEARN = 0.05;
-export const HAUL_LEARN_STEEP = 0.5;
-export const HAUL_LEARN_RISE = 24;
+export const HAUL_LEARN = PULL_LEARN;
+/** What the steepest step teaches on top of a flat tile, as so many flat tiles. */
+export const HAUL_STEEP_TIMES = 10;
+/** The rise, between a tile's centre and the last's, from which a step teaches the whole of `HAUL_LEARN_STEEP` more. */
+export const HAUL_STEEP_AT = 12;
+export const HAUL_LEARN_STEEP = HAUL_LEARN * HAUL_STEEP_TIMES;
+export const HAUL_LEARN_RISE = HAUL_STEEP_AT / HAUL_LEARN_STEEP;
 export const haulLearn = (rise: number): number => HAUL_LEARN + Math.min(HAUL_LEARN_STEEP, Math.abs(rise) / HAUL_LEARN_RISE);
 /**
  * The skill a draught beast keeps in the traces, which a team's pace and the steepest step its wheels take read
@@ -5878,13 +5887,18 @@ const FORAGE_TIME = 2.5;
 /** What an errand waits after fetching what it carries out of the stores, as the island's `worker_settle` does after a fetch. */
 const ERRAND_FETCH = 0.5;
 
-/** A creature's level, read off its best task skill. */
 /**
- * A wildermon's level is its skill: the one it was born to (its job's, a draught beast's hauling, or its own), to the whole
- * number below, and one for a kind that has none. Asked for: "Level should be equal to that skill, since there's only
- * 1 skill per wildermon". The island's `creature_level`.
+ * A wildermon's level is its level skill (`levelSkill`): its trade's, its own, or a draught beast's or a mount's climbing,
+ * to the whole number below, and one without it. Asked for: "Level should be equal to that skill, since there's only
+ * 1 skill per wildermon", and "Level and evolution read only a kind's own level skill": the climbing a Chiptail learns
+ * in the traces, or the fighting any learns, levels and evolves nothing. A kind with no level skill is at its highest
+ * skill. The island's `creature_level`.
  */
-export const creatureLevel = (c: Pick<Creature, 'skills'>): number => Math.max(1, Math.floor(Math.max(0, ...Object.values(c.skills))));
+export function creatureLevel(c: Pick<Creature, 'species' | 'skills'>): number {
+  const def = SPECIES[c.species];
+  const skill = def ? levelSkill(def) : null;
+  return Math.max(1, Math.floor(skill ? c.skills[skill] ?? 0 : Math.max(0, ...Object.values(c.skills))));
+}
 
 /** How long a deed worker takes over a task: twice what a player of the same skill would. */
 export function workDuration(skill: number): number {

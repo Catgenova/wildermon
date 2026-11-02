@@ -277,9 +277,10 @@ begin
   update creature set skills = '{"climbing": 37.5}' where world_id = w and id = v_old;
   update creature set skills = '{"climbing": 12.25, "driving": 20}' where world_id = w and id = v_both;
   update creature set skills = '{"climbing": 41}' where world_id = w and id = v_orse;
-  insert into said select 'LEVEL', creature_level(skills)::text from creature where world_id = w and id = v_old;
+  -- Its level then: the highest of its skills, as a creature's level was until 20261102180001.
+  insert into said select 'LEVEL', floor((select max(value::numeric) from jsonb_each_text(skills)))::int::text from creature where world_id = w and id = v_old;
   ${carry ?? ''}
-  insert into said select 'CARRIED', string_agg(skills::text || '@' || creature_level(skills), ' ' order by id)
+  insert into said select 'CARRIED', string_agg(skills::text || '@' || creature_level(skills, species), ' ' order by id)
     from creature where world_id = w and id in (v_old, v_both, v_orse);
 end $t$;
 select k || '=' || v from said order by k;

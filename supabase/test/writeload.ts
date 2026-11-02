@@ -51,7 +51,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 
 /** The functions 20261101350001 made PL/pgSQL. */
 const PLANNED = [
-  'stage_of(creature)', 'creature_level(jsonb)', 'trait_mul(text[], text)', 'aura_channel(text)',
+  'stage_of(creature)', 'creature_level(jsonb, text)', 'trait_mul(text[], text)', 'aura_channel(text)',
   'deed_aura_of(uuid, uuid, bigint, text)', 'evo_perk(creature, text)', 'perk_n(creature, text)', 'task_skill(creature)',
   'work_range(creature)', 'den_class(creature)', 'learn_pace(creature, text)', 'species_health(text)',
   'class_mul(uuid, uuid, text, text)', 'rarity_blood(text, text)', 'companion_quick(creature)', 'kind_name_at(creature)',
@@ -114,7 +114,7 @@ const T = 24;
 const NUMBERS = `(
   select string_agg(line, E'\\n' order by line collate "C") from (
     select 'c ' || c.world_id || ' ' || c.id || ' ' || array_to_string(array[
-        stage_of(c)::text, creature_level(c.skills)::text, task_skill(c)::text, work_range(c)::text, den_class(c)::text,
+        stage_of(c)::text, creature_level(c.skills, c.species)::text, task_skill(c)::text, work_range(c)::text, den_class(c)::text,
         species_health(c.species)::text, max_health(c)::text, kind_name_at(c), kind_named(c)::text, companion_quick(c)::text,
         stun_left(c.world_id, c.id)::text, age_row(c.born, old_of(c), age_pace(c))::text, age_row(c.born, old_of(c))::text,
         class_mul(c.world_id, c.keeper, 'hide', 'soul_strength')::text, class_mul(c.world_id, c.keeper, 'speed', 'body_strength')::text,

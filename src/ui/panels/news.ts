@@ -78,6 +78,7 @@ import { RUNESTONES, START_GAP, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE
 import { BAG_CARRY as BAG_CARRY_293 } from '../../game/gear';
 import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
+import { HAUL_LEARN as HAUL_LEARN_450, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_450, HAUL_STEEP_AT as HAUL_STEEP_AT_450 } from '../../game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
 import { ENCHANT_HEAD, HOARD_HEAD, MIND_GAIN, PROSPECT_HEAD, SOUL_GAIN, TAME_HEAD } from '../../game/learn';
 import { BARTER_IDLE, BARTER_REACH, BARTER_SAID } from '../../game/barter';
@@ -4244,6 +4245,20 @@ export const NEWS: News[] = [
     n: 451,
     day: '2026-11-02',
     lines: () => [`Changed: founding a settlement: its token at least ${DEED_SPACING} tiles from every other settlement's token on one axis (borders at level ${MAX_DEED_LEVEL} ${DEED_GAP} tiles apart; was: no overlap at level 1). Settlements already standing stay.`],
+  },
+  {
+    n: 450,
+    day: '2026-11-02',
+    lines: () => {
+      const rox = SPECIES.roxxen, chip = SPECIES.quarra;
+      return [
+        `Changed: climbing per tile in the traces or under a rider: base gain ${HAUL_LEARN_450} flat (was 0.05), ${HAUL_LEARN_450 + HAUL_LEARN_STEEP_450} at a rise of ${HAUL_STEEP_AT_450}+ (was 0.55). `
+          + `Same base as ${rox.name} line driving per tile; ${rox.name} line learning pace ${percent(PACE_258.pull)} on top.`,
+        `Changed: wildermon level and evolution stage: its level skill only (its task's, its own, or climbing for a draught kind or mount with neither); was its highest skill. `
+          + `Climbing in the traces, fighting, any other skill: no level, no evolution (e.g. ${chip.name} line: mining only).`,
+        `Already evolved by another skill: kept at its stage, level skill raised to the stage's level (${EVOLVE_AT[0]} or ${EVOLVE_AT[1]}).`,
+      ];
+    },
   },
   {
     n: 449,

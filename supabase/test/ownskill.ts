@@ -65,7 +65,7 @@ begin
   perform rpc_join(w, 'Mira');
   update player set x = 16.5, y = 16.5, body_at = now(), swim_at = now() where world_id = w and uid = u;
   insert into said select 'LEARNS:' || id, learns || '|' || learns_by from species_def where learns is not null;
-  insert into said values ('LEVELS', creature_level('{"foraging": 24.99}') || '|' || creature_level('{"foraging": 25}') || '|' || creature_level('{}'));
+  insert into said values ('LEVELS', creature_level('{"foraging": 24.99}', 'rabba') || '|' || creature_level('{"foraging": 25}', 'rabba') || '|' || creature_level('{}', 'rabba'));
 
   -- A woola, born knowing a little, sheared.
   a := creature_spawn(w, 'woola', 17, 16.5, 'active', now() - interval '60 days', u);
