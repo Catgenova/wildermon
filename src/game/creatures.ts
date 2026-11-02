@@ -3622,12 +3622,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'bandage',
     workRange: 10,
-    // [patches, fur]: the sheet's lavender-grey on cream, a dove grey on ivory, a lilac on oatmeal, and a slate on buff.
+    // [patches, fur]: the sheet's warm grey-lavender on cream, a dove grey on ivory, a lilac-grey on oatmeal, and a slate on buff.
     variants: [
-      ['#9890b4', '#f6eedc'],
-      ['#a09ca8', '#f4f0e6'],
-      ['#ac98bc', '#f2e6d4'],
-      ['#8a8ca4', '#f0e6d2'],
+      ['#988fad', '#f6eedc'],
+      ['#a39dab', '#f4f0e6'],
+      ['#a497b4', '#f2e6d4'],
+      ['#8d889e', '#f0e6d2'],
     ],
     butcher: { meat: 3, leather: 4, bone: 2, gland: 2 },
     wound: 'pierce',

@@ -97,7 +97,7 @@ const CLOTHKIT_LOOK: Loom = {
   head: { r: [0.31, 0.32, 0.28], up: 0.2, pitch: 0 },
   eye: { dir: [0.52, 0.72, 0.22], size: 0.085 },
   ear: { dir: [0.34, -0.3, 0.9], len: 0.66, w: 0.2, back: 8, splay: 20, turn: 30, lop: 22 },
-  ruff: { count: 12, len: 0.1, rows: 1 },
+  ruff: { count: 14, len: 0.13, rows: 1 },
   tail: { at: [0, -0.56, 0.02], r: 0.13 },
   saddle: 0, spiral: false, wrapped: false, diamond: false,
   roll: [0, 0], wind: [0.11, 0.22], band: 0.16,
@@ -120,7 +120,7 @@ const LOOMHARE_LOOK: Loom = {
   head: { r: [0.34, 0.38, 0.31], up: 0.22, pitch: 0 },
   eye: { dir: [0.54, 0.72, 0.22], size: 0.082 },
   ear: { dir: [0.32, -0.32, 0.9], len: 0.98, w: 0.26, back: 16, splay: 18, turn: 30, lop: 22 },
-  ruff: { count: 20, len: 0.22, rows: 3 },
+  ruff: { count: 22, len: 0.3, rows: 3 },
   tail: { at: [0, -0.76, 0.04], r: 0.16 },
   saddle: 0.75, spiral: true, wrapped: false, diamond: false,
   roll: [0.15, 0.3], wind: [0.13, 0.26], band: 0.17,
@@ -131,25 +131,25 @@ const LOOMHARE_LOOK: Loom = {
 /** A Bandageweaver: large and stately, sitting tall, its head raised, very long ears, a great ruff, bandaged fore legs, ribbons looped round it. */
 const BANDAGEWEAVER_LOOK: Loom = {
   stage: 2,
-  high: 0.62,
-  hips: { c: [0, -0.26, 0.04], r: [0.72, 0.92, 0.62] },
-  leg: { at: [0.42, -0.3, -0.22], len: [0.36, 0.36], haunch: [0.32, 0.55, 0.48], foot: [0.72, 0.18], heel: [0.46, -0.72, 0] },
-  chest: { at: [0, 0.4, 0.1], lean: 2 },
-  torso: { z: [-0.25, 0.15, 0.5, 0.72], y: [-0.06, 0.06, 0.06, 0], w: [0.6, 0.56, 0.46, 0.34], h: [0.55, 0.52, 0.42, 0.3] },
-  shoulder: [0.34, 0.16, 0.3],
-  arm: [0.5, 0.56], armW: [0.19, 0.17], hand: 0.15,
-  paw: [0.26, 0.44, 0.1],
-  pawDown: [0.3, 0.86, 0],
-  neck: { at: [0, 0.05, 0.7], len: 0.12, w: 0.36 },
-  head: { r: [0.44, 0.5, 0.4], up: 0.28, pitch: 22 },
-  eye: { dir: [0.56, 0.7, 0.2], size: 0.09 },
-  ear: { dir: [0.3, -0.45, 0.84], len: 1.7, w: 0.27, back: 46, splay: 12, turn: 50, lop: 10 },
-  ruff: { count: 24, len: 0.36, rows: 3 },
-  tail: { at: [0, -1.12, 0.06], r: 0.22 },
+  high: 0.66,
+  hips: { c: [0, -0.28, 0.04], r: [0.78, 0.98, 0.68] },
+  leg: { at: [0.46, -0.32, -0.24], len: [0.38, 0.38], haunch: [0.42, 0.68, 0.62], foot: [0.78, 0.2], heel: [0.5, -0.78, 0] },
+  chest: { at: [0, 0.42, 0.12], lean: 2 },
+  torso: { z: [-0.25, 0.15, 0.55, 0.8], y: [-0.06, 0.06, 0.06, 0], w: [0.64, 0.6, 0.5, 0.36], h: [0.58, 0.55, 0.45, 0.32] },
+  shoulder: [0.36, 0.18, 0.34],
+  arm: [0.54, 0.6], armW: [0.2, 0.18], hand: 0.16,
+  paw: [0.28, 0.48, 0.1],
+  pawDown: [0.32, 0.92, 0],
+  neck: { at: [0, 0.05, 0.78], len: 0.14, w: 0.4 },
+  head: { r: [0.58, 0.64, 0.53], up: 0.34, pitch: 20 },
+  eye: { dir: [0.56, 0.7, 0.2], size: 0.11 },
+  ear: { dir: [0.3, -0.45, 0.84], len: 1.85, w: 0.32, back: 46, splay: 12, turn: 50, lop: 10 },
+  ruff: { count: 26, len: 0.46, rows: 3 },
+  tail: { at: [0, -1.24, 0.06], r: 0.24 },
   saddle: 1, spiral: true, wrapped: true, diamond: true,
-  roll: [0.26, 0.52], wind: [0.17, 0.34], band: 0.26,
-  gait: { reach: 0.9, lift: 0.26 },
-  size: 5.8,
+  roll: [0.36, 0.7], wind: [0.18, 0.36], band: 0.34,
+  gait: { reach: 0.95, lift: 0.26 },
+  size: 5.0,
 };
 
 const LOOKS: readonly Loom[] = [CLOTHKIT_LOOK, LOOMHARE_LOOK, BANDAGEWEAVER_LOOK];
@@ -198,11 +198,18 @@ const onEggDir = (c: V3, r: V3, p: V3): V3 => [(p[0] - c[0]) / r[0], (p[1] - c[1
 const patchy = (p: V3, seed: number): number =>
   Math.sin(p[0] * 4.3 + seed) * Math.sin(p[1] * 3.6 + 1.7 * seed + p[2] * 1.4) + 0.6 * Math.sin(p[2] * 5.2 - p[0] * 2.1 + seed * 0.7);
 
-/** Whether a point on the coat (its way out of what it is on, scaled) is lavender: up the back and over the haunches, cream under and in front. */
-function lavenderAt(s: Loom, d: V3, seed: number): boolean {
+/**
+ * The coat at a point on it (its way out of what it is on, scaled): lavender up the back and over the haunches, cream under and in
+ * front, a band of the two blended between them, and cream mottles breaking into the lavender.
+ */
+function furAt(s: Loom, d: V3, seed: number): Mat {
   const top = d[2] + 0.35 * -d[1];
-  if (s.saddle > 0) return top > 0.55 - s.saddle * 0.75 + 0.12 * patchy(d, seed) && d[1] < 0.55;
-  return top > 0.35 && patchy(scale(d, 0.6), seed) > -0.1;
+  const v = s.saddle > 0
+    ? (d[1] < 0.55 ? top - (0.55 - s.saddle * 0.75) + 0.12 * patchy(d, seed) : -1)
+    : Math.min(top - 0.35, patchy(scale(d, 0.6), seed) + 0.1);
+  if (v > 0.14) return patchy(scale(d, 2.4), seed + 5) > 0.95 ? 'coatLight' : 'coat';
+  if (v > -0.04) return 'coatLight';
+  return 'mark';
 }
 
 /** Two bones bent to put the end of the second at `to` from `from`, the joint between them bowed toward `hint`. */
@@ -724,7 +731,7 @@ function headOf(s: Loom, n: number, k: number, shut: boolean): Mesh {
   const nose = egg(add(mc, [0, mr[1] * 0.9, mr[2] * 0.42]), UPRIGHT, [R[0] * 0.1, R[0] * 0.06, R[0] * 0.07], 6, 3, 'nose');
   const mouth = smile(add(mc, [0, mr[1] * 0.96, -mr[2] * 0.2]), [0, 1, 0.1], R[0] * 0.16, 'lid');
   // A blush under each eye.
-  const blush = paint([1, -1].map((sd) => patchOn(C, R, [sd * (s.eye.dir[0] + 0.25), s.eye.dir[1] - 0.05, s.eye.dir[2] - 0.45], s.eye.size * 1.2, s.eye.size * 0.7, 'inner', sd * 0.25, 0.03, 10)));
+  const blush = paint([1, -1].map((sd) => patchOn(C, R, [sd * (s.eye.dir[0] + 0.25), s.eye.dir[1] - 0.05, s.eye.dir[2] - 0.45], s.eye.size * 1.0, s.eye.size * 0.55, 'petal', sd * 0.25, 0.03, 10)));
   return merge(skull, ...cheeks, muzzle, nose, mouth, blush, eyesOf(s, shut));
 }
 
@@ -774,29 +781,34 @@ function earOf(s: Loom, n: number): Mesh {
   const ws = [0.5, 0.86, 1, 0.97, 0.8, 0.5, 0.04].map((x) => x * w);
   const line = zs.map((z, q) => [0, -0.05 * Math.sin((q / 6) * Math.PI) * L * 0.2, z] as V3);
   const cup = (p: V3): V3 => [p[0], p[1] + 0.32 * w * Math.min(1, (p[0] / w) ** 2), p[2]];
-  const tip = s.stage === 0 ? 0.55 : 0.42;
-  const shell = tube(line, ws, ws.map((x) => Math.max(0.02, x * 0.2)), Math.max(8, n), (ring) => (us[ring] >= tip ? 'coat' : 'mark'), { up: [0, 1, 0] });
+  const shell = tube(line, ws, ws.map((x) => Math.max(0.02, x * 0.2)), Math.max(8, n), (ring) => (ring === 0 ? 'mark' : 'coat'), { up: [0, 1, 0] });
   const cupped = mesh(shell.v.map(cup), shell.f);
   const rim = (sd: number): V3[] => [1, 2, 3, 4, 5].map((q) => cup([sd * ws[q] * 0.7, line[q][1] + ws[q] * 0.2 + 0.012, zs[q]]));
   const lining: V3[] = [cup([0, line[0][1] + ws[0] * 0.2 + 0.012, zs[0] + L * 0.05]), ...rim(-1), cup([0, line[6][1] + 0.02, L * 0.94]), ...rim(1).reverse()];
   return merge(cupped, paint([facing(lining, [0, 1, 0], 'inner')]));
 }
 
-/** The ruff at its chest, in the chest's frame: cream tufts out and down from round the top of the torso, thickest in front. */
+/** A rounded tuft of fur: a flattened egg from `root` out along `dir`, lying with its flat to `face`. */
+function lobe(root: V3, dir: V3, face: V3, L: number, W: number, mat: Mat): Mesh {
+  const Y = unit(dir), X = unit(cross(Y, face)), Z = cross(X, Y);
+  return egg(add(add(root, scale(Y, L * 0.42)), scale(Z, L * 0.04)), [X, Y, Z], [W, L * 0.55, L * 0.2], 7, 4, mat);
+}
+
+/** The ruff at its chest, in the chest's frame: layered rounded cream tufts out and down from round the top of the torso, biggest in front. */
 function ruffOf(s: Loom): Mesh {
   const F = s.ruff, out: Mesh[] = [];
   const zt = s.torso.z[s.torso.z.length - 1];
   for (let row = 0; row < F.rows; row++) {
-    const z = zt - 0.02 - row * F.len * 0.62;
-    const count = F.count - row * 2;
+    const z = zt - 0.02 - row * F.len * 0.55;
+    const count = Math.max(6, Math.round(F.count * 0.6) - row);
     for (let q = 0; q < count; q++) {
-      const a = (q / count) * TAU + row * 0.25 + Math.PI / 2;
+      const a = (q / count) * TAU + row * (Math.PI / count) + Math.PI / 2;
       const front = Math.cos(a - Math.PI / 2);
-      if (front < -0.2 && row > 0) continue;
-      const on = onTorso(s, z, a, -0.02);
-      const L = F.len * (0.8 + 0.4 * jitter(q + row * 31)) * (0.7 + 0.45 * Math.max(0, front));
-      const tip = add(add(on.p, scale(on.n, L * 0.72)), [0, 0, -L * 0.62]);
-      out.push(tuft(on.p, tip, L * 0.4, on.n, q % 3 === 0 ? 'muzzle' : 'mark', L * 0.1));
+      if (front < -0.3 && row > 0) continue;
+      const on = onTorso(s, z, a, -0.03);
+      const L = F.len * (0.85 + 0.3 * jitter(q + row * 31)) * (0.75 + 0.4 * Math.max(0, front));
+      const dir = unit(add(scale(on.n, 0.62), [0, 0, -0.78]));
+      out.push(lobe(on.p, dir, on.n, L, L * 0.42, (q + row) % 3 === 0 ? 'muzzle' : 'mark'));
     }
   }
   return merge(...out);
@@ -809,7 +821,7 @@ function torsoOf(s: Loom, n: number, seed: number): Mesh {
   return painted(m, (c) => {
     const r = torsoAt(s, c[2]), d: V3 = [c[0] / r.w, (c[1] - r.y) / r.h, 0];
     if (d[1] > (s.saddle > 0 ? 0.3 : -0.2)) return 'mark';
-    return lavenderAt(s, [d[0], d[1], 0.5 + c[2]], seed + 1) ? 'coat' : 'mark';
+    return furAt(s, [d[0], d[1], 0.5 + c[2]], seed + 1);
   });
 }
 
@@ -881,7 +893,8 @@ function heldStrip(s: Loom): Ribbon {
       const out: Knot[] = [
         { bone: 'root', p: mouth, n: fwd, w: w * 0.7 },
         { bone: 'root', p: held, n: fwd, w },
-        { bone: 'root', p: hang, n: unit(add(fwd, [0, 0, 0.3])), w },
+        { bone: 'root', p: [held[0] + 0.05, held[1] + 0.03, lerp(held[2], hang[2], 0.45)], n: unit(add(fwd, [0.8, 0, 0])), w },
+        { bone: 'root', p: [hang[0] - 0.04, hang[1] + 0.02, hang[2]], n: unit(add(fwd, [-0.6, 0, 0.25])), w },
         { bone: 'root', p: g0, n: unit([0.2, 0.4, 1]), w },
         { bone: 'root', p: [g0[0] + 0.12, g0[1] + 0.1, 0.08], n: unit([0.5, -0.4, 0.6]), w },
         { bone: 'root', p: [g0[0] + 0.04, g0[1] + 0.22, 0.02], n: [0, 0, 1], w },
@@ -907,7 +920,8 @@ function pawStrip(s: Loom): Ribbon {
         { bone: 'root', p: add(l, [-0.03, 0.02, 0.05]), n: fwd, w: w * 0.8 },
         { bone: 'root', p: add(mid, scale(fwd, 0.05)), n: unit(add(fwd, [0, 0, 0.2])), w },
         { bone: 'root', p: add(r, [0.02, 0.03, -0.02]), n: fwd, w },
-        { bone: 'root', p: [r[0] * 0.8 + 0.02, r[1] + 0.08, r[2] * 0.45], n: unit(add(fwd, [0.2, 0, 0.2])), w },
+        { bone: 'root', p: [r[0] + 0.06, r[1] + 0.05, r[2] * 0.68], n: unit(add(fwd, [0.9, 0, 0])), w },
+        { bone: 'root', p: [r[0] * 0.8 - 0.03, r[1] + 0.09, r[2] * 0.36], n: unit(add(fwd, [-0.6, 0, 0.25])), w },
         { bone: 'root', p: g0, n: unit([0.2, 0.3, 1]), w },
         { bone: 'root', p: [g0[0] - 0.16, g0[1] + 0.14, 0.09], n: unit([-0.4, -0.3, 0.7]), w },
         { bone: 'root', p: [g0[0] - 0.08, g0[1] + 0.3, 0.02], n: [0, 0, 1], w },
@@ -933,7 +947,8 @@ function windStrip(s: Loom): Ribbon {
       const g0: V3 = [R.t[0] * 0.5, R.t[1] + 0.16 + 0.04 * Math.sin(TAU * 3 * t), 0.03];
       return [
         { bone: 'root', p: off, n: fwd, w },
-        { bone: 'root', p: [off[0], off[1] + 0.06, off[2] * 0.55], n: unit(add(fwd, [0, 0, 0.3])), w },
+        { bone: 'root', p: [off[0] + 0.05, off[1] + 0.04, off[2] * 0.66], n: unit(add(fwd, [0.8, 0, 0])), w },
+        { bone: 'root', p: [off[0] - 0.04, off[1] + 0.08, off[2] * 0.33], n: unit(add(fwd, [-0.6, 0, 0.25])), w },
         { bone: 'root', p: g0, n: unit([0, 0.3, 1]), w },
         { bone: 'root', p: [g0[0] + 0.12, g0[1] + 0.14, 0.08], n: unit([0.5, -0.3, 0.7]), w },
         { bone: 'root', p: [g0[0] + 0.02, g0[1] + 0.3, 0.02], n: [0, 0, 1], w },
@@ -966,84 +981,73 @@ function loomhareRibbons(s: Loom): Ribbon[] {
   const top = s.torso.z[s.torso.z.length - 1];
   // Off the back of its shoulders, up and out behind in a wave, and down past its haunches to the ground.
   const streamer = (sd: number, key: string, up: number): Ribbon => ({
-    key, steps: 4, pieces: 8, marks: [0.5, 0.8], free: 0.25, flap: 0.16,
+    key, steps: 4, pieces: 8, marks: [0.5, 0.8], free: 0.25, flap: 0.12,
     knots: () => [
       onChest(s, top - 0.06, -Math.PI / 2 + sd * 0.35, 0.05, w * 0.8, [sd * 0.6, 0, 0.4]),
-      { bone: 'chest', p: [sd * 0.2, -0.34, top + 0.16 + up], n: unit([sd, -0.3, 0.4]), w: w * 0.95 },
-      { bone: 'chest', p: [sd * 0.34, -0.64, top + 0.22 + up], n: unit([sd, 0.1, 0.5]), w },
-      { bone: 'trunk', p: [sd * 0.5, -0.86, 0.4 + up * 0.5], n: unit([sd, -0.3, 0.2]), w },
-      { bone: 'trunk', p: [sd * 0.6, -1.04, 0.04], n: unit([sd, -0.5, 0.1]), w },
-      { bone: 'trunk', p: [sd * 0.56, -1.2, gz + 0.12], n: unit([sd * 0.5, -0.4, 0.7]), w },
-      { bone: 'trunk', p: [sd * 0.44, -1.38, gz + 0.01], n: [0, 0, 1], w: w * 0.9 },
+      { bone: 'chest', p: [sd * 0.2, -0.34, top + 0.16 + up], n: unit([sd, -0.3, 0.4]), w: w * 1.3 },
+      { bone: 'chest', p: [sd * 0.34, -0.64, top + 0.22 + up], n: unit([sd, 0.1, 0.5]), w: w * 1.4 },
+      { bone: 'trunk', p: [sd * 0.5, -0.86, 0.4 + up * 0.5], n: unit([sd, -0.3, 0.2]), w: w * 1.4 },
+      { bone: 'trunk', p: [sd * 0.6, -1.04, 0.04], n: unit([sd, -0.5, 0.1]), w: w * 1.4 },
+      { bone: 'trunk', p: [sd * 0.56, -1.2, gz + 0.12], n: unit([sd * 0.5, -0.4, 0.7]), w: w * 1.35 },
+      { bone: 'trunk', p: [sd * 0.44, -1.38, gz + 0.01], n: [0, 0, 1], w: w * 1.3 },
     ],
   });
   return [drape(1, 'drapeR', [0.36, 0.78], 0), drape(-1, 'drapeL', [0.5], -0.08), streamer(-1, 'streamL', 0.1), streamer(1, 'streamR', -0.04)];
 }
 
 /**
- * The Bandageweaver's ribbons: a sash round its body, across its chest from its left hip to its right shoulder and back down
- * behind; a ribbon rising off its back behind its head in a great loop and falling over its haunches to trail on the ground
- * behind it; one sweeping out from its right shoulder in a wide arc down to the ground before it; and one out from its haunches
- * in a wide arc behind on its left.
+ * The Bandageweaver's ribbons, four wide flat bands in big clean arcs: a sash round its body, across its chest from its left hip
+ * over its right shoulder and back down behind; a loop up off the back of its right shoulder, over its head and down its back over its
+ * haunches to the ground behind it; one sweeping out from its right shoulder to the ground before it; and one out from behind
+ * its left shoulder to the ground behind it on its left.
  */
 function weaverRibbons(s: Loom): Ribbon[] {
   const w = s.band, gz = -s.high + 0.02, T = s.torso.z, top = T[T.length - 1];
   const hz = s.neck.at[2] + s.neck.len + s.head.up;
   const sash: Ribbon = {
-    key: 'sash', steps: 3, pieces: 10, marks: [0.2], free: 1, flap: 0,
+    key: 'sash', steps: 4, pieces: 10, marks: [0.24], free: 1, flap: 0,
     knots: () => [
-      onChest(s, T[0] + 0.12, Math.PI / 2 + 1.25, 0.05, w * 0.9),
-      onChest(s, T[0] + 0.3, Math.PI / 2 + 0.55, 0.07, w),
-      onChest(s, T[1] + 0.12, Math.PI / 2 - 0.1, 0.08, w),
-      onChest(s, T[2] - 0.02, Math.PI / 2 - 0.75, 0.08, w),
-      onChest(s, top - 0.04, 0.05, 0.08, w, [0, 0, 0.8]),
-      onChest(s, T[2] - 0.04, -Math.PI / 2 + 0.75, 0.07, w),
-      onChest(s, T[1] + 0.05, -Math.PI / 2 - 0.2, 0.07, w),
-      onChest(s, T[0] + 0.14, -Math.PI / 2 - 1.0, 0.06, w),
-      onChest(s, T[0] + 0.1, Math.PI + 0.3, 0.05, w * 0.9),
+      onChest(s, T[0] + 0.12, Math.PI / 2 + 1.2, 0.06, w),
+      onChest(s, T[1] + 0.02, Math.PI / 2 + 0.4, 0.08, w),
+      onChest(s, T[2] - 0.04, Math.PI / 2 - 0.55, 0.09, w),
+      onChest(s, top - 0.04, 0.05, 0.09, w, [0, 0, 0.8]),
+      onChest(s, T[2] - 0.06, -Math.PI / 2 + 0.7, 0.08, w),
+      onChest(s, T[1] - 0.02, -Math.PI / 2 - 0.3, 0.07, w),
+      onChest(s, T[0] + 0.12, Math.PI + 0.25, 0.06, w),
     ],
   };
-  // The loop: up off the back behind the head and round, in a plane facing out to its side, and down over the haunches.
-  const cy = -0.62, cz = hz + 0.28, R = 0.46;
-  const ring = (deg: number, x: number): Knot => {
-    const a = (deg * Math.PI) / 180;
-    return { bone: 'chest', p: [x, cy + R * Math.cos(a), cz + R * Math.sin(a)], n: unit([1, 0.15 * Math.sin(a), -0.1]), w };
-  };
   const loop: Ribbon = {
-    key: 'loop', steps: 4, pieces: 12, marks: [0.3, 0.72], free: 0.6, flap: 0.08,
+    key: 'loop', steps: 5, pieces: 14, marks: [0.36, 0.7], free: 0.75, flap: 0.05,
     knots: () => [
-      onChest(s, top - 0.1, -Math.PI / 2 + 0.2, 0.06, w * 0.9, [0.6, 0, 0.5]),
-      { bone: 'chest', p: [0.18, -0.48, top + 0.2], n: unit([1, -0.2, 0]), w },
-      ring(-150, 0.16), ring(-200, 0.12), ring(-250, 0.06), ring(-290, 0), ring(-330, -0.06), ring(-375, -0.12),
-      { bone: 'trunk', p: [-0.22, -0.95, 0.68], n: unit([0.8, -0.2, 0.5]), w },
-      { bone: 'trunk', p: [-0.3, -1.3, 0.25], n: unit([0.6, -0.6, 0.4]), w },
-      { bone: 'trunk', p: [-0.34, -1.5, gz + 0.12], n: unit([0.3, -0.5, 0.8]), w },
-      { bone: 'trunk', p: [-0.2, -1.74, gz + 0.01], n: [0, 0, 1], w },
-      { bone: 'trunk', p: [0.08, -1.92, gz + 0.06], n: unit([0.3, 0.4, 0.8]), w: w * 0.95 },
+      onChest(s, top - 0.06, -Math.PI / 2 + 0.7, 0.08, w, [0, 0, 0.6]),
+      { bone: 'chest', p: [0.6, -0.5, hz - 0.1], n: unit([0.55, 0.65, 0.2]), w },
+      { bone: 'chest', p: [0.6, -0.56, hz + 0.6], n: unit([0.45, 0.75, 0.3]), w },
+      { bone: 'chest', p: [0.06, -0.5, hz + 1.04], n: unit([0, 0.75, 0.66]), w },
+      { bone: 'chest', p: [-0.52, -0.46, hz + 0.66], n: unit([-0.45, 0.7, 0.3]), w },
+      { bone: 'chest', p: [-0.62, -0.56, hz - 0.12], n: unit([-0.6, 0.5, 0.3]), w },
+      { bone: 'trunk', p: [-0.46, -0.84, 0.68], n: unit([-0.4, -0.3, 0.85]), w },
+      { bone: 'trunk', p: [-0.26, -1.34, 0.22], n: unit([-0.15, -0.6, 0.75]), w },
+      { bone: 'trunk', p: [-0.16, -1.66, gz + 0.02], n: [0, 0, 1], w },
     ],
   };
   const front: Ribbon = {
-    key: 'sweep', steps: 4, pieces: 8, marks: [0.42], free: 0.4, flap: 0.1,
+    key: 'sweep', steps: 5, pieces: 9, marks: [0.45], free: 0.45, flap: 0.06,
     knots: () => [
-      onChest(s, top - 0.08, 0.15, 0.08, w * 0.9, [0, 0, 0.5]),
-      { bone: 'chest', p: [0.66, 0.04, top + 0.08], n: unit([0.3, 0.3, 1]), w },
-      { bone: 'trunk', p: [1.08, 0.46, 0.5], n: unit([0.3, 0.9, 0.2]), w },
-      { bone: 'trunk', p: [1.2, 0.8, 0.0], n: unit([0.6, 0.7, -0.1]), w },
-      { bone: 'trunk', p: [1.04, 1.04, gz + 0.14], n: unit([0.3, 0.5, 0.7]), w },
-      { bone: 'trunk', p: [0.8, 1.2, gz + 0.01], n: [0, 0, 1], w },
-      { bone: 'trunk', p: [0.56, 1.36, gz + 0.06], n: unit([-0.3, 0.4, 0.8]), w: w * 0.95 },
+      onChest(s, top - 0.16, 0.05, 0.09, w, [0.3, 0.3, 0.3]),
+      { bone: 'trunk', p: [1.12, 0.36, 0.62], n: unit([0.45, 0.8, 0.2]), w },
+      { bone: 'trunk', p: [1.4, 0.64, 0.02], n: unit([0.6, 0.75, 0.0]), w },
+      { bone: 'trunk', p: [1.26, 0.94, gz + 0.06], n: unit([0.3, 0.4, 0.85]), w },
+      { bone: 'trunk', p: [0.94, 1.14, gz + 0.01], n: [0, 0, 1], w },
     ],
   };
   const back: Ribbon = {
-    key: 'trail', steps: 4, pieces: 8, marks: [0.5], free: 0.35, flap: 0.12,
+    key: 'trail', steps: 5, pieces: 9, marks: [0.45], free: 0.45, flap: 0.06,
     knots: () => [
-      onHips(s, [-0.15, -0.3, 0.95], 0.05, w * 0.9),
-      onHips(s, [-0.6, -0.4, 0.7], 0.07, w),
-      { bone: 'trunk', p: [-1.06, -0.6, 0.46], n: unit([-0.4, -0.6, 0.6]), w },
-      { bone: 'trunk', p: [-1.36, -0.3, 0.05], n: unit([-0.9, 0.1, 0.3]), w },
-      { bone: 'trunk', p: [-1.28, 0.02, gz + 0.12], n: unit([-0.6, 0.2, 0.7]), w },
-      { bone: 'trunk', p: [-1.04, 0.26, gz + 0.01], n: [0, 0, 1], w },
-      { bone: 'trunk', p: [-0.8, 0.42, gz + 0.06], n: unit([0.3, 0.3, 0.8]), w: w * 0.95 },
+      onChest(s, top - 0.2, Math.PI + 0.5, 0.08, w, [-0.3, -0.2, 0.3]),
+      { bone: 'trunk', p: [-1.12, -0.3, 0.64], n: unit([-0.5, 0.7, 0.3]), w },
+      { bone: 'trunk', p: [-1.42, -0.62, 0.04], n: unit([-0.7, 0.6, 0.0]), w },
+      { bone: 'trunk', p: [-1.26, -0.96, gz + 0.06], n: unit([-0.3, 0.3, 0.85]), w },
+      { bone: 'trunk', p: [-0.94, -1.16, gz + 0.01], n: [0, 0, 1], w },
     ],
   };
   return [sash, loop, front, back];
@@ -1051,7 +1055,7 @@ function weaverRibbons(s: Loom): Ribbon[] {
 
 /** A sling of ribbon round the roll at its side, up to its haunch: what holds it there. */
 function slingOf(s: Loom): Ribbon {
-  const R = s.roll[0], at = rollAt(s), w = s.band * 0.7;
+  const R = s.roll[0], at = rollAt(s), w = s.band * (s.stage === 2 ? 0.8 : 0.7);
   return {
     key: 'sling', steps: 3, pieces: 4, marks: [], free: 1, flap: 0,
     knots: () => [
@@ -1073,7 +1077,7 @@ function loomBuild(s: Loom, lod: number, bones: LoomBones): Piece[] {
   const n = cut(lod, 8, 10), k = cut(lod, 5, 6), pieces: Piece[] = [], seed = 1.7 + s.stage;
   const hide = headSolids(s);
   const Hc = s.hips.c, Hr = s.hips.r;
-  pieces.push({ key: 'hips', mesh: painted(orb(Hc, Hr, n + 12, k + 6, 'mark'), (c) => (lavenderAt(s, onEggDir(Hc, Hr, c), seed) ? 'coat' : 'mark')), bone: 'trunk', bias: 0 });
+  pieces.push({ key: 'hips', mesh: painted(orb(Hc, Hr, n + 12, k + 6, 'mark'), (c) => furAt(s, onEggDir(Hc, Hr, c), seed)), bone: 'trunk', bias: 0 });
   pieces.push({ key: 'torso', mesh: torsoOf(s, n + 10, seed), bone: 'chest', bias: 0.01, after: 'hips', breathes: { c: [0, 0, s.torso.z[1]], k: 0.04 } });
   pieces.push({ key: 'ruff', mesh: s.diamond ? merge(ruffOf(s), diamondOn(s)) : ruffOf(s), bone: 'chest', bias: 0.03, after: ['torso'], lines: false });
   pieces.push({ key: 'neck', mesh: tube([[0, 0, -0.08], [0, 0, s.neck.len + 0.06]], s.neck.w, s.neck.w * 0.9, n, 'mark'), bone: 'neck', bias: 0, under: 'head' });
@@ -1087,7 +1091,7 @@ function loomBuild(s: Loom, lod: number, bones: LoomBones): Piece[] {
     const sd = i ? 1 : -1, front: V3 = [0, 1, 0];
     // The haunch on the body's side over the hip, down to the ground: where a rabbit sitting carries its thigh.
     const hr = L.haunch, hc: V3 = [sd * L.at[0], L.at[1] - hr[1] * 0.15, L.at[2] + hr[2] * 0.15];
-    const haunch = painted(egg(hc, UPRIGHT, hr, n + 8, k + 4, 'mark'), (c) => { const d = onEggDir(hc, hr, c); return lavenderAt(s, [d[0] * 0.5, d[1] * 0.7 - 0.1, d[2] + 0.5], seed + 3) ? 'coat' : 'mark'; });
+    const haunch = painted(egg(hc, UPRIGHT, hr, n + 8, k + 4, 'mark'), (c) => { const d = onEggDir(hc, hr, c); return furAt(s, [d[0] * 0.5, d[1] * 0.7 - 0.1, d[2] + 0.5], seed + 3); });
     const swirl = s.spiral ? paint([spiralOn(hc, hr, [sd, -0.15, 0.2], Math.min(hr[1], hr[2]) * 0.62, 2.2, Math.min(hr[1], hr[2]) * 0.07, 'mark')]) : null;
     const shin = tube([[0, 0, 0.02], [0, 0, -L.len[1]]], [L.foot[1] * 0.75, L.foot[1] * 0.6], [L.foot[1] * 0.75, L.foot[1] * 0.6], n, 'mark', { seam: 'start' });
     const fl = L.foot[0], fw = L.foot[1];
@@ -1217,15 +1221,16 @@ function loomKind(s: Loom): Kind {
     // The variant's two colours are its lavender patches and its cream fur; its pink ears and nose, amber eyes, cream bandages and
     // gold marks are the same on every variant.
     palette: (coat, mark) => {
-      const lav = mix(coat, [178, 170, 204], 0.3), cream = mix([252, 246, 232], mark, 0.35);
+      const lav = mix(coat, [158, 148, 160], 0.25), cream = mix([250, 244, 230], mark, 0.35);
       return coatPalette(coat, mark, {
         coat: lav,
-        coatDark: mix(lav, [92, 84, 116], 0.3),
-        coatLight: mix(lav, [255, 250, 240], 0.3),
+        coatDark: mix(lav, [96, 86, 104], 0.3),
+        coatLight: mix(lav, cream, 0.55),
         mark: cream,
         belly: cream,
         muzzle: mix(cream, [255, 254, 250], 0.6),
-        inner: [240, 160, 160],
+        inner: [232, 165, 147],
+        petal: mix(cream, [236, 170, 160], 0.38),
         lid: [84, 52, 40],
         nose: [232, 140, 148],
         eye: [40, 22, 16],
