@@ -2875,7 +2875,7 @@ insert into species_diet values ('whispet', 'apple');
 insert into species_diet values ('whispet', 'nuts');
 insert into species_diet values ('whispet', 'acorn');
 update species_def set favourite = 'apple' where id = 'whispet';
-insert into species_def values ('bura', 'Packlet', 'No settlement task. Panniers: 200 items, opened from its menu; a store within 3 tiles for crafting and building. Crate, release, cull: panniers empty only. Level: body strength, learned per 30 seconds out at your heel or keeping a settlement. Evolves at level 25: Haulbud.', 55, 6, 1.5, 22, 0.09, 'grass or grain', false, null, 6, 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, 'crush', null, null);
+insert into species_def values ('bura', 'Packlet', 'No settlement task. Panniers: 200 items, opened from its menu; a store within 3 tiles for crafting and building. Crate, release, cull: panniers empty only. Level: body strength, learned per 30 seconds out at your heel or keeping a settlement. Evolves at level 25: Haulbud.', 55, 6, 1.5, 1, 0.09, 'grass or grain', false, null, 6, 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, 'crush', null, null);
 update species_def set pannier = 200, panniers = array[200, 500, 1000]::real[] where id = 'bura';
 update species_def set hide = 'thick' where id = 'bura';
 update species_def set learns = 'body_strength', learns_by = 'out' where id = 'bura';

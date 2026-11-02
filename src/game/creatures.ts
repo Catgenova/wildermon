@@ -3714,7 +3714,8 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 55,
     attack: 6,
     speed: 1.5,
-    tameLevel: 22,
+    // Asked: "Reduce taming level requirements for bura to 1" (was 22).
+    tameLevel: 1,
     tameChance: 0.09,
     diet: ['mixed_grass', 'wheat', 'corn', 'carrot'],
     baitHint: 'grass or grain',

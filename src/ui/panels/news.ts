@@ -4241,6 +4241,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 449,
+    day: '2026-11-02',
+    lines: () => [`Changed: ${SPECIES.bura.name} taming needed: ${SPECIES.bura.tameLevel} (was 22); a wild ${SPECIES.bura.stages![0].name} or ${SPECIES.bura.stages![1].name} +${WILD_STAGE_TAME} a stage.`],
+  },
+  {
     n: 448,
     day: '2026-11-02',
     lines: () => [`Added: map: a purple square at every settlement on the island, its border once ${SETTLEMENT_BORDER_PX} px or more across; yours with a white centre; named with Names on.`],
