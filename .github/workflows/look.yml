@@ -41,7 +41,7 @@ jobs:
           PUBLIC_KEY: sb_publishable_10_lQyHkKqBQ9F6rYuJehw_9rNaCtz3
         run: |
           base="https://$PROJECT_REF.supabase.co"
-          door() { echo "== $1"; curl -s -m 30 -o body.txt -w "status %{http_code}, %{time_total} s\n" "${@:2}"; head -c 400 body.txt; echo; }
+          door() { echo "== $1"; curl -s -m 30 -o body.txt -w "status %{http_code}, %{time_total} s\n" "${@:2}" || echo "(no answer: curl $?)"; head -c 400 body.txt 2>/dev/null; echo; }
           door "auth health" -H "apikey: $PUBLIC_KEY" "$base/auth/v1/health"
           door "auth settings (public)" -H "apikey: $PUBLIC_KEY" "$base/auth/v1/settings"
           door "the API's root" -H "apikey: $PUBLIC_KEY" "$base/rest/v1/"
