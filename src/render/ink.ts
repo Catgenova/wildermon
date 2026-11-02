@@ -1,3 +1,10 @@
+/**
+ * For a canvas that is read back (`inkOf`, a picture put in the browser's store): kept in the computer's memory, where
+ * a read is a copy. A canvas on the graphics chip read back holds the page until the chip has drawn everything asked
+ * of it before.
+ */
+export const READ_BACK: CanvasRenderingContext2DSettings = { willReadFrequently: true };
+
 /** The box round everything not see-through in a picture, as shares of its width and height: left, top, right, bottom. The whole picture where it cannot be read. */
 export function inkOf(src: HTMLCanvasElement): [number, number, number, number] {
   let box: [number, number, number, number] = [0, 0, 1, 1];
