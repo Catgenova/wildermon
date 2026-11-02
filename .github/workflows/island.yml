@@ -5440,7 +5440,10 @@ jobs:
         id: cli
         continue-on-error: true
         with:
-          version: latest
+          # Pinned: CLI 3.0 (2026-11-02) targets the local stack unless a command
+          # says --remote, and asks before writing to a hosted database. Every
+          # command here is written for 2.x, where --linked is the project.
+          version: 2.122.1
         env:
           # The action resolves "latest" through the GitHub API, unauthenticated
           # from a shared runner address, and a run failed with "rate limit
@@ -5453,7 +5456,7 @@ jobs:
           # npm rather than the GitHub API: the same binary, fetched from a
           # registry that is not counting anonymous requests per address.
           echo "::warning::supabase/setup-cli failed; installing from npm instead."
-          npm i -g supabase
+          npm i -g supabase@2.122.1
           supabase --version
       - name: Room on the database
         # Run 652 could not push the creature crates: the project refused the

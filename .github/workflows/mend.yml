@@ -20,7 +20,10 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
         with:
-          version: latest
+          # Pinned: CLI 3.0 (2026-11-02) targets the local stack unless a command
+          # says --remote, and asks before writing to a hosted database. Every
+          # command here is written for 2.x, where --linked is the project.
+          version: 2.122.1
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Mend

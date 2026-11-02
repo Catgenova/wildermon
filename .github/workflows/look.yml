@@ -24,12 +24,15 @@ jobs:
         id: cli
         continue-on-error: true
         with:
-          version: latest
+          # Pinned: CLI 3.0 (2026-11-02) targets the local stack unless a command
+          # says --remote, and asks before writing to a hosted database. Every
+          # command here is written for 2.x, where --linked is the project.
+          version: 2.122.1
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Get the CLI another way if that did not work
         if: steps.cli.outcome != 'success'
-        run: npm i -g supabase && supabase --version
+        run: npm i -g supabase@2.122.1 && supabase --version
       - name: The front doors, and what the services in front of the database said
         # Asked about: "Players still unable to log in", after "Could not query the database for the schema cache.
         # Retrying." with the database itself answering. Whether Auth and the API answer from outside, with the
