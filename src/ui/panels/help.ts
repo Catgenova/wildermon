@@ -1,4 +1,4 @@
-import { MAP_ZOOM_MIN, MAP_ZOOM_STEP } from './minimap';
+import { MAP_ZOOM_MIN, MAP_ZOOM_STEP, SETTLEMENT_BORDER_PX } from './minimap';
 import { BAG_CARRY } from '../../game/gear';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
@@ -1076,6 +1076,7 @@ export function helpText(): string {
       <li>In the list: click the dot to cycle colour, the name to rename, × to delete.</li>
       <li>Max ${MARK_CAP} marks; past that the oldest is removed.</li>
       <li>Map zoom: wheel or pinch, down to ${MAP_ZOOM_MIN} tiles across; ×${MAP_ZOOM_STEP} a notch. Pan: drag. <b>Fit</b>: back to the land seen, following you.</li>
+      <li>Map settlements: a purple square at every settlement's token on the island, its border once ${SETTLEMENT_BORDER_PX} px or more across; yours with a white centre. Names: <b>Names</b>.</li>
       <li><kbd>Home</kbd> or <b>Walk home</b>: walks to your settlement totem; with none, to your landing shore or the last bed you woke in.</li>
     </ul>
     <h3>The camera</h3>

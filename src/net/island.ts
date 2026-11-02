@@ -4453,6 +4453,16 @@ export class Island {
       token: t && typeof t.x === 'number' && typeof t.y === 'number' ? { x: t.x, y: t.y, deed: String(t.deed ?? '') } : null };
   }
 
+  /** Every settlement on the island, for the map (`rpc_settlements`); null when the island did not answer. */
+  async settlements(): Promise<Array<{ name: string; x: number; y: number; radius: number; mine: boolean }> | null> {
+    if (!this.info) return null;
+    const { data, error } = await supabase().rpc('rpc_settlements', { p_world: this.info.id });
+    if (error || !data) return null;
+    return rowsIn<{ name: string; x: number; y: number; radius: number; mine: boolean }>((data as { deeds?: unknown }).deeds)
+      .filter((d) => typeof d.x === 'number' && typeof d.y === 'number' && typeof d.radius === 'number')
+      .map((d) => ({ name: String(d.name ?? ''), x: d.x, y: d.y, radius: d.radius, mine: !!d.mine }));
+  }
+
   /** A thing's last `SALES_SHOWN` sales on the island this month, newest first (`rpc_sales`). */
   async sales(def: string): Promise<Sale[]> {
     if (!this.info) return [];

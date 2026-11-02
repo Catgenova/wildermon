@@ -40,6 +40,13 @@ export const CONTOUR_STEP = 20;
 export const CONTOUR_INDEX = 5;
 
 /** The narrowest the map zooms in to, in tiles across. */
+/** The colour settlements are drawn in on the map. */
+export const SETTLEMENT_CSS = '#a066e8';
+/** A settlement's border is drawn on the map once it comes out at least this many pixels across. */
+export const SETTLEMENT_BORDER_PX = 12;
+/** A settlement as the map draws it (`rpc_settlements`). */
+export interface MapSettlement { name: string; x: number; y: number; radius: number; mine: boolean }
+
 export const MAP_ZOOM_MIN = 16;
 /** How much a notch of the wheel zooms the map: this many times wider or narrower. */
 export const MAP_ZOOM_STEP = 1.25;
@@ -95,6 +102,8 @@ export class MinimapPanel {
   private shown = 0;
   /** The list of marks wants listing again (`listMarks`). */
   private marksStale = false;
+  /** Every settlement on the island (`rpc_settlements`), drawn as a square in `SETTLEMENT_CSS` at its token, and its border. */
+  settlements: () => ReadonlyArray<MapSettlement> = () => [];
   /** Every stall and shop counter on the last market board read (`MarketPanel.stallsSeen`), drawn as a square each. */
   stalls: () => ReadonlyArray<{ x: number; y: number; mine: boolean }> = () => [];
 
@@ -644,6 +653,35 @@ export class MinimapPanel {
      * Drawn at one fixed size, a name came out at six pixels high.
      */
     const k = Math.max(0.5, Math.min(4, this.view.width / (this.shown || this.view.width))) * (LABEL_PX / 15);
+    // Settlements: a purple square at each token, its border a thin purple line once it is more than a few pixels across;
+    // one of yours with a pale centre.
+    ctx.font = '15px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    for (const d of this.settlements()) {
+      const mx = (d.x + 0.5 - ox) * scale;
+      const my = (d.y + 0.5 - oy) * scale;
+      const side = (d.radius * 2 + 1) * scale;
+      if (mx + side < 0 || my + side < 0 || mx - side > this.view.width || my - side > this.view.height) continue;
+      if (side >= SETTLEMENT_BORDER_PX) {
+        ctx.strokeStyle = SETTLEMENT_CSS;
+        ctx.globalAlpha = 0.7;
+        ctx.lineWidth = 1;
+        ctx.strokeRect((d.x - d.radius - ox) * scale, (d.y - d.radius - oy) * scale, side, side);
+        ctx.globalAlpha = 1;
+      }
+      this.at(mx, my, k, () => {
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.fillStyle = SETTLEMENT_CSS;
+        ctx.fillRect(-4.5, -4.5, 9, 9);
+        ctx.strokeRect(-4.5, -4.5, 9, 9);
+        if (d.mine) {
+          ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          ctx.fillRect(-1.5, -1.5, 3, 3);
+        }
+      });
+      if (this.names) this.tag(mx, my, k, 7, 0, d.name, SETTLEMENT_CSS);
+    }
     // The market: every stall and counter on the last board read, a square each in the market colour; your own hollow.
     const market = MARK_CSS(MARKET_MARK);
     for (const st of this.stalls()) {

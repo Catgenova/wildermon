@@ -251,6 +251,7 @@ import{$S as e,$_ as t,$b as n,$c as r,$d as i,$f as a,$g as o,$h as s,$l as ee,
       <li>In the list: click the dot to cycle colour, the name to rename, × to delete.</li>
       <li>Max 64 marks; past that the oldest is removed.</li>
       <li>Map zoom: wheel or pinch, down to 16 tiles across; ×${zd} a notch. Pan: drag. <b>Fit</b>: back to the land seen, following you.</li>
+      <li>Map settlements: a purple square at every settlement's token on the island, its border once 12 px or more across; yours with a white centre. Names: <b>Names</b>.</li>
       <li><kbd>Home</kbd> or <b>Walk home</b>: walks to your settlement totem; with none, to your landing shore or the last bed you woke in.</li>
     </ul>
     <h3>The camera</h3>

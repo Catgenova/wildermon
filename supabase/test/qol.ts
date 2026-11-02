@@ -233,6 +233,42 @@ else {
   check('and not to anybody else', island.THEIRS === 'absent' || island.THEIRS === 'null', island.THEIRS);
 }
 
+// Asked: "Show purple squares on the map for settlements". The island names every settlement, where it is and how
+// far its border goes, to anybody on it; yours marked as yours.
+{
+  const out = psql(`
+begin;
+create temp table said (k text, v text);
+do $$
+declare w uuid; me uuid; them uuid;
+begin
+  select id into w from world where name = 'Hoarding';
+  select uid into me from player where world_id = w and name = 'Dane';
+  select uid into them from player where world_id = w and name = 'Crowd1';
+  delete from deed where world_id = w and founded_by in (me, them);
+  insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Mapstead', 30, 31, 6, 1, me);
+  perform set_config('request.jwt.claims', json_build_object('sub', me)::text, true);
+  insert into said select 'MINE', e::text from jsonb_array_elements(rpc_settlements(w)->'deeds') e where e->>'name' = 'Mapstead';
+  perform set_config('request.jwt.claims', json_build_object('sub', them)::text, true);
+  insert into said select 'THEIRS', e::text from jsonb_array_elements(rpc_settlements(w)->'deeds') e where e->>'name' = 'Mapstead';
+  insert into said select 'ALL', (jsonb_array_length(rpc_settlements(w)->'deeds') = (select count(*) from deed where world_id = w))::text;
+end $$;
+select k || '=' || coalesce(v, 'null') from said;
+rollback;
+`);
+  const got: Record<string, string> = {};
+  for (const line of out.split('\n')) {
+    const i = line.indexOf('=');
+    if (i > 0) got[line.slice(0, i)] = line.slice(i + 1);
+  }
+  const mine = JSON.parse(got.MINE ?? 'null') as { x: number; y: number; radius: number; mine: boolean } | null;
+  const theirs = JSON.parse(got.THEIRS ?? 'null') as { mine: boolean } | null;
+  check('the map: the island says where a settlement is and how far its border goes, yours as yours',
+    mine?.x === 30 && mine.y === 31 && mine.radius === 6 && mine.mine === true, got.MINE ?? 'absent');
+  check('and to somebody else, the same settlement, not theirs', theirs?.mine === false, got.THEIRS ?? 'absent');
+  check('and every settlement on the island', got.ALL === 'true', got.ALL ?? 'absent');
+}
+
 // Asked: "Turn edge scrolling off by default". Off with nothing kept, and off for a browser that kept the old default
 // without its being set in Settings; one set there (on or off) is kept.
 {

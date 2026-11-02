@@ -119,6 +119,9 @@ import { PlanBar } from './planbar';
 import { jobEntry, pinEntry, pinnable } from './beltmenu';
 import { creatureLines } from './creatureinfo';
 import { MARK_COLOURS } from '../game/marks';
+import type { MapSettlement } from './panels/minimap';
+/** How often the map asks the island where every settlement is, in ms, while it is open. */
+const SETTLEMENTS_EVERY = 60_000;
 import { SettingsPanel } from './panels/settings';
 import { Palette, type PaletteEntry } from './palette';
 import { compareLines, itemCard } from './compare';
@@ -590,6 +593,22 @@ export class UI {
     this.market = new MarketPanel(marketWin, game, this.island, () => this.social.folk());
     // The market on the map: every stall and counter on the last board read, and your own.
     this.minimap.stalls = () => this.market.stallsSeen();
+    // Every settlement on the map, asked of the island every `SETTLEMENTS_EVERY` while the map is open; the ones the
+    // ground read brought meanwhile (a settlement founded nearby since) are drawn too.
+    {
+      let all: MapSettlement[] = [];
+      let asked = -Infinity;
+      this.minimap.settlements = () => {
+        const now = performance.now();
+        if (this.island && now - asked > SETTLEMENTS_EVERY) {
+          asked = now;
+          void this.island.settlements().then((got) => { if (got) all = got; });
+        }
+        const near = this.game.neighbourDeeds.filter((n) => !all.some((d) => d.x === n.x && d.y === n.y))
+          .map((n) => ({ name: n.name, x: n.x, y: n.y, radius: n.radius, mine: !!n.mine }));
+        return near.length ? [...all, ...near] : all;
+      };
+    }
     /*
      * Who leads the island: each skill's highest, the best-bred wildermon and
      * the biggest settlements. Beside the other two windows about other people,

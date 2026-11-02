@@ -7,7 +7,7 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
-import { MAP_ZOOM_MIN } from './minimap';
+import { SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
 import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
@@ -4239,6 +4239,11 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 448,
+    day: '2026-11-02',
+    lines: () => [`Added: map: a purple square at every settlement on the island, its border once ${SETTLEMENT_BORDER_PX} px or more across; yours with a white centre; named with Names on.`],
   },
   {
     n: 447,
