@@ -5286,9 +5286,35 @@ jobs:
           # cursor and the ids it holds, it is sent exactly what was written
           # since, what it lacks and which went, and a browser laying those
           # holds what the whole answer says after every turn of the clock.
+          # Packed, every row unpacks to the whole answer's, key for key.
           npx esbuild supabase/test/fetchdelta.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/fetchdelta.mjs --log-level=error
           node node_modules/.cache/fetchdelta.mjs
+
+      - name: The ground read sends only what changed, and the same answer for less
+        if: matrix.shard == 6
+        run: |
+          # Asked for: "streamline cpu". The read with the water asked only of a
+          # well says what it says asking every piece, key for key; a browser
+          # that says no cursor gets what it always got; handed back its cursor
+          # it is sent what was written since, what came into range or reach,
+          # and what moves without a write, and a browser laying those holds
+          # what the whole answer says, key for key, after every change. Asked
+          # with the creatures in one round trip, each says what it says alone.
+          npx esbuild supabase/test/grounddelta.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/grounddelta.mjs --log-level=error
+          node node_modules/.cache/grounddelta.mjs
+
+      - name: A page opened before the migrations asks the new way once the island has them
+        if: matrix.shard == 5
+        run: |
+          # Seen live: every creatures read in the old form for half an hour
+          # after its migration. The browser's own Island against a stand-in:
+          # told the new forms are missing, it asks the old way, and the new way
+          # again RETRY_NEWER seconds on, cursor and all, in one round trip.
+          npx esbuild supabase/test/askdown.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/askdown.mjs --log-level=error
+          node node_modules/.cache/askdown.mjs
 
   migrate:
     name: Push the migrations to the project

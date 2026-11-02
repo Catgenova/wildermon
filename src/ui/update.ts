@@ -57,7 +57,10 @@ export function updateButton(): HTMLButtonElement {
     btn.disabled = true;
     void reloadFresh();
   });
-  setInterval(() => void look(), UPDATE_CHECK_MS);
+  // Not while the page is hidden: it looks again as it comes back in front.
+  setInterval(() => {
+    if (document.visibilityState !== 'hidden') void look();
+  }, UPDATE_CHECK_MS);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') void look();
   });
