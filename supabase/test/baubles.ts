@@ -490,11 +490,21 @@ const lastSaid = (): string => game.log[game.log.length - 1]?.text ?? '';
 game.inventory.add('trowel', { ql: 90 });
 game.skills.values.set('archaeology', 90);
 const dig = ACTION_BY_ID.get('investigate')!;
+// The draws pinned, as the island's are by setseed: unpinned, one run in many turned up 42%.
+const unpinned = Math.random;
+let seedState = 0x4242;
+Math.random = (): number => {
+  seedState = (seedState + 0x6d2b79f5) | 0;
+  let t = Math.imul(seedState ^ (seedState >>> 15), 1 | seedState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
 for (let i = 0; i < 400; i++) {
   const x = 36 + (i % 12);
   const y = 36 + (Math.floor(i / 12) % 12);
   dig.perform({ kind: 'tile', x, y, cx: x, cy: y }, game);
 }
+Math.random = unpinned;
 const pack = [...game.inventory.items];
 const bFound = pack.filter((i) => i.id === TARNISHED).reduce((n, i) => n + i.count, 0);
 const bFrags = pack.filter((i) => i.id === 'fragment').reduce((n, i) => n + i.count, 0);
