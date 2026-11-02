@@ -41,6 +41,7 @@ import { DEED_ACTIONS, deedAimed } from './deed';
 import { CRATE_ACTIONS } from './crates';
 import { PANNIER_ACTIONS } from './panniers';
 import { CREATURE_ACTIONS } from './creatureActions';
+import { AROUND_ACTIONS } from './around';
 import { CREATURE_CRATE_ACTIONS } from './creaturecrate';
 import { HUSBANDRY_ACTIONS } from './husbandry';
 import { DYE_ACTIONS, recipeSays } from './dyes';
@@ -3233,6 +3234,7 @@ export const ACTIONS: ActionDef[] = [
   ...CELLAR_ACTIONS,
   ...FRAME_ACTIONS,
   ...CREATURE_ACTIONS,
+  ...AROUND_ACTIONS,
   ...CREATURE_CRATE_ACTIONS,
   ...HUSBANDRY_ACTIONS,
   ...DYE_ACTIONS,

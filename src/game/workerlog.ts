@@ -41,6 +41,8 @@ import { article, listed, listedOr } from './words';
  *   * `nospar`: a Sparra on a settlement with no guard of yours there free to spar with (`sparsAsGuard`);
  *   * `season`: a Vesp at its hive in `SKEP_IDLE`, when nothing is in flower for it (`vespTrip`);
  *   * `flowers`: a Vesp whose hive has no wildflowers within the number of tiles (`SKEP_REACH`) of it;
+ *   * `nostore`: working round its keeper (`Creature.around`), no storage within the number of tiles of them it may put
+ *     into (`aroundStores`);
  *   * `stairs`: its store, station or planned work a storey up, the number that storey counted from 1 for the ground,
  *     with no finished staircase going up to it (`creature_way`, `hod_unreached`).
  *
@@ -57,17 +59,18 @@ import { article, listed, listedOr } from './words';
  */
 export const FLIGHT_TILES = 1;
 
-export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded' | 'season' | 'flowers' | 'stairs' | 'stranded' | 'waiting';
-export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded', 'season', 'flowers', 'stairs', 'stranded', 'waiting'];
+export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded' | 'season' | 'flowers' | 'stairs' | 'stranded' | 'waiting' | 'nostore';
+export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded', 'season', 'flowers', 'stairs', 'stranded', 'waiting', 'nostore'];
 
 /**
- * Why a worker is idle, as kept on it: the code, its number, and whether it works off a post rather than the token;
- * for a rest in a bed, the bed's kind.
+ * Why a worker is idle, as kept on it: the code, its number, and whether it works off a post or round its keeper
+ * (`around`, the island's `idleAround`) rather than the token; for a rest in a bed, the bed's kind.
  */
 export interface Idle {
   why: IdleWhy;
   n: number;
   post?: boolean;
+  around?: boolean;
   bed?: string;
   what?: string[];
 }
@@ -156,32 +159,40 @@ const secondsMore = (secs: number): string => {
  */
 export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carrying?: string | null): string {
   const n = Math.round(idle.n);
+  // Where it works from: its keeper, its post or the totem.
+  const from = idle.around ? 'you' : idle.post ? 'its work post' : 'the totem';
+  // And the stores it works out of: storage in reach of its keeper, or the settlement's.
+  const stores = idle.around ? 'storage in reach' : 'your settlement stores';
   switch (idle.why) {
     case 'range':
       // A magga with nothing lying about sorts the stores (`sortStack`), off a work post nothing but what lies about.
       if (kind === 'fetch') {
         const bins = `${itemDef('bulk_bin').name.toLowerCase()} or ${itemDef('craft_bin').name.toLowerCase()}`;
-        return `Idle: nothing lying on the ground within ${n} tiles of ${idle.post ? 'its work post.' : `the totem; nothing in your settlement stores for a ${bins} with room.`}`;
+        return `Idle: nothing lying on the ground within ${n} tiles of ${idle.post || idle.around ? `${from}.` : `the totem; nothing in your settlement stores for a ${bins} with room.`}`;
       }
-      return `Idle: no ${(kind && IDLE_SOURCE[kind]) ?? 'work of its task'} within ${n} tiles of ${idle.post ? 'its work post' : 'the totem'}.`;
+      return `Idle: no ${(kind && IDLE_SOURCE[kind]) ?? 'work of its task'} within ${n} tiles of ${from}.`;
     case 'stock': {
       // What the work in range wants, by name, and how many more past those: "no marble brick or glass".
       if (idle.what?.length) {
         const names = idle.what.map((id) => itemDef(id).name.toLowerCase());
         if (n > names.length) names.push(`${n - names.length} more`);
-        return `Idle: no ${listedOr(names)} in your settlement stores.`;
+        return `Idle: no ${listedOr(names)} in ${stores}.`;
       }
       const verb = (kind && IDLE_STOCK[kind]) ?? 'work';
       const wants = kind ? IDLE_STOCK_THING[kind] ?? recipeWants(kind) : '';
-      return `Idle: nothing in your settlement stores to ${verb}${wants ? ` (needs ${wants})` : ''}.`;
+      return `Idle: nothing in ${stores} to ${verb}${wants ? ` (needs ${wants})` : ''}.`;
     }
     case 'room': {
       const [where, what] = (kind && IDLE_ROOM[kind]) ?? ['store', 'what it brings'];
       return `Idle: no ${where} on the settlement has room for ${what}.`;
     }
     case 'full':
+      if (idle.around) return `Idle: ${carrying ? `holding ${carrying.toLowerCase()}, ` : ''}storage in reach full.`;
       return `Idle: holding ${carrying ? carrying.toLowerCase() : 'a load'}, settlement storage full.`;
+    case 'nostore':
+      return `Idle: no storage within ${n} tiles of you.`;
     case 'far':
+      if (idle.around) return `Idle: walking to you, ${n} tiles away.`;
       return `Idle: walking home, ${n} tiles from its work.`;
     case 'away':
       return 'Idle: keeper away.';

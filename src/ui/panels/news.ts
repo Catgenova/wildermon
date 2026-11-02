@@ -15,6 +15,7 @@ import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS,
 import { BOOT_PHASES, NEAR_REACH, TREE_WAIT_MS } from '../bootsteps';
 import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
+import { aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
 import { DAMAGE_WARN, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_KIT, TRAVEL_LEG } from '../../game/game';
@@ -4250,6 +4251,15 @@ export const NEWS: News[] = [
     lines: () => [
       'Fixed: dying on a long walk (a map pin, Walk home): the walk went on from the spawn and the chooser of where to wake shut before a pick. A death now ends the walk.',
       `Fixed: the chooser of where to wake took a key held from the fight as a pick. No pick in its first ${RESPAWN_ARM_MS / 1000} s or from a held key; no card chosen until Tab or an arrow.`,
+    ],
+  },
+  {
+    n: 441,
+    day: '2026-11-02',
+    lines: () => [
+      `Added: Work around me (a wildermon's menu, Wildermon window): one following you within ${POST_FOLLOW_REACH} tiles or crated in your pack or beside you works its task within its work range of you, into storage in reach you may use (crates, storage furniture, carts, wagons, boats).`,
+      `Work around me: idle with no storage in reach, or storage full; nothing dropped. Tasks: gathering, and at the stores ${listed(aroundStoreTrades())}. Not settlement-only tasks (guarding, stoking, stations, buildings, wildermon).`,
+      'Work around me: Stop in the status panel or its menu, or offline: back into its crate, or following you; its crate gone: as a post\'s worker goes. Not counted against settlement working slots.',
     ],
   },
   {

@@ -3924,6 +3924,20 @@ jobs:
             --outfile=node_modules/.cache/errandhome.mjs --log-level=error
           node node_modules/.cache/errandhome.mjs
 
+      - name: A wildermon works round its keeper, into storage in reach
+        if: matrix.shard == 6
+        run: |
+          # Asked for: "Allow wildermon to Work Around Me, provided there is
+          # storage nearby (carts and wagons and accessible boats included)."
+          # Its ground is its keeper's tile; its loads go into crates, furniture,
+          # carts, wagons and boats its keeper may use within its range; none,
+          # or full, and it idles and drops nothing. Stop, or its keeper
+          # offline, and it goes back into its crate or to following, on both
+          # sides.
+          npx esbuild supabase/test/workaround.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/workaround.mjs --log-level=error
+          node node_modules/.cache/workaround.mjs
+
       - name: A settlement's stores are read off the settlement
         if: matrix.shard == 4
         run: |

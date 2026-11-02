@@ -137,8 +137,9 @@ export function creatureLines(g: Game, c: Creature): string[] {
     lines.push(`In a wildermon crate${where} · no hunger`);
   } else if (c.mode === 'deed') {
     // A reach means nothing to something with no trade to range out and do.
-    if (def.gathers) lines.push(`Settlement worker · ${GATHER_VERB[def.gathers]} ${taskSkill(c, def).toFixed(1)} · range ${workRangeOf(c, def)} tiles`);
-    else lines.push(`Settlement worker · ${def.style === 'spar' ? 'sparring' : 'no task'}`);
+    const role = c.around ? 'Working around you' : 'Settlement worker';
+    if (def.gathers) lines.push(`${role} · ${GATHER_VERB[def.gathers]} ${taskSkill(c, def).toFixed(1)} · range ${workRangeOf(c, def)} tiles`);
+    else lines.push(`${role} · ${def.style === 'spar' ? 'sparring' : 'no task'}`);
     // Who it is sparring with on the settlement (`sparTaskSays`).
     const partner = c.sparWith != null ? g.creatures.get(c.sparWith) : undefined;
     if (partner && partner.mode === 'deed') lines.push(`Sparring with ${partner.name}`);

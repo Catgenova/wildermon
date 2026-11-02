@@ -3408,6 +3408,9 @@ export class UI {
         push(item('assign_deed'));
       }
     }
+    // Work around me, and the way back from it (`around.ts`).
+    push(item('work_around'));
+    push(item('stop_work_around'));
     push(item('take_creature'));
     push(item('crate_creature'));
     push(item('rename_creature'));

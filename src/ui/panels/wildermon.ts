@@ -29,13 +29,14 @@ import { CarePanel } from './care';
  * it does neither -- it goes where the wagon is taken (`Creatures.update`) --
  * and goes back to its order when it is taken out.
  */
-type Place = Creature['mode'] | 'saddle' | 'traces';
-const placeOf = (c: Creature): Place => (c.ridden ? 'saddle' : c.hitchedTo !== null ? 'traces' : c.mode);
+type Place = Creature['mode'] | 'saddle' | 'traces' | 'around';
+const placeOf = (c: Creature): Place => (c.ridden ? 'saddle' : c.hitchedTo !== null ? 'traces' : c.mode === 'deed' && c.around ? 'around' : c.mode);
 const GROUPS: Array<[Place, string]> = [
   ['saddle', 'Ridden'],
   ['traces', 'In the traces'],
   ['active', 'Companion'],
   ['deed', 'Working the settlement'],
+  ['around', 'Working around you'],
   ['stored', 'In wildermon crates'],
 ];
 
@@ -660,7 +661,7 @@ export class WildermonPanel {
       // A stance and a round of work are for one that is following you or
       // working, not one in the traces or under a rider.
       if (place === 'active') parts.push(`Stance: ${STANCE_NAMES[c.stance]}`);
-      if (place === 'deed') {
+      if (place === 'deed' || place === 'around') {
         const verb = def.gathers ? GATHER_VERB[def.gathers] : 'working';
         // Resting (`REST_FOR`) before anything it holds: a tired water carrier rests with its bucket.
         const rest = c.idle?.why === 'bed' ? 'Asleep in its bed' : c.idle?.why === 'rest' ? 'Resting' : c.idle?.why === 'tired' ? 'Walking to its bed' : '';
@@ -679,7 +680,7 @@ export class WildermonPanel {
       const said = parts.join(' · ');
       if (info.textContent !== said) info.textContent = said;
       const job = c.trade ?? def.gathers;
-      const idle = place === 'deed' && c.idle ? idleSays(c.idle, job, c.carrying ? itemDef(c.carrying.id).name : null) : '';
+      const idle = (place === 'deed' || place === 'around') && c.idle ? idleSays(c.idle, job, c.carrying ? itemDef(c.carrying.id).name : null) : '';
       if (idleLine.textContent !== idle) idleLine.textContent = idle;
       hide(idleLine, !idle);
       const ledger = c.mode === 'deed' ? ledgerLines(c.ledger, this.game.islandDay()).join('\n') : '';

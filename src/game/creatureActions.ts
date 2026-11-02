@@ -659,7 +659,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     baseTime: 0,
     applies: (t, g) => {
       const c = creatureOf(g, t);
-      return !!c && c.hitchedTo === null && !c.ridden && (c.mode === 'active' || c.post !== null);
+      return !!c && c.hitchedTo === null && !c.ridden && (c.mode === 'active' || c.post !== null || !!c.around);
     },
     check: (t, g) => {
       if (!g.deed) return 'No settlement.';
@@ -668,7 +668,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (c && !SPECIES[c.species].gathers && SPECIES[c.species].style !== 'spar') return `${SPECIES[c.species].name}: no task.`;
       // One off a post takes a place as much as one off the road, since a post costs none.
       const working = g.creatures.workers().length;
-      if (c && (c.mode !== 'deed' || c.post !== null) && working >= g.workerCap) {
+      if (c && (c.mode !== 'deed' || c.post !== null || !!c.around) && working >= g.workerCap) {
         return `${g.deed.name} full: ${g.workerCap} workers at level ${g.deedLevel}.`;
       }
       // A trade it was asked for by name has to be one of its own.
@@ -685,6 +685,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const d = g.deed;
       if (!c || !d) return;
       g.clearPost(c);
+      // Off your heels or off work round you: on the settlement's roll now.
+      c.around = null;
       // The trade it was set to, remembered only when it is not what its kind
       // does anyway.
       const want = t.kind === 'creature' ? t.job : undefined;
@@ -723,6 +725,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       // Every load of a trip in its arms, not only the last.
       for (const it of takeArms(c)) if (!(crate && g.crateAdd(crate, it))) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), it);
       c.mode = 'active';
+      c.around = null;
       c.enemy = null;
       c.state = 'idle';
       c.until = g.time;
@@ -1342,6 +1345,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       // Its gear comes back to you (`takeGear`).
       takeGear(g, c);
       c.mode = 'wild';
+      c.around = null;
       c.stance = 'passive';
       c.enemy = null;
       const was = c.name;
