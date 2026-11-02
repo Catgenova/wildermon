@@ -7,6 +7,8 @@
  *   * the read with its short cut (the water asked only of a well) says what the same read says with the short cut
  *     taken out, key for key, on the burning half and the slow one; and its whole answer in the new shape says the
  *     same, with a cursor;
+ *   * whose each crate is (`mine`), found once for them all, says what finding it for each crate said, to the founder of
+ *     a settlement, a citizen whose rank keeps its stores, one whose rank does not, and somebody not of it;
  *   * a browser that says no cursor (a page from before this) gets what it always got;
  *   * handed back its cursor, the read sends exactly what changed: a piece renamed, one set down, a thing put in a
  *     chest within reach and one taken out of another, a thing dropped; says which went (a piece taken up, a thing
@@ -198,6 +200,44 @@ for (const line of sameSaid.split('\n').filter((l) => l.includes('='))) {
   check(`${name}: a browser that says no cursor gets what it always got, and no cursor`, oldAt === 'false', v);
   check(`${name}: the well has filled since it was drawn`, filling === 'true', v);
 }
+
+// Whose each crate is, found once for them all (`crates_near`): what it said finding it for each, to the founder, a
+// citizen whose rank lets them at the stores, one whose rank does not, and somebody not of the settlement.
+const MINE_ONCE = 'coalesce(c.made_by = p_uid, true) or exists (select 1 from unnest(may.ds) d where deed_covers(d, c.x, c.y))';
+const whoseSaid = psql(`begin;
+do $t$
+declare d text := pg_get_functiondef('public.crates_near(uuid,uuid,double precision)'::regprocedure); c text := $c$${MINE_ONCE}$c$; n int;
+begin
+  n := (length(d) - length(replace(d, c, ''))) / length(c);
+  if n <> 1 then raise exception 'short cut found % times', n; end if;
+  execute replace(replace(d, 'FUNCTION public.crates_near(', 'FUNCTION pg_temp.crates_near_was('), c, 'crate_yours(p_world, p_uid, c.id)');
+end $t$;
+insert into crate (world_id, id, kind, x, y, sx, sy, deed, made_by) values (${W}, 3, 'plank', 100, 97, 0, 0, false, '${YOU}'),
+  (${W}, 4, 'plank', 97, 101, 0, 0, false, null), (${W}, 5, 'plank', 125, 125, 0, 0, false, '${YOU}');
+insert into deed (world_id, name, x, y, radius, level, founded_by) values (${W}, 'Whosestead', 100, 100, 6, 3, '${YOU}');
+update deed_rank_def set perms = case when ord = (select min(ord) from deed_rank_def where world_id = ${W} and founder = '${YOU}') then 2 else 0 end
+ where world_id = ${W} and founder = '${YOU}';
+create temp table said (k text, v text);
+create function pg_temp.whose(k text, u uuid) returns void language sql as $f$
+  insert into said select k, (crates_near(${W}, u, 40) = pg_temp.crates_near_was(${W}, u, 40))::text || '|'
+    || (select count(*) from jsonb_array_elements(crates_near(${W}, u, 40)) e where (e->>'mine')::boolean)
+$f$;
+select pg_temp.whose('founder', '${YOU}');
+insert into deed_member (world_id, founder, uid, role, rank_id)
+  select ${W}, '${YOU}', '${ME}', 'citizen', id from deed_rank_def where world_id = ${W} and founder = '${YOU}' order by ord limit 1;
+select pg_temp.whose('keeper', '${ME}');
+update deed_member set rank_id = (select id from deed_rank_def where world_id = ${W} and founder = '${YOU}' and perms = 0 order by ord limit 1)
+ where world_id = ${W} and uid = '${ME}';
+select pg_temp.whose('no stores', '${ME}');
+delete from deed_member where world_id = ${W} and uid = '${ME}';
+select pg_temp.whose('outsider', '${ME}');
+select string_agg(k || '=' || v, ',' order by k) from said;
+rollback;`).split('\n').pop()!;
+const whose = Object.fromEntries(whoseSaid.split(',').map((kv) => kv.split('=')));
+check('whose each crate is, found once: the same answer to the founder, a keeper of the stores, a citizen without, an outsider',
+  ['founder', 'keeper', 'no stores', 'outsider'].every((k) => whose[k]?.startsWith('true|')), whoseSaid);
+check('and they differ as they should (founder 4, keeper 4, the rest their own 3)',
+  whose.founder?.endsWith('|4') && whose.keeper?.endsWith('|4') && whose['no stores']?.endsWith('|3') && whose.outsider?.endsWith('|3'), whoseSaid);
 
 /* ---- only what changed ----------------------------------------------------------------------------------------- */
 
