@@ -903,6 +903,17 @@ export class SettingsPanel {
     for (const row of this.keeperRows) row.hidden = false;
   }
 
+  /** Open the window at a tab (the UI Menu's Keys row). */
+  openAt(id: string, win: { open(): void; isOpen: boolean }): void {
+    this.show(id);
+    if (!win.isOpen) win.open();
+  }
+
+  /** The tab showing. */
+  get page(): string {
+    return this.tab;
+  }
+
   /** Switch tabs. */
   private show(id: string): void {
     if (!this.pages.has(id)) return;

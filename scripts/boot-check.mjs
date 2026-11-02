@@ -230,6 +230,12 @@ if (panels) {
   if (p.badLinks.length) bad.push(`in the game: links to neither this site nor https:, or without noopener: ${p.badLinks.join(', ')}`);
   if (!p.escaped) bad.push('in the game: html`` did not put markup in as text');
   if (p.pwned) bad.push('in the game: a chat line ran script');
+  const menu = new Map(p.menu ?? []);
+  const wantRows = ['Journal', 'Journal: Goals', 'Journal: Ledger', 'Journal: Help', "Journal: What's new", 'Journal: Leaderboards', 'Journal: Field guide', 'Journal: Tracker', 'Settings', 'Settings: Keys'];
+  const missing = wantRows.filter((r) => !menu.has(r));
+  if (missing.length) bad.push(`in the game: the UI Menu has no ${missing.join(', ')} row`);
+  else if (!menu.get('Journal: Help') || !menu.get('Journal: Field guide')) bad.push('in the game: the UI Menu\'s journal tabs do not say their keys');
+  if (p.menuTab !== 'Field guide') bad.push(`in the game: the UI Menu's Journal: Field guide row turned the journal to ${p.menuTab || 'nothing'}`);
 }
 
 /* The policy refuses what it should, and reports it. */

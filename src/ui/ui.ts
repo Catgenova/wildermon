@@ -107,7 +107,7 @@ import { DeedPanel, ORDER_HINTS } from './panels/deed';
 import { ORDER_STANCES } from '../game/visitors';
 import { DELIVER_REACH, settleLine } from '../game/noticeboard';
 import type { LedgerPanel } from './panels/ledger';
-import { JournalPanel, type JournalTab } from './panels/journal';
+import { JOURNAL_TAB_BIND, JOURNAL_TABS, JournalPanel, type JournalTab } from './panels/journal';
 import { ContextMenu, type MenuItem } from './contextmenu';
 import { AutoEat } from '../game/autoeat';
 import { ShoppingPanel } from './panels/shopping';
@@ -806,7 +806,7 @@ export class UI {
       return l === 'unbound' ? undefined : l;
     };
     for (const b of BINDS) {
-      const journalTab = ({ win_ledger: 'ledger', win_help: 'help', win_news: 'news', win_boards: 'boards', win_guide: 'guide', win_tracker: 'tracker' } as const)[b.id as 'win_ledger'];
+      const journalTab = b.id === 'win_journal' ? undefined : JOURNAL_TABS.find(([t]) => JOURNAL_TAB_BIND[t] === b.id)?.[0];
       if (journalTab) {
         // The ledger, the help, what's new, the leaderboards, the field guide and the tracker are tabs of the journal, not windows of their own.
         const tab = journalTab;
@@ -1661,16 +1661,35 @@ export class UI {
   showWindowMenu(x: number, y: number): void {
     // A window that was never made here -- the Island keeper, for anybody who
     // does not keep the island -- is not on the list.
-    const entries: MenuItem[] = WINDOWS.filter((wdw) => this.windows.get(wdw.id)).map((wdw) => {
-      const open = this.windows.get(wdw.id)?.isOpen ?? false;
-      const codes = this.keys.codes(wdw.bind);
-      return {
-        label: wdw.label,
-        checked: open,
-        keys: codes.length ? keyName(codes[0]) : undefined,
-        onSelect: () => this.toggleWindow(wdw.id),
-      };
-    });
+    const keyOf = (bind: string): string | undefined => {
+      const codes = this.keys.codes(bind);
+      return codes.length ? keyName(codes[0]) : undefined;
+    };
+    const entries: MenuItem[] = [];
+    for (const wdw of WINDOWS) {
+      const win = this.windows.get(wdw.id);
+      if (!win) continue;
+      entries.push({ label: wdw.label, checked: win.isOpen, keys: keyOf(wdw.bind), onSelect: () => this.toggleWindow(wdw.id) });
+      // The journal's tabs under it, each with the key that opens it there.
+      if (wdw.id === 'journal') {
+        for (const [tab, label] of JOURNAL_TABS) {
+          entries.push({
+            label: `Journal: ${label}`,
+            checked: win.isOpen && this.journalPanel.tab === tab,
+            keys: keyOf(JOURNAL_TAB_BIND[tab]),
+            onSelect: () => this.journalPanel.toggle(tab),
+          });
+        }
+      }
+      // Every hotkey, listed and rebound: Settings at its Keys tab.
+      if (wdw.id === 'settings') {
+        entries.push({
+          label: 'Settings: Keys',
+          checked: win.isOpen && this.settings.page === 'keys',
+          onSelect: () => this.settings.openAt('keys', win),
+        });
+      }
+    }
     this.menu.show(x, y, 'Windows', entries);
   }
 

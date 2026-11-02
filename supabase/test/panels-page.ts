@@ -43,6 +43,9 @@ export interface HostileSeen {
   badLinks: string[];
   /** Links in the event log at all: chat is never linkified. */
   logLinks: number;
+  /** The UI Menu's rows, label and key, and the journal tab its Journal: Field guide row turned to. */
+  menu: Array<[string, string]>;
+  menuTab: string;
   /** Whether a markup-in-`html` check put the text in as text. */
   escaped: boolean;
   /** Whether anything set `window.__pwned`. */
@@ -50,7 +53,7 @@ export interface HostileSeen {
   done: boolean;
 }
 
-const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false };
+const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, menu: [], menuTab: '' };
 (window as unknown as { panels: HostileSeen }).panels = seen;
 
 document.getElementById('boot')?.remove();
@@ -97,6 +100,15 @@ for (const tab of TABS) {
 }
 for (let i = 0; i < 100 && !uiRoot.querySelector('.help-sec'); i++) await rest(50);
 seen.help = !!uiRoot.querySelector('.help-sec');
+// The UI Menu: every window, the journal's tabs and Settings: Keys, each with its key.
+ui.showWindowMenu(10, 10);
+frame();
+for (const row of uiRoot.querySelectorAll<HTMLElement>('.ctx-item')) {
+  seen.menu.push([row.querySelector('.ctx-label')?.textContent ?? '', row.querySelector('.ctx-shortcut')?.textContent ?? '']);
+}
+[...uiRoot.querySelectorAll<HTMLElement>('.ctx-item')].find((r) => r.querySelector('.ctx-label')?.textContent === 'Journal: Field guide')?.click();
+frame();
+seen.menuTab = uiRoot.querySelector('.journal-tabs .tb-on')?.textContent ?? '';
 ui.openPalette();
 frame();
 ui.showEmotes();

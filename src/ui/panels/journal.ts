@@ -5,7 +5,10 @@ import { LedgerPanel } from './ledger';
 import { NewsPanel } from './news';
 
 /** The journal's tabs: what there is to do, what you have made, how any of it works, what has changed, who stands highest, every kind of creature, and the trades you are watching. */
-export type JournalTab = 'goals' | 'ledger' | 'help' | 'news' | 'boards' | 'guide' | 'tracker';
+import { JOURNAL_TABS, type JournalTab } from './journaltabs';
+
+export { JOURNAL_TAB_BIND, JOURNAL_TABS, type JournalTab } from './journaltabs';
+
 
 /**
  * The journal: everything somebody thought worth doing on this island, in
@@ -54,15 +57,7 @@ export class JournalPanel {
     win.body.classList.add('settings-body', 'journal-body');
     const bar = document.createElement('div');
     bar.className = 'log-tabs journal-tabs';
-    for (const [id, label, title] of [
-      ['goals', 'Goals', 'Goals, ticked off when done'],
-      ['ledger', 'Ledger', 'Everything made: count, rare count, best QL'],
-      ['help', 'Help', 'Rules and numbers'],
-      ['news', "What's new", 'Changes, newest first; unread marked'],
-      ['boards', 'Leaderboards', 'Top skill holders, best-bred wildermon, largest settlements'],
-      ['guide', 'Field guide', 'Every creature kind: seen, tamed, bred, habitat, yield'],
-      ['tracker', 'Tracker', 'Tracked skills: progress to next level'],
-    ] as Array<[JournalTab, string, string]>) {
+    for (const [id, label, title] of JOURNAL_TABS) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'tb-btn tb-small log-tab' + (id === this.tab ? ' tb-on' : '');
