@@ -1,0 +1,1 @@
+import{i as e,n as t,r as n}from"./wild-cow2.js";export{t as CREAMCALF,n as LACTISOVEREIGN,e as MILKMERE};

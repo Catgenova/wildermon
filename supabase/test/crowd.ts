@@ -120,6 +120,7 @@ try {
     })();` });
     await tab.addScriptTag({ content: `window.crowdScene = { following: ${following} };` });
     await tab.addScriptTag({ content: page });
+    await tab.evaluate(() => (window as unknown as { crowd: { ready: Promise<void> } }).crowd.ready);
     if (thrown.length) throw new Error(`the page threw: ${thrown.join('; ')}`);
     return { tab, ctx };
   };

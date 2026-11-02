@@ -14,7 +14,7 @@
  * than on the pose itself, so cells of one kind at different fleeces are
  * drawn at one scale and a shorn body shows as smaller.
  */
-import { drawWildermonPortrait, WILDERMON, WILDERMON_STAGES } from '../../src/render/wildermon';
+import { drawWildermonPortrait, loadAllWildermon, wildermonKind } from '../../src/render/wildermon';
 import { SPECIES } from '../../src/game/creatures';
 import { drawKind, evolveBurst, extentOf, kitOf, paletteFor, type Anim } from '../../src/render/beasts';
 
@@ -23,9 +23,7 @@ interface Cell { species: string; stage?: number; facing?: number; pose?: string
 /** A cell drawn at the scale of the kind standing in full fleece, posed as it says. */
 function fixed(ctx: CanvasRenderingContext2D, w: number, h: number, cell: Cell, colors: [string, string]): void {
   const stage = cell.stage ?? 0;
-  const later = stage > 0 ? WILDERMON_STAGES[cell.species]?.[stage - 1] : undefined;
-  const kind = later ?? WILDERMON[cell.species];
-  const key = later ? `${cell.species}@${stage}` : cell.species;
+  const { kind, key } = wildermonKind(cell.species, stage)!;
   const kit = kitOf(key, kind, 1);
   const facing = cell.facing ?? 1;
   const still: Anim = { t: 0, u: 0, go: 0, gait: 0, graze: 0, blink: false, breath: 0.5, fleece: 1, seed: 0.3 };
@@ -53,6 +51,8 @@ const poseOf = (p = 'stand'): Partial<Anim> | undefined => {
   return { act: { kind: k as 'strike' | 'work' | 'cast' | 'evolve', t: x } };
 };
 const root = document.getElementById('root')!;
+// Every line's models fetched first (`loadAllWildermon`).
+void loadAllWildermon().then(() => {
 for (const row of rows) {
   const line = document.createElement('div');
   line.style.whiteSpace = 'nowrap';
@@ -80,3 +80,4 @@ for (const row of rows) {
   root.append(line);
 }
 (window as unknown as { DONE: boolean }).DONE = true;
+});
