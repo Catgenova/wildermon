@@ -33,6 +33,7 @@
 import { execFileSync } from 'node:child_process';
 import { BOARD_TOP, bredScore } from '../../src/game/boards';
 import { MAX_DEED_LEVEL } from '../../src/game/game';
+import { levelSkill, SPECIES } from '../../src/game/creatures';
 import { GRADE_STEP, stageSlots, TIERS } from '../../src/game/traits';
 import { BOARD_RULES, BRED_MAX, figure } from '../../src/ui/panels/boards';
 
@@ -93,7 +94,7 @@ const BEASTS: Beast[] = [
 const sqlText = (s: string): string => `'${s.replace(/'/g, "''")}'`;
 const beastRows = BEASTS.map((b) => `(${sqlText(b.world)}, ${b.id}, ${sqlText(b.species)}, ${sqlText(b.name)}, ${sqlText(b.mode)}, `
   + `${b.keeper ? sqlText(b.keeper) : 'null'}, array[${b.traits.map(sqlText).join(', ')}]::text[], `
-  + `${sqlText(JSON.stringify(b.skill ? { digging: b.skill } : {}))}::jsonb, 4, 4, 4, 4, 10, 'female')`).join(',\n  ');
+  + `${sqlText(JSON.stringify(b.skill ? { [levelSkill(SPECIES[b.species]) ?? 'digging']: b.skill } : {}))}::jsonb, 4, 4, 4, 4, 10, 'female')`).join(',\n  ');
 
 /** Ask the board as somebody, as a client with the publishable key would. */
 const ask = (key: string, uid: string, path = ''): string => `
