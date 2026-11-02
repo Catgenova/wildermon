@@ -1507,6 +1507,19 @@ jobs:
             --outfile=node_modules/.cache/stock.mjs --log-level=error
           node node_modules/.cache/stock.mjs
 
+      - name: The stocking clock, cheaper and the same
+        if: matrix.shard == 3
+        run: |
+          # `stock_tick` asks once whether any block round anybody is owed and
+          # stops there when none is; `near_tile` reads each line it looks at
+          # once. On an island of its own: `near_tile` gives the answer it gave
+          # before at every point sampled, and ninety minutes of the clock as
+          # it was and as it is put out the same blocks on the same turns, the
+          # same wildlife in the same places, with the same stamps.
+          npx esbuild supabase/test/stockclock.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/stockclock.mjs --log-level=error
+          node node_modules/.cache/stockclock.mjs
+
       - name: A spadeful you could not put down
         if: matrix.shard == 1
         run: |
