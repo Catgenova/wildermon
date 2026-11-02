@@ -303,9 +303,16 @@ export function laneOf(b: Bridge, x: number, y: number): number | null {
   return null;
 }
 
-/** Whether wheels of this kind may cross a bridge: a cart where carts cross, a wagon only from `WAGON_WIDTH` lanes. The island's `deck_wheels`. */
+/** Whether wheels of this kind may cross a bridge: a cart where carts cross, a wagon only from `WAGON_WIDTH` lanes. */
 export const bridgeWheels = (b: Bridge, vehicle: string): boolean =>
   !!BRIDGES[b.kind]?.carts && (vehicle !== 'wagon' || bridgeWidth(b) >= WAGON_WIDTH);
+
+/**
+ * Whether a bridge's deck carries wheels of this kind (`bridgeWheels`) with both its ends on the ground: a walkway
+ * up a storey, or a ramp up to one, is driven by nobody. Wheels go under any other deck, on the ground. The island's
+ * `deck_wheels`.
+ */
+export const deckWheels = (b: Bridge, vehicle: string): boolean => bridgeWheels(b, vehicle) && bridgeLevels(b).every((l) => l === 0);
 
 /**
  * Whether a piece set down on this tile of a bridge's deck goes on the deck:
