@@ -316,6 +316,14 @@ export const deedWorkersAt = (level: number): number => DEED_WORKERS_AT_LEVEL_ON
  */
 export const DEED_GAP = 5;
 export const DEED_SPACING = 2 * deedRadiusAt(MAX_DEED_LEVEL) + 1 + DEED_GAP;
+/**
+ * Asked for: "Don't allow new settlements within 100 tiles of a runestone". The least gap between a new token and a
+ * runestone, in tiles, from the stone's nearest tile (`stoneGap`). The island's `deed_stone_gap`.
+ */
+export const DEED_STONE_GAP = 100;
+/** The refusal for a token too near a runestone, in the island's words (`deed_refusal`). */
+export const deedNearStone = (name: string, gap: number): string =>
+  `Too close to ${name}: ${Math.floor(gap)} tiles; ${DEED_STONE_GAP} needed.`;
 /** The refusal for a token too near another settlement's, in the island's words (`deed_refusal`). */
 export const deedTooClose = (name: string, apart: number): string =>
   `Too close to ${name}: ${apart} tiles token to token; ${DEED_SPACING} needed (borders at level ${MAX_DEED_LEVEL} ${DEED_GAP} tiles apart).`;

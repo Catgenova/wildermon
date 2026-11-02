@@ -39,7 +39,8 @@
 import { execFileSync } from 'node:child_process';
 import { Game, type DeedRole } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
-import { DEED_GAP, DEED_SPACING, DEEDS_JOINED, deedRadiusAt, deedTooClose, MAX_DEED_LEVEL } from '../../src/game/game';
+import { DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DEEDS_JOINED, deedNearStone, deedRadiusAt, deedTooClose, MAX_DEED_LEVEL } from '../../src/game/game';
+import { RUNESTONES, STONE_HALF, STONE_LEAST, stoneCentre, stoneGap } from '../../src/game/runestones';
 import type { Social } from '../../src/net/island';
 import { inviteRefusal, moveInRefusal, rollFull } from '../../src/ui/panels/social';
 
@@ -103,6 +104,56 @@ check(`a token ${DEED_SPACING - 1} tiles from another settlement's is refused, a
 check(`and one ${DEED_SPACING} tiles off is not (${DEED_SPACING} = 2 × ${deedRadiusAt(MAX_DEED_LEVEL)} + 1 + ${DEED_GAP})`,
   asked() === 'none' && DEED_SPACING === 2 * deedRadiusAt(MAX_DEED_LEVEL) + 1 + DEED_GAP, asked());
 const browserNear = asked(near);
+// Asked: "Don't allow new settlements within 100 tiles of a runestone". On an island the size of the live one's chart
+// (the stones stand only on one of STONE_LEAST or more), 50 tiles from the Crownstone and DEED_STONE_GAP tiles off.
+const big = Game.create(4242, STONE_LEAST);
+big.inventory.add('deed_stake');
+const stone = RUNESTONES[0];
+const sc = stoneCentre(stone, STONE_LEAST);
+const dry = (dx: number): Target | null => {
+  for (let dy = 0; dy < 60; dy++) for (const sy of [1, -1]) {
+    const x = sc.x + dx, y = sc.y + sy * dy;
+    if (big.world.inBounds(x, y) && !big.world.hasWater(x, y) && big.world.isPassable(x, y)) return { kind: 'tile', x, y, cx: x, cy: y };
+  }
+  return null;
+};
+const nearStone = dry(-50), farStone = dry(-(DEED_STONE_GAP + STONE_HALF + 2));
+const stoneSaid = (t: Target | null): string => (t ? found.check?.(t, big) ?? 'none' : 'no dry tile');
+check(`a token ${Math.floor(stoneGap(stone, STONE_LEAST, nearStone?.x ?? 0, nearStone?.y ?? 0))} tiles from ${stone.name} is refused, and says how far it needs to be`,
+  !!nearStone && stoneSaid(nearStone) === deedNearStone(stone.name, stoneGap(stone, STONE_LEAST, nearStone.x, nearStone.y)), stoneSaid(nearStone));
+check(`and one ${DEED_STONE_GAP} or more off is not refused for it`, !!farStone && !stoneSaid(farStone).startsWith(`Too close to ${stone.name}`), stoneSaid(farStone));
+// The island's half, on the suite's island the size of the live one: a token 50 tiles west of the Crownstone, on the
+// first dry tile north or south of that line, as the browser's half picks it; rolled back.
+{
+  const said = psql(`
+begin;
+create temp table said (v text);
+do $$
+declare w uuid; u uuid; c record; gx int; gy int; dy int; s int;
+begin
+  select id into w from world where name = 'Bigness';
+  select uid into u from player where world_id = w order by uid limit 1;
+  select * into c from runestone_centres(4096) where id = 'crownstone';
+  delete from deed where world_id = w and founded_by = u;
+  delete from item where world_id = w and holder = 'player' and holder_uid = u and def = 'deed_stake';
+  perform give(w, u, 'deed_stake', 1, 50);
+  gx := c.x - 50;
+  <<find>> for dy in 0..59 loop
+    foreach s in array array[1, -1] loop
+      if not has_water(w, gx, c.y + s * dy) and passable(w, gx, c.y + s * dy) then gy := c.y + s * dy; exit find; end if;
+    end loop;
+  end loop;
+  update player set x = gx + 0.5, y = gy + 0.5 where world_id = w and uid = u;
+  insert into said select coalesce(deed_refusal(w, u, 'found_settlement', '{"kind":"item"}'::jsonb), 'none')
+    || '|' || floor(sqrt(power(greatest(0, abs(gx - c.x) - stone_half()), 2) + power(greatest(0, abs(gy - c.y) - stone_half()), 2)))::int;
+end $$;
+select v from said;
+rollback;
+`).trim().split('\n').pop() ?? '';
+  const [refused, gap] = said.split('|');
+  check(`the island refuses a token ${gap} tiles from ${stone.name}, in the words the browser uses`,
+    refused === deedNearStone(stone.name, Number(gap)), said);
+}
 
 /* ---- the island ------------------------------------------------------------ */
 

@@ -153,7 +153,7 @@ import {
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POND_MOST, POOL_DEPTH, POOL_LIP, RUN_MOST, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { CLEAR_OF_BUILDINGS, CONCRETE_PER_STEP, LIFT_PER_MASONRY, POOL_FILL } from '../../game/foundations';
 import { AWARENESS, awarenessReach, BASE_SIGHT, LIGHT_GIVES_BACK, NIGHT_LOSS, TREE_OPACITY } from '../../game/vision';
-import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEED_GAP, DEED_SPACING, FORAGE_COOLDOWN } from '../../game/game';
+import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, FORAGE_COOLDOWN } from '../../game/game';
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
@@ -1754,7 +1754,7 @@ export function helpText(): string {
     <h3>Settling and building</h3>
     <h4>Founding</h4>
     <ul>
-      <li><b>Settlement stake</b>: a shaft, carving knife. Use where you stand: a settlement ${DEED_ACROSS} by ${DEED_ACROSS} tiles round a settlement totem. Token at least ${DEED_SPACING} tiles from every other settlement's token on one axis (borders at level ${MAX_DEED_LEVEL} ${DEED_GAP} tiles apart).</li>
+      <li><b>Settlement stake</b>: a shaft, carving knife. Use where you stand: a settlement ${DEED_ACROSS} by ${DEED_ACROSS} tiles round a settlement totem. Token at least ${DEED_SPACING} tiles from every other settlement's token on one axis (borders at level ${MAX_DEED_LEVEL} ${DEED_GAP} tiles apart), and at least ${DEED_STONE_GAP} tiles from every runestone.</li>
       <li>One settlement at a time. Building only on its land.</li>
       <li>Items left outside on settlement land: rot rate ${frac(DEED_DECAY)} of that off it.</li>
     </ul>

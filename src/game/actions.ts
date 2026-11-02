@@ -4,7 +4,7 @@ import { PROSPECT_HEAD, tryGain } from './learn';
 import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TileType, bushSpecies, packTreeData, slabVariant, treeAge, treeSpecies, treeVariant, lastDawn, nextDawn, type TreeAge, LAWN_AFTER, MOWN_TODAY, MOWING, mownDays, mownToday } from '../world/tiles';
 import { FLOWER_ACTIONS, groundSays } from './wildflowers';
 import { MOTE_ACTIONS, WATER_MOTE, WATER_MOTES_EACH } from './motes';
-import { STONE_GUARDED, stoneGroundRefusal, TELESTONE, TELESTONE_ACTIONS, telestoneSays } from './runestones';
+import { hasRunestones, RUNESTONES, STONE_GUARDED, stoneGap, stoneGroundRefusal, TELESTONE, TELESTONE_ACTIONS, telestoneSays } from './runestones';
 import { DAILY_RESET, isSeam, metres } from '../world/tiles';
 import type { World } from '../world/world';
 import { bedrockAt, oreAt } from '../world/ore';
@@ -71,7 +71,7 @@ import { SPECIES, type Stance, takeArms } from './creatures';
 import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollTable } from './forage';
 import { atWaterEdge, WATER_GARDEN_ACTIONS } from './watergarden';
 import { CELLAR_DEPTH, CELLAR_LEVEL, floorOf, type FloorKind, type RoofShape, type Side, type StairHand, type WallType } from './building';
-import { DEED_RADIUS, DEED_SPACING, deedTooClose, PROSPECT_MARK_TIME, type Game } from './game';
+import { DEED_RADIUS, DEED_SPACING, DEED_STONE_GAP, deedNearStone, deedTooClose, PROSPECT_MARK_TIME, type Game } from './game';
 import { isFounder, lacks } from './ranks';
 import { materialOfItem } from './materials';
 import { boonOf, boonTime, clockLeft } from './boons';
@@ -3054,6 +3054,12 @@ export const ACTIONS: ActionDef[] = [
         if (apart < DEED_SPACING && (!close || apart < close.apart)) close = { name: d.name, apart };
       }
       if (close) return deedTooClose(close.name, close.apart);
+      // A runestone closer than `DEED_STONE_GAP`: the nearest of them.
+      if (hasRunestones(w.w)) {
+        const near = RUNESTONES.map((s) => ({ s, gap: stoneGap(s, w.w, x, y) })).filter((n) => n.gap < DEED_STONE_GAP)
+          .sort((a, b) => a.gap - b.gap)[0];
+        if (near) return deedNearStone(near.s.name, near.gap);
+      }
       // A poured slab is dry, level ground standing above whatever is under
       // it, which is exactly what a token wants and is sometimes the only
       // such tile on a hillside.
