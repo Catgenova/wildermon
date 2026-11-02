@@ -1015,6 +1015,19 @@ jobs:
           npx esbuild supabase/test/turned.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/turned.mjs --log-level=error
           node node_modules/.cache/turned.mjs
+      - name: Each wildermon line's models and voice fetched when wanted, and let go of when not
+        if: matrix.shard == 1
+        run: |
+          # The models were a quarter of the game's code, all loaded before the
+          # island was asked for anything. Each line is fetched the first time
+          # a body of it is drawn, its voice the first time one is in earshot,
+          # and a line not drawn for a while lets go of its pieces and pictures.
+          # Checked: every line and voice comes, nothing imports one by name
+          # (which would put it back in what every player loads at the start),
+          # and a line let go of is made again the same.
+          npx esbuild supabase/test/wildlines.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/wildlines.mjs --log-level=error
+          node node_modules/.cache/wildlines.mjs
       - name: A settlement full of wildermon and walls draws them once, not every frame
         if: matrix.shard == 1
         env:
@@ -1522,6 +1535,19 @@ jobs:
             --outfile=node_modules/.cache/stock.mjs --log-level=error
           node node_modules/.cache/stock.mjs
 
+      - name: The stocking clock, cheaper and the same
+        if: matrix.shard == 3
+        run: |
+          # `stock_tick` asks once whether any block round anybody is owed and
+          # stops there when none is; `near_tile` reads each line it looks at
+          # once. On an island of its own: `near_tile` gives the answer it gave
+          # before at every point sampled, and ninety minutes of the clock as
+          # it was and as it is put out the same blocks on the same turns, the
+          # same wildlife in the same places, with the same stamps.
+          npx esbuild supabase/test/stockclock.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/stockclock.mjs --log-level=error
+          node node_modules/.cache/stockclock.mjs
+
       - name: A spadeful you could not put down
         if: matrix.shard == 1
         run: |
@@ -1570,6 +1596,21 @@ jobs:
           npx esbuild supabase/test/dawn.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/dawn.mjs --log-level=error
           node node_modules/.cache/dawn.mjs
+
+      - name: A day in the woods in parts, the same day
+        if: matrix.shard == 3
+        run: |
+          # A go of `tree_tick` was a whole island's day in one transaction,
+          # 98 seconds at worst on the live island, holding every line it had
+          # written. It is parts of a second now, each committed, carried on
+          # from `private.tree_run`. On an island of its own: the day as it
+          # was, the day in the smallest parts there are and the day in one go
+          # leave the same ground byte for byte and the same record, from one
+          # seed; a spot built on between picking and planting takes no
+          # sapling; and the tick carries on a day under way first.
+          npx esbuild supabase/test/woodparts.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/woodparts.mjs --log-level=error
+          node node_modules/.cache/woodparts.mjs
 
       - name: The island's year is the same year on both sides
         if: matrix.shard == 1
@@ -3175,6 +3216,21 @@ jobs:
             --outfile=node_modules/.cache/stirload.mjs --log-level=error
           node node_modules/.cache/stirload.mjs
 
+      - name: A creature's numbers planned once, a settle writing what changed
+        if: matrix.shard == 3
+        run: |
+          # A creature's numbers and its stores' room are planned once a
+          # session, not once a settle; a worker's or companion's settle
+          # writes its row only when it changed; a step writes no index. Each
+          # function put back as the SQL it was: every number for every kind,
+          # stage, trait, gear and channel and every piece of furniture the
+          # same to the last bit, a round of the clock and an hour of work the
+          # same island, with fewer creature rows written and none that
+          # changed left unwritten.
+          npx esbuild supabase/test/writeload.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/writeload.mjs --log-level=error
+          node node_modules/.cache/writeload.mjs
+
       - name: A queue put in order
         if: matrix.shard == 3
         run: |
@@ -4104,6 +4160,18 @@ jobs:
           npx esbuild supabase/test/bagcarry.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/bagcarry.mjs --log-level=error
           node node_modules/.cache/bagcarry.mjs
+
+      - name: What a step costs the island, and that it is the same step
+        if: matrix.shard == 4
+        run: |
+          # The pack weighed in one pass and the lookups a step asks planned
+          # once a session: the weight, the limit and the share the same
+          # numbers to the last bit as every thing weighs itself; no vehicle
+          # and no mount NULL, not a row of NULLs; every lookup plpgsql; and a
+          # step still goes where it is asked and stops short of the trees.
+          npx esbuild supabase/test/stepcost.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/stepcost.mjs --log-level=error
+          node node_modules/.cache/stepcost.mjs
 
       - name: Where things come from, impossible things swept, and work faster than its pace
         if: matrix.shard == 4
@@ -5325,9 +5393,35 @@ jobs:
           # cursor and the ids it holds, it is sent exactly what was written
           # since, what it lacks and which went, and a browser laying those
           # holds what the whole answer says after every turn of the clock.
+          # Packed, every row unpacks to the whole answer's, key for key.
           npx esbuild supabase/test/fetchdelta.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/fetchdelta.mjs --log-level=error
           node node_modules/.cache/fetchdelta.mjs
+
+      - name: The ground read sends only what changed, and the same answer for less
+        if: matrix.shard == 6
+        run: |
+          # Asked for: "streamline cpu". The read with the water asked only of a
+          # well says what it says asking every piece, key for key; a browser
+          # that says no cursor gets what it always got; handed back its cursor
+          # it is sent what was written since, what came into range or reach,
+          # and what moves without a write, and a browser laying those holds
+          # what the whole answer says, key for key, after every change. Asked
+          # with the creatures in one round trip, each says what it says alone.
+          npx esbuild supabase/test/grounddelta.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/grounddelta.mjs --log-level=error
+          node node_modules/.cache/grounddelta.mjs
+
+      - name: A page opened before the migrations asks the new way once the island has them
+        if: matrix.shard == 5
+        run: |
+          # Seen live: every creatures read in the old form for half an hour
+          # after its migration. The browser's own Island against a stand-in:
+          # told the new forms are missing, it asks the old way, and the new way
+          # again RETRY_NEWER seconds on, cursor and all, in one round trip.
+          npx esbuild supabase/test/askdown.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/askdown.mjs --log-level=error
+          node node_modules/.cache/askdown.mjs
 
   migrate:
     name: Push the migrations to the project

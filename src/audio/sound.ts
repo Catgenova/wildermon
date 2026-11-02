@@ -3,7 +3,7 @@ import { TileType, stepsTimber } from '../world/tiles';
 import { MATERIAL_BY_ID } from '../game/building';
 import { BRIDGES } from '../game/bridges';
 import { blow, chime, footfall, stroke, type Footing, type Stroke } from './kit';
-import { VOICES } from './voices';
+import { voiceOf } from './voices';
 import { stageOf } from '../game/creatures';
 
 /**
@@ -435,7 +435,10 @@ export class Sound {
     const p = g.player;
     foot(EARS_PLAYER, p.x, p.y, p.level);
     for (const cr of g.creatures.list.values()) {
-      if (heard(cr.x, cr.y)) foot(cr.id, cr.x, cr.y, 0);
+      if (!heard(cr.x, cr.y)) continue;
+      // Its voice fetched while it is in earshot, so it is in before it acts.
+      voiceOf(cr.species);
+      foot(cr.id, cr.x, cr.y, 0);
     }
     for (const other of g.roster.list()) {
       if (heard(other.x, other.y)) foot(EARS_PEER - other.id, other.x, other.y, other.level);
@@ -465,10 +468,10 @@ export class Sound {
     const g = this.game;
     g.events.on('work', (x, y, kind) => this.say(x, y, (ctx, node, at) => stroke(ctx, node, at, kind as Stroke, this.next())));
     g.events.on('hit', (x, y, _amount, kind) => this.say(x, y, (ctx, node, at) => blow(ctx, node, at, kind === 'taken', this.next())));
-    // A wildermon's own voice, for each act it has a sound for (`VOICES`), at the stage it is at.
+    // A wildermon's own voice, for each act it has a sound for (`voiceOf`), at the stage it is at.
     g.events.on('beast', (id, act) => {
       const c = g.creatures.get(id);
-      const cue = c && VOICES[c.species]?.[act];
+      const cue = c && voiceOf(c.species)?.[act];
       if (c && cue) this.say(c.x, c.y, (ctx, node, at) => cue(ctx, node, at, stageOf(c), this.next()));
     });
     // A skill speaks when its whole number changes, which is the same rule

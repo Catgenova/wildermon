@@ -1,0 +1,1 @@
+import{n as e,r as t,t as n}from"./wild-spiral2.js";export{n as SPIRALCALF,e as SPIRALPHANT,t as SPIRALTRUNK};

@@ -4,6 +4,8 @@ import type { Enchant } from '../game/enchant';
 import { firedIn, toldIn, type FiredWire, type ToldWire } from './told';
 import { HeardLines } from './heardlines';
 import { MobsHeld, type MobsAnswer } from './mobsync';
+import { GroundHeld, type GroundAnswer } from './groundsync';
+import { askDown, lacks, Lacked } from './askdown';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { ErrorReport } from './errors';
 import { CHUNK, World } from '../world/world';
@@ -412,6 +414,29 @@ export interface PlayerRow {
   act: string | null;
   act_ends: string | null;
   [key: string]: unknown;
+}
+
+/**
+ * How early, in seconds, the creatures or the ground read is asked when the other is due, so that the two go in one
+ * round trip (`Island.refreshNear`) and stay in step after: half the beat of either.
+ */
+const NEAR_EARLY = 0.5;
+
+/** The creatures read as asked (`Island.mobsAsk`): whether whole, its number, and its arguments either way. */
+interface MobsAsk {
+  whole: boolean;
+  seq: number;
+  plain: { p_world: string; p_range: number };
+  since: { p_world: string; p_range: number; p_since: string; p_have: number[] };
+}
+
+/** The ground read as asked (`Island.groundAsk`): whether with the slow half, its number, our asks when it went, its cursor. */
+interface GroundAsk {
+  slow: boolean;
+  seq: number;
+  asked: number;
+  plain: { p_world: string; p_range: number; p_slow: boolean };
+  since: string;
 }
 
 /**
@@ -1243,16 +1268,30 @@ export class Island {
   /**
    * The creatures as the island last said them, and the cursor to ask for only what changed since (`mobsync.ts`).
    * `mobsWhole` asks for the whole answer next, after anything we do; `mobsWholeAt` is when the last whole one was
-   * asked; `mobsOld` an island a migration behind this page, asked the old way for the rest of the stay; and
-   * `mobsAsked` / `mobsLaid` number the asks, so an answer that comes after a newer one is not laid.
+   * asked; `mobsOld` an island a migration behind this page, asked the old way until `RETRY_NEWER` seconds have
+   * gone (`askdown.ts`); and `mobsAsked` / `mobsLaid` number the asks, so an answer that comes after a newer one is
+   * not laid.
    */
   private mobs = new MobsHeld();
   private mobsWhole = true;
   private mobsWholeAt = -Infinity;
-  private mobsOld = false;
+  private mobsOld = new Lacked();
+  /** An island that does not pack the rows (`p_pack`), asked for them as objects for a while (`askdown.ts`). */
+  private mobsLoose = new Lacked();
   private mobsAsked = 0;
   private mobsLaid = 0;
   private lastGround = 0;
+  /**
+   * The ground's burning half as the island last said it, and the cursor to ask for only what changed since
+   * (`groundsync.ts`): `groundOld` an island a migration behind this page, asked the old way for a while
+   * (`askdown.ts`); `groundAsked` / `groundLaid` number the asks, so an answer that comes after a newer one is not laid.
+   */
+  private ground = new GroundHeld();
+  private groundOld = new Lacked();
+  /** An island without `rpc_near`, asked the creatures and the ground apart for a while (`askdown.ts`). */
+  private nearOld = new Lacked();
+  private groundAsked = 0;
+  private groundLaid = 0;
   private lastSprings = 0;
   /** When the spots picked over near us were last read (`refreshForaged`), and where we were. */
   private lastForaged = 0;
@@ -1363,6 +1402,8 @@ export class Island {
    * and a tab that was shut an hour ago.
    */
   private beat: ReturnType<typeof setTimeout> | null = null;
+  /** When (performance ms) a beat put off while the page was hidden was wanted, or 0 for none (`armBeat`, `shown`). */
+  private beatOwed = 0;
   /** The block of country the channel is listening to, as `rx,ry`. */
   private block = '';
   /**
@@ -1587,7 +1628,11 @@ export class Island {
     const got = data as { world: WorldRow; you: PlayerRow; new: boolean };
     this.info = got.world;
     this.mobs.clear();
-    this.mobsOld = false;
+    this.mobsOld.clear();
+    this.mobsLoose.clear();
+    this.ground.clear();
+    this.groundOld.clear();
+    this.nearOld.clear();
     this.landFrom = Number(got.world.changes_from ?? 0) || 0;
     // The hour, straight away, so the first frame is drawn in the island's
     // light rather than in whatever this browser last believed.
@@ -2152,7 +2197,23 @@ export class Island {
    */
   private armBeat(seconds: number): void {
     if (this.beat) clearTimeout(this.beat);
-    this.beat = setTimeout(() => void this.pulse(), Math.max(0.5, seconds) * 1000);
+    const wanted = Math.max(0.5, seconds);
+    /*
+     * While the page is hidden, no sooner than the heartbeat: the island's clock settles a job that comes due whether
+     * or not anybody asks (`world_tick`), and nobody is looking at the bar. Looked at again, the beat goes when it
+     * was wanted, or at once (`shown`).
+     */
+    const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
+    this.beatOwed = hidden && wanted < HEARTBEAT ? performance.now() + wanted * 1000 : 0;
+    this.beat = setTimeout(() => {
+      this.beatOwed = 0;
+      void this.pulse();
+    }, (hidden ? Math.max(wanted, HEARTBEAT) : wanted) * 1000);
+  }
+
+  /** The page is in front again: a beat put off while it was hidden goes when it was wanted, or at once. */
+  shown(): void {
+    if (this.info && this.beatOwed) this.armBeat((this.beatOwed - performance.now()) / 1000);
   }
 
   /** Input timing for the island's watch (`src/engine/cadence.ts`): a flag at most, so nothing comes back and a failure is dropped. */
@@ -2396,8 +2457,7 @@ export class Island {
         this.refreshPeople().catch(() => undefined),
         this.refreshPack().catch(() => undefined),
         this.catchUpQuietly(),
-        this.refreshMobs(now).catch(() => undefined),
-        this.refreshGround(now).catch(() => undefined),
+        this.refreshNear(now).catch(() => undefined),
       ]);
       // And the lines told while the channels were joining again, which the settle above was sent too soon to read.
       if (cut) this.armBeat(0.5);
@@ -2945,6 +3005,35 @@ export class Island {
   }
 
   /**
+   * The creatures and the ground near us, each on its own beat (`refreshMobs`, `refreshGround`), and in one round
+   * trip when both are due (`rpc_near`): the same two answers, each laid as it would be on its own. An island a
+   * migration behind this page, or one either read is asked the old way of, is asked them apart.
+   */
+  async refreshNear(now: number): Promise<void> {
+    // Either due brings the other along when it is due within `NEAR_EARLY`, so the two keep step and go together.
+    let mobs = this.mobsAsk(now);
+    const ground = this.groundAsk(now, mobs ? NEAR_EARLY : 0);
+    if (ground && !mobs) mobs = this.mobsAsk(now, NEAR_EARLY);
+    const at = performance.now() / 1000;
+    if (mobs && ground && ![this.nearOld, this.mobsOld, this.mobsLoose, this.groundOld].some((l) => l.on(at))) {
+      const { data, error } = await supabase().rpc('rpc_near', {
+        ...mobs.since, p_pack: true, p_ground_range: ground.plain.p_range, p_slow: ground.plain.p_slow, p_ground_since: ground.since,
+      });
+      if (!lacks(error, /rpc_near|p_ground_since/)) {
+        const both = (data ?? null) as { creatures?: unknown; ground?: unknown } | null;
+        this.layMobs(mobs, both?.creatures ?? null, error);
+        this.layGround(ground, both?.ground ?? null, error);
+        return;
+      }
+      this.nearOld.trip(at);
+    }
+    await Promise.all([
+      mobs ? this.mobsCall(mobs).then((r) => this.layMobs(mobs, r.data, r.error)) : null,
+      ground ? this.groundCall(ground).then((r) => this.layGround(ground, r.data, r.error)) : null,
+    ]);
+  }
+
+  /**
    * What is moving about near us.
    *
    * Asked for on its own beat, rather than with the rest of the reconcile: a
@@ -2953,7 +3042,15 @@ export class Island {
    * is `creature_sweep`'s only door.
    */
   async refreshMobs(now: number): Promise<void> {
-    if (!this.info || !this.hooks.mobs || now - this.lastMobs < MOBS_EVERY * this.slower()) return;
+    const ask = this.mobsAsk(now);
+    if (!ask) return;
+    const { data, error } = await this.mobsCall(ask);
+    this.layMobs(ask, data, error);
+  }
+
+  /** The creatures read as it would be asked now, or null when it is not due. */
+  private mobsAsk(now: number, early = 0): MobsAsk | null {
+    if (!this.info || !this.hooks.mobs || now + early - this.lastMobs < MOBS_EVERY * this.slower()) return null;
     this.lastMobs = now;
     /*
      * Only what changed since the last answer, which is most of the island's work saved: five to ten in a hundred
@@ -2966,15 +3063,31 @@ export class Island {
       this.mobsWhole = false;
       this.mobsWholeAt = now;
     }
-    const seq = ++this.mobsAsked;
     const plain = { p_world: this.info.id, p_range: MOBS_RANGE };
-    let { data, error } = this.mobsOld ? await supabase().rpc('rpc_creatures', plain)
-      : await supabase().rpc('rpc_creatures', { ...plain, p_since: whole ? '' : this.mobs.at, p_have: whole ? [] : this.mobs.have() });
-    // An island a migration behind this page has no `p_since` (PostgREST: no such function): asked as it used to be.
-    if (error && !this.mobsOld && (error.code === 'PGRST202' || /p_since|p_have/.test(error.message))) {
-      this.mobsOld = true;
-      ({ data, error } = await supabase().rpc('rpc_creatures', plain));
-    }
+    return {
+      whole, seq: ++this.mobsAsked, plain,
+      since: { ...plain, p_since: whole ? '' : this.mobs.at ?? '', p_have: whole ? [] : this.mobs.have() },
+    };
+  }
+
+  /** The creatures read on its own. */
+  private async mobsCall(ask: MobsAsk): Promise<{ data: unknown; error: { code?: string; message: string } | null }> {
+    /*
+     * Packed (`mobsync.ts`): each row as its values, the keys laid back on here. An island a migration behind this
+     * page has no `p_pack`, or no `p_since` either (PostgREST: no such function): asked as it used to be, and the
+     * newer way again `RETRY_NEWER` seconds on (`askdown.ts`).
+     */
+    return askDown([
+      { args: { ...ask.since, p_pack: true }, lacked: this.mobsLoose, says: /p_pack/ },
+      { args: ask.since, lacked: this.mobsOld, says: /p_since|p_have/ },
+      { args: ask.plain, lacked: null, says: /$^/ },
+    ], performance.now() / 1000, (args) => supabase().rpc('rpc_creatures', args));
+  }
+
+  /** A creatures answer laid, however it came. */
+  private layMobs(ask: MobsAsk, data: unknown, error: unknown): void {
+    if (!this.hooks.mobs) return;
+    const { whole, seq } = ask;
     /*
      * A call that failed is not an island with nothing on it.
      *
@@ -3015,6 +3128,14 @@ export class Island {
    * correct for.
    */
   async refreshGround(now: number): Promise<void> {
+    const ask = this.groundAsk(now);
+    if (!ask) return;
+    const { data, error } = await this.groundCall(ask);
+    this.layGround(ask, data, error);
+  }
+
+  /** The ground read as it would be asked now, or null when it is not due. */
+  private groundAsk(now: number, early = 0): GroundAsk | null {
     /*
      * Nothing set down moves unless somebody moves it, so while we are
      * standing still and not working, this is asked for at a walking pace
@@ -3027,15 +3148,37 @@ export class Island {
     }
     const idle = now - this.restless > GROUND_IDLE;
     const wait = (idle ? GROUND_IDLE : GROUND_EVERY) * this.slower();
-    if (!this.info || !this.hooks.built || now - this.lastGround < wait) return;
+    if (!this.info || !this.hooks.built || now + early - this.lastGround < wait) return null;
     this.lastGround = now;
     // The slow half when it is owed, and the burning half every other time.
     const slow = this.groundSlow;
     this.groundSlow = false;
-    const asked = this.acted;
-    const { data } = await supabase().rpc('rpc_ground', {
-      p_world: this.info.id, p_range: GROUND_RANGE, p_slow: slow,
-    });
+    /*
+     * Only what changed since the last answer laid (`groundsync.ts`), and the whole answer with every slow half: every
+     * `RECONCILE_EVERY` seconds and after anything we do.
+     */
+    const whole = slow || this.ground.at === null;
+    return {
+      slow, seq: ++this.groundAsked, asked: this.acted,
+      plain: { p_world: this.info.id, p_range: GROUND_RANGE, p_slow: slow },
+      since: whole ? '' : this.ground.at ?? '',
+    };
+  }
+
+  /** The ground read on its own. */
+  private async groundCall(ask: GroundAsk): Promise<{ data: unknown; error: { code?: string; message: string } | null }> {
+    // An island a migration behind this page has no `p_since` (PostgREST: no such function): asked as it used to be,
+    // and the newer way again `RETRY_NEWER` seconds on (`askdown.ts`).
+    return askDown([
+      { args: { ...ask.plain, p_since: ask.since }, lacked: this.groundOld, says: /p_since/ },
+      { args: ask.plain, lacked: null, says: /$^/ },
+    ], performance.now() / 1000, (args) => supabase().rpc('rpc_ground', args));
+  }
+
+  /** A ground answer laid, however it came. */
+  private layGround(ask: GroundAsk, data: unknown, error: unknown): void {
+    if (!this.hooks.built) return;
+    const { slow, seq, asked } = ask;
     /*
      * Thrown away if one of our own asks was answered while this was out.
      *
@@ -3049,7 +3192,20 @@ export class Island {
       if (slow) this.groundSlow = true;
       return;
     }
-    if (data) this.hooks.built(data as IslandGround);
+    // A call that failed says nothing about the ground, and an answer to an older ask than one laid is older than it.
+    if (error || !data || typeof data !== 'object' || seq < this.groundLaid) {
+      if (slow) this.groundSlow = true;
+      return;
+    }
+    this.groundLaid = seq;
+    if (!('at' in data)) {
+      this.ground.clear();
+      this.hooks.built(data as IslandGround);
+      return;
+    }
+    const laid = this.ground.take(data as GroundAnswer);
+    if (laid) this.hooks.built(laid as unknown as IslandGround);
+    else this.groundSlow = true;
   }
 
   /**
@@ -3230,8 +3386,7 @@ export class Island {
     // Held to a few words' worth: a walk longer than that untold goes from the latest of it.
     if (this.walked.length > 4 * VIA_MAX) this.walked.splice(0, this.walked.length - 4 * VIA_MAX);
     void this.reconcile(now);
-    void this.refreshMobs(now);
-    void this.refreshGround(now);
+    void this.refreshNear(now);
     void this.refreshSprings(now);
     this.near = { x, y };
     void this.refreshForaged(now);
