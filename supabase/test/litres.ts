@@ -50,6 +50,10 @@ const say = (k: string, id: string): string => `insert into said select '${k}', 
 const out = psql(`
 discard temp;
 begin;
+-- Every check comes off: this is about the litres a go takes, and a failed go takes none (it damages them: faildamage.ts).
+create or replace function skill_check(p_skill double precision, p_difficulty double precision,
+   p_tool_ql double precision default 0, p_ease double precision default 0)
+   returns boolean language sql as 'select true';
 create temp table said (k text, v text);
 do $t$
 declare w uuid; u uuid := '${MIRA}'; v_flour bigint; v_w bigint; v_b bigint; v_bar bigint; v_hide bigint; v_lye bigint; v_milk bigint; v_part bigint; v_ash bigint;
@@ -124,6 +128,8 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 /* ---- in the browser ------------------------------------------------------------------------------------------- */
 
 const g = Game.create(179, 256);
+// Every check comes off, as on the island above.
+g.skillCheck = () => true;
 const w = g.world;
 w.water = null;
 w.heights.fill(10);
