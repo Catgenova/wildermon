@@ -153,6 +153,16 @@ jobs:
                  f.funcname, f.calls, round(f.total_time) as ms_total, round(f.self_time) as ms_self,
                  round((f.total_time / greatest(f.calls, 1))::numeric, 2) as ms_each
                  from pg_stat_user_functions f order by f.self_time desc limit 25"
+          # Asked: "Anything we can do here to streamline cpu?". Where the clock's time goes on an ordinary round, and
+          # which calls cost the database most in all: a call's name is the function PostgREST wraps.
+          ask "the clock's average round, last hour, by stage" "select count(*) as rounds, round(avg(ms)::numeric) as ms_avg,
+                 (select string_agg(k || ' ' || v, ', ' order by v desc) from (select e.key as k, round(avg((e.value::text)::numeric), 1) as v
+                    from tick_time t2, jsonb_each(t2.stages) e where t2.at > now() - interval '1 hour' group by e.key) s) as stage_avg_ms
+                 from tick_time where at > now() - interval '1 hour'"
+          ask "what costs the database most in all (pg_stat_statements)" "select coalesce(substring(query from '\"?public\"?\.\"?([a-z_0-9]+)\"?\('), left(regexp_replace(query, '\s+', ' ', 'g'), 60)) as call,
+                 sum(calls) as calls, round(sum(total_exec_time) / 1000) as s_total, round((sum(total_exec_time) / greatest(sum(calls), 1))::numeric, 2) as ms_each,
+                 round(100 * sum(total_exec_time) / (select sum(total_exec_time) from pg_stat_statements)) as pct
+                 from pg_stat_statements where query not like '%pg_stat%' group by 1 order by sum(total_exec_time) desc limit 20"
           ask "rounds over 2 s, by 5 minutes, last 3 hours" "select to_char(date_trunc('hour', at) + floor(extract(minute from at) / 5) * interval '5 minutes', 'HH24:MI') as at,
                  count(*) filter (where ms > 2000) as over_2s, round(max(ms)::numeric) as worst, round(avg(ms)::numeric) as avg
                  from tick_time where at > now() - interval '3 hours' group by 1 order by 1"
