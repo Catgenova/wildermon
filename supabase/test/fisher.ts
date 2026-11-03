@@ -24,7 +24,7 @@
  * Runs against the database the suite leaves behind, and puts it back.
  */
 import { execFileSync } from 'node:child_process';
-import { Game } from '../../src/game/game';
+import { Game, STARTER_FOOD } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import {
   BAIT_BY_ID, BAIT_PULL, BAIT_SHY, biteWeight, CAST, castAt, catchFish, FISH, fishJournal, HOOK_MOST, NET_HAUL, NET_LEAST, NET_REACH,
@@ -667,7 +667,7 @@ game.rand = () => RARE_BELOW;
 fishDef.perform(tileAt(px + 5, py), game);
 check('its Rare Catch lands a rare fish all the way under the same dice',
   game.inventory.items.some((it) => FISH.some((f) => f.id === it.id) && it.rare === RARITIES.length - 1));
-for (const it of [...game.inventory.items]) if (FISH.some((f) => f.id === it.id) || it.id === 'worm') game.inventory.remove(it.uid, it.count);
+for (const it of [...game.inventory.items]) if (FISH.some((f) => f.id === it.id) || it.id === 'worm' || it.id === STARTER_FOOD) game.inventory.remove(it.uid, it.count);
 game.inventory.add('cooked_fish', { ql: 30 });
 game.setPerks({});
 // The odds and the ceiling after it are `yields.ts`'s (`supabase/test/yields.ts`); the bait is the label's own.
