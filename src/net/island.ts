@@ -496,6 +496,14 @@ export interface ItemRow {
  * thing came from (`origin`, `origin_fn`, `origin_uid`) is the watch's, and the island refuses a
  * browser those (20261026131100).
  */
+/**
+ * What the roster reads of everybody awake, every \`RECONCILE_EVERY\` (\`refreshPeople\`): what anybody else is drawn
+ * with (\`hooks.people\`) and nothing more. Every column was every awake body's whole row -- stats, ledger, tallies,
+ * queues -- to every browser on the island: the square of the people on it in kilobytes, 265 kB a read with 150
+ * awake against 48 kB of this.
+ */
+const PEOPLE_COLUMNS = 'world_id,uid,name,x,y,level,look,act,act_ends';
+
 const PACK_COLUMNS = 'id,def,ql,dmg,count,extra,holder,inside,gx,gy,charges,locked,issued,rare,dye,bless,'
   + 'maker,piece,creature,mark,enchant,engraving,lit,lit_at';
 
@@ -3324,7 +3332,7 @@ export class Island {
     if (!this.info) return;
     // And what each of them has on, which their rows cannot say: see `rpc_worn`.
     const [{ data, error }, worn] = await Promise.all([
-      supabase().from('player').select('*').eq('world_id', this.info.id).eq('away', false),
+      supabase().from('player').select(PEOPLE_COLUMNS).eq('world_id', this.info.id).eq('away', false),
       supabase().rpc('rpc_worn', { p_world: this.info.id }),
     ]);
     // A call that failed is not an island with nobody on it. See `refreshMobs`,
@@ -3348,7 +3356,8 @@ export class Island {
         p.level = said.level;
       }
       this.people.set(p.uid, p);
-      if (p.uid === this.uid) this.me = p;
+      // Our own row is the roster's columns only: what the join read of it stands, and these come up to date.
+      if (p.uid === this.uid) this.me = { ...(this.me ?? p), ...p };
     }
     this.hooks.people([...this.people.values()]);
   }
