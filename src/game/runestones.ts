@@ -211,6 +211,36 @@ export function startChoices(first: boolean, size: number): readonly Runestone[]
   return first && hasRunestones(size) ? RUNESTONES : [];
 }
 
+/* ---- The safe ring ---------------------------------------------------------------------------- */
+
+/**
+ * Tiles round the island's spawn and round each Runestone in which no monster
+ * or hunter is put out, none starts a hunt, and one that brings its own hunt
+ * in lets go and turns home: the island's `safe_ring`, measured straight
+ * (`inSafeRing`). Sixty is a minute and a half at walking pace (`BASE_SPEED`,
+ * two thirds of a tile a second; the help works it out), which is room to
+ * look round and set off from wherever a newcomer is put down — the start
+ * ring is `START_GAP + START_SPARE` tiles out — and more than twice a wild
+ * thing's home range (`WILD_RANGE`), so one put out at the edge wanders no
+ * nearer than half way in. The stones stand hundreds of tiles apart, so the
+ * rings never meet, and a settlement keeps further off still (`DEED_STONE_GAP`).
+ */
+export const SAFE_RING = 60;
+
+/**
+ * The points the ring is measured from on a world `size` across with its
+ * spawn at (`spawnX`, `spawnY`): the middle of the spawn tile and of each
+ * stone's centre tile (`stonePoint`). The island's `safe_ring_on`.
+ */
+export function safeRingPoints(size: number, spawnX: number, spawnY: number): Array<{ x: number; y: number }> {
+  return [{ x: spawnX + 0.5, y: spawnY + 0.5 }, ...(hasRunestones(size) ? RUNESTONES.map((s) => stonePoint(s, size)) : [])];
+}
+
+/** Whether a point is inside the safe ring: within `SAFE_RING` tiles of one of `safeRingPoints`. The island's `safe_ring_on`. */
+export function inSafeRing(size: number, spawnX: number, spawnY: number, x: number, y: number): boolean {
+  return safeRingPoints(size, spawnX, spawnY).some((p) => (x - p.x) ** 2 + (y - p.y) ** 2 <= SAFE_RING ** 2);
+}
+
 /**
  * How near a stone's centre tile, each way, counts as standing beside it for
  * the journal: the outermost ring a Telestone sets a traveller down on. The

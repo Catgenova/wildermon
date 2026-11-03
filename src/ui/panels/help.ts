@@ -63,7 +63,7 @@ import { BARDING_CUT, gearBill, gearSays, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZE_B
 import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP, HAUL_SKILL } from '../../game/creatures';
-import { PERK_STAGE, perkLine, perkSays, STAGE_PERKS } from '../../game/creatures';
+import { PERK_STAGE, perkLine, perkSays, ringKeepsOut, STAGE_PERKS } from '../../game/creatures';
 import {
   ALLOY_QL, AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
@@ -175,7 +175,7 @@ import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
-import { LANDING_STAND, RUNESTONES, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
+import { LANDING_STAND, RUNESTONES, SAFE_RING, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
   BUSH_DEFS, groundRoll, ROCK_VARIANTS, SLAB_VARIANTS, STEPS_BRICKS, STEPS_LEAST, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS, STEPS_TWIST, TILE_DEFS, TileType,
   TREE_DAWN_UTC, TREE_DEFS, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS,
@@ -2259,6 +2259,10 @@ export function helpText(): string {
       on the nearest ring ${START_GAP} to ${START_GAP + START_SPARE} tiles out with a free tile (as a Telestone's: dry, no building, no more than ${metres(LANDING_STAND)} m between highest and lowest corner).
       Never asked again.</li>
       <li>On death: <b>Respawn</b> beside one, on the same ring as a first join (Dying, below).</li>
+      <li><b>Safe ring</b>: ${SAFE_RING} tiles (${Math.round(SAFE_RING / BASE_SPEED)} s walking) round the island's spawn and each Runestone.
+      No spawns there of ${listed(Object.values(SPECIES).filter(ringKeepsOut).map((d) => `${d.name.toLowerCase()}s`))}.
+      No hunt started on you, or by one, standing there; one hunting you there or come into it: stops, goes home, ignores you for ${Math.round(HUNT_REST)} s.
+      Not covered: a creature you struck or drew onto you with a class skill; a wild creature's fight with a tame one.</li>
       <li>Impassable; nothing dug, built, planted or set down on its ${STONE_SPAN * STONE_SPAN} tiles. Hover or Examine names it.</li>
       <li>Meditation gain ${mul(SIT_WORTH.stone)} on a rug within ${SIT_WORTH.stoneReach} tiles (Meditation, below).</li>
       <li><b>Telestone</b>: ${bill('make_telestone')}, ${workedAt('make_telestone')}. <b>Travel to a Runestone</b> on it in the pack, pick a stone: instant, onto a free tile beside it

@@ -314,26 +314,11 @@ export const LEG_SLACK = 64;
  */
 export const FOUND_MAX = 512;
 
-/**
- * How far from where people wash ashore nothing hunts.
- *
- * The clock is what made this matter. Wildlife never moved before it, so a
- * goblin standing at the landing beach was scenery; now it comes for you, and
- * a fresh body with a hatchet and no fighting to speak of can do nothing about
- * it. The first live run after the front door opened on the island lost both
- * its settlement and its dig to one — `The goblin is on you. You have a deep
- * cut to the chest, bleeding.` — which is a game working exactly as written
- * and a first five minutes nobody would come back from.
- *
- * So there is a quiet beach: nothing that hunts is put down within this of the
- * spawn, and nothing that hunts will start on somebody standing inside it or
- * keep at them once they are. Twenty-four tiles is about a screen — a corner
- * of a 4096 island, and most of a small one, which is right both times.
- *
- * It is not safety, it is a beginning. Walk off the beach and the island is
- * exactly as dangerous as it was.
+/*
+ * How far from where people wash ashore nothing hunts was `PEACE_REACH`, 24 tiles each way from the spawn: the quiet
+ * beach, after the first live run lost its settlement and its dig to a goblin standing where everybody comes ashore.
+ * It is the safe ring now, round the spawn and every Runestone (`SAFE_RING` in `runestones.ts`).
  */
-export const PEACE_REACH = 24;
 
 /** An island nobody has stood on for a month goes back to the sea. */
 export const ISLAND_KEEP = 30 * 24 * 3600;

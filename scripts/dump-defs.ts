@@ -136,7 +136,7 @@ import { DEFAULT_LOOK, DYED_HAIR, LOOK_TABLES } from '../src/game/look';
 import { ACTION_FLOOR, ACTION_PACE, COTTON_SECONDS, COTTON_WEIGHT, MINING_SECONDS, MINING_WEIGHT, WORKER_WEIGHT, WORLD_PACE } from '../src/game/pace';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, SWIM_LEARN, SWIM_WIND, THIRST_RATE, STAMINA_BAR_PER_LEVEL, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from '../src/game/body';
 import { SAY_A_MINUTE, SAY_MAX } from '../src/game/chat';
-import { CALLS_A_MINUTE, CHANGE_KEEP, EVENT_KEEP, FOG_BYTES, FOUND_MAX, GUIDE_BATCH, IDLE_LOGOUT, ISLAND_KEEP, ISLAND_UNOPENED_KEEP, ISLAND_UNVISITED_KEEP, LAND_ASK, LEG_SLACK, MOBS_RANGE, PEACE_REACH, REGION, SENT_INLINE, STIR_COARSE_EVERY, STIR_SLACK, STORED_SETTLE, SWEEP_EVERY, SWEEP_ROWS, TICK_PLAYERS, TICK_SECONDS, TICK_WORLDS, WALK_SAMPLES, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../src/game/keep';
+import { CALLS_A_MINUTE, CHANGE_KEEP, EVENT_KEEP, FOG_BYTES, FOUND_MAX, GUIDE_BATCH, IDLE_LOGOUT, ISLAND_KEEP, ISLAND_UNOPENED_KEEP, ISLAND_UNVISITED_KEEP, LAND_ASK, LEG_SLACK, MOBS_RANGE, REGION, SENT_INLINE, STIR_COARSE_EVERY, STIR_SLACK, STORED_SETTLE, SWEEP_EVERY, SWEEP_ROWS, TICK_PLAYERS, TICK_SECONDS, TICK_WORLDS, WALK_SAMPLES, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../src/game/keep';
 import { CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STAND, MAX_STEP, SWIM_DEPTH } from '../src/game/player';
 import { CHUNK } from '../src/world/world';
 import { REGIONS } from '../src/world/regions';
@@ -167,7 +167,7 @@ import {
   TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
 } from '../src/game/tracking';
 import {
-  LANDING, LANDING_STAND, RUNESTONES, START_RING, STONE_CHART, STONE_GUARDED, STONE_HALF, STONE_LEAST, TELE_FAR, TELE_FAST, TELE_GRACE, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW,
+  LANDING, LANDING_STAND, RUNESTONES, SAFE_RING, START_RING, STONE_CHART, STONE_GUARDED, STONE_HALF, STONE_LEAST, TELE_FAR, TELE_FAST, TELE_GRACE, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW,
   TELESTONE, TELESTONE_SAID, TRAVEL,
 } from '../src/game/runestones';
 import { RESPAWN_RING } from '../src/game/respawn';
@@ -1835,7 +1835,10 @@ for (const [fn, v] of [
   ['chunk_size', CHUNK],
   /* And the biggest island a tab may found, which is how the keeper tells a
      browser's island from the tool's. */
-  ['found_max', FOUND_MAX], ['peace_reach', PEACE_REACH],
+  ['found_max', FOUND_MAX],
+  /* And the safe ring round the spawn and every Runestone; `peace_reach` is its old name, which the tests that stand a
+     body off it still read. */
+  ['safe_ring', SAFE_RING], ['peace_reach', SAFE_RING],
   /* And the slack that lets the creature box be looked up rather than scanned. */
   ['leg_slack', LEG_SLACK],
   /* And the most fog of war the island keeps for one body, so the one thing
@@ -2192,6 +2195,19 @@ out.push(`create or replace function track_point(p_points int, p_i int) returns 
  */
 out.push(`create or replace function runestones() returns table (ord int, id text, name text, x int, y int) language sql immutable as $fn$ values ${RUNESTONES.map((r, i) => `(${i}, ${q(r.id)}, ${q(r.name)}, ${r.x}, ${r.y})`).join(', ')} $fn$;`);
 out.push(`create or replace function landing_ring() returns table (k int, dx int, dy int) language sql immutable as $fn$ values ${LANDING.map(([dx, dy], i) => `(${i}, ${dx}, ${dy})`).join(', ')} $fn$;`);
+/*
+ * Whether a point is in the safe ring (`inSafeRing`): within `SAFE_RING` of the middle of the spawn tile or of a
+ * stone's centre tile (`stonePoint`, the island's `runestone_centres`). Written out stone by stone, one expression and
+ * no query, so it is inlined where it is asked: the creature tick asks it for every throw and every hunt.
+ */
+{
+  const axis = (v: number): string =>
+    `(least(p_size - ${1 + STONE_HALF}, greatest(${STONE_HALF}, floor(${v + 0.5}::double precision * p_size / ${STONE_CHART})::int)) + 0.5)`;
+  const near = (x: string, y: string): string => `(p_x - ${x}) ^ 2 + (p_y - ${y}) ^ 2 <= ${SAFE_RING * SAFE_RING}`;
+  out.push(`create or replace function safe_ring_on(p_size int, p_sx int, p_sy int, p_x double precision, p_y double precision) returns boolean `
+    + `language sql immutable as $fn$ select ${near('(p_sx + 0.5)', '(p_sy + 0.5)')} or (p_size >= ${STONE_LEAST} and (`
+    + `${RUNESTONES.map((r) => near(axis(r.x), axis(r.y))).join(' or ')})) $fn$;`);
+}
 // Where a body joining for the first time starts round the stone it picked (`START_RING`), ring by ring.
 out.push(`create or replace function start_ring() returns table (k int, dx int, dy int) language sql immutable as $fn$ values ${START_RING.map(([dx, dy], i) => `(${i}, ${dx}, ${dy})`).join(', ')} $fn$;`);
 // Where a body waking at a settlement wakes round its token (`RESPAWN_RING`), ring by ring.

@@ -74,7 +74,7 @@ import { FIELD_LAYOUTS } from '../../render/crops';
 import { TURNS } from '../../render/view';
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
-import { RUNESTONES, START_GAP, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
+import { RUNESTONES, SAFE_RING, START_GAP, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { BAG_CARRY as BAG_CARRY_293 } from '../../game/gear';
 import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
@@ -177,7 +177,7 @@ import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
 import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
-import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
+import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HUNT_REST, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, ringKeepsOut, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
 import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
 import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
@@ -4240,6 +4240,16 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 467,
+    day: '2026-11-03',
+    lines: () => [
+      `Added: safe ring: ${num(SAFE_RING)} tiles round the island's spawn and each of the ${num(RUNESTONES.length)} Runestones (was: 24 tiles each way round the spawn only). `
+        + `No spawns there of ${listed(Object.values(SPECIES).filter(ringKeepsOut).map((d) => `${d.name.toLowerCase()}s`))}; those already there and in no fight: removed.`,
+      `Added: inside it: no hunt started on you, or by one, standing there; one hunting you there or come into it: stops, goes home, ignores you for ${num(Math.round(HUNT_REST))} s.`,
+      'Changed: a creature you struck or drew onto you with a class skill: fights on inside it (was: let go on the spawn beach). A Sanctuary: unchanged.',
+    ],
   },
   {
     n: 458,
