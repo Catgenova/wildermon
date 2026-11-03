@@ -112,16 +112,15 @@ import { DEATH_GRACE_HOURS, GRACE_SPARES, PLAYED_GAP } from '../../game/deathgra
 import {
   ASH_RATE, BASE_QUEUE, BOAT_LOAD_DRAG, boatHands, MIND_EASE_PER_LEVEL, MIND_EASED_SKILLS, mindEaseAt, queueCapAt, SOUL_PER_LEVEL, SOUL_TAME_PER_LEVEL, soulAbove, soulTameAbove, controlPaceAbove, staminaCostAbove, windRegenAbove, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP, CHAR_START, DAMAGE_MAX, DAMAGE_WARN,
   DAMAGE_WARN_STEP, DAWN, DAY_SECONDS, DEED_RADIUS, DEED_RADIUS_PER_LEVEL, DEEDS_JOINED, deedWorkersAt, DUSK,
-  footing, Game, goSeconds, hullSpeed, KIT_QL, kitQl, MAX_DEED_LEVEL, STARTER_KIT, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
+  footing, Game, goSeconds, hullSpeed, KIT_QL, kitQl, MAX_DEED_LEVEL, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
   QL_SPAN, QUEUE_PER_MIND, TWILIGHT, wearPerUse,
-  QL_TOP,
-} from '../../game/game';
+  QL_TOP, deedLevel } from '../../game/game';
 import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES, PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
-import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor, TAN_LYE } from '../../game/items';
+import { billWords, countOf, DEED_DECAY, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor, TAN_LYE } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
-import { guideEntries, guidePages, keepable } from '../../game/guide';
+import { entryTameLevel, guideEntries, guidePages, keepable } from '../../game/guide';
 import { TRACK_BANDS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { MOBS_RANGE } from '../../game/keep';
@@ -1012,10 +1011,51 @@ function fromRelic(id: string): string {
   return `<b>${itemDef(id).name}</b> (restored from ${article(relic)} ${relic})`;
 }
 
+/** A window's or a job's key, as the help names it: its first default key. */
+const keyOf = (id: string): string => keyName(BIND_BY_ID.get(id)?.keys[0] ?? '');
+/** A recipe as Crafting lists it, and the tool it takes: "<b>Saw into planks</b> (saw)". */
+const craftSaid = (id: string): string => {
+  const r = recipe(id);
+  return `<b>${r.label}</b>${r.tool ? ` (${lowName(r.tool)})` : ''}`;
+};
+/** A recipe and what goes into it: "<b>Cook over the fire</b> (meat)". */
+const cookSaid = (id: string): string => `<b>${recipe(id).label}</b> (${listed(recipe(id).inputs.map((i) => lowName(i.item)))})`;
+/** A job on the right-click menu, and the tool it takes: "<b>Cut down</b> (hatchet)". */
+const jobSaid = (id: string): string => {
+  const tool = ACTION_BY_ID.get(id)?.tool;
+  return `<b>${act(id)}</b>${tool ? ` (${lowName(tool)})` : ''}`;
+};
+/** Where each goal of the journal's first chapter is done: its key, window or menu. */
+const FIRST_HOUR_DO: Record<string, () => string> = {
+  tree: () => `Right-click a tree: ${jobSaid('cut_down')}`,
+  plank: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_planks')}, ${made('make_planks')} planks a log`,
+  fire: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_shafts')}, ${FIRE_COST} shafts; right-click the ground: ${jobSaid('build_campfire')}; right-click the fire: ${jobSaid('light_campfire')}`,
+  cook: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>), next to a lit fire: ${cookSaid('cook_meat')}, ${cookSaid('bake_potato')}`,
+  crate: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_log_crate')}; right-click the ground: ${jobSaid('place_crate')}`,
+  deed: () => `Right-click the ground: ${jobSaid('found_settlement')} (${lowName('deed_stake')}, in the pack)`,
+};
+/**
+ * The help's first page, asked for: "a First hour page in Help". The goals of the journal's first chapter, each with
+ * where it is done, and the starting food and taming; every name and number off its rule.
+ */
+function firstHour(): string {
+  const first = JOURNAL[0];
+  const taming = startOf('taming');
+  const reach = guidePages().filter((def) => (entryTameLevel({ def, stage: 0 }) ?? Infinity) <= taming).length;
+  return `
+    <h3>First hour</h3>
+    <ul>
+      <li><b>Goals</b>: Journal (<kbd>${keyOf('win_journal')}</kbd>), Goals tab, chapter <b>${first.name}</b>: ${first.goals.length} goals</li>
+      <li><b>Eat</b>: Inventory (<kbd>${keyOf('win_inventory')}</kbd>), click the ${lowName(STARTER_FOOD)}: <b>${act('eat')}</b>. ${STARTER_FOOD_COUNT} in the starting pack, food bar +${percent(foodFill(STARTER_FOOD, KIT_QL))} each</li>
+      ${first.goals.map((g) => `<li><b>${g.text}</b>: ${FIRST_HOUR_DO[g.id]?.() ?? `Journal (<kbd>${keyOf('win_journal')}</kbd>), Goals tab`}</li>`).join('\n      ')}
+      <li><b>Tame</b>: right-click a wild one: <b>${act('tame')}</b>, offering of its food in the pack. Taming ${taming} at the start: ${reach} kinds. Field guide (<kbd>${keyOf('win_guide')}</kbd>): <b>Tameable now</b></li>
+    </ul>`;
+}
+
 export function helpText(): string {
   const CRATE_BILL = crateBill();
   const PEDIGREE_SOURCES = pedigreeSources();
-  return `
+  return `${firstHour()}
     <h3>Getting around</h3>
     <p>Movement is by clicking only. Keys move the <i>view</i>. Walking paths round obstacles.</p>
     <table>
@@ -1759,7 +1799,7 @@ export function helpText(): string {
     <h4>Founding</h4>
     <ul>
       <li><b>Settlement stake</b>: a shaft, carving knife. Use where you stand: a settlement ${DEED_ACROSS} by ${DEED_ACROSS} tiles round a settlement totem. Token at least ${DEED_SPACING} tiles from every other settlement's token on one axis (borders at level ${MAX_DEED_LEVEL} ${DEED_GAP} tiles apart), and at least ${DEED_STONE_GAP} tiles from every runestone.</li>
-      <li><b>Preview settlement here</b> (tile menu, stake in the pack): border at level 1 (${deedAcrossAt(1)} by ${deedAcrossAt(1)} tiles) and, fainter, at level ${MAX_DEED_LEVEL} (${deedAcrossAt(MAX_DEED_LEVEL)} by ${deedAcrossAt(MAX_DEED_LEVEL)}), drawn on the ground; red where founding is refused. Log: the refusal, or allowed. Measured from every settlement on the island. Shown until the stake is spent or <b>Clear settlement preview</b>.</li>
+      <li><b>Preview settlement here</b> (tile menu, stake in the pack): border at level ${deedLevel(null)} (${deedAcrossAt(deedLevel(null))} by ${deedAcrossAt(deedLevel(null))} tiles) and, fainter, at level ${MAX_DEED_LEVEL} (${deedAcrossAt(MAX_DEED_LEVEL)} by ${deedAcrossAt(MAX_DEED_LEVEL)}), drawn on the ground; red where founding is refused. Log: the refusal, or allowed. Measured from every settlement on the island. Shown until the stake is spent or <b>Clear settlement preview</b>.</li>
       <li>One settlement at a time. Building only on its land.</li>
       <li>Items left outside on settlement land: rot rate ${frac(DEED_DECAY)} of that off it.</li>
     </ul>
@@ -2470,6 +2510,7 @@ export function helpText(): string {
       <li>A page: where it spawns and how far it keeps from home, its % of wild spawns, taming needed and accepted food, its use once yours, how it fights, carcass yield.</li>
       <li><b>Field guide</b> on any creature's menu opens its page.</li>
       <li>Search, above the index: name, line or task of the kinds seen; kinds not seen hidden while searching.</li>
+      <li><b>Tameable now (Taming</b> <i>your level</i><b>)</b>, under the search: only kinds and stages seen whose taming is at or under your Taming (a stage: its kind's +${WILD_STAGE_TAME} a stage). Not monsters. With the search: both. Taming ${startOf('taming')} at the start: ${guidePages().filter((def) => (entryTameLevel({ def, stage: 0 }) ?? Infinity) <= startOf('taming')).length} kinds.</li>
       <li><b>Forms</b> (a tameable kind's page): its colour form, large form and small form, each with its wild odds and effect, marked seen (one in it in your sight) and tamed. Not counted in the progress.</li>
       <li>A kind's page: <b>Bred records</b>, the island's best bred of it (${RECORD_STATS.map((s) => s.name.toLowerCase()).join(', ')}), as on the Leaderboards.</li>
       <li>Kept by the island; a sighting counts only within ${MOBS_RANGE} tiles of you.</li>
@@ -2722,6 +2763,7 @@ export function helpText(): string {
       <li><b>Improve</b> (right-click a finished item): each pass uses a little stock; success raises quality (QL), by a lot at first and very little near the top.
       Failure damages it; past ${IMPROVE_DAMAGE} damage it must be <b>Repair</b>ed before more work.</li>
       <li><b>Starting kit</b>: one of each of ${STARTER_KIT.length - 1} tools at QL ${KIT_QL}, and a water skin. Named <b>Starter (tool)</b>. <b>Cannot be improved</b> (repairable only), <b>sold or traded</b> (barter, deal, parcel, stall price, order). Kept on death; a missing piece given again on coming ashore and on waking after a death.</li>
+      <li><b>Starting food</b>: ${STARTER_FOOD_COUNT} ${lowName(STARTER_FOOD)} at QL ${KIT_QL}, food bar +${percent(foodFill(STARTER_FOOD, KIT_QL))} each (${percent(STARTER_FOOD_COUNT * foodFill(STARTER_FOOD, KIT_QL))} in all). First coming ashore only; not a kit piece (eaten, traded, into the grave; not given again).</li>
     </ul>
     <table>
       <tr><td><b>Metal</b></td><td><b>File</b> + <b>whetstone</b>; a lump of metal per pass</td></tr>

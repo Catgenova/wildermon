@@ -106,6 +106,12 @@ export function guideEntry(key: string): GuideEntry | undefined {
   const st = Number.isInteger(stage) && stage >= 1 ? def.stages?.[stage - 1] : undefined;
   return st ? { key, def, stage, name: st.name } : undefined;
 }
+/**
+ * The taming a page's kind asks at that stage, as an offering or a trap asks it of one in the wild (`tameNeeds`): its
+ * kind's, and `WILD_STAGE_TAME` more for each stage past its first. Null for one that cannot be tamed (a monster).
+ */
+export const entryTameLevel = (entry: Pick<GuideEntry, 'def' | 'stage'>): number | null =>
+  (keepable(entry.def) && entry.def.tameChance > 0 ? entry.def.tameLevel + WILD_STAGE_TAME * entry.stage : null);
 /** Every page in the book's order: each kind, and after it each of its stages. */
 export const guideEntries = (): GuideEntry[] =>
   guidePages().flatMap((def) => [0, ...(def.stages ?? []).map((_, i) => i + 1)].map((st) => guideEntry(stageKey(def.id, st))!));

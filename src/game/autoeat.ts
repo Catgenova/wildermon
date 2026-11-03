@@ -1,7 +1,7 @@
 import { ACTION_BY_ID } from './actions';
 import { EXHAUSTED } from './body';
 import type { Game } from './game';
-import { itemDef, markOf, type Item } from './items';
+import { foodFill, itemDef, markOf, type Item } from './items';
 
 /**
  * Eating by itself (`settings.autoEat`).
@@ -24,7 +24,7 @@ const ASK_EVERY = 10;
 const NOTHING_EVERY = 300;
 
 /** What a mouthful of it puts on Food, as the Eat job works it out. */
-export const fillOf = (item: Item): number => (itemDef(item.id).food ?? 0) * (0.7 + item.ql / 200) * markOf(item, 'fill');
+export const fillOf = (item: Item): number => foodFill(item.id, item.ql) * markOf(item, 'fill');
 
 /** The food it would eat now: loose in the pack, not locked; the one that fills most, or the worst first. */
 export function foodToEat(g: Game, worst = g.settings.autoEatWorst): Item | null {

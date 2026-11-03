@@ -11,7 +11,7 @@
  * came back against what went out, and then gives the island up again — CI
  * should not silt the database up a little more every commit.
  */
-import type { IslandGround } from '../../src/game/game';
+import { STARTER_KIT, type IslandGround } from '../../src/game/game';
 import { Island } from '../../src/net/island';
 import { generateAtlasWorld } from '../../src/world/atlas-world';
 import { TILE_DEFS } from '../../src/world/tiles';
@@ -1167,7 +1167,10 @@ async function main(): Promise<void> {
     }
 
     const { data: pack, error: packErr } = await supabase().from('item').select('id,def,count').eq('world_id', id).eq('holder_uid', uid);
-    check('we are carrying the starting kit', (pack ?? []).length >= 9, packErr ? packErr.message : `${(pack ?? []).length} things`);
+    // Every tool of the kit (`STARTER_KIT`): a missing one is given again on coming ashore (`kit_topup`).
+    const kitMissing = STARTER_KIT.map(([k]) => k).filter((k) => !(pack ?? []).some((it) => it.def === k));
+    check(`we are carrying the starting kit, all ${STARTER_KIT.length} tools`, !packErr && kitMissing.length === 0,
+      packErr ? packErr.message : kitMissing.length ? `missing ${kitMissing.join(', ')}` : `${(pack ?? []).length} things`);
 
     /*
      * The social doors, through PostgREST rather than through psql.

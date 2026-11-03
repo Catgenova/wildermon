@@ -79,7 +79,7 @@ import { helpingOf, NUTRIENTS } from './nutrition';
 import { SKILL_DEFS } from './skills';
 import {
   describeFrom, DRINK_LITRES, itemDef, itemName, itemWeight, litresOf, markOf, VESSELS, markSays, rarityOf, bagAdd, bagRefuses, bagSpare, isBag, storedLine, RARITIES, RARITY_WORD, rollRarity,
-  NOT_RESTORED, unrestored, type Item,
+  foodFill, NOT_RESTORED, unrestored, type Item,
 } from './items';
 import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
@@ -2485,7 +2485,7 @@ export const ACTIONS: ActionDef[] = [
       g.inventory.remove(item.uid, 1);
       // Fuller, the more and the longer for its maker's hand in it (a Cook's
       // Filling, Hearty and Flavoursome), whoever is eating it.
-      g.player.stats.hunger = Math.min(1, g.player.stats.hunger + (def.food ?? 0) * (0.7 + item.ql / 200) * markOf(item, 'fill'));
+      g.player.stats.hunger = Math.min(1, g.player.stats.hunger + foodFill(item.id, item.ql) * markOf(item, 'fill'));
       // A dish favours a trade, and having eaten it you are better at that
       // trade for a while.
       const favour = g.grantBoon(item.id, item.ql, markOf(item, 'knack'));

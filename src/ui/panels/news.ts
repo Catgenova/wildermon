@@ -18,7 +18,7 @@ import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
-import { DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_KIT, TRAVEL_LEG } from '../../game/game';
+import { DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
@@ -164,7 +164,7 @@ import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY }
 import { awayFor } from '../../game/away';
 import { ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
-import { itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid } from '../../game/items';
+import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid } from '../../game/items';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable } from '../../game/improve';
 import { weaponCarry } from '../../render/figure';
@@ -4278,7 +4278,7 @@ export const NEWS: News[] = [
   {
     n: 462,
     day: '2026-11-03',
-    lines: () => [`New: Preview settlement here (tile menu, stake in the pack): border at level 1 (${deedAcrossAt(1)} by ${deedAcrossAt(1)} tiles) and, fainter, at level ${MAX_DEED_LEVEL} `
+    lines: () => [`New: Preview settlement here (tile menu, stake in the pack): border at level ${deedLevel(null)} (${deedAcrossAt(deedLevel(null))} by ${deedAcrossAt(deedLevel(null))} tiles) and, fainter, at level ${MAX_DEED_LEVEL} `
       + `(${deedAcrossAt(MAX_DEED_LEVEL)} by ${deedAcrossAt(MAX_DEED_LEVEL)}), drawn on the ground; red where founding is refused. Log: the refusal, or allowed. Stake not spent.`],
   },
   {
@@ -4289,6 +4289,21 @@ export const NEWS: News[] = [
       `Played time: on the island, browser heard from within ${PLAYED_GAP} s; not away, logged off or asleep. Time left: Death grace in the effects row and on the Respawn chooser.`,
       `Characters already ashore: played time set to the time since coming ashore, at most ${DEATH_GRACE_HOURS} h.`,
     ],
+  },
+  {
+    n: 461,
+    day: '2026-11-03',
+    lines: () => [`Added: Help (${defaultKey('win_help')}), first page: First hour. The ${JOURNAL[0].goals.length} ${JOURNAL[0].name} goals, each with its key or menu; eating the starting food; taming.`],
+  },
+  {
+    n: 460,
+    day: '2026-11-03',
+    lines: () => [`Added: Field guide (${defaultKey('win_guide')}), index: Tameable now (your Taming): kinds and stages seen with taming at or under your Taming. Not monsters. With the search: both.`],
+  },
+  {
+    n: 459,
+    day: '2026-11-03',
+    lines: () => [`Added: starting food: ${STARTER_FOOD_COUNT} ${itemDef(STARTER_FOOD).name.toLowerCase()} at QL ${KIT_QL}, food bar +${percent(foodFill(STARTER_FOOD, KIT_QL))} each (${percent(STARTER_FOOD_COUNT * foodFill(STARTER_FOOD, KIT_QL))} in all). First coming ashore only; not a kit piece (eaten, traded, into the grave; not given again).`],
   },
   {
     n: 458,

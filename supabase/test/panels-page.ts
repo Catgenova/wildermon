@@ -15,7 +15,8 @@ import { Renderer } from '../../src/render/renderer';
 import { RESPAWN_ARM_MS, showRespawn } from '../../src/ui/respawn';
 import { FullscreenCanvas } from '../../src/engine/canvas';
 import { DAY_SECONDS } from '../../src/game/pace';
-import { SPECIES } from '../../src/game/creatures';
+import { SPECIES, WILD_STAGE_TAME } from '../../src/game/creatures';
+import { guideEntries } from '../../src/game/guide';
 import { UI } from '../../src/ui/ui';
 import { Keybinds } from '../../src/game/keybinds';
 import type { JournalTab } from '../../src/ui/panels/journal';
@@ -52,6 +53,11 @@ export interface HostileSeen {
   guideLong: [number, number, number];
   /** The field guide's search: cards shown with nothing typed, and with a seen kind's name typed; and with a word nothing has. */
   guideSearch: [number, number, number];
+  /**
+   * The field guide's Tameable now: cards shown off, shown on, the kinds and stages seen that Taming reaches (worked
+   * out here off `SPECIES`), whether its label names the Taming, and cards shown once off again.
+   */
+  guideTame: [number, number, number, boolean, number];
   /** The respawn chooser: picked by an Enter at once or a held one (should not be), and by a click after (should be). */
   respawn: { atOnce: string; held: string; later: string };
   menu: Array<[string, string]>;
@@ -65,7 +71,7 @@ export interface HostileSeen {
   done: boolean;
 }
 
-const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, guideMs: -1, guideLong: [0, 0, 0], guideSearch: [-1, -1, -1], menu: [], menuTab: '', respawn: { atOnce: '', held: '', later: '' }, map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
+const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, guideMs: -1, guideLong: [0, 0, 0], guideSearch: [-1, -1, -1], guideTame: [-1, -1, -1, false, -1], menu: [], menuTab: '', respawn: { atOnce: '', held: '', later: '' }, map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
 (window as unknown as { panels: HostileSeen }).panels = seen;
 
 document.getElementById('boot')?.remove();
@@ -140,6 +146,22 @@ for (const tab of TABS) {
       seen.guideSearch = [all, some, shown()];
       search.value = '';
       search.dispatchEvent(new Event('input'));
+    }
+    // Tameable now: a kind Taming reaches (rabba), one it does not (lume) and a monster (goblin) seen.
+    const tame = uiRoot.querySelector<HTMLButtonElement>('.guide-tameable');
+    if (tame) {
+      game.guideMark('lume', 'seen');
+      game.guideMark('goblin', 'seen');
+      frame();
+      const skill = Math.floor(game.skills.get('taming'));
+      const want = guideEntries().filter((e) => game.guide.seen.has(e.key) && !e.def.monster
+        && e.def.tameLevel + WILD_STAGE_TAME * e.stage <= skill).length;
+      const off = shown();
+      tame.click();
+      const on = shown();
+      const named = tame.textContent === `Tameable now (Taming ${skill})` && tame.getAttribute('aria-pressed') === 'true';
+      tame.click();
+      seen.guideTame = [off, on, want, named, shown()];
     }
   }
   seen.tabs.push(tab);
