@@ -1,0 +1,85 @@
+name: Load
+
+# How many people the island holds at once, measured on the island
+# (tools/loadtest.ts). Run by hand only, and never beside a live Island run:
+# it puts simulated people on the real island, rolls back everything they ask,
+# and takes every row it made away before it stops.
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: People at each step
+        default: '10,25,50,75,100,150'
+        type: string
+      step_secs:
+        description: Seconds each step lasts
+        default: '120'
+        type: string
+      max_p95_ms:
+        description: Stop once the slowest 5% of asks take longer than this
+        default: '1500'
+        type: string
+      island:
+        description: The island's name; empty for the lasting island with the most people
+        default: ''
+        type: string
+
+concurrency:
+  group: load-test
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  load:
+    name: Simulated people on the real island
+    runs-on: ubuntu-latest
+    environment: AI
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        id: cli
+        continue-on-error: true
+        with:
+          version: 2.122.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Get the CLI another way if that did not work
+        if: steps.cli.outcome != 'success'
+        run: npm i -g supabase@2.122.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Link to the project, for the pooler's address
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          test -s supabase/.temp/pooler-url || { echo "::error::supabase link wrote no pooler address."; exit 1; }
+          psql --version
+      - name: Step the people up, measure, take them away
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGCONNECT_TIMEOUT: '20'
+          METRICS_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+          STEPS: ${{ inputs.steps }}
+          STEP_SECS: ${{ inputs.step_secs }}
+          MAX_P95_MS: ${{ inputs.max_p95_ms }}
+          ISLAND: ${{ inputs.island }}
+        run: |
+          # The pooler `supabase link` wrote down is in session mode (5432), which
+          # sets up and measures; each simulated person goes through transaction
+          # mode (6543), as PostgREST's connections are shared out.
+          export ADMIN_URL="$(sed 's/:\[YOUR-PASSWORD\]//' supabase/.temp/pooler-url)"
+          export DB_URL="$(printf '%s' "$ADMIN_URL" | sed -E 's/:5432\//:6543\//')"
+          export METRICS_URL="https://$PROJECT_REF.supabase.co/customer/v1/privileged/metrics"
+          npx esbuild tools/loadtest.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/loadtest.mjs --log-level=error
+          node node_modules/.cache/loadtest.mjs
