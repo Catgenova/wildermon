@@ -41,6 +41,13 @@
  *     finished;
  *   * nobody walks it: no step goes onto its deck in the browser, and out of
  *     your depth under one on the island, you swim.
+ *   * a water mote set in it: refused unfinished, fed by a dug spring (said
+ *     "spring at x, y"), with none to hand and from too far off; set, a
+ *     spring at its head with the dug spring's water to the corner, keeping
+ *     a fountain full at the same rate and filling the hollow the dug
+ *     spring's water filled; said "water mote at x, y", a second refused,
+ *     not stopped up, not one of its setter's springs, told to the browser;
+ *     gone with the aqueduct pulled down, on both sides in the same words.
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
@@ -51,7 +58,11 @@ import { STONE_ARCH } from '../../src/game/bridges';
 import { FOUNTAIN_HOLDS } from '../../src/game/furniture';
 import { TileType } from '../../src/world/tiles';
 import { NOTHING_YET } from '../../src/game/greening';
-import { AQ_OVER, AQUEDUCT, aqueductPlan, fillWords, footSays } from '../../src/game/aqueducts';
+import {
+  AQ_MOTE_OPEN, AQ_MOTE_REACH, AQ_OVER, AQUEDUCT, aqMoteDry, aqMoteFed, aqueductPlan, aqueductSays, channelOf, fedBy, fillWords, footSays, MOTE_SET,
+} from '../../src/game/aqueducts';
+import { WATER_MOTE, WATER_MOTE_NEED } from '../../src/game/motes';
+import { SPRING_MOTE_STOP } from '../../src/game/springs';
 import { pondFull, RUN_RATE, settleChain, springCorner, type Chain, type Slab } from '../../src/world/springs';
 import {
   AQUEDUCT_FLOW, AQUEDUCT_LPS, aqueductShut, CHANNEL_DEEP, CHANNEL_WIDE, CORNER_LITRES, FOUNTAIN_RIM, fillSeconds, pondRate, settleWater,
@@ -991,6 +1002,249 @@ rollback;`));
   say(island.get('aqueduct') === 'true' && under, `out of your depth in the pond under an aqueduct, you swim, on both sides: its deck holds nobody up`);
   // What a bridge's deck does for somebody under it is as it was: this only takes an aqueduct out of it.
   say(island.get('rope') === 'false', 'and on the island a rope bridge in the same place still counts as a deck, as it did');
+}
+
+/* ---- A water mote set in it -------------------------------------------------------------------- */
+
+/*
+ * The aqueduct from the pool at (40, 38) to the fountain at (37, 38),
+ * finished. Fed first by a spring dug in the pool: said "spring at 40, 38",
+ * and a water mote refused. The spring stopped, it runs dry; then a water mote
+ * refused with none to hand and from too far off, and set: a spring at its
+ * head kept with the aqueduct, the chain the dug one had, the fountain kept
+ * full at the channel's rate on top of its own as with the dug one, said
+ * "water mote at 40, 38", a second refused, not stopped up with a shovel, not
+ * one of the springs its setter keeps, and the island telling the browser
+ * which spring it is. Pulled down, the spring goes with it and the fountain
+ * is back to its own. The same on both sides, word for word.
+ */
+{
+  const POOL: [number, number] = [40, 38];
+  const FOUNT: [number, number] = [37, 38];
+  const FAT = `{"kind":"tile","x":${FOUNT[0]},"y":${FOUNT[1]},"cx":${FOUNT[0]},"cy":${FOUNT[1]},"head":[${POOL[0]},${POOL[1]}]}`;
+  const PT = `{"kind":"tile","x":${POOL[0]},"y":${POOL[1]},"cx":${POOL[0]},"cy":${POOL[1]}}`;
+  const [px, py] = springCorner((x, y) => hAt(x, y) ?? 0, POOL[0], POOL[1]);
+  const island = lines(psql(`
+begin;
+create temp table said (k text, v text);
+do $b$
+declare w uuid; me uuid; them uuid; v_spring bigint; v_b bigint; v_f bigint; v_t jsonb; f placed;
+begin
+  ${ISLAND_SCENE}
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'fountain', ${FOUNT[0]}, ${FOUNT[1]}, 0, 0, ${FOUNT[0]} + 0.375, ${FOUNT[1]} + 0.375, 80)
+    returning id into v_f;
+  update player set body_at = now(), x = ${POOL[0]}.5, y = ${POOL[1] + 1}.5 where world_id = w and uid = me;
+  perform act_perform(w, me, 'plan_aqueduct', '${FAT}');
+  select id into v_b from bridge where world_id = w and kind = 'aqueduct';
+  v_t := jsonb_build_object('kind', 'bridge', 'id', v_b);
+  insert into said values ('open', coalesce(act_refusal(w, me, 'set_aqueduct_mote', v_t), 'none'));
+  update bridge_span set needed = '{}'::jsonb where world_id = w and bridge = v_b;
+  -- Fed by a spring dug in the pool at its head.
+  insert into spring (world_id, x, y, cx, cy, made_by) values (w, ${POOL[0]}, ${POOL[1]}, ${px}, ${py}, me) returning id into v_spring;
+  perform settle_spring(w, v_spring);
+  insert into said values ('dug', (select chain::text from spring where id = v_spring));
+  insert into said values ('dugfeed', (select string_agg(f2.x || ',' || f2.y || ',' || f2.fountain, ' ') from aqueduct_feed f2 where f2.world_id = w));
+  update placed set litres = 0, since = now() - interval '50 milliseconds' where id = v_f;
+  select * into f from placed where id = v_f;
+  insert into said values ('dugfed', placed_litres(f)::text);
+  insert into said values ('dugby', coalesce(act_refusal(w, me, 'set_aqueduct_mote', v_t), 'none'));
+  -- Stopped up: dry.
+  perform aqueduct_unfeed(w, v_spring);
+  delete from spring where id = v_spring;
+  insert into said values ('none', coalesce(act_refusal(w, me, 'set_aqueduct_mote', v_t), 'none'));
+  insert into item (world_id, def, holder, holder_uid, ql, count) values (w, 'water_mote', 'player', me, 40, 2);
+  update player set body_at = now(), x = 30.5, y = ${POOL[1]}.5 where world_id = w and uid = me;
+  insert into said values ('far', coalesce(act_refusal(w, me, 'set_aqueduct_mote', v_t), 'none'));
+  update player set body_at = now(), x = ${POOL[0]}.5, y = ${POOL[1] + 1}.5 where world_id = w and uid = me;
+  insert into said values ('ok', coalesce(act_refusal(w, me, 'set_aqueduct_mote', v_t), 'none'));
+  perform act_perform(w, me, 'set_aqueduct_mote', v_t);
+  insert into said values ('set', (select text from event where world_id = w and uid = me order by n desc limit 1));
+  insert into said values ('mote', (select chain::text from spring where world_id = w and mote_in = v_b));
+  insert into said values ('motefeed', (select string_agg(f2.x || ',' || f2.y || ',' || f2.fountain, ' ') from aqueduct_feed f2 where f2.world_id = w));
+  insert into said values ('left', (select coalesce(sum(count), 0) from item where world_id = w and holder_uid = me and def = 'water_mote')::text);
+  update placed set litres = 0, since = now() - interval '50 milliseconds' where id = v_f;
+  select * into f from placed where id = v_f;
+  insert into said values ('motefed', placed_litres(f)::text);
+  insert into said values ('again', coalesce(act_refusal(w, me, 'set_aqueduct_mote', v_t), 'none'));
+  insert into said values ('stop', coalesce(act_refusal(w, me, 'stop_spring', '${PT}'), 'none'));
+  insert into said values ('kept', (select count(*) from spring where world_id = w and made_by = me and mote_in is null)::text
+    || ' ' || (select count(*) from spring where world_id = w and made_by = me)::text);
+  insert into said values ('told', (select string_agg(coalesce(c->>'mote_in', 'null'), ' ') from jsonb_array_elements(rpc_springs(w, 40, '{}')->'chains') c)
+    || ' ' || v_b);
+  perform act_perform(w, me, 'demolish_aqueduct', v_t);
+  insert into said values ('down', (select text from event where world_id = w and uid = me order by n desc limit 1)
+    || ' | ' || (select count(*) from spring where world_id = w) || ' ' || (select count(*) from aqueduct_feed where world_id = w));
+  update placed set litres = 0, since = now() - interval '50 milliseconds' where id = v_f;
+  select * into f from placed where id = v_f;
+  insert into said values ('unfed', placed_litres(f)::text);
+end $b$;
+select string_agg(k || '=' || v, E'\\n~~\\n' order by k) from said;
+rollback;`));
+  const r = (k: string): string => island.get(k) ?? '';
+  const g = browserScene();
+  const f = g.addFurniture('fountain', FOUNT[0], FOUNT[1], 0, 0, 80);
+  g.update(0.01);
+  g.player.x = POOL[0] + 0.5;
+  g.player.y = POOL[1] + 1.5;
+  act('plan_aqueduct').perform(tile(FOUNT[0], FOUNT[1], { head: POOL }), g);
+  const b = [...g.bridges.values()].find((x) => x.kind === 'aqueduct')!;
+  const bt: Target = { kind: 'bridge', id: b.id };
+  const mote = act('set_aqueduct_mote');
+  const ask = (): string => mote.check?.(bt, g) ?? 'none';
+  const open = ask();
+  for (const sp of b.spans) for (const k of Object.keys(sp.needed)) sp.needed[k] = 0;
+  g.springs.channelChanged(channelOf(g, b));
+  g.update(0.01);
+  const fillFor = (): number => {
+    f.litres = 0;
+    g.update(0.05);
+    return f.litres ?? 0;
+  };
+  // Fed by a spring dug in the pool at its head.
+  const dug = g.springs.dig(POOL[0], POOL[1], null, Date.now() - 3600 * 1000)!;
+  g.update(0.01);
+  const dugChain = viaOne(canon(dug.chain));
+  const dugFed = fillFor();
+  const dugBy = ask();
+  say(open === r('open') && open === AQ_MOTE_OPEN, `unfinished, a water mote is refused on both sides: "${open}"${open === r('open') ? '' : ` | island "${r('open')}"`}`);
+  say(dugChain === stripFill(JSON.parse(r('dug'))) && r('dugfeed') === `${FOUNT[0]},${FOUNT[1]},true` && fedBy(g, b) === `spring at ${POOL[0]}, ${POOL[1]}`
+      && dugBy === r('dugby') && dugBy === aqMoteFed(`spring at ${POOL[0]}, ${POOL[1]}`),
+    `fed by a spring dug in its head pool, it is said so and a water mote is refused, on both sides: "Fed by: ${fedBy(g, b)}", "${dugBy}"${dugBy === r('dugby') ? '' : ` | island "${r('dugby')}"`}`);
+  g.springs.stop(dug.id);
+  g.update(0.01);
+  const none = ask();
+  g.inventory.add(WATER_MOTE, { count: 2, ql: 40 });
+  g.player.x = 30.5;
+  g.player.y = POOL[1] + 0.5;
+  const far = ask();
+  g.player.x = POOL[0] + 0.5;
+  g.player.y = POOL[1] + 1.5;
+  const ok = ask();
+  say(none === r('none') && none === WATER_MOTE_NEED && far === r('far') && far === AQ_MOTE_REACH && ok === r('ok') && ok === 'none' && fedBy(g, b) === null,
+    `dry, a water mote is refused with none to hand and from too far off, and may be set at its head, on both sides: "${none}", "${far}"`);
+  mote.perform(bt, g);
+  g.update(0.01);
+  const set = g.log[g.log.length - 1]?.text ?? '';
+  const ms = [...g.springs.list.values()].find((s) => s.moteIn === b.id);
+  const moteFed = fillFor();
+  say(set === r('set') && set.startsWith(MOTE_SET), `set, in the same words on both sides: "${set}"${set === r('set') ? '' : ` | island "${r('set')}"`}`);
+  say(!!ms && ms.x === POOL[0] && ms.y === POOL[1] && viaOne(canon(ms.chain)) === stripFill(JSON.parse(r('mote') || '{"ponds":[]}')) && viaOne(canon(ms.chain)) === dugChain
+      && r('motefeed') === r('dugfeed') && g.springs.feeds(FOUNT[0], FOUNT[1]),
+    `a spring at its head, its water the dug spring's to the corner, into the fountain, on both sides (island ${r('motefeed')})`);
+  say(Math.abs(moteFed - dugFed) < 1e-9 && Math.abs(moteFed - Number(r('motefed'))) < 1e-3 && Math.abs(Number(r('motefed')) - Number(r('dugfed'))) < 1e-3
+      && Math.abs(moteFed - Math.min(FOUNTAIN_HOLDS, (g.wellRate(f) + AQUEDUCT_LPS) * 0.05)) < 1e-6,
+    `and the fountain takes what it took from the dug spring, ${AQUEDUCT_LPS} litres a second on top of its own: ${moteFed.toFixed(3)} litres in a twentieth of a second on both sides `
+    + `(island ${Number(r('motefed')).toFixed(3)}, with the dug spring ${Number(r('dugfed')).toFixed(3)})`);
+  const again = ask();
+  const stop = act('stop_spring').check?.(tile(POOL[0], POOL[1]), g) ?? 'none';
+  const [keptDug, keptAll] = r('kept').split(' ');
+  say(again === r('again') && again === aqMoteFed(`water mote at ${POOL[0]}, ${POOL[1]}`) && fedBy(g, b) === `water mote at ${POOL[0]}, ${POOL[1]}`
+      && g.inventory.count(WATER_MOTE) === 1 && r('left') === '1',
+    `one water mote used up; said "Fed by: ${fedBy(g, b)}", and a second refused on both sides: "${again}"${again === r('again') ? '' : ` | island "${r('again')}"`}`);
+  say(stop === r('stop') && stop === SPRING_MOTE_STOP && keptDug === '0' && keptAll === '1' && g.springs.keptBy(null) === 0,
+    `not stopped up with a shovel, and not one of the springs its setter keeps, on both sides: "${stop}"${stop === r('stop') ? '' : ` | island "${r('stop')}"`}`);
+  const toldAll = r('told').split(' ');
+  const id = toldAll.pop();
+  say(toldAll.length === 1 && toldAll[0] === id, `the island tells the browser which spring is a water mote, and in which aqueduct: ${r('told')}`);
+  const own = g.wellRate(f) * 0.05;
+  act('demolish_aqueduct').perform(bt, g);
+  g.update(0.01);
+  const down = [...g.log].reverse().find((l) => l.text.startsWith('Aqueduct removed'))?.text ?? '';
+  const unfed = fillFor();
+  const [downSaid, downRest] = r('down').split(' | ');
+  say(down === downSaid && downRest === '0 0' && g.springs.list.size === 0 && Math.abs(unfed - own) < 1e-6 && Math.abs(Number(r('unfed')) - own) < 1e-3,
+    `pulled down, the water mote's spring goes with it and the fountain is back to its own, on both sides: "${down}"${down === downSaid ? '' : ` | island "${downSaid}"`}`);
+}
+
+/*
+ * The aqueduct from the spring's pond in the bowl to the hollow, finished,
+ * and the spring stopped: dry. A water mote set at its head (15, 40) rises
+ * there, fills the bowl to its lip as the dug spring did, and the hollow at
+ * its foot fills at the channel's flow: the same pond the dug spring's water
+ * filled, on both sides.
+ */
+{
+  const [sx, sy] = springCorner((x, y) => hAt(x, y) ?? 0, BOWL[0], BOWL[1]);
+  const BOWL_CORNERS: Array<[number, number]> = [];
+  for (let y = 39; y <= 41; y++) for (let x = 12; x <= 16; x++) BOWL_CORNERS.push([x, y]);
+  const BOWL_ROWS = BOWL_CORNERS.map(([x, y]) => `(${x}, ${y}, ${height(x, y)})`).join(', ');
+  const island = lines(psql(`
+begin;
+create temp table said (k text, v text);
+do $b$
+declare w uuid; me uuid; them uuid; v_spring bigint; v_b bigint; v_t jsonb;
+begin
+  ${ISLAND_SCENE}
+  insert into spring (world_id, x, y, cx, cy, made_by) values (w, ${BOWL[0]}, ${BOWL[1]}, ${sx}, ${sy}, me) returning id into v_spring;
+  perform settle_spring(w, v_spring);
+  perform act_perform(w, me, 'plan_aqueduct', '${AT}');
+  select id into v_b from bridge where world_id = w and kind = 'aqueduct';
+  v_t := jsonb_build_object('kind', 'bridge', 'id', v_b);
+  update bridge_span set needed = '{}'::jsonb where world_id = w and bridge = v_b;
+  perform aqueduct_touch(w, ${HEAD[0]}, ${HEAD[1]}, ${FOOT[0]}, ${FOOT[1]});
+  insert into said values ('dug', (select chain::text from spring where id = v_spring));
+  perform aqueduct_unfeed(w, v_spring);
+  delete from spring where id = v_spring;
+  insert into said values ('dry', has_water(w, ${FOOT[0]}, ${FOOT[1]})::text || ' ' || has_water(w, ${HEAD[0]}, ${HEAD[1]})::text);
+  insert into item (world_id, def, holder, holder_uid, ql, count) values (w, 'water_mote', 'player', me, 40, 1);
+  update player set body_at = now(), x = ${HEAD[0] + 1}.5, y = ${HEAD[1]}.5 where world_id = w and uid = me;
+  -- The bowl filled in: no hollow at its head to hold the water.
+  perform land_set_height(w, x, y, 150) from generate_series(12, 16) x, generate_series(39, 41) y;
+  insert into said values ('filled', coalesce(act_refusal(w, me, 'set_aqueduct_mote', v_t), 'none'));
+  perform land_set_height(w, v.x, v.y, v.h) from (values ${BOWL_ROWS}) v(x, y, h);
+  insert into said values ('ok', coalesce(act_refusal(w, me, 'set_aqueduct_mote', v_t), 'none'));
+  perform act_perform(w, me, 'set_aqueduct_mote', v_t);
+  insert into said values ('set', (select text from event where world_id = w and uid = me order by n desc limit 1));
+  insert into said values ('mote', (select chain::text from spring where world_id = w and mote_in = v_b));
+  insert into said values ('feed', (select string_agg(f.x || ',' || f.y || ',' || f.fountain, ' ') from aqueduct_feed f where f.world_id = w));
+  insert into said values ('wet', has_water(w, ${FOOT[0]}, ${FOOT[1]})::text || ' ' || has_water(w, ${CATCH[0]}, ${CATCH[1]})::text);
+end $b$;
+select string_agg(k || '=' || v, E'\\n~~\\n' order by k) from said;
+rollback;`));
+  const r = (k: string): string => island.get(k) ?? '';
+  const g = browserScene();
+  const dug = g.springs.dig(BOWL[0], BOWL[1], null, Date.now() - 3600 * 1000)!;
+  g.update(0.01);
+  act('plan_aqueduct').perform(tile(FOOT[0], FOOT[1], { head: HEAD }), g);
+  const b = [...g.bridges.values()].find((x) => x.kind === 'aqueduct')!;
+  const bt: Target = { kind: 'bridge', id: b.id };
+  for (const sp of b.spans) for (const k of Object.keys(sp.needed)) sp.needed[k] = 0;
+  g.springs.channelChanged(channelOf(g, b));
+  g.update(0.01);
+  const dugChain = dug.chain;
+  // The pond the channel fills, and what runs on from it.
+  const below = (c: Chain): string => {
+    const via = c.streams.find((st) => st.via !== undefined);
+    return typeof via?.to === 'number' ? viaOne(canon({ pond: c.ponds[via.to], on: c.streams.filter((st) => st.from >= (via.to as number)) })) : 'none';
+  };
+  const islandBelow = (c: { ponds: Array<Record<string, unknown>> } & Record<string, unknown>): string =>
+    below(JSON.parse(stripFill(c)) as Chain);
+  g.springs.stop(dug.id);
+  g.update(0.01);
+  const dry = `${g.world.hasWater(FOOT[0], FOOT[1])} ${g.world.hasWater(HEAD[0], HEAD[1])}`;
+  g.inventory.add(WATER_MOTE, { count: 1, ql: 40 });
+  g.player.x = HEAD[0] + 1.5;
+  g.player.y = HEAD[1] + 0.5;
+  for (const [x, y] of BOWL_CORNERS) g.world.setHeight(x, y, 150);
+  const filled = act('set_aqueduct_mote').check?.(bt, g) ?? 'none';
+  for (const [x, y] of BOWL_CORNERS) g.world.setHeight(x, y, height(x, y));
+  say(filled === r('filled') && filled === aqMoteDry(b.height),
+    `with the bowl at its head filled in, no water would reach the channel: refused on both sides: "${filled}"${filled === r('filled') ? '' : ` | island "${r('filled')}"`}`);
+  const ok = act('set_aqueduct_mote').check?.(bt, g) ?? 'none';
+  act('set_aqueduct_mote').perform(bt, g);
+  g.update(0.01);
+  const set = g.log[g.log.length - 1]?.text ?? '';
+  const ms = [...g.springs.list.values()].find((s) => s.moteIn === b.id);
+  const island0 = JSON.parse(r('mote') || '{"ponds":[],"streams":[]}');
+  say(dry === 'false false' && r('dry') === dry && ok === 'none' && r('ok') === 'none',
+    `the spring stopped, the bowl and the hollow are dry, and a water mote may be set at its head on both sides (${dry}, island ${r('dry')})${ok === 'none' && r('ok') === 'none' ? '' : ` -- "${ok}" | island "${r('ok')}"`}`);
+  say(set === r('set') && set === aqueductSays(g, b, MOTE_SET), `set, in the same words on both sides: "${set}"${set === r('set') ? '' : ` | island "${r('set')}"`}`);
+  say(!!ms && viaOne(canon(ms.chain)) === stripFill(island0) && below(ms.chain) === below(dugChain) && below(dugChain) !== 'none'
+      && below(dugChain) === islandBelow(JSON.parse(r('dug'))) && ms.chain.ponds[0].level === dugChain.ponds[0].level,
+    `it fills the bowl to ${ms?.chain.ponds[0].level}, as the dug spring did, and the hollow at its foot is the pond the dug spring's water filled, on both sides`);
+  say(r('feed') === `${FOOT[0]},${FOOT[1]},false` && r('wet') === 'true false' && g.world.hasWater(FOOT[0], FOOT[1]) && !g.world.hasWater(CATCH[0], CATCH[1])
+      && fedBy(g, b) === `water mote at ${HEAD[0]}, ${HEAD[1]}`,
+    `the hollow at its foot is water and the catch pond below the cliff dry, on both sides (island ${r('feed')}, ${r('wet')}): "Fed by: ${fedBy(g, b)}"`);
 }
 
 console.log(bad ? `${bad} of these are not what they should be` : 'all as they should be');

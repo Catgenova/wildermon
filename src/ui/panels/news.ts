@@ -49,7 +49,7 @@ import {
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
-import { WATER_MOTE_NEED } from '../../game/motes';
+import { WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
@@ -206,7 +206,7 @@ import { BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, boilCountPlain, DYEABLE_ITEMS, g
 import { GREEN_ACTIONS, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET } from '../../game/greening';
 import { BUCKET_LITRES, FURNITURE, WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { BAY_PAST_HEFT, BRIDGE_BILL_TIMES, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBridge, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, STONE_ARCH, THROWN, WAGON_WIDTH, WIDEST } from '../../game/bridges';
-import { AQUEDUCT } from '../../game/aqueducts';
+import { AQUEDUCT, AQUEDUCT_MOTE_USE, aqMoteFed } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, TILE_METRES } from '../../world/aqueducts';
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
 import { CROP_LIST, CROP_STAGES, CROPS, growthWords } from '../../game/farming';
@@ -4243,6 +4243,15 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 472,
+    day: '2026-11-03',
+    lines: () => [
+      `Added: ${ACTION_BY_ID.get('set_aqueduct_mote')?.label} (finished, dry aqueduct, within ${PULL_REACH} tiles of its head): ${WATER_MOTES_EACH} water mote used up; a spring at its head (in its pool, or at the bottom of its hollow), feeding what a dug spring would. `
+        + `Not counted in your ${SPRINGS_EACH} springs; gone when the aqueduct is pulled down. Refused on an aqueduct fed already: "${aqMoteFed('spring at x, y')}"`,
+      'Added: aqueduct menu, while water runs: "Fed by: spring at x, y" or "Fed by: water mote at x, y".',
+    ],
+  },
+  {
     n: 469,
     day: '2026-11-03',
     lines: () => ['Changed: garden steps: carts and wagons drive them (was: refused); mounts, as before.'],
@@ -4768,7 +4777,8 @@ export const NEWS: News[] = [
   {
     n: 393,
     day: '2026-10-30',
-    lines: () => [`Changed: water mote cost: ${WATER_MOTE_USES.map(([what, n]) => `${what} ${n}`).join(', ')}. Used up when dug or built. Without: "${WATER_MOTE_NEED}"`],
+    // The uses there were then: not the aqueduct's, which came after (472).
+    lines: () => [`Changed: water mote cost: ${WATER_MOTE_USES.filter(([what]) => what !== AQUEDUCT_MOTE_USE).map(([what, n]) => `${what} ${n}`).join(', ')}. Used up when dug or built. Without: "${WATER_MOTE_NEED}"`],
   },
   {
     n: 392,

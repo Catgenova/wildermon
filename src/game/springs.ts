@@ -14,7 +14,7 @@ import type { ActionDef } from './actions';
 import type { World } from '../world/world';
 import {
   FILL_RATE, pondFull, POND_MOST, RUN_RATE, settleChain, springCorner, SPRING_DEPTH, SPRINGS_EACH, WaterField,
-  type Chain, type Pond, type PondWater, type Shut, type SlabAt, type Stream, type StreamWater,
+  type Chain, type Pond, type PondWater, type Shut, type SlabAt, type SpringRefusal, type Stream, type StreamWater,
 } from '../world/springs';
 import { AQUEDUCT_FLOW, pondRate, settleWater, type Channel } from '../world/aqueducts';
 import { metres } from '../world/tiles';
@@ -37,6 +37,8 @@ export interface Spring {
   ver: number;
   /** The tile each aqueduct its water goes along draws from, by the aqueduct's id, as it was settled: for saying so. */
   heads?: Record<number, [number, number]>;
+  /** A water mote set in an aqueduct rather than a spring dug: that aqueduct's id, the spring at its head (`set_aqueduct_mote`). */
+  moteIn?: number;
 }
 
 /** A spring as a save keeps it: where it is and who dug it. Its water is worked out again from the ground. */
@@ -63,6 +65,8 @@ export interface IslandSpring {
   mine: boolean;
   ver: number;
   chain: { ponds: IslandPond[]; streams: Stream[]; box: Chain['box'] };
+  /** The aqueduct a water mote was set in, for a spring that is one; null for a spring dug. */
+  mote_in?: number | null;
 }
 
 /**
@@ -129,11 +133,39 @@ export class Springs {
     return undefined;
   }
 
-  /** How many springs somebody keeps. */
+  /** How many springs somebody keeps: dug, not a water mote set in an aqueduct. */
   keptBy(by: string | null): number {
     let n = 0;
-    for (const s of this.list.values()) if (s.by === by) n++;
+    for (const s of this.list.values()) if (s.by === by && s.moteIn === undefined) n++;
     return n;
+  }
+
+  /**
+   * The corner a water mote set at an aqueduct's head rises at: in a pool,
+   * the tile's lowest, as a spring dug there; elsewhere downhill from that
+   * corner, to the lowest of its four neighbours lower than it (by y, then x,
+   * among equals), until none is: the bottom of the hollow its water stood
+   * in. The island's `mote_corner`.
+   */
+  moteCorner(x: number, y: number): [number, number] {
+    let [cx, cy] = springCorner((a, b) => this.world.getHeight(a, b), x, y);
+    if (this.slabs(x, y)?.pool) return [cx, cy];
+    for (;;) {
+      let best: [number, number, number] | null = null;
+      for (const [nx, ny] of [[cx, cy - 1], [cx - 1, cy], [cx + 1, cy], [cx, cy + 1]] as const) {
+        const v = this.height(nx, ny);
+        if (v === null || v >= (this.height(cx, cy) ?? 0)) continue;
+        if (!best || v < best[2] || (v === best[2] && (ny < best[1] || (ny === best[1] && nx < best[0])))) best = [nx, ny, v];
+      }
+      if (!best) return [cx, cy];
+      [cx, cy] = [best[0], best[1]];
+    }
+  }
+
+  /** The water of a water mote set at an aqueduct's head at a tile, as `dig` would settle it now, or why it would not rise. */
+  moteTrial(x: number, y: number): Chain | SpringRefusal {
+    const [cx, cy] = this.moteCorner(x, y);
+    return settleWater(this.height, cx, cy, this.slabs, [x, y], this.channels(), this.shut());
   }
 
   /** What stops a spring being dug in a tile, or null: water already there, a hollow too shallow to hold a pond, or one too wide to fill. */
@@ -164,13 +196,14 @@ export class Springs {
     return out;
   }
 
-  /** Dig a spring: its water rises now, and runs on down to wherever it goes. */
-  dig(x: number, y: number, by: string | null, now: number): Spring | null {
-    const [cx, cy] = springCorner((a, b) => this.world.getHeight(a, b), x, y);
+  /** Dig a spring, or set a water mote in the aqueduct `moteIn` at its head: its water rises now, and runs on down to wherever it goes. */
+  dig(x: number, y: number, by: string | null, now: number, moteIn?: number): Spring | null {
+    const [cx, cy] = moteIn !== undefined ? this.moteCorner(x, y) : springCorner((a, b) => this.world.getHeight(a, b), x, y);
     const channels = this.channels();
     const chain = settleWater(this.height, cx, cy, this.slabs, [x, y], channels, this.shut());
     if (typeof chain === 'string') return null;
     const s: Spring = { id: this.nextId++, x, y, cx, cy, by, chain, fill: fillings(chain, null, now), ver: 1, heads: this.headsOf(chain, channels) };
+    if (moteIn !== undefined) s.moteIn = moteIn;
     this.list.set(s.id, s);
     this.lay();
     return s;
@@ -308,6 +341,7 @@ export class Springs {
           streams: c.chain.streams, box: c.chain.box,
         },
         fill: c.chain.ponds.map((p) => ({ from: p.from ?? p.level, since: p.since ? Date.parse(p.since) : 0 })),
+        ...(typeof c.mote_in === 'number' ? { moteIn: c.mote_in } : {}),
       });
       changed = true;
     }
@@ -346,6 +380,9 @@ export class Springs {
     this.touched(c.to[0], c.to[1]);
   }
 }
+
+/** Why a water mote set in an aqueduct is not stopped up with a shovel. The island's `spring_refusal` says the same. */
+export const SPRING_MOTE_STOP = 'Water mote in the aqueduct: stops when the aqueduct is pulled down.';
 
 /** How fast a pond rises, in metres a minute, for anything that says so. */
 export const RISE_A_MINUTE = (FILL_RATE / 10) * 60;
@@ -438,7 +475,10 @@ export const SPRING_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
       if (!g.inventory.has('shovel')) return 'Need a shovel.';
-      return g.springs.at(t.x, t.y) ? null : 'No spring here.';
+      const s = g.springs.at(t.x, t.y);
+      if (!s) return 'No spring here.';
+      // A water mote set in an aqueduct goes with the aqueduct (`set_aqueduct_mote`).
+      return s.moteIn !== undefined ? SPRING_MOTE_STOP : null;
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
