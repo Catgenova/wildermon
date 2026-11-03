@@ -276,6 +276,13 @@ function putPeople(world: string, spots: Array<[number, number]>, n: number): Bo
   }
   admin(`insert into player (world_id, uid, name, x, y, away, seen_at) values ${values.join(',\n')}
     on conflict (world_id, uid) do update set away = false, seen_at = now(), x = excluded.x, y = excluded.y`);
+  /*
+   * And the squares of land they walk on, built and kept, as they are wherever anybody has walked: each ask is
+   * rolled back, so a square a step builds would be built again on every step, and the knot sharing it would wait
+   * on the one building it. That is a cost of the test, not of the island.
+   */
+  admin(`select count(land_chunk_get(${lit(world)}, k.cx, k.cy)) from (select distinct floor(b.x / chunk_size())::int as cx,
+      floor(b.y / chunk_size())::int as cy from (values ${bodies.map((b) => `(${b.x}, ${b.y})`).join(', ')}) b(x, y)) k`);
   return bodies;
 }
 
