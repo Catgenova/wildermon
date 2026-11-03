@@ -5567,6 +5567,18 @@ jobs:
             --outfile=node_modules/.cache/grounddelta.mjs --log-level=error
           node node_modules/.cache/grounddelta.mjs
 
+      - name: Everybody ashore is read once a call, and is the list it was
+        if: matrix.shard == 6
+        run: |
+          # The map's list of everybody on the island (folk_ashore, on the
+          # ground's slow half) counted everybody online again for every row,
+          # so one ask grew with the square of the people on. Held to the old
+          # definition row for row: crowded (no places), five online (places),
+          # alone (empty); named by accounts; in under half the old time.
+          npx esbuild supabase/test/folk.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/folk.mjs --log-level=error
+          node node_modules/.cache/folk.mjs
+
       - name: A page opened before the migrations asks the new way once the island has them
         if: matrix.shard == 5
         run: |
