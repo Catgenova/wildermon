@@ -49,7 +49,7 @@ import {
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
-import { WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
+import { LIFE_MOTES_EACH, POULTICE_HEAL, WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
@@ -4254,6 +4254,12 @@ export const NEWS: News[] = [
         'Fixed: barrel\'s brew time left, after a reload or coming back in range: time left (was: its whole brew time again, a finished brew shown working).',
       ];
     },
+  },
+  {
+    n: 473,
+    day: '2026-11-03',
+    lines: () => [`New: Healer's poultice: ${ACTION_BY_ID.get('dress_poultice')?.label} (you or somebody beside you), ${ACTION_BY_ID.get('treat_poultice')?.label} (a wildermon). `
+      + `${LIFE_MOTES_EACH} life mote per go that takes; health healed ×${POULTICE_HEAL}; on a person, the next worst uninfected wound closed too. Slipped dressing, bad treatment: mote kept.`],
   },
   {
     n: 469,

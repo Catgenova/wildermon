@@ -175,6 +175,8 @@ const cut = (m: number): string => `−${percent(1 - m)}`;
 const mul = (m: number): string => `×${Number(m.toFixed(3))}`;
 const secs = (s: number): string => `${Number(s.toFixed(1))} s`;
 const base = (id: string): number => ACTION_BY_ID.get(id)?.baseTime ?? 0;
+/** A dressing's time, by this much: a Healer's poultice (`dress_poultice`) is a dressing too. */
+const dressTime = (v: number): Record<string, number> => ({ 'time:bind_wound': v, 'time:dress_poultice': v });
 const diff = (id: string): number => ACTION_BY_ID.get(id)?.difficulty ?? 0;
 const kg = (id: string): number => ITEM_DEFS[id]?.weight ?? 0;
 /** "15 percentage points", from 0.15 added to a chance. */
@@ -1597,7 +1599,7 @@ const NATURALIST: Seed[] = [
   },
   {
     num: 23, name: 'Quick Dressing',
-    fx: { 'time:bind_wound': 0.6 },
+    fx: dressTime(0.6),
     note: (fx) => `Dressing time ${cut(fx['time:bind_wound'])} (base ${secs(base('bind_wound'))}).`,
   },
   {
@@ -2285,7 +2287,7 @@ const CHIRURGEON: Seed[] = [
   },
   {
     num: 105, name: 'Quick Bandage',
-    fx: { 'time:bind_wound': 0.7 },
+    fx: dressTime(0.7),
     note: (fx) => `Dressing time ${cut(fx['time:bind_wound'])}: ${secs(base('bind_wound') * fx['time:bind_wound'])} `
       + `(base ${secs(base('bind_wound'))}).`,
   },

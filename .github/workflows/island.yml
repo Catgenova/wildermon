@@ -2779,6 +2779,20 @@ jobs:
             --outfile=node_modules/.cache/dress.mjs --log-level=error
           node node_modules/.cache/dress.mjs
 
+      - name: A Healer's poultice heals twice and closes one more wound
+        if: matrix.shard == 3
+        run: |
+          # Asked: "Healer's poultice -- first aid with a life mote heals x2
+          # and closes one extra wound." The same body on both sides, every
+          # roll pinned: a dressing with a life mote heals twice what one
+          # without does and closes the next worst wound, never one gone bad,
+          # and uses the mote; one that slips keeps it; without a mote the
+          # entry is refused in the same words; on somebody beside you and on
+          # a wildermon the same; the entries' time and the life mote's text.
+          npx esbuild supabase/test/poultice.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/poultice.mjs --log-level=error
+          node node_modules/.cache/poultice.mjs
+
       - name: The Beastmaster's spells and passives
         if: matrix.shard == 3
         run: |

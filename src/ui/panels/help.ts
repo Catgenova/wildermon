@@ -95,7 +95,7 @@ import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
 import { SOUL_CHANCE } from '../../game/sacrifice';
-import { HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
+import { FIRST_AID_ACTION_BY_ID, HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
 import { groomGain } from '../../game/husbandry';
 import { ARTIFACT_FOR, SHEAR_FEATHERS, SHEAR_WOOL } from '../../game/creatureActions';
 import { COOKED_MEAT_TOO, OLD_FOR } from '../../game/creatures';
@@ -173,7 +173,7 @@ import {
 import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
-import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
+import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTES_LEAST, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
 import { LANDING_STAND, RUNESTONES, SAFE_RING, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
@@ -2702,6 +2702,9 @@ export function helpText(): string {
       <li><b>Chirurgy</b>: every ${Math.round(CLOSE_PACE / CLOSE_PER_SKILL)} points adds the base close rate again, on every wound.</li>
       <li><b>Gone bad</b>: drains instead of closing; no dressing holds (skipped for the next worst). Scour with a bucket of <b>lye</b> first (hard first aid); it reopens and
       bleeds: dress straight after.</li>
+      <li><b>Healer's poultice</b>: <b>${FIRST_AID_ACTION_BY_ID.get('dress_poultice')?.label}</b> (you or somebody beside you) and <b>${FIRST_AID_ACTION_BY_ID.get('treat_poultice')?.label}</b>
+      (a wildermon), with a life mote in the pack: ${LIFE_MOTES_EACH} life mote per go that takes; health healed ×${POULTICE_HEAL}; on a person, the next worst uninfected wound
+      closed too. Slipped dressing, bad treatment: mote kept. Never repeats.</li>
     </ul>
     <h4>Naturalist remedies</h4>
     <ul>

@@ -72,7 +72,7 @@ const theirs = (who: string): string => `(select coalesce(string_agg((wd->>'id')
   from player p, jsonb_array_elements(p.wounds) t(wd) where p.world_id = ${W} and p.uid = ${who})`;
 /** Somebody with these wounds on them, settled to this moment so none turns while they are asked. */
 const SET_WOUNDS = (who: string, wounds: Wound[]): string => `
-  update player set wounds = ${jsonSql(wounds)}, act = null, act_target = null, act_queue = '[]',
+  update player set wounds = ${jsonSql(wounds)}, act = null, act_target = null, act_queue = '[]', body_at = now(),
       stats = jsonb_set(jsonb_set(coalesce(stats, '{}'::jsonb), '{health}', '0.5'), '{hurtSettled}', to_jsonb(now()))
     where world_id = ${W} and uid = ${who};`;
 /** Dane with these wounds on him, nothing in his pack to dress with but `pack`, first aid at 100 and nothing said yet. */

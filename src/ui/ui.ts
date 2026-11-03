@@ -84,7 +84,7 @@ import { DEED_ACTION_BY_ID, joinFromAfar, leaveQuestion, standingWord, upgradePr
 import { CROP_BY_SEED, cropDef, cropReady, describeCrop, emptyFields, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
 import { PLANTER_GROWTH } from '../game/growth';
 import { describeWaterPlant } from '../game/watergarden';
-import { swirlName } from '../game/motes';
+import { LIFE_MOTES_EACH, swirlName } from '../game/motes';
 import { runestoneAt } from '../game/runestones';
 import { cornerReading, groundReading, yieldLines } from './tileinfo';
 import { deedWorkersAt, MAX_DEED_LEVEL, type Deed } from '../game/game';
@@ -3553,14 +3553,14 @@ export class UI {
       note: after ? 'Following' : 'Follow until you walk elsewhere',
       onSelect: () => this.game.follow(uid, name),
     });
-    // Their wounds, at your first aid and out of your pack: anybody may.
-    const dress = ACTION_BY_ID.get('bind_wound');
+    // Their wounds, at your first aid and out of your pack: anybody may. And with a life mote, a Healer's poultice.
     const patient: Target = { kind: 'person', uid, name };
-    if (dress?.applies(patient, this.game)) {
+    for (const dress of [ACTION_BY_ID.get('bind_wound'), ACTION_BY_ID.get('dress_poultice')]) {
+      if (!dress?.applies(patient, this.game)) continue;
       const why = dress.check?.(patient, this.game) ?? null;
       entries.push({
         label: dress.labelFor?.(patient, this.game) ?? dress.label,
-        note: 'Your first aid and dressings',
+        note: dress.id === 'bind_wound' ? 'Your first aid and dressings' : `Your first aid, dressings and ${LIFE_MOTES_EACH} life mote`,
         hint: why ?? undefined,
         disabled: !!why,
         onSelect: () => this.game.requestAction(dress, patient),

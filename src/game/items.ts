@@ -8,7 +8,7 @@ import { metres } from './piers';
 import { article, capital, fill, listed, numberWord, percent, timeWords } from './words';
 import { CIRCLET_SHARE, CIRCLET_STONES, JEWEL_BONUS } from './gems';
 import { TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, TELESTONE } from './runestones';
-import { elementIslands, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT } from './motes';
+import { elementIslands, LIFE_MOTES_EACH, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, POULTICE_HEAL, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT } from './motes';
 import {
   ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantMarker, ON_WORDS, roomMul, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, type Enchant,
 } from './enchant';
@@ -700,7 +700,10 @@ for (const e of MOTE_ELEMENTS) {
       // A light mote is what a rune gate's pillars are lit by (`runegate.ts`).
       + (e === 'light' ? ' Rune gate: {wall.rune_gate.light_mote} over its stone, one per pillar.' : '')
       // A water mote is spent on a spring, a pool, and the pieces that hold water (`WATER_MOTE_USES`).
-      + (e === 'water' ? ' Spent on: {waterUses}.' : ''),
+      + (e === 'water' ? ' Spent on: {waterUses}.' : '')
+      // A life mote is a Healer's poultice (`firstaid.ts`), its entries filled in there.
+      + (e === 'life' ? ` Healer's poultice ({poulticeUses}): ${LIFE_MOTES_EACH} per go that takes; health healed ×${POULTICE_HEAL}; `
+        + 'on a person, next worst uninfected wound closed. Slipped dressing, bad treatment: mote kept.' : ''),
   };
 }
 

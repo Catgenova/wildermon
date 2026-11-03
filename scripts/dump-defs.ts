@@ -46,7 +46,7 @@ import { BREW_GAIN, BREW_SPRING_MUL } from '../src/game/brewing';
 import { IMPROVE_FLOOR, IMPROVE_GAIN } from '../src/game/improve';
 import { RESTORE_GAIN } from '../src/game/archaeology';
 import { FREE_GAIN } from '../src/game/traps';
-import { BANDAGE_GAIN, CLEAN_GAIN, DRESS_CHECK } from '../src/game/firstaid';
+import { BANDAGE_GAIN, CLEAN_GAIN, DRESS_CHECK, POULTICE_KEPT, poulticeSays } from '../src/game/firstaid';
 import { SHOT_ARCHERY, SHOT_FIGHT, SWING_ARM, SWING_BODY, SWING_FIGHT, TAME_GAIN, TAME_NERVE } from '../src/game/creatureActions';
 import { BAIT_PULL, BAIT_SHY, HOOK_BAIT, HOOK_BASE, HOOK_MOST, NET_GAIN, NET_HAUL, NET_LEAST, ROD_GAIN } from '../src/game/fishing';
 import { BREED_GAIN } from '../src/game/husbandry';
@@ -161,7 +161,7 @@ import {
 import { CANDLE_BURN, TORCH_BURN } from '../src/game/light';
 import {
   ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, MOTE_ELEMENTS, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRL_DRAWS, SWIRL_SAID, SWIRL_TRIES, SWIRLS_A_DAY,
-  WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH,
+  WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH, LIFE_MOTE, LIFE_MOTE_NEED, LIFE_MOTES_EACH, POULTICE_HEAL,
 } from '../src/game/motes';
 import {
   TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
@@ -2171,6 +2171,20 @@ out.push(`create or replace function region_element(p_region int) returns text l
 out.push(`create or replace function water_mote() returns text language sql immutable as $fn$ select ${q(WATER_MOTE)} $fn$;`);
 out.push(`create or replace function water_motes_each() returns int language sql immutable as $fn$ select ${q(WATER_MOTES_EACH)} $fn$;`);
 out.push(`create or replace function water_mote_need() returns text language sql immutable as $fn$ select ${q(WATER_MOTE_NEED)} $fn$;`);
+/*
+ * A Healer's poultice (`firstaid.ts`): the life mote it takes, how many, what it is refused without, what it multiplies the
+ * health healed by, and what its line says when it took (`poultice_says`, with the wound it closed or null) and when it was kept.
+ */
+out.push(`create or replace function life_mote() returns text language sql immutable as $fn$ select ${q(LIFE_MOTE)} $fn$;`);
+out.push(`create or replace function life_motes_each() returns int language sql immutable as $fn$ select ${q(LIFE_MOTES_EACH)} $fn$;`);
+out.push(`create or replace function life_mote_need() returns text language sql immutable as $fn$ select ${q(LIFE_MOTE_NEED)} $fn$;`);
+out.push(`create or replace function poultice_heal() returns double precision language sql immutable as $fn$ select ${q(POULTICE_HEAL)}::double precision $fn$;`);
+out.push(`create or replace function poultice_kept() returns text language sql immutable as $fn$ select ${q(POULTICE_KEPT)} $fn$;`);
+{
+  // The line round the wound it closed, split where the wound goes.
+  const [head, tail] = poulticeSays('\u0001').split('\u0001');
+  out.push(`create or replace function poultice_says(p_closed text) returns text language sql immutable as $fn$ select case when p_closed is null then ${q(poulticeSays(null))} else ${q(head)} || p_closed || ${q(tail)} end $fn$;`);
+}
 out.push(`create or replace function swirl_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${Object.entries(SWIRL_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
 /*
  * Tracking (`tracking.ts`): the job and its skill, how far a track reaches and
