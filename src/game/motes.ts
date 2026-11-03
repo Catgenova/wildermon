@@ -82,6 +82,18 @@ export const WATER_MOTE = moteItem('water');
 export const WATER_MOTES_EACH = 1;
 /** What a dig is refused without them: "Need 1 water mote." */
 export const WATER_MOTE_NEED = `Need ${WATER_MOTES_EACH} ${moteName('water').toLowerCase()}${WATER_MOTES_EACH === 1 ? '' : 's'}.`;
+/**
+ * The life mote, and how many a Healer's poultice takes: first aid with one
+ * (`dress_poultice`, `treat_poultice` in `firstaid.ts`), used up only on a go
+ * that takes. What it does: health healed ×`POULTICE_HEAL`, and the next worst
+ * wound closed. The island's `life_mote`, `life_motes_each`, `life_mote_need`
+ * and `poultice_heal`.
+ */
+export const LIFE_MOTE = moteItem('life');
+export const LIFE_MOTES_EACH = 1;
+export const POULTICE_HEAL = 2;
+/** What a poultice is refused without one: "Need 1 life mote." */
+export const LIFE_MOTE_NEED = `Need ${LIFE_MOTES_EACH} ${moteName('life').toLowerCase()}${LIFE_MOTES_EACH === 1 ? '' : 's'}.`;
 /** What a swirl is called on the ground: "Fire mote swirl". */
 export const swirlName = (e: MoteElement): string => `${capital(e)} mote swirl`;
 

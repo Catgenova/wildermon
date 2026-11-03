@@ -49,7 +49,7 @@ import {
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
-import { WATER_MOTE_NEED } from '../../game/motes';
+import { LIFE_MOTES_EACH, POULTICE_HEAL, WATER_MOTE_NEED } from '../../game/motes';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
@@ -4241,6 +4241,12 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 473,
+    day: '2026-11-03',
+    lines: () => [`New: Healer's poultice: ${ACTION_BY_ID.get('dress_poultice')?.label} (you or somebody beside you), ${ACTION_BY_ID.get('treat_poultice')?.label} (a wildermon). `
+      + `${LIFE_MOTES_EACH} life mote per go that takes; health healed ×${POULTICE_HEAL}; on a person, the next worst uninfected wound closed too. Slipped dressing, bad treatment: mote kept.`],
   },
   {
     n: 469,

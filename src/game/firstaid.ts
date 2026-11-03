@@ -3,7 +3,8 @@ import { tryGain } from './learn';
 import type { ActionDef, Target } from './actions';
 import { maxHealth, SPECIES, type Creature } from './creatures';
 import type { Game } from './game';
-import { itemName, type Item } from './items';
+import { describeFrom, itemName, type Item } from './items';
+import { LIFE_MOTE, LIFE_MOTE_NEED, LIFE_MOTES_EACH, POULTICE_HEAL } from './motes';
 import { dressingHelps, onYour, PART_NAMES, worstWound, WOUND_CLOSED, WOUND_KINDS, woundNamed, woundText, woundToDress, type Wound } from './wounds';
 
 /** How hard a dressing is to put on well: a wound gone bad takes none until it is cleaned out. */
@@ -106,6 +107,126 @@ export function dressRefusal(g: Game): string | null {
 const personOf = (g: Game, t: Target): { name: string } | undefined =>
   t.kind === 'person' ? (g.roster.list().find((p) => p.uid === t.uid) ?? (t.name ? { name: t.name } : undefined)) : undefined;
 
+/** Why a dressing will not go on, past what it is asked from: the island's `fight_refusal` for `bind_wound`. */
+function dressCheck(t: Target, g: Game): string | null {
+  // What is wrong with somebody else is the island's to know; the dressing is yours.
+  if (t.kind === 'person') return dressingFor(g, null) ? null : 'Nothing to dress it with.';
+  if (t.kind !== 'item') return null;
+  const w = named(g, t);
+  if (w === null) return WOUND_CLOSED;
+  return w ? dressRefusalFor(g, w) : dressRefusal(g);
+}
+
+/** Why a wildermon will not be treated: the island's `fight_refusal` for `treat_creature`. */
+function treatCheck(t: Target, g: Game): string | null {
+  const c = creatureOf(g, t);
+  if (!c) return 'It is gone.';
+  if (c.mode === 'wild') return 'Not while it is wild.';
+  if (c.health >= maxHealth(c, SPECIES[c.species])) return `${c.name}: not hurt.`;
+  if (!bestBandage(g)) return 'Need a bandage: cut one from cloth.';
+  if (Math.hypot(c.x - g.player.x, c.y - g.player.y) > 1.9) return 'Stand beside it.';
+  return null;
+}
+
+/**
+ * A Healer's poultice: a dressing or a treatment with a life mote, its own
+ * menu entry so a mote is never spent unasked. On a go that takes it is used
+ * up (`LIFE_MOTES_EACH`), the health healed is ×`POULTICE_HEAL`, and on a
+ * body the next worst uninfected wound (`worstWound`, after the one dressed)
+ * is closed. On a go that slips or goes badly it is kept and the go is a
+ * plain one. The island's `perform_fight` the same, in the same words.
+ */
+export const POULTICE_KEPT = 'Life mote kept.';
+/** What a poultice that took adds to the line: " Life mote: health ×2; closed: the bruise on your chest." */
+export const poulticeSays = (closed: string | null): string => ` Life mote: health ×${POULTICE_HEAL}${closed ? `; closed: ${closed}` : ''}.`;
+/** What a poultice may be asked from: a dressing, as a dressing is, or the life mote itself. */
+const POULTICE_FROM = new Set(['bandage', 'cover', LIFE_MOTE]);
+const moteHeld = (g: Game): boolean => g.inventory.count(LIFE_MOTE) >= LIFE_MOTES_EACH;
+/** The wound a poultice closes beside the one it dresses: the next worst, never one gone bad. The island's the same. */
+export const poulticeCloses = (wounds: Wound[], dressed: Wound): Wound | null => worstWound(wounds.filter((x) => x !== dressed && !x.infected));
+
+/** A dressing out of your pack, with a life mote (`mote`) or without: `bind_wound` and `dress_poultice`. */
+function dressGo(t: Target, g: Game, mote: boolean): boolean | void {
+  // Somebody else's wounds are the island's to dress (`perform_fight`), where a Naturalist's Field Medic or a Chirurgeon's
+  // Field Surgeon (`heal:others`) puts back more, and a poultice closes their next worst.
+  if (t.kind === 'person') return;
+  const w = yoursToDress(g, t);
+  if (!w) return;
+  const use = dressingFor(g, w);
+  if (!use || !g.inventory.remove(use.item.uid, 1)) return;
+  const suits = use.herb === WOUND_KINDS[w.kind].herb;
+  // Slips half as often for a Naturalist's Sure Hands.
+  const clean = g.sureCheck('bind_wound', 'first_aid', DRESS_CHECK, use.item.ql, g.mindEase());
+  // The wound a poultice closes, picked off the wounds as they were; and the mote used only on a go that took.
+  const closes = mote && clean ? poulticeCloses(g.player.wounds, w) : null;
+  const poultice = mote && clean && g.inventory.consume(LIFE_MOTE, LIFE_MOTES_EACH);
+  // Cloth holds a dressing on. The right herb closes the wound. And more on a body far gone, for a Chirurgeon's Triage Instinct.
+  const triage = g.player.stats.health < g.perk('triage:below', 0) ? g.perk('triage:heal', 1) : 1;
+  const healed = healAmount(g.skills.get('first_aid'), use.item.ql) * (clean ? 1 : SLIP_HEAL) * (suits ? SUITS_HEAL : use.herb ? HERB_HEAL : 1) * triage
+    * (poultice ? POULTICE_HEAL : 1);
+  g.player.stats.health = Math.min(1, g.player.stats.health + healed);
+  // And wind back for a Chirurgeon's Bedside Manner.
+  g.player.stats.stamina = Math.min(1, g.player.stats.stamina + g.perk('stamina:bind_wound', 0));
+  w.severity = Math.max(0, w.severity - healed);
+  w.dressing = clean ? use.herb : w.dressing;
+  if (clean) {
+    // A bleeding wound stopped, for the journal (the island's `perform_fight` the same).
+    if (w.bleeding) g.note('staunched');
+    w.bleeding = false;
+    // And closes faster for the hands that dressed it (a Naturalist's Quick Mend),
+    const mend = g.perk('mend:bind_wound', 1);
+    if (mend !== 1) w.mend = mend;
+    else delete w.mend;
+    // and goes bad less often under them (a Chirurgeon's Clean Cloth).
+    const fester = g.perk('fester:bind_wound', 1);
+    if (fester !== 1) w.fester = fester;
+    else delete w.fester;
+  }
+  const shut = poultice && closes ? closes : null;
+  if (shut) g.player.wounds = g.player.wounds.filter((x) => x !== shut);
+  g.gainSkill('first_aid', tryGain(clean, BANDAGE_GAIN));
+  g.note('dressed');
+  if (suits && clean) g.note('covered');
+  g.logMsg(
+    (!clean
+      ? `Dressing failed: ${woundText(w)} remains.`
+      : suits
+        ? `Dressed: ${onYou(w)}, ${use.herb} cover. Bleeding stopped; heals fast.`
+        : use.herb
+          ? `Dressed: ${onYou(w)}, ${use.herb} cover (wrong herb for a ${WOUND_KINDS[w.kind].name}). Bleeding stopped.`
+          : `Dressed: ${onYou(w)}, cloth. Bleeding stopped; heals slowly.`)
+    + (!mote ? '' : poultice ? poulticeSays(shut ? onYou(shut) : null) : ` ${POULTICE_KEPT}`),
+    'event',
+  );
+  // Keep going while a dressing out of the pack would still do some wound good: the one asked for, if one was. Never a poultice.
+  return !mote && !!yoursToDress(g, t);
+}
+
+/** A wildermon treated, with a life mote (`mote`) or without: `treat_creature` and `treat_poultice`. A wildermon has no wounds to close. */
+function treatGo(t: Target, g: Game, mote: boolean): void {
+  const c = creatureOf(g, t);
+  const bandage = bestBandage(g);
+  if (!c || !bandage) return;
+  const def = SPECIES[c.species];
+  const ql = bandage.ql;
+  if (!g.inventory.remove(bandage.uid, 1)) return;
+  const clean = g.skillCheck('first_aid', 14, ql, g.mindEase());
+  // A dressing that goes on badly still heals a third and still teaches
+  // something; what it does not do is teach as much as a good one.
+  if (!clean) g.missed();
+  const poultice = mote && clean && g.inventory.consume(LIFE_MOTE, LIFE_MOTES_EACH);
+  const top = maxHealth(c, def);
+  const healed = top * healAmount(g.skills.get('first_aid'), ql) * (clean ? 1 : POOR_DRESSING) * (poultice ? POULTICE_HEAL : 1);
+  c.health = Math.min(top, c.health + healed);
+  g.logMsg(
+    (clean
+      ? `Treated ${c.name}: ${itemName(bandage).toLowerCase()} used. Health ${Math.ceil(c.health)}/${top}.`
+      : `Treatment went badly (${Math.round(POOR_DRESSING * 100)}% effect): ${c.name} health ${Math.ceil(c.health)}/${top}.`)
+    + (!mote ? '' : poultice ? poulticeSays(null) : ` ${POULTICE_KEPT}`),
+    'event',
+  );
+}
+
 export const FIRST_AID_ACTIONS: ActionDef[] = [
   {
     id: 'bind_wound',
@@ -126,62 +247,10 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       return w ? `Dress ${onYou(w)}` : 'Dress a wound';
     },
     check: (t, g) => {
-      // What is wrong with somebody else is the island's to know; the dressing is yours.
-      if (t.kind === 'person') return dressingFor(g, null) ? null : 'Nothing to dress it with.';
-      if (t.kind !== 'item') return null;
-      if (!['bandage', 'cover'].includes(g.inventory.get(t.uid)?.id ?? '')) return 'Not a dressing.';
-      const w = named(g, t);
-      if (w === null) return WOUND_CLOSED;
-      return w ? dressRefusalFor(g, w) : dressRefusal(g);
+      if (t.kind === 'item' && !['bandage', 'cover'].includes(g.inventory.get(t.uid)?.id ?? '')) return 'Not a dressing.';
+      return dressCheck(t, g);
     },
-    perform: (t, g) => {
-      // Nobody else is here to dress offline: another's wounds are dressed on the island, and a Naturalist's Field Medic or a
-      // Chirurgeon's Field Surgeon (`heal:others`) puts back more there.
-      if (t.kind === 'person') return;
-      const w = yoursToDress(g, t);
-      if (!w) return;
-      const use = dressingFor(g, w);
-      if (!use || !g.inventory.remove(use.item.uid, 1)) return;
-      const suits = use.herb === WOUND_KINDS[w.kind].herb;
-      // Slips half as often for a Naturalist's Sure Hands.
-      const clean = g.sureCheck('bind_wound', 'first_aid', DRESS_CHECK, use.item.ql, g.mindEase());
-      // Cloth holds a dressing on. The right herb closes the wound. And more on a body far gone, for a Chirurgeon's Triage Instinct.
-      const triage = g.player.stats.health < g.perk('triage:below', 0) ? g.perk('triage:heal', 1) : 1;
-      const healed = healAmount(g.skills.get('first_aid'), use.item.ql) * (clean ? 1 : SLIP_HEAL) * (suits ? SUITS_HEAL : use.herb ? HERB_HEAL : 1) * triage;
-      g.player.stats.health = Math.min(1, g.player.stats.health + healed);
-      // And wind back for a Chirurgeon's Bedside Manner.
-      g.player.stats.stamina = Math.min(1, g.player.stats.stamina + g.perk('stamina:bind_wound', 0));
-      w.severity = Math.max(0, w.severity - healed);
-      w.dressing = clean ? use.herb : w.dressing;
-      if (clean) {
-        // A bleeding wound stopped, for the journal (the island's `perform_fight` the same).
-        if (w.bleeding) g.note('staunched');
-        w.bleeding = false;
-        // And closes faster for the hands that dressed it (a Naturalist's Quick Mend),
-        const mend = g.perk('mend:bind_wound', 1);
-        if (mend !== 1) w.mend = mend;
-        else delete w.mend;
-        // and goes bad less often under them (a Chirurgeon's Clean Cloth).
-        const fester = g.perk('fester:bind_wound', 1);
-        if (fester !== 1) w.fester = fester;
-        else delete w.fester;
-      }
-      g.gainSkill('first_aid', tryGain(clean, BANDAGE_GAIN));
-      g.note('dressed');
-      if (suits && clean) g.note('covered');
-      g.logMsg(
-        !clean
-          ? `Dressing failed: ${woundText(w)} remains.`
-          : suits
-            ? `Dressed: ${onYou(w)}, ${use.herb} cover. Bleeding stopped; heals fast.`
-            : use.herb
-              ? `Dressed: ${onYou(w)}, ${use.herb} cover (wrong herb for a ${WOUND_KINDS[w.kind].name}). Bleeding stopped.`
-              : `Dressed: ${onYou(w)}, cloth. Bleeding stopped; heals slowly.`,
-        'event',
-      );
-      // Keep going while a dressing out of the pack would still do some wound good: the one asked for, if one was.
-      return !!yoursToDress(g, t);
-    },
+    perform: (t, g) => dressGo(t, g, false),
   },
   {
     id: 'clean_wound',
@@ -234,37 +303,47 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       return !!c && c.mode !== 'wild' && c.health < maxHealth(c, SPECIES[c.species]);
     },
-    check: (t, g) => {
-      const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
-      if (c.mode === 'wild') return 'Not while it is wild.';
-      if (c.health >= maxHealth(c, SPECIES[c.species])) return `${c.name}: not hurt.`;
-      if (!bestBandage(g)) return 'Need a bandage: cut one from cloth.';
-      if (Math.hypot(c.x - g.player.x, c.y - g.player.y) > 1.9) return 'Stand beside it.';
-      return null;
-    },
-    perform: (t, g) => {
-      const c = creatureOf(g, t);
-      const bandage = bestBandage(g);
-      if (!c || !bandage) return;
-      const def = SPECIES[c.species];
-      const ql = bandage.ql;
-      if (!g.inventory.remove(bandage.uid, 1)) return;
-      const clean = g.skillCheck('first_aid', 14, ql, g.mindEase());
-      // A dressing that goes on badly still heals a third and still teaches
-      // something; what it does not do is teach as much as a good one.
-      if (!clean) g.missed();
-      const top = maxHealth(c, def);
-      const healed = top * healAmount(g.skills.get('first_aid'), ql) * (clean ? 1 : POOR_DRESSING);
-      c.health = Math.min(top, c.health + healed);
-      g.logMsg(
-        clean
-          ? `Treated ${c.name}: ${itemName(bandage).toLowerCase()} used. Health ${Math.ceil(c.health)}/${top}.`
-          : `Treatment went badly (${Math.round(POOR_DRESSING * 100)}% effect): ${c.name} health ${Math.ceil(c.health)}/${top}.`,
-        'event',
-      );
-    },
+    check: (t, g) => treatCheck(t, g),
+    perform: (t, g) => treatGo(t, g, false),
   },
 ];
+
+/** The dressing and the treatment a poultice is the same go as: its time, stamina and trade are theirs. */
+const BIND = FIRST_AID_ACTIONS.find((a) => a.id === 'bind_wound')!;
+const TREAT = FIRST_AID_ACTIONS.find((a) => a.id === 'treat_creature')!;
+
+/** A Healer's poultice: the two goes above with a life mote, never repeated, so each mote is asked for. */
+FIRST_AID_ACTIONS.push(
+  {
+    id: 'dress_poultice',
+    label: `${BIND.label} with a life mote`,
+    verb: BIND.verb,
+    skill: BIND.skill,
+    stamina: BIND.stamina,
+    baseTime: BIND.baseTime,
+    // From a dressing or the mote, or beside somebody: only with a life mote in the pack.
+    applies: (t, g) => moteHeld(g) && ((t.kind === 'item' && POULTICE_FROM.has(g.inventory.get(t.uid)?.id ?? '')) || t.kind === 'person'),
+    labelFor: (t, g) => `${BIND.labelFor?.(t, g) ?? BIND.label} with a life mote`,
+    check: (t, g) => {
+      if (!moteHeld(g)) return LIFE_MOTE_NEED;
+      if (t.kind === 'item' && !POULTICE_FROM.has(g.inventory.get(t.uid)?.id ?? '')) return 'Not a dressing.';
+      return dressCheck(t, g);
+    },
+    perform: (t, g) => dressGo(t, g, true),
+  },
+  {
+    id: 'treat_poultice',
+    label: `${TREAT.label} with a life mote`,
+    verb: TREAT.verb,
+    skill: TREAT.skill,
+    stamina: TREAT.stamina,
+    baseTime: TREAT.baseTime,
+    applies: (t, g) => moteHeld(g) && TREAT.applies(t, g),
+    check: (t, g) => (moteHeld(g) ? treatCheck(t, g) : LIFE_MOTE_NEED),
+    perform: (t, g) => treatGo(t, g, true),
+  },
+);
+/** The poultice's entries, by name, on the life mote: "Dress a wound with a life mote, Treat its wounds with a life mote". */
+describeFrom(LIFE_MOTE, { poulticeUses: FIRST_AID_ACTIONS.filter((a) => a.id.endsWith('_poultice')).map((a) => a.label).join(', ') });
 
 export const FIRST_AID_ACTION_BY_ID = new Map(FIRST_AID_ACTIONS.map((a) => [a.id, a]));

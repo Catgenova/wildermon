@@ -199,6 +199,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   pick_up: 'cloth', pick_up_all: 'cloth', feed: 'cloth', candle_lamp: 'cloth',
   tack_creature: 'cloth', untack_creature: 'cloth', hitch_creature: 'cloth',
   groom: 'cloth', make_brush: 'cloth', patch_item: 'cloth', apply_salve: 'cloth', mend_kit: 'cloth', seal_item: 'cloth',
+  // A Healer's poultice, a dressing or a treatment with a life mote (`firstaid.ts`): cloth, as the dressing is.
+  dress_poultice: 'cloth', treat_poultice: 'cloth',
   // An ancient comb drawn through a coat, a file over a hide and a pot's contents worked in (`creatureActions`, `use_ancient_*`).
   use_ancient_comb: 'cloth', use_ancient_file: 'cloth', use_ancient_pot: 'cloth',
   // And an ancient lamp lit over one to rekindle a trait, as any lamp is lit.
