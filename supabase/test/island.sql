@@ -1170,7 +1170,8 @@ select '181. with the right herb for a cut: ' || coalesce(act_refusal(:'world2',
 select act_perform(:'world2', :'ivar', 'bind_wound', '{"kind":"item"}') \g /dev/null
 select '182. ' || coalesce((select string_agg(text, ' | ' order by n) from event where uid = :'ivar'), 'nothing said')
      || ' — ' || coalesce((select string_agg(wound_text(x.value), ' | ') from player p, jsonb_array_elements(p.wounds) x where p.uid = :'ivar'), 'closed over');
--- Bled out, with nobody watching.
+-- Bled out, with nobody watching: a body past its death grace (`death_grace`), so the death takes what it carries.
+update player set played = death_grace() where uid = :'ivar';
 update player set wounds = '[{"kind":"cut","part":"chest","severity":0.4,"bleeding":true,"infected":true,"dressing":null}]'::jsonb,
     stats = jsonb_set(jsonb_set(stats, '{health}', '0.3'), '{hurtSettled}', to_jsonb(now() - interval '600 seconds')),
     x = 3.5, y = 3.5 where uid = :'ivar';
