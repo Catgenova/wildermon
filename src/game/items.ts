@@ -1336,6 +1336,9 @@ export function litresOf(item: { id: string; charges?: number; dye?: string }): 
   return item.charges ?? def?.charges ?? 0;
 }
 
+/** What one of a food at a QL puts on the food bar, before its maker's mark: `food` × (0.7 + QL/200). The island's Eat (`perform_item`). */
+export const foodFill = (id: string, ql: number): number => (ITEM_DEFS[id]?.food ?? 0) * (0.7 + ql / 200);
+
 export function groundDecayRate(item: Item): number {
   const def = itemDef(item.id);
   const base = def.decay ?? CATEGORY_DECAY[def.category];

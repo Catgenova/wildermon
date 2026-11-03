@@ -1,5 +1,5 @@
 import type { Game } from '../../game/game';
-import { countsLine, guideEntries, guideEntry, GUIDE_MARKS, guideMarks, guidePage, keepable, MARK_NAMES, type GuideEntry, type GuideMark } from '../../game/guide';
+import { countsLine, entryTameLevel, guideEntries, guideEntry, GUIDE_MARKS, guideMarks, guidePage, keepable, MARK_NAMES, type GuideEntry, type GuideMark } from '../../game/guide';
 import type { Island } from '../../net/island';
 import { recordSaid, RECORD_STATS, type BredRecord } from '../../game/boards';
 import { ACTION_BY_ID } from '../../game/actions';
@@ -36,6 +36,12 @@ export class GuidePanel {
    * index's redraw, so typing keeps its place; the cards are hidden, not redrawn (`findCards`).
    */
   private readonly search: HTMLInputElement;
+  /**
+   * Asked for: a "Tameable now" filter. On, the index keeps the kinds and stages seen whose taming (`entryTameLevel`)
+   * is at or under your Taming; never a monster. With the search, both must hold.
+   */
+  private readonly tameable: HTMLButtonElement;
+  private tameOnly = false;
   private readonly found: HTMLDivElement;
   private readonly bar: HTMLDivElement;
   private readonly view: HTMLDivElement;
@@ -75,10 +81,18 @@ export class GuidePanel {
     this.search.placeholder = 'Search: name, line or task';
     this.search.setAttribute('aria-label', 'Search the field guide');
     this.search.addEventListener('input', () => this.findCards());
+    this.tameable = document.createElement('button');
+    this.tameable.type = 'button';
+    this.tameable.className = 'tb-btn tb-small guide-tameable';
+    this.tameable.setAttribute('aria-pressed', 'false');
+    this.tameable.addEventListener('click', () => {
+      this.tameOnly = !this.tameOnly;
+      this.findCards();
+    });
     this.found = document.createElement('div');
     this.found.className = 'guide-how';
     this.found.hidden = true;
-    host.append(this.counts, this.search, this.found, this.bar, this.view);
+    host.append(this.counts, this.search, this.tameable, this.found, this.bar, this.view);
     game.events.on('guide', () => {
       if (this.showing()) this.draw();
     });
@@ -116,7 +130,7 @@ export class GuidePanel {
   private draw(): void {
     const g = this.game.guide;
     // And the Tracking the Track button's hover is read at.
-    const key = `${this.page}|${this.failed}|${JSON.stringify(this.records)}|${trackLevel(this.game.skills.get(TRACKING))}|${[...g.seen].sort()}|${[...g.tamed].sort()}|${[...g.bred].sort()}`;
+    const key = `${this.page}|${this.failed}|${JSON.stringify(this.records)}|${trackLevel(this.game.skills.get(TRACKING))}|${this.taming()}|${[...g.seen].sort()}|${[...g.tamed].sort()}|${[...g.bred].sort()}`;
     if (key === this.drawn) return;
     this.drawn = key;
     this.counts.textContent = countsLine(g);
@@ -133,6 +147,7 @@ export class GuidePanel {
   private drawIndex(): void {
     this.bar.hidden = true;
     this.search.hidden = false;
+    this.tameable.hidden = false;
     const grid = document.createElement('div');
     grid.className = 'guide-grid';
     const g = this.game.guide;
@@ -168,25 +183,42 @@ export class GuidePanel {
       card.addEventListener('click', () => this.turnTo(entry.key));
       // What a search finds it by, once seen: its name, its line's, and its task.
       card.dataset.find = seen ? [entry.name, def.name, def.gathers ? GATHER_VERB[def.gathers] : ''].join(' ').toLowerCase() : '';
+      // And the taming it asks, once seen, for Tameable now; none for a monster.
+      const tame = entryTameLevel(entry);
+      card.dataset.tame = seen && tame !== null ? String(tame) : '';
       grid.append(card);
     });
     this.view.append(grid);
     this.findCards();
   }
 
-  /** The index narrowed to what the search has in it, and how many that leaves. */
+  /** Your Taming, whole, as an offering is refused under it (`Need taming N`). */
+  private taming(): number {
+    return Math.floor(this.game.skills.get('taming'));
+  }
+
+  /** The index narrowed to what the search has in it and, with Tameable now on, to what you can tame; and how many that leaves. */
   private findCards(): void {
     const q = this.search.value.trim().toLowerCase();
+    const skill = this.taming();
+    this.tameable.textContent = `Tameable now (Taming ${skill})`;
+    this.tameable.title = `${this.tameOnly ? 'Showing' : 'Show'} only kinds and stages seen with taming ${skill} or under; not monsters`;
+    this.tameable.setAttribute('aria-pressed', String(this.tameOnly));
+    this.tameable.classList.toggle('tb-on', this.tameOnly);
     const cards = [...this.view.querySelectorAll<HTMLElement>('.guide-card')];
     let shown = 0;
     for (const card of cards) {
-      const hide = !!q && !(card.dataset.find ?? '').includes(q);
+      const tame = card.dataset.tame ?? '';
+      const hide = (!!q && !(card.dataset.find ?? '').includes(q)) || (this.tameOnly && !(tame !== '' && Number(tame) <= skill));
       if (card.hidden !== hide) card.hidden = hide;
       if (!hide) shown++;
     }
-    for (const how of this.view.querySelectorAll<HTMLElement>(':scope > .guide-how')) how.hidden = !!q;
-    this.found.hidden = !q || this.page !== null;
-    this.found.textContent = shown ? `${shown} of ${cards.length}` : 'None seen by that name or task.';
+    const narrowed = !!q || this.tameOnly;
+    for (const how of this.view.querySelectorAll<HTMLElement>(':scope > .guide-how')) how.hidden = narrowed;
+    this.found.hidden = !narrowed || this.page !== null;
+    this.found.textContent = shown ? `${shown} of ${cards.length}`
+      : q ? (this.tameOnly ? `None seen by that name or task at taming ${skill} or under.` : 'None seen by that name or task.')
+        : `None seen at taming ${skill} or under.`;
   }
 
   /** One page: its picture and marks, and then what the book says of it, once it has been seen. */
@@ -195,8 +227,9 @@ export class GuidePanel {
     const pages = guideEntries();
     const at = pages.findIndex((e) => e.key === entry.key);
     this.bar.hidden = false;
-    // A page is not searched; the search waits for the index.
+    // A page is not searched; the search and the filter wait for the index.
     this.search.hidden = true;
+    this.tameable.hidden = true;
     this.found.hidden = true;
     const button = (text: string, title: string, go: () => void): HTMLButtonElement => {
       const b = document.createElement('button');

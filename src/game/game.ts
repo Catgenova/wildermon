@@ -44,7 +44,7 @@ import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
 import { runeGateLights } from './runegate';
 import { GameEmitter, isTalk, TALK_LOG, type LogEntry, type LogKind } from './events';
-import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
+import { bagTake, DEED_DECAY, describeWith, foldInto, foodFill, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
 import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
@@ -682,6 +682,14 @@ export const STARTER_KIT: ReadonlyArray<readonly [string, number, string]> = [
   ['quern', KIT_QL, ''],
   ['water_skin', 30, ''],
 ];
+/**
+ * Food given with the kit on a first coming ashore, beside the stake (`starter_kit`): one full food bar's worth at
+ * `KIT_QL`, as many as Eat takes to fill it from empty (`foodFill`). Not issued: eaten, traded, buried like any food,
+ * and not given again on coming ashore or waking (the kit's tools are). Cheese: nothing rots in a pack, and on the
+ * ground it lasts a day.
+ */
+export const STARTER_FOOD = 'cheese';
+export const STARTER_FOOD_COUNT = Math.ceil(1 / foodFill(STARTER_FOOD, KIT_QL));
 /** The quality a tool in the kit comes ashore at, for the text that says why to better it. */
 export const kitQl = (id: string): number => STARTER_KIT.find(([k]) => k === id)?.[1] ?? 0;
 
@@ -1487,6 +1495,7 @@ export class Game {
   giveStarterKit(): void {
     for (const [id, ql, made] of STARTER_KIT) this.inventory.add(id, { ql, issued: true, extra: made || undefined });
     this.inventory.add('deed_stake', { ql: 50, extra: 'Pine' });
+    this.inventory.add(STARTER_FOOD, { ql: KIT_QL, count: STARTER_FOOD_COUNT });
   }
 
   /** Whether the player can stand on a tile at a storey: the ground, or a finished floor, staircase or ladder. */

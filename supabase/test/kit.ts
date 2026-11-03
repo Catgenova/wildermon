@@ -13,14 +13,16 @@
  *   * an issued tool cannot be improved;
  *   * a death leaves the issued tools on the body and buries the rest;
  *   * a kit tool held in no issued copy is given again on coming ashore and on
- *     waking from a death, once; nothing is given twice.
+ *     waking from a death, once; nothing is given twice;
+ *   * and food, a full food bar of it (`STARTER_FOOD`, `STARTER_FOOD_COUNT`), on
+ *     the first coming ashore only: not issued, not given again.
  *
  * Everything the island does is rolled back.
  */
 import { execFileSync } from 'node:child_process';
 import { barterPutRefusal, barterSaid } from '../../src/game/barter';
-import { KIT_LEFT_OUT, KIT_QL, STARTER_KIT } from '../../src/game/game';
-import { Inventory, itemName } from '../../src/game/items';
+import { Game, KIT_LEFT_OUT, KIT_QL, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT } from '../../src/game/game';
+import { foodFill, Inventory, itemName } from '../../src/game/items';
 import { fitsOrder } from '../../src/game/orders';
 
 const psql = (sql: string): string =>
@@ -71,7 +73,9 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
   insert into said select 'KIT', string_agg(def || ':' || ql::int || ':' || issued::text, ',' order by def)
-    from item where world_id = w and holder_uid = u and def <> 'deed_stake';
+    from item where world_id = w and holder_uid = u and def not in ('deed_stake', '${STARTER_FOOD}');
+  insert into said select 'FOOD', coalesce(string_agg(def || ':' || ql::int || ':' || count || ':' || issued::text, ','), '-')
+    from item where world_id = w and holder_uid = u and def = '${STARTER_FOOD}';
   insert into said select 'STAKE', count(*)::text from item where world_id = w and holder_uid = u and def = 'deed_stake';
   select id into v_id from item where world_id = w and holder_uid = u and def = 'hatchet';
   insert into said values ('IMPROVE', coalesce(item_refusal(w, u, 'improve_item', jsonb_build_object('uid', v_id::text)), '-'));
@@ -92,6 +96,7 @@ begin
   insert into said select 'SAW', count(*)::text || '|' || min(ql)::int::text || '|' || bool_and(issued)::text
     from item where world_id = w and holder_uid = u and def = 'saw';
   insert into said select 'TOTAL', count(*)::text from item where world_id = w and holder_uid = u and issued;
+  insert into said select 'FOOD2', coalesce(sum(count), 0)::text from item where world_id = w and holder_uid = u and def = '${STARTER_FOOD}';
   -- A kit tool put down out of the pack (a store, the ground) and coming ashore again: not given again.
   update item set holder = 'ground', holder_uid = null, gx = 16, gy = 16 where world_id = w and holder_uid = u and def = 'pickaxe';
   perform rpc_join(w, 'Mira');
@@ -130,7 +135,9 @@ check('coming ashore gives the browser kit, every piece issued, at its QL', at('
 check('and the stake', at('STAKE') === '1', at('STAKE'));
 check('an issued tool cannot be improved', /cannot be improved/i.test(at('IMPROVE')), at('IMPROVE'));
 check('a death leaves every issued tool on the body and buries the rest', at('AFTER') === `${STARTER_KIT.length}|0`, at('AFTER'));
-check('the grave holds the log and the stake, and no kit tool', at('GRAVE').split(',').sort().join(',') === 'deed_stake,log', at('GRAVE'));
+check('the grave holds the log, the stake and the food, and no kit tool', at('GRAVE').split(',').sort().join(',') === ['deed_stake', 'log', STARTER_FOOD].sort().join(','), at('GRAVE'));
+check(`coming ashore the first time gives ${STARTER_FOOD_COUNT} ${STARTER_FOOD} at QL ${KIT_QL}, not issued`, at('FOOD') === `${STARTER_FOOD}:${KIT_QL}:${STARTER_FOOD_COUNT}:false`, at('FOOD'));
+check('and not again on coming ashore or waking', at('FOOD2') === '0', at('FOOD2'));
 check(`a lost kit tool is given again on coming ashore, once, at QL ${KIT_QL}, issued`, at('SAW') === `1|${KIT_QL}|true`, at('SAW'));
 check('nothing given twice', at('TOTAL') === String(STARTER_KIT.length), at('TOTAL'));
 check('a kit tool put down out of the pack is still yours: coming ashore twice gives no other', at('PUTDOWN') === '0|1', at('PUTDOWN'));
@@ -145,6 +152,11 @@ check('or take a price on a stall', at('PRICE') === STARTER, at('PRICE'));
 check('or fill an order; one of your own making does', at('FITS') === '0' && at('FITS2') === '1|false', `${at('FITS')} / ${at('FITS2')}`);
 
 /* ---- the browser's side -------------------------------------------------------- */
+check(`the food fills the food bar from empty: ${STARTER_FOOD_COUNT} × ${foodFill(STARTER_FOOD, KIT_QL).toFixed(3)}, and one fewer would not`,
+  STARTER_FOOD_COUNT * foodFill(STARTER_FOOD, KIT_QL) >= 1 && (STARTER_FOOD_COUNT - 1) * foodFill(STARTER_FOOD, KIT_QL) < 1);
+const fresh = Game.create(175, 64).inventory.items;
+check('the browser gives the same food with the kit', fresh.filter((it) => it.id === STARTER_FOOD).map((it) => `${it.ql}:${it.count}:${!!it.issued}`).join() === `${KIT_QL}:${STARTER_FOOD_COUNT}:false`,
+  fresh.filter((it) => it.id === STARTER_FOOD).map((it) => `${it.ql}:${it.count}`).join());
 const inv = new Inventory();
 const kitHatchet = inv.add('hatchet', { ql: 20, issued: true, extra: 'Copper' });
 const made = inv.add('hatchet', { ql: 25, extra: 'Copper' });

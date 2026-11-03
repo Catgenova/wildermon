@@ -252,6 +252,9 @@ if (panels) {
   }
   console.log(`field guide search: ${p.guideSearch[0]} cards, ${p.guideSearch[1]} by a seen kind's name, ${p.guideSearch[2]} by a word nothing has`);
   if (!(p.guideSearch[0] > 1 && p.guideSearch[1] >= 1 && p.guideSearch[1] < p.guideSearch[0] && p.guideSearch[2] === 0)) bad.push(`in the game: the field guide's search did not narrow the index: ${p.guideSearch.join(', ')}`);
+  const t = p.guideTame ?? [];
+  console.log(`field guide Tameable now: ${t[0]} cards off, ${t[1]} on, ${t[2]} seen that Taming reaches; label ${t[3] ? 'names the Taming' : 'does not name the Taming'}; ${t[4]} off again`);
+  if (!(t[2] >= 1 && t[1] === t[2] && t[1] < t[0] && t[3] && t[4] === t[0])) bad.push(`in the game: the field guide's Tameable now did not keep only what Taming reaches: ${t.join(', ')}`);
   if (p.menuTab !== 'Field guide') bad.push(`in the game: the UI Menu's Journal: Field guide row turned the journal to ${p.menuTab || 'nothing'}`);
 }
 

@@ -2016,6 +2016,12 @@ button.goal-row:focus-visible {
   font-size: 12px;
 }
 
+/* The Tameable now filter, under the search. */
+.guide-tameable {
+  align-self: flex-start;
+  margin: 6px 2px;
+}
+
 .guide-how {
   margin: 0 2px 6px;
   color: var(--ui-dim);

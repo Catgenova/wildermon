@@ -18,7 +18,7 @@ import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
-import { DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_KIT, TRAVEL_LEG } from '../../game/game';
+import { DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
@@ -163,7 +163,7 @@ import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY }
 import { awayFor } from '../../game/away';
 import { ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
-import { itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid } from '../../game/items';
+import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid } from '../../game/items';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable } from '../../game/improve';
 import { weaponCarry } from '../../render/figure';
@@ -174,7 +174,7 @@ import { CHAR_START, SOUL_PER_LEVEL, soulAbove } from '../../game/game';
 import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase } from '../../game/game';
 import { DARK_WALK, DARK_WORK, NIGHT_EYES_FROM, TRACK_AWARE } from '../../game/learn';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
-import { ALL_GOALS } from '../../game/journal';
+import { ALL_GOALS, JOURNAL } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
 import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
 import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
@@ -4240,6 +4240,21 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 461,
+    day: '2026-11-03',
+    lines: () => [`Added: Help (${defaultKey('win_help')}), first page: First hour. The ${JOURNAL[0].goals.length} ${JOURNAL[0].name} goals, each with its key or menu; eating the starting food; taming.`],
+  },
+  {
+    n: 460,
+    day: '2026-11-03',
+    lines: () => [`Added: Field guide (${defaultKey('win_guide')}), index: Tameable now (your Taming): kinds and stages seen with taming at or under your Taming. Not monsters. With the search: both.`],
+  },
+  {
+    n: 459,
+    day: '2026-11-03',
+    lines: () => [`Added: starting food: ${STARTER_FOOD_COUNT} ${itemDef(STARTER_FOOD).name.toLowerCase()} at QL ${KIT_QL}, food bar +${percent(foodFill(STARTER_FOOD, KIT_QL))} each (${percent(STARTER_FOOD_COUNT * foodFill(STARTER_FOOD, KIT_QL))} in all). First coming ashore only; not a kit piece (eaten, traded, into the grave; not given again).`],
   },
   {
     n: 458,
