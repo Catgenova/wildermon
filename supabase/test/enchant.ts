@@ -172,8 +172,9 @@ do $t$
 declare w uuid; u uuid := '${MIRA}'; v_reed bigint; v_pap bigint; v_s bigint; v_sw bigint; v_x bigint; v_pl bigint;
         v_e record; v_before double precision; v_p player; v_c creature; v_ground jsonb;
 begin
-  -- Big enough that a rowl turning tail at 41,40 (section 12) runs its whole leg on the land.
-  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting', 118, 96, 10, 10, true) returning id into w;
+  -- Big enough that a rowl turning tail at 41,40 (section 12) runs its whole leg on the land, with its spawn in the far
+  -- corner so that 40,40 is outside the safe ring round it (\`safe_ring\`, 60 tiles), where a hunter hunts.
+  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting', 118, 96, 94, 94, true) returning id into w;
   perform land_blank(w, 96);
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');

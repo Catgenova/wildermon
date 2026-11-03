@@ -189,6 +189,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   // Water, poured or drawn.
   fish: 'water', fill_bucket: 'water', fill_skin: 'water',
   empty_vessel: 'water', pour_into_barrel: 'water', empty_creel: 'water',
+  // A water mote set in a barrel (a brewer's spring) or in an aqueduct's head: water, as poured.
+  set_brew_spring: 'water', set_aqueduct_mote: 'water',
   damp_smelter: 'water', damp_kiln: 'water', put_out_oven: 'water', put_out_campfire: 'water',
   // Hot metal going into it (a Smith's Temper Bath).
   quench_item: 'water',
