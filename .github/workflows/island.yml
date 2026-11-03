@@ -4637,6 +4637,20 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/aged.mjs --log-level=error
           node node_modules/.cache/aged.mjs
 
+      - name: A brewer's spring brews in ×0.75 the time, the same on both sides
+        if: matrix.shard == 5
+        run: |
+          # Each brew's time in a barrel and in a brewer's spring the same on
+          # both sides; Set a water mote refused without a mote, while a brew
+          # works, a second time, out of reach, on a well and on nothing, in
+          # the same words; set, one mote used up, said on Examine; ale in it
+          # done at ×0.75 the time and not a second before, where the plain
+          # barrel's still works; mead's ageing stamped at its end; the island
+          # sending the mark and the seconds left.
+          npx esbuild supabase/test/brewspring.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/brewspring.mjs --log-level=error
+          node node_modules/.cache/brewspring.mjs
+
       - name: Maps drawn, studied and copied, the same on both sides
         if: matrix.shard == 5
         run: |

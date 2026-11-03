@@ -15,7 +15,7 @@ import { anvilCentre, type PlacedAnvil } from './anvil';
 import { isOreItem, METAL_BY_ID, METAL_BY_LUMP, METAL_BY_ORE, METALS, MOULD_BY_ID, RARE_METALS, smeltSeconds } from './metal';
 import { smelterCapacity, smelterCentre, type PlacedSmelter } from './smelter';
 import { fireSeconds, firedQl, kilnCapacity, kilnCentre, POTTERY, POTTERY_BY_UNFIRED, isGreenware, type PlacedKiln } from './kiln';
-import { BREWS, isWorking, type BrewDef } from './brewing';
+import { brewTime, BREWS, isWorking, type BrewDef } from './brewing';
 import { fragmentOf, RELICS, RESTORE_AGE, type RelicDef } from './archaeology';
 import { fitsDen, furnitureDef, furnitureRefuses, furnitureRoom, holdsLiquid, isPlanter, isWell, litresIn } from './furniture';
 import { crateCentre } from './crates';
@@ -8238,8 +8238,9 @@ export class Creatures {
     const skill = c.skills[GATHER_SKILL.brew] ?? 1;
     f.litres = brew.litres;
     f.liquid = brew.id;
-    f.ferment = brew.time;
-    if (brew.ages) f.agedFrom = game.wallNow() + brew.time;
+    // As long as a person's brew takes in it: less in a brewer's spring.
+    f.ferment = brewTime(f, brew);
+    if (brew.ages) f.agedFrom = game.wallNow() + f.ferment;
     else delete f.agedFrom;
     delete f.knack;
     f.ql = Math.max(1, Math.min(100, (qls / brew.count + skill) / 2));

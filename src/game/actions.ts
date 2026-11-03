@@ -15,7 +15,7 @@ import { jettyOver } from './frame';
 import { ANVIL_ACTIONS } from './anvil';
 import { POST_ACTIONS } from './posts';
 import { FISHING_ACTIONS, fishJournal } from './fishing';
-import { BREWING_ACTIONS } from './brewing';
+import { BREW_SPRING, BREWING_ACTIONS } from './brewing';
 import { CAMPFIRE_ACTIONS } from './campfire';
 import { SMELTER_ACTIONS } from './smelter';
 import { KILN_ACTIONS } from './kiln';
@@ -843,12 +843,14 @@ export const GRASS_PLANT = MOSS_PLANT;
 describeFrom('mixed_grass', { grass: { cut: GRASS_PER_CUT, plant: GRASS_PLANT } });
 describeFrom('repair_kit', { mend: KIT_MEND });
 /**
- * What takes a water mote, and how many: Dig a spring and Dig a pool, and
- * every piece with one in its bill. Said on the water mote and in the help.
+ * What takes a water mote, and how many: Dig a spring and Dig a pool, every
+ * piece with one in its bill, and a barrel made a brewer's spring
+ * (`set_brew_spring`). Said on the water mote and in the help.
  */
 export const WATER_MOTE_USES: ReadonlyArray<readonly [string, number]> = [
   ...[...SPRING_ACTIONS, ...FOUNDATION_ACTIONS].filter((a) => a.id === 'dig_spring' || a.id === 'dig_pool').map((a) => [a.label, WATER_MOTES_EACH] as const),
   ...FURNITURE.flatMap((d) => d.bill.filter(([i]) => i === WATER_MOTE).map(([, n]) => [d.name, n] as const)),
+  [BREW_SPRING, WATER_MOTES_EACH],
 ];
 describeFrom(WATER_MOTE, { waterUses: WATER_MOTE_USES.map(([what, n]) => `${what} ${n}`).join(', ') });
 /** Whether a thing could take a seal: anything but the sealant itself, and nothing sealed already. */
