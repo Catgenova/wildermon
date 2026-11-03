@@ -344,22 +344,33 @@ function wentOn(a: Statements, b: Statements, secs: number, top = 12): string[] 
   return d.slice(0, top).map((x) => `${((x.ms / all) * 100).toFixed(1)}% · ${(x.calls / secs).toFixed(1)}/s · ${(x.ms / Math.max(1, x.calls)).toFixed(1)} ms each · \`${x.text.replace(/`/g, "'")}\``);
 }
 
-/** How long the island's clock took each go during a step, by pg_cron's own log. */
+/**
+ * How long the island's clock took each round during a step, by its own count (`tick_time`, a row a round, with the
+ * stir in it); and which way each clock turned: a loop a minute at a time (`private.clock_loop`), or a job a second.
+ */
 function clockTook(from: Date): string {
+  const said: string[] = [];
   try {
-    const rows = admin(`select j.jobname || '|' || count(*) || '|' ||
-        round((percentile_cont(0.5) within group (order by extract(epoch from d.end_time - d.start_time) * 1000))::numeric, 1) || '|' ||
-        round((percentile_cont(0.95) within group (order by extract(epoch from d.end_time - d.start_time) * 1000))::numeric, 1)
-      from cron.job_run_details d join cron.job j on j.jobid = d.jobid
-     where d.start_time >= ${lit(from.toISOString())} and d.end_time is not null and j.jobname in ('world-tick', 'stock-tick', 'tree-tick')
-     group by j.jobname order by j.jobname`);
-    return rows.map((r) => {
-      const [job, n, p50, p95] = r.split('|');
-      return `${job} ${p50} ms (p95 ${p95}, ${n} goes)`;
-    }).join(', ');
+    const [row] = admin(`select count(*) || '|' || coalesce(round((percentile_cont(0.5) within group (order by ms))::numeric, 1), 0) || '|' ||
+        coalesce(round((percentile_cont(0.95) within group (order by ms))::numeric, 1), 0) || '|' ||
+        coalesce(round(avg((stages->>'stir')::numeric), 1), 0)
+      from tick_time where at >= ${lit(from.toISOString())}`);
+    const [n, p50, p95, stir] = (row ?? '0|0|0|0').split('|');
+    said.push(`world ${p50} ms (p95 ${p95}, stir ${stir}, ${n} rounds)`);
   } catch (e) {
-    return `(the clock's log: ${String(e).split('\n')[0]})`;
+    said.push(`(the clock's count: ${String(e).split('\n')[0]})`);
   }
+  try {
+    const rows = admin(`select j.jobname || '|' || count(*) filter (where d.status = 'succeeded') || '|' || count(*) filter (where d.status = 'failed')
+      from cron.job_run_details d join cron.job j on j.jobid = d.jobid
+     where d.start_time >= ${lit(from.toISOString())} and j.jobname in ('world-loop', 'stock-loop', 'tree-loop')
+     group by j.jobname order by j.jobname`);
+    for (const r of rows) {
+      const [job, good, bad] = r.split('|');
+      said.push(`${job} ${good} ok${Number(bad) ? `, ${bad} failed` : ''}`);
+    }
+  } catch { /* no pg_cron */ }
+  return said.join(', ');
 }
 
 /** The CPU the project's metrics say, as a share busy, averaged over the cores; null when they do not answer. */
