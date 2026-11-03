@@ -678,6 +678,12 @@ export interface PlacedFurniture {
   /** Seconds a brew still has to work before it can be drawn off. */
   ferment?: number;
   /**
+   * A water mote set in a barrel: a brewer's spring, whose brews take
+   * `BREW_SPRING_MUL` of their time (`brewing.ts`). Kept until the barrel is
+   * picked up; the island's `placed.state.spring`.
+   */
+  spring?: boolean;
+  /**
    * For a barrel of a brew that ages, the moment it stops (or stopped)
    * working, in epoch seconds: what its age is counted from (`ageing.ts`; the
    * island's `placed.aged_from`). Gone when the barrel is emptied.

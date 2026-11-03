@@ -49,7 +49,7 @@ import {
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
-import { WATER_MOTE_NEED } from '../../game/motes';
+import { WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
@@ -90,7 +90,7 @@ import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
 import { CUT_VINE, GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
 import { ARTIFACT_FOR, SHEAR_FROM, SHEAR_WOOL } from '../../game/creatureActions';
-import { GRAPE_WINE_GRAPES } from '../../game/brewing';
+import { BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID, BREWS, GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
@@ -4243,6 +4243,19 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 471,
+    day: '2026-11-03',
+    lines: () => {
+      const set = BREWING_ACTION_BY_ID.get('set_brew_spring');
+      return [
+        `Added: ${BREW_SPRING.toLowerCase()}: barrel menu, ${set?.label} (${WATER_MOTES_EACH} water mote used up). Brews set going in it: ×${BREW_SPRING_MUL} the time, `
+          + `${listed(BREWS.map((b) => `${b.name.toLowerCase()} ${dur(b.time * BREW_SPRING_MUL)} (was ${dur(b.time)})`))}. ${SPECIES.hoppa.name} line's brews in it: the same.`,
+        `Refused: while a brew works ("Still fermenting."); a second mote ("${BREW_SPRING_ALREADY}"). Lost when the barrel is picked up. Examine and the barrel's line: "${BREW_SPRING}: brew time ×${BREW_SPRING_MUL}".`,
+        'Fixed: barrel\'s brew time left, after a reload or coming back in range: time left (was: its whole brew time again, a finished brew shown working).',
+      ];
+    },
+  },
+  {
     n: 469,
     day: '2026-11-03',
     lines: () => ['Changed: garden steps: carts and wagons drive them (was: refused); mounts, as before.'],
@@ -4768,7 +4781,7 @@ export const NEWS: News[] = [
   {
     n: 393,
     day: '2026-10-30',
-    lines: () => [`Changed: water mote cost: ${WATER_MOTE_USES.map(([what, n]) => `${what} ${n}`).join(', ')}. Used up when dug or built. Without: "${WATER_MOTE_NEED}"`],
+    lines: () => [`Changed: water mote cost: ${WATER_MOTE_USES.filter(([what]) => what !== BREW_SPRING).map(([what, n]) => `${what} ${n}`).join(', ')}. Used up when dug or built. Without: "${WATER_MOTE_NEED}"`],
   },
   {
     n: 392,

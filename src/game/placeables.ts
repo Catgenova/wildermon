@@ -1,7 +1,7 @@
 import { burnsFor, capital } from './words';
 import { INDOORS_REST } from './building';
 import { brewQl, drawnQl, keepsQl, pouredQl, wineAgeSays } from './ageing';
-import { drinkable, isBrew, isWorking } from './brewing';
+import { brewSpringSays, drinkable, isBrew, isWorking } from './brewing';
 import type { ActionDef, Target } from './actions';
 import { FUEL_SAID, FUEL_VALUES, fuelAtHand, hasAshes, rakeAshes } from './campfire';
 import {
@@ -157,7 +157,8 @@ export function drawDye(g: Game, f: PlacedFurniture, bucket: Item): { n: number;
 
 /**
  * What Examine says of a vessel standing about: its quality, and what is in
- * it -- for dye, its colour, hex, QL and mix (`dyeSays`). The island says the
+ * it -- for dye, its colour, hex, QL and mix (`dyeSays`) -- and a brewer's
+ * spring (`brewSpringSays`). The island says the
  * same (`vessel_says`).
  */
 export function vesselSays(f: PlacedFurniture, now = Date.now() / 1000): string {
@@ -167,7 +168,7 @@ export function vesselSays(f: PlacedFurniture, now = Date.now() / 1000): string 
     : dye ? `Holds: ${dyeSays(dye, litres)}`
       : `Holds: ${litres.toFixed(0)} litres of ${LIQUID_NAME[f.liquid]}.`;
   // And a wine kept in it, how long and what it has gained (`ageing.ts`).
-  return `${furnitureName(f)}: Quality ${f.ql.toFixed(2)}, ${litres.toFixed(0)} of ${liquidCapacity(f)} litres. ${held}${wineAgeSays(f, now)}`;
+  return `${furnitureName(f)}: Quality ${f.ql.toFixed(2)}, ${litres.toFixed(0)} of ${liquidCapacity(f)} litres. ${held}${wineAgeSays(f, now)}${brewSpringSays(f)}`;
 }
 
 /** Whether there is water at hand at all: a shore, a well or a barrel of it. */

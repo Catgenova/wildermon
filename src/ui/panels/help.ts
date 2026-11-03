@@ -24,7 +24,7 @@ import { HEAL_FED } from '../../game/body';
 import { BOON_BONUS, BOON_FOODS, boonTime, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { bedRest, SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_FOOD, SLEEP_HEAL, SLEEP_WATER, sleepHm, sleepRate } from '../../game/sleep';
 import { TINCTURE_NAMES } from '../../game/remedies';
-import { BREW_BY_ID, BREWS, isBrew } from '../../game/brewing';
+import { BREW_BY_ID, BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID, BREWS, isBrew } from '../../game/brewing';
 import { AGEING_GROUPS, CELLAR_AGEING, keepsQl } from '../../game/ageing';
 import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, onceEvery, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, grapesFor, PICK_GRAPES, PLANT_VINE,
@@ -1554,6 +1554,8 @@ export function helpText(): string {
       ${listed(BREWS.map((b) => `<b>${b.name.toLowerCase()}</b>: ${countIn(b.input, b.count)} + ${b.litres} litres of water, ${dur(b.time)}`))}.</li>
       <li>Yield: litres of drink = litres of water.</li>
       <li>While working: cannot be drawn off; cannot be hurried. Then draw into a bucket and drink from that.</li>
+      <li><b>${BREW_SPRING}</b> (right-click a barrel: ${BREWING_ACTION_BY_ID.get('set_brew_spring')?.label}; ${WATER_MOTES_EACH} water mote used up): brew time ×${BREW_SPRING_MUL},
+      ${listed(BREWS.map((b) => `${b.name.toLowerCase()} ${dur(b.time * BREW_SPRING_MUL)}`))}. Workers' brews too. Not while working; once a barrel ("${BREW_SPRING_ALREADY}"); lost when the barrel is picked up.</li>
       <li>Brew quality (QL): half the ingredients' QL + half your <b>brewing</b>. Failed brew: ingredients damaged by their QL (${FAIL_DAMAGE_SAID}); water lost: that damage as a share of the brew's litres, by the barrel's QL, to the whole litre.</li>
     </ul>
     <h4>Ageing</h4>

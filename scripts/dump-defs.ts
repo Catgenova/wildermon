@@ -42,7 +42,7 @@ import { CRAFT_HEAD, CRAFT_REACH } from '../src/game/recipes';
 import { MILK_LITRES, MILK_READY, WHEY_BUCKET, WHEY_FEED } from '../src/game/dairy';
 import { BUCKET_LITRES } from '../src/game/furniture';
 import { SMITH_GAIN } from '../src/game/anvil';
-import { BREW_GAIN } from '../src/game/brewing';
+import { BREW_GAIN, BREW_SPRING_MUL } from '../src/game/brewing';
 import { IMPROVE_FLOOR, IMPROVE_GAIN } from '../src/game/improve';
 import { RESTORE_GAIN } from '../src/game/archaeology';
 import { FREE_GAIN } from '../src/game/traps';
@@ -1884,6 +1884,8 @@ for (const [fn, v] of [
   ['wind_rest', WIND_REST], ['wind_walk', WIND_WALK], ['wind_per_level', WIND_PER_LEVEL], ['stamina_bar_per_level', STAMINA_BAR_PER_LEVEL],
   // Litres (`items.ts`, `placeables.ts`).
   ['litre_kg', LITRE_KG], ['lye_use', LYE_USE], ['drink_litres', DRINK_LITRES],
+  // What a brewer's spring makes of a brew's time (`brewing.ts`).
+  ['brew_spring_mul', BREW_SPRING_MUL],
   // Six more relics (`creatures.ts`, `relicuse.ts`).
   // Wildermon gear (`wildgear.ts`), and the tool rule's damage drag it shares (`limits.ts`).
   ['pack_loads', PACK_LOADS], ['harness_pace', HARNESS_PACE], ['barding_cut', BARDING_CUT], ['gear_floor', GEAR_FLOOR],

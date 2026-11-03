@@ -9080,6 +9080,8 @@ export class Game {
           // A well's or a fountain's is water, whatever is left in it, as the island's `placed_liquid` has it.
           litres: r.litres ?? undefined, liquid: ((furnitureDef(r.sub ?? 'chest').well ?? 0) > 0 ? 'water' : r.liquid ?? undefined) as PlacedFurniture['liquid'],
           ferment: r.ferment ?? undefined,
+          // A water mote set in it: a brewer's spring (`brewing.ts`).
+          ...(r.state?.spring === true ? { spring: true } : {}),
           // When a wine in it stops working, and a trellis's vine (`ageing.ts`, `vineyard.ts`).
           agedFrom: r.aged_from ?? undefined,
           vineAt: r.vine_at ?? undefined,
@@ -10936,6 +10938,7 @@ export interface IslandPlaced {
   rare?: string | null;
   litres: number | null;
   liquid: string | null;
+  /** Seconds a brew in it still has to work (`ferment_left`), not the whole of its working. */
   ferment: number | null;
   /** For a barrel of wine, when it stops working, in epoch seconds (`ageing.ts`); absent from older islands. */
   aged_from?: number | null;
@@ -10946,7 +10949,7 @@ export interface IslandPlaced {
   bait_ql: number | null;
   caught: number | null;
   /** A furnace's queue and what it has made; a planter's last crop (`sown`), for a Farmer's Crop Rotation. */
-  state: { jobs?: unknown[]; output?: unknown[]; sown?: string; skep_at?: number } | null;
+  state: { jobs?: unknown[]; output?: unknown[]; sown?: string; skep_at?: number; spring?: boolean } | null;
   mine: boolean;
   /** The padlock fitted to it, by the number it shares with its key. */
   lock?: number | null;

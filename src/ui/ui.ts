@@ -73,7 +73,7 @@ import { BAUBLE_SAID, BAUBLE_TIER_BY_ID, BAUBLE_TIERS, readBauble, socketsOf, so
 import { FED_SAID, SACRIFICE_SAID, sacrificeable } from '../game/sacrifice';
 import { abilitiesOf, CHOOSE_AT, MEDITATION, nextStep, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, PATH_LIST, picksOf, sittingWorth } from '../game/meditation';
 import { canImprove } from '../game/improve';
-import { BREWS } from '../game/brewing';
+import { brewTime, BREWS } from '../game/brewing';
 import { fireAnchor, fireState, FIRE_COST, isFuel, type PlacedCampfire } from '../game/campfire';
 import { COIN_METALS, COIN_REFUSAL, DIE_WEAR, INGOT_LUMPS, MOULD_BY_ID, MOULD_BY_MAKES, isCasting, isIngot, isLump, isMetalStock, isMould, isOreItem, lumpsIn, metalOfBar, mouldLumps, mouldUsesLeft } from '../game/metal';
 import { meltable } from '../game/melt';
@@ -2884,7 +2884,7 @@ export class UI {
           const reason = brewDef.check?.(bt, g) ?? null;
           return {
             label: b.name,
-            note: `${b.count} × ${itemDef(b.input).name.toLowerCase()} · ${b.litres} litres · ${Math.round(b.time / 60)}m`,
+            note: `${b.count} × ${itemDef(b.input).name.toLowerCase()} · ${b.litres} litres · ${Math.round(brewTime(f, b) / 60)}m`,
             hint: reason ?? undefined,
             disabled: !!reason,
             onSelect: () => g.requestAction(brewDef, bt),

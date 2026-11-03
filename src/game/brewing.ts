@@ -1,15 +1,18 @@
 import { tryGain } from './learn';
 import { damageDrawn, failDamagedSaid, failLitresOf, failLitresSaid } from './faildamage';
 import type { ActionDef, Target } from './actions';
-import { furnitureName, holdsLiquid, LIQUID_NAME, litresIn, type LiquidKind, type PlacedFurniture } from './furniture';
+import { furnitureCentre, furnitureName, holdsLiquid, isWell, LIQUID_NAME, litresIn, type LiquidKind, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
 import { describeWith, itemDef } from './items';
+import { WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH } from './motes';
 import { world } from './pace';
+import { STATE_TAILS } from './pieceTails';
 
 /**
  * Brewing. Fill a barrel with water, tip in what you have grown or gathered,
  * and leave it alone. It works for as long as its `time` says -- from ale,
- * the quickest, to wine, the slowest -- and nothing can hurry it. What comes out
+ * the quickest, to wine, the slowest -- and once it is going nothing can hurry
+ * it; a barrel that is a brewer's spring takes less (`brewTime`). What comes out
  * is drawn off into a bucket like any other liquid and drunk from that, and
  * every one of them favours a trade far harder than any food does.
  */
@@ -76,6 +79,41 @@ export const isBrew = (liquid: LiquidKind | undefined): boolean => !!liquid && (
 /** Still working, and not to be drawn off until it has stopped. */
 export const isWorking = (f: PlacedFurniture): boolean => (f.ferment ?? 0) > 0;
 
+/**
+ * A brewer's spring: a water mote set in a barrel (`set_brew_spring`), for
+ * good -- until the barrel is picked up. Every brew set going in it after
+ * works for this share of its time; none is working when the mote goes in,
+ * which is refused while one is. The island's `brew_spring_mul` and
+ * `private.brew_seconds`.
+ */
+export const BREW_SPRING_MUL = 0.75;
+/** What it is called, on the water mote's list of uses and on the barrel. */
+export const BREW_SPRING = "Brewer's spring";
+/** A coopered vessel, which can be one: every barrel, and not a well or a fountain. */
+export const springable = (f: PlacedFurniture): boolean => holdsLiquid(f) && !isWell(f);
+/** Seconds this brew works for in this barrel. */
+export const brewTime = (f: PlacedFurniture, brew: BrewDef): number => brew.time * (f.spring ? BREW_SPRING_MUL : 1);
+/** What a barrel says it is, on Examine: the island's `private.brew_spring_says`. */
+export const brewSpringSays = (f: PlacedFurniture): string => (f.spring ? ` ${BREW_SPRING}: brew time ×${BREW_SPRING_MUL}.` : '');
+// And on the piece's own line, beside how long a brew in it has to go.
+STATE_TAILS.push((f) => (f.spring ? ` · ${BREW_SPRING.toLowerCase()}, brew time ×${BREW_SPRING_MUL}` : ''));
+/** What a barrel that already is one is told. The island says the same. */
+export const BREW_SPRING_ALREADY = `Already a ${BREW_SPRING.toLowerCase()}.`;
+/** Tiles from the barrel's middle it is set from: the island's `placed_in_reach`. */
+const BREW_SPRING_REACH = 2.4;
+
+/** Why a water mote cannot be set in this piece, or null. The island's `private.brew_spring_refusal`. */
+export function brewSpringReason(g: Game, f: PlacedFurniture | undefined): string | null {
+  if (!f) return 'It is gone.';
+  if (!springable(f)) return 'Not a barrel.';
+  const [cx, cy] = furnitureCentre(f);
+  if (Math.hypot(cx - g.player.x, cy - g.player.y) > BREW_SPRING_REACH) return 'Stand next to it.';
+  if (f.spring) return BREW_SPRING_ALREADY;
+  if (isWorking(f)) return 'Still fermenting.';
+  if (g.inventory.count(WATER_MOTE) < WATER_MOTES_EACH) return WATER_MOTE_NEED;
+  return null;
+}
+
 /** Anything you would actually put in your mouth. */
 export const drinkable = (liquid: LiquidKind | undefined): boolean => liquid === 'water' || liquid === 'milk' || liquid === 'juice' || isBrew(liquid);
 
@@ -140,11 +178,13 @@ export const BREWING_ACTIONS: ActionDef[] = [
         return;
       }
       if (!g.spendStock(brew.input, brew.count)) return;
+      // As long as its brew takes in this barrel: less in a brewer's spring.
+      const time = brewTime(f, brew);
       f.litres = brew.litres;
       f.liquid = brew.id;
-      f.ferment = brew.time;
+      f.ferment = time;
       // A brew that ages does so from the moment it stops working, which is now and its working (`ageing.ts`).
-      if (brew.ages) f.agedFrom = g.wallNow() + brew.time;
+      if (brew.ages) f.agedFrom = g.wallNow() + time;
       else delete f.agedFrom;
       // Its brewer's hand in it, which goes into every bucket drawn off it (a Cook's Strong Brew).
       const knack = g.perk(`brewed:${brew.id}`, 1);
@@ -154,7 +194,27 @@ export const BREWING_ACTIONS: ActionDef[] = [
       g.gainSkill('brewing', tryGain(true, BREW_GAIN));
       g.note('brew');
       g.note(`brew:${brew.id}`);
-      g.logMsg(`${brew.done} Ready in about ${Math.round(brew.time / 60)} minutes.`, 'event');
+      g.logMsg(`${brew.done} Ready in about ${Math.round(time / 60)} minutes.`, 'event');
+      g.events.emit('crate');
+    },
+  },
+  {
+    id: 'set_brew_spring',
+    label: 'Set a water mote',
+    verb: 'setting a water mote',
+    stamina: 0.01,
+    baseTime: 3,
+    applies: (t, g) => {
+      const f = pieceOf(g, t);
+      return !!f && springable(f) && !f.spring;
+    },
+    check: (t, g) => brewSpringReason(g, pieceOf(g, t)),
+    perform: (t, g) => {
+      const f = pieceOf(g, t);
+      if (!f || brewSpringReason(g, f) || !g.inventory.consume(WATER_MOTE, WATER_MOTES_EACH)) return;
+      f.spring = true;
+      g.logMsg(`${BREW_SPRING}: ${furnitureName(f).toLowerCase()}, brew time ×${BREW_SPRING_MUL}.`, 'event');
+      g.events.emit('inventory');
       g.events.emit('crate');
     },
   },
