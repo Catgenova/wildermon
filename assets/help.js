@@ -2702,7 +2702,7 @@ import{$a as e,$b as t,$c as n,$d as r,$g as i,$h as a,$n as o,$o as s,$s as ee,
       <li><b>Lay stone steps</b> (trowel, masonry 15): ${ba}, in ${D(ld.map(e=>e.name.replace(/ slabs$/,``).toLowerCase()))}.
       <b>Lay timber steps</b> (mallet, carpentry 12): ${ei}, in that wood. Several materials carried: the menu asks. On a settlement: needs ${_.shape.label}.</li>
       <li>Standable up to slope <b>${C(80)} m</b> (bare ground: ${C(60)} m, +${Lp(Gl)} m per climbing level). Steps on or off ignore the ${C(32)} m step limit between tile centres;
-      only the tile stepped onto must be standable. Wildermon likewise; no carts or wagons.</li>
+      only the tile stepped onto must be standable. Wildermon, mounts, carts and wagons likewise.</li>
       <li><b>Take up the steps</b> (pickaxe, paving): ${F(Na)} back, rounded down (${rc(3)} of 3 slabs and ${rc(6)} of 6 bricks,
       or ${rc(10)} of 10 planks); leaves packed dirt.</li>
       <li><b>Rose arch</b> (${W(`make_rose_arch`)}: ${V(`make_rose_arch`)}); <b>stone rose arch</b> (${W(`make_stone_rose_arch`)}, trowel: ${V(`make_stone_rose_arch`)}):

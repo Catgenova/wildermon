@@ -7,8 +7,8 @@
  * `TileType.Steps`, the stone or the wood goes in its data byte, and which way
  * it climbs is read off the corners (`stepsFit`). What makes it more than a
  * picture is that a flight is walked at any slope it can be laid on, where the
- * bare ground would be too steep to stand on (`standsOn`, `groundStep`), and a
- * wheel will not take it.
+ * bare ground would be too steep to stand on (`standsOn`, `groundStep`), on foot,
+ * mounted or on wheels.
  *
  * Every door here is the island's too, in the same words and the same order
  * (`steps_refusal`, `perform_steps`): the tool first, as the island asks it of

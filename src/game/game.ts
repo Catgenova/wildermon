@@ -1721,8 +1721,6 @@ export class Game {
       // Any other deck is over the wheels, lane to lane too: under it is the ground, driven as any ground is.
     }
     if (!this.vehicleGround(x1, y1)) return null;
-    // A flight of garden steps is climbed, not driven: no wheel takes one.
-    if (this.world.getTile(x1, y1) === TileType.Steps) return null;
     // A door is for a person. Wheels want a double door, an archway or a gate.
     if (this.buildings.blocksVehicle(x0, y0, x1, y1)) return null;
     // And a staircase or a ladder going up from the tile is no road, nor the stairwell of one going down.

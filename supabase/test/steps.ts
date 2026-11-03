@@ -297,6 +297,13 @@ begin
     values (w, 'furniture', 'large_cart', ${X}, ${Y + 1}, ${X}.5, ${Y + 1}.5, 30, u, u);
   insert into said values ('CART|' || (walk_share(w, u, 0, ${X}.5, ${Y + 1}.5, ${X}.5, ${Y}.5) >= 1)
     || ' ' || (walk_share(w, u, 0, ${X}.5, ${Y + 1}.5, ${X + 1}.5, ${Y + 1}.5) >= 1));
+  delete from placed where world_id = w and driver = u;
+  -- And under a rider: a grown Thistlekit at the foot.
+  update creature set rider = null where world_id = w and rider = u;
+  update creature set rider = u
+   where world_id = w and id = creature_spawn(w, 'orse', ${X}.5, ${Y + 1}.5, 'active', now() - interval '60 days', u);
+  insert into said values ('RIDE|' || (walk_share(w, u, 0, ${X}.5, ${Y + 1}.5, ${X}.5, ${Y}.5) >= 1)
+    || ' ' || (walk_share(w, u, 0, ${X}.5, ${Y}.5, ${X}.5, ${Y - 1}.5) >= 1));
 end $$;
 select k from said;
 rollback;`);
@@ -317,7 +324,17 @@ rollback;`);
   cart.driven = true;
   const drives = `${game.driveRule(X, Y + 1, 0, X, Y) !== null} ${game.driveRule(X, Y + 1, 0, X + 1, Y + 1) !== null}`;
   game.removeFurniture(cart.id);
-  check(`at ${rise}, a cart is refused the flight and driven along the landing on both sides`, drives === said(theirs, 'CART'), `browser ${drives}, island ${said(theirs, 'CART')}`);
+  check(`at ${rise}, a cart onto the flight and along the landing: the same on both sides`, drives === said(theirs, 'CART'), `browser ${drives}, island ${said(theirs, 'CART')}`);
+  if (rise <= STEPS_MOST) check(`at ${rise}, a cart drives onto the flight`, drives.startsWith('true'), drives);
+  // Mounted: up onto the flight from its foot, and off it onto its head.
+  const steed = game.creatures.spawn('orse', X + 0.5, Y + 1.5, 'active', game.rand, game.time - 3600 * 24 * 60);
+  steed.tacked = true;
+  steed.hunger = 1;
+  game.mount(steed);
+  const rides = `${game.rideRule(X, Y + 1, 0, X, Y) !== null} ${game.rideRule(X, Y, 0, X, Y - 1) !== null}`;
+  game.dismount();
+  check(`at ${rise}, a rider onto the flight and off it: the same on both sides`, rides === said(theirs, 'RIDE'), `browser ${rides}, island ${said(theirs, 'RIDE')}`);
+  if (rise <= STEPS_MOST) check(`at ${rise}, a rider takes the flight`, rides === 'true true', rides);
 }
 
 /* ---- names ------------------------------------------------------------------ */

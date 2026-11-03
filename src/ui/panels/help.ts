@@ -3580,7 +3580,7 @@ export function helpText(): string {
       <li><b>Lay stone steps</b> (trowel, masonry ${STONE_DIFFICULTY}): ${STONE_STEPS_BILL}, in ${listed(SLAB_VARIANTS.map((v) => v.name.replace(/ slabs$/, '').toLowerCase()))}.
       <b>Lay timber steps</b> (mallet, carpentry ${TIMBER_DIFFICULTY}): ${TIMBER_STEPS_BILL}, in that wood. Several materials carried: the menu asks. On a settlement: needs ${POWER.shape.label}.</li>
       <li>Standable up to slope <b>${metres(STEPS_MOST)} m</b> (bare ground: ${metres(MAX_STAND)} m, +${metresFine(CLIMB_PER_LEVEL)} m per climbing level). Steps on or off ignore the ${metres(MAX_STEP)} m step limit between tile centres;
-      only the tile stepped onto must be standable. Wildermon likewise; no carts or wagons.</li>
+      only the tile stepped onto must be standable. Wildermon, mounts, carts and wagons likewise.</li>
       <li><b>Take up the steps</b> (pickaxe, paving): ${frac(STEPS_BACK)} back, rounded down (${stepsBack(STEPS_SLABS)} of ${STEPS_SLABS} slabs and ${stepsBack(STEPS_BRICKS)} of ${STEPS_BRICKS} bricks,
       or ${stepsBack(STEPS_PLANKS)} of ${STEPS_PLANKS} planks); leaves packed dirt.</li>
       <li><b>Rose arch</b> (${workedAt('make_rose_arch')}: ${bill('make_rose_arch')}); <b>stone rose arch</b> (${workedAt('make_stone_rose_arch')}, trowel: ${bill('make_stone_rose_arch')}):
