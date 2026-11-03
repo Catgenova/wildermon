@@ -6621,6 +6621,8 @@ export class Game {
     if (!b) return;
     this.bridges.delete(id);
     this.reindexDecks();
+    // A water mote set in an aqueduct goes with it (`set_aqueduct_mote`), as the island's `spring.mote_in` cascades.
+    for (const s of [...this.springs.list.values()]) if (s.moteIn === id) this.springs.stop(s.id);
     for (const s of b.spans) this.events.emit('world', s.x, s.y);
   }
 

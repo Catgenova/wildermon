@@ -1,5 +1,5 @@
 import { ACTION_BY_ID, type Target } from '../game/actions';
-import { AQ_SAME, AQ_THERE, AQUEDUCT, aqueductHeads, aqueductPlan, footSays, waterAlong } from '../game/aqueducts';
+import { AQ_SAME, AQ_THERE, AQUEDUCT, aqueductHeads, aqueductPlan, fedBy, footSays, waterAlong } from '../game/aqueducts';
 import { isDone } from '../game/building';
 import { spanWants, type Bridge } from '../game/bridges';
 import type { Game } from '../game/game';
@@ -69,9 +69,10 @@ export function aqueductEntries(g: Game, b: Bridge): MenuItem[] {
   if (open) entries.push({ label: `Open span needs: ${spanWants(open)}`, disabled: true });
   else if (foot) {
     entries.push({ label: `Flowing: ${AQUEDUCT_FLOW} litres/min of spring water`, disabled: true });
+    entries.push({ label: `Fed by: ${fedBy(g, b)}`, disabled: true });
     entries.push({ label: foot, disabled: true });
   } else entries.push({ label: dryWhy(g, b), disabled: true });
-  for (const id of ['build_aqueduct', 'scrub_moss', 'demolish_aqueduct']) {
+  for (const id of ['build_aqueduct', 'set_aqueduct_mote', 'scrub_moss', 'demolish_aqueduct']) {
     const a = ACTION_BY_ID.get(id);
     if (!a || !a.applies(bt, g)) continue;
     const reason = a.check?.(bt, g) ?? null;

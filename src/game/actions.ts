@@ -47,7 +47,7 @@ import { HUSBANDRY_ACTIONS } from './husbandry';
 import { DYE_ACTIONS, recipeSays } from './dyes';
 import { TRAP_ACTIONS } from './traps';
 import { BRIDGE_ACTIONS } from './bridges';
-import { AQ_OVER, AQUEDUCT_ACTIONS } from './aqueducts';
+import { AQ_OVER, AQUEDUCT_ACTIONS, AQUEDUCT_MOTE_USE } from './aqueducts';
 import { SPRING_ACTIONS } from './springs';
 import { FOUNDATION_ACTIONS } from './foundations';
 import { STEPS_ACTIONS } from './steps';
@@ -843,12 +843,14 @@ export const GRASS_PLANT = MOSS_PLANT;
 describeFrom('mixed_grass', { grass: { cut: GRASS_PER_CUT, plant: GRASS_PLANT } });
 describeFrom('repair_kit', { mend: KIT_MEND });
 /**
- * What takes a water mote, and how many: Dig a spring and Dig a pool, every
- * piece with one in its bill, and a barrel made a brewer's spring
- * (`set_brew_spring`). Said on the water mote and in the help.
+ * What takes a water mote, and how many: Dig a spring, Dig a pool and Set a
+ * water mote in an aqueduct, every piece with one in its bill, and a barrel
+ * made a brewer's spring (`set_brew_spring`). Said on the water mote and in the help.
  */
 export const WATER_MOTE_USES: ReadonlyArray<readonly [string, number]> = [
   ...[...SPRING_ACTIONS, ...FOUNDATION_ACTIONS].filter((a) => a.id === 'dig_spring' || a.id === 'dig_pool').map((a) => [a.label, WATER_MOTES_EACH] as const),
+  // A spring at an aqueduct's head (`set_aqueduct_mote`).
+  [AQUEDUCT_MOTE_USE, WATER_MOTES_EACH] as const,
   ...FURNITURE.flatMap((d) => d.bill.filter(([i]) => i === WATER_MOTE).map(([, n]) => [d.name, n] as const)),
   [BREW_SPRING, WATER_MOTES_EACH],
 ];

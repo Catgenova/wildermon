@@ -6,6 +6,8 @@ import type { Game } from './game';
 import { greenNow } from './greening';
 import { itemDef } from './items';
 import { lacks } from './ranks';
+import { WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH } from './motes';
+import type { Spring } from './springs';
 import { POND_MOST, pondFull, poolLevel, settleChain, springCorner, SPRING_DEPTH, type Chain, type Stream } from '../world/springs';
 import { AQUEDUCT_FLOW, CHANNEL_DEEP, fillSeconds, FOUNTAIN_RIM, pondRate, type Channel } from '../world/aqueducts';
 import { metres, TileType } from '../world/tiles';
@@ -253,12 +255,53 @@ export const channelOf = (g: Game, b: Bridge): Channel => ({
   fountain: g.furnitureOnTile(b.bx, b.by).some((f) => f.kind === 'fountain'),
 });
 
-/** The stream a spring's water takes along an aqueduct, the chain it is in and how its ponds rose, when any spring's does. */
-export function waterAlong(g: Game, id: number): { chain: Chain; stream: Stream; fill: Array<{ from: number; since: number }> } | null {
-  for (const s of g.springs.list.values()) {
+/** The stream a spring's water takes along an aqueduct, the chain it is in and how its ponds rose, when any spring's does: the first spring by id. */
+export function waterAlong(g: Game, id: number): { spring: Spring; chain: Chain; stream: Stream; fill: Array<{ from: number; since: number }> } | null {
+  for (const s of [...g.springs.list.values()].sort((a, b) => a.id - b.id)) {
     const stream = s.chain.streams.find((st) => st.via === id);
-    if (stream) return { chain: s.chain, stream, fill: s.fill };
+    if (stream) return { spring: s, chain: s.chain, stream, fill: s.fill };
   }
+  return null;
+}
+
+/**
+ * What feeds an aqueduct, as its menu and a refusal say it: the first spring
+ * by id whose water runs along it, by the tile it is in -- a water mote set
+ * in an aqueduct (`set_aqueduct_mote`) by its aqueduct's head -- or null
+ * while none runs. The island's `aqueduct_fed_by`.
+ */
+export function fedBy(g: Game, b: Bridge): string | null {
+  const s = waterAlong(g, b.id)?.spring;
+  return s ? `${s.moteIn !== undefined ? 'water mote' : 'spring'} at ${s.x}, ${s.y}` : null;
+}
+
+/** What is said of a finished aqueduct a water mote is set in, after `aqueductSays`'s own first words. */
+const LAST_SPAN = 'Last span laid.';
+export const MOTE_SET = 'Water mote set.';
+/** Why a water mote will not be set in an aqueduct. The island's `aqueduct_refusal` says the same. */
+export const AQ_MOTE_OPEN = 'Finish the aqueduct first.';
+export const AQ_MOTE_REACH = 'Stand at its head.';
+export const aqMoteFed = (by: string): string => `Already fed: ${by}.`;
+export const aqMoteDry = (height: number): string => `No water would run along it from its head at ${metres(height)} m.`;
+
+/**
+ * Why a water mote may not be set in an aqueduct, or null: finished, not fed
+ * already, within `PULL_REACH` of its head, on a settlement by its builders
+ * only (`pullDownRefusal`), a water mote to hand, and a spring at its head
+ * that would run along it. The island's `aqueduct_refusal`, in this order.
+ */
+export function moteRefusal(g: Game, t: Target): string | null {
+  const b = aqueductOf(g, t);
+  if (!b) return 'It is gone.';
+  if (!bridgeDone(b)) return AQ_MOTE_OPEN;
+  const by = fedBy(g, b);
+  if (by) return aqMoteFed(by);
+  if (Math.hypot(b.ax + 0.5 - g.player.x, b.ay + 0.5 - g.player.y) > PULL_REACH) return AQ_MOTE_REACH;
+  const deed = pullDownRefusal(g, b, AQUEDUCT_ACTIONS.find((a) => a.id === 'set_aqueduct_mote')?.label);
+  if (deed) return deed;
+  if (g.inventory.count(WATER_MOTE) < WATER_MOTES_EACH) return WATER_MOTE_NEED;
+  const chain = g.springs.moteTrial(b.ax, b.ay);
+  if (typeof chain === 'string' || !chain.streams.some((st) => st.via === b.id)) return aqMoteDry(b.height);
   return null;
 }
 
@@ -266,12 +309,12 @@ export function waterAlong(g: Game, id: number): { chain: Chain; stream: Stream;
  * What is said when the last span is laid: where the water goes now, or that
  * none comes. The island says the same (`aqueduct_says`).
  */
-export function aqueductSays(g: Game, b: Bridge): string {
+export function aqueductSays(g: Game, b: Bridge, first = LAST_SPAN): string {
   const foot = footSays(g, b);
   if (!foot) {
-    return `Last span laid. Channel dry: no spring water at its head at ${metres(b.height)} m or over.`;
+    return `${first} Channel dry: no spring water at its head at ${metres(b.height)} m or over.`;
   }
-  return `Last span laid. Flow ${AQUEDUCT_FLOW} litres/min out of its head, not over its lip. ${foot}`;
+  return `${first} Flow ${AQUEDUCT_FLOW} litres/min out of its head, not over its lip. ${foot}`;
 }
 
 /**
@@ -397,6 +440,27 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
     },
   },
   {
+    id: 'set_aqueduct_mote',
+    label: 'Set a water mote',
+    verb: 'setting a water mote',
+    stamina: 0.02,
+    baseTime: 5,
+    applies: (t, g) => {
+      const b = aqueductOf(g, t);
+      return !!b && bridgeDone(b);
+    },
+    check: (t, g) => moteRefusal(g, t),
+    perform: (t, g) => {
+      const b = aqueductOf(g, t);
+      if (!b || moteRefusal(g, t) || !g.inventory.consume(WATER_MOTE, WATER_MOTES_EACH)) return;
+      // A spring at its head, kept with the aqueduct: no hollow dug, not one of the springs you keep (`SPRINGS_EACH`).
+      if (!g.springs.dig(b.ax, b.ay, null, Date.now(), b.id)) return;
+      g.note('aqueduct');
+      g.logMsg(aqueductSays(g, b, MOTE_SET), 'event');
+      g.events.emit('world', b.ax, b.ay);
+    },
+  },
+  {
     id: 'demolish_aqueduct',
     label: 'Pull the aqueduct down',
     verb: 'pulling the aqueduct down',
@@ -416,7 +480,8 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       const b = aqueductOf(g, t);
       if (!b) return;
-      const ran = bridgeDone(b) && waterAlong(g, b.id) !== null;
+      // Its head spills again only where a spring's water reached it: a water mote set in it goes with it.
+      const ran = bridgeDone(b) && [...g.springs.list.values()].some((s) => s.moteIn !== b.id && s.chain.streams.some((st) => st.via === b.id));
       // Half of what went into it comes back, as with a bridge.
       const back = new Map<string, number>();
       for (const s of b.spans) {
@@ -447,3 +512,6 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
 ];
 
 export const AQUEDUCT_ACTION_BY_ID = new Map(AQUEDUCT_ACTIONS.map((a) => [a.id, a]));
+
+/** A water mote's use in an aqueduct, as the water mote and the help list it: "Set a water mote (aqueduct)". */
+export const AQUEDUCT_MOTE_USE = `${AQUEDUCT_ACTION_BY_ID.get('set_aqueduct_mote')?.label} (${AQUEDUCT.name.toLowerCase()})`;

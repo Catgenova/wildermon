@@ -61,8 +61,8 @@ check(`every piece's bill has ${WATER_MOTES_EACH} water mote, and its recipe as 
   PIECES.every((p) => furnitureDef(p.id).bill.some(([i, n]) => i === WATER_MOTE && n === WATER_MOTES_EACH)
     && recipe(p.recipe).inputs.some((i) => i.item === WATER_MOTE && (i.count ?? 1) === WATER_MOTES_EACH)),
   PIECES.map((p) => `${p.id}: ${furnitureDef(p.id).bill.map(([i, n]) => `${n} ${i}`).join(', ')}`).join(' / '));
-check("the water mote says what it is spent on: the five, and a brewer's spring (`brewspring.ts`)",
-  WATER_MOTE_USES.length === 6 && WATER_MOTE_USES.every(([what, n]) => itemDef(WATER_MOTE).description?.includes(`${what} ${n}`)),
+check("the water mote says what it is spent on: the five, a brewer's spring (`brewspring.ts`) and an aqueduct's head (`aqueduct.ts`)",
+  WATER_MOTE_USES.length === 7 && WATER_MOTE_USES.every(([what, n]) => itemDef(WATER_MOTE).description?.includes(`${what} ${n}`)),
   itemDef(WATER_MOTE).description ?? '');
 
 /* ---- On the island ------------------------------------------------------------------------------ */

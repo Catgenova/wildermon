@@ -285,7 +285,7 @@ export const STANDING_A: Goal[] = [
   {
     id: 'aqueduct',
     text: 'Carry a spring\'s water over an aqueduct',
-    get how() { return late(() => 'Dig a spring and let it fill a pond or a pool. Right-click a tile out from it where the water could pour: "Lead an aqueduct here", then "Work on the aqueduct" until every span is laid. Ticks at the last span when a spring\'s water runs along it.'); },
+    get how() { return late(() => 'Dig a spring and let it fill a pond or a pool. Right-click a tile out from it where the water could pour: "Lead an aqueduct here", then "Work on the aqueduct" until every span is laid. Ticks at the last span when a spring\'s water runs along it, or at "Set a water mote" on it.'); },
     met: did('aqueduct'),
   },
   {

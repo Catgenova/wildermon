@@ -687,6 +687,7 @@ const PLAN_WALL = ACTION_BY_ID.get('plan_wall');
 /** Pulling a bridge down, which a settlement keeps to its builders. */
 const BRIDGE_PULL = ACTION_BY_ID.get('demolish_bridge');
 const AQUEDUCT_PULL = ACTION_BY_ID.get('demolish_aqueduct');
+const AQUEDUCT_MOTE = ACTION_BY_ID.get('set_aqueduct_mote');
 const coveredBy = (pace: number): number => Math.ceil(GREEN_DAYS / pace);
 /** A name as the middle of a sentence has it, with its article: "a statue". */
 const aOrAn = (name: string): string => `${article(name)} ${name.toLowerCase()}`;
@@ -2184,6 +2185,9 @@ export function helpText(): string {
       <li>Fountain removed: water pours onto that tile and away from its lowest corner. Pool filled in: lands on the foundation and leaves over its lowest edge.
       Fountain set back: fed again.</li>
       <li>Menu gives the reason it is dry: no spring water at its head, head water under the channel, or another aqueduct from the same water first.</li>
+      <li><b>${AQUEDUCT_MOTE?.label}</b> (finished, dry aqueduct; ${WATER_MOTES_EACH} water mote used up; within ${PULL_REACH} tiles of the middle of its head; on a settlement, builders only):
+      a spring at its head: in its pool, or at the bottom of the hollow it stands in. Fed as by a dug spring (fountain, pool, hollow, on downhill). No shovel, no hollow dug; not counted in your ${SPRINGS_EACH} springs; not stopped up; gone when the aqueduct is pulled down.</li>
+      <li>Menu, while water runs: <b>Fed by</b>: spring at x, y, or water mote at its head's x, y.</li>
     </ul>
     <h3>Ivy and moss on old stone</h3>
     <ul>
