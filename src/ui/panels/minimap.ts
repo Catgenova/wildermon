@@ -1,7 +1,7 @@
-import { TRAVEL_LEG, type Game } from '../../game/game';
+import { DEED_STONE_GAP, TRAVEL_LEG, type Game } from '../../game/game';
 import { MARK_COLOURS, MARK_CSS, MARKET_MARK } from '../../game/marks';
 import { furnitureDef, furnitureName } from '../../game/furniture';
-import { hasRunestones, RUNESTONES, stoneCentre } from '../../game/runestones';
+import { hasRunestones, RUNESTONES, STONE_HALF, stoneCentre } from '../../game/runestones';
 import type { Renderer } from '../../render/renderer';
 import { ROCK_VARIANTS, TileType, TILE_DEFS } from '../../world/tiles';
 import { UNSEEN, VISIBLE } from '../../game/vision';
@@ -46,6 +46,25 @@ export const SETTLEMENT_CSS = '#a066e8';
 export const SETTLEMENT_BORDER_PX = 12;
 /** A settlement as the map draws it (`rpc_settlements`). */
 export interface MapSettlement { name: string; x: number; y: number; radius: number; mine: boolean }
+/** The colour the Runestones and their no-settlement rings are drawn in on the map. */
+export const STONE_CSS = '#e8dcc0';
+/**
+ * Every Runestone on a world `size` across, as the map draws it: its name at its centre tile, and the ring round it
+ * inside which no settlement may be founded: `ring` tiles from the stone's nearest tile (`DEED_STONE_GAP`, `stoneGap`),
+ * so `half` tiles out from its centre tile before the corners round.
+ */
+export function mapStones(size: number): Array<{ name: string; x: number; y: number; ring: number; half: number }> {
+  return (hasRunestones(size) ? RUNESTONES : []).map((s) => {
+    const c = stoneCentre(s, size);
+    return { name: s.name, x: c.x, y: c.y, ring: DEED_STONE_GAP, half: STONE_HALF };
+  });
+}
+/** What the map's legend names, in the order it is drawn: what each mark is, with the ring's number. */
+export const MAP_LEGEND: ReadonlyArray<{ kind: 'settlement' | 'stone' | 'ring'; label: string }> = [
+  { kind: 'settlement', label: 'Settlement' },
+  { kind: 'stone', label: 'Runestone' },
+  { kind: 'ring', label: `No new settlement: within ${DEED_STONE_GAP} tiles of a Runestone` },
+];
 
 export const MAP_ZOOM_MIN = 16;
 /** How much a notch of the wheel zooms the map: this many times wider or narrower. */
@@ -162,9 +181,21 @@ export class MinimapPanel {
     this.fitBtn.disabled = true;
     this.fitBtn.addEventListener('click', () => this.hold(null));
     bar.append(dropBtn, homeBtn, nameBtn, this.fitBtn);
+    // The legend: a swatch and a label for each kind of mark in `MAP_LEGEND`.
+    const legend = document.createElement('div');
+    legend.className = 'map-legend';
+    for (const l of MAP_LEGEND) {
+      const row = document.createElement('span');
+      row.className = 'map-legend-row';
+      const sw = document.createElement('span');
+      sw.className = `map-legend-swatch map-legend-${l.kind}`;
+      sw.style.setProperty('--ink', l.kind === 'settlement' ? SETTLEMENT_CSS : STONE_CSS);
+      row.append(sw, l.label);
+      legend.append(row);
+    }
     this.marksEl = document.createElement('div');
     this.marksEl.className = 'map-marks';
-    win.body.append(bar, this.view, this.marksEl);
+    win.body.append(bar, this.view, legend, this.marksEl);
     new ResizeObserver(() => {
       this.shown = Math.min(this.view.clientWidth, this.view.clientHeight);
     }).observe(this.view);
@@ -755,18 +786,43 @@ export class MinimapPanel {
     }
     // Landmarks: a statue is on the map from the day it is set up, a stone
     // diamond with its name, drawn under the people and over the marks.
-    // And the Runestones, which are on every map from the start, a stone diamond each like a statue's (`runestones.ts`).
-    const marks: Array<{ x: number; y: number; label: string }> = (hasRunestones(this.game.world.w) ? RUNESTONES : []).map((s) => {
-      const c = stoneCentre(s, this.game.world.w);
-      return { x: c.x, y: c.y, label: s.name };
-    });
+    // And the Runestones, which are on every map from the start, a stone diamond each like a statue's (`runestones.ts`),
+    // inside a dashed ring `DEED_STONE_GAP` tiles out from the stone's edge where no settlement may be founded.
+    const stones = mapStones(this.game.world.w);
+    ctx.save();
+    ctx.strokeStyle = STONE_CSS;
+    ctx.globalAlpha = 0.75;
+    ctx.lineWidth = 1.5 * k;
+    ctx.setLineDash([4 * k, 3 * k]);
+    for (const s of stones) {
+      const cx = (s.x + 0.5 - ox) * scale;
+      const cy = (s.y + 0.5 - oy) * scale;
+      const r = s.ring * scale;
+      const h = s.half * scale;
+      if (cx + h + r < 0 || cy + h + r < 0 || cx - h - r > this.view.width || cy - h - r > this.view.height) continue;
+      // The stone's own tiles widened by the ring, the corners rounded by it: every tile `stoneGap` puts under the ring.
+      ctx.beginPath();
+      ctx.moveTo(cx - h, cy - h - r);
+      ctx.lineTo(cx + h, cy - h - r);
+      ctx.arc(cx + h, cy - h, r, -Math.PI / 2, 0);
+      ctx.lineTo(cx + h + r, cy + h);
+      ctx.arc(cx + h, cy + h, r, 0, Math.PI / 2);
+      ctx.lineTo(cx - h, cy + h + r);
+      ctx.arc(cx - h, cy + h, r, Math.PI / 2, Math.PI);
+      ctx.lineTo(cx - h - r, cy - h);
+      ctx.arc(cx - h, cy - h, r, Math.PI, Math.PI * 1.5);
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
+    const marks: Array<{ x: number; y: number; label: string }> = stones.map((s) => ({ x: s.x, y: s.y, label: s.name }));
     for (const f of this.game.furniture.values()) if (furnitureDef(f.kind).landmark) marks.push({ x: f.x, y: f.y, label: furnitureName(f) });
     for (const f of marks) {
       const lx = (f.x + 0.5 - ox) * scale;
       const ly = (f.y + 0.5 - oy) * scale;
       if (lx < -20 * k || ly < -20 * k || lx > this.view.width + 20 * k || ly > this.view.height + 20 * k) continue;
       this.at(lx, ly, k, () => {
-        ctx.fillStyle = '#e8dcc0';
+        ctx.fillStyle = STONE_CSS;
         ctx.strokeStyle = 'rgba(0,0,0,0.8)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -778,7 +834,7 @@ export class MinimapPanel {
         ctx.fill();
         ctx.stroke();
       });
-      if (this.names) this.tag(lx, ly, k, 8, 0, f.label, '#e8dcc0');
+      if (this.names) this.tag(lx, ly, k, 8, 0, f.label, STONE_CSS);
     }
     /*
      * Everybody else, while the island is quiet enough to say where they are.

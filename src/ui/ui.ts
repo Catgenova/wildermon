@@ -7,7 +7,7 @@ import type { Game } from '../game/game';
 import { EMOTES } from '../game/emotes';
 import type { Pick, Renderer } from '../render/renderer';
 import { TileType, TREE_DEFS, treeAge, treeSpecies, SLAB_BY_ITEM } from '../world/tiles';
-import { ACTION_BY_ID, type ActionDef, type Target, fruitSprout, SPOIL_ORDER } from '../game/actions';
+import { ACTION_BY_ID, type ActionDef, type Target, deedAcrossAt, foundingPreview, fruitSprout, SPOIL_ORDER } from '../game/actions';
 import { BARTER_REACH, BARTER_SAID } from '../game/barter';
 import { BUILD_ACTION_BY_ID, layingBill, materialName } from '../game/buildActions';
 import {
@@ -3483,7 +3483,37 @@ export class UI {
       // only one that knew to ask, which is how the island came to be handed a
       // settlement with no name on it and called it Homestead.
       onSelect: () => g.requestAction(def, t),
+    }, ...this.previewEntries(pick)];
+  }
+
+  /**
+   * Preview settlement: the border a settlement founded on this tile would have, at its first level and its last, and
+   * the island's refusal there or that it would be allowed (`foundingPreview`), before the stake is spent. Measured from
+   * every settlement on the island (`rpc_settlements`), not only those the ground read brought. Drawn while a stake is
+   * in the pack (`Renderer.drawFoundPreview`); Clear takes it off.
+   */
+  private previewEntries(pick: Pick): MenuItem[] {
+    const g = this.game;
+    const first = deedAcrossAt(1), last = deedAcrossAt(MAX_DEED_LEVEL);
+    const out: MenuItem[] = [{
+      label: 'Preview settlement here',
+      note: `Border ${first} × ${first}, ${last} × ${last} at level ${MAX_DEED_LEVEL}`,
+      onSelect: () => void (async () => {
+        const all = this.island ? await this.island.settlements() : null;
+        if (!all) {
+          g.logMsg('Settlement preview: no answer from the island. Retry.', 'error');
+          return;
+        }
+        const seen = foundingPreview(g, pick.x, pick.y, all);
+        g.foundPreview = { x: seen.x, y: seen.y, refusal: seen.refusal };
+        g.logMsg(seen.said, seen.refusal ? 'error' : 'info');
+      })(),
     }];
+    if (g.foundPreview) {
+      const p = g.foundPreview;
+      out.push({ label: 'Clear settlement preview', note: `(${p.x}, ${p.y})`, onSelect: () => { g.foundPreview = null; } });
+    }
+    return out;
   }
 
   /**

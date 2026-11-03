@@ -85,7 +85,7 @@ import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, 
 import { KILN_SUBTILES, kilnCentre, type PlacedKiln } from '../game/kiln';
 import { furnitureCentre, furnitureDef, hearthCapacity, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
 import { KNOWN, UNSEEN, VISIBLE } from '../game/vision';
-import { darknessAt, DAWN, deedLevel, DUSK } from '../game/game';
+import { darknessAt, DAWN, deedLevel, deedRadiusAt, DUSK, MAX_DEED_LEVEL } from '../game/game';
 import { boatSway, clothInWind, crewOrder, deviceOf, drawFurniture, drawFurnitureLive, driverOn, swayOnScreen, WHEELS, wheelBlur, wheelTrim, steeredByTiller, woodHex, furnitureHoles, helmSeat, reinsTo, rowedPiece, furnitureSpan, FURNITURE_HEIGHT, glowsAtNight, headingView, mossTrim, PIECE_STAGES, pieceView, planterTrim, roseTrim, vineTrim, VINE_VARIANTS, type Air, type Crew, type PieceView } from './furniture';
 import { roseStage } from '../game/roses';
 import { isTrellis, vineStage } from '../game/vineyard';
@@ -824,6 +824,10 @@ const WEED_SEEN = 0.35;
 const GRID_COLOR = 'rgba(0,0,0,0.16)';
 const DEED_COLOR = 'rgba(96, 230, 110, 0.9)';
 const DEED_SHADOW = 'rgba(0, 40, 0, 0.6)';
+/** A previewed settlement the island would refuse (`Game.foundPreview`): its border in this, rather than `DEED_COLOR`. */
+const PREVIEW_REFUSED = 'rgba(235, 92, 72, 0.95)';
+/** How faint a previewed settlement's border at its last level is drawn, against its first level's. */
+export const PREVIEW_MAX_WEIGHT = 0.4;
 const PLAN_COLOR = 'rgba(120, 220, 140, 0.95)';
 /** A plan over an area before it is asked for (`drawPlanGhost`): its pieces, and those that would be refused. */
 const PLAN_GHOST_FILL = 'rgba(120, 220, 140, 0.32)';
@@ -16159,7 +16163,26 @@ export class Renderer {
     if (deed) this.deedRing(ctx, deed, 1);
   }
 
-  private deedRing(ctx: CanvasRenderingContext2D, deed: { x: number; y: number; radius: number }, weight: number): void {
+  /**
+   * A settlement previewed before founding (`Game.foundPreview`), while a stake is still in the pack: its border at
+   * the first level, and fainter at the last (`deedRadiusAt(MAX_DEED_LEVEL)`); in red where the island would refuse it.
+   */
+  private previewShown(): NonNullable<Game['foundPreview']> | null {
+    const p = this.game.foundPreview;
+    if (!p) return null;
+    // Spent, or never made: the preview goes with the stake.
+    if (!this.game.inventory.items.some((it) => it.id === 'deed_stake')) this.game.foundPreview = null;
+    return this.game.foundPreview;
+  }
+
+  private drawFoundPreview(ctx: CanvasRenderingContext2D, p: NonNullable<Game['foundPreview']>): void {
+    const colour = p.refusal ? PREVIEW_REFUSED : DEED_COLOR;
+    this.deedRing(ctx, { x: p.x, y: p.y, radius: deedRadiusAt(MAX_DEED_LEVEL) }, PREVIEW_MAX_WEIGHT, colour);
+    this.deedRing(ctx, { x: p.x, y: p.y, radius: deedRadiusAt(1) }, 1, colour);
+    this.deedRing(ctx, { x: p.x, y: p.y, radius: 0 }, 1, colour);
+  }
+
+  private deedRing(ctx: CanvasRenderingContext2D, deed: { x: number; y: number; radius: number }, weight: number, colour = DEED_COLOR): void {
     const w = this.game.world;
     const cam = this.camera;
     const x0 = deed.x - deed.radius;
@@ -16184,7 +16207,7 @@ export class Renderer {
     ctx.strokeStyle = DEED_SHADOW;
     ctx.stroke();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = DEED_COLOR;
+    ctx.strokeStyle = colour;
     ctx.stroke();
     ctx.lineWidth = 1;
     ctx.restore();
@@ -17521,7 +17544,10 @@ export class Renderer {
 
     const hover = this.hover;
     this.drawProspected(ctx);
-    if (game.deed && (game.settings.deedBorder || (hover && game.isMyToken(hover.x, hover.y)))) this.drawDeedBorder(ctx);
+    // A settlement previewed draws the borders already standing beside it, as your own being on does.
+    const previewed = this.previewShown();
+    if ((game.deed && (game.settings.deedBorder || (hover && game.isMyToken(hover.x, hover.y)))) || previewed) this.drawDeedBorder(ctx);
+    if (previewed) this.drawFoundPreview(ctx, previewed);
     if (hover) {
       this.tilePath(ctx, hover.x, hover.y, !!hover.down, hover.level);
       ctx.fillStyle = 'rgba(255,255,255,0.08)';

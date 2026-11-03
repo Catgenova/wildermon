@@ -7,7 +7,7 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
-import { SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
+import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
 import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
@@ -121,7 +121,7 @@ import { meltLumps } from '../../game/melt';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
-import { ACTION_BY_ID, PACKED_FIRST, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
+import { ACTION_BY_ID, deedAcrossAt, PACKED_FIRST, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
@@ -4240,6 +4240,18 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 463,
+    day: '2026-11-03',
+    lines: () => [`Added: map: a dashed ring round each Runestone, ${DEED_STONE_GAP} tiles out from its edge: no new settlement inside.`,
+      `Added: map legend, under the map: ${listed(MAP_LEGEND.map((l) => l.label))}.`],
+  },
+  {
+    n: 462,
+    day: '2026-11-03',
+    lines: () => [`New: Preview settlement here (tile menu, stake in the pack): border at level 1 (${deedAcrossAt(1)} by ${deedAcrossAt(1)} tiles) and, fainter, at level ${MAX_DEED_LEVEL} `
+      + `(${deedAcrossAt(MAX_DEED_LEVEL)} by ${deedAcrossAt(MAX_DEED_LEVEL)}), drawn on the ground; red where founding is refused. Log: the refusal, or allowed. Stake not spent.`],
   },
   {
     n: 458,

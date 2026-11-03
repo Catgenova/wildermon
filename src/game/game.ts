@@ -2392,6 +2392,13 @@ export class Game {
   neighbourDeeds: Array<{ name: string; x: number; y: number; radius: number; level: number; holder: string | null; mine?: boolean; role?: DeedRole; rank?: string; perms?: number }> = [];
 
   /**
+   * A settlement previewed before its stake is spent (the tile menu's Preview settlement): the token tile, and why
+   * the island would refuse it there (`foundingRefusal`), or null. Drawn by the renderer at the border's first level
+   * and its last while a stake is in the pack.
+   */
+  foundPreview: { x: number; y: number; refusal: string | null } | null = null;
+
+  /**
    * Everybody else ashore, as of the last slow read.
    *
    * Only those with an `x` on them can be drawn, and whether anybody has one

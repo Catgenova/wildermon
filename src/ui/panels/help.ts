@@ -1,4 +1,4 @@
-import { MAP_ZOOM_MIN, MAP_ZOOM_STEP, SETTLEMENT_BORDER_PX } from './minimap';
+import { MAP_LEGEND, MAP_ZOOM_MIN, MAP_ZOOM_STEP, SETTLEMENT_BORDER_PX } from './minimap';
 import { BAG_CARRY } from '../../game/gear';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
@@ -9,7 +9,7 @@ import { FRAMES } from '../runecut-frames';
 import { lifeWords } from '../runecut-life';
 import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import {
-  ACTION_BY_ID, CHIP_CHANCE, CLEARED_TO, FRUIT_MATURE, FRUIT_OLD, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MINE_COLLAPSE, MINE_DEPTH, MOSS_PER_CUT, MOSS_PLANT,
+  ACTION_BY_ID, CHIP_CHANCE, CLEARED_TO, deedAcrossAt, FRUIT_MATURE, FRUIT_OLD, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MINE_COLLAPSE, MINE_DEPTH, MOSS_PER_CUT, MOSS_PLANT,
   PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE, WATER_MOTE_USES, WEAR_PER_GO,
 } from '../../game/actions';
 import { CODE_DIGITS, CODE_SECONDS } from '../../game/keeper';
@@ -1077,6 +1077,8 @@ export function helpText(): string {
       <li>Max ${MARK_CAP} marks; past that the oldest is removed.</li>
       <li>Map zoom: wheel or pinch, down to ${MAP_ZOOM_MIN} tiles across; ×${MAP_ZOOM_STEP} a notch. Pan: drag. <b>Fit</b>: back to the land seen, following you.</li>
       <li>Map settlements: a purple square at every settlement's token on the island, its border once ${SETTLEMENT_BORDER_PX} px or more across; yours with a white centre. Names: <b>Names</b>.</li>
+      <li>Map Runestones: a stone diamond with its name at each; a dashed ring round it, ${DEED_STONE_GAP} tiles out from its edge: no new settlement inside.</li>
+      <li>Map legend, under the map: ${listed(MAP_LEGEND.map((l) => l.label))}.</li>
       <li><kbd>Home</kbd> or <b>Walk home</b>: walks to your settlement totem; with none, to your landing shore or the last bed you woke in.</li>
     </ul>
     <h3>The camera</h3>
@@ -1755,6 +1757,7 @@ export function helpText(): string {
     <h4>Founding</h4>
     <ul>
       <li><b>Settlement stake</b>: a shaft, carving knife. Use where you stand: a settlement ${DEED_ACROSS} by ${DEED_ACROSS} tiles round a settlement totem. Token at least ${DEED_SPACING} tiles from every other settlement's token on one axis (borders at level ${MAX_DEED_LEVEL} ${DEED_GAP} tiles apart), and at least ${DEED_STONE_GAP} tiles from every runestone.</li>
+      <li><b>Preview settlement here</b> (tile menu, stake in the pack): border at level 1 (${deedAcrossAt(1)} by ${deedAcrossAt(1)} tiles) and, fainter, at level ${MAX_DEED_LEVEL} (${deedAcrossAt(MAX_DEED_LEVEL)} by ${deedAcrossAt(MAX_DEED_LEVEL)}), drawn on the ground; red where founding is refused. Log: the refusal, or allowed. Measured from every settlement on the island. Shown until the stake is spent or <b>Clear settlement preview</b>.</li>
       <li>One settlement at a time. Building only on its land.</li>
       <li>Items left outside on settlement land: rot rate ${frac(DEED_DECAY)} of that off it.</li>
     </ul>

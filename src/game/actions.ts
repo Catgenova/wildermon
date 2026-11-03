@@ -71,7 +71,7 @@ import { SPECIES, type Stance, takeArms } from './creatures';
 import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollTable } from './forage';
 import { atWaterEdge, WATER_GARDEN_ACTIONS } from './watergarden';
 import { CELLAR_DEPTH, CELLAR_LEVEL, floorOf, type FloorKind, type RoofShape, type Side, type StairHand, type WallType } from './building';
-import { DEED_RADIUS, DEED_SPACING, DEED_STONE_GAP, deedNearStone, deedTooClose, PROSPECT_MARK_TIME, type Game } from './game';
+import { DEED_RADIUS, DEED_SPACING, DEED_STONE_GAP, deedNearStone, deedRadiusAt, deedTooClose, MAX_DEED_LEVEL, PROSPECT_MARK_TIME, type Game } from './game';
 import { isFounder, lacks } from './ranks';
 import { materialOfItem } from './materials';
 import { boonOf, boonTime, clockLeft } from './boons';
@@ -891,6 +891,80 @@ function drewDye(g: Game, from: { kind: string }, drew: { n: number; bucket: Ite
   const now = dyeIn(drew?.bucket);
   if (!drew || !now) return;
   g.logMsg(`Drew ${drew.n} ${drew.n === 1 ? 'litre' : 'litres'} of dye from the ${itemDef(from.kind).name.toLowerCase()}. Bucket: ${dyeSays(now.liquid, now.litres)}`, 'event');
+}
+
+/**
+ * Why a settlement's token may not go in at (x, y), in the island's words (`deed_refusal`), or null: the rule
+ * `found_settlement` asks, and the preview of a settlement's border asks of any tile (`ui.ts`). In the island's order
+ * -- your own settlement, the map edge, the ground, other tokens, the runestones -- with somebody else's border, which
+ * the island refuses as a token too close, named as a border here. `deeds`: the settlements to measure from, the ground
+ * read's by default (`neighbourDeeds`, those in reach); the preview hands it every settlement on the island.
+ */
+export function foundingRefusal(
+  g: Game, x: number, y: number,
+  deeds: ReadonlyArray<{ name: string; x: number; y: number; radius: number; holder?: string | null }> = g.neighbourDeeds,
+): string | null {
+  /*
+   * Only a settlement you founded stands in the way, which is the island's
+   * rule (`deed_refusal` asks `founded_by`). On an island `g.deed` is the
+   * first of yours, and with none of your own it is one you were asked onto
+   * -- so this refused a citizen of somebody else's settlement as if it were
+   * their own. Reported: "i disbanded my settlement so i could make a new one
+   * but it's still telling me i can't because i already have a deed ... i
+   * think it must be because i'm a citizen of oceanport".
+   */
+  if (g.deed && isFounder(g.deed)) return 'Already founded a settlement. Disband it first.';
+  /*
+   * Somebody else's border, which used to arrive as `g.deed` because an
+   * island held one settlement and everybody was handed it. It is a
+   * neighbour now, and the refusal can say whose.
+   */
+  const inside = deeds.find((d) => Math.abs(x - d.x) <= d.radius && Math.abs(y - d.y) <= d.radius);
+  if (inside) {
+    return `${inside.name}${inside.holder ? `, which is ${inside.holder}'s,` : ''} already reaches there. Found yours further out.`;
+  }
+  const w = g.world;
+  if (x - DEED_RADIUS < 0 || y - DEED_RADIUS < 0 || x + DEED_RADIUS >= w.w || y + DEED_RADIUS >= w.h) return 'Too close to the map edge.';
+  // A poured slab is dry, level ground standing above whatever is under
+  // it, which is exactly what a token wants and is sometimes the only
+  // such tile on a hillside.
+  if (!g.slabAt(x, y)) {
+    if (w.hasWater(x, y)) return 'Totem needs dry land.';
+    if (!w.isPassable(x, y)) return 'Totem needs a clear tile.';
+  }
+  // Another settlement's token closer than `DEED_SPACING` on both axes: the nearest of them, as the island says it.
+  let close: { name: string; apart: number } | null = null;
+  for (const d of deeds) {
+    const apart = Math.max(Math.abs(x - d.x), Math.abs(y - d.y));
+    if (apart < DEED_SPACING && (!close || apart < close.apart)) close = { name: d.name, apart };
+  }
+  if (close) return deedTooClose(close.name, close.apart);
+  // A runestone closer than `DEED_STONE_GAP`: the nearest of them.
+  if (hasRunestones(w.w)) {
+    const near = RUNESTONES.map((s) => ({ s, gap: stoneGap(s, w.w, x, y) })).filter((n) => n.gap < DEED_STONE_GAP)
+      .sort((a, b) => a.gap - b.gap)[0];
+    if (near) return deedNearStone(near.s.name, near.gap);
+  }
+  return null;
+}
+
+/** Tiles across a settlement's border at a level: the token and `deedRadiusAt` each way. */
+export const deedAcrossAt = (level: number): number => 2 * deedRadiusAt(level) + 1;
+
+/**
+ * A settlement previewed at (x, y) before the stake is spent: why the island would refuse it there, by the rule
+ * founding asks (`foundingRefusal`), measured from every settlement on the island (`all`, `rpc_settlements`) as well as
+ * those the ground read brought; and the line the log says it in.
+ */
+export function foundingPreview(
+  g: Game, x: number, y: number, all: ReadonlyArray<{ name: string; x: number; y: number; radius: number }>,
+): { x: number; y: number; refusal: string | null; said: string } {
+  const deeds = [...g.neighbourDeeds, ...all.filter((d) => !g.neighbourDeeds.some((n) => n.x === d.x && n.y === d.y))];
+  const refusal = foundingRefusal(g, x, y, deeds);
+  const first = deedAcrossAt(1), last = deedAcrossAt(MAX_DEED_LEVEL);
+  const said = `Settlement preview (${x}, ${y}): ${refusal ? `refused. ${refusal}`
+    : `allowed. Border ${first} × ${first} tiles at level 1, ${last} × ${last} at level ${MAX_DEED_LEVEL}.`}`;
+  return { x, y, refusal, said };
 }
 
 export const ACTIONS: ActionDef[] = [
@@ -3025,49 +3099,7 @@ export const ACTIONS: ActionDef[] = [
       // when the stake itself was the thing clicked.
       const x = t.kind === 'tile' ? t.x : g.player.tileX;
       const y = t.kind === 'tile' ? t.y : g.player.tileY;
-      /*
-       * Somebody else's border, which used to arrive as `g.deed` because an
-       * island held one settlement and everybody was handed it. It is a
-       * neighbour now, and the refusal can say whose.
-       */
-      const near = g.deedAt(x, y);
-      if (near) {
-        return `${near.name}${near.holder ? `, which is ${near.holder}'s,` : ''} already reaches there. Found yours further out.`;
-      }
-      /*
-       * Only a settlement you founded stands in the way, which is the island's
-       * rule (`deed_refusal` asks `founded_by`). On an island `g.deed` is the
-       * first of yours, and with none of your own it is one you were asked
-       * onto -- so this refused a citizen of somebody else's settlement as if
-       * it were their own. Reported: "i disbanded my settlement so i could
-       * make a new one but it's still telling me i can't because i already
-       * have a deed ... i think it must be because i'm a citizen of
-       * oceanport". No rank at all is the solo game, where the deed is yours.
-       */
-      if (g.deed && isFounder(g.deed)) return 'Already founded a settlement. Disband it first.';
-      const w = g.world;
-      if (x - DEED_RADIUS < 0 || y - DEED_RADIUS < 0 || x + DEED_RADIUS >= w.w || y + DEED_RADIUS >= w.h) return 'Too close to the map edge.';
-      // Another settlement's token closer than `DEED_SPACING` on both axes: the nearest of them, as the island says it.
-      let close: { name: string; apart: number } | null = null;
-      for (const d of g.neighbourDeeds) {
-        const apart = Math.max(Math.abs(x - d.x), Math.abs(y - d.y));
-        if (apart < DEED_SPACING && (!close || apart < close.apart)) close = { name: d.name, apart };
-      }
-      if (close) return deedTooClose(close.name, close.apart);
-      // A runestone closer than `DEED_STONE_GAP`: the nearest of them.
-      if (hasRunestones(w.w)) {
-        const near = RUNESTONES.map((s) => ({ s, gap: stoneGap(s, w.w, x, y) })).filter((n) => n.gap < DEED_STONE_GAP)
-          .sort((a, b) => a.gap - b.gap)[0];
-        if (near) return deedNearStone(near.s.name, near.gap);
-      }
-      // A poured slab is dry, level ground standing above whatever is under
-      // it, which is exactly what a token wants and is sometimes the only
-      // such tile on a hillside.
-      if (!g.slabAt(x, y)) {
-        if (w.hasWater(x, y)) return 'Totem needs dry land.';
-        if (!w.isPassable(x, y)) return 'Totem needs a clear tile.';
-      }
-      return null;
+      return foundingRefusal(g, x, y);
     },
     perform: (t, g) => {
       // The stake is taken out of the pack whichever way the job was asked
