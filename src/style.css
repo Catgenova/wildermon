@@ -602,6 +602,14 @@ body {
   color: #f3c2b4;
 }
 
+/* The death grace left, and that nothing was lost (`deathgrace.ts`). */
+.respawn-grace {
+  padding: 0.35rem 0.6rem;
+  border-left: 3px solid #8fc7a0;
+  background: rgba(143, 199, 160, 0.12);
+  color: #cfe9d6;
+}
+
 /* The two rows' heads: the settlements' a little apart from the stones above them. */
 .respawn .boot-stones-head + .boot-stone ~ .boot-stones-head {
   margin-top: 0.45rem;

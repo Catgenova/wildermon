@@ -43,6 +43,7 @@ import { itemDef, itemName, type Item } from '../game/items';
 import { groundRoll, TILE_DEFS } from '../world/tiles';
 import { furnitureDef } from '../game/furniture';
 import { capital, listed, percent, timeWords } from '../game/words';
+import { DEATH_GRACE_HOURS, GRACE_SPARES, graceSaid } from '../game/deathgrace';
 import type { TipLine, Tooltip } from './tooltip';
 import { fixedAll, html, setMarkup, type Markup } from './html';
 
@@ -301,8 +302,8 @@ function enchantOnYou(e: EnchantmentDef, total: number): string {
   return capital(line);
 }
 
-/** What is on you just now, good first, each side in the order it is listed here. */
-export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
+/** What is on you just now, good first, each side in the order it is listed here; `now` is the wall clock, in seconds. */
+export function effectsOn(g: Game, spells: SpellsOnYou, now = Date.now() / 1000): Effect[] {
   const p = g.player;
   const s = p.stats;
   const out: Effect[] = [];
@@ -311,6 +312,15 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
   };
 
   /* -- For you --------------------------------------------------------------- */
+
+  // The death grace, while played time is under it (`deathgrace.ts`).
+  const grace = p.graceEnds === null ? 0 : p.graceEnds - now;
+  if (grace > 0) {
+    add({
+      id: 'grace', good: true, glyph: 'shield', name: 'Death grace', caption: shortLeft(grace),
+      does: [`${graceSaid(grace)}.`, GRACE_SPARES], from: `Played time under ${DEATH_GRACE_HOURS} h.`,
+    });
+  }
 
   // The skin over you, which every blow takes what it can out of first, and which lasts until blows use it up.
   if (p.skin.size > 0) {

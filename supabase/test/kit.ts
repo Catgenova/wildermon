@@ -79,6 +79,8 @@ begin
   -- A log in the pack, then a death.
   insert into item (world_id, holder, holder_uid, def, ql) values (w, 'player', u, 'log', 30);
   update player set x = 20.5, y = 20.5 where world_id = w and uid = u;
+  -- Past the death grace (death_grace_left), so a death takes what it takes.
+  update player set played = death_grace() where world_id = w and uid = u;
   perform player_die(w, u);
   insert into said select 'AFTER', count(*) filter (where issued)::text || '|' || count(*) filter (where def = 'log')::text
     from item where world_id = w and holder_uid = u and holder = 'player';
