@@ -59,6 +59,8 @@ import { ALL_GOALS } from './journal';
 import { journalRulesA } from './journal-a';
 import * as creatureRules from './creatures';
 import * as guideRules from './guide';
+import * as aroundRules from './around';
+import * as postRules from './posts';
 import { FieldGuide, formSeenLine, GUIDE_LOOK, guideEntry, guideMarks, guideName, seenLine, stageKey, type GuideBook, type GuideMark } from './guide';
 import { formKey, formsOf } from './wildforms';
 import { sightedLine } from './sighted';
@@ -328,7 +330,7 @@ export const deedNearStone = (name: string, gap: number): string =>
 export const deedTooClose = (name: string, apart: number): string =>
   `Too close to ${name}: ${apart} tiles token to token; ${DEED_SPACING} needed (borders at level ${MAX_DEED_LEVEL} ${DEED_GAP} tiles apart).`;
 // The journal's goals of the wildermon and of a settlement read these, handed over now the game is running (`journal-a.ts`).
-journalRulesA(creatureRules, guideRules, { most: MAX_DEED_LEVEL, workersAt: deedWorkersAt });
+journalRulesA(creatureRules, guideRules, { most: MAX_DEED_LEVEL, workersAt: deedWorkersAt }, aroundRules, postRules);
 
 /**
  * UI questions the game needs; main.ts wires them to the interface.

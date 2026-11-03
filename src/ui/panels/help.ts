@@ -1444,6 +1444,7 @@ export function helpText(): string {
     <ul>
       <li><b>Journal</b> (<kbd>J</kbd>): ${ALL_GOALS.length} goals in ${JOURNAL.length} chapters, from the first tree felled to a skill at ${LEGEND_AT}.</li>
       <li>Optional; no rewards. Each ticks itself when done, is logged, and stays ticked.</li>
+      <li>After ${JOURNAL[0].name}: <b>${JOURNAL[1].name}</b>: ${JOURNAL[1].goals.map((g) => g.text.toLowerCase()).join('; ')}. Click a goal for how.</li>
     </ul>
     <h3>Crafting</h3>
     <ul>

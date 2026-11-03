@@ -10,7 +10,7 @@
  */
 import type { Game } from './game';
 import type { Goal } from './journal';
-import type { Creature, GatherKind } from './creatures';
+import type { Creature, GatherKind, SpeciesDef } from './creatures';
 import { MUTATION_ODDS, PEDIGREE_MOST, stageSlots, TRAIT_SLOTS } from './traits';
 import { COLOUR_FORM_ODDS, FORM_PASS, SIZE_FORM_ODDS } from './wildforms';
 import { GEAR_SLOTS, gearA } from './wildgear';
@@ -55,13 +55,20 @@ interface DeedRules {
   most: number;
   workersAt: (level: number) => number;
 }
+/** Work around me (`around.ts`) and how near a wildermon following you is in reach (`posts.ts`). */
+type AroundRules = typeof import('./around');
+type PostRules = typeof import('./posts');
 let heldCreatures: CreatureRules | undefined;
 let heldGuide: GuideRules | undefined;
 let heldDeed: DeedRules | undefined;
-export function journalRulesA(creatures: CreatureRules, guide: GuideRules, deed: DeedRules): void {
+let heldAround: AroundRules | undefined;
+let heldPosts: PostRules | undefined;
+export function journalRulesA(creatures: CreatureRules, guide: GuideRules, deed: DeedRules, around: AroundRules, posts: PostRules): void {
   heldCreatures = creatures;
   heldGuide = guide;
   heldDeed = deed;
+  heldAround = around;
+  heldPosts = posts;
 }
 const handed = <T>(r: T | undefined): T => {
   if (!r) throw new Error('journal-a: the game has not handed its rules over yet');
@@ -70,6 +77,10 @@ const handed = <T>(r: T | undefined): T => {
 const C = (): CreatureRules => handed(heldCreatures);
 const GD = (): GuideRules => handed(heldGuide);
 const DEED = (): DeedRules => handed(heldDeed);
+const AROUND = (): AroundRules => handed(heldAround);
+const POSTS = (): PostRules => handed(heldPosts);
+/** Work around me's menu label, as the wildermon's menu reads it. */
+const aroundLabel = (): string => AROUND().AROUND_ACTION_BY_ID.get('work_around')?.label ?? '';
 
 const did = (key: string, n = 1) => (g: Game): boolean => (g.tally[key] ?? 0) >= n;
 /** Only your own: absent `mine` is the game's own word for yours. */
@@ -352,3 +363,60 @@ export const STANDING_A: Goal[] = [
     met: (g) => g.creatures.specialties().some((s) => s.n >= C().SPECIALTY_AT),
   },
 ];
+
+/*
+ * The first wildermon chapter's two goals (`journal.ts`): taming one, and setting it to Work around me. Their texts
+ * are read off the rules here; their counts are the island's ('tamed', 'around').
+ */
+/** How many kinds the taming goal names. */
+const TAME_EXAMPLES = 3;
+
+/** The least Taming any kind you can keep asks for, and the kinds that ask only that. */
+function easiestTame(): { at: number; kinds: SpeciesDef[] } {
+  const kinds = Object.values(C().SPECIES).filter((d) => GD().keepable(d));
+  const at = Math.min(...kinds.map((d) => d.tameLevel));
+  return { at, kinds: kinds.filter((d) => d.tameLevel === at) };
+}
+
+/**
+ * Of those, the likeliest to take an offering whose task also works round you, out all year and by day, and not one
+ * that hunts you; each with what it eats.
+ */
+const tameExamples = (): string[] =>
+  easiestTame().kinds
+    .filter((d) => !d.hunter && !d.nocturnal && !d.season && !d.deepWater && AROUND().aroundTrade(d.gathers))
+    .sort((a, b) => b.tameChance - a.tameChance || a.name.localeCompare(b.name))
+    .slice(0, TAME_EXAMPLES)
+    .map((d) => `${d.name} (${listedOr(d.diet.map((id) => lower(itemDef(id).name)))})`);
+
+/** Lowest and highest of a list, as "6–12", or the one number where they agree. */
+const span = (xs: number[]): string => {
+  const lo = Math.min(...xs), hi = Math.max(...xs);
+  return lo === hi ? `${lo}` : `${lo}–${hi}`;
+};
+
+/** The kinds you can keep whose task works round you. */
+const aroundKinds = (): SpeciesDef[] => Object.values(C().SPECIES).filter((d) => GD().keepable(d) && AROUND().aroundTrade(d.gathers));
+
+export const FIRST_WILDERMON = {
+  tameHint: (): string => late(() => `Taming ${easiestTame().at}: ${easiestTame().kinds.length} kinds`),
+  tameHow: (): string => late(() => {
+    const { at, kinds } = easiestTame();
+    return `With a food it eats in your pack, right-click a wild wildermon: Tame. 1 food per try. `
+      + `Taming ${at}: ${kinds.length} kinds, e.g. ${listed(tameExamples())}. `
+      + `+${C().WILD_STAGE_TAME} Taming per evolution stage past its first. `
+      + 'Find one: Journal window, Field guide tab, a seen kind\'s page: Track. '
+      + `A second one: an empty ${lower(itemDef('creature_crate').name)} in your pack. Taken from a trap: not counted.`;
+  }),
+  aroundText: (): string => late(() => `Set a wildermon to ${aroundLabel()}`),
+  aroundHint: (): string => late(() => `Following you, within ${POSTS().POST_FOLLOW_REACH} tiles; storage within its work range of you`),
+  aroundHow: (): string => late(() => {
+    const kinds = aroundKinds();
+    return `A tamed wildermon following you, within ${POSTS().POST_FOLLOW_REACH} tiles: right-click it, ${aroundLabel()}. `
+      + `${AROUND().AROUND_MOST} at a time; no settlement needed. `
+      + `Storage within its work range of you: ${span(kinds.map((d) => d.workRange))} tiles by kind, `
+      + `+${span(kinds.map((d) => d.rangePerStep ?? C().RANGE_PER_STEP))} per ${C().SKILL_STEP} task skill (Wildermon window: Range). `
+      + 'Crates and storage furniture you may put into, carts, wagons and boats; the cart you pull, what you drive and the boat you are in at any range. '
+      + `Kinds with a task worked round you: ${kinds.length} of ${Object.values(C().SPECIES).filter((d) => GD().keepable(d)).length}.`;
+  }),
+};
