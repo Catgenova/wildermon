@@ -394,6 +394,8 @@ begin
 
   /* ---- your own grave emptied ---- */
   perform give(w, u, 'plank', 2, 30);
+  -- Past the death grace (death_grace_left), so a death takes what it takes.
+  update player set played = death_grace() where world_id = w and uid = u;
   perform player_die(w, u);
   select id into v_g from placed where world_id = w and made_by = u and crumbles_at is not null;
   perform perform_holding(w, u, 'furniture_take_all', jsonb_build_object('kind', 'furniture', 'id', v_g));

@@ -274,6 +274,8 @@ begin
     values (w, 'player', '${ANNA}', 'hatchet', 55, 1, 999999) returning id into v_dealt;
   update player set equipped = jsonb_build_object('head', v_cap, 'jewel', v_ring, 'weapon', v_sword, 'belt', v_belt)
     where world_id = w and uid = '${ANNA}';
+  -- Past the death grace (death_grace_left), so a death takes what it takes.
+  update player set played = death_grace() where world_id = w and uid = '${ANNA}';
 
   perform player_die(w, '${ANNA}');
   select id into v_g from placed where world_id = w and made_by = '${ANNA}' and crumbles_at is not null;

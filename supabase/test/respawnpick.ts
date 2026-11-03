@@ -111,6 +111,8 @@ create function pg_temp.die(w uuid, u uuid) returns void language plpgsql as $f$
 begin
   update player set x = ${FALL.x}, y = ${FALL.y}, level = 0 where world_id = w and uid = u;
   perform give(w, u, 'hatchet', 1, 50, null, null, null, null, null);
+  -- Past the death grace (death_grace_left), so a death takes what it takes.
+  update player set played = greatest(played, death_grace()) where world_id = w and uid = u;
   perform player_die(w, u);
 end $f$;
 -- The beat's offer.

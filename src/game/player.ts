@@ -236,6 +236,13 @@ export class Player {
    * island said. Kept by the island in `stats.aegis` and `stats.aegisBy`.
    */
   skin: Skin = { size: 0, mine: false, by: null };
+  /**
+   * When the death grace runs out (`deathgrace.ts`), in wall-clock seconds
+   * (`Date.now() / 1000`) as the island last said it: played time runs while
+   * the page is in the game, so it runs out with the clock between beats.
+   * Null once it is over.
+   */
+  graceEnds: number | null = null;
   /** Game time each path ability was last called on. */
   usedAt: Record<string, number> = {};
   /** Banked favour, and the hour you last had anything to say. */

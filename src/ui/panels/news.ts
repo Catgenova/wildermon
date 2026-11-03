@@ -154,6 +154,7 @@ import { TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
 import { FED_SAID, SOUL_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
+import { DEATH_GRACE_HOURS, GRACE_SPARES, PLAYED_GAP } from '../../game/deathgrace';
 import { RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
 import { CARRY_BASE, CARRY_PER_STRENGTH, DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, deedWorkersAt, goSeconds, MAX_DEED_LEVEL, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
 import { UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS } from '../screen';
@@ -4240,6 +4241,15 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 465,
+    day: '2026-11-03',
+    lines: () => [
+      `Added: death grace: your first ${DEATH_GRACE_HOURS} h played. ${GRACE_SPARES}`,
+      `Played time: on the island, browser heard from within ${PLAYED_GAP} s; not away, logged off or asleep. Time left: Death grace in the effects row and on the Respawn chooser.`,
+      `Characters already ashore: played time set to the time since coming ashore, at most ${DEATH_GRACE_HOURS} h.`,
+    ],
   },
   {
     n: 458,

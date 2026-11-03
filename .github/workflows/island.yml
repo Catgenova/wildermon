@@ -3757,6 +3757,20 @@ jobs:
           npx esbuild supabase/test/respawnpick.ts --bundle --platform=node --format=esm --packages=external \
             --outfile=node_modules/.cache/respawnpick.mjs --log-level=error
           node node_modules/.cache/respawnpick.mjs
+      - name: A death in a new character's first 24 h played takes nothing
+        if: matrix.shard == 6
+        run: |
+          # "a grace period after death for new players -- no penalty for dying
+          # during a character's first 24 hours of playtime (time actually
+          # played, not time since sign-up)". Under the grace a death digs no
+          # grave and lowers nothing, and says the grace left in the browser's
+          # words; at it and past it, a grave and a death's bars as before.
+          # Played time counts the stretch body_settle settles while in the
+          # game, and nothing away, unheard or after a gap; the beat says the
+          # grace left, and the effects row shows it.
+          npx esbuild supabase/test/deathgrace.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/deathgrace.mjs --log-level=error
+          node node_modules/.cache/deathgrace.mjs
       - name: Sleep logs you off in a bed, and the sleep bonus, the same on both sides
         if: matrix.shard == 4
         run: |

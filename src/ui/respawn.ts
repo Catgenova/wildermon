@@ -22,6 +22,7 @@ import type { Game } from '../game/game';
 import type { Island } from '../net/island';
 import { deedTotemVariant } from '../render/deedtotem';
 import { stoneCards, type StoneCard } from './stonestart';
+import { graceKeptSaid } from '../game/deathgrace';
 
 /** A chooser on the screen: the pick it answers with, and a way to take it off unanswered. */
 /** How long after it shows the chooser takes no pick, in ms. */
@@ -36,9 +37,11 @@ export interface RespawnShown {
 /**
  * Put the chooser on `root` for a body that fell as `fell` says, on a world
  * `size` across whose spawn is `spawn` (the middle of its tile). `why` is a
- * refusal of the last pick, said over the cards.
+ * refusal of the last pick, said over the cards; `grace` the seconds of the
+ * death grace left, said under the title while there are any (`deathgrace.ts`).
  */
-export function showRespawn(root: HTMLElement, fell: Fallen, size: number, spawn: { x: number; y: number }, why: string | null = null): RespawnShown {
+export function showRespawn(root: HTMLElement, fell: Fallen, size: number, spawn: { x: number; y: number }, why: string | null = null,
+  grace: number | null = null): RespawnShown {
   let settle: (at: string) => void = () => {};
   const done = new Promise<string>((r) => { settle = r; });
   const el = document.createElement('div');
@@ -53,6 +56,12 @@ export function showRespawn(root: HTMLElement, fell: Fallen, size: number, spawn
   title.textContent = RESPAWN_TITLE;
   card.setAttribute('aria-labelledby', title.id);
   card.append(title);
+  if (grace !== null && grace > 0) {
+    const kept = document.createElement('div');
+    kept.className = 'respawn-grace';
+    kept.textContent = graceKeptSaid(grace);
+    card.append(kept);
+  }
   if (why) {
     const no = document.createElement('div');
     no.className = 'respawn-why';
@@ -148,7 +157,9 @@ export function mountRespawn(root: HTMLElement, game: Game, island: Island): voi
   const show = (fell: Fallen, why: string | null): void => {
     open?.close();
     shownFor = `${fell.x},${fell.y}`;
-    const me = showRespawn(root, fell, island.info?.size ?? game.world.w, { x: game.spawn.x + 0.5, y: game.spawn.y + 0.5 }, why);
+    const ends = game.player.graceEnds;
+    const me = showRespawn(root, fell, island.info?.size ?? game.world.w, { x: game.spawn.x + 0.5, y: game.spawn.y + 0.5 }, why,
+      ends === null ? null : ends - Date.now() / 1000);
     open = me;
     void me.done.then(async (at) => {
       if (open === me) open = null;

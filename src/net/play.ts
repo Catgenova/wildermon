@@ -26,6 +26,7 @@ import { skillRises, tookOff } from './felt';
 import { packAll } from './packed';
 import { reportErrorsTo } from './errors';
 import { learnChart } from '../game/cartography';
+import { graceLeft } from '../game/deathgrace';
 import { isBarred } from '../game/keeper';
 
 /**
@@ -491,6 +492,11 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
   // Your favour as the island keeps it, until the first beat says it with what has trickled in since.
   if (typeof me.favour === 'number') game.player.favour = me.favour;
   if (me.stats && typeof me.stats === 'object') sawSkin(skinOfStats(me.stats as Record<string, unknown>));
+  // And the death grace left (`deathgrace.ts`): from what the row has played, until the first beat says it.
+  const sawGrace = (left: number | null): void => {
+    game.player.graceEnds = left === null ? null : Date.now() / 1000 + left;
+  };
+  if (typeof me.played === 'number') sawGrace(graceLeft(me.played));
 
   /*
    * The rest of you, which the browser had no way of hearing about.
@@ -592,6 +598,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     if (what.held) sawHeld(what.held);
     if (what.skin) sawSkin(what.skin);
     else if (what.stats && typeof what.stats.aegis === 'number') sawSkin(skinOfStats(what.stats));
+    // And the death grace left, which every beat says (`deathgrace.ts`).
+    if (what.grace !== undefined) sawGrace(what.grace);
     if (what.boons) game.player.boons = what.boons as typeof game.player.boons;
     if (what.knacks) game.player.knacks = what.knacks;
     if (what.titles) game.player.titles = what.titles;

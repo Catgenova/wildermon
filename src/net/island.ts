@@ -39,6 +39,7 @@ import { BUILD, DEPLOY, StaleBuild } from '../version';
 import type { InputNote } from '../engine/cadence';
 import type { BootPhase } from '../ui/bootsteps';
 import { fallenIn, type Fallen } from '../game/respawn';
+import { graceIn } from '../game/deathgrace';
 
 /**
  * The jobs whose work shows only on the ground's slow half: Clear the ivy and
@@ -1056,6 +1057,8 @@ export interface IslandHooks {
      */
     held?: Record<string, HeldSaid>;
     skin?: SkinSaid;
+    /** Seconds of the death grace left (`rpc_settle`'s `grace`), null once it is over (`deathgrace.ts`); every beat says it. */
+    grace?: number | null;
     /**
      * And the journal, which on an island could not tick a single one of its
      * eighty-five goals: forty-six of them count things done, the counting was
@@ -2284,6 +2287,7 @@ export class Island {
         saidTo?: number | null;
         land_from?: number;
         fallen?: unknown;
+        grace?: number | null;
       };
       if (typeof said.land_from === 'number') this.landFrom = Math.max(this.landFrom, said.land_from);
       // The hour, on the beat every browser makes anyway. Nothing else has to
@@ -2333,6 +2337,8 @@ export class Island {
         held: said.blessings && typeof said.blessings === 'object' ? this.held(said.blessings) : undefined,
         skin: said.skin && typeof said.skin === 'object' ? said.skin : undefined,
         tally: said.tally, ledger: said.ledger, ticked: said.ticked,
+        // Not said (the beat leaves nulls out) once it is over.
+        grace: graceIn(said.grace),
       });
       // After a death, where to wake, while the body may still pick: shown over the world (`src/ui/respawn.ts`).
       if (!error) this.hooks.fallen?.(fallenIn(said.fallen));
