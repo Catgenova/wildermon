@@ -125,6 +125,21 @@ jobs:
             from cron.job_run_details d join cron.job j using (jobid)
            where j.jobname = 'world-tick' and start_time > now() - interval '1 hour' and status <> 'succeeded'
            group by 1, 3 order by 2 desc limit 10"
+          # The clocks a minute at a time (20261103160000): load test 3 found no run of them in any step, and nothing
+          # calling `clock_loop` on the database. Every run of each, its jobs as stored, and pg_cron's own settings.
+          ask "the clock loops, every run in the last 3 hours" "select j.jobname, j.jobid, j.active, j.database, j.username, d.status,
+                 count(*) as runs, to_char(min(d.start_time), 'HH24:MI:SS') as first, to_char(max(d.start_time), 'HH24:MI:SS') as last,
+                 round(max(extract(epoch from coalesce(d.end_time, now()) - d.start_time))::numeric, 1) as longest_s,
+                 left(coalesce(d.return_message, ''), 160) as said
+            from cron.job j left join cron.job_run_details d on d.jobid = j.jobid and d.start_time > now() - interval '3 hours'
+           where j.jobname like '%-loop' or j.jobname in ('world-tick', 'watch-sweep')
+           group by 1, 2, 3, 4, 5, 6, 11 order by 1, 6"
+          ask "the clock loops' commands" "select jobname, schedule, command, nodename, nodeport from cron.job where jobname like '%-loop'"
+          ask "pg_cron's settings" "select name, setting from pg_settings
+           where name like 'cron.%' or name in ('max_worker_processes', 'max_connections', 'statement_timeout', 'idle_in_transaction_session_timeout')
+           order by name"
+          ask "background workers by kind" "select backend_type, state, count(*), left(max(query), 80) as query
+            from pg_stat_activity group by 1, 2 order by 3 desc"
           ask "rounds, last 15 minutes" "select count(*) as rounds, round(avg(ms)::numeric, 1) as ms_avg, round(max(ms)::numeric, 1) as ms_worst,
                  to_char(max(at), 'HH24:MI:SS') as last from tick_time where at > now() - interval '15 minutes'"
           # Asked: "Server stuttering?", with a round of 22 s among rounds of half a second: which rounds, and which of
