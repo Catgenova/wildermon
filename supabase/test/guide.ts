@@ -53,7 +53,8 @@ const WOOL_LEVEL = levelSkill(SPECIES.woola)!;
 import {
   countsLine, FieldGuide, guideCounts, guideEntries, guideEntry, guideMarks, guidePage, guidePages, seenLine, stageKey, whereItLives, wildShare,
 } from '../../src/game/guide';
-import { GUIDE_BATCH, MOBS_RANGE, PEACE_REACH } from '../../src/game/keep';
+import { GUIDE_BATCH, MOBS_RANGE } from '../../src/game/keep';
+import { SAFE_RING } from '../../src/game/runestones';
 import { packLand, packWorld, unpack } from '../../src/game/save';
 import { TILE_DEFS } from '../../src/world/tiles';
 import { percent, timeWords } from '../../src/game/words';
@@ -121,11 +122,12 @@ for (const d of KINDS) {
     [`1 in ${Math.round(1 / wildShare(d))}`, true, lines.includes(`Spawn share: 1 in ${Math.round(1 / wildShare(d))}`)],
     [`off a token by ${MONSTER_KEEP_OFF[d.id]}`, !!d.monster, lines.includes(`Never within ${MONSTER_KEEP_OFF[d.id]} tiles of a settlement totem`)],
     [`no more than ${MONSTER_CAP[d.id]}`, !!d.monster, lines.includes(`Island cap: ${MONSTER_CAP[d.id] ?? 0} at once`)],
-    ['no quiet beach alone', false, lines.includes('landing beach')],
+    ['no safe ring alone', false, lines.includes('safe ring')],
   ];
   for (const [what, should, is] of want) if (should !== is) where.push(`${d.id} ${should ? 'lacks' : 'has'} ${what}`);
-  const ashore = whereItLives(d, true).some((l) => l === `Never within ${PEACE_REACH} tiles of the landing beach`);
-  if (ashore !== !!d.monster) where.push(`${d.id} ${d.monster ? 'lacks' : 'has'} the quiet beach on an island`);
+  const ringed = whereItLives(d, true).some((l) => l === `Never within ${SAFE_RING} tiles of the island's spawn or a Runestone (safe ring)`);
+  const keptOut = !!(d.monster || d.hunter || d.defaultStance === 'aggressive');
+  if (ringed !== keptOut) where.push(`${d.id} ${keptOut ? 'lacks' : 'has'} the safe ring on an island`);
 }
 check('where each kind lives is its own rules read out: every line is there for its rule and none without one, every number the rule\'s',
   !where.length, where.slice(0, 6).join('; '));

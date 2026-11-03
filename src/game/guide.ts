@@ -35,12 +35,12 @@ import { TACK } from './creatureActions';
 import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
-  EVOLVE_AT, favouriteSays, GATHER_DO, GATHER_SKILL, STAGE_MUL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS,
+  EVOLVE_AT, favouriteSays, GATHER_DO, GATHER_SKILL, STAGE_MUL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS, ringKeepsOut,
   footing, HAUL_LEARN, HAUL_LEARN_STEEP, HAUL_SKILL, HAUL_STEEP_AT, LEARNS_SAYS, levelSkill, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef, LEARN_PACE,
 } from './creatures';
 import { BANE_BONUS } from './gear';
 import { HOARD_METALS, itemDef } from './items';
-import { PEACE_REACH } from './keep';
+import { SAFE_RING } from './runestones';
 import { defaultKey } from './keybinds';
 import { MATERIALS } from './materials';
 import { SKILL_BY_ID } from './skills';
@@ -270,8 +270,8 @@ export function wildShare(def: SpeciesDef): number {
  * throws in with, how often the wild's roll is this kind, and, for a monster,
  * how far it keeps from a settlement and how many may be about at once.
  *
- * `onIsland` adds the one rule only an island has: no monster is put down on
- * the quiet beach where everybody comes ashore (`at_peace`).
+ * `onIsland` adds the one rule only an island has: no monster or hunter is
+ * put down inside the safe ring round the spawn and the Runestones (`SAFE_RING`, `at_peace`).
  */
 export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
   const lines: string[] = [];
@@ -291,8 +291,8 @@ export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
   if (def.season) lines.push(`Wild only ${seasonSays(def.season)} (UTC); gone from the wild on other days`);
   if (def.monster) {
     lines.push(`Never within ${MONSTER_KEEP_OFF[def.id] ?? 0} tiles of a settlement totem`);
-    if (onIsland) lines.push(`Never within ${PEACE_REACH} tiles of the landing beach`);
   }
+  if (onIsland && ringKeepsOut(def)) lines.push(`Never within ${SAFE_RING} tiles of the island's spawn or a Runestone (safe ring)`);
   lines.push(`Home range: ${WILD_RANGE} tiles`);
   lines.push(def.hunter
     ? 'Solitary: a home ground of its own'

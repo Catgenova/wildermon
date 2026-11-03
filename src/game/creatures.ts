@@ -4495,6 +4495,12 @@ export const WILD_SPECIES: Array<[string, number]> = [
   ['whispet', 4],
 ];
 
+/**
+ * The kinds the safe ring keeps out (`SAFE_RING`): a monster, a hunter and
+ * anything that stands aggressive. The island's `ring_keeps_out`.
+ */
+export const ringKeepsOut = (d: SpeciesDef): boolean => !!(d.monster || d.hunter || d.defaultStance === 'aggressive');
+
 /** How far off a hunter picks up your scent, and how far you must get to lose it. */
 export const HUNT_SIGHT = 7;
 const HUNT_GIVE_UP = 13;

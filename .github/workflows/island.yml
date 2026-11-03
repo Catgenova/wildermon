@@ -2520,6 +2520,18 @@ jobs:
             --outfile=node_modules/.cache/packs.mjs --log-level=error
           node node_modules/.cache/packs.mjs
 
+      - name: The safe ring round the spawn and the Runestones
+        if: matrix.shard == 2
+        run: |
+          # Both sides measure the ring the same and keep the same kinds out of
+          # it; a roll of the wild and a stocked block inside it put out no
+          # monster, hunter or aggressive kind where outside they can; no hunt
+          # starts with either side in it, one of its own that comes in lets go
+          # and turns for home, and a fight the body started runs on.
+          npx esbuild supabase/test/safering.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/safering.mjs --log-level=error
+          node node_modules/.cache/safering.mjs
+
       - name: Dodges, criticals, arrow heads, venom and threat
         if: matrix.shard == 2
         run: |
