@@ -369,10 +369,17 @@ game.inventory.add('trowel', { ql: 90 });
 game.skills.values.set('archaeology', 90);
 const dig = ACTION_BY_ID.get('investigate')!;
 const N = 6000;
+// The log keeps only its last lines (`trimLog`), so each dig's find is read as it is said, not from the log at the end.
+const logged: string[] = [];
+const heard = new WeakSet<object>();
 for (let i = 0; i < N; i++) {
   const x = 36 + (i % 12);
   const y = 36 + (Math.floor(i / 12) % 12);
   dig.perform({ kind: 'tile', x, y, cx: x, cy: y }, game);
+  for (let k = game.log.length - 1; k >= 0 && !heard.has(game.log[k]); k--) {
+    heard.add(game.log[k]);
+    if (game.log[k].text.startsWith('Found: Bauble')) logged.push(game.log[k].text);
+  }
 }
 const count = (id: string): number => game.inventory.items.filter((i) => i.id === id).reduce((n, i) => n + i.count, 0);
 const bRegret = count(REGRET);
@@ -383,9 +390,8 @@ check(`the browser turns one up for about ${pct(REGRET_SHARE)} of finds too`,
 check(`and a tarnished bauble for about ${pct(BAUBLE_SHARE)} still`,
   Math.abs(bTarnished / bFinds - BAUBLE_SHARE) < 0.03, `${bTarnished} of ${bFinds} (${pct(bTarnished / bFinds)})`);
 check('whole, every one of them', game.inventory.items.filter((i) => i.id === REGRET).every((i) => i.dmg === 0 && i.ql >= 1 && i.ql <= 100));
-const logged = game.log.filter((l) => l.text.startsWith('Found: Bauble')).map((l) => l.text);
 check('said as the island says it', logged.length > 0 && logged.every((t) => FOUND.test(t))
-  && logged[0].replace(/QL [\d.]+/, 'QL') === say('FOUNDSAID').replace(/QL [\d.]+/, 'QL'), logged[0] ?? '(nothing)');
+  && logged[0].replace(/QL [\d.]+/, 'QL') === say('FOUNDSAID').replace(/QL [\d.]+/, 'QL'), `${logged.length} of ${bRegret}: ${logged[0] ?? '(nothing)'}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\n${ok.length} passed, ${bad.length} failed`);
