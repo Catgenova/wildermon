@@ -21,13 +21,21 @@
  * anybody else -- sowing, a wall and a storey floor finished, honey taken out
  * of a hive, a night in a bed you built against somebody else's -- and every
  * count a goal reads is noted somewhere on it.
+ *
+ * And the first wildermon, the chapter after Ashore: an offering that takes and Work around me started are each noted
+ * on the island for whoever did it ('tamed', 'around'), and the browser shows both goals met from the tally the beat
+ * carries; their how-tos read off the rules they name.
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { BROWSER_TALLY, Game } from '../../src/game/game';
-import { ALL_GOALS } from '../../src/game/journal';
+import { ALL_GOALS, JOURNAL } from '../../src/game/journal';
 import '../../src/game/recipes';
 import { RECIPES } from '../../src/game/recipes';
+import { AROUND_ACTION_BY_ID, AROUND_MOST, aroundTrade } from '../../src/game/around';
+import { SPECIES, WILD_STAGE_TAME } from '../../src/game/creatures';
+import { itemDef } from '../../src/game/items';
+import { POST_FOLLOW_REACH } from '../../src/game/posts';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -246,6 +254,108 @@ const prefixed = (k: string): boolean => {
 const unnoted = [...keys].filter((k) => !BROWSER_TALLY.has(k) && !defs.includes(`'${k}'`) && !prefixed(k)
   && !['rare', 'supreme', 'fantastic'].includes(k));
 check(`every count a goal reads (${keys.size}) is noted on the island`, unnoted.length === 0, unnoted.join(', '));
+
+/* ---- the first wildermon: tamed, and set to Work around me ---------------- */
+
+/*
+ * Asked for: two goals for new players, "Tame a wildermon" and "Set a wildermon to Work around me". Each is met on the
+ * island by doing it -- an offering that takes, and Work around me started -- and the browser shows it met from the
+ * tally the beat carries (`rpc_settle`, merged as `play.ts` merges it). An island of its own, rolled back; the offering
+ * rolled from a fixed seed, and tried until it takes.
+ */
+const TAMER = '7e5b0000-0000-4000-8000-0000000b0001';
+const first = JOURNAL[1];
+check('the chapter after Ashore is the first wildermon: tame one, then Work around me',
+  first.goals.map((g) => g.id).join(',') === 'tame,workaround' && ALL_GOALS.filter((g) => g.id === 'tame').length === 1,
+  `${first.name}: ${first.goals.map((g) => g.id).join(', ')}`);
+const pair = psql(`
+discard temp;
+begin;
+select setseed(0.4242);
+create temp table said (k text, v text);
+do $t$
+declare w uuid; u uuid := '${TAMER}'; v_wild int; v_i int; j jsonb;
+begin
+  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Journal goals', 303, 120, 40, 40, true) returning id into w;
+  perform land_blank(w, 120);
+  perform land_set_tile(w, x, y, tile_id('Grass')) from generate_series(0, 119) x, generate_series(10, 110) y;
+  perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
+  perform rpc_join(w, 'Tamer');
+  update player set x = 40.5, y = 40.5, body_at = now(), seen_at = now(), away = false, act = null, act_queue = '[]'::jsonb
+   where world_id = w and uid = u;
+  insert into said select 'START', coalesce(tally, '{}'::jsonb)::text from player where world_id = w and uid = u;
+  insert into said select 'KEPT', count(*)::text from creature where world_id = w and keeper = u;
+  perform give(w, u, 'potato', 80, 30);
+  insert into skill (world_id, uid, id, value) values (w, u, 'taming', 90)
+    on conflict (world_id, uid, id) do update set value = 90;
+
+  -- An offering, until one takes.
+  v_wild := creature_spawn(w, 'rabba', 41.2, 40.5, 'wild', now() - interval '10 days', null);
+  for v_i in 1..60 loop
+    exit when (select mode from creature where world_id = w and id = v_wild) <> 'wild';
+    perform act_perform(w, u, 'tame', jsonb_build_object('kind', 'creature', 'id', v_wild));
+  end loop;
+  insert into said select 'TAMED', mode || '|' || coalesce(keeper::text, '') from creature where world_id = w and id = v_wild;
+  insert into said select 'AFTER_TAME', coalesce(tally, '{}'::jsonb)::text from player where world_id = w and uid = u;
+
+  -- Work around me, from its menu.
+  j := rpc_act(w, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_wild));
+  insert into said values ('ACT', coalesce(j->>'done', j->>'why', j::text));
+  insert into said select 'AROUND', mode || '|' || coalesce(around->>'was', 'none') from creature where world_id = w and id = v_wild;
+  -- What the beat carries.
+  insert into said select 'BEAT', coalesce(rpc_settle(null, w, null, true, null)->'tally', 'null'::jsonb)::text;
+end $t$;
+select k || '=' || v from said;
+rollback;
+`);
+const two: Record<string, string> = {};
+for (const line of pair.split('\n')) {
+  const i = line.indexOf('=');
+  if (i > 0) two[line.slice(0, i)] = line.slice(i + 1);
+}
+const start = JSON.parse(two.START ?? '{}') as Record<string, number>;
+const afterTame = JSON.parse(two.AFTER_TAME ?? '{}') as Record<string, number>;
+const beat = JSON.parse(two.BEAT ?? 'null') as Record<string, number> | null;
+check('on the island somebody just ashore has tamed nothing and keeps nothing', !start.tamed && !start.around && two.KEPT === '0', `${two.START}, ${two.KEPT} kept`);
+check('an offering that takes is a tame, noted for the tamer', two.TAMED === `active|${TAMER}` && afterTame.tamed === 1 && !afterTame.around,
+  `${two.TAMED}; ${two.AFTER_TAME}`);
+check('Work around me on the one following you starts, and is noted for whoever started it',
+  two.AROUND === 'deed|follow' && beat?.around === 1, `${two.ACT}; ${two.AROUND}; ${two.BEAT}`);
+
+// The browser, from the same tally: as the beat merges it, and as the journal ticks it.
+const fresh = Game.create(4243);
+fresh.tallyFromIsland = true;
+const hear = (tally: Record<string, number>): void => {
+  for (const k of Object.keys(fresh.tally)) if (!BROWSER_TALLY.has(k) && !(k in tally)) delete fresh.tally[k];
+  for (const [k, v] of Object.entries(tally)) if (typeof v === 'number') fresh.tally[k] = v;
+};
+const both = (): string => ['tame', 'workaround'].map((id) => `${id} ${goal(id).met(fresh) ? 'met' : 'open'}`).join(', ');
+hear(start);
+check('in the browser, from the island\'s tally at the start: neither goal met', !goal('tame').met(fresh) && !goal('workaround').met(fresh), both());
+hear(afterTame);
+check('after the tame: tamed, not yet working around', goal('tame').met(fresh) && !goal('workaround').met(fresh), both());
+hear(beat ?? {});
+check('from the beat after Work around me: both met', goal('tame').met(fresh) && goal('workaround').met(fresh), both());
+(fresh as unknown as { checkJournal(): void }).checkJournal();
+check('and the journal ticks both', fresh.ticked.has('tame') && fresh.ticked.has('workaround'), [...fresh.ticked].join(', '));
+
+// Their words, read off the rules they name.
+const tameLeast = Math.min(...Object.values(SPECIES).filter((d) => !d.monster).map((d) => d.tameLevel));
+const tameEasy = Object.values(SPECIES).filter((d) => !d.monster && d.tameLevel === tameLeast);
+const tameHow = goal('tame').how ?? '';
+const named = tameEasy.filter((d) => tameHow.includes(`${d.name} (`));
+check(`the taming how-to names the least Taming (${tameLeast}), how many kinds ask only that (${tameEasy.length}), some of them with their food, and Track`,
+  tameHow.includes(`Taming ${tameLeast}: ${tameEasy.length} kinds`) && named.length >= 2
+    && named.every((d) => d.diet.every((id) => tameHow.includes(itemDef(id).name.toLowerCase())))
+    && tameHow.includes('Track') && tameHow.includes(`+${WILD_STAGE_TAME} Taming`),
+  tameHow);
+const aroundHow = goal('workaround').how ?? '';
+const workRanges = Object.values(SPECIES).filter((d) => !d.monster && aroundTrade(d.gathers)).map((d) => d.workRange);
+check(`the Work around me goal is the menu's label, and its how-to the reach to the one following you (${POST_FOLLOW_REACH}) and the storage range by kind`,
+  goal('workaround').text === `Set a wildermon to ${AROUND_ACTION_BY_ID.get('work_around')?.label}`
+    && aroundHow.includes(`within ${POST_FOLLOW_REACH} tiles`) && aroundHow.includes(`${AROUND_MOST} at a time`)
+    && aroundHow.includes(`${Math.min(...workRanges)}–${Math.max(...workRanges)} tiles by kind`),
+  `${goal('workaround').text}: ${aroundHow}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nthe journal counts only your own work — ${ok.length} of ${ok.length + bad.length}`);

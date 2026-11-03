@@ -174,7 +174,7 @@ import { CHAR_START, ORDINARY_GAIN, SOUL_PER_LEVEL, soulAbove } from '../../game
 import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase } from '../../game/game';
 import { DARK_WALK, DARK_WORK, NIGHT_EYES_FROM, TRACK_AWARE } from '../../game/learn';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
-import { ALL_GOALS } from '../../game/journal';
+import { ALL_GOALS, JOURNAL } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
 import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
 import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
@@ -4254,6 +4254,17 @@ export const NEWS: News[] = [
       return [
         `Changed: skill gain below ${EARLY_SKILL_BELOW}: ×${EARLY_SKILL_MUL}, multiplied part up to ${EARLY_SKILL_BELOW}. Ordinary actions from 1 to ${EARLY_SKILL_BELOW}: ${goes(playerGain)} (was ${goes(skillGain)}).`,
         `Skills window: "Gain ×${EARLY_SKILL_MUL} below ${EARLY_SKILL_BELOW}" on each skill under it. Wildermon skills and class level: unchanged.`,
+      ];
+    },
+  },
+  {
+    n: 464,
+    day: '2026-11-03',
+    lines: () => {
+      const c = JOURNAL[1];
+      return [
+        `Added: journal chapter ${c.name}, after ${JOURNAL[0].name}: ${c.goals.map((g) => g.text).join('; ')}. Each with its how-to.`,
+        `Changed: ${c.goals[0].text.toLowerCase()}: moved here from The wildermon. Already ticked: stays ticked.`,
       ];
     },
   },

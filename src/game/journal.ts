@@ -13,7 +13,7 @@ import { GOAL_HOW } from './journalhow';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from './journal-c';
 import { capital, fill, listed } from './words';
 import { REACH_FORCE } from './wind';
-import { STANDING_A, WILDERMON_A } from './journal-a';
+import { FIRST_WILDERMON, STANDING_A, WILDERMON_A } from './journal-a';
 import { CRAFTS_B, LAND_B, WATER_B } from './journal-b';
 
 /**
@@ -115,6 +115,25 @@ export const JOURNAL: Chapter[] = [
       { id: 'deed', text: 'Plant a stake to found a settlement', how: `Starting pack has a settlement stake. Stand at the centre you want and right-click the ground: Found settlement. Inside its border: decay ×${+DEED_DECAY.toFixed(3)}; only citizens may dig.`, met: (g) => founded(g) },
     ],
   },
+  /*
+   * Asked for: two goals for new players, a wildermon tamed and set to Work around me. Next after the first chapter
+   * rather than in it: that one is the guide's, which stands down once it is done (`ashore`), and a tame is an
+   * offering that can be refused any number of times. Taming moved here from the wildermon's chapter, its id kept, so
+   * one ticked there stays ticked.
+   */
+  {
+    name: 'First wildermon',
+    goals: [
+      { id: 'tame', text: 'Tame a wildermon', get hint() { return FIRST_WILDERMON.tameHint(); }, get how() { return FIRST_WILDERMON.tameHow(); }, met: did('tamed') },
+      {
+        id: 'workaround',
+        get text() { return FIRST_WILDERMON.aroundText(); },
+        get hint() { return FIRST_WILDERMON.aroundHint(); },
+        get how() { return FIRST_WILDERMON.aroundHow(); },
+        met: did('around'),
+      },
+    ],
+  },
   {
     name: 'The crafts',
     goals: [
@@ -176,7 +195,6 @@ export const JOURNAL: Chapter[] = [
   {
     name: 'The wildermon',
     goals: [
-      { id: 'tame', text: 'Tame a wildermon', met: did('tamed') },
       { id: 'work', text: 'Set a wildermon to work on your settlement', met: (g) => g.creatures.working().filter((c) => c.mine !== false).length > 0 },
       { id: 'five', text: 'Keep five species of wildermon at once', met: (g) => kept(g) >= 5 },
       { id: 'ride', text: 'Saddle a wildermon and ride it', met: did('mounted') },
