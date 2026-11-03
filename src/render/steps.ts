@@ -12,14 +12,12 @@
  * Down each side runs a cheek, a low wall with a coping on it a hand over the
  * line of the nosings, and at a free end -- the foot or the head of a flight
  * that does not go on into another tile of steps -- the end tread is a
- * landing, deep enough to stand a pot of flowers on at either side. A flight
- * laid beside another going the same way with as many steps is one broad
- * flight: no cheek between them, and no pots.
+ * landing. A flight laid beside another going the same way with as many
+ * steps is one broad flight: no cheek between them.
  *
  * It is drawn in the ground pass, straight after the tile's own colour, and it
  * is drawn in the order a camera anywhere round it would see it: the far
- * cheek, the steps from the back, the pots on the far side, then the near
- * cheek and its pots. Whatever stands on the tile or in front of it is drawn
+ * cheek, the steps from the back, then the near cheek. Whatever stands on the tile or in front of it is drawn
  * after, which is the order the ground is always drawn in.
  *
  * Stone flights take the four stones slabs are cut from, dressed as a stone
@@ -50,9 +48,6 @@ const CH = 3;
 /** How far a tread stands out over the riser under it, as a share of the tile, and how thick its nosing is. */
 const NOSE = 0.016;
 const NOSE_H = 1;
-/** A pot's radius, as a share of the tile, and how tall it stands, in height units. */
-const POT_R = 0.085;
-const POT_H = 5.2;
 
 const clamp255 = (v: number): number => Math.max(0, Math.min(255, Math.round(v)));
 const rgb = (c: RGB, k = 1, a = 1): string => `rgba(${clamp255(c[0] * k)}, ${clamp255(c[1] * k)}, ${clamp255(c[2] * k)}, ${a})`;
@@ -134,7 +129,7 @@ export function flightAt(world: World, x: number, y: number): Flight {
     left: sameFlight(world, x - ax, y - ay, up, n),
     right: sameFlight(world, x + ax, y + ay, up, n),
   };
-  // The treads: a landing at each free end, deep enough for a pot, and the rest shared out evenly.
+  // The treads: a landing at each free end, and the rest shared out evenly.
   const d0 = n >= 3 && !joins.foot ? Math.max(1 / n, LANDING) : 1 / n;
   const d1 = n >= 3 && !joins.head ? Math.max(1 / n, LANDING) : 1 / n;
   const mid = n > 2 ? (1 - d0 - d1) / (n - 2) : 0;
@@ -274,8 +269,8 @@ function bake(o: StepsView, x: number, y: number, zoom: number, c: readonly numb
     rotateY: (wx, wy) => cam.rotateY(wx, wy),
     heightScale: cam.heightScale,
   };
-  // The tile's corners, from the ground under the lowest to over the highest coping, pot and flowers.
-  const lo = Math.min(c[0], c[1], c[2], c[3]), hi = Math.max(c[0], c[1], c[2], c[3]) + CH + POT_H + 4;
+  // The tile's corners, from the ground under the lowest to over the highest coping.
+  const lo = Math.min(c[0], c[1], c[2], c[3]), hi = Math.max(c[0], c[1], c[2], c[3]) + CH + 4;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const [u, v] of [[0, 0], [1, 0], [1, 1], [0, 1]]) {
     const sx = eye.worldToScreenX(x + u, y + v);
@@ -284,8 +279,8 @@ function bake(o: StepsView, x: number, y: number, zoom: number, c: readonly numb
     y0 = Math.min(y0, eye.worldToScreenY(x + u, y + v, hi));
     y1 = Math.max(y1, eye.worldToScreenY(x + u, y + v, lo));
   }
-  // Room for the ink and for the flowers standing over a pot.
-  const pad = 3 + 12 * zoom;
+  // Room for the ink.
+  const pad = 3 + 4 * zoom;
   x0 = Math.floor(x0 - pad);
   y0 = Math.floor(y0 - pad);
   x1 = Math.ceil(x1 + pad);
@@ -298,13 +293,6 @@ function bake(o: StepsView, x: number, y: number, zoom: number, c: readonly numb
   paint({ ctx: g, cam: eye, world: o.world, zoom, season: o.season, light: o.light }, x, y);
   return { canvas, x0, y0, area: canvas.width * canvas.height };
 }
-
-/** Pinks, whites, yellows and a blue for the pots: which one a pot has is its place's. */
-const BLOOMS: RGB[] = [hex('#f4a8bd'), hex('#f6f1e6'), hex('#f5d77b'), hex('#e98f95'), hex('#b7b0e6'), hex('#f2b98a')];
-/** The leaves in a pot: lit, mid and deep, and the rust of an autumn one. */
-const LEAF: RGB[] = [hex('#8cc295'), hex('#5f9f73'), hex('#3f7258')];
-const RUST: RGB = hex('#c9905a');
-const CLAY: RGB = hex('#cf8466');
 
 /** Paint the flight laid on the tile at (x, y), shape by shape. */
 function paint(o: Paint, x: number, y: number): void {
@@ -479,112 +467,6 @@ function paint(o: Paint, x: number, y: number): void {
     line(P(tL, s0 - NOSE, topL), P(tR, s0 - NOSE, topR), rgb(st.nose, treadLit * 1.05), 1.4);
   };
 
-  /* ---- a pot of flowers, at an end of a landing --------------------------- */
-  const pot = (t: number, s: number, i: number, key: number): void => {
-    if (coarse) return;
-    const h = f.top(i, t);
-    const [px, py] = P(t, s, h);
-    // As wide as it is on the ground, measured across the screen.
-    const [ex] = P(t + POT_R, s, h), [fx] = P(t, s + POT_R, h);
-    const r = Math.max(2.2, Math.hypot(ex - px, fx - px) * 0.9);
-    const tall = POT_H * cam.heightScale * zoom;
-    const rim = r * 0.36;
-    // Its shadow on the tread, and its body: a clay pot, lit from the right.
-    ctx.fillStyle = 'rgba(40, 52, 60, 0.18)';
-    ctx.beginPath();
-    ctx.ellipse(px + r * 0.25, py, r * 1.05, rim * 1.05, 0, 0, Math.PI * 2);
-    ctx.fill();
-    const body = ctx.createLinearGradient(px - r, 0, px + r, 0);
-    body.addColorStop(0, rgb(CLAY, 0.78));
-    body.addColorStop(0.6, rgb(CLAY, 1.02));
-    body.addColorStop(1, rgb(CLAY, 1.12));
-    ctx.beginPath();
-    ctx.moveTo(px - r, py - tall);
-    ctx.lineTo(px - r * 0.72, py);
-    ctx.ellipse(px, py, r * 0.72, rim * 0.72, 0, Math.PI, 0, true);
-    ctx.lineTo(px + r, py - tall);
-    ctx.closePath();
-    ctx.fillStyle = body;
-    ctx.fill();
-    ctx.strokeStyle = rgb(hex('#7b4536'), 1, 0.85);
-    ctx.lineWidth = lw(0.9);
-    ctx.stroke();
-    // The rim, a band a little proud of the body.
-    ctx.beginPath();
-    ctx.ellipse(px, py - tall, r * 1.06, rim, 0, 0, Math.PI * 2);
-    ctx.fillStyle = rgb(CLAY, 1.1);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(px, py - tall, r * 0.86, rim * 0.72, 0, 0, Math.PI * 2);
-    ctx.fillStyle = rgb(hex('#5d4337'));
-    ctx.fill();
-    // What is growing in it, and the flowers on it in spring and summer; a bare stem or two in winter.
-    const season = o.season;
-    const top = py - tall - rim * 0.3;
-    if (season === 'winter') {
-      ctx.strokeStyle = rgb(hex('#6f5a4c'));
-      ctx.lineWidth = lw(1);
-      for (let k = 0; k < 4; k++) {
-        const a = -1.1 + k * 0.7 + (hash2(salt, key, k) - 0.5) * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(px + (k - 1.5) * r * 0.25, top + rim * 0.4);
-        ctx.lineTo(px + Math.sin(a) * r * 0.9, top - Math.cos(a) * r * 1.1);
-        ctx.stroke();
-      }
-      return;
-    }
-    const lobes: Array<[number, number, number]> = [[-0.62, -0.1, 0.6], [0.6, -0.12, 0.62], [-0.28, -0.62, 0.66], [0.3, -0.66, 0.64], [0, -1.02, 0.6], [0, -0.22, 0.72]];
-    const leaf = season === 'autumn' ? LEAF.map((c) => mix(c, RUST, 0.32)) : LEAF;
-    for (const [lx, ly, lr] of lobes) {
-      ctx.beginPath();
-      ctx.arc(px + lx * r, top + ly * r, lr * r, 0, Math.PI * 2);
-      ctx.fillStyle = rgb(leaf[1]);
-      ctx.fill();
-      ctx.strokeStyle = rgb(leaf[2], 1, 0.8);
-      ctx.lineWidth = lw(0.8);
-      ctx.stroke();
-    }
-    for (const [lx, ly, lr] of lobes) {
-      ctx.beginPath();
-      ctx.arc(px + lx * r + lr * r * 0.22, top + ly * r - lr * r * 0.25, lr * r * 0.55, 0, Math.PI * 2);
-      ctx.fillStyle = rgb(leaf[0], 1, 0.85);
-      ctx.fill();
-    }
-    if (season === 'autumn') return;
-    // Each pot is one colour, which is its place's; summer is fuller than spring.
-    const bloom = BLOOMS[Math.floor(hash2(x * 7 + key, y * 5 + i, 41) * BLOOMS.length)];
-    const count = season === 'summer' ? 7 : 5;
-    for (let k = 0; k < count; k++) {
-      const a = (k / count) * Math.PI * 2 + hash2(salt, key, 43 + k) * 0.8;
-      const d = 0.35 + 0.45 * hash2(salt, key, 47 + k);
-      const bx = px + Math.cos(a) * d * r * 1.05;
-      const by = top - 0.52 * r + Math.sin(a) * d * r * 0.7;
-      const br = Math.max(1.1, r * (season === 'summer' ? 0.24 : 0.2));
-      for (let p = 0; p < 5; p++) {
-        const pa = (p / 5) * Math.PI * 2 + k;
-        ctx.beginPath();
-        ctx.arc(bx + Math.cos(pa) * br * 0.62, by + Math.sin(pa) * br * 0.5, br * 0.58, 0, Math.PI * 2);
-        ctx.fillStyle = rgb(bloom);
-        ctx.fill();
-      }
-      ctx.beginPath();
-      ctx.arc(bx, by, br * 0.34, 0, Math.PI * 2);
-      ctx.fillStyle = rgb(hex('#f0c24e'));
-      ctx.fill();
-    }
-  };
-  /** The pots on one side of the flight: at the foot and at the head, where the flight ends there and does not go on. */
-  const pots = (right: boolean): void => {
-    if (right ? f.joins.right : f.joins.left) return;
-    const t = right ? 1 - CW - POT_R * 1.15 : CW + POT_R * 1.15;
-    // The far one of the two first, so the nearer stands in front of it.
-    const ends: Array<[number, number, number]> = [];
-    if (!f.joins.foot) ends.push([Math.max(POT_R * 1.2, (b[1] - NOSE) / 2), 0, right ? 1 : 0]);
-    if (!f.joins.head) ends.push([Math.min(1 - POT_R * 1.2, (b[n - 1] + 1) / 2), n - 1, right ? 3 : 2]);
-    ends.sort((a, c) => depth(t, a[0]) - depth(t, c[0]));
-    for (const [s, i, key] of ends) pot(t, s, i, key);
-  };
   const depth = (t: number, s: number): number => {
     const [wx, wy] = W(t, s);
     return cam.rotateX(wx, wy) + cam.rotateY(wx, wy);
@@ -592,13 +474,11 @@ function paint(o: Paint, x: number, y: number): void {
 
   ctx.save();
   ctx.lineJoin = 'round';
-  // The far cheek, the steps from the back, the far pots, then the near cheek and its pots.
+  // The far cheek, the steps from the back, then the near cheek.
   const farRight = !nearRight;
   if (!(farRight ? f.joins.right : f.joins.left)) cheek(farRight);
   const order = Array.from({ length: n }, (_, i) => i).sort((a, c) => depth(0.5, (b[a] + b[a + 1]) / 2) - depth(0.5, (b[c] + b[c + 1]) / 2));
   for (const i of order) step(i);
-  pots(farRight);
   if (!(nearRight ? f.joins.right : f.joins.left)) cheek(nearRight);
-  pots(nearRight);
   ctx.restore();
 }

@@ -4243,6 +4243,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 468,
+    day: '2026-11-03',
+    lines: () => ['Changed: garden steps: no flower pots on the landings.'],
+  },
+  {
     n: 466,
     day: '2026-11-03',
     lines: () => {
