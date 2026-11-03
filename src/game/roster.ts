@@ -1,6 +1,7 @@
 import type { PeerId, PeerState } from '../net/protocol';
 import { tileKey } from './tileindex';
 import { phasePerTile, RIDE_CADENCE } from './player';
+import { BODY_EVERY } from './keep';
 
 /** Handed back for a tile nobody is standing on, so the common answer is free. */
 const NOBODY: readonly Peer[] = [];
@@ -34,7 +35,11 @@ export interface Peer extends PeerState {
    */
   fromX: number;
   fromY: number;
-  /** How long that walk should take, in seconds: the gap actually observed. */
+  /** Where the walk to the last word began: where they were drawn when it came, and when that was drawn. */
+  startX: number;
+  startY: number;
+  walkAt: number;
+  /** How long that walk should take, in seconds (`walkSpan`). */
   span: number;
   /**
    * Their own walk cycle, counted by the clock at `RIDE_CADENCE` as it
@@ -92,8 +97,44 @@ export interface Peer extends PeerState {
  */
 export const saidWords = (line: string): string => line.replace(/^<[^>]*>\s*/, '');
 
-/** How far out of step a peer must be before they are snapped rather than walked. */
-const TELEPORT = 6;
+/**
+ * The fastest anybody is drawn going, in tiles a second: a caravel on a reach
+ * in a gale makes about eleven (\`pace.ts\`), a mount five.
+ */
+const FASTEST = 12;
+
+/**
+ * How far out of step a peer must be before they are snapped rather than
+ * walked: two words' worth at the fastest pace, so a word lost on the way is
+ * walked over and only a rune gate, a spell or a death is a jump.
+ */
+const TELEPORT = Math.max(6, 2 * FASTEST * BODY_EVERY);
+
+/**
+ * How much longer than the gap between two words the walk between them takes.
+ *
+ * A word goes out every \`BODY_EVERY\` at most. Walked in exactly that, somebody
+ * arrives at each word just as the next is due, and any word late on the wire
+ * leaves them standing until it comes: a walk drawn as a string of stops. A
+ * little longer, and the next word always comes while they are still on their
+ * way to this one, so they walk on from wherever they have got to without a
+ * pause. They are drawn that much behind where they are; nothing reads where
+ * they are drawn but the drawing (\`drawnAt\`): a reach or a target reads \`x\`
+ * and \`y\`, the last word.
+ */
+export const WALK_SLACK = 1.5;
+
+/** The longest ago a frame may have been drawn for a walk to be timed from it (\`walkAt\`): a tab put away draws none. */
+const WALK_FRAME_MOST = 0.1;
+
+/**
+ * How long the walk to a word takes, from the gap since the word before it.
+ *
+ * Never less than the gap words are sent at, and never more than two of them:
+ * the first word after somebody has stood still a minute is a step from where
+ * they stood, not a minute's walk.
+ */
+export const walkSpan = (gap: number): number => Math.min(2 * BODY_EVERY, Math.max(BODY_EVERY, gap)) * WALK_SLACK;
 
 /** How quickly a peer's drawn pace follows what it is drawn doing, a second: as slowly as the gait it is drawn at (`EASE` in `../render/gait`). */
 const PACE_EASE = 4;
@@ -120,6 +161,8 @@ export class Roster {
   private byTile = new Map<number, Peer[]>();
   /** The tiles written to this frame, so the rest are left alone. */
   private filled: number[] = [];
+  /** When the last frame was eased (\`ease\`), on \`clock\`. */
+  private easedAt = -Infinity;
 
   get size(): number {
     return this.peers.size;
@@ -161,7 +204,7 @@ export class Roster {
     if (state.id === this.self) return;
     const had = this.peers.get(state.id);
     if (!had) {
-      this.peers.set(state.id, { ...state, at: now, fromX: state.x, fromY: state.y, span: 0, walkPhase: 0, facing: 1, stepPhase: 0, pace: 0, drawnX: state.x, drawnY: state.y });
+      this.peers.set(state.id, { ...state, at: now, fromX: state.x, fromY: state.y, startX: state.x, startY: state.y, walkAt: now, span: 0, walkPhase: 0, facing: 1, stepPhase: 0, pace: 0, drawnX: state.x, drawnY: state.y });
       return;
     }
     /*
@@ -178,13 +221,25 @@ export class Roster {
       return;
     }
     const jumped = Math.hypot(state.x - had.x, state.y - had.y) > TELEPORT;
-    had.fromX = jumped ? state.x : had.x;
-    had.fromY = jumped ? state.y : had.y;
-    // The gap actually observed rather than the one we hoped for: a link that
-    // is running slow should be walked slowly, not walked fast and then waited.
-    had.span = jumped ? 0 : Math.max(0.01, Math.min(1, now - had.at));
+    /*
+     * From where they are drawn, not from the last word: they are still on
+     * their way to it (\`WALK_SLACK\`), and starting from it would jump them the
+     * rest of the way.
+     */
+    had.fromX = jumped ? state.x : had.fromX;
+    had.fromY = jumped ? state.y : had.fromY;
+    had.startX = had.fromX;
+    had.startY = had.fromY;
+    /*
+     * From the frame that drew them there, which is where \`fromX\` was worked
+     * out, rather than from now: timed from now, the frame a word comes in on
+     * draws them where the last one did, a stop at every word.
+     */
+    had.walkAt = !jumped && now - this.easedAt <= WALK_FRAME_MOST ? this.easedAt : now;
+    // The gap actually observed: a link that is running slow is walked slowly, not walked fast and then waited.
+    had.span = jumped ? 0 : walkSpan(now - had.at);
     had.at = now;
-    Object.assign(had, { ...state, at: now, fromX: had.fromX, fromY: had.fromY, span: had.span, walkPhase: had.walkPhase, facing: had.facing });
+    Object.assign(had, { ...state, at: now, fromX: had.fromX, fromY: had.fromY, startX: had.startX, startY: had.startY, walkAt: had.walkAt, span: had.span, walkPhase: had.walkPhase, facing: had.facing });
   }
 
   /** Everybody, in one word, replacing whoever is no longer in the list. */
@@ -214,6 +269,7 @@ export class Roster {
    */
   ease(dt: number): void {
     const now = clock();
+    this.easedAt = now;
     // The tile index goes with the easing: one walk of the list does both, and
     // the renderer asks `atTile` immediately afterwards.
     for (const key of this.filled) {
@@ -222,10 +278,11 @@ export class Roster {
     }
     this.filled.length = 0;
     for (const p of this.peers.values()) {
+      // At one pace along the line from where the walk began, so somebody going steadily is drawn going steadily.
       if (p.span > 0) {
-        const t = Math.min(1, (now - p.at) / p.span);
-        p.fromX += (p.x - p.fromX) * t;
-        p.fromY += (p.y - p.fromY) * t;
+        const t = Math.min(1, (now - p.walkAt) / p.span);
+        p.fromX = p.startX + (p.x - p.startX) * t;
+        p.fromY = p.startY + (p.y - p.startY) * t;
         if (t >= 1) p.span = 0;
       }
       if (p.moving) p.walkPhase += dt * RIDE_CADENCE;

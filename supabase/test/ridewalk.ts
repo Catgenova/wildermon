@@ -98,7 +98,11 @@ let dx = 30.5;
 const seenAs = (x: number): void => g.roster.saw({ id: 9001, uid: 'driver-uid', name: 'Drover', x, y: 36.5, dirX: 1, dirY: 0, level: 0,
   moving: true, swimming: false, working: false } as never);
 seenAs(dx);
+// Their walk is drawn by the page's clock (\`Roster.ease\`), so the page's clock goes on a frame at a time.
+let page = performance.now();
+Object.defineProperty(globalThis.performance, 'now', { value: () => page, configurable: true, writable: true });
 drive("somebody else's cart", () => {
+  page += 1000 / 30;
   dx += 0.12;
   seenAs(dx);
   for (const c of team) {

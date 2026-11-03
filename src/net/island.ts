@@ -3424,7 +3424,7 @@ export class Island {
     const said = `${x.toFixed(2)},${y.toFixed(2)},${level}`;
 
     /*
-     * Where the body is, five times a second, over Broadcast.
+     * Where the body is, twice a second (`BODY_EVERY`), over Broadcast.
      *
      * This is a drawing message, not a fact: nobody's client can make anybody
      * else's position true, and the island keeps the truth on the row below.

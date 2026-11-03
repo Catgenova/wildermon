@@ -467,7 +467,9 @@ jobs:
           # with the wind, her quality and the hands at her helm, so a good
           # ship in a good wind was pulled back every second; and other people
           # were drawn jumping, cut short mid-walk by everybody else's words
-          # and pulled back to rows a second old.
+          # and pulled back to rows a second old. Told twice a second, somebody
+          # walking is drawn moving every frame, never backwards, never more
+          # than a word and a half behind; a rune gate is a jump.
           npx esbuild supabase/test/pace.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/pace.mjs --log-level=error
           node node_modules/.cache/pace.mjs

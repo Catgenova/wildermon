@@ -165,8 +165,17 @@ export const REGION = 256;
  */
 export const SENT_INLINE = 100;
 
-/** How often a body tells the island where it is, over Broadcast. */
-export const BODY_EVERY = 0.2;
+/**
+ * How often a body tells the people near it where it is, over Broadcast, at
+ * most: twice a second, drawn walking between words (`walkSpan` in
+ * `roster.ts`).
+ *
+ * A drawing message only. What the island holds you to -- how far you may have
+ * walked, whether you are near enough to a job -- is the row `rpc_move` writes,
+ * at its own `MOVE_EVERY`, and none of it reads this. Every word is a Realtime
+ * message for each browser near you, and five a second was most of the bill.
+ */
+export const BODY_EVERY = 0.5;
 
 /**
  * How long somebody heard over Broadcast is drawn where Broadcast said, rather
@@ -175,7 +184,7 @@ export const BODY_EVERY = 0.2;
  * Reported as other people rubberbanding when they move quickly. The row is
  * written by \`rpc_move\`, at most once a \`MOVE_EVERY\`, and read back by the
  * twenty-second reconcile and every time the channels are taken again, which
- * is every block walked into. A body on the wire is a fifth of a second old;
+ * is every block walked into. A body on the wire is half a second old;
  * its row is up to a second old before the read even leaves, and at a
  * mount's or a ship's pace that is five tiles or more behind. Laying the row
  * over what the channel said pulled everybody on the move back to where they
