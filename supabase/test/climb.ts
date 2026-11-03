@@ -132,11 +132,11 @@ const up = walkIsland(9.5, 5.5, 12.5, 5.5);
 /*
  * A go is rolled — 0.6 to 1.4 of the base, as every go is — so what three
  * goes come to is a range. Both ends of it, from where he started, by the
- * island's own `skill_gain_of` and the multiplier it would have applied.
+ * island's own `skill_gain_of` and `early_gain` and the multiplier it would have applied.
  */
 const range = (was: number, bases: number[]): [number, number] =>
   [0.6, 1.4].map((roll) => Number(psql(`
-    select ${bases.reduce((v, b) => `(${v} + skill_gain_of(${v}, ${b} * skill_mult(${W}, ${IVAR}, 'climbing'), ${roll}))`, String(was))}`))) as [number, number];
+    select ${bases.reduce((v, b) => `(${v} + early_gain(${v}, skill_gain_of(${v}, ${b} * skill_mult(${W}, ${IVAR}, 'climbing'), ${roll})))`, String(was))}`))) as [number, number];
 const [lo, hi] = range(up.was, steps.map((c) => worth(c) ?? 0));
 check('and walking up it through rpc_move raises climbing on the island, three goes of it',
   up.now >= lo - 1e-9 && up.now <= hi + 1e-9 && up.at === '12.5,5.5',

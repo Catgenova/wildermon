@@ -54,7 +54,7 @@ import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters'
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
 import { ACTION_FLOOR, ACTION_PACE, WORLD_PACE } from '../../game/pace';
-import { GAIN_RATE, MIN_GAIN, PAST_TOP, SKILL_BY_ID, SKILL_TOP, skillGain } from '../../game/skills';
+import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, MIN_GAIN, PAST_TOP, playerGain, SKILL_BY_ID, SKILL_TOP, skillGain } from '../../game/skills';
 import { favourCap, PRAYER_GAIN, PRAYER_PEAKS, PRAYER_REST, prayerWorth } from '../../game/faith';
 import {
   calmCap, CHOOSE_AT, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_WORTH, TECHNIQUES,
@@ -170,7 +170,7 @@ import { weaponCarry } from '../../render/figure';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
 import { staminaBarAbove, SWIM_LEARN } from '../../game/body';
-import { CHAR_START, SOUL_PER_LEVEL, soulAbove } from '../../game/game';
+import { CHAR_START, ORDINARY_GAIN, SOUL_PER_LEVEL, soulAbove } from '../../game/game';
 import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase } from '../../game/game';
 import { DARK_WALK, DARK_WORK, NIGHT_EYES_FROM, TRACK_AWARE } from '../../game/learn';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
@@ -4239,6 +4239,22 @@ export const NEWS: News[] = [
       const d = SPECIES.leecha, [one, two] = d.stages!;
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
+    },
+  },
+  {
+    n: 466,
+    day: '2026-11-03',
+    lines: () => {
+      // Ordinary actions at an even roll from level 1 to the mark, with the rule and without it.
+      const goes = (gain: (v: number, base: number, roll: number) => number): number => {
+        let n = 0;
+        for (let v = 1; v < EARLY_SKILL_BELOW; n++) v += gain(v, ORDINARY_GAIN, 1);
+        return n;
+      };
+      return [
+        `Changed: skill gain below ${EARLY_SKILL_BELOW}: ×${EARLY_SKILL_MUL}, multiplied part up to ${EARLY_SKILL_BELOW}. Ordinary actions from 1 to ${EARLY_SKILL_BELOW}: ${goes(playerGain)} (was ${goes(skillGain)}).`,
+        `Skills window: "Gain ×${EARLY_SKILL_MUL} below ${EARLY_SKILL_BELOW}" on each skill under it. Wildermon skills and class level: unchanged.`,
+      ];
     },
   },
   {

@@ -121,7 +121,7 @@ begin
   perform rpc_move(w, 23.5, 21.5, 0);
   insert into said select 'IDLE', skill_of(w, u, driving_skill())::text;
   insert into said select 'BOUNDS', string_agg(b, '|' order by r) from (
-    select r, (1 + skill_gain_of(1, sailing_learn() * skill_mult(w, u, sailing_skill()), r))::text as b
+    select r, (1 + early_gain(1, skill_gain_of(1, sailing_learn() * skill_mult(w, u, sailing_skill()), r)))::text as b
       from unnest(array[0.6, 1.4]) r) x;
 end $t$;
 select k || '=' || v from said order by k;

@@ -41,7 +41,7 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
-import { SKILL_BY_ID, isQuiet, skillGain } from '../../src/game/skills';
+import { SKILL_BY_ID, isQuiet, playerGain, skillGain } from '../../src/game/skills';
 import { ITEM_DEFS } from '../../src/game/items';
 import { groundSays } from '../../src/game/wildflowers';
 import {
@@ -237,7 +237,7 @@ begin
       || '|' || (select e.text from event e where e.world_id = w and e.uid = u order by e.n desc limit 1)
       || '|' || (select count(*) from realtime.messages r where r.topic = 'land:' || w || ':' || region_of(61, 60)
                   and r.payload->'swirls'->'gone' @> to_jsonb(v_id))
-      || '|' || (skill_gain_of(lvl, skill_mult(w, u, 'elementalism'), 0.6)) || '|' || (skill_gain_of(lvl, skill_mult(w, u, 'elementalism'), 1.4)));
+      || '|' || early_gain(lvl, skill_gain_of(lvl, skill_mult(w, u, 'elementalism'), 0.6)) || '|' || early_gain(lvl, skill_gain_of(lvl, skill_mult(w, u, 'elementalism'), 1.4)));
     -- And again, once it is gone.
     insert into said values ('GONE' || lvl, coalesce(act_refusal(w, u, 'collect_motes', tgt), 'none'));
   end loop;
@@ -326,7 +326,7 @@ for (const lvl of BANDS) {
   const gain = Number(after) - Number(before);
   check(`and trains Elementalism by one go of it at ${lvl}, as the browser's gain has it`,
     (lvl >= 100 && gain === 0) || (gain >= Number(lo) - 1e-9 && gain <= Number(hi) + 1e-9
-      && Number(lo) <= skillGain(lvl, 1, 0.6) * 1.0001 + 1e-12 && Number(hi) >= skillGain(lvl, 1, 1.4) * 0.9999),
+      && Number(lo) <= playerGain(lvl, 1, 0.6) * 1.0001 + 1e-12 && Number(hi) >= playerGain(lvl, 1, 1.4) * 0.9999),
     `+${gain.toFixed(5)}, between ${Number(lo).toFixed(5)} and ${Number(hi).toFixed(5)}`);
   check(`and once it is gone, a collect is refused: "${SWIRL_SAID.gone}"`, isle.get(`GONE${lvl}`) === SWIRL_SAID.gone, isle.get(`GONE${lvl}`));
 }
