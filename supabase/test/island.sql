@@ -9488,13 +9488,16 @@ select coalesce(act_refusal(:'world2', :'ivar', 'set_ring', ('{"kind":"item","ui
 select give(:'world2', :'ivar', 'file', 1, 50, 'Iron') \g /dev/null
 select coalesce(act_refusal(:'world2', :'ivar', 'set_ring', ('{"kind":"item","uid":' || :'stone' || '}')::jsonb), 'ALLOWED') as withfile \gset
 select round(skill_mult(:'world2', :'ivar', 'fighting')::numeric, 2) as bare_fight, round(skill_mult(:'world2', :'ivar', 'mining')::numeric, 2) as bare_mine \gset
--- The seating can fail, as any craft can; the stone and the band are kept on a failure, so it is tried until it takes.
+-- The seating can fail, as any craft can, and a failure damages the stone and the band (`fail_damage`); five or so
+-- break them. So it is tried until it takes with the damage mended before each go: how many goes that takes is the
+-- dice, and what is checked after is the ring it makes.
 create or replace function pg_temp.set_until(p_world uuid, p_uid uuid, p_stone bigint) returns int language plpgsql as $$
 declare i int := 0;
 begin
   loop
     i := i + 1;
     if exists (select 1 from item where world_id = p_world and holder_uid = p_uid and def = 'jewelled_ring') or i > 40 then return i; end if;
+    update item set dmg = 0 where world_id = p_world and holder_uid = p_uid and def in ('gem', 'ring');
     perform act_perform(p_world, p_uid, 'set_ring', jsonb_build_object('kind', 'item', 'uid', p_stone));
   end loop;
 end $$;

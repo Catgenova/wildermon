@@ -840,7 +840,9 @@ select coalesce((select string_agg(i.id || ' keyed ' || i.keyed, ',') from item 
     where i.world_id = ${W} and i.holder_uid = '${WHO[who]}' and i.def = 'key' and w.level = 0 and w.dir = '${bd.dir}' and w.x = ${bd.x} and w.y = ${bd.y}), 'none');`).split('\n');
   const before = JSON.parse(r0) as Record<string, unknown>;
   const after = JSON.parse(r1) as Record<string, unknown>;
-  const fields = Object.keys(after).filter((k) => JSON.stringify(after[k]) !== JSON.stringify(before[k])).sort().join(', ');
+  // `played` is the body's own clock (`body_settle` adds a stretch only if it was settled under `played_gap()` ago),
+  // so whether it moves in a call is the test's pace, not the plan: left out, as nothing a plan writes.
+  const fields = Object.keys(after).filter((k) => k !== 'played' && JSON.stringify(after[k]) !== JSON.stringify(before[k])).sort().join(', ');
   const seen = JSON.stringify(wallIn(groundFor('sim', 13.5, 9.5), bd.dir, bd.x, bd.y));
   return { answer, row, wind, wall, told, pack, seen, pads, key, moved: moved(c0, c1), fields };
 };
