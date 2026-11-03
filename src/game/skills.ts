@@ -208,6 +208,22 @@ export const PAST_TOP = 2;
 export const skillGain = (v: number, base: number, roll: number): number =>
   (Math.max(MIN_GAIN, base * skillRoom(v)) * roll * GAIN_RATE) / PAST_TOP ** Math.max(0, v - SKILL_TOP);
 
+/**
+ * Below this level a skill's gains are multiplied by `EARLY_SKILL_MUL`, and the multiplied part stops at it: a go
+ * that would carry a skill past it ends there, or at the go's own gain if that is more (`earlyGain`). A body's own
+ * skills only; a wildermon's and a class level's are `skillGain` alone. The island's `early_skill_below` and
+ * `early_skill_mul`.
+ */
+export const EARLY_SKILL_BELOW = 10;
+export const EARLY_SKILL_MUL = 2;
+
+/** A gain of `gain` made at `v`: ×`EARLY_SKILL_MUL` below `EARLY_SKILL_BELOW`, no further than it with the multiplier. The island's `early_gain`. */
+export const earlyGain = (v: number, gain: number): number =>
+  Math.max(gain, Math.min(EARLY_SKILL_MUL * gain, EARLY_SKILL_BELOW - v));
+
+/** One gain of a body's own skill: the curve (`skillGain`), then `earlyGain`. */
+export const playerGain = (v: number, base: number, roll: number): number => earlyGain(v, skillGain(v, base, roll));
+
 export class Skills {
   values = new Map<string, number>();
 
@@ -232,7 +248,7 @@ export class Skills {
    */
   gain(id: string, base: number, rand: () => number = Math.random): number {
     const v = this.standing(id);
-    const gain = skillGain(v, base, 0.6 + 0.8 * rand());
+    const gain = playerGain(v, base, 0.6 + 0.8 * rand());
     const next = v + gain;
     this.values.set(id, next);
     return next - v;

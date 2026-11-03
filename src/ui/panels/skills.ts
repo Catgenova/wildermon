@@ -2,7 +2,7 @@ import { awareTraitEase, boatHands, CARRY_PER_STRENGTH, CHAR_START, controlPaceA
 import { staminaBarAbove } from '../../game/body';
 import { CONTROL_HIT } from '../../game/gear';
 import { listed, percent } from '../../game/words';
-import { SKILL_BY_ID, SKILL_DEFS } from '../../game/skills';
+import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, SKILL_BY_ID, SKILL_DEFS } from '../../game/skills';
 import { effectTracks, hardestOre, hasEffects, type EffectTrack } from '../../game/skilleffects';
 import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
@@ -265,10 +265,15 @@ export class SkillsPanel {
     }
   }
 
-  /** The note beside a skill, short, and the sentence it stands for: its knacks, what it is worth right now, and for a characteristic what raises it. */
+  /** The note beside a skill, short, and the sentence it stands for: its knacks, its gain below `EARLY_SKILL_BELOW`, what it is worth right now, and for a characteristic what raises it. */
   private note(id: string): [string, string] {
     const g = this.game;
-    const [short, worth] = this.plain(id) ?? ['', ''];
+    const [said, says] = this.plain(id) ?? ['', ''];
+    // Under the mark, every gain multiplied (`earlyGain`).
+    const early = g.skills.standing(id) < EARLY_SKILL_BELOW;
+    const short = [early ? `Gain ×${EARLY_SKILL_MUL} below ${EARLY_SKILL_BELOW}` : '', said].filter(Boolean).join(' · ');
+    const worth = [early ? `Skill gain per action ×${EARLY_SKILL_MUL} below ${EARLY_SKILL_BELOW} (multiplied part up to ${EARLY_SKILL_BELOW}).` : '', says]
+      .filter(Boolean).join(' ');
     // What raises a characteristic, which no trade's name says for it (`RAISED_BY`).
     const raised = raisedBySays(id);
     const long = [worth, raised ? `Raised by: ${raised}.` : ''].filter(Boolean).join(' ');

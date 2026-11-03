@@ -5259,6 +5259,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/pasttop.mjs --log-level=error
           node node_modules/.cache/pasttop.mjs
 
+      - name: Skill gain ×2 below 10, the multiplied part up to 10
+        if: matrix.shard == 6
+        run: |
+          # EARLY_SKILL_BELOW and EARLY_SKILL_MUL: a go below the mark is
+          # doubled, one carried past it doubled ends at it, one at or above
+          # it is the curve alone; the island and the browser give the same
+          # gain at each, and the watch counts goes at that rate.
+          npx esbuild supabase/test/earlyskill.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/earlyskill.mjs --log-level=error
+          node node_modules/.cache/earlyskill.mjs
+
       - name: The island's watch keeps its ledger and raises its flags
         if: matrix.shard == 6
         run: |

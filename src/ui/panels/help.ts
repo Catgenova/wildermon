@@ -142,7 +142,7 @@ import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { TREE_DEPTH } from '../recipetree';
-import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
+import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, MIN_GAIN, playerGain, SKILL_BY_ID } from '../../game/skills';
 import { SMELTER_H, SMELTER_W } from '../../game/smelter';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
 import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
@@ -334,7 +334,7 @@ const SOUL_PCT = `+${+(SOUL_PER_LEVEL * 100).toFixed(4)}%`;
 /** And as a label: "+0.125% per soul strength level over 20". */
 const SOUL_RATE = `${SOUL_PCT} per soul strength level over ${CHAR_START}`;
 /** What one prayer trains a skill by at `v`, for a gain of `base`, on the roll's mean: "+1.4". */
-const prayerTrains = (v: number, base: number): string => `+${skillGain(v, base, 1).toFixed(1)}`;
+const prayerTrains = (v: number, base: number): string => `+${playerGain(v, base, 1).toFixed(1)}`;
 /** Every count of motes a swirl can give, fewest first (`motesFor`). */
 const MOTE_COUNTS = Array.from({ length: MOTES_MOST - MOTES_LEAST + 1 }, (_, i) => MOTES_LEAST + i);
 /** Where the help reads a prayer off: the skill levels, and the altar's quality at either end and in the middle. */
@@ -766,7 +766,7 @@ const SEAMS = ROCK_VARIANTS.filter((r) => r.level).sort((a, b) => (a.level ?? 0)
 const seamName = (name: string): string => name.replace(/ (vein|seam)$/, '').toLowerCase();
 /** What an ordinary go teaches at a level, and the levels worth showing it at. */
 const GAIN_AT = [1, 50, 90, 99];
-const gainAt = (level: number): number => skillGain(level, ORDINARY_GAIN, 1);
+const gainAt = (level: number): number => playerGain(level, ORDINARY_GAIN, 1);
 const gainSaid = (level: number): string => String(Number(gainAt(level).toPrecision(gainAt(level) >= 0.1 ? 2 : 1)));
 
 /** What a wildermon crate is built of, read off its bill: "8 × plank, 4 × nails and 2 × metal ribbon". */
@@ -2249,7 +2249,7 @@ export function helpText(): string {
       Quality (QL) = your elementalism.</li>
       <li>Then gone for everybody: the first to finish gets it; others are told it is gone.</li>
       <li><b>Water mote</b> spent on: ${WATER_MOTE_USES.map(([what, n]) => `${what} ${n}`).join(', ')}.</li>
-      <li>Trains <b>elementalism</b> (only source): about ${listed([1, 20, 50].map((v) => `+${skillGain(v, 1, 1).toFixed(2)} at ${v}`))}.</li>
+      <li>Trains <b>elementalism</b> (only source): about ${listed([1, 20, 50].map((v) => `+${playerGain(v, 1, 1).toFixed(2)} at ${v}`))}.</li>
     </ul>
     <h3>Runestones and the Telestone</h3>
     <ul>
@@ -3518,6 +3518,7 @@ export function helpText(): string {
       <li>Skill gain per ordinary action: about ${listed(GAIN_AT.map((v, i) => `<b>${gainSaid(v)}</b> at ${i === 0 ? 'level ' : ''}${v}`))}:
       ${Math.round(1 / gainAt(GAIN_AT[0]))} actions for the first point, ${Math.round(1 / gainAt(GAIN_AT[2]))} for the point after ${GAIN_AT[2]}, about <b>${Math.round(1 / (MIN_GAIN * GAIN_RATE))}</b>
       for the last. The log shows gains to the fourth decimal.</li>
+      <li>Below <b>${EARLY_SKILL_BELOW}</b>: skill gain <b>×${EARLY_SKILL_MUL}</b>, multiplied part up to ${EARLY_SKILL_BELOW} (counted above). Skills window: "Gain ×${EARLY_SKILL_MUL} below ${EARLY_SKILL_BELOW}" on each skill under it.</li>
       <li>Higher skill: faster, more successful actions; steeper slopes shapeable.</li>
     </ul>
     <h3>Garden steps, rose arches and flags</h3>
