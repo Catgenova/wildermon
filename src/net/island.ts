@@ -1485,9 +1485,9 @@ export class Island {
   private slower(): number {
     return typeof document !== 'undefined' && document.visibilityState === 'hidden' ? AWAY_SLOWER : 1;
   }
-  /** The island's shared topic we are holding a share of, if any. */
-  private bodiesTopic = '';
-  /** Bodies go on a topic everybody on the island agrees on. */
+  /** The nearby topics we hold a share of (`holdBodies`), by name: the blocks round us. */
+  private nearby = new Map<string, RealtimeChannel>();
+  /** Bodies go out on the topic of the block we stand in, one of `nearby`. */
   private bodies: RealtimeChannel | null = null;
   /** Numbers the row topics, so no two subscriptions are ever the same name. */
   private static topics = 0;
@@ -2395,7 +2395,7 @@ export class Island {
     const rt = supabase().realtime as unknown as { isConnected?: () => boolean };
     if (rt.isConnected && !rt.isConnected()) return true;
     const channels = this.hears ? [...this.heard.values()] : this.channel ? [this.channel] : [];
-    if (this.bodies) channels.push(this.bodies);
+    for (const ch of this.bodyChannels()) channels.push(ch);
     if (!channels.length) return this.channelState !== 'listening';
     return channels.some((ch) => ch.state !== 'joined');
   }
@@ -2412,7 +2412,7 @@ export class Island {
     const rt = supabase().realtime as unknown as { isConnected?: () => boolean };
     if (rt.isConnected && !rt.isConnected()) return true;
     const channels = this.hears ? [...this.heard.values()] : this.channel ? [this.channel] : [];
-    if (this.bodies) channels.push(this.bodies);
+    for (const ch of this.bodyChannels()) channels.push(ch);
     return channels.some((ch) => ch.state === 'errored');
   }
 
@@ -2442,8 +2442,8 @@ export class Island {
     if (cut) {
       await this.freshToken();
       await this.wake();
-      // The bodies' topic is held once for the whole stay (`holdBodies`), so a closed one is joined again here.
-      if (this.bodies?.state === 'closed') this.bodies.subscribe();
+      // The bodies' topics are held across a block change (`holdBodies`), so a closed one is joined again here.
+      for (const ch of this.bodyChannels()) if (ch.state === 'closed') ch.subscribe();
       void this.watch(id).catch((e: unknown) => {
         this.hooks.say(`The island is not telling this machine what it does (${String(e)}).`, 'error');
       });
@@ -2634,7 +2634,7 @@ export class Island {
     // whatever the island has been asked to do since.
     const armed = this.channel;
 
-    this.holdBodies(worldId);
+    this.holdBodies(worldId, here.x, here.y);
     await this.freshToken();
 
     /*
@@ -2678,24 +2678,44 @@ export class Island {
     await this.refreshPack();
   }
 
+  /** The channels bodies go out and come in on, each once. */
+  private bodyChannels(): RealtimeChannel[] {
+    const out = [...this.nearby.values()];
+    if (this.bodies && !out.includes(this.bodies)) out.push(this.bodies);
+    return out;
+  }
+
   /*
-   * Bodies, on the one name everybody on the island agrees on.
+   * Bodies, on the topics of the nine blocks round us (`blocksAround`).
    *
-   * This is the opposite case to the rows above and for the same reason:
-   * Broadcast only reaches people listening to the same topic, so it *has*
-   * to be shared, and the block we are standing in has nothing to do with
-   * it. Taken once at the join and held until we leave.
+   * Sent on the block we stand in and heard on the nine round us, so a body
+   * reaches whoever is within a block of it (`REGION` tiles at the least)
+   * and nobody else. On one topic for the whole island every body went to
+   * every browser on it, which is the square of the people on it in
+   * messages a second; this is the people near you. Public topics, as the
+   * island one was: a drawing message, and nobody's client can make
+   * anybody's position true. Walking into a new block leaves the three
+   * behind and joins the three ahead, with the land's own (`listen`).
    */
-  private holdBodies(worldId: string): void {
+  private holdBodies(worldId: string, x: number, y: number): void {
     const sb = supabase();
-    if (!this.bodies) {
-      this.bodiesTopic = `island:${worldId}`;
-      this.bodies = hold(this.bodiesTopic, () =>
-        sb.channel(this.bodiesTopic, { config: { broadcast: { self: false } } }));
-      this.bodies.on('broadcast', { event: 'body' }, (m) => {
-        // A channel shared with another `Island` in the same page goes on
-        // carrying bodies after we have left it; they are not ours any more.
-        if (!this.bodies) return;
+    const topicOf = (b: number): string => `near:${worldId}:${b}`;
+    const wanted = new Set(this.blocksAround(x, y).map(topicOf));
+    const ownTopic = topicOf(Math.floor(y / REGION) * 1024 + Math.floor(x / REGION));
+    for (const [topic] of [...this.nearby]) {
+      if (wanted.has(topic)) continue;
+      this.nearby.delete(topic);
+      void drop(topic);
+    }
+    for (const topic of wanted) {
+      if (this.nearby.has(topic)) continue;
+      const ch = hold(topic, () => sb.channel(topic, { config: { broadcast: { self: false } } }));
+      this.nearby.set(topic, ch);
+      // A channel shared with another `Island` in the same page goes on
+      // carrying bodies after we have let it go; they are not ours any more.
+      const ours = (): boolean => this.nearby.get(topic) === ch;
+      ch.on('broadcast', { event: 'body' }, (m) => {
+        if (!ours()) return;
         const b = (m as { payload?: PlayerRow }).payload;
         if (!b?.uid || b.uid === this.uid) return;
         this.heardAt.set(b.uid, performance.now() / 1000);
@@ -2711,8 +2731,8 @@ export class Island {
        * is no rule anywhere that reads whether somebody waved, so there is
        * nothing for it to keep.
        */
-      this.bodies.on('broadcast', { event: 'emote' }, (m) => {
-        if (!this.bodies) return;
+      ch.on('broadcast', { event: 'emote' }, (m) => {
+        if (!ours()) return;
         const e = (m as { payload?: { uid?: string; name?: string; emote?: string } }).payload;
         if (!e?.uid || !e.emote || e.uid === this.uid) return;
         this.hooks.emote?.(e.uid, e.name ?? '', e.emote);
@@ -2722,23 +2742,24 @@ export class Island {
        * browser, sent once the island has taken the cast (`castSeen`). The
        * island already knows; this is only so everybody watching sees it.
        */
-      this.bodies.on('broadcast', { event: 'cast' }, (m) => {
-        if (!this.bodies) return;
+      ch.on('broadcast', { event: 'cast' }, (m) => {
+        if (!ours()) return;
         const e = (m as { payload?: { uid?: unknown; spell?: unknown; at?: unknown; pet?: unknown; from?: unknown } }).payload;
         if (!e || typeof e.uid !== 'string' || typeof e.spell !== 'string' || e.uid === this.uid || e.spell.length > 64) return;
         const at = castWireIn(e.at);
         if (at) this.hooks.castSeen?.(e.uid, e.spell, at, castMoreIn(e));
       });
       // And something of a spell of theirs that fired after its cast, as the island told them (`castFired`).
-      this.bodies.on('broadcast', { event: 'castfx' }, (m) => {
-        if (!this.bodies) return;
+      ch.on('broadcast', { event: 'castfx' }, (m) => {
+        if (!ours()) return;
         const e = (m as { payload?: { uid?: unknown } }).payload;
         const f = firedIn(e);
         if (!e || !f || typeof e.uid !== 'string' || e.uid === this.uid) return;
         this.hooks.castFired?.(e.uid, f);
       });
-      this.bodies.subscribe();
+      if (ch.state === 'closed') ch.subscribe();
     }
+    this.bodies = this.nearby.get(ownTopic) ?? null;
   }
 
   private async freshToken(): Promise<void> {
@@ -2810,7 +2831,7 @@ export class Island {
     for (const [topic, bind] of wanted) {
       if (!this.heard.has(topic)) this.heard.set(topic, bind(sb.channel(topic, { config: { private: true } })));
     }
-    this.holdBodies(worldId);
+    this.holdBodies(worldId, here.x, here.y);
     await this.freshToken();
     // A leave, or a walk into the next block, during the awaits: that go has
     // the channels now, and joins whatever this one did not get to.
@@ -3944,7 +3965,7 @@ export class Island {
     return data as { here: boolean; say: string };
   }
 
-  /** Say you cast a spell the island took, to whoever is listening on this island, for them to draw. */
+  /** Say you cast a spell the island took, to whoever is within a block of you (`holdBodies`), for them to draw. */
   castSeen(spell: string, at: CastWire, more: CastMore = {}): void {
     if (!this.bodies || !this.uid) return;
     void this.bodies.send({ type: 'broadcast', event: 'cast', payload: { uid: this.uid, spell, at, ...more } });
@@ -3956,7 +3977,7 @@ export class Island {
     void this.bodies.send({ type: 'broadcast', event: 'castfx', payload: { uid: this.uid, ...f } });
   }
 
-  /** Say you waved, to whoever is listening on this island. */
+  /** Say you waved, to whoever is within a block of you (`holdBodies`). */
   emote(id: string): void {
     if (!this.bodies || !this.uid) return;
     void this.bodies.send({
@@ -4949,7 +4970,8 @@ export class Island {
     this.heard.clear();
     await Promise.all(heard.map((ch) => sb.removeChannel(ch)));
     this.bodies = null;
-    await drop(this.bodiesTopic);
-    this.bodiesTopic = '';
+    const near = [...this.nearby.keys()];
+    this.nearby.clear();
+    await Promise.all(near.map((topic) => drop(topic)));
   }
 }

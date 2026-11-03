@@ -2325,6 +2325,19 @@ jobs:
             --outfile=node_modules/.cache/mirror.mjs --log-level=error
           node node_modules/.cache/mirror.mjs
 
+      - name: Bodies go to the blocks round you, not to the whole island
+        if: matrix.shard == 2
+        run: |
+          # A body, a wave and a cast go out on the topic of the block their
+          # sender stands in and are heard on the nine round you, so the
+          # messages a second are the people near you and not the square of
+          # everybody on the island. Nine held mid-island, four in a corner;
+          # the next block heard, two off not held; a walk keeps six, leaves
+          # three, joins three; a topic let go of is not heard.
+          npx esbuild supabase/test/nearby.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/nearby.mjs --log-level=error
+          node node_modules/.cache/nearby.mjs
+
       - name: A kept thing stays kept
         if: matrix.shard == 2
         run: |
