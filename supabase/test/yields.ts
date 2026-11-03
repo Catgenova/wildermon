@@ -25,7 +25,8 @@ import { EMPTY_CHANCE, FIND_CHECK } from '../../src/game/forage';
 import { FISH, fishable, staysOn, waterDepth } from '../../src/game/fishing';
 import { cropYield, describeCrop, RIPE, seedSays } from '../../src/game/farming';
 import { fruitsAt } from '../../src/game/fruiting';
-import { seasonAt } from '../../src/world/calendar';
+import { seasonAt, seasonBegan } from '../../src/world/calendar';
+import { SEASON_SECONDS } from '../../src/game/growth';
 import { itemDef } from '../../src/game/items';
 import { findChance, qlCap, searchPasses, seasonWindow } from '../../src/game/yields';
 import { readyIn, waitWords } from '../../src/game/words';
@@ -258,6 +259,11 @@ const uses = tileUses(game, tx, ty);
 check('a field says what a harvest gives, untended and tended',
   uses.includes(`Harvest: ${cropYield(0).produce} untended, ${cropYield(RIPE).produce} tended every stage; ${seedSays()}`) && !uses.some((l) => l.includes('only the seed')),
   uses.join(' | '));
+// Sown at the first hour of a spring, whatever the season is today: in winter a field only waits for spring, and the
+// whole way to ripe is a spring's.
+let spring = seasonBegan(game.wallNow());
+while (seasonAt(spring).season !== 'spring') spring = seasonBegan(spring + SEASON_SECONDS);
+game.wallClock = () => spring + 3600;
 const crop = game.plantCrop(tx, ty, 'onion', 18);
 const line = (): string => describeCrop(crop, game.cropPer(crop), game.growNow(crop), game.wallNow(), 0, game.qlCeiling('farming'));
 const sown = line();
@@ -269,6 +275,7 @@ check('a crop says the whole way to ripe while more than a stage is left, and it
   // The stage before ripe says "ripe in" once, as its next stage; earlier ones say it twice, the second for the whole way.
   (sown.match(/ripe in /g) ?? []).length === 1 && sown.includes(' · sprouting in ') && (last.match(/ripe in /g) ?? []).length === 1 && ripe.includes('ready to harvest')
   && ripe.endsWith(` · harvest QL up to ${Math.ceil((18 + game.qlCeiling('farming')) / 2 - 1e-9)}`), `${sown} | ${last} | ${ripe}`);
+game.wallClock = null;
 
 for (const l of [...ok, ...bad]) console.log(l);
 if (bad.length) {
