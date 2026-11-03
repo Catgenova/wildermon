@@ -1924,6 +1924,22 @@ jobs:
             --outfile=node_modules/.cache/citizen.mjs --log-level=error
           node node_modules/.cache/citizen.mjs
 
+      - name: A settlement previewed before founding, and the Runestones' rings on the map
+        if: matrix.shard == 2
+        run: |
+          # "Before the stake is spent, the player can see where the settlement
+          # would be and whether it would be refused." On Bigness, with somebody
+          # else's settlement put down for it: a token one short of the spacing
+          # from it, one fifty tiles from the Crownstone and one that is
+          # neither. The browser's preview, handed the island's own
+          # rpc_settlements answer, says what act_refusal says for each, word
+          # for word, as founding there does. And the map lists every stone
+          # runestone_centres has, by name at its centre, its ring
+          # deed_stone_gap() out from its edge.
+          npx esbuild supabase/test/foundpreview.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/foundpreview.mjs --log-level=error
+          node node_modules/.cache/foundpreview.mjs
+
       - name: Mayors invite, and ranks are set
         if: matrix.shard == 2
         run: |
