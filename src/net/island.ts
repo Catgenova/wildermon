@@ -24,7 +24,7 @@ import type { StoreLogEntry } from '../game/stores';
 import type { DeedWatch } from '../game/visitors';
 import type { Mark } from '../game/items';
 import type { PathBeat, PathSaid } from '../game/meditation';
-import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
+import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, NEAR_WHOLE_EVERY, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
 import type { GuideBook } from '../game/guide';
 import { packFog, unpackFog } from './fogpack';
 import { chartedSquare } from '../game/cartography';
@@ -1429,6 +1429,8 @@ export class Island {
    * what stops a wall you just put up waiting twenty seconds to exist.
    */
   private groundSlow = true;
+  /** When the ground's slow half was last owed by the clock (`reconcile`), on the page's clock. */
+  private groundWholeAt = -Infinity;
   /**
    * Whether the island's book of skills has landed in this browser yet.
    *
@@ -3023,9 +3025,12 @@ export class Island {
   private async reconcile(now: number): Promise<void> {
     if (!this.info || now - this.lastReconcile < RECONCILE_EVERY) return;
     this.lastReconcile = now;
-    // And the ground's slow half with it, so a wall somebody else built is
-    // twenty seconds late at worst rather than never.
-    this.groundSlow = true;
+    // And the ground's slow half every `NEAR_WHOLE_EVERY`, so a wall somebody
+    // else built is that late at worst rather than never.
+    if (now - this.groundWholeAt >= NEAR_WHOLE_EVERY) {
+      this.groundWholeAt = now;
+      this.groundSlow = true;
+    }
     await this.refreshPeople();
     await this.refreshPack();
     await this.catchUpQuietly();
@@ -3081,11 +3086,11 @@ export class Island {
     this.lastMobs = now;
     /*
      * Only what changed since the last answer, which is most of the island's work saved: five to ten in a hundred
-     * of the rows in view are written from one second to the next. The whole answer every `RECONCILE_EVERY`
+     * of the rows in view are written from one second to the next. The whole answer every `NEAR_WHOLE_EVERY`
      * seconds and after anything we do, for what moves with the clock or our own hands without a row being
      * written (an age, a shoe worn out, a settlement's trade counts).
      */
-    const whole = this.mobsWhole || this.mobs.at === null || now - this.mobsWholeAt >= RECONCILE_EVERY;
+    const whole = this.mobsWhole || this.mobs.at === null || now - this.mobsWholeAt >= NEAR_WHOLE_EVERY;
     if (whole) {
       this.mobsWhole = false;
       this.mobsWholeAt = now;
@@ -3182,7 +3187,7 @@ export class Island {
     this.groundSlow = false;
     /*
      * Only what changed since the last answer laid (`groundsync.ts`), and the whole answer with every slow half: every
-     * `RECONCILE_EVERY` seconds and after anything we do.
+     * `NEAR_WHOLE_EVERY` seconds and after anything we do.
      */
     const whole = slow || this.ground.at === null;
     return {

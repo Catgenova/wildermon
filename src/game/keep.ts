@@ -203,6 +203,19 @@ export const BODY_FRESH = 3;
  */
 export const RECONCILE_EVERY = 20;
 
+/**
+ * How often the creatures and the ground near you are asked for whole, rather
+ * than only what changed since the last answer (\`rpc_near\`), and after
+ * anything you do.
+ *
+ * The whole answer is what puts right what moves with the clock without a row
+ * being written (an age, a shoe worn out, a settlement's trade counts) and the
+ * ground's slow half (somebody else's wall), so those are this late at most.
+ * It costs about five changes-only answers (\`tools/loadtest.ts\`); asked every
+ * \`RECONCILE_EVERY\` it was a fifth of every browser's reads.
+ */
+export const NEAR_WHOLE_EVERY = 60;
+
 /* ---- Reading the land rather than replaying how it got that way --------- */
 
 /**

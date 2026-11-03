@@ -25,7 +25,7 @@
  * transactions after it are new to it. Makes its own island, and takes it away again.
  */
 import { execFileSync } from 'node:child_process';
-import { RECONCILE_EVERY } from '../../src/game/keep';
+import { AWAY_SLOWER, GROUND_IDLE } from '../../src/game/keep';
 import { GroundHeld, GROUND_LISTS, type GroundAnswer } from '../../src/net/groundsync';
 
 const psql = (sql: string): string =>
@@ -410,8 +410,10 @@ check('and one read over another range', fullFor(`, false, '${at.replace(/^(g1:[
 check('and a good one is not', fullFor(`, false, '${at}'`) === false);
 
 const most = Number(psql('select private.since_most()'));
-check(`the browser asks for the whole answer every ${RECONCILE_EVERY} s, well within the ${most} s a cursor is good for`,
-  RECONCILE_EVERY * 2 <= most, `${RECONCILE_EVERY} / ${most}`);
+// Every answer hands back a cursor of its own, so what a cursor must outlast is the longest wait between two asks: a tab in the background.
+const longest = GROUND_IDLE * AWAY_SLOWER;
+check(`the longest wait between two asks, ${longest} s in a background tab, is within the ${most} s a cursor is good for`,
+  longest <= most, `${longest} / ${most}`);
 
 psql(`delete from world where name = '${ISLE}';`);
 

@@ -10,7 +10,7 @@
  * pooler, as PostgREST's are, and asks what a browser asks, as often as a
  * browser asks it (`src/net/island.ts`, `src/game/keep.ts`):
  *
- *   every second     the creatures and ground near (`rpc_near`), the whole answer every 20 s and what changed since in between
+ *   every second     the creatures and ground near (`rpc_near`), the whole answer every `NEAR_WHOLE_EVERY` and what changed since in between
  *   every second     a step (`rpc_move`), half of them, the walkers
  *   every 4 s        the springs (`rpc_springs`)
  *   every 5 s        what was foraged near (`foraged`)
@@ -48,6 +48,7 @@
 import { spawn, execFileSync, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { writeFileSync } from 'node:fs';
+import { NEAR_WHOLE_EVERY } from '../src/game/keep';
 
 const DB_URL = process.env.DB_URL ?? '';
 const ADMIN_URL = process.env.ADMIN_URL || DB_URL;
@@ -200,7 +201,7 @@ async function live(b: Body, until: () => boolean): Promise<void> {
     const second = performance.now();
     const t = second / 1000 - t0;
     const now = second / 1000;
-    const whole = now - wholeAt >= 20 || !b.cs;
+    const whole = now - wholeAt >= NEAR_WHOLE_EVERY || !b.cs;
     const r = await b.ask(b.near(whole));
     note(whole ? 'near_whole' : 'near', r);
     if (!r.failed && r.lines[0]) {
@@ -309,6 +310,33 @@ function dbTime(): { ms: number; calls: number } {
   }
 }
 
+/** Every statement the database has counted, by its id: the time spent on it, how often, and the start of its text. */
+type Statements = Map<string, { ms: number; calls: number; text: string }>;
+const US = String.fromCharCode(31);
+function statements(): Statements {
+  const out: Statements = new Map();
+  try {
+    for (const row of admin(`select queryid || chr(31) || total_exec_time || chr(31) || calls || chr(31) ||
+        left(regexp_replace(query, '\\s+', ' ', 'g'), 110) from extensions.pg_stat_statements where calls > 0`)) {
+      const [id, ms, calls, text] = row.split(US);
+      const had = out.get(id);
+      // The same statement under several users or databases: one line.
+      if (had) { had.ms += Number(ms); had.calls += Number(calls); } else out.set(id, { ms: Number(ms), calls: Number(calls), text: text ?? '' });
+    }
+  } catch { /* none to read */ }
+  return out;
+}
+
+/** Where a step's database time went: the statements that took most of it, with their share, calls a second and time a call. */
+function wentOn(a: Statements, b: Statements, secs: number, top = 12): string[] {
+  const d = [...b].map(([id, x]) => {
+    const was = a.get(id);
+    return { text: x.text, ms: x.ms - (was?.ms ?? 0), calls: x.calls - (was?.calls ?? 0) };
+  }).filter((x) => x.ms > 0).sort((p, q) => q.ms - p.ms);
+  const all = d.reduce((n, x) => n + x.ms, 0);
+  return d.slice(0, top).map((x) => `${((x.ms / all) * 100).toFixed(1)}% · ${(x.calls / secs).toFixed(1)}/s · ${(x.ms / Math.max(1, x.calls)).toFixed(1)} ms each · \`${x.text.replace(/`/g, "'")}\``);
+}
+
 /** How long the island's clock took each go during a step, by pg_cron's own log. */
 function clockTook(from: Date): string {
   try {
@@ -357,6 +385,9 @@ async function main(): Promise<void> {
   if (!spots.length) throw new Error('no country on this island far enough from everybody');
   const report: string[] = ['| People | Asks/s | p50 ms | p95 ms | Failed | DB time/s | DB cores busy | CPU busy | Clock |', '|---|---|---|---|---|---|---|---|---|'];
   const detail: string[] = [];
+  const went: string[] = [];
+  let track = '?';
+  try { track = admin(`select current_setting('pg_stat_statements.track', true)`)[0] || '?'; } catch { /* not there */ }
   let bodies: Body[] = [];
   let stop = false;
   const end = (): void => { stop = true; };
@@ -376,6 +407,7 @@ async function main(): Promise<void> {
       await sleep(5000);
       const from = new Date();
       const db0 = dbTime();
+      const st0 = statements();
       const cpu0 = await cpuBusy();
       const t0 = performance.now();
       const until = (): boolean => stop || performance.now() - t0 >= STEP_SECS * 1000;
@@ -386,6 +418,7 @@ async function main(): Promise<void> {
       clearInterval(keepAwake);
       const secs = (performance.now() - t0) / 1000;
       const db1 = dbTime();
+      const st1 = statements();
       const cpu1 = await cpuBusy();
       const all = [...took.values()].flat();
       const p95 = pct(all, 0.95);
@@ -395,6 +428,7 @@ async function main(): Promise<void> {
       report.push(`| ${n} | ${(asked / secs).toFixed(0)} | ${pct(all, 0.5).toFixed(0)} | ${p95.toFixed(0)} | ${(share * 100).toFixed(1)}% | ${dbPerSec.toFixed(0)} ms | ${(dbPerSec / 1000 / CORES * 100).toFixed(0)}% | ${Number.isNaN(cpu) ? '—' : `${(cpu * 100).toFixed(0)}%`} | ${clockTook(from)} |`);
       detail.push(`${n} people: ${[...took].map(([k, xs]) => `${k} p50 ${pct(xs, 0.5).toFixed(0)} / p95 ${pct(xs, 0.95).toFixed(0)} ms (${xs.length})`).join('; ')}`);
       if (failures.length) detail.push(`  failed, the first of them: ${failures.join(' | ')}`);
+      went.push(`#### ${n} people`, '', ...wentOn(st0, st1, secs).map((l) => `- ${l}`), '');
       console.log(report[report.length - 1]);
       console.log(detail[detail.length - 1]);
       const why = p95 > MAX_P95_MS ? `p95 ${p95.toFixed(0)} ms is past ${MAX_P95_MS}`
@@ -413,7 +447,8 @@ async function main(): Promise<void> {
     console.log(left);
     detail.push(left);
   }
-  const out = [`### Load on ${isle.name}`, '', ...report, '', ...detail.map((d) => `- ${d}`)].join('\n');
+  const out = [`### Load on ${isle.name}`, '', ...report, '', ...detail.map((d) => `- ${d}`), '',
+    `### Where the database's time went (pg_stat_statements, track = ${track}${track === 'all' ? ': a function and what it runs are both counted' : ''})`, '', ...went].join('\n');
   if (process.env.GITHUB_STEP_SUMMARY) writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${out}\n`, { flag: 'a' });
   console.log(`\n${out}`);
 }
