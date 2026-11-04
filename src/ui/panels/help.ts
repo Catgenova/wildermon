@@ -3095,7 +3095,7 @@ export function helpText(): string {
       at ${DAMAGE_MAX} it breaks. Restored, it mends like anything else, but for ${unmendableSaid()}.</li>
       <li>${RELICS.length} relics, from ${article(RELICS[0].name)} <b>${RELICS[0].name}</b> in ${RELICS[0].parts} pieces to ${article(LAST_RELIC.name)} <b>${LAST_RELIC.name}</b> in ${LAST_RELIC.parts};
       each recognised only at enough archaeology. Common ones turn up far more often; pieces you lack are favoured.</li>
-      <li><b>Restore</b> (all pieces in hand, right-click one): <b>Restoration</b>, at any damage short of breaking. Failure: ${RESTORE_HARM} to ${RESTORE_HARM + RESTORE_HARM_SPREAD} more damage on
+      <li><b>Investigate</b>: with a trowel. <b>Restore</b> (all pieces in hand, right-click one): with a brush; <b>Restoration</b>, at any damage short of breaking. Failure: ${RESTORE_HARM} to ${RESTORE_HARM + RESTORE_HARM_SPREAD} more damage on
       every piece. Result quality (QL): the pieces' worth, less ${percent(1 / RESTORE_AGE)} per point of their damage.</li>
       <li>A statuette is treasure only; ${listed([...UNMENDABLE].map((id) => { const r = RELICS.find((x) => x.result === id)?.name ?? ''; return `${article(r)} <b>${r}</b> is ${article(lowName(id))} ${lowName(id)}`; }))} (below).</li>
     </ul>

@@ -229,7 +229,8 @@ begin
     order by e.n desc limit 1;
   delete from item where world_id = w and holder = 'player' and holder_uid = u and def in ('fragment', 'tarnished_bauble', 'bauble_regret');
 
-  /* Restoring one. */
+  /* Restoring one, with the brush restoring takes. */
+  perform give(w, u, 'brush', 1, 60);
   b := give(w, u, 'tarnished_bauble', 1, 60, 'major');
   update item set dmg = 90 where id = b;
   insert into said values ('FARGONE', coalesce(act_refusal(w, u, 'restore_relic', jsonb_build_object('kind', 'item', 'uid', b)), 'null'));
@@ -514,6 +515,7 @@ check('each with its tier on it and the damage of the ground',
   pack.filter((i) => i.id === TARNISHED).every((i) => BAUBLE_TIER_BY_ID.has(i.extra as BaubleTier) && i.dmg >= 18 && i.dmg <= 68));
 for (const i of pack) if (i.id === TARNISHED || i.id === 'fragment' || i.id === REGRET) game.inventory.remove(i.uid, i.count);
 const restoreDef = ACTION_BY_ID.get('restore_relic')!;
+game.inventory.add('brush', { ql: 60 });
 const tarn = game.inventory.add(TARNISHED, { ql: 60, extra: 'major' });
 tarn.dmg = 90;
 check('and so does the browser', (restoreDef.check?.({ kind: 'item', uid: tarn.uid }, game) ?? null) === null);

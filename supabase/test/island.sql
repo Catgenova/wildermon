@@ -3333,6 +3333,8 @@ declare w uuid := (select id from world where name <> 'Rockhaven' order by made_
 begin
   select * into r from relic_def order by difficulty limit 1;
   delete from item where world_id = w and holder_uid = me and def = 'fragment';
+  -- And the brush restoring takes.
+  perform give(w, me, 'brush', 1, 55);
   for n in 1..r.parts loop
     made := give(w, me, 'fragment', 1, 55, r.name || ' ' || n || '/' || r.parts);
     update item set dmg = 30 where id = made;

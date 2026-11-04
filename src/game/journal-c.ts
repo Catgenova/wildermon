@@ -79,7 +79,7 @@ export const ISLAND_GOALS: Goal[] = [
   {
     id: 'allrelics', text: `Restore all ${RELICS.length} relics`,
     hint: listed(RELICS.map((r) => r.name)),
-    how: 'Each relic once: dig its fragments with "Investigate", and with every piece in your pack right-click one and choose "Restore". Deeper relics turn up only at higher archaeology. A failed go damages the pieces and does not count.',
+    how: 'Each relic once: dig its fragments with "Investigate", and with every piece in your pack right-click one and choose "Restore", with a brush in your pack. Deeper relics turn up only at higher archaeology. A failed go damages the pieces and does not count.',
     met: all(RELICS.map((r) => `restored:${r.result}`)),
   },
   {

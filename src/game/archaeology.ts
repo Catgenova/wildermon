@@ -70,6 +70,10 @@ export const RELICS: RelicDef[] = [
   { name: 'ancient helm', parts: 5, result: ANCIENT_HELM, difficulty: 44 },
 ];
 
+/** What restoring a relic or a tarnished bauble is done with, and what is said without one. The island's `dig_refusal` says the same. */
+export const RESTORE_TOOL = 'brush';
+export const RESTORE_TOOL_NEED = 'Need a brush.';
+
 /** Ground worth turning over: soil, sand and trails, not bare rock or standing water. */
 export const DIGGABLE: ReadonlySet<number> = new Set<number>([
   TileType.Grass,
@@ -320,6 +324,8 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
     label: 'Restore',
     verb: 'restoring',
     skill: 'restoration',
+    // Brushed clean before the pieces go back together; a find is turned up with a trowel (`investigate`).
+    tool: RESTORE_TOOL,
     stamina: 0.07,
     baseTime: 20,
     applies: (t, g) => {
@@ -330,6 +336,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'item') return null;
       const item = g.inventory.get(t.uid);
+      if (!g.inventory.has(RESTORE_TOOL)) return RESTORE_TOOL_NEED;
       // At any damage short of breaking: nothing mends a find before it is
       // restored (`unrestored`), so it is restored as it is or not at all.
       if (item?.id === TARNISHED) return null;

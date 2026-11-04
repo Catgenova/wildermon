@@ -18,6 +18,7 @@
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
+import { RESTORE_TOOL, RESTORE_TOOL_NEED } from '../../src/game/archaeology';
 import { execFileSync } from 'node:child_process';
 import { DAMAGE_MAX, Game, type DeedStore } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
@@ -77,6 +78,8 @@ begin
   f2 := give(w, u, 'fragment', 1, ${QL}, 'old pot 2/2');
   b := give(w, u, 'tarnished_bauble', 1, ${QL}, 'minor');
   t := give(w, u, '${TOOL}', 1, ${QL});
+  -- The brush restoring takes.
+  perform give(w, u, 'brush', 1, ${QL});
   update item set dmg = ${DMG} where id in (f1, f2, b, t);
   perform give(w, u, 'repair_kit', 2, ${QL});
 
@@ -97,6 +100,12 @@ begin
   insert into said values
     ('RESTORE|f', coalesce(act_refusal(w, u, 'restore_relic', jsonb_build_object('kind', item_t, 'uid', f1)), 'ALLOWED')),
     ('RESTORE|b', coalesce(act_refusal(w, u, 'restore_relic', jsonb_build_object('kind', item_t, 'uid', b)), 'ALLOWED'));
+  -- And without the brush restoring takes.
+  update item set holder = 'ground', holder_uid = null where world_id = w and holder = 'player' and holder_uid = u and def = 'brush';
+  insert into said values
+    ('NOBRUSH|f', coalesce(act_refusal(w, u, 'restore_relic', jsonb_build_object('kind', item_t, 'uid', f1)), 'ALLOWED')),
+    ('NOBRUSH|b', coalesce(act_refusal(w, u, 'restore_relic', jsonb_build_object('kind', item_t, 'uid', b)), 'ALLOWED'));
+  update item set holder = 'player', holder_uid = u where world_id = w and holder = 'ground' and def = 'brush';
 
   /* A worker mending the stores: the finds are the worst in the crate, and passed by. */
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Home', 8, 8, 3, 1, u);
@@ -146,6 +155,7 @@ const f1 = add('fragment', 'old pot 1/2');
 const f2 = add('fragment', 'old pot 2/2');
 const b = add('tarnished_bauble', 'minor');
 const t = add(TOOL);
+add('brush');
 game.inventory.add('repair_kit', { ql: QL, count: 2 });
 game.skills.values.set('prayer', 90);
 game.skills.values.set('restoration', 100);
@@ -171,6 +181,14 @@ b.dmg = WORSE;
 check(`the browser restores them at ${WORSE} damage too`,
   (restore.check?.(on(f1), game) ?? null) === null && (restore.check?.(on(b), game) ?? null) === null,
   `${restore.check?.(on(f1), game)} / ${restore.check?.(on(b), game)}`);
+{
+  const brush = game.inventory.items.find((i) => i.id === RESTORE_TOOL)!;
+  game.inventory.remove(brush.uid, 1);
+  const nb = `${restore.check?.(on(f1), game)}|${restore.check?.(on(b), game)}`;
+  check(`no brush: Restore refused, "${RESTORE_TOOL_NEED}", both sides`, nb === `${RESTORE_TOOL_NEED}|${RESTORE_TOOL_NEED}`
+    && `${say('NOBRUSH|f')}|${say('NOBRUSH|b')}` === nb, `browser ${nb}, island ${say('NOBRUSH|f')}|${say('NOBRUSH|b')}`);
+  add(RESTORE_TOOL);
+}
 
 const store: DeedStore = { x: 8, y: 8, centre: [8.5, 8.5], items: [f1, b, t], name: 'Home', deed: true } as DeedStore;
 (game as unknown as { deedStores: () => DeedStore[] }).deedStores = () => [store];

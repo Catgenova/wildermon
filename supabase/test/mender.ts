@@ -246,6 +246,8 @@ begin
   ${skillAt('repair', SKILL)};
   v_it := ${thing('shovel', QL, DMG)};
   v_b := ${thing('tarnished_bauble', BAUBLE_QL, BAUBLE_DMG, "'minor'")};
+  -- The brush restoring takes.
+  perform give(w, u, 'brush', 1, ${QL});
   perform pg_temp.hold(w, u, '{}');
   v_t := pg_temp.secs(w, u, 'repair_item', ${itemT('v_it')}) || '|' || pg_temp.secs(w, u, 'restore_relic', ${itemT('v_b')});
   ${hold('Quick Hands', 'Quick Restore')};

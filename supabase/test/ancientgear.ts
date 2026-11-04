@@ -94,7 +94,8 @@ begin
   insert into said select 'WEAPON:' || x.id, x.kind || ':' || x.damage || ':' || x.swing || ':' || coalesce(x.two_handed, false) || ':' || weapon_reach(x.id)
     from weapon_def x where x.id in ('ancient_short_sword', 'short_sword');
 
-  -- Each relic, its every piece in the pack, restored.
+  -- Each relic, its every piece in the pack, restored, with the brush restoring takes.
+  perform give(w, u, 'brush', 1, 60);
   for r in select * from relic_def where name in ('ancient helm', 'old blade') loop
     for i in 1 .. r.parts loop v := give(w, u, 'fragment', 1, 60, r.name || ' ' || i || '/' || r.parts); end loop;
     i := 0;
@@ -195,6 +196,7 @@ const mend = CAST_BY_ID.get('mend')!;
 check('the two relics restore into the ancient helm and the ancient short sword, the same on both sides',
   GEAR.every(({ relic, id }) => RELICS.some((r) => r.name === relic && r.result === id))
     && at('RELICS') === GEAR.map(({ relic, id }) => `${relic}:${id}`).sort().join(','), at('RELICS'));
+g.inventory.add('brush', { ql: 60 });
 for (const { relic, id } of GEAR) {
   const r = RELICS.find((x) => x.name === relic)!;
   for (let i = 1; i <= r.parts; i++) g.inventory.add('fragment', { ql: 60, extra: `${relic} ${i}/${r.parts}` });

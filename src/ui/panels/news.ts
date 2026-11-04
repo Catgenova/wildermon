@@ -156,7 +156,7 @@ import { TINCTURE_NAMES } from '../../game/remedies';
 import { FED_SAID, SOUL_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import { DEATH_GRACE_HOURS, GRACE_SPARES, PLAYED_GAP } from '../../game/deathgrace';
-import { RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
+import { RESTORE_HARM, RESTORE_HARM_SPREAD, RESTORE_TOOL_NEED } from '../../game/archaeology';
 import { CARRY_BASE, CARRY_PER_STRENGTH, DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, deedWorkersAt, goSeconds, MAX_DEED_LEVEL, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
 import { UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS } from '../screen';
 import { defaultKey } from '../../game/keybinds';
@@ -4242,6 +4242,13 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 480,
+    day: '2026-11-04',
+    lines: () => [
+      `Changed: ${ACTION_BY_ID.get('restore_relic')?.label} (relic pieces, tarnished bauble): needs a brush in the pack ("${RESTORE_TOOL_NEED}"); wears it. ${ACTION_BY_ID.get('investigate')?.label}: a trowel, as before.`,
+    ],
   },
   {
     n: 478,
