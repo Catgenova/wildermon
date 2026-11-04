@@ -106,6 +106,25 @@ jobs:
           ask "Nakatari in any store log, last 3 days" "select to_char(l.at, 'MM-DD HH24:MI') as at, l.put, l.def, l.what, l.count, l.store
              from deed_store_log l join player p on p.world_id = l.world_id and p.uid = l.uid and lower(p.name) = 'nakatari'
             where p.world_id::text like 'f3a88670%' and l.at > now() - interval '3 days' order by l.id desc limit 15"
+          # Asked about: "Meri's oremander is bringing copper to my storage". Meri, her settlement and what she belongs
+          # to, her Oremanders (mola) and their posts, and where `worker_store` sends a load of copper from each, whose that
+          # store is, and whether Meri may put into it (`crate_put_shut`, `store_shut_piece`).
+          ask "Meri and her settlements" "select p.name, round(p.x) as x, round(p.y) as y, d.name as deed, d.founded_by = p.uid as founder,
+                 folk_name(d.world_id, d.founded_by) as founded_by, m.role
+             from player p left join deed_member m on m.world_id = p.world_id and m.uid = p.uid
+             left join deed d on d.world_id = p.world_id and (d.founded_by = p.uid or d.founded_by = m.founder)
+            where lower(p.name) like 'meri%' and p.world_id::text like 'f3a88670%'"
+          ask "Meri's Oremanders: post, work site, and the store a load of copper goes to" "select c.id, c.name, c.mode, c.phase, c.job,
+                 round(creature_x(c)::numeric) as x, round(creature_y(c)::numeric) as y, c.post, q.x as post_x, q.y as post_y,
+                 (my_deed(c.world_id, c.keeper)).name as home, s.kind as store, s.id as store_id, round(s.cx::numeric) as sx, round(s.cy::numeric) as sy,
+                 case when s.kind = 'crate' then (select folk_name(cr.world_id, cr.made_by) || ' / ' || crate_name(cr) || ' / ' || coalesce(crate_put_shut(cr.world_id, c.keeper, cr), 'open')
+                                                  from crate cr where cr.world_id = c.world_id and cr.id = s.id::int)
+                      else (select folk_name(pl.world_id, pl.made_by) || ' / ' || pl.sub || ' / ' || coalesce(store_shut_piece(pl.world_id, c.keeper, pl), 'open')
+                              from placed pl where pl.id = s.id) end as whose_what_shut
+             from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper and lower(p.name) like 'meri%'
+             left join placed q on q.id = c.post
+             left join lateral worker_store(c.world_id, c, 'copper_ore', 1) s on true
+            where c.species = 'mola' and p.world_id::text like 'f3a88670%' order by c.id"
           # Asked about: "Catgenova's position is broken, every time I move I rubber band back". The body as the island
           # holds it, what holds a walk back (aboard, overload, cart, saddle), the browser's errors from that account, and
           # four short trial steps as catgenova, each undone (a subtransaction rolled back, then the whole), so nothing is
