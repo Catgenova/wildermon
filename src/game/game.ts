@@ -7431,8 +7431,8 @@ export class Game {
   /** Add an item to a crate; false when it would not fit. */
   crateAdd(crate: PlacedCrate, item: Item): boolean {
     if (crateUnits(crate) + item.count > crateCapacity(crate)) return false;
-    const def = ITEM_DEFS[item.id];
-    const stack = def?.stackable ? crate.items.find((it) => it.id === item.id && it.extra === item.extra && it.piece === item.piece) : undefined;
+    // Onto a pile only of what it is in everything but the count: a supreme plank is not a plank (`crate_put`).
+    const stack = crate.items.find((it) => sameStack(it, item));
     if (stack) {
       stack.ql = (stack.ql * stack.count + item.ql * item.count) / (stack.count + item.count);
       stack.count += item.count;

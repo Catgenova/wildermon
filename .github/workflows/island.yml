@@ -4871,6 +4871,15 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/drinkany.mjs --log-level=error
           node node_modules/.cache/drinkany.mjs
 
+      - name: A rare thing put into a crate stays rare, a pile of its own
+        if: matrix.shard == 5
+        run: |
+          # Both sides: supreme planks into a crate of plain ones are a supreme
+          # pile; plain ones, and a worker's, go onto the plain pile.
+          npx esbuild supabase/test/craterare.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/craterare.mjs --log-level=error
+          node node_modules/.cache/craterare.mjs
+
       - name: A mould is the smith's, formed and poured by blacksmithing
         if: matrix.shard == 5
         run: |

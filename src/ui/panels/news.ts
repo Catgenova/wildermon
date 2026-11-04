@@ -4245,6 +4245,13 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 481,
+    day: '2026-11-04',
+    lines: () => [
+      'Fixed: a rare, supreme or fantastic thing put into a crate keeps its rarity, dye, blessing and maker: a pile of its own, not onto the plain pile.',
+    ],
+  },
+  {
     n: 480,
     day: '2026-11-04',
     lines: () => [
