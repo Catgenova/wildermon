@@ -4245,6 +4245,13 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 484,
+    day: '2026-11-04',
+    lines: () => [
+      'Changed: old, very old and shrivelled trees: no rune on the trunk, nor its glow at night.',
+    ],
+  },
+  {
     n: 483,
     day: '2026-11-04',
     lines: () => [

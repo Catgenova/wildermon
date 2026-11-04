@@ -253,8 +253,6 @@ export interface Species3D {
   undergrowth?: { stone: RGB };
   /** Snow along the top of each lump of leaf in winter: a leaf kept through it (`paintCluster`). */
   snowCap?: boolean;
-  /** A carved rune inked in the kit's ink, and lit as a runestone's runes after dark. */
-  inkedRune?: boolean;
   /** A mass's height on the screen against its width: 0.86 unless given. */
   pad?: number;
   /** An open crown: the wood laid among the masses by depth, the branches seen through the gaps. */

@@ -57,7 +57,6 @@ export const oak: Species3D = {
   pad: 0.84,
   buttress: true,
   snowLine: true,
-  inkedRune: true,
   leaf: {
     summer: rampOf(flat.leaf),
     spring: rampOf(fresh(flat.leaf)),

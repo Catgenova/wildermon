@@ -8,7 +8,7 @@
  */
 import { HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from '../iso';
 import { KIT_INK, KIT_INK_W } from '../kit/core';
-import { cut, glyphPath, proj, RUNE_EDGE, RUNE_GOLD, RUNE_WHITE, type Eye } from '../runestone';
+import { proj, type Eye } from '../runestone';
 import { mulberry32 } from '../../world/noise';
 import { sprigOf } from '../outcrops';
 import type { Light } from './light';
@@ -1702,48 +1702,6 @@ function onTrunk(job: Job, z: number, az: number): { p: V3; n: V3; seen: number;
   return { p: add(axis, mul(n, r * 0.92)), n, seen, r };
 }
 
-/**
- * A rune cut in the bark and inked as the kit inks: the ink, the groove in
- * the bark's own shade inside it, and a lit edge; after dark the groove lit
- * gold as a runestone's runes are, in a glow of widening faint strokes.
- * In the glyph's own frame, a unit from its middle to its top.
- */
-function inkedRune(g: Ctx, face: RGB, night: boolean): void {
-  const path = (): void => { g.beginPath(); glyphPath(g, 'algiz', 0, 0, 1); };
-  g.lineCap = 'round';
-  g.lineJoin = 'round';
-  if (night) {
-    for (const [k, al] of [[2.2, 0.06], [1.6, 0.1], [1.15, 0.16], [0.8, 0.24]] as Array<[number, number]>) {
-      path();
-      g.strokeStyle = `rgba(255, 172, 72, ${al})`;
-      g.lineWidth = k;
-      g.stroke();
-    }
-    for (const [col, w] of [[RUNE_EDGE, 0.36], [RUNE_GOLD, 0.25], [RUNE_WHITE, 0.12]] as Array<[string, number]>) {
-      path();
-      g.strokeStyle = col;
-      g.lineWidth = w;
-      g.stroke();
-    }
-    return;
-  }
-  path();
-  g.strokeStyle = rgb(KIT_INK);
-  g.lineWidth = 0.42;
-  g.stroke();
-  path();
-  g.strokeStyle = rgb(mixRgb(face, hex('#2a2030'), 0.55));
-  g.lineWidth = 0.26;
-  g.stroke();
-  g.save();
-  g.translate(0.05, 0.05);
-  path();
-  g.strokeStyle = rgb(mixRgb(face, [255, 246, 228], 0.35), 0.7);
-  g.lineWidth = 0.08;
-  g.stroke();
-  g.restore();
-}
-
 /** How high the trunk goes before it splits. */
 const trunkTop = (job: Job): number => job.sk.limbs.reduce((m, l) => (l.order === 0 ? Math.max(m, l.b[2]) : m), 0);
 
@@ -1761,23 +1719,6 @@ function paintCarving(g: Ctx, job: Job): void {
       g.strokeStyle = rgb(KIT_INK);
       g.lineWidth = KIT_INK_W * 0.7;
       g.stroke();
-    }
-  }
-  if (sk.rune !== null) {
-    // Cut in the smooth bark over a rough foot.
-    const at = onTrunk(job, Math.max(Math.min(sk.height * 0.12, trunkTop(job) * 0.45), (sk.rough ?? 0) * 1.3), sk.rune);
-    if (at && at.seen > 0.3) {
-      const [x, y] = proj(e, at.p);
-      const tan: V3 = [-at.n[1], at.n[0], 0];
-      const [tx, ty] = projVec(e, tan);
-      const s = at.r * 0.5;
-      g.save();
-      g.transform(tx * s, ty * s, 0, -HEIGHT_SCALE * s, x, y);
-      const lam = Math.max(0, dot(at.n, job.light.sun));
-      const face = mixRgb(hex(spec.bark.shade), hex(spec.bark.lit), clamp01((job.light.ambient + job.light.direct * lam - 0.22) / 0.82));
-      if (spec.inkedRune) inkedRune(g, face, job.light.night);
-      else cut(g, face, 0.3, () => glyphPath(g, 'algiz', 0, 0, 1));
-      g.restore();
     }
   }
 }
@@ -2796,34 +2737,6 @@ function boughOf(job: Job, s: Shown, all: Path2D[], turnBy: number): Bough {
 /** How far round from the eye a spray is turned aside, at the least, in radians. */
 const PART = 0.28;
 
-/** A rune cut in the bark lit from inside at night, as the island's runes are. */
-function runeGlow(g: Ctx, job: Job): void {
-  const { sk, e } = job;
-  if (sk.rune === null || !job.light.night) return;
-  const at = onTrunk(job, sk.height * 0.12, sk.rune);
-  if (!at || at.seen <= 0.3) return;
-  const [x, y] = proj(e, at.p);
-  const tan: V3 = [-at.n[1], at.n[0], 0];
-  const [tx, ty] = projVec(e, tan);
-  const s = at.r * 0.5;
-  g.save();
-  g.transform(tx * s, ty * s, 0, -HEIGHT_SCALE * s, x, y);
-  g.lineCap = 'round';
-  g.lineJoin = 'round';
-  const stroke = (col: string, w: number): void => {
-    g.beginPath();
-    glyphPath(g, 'algiz', 0, 0, 1);
-    g.strokeStyle = col;
-    g.lineWidth = w;
-    g.stroke();
-  };
-  for (const [k, al] of [[2.2, 0.06], [1.6, 0.1], [1.15, 0.16], [0.8, 0.24]] as Array<[number, number]>) stroke(`rgba(255, 172, 72, ${al})`, k);
-  stroke(RUNE_EDGE, 0.36);
-  stroke(RUNE_GOLD, 0.25);
-  stroke(RUNE_WHITE, 0.12);
-  g.restore();
-}
-
 /**
  * A conifer: its trunk a piece between each two whorls, and its boughs,
  * laid back to front among them, so the boughs behind the leader go under
@@ -2955,8 +2868,6 @@ function paintWhorls(g: Ctx, job: Job): void {
   items.sort((a, b) => a.d - b.d);
   for (const it of items) it.draw();
   paintCarving(g, job);
-  // An inked rune has its glow (`inkedRune`).
-  if (!job.spec.inkedRune) runeGlow(g, job);
 }
 
 /**

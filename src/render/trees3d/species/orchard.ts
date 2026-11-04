@@ -107,7 +107,6 @@ export function orchardOf(name: string, flat: TreeLook, kind: OrchardKind): Spec
     forms: FORMS,
     pad: kind.pad ?? 0.84,
     snowLine: true,
-    inkedRune: true,
     leaf: {
       summer: shine(rampOf(flat.leaf)),
       spring: shine(rampOf(fresh(flat.leaf))),

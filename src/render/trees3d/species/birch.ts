@@ -58,7 +58,6 @@ export const birch: Species3D = {
   haze: true,
   pad: 0.9,
   snowLine: true,
-  inkedRune: true,
   leaf: {
     summer: rampOf(flat.leaf),
     spring: rampOf(fresh(flat.leaf)),

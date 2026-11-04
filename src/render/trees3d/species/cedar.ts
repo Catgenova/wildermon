@@ -58,7 +58,6 @@ export const cedar: Species3D = {
   },
   buttress: true,
   snowLine: true,
-  inkedRune: true,
   undergrowth: { stone: STONE },
   leaf: {
     summer: rampOf(flat.leaf),

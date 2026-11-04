@@ -57,7 +57,6 @@ export const willow: Species3D = {
   open: true,
   buttress: true,
   snowLine: true,
-  inkedRune: true,
   leaf: {
     summer: rampOf(flat.leaf),
     spring: rampOf(fresh(flat.leaf)),
