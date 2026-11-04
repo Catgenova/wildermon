@@ -106,6 +106,14 @@ jobs:
           ask "Nakatari in any store log, last 3 days" "select to_char(l.at, 'MM-DD HH24:MI') as at, l.put, l.def, l.what, l.count, l.store
              from deed_store_log l join player p on p.world_id = l.world_id and p.uid = l.uid and lower(p.name) = 'nakatari'
             where p.world_id::text like 'f3a88670%' and l.at > now() - interval '3 days' order by l.id desc limit 15"
+          # Asked: "Are there any glimma on crescent island?" Wild Glimmips by region (0 the Crescent, as `REGIONS`), and where each is.
+          ask "wild Glimmips by region" "select region_at(c.world_id, creature_x(c), creature_y(c)) as region, count(*) as wild
+             from creature c join world w on w.id = c.world_id and w.id::text like 'f3a88670%'
+            where c.species = 'glimmip' and c.mode = 'wild' group by 1 order by 1"
+          ask "wild Glimmips: where" "select c.id, c.phase, round(creature_x(c)::numeric) as x, round(creature_y(c)::numeric) as y,
+                 region_at(c.world_id, creature_x(c), creature_y(c)) as region, to_char(c.born, 'MM-DD HH24:MI') as born
+             from creature c join world w on w.id = c.world_id and w.id::text like 'f3a88670%'
+            where c.species = 'glimmip' and c.mode = 'wild' order by 5, 1"
           # Asked about: "Meri's oremander is bringing copper to my storage". Meri, her settlement and what she belongs
           # to, her Oremanders (mola) and their posts, and where `worker_store` sends a load of copper from each, whose that
           # store is, and whether Meri may put into it (`crate_put_shut`, `store_shut_piece`).
