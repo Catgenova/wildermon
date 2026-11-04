@@ -4245,6 +4245,13 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 483,
+    day: '2026-11-04',
+    lines: () => [
+      'Fixed: a worker fills only its keeper\'s storage: their own, a settlement store they may use, or storage on their settlement made by somebody of it. Not a neighbour\'s bin or crate under their settlement\'s square, beside a post or where it unloads.',
+    ],
+  },
+  {
     n: 482,
     day: '2026-11-04',
     lines: () => [

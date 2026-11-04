@@ -4881,6 +4881,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/offaledge.mjs --log-level=error
           node node_modules/.cache/offaledge.mjs
 
+      - name: A worker fills its keeper's storage and nobody else's
+        if: matrix.shard == 5
+        run: |
+          # Both sides: a worker whose settlement's square reaches over a
+          # neighbour's bin fills its own; off a post and where it unloads,
+          # never the neighbour's; the neighbour's own worker still does.
+          npx esbuild supabase/test/neighbourbin.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/neighbourbin.mjs --log-level=error
+          node node_modules/.cache/neighbourbin.mjs
+
       - name: A rare thing put into a crate stays rare, a pile of its own
         if: matrix.shard == 5
         run: |

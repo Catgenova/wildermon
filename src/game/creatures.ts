@@ -10867,8 +10867,9 @@ export class Creatures {
     // A worker out on a post fills whatever stands beside the post before it
     // walks the load all the way home; a worker on the deed fills the
     // settlement's own crate first, as it always has.
-    const near = game.postStores(c).filter((s) => s.room(item));
-    const stores = near.length ? near : game.deedStores().filter((s) => s.room(item));
+    // Only its keeper's to fill (`workerMay`), at the post and at home alike.
+    const near = game.postStores(c).filter((s) => s.workerMay && s.room(item));
+    const stores = near.length ? near : game.deedStores().filter((s) => s.workerMay && s.room(item));
     if (!stores.length) return null;
     const nearest = (of: DeedStore[]): DeedStore | null => {
       let best: DeedStore | null = null;

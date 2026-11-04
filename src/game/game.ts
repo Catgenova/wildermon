@@ -3,6 +3,7 @@ import { DAMAGE_MAX, PLACED_REACH, QL_TOP, wearPerUse, wornShare } from './limit
 import { generateWorld } from '../world/generate';
 import { EMOTES, EMOTE_BY_ID } from './emotes';
 import { deedMay, lacks, type DeedRole } from './ranks';
+import { storeUse } from './stores';
 import { boundKey } from './keybinds';
 import { capital, listed, percent } from './words';
 import { brazierBurn, shoreNear } from './placeables';
@@ -171,6 +172,12 @@ export interface DeedStore {
    * seed bin, by one rule rather than five.
    */
   bin: boolean;
+  /**
+   * Whether a worker of yours may fill it: a crate you may put into
+   * (`crateShut`), a piece you may open that is yours or a settlement store
+   * you may use. The island's `worker_crate_ok` and `worker_piece_ok`.
+   */
+  workerMay: boolean;
   /** Whether this would take the thing being carried. */
   room(item: Item): boolean;
   add(item: Item): boolean;
@@ -9817,6 +9824,7 @@ export class Game {
       name: crateName(c),
       deed: !!c.deed,
       bin: false,
+      workerMay: !crateShut(this, c),
       room: (item) => crateUnits(c) + item.count <= cap,
       add: (item) => this.crateAdd(c, item),
       changed: () => this.events.emit('crate'),
@@ -9835,6 +9843,9 @@ export class Game {
       name: def.name,
       deed: false,
       bin: !!def.takes,
+      // Somebody else's piece only as a settlement store you may use: under the square of a settlement of yours it is
+      // still theirs (`worker_may`). The island also lets a fellow citizen's unmarked piece through, which this cannot tell.
+      workerMay: !pieceShut(this, f) && (f.mine !== false || storeUse(this, f, def.name.toLowerCase()) === 'open'),
       room: (item) => !furnitureRefuses(f, item) && item.count <= furnitureRoom(f, item),
       add: (item) => this.furnitureAdd(f, item),
       changed: () => this.events.emit('crate'),
