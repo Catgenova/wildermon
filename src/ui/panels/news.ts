@@ -4245,6 +4245,13 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 486,
+    day: '2026-11-04',
+    lines: () => [
+      'Changed: waterfalls redrawn: streams over ledges, ponds over their rims, pools, fountains and aqueduct spouts.',
+    ],
+  },
+  {
     n: 485,
     day: '2026-11-04',
     lines: () => [
