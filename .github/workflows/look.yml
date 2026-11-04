@@ -150,6 +150,26 @@ jobs:
            group by 1, 2, 3 order by 1"
           ask "when pg_cron's scheduler started" "select backend_type, pid, to_char(backend_start, 'MM-DD HH24:MI:SS') as started
             from pg_stat_activity where backend_type like 'pg_cron%'"
+          # Where the disk goes (tile_change: 1270 MB for 171 rows on 11-04): heap, indexes and TOAST apart, live and
+          # dead rows, and when autovacuum last got to each of the biggest tables.
+          ask "the biggest tables, heap / indexes / toast, live and dead rows, last vacuum" "select c.relname,
+                 pg_size_pretty(pg_relation_size(c.oid)) as heap, pg_size_pretty(pg_indexes_size(c.oid)) as indexes,
+                 pg_size_pretty(coalesce(pg_total_relation_size(nullif(c.reltoastrelid, 0)), 0)) as toast,
+                 s.n_live_tup as live, s.n_dead_tup as dead, s.n_tup_ins as ins, s.n_tup_del as del,
+                 to_char(greatest(s.last_autovacuum, s.last_vacuum), 'MM-DD HH24:MI') as vacuumed, s.autovacuum_count as autovacuums
+            from pg_class c join pg_stat_user_tables s on s.relid = c.oid
+           order by pg_total_relation_size(c.oid) desc limit 8"
+          ask "what holds back vacuum: oldest transactions, slots, prepared" "select 'backend' as what, pid::text as who, backend_xmin::text as xmin,
+                 round(extract(epoch from now() - xact_start)::numeric) as age_s, left(query, 60) as query
+            from pg_stat_activity where backend_xmin is not null order by age(backend_xmin) desc limit 5"
+          ask "replication slots" "select slot_name, slot_type, active, xmin, catalog_xmin, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) as behind
+            from pg_replication_slots"
+          ask "autovacuum settings" "select name, setting from pg_settings where name like 'autovacuum%' or name in ('work_mem', 'maintenance_work_mem', 'temp_file_limit', 'log_temp_files') order by name"
+          # Which statements spill to disk (887 temp files, 17 GB, on 11-04), and since when the counts run.
+          ask "statements by what they wrote to temp files" "select left(regexp_replace(query, '\s+', ' ', 'g'), 100) as statement, calls,
+                 pg_size_pretty(temp_blks_written * 8192) as temp_written, round(mean_exec_time::numeric, 1) as ms_each
+            from pg_stat_statements where temp_blks_written > 0 order by temp_blks_written desc limit 12"
+          ask "since when pg_stat_statements counts" "select to_char(stats_reset, 'MM-DD HH24:MI') as since, dealloc from pg_stat_statements_info"
           ask "rounds, last 15 minutes" "select count(*) as rounds, round(avg(ms)::numeric, 1) as ms_avg, round(max(ms)::numeric, 1) as ms_worst,
                  to_char(max(at), 'HH24:MI:SS') as last from tick_time where at > now() - interval '15 minutes'"
           # Asked: "Server stuttering?", with a round of 22 s among rounds of half a second: which rounds, and which of
