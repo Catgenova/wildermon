@@ -170,6 +170,12 @@ jobs:
                  pg_size_pretty(temp_blks_written * 8192) as temp_written, round(mean_exec_time::numeric, 1) as ms_each
             from pg_stat_statements where temp_blks_written > 0 order by temp_blks_written desc limit 12"
           ask "since when pg_stat_statements counts" "select to_char(stats_reset, 'MM-DD HH24:MI') as since, dealloc from pg_stat_statements_info"
+          # The Iron vein at 2625, 2995 put back (20261104105000): its tile, its kind, the rock under it and its corners' soil.
+          ask "the tile at 2625, 2995" "select (select name from tile_def where id = land_tile(w.id, 2625, 2995)) as tile,
+                 (select name from rock_def where id = land_data(w.id, 2625, 2995)) as kind,
+                 (select name from rock_def where id = land_rock(w.id, 2625, 2995)) as rock_under,
+                 land_dirt(w.id, 2625, 2995) + land_dirt(w.id, 2626, 2995) + land_dirt(w.id, 2626, 2996) + land_dirt(w.id, 2625, 2996) as corner_soil
+            from world w where w.id::text like 'f3a88670%'"
           # The API's own connections, by age: a call on a connection seconds old pays for planning everything it calls
           # (a move cost 41-45 ms on a new connection, 13-16 on its second, 4-5 warm, on the test island).
           # Who is connected, by role and by the name each client gives itself.
