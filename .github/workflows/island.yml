@@ -5615,6 +5615,22 @@ jobs:
             --outfile=node_modules/.cache/askdown.mjs --log-level=error
           node node_modules/.cache/askdown.mjs
 
+      - name: An ancient helm and an ancient short sword, and nothing improves or repairs them
+        if: matrix.shard == 6
+        run: |
+          # Asked for: "ancient Helms and ancient short swords cant be improved
+          # or repaired, even with ancient whetstones. Ancient Helms provide +3
+          # tile sight radius. Ancient swords swing 25% faster." The two relics
+          # restore into them on both sides; Improve, Repair, a repair kit, Mend
+          # and an ancient whetstone refuse either in the same words, none
+          # offered in the browser, the thing as it was after; a worker mending
+          # the stores passes them by; a plain helm and short sword as ever.
+          # Sight +ANCIENT_HELM_SIGHT worn, nothing carried; the swing at
+          # ANCIENT_SWORD_SWING a short sword's on both sides; each says so.
+          npx esbuild supabase/test/ancientgear.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/ancientgear.mjs --log-level=error
+          node node_modules/.cache/ancientgear.mjs
+
   migrate:
     name: Push the migrations to the project
     # On the rules having passed here, or over the same code already (`already`).

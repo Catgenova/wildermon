@@ -433,6 +433,13 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   ancient_seed_jar: { name: 'Ancient seed jar', category: 'misc', weight: 0.7, decay: 3, description: 'Open: {relicUse.jarSeeds} seeds of one of {relicUse.crops} crops at random, at the jar\'s QL. Used up.' },
   ancient_stamp: { name: 'Ancient stamp', category: 'misc', weight: 0.3, decay: 3, description: 'Carried: rare chance ×{relicUse.stampRare} on your next {relicUse.stampGoes} crafts and forgings. One go each; used up after the last.' },
   rune_tablet: { name: 'Rune tablet', category: 'misc', weight: 1.1, decay: 3, description: 'Read (Skills window, Rune tablet on a skill under {relicUse.tabletBelow}): that skill +{relicUse.tabletGain}. Used up.' },
+  /*
+   * Two relics' restored gear (`archaeology.ts`): worn and wielded as a helm
+   * and a short sword are (`gear.ts`), each with a benefit of its own, and
+   * nothing improves or repairs either (`UNMENDABLE`).
+   */
+  ancient_helm: { name: 'Ancient helm', category: 'tool', weight: 3, description: 'Worn: sight radius +{sight} tiles. Cannot be improved or repaired.' },
+  ancient_short_sword: { name: 'Ancient short sword', category: 'tool', weight: 1.4, description: '{damage} damage, a blow every {swing} seconds, reach {reach} tiles. One hand: a shield fits. Swing time −{quicker:pct} against a short sword. Cannot be improved or repaired.' },
   // Wildermon gear, a slot and a size each, fitted from its menu (`wildgear.ts`).
   ...GEAR_ITEMS,
   mixed_grass: { name: 'Mixed grass', category: 'material', weight: 0.1, stackable: true, raw: true, decay: 120, description: 'Cutting a grass tile gives {grass.cut}. Plant {grass.plant} on a dirt tile: the tile becomes grass.' },
@@ -1260,6 +1267,17 @@ export const UNRESTORED: ReadonlySet<string> = new Set(['fragment', 'tarnished_b
 export const unrestored = (item: { id: string }): boolean => UNRESTORED.has(item.id);
 /** Why nothing mends one, in the island's words (`not_restored_says`). */
 export const NOT_RESTORED = 'Not restored: cannot be repaired. Gone if it breaks first.';
+
+/**
+ * Restored gear that nothing improves or repairs: not Improve, Repair, a
+ * repair kit, Mend, an ancient whetstone, nor a worker mending the stores.
+ * Asked for: "ancient Helms and ancient short swords cant be improved or
+ * repaired, even with ancient whetstones." The island's `unmendable`.
+ */
+export const UNMENDABLE: ReadonlySet<string> = new Set(['ancient_helm', 'ancient_short_sword']);
+export const unmendable = (item: { id: string }): boolean => UNMENDABLE.has(item.id);
+/** Why, in the island's words (`unmendable_says`): "Ancient helm: cannot be improved or repaired." */
+export const unmendableSays = (item: { id: string }): string => `${itemDef(item.id).name}: cannot be improved or repaired.`;
 
 /** What is counted by the lot rather than one by one: 4 cloth, not 4 cloths. */
 const BY_THE_LOT = new Set(['cloth', 'wool', 'leather', 'mortar', 'yarn', 'wax', 'sand', 'clay', 'dirt', 'moss', 'thatch', 'peat', 'tar', 'coal', 'concrete', 'cotton', 'wemp', 'mixed_grass', 'sinew', 'honey', 'flour', 'cornmeal', 'dough', 'wheat', 'corn', 'thyme', 'basil', 'mint', 'sage', 'rosemary', 'lavender']);

@@ -1,7 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
-import { itemName, NOT_RESTORED, unrestored, type Item } from './items';
+import { itemName, NOT_RESTORED, unmendable, unmendableSays, unrestored, type Item } from './items';
 import { worldRate } from './pace';
 import { WELL_CEILING, wellCap } from './wells';
 import { SKILL_BY_ID } from './skills';
@@ -178,6 +178,8 @@ export function castReason(g: Game, def: CastDef, item?: Item): string | null {
   if (def.on === 'item' && !item) return 'Choose an item.';
   // Not on a find nobody has restored yet, which nothing mends (`unrestored`).
   if (def.id === 'mend' && item && unrestored(item)) return NOT_RESTORED;
+  // Nor on restored gear, which nothing repairs (`unmendable`).
+  if (def.id === 'mend' && item && unmendable(item)) return unmendableSays(item);
   if (def.id === 'mend' && item && item.dmg <= 0) return `${itemName(item)}: not damaged.`;
   if (def.id === 'cunning' && item) {
     if ((item.bless ?? 0) >= BLESS_CAP) return `${itemName(item)}: max ${BLESS_CAP} casts reached.`;

@@ -3,7 +3,7 @@ import type { ActionDef } from './actions';
 import { ARMOUR_BY_ID, isShield, WEAPON_BY_ID } from './gear';
 import { FURNITURE_BY_ID } from './furniture';
 import type { Game } from './game';
-import { itemDef, itemName, liftRarity, rarityOf, RARITIES, RARITY_LIFT, temperOf, type Item } from './items';
+import { itemDef, itemName, liftRarity, rarityOf, RARITIES, RARITY_LIFT, temperOf, unmendable, unmendableSays, type Item } from './items';
 import { ingotOf, isMould, METALS } from './metal';
 import { waterNear } from './placeables';
 import { materialOfItem, matOf } from './materials';
@@ -70,6 +70,8 @@ const WOOD_TOOLS = new Set(['mallet', 'short_bow', 'medium_bow', 'long_bow', 'cl
 
 /** What a thing is made of, and which skill judges work on it. */
 export function improvable(id: string): { material: MaterialDef; skill: string } | null {
+  // Restored gear nothing improves (`UNMENDABLE`), whatever it would be made of.
+  if (unmendable({ id })) return null;
   const armour = ARMOUR_BY_ID.get(id);
   if (armour) {
     if (armour.cls === 'cloth') return { material: MATERIALS.cloth, skill: 'tailoring' };
@@ -174,6 +176,7 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       if (t.kind !== 'item') return null;
       const item = g.inventory.get(t.uid);
       if (!item) return 'It is gone.';
+      if (unmendable(item)) return unmendableSays(item);
       const what = improvable(item.id);
       if (!what) return 'Cannot be improved.';
       if (item.issued) return 'Starting kit cannot be improved: make your own.';

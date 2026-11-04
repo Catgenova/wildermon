@@ -7814,6 +7814,8 @@ const MODELS: Record<string, (b: Build, fit: number) => GearModel> = {
     }],
   }),
 };
+// Restored gear (`ANCIENT_HELM` in gear.ts): a helm's own model.
+MODELS.ancient_helm = MODELS.helm;
 
 /** A skirt's hem, `below` under its lowest ring and `up` above it, `out` further out: a roll or a band round it. */
 function profileHem(rs: number[][], out: number, up: number, below = 0.06): number[][] {
@@ -8341,6 +8343,8 @@ const WEAPONS: Record<string, () => Weapon> = {
   long_bow: () => bowOf(18, 0.9, 'woodDark', 'long'),
   composite_bow: () => bowOf(12, 0.95, 'leatherDark', 'recurve'),
 };
+// Restored gear (`ANCIENT_SWORD` in gear.ts): a short sword's own model.
+WEAPONS.ancient_short_sword = WEAPONS.short_sword;
 
 /**
  * A bow `L` long, standing along z, bellied `c` forward of its string at the

@@ -1,7 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import { CROP_LIST } from './farming';
 import type { Game } from './game';
-import { describeWith, itemDef, itemName, NOT_RESTORED, STAMP_GOES_NAMED, unrestored, type Item } from './items';
+import { describeWith, itemDef, itemName, NOT_RESTORED, STAMP_GOES_NAMED, unmendable, unmendableSays, unrestored, type Item } from './items';
 import { SKILL_BY_ID } from './skills';
 
 /**
@@ -67,6 +67,8 @@ export function honeRefusal(g: Game, t: Target): string | null {
   if (!it) return 'It is gone.';
   if (!g.inventory.find(WHETSTONE)) return 'Need an ancient whetstone.';
   if (unrestored(it)) return NOT_RESTORED;
+  // Nor restored gear, which nothing repairs (`unmendable`).
+  if (unmendable(it)) return unmendableSays(it);
   if (it.dmg <= 0) return 'Not damaged.';
   return null;
 }
@@ -103,7 +105,7 @@ export const RELIC_USE_ACTIONS: ActionDef[] = [
     baseTime: 3,
     applies: (t, g) => {
       const it = held(g, t);
-      return !!it && it.id !== WHETSTONE && it.dmg > 0 && !unrestored(it) && !!g.inventory.find(WHETSTONE);
+      return !!it && it.id !== WHETSTONE && it.dmg > 0 && !unrestored(it) && !unmendable(it) && !!g.inventory.find(WHETSTONE);
     },
     check: (t, g) => honeRefusal(g, t),
     perform: (t, g) => {

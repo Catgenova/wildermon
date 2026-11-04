@@ -8,6 +8,7 @@ import { heldReachOf } from './light';
 import { isLampPiece, lampAt, lampBurning, lampReach } from './lamps';
 import { isRuneLantern, runeLanternReach } from './runelantern';
 import { furnitureCentre } from './furniture';
+import { ANCIENT_HELM, ANCIENT_HELM_SIGHT } from './gear';
 
 /**
  * What can be seen from where you are standing.
@@ -190,7 +191,8 @@ export class Vision {
    * The distance the player can see right now.
    *
    * Four things have a say, in this order: how much you notice, how high you
-   * are standing, how dark it is, and what you are carrying that burns.
+   * are standing, how dark it is, and what you are carrying that burns. And
+   * an ancient helm worn adds `ANCIENT_HELM_SIGHT` tiles to all of it.
    */
   sightRange(): number {
     const g = this.game;
@@ -212,7 +214,8 @@ export class Vision {
     // And a Hawk's Eye worn, multiplying with it.
     const keen = g.pathFx('sight', 1) * (1 + g.wornEnchant('sight'));
     const seen = Math.max(3, Math.min(MAX_SIGHT * keen, open * day * keen));
-    return lamp ? Math.max(seen, heldReachOf(lamp)) : seen;
+    const helm = g.worn('head')?.id === ANCIENT_HELM ? ANCIENT_HELM_SIGHT : 0;
+    return (lamp ? Math.max(seen, heldReachOf(lamp)) : seen) + helm;
   }
 
   private recompute(): void {

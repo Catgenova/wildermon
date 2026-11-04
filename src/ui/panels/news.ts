@@ -163,9 +163,9 @@ import { defaultKey } from '../../game/keybinds';
 import { guideEntries, guidePages, wildShare } from '../../game/guide';
 import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY } from '../../game/keeper';
 import { awayFor } from '../../game/away';
-import { ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
+import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
-import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid } from '../../game/items';
+import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, unmendableSays } from '../../game/items';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable } from '../../game/improve';
 import { weaponCarry } from '../../render/figure';
@@ -4261,6 +4261,22 @@ export const NEWS: News[] = [
         + 'while nothing finished is above it or the nearest thing above is a glass roof.',
       `${BED_COVERED} A growing crop holds its progress until uncovered. One crop per tile, any storey. Settlement farm workers: beds up finished staircases. Hod carriers: its timber and dirt, not its ribbons.`,
     ],
+  },
+  {
+    n: 477,
+    day: '2026-11-04',
+    lines: () => {
+      const relic = (id: string): string => RELICS.find((r) => r.result === id)?.name ?? '';
+      const [sword, plain] = [WEAPON_BY_ID.get(ANCIENT_SWORD), WEAPON_BY_ID.get('short_sword')];
+      return [
+        `Changed: ${article(relic(ANCIENT_HELM))} ${relic(ANCIENT_HELM)} restores into ${article(itemDef(ANCIENT_HELM).name)} ${itemDef(ANCIENT_HELM).name.toLowerCase()} (was: ${itemDef('helm').name.toLowerCase()}): `
+          + `worn as a helm; sight radius +${ANCIENT_HELM_SIGHT} tiles.`,
+        `Changed: ${article(relic(ANCIENT_SWORD))} ${relic(ANCIENT_SWORD)} restores into ${article(itemDef(ANCIENT_SWORD).name)} ${itemDef(ANCIENT_SWORD).name.toLowerCase()} (was: ${itemDef('short_sword').name.toLowerCase()}): `
+          + `wielded as a short sword; swing time ×${ANCIENT_SWORD_SWING} (${sword?.swing} seconds, short sword ${plain?.swing}).`,
+        `Added: neither improved nor repaired: Improve, Repair, repair kit, Mend, ancient whetstone and a worker mending the stores refused ("${unmendableSays({ id: ANCIENT_HELM })}"). `
+          + 'Helms and short swords restored before: unchanged.',
+      ];
+    },
   },
   {
     n: 475,

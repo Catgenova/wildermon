@@ -76,6 +76,19 @@ export interface ArmourDef {
 
 const armour = (id: string, slot: Slot, cls: ArmourClass): ArmourDef => ({ id, slot, cls });
 
+/**
+ * Restored gear (`archaeology.ts`), each the piece a smith makes and more:
+ * asked for, "Ancient Helms provide +3 tile sight radius. Ancient swords swing
+ * 25% faster." Neither is improved or repaired by anything (`UNMENDABLE`).
+ */
+export const ANCIENT_HELM = 'ancient_helm';
+export const ANCIENT_SWORD = 'ancient_short_sword';
+/** Tiles an ancient helm worn adds to the wearer's sight radius, on top of everything else (`Vision.sightRange`). */
+export const ANCIENT_HELM_SIGHT = 3;
+/** An ancient short sword's swing time, as a share of a short sword's. */
+export const ANCIENT_SWORD_SWING = 0.75;
+describeFrom(ANCIENT_HELM, { sight: ANCIENT_HELM_SIGHT });
+
 /** Every piece: five slots in each of the four classes. */
 export const ARMOUR: ArmourDef[] = [
   armour('wool_cap', 'head', 'cloth'),
@@ -94,6 +107,8 @@ export const ARMOUR: ArmourDef[] = [
   armour('chain_leggings', 'legs', 'chain'),
   armour('chain_boots', 'feet', 'chain'),
   armour('helm', 'head', 'plate'),
+  // Restored from an ancient helm's pieces: a helm, and sight further (`ANCIENT_HELM_SIGHT`).
+  armour(ANCIENT_HELM, 'head', 'plate'),
   armour('plate_breastplate', 'chest', 'plate'),
   armour('plate_arms', 'arms', 'plate'),
   armour('plate_legs', 'legs', 'plate'),
@@ -145,12 +160,15 @@ export interface WeaponDef {
 }
 
 const weapon = (id: string, kind: WeaponKind, damage: number, swing: number, extra: Partial<WeaponDef> = {}): WeaponDef => ({ id, kind, damage, swing, ...extra });
+const SHORT_SWORD = weapon('short_sword', 'swords', 8, 2);
 
 export const WEAPONS: WeaponDef[] = [
   weapon('hunting_knife', 'knives', 5, 1.5),
   weapon('butchering_knife', 'knives', 4.5, 1.6),
   weapon('carving_knife', 'knives', 3, 1.4),
-  weapon('short_sword', 'swords', 8, 2),
+  SHORT_SWORD,
+  // Restored from an old blade's pieces: a short sword, at `ANCIENT_SWORD_SWING` its swing time.
+  { ...SHORT_SWORD, id: ANCIENT_SWORD, swing: SHORT_SWORD.swing * ANCIENT_SWORD_SWING },
   weapon('sword', 'swords', 10, 2.4),
   weapon('long_sword', 'swords', 13, 2.9, { twoHanded: true }),
   weapon('hatchet', 'axes', 7, 2.2),
@@ -200,6 +218,7 @@ export const reachOf = (w: Pick<WeaponDef, 'kind' | 'range' | 'thrown'>): number
 // A bow says how far it reaches, what it hits for and how often, off the bow;
 // a weapon held to the end how far it reaches, and how much past a sword.
 for (const w of WEAPONS) describeFrom(w.id, { ...w, reach: reachOf(w), past: +(reachOf(w) - WEAPON_REACH.swords).toFixed(1) });
+describeFrom(ANCIENT_SWORD, { quicker: 1 - ANCIENT_SWORD_SWING });
 export const isWeapon = (id: string): boolean => WEAPON_BY_ID.has(id);
 export const isBow = (id: string): boolean => !!WEAPON_BY_ID.get(id)?.ammo;
 export const isThrown = (id: string): boolean => !!WEAPON_BY_ID.get(id)?.thrown;

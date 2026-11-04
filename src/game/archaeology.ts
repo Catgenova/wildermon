@@ -3,6 +3,7 @@ import { TileType } from '../world/tiles';
 import type { ActionDef } from './actions';
 import type { Game } from './game';
 import { itemName, markOf, RARITY_ODDS, RARITY_WORD, rollRarity, type Item } from './items';
+import { ANCIENT_HELM, ANCIENT_SWORD } from './gear';
 import { SKILL_DEFS } from './skills';
 import { pct, pickedSaid, taggedWith } from './yields';
 import {
@@ -46,7 +47,10 @@ export interface RelicDef {
  * wildermon of yours can be given (`creatureActions.ts`): an old pot and an old
  * file used to come back an ordinary clay pot and file, the same as one made at
  * a bench, and any made before this still are; an old lamp came back an old
- * lamp, which is an ancient lamp now.
+ * lamp, which is an ancient lamp now. An old blade and an ancient helm came
+ * back a short sword and a helm, the same as a smith's; they restore into an
+ * ancient short sword and an ancient helm now (`gear.ts`), and any restored
+ * before this are still a plain short sword and helm.
  */
 export const RELICS: RelicDef[] = [
   { name: 'old pot', parts: 2, result: 'ancient_pot', difficulty: 12 },
@@ -59,11 +63,11 @@ export const RELICS: RelicDef[] = [
   { name: 'old bridle', parts: 3, result: 'ancient_bridle', difficulty: 28 },
   { name: 'bronze mirror', parts: 3, result: 'bronze_mirror', difficulty: 30 },
   { name: 'old brace', parts: 5, result: 'ancient_brace', difficulty: 32 },
-  { name: 'old blade', parts: 4, result: 'short_sword', difficulty: 34 },
+  { name: 'old blade', parts: 4, result: ANCIENT_SWORD, difficulty: 34 },
   { name: 'statuette', parts: 4, result: 'statuette', difficulty: 38 },
   { name: "maker's stamp", parts: 3, result: 'ancient_stamp', difficulty: 40 },
   { name: 'rune tablet', parts: 4, result: 'rune_tablet', difficulty: 42 },
-  { name: 'ancient helm', parts: 5, result: 'helm', difficulty: 44 },
+  { name: 'ancient helm', parts: 5, result: ANCIENT_HELM, difficulty: 44 },
 ];
 
 /** Ground worth turning over: soil, sand and trails, not bare rock or standing water. */

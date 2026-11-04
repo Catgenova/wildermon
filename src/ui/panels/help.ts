@@ -117,10 +117,10 @@ import {
   footing, Game, goSeconds, hullSpeed, KIT_QL, kitQl, MAX_DEED_LEVEL, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
   QL_SPAN, QUEUE_PER_MIND, TWILIGHT, wearPerUse,
   QL_TOP, deedLevel } from '../../game/game';
-import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
+import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES, PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
-import { billWords, countOf, DEED_DECAY, DRINK_LITRES, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor, TAN_LYE } from '../../game/items';
+import { billWords, countOf, DEED_DECAY, DRINK_LITRES, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor, TAN_LYE, UNMENDABLE, unmendableSays } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { entryTameLevel, guideEntries, guidePages, keepable } from '../../game/guide';
 import { TRACK_BANDS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
@@ -1004,13 +1004,26 @@ function artifactHelp(): string {
     <p>Old pots and files restored before these existed stay a plain clay pot or file; an old lamp restored before is an ancient lamp.</p>
     <p>Four relics restore into items used on you and your things:</p>
     <ul>
-      <li>${fromRelic(WHETSTONE)}: Hone with it, on a damaged tool or weapon in your pack: all damage off, QL kept. Not on an unrestored find. Used up.</li>
+      <li>${fromRelic(WHETSTONE)}: Hone with it, on a damaged tool or weapon in your pack: all damage off, QL kept. Not on an unrestored find, nor ${unmendableSaid()}. Used up.</li>
       <li>${fromRelic(SEED_JAR)}: Open: ${JAR_SEEDS} seeds of one of ${CROP_LIST.length} crops at random, at the jar's QL. Used up.</li>
       <li>${fromRelic(STAMP)}: carried: rare chance ×${STAMP_RARE} on your next ${STAMP_GOES} crafts and forgings (an anvil's casting work). One go each;
       its name says the goes left; used up after the last.</li>
       <li>${fromRelic(TABLET)}: Skills window, <i>Rune tablet +${TABLET_GAIN.toFixed(1)}</i> on a skill under ${TABLET_BELOW}: that skill +${TABLET_GAIN.toFixed(1)}. Used up.</li>
-    </ul>`;
+    </ul>
+    <p>${RELICS.filter((r) => UNMENDABLE.has(r.result)).length} relics restore into gear, worn or wielded as ${article(lowName('helm'))} ${lowName('helm')} and ${article(lowName(SWORD_PLAIN.id))} ${lowName(SWORD_PLAIN.id)} (armour, damage, reach, weight):</p>
+    <ul>
+      <li>${fromRelic(ANCIENT_HELM)}: head slot, plate. Worn: sight radius +${ANCIENT_HELM_SIGHT} tiles.</li>
+      <li>${fromRelic(ANCIENT_SWORD)}: swing time ×${ANCIENT_SWORD_SWING} a ${lowName(SWORD_PLAIN.id)}'s: ${SWORD_ANCIENT.swing} seconds against ${SWORD_PLAIN.swing}, before skill.</li>
+      <li>Neither: Improve, Repair, repair kit, Mend, ancient whetstone, a mender in the stores. Refused: <i>${unmendableSays({ id: ANCIENT_HELM })}</i></li>
+    </ul>
+    <p>Helms and short swords restored before these existed stay a plain helm and short sword.</p>`;
 }
+
+/** A short sword, and the ancient one restored from an old blade, for the relic list above. */
+const SWORD_PLAIN = WEAPON_BY_ID.get('short_sword') as WeaponDef;
+const SWORD_ANCIENT = WEAPON_BY_ID.get(ANCIENT_SWORD) as WeaponDef;
+/** The gear nothing improves or repairs (`UNMENDABLE`), as the help's lists say it: "an ancient helm or an ancient short sword". */
+const unmendableSaid = (): string => listedOr([...UNMENDABLE].map((id) => `${article(lowName(id))} ${lowName(id)}`));
 
 /** A relic's restored item and the relic it comes from, for the lists above. */
 function fromRelic(id: string): string {
@@ -1343,6 +1356,7 @@ export function helpText(): string {
       hit chance +${AWARE_RATE} × darkness, over ${percent(NIGHT_EYES_FROM)} dark or underground (+${AWARE_TOP} at ${SKILL_TOP} in full dark).
       Animal husbandry to read a trait: one level less per ${AWARE_TRAIT_STEP} levels over ${CHAR_START} (−${awareTraitEase(SKILL_TOP)} at ${SKILL_TOP}).</li>
       <li>Raised by ${raisedBySays('awareness')}.</li>
+      <li>${itemDef(ANCIENT_HELM).name} worn: sight +${ANCIENT_HELM_SIGHT} tiles, after everything else.</li>
       <li>Height adds distance; ridges hide what is behind; a wood blocks sight ${Math.ceil(1 / TREE_OPACITY)} trees deep;
       <b>darkness takes ${frac(NIGHT_LOSS)} of sight</b>.</li>
       <li>Your settlement is in sight while you hold it; your wildermon see from wherever they work.</li>
@@ -2691,7 +2705,7 @@ export function helpText(): string {
     </ul>
     <h4>Repair</h4>
     <ul>
-      <li><b>Repair</b> (right-click anything damaged; not a fragment or an unrestored tarnished bauble, see <b>Digging up the past</b>): its own skill; an action at a time,
+      <li><b>Repair</b> (right-click anything damaged; not a fragment or an unrestored tarnished bauble, nor ${unmendableSaid()}, see <b>Digging up the past</b>): its own skill; an action at a time,
       removing damage and a little QL; stop any time.</li>
       <li>${WORN} damage off: ${repairGoes(startOf('repair'))} actions at repair ${startOf('repair')}, costing ${repairCost(startOf('repair'))} of QL;
       at repair ${SKILLED}: ${repairGoes(SKILLED)} actions for ${repairCost(SKILLED)}.</li>
@@ -2793,7 +2807,7 @@ export function helpText(): string {
     <h3>Improving</h3>
     <ul>
       <li><b>Improve</b> (right-click a finished item): each pass uses a little stock; success raises quality (QL), by a lot at first and very little near the top.
-      Failure damages it; past ${IMPROVE_DAMAGE} damage it must be <b>Repair</b>ed before more work.</li>
+      Failure damages it; past ${IMPROVE_DAMAGE} damage it must be <b>Repair</b>ed before more work. Not on ${unmendableSaid()}.</li>
       <li><b>Starting kit</b>: one of each of ${STARTER_KIT.length - 1} tools at QL ${KIT_QL}, and a water skin. Named <b>Starter (tool)</b>. <b>Cannot be improved</b> (repairable only), <b>sold or traded</b> (barter, deal, parcel, stall price, order). Kept on death; a missing piece given again on coming ashore and on waking after a death.</li>
       <li><b>Starting food</b>: ${STARTER_FOOD_COUNT} ${lowName(STARTER_FOOD)} at QL ${KIT_QL}, food bar +${percent(foodFill(STARTER_FOOD, KIT_QL))} each (${percent(STARTER_FOOD_COUNT * foodFill(STARTER_FOOD, KIT_QL))} in all). First coming ashore only; not a kit piece (eaten, traded, into the grave; not given again).</li>
     </ul>
@@ -3078,12 +3092,12 @@ export function helpText(): string {
       <li><b>Investigate</b> (right-click soil, sand or a trail): <b>trowel</b>, <b>Archaeology</b>; sometimes a <b>fragment</b>. A searched tile is empty for a while.</li>
       <li>A fragment names its relic and piece (<i>${LAST_RELIC.name} ${LAST_RELIC.parts - 1}/${LAST_RELIC.parts}</i>); found at ${FIND_DAMAGE} to ${FIND_DAMAGE + FIND_DAMAGE_SPREAD} damage.</li>
       <li><b>Fragments and tarnished baubles cannot be repaired until restored</b> (no Repair, repair kit, Mend or worker mending). Damage only rises (failed restoring, weather);
-      at ${DAMAGE_MAX} it breaks. Restored, it mends like anything else.</li>
+      at ${DAMAGE_MAX} it breaks. Restored, it mends like anything else, but for ${unmendableSaid()}.</li>
       <li>${RELICS.length} relics, from ${article(RELICS[0].name)} <b>${RELICS[0].name}</b> in ${RELICS[0].parts} pieces to ${article(LAST_RELIC.name)} <b>${LAST_RELIC.name}</b> in ${LAST_RELIC.parts};
       each recognised only at enough archaeology. Common ones turn up far more often; pieces you lack are favoured.</li>
       <li><b>Restore</b> (all pieces in hand, right-click one): <b>Restoration</b>, at any damage short of breaking. Failure: ${RESTORE_HARM} to ${RESTORE_HARM + RESTORE_HARM_SPREAD} more damage on
       every piece. Result quality (QL): the pieces' worth, less ${percent(1 / RESTORE_AGE)} per point of their damage.</li>
-      <li>A statuette is treasure only; an <b>old blade</b> is a sword and an <b>ancient helm</b> a helm.</li>
+      <li>A statuette is treasure only; ${listed([...UNMENDABLE].map((id) => { const r = RELICS.find((x) => x.result === id)?.name ?? ''; return `${article(r)} <b>${r}</b> is ${article(lowName(id))} ${lowName(id)}`; }))} (below).</li>
     </ul>
     ${artifactHelp()}
     <h3>Baubles</h3>

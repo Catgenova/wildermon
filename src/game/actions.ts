@@ -79,7 +79,7 @@ import { helpingOf, NUTRIENTS } from './nutrition';
 import { SKILL_DEFS } from './skills';
 import {
   describeFrom, DRINK_LITRES, itemDef, itemName, itemWeight, litresOf, markOf, VESSELS, markSays, rarityOf, bagAdd, bagRefuses, bagSpare, isBag, storedLine, RARITIES, RARITY_WORD, rollRarity,
-  foodFill, NOT_RESTORED, unrestored, type Item,
+  foodFill, NOT_RESTORED, unmendable, unmendableSays, unrestored, type Item,
 } from './items';
 import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
@@ -2610,17 +2610,18 @@ export const ACTIONS: ActionDef[] = [
     repeat: true,
     stamina: 0.02,
     baseTime: 1,
-    // Not offered on a find nobody has restored yet (`unrestored`), which nothing mends.
+    // Not offered on a find nobody has restored yet (`unrestored`), nor on restored gear (`unmendable`), which nothing mends.
     applies: (t, g) => {
       if (t.kind !== 'item') return false;
       const item = g.inventory.get(t.uid);
-      return !!item && item.dmg > 0 && !unrestored(item);
+      return !!item && item.dmg > 0 && !unrestored(item) && !unmendable(item);
     },
     check: (t, g) => {
       if (t.kind !== 'item') return null;
       const item = g.inventory.get(t.uid);
       if (!item) return 'It is gone.';
       if (unrestored(item)) return NOT_RESTORED;
+      if (unmendable(item)) return unmendableSays(item);
       if (item.dmg <= 0) return 'Not damaged.';
       if (item.ql <= REPAIR_FLOOR) return `QL at ${REPAIR_FLOOR}: cannot repair.`;
       return null;
@@ -2704,13 +2705,14 @@ export const ACTIONS: ActionDef[] = [
     applies: (t, g) => {
       if (t.kind !== 'item') return false;
       const item = g.inventory.get(t.uid);
-      return !!item && item.dmg > 0 && item.id !== 'repair_kit' && !unrestored(item) && g.inventory.count('repair_kit') > 0;
+      return !!item && item.dmg > 0 && item.id !== 'repair_kit' && !unrestored(item) && !unmendable(item) && g.inventory.count('repair_kit') > 0;
     },
     check: (t, g) => {
       if (t.kind !== 'item') return null;
       const item = g.inventory.get(t.uid);
       if (!item) return 'It is gone.';
       if (unrestored(item)) return NOT_RESTORED;
+      if (unmendable(item)) return unmendableSays(item);
       if (item.dmg <= 0) return 'Not damaged.';
       if (item.id === 'repair_kit') return 'Not on a repair kit.';
       if (g.inventory.count('repair_kit') < 1) return 'Need a repair kit.';
