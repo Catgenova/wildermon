@@ -23,6 +23,10 @@ on:
         description: The island's name; empty for the lasting island with the most people
         default: ''
         type: string
+      in_settlements:
+        description: Knots of five stood in settlements, one a settlement, the first knots of every step
+        default: '0'
+        type: string
 
 concurrency:
   group: load-test
@@ -73,6 +77,7 @@ jobs:
           STEP_SECS: ${{ inputs.step_secs }}
           MAX_P95_MS: ${{ inputs.max_p95_ms }}
           ISLAND: ${{ inputs.island }}
+          IN_SETTLEMENTS: ${{ inputs.in_settlements }}
         run: |
           # The pooler `supabase link` wrote down is in session mode (5432), which
           # sets up and measures; each simulated person goes through transaction

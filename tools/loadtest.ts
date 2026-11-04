@@ -43,6 +43,9 @@
  *   MAX_FAILED    this share of asks failing ends the test, 0.02
  *   CORES         the database's CPU cores, for the share of them used, 2
  *   MAX_CPU       the project's CPU this busy ends the test, 0.9
+ *   IN_SETTLEMENTS  this many knots stood in settlements, the first knots of every step, 0: one knot a settlement,
+ *                 the ones nobody is in first and the most built-up of those, on clear ground nearest the
+ *                 token; their asks reported apart from the ones out in empty country
  *   METRICS_URL   the project's Prometheus endpoint, with METRICS_KEY (the service key) to read it
  */
 import { spawn, execFileSync, type ChildProcessWithoutNullStreams } from 'node:child_process';
@@ -58,6 +61,7 @@ const MAX_P95_MS = Number(process.env.MAX_P95_MS ?? 1500);
 const MAX_FAILED = Number(process.env.MAX_FAILED ?? 0.02);
 const CORES = Number(process.env.CORES ?? 2);
 const MAX_CPU = Number(process.env.MAX_CPU ?? 0.9);
+const IN_SETTLEMENTS = Math.max(0, Math.floor(Number(process.env.IN_SETTLEMENTS ?? 0)));
 const KNOT = 5;
 /** Every simulated person's uid starts with this, so the clean-up can find each one and nothing else. */
 const UID_HEAD = '10ad7e57-0000-4000-8000-';
@@ -88,7 +92,8 @@ class Body {
   have = '{}';
   stopped = false;
 
-  constructor(readonly uid: string, readonly world: string, readonly x: number, readonly y: number, readonly walker: boolean) {
+  constructor(readonly uid: string, readonly world: string, readonly x: number, readonly y: number, readonly walker: boolean,
+    readonly settled: boolean) {
     this.proc = spawn('psql', [DB_URL, '-X', '-q', '-t', '-A', '-v', 'ON_ERROR_STOP=0'], { env: process.env });
     const rl = createInterface({ input: this.proc.stdout });
     rl.on('line', (line) => {
@@ -171,20 +176,27 @@ select count(*) from item where world_id = ${w} and holder in ('player', 'bag') 
 /* ---- What a step measured ---------------------------------------------------- */
 
 const took = new Map<Kind, number[]>();
+/** The same, in settlements and out in empty country apart, when some knots are in settlements. */
+const tookIn = new Map<Kind, number[]>();
+const tookOut = new Map<Kind, number[]>();
 let asked = 0;
 let failed = 0;
 const failures: string[] = [];
-const note = (kind: Kind, r: { ms: number; lines: string[]; failed: boolean }): void => {
+const note = (kind: Kind, r: { ms: number; lines: string[]; failed: boolean }, settled: boolean): void => {
   asked += 1;
   if (r.failed) {
     failed += 1;
     if (failures.length < 12) failures.push(`${kind}: ${r.lines.find((l) => l.startsWith('ERROR')) ?? '?'}`);
     return;
   }
-  let list = took.get(kind);
-  if (!list) took.set(kind, (list = []));
-  list.push(r.ms);
+  for (const m of IN_SETTLEMENTS ? [took, settled ? tookIn : tookOut] : [took]) {
+    let list = m.get(kind);
+    if (!list) m.set(kind, (list = []));
+    list.push(r.ms);
+  }
 };
+const told = (m: Map<Kind, number[]>): string =>
+  [...m].map(([k, xs]) => `${k} p50 ${pct(xs, 0.5).toFixed(0)} / p95 ${pct(xs, 0.95).toFixed(0)} ms (${xs.length})`).join('; ');
 const pct = (xs: number[], p: number): number => {
   if (!xs.length) return NaN;
   const s = [...xs].sort((a, b) => a - b);
@@ -203,7 +215,7 @@ async function live(b: Body, until: () => boolean): Promise<void> {
     const now = second / 1000;
     const whole = now - wholeAt >= NEAR_WHOLE_EVERY || !b.cs;
     const r = await b.ask(b.near(whole));
-    note(whole ? 'near_whole' : 'near', r);
+    note(whole ? 'near_whole' : 'near', r, b.settled);
     if (!r.failed && r.lines[0]) {
       const [, cs, gs, ids] = r.lines[0].split('|');
       b.cs = cs ?? '';
@@ -213,11 +225,11 @@ async function live(b: Body, until: () => boolean): Promise<void> {
         b.have = `{${ids ?? ''}}`;
       }
     }
-    if (b.walker) note('move', await b.ask(b.step(t)));
-    if (now - springsAt >= 4) { springsAt = now; note('springs', await b.ask(b.springs())); }
-    if (now - foragedAt >= 5) { foragedAt = now; note('foraged', await b.ask(b.foraged())); }
-    if (now - reconcileAt >= 20) { reconcileAt = now; note('reconcile', await b.ask(b.reconcile())); }
-    if (now - settleAt >= 60) { settleAt = now; note('settle', await b.ask(b.settle())); }
+    if (b.walker) note('move', await b.ask(b.step(t)), b.settled);
+    if (now - springsAt >= 4) { springsAt = now; note('springs', await b.ask(b.springs()), b.settled); }
+    if (now - foragedAt >= 5) { foragedAt = now; note('foraged', await b.ask(b.foraged()), b.settled); }
+    if (now - reconcileAt >= 20) { reconcileAt = now; note('reconcile', await b.ask(b.reconcile()), b.settled); }
+    if (now - settleAt >= 60) { settleAt = now; note('settle', await b.ask(b.settle()), b.settled); }
     const left = 1000 - (performance.now() - second);
     if (left > 0) await sleep(left);
   }
@@ -262,17 +274,59 @@ function pickSpots(world: string, size: number, knots: number): Array<[number, n
   return spots;
 }
 
-function putPeople(world: string, spots: Array<[number, number]>, n: number): Body[] {
+type Settlement = { name: string; x: number; y: number; people: number; busy: number };
+
+/**
+ * One spot in each of `n` settlements: the ones nobody but the simulated is within forty tiles of first, and of those
+ * the most built-up (things placed, building tiles and creatures on the deed). In each, the clear ground nearest the
+ * token a knot needs (fourteen tiles by six with no building tile in it, the knot's steps included; its middle on the
+ * deed, its ends past a small deed's edge), on land.
+ */
+function pickSettlements(world: string, n: number): Settlement[] {
+  if (n <= 0) return [];
+  const w = lit(world);
+  return admin(`with d as (
+      select d.name, d.x, d.y, d.radius,
+        (select count(*) from player p where p.world_id = ${w} and not p.away and p.uid::text not like ${lit(`${UID_HEAD}%`)}
+            and greatest(abs(p.x - d.x), abs(p.y - d.y)) <= d.radius + 40) as people,
+        (select count(*) from placed o where o.world_id = ${w} and abs(o.x - d.x) <= d.radius and abs(o.y - d.y) <= d.radius)
+        + (select count(*) from building_tile b where b.world_id = ${w} and abs(b.x - d.x) <= d.radius and abs(b.y - d.y) <= d.radius)
+        + (select count(*) from creature c where c.world_id = ${w} and abs(c.to_x - d.x) <= d.radius and abs(c.to_y - d.y) <= d.radius) as busy
+      from deed d where d.world_id = ${w})
+    select replace(d.name, '|', '/') || '|' || s.x || '|' || s.y || '|' || d.people || '|' || d.busy from d
+     cross join lateral (
+       select gx as x, gy as y from generate_series(d.x - d.radius - 4, d.x + d.radius - 4) gx, generate_series(d.y - d.radius - 1, d.y + d.radius - 1) gy
+        where centre_height(${w}, gx, gy) > 0 and centre_height(${w}, gx + 8, gy + 3) > 0
+          and not exists (select 1 from building_tile b where b.world_id = ${w} and b.x between gx - 3 and gx + 11 and b.y between gy - 1 and gy + 4)
+        order by abs(gx + 4 - d.x) + abs(gy + 1 - d.y) limit 1) s
+     order by d.people, d.busy desc, d.name limit ${n}`).map((r) => {
+    const [name, x, y, people, busy] = r.split('|');
+    return { name, x: Number(x), y: Number(y), people: Number(people), busy: Number(busy) };
+  });
+}
+
+function putPeople(world: string, spots: Array<[number, number]>, settlements: Settlement[], n: number): Body[] {
   const bodies: Body[] = [];
   const values: string[] = [];
   for (let i = 0; i < n; i++) {
-    const [sx, sy] = spots[Math.floor(i / KNOT) % spots.length];
-    // Each knot within ten tiles of its spot; each knot on a shared spot a block over.
-    const shift = Math.floor(i / KNOT / spots.length) * 256;
-    const x = Math.min(sx + shift + (i % KNOT) * 2 + 0.5, sx + 250), y = sy + ((i % KNOT) % 2) * 3 + 0.5;
+    const knot = Math.floor(i / KNOT);
+    const settled = knot < settlements.length;
+    let x: number, y: number;
+    if (settled) {
+      const s = settlements[knot];
+      x = s.x + (i % KNOT) * 2 + 0.5;
+      y = s.y + ((i % KNOT) % 2) * 3 + 0.5;
+    } else {
+      const far = knot - settlements.length;
+      const [sx, sy] = spots[far % spots.length];
+      // Each knot within ten tiles of its spot; each knot on a shared spot a block over.
+      const shift = Math.floor(far / spots.length) * 256;
+      x = Math.min(sx + shift + (i % KNOT) * 2 + 0.5, sx + 250);
+      y = sy + ((i % KNOT) % 2) * 3 + 0.5;
+    }
     const uid = uidOf(i + 1);
     values.push(`(${lit(world)}, ${lit(uid)}, ${lit(`Load test ${i + 1}`)}, ${x}, ${y}, false, now())`);
-    bodies.push(new Body(uid, world, x, y, i % 2 === 0));
+    bodies.push(new Body(uid, world, x, y, i % 2 === 0, settled));
   }
   admin(`insert into player (world_id, uid, name, x, y, away, seen_at) values ${values.join(',\n')}
     on conflict (world_id, uid) do update set away = false, seen_at = now(), x = excluded.x, y = excluded.y`);
@@ -398,9 +452,12 @@ async function main(): Promise<void> {
   if (!DB_URL) throw new Error('DB_URL is not set');
   const isle = pickIsland();
   const most = Math.max(...STEPS);
-  const spots = pickSpots(isle.id, isle.size, Math.ceil(most / KNOT));
+  const settlements = pickSettlements(isle.id, IN_SETTLEMENTS);
+  const spots = pickSpots(isle.id, isle.size, Math.max(1, Math.ceil(most / KNOT) - settlements.length));
   console.log(`island ${isle.name} (${isle.size} tiles); ${spots.length} spots at least 300 tiles from anybody; steps ${STEPS.join(', ')} of ${STEP_SECS} s`);
-  if (!spots.length) throw new Error('no country on this island far enough from everybody');
+  if (!spots.length && Math.ceil(most / KNOT) > settlements.length) throw new Error('no country on this island far enough from everybody');
+  const settledAt = settlements.map((s) => `${s.name} at ${s.x}, ${s.y} (${s.busy} things, buildings and creatures; ${s.people} people near)`);
+  if (IN_SETTLEMENTS) console.log(`${settlements.length} of ${IN_SETTLEMENTS} knots in settlements: ${settledAt.join('; ') || 'none found'}`);
   const report: string[] = ['| People | Asks/s | p50 ms | p95 ms | Failed | DB time/s | DB cores busy | CPU busy | Clock |', '|---|---|---|---|---|---|---|---|---|'];
   const detail: string[] = [];
   const went: string[] = [];
@@ -417,10 +474,12 @@ async function main(): Promise<void> {
       for (const b of bodies) b.close();
       await sleep(500);
       took.clear();
+      tookIn.clear();
+      tookOut.clear();
       asked = 0;
       failed = 0;
       failures.length = 0;
-      bodies = putPeople(isle.id, spots, n);
+      bodies = putPeople(isle.id, spots, settlements, n);
       // Joined, and a few seconds for every connection to be made before anything is counted.
       await sleep(5000);
       const from = new Date();
@@ -444,11 +503,17 @@ async function main(): Promise<void> {
       const cpu = cpu0 && cpu1 && cpu1.at > cpu0.at ? (cpu1.busy - cpu0.busy) / (cpu1.at - cpu0.at) : NaN;
       const share = asked ? failed / asked : 0;
       report.push(`| ${n} | ${(asked / secs).toFixed(0)} | ${pct(all, 0.5).toFixed(0)} | ${p95.toFixed(0)} | ${(share * 100).toFixed(1)}% | ${dbPerSec.toFixed(0)} ms | ${(dbPerSec / 1000 / CORES * 100).toFixed(0)}% | ${Number.isNaN(cpu) ? '—' : `${(cpu * 100).toFixed(0)}%`} | ${clockTook(from)} |`);
-      detail.push(`${n} people: ${[...took].map(([k, xs]) => `${k} p50 ${pct(xs, 0.5).toFixed(0)} / p95 ${pct(xs, 0.95).toFixed(0)} ms (${xs.length})`).join('; ')}`);
+      const said = detail.length;
+      detail.push(`${n} people: ${told(took)}`);
+      const inside = bodies.filter((b) => b.settled).length;
+      if (inside) {
+        detail.push(`  ${inside} in settlements: ${told(tookIn)}`);
+        if (inside < bodies.length) detail.push(`  ${bodies.length - inside} in empty country: ${told(tookOut)}`);
+      }
       if (failures.length) detail.push(`  failed, the first of them: ${failures.join(' | ')}`);
       went.push(`#### ${n} people`, '', ...wentOn(st0, st1, secs).map((l) => `- ${l}`), '');
       console.log(report[report.length - 1]);
-      console.log(detail[detail.length - 1]);
+      for (const d of detail.slice(said)) console.log(d);
       const why = p95 > MAX_P95_MS ? `p95 ${p95.toFixed(0)} ms is past ${MAX_P95_MS}`
         : share > MAX_FAILED ? `${(share * 100).toFixed(1)}% failed, past ${MAX_FAILED * 100}%`
           : cpu > MAX_CPU ? `CPU ${(cpu * 100).toFixed(0)}% busy, past ${MAX_CPU * 100}%` : '';
@@ -465,7 +530,7 @@ async function main(): Promise<void> {
     console.log(left);
     detail.push(left);
   }
-  const out = [`### Load on ${isle.name}`, '', ...report, '', ...detail.map((d) => `- ${d}`), '',
+  const out = [`### Load on ${isle.name}`, '', ...(settledAt.length ? [`In settlements, a knot each: ${settledAt.join('; ')}`, ''] : []), ...report, '', ...detail.map((d) => `- ${d}`), '',
     `### Where the database's time went (pg_stat_statements, track = ${track}${track === 'all' ? ': a function and what it runs are both counted' : ''})`, '', ...went].join('\n');
   if (process.env.GITHUB_STEP_SUMMARY) writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${out}\n`, { flag: 'a' });
   console.log(`\n${out}`);
