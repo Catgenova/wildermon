@@ -605,7 +605,7 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
   // The ink down each end of the sheet, where it draws back and frays: the kit's rule round a solid.
   if (first || last) {
     ctx.strokeStyle = SIDE_INK;
-    ctx.lineWidth = Math.max(1, 1.25 * z);
+    ctx.lineWidth = Math.max(1.2, 1.7 * z);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -623,13 +623,12 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
 
   // Streaks: lengths running down it at the water's pace below the glassy curl, on a lattice of lanes fixed to the world.
   const lanes = lanesAt(z);
-  const step = 1 / lanes;
+  // Fewer streaks than there are lanes, and each the bolder for it.
+  const step = 1 / (lanes - 1);
   const pale = STREAK_PALE_LIST;
   const faint = STREAK_FAINT_LIST;
-  const dim = STREAK_DIM_LIST;
   pale.length = 0;
   faint.length = 0;
-  dim.length = 0;
   for (let k = Math.floor(a / step) - 1; k * step < b + step; k++) {
     const key = k * 7 + lanes;
     const u = (k + 0.5 + (keyed(s, key, 21) - 0.5) * 0.7) * step;
@@ -638,7 +637,7 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
     let onRope = false;
     for (let r = 0; r < list.length && !onRope; r += 3) onRope = Math.abs(u - list[r]) < list[r + 1];
     // On a rope near white; on the veil now and then darker teal, now and then a fainter white, and mostly nothing.
-    const into = onRope ? (h < 0.6 ? pale : h < 0.8 ? faint : null) : h < 0.16 ? dim : h < 0.34 ? faint : null;
+    const into = onRope ? (h < 0.42 ? pale : null) : h < 0.08 ? faint : null;
     if (!into) continue;
     // Each lane a train of lengths, its own length, gap and pace, so no two keep step; a length is a metre or three of water, whatever the drop.
     const metres = Math.max(1, p.drop / UNITS_A_METRE);
@@ -657,14 +656,14 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
   ctx.lineCap = 'round';
   // Three widths of streak, drawn a width at a time, and each wavering a little as it falls, more down a taller fall.
   const waver = 0.006 + 0.012 * p.tall;
-  for (const [items, ink, w] of [[dim, STREAK_DIM, 1.2], [faint, STREAK_FAINT, 1], [pale, STREAK_PALE, 1.05]] as const) {
+  for (const [items, ink, w] of [[faint, STREAK_FAINT, 1], [pale, STREAK_PALE, 1]] as const) {
     if (!items.length) continue;
     ctx.strokeStyle = ink;
-    for (let width = 0; width < 3; width++) {
-      ctx.lineWidth = Math.max(1, w * z * [0.9, 1.4, 2.1][width]);
+    for (let width = 0; width < 2; width++) {
+      ctx.lineWidth = Math.max(1.2, w * z * [1.8, 2.5][width]);
       ctx.beginPath();
       for (let i = 0; i < items.length; i += 4) {
-        if (Math.floor(items[i + 3] * 3) !== width) continue;
+        if (Math.floor(items[i + 3] * 2) !== width) continue;
         const q = Math.max(1, Math.min(5, Math.ceil((items[i + 2] - items[i + 1]) * 10)));
         for (let j = 0; j <= q; j++) {
           const f = items[i + 1] + ((items[i + 2] - items[i + 1]) * j) / q;
@@ -678,7 +677,7 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
   }
 
   // Threads: water breaking away in the lower part, falling clear of the sheet in front of it and stretching as it goes.
-  const threads = Math.max(2, Math.round(lanes * (0.4 + 0.5 * p.tall)));
+  const threads = Math.max(2, Math.round(lanes * (0.25 + 0.35 * p.tall)));
   const tstep = 1 / threads;
   ctx.strokeStyle = THREAD;
   ctx.lineWidth = Math.max(0.9, 1.05 * z);
@@ -695,7 +694,7 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
       const head = from + (1 - from) * age * age * (1.4 - 0.4 * age);
       const tail = Math.max(from, head - (0.05 + 0.22 * age) * (0.6 + 0.4 * p.tall));
       if (head <= from + 0.01) continue;
-      strand(ctx, p, u + (h - 0.5) * 0.03 * age, tail, head, 0.05 + 0.1 * age * (0.4 + p.tall));
+      strand(ctx, p, u + (h - 0.5) * 0.03 * age, tail, head, 0.015 + 0.035 * age * (0.4 + p.tall));
     }
   }
   ctx.stroke();
@@ -1051,12 +1050,14 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
     return Math.atan2(LIP[3] / s.reach / (DISC_H * z), LIP[2] / s.reach / (DISC_W * z));
   };
   const way = wayAt(s.from);
+  // How narrow the fall is, 1 for a thread to 0 for a sheet most of a tile wide: a narrow fall's foam spreads wide and lies low.
+  const slim = p.ring ? 0 : Math.max(0, 1 - (hi - lo) / 0.9);
   // How far the foam spreads past each end of the foot, wider than a narrow fall's water: a ring has no ends.
-  const spread = p.ring ? 0 : (0.05 + 0.1 * tall) * flow;
+  const spread = p.ring ? 0 : (0.05 + 0.1 * tall) * flow * (1 + 1.4 * slim);
   // Thinner toward the ends of the foot, where less water comes down; a ring has none.
   const inset = (u: number): number => (p.ring ? 1 : Math.min(1, (Math.min(u - lo, hi - u) + 0.03 + spread) / (s.half * 0.9 + spread)));
   // A narrow fall's foam heaps less high.
-  const narrow = p.ring ? 1 : 0.55 + 0.45 * Math.min(1, (hi - lo) / 0.45);
+  const narrow = 1 - 0.85 * slim;
   // What lies past an end belongs to the piece at that end.
   const first = !p.ring && a <= lo + 1e-6;
   const last = !p.ring && b >= hi - 1e-6;
@@ -1095,6 +1096,38 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
     }
   }
 
+  if (detail) {
+    // Spray: drops thrown up out of the foam both ways along the foot, arcing up and falling back; more and higher off a taller fall. Laid under the
+    // foam, so a drop shows only where it has risen clear of it.
+    ctx.fillStyle = FOAM;
+    ctx.beginPath();
+    const sprayEvery = SPRAY_EVERY * (z >= 1.5 ? 1 : 1.5);
+    const lift = (0.6 + 2.2 * tall) * HALF_H * z * 0.5 * flow;
+    for (let k = Math.floor(a / sprayEvery) - 1; k * sprayEvery < b + sprayEvery; k++) {
+      const h = keyed(s, k, 71);
+      if (h > (0.55 + 0.3 * tall) * flow) continue;
+      const u0k = (k + 0.5) * sprayEvery;
+      if (u0k < a || u0k >= b) continue;
+      const period = 0.6 + 0.5 * keyed(s, k, 72);
+      const age = (((t / period + h * 7.3) % 1) + 1) % 1;
+      const side = keyed(s, k, 73) < 0.5 ? -1 : 1;
+      const u = u0k + side * age * (0.08 + 0.2 * tall) * (0.5 + h);
+      const out = age * (0.1 + 0.25 * keyed(s, k, 74)) * (0.6 + tall);
+      foot(u, out, 0, 0);
+      const y = FT[1] - lift * (0.5 + h) * (age * 2 - age * age * 1.6) * inset(u0k);
+      const r = Math.max(0.6, (1.3 - age) * (0.7 + 0.5 * tall) * z * (0.6 + 0.6 * h) * Math.sqrt(flow));
+      ctx.moveTo(FT[0] + r, y);
+      ctx.arc(FT[0], y, r, 0, Math.PI * 2);
+    }
+    // Each drop ruled round, from close enough to see it.
+    if (z >= 1.5 && flow >= 0.6) {
+      ctx.strokeStyle = SPRAY_INK;
+      ctx.lineWidth = Math.min(1.2, 0.4 * z);
+      ctx.stroke();
+    }
+    ctx.fill();
+  }
+
   /*
    * Lumps of foam along the foot, in two rows, the back one heaped where the
    * sheet comes down and the front one lower and further out where the churn
@@ -1124,7 +1157,7 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
       const pulse = detail ? 0.5 + 0.5 * Math.sin(t * (3.1 + 2.3 * h) + h * 17) : 0.5;
       const ins = inset(u);
       const grow = row === 0 ? 0.5 + 0.8 * heap : 0.7 + 0.35 * heap;
-      const r = size * DISC_W * z * grow * (0.8 + 0.3 * pulse) * (0.45 + 0.55 * ins) * (0.55 + 0.85 * keyed(s, k * 2 + row, 64) ** 2);
+      const r = size * DISC_W * z * grow * (1 - 0.3 * slim) * (0.8 + 0.3 * pulse) * (0.45 + 0.55 * ins) * (0.55 + 0.85 * keyed(s, k * 2 + row, 64) ** 2);
       const out = row === 0 ? (keyed(s, k, 65) - 0.35) * 0.06 : (0.08 + 0.1 * keyed(s, k, 68)) * (0.7 + tall);
       const up = (row === 0 ? (s.wet ? 0.45 : 1) * (1.2 + 5 * tall + 10 * tall * tall) * heap * (0.75 + 0.4 * pulse) * ins : (s.wet ? 0.1 : 0.5) * (1 + 3 * tall) * ins) * flow * narrow;
       foot(u, out, up, 0);
@@ -1162,40 +1195,11 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
       const age = (((t / (2.2 + keyed(s, k, 76)) + keyed(s, k, 77) * 3) % 1) + 1) % 1;
       const r = (0.18 + 0.4 * tall) * (0.7 + 0.5 * age) * inset(c);
       foot(c, 0.05, (3 + 16 * tall) * age, 0);
-      ctx.globalAlpha = 0.26 * (tall - 0.2) * Math.sin(Math.PI * age);
+      ctx.globalAlpha = 0.14 * (tall - 0.2) * Math.sin(Math.PI * age);
       ctx.drawImage(foamTex, FT[0] - r * DISC_W * z, FT[1] - r * DISC_H * z * 1.6, r * DISC_W * z * 2, r * DISC_H * z * 3.2);
     }
     ctx.globalAlpha = 1;
   }
-
-  // Spray: drops thrown up out of the foam both ways along the foot, arcing up and falling back; more and higher off a taller fall.
-  ctx.fillStyle = FOAM;
-  ctx.beginPath();
-  const sprayEvery = SPRAY_EVERY * (z >= 1.5 ? 1 : 1.5);
-  const lift = (0.6 + 2.2 * tall) * HALF_H * z * 0.5 * flow;
-  for (let k = Math.floor(a / sprayEvery) - 1; k * sprayEvery < b + sprayEvery; k++) {
-    const h = keyed(s, k, 71);
-    if (h > (0.55 + 0.3 * tall) * flow) continue;
-    const u0k = (k + 0.5) * sprayEvery;
-    if (u0k < a || u0k >= b) continue;
-    const period = 0.6 + 0.5 * keyed(s, k, 72);
-    const age = (((t / period + h * 7.3) % 1) + 1) % 1;
-    const side = keyed(s, k, 73) < 0.5 ? -1 : 1;
-    const u = u0k + side * age * (0.08 + 0.2 * tall) * (0.5 + h);
-    const out = age * (0.1 + 0.25 * keyed(s, k, 74)) * (0.6 + tall);
-    foot(u, out, 0, 0);
-    const y = FT[1] - lift * (0.5 + h) * (age * 2 - age * age * 1.6) * inset(u0k);
-    const r = Math.max(0.6, (1.3 - age) * (0.7 + 0.5 * tall) * z * (0.6 + 0.6 * h) * Math.sqrt(flow));
-    ctx.moveTo(FT[0] + r, y);
-    ctx.arc(FT[0], y, r, 0, Math.PI * 2);
-  }
-  // Each drop ruled round, from close enough to see it.
-  if (z >= 1.5 && flow >= 0.6) {
-    ctx.strokeStyle = SPRAY_INK;
-    ctx.lineWidth = Math.min(1.2, 0.4 * z);
-    ctx.stroke();
-  }
-  ctx.fill();
 }
 
 /** Where the foot of a sheet is on the screen at `u` along its lip. */
@@ -1259,8 +1263,8 @@ const mixRgb = (a: RGB, b: RGB, k: number): RGB => [a[0] + (b[0] - a[0]) * k, a[
 const rgb = (c: RGB): string => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
 const rgba = (c: RGB, a: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a.toFixed(3)})`;
 
-/** The ink water is ruled in: the kit's warm ink taken halfway to the water's edge colour. */
-const WATER_INK: RGB = mixRgb(SPRING_EDGE, STONE_INK, 0.5);
+/** The ink water is ruled in: the kit's warm ink taken a third of the way to the water's edge colour. */
+const WATER_INK: RGB = mixRgb(SPRING_EDGE, STONE_INK, 0.66);
 /** The kit's warm white, which the near white of falling water and the top of its foam are. */
 const WARM_WHITE: RGB = mixRgb(SPRING_FOAM, [255, 251, 234], 0.6);
 /** The lilac the kit's shade goes toward, which the shade under foam is taken toward. */
@@ -1304,10 +1308,9 @@ const WET_ROCK = 'rgba(40,58,78,0.3)';
 const TEAR = rgb(mixRgb(mixRgb(SPRING_WATER, SPRING_EDGE, 0.75), [105, 104, 111], 0.2));
 /** The ink down each end of a sheet. */
 const SIDE_INK = rgb(WATER_INK);
-/** Streaks: near white on the ropes, fainter white and darker teal on the veil. */
+/** Streaks: near white on the ropes, fainter white on the veil. */
 const STREAK_PALE = rgba(WARM_WHITE, 0.86);
 const STREAK_FAINT = rgba(WARM_WHITE, 0.4);
-const STREAK_DIM = rgba(SPRING_DARK, 0.22);
 /** Threads breaking away, and the broken edge at each end. */
 const THREAD = rgba(WARM_WHITE, 0.7);
 /** Flecks of white breaking out of the lower part of a tall fall. */
@@ -1346,4 +1349,3 @@ const ROPES: number[] = [];
 const LUMPS = new Float64Array(4 * 512);
 const STREAK_PALE_LIST: number[] = [];
 const STREAK_FAINT_LIST: number[] = [];
-const STREAK_DIM_LIST: number[] = [];
