@@ -103,6 +103,27 @@ jobs:
           select q.id, q.kind, q.sub, q.x, q.y, q.cx, q.cy from placed q join player p on p.world_id = q.world_id and q.id = p.aboard
            where p.name = 'catgenova' and p.world_id::text like 'f3a88670%';
           \x off
+          -- The ground round the body, as the island walks it: each tile's kind, height, water and whether a body stands there.
+          select t.x, t.y, land_tile(p.world_id, t.x, t.y) as tile, water_over(p.world_id, t.x, t.y) as water,
+                 round(walk_ground(p.world_id, t.x + 0.5, t.y + 0.5)::numeric, 2) as ground,
+                 round(walk_share(p.world_id, p.uid, p.level, p.x, p.y, t.x + 0.5, t.y + 0.5)::numeric, 2) as share_from_body
+            from player p cross join lateral (select gx as x, gy as y from generate_series(floor(p.x)::int - 2, floor(p.x)::int + 2) gx,
+                                                    generate_series(floor(p.y)::int - 2, floor(p.y)::int + 2) gy) t
+           where p.name = 'catgenova' and p.world_id::text like 'f3a88670%' order by t.y, t.x;
+          -- What is placed, built or standing within 3 tiles.
+          select q.id, q.kind, q.sub, q.x, q.y, q.sx, q.sy, round(q.cx::numeric, 2) as cx, round(q.cy::numeric, 2) as cy, q.level, q.creature, q.sleeper, q.driver
+            from placed q join player p on p.world_id = q.world_id and p.name = 'catgenova' and p.world_id::text like 'f3a88670%'
+           where q.x between floor(p.x)::int - 3 and floor(p.x)::int + 3 and q.y between floor(p.y)::int - 3 and floor(p.y)::int + 3 order by q.y, q.x;
+          select w.level, w.dir, w.x, w.y, w.type from wall w join player p on p.world_id = w.world_id and p.name = 'catgenova' and p.world_id::text like 'f3a88670%'
+           where w.x between floor(p.x)::int - 3 and floor(p.x)::int + 4 and w.y between floor(p.y)::int - 3 and floor(p.y)::int + 4 order by w.level, w.y, w.x;
+          select f.level, f.x, f.y, f.kind from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova' and p.world_id::text like 'f3a88670%'
+           where f.x between floor(p.x)::int - 3 and floor(p.x)::int + 3 and f.y between floor(p.y)::int - 3 and floor(p.y)::int + 3 order by f.level, f.y, f.x;
+          select c.id, c.species, c.mode, c.rider is not null as ridden, c.keeper = p.uid as his, round(creature_x(c)::numeric, 2) as x, round(creature_y(c)::numeric, 2) as y
+            from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova' and p.world_id::text like 'f3a88670%'
+           where abs(creature_x(c) - p.x) < 4 and abs(creature_y(c) - p.y) < 4 order by c.id;
+          -- The door's pace for this body: each slot's latest charge against now (`private.pace`).
+          select c.stripe, to_char(c.minute, 'HH24:MI') as minute, c.calls, c.paced, now() as now
+            from caller c join player p on p.uid = c.uid and p.name = 'catgenova' and p.world_id::text like 'f3a88670%' order by c.minute desc limit 5;
           select to_char(e.at, 'HH24:MI:SS') as at, e.build, left(e.message, 160) as message, left(e.place, 80) as place
             from client_error e join player p on p.uid = e.uid and p.name = 'catgenova' and p.world_id::text like 'f3a88670%'
            where e.at > now() - interval '3 hours' order by e.at desc limit 15;
@@ -113,11 +134,17 @@ jobs:
             select * into p from player where name = 'catgenova' and world_id::text like 'f3a88670%';
             if not found then raise notice 'no catgenova'; return; end if;
             perform set_config('request.jwt.claims', json_build_object('sub', p.uid, 'role', 'authenticated')::text, true);
-            for d in select * from (values ('east', 0.3, 0.0), ('west', -0.3, 0.0), ('south', 0.0, 0.3), ('north', 0.0, -0.3)) v(dir, dx, dy) loop
+            for d in select * from (values ('east', 0.3, 0.0, 0, false), ('west', -0.3, 0.0, 0, false), ('south', 0.0, 0.3, 0, false),
+                                            ('north', 0.0, -0.3, 0, false), ('east far', 1.4, 0.0, 0, false), ('west far', -1.4, 0.0, 0, false),
+                                            ('north far', 0.0, -1.4, 0, false), ('ne far', 1.0, -1.0, 0, false), ('nw far', -1.0, -1.0, 0, false),
+                                            ('se far', 1.0, 1.0, 0, false), ('sw far', -1.0, 1.0, 0, false),
+                                            ('west far, by a turn', -1.4, 0.0, 0, true), ('north far, by a turn', 0.0, -1.4, 0, true),
+                                            ('east on storey 2', 0.3, 0.0, 1, false), ('east in a cellar', 0.3, 0.0, -1, false)) v(dir, dx, dy, lvl, turn) loop
               begin
-                r := rpc_move(p.world_id, p.x + d.dx, p.y + d.dy, p.level);
-                raise notice 'step %: asked %, %; answered %', d.dir, round((p.x + d.dx)::numeric, 2), round((p.y + d.dy)::numeric, 2),
-                  r - 'stats' - 'wounds';
+                r := rpc_move(p.world_id, p.x + d.dx, p.y + d.dy, p.level + d.lvl,
+                              case when d.turn then jsonb_build_array(jsonb_build_array(p.x + d.dx / 2, p.y + d.dy / 2)) end);
+                raise notice 'step %: asked %, % storey %; answered %', d.dir, round((p.x + d.dx)::numeric, 2), round((p.y + d.dy)::numeric, 2),
+                  p.level + d.lvl, r - 'stats' - 'wounds';
                 raise exception 'undo';
               exception when others then
                 get stacked diagnostics v_ctx = pg_exception_context;
