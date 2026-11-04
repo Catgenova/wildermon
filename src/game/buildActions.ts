@@ -33,6 +33,7 @@ import {
   type MaterialDef,
   jobLevel,
   NO_PLAN_FROM,
+  GARDEN_BED,
 } from './building';
 import { dyeChoice, dyeEnough, dyeReason, litresWord, NO_COLOUR, paneTint, pickDye, SCRUB_TIME, SCRUB_TOOL, SCRUB_WIND, spendDye, TINTED_PANE } from './dyes';
 import { capital } from './words';
@@ -60,11 +61,12 @@ export const needTool = (g: Game, tool: string): string | null => (g.inventory.h
 /** Plural-ish item names for material lists. */
 export function materialName(id: string, n: number): string {
   const name = itemDef(id).name.toLowerCase();
-  if (n === 1 || name.endsWith('s') || ['mortar', 'thatch', 'adobe'].includes(name)) return name;
+  if (n === 1 || name.endsWith('s') || ['mortar', 'thatch', 'adobe', 'dirt'].includes(name)) return name;
   return `${name}s`;
 }
 
-export const needsText = (bill: Bill): string => describeNeeds(bill, materialName);
+/** What a bill still wants, of the make its material takes where it takes one (`billExtra`). */
+export const needsText = (bill: Bill & { material?: string }): string => describeNeeds(bill, materialName, bill.material);
 
 import { buildWork, consumeUnit, nextAvailable, takeUnit, toHand } from './buildstock';
 export { buildReach, buildWork, consumeUnit, nextAvailable, takeUnit, toHand } from './buildstock';
@@ -1182,8 +1184,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       g.floorFitted();
       const kind = floorKind(floor);
       const mat = material(floor.material);
-      // Floors are paving; stairs, ladders and roofs are carpentry or masonry by material.
-      g.gainSkill(kind === 'floor' ? 'paving' : kind === 'ladder' ? 'carpentry' : (mat?.skill ?? 'carpentry'), 0.4);
+      // Floors are paving, but a garden bed, which is joinery; stairs, ladders and roofs are carpentry or masonry by material.
+      g.gainSkill(kind === 'floor' && mat?.id !== GARDEN_BED.id ? 'paving' : kind === 'ladder' ? 'carpentry' : (mat?.skill ?? 'carpentry'), 0.4);
       g.events.emit('world', t.x, t.y);
       const what = kind === 'ladder' ? 'ladder' : `${mat?.name.toLowerCase()} ${floorName(floor)}`;
       if (isDone(floor)) {

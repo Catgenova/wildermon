@@ -46,6 +46,7 @@ import type { Target } from './actions';
 import { floorKind, GLASS_ROOF, isDone, onlyRefusal, onlySaid, WALL_TYPE_BY_ID, workLevel, type Building, type Buildings } from './building';
 import type { Game } from './game';
 import { rebaseStage } from './growth';
+import { BED, BED_NO_DECK } from './gardenbed';
 import { TileType } from '../world/tiles';
 
 type TileTarget = Extract<Target, { kind: 'tile' }>;
@@ -188,6 +189,8 @@ export function glassPlanRefusal(g: Game, t: TileTarget, action: 'plan_wall' | '
   // A building has one roof, and its first tile set the shape; the first tile asks for its own.
   if (t.material === GLASS && (b.roof ?? t.roofShape ?? 'hip') === 'flat') return GLASS_PITCHED;
   if (kind === 'floor' && workLevel(b) === 0 && g.world.getTile(t.x, t.y) === TileType.Field) return FIELD_UNFLOORED;
+  // A garden bed is no deck on piers (`gardenbed.ts`).
+  if (t.material === BED && kind === 'floor' && workLevel(b) === 0 && g.buildings.onPiers(t.x, t.y)) return BED_NO_DECK;
   if (kind === 'roof' && t.material !== GLASS && fieldIn(g, b)) return FIELD_GLASS_ONLY;
   return null;
 }
@@ -204,6 +207,8 @@ export function glassResync(g: Game): number {
   const glasshouse = new Map<number, boolean>();
   let n = 0;
   for (const c of g.crops.values()) {
+    // A garden bed's crop keeps to the glass clock or the still one by its bed's cover (`gardenbed.ts`), whatever the building.
+    if (c.level !== undefined) continue;
     const b = g.buildings.buildingAt(c.x, c.y);
     let glass = false;
     if (b) {

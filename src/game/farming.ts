@@ -10,6 +10,7 @@ import { clearedSaid, clearedTo, glassTillRefusal, glazing, isGlasshouse } from 
 import type { Building, Buildings } from './building';
 import { capital, timeWords } from './words';
 import { lacksTool, REAP_TOOL, TEND_TOOL } from './jobtools';
+import { BED_NAME, bedLevelOf, bedSowRefusal, cropHere, emptyBeds, farmLevel } from './gardenbed';
 
 /**
  * Farming: rake a field out of grass or dirt, sow a seed, tend it through
@@ -117,6 +118,17 @@ export interface Crop {
    */
   glass?: boolean;
   /**
+   * On a garden bed: the storey of the bed it grows on (`gardenbed.ts`), the
+   * island's `crop.level`. It grows on the glass clock (`glass`) while the bed
+   * is open to the sky or under glass. Absent in a field and in a planter.
+   */
+  level?: number;
+  /**
+   * On a covered garden bed: on the still clock (`STILL_CLOCK`), so it stands
+   * still until the bed is uncovered. The island's `crop.still`.
+   */
+  still?: boolean;
+  /**
    * Sown by somebody with Love's Season's Hand: out of glass it grows on the
    * Season's Hand's clock (`handClock`), through winter at `HAND_WINTER`.
    * Stamped at sowing, as the island's `crop.hand` is.
@@ -209,6 +221,8 @@ export function cropRipeLeft(c: Crop, per: number, now: number, wall: number): n
 /** Real seconds from `wall` that `left` growing seconds take on a crop's clock: a field's over the year, the others' steady. */
 function growingToWall(c: Crop, left: number, wall: number): number {
   const clock = cropClockOf(c);
+  // On a covered garden bed it never moves on until it is uncovered.
+  if (clock === 'still') return Infinity;
   if (clock === 'hand') return left > 0 ? handMoment(handClock(wall) + left) - wall : 0;
   if (clock !== 'field') return left / steadyRate(clock);
   return left > 0 ? fieldMoment(fieldClock(wall) + left) - wall : 0;
@@ -226,6 +240,7 @@ function growingToWall(c: Crop, left: number, wall: number): number {
  */
 export function cropWhen(next: string, left: number, clock: boolean | CropClock, wall: number): string {
   const k = clockNamed(clock);
+  if (k === 'still') return BED_STILL;
   // A Season's Hand's field never stands still, so it never waits.
   if (k === 'hand') return `${next} in ${timeWords(handMoment(handClock(wall) + left) - wall)}`;
   if (k !== 'field') return `${next} in ${timeWords(left / steadyRate(k))}`;
@@ -254,6 +269,9 @@ export function stageNote(name: string, per: number, clock: boolean | CropClock,
   return `${name}, ${Math.round(per / rate)}s a growth stage${wall >= YEAR_FROM ? ` in ${season}` : ''}`;
 }
 
+/** When a crop on a covered garden bed comes to its next stage: not until it is uncovered. */
+export const BED_STILL = 'covered: no growth';
+
 /** A share of a crop's pace as a line says it: "growth speed ×1.5". */
 export function growthWords(r: number): string {
   return `growth speed ×${+Math.max(0, r).toFixed(2)}`;
@@ -277,9 +295,10 @@ export const glassSays = (bld: Buildings, b: Building | undefined): string => (i
  * glass. ...". `clock` as `cropWhen` takes it. The island's is `sown_said`,
  * and `sown_said_on` for a clock by name.
  */
-export const sownSaid = (name: string, clock: boolean | CropClock, when: string): string => {
+export const sownSaid = (name: string, clock: boolean | CropClock, when: string, bed = false): string => {
   const k = clockNamed(clock);
-  return `Sown: ${name.toLowerCase()}${k === 'planter' ? ', planter' : k === 'glass' ? ', under glass' : ''}. ${capital(when)}.`;
+  const where = bed ? `, ${BED_NAME.toLowerCase()}` : k === 'planter' ? ', planter' : k === 'glass' ? ', under glass' : '';
+  return `Sown: ${name.toLowerCase()}${where}. ${capital(when)}.`;
 };
 
 /**
@@ -297,7 +316,8 @@ export function describeCrop(c: Crop, per: number, now: number, wall: number, bu
   const y = cropYield(c.tended, bumper);
   // The harvest's quality: the field's and the harvester's hand, halved (`harvestQl`), at the hand's best.
   const ql = qlTop > 0 ? ` · harvest QL up to ${Math.ceil(harvestQl(c.ql, qlTop) - 1e-9)}` : '';
-  return `${def.name}${c.glass ? ' under glass' : ''}, ${cropStageName(c)} · ${when}${ripe !== null && Number.isFinite(ripe) ? ` · ripe in ${timeWords(ripe)}` : ''} · tended ${c.tended}/${RIPE}: yield ${y.produce} ${itemDef(def.produce).name.toLowerCase()}, ${seedSays()}${ql}`;
+  const where = c.level !== undefined ? ` in a ${BED_NAME.toLowerCase()}` : c.glass ? ' under glass' : '';
+  return `${def.name}${where}, ${cropStageName(c)} · ${when}${ripe !== null && Number.isFinite(ripe) ? ` · ripe in ${timeWords(ripe)}` : ''} · tended ${c.tended}/${RIPE}: yield ${y.produce} ${itemDef(def.produce).name.toLowerCase()}, ${seedSays()}${ql}`;
 }
 
 /** What a harvest comes out at: the field's own quality and the harvester's, halved (the island's `harvest_crop`). */
@@ -308,9 +328,13 @@ describeFrom('planter', { growth: PLANTER_GROWTH });
 
 /** The planter a job is aimed at, when it is aimed at one. */
 const planterOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.planterPiece(t.id) : undefined);
-/** What a job is aimed at: the crop in a field, or the one in a planter. */
+/** What a job is aimed at: the crop in a field or on the garden bed of the storey you stand on (`gardenbed.ts`), or the one in a planter. */
 const cropOf = (g: Game, t: Target): Crop | undefined =>
-  t.kind === 'tile' ? g.cropAt(t.x, t.y) : t.kind === 'furniture' ? g.planted.get(t.id) : undefined;
+  t.kind === 'tile' ? cropHere(g, t.x, t.y, bedLevelOf(g, t.x, t.y)) : t.kind === 'furniture' ? g.planted.get(t.id) : undefined;
+/** Whether a job on a tile is aimed at a finished garden bed on the storey you stand on. */
+const onBed = (g: Game, t: Target): boolean => t.kind === 'tile' && bedLevelOf(g, t.x, t.y) !== null;
+/** Whether a tile is a field a job is aimed at: tilled ground, and no garden bed on the storey you stand on over it. */
+const onField = (g: Game, t: Target): boolean => t.kind === 'tile' && !onBed(g, t) && g.world.getTile(t.x, t.y) === TileType.Field;
 /** Why a planter is out of reach, as the island says it (`fire_refusal`), or null. */
 const planterReach = (g: Game, f: PlacedFurniture): string | null => (g.besidePiece(f) ? null : 'Stand next to the planter.');
 
@@ -334,20 +358,31 @@ const HARVEST = { baseTime: 5, stamina: 0.04 };
 const patchOf = (job: { baseTime: number; stamina: number }): { baseTime: number; stamina: number } =>
   ({ baseTime: job.baseTime * PATCH_TIME, stamina: job.stamina * PATCH_TIME });
 
-/** The empty fields in a patch: tilled, and nothing growing. */
-export const emptyFields = (g: Game, x: number, y: number, r: number): Array<[number, number]> =>
-  patchAround(g, x, y, r).filter(([tx, ty]) => g.world.getTile(tx, ty) === TileType.Field && !g.cropAt(tx, ty));
+/**
+ * The empty fields in a patch: tilled, and nothing growing; on the ground,
+ * row by row, with the open garden beds of the ground floor among them, and
+ * on a storey its open garden beds (`gardenbed.ts`).
+ */
+export const emptyFields = (g: Game, x: number, y: number, r: number): Array<[number, number]> => {
+  const level = farmLevel(g);
+  const tiles = patchAround(g, x, y, r);
+  const beds = new Set(emptyBeds(g, tiles, level).map(([tx, ty]) => `${tx},${ty}`));
+  return tiles.filter(([tx, ty]) => beds.has(`${tx},${ty}`)
+    || (level === 0 && g.world.getTile(tx, ty) === TileType.Field && !g.cropAt(tx, ty)));
+};
+/** Whether a crop in a patch is on the storey a patch job is worked from: a field's and a ground-floor bed's on the ground. */
+const onStorey = (g: Game, c: Crop): boolean => (c.level ?? 0) === farmLevel(g);
 /** The crops in a patch that want tending: not ripe, and not tended at the stage they are at. */
 export const wantTending = (g: Game, x: number, y: number, r: number): Crop[] =>
   patchAround(g, x, y, r).flatMap(([tx, ty]) => {
     const c = g.cropAt(tx, ty);
-    return c && !cropReady(c) && !c.tendedNow ? [c] : [];
+    return c && onStorey(g, c) && !cropReady(c) && !c.tendedNow ? [c] : [];
   });
 /** The ripe crops in a patch. */
 export const ripeIn = (g: Game, x: number, y: number, r: number): Crop[] =>
   patchAround(g, x, y, r).flatMap(([tx, ty]) => {
     const c = g.cropAt(tx, ty);
-    return c && cropReady(c) ? [c] : [];
+    return c && onStorey(g, c) && cropReady(c) ? [c] : [];
   });
 
 /**
@@ -370,13 +405,13 @@ export const planterPace = (g: Game, f: PlacedFurniture, id: string): number => 
  * Sow one field, or a planter, from a seed in the pack. A Farmer's Seed Saver
  * keeps the seed now and then; null when there was no seed left to spend.
  */
-function sowOne(g: Game, into: { x: number; y: number } | PlacedFurniture, seed: Item, def: CropDef): 'sown' | 'kept' | null {
+function sowOne(g: Game, into: { x: number; y: number; level?: number } | PlacedFurniture, seed: Item, def: CropDef): 'sown' | 'kept' | null {
   const kept = g.rand() < g.perk('keep:plant_seed', 0);
   const ql = seed.ql;
   if (!kept && !g.inventory.remove(seed.uid, 1)) return null;
   if ('kind' in into) g.sowPlanter(into, def.id, ql, planterPace(g, into, def.id));
   else {
-    g.plantCrop(into.x, into.y, def.id, ql, sownPace(g, into.x, into.y, def.id));
+    g.plantCrop(into.x, into.y, def.id, ql, sownPace(g, into.x, into.y, def.id), 'level' in into ? into.level : undefined);
     // Seed in a field, for the journal (the island's `sow_one` the same); a planter is not a field.
     g.note('sowed');
   }
@@ -418,6 +453,9 @@ function reapOne(g: Game, c: Crop): { produce: Item; got: number; seeds: number;
   return { produce, got, seeds, ql };
 }
 
+/** What a harvest leaves ready to sow: the planter, the garden bed or the field. */
+const sowsAgain = (c: Crop): string => (c.planter !== undefined ? 'Planter' : c.level !== undefined ? BED_NAME : 'Field');
+
 /** "That wants a Farmer who has learned to sow a patch." */
 const unlearned = (what: string): string => `Needs perk: ${what} (Farmer).`;
 
@@ -456,8 +494,8 @@ export const FARM_ACTIONS: ActionDef[] = [
     skill: 'farming',
     hidden: true,
     ...SOW,
-    // A tilled field, or a planter with nothing growing in it.
-    applies: (t, g) => (t.kind === 'tile' && g.world.getTile(t.x, t.y) === TileType.Field) || !!planterOf(g, t),
+    // A tilled field, a finished garden bed on the storey you stand on (`gardenbed.ts`), or a planter with nothing growing in it.
+    applies: (t, g) => onField(g, t) || onBed(g, t) || !!planterOf(g, t),
     check: (t, g) => {
       const box = planterOf(g, t);
       if (box) {
@@ -466,8 +504,11 @@ export const FARM_ACTIONS: ActionDef[] = [
         if (g.planted.has(box.id)) return 'Already growing a crop.';
       } else {
         if (t.kind !== 'tile') return 'Choose a field.';
-        if (g.world.getTile(t.x, t.y) !== TileType.Field) return 'Needs a tilled field.';
-        if (g.cropAt(t.x, t.y)) return 'Already growing a crop.';
+        const bed = bedLevelOf(g, t.x, t.y);
+        if (bed === null && g.world.getTile(t.x, t.y) !== TileType.Field) return 'Needs a tilled field.';
+        // Covered, or a crop on the tile already, on this storey or another.
+        const why = bedSowRefusal(g, t.x, t.y, bed);
+        if (why) return why;
       }
       const uid = t.kind === 'tile' || t.kind === 'furniture' ? t.itemUid : undefined;
       const seed = uid !== undefined ? g.inventory.get(uid) : undefined;
@@ -482,13 +523,14 @@ export const FARM_ACTIONS: ActionDef[] = [
       const seed = g.inventory.get(uid);
       const def = seed && CROP_BY_SEED.get(seed.id);
       if (!seed || !def) return;
-      const sown = sowOne(g, box ?? { x: t.kind === 'tile' ? t.x : 0, y: t.kind === 'tile' ? t.y : 0 }, seed, def);
+      const bed = t.kind === 'tile' ? bedLevelOf(g, t.x, t.y) : null;
+      const sown = sowOne(g, box ?? { x: t.kind === 'tile' ? t.x : 0, y: t.kind === 'tile' ? t.y : 0, ...(bed !== null ? { level: bed } : {}) }, seed, def);
       if (!sown) return;
       const c = box ? g.planted.get(box.id) : t.kind === 'tile' ? g.cropAt(t.x, t.y) : undefined;
-      // When it will be sprouting, in real time, from the season it was sown in -- or in any, in a planter or under glass.
+      // When it will be sprouting, in real time, from the season it was sown in -- or in any, in a planter, under glass or on a garden bed.
       const clock: CropClock = c ? cropClockOf(c) : box ? 'planter' : 'field';
       const when = c ? cropWhen(STAGE_NAMES[1], g.cropPer(c), clock, g.wallNow()) : `${STAGE_NAMES[1]} soon`;
-      g.logMsg(`${sownSaid(def.name, clock, when)}${sown === 'kept' ? ' Seed kept.' : ''}`, 'event');
+      g.logMsg(`${sownSaid(def.name, clock, when, bed !== null)}${sown === 'kept' ? ' Seed kept.' : ''}`, 'event');
     },
   },
   {
@@ -545,7 +587,7 @@ export const FARM_ACTIONS: ActionDef[] = [
       const def = cropDef(c.id);
       const r = reapOne(g, c);
       g.logMsg(
-        `Harvested: ${r.got} × ${itemName(r.produce).toLowerCase()}, ${r.seeds} ${itemDef(def.seed).name.toLowerCase()}, QL ${r.ql.toFixed(1)}. ${c.planter !== undefined ? 'Planter' : 'Field'} ready to sow.`,
+        `Harvested: ${r.got} × ${itemName(r.produce).toLowerCase()}, ${r.seeds} ${itemDef(def.seed).name.toLowerCase()}, QL ${r.ql.toFixed(1)}. ${sowsAgain(c)} ready to sow.`,
         'event',
       );
     },
@@ -554,17 +596,19 @@ export const FARM_ACTIONS: ActionDef[] = [
     // A field broken back up; and in a planter, what is growing turned back into the soil so the planter can be sown again or picked up.
     id: 'clear_field',
     label: 'Clear field',
-    labelFor: (t, g) => (planterOf(g, t) ? 'Pull up crop' : 'Clear field'),
+    labelFor: (t, g) => (planterOf(g, t) || onBed(g, t) ? 'Pull up crop' : 'Clear field'),
     verb: 'clearing the field',
     skill: 'farming',
     tool: TEND_TOOL,
     stamina: 0.03,
     baseTime: 3,
-    applies: (t, g) => (t.kind === 'tile' && g.world.getTile(t.x, t.y) === TileType.Field) || (t.kind === 'furniture' && !!planterOf(g, t) && g.planted.has(t.id)),
+    // A field; a garden bed with something growing on it, which stays a bed; or a planter with something in it.
+    applies: (t, g) => onField(g, t) || (onBed(g, t) && !!cropOf(g, t)) || (t.kind === 'furniture' && !!planterOf(g, t) && g.planted.has(t.id)),
     check: (t, g) => {
       const box = planterOf(g, t);
       const far = box ? planterReach(g, box) : null;
-      return far ?? lacksTool(g, TEND_TOOL) ?? (!box || g.planted.has(box.id) ? null : 'No crop there.');
+      const none = box ? !g.planted.has(box.id) : onBed(g, t) && !cropOf(g, t);
+      return far ?? lacksTool(g, TEND_TOOL) ?? (none ? 'No crop there.' : null);
     },
     perform: (t, g) => {
       const box = planterOf(g, t);
@@ -576,7 +620,14 @@ export const FARM_ACTIONS: ActionDef[] = [
         return;
       }
       if (t.kind !== 'tile') return;
-      const c = g.cropAt(t.x, t.y);
+      // A garden bed is pulled up and stays a bed.
+      const bedCrop = onBed(g, t) ? cropOf(g, t) : undefined;
+      if (bedCrop) {
+        g.uproot(bedCrop);
+        g.logMsg(`Cleared: ${cropDef(bedCrop.id).name.toLowerCase()}.`, 'event');
+        return;
+      }
+      const c = cropOf(g, t);
       if (c) g.removeCrop(t.x, t.y);
       // Broken up, it is not a field any more, and has no last crop.
       g.forgetSown(t.x, t.y);
@@ -594,7 +645,7 @@ export const FARM_ACTIONS: ActionDef[] = [
     skill: 'farming',
     hidden: true,
     ...patchOf(SOW),
-    applies: (t, g) => t.kind === 'tile' && g.perk('sow_patch', 0) > 0 && g.world.getTile(t.x, t.y) === TileType.Field,
+    applies: (t, g) => t.kind === 'tile' && g.perk('sow_patch', 0) > 0 && (onField(g, t) || onBed(g, t)),
     check: (t, g) => {
       if (t.kind !== 'tile') return 'Choose a field.';
       if (g.perk('sow_patch', 0) <= 0) return unlearned('Sow a Patch');
@@ -613,7 +664,8 @@ export const FARM_ACTIONS: ActionDef[] = [
       for (const [x, y] of emptyFields(g, t.x, t.y, g.perk('sow_patch', 0))) {
         const seed = g.inventory.get(t.itemUid);
         if (!seed) break;
-        const how = sowOne(g, { x, y }, seed, def);
+        const bed = bedLevelOf(g, x, y);
+        const how = sowOne(g, { x, y, ...(bed !== null ? { level: bed } : {}) }, seed, def);
         if (!how) break;
         sown += 1;
         if (how === 'kept') kept += 1;
@@ -630,7 +682,7 @@ export const FARM_ACTIONS: ActionDef[] = [
     skill: 'farming',
     tool: TEND_TOOL,
     ...patchOf(TEND),
-    applies: (t, g) => t.kind === 'tile' && g.perk('tend_patch', 0) > 0 && g.cropAt(t.x, t.y) !== undefined,
+    applies: (t, g) => t.kind === 'tile' && g.perk('tend_patch', 0) > 0 && cropOf(g, t) !== undefined,
     check: (t, g) => {
       const rake = lacksTool(g, TEND_TOOL);
       if (rake) return rake;
@@ -653,7 +705,7 @@ export const FARM_ACTIONS: ActionDef[] = [
     skill: 'farming',
     tool: REAP_TOOL,
     ...patchOf(HARVEST),
-    applies: (t, g) => t.kind === 'tile' && g.perk('harvest_patch', 0) > 0 && g.cropAt(t.x, t.y) !== undefined,
+    applies: (t, g) => t.kind === 'tile' && g.perk('harvest_patch', 0) > 0 && cropOf(g, t) !== undefined,
     check: (t, g) => {
       const sickle = lacksTool(g, REAP_TOOL);
       if (sickle) return sickle;

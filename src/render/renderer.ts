@@ -101,7 +101,7 @@ import { denHit, denPools, drawDen, drawDenLive, isDen, prewarmDen, type DenLook
 import { MEMORIAL } from '../game/memorial';
 import { COUNTER_HOLDS, counterHeld, counterSeat, streetOf } from '../game/counters';
 import { counterHole, counterWares, drawCounterDaylight, drawCounterFrontKept, drawCounterInside, drawCounterReveal, stripeOf, type CounterLook } from './counter';
-import { cropDef, type CropLook } from '../game/farming';
+import { cropDef, type Crop, type CropLook } from '../game/farming';
 import { crateCentre, crateKindOfItem, subtileOf, SUBTILES } from '../game/crates';
 import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER, SPECIES, threatens, type Creature } from '../game/creatures';
 import { rarityOf } from '../game/items';
@@ -4880,8 +4880,13 @@ export class Renderer {
             this.take('swirl', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, h), null).swirl = swirl;
           }
         }
+        // A crop on a garden bed, on whatever storey the bed is: at the bed's soil, as a field's crop stands on its ground.
+        const bedCrop = this.game.crops.size && !cutHere ? this.game.cropAt(x, y) : undefined;
+        if (bedCrop && bedCrop.level !== undefined) this.takeBedCrop(bedCrop, x, y, cam.rotation);
         if (t === TileType.Field && !aloft) {
-          const crop = this.game.crops.size ? this.game.cropAt(x, y) : undefined;
+          const fieldCrop = this.game.crops.size ? this.game.cropAt(x, y) : undefined;
+          // Only the field's own: one on a bed over it is drawn up there.
+          const crop = fieldCrop && fieldCrop.level === undefined ? fieldCrop : undefined;
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
           const [mx, my] = V.staggered ? [baseX, baseY + hh] : [baseX + hw / 2, baseY + hh / 2];
           if (crop && this.still) {
@@ -11368,6 +11373,35 @@ export class Renderer {
     if (!bld.columns.size) return false;
     const [ax, ay, bx, by] = borderPoints(border);
     return bld.hasColumnAt(ax, ay) || bld.hasColumnAt(bx, by);
+  }
+
+  /**
+   * A crop on a garden bed (`gardenbed.ts`), stood on the bed's soil at the
+   * middle of its tile: the height its floor is laid at (`drawFloorNow`), on
+   * a jetty its building's floor. Seen as the floor under it is -- pinned on
+   * that storey, or with nothing above the storey looked at taken off -- and
+   * never waiting out a winter, as nothing on the glass clock does.
+   */
+  private takeBedCrop(crop: Crop, x: number, y: number, rotation: number): void {
+    const level = crop.level ?? 0;
+    const bld = this.game.buildings;
+    if (this.pinned !== null && this.pinned !== level) return;
+    const view = this.game.settings.viewLevel;
+    if (view !== null && view >= 0 && level > view) return;
+    const floor = bld.floor(level, x, y);
+    if (!floor) return;
+    const building = bld.buildingAt(x, y);
+    const jetty = building ? undefined : bld.jettyAt(x, y);
+    const ground = this.game.world.getHeight(x, y);
+    const base = jetty ? (jettyBase(this.game, jetty, x, y) ?? ground) : (building?.deck ?? ground);
+    const h = base + level * WALL_HEIGHT + 0.5;
+    const cam = this.camera;
+    const sx = cam.worldToScreenX(x + 0.5, y + 0.5), sy = cam.worldToScreenY(x + 0.5, y + 0.5, h);
+    const def = cropDef(crop.id);
+    const spr = this.still
+      ? cropFlatSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], false, !cam.view.staggered)
+      : cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], false, rotation, this.cropStep, Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS));
+    this.take('crop', x, y, sx, sy, spr);
   }
 
   /** The height a building's floors are counted from: its deck on piers (`piers.ts`), or the ground at its first tile, as its own walls are drawn. */

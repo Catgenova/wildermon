@@ -22,9 +22,10 @@ import { FURNITURE } from '../src/game/furniture';
 import { FORAGE_TABLE, BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, PER_ROLL } from '../src/game/forage';
 import { STONES_DEPTH, STONES_SLABS } from '../src/game/watergarden';
 import { WATER_PLANTS, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING } from '../src/world/waterplants';
-import { CROP_LIST, glassExamine } from '../src/game/farming';
+import { BED_STILL, CROP_LIST, glassExamine } from '../src/game/farming';
+import { BED, BED_COVERED, BED_NAME, BED_NO_DECK, BED_ONE_CROP } from '../src/game/gardenbed';
 import { FISH, BAITS } from '../src/game/fishing';
-import { GLASS_ROOF, onlySaid, WALL_TYPES, MATERIALS as BUILD_MATERIALS, ROOF_SHAPES, STOREY_SKILL, INDOORS_DECAY, INDOORS_REST, WALL_HEIGHT, LADDER_PLANKS, MAX_LEVELS, TOP_LEVELS, WALL_THICK,
+import { GARDEN_BED, GLASS_ROOF, onlySaid, WALL_TYPES, MATERIALS as BUILD_MATERIALS, ROOF_SHAPES, STOREY_SKILL, INDOORS_DECAY, INDOORS_REST, WALL_HEIGHT, LADDER_PLANKS, MAX_LEVELS, TOP_LEVELS, WALL_THICK,
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_LEVEL, CELLAR_SOIL, COLUMN_SHARE, JETTY_REACH, OUTSIDE_STAIR_LEVEL } from '../src/game/building';
 import { cellarOutdoor } from '../src/game/cellar';
 import { REPOINT_BACK } from '../src/game/buildActions';
@@ -296,6 +297,8 @@ out.push(`create table if not exists build_material_bill (
   material text not null, ord int not null, item text not null, n int not null,
   primary key (material, item)
 );`);
+/* What a bill item must be of where a material takes only one make: the `extra` an item carries, a ribbon's metal (`MaterialDef.extra`). */
+out.push(`alter table build_material_bill add column if not exists extra text;`);
 /*
  * The wildermon, their blood and their ages.
  *
@@ -2597,6 +2600,20 @@ out.push(`insert into build_material_def (id, name, kind, tool, skill, storeys, 
 GLASS_ROOF.bill.forEach(([item, n], ord) => out.push(`insert into build_material_bill values (${q(GLASS_ROOF.id)}, ${q(ord)}, ${q(item)}, ${q(n)});`));
 if (GLASS_ROOF.only) out.push(`update build_material_def set only_walls = ${arr(GLASS_ROOF.only.walls)}, only_floors = ${arr(GLASS_ROOF.only.floors)}, only_said = ${q(onlySaid(GLASS_ROOF))} where id = ${q(GLASS_ROOF.id)};`);
 out.push(`create or replace function glass_material() returns text language sql immutable as $fn$ select ${q(GLASS)} $fn$;`);
+/*
+ * Garden beds (`src/game/gardenbed.ts`): laid as a floor and nothing else, its
+ * bill a solid wall's worth of which a floor takes its share, its ribbons iron
+ * ones (`extra`); and what the doors say of one.
+ */
+out.push(`insert into build_material_def (id, name, kind, tool, skill, storeys, heft) values (${q(GARDEN_BED.id)}, ${q(GARDEN_BED.name)}, ${q(GARDEN_BED.kind)}, ${q(GARDEN_BED.tool)}, ${q(GARDEN_BED.skill)}, ${q(GARDEN_BED.storeys)}, ${q(GARDEN_BED.heft)});`);
+GARDEN_BED.bill.forEach(([item, n], ord) => out.push(`insert into build_material_bill (material, ord, item, n, extra) values (${q(GARDEN_BED.id)}, ${q(ord)}, ${q(item)}, ${q(n)}, ${GARDEN_BED.extra?.[item] ? q(GARDEN_BED.extra[item]) : 'null'});`));
+if (GARDEN_BED.only) out.push(`update build_material_def set only_walls = ${arr(GARDEN_BED.only.walls)}, only_floors = ${arr(GARDEN_BED.only.floors)}, only_said = ${q(onlySaid(GARDEN_BED))} where id = ${q(GARDEN_BED.id)};`);
+out.push(`create or replace function bed_material() returns text language sql immutable as $fn$ select ${q(BED)} $fn$;`);
+for (const [fn, v] of [
+  ['bed_covered_said', BED_COVERED], ['bed_one_crop_said', BED_ONE_CROP], ['bed_name', BED_NAME], ['bed_still_said', BED_STILL], ['bed_no_deck_said', BED_NO_DECK],
+] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
 out.push(`create or replace function glasshouse_growth() returns double precision language sql immutable as $fn$ select ${q(GLASSHOUSE_GROWTH)}::double precision $fn$;`);
 for (const [fn, v] of [
   ['glass_pitched_said', GLASS_PITCHED], ['field_unfloored_said', FIELD_UNFLOORED],

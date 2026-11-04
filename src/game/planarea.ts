@@ -36,7 +36,7 @@ import {
   type WallType,
 } from './building';
 import { fenceScale, needTool } from './buildActions';
-import { storedFor } from './buildstock';
+import { packed, storedFor } from './buildstock';
 import { jettyOver } from './frame';
 import { counterStreetRefusal } from './counters';
 import type { Game } from './game';
@@ -240,7 +240,7 @@ export function areaTotals(g: Game, pieces: AreaPiece[]): AreaTotal[] {
   }
   const mat = material ? (MATERIAL_BY_ID.get(material) ?? (material === GLASS_ROOF.id ? GLASS_ROOF : undefined)) : undefined;
   const tiles = passing(pieces).map((p) => ({ x: p.target.x, y: p.target.y }));
-  return [...need.entries()].map(([id, n]) => ({ id, need: n, carried: g.inventory.count(id), stored: storedFor(g, id, mat, tiles) }));
+  return [...need.entries()].map(([id, n]) => ({ id, need: n, carried: packed(g, id, mat), stored: storedFor(g, id, mat, tiles) }));
 }
 
 /** What the pieces that pass are, counted: "12 walls", "1 tile". */

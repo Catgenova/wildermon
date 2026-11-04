@@ -25,6 +25,7 @@ import {
   MATERIAL_BY_ID,
   isDone,
   MATERIALS,
+  FLOOR_MATERIALS,
   MATERIALS_WITH_GLASS,
   takesAs,
   progressOf,
@@ -81,7 +82,8 @@ import { jobName, smelterAnchor, smelterState, type PlacedSmelter } from '../gam
 import { isGreenware, kilnAnchor, kilnState, type PlacedKiln } from '../game/kiln';
 import { furnitureAnchor, furnitureCapacity, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureName, furnitureState, furnitureUnits, isFurniture, isPlanter, rackDeck, rackSpots, type PlacedFurniture, teamOf, turnedFacing, vehicleOf } from '../game/furniture';
 import { DEED_ACTION_BY_ID, joinFromAfar, leaveQuestion, standingWord, upgradeProgress, upgradeReason } from '../game/deed';
-import { CROP_BY_SEED, cropDef, cropReady, describeCrop, emptyFields, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
+import { CROP_BY_SEED, cropDef, cropReady, describeCrop, emptyFields, FARM_ACTION_BY_ID, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
+import { bedLevelOf } from '../game/gardenbed';
 import { PLANTER_GROWTH } from '../game/growth';
 import { describeWaterPlant } from '../game/watergarden';
 import { LIFE_MOTES_EACH, swirlName } from '../game/motes';
@@ -1224,9 +1226,9 @@ export class UI {
     return [{
       label: `Plan ${level > 0 ? 'floor' : 'flooring'}: every tile (storey ${level + 1})`,
       note: `${bare} tiles`,
-      children: MATERIALS.filter((m) => takesAs(m, { floor: 'floor' })).map((m) => ({
+      children: FLOOR_MATERIALS.filter((m) => takesAs(m, { floor: 'floor' })).map((m) => ({
         label: m.name,
-        note: `${describeNeeds(floorBill(m.id), materialName)} each`,
+        note: `${describeNeeds(floorBill(m.id), materialName, m.id)} each`,
         onSelect: () => this.startPlanArea({ kind: 'floor', buildingId: b.id, level, material: m.id, anchor: { x, y } }),
       })),
     }];
@@ -1995,44 +1997,8 @@ export class UI {
     }
     // Setting carried furniture down on the block of subtiles under the cursor.
     entries.push(...this.furnitureDownEntries());
-    // Sowing on a tilled field: pick from the seeds you carry. A Farmer who has
-    // learned to sow a patch is offered that too, from the same seeds.
-    const seedsCarried = this.game.inventory.items.filter((it) => CROP_BY_SEED.has(it.id));
-    const sowMenu = (def: ActionDef, label: string, note: (crop: CropDef) => string): void => {
-      entries.push({
-        label,
-        disabled: !seedsCarried.length,
-        hint: seedsCarried.length ? undefined : 'No seeds carried (from foraging and botanizing).',
-        children: seedsCarried.length
-          ? seedsCarried.map((it) => {
-              const crop = CROP_BY_SEED.get(it.id)!;
-              const st: Target = { ...target, itemUid: it.uid };
-              const reason = def.check?.(st, this.game) ?? null;
-              return {
-                label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
-                note: note(crop),
-                hint: reason ?? undefined,
-                disabled: !!reason,
-                onSelect: () => this.game.requestAction(def, st),
-              };
-            })
-          : undefined,
-      });
-    };
-    const sowDef = ACTION_BY_ID.get('plant_seed');
-    if (sowDef && sowDef.applies(target, this.game) && !this.game.cropAt(pick.x, pick.y)) {
-      // At the pace this sowing would grow at: a Farmer's Fast Growth and Crop Rotation.
-      // Under glass at the glasshouse's share in any season, and in the open at the season's (`glasshouse.ts`).
-      // And on a Season's Hand's clock for a sower with Love's Season's Hand, which a winter does not stop.
-      const clock = underGlass(this.game.buildings, pick.x, pick.y) ? 'glass' : this.game.pathFx('winter', 0) > 0 ? 'hand' : 'field';
-      sowMenu(sowDef, 'Sow', (crop) => stageNote(crop.name, crop.stageSeconds * sownPace(this.game, pick.x, pick.y, crop.id), clock, this.game.wallNow()));
-    }
-    const patchDef = ACTION_BY_ID.get('sow_patch');
-    if (patchDef && patchDef.applies(target, this.game)) {
-      const r = this.game.perk('sow_patch', 0);
-      const empty = emptyFields(this.game, pick.x, pick.y, r).length;
-      sowMenu(patchDef, 'Sow a patch', (crop) => `${crop.name} on ${empty} empty ${empty === 1 ? 'field' : 'fields'} of the ${2 * r + 1}×${2 * r + 1}`);
-    }
+    // Sowing on a tilled field or a garden bed (`sowEntries`).
+    entries.push(...this.sowEntries(pick, target));
     const smelterDef = ACTION_BY_ID.get('place_smelter');
     const smelterItem = this.game.inventory.find('smelter');
     if (smelterDef && smelterItem) {
@@ -2221,6 +2187,56 @@ export class UI {
   }
 
   /**
+   * Sowing on a tilled field or a garden bed: pick from the seeds you carry. A
+   * Farmer who has learned to sow a patch is offered that too, from the same
+   * seeds. On the ground's list and on a pinned storey's (`storeyMenu`).
+   */
+  private sowEntries(pick: Pick, target: Extract<Target, { kind: 'tile' }>): MenuItem[] {
+    const entries: MenuItem[] = [];
+    // Sowing on a tilled field: pick from the seeds you carry. A Farmer who has
+    // learned to sow a patch is offered that too, from the same seeds.
+    const seedsCarried = this.game.inventory.items.filter((it) => CROP_BY_SEED.has(it.id));
+    const sowMenu = (def: ActionDef, label: string, note: (crop: CropDef) => string): void => {
+      entries.push({
+        label,
+        disabled: !seedsCarried.length,
+        hint: seedsCarried.length ? undefined : 'No seeds carried (from foraging and botanizing).',
+        children: seedsCarried.length
+          ? seedsCarried.map((it) => {
+              const crop = CROP_BY_SEED.get(it.id)!;
+              const st: Target = { ...target, itemUid: it.uid };
+              const reason = def.check?.(st, this.game) ?? null;
+              return {
+                label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
+                note: note(crop),
+                hint: reason ?? undefined,
+                disabled: !!reason,
+                onSelect: () => this.game.requestAction(def, st),
+              };
+            })
+          : undefined,
+      });
+    };
+    const sowDef = ACTION_BY_ID.get('plant_seed');
+    if (sowDef && sowDef.applies(target, this.game) && !this.game.cropAt(pick.x, pick.y)) {
+      // At the pace this sowing would grow at: a Farmer's Fast Growth and Crop Rotation.
+      // Under glass at the glasshouse's share in any season, and in the open at the season's (`glasshouse.ts`).
+      // And on a Season's Hand's clock for a sower with Love's Season's Hand, which a winter does not stop.
+      // And on a garden bed on the glass clock, as under glass (`gardenbed.ts`).
+      const onBed = bedLevelOf(this.game, pick.x, pick.y) !== null;
+      const clock = onBed || underGlass(this.game.buildings, pick.x, pick.y) ? 'glass' : this.game.pathFx('winter', 0) > 0 ? 'hand' : 'field';
+      sowMenu(sowDef, 'Sow', (crop) => stageNote(crop.name, crop.stageSeconds * sownPace(this.game, pick.x, pick.y, crop.id), clock, this.game.wallNow()));
+    }
+    const patchDef = ACTION_BY_ID.get('sow_patch');
+    if (patchDef && patchDef.applies(target, this.game)) {
+      const r = this.game.perk('sow_patch', 0);
+      const empty = emptyFields(this.game, pick.x, pick.y, r).length;
+      sowMenu(patchDef, 'Sow a patch', (crop) => `${crop.name} on ${empty} empty ${empty === 1 ? 'field' : 'fields'} of the ${2 * r + 1}×${2 * r + 1}`);
+    }
+    return entries;
+  }
+
+  /**
    * The list for a tile of a pinned storey over the ground (`storeyview.ts`): that storey's building work, the
    * furniture you carry to set down on it, and marks. Nothing of the ground under it, and no spells.
    */
@@ -2230,6 +2246,14 @@ export class UI {
     const host = g.buildings.buildingAt(pick.x, pick.y) ?? storeyHost(g, pick.x, pick.y, level);
     const onRoof = !!host && g.buildings.buildingAt(pick.x, pick.y) === host && level >= host.levels;
     const entries: MenuItem[] = [...this.buildingEntries(pick, level)];
+    // A garden bed on it, worked from it (`gardenbed.ts`): sown, tended, harvested and pulled up.
+    if (bedLevelOf(g, pick.x, pick.y) === level) {
+      const bedAt = { kind: 'tile' as const, x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy };
+      entries.push(...this.sowEntries(pick, bedAt));
+      for (const { def, reason } of g.actionsFor(bedAt)) {
+        if (FARM_ACTION_BY_ID.has(def.id)) entries.push(this.jobEntry(def, bedAt, reason, def.labelFor?.(bedAt, g) ?? def.label));
+      }
+    }
     entries.push(...this.bridgeFromHere(pick, { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy }));
     if (!onRoof && g.standable(pick.x, pick.y, level)) entries.push(...this.furnitureDownEntries());
     entries.push(...this.markEntries(pick));
@@ -3954,11 +3978,12 @@ export class UI {
       else {
         entries.push({
           label: `Plan ${floorLabel}`,
-          children: MATERIALS.filter((m) => takesAs(m, { floor: 'floor' })).map((m) => {
+          // A deck on piers in any of them; a floor in any of them or a garden bed (`BED_NO_DECK`).
+          children: (deck ? MATERIALS : FLOOR_MATERIALS).filter((m) => takesAs(m, { floor: 'floor' })).map((m) => {
             const t: Target = { ...base, material: m.id, floorKind: 'floor' };
             const why = cellarReason(g, plan, t);
             if (why) return { label: m.name, hint: why, disabled: true };
-            const bill = describeNeeds(deck ? deckBill(m.id, g.pierDropAt(x, y)) : floorBill(m.id), materialName);
+            const bill = describeNeeds(deck ? deckBill(m.id, g.pierDropAt(x, y)) : floorBill(m.id), materialName, m.id);
             // A deck carries what it is laid in (`deckCarries`), and says so.
             return { label: m.name, note: deck ? `${bill} · walls up to ${heftWord(m.heft)}` : bill, onSelect: () => g.requestAction(plan, t) };
           }),

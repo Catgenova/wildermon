@@ -45,10 +45,11 @@ import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays,
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
   NO_PLAN_FROM, OUTSIDE_STAIR_LEVEL, roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
-  STOREY_JOBS,
+  STOREY_JOBS, describeNeeds, GARDEN_BED,
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
+import { BED_COVERED } from '../../game/gardenbed';
 import { LIFE_MOTES_EACH, POULTICE_HEAL, WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
@@ -4248,6 +4249,17 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: Drink from a barrel, well, fountain, bucket or skin: any liquid but ${listed([...UNDRINKABLE].map((l) => LIQUID_NAME[l]))} (was: water, milk, juice and brews only); ${DRINK_LITRES} litre a drink. `
         + `Bucket of water: ${percent(itemDef('water_bucket').drink ?? 0)} of thirst; bucket of whey: ${percent(itemDef('whey_bucket').drink ?? 0)} (was: not drinkable).`,
+    ],
+  },
+  {
+    n: 476,
+    day: '2026-11-04',
+    lines: () => [
+      `New: ${GARDEN_BED.name.toLowerCase()}, Plan floor on any storey: ${describeNeeds(floorBill(GARDEN_BED.id), materialName, GARDEN_BED.id)} per tile; `
+        + `mallet; trains carpentry. ${onlySaid(GARDEN_BED)}`,
+      `Finished: a field. Sow, tend, harvest and patches from the storey you stand on; ${growthWords(GLASSHOUSE_GROWTH)} in every season, winter included, `
+        + 'while nothing finished is above it or the nearest thing above is a glass roof.',
+      `${BED_COVERED} A growing crop holds its progress until uncovered. One crop per tile, any storey. Settlement farm workers: beds up finished staircases. Hod carriers: its timber and dirt, not its ribbons.`,
     ],
   },
   {

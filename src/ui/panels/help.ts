@@ -39,10 +39,12 @@ import { HOARD_LUMPS, HOARD_MORE } from '../../game/butcher';
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, columnBill, floorBill, GLASS_ROOF, HEFT_WORDS, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIALS as WALL_MATERIALS, onlySaid, OUTSIDE_STAIR_LEVEL, takesAs,
   MAX_LEVELS, NO_PLAN_FROM, RAILING_HEIGHT, roofShapeDef, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, roofShapeOf, SIDE_NAMES, WALL_HEIGHT, wallBill, WALL_TYPE_BY_ID, WALL_TYPES,
+  describeNeeds, GARDEN_BED,
 } from '../../game/building';
 import { CELLAR_ACTION_BY_ID, CELLAR_DAYLIGHT, cellarOutdoor } from '../../game/cellar';
 import { SPIRAL_TREADS } from '../../game/spiral';
 import { materialName } from '../../game/buildActions';
+import { BED_COVERED, BED_ONE_CROP } from '../../game/gardenbed';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_SEEN, COUNTER_WALL } from '../../game/counters';
 import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
 import { FIND_SHOWN } from '../../game/marketfind';
@@ -277,6 +279,10 @@ const glassTile = (): string =>
 /** What a solid wall of glass takes: "24 glass panes and 8 timbers". */
 const glassWall = (): string =>
   listed(Object.entries(wallBill(GLASS_ROOF.id, 'solid').total).map(([id, n]) => `${n} ${materialName(id, n)}`));
+/** What a tile of garden bed takes: "4 timbers, 2 metal ribbons (iron), 6 dirt", off its bill (`floorBill`). */
+const bedTile = (): string => describeNeeds(floorBill(GARDEN_BED.id), materialName, GARDEN_BED.id);
+/** The make of the item a garden bed takes only one make of, lower case: "iron". */
+const bedMake = (): string => listed(Object.values(GARDEN_BED.extra ?? {}).map((m) => m.toLowerCase()));
 /** The wall types that close in a glasshouse and are laid in glass, from `only`: "solid wall". */
 const glassWallTypes = (): string => listed(WALL_TYPES.filter((w) => takesAs(GLASS_ROOF, { wall: w.id })).map((w) => (w.id === 'solid' ? 'solid wall' : w.name.toLowerCase())));
 /** The Farmer's perks that work on a planter as on a field: whatever a sowing or a harvest reads, but for Crop Rotation, which a planter keys to itself. */
@@ -1680,6 +1686,7 @@ export function helpText(): string {
       Seed, either way: ${seedSays()} per harvest (settlement workers too).</li>
       <li>Tending and tilling train <b>Farming</b>; farming sets harvest quality (QL).</li>
       <li>Harvesting leaves the field tilled (resowable; a ${SPECIES.seavic.name} can run one alone).</li>
+      <li><b>${GARDEN_BED.name}</b>: a floor that farms as a field, ${growthWords(GLASSHOUSE_GROWTH)} in every season while open to the sky or under glass (see Building).</li>
     </ul>
     <h4>Farmer patches</h4>
     <ul>
@@ -1859,6 +1866,16 @@ export function helpText(): string {
       Cotton growth stage: ${dur(CROPS.cotton.stageSeconds / GLASSHOUSE_GROWTH)} all year.</li>
       <li>Last panel or wall in: crops continue at glasshouse growth speed from their progress. A roof tile or wall removed, or a tile added: field growth speed from there.</li>
       <li>Indoors: items left in it rot at ${frac(INDOORS_DECAY)} of the open-air rate.</li>
+    </ul>
+    <h4>Garden beds</h4>
+    <ul>
+      <li><b>Plan floor</b> offers <b>${GARDEN_BED.name.toLowerCase()}</b>, any storey: ${bedTile()} per tile; mallet; trains carpentry. ${onlySaid(GARDEN_BED)}</li>
+      <li>Ribbons: ${bedMake()} only. Hod carriers: timber and dirt only.</li>
+      <li>Finished: a field, no tilling. Sow, tend, harvest and patches from the storey you stand on (all field rules, Farmer perks and Bounty included).</li>
+      <li>Growth: <b>${growthWords(GLASSHOUSE_GROWTH)} in every season</b>, winter included, while open: nothing finished above it, or the nearest finished thing above a glass roof.</li>
+      <li>Covered (floor, staircase or roof not of glass above): "${BED_COVERED}" Growing crop: holds its progress until uncovered.</li>
+      <li>One crop per tile, any storey: "${BED_ONE_CROP}"</li>
+      <li>Removed or relaid in another material: its crop goes with it. Settlement farm workers: beds on any storey a finished staircase reaches.</li>
     </ul>
     <h4>Fences, gates, half walls</h4>
     <ul>

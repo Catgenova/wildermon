@@ -18,6 +18,7 @@ import {
   isDone,
   MATERIAL_BY_ID,
   MATERIALS,
+  FLOOR_MATERIALS,
   MATERIALS_WITH_GLASS,
   OPPOSITE_SIDE,
   OUTSIDE_STAIR_LEVEL,
@@ -69,10 +70,11 @@ const materials = (g: Game, def: ActionDef, target: TileTarget, label: string, b
   const as = def.id === 'plan_column' ? { column: true } : def.id === 'plan_floor' ? { floor: target.floorKind ?? 'floor' } : { wall: target.wallType };
   return {
     label,
-    children: MATERIALS.filter((m) => takesAs(m, as)).map((m) => {
+    // A floor in any of them or a garden bed (`FLOOR_MATERIALS`); anything else in any of them.
+    children: (def.id === 'plan_floor' ? FLOOR_MATERIALS : MATERIALS).filter((m) => takesAs(m, as)).map((m) => {
       const t: TileTarget = { ...target, material: m.id };
       const why = def.check?.(t, g) ?? null;
-      return { label: m.name, note: describeNeeds(bill(m.id), materialName), hint: why ?? undefined, disabled: !!why, onSelect: () => g.requestAction(def, t) };
+      return { label: m.name, note: describeNeeds(bill(m.id), materialName, m.id), hint: why ?? undefined, disabled: !!why, onSelect: () => g.requestAction(def, t) };
     }),
   };
 };

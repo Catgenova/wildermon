@@ -4,6 +4,7 @@
  * planned first, then built by feeding them materials one unit at a time.
  */
 import { capital, fill, listedOr } from './words';
+import { METAL_BY_ID } from './metal';
 
 export type WallType = 'solid' | 'window' | 'bay' | 'door' | 'double_door' | 'arch' | 'fence' | 'fence_gate' | 'half_wall' | 'iron_gate'
   | 'counter' | 'railing'
@@ -207,6 +208,12 @@ export interface MaterialDef {
   only?: { walls: readonly WallType[]; floors: readonly FloorKind[] };
   /** Glass, and seen through: a wall of it does not stop the eye (`vision.ts`), as a window does not. */
   seeThrough?: boolean;
+  /**
+   * Bill items taken only of one make: the `Item.extra` an item of that id
+   * must carry, as a metal ribbon carries its metal's name -- a garden bed's
+   * ribbons are iron ones. The island's `build_material_bill.extra`.
+   */
+  extra?: Readonly<Record<string, string>>;
 }
 
 /** The three grades of weight, as a builder names them. */
@@ -219,6 +226,9 @@ export const heftWord = (n: number): string => HEFT_WORDS[n] ?? 'timber';
 export const STOREY_SKILL = 10;
 /** Past the tenth storey, which only a Mason's Tall Walls reaches, a hundred is as much as there is. */
 export const storeySkill = (levels: number): number => Math.min(100, levels * STOREY_SKILL);
+
+/** A floor's share of a solid wall's bill (`floorBill`). */
+export const FLOOR_SHARE = 0.5;
 
 export const MATERIALS: MaterialDef[] = [
   { id: 'log', name: 'Log', kind: 'wood', tool: 'mallet', skill: 'carpentry', color: [139, 106, 62], trim: [92, 66, 38], floor: [150, 118, 74], courses: 3, bill: [['log', 16]], storeys: 3, heft: 1 },
@@ -259,6 +269,36 @@ export const GLASS_ROOF: MaterialDef = {
 MATERIAL_BY_ID.set(GLASS_ROOF.id, GLASS_ROOF);
 /** Every material a wall menu offers: `MATERIALS` and glass, which takes a solid wall and no other type (`takesAs`). */
 export const MATERIALS_WITH_GLASS: readonly MaterialDef[] = [...MATERIALS, GLASS_ROOF];
+
+/** A garden bed tile's bill: timber, iron metal ribbons and dirt (`GARDEN_BED`, through `floorBill`). */
+export const GARDEN_BED_TIMBER = 4;
+export const GARDEN_BED_RIBBONS = 2;
+export const GARDEN_BED_DIRT = 6;
+/** The metal a garden bed's ribbons are of. */
+export const GARDEN_BED_METAL = 'iron';
+/**
+ * A garden bed: soil in a timber frame bound with iron ribbons, laid as a
+ * floor and nothing else (`only`), with the mallet, trained as carpentry, at
+ * timber's heft. A tile of it costs `GARDEN_BED_TIMBER` timber,
+ * `GARDEN_BED_RIBBONS` iron metal ribbons and `GARDEN_BED_DIRT` dirt: its bill
+ * is a solid wall's worth, which a floor takes `FLOOR_SHARE` of as every
+ * floor does. Finished, it is a field to sow: see `gardenbed.ts`. Not in
+ * `MATERIALS`, which every menu of walls, fences and columns offers; the floor
+ * menus offer it (`FLOOR_MATERIALS`).
+ */
+export const GARDEN_BED: MaterialDef = {
+  id: 'garden_bed', name: 'Garden bed', kind: 'wood', tool: 'mallet', skill: 'carpentry',
+  color: [96, 70, 46], trim: [140, 104, 66], floor: [92, 66, 44], courses: 4,
+  bill: [['timber', GARDEN_BED_TIMBER / FLOOR_SHARE], ['ribbon', GARDEN_BED_RIBBONS / FLOOR_SHARE], ['dirt', GARDEN_BED_DIRT / FLOOR_SHARE]],
+  storeys: 10, heft: 1, only: { walls: [], floors: ['floor'] },
+  extra: { ribbon: METAL_BY_ID.get(GARDEN_BED_METAL)?.name ?? 'Iron' },
+};
+MATERIAL_BY_ID.set(GARDEN_BED.id, GARDEN_BED);
+/** Every material a floor menu offers: `MATERIALS` and the garden bed, which takes a floor and nothing else (`takesAs`). */
+export const FLOOR_MATERIALS: readonly MaterialDef[] = [...MATERIALS, GARDEN_BED];
+/** The make a material takes a bill item of (`MaterialDef.extra`), or undefined for any. */
+export const billExtra = (material: string | undefined, item: string): string | undefined =>
+  material ? MATERIAL_BY_ID.get(material)?.extra?.[item] : undefined;
 
 /** A floor kind as the sentence below names it. */
 const FLOOR_WORDS: Record<FloorKind, string> = { floor: 'a floor', stairs: 'a flight of stairs', ladder: 'a ladder', roof: 'a roof' };
@@ -741,7 +781,7 @@ export const SINGLE_STAIRS_SHARE = 0.5;
 export function floorBill(material: string, kind: FloorKind = 'floor', roof: RoofShape = 'hip', hand?: StairHand | null): Bill {
   if (kind === 'ladder') return { needed: { plank: LADDER_PLANKS }, total: { plank: LADDER_PLANKS } };
   if (kind === 'roof') return scaledBill(material, ROOF_SHAPE_BY_ID.get(roof)?.factor ?? 0.5);
-  return scaledBill(material, kind === 'stairs' ? (hand ? SINGLE_STAIRS_SHARE : STAIRS_SHARE) : 0.5);
+  return scaledBill(material, kind === 'stairs' ? (hand ? SINGLE_STAIRS_SHARE : STAIRS_SHARE) : FLOOR_SHARE);
 }
 
 /**
@@ -1748,8 +1788,13 @@ export class Buildings {
 }
 
 /** Human readable remaining materials, e.g. "2 logs, 1 plank". */
-export function describeNeeds(bill: Bill, nameOf: (id: string, n: number) => string): string {
+export function describeNeeds(bill: Bill, nameOf: (id: string, n: number) => string, material?: string): string {
   const parts: string[] = [];
-  for (const [id, n] of Object.entries(bill.needed)) if (n > 0) parts.push(`${n} ${nameOf(id, n)}`);
+  for (const [id, n] of Object.entries(bill.needed)) {
+    if (n <= 0) continue;
+    // Of one make only, as an item of it is named: "2 metal ribbons (iron)" (`billExtra`).
+    const of = billExtra(material, id);
+    parts.push(`${n} ${nameOf(id, n)}${of ? ` (${of.toLowerCase()})` : ''}`);
+  }
   return parts.join(', ');
 }

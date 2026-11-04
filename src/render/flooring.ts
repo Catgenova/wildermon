@@ -950,8 +950,124 @@ function bedded(ink: string, a = 0.16): (g: Ctx, x: number, y: number, w: number
 }
 
 /** What each material lays a floor in, and whether it runs one way. */
+/**
+ * A garden bed (`gardenbed.ts`): a tile of tilled soil in its own frame of
+ * squared timber, four rails mitred at the corners and bound over each mitre
+ * with a strap of iron ribbon, nailed through. The soil is dark and turned in
+ * rows, crumb and clods on it. Every tile of the picture is one bed, so a
+ * room of them is beds side by side, each in its frame.
+ */
+function gardenBed(seed: number): HTMLCanvasElement {
+  const [c, g] = canvas(S, S);
+  const R = rand(seed);
+  const T = FLOOR_PPT;
+  const rail = T * 0.11;
+  const soil = ['#4a3222', '#523826', '#45301f', '#583c28'];
+  for (let j = 0; j < FLOOR_TILES; j++) {
+    for (let i = 0; i < FLOOR_TILES; i++) {
+      const x0 = i * T, y0 = j * T;
+      // The soil: a dark ground, turned in rows across the bed, crumb and clods over it.
+      g.fillStyle = '#3e2a1c';
+      g.fillRect(x0, y0, T, T);
+      const rows = 5;
+      const inner = T - 2 * rail, rh = inner / rows;
+      for (let r = 0; r < rows; r++) {
+        const ry = y0 + rail + r * rh;
+        const grad = g.createLinearGradient(0, ry, 0, ry + rh);
+        grad.addColorStop(0, '#2f2016');
+        grad.addColorStop(0.35, soil[(r + i + j) % soil.length]);
+        grad.addColorStop(0.7, step(soil[(r + 1 + i) % soil.length], 0.08));
+        grad.addColorStop(1, '#2c1e14');
+        g.fillStyle = grad;
+        g.fillRect(x0 + rail, ry, inner, rh);
+      }
+      g.save();
+      g.beginPath();
+      g.rect(x0 + rail, y0 + rail, inner, inner);
+      g.clip();
+      for (let k = 0; k < 420; k++) {
+        const px = x0 + rail + R() * inner, py = y0 + rail + R() * inner;
+        g.fillStyle = R() < 0.5 ? hexA('#6e5039', 0.35 + R() * 0.3) : hexA('#22160e', 0.3 + R() * 0.3);
+        g.beginPath();
+        g.arc(px, py, 0.8 + R() * 1.8, 0, Math.PI * 2);
+        g.fill();
+      }
+      for (let k = 0; k < 26; k++) {
+        const px = x0 + rail + R() * inner, py = y0 + rail + R() * inner, r = 2.5 + R() * 3.5;
+        g.fillStyle = '#5c412b';
+        g.beginPath();
+        g.ellipse(px, py, r, r * 0.75, R() * Math.PI, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = hexA('#8a6a4e', 0.5);
+        g.beginPath();
+        g.ellipse(px - r * 0.25, py - r * 0.25, r * 0.45, r * 0.3, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+      // The shade the frame throws on the soil inside it.
+      g.strokeStyle = 'rgba(16, 10, 6, 0.45)';
+      g.lineWidth = rail * 0.5;
+      g.strokeRect(x0 + rail, y0 + rail, inner, inner);
+      g.restore();
+      // The frame: four rails, each a board with its grain along it, mitred at the corners.
+      const rails: Array<[Pt[], boolean]> = [
+        [[[x0, y0], [x0 + T, y0], [x0 + T - rail, y0 + rail], [x0 + rail, y0 + rail]], true],
+        [[[x0 + T, y0], [x0 + T, y0 + T], [x0 + T - rail, y0 + T - rail], [x0 + T - rail, y0 + rail]], false],
+        [[[x0 + T, y0 + T], [x0, y0 + T], [x0 + rail, y0 + T - rail], [x0 + T - rail, y0 + T - rail]], true],
+        [[[x0, y0 + T], [x0, y0], [x0 + rail, y0 + rail], [x0 + rail, y0 + T - rail]], false],
+      ];
+      rails.forEach(([pts, across], n) => {
+        const tone = ['#a07a52', '#946f49', '#a8825a', '#8f6b46'][(n + i * 2 + j) % 4];
+        g.save();
+        path(g, pts);
+        g.clip();
+        g.fillStyle = tone;
+        g.fillRect(x0, y0, T, T);
+        g.strokeStyle = hexA('#5e4430', 0.35);
+        g.lineWidth = 1;
+        for (let k = 0; k < 4; k++) {
+          const v = 0.2 + k * 0.2 + (R() - 0.5) * 0.08, ph = R() * 6, amp = 0.6 + R();
+          g.beginPath();
+          for (let u = 0; u <= T; u += 8) {
+            const w = Math.sin(u / 70 + ph) * amp;
+            const along = n === 0 ? [x0 + u, y0 + rail * v + w] : n === 1 ? [x0 + T - rail * v + w, y0 + u]
+              : n === 2 ? [x0 + u, y0 + T - rail * v + w] : [x0 + rail * v + w, y0 + u];
+            if (u) g.lineTo(along[0], along[1]);
+            else g.moveTo(along[0], along[1]);
+          }
+          g.stroke();
+        }
+        g.restore();
+        bevel(g, (dx, dy) => path(g, pts, dx, dy), '#d2b18a', '#4e3824', 3, across ? 0.6 : 0.5);
+      });
+      // The iron ribbon over each mitre: a dark strap across the corner, two nail heads through it.
+      for (const [cx, cy, sx, sy] of [[x0, y0, 1, 1], [x0 + T, y0, -1, 1], [x0 + T, y0 + T, -1, -1], [x0, y0 + T, 1, -1]] as const) {
+        const a = rail * 1.55, b = rail * 0.55;
+        const strap: Pt[] = [[cx + sx * a, cy], [cx + sx * (a + b), cy], [cx, cy + sy * (a + b)], [cx, cy + sy * a]];
+        path(g, strap);
+        g.fillStyle = '#4c4f55';
+        g.fill();
+        bevel(g, (dx, dy) => path(g, strap, dx, dy), '#9ea3ab', '#25272b', 2, 0.7);
+        for (const t of [0.3, 0.7]) {
+          const nx = cx + sx * (a + b / 2) * (1 - t), ny = cy + sy * (a + b / 2) * t;
+          g.fillStyle = '#2a2c30';
+          g.beginPath();
+          g.arc(nx, ny, 2.2, 0, Math.PI * 2);
+          g.fill();
+          g.fillStyle = 'rgba(200, 204, 210, 0.6)';
+          g.beginPath();
+          g.arc(nx - 0.6, ny - 0.6, 0.9, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+    }
+  }
+  return c;
+}
+
 function laid(material: string): { img: HTMLCanvasElement; runs: boolean } | null {
   switch (material) {
+    case 'garden_bed':
+      return { runs: false, img: gardenBed(281) };
     case 'plank':
       return {
         runs: true,

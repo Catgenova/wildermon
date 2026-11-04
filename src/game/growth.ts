@@ -65,14 +65,26 @@ export const GLASSHOUSE_GROWTH = SPRING_GROWTH;
  * (`PLANTER_GROWTH` of the plain clock) or a glasshouse's (`GLASSHOUSE_GROWTH`
  * of it). A crop keeps its stage start on its own clock.
  */
-export type CropClock = 'field' | 'planter' | 'glass' | 'hand';
-/** The clock a crop grows on: in a planter, under glass, or in a field -- a Season's Hand's (`handClock`) for one sown by somebody with it. */
-export const cropClockOf = (c: { planter?: number; glass?: boolean; hand?: boolean }): CropClock =>
-  c.planter !== undefined ? 'planter' : c.glass ? 'glass' : c.hand ? 'hand' : 'field';
+export type CropClock = 'field' | 'planter' | 'glass' | 'hand' | 'still';
+/**
+ * The clock a crop grows on: in a planter, under glass, or in a field -- a
+ * Season's Hand's (`handClock`) for one sown by somebody with it -- or, on a
+ * covered garden bed, the still clock, which never runs (`STILL_CLOCK`).
+ */
+export const cropClockOf = (c: { planter?: number; glass?: boolean; hand?: boolean; still?: boolean }): CropClock =>
+  c.planter !== undefined ? 'planter' : c.still ? 'still' : c.glass ? 'glass' : c.hand ? 'hand' : 'field';
+/**
+ * The still clock's reading, at every moment: a crop on a covered garden bed
+ * (`gardenbed.ts`) keeps its stage start on it as how far into its stage it
+ * had grown, below this, and grows not at all until it is carried back onto
+ * the glass clock (`rebaseStage`). The island stores the same reading as a
+ * moment that many seconds from the epoch (`crop_rebased`).
+ */
+export const STILL_CLOCK = 0;
 /** A clock named the old way, a planter's or not, or by name. */
 export const clockNamed = (k: boolean | CropClock): CropClock => (k === true ? 'planter' : k === false ? 'field' : k);
 /** A share of the plain clock a clock runs at, for the two that run steadily; a field's has none. */
-export const steadyRate = (k: CropClock): number => (k === 'planter' ? PLANTER_GROWTH : k === 'glass' ? GLASSHOUSE_GROWTH : NaN);
+export const steadyRate = (k: CropClock): number => (k === 'planter' ? PLANTER_GROWTH : k === 'glass' ? GLASSHOUSE_GROWTH : k === 'still' ? 0 : NaN);
 
 /** The glass clock: the growing seconds under glass up to a moment, `GLASSHOUSE_GROWTH` of the plain clock. */
 export const glassClock = (t: number): number => GLASSHOUSE_GROWTH * t;

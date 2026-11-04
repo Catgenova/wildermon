@@ -1778,6 +1778,21 @@ jobs:
           npx esbuild supabase/test/glasswall.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/glasswall.mjs --log-level=error
           node node_modules/.cache/glasswall.mjs
+
+      - name: A garden bed is a field on any storey, open to the sky or under glass
+        if: matrix.shard == 6
+        run: |
+          # A floor of garden bed, laid as a floor and nothing else, at its bill
+          # through `floorBill` and with iron ribbons only; finished, sown,
+          # tended and harvested on the ground and on storey 2 from the storey
+          # stood on, on the glass clock in a winter, open to the sky or under
+          # glass; covered by a floor or a roof not of glass, refused a sowing,
+          # its crop held on the still clock and grown on from there when
+          # uncovered; one crop a tile; taken up with its bed; worked by a farm
+          # worker up the stairs; a glasshouse field and a planter as they were.
+          npx esbuild supabase/test/gardenbed.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/gardenbed.mjs --log-level=error
+          node node_modules/.cache/gardenbed.mjs
       - name: A wall changed where it stands
         if: matrix.shard == 2
         run: |

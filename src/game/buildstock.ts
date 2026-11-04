@@ -51,16 +51,28 @@ const buildStores = (g: Game, mat: MaterialDef | undefined): Array<{ items: Item
   const reach = buildReach(g, mat);
   return reach > 0 ? g.storesWithin(reach) : [];
 };
-const takeable = (it: Item, id: string): boolean => it.id === id && it.count > 0 && !it.locked && it.price === undefined;
+const takeable = (it: Item, id: string, mat?: MaterialDef): boolean =>
+  it.id === id && it.count > 0 && !it.locked && it.price === undefined && ofMake(it, id, mat);
+/** Whether an item is of the make a material takes it in (`MaterialDef.extra`): an iron ribbon for a garden bed, any other ribbon for anything else. */
+const ofMake = (it: Item, id: string, mat: MaterialDef | undefined): boolean => {
+  const of = mat?.extra?.[id];
+  return of === undefined || it.extra === of;
+};
+/** What a material takes an item of in the pack: its make, where it takes only one (`MaterialDef.extra`). */
+export const packed = (g: Game, id: string, mat: MaterialDef | undefined): number => {
+  const of = mat?.extra?.[id];
+  return of === undefined ? g.inventory.count(id) : g.inventory.items.filter((it) => it.id === id && !it.locked && it.extra === of).reduce((n, it) => n + it.count, 0);
+};
 
 /** The next item on a bill that is to hand: in the pack, in a crate on the tile, or in a store within `buildReach`. */
 export function nextAvailable(g: Game, bill: Bill & { material: string }, at?: { x: number; y: number }): string | null {
-  const stores = buildStores(g, material(bill.material));
+  const mat = material(bill.material);
+  const stores = buildStores(g, mat);
   for (const [id, n] of Object.entries(bill.needed)) {
     if (n <= 0) continue;
-    if (g.inventory.has(id)) return id;
-    if (at && siteCrates(g, at.x, at.y).some((c) => c.items.some((it) => it.id === id && it.count > 0))) return id;
-    if (stores.some((st) => st.items.some((it) => takeable(it, id)))) return id;
+    if (packed(g, id, mat) > 0) return id;
+    if (at && siteCrates(g, at.x, at.y).some((c) => c.items.some((it) => it.id === id && it.count > 0 && ofMake(it, id, mat)))) return id;
+    if (stores.some((st) => st.items.some((it) => takeable(it, id, mat)))) return id;
   }
   return null;
 }
@@ -73,15 +85,16 @@ export function nextAvailable(g: Game, bill: Bill & { material: string }, at?: {
  * way, with no material.
  */
 export function takeUnit(g: Game, id: string, mat: MaterialDef | undefined, at?: { x: number; y: number }): Item | null {
-  if (g.inventory.has(id)) {
+  const of = mat?.extra?.[id];
+  if (packed(g, id, mat) > 0) {
     // The pile `consume` takes it off: the first loose one, as the island takes the lowest numbered.
-    const from = g.inventory.find(id);
-    return from && g.inventory.consume(id) ? from : null;
+    const from = g.inventory.find(id, of);
+    return from && g.inventory.consume(id, 1, of) ? from : null;
   }
   // Out of the crate on the site, a unit at a time, and the row goes when
   // the last of it does.
   for (const c of siteCrates(g, at?.x ?? 0, at?.y ?? 0)) {
-    const i = c.items.findIndex((it) => it.id === id && it.count > 0);
+    const i = c.items.findIndex((it) => it.id === id && it.count > 0 && ofMake(it, id, mat));
     if (i < 0) continue;
     const it = c.items[i];
     it.count -= 1;
@@ -89,7 +102,7 @@ export function takeUnit(g: Game, id: string, mat: MaterialDef | undefined, at?:
     return it;
   }
   for (const st of buildStores(g, mat)) {
-    const it = st.items.find((x) => takeable(x, id));
+    const it = st.items.find((x) => takeable(x, id, mat));
     if (it && spendOut(st.items, it.uid, 1)) {
       g.events.emit('crate');
       return it;
@@ -115,9 +128,9 @@ export function consumeUnit(g: Game, bill: Bill & { material: string }, at?: { x
 
 /** How much of `id` is to hand for a bill: the pack, a crate on the tile, and the stores within `buildReach`. */
 export function toHand(g: Game, id: string, mat: MaterialDef | undefined, at: { x: number; y: number }): number {
-  let n = g.inventory.count(id);
-  for (const c of siteCrates(g, at.x, at.y)) for (const it of c.items) if (it.id === id) n += it.count;
-  for (const st of buildStores(g, mat)) for (const it of st.items) if (takeable(it, id)) n += it.count;
+  let n = packed(g, id, mat);
+  for (const c of siteCrates(g, at.x, at.y)) for (const it of c.items) if (it.id === id && ofMake(it, id, mat)) n += it.count;
+  for (const st of buildStores(g, mat)) for (const it of st.items) if (takeable(it, id, mat)) n += it.count;
   return n;
 }
 
@@ -134,11 +147,11 @@ export function storedFor(g: Game, id: string, mat: MaterialDef | undefined, til
   for (const c of g.crates.values()) {
     if (!on.has(`${c.x},${c.y}`)) continue;
     counted.add(c.items);
-    for (const it of c.items) if (it.id === id) n += it.count;
+    for (const it of c.items) if (it.id === id && ofMake(it, id, mat)) n += it.count;
   }
   for (const st of buildStores(g, mat)) {
     if (counted.has(st.items)) continue;
-    for (const it of st.items) if (takeable(it, id)) n += it.count;
+    for (const it of st.items) if (takeable(it, id, mat)) n += it.count;
   }
   return n;
 }

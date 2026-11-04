@@ -53,6 +53,7 @@ create table if not exists build_material_bill (
   material text not null, ord int not null, item text not null, n int not null,
   primary key (material, item)
 );
+alter table build_material_bill add column if not exists extra text;
 create table if not exists species_def (
   id text primary key, name text not null, description text not null,
   health real not null, attack real not null, speed real not null,
@@ -8968,6 +8969,17 @@ insert into build_material_bill values ('glass', 0, 'glass', 24);
 insert into build_material_bill values ('glass', 1, 'timber', 8);
 update build_material_def set only_walls = array['solid']::text[], only_floors = array['roof']::text[], only_said = 'Glass: only as a solid wall or a roof.' where id = 'glass';
 create or replace function glass_material() returns text language sql immutable as $fn$ select 'glass' $fn$;
+insert into build_material_def (id, name, kind, tool, skill, storeys, heft) values ('garden_bed', 'Garden bed', 'wood', 'mallet', 'carpentry', 10, 1);
+insert into build_material_bill (material, ord, item, n, extra) values ('garden_bed', 0, 'timber', 8, null);
+insert into build_material_bill (material, ord, item, n, extra) values ('garden_bed', 1, 'ribbon', 4, 'Iron');
+insert into build_material_bill (material, ord, item, n, extra) values ('garden_bed', 2, 'dirt', 12, null);
+update build_material_def set only_walls = array[]::text[], only_floors = array['floor']::text[], only_said = 'Garden bed: only as a floor.' where id = 'garden_bed';
+create or replace function bed_material() returns text language sql immutable as $fn$ select 'garden_bed' $fn$;
+create or replace function bed_covered_said() returns text language sql immutable as $fn$ select 'Covered: garden beds need open sky or a glass roof.' $fn$;
+create or replace function bed_one_crop_said() returns text language sql immutable as $fn$ select 'Crop on another storey of this tile: one crop per tile.' $fn$;
+create or replace function bed_name() returns text language sql immutable as $fn$ select 'Garden bed' $fn$;
+create or replace function bed_still_said() returns text language sql immutable as $fn$ select 'covered: no growth' $fn$;
+create or replace function bed_no_deck_said() returns text language sql immutable as $fn$ select 'Garden bed: not a deck on piers.' $fn$;
 create or replace function glasshouse_growth() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
 create or replace function glass_pitched_said() returns text language sql immutable as $fn$ select 'Glass roofs: pitched, gabled or hipped only (flat roofs are walkable decks).' $fn$;
 create or replace function field_unfloored_said() returns text language sql immutable as $fn$ select 'Field here: clear it first.' $fn$;
