@@ -38,7 +38,7 @@
  * rolled back.
  */
 import { readFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import {
   FOG_EVERY, GATE_FOLK_EVERY, GROUND_EVERY, GUIDE_EVERY, MOBS_EVERY, RECONCILE_EVERY, SNAP_GAP, SPRINGS_EVERY, SWIRLS_EVERY,
 } from '../../src/game/keep';
@@ -47,18 +47,16 @@ import { Game } from '../../src/game/game';
 import { clockSteps } from '../../src/engine/loop';
 import { TILE_DEFS, TileType } from '../../src/world/tiles';
 
+const PG_ENV = {
+  ...process.env,
+  PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
+  PGPORT: process.env.PGPORT ?? '5433',
+  PGUSER: process.env.PGUSER ?? 'wurm',
+  PGDATABASE: process.env.PGDATABASE ?? 'postgres',
+};
+const PSQL_ARGS = ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'];
 const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
+  execFileSync('psql', PSQL_ARGS, { input: sql, encoding: 'utf8', env: PG_ENV }).trim();
 
 const ok: string[] = [];
 const bad: string[] = [];
@@ -171,6 +169,23 @@ for (const c of budget.keys()) {
     bucket.get(`${c}.later`));
 }
 check('one class empty leaves the others alone', bucket.get('alone') === 'through', bucket.get('alone'));
+
+/* ---- two calls of one body at once ------------------------------------------------------------ */
+
+// A browser asks several things at once. Each connection keeps its own count of a body (`caller.stripe`), so a call
+// on one connection does not wait for another call of the same body still open on another.
+const TWICE = '99999999-0000-4000-8000-0000000000b2';
+const HOLD_SECS = 2;
+const holder = spawn('psql', PSQL_ARGS, { env: PG_ENV, stdio: ['pipe', 'ignore', 'ignore'] });
+const held = new Promise<void>((done) => holder.on('exit', () => done()));
+holder.stdin.end(`begin; select private.pace('${TWICE}', 'look'); select too_fast('${TWICE}'); select pg_sleep(${HOLD_SECS}); rollback;`);
+await new Promise((done) => setTimeout(done, 500));
+const askedAt = Date.now();
+psql(`begin; select private.pace('${TWICE}', 'look'); select private.pace('${TWICE}', 'act'); select too_fast('${TWICE}'); rollback;`);
+const waited = Date.now() - askedAt;
+await held;
+check(`a call does not wait for another of the same body still open on another connection (held ${HOLD_SECS} s)`,
+  waited < 1000, `${waited} ms`);
 
 /* ---- a door refused does nothing ------------------------------------------------------------ */
 

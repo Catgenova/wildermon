@@ -172,8 +172,7 @@ jobs:
           ask "since when pg_stat_statements counts" "select to_char(stats_reset, 'MM-DD HH24:MI') as since, dealloc from pg_stat_statements_info"
           # The API's own connections, by age: a call on a connection seconds old pays for planning everything it calls
           # (a move cost 41-45 ms on a new connection, 13-16 on its second, 4-5 warm, on the test island).
-          # Who is connected, by role and by the name each client gives itself: 359,053 BEGIN/set_config/rollback in 110 s
-          # were counted at 02:00 on 11-04 with one player on, and nothing of the island's own does that.
+          # Who is connected, by role and by the name each client gives itself.
           ask "connections by role and client name" "select usename, application_name, backend_type, state, count(*)
             from pg_stat_activity group by 1, 2, 3, 4 order by 5 desc"
           ask "transactions on the database since its statistics were reset" "select xact_commit, xact_rollback, to_char(stats_reset, 'MM-DD HH24:MI') as since
@@ -189,7 +188,7 @@ jobs:
           echo "== what each call costs now: 110 seconds of pg_stat_statements, by call and arguments"
           PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$(sed 's/:\[YOUR-PASSWORD\]//' supabase/.temp/pooler-url)" -X -q -v ON_ERROR_STOP=1 <<'EOSQL' \
             || echo "::warning::could not take the two-minute count"
-          create temp table s0 as select queryid, calls, total_exec_time from pg_stat_statements;
+          create temp table s0 as select userid, dbid, toplevel, queryid, calls, total_exec_time from pg_stat_statements;
           -- Two waits: a statement here is cut off at two minutes.
           select pg_sleep(55);
           select pg_sleep(55);
@@ -199,7 +198,7 @@ jobs:
                  sum(s.calls - coalesce(a.calls, 0)) as calls,
                  round((sum(s.total_exec_time - coalesce(a.total_exec_time, 0)) / greatest(sum(s.calls - coalesce(a.calls, 0)), 1))::numeric, 2) as ms_each,
                  round(sum(s.total_exec_time - coalesce(a.total_exec_time, 0))::numeric) as ms_total
-            from pg_stat_statements s left join s0 a using (queryid) left join pg_roles r on r.oid = s.userid
+            from pg_stat_statements s left join s0 a using (userid, dbid, toplevel, queryid) left join pg_roles r on r.oid = s.userid
            where s.calls > coalesce(a.calls, 0)
            group by 1, 2, 3 order by sum(s.total_exec_time - coalesce(a.total_exec_time, 0)) desc limit 20;
           EOSQL
