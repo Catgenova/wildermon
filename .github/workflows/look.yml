@@ -83,6 +83,14 @@ jobs:
                    "https://api.supabase.com/v1/projects/$PROJECT_REF/config/disk/util" \
                  | jq -r '.metrics | "\(.fs_used_bytes) \(.fs_size_bytes)"' 2>/dev/null || true)
           echo "== disk (used, size in bytes): $disk"
+          # Asked about: "Nakatari just placed a 4ql supreme plank into his settlement crate and it lost its rarity."
+          # Whether 20261104190000 gave it back: his planks in the pack, and the store log's planks from him.
+          ask "Nakatari's planks in the pack" "select i.id, i.def, i.count, round(i.ql::numeric, 2) as ql, i.rare, i.holder
+             from item i join player p on p.world_id = i.world_id and p.uid = i.holder_uid and lower(p.name) = 'nakatari'
+            where i.holder = 'player' and i.def = 'plank' and p.world_id::text like 'f3a88670%'"
+          ask "Nakatari's planks in the store log" "select to_char(l.at, 'MM-DD HH24:MI') as at, l.put, l.what, l.count, l.store
+             from deed_store_log l join player p on p.world_id = l.world_id and p.uid = l.uid and lower(p.name) = 'nakatari'
+            where l.def = 'plank' and p.world_id::text like 'f3a88670%' order by l.id desc limit 10"
           # Asked about: "Catgenova's position is broken, every time I move I rubber band back". The body as the island
           # holds it, what holds a walk back (aboard, overload, cart, saddle), the browser's errors from that account, and
           # four short trial steps as catgenova, each undone (a subtransaction rolled back, then the whole), so nothing is
