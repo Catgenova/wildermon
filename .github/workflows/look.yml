@@ -140,6 +140,16 @@ jobs:
            order by name"
           ask "background workers by kind" "select backend_type, state, count(*), left(max(query), 80) as query
             from pg_stat_activity group by 1, 2 order by 3 desc"
+          # Whether pg_cron's scheduler is working from the jobs as stored or from a list it read before they changed:
+          # what each clock job actually ran in the last ten minutes, against what `cron.job` says it runs now, and
+          # when the scheduler itself started.
+          ask "what the clock jobs ran, last 10 minutes, against what they are stored as" "select j.jobname, left(d.command, 50) as ran,
+                 left(j.command, 50) as stored, count(*) as runs, to_char(max(d.start_time), 'HH24:MI:SS') as last
+            from cron.job_run_details d join cron.job j on j.jobid = d.jobid
+           where d.start_time > now() - interval '10 minutes' and j.jobname in ('world-tick', 'stock-tick', 'tree-tick')
+           group by 1, 2, 3 order by 1"
+          ask "when pg_cron's scheduler started" "select backend_type, pid, to_char(backend_start, 'MM-DD HH24:MI:SS') as started
+            from pg_stat_activity where backend_type like 'pg_cron%'"
           ask "rounds, last 15 minutes" "select count(*) as rounds, round(avg(ms)::numeric, 1) as ms_avg, round(max(ms)::numeric, 1) as ms_worst,
                  to_char(max(at), 'HH24:MI:SS') as last from tick_time where at > now() - interval '15 minutes'"
           # Asked: "Server stuttering?", with a round of 22 s among rounds of half a second: which rounds, and which of
