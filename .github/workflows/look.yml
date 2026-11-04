@@ -172,6 +172,12 @@ jobs:
           ask "since when pg_stat_statements counts" "select to_char(stats_reset, 'MM-DD HH24:MI') as since, dealloc from pg_stat_statements_info"
           # The API's own connections, by age: a call on a connection seconds old pays for planning everything it calls
           # (a move cost 41-45 ms on a new connection, 13-16 on its second, 4-5 warm, on the test island).
+          # Who is connected, by role and by the name each client gives itself: 359,053 BEGIN/set_config/rollback in 110 s
+          # were counted at 02:00 on 11-04 with one player on, and nothing of the island's own does that.
+          ask "connections by role and client name" "select usename, application_name, backend_type, state, count(*)
+            from pg_stat_activity group by 1, 2, 3, 4 order by 5 desc"
+          ask "transactions on the database since its statistics were reset" "select xact_commit, xact_rollback, to_char(stats_reset, 'MM-DD HH24:MI') as since
+            from pg_stat_database where datname = current_database()"
           ask "the API's connections by age" "select usename, state, count(*),
                  round(min(extract(epoch from now() - backend_start))::numeric) as youngest_s,
                  round(percentile_cont(0.5) within group (order by extract(epoch from now() - backend_start))::numeric) as median_s,
@@ -187,14 +193,15 @@ jobs:
           -- Two waits: a statement here is cut off at two minutes.
           select pg_sleep(55);
           select pg_sleep(55);
-          select coalesce(substring(s.query from '"?public"?\."?([a-z_0-9]+)"?\('), left(regexp_replace(s.query, '\s+', ' ', 'g'), 40)) as call,
+          select r.rolname as who,
+                 coalesce(substring(s.query from '"?public"?\."?([a-z_0-9]+)"?\('), left(regexp_replace(s.query, '\s+', ' ', 'g'), 40)) as call,
                  coalesce(nullif(array_to_string(array(select distinct m[1] from regexp_matches(s.query, '"(p_[a-z_]+)"', 'g') as m order by 1), ','), ''), '-') as args,
                  sum(s.calls - coalesce(a.calls, 0)) as calls,
                  round((sum(s.total_exec_time - coalesce(a.total_exec_time, 0)) / greatest(sum(s.calls - coalesce(a.calls, 0)), 1))::numeric, 2) as ms_each,
                  round(sum(s.total_exec_time - coalesce(a.total_exec_time, 0))::numeric) as ms_total
-            from pg_stat_statements s left join s0 a using (queryid)
+            from pg_stat_statements s left join s0 a using (queryid) left join pg_roles r on r.oid = s.userid
            where s.calls > coalesce(a.calls, 0)
-           group by 1, 2 order by sum(s.total_exec_time - coalesce(a.total_exec_time, 0)) desc limit 20;
+           group by 1, 2, 3 order by sum(s.total_exec_time - coalesce(a.total_exec_time, 0)) desc limit 20;
           EOSQL
           ask "rounds, last 15 minutes" "select count(*) as rounds, round(avg(ms)::numeric, 1) as ms_avg, round(max(ms)::numeric, 1) as ms_worst,
                  to_char(max(at), 'HH24:MI:SS') as last from tick_time where at > now() - interval '15 minutes'"
