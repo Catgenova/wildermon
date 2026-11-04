@@ -6,6 +6,7 @@ import { worldRate } from './pace';
 import { WELL_CEILING, wellCap } from './wells';
 import { SKILL_BY_ID } from './skills';
 import { SOUL_GAIN, tryGain } from './learn';
+import { statueName, statuePatron, type PatronDef } from './patronlist';
 
 /**
  * An altar, and what it is worth to have one.
@@ -242,6 +243,56 @@ export function doCast(g: Game, def: CastDef, item?: Item): string {
 
 const itemOf = (g: Game, t: Target): Item | undefined => (t.kind === 'item' ? g.inventory.get(t.uid) : undefined);
 
+/** Why a prayer is not heard yet, or null: the wait since the last one, at an altar and with a statue alike. */
+const prayerRest = (g: Game): string | null => {
+  const rest = g.player.prayedAt + PRAYER_REST - g.time;
+  return rest > 0 ? prayerRestWords(rest) : null;
+};
+
+/**
+ * Why a patron's statue is not prayed with by you: anybody but a follower of
+ * its patron, no patron at all included. The island's `statue_followers`, word
+ * for word: "Statue of Chaos: followers of Chaos only."
+ */
+export const statueFollowers = (p: PatronDef): string => `${statueName(p)}: followers of ${p.name} only.`;
+
+/** Why this statue in the pack will not be prayed with now, or null. The island's `faith_refusal`, word for word. */
+export function statuePrayRefusal(g: Game, t: Target): string | null {
+  const it = itemOf(g, t);
+  const p = it && statuePatron(it.id);
+  if (!it || !p) return 'It is gone.';
+  if (g.player.patron !== p.id) return statueFollowers(p);
+  return prayerRest(g);
+}
+
+/**
+ * One prayer heard, at an altar or with a statue of that QL: favour banked by
+ * `prayerWorth` at the hour and your Prayer, the wait started, faith trained.
+ * The island's `perform_faith`, for `pray` and `pray_statue` alike.
+ */
+function prayed(g: Game, ql: number): void {
+  const hour = g.hourOfDay();
+  // And more for a Favoured worn, and for soul strength (`perform_faith`).
+  const gained = prayerWorth(ql, hour, g.skills.get(PRAYER)) * (1 + g.wornEnchant('favour')) * g.soulMul();
+  const cap = favourCap(g.skills.get(FAITH));
+  const before = g.player.favour;
+  g.player.favour = Math.min(cap, before + gained);
+  g.player.prayedAt = g.time;
+  g.gainSkill(FAITH, PRAYER_GAIN);
+  g.note('prayed');
+  const dawn = Math.abs(hour - 6) < 2 || Math.abs(hour - 20) < 2;
+  g.logMsg(
+    `Prayed${dawn ? ' (dawn or dusk bonus)' : ''}. Favour ${Math.floor(g.player.favour)}/${Math.floor(cap)}.`,
+    'event',
+  );
+  // And soul strength, as every one of its sources teaches it (`SOUL_GAIN`).
+  g.gainSkill('soul_strength', tryGain(true, SOUL_GAIN));
+}
+
+/** A prayer's go: seconds at Prayer 1, and wind; at an altar and with a statue alike. */
+export const PRAY_TIME = 14;
+export const PRAY_WIND = 0.02;
+
 /** Which cast a target is asking for, carried on the target itself. */
 const castOf = (t: Target): CastDef | undefined => (t.kind === 'item' || t.kind === 'tile' ? CAST_BY_ID.get((t as { spell?: string }).spell ?? '') : undefined);
 
@@ -275,8 +326,8 @@ export const FAITH_ACTIONS: ActionDef[] = [
     verb: 'praying',
     // Said with Prayer, which the go trains as every job trains its own skill; faith is trained in `perform`.
     skill: PRAYER,
-    stamina: 0.02,
-    baseTime: 14,
+    stamina: PRAY_WIND,
+    baseTime: PRAY_TIME,
     applies: (t, g) => {
       const f = pieceOf(g, t);
       return !!f && isAltar(f);
@@ -285,29 +336,37 @@ export const FAITH_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
       if (!nearPiece(g, f)) return 'Stand at the altar.';
-      const rest = g.player.prayedAt + PRAYER_REST - g.time;
-      if (rest > 0) return prayerRestWords(rest);
-      return null;
+      return prayerRest(g);
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return;
-      const hour = g.hourOfDay();
-      // And more for a Favoured worn, and for soul strength (`perform_faith`).
-      const gained = prayerWorth(f.ql, hour, g.skills.get(PRAYER)) * (1 + g.wornEnchant('favour')) * g.soulMul();
-      const cap = favourCap(g.skills.get(FAITH));
-      const before = g.player.favour;
-      g.player.favour = Math.min(cap, before + gained);
-      g.player.prayedAt = g.time;
-      g.gainSkill(FAITH, PRAYER_GAIN);
-      g.note('prayed');
-      const dawn = Math.abs(hour - 6) < 2 || Math.abs(hour - 20) < 2;
-      g.logMsg(
-        `Prayed${dawn ? ' (dawn or dusk bonus)' : ''}. Favour ${Math.floor(g.player.favour)}/${Math.floor(cap)}.`,
-        'event',
-      );
-      // And soul strength, as every one of its sources teaches it (`SOUL_GAIN`).
-      g.gainSkill('soul_strength', tryGain(true, SOUL_GAIN));
+      prayed(g, f.ql);
+    },
+  },
+  {
+    /*
+     * A patron's statue in the pack, prayed with anywhere by a follower of its
+     * patron: an altar's prayer at the statue's QL, the same wait, favour,
+     * training and hour (`prayed`). Asked for: "The restored statue can be
+     * Enchanted using one of each mote to be statue of x diety and can be used
+     * for mobile prayer instead of needing to be at an altar".
+     */
+    id: 'pray_statue',
+    label: 'Pray',
+    verb: 'praying',
+    skill: PRAYER,
+    stamina: PRAY_WIND,
+    baseTime: PRAY_TIME,
+    applies: (t, g) => {
+      const it = itemOf(g, t);
+      return !!it && !!statuePatron(it.id);
+    },
+    check: (t, g) => statuePrayRefusal(g, t),
+    perform: (t, g) => {
+      if (statuePrayRefusal(g, t)) return;
+      const it = itemOf(g, t);
+      if (it) prayed(g, it.ql);
     },
   },
 ];

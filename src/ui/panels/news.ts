@@ -50,13 +50,14 @@ import {
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
 import { BED_COVERED } from '../../game/gardenbed';
-import { LIFE_MOTES_EACH, POULTICE_HEAL, WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
+import { LIFE_MOTES_EACH, MOTE_ELEMENTS, POULTICE_HEAL, STATUE_MOTES, WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
 import { ACTION_FLOOR, ACTION_PACE, WORLD_PACE } from '../../game/pace';
 import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, MIN_GAIN, PAST_TOP, playerGain, SKILL_BY_ID, SKILL_TOP, skillGain } from '../../game/skills';
-import { favourCap, PRAYER_GAIN, PRAYER_PEAKS, PRAYER_REST, prayerWorth } from '../../game/faith';
+import { favourCap, PRAYER_GAIN, PRAYER_PEAKS, PRAYER_REST, prayerWorth, statueFollowers } from '../../game/faith';
+import { statueName } from '../../game/patronlist';
 import {
   calmCap, CHOOSE_AT, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_WORTH, TECHNIQUES,
 } from '../../game/meditation';
@@ -4248,6 +4249,16 @@ export const NEWS: News[] = [
     day: '2026-11-04',
     lines: () => [
       `Changed: ${ACTION_BY_ID.get('restore_relic')?.label} (relic pieces, tarnished bauble): needs a brush in the pack ("${RESTORE_TOOL_NEED}"); wears it. ${ACTION_BY_ID.get('investigate')?.label}: a trowel, as before.`,
+    ],
+  },
+  {
+    n: 479,
+    day: '2026-11-04',
+    lines: () => [
+      `Added: Enchant on a restored statuette (pack), one option per patron, any patron: ${STATUE_MOTES} mote${STATUE_MOTES === 1 ? '' : 's'} of each of the ${MOTE_ELEMENTS.length} elements, `
+        + `used up → ${listedOr(PATRONS.map(statueName))}; QL kept. ${SKILL_BY_ID.get('enchanting')?.name}; never fails.`,
+      `Added: Pray on a patron's statue (pack), anywhere: as at an altar of the statue's QL; same favour, ${dur(PRAYER_REST)} wait and training. `
+        + `Followers of its patron only ("${statueFollowers(PATRONS[PATRONS.length - 1])}"); no patron: refused.`,
     ],
   },
   {

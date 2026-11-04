@@ -5,10 +5,11 @@ import { MATERIAL_BY_ID, WALL_TYPES } from './building';
 import { candleBurn, lanternReach, torchBurn, torchReach } from './light';
 import { CLOSE_CLOTH, CLOSE_RIGHT } from './wounds';
 import { metres } from './piers';
-import { article, capital, fill, listed, numberWord, percent, timeWords } from './words';
+import { article, capital, fill, listed, listedOr, numberWord, percent, timeWords } from './words';
+import { PATRONS, patronStatue, statueName } from './patronlist';
 import { CIRCLET_SHARE, CIRCLET_STONES, JEWEL_BONUS } from './gems';
 import { TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, TELESTONE } from './runestones';
-import { elementIslands, LIFE_MOTES_EACH, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, POULTICE_HEAL, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT } from './motes';
+import { elementIslands, LIFE_MOTES_EACH, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, POULTICE_HEAL, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, STATUE_MOTES, SWIRL_DARK, SWIRL_LIGHT } from './motes';
 import {
   ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantMarker, ON_WORDS, roomMul, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, type Enchant,
 } from './enchant';
@@ -106,6 +107,15 @@ export const isWorked = (id: string): boolean => {
 export const CATEGORY_DECAY: Record<ItemCategory, number> = { food: 200, plant: 100, material: 25, tool: 12, misc: 12 };
 /** What a settlement does to the rot of everything lying on its land: a tenth of the pace in the wild. */
 export const DEED_DECAY = 0.1;
+
+/**
+ * A relic restored (`archaeology.ts`), and what a patron's statue is made of
+ * and weighs (`relicuse.ts`): enchanted with `STATUE_MOTES` of each element.
+ */
+const STATUETTE_DEF: ItemDef = {
+  name: 'Statuette', category: 'misc', weight: 1.4, decay: 2,
+  description: `Enchant (pack): ${STATUE_MOTES} mote${STATUE_MOTES === 1 ? '' : 's'} of each of the ${MOTE_ELEMENTS.length} elements, used up → ${listedOr(PATRONS.map(statueName))}, QL kept.`,
+};
 
 export const ITEM_DEFS: Record<string, ItemDef> = {
   shovel: { name: 'Shovel', category: 'tool', weight: 3, description: 'Digs, flattens and packs dirt.' },
@@ -399,7 +409,13 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   treasure_map: { name: 'Treasure map', category: 'misc', weight: 0.1, decay: 20, description: 'Read it to see the picture; find the matching ground and dig. A hoard is always guarded. Rots if left lying on the ground, and the hoard with it; keep it in a pack or crate.' },
   // A square of the island drawn on papyrus (`cartography.ts`): what it holds is its `extra`.
   drawn_map: { name: 'Map', category: 'misc', weight: 0.05, decay: 14, description: '{sheet}: a square of the island centred on the tile it was drawn on, {least} tiles each way and one tile further for every {perTile} QL, so {most} each way at QL {top}. Its name gives place and reach. Study: adds the square to your map. Copy onto another sheet: QL at most the map\'s, the sheet\'s or your papyrusmaking; reach by its own QL.' },
-  statuette: { name: 'Statuette', category: 'misc', weight: 1.4, decay: 2 },
+  statuette: STATUETTE_DEF,
+  // A restored statuette enchanted (`relicuse.ts`), one for each patron, prayed with from the pack (`faith.ts`).
+  ...Object.fromEntries(PATRONS.map((p): [string, ItemDef] => [patronStatue(p.id), {
+    ...STATUETTE_DEF,
+    name: statueName(p),
+    description: `Pray (pack), anywhere: favour, prayer wait and training as at an altar of its QL. Followers of ${p.name} only.`,
+  }])),
   tarnished_bauble: { name: 'Tarnished bauble', category: 'misc', weight: 0.1, decay: 3, description: 'No effect until restored. Restoration difficulty by grade: minor {bauble.minor.difficulty}, major {bauble.major.difficulty}, ancient {bauble.ancient.difficulty}; effect and rarity set at random then. Cannot be repaired before then; gone if it breaks.' },
   bauble_minor: { name: 'Minor bauble', category: 'misc', weight: 0.1, description: 'Set in one of the {bauble.minor.slots} minor sockets of your settlement\'s altar. Citizens working there get its effect on that one skill: less time per action, or more skill gained.' },
   bauble_major: { name: 'Major bauble', category: 'misc', weight: 0.1, description: 'Set in one of the {bauble.major.slots} major sockets of your settlement\'s altar. Citizens working there get its chance of {bauble.yield}× the yield per action in that one skill.' },

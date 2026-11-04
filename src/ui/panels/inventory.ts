@@ -19,6 +19,9 @@ import { ABSORB_SAID, absorbable, SOUL } from '../../game/sacrifice';
 import { ENCHANT, enchantable, fitsOn } from '../../game/enchanting';
 import { ENCHANT_SAID, enchantChance, ENCHANTERS_PLINTH, ENCHANTING, scrollOf, wrongKind } from '../../game/enchant';
 import { percent } from '../../game/words';
+import { ENCHANT_STATUE } from '../../game/relicuse';
+import { MOTE_ELEMENTS, STATUE_MOTES } from '../../game/motes';
+import { PATRONS, STATUETTE, statueName } from '../../game/patronlist';
 import { hasRunestones, RUNESTONES, stoneChoice, stoneDistance, TELESTONE, TELESTONE_SAID, telestoneRange, telestoneWait, timeLeftNote, TRAVEL } from '../../game/runestones';
 import { improvable, improveCeiling } from '../../game/improve';
 
@@ -398,6 +401,22 @@ export class InventoryPanel {
           const t = { kind: 'item' as const, uid: item.uid, stone: s.id };
           const why = travel.check?.(t, this.game) ?? null;
           return { label: stoneChoice(s, d), hint: why ?? undefined, disabled: d > reach, onSelect: () => this.game.requestAction(travel, t) };
+        }),
+      });
+    }
+    /*
+     * A restored statuette is enchanted into the statue of a patron, one
+     * option for each, with a mote of every element (`relicuse.ts`).
+     */
+    const statue = item.id === STATUETTE ? ACTION_BY_ID.get(ENCHANT_STATUE) : undefined;
+    if (statue) {
+      entries.push({
+        label: statue.label,
+        note: `${STATUE_MOTES} of each of ${MOTE_ELEMENTS.length} motes`,
+        children: PATRONS.map((p) => {
+          const t = { kind: 'item' as const, uid: item.uid, patron: p.id };
+          const why = statue.check?.(t, this.game) ?? null;
+          return { label: statueName(p), hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(statue, t) };
         }),
       });
     }

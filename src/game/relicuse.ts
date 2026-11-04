@@ -3,6 +3,10 @@ import { CROP_LIST } from './farming';
 import type { Game } from './game';
 import { describeWith, itemDef, itemName, NOT_RESTORED, STAMP_GOES_NAMED, unmendable, unmendableSays, unrestored, type Item } from './items';
 import { SKILL_BY_ID } from './skills';
+import { ENCHANT_TIME, ENCHANT_WIND, ENCHANTING } from './enchant';
+import { MOTE_ELEMENTS, moteItem, motesWord, STATUE_MOTES, type MoteElement } from './motes';
+import { PATRON_BY_ID, patronStatue, STATUETTE, statueName, type PatronDef } from './patronlist';
+import { listed } from './words';
 
 /**
  * Four relics put back together out of the ground and used on you and your
@@ -84,6 +88,43 @@ export function tabletRefusal(g: Game, t: Target): string | null {
   return null;
 }
 
+/**
+ * A restored statuette enchanted into a patron's statue: `STATUE_MOTES` of
+ * every element's mote, all used up, the statuette made the statue of the
+ * patron chosen (one option for each, anybody any of them), its QL, damage and
+ * rarity as they were. Done anywhere, with enchanting, as a job: never fails.
+ * Asked for: "The restored statue can be Enchanted using one of each mote to
+ * be statue of x diety". The island's `enchant_statue`.
+ */
+export const ENCHANT_STATUE = 'enchant_statue';
+/** Why one will not be made, in the words both sides say. */
+export const STATUE_SAID = {
+  gone: 'It is gone.',
+  statuette: `Restored ${itemDef(STATUETTE).name.toLowerCase()}s only.`,
+  patron: 'Choose a patron.',
+} as const;
+/** The elements short of `STATUE_MOTES` in the pack, in `MOTE_ELEMENTS` order. */
+export const statueShort = (g: Game): MoteElement[] => MOTE_ELEMENTS.filter((e) => g.inventory.count(moteItem(e)) < STATUE_MOTES);
+/** Why, when motes are short: "Need 1 dark mote and 1 light mote." The island's `relic_use_refusal`, word for word. */
+export const statueMotesNeed = (short: readonly MoteElement[]): string => `Need ${listed(short.map((e) => motesWord(STATUE_MOTES, e)))}.`;
+/** Every mote a statue takes, all elements together. */
+export const STATUE_MOTES_ALL = STATUE_MOTES * MOTE_ELEMENTS.length;
+/** What making one says: "Enchanted: Statue of Chaos, QL 40.0. 8 motes used up." */
+export const statueMadeSays = (p: PatronDef, ql: number): string =>
+  `Enchanted: ${statueName(p)}, QL ${ql.toFixed(1)}. ${STATUE_MOTES_ALL} motes used up.`;
+
+/** Why this statuette will not be made into this patron's statue now, or null. The island's `relic_use_refusal`, word for word. */
+export function statueEnchantRefusal(g: Game, t: Target): string | null {
+  const it = held(g, t);
+  if (!it) return STATUE_SAID.gone;
+  if (it.id !== STATUETTE) return STATUE_SAID.statuette;
+  const p = t.kind === 'item' && t.patron ? PATRON_BY_ID.get(t.patron) : undefined;
+  if (!p) return STATUE_SAID.patron;
+  const short = statueShort(g);
+  if (short.length) return statueMotesNeed(short);
+  return null;
+}
+
 // The numbers the four describe themselves with, from the rules above.
 describeWith({
   relicUse: {
@@ -155,6 +196,32 @@ export const RELIC_USE_ACTIONS: ActionDef[] = [
       g.skills.values.set(t.skill, now);
       g.events.emit('inventory');
       g.logMsg(`Rune tablet read: ${SKILL_BY_ID.get(t.skill)?.name} ${now.toFixed(4)} (+${TABLET_GAIN.toFixed(1)}). Tablet used up.`, 'skill');
+    },
+  },
+  {
+    // Chosen on the statuette's own menu, one option for each patron, which puts the patron on the target (`inventory.ts`).
+    id: ENCHANT_STATUE,
+    label: 'Enchant',
+    labelFor: (t) => {
+      const p = t.kind === 'item' && t.patron ? PATRON_BY_ID.get(t.patron) : undefined;
+      return p ? `Enchant: ${statueName(p)}` : 'Enchant';
+    },
+    verb: 'enchanting',
+    hidden: true,
+    skill: ENCHANTING,
+    stamina: ENCHANT_WIND,
+    baseTime: ENCHANT_TIME,
+    applies: (t, g) => held(g, t)?.id === STATUETTE && (t as ItemTarget).patron !== undefined,
+    check: (t, g) => statueEnchantRefusal(g, t),
+    perform: (t, g) => {
+      if (statueEnchantRefusal(g, t) || t.kind !== 'item' || !t.patron) return;
+      const it = held(g, t);
+      const p = PATRON_BY_ID.get(t.patron);
+      if (!it || !p) return;
+      for (const e of MOTE_ELEMENTS) g.inventory.consume(moteItem(e), STATUE_MOTES);
+      it.id = patronStatue(p.id);
+      g.events.emit('inventory');
+      g.logMsg(statueMadeSays(p, it.ql), 'event');
     },
   },
 ];

@@ -145,6 +145,7 @@ import { EquipmentPanel } from './panels/equipment';
 import { TradesPanel } from './panels/trades';
 import { FaithPanel } from './panels/faith';
 import { FaithBook } from './faithbook';
+import { PATRON_BY_ID, type PatronId } from '../game/patronlist';
 import { SpellBar, type SpellAim } from './spellbar';
 import { defsOf, inviteDeeds, inviteRefusal, SocialPanel } from './panels/social';
 import { MarketPanel } from './panels/market';
@@ -645,6 +646,11 @@ export class UI {
      * answer. Asked once now, so the bar has what is in it from the start.
      */
     this.faithBook = new FaithBook(this.island);
+    // Your patron, as every faith answer says it, for what a patron's statue is prayed with by (`pray_statue`).
+    this.faithBook.on(() => {
+      const mine = this.faithBook.said?.patron;
+      game.player.patron = mine && PATRON_BY_ID.has(mine as PatronId) ? mine as PatronId : null;
+    });
     const faithWin = this.windows.create({ id: 'faith', title: 'Faith', x: 12, y: 56, width: 460, height: 560, anchor: 'tl', open: false });
     this.faith = new FaithPanel(faithWin, this.faithBook, game);
     this.spellBar = new SpellBar(root, game, this.faithBook, (x, y, title, items) => this.menu.show(x, y, title, items),

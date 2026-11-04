@@ -137,6 +137,8 @@ export const HUSHED: ReadonlySet<string> = new Set([
   // Faith and the paths, which are the two things on this island done by
   // sitting still; and what is given up at the altar, and what it gives back.
   'pray', 'cast', 'meditate', 'sacrifice', 'absorb_soul',
+  // And a prayer said over a patron's statue in the pack, as at an altar (`faith.ts`).
+  'pray_statue',
   // Getting on and off things, and being pulled along by one.
   'board_vehicle', 'board_passenger', 'mount_creature', 'dismount_creature', 'pull_cart', 'unhitch_team',
   // Winning an animal over, which is done by standing very quietly; and a
@@ -212,6 +214,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   // A bronze mirror held up to one, bronze as a bell is.
   use_bronze_mirror: 'metal',
   hone_whetstone: 'stone', open_seed_jar: 'cloth', read_rune_tablet: 'cloth',
+  // A statuette's stone enchanted into a patron's statue (`relicuse.ts`), as a bauble is pressed into the altar's.
+  enchant_statue: 'stone',
   // Wildermon gear buckled on and off (`wildgearActions.ts`), as tack is.
   fit_gear_pack: 'cloth', remove_gear_pack: 'cloth', fit_gear_harness: 'cloth', remove_gear_harness: 'cloth',
   fit_gear_barding: 'cloth', remove_gear_barding: 'cloth',

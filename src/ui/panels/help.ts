@@ -167,6 +167,7 @@ import {
   ARROW_IDS, BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, dodgeChance, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
 } from '../../game/fight';
+import { statueName } from '../../game/patronlist';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import {
@@ -175,7 +176,7 @@ import {
 import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
-import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTES_LEAST, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
+import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTE_ELEMENTS, MOTES_LEAST, STATUE_MOTES, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
 import { LANDING_STAND, RUNESTONES, SAFE_RING, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
@@ -3097,7 +3098,9 @@ export function helpText(): string {
       each recognised only at enough archaeology. Common ones turn up far more often; pieces you lack are favoured.</li>
       <li><b>Investigate</b>: with a trowel. <b>Restore</b> (all pieces in hand, right-click one): with a brush; <b>Restoration</b>, at any damage short of breaking. Failure: ${RESTORE_HARM} to ${RESTORE_HARM + RESTORE_HARM_SPREAD} more damage on
       every piece. Result quality (QL): the pieces' worth, less ${percent(1 / RESTORE_AGE)} per point of their damage.</li>
-      <li>A statuette is treasure only; ${listed([...UNMENDABLE].map((id) => { const r = RELICS.find((x) => x.result === id)?.name ?? ''; return `${article(r)} <b>${r}</b> is ${article(lowName(id))} ${lowName(id)}`; }))} (below).</li>
+      <li>A <b>statuette</b>: <b>Enchant</b> on it in the pack, one option per patron, any patron: ${STATUE_MOTES} mote${STATUE_MOTES === 1 ? '' : 's'} of each of the ${MOTE_ELEMENTS.length} elements, used up →
+      ${listedOr(PATRONS.map((p) => `<b>${statueName(p)}</b>`))}; QL kept. <b>${SKILL_NAME('enchanting')}</b>; never fails. A statue: <b>Pray</b> (see <b>An altar</b>).</li>
+      <li>${capital(listed([...UNMENDABLE].map((id) => { const r = RELICS.find((x) => x.result === id)?.name ?? ''; return `${article(r)} <b>${r}</b> is ${article(lowName(id))} ${lowName(id)}`; })))} (below).</li>
     </ul>
     ${artifactHelp()}
     <h3>Baubles</h3>
@@ -3412,6 +3415,8 @@ export function helpText(): string {
       <li><b>${SKILL_NAME('prayer')}</b> sets max favour: ${listed(PRAYER_SHOWN.map((v) => `${Math.floor(favourCap(v))} favour at ${SKILL_NAME('prayer')} ${v}`))}.</li>
       <li>Best at <b>${listed(PRAYER_PEAKS.map(hudHour))}</b>: favour ${mul((PRAYER_BASE + PRAYER_LIFT) / PRAYER_BASE)} that at ${PRAYER_TAPER} hours or more from either; tapering between.</li>
       <li>Altar QL ${ALTAR_QL[2]}: favour ${mul(prayerWorth(ALTAR_QL[2], PRAYER_PEAKS[0], 1) / prayerWorth(ALTAR_QL[0], PRAYER_PEAKS[0], 1))} that at a QL ${ALTAR_QL[0]} one.</li>
+      <li><b>${listedOr(PATRONS.map(statueName))}</b> (an enchanted statuette, see <b>Digging up the past</b>): <b>Pray</b> on it in the pack, anywhere, no altar:
+      favour, wait and training as at an altar of the statue's QL. Followers of its patron only; no patron: refused.</li>
       <li>Regeneration: ${Number((FAVOUR_TRICKLE * 3600).toFixed(1))} favour an hour, up to your cap.</li>
       <li>Holds the settlement's bauble sockets (see <b>Baubles</b>).</li>
       <li><b>Sacrifice</b> (altar menu): gives up one ${RARITIES.slice(1, -1).map((r) => r.name).join(', ')} or ${RARITIES[RARITIES.length - 1].name} item from the pack (one of a stack);

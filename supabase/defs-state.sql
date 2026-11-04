@@ -896,6 +896,9 @@ insert into item_def values ('fragment', 'Fragment', 'misc', 0.6, false, 3, null
 insert into item_def values ('treasure_map', 'Treasure map', 'misc', 0.1, false, 20, null);
 insert into item_def values ('drawn_map', 'Map', 'misc', 0.05, false, 14, null);
 insert into item_def values ('statuette', 'Statuette', 'misc', 1.4, false, 2, null);
+insert into item_def values ('patron_statue_blessing', 'Statue of Blessing', 'misc', 1.4, false, 2, null);
+insert into item_def values ('patron_statue_justice', 'Statue of Justice', 'misc', 1.4, false, 2, null);
+insert into item_def values ('patron_statue_chaos', 'Statue of Chaos', 'misc', 1.4, false, 2, null);
 insert into item_def values ('tarnished_bauble', 'Tarnished bauble', 'misc', 0.1, false, 3, null);
 insert into item_def values ('bauble_minor', 'Minor bauble', 'misc', 0.1, false, null, null);
 insert into item_def values ('bauble_major', 'Major bauble', 'misc', 0.1, false, null, null);
@@ -1533,6 +1536,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('take_up_steps', 'Take up the steps', 'taking up the steps', 'paving', 'pickaxe', false, null, 0.05, 10, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('cast', 'Call on it', 'calling on it', 'prayer', null, false, null, 0.03, 6, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pray', 'Pray', 'praying', 'praying', null, false, null, 0.02, 14, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pray_statue', 'Pray', 'praying', 'praying', null, false, null, 0.02, 14, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('set_bauble', 'Set into the altar', 'setting a bauble', null, null, false, null, 0.01, 4, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('engrave_memorial', 'Engrave', 'engraving the stone', 'masonry', 'chisel', false, null, 0.03, 15, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('read_memorial', 'Examine', 'reading the stone', null, null, false, null, 0, 0, null, true, false);
@@ -1554,6 +1558,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('hone_whetstone', 'Hone with ancient whetstone', 'honing', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('open_seed_jar', 'Open', 'opening the jar', null, null, false, null, 0.01, 2, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('read_rune_tablet', 'Read the rune tablet', 'reading the tablet', null, null, false, null, 0.01, 5, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('enchant_statue', 'Enchant', 'enchanting', 'enchanting', null, false, null, 0.02, 8, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('fit_gear_pack', 'Fit a wildermon pack', 'fitting the pack', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('remove_gear_pack', 'Remove the pack', 'removing the pack', null, null, false, null, 0.01, 2, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('fit_gear_harness', 'Fit a wildermon harness', 'fitting the harness', null, null, false, null, 0.01, 3, null, false, false);
@@ -3547,6 +3552,10 @@ update item_def set description = 'Study: its trade''s skill, named on the spine
 update item_def set description = 'Find the other pieces: a restorer joins them. Cannot be repaired before then; gone if it breaks.' where id = 'fragment';
 update item_def set description = 'Read it to see the picture; find the matching ground and dig. A hoard is always guarded. Rots if left lying on the ground, and the hoard with it; keep it in a pack or crate.' where id = 'treasure_map';
 update item_def set description = 'papyrus: a square of the island centred on the tile it was drawn on, 4 tiles each way and one tile further for every 5 QL, so 24 each way at QL 100. Its name gives place and reach. Study: adds the square to your map. Copy onto another sheet: QL at most the map''s, the sheet''s or your papyrusmaking; reach by its own QL.' where id = 'drawn_map';
+update item_def set description = 'Enchant (pack): 1 mote of each of the 8 elements, used up → Statue of Blessing, Statue of Justice or Statue of Chaos, QL kept.' where id = 'statuette';
+update item_def set description = 'Pray (pack), anywhere: favour, prayer wait and training as at an altar of its QL. Followers of Blessing only.' where id = 'patron_statue_blessing';
+update item_def set description = 'Pray (pack), anywhere: favour, prayer wait and training as at an altar of its QL. Followers of Justice only.' where id = 'patron_statue_justice';
+update item_def set description = 'Pray (pack), anywhere: favour, prayer wait and training as at an altar of its QL. Followers of Chaos only.' where id = 'patron_statue_chaos';
 update item_def set description = 'No effect until restored. Restoration difficulty by grade: minor 15, major 30, ancient 45; effect and rarity set at random then. Cannot be repaired before then; gone if it breaks.' where id = 'tarnished_bauble';
 update item_def set description = 'Set in one of the 21 minor sockets of your settlement''s altar. Citizens working there get its effect on that one skill: less time per action, or more skill gained.' where id = 'bauble_minor';
 update item_def set description = 'Set in one of the 5 major sockets of your settlement''s altar. Citizens working there get its chance of 2× the yield per action in that one skill.' where id = 'bauble_major';
@@ -6141,6 +6150,10 @@ create or replace function water_motes_each() returns int language sql immutable
 create or replace function water_mote_need() returns text language sql immutable as $fn$ select 'Need 1 water mote.' $fn$;
 create or replace function life_mote() returns text language sql immutable as $fn$ select 'life_mote' $fn$;
 create or replace function life_motes_each() returns int language sql immutable as $fn$ select 1 $fn$;
+create or replace function statuette() returns text language sql immutable as $fn$ select 'statuette' $fn$;
+create or replace function statue_motes() returns int language sql immutable as $fn$ select 1 $fn$;
+create or replace function patron_statue(p_patron text) returns text language sql immutable as $fn$ select case p_patron when 'blessing' then 'patron_statue_blessing' when 'justice' then 'patron_statue_justice' when 'chaos' then 'patron_statue_chaos' end $fn$;
+create or replace function statue_patron(p_def text) returns text language sql immutable as $fn$ select case p_def when 'patron_statue_blessing' then 'blessing' when 'patron_statue_justice' then 'justice' when 'patron_statue_chaos' then 'chaos' end $fn$;
 create or replace function life_mote_need() returns text language sql immutable as $fn$ select 'Need 1 life mote.' $fn$;
 create or replace function poultice_heal() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
 create or replace function poultice_kept() returns text language sql immutable as $fn$ select 'Life mote kept.' $fn$;

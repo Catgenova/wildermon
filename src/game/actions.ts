@@ -57,6 +57,7 @@ import { LANTERN_ACTIONS } from './lantern';
 import { COUNTER_ACTIONS } from './counters';
 import { LAMP_ACTIONS } from './lamps';
 import { FAITH_ACTIONS } from './faith';
+import type { PatronId } from './patronlist';
 import { BAUBLE_ACTIONS } from './baubles';
 import { engravedItemSays, MEMORIAL_ACTIONS } from './memorial';
 import { VINEYARD_ACTIONS } from './vineyard';
@@ -198,6 +199,8 @@ export type Target =
       wound?: string;
       /** The skill a rune tablet goes into, for `read_rune_tablet` (`relicuse.ts`), chosen in the Skills window. */
       skill?: string;
+      /** The patron a statuette is made the statue of, for `enchant_statue` (`relicuse.ts`), chosen on its menu. */
+      patron?: PatronId;
     }
   /** What is lying on a tile; `down` for what lies on the cellar's floor under it. */
   | { kind: 'ground'; x: number; y: number; uid: number | null; down?: boolean }

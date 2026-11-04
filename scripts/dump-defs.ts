@@ -162,8 +162,9 @@ import {
 import { CANDLE_BURN, TORCH_BURN } from '../src/game/light';
 import {
   ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, MOTE_ELEMENTS, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRL_DRAWS, SWIRL_SAID, SWIRL_TRIES, SWIRLS_A_DAY,
-  WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH, LIFE_MOTE, LIFE_MOTE_NEED, LIFE_MOTES_EACH, POULTICE_HEAL,
+  WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH, LIFE_MOTE, LIFE_MOTE_NEED, LIFE_MOTES_EACH, POULTICE_HEAL, STATUE_MOTES,
 } from '../src/game/motes';
+import { patronStatue, STATUETTE } from '../src/game/patronlist';
 import {
   TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
 } from '../src/game/tracking';
@@ -2180,6 +2181,14 @@ out.push(`create or replace function water_mote_need() returns text language sql
  */
 out.push(`create or replace function life_mote() returns text language sql immutable as $fn$ select ${q(LIFE_MOTE)} $fn$;`);
 out.push(`create or replace function life_motes_each() returns int language sql immutable as $fn$ select ${q(LIFE_MOTES_EACH)} $fn$;`);
+/*
+ * A patron's statue (`relicuse.ts`, `faith.ts`): what it is enchanted out of, the motes of each element that takes, the
+ * statue of each patron, and the patron of each statue (null for anything else).
+ */
+out.push(`create or replace function statuette() returns text language sql immutable as $fn$ select ${q(STATUETTE)} $fn$;`);
+out.push(`create or replace function statue_motes() returns int language sql immutable as $fn$ select ${q(STATUE_MOTES)} $fn$;`);
+out.push(`create or replace function patron_statue(p_patron text) returns text language sql immutable as $fn$ select case p_patron ${PATRONS.map((p) => `when ${q(p.id)} then ${q(patronStatue(p.id))} `).join('')}end $fn$;`);
+out.push(`create or replace function statue_patron(p_def text) returns text language sql immutable as $fn$ select case p_def ${PATRONS.map((p) => `when ${q(patronStatue(p.id))} then ${q(p.id)} `).join('')}end $fn$;`);
 out.push(`create or replace function life_mote_need() returns text language sql immutable as $fn$ select ${q(LIFE_MOTE_NEED)} $fn$;`);
 out.push(`create or replace function poultice_heal() returns double precision language sql immutable as $fn$ select ${q(POULTICE_HEAL)}::double precision $fn$;`);
 out.push(`create or replace function poultice_kept() returns text language sql immutable as $fn$ select ${q(POULTICE_KEPT)} $fn$;`);

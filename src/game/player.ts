@@ -1,6 +1,7 @@
 import type { Boon } from './boons';
 import type { Wound } from './wounds';
 import type { PathId } from './meditation';
+import type { PatronId } from './patronlist';
 import type { BeltPin } from './belt';
 import { emptyNutrition, type Nutrient } from './nutrition';
 import { BELT_MAX } from './belt';
@@ -248,6 +249,8 @@ export class Player {
   /** Banked favour, and the hour you last had anything to say. */
   favour = 0;
   prayedAt = -1e9;
+  /** Your patron as the island last said it (`rpc_faith`), which a patron's statue is prayed with by; none taken, null. */
+  patron: PatronId | null = null;
   /** What is open on you, and what is on it. */
   wounds: Wound[] = [];
   nextWound = 1;

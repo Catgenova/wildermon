@@ -75,6 +75,7 @@ const targets: Array<[string, Target & Record<string, unknown>]> = [
   ['apply_salve', { kind: 'item', uid: 1, wound: 'arm:0' }],
   ['read_rune_tablet', { kind: 'item', uid: 1, skill: 'mining' }],
   ['travel_runestone', { kind: 'item', uid: 1, stone: 'north' }],
+  ['enchant_statue', { kind: 'item', uid: 1, patron: 'chaos' }],
   ['absorb_soul', { kind: 'item', uid: 1, soul: 2, spell: 'x' }],
   ['pick_up', { kind: 'ground', x: AT, y: AT, uid: null }],
   ['pick_up', { kind: 'ground', x: AT, y: AT, uid: 4, down: true }],

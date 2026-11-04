@@ -94,6 +94,12 @@ export const LIFE_MOTES_EACH = 1;
 export const POULTICE_HEAL = 2;
 /** What a poultice is refused without one: "Need 1 life mote." */
 export const LIFE_MOTE_NEED = `Need ${LIFE_MOTES_EACH} ${moteName('life').toLowerCase()}${LIFE_MOTES_EACH === 1 ? '' : 's'}.`;
+/**
+ * How many motes of each element enchanting a restored statuette into a
+ * patron's statue takes, all used up: one of each of `MOTE_ELEMENTS`
+ * (`relicuse.ts`). The island's `statue_motes`.
+ */
+export const STATUE_MOTES = 1;
 /** What a swirl is called on the ground: "Fire mote swirl". */
 export const swirlName = (e: MoteElement): string => `${capital(e)} mote swirl`;
 

@@ -4,6 +4,7 @@ import { LAND_GROWS, LAND_GROWS_SAID, PATH_PICK_BY_ID, PATH_TIER_AT } from './me
 import { SKILL_BY_ID } from './skills';
 import { CLASS_SPELL_BY_ID } from './talents';
 import { listedOr, percent } from './words';
+import { PATRON_BY_ID, type Alignment, type PatronId } from './patronlist';
 
 /**
  * Patrons, and the spells they give.
@@ -30,21 +31,8 @@ import { listedOr, percent } from './words';
  * whatever is in it.
  */
 
-export type PatronId = 'blessing' | 'justice' | 'chaos';
-export type Alignment = 'good' | 'neutral' | 'evil';
-
-export interface PatronDef {
-  id: PatronId;
-  name: string;
-  alignment: Alignment;
-}
-
-export const PATRONS: PatronDef[] = [
-  { id: 'blessing', name: 'Blessing', alignment: 'good' },
-  { id: 'justice', name: 'Justice', alignment: 'neutral' },
-  { id: 'chaos', name: 'Chaos', alignment: 'evil' },
-];
-export const PATRON_BY_ID = new Map(PATRONS.map((p) => [p.id, p]));
+// The three, kept in a leaf the item table can read (`patronlist.ts`), and handed on from here.
+export { PATRONS, PATRON_BY_ID, type Alignment, type PatronDef, type PatronId } from './patronlist';
 export const ALIGNMENT_NAMES: Record<Alignment, string> = { good: 'Good', neutral: 'Neutral', evil: 'Evil' };
 
 /**
