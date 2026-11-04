@@ -35,7 +35,8 @@
  */
 import { hash2 } from '../world/noise';
 import { HALF_H, HALF_W } from './iso';
-import { SPRING_DARK, SPRING_EDGE, SPRING_FOAM, SPRING_PALE, SPRING_WATER } from './water';
+import { RUNE_WHITE, STONE_INK } from './runestone';
+import { SPRING_EDGE, SPRING_FOAM, SPRING_PALE, SPRING_WATER } from './water';
 
 /** Below this zoom water is its shapes and colours: streaks, threads, rings, spray and ripples are too small to see. */
 export const DETAIL_FROM = 0.6;
@@ -160,12 +161,14 @@ const FALL_G = 5.5;
 const UNITS_A_METRE = 10;
 /** How far apart the ropes of thicker water across a sheet are, in tiles, how wide one is at most either side of its middle, and how far one wanders either way as it falls. */
 const ROPE_EVERY = 0.34;
-const ROPE_HALF = 0.085;
+const ROPE_HALF = 0.115;
 const ROPE_WANDER = 0.016;
 /** How far back from the lip the smooth water drawn into it begins, in tiles. */
 const TONGUE = 0.16;
 /** How long the lengths the light along a lip is broken into are, in tiles. */
 const LIP_EVERY = 0.37;
+/** How far apart the glints along a lip are, at most one to each, in tiles. */
+const GLINT_EVERY = 0.85;
 /** How far down a sheet it stays glassy, before the streaks begin, as a share of its fall. */
 const GLASSY = 0.1;
 /** How far apart the tears in a thin veil may be, in tiles, and how wide one opens at most either side of its middle. */
@@ -181,7 +184,7 @@ const TEAR_WIDE = 0.022;
 const HAIR = 0.006;
 const HAIR_PX = 1.6;
 /** How far apart the lumps of foam along a foot are, in tiles, and the rings on the water in front of it. */
-const LUMP_EVERY = 0.075;
+const LUMP_EVERY = 0.085;
 const RING_EVERY = 0.45;
 /** How far apart the spray drops thrown up from a foot are, in tiles, and the puffs of mist off it. */
 const SPRAY_EVERY = 0.07;
@@ -195,7 +198,7 @@ const DISC_H = HALF_H * Math.SQRT2;
 
 /** How many streaks run down a tile of width at a zoom: fewer as it goes out, and each then drawn thicker for its size. */
 function lanesAt(zoom: number): number {
-  return zoom >= 1.6 ? 10 : zoom >= 1.15 ? 8 : zoom >= 0.85 ? 6 : 4;
+  return zoom >= 1.6 ? 7 : zoom >= 1.15 ? 6 : zoom >= 0.85 ? 5 : 4;
 }
 
 /** The height a sheet's water lands at, at a point along its lip. */
@@ -383,12 +386,12 @@ const keyed = (s: Sheet, k: number, salt: number): number => hash2(s.line * 2 + 
  */
 function ropes(p: Placed, u0: number, u1: number, out: number[]): void {
   const s = p.sheet;
-  const share = 0.8 - 0.3 * p.thin;
+  const share = 0.88 - 0.18 * p.thin;
   const reach = ROPE_HALF + ROPE_WANDER;
   for (let k = Math.floor((u0 - reach) / ROPE_EVERY) - 1; k * ROPE_EVERY <= u1 + reach; k++) {
     if (keyed(s, k, 11) > share) continue;
-    const mid = (k + 0.5 + (keyed(s, k, 12) - 0.5) * 0.72) * ROPE_EVERY;
-    const half = ROPE_HALF * (0.28 + 0.72 * keyed(s, k, 13)) * (1 - 0.25 * p.thin);
+    const mid = (k + 0.5 + (keyed(s, k, 12) - 0.5) * 0.5) * ROPE_EVERY;
+    const half = ROPE_HALF * (0.55 + 0.45 * keyed(s, k, 13)) * (1 - 0.08 * p.thin);
     if (mid + half + ROPE_WANDER < u0 || mid - half - ROPE_WANDER > u1) continue;
     out.push(mid, half, keyed(s, k, 14));
   }
@@ -415,14 +418,16 @@ function fray(p: Placed, end: number, f: number, t: number): number {
 /* ---- The sheet -------------------------------------------------------------- */
 
 /**
- * The colours down a sheet, for its veil, its ropes and the thick of its
- * ropes: gradients that run square to its lip on the screen, from the lip to
- * as far below it as the foot is, so every piece of one sheet has the same
- * colour at the same depth under its lip wherever the piece begins. A
- * gradient along the line from one point of the lip to the foot below it
- * would change along the lip as well, and each piece would start it afresh.
+ * The colours down a sheet in one set of `inks` -- its veil, its ropes, the
+ * lit side of its ropes or the crease down their shaded side -- as a
+ * gradient that runs square to its lip on the screen, from the lip to as far
+ * below it as the foot is, so every piece of one sheet has the same colour at
+ * the same depth under its lip wherever the piece begins. A gradient along
+ * the line from one point of the lip to the foot below it would change along
+ * the lip as well, and each piece would start it afresh. Made only for what a
+ * piece draws.
  */
-function downSheet(ctx: CanvasRenderingContext2D, p: Placed, u = p.sheet.from): [CanvasGradient, CanvasGradient, CanvasGradient] {
+function downSheet(ctx: CanvasRenderingContext2D, p: Placed, inks: string[][], u = p.sheet.from): CanvasGradient {
   // Round a ring the lip turns as it goes, so the square to it is taken where the piece is.
   alongAt(p, u);
   const el = Math.hypot(LIP[4], LIP[5]) || 1;
@@ -440,15 +445,9 @@ function downSheet(ctx: CanvasRenderingContext2D, p: Placed, u = p.sheet.from): 
   const tone = Math.round(p.white * 10);
   const x1 = PT[0] + nx * depth;
   const y1 = PT[1] + ny * depth;
-  const out: [CanvasGradient, CanvasGradient, CanvasGradient] = [
-    ctx.createLinearGradient(PT[0], PT[1], x1, y1), ctx.createLinearGradient(PT[0], PT[1], x1, y1), ctx.createLinearGradient(PT[0], PT[1], x1, y1),
-  ];
-  for (let k = 0; k < STOPS.length; k++) {
-    out[0].addColorStop(STOPS[k], VEIL[tone][k]);
-    out[1].addColorStop(STOPS[k], ROPE[tone][k]);
-    out[2].addColorStop(STOPS[k], CORE[tone][k]);
-  }
-  return out;
+  const g = ctx.createLinearGradient(PT[0], PT[1], x1, y1);
+  for (let k = 0; k < STOPS.length; k++) g.addColorStop(STOPS[k], inks[tone][k]);
+  return g;
 }
 
 /**
@@ -481,6 +480,13 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
   const bw = last ? b : b + hair;
   const left = (f: number): number => (first ? lo + fray(p, 0, f, t) : aw);
   const right = (f: number): number => (last ? hi - fray(p, 1, f, t) : bw);
+  // Both edges at each slice, worked out once for everything drawn down them.
+  const SL = SLICE_L;
+  const SR = SLICE_R;
+  for (let i = 0; i <= n; i++) {
+    SL[i] = left(i / n);
+    SR[i] = right(i / n);
+  }
 
   // The wet rock beside each end: darkened a little way out from the water, further lower down where the spray wets it, and pushed back against the face.
   if (first || last) {
@@ -489,16 +495,16 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
     for (let end = 0; end < 2; end++) {
       if ((end === 0 && !first) || (end === 1 && !last)) continue;
       const side = end === 0 ? -1 : 1;
-      const edge = (f: number): number => (end === 0 ? left(f) : right(f));
+      const E = end === 0 ? SL : SR;
       for (let i = 0; i <= n; i++) {
         const f = i / n;
-        at(p, edge(f) + side * (0.015 + 0.07 * f), f, -0.05, PT, 0);
+        at(p, E[i] + side * (0.015 + 0.07 * f), f, -0.05, PT, 0);
         if (i === 0) ctx.moveTo(PT[0], PT[1]);
         else ctx.lineTo(PT[0], PT[1]);
       }
       for (let i = n; i >= 0; i--) {
         const f = i / n;
-        at(p, edge(f) - side * 0.03, f, -0.05, PT, 0);
+        at(p, E[i] - side * 0.03, f, -0.05, PT, 0);
         ctx.lineTo(PT[0], PT[1]);
       }
       ctx.closePath();
@@ -506,42 +512,60 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
     ctx.fill();
   }
 
-  const [veil, rope, core] = downSheet(ctx, p, p.ring ? (a + b) / 2 : s.from);
+  const gu = p.ring ? (a + b) / 2 : s.from;
+  // Which way along the lip is screen-left here, where a rope is lit from: round a ring, where the piece is.
+  alongAt(p, (a + b) / 2);
+  const lit = LIP[4] >= 0 ? -1 : 1;
   const list = ROPES;
   list.length = 0;
   ropes(p, aw - ROPE_HALF, bw + ROPE_HALF, list);
 
   // The veil, and the tears in it where the wet rock behind shows through.
-  ctx.fillStyle = veil;
+  ctx.fillStyle = downSheet(ctx, p, VEIL, gu);
   ctx.beginPath();
   for (let i = 0; i <= n; i++) {
-    atSlice(p, left(i / n), i, PT, 0);
+    atSlice(p, SL[i], i, PT, 0);
     if (i === 0) ctx.moveTo(PT[0], PT[1]);
     else ctx.lineTo(PT[0], PT[1]);
   }
   for (let i = n; i >= 0; i--) {
-    atSlice(p, right(i / n), i, PT, 0);
+    atSlice(p, SR[i], i, PT, 0);
     ctx.lineTo(PT[0], PT[1]);
   }
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = TEAR;
   ctx.beginPath();
-  tears(ctx, p, a, b, lo, hi, list, t);
-  ctx.fill();
+  if (tears(ctx, p, a, b, lo, hi, list, t)) ctx.fill();
 
-  // The ropes: paler the whole way down, and palest down the thick of each, so it rounds off to the veil either side.
-  if (list.length) {
-    for (const [ink, share] of [[rope, 1], [core, 0.45]] as const) {
-      ctx.fillStyle = ink;
+  /*
+   * The ropes, each a rounded column of thicker water: paler the whole way
+   * down, palest down its lit side, and creased down its shaded side, where
+   * it turns away into the veil -- the kit's two faces and the crease
+   * between them. Each drawn by every piece it crosses, solid, cut to the
+   * piece, so the pieces lay the same colour over each other's edges.
+   */
+  // Each rope's middle and half width at each slice, worked out once.
+  const ropeCount = Math.min(list.length / 3, (ROPE_MID.length / (n + 1)) | 0);
+  for (let r = 0; r < ropeCount; r++) {
+    for (let i = 0; i <= n; i++) {
+      ROPE_MID[r * (n + 1) + i] = ropeAt(list, r * 3, i / n);
+      ROPE_W[r * (n + 1) + i] = ropeHalf(list, r * 3, i / n);
+    }
+  }
+  if (ropeCount) {
+    for (const [ink, share] of [[ROPE, 1], [CORE, 0.5]] as const) {
+      // The lit side of a rope is too narrow to see below `DETAIL_FROM`.
+      if (share < 1 && z < DETAIL_FROM) continue;
+      ctx.fillStyle = downSheet(ctx, p, ink, gu);
       ctx.beginPath();
-      for (let r = 0; r < list.length; r += 3) {
-        if (share < 1 && list[r + 1] < ROPE_HALF * 0.4) continue;
+      for (let r = 0; r < ropeCount; r++) {
+        if (share < 1 && list[r * 3 + 1] < ROPE_HALF * 0.35) continue;
         for (let i = 0; i <= n; i++) {
-          const f = i / n;
-          const mid = ropeAt(list, r, f) - (share < 1 ? ropeHalf(list, r, f) * 0.18 : 0);
-          const u = Math.max(mid - ropeHalf(list, r, f) * share, aw, left(f));
-          const w = Math.min(mid + ropeHalf(list, r, f) * share, bw, right(f));
+          const half = ROPE_W[r * (n + 1) + i];
+          const mid = ROPE_MID[r * (n + 1) + i] + (share < 1 ? lit * half * 0.4 : 0);
+          const u = Math.max(mid - half * share, aw, SL[i]);
+          const w = Math.min(mid + half * share, bw, SR[i]);
           ROPE_EDGE[i] = w > u ? w : u;
           atSlice(p, u, i, PT, 0);
           if (i === 0) ctx.moveTo(PT[0], PT[1]);
@@ -555,18 +579,58 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
       }
       ctx.fill();
     }
+    if (z >= DETAIL_FROM) {
+      // The crease, in lengths wherever it lies on this piece's water: solid, so a length two pieces both lay is the same length.
+      ctx.strokeStyle = downSheet(ctx, p, CREASE, gu);
+      ctx.lineWidth = Math.max(0.8, 0.85 * z);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (let r = 0; r < ropeCount; r++) {
+        if (list[r * 3 + 1] < ROPE_HALF * 0.35) continue;
+        let down = false;
+        for (let i = 1; i <= n; i++) {
+          const u = ROPE_MID[r * (n + 1) + i] - lit * ROPE_W[r * (n + 1) + i] * 0.92;
+          if (u < aw || u > bw || u < SL[i] + 0.01 || u > SR[i] - 0.01) {
+            down = false;
+            continue;
+          }
+          atSlice(p, u, i, PT, 0);
+          if (!down) ctx.moveTo(PT[0], PT[1]);
+          else ctx.lineTo(PT[0], PT[1]);
+          down = true;
+        }
+      }
+      ctx.stroke();
+    }
+  }
+  // The ink down each end of the sheet, where it draws back and frays: the kit's rule round a solid.
+  if (first || last) {
+    ctx.strokeStyle = SIDE_INK;
+    ctx.lineWidth = Math.max(1.2, 1.7 * z);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let end = 0; end < 2; end++) {
+      if ((end === 0 && !first) || (end === 1 && !last)) continue;
+      for (let i = 0; i <= n; i++) {
+        atSlice(p, end === 0 ? SL[i] : SR[i], i, PT, 0);
+        if (i === 0) ctx.moveTo(PT[0], PT[1]);
+        else ctx.lineTo(PT[0], PT[1]);
+      }
+    }
+    ctx.stroke();
   }
   if (z < DETAIL_FROM) return;
 
   // Streaks: lengths running down it at the water's pace below the glassy curl, on a lattice of lanes fixed to the world.
   const lanes = lanesAt(z);
-  const step = 1 / lanes;
+  // Fewer streaks than there are lanes, and each the bolder for it.
+  const step = 1 / (lanes - 1);
   const pale = STREAK_PALE_LIST;
   const faint = STREAK_FAINT_LIST;
-  const dim = STREAK_DIM_LIST;
   pale.length = 0;
   faint.length = 0;
-  dim.length = 0;
   for (let k = Math.floor(a / step) - 1; k * step < b + step; k++) {
     const key = k * 7 + lanes;
     const u = (k + 0.5 + (keyed(s, key, 21) - 0.5) * 0.7) * step;
@@ -575,11 +639,11 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
     let onRope = false;
     for (let r = 0; r < list.length && !onRope; r += 3) onRope = Math.abs(u - list[r]) < list[r + 1];
     // On a rope near white; on the veil now and then darker teal, now and then a fainter white, and mostly nothing.
-    const into = onRope ? (h < 0.75 ? pale : faint) : h < 0.42 ? dim : h < 0.62 ? faint : null;
+    const into = onRope ? (h < 0.42 ? pale : null) : h < 0.08 ? faint : null;
     if (!into) continue;
     // Each lane a train of lengths, its own length, gap and pace, so no two keep step; a length is a metre or three of water, whatever the drop.
     const metres = Math.max(1, p.drop / UNITS_A_METRE);
-    const long = Math.min(0.36, (1 + 2.2 * keyed(s, key, 23)) / metres);
+    const long = Math.min(0.24, (0.6 + 1.4 * keyed(s, key, 23)) / metres);
     const every = long + Math.min(0.4, (0.6 + 2.6 * keyed(s, key, 24)) / metres);
     const pace = (0.9 + 0.22 * h) / p.fallTime;
     const lead = (((t * pace + keyed(s, key, 25) * 5) % every) + every) % every;
@@ -591,17 +655,17 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
       into.push(u, f0, f1, keyed(s, key, 27));
     }
   }
-  ctx.lineCap = 'butt';
+  ctx.lineCap = 'round';
   // Three widths of streak, drawn a width at a time, and each wavering a little as it falls, more down a taller fall.
   const waver = 0.006 + 0.012 * p.tall;
-  for (const [items, ink, w] of [[dim, STREAK_DIM, 1.2], [faint, STREAK_FAINT, 1], [pale, STREAK_PALE, 1.05]] as const) {
+  for (const [items, ink, w] of [[faint, STREAK_FAINT, 1], [pale, STREAK_PALE, 1]] as const) {
     if (!items.length) continue;
     ctx.strokeStyle = ink;
-    for (let width = 0; width < 3; width++) {
-      ctx.lineWidth = Math.max(1, w * z * [0.7, 1.1, 1.7][width]);
+    for (let width = 0; width < 2; width++) {
+      ctx.lineWidth = Math.max(1.2, w * z * [1.8, 2.5][width]);
       ctx.beginPath();
       for (let i = 0; i < items.length; i += 4) {
-        if (Math.floor(items[i + 3] * 3) !== width) continue;
+        if (Math.floor(items[i + 3] * 2) !== width) continue;
         const q = Math.max(1, Math.min(5, Math.ceil((items[i + 2] - items[i + 1]) * 10)));
         for (let j = 0; j <= q; j++) {
           const f = items[i + 1] + ((items[i + 2] - items[i + 1]) * j) / q;
@@ -615,7 +679,7 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
   }
 
   // Threads: water breaking away in the lower part, falling clear of the sheet in front of it and stretching as it goes.
-  const threads = Math.max(2, Math.round(lanes * (0.4 + 0.5 * p.tall)));
+  const threads = Math.max(2, Math.round(lanes * (0.25 + 0.35 * p.tall)));
   const tstep = 1 / threads;
   ctx.strokeStyle = THREAD;
   ctx.lineWidth = Math.max(0.9, 1.05 * z);
@@ -632,7 +696,7 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
       const head = from + (1 - from) * age * age * (1.4 - 0.4 * age);
       const tail = Math.max(from, head - (0.05 + 0.22 * age) * (0.6 + 0.4 * p.tall));
       if (head <= from + 0.01) continue;
-      strand(ctx, p, u + (h - 0.5) * 0.03 * age, tail, head, 0.05 + 0.1 * age * (0.4 + p.tall));
+      strand(ctx, p, u + (h - 0.5) * 0.03 * age, tail, head, 0.015 + 0.035 * age * (0.4 + p.tall));
     }
   }
   ctx.stroke();
@@ -712,17 +776,19 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
  * each opening partway down, carried on down with the water as it widens and
  * closing again before the foot, and then another. Each is drawn by the piece
  * it lies wholly in, and one lying across the join of two pieces by neither.
+ * Whether there was any.
  */
-function tears(ctx: CanvasRenderingContext2D, p: Placed, a: number, b: number, lo: number, hi: number, list: number[], t: number): void {
+function tears(ctx: CanvasRenderingContext2D, p: Placed, a: number, b: number, lo: number, hi: number, list: number[], t: number): boolean {
   const s = p.sheet;
-  if (p.grow < 1) return;
+  if (p.grow < 1) return false;
+  let any = false;
   for (let k = Math.floor(a / TEAR_EVERY) - 1; k * TEAR_EVERY < b + TEAR_EVERY; k++) {
     const u = (k + 0.5 + (keyed(s, k, 91) - 0.5) * 0.6) * TEAR_EVERY;
     const h = keyed(s, k, 92);
     const most = TEAR_WIDE * (0.45 + 0.55 * h);
     if (u - most < a || u + most > b) continue;
     const end = p.ring ? 0 : Math.max(0, 1 - Math.min(u - lo, hi - u) / 0.4);
-    if (keyed(s, k, 93) > (p.thin * 0.55 + end * 0.4) * Math.min(1, p.drop / 30)) continue;
+    if (keyed(s, k, 93) > (p.thin * 0.3 + end * 0.3) * Math.min(1, p.drop / 30)) continue;
     let clear = true;
     for (let r = 0; r < list.length && clear; r += 3) clear = Math.abs(u - list[r]) > list[r + 1] + most + ROPE_WANDER;
     if (!clear || u - most < lo + s.half * 0.6 || u + most > hi - s.half * 0.6) continue;
@@ -746,7 +812,9 @@ function tears(ctx: CanvasRenderingContext2D, p: Placed, a: number, b: number, l
       ctx.lineTo(PT[0], PT[1]);
     }
     ctx.closePath();
+    any = true;
   }
+  return any;
 }
 
 /** A line down a sheet at `u` along its lip from `f0` to `f1` of the way down, `off` of a tile out in front, onto the path. */
@@ -809,9 +877,8 @@ export function drawLip(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, u
   }
   if (depth > 0.5) {
     const g = ctx.createLinearGradient(PT[0] - nx * depth, PT[1] - ny * depth, PT[0], PT[1]);
-    g.addColorStop(0, TONGUE_INK[0]);
-    g.addColorStop(0.6, TONGUE_INK[1]);
-    g.addColorStop(1, TONGUE_INK[2]);
+    // Two flat tones stepped hard, as the kit paints a face, over the water still clear behind them.
+    for (let k = 0; k < TONGUE_STOPS.length; k++) g.addColorStop(TONGUE_STOPS[k], TONGUE_INK[k >> 1]);
     ctx.fillStyle = g;
   } else ctx.fillStyle = TONGUE_INK[1];
   ctx.beginPath();
@@ -850,13 +917,32 @@ export function drawLip(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, u
     }
     ctx.stroke();
   }
-  // The light along the edge where it rounds over, in lengths fixed to the world, broken short of each end and here and there along it.
+  /*
+   * The light along the edge where it rounds over, in lengths fixed to the
+   * world, broken short of each end and here and there along it, over an
+   * unbroken crease where the water rolled over meets the face of the sheet:
+   * the kit's lit arris and the crease under it, both solid where two pieces
+   * both lay them.
+   */
   const e0 = Math.max(aw, lo + s.half * 0.45);
   const e1 = Math.min(bw, hi - s.half * 0.45);
   if (e1 > e0) {
-    ctx.strokeStyle = LIP_LIGHT;
-    ctx.lineWidth = Math.max(1, 1.4 * z);
     ctx.lineCap = 'round';
+    if (z >= DETAIL_FROM && s.grow >= 1) {
+      // The crease unbroken, from one end of the light to the other.
+      ctx.strokeStyle = LIP_CREASE;
+      ctx.lineWidth = Math.max(0.8, 0.8 * z);
+      ctx.beginPath();
+      const q1 = Math.max(1, Math.ceil((e1 - e0) / 0.1));
+      for (let q = 0; q <= q1; q++) {
+        at(p, e0 + ((e1 - e0) * q) / q1, 0.075, 0, PT, 0);
+        if (q === 0) ctx.moveTo(PT[0], PT[1]);
+        else ctx.lineTo(PT[0], PT[1]);
+      }
+      ctx.stroke();
+    }
+    ctx.strokeStyle = LIP_LIGHT;
+    ctx.lineWidth = Math.max(1, 1.5 * z);
     ctx.beginPath();
     for (let k = Math.floor(e0 / LIP_EVERY) - 1; k * LIP_EVERY < e1; k++) {
       const g0 = Math.max(e0, k * LIP_EVERY + (keyed(s, k, 98) < 0.3 ? 0.04 + 0.05 * keyed(s, k, 99) : 0));
@@ -892,8 +978,42 @@ export function drawLip(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, u
       ctx.stroke();
     }
     ctx.lineCap = 'butt';
+    if (z >= DETAIL_FROM && s.grow >= 1) glints(ctx, p, a, b, lo, hi, z, t);
   }
   ctx.lineWidth = 1;
+}
+
+/**
+ * The glints along a lip, the kit's sparing accent: a four-pointed star of
+ * the runes' white now and then where the light catches the water turning
+ * over, each on a place of its own along the lip, keeping a beat of its own,
+ * and laid by the piece it is in.
+ */
+function glints(ctx: CanvasRenderingContext2D, p: Placed, a: number, b: number, lo: number, hi: number, z: number, t: number): void {
+  const s = p.sheet;
+  ctx.fillStyle = GLINT;
+  for (let k = Math.floor(a / GLINT_EVERY) - 1; k * GLINT_EVERY < b; k++) {
+    const h = keyed(s, k, 111);
+    const u = (k + 0.5 + (h - 0.5) * 0.6) * GLINT_EVERY;
+    if (u < a || u >= b || u < lo + s.half * 0.6 || u > hi - s.half * 0.6) continue;
+    const beat = Math.sin(t * (1.3 + 0.9 * keyed(s, k, 112)) + h * 40);
+    if (beat < 0.55) continue;
+    const k2 = (beat - 0.55) / 0.45;
+    const r = (2.2 + 1.6 * keyed(s, k, 113)) * z * (0.5 + 0.5 * k2);
+    at(p, u, 0.025, 0, PT, 0);
+    const x = PT[0];
+    const y = PT[1] - r * 0.15;
+    const w = r * 0.3;
+    ctx.globalAlpha = 0.35 + 0.65 * k2;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.quadraticCurveTo(x + w * 0.3, y - w * 0.3, x + w, y);
+    ctx.quadraticCurveTo(x + w * 0.3, y + w * 0.3, x, y + r);
+    ctx.quadraticCurveTo(x - w * 0.3, y + w * 0.3, x - w, y);
+    ctx.quadraticCurveTo(x - w * 0.3, y - w * 0.3, x, y - r);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 
 /* ---- The foot --------------------------------------------------------------- */
@@ -931,8 +1051,17 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
     return Math.atan2(LIP[3] / s.reach / (DISC_H * z), LIP[2] / s.reach / (DISC_W * z));
   };
   const way = wayAt(s.from);
+  // How narrow the fall is, 1 for a thread to 0 for a sheet most of a tile wide: a narrow fall's foam spreads wide and lies low.
+  const slim = p.ring ? 0 : Math.max(0, 1 - (hi - lo) / 0.9);
+  // How far the foam spreads past each end of the foot, wider than a narrow fall's water: a ring has no ends.
+  const spread = p.ring ? 0 : (0.05 + 0.1 * tall) * flow * (1 + 1.4 * slim);
   // Thinner toward the ends of the foot, where less water comes down; a ring has none.
-  const inset = (u: number): number => (p.ring ? 1 : Math.min(1, (Math.min(u - lo, hi - u) + 0.03) / (s.half * 0.9)));
+  const inset = (u: number): number => (p.ring ? 1 : Math.min(1, (Math.min(u - lo, hi - u) + 0.03 + spread) / (s.half * 0.9 + spread)));
+  // A narrow fall's foam heaps less high.
+  const narrow = 1 - 0.85 * slim;
+  // What lies past an end belongs to the piece at that end.
+  const first = !p.ring && a <= lo + 1e-6;
+  const last = !p.ring && b >= hi - 1e-6;
 
   if (s.wet && detail) {
     // The band of broken water spread in front of the foot, lying on the water.
@@ -968,13 +1097,47 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
     }
   }
 
+  if (detail) {
+    // Spray: drops thrown up out of the foam both ways along the foot, arcing up and falling back; more and higher off a taller fall. Laid under the
+    // foam, so a drop shows only where it has risen clear of it.
+    ctx.fillStyle = FOAM;
+    ctx.beginPath();
+    const sprayEvery = SPRAY_EVERY * (z >= 1.5 ? 1 : 1.5);
+    const lift = (0.6 + 2.2 * tall) * HALF_H * z * 0.5 * flow;
+    for (let k = Math.floor(a / sprayEvery) - 1; k * sprayEvery < b + sprayEvery; k++) {
+      const h = keyed(s, k, 71);
+      if (h > (0.55 + 0.3 * tall) * flow) continue;
+      const u0k = (k + 0.5) * sprayEvery;
+      if (u0k < a || u0k >= b) continue;
+      const period = 0.6 + 0.5 * keyed(s, k, 72);
+      const age = (((t / period + h * 7.3) % 1) + 1) % 1;
+      const side = keyed(s, k, 73) < 0.5 ? -1 : 1;
+      const u = u0k + side * age * (0.08 + 0.2 * tall) * (0.5 + h);
+      const out = age * (0.1 + 0.25 * keyed(s, k, 74)) * (0.6 + tall);
+      foot(u, out, 0, 0);
+      const y = FT[1] - lift * (0.5 + h) * (age * 2 - age * age * 1.6) * inset(u0k);
+      const r = Math.max(0.6, (1.3 - age) * (0.7 + 0.5 * tall) * z * (0.6 + 0.6 * h) * Math.sqrt(flow));
+      ctx.moveTo(FT[0] + r, y);
+      ctx.arc(FT[0], y, r, 0, Math.PI * 2);
+    }
+    // Each drop ruled round, from close enough to see it.
+    if (z >= 1.5 && flow >= 0.6) {
+      ctx.strokeStyle = SPRAY_INK;
+      ctx.lineWidth = Math.min(1.2, 0.4 * z);
+      ctx.stroke();
+    }
+    ctx.fill();
+  }
+
   /*
    * Lumps of foam along the foot, in two rows, the back one heaped where the
    * sheet comes down and the front one lower and further out where the churn
-   * spreads: shaded under, then white over, each swelling and sinking in its
-   * turn. Each is shaded by the piece it lies in, and whited by that one and
-   * the pieces either side, so the shade of one piece's lumps never lies over
-   * the white of its neighbour's.
+   * spreads, and a little past each end of the foot: ruled round in ink, shaded
+   * under, then white over, a heap of puffs as the kit draws one, each
+   * swelling and sinking in its turn. Each is ruled and shaded by the piece it
+   * lies in (one past an end by the piece at that end), and whited by that one
+   * and the pieces either side, so the ink and shade of one piece's lumps
+   * never lie over the white of its neighbour's.
    */
   const every = LUMP_EVERY * (z >= 1.25 ? 1 : detail ? 1.35 : 2.5);
   const lumps = LUMPS;
@@ -988,30 +1151,35 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
     for (let k = Math.floor((a - near) / every) - 1; k * every < b + near; k++) {
       const h = keyed(s, k * 2 + row, 63 + (detail ? 0 : 1));
       const u = (k + 0.5 + (h - 0.5) * 0.8 + row * 0.5) * every;
-      if (u < a - near || u >= b + near || u < lo + 0.03 || u > hi - 0.03) continue;
+      if (u < a - near || u >= b + near || u < lo + 0.03 - spread || u > hi - 0.03 + spread) continue;
       if (row === 1 && keyed(s, k * 2 + row, 67) > (s.wet ? 0.8 : 0.55)) continue;
       let heap = 0.45;
       for (let r = 0; r < list.length; r += 3) heap = Math.max(heap, 1 - Math.abs(u - list[r]) / (list[r + 1] + 0.14));
       const pulse = detail ? 0.5 + 0.5 * Math.sin(t * (3.1 + 2.3 * h) + h * 17) : 0.5;
       const ins = inset(u);
       const grow = row === 0 ? 0.5 + 0.8 * heap : 0.7 + 0.35 * heap;
-      const r = size * DISC_W * z * grow * (0.8 + 0.3 * pulse) * (0.45 + 0.55 * ins) * (0.55 + 0.85 * keyed(s, k * 2 + row, 64) ** 2);
+      const r = size * DISC_W * z * grow * (1 - 0.3 * slim) * (0.8 + 0.3 * pulse) * (0.45 + 0.55 * ins) * (0.55 + 0.85 * keyed(s, k * 2 + row, 64) ** 2);
       const out = row === 0 ? (keyed(s, k, 65) - 0.35) * 0.06 : (0.08 + 0.1 * keyed(s, k, 68)) * (0.7 + tall);
-      const up = (row === 0 ? (s.wet ? 0.45 : 1) * (1.2 + 5 * tall + 10 * tall * tall) * heap * (0.75 + 0.4 * pulse) * ins : (s.wet ? 0.1 : 0.5) * (1 + 3 * tall) * ins) * flow;
+      const up = (row === 0 ? (s.wet ? 0.45 : 1) * (1.2 + 5 * tall + 10 * tall * tall) * heap * (0.75 + 0.4 * pulse) * ins : (s.wet ? 0.1 : 0.5) * (1 + 3 * tall) * ins) * flow * narrow;
       foot(u, out, up, 0);
       if (m + 4 > lumps.length) break;
       lumps[m++] = FT[0];
       lumps[m++] = FT[1];
       lumps[m++] = Math.max(0.8, r);
-      lumps[m++] = u >= a && u < b ? 1 : 0;
+      lumps[m++] = (u >= a || first) && (u < b || last) ? 1 : 0;
     }
   }
-  for (const [ink, lift, grow, all] of [[PLUME_SHADE, -0.25, 1, false], [FOAM, 0.1, 0.88, true]] as const) {
+  // Ruled round, then shaded under, then white over: the ink and the shade by the piece each lump lies in, the white by that one and its neighbours.
+  const rule = Math.max(0.7, 0.8 * z);
+  for (const [ink, lift, grow, add, all] of [[FOAM_INK, -0.25, 1, rule, false], [PLUME_SHADE, -0.25, 1, 0, false], [FOAM, 0.12, 0.86, 0, true]] as const) {
     ctx.fillStyle = ink;
     ctx.beginPath();
     for (let i = 0; i < m; i += 4) {
       if (!all && !lumps[i + 3]) continue;
-      const r = lumps[i + 2] * grow;
+      // Too small to be seen ruled round, or a thin ring's beads of foam: shaded and whited only.
+      if (add && (lumps[i + 2] < 1.6 || flow < 0.6)) continue;
+      // The rule no wider than a fifth of the lump, so a small one is foam and not a bead.
+      const r = lumps[i + 2] * grow + Math.min(add, lumps[i + 2] * 0.2);
       const y = lumps[i + 1] - lumps[i + 2] * lift;
       ctx.moveTo(lumps[i] + r, y);
       ctx.arc(lumps[i], y, r, 0, Math.PI * 2);
@@ -1028,34 +1196,11 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
       const age = (((t / (2.2 + keyed(s, k, 76)) + keyed(s, k, 77) * 3) % 1) + 1) % 1;
       const r = (0.18 + 0.4 * tall) * (0.7 + 0.5 * age) * inset(c);
       foot(c, 0.05, (3 + 16 * tall) * age, 0);
-      ctx.globalAlpha = 0.5 * (tall - 0.2) * Math.sin(Math.PI * age);
+      ctx.globalAlpha = 0.14 * (tall - 0.2) * Math.sin(Math.PI * age);
       ctx.drawImage(foamTex, FT[0] - r * DISC_W * z, FT[1] - r * DISC_H * z * 1.6, r * DISC_W * z * 2, r * DISC_H * z * 3.2);
     }
     ctx.globalAlpha = 1;
   }
-
-  // Spray: drops thrown up out of the foam both ways along the foot, arcing up and falling back; more and higher off a taller fall.
-  ctx.fillStyle = FOAM;
-  ctx.beginPath();
-  const sprayEvery = SPRAY_EVERY * (z >= 1.5 ? 1 : 1.5);
-  const lift = (0.6 + 2.2 * tall) * HALF_H * z * 0.5 * flow;
-  for (let k = Math.floor(a / sprayEvery) - 1; k * sprayEvery < b + sprayEvery; k++) {
-    const h = keyed(s, k, 71);
-    if (h > (0.55 + 0.3 * tall) * flow) continue;
-    const u0k = (k + 0.5) * sprayEvery;
-    if (u0k < a || u0k >= b) continue;
-    const period = 0.6 + 0.5 * keyed(s, k, 72);
-    const age = (((t / period + h * 7.3) % 1) + 1) % 1;
-    const side = keyed(s, k, 73) < 0.5 ? -1 : 1;
-    const u = u0k + side * age * (0.08 + 0.2 * tall) * (0.5 + h);
-    const out = age * (0.1 + 0.25 * keyed(s, k, 74)) * (0.6 + tall);
-    foot(u, out, 0, 0);
-    const y = FT[1] - lift * (0.5 + h) * (age * 2 - age * age * 1.6) * inset(u0k);
-    const r = Math.max(0.6, (1.3 - age) * (0.7 + 0.5 * tall) * z * (0.6 + 0.6 * h) * Math.sqrt(flow));
-    ctx.moveTo(FT[0] + r, y);
-    ctx.arc(FT[0], y, r, 0, Math.PI * 2);
-  }
-  ctx.fill();
 }
 
 /** Where the foot of a sheet is on the screen at `u` along its lip. */
@@ -1096,7 +1241,7 @@ export function drawMist(
       const px = x + lean.x * blown + Math.sin(age * 5 + k * 2.1 + j) * 5 * z;
       const py = y - age * (14 + 50 * tall) * z + lean.y * blown * 0.4;
       const r = size * (0.4 + 0.8 * age);
-      ctx.globalAlpha = 0.34 * tall * Math.sin(Math.PI * age) * (1 - 0.4 * dark);
+      ctx.globalAlpha = 0.24 * tall * Math.sin(Math.PI * age) * (1 - 0.4 * dark);
       ctx.drawImage(tex, px - r, py - r * 0.8, r * 2, r * 1.6);
     }
   }
@@ -1105,61 +1250,100 @@ export function drawMist(
 
 /* ---- Colours ---------------------------------------------------------------- */
 
+/*
+ * Drawn as the runestones' kit is drawn (`./runestone`, `./kit/core`): pastel
+ * water in a few flat tones rather than a wash, each rope of thicker water a
+ * rounded column lit on its screen-left side and creased on its right, the
+ * sheet ruled down its ends in the kit's ink -- warm, never black, here taken
+ * toward the water's own edge colour -- and the foam at its foot a heap of
+ * puffs ruled round in the same ink, warm white over a lilac shade, as the
+ * kit's shade goes toward lilac rather than toward black.
+ */
 type RGB = readonly [number, number, number];
 const mixRgb = (a: RGB, b: RGB, k: number): RGB => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 const rgb = (c: RGB): string => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
 const rgba = (c: RGB, a: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a.toFixed(3)})`;
 
-/** Where down a sheet its colours change, from the lip to the foot, as shares of how far below the lip on the screen. */
-const STOPS = [0, 0.07, 0.17, 0.45, 0.78, 1];
-/** The sheet down its length, for each of eleven steps of how white it goes by the foot: bright where it turns over, glassy under that, paler as it falls, white at the foot. */
+/** The ink water is ruled in: the kit's warm ink taken a third of the way to the water's edge colour. */
+const WATER_INK: RGB = mixRgb(SPRING_EDGE, STONE_INK, 0.66);
+/** The kit's warm white, which the near white of falling water and the top of its foam are. */
+const WARM_WHITE: RGB = mixRgb(SPRING_FOAM, [255, 251, 234], 0.6);
+/** The lilac the kit's shade goes toward, which the shade under foam is taken toward. */
+const LILAC: RGB = [170, 168, 206];
+
+/**
+ * Where down a sheet its colours change, from the lip to the foot, as shares
+ * of how far below the lip on the screen: four flat tones, as the kit paints
+ * a face, each stepped hard into the next -- the roll over the lip, the glassy water under it,
+ * the paler water breaking up, and the white over the foot.
+ */
+const STOPS = [0, 0.045, 0.07, 0.34, 0.36, 0.64, 0.66, 1];
+/** The sheet down its length at each stop, for each of eleven steps of how white it goes by the foot. */
 const BODY: RGB[][] = Array.from({ length: 11 }, (_, i) => {
   const w = i / 10;
   return [
-    mixRgb(SPRING_WATER, SPRING_PALE, 0.62),
-    mixRgb(SPRING_WATER, SPRING_PALE, 0.12),
-    mixRgb(SPRING_WATER, SPRING_PALE, 0.2),
-    mixRgb(SPRING_WATER, SPRING_PALE, 0.38 + 0.2 * w),
-    mixRgb(SPRING_PALE, SPRING_FOAM, 0.02 + 0.45 * w * w),
-    mixRgb(SPRING_PALE, SPRING_FOAM, 0.15 + 0.8 * w),
+    mixRgb(SPRING_WATER, SPRING_PALE, 0.66),
+    mixRgb(SPRING_WATER, SPRING_PALE, 0.56),
+    mixRgb(SPRING_WATER, SPRING_PALE, 0.1),
+    mixRgb(SPRING_WATER, SPRING_PALE, 0.16),
+    mixRgb(SPRING_WATER, SPRING_PALE, 0.36 + 0.14 * w),
+    mixRgb(SPRING_WATER, SPRING_PALE, 0.46 + 0.2 * w),
+    mixRgb(SPRING_PALE, WARM_WHITE, 0.1 + 0.45 * w),
+    mixRgb(SPRING_PALE, WARM_WHITE, 0.25 + 0.7 * w),
   ];
 });
 /**
  * The thin veil of it, bluer where the dark rock shows through; a rope of
- * thicker water, paler; and the thick of a rope, palest. Solid, so pieces of
- * one sheet laid over each other's edges meet without a seam.
+ * thicker water, paler; the lit side of a rope, palest; and the crease down
+ * its shaded side, the rope's own colour taken toward the ink. Solid, so
+ * pieces of one sheet laid over each other's edges meet without a seam.
  */
-const VEIL: string[][] = BODY.map((row) => row.map((c, k) => rgb(mixRgb(c, SPRING_EDGE, [0.12, 0.38, 0.35, 0.3, 0.15, 0.04][k]))));
-const ROPE: string[][] = BODY.map((row) => row.map((c, k) => rgb(mixRgb(c, SPRING_PALE, [0.3, 0.22, 0.32, 0.3, 0.18, 0.06][k]))));
-const CORE: string[][] = BODY.map((row) => row.map((c, k) => rgb(mixRgb(c, SPRING_PALE, [0.4, 0.42, 0.58, 0.55, 0.36, 0.12][k]))));
+const VEIL: string[][] = BODY.map((row) => row.map((c, k) => rgb(mixRgb(c, SPRING_EDGE, [0.1, 0.12, 0.46, 0.42, 0.26, 0.22, 0.06, 0.03][k]))));
+const ROPE_RGB: RGB[][] = BODY.map((row) => row.map((c, k) => mixRgb(c, SPRING_PALE, [0.3, 0.3, 0.26, 0.3, 0.26, 0.24, 0.12, 0.05][k])));
+const ROPE: string[][] = ROPE_RGB.map((row) => row.map(rgb));
+const CORE: string[][] = BODY.map((row) => row.map((c, k) => rgb(mixRgb(mixRgb(c, SPRING_PALE, [0.55, 0.55, 0.6, 0.66, 0.6, 0.55, 0.3, 0.15][k]), WARM_WHITE, 0.2))));
+const CREASE: string[][] = ROPE_RGB.map((row) => row.map((c, k) => rgb(mixRgb(c, WATER_INK, [0.3, 0.3, 0.55, 0.52, 0.42, 0.38, 0.2, 0.12][k]))));
 /** The wet rock behind a sheet. */
-const WET_ROCK = 'rgba(16,52,58,0.3)';
+const WET_ROCK = 'rgba(40,58,78,0.3)';
 /** The wet rock seen through a tear in a sheet. */
-const TEAR = 'rgb(84,112,118)';
-/** Streaks: near white on the ropes, fainter white and darker teal on the veil. */
-const STREAK_PALE = rgba(SPRING_PALE, 0.82);
-const STREAK_FAINT = rgba(SPRING_FOAM, 0.34);
-const STREAK_DIM = rgba(SPRING_DARK, 0.26);
+const TEAR = rgb(mixRgb(mixRgb(SPRING_WATER, SPRING_EDGE, 0.75), [105, 104, 111], 0.2));
+/** The ink down each end of a sheet. */
+const SIDE_INK = rgb(WATER_INK);
+/** Streaks: near white on the ropes, fainter white on the veil. */
+const STREAK_PALE = rgba(WARM_WHITE, 0.86);
+const STREAK_FAINT = rgba(WARM_WHITE, 0.4);
 /** Threads breaking away, and the broken edge at each end. */
-const THREAD = rgba(SPRING_FOAM, 0.62);
+const THREAD = rgba(WARM_WHITE, 0.7);
 /** Flecks of white breaking out of the lower part of a tall fall. */
-const FLECK = rgba(SPRING_FOAM, 0.7);
-const EDGE_LIGHT = rgba(SPRING_FOAM, 0.7);
+const FLECK = rgba(WARM_WHITE, 0.8);
+const EDGE_LIGHT = rgba(WARM_WHITE, 0.75);
 /** The water drawn into a lip, from clear to where it turns over; and the light along the edge. */
-const TONGUE_INK = [rgba(SPRING_PALE, 0), rgba(mixRgb(SPRING_WATER, SPRING_PALE, 0.55), 0.55), rgba(mixRgb(SPRING_PALE, SPRING_FOAM, 0.4), 0.95)];
+const TONGUE_INK = [rgba(SPRING_PALE, 0), rgba(mixRgb(SPRING_WATER, SPRING_PALE, 0.5), 0.42), rgba(mixRgb(SPRING_PALE, WARM_WHITE, 0.3), 0.85)];
+/** Where down the water drawn into a lip each of those begins and ends, from the back of it to the edge. */
+const TONGUE_STOPS = [0, 0.34, 0.34, 0.74, 0.74, 1];
 /** The lines of water drawn in toward a lip. */
-const TONGUE_LINE = rgba(SPRING_FOAM, 0.55);
-const LIP_LIGHT = rgba(SPRING_FOAM, 0.95);
-/** Foam, and the shade under a lump of it. */
-const FOAM = rgb(SPRING_FOAM);
-const PLUME_SHADE = rgb(mixRgb(SPRING_PALE, SPRING_EDGE, 0.24));
+const TONGUE_LINE = rgba(WARM_WHITE, 0.6);
+const LIP_LIGHT = rgb(WARM_WHITE);
+/** The crease under the light along a lip, where the water rolled over meets the face of the sheet. */
+const LIP_CREASE = rgb(mixRgb(mixRgb(SPRING_WATER, SPRING_PALE, 0.3), WATER_INK, 0.45));
+/** A glint where the light catches the water turning over: the runes' white. */
+const GLINT = RUNE_WHITE;
+/** Foam: its top, the shade under a puff of it, and the ink it is ruled round with. */
+const FOAM = rgb(WARM_WHITE);
+const PLUME_SHADE = rgb(mixRgb(mixRgb(SPRING_PALE, LILAC, 0.42), SPRING_EDGE, 0.1));
+const FOAM_INK = rgb(mixRgb(WATER_INK, SPRING_PALE, 0.18));
+const SPRAY_INK = rgba(WATER_INK, 0.4);
 /** A ring on the water at eight strengths, as it fades. */
-const RINGS = Array.from({ length: 8 }, (_, i) => rgba(SPRING_FOAM, 0.08 + (0.6 * (i + 1)) / 8));
+const RINGS = Array.from({ length: 8 }, (_, i) => rgba(WARM_WHITE, 0.08 + (0.6 * (i + 1)) / 8));
 
 /** Scratch: a screen point or two, the curve, the ropes of a stretch, a foot's points, lumps as x, y, radius and whether the piece owns it, and streaks as lane and span. */
 const PT = new Float64Array(4);
-/** Scratch for the far edge of a rope at each slice of a sheet. */
+/** Scratch for the far edge of a rope at each slice of a sheet; each end of a stretch at each slice; and each rope's middle and half width at each slice. */
 const ROPE_EDGE = new Float64Array(32);
+const SLICE_L = new Float64Array(32);
+const SLICE_R = new Float64Array(32);
+const ROPE_MID = new Float64Array(1024);
+const ROPE_W = new Float64Array(1024);
 const CV = new Float64Array(2);
 /** Scratch for where the lip is at a point and the step out from it to the foot, and the step along it (`lipAt`, `alongAt`). */
 const LIP = new Float64Array(6);
@@ -1168,4 +1352,3 @@ const ROPES: number[] = [];
 const LUMPS = new Float64Array(4 * 512);
 const STREAK_PALE_LIST: number[] = [];
 const STREAK_FAINT_LIST: number[] = [];
-const STREAK_DIM_LIST: number[] = [];
