@@ -178,16 +178,18 @@ jobs:
                  round(max(extract(epoch from now() - backend_start))::numeric) as oldest_s
             from pg_stat_activity where backend_type = 'client backend' and usename in ('authenticator', 'postgres')
            group by 1, 2 order by 1, 2"
-          # What each call costs now, not since 11-02: the counts two minutes apart, by call and by the arguments it was
+          # What each call costs now, not since 11-02: the counts 110 seconds apart, by call and by the arguments it was
           # asked with (an old browser's form apart from a new one's). Through psql, one session, so the first count keeps.
-          echo "== what each call costs now: two minutes of pg_stat_statements, by call and arguments"
+          echo "== what each call costs now: 110 seconds of pg_stat_statements, by call and arguments"
           PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$(sed 's/:\[YOUR-PASSWORD\]//' supabase/.temp/pooler-url)" -X -q -v ON_ERROR_STOP=1 <<'EOSQL' \
             || echo "::warning::could not take the two-minute count"
           create temp table s0 as select queryid, calls, total_exec_time from pg_stat_statements;
-          select pg_sleep(120);
+          -- Two waits: a statement here is cut off at two minutes.
+          select pg_sleep(55);
+          select pg_sleep(55);
           select coalesce(substring(s.query from '"?public"?\."?([a-z_0-9]+)"?\('), left(regexp_replace(s.query, '\s+', ' ', 'g'), 40)) as call,
                  coalesce(nullif(array_to_string(array(select distinct m[1] from regexp_matches(s.query, '"(p_[a-z_]+)"', 'g') as m order by 1), ','), ''), '-') as args,
-                 sum(s.calls - coalesce(a.calls, 0)) as calls_2min,
+                 sum(s.calls - coalesce(a.calls, 0)) as calls,
                  round((sum(s.total_exec_time - coalesce(a.total_exec_time, 0)) / greatest(sum(s.calls - coalesce(a.calls, 0)), 1))::numeric, 2) as ms_each,
                  round(sum(s.total_exec_time - coalesce(a.total_exec_time, 0))::numeric) as ms_total
             from pg_stat_statements s left join s0 a using (queryid)
