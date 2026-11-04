@@ -22,6 +22,7 @@
  *
  * Runs against the database the suite leaves behind.
  */
+import { RELICS } from '../../src/game/archaeology';
 import { execFileSync } from 'node:child_process';
 import { ACTIONS } from '../../src/game/actions';
 import { RECIPES } from '../../src/game/recipes';
@@ -71,6 +72,8 @@ for (const m of MOULDS) {
 }
 for (const p of POTTERY) if (!madeBy.has(p.fired)) madeBy.set(p.fired, `fired in a kiln from ${p.unfired}`);
 for (const [id, how] of NOT_MADE) if (!madeBy.has(id)) madeBy.set(id, how);
+// And what restoring a relic puts in your hands: another is had by digging up its fragments again.
+for (const r of RELICS) if (!madeBy.has(r.result)) madeBy.set(r.result, `restored from ${r.name} fragments`);
 
 const tools = Object.entries(ITEM_DEFS)
   .filter(([, d]) => (d as { category?: string }).category === 'tool')
