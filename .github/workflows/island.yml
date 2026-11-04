@@ -5776,6 +5776,40 @@ jobs:
           # tree, so anything the CLI would slot in early has been checked.
           supabase db push --include-all
           supabase migration list --linked | tail -12
+      - name: The clocks wound as they are written
+        # pg_cron's scheduler keeps its own list of jobs and reads `cron.job` again only when told the table changed.
+        # A push that changes many functions at once sends more notices than the scheduler reads in a second, so it is
+        # told to throw every cache away instead -- and that notice it does not take as "the jobs changed". After the
+        # push of 20261103160000 the scheduler went on running world-tick, stock-tick and tree-tick as they were before
+        # it, and never started the loops it added: the look of 11-04 00:01 found each job running its old command,
+        # and the loop jobs never once run.
+        #
+        # So, once the push is in and has settled: one unchanged `cron.alter_job` on each job, a small change on its
+        # own, which the scheduler reads as one. Then wait until the clock's job is seen running what it is stored as.
+        # Allowed to fail without failing the deploy: the clocks still turn on the list the scheduler has.
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          sleep 5
+          supabase db query --linked "select count(cron.alter_job(j.jobid, active := j.active)) as jobs_touched from cron.job j" \
+            || { echo "::warning::Could not touch the cron jobs; the scheduler may be running an old list of them."; exit 0; }
+          FRESH=$(cat <<'EOSQL'
+          select case when exists (
+                   select 1 from cron.job_run_details d join cron.job j on j.jobid = d.jobid
+                    where j.jobname = 'world-tick' and d.start_time > now() - interval '3 seconds'
+                      and d.command = j.command)
+                 then 'the scheduler runs the jobs as stored' else 'not yet' end as clocks
+          EOSQL
+          )
+          for i in $(seq 1 20); do
+            sleep 3
+            if supabase db query --linked "$FRESH" 2>/dev/null | grep -q 'as stored'; then
+              echo "the scheduler runs the jobs as stored (after ${i} looks)"; exit 0
+            fi
+          done
+          echo "::warning::After a minute the scheduler still runs world-tick as it was, not as cron.job stores it."
       - name: Who keeps the islands
         # The Island keeper's tools (20260925234600) open for whoever founded an
         # island, on that island, and for anybody in `private.island_owner`, on
@@ -6026,6 +6060,17 @@ jobs:
                  "postgresql://postgres:$SUPABASE_DB_PASSWORD@db.$PROJECT_REF.supabase.co:5432/postgres" \
                  -c "$CLOCKS" \
             || echo "::warning::No clocks listed — either pg_cron is not installed on this project or cron.job could not be read. The island's heartbeat and its stocking both depend on it."
+          # And what the scheduler actually ran, beside what the job is stored as: the two differ when the scheduler is
+          # working from a list it read before a push (see "The clocks wound as they are written").
+          RAN=$(cat <<'EOSQL'
+          select j.jobname, left(d.command, 50) as ran, d.command = j.command as as_stored, count(*) as runs,
+                 to_char(max(d.start_time), 'HH24:MI:SS') as last
+            from cron.job_run_details d join cron.job j on j.jobid = d.jobid
+           where d.start_time > now() - interval '2 minutes'
+           group by 1, 2, 3 order by 1;
+          EOSQL
+          )
+          supabase db query --linked "$RAN" || echo "::warning::Could not read what the clocks ran."
 
           # `cron.job_run_details` keys on `jobid`, not `jobname` -- the first
           # cut of this asked for `d.jobname` and got `column d.jobname does
