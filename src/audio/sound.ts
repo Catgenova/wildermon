@@ -155,7 +155,7 @@ export const HUSHED: ReadonlySet<string> = new Set([
 export const STROKE_BY_ID: Record<string, Stroke> = {
   // Ground.
   dig: 'earth', dredge: 'earth', flatten: 'earth', pack: 'earth', cultivate: 'earth',
-  drop_dirt: 'earth', drop_dirt_here: 'earth', dig_stump: 'earth',
+  drop_dirt: 'earth', drop_dirt_here: 'earth', change_tile: 'earth', dig_stump: 'earth',
   take_ashes_oven: 'earth', take_ashes_fire: 'earth', take_ashes_smelter: 'earth', take_ashes_kiln: 'earth',
   // Stone, whether it is being cut or merely shifted.
   pave_cobble: 'stone', pave_slabs: 'stone', remove_paving: 'stone',

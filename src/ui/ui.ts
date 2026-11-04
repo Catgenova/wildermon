@@ -7,7 +7,7 @@ import type { Game } from '../game/game';
 import { EMOTES } from '../game/emotes';
 import type { Pick, Renderer } from '../render/renderer';
 import { TileType, TREE_DEFS, treeAge, treeSpecies, SLAB_BY_ITEM } from '../world/tiles';
-import { ACTION_BY_ID, type ActionDef, type Target, deedAcrossAt, foundingPreview, fruitSprout, SPOIL_ORDER } from '../game/actions';
+import { ACTION_BY_ID, type ActionDef, type Target, deedAcrossAt, foundingPreview, fruitSprout, SPOIL_ORDER, SPOIL_TILE } from '../game/actions';
 import { BARTER_REACH, BARTER_SAID } from '../game/barter';
 import { BUILD_ACTION_BY_ID, layingBill, materialName } from '../game/buildActions';
 import {
@@ -2150,9 +2150,11 @@ export class UI {
           continue;
         }
       }
-      // Change tile: one option per dirt, clay or sand carried.
-      if (def.id === 'drop_dirt') {
-        const kinds = SPOIL_ORDER.map((id) => this.game.inventory.items.filter((it) => it.id === id && !it.locked)).filter((s) => s.length > 0);
+      // Drop dirt: one option per dirt, clay or sand carried; Change tile, per one that is not this tile's.
+      if (def.id === 'drop_dirt' || def.id === 'change_tile') {
+        const here = target.kind === 'tile' ? this.game.world.getTile(target.x, target.y) : null;
+        const kinds = SPOIL_ORDER.filter((id) => def.id === 'drop_dirt' || SPOIL_TILE[id] !== here)
+          .map((id) => this.game.inventory.items.filter((it) => it.id === id && !it.locked)).filter((s) => s.length > 0);
         if (kinds.length > 0) {
           entries.push({
             label: def.label,

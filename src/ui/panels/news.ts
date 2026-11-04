@@ -63,7 +63,7 @@ import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
-import { BUSH_DEFS, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
+import { BURYABLE, BUSH_DEFS, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
@@ -121,7 +121,7 @@ import { meltLumps } from '../../game/melt';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
-import { ACTION_BY_ID, deedAcrossAt, PACKED_FIRST, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
+import { ACTION_BY_ID, deedAcrossAt, PACKED_FIRST, ROCK_AT_CORNER, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
@@ -4241,6 +4241,17 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 474,
+    day: '2026-11-04',
+    lines: () => [
+      `Changed: ${ACTION_BY_ID.get('drop_dirt')?.label} (was: Change tile), on a corner or at your feet: 1 dirt, clay or sand, corner +${metres(1)} m and +1 soil; tile type unchanged (was: laid as that dirt, clay or sand). `
+        + `Refused at a corner of a rock, ore or seam tile: "${ROCK_AT_CORNER}"`,
+      `Added: ${ACTION_BY_ID.get('change_tile')?.label} (a tile of ${listed([...BURYABLE].map((t) => TILE_DEFS[t as TileType].name.toLowerCase()))}): 1 dirt, clay or sand, tile laid as it; corner heights and soil unchanged. `
+        + 'One option per dirt, clay or sand carried, not the tile\'s own. Not on rock, ores, seams, packed dirt, fields or paving.',
+      'Fixed: Change tile at a corner of exposed rock, ore or a seam turned it to dirt.',
+    ],
   },
   {
     n: 471,

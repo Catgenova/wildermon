@@ -10,7 +10,7 @@ import { lifeWords } from '../runecut-life';
 import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import {
   ACTION_BY_ID, CHIP_CHANCE, CLEARED_TO, deedAcrossAt, FRUIT_MATURE, FRUIT_OLD, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MINE_COLLAPSE, MINE_DEPTH, MOSS_PER_CUT, MOSS_PLANT,
-  PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE, WATER_MOTE_USES, WEAR_PER_GO,
+  PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE, ROCK_AT_CORNER, WATER_MOTE_USES, WEAR_PER_GO,
 } from '../../game/actions';
 import { CODE_DIGITS, CODE_SECONDS } from '../../game/keeper';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEM_ODDS, GEMS, JEWEL_BONUS, tradeName } from '../../game/gems';
@@ -177,7 +177,7 @@ import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTES_LEAST, MOTES_MOST, MOTES_STEP, P
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
 import { LANDING_STAND, RUNESTONES, SAFE_RING, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
-  BUSH_DEFS, groundRoll, ROCK_VARIANTS, SLAB_VARIANTS, STEPS_BRICKS, STEPS_LEAST, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS, STEPS_TWIST, TILE_DEFS, TileType,
+  BURYABLE, BUSH_DEFS, groundRoll, ROCK_VARIANTS, SLAB_VARIANTS, STEPS_BRICKS, STEPS_LEAST, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS, STEPS_TWIST, TILE_DEFS, TileType,
   TREE_DAWN_UTC, TREE_DEFS, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS,
 } from '../../world/tiles';
 import { STEPS_BACK, stepsBack, STONE_DIFFICULTY, STONE_STEPS_BILL, TIMBER_DIFFICULTY, TIMBER_STEPS_BILL } from '../../game/steps';
@@ -3529,9 +3529,9 @@ export function helpText(): string {
     <h4>Digging and the level</h4>
     <ul>
       <li>Every corner: soil over bedrock. <b>Digging</b> lowers the corner nearest the click (marker) and takes a spadeful of its soil; stops at rock.
-      All corners bare: the tile becomes rock (whatever lies there, possibly a seam). <b>Change tile</b> on a corner covers rock again.</li>
+      All corners bare: the tile becomes rock (whatever lies there, possibly a seam). <b>Drop dirt</b> refused at a corner of rock, ore or a seam: "${ROCK_AT_CORNER}" Rock raised by <b>Raise rock</b> (concrete, rubble).</li>
       <li><b>Take the level here</b> (right-click a corner): that height becomes the target. <b>Flatten</b> aims at it instead of your own tile.
-      <b>Digging</b> and <b>Chip corner</b> stop at the mark going down; <b>Change tile</b> and <b>concrete</b> stop at it going up (a repeat run ends when level).
+      <b>Digging</b> and <b>Chip corner</b> stop at the mark going down; <b>Drop dirt</b> and <b>concrete</b> stop at it going up (a repeat run ends when level).
       The Tile window shows the cursor corner's distance from it. <b>Clear the level</b> removes it.</li>
     </ul>
     <h4>Foundations</h4>
@@ -3545,8 +3545,9 @@ export function helpText(): string {
     <h4>Soil</h4>
     <ul>
       <li>Dirt, clay and sand: <b>${itemDef('dirt').weight}kg</b> each; a starting back carries ${Math.floor((CARRY_BASE + CHAR_START * CARRY_PER_STRENGTH) / itemDef('dirt').weight)} before overload.</li>
-      <li><b>Change tile</b> (a corner, or an item for your feet): dirt, clay or sand raises the corner one step and lays that tile.</li>
-      <li>Change tile and flattening's fill take a spadeful from any <b>crate, cart or bin within reach</b> when you carry none.</li>
+      <li><b>Drop dirt</b> (a corner, or an item for your feet): 1 dirt, clay or sand; corner +${metres(1)} m and +1 soil; tile type unchanged.</li>
+      <li><b>Change tile</b> (a tile of ${listed([...BURYABLE].map((t) => TILE_DEFS[t as TileType].name.toLowerCase()))}): 1 dirt, clay or sand; tile laid as it; corner heights and soil unchanged. Offered per dirt, clay or sand not the tile's own.</li>
+      <li>Drop dirt, Change tile and flattening's fill take a spadeful from any <b>crate, cart or bin within reach</b> when you carry none.</li>
       <li><b>${capital(listed(Object.values(TILE_DEFS).filter((d) => d.collect).map((d) => d.name.toLowerCase())))}</b>: <b>Collect</b> (<i>Collect clay</i>, <i>Collect dirt</i>), standing on it:
       a shovelful off the top; tile type, corner heights and soil unchanged; slightly slower than digging a corner.</li>
       <li><b>Cut moss</b>: <b>${MOSS_PER_CUT} moss</b>; tile stays moss; regrows before the next cut. Digging its corner gives dirt.

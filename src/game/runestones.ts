@@ -407,7 +407,7 @@ export const TELESTONE_ACTIONS: ActionDef[] = [
  */
 export const STONE_GUARDED: ReadonlySet<string> = new Set([
   // The ground's shape and surface.
-  'dig', 'dig_tile', 'dredge', 'flatten', 'drop_dirt', 'drop_dirt_here', 'rubble_fill', 'raise_rock', 'mine', 'chip_corner',
+  'dig', 'dig_tile', 'dredge', 'flatten', 'drop_dirt', 'drop_dirt_here', 'change_tile', 'rubble_fill', 'raise_rock', 'mine', 'chip_corner',
   'pack', 'cultivate', 'pave_cobble', 'pave_slabs', 'remove_paving', 'dig_spring', 'stop_spring', 'dig_pool', 'fill_pool',
   'lay_steps', 'lay_timber_steps', 'take_up_steps', 'plant_moss', 'plant_grass', 'lay_stones', 'lift_stones',
   'plant_lily', 'plant_lotus', 'pull_water_plant', 'cut_grass', 'cut_moss', 'cut_reeds', 'clear_brush', 'dig_worms',

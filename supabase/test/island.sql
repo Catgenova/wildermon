@@ -7357,24 +7357,25 @@ select '840. and dug out to the rock: ' || string_agg(
      || ' — every one of them used to read Rock here'
 from (values (44,44),(45,44),(44,45),(45,45)) q(x, y);
 
--- And a spadeful of dirt put back on the corner they share.
+-- And a spadeful of dirt put back on the corner they share, by Drop dirt, which lays no tile.
+create temp table drop_said (why text);
 do $$
-declare w uuid; me uuid := '77777777-7777-7777-7777-777777777777';
+declare w uuid; me uuid := '77777777-7777-7777-7777-777777777777'; v_why text;
 begin
   select id into w from world where name = 'Hoarding';
   update player set x = 44.4, y = 44.4, act = null, act_queue = '[]'::jsonb, seen_at = now(),
       stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1') where world_id = w and uid = me;
   delete from item where world_id = w and holder_uid = me and def = 'dirt';
   insert into item (world_id, holder, holder_uid, def, ql, count) values (w, 'player', me, 'dirt', 20, 5);
-  perform perform_terrain(w, me, 'drop_dirt_here', '{"kind":"item"}'::jsonb);
+  v_why := act_refusal(w, me, 'drop_dirt_here', '{"kind":"item"}'::jsonb);
+  insert into drop_said values (v_why);
+  if v_why is null then perform perform_terrain(w, me, 'drop_dirt_here', '{"kind":"item"}'::jsonb); end if;
 end $$;
-select '841. and a spadeful of dirt put back on them: ' || string_agg(
+select '841. and Drop dirt at the corner they share (' || coalesce((select why from drop_said), 'allowed') || '): ' || string_agg(
          (select name from tile_def t where t.id = land_tile(:'world5', q.x, q.y)), ', ' order by q.x, q.y)
-     || ' — the three nobody was standing on are untouched, which is the rule this'
-     || ' measures. The first is the tile under the shovel, and a spadeful buries'
-     || ' what it lands on: that is 862, and it is a person doing it rather than'
-     || ' the ground doing it to them.'
+     || ' — all four as they were: the beds are not rock, so nothing turns them to dirt, and Drop dirt lays no tile'
 from (values (44,44),(45,44),(44,45),(45,45)) q(x, y);
+drop table drop_said;
 
 -- And the thing the rule is for, which still has to work: grass over bedrock.
 do $$
@@ -7746,9 +7747,9 @@ select '861. and the same day with somebody standing in the middle of it: ' || :
  * loud and nothing else, so a bank of clay took the dirt, rose a step and
  * stayed a bank of clay.
  *
- * Both spadefuls are asked here, because there are two of them and only one
- * was ever covering anything: `drop_dirt` aims at a corner and covers the tile
- * it names, and `drop_dirt_here` aims at your feet and covered nothing at all.
+ * Laying the tile is Change tile's (`change_tile`) now, and Drop dirt
+ * (`drop_dirt`, `drop_dirt_here`) raises a corner and lays nothing: asked
+ * here of both, as `changetile.ts` asks them of both sides.
  *
  * This is the opposite rule to 839-843 on purpose, and they are both wanted.
  * `reconcile` leaves a bed alone, so the ground never turns your clay to dirt
@@ -7778,22 +7779,28 @@ select '862. four faces to drop dirt on: ' || string_agg(
          (select name from tile_def t where t.id = land_tile(:'world7', q.x, q.y)), ', ' order by q.y, q.x)
 from (values (20,20),(21,20),(20,21),(21,21)) q(x, y);
 
--- A spadeful on each, aimed at the corner the way the browser aims one.
+-- Change tile on each, asked first the way the browser asks it.
+create temp table change_said (x int, y int, why text);
 do $$
-declare w uuid; me uuid := '77777777-7777-7777-7777-777777777777'; q record;
+declare w uuid; me uuid := '77777777-7777-7777-7777-777777777777'; q record; v_why text;
 begin
   select id into w from world where name = 'Hoarding';
   for q in select * from (values (20,20),(21,20),(20,21),(21,21)) v(x, y) loop
     update player set x = q.x + 0.4, y = q.y + 0.4,
         stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1') where world_id = w and uid = me;
-    perform act_perform(w, me, 'drop_dirt', jsonb_build_object(
-      'kind', 'tile', 'x', q.x, 'y', q.y, 'cx', q.x, 'cy', q.y));
+    v_why := act_refusal(w, me, 'change_tile', jsonb_build_object('kind', 'tile', 'x', q.x, 'y', q.y));
+    insert into change_said values (q.x, q.y, v_why);
+    if v_why is null then
+      perform act_perform(w, me, 'change_tile', jsonb_build_object('kind', 'tile', 'x', q.x, 'y', q.y));
+    end if;
   end loop;
 end $$;
-select '863. and after one each: ' || string_agg(
-         (select name from tile_def t where t.id = land_tile(:'world7', q.x, q.y)), ', ' order by q.y, q.x)
-     || ' — the cobblestone is broken up rather than buried, which is why it is still there'
+select '863. and after Change tile with dirt on each: ' || string_agg(
+         (select name from tile_def t where t.id = land_tile(:'world7', q.x, q.y))
+         || coalesce(' (' || (select why from change_said c where c.x = q.x and c.y = q.y) || ')', ''), ', ' order by q.y, q.x)
+     || ' — cobblestone is not ground a spadeful lays over'
 from (values (20,20),(21,20),(20,21),(21,21)) q(x, y);
+drop table change_said;
 
 -- And the other spadeful: the one you drop at your feet.
 do $$
@@ -7806,10 +7813,10 @@ begin
       stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1') where world_id = w and uid = me;
   perform act_perform(w, me, 'drop_dirt_here', '{"kind":"item"}'::jsonb);
 end $$;
-select '864. and a spadeful dropped at your feet on sand: '
+select '864. and Drop dirt at your feet on sand: '
      || (select name from tile_def t where t.id = land_tile(:'world7', 22, 22))
-     || ' — which used to raise the corner and leave the face exactly as it was';
-select '865. and the list both sides read: ' || string_agg(d.name, ', ' order by b.tile)
+     || ', the corner up to ' || land_height(:'world7', 22, 22) || ' from 4 — the corner raised and the face as it was';
+select '865. and the list Change tile reads, both sides: ' || string_agg(d.name, ', ' order by b.tile)
   from buryable b join tile_def d on d.id = b.tile;
 
 /*
@@ -8991,14 +8998,14 @@ begin
   update player set x = 41.5, y = 40.5 where world_id = w and uid = me;
 end $$;
 select land_height(:'world6', 41, 41) as h0 \gset
-select act_perform(:'world6', '77777777-7777-7777-7777-777777777777', 'drop_dirt',
-  ('{"kind":"tile","x":41,"y":41,"cx":41,"cy":41,"itemUid":' || (select id from item where world_id = :'world6' and holder_uid = '77777777-7777-7777-7777-777777777777' and def = 'clay') || '}')::jsonb) \g /dev/null
-select '942. clay dropped on a grass corner: the ground is ' || (select name from tile_def where id = land_tile(:'world6', 41, 41))
-     || ', the corner rose from ' || :'h0' || ' to ' || land_height(:'world6', 41, 41)
-     || ' — "' || (select text from event where uid = '77777777-7777-7777-7777-777777777777' and text like 'You drop%' order by n desc limit 1) || '"';
-select act_perform(:'world6', '77777777-7777-7777-7777-777777777777', 'drop_dirt',
-  ('{"kind":"tile","x":41,"y":41,"cx":41,"cy":41,"itemUid":' || (select id from item where world_id = :'world6' and holder_uid = '77777777-7777-7777-7777-777777777777' and def = 'sand') || '}')::jsonb) \g /dev/null
-select '943. and sand on the same corner: ' || (select name from tile_def where id = land_tile(:'world6', 41, 41))
+select act_perform(:'world6', '77777777-7777-7777-7777-777777777777', 'change_tile',
+  ('{"kind":"tile","x":41,"y":41,"itemUid":' || (select id from item where world_id = :'world6' and holder_uid = '77777777-7777-7777-7777-777777777777' and def = 'clay') || '}')::jsonb) \g /dev/null
+select '942. Change tile with clay on grass: the ground is ' || (select name from tile_def where id = land_tile(:'world6', 41, 41))
+     || ', the corner ' || :'h0' || ' then and ' || land_height(:'world6', 41, 41) || ' now'
+     || ' — "' || (select text from event where uid = '77777777-7777-7777-7777-777777777777' and kind = 'event' order by n desc limit 1) || '"';
+select act_perform(:'world6', '77777777-7777-7777-7777-777777777777', 'change_tile',
+  ('{"kind":"tile","x":41,"y":41,"itemUid":' || (select id from item where world_id = :'world6' and holder_uid = '77777777-7777-7777-7777-777777777777' and def = 'sand') || '}')::jsonb) \g /dev/null
+select '943. and sand on the same tile: ' || (select name from tile_def where id = land_tile(:'world6', 41, 41))
      || ' — and asked with nothing named, what goes down first: ' || spoil_in_hand(:'world6', '77777777-7777-7777-7777-777777777777', null);
 select '944. a log named: "' || coalesce(act_refusal(:'world6', '77777777-7777-7777-7777-777777777777', 'drop_dirt',
         ('{"kind":"tile","x":41,"y":41,"cx":41,"cy":41,"itemUid":' || (select id from item where world_id = :'world6' and holder_uid = '77777777-7777-7777-7777-777777777777' and def = 'log' order by id desc limit 1) || '}')::jsonb), 'ALLOWED')
@@ -9779,15 +9786,15 @@ begin
   insert into item (world_id, holder, holder_uid, def, ql, count) values (w, 'player', me, 'dirt', 20, 4);
 end $$;
 select land_height(:'world7', 24, 24) as reed_h0 \gset
-select coalesce(act_refusal(:'world7', :'eater', 'drop_dirt', '{"kind":"tile","x":24,"y":24,"cx":24,"cy":24}'::jsonb), 'allowed') as reed_door \gset
-select act_perform(:'world7', :'eater', 'drop_dirt', '{"kind":"tile","x":24,"y":24,"cx":24,"cy":24}'::jsonb) \g /dev/null
-select '988. a reed bed at 24,24, dirt dropped on its corner (' || :'reed_door' || '): the bed is ' || (select name from tile_def where id = land_tile(:'world7', 24, 24))
-     || ' and the corner is up from ' || :reed_h0 || ' to ' || land_height(:'world7', 24, 24)
-     || '; the reed bed beside it, still ' || (select name from tile_def where id = land_tile(:'world7', 25, 24)) || ', takes the spadeful dropped at your feet too: '
-     || (select case when exists (select 1 from buryable b where b.tile = tile_id('Reed')) then 'reed is on the list both sides read' else 'reed is NOT on the list' end);
+select coalesce(act_refusal(:'world7', :'eater', 'change_tile', '{"kind":"tile","x":24,"y":24}'::jsonb), 'allowed') as reed_door \gset
+select act_perform(:'world7', :'eater', 'change_tile', '{"kind":"tile","x":24,"y":24}'::jsonb) \g /dev/null
+select '988. a reed bed at 24,24, Change tile with dirt (' || :'reed_door' || '): the bed is ' || (select name from tile_def where id = land_tile(:'world7', 24, 24))
+     || ' and the corner is ' || land_height(:'world7', 24, 24) || ', as it was at ' || :reed_h0
+     || '; the reed bed beside it, still ' || (select name from tile_def where id = land_tile(:'world7', 25, 24)) || '; '
+     || (select case when exists (select 1 from buryable b where b.tile = tile_id('Reed')) then 'reed is on the list Change tile reads, both sides' else 'reed is NOT on the list' end);
 update player set x = 25.4, y = 24.4 where world_id = :'world7' and uid = :'eater' \g /dev/null
 select act_perform(:'world7', :'eater', 'drop_dirt_here', ('{"kind":"item","uid":' || (select id from item where world_id = :'world7' and holder_uid = :'eater' and def = 'dirt' limit 1) || '}')::jsonb) \g /dev/null
-select '989. and dropped at the feet on the bed beside: it is ' || (select name from tile_def where id = land_tile(:'world7', 25, 24)) || ', with ' || coalesce((select sum(count) from item where world_id = :'world7' and holder_uid = :'eater' and def = 'dirt'), 0) || ' dirt left of four';
+select '989. and dropped at the feet on the bed beside: it is still ' || (select name from tile_def where id = land_tile(:'world7', 25, 24)) || ', with ' || coalesce((select sum(count) from item where world_id = :'world7' and holder_uid = :'eater' and def = 'dirt'), 0) || ' dirt left of four';
 
 /*
  * A casting is a thing in its own right: named for its piece, stacked by it

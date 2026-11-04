@@ -1,11 +1,12 @@
 /**
- * Packed dirt is not raised by Change tile.
+ * Packed dirt is not raised by Drop dirt.
  *
  * Reported: "can't flatten a tile of packed dirt ... you can still change the
- * level of packed dirt with 'Change tile'." Both Change tiles (a corner of the
+ * level of packed dirt with 'Change tile'." Both Drop dirts (a corner of the
  * tile pointed at, `drop_dirt`; the corner nearest your feet,
- * `drop_dirt_here`) refuse packed ground in the same words on both sides, and
- * still raise dirt.
+ * `drop_dirt_here`; named Change tile then) refuse packed ground in the same
+ * words on both sides, and still raise dirt. Change tile is not offered on
+ * packed dirt (`changetile.ts`).
  *
  * Runs against the database the suite leaves behind, in a transaction it
  * rolls back: Hoarding.

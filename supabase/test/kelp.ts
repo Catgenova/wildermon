@@ -1,11 +1,12 @@
 /**
- * Dirt dropped on a kelp bed makes a dirt floor.
+ * Change tile on a kelp bed makes a dirt floor.
  *
- * Asked: "allow dropping dirt on a kelp tile to change it to a dirt tile". A
- * spadeful raised the corner and left the kelp where it was, because kelp was
- * not on the list of ground a spadeful buries (`BURYABLE`, the island's
- * `buryable`). This asks, of both sides, that dirt dropped at your feet and
- * dirt dropped on a corner each turn a kelp tile to dirt, under water.
+ * Asked: "allow dropping dirt on a kelp tile to change it to a dirt tile". Kelp
+ * was not on the list of ground a spadeful buries (`BURYABLE`, the island's
+ * `buryable`). Laying a tile is Change tile's now, and Drop dirt lays none
+ * (`changetile.ts`). This asks, of both sides, that Change tile with dirt
+ * turns a kelp tile to dirt under water, on the tile you stand on and on the
+ * one beside you, and that Drop dirt at your feet leaves the kelp as it was.
  *
  * Runs against the database the suite leaves behind, in one transaction that
  * is rolled back.
@@ -55,14 +56,18 @@ begin
   perform land_set_tile(w, 13, 10, ${TileType.Kelp});
   insert into said values ('WET', has_water(w, 10, 10)::text || ',' || has_water(w, 13, 10)::text);
   update player set body_at = now(), x = 10.5, y = 10.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb where world_id = w and uid = u;
-  perform give(w, u, 'dirt', 2, 20);
-  -- At your feet.
+  perform give(w, u, 'dirt', 3, 20);
+  -- Drop dirt at your feet: the corner, and no tile.
   perform perform_terrain(w, u, 'drop_dirt_here', jsonb_build_object('kind', 'item', 'uid', null));
+  insert into said values ('DROPPED', land_tile(w, 10, 10)::text);
+  -- Change tile on the tile you stand on.
+  insert into said values ('FEET_ASK', coalesce(act_refusal(w, u, 'change_tile', jsonb_build_object('kind', 'tile', 'x', 10, 'y', 10)), 'none'));
+  perform act_perform(w, u, 'change_tile', jsonb_build_object('kind', 'tile', 'x', 10, 'y', 10));
   insert into said values ('FEET', land_tile(w, 10, 10)::text);
-  -- And on a corner of the other, from beside it.
+  -- And on the other, from beside it.
   update player set body_at = now(), x = 12.5, y = 10.5 where world_id = w and uid = u;
-  insert into said values ('ASK', coalesce(act_refusal(w, u, 'drop_dirt', jsonb_build_object('kind', 'tile', 'x', 13, 'y', 10, 'cx', 13, 'cy', 10)), 'none'));
-  perform act_perform(w, u, 'drop_dirt', jsonb_build_object('kind', 'tile', 'x', 13, 'y', 10, 'cx', 13, 'cy', 10));
+  insert into said values ('ASK', coalesce(act_refusal(w, u, 'change_tile', jsonb_build_object('kind', 'tile', 'x', 13, 'y', 10)), 'none'));
+  perform act_perform(w, u, 'change_tile', jsonb_build_object('kind', 'tile', 'x', 13, 'y', 10));
   insert into said values ('CORNER', land_tile(w, 13, 10)::text);
   insert into said values ('LISTED', exists (select 1 from buryable where tile = ${TileType.Kelp})::text);
 end $t$;
@@ -73,8 +78,9 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 
 check('on the island, the kelp is under water', at('WET') === 'true,true', at('WET'));
 check('the island lists kelp as ground a spadeful buries', at('LISTED') === 'true', at('LISTED'));
-check('dirt dropped at your feet on kelp makes it dirt', at('FEET') === String(TileType.Dirt), `${at('FEET')}, dirt is ${TileType.Dirt}`);
-check('and dirt dropped on its corner does the same', at('ASK') === 'none' && at('CORNER') === String(TileType.Dirt), `${at('ASK')} / ${at('CORNER')}`);
+check('Drop dirt at your feet leaves the kelp', at('DROPPED') === String(TileType.Kelp), at('DROPPED'));
+check('Change tile with dirt on the kelp you stand on makes it dirt', at('FEET_ASK') === 'none' && at('FEET') === String(TileType.Dirt), `${at('FEET_ASK')} / ${at('FEET')}, dirt is ${TileType.Dirt}`);
+check('and on the kelp beside you does the same', at('ASK') === 'none' && at('CORNER') === String(TileType.Dirt), `${at('ASK')} / ${at('CORNER')}`);
 
 /* ---- in the browser ---------------------------------------------------------------- */
 
@@ -88,20 +94,25 @@ game.player.x = X + 0.5;
 game.player.y = Y + 0.5;
 const dirt = game.inventory.add('dirt', { ql: 20 });
 game.inventory.add('dirt', { ql: 20 });
+game.inventory.add('dirt', { ql: 20 });
 check('in the browser, kelp is ground a spadeful buries', BURYABLE.has(TileType.Kelp));
 check('the kelp is under water', game.world.hasWater(X, Y) && game.world.hasWater(X + 3, Y));
 const here = ACTION_BY_ID.get('drop_dirt_here');
 const feet: Target = { kind: 'item', uid: dirt.uid };
-check('dropping dirt at your feet over kelp is allowed', (here?.check?.(feet, game) ?? null) === null, String(here?.check?.(feet, game)));
+check('Drop dirt at your feet over kelp is allowed', (here?.check?.(feet, game) ?? null) === null, String(here?.check?.(feet, game)));
 here?.perform(feet, game);
+check('and leaves the kelp', game.world.getTile(X, Y) === TileType.Kelp, String(game.world.getTile(X, Y)));
+const change = ACTION_BY_ID.get('change_tile');
+const under = { kind: 'tile', x: X, y: Y } as Target;
+check('Change tile on the kelp you stand on is offered and allowed', !!change?.applies(under, game) && (change?.check?.(under, game) ?? null) === null, String(change?.check?.(under, game)));
+change?.perform(under, game);
 check('and makes it dirt', game.world.getTile(X, Y) === TileType.Dirt, String(game.world.getTile(X, Y)));
 game.player.x = X + 2.5;
-const corner = { kind: 'tile', x: X + 3, y: Y, cx: X + 3, cy: Y } as Target;
-const onCorner = ACTION_BY_ID.get('drop_dirt');
-check('dropping dirt on a kelp tile\'s corner is allowed', (onCorner?.check?.(corner, game) ?? null) === null, String(onCorner?.check?.(corner, game)));
-onCorner?.perform(corner, game);
+const beside = { kind: 'tile', x: X + 3, y: Y } as Target;
+check('Change tile on the kelp beside you is allowed', (change?.check?.(beside, game) ?? null) === null, String(change?.check?.(beside, game)));
+change?.perform(beside, game);
 check('and makes it dirt too', game.world.getTile(X + 3, Y) === TileType.Dirt, String(game.world.getTile(X + 3, Y)));
 
 for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\ndirt on a kelp bed — ${ok.length} of ${ok.length + bad.length}`);
+console.log(`\nchange tile on a kelp bed — ${ok.length} of ${ok.length + bad.length}`);
 if (bad.length) process.exit(1);

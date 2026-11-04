@@ -175,7 +175,8 @@ const GROWTH: Partial<Record<number, number>> = {
 export const growth = (t: number): number => GROWTH[t] ?? 0;
 
 /**
- * Ground a spadeful of dirt covers over, leaving dirt.
+ * Ground a spadeful of dirt covers over, leaving dirt: what Change tile
+ * (`change_tile`) is offered on. Drop dirt raises a corner and lays no tile.
  *
  * Reported from the island: *"dropping dirt on a clay/sand tile corner isn't
  * properly changing those tiles to dirt."* It was not: the rule buried grass

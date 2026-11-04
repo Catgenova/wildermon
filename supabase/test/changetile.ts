@@ -1,18 +1,28 @@
 /**
- * Change tile lays what was dropped.
+ * Drop dirt and Change tile, two jobs.
  *
- * Reported: "drop dirt" left dirt whatever was dropped; clay or sand on dirt
- * stayed dirt. Asks of both sides that Change tile, at a corner and at your
- * feet, lays clay, sand or dirt as dropped, dirt under it included, and that
- * both are named Change tile.
+ * Reported: "This tile is completely exposed iron but reads as Dirt due to a
+ * player clicking Change Tile here. Change Tile shouldn't be an option on rocks
+ * or ores or seams. Make Drop Dirt and Change Tile two completely different
+ * functions. CHANGE TILE will no longer change any elevations."
+ *
+ * Asks of both sides, in the same words:
+ *   * Change tile (`change_tile`, a tile) lays clay, sand or dirt as chosen,
+ *     every corner's height and soil as they were; not offered on rock, an ore,
+ *     a seam or packed dirt; refused under a building; offered only for a
+ *     spoil that is not the tile's own.
+ *   * Drop dirt (`drop_dirt` on a corner, `drop_dirt_here` at your feet)
+ *     raises the corner one step and lays no tile; refused at a corner of a
+ *     rock tile ("Rock at this corner."), the ore left as it was.
  *
  * Runs against the database the suite leaves behind, in one transaction that
  * is rolled back.
  */
 import { execFileSync } from 'node:child_process';
-import { ACTION_BY_ID, type Target } from '../../src/game/actions';
+import { ACTION_BY_ID, ROCK_AT_CORNER, type Target } from '../../src/game/actions';
 import { Game } from '../../src/game/game';
-import { TileType } from '../../src/world/tiles';
+import { STONE_GUARDED } from '../../src/game/runestones';
+import { ROCK_VARIANTS, TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -34,89 +44,234 @@ const check = (what: string, passed: boolean, detail = ''): void => {
   (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
+/*
+ * One row of ground, the same on both sides, at offsets from (X, Y):
+ *   0 dirt → clay, 2 dirt → sand, 4 clay → dirt (the first to hand that is not clay),
+ *   6 plain rock, 8 an iron vein, 10 a coal seam, 12 packed dirt, 14 dirt under a building,
+ *   16 clay (asked with clay alone in the pack), 20 a corner of dirt for Drop dirt,
+ *   24 grass under your feet for Drop dirt at your feet.
+ */
+const IRON = ROCK_VARIANTS.findIndex((r) => r.name === 'Iron vein');
+const COAL = ROCK_VARIANTS.findIndex((r) => r.name === 'Coal seam');
+const ROCKS: Array<[string, number, number]> = [['plain rock', 6, 0], ['an iron vein', 8, IRON], ['a coal seam', 10, COAL]];
+
 /* ---- on the island --------------------------------------------------------------- */
 
 const ODA = '6e1b0000-0000-4000-8000-0000000000c7';
+const X0 = 10, Y0 = 10;
 const out = psql(`
 discard temp;
 begin;
 create temp table said (k text, v text);
+create function pg_temp.corners(w uuid, x int, y int) returns text language sql stable as $f$
+  select string_agg(land_height(w, c.cx, c.cy) || '/' || land_dirt(w, c.cx, c.cy), ' ' order by c.ord) from tile_corners(x, y) c
+$f$;
+create function pg_temp.types(w uuid, cx int, cy int) returns text language sql stable as $f$
+  select string_agg(land_tile(w, x, y) || ':' || land_data(w, x, y), ' ' order by y, x)
+    from generate_series(cx - 1, cx) x cross join generate_series(cy - 1, cy) y
+$f$;
 do $t$
-declare w uuid; u uuid := '${ODA}'; clay bigint; sand bigint;
+declare w uuid; u uuid := '${ODA}'; bx int := ${X0}; by_ int := ${Y0}; clay bigint; sand bigint; was text; r record;
+        tgt jsonb;
 begin
-  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Tiles', 169, 32, 5, 5, true) returning id into w;
-  perform land_blank(w, 32);
+  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Tiles', 169, 64, 5, 5, true) returning id into w;
+  perform land_blank(w, 64);
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Oda');
-  for i in 4..28 loop for j in 4..20 loop perform land_set_height(w, i, j, 20); perform land_set_tile(w, i, j, ${TileType.Dirt}); end loop; end loop;
-  perform land_set_tile(w, 20, 10, ${TileType.Clay});
-  update player set body_at = now(), x = 10.5, y = 10.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb where world_id = w and uid = u;
-  perform give(w, u, 'dirt', 2, 20);
-  perform give(w, u, 'clay', 2, 20);
-  perform give(w, u, 'sand', 2, 20);
+  for i in bx - 4..bx + 30 loop for j in by_ - 4..by_ + 4 loop
+    perform land_set_height(w, i, j, 20); perform land_set_dirt(w, i, j, 5);
+    perform land_set_tile(w, i, j, ${TileType.Dirt}); perform land_set_data(w, i, j, 0);
+  end loop; end loop;
+  perform land_set_tile(w, bx + 4, by_, ${TileType.Clay});
+  ${ROCKS.map(([, dx, kind]) => `perform land_set_tile(w, bx + ${dx}, by_, ${TileType.Rock}); perform land_set_data(w, bx + ${dx}, by_, ${kind});`).join('\n  ')}
+  perform land_set_tile(w, bx + 12, by_, ${TileType.PackedDirt});
+  insert into building (world_id, id, name, planned_by) values (w, 1, 'Shed', u);
+  insert into building_tile (world_id, building, x, y) values (w, 1, bx + 14, by_);
+  perform land_set_tile(w, bx + 16, by_, ${TileType.Clay});
+  perform land_set_tile(w, bx + 24, by_, ${TileType.Grass});
+  update player set body_at = now(), x = bx + 0.5, y = by_ + 0.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb where world_id = w and uid = u;
+  perform give(w, u, 'dirt', 3, 20);
+  perform give(w, u, 'clay', 3, 20);
+  perform give(w, u, 'sand', 3, 20);
   select id into clay from item where world_id = w and holder_uid = u and def = 'clay' limit 1;
   select id into sand from item where world_id = w and holder_uid = u and def = 'sand' limit 1;
-  insert into said values ('LABELS', (select string_agg(label, ',' order by id) from action_def where id in ('drop_dirt', 'drop_dirt_here')));
-  -- Clay at your feet, on dirt.
-  insert into said values ('FEET_ASK', coalesce(act_refusal(w, u, 'drop_dirt_here', jsonb_build_object('kind', 'item', 'uid', clay)), 'none'));
-  perform perform_terrain(w, u, 'drop_dirt_here', jsonb_build_object('kind', 'item', 'uid', clay));
-  insert into said values ('FEET', land_tile(w, 10, 10)::text);
-  -- Sand on a corner of dirt.
-  update player set body_at = now(), x = 14.5, y = 10.5 where world_id = w and uid = u;
-  insert into said values ('SAND_ASK', coalesce(act_refusal(w, u, 'drop_dirt', jsonb_build_object('kind', 'tile', 'x', 15, 'y', 10, 'cx', 15, 'cy', 10, 'itemUid', sand)), 'none'));
-  perform act_perform(w, u, 'drop_dirt', jsonb_build_object('kind', 'tile', 'x', 15, 'y', 10, 'cx', 15, 'cy', 10, 'itemUid', sand));
-  insert into said values ('SAND', land_tile(w, 15, 10)::text);
-  -- Dirt on a corner of clay.
-  update player set body_at = now(), x = 19.5, y = 10.5 where world_id = w and uid = u;
-  perform act_perform(w, u, 'drop_dirt', jsonb_build_object('kind', 'tile', 'x', 20, 'y', 10, 'cx', 20, 'cy', 10,
-    'itemUid', (select id from item where world_id = w and holder_uid = u and def = 'dirt' limit 1)));
-  insert into said values ('DIRT', land_tile(w, 20, 10)::text);
-  -- Nothing to drop.
-  delete from item where world_id = w and holder_uid = u and def in ('dirt', 'clay', 'sand');
-  insert into said values ('NONE', coalesce(act_refusal(w, u, 'drop_dirt_here', jsonb_build_object('kind', 'item', 'uid', null)), 'none'));
+  insert into said values ('LABELS', (select string_agg(id || ':' || label, ',' order by id) from action_def where id in ('drop_dirt', 'drop_dirt_here', 'change_tile')));
+  insert into said values ('CORNER', (select corner::text from action_def where id = 'change_tile'));
+  insert into said values ('GUARDED', shapes_ground('change_tile') || ',' || stone_guarded('change_tile') || ',' || ground_action('change_tile') || ',' || act_ported('change_tile'));
+
+  -- Change tile: clay, then sand, then whatever is first to hand on clay.
+  for r in select * from (values ('CLAY', 0, clay), ('SAND', 2, sand), ('AUTO', 4, null::bigint)) v(k, dx, item) loop
+    update player set x = bx + r.dx + 0.5, y = by_ + 0.5 where world_id = w and uid = u;
+    tgt := jsonb_build_object('kind', 'tile', 'x', bx + r.dx, 'y', by_) || coalesce(jsonb_build_object('itemUid', r.item), '{}'::jsonb);
+    was := pg_temp.corners(w, bx + r.dx, by_);
+    insert into said values (r.k || '_ASK', coalesce(act_refusal(w, u, 'change_tile', tgt), 'none'));
+    perform act_perform(w, u, 'change_tile', tgt);
+    insert into said values (r.k, land_tile(w, bx + r.dx, by_)::text);
+    insert into said values (r.k || '_CORNERS', (pg_temp.corners(w, bx + r.dx, by_) = was)::text || ' ' || pg_temp.corners(w, bx + r.dx, by_));
+  end loop;
+  insert into said values ('SAID', (select text from event where uid = u and kind = 'event' order by n desc limit 1));
+  insert into said values ('LEFT', (select string_agg(def || count, ',' order by def) from item where world_id = w and holder_uid = u and def in ('dirt', 'clay', 'sand')));
+
+  -- Refused: rock of every kind, packed dirt, a building.
+  for r in select * from (values ('ROCK0', 6), ('ROCK1', 8), ('ROCK2', 10), ('PACKED', 12), ('BUILDING', 14)) v(k, dx) loop
+    update player set x = bx + r.dx - 0.5, y = by_ + 0.5 where world_id = w and uid = u;
+    insert into said values (r.k, coalesce(act_refusal(w, u, 'change_tile', jsonb_build_object('kind', 'tile', 'x', bx + r.dx, 'y', by_)), 'none'));
+  end loop;
+
+  -- Drop dirt on a corner of dirt, and at your feet on grass.
+  update player set x = bx + 19.5, y = by_ + 0.5 where world_id = w and uid = u;
+  was := pg_temp.types(w, bx + 20, by_);
+  insert into said values ('DROP_H0', land_height(w, bx + 20, by_) || '/' || land_dirt(w, bx + 20, by_));
+  tgt := jsonb_build_object('kind', 'tile', 'x', bx + 20, 'y', by_, 'cx', bx + 20, 'cy', by_);
+  insert into said values ('DROP_ASK', coalesce(act_refusal(w, u, 'drop_dirt', tgt), 'none'));
+  perform act_perform(w, u, 'drop_dirt', tgt);
+  insert into said values ('DROP_H1', land_height(w, bx + 20, by_) || '/' || land_dirt(w, bx + 20, by_));
+  insert into said values ('DROP_TYPES', (pg_temp.types(w, bx + 20, by_) = was)::text || ' ' || pg_temp.types(w, bx + 20, by_));
+  update player set x = bx + 24.3, y = by_ + 0.3 where world_id = w and uid = u;
+  was := pg_temp.types(w, bx + 24, by_);
+  insert into said values ('HERE_H0', land_height(w, bx + 24, by_) || '/' || land_dirt(w, bx + 24, by_));
+  tgt := jsonb_build_object('kind', 'item', 'uid', sand);
+  insert into said values ('HERE_ASK', coalesce(act_refusal(w, u, 'drop_dirt_here', tgt), 'none'));
+  perform act_perform(w, u, 'drop_dirt_here', tgt);
+  insert into said values ('HERE_H1', land_height(w, bx + 24, by_) || '/' || land_dirt(w, bx + 24, by_));
+  insert into said values ('HERE_TYPES', (pg_temp.types(w, bx + 24, by_) = was)::text || ' ' || pg_temp.types(w, bx + 24, by_));
+
+  -- Drop dirt at a corner of the iron vein, asked as the browser asks it; and at your feet beside the coal seam.
+  update player set x = bx + 7.5, y = by_ + 0.5 where world_id = w and uid = u;
+  tgt := jsonb_build_object('kind', 'tile', 'x', bx + 8, 'y', by_, 'cx', bx + 8, 'cy', by_);
+  insert into said values ('ORE_ASK', coalesce((rpc_act(w, 'drop_dirt', tgt, 1))->>'why', 'started'));
+  insert into said values ('ORE', land_tile(w, bx + 8, by_) || ':' || land_data(w, bx + 8, by_) || ' ' || land_height(w, bx + 8, by_));
+  update player set x = bx + 10.3, y = by_ + 0.3, act = null, act_queue = '[]'::jsonb where world_id = w and uid = u;
+  insert into said values ('SEAM_HERE', coalesce(act_refusal(w, u, 'drop_dirt_here', jsonb_build_object('kind', 'item', 'uid', clay)), 'none'));
+
+  -- Clay alone in the pack, on clay: nothing to lay; and clay named.
+  update player set x = bx + 16.5, y = by_ + 0.5 where world_id = w and uid = u;
+  delete from item where world_id = w and holder_uid = u and def in ('dirt', 'sand');
+  insert into said values ('ONLY_CLAY', coalesce(act_refusal(w, u, 'change_tile', jsonb_build_object('kind', 'tile', 'x', bx + 16, 'y', by_)), 'none'));
+  insert into said values ('SAME', coalesce(act_refusal(w, u, 'change_tile', jsonb_build_object('kind', 'tile', 'x', bx + 16, 'y', by_, 'itemUid', clay)), 'none'));
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
 const isle = new Map(out.split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)] as [string, string]));
 const at = (k: string): string => isle.get(k) ?? '(not said)';
 
-check('on the island, both are named Change tile', at('LABELS') === 'Change tile,Change tile', at('LABELS'));
-check('clay at your feet on dirt is allowed', at('FEET_ASK') === 'none', at('FEET_ASK'));
-check('and lays clay', at('FEET') === String(TileType.Clay), `${at('FEET')}, clay is ${TileType.Clay}`);
-check('sand on a corner of dirt is allowed', at('SAND_ASK') === 'none', at('SAND_ASK'));
-check('and lays sand', at('SAND') === String(TileType.Sand), `${at('SAND')}, sand is ${TileType.Sand}`);
-check('dirt on a corner of clay lays dirt', at('DIRT') === String(TileType.Dirt), at('DIRT'));
-check('nothing to drop is refused', at('NONE') === 'Need dirt, clay or sand.', at('NONE'));
+check('on the island: Drop dirt, Drop dirt and Change tile', at('LABELS') === 'change_tile:Change tile,drop_dirt:Drop dirt,drop_dirt_here:Drop dirt', at('LABELS'));
+check('Change tile aims at a tile, not a corner', at('CORNER') === 'false', at('CORNER'));
+check('a settlement\'s border and a Runestone speak for it, through the ground\'s door', at('GUARDED') === 'true,true,true,true', at('GUARDED'));
+for (const [k, what, tile] of [['CLAY', 'clay named, on dirt', TileType.Clay], ['SAND', 'sand named, on dirt', TileType.Sand], ['AUTO', 'nothing named, on clay', TileType.Dirt]] as const) {
+  check(`Change tile, ${what}: allowed`, at(`${k}_ASK`) === 'none', at(`${k}_ASK`));
+  check(`and lays ${TileType.Clay === tile ? 'clay' : tile === TileType.Sand ? 'sand' : 'dirt'}`, at(k) === String(tile), at(k));
+  check('every corner\'s height and soil as they were', at(`${k}_CORNERS`).startsWith('true'), at(`${k}_CORNERS`));
+}
+check('said: Changed to dirt.', at('SAID') === 'Changed to dirt.', at('SAID'));
+check('one spadeful each spent', at('LEFT') === 'clay2,dirt2,sand2', at('LEFT'));
+for (const [i, [what]] of ROCKS.entries()) check(`Change tile refused on ${what}`, at(`ROCK${i}`) === 'Not on rock.', at(`ROCK${i}`));
+check('and on packed dirt', at('PACKED') === 'Not on packed dirt.', at('PACKED'));
+check('and under a building', at('BUILDING') === 'Not inside a building.', at('BUILDING'));
+check('Drop dirt on a corner of dirt: allowed', at('DROP_ASK') === 'none', at('DROP_ASK'));
+check('raises the corner one step, height and soil', at('DROP_H0') === '20/5' && at('DROP_H1') === '21/6', `${at('DROP_H0')} → ${at('DROP_H1')}`);
+check('and every tile round it as it was', at('DROP_TYPES').startsWith('true'), at('DROP_TYPES'));
+check('Drop dirt at your feet on grass: allowed', at('HERE_ASK') === 'none', at('HERE_ASK'));
+check('raises the corner one step', at('HERE_H0') === '20/5' && at('HERE_H1') === '21/6', `${at('HERE_H0')} → ${at('HERE_H1')}`);
+check('and the grass is grass, every tile round it as it was', at('HERE_TYPES').startsWith('true'), at('HERE_TYPES'));
+check('Drop dirt at a corner of an iron vein: refused', at('ORE_ASK') === ROCK_AT_CORNER, at('ORE_ASK'));
+check('and the vein is a vein, its corner where it was', at('ORE') === `${TileType.Rock}:${IRON} 20`, at('ORE'));
+check('Drop dirt at your feet beside a coal seam: refused', at('SEAM_HERE') === ROCK_AT_CORNER, at('SEAM_HERE'));
+check('Change tile on clay with clay alone to hand: nothing to lay', at('ONLY_CLAY') === 'Need dirt, clay or sand, in the pack or a container beside you.', at('ONLY_CLAY'));
+check('and with clay named: refused', at('SAME') === 'Already clay.', at('SAME'));
 
 /* ---- in the browser ---------------------------------------------------------------- */
 
 const game = Game.create(4247);
 const [X, Y] = [60, 60];
-for (let x = X - 2; x <= X + 14; x++) for (let y = Y - 2; y <= Y + 4; y++) { game.world.setHeight(x, y, 20); game.world.setTile(x, y, TileType.Dirt); }
-game.world.setTile(X + 10, Y, TileType.Clay);
+const w = game.world;
+for (let x = X - 4; x <= X + 30; x++) for (let y = Y - 4; y <= Y + 4; y++) { w.setHeight(x, y, 20); w.setDirt(x, y, 5); w.setTile(x, y, TileType.Dirt); }
+w.setTile(X + 4, Y, TileType.Clay);
+for (const [, dx, kind] of ROCKS) w.setTile(X + dx, Y, TileType.Rock, kind);
+w.setTile(X + 12, Y, TileType.PackedDirt);
+game.buildings.create('Shed', X + 14, Y);
+w.setTile(X + 16, Y, TileType.Clay);
+w.setTile(X + 24, Y, TileType.Grass);
 for (const f of [...game.furniture.values()]) game.removeFurniture(f.id);
-game.player.x = X + 0.5;
-game.player.y = Y + 0.5;
+for (const c of [...game.crates.values()]) game.crates.delete(c.id);
+for (const it of [...game.inventory.items]) if (['dirt', 'clay', 'sand'].includes(it.id)) game.inventory.remove(it.uid, it.count);
+const put = (x: number, y: number): void => { game.player.x = x; game.player.y = y; };
 const dirt = game.inventory.add('dirt', { ql: 20 });
 const clay = game.inventory.add('clay', { ql: 20 });
 const sand = game.inventory.add('sand', { ql: 20 });
-const here = ACTION_BY_ID.get('drop_dirt_here')!;
+for (const id of ['dirt', 'clay', 'sand']) for (let n = 0; n < 2; n++) game.inventory.add(id, { ql: 20 });
+const change = ACTION_BY_ID.get('change_tile')!;
 const onCorner = ACTION_BY_ID.get('drop_dirt')!;
-check('in the browser, both are named Change tile', here.label === 'Change tile' && onCorner.label === 'Change tile', `${here.label} / ${onCorner.label}`);
-const feet: Target = { kind: 'item', uid: clay.uid };
-check('clay at your feet on dirt is allowed', (here.check?.(feet, game) ?? null) === null, String(here.check?.(feet, game)));
+const here = ACTION_BY_ID.get('drop_dirt_here')!;
+check('in the browser: Drop dirt, Drop dirt and Change tile', onCorner.label === 'Drop dirt' && here.label === 'Drop dirt' && change.label === 'Change tile',
+  `${onCorner.label} / ${here.label} / ${change.label}`);
+check('Change tile aims at a tile, not a corner', !change.corner);
+check('a Runestone speaks for it', STONE_GUARDED.has('change_tile'));
+const corners = (x: number, y: number): string => [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]].map(([cx, cy]) => `${w.getHeight(cx, cy)}/${w.getDirt(cx, cy)}`).join(' ');
+const types = (cx: number, cy: number): string => [[cx - 1, cy - 1], [cx, cy - 1], [cx - 1, cy], [cx, cy]].map(([x, y]) => `${w.getTile(x, y)}:${w.getData(x, y)}`).join(' ');
+const tileAt = (x: number, itemUid?: number): Target => ({ kind: 'tile', x, y: Y, cx: x, cy: Y, ...(itemUid !== undefined ? { itemUid } : {}) } as Target);
+const ask = (def: typeof change, t: Target): string => def.check?.(t, game) ?? 'none';
+const mine: Record<string, string> = {};
+
+for (const [what, dx, uid, tile] of [['clay named, on dirt', 0, clay.uid, TileType.Clay], ['sand named, on dirt', 2, sand.uid, TileType.Sand], ['nothing named, on clay', 4, undefined, TileType.Dirt]] as const) {
+  put(X + dx + 0.5, Y + 0.5);
+  const t = tileAt(X + dx, uid);
+  const was = corners(X + dx, Y);
+  check(`Change tile, ${what}: offered and allowed`, change.applies(t, game) && ask(change, t) === 'none', ask(change, t));
+  change.perform(t, game);
+  check(`and lays ${tile === TileType.Clay ? 'clay' : tile === TileType.Sand ? 'sand' : 'dirt'}`, w.getTile(X + dx, Y) === tile, String(w.getTile(X + dx, Y)));
+  check('every corner\'s height and soil as they were', corners(X + dx, Y) === was, `${was} → ${corners(X + dx, Y)}`);
+}
+const left = ['clay', 'dirt', 'sand'].map((id) => `${id}${game.inventory.count(id)}`).join(',');
+check('one spadeful each spent', left === 'clay2,dirt2,sand2', left);
+for (const [i, [what, dx]] of ROCKS.entries()) {
+  put(X + dx - 0.5, Y + 0.5);
+  check(`Change tile not offered on ${what}`, !change.applies(tileAt(X + dx), game));
+  mine[`ROCK${i}`] = ask(change, tileAt(X + dx));
+}
+put(X + 11.5, Y + 0.5);
+check('nor on packed dirt', !change.applies(tileAt(X + 12), game));
+mine.PACKED = ask(change, tileAt(X + 12));
+put(X + 13.5, Y + 0.5);
+mine.BUILDING = ask(change, tileAt(X + 14));
+check('and refused under a building', mine.BUILDING === 'Not inside a building.', mine.BUILDING);
+
+put(X + 19.5, Y + 0.5);
+const dropAt = tileAt(X + 20);
+let was = types(X + 20, Y);
+const h0 = `${w.getHeight(X + 20, Y)}/${w.getDirt(X + 20, Y)}`;
+check('Drop dirt on a corner of dirt: allowed', ask(onCorner, dropAt) === 'none', ask(onCorner, dropAt));
+onCorner.perform(dropAt, game);
+check('raises the corner one step, height and soil', h0 === '20/5' && `${w.getHeight(X + 20, Y)}/${w.getDirt(X + 20, Y)}` === '21/6', `${h0} → ${w.getHeight(X + 20, Y)}/${w.getDirt(X + 20, Y)}`);
+check('and every tile round it as it was', types(X + 20, Y) === was, `${was} → ${types(X + 20, Y)}`);
+put(X + 24.3, Y + 0.3);
+was = types(X + 24, Y);
+const feet: Target = { kind: 'item', uid: sand.uid };
+check('Drop dirt at your feet on grass: allowed', ask(here, feet) === 'none', ask(here, feet));
 here.perform(feet, game);
-check('and lays clay', game.world.getTile(X, Y) === TileType.Clay, String(game.world.getTile(X, Y)));
-game.player.x = X + 4.5;
-const sandAt = { kind: 'tile', x: X + 5, y: Y, cx: X + 5, cy: Y, itemUid: sand.uid } as Target;
-check('sand on a corner of dirt is allowed', (onCorner.check?.(sandAt, game) ?? null) === null, String(onCorner.check?.(sandAt, game)));
-onCorner.perform(sandAt, game);
-check('and lays sand', game.world.getTile(X + 5, Y) === TileType.Sand, String(game.world.getTile(X + 5, Y)));
-game.player.x = X + 9.5;
-const dirtAt = { kind: 'tile', x: X + 10, y: Y, cx: X + 10, cy: Y, itemUid: dirt.uid } as Target;
-onCorner.perform(dirtAt, game);
-check('dirt on a corner of clay lays dirt', game.world.getTile(X + 10, Y) === TileType.Dirt, String(game.world.getTile(X + 10, Y)));
+check('raises the corner one step', `${w.getHeight(X + 24, Y)}/${w.getDirt(X + 24, Y)}` === '21/6', `${w.getHeight(X + 24, Y)}/${w.getDirt(X + 24, Y)}`);
+check('and the grass is grass, every tile round it as it was', types(X + 24, Y) === was && w.getTile(X + 24, Y) === TileType.Grass, `${was} → ${types(X + 24, Y)}`);
+
+put(X + 7.5, Y + 0.5);
+mine.ORE_ASK = ask(onCorner, tileAt(X + 8));
+check('Drop dirt at a corner of an iron vein: refused', mine.ORE_ASK === ROCK_AT_CORNER, mine.ORE_ASK);
+check('and the vein is a vein', w.getTile(X + 8, Y) === TileType.Rock && w.getData(X + 8, Y) === IRON);
+put(X + 10.3, Y + 0.3);
+mine.SEAM_HERE = ask(here, { kind: 'item', uid: clay.uid });
+check('Drop dirt at your feet beside a coal seam: refused', mine.SEAM_HERE === ROCK_AT_CORNER, mine.SEAM_HERE);
+
+put(X + 16.5, Y + 0.5);
+for (const it of [...game.inventory.items]) if (it.id === 'dirt' || it.id === 'sand') game.inventory.remove(it.uid, it.count);
+check('Change tile not offered on clay with clay alone to hand', !change.applies(tileAt(X + 16), game));
+mine.ONLY_CLAY = ask(change, tileAt(X + 16));
+mine.SAME = ask(change, tileAt(X + 16, clay.uid));
+check('and refused with clay named', mine.SAME === 'Already clay.', mine.SAME);
+void dirt;
+
+/* ---- the same words ---------------------------------------------------------------- */
+
+for (const [k, v] of Object.entries(mine)) check(`said the same on both sides: ${k}`, v === at(k), `browser "${v}", island "${at(k)}"`);
 
 for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nchange tile — ${ok.length} of ${ok.length + bad.length}`);
+console.log(`\ndrop dirt and change tile — ${ok.length} of ${ok.length + bad.length}`);
 if (bad.length) process.exit(1);

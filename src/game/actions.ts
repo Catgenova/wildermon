@@ -421,7 +421,7 @@ const cornerName = (t: Target & { kind: 'tile' }): string => {
 
 const tile = (t: Target, g: Game): TileType => (t.kind === 'tile' ? g.world.getTile(t.x, t.y) : TileType.Sand);
 
-/** Change tile on packed ground, as the island says it (`ground_refusal`, `terrain_refusal`). */
+/** Drop dirt on packed ground, as the island says it (`ground_refusal`, `terrain_refusal`). */
 export const PACKED_FIRST = `${TILE_DEFS[TileType.PackedDirt].name}: cultivate first.`;
 
 /** Paving goes on a packed floor, never on sod or loose earth. */
@@ -443,6 +443,24 @@ const cornerUnderBuilding = (g: Game, cx: number, cy: number): string | null => 
   for (let y = cy - 1; y <= cy; y++) for (let x = cx - 1; x <= cx; x++) if (g.buildings.buildingAt(x, y) || g.buildings.jettyAt(x, y)) return 'Not under a building.';
   return null;
 };
+
+/** Drop dirt at a corner of a rock, ore or seam tile, as the island says it (`corner_rock`). */
+export const ROCK_AT_CORNER = 'Rock at this corner.';
+const rockAtCorner = (g: Game, cx: number, cy: number): string | null => {
+  for (let y = cy - 1; y <= cy; y++) {
+    for (let x = cx - 1; x <= cx; x++) if (g.world.inBounds(x, y) && g.world.getTile(x, y) === TileType.Rock) return ROCK_AT_CORNER;
+  }
+  return null;
+};
+
+/**
+ * The spadeful Change tile lays on (x, y): the one chosen off the menu, or the
+ * first to hand whose tile is not the one there (`spoilFrom`). The island's `change_spoil`.
+ */
+export function changeSpoil(g: Game, x: number, y: number, uid?: number): { id: string; take: () => boolean } | undefined {
+  const here = g.world.getTile(x, y);
+  return spoilFrom(g, SPOIL_ORDER.filter((id) => SPOIL_TILE[id] !== here), uid);
+}
 
 /**
  * The storey a sweep of the ground gathers on: the pile's own for a pile, and
@@ -1408,8 +1426,8 @@ export const ACTIONS: ActionDef[] = [
   },
   {
     id: 'drop_dirt',
-    label: 'Change tile',
-    verb: 'changing tile',
+    label: 'Drop dirt',
+    verb: 'dropping dirt',
     skill: 'digging',
     corner: true,
     stamina: 0.02,
@@ -1426,7 +1444,7 @@ export const ACTIONS: ActionDef[] = [
       if (under) return under;
       // Packed ground is not dug, flattened or raised: cultivate it first (`unpacked` paves it).
       if (tile(t, g) === TileType.PackedDirt) return PACKED_FIRST;
-      return levelStop(g, t.cx, t.cy, 1) ?? slopeRefusal(g, 'digging', t.cx, t.cy, 1);
+      return rockAtCorner(g, t.cx, t.cy) ?? levelStop(g, t.cx, t.cy, 1) ?? slopeRefusal(g, 'digging', t.cx, t.cy, 1);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -1436,9 +1454,36 @@ export const ACTIONS: ActionDef[] = [
       w.setHeight(t.cx, t.cy, w.getHeight(t.cx, t.cy) + 1);
       w.setDirt(t.cx, t.cy, w.getDirt(t.cx, t.cy) + 1);
       g.exposeRock(t.cx, t.cy);
-      // What the spadeful covers becomes what was in it: dirt, clay or sand.
-      if (BURYABLE.has(w.getTile(t.x, t.y))) w.setTile(t.x, t.y, SPOIL_TILE[it.id]);
       g.logMsg(`Dropped: ${itemDef(it.id).name.toLowerCase()}, ${cornerName(t)} corner raised.`, 'event');
+    },
+  },
+  {
+    // The tile laid as dirt, clay or sand, its corners and soil as they were. The island's `perform_ground`.
+    id: 'change_tile',
+    label: 'Change tile',
+    verb: 'changing tile',
+    skill: 'digging',
+    stamina: 0.02,
+    baseTime: 2,
+    applies: (t, g) => t.kind === 'tile' && BURYABLE.has(g.world.getTile(t.x, t.y)) && !!changeSpoil(g, t.x, t.y),
+    check: (t, g) => {
+      if (t.kind !== 'tile') return null;
+      const here = g.world.getTile(t.x, t.y);
+      if (!BURYABLE.has(here)) return `Not on ${TILE_DEFS[here].name.toLowerCase()}.`;
+      const it = changeSpoil(g, t.x, t.y, t.itemUid);
+      if (!it) {
+        return t.itemUid !== undefined ? 'Not dirt, clay or sand.'
+          : 'Need dirt, clay or sand, in the pack or a container beside you.';
+      }
+      if (SPOIL_TILE[it.id] === here) return `Already ${TILE_DEFS[here].name.toLowerCase()}.`;
+      return underBuilding(g, t.x, t.y);
+    },
+    perform: (t, g) => {
+      if (t.kind !== 'tile') return;
+      const it = changeSpoil(g, t.x, t.y, t.itemUid);
+      if (!it || SPOIL_TILE[it.id] === g.world.getTile(t.x, t.y) || !it.take()) return;
+      g.world.setTile(t.x, t.y, SPOIL_TILE[it.id]);
+      g.logMsg(`Changed to ${TILE_DEFS[SPOIL_TILE[it.id]].name.toLowerCase()}.`, 'event');
     },
   },
   {
@@ -3348,8 +3393,8 @@ export const ACTIONS: ActionDef[] = [
   ...GREEN_ACTIONS,
   {
     id: 'drop_dirt_here',
-    label: 'Change tile',
-    verb: 'changing tile',
+    label: 'Drop dirt',
+    verb: 'dropping dirt',
     skill: 'digging',
     stamina: 0.02,
     baseTime: 2,
@@ -3360,6 +3405,7 @@ export const ACTIONS: ActionDef[] = [
       // Not a corner of a building: standing on a deck on piers, the ground under it (`piers.ts`), as `drop_dirt` has it.
       return cornerUnderBuilding(g, c.cx, c.cy)
         ?? (g.world.getTile(g.player.tileX, g.player.tileY) === TileType.PackedDirt ? PACKED_FIRST : null)
+        ?? rockAtCorner(g, c.cx, c.cy)
         ?? slopeRefusal(g, 'digging', c.cx, c.cy, 1);
     },
     perform: (t, g) => {
@@ -3373,10 +3419,6 @@ export const ACTIONS: ActionDef[] = [
       // here and this side never did: a spadeful is a spadeful of something.
       w.setDirt(c.cx, c.cy, w.getDirt(c.cx, c.cy) + 1);
       g.exposeRock(c.cx, c.cy);
-      // And the ground it covered, which is the tile under your feet — the
-      // corner it raises belongs to as many as four of them.
-      const [fx, fy] = [g.player.tileX, g.player.tileY];
-      if (BURYABLE.has(w.getTile(fx, fy))) w.setTile(fx, fy, SPOIL_TILE[spoil]);
       g.logMsg(`Dropped: ${itemDef(spoil).name.toLowerCase()} at your feet, corner raised.`, 'event');
     },
   },
@@ -3389,7 +3431,7 @@ export const ACTIONS: ActionDef[] = [
  * asks a door — the menu, the belt, a job coming off the queue — is covered by
  * having asked it.
  */
-const SHAPES_GROUND = new Set(['dig', 'dredge', 'flatten', 'drop_dirt', 'drop_dirt_here', 'raise_rock',
+const SHAPES_GROUND = new Set(['dig', 'dredge', 'flatten', 'drop_dirt', 'drop_dirt_here', 'change_tile', 'raise_rock',
   'mine', 'chip_corner', 'pack', 'cultivate', 'pave_cobble', 'pave_slabs', 'remove_paving',
   'dig_spring', 'stop_spring', 'dig_pool', 'fill_pool',
   'lay_steps', 'lay_timber_steps', 'take_up_steps', 'plant_moss', 'plant_grass',
