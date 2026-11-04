@@ -121,7 +121,7 @@ import { meltLumps } from '../../game/melt';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
-import { ACTION_BY_ID, deedAcrossAt, DROP_RAISE, PACKED_FIRST, ROCK_AT_CORNER, SPADEFUL, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
+import { ACTION_BY_ID, deedAcrossAt, DROP_RAISE, PACKED_FIRST, SPADEFUL, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
@@ -4243,11 +4243,17 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 475,
+    day: '2026-11-04',
+    lines: () => [
+      `Changed: ${ACTION_BY_ID.get('drop_dirt')?.label} at a corner of rock, ore or a seam: allowed (was: refused); +${DROP_RAISE} soil, tile dirt; ${ACTION_BY_ID.get('change_tile')?.label} on it as on any dirt. Soil dug off: the rock, ore or seam again.`,
+    ],
+  },
+  {
     n: 474,
     day: '2026-11-04',
     lines: () => [
-      `Changed: ${ACTION_BY_ID.get('drop_dirt')?.label} (was: Change tile), on a corner or at your feet: ${SPADEFUL} dirt, clay or sand, corner +${metres(DROP_RAISE)} m and +${DROP_RAISE} soil; tile type unchanged (was: laid as that dirt, clay or sand). `
-        + `Refused at a corner of a rock, ore or seam tile: "${ROCK_AT_CORNER}"`,
+      `Changed: ${ACTION_BY_ID.get('drop_dirt')?.label} (was: Change tile), on a corner or at your feet: ${SPADEFUL} dirt, clay or sand, corner +${metres(DROP_RAISE)} m and +${DROP_RAISE} soil; tile type unchanged (was: laid as that dirt, clay or sand).`,
       `Added: ${ACTION_BY_ID.get('change_tile')?.label} (a tile of ${listed([...BURYABLE].map((t) => TILE_DEFS[t as TileType].name.toLowerCase()))}): ${SPADEFUL} dirt, clay or sand, tile laid as it; corner heights and soil unchanged. `
         + 'One option per dirt, clay or sand carried, not the tile\'s own. Not on rock, ores, seams, packed dirt, fields or paving.',
       'Fixed: Change tile at a corner of exposed rock, ore or a seam turned it to dirt.',

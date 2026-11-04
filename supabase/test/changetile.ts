@@ -12,14 +12,19 @@
  *     a seam or packed dirt; refused under a building; offered only for a
  *     spoil that is not the tile's own.
  *   * Drop dirt (`drop_dirt` on a corner, `drop_dirt_here` at your feet)
- *     raises the corner one step and lays no tile; refused at a corner of a
- *     rock tile ("Rock at this corner."), the ore left as it was.
+ *     raises the corner one step and lays no tile.
+ *
+ * Then asked: "Dirt should be able to be dropped on rock/seam/vein and it will
+ * create a toplayer again as normal. That dirt tile could then be Change
+ * Tile-d." Drop dirt at a corner of an iron vein or a coal seam: allowed, the
+ * tile dirt; its soil dug off, the vein again; dropped again, Change tile on
+ * that dirt.
  *
  * Runs against the database the suite leaves behind, in one transaction that
  * is rolled back.
  */
 import { execFileSync } from 'node:child_process';
-import { ACTION_BY_ID, ROCK_AT_CORNER, type Target } from '../../src/game/actions';
+import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { Game } from '../../src/game/game';
 import { STONE_GUARDED } from '../../src/game/runestones';
 import { ROCK_VARIANTS, TileType } from '../../src/world/tiles';
@@ -47,7 +52,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 /*
  * One row of ground, the same on both sides, at offsets from (X, Y):
  *   0 dirt → clay, 2 dirt → sand, 4 clay → dirt (the first to hand that is not clay),
- *   6 plain rock, 8 an iron vein, 10 a coal seam, 12 packed dirt, 14 dirt under a building,
+ *   6 plain rock, 8 an iron vein (bare, iron under it), 10 a coal seam, 12 packed dirt, 14 dirt under a building,
  *   16 clay (asked with clay alone in the pack), 20 a corner of dirt for Drop dirt,
  *   24 grass under your feet for Drop dirt at your feet.
  */
@@ -84,6 +89,10 @@ begin
   end loop; end loop;
   perform land_set_tile(w, bx + 4, by_, ${TileType.Clay});
   ${ROCKS.map(([, dx, kind]) => `perform land_set_tile(w, bx + ${dx}, by_, ${TileType.Rock}); perform land_set_data(w, bx + ${dx}, by_, ${kind});`).join('\n  ')}
+  -- The vein bare and iron under it, as an exposed vein is.
+  perform land_set_rock(w, bx + 8, by_, ${IRON});
+  perform land_set_dirt(w, bx + 8, by_, 0); perform land_set_dirt(w, bx + 9, by_, 0);
+  perform land_set_dirt(w, bx + 9, by_ + 1, 0); perform land_set_dirt(w, bx + 8, by_ + 1, 0);
   perform land_set_tile(w, bx + 12, by_, ${TileType.PackedDirt});
   insert into building (world_id, id, name, planned_by) values (w, 1, 'Shed', u);
   insert into building_tile (world_id, building, x, y) values (w, 1, bx + 14, by_);
@@ -136,13 +145,29 @@ begin
   insert into said values ('HERE_H1', land_height(w, bx + 24, by_) || '/' || land_dirt(w, bx + 24, by_));
   insert into said values ('HERE_TYPES', (pg_temp.types(w, bx + 24, by_) = was)::text || ' ' || pg_temp.types(w, bx + 24, by_));
 
-  -- Drop dirt at a corner of the iron vein, asked as the browser asks it; and at your feet beside the coal seam.
+  -- Drop dirt at a corner of the iron vein: a top layer, the tile dirt; its soil dug off, the vein again. Dropped
+  -- again, and Change tile on that dirt, with sand. And Drop dirt at your feet beside the coal seam.
+  -- A spadeful of dirt for each drop, so the clay is left for what is asked of it below.
+  perform give(w, u, 'dirt', 2, 20);
   update player set x = bx + 7.5, y = by_ + 0.5 where world_id = w and uid = u;
   tgt := jsonb_build_object('kind', 'tile', 'x', bx + 8, 'y', by_, 'cx', bx + 8, 'cy', by_);
-  insert into said values ('ORE_ASK', coalesce((rpc_act(w, 'drop_dirt', tgt, 1))->>'why', 'started'));
-  insert into said values ('ORE', land_tile(w, bx + 8, by_) || ':' || land_data(w, bx + 8, by_) || ' ' || land_height(w, bx + 8, by_));
-  update player set x = bx + 10.3, y = by_ + 0.3, act = null, act_queue = '[]'::jsonb where world_id = w and uid = u;
+  insert into said values ('ORE_ASK', coalesce(act_refusal(w, u, 'drop_dirt', tgt), 'none'));
+  perform act_perform(w, u, 'drop_dirt', tgt);
+  insert into said values ('ORE', land_tile(w, bx + 8, by_) || ' ' || land_height(w, bx + 8, by_) || '/' || land_dirt(w, bx + 8, by_));
+  perform land_set_dirt(w, bx + 8, by_, 0);
+  perform reconcile_around(w, bx + 8, by_);
+  insert into said values ('ORE_BARE', land_tile(w, bx + 8, by_) || ':' || land_data(w, bx + 8, by_));
+  tgt := jsonb_build_object('kind', 'tile', 'x', bx + 8, 'y', by_, 'cx', bx + 8, 'cy', by_);
+  perform act_perform(w, u, 'drop_dirt', tgt);
+  update player set x = bx + 8.5, y = by_ + 0.5 where world_id = w and uid = u;
+  tgt := jsonb_build_object('kind', 'tile', 'x', bx + 8, 'y', by_, 'itemUid', sand);
+  insert into said values ('ORE_CHANGE_ASK', coalesce(act_refusal(w, u, 'change_tile', tgt), 'none'));
+  perform act_perform(w, u, 'change_tile', tgt);
+  insert into said values ('ORE_CHANGED', land_tile(w, bx + 8, by_)::text);
+  update player set x = bx + 10.3, y = by_ + 0.3 where world_id = w and uid = u;
   insert into said values ('SEAM_HERE', coalesce(act_refusal(w, u, 'drop_dirt_here', jsonb_build_object('kind', 'item', 'uid', clay)), 'none'));
+  perform act_perform(w, u, 'drop_dirt_here', jsonb_build_object('kind', 'item', 'uid', clay));
+  insert into said values ('SEAM', land_tile(w, bx + 10, by_)::text);
 
   -- Clay alone in the pack, on clay: nothing to lay; and clay named.
   update player set x = bx + 16.5, y = by_ + 0.5 where world_id = w and uid = u;
@@ -174,9 +199,13 @@ check('and every tile round it as it was', at('DROP_TYPES').startsWith('true'), 
 check('Drop dirt at your feet on grass: allowed', at('HERE_ASK') === 'none', at('HERE_ASK'));
 check('raises the corner one step', at('HERE_H0') === '20/5' && at('HERE_H1') === '21/6', `${at('HERE_H0')} → ${at('HERE_H1')}`);
 check('and the grass is grass, every tile round it as it was', at('HERE_TYPES').startsWith('true'), at('HERE_TYPES'));
-check('Drop dirt at a corner of an iron vein: refused', at('ORE_ASK') === ROCK_AT_CORNER, at('ORE_ASK'));
-check('and the vein is a vein, its corner where it was', at('ORE') === `${TileType.Rock}:${IRON} 20`, at('ORE'));
-check('Drop dirt at your feet beside a coal seam: refused', at('SEAM_HERE') === ROCK_AT_CORNER, at('SEAM_HERE'));
+check('Drop dirt at a corner of an iron vein: allowed', at('ORE_ASK') === 'none', at('ORE_ASK'));
+check('the corner one step up with a spadeful of soil, the vein dirt', at('ORE') === `${TileType.Dirt} 21/1`, at('ORE'));
+check('its soil dug off: the iron vein again', at('ORE_BARE') === `${TileType.Rock}:${IRON}`, at('ORE_BARE'));
+check('dropped again, Change tile on that dirt: allowed', at('ORE_CHANGE_ASK') === 'none', at('ORE_CHANGE_ASK'));
+check('and lays sand', at('ORE_CHANGED') === String(TileType.Sand), at('ORE_CHANGED'));
+check('Drop dirt at your feet beside a coal seam: allowed', at('SEAM_HERE') === 'none', at('SEAM_HERE'));
+check('and the seam, soil on its corners, dirt', at('SEAM') === String(TileType.Dirt), at('SEAM'));
 check('Change tile on clay with clay alone to hand: nothing to lay', at('ONLY_CLAY') === 'Need dirt, clay or sand, in the pack or a container beside you.', at('ONLY_CLAY'));
 check('and with clay named: refused', at('SAME') === 'Already clay.', at('SAME'));
 
@@ -188,6 +217,8 @@ const w = game.world;
 for (let x = X - 4; x <= X + 30; x++) for (let y = Y - 4; y <= Y + 4; y++) { w.setHeight(x, y, 20); w.setDirt(x, y, 5); w.setTile(x, y, TileType.Dirt); }
 w.setTile(X + 4, Y, TileType.Clay);
 for (const [, dx, kind] of ROCKS) w.setTile(X + dx, Y, TileType.Rock, kind);
+w.setRockKind(X + 8, Y, IRON);
+for (const [cx, cy] of [[X + 8, Y], [X + 9, Y], [X + 9, Y + 1], [X + 8, Y + 1]]) w.setDirt(cx, cy, 0);
 w.setTile(X + 12, Y, TileType.PackedDirt);
 game.buildings.create('Shed', X + 14, Y);
 w.setTile(X + 16, Y, TileType.Clay);
@@ -252,13 +283,28 @@ here.perform(feet, game);
 check('raises the corner one step', `${w.getHeight(X + 24, Y)}/${w.getDirt(X + 24, Y)}` === '21/6', `${w.getHeight(X + 24, Y)}/${w.getDirt(X + 24, Y)}`);
 check('and the grass is grass, every tile round it as it was', types(X + 24, Y) === was && w.getTile(X + 24, Y) === TileType.Grass, `${was} → ${types(X + 24, Y)}`);
 
+// A spadeful of dirt for each drop, so the clay is left for what is asked of it below.
+for (let n = 0; n < 2; n++) game.inventory.add('dirt', { ql: 20 });
 put(X + 7.5, Y + 0.5);
 mine.ORE_ASK = ask(onCorner, tileAt(X + 8));
-check('Drop dirt at a corner of an iron vein: refused', mine.ORE_ASK === ROCK_AT_CORNER, mine.ORE_ASK);
-check('and the vein is a vein', w.getTile(X + 8, Y) === TileType.Rock && w.getData(X + 8, Y) === IRON);
+check('Drop dirt at a corner of an iron vein: allowed', mine.ORE_ASK === 'none', mine.ORE_ASK);
+onCorner.perform(tileAt(X + 8), game);
+const ore = `${w.getTile(X + 8, Y)} ${w.getHeight(X + 8, Y)}/${w.getDirt(X + 8, Y)}`;
+check('the corner one step up with a spadeful of soil, the vein dirt', ore === `${TileType.Dirt} 21/1`, ore);
+w.setDirt(X + 8, Y, 0);
+w.reconcileAround(X + 8, Y);
+check('its soil dug off: the iron vein again', w.getTile(X + 8, Y) === TileType.Rock && w.getData(X + 8, Y) === IRON, `${w.getTile(X + 8, Y)}:${w.getData(X + 8, Y)}`);
+onCorner.perform(tileAt(X + 8), game);
+put(X + 8.5, Y + 0.5);
+mine.ORE_CHANGE_ASK = ask(change, tileAt(X + 8, sand.uid));
+check('dropped again, Change tile on that dirt: offered and allowed', change.applies(tileAt(X + 8, sand.uid), game) && mine.ORE_CHANGE_ASK === 'none', mine.ORE_CHANGE_ASK);
+change.perform(tileAt(X + 8, sand.uid), game);
+check('and lays sand', w.getTile(X + 8, Y) === TileType.Sand, String(w.getTile(X + 8, Y)));
 put(X + 10.3, Y + 0.3);
 mine.SEAM_HERE = ask(here, { kind: 'item', uid: clay.uid });
-check('Drop dirt at your feet beside a coal seam: refused', mine.SEAM_HERE === ROCK_AT_CORNER, mine.SEAM_HERE);
+check('Drop dirt at your feet beside a coal seam: allowed', mine.SEAM_HERE === 'none', mine.SEAM_HERE);
+here.perform({ kind: 'item', uid: clay.uid }, game);
+check('and the seam, soil on its corners, dirt', w.getTile(X + 10, Y) === TileType.Dirt, String(w.getTile(X + 10, Y)));
 
 put(X + 16.5, Y + 0.5);
 for (const it of [...game.inventory.items]) if (it.id === 'dirt' || it.id === 'sand') game.inventory.remove(it.uid, it.count);

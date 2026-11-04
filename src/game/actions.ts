@@ -447,15 +447,6 @@ const cornerUnderBuilding = (g: Game, cx: number, cy: number): string | null => 
   return null;
 };
 
-/** Drop dirt at a corner of a rock, ore or seam tile, as the island says it (`corner_rock`). */
-export const ROCK_AT_CORNER = 'Rock at this corner.';
-const rockAtCorner = (g: Game, cx: number, cy: number): string | null => {
-  for (let y = cy - 1; y <= cy; y++) {
-    for (let x = cx - 1; x <= cx; x++) if (g.world.inBounds(x, y) && g.world.getTile(x, y) === TileType.Rock) return ROCK_AT_CORNER;
-  }
-  return null;
-};
-
 /**
  * The spadeful Change tile lays on (x, y): the one chosen off the menu, or the
  * first to hand whose tile is not the one there (`spoilFrom`). The island's `change_spoil`.
@@ -1447,7 +1438,8 @@ export const ACTIONS: ActionDef[] = [
       if (under) return under;
       // Packed ground is not dug, flattened or raised: cultivate it first (`unpacked` paves it).
       if (tile(t, g) === TileType.PackedDirt) return PACKED_FIRST;
-      return rockAtCorner(g, t.cx, t.cy) ?? levelStop(g, t.cx, t.cy, DROP_RAISE) ?? slopeRefusal(g, 'digging', t.cx, t.cy, DROP_RAISE);
+      // At a corner of rock, an ore or a seam too: the soil makes it dirt (`exposeRock`), dug bare it is that rock again.
+      return levelStop(g, t.cx, t.cy, DROP_RAISE) ?? slopeRefusal(g, 'digging', t.cx, t.cy, DROP_RAISE);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -3408,7 +3400,6 @@ export const ACTIONS: ActionDef[] = [
       // Not a corner of a building: standing on a deck on piers, the ground under it (`piers.ts`), as `drop_dirt` has it.
       return cornerUnderBuilding(g, c.cx, c.cy)
         ?? (g.world.getTile(g.player.tileX, g.player.tileY) === TileType.PackedDirt ? PACKED_FIRST : null)
-        ?? rockAtCorner(g, c.cx, c.cy)
         ?? slopeRefusal(g, 'digging', c.cx, c.cy, DROP_RAISE);
     },
     perform: (t, g) => {
