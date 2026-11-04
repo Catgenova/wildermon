@@ -8,6 +8,7 @@ import { DAMAGE_MAX, DAMAGE_WARN, NIGHT_ENDS, NIGHT_STARTS, type Game } from '..
 import { applyLook, islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { BINDS, BIND_GROUPS, keyName, keyReserved, MAX_KEYS, type Keybinds } from '../../game/keybinds';
 import { whoAmI } from '../../net/accounts';
+import { UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
 import { RARITIES } from '../../game/items';
 import { CRAFT_REACH } from '../../game/recipes';
 import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
@@ -673,7 +674,7 @@ export class SettingsPanel {
       display.append(row);
     }
 
-    // Your body to the ground floor of the tile it stands on, on the island (`rpc_unstick`).
+    // Off a storey, or out of a pocket on the ground no walk leaves, on the island (`rpc_unstick`).
     if (unstick) {
       const row = document.createElement('div');
       row.className = 'setting-row setting-look';
@@ -681,7 +682,8 @@ export class SettingsPanel {
       const name = document.createElement('b');
       name.textContent = 'I\'m stuck';
       const says = document.createElement('small');
-      says.textContent = 'Moves you to the ground floor, same tile. From any storey or a cellar.';
+      says.textContent = `Storey or cellar: ground floor, same tile. Ground with no walk ${UNSTICK_REACH} tiles out: nearest tile within ${UNSTICK_SEARCH} `
+        + 'with one, else your settlement totem or the landing. Not mounted or driving.';
       text.append(name, says);
       const go = document.createElement('button');
       go.type = 'button';

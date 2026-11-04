@@ -3881,9 +3881,19 @@ export class Island {
     return this.faithDoor('rpc_regret_patron', {});
   }
 
-  /** "I'm stuck": your body to the ground floor of the tile it stands on (`rpc_unstick`). */
+  /**
+   * "I'm stuck" (`rpc_unstick`): up a storey or in a cellar, to the ground floor
+   * of the tile; on the ground, out of a pocket no walk leaves, to where the
+   * answer says. The browser goes there now rather than on its next step.
+   */
   async unstick(): Promise<string | null> {
-    return this.door('rpc_unstick', {});
+    if (!this.info) return 'You are not on an island.';
+    const { data, error } = await supabase().rpc('rpc_unstick', { p_world: this.info.id });
+    if (error) return error.message;
+    const said = (data ?? {}) as { why?: string; x?: number; y?: number; level?: number };
+    if (typeof said.why === 'string') return said.why;
+    if (typeof said.x === 'number' && typeof said.y === 'number') this.follow({ x: said.x, y: said.y, level: said.level ?? 0 });
+    return null;
   }
 
   /** Break a Bauble of Regret to undo your path: its picks go with it, and its techniques off the spell bar. */

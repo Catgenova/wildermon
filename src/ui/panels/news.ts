@@ -132,7 +132,7 @@ import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELO
 import { RELICS } from '../../game/archaeology';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
 import { cropYield, RIPE, seedSays } from '../../game/farming';
-import { HEARTBEAT, IDLE_LOGOUT, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
+import { HEARTBEAT, IDLE_LOGOUT, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ACT_MANY_MOST, VIA_MAX } from '../../net/island';
 import { SAID_LAG_MS } from '../../net/heardlines';
@@ -4243,6 +4243,13 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 482,
+    day: '2026-11-04',
+    lines: () => [
+      `Changed: I'm stuck (Settings) on the ground, when no walk gets ${UNSTICK_REACH} tiles out (a ledge, a cliff): to the nearest tile within ${UNSTICK_SEARCH} with one; else your settlement totem or the landing. Not mounted or driving.`,
+    ],
   },
   {
     n: 481,

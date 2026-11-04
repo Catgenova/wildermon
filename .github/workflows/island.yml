@@ -4871,6 +4871,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/drinkany.mjs --log-level=error
           node node_modules/.cache/drinkany.mjs
 
+      - name: I'm stuck on the ground walks a body out of a pocket no walk leaves
+        if: matrix.shard == 5
+        run: |
+          # A tile raised flat above its neighbours: stuck, unstuck to the
+          # nearest tile a walk gets out from, walks on; refused mounted and on
+          # open ground; up a storey the ground floor as before.
+          npx esbuild supabase/test/offaledge.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/offaledge.mjs --log-level=error
+          node node_modules/.cache/offaledge.mjs
+
       - name: A rare thing put into a crate stays rare, a pile of its own
         if: matrix.shard == 5
         run: |

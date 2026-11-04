@@ -89,6 +89,15 @@ export const HEARTBEAT = 60;
  */
 export const SNAP_GAP = 4;
 
+/**
+ * "I'm stuck" on the ground (`rpc_unstick`): stuck is a walk from your tile
+ * that gets no further than `UNSTICK_REACH` tiles out, and the way out is the
+ * nearest tile within `UNSTICK_SEARCH` from which one does. The island's
+ * `unstick_reach` and `unstick_search`.
+ */
+export const UNSTICK_REACH = 4;
+export const UNSTICK_SEARCH = 8;
+
 /** Lines of talk kept before they are swept up. Nobody reads their own backlog. */
 export const EVENT_KEEP = 24 * 3600;
 

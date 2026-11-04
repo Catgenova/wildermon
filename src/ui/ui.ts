@@ -3251,7 +3251,7 @@ export class UI {
   }
 
   /** Off the roll of one you were asked onto, once you have said you mean it. */
-  /** "I'm stuck" (Settings): to the ground floor of the tile you stand on, the island first (`rpc_unstick`). */
+  /** "I'm stuck" (Settings): off a storey, or out of a pocket on the ground no walk leaves, the island first (`rpc_unstick`). */
   private async unstick(): Promise<void> {
     if (!this.island) return;
     const why = await this.island.unstick();
