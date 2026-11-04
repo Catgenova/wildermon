@@ -66,6 +66,15 @@ const METAL_TOOLS = new Set([
   'anvil',
   'hammer',
 ]);
+/**
+ * Packs, by what they are stitched of and the skill that stitches them (`make_sack`, `make_satchel`,
+ * `make_backpack`). Worn, a sack and a backpack add to the carry limit by their quality (`carry` × QL%).
+ */
+export const PACKS: Readonly<Record<string, { material: Material; skill: string }>> = {
+  sack: { material: 'cloth', skill: 'tailoring' },
+  satchel: { material: 'leather', skill: 'leatherworking' },
+  backpack: { material: 'leather', skill: 'leatherworking' },
+};
 const WOOD_TOOLS = new Set(['mallet', 'short_bow', 'medium_bow', 'long_bow', 'club', 'wooden_shield', 'lectern', 'fishing_rod', 'rope_tool']);
 
 /** What a thing is made of, and which skill judges work on it. */
@@ -93,6 +102,8 @@ export function improvable(id: string): { material: MaterialDef; skill: string }
   // A Fisher's pond is set in stone, like a mason's work, whoever dug it.
   if (piece) return { material: piece.skill === 'masonry' || piece.pond ? MATERIALS.stone : MATERIALS.wood, skill: piece.skill ?? 'fine_carpentry' };
   if (id === 'whetstone' || id === 'quern') return { material: MATERIALS.stone, skill: 'stonecutting' };
+  const pack = PACKS[id];
+  if (pack) return { material: MATERIALS[pack.material], skill: pack.skill };
   // Everything else — food, materials, moulds, green ware — is left as it was made.
   return null;
 }

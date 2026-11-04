@@ -4891,6 +4891,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/neighbourbin.mjs --log-level=error
           node node_modules/.cache/neighbourbin.mjs
 
+      - name: A sack, a satchel and a backpack are improvable
+        if: matrix.shard == 5
+        run: |
+          # Both sides: of cloth by Tailoring and leather by Leatherworking, the
+          # island's list the browser's, every bag a pack on it; a backpack
+          # improved; a sack without cloth refused in the same words.
+          npx esbuild supabase/test/packimprove.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/packimprove.mjs --log-level=error
+          node node_modules/.cache/packimprove.mjs
+
       - name: A rare thing put into a crate stays rare, a pile of its own
         if: matrix.shard == 5
         run: |

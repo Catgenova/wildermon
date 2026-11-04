@@ -4245,6 +4245,13 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 485,
+    day: '2026-11-04',
+    lines: () => [
+      `Added: Improve on packs. ${itemDef('sack').name}: needle and cloth, Tailoring. ${itemDef('satchel').name}, ${itemDef('backpack').name.toLowerCase()}: awl, needle and leather, Leatherworking. Worn, its quality sets its carry limit bonus.`,
+    ],
+  },
+  {
     n: 484,
     day: '2026-11-04',
     lines: () => [
