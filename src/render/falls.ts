@@ -36,7 +36,7 @@
 import { hash2 } from '../world/noise';
 import { HALF_H, HALF_W } from './iso';
 import { RUNE_WHITE, STONE_INK } from './runestone';
-import { SPRING_DARK, SPRING_EDGE, SPRING_FOAM, SPRING_PALE, SPRING_WATER } from './water';
+import { SPRING_EDGE, SPRING_FOAM, SPRING_PALE, SPRING_WATER } from './water';
 
 /** Below this zoom water is its shapes and colours: streaks, threads, rings, spray and ripples are too small to see. */
 export const DETAIL_FROM = 0.6;
@@ -875,9 +875,8 @@ export function drawLip(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, u
   }
   if (depth > 0.5) {
     const g = ctx.createLinearGradient(PT[0] - nx * depth, PT[1] - ny * depth, PT[0], PT[1]);
-    g.addColorStop(0, TONGUE_INK[0]);
-    g.addColorStop(0.6, TONGUE_INK[1]);
-    g.addColorStop(1, TONGUE_INK[2]);
+    // Two flat tones stepped hard, as the kit paints a face, over the water still clear behind them.
+    for (let k = 0; k < TONGUE_STOPS.length; k++) g.addColorStop(TONGUE_STOPS[k], TONGUE_INK[k >> 1]);
     ctx.fillStyle = g;
   } else ctx.fillStyle = TONGUE_INK[1];
   ctx.beginPath();
@@ -1157,7 +1156,7 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
       const pulse = detail ? 0.5 + 0.5 * Math.sin(t * (3.1 + 2.3 * h) + h * 17) : 0.5;
       const ins = inset(u);
       const grow = row === 0 ? 0.5 + 0.8 * heap : 0.7 + 0.35 * heap;
-      const r = size * DISC_W * z * grow * (1 - 0.3 * slim) * (0.8 + 0.3 * pulse) * (0.45 + 0.55 * ins) * (0.55 + 0.85 * keyed(s, k * 2 + row, 64) ** 2);
+      const r = size * DISC_W * z * grow * (1 - 0.45 * slim) * (0.8 + 0.3 * pulse) * (0.45 + 0.55 * ins) * (0.55 + 0.85 * keyed(s, k * 2 + row, 64) ** 2);
       const out = row === 0 ? (keyed(s, k, 65) - 0.35) * 0.06 : (0.08 + 0.1 * keyed(s, k, 68)) * (0.7 + tall);
       const up = (row === 0 ? (s.wet ? 0.45 : 1) * (1.2 + 5 * tall + 10 * tall * tall) * heap * (0.75 + 0.4 * pulse) * ins : (s.wet ? 0.1 : 0.5) * (1 + 3 * tall) * ins) * flow * narrow;
       foot(u, out, up, 0);
@@ -1276,7 +1275,7 @@ const LILAC: RGB = [170, 168, 206];
  * a face, each stepped hard into the next -- the roll over the lip, the glassy water under it,
  * the paler water breaking up, and the white over the foot.
  */
-const STOPS = [0, 0.045, 0.07, 0.4, 0.42, 0.76, 0.78, 1];
+const STOPS = [0, 0.045, 0.07, 0.34, 0.36, 0.64, 0.66, 1];
 /** The sheet down its length at each stop, for each of eleven steps of how white it goes by the foot. */
 const BODY: RGB[][] = Array.from({ length: 11 }, (_, i) => {
   const w = i / 10;
@@ -1317,7 +1316,9 @@ const THREAD = rgba(WARM_WHITE, 0.7);
 const FLECK = rgba(WARM_WHITE, 0.8);
 const EDGE_LIGHT = rgba(WARM_WHITE, 0.75);
 /** The water drawn into a lip, from clear to where it turns over; and the light along the edge. */
-const TONGUE_INK = [rgba(SPRING_PALE, 0), rgba(mixRgb(SPRING_WATER, SPRING_PALE, 0.55), 0.55), rgba(mixRgb(SPRING_PALE, WARM_WHITE, 0.4), 0.95)];
+const TONGUE_INK = [rgba(SPRING_PALE, 0), rgba(mixRgb(SPRING_WATER, SPRING_PALE, 0.5), 0.42), rgba(mixRgb(SPRING_PALE, WARM_WHITE, 0.3), 0.85)];
+/** Where down the water drawn into a lip each of those begins and ends, from the back of it to the edge. */
+const TONGUE_STOPS = [0, 0.34, 0.34, 0.74, 0.74, 1];
 /** The lines of water drawn in toward a lip. */
 const TONGUE_LINE = rgba(WARM_WHITE, 0.6);
 const LIP_LIGHT = rgb(WARM_WHITE);
