@@ -555,6 +555,8 @@ export function drawSheet(ctx: CanvasRenderingContext2D, v: FallView, p: Placed,
   }
   if (ropeCount) {
     for (const [ink, share] of [[ROPE, 1], [CORE, 0.5]] as const) {
+      // The lit side of a rope is too narrow to see below `DETAIL_FROM`.
+      if (share < 1 && z < DETAIL_FROM) continue;
       ctx.fillStyle = downSheet(ctx, p, ink, gu);
       ctx.beginPath();
       for (let r = 0; r < ropeCount; r++) {

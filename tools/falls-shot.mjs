@@ -9,6 +9,7 @@
  *   node tools/falls-shot.mjs --scenes stream,spill --zooms 1 --turns 0,2,5 --hours 13
  *   node tools/falls-shot.mjs --dpr 2                                 # pictures at twice the pixels
  *   node tools/falls-shot.mjs --bench                                 # frame times and the painter's, no pictures
+ *   node tools/falls-shot.mjs --bench --painter --repeat 9            # the painter's alone, nine times at each zoom
  *   node tools/falls-shot.mjs --fzooms 2,3                            # the fountain's zooms (default 1,2,5)
  *   node tools/falls-shot.mjs --pair                                  # a second frame 0.12 s after each
  *
@@ -83,11 +84,17 @@ if (error) {
 }
 
 if (flag('bench')) {
+  // The painter timed `--repeat` times at each zoom, the least and the middle of them given.
+  const repeat = Number(opt('repeat', '1'));
   for (const zoom of zooms) {
-    const p = await page.evaluate((z) => window.falls.painter(z, 100), zoom);
-    console.log(`painter alone, zoom ${zoom}: ${p.ms.toFixed(3)} ms a frame (sheet ${p.sheet.toFixed(3)}, foot ${p.foot.toFixed(3)}, lip ${p.lip.toFixed(3)})`);
+    const runs = [];
+    for (let i = 0; i < repeat; i++) runs.push(await page.evaluate((z) => window.falls.painter(z, 100), zoom));
+    runs.sort((x, y) => x.ms - y.ms);
+    const p = runs[0];
+    const mid = runs[runs.length >> 1];
+    console.log(`painter alone, zoom ${zoom}: ${p.ms.toFixed(3)} ms a frame (sheet ${p.sheet.toFixed(3)}, foot ${p.foot.toFixed(3)}, lip ${p.lip.toFixed(3)})${repeat > 1 ? `, middle of ${repeat} ${mid.ms.toFixed(3)}` : ''}`);
   }
-  for (const scene of scenes) {
+  for (const scene of flag('painter') ? [] : scenes) {
     for (const zoom of zooms) {
       const r = await page.evaluate(([s, z]) => window.falls.bench({ scene: s, zoom: z, turn: 0, hour: 13, t: 20 }, 240), [scene, zoom]);
       console.log(`frame, ${scene} zoom ${zoom}: median ${r.median.toFixed(2)} ms, mean ${r.mean.toFixed(2)} ms`);
