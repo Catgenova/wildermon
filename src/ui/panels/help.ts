@@ -9,8 +9,8 @@ import { FRAMES } from '../runecut-frames';
 import { lifeWords } from '../runecut-life';
 import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import {
-  ACTION_BY_ID, CHIP_CHANCE, CLEARED_TO, deedAcrossAt, FRUIT_MATURE, FRUIT_OLD, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MINE_COLLAPSE, MINE_DEPTH, MOSS_PER_CUT, MOSS_PLANT,
-  PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE, ROCK_AT_CORNER, WATER_MOTE_USES, WEAR_PER_GO,
+  ACTION_BY_ID, CHIP_CHANCE, CLEARED_TO, deedAcrossAt, DROP_RAISE, FRUIT_MATURE, FRUIT_OLD, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MINE_COLLAPSE, MINE_DEPTH, MOSS_PER_CUT, MOSS_PLANT,
+  PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE, ROCK_AT_CORNER, SPADEFUL, WATER_MOTE_USES, WEAR_PER_GO,
 } from '../../game/actions';
 import { CODE_DIGITS, CODE_SECONDS } from '../../game/keeper';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEM_ODDS, GEMS, JEWEL_BONUS, tradeName } from '../../game/gems';
@@ -3545,8 +3545,8 @@ export function helpText(): string {
     <h4>Soil</h4>
     <ul>
       <li>Dirt, clay and sand: <b>${itemDef('dirt').weight}kg</b> each; a starting back carries ${Math.floor((CARRY_BASE + CHAR_START * CARRY_PER_STRENGTH) / itemDef('dirt').weight)} before overload.</li>
-      <li><b>Drop dirt</b> (a corner, or an item for your feet): 1 dirt, clay or sand; corner +${metres(1)} m and +1 soil; tile type unchanged.</li>
-      <li><b>Change tile</b> (a tile of ${listed([...BURYABLE].map((t) => TILE_DEFS[t as TileType].name.toLowerCase()))}): 1 dirt, clay or sand; tile laid as it; corner heights and soil unchanged. Offered per dirt, clay or sand not the tile's own.</li>
+      <li><b>Drop dirt</b> (a corner, or an item for your feet): ${SPADEFUL} dirt, clay or sand; corner +${metres(DROP_RAISE)} m and +${DROP_RAISE} soil; tile type unchanged.</li>
+      <li><b>Change tile</b> (a tile of ${listed([...BURYABLE].map((t) => TILE_DEFS[t as TileType].name.toLowerCase()))}): ${SPADEFUL} dirt, clay or sand; tile laid as it; corner heights and soil unchanged. Offered per dirt, clay or sand not the tile's own.</li>
       <li>Drop dirt, Change tile and flattening's fill take a spadeful from any <b>crate, cart or bin within reach</b> when you carry none.</li>
       <li><b>${capital(listed(Object.values(TILE_DEFS).filter((d) => d.collect).map((d) => d.name.toLowerCase())))}</b>: <b>Collect</b> (<i>Collect clay</i>, <i>Collect dirt</i>), standing on it:
       a shovelful off the top; tile type, corner heights and soil unchanged; slightly slower than digging a corner.</li>

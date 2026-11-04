@@ -339,6 +339,9 @@ export const TEACHES_NOTHING = new Set<string>([
 
 /** The order a spadeful is looked for in, which is the order it was written in. */
 export const SPOIL_ORDER = ['dirt', 'clay', 'sand'];
+/** Dirt, clay or sand a Drop dirt or a Change tile spends; and the steps of height and soil a Drop dirt adds to its corner. */
+export const SPADEFUL = 1;
+export const DROP_RAISE = 1;
 
 /** A word and its article: "an oak", "a pine". */
 export const an = (word: string): string => `${/^[aeiou]/i.test(word) ? 'an' : 'a'} ${word}`;
@@ -1444,15 +1447,15 @@ export const ACTIONS: ActionDef[] = [
       if (under) return under;
       // Packed ground is not dug, flattened or raised: cultivate it first (`unpacked` paves it).
       if (tile(t, g) === TileType.PackedDirt) return PACKED_FIRST;
-      return rockAtCorner(g, t.cx, t.cy) ?? levelStop(g, t.cx, t.cy, 1) ?? slopeRefusal(g, 'digging', t.cx, t.cy, 1);
+      return rockAtCorner(g, t.cx, t.cy) ?? levelStop(g, t.cx, t.cy, DROP_RAISE) ?? slopeRefusal(g, 'digging', t.cx, t.cy, DROP_RAISE);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       const it = spoilFrom(g, SPOIL_ORDER, t.itemUid);
       if (!it || !it.take()) return;
       const w = g.world;
-      w.setHeight(t.cx, t.cy, w.getHeight(t.cx, t.cy) + 1);
-      w.setDirt(t.cx, t.cy, w.getDirt(t.cx, t.cy) + 1);
+      w.setHeight(t.cx, t.cy, w.getHeight(t.cx, t.cy) + DROP_RAISE);
+      w.setDirt(t.cx, t.cy, w.getDirt(t.cx, t.cy) + DROP_RAISE);
       g.exposeRock(t.cx, t.cy);
       g.logMsg(`Dropped: ${itemDef(it.id).name.toLowerCase()}, ${cornerName(t)} corner raised.`, 'event');
     },
@@ -3406,18 +3409,18 @@ export const ACTIONS: ActionDef[] = [
       return cornerUnderBuilding(g, c.cx, c.cy)
         ?? (g.world.getTile(g.player.tileX, g.player.tileY) === TileType.PackedDirt ? PACKED_FIRST : null)
         ?? rockAtCorner(g, c.cx, c.cy)
-        ?? slopeRefusal(g, 'digging', c.cx, c.cy, 1);
+        ?? slopeRefusal(g, 'digging', c.cx, c.cy, DROP_RAISE);
     },
     perform: (t, g) => {
       if (t.kind !== 'item') return;
       const spoil = g.inventory.get(t.uid)?.id ?? '';
-      if (!(spoil in SPOIL_TILE) || !g.inventory.remove(t.uid, 1)) return;
+      if (!(spoil in SPOIL_TILE) || !g.inventory.remove(t.uid, SPADEFUL)) return;
       const c = g.nearestCornerToPlayer();
       const w = g.world;
-      w.setHeight(c.cx, c.cy, w.getHeight(c.cx, c.cy) + 1);
+      w.setHeight(c.cx, c.cy, w.getHeight(c.cx, c.cy) + DROP_RAISE);
       // The soil as well as the height, which the island has always written
       // here and this side never did: a spadeful is a spadeful of something.
-      w.setDirt(c.cx, c.cy, w.getDirt(c.cx, c.cy) + 1);
+      w.setDirt(c.cx, c.cy, w.getDirt(c.cx, c.cy) + DROP_RAISE);
       g.exposeRock(c.cx, c.cy);
       g.logMsg(`Dropped: ${itemDef(spoil).name.toLowerCase()} at your feet, corner raised.`, 'event');
     },
