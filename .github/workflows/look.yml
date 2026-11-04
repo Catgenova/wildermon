@@ -170,6 +170,30 @@ jobs:
                  pg_size_pretty(temp_blks_written * 8192) as temp_written, round(mean_exec_time::numeric, 1) as ms_each
             from pg_stat_statements where temp_blks_written > 0 order by temp_blks_written desc limit 12"
           ask "since when pg_stat_statements counts" "select to_char(stats_reset, 'MM-DD HH24:MI') as since, dealloc from pg_stat_statements_info"
+          # The API's own connections, by age: a call on a connection seconds old pays for planning everything it calls
+          # (a move cost 41-45 ms on a new connection, 13-16 on its second, 4-5 warm, on the test island).
+          ask "the API's connections by age" "select usename, state, count(*),
+                 round(min(extract(epoch from now() - backend_start))::numeric) as youngest_s,
+                 round(percentile_cont(0.5) within group (order by extract(epoch from now() - backend_start))::numeric) as median_s,
+                 round(max(extract(epoch from now() - backend_start))::numeric) as oldest_s
+            from pg_stat_activity where backend_type = 'client backend' and usename in ('authenticator', 'postgres')
+           group by 1, 2 order by 1, 2"
+          # What each call costs now, not since 11-02: the counts two minutes apart, by call and by the arguments it was
+          # asked with (an old browser's form apart from a new one's). Through psql, one session, so the first count keeps.
+          echo "== what each call costs now: two minutes of pg_stat_statements, by call and arguments"
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$(sed 's/:\[YOUR-PASSWORD\]//' supabase/.temp/pooler-url)" -X -q -v ON_ERROR_STOP=1 <<'EOSQL' \
+            || echo "::warning::could not take the two-minute count"
+          create temp table s0 as select queryid, calls, total_exec_time from pg_stat_statements;
+          select pg_sleep(120);
+          select coalesce(substring(s.query from '"?public"?\."?([a-z_0-9]+)"?\('), left(regexp_replace(s.query, '\s+', ' ', 'g'), 40)) as call,
+                 coalesce(nullif(array_to_string(array(select distinct m[1] from regexp_matches(s.query, '"(p_[a-z_]+)"', 'g') as m order by 1), ','), ''), '-') as args,
+                 sum(s.calls - coalesce(a.calls, 0)) as calls_2min,
+                 round((sum(s.total_exec_time - coalesce(a.total_exec_time, 0)) / greatest(sum(s.calls - coalesce(a.calls, 0)), 1))::numeric, 2) as ms_each,
+                 round(sum(s.total_exec_time - coalesce(a.total_exec_time, 0))::numeric) as ms_total
+            from pg_stat_statements s left join s0 a using (queryid)
+           where s.calls > coalesce(a.calls, 0)
+           group by 1, 2 order by sum(s.total_exec_time - coalesce(a.total_exec_time, 0)) desc limit 20;
+          EOSQL
           ask "rounds, last 15 minutes" "select count(*) as rounds, round(avg(ms)::numeric, 1) as ms_avg, round(max(ms)::numeric, 1) as ms_worst,
                  to_char(max(at), 'HH24:MI:SS') as last from tick_time where at > now() - interval '15 minutes'"
           # Asked: "Server stuttering?", with a round of 22 s among rounds of half a second: which rounds, and which of
