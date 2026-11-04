@@ -85,6 +85,14 @@ CanvasRenderingContext2D.prototype.fillText = function (this: CanvasRenderingCon
  * east a little every third one when `walk`: how many times the name was written in each.
  */
 function frames(scene: { mounted: boolean; reins: boolean }, n: number, zoom: number, turn: number, walk: boolean): number[] {
+  /*
+   * Each view from its own start, as somebody first seen there. Put back to the start while still known, a body
+   * walked on by the last view eases back over up to `2 × BODY_EVERY × WALK_SLACK` seconds (`walkSpan`), longer than
+   * the frames let settle: at zoom 2 its first counted frames were drawn a tile on, past the edge of what is drawn,
+   * and on some clock starts not at all.
+   */
+  game.roster.sawAll([]);
+  game.creatures.sawAll([], game.time);
   at.x = cx + 2.5;
   at.y = cy + 1.5;
   told(scene);
