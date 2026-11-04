@@ -83,6 +83,52 @@ jobs:
                    "https://api.supabase.com/v1/projects/$PROJECT_REF/config/disk/util" \
                  | jq -r '.metrics | "\(.fs_used_bytes) \(.fs_size_bytes)"' 2>/dev/null || true)
           echo "== disk (used, size in bytes): $disk"
+          # Asked about: "Catgenova's position is broken, every time I move I rubber band back". The body as the island
+          # holds it, what holds a walk back (aboard, overload, cart, saddle), the browser's errors from that account, and
+          # four short trial steps as catgenova, each undone (a subtransaction rolled back, then the whole), so nothing is
+          # written: what `rpc_move` answers, or the error it raises.
+          echo "== rubber band: catgenova"
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$(sed 's/:\[YOUR-PASSWORD\]//' supabase/.temp/pooler-url)" -X -q <<'EOSQL' \
+            || echo "::warning::could not look at catgenova's walk"
+          \x on
+          select round(p.x::numeric, 2) as x, round(p.y::numeric, 2) as y, p.level, p.level_h, p.aboard, p.away, p.act,
+                 round(p.walk_ahead::numeric, 2) as walk_ahead, to_char(p.moved_at, 'MM-DD HH24:MI:SS') as moved,
+                 to_char(p.seen_at, 'MM-DD HH24:MI:SS') as seen, to_char(p.body_at, 'MM-DD HH24:MI:SS') as body,
+                 to_char(now(), 'MM-DD HH24:MI:SS') as now,
+                 round(over_carry(p.world_id, p.uid)::numeric, 2) as over_carry, carry_stop() as carry_stop,
+                 round(travel_speed(p.world_id, p.uid)::numeric, 3) as speed, round(walk_ground(p.world_id, p.x, p.y)::numeric, 3) as ground,
+                 (driving(p.world_id, p.uid)).id as driving, (mount_of(p.world_id, p.uid)).id as mount,
+                 p.stats->>'health' as health, jsonb_array_length(coalesce(p.wounds, '[]'::jsonb)) as wounds
+            from player p where p.name = 'catgenova' and p.world_id::text like 'f3a88670%';
+          select q.id, q.kind, q.sub, q.x, q.y, q.cx, q.cy from placed q join player p on p.world_id = q.world_id and q.id = p.aboard
+           where p.name = 'catgenova' and p.world_id::text like 'f3a88670%';
+          \x off
+          select to_char(e.at, 'HH24:MI:SS') as at, e.build, left(e.message, 160) as message, left(e.place, 80) as place
+            from client_error e join player p on p.uid = e.uid and p.name = 'catgenova' and p.world_id::text like 'f3a88670%'
+           where e.at > now() - interval '3 hours' order by e.at desc limit 15;
+          begin;
+          do $try$
+          declare p player; d record; r jsonb; v_ctx text;
+          begin
+            select * into p from player where name = 'catgenova' and world_id::text like 'f3a88670%';
+            if not found then raise notice 'no catgenova'; return; end if;
+            perform set_config('request.jwt.claims', json_build_object('sub', p.uid, 'role', 'authenticated')::text, true);
+            for d in select * from (values ('east', 0.3, 0.0), ('west', -0.3, 0.0), ('south', 0.0, 0.3), ('north', 0.0, -0.3)) v(dir, dx, dy) loop
+              begin
+                r := rpc_move(p.world_id, p.x + d.dx, p.y + d.dy, p.level);
+                raise notice 'step %: asked %, %; answered %', d.dir, round((p.x + d.dx)::numeric, 2), round((p.y + d.dy)::numeric, 2),
+                  r - 'stats' - 'wounds';
+                raise exception 'undo';
+              exception when others then
+                get stacked diagnostics v_ctx = pg_exception_context;
+                if sqlerrm <> 'undo' then
+                  raise notice 'step %: ERROR % (%) at %', d.dir, sqlerrm, sqlstate, left(regexp_replace(v_ctx, '\s+', ' ', 'g'), 400);
+                end if;
+              end;
+            end loop;
+          end $try$;
+          rollback;
+          EOSQL
           # The project's own security advisors (the dashboard's Security Advisor), red and yellow only.
           echo "== security advisors (ERROR, WARN)"
           curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
