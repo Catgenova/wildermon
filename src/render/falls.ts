@@ -1156,7 +1156,7 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
       const pulse = detail ? 0.5 + 0.5 * Math.sin(t * (3.1 + 2.3 * h) + h * 17) : 0.5;
       const ins = inset(u);
       const grow = row === 0 ? 0.5 + 0.8 * heap : 0.7 + 0.35 * heap;
-      const r = size * DISC_W * z * grow * (1 - 0.45 * slim) * (0.8 + 0.3 * pulse) * (0.45 + 0.55 * ins) * (0.55 + 0.85 * keyed(s, k * 2 + row, 64) ** 2);
+      const r = size * DISC_W * z * grow * (1 - 0.3 * slim) * (0.8 + 0.3 * pulse) * (0.45 + 0.55 * ins) * (0.55 + 0.85 * keyed(s, k * 2 + row, 64) ** 2);
       const out = row === 0 ? (keyed(s, k, 65) - 0.35) * 0.06 : (0.08 + 0.1 * keyed(s, k, 68)) * (0.7 + tall);
       const up = (row === 0 ? (s.wet ? 0.45 : 1) * (1.2 + 5 * tall + 10 * tall * tall) * heap * (0.75 + 0.4 * pulse) * ins : (s.wet ? 0.1 : 0.5) * (1 + 3 * tall) * ins) * flow * narrow;
       foot(u, out, up, 0);
@@ -1174,8 +1174,8 @@ export function drawFoot(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, 
     ctx.beginPath();
     for (let i = 0; i < m; i += 4) {
       if (!all && !lumps[i + 3]) continue;
-      // Too small to be seen ruled round: shaded and whited only.
-      if (add && lumps[i + 2] < 1.6) continue;
+      // Too small to be seen ruled round, or a thin ring's beads of foam: shaded and whited only.
+      if (add && (lumps[i + 2] < 1.6 || flow < 0.6)) continue;
       // The rule no wider than a fifth of the lump, so a small one is foam and not a bead.
       const r = lumps[i + 2] * grow + Math.min(add, lumps[i + 2] * 0.2);
       const y = lumps[i + 1] - lumps[i + 2] * lift;
@@ -1239,7 +1239,7 @@ export function drawMist(
       const px = x + lean.x * blown + Math.sin(age * 5 + k * 2.1 + j) * 5 * z;
       const py = y - age * (14 + 50 * tall) * z + lean.y * blown * 0.4;
       const r = size * (0.4 + 0.8 * age);
-      ctx.globalAlpha = 0.34 * tall * Math.sin(Math.PI * age) * (1 - 0.4 * dark);
+      ctx.globalAlpha = 0.24 * tall * Math.sin(Math.PI * age) * (1 - 0.4 * dark);
       ctx.drawImage(tex, px - r, py - r * 0.8, r * 2, r * 1.6);
     }
   }
