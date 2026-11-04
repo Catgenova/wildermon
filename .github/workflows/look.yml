@@ -91,6 +91,21 @@ jobs:
           ask "Nakatari's planks in the store log" "select to_char(l.at, 'MM-DD HH24:MI') as at, l.put, l.what, l.count, l.store
              from deed_store_log l join player p on p.world_id = l.world_id and p.uid = l.uid and lower(p.name) = 'nakatari'
             where l.def = 'plank' and p.world_id::text like 'f3a88670%' order by l.id desc limit 10"
+          # And where it is: every crate on the settlement he keeps or belongs to, or made by him, and the planks in each.
+          ask "Nakatari's settlement" "select d.name, d.x, d.y, d.radius, d.founded_by = p.uid as founder
+             from player p join deed d on d.world_id = p.world_id
+              and (d.founded_by = p.uid or exists (select 1 from deed_member m where m.world_id = d.world_id and m.founder = d.founded_by and m.uid = p.uid))
+            where lower(p.name) = 'nakatari' and p.world_id::text like 'f3a88670%'"
+          ask "planks in Nakatari's settlement's crates" "select c.id as crate, crate_name(c) as name, c.x, c.y, c.deed, c.store_of is not null as store,
+                 c.made_by = p.uid as his, i.id as item, i.count, round(i.ql::numeric, 2) as ql, i.rare
+             from player p join deed d on d.world_id = p.world_id
+              and (d.founded_by = p.uid or exists (select 1 from deed_member m where m.world_id = d.world_id and m.founder = d.founded_by and m.uid = p.uid))
+             join crate c on c.world_id = p.world_id and (deed_covers(d, c.x, c.y) or c.made_by = p.uid)
+             join item i on i.world_id = c.world_id and i.holder = 'crate' and i.crate = c.id and i.def = 'plank'
+            where lower(p.name) = 'nakatari' and p.world_id::text like 'f3a88670%' order by c.id, i.id"
+          ask "Nakatari in any store log, last 3 days" "select to_char(l.at, 'MM-DD HH24:MI') as at, l.put, l.def, l.what, l.count, l.store
+             from deed_store_log l join player p on p.world_id = l.world_id and p.uid = l.uid and lower(p.name) = 'nakatari'
+            where p.world_id::text like 'f3a88670%' and l.at > now() - interval '3 days' order by l.id desc limit 15"
           # Asked about: "Catgenova's position is broken, every time I move I rubber band back". The body as the island
           # holds it, what holds a walk back (aboard, overload, cart, saddle), the browser's errors from that account, and
           # four short trial steps as catgenova, each undone (a subtransaction rolled back, then the whole), so nothing is
