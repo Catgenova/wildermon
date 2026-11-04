@@ -1,9 +1,9 @@
 import { rand } from '../../ivy';
 import { proj, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, faceColour, hex, mix, type Tone } from '../core';
-import { bayAt, BUILDERS, byRole, ownerOf, refugeGaps, runeLine, samples, turned, U, type BridgePainter, type FaceInfo, type Kit, type L, type Part3 } from './core';
+import { bayAt, BUILDERS, byRole, lampStandard, ownerOf, refugeGaps, runeLine, samples, turned, U, type BridgePainter, type FaceInfo, type Kit, type L, type Part3 } from './core';
 import { plasterPaint, stoneBase } from './base';
-import { arcade, cface, fi, lampPost, roundOut, runsOf, tilePaint, wallFrame, refuged, runeKey, seen, whole, hash2 } from './clay';
+import { arcade, cface, fi, roundOut, runsOf, tilePaint, wallFrame, refuged, runeKey, seen, whole, hash2 } from './clay';
 
 /**
  * Clay adobe: the coat of the island's adobe houses (`ADOBE` in
@@ -313,7 +313,7 @@ function ends(k: Kit): void {
  * Over each pier of a bridge two lanes wide, a round refuge on its buttress:
  * a half-round of deck carried out over it, its edge the cornice's, a low
  * round wall about it with a round post where it meets the parapet; at three
- * lanes a lamp in it.
+ * lanes a lamp on a round post at the front of it.
  */
 function refuges(k0: Kit): void {
   const { plan, sl, st } = k0;
@@ -365,9 +365,12 @@ function refuges(k0: Kit): void {
         if (ownerOf(k, s - T * 0.6, s + T * 0.6) === null) continue;
         turned(k, part, s, tp, z, [[0, T * 0.62], [zt - z + 0.6, T * 0.6], [zt - z + 2.2, T * 0.4], [zt - z + 3.1, 0]], 8, st.stone, 2.4);
       }
-      if (plan.width >= 3 && ownerOf(k, p.s - 0.05, p.s + 0.05) !== null) {
-        const tl = t + edge * R * 0.45;
-        lampPost(k, part, p.s, tl, z, PALE);
+      // At three lanes a lamp standard over the pier, on a round post through the wall at the front of its round, as high
+      // as the posts either hand. Laid after the wall, all lower than its foot, and by depth with those posts.
+      if (plan.width >= 3) {
+        const tp = t + edge * (R - T / 2), h = zt - z + 2.4;
+        turned(k, part, p.s, tp, z, [[0, T * 0.62], [zt - z + 0.6, T * 0.6], [h - 0.8, T * 0.6], [h - 0.6, T * 0.68], [h, T * 0.68]], 8, st.stone, 2.4);
+        lampStandard(k, part, p.s, tp, z + h, 2.5);
       }
     }
   }

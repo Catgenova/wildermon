@@ -1,7 +1,7 @@
 import { cut, glyphPath, proj, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, dot, faceColour, hex, mix, type Ctx, type RGB, type Tone, type V3 } from '../core';
 import {
-  bayAt, BUILDERS, edgeOn, ownerOf, REFUGE_OUT, refugeGaps, refugeOutline, samples, turned, U,
+  bayAt, box, BUILDERS, edgeOn, lampStandard, ownerOf, REFUGE_OUT, refugeGaps, refugeOutline, samples, turned, U,
   type BridgePainter, type BridgeStyle, type Builders, type FaceInfo, type Kit, type L, type Part3, type Plan, type Role, type Slice,
 } from './core';
 
@@ -837,22 +837,21 @@ export interface RefugeWall {
   thick: number;
   /** What stands on the coping, segment by segment: merlons, stones on edge. */
   crown?: (k: Kit, part: Part3, face: Kit['face'], seg: Seg, inner: Seg, z: number, seed: number, front: boolean) => void;
+  /** How high over the coping the crown's stone in the middle of the front stands, for a lamp on it; without one, a pedestal. */
+  lampOn?: number;
 }
 
+/** How high a refuge's lamp pedestal stands over its coping, its cap the last unit of it. */
+const PEDESTAL = 3.4;
+
 /**
- * Over each pier: the core's refuge platform, corbel and lamp, its parapet
- * laid by the style instead, the same wall and coping as the bridge's own
- * run round the refuge's outline (`refugeOutline`), its rune line along it.
+ * Over each pier: the core's refuge platform and corbel, and its parapet
+ * the style's, the same wall and coping as the bridge's own run round the
+ * refuge's outline (`refugeOutline`), its rune line along it; at three
+ * lanes a lamp standard in the middle of its front (`lampStandard`).
  */
 export function refugesOwn(w: RefugeWall): Builders['refuges'] {
   return (k) => {
-    // Of the core's refuge only its lamp (its solids laid from order 4): the platform, corbel and parapet are laid here.
-    const order: Record<Part3, number | undefined> = { back: undefined, front: undefined, rail: undefined };
-    const lines = k.glow.lines.length;
-    const solid: Kit['solid'] = (part, o) => { order[part] = o; k.solid(part, o); };
-    const face: Kit['face'] = (part, pts, out, tone, info, frame) => { if ((order[part] ?? 0) >= 4) k.face(part, pts, out, tone, info, frame); };
-    BUILDERS.refuges({ ...k, solid, face });
-    k.glow.lines.splice(lines);
     const { plan, sl, st } = k;
     for (const p of plan.piers) {
       if (p.end) continue;
@@ -917,6 +916,18 @@ export function refugesOwn(w: RefugeWall): Builders['refuges'] {
             // Cut to the slice as the rest, so a piece straddling a cut is laid half in each.
             w.crown(k2, part, clip, o2, i2, z2, Math.round(p.s * 40) * 8 + q * 2 + (edge > 0 ? 1 : 0), q > 0 && q < segs.length - 1);
           }
+        }
+        // At three lanes a lamp standard over the pier, in the middle of the front: on the crown's middle stone there, or on a
+        // pedestal through the coping (each slice its half, a pier may stand on a cut). Laid after the wall, all lower than its foot.
+        if (plan.width >= 3) {
+          const tc = (outer[1][1] + inner[1][1]) / 2;
+          let foot = z2 + (w.lampOn ?? 0);
+          if (w.lampOn === undefined) {
+            foot = z2 + PEDESTAL;
+            box(k2, part, p.s - 0.06, p.s + 0.06, tc - w.thick / 2 - 0.012, tc + w.thick / 2 + 0.012, z, foot - 1, st.stone, 'post', 2.7);
+            box(k2, part, p.s - 0.072, p.s + 0.072, tc - w.thick / 2 - 0.024, tc + w.thick / 2 + 0.024, foot - 1, foot, st.trim, 'cap', 2.8);
+          }
+          if (ownerOf(k, p.s - 0.05, p.s + 0.05) !== null) lampStandard(k2, part, p.s, tc, foot, 2.9);
         }
       }
     }
@@ -998,9 +1009,9 @@ function crenelParapet(k: Kit, edge: number, part: Part3): void {
   }
 }
 
-/** Round each refuge the same crenellated parapet: one capped merlon across its front, its splayed sides left open as embrasures. */
+/** Round each refuge the same crenellated parapet: one capped merlon across its front, the lamp on it, its splayed sides left open as embrasures. */
 const crenelRefuges = refugesOwn({
-  top: LOW, cope: COPE, over: 0.014, thick: 0.09,
+  top: LOW, cope: COPE, over: 0.014, thick: 0.09, lampOn: MERLON + MCAP,
   crown: (k, part, face, o, i, z, _seed, front) => {
     if (!front) return;
     const h = Math.min(0.4, 0.1 / o.len);

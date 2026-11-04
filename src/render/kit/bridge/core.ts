@@ -967,7 +967,7 @@ export function newel(k: Kit, part: Part3, s: number, t: number, z: number): voi
 /**
  * Over each pier of a bridge two lanes wide, a refuge: the deck carried out
  * over the cutwater, the parapet broken (`refugeGaps`) and run round it
- * instead; and at three lanes, a lamp in it.
+ * instead; and at three lanes, a lamp on a pedestal in its front (`lamp`).
  */
 function refugeFor(k: Kit): void {
   const { plan, sl, st } = k;
@@ -1003,7 +1003,7 @@ function refugeFor(k: Kit): void {
       }
       // Its parapet, run round it.
       refugeParapet(k2, part, line, edge, z, face);
-      if (plan.width >= 3 && ownerOf(k2, p.s - 0.05, p.s + 0.05) !== null) lamp(k2, part, p.s, t + edge * REFUGE_OUT * 0.45, z);
+      if (plan.width >= 3) lamp(k2, part, p.s, t, edge, z);
     }
   }
 }
@@ -1199,26 +1199,55 @@ function refugeParapet(k: Kit, part: Part3, line: Array<[number, number]>, edge:
   }
 }
 
-/** A lamp post on a stone bridge, a banner pole on a timber one. */
-function lamp(k: Kit, part: Part3, s: number, t: number, z: number): void {
+/**
+ * The lamp of the refuge over pier `s` on outer edge `edge` (at `t` across).
+ * Stone: a pedestal in the middle of the refuge's front wall, as tall as a
+ * post (its halves laid by the slices either side of a cut, as the wall's
+ * are), and the lamp standard on it (`lampStandard`). Timber: a banner pole
+ * on the refuge's floor.
+ */
+function lamp(k: Kit, part: Part3, s: number, t: number, edge: number, z: number): void {
   const { st } = k;
-  const H = 26;
-  const iron = { lit: hex('#a6b2c6'), shade: hex('#454c66') } as Tone;
   if (st.family === 'stone') {
-    box(k, part, s - 0.04, s + 0.04, t - 0.04, t + 0.04, z, z + 3, st.trim, 'plinth', 4);
-    turned(k, part, s, t, z + 3, [[0, 0.02], [H - 6, 0.016], [H - 5, 0.025]], 6, iron, 4.1);
-    // The lantern: a glass box and a cap.
-    box(k, part, s - 0.03, s + 0.03, t - 0.03, t + 0.03, z + H - 2, z + H + 2.5, { lit: hex('#ffe7a4'), shade: hex('#e9b468') }, 'lamp', 4.2);
-    turned(k, part, s, t, z + H + 2.5, [[0, 0.04], [1.4, 0]], 4, iron, 4.3);
-    k.glow.lamps.push(k.m([s, t, z + H]));
-  } else {
-    const pole = st.post ?? st.stone;
-    turned(k, part, s, t, z, [[0, 0.018], [H + 4, 0.014], [H + 5, 0.022], [H + 5.6, 0]], 6, pole, 4.1);
-    const cloth = { lit: mix(st.rail?.lit ?? hex('#f2b8c6'), hex('#ffffff'), 0.1), shade: mix(st.rail?.shade ?? hex('#a07090'), hex('#5a4a6a'), 0.3) } as Tone;
-    k.solid(part, 4.2);
-    const top = z + H + 3;
-    k.face(part, [[s, t, top], [s + 0.16, t, top - 1], [s + 0.14, t, top - 7], [s, t, top - 6]], [0, 1, 0], cloth, info('lamp', 0, 1, 0, 1, 1));
+    // The middle of the front wall's thickness (`refugeParapet`).
+    const tc = t + edge * (REFUGE_OUT - 0.04);
+    const top = z + (st.parapetHeight ?? 10) + 2.8;
+    box(k, part, s - 0.06, s + 0.06, tc - 0.06, tc + 0.06, z, top - 1, st.stone, 'post', 2.7);
+    box(k, part, s - 0.07, s + 0.07, tc - 0.07, tc + 0.07, top - 1, top, st.trim, 'cap', 2.8);
+    if (ownerOf(k, s - 0.05, s + 0.05) !== null) lampStandard(k, part, s, tc, top, 2.9);
+    return;
   }
+  if (ownerOf(k, s - 0.05, s + 0.05) === null) return;
+  const H = 26;
+  const tp = t + edge * REFUGE_OUT * 0.45;
+  const pole = st.post ?? st.stone;
+  turned(k, part, s, tp, z, [[0, 0.018], [H + 4, 0.014], [H + 5, 0.022], [H + 5.6, 0]], 6, pole, 4.1);
+  const cloth = { lit: mix(st.rail?.lit ?? hex('#f2b8c6'), hex('#ffffff'), 0.1), shade: mix(st.rail?.shade ?? hex('#a07090'), hex('#5a4a6a'), 0.3) } as Tone;
+  k.solid(part, 4.2);
+  const top = z + H + 3;
+  k.face(part, [[s, tp, top], [s + 0.16, tp, top - 1], [s + 0.14, tp, top - 7], [s, tp, top - 6]], [0, 1, 0], cloth, info('lamp', 0, 1, 0, 1, 1));
+}
+
+/** A lamp standard's iron post from its foot to its lantern, and the lantern, in units; their tones. */
+export const STANDARD = 12;
+export const LANTERN = 4.5;
+export const LAMP_IRON: Tone = { lit: hex('#a6b2c6'), shade: hex('#454c66') };
+export const LAMP_GLASS: Tone = { lit: hex('#ffe7a4'), shade: hex('#e9b468') };
+
+/**
+ * A lamp standard, its foot at `z` on the top of the pedestal it stands on
+ * over a refuge's pier: an iron post, a glass lantern and its cap, laid
+ * whole by whichever slice lays it. Nothing of the parapet round it stands
+ * higher than its foot, so all of that is laid before it (`order`, after
+ * the pedestal's) and none of it can be in front of it; what stands as
+ * high, a post's finial, is laid by depth with it, at the same order.
+ */
+export function lampStandard(k: Kit, part: Part3, s: number, t: number, z: number, order: number): void {
+  const kw: Kit = { ...k, sl: { ...k.sl, s0: Math.min(k.sl.s0, s - 0.1), s1: Math.max(k.sl.s1, s + 0.1) } };
+  turned(kw, part, s, t, z, [[0, 0.028], [1, 0.02], [STANDARD - 1, 0.016], [STANDARD, 0.025]], 6, LAMP_IRON, order);
+  box(kw, part, s - 0.03, s + 0.03, t - 0.03, t + 0.03, z + STANDARD, z + STANDARD + LANTERN, LAMP_GLASS, 'lamp', order + 0.01);
+  turned(kw, part, s, t, z + STANDARD + LANTERN, [[0, 0.04], [1.4, 0]], 4, LAMP_IRON, order + 0.02);
+  k.glow.lamps.push(k.m([s, t, z + STANDARD + LANTERN / 2]));
 }
 
 /* ---- timber --------------------------------------------------------------------------------------- */

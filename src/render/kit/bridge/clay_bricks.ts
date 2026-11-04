@@ -1,8 +1,8 @@
 import { glyphPath, RUNE_GOLD, RUNE_WHITE } from '../../runestone';
 import { css, hex, mix, type Tone } from '../core';
-import { box, BUILDERS, byRole, edgeOn, ownerOf, REFUGE_OUT, refugeHalf, refugeLine, refugeOutline, turned, U, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
+import { box, BUILDERS, byRole, edgeOn, lampStandard, ownerOf, REFUGE_OUT, refugeHalf, refugeLine, refugeOutline, turned, U, type BridgePainter, type Kit, type L, type Part3, type Role } from './core';
 import { stoneBase } from './base';
-import { arcade, brickPaint, cface, fi, herringbonePaint, lampPost, refuged, ringPaint, runeKey, seen, whole, tilePaint, vaultPaint } from './clay';
+import { arcade, brickPaint, cface, fi, herringbonePaint, refuged, ringPaint, runeKey, seen, whole, tilePaint, vaultPaint } from './clay';
 
 /**
  * Clay bricks: the brick of the island's brick houses (`BRICK` in
@@ -107,7 +107,8 @@ const toward = (line: ST[], c: ST, fs: number, ft: number): ST[] => line.map(([s
  * brick buttress of the same plan standing on the ground, three courses
  * corbelled out from it, the floor in the deck's pavers, its edge the
  * cornice's, and round it a wall of the parapet's brick under the dark
- * coping, the parapet's rune line along it; at three lanes a lamp in it.
+ * coping, the parapet's rune line along it; at three lanes a lamp on a
+ * pedestal in the middle of its front.
  */
 function refuges(k0: Kit): void {
   const { plan, sl, st } = k0;
@@ -167,7 +168,14 @@ function refuges(k0: Kit): void {
           k.glow.lines.push([k.m([a, tAt(a) + edge * 0.004, zc - cop * 0.5]), k.m([b, tAt(b) + edge * 0.004, zc - cop * 0.5])]);
         }
       }
-      if (plan.width >= 3 && ownerOf(k, p.s - 0.05, p.s + 0.05) !== null) lampPost(k, part, p.s, t + edge * REFUGE_OUT * 0.5, z, st.trim);
+      // At three lanes a lamp standard over the pier, on a brick pedestal through the middle of the front wall under a cap of
+      // the coping's stone. Laid after the wall, all lower than its foot.
+      if (plan.width >= 3) {
+        const tc = t + edge * (REFUGE_OUT - T / 2), foot = zc + 3.4;
+        box(k, part, p.s - 0.06, p.s + 0.06, tc - T / 2 - 0.012, tc + T / 2 + 0.012, z, foot - 1, BRICK, 'post', 2.7);
+        box(k, part, p.s - 0.072, p.s + 0.072, tc - T / 2 - 0.024, tc + T / 2 + 0.024, foot - 1, foot, st.trim, 'cap', 2.8);
+        lampStandard(k, part, p.s, tc, foot, 2.9);
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 import { cut, glyphPath, lightOf, proj, RUNE_GOLD } from '../../runestone';
 import { css, faceColour, hex, mix, type Ctx, type RGB, type Tone, type V3 } from '../core';
-import { bayAt, box, ownerOf, RAMP_CUTWATER, RAMP_WALL, rampReturns, refugeGaps, refugeHalf, samples, turned, U, type Bay, type BridgePainter, type FaceInfo, type Kit, type L, type Part3, type Pier, type Plan, type Role } from './core';
+import { bayAt, box, ownerOf, RAMP_CUTWATER, RAMP_WALL, rampReturns, refugeGaps, refugeHalf, samples, U, type Bay, type BridgePainter, type FaceInfo, type Kit, type L, type Part3, type Pier, type Plan, type Role } from './core';
 
 /**
  * What the two clay bridges share, built their own way rather than the
@@ -629,19 +629,6 @@ export function runsOf(plan: Plan, s0: number, s1: number): Array<[number, numbe
     });
   }
   return runs;
-}
-
-/* ---- lamps ---------------------------------------------------------------------------------------- */
-
-/** A lamp post: an iron post on a plinth, a glass lantern and its cap, as the other stone bridges have. */
-export function lampPost(k: Kit, part: Part3, s: number, t: number, z: number, plinth: Tone): void {
-  const H = 26;
-  const iron = { lit: hex('#a6b2c6'), shade: hex('#454c66') } as Tone;
-  box(k, part, s - 0.04, s + 0.04, t - 0.04, t + 0.04, z, z + 3, plinth, 'plinth', 4);
-  turned(k, part, s, t, z + 3, [[0, 0.02], [H - 6, 0.016], [H - 5, 0.025]], 6, iron, 4.1);
-  box(k, part, s - 0.03, s + 0.03, t - 0.03, t + 0.03, z + H - 2, z + H + 2.5, { lit: hex('#ffe7a4'), shade: hex('#e9b468') }, 'lamp', 4.2);
-  turned(k, part, s, t, z + H + 2.5, [[0, 0.04], [1.4, 0]], 4, iron, 4.3);
-  k.glow.lamps.push(k.m([s, t, z + H]));
 }
 
 /* ---- painters ------------------------------------------------------------------------------------- */

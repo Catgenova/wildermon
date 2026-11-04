@@ -1,7 +1,7 @@
 import { css, dot, faceColour, hex, mix, proj, sub, TAU, type Ctx, type RGB, type Tone } from '../core';
 import { cut, glyphPath, lightOf, RUNE_GOLD, RUNE_WHITE, type Eye } from '../../runestone';
 import {
-  BRIDGE_INK, edgeOn, RAMP_CUTWATER, RAMP_WALL, U, bayAt, box, ownerOf, rampReturns, refugeGaps, refugeOutline, samples,
+  BRIDGE_INK, edgeOn, LAMP_GLASS, LAMP_IRON, LANTERN, RAMP_CUTWATER, RAMP_WALL, STANDARD, U, bayAt, box, ownerOf, rampReturns, refugeGaps, refugeOutline, samples,
   type BridgePainter, type BridgeStyle, type FaceInfo, type Kit, type L, type Part3, type Plan, type Role,
 } from './core';
 
@@ -763,8 +763,11 @@ function parapetLine(k: Kit, cfg: Classical, part: Part3, edge: number, tOut: nu
 /** The frame of an upright face along the bridge at `t`, as the core's. */
 const wallF = (t: number, out: number): { o: L; a: L; b: L } => ({ o: [0, t, 0], a: [out > 0 ? 1 / U : -1 / U, 0, 0], b: [0, 0, 1] });
 
-/** A post of the parapet (a die on a solid one) over `p0`..`p1` along the bridge on the line `t0`..`t1`, its cap over the coping and its finial. */
-function postAt(k: Kit, cfg: Classical, part: Part3, p0: number, p1: number, t0: number, t1: number, order: number): void {
+/**
+ * A post of the parapet (a die on a solid one) over `p0`..`p1` along the bridge on the line `t0`..`t1`, its cap over the
+ * coping and its finial, or none where a lamp stands on it (`lampAt`); its cap's top, which the finial or the lamp stands on.
+ */
+function postAt(k: Kit, cfg: Classical, part: Part3, p0: number, p1: number, t0: number, t1: number, order: number, finial = true): number {
   const { plan, st } = k;
   const sp = (p0 + p1) / 2;
   const solid = cfg.parapet === 'solid';
@@ -774,11 +777,13 @@ function postAt(k: Kit, cfg: Classical, part: Part3, p0: number, p1: number, t0:
   box(k, part, p0, p1, t0 - dt, t1 + dt, treadAt(plan, sp), railLow + (solid ? coping : 0), cfg.posts === 'trim' ? st.trim : st.stone, 'post', order + 0.5);
   const capZ = railLow + coping;
   box(k, part, p0 - 0.012, p1 + 0.012, t0 - dt - 0.012, t1 + dt + 0.012, capZ, capZ + 1.3, st.trim, 'cap', order + 1.6);
+  if (!finial) return capZ + 1.3;
   const tc = (t0 + t1) / 2;
   const fin = cfg.finial === 'urn' ? URN : BALL;
   const sc = cfg.finial === 'urn' ? 0.55 : 0.8;
   k.loose(part, (g, e) => lathe(g, e, k, [sp, tc, capZ + 1.3], fin.map(([h, r]) => [h * sc, r * sc]), st.stone, 0.45),
     [[sp - 0.05, tc, capZ], [sp + 0.05, tc, capZ + 1.3 + 3.2 * sc]], order + 1.7);
+  return capZ + 1.3;
 }
 
 /** The runs of a slice's parapet: the slice less the refuges' gaps. */
@@ -814,20 +819,26 @@ function newelAt(k: Kit, cfg: Classical, part: Part3, s: number, t: number): voi
     [[s - w, t, z + H], [s + w, t, z + H + 0.9 + 6.5 * sc]], 3.4);
 }
 
-/** A lamp standard on a refuge: a pedestal, an iron post, a lantern. */
-function lampAt(k: Kit, part: Part3, s: number, t: number, z: number): void {
-  const { st } = k;
-  const iron: Tone = { lit: hex('#a6b2c6'), shade: hex('#454c66') };
-  const H = 26;
-  box(k, part, s - 0.05, s + 0.05, t - 0.05, t + 0.05, z, z + 4, st.trim, 'plinth', 4);
+/**
+ * A lamp standard on the pedestal in a refuge's front (`postAt`), its foot at `z` on the pedestal's cap: an iron post, a
+ * lantern, its cap; laid whole by whichever slice lays it. Laid after the parapet, all of which is lower than its foot, and
+ * by depth with the posts' finials (`order`, theirs), which are as high.
+ */
+function lampAt(k: Kit, part: Part3, s: number, t: number, z: number, order: number): void {
+  const kw: Kit = { ...k, sl: { ...k.sl, s0: Math.min(k.sl.s0, s - 0.1), s1: Math.max(k.sl.s1, s + 0.1) } };
+  const L = STANDARD - 0.6;
   k.loose(part, (g, e) => {
-    lathe(g, e, k, [s, t, z + 4], [[0, 0.9], [1.2, 0.6], [H - 7, 0.45], [H - 6, 0.9], [H - 5.6, 0.5]], iron, 0.45);
-  }, [[s - 0.05, t, z + 4], [s + 0.05, t, z + H]], 4.1);
-  box(k, part, s - 0.032, s + 0.032, t - 0.032, t + 0.032, z + H - 5.6, z + H - 1, { lit: hex('#ffe7a4'), shade: hex('#e9b468') }, 'lamp', 4.2);
-  k.loose(part, (g, e) => lathe(g, e, k, [s, t, z + H - 1], [[0, 1.9], [0.8, 1.4], [2, 0.3], [2.6, 0.6], [3, 0]], iron, 0.45),
-    [[s - 0.05, t, z + H - 1], [s + 0.05, t, z + H + 2]], 4.3);
-  k.glow.lamps.push(k.m([s, t, z + H - 3.3]));
+    lathe(g, e, k, [s, t, z], [[0, 0.9], [1.2, 0.6], [L - 1, 0.45], [L, 0.9], [L + 0.4, 0.5]], LAMP_IRON, 0.45);
+  }, [[s - 0.05, t, z], [s + 0.05, t, z + L]], order);
+  box(kw, part, s - 0.032, s + 0.032, t - 0.032, t + 0.032, z + L + 0.4, z + L + 0.4 + LANTERN, LAMP_GLASS, 'lamp', order + 0.01);
+  const top = z + L + 0.4 + LANTERN;
+  k.loose(part, (g, e) => lathe(g, e, k, [s, t, top], [[0, 1.9], [0.8, 1.4], [2, 0.3], [2.6, 0.6], [3, 0]], LAMP_IRON, 0.45),
+    [[s - 0.05, t, top], [s + 0.05, t, top + 3]], order + 0.02);
+  k.glow.lamps.push(k.m([s, t, top - LANTERN / 2]));
 }
+
+/** The side of a refuge's outline (`refugeOutline`) that is its front, along the bridge: the lamp's pedestal is in its middle. */
+const FRONT = 1;
 
 /** A polygon of the frame cut to the run `s0`..`s1` along the bridge. */
 function clipRun(pts: L[], s0: number, s1: number): L[] {
@@ -861,7 +872,8 @@ const segF = (a: [number, number], b: [number, number]): { o: L; a: L; b: L } =>
  * outline (`refugeOutline`, a half-hexagon over the cutwater): the deck
  * carried out on a corbel, the cornice run round its edge, and the parapet
  * turned out round it, a post at each corner, balusters (or the wall) along
- * each side; a lamp in it at three lanes.
+ * each side; at three lanes a lamp standard on a post in the middle of its
+ * front, over the pier (`lampAt`).
  */
 function refugesOf(k: Kit, cfg: Classical): void {
   const { plan, sl, st } = k;
@@ -869,6 +881,7 @@ function refugesOf(k: Kit, cfg: Classical): void {
   if (plan.ramp) return;
   const T = 0.1;
   const H = cfg.parapetHeight, lift = stepOf(plan);
+  const lit = plan.width >= 3;
   for (const p of plan.piers) {
     if (p.end) continue;
     for (const edge of sl.edges) {
@@ -960,12 +973,18 @@ function refugesOf(k: Kit, cfg: Classical): void {
         if (cfg.parapet === 'balustrade') {
           // Clear of the post at the bridge's end of a side, and of the corner at the other.
           const e0 = q === 0 ? POST * 1.4 : 0.03, e1 = q === segs.length - 1 ? POST * 1.4 : 0.03;
-          const m = Math.max(1, Math.round((len - e0 - e1) / 0.088));
+          // And on the front, either side of the lamp's pedestal in its middle, where there is room for one.
+          const ped = POST + 0.012, split = q === FRONT && lit;
+          const spans: Array<[number, number]> = split ? [[e0, len / 2 - ped], [len / 2 + ped, len - e1]] : [[e0, len - e1]];
           const pts: Array<[number, number]> = [];
-          for (let j = 0; j < m; j++) {
-            const u = (e0 + ((len - e0 - e1) * (j + 0.5)) / m) / len;
-            const c = inward([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u], n, T / 2);
-            if (c[0] >= sl.s0 - 1e-6 && c[0] < sl.s1 - 1e-6) pts.push(c);
+          for (const [u0, u1] of spans) {
+            if (split && u1 - u0 < 0.04) continue;
+            const m = Math.max(1, Math.round((u1 - u0) / 0.088));
+            for (let j = 0; j < m; j++) {
+              const u = (u0 + ((u1 - u0) * (j + 0.5)) / m) / len;
+              const c = inward([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u], n, T / 2);
+              if (c[0] >= sl.s0 - 1e-6 && c[0] < sl.s1 - 1e-6) pts.push(c);
+            }
           }
           if (pts.length) {
             pts.sort((q, r) => dot(k.m([q[0], q[1], 0]), k.e.toward) - dot(k.m([r[0], r[1], 0]), k.e.toward));
@@ -981,7 +1000,13 @@ function refugesOf(k: Kit, cfg: Classical): void {
         if (c[0] < sl.s0 - 1e-6 || c[0] >= sl.s1 - 1e-6) continue;
         postAt(k2, cfg, part, c[0] - POST, c[0] + POST, c[1] - T / 2, c[1] + T / 2, 3);
       }
-      if (plan.width >= 3 && ownerOf(k2, p.s - 0.05, p.s + 0.05) !== null) lampAt(k2, part, p.s, tOut + edge * 0.11, z);
+      // At three lanes a lamp, on a post in the middle of the front with no finial: each slice its half of the post (a pier
+      // may stand on a cut), the slice that owns its middle the lamp. Its finials' order: those are as high as its foot.
+      if (lit) {
+        const tc = line[FRONT][1] - edge * T / 2;
+        const foot = postAt(k2, cfg, part, p.s - POST, p.s + POST, tc - T / 2, tc + T / 2, 3, false);
+        if (ownerOf(k2, p.s - 0.05, p.s + 0.05) !== null) lampAt(k2, part, p.s, tc, foot, 4.7);
+      }
     }
   }
 }

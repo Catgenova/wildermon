@@ -560,7 +560,7 @@ export function glowAlong(k: Kit, a: L, b: L, z: number): void {
  * Over each pier of a bridge two lanes wide or more, on each outer edge, a
  * refuge: a platform with its front corners cut, carried on two knee braces
  * from the bent, railed round its three outer sides; three lanes wide, a
- * banner in it.
+ * banner whose pole is a post in the middle of its front rail.
  */
 function refuges(k: Kit, c: Carpentry): void {
   const { plan, sl, st } = k;
@@ -596,7 +596,9 @@ function refuges(k: Kit, c: Carpentry): void {
       R.run(k, part, order, f0, f1, [0, 1], edge);
       R.run(k, part, order, f1, b1, [0, 1], edge);
       railPosts(k, part, order + 0.5, [f0, f1].filter((q) => q[0] >= sl.s0 - EPS && q[0] < sl.s1 - EPS), edge, R);
-      if (plan.width >= 3 && ownNear(k, p.s - 0.03, p.s + 0.03)) c.banner(k, part, p.s, (te + tf) / 2 + edge * 0.02, z, edge);
+      // A post of the front rail, on its line: the rail runs into it as into any post, laid before it. On the floor behind
+      // the rail it was laid over the rail, which stands in front of it.
+      if (plan.width >= 3 && ownNear(k, p.s - 0.03, p.s + 0.03)) c.banner(k, part, p.s, tin, z, edge);
     }
   }
 }
