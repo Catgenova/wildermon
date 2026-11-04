@@ -90,7 +90,7 @@ import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
 import { CUT_VINE, GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
 import { ARTIFACT_FOR, SHEAR_FROM, SHEAR_WOOL } from '../../game/creatureActions';
-import { BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID, BREWS, GRAPE_WINE_GRAPES } from '../../game/brewing';
+import { BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID, BREWS, GRAPE_WINE_GRAPES, UNDRINKABLE } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
@@ -114,7 +114,7 @@ import { BEARD_ODDS } from '../../game/look';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, type PlacedFurniture } from '../../game/furniture';
-import { billWords, countOf, DRINK_LITRES, LITRE_KG, TAN_LYE, type Item } from '../../game/items';
+import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
 import { meltLumps } from '../../game/melt';
@@ -4241,6 +4241,14 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 478,
+    day: '2026-11-04',
+    lines: () => [
+      `Changed: Drink from a barrel, well, fountain, bucket or skin: any liquid but ${listed([...UNDRINKABLE].map((l) => LIQUID_NAME[l]))} (was: water, milk, juice and brews only); ${DRINK_LITRES} litre a drink. `
+        + `Bucket of water: ${percent(itemDef('water_bucket').drink ?? 0)} of thirst; bucket of whey: ${percent(itemDef('whey_bucket').drink ?? 0)} (was: not drinkable).`,
+    ],
   },
   {
     n: 475,

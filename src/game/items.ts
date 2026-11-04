@@ -203,7 +203,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   crate_plank: { name: 'Plank crate', category: 'misc', weight: 15, decay: 6, description: 'Holds {capacity} things. Placed on any spot of a tile.' },
   water_skin: { name: 'Water skin', category: 'misc', weight: 0.5, drink: 0.35, charges: 5, description: 'Holds water. Fill at any shore.' },
   bucket: { name: 'Bucket', category: 'tool', weight: 1.6, decay: 8, description: 'Fill at any shore. Ashes and water make lye in it.' },
-  water_bucket: { name: 'Bucket of water', category: 'tool', weight: 6, decay: 8, charges: 5, description: '{bucketLitres} L. Full: leaches ashes into lye.' },
+  water_bucket: { name: 'Bucket of water', category: 'tool', weight: 6, decay: 8, drink: 0.5, charges: 5, description: '{bucketLitres} L. Full: leaches ashes into lye.' },
   lye_bucket: { name: 'Bucket of lye', category: 'tool', weight: 6, decay: 10, charges: 5, description: '{bucketLitres} L. Tanning a hide: {recipe.tan_hide.lye_bucket} L. Cleaning a wound, removing dye or paint: {lyeUse} L.' },
   dirt: { name: 'Dirt', category: 'material', weight: 20, stackable: true, raw: true, description: 'Drop to raise the ground.' },
   moss: { name: 'Moss', category: 'material', weight: 0.5, stackable: true, raw: true, description: 'Cutting a moss tile gives {moss.cut}. Plant {moss.plant} on a dirt tile: the tile becomes moss.' },

@@ -3369,6 +3369,7 @@ update item_def set description = 'Holds 60 things. Placed on any spot of a tile
 update item_def set drink = 0.35 where id = 'water_skin';
 update item_def set description = 'Holds water. Fill at any shore.' where id = 'water_skin';
 update item_def set description = 'Fill at any shore. Ashes and water make lye in it.' where id = 'bucket';
+update item_def set drink = 0.5 where id = 'water_bucket';
 update item_def set description = '5 L. Full: leaches ashes into lye.' where id = 'water_bucket';
 update item_def set description = '5 L. Tanning a hide: 1 L. Cleaning a wound, removing dye or paint: 1 L.' where id = 'lye_bucket';
 update item_def set description = 'Drop to raise the ground.' where id = 'dirt';
@@ -3866,6 +3867,7 @@ update item_def set description = 'Enchant (on the scroll): into fishing nets in
 update item_def set description = 'Enchant (on the scroll): into beds, cots or tents in your pack. Chance: the average of your enchanting and the scroll''s QL, as a percent, 5% to 95%. Enchantment QL: about that average, at most the scroll''s QL and the QL of what it goes into. Fail: the thing takes 30 damage, and 5% of the time is destroyed. Scroll used up either way. One enchantment per thing. At QL 100: Sleep bonus per hour asleep +25%; max stored +25%. Linear below. Failed writing: motes lost; the papyrus takes 25 damage.' where id = 'dreamweave_scroll';
 update item_def set description = 'Enchant (on the scroll): into saddles in your pack. Chance: the average of your enchanting and the scroll''s QL, as a percent, 5% to 95%. Enchantment QL: about that average, at most the scroll''s QL and the QL of what it goes into. Fail: the thing takes 30 damage, and 5% of the time is destroyed. Scroll used up either way. One enchantment per thing. At QL 100: Mount speed +10%, after tack makers'' bonuses. Linear below. Failed writing: motes lost; the papyrus takes 25 damage.' where id = 'fleetfoot_scroll';
 update item_def set description = 'Enchant (on the scroll): into bridles in your pack. Chance: the average of your enchanting and the scroll''s QL, as a percent, 5% to 95%. Enchantment QL: about that average, at most the scroll''s QL and the QL of what it goes into. Fail: the thing takes 30 damage, and 5% of the time is destroyed. Scroll used up either way. One enchantment per thing. At QL 100: In pack: tame chance per offering +25%. On a mount: never breaks off a fight for distance. Linear below. Failed writing: motes lost; the papyrus takes 25 damage.' where id = 'tamers_bridle_scroll';
+update item_def set drink = 0.3 where id = 'whey_bucket';
 update item_def set description = '5 litres of whey (left over from pressing a bucket of milk into cheese). Feed to any wildermon you keep: hunger +40%; bucket emptied. Can be poured into a barrel or emptied.' where id = 'whey_bucket';
 update item_def set description = 'Gorral milk: 2 litres per milking. Milk a Gorral into it again; becomes a bucket of milk at 5 litres (excess lost). Not drinkable until full.' where id = 'milk_part';
 insert into boon_skill values (0, 'digging');
@@ -6390,7 +6392,7 @@ insert into liquid_def values ('grape_wine', 'grape wine', true, true);
 insert into liquid_def values ('juice', 'juice', true, false);
 insert into liquid_def values ('spirit', 'spirit', true, true);
 insert into liquid_def values ('dye', 'dye', false, false);
-insert into liquid_def values ('whey', 'whey', false, false);
+insert into liquid_def values ('whey', 'whey', true, false);
 update tile_def set wormy = true where id = 0;
 update tile_def set wormy = true where id = 1;
 update tile_def set wormy = true where id = 2;

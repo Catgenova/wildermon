@@ -114,8 +114,10 @@ export function brewSpringReason(g: Game, f: PlacedFurniture | undefined): strin
   return null;
 }
 
-/** Anything you would actually put in your mouth. */
-export const drinkable = (liquid: LiquidKind | undefined): boolean => liquid === 'water' || liquid === 'milk' || liquid === 'juice' || isBrew(liquid);
+/** The liquids nobody drinks, out of a barrel, a bucket, a well or anything else: lye and dye. The island's `liquid_def.drinkable`. */
+export const UNDRINKABLE: ReadonlySet<LiquidKind> = new Set<LiquidKind>(['lye', 'dye']);
+/** Every liquid but lye and dye. */
+export const drinkable = (liquid: LiquidKind | undefined): boolean => liquid !== undefined && !UNDRINKABLE.has(liquid);
 
 type FurnitureTarget = Extract<Target, { kind: 'furniture' }>;
 const pieceOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.furniture.get((t as FurnitureTarget).id) : undefined);

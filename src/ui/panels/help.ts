@@ -24,7 +24,7 @@ import { HEAL_FED } from '../../game/body';
 import { BOON_BONUS, BOON_FOODS, boonTime, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { bedRest, SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_FOOD, SLEEP_HEAL, SLEEP_WATER, sleepHm, sleepRate } from '../../game/sleep';
 import { TINCTURE_NAMES } from '../../game/remedies';
-import { BREW_BY_ID, BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID, BREWS, isBrew } from '../../game/brewing';
+import { BREW_BY_ID, BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID, BREWS, isBrew, UNDRINKABLE } from '../../game/brewing';
 import { AGEING_GROUPS, CELLAR_AGEING, keepsQl } from '../../game/ageing';
 import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, onceEvery, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, grapesFor, PICK_GRAPES, PLANT_VINE,
@@ -118,7 +118,7 @@ import {
 import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES, PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
-import { billWords, countOf, DEED_DECAY, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor, TAN_LYE } from '../../game/items';
+import { billWords, countOf, DEED_DECAY, DRINK_LITRES, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor, TAN_LYE } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { entryTameLevel, guideEntries, guidePages, keepable } from '../../game/guide';
 import { TRACK_BANDS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
@@ -552,7 +552,7 @@ function dairyHelp(): string {
     <h4>Whey</h4>
     <ul>
       <li>Feed to any wildermon you keep: fills ${percent(WHEY_FEED)} of its hunger (one item of its own diet: ${percent(GRAZE_FILL)}). Bucket returned empty.</li>
-      <li>Not drinkable. Can be poured into a barrel or tipped out. Rots as fast as a bucket of milk.</li>
+      <li>Drink: ${percent(itemDef('whey_bucket').drink ?? 0)} of thirst a litre. Can be poured into a barrel or tipped out. Rots as fast as a bucket of milk.</li>
     </ul>`;
 }
 
@@ -2368,6 +2368,8 @@ export function helpText(): string {
     <ul>
       <li><b>Well</b>: masonry, ${bill('make_well')}. <b>Draws its own water</b> up to <b>${furnitureDef('well').well} litres</b>; rate set by its quality (QL).</li>
       <li>Fill a bucket or waterskin as at a shore, or <b>drink from it</b>.</li>
+      <li><b>Drink</b> from a barrel, well, fountain, bucket or skin: any liquid but ${listed([...UNDRINKABLE].map((l) => LIQUID_NAME[l]))} ("Not drinkable."); ${DRINK_LITRES} litre a drink.
+      Bucket of water: ${percent(itemDef('water_bucket').drink ?? 0)} of thirst; bucket of whey: ${percent(itemDef('whey_bucket').drink ?? 0)}.</li>
       <li><b>Barrels</b>: liquid only; ${BARRELS.length} sizes: ${listed(BARRELS.map((f, i) => `<b>${f.name.toLowerCase()}</b> (${f.liquid}${i === 0 ? ' litres' : ''})`))}.
       One liquid per barrel.</li>
       <li><b>Pour</b> a full bucket in: empty bucket back; on a stack, all of them in turn. Filling a bucket beside a barrel draws from the barrel.</li>

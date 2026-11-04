@@ -4846,6 +4846,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/litres.mjs --log-level=error
           node node_modules/.cache/litres.mjs
 
+      - name: Every liquid but lye and dye is drunk, out of a barrel, a well, a bucket or a skin
+        if: matrix.shard == 5
+        run: |
+          # Both sides: a bucket of water and of whey drunk out of the pack, a
+          # litre and its thirst; lye not offered; a barrel of whey drunk from,
+          # of lye or dye "Not drinkable."; the island's list the browser's.
+          npx esbuild supabase/test/drinkany.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/drinkany.mjs --log-level=error
+          node node_modules/.cache/drinkany.mjs
+
       - name: A mould is the smith's, formed and poured by blacksmithing
         if: matrix.shard == 5
         run: |
