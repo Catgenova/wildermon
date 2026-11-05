@@ -6958,7 +6958,7 @@ export class Renderer {
         const size = bodySize(cr);
         // The stage it has evolved to, which may be drawn as another body.
         const stage = stageOf(cr);
-        const tall = Math.max(22 * size, (wildermonTop(def.id, stage) ?? 0) * big);
+        const tall = Math.max(22 * size, (wildermonTop(def.id, stage, cr.variant) ?? 0) * big);
         const wide = 10 * size;
         // And the box it is drawn in, a long beast's length either way and a little over its head, for keeping it off a runestone's runes.
         const reach = Math.max(32 * big, wide * 3);
@@ -6979,6 +6979,7 @@ export class Renderer {
           graze: cr.state === 'forage',
           rare: cr.rare,
           stage,
+          variant: cr.variant,
           act: actOf(cr, this.game.time),
           tacked: cr.tacked,
         };

@@ -16,7 +16,7 @@ import { VERSION } from '../version';
 import { updateButton } from './update';
 import { fixed, html, setMarkup } from './html';
 import { BACK_SLACK, blowOf, blowWords, COWARD_DRAG, FIGHT_STANCE_NAMES, HEAVY_EVERY, HIDE_NAMES, hideSays, hideTakes, HUNT_REACH, KEEP_OFF, PACK_CALL, stanceSays, swungWith, TARGET_RANGE, THROW_HIT, THROW_REACH, turnsAt } from '../game/fight';
-import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER } from '../game/creatures';
+import { HUNT_SIGHT, kindName, maxHealth, PLAYER_ATTACKER } from '../game/creatures';
 import { consider } from '../game/consider';
 import { percent } from '../game/words';
 import { feedFill } from '../game/creatureActions';
@@ -623,12 +623,12 @@ export class Hud {
     // How a fight with it would go (`consider`), coloured by which way it leans.
     const k = consider(g, c);
     const weigh = `Blows to kill: yours ~${k.mine}, its ~${k.its}.`;
-    const said = `${def.name}|${intent}${bleeding}|${note}|${c.windup > 0}|${weigh}|${k.rating}`;
+    const said = `${kindName(c)}|${intent}${bleeding}|${note}|${c.windup > 0}|${weigh}|${k.rating}`;
     if (said === this.targetSaid) return;
     this.targetSaid = said;
     this.targetConsider.textContent = weigh;
     this.targetConsider.dataset.rating = k.rating;
-    this.targetName.textContent = def.name;
+    this.targetName.textContent = kindName(c);
     this.targetIntent.textContent = `${intent}${bleeding}`;
     this.targetIntent.classList.toggle('hud-target-warn', c.windup > 0);
     this.targetNote.textContent = note;

@@ -1568,6 +1568,8 @@ export interface CreaturePose {
   health: number;
   /** The stage it has evolved to (`stageOf`), for a kind drawn differently at each. */
   stage?: number;
+  /** Its variant, for a kind whose variants are subspecies drawn as bodies of their own (`SpeciesDef.subspecies`). */
+  variant?: number;
   /** What it is doing this moment, and how far through it (`BeastPose.act`). */
   act?: { kind: BeastAct; t: number };
   label?: string;
@@ -2043,8 +2045,8 @@ export function drawCreature(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     drawWildermon(ctx, sx, sy, zoom, pose.species as string, pose.colors, {
       id: pose.id, facing: pose.facing, phase: pose.phase, moving: pose.moving, gait: pose.gait, fleece: pose.fleece, graze: pose.graze, rare: pose.rare,
       act: pose.act,
-    }, pose.stage, pose.tacked);
-    drawCreatureOverlay(ctx, sx, sy, zoom, pose, wildermonTop(pose.species as string, pose.stage));
+    }, pose.stage, pose.tacked, pose.variant);
+    drawCreatureOverlay(ctx, sx, sy, zoom, pose, wildermonTop(pose.species as string, pose.stage, pose.variant));
     return;
   }
   const kept = standingSprite(pose);

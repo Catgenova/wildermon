@@ -1,6 +1,7 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
 import { MONSTER_GROWTH } from '../../render/monster-size';
 import { FORGET_AFTER, LOADING_AT_ONCE, SLICE_MS } from '../../render/wildermon';
+import { ACT_SECS } from '../../render/beasts';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
@@ -4246,6 +4247,18 @@ export const NEWS: News[] = [
       const d = SPECIES.leecha, [one, two] = d.stages!;
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
+    },
+  },
+  {
+    n: 495,
+    day: '2026-11-05',
+    lines: () => {
+      const names = SPECIES.ogre.subspecies!;
+      return [
+        `Added: ${names.length} ogre subspecies, 1 in ${names.length} wild each: ${listed(names)}. Same health, blow and speed. Name in hover, target bar, log and Examine; Field guide: Subspecies.`,
+        `Changed: ogre models (was: one ogre carrying a tree): ${names[0]}, rune-cut standing stone club; ${names[1]}, rune-riveted iron cuffs, chain and a gate on its back; ${names[2]}, standing stones and moss on its back, root club.`,
+        `Added: ogre strike drawn, ${ACT_SECS.strike} s: club or both fists down, dust ring and rune sparks at the blow.`,
+      ];
     },
   },
   {

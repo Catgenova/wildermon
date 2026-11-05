@@ -1,8 +1,8 @@
 import {
-  add, beat, bend, bipedBones, coatPalette, cross, curve, cyc, darker, disc, dot, drift, eyes, lighter, merge, mirrored, mix, moved, onEgg, orb, orbAlong, paint,
+  add, beat, bend, bipedBones, coatPalette, cross, curve, cyc, darker, disc, drift, eyes, lighter, merge, mirrored, mix, moved, onEgg, orb, orbAlong, paint,
   pastel, scale, sub, taper, TAU, tube, unit, type BipedPose, type BipedSpec, type Disc, type Kind, type Piece,
 } from './beasts';
-import { joint, mesh, ROOT, type Mat, type Mesh, type V3 } from './figure';
+import type { Mat, Mesh, V3 } from './figure';
 import { blade, cut } from './beastkit';
 import { MONSTER_GROWTH } from './monster-size';
 
@@ -376,12 +376,10 @@ export const ORC: Kind = {
 /* ---- the ogre ---------------------------------------------------------------------- */
 
 /**
- * An ogre: a hill of shoulder on short legs, a small head sunk in it with
- * small eyes and a great underbite, and a whole young tree in one fist --
- * roots at the grip end and still in leaf at the other -- carried on the
- * shoulder.
+ * The ogre's bones: a hill of shoulder on short legs, a small head sunk in it.
+ * Its three subspecies are built on them in `./wild-ogre`.
  */
-const OGRE_SPEC: BipedSpec = {
+export const OGRE_SPEC: BipedSpec = {
   high: 1.4,
   leg: { at: [0.62, 0, -0.1], len: [0.62, 0.62, 0.14], rest: [8, -14] },
   chest: { at: [0, 0, 0.3], lean: 18 },
@@ -391,130 +389,4 @@ const OGRE_SPEC: BipedSpec = {
   swing: [22, 32],
   waddle: 8,
   armSwing: 14,
-};
-
-const OGRE_HEAD = { c: [0, 0.2, 0.3] as V3, r: [0.62, 0.6, 0.58] as V3 };
-
-/** The right arm as it holds the tree on the shoulder, standing or going alike: forward, out and the elbow (degrees). */
-const OGRE_HOLD: [number, number, number] = [73, -5, 78];
-
-/** The tree in the chest's frame: the point on its trunk the fist is round, and how far it leans back over the shoulder. */
-const OGRE_TREE = { at: [1.44, 1.03, 2.35] as V3, pitch: 58 };
-
-/**
- * The right fist, closed round the trunk of the tree, in the hand's own
- * frame: a knuckled lump where the hand is, and four fingers curled round
- * the far side of the trunk, so that seen from anywhere it is a fist on the
- * trunk and not a hand beside it. With the balls down the trunk that hide
- * what of it is behind the trunk.
- */
-function ogreFist(n: number, k: number): { mesh: Mesh; hide: Array<{ c: V3; r: V3 }>; front: V3 } {
-  const S = OGRE_SPEC.arm;
-  const arm = joint(ROOT, S.at, S.rest[0] + OGRE_HOLD[0], -(S.rest[1] + OGRE_HOLD[1]));
-  const wrist = joint(joint(arm, [0, 0, -S.len[0]], S.rest[2] + OGRE_HOLD[2]), [0, 0, -S.len[1]]);
-  // A point or a way in the chest's frame, in the hand's.
-  const m = wrist.m;
-  const turn = (d: V3): V3 => [m[0] * d[0] + m[3] * d[1] + m[6] * d[2], m[1] * d[0] + m[4] * d[1] + m[7] * d[2], m[2] * d[0] + m[5] * d[1] + m[8] * d[2]];
-  const local = (p: V3): V3 => turn(sub(p, wrist.t));
-  // The trunk's line, from the roots toward the crown, and where along it the hand is.
-  const P = OGRE_TREE.pitch * (Math.PI / 180);
-  const up: V3 = [0, -Math.sin(P), Math.cos(P)];
-  const on = add(OGRE_TREE.at, scale(up, dot(sub(wrist.t, OGRE_TREE.at), up)));
-  const out = unit(sub(wrist.t, on)), round = cross(up, out);
-  const R = 0.21, fr = 0.12;
-  const ring = (along: number, deg: number, r: number): V3 => {
-    const a = deg * (Math.PI / 180);
-    return add(add(on, scale(up, along)), add(scale(out, Math.cos(a) * r), scale(round, Math.sin(a) * r)));
-  };
-  const fist = merge(
-    orbAlong(ring(0, 0, R + 0.16), up, [0.36, 0.3, 0.44], n, k, 'coat'),
-    ...[-0.25, -0.08, 0.09, 0.26].map((along) => tube([0, 60, 125, 190, 250].map((deg) => ring(along, deg, R + fr * 0.75)), [fr, fr, fr * 0.95, fr * 0.9, fr * 0.8], [fr, fr, fr * 0.95, fr * 0.9, fr * 0.8], 5, 'coat')),
-  );
-  return {
-    mesh: mesh(fist.v.map(local), fist.f),
-    hide: [-0.5, -0.33, -0.17, 0, 0.17, 0.33, 0.5].map((along) => ({ c: local(add(on, scale(up, along))), r: [R, R, R] as V3 })),
-    // Over the body while the fist's side of it is toward the viewer: from in front and to the right.
-    front: turn(unit([0.6, 1, 0])),
-  };
-}
-
-function ogreBuild(lod: number): Piece[] {
-  const n = cut(lod, 9, 12), k = cut(lod, 5, 7);
-  // The hill: a belly swelling up into a hump of shoulder, as one mass rather than two balls, so that it shades in one sweep from
-  // lit shoulder to shadowed belly and not in bands.
-  const hill: Array<[number, number, number, number]> = [
-    // Height, half its width, half its depth, and how far forward its middle is.
-    [-0.5, 0.7, 0.6, 0.12], [-0.25, 1.12, 0.98, 0.14], [0.1, 1.38, 1.2, 0.16], [0.5, 1.46, 1.25, 0.16], [0.9, 1.5, 1.2, 0.12],
-    [1.25, 1.62, 1.12, 0.02], [1.55, 1.7, 1.1, -0.08], [1.85, 1.6, 1.0, -0.12], [2.1, 1.3, 0.8, -0.12], [2.26, 0.8, 0.5, -0.12], [2.33, 0.12, 0.08, -0.12],
-  ];
-  const bulk = merge(
-    tube(hill.map(([z, , , y]) => [0, y, z] as V3), hill.map(([, w]) => w), hill.map(([, , h]) => h), n + 6, 'coat', { up: [0, 1, 0] }),
-    orbAlong([0, 0.72, 0.55], [0, 1, -0.2], [1.0, 0.6, 0.9], n, k, 'mark'),
-  );
-  const cloth = tube([[0, 0, 0.1], [0, 0.05, -0.55]], [1.05, 1.15], [0.95, 1.0], n, 'leather', { up: [0, 1, 0] });
-  const H = OGRE_HEAD;
-  const skull = orb(H.c, H.r, n, k, 'coat');
-  // Small dim eyes glowering under a heavy brow, a lump of a nose, and a great underbite in a darker skin jutting out past it, with
-  // two tusks up out of it past the upper lip.
-  const eyeDir: V3 = [0.45, 0.84, 0.26];
-  const { lids, brows } = glower(H.c, H.r, eyeDir, 0.14, { tall: 1.0, drop: 0.4, slope: 0.35, brow: 0.09 });
-  const face = merge(
-    orbAlong(add(H.c, [0, 0.5, -0.38]), [0, 1, -0.25], [0.6, 0.44, 0.36], n, k, 'coatDark'),
-    ...[1, -1].map((s) => taper([add(H.c, [s * 0.3, 0.8, -0.32]), add(H.c, [s * 0.34, 0.88, -0.1]), add(H.c, [s * 0.36, 0.9, 0.12])], 0.12, 0.04, 5, 'tooth')),
-    orbAlong(add(H.c, [0, 0.62, 0.08]), [0, 1, 0], [0.16, 0.12, 0.14], 5, 3, 'coatDark'),
-  );
-  const look = (shut: boolean): Mesh => merge(eyes(H.c, H.r, eyeDir, 0.14, { tall: 1.0, shut, pupil: 0, rim: 0 }), lids);
-  // The tree: a trunk, a short spread of roots just below the fist, a leafy crown at the other end.
-  const tree = merge(
-    taper([[0, 0, -0.62], [0, 0, 3.2]], 0.22, 0.14, 7, 'bark'),
-    ...[0, 1, 2, 3].map((q) => taper(curve([0, 0, -0.5], [Math.cos(q * 1.6) * 0.24, Math.sin(q * 1.6) * 0.24, -0.72], [Math.cos(q * 1.6) * 0.38, Math.sin(q * 1.6) * 0.38, -0.96], 2), 0.1, 0.03, 4, 'bark')),
-    ...[[0, 0, 3.5, 0.8], [0.62, 0.12, 3.1, 0.62], [-0.6, -0.12, 3.15, 0.6], [0.12, 0.66, 3.2, 0.58], [-0.14, -0.66, 3.2, 0.58], [0.34, -0.3, 3.85, 0.55], [-0.3, 0.34, 3.8, 0.55]]
-      .map(([x, y, z, r]) => orb([x, y, z], [r, r, r * 0.86], n - 2, k - 1, (z as number) > 3.3 ? 'leaf' : 'leafDark')),
-    ...[[0.2, 0, 2.2], [-0.2, 0.1, 2.5]].map(([x, y, z]) => taper([[0, 0, z - 0.3], [x * 3, y * 3, z + 0.25]], 0.06, 0.02, 4, 'bark')),
-  );
-  // Carried on the right shoulder: gripped in the fist just above the roots, the crown out behind over the shoulder.
-  const carried = moved(tree, OGRE_TREE.at, 0, OGRE_TREE.pitch, 0);
-  const fist = ogreFist(n, k);
-  return [
-    { key: 'hips', mesh: orb([0, 0, 0], [1.05, 0.85, 0.7], n, k, 'leather'), bone: 'body', bias: 0 },
-    // The loincloth a piece of its own, over the tops of both thighs from every side, so that the near one never comes out over it.
-    { key: 'cloth', mesh: cloth, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips'] },
-    { key: 'body', mesh: bulk, bone: 'chest', bias: 0.005, breathes: { c: [0, 0, 0.9], k: 0.06 } },
-    { key: 'head', mesh: merge(skull, face, look(false)), shut: merge(skull, face, look(true)), bone: 'head', bias: 0.2 },
-    { key: 'brows', mesh: brows, bone: 'head', bias: 0.21, after: 'head', hide: [{ c: H.c, r: H.r }] },
-    { key: 'tree', mesh: carried, bone: 'chest', bias: 0.05, after: ['body', 'arm1'], front: [1, 0, 0] },
-    // The right hand is the fist round the trunk, drawn over the tree (and over the body from in front), with what of it is round
-    // the far side of the trunk hidden by it.
-    ...limbs({ n, arm: [1.0, 0.95], armW: [0.52, 0.46], hand: hand(0.46, 4, 0.36, n), leg: [0.62, 0.62], legW: [0.5, 0.44], foot: pawFoot(0.44, 0.9, n) })
-      .map((pc): Piece => (pc.key === 'hand1' ? { ...pc, mesh: fist.mesh, bias: 0.06, after: ['body', 'tree'], front: fist.front, hide: fist.hide } : pc)),
-  ];
-}
-
-export const OGRE: Kind = {
-  bones: (a) => bipedBones(OGRE_SPEC, a, (p: BipedPose) => {
-    // The tree on the shoulder: the right arm up and bent back so the trunk lies over it, held there going or standing, so the fist
-    // stays closed round the trunk.
-    p.arms[1] = [...OGRE_HOLD];
-    if (a.go > 0) return;
-    const t = a.t;
-    // Slow and heavy: a great breath, the weight rolled from foot to foot, a scratch at the head now and then.
-    p.chest[0] += 6 * cyc(t, 4);
-    p.roll += 4 * cyc(t, 4, 1);
-    const scratch = beat(t, [9.2], 2.0);
-    p.arms[0] = [p.arms[0][0] + 130 * scratch, p.arms[0][1] + 10 * scratch, p.arms[0][2] + 100 * scratch + 15 * scratch * Math.sin(t * TAU * 3)];
-    p.head[2] += 10 * scratch;
-  }),
-  build: ogreBuild,
-  palette: (coat, mark) => {
-    // A hide of lilac stone, three quarters of the way from the variant's beige: in the beige itself it was a big bald man.
-    const c = mix(pastel(coat, 30), [196, 176, 206], 0.75);
-    return coatPalette(coat, mark, {
-      coat: c, coatDark: darker(c, 0.28), coatLight: lighter(c, 0.2), lid: darker(c, 0.45), belly: mix(c, pastel(mark, 30), 0.72),
-      leather: [150, 120, 96], bark: [120, 88, 66], leaf: [150, 200, 110], leafDark: [110, 164, 92], tooth: [246, 238, 214],
-    }, 30);
-  },
-  shadow: [2.1, 1.7],
-  stride: 1.3,
-  size: 6.0 * MONSTER_GROWTH,
-  blinks: 6,
 };
