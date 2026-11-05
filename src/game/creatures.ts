@@ -875,6 +875,9 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   dulla: { kind: 'more', n: 1, what: 'moss per cut' },
   carra: { kind: 'more', n: 1, what: 'timbers per log' },
   awla: { kind: 'more', n: 1, what: 'shafts per log' },
+  // Its lily roots and lotus seeds come out of the stores its stage's a trip (`stageLoads`), as a bedda's seed; the island's
+  // `errand_step` takes the same (`stage_loads`).
+  spitta: { kind: 'loads', n: 1, what: 'roots or seeds per trip' },
   bura: { kind: 'blood', n: 1.05, channel: 'speed', what: 'speed' },
   cindra: { kind: 'loads', n: 1, what: 'actions per cycle' },
   // A dam of the line's: the chance of a second calf at a covering (`twinChance`), which its blood's `twins` scales.
@@ -3299,9 +3302,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   spitta: {
     id: 'spitta',
-    name: 'Spitta',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Padbloom',
+    was: ['Spitta'],
+    // Asked for, with a reference sheet: Padbloom, Lilyback, Lotushell. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Lilyback', description: '' },
+      { name: 'Lotushell', description: '' },
+    ],
     health: 24,
     attack: 6,
     speed: 2.0,
@@ -3312,11 +3321,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'lily',
     workRange: 10,
+    // [skin, cream]: the sheet's leaf green with cream, a jade with ivory, an olive with buff, and a sage with pale straw.
     variants: [
-      ['#5c8c3c', '#d4e0a0'],
-      ['#8c8c2c', '#e8e4a0'],
-      ['#3c7c5c', '#b4dcc4'],
-      ['#7c5c2c', '#dcc49c'],
+      ['#7aa04c', '#f0e4b8'],
+      ['#5c9a6a', '#ece8cc'],
+      ['#8a9a3c', '#f2dcae'],
+      ['#6c8c5c', '#e8e2c0'],
     ],
     butcher: { meat: 3, leather: 2, bone: 2, gland: 2 },
     wound: 'pierce',
@@ -4229,6 +4239,7 @@ sayLineLater('glimmip', 'Level: glassblowing.');
 sayLineLater('dulla', `Level: ${GATHER_SKILL.moss.replace(/_/g, ' ')}.`);
 sayLineLater('carra', `Level: ${GATHER_SKILL.timber.replace(/_/g, ' ')}.`);
 sayLineLater('awla', `Level: ${GATHER_SKILL.shaft}.`);
+sayLineLater('spitta', `Level: ${GATHER_SKILL.lily}.`);
 
 /**
  * The Packlet line's words: no task, and its panniers at each stage (`SpeciesDef.pannier`), opened from its menu as a

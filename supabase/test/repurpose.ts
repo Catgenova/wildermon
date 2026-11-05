@@ -163,6 +163,9 @@ const CHURN_GO = STAGE_LOADS[2] + STAGE_PERKS.whirla.n;
 const CHURN_PUT: Array<[string, number]> = [['milk_bucket', CHURN_GO]];
 const churnWants = (): string => [`${CHURN_RECIPE.result} ${(CHURN_RECIPE.count ?? 1) * CHURN_GO}`,
   ...(CHURN_RECIPE.returns ?? []).map(([id, n]) => `${id} ${n * CHURN_GO}`)].sort().join(',');
+/** A Lotushell carries its third stage's roots or seeds a trip and its line's one more (`STAGE_LOADS`, `STAGE_PERKS`). */
+const LILY_SKILLS = { [GATHER_SKILL.lily]: EVOLVE_AT[1] };
+const LILY_GO = STAGE_LOADS[2] + STAGE_PERKS.spitta.n;
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
 const listed = (m: Map<string, number>): string => [...m].filter(([, n]) => n > 0).map(([id, n]) => `${id} ${n}`).sort().join(',') || '-';
@@ -394,6 +397,9 @@ ${CASES.map((c) => `
       || '|' || coalesce((select string_agg(kind, ',' order by kind) from water_plant where world_id = w), '-')
       || '|' || coalesce((select bool_and(planted_by = u)::text from water_plant where world_id = w), '-')
       || '|' || coalesce((select skills->>'${GATHER_SKILL.lily}' from creature where world_id = w and id = (select id from hand where species = 'spitta')), '-');
+  -- LILYLOADS: at its third stage, a Lotushell, it carries its stage's roots or seeds a trip and its line's one more.
+  update creature set skills = '${JSON.stringify(LILY_SKILLS)}'::jsonb where world_id = w and id = (select id from hand where species = 'spitta');
+  insert into said select 'LILYLOADS', (select stage_loads(c)::text from creature c where c.world_id = w and c.id = (select id from hand where species = 'spitta'));
   ${after('spitta')}
 end $t$;
 select k || '=' || v from said order by k;
@@ -537,6 +543,11 @@ const LILY_SPOTS = '20,18 20,19';
   const [stores, spots, kinds, mine] = at('LILY').split('|');
   check(`on the island, a spitta plants the lily root and the lotus seeds in the deep water, ring by ring from the totem: ${LILY_SPOTS}`,
     stores === '-' && spots === LILY_SPOTS && kinds === WATER_PLANTS.map((d) => d.id).sort().join(',') && mine === 'true', at('LILY'));
+}
+check(`on the island, a ${SPECIES.spitta.stages![1].name} carries ${LILY_GO} roots or seeds a trip`, at('LILYLOADS') === String(LILY_GO), at('LILYLOADS'));
+{
+  const lotushell = { species: 'spitta', skills: LILY_SKILLS } as unknown as Creature;
+  check(`in the browser, a ${SPECIES.spitta.stages![1].name} carries ${LILY_GO} roots or seeds a trip`, stageLoads(lotushell) === LILY_GO, String(stageLoads(lotushell)));
 }
 
 /* ---- the conversion, on the island ---------------------------------------------------- */
