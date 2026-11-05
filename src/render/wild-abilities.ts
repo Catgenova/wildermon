@@ -1,5 +1,5 @@
 import {
-  coatPalette, curve, merge, moved, orb, quadBonesOf, taper, TAU, tube,
+  coatPalette, curve, merge, moved, orb, quadBonesOf, taper, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { cut, earMesh, quadPieces } from './beastkit';
@@ -71,19 +71,6 @@ function kindOf(l: Look): Kind {
 }
 
 const HEAD = (y: number, z: number, r: V3): { c: V3; r: V3 } => ({ c: [0, y, z], r });
-
-/* ---- the whirla: a whip of a tail --------------------------------------------------- */
-
-export const WHIRLA = kindOf({
-  spec: { ...pawed({ high: 1.3, len: 2.1, legs: 0.8, neck: 0.36, lean: 40, swing: [24, 40], ears: [30, 24], tail: [0.4, 16, 8] }), nose: 12 },
-  head: HEAD(0.3, 0.16, [0.98, 0.96, 0.88]), body: [2.1, 0.95, 0.82], neck: [0.56, 0.56, 0.36], ear: [0.36, 0.22, 30], legs: [0.8, 0.23, 0.22, 'coatDark'],
-  snout: [1.0, -0.18, [0.38, 0.32, 0.34], 0.11],
-  tail: (n) => merge(root(n), tube(Array.from({ length: 14 }, (_, i): V3 => {
-    const a = (i / 13) * TAU * 1.1, rr = 0.15 + i * 0.07;
-    return [Math.sin(a) * rr, -0.2 - Math.cos(a) * rr * 0.6 - i * 0.04, 0.05 + i * 0.01];
-  }), [0.08, 0.02], [0.08, 0.02], 5, 'coat')),
-  own: {}, mark: 30, shadow: [1.5, 1.15], stride: 1.45, size: 1.6,
-});
 
 /* ---- the scorcha: embers on its back, a flame at its tail ---------------------------- */
 
