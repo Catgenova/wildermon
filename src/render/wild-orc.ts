@@ -152,15 +152,21 @@ const boot = (r: number, len: number, n: number): Mesh => merge(
 function limbs(o: {
   n: number; arm: [number, number]; armW: [number, number]; hands: [Mesh, Mesh]; leg: [number, number]; legW: [number, number]; foot: Mesh;
   armMat?: Mat; legMat?: Mat; wear?: Record<string, Mesh>;
+  /**
+   * The head's egg on its bone, and the pieces on the head: an arm raised past it is drawn over them where it is before the head,
+   * and under them, and hidden by the head, where it is behind it.
+   */
+  head?: { c: V3; r: V3 }; heads?: string[];
 }): Piece[] {
   const out: Piece[] = [];
   const worn = (bone: string, m: Mesh): Mesh => (o.wear?.[bone] ? merge(m, o.wear[bone]) : m);
+  const past: Partial<Piece> = o.head ? { after: ['body', ...(o.heads ?? ['head'])], hide: [o.head], hideIn: 'head' } : { after: 'body' };
   for (const [k, sd] of [[0, -1], [1, 1]] as Array<[number, number]>) {
     const front: V3 = [sd, 0.35, 0];
     out.push(
-      { key: `arm${k}`, mesh: worn(`arm${k}`, tube([[0, 0, 0.12], [0, 0, -o.arm[0]]], [o.armW[0], o.armW[0] * 0.9], [o.armW[0], o.armW[0] * 0.9], o.n, o.armMat ?? 'coat', { seam: 'both' })), bone: `arm${k}`, bias: 0.03, after: 'body', front, convex: !o.wear?.[`arm${k}`] },
-      { key: `fore${k}`, mesh: worn(`elbow${k}`, tube([[0, 0, 0.05], [0, 0, -o.arm[1]]], [o.armW[1], o.armW[1] * 0.86], [o.armW[1], o.armW[1] * 0.86], o.n, o.armMat ?? 'coat', { seam: 'both' })), bone: `elbow${k}`, bias: 0.035, after: 'body', front, convex: !o.wear?.[`elbow${k}`] },
-      { key: `hand${k}`, mesh: o.hands[k], bone: `hand${k}`, bias: 0.04, after: 'body', front },
+      { key: `arm${k}`, mesh: worn(`arm${k}`, tube([[0, 0, 0.12], [0, 0, -o.arm[0]]], [o.armW[0], o.armW[0] * 0.9], [o.armW[0], o.armW[0] * 0.9], o.n, o.armMat ?? 'coat', { seam: 'both' })), bone: `arm${k}`, bias: 0.03, front, convex: !o.wear?.[`arm${k}`], ...past },
+      { key: `fore${k}`, mesh: worn(`elbow${k}`, tube([[0, 0, 0.05], [0, 0, -o.arm[1]]], [o.armW[1], o.armW[1] * 0.86], [o.armW[1], o.armW[1] * 0.86], o.n, o.armMat ?? 'coat', { seam: 'both' })), bone: `elbow${k}`, bias: 0.035, front, convex: !o.wear?.[`elbow${k}`], ...past },
+      { key: `hand${k}`, mesh: o.hands[k], bone: `hand${k}`, bias: 0.04, front, ...past },
     );
   }
   for (const [key, sd] of [['ll', -1], ['lr', 1]] as Array<[string, number]>) {
@@ -185,6 +191,79 @@ const wraps = (z0: number, z1: number, r: number, bands: number, n: number, a: M
 const flap = (y: number, w: number, z: number, n: number, mat: Mat | ((ring: number, j: number) => Mat)): Mesh =>
   tube([[0, y, 0.02], [0, y * 1.05, z * 0.5], [0, y * 1.08, z * 0.84], [0, y * 1.1, z]], [w, w * 0.96, w * 0.82, w * 0.34], [0.07, 0.065, 0.06, 0.05], n, mat, { up: [0, Math.sign(y), 0] });
 
+/**
+ * Things hanging from the belt -- a flap, a strap, a strip of hide -- each swung out about where it hangs from, just as
+ * far as it must to clear the legs as they stride: so a knee coming up lifts the flap before it rather than going through
+ * it. Each is a run of the mesh's corners (`from`, `count`), where it hangs from (`at`, in the body's frame), the way out
+ * it swings (`out`, level), how far down it hangs and how wide it is.
+ */
+interface Hanger { from: number; count: number; at: V3; out: V3; len: number; w: number }
+
+/** Hanging things put together as one mesh, and each one's run of corners (`Hanger`). */
+function hung(items: ReadonlyArray<{ m: Mesh; at: V3; out: V3; len: number; w: number }>): { mesh: Mesh; hang: Hanger[] } {
+  let from = 0;
+  const hang = items.map((it) => {
+    const h = { from, count: it.m.v.length, at: it.at, out: unit([it.out[0], it.out[1], 0]), len: it.len, w: it.w };
+    from += it.m.v.length;
+    return h;
+  });
+  return { mesh: merge(...items.map((it) => it.m)), hang };
+}
+
+/** The bones of a moment, worked out once for all the hanging things on it. */
+const bonesFor = new WeakMap<Anim, Bones>();
+
+/** A point turned `phi` about the line through `at` along `k` (unit). */
+function turnAbout(p: V3, at: V3, k: V3, phi: number): V3 {
+  const v = sub(p, at), c = Math.cos(phi), s = Math.sin(phi);
+  return add(at, add(add(scale(v, c), scale(cross(k, v), s)), scale(k, dot(k, v) * (1 - c))));
+}
+
+/**
+ * How a piece on the body bone of hanging things swings (`Piece.bent`): each one turned out, about the line it hangs from,
+ * by the least of a run of angles at which every point down its middle and its two edges is clear of each thigh and shin
+ * (`legs`) by the leg's width and its own thickness.
+ */
+function swingClear(bones: (a: Anim) => Bones, hang: readonly Hanger[], legs: Limbs): (v: readonly V3[], a: Anim) => V3[] {
+  return (v, a) => {
+    let b = bonesFor.get(a);
+    if (!b) { b = bones(a); bonesFor.set(a, b); }
+    const body = b.body;
+    const inBody = (p: V3): V3 => into(body, sub(p, body.t));
+    const segs: Array<[V3, V3, number]> = [];
+    for (const key of ['ll', 'lr']) {
+      const hip = inBody(b[`${key}0`].t), knee = inBody(b[`${key}1`].t), ankle = inBody(b[`${key}2`].t);
+      segs.push([hip, knee, legs.legW[0]], [knee, ankle, legs.legW[1]]);
+    }
+    const clear = (p: V3): boolean => segs.every(([s0, s1, r]) => {
+      const d = sub(s1, s0), t = clamp(dot(sub(p, s0), d) / (dot(d, d) || 1));
+      const q = add(s0, scale(d, t));
+      return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) > r + 0.07;
+    });
+    const out = [...v] as V3[];
+    for (const h of hang) {
+      const k = unit(cross(h.out, [0, 0, 1])), across = cross([0, 0, 1], h.out);
+      let phi = 0;
+      for (let step = 0; step <= 16; step++) {
+        phi = (step / 16) * 1.4;
+        const down: V3 = [h.out[0] * Math.sin(phi), h.out[1] * Math.sin(phi), -Math.cos(phi)];
+        let ok = true;
+        for (const s of [0.35, 0.65, 1]) {
+          for (const x of [-0.7, 0, 0.7]) if (!clear(add(add(h.at, scale(down, s * h.len)), scale(across, x * h.w)))) { ok = false; break; }
+          if (!ok) break;
+        }
+        if (ok) break;
+      }
+      if (phi > 0) for (let q = h.from; q < h.from + h.count; q++) out[q] = turnAbout(v[q], h.at, k, phi);
+    }
+    return out;
+  };
+}
+
+/** A flap from the belt (`flap`'s numbers) as one hanging thing, swung clear of the legs as a whole. */
+const flapClear = (bones: (a: Anim) => Bones, m: Mesh, f: readonly [number, number, number], legs: Limbs): ((v: readonly V3[], a: Anim) => V3[]) =>
+  swingClear(bones, [{ from: 0, count: m.v.length, at: [0, f[0], 0.02], out: [0, Math.sign(f[0]), 0], len: -f[2], w: f[1] }], legs);
+
 /** A mesh with the faces whose middles `keep` turns down taken out: a mantle open at the front. */
 function only(m: Mesh, keep: (c: V3) => boolean): Mesh {
   return mesh(m.v, m.f.filter((f) => {
@@ -193,6 +272,9 @@ function only(m: Mesh, keep: (c: V3) => boolean): Mesh {
     return keep(c);
   }));
 }
+
+/** A kind's arms and legs: the lengths and widths of the upper and lower of each, its fist, and its foot (how wide, how long). */
+interface Limbs { arm: [number, number]; armW: [number, number]; leg: [number, number]; legW: [number, number]; hand: number; foot: [number, number] }
 
 /** One arm's pose moved toward another by `k`. */
 const toward = (a: readonly number[], b: readonly number[], k: number): [number, number, number] => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
@@ -335,20 +417,25 @@ const A_SPEC: BipedSpec = {
   chest: { at: [0, 0, 0.22], lean: 26 },
   neck: { at: [0, 0.5, 1.66], len: 0.2, lean: 22 },
   head: { pitch: -14 },
-  arm: { at: [1.42, 0.12, 1.38], len: [0.95, 0.9], rest: [10, 16, 22] },
-  swing: [24, 36],
+  arm: { at: [1.6, 0.12, 1.38], len: [0.95, 0.9], rest: [10, 20, 22] },
+  swing: [24, 32],
   waddle: 7,
   armSwing: 16,
 };
 
 /** The brute's trunk: a waist going up into a hill of shoulder, and a hump of muscle behind the neck the head sits low in front of. */
 const A_RINGS: Ring[] = [
-  [-0.32, 0.74, 0.62, 0.02], [0.15, 0.9, 0.74, 0.08], [0.62, 1.2, 0.9, 0.14], [1.05, 1.5, 0.98, 0.14], [1.42, 1.66, 0.94, 0.06],
-  [1.72, 1.4, 0.8, -0.04], [1.92, 0.86, 0.56, -0.06], [2.02, 0.12, 0.1, -0.06],
+  [-0.32, 0.74, 0.62, 0.02], [0.15, 0.9, 0.74, 0.08], [0.62, 1.12, 0.9, 0.14], [1.05, 1.4, 0.98, 0.14], [1.42, 1.5, 0.94, 0.06],
+  [1.72, 1.3, 0.8, -0.04], [1.92, 0.86, 0.56, -0.06], [2.02, 0.12, 0.1, -0.06],
 ];
 const A_FACE: Face = { c: [0, 0.2, 0.42], r: [0.64, 0.64, 0.58], eye: [0.5, 0.82, 0.3], eyeSize: 0.15, brow: 0.11, jaw: [[0, 0.5, -0.3], [0.56, 0.4, 0.3]], tusk: 0.5, nose: [0.2, 0.13] };
 /** When the cleaver lands, as a share of the strike. */
 const A_HIT = 0.44;
+/** The pieces on its head, which an arm or what it holds goes over or under as a whole (`limbs`). */
+const A_HEADS = ['head', 'jaw', 'brows', 'ear0', 'ear1', 'crest'];
+const A_LIMBS: Limbs = { arm: [0.95, 0.9], armW: [0.44, 0.42], leg: [0.62, 0.62], legW: [0.46, 0.4], hand: 0.38, foot: [0.38, 0.8] };
+/** The hide flaps before and behind: how far out from the hips each hangs (behind, less than nought), half its width, how far down. */
+const A_FLAPS: Array<[number, number, number]> = [[0.62, 0.5, -0.72], [-0.56, 0.56, -0.66]];
 /** The brute's cleaver, along its own z from the grip: how far its blade's spine runs, and its depth at each step (edge to spine). */
 const A_BLADE = { z0: 0.5, z1: 1.95, depth: [0.62, 0.66, 0.5, 0.68, 0.68, 0.62] };
 
@@ -377,14 +464,14 @@ function bruteBuild(lod: number): Piece[] {
     orbAlong([0, 0.82, -0.03], [0, 1, 0], [0.21, 0.07, 0.19], 7, 3, 'fitting'),
     paint(rune('thurisaz', [0, 0.9, -0.03], [0, 1, 0], [0, 0, 1], 0.12, 0.05, 'leatherDark', 'leatherDark')),
   );
-  const fore = merge(flap(0.62, 0.5, -0.72, 6, 'leather'), paint([disc([0.18, 0.72, -0.4], [0, 1, 0], 0.17, 0.15, 4, 'mark', { spin: 0.4 })]));
-  const back = flap(-0.56, 0.56, -0.66, 6, 'leather');
+  const fore = merge(flap(...A_FLAPS[0], 6, 'leather'), paint([disc([0.18, 0.72, -0.4], [0, 1, 0], 0.17, 0.15, 4, 'mark', { spin: 0.4 })]));
+  const back = flap(...A_FLAPS[1], 6, 'leather');
   const skirt = tube([[0, 0.02, 0.04], [0, 0.03, -0.32]], [0.88, 0.96], [0.72, 0.8], n, (_r, j) => (j % 3 ? 'leatherDark' : 'leather'), { up: [0, 1, 0] });
   // The left shoulder: a leather pad strapped on with three bone spikes out of it.
   const pad = merge(
-    orbAlong([-1.4, 0.06, 1.6], [-0.7, 0, 1], [0.6, 0.62, 0.3], n, 3, 'leatherDark'),
-    orbAlong([-1.42, 0.06, 1.64], [-0.7, 0, 1], [0.44, 0.46, 0.28], 7, 3, 'leather'),
-    ...[[-0.24, 0.5], [0.14, 0.62], [0.5, 0.44]].map(([y, l]) => taper(curve([-1.55, y, 1.78], [-1.8, y - 0.04, 1.78 + l * 0.6], [-1.95, y - 0.14, 1.78 + l], 2), 0.11, 0.02, 5, 'tooth')),
+    orbAlong([-1.5, 0.06, 1.6], [-0.7, 0, 1], [0.6, 0.62, 0.3], n, 3, 'leatherDark'),
+    orbAlong([-1.52, 0.06, 1.64], [-0.7, 0, 1], [0.44, 0.46, 0.28], 7, 3, 'leather'),
+    ...[[-0.24, 0.5], [0.14, 0.62], [0.5, 0.44]].map(([y, l]) => taper(curve([-1.65, y, 1.78], [-1.9, y - 0.04, 1.78 + l * 0.6], [-2.05, y - 0.14, 1.78 + l], 2), 0.11, 0.02, 5, 'tooth')),
   );
   const F = A_FACE;
   const face = orcHead(F, n, k);
@@ -424,8 +511,8 @@ function bruteBuild(lod: number): Piece[] {
   return [
     { key: 'hips', mesh: orb([0, 0, 0], [0.8, 0.62, 0.5], 7, 3, 'leatherDark'), bone: 'body', bias: 0 },
     { key: 'skirt', mesh: skirt, bone: 'body', bias: 0.015, after: ['ll0', 'lr0', 'hips'] },
-    { key: 'flap0', mesh: fore, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips', 'skirt'], front: [0, 1, 0] },
-    { key: 'flap1', mesh: back, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips', 'skirt'], front: [0, -1, 0] },
+    { key: 'flap0', mesh: fore, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips', 'skirt'], front: [0, 1, 0], bent: flapClear(bruteBones, fore, A_FLAPS[0], A_LIMBS) },
+    { key: 'flap1', mesh: back, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips', 'skirt'], front: [0, -1, 0], bent: flapClear(bruteBones, back, A_FLAPS[1], A_LIMBS) },
     { key: 'body', mesh: merge(chest, belt), bone: 'chest', bias: 0.005, breathes: { c: [0, 0, 0.8], k: 0.06 } },
     { key: 'pad', mesh: pad, bone: 'chest', bias: 0.06, after: ['body', 'arm0'] },
     { key: 'head', mesh: merge(face.head, daub), shut: merge(face.shut, daub), bone: 'head', bias: 0.2 },
@@ -434,9 +521,9 @@ function bruteBuild(lod: number): Piece[] {
     { key: 'ear0', mesh: ears(-1), bone: 'head', bias: 0.21, after: 'head', hide },
     { key: 'ear1', mesh: ears(1), bone: 'head', bias: 0.21, after: 'head', hide },
     { key: 'crest', mesh: crest, bone: 'head', bias: 0.19, hide },
-    { key: 'cleaver', mesh: hold.mesh(cleaver), bone: 'hand1', bias: 0.05, after: ['hand1'], front: [1, 0.4, 0] },
+    { key: 'cleaver', mesh: hold.mesh(cleaver), bone: 'hand1', bias: 0.05, after: ['hand1', ...A_HEADS], front: [1, 0.4, 0], hide, hideIn: 'head' },
     ...limbs({
-      n, arm: [0.95, 0.9], armW: [0.44, 0.42], hands: [fist(0.38, n), fist(0.38, n)], leg: [0.62, 0.62], legW: [0.46, 0.4], foot: bareFoot(0.38, 0.8, n),
+      n, ...A_LIMBS, head: hide[0], heads: A_HEADS, hands: [fist(A_LIMBS.hand, n), fist(A_LIMBS.hand, n)], foot: bareFoot(A_LIMBS.foot[0], A_LIMBS.foot[1], n),
       wear: {
         elbow0: wraps(-0.3, -0.75, 0.46, 3, Math.max(7, n - 4)),
         elbow1: merge(tube([[0, 0, -0.48], [0, 0, -0.82]], 0.45, 0.45, n, 'leatherDark'), paint(runeOnLimb('tiwaz', -0.65, 60, 0.46, 0.12, 0.06, 'ember', 'flame'))),
@@ -463,23 +550,34 @@ function bruteBones(a: Anim): Bones {
   return bipedBones(A_SPEC, a, (p: BipedPose) => {
     // The cleaver carried low in the right fist; at a run, up and ready. The left fist hanging heavy and out from the hip.
     const run = a.gait * a.go;
-    p.arms[1] = [p.arms[1][0] * 0.5 + 4 + 40 * run, p.arms[1][1] + 10, p.arms[1][2] + 6 + 34 * run];
+    // Out from the side as it runs, so the cleaver is carried clear of its jaw; the chest reared a little, so a knee coming up
+    // does not go into its belly.
+    p.arms[1] = [p.arms[1][0] * 0.5 + 4 + 18 * run, p.arms[1][1] + 10 + 14 * run, p.arms[1][2] + 6 + 14 * run];
+    p.chest[0] -= 8 * run;
     p.arms[0] = [p.arms[0][0], p.arms[0][1] + 8, p.arms[0][2] + 10];
     if (a.act?.kind === 'strike') {
       const t = a.act.t;
       // Up over its head and back, the chest reared and the jaw open; down onto what it strikes with the whole of its weight; and up out of it.
       const wind = ramp(t, 0.02, 0.32) * (1 - ramp(t, A_HIT - 0.1, A_HIT));
       const chop = ramp(t, A_HIT - 0.1, A_HIT) * (1 - ramp(t, 0.72, 1));
-      p.arms[1] = toward(toward(p.arms[1], [178, 6, 70], wind), [70, 0, 6], chop);
+      // The arm goes up out to the side of the head, not past it, and the cleaver back over the shoulder. On the move its legs keep
+      // to their stride and its chest bows less, so its knees are clear of its belly.
+      const still = 1 - a.go;
+      p.arms[1] = toward(toward(p.arms[1], [160, -26, 38], wind), [54, 26, 10], chop);
+      // Swung out to the side on the way up and on the way down, so the upper arm goes round the shoulder, not through it.
+      // (Out is away from the body below the level of the shoulder and toward it above, so it is turned by how far up the arm is.)
+      const away = Math.cos((p.arms[1][0] + A_SPEC.arm.rest[0]) * (Math.PI / 180));
+      p.arms[1][1] += away * (40 * Math.sin(Math.PI * ramp(t, 0.02, 0.32)) * (1 - chop) + 50 * Math.sin(Math.PI * ramp(t, A_HIT - 0.1, A_HIT)));
       p.arms[0] = toward(p.arms[0], [26, 26, 34], Math.max(wind, chop));
-      p.chest[0] += -18 * wind + 22 * chop;
+      p.chest[0] += (-18 * wind + 22 * chop) * (1 - 0.8 * a.go);
       p.chest[2] += -16 * wind + 14 * chop;
       p.head[0] += 14 * wind - 8 * chop;
+      p.head[1] -= 10 * wind;
       p.jaw = Math.max(wind, 0.7 * chop);
-      p.legs[0][0] += 12 * chop;
-      p.legs[1][0] -= 8 * chop;
-      p.legs[0][1] += 0.12 * chop;
-      p.legs[1][1] += 0.12 * chop;
+      p.legs[0][0] += 12 * chop * still;
+      p.legs[1][0] -= 8 * chop * still;
+      p.legs[0][1] += 0.12 * chop * still;
+      p.legs[1][1] += 0.12 * chop * still;
       return;
     }
     if (a.go > 0) return;
@@ -539,7 +637,7 @@ const B_SPEC: BipedSpec = {
   chest: { at: [0, 0, 0.25], lean: 10 },
   neck: { at: [0, 0.2, 1.8], len: 0.24, lean: 6 },
   head: { pitch: -4 },
-  arm: { at: [1.34, 0.08, 1.5], len: [0.85, 0.8], rest: [6, 20, 20] },
+  arm: { at: [1.42, 0.08, 1.5], len: [0.85, 0.8], rest: [6, 28, 20] },
   swing: [24, 36],
   waddle: 4,
   armSwing: 14,
@@ -547,11 +645,14 @@ const B_SPEC: BipedSpec = {
 
 /** The veteran's trunk: a deep chest in a steel cuirass over a leather waist. */
 const B_RINGS: Ring[] = [
-  [-0.3, 0.78, 0.66, 0.02], [0.18, 0.92, 0.76, 0.06], [0.62, 1.16, 0.9, 0.12], [1.12, 1.34, 0.94, 0.1], [1.56, 1.32, 0.86, 0.02],
+  [-0.3, 0.78, 0.66, 0.02], [0.18, 0.92, 0.76, 0.06], [0.62, 1.16, 0.9, 0.12], [1.12, 1.28, 0.94, 0.1], [1.56, 1.32, 0.86, 0.02],
   [1.84, 0.94, 0.62, -0.02], [1.98, 0.3, 0.24, -0.02],
 ];
 const B_FACE: Face = { c: [0, 0.16, 0.48], r: [0.66, 0.66, 0.62], eye: [0.52, 0.82, 0.24], eyeSize: 0.15, brow: 0.1, jaw: [[0, 0.52, -0.34], [0.58, 0.42, 0.3]], tusk: 0.52, nose: [0.2, 0.13] };
 const B_HIT = 0.46;
+const B_HEADS = ['head', 'jaw', 'brows', 'ear0', 'ear1', 'helm'];
+const B_LIMBS: Limbs = { arm: [0.85, 0.8], armW: [0.38, 0.34], leg: [0.7, 0.7], legW: [0.4, 0.34], hand: 0.32, foot: [0.34, 0.74] };
+const B_FLAPS: Array<[number, number, number]> = [[0.62, 0.42, -0.86], [-0.56, 0.48, -0.8]];
 /** The shield on the left forearm's bone: its middle, and the way its face looks. */
 const B_SHIELD = { at: [-0.12, 0.1, -0.92] as V3, n: unit([-0.42, 0.12, -0.9]) };
 /** The bearded axe along its own z from the grip: the haft's length and where the head is on it. */
@@ -580,23 +681,24 @@ function veteranBuild(lod: number): Piece[] {
   );
   // The war-cloth: red, hanging before and behind from the belt, its hem a darker red, the home-rune on it in gold.
   const hem = (ring: number): Mat => (ring >= 2 ? 'clothDark' : 'cloth');
-  const fore = merge(flap(0.62, 0.42, -0.86, 6, hem), paint(rune('othala', [0, 0.72, -0.36], [0, 1, 0], [0, 0, 1], 0.2, 0.07, 'fitting', 'rivet', false)));
-  const back = flap(-0.56, 0.48, -0.8, 6, hem);
+  const fore = merge(flap(...B_FLAPS[0], 6, hem), paint(rune('othala', [0, 0.72, -0.36], [0, 1, 0], [0, 0, 1], 0.2, 0.07, 'fitting', 'rivet', false)));
+  const back = flap(...B_FLAPS[1], 6, hem);
   // Under the cloth, a skirt of leather straps studded with steel, each hanging on its own.
-  const skirt = merge(...Array.from({ length: 8 }, (_, q) => {
+  const skirt = hung(Array.from({ length: 8 }, (_, q) => {
     const t = ((q + 0.5) / 8) * TAU, o: V3 = [Math.cos(t) * 0.84, 0.03 + Math.sin(t) * 0.72, 0], out = unit([o[0], o[1] - 0.03, 0]);
     const end = add(o, add(scale(out, 0.1), [0, 0, -0.5]));
-    return merge(tube([o, end], [0.24, 0.22], [0.045, 0.04], 4, q % 2 ? 'leatherDark' : 'leather', { up: out }), paint([disc(add(add(o, scale(sub(end, o), 0.6)), scale(out, 0.05)), out, 0.06, 0.06, 5, 'metal', { lit: true })]));
+    const m = merge(tube([o, end], [0.24, 0.22], [0.045, 0.04], 4, q % 2 ? 'leatherDark' : 'leather', { up: out }), paint([disc(add(add(o, scale(sub(end, o), 0.6)), scale(out, 0.05)), out, 0.06, 0.06, 5, 'metal', { lit: true })]));
+    return { m, at: o, out, len: 0.5, w: 0.22 };
   }));
   // Pauldrons: three lames of steel stacked down each shoulder, each edged in its dark, gold rivets on the top one.
   const pauldron = (s: number): Mesh => merge(...[0, 1].map((q) => {
-    const c: V3 = [s * (1.36 + q * 0.1), 0.06, 1.72 - q * 0.3];
+    const c: V3 = [s * (1.42 + q * 0.1), 0.06, 1.72 - q * 0.3];
     const ax = unit([s * (0.7 + q * 0.25), 0, 1]);
     return merge(
       orbAlong(c, ax, [0.64 - q * 0.06, 0.62 - q * 0.06, 0.26], 7, 3, 'metal'),
       orbAlong(sub(c, scale(ax, 0.05)), ax, [0.67 - q * 0.06, 0.65 - q * 0.06, 0.2], 7, 2, q ? 'metalDark' : 'fitting'),
     );
-  }), paint([-0.3, 0, 0.3].map((y) => disc([s * 1.4, 0.06 + y, 1.97], [s * 0.4, 0, 1], 0.05, 0.05, 6, 'rivet', { lit: true }))));
+  }), paint([-0.3, 0, 0.3].map((y) => disc([s * 1.46, 0.06 + y, 1.97], [s * 0.4, 0, 1], 0.05, 0.05, 6, 'rivet', { lit: true }))));
   const F = B_FACE;
   const face = orcHead(F, n, k);
   // War paint in the cloth's red: a stripe down from each eye over the cheek.
@@ -647,9 +749,9 @@ function veteranBuild(lod: number): Piece[] {
   const hide = [{ c: F.c, r: F.r }];
   return [
     { key: 'hips', mesh: orb([0, 0, 0], [0.82, 0.64, 0.56], 7, 3, 'leatherDark'), bone: 'body', bias: 0 },
-    { key: 'skirt', mesh: skirt, bone: 'body', bias: 0.015, after: ['ll0', 'lr0', 'hips'] },
-    { key: 'flap0', mesh: fore, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips', 'skirt'], front: [0, 1, 0] },
-    { key: 'flap1', mesh: back, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips', 'skirt'], front: [0, -1, 0] },
+    { key: 'skirt', mesh: skirt.mesh, bone: 'body', bias: 0.015, after: ['ll0', 'lr0', 'hips'], bent: swingClear(veteranBones, skirt.hang, B_LIMBS) },
+    { key: 'flap0', mesh: fore, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips', 'skirt'], front: [0, 1, 0], bent: flapClear(veteranBones, fore, B_FLAPS[0], B_LIMBS) },
+    { key: 'flap1', mesh: back, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips', 'skirt'], front: [0, -1, 0], bent: flapClear(veteranBones, back, B_FLAPS[1], B_LIMBS) },
     { key: 'body', mesh: merge(chest, belt), bone: 'chest', bias: 0.005, breathes: { c: [0, 0, 0.8], k: 0.04 } },
     { key: 'paul0', mesh: pauldron(-1), bone: 'chest', bias: 0.06, after: ['body', 'arm0'] },
     { key: 'paul1', mesh: pauldron(1), bone: 'chest', bias: 0.06, after: ['body', 'arm1'] },
@@ -659,10 +761,10 @@ function veteranBuild(lod: number): Piece[] {
     { key: 'ear0', mesh: ear(F, -1, 0.56, n), bone: 'head', bias: 0.21, after: 'head', hide },
     { key: 'ear1', mesh: ear(F, 1, 0.56, n), bone: 'head', bias: 0.21, after: 'head', hide },
     { key: 'helm', mesh: helm, bone: 'head', bias: 0.22, after: ['head', 'brows', 'ear0', 'ear1'] },
-    { key: 'shield', mesh: shield, bone: 'elbow0', bias: 0.06, after: ['fore0', 'hand0', 'body', 'paul0'], front: B_SHIELD.n },
-    { key: 'axe', mesh: hold.mesh(axe), bone: 'hand1', bias: 0.05, after: ['hand1'], front: [1, 0.4, 0] },
+    { key: 'shield', mesh: shield, bone: 'elbow0', bias: 0.06, after: ['fore0', 'hand0', 'body', 'paul0', ...B_HEADS], front: B_SHIELD.n, hide, hideIn: 'head' },
+    { key: 'axe', mesh: hold.mesh(axe), bone: 'hand1', bias: 0.05, after: ['hand1', ...B_HEADS], front: [1, 0.4, 0], hide, hideIn: 'head' },
     ...limbs({
-      n, arm: [0.85, 0.8], armW: [0.38, 0.34], hands: [fist(0.32, n), fist(0.32, n)], leg: [0.7, 0.7], legW: [0.4, 0.34], foot: boot(0.34, 0.74, n),
+      n, ...B_LIMBS, head: hide[0], heads: B_HEADS, hands: [fist(B_LIMBS.hand, n), fist(B_LIMBS.hand, n)], foot: boot(B_LIMBS.foot[0], B_LIMBS.foot[1], n),
       wear: {
         elbow1: merge(tube([[0, 0, -0.3], [0, 0, -0.76]], [0.38, 0.4], [0.38, 0.4], n, 'leatherDark'), tube([[0, 0, -0.42], [0, 0, -0.6]], 0.41, 0.41, n, 'metal')),
         ll1: tube([[0, 0, -0.06], [0, 0, -0.5]], [0.37, 0.33], [0.37, 0.33], n, 'metal'),
@@ -682,8 +784,9 @@ function veteranBones(a: Anim): Bones {
   return bipedBones(B_SPEC, a, (p: BipedPose) => {
     // The shield carried up before the left of its chest, the axe at its right side, the forearm forward; at a run, both higher.
     const run = a.gait * a.go;
-    p.arms[0] = [p.arms[0][0] * 0.3 + 26 + 10 * run, p.arms[0][1] - 6, p.arms[0][2] + 66];
-    p.arms[1] = [p.arms[1][0] * 0.5 + 4 + 20 * run, p.arms[1][1] - 4, p.arms[1][2] + 60 + 10 * run];
+    // Both forearms kept low enough, and the arms far enough out, that a swing forward does not bring a fist up into a pauldron.
+    p.arms[0] = [p.arms[0][0] * 0.3 + 26, p.arms[0][1] - 3 + 6 * run, p.arms[0][2] + 56 - 6 * run];
+    p.arms[1] = [p.arms[1][0] * 0.5 + 4 + 6 * run, p.arms[1][1] - 4 + 16 * run, p.arms[1][2] + 52];
     if (a.act?.kind === 'strike') {
       const t = a.act.t;
       // The shield thrust out ahead and the axe up and back over the right shoulder; the step in behind the shield and the axe brought
@@ -692,15 +795,21 @@ function veteranBones(a: Anim): Bones {
       const chop = ramp(t, B_HIT - 0.12, B_HIT) * (1 - ramp(t, 0.74, 1));
       const guard = ramp(t, 0.0, 0.2) * (1 - ramp(t, 0.8, 1));
       p.arms[0] = toward(p.arms[0], [64, -2, 30], guard);
-      p.arms[1] = toward(toward(p.arms[1], [170, 34, 80], wind), [64, -18, 10], chop);
+      // The axe arm goes up out to the side of the helm, its elbow open, and comes down across in front of it, not through it.
+      const still = 1 - a.go;
+      p.arms[1] = toward(toward(p.arms[1], [150, -22, 40], wind), [70, 18, 10], chop);
+      // Round the shoulder on the way up and down, not through it (out is toward the body once the arm is over the shoulder).
+      const away = Math.cos((p.arms[1][0] + B_SPEC.arm.rest[0]) * (Math.PI / 180));
+      p.arms[1][1] += away * (56 * Math.sin(Math.PI * ramp(t, 0.02, 0.32)) * (1 - chop) + 40 * Math.sin(Math.PI * ramp(t, B_HIT - 0.12, B_HIT)));
       p.chest[2] += -22 * wind + 26 * chop;
-      p.chest[0] += -6 * wind + 14 * chop;
-      p.head[1] += 10 * wind - 8 * chop;
+      p.chest[0] += (-6 * wind + 14 * chop) * (1 - 0.5 * a.go);
+      p.head[1] += 4 * wind - 8 * chop;
+      p.head[0] += 8 * chop;
       p.jaw = 0.6 * Math.max(wind, chop);
-      p.legs[0][0] += 14 * guard;
-      p.legs[1][0] -= 10 * guard;
-      p.legs[0][1] += 0.1 * chop;
-      p.legs[1][1] += 0.1 * chop;
+      p.legs[0][0] += 14 * guard * still;
+      p.legs[1][0] -= 10 * guard * still;
+      p.legs[0][1] += 0.1 * chop * still;
+      p.legs[1][1] += 0.1 * chop * still;
       return;
     }
     if (a.go > 0) return;
@@ -713,7 +822,7 @@ function veteranBones(a: Anim): Bones {
     p.neck[1] = 0.5 * p.neck[1] * (1 - held) + 6 * round;
     const bang = beat(t, [10.2, 22.0], 1.6);
     const knock = bang * (0.5 + 0.5 * Math.sin(t * TAU * 2.5));
-    p.arms[1] = [p.arms[1][0] + 30 * bang + 8 * knock, p.arms[1][1] - 26 * bang, p.arms[1][2] + 10 * bang];
+    p.arms[1] = [p.arms[1][0] + 46 * bang + 8 * knock, p.arms[1][1] - 6 * bang, p.arms[1][2] + 20 * bang];
     p.arms[0] = [p.arms[0][0] + 8 * bang, p.arms[0][1] - 4 * bang, p.arms[0][2]];
     p.chest[2] += -10 * bang;
   });
@@ -752,7 +861,7 @@ const C_SPEC: BipedSpec = {
   chest: { at: [0, 0, 0.22], lean: 22 },
   neck: { at: [0, 0.36, 1.62], len: 0.3, lean: 16 },
   head: { pitch: -12 },
-  arm: { at: [1.06, 0.1, 1.4], len: [0.88, 0.84], rest: [8, 14, 20] },
+  arm: { at: [1.12, 0.1, 1.4], len: [0.88, 0.84], rest: [8, 16, 20] },
   swing: [22, 34],
   waddle: 4,
   armSwing: 14,
@@ -765,6 +874,8 @@ const C_RINGS: Ring[] = [
 ];
 const C_FACE: Face = { c: [0, 0.18, 0.46], r: [0.6, 0.62, 0.6], eye: [0.5, 0.82, 0.28], eyeSize: 0.15, brow: 0.1, jaw: [[0, 0.5, -0.32], [0.54, 0.42, 0.3]], tusk: 0.56, nose: [0.18, 0.12] };
 const C_HIT = 0.5;
+const C_HEADS = ['head', 'jaw', 'brows', 'ear0', 'ear1', 'knot'];
+const C_LIMBS: Limbs = { arm: [0.88, 0.84], armW: [0.34, 0.3], leg: [0.76, 0.74], legW: [0.34, 0.29], hand: 0.32, foot: [0.32, 0.72] };
 /** The chanter's hide cloak: from the small of its back up over its shoulders, open at the front. */
 const C_MANTLE: Ring[] = [[0.4, 0.74, 0.66, -0.12], [0.8, 0.92, 0.78, -0.08], [1.2, 1.16, 0.86, -0.05], [1.56, 1.26, 0.84, -0.04], [1.78, 1.04, 0.68, -0.06], [1.92, 0.56, 0.42, -0.06]];
 /** The totem staff along its own z from the grip: how far down to its foot, and up to the skull at its head. */
@@ -790,7 +901,10 @@ function chanterBuild(lod: number): Piece[] {
   // The mantle: a shaggy hide over the shoulders and down the back, open at the front, tufted along its edge.
   const MR = C_MANTLE;
   const mantle = merge(
-    only(trunk(MR, n + 2, (ring) => (ring >= 4 ? 'featherDark' : 'feather')), (c) => c[1] < 0.12 + (c[2] - 1.0) * 0.55),
+    // Open at both ends as well as at the front: a cap across its hem would be a dark disc before the chest when it leans into a run.
+    only(tube(MR.map(([z, , , y]) => [0, y, z] as V3), MR.map(([, w]) => w), MR.map(([, , h]) => h), n + 2, (ring) => (ring >= 4 ? 'featherDark' : 'feather'), { up: [0, 1, 0], start: false, end: false }),
+      // Over the shoulders and down the back, and no further forward than the back of the neck: not a collar round the throat.
+      (c) => c[1] < Math.min(0.12 + (c[2] - 1.0) * 0.55, 0.16)),
     // The war-rune painted big across the back of the hide, in the same glowing teal.
     paint(runeOnTrunk(MR, 'dagaz', 1.12, 270, 0.34, 0.11, 'water', 'crystal')),
     // Shag across the back under the shoulders, and the ragged hem.
@@ -810,10 +924,10 @@ function chanterBuild(lod: number): Piece[] {
   );
   const belt = tube([[0, 0.04, -0.12], [0, 0.04, 0.08]], 0.7, 0.62, n, 'leatherDark', { up: [0, 1, 0] });
   // A kilt of hide strips, each hanging on its own.
-  const strips = merge(...[-150, -110, -70, -30, 30, 70, 110, 150, 190, 230, 270, 310].map((d, q) => {
+  const strips = hung([-150, -110, -70, -30, 30, 70, 110, 150, 190, 230, 270, 310].map((d, q) => {
     const t = d * (Math.PI / 180), o: V3 = [Math.cos(t) * 0.7, Math.sin(t) * 0.62, 0];
-    const out = unit([o[0], o[1], 0]);
-    return tube([add(o, [0, 0, 0]), add(o, add(scale(out, 0.08), [0, 0, -0.42 - (q % 3) * 0.08]))], [0.17, 0.14], [0.04, 0.035], 4, q % 2 ? 'leatherDark' : 'leather', { up: out });
+    const out = unit([o[0], o[1], 0]), long = 0.42 + (q % 3) * 0.08;
+    return { m: tube([add(o, [0, 0, 0]), add(o, add(scale(out, 0.08), [0, 0, -long]))], [0.17, 0.14], [0.04, 0.035], 4, q % 2 ? 'leatherDark' : 'leather', { up: out }), at: o, out, len: long, w: 0.15 };
   }));
   const F = C_FACE;
   const face = orcHead(F, n, k, 'crystal');
@@ -858,18 +972,19 @@ function chanterBuild(lod: number): Piece[] {
   const hide = [{ c: F.c, r: F.r }];
   return [
     { key: 'hips', mesh: orb([0, 0, 0], [0.7, 0.58, 0.5], 7, 3, 'leatherDark'), bone: 'body', bias: 0 },
-    { key: 'strips', mesh: strips, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips'] },
+    { key: 'strips', mesh: strips.mesh, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips'], bent: swingClear(chanterBones, strips.hang, C_LIMBS) },
     { key: 'body', mesh: merge(chest, belt), bone: 'chest', bias: 0.005, breathes: { c: [0, 0, 0.8], k: 0.05 } },
-    { key: 'mantle', mesh: mantle, bone: 'chest', bias: 0.03, after: ['body', 'arm0', 'arm1', 'staff', 'fore1', 'hand1'], front: [0, -1, 0] },
+    // Drawn after the head where it is before it (from behind), and hidden by the head where it is behind it.
+    { key: 'mantle', mesh: mantle, bone: 'chest', bias: 0.03, after: ['body', 'arm0', 'arm1', 'staff', 'fore1', 'hand1', ...C_HEADS], front: [0, -1, 0], hide, hideIn: 'head' },
     { key: 'head', mesh: merge(face.head, paintFace), shut: merge(face.shut, paintFace), bone: 'head', bias: 0.2 },
     { key: 'jaw', mesh: face.jaw, bone: 'jaw', bias: 0.205, after: 'head' },
     { key: 'brows', mesh: face.brows, bone: 'head', bias: 0.21, after: 'head', hide },
     { key: 'ear0', mesh: ear(F, -1, 0.7, n), bone: 'head', bias: 0.21, after: 'head', hide },
     { key: 'ear1', mesh: ear(F, 1, 0.7, n), bone: 'head', bias: 0.21, after: 'head', hide },
     { key: 'knot', mesh: knot, bone: 'head', bias: 0.19, hide },
-    { key: 'staff', mesh: hold.mesh(staff), bone: 'hand1', bias: 0.05, after: ['hand1'], front: [1, 0.4, 0] },
+    { key: 'staff', mesh: hold.mesh(staff), bone: 'hand1', bias: 0.05, after: ['hand1', ...C_HEADS], front: [1, 0.4, 0], hide, hideIn: 'head' },
     ...limbs({
-      n, arm: [0.88, 0.84], armW: [0.34, 0.3], hands: [hand(0.32, 0.4, n), fist(0.3, n)], leg: [0.76, 0.74], legW: [0.34, 0.29], foot: bareFoot(0.32, 0.72, n),
+      n, ...C_LIMBS, head: hide[0], heads: C_HEADS, hands: [hand(C_LIMBS.hand, 0.4, n), fist(0.3, n)], foot: bareFoot(C_LIMBS.foot[0], C_LIMBS.foot[1], n),
       wear: {
         arm0: paint(runeOnLimb('laguz', -0.4, 150, 0.31, 0.16, 0.06, 'water', 'crystal')),
         arm1: paint(runeOnLimb('laguz', -0.4, 30, 0.31, 0.16, 0.06, 'water', 'crystal')),
@@ -908,15 +1023,19 @@ function chanterBones(a: Anim): Bones {
       const wind = ramp(t, 0.02, 0.34) * (1 - ramp(t, C_HIT - 0.1, C_HIT));
       const slam = ramp(t, C_HIT - 0.1, C_HIT) * (1 - ramp(t, 0.76, 1));
       const [f1, o1, e1] = p.arms[1];
-      p.arms[1] = toward(toward(p.arms[1], [f1 + 46, o1 + 6, e1 - 46], wind), [f1 - 4, o1, e1 + 4], slam);
-      p.arms[0] = toward(toward(p.arms[0], [150, 30, 20], wind), [84, 0, 6], slam);
-      p.chest[0] += -16 * wind + 10 * slam;
+      // Both lifted out to the sides of the head, not past it: the staff hand up and out, the left hand flung up wide.
+      const still = 1 - a.go;
+      p.arms[1] = toward(toward(p.arms[1], [f1 + 40, o1 - 14, e1 - 40], wind), [f1 - 4, o1 + 4, e1 + 4], slam);
+      p.arms[0] = toward(toward(p.arms[0], [128, -40, 14], wind), [78, 16, 6], slam);
+      const away = Math.cos((p.arms[0][0] + C_SPEC.arm.rest[0]) * (Math.PI / 180));
+      p.arms[0][1] += away * 40 * (Math.sin(Math.PI * ramp(t, 0.02, 0.34)) * (1 - slam) + Math.sin(Math.PI * ramp(t, C_HIT - 0.1, C_HIT)));
+      p.chest[0] += (-16 * wind + 10 * slam) * (1 - 0.5 * a.go);
       p.head[0] += 18 * wind - 10 * slam;
       p.jaw = Math.max(wind, slam);
-      p.legs[0][0] += 12 * slam;
-      p.legs[1][0] -= 10 * slam;
-      p.legs[0][1] += 0.1 * slam;
-      p.legs[1][1] += 0.1 * slam;
+      p.legs[0][0] += 12 * slam * still;
+      p.legs[1][0] -= 10 * slam * still;
+      p.legs[0][1] += 0.1 * slam * still;
+      p.legs[1][1] += 0.1 * slam * still;
       return;
     }
     if (a.go > 0) return;
@@ -927,12 +1046,13 @@ function chanterBones(a: Anim): Bones {
     p.arms[1][0] += 10 * thump;
     p.head[0] += 6 * thump;
     const raise = 0.5 + 0.5 * cyc(t, 3);
-    p.arms[0] = [p.arms[0][0] + 50 * raise, p.arms[0][1] + 20 * raise + 6 * cyc(t, 12), p.arms[0][2] + 60 * raise];
+    p.arms[0] = [p.arms[0][0] + 44 * raise, p.arms[0][1] + 28 * raise + 6 * cyc(t, 12), p.arms[0][2] + 52 * raise];
     const cry = beat(t, [8.0, 20.0], 2.0);
     p.head[0] += 26 * cry;
     p.chest[0] -= 14 * cry;
     p.jaw = Math.max(p.jaw, cry);
-    p.arms[0] = [p.arms[0][0] + 60 * cry, p.arms[0][1] + 20 * cry, p.arms[0][2] - 30 * cry];
+    // The left arm flung up and out to the side, above the shoulder and clear of the head.
+    p.arms[0] = toward(p.arms[0], [24, 112, 14], cry);
     p.arms[1] = [p.arms[1][0] + 30 * cry, p.arms[1][1], p.arms[1][2]];
   });
 }
@@ -989,3 +1109,21 @@ export const ORC_C: Kind = {
 
 /** Each proposal, by its letter: put one in the orc's place (`LINES.orc` in `./wildermon`) to make it the orc. */
 export const ORC_PROPOSALS: Record<string, Kind> = { A: ORC_A, B: ORC_B, C: ORC_C };
+
+/**
+ * What each proposal's body is, as solids, for the tool that looks for an arm, a leg or what is held passing through it
+ * (`tools/orc/clip.ts`): the trunk's rings on the chest, the hips and the head, lumps on the chest (pauldrons), the flaps
+ * hanging from the belt, a cloak's rings, the limbs, and the pieces held.
+ */
+export interface OrcShape {
+  trunk: readonly Ring[]; hips: { c: V3; r: V3 }; face: Face; limbs: Limbs; flaps: ReadonlyArray<[number, number, number]>;
+  lumps: ReadonlyArray<{ bone: string; c: V3; r: V3 }>; cloak?: readonly Ring[]; held: readonly string[];
+}
+export const ORC_SHAPES: Record<string, OrcShape> = {
+  A: { trunk: A_RINGS, hips: { c: [0, 0, 0], r: [0.8, 0.62, 0.5] }, face: A_FACE, limbs: A_LIMBS, flaps: A_FLAPS, lumps: [], held: ['cleaver'] },
+  B: {
+    trunk: B_RINGS, hips: { c: [0, 0, 0], r: [0.82, 0.64, 0.56] }, face: B_FACE, limbs: B_LIMBS, flaps: B_FLAPS,
+    lumps: [-1, 1].map((s) => ({ bone: 'chest', c: [s * 1.42, 0.06, 1.72] as V3, r: [0.62, 0.6, 0.26] as V3 })), held: ['axe', 'shield'],
+  },
+  C: { trunk: C_RINGS, hips: { c: [0, 0, 0], r: [0.7, 0.58, 0.5] }, face: C_FACE, limbs: C_LIMBS, flaps: [], lumps: [], cloak: C_MANTLE, held: ['staff'] },
+};

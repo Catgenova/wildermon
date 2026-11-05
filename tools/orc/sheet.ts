@@ -54,6 +54,8 @@ function poseOf(p = 'stand'): { go: number; gait: number; u: number; act?: { kin
   if (k === 'walk') return { go: 1, gait: 0, u: x };
   if (k === 'run') return { go: 1, gait: 1, u: x };
   if (k === 'strike') return { go: 0, gait: 0, u: 0, act: { kind: 'strike', t: x } };
+  // Striking on the move, the stride where `tools/orc/clip.ts` has it at that moment of the strike.
+  if (k === 'walk-strike' || k === 'run-strike') return { go: 1, gait: k === 'run-strike' ? 1 : 0, u: (x * 50) / 37, act: { kind: 'strike', t: x } };
   return { go: 0, gait: 0, u: 0 };
 }
 

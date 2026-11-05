@@ -57,6 +57,21 @@ function lineup() {
 let spec;
 if (plan === 'bench') spec = { sections: [], bench: { who: (process.argv[4] ?? 'orc,A,B,C').split(','), n: 80, frames: 30 } };
 else if (plan === 'lineup') spec = { sections: lineup() };
+// Chosen moments close up (the list inline, or `@file`): `frames '<title>' '[{"who":"A","pose":"run-strike:0.68","facing":2,"t":0}, ...]'`, eight to a row.
+// Every turn against a run of moments (strike, run, striking on the move, the bellow), small, for looking for what passes through
+// what: `audit:A`.
+else if (plan.startsWith('audit:')) {
+  const who = plan.slice(6);
+  const poses = [...[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75].map((t) => `strike:${t}`), ...[0, 0.25, 0.5, 0.75].map((u) => `run:${u}`), 'walk-strike:0.2', 'run-strike:0.4', 'stand'];
+  spec = { sections: [{ title: `${who}: every turn (rows 0 to 7) through the strike, the run, striking on the move and its loop's bellow`,
+    rows: turns.map((f) => poses.map((pose) => close(who, { facing: f, pose: pose === 'stand' ? undefined : pose, t: pose === 'stand' ? { A: 6.2, B: 10.4, C: 8.6 }[who] ?? 0 : 0, k: 12, w: 112, h: 175, label: `${f} ${pose}` }))) }] };
+}
+else if (plan === 'frames') {
+  const list = JSON.parse(process.argv[5].startsWith('@') ? readFileSync(process.argv[5].slice(1), 'utf8') : process.argv[5]);
+  const rows = [];
+  for (let i = 0; i < list.length; i += 8) rows.push(list.slice(i, i + 8).map((c) => close(c.who, { k: 22, w: 220, h: 330, ...c, label: c.label ?? `${c.who} ${c.pose ?? `stand ${c.t ?? 0}`} turn ${c.facing ?? 1}` })));
+  spec = { sections: [{ title: process.argv[4], rows }] };
+}
 else if (plan.startsWith('close:')) spec = { sections: [closeRows(plan.slice(6))] };
 else spec = { sections: sheet(plan) };
 
