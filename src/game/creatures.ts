@@ -858,6 +858,8 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   petta: { kind: 'more', n: 1, what: 'flowers per pick' },
   potta: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   rippa: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  // Its stone brick is a recipe worked at the stores, which the island's `errand_do` adds a line's 'more' to.
+  chissa: { kind: 'more', n: 1, what: 'stone brick per shard' },
   papra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   glimmip: { kind: 'more', n: 1, what: 'glass lumps per batch' },
   kemma: { kind: 'loads', n: 1, what: 'wildermon brushed per cycle' },
@@ -3026,8 +3028,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   chissa: {
     id: 'chissa',
-    name: 'Chissa',
+    name: 'Chipkin',
+    was: ['Chissa'],
+    // Asked for, with a reference sheet: Chipkin, Brickorn, Fortigran. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Brickorn', description: '' },
+      { name: 'Fortigran', description: '' },
+    ],
     health: 28,
     attack: 3,
     speed: 1.8,
@@ -3038,11 +3047,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'chisel',
     workRange: 6,
+    // [stone, brick]: the sheet's cream sandstone with terracotta, oatmeal with a deep red, pale limestone with ochre, and buff with rose.
     variants: [
-      ['#9a948c', '#dcd8d0'],
-      ['#8a8a90', '#d0d0d8'],
-      ['#a49a8c', '#e4dccc'],
-      ['#7c7c7c', '#c8c8c4'],
+      ['#e8d6b8', '#c8693e'],
+      ['#e2d0b4', '#b0503a'],
+      ['#ece2cc', '#c88a46'],
+      ['#e4cdb0', '#c06a5c'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 3 },
   },
@@ -4285,6 +4295,7 @@ sayLineLater('flecha', `Level: ${GATHER_SKILL.fletch.replace(/_/g, ' ')}.`);
 sayLineLater('glossa', `Level: ${GATHER_SKILL.mortar}.`);
 sayLineLater('crakka', `Level: ${GATHER_SKILL.concrete}.`);
 sayLineLater('leecha', `Level: ${GATHER_SKILL.bandage.replace(/_/g, ' ')}.`);
+sayLineLater('chissa', `Level: ${GATHER_SKILL.chisel.replace(/_/g, ' ')}.`);
 sayLineLater('whirla', `Level: ${GATHER_SKILL.churn.replace(/_/g, ' ')}.`);
 sayLineLater('simma', `Level: ${GATHER_SKILL.cook}.`);
 
