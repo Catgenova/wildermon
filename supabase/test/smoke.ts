@@ -108,6 +108,30 @@ async function drain(id: string, uid: string, tries = waitFor(30)): Promise<numb
  * now — the same function, the same step rule, off the same `World` the join
  * built.
  */
+/*
+ * Every tile a body at (x, y) is standing on: one in the middle of a tile, two on an edge, four on a corner. Half a
+ * tile's walk leaves it exactly on a corner, which \`floor\` puts on one of the four, and that one can be a pocket our
+ * copy of the land routes nothing out of while the one beside it is open ground. Live run 2000 (seed 1396066766): the
+ * body at 19.0, 45.0 was put on the bare rock of 19,45, walled in by trees and rock, though it stood on the corner of
+ * the grass it came ashore on.
+ */
+function standingOn(x: number, y: number): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  for (const fx of new Set([Math.floor(x), Math.floor(x - 1e-6)]))
+    for (const fy of new Set([Math.floor(y), Math.floor(y - 1e-6)])) out.push([fx, fy]);
+  return out;
+}
+
+/** A path from any of the tiles a body is standing on to (tx, ty), or null: none, or a tile it is already on. */
+function pathFrom(world: World, starts: Array<[number, number]>, tx: number, ty: number): Array<{ x: number; y: number }> | null {
+  if (starts.some(([fx, fy]) => fx === tx && fy === ty)) return [{ x: tx, y: ty }];
+  for (const [fx, fy] of starts) {
+    const path = findPath(world, fx, fy, 0, tx, ty, pathOptions(world));
+    if (path) return path;
+  }
+  return null;
+}
+
 async function walkTo(id: string, world: World, uid: string, x: number, y: number): Promise<boolean> {
   for (let leg = 0; leg < 8; leg++) {
     const { data: here } = await supabase().from('player').select('x,y')
@@ -129,9 +153,8 @@ async function walkTo(id: string, world: World, uid: string, x: number, y: numbe
      * started looking from where the body actually is rather than from where
      * it came ashore, is now the likeliest answer rather than an odd one.
      */
-    const path = fx === tx && fy === ty
-      ? [{ x: tx, y: ty }]
-      : findPath(world, fx, fy, 0, tx, ty, pathOptions(world));
+    // From whichever tile under the body has a way there (\`standingOn\`).
+    const path = fx === tx && fy === ty ? [{ x: tx, y: ty }] : pathFrom(world, standingOn(from.x, from.y), tx, ty);
     if (!path) return false;
     for (const wp of path) {
       const { data } = await supabase().rpc('rpc_move',
@@ -734,7 +757,13 @@ async function main(): Promise<void> {
           // Run 363 on the real island chose a tile a step from the spawn with
           // no path to it, and the walk that followed could not get there — the
           // same gap the dig corner had, closed the same way.
-          if ((dx || dy) && !findPath(back, Math.floor(at.x), Math.floor(at.y), 0, x, y, pathOptions(back))) continue;
+          if (!pathFrom(back, standingOn(at.x, at.y), x, y)) continue;
+          /*
+           * And soil a shovel takes within walk of it: the dig below starts from here. Run 2000 founded on the bare
+           * rock of a pocket the body had stepped onto, and then "all rock and water" was said of an island with sixty
+           * corners worth digging a few tiles off.
+           */
+          if (!soilWithinWalk(back, x, y)) continue;
           sx = x; sy = y; done = true;
         }
       }
