@@ -83,6 +83,42 @@ jobs:
                    "https://api.supabase.com/v1/projects/$PROJECT_REF/config/disk/util" \
                  | jq -r '.metrics | "\(.fs_used_bytes) \(.fs_size_bytes)"' 2>/dev/null || true)
           echo "== disk (used, size in bytes): $disk"
+          # Asked: "Find out why my bastiondrakes cant go up my stairs now". The keeper's Bricklings by stage, where
+          # each stands and at what storey, why it idles, its way; the stairs of the buildings near them; and the way
+          # the island finds from each to its work. Reads only.
+          ask "drakes: the keeper's bricklings" "select c.id, c.name, stage_of(c), c.mode, c.phase, c.job, c.idle_why, c.idle_n, c.storey, c.storey_from,
+                 round(creature_x(c)::numeric, 1) as cx, round(creature_y(c)::numeric, 1) as cy, round(c.to_x::numeric, 1) as tx, round(c.to_y::numeric, 1) as ty,
+                 c.work_x, c.work_y, work_range(c) as rng, c.carrying, left(c.way::text, 200) as way, to_char(c.until, 'HH24:MI:SS') as until, c.post, c.form_size
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+            where c.keeper = p.uid and c.species = 'cobbe' order by c.id"
+          ask "drakes: where the island sends each next" "select c.id, stage_of(c), s.* from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+             cross join lateral errand_step(c.world_id, c.id) s
+            where c.keeper = p.uid and c.species = 'cobbe' and c.mode = 'deed' order by c.id"
+          ask "drakes: their last 40 messages" "select to_char(e.at, 'MM-DD HH24:MI:SS') as at, e.text from event e join player p on p.world_id = e.world_id and p.uid = e.uid
+             where p.name = 'catgenova' and (e.text ilike '%bastiondrake%' or e.text ilike '%mortarback%' or e.text ilike '%brickling%' or e.text ilike '%stair%' or e.text ilike '%storey%')
+             order by e.n desc limit 40"
+          ask "drakes: stairs and ladders on the keeper's settlement" "select f.building, b.name, f.level, f.x, f.y, f.kind, f.hand, f.facing, f.material, bill_done(f.needed) as done, f.needed::text as needed
+             from player p join deed d on d.world_id = p.world_id and d.founded_by = p.uid
+             join floor_tile f on f.world_id = p.world_id and f.kind in ('stairs', 'ladder') and on_my_deed(p.world_id, p.uid, f.x, f.y)
+             left join building b on b.world_id = f.world_id and b.id = f.building
+            where p.name = 'catgenova' order by f.building, f.level, f.x, f.y"
+          ask "drakes: planned work a hod carrier cannot reach" "select c.id, u.* from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+             cross join lateral hod_unreached(c.world_id, p.uid, floor(creature_x(c))::int, floor(creature_y(c))::int, work_range(c)) u
+            where c.keeper = p.uid and c.species = 'cobbe' and c.mode = 'deed' and stage_of(c) = 2 limit 30"
+          ask "drakes: the way from each to the top of each staircase near it" "select c.id, stage_of(c), f.building, f.level, f.x, f.y, f.facing,
+                 creature_way(c.world_id, floor(creature_x(c))::int, floor(creature_y(c))::int, greatest(0, c.storey), f.x, f.y, f.level) is not null as way_up,
+                 left(creature_way(c.world_id, floor(creature_x(c))::int, floor(creature_y(c))::int, greatest(0, c.storey), f.x, f.y, f.level)::text, 160) as steps
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+             join floor_tile f on f.world_id = c.world_id and f.kind = 'stairs' and bill_done(f.needed)
+              and abs(f.x - creature_x(c)) <= 40 and abs(f.y - creature_y(c)) <= 40
+            where c.keeper = p.uid and c.species = 'cobbe' and c.mode = 'deed' order by c.id, f.building, f.level limit 40"
+          ask "drakes: walls round the stairs a beast does not pass" "select wl.building, wl.level, wl.x, wl.y, wl.dir, wl.type, wl.material, wl.lowered, t.passable, t.beast_proof
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+             join floor_tile f on f.world_id = c.world_id and f.kind = 'stairs' and abs(f.x - creature_x(c)) <= 40 and abs(f.y - creature_y(c)) <= 40
+             join wall wl on wl.world_id = f.world_id and wl.building = f.building and wl.x between f.x - 1 and f.x + 1 and wl.y between f.y - 1 and f.y + 1
+             left join wall_type_def t on t.id = wl.type
+            where c.keeper = p.uid and c.species = 'cobbe' and stage_of(c) = 2 and bill_done(wl.needed)
+            group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 order by 1, 2, 3, 4 limit 60"
           # Asked about: "Nakatari just placed a 4ql supreme plank into his settlement crate and it lost its rarity."
           # Whether 20261104190000 gave it back: his planks in the pack, and the store log's planks from him.
           ask "Nakatari's planks in the pack" "select i.id, i.def, i.count, round(i.ql::numeric, 2) as ql, i.rare, i.holder
