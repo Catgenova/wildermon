@@ -47,8 +47,9 @@ const PETAL: RGB = [246, 168, 184];
 const PETAL_TIP: RGB = [255, 226, 232];
 const HEART: RGB = [250, 214, 110];
 
-/** A pool's water: the ramp's colour at the depth from its surface to its floor. */
-const POOL_WATER = `rgb(${waterRgb(POOL_DEPTH - POOL_LIP).join(',')})`;
+/** A pool's water: the ramp's colour at the depth from its surface to its floor; and the same for the falls painter, which a curtain over its edge starts in. */
+const POOL_RGB = waterRgb(POOL_DEPTH - POOL_LIP);
+const POOL_WATER = `rgb(${POOL_RGB.join(',')})`;
 
 /** The concrete left round a pool, as a share of the tile's side. */
 const RIM = 0.12;
@@ -237,7 +238,7 @@ export function sheetOf(p: PoolScene, run: Run): Sheet {
   return {
     axis, line: run.line, from: run.open0 + back, to: run.open1 - back, half: back,
     way: run.side === 'e' || run.side === 's' ? 1 : -1, reach: run.onto ? THROW_ONTO : THROW_DOWN, curl: HUG,
-    top: run.top, landFrom: run.lo, land, wet: run.onto, grow: 1,
+    top: run.top, landFrom: run.lo, land, wet: run.onto, grow: 1, source: POOL_RGB,
   };
 }
 

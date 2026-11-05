@@ -118,6 +118,13 @@ const TIMBER_DARK = hex('#5e4630');
 const BED_DRY = hex('#9ea2ae');
 const WALL_WET = hex('#7f8f96');
 const DAMP = hex('#7d8394');
+/** The water in a channel from wall to wall, each band its share of the width and its colour, widest first: dark at its walls and paler down its middle. */
+const CHANNEL_BANDS: ReadonlyArray<readonly [number, RGB]> = [
+  [1, SPRING_EDGE], [0.84, mix(SPRING_WATER, SPRING_EDGE, 0.12)], [0.56, mix(SPRING_WATER, SPRING_PALE, 0.3)], [0.24, mix(SPRING_WATER, SPRING_PALE, 0.58)],
+];
+/** The channel's water, and its paler middle, as a spout's sheet starts in them (`Sheet.source`, `Sheet.bands`). */
+const CHANNEL_WATER = CHANNEL_BANDS[1][1];
+const CHANNEL_MIDDLE = CHANNEL_BANDS.slice(2);
 
 /** One piece of an aqueduct to draw: a bay's insides, its face and water, or the spout at its foot. */
 export interface AqueductPart {
@@ -1175,10 +1182,7 @@ export class AqueductPainter {
   private channelWater(ctx: CanvasRenderingContext2D, bay: Bay, wet: number, from = -0.004): void {
     const f = this.f!;
     const end = Math.min(1.004, wet + (wet >= 1 ? 0.004 : 0));
-    const bands: Array<[number, RGB]> = [
-      [1, SPRING_EDGE], [0.84, mix(SPRING_WATER, SPRING_EDGE, 0.12)], [0.56, mix(SPRING_WATER, SPRING_PALE, 0.3)], [0.24, mix(SPRING_WATER, SPRING_PALE, 0.58)],
-    ];
-    for (const [w, c] of bands) {
+    for (const [w, c] of CHANNEL_BANDS) {
       ctx.fillStyle = css(c);
       ctx.beginPath();
       this.move(ctx, bay, from, -WET * w, bay.water);
@@ -1649,7 +1653,10 @@ export class AqueductPainter {
       wet,
       grow: Math.min(1, gone / 0.7),
       feed: WET,
-      back: 0.1,
+      // The channel runs to the lip in its own colours, and on over it.
+      back: 0,
+      source: CHANNEL_WATER,
+      bands: CHANNEL_MIDDLE,
     };
     const placed = place(f.fv, sheet);
     const u0 = sheet.from - sheet.half;
@@ -1727,6 +1734,7 @@ export class AqueductPainter {
       grow: Math.min(1, gone / 0.5),
       feed: WET,
       back: 0.1,
+      source: CHANNEL_WATER,
     };
     if (sheet.top - sheet.land[0] < 1) return;
     const placed = place(f.fv, sheet);

@@ -10,7 +10,10 @@
  *     onto rock;
  *   * `fountain`: a tiered fountain, running;
  *   * `aqueduct`: an aqueduct off a spring's bowl, its spout pouring into a
- *     hollow it fills.
+ *     hollow it fills (`spout`, its lip, closer);
+ *   * `cliff`: a pond going over five corners of its rim, down a dark rock
+ *     face 68 tall into a pond below (`brink`, its lip, closer);
+ *   * `pool`: a pool three tiles wide going over its edge into a pool below.
  *
  * Driven through `window.falls`: `shot({ scene, zoom, turn, hour, t })` puts
  * the camera there and draws one frame at drawing clock `t`, for the script
@@ -92,6 +95,16 @@ function height(x: number, y: number): number {
     return Math.max(-8, 52 - 3 * (y - 14));
   }
   if (x >= 30 && x <= 54 && y >= 36) return aqueductHeight(x - 24, y - 6);
+  // The cliff: a pond on a plateau at 112 going over five corners of its rim, a dark rock face 68 tall, into a pond below.
+  if (x >= 16 && x <= 28 && y >= 36 && y <= 56) {
+    if (y <= 44) {
+      if (x >= 20 && x <= 24 && y >= 40 && y <= 43) return x === 22 && y === 41 ? 100 : 106;
+      if (x >= 20 && x <= 24 && y === 44) return 112;
+      return 120;
+    }
+    if (x >= 18 && x <= 26 && y >= 45 && y <= 49) return 28;
+    return 46 - 2 * (y - 45);
+  }
   return 30;
 }
 
@@ -103,6 +116,10 @@ const SCENES: Record<string, [number, number, number]> = {
   spill: [44, 14, 80],
   fountain: [10.5, 46.5, 32],
   aqueduct: [46.5, 46.5, 75],
+  spout: [48.5, 46.5, 130],
+  cliff: [22.5, 45, 80],
+  brink: [22.5, 44, 112],
+  pool: [5.5, 39, 50],
 };
 
 const params = new URLSearchParams(location.search);
@@ -148,6 +165,13 @@ try {
     [7, 42, 2], [14, 50, 3], [52, 40, 1], [33, 52, 3],
   ];
   for (const [x, y, sp] of trees) w.setTile(x, y, TileType.Tree, packTreeData(sp, (x * 7 + y) & 7));
+  // The pool: a row of three poured to 60 and walled round on three sides, its water going over into a row of three poured to 40.
+  for (let x = 3; x <= 7; x++) game.addFoundation(x, 37, 60, 0);
+  for (const x of [3, 7]) game.addFoundation(x, 38, 60, 0);
+  for (let x = 4; x <= 6; x++) {
+    game.addFoundation(x, 38, 60, 0).pool = true;
+    game.addFoundation(x, 39, 40, 0).pool = true;
+  }
   game.springs.lay();
   const ago = Date.now() - 3600 * 1000;
   // The aqueduct first, so the bowl's water goes along it.
@@ -156,6 +180,8 @@ try {
   game.springs.dig(12, 8, null, ago);
   game.springs.dig(44, 8, null, ago);
   game.springs.dig(37, 46, null, ago);
+  game.springs.dig(22, 41, null, ago);
+  game.springs.dig(5, 38, null, ago);
   const fountain = game.addFurniture('fountain', 10, 46, 0, 0, 80);
   fountain.litres = 50;
   game.update(0.01);
