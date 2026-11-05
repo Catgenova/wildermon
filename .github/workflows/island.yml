@@ -3119,6 +3119,18 @@ jobs:
             --outfile=node_modules/.cache/recipedrops.mjs --log-level=error
           node node_modules/.cache/recipedrops.mjs
 
+      - name: An oven as a station, a ferment sealed and opened, and a dish served out to a group
+        if: matrix.shard == 6
+        run: |
+          # A lit oven is the oven station and a brazier is not; a ferment seals
+          # a vessel ready in its time, refused too soon and opened for the
+          # result and the vessel back, one wanting a cellar refused above
+          # ground; a group's dish hands a share to each player in reach and
+          # the rest to the server. Fixtures only: no recipe uses them yet.
+          npx esbuild supabase/test/fermentfeast.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/fermentfeast.mjs --log-level=error
+          node node_modules/.cache/fermentfeast.mjs
+
       - name: The Springlet, slow on land and a hare's pace in water, found only in deep water
         if: matrix.shard == 3
         run: |
@@ -5236,7 +5248,7 @@ jobs:
       - name: Twelve more hands on a settlement
         if: matrix.shard == 6
         run: |
-          # A forga and a potta empty and charge the smelters and the kilns, a
+          # A Sluglow and a potta empty and charge the smelters and the kilns, a
           # cindra rakes ashes and leaches lye, a hoppa brews, a simma cooks, a
           # relka restores, a bedda keeps the planters, and a wurla, a sprigga,
           # an ambra, a petta and a scurra work worms, sprouts, tar, flowers and
@@ -5249,7 +5261,7 @@ jobs:
         if: matrix.shard == 6
         run: |
           # A rippa saws planks, a chissa chisels stone brick, a mudda shapes
-          # clay brick, a cordra lays up rope and a flecha fletches arrows at
+          # clay brick and a flecha fletches arrows at
           # the stores, a papra presses papyrus at a paper press, a glossa
           # glazes the pottery and a dippa fills the empty buckets: each the
           # same on both sides.
@@ -5286,7 +5298,7 @@ jobs:
           # lotus, a crakka mixes concrete, a glossa mortar, a carra saws
           # timbers, an awla carves shafts, a scorcha mixes alloys at a lit
           # smelter, a leecha makes bandages, covers and salves, a frosta
-          # presses cheese, a whirla churns butter and a brittla distils: each
+          # presses cheese and a whirla churns butter (the forga, cordra and brittla are gone): each
           # the player's own recipe or action, out of the stores and back in;
           # no worker glazes or butchers; the ten former guards have no ability
           # and do not guard; the testa, skulka, gasha, hamma, bashka, executa,

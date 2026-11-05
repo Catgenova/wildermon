@@ -166,7 +166,10 @@ import {
 } from '../src/game/motes';
 import { patronStatue, STATUETTE } from '../src/game/patronlist';
 import { RECIPE_DROP_ODDS, RECIPE_DROPPERS, RECIPE_ITEM, RECIPE_KNOWN } from '../src/game/recipebook';
-import { lockedRecipes, recipeTitle } from '../src/game/recipes';
+import { bookOf, FERMENT_CELLAR_SAYS, fermentRecipes, lockedRecipes, recipeTitle, SEALED_ITEM } from '../src/game/recipes';
+import { VESSEL_BACK_QL } from '../src/game/ferment';
+import { serveDishes } from '../src/game/feast';
+import { BOOK_DROPS, BOOK_KINDS, BOOKS } from '../src/game/bookdrops';
 import {
   TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
 } from '../src/game/tracking';
@@ -2204,6 +2207,37 @@ out.push(`create or replace function recipe_known_says() returns text language s
 out.push(`create or replace function locked_recipes() returns table (id text, title text, ord int) language sql immutable as $fn$ select * from (values ${
   lockedRecipes().map((r, n) => `(${q(r.id)}, ${q(recipeTitle(r))}, ${n})`).join(', ') || `(null::text, null::text, null::int)`
 }) v (id, title, ord) where v.id is not null $fn$;`);
+/*
+ * Ferments and ageings (`Recipe.ferment`, `ferment.ts`): the item one is sealed in, the QL its vessel comes back at,
+ * what one that wants a cellar says elsewhere, and every ferment recipe with its time, its vessel and whether it wants
+ * a cellar, keyed by the title its sealed vessel carries in `extra`.
+ */
+out.push(`create or replace function sealed_item() returns text language sql immutable as $fn$ select ${q(SEALED_ITEM)} $fn$;`);
+out.push(`create or replace function vessel_back_ql() returns double precision language sql immutable as $fn$ select ${q(VESSEL_BACK_QL)}::double precision $fn$;`);
+out.push(`create or replace function ferment_cellar_says() returns text language sql immutable as $fn$ select ${q(FERMENT_CELLAR_SAYS)} $fn$;`);
+out.push(`create or replace function ferment_recipes() returns table (id text, title text, seconds double precision, vessel text, cellar boolean) language sql immutable as $fn$ select * from (values ${
+  fermentRecipes().map((r) => `(${q(r.id)}, ${q(recipeTitle(r))}, ${q(r.ferment!.seconds)}::double precision, ${q(r.ferment!.vessel)}, ${r.ferment!.cellar ? 'true' : 'false'})`).join(', ')
+    || `(null::text, null::text, null::double precision, null::text, null::boolean)`
+}) v (id, title, seconds, vessel, cellar) where v.id is not null $fn$;`);
+/* A dish for a group (`ItemDef.serve`, `feast.ts`): what each share of it is, how many, and how far off a player may be handed one. */
+out.push(`create or replace function serve_dishes() returns table (item text, serving text, count int, reach double precision) language sql immutable as $fn$ select * from (values ${
+  serveDishes().map(([id, sv]) => `(${q(id)}, ${q(sv.serving)}, ${q(sv.count)}::int, ${q(sv.reach)}::double precision)`).join(', ')
+    || `(null::text, null::text, null::int, null::double precision)`
+}) v (item, serving, count, reach) where v.item is not null $fn$;`);
+/*
+ * And the kinds of book (`recipebook.ts`): the book each shut recipe is opened by (`bookOf`: a Formula for an
+ * enchantment scroll, a Recipe for anything else), the item each is written on, what reading one already open says, and
+ * the kinds whose carcasses carry one, with the odds per butchering (`BOOK_DROPS`).
+ */
+out.push(`create or replace function recipe_book(p_recipe text) returns text language sql immutable as $fn$ select case ${
+  lockedRecipes().map((r) => `when p_recipe = ${q(r.id)} then ${q(bookOf(r))} `).join('')
+}else null end $fn$;`);
+out.push(`create or replace function book_item(p_book text) returns text language sql immutable as $fn$ select case p_book ${BOOK_KINDS.map((b) => `when ${q(b)} then ${q(BOOKS[b].item)} `).join('')}end $fn$;`);
+out.push(`create or replace function book_known_says(p_book text) returns text language sql immutable as $fn$ select case p_book ${BOOK_KINDS.map((b) => `when ${q(b)} then ${q(BOOKS[b].known)} `).join('')}end $fn$;`);
+out.push(`create or replace function book_of_item(p_def text) returns text language sql immutable as $fn$ select case p_def ${BOOK_KINDS.map((b) => `when ${q(BOOKS[b].item)} then ${q(b)} `).join('')}end $fn$;`);
+out.push(`create or replace function book_drops() returns table (kind text, book text, odds double precision) language sql immutable as $fn$ select * from (values ${
+  BOOK_DROPS.map((d) => `(${q(d.kind)}, ${q(d.book)}, ${q(d.odds)}::double precision)`).join(', ')
+}) v (kind, book, odds) $fn$;`);
 /*
  * A patron's statue (`relicuse.ts`, `faith.ts`): what it is enchanted out of, the motes of each element that takes, the
  * statue of each patron, and the patron of each statue (null for anything else).

@@ -233,7 +233,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'thrice', text: `Cast ${BLESS_CAP} circles of cunning on one tool`, met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) >= BLESS_CAP) },
       // A scroll written at the crafting window and put into a weapon (`enchant.ts`): held, not counted, so the island has nothing to note.
       // A melee weapon, as it says: any enchanted thing in the pack did, a ring or a bow among them.
-      { id: 'enchanted', text: 'Enchant a melee weapon', hint: 'Scroll from papyrus and motes, then Enchant on the scroll', met: (g) => g.inventory.items.some((it) => !!it.enchant && ENCHANTMENTS[it.enchant.id]?.on === 'melee') },
+      { id: 'enchanted', text: 'Enchant a melee weapon', hint: 'Formula read, scroll from papyrus and motes, then Enchant on the scroll', met: (g) => g.inventory.items.some((it) => !!it.enchant && ENCHANTMENTS[it.enchant.id]?.on === 'melee') },
       { id: 'goblin', text: 'Kill a goblin', met: did('slew:goblin') },
       { id: 'orc', text: 'Kill an orc', met: did('slew:orc') },
       { id: 'ogre', text: 'Kill an ogre', met: did('slew:ogre') },

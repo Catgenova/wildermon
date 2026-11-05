@@ -1,5 +1,5 @@
 import {
-  coatPalette, curve, merge, moved, orb, quadBonesOf, taper, tube,
+  coatPalette, curve, merge, orb, quadBonesOf, taper, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { cut, earMesh, quadPieces } from './beastkit';
@@ -10,8 +10,8 @@ import { barrel, OWN, paws } from './wild-hands2';
 
 /**
  * Six that had an ability of their own (`AbilityId`), settlement workers now: each wears what it
- * did -- a whirl of blades, embers, icicles, tendrils, a brittle shell,
- * a round sucking mouth for a leech.
+ * did -- a whirl of blades, embers, icicles, tendrils, a round sucking
+ * mouth for a leech (the brittla, a brittle shell, is gone: `REMOVED_KINDS`).
  */
 
 /** A tail's root, out of the body, before what is on the end of it. */
@@ -109,16 +109,4 @@ export const ROOTLE = kindOf({
   own: { bark: [96, 76, 50], stem: [120, 96, 60] }, mark: 30, shadow: [1.6, 1.3], stride: 1.25, size: 1.65,
 });
 
-/* ---- the brittla: glassy shards along its back --------------------------------------- */
-
-export const BRITTLA = kindOf({
-  spec: { ...pawed({ high: 1.3, len: 2.1, legs: 0.75, neck: 0.34, lean: 45, swing: [22, 36], ears: [30, 24], tail: [0.4, 14, 6] }), nose: 12 },
-  head: HEAD(0.32, 0.15, [0.98, 0.96, 0.88]), body: [2.1, 1.0, 0.85], neck: [0.58, 0.58, 0.34], ear: [0.34, 0.22, 30], legs: [0.75, 0.24, 0.22, 'coatDark'],
-  snout: [1.0, -0.18, [0.38, 0.32, 0.32], 0.1],
-  back: () => merge(...[[-0.7, 0.1, 18], [-0.35, -0.12, -14], [0, 0.12, 22], [0.35, -0.08, -10]].map(([y, x, lean]) =>
-    moved(taper([[0, 0, 0], [0, 0, 0.42]], 0.11, 0.01, 4, 'crystal'), [x, y, 0.72], 0, lean, lean))),
-  thin: true,
-  tail: (n) => merge(root(n), taper([[0, -0.2, 0], [0, -0.75, 0.15], [0, -1.0, 0.2]], 0.09, 0.02, n, 'crystalDark')),
-  own: { crystal: [200, 226, 240], crystalDark: [140, 176, 196] }, mark: 30, shadow: [1.45, 1.15], stride: 1.45, size: 1.6,
-});
 

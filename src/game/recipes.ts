@@ -1,3 +1,4 @@
+import type { BookKind } from './bookdrops';
 import { MIND_GAIN, tryGain } from './learn';
 import { madeBy } from './signing';
 import type { ActionDef, Target } from './actions';
@@ -81,9 +82,9 @@ const article = (id: string): string => (/^[aeiou]/.test(lower(id)) ? 'an ' : 'a
 export type RecipeCategory = 'Woodwork' | 'Furniture' | 'Stonework' | 'Clay & thatch' | 'Cloth' | 'Alchemy' | 'Writing' | 'Cooking' | 'Smelting' | 'Glassblowing'
   | 'Jewellery' | 'Mending' | 'Enchanting';
 /** A place a recipe has to be worked at, beyond what is carried. */
-export type Station = 'campfire' | 'smelter' | 'spindle' | 'loom' | typeof PAPER_PRESS | typeof ENCHANTERS_PLINTH | typeof BUTTER_CHURN;
+export type Station = 'campfire' | 'oven' | 'smelter' | 'spindle' | 'loom' | typeof PAPER_PRESS | typeof ENCHANTERS_PLINTH | typeof BUTTER_CHURN;
 /** What a station is called where a recipe says it wants one. The island's `station_name` is generated from this. */
-export const STATION_NAME: Record<Station, string> = { campfire: 'lit campfire', smelter: 'hot smelter', spindle: 'spindle', loom: 'loom', paper_press: 'paper press',
+export const STATION_NAME: Record<Station, string> = { campfire: 'lit campfire', oven: 'lit oven', smelter: 'hot smelter', spindle: 'spindle', loom: 'loom', paper_press: 'paper press',
   [ENCHANTERS_PLINTH]: PLINTH_NAME, [BUTTER_CHURN]: 'butter churn' };
 
 export interface RecipeInput {
@@ -103,8 +104,9 @@ export interface Recipe {
   id: string;
   category: RecipeCategory;
   /**
-   * Shut until its recipe is read: a Recipe off a goblin's or an orc's carcass (`RECIPE_DROPPERS`), read and used up
-   * (`recipebook.ts`). Listed, greyed and padlocked in the crafting window until then. The island's `locked_recipes`.
+   * Shut until its book is read: a Recipe (Cooking) off a goblin's or an orc's carcass, a Formula (Enchanting) off an
+   * ogre's or a dragon's (`BOOK_DROPS`), read and used up (`recipebook.ts`; which one by `bookOf`). Listed, greyed and
+   * padlocked in the crafting window until then. The island's `locked_recipes` and `recipe_book`.
    */
   locked?: boolean;
   /** What its recipe is called, where the thing it makes does not say it: "Cherry preserves" (`recipeTitle`). */
@@ -185,7 +187,30 @@ export interface Recipe {
    * has to have `TRADE_BOOK_AT` of. The island reads it off the recipe's id.
    */
   writes?: string;
+  /**
+   * Set going rather than made: what a go makes is sealed in its vessel (`ferment.ts`) and opened for the result once
+   * `seconds` have passed. The island's `ferment_recipes`.
+   */
+  ferment?: Ferment;
 }
+
+/**
+ * A ferment or an ageing (`Recipe.ferment`): how long it works, the vessel it is sealed in, and whether it is set going
+ * only in a cellar.
+ */
+export interface Ferment {
+  /** Game seconds from sealing to ready (`world()` for a span said in real minutes). */
+  seconds: number;
+  /** One of the recipe's inputs, used up when it is sealed and handed back when it is opened. */
+  vessel: string;
+  /** Set going only standing in a cellar (a storey under the ground). */
+  cellar?: boolean;
+}
+
+/** What a ferment that wants a cellar says anywhere else. The island says the same. */
+export const FERMENT_CELLAR_SAYS = 'Need: a cellar.';
+/** Whether a recipe's ferment may be set going where the player stands: anywhere, or in a cellar for one that wants it. */
+export const fermentPlaceOk = (r: Pick<Recipe, 'ferment'>, g: Game): boolean => !r.ferment?.cellar || (g.player.level ?? 0) < 0;
 
 /**
  * Parts not beaten out at an anvil that still carry their maker's mark into
@@ -364,7 +389,8 @@ export const RECIPES: Recipe[] = [
    * better than the sheet it was written on.
    */
   ...ENCHANTMENT_LIST.map((e): Recipe => ({
-    id: `make_${e.scroll}`, category: 'Enchanting', result: e.scroll,
+    // Every one shut until its Formula is read (`bookOf`, `recipebook.ts`).
+    id: `make_${e.scroll}`, category: 'Enchanting', locked: true, result: e.scroll,
     inputs: [{ item: 'papyrus', count: SCROLL_SHEETS }, ...e.motes.map(([item, count]) => ({ item, count }))],
     skill: ENCHANTING, label: `Write ${article(e.name)}${e.name} scroll`, verb: 'writing a scroll', baseTime: 12, stamina: 0.03, difficulty: SCROLL_DIFFICULTY,
     note: 'QL at most the papyrus QL',
@@ -810,7 +836,7 @@ describeFrom('trowel', { clayShapes: listed(RECIPES.filter((r) => r.tool === 'tr
 describeGoals(RECIPE_SAID);
 // What the journal counts as cooking on a campfire: whatever Crafting cooks at one.
 campfireFood(RECIPES.filter((r) => r.station === 'campfire' && r.category === 'Cooking').map((r) => r.result));
-cookedDishes(RECIPES.filter((r) => r.station === 'campfire' && r.category === 'Cooking').map((r) => r.result));
+cookedDishes(RECIPES.filter((r) => (r.station === 'campfire' || r.station === 'oven') && r.category === 'Cooking').map((r) => r.result));
 
 /** Why a recipe that is worked on a settlement is refused anywhere else; the island says the same (`craft_refusal`). */
 export const DEED_ONLY = 'Build only on a settlement of yours.';
@@ -961,7 +987,8 @@ const whole = (it: Item): boolean => !VESSELS[it.id] || !itemDef(it.id).charges 
  */
 export function recipeStatus(r: Recipe, g: Game, want?: string, stock: readonly CraftStock[] = g.craftStock(undefined, false, reachFor(g, r))): RecipeStatus {
   const tool = !r.tool || g.inventory.has(r.tool);
-  const station = !r.station || g.atStation(r.station);
+  // A ferment that wants a cellar counts its cellar as part of where it is worked.
+  const station = (!r.station || g.atStation(r.station)) && fermentPlaceOk(r, g);
   const deed = !r.deed || g.onDeed(g.player.tileX, g.player.tileY);
   const second = secondAltar(r, g);
   const material = chooseMaterial(g, r, undefined, want, stock);
@@ -1074,12 +1101,41 @@ export function chooseMaterial(g: Game, r: Recipe, preferUid?: number, want?: st
 
 /** What a recipe's own Recipe is called: its `title`, or the name of what it makes. "Cottage pie". */
 export const recipeTitle = (r: Recipe): string => r.title ?? itemDef(r.result).name;
-/** Every recipe shut until its Recipe is read, in the order they are listed. The island's `locked_recipes`. */
-export const lockedRecipes = (): Recipe[] => RECIPES.filter((r) => r.locked);
-/** A shut recipe you have not read the Recipe of. */
+/**
+ * What a shut recipe is opened by: a Formula for an enchantment scroll, a Recipe for anything else. The island's
+ * `recipe_book`.
+ */
+export type { BookKind };
+export const bookOf = (r: Pick<Recipe, 'category'>): BookKind => (r.category === 'Enchanting' ? 'formula' : 'recipe');
+/** Every recipe shut until its book is read (of one kind, or of both), in the order they are listed. The island's `locked_recipes`. */
+export const lockedRecipes = (book?: BookKind): Recipe[] => RECIPES.filter((r) => r.locked && (!book || bookOf(r) === book));
+/** A shut recipe you have not read the book of. */
 export const recipeUnread = (r: Recipe, g: Game): boolean => !!r.locked && !g.knowsRecipe(r.id);
-/** What a shut recipe unread says, as the island's `craft_refusal`: "Need recipe: Cottage pie." */
-export const needRecipeSays = (r: Recipe): string => `Need recipe: ${recipeTitle(r)}.`;
+/** What a shut recipe unread says, as the island's `craft_refusal`: "Need recipe: Cottage pie.", "Need formula: Emberbrand scroll." */
+export const needRecipeSays = (r: Recipe): string => `Need ${bookOf(r)}: ${recipeTitle(r)}.`;
+
+/**
+ * A ferment set going (`Recipe.ferment`, `ferment.ts`): the vessel it is sealed in, named for what it will be
+ * (`recipeTitle` in `extra`), its `charges` the game time it is ready at.
+ */
+export const SEALED_ITEM = 'sealed_vessel';
+/** The ferment recipes, in book order: what a sealed vessel's `extra` is looked up among. The island's `ferment_recipes`. */
+export const fermentRecipes = (): Recipe[] => RECIPES.filter((r) => r.ferment);
+/** Time left as the island's `clock_left` says it: whole minutes, or seconds under one. */
+export const fermentLeftSaid = (seconds: number): string => {
+  const s = Math.max(0, seconds);
+  return Math.floor(s / 60) >= 1 ? `${Math.floor(s / 60)}m` : `${Math.round(s)}s`;
+};
+
+/** Seal what a ferment go made (`Recipe.ferment`): one sealed vessel at its QL and rarity, ready `seconds` from now. */
+export function sealFerment(g: Game, r: Recipe, ql: number, rare: number | undefined): Item {
+  const f = r.ferment!;
+  const it = g.inventory.add(SEALED_ITEM, { ql, extra: recipeTitle(r), ...(rare ? { rare } : {}) });
+  it.charges = Math.ceil(g.time + f.seconds);
+  g.events.emit('inventory');
+  g.logMsg(`Sealed: ${recipeTitle(r).toLowerCase()}. Ready in ${fermentLeftSaid(f.seconds)}.`, 'event');
+  return it;
+}
 
 /** Why a recipe cannot be made right now, or null. */
 export function recipeReason(r: Recipe, g: Game, preferUid?: number, stock: readonly CraftStock[] = g.craftStock(preferUid, false, reachFor(g, r))): string | null {
@@ -1092,6 +1148,7 @@ export function recipeReason(r: Recipe, g: Game, preferUid?: number, stock: read
   }
   if (r.tool && !g.inventory.has(r.tool)) return `Need ${article(r.tool)}${lower(r.tool)}.`;
   if (r.station && !g.atStation(r.station)) return `Need: ${STATION_NAME[r.station]}.`;
+  if (!fermentPlaceOk(r, g)) return FERMENT_CELLAR_SAYS;
   if (r.deed && !g.onDeed(g.player.tileX, g.player.tileY)) return DEED_ONLY;
   if (secondAltar(r, g)) return ONE_ALTAR;
   const mat = chooseMaterial(g, r, preferUid, undefined, stock);
@@ -1282,7 +1339,7 @@ export function recipeAction(r: Recipe): ActionDef {
       const stock = g.craftStock(t.uid, false, reachFor(g, r));
       const was = stock.find((s) => s.item.uid === t.uid)?.item;
       // An oven holds its heat evenly: what would burn over a fire comes out right.
-      const oven = r.station === 'campfire' ? g.hotOvenNear() : undefined;
+      const oven = r.station === 'campfire' ? g.hotOvenNear() : r.station === 'oven' ? g.litOvenNear() : undefined;
       const ease = g.mindEase() + (oven ? 10 : 0);
       // What it is being made of decides how stubborn the work is: oak and
       // the deep metals fight the hands that shape them.
@@ -1415,6 +1472,13 @@ export function recipeAction(r: Recipe): ActionDef {
       // And twice the chance of the first step with an ancient stamp carried, which a go comes off (`pressStamp`).
       const rare = rollRarityFrom(g.rand, used, pressStamp(g, g.perk(`rare:${r.id}`, RARITY_ODDS[0])));
       const rareIn = rareInputSaid(used);
+      // Set going rather than made: sealed in its vessel, to be opened when ready (`ferment.ts`).
+      if (r.ferment) {
+        if (rareIn) g.logMsg(rareIn, 'event');
+        sealFerment(g, r, ql, rare);
+        g.gainSkill('mind_logic', tryGain(true, CRAFT_HEAD));
+        return more(t, g);
+      }
       const item = g.inventory.add(r.result, {
         count, ql, extra: r.extra ?? mat, ...(stackable && marked ? { mark: marked } : {}), ...(rare ? { rare } : {}),
         // Rare work, and one thing made at the signing QL, carries its maker's name (`signing.ts`).
