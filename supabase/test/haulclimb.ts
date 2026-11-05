@@ -47,8 +47,8 @@ check('haul_learn, haul_learn_steep and haul_learn_rise are the browser\'s on th
   Number(hl) === HAUL_LEARN && Number(hs) === HAUL_LEARN_STEEP && Number(hr) === HAUL_LEARN_RISE, isleRule);
 check(`haul_learn_of is the browser's haulLearn at rises ${RISES.join(', ')}`,
   of.split(',').every((v, i) => Math.abs(Number(v) - haulLearn(RISES[i])) < 1e-12), `${of} vs ${RISES.map(haulLearn).join(',')}`);
-check('a Thistlekit, a Gorral and a Shaggan keep climbing in the traces; a Cartling its driving',
-  ['orse', 'gorral', 'shaggan'].every((k) => tracesSkill(SPECIES[k]) === HAUL_SKILL) && tracesSkill(SPECIES.roxxen) !== HAUL_SKILL);
+check('a Thistlekit keeps climbing in the traces; a Cartling its driving',
+  tracesSkill(SPECIES.orse) === HAUL_SKILL && tracesSkill(SPECIES.roxxen) !== HAUL_SKILL);
 
 /* ---- the browser --------------------------------------------------------- */
 

@@ -355,7 +355,7 @@ begin
   -- The first three, each a roll on a hit; enchant2.ts has the rest.
   for v_e in select * from enchantments() where effect in ('burn', 'bleed', 'stun') order by ord loop
     insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
-      values (w, 9100 + v_e.ord, 'shaggan', 'Shaggan', 'wild', 30.5, 30.5, 30.5, 30.5, 90, 'female');
+      values (w, 9100 + v_e.ord, 'roxxen', 'Cartling', 'wild', 30.5, 30.5, 30.5, 30.5, 90, 'female');
     update item set enchant = jsonb_build_object('id', v_e.id, 'ql', ${HIT_QL}) where id = v_sw;
     perform pg_temp.dice((enchant_hit_chance(v_e.id, ${HIT_QL}) + 0.001)::text);
     perform enchant_hit(w, u, 9100 + v_e.ord, (select i from item i where i.id = v_sw), 4);
@@ -371,8 +371,8 @@ begin
   -- 9b. An Emberbrand's burn, with and without the wielder's own Firebrand spell (the Kindler's) holding: as long as every burn they start.
   update item set enchant = '{"id": "emberbrand", "ql": 100}'::jsonb where id = v_sw;
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
-    values (w, 9105, 'shaggan', 'Shaggan', 'wild', 30.5, 32.5, 30.5, 32.5, 90, 'female'),
-           (w, 9106, 'shaggan', 'Shaggan', 'wild', 32.5, 32.5, 32.5, 32.5, 90, 'female');
+    values (w, 9105, 'roxxen', 'Cartling', 'wild', 30.5, 32.5, 30.5, 32.5, 90, 'female'),
+           (w, 9106, 'roxxen', 'Cartling', 'wild', 32.5, 32.5, 32.5, 32.5, 90, 'female');
   perform pg_temp.dice('0.01');
   perform enchant_hit(w, u, 9105, (select i from item i where i.id = v_sw), 4);
   update player set blessings = coalesce(blessings, '{}'::jsonb) || jsonb_build_object('firebrand',
@@ -391,7 +391,7 @@ begin
   update item set enchant = '{"id": "concussion", "ql": 100}'::jsonb where id = v_sw;
   update player set equipped = jsonb_build_object('weapon', v_sw) where world_id = w and uid = u;
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
-    values (w, 9110, 'shaggan', 'Shaggan', 'wild', 11.2, 10.5, 11.2, 10.5, 90, 'male');
+    values (w, 9110, 'roxxen', 'Cartling', 'wild', 11.2, 10.5, 11.2, 10.5, 90, 'male');
   perform pg_temp.dice('0.01');
   perform perform_fight(w, u, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', 9110));
   perform pg_temp.nodice();
@@ -400,14 +400,14 @@ begin
   insert into said select 'PANEL', coalesce((select (t->>'stunned')::double precision::text from jsonb_array_elements(rpc_creatures(w, 40)) t
     where (t->>'id')::int = 9110), 'none');
 
-  -- 11. The stun itself: a shaggan after Mira, beside her. Due a go, it strikes; stunned, it neither strikes nor moves for its
+  -- 11. The stun itself: a cartling after Mira, beside her. Due a go, it strikes; stunned, it neither strikes nor moves for its
   --     seconds; and once they are past, it strikes again.
   -- Away from the peace round the landing, where nothing hunts anybody, and every roll a half: nobody dodges.
   update player set equipped = '{}'::jsonb, x = 40.5, y = 40.5 where world_id = w and uid = u;
   delete from creature where world_id = w;
   perform pg_temp.dice('0.5');
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex, hunting, until, settled_at, leg_at, leg_ends)
-    values (w, 9120, 'shaggan', 'Shaggan', 'wild', 41.2, 40.5, 41.2, 40.5, 90, 'male', u,
+    values (w, 9120, 'roxxen', 'Cartling', 'wild', 41.2, 40.5, 41.2, 40.5, 90, 'male', u,
             now() - interval '1 second', now() - interval '1 second', now() - interval '1 second', now() - interval '1 second');
   perform creature_settle(w, 9120);
   insert into said select 'DUE', (1 - (p.stats->>'health')::double precision > 0)::text from player p where p.world_id = w and p.uid = u;
@@ -464,7 +464,7 @@ begin
 
   -- 13. A fright on one stunned: it runs once the stun is over, not before.
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
-    values (w, 9132, 'shaggan', 'Shaggan', 'wild', 44.5, 44.5, 44.5, 44.5, 90, 'male');
+    values (w, 9132, 'roxxen', 'Cartling', 'wild', 44.5, 44.5, 44.5, 44.5, 90, 'male');
   perform enchant_stun(w, 9132);
   perform faith_flee(w, 9132, 40.5, 40.5, 5);
   insert into said select 'FRIGHT', (creature_x(c) = 44.5 and creature_y(c) = 44.5)::text
@@ -711,7 +711,7 @@ check(`and ${ENCHANT_BREAK * 100}% of the time it goes to pieces outright, out o
 
 /* 9. A hit, with each. */
 const spawn = (x: number, y: number) => {
-  const c = g.creatures.spawn('shaggan', x, y, 'wild', () => 0.5, 0);
+  const c = g.creatures.spawn('roxxen', x, y, 'wild', () => 0.5, 0);
   c.health = 90;
   return c;
 };
@@ -730,7 +730,7 @@ for (const e of [EMBER, RAZOR, CONC]) {
     mark === '-' && bleeding !== 'true' && over === null && under?.id === e.id
       && u[0] === wantMark && (e.effect === 'burn' || e.effect === 'bleed' ? u[1] === 'true' : true)
       && (e.effect === 'bleed' ? near(Number(u[2]), 4 * KNIFE_BLEED) : true)
-      && u[3] === enchantHitSaid(e, 'shaggan'),
+      && u[3] === enchantHitSaid(e, 'cartling'),
     `${isle.get(`OVER:${e.id}`)} / ${isle.get(`UNDER:${e.id}`)}`);
 }
 
@@ -745,7 +745,7 @@ for (const e of [EMBER, RAZOR, CONC]) {
   act('attack_creature').perform({ kind: 'creature', id: c.id }, g);
   const swung = said.filter((m) => m.startsWith('Concussion: '));
   check(`a landed swing with a Concussion sword at QL 100 stuns it, and the fight log says so, on both sides: ${swung[0]}`,
-    part('SWING', 0).startsWith('hold,stun') && part('SWING', 1) === swung[0] && (c.stunUntil ?? 0) > g.time && swung[0] === enchantHitSaid(CONC, 'shaggan'),
+    part('SWING', 0).startsWith('hold,stun') && part('SWING', 1) === swung[0] && (c.stunUntil ?? 0) > g.time && swung[0] === enchantHitSaid(CONC, 'cartling'),
     `${isle.get('SWING')} / ${swung.join(' # ')} ${c.stunUntil}`);
   check(`and the island tells the browser how long is left of it, for the target panel (${isle.get('PANEL')} s)`, near(Number(isle.get('PANEL')), STUN_SECS, 0.01), isle.get('PANEL'));
   // And an Emberbrand's and a Razoredge's, the same way: the burn and the bleed are the ones the game already has.
@@ -757,7 +757,7 @@ for (const e of [EMBER, RAZOR, CONC]) {
     act('attack_creature').perform({ kind: 'creature', id: d.id }, g);
     const ran = e === EMBER ? (d.burnUntil ?? 0) > g.time && d.bleedUntil > g.time : d.bleedUntil > g.time && d.bleedRate > 0 && !(d.burnUntil ?? 0);
     check(`and a ${e.name} sword's, ${e === EMBER ? 'a burn' : 'a bleed of the blow'}, through the same swing, said the same way`,
-      ran && said.includes(enchantHitSaid(e, 'shaggan')), `${d.burnUntil} ${d.bleedUntil} ${d.bleedRate} ${said.join(' # ')}`);
+      ran && said.includes(enchantHitSaid(e, 'cartling')), `${d.burnUntil} ${d.bleedUntil} ${d.bleedRate} ${said.join(' # ')}`);
   }
   g.player.equipped.weapon = null;
 }

@@ -2250,7 +2250,7 @@ const OWN_BODY: Record<string, (ctx: CanvasRenderingContext2D, sx: number, sy: n
   vola: drawVolaBody, bevere: drawBevereBody, seavic: drawSeavicBody, mola: drawMolaBody,
   crawler: drawCrawlerBody, noot: drawNootBody, embra: drawEmbraBody, quarra: drawQuarraBody,
   woola: drawWoolaBody, ulva: drawUlvaBody, magga: drawMaggaBody, roxxen: drawRoxxenBody,
-  orse: drawOrseBody, rowl: drawRowlBody, vesp: drawVespBody, lume: drawLumeBody,
+  orse: drawOrseBody, rowl: drawRowlBody, vesp: drawVespBody,
   dragon: drawDragonBody,
 };
 
@@ -3481,7 +3481,7 @@ function drawCrawlerBody(ctx: CanvasRenderingContext2D, sx: number, sy: number, 
 /**
  * The eighteen newer wildermon are not drawn one at a time. Three kits cover
  * the lot: a thing on four legs, a thing standing on two, and a thing with no
- * bones in it at all. What tells a Shaggan from a Dowse is the numbers handed
+ * bones in it at all. What tells a Cudda from a Dowse is the numbers handed
  * to the kit — how long the legs are, how deep the barrel, what is carried on
  * the head — which is enough to know one across a field, and a great deal
  * less to keep than eighteen bodies would be.
@@ -3540,9 +3540,7 @@ const BEASTS: Record<string, BeastShape> = {
   tinka: { body: [6, 4], ride: 3.4, leg: 4, legW: 1.8, span: 4.2, head: 3.6, neck: [6.8, -2.2], muzzle: 1.6, ear: 'point', tail: 'brush', whisker: true, cadence: 1.5 },
   middun: { body: [9, 4.6], ride: 3, leg: 3.6, legW: 2.2, span: 6.4, head: 3.4, neck: [10, 0.4], muzzle: 3.6, ear: 'round', tail: 'brush', cadence: 1.1 },
   bura: { body: [12, 7], ride: 6.5, leg: 7.5, legW: 3.4, span: 9, head: 4.6, neck: [13.5, -2], muzzle: 2.6, ear: 'long', tail: 'tuft', cadence: 0.75 },
-  gorral: { body: [9, 5], ride: 6.5, leg: 7.5, legW: 2.2, span: 6.5, head: 3.8, neck: [10.5, -2.6], muzzle: 2.2, ear: 'point', horn: 'curl', tail: 'stub', shag: 2, cadence: 1.25 },
   wadd: { body: [11, 4.8], ride: 2.8, leg: 3.4, legW: 2.4, span: 7.5, head: 3.8, neck: [11.5, 0.4], muzzle: 2.4, ear: 'round', tail: 'flat', cadence: 1.2 },
-  shaggan: { body: [14, 8.5], ride: 5.5, leg: 6.5, legW: 4.4, span: 10, head: 5.4, neck: [15, 0.5], muzzle: 2.6, horn: 'sweep', tail: 'tuft', hump: 6, shag: 5, cadence: 0.6 },
   cudda: { body: [11.5, 7], ride: 5.5, leg: 6.5, legW: 3, span: 8, head: 4.4, neck: [12.5, -1], muzzle: 2.6, ear: 'long', horn: 'nub', tail: 'tuft', udder: true, cadence: 0.8 },
   snout: { body: [9, 5], ride: 3.4, leg: 4, legW: 2.6, span: 6.4, head: 3.6, neck: [9.8, 0.2], muzzle: 4.2, ear: 'flop', tail: 'stub', whisker: true, cadence: 1.05 },
 };
@@ -3961,37 +3959,6 @@ function drawVespBody(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoo
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
     ctx.beginPath();
     ctx.ellipse(bx - 0.5, byy - 1.2, 1.5, 0.6, a * 0.4, 0, TAU);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-/** A Lume: a cold light drifting a foot off the ground, and very little else. */
-function drawLumeBody(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: CreaturePose): void {
-  ctx.save();
-  ctx.translate(sx, sy);
-  ctx.scale(zoom, zoom);
-  const [pale, bright] = pose.colors;
-  const drift = gaitSin(pose, 0.5) * 1.6;
-  const cy = -11 + drift;
-  const glow = ctx.createRadialGradient(0, cy, 0.5, 0, cy, 13);
-  glow.addColorStop(0, bright);
-  glow.addColorStop(0.35, `${pale}cc`);
-  glow.addColorStop(1, 'rgba(230,240,220,0)');
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.ellipse(0, cy, 13, 12, 0, 0, TAU);
-  ctx.fill();
-  ctx.fillStyle = bright;
-  ctx.beginPath();
-  ctx.ellipse(0, cy, 4.4, 4.8, 0, 0, TAU);
-  ctx.fill();
-  // A few slow trailing motes that say which way it is drifting.
-  ctx.fillStyle = `${pale}aa`;
-  for (let i = 0; i < 4; i++) {
-    const a = pose.phase * 0.3 + (i / 4) * TAU;
-    ctx.beginPath();
-    ctx.ellipse(Math.cos(a) * 7, cy + Math.sin(a) * 5.5, 1.1, 1.1, 0, 0, TAU);
     ctx.fill();
   }
   ctx.restore();

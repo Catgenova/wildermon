@@ -186,13 +186,13 @@ const put = (species: string, x: number, y: number, mode: Creature['mode'] = 'wi
   game.creatures.spawn(species, x, y, mode, game.rand, 0);
 const woola = put('woola', px + 1.5, py);
 const [fx, fy] = far(MOBS_RANGE);
-const lume = put('lume', fx, fy);
+const kemma = put('kemma', fx, fy);
 const quill = put('quill', px + 0.5, py, 'stored');
 game.log.length = 0;
 game.update(1.1);
-check('the body can see the one beside it and not the one far off', game.vision.isWatched(woola.x, woola.y) && !game.vision.isWatched(lume.x, lume.y));
+check('the body can see the one beside it and not the one far off', game.vision.isWatched(woola.x, woola.y) && !game.vision.isWatched(kemma.x, kemma.y));
 check('a creature standing in view is marked seen', game.guide.seen.has('woola'), sorted(game.guide.seen));
-check('and one out of sight is not, nor one in a crate beside you', !game.guide.seen.has('lume')
+check('and one out of sight is not, nor one in a crate beside you', !game.guide.seen.has('kemma')
   && quill.mode === 'stored' && game.vision.isWatched(quill.x, quill.y) && !game.guide.seen.has('quill'), sorted(game.guide.seen));
 const line = seenLine(SPECIES.woola, game.guide);
 check('and the log says so, in the words both sides use', game.log.filter((l) => l.text === line).length === 1,
@@ -298,16 +298,16 @@ begin
   delete from guide where world_id = w and uid = dane;
   -- Nothing of any kind the test uses anywhere on the island but what it puts down itself.
   delete from creature where world_id = w
-    and species in ('woola', 'lume', 'quill', 'rabba', 'vola', 'cudda', 'sedra', 'holla');
+    and species in ('woola', 'kemma', 'quill', 'rabba', 'vola', 'cudda', 'sedra', 'holla');
   -- And nothing following him, so a tamed one has somewhere to go.
   update creature set mode = 'wild', keeper = null where world_id = w and keeper = dane and mode in ('active', 'stored');
 
   -- Sightings.
   perform creature_spawn(w, 'woola', v_x + 3, v_y, 'wild', now() - interval '10 days');
-  perform creature_spawn(w, 'lume', v_x + ${MOBS_RANGE} + 10, v_y, 'wild', now() - interval '10 days');
+  perform creature_spawn(w, 'kemma', v_x + ${MOBS_RANGE} + 10, v_y, 'wild', now() - interval '10 days');
   v_id := creature_spawn(w, 'quill', v_x, v_y, 'active', now() - interval '10 days', dane);
   update creature set mode = 'stored' where world_id = w and id = v_id;
-  insert into said values ('FIRST', rpc_guide_seen(w, array['woola', 'woola', 'lume', 'quill', 'nosuch'])::text);
+  insert into said values ('FIRST', rpc_guide_seen(w, array['woola', 'woola', 'kemma', 'quill', 'nosuch'])::text);
   insert into said values ('AGAIN', rpc_guide_seen(w, array['woola'])::text);
   -- A stage's page: taken while one at that stage stands near; then put back as it was.
   v_id := creature_spawn(w, 'woola', v_x + 2, v_y, 'wild', now() - interval '10 days');
@@ -428,7 +428,7 @@ const first = JSON.parse(answer('FIRST')) as { added: string[]; had: string[]; a
 check('a kind handed over is taken while one stands near you, and a kind named twice is named once', first.added?.join() === 'woola' && !first.had?.length,
   answer('FIRST'));
 check(`and one further off than the ${MOBS_RANGE} tiles a browser is told about, one in a crate and one there is no such thing as are absent`,
-  first.absent?.join() === 'lume,nosuch,quill', answer('FIRST'));
+  first.absent?.join() === 'kemma,nosuch,quill', answer('FIRST'));
 check('handed over again, it is had rather than added, and nothing more is written', answer('AGAIN') === '{"had": ["woola"], "added": [], "absent": []}'
   && answer('ROWS') === 'woola:false:false', `${answer('AGAIN')} ${answer('ROWS')}`);
 check('a stage\'s page is taken while one at that stage stands near, and one at no stage there is or not near is absent',

@@ -234,7 +234,9 @@ check('all read, an orc still gives one', LOCKED.some((r) => recipeTitle(r) === 
 check('one already read is refused, and kept', island('KNOWN') === RECIPE_KNOWN && island('KEPT') === '1', `${island('KNOWN')} / ${island('KEPT')}`);
 check('the roll missed, a goblin and a dragon give none', island('MISS') === '0', island('MISS'));
 check('read, cottage pie is no longer refused for its recipe', !island('OPEN').startsWith('Need recipe'), island('OPEN'));
-check('the beat says the recipes and Formulas read', island('BEAT') === JSON.stringify(lockedRecipes().map((r) => r.id).sort()).replace(/,/g, ', '), island('BEAT'));
+// Compared as a set: the island's order is its database's collation, which on CI puts emberbrand before ember_heart.
+const beatRead = ((): string[] => { try { return (JSON.parse(island('BEAT')) as string[]).slice().sort(); } catch { return []; } })();
+check('the beat says the recipes and Formulas read', JSON.stringify(beatRead) === JSON.stringify(lockedRecipes().map((r) => r.id).sort()), island('BEAT'));
 
 /* ---- the browser -------------------------------------------------------------------- */
 

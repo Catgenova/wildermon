@@ -152,7 +152,7 @@ begin
   -- 2. Gale, Nightblade, Sunstrike: in the hand, and what each makes of a swing.
   update player set equipped = jsonb_build_object('weapon', v_sw) where world_id = w and uid = u;
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
-    values (w, 9201, 'shaggan', 'Shaggan', 'wild', 41.2, 40.5, 41.2, 40.5, 90, 'female'),
+    values (w, 9201, 'roxxen', 'Cartling', 'wild', 41.2, 40.5, 41.2, 40.5, 90, 'female'),
            (w, 9202, 'goblin', 'Goblin', 'wild', 40.5, 41.2, 40.5, 41.2, 60, 'male');
   select * into v_c from creature where world_id = w and id = 9201;
   select * into v_g from creature where world_id = w and id = 9202;
@@ -188,7 +188,7 @@ begin
     from player p where p.world_id = w and p.uid = u;
   perform pg_temp.nodice();
 
-  -- 5. Tidecaller at QL ${HIT_QL}: how far one hit puts the shaggan's next blow back.
+  -- 5. Tidecaller at QL ${HIT_QL}: how far one hit puts the cartling's next blow back.
   update item set enchant = jsonb_build_object('id', 'tidecaller', 'ql', ${HIT_QL}) where id = v_sw;
   update creature set until = now() + interval '1 second' where world_id = w and id = 9201;
   select until into v_until from creature where world_id = w and id = 9201;
@@ -205,10 +205,10 @@ begin
   update item set enchant = '{"id": "farsight", "ql": 100}'::jsonb where id = v_bow;
   insert into said select 'FAR', bow_range(w, u, b, (select i from item i where i.id = v_bow))::text from weapon_def b where b.id = 'short_bow';
 
-  -- 7. Flamearrow and Frostbite at QL ${HIT_QL}: a roll just over its chance, then just under, on a fresh shaggan each.
+  -- 7. Flamearrow and Frostbite at QL ${HIT_QL}: a roll just over its chance, then just under, on a fresh cartling each.
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
-    values (w, 9211, 'shaggan', 'Shaggan', 'wild', 30.5, 30.5, 30.5, 30.5, 90, 'female'),
-           (w, 9212, 'shaggan', 'Shaggan', 'wild', 32.5, 30.5, 32.5, 30.5, 90, 'female');
+    values (w, 9211, 'roxxen', 'Cartling', 'wild', 30.5, 30.5, 30.5, 30.5, 90, 'female'),
+           (w, 9212, 'roxxen', 'Cartling', 'wild', 32.5, 30.5, 32.5, 30.5, 90, 'female');
   update item set enchant = jsonb_build_object('id', 'flamearrow', 'ql', ${HIT_QL}) where id = v_bow;
   perform pg_temp.dice((enchant_hit_chance('flamearrow', ${HIT_QL}) + 0.001)::text);
   perform enchant_shot(w, u, 9211, (select i from item i where i.id = v_bow));
@@ -271,17 +271,17 @@ begin
   update item set enchant = '{"id": "shadowcloak", "ql": 100}'::jsonb where id = v_chest;
   insert into said values ('SHADOW', enchant_shadow(w, u)::text || '|' || is_night(w)::text);
 
-  -- 10. Thornhide on two pieces: a shaggan's blow, and what is owed back to it.
+  -- 10. Thornhide on two pieces: a cartling's blow, and what is owed back to it.
   update item set enchant = null where id in (v_chest, v_cap, v_arm, v_leg, v_boot, v_sh);
   update player set equipped = jsonb_build_object('chest', v_chest, 'head', v_cap) where world_id = w and uid = u;
   update item set enchant = '{"id": "thornhide", "ql": 100}'::jsonb where id in (v_chest, v_cap);
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
-    values (w, 9221, 'shaggan', 'Shaggan', 'wild', 41.2, 40.5, 41.2, 40.5, 90, 'male');
+    values (w, 9221, 'roxxen', 'Cartling', 'wild', 41.2, 40.5, 41.2, 40.5, 90, 'male');
   update player set stats = stats || jsonb_build_object('health', 1, 'hurtBy', 9221), wounds = '[]'::jsonb, blessings = '{}'::jsonb
    where world_id = w and uid = u;
   delete from faith_owed where world_id = w;
   perform pg_temp.dice('0.99');
-  perform hurt_player(w, u, 0.1, 'The shaggan bites', 'bite');
+  perform hurt_player(w, u, 0.1, 'The cartling bites', 'bite');
   perform pg_temp.nodice();
   insert into said select 'THORN', (1 - (p.stats->>'health')::double precision)::text
     || '|' || coalesce((select sum(o.dmg)::text from faith_owed o where o.world_id = w and o.creature_id = 9221), 'none')
@@ -395,15 +395,15 @@ check('and taken on a sword, on both sides', isle.get('R:sword') === 'none' && a
 
 /* 2. Gale, Nightblade, Sunstrike. */
 g.player.equipped.weapon = sword.uid;
-const shaggan = g.creatures.spawn('shaggan', 41.2, 40.5, 'wild', () => 0.5, 0);
-shaggan.health = 90;
+const cartling = g.creatures.spawn('roxxen', 41.2, 40.5, 'wild', () => 0.5, 0);
+cartling.health = 90;
 const goblin = g.creatures.spawn('goblin', 40.5, 41.2, 'wild', () => 0.5, 0);
 goblin.health = 60;
 const swingDef = { id: 'attack_creature', baseTime: 2.5 };
 const swordDef = WEAPON_BY_ID.get('sword')!;
-const plainHere = [fightBase(g, swingDef) ?? 0, myCritChance(g, swordDef), classDealt(g, shaggan), classDealt(g, goblin)];
+const plainHere = [fightBase(g, swingDef) ?? 0, myCritChance(g, swordDef), classDealt(g, cartling), classDealt(g, goblin)];
 const plainIsle = (isle.get('PLAIN') ?? '').split('|').map(Number);
-check('without an enchantment a swing\'s time, the critical chance and the damage on a shaggan and a goblin are the same on both sides',
+check('without an enchantment a swing\'s time, the critical chance and the damage on a cartling and a goblin are the same on both sides',
   plainHere.every((x, i) => near(x, plainIsle[i])), `${plainIsle.join(' ')} / ${plainHere.join(' ')}`);
 sword.enchant = { id: GALE.id, ql: 100 };
 const galeHere = fightBase(g, swingDef) ?? 0;
@@ -414,17 +414,17 @@ const nightHere = myCritChance(g, swordDef);
 check(`a Nightblade at QL 100 adds ${enchantValue(NIGHT, 100) * 100} points to the critical chance on both sides: ${plainHere[1]} to ${nightHere}`,
   near(nightHere, plainHere[1] + enchantValue(NIGHT, 100)) && near(Number(isle.get('NIGHT')), nightHere), `island ${isle.get('NIGHT')}`);
 sword.enchant = { id: SUN.id, ql: 100 };
-const sunHere = [classDealt(g, shaggan), classDealt(g, goblin)];
-check(`a Sunstrike at QL 100 does ${enchantValue(SUN, 100) * 100}% more to a goblin, a hostile monster, and nothing more to a shaggan, on both sides`,
-  SPECIES.goblin.monster === true && !SPECIES.shaggan.monster && near(sunHere[0], plainHere[2]) && near(sunHere[1], plainHere[3] * (1 + enchantValue(SUN, 100)))
+const sunHere = [classDealt(g, cartling), classDealt(g, goblin)];
+check(`a Sunstrike at QL 100 does ${enchantValue(SUN, 100) * 100}% more to a goblin, a hostile monster, and nothing more to a cartling, on both sides`,
+  SPECIES.goblin.monster === true && !SPECIES.roxxen.monster && near(sunHere[0], plainHere[2]) && near(sunHere[1], plainHere[3] * (1 + enchantValue(SUN, 100)))
     && near(Number(part('SUN', 0)), sunHere[0]) && near(Number(part('SUN', 1)), sunHere[1]),
   `${isle.get('SUN')} / ${sunHere.join('|')}`);
 
 /* 3. Venomfang. */
 sword.enchant = { id: VENOM.id, ql: HIT_QL };
-const vc = g.creatures.spawn('shaggan', 30.5, 30.5, 'wild', () => 0.5, 0);
+const vc = g.creatures.spawn('roxxen', 30.5, 30.5, 'wild', () => 0.5, 0);
 vc.health = 90;
-// No blood and no rarity, as the island's shaggan has none: what a fixed roll draws moves as the trait table grows.
+// No blood and no rarity, as the island's cartling has none: what a fixed roll draws moves as the trait table grows.
 vc.traits = [];
 vc.rare = 0;
 const vchance = enchantHitChance(VENOM, HIT_QL);
@@ -433,11 +433,11 @@ const vover = enchantRoll(g, sword, vc);
 dice(vchance - 0.001);
 const vunder = enchantRoll(g, sword, vc);
 if (vunder) enchantWorks(g, vunder, HIT_QL, vc, 10, { burn: () => {}, bleed: () => {} });
-const venomRate = maxHealth(vc, SPECIES.shaggan) * VENOM_DRAIN;
+const venomRate = maxHealth(vc, SPECIES.roxxen) * VENOM_DRAIN;
 check(`a Venomfang at QL ${HIT_QL} (${vchance * 100}%): a roll just over does nothing and just under puts venom in it, ${VENOM_DRAIN * 100}% of its full health a second, on both sides`,
   part('VOVER') !== 'true' && vover === null && vunder?.id === VENOM.id && part('VUNDER', 0) === 'true'
     && near(Number(part('VUNDER', 1)), venomRate, 1e-5) && near(vc.bleedRate, venomRate) && vc.bleedUntil > g.time
-    && part('VUNDER', 3) === said[said.length - 1] && said[said.length - 1] === 'Venomfang: shaggan envenomed.',
+    && part('VUNDER', 3) === said[said.length - 1] && said[said.length - 1] === 'Venomfang: cartling envenomed.',
   `${isle.get('VOVER')} ${isle.get('VUNDER')} / ${vc.bleedRate} ${said[said.length - 1]}`);
 
 /* 4. Leeching. */
@@ -448,8 +448,8 @@ rolls = 0;
 const counted = g.rand;
 g.rand = () => { rolls++; return counted(); };
 for (let i = 0; i < 2; i++) {
-  const e = enchantRoll(g, sword, shaggan);
-  if (e) enchantWorks(g, e, HIT_QL, shaggan, 10, { burn: () => {}, bleed: () => {} });
+  const e = enchantRoll(g, sword, cartling);
+  if (e) enchantWorks(g, e, HIT_QL, cartling, 10, { burn: () => {}, bleed: () => {} });
 }
 const leeched = 0.5 + 2 * leechHeal(LEECH, HIT_QL, 10);
 check(`a Leeching at QL ${HIT_QL} gives back ${enchantValue(LEECH, HIT_QL) * 100}% of each hit of 10 as health, at ${BLOW_SHARE * 100}% of your health a point, every hit and with no roll, on both sides`,
@@ -459,13 +459,13 @@ check(`a Leeching at QL ${HIT_QL} gives back ${enchantValue(LEECH, HIT_QL) * 100
 
 /* 5. Tidecaller. */
 sword.enchant = { id: TIDE.id, ql: HIT_QL };
-shaggan.cooldown = 1;
-const e5 = enchantRoll(g, sword, shaggan);
-if (e5) enchantWorks(g, e5, HIT_QL, shaggan, 10, { burn: () => {}, bleed: () => {} });
-const tideSecs = blowEvery(SPECIES.shaggan) * enchantValue(TIDE, HIT_QL);
-check(`a Tidecaller at QL ${HIT_QL} puts a shaggan's next blow back ${enchantValue(TIDE, HIT_QL) * 100}% of the ${blowEvery(SPECIES.shaggan)} s between its blows (${tideSecs} s), on both sides`,
-  near(shaggan.cooldown, 1 + tideSecs) && near(drainSecs(TIDE, HIT_QL, shaggan), tideSecs) && near(Number(isle.get('TIDE')), tideSecs, 1e-3),
-  `${isle.get('TIDE')} / ${shaggan.cooldown - 1}`);
+cartling.cooldown = 1;
+const e5 = enchantRoll(g, sword, cartling);
+if (e5) enchantWorks(g, e5, HIT_QL, cartling, 10, { burn: () => {}, bleed: () => {} });
+const tideSecs = blowEvery(SPECIES.roxxen) * enchantValue(TIDE, HIT_QL);
+check(`a Tidecaller at QL ${HIT_QL} puts a cartling's next blow back ${enchantValue(TIDE, HIT_QL) * 100}% of the ${blowEvery(SPECIES.roxxen)} s between its blows (${tideSecs} s), on both sides`,
+  near(cartling.cooldown, 1 + tideSecs) && near(drainSecs(TIDE, HIT_QL, cartling), tideSecs) && near(Number(isle.get('TIDE')), tideSecs, 1e-3),
+  `${isle.get('TIDE')} / ${cartling.cooldown - 1}`);
 
 /* 6. A bow: Farsight. */
 const farScroll = thing(FAR.scroll, 90);
@@ -492,14 +492,14 @@ const shotAt = (e: EnchantmentDef, c: Creature): { over: EnchantmentDef | null; 
   if (under) enchantWorks(g, under, HIT_QL, c, 10, { burn: () => g.burn(c, ENCHANT_BURN.each, ENCHANT_BURN.secs), bleed: () => {} });
   return { over, under };
 };
-const fc = g.creatures.spawn('shaggan', 30.5, 30.5, 'wild', () => 0.5, 0);
+const fc = g.creatures.spawn('roxxen', 30.5, 30.5, 'wild', () => 0.5, 0);
 fc.health = 90;
 const fl = shotAt(FLAME, fc);
 check(`a Flamearrow at QL ${HIT_QL} (${enchantHitChance(FLAME, HIT_QL) * 100}%): a shot's roll just over does nothing and just under sets it burning, on both sides`,
   isle.get('FOVER') === '-' && fl.over === null && fl.under?.id === FLAME.id && part('FUNDER', 0) === 'burn' && (fc.burnUntil ?? 0) > g.time
-    && part('FUNDER', 1) === said[said.length - 1] && said[said.length - 1] === 'Flamearrow: shaggan burning.',
+    && part('FUNDER', 1) === said[said.length - 1] && said[said.length - 1] === 'Flamearrow: cartling burning.',
   `${isle.get('FOVER')} ${isle.get('FUNDER')} / ${said[said.length - 1]}`);
-const ic = g.creatures.spawn('shaggan', 32.5, 30.5, 'wild', () => 0.5, 0);
+const ic = g.creatures.spawn('roxxen', 32.5, 30.5, 'wild', () => 0.5, 0);
 ic.health = 90;
 const fr = shotAt(FROST, ic);
 check(`a Frostbite at QL ${HIT_QL} (${enchantHitChance(FROST, HIT_QL) * 100}%): just over does nothing; just under holds it to ${FROST_PACE * 100}% of its pace for ${FROST_SECS} seconds, on both sides, and the island's creatures door says so`,
@@ -508,7 +508,7 @@ check(`a Frostbite at QL ${HIT_QL} (${enchantHitChance(FROST, HIT_QL) * 100}%): 
     && near(Number(part('IUNDER', 2)), Number(isle.get('SPEED0')) * FROST_PACE)
     && near(Number((part('IUNDER', 3)).split(',')[0]), FROST_SECS, 0.2) && near(Number((part('IUNDER', 3)).split(',')[1]), FROST_PACE)
     && ic.slowPace === FROST_PACE && near((ic.slowUntil ?? 0) - g.time, FROST_SECS) && slowed(g, ic)
-    && part('IUNDER', 4) === said[said.length - 1] && said[said.length - 1] === `Frostbite: shaggan slowed to ${FROST_PACE * 100}% speed for ${FROST_SECS} s.`,
+    && part('IUNDER', 4) === said[said.length - 1] && said[said.length - 1] === `Frostbite: cartling slowed to ${FROST_PACE * 100}% speed for ${FROST_SECS} s.`,
   `${isle.get('IOVER')} ${isle.get('IUNDER')} / ${ic.slowPace} ${(ic.slowUntil ?? 0) - g.time} ${said[said.length - 1]}`);
 
 /* 8. What is worn: refusals by kind. */
@@ -572,7 +572,7 @@ set(null, jerkin, cap, sleeves, trousers, boot, shield);
 for (const k of Object.keys(g.player.equipped)) g.player.equipped[k] = null;
 Object.assign(g.player.equipped, { chest: jerkin.uid, head: cap.uid });
 set(THORN, jerkin, cap);
-const tc = g.creatures.spawn('shaggan', 41.2, 40.5, 'wild', () => 0.5, 0);
+const tc = g.creatures.spawn('roxxen', 41.2, 40.5, 'wild', () => 0.5, 0);
 tc.health = 90;
 g.player.stats.health = 1;
 g.player.wounds = [];
@@ -582,7 +582,7 @@ dice(0.99);
 let sent = 0;
 const hurtOf = g.creatures.hurt.bind(g.creatures);
 g.creatures.hurt = (gg, c, dmg, ...rest) => { if (c === tc) sent += dmg; return hurtOf(gg, c, dmg, ...rest); };
-g.hurtPlayer(0.1, 'The shaggan bites', 'bite');
+g.hurtPlayer(0.1, 'The cartling bites', 'bite');
 g.creatures.hurt = hurtOf;
 const lostHere = 1 - g.player.stats.health;
 const share = g.wornEnchant('thorns');

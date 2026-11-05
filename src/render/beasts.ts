@@ -455,7 +455,7 @@ export interface Kind {
    * staying where they were put while they are down (`leapOf`).
    */
   leaps?: readonly [boolean, boolean];
-  /** Light rather than stuff, drawn over the body: a lume's glow, an ember on a back. */
+  /** Light rather than stuff, drawn over the body: a glow, an ember on a back. */
   glow?(b: Bones, a: Anim): Array<{ p: V3; r: number; c: RGB; a: number }>;
   /**
    * The two colours of the motes rising round it as it evolves (`evolveBurst`), for a kind whose own colours are not its
@@ -2024,7 +2024,7 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
  * The light a wildermon evolves in, drawn in its own units with its feet at the origin, `t` nought to one through it:
  * under it, a thin ring going out over the ground and a soft glow standing up behind it; over it, small motes of its
  * own colours rising round it and, at the turn, a ring of light going out from it and a brief soft flash. Every size
- * is a share of how tall it is, so a lume and an ogre evolve alike, and none of it so bright or so big that the body
+ * is a share of how tall it is, so a Glimmoth and an ogre evolve alike, and none of it so bright or so big that the body
  * is lost in it. Every kind evolves in it; a kind may add light of its own in `glow` and `extra` on the act.
  */
 export function evolveBurst(g: CanvasRenderingContext2D, species: string, kind: Kind, pal: Palette, t: number, under: boolean): void {

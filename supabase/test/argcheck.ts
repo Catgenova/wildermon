@@ -58,7 +58,7 @@ const targets: Array<[string, Target & Record<string, unknown>]> = [
   ['plan_bridge', { kind: 'tile', x: AT + 1, y: AT, cx: AT + 1, cy: AT, material: 'plank', width: 2, side: 'w' }],
   ['plan_aqueduct', { kind: 'tile', x: AT + 1, y: AT, cx: AT + 1, cy: AT, head: [AT, AT] }],
   ['place_furniture', { kind: 'tile', x: AT + 1, y: AT, cx: AT + 1, cy: AT, sx: 1, sy: 2, itemUid: 1, facing: 'e', level: 0 }],
-  ['track', { kind: 'tile', x: AT, y: AT, cx: AT, cy: AT, species: 'shaggan' }],
+  ['track', { kind: 'tile', x: AT, y: AT, cx: AT, cy: AT, species: 'roxxen' }],
   ['cast', { kind: 'tile', x: AT, y: AT, cx: AT, cy: AT, spell: 'none' }],
   ['store_in_crate', { kind: 'crate', id: 1, scroll: 2 }],
   ['bind_wound', { kind: 'person', uid: YOU, name: 'Yonne' }],
@@ -214,8 +214,8 @@ begin
 
   -- Two creatures, one in reach of a read and one past the most a read reaches.
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex) values
-    (w, 9701, 'shaggan', 'Near', 'wild', ${AT} + 30.5, ${AT}.5, ${AT} + 30.5, ${AT}.5, 90, 'female'),
-    (w, 9702, 'shaggan', 'Far', 'wild', ${AT} + 100.5, ${AT}.5, ${AT} + 100.5, ${AT}.5, 90, 'female');
+    (w, 9701, 'roxxen', 'Near', 'wild', ${AT} + 30.5, ${AT}.5, ${AT} + 30.5, ${AT}.5, 90, 'female'),
+    (w, 9702, 'roxxen', 'Far', 'wild', ${AT} + 100.5, ${AT}.5, ${AT} + 100.5, ${AT}.5, 90, 'female');
   delete from caller;
   insert into said select 'READ', coalesce(string_agg(c->>'name', ',' order by c->>'name'), '')
     from jsonb_array_elements(rpc_creatures(w, 1000)) c where (c->>'id')::int in (9701, 9702);

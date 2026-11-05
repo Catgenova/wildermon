@@ -295,7 +295,7 @@ export const bowRange = (def: WeaponDef, item: Item | null): number => (def.rang
 
 /**
  * Silver's old virtue: it bites the unnatural. Anything that carries its own
- * light — a Lume, an Embra — takes half again from a silver edge. The number
+ * light — an Embra, a dragon — takes half again from a silver edge. The number
  * lives with the materials, whose examine line says it (`materials.ts`).
  */
 export { BANE_BONUS } from './materials';

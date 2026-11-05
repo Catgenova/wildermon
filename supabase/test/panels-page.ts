@@ -147,10 +147,10 @@ for (const tab of TABS) {
       search.value = '';
       search.dispatchEvent(new Event('input'));
     }
-    // Tameable now: a kind Taming reaches (rabba), one it does not (lume) and a monster (goblin) seen.
+    // Tameable now: a kind Taming reaches (rabba), one it does not (snout) and a monster (goblin) seen.
     const tame = uiRoot.querySelector<HTMLButtonElement>('.guide-tameable');
     if (tame) {
-      game.guideMark('lume', 'seen');
+      game.guideMark('snout', 'seen');
       game.guideMark('goblin', 'seen');
       frame();
       const skill = Math.floor(game.skills.get('taming'));

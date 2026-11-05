@@ -7,7 +7,7 @@
  *
  * Asks that `tame_hard()` is the browser's number; that the island's `tame_learn` is the browser's for every kind at
  * every stage; that each of the island's four gains is multiplied by it; and, in the browser, that an offering taken
- * by a Lume teaches what one taken by a Rabba does, by the two kinds' `tameLearn`.
+ * by a Dirtlet teaches what one taken by a Rabba does, by the two kinds' `tameLearn`.
  *
  * Runs against the database the suite leaves behind. The island's half is rolled back.
  */
@@ -102,9 +102,9 @@ const taught = (species: string): { gain: number; tamed: boolean } => {
   return { gain: g.skills.get('taming') - at, tamed: c.mode !== 'wild' };
 };
 const easy = taught('rabba');
-const hard = taught('lume');
-const want = tameLearn({ species: 'lume', skills: {} }) / tameLearn({ species: 'rabba', skills: {} });
-check(`in the browser, a Lume taken teaches ×${want.toFixed(3)} what a Rabba does`,
+const hard = taught('snout');
+const want = tameLearn({ species: 'snout', skills: {} }) / tameLearn({ species: 'rabba', skills: {} });
+check(`in the browser, a ${SPECIES.snout.name} taken teaches ×${want.toFixed(3)} what a Rabba does`,
   easy.tamed && hard.tamed && Math.abs(hard.gain / easy.gain - want) < 1e-6, `${hard.gain} / ${easy.gain}`);
 
 for (const l of [...ok, ...bad]) console.log(l);

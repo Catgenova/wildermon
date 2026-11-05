@@ -252,8 +252,8 @@ export class Vision {
     for (const c of g.creatures.list.values()) {
       if (c.mode === 'wild' || c.mode === 'stored') continue;
       const def = g.creatures.species(c);
-      // A watcher is worth a hill; a Lume carries its own daylight about with
-      // it, so what it lights is lit whatever the hour.
+      // A watcher is worth a hill; one that glows carries its own daylight about
+      // with it, so what it lights is lit whatever the hour.
       const keen = bloodMul(c, 'sight');
       this.cast(next, c.x, c.y, keptSight(def, keen, g.darkness(), bloodMul(c, 'night')), mark);
     }
