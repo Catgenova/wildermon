@@ -381,7 +381,7 @@ export const ORC: Kind = {
  * roots at the grip end and still in leaf at the other -- carried on the
  * shoulder.
  */
-const OGRE_SPEC: BipedSpec = {
+export const OGRE_SPEC: BipedSpec = {
   high: 1.4,
   leg: { at: [0.62, 0, -0.1], len: [0.62, 0.62, 0.14], rest: [8, -14] },
   chest: { at: [0, 0, 0.3], lean: 18 },
