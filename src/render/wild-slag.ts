@@ -57,8 +57,8 @@ interface Slag {
     tower?: { r: number; h: number }; slots?: number; crest?: { r: number; f: number }; face?: boolean;
   };
   chimneys: Chimney[];
-  /** Four legs a side, front to back, as the Sandpip's. */
-  legs: { x: number; z: number; ys: number[]; fan: number[]; upper: number; lower: number; reach: number; thick: number; arch: number };
+  /** Four legs a side, front to back, as the Sandpip's; with `root`, how much farther in past the hip its upper part reaches. */
+  legs: { x: number; z: number; ys: number[]; fan: number[]; upper: number; lower: number; reach: number; thick: number; arch: number; root?: number };
   /** The claws, as the Sandpip's; with `hub`, a copper rivet hub at each wrist. */
   claw: { at: V3; arm: [number, number]; hand: [number, number]; rest: { fwd: number; out: [number, number]; pitch: number; open: number; yaw?: number; roll?: number }; thick: number; hub?: boolean };
   /** How it goes: as the Sandpip's; `trickle` is how hard its metal sloshes and sparks as it goes. */
@@ -76,8 +76,8 @@ const SLAGLET_LOOK: Slag = {
   eye: { root: [0.16, 0.5, 0.3], len: 0.2, r: 0.13, out: 30, lean: 22, stagger: 10 },
   bowl: { at: [0, 0.04, -0.12], tilt: 0, prof: [[0, 0.42], [0.08, 0.62], [0.18, 0.74], [0.28, 0.79], [0.36, 0.78], [0.42, 0.75]], segs: 11, wall: 0.1, sand: 0.07, heap: 0.04, face: true },
   chimneys: [{ az: 145, r: 0.075, h: 0.26 }, { az: -145, r: 0.07, h: 0.2 }],
-  legs: { x: 0.46, z: -0.04, ys: [0.3, 0.1, -0.1, -0.3], fan: [50, 17, -17, -50], upper: 0.3, lower: 0.36, reach: 0.56, thick: 0.11, arch: 0.12 },
-  claw: { at: [0.38, 0.5, -0.1], arm: [0.22, 0.2], hand: [0.34, 0.34], rest: { fwd: 0.56, out: [0.56, 0.56], pitch: -20, open: 20, yaw: 22 }, thick: 0.08 },
+  legs: { x: 0.54, z: -0.14, ys: [0.3, 0.1, -0.1, -0.3], fan: [50, 17, -17, -50], upper: 0.34, lower: 0.36, reach: 0.54, thick: 0.11, arch: 0.12 },
+  claw: { at: [0.38, 0.5, -0.16], arm: [0.22, 0.2], hand: [0.34, 0.34], rest: { fwd: 0.56, out: [0.56, 0.56], pitch: -20, open: 20, yaw: 22 }, thick: 0.08 },
   gait: { sweep: [0.3, 0.38], duty: [0.6, 0.52], lift: [0.14, 0.18], bob: 0.085, sway: 2, rock: 1.5, trickle: 0 },
   strike: 0,
   size: 2.2,
@@ -94,8 +94,8 @@ const ALLOYSTER_LOOK: Slag = {
     band: 0.97, dome: 0.46, mouth: { w: 46, h: 0.56, f: 0.62 }, cupola: { r: 0.2, h: 0.16 },
   },
   chimneys: [{ az: 112, r: 0.11, h: 0.5, inset: 0.32 }, { az: 146, r: 0.1, h: 0.38, inset: 0.28 }],
-  legs: { x: 0.66, z: -0.1, ys: [0.42, 0.14, -0.14, -0.42], fan: [50, 17, -17, -50], upper: 0.5, lower: 0.6, reach: 0.8, thick: 0.17, arch: 0.12 },
-  claw: { at: [0.64, 0.74, -0.2], arm: [0.46, 0.42], hand: [0.8, 0.8], rest: { fwd: 0.6, out: [0.36, 0.36], pitch: -18, open: 24, yaw: 26 }, thick: 0.15, hub: true },
+  legs: { x: 0.8, z: -0.24, ys: [0.42, 0.14, -0.14, -0.42], fan: [50, 17, -17, -50], upper: 0.54, lower: 0.56, reach: 0.76, thick: 0.17, arch: 0.12 },
+  claw: { at: [0.64, 0.74, -0.28], arm: [0.46, 0.42], hand: [0.8, 0.8], rest: { fwd: 0.6, out: [0.36, 0.36], pitch: -18, open: 24, yaw: 26 }, thick: 0.15, hub: true },
   gait: { sweep: [0.42, 0.52], duty: [0.62, 0.52], lift: [0.18, 0.24], bob: 0.12, sway: 2.5, rock: 3, trickle: 0 },
   strike: 1,
   size: 2.3,
@@ -112,8 +112,8 @@ const MOLTENEX_LOOK: Slag = {
     band: 0.95, tower: { r: 0.3, h: 0.66 }, slots: 14, crest: { r: 0.5, f: 0.52 },
   },
   chimneys: [{ az: -54, r: 0.13, h: 0.62 }, { az: 54, r: 0.13, h: 0.62 }, { az: -138, r: 0.15, h: 0.86 }, { az: 138, r: 0.15, h: 0.86 }],
-  legs: { x: 0.98, z: -0.1, ys: [0.6, 0.2, -0.2, -0.6], fan: [50, 17, -17, -50], upper: 0.72, lower: 0.86, reach: 1.1, thick: 0.24, arch: 0.12 },
-  claw: { at: [1.0, 1.0, -0.2], arm: [0.7, 0.66], hand: [1.2, 1.2], rest: { fwd: 0.6, out: [0.44, 0.44], pitch: -18, open: 28, yaw: 30 }, thick: 0.22, hub: true },
+  legs: { x: 1.24, z: -0.34, ys: [0.6, 0.2, -0.2, -0.6], fan: [50, 17, -17, -50], upper: 0.9, lower: 0.7, reach: 1.1, thick: 0.24, arch: 0.12, root: 0.3 },
+  claw: { at: [1.0, 1.0, -0.34], arm: [0.7, 0.66], hand: [1.2, 1.2], rest: { fwd: 0.6, out: [0.44, 0.44], pitch: -18, open: 28, yaw: 30 }, thick: 0.22, hub: true },
   gait: { sweep: [0.6, 0.72], duty: [0.66, 0.54], lift: [0.2, 0.26], bob: 0.15, sway: 3, rock: 3, trickle: 1 },
   strike: 2,
   size: 2.5,
@@ -210,11 +210,75 @@ function onDome(B: Slag['bowl'], az: number, up: number): { p: V3; n: V3 } {
   return { p: [Math.sin(a) * r, Math.cos(a) * r, z], n: unit([Math.sin(a) * Math.cos(ph) / R, Math.cos(a) * Math.cos(ph) / R, Math.sin(ph) / Math.max(0.01, D)]) };
 }
 
-/** The crucible as a solid that hides what is inside it or behind it, in its own frame: an egg a little inside its outside. */
-function bowlSolid(B: Slag['bowl']): { c: V3; r: V3 } {
-  const { H } = rimOf(B), R = Math.max(...B.prof.map((p) => p[1])), D = B.dome ?? 0;
-  return { c: [0, 0, (H + D * 0.6) * 0.52], r: [R * 0.9, R * 0.9, (H + D * 0.6) * 0.5] };
+/**
+ * The crucible as solids that hide what is inside it or behind it (`Piece.hide`), in its own frame: a stack of eggs, each wholly
+ * inside its outside, from its foot to the top of its metal (or of its dome), so that a leg or an arm going in under it is hidden
+ * where it is inside the wall and not drawn over it, out to the swell of its sides, which one egg could not follow.
+ */
+function bowlSolids(B: Slag['bowl']): Array<{ c: V3; r: V3 }> {
+  const { H, R } = rimOf(B), D = B.dome ?? 0, top = D ? H : H - B.sand, out: Array<{ c: V3; r: V3 }> = [];
+  const n = 5;
+  for (let q = 0; q < n; q++) {
+    const zc = top * (q + 0.5) / n, hz = Math.min(zc, top - zc + (D ? D * 0.5 : 0), top * 0.34);
+    // As wide as it can be with every height of it inside the outside there.
+    let r = Infinity;
+    for (let j = -20; j <= 20; j++) {
+      const z = zc + hz * j / 20.5, f = 1 - ((z - zc) / hz) ** 2;
+      if (z < 0 || f <= 0) continue;
+      const wall = z <= H ? profAt(B, z / H).r : R;
+      r = Math.min(r, wall * 0.97 / Math.sqrt(f));
+    }
+    out.push({ c: [0, 0, zc], r: [r, r, hz] });
+  }
+  if (D) out.push({ c: [0, 0, H], r: [R * 0.96, R * 0.96, D * 0.96] });
+  return out;
 }
+
+/**
+ * How far a point is inside the crucible's outside, with `th` round it, and the way out of it there, in the crucible's frame:
+ * the wall's outward normal at that height. Nothing for a point under its foot or over its top, where there is no wall.
+ */
+function intoBowl(B: Slag['bowl'], q: V3, th: number): { pen: number; n: V3 } | null {
+  const { H, R } = rimOf(B), D = B.dome ?? 0, z = q[2], d = Math.hypot(q[0], q[1]);
+  if (z < 0 || z > H + D) return null;
+  const a: V3 = d > 1e-6 ? [q[0] / d, q[1] / d, 0] : [0, 1, 0];
+  if (z <= H) {
+    const w = profAt(B, z / H);
+    return { pen: w.r + th - d, n: unit([a[0], a[1], -w.dr]) };
+  }
+  const s = (z - H) / D, r = R * Math.sqrt(Math.max(0, 1 - s * s));
+  return { pen: r + th - d, n: unit([a[0] * Math.sqrt(Math.max(0, 1 - s * s)) / R, a[1] * Math.sqrt(Math.max(0, 1 - s * s)) / R, s / D]) };
+}
+
+/** The point in the world frame of a frame whose turn is square (the transpose undoes it). */
+const local = (x: Xf, p: V3): V3 => {
+  const m = x.m, d = sub(p, x.t);
+  return [m[0] * d[0] + m[3] * d[1] + m[6] * d[2], m[1] * d[0] + m[4] * d[1] + m[7] * d[2], m[2] * d[0] + m[5] * d[1] + m[8] * d[2]];
+};
+/** A way in a frame, in the world. */
+const turned = (x: Xf, v: V3): V3 => sub(place(x, v), x.t);
+
+/**
+ * How far to move something `th` thick at `p` so it is clear of the crucible's outside, along the wall's outward normal: nought
+ * well clear of it, and easing in over the last `soft` of the way, so a knee or a claw coming up to the wall slides off it
+ * smoothly rather than stopping dead on it.
+ */
+function clearOf(B: Slag['bowl'], shell: Xf, p: V3, th: number, soft: number): V3 {
+  let at = p;
+  for (let i = 0; i < 3; i++) {
+    const hit = intoBowl(B, local(shell, at), th);
+    if (!hit) break;
+    const pen = 0.5 * (hit.pen + Math.sqrt(hit.pen * hit.pen + soft * soft)) - 0.5 * soft;
+    if (pen <= 1e-4) break;
+    at = add(at, scale(turned(shell, hit.n), pen));
+  }
+  return sub(at, p);
+}
+
+const lerp3 = (a: V3, b: V3, t: number): V3 => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+
+/** A frame with its `y` (the length of the bone) stretched by `k`: a leg or an arm part reaching a joint moved off the wall. */
+const stretched = (x: Xf, k: number): Xf => ({ m: [x.m[0], x.m[1] * k, x.m[2], x.m[3], x.m[4] * k, x.m[5], x.m[6], x.m[7] * k, x.m[8]], t: x.t });
 
 /** The top of its metal, in the crucible's frame: the middle of the pool, or the middle of the mouth where it is domed over. */
 function poolTopLocal(B: Slag['bowl']): V3 {
@@ -513,13 +577,16 @@ const ventsOf = (s: Slag): Array<{ at: V3; r: number }> => s.chimneys.map((c) =>
  * the back of the crucible to its front, all but hidden under it; its face is
  * on the crucible.
  */
+/** The body's half-width, half-depth or height of its middle `y` along it. */
+function ringAt(R: Rings, y: number, q: 'w' | 'h' | 'z'): number {
+  let i = 0;
+  while (i < R.y.length - 2 && R.y[i + 1] < y) i++;
+  return lerp(R[q][i], R[q][i + 1], clamp((y - R.y[i]) / (R.y[i + 1] - R.y[i])));
+}
+
 function bodyOf(s: Slag, n: number): Mesh {
   const R = s.body, y0 = R.y[0], y1 = R.y[R.y.length - 1];
-  const at = (y: number, q: 'w' | 'h' | 'z'): number => {
-    let i = 0;
-    while (i < R.y.length - 2 && R.y[i + 1] < y) i++;
-    return lerp(R[q][i], R[q][i + 1], clamp((y - R.y[i]) / (R.y[i + 1] - R.y[i])));
-  };
+  const at = (y: number, q: 'w' | 'h' | 'z'): number => ringAt(R, y, q);
   // Three segments along it, each with a crease: two rings a little in at each.
   const ys: number[] = [], pinch: boolean[] = [];
   const segs = 3;
@@ -584,7 +651,8 @@ function hubOf(h: number): Mesh {
 /** A leg's upper part, along `y` from its hip into the body to its knee: peach, chunky, a cream band at the knee. */
 function upperOf(s: Slag): Mesh {
   const L = s.legs.upper, w = s.legs.thick;
-  return tube([[0, -w * 1.2, 0], [0, L * 0.2, 0], [0, L * 0.82, 0], [0, L + w * 0.3, 0]], [w, w * 1.05, w * 0.95, w * 0.85], [w, w * 1.05, w * 0.95, w * 0.85], 6,
+  // Its root reaching in past the hip, under the crucible, as far as the body's side.
+  return tube([[0, -w * 1.2 - (s.legs.root ?? 0), 0], [0, L * 0.2, 0], [0, L * 0.82, 0], [0, L + w * 0.3, 0]], [w, w * 1.05, w * 0.95, w * 0.85], [w, w * 1.05, w * 0.95, w * 0.85], 6,
     (ring) => (ring === 2 ? 'coatDark' : 'horn'), { seam: 'start' });
 }
 
@@ -932,7 +1000,7 @@ function slagBones(s: Slag): (a: Anim) => Bones {
     const p = poseOf(s, a);
     const body = joint(ROOT, [0, p.y, p.z], p.pitch, p.roll, p.yaw);
     const b: Bones = { body };
-    const B = s.bowl;
+    const B = s.bowl, k = kOf(s);
     b.shell = joint(body, B.at, B.tilt + p.rockP, p.rockR, 0);
     const ground = heading(0, p.y, p.yaw), up: V3 = [0, 0, 1];
     for (let q = 0; q < 2; q++) {
@@ -945,27 +1013,62 @@ function slagBones(s: Slag): (a: Anim) => Bones {
       const tipW = place(ground, c.tip), wrist = sub(tipW, sub(place(hand0, tipOf(h)), hand0.t));
       // Never into the ground: lifted by however far its lowest point would go under it.
       // Smoothly, so a claw settling onto the ground and leaving it again never jerks as the ground starts or stops holding it up.
+      // Never into the crucible either: the hand moved off its wall along the wall's normal by however far its wrist, palm or
+      // fingers would go into it (claws held up as it goes, or lifted over its face, come up under the swell of a big crucible).
+      let push: V3 = [0, 0, 0];
+      for (const [pt, th] of [[[0, 0, 0], h * 0.2], [[0, h * 0.36, 0], h * 0.38], [[0, h * 0.9, -h * 0.2], h * 0.15], [tipOf(h), h * 0.05]] as Array<[V3, number]>) {
+        const off = clearOf(B, b.shell, add(wrist, turned(hand0, pt)), th, SOFT * k);
+        if (len(off) > len(push)) push = off;
+      }
+      wrist[0] += push[0]; wrist[1] += push[1]; wrist[2] += push[2];
       const dz = FLOOR - lowOf({ m: hand0.m, t: [0, 0, 0] }, h, c.open) - wrist[2];
       wrist[2] += 0.5 * (dz + Math.sqrt(dz * dz + SOFT * SOFT));
-      const hand: Xf = { m: hand0.m, t: wrist };
-      const sh = place(body, [sd * s.claw.at[0], s.claw.at[1], s.claw.at[2]]);
+      // Its shoulders, like its hips, go with the crucible as it rocks, so it never comes down onto its arms.
+      const sh = place(b.shell, sub([sd * s.claw.at[0], s.claw.at[1], s.claw.at[2]], B.at));
       // The elbow out to the side and back, which is the one way the wrist never goes from the shoulder, so it cannot flip.
       const pole = sub(place(ground, [sd * 0.8, -1, 0]), ground.t);
-      const [A1, A2] = s.claw.arm, el = kneeOf(sh, wrist, A1, A2, pole);
+      const [A1, A2] = s.claw.arm, T = s.claw.thick * 1.1;
+      // The elbow off the crucible's wall, each part of the arm stretched a little to meet it there.
+      const elbowOf = (): V3 => {
+        const e = kneeOf(sh, wrist, A1, A2, pole);
+        return add(e, clearOf(B, b.shell, e, T, SOFT * k));
+      };
+      let el = elbowOf();
+      // And the arm itself clear of it: a claw raised high, or brought down in front, from a shoulder under the swell of a big
+      // crucible would have its arm through the wall, so the hand is taken out from the crucible, level, until it is not.
+      for (let i = 0; i < 6; i++) {
+        let most = 0;
+        for (const [from, to] of [[sh, el], [el, wrist]]) {
+          for (const f of [0.3, 0.55, 0.8]) most = Math.max(most, len(clearOf(B, b.shell, lerp3(from, to, f), T, SOFT * k)));
+        }
+        if (most < 1e-3) break;
+        const q0 = local(b.shell, wrist), r = Math.hypot(q0[0], q0[1]) || 1;
+        const way = turned(b.shell, [q0[0] / r, q0[1] / r, 0]);
+        wrist[0] += way[0] * most; wrist[1] += way[1] * most; wrist[2] += way[2] * most;
+        el = elbowOf();
+      }
+      const hand: Xf = { m: hand0.m, t: wrist };
       // Each part rolled to the plane the arm bends in, which turns smoothly with it.
       const plane = cross(sub(wrist, sh), pole), roll = cross(plane, sub(el, sh));
-      b[`arm${q}0`] = aim(sh, sub(el, sh), roll);
-      b[`arm${q}1`] = aim(el, sub(wrist, el), cross(plane, sub(wrist, el)));
+      b[`arm${q}0`] = stretched(aim(sh, sub(el, sh), roll), len(sub(el, sh)) / A1);
+      b[`arm${q}1`] = stretched(aim(el, sub(wrist, el), cross(plane, sub(wrist, el))), len(sub(wrist, el)) / A2);
       b[`claw${q}`] = hand;
       b[`nip${q}`] = joint(hand, hingeOf(h), c.open, 0, 0);
       // Its legs.
       for (let i = 0; i < 4; i++) {
-        const hip = place(body, hipOf(s, i, sd)), foot = footOf(s, i, sd, a);
-        const kn = kneeOf(hip, foot, s.legs.upper, s.legs.lower, up);
+        // Its hips go with the crucible as it rocks on the body, so the crucible never comes down onto its legs as it rears,
+        // lurches or sways: where they are on the body standing, carried round with it.
+        const hip = place(b.shell, sub(hipOf(s, i, sd), B.at)), foot = footOf(s, i, sd, a);
+        const kn0 = kneeOf(hip, foot, s.legs.upper, s.legs.lower, up);
+        // The knee kept off the crucible's wall, out under its swell, where a leg folding as it steps would put it up into it;
+        // each part of the leg stretched a little to meet it there.
+        const LT = s.legs.thick * 1.05;
+        const kn = add(kn0, clearOf(B, b.shell, kn0, LT, SOFT * k));
         // Each part rolled to the plane the leg is in, by that plane's own level normal, which turns smoothly as the foot swings
         // round: rolled by the world's up instead, a part passing through upright turned half round in a moment.
         const N = cross(sub(foot, hip), up);
-        const upper = inPlane(hip, sub(kn, hip), N), lower = inPlane(kn, sub(foot, kn), N);
+        const upper = stretched(inPlane(hip, sub(kn, hip), N), len(sub(kn, hip)) / s.legs.upper);
+        const lower = stretched(inPlane(kn, sub(foot, kn), N), len(sub(foot, kn)) / s.legs.lower);
         b[`leg${i}${q}0`] = upper;
         b[`leg${i}${q}1`] = lower;
         const tip: Xf = { m: lower.m, t: foot };
@@ -983,7 +1086,7 @@ function slagBones(s: Slag): (a: Anim) => Bones {
 
 function slagBuild(s: Slag, lod: number): Piece[] {
   const n = cut(lod, 8, 11), k = cut(lod, 4, 6), nb = cut(lod, 18, 27);
-  const bowl = bowlOf(s, nb), solid = bowlSolid(s.bowl);
+  const bowl = bowlOf(s, nb), solids = bowlSolids(s.bowl);
   // How far the metal has risen and the fixtures grown this moment, from the act it is in (the pose works the same out for the bones).
   const heapOf = (a: Anim): number => (a.act?.kind === 'work' ? poseOf(s, a).heap : 0);
   const crownOf = (a: Anim): number => (a.act?.kind === 'evolve' ? poseOf(s, a).crown : 1);
@@ -1008,23 +1111,25 @@ function slagBuild(s: Slag, lod: number): Piece[] {
       },
     });
   });
-  pieces.push({ key: 'body', mesh: bodyOf(s, n), bone: 'body', bias: 0.01, after: 'shell', front: [0, 1, 0], hide: [solid], hideIn: 'shell' });
+  pieces.push({ key: 'body', mesh: bodyOf(s, n), bone: 'body', bias: 0.01, after: 'shell', front: [0, 1, 0], hide: solids, hideIn: 'shell' });
   const up = upperOf(s), low = lowerOf(s), knee = orb([0, 0, 0], s.legs.thick * 0.95, 6, 3, 'coatDark');
   const upS = up, lowS = merge(low, knee);
   for (let q = 0; q < 2; q++) {
     const sd = q ? 1 : -1, h = s.claw.hand[q], T = s.claw.thick * (0.75 + 0.35 * h / s.claw.hand[1]);
     const front: V3 = [sd * 0.5, 1, 0];
     pieces.push(
-      { key: `arm${q}0`, mesh: tube([[0, -T, 0], [0, s.claw.arm[0] + T * 0.3, 0]], T, T, 6, 'horn', { seam: 'start' }), bone: `arm${q}0`, bias: 0.02, after: 'body', front, convex: true },
-      { key: `arm${q}1`, mesh: merge(orb([0, 0, 0], T * 1.05, 6, 3, 'coatDark'), tube([[0, 0, 0], [0, s.claw.arm[1] + T * 0.3, 0]], T * 1.05, T * 1.05, 6, 'horn')), bone: `arm${q}1`, bias: 0.025, after: 'body', front },
-      { key: `claw${q}`, mesh: merge(handOf(h, n, k), s.claw.hub ? hubOf(h) : null), bone: `claw${q}`, bias: 0.03, after: [`arm${q}1`, 'body'], front },
-      { key: `nip${q}`, mesh: nipToothed(h), bone: `nip${q}`, bias: 0.035, after: `claw${q}`, front: [sd, 0.3, 0.3] },
+      { key: `arm${q}0`, mesh: tube([[0, -T, 0], [0, s.claw.arm[0] + T * 0.3, 0]], T, T, 6, 'horn', { seam: 'start' }), bone: `arm${q}0`, bias: 0.02, after: 'body', front, convex: true, hide: solids, hideIn: 'shell' },
+      // The forearm narrowing to the wrist, into the hand's own wrist and no wider than its palm is thick, so its end never stands
+      // out of the side of the hand as a flat cap.
+      { key: `arm${q}1`, mesh: merge(orb([0, 0, 0], T * 1.05, 6, 3, 'coatDark'), tube([[0, 0, 0], [0, s.claw.arm[1] * 0.55, 0], [0, s.claw.arm[1] + h * 0.04, 0]], [T * 1.05, T, Math.min(T, h * 0.17)], [T * 1.05, T, Math.min(T, h * 0.17)], 6, 'horn')), bone: `arm${q}1`, bias: 0.025, after: 'body', front, hide: solids, hideIn: 'shell' },
+      { key: `claw${q}`, mesh: merge(handOf(h, n, k), s.claw.hub ? hubOf(h) : null), bone: `claw${q}`, bias: 0.03, after: [`arm${q}1`, 'body'], front, hide: solids, hideIn: 'shell' },
+      { key: `nip${q}`, mesh: nipToothed(h), bone: `nip${q}`, bias: 0.035, after: `claw${q}`, front: [sd, 0.3, 0.3], hide: solids, hideIn: 'shell' },
     );
     for (let i = 0; i < 4; i++) {
       const lf: V3 = [sd, 0, 0];
       pieces.push(
-        { key: `leg${i}${q}0`, mesh: upS, bone: `leg${i}${q}0`, bias: 0.01, after: 'body', front: lf, hide: [solid], hideIn: 'shell' },
-        { key: `leg${i}${q}1`, mesh: lowS, bone: `leg${i}${q}1`, bias: 0.015, after: `leg${i}${q}0`, front: lf, thin: s.strike === 0, hide: [solid], hideIn: 'shell' },
+        { key: `leg${i}${q}0`, mesh: upS, bone: `leg${i}${q}0`, bias: 0.01, after: 'body', front: lf, hide: solids, hideIn: 'shell' },
+        { key: `leg${i}${q}1`, mesh: lowS, bone: `leg${i}${q}1`, bias: 0.015, after: `leg${i}${q}0`, front: lf, thin: s.strike === 0, hide: solids, hideIn: 'shell' },
       );
     }
   }
