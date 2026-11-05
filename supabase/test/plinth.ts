@@ -20,7 +20,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import { itemDef, type Item } from '../../src/game/items';
-import { RECIPE_BY_ID, STATION_NAME } from '../../src/game/recipes';
+import { lockedRecipes, RECIPE_BY_ID, STATION_NAME } from '../../src/game/recipes';
 import { ENCHANT_SAID, ENCHANTERS_PLINTH, PLINTH_NAME } from '../../src/game/enchant';
 import { ENCHANT } from '../../src/game/enchanting';
 import { furnitureCentre, furnitureDef, STATION_REACH } from '../../src/game/furniture';
@@ -116,6 +116,9 @@ begin
   perform land_blank(w, 64);
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
+  -- Every scroll's Formula read (recipebook.ts): writing them is what is asked here, not finding them.
+  insert into private.recipe_known (world_id, uid, recipe)
+    select w, u, l.id from locked_recipes() l where recipe_book(l.id) = 'formula' on conflict do nothing;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
   update player set x = 10.5, y = 10.5, body_at = now(), swim_at = now(), equipped = '{}'::jsonb, craft_from_stores = false,
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('hunger', 1, 'thirst', 1, 'health', 1, 'stamina', 1)
@@ -172,6 +175,8 @@ const part = (k: string, i = 0): string => (isle.get(k) ?? '').split('|')[i] ?? 
 /* ---- in the browser, the same ----------------------------------------------------- */
 
 const g = Game.create(141, 256);
+// Every scroll's Formula read, as on the island above.
+for (const r of lockedRecipes('formula')) g.knownRecipes.add(r.id);
 const w = g.world;
 w.water = null;
 w.heights.fill(10);

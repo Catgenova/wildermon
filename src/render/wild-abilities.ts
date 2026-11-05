@@ -1,5 +1,5 @@
 import {
-  coatPalette, curve, merge, moved, orb, quadBonesOf, taper, TAU, tube,
+  coatPalette, curve, merge, orb, quadBonesOf, taper, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { cut, earMesh, quadPieces } from './beastkit';
@@ -10,8 +10,8 @@ import { barrel, OWN, paws } from './wild-hands2';
 
 /**
  * Six that had an ability of their own (`AbilityId`), settlement workers now: each wears what it
- * did -- a whirl of blades, embers, icicles, tendrils, a brittle shell,
- * a round sucking mouth for a leech.
+ * did -- a whirl of blades, embers, icicles, tendrils, a round sucking
+ * mouth for a leech (the brittla, a brittle shell, is gone: `REMOVED_KINDS`).
  */
 
 /** A tail's root, out of the body, before what is on the end of it. */
@@ -72,19 +72,6 @@ function kindOf(l: Look): Kind {
 
 const HEAD = (y: number, z: number, r: V3): { c: V3; r: V3 } => ({ c: [0, y, z], r });
 
-/* ---- the whirla: a whip of a tail --------------------------------------------------- */
-
-export const WHIRLA = kindOf({
-  spec: { ...pawed({ high: 1.3, len: 2.1, legs: 0.8, neck: 0.36, lean: 40, swing: [24, 40], ears: [30, 24], tail: [0.4, 16, 8] }), nose: 12 },
-  head: HEAD(0.3, 0.16, [0.98, 0.96, 0.88]), body: [2.1, 0.95, 0.82], neck: [0.56, 0.56, 0.36], ear: [0.36, 0.22, 30], legs: [0.8, 0.23, 0.22, 'coatDark'],
-  snout: [1.0, -0.18, [0.38, 0.32, 0.34], 0.11],
-  tail: (n) => merge(root(n), tube(Array.from({ length: 14 }, (_, i): V3 => {
-    const a = (i / 13) * TAU * 1.1, rr = 0.15 + i * 0.07;
-    return [Math.sin(a) * rr, -0.2 - Math.cos(a) * rr * 0.6 - i * 0.04, 0.05 + i * 0.01];
-  }), [0.08, 0.02], [0.08, 0.02], 5, 'coat')),
-  own: {}, mark: 30, shadow: [1.5, 1.15], stride: 1.45, size: 1.6,
-});
-
 /* ---- the scorcha: embers on its back, a flame at its tail ---------------------------- */
 
 export const SCORCHA = kindOf({
@@ -122,16 +109,4 @@ export const ROOTLE = kindOf({
   own: { bark: [96, 76, 50], stem: [120, 96, 60] }, mark: 30, shadow: [1.6, 1.3], stride: 1.25, size: 1.65,
 });
 
-/* ---- the brittla: glassy shards along its back --------------------------------------- */
-
-export const BRITTLA = kindOf({
-  spec: { ...pawed({ high: 1.3, len: 2.1, legs: 0.75, neck: 0.34, lean: 45, swing: [22, 36], ears: [30, 24], tail: [0.4, 14, 6] }), nose: 12 },
-  head: HEAD(0.32, 0.15, [0.98, 0.96, 0.88]), body: [2.1, 1.0, 0.85], neck: [0.58, 0.58, 0.34], ear: [0.34, 0.22, 30], legs: [0.75, 0.24, 0.22, 'coatDark'],
-  snout: [1.0, -0.18, [0.38, 0.32, 0.32], 0.1],
-  back: () => merge(...[[-0.7, 0.1, 18], [-0.35, -0.12, -14], [0, 0.12, 22], [0.35, -0.08, -10]].map(([y, x, lean]) =>
-    moved(taper([[0, 0, 0], [0, 0, 0.42]], 0.11, 0.01, 4, 'crystal'), [x, y, 0.72], 0, lean, lean))),
-  thin: true,
-  tail: (n) => merge(root(n), taper([[0, -0.2, 0], [0, -0.75, 0.15], [0, -1.0, 0.2]], 0.09, 0.02, n, 'crystalDark')),
-  own: { crystal: [200, 226, 240], crystalDark: [140, 176, 196] }, mark: 30, shadow: [1.45, 1.15], stride: 1.45, size: 1.6,
-});
 

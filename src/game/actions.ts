@@ -28,6 +28,8 @@ import { BUTCHER_ACTIONS } from './butcher';
 import { ARCHAEOLOGY_ACTIONS } from './archaeology';
 import { RELIC_USE_ACTIONS } from './relicuse';
 import { RECIPE_BOOK_ACTIONS } from './recipebook';
+import { FERMENT_ACTIONS } from './ferment';
+import { FEAST_ACTIONS } from './feast';
 import { WILD_GEAR_ACTIONS } from './wildgearActions';
 import { CIRCLET, CIRCLET_SET, CIRCLET_STONES, circletSays, circletWithRoom, gemOf, maybeGem, stonesOf } from './gems';
 import { TREASURE_ACTIONS, maybeMap } from './treasure';
@@ -3362,6 +3364,8 @@ export const ACTIONS: ActionDef[] = [
   ...ARCHAEOLOGY_ACTIONS,
   ...RELIC_USE_ACTIONS,
   ...RECIPE_BOOK_ACTIONS,
+  ...FERMENT_ACTIONS,
+  ...FEAST_ACTIONS,
   // Wildermon gear fitted and taken off (`wildgearActions.ts`).
   ...WILD_GEAR_ACTIONS,
   ...TREASURE_ACTIONS,

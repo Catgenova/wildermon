@@ -4,11 +4,12 @@
  * Asked for, as a plan: a dulla cuts moss, a rootle plants vines, a spitta plants water lilies and lotus, a crakka
  * mixes concrete, a glossa mortar, a carra saws timbers, an awla carves shafts, a scorcha mixes alloys at a lit
  * smelter, a leecha makes bandages, covers and salves, a frosta presses cheese, a whirla churns butter and a brittla
- * distils. Each does what your own hands do, out of the settlement stores and back into them: the same inputs, amounts
+ * distilled (the brittla is gone now, `REMOVED_KINDS`, and distilling with it as a worker's trade). Each does what your own hands do, out of the settlement stores and back into them: the same inputs, amounts
  * and outputs as the player's own rule, no tool, levelling the skill that rule trains. No worker glazes or butchers any
  * more. The ten of them that kept watch no longer do, and have no ability or fighting style. And the ten guards that
  * were not revamped are gone: an owned one becomes one of these, by fit (`REMOVED_KINDS`), and keeps everything but
- * its kind; a wild one is gone; none stands up wild or is bred again.
+ * its kind; a wild one is gone; none stands up wild or is bred again. So are the forga, the cordra and the brittla, the
+ * same way: a forga becomes a scorcha, a cordra an ulva, a brittla a hoppa.
  *
  * Asked of both sides: each kind's trade, skill, words and learning pace are the same; set to work, each takes what
  * its recipe takes out of the stores and puts what it makes (and hands back) in, as the recipe says, only where its
@@ -26,7 +27,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { deedJobLine } from '../../src/game/creaturecrate';
 import {
-  ALLOY_QL, EVOLVE_AT, GATHER_DO, perkN, stageLoads, STAGE_PERKS, GATHER_SKILL, HANDS_TRADES, kindNow, LEARN_PACE, LOAD_TRADES, REMOVED_KINDS, sparsAsGuard, SPECIES, TEND_JOBS, tradeRecipes, WILD_SPECIES,
+  ALLOY_QL, EVOLVE_AT, GATHER_DO, perkN, stageLoads, STAGE_LOADS, STAGE_PERKS, GATHER_SKILL, HANDS_TRADES, kindNow, LEARN_PACE, LOAD_TRADES, REMOVED_KINDS, sparsAsGuard, SPECIES, TEND_JOBS, tradeRecipes, WILD_SPECIES,
   workerSkipsTools, type Creature, type GatherKind,
 } from '../../src/game/creatures';
 import { idleSays } from '../../src/game/workerlog';
@@ -65,19 +66,24 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 /** Each kind, its new trade, and the action your own hands do it by (for the skill it trains). */
 const KINDS: Array<[id: string, trade: GatherKind]> = [
   ['dulla', 'moss'], ['rootle', 'vine'], ['spitta', 'lily'], ['crakka', 'concrete'], ['glossa', 'mortar'], ['carra', 'timber'],
-  ['awla', 'shaft'], ['scorcha', 'alloy'], ['leecha', 'bandage'], ['frosta', 'cheese'], ['whirla', 'churn'], ['brittla', 'distil'],
+  ['awla', 'shaft'], ['scorcha', 'alloy'], ['leecha', 'bandage'], ['frosta', 'cheese'], ['whirla', 'churn'],
 ];
-/** The ten that kept watch until now. */
-const WERE_GUARDS = ['dulla', 'rootle', 'spitta', 'crakka', 'awla', 'scorcha', 'leecha', 'frosta', 'whirla', 'brittla'];
+/** The ten that kept watch until now, but the brittla, which is gone. */
+const WERE_GUARDS = ['dulla', 'rootle', 'spitta', 'crakka', 'awla', 'scorcha', 'leecha', 'frosta', 'whirla'];
 /** The ten guards taken out of the game, and the kind an owned one becomes, as asked. */
 const GONE: Array<[id: string, becomes: string]> = [
   ['testa', 'crakka'], ['skulka', 'spitta'], ['gasha', 'carra'], ['hamma', 'awla'], ['bashka', 'glossa'],
   ['executa', 'carra'], ['shova', 'whirla'], ['howla', 'frosta'], ['marka', 'scorcha'], ['wardo', 'leecha'],
 ];
 const GONE_LIST = GONE.map(([id]) => `'${id}'`).join(', ');
+/** The three taken out after them ("Remove forga", "Remove cordra", "Remove brittla"), each to the kind nearest its trade. */
+const GONE3: Array<[id: string, becomes: string, from: string, to: string]> = [
+  ['forga', 'scorcha', 'smelting', 'smelting'], ['cordra', 'ulva', 'ropemaking', 'tailoring'], ['brittla', 'hoppa', 'brewing', 'brewing'],
+];
+const GONE3_LIST = GONE3.map(([id]) => `'${id}'`).join(', ');
 /** The action each tile trade does as your own hands do it. */
 const OWN_ACTION: Partial<Record<GatherKind, string>> = { moss: 'cut_moss', vine: PLANT_VINE, lily: `plant_${WATER_PLANTS[0].id}` };
-const RECIPE_TRADES: GatherKind[] = ['concrete', 'mortar', 'timber', 'shaft', 'alloy', 'bandage', 'cheese', 'churn', 'distil'];
+const RECIPE_TRADES: GatherKind[] = ['concrete', 'mortar', 'timber', 'shaft', 'alloy', 'bandage', 'cheese', 'churn'];
 
 /* ---- the recipe cases ------------------------------------------------------------- */
 
@@ -96,8 +102,6 @@ const CASES: Case[] = [
   { k: 'NOCHURN', id: 'whirla', put: [['milk_bucket', 1]], why: 'range' },
   { k: 'ALLOY', id: 'scorcha', put: [['copper_lump', 3], ['tin_lump', 1], ['zinc_lump', 1]], at: 'smelter' },
   { k: 'UNLIT', id: 'scorcha', put: [['copper_lump', 3], ['tin_lump', 1]], at: 'unlit', why: 'range' },
-  { k: 'DISTIL', id: 'brittla', put: [['ale_bucket', 3], ['mead_bucket', 2]], at: 'campfire' },
-  { k: 'COLD', id: 'brittla', put: [['ale_bucket', 3]], at: 'cold', why: 'range' },
   { k: 'NOSTOCK', id: 'crakka', put: [['mortar', 1]], why: 'stock' },
   // No worker butchers or glazes: a carra and a glossa leave a carcass, a bare pot and the ash for its glaze alone.
   { k: 'NOBUTCHER', id: 'carra', put: [['corpse', 1]], why: 'stock' },
@@ -136,6 +140,16 @@ const CHIP_SKILLS = { [GATHER_SKILL.chisel]: EVOLVE_AT[1] };
 const CHIP_RECIPE = RECIPE_BY_ID.get(tradeRecipes('chisel')[0])!;
 const CHIP_PUT: Array<[string, number]> = CHIP_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
 const chipWants = (): string => `${CHIP_RECIPE.result} ${(CHIP_RECIPE.count ?? 1) + STAGE_PERKS.chissa.n}`;
+/**
+ * A Butterwhorl churns its third stage's batches a go and its line's one more (`STAGE_LOADS`, `STAGE_PERKS`): that many buckets
+ * of milk in the stores all churned, each bucket handed back empty.
+ */
+const CHURN_SKILLS = { [GATHER_SKILL.churn]: EVOLVE_AT[1] };
+const CHURN_RECIPE = RECIPE_BY_ID.get(CHURN_BUTTER)!;
+const CHURN_GO = STAGE_LOADS[2] + STAGE_PERKS.whirla.n;
+const CHURN_PUT: Array<[string, number]> = [['milk_bucket', CHURN_GO]];
+const churnWants = (): string => [`${CHURN_RECIPE.result} ${(CHURN_RECIPE.count ?? 1) * CHURN_GO}`,
+  ...(CHURN_RECIPE.returns ?? []).map(([id, n]) => `${id} ${n * CHURN_GO}`)].sort().join(',');
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
 const listed = (m: Map<string, number>): string => [...m].filter(([, n]) => n > 0).map(([id, n]) => `${id} ${n}`).sort().join(',') || '-';
@@ -231,6 +245,14 @@ begin
       || '|' || (select count(*) from creature where species in (${GONE_LIST})) || '|' || (select count(*) from guide where species in (${GONE_LIST}))
       || '|' || (select count(*) from bred_record where species in (${GONE_LIST}));
   insert into said select 'KINDNOW', string_agg(k || ':' || coalesce(private.kind_now(k), '-'), ',' order by k) from unnest(array[${GONE_LIST}, 'crakka']) k;
+  insert into said select 'GONE3', (select count(*) from species_def where id in (${GONE3_LIST})) || '|' || (select count(*) from wild_table where species in (${GONE3_LIST}))
+      || '|' || (select count(*) from species_butcher where species in (${GONE3_LIST})) || '|' || (select count(*) from species_diet where species in (${GONE3_LIST}))
+      || '|' || (select count(*) from creature where species in (${GONE3_LIST})) || '|' || (select count(*) from guide where species in (${GONE3_LIST}))
+      || '|' || (select count(*) from bred_record where species in (${GONE3_LIST}));
+  insert into said select 'NOTRADE:' || k, tend_job(k) || '|' || hands_trade(k) || '|' || worker_job_ported(k) || '|' || store_recipe_trade(k)
+      || '|' || (select count(*) from gather_def where id = k) || '|' || (select count(*) from learn_pace_def where id = k)
+      || '|' || coalesce(array_to_string(tend_recipes(k), ','), '-') from unnest(array['rope', 'distil']) k;
+  insert into said select 'KINDNOW3', string_agg(k || ':' || coalesce(private.kind_now(k), '-'), ',' order by k) from unnest(array[${GONE3_LIST}]) k;
   -- No glazing and no butchering left anywhere a worker could be set to.
   insert into said select 'NOGLAZE', (select count(*) from species_def where gathers in ('glaze', 'butcher') or 'glaze' = any(coalesce(trades, '{}')) or 'butcher' = any(coalesce(trades, '{}')))
       || '|' || (select count(*) from gather_def where id in ('glaze', 'butcher')) || '|' || (select count(*) from learn_pace_def where id in ('glaze', 'butcher'))
@@ -308,6 +330,12 @@ ${CASES.map((c) => `
   ${ready('chissa').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(CHIP_SKILLS)}'::jsonb`)}
   insert into said select 'CHIP', ${held};
   ${after('chissa')}
+  -- BUTTER: the whirla, at its third stage a Butterwhorl, churns both buckets of milk in the one go at its churn.
+  ${stocked(CHURN_PUT)}
+  ${stationAt('churn')}
+  ${ready('whirla').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(CHURN_SKILLS)}'::jsonb`)}
+  insert into said select 'BUTTER', ${held} || '|' || (select stage_loads(c) from creature c where c.world_id = w and c.id = (select id from hand where species = 'whirla'));
+  ${after('whirla')}
 
   -- VINE: a trellis on grass with no vine, one with a vine already, one on sand; three cuttings.
   perform land_set_tile(w, 21, 14, tile_id('Sand'));
@@ -381,16 +409,14 @@ for (const trade of RECIPE_TRADES) {
     check(`${rid} is the player's own recipe on both sides, and trains ${GATHER_SKILL[trade]}`, at(`RECIPE:${rid}`) === mine && r.skill === GATHER_SKILL[trade], `${at(`RECIPE:${rid}`)} / ${mine}`);
   }
 }
-check('the recipes are the player\'s: concrete, mortar, timbers, shafts, the five alloys, bandages, covers and salves, cheese, butter and every distilling',
+check('the recipes are the player\'s: concrete, mortar, timbers, shafts, the five alloys, bandages, covers and salves, cheese and butter',
   tradeRecipes('concrete').join() === 'mix_concrete' && tradeRecipes('mortar').join() === 'make_mortar' && tradeRecipes('timber').join() === 'make_timbers'
     && tradeRecipes('shaft').join() === 'make_shafts' && tradeRecipes('alloy').join() === 'make_bronze,make_brass,make_steel,make_pewter,make_electrum'
     && tradeRecipes('cheese').join() === 'make_cheese' && tradeRecipes('churn').join() === CHURN_BUTTER
     && tradeRecipes('bandage')[0] === 'make_bandage' && tradeRecipes('bandage').filter((r) => r.startsWith('make_cover_')).length === 5
-    && tradeRecipes('bandage').filter((r) => r.startsWith('make_salve_')).length === 5
-    && tradeRecipes('distil').join() === 'distil_ale,distil_cider,distil_mead,distil_wine,distil_grape_wine');
-check('stations: a butter churn for butter, a smelter for the alloys, a campfire for distilling, none for the rest',
+    && tradeRecipes('bandage').filter((r) => r.startsWith('make_salve_')).length === 5);
+check('stations: a butter churn for butter, a smelter for the alloys, none for the rest',
   RECIPE_BY_ID.get(CHURN_BUTTER)?.station === BUTTER_CHURN && tradeRecipes('alloy').every((r) => RECIPE_BY_ID.get(r)?.station === 'smelter')
-    && tradeRecipes('distil').every((r) => RECIPE_BY_ID.get(r)?.station === 'campfire')
     && (['concrete', 'mortar', 'timber', 'shaft', 'bandage', 'cheese'] as GatherKind[]).every((t) => tradeRecipes(t).every((r) => !RECIPE_BY_ID.get(r)?.station)));
 check('no tool for any of them: the saw, the carving knife, the clay bowl and the clay pot are among what no worker needs',
   ['saw', 'carving_knife', 'clay_bowl', 'clay_pot'].every((t) => workerSkipsTools().includes(itemDef(t).name.toLowerCase())), workerSkipsTools().join(', '));
@@ -406,6 +432,16 @@ check('each owned one becomes the kind asked, on both sides', GONE.every(([id, t
   && at('KINDNOW') === [...GONE.map(([id, to]) => `${id}:${to}`), 'crakka:-'].sort().join(','), at('KINDNOW'));
 check('an old carcass of one is a carcass of the kind it became, in the browser',
   GONE.every(([id, to]) => corpseSpecies({ uid: 1, id: 'corpse', ql: 30, dmg: 0, count: 1, extra: REMOVED_KINDS[id].name })?.id === to));
+check('the forga, the cordra and the brittla are gone from both sides: no kind, no wild weight, no carcass, no bait, none on the island, nothing in a guide or the stud book',
+  GONE3.every(([id]) => !SPECIES[id] && !WILD_SPECIES.some(([w]) => w === id)) && at('GONE3') === '0|0|0|0|0|0|0', at('GONE3'));
+check('an owned forga becomes a scorcha, a cordra an ulva and a brittla a hoppa, on both sides',
+  GONE3.every(([id, to]) => REMOVED_KINDS[id]?.becomes === to && kindNow(id) === to && !!SPECIES[to])
+  && at('KINDNOW3') === GONE3.map(([id, to]) => `${id}:${to}`).sort().join(','), at('KINDNOW3'));
+check('an old carcass of one of the three is a carcass of the kind it became, in the browser',
+  GONE3.every(([id, to]) => corpseSpecies({ uid: 1, id: 'corpse', ql: 30, dmg: 0, count: 1, extra: REMOVED_KINDS[id].name })?.id === to));
+check('making rope and distilling are no worker\'s trade on either side; their recipes are still the player\'s',
+  ['rope', 'distil'].every((t) => !(t in GATHER_SKILL) && !(t in GATHER_DO) && at(`NOTRADE:${t}`) === 'false|false|false|false|0|0|-')
+    && !!RECIPE_BY_ID.get('make_rope') && !!RECIPE_BY_ID.get('distil_ale'), `${at('NOTRADE:rope')} ${at('NOTRADE:distil')}`);
 
 /* ---- what each does, on the island ------------------------------------------------------ */
 
@@ -430,6 +466,7 @@ check(`on the island, a ${SPECIES.glossa.stages![1].name} mixes one batch into $
 check(`on the island, a ${MORTARIUM} mixes one batch into ${conWants()}`, at('CON') === conWants(), at('CON'));
 check(`on the island, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, at('WEAVE') === weaveWants(), at('WEAVE'));
 check(`on the island, a ${SPECIES.chissa.stages![1].name} chisels one shard into ${chipWants()}`, at('CHIP') === chipWants(), at('CHIP'));
+check(`on the island, a ${SPECIES.whirla.stages![1].name} churns ${CHURN_GO} buckets of milk a go: ${churnWants()}`, at('BUTTER') === `${churnWants()}|${CHURN_GO}`, at('BUTTER'));
 {
   // Two logs, both carved in the one go at its stage's batches, each its recipe's shafts and its line's one more.
   const each = RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n;
@@ -521,6 +558,75 @@ check(`a Testa carcass is a ${SPECIES.crakka.name} carcass`,
 check('the guide has seen a crakka and a carra and tamed a carra, and nothing of a testa or a gasha', cv('GUIDE') === 'carra:true,crakka:false', cv('GUIDE'));
 check('the stud book holds the testa\'s record as a crakka\'s, and the better of the gasha\'s and the executa\'s as a carra\'s',
   cv('STUD') === 'carra:tough:5:Exe,crakka:hardy:3:Old Testa', cv('STUD'));
+
+/*
+ * And the migration that takes out the forga, the cordra and the brittla, run twice on a world that holds them: an owned
+ * one of each, named, levelled in its own trade, with a mark on it; a wild cordra a crakka of yours is fighting; a Cordra
+ * carcass; a guide that has seen a forga and an ulva and tamed a cordra; stud book records for a forga, and for a
+ * cordra that an ulva's better record outranks.
+ */
+const MIGRATION3 = readFileSync('supabase/migrations/20261105170000_forga_cordra_brittla_are_gone.sql', 'utf8');
+const conv3 = psql(`
+discard temp;
+begin;
+create temp table said (k text, v text);
+create temp table kept (was text, id int);
+create temp table wld (w uuid, u uuid, wild int, fighter int);
+do $t$
+declare w uuid; u uuid := '${MARA}'; v_id int;
+begin
+  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Threefold', 503, 40, 16, 16, true) returning id into w;
+  perform land_blank(w, 40);
+  perform land_set_tile(w, x, y, tile_id('Grass')) from generate_series(0, 39) x, generate_series(0, 39) y;
+  perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
+  perform rpc_join(w, 'Mara');
+${GONE3.map(([id, , from]) => `  v_id := creature_spawn(w, 'crakka', 16.6, 16.6, 'active', now() - interval '60 days', u);
+  update creature set species = '${id}', name = 'My ${id}', skills = '{"${from}": 31.5, "fighting": 7}'::jsonb, traits = '{hardy}', health = 17, job = 'moss'
+   where world_id = w and id = v_id;
+  insert into kept values ('${id}', v_id);
+  insert into class_mark (world_id, creature_id, kind, val, until) values (w, v_id, 'ability', 1, now() + interval '1 hour');`).join('\n')}
+  insert into wld select w, u, creature_spawn(w, 'carra', 20.5, 20.5, 'wild', now() - interval '60 days', null),
+                         creature_spawn(w, 'crakka', 19.5, 20.5, 'active', now() - interval '60 days', u);
+  update creature set species = 'cordra' where world_id = w and id = (select wild from wld);
+  update creature set enemy = (select wild from wld) where world_id = w and id = (select fighter from wld);
+  insert into crate (world_id, id, kind, x, y, sx, sy, deed, made_by) values (w, 7603, 'plank', 17, 16, 0, 0, false, u);
+  insert into item (world_id, holder, crate, def, ql, count, extra) values (w, 'crate', 7603, 'corpse', 30, 1, 'Cordra');
+  insert into guide (world_id, uid, species, tamed) values (w, u, 'forga', false), (w, u, 'cordra', true), (w, u, 'ulva', false);
+  insert into bred_record (world_id, species, stat, value, creature_id, name, breeder, born_at) values
+    (w, 'forga', 'hardy', 3, 1, 'Old Forga', u, now()), (w, 'cordra', 'tough', 2, 2, 'Cord', u, now()), (w, 'ulva', 'tough', 4, 3, 'Spin', u, now());
+end $t$;
+${MIGRATION3}
+${MIGRATION3}
+do $t$
+declare w uuid := (select wld.w from wld); u uuid := (select wld.u from wld);
+begin
+  insert into said select 'TURNED:' || k.was, c.species || '|' || c.name || '|' || (c.keeper = u) || '|' || (c.skills->>'fighting')
+      || '|' || coalesce(c.skills->>(select g.skill from gather_def g join species_def sd on sd.gathers = g.id where sd.id = c.species), '-')
+      || '|' || array_to_string(c.traits, ',') || '|' || c.health || '|' || coalesce(c.job, '-')
+      || '|' || (select count(*) from class_mark m where m.world_id = w and m.creature_id = c.id)
+    from kept k join creature c on c.world_id = w and c.id = k.id;
+  insert into said select 'WILD', (select count(*) from creature where world_id = w and id = (select wild from wld)) || '|'
+      || coalesce((select enemy::text from creature where world_id = w and id = (select fighter from wld)), '-');
+  insert into said select 'CORPSE', string_agg(extra, ',') from item where world_id = w and def = 'corpse';
+  insert into said select 'GUIDE', string_agg(species || ':' || tamed, ',' order by species) from guide where world_id = w and uid = u;
+  insert into said select 'STUD', string_agg(species || ':' || stat || ':' || value || ':' || name, ',' order by species, stat) from bred_record where world_id = w;
+end $t$;
+select k || '=' || v from said order by k;
+rollback;`);
+const conved3 = new Map(conv3.split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)] as [string, string]));
+const cv3 = (k: string): string => conved3.get(k) ?? '(not said)';
+for (const [id, to, from, into] of GONE3) {
+  const [kind, name, mine, fighting, trade, traits, health, job, marks] = cv3(`TURNED:${id}`).split('|');
+  check(`an owned ${REMOVED_KINDS[id].name} becomes a ${SPECIES[to].name}, its name, keeper, skills, traits and health kept, its ${from} in its new trade's ${into}, its own trade and marks gone`,
+    kind === to && name === `My ${id}` && mine === 'true' && fighting === '7' && trade === '31.5' && GATHER_SKILL[SPECIES[to].gathers!] === into
+      && traits === 'hardy' && health === '17' && job === '-' && marks === '0', cv3(`TURNED:${id}`));
+}
+check('a wild cordra is gone, and the crakka fighting it fights nothing', cv3('WILD') === '0|-', cv3('WILD'));
+check(`a Cordra carcass is a ${SPECIES.ulva.name} carcass`,
+  cv3('CORPSE') === SPECIES.ulva.name && corpseSpecies({ uid: 1, id: 'corpse', ql: 30, dmg: 0, count: 1, extra: cv3('CORPSE') })?.id === 'ulva', cv3('CORPSE'));
+check('the guide has seen a scorcha and tamed an ulva, and nothing of a forga or a cordra', cv3('GUIDE') === 'scorcha:false,ulva:true', cv3('GUIDE'));
+check('the stud book holds the forga\'s record as a scorcha\'s, and the ulva\'s better record over the cordra\'s',
+  cv3('STUD') === 'scorcha:hardy:3:Old Forga,ulva:tough:4:Spin', cv3('STUD'));
 
 /* ---- idle words ------------------------------------------------------------------------- */
 
@@ -656,6 +762,16 @@ for (const k of CASES) {
   c.skills = { ...CHIP_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.chissa.stages![1].name} chisels one shard into ${chipWants()}`, inCrate(crate) === chipWants(), inCrate(crate));
+}
+{
+  const g = body();
+  const crate = stock(g, CHURN_PUT);
+  g.addFurniture(BUTTER_CHURN, 19, 16, 0, 0, 30);
+  const c = worker(g, 'whirla');
+  c.skills = { ...CHURN_SKILLS };
+  run(g, 120);
+  check(`in the browser, a ${SPECIES.whirla.stages![1].name} churns ${CHURN_GO} buckets of milk a go: ${churnWants()}`,
+    stageLoads(c) === CHURN_GO && inCrate(crate) === churnWants(), `${stageLoads(c)} ${inCrate(crate)}`);
 }
 {
   const g = body();

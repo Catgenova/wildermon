@@ -2,6 +2,7 @@ import { lairOf } from '../world/regions';
 import { storeySkill } from './building';
 import { WIDEST } from './bridges';
 import { BLESS_CAP } from './faith';
+import { BOOKS, bookDrops } from './bookdrops';
 import { rarityChance } from './items';
 import { CHOOSE_AT, PATH_TIER_AT } from './meditation';
 import { KNACK_CAP, KNACK_HOME, KNACK_ODDS, TITLE_STEPS } from './titles';
@@ -63,7 +64,7 @@ export const GOAL_HOW: Readonly<Record<string, string>> = {
   prayed: 'Stand by an altar, right-click it and choose "Pray". The menu says when you may pray again; prayers at its best hours give more favour.',
   cunning: 'Pray until you have the faith and favour the menu shows for it, then right-click an altar, choose "Call on it", "Circle of cunning" and a tool from your pack. The tools you came ashore with are refused, and the tool must be in your pack when the journal looks.',
   thrice: `Altar, "Call on it": "Circle of cunning" on the same tool ${BLESS_CAP} times. The tool must be in your pack when the journal checks.`,
-  enchanted: 'Write a scroll for a melee weapon in Crafting (R), such as "Write an Emberbrand scroll" ({recipe.make_emberbrand_scroll.papyrus} papyrus and {recipe.make_emberbrand_scroll.fire_mote} fire motes); papyrus is "Press into papyrus" at a paper press, motes are "Collect motes" at a mote swirl. At an enchanter\'s plinth right-click the scroll, choose "Enchant" and the weapon, and keep it in your pack. A bow, a thrown weapon or anything else does not count.',
+  enchanted: `Read its Formula first ("${BOOKS.formula.label}" on it in the pack; per butchering: ${bookDrops('formula').map((d) => `${d.kind} ${percent(d.odds)}`).join(', ')}). ` + 'Write a scroll for a melee weapon in Crafting (R), such as "Write an Emberbrand scroll" ({recipe.make_emberbrand_scroll.papyrus} papyrus and {recipe.make_emberbrand_scroll.fire_mote} fire motes); papyrus is "Press into papyrus" at a paper press, motes are "Collect motes" at a mote swirl. At an enchanter\'s plinth right-click the scroll, choose "Enchant" and the weapon, and keep it in your pack. A bow, a thrown weapon or anything else does not count.',
   goblin: 'Find a goblin out in the country, away from any settlement totem, and "Attack" it (its right-click menu, or Space). The blow or shot that kills it must be yours: a kill by your companion or your settlement\'s wildermon does not count.',
   orc: 'Orcs keep away from settlement totems; attack one and land the killing blow or shot yourself. A kill by a wildermon does not count.',
   ogre: 'Ogres keep away from settlement totems; attack one and land the killing blow or shot yourself. A kill by a wildermon does not count.',

@@ -5,7 +5,7 @@
  * sides, that each of the eight is a species with its trade, may be set to
  * work a settlement and says what it does in the island's words; and that
  * set to work it does it: planks sawn, stone brick chiselled, clay brick
- * shaped, rope laid up and arrows fletched at the stores, papyrus pressed at
+ * shaped and arrows fletched at the stores (rope no longer: the cordra and its trade are gone), papyrus pressed at
  * a paper press, and an empty bucket filled at a well and put back. A
  * glossa mixes mortar now (`repurpose.ts`): no worker glazes a pot.
  *
@@ -41,15 +41,14 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 };
 
 const HANDS: Array<[string, GatherKind]> = [
-  ['rippa', 'saw'], ['chissa', 'chisel'], ['mudda', 'brick'], ['cordra', 'rope'],
+  ['rippa', 'saw'], ['chissa', 'chisel'], ['mudda', 'brick'],
   ['flecha', 'fletch'], ['papra', 'paper'], ['glossa', 'mortar'], ['dippa', 'fill'],
 ];
-/** What each of the five at the stores is given, and what the stores hold after: its makings and no tool, which a worker needs none of. */
+/** What each of the four at the stores is given, and what the stores hold after: its makings and no tool, which a worker needs none of. */
 const AT_STORES: Array<[string, Array<[string, number]>, string]> = [
   ['rippa', [['log', 1]], 'plank 3'],
   ['chissa', [['rock_shards', 1]], 'stone_brick 2'],
   ['mudda', [['clay', 1]], 'unfired_clay_brick 1'],
-  ['cordra', [['wemp', 4]], 'rope 1'],
   ['flecha', [['shaft', 1], ['arrow_head', 3], ['feather', 3]], 'arrow 3'],
 ];
 const PAPER: Array<[string, number]> = [['reed', 4], ['water_bucket', 1]];
@@ -98,7 +97,7 @@ begin
   insert into said select 'RECIPES:' || k, coalesce(array_to_string(tend_recipes(k), ','), '-')
     from unnest(array[${[...Object.keys(STORE_RECIPES), 'paper'].map((k) => `'${k}'`).join(', ')}]) k;
 
-  -- The five at the stores, each given its makings and no tool.
+  -- The four at the stores, each given its makings and no tool.
 ${AT_STORES.map(([id, items]) => `  ${put(items)}${work(id)}
   insert into said select 'MADE:${id}', ${held};${done()}`).join('\n')}
 
@@ -151,7 +150,6 @@ const takes = (id: string, item: string): number => RECIPE_BY_ID.get(id)?.inputs
 check('the words give the numbers the recipes use',
   GATHER_DO.saw.includes(`${made('make_planks')} a log`)
   && GATHER_DO.chisel.includes(`${made('make_stone_brick')} a shard`)
-  && GATHER_DO.rope.includes(`${takes('make_rope', 'wemp')} fibres a rope`)
   && GATHER_DO.fletch.includes(`${made('make_arrows')} a shaft, ${takes('make_arrows', 'arrow_head')} heads`)
   && GATHER_DO.paper.includes(`${made('make_papyrus')} sheets per ${takes('make_papyrus', 'reed')} reeds`),
   [GATHER_DO.saw, GATHER_DO.fletch, GATHER_DO.paper].join(' / '));
