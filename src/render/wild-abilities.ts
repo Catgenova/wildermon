@@ -84,15 +84,3 @@ export const SCORCHA = kindOf({
   own: { ember: [255, 140, 50], flame: [255, 196, 80] }, mark: 30, shadow: [1.5, 1.2], stride: 1.4, size: 1.65,
 });
 
-/* ---- the frosta: icicles hanging off its flanks --------------------------------------- */
-
-export const FROSTA = kindOf({
-  spec: { ...pawed({ high: 1.3, len: 2.2, legs: 0.72, neck: 0.34, lean: 50, swing: [22, 36], ears: [35, 22], tail: [0.45, 16, 6] }), nose: 12 },
-  head: HEAD(0.32, 0.14, [1.02, 0.98, 0.9]), body: [2.2, 1.15, 0.95], neck: [0.64, 0.64, 0.34], ear: [0.32, 0.26, 35], legs: [0.72, 0.28, 0.25, 'coatLight'],
-  snout: [1.0, -0.2, [0.4, 0.32, 0.34], 0.11],
-  back: () => merge(...[-0.6, -0.2, 0.2, 0.55].flatMap((y) => [-1, 1].map((s) => taper([[s * 0.55, y, 0.15], [s * 0.6, y, -0.25]], 0.07, 0.01, 4, 'crystal')))),
-  thin: true,
-  tail: (n) => merge(root(n), taper([[0, -0.2, 0], [0, -0.7, 0.1]], 0.16, 0.06, n, 'coatLight')),
-  own: { crystal: [190, 230, 250] }, mark: 30, shadow: [1.55, 1.25], stride: 1.4, size: 1.7,
-});
-

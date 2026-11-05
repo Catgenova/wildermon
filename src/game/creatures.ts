@@ -890,6 +890,8 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   crakka: { kind: 'more', n: 1, what: 'concrete per mix' },
   // Its bandages, covers and salves are recipes worked at the stores, which the island's `errand_do` adds a line's 'more' to.
   leecha: { kind: 'more', n: 1, what: 'bandages, covers or salves per make' },
+  // Its cheese is a recipe worked at the stores, which the island's `errand_do` adds a line's 'more' to.
+  frosta: { kind: 'more', n: 1, what: 'cheese per press' },
   // Its butter is a recipe worked at a churn of yours, a batch after the first in the same go as an ulva's (`moreRecipes`, the
   // island's `errand_go` and `stage_loads`).
   whirla: { kind: 'loads', n: 1, what: 'batches per cycle' },
@@ -3510,9 +3512,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   frosta: {
     id: 'frosta',
-    name: 'Frosta',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Wheybit',
+    was: ['Frosta'],
+    // Asked for, with a reference sheet: Wheybit, Pressqueak, Fromageon. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Pressqueak', description: '' },
+      { name: 'Fromageon', description: '' },
+    ],
     health: 32,
     attack: 7,
     speed: 1.9,
@@ -3523,11 +3531,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'cheese',
     workRange: 10,
+    // [fur, front]: the sheet's brown over cream, a grey-brown, a chestnut, and a dusky brown.
     variants: [
-      ['#c8d8e0', '#f4fcff'],
-      ['#b8c8d4', '#ecf4fc'],
-      ['#d4e0e8', '#f8fcff'],
-      ['#a8b8c8', '#e0ecf4'],
+      ['#7c6052', '#f6e8d2'],
+      ['#746660', '#efe4d6'],
+      ['#8c5e44', '#f8e6cc'],
+      ['#5e4c46', '#ece0d0'],
     ],
     butcher: { meat: 4, fur: 5, leather: 3, bone: 3 },
     wound: 'bite',
@@ -4255,6 +4264,7 @@ sayLineLater('crakka', `Level: ${GATHER_SKILL.concrete}.`);
 sayLineLater('leecha', `Level: ${GATHER_SKILL.bandage.replace(/_/g, ' ')}.`);
 sayLineLater('chissa', `Level: ${GATHER_SKILL.chisel.replace(/_/g, ' ')}.`);
 sayLineLater('whirla', `Level: ${GATHER_SKILL.churn.replace(/_/g, ' ')}.`);
+sayLineLater('frosta', `Level: ${GATHER_SKILL.cheese}.`);
 sayLineLater('simma', `Level: ${GATHER_SKILL.cook}.`);
 
 /** Which species roam wild, by weight. */
