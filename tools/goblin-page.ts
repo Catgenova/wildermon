@@ -1,6 +1,6 @@
 /**
  * The page `tools/goblin-shot.mjs` opens to look the goblin's three subspecies
- * over (`GOBLIN_RUNECUT` in `src/render/goblin-runecut.ts`; A the Scrapper, B
+ * over (`GOBLIN_RUNECUT` in `src/render/wild-goblin.ts`; A the Scrapper, B
  * the Raider, C the Hexer Goblin): for one, a sheet of it close up at all eight
  * turns, standing, looking about, walking, running and striking; then at the
  * size the island is played at, by day and by night, marked as hostile and
@@ -29,7 +29,7 @@ import { levelSkill, SPECIES } from '../src/game/creatures';
 import { drawKind, extentOf, forgetBeast, kitOf, paletteFor, type Anim, type Kind, type Piece } from '../src/render/beasts';
 import { drawWildermonPortrait, loadWildermon, wildermonKind } from '../src/render/wildermon';
 import { mesh } from '../src/render/figure';
-import { GOBLIN_RUNECUT } from '../src/render/goblin-runecut';
+import { GOBLIN_RUNECUT } from '../src/render/wild-goblin';
 
 interface GobPage {
   ready: boolean;

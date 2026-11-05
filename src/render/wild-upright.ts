@@ -6,7 +6,7 @@ import { MONSTER_GROWTH } from './monster-size';
  * What the ones that stand up share: the bad things of the high ground --
  * the goblin, the orc and the ogre -- their glower and the ogre's bones. Each
  * is three subspecies drawn in a module of its own: the goblin's in
- * `./goblin-runecut`, the orc's in `./wild-orc`, the ogre's in `./wild-ogre`.
+ * `./wild-goblin`, the orc's in `./wild-orc`, the ogre's in `./wild-ogre`.
  * (The tinka is the mend line now, `./wild-mend`.)
  */
 

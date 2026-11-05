@@ -2573,6 +2573,7 @@ import{$_ as e,$b as t,$d as n,$f as r,$i as i,$n as a,$p as o,$y as s,AC as ee,
       <li>Ogre subspecies, 1 in ${_.ogre.subspecies.length} wild each, same health, blow and speed: ${S(_.ogre.subspecies.map(e=>`<b>${e}</b>`))}.</li>
       <li>Orc subspecies, 1 in ${_.orc.subspecies.length} wild each, same health, blow and speed: ${S(_.orc.subspecies.map(e=>`<b>${e}</b>`))}.</li>
       <li>Dragon subspecies, 1 in ${_.dragon.subspecies.length} wild each, same health, blow and speed: ${S(_.dragon.subspecies.map(e=>`<b>${e}</b>`))}.</li>
+      <li>Goblin subspecies, 1 in ${_.goblin.subspecies.length} wild each, same health, blow and speed: ${S(_.goblin.subspecies.map(e=>`<b>${e}</b>`))}.</li>
       <li>Notice range ${Ym[0]} to ${Ym[Ym.length-1]} tiles (other hunters 7); they come straight at you and chase far.</li>
       <li><b>Rare</b>: ${D(Gt)} of wild spawns; of those ${S(kr.map(([e,t])=>`${D(t/Xm)} ${_[e].name.toLowerCase()}s`))}.</li>
       <li>Max alive: ${S(kr.map(([e])=>`${Kr[e]??1} ${_[e].name.toLowerCase()}${(Kr[e]??1)===1?``:`s`}`))}.
