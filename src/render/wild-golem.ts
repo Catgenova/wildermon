@@ -1,5 +1,5 @@
 import {
-  ACT_SECS, add, beat, bipedBones, clamp, cross, cyc, DEG, coatPalette, darker, dot, drift, frac, lerp, lighter, merge, mix, moved,
+  ACT_SECS, add, beat, bipedBones, clamp, cross, cyc, DEG, coatPalette, dot, drift, frac, lerp, merge, mix, moved,
   onEgg, orb, paint, scale, smooth, sub, TAU, unit, type Anim, type BipedPose, type BipedSpec, type Bones, type Disc, type Kind,
   type Piece,
 } from './beasts';
@@ -42,8 +42,8 @@ interface Golem {
   arm: { at: V3; len: [number, number]; w: [number, number]; fist: number };
   /** How it holds its arms standing, left and right. */
   hold: readonly [Hold, Hold];
-  /** The head's egg in its own frame, and how far nose-up it is carried; the eyes' size. */
-  head: { c: V3; r: V3; pitch: number; eye: number };
+  /** The head's egg in its own frame, and how far nose-up it is carried; the eyes' size; and whether its brow, cheeks and jaw are rounded lumps rather than cut blocks. */
+  head: { c: V3; r: V3; pitch: number; eye: number; round?: boolean };
   /** The crest: how many slabs, how long the middle one, how wide, how far they fan. */
   crest: { count: number; len: number; w: number; fan: number };
   /** Orange crystal shards down its back: how many, how long. */
@@ -74,7 +74,7 @@ const CHIPKIN_LOOK: Golem = {
   neck: { at: [0, 0.32, 0.98], len: 0.04 },
   arm: { at: [0.78, 0.12, 0.74], len: [0.3, 0.28], w: [0.26, 0.3], fist: 0.36 },
   hold: [[22, 22, 30, 60], [22, 22, 30, 60]],
-  head: { c: [0, 0.14, 0.44], r: [0.66, 0.6, 0.58], pitch: 4, eye: 0.13 },
+  head: { c: [0, 0.14, 0.44], r: [0.66, 0.6, 0.58], pitch: 4, eye: 0.14, round: true },
   crest: { count: 4, len: 0.86, w: 0.46, fan: 30 },
   shards: { count: 6, len: 0.5 },
   brick: { fore: 0, shin: 0, shoulder: false },
@@ -125,9 +125,9 @@ const FORTIGRAN_LOOK: Golem = {
   shards: { count: 0, len: 0 },
   brick: { fore: 2, shin: 2, shoulder: false },
   plate: 0,
-  tower: { r: 0.98, h: 1.36, courses: 8, at: [-0.34, -0.7, 0.1] },
+  tower: { r: 1.3, h: 1.5, courses: 8, at: [-0.3, -0.55, -0.42] },
   arches: true,
-  moss: 0.42,
+  moss: 0.5,
   gait: { swing: [18, 24], waddle: 5, armSwing: 8, bounce: 0.4 },
   size: 4.5,
 };
@@ -459,6 +459,32 @@ function brickBand(rad: number, z0: number, courses: number, ring: number, h: nu
   return merge(...out);
 }
 
+/**
+ * A sleeve of brick round a limb, in its frame (down its -Z) from `z0` to `z1`: courses laid flush one on the next round a dark
+ * mortar core, from `r0` across at its top to `r1` at its bottom, each course set half a brick round from the last, so the dark
+ * between the bricks is the mortar.
+ */
+function brickSleeve(z0: number, z1: number, r0: number, r1: number, n: number, seed: number): Mesh {
+  const len = z0 - z1, courses = Math.max(3, Math.round(len / (Math.max(r0, r1) * 0.3)));
+  const h = len / courses / 2, out: Mesh[] = [];
+  out.push(tubeCore(z0, z1, r0 * 0.9, r1 * 0.9, n));
+  for (let c = 0; c < courses; c++) {
+    const z = z0 - h - c * h * 2, rad = lerp(r0, r1, (c + 0.5) / courses);
+    const ring = Math.max(9, Math.round((TAU * rad) / (rad * 0.55)));
+    for (let q = 0; q < ring; q++) {
+      const th = ((q + (c % 2) * 0.5) / ring) * TAU;
+      const o: V3 = [Math.cos(th), Math.sin(th), 0], along: V3 = [-Math.sin(th), Math.cos(th), 0];
+      const w = (TAU * rad) / ring / 2 * 0.9;
+      out.push(block(add(scale(o, rad), [0, 0, z]), [w, rad * 0.16, h * 0.86], [along, o, [0, 0, 1]], brickMat(seed + c * 31 + q, 0), seed + c * 31 + q, 0.05));
+    }
+  }
+  return merge(...out);
+}
+
+/** The dark core a sleeve of brick is laid round: the mortar between its bricks. */
+const tubeCore = (z0: number, z1: number, r0: number, r1: number, n: number): Mesh =>
+  orb([0, 0, (z0 + z1) / 2], [Math.max(r0, r1), Math.max(r0, r1), (z0 - z1) / 2 * 1.04], n, 4, 'hoof');
+
 /* ---- the head ------------------------------------------------------------------------------- */
 
 /** Where its eyes sit, in the head's frame: deep in the dark of its face, under the brow. */
@@ -475,15 +501,23 @@ function headOf(s: Golem, n: number): Mesh {
   const H = s.head, c = H.c, r = H.r;
   // The back of its head a rounded stone, and the dark hollow of its face in front of it.
   const skull = stone(add(c, [0, -r[1] * 0.25, r[2] * 0.05]), [r[0] * 0.86, r[1] * 0.72, r[2] * 0.82], 7, n + 1);
-  const face = orb(add(c, [0, r[1] * 0.28, -r[2] * 0.05]), [r[0] * 0.66, r[1] * 0.6, r[2] * 0.58], n, 4, 'stoneDark');
-  // The brow over it, a heavy flat slab overhanging and tipped down at the front.
-  const brow = block(add(c, [0, r[1] * 0.5, r[2] * 0.44]), [r[0] * 0.84, r[1] * 0.46, r[2] * 0.15], frameOf([0, 0.42, 1], [0, 1, 0]),
-    (f) => (f === 1 ? 'coatLight' : f === 3 ? 'coat' : 'coatDark'), 5, 0.06);
-  // Its cheeks: a plate each side, angled in toward the front so the two close on its chin like a helm; and its chin, jutting.
-  const cheeks = [-1, 1].map((sd) => block(add(c, [sd * r[0] * 0.64, r[1] * 0.42, -r[2] * 0.24]), [r[0] * 0.15, r[1] * 0.42, r[2] * 0.44],
-    frameOf([sd * 0.25, 0.15, 1], [-sd * 0.55, 1, 0]), (f) => (f === 3 ? 'coatLight' : 'coat'), 9 + sd, 0.08));
-  const jaw = block(add(c, [0, r[1] * 0.66, -r[2] * 0.66]), [r[0] * 0.44, r[1] * 0.3, r[2] * 0.15], frameOf([0, -0.3, 1], [0, 1, 0]),
-    (f) => (f === 1 || f === 3 ? 'coatLight' : 'coat'), 13, 0.08);
+  const face = orb(add(c, [0, r[1] * 0.3, -r[2] * 0.05]), [r[0] * 0.68, r[1] * 0.62, r[2] * 0.6], n, 4, 'stoneDark');
+  // The brow over it, a heavy slab overhanging well forward of the face and tipped down at the front, so the face sits in its
+  // shadow; the Chipkin's a heavy rounded stone instead.
+  const brow = H.round
+    ? stone(add(c, [0, r[1] * 0.62, r[2] * 0.42]), [r[0] * 0.92, r[1] * 0.5, r[2] * 0.26], 5, n, 'coatLight')
+    : block(add(c, [0, r[1] * 0.6, r[2] * 0.44]), [r[0] * 0.9, r[1] * 0.56, r[2] * 0.22], frameOf([0, 0.5, 1], [0, 1, 0]),
+      (f) => (f === 1 ? 'coatLight' : f === 3 ? 'coat' : 'coatDark'), 5, 0.06);
+  // Its cheeks: a stone each side, angled in toward the front so the two close on its chin like a helm; and its chin, jutting.
+  // The Chipkin's rounded lumps, the others' cut blocks.
+  const cheeks = [-1, 1].map((sd) => H.round
+    ? stone(add(c, [sd * r[0] * 0.62, r[1] * 0.42, -r[2] * 0.22]), [r[0] * 0.3, r[1] * 0.44, r[2] * 0.48], 9 + sd, n, 'coat')
+    : block(add(c, [sd * r[0] * 0.64, r[1] * 0.42, -r[2] * 0.24]), [r[0] * 0.15, r[1] * 0.42, r[2] * 0.44],
+      frameOf([sd * 0.25, 0.15, 1], [-sd * 0.55, 1, 0]), (f) => (f === 3 ? 'coatLight' : 'coat'), 9 + sd, 0.08));
+  const jaw = H.round
+    ? stone(add(c, [0, r[1] * 0.62, -r[2] * 0.66]), [r[0] * 0.5, r[1] * 0.34, r[2] * 0.22], 13, n, 'coat')
+    : block(add(c, [0, r[1] * 0.66, -r[2] * 0.66]), [r[0] * 0.44, r[1] * 0.3, r[2] * 0.15], frameOf([0, -0.3, 1], [0, 1, 0]),
+      (f) => (f === 1 || f === 3 ? 'coatLight' : 'coat'), 13, 0.08);
   // The eyes: slanted amber slits, the inner corner lower, lit.
   const eyes = paint([-1, 1].map((sd) => {
     const e = eyeAt(s, sd), w = H.eye * 1.5, h = H.eye * 0.8, n3: V3 = [0, 1, 0];
@@ -520,12 +554,12 @@ function bodyOf(s: Golem, n: number): Mesh {
     const dir: V3 = [Math.cos(th) * ring, Math.sin(th) * ring, z];
     const e = onEgg(T.c, scale(T.r, 0.86), dir);
     // A little smaller than they would need to be to close up, so the dark of the joints shows between them.
-    const sz = S.size * (0.74 + 0.36 * jitter(q + 5));
+    const sz = S.size * (0.68 + 0.3 * jitter(q + 5));
     const r: V3 = [T.r[0] * sz, T.r[1] * sz * 0.9, T.r[2] * sz * 0.8];
     const tone = jitter(q + 17);
     out.push(stone(add(e.p, scale(e.n, r[2] * 0.25)), r, q + 40, n, tone < 0.28 ? 'coatLight' : tone > 0.78 ? 'coatDark' : 'coat'));
-    // Moss in the joint beside some of them: a small cushion low on the stone, not the whole of it.
-    if (jitter(q + 91) < s.moss && z > -0.2) out.push(stone(add(e.p, add(scale(e.n, r[2] * 0.62), [0, 0, -r[2] * 0.45])), [r[0] * 0.55, r[1] * 0.5, r[2] * 0.36], q + 140, n, 'moss'));
+    // Moss on some of them: a green cushion over the top of the stone, where rain would sit.
+    if (jitter(q + 91) < s.moss && z > -0.3) out.push(stone(add(e.p, add(scale(e.n, r[2] * 0.72), [0, 0, r[2] * 0.22])), [r[0] * 0.78, r[1] * 0.72, r[2] * 0.38], q + 140, n, 'moss'));
   }
   return merge(...out);
 }
@@ -592,7 +626,7 @@ function towerOf(s: Golem): Mesh | null {
       const th = ((q + (c % 2) * 0.5) / ring) * TAU;
       const o = dirAt(Math.cos(th), Math.sin(th)), along = dirAt(-Math.sin(th), Math.cos(th));
       const w = (TAU * W.r) / ring / 2 * 0.95;
-      const mossy = jitter(c * 17 + q) < s.moss * 0.3 && c < 2;
+      const mossy = jitter(c * 17 + q) < s.moss * 0.5 && c < 3;
       out.push(block(at(Math.cos(th) * W.r, Math.sin(th) * W.r, z), [w, h * 0.7, h * 0.94], [along, o, U], mossy ? 'moss' : brickMat(c * 29 + q, 0), c * 29 + q, 0.05));
     }
   }
@@ -607,13 +641,13 @@ function towerOf(s: Golem): Mesh | null {
   }
   // Its top: a low cream cap inside the ring, so it reads as a tower and not a tub from above.
   out.push(paint([facingDisc(Array.from({ length: 14 }, (_, q) => at(Math.cos((q / 14) * TAU) * W.r * 0.94, Math.sin((q / 14) * TAU) * W.r * 0.94, top + h * 0.75)), U, 'hornDark')]));
-  // Three arched windows on each side of it, where they show beside its shoulders.
+  // Three arched windows in a row on each side of it, high, where they show over its shoulders.
   const wins: Disc[] = [];
-  for (const yaw of [-0.5, 0, 0.5, Math.PI - 0.5, Math.PI, Math.PI + 0.5]) {
+  for (const yaw of [-0.36, 0, 0.36, Math.PI - 0.36, Math.PI, Math.PI + 0.36]) {
     const o = dirAt(Math.cos(yaw), Math.sin(yaw));
     const along = dirAt(-Math.sin(yaw), Math.cos(yaw));
-    const mid = at(Math.cos(yaw) * W.r * 1.02, Math.sin(yaw) * W.r * 1.02, W.h * 0.6);
-    const ww = W.r * 0.14, hh = W.h * 0.15;
+    const mid = at(Math.cos(yaw) * W.r * 1.02, Math.sin(yaw) * W.r * 1.02, W.h * 0.7);
+    const ww = W.r * 0.09, hh = W.h * 0.09;
     const pts: V3[] = [];
     for (let k = 0; k <= 8; k++) {
       const a = Math.PI - (k / 8) * Math.PI;
@@ -623,8 +657,32 @@ function towerOf(s: Golem): Mesh | null {
     wins.push(facingDisc(pts.map((p) => add(p, scale(o, 0.06))), o, 'stoneDark'));
   }
   out.push(paint(wins));
+  // The cream arch bands: from the tower's side low down, rising over the top of each shoulder and coming down in front of it
+  // to the arm, blocks laid edge to edge along the curve.
+  for (const sd of [-1, 1]) {
+    const T = s.torso;
+    const back = onEgg(T.c, T.r, unit([sd * 0.92, -0.5, 0.22]));
+    const from = add(back.p, scale(back.n, 0.1));
+    const over = onEgg(T.c, T.r, unit([sd * 1.0, 0.0, 0.42]));
+    const peak = add(over.p, scale(over.n, 0.28));
+    const down = onEgg(T.c, T.r, unit([sd * 0.95, 0.52, 0.0]));
+    const to = add(down.p, scale(down.n, 0.1));
+    const steps = 7;
+    for (let q = 0; q < steps; q++) {
+      const u = (q + 0.5) / steps, u2 = (q + 1.5) / steps;
+      const p = bez(from, peak, to, u), p2 = bez(from, peak, to, Math.min(1, u2));
+      const along = unit(sub(p2, p)), side: V3 = [sd, 0, 0];
+      const outward = unit(cross(along, side));
+      const len = Math.hypot(...sub(bez(from, peak, to, (q + 1) / steps), bez(from, peak, to, q / steps)) as [number, number, number]);
+      out.push(block(p, [0.3, len * 0.47, 0.14], [side, along, dot(outward, [0, 0, 1]) < 0 ? scale(outward, -1) : outward],
+        (f) => (f === 5 || f === 4 ? 'horn' : 'hornDark'), 600 + q + (sd > 0 ? 20 : 0), 0.06));
+    }
+  }
   return merge(...out);
 }
+
+/** A point along a curve from `a` to `b` bent toward `c`, `u` of the way. */
+const bez = (a: V3, c: V3, b: V3, u: number): V3 => add(add(scale(a, (1 - u) * (1 - u)), scale(c, 2 * u * (1 - u))), scale(b, u * u));
 
 /* ---- the limbs ------------------------------------------------------------------------------ */
 
@@ -641,7 +699,9 @@ function limbStones(len: number, w0: number, w1: number, n: number, seed: number
 /** A fist: a big rounded block, four knuckle stones across its front and a thumb stone. */
 function fistOf(r: number, n: number, seed: number, mossy: boolean): Mesh {
   const c: V3 = [0, r * 0.1, -r * 0.8];
-  const palm = stone(c, [r * 0.95, r * 0.85, r * 0.9], seed, n, mossy ? 'moss' : 'coat');
+  const palm = merge(stone(c, [r * 0.95, r * 0.85, r * 0.9], seed, n, 'coat'),
+    // Moss over the back of it.
+    mossy ? stone(add(c, [-r * 0.2, -r * 0.2, r * 0.62]), [r * 0.62, r * 0.55, r * 0.3], seed + 30, n, 'moss') : null);
   const knuckles = [-0.66, -0.22, 0.22, 0.66].map((x, q) => stone(add(c, [x * r * 0.92, r * 0.62, -r * 0.42]), [r * 0.3, r * 0.34, r * 0.42], seed + q + 1, n, q % 2 ? 'coatLight' : 'coat'));
   const thumb = stone(add(c, [r * 0.82, r * 0.42, r * 0.1]), [r * 0.28, r * 0.36, r * 0.32], seed + 9, n, 'coatLight');
   const thumb2 = stone(add(c, [-r * 0.82, r * 0.42, r * 0.1]), [r * 0.28, r * 0.36, r * 0.32], seed + 11, n, 'coatLight');
@@ -666,20 +726,23 @@ function limbs(s: Golem, n: number): Piece[] {
     const upper = merge(limbStones(A.len[0], A.w[0] * 1.15, A.w[0], n, 70 + k * 10, 2), shoulder,
       // The Fortigran's cream band round its upper arm, under its arch.
       s.arches ? brickBand(A.w[0] * 1.12, -A.len[0] * 0.45, 1, 10, A.w[0] * 0.22, 700 + k * 9, (i) => (i % 2 ? 'horn' : 'hornDark')) : null);
-    const fore = merge(limbStones(A.len[1], A.w[1], A.w[1] * 1.1, n, 90 + k * 10, 2),
-      B.fore ? brickBand(A.w[1] * 1.02, -A.len[1] * 0.22, B.fore, 10, A.w[1] * 0.15, 800 + k * 40) : null);
+    // A forearm of stone, or, for a stage with brick on it, a sleeve of brick from the elbow down to the wrist.
+    const fore = B.fore
+      ? merge(stone([0, 0, -A.len[1] * 0.02], [A.w[1] * 0.95, A.w[1] * 0.9, A.w[1] * 0.6], 90 + k * 10, n), brickSleeve(-A.len[1] * 0.1, -A.len[1] * 1.02, A.w[1] * 0.98, A.w[1] * 1.08, n, 800 + k * 40))
+      : limbStones(A.len[1], A.w[1], A.w[1] * 1.1, n, 90 + k * 10, 2);
     out.push(
       { key: `arm${k}`, mesh: upper, bone: `arm${k}`, bias: 0.03, after: 'body', front, convex: false },
       { key: `fore${k}`, mesh: fore, bone: `elbow${k}`, bias: 0.035, after: 'body', front },
-      { key: `hand${k}`, mesh: fistOf(A.fist, n, 120 + k * 20, false), bone: `hand${k}`, bias: 0.04, after: ['body', `fore${k}`], front },
+      { key: `hand${k}`, mesh: fistOf(A.fist, n, 120 + k * 20, s.moss > 0 && k === 0), bone: `hand${k}`, bias: 0.04, after: ['body', `fore${k}`], front },
     );
   }
   for (const [key, sd, k] of [['ll', -1, 0], ['lr', 1, 1]] as Array<[string, number, number]>) {
     const front: V3 = [sd * 0.8, 0.5, 0];
     out.push(
       { key: `${key}0`, mesh: limbStones(L.len[0], L.w[0], L.w[1], n, 150 + k * 10, 1), bone: `${key}0`, bias: 0.01, after: ['body', 'hips'], front },
-      { key: `${key}1`, mesh: merge(limbStones(L.len[1], L.w[1], L.w[1], n, 170 + k * 10, 1),
-        B.shin ? brickBand(L.w[1] * 1.02, -L.len[1] * 0.1, B.shin, 10, L.w[1] * 0.16, 900 + k * 40) : null), bone: `${key}1`, bias: 0.015, after: 'body', front },
+      { key: `${key}1`, mesh: B.shin
+        ? merge(stone([0, 0, 0], [L.w[1] * 0.95, L.w[1] * 0.9, L.w[1] * 0.55], 170 + k * 10, n), brickSleeve(-L.len[1] * 0.05, -L.len[1] * 1.15, L.w[1] * 0.98, L.w[1] * 1.04, n, 900 + k * 40))
+        : limbStones(L.len[1], L.w[1], L.w[1], n, 170 + k * 10, 1), bone: `${key}1`, bias: 0.015, after: 'body', front },
       { key: `${key}2`, mesh: footOf(L.w[1] * 1.1, L.foot, L.len[2], n, 190 + k * 10), bone: `${key}2`, bias: 0.02, after: 'body', front },
     );
   }
@@ -766,7 +829,7 @@ function chips(g: CanvasRenderingContext2D, view: View, s: Golem, b: Bones, a: A
 
 /* ---- the kinds ----------------------------------------------------------------------------- */
 
-const AMBER: RGB = [255, 196, 64];
+const AMBER: RGB = [255, 214, 84];
 
 function golemKind(s: Golem): Kind {
   const bones = golemBones(s);
@@ -777,26 +840,28 @@ function golemKind(s: Golem): Kind {
     // The variant's coat is its stone, its mark its brick. The amber of its eyes and gem, the orange of its shards and the moss
     // are the same on every variant.
     palette: (coat, mark) => {
-      // Warm sandstone: the variant's stone pulled toward tan, so it is not chalk.
-      const sand = mix(coat, [232, 186, 144], 0.48);
-      const brick = mix(mark, [250, 200, 170], 0.08);
-      tones = { light: lighter(sand, 0.2), dark: darker(sand, 0.3) };
+      // Warm peach sandstone, as the sheet's: its mid a tan-peach, its lit faces cream, its shade a warm brown, and the joints
+      // between the stones a deep brown. The variant only tints it; it never goes to chalk.
+      const sand = mix(coat, [214, 160, 118], 0.72);
+      const brick = mix(mark, [206, 104, 62], 0.35);
+      tones = { light: mix(sand, [246, 226, 196], 0.6), dark: mix(sand, [150, 92, 62], 0.6) };
       return coatPalette(coat, mark, {
         coat: sand,
-        // Its shade warm, toward peach, as the sheet's is.
-        coatDark: mix(darker(sand, 0.26), [196, 128, 92], 0.35),
-        coatLight: mix(lighter(sand, 0.3), [255, 238, 214], 0.3),
-        stone: mix(darker(sand, 0.5), [120, 92, 74], 0.3),
-        stoneDark: mix(darker(sand, 0.66), [56, 40, 36], 0.45),
+        coatDark: mix(sand, [168, 102, 70], 0.62),
+        coatLight: mix(sand, [244, 220, 186], 0.62),
+        stone: mix(sand, [96, 52, 38], 0.8),
+        stoneDark: [62, 36, 32],
         shell: brick,
-        shellDark: darker(brick, 0.2),
-        horn: lighter(mix(sand, [250, 232, 196], 0.4), 0.12),
-        hornDark: mix(sand, [226, 204, 166], 0.4),
+        shellDark: mix(brick, [120, 52, 34], 0.45),
+        // The mortar between the bricks: a dark warm brown.
+        hoof: [92, 50, 38],
+        horn: mix(sand, [246, 226, 194], 0.7),
+        hornDark: mix(sand, [216, 178, 138], 0.6),
         crystal: [255, 170, 70],
         crystalDark: [226, 118, 42],
         ember: AMBER,
-        flame: [255, 150, 50],
-        moss: [138, 164, 84],
+        flame: [255, 168, 60],
+        moss: [118, 168, 62],
         mark: brick,
       }, 30);
     },
@@ -807,7 +872,7 @@ function golemKind(s: Golem): Kind {
     acts: ['strike', 'work'],
     // Its eyes alight, and the Brickorn's gem.
     glow: (b) => [
-      ...[-1, 1].map((sd) => ({ p: place(b.head, eyeAt(s, sd)), r: s.head.eye * 1.3, c: AMBER, a: 0.35 })),
+      ...[-1, 1].map((sd) => ({ p: place(b.head, eyeAt(s, sd)), r: s.head.eye * 2.2, c: AMBER, a: 0.75 })),
       ...(s.plate ? [{ p: place(b.chest, onEgg(s.torso.c, s.torso.r, PLATE_DIR).p), r: s.plate * 0.9, c: AMBER, a: 0.4 }] : []),
     ],
     // Evolving, the motes rising round it are stone dust and amber.
