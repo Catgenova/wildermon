@@ -57,7 +57,6 @@ const CASES: Array<{ id: string; items: Array<[string, number]>; at: Station; af
   { id: 'siffa', items: [['copper_lump', 1], ['gold_lump', 1]], at: 'anvil', after: `gold_lump 1,${smithMakes('ribbon')} ${smithPer('ribbon')}` },
   { id: 'rippa', items: [['log', 1]], at: null, after: makes('make_planks'), tool: RECIPE_BY_ID.get('make_planks')!.tool },
   { id: 'chissa', items: [['rock_shards', 1]], at: null, after: makes('make_stone_brick'), tool: RECIPE_BY_ID.get('make_stone_brick')!.tool },
-  { id: 'cordra', items: [['wemp', 4]], at: null, after: makes('make_rope'), tool: RECIPE_BY_ID.get('make_rope')!.tool },
   { id: 'flecha', items: [['shaft', 1], ['arrow_head', 3], ['feather', 3]], at: null, after: makes('make_arrows'), tool: RECIPE_BY_ID.get('make_arrows')!.tool },
   { id: 'tanna', items: [['hide', 1], ['lye_bucket', 1]], at: null, after: `${makes('tan_hide')},lye_bucket 1`, tool: RECIPE_BY_ID.get('tan_hide')!.tool },
   { id: 'grista', items: [['wheat', 2]], at: null, after: makes('make_flour'), tool: RECIPE_BY_ID.get('make_flour')!.tool },

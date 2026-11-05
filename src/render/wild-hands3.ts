@@ -1,5 +1,5 @@
 import {
-  beat, coatPalette, merge, orb, quadBonesOf, taper, TAU, tube,
+  beat, coatPalette, merge, quadBonesOf, taper, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { cut, earMesh, quadPieces } from './beastkit';
@@ -9,9 +9,9 @@ import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Two more of the settlement's hands: the chissa and the cordra. As with
- * the others (`./wild-hands`, `./wild-hands2`), each wears the tool of its
- * trade: a chisel and a rope. The mudda is the Sliplet now
+ * One more of the settlement's hands: the chissa (the cordra is gone, `REMOVED_KINDS`). As
+ * with the others (`./wild-hands`, `./wild-hands2`), it wears the tool of its
+ * trade: a chisel. The mudda is the Sliplet now
  * (`./wild-clayroll`), the dippa the Pailbara (`./wild-capy`), the rippa the
  * Logkit (`./wild-timber`), the papra the Reedling (`./wild-papyrus`), the
  * flecha the Sablekit (`./wild-sable`) and the glossa the Mortarshell
@@ -62,38 +62,3 @@ export const CHISSA: Kind = {
   size: 1.65,
 };
 
-/* ---- the cordra: a tail of two strands laid up into a rope --------------------------- */
-
-const CORDRA_SPEC: QuadSpec = { ...pawed({ high: 1.35, len: 2.2, legs: 0.8, neck: 0.35, lean: 40, swing: [24, 40], ears: [30, 22], tail: [0.6, 16, 10] }), nose: 12 };
-const CORDRA_HEAD = { c: [0, 0.3, 0.18] as V3, r: [0.98, 0.94, 0.88] as V3 };
-
-function cordraBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = CORDRA_HEAD;
-  // Two strands twisted about each other, two turns of lay, a knot at the end.
-  const strand = (phase: number, mat: 'coat' | 'coatLight') => tube(
-    Array.from({ length: 9 }, (_, i): V3 => {
-      const t = i / 8, a = phase + t * TAU * 2;
-      return [Math.cos(a) * 0.07, -0.1 - t * 1.35, Math.sin(a) * 0.07];
-    }), 0.075, 0.075, 5, mat);
-  const rope = merge(root(n), strand(0, 'coat'), strand(Math.PI, 'coatLight'), orb([0, -1.5, 0], 0.13, 6, 4, 'coatDark'));
-  return quadPieces({
-    n, k,
-    body: barrel(2.3, 1.0, 0.85),
-    neck: { w: 0.6, h: 0.6, len: 0.35 },
-    head: { c: H.c, r: H.r, face: snout(1.0, -0.18, [0.4, 0.3, 0.34], 0.11, n, k), eye: { dir: [0.74, 0.52, 0.36], size: 0.3, rim: 0.12 } },
-    ear: earMesh(0.38, 0.22, n),
-    earTurn: 35,
-    tail: [rope],
-    ...paws(n, k, 0.8, 0.25, 0.22, 'coatDark'),
-  });
-}
-
-export const CORDRA: Kind = {
-  bones: quadBonesOf(CORDRA_SPEC, trot),
-  build: cordraBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({}), 40),
-  shadow: [1.5, 1.15],
-  stride: 1.4,
-  size: 1.65,
-};

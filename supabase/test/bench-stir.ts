@@ -57,7 +57,7 @@ const FOUNDERS = [0, 2, 5];
 
 /** A settlement's trades: the species set to it. Gatherers, errands at the stores, a hod carrier, guards, a hunter. */
 const WORKERS = ['bevere', 'rabba', 'grazza', 'sedra', 'mola', 'wadd', 'magga', 'whispet', 'stona', 'rowl',
-  'cobbe', 'rippa', 'mudda', 'cordra', 'simma', 'awla', 'tanna', 'tinka'];
+  'cobbe', 'rippa', 'mudda', 'chissa', 'simma', 'awla', 'tanna', 'tinka'];
 /** What a settlement's stores hold: each piece, where it stands off the token, and what is in it, within its room. */
 const STORES: { sub: string; dx: number; dy: number; items: [string, number][] }[] = [
   { sub: 'chest', dx: 2, dy: 1, items: [['lye_bucket', 2], ['bucket', 2], ['ash', 10], ['sprout', 8], ['cotton', 10], ['rope', 4], ['shaft', 10], ['candle', 6]] },

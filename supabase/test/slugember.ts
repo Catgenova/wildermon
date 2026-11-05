@@ -1,5 +1,6 @@
 /**
- * A stoker burns tar first, never overfills, and from its second stage works the smelters.
+ * A stoker burns tar first, never overfills, and at every stage works the smelters (from its second until the forga went:
+ * "The slug line").
  *
  * Asked for: "Slugember needs to prioritize tar, peat, and coal for fueling fires and shelters etc. Slugember should
  * also load raw ore into smelters and Take What Is Done." And: "Make sure that slugember isnt loading more fuel than is
@@ -15,8 +16,8 @@
  *     takes what is left back to the stores;
  *   * a hearth another worker is carrying fuel to is left alone;
  *   * it fuels ovens, lit, and braziers, left to light themselves;
- *   * a Sluglow leaves a smelter alone; a Slugember empties it into the stores and charges it with the ore, also when a
- *     hearth wants fuel and there is none;
+ *   * a Sluglow and a Slugember empty it into the stores and charge it with the ore, also when a hearth wants fuel and
+ *     there is none;
  *   * and says why it stands about;
  *   * and leaves a hearth past its settlement's edge alone, though within its reach ("my slugferno is lighting campfires
  *     on other peoples deeds").
@@ -216,10 +217,10 @@ const order = [...STOKE_FIRST, 'log'];
 check(`tar is a fuel, ${FUEL_VALUES.tar} seconds a piece, between peat and coal; the fuel order and the smelter stage are the island's`,
   FUEL_VALUES.tar > FUEL_VALUES.peat && FUEL_VALUES.tar < FUEL_VALUES.coal
   && at('DEFS') === `${FUEL_VALUES.tar}|${order.join(',')}|${STOKE_FIRST.length}|${STOKE_SMELTS_AT}|${FUEL_SAID}`, at('DEFS'));
-check('the stage the smelter work comes in at is a Slugember\'s', STOKE_SMELTS_AT === 1 && SPECIES.embra.stages![0].name === 'Slugember');
-check('the stages that work the smelters say so, and the first does not',
-  SPECIES.embra.stages!.every((s) => /smelters/.test(s.description) && /Fuel order: tar, peat, coal/.test(s.description))
-  && !/empties your smelters/.test(SPECIES.embra.description), SPECIES.embra.stages![0].description);
+check('the smelter work comes in at the first stage, a Sluglow\'s', STOKE_SMELTS_AT === 0 && SPECIES.embra.name === 'Sluglow');
+check('every stage says it works the smelters, the first too',
+  [SPECIES.embra.description, ...SPECIES.embra.stages!.map((s) => s.description)].every((d) => /empties your smelters/.test(d) && /Fuel order: tar, peat, coal/.test(d)),
+  SPECIES.embra.description);
 
 /* ---- on the island ----------------------------------------------------------------- */
 
@@ -240,7 +241,7 @@ check('on the island, and takes that one back to the stores', at('BACK') === 'co
 check('on the island, a campfire another worker is carrying fuel to is left to it', at('CLAIMED') === '-|-|range', at('CLAIMED'));
 check('on the island, an oven is fed a log and lit, to its own capacity', at('OVEN') === `-|${FUEL_VALUES.log}|true|true`, at('OVEN'));
 check('on the island, a brazier is fed a log and left to light itself after dark, to its own capacity', at('BRAZIER') === `-|${FUEL_VALUES.log}|false|true`, at('BRAZIER'));
-check('on the island, a Sluglow leaves a smelter alone, and says nothing is in range', at('SMELT:low') === 'copper_ore 3|0|1|range', at('SMELT:low'));
+check('on the island, a Sluglow takes the lumps out of a smelter into the stores and charges it with the ore', at('SMELT:low').startsWith('copper_lump 2|3|0|'), at('SMELT:low'));
 check('on the island, a Slugember takes the lumps out of a smelter into the stores and charges it with the ore', at('SMELT:ember') === 'copper_lump 2|3|0', at('SMELT:ember'));
 check('on the island, a Slugember takes a poured mould\'s castings into the stores as castings of their piece', at('CASTING') === 'casting 2 Bronze shovel_head', at('CASTING'));
 check('on the island, and so with a cold campfire and no fuel for it', at('SMELT:nofuel') === 'copper_lump 2|3|0', at('SMELT:nofuel'));
@@ -394,7 +395,7 @@ for (const [level, name, campfire] of [[LOW, 'low', false], [EMBER, 'ember', fal
   const c = worker(g, level);
   run(g, 120);
   const got = `${inCrate(crate)}|${s.jobs.length}|${s.output.length}${name === 'low' ? `|${c.idle?.why}` : ''}`;
-  check(`in the browser, ${name === 'low' ? 'a Sluglow leaves a smelter alone' : name === 'ember' ? 'a Slugember empties a smelter into the stores and charges it with the ore'
+  check(`in the browser, ${name === 'low' ? 'a Sluglow empties a smelter into the stores and charges it with the ore' : name === 'ember' ? 'a Slugember empties a smelter into the stores and charges it with the ore'
     : 'and so with a cold campfire and no fuel for it'}, as on the island`, got === at(`SMELT:${name}`), got);
 }
 {

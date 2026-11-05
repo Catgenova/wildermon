@@ -1,14 +1,14 @@
 import {
-  add, beat, coatPalette, curve, cyc, disc, merge, moved, orb, orbAlong, paint, quadBonesOf, taper, TAU, tube,
+  add, coatPalette, cyc, disc, merge, orbAlong, paint, quadBonesOf, TAU, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { cut, earMesh, pawMesh, quadPieces, type QuadLook } from './beastkit';
-import { place, type Mat, type Mesh, type RGB, type V3 } from './figure';
+import { type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
-import { links, snout } from './wild-hands';
+import { links } from './wild-hands';
 
 /**
- * More of the settlement's hands: the forga, the cindra and the hoppa
+ * More of the settlement's hands: the cindra and the hoppa (the forga is gone, `REMOVED_KINDS`)
  * (the simma is the Brothlet now, `./wild-broth`, the scurra is the Wallkit now, `./wild-wall`, the bedda
  * the Sprigkit, `./wild-calico`, the petta the Briarling, `./wild-goat`, the potta the
  * Kilnlet, `./wild-kiln`, the
@@ -37,53 +37,6 @@ export function paws(n: number, k: number, legs: number, thick: number, r: numbe
     hind: { upper: [0.28, -legs * 0.52, thick * 1.1, thick * 0.94], lower: [0, -legs * 0.48, thick * 0.86, thick * 0.78], foot: pawMesh(r, n, k, mat) },
   };
 }
-
-/* ---- the forga: tongs for a tail, a bellows for a chest ----------------------------- */
-
-const FORGA_SPEC: QuadSpec = { ...pawed({ high: 1.4, len: 2.4, legs: 0.75, neck: 0.35, lean: 60, swing: [20, 34], ears: [35, 15], tail: [0.5, 20, 6] }), nose: 12 };
-const FORGA_HEAD = { c: [0, 0.35, 0.12] as V3, r: [1.1, 1.0, 0.92] as V3 };
-
-function forgaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = FORGA_HEAD;
-  // The tongs: two iron arms off a rivet, their jaws a little open.
-  const tongs = merge(
-    taper([[0, 0.05, 0], [0, -0.25, 0]], 0.13, 0.09, n, 'coat'),
-    orb([0, -0.3, 0], 0.08, 6, 4, 'metal'),
-    ...[-1, 1].map((s) => tube(curve([0, -0.3, 0], [s * 0.18, -0.75, 0.02], [s * 0.08, -1.25, 0.08], 4), 0.07, 0.06, 5, 'metalDark')),
-  );
-  // The bellows on its chest: two boards with a leather pleat between, its nozzle pointing down.
-  const bellows = merge(
-    tube([[0, 0, 0.32], [0, 0, -0.32]], 0.42, 0.06, 8, 'wood', { up: [0, 1, 0] }),
-    tube([[0, -0.1, 0.28], [0, -0.1, -0.28]], 0.36, 0.08, 8, 'leather', { up: [0, 1, 0] }),
-    taper([[0, 0, -0.32], [0, 0, -0.55]], 0.06, 0.03, 5, 'metal'),
-  );
-  return quadPieces({
-    n, k,
-    body: barrel(2.7, 1.25, 0.95),
-    neck: { w: 0.7, h: 0.7, len: 0.35 },
-    head: { c: H.c, r: H.r, face: snout(1.05, -0.2, [0.44, 0.32, 0.38], 0.12, n, k), eye: { dir: [0.74, 0.52, 0.34], size: 0.3, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.18] },
-    ear: earMesh(0.36, 0.26, n),
-    earTurn: 35,
-    tail: [tongs],
-    ...paws(n, k, 0.75, 0.3, 0.25, 'coatDark'),
-    extras: [{ key: 'bellows', mesh: moved(bellows, [0, 1.25, -0.15]), bone: 'trunk', bias: 0.05, after: ['body'] }],
-  });
-}
-
-export const FORGA: Kind = {
-  bones: quadBonesOf(FORGA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it pumps its chest now and then, as a bellows is worked.
-    if (a.go <= 0) p.squash += 0.05 * Math.max(0, Math.sin(a.t * TAU * 1.5)) * beat(a.t, [5.2, 15.1], 2.4);
-  }),
-  build: forgaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ metal: [150, 150, 158], metalDark: [96, 98, 108], wood: [150, 104, 70], leather: [120, 80, 52] }), 20),
-  glow: (b, a) => [{ p: place(b.trunk, [0, 0, 0.9]), r: 0.7, c: [255, 150, 70] as RGB, a: 0.12 + 0.05 * Math.sin(a.t * Math.PI * 3) }],
-  shadow: [1.6, 1.3],
-  stride: 1.35,
-  size: 1.75,
-};
 
 /* ---- the hoppa: a cork for a nose and hops for a crown ------------------------------ */
 
