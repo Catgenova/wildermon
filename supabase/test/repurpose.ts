@@ -16,7 +16,8 @@
  * comes out at its lumps' quality as your own hands' does; moss is cut and carried home; a grape cutting is planted at
  * a trellis with no vine on soil, and no other; a water lily root and lotus seeds are planted in still water deep
  * enough; a carcass and a bare pot are left as they are. And a Spiralphant, an awla at its third stage, carves its line's
- * one more shaft from each log (`STAGE_PERKS`), and a Bandageweaver, a leecha at its third stage, cuts its line's one more
+ * one more shaft from each log (`STAGE_PERKS`), a Fortigran, a chissa at its third stage, chisels its line's one more stone
+ * brick from each shard, and a Bandageweaver, a leecha at its third stage, cuts its line's one more
  * bandage from each cloth, on both sides.
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
@@ -130,6 +131,11 @@ const WEAVE_SKILLS = { [GATHER_SKILL.bandage]: EVOLVE_AT[1] };
 const WEAVE_RECIPE = RECIPE_BY_ID.get(tradeRecipes('bandage')[0])!;
 const WEAVE_PUT: Array<[string, number]> = WEAVE_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
 const weaveWants = (): string => `${WEAVE_RECIPE.result} ${(WEAVE_RECIPE.count ?? 1) + STAGE_PERKS.leecha.n}`;
+/** A Fortigran's go at one shard: the stone brick its recipe chisels from it, and its line's third-stage one on top. */
+const CHIP_SKILLS = { [GATHER_SKILL.chisel]: EVOLVE_AT[1] };
+const CHIP_RECIPE = RECIPE_BY_ID.get(tradeRecipes('chisel')[0])!;
+const CHIP_PUT: Array<[string, number]> = CHIP_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
+const chipWants = (): string => `${CHIP_RECIPE.result} ${(CHIP_RECIPE.count ?? 1) + STAGE_PERKS.chissa.n}`;
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
 const listed = (m: Map<string, number>): string => [...m].filter(([, n]) => n > 0).map(([id, n]) => `${id} ${n}`).sort().join(',') || '-';
@@ -296,6 +302,13 @@ ${CASES.map((c) => `
   insert into said select 'WEAVE', ${held};
   ${after('leecha')}
 
+  -- CHIP: the chissa, at its third stage a Fortigran, chisels one shard into stone brick, and makes its line's third-stage brick on top.
+  insert into hand values ('chissa', creature_spawn(w, 'chissa', 16.6, 16.6, 'active', now() - interval '60 days', u));
+  ${stocked(CHIP_PUT)}
+  ${ready('chissa').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(CHIP_SKILLS)}'::jsonb`)}
+  insert into said select 'CHIP', ${held};
+  ${after('chissa')}
+
   -- VINE: a trellis on grass with no vine, one with a vine already, one on sand; three cuttings.
   perform land_set_tile(w, 21, 14, tile_id('Sand'));
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, material) values
@@ -416,6 +429,7 @@ check(`on the island, a Fletchercrest fletches one batch into ${fletchWants()}`,
 check(`on the island, a ${SPECIES.glossa.stages![1].name} mixes one batch into ${mixWants()}`, at('MIX') === mixWants(), at('MIX'));
 check(`on the island, a ${MORTARIUM} mixes one batch into ${conWants()}`, at('CON') === conWants(), at('CON'));
 check(`on the island, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, at('WEAVE') === weaveWants(), at('WEAVE'));
+check(`on the island, a ${SPECIES.chissa.stages![1].name} chisels one shard into ${chipWants()}`, at('CHIP') === chipWants(), at('CHIP'));
 {
   // Two logs, both carved in the one go at its stage's batches, each its recipe's shafts and its line's one more.
   const each = RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n;
@@ -634,6 +648,14 @@ for (const k of CASES) {
   c.skills = { ...WEAVE_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, inCrate(crate) === weaveWants(), inCrate(crate));
+}
+{
+  const g = body();
+  const crate = stock(g, CHIP_PUT);
+  const c = worker(g, 'chissa');
+  c.skills = { ...CHIP_SKILLS };
+  run(g, 120);
+  check(`in the browser, a ${SPECIES.chissa.stages![1].name} chisels one shard into ${chipWants()}`, inCrate(crate) === chipWants(), inCrate(crate));
 }
 {
   const g = body();

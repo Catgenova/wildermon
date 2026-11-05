@@ -99,7 +99,7 @@ const LINES: Record<string, () => Promise<Line>> = {
   petta: () => import('./wild-goat').then((m) => line(m.BRIARLING, [m.MEADOWTIDE, m.FLORACRUX])),
   scurra: () => import('./wild-wall').then((m) => line(m.WALLKIT, [m.BRISTLEWARD, m.STONEPOLISH])),
   rippa: () => import('./wild-timber').then((m) => line(m.LOGKIT, [m.SAWQUILL, m.TIMBERBACK])),
-  chissa: () => import('./wild-hands3').then((m) => line(m.CHISSA)),
+  chissa: () => import('./wild-golem').then((m) => line(m.CHIPKIN, [m.BRICKORN, m.FORTIGRAN])),
   mudda: () => import('./wild-clayroll').then((m) => line(m.SLIPLET, [m.WHEELMOTE, m.ROLLTERRA])),
   cordra: () => import('./wild-hands3').then((m) => line(m.CORDRA)),
   flecha: () => import('./wild-sable').then((m) => line(m.SABLEKIT, [m.SABLEPLUME, m.FLETCHERCREST])),

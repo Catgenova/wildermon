@@ -152,6 +152,8 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   crakka: () => import('./voice-pestlet').then((m) => m.PESTLET_VOICE),
   // The Clothkit, the Loomhare and the Bandageweaver.
   leecha: () => import('./voice-loomhare').then((m) => m.LOOMHARE_VOICE),
+  // The Chipkin, the Brickorn and the Fortigran.
+  chissa: () => import('./voice-golem').then((m) => m.GOLEM_VOICE),
   // The Brothlet, the Stockbelly and the Cauldronthroat.
   simma: () => import('./voice-broth').then((m) => m.BROTH_VOICE),
 };
