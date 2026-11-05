@@ -7,7 +7,7 @@ import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, typ
 
 /**
  * The butter-churn snail line: the Creamlet, a small round cream snail,
- * blush-mottled, beaming with its eyes shut, whose shell is a little churn
+ * blush-mottled, smiling, its eyes on its stalks only, whose shell is a little churn
  * barrel lying on its side -- a cream disc with a tan spiral on each end, iron
  * bands round it -- with an upright churn on top, full of cream, its plunger
  * standing up out of it; the Churnsnail, bigger and longer, its barrel big
@@ -330,33 +330,12 @@ function neckMesh(s: Churn, G: Geo, n: number): Mesh {
   return merge(body, paint(spots));
 }
 
-/** Eyes shut in a smile: two arcs curving up, each a band a line thick, painted on the face along `n` at `at`. */
-function happyEye(at: V3, n: V3, w: number, m: Mat): Disc {
-  const d = unit(n);
-  let u = cross([0, 0, 1], d);
-  if (Math.hypot(u[0], u[1], u[2]) < 1e-4) u = [1, 0, 0];
-  u = unit(u);
-  const up = cross(d, u);
-  const pts: Array<[number, number]> = [];
-  for (let q = 0; q <= 8; q++) {
-    const a = Math.PI * (q / 8);
-    pts.push([-Math.cos(a), Math.sin(a) * 0.62 - 0.2]);
-  }
-  const th = 0.2;
-  const band = [...pts.map(([x, y]) => [x * (1 + th * 0.5), y + th] as [number, number]), ...[...pts].reverse().map(([x, y]) => [x * (1 - th * 0.5), y - th * 0.3] as [number, number])];
-  const v = band.map(([x, y]) => add(add(at, scale(d, 0.03)), add(scale(u, x * w * 0.5), scale(up, y * w * 0.5))));
-  return facing(v, m, d);
-}
-
-/** The head: a round egg, its eyes shut in a smile, a smile under them; the Creamlet's mouth open and its cheeks pink. */
+/** The head: a round egg, its eyes on its stalks and none on its face, a smile on it; the Creamlet's mouth open and its cheeks pink. */
 function headMesh(s: Churn, n: number, k: number): Mesh {
   const R = s.head.r, c: V3 = [0, 0, 0];
   const marks: Disc[] = [];
-  const w = s.head.eye * (R[0] / 0.5) * 1.9;
   for (const sd of [1, -1]) {
-    const e = onEgg(c, R, [sd * 0.46, 0.84, 0.18]);
-    marks.push(happyEye(e.p, e.n, w, 'lid'));
-    // Pink cheeks under each eye.
+    // Pink cheeks either side of its smile.
     const ch = onEgg(c, R, [sd * 0.6, 0.72, -0.12]);
     marks.push(disc(add(ch.p, scale(ch.n, 0.025)), ch.n, R[0] * (s.stage ? 0.13 : 0.18), R[0] * (s.stage ? 0.08 : 0.11), 8, 'inner'));
   }
