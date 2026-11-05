@@ -83,7 +83,8 @@ const LINES: Record<string, () => Promise<Line>> = {
   tanna: () => import('./wild-pelt').then((m) => line(m.PELTLING, [m.PELTIPEDE, m.HIDEWEAVER])),
   grista: () => import('./wild-hamster').then((m) => line(m.WHEATLEY, [m.WHEATWHIRL, m.WHEATCHEEKS])),
   wicka: () => import('./wild-moth').then((m) => line(m.GLIMMOTH, [m.LUREWING, m.NOCTILURE])),
-  brambo: () => import('./wild-hands').then((m) => line(m.BRAMBO)),
+  // The Bramblet, the Vinehorn and the Briarstag.
+  brambo: () => import('./wild-deer').then((m) => line(m.BRAMBLET, [m.VINEHORN, m.BRIARSTAG])),
   grazza: () => import('./wild-mantis').then((m) => line(m.SPRIGMANT, [m.PETALBLADE, m.BLOOMREAPER])),
   siffa: () => import('./wild-ribbon').then((m) => line(m.RIBBONIP, [m.STRIPFORGE, m.METALLOCURL])),
   potta: () => import('./wild-kiln').then((m) => line(m.KILNLET, [m.TERRABRICK, m.KILNSPIRE])),
@@ -328,7 +329,7 @@ export function wildermonTop(species: string, stage = 0, variant?: number): numb
  * The kinds whose name and health bar go over the highest they reach standing about or at their acts, not only standing still and
  * going: a beast that rears, or whose tall ears swivel, would otherwise come up through its own name.
  */
-const CLEARS = new Set(['orse', 'springlet']);
+const CLEARS = new Set(['orse', 'springlet', 'brambo']);
 /** Over the feet the highest any part of a kind comes, in screen units at zoom one, through its loop standing and its strike and task, with a margin. */
 const clears = new Map<string, number>();
 function clearOf(key: string, kind: Kind): number {

@@ -846,6 +846,9 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   middun: { kind: 'loads', n: 1, what: 'items per trip' },
   sparra: { kind: 'blood', n: 1.1, channel: 'tough', what: 'blow' },
   plucka: { kind: 'more', n: 1, what: 'fruit per pick' },
+  // A pick of a bush or a trellis vine is a gather like a fruit tree's, which both sides add a line's 'more' to (`perkMore`, the
+  // island's `perk_more` in `worker_settle`).
+  brambo: { kind: 'more', n: 1, what: 'berries or grapes per pick' },
   grista: { kind: 'loads', n: 1, what: 'batches per cycle' },
   relka: { kind: 'loads', n: 1, what: 'relics per cycle' },
   wadd: { kind: 'more', n: 1, what: 'fish per catch' },
@@ -1287,7 +1290,7 @@ export const LEARN_PACE_MOST = 4;
 export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // Out to the ground and home with a load.
   forage: 0.99, botanize: 1, woodcut: 0.97, farm: 0.96, mine: 1.07, quarry: 1.1, sand: 1.05, clay: 1.07, peat: 1.04,
-  reed: 1.04, fetch: 1, compost: 1.03, fruit: 1.01, bush: 1.12, grass: 1.01, sprout: 0.99, resin: 1.06, flower: 1.04,
+  reed: 1.04, fetch: 1, compost: 1.03, fruit: 1.01, bush: 1.03, grass: 1.01, sprout: 0.99, resin: 1.06, flower: 1.04,
   worm: 0.98, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 0.96, hive: 1.01, moss: 1.05,
   // At the stores, a fire, a press or a barrel, one thing after another.
   mend: 1.05, restore: 0.7, tan: 0.84, mill: 0.81, saw: 0.84, chisel: 0.88, brick: 0.84,
@@ -2595,8 +2598,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   brambo: {
     id: 'brambo',
-    name: 'Brambo',
+    name: 'Bramblet',
+    was: ['Brambo'],
+    // Asked for, with a reference sheet: Bramblet, Vinehorn, Briarstag.
     description: 'Settlement task: pick bushes in season, as many as your hands would at its forestry, and ripe trellis vines; output home.',
+    stages: [
+      { name: 'Vinehorn', description: '' },
+      { name: 'Briarstag', description: '' },
+    ],
     health: 22,
     attack: 3,
     speed: 2,
@@ -2607,11 +2616,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'bush',
     workRange: 8,
+    // [coat, cream]: the sheet's fawn tan with cream, a russet with ivory, a honey with buttermilk, and a greyer brown with oat.
     variants: [
-      ['#6b4f3a', '#c69a72'],
-      ['#4f5a38', '#a7b47e'],
-      ['#7a4a46', '#d39a92'],
-      ['#5a4a5e', '#b49ab8'],
+      ['#b88656', '#f4e6cc'],
+      ['#a8704a', '#f6e8d6'],
+      ['#c4975e', '#f8ecd0'],
+      ['#9a7a5a', '#ece0c8'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
     nearTrees: true,
@@ -4668,7 +4678,7 @@ sayLine('stona', `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('ward
 // The seven lines asked for on 22–23 October: each one's words as its kind already says them, at every stage.
 for (const [id, level] of [['magga', 'foraging'], ['grazza', 'foraging'], ['grubba', 'digging'], ['wurla', 'digging'],
   ['mudda', 'pottery'], ['dippa', 'carrying'], ['middun', 'farming']] as const) sayLine(id, SPECIES[id].description, `Level: ${level}.`);
-for (const id of ['plucka', 'grista', 'relka', 'tanna']) sayLine(id, SPECIES[id].description, `Level: ${GATHER_SKILL[SPECIES[id].gathers!]}.`);
+for (const id of ['plucka', 'grista', 'relka', 'tanna', 'brambo']) sayLine(id, SPECIES[id].description, `Level: ${GATHER_SKILL[SPECIES[id].gathers!]}.`);
 sayLine('vesp', SPECIES.vesp.description, 'Level: animal husbandry.');
 sayLine('bedda', SPECIES.bedda.description, 'Level: farming.');
 sayLine('petta', SPECIES.petta.description, 'Level: foraging.');

@@ -25,7 +25,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { deedJobLine } from '../../src/game/creaturecrate';
 import {
-  CARE_WANTING, DAIRY_FULL, EVOLVE_AT, GATHER_DO, GATHER_SKILL, HEAL_BELOW, MILL_RECIPES, SPECIES, STAGE_LOADS, STAGE_PERKS, TAN_RECIPES, TEND_JOBS,
+  CARE_WANTING, DAIRY_FULL, EVOLVE_AT, GATHER_DO, GATHER_SKILL, HEAL_BELOW, MILL_RECIPES, perkMore, SPECIES, STAGE_LOADS, STAGE_PERKS, stageOf, TAN_RECIPES, TEND_JOBS,
   type Creature,
 } from '../../src/game/creatures';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
@@ -207,6 +207,13 @@ begin
   v_load := worker_do(w, c.id);
   insert into said values ('BUSH', coalesce(v_load->>'def', '-') || '|' || coalesce(v_load->>'count', '0') || '|'
     || coalesce((select b.yields from bush_def b where b.id = land_data(w, 19, 16)), '-') || '|' || is_foraged(w, 19, 16, 'forage')::text);
+  -- A Briarstag: the same pick, with its line's third-stage one more on it (perk_more in worker_settle); a Vinehorn just under it.
+  for v_n in 0..1 loop
+    update creature set skills = jsonb_build_object('${GATHER_SKILL.bush}', ${EVOLVE_AT[1]} - 1 + v_n) where world_id = w and id = c.id returning * into c;
+    insert into said values ('BRIAR' || v_n, stage_of(c) || '|' || coalesce(perk_more(c, jsonb_build_object('def', coalesce((select b.yields from bush_def b
+      where b.yields is not null order by b.id limit 1), '-'), 'count', 1))->>'count', '-'));
+  end loop;
+  update creature set mode = 'stored' where world_id = w and id = c.id;
 
   perform land_set_tile(w, 21, 16, tile_id('Moss'));
   select * into c from creature where world_id = w and id = (select id from hand where species = 'grazza');
@@ -286,6 +293,8 @@ if (at('BUSHSEASON') === 'none') {
   check('a brambo finds a bush in its season, and not the grass beside it', bushTile === 'true' && grassBeside === 'false', at('BUSHTILE'));
   check('and picks it as a person would, leaving it picked', bushGot === bushYields && Number(bushCount) >= 1 && bushPicked === 'true', at('BUSH'));
 }
+check(`a Vinehorn just under its third stage picks one to a pick; a Briarstag ${1 + STAGE_PERKS.brambo.n}, its line's ${STAGE_PERKS.brambo.what} +${STAGE_PERKS.brambo.n}`,
+  STAGE_PERKS.brambo.kind === 'more' && at('BRIAR0') === '1|1' && at('BRIAR1') === `2|${1 + STAGE_PERKS.brambo.n}`, `${at('BRIAR0')} / ${at('BRIAR1')}`);
 const [grassLoad, mown, grassAgain] = at('GRASS').split('|');
 check('a grazza cuts mixed grass off grass, marks the settlement\'s grass as cut today toward lawn, and leaves it short', grassLoad === 'mixed_grass 2' && mown === '4' && grassAgain === 'false', at('GRASS'));
 const [mossLoad, mossAgain] = at('MOSS').split('|');
@@ -414,6 +423,15 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   run(g, 120);
   const hay = crate.items.filter((i) => i.id === 'mixed_grass' || i.id === 'moss').reduce((n, i) => n + i.count, 0);
   check('a grazza cuts grass and moss and carries its cuts home to the crate', hay >= 2, held(crate));
+}
+{
+  // A Briarstag's pick, with its line's third-stage one more on it, as a pick from a bush comes in (`perkMore`); a Vinehorn just under it.
+  const pick = (lv: number): string => {
+    const c = { species: 'brambo', skills: { [GATHER_SKILL.bush]: lv } };
+    return `${stageOf(c)}|${perkMore(c, { id: 'blueberries', count: 1 })?.count}`;
+  };
+  check(`in the browser, a Vinehorn just under its third stage picks one to a pick; a Briarstag ${1 + STAGE_PERKS.brambo.n}`,
+    pick(EVOLVE_AT[1] - 1) === '1|1' && pick(EVOLVE_AT[1]) === `2|${1 + STAGE_PERKS.brambo.n}`, `${pick(EVOLVE_AT[1] - 1)} / ${pick(EVOLVE_AT[1])}`);
 }
 
 for (const line of [...ok, ...bad]) console.log(line);

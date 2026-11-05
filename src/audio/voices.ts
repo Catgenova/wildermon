@@ -108,6 +108,7 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   ulva: () => import('./voice-spider').then((m) => m.SPIDER_VOICE),
   // The Briarling, the Meadowtide and the Floracrux.
   petta: () => import('./voice-goat').then((m) => m.GOAT_VOICE),
+  brambo: () => import('./voice-deer').then((m) => m.DEER_VOICE),
   // The Whispling, the Hushwing and the Songroost.
   kemma: () => import('./voice-owl').then((m) => m.OWL_VOICE),
   // The Kilnlet, the Terrabrick and the Kilnspire.
