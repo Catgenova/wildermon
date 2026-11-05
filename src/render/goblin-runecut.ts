@@ -9,33 +9,31 @@ import { glower } from './wild-upright';
 import { MONSTER_GROWTH } from './monster-size';
 
 /**
- * The goblin in the runecut kit: three proposed looks for it, for choosing
- * between (`tools/goblin-shot.mjs`); the live goblin is `GOBLIN` in
- * `./wild-upright` until one of these takes its place in `LINES`.
+ * The goblin, in Runecut's look: three subspecies, one for each of the goblin's variants (`GOBLINS`,
+ * `SpeciesDef.subspecies`), the Scrapper, the Raider and the Hexer Goblin. Asked for: "Orc all 3, goblin all 3, ship".
  *
- * Each is the same knee-high body on the same bones as the live one (two
- * legs, the hips, the chest, a neck and a head, an arm each side, the blade
- * in the right hand), at the same size, so any of them is drawn in its place
- * with nothing in the rules changed. What is the kit's about them: chunky soft
- * masses, a chalky pastel skin lit in three steps, gear in the island's own
- * iron, brass, hide and bone, the runes of the runestones cut into what they
- * carry -- gold, mint or red -- and a strike: a wind-up, a chop and a pale
- * slash through the air where the blade went.
+ * Each is the same knee-high body on the same upright bones (two legs, the hips, the chest, a neck and a head, an arm
+ * each side, the blade in the right hand) at the same size, with the same health, blow and speed: they differ in look
+ * and in how they strike. What is the kit's about them: chunky soft masses, a chalky pastel skin lit in three steps,
+ * gear in the island's own iron, brass, hide and bone, the runes of the runestones cut into what they carry -- gold,
+ * mint or red -- and a strike each of its own, with a pale slash through the air where the blade went.
  *
- *   A, the Scrapper: wiry and hunched, a ragged top-knot, notched ears and a
- *      brass ring through one, a patched tunic too big for it on a rope belt
- *      with a bone charm and a pouch, a strap of dark hide across it,
- *      bandaged wrists and ankles, and a broad notched cleaver with gold runes
- *      scratched down its flat, held up beside it.
- *   B, the Raider: a plum hood with a drooping point and a short cape, its
- *      ears out through the hood and its eyes bright in the shade of it, a
- *      round hide shield painted with a red rune on its left arm and a curved
- *      blade in its right, behind which it creeps.
- *   C, the Hexer: low and long-armed, darker of skin, a horned skull worn on
- *      its head with two feathers, mint runes painted on its face, chest, back
- *      and wrists, a necklace of teeth with a rune-stone hung from it, a
- *      fringe of hide strips for a skirt, and a hooked bone-hilted knife of
- *      mint glass.
+ *   A, the Scrapper Goblin: wiry and hunched, a ragged top-knot, notched ears and a brass ring through one, a patched
+ *      tunic too big for it with a ragged hem on a rope belt with a bone charm and a pouch, a strap of dark hide across
+ *      it, bandaged wrists and ankles, and a broad notched cleaver with gold runes scratched down its flat, held out
+ *      before it; it chops overhead, and the edge throws gold sparks.
+ *   B, the Raider Goblin: a plum hood with a drooping point and a short cape, its ears out through the hood, a round
+ *      hide shield painted with a red rune held up on its left arm and a curved blade in its right; it sweeps the
+ *      blade across from over the shield, turning through the blow.
+ *   C, the Hexer Goblin: low and long-armed, darker of skin, mint eyes, a horned skull worn on its head with two
+ *      feathers, mint runes painted on its face, chest, back and wrists, a necklace of teeth with a rune-stone hung
+ *      from it, a kilt of hide and bone strips, and a hooked knife of mint glass; it lunges and stabs, and the knife
+ *      flashes a mint star.
+ *
+ * Kept clear of itself: every arm and blade path through a strike, a standing loop, a walk and a run was searched a
+ * twentieth at a time for none of it inside the head or the body (`tools/goblin-shot.mjs --frames` draws them); a
+ * blade or an arm raised past the head from behind is hidden by it; each limb is rounded over at its joint; the tunic
+ * and the jerkin below the belt go over the thighs, and the Raider's cape over its back.
  */
 
 /* ---- small things -------------------------------------------------------------------- */
@@ -161,7 +159,7 @@ const LOOKS: Record<Look, Gob> = {
     spec: { ...BASE_SPEC, chest: { at: [0, 0, 0.18], lean: 18 }, head: { pitch: -2 }, waddle: 4 },
     head: { c: [0, 0.14, 0.58], r: [0.94, 0.88, 0.82] },
     eye: { dir: [0.62, 0.76, 0.12], size: 0.27, tall: 0.92, pupil: 0.26 },
-    ear: { root: [0.74, -0.08, 0.22], mid: [1.3, -0.3, 0.3], tip: [1.9, -0.72, 0.42], w: [0.32, 0.31, 0.24, 0.12, 0.01], ring: true },
+    ear: { root: [0.74, -0.08, 0.22], mid: [1.3, -0.24, 0.22], tip: [1.9, -0.5, 0.16], w: [0.32, 0.31, 0.24, 0.12, 0.01], ring: true },
     nose: { len: 0.46, r: 0.15, hook: 0.14 },
     armW: [0.19, 0.18], legW: [0.23, 0.2], hand: 0.22, foot: [0.23, 0.56],
   },
@@ -203,6 +201,16 @@ function foot(r: number, len: number, n: number, mat: Mat = 'coat'): Mesh {
   );
 }
 
+/**
+ * One part of a limb down its bone from the joint: rounded over at the top, so bent away from what it hangs from it shows
+ * a knuckle of itself and not a hole, `len` long, `w` across at the joint, half way and the end; open at the end, where
+ * the next part goes on. `mat` is each band's, `ring` nought for the first below the joint.
+ */
+function limbPart(len: number, w: [number, number, number], n: number, mat: (ring: number) => Mat): Mesh {
+  return tube([[0, 0, w[0] * 0.8], [0, 0, w[0] * 0.35], [0, 0, 0], [0, 0, -len * 0.45], [0, 0, -len]], [w[0] * 0.5, w[0] * 0.9, w[0], w[1], w[2]],
+    [w[0] * 0.5, w[0] * 0.9, w[0], w[1], w[2]], n, (ring) => mat(Math.max(0, ring - 2)), { seam: 'end' });
+}
+
 /** Arms and legs on the upright bones, each tube's band made of what `armMat`/`legMat` say (`ring` nought at the joint). */
 function limbs(s: Gob, n: number, o: { arm?: (part: 0 | 1, ring: number) => Mat; leg?: (part: 0 | 1, ring: number) => Mat; handMat?: Mat; footMat?: Mat }): Piece[] {
   const S = s.spec, out: Piece[] = [];
@@ -210,21 +218,23 @@ function limbs(s: Gob, n: number, o: { arm?: (part: 0 | 1, ring: number) => Mat;
   const h = hand(s.hand, n, o.handMat), f = foot(s.foot[0], s.foot[1], n, o.footMat);
   // Thin enough that eight round is as round as ten.
   const m = n - 2;
+  // Raised past the head, what of an arm is behind it is hidden by it.
+  const hide = [{ c: s.head.c, r: scale(s.head.r, 0.97) }];
   for (const [k, sd] of [[0, -1], [1, 1]] as Array<[number, number]>) {
     const front: V3 = [sd, 0.35, 0];
     const [a0, a1] = S.arm.len, [w0, w1] = s.armW;
     out.push(
-      { key: `arm${k}`, mesh: tube([[0, 0, 0.12], [0, 0, -a0]], [w0 * 1.08, w0 * 0.92], [w0 * 1.08, w0 * 0.92], m, (ring) => armMat(0, ring), { seam: 'both' }), bone: `arm${k}`, bias: 0.03, after: 'body', front, convex: true },
-      { key: `fore${k}`, mesh: tube([[0, 0, 0.05], [0, 0, -a1 * 0.45], [0, 0, -a1]], [w1, w1 * 1.04, w1 * 0.9], [w1, w1 * 1.04, w1 * 0.9], m, (ring) => armMat(1, ring), { seam: 'both' }), bone: `elbow${k}`, bias: 0.035, after: 'body', front, convex: true },
-      { key: `hand${k}`, mesh: sd < 0 ? mirrored(h) : h, bone: `hand${k}`, bias: 0.04, after: 'body', front },
+      { key: `arm${k}`, mesh: limbPart(a0, [w0 * 1.08, w0, w0 * 0.92], m, (ring) => armMat(0, ring)), bone: `arm${k}`, bias: 0.03, after: 'body', front, convex: true, hide, hideIn: 'head' },
+      { key: `fore${k}`, mesh: limbPart(a1, [w1, w1 * 1.04, w1 * 0.9], m, (ring) => armMat(1, ring)), bone: `elbow${k}`, bias: 0.035, after: 'body', front, convex: true, hide, hideIn: 'head' },
+      { key: `hand${k}`, mesh: sd < 0 ? mirrored(h) : h, bone: `hand${k}`, bias: 0.04, after: 'body', front, hide, hideIn: 'head' },
     );
   }
   for (const [key, sd] of [['ll', -1], ['lr', 1]] as Array<[string, number]>) {
     const front: V3 = [sd * 0.8, 0.5, 0];
     const [l0, l1] = S.leg.len, [w0, w1] = s.legW;
     out.push(
-      { key: `${key}0`, mesh: tube([[0, 0, 0.12], [0, 0, -l0]], [w0 * 1.1, w0 * 0.9], [w0 * 1.1, w0 * 0.9], m, (ring) => legMat(0, ring), { seam: 'both' }), bone: `${key}0`, bias: 0.01, after: ['body', 'hips'], front, convex: true },
-      { key: `${key}1`, mesh: tube([[0, 0, 0.05], [0, 0, -l1 * 0.45], [0, 0, -l1]], [w1, w1 * 0.95, w1 * 0.85], [w1, w1 * 0.95, w1 * 0.85], m, (ring) => legMat(1, ring), { seam: 'both' }), bone: `${key}1`, bias: 0.015, after: 'body', front, convex: true },
+      { key: `${key}0`, mesh: limbPart(l0, [w0 * 1.1, w0, w0 * 0.9], m, (ring) => legMat(0, ring)), bone: `${key}0`, bias: 0.01, after: ['body', 'hips'], front, convex: true },
+      { key: `${key}1`, mesh: limbPart(l1, [w1, w1 * 0.95, w1 * 0.85], m, (ring) => legMat(1, ring)), bone: `${key}1`, bias: 0.015, after: 'body', front, convex: true },
       { key: `${key}2`, mesh: sd < 0 ? mirrored(f) : f, bone: `${key}2`, bias: 0.02, after: 'body', front },
     );
   }
@@ -297,8 +307,8 @@ function ear(s: Gob, side: number, n: number): Mesh {
 /** Where along the blade arm's hand each look's blade is held, and how it is turned (`moved`). */
 const GRIP: Record<Look, { at: V3; yaw: number; pitch: number; roll: number }> = {
   A: { at: [0, 0.1, -0.12], yaw: -58, pitch: -50, roll: 0 },
-  B: { at: [0, 0.1, -0.12], yaw: -18, pitch: -58, roll: 0 },
-  C: { at: [0, 0.1, -0.12], yaw: -18, pitch: -56, roll: 0 },
+  B: { at: [0, 0.1, -0.12], yaw: -50, pitch: -50, roll: 0 },
+  C: { at: [0, 0.08, -0.12], yaw: -6, pitch: -84, roll: 0 },
 };
 
 
@@ -356,7 +366,7 @@ function bladeC(n: number): Mesh {
 /** A blade put in the hand as the look holds it. */
 function held(s: Gob, n: number): Mesh {
   const g = GRIP[s.look], m0 = s.look === 'A' ? bladeA(n) : s.look === 'B' ? bladeB(n) : bladeC(n);
-  const k = s.look === 'A' ? 1.18 : s.look === 'B' ? 1.08 : 1.1, m = mesh(m0.v.map((p) => scale(p, k)), m0.f);
+  const k = s.look === 'A' ? 1.18 : s.look === 'B' ? 1.08 : 1.05, m = mesh(m0.v.map((p) => scale(p, k)), m0.f);
   return moved(m, g.at, g.yaw, g.pitch, g.roll);
 }
 /** The blade's tip in the hand's frame. */
@@ -394,16 +404,18 @@ function buildGob(s: Gob, lod: number): Piece[] {
   let hips: Mesh;
   let arm: ((part: 0 | 1, ring: number) => Mat) | undefined;
   let leg: ((part: 0 | 1, ring: number) => Mat) | undefined;
+  // The tunic or jerkin below the belt, drawn over the tops of the thighs from every side, as the Hexer's kilt is.
+  let skirt: Mesh | undefined;
   if (s.look === 'A') {
     // A tunic too big for it, of a hide gone pale, with a mint patch stitched on its chest and another on its back, a rope belt
     // with a bone charm and a pouch hung off it; a top-knot of dark hair tied in a brass ring.
-    // Its hem ragged: every other corner of the bottom ring drawn up and in.
-    const whole = tube([[0, 0, -0.46], [0, 0.03, 0.02], [0, 0.04, 0.55], [0, 0.02, 0.95], [0, 0, 1.12]], [0.72, 0.74, 0.68, 0.56, 0.32], [0.64, 0.66, 0.6, 0.5, 0.3], n, 'leather', { up: [0, 1, 0], start: false });
-    const tunic = mesh(whole.v.map((p, q) => (q < n && q % 2 === 1 ? [p[0] * 0.9, p[1] * 0.9, p[2] + 0.2] as V3 : p)), whole.f);
+    // The tunic above the belt on the body; below it, a piece of its own (\`skirt\`) over the thighs, its hem ragged: every other
+    // corner of the bottom ring drawn up and in.
+    const tunic = tube([[0, 0.03, 0.02], [0, 0.04, 0.55], [0, 0.02, 0.95], [0, 0, 1.12]], [0.74, 0.68, 0.56, 0.32], [0.66, 0.6, 0.5, 0.3], n, 'leather', { up: [0, 1, 0], start: false });
+    const hem = tube([[0, 0, -0.46], [0, 0.03, 0.1]], [0.72, 0.745], [0.64, 0.665], n, 'leather', { up: [0, 1, 0], start: false, end: false });
     const patches: Disc[] = [
       disc([0.24, 0.66, 0.58], [0.3, 1, 0.05], 0.2, 0.17, 4, 'petal', { spin: 0.25 }),
       disc([-0.2, -0.6, 0.4], [-0.3, -1, 0], 0.22, 0.2, 4, 'leatherDark', { spin: 0.6 }),
-      disc([-0.36, 0.56, -0.18], [-0.5, 1, -0.1], 0.13, 0.1, 5, 'leatherDark'),
     ];
     const belt = tube([[0, 0.02, 0.08], [0, 0.02, 0.2]], 0.78, 0.7, n, 'bark', { up: [0, 1, 0] });
     const hung = merge(
@@ -416,7 +428,8 @@ function buildGob(s: Gob, lod: number): Piece[] {
     // A strap of dark hide across it from the right hip over the left shoulder, a scabbard's that has lost its scabbard.
     const strap = tube([[0.52, 0.5, 0.2], [0.06, 0.68, 0.6], [-0.36, 0.52, 0.98], [-0.44, 0, 1.14], [-0.34, -0.52, 0.95], [0.1, -0.64, 0.55], [0.52, -0.52, 0.2]], 0.075, 0.035, 4, 'leatherDark', { start: false, end: false });
     body = merge(tunic, paint(patches), belt, strap);
-    worn.push(hung);
+    skirt = merge(mesh(hem.v.map((p, q) => (q < n && q % 2 === 1 ? [p[0] * 0.9, p[1] * 0.9, p[2] + 0.2] as V3 : p)), hem.f),
+      paint([disc([-0.36, 0.58, -0.18], [-0.5, 1, -0.1], 0.13, 0.1, 5, 'leatherDark')]), hung);
     hips = orb([0, 0, 0], [0.56, 0.48, 0.44], n - 2, k - 1, 'leatherDark');
     // Rag wound round each forearm, two bands of it.
     arm = (part, ring) => (part === 1 && (ring === 1 || ring === 2) ? 'muzzle' : 'coat');
@@ -430,9 +443,11 @@ function buildGob(s: Gob, lod: number): Piece[] {
   } else if (s.look === 'B') {
     // A plum hood over the head with a drooping point, ears out through it; a short cape off the shoulders; a hide jerkin
     // under it, a sash of mint at the waist; leather wraps on the forearms and the shins.
-    const jerk = tube([[0, 0, -0.38], [0, 0.03, 0.05], [0, 0.04, 0.55], [0, 0.02, 0.95], [0, 0, 1.12]], [0.66, 0.72, 0.68, 0.56, 0.32], [0.6, 0.64, 0.6, 0.5, 0.3], n, 'leather', { up: [0, 1, 0] });
-    const sash = merge(
-      tube([[0, 0.02, 0.1], [0, 0.02, 0.24]], 0.77, 0.69, n, 'petal', { up: [0, 1, 0] }),
+    // The jerkin above the sash on the body, and below it a piece of its own over the thighs (\`skirt\`).
+    const jerk = tube([[0, 0.03, 0.05], [0, 0.04, 0.55], [0, 0.02, 0.95], [0, 0, 1.12]], [0.72, 0.68, 0.56, 0.32], [0.64, 0.6, 0.5, 0.3], n, 'leather', { up: [0, 1, 0], start: false });
+    const sash = tube([[0, 0.02, 0.1], [0, 0.02, 0.24]], 0.77, 0.69, n, 'petal', { up: [0, 1, 0] });
+    skirt = merge(
+      tube([[0, 0, -0.38], [0, 0.03, 0.12]], [0.66, 0.725], [0.6, 0.645], n, 'leather', { up: [0, 1, 0], start: false, end: false }),
       taper([[-0.46, 0.5, 0.14], [-0.5, 0.56, -0.12], [-0.46, 0.52, -0.34]], 0.1, 0.06, 4, 'petal'),
     );
     // The cape: the back two thirds of a ring round the shoulders, flaring down to the hips, plum without and darker within.
@@ -443,9 +458,11 @@ function buildGob(s: Gob, lod: number): Piece[] {
       // Facet j's middle is at angle a from the +x axis toward +y (the front): kept where it is round the back.
       return Math.sin(a) < 0.25 ? 'cap' : 'glint';
     }, { up: [0, 1, 0], start: false, end: false });
-    const cape = only(whole, (m) => (m === 'cap' ? 'cap' : null));
-    const lining = only(insideOut(whole), (m) => (m === 'cap' ? 'membrane' : null));
-    pieces.push({ key: 'cape', mesh: merge(cape, lining), bone: 'chest', bias: -0.02, under: ['head'] });
+    // The ring is wound facing in (its rings run down), so its outside is the ring turned inside out.
+    const cape = only(insideOut(whole), (m) => (m === 'cap' ? 'cap' : null));
+    const lining = only(whole, (m) => (m === 'cap' ? 'membrane' : null));
+    // Over the body and the jerkin's skirt seen from behind, under them from in front; the hood over it (`hood`).
+    pieces.push({ key: 'cape', mesh: merge(cape, lining), bone: 'chest', bias: 0.02, after: ['body', 'skirt'], front: [0, -1, 0] });
     body = merge(jerk, sash);
     hips = orb([0, 0, 0], [0.6, 0.52, 0.48], n - 2, k - 1, 'leatherDark');
     arm = (part, ring) => (part === 1 && ring >= 1 ? 'leatherDark' : 'coat');
@@ -457,7 +474,7 @@ function buildGob(s: Gob, lod: number): Piece[] {
     const hood = tube(ys.map((y) => [0, y, H.c[2] + 0.1] as V3), prof.map((p) => p * H.r[0] * 1.1), prof.map((p) => p * H.r[2] * 1.16), n,
       'cap', { up: [0, 0, 1], end: false });
     const point = taper(curve(add(H.c, [0, -H.r[1] * 0.9, H.r[2] * 0.7]), add(H.c, [0, -H.r[1] * 1.5, H.r[2] * 0.85]), add(H.c, [0.1, -H.r[1] * 2.0, H.r[2] * 0.25]), 3), 0.3, 0.03, 6, 'cap');
-    pieces.push({ key: 'hood', mesh: merge(hood, point), bone: 'head', bias: 0.205, after: 'head' });
+    pieces.push({ key: 'hood', mesh: merge(hood, point), bone: 'head', bias: 0.205, after: ['head', 'cape'] });
     // The ears out through the hood: what of them is inside it hidden by it.
     const hoodSolid = [{ c: [0, H.c[1] - 0.12, H.c[2] + 0.14] as V3, r: [H.r[0] * 1.06, H.r[1] * 1.06, H.r[2] * 1.14] as V3 }];
     ears = ears.map((e) => ({ ...e, after: ['head', 'hood'], hide: hoodSolid }));
@@ -472,7 +489,7 @@ function buildGob(s: Gob, lod: number): Piece[] {
         ...[0, 1, 2, 3, 4, 5].map((q) => disc(add([-0.105, 0, 0], [0, Math.cos((q / 6) * TAU + 0.5) * R * 0.93, Math.sin((q / 6) * TAU + 0.5) * R * 0.93]), [-1, 0, 0], 0.04, 0.04, 4, 'spot', { lit: true })),
       ]),
     );
-    pieces.push({ key: 'shield', mesh: moved(moved(shield, [0, 0, 0], 70, 0, 0), [-0.12, 0.08, 0.25], 0, 0, 0), bone: 'elbow0', bias: 0.08, after: ['fore0', 'hand0', 'body'], front: [-1, 0.6, 0] });
+    pieces.push({ key: 'shield', mesh: moved(moved(shield, [0, 0, 0], 0, 0, -55), [-0.32, 0.1, -0.1], 0, 0, 0), bone: 'elbow0', bias: 0.08, after: ['fore0', 'hand0', 'body'], front: [-1, 0.6, 0] });
   } else {
     // Bare to the waist, mint runes painted on its chest and belly; a necklace of teeth with a rune-stone hung from it; a skirt of
     // hide strips; a horned skull worn on its head, two feathers stuck in it.
@@ -528,11 +545,13 @@ function buildGob(s: Gob, lod: number): Piece[] {
   const blade1 = held(s, n);
   pieces.push(
     { key: 'hips', mesh: hips, bone: 'body', bias: 0 },
+    ...(skirt ? [{ key: 'skirt', mesh: skirt, bone: 'chest', bias: 0.012, after: ['ll0', 'lr0', 'hips', 'body'] }] : []),
     { key: 'body', mesh: merge(body, ...worn), bone: 'chest', bias: 0.005, breathes: { c: [0, 0, 0.4], k: 0.04 } },
     { key: 'head', mesh: merge(F.skull, F.face, F.look(false), ...headExtra, ...crown), shut: merge(F.skull, F.face, F.look(true), ...headExtra, ...crown), bone: 'head', bias: 0.2 },
     { key: 'brows', mesh: F.brows, bone: 'head', bias: 0.21, after: 'head', hide },
     ...ears,
-    { key: 'sword', mesh: blade1, bone: 'hand1', bias: 0.05, after: ['hand1', 'body'], front: [1, 0.4, 0] },
+    // The blade over the hand and the body; and, raised past the head from behind, what of it is behind the head hidden by it.
+    { key: 'sword', mesh: blade1, bone: 'hand1', bias: 0.05, after: ['hand1', 'body'], front: [1, 0.4, 0], hide: [{ c: H.c, r: scale(H.r, 0.97) }], hideIn: 'head' },
     ...limbs(s, n, { arm, leg }),
   );
   return pieces;
@@ -555,14 +574,16 @@ type Tri = [number, number, number];
 const mix3 = (a: Tri, b: Tri, t: number): Tri => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 /**
  * The blade arm (forward, out, elbow, past how it hangs) at each moment of a strike, for each look: held ready, drawn back,
- * and at the blow. Fitted to put the hand and the blade where each wants them: the Scrapper's cleaver up before it, raised
- * over its head and chopped down ahead of it; the Raider's blade out at its side, drawn back high and swept across; the
- * Hexer's knife point up before it, lifted and stabbed down.
+ * and at the blow. Each fitted to put the hand and the blade where it wants them and searched along the whole of the
+ * blow, a twentieth at a time, for a path that keeps the arm and the blade clear of the head and the body: the
+ * Scrapper's cleaver held out before it, raised high and chopped down ahead of it; the Raider's blade out low at its
+ * side, raised over the shield and swept across; the Hexer's knife held point down in its fist, drawn back to its hip
+ * and driven forward and down.
  */
 const ARM: Record<Look, { ready: Tri; back: Tri; hit: Tri }> = {
-  A: { ready: [40, -12, 64], back: [176, -20, 0], hit: [80, 6, 6] },
-  B: { ready: [-8, -24, 70], back: [76, 80, 140], hit: [100, 44, -6] },
-  C: { ready: [20, 4, 66], back: [140, -12, -6], hit: [70, 0, 4] },
+  A: { ready: [60, 24, -10], back: [100, -30, 20], hit: [50, 30, 0] },
+  B: { ready: [20, -20, 66], back: [70, -30, 35], hit: [84, 52, -10] },
+  C: { ready: [28, -20, 70], back: [-50, 24, 110], hit: [88, -16, -10] },
 };
 
 function posed(s: Gob): (a: Anim) => Bones {
@@ -573,8 +594,8 @@ function posed(s: Gob): (a: Anim) => Bones {
     const sw = p.arms[1][0];
     p.arms[1] = [A.ready[0] + sw * 0.3, A.ready[1], A.ready[2]];
     if (s.look === 'B') {
-      // The shield up before it.
-      p.arms[0] = [p.arms[0][0] * 0.3 + 70, p.arms[0][1] + 6, p.arms[0][2] + 48];
+      // The shield up before it, clear of its face.
+      p.arms[0] = [p.arms[0][0] * 0.15 + 24, 24, 58];
     } else if (s.look === 'C') {
       // The other hand hung low and open, a little out.
       p.arms[0] = [p.arms[0][0] * 0.5 + 8, p.arms[0][1] + 10, p.arms[0][2] + 8];
@@ -583,16 +604,31 @@ function posed(s: Gob): (a: Anim) => Bones {
     if (act >= 0) {
       const { back, chop, home } = strikeOf(act);
       const up = back * (1 - chop), down = chop * (1 - home);
-      // Drawn back, the blade high and the body leant away from what it hits; then a lunge, the body forward and the blade
-      // through where what it hits is; then back to standing.
       p.arms[1] = mix3(mix3(mix3(A.ready, A.back, back), A.hit, chop), A.ready, home);
-      if (s.look === 'B') p.arms[0] = [p.arms[0][0] + 14 * down, p.arms[0][1] + 10 * up, p.arms[0][2] - 10 * down];
-      else if (s.look === 'C') p.arms[0] = [p.arms[0][0] + 50 * up, p.arms[0][1] + 20 * up, p.arms[0][2] + 30 * up];
-      else p.arms[0] = [p.arms[0][0] + 30 * up - 20 * down, p.arms[0][1] + 20 * up, p.arms[0][2] + 20 * up];
-      p.chest = [p.chest[0] - 12 * up + 22 * down, p.chest[1] - 10 * up + 12 * down, p.chest[2]];
-      p.head = [p.head[0] + 8 * up - 10 * down, p.head[1] * 0.3, p.head[2]];
-      p.lift += 0.12 * up - 0.06 * down;
-      if (a.go <= 0) p.legs = [[p.legs[0][0] - 10 * down, 0.1 * up, 0], [p.legs[1][0] + 26 * down, 0.25 * up, 0]];
+      if (s.look === 'A') {
+        // An overhead chop: leant back with the cleaver up, then the whole body brought down behind it, a step in.
+        p.arms[0] = [p.arms[0][0] + 30 * up - 20 * down, p.arms[0][1] + 20 * up, p.arms[0][2] + 20 * up];
+        p.chest = [p.chest[0] - 12 * up + 22 * down, p.chest[1] - 10 * up + 12 * down, p.chest[2]];
+        p.head = [p.head[0] + 8 * up - 10 * down, p.head[1] * 0.3, p.head[2]];
+        p.lift += 0.12 * up - 0.06 * down;
+        if (a.go <= 0) p.legs = [[p.legs[0][0] - 10 * down, 0.1 * up, 0], [p.legs[1][0] + 26 * down, 0.25 * up, 0]];
+      } else if (s.look === 'B') {
+        // A sweep from behind the shield: turned away with the blade up over it, then turned through the blow, the shield
+        // pushed out at the end of it.
+        p.arms[0] = [p.arms[0][0] + 18 * down, p.arms[0][1] - 8 * up, p.arms[0][2] - 14 * down];
+        p.chest = [p.chest[0] - 6 * up + 14 * down, p.chest[1] - 6 * up + 8 * down, p.chest[2] + 16 * up - 20 * down];
+        p.head = [p.head[0] + 4 * up - 6 * down, p.head[1] * 0.3 - 10 * up + 10 * down, p.head[2]];
+        p.lift += 0.04 * up;
+        if (a.go <= 0) p.legs = [[p.legs[0][0] + 8 * up - 6 * down, 0.15 * up, 0], [p.legs[1][0] - 6 * up + 22 * down, 0.1 * up, 0]];
+      } else {
+        // A lunge: crouched low with the knife drawn back to its hip and the free hand's claws out before it, then sprung
+        // forward off its back foot, the knife driven down ahead of it.
+        p.arms[0] = [p.arms[0][0] + 50 * up + 20 * down, p.arms[0][1] + 16 * up, p.arms[0][2] + 30 * up];
+        p.chest = [p.chest[0] - 8 * up + 16 * down, p.chest[1] + 8 * up - 6 * down, p.chest[2] + 14 * up - 10 * down];
+        p.head = [p.head[0] + 6 * up - 4 * down, p.head[1] * 0.3, p.head[2]];
+        p.lift += -0.12 * up + 0.16 * down;
+        if (a.go <= 0) p.legs = [[p.legs[0][0] + 6 * up - 22 * down, 0.4 * up, 0], [p.legs[1][0] - 4 * up + 34 * down, 0.4 * up + 0.15 * down, 0]];
+      }
       p.jaw = up;
       return;
     }
@@ -624,7 +660,7 @@ function posed(s: Gob): (a: Anim) => Bones {
       p.head[2] += 14 * cyc(t, 2, 1.2);
       p.head[1] = 10 * drift(t, 2.1);
       const charm = beat(t, [3.0, 13.0, 19.5], 2.6);
-      p.arms[0] = [p.arms[0][0] + 70 * charm, p.arms[0][1] - 28 * charm, p.arms[0][2] + 70 * charm + 8 * charm * Math.sin(t * TAU * 3)];
+      p.arms[0] = [p.arms[0][0] + 50 * charm, p.arms[0][1] + 38 * charm, p.arms[0][2] + 26 * charm + 8 * charm * Math.sin(t * TAU * 3)];
       p.legs = p.legs.map((l) => [l[0] + 4 * cyc(t, 2), l[1] + 0.1, l[2]] as [number, number, number]);
     }
   });
@@ -668,6 +704,33 @@ function slash(g: CanvasRenderingContext2D, view: View, s: Gob, bones: (a: Anim)
   g.beginPath();
   outer.forEach(([x, y], q) => (q ? g.lineTo(x, y) : g.moveTo(x, y)));
   g.stroke();
+  // At the blow, where the tip lands: the Scrapper's cleaver throws gold sparks off its edge, the Hexer's knife a mint star
+  // of its runes' light. The Raider's sweep is its band alone.
+  const since = t - HIT;
+  if (since >= -0.02 && since < 0.24 && s.look !== 'B') {
+    const [x, y] = outer[outer.length - 1], u = clamp((since + 0.02) / 0.26), al = (1 - u) * fade;
+    if (s.look === 'A') {
+      g.strokeStyle = `rgba(255,214,120,${al})`;
+      g.lineWidth = 0.07;
+      for (let q = 0; q < 5; q++) {
+        const ang = -Math.PI * (0.15 + 0.17 * q), r0 = 0.15 + 0.7 * u, r1 = r0 + 0.25 * (1 - u);
+        g.beginPath();
+        g.moveTo(x + Math.cos(ang) * r0, y + Math.sin(ang) * r0);
+        g.lineTo(x + Math.cos(ang) * r1, y + Math.sin(ang) * r1);
+        g.stroke();
+      }
+    } else {
+      const r = 0.3 + 0.55 * Math.sin(Math.PI * Math.min(1, u * 1.6)), w = r * 0.22;
+      g.fillStyle = `rgba(160,255,222,${0.9 * al})`;
+      g.beginPath();
+      for (let q = 0; q < 8; q++) {
+        const ang = (q / 8) * TAU, rr = q % 2 ? w : r;
+        g.lineTo(x + Math.cos(ang) * rr, y + Math.sin(ang) * rr * 0.9);
+      }
+      g.closePath();
+      g.fill();
+    }
+  }
   g.restore();
 }
 
@@ -709,5 +772,10 @@ function goblinKind(s: Gob): Kind {
   };
 }
 
-/** The three proposed goblins, by letter. */
+/** The three goblins, by letter. */
 export const GOBLIN_RUNECUT: Record<Look, Kind> = { A: goblinKind(LOOKS.A), B: goblinKind(LOOKS.B), C: goblinKind(LOOKS.C) };
+/**
+ * The goblin's subspecies, one for each of its variants in their order (`SpeciesDef.subspecies`): the Scrapper, the
+ * Raider and the Hexer Goblin. The line draws a goblin as its variant's (`wildermonKind`).
+ */
+export const GOBLINS: readonly Kind[] = [GOBLIN_RUNECUT.A, GOBLIN_RUNECUT.B, GOBLIN_RUNECUT.C];

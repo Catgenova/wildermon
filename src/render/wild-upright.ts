@@ -1,5 +1,5 @@
 import {
-  add, beat, bend, bipedBones, coatPalette, cross, curve, cyc, darker, disc, drift, eyes, lighter, merge, mirrored, mix, moved, onEgg, orb, orbAlong, paint,
+  add, beat, bend, bipedBones, coatPalette, cross, curve, cyc, darker, disc, eyes, lighter, merge, mirrored, mix, moved, onEgg, orb, orbAlong, paint,
   pastel, scale, sub, taper, TAU, tube, unit, type BipedPose, type BipedSpec, type Disc, type Kind, type Piece,
 } from './beasts';
 import type { Mat, Mesh, V3 } from './figure';
@@ -7,10 +7,11 @@ import { blade, cut } from './beastkit';
 import { MONSTER_GROWTH } from './monster-size';
 
 /**
- * The ones that stand up: the three bad things of the high ground -- the
- * goblin, the orc and the ogre -- each a chunky soft-edged body like every
- * other wildermon, and each with what it carries in its hand. (The tinka is
- * the mend line now, `./wild-mend`.)
+ * The ones that stand up: the bad things of the high ground -- the orc, and
+ * the ogre's bones -- each a chunky soft-edged body like every other
+ * wildermon, and each with what it carries in its hand. (The tinka is the
+ * mend line now, `./wild-mend`; the goblin's three subspecies are
+ * `./goblin-runecut`, the ogre's `./wild-ogre`.)
  */
 
 /** Arms and legs on the upright bones: an upper and a lower tube down each, a hand and a foot as the kind makes them. */
@@ -120,148 +121,7 @@ export function glower(c: V3, r: V3, dir: V3, size: number, o: { tall?: number; 
   return { lids: paint(lids), brows: merge(...brows) };
 }
 
-/**
- * A mouth laid along the skin of a head through `dirs` (ways out of the
- * middle of it), `w` thick, with teeth hanging from the top of it: each tooth
- * where along the mouth it is (nought to one) and how long.
- */
-function grin(c: V3, r: V3, dirs: V3[], w: number, teeth: Array<[number, number]>): Mesh {
-  const on = dirs.map((d) => onEgg(c, r, d));
-  const pts = on.map(({ p, n }) => add(p, scale(n, w * 0.8)));
-  const fangs = teeth.map(([f, len]): Disc => {
-    const x = f * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(x)), k = x - i;
-    const n = unit(add(scale(on[i].n, 1 - k), scale(on[i + 1].n, k)));
-    const along = unit(sub(pts[i + 1], pts[i]));
-    let down = unit(cross(along, n));
-    if (down[2] > 0) down = scale(down, -1);
-    const base = add(add(pts[i], scale(sub(pts[i + 1], pts[i]), k)), scale(n, w * 1.3));
-    return { v: outward([add(base, scale(along, -len * 0.42)), add(base, scale(along, len * 0.42)), add(base, scale(down, len))], n), m: 'tooth' };
-  });
-  return merge(tube(pts, w, w, 4, 'nose'), paint(fangs));
-}
-
-/* ---- the goblin -------------------------------------------------------------------- */
-
-/**
- * A goblin: knee-high, green-grey and entirely malice, all ears and grin,
- * in a jerkin somebody else made -- patched, belted, too big -- and holding
- * a notched blade it did not make either.
- */
-const GOBLIN_SPEC: BipedSpec = {
-  high: 1.0,
-  leg: { at: [0.34, 0, -0.1], len: [0.46, 0.46, 0.1], rest: [16, -32] },
-  chest: { at: [0, 0, 0.18], lean: 20 },
-  neck: { at: [0, 0.12, 1.02], len: 0.2, lean: 0 },
-  head: { pitch: -8 },
-  arm: { at: [0.68, 0.1, 0.8], len: [0.5, 0.5], rest: [10, 16, 30] },
-  swing: [32, 46],
-  waddle: 6,
-  armSwing: 24,
-};
-
-const GOBLIN_HEAD = { c: [0, 0.14, 0.58] as V3, r: [0.95, 0.9, 0.84] as V3 };
-
-/** Where the cutting edge of the goblin's blade is, along it: its line, with two notches bitten out of it. */
-const GOBLIN_EDGE: Array<[number, number]> = [[0.05, 0.2], [0.3, 0.26], [0.52, 0.27], [0.62, 0.06], [0.72, 0.26], [0.9, 0.25], [1.0, 0.07], [1.1, 0.22], [1.3, 0.14], [1.48, 0.02]];
-
-function goblinBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  // The jerkin: leather, too big for it, belted, with a patch sewn on in another leather.
-  const jerkin = merge(
-    tube([[0, 0, -0.35], [0, 0.03, 0.05], [0, 0.04, 0.55], [0, 0.02, 0.95], [0, 0, 1.12]], [0.66, 0.72, 0.68, 0.56, 0.32], [0.6, 0.64, 0.6, 0.5, 0.3], n, 'leather', { up: [0, 1, 0] }),
-    tube([[0, 0.02, 0.12], [0, 0.02, 0.24]], 0.76, 0.68, n, 'leatherDark', { up: [0, 1, 0] }),
-    paint([disc([0.28, 0.64, 0.6], [0.3, 1, 0], 0.18, 0.2, 4, 'mark', { spin: 0.3 }), disc([0, 0.72, 0.18], [0, 1, 0], 0.1, 0.08, 4, 'crystal')]),
-  );
-  const H = GOBLIN_HEAD;
-  const skull = orb(H.c, H.r, n + 1, k + 1, 'coat');
-  // Malice: the eyes big and yellow under lids that slope down to a long nose, and a grin laid right round the face with three
-  // teeth in it. The eyes far enough round that one is whole inside the outline seen side on.
-  const eyeDir: V3 = [0.66, 0.74, 0.12];
-  const { lids, brows } = glower(H.c, H.r, eyeDir, 0.3, { tall: 0.95, drop: 0.42, slope: 0.32, brow: 0.08 });
-  const face = merge(
-    orbAlong(add(H.c, [0, 1.0, -0.1]), [0, 1, -0.35], [0.17, 0.3, 0.3], n, k, 'coat'),
-    grin(H.c, H.r, [[-0.55, 0.8, -0.28], [-0.3, 0.9, -0.5], [0, 0.9, -0.58], [0.3, 0.9, -0.5], [0.55, 0.8, -0.28]], 0.045, [[0.3, 0.15], [0.55, 0.17], [0.74, 0.14]]),
-  );
-  const look = (shut: boolean): Mesh => merge(eyes(H.c, H.r, eyeDir, 0.3, { tall: 0.95, shut, iris: 'bloom', pupil: 0.32, rim: 0 }), lids);
-  // Ears: long and pointed, swept out and back from the sides of the head and a little up, pink inside, so that they show their
-  // length seen side on and make a V seen from in front. Each is thick at the root and its flat rolled toward the sky, so the far
-  // one, seen past the head from in front and to the side, is a pointed ear and not a leaf seen edge on as a stick.
-  const earThick = [0.16, 0.15, 0.12, 0.07, 0.01];
-  const ear = (s: number): Mesh => {
-    const root = add(H.c, [s * 0.72, -0.05, 0.25]), mid = add(H.c, [s * 1.12, -0.5, 0.42]), tip = add(H.c, [s * 1.58, -1.22, 0.62]);
-    const along = unit(sub(tip, root)), up: V3 = [s * 0.45, 0.35, 0.82];
-    const face = unit(sub(up, scale(along, along[0] * up[0] + along[1] * up[1] + along[2] * up[2])));
-    // The pink laid on the flat two fifths of the way out, where the ear is between its second ring and its third.
-    const lift = earThick[1] + (earThick[2] - earThick[1]) * 0.6 + 0.01;
-    return merge(
-      tube(curve(root, mid, tip, 4), [0.34, 0.33, 0.25, 0.12, 0.01], earThick, n, 'coat', { up }),
-      paint([disc(add(bend(root, mid, tip, 0.4), scale(face, lift)), face, 0.34, 0.15, 6, 'inner', { up: cross(face, along) })]),
-    );
-  };
-  // The blade: short, broad and notched, in dark iron with its edge ground bright; a bar for a guard, a grip bound in rag. Its
-  // back is straight, and the notches are bitten out of its edge.
-  const back = -0.2;
-  const sword = merge(
-    blade(GOBLIN_EDGE.map(([y, e]) => [0, y, (e + back) / 2] as V3), GOBLIN_EDGE.map(([, e]) => (e - back) / 2), [1, 0, 0], { mat: 'stone', rib: 'stoneDark', fold: 0.04, thick: 0.06 }),
-    blade(GOBLIN_EDGE.slice(0, -1).map(([y, e]) => [0, y, e - 0.035] as V3), GOBLIN_EDGE.slice(0, -1).map(() => 0.035), [1, 0, 0], { mat: 'spot', fold: 0, thick: 0.075 }),
-    tube([[0, 0.03, -0.26], [0, 0.03, 0.3]], 0.055, 0.055, 5, 'bark'),
-    tube([[0, 0.02, 0], [0, -0.28, 0]], 0.06, 0.06, 5, 'leatherDark'),
-  );
-  // Held tipped out, away from its own face.
-  const grip = moved(sword, [0, 0.1, -0.12], -28, -30, 0);
-  const hide = [{ c: H.c, r: H.r }];
-  return [
-    { key: 'hips', mesh: orb([0, 0, 0], [0.6, 0.52, 0.48], n, k, 'leatherDark'), bone: 'body', bias: 0 },
-    { key: 'body', mesh: jerkin, bone: 'chest', bias: 0.005, breathes: { c: [0, 0, 0.4], k: 0.04 } },
-    { key: 'head', mesh: merge(skull, face, look(false)), shut: merge(skull, face, look(true)), bone: 'head', bias: 0.2 },
-    { key: 'brows', mesh: brows, bone: 'head', bias: 0.21, after: 'head', hide },
-    // Each ear a piece of its own, over the head and hidden where it goes round behind it: laid back along the head as they are,
-    // the head would otherwise cover the near one from one side and the far one would show through it from the other.
-    { key: 'ear0', mesh: ear(-1), bone: 'head', bias: 0.21, after: 'head', hide },
-    { key: 'ear1', mesh: ear(1), bone: 'head', bias: 0.21, after: 'head', hide },
-    { key: 'sword', mesh: grip, bone: 'hand1', bias: 0.05, after: ['hand1', 'body'], front: [1, 0.4, 0] },
-    ...limbs({ n, arm: [0.5, 0.5], armW: [0.16, 0.14], hand: hand(0.18, 4, 0.22, n), leg: [0.46, 0.46], legW: [0.2, 0.17], foot: pawFoot(0.19, 0.5, n) }),
-  ];
-}
-
 export { MONSTER_GROWTH };
-
-export const GOBLIN: Kind = {
-  bones: (a) => bipedBones(GOBLIN_SPEC, a, (p: BipedPose) => {
-    // The blade held out ahead of it at the belly, point forward and out, going or standing: low enough that seen side on it is
-    // under the face rather than across it however far the head turns, and seen from in front and to the side, out past the grin.
-    p.arms[1] = [p.arms[1][0] * 0.4 + 14, p.arms[1][1] + 33, p.arms[1][2] + 10];
-    if (a.go > 0) return;
-    const t = a.t;
-    // Shifty: a quick look to one side, held a moment and snapped back, then one to the other -- never so far round that its face
-    // is gone, and between them facing ahead, so that seen side on its face is there most of the time -- a crouch, and the flat
-    // of the blade slapped into the other palm.
-    const glance = (at: number[]): number => Math.min(1, 2 * beat(t, at, 2.4));
-    const shift = glance([0.6, 9.4, 16.8]) - glance([5.4, 13.6, 21.2]) + 0.15 * drift(t, 1.3);
-    p.head[1] = 14 * shift;
-    p.neck[1] = 4 * shift;
-    const slap = beat(t, [4.4, 12.8, 20.1], 0.7);
-    p.arms[0] = [p.arms[0][0] + 40 * slap, p.arms[0][1] - 10 * slap, p.arms[0][2] + 50 * slap];
-    p.arms[1] = [p.arms[1][0] + 10 * slap, p.arms[1][1] - 12 * slap, p.arms[1][2] + 10 * slap];
-    p.legs = p.legs.map((l) => [l[0] + 6 * (0.5 + 0.5 * cyc(t, 3)), l[1] + 0.12 * (0.5 + 0.5 * cyc(t, 3)), l[2]] as [number, number, number]);
-  }),
-  build: goblinBuild,
-  palette: (coat, mark) => {
-    // The green-grey skin taken halfway to a pale lime: the variants' own green-grey is nearly the colour of the grass it stands on,
-    // and this stands off it by being lighter and yellower.
-    const skin = mix(pastel(coat, 90), [214, 226, 160], 0.5);
-    return coatPalette(coat, mark, {
-      coat: skin, coatLight: lighter(skin, 0.2),
-      leather: [176, 128, 96], leatherDark: [140, 98, 76], mark: mix(pastel(mark), [196, 150, 110], 0.5), bloom: [250, 220, 90], lid: darker(pastel(coat), 0.3),
-      coatDark: darker(pastel(coat), 0.45), stone: [150, 158, 172], stoneDark: [122, 130, 146], spot: [236, 242, 250], bark: [150, 110, 84], crystal: [226, 200, 120],
-      nose: [70, 50, 60], tooth: [250, 246, 226],
-    }, 90);
-  },
-  shadow: [1.1, 1.0],
-  stride: 1.7,
-  size: 2.0 * MONSTER_GROWTH,
-  blinks: 3,
-};
 
 /* ---- the orc ----------------------------------------------------------------------- */
 

@@ -4101,11 +4101,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: null,
     workRange: 0,
+    // One skin each for its three subspecies, in their order: olive, grey-sage, dark moss.
     variants: [
-      ['#6f7f52', '#c3cf9e'],
-      ['#5d6d48', '#aab98a'],
-      ['#7c8a5e', '#d0daa9'],
+      ['#8a9a52', '#c8d49a'],
+      ['#76885e', '#b4c0a0'],
+      ['#5e7046', '#9aae86'],
     ],
+    subspecies: ['Scrapper Goblin', 'Raider Goblin', 'Hexer Goblin'],
     butcher: { meat: 2, leather: 3, bone: 4, sinew: 2 },
     hunter: true,
     pack: true,

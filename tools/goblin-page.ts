@@ -1,18 +1,20 @@
 /**
- * The page `tools/goblin-shot.mjs` opens to look the goblin's proposed looks
- * over (`GOBLIN_RUNECUT` in `src/render/goblin-runecut.ts`): for one look, a
- * sheet of it close up at all eight turns, standing, looking about, walking,
- * running and striking; then at the size the island is played at, by day and
- * by night, marked as hostile and not, on the game's own ground through the
- * game's own renderer; and a lineup of every look beside the live goblin and
- * revamped wildermon.
+ * The page `tools/goblin-shot.mjs` opens to look the goblin's three subspecies
+ * over (`GOBLIN_RUNECUT` in `src/render/goblin-runecut.ts`; A the Scrapper, B
+ * the Raider, C the Hexer Goblin): for one, a sheet of it close up at all eight
+ * turns, standing, looking about, walking, running and striking; then at the
+ * size the island is played at, by day and by night, marked as hostile and
+ * not, on the game's own ground through the game's own renderer, put out in
+ * its own variant so the line draws it as that subspecies; and a lineup of all
+ * three beside revamped wildermon.
  *
  * Driven through `window.gob`: `sheet(look)` lays the sheet out for one look,
  * `lineup()` the lineup, `big(...)` single looks big, `refs(...)` wildermon
  * big; `fresh(look, lod)` times a goblin drawn afresh, `pieces(look)` what
  * each of its pieces costs, and `bench(look, n)` a crowd of goblins drawn
- * afresh and on the island. The look is swapped onto the live `GOBLIN` kind
- * for the page only (`Object.assign`), so the island draws it as a goblin.
+ * afresh and on the island. Drawn close up, the look is put on a kind of the
+ * page's own (`GOBLIN`, `Object.assign`); on the island, each goblin is drawn
+ * as its variant's subspecies, as the game draws it.
  *
  * A tool and nothing else: the island it draws is a local copy of the rules
  * (`Game.create`), as the falls page's is, never a game for anybody to play.
@@ -26,7 +28,6 @@ import { HALF_H, HALF_W } from '../src/render/iso';
 import { levelSkill, SPECIES } from '../src/game/creatures';
 import { drawKind, extentOf, forgetBeast, kitOf, paletteFor, type Anim, type Kind, type Piece } from '../src/render/beasts';
 import { drawWildermonPortrait, loadWildermon, wildermonKind } from '../src/render/wildermon';
-import { GOBLIN } from '../src/render/wild-upright';
 import { mesh } from '../src/render/figure';
 import { GOBLIN_RUNECUT } from '../src/render/goblin-runecut';
 
@@ -37,24 +38,25 @@ interface GobPage {
   lineup(): Promise<void>;
   refs(list: Array<[string, number, number]>): Promise<void>;
   big(list: Array<[string, number, number, number]>): Promise<void>;
+  frames(look: string, motion: string): Promise<void>;
   bench(look: string, n: number): Promise<{ fresh: number; picture: number; island: number; islandGo: number }>;
   pieces(look: string): Array<[string, number]>;
   fresh(look: string, lod: number): number;
 }
-const page: GobPage = { ready: false, error: '', sheet: async () => {}, lineup: async () => {}, refs: async () => {}, big: async () => {}, bench: async () => ({ fresh: 0, picture: 0, island: 0, islandGo: 0 }), pieces: () => [], fresh: () => 0 };
+const page: GobPage = { ready: false, error: '', sheet: async () => {}, lineup: async () => {}, refs: async () => {}, big: async () => {}, frames: async () => {}, bench: async () => ({ fresh: 0, picture: 0, island: 0, islandGo: 0 }), pieces: () => [], fresh: () => 0 };
 (window as unknown as { gob: GobPage }).gob = page;
 
-/** The live goblin as it is, kept before any look is put on it. */
-const LIVE: Kind = { ...GOBLIN };
-const LOOKS: Record<string, Kind> = { live: LIVE, ...GOBLIN_RUNECUT };
-const NAMES: Record<string, string> = {
-  live: 'Live goblin (now)',
-  A: 'A: Scrapper',
-  B: 'B: Raider',
-  C: 'C: Hexer',
-};
-let current = 'live';
+const LOOKS: Record<string, Kind> = { ...GOBLIN_RUNECUT };
+/** Each look's subspecies' name, as the field guide has it, and its variant. */
+const NAMES: Record<string, string> = Object.fromEntries(['A', 'B', 'C'].map((l, v) => [l, `${l}: ${SPECIES.goblin.subspecies![v]}`]));
+const VARIANT: Record<string, number> = { A: 0, B: 1, C: 2 };
+/** The kind the page draws close up, the look put on it (`setLook`), and its pictures kept under `goblin`. */
+const GOBLIN: Kind = { ...GOBLIN_RUNECUT.A };
+let current = 'A';
+/** The variant the look is put out in: its subspecies' own, and its colours. */
+let lookVariant = 0;
 function setLook(look: string): void {
+  lookVariant = VARIANT[look] ?? 0;
   if (look === current) return;
   // Forget what was kept for the goblin first, so its pieces, pictures and colours are made afresh from the new look.
   forgetBeast('goblin', GOBLIN);
@@ -74,7 +76,7 @@ const GOB_COLORS = SPECIES.goblin.variants;
 const still: Anim = { t: 0, u: 0, go: 0, gait: 0, graze: 0, blink: false, breath: 0.5, fleece: 1, seed: 0.3 };
 
 /** A cell `w` by `h` CSS pixels of the goblin in `look`, posed, at one scale for every turn and pose (`k` pixels a unit). */
-function closeCell(w: number, h: number, facing: number, a: Anim, k: number, bg: string, variant = 0): HTMLCanvasElement {
+function closeCell(w: number, h: number, facing: number, a: Anim, k: number, bg: string, variant = lookVariant): HTMLCanvasElement {
   const cv = document.createElement('canvas');
   cv.width = Math.round(w * DPR);
   cv.height = Math.round(h * DPR);
@@ -251,13 +253,12 @@ page.sheet = async (look) => {
     [{ act: { kind: 'strike', t: 0.8 } }, 'strike: follow'],
   ];
   for (const f of [1, 6]) close.append(strip(poses.map(([p, label]) => [closeCell(130, 180, f, { ...still, ...p }, k * 0.88, GRASS), label] as [HTMLCanvasElement, string])));
-  root.append(heading('Variants (turn 1, 3, 7)'));
-  root.append(strip([1, 2].flatMap((v) => [1, 3, 7].map((f) => [closeCell(130, 180, f, still, k * 0.88, GRASS, v), `variant ${v} turn ${f}`] as [HTMLCanvasElement, string]))));
   // At the size the island is played at (zoom 1), every turn and the poses, by day and by night; and closer, at zoom 2.
-  const turns = Array.from({ length: 8 }, (_, f) => ({ species: 'goblin', facing: f, variant: f % 3 }));
+  const v = lookVariant;
+  const turns = Array.from({ length: 8 }, (_, f) => ({ species: 'goblin', facing: f, variant: v }));
   const acting: Array<Omit<Body, 'x' | 'y'>> = [
-    { species: 'goblin', facing: 1 }, { species: 'goblin', facing: 7, moving: true }, { species: 'goblin', facing: 2, strike: 0.5 },
-    { species: 'goblin', facing: 6, strike: 0.25 }, { species: 'goblin', facing: 3 }, { species: 'goblin', facing: 0, strike: 0.5 },
+    { species: 'goblin', facing: 1, variant: v }, { species: 'goblin', facing: 7, moving: true, variant: v }, { species: 'goblin', facing: 2, strike: 0.5, variant: v },
+    { species: 'goblin', facing: 6, strike: 0.25, variant: v }, { species: 'goblin', facing: 3, variant: v }, { species: 'goblin', facing: 0, strike: 0.5, variant: v },
   ];
   for (const [h, when] of [[13, 'day'], [23, 'night']] as Array<[number, string]>) {
     for (const marked of [false, true]) {
@@ -273,31 +274,28 @@ page.sheet = async (look) => {
 
 page.lineup = async () => {
   root.replaceChildren();
-  root.append(heading('Lineup at game zoom 1: live goblin, A, B, C, then revamped wildermon (Brickling / Bastiondrake, Whispet / Hallowmire, Moonhare, Stitchkit)', 15));
+  root.append(heading('Lineup at game zoom 1: the Scrapper, Raider and Hexer Goblin, then revamped wildermon (Brickling / Bastiondrake, Whispet / Hallowmire, Moonhare, Stitchkit)', 15));
   const others: Array<Omit<Body, 'x' | 'y'>> = [
     { species: 'cobbe', facing: 1 }, { species: 'cobbe', facing: 1, stage: 2 }, { species: 'whispet', facing: 1 }, { species: 'whispet', facing: 1, stage: 2 },
     { species: 'orse', facing: 1, stage: 2 }, { species: 'tinka', facing: 1 },
   ];
   for (const [h, when, marked] of [[13, 'day', false], [23, 'night', false], [13, 'day, hostile marked in red (default setting)', true]] as Array<[number, string, boolean]>) {
     const cells: Array<[HTMLCanvasElement, string]> = [];
-    for (const look of ['live', 'A', 'B', 'C']) {
-      setLook(look);
-      cells.push([await islandRow(row([{ species: 'goblin', facing: 1 }, { species: 'goblin', facing: 7, strike: 0.5 }], 16, 30, 1.05), 1, h, 180, 130, 0.35, marked), NAMES[look]]);
+    for (const look of ['A', 'B', 'C']) {
+      const v = VARIANT[look];
+      cells.push([await islandRow(row([{ species: 'goblin', facing: 1, variant: v }, { species: 'goblin', facing: 7, strike: 0.5, variant: v }], 16, 30, 1.05), 1, h, 180, 130, 0.35, marked), NAMES[look]]);
     }
-    setLook('live');
     cells.push([await islandRow(row(others, 16, 30, 1.5), 1, h, 820, 130, 0.35, marked), 'Brickling, Bastiondrake, Whispet, Hallowmire, Moonhare, Stitchkit']);
     root.append(heading(when));
     root.append(strip(cells));
   }
-  // Close, in the same light as the portraits: every look and the wildermon at one scale.
   // Close, each filling its cell, for the style: every look beside revamped wildermon drawn the same way.
-  root.append(heading('Close up, each filling its cell: live, A, B, C beside the Bastiondrake, Hallowmire, Stitchkit and Moonhare'));
+  root.append(heading('Close up, each filling its cell: the Scrapper, Raider and Hexer Goblin beside the Bastiondrake, Hallowmire, Stitchkit and Moonhare'));
   const cells: Array<[HTMLCanvasElement, string]> = [];
-  for (const look of ['live', 'A', 'B', 'C']) {
+  for (const look of ['A', 'B', 'C']) {
     setLook(look);
     cells.push([closeCell(200, 230, 1, still, closeScale(215), GRASS), NAMES[look]]);
   }
-  setLook('live');
   for (const [sp, stage, name] of [['cobbe', 2, 'Bastiondrake'], ['whispet', 2, 'Hallowmire'], ['tinka', 0, 'Stitchkit'], ['orse', 2, 'Moonhare']] as Array<[string, number, string]>) {
     const cv = document.createElement('canvas');
     cv.width = 200 * DPR;
@@ -325,6 +323,22 @@ page.big = async (list) => {
   for (let i = 0; i < cells.length; i += 5) root.append(strip(cells.slice(i, i + 5)));
 };
 
+/**
+ * One motion of a look at every turn, a row a turn, at regular steps through it, for looking each frame over for a
+ * limb or a blade through the body: `idle` every two seconds of its loop, `walk` and `run` every eighth of a stride,
+ * `strike` every tenth of the blow.
+ */
+page.frames = async (look, motion) => {
+  setLook(look);
+  root.replaceChildren();
+  root.append(heading(`${NAMES[look] ?? look}: ${motion}, every turn (rows 0-7), at regular steps`, 16));
+  const k = closeScale(170);
+  const steps: Array<[Partial<Anim>, string]> = motion === 'idle' ? Array.from({ length: 12 }, (_, q) => [{ t: q * 2 }, `t ${q * 2}`] as [Partial<Anim>, string])
+    : motion === 'walk' || motion === 'run' ? Array.from({ length: 8 }, (_, q) => [{ go: 1, gait: motion === 'run' ? 1 : 0, u: q / 8 }, `u ${q}/8`] as [Partial<Anim>, string])
+      : Array.from({ length: 11 }, (_, q) => [{ act: { kind: 'strike' as const, t: q / 10 } }, `t ${(q / 10).toFixed(1)}`] as [Partial<Anim>, string]);
+  for (let f = 0; f < 8; f++) root.append(strip(steps.map(([pose, label]) => [closeCell(118, 160, f, { ...still, ...pose }, k * 0.86, GRASS), `${f}: ${label}`] as [HTMLCanvasElement, string])));
+};
+
 /** Revamped wildermon big, each filling its cell, for setting the goblin's looks against: species, stage, turn. */
 page.refs = async (list) => {
   root.replaceChildren();
@@ -350,7 +364,7 @@ function freshMs(kit: readonly Piece[], reps: number): number {
   cv.width = 1600;
   cv.height = 900;
   const g = cv.getContext('2d')!;
-  const pal = paletteFor('goblin', GOBLIN, GOB_COLORS[0]);
+  const pal = paletteFor('goblin', GOBLIN, GOB_COLORS[lookVariant]);
   const zoom = 2 * (GOBLIN.size ?? 1);
   const times: number[] = [];
   for (let r = 0; r < reps; r++) {
@@ -394,7 +408,7 @@ page.bench = async (look, n) => {
   cv.height = 900;
   const g = cv.getContext('2d')!;
   const kit = kitOf('goblin', GOBLIN, 1);
-  const pal = paletteFor('goblin', GOBLIN, GOB_COLORS[0]);
+  const pal = paletteFor('goblin', GOBLIN, GOB_COLORS[lookVariant]);
   const zoom = 2 * (GOBLIN.size ?? 1);
   const times: number[] = [];
   for (let r = 0; r < 40; r++) {
@@ -413,7 +427,7 @@ page.bench = async (look, n) => {
   times.sort((x, y) => x - y);
   const fresh = times[times.length >> 1];
   // On the island: `n` goblins standing about and going, every frame, steady (pictures kept), median ms a frame.
-  const bodies: Body[] = Array.from({ length: n }, (_, i) => ({ species: 'goblin', x: 10 + (i % 6) * 1.6, y: 14 + Math.floor(i / 6) * 1.6, facing: i % 8, moving: i % 4 === 0, variant: i % 3 }));
+  const bodies: Body[] = Array.from({ length: n }, (_, i) => ({ species: 'goblin', x: 10 + (i % 6) * 1.6, y: 14 + Math.floor(i / 6) * 1.6, facing: i % 8, moving: i % 4 === 0, variant: lookVariant }));
   const timeIsland = async (): Promise<number> => {
     stock(bodies);
     await islandFrame(1, 13, [14, 18], 120);

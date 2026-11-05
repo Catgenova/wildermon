@@ -1,17 +1,18 @@
 /**
- * Sheets of the goblin's proposed looks (`GOBLIN_RUNECUT`), drawn by the game's
+ * Sheets of the goblin's three subspecies (`GOBLIN_RUNECUT`), drawn by the game's
  * own renderer on the page `tools/goblin-page.ts` builds: for each look its
  * turns, poses and variants close up, then at game zoom by day and by night;
- * a lineup of every look beside the live goblin and revamped wildermon; and
+ * a lineup of all three beside revamped wildermon; and
  * the cost of drawing a crowd of them.
  *
- *   node tools/goblin-shot.mjs --out /some/dir                 # goblin-<look>.png and goblin-<look>-close.png for live, A, B, C; goblin-lineup.png
+ *   node tools/goblin-shot.mjs --out /some/dir                 # goblin-<look>.png and goblin-<look>-close.png for A, B, C; goblin-lineup.png
  *   node tools/goblin-shot.mjs --looks A --out /some/dir       # one look's sheet
  *   node tools/goblin-shot.mjs --bench --n 24                  # ms for a crowd of 24, each look, drawn afresh and on the island
  *   node tools/goblin-shot.mjs --fresh --rounds 6              # ms a goblin drawn afresh, the looks taken in turn round after round
  *   node tools/goblin-shot.mjs --pieces --looks C              # what each piece of a look costs
  *   node tools/goblin-shot.mjs --big '[["A",1,0,-1]]' --name a.png   # looks big: look, turn, clock, strike (-1 none)
  *   node tools/goblin-shot.mjs --refs '[["tinka",0,1]]'        # wildermon big: species, stage, turn
+ *   node tools/goblin-shot.mjs --frames --looks A --motions strike   # every turn at regular steps through a motion
  *
  * Pictures at a device pixel ratio of 2 unless `--dpr` says otherwise. Uses
  * Playwright's Chromium (`/opt/pw-browsers/chromium` when it is there) and
@@ -30,7 +31,7 @@ const opt = (name, fallback) => {
 };
 const flag = (name) => args.includes(`--${name}`);
 const out = resolve(opt('out', 'tmp/goblin'));
-const looks = opt('looks', 'live,A,B,C').split(',');
+const looks = opt('looks', 'A,B,C').split(',');
 const dpr = Number(opt('dpr', '2'));
 mkdirSync(out, { recursive: true });
 
@@ -89,6 +90,16 @@ if (flag('fresh')) {
   for (const look of looks) {
     const r = await page.evaluate(([l, k]) => window.gob.bench(l, k), [look, n]);
     console.log(`${look}: ${n} drawn afresh ${r.fresh.toFixed(2)} ms a frame (${r.picture.toFixed(3)} ms a goblin); island, ${n} about, steady ${r.island.toFixed(2)} ms; all going ${r.islandGo.toFixed(2)} ms`);
+  }
+} else if (flag('frames')) {
+  // Every frame of each motion at regular steps, every turn: <look>-<motion>.png for each.
+  for (const look of looks) {
+    for (const motion of opt('motions', 'idle,walk,run,strike').split(',')) {
+      await page.evaluate(([l, m]) => window.gob.frames(l, m), [look, motion]);
+      await page.evaluate(() => { document.getElementById('game').style.visibility = 'hidden'; });
+      await page.locator('#sheet').screenshot({ path: join(out, `${look}-${motion}.png`) });
+      console.log(join(out, `${look}-${motion}.png`));
+    }
   }
 } else if (flag('big')) {
   await page.evaluate((l) => window.gob.big(l), JSON.parse(opt('big', '[]')));

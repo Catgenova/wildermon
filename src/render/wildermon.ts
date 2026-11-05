@@ -69,7 +69,7 @@ const LINES: Record<string, () => Promise<Line>> = {
   warda: () => import('./wild-sky').then((m) => line(m.SKYLOOKLET, [m.SKYWARDEN, m.SKYRANGE])),
   quill: () => import('./wild-peafowl').then((m) => line(m.PEACHICK, [m.PLUMECREST, m.FEATHERBOURNE])),
   tinka: () => import('./wild-mend').then((m) => line(m.STITCHKIT, [m.PATCHCOON, m.MENDERMASK])),
-  goblin: () => import('./wild-upright').then((m) => line(m.GOBLIN)),
+  goblin: () => import('./goblin-runecut').then((m) => ({ kind: m.GOBLINS[0], subspecies: m.GOBLINS })),
   orc: () => import('./wild-upright').then((m) => line(m.ORC)),
   ogre: () => import('./wild-ogre').then((m) => ({ kind: m.OGRES[0], subspecies: m.OGRES })),
   vesp: () => import('./wild-bee').then((m) => line(m.BUZZLET, [m.COMBWORKER, m.HIVEMASTER])),

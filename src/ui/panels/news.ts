@@ -4250,6 +4250,18 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 498,
+    day: '2026-11-05',
+    lines: () => {
+      const names = SPECIES.goblin.subspecies!;
+      return [
+        `Added: ${names.length} goblin subspecies, 1 in ${names.length} wild each: ${listed(names)}. Same health, blow and speed. Name in hover, target bar, log and Examine; Field guide: Subspecies.`,
+        `Changed: goblin models (was: one goblin in a jerkin with a notched blade): ${names[0]}, top-knot, patched tunic, rune-scratched cleaver; ${names[1]}, plum hood and cape, red-rune hide shield, curved blade; ${names[2]}, horned skull cap, mint warpaint and eyes, mint glass knife.`,
+        `Added: goblin strike drawn, ${ACT_SECS.strike} s: ${names[0]}, overhead chop, gold sparks; ${names[1]}, sweep from behind the shield; ${names[2]}, lunge and stab, mint flash.`,
+      ];
+    },
+  },
+  {
     n: 495,
     day: '2026-11-05',
     lines: () => {
