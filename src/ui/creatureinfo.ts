@@ -100,7 +100,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
 
   // A monster is not a wildermon and nothing about it is negotiable.
   if (def.monster) {
-    lines.push(`${def.name} · hostile`);
+    lines.push(`${kindName(c)} · hostile`);
     lines.push(`Health ${Math.ceil(c.health)}/${maxHealth(c, def)} ${bar(c.health / maxHealth(c, def))} · blow ${attackOf(c, def).toFixed(0)} damage`);
     lines.push('Cannot be tamed.');
     return lines;

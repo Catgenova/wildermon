@@ -1,8 +1,8 @@
-// Pictures of the ogre proposals (`src/render/wild-ogre.ts`), drawn by tools/ogre/page.ts at twice the pixels.
+// Pictures of the ogre subspecies (`src/render/wild-ogre.ts`), drawn by tools/ogre/page.ts at twice the pixels.
 //
 //   node tools/ogre/shot.mjs --out /some/dir                 # ogre-A.png, ogre-B.png, ogre-C.png, the close-ups and ogre-lineup.png
-//   node tools/ogre/shot.mjs --out /some/dir --only A        # one proposal's sheet and close-up
-//   node tools/ogre/shot.mjs --bench                          # ms a frame for a crowd of each, the live ogre's first
+//   node tools/ogre/shot.mjs --out /some/dir --only A        # one subspecies (A Menhir, B Gatebreaker, C Barrowback): sheet and close-up
+//   node tools/ogre/shot.mjs --bench                          # ms a frame for a crowd of each
 //
 // Uses Playwright's Chromium (`/opt/pw-browsers/chromium` when it is there) and esbuild from node_modules; never `playwright install`.
 import { build } from 'esbuild';
@@ -41,7 +41,18 @@ async function page(scale) {
   return p;
 }
 
-if (opt('strip')) {
+if (opt('audit')) {
+  // --audit A -- every facing against the standing loop, walk, run and strike.
+  const poses = ['stand:0', 'stand:4.5', 'stand:9.2', 'stand:15.4', 'stand:18', 'walk:0', 'walk:0.25', 'walk:0.5', 'walk:0.75', 'run:0', 'run:0.25', 'run:0.5', 'run:0.75',
+    ...[0.06, 0.19, 0.31, 0.44, 0.56, 0.69, 0.81, 0.94].map((t) => `strike:${t}`)];
+  for (const id of opt('audit').split(',')) {
+    const p = await page(1);
+    await p.evaluate(([id, poses]) => window.ogre.audit(id, poses), [id, poses]);
+    await p.locator('#root').screenshot({ path: join(out, `audit-${id}.png`) });
+    console.log(join(out, `audit-${id}.png`));
+    await p.close();
+  }
+} else if (opt('strip')) {
   // --strip 'A:2:strike:0.3,strike:0.5;B:1:stand:0' -- a row a body, a facing, then its poses.
   const p = await page(1);
   for (const spec of opt('strip').split(';')) {
@@ -54,7 +65,7 @@ if (opt('strip')) {
 } else if (flag('bench')) {
   const p = await page(1);
   const n = Number(opt('n', '24')), frames = Number(opt('frames', '20'));
-  for (const id of ['live', ...only]) {
+  for (const id of only) {
     const runs = [];
     for (let q = 0; q < 3; q++) runs.push(await p.evaluate(([id, n, frames]) => window.ogre.bench(id, n, frames), [id, n, frames]));
     const med = (k) => runs.map((r) => r[k]).sort((x, y) => x - y)[1];

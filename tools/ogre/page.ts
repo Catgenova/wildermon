@@ -1,13 +1,13 @@
 /**
- * The page `tools/ogre/shot.mjs` opens to look the ogre proposals over
- * (`src/render/wild-ogre.ts`) beside the live ogre and the other monsters.
+ * The page `tools/ogre/shot.mjs` opens to look over the three ogre
+ * subspecies (`src/render/wild-ogre.ts`) beside the other monsters.
  *
  * Driven through `window.ogre`:
- *   * `sheet(id)`: one proposal's turns by day and night, its standing loop,
+ *   * `sheet(id)`: one subspecies' turns by day and night, its standing loop,
  *     walk and run, strike from two sides, and the game's zooms on grass with
  *     an orc and a goblin beside it;
- *   * `close(id)`: the proposal drawn big, crisp, by day and night;
- *   * `lineup()`: the live ogre, the three proposals, the orc, the goblin and
+ *   * `close(id)`: the subspecies drawn big, crisp, by day and night;
+ *   * `lineup()`: the three subspecies, the orc, the goblin and
  *     revamped wildermon, at the game's scale, by day and night;
  *   * `bench(id, n, frames)`: the cost of a crowd of `n` of them.
  *
@@ -19,8 +19,7 @@ import { drawKind, extentOf, kitOf, paletteFor, drawBeast, beastFrame, type Anim
 import { loadWildermon, wildermonKind } from '../../src/render/wildermon';
 import { SPECIES } from '../../src/game/creatures';
 import { NIGHT_WASH } from '../../src/render/nightwash';
-import { OGRE } from '../../src/render/wild-upright';
-import { OGRE_PROPOSALS } from '../../src/render/wild-ogre';
+import { OGRE_LOOKS } from '../../src/render/wild-ogre';
 
 const DEV = window.devicePixelRatio || 1;
 const GRASS = '#7d9b5e';
@@ -30,8 +29,12 @@ const inkAt = (step: number, size = 1): number => Math.max(1.1, (0.7 * step) / s
 interface Body { key: string; kind: Kind; colors: [string, string] }
 
 function bodyOf(id: string, variant = 0): Body {
-  if (id === 'live') return { key: 'ogre-live', kind: OGRE, colors: SPECIES.ogre.variants[variant] };
-  if (id in OGRE_PROPOSALS) return { key: `ogre-${id}`, kind: OGRE_PROPOSALS[id].kind, colors: SPECIES.ogre.variants[variant] };
+  // A subspecies through the game's own wiring: the ogre line's body for that variant (`wildermonKind`), in that variant's colours.
+  if (id in OGRE_LOOKS) {
+    const v = 'ABC'.indexOf(id), m = wildermonKind('ogre', 0, false, v);
+    if (!m || m.kind !== OGRE_LOOKS[id].kind) throw new Error(`ogre variant ${v} is not ${OGRE_LOOKS[id].name}`);
+    return { key: m.key, kind: m.kind, colors: SPECIES.ogre.variants[v] };
+  }
   const [sp, st] = id.split('@');
   const m = wildermonKind(sp, Number(st ?? 0));
   if (!m) throw new Error(`no ${id}`);
@@ -156,9 +159,9 @@ function gameCell(line: HTMLElement, w: number, h: number, zoom: number, b: Body
 }
 
 function sheet(id: string): void {
-  const P = OGRE_PROPOSALS[id];
+  const P = OGRE_LOOKS[id];
   const b = bodyOf(id);
-  heading(`Ogre ${id}: ${P.name}`, true);
+  heading(`${P.name} (ogre variant ${'ABC'.indexOf(id)})`, true);
   note(P.concept);
   const Z = 0.6;
   heading(`Turns, facings 0 to 7, standing, zoom ${Z} (day)`);
@@ -197,9 +200,9 @@ function sheet(id: string): void {
 }
 
 function close(id: string): void {
-  const P = OGRE_PROPOSALS[id];
+  const P = OGRE_LOOKS[id];
   const b = bodyOf(id);
-  heading(`Ogre ${id}: ${P.name}, close`, true);
+  heading(`${P.name}, close`, true);
   const r = row();
   for (const [f, pose, nightly, label] of [[1, 'stand:0', false, 'facing 1'], [6, 'stand:0', false, 'facing 6'], [1, 'strike:0.5', false, 'strike, the blow'], [1, 'stand:0', true, 'night']] as Array<[number, string, boolean, string]>) {
     const { cv, g } = canvasOf(460, 560);
@@ -221,9 +224,9 @@ function close(id: string): void {
 }
 
 function lineup(): void {
-  heading('Lineup at the game\'s scale, zoom 0.6: live ogre, A, B, C, orc, goblin, Bastiondrake, Monolithump, Earthrend', true);
-  const who = ['live', 'A', 'B', 'C', 'orc', 'goblin', 'cobbe@2', 'quarra@2', 'snout@2'];
-  const xs = [110, 330, 560, 790, 980, 1090, 1200, 1300, 1400];
+  heading('Lineup at the game\'s scale, zoom 0.6: Menhir, Gatebreaker and Barrowback Ogres, orc, goblin, Bastiondrake, Monolithump, Earthrend', true);
+  const who = ['A', 'B', 'C', 'orc', 'goblin', 'cobbe@2', 'quarra@2', 'snout@2'];
+  const xs = [130, 380, 640, 860, 980, 1100, 1220, 1340];
   for (const [facing, nightly] of [[1, false], [1, true], [3, false]] as Array<[number, boolean]>) {
     const w = 1500, h = 340;
     const r = row();
@@ -233,8 +236,8 @@ function lineup(): void {
     if (nightly) night(g, w, h);
     cell(r, cv, `facing ${facing}${nightly ? ', night' : ''}`);
   }
-  heading('Style: each drawn to the same height, crisp: live ogre, A, B, C beside revamped wildermon (Bastiondrake, Monolithump, Earthrend, Cragjaws, Hallowmire)', true);
-  const style = ['live', 'A', 'B', 'C', 'cobbe@2', 'quarra@2', 'snout@2', 'thumpa@2', 'whispet@2'];
+  heading('Style: each drawn to the same height, crisp: the three ogres beside revamped wildermon (Bastiondrake, Monolithump, Earthrend, Cragjaws, Hallowmire)', true);
+  const style = ['A', 'B', 'C', 'cobbe@2', 'quarra@2', 'snout@2', 'thumpa@2', 'whispet@2'];
   const r = row();
   for (const id of style) {
     const b = bodyOf(id);
@@ -293,8 +296,18 @@ function strip(id: string, facing: number, poses: string[]): void {
   for (const pose of poses) gameCell(r, 250, 300, 0.6, b, facing, pose, false, `${id} f${facing} ${pose}`);
 }
 
+/** Every turn against every pose, small, for finding what passes through what: a row a pose, a column a facing. */
+function audit(id: string, poses: string[]): void {
+  const b = bodyOf(id);
+  heading(`${OGRE_LOOKS[id]?.name ?? id}: every facing against every pose`, true);
+  for (const pose of poses) {
+    const r = row();
+    for (let f = 0; f < 8; f++) gameCell(r, 200, 230, 0.5, b, f, pose, false, `${pose} f${f}`);
+  }
+}
+
 const W = window as unknown as { ogre: Record<string, unknown>; READY: boolean };
-W.ogre = { sheet, close, lineup, bench, strip };
-void Promise.all(['goblin', 'orc', 'cobbe', 'quarra', 'snout', 'thumpa', 'whispet'].map((s) => loadWildermon(s))).then(() => {
+W.ogre = { sheet, close, lineup, bench, strip, audit };
+void Promise.all(['ogre', 'goblin', 'orc', 'cobbe', 'quarra', 'snout', 'thumpa', 'whispet'].map((s) => loadWildermon(s))).then(() => {
   W.READY = true;
 });

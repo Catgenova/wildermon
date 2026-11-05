@@ -712,6 +712,11 @@ export interface SpeciesDef {
   learns?: { skill: string; by: LearnsBy };
   /** What it evolves into at each of `EVOLVE_AT`, for a kind that evolves: a name and words of each stage's own. */
   stages?: [StageDef, StageDef];
+  /**
+   * For a kind whose variants are subspecies, what each is called, one for each of `variants` in its order: the
+   * variant the island puts one out in (an even roll among them) is its subspecies (`kindName`).
+   */
+  subspecies?: readonly string[];
   /** What the kind used to be called, which a carcass or a crate from before can still say. */
   was?: readonly string[];
 }
@@ -1111,11 +1116,16 @@ export function takeArms(c: Pick<Creature, 'carrying' | 'laden' | 'homeward'>): 
   c.homeward = false;
   return all;
 }
-/** What it is called at the stage it is at. */
-export function kindName(c: Pick<Creature, 'species' | 'skills'>): string {
+/** What it is called at the stage it is at, or, for a kind of subspecies, what its subspecies is called (`subspeciesName`). */
+export function kindName(c: Pick<Creature, 'species' | 'skills'> & { variant?: number }): string {
   const def = SPECIES[c.species];
   const stage = stageOf(c);
-  return stage && def?.stages ? def.stages[stage - 1].name : def?.name ?? c.species;
+  return stage && def?.stages ? def.stages[stage - 1].name : subspeciesName(c) ?? def?.name ?? c.species;
+}
+/** The subspecies it is, by its variant, for a kind of subspecies (`SpeciesDef.subspecies`); nothing for any other. */
+export function subspeciesName(c: { species: string; variant?: number }): string | null {
+  const names = SPECIES[c.species]?.subspecies;
+  return names && c.variant !== undefined ? names[c.variant] ?? names[0] : null;
 }
 /** Its words at the stage it is at. */
 export function kindDescription(c: Pick<Creature, 'species' | 'skills'>): string {
@@ -4152,11 +4162,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: null,
     workRange: 0,
+    // One hide each for its three subspecies, in their order: lilac, clay-red, sage.
     variants: [
-      ['#8a7358', '#d8c4a4'],
-      ['#6f5c47', '#bda88a'],
-      ['#9a8464', '#e4d3b3'],
+      ['#c2acce', '#8a6896'],
+      ['#b8786e', '#7a4644'],
+      ['#92a080', '#627656'],
     ],
+    subspecies: ['Menhir Ogre', 'Gatebreaker Ogre', 'Barrowback Ogre'],
     butcher: { meat: 14, leather: 10, bone: 14, sinew: 8, tusk: 4, gland: 2 },
     hunter: true,
     defensive: true,
@@ -4396,14 +4408,14 @@ export const FORMER_NAME: Record<string, string> = Object.fromEntries(
  */
 export function kindNamed(c: Pick<Creature, 'species' | 'name'>): boolean {
   const d = SPECIES[c.species];
-  return !!d && (c.name === d.name || !!d.stages?.some((st) => st.name === c.name) || !!d.was?.includes(c.name));
+  return !!d && (c.name === d.name || !!d.stages?.some((st) => st.name === c.name) || !!d.was?.includes(c.name) || !!d.subspecies?.includes(c.name));
 }
 /**
  * Its name, or, where nobody has named it, what its kind is called at the stage it is at: one stood up a Pigroot that
  * is a Harvestusk now is called a Harvestusk (asked for: "Stage 3 evolutions that never had a name change should have
  * their names updated as they evolve"), and one stood up under its kind's old name its kind's name now.
  */
-export const renamedKind = (c: Pick<Creature, 'species' | 'name' | 'skills'>): string => (kindNamed(c) ? kindName(c) : c.name);
+export const renamedKind = (c: Pick<Creature, 'species' | 'name' | 'skills'> & { variant?: number }): string => (kindNamed(c) ? kindName(c) : c.name);
 
 export const WILD_SPECIES: Array<[string, number]> = [
   ['rabba', 27],
@@ -10059,9 +10071,9 @@ export class Creatures {
       c.blows = 0;
       c.windup = 0;
       c.packLead = !def.pack ? null : mate ? (mate.packLead ?? mate.id) : c.id;
-      game.logMsg(mate ? `Another ${def.name.toLowerCase()} joins.` : `${def.name} hunting you.`, 'fight');
+      game.logMsg(mate ? `Another ${kindName(c).toLowerCase()} joins.` : `${kindName(c)} hunting you.`, 'fight');
     }
-    const name = def.name.toLowerCase();
+    const name = kindName(c).toLowerCase();
     /*
      * Drawing back for a heavy blow: it stands where it is for `WIND_UP`, and
      * lands it on whatever is still in its reach. Stepping out of it is the
@@ -10194,7 +10206,7 @@ export class Creatures {
         c.cooldown = blowEvery(def) / this.mul(c, 'haste');
         p.attackedBy = c.id;
         p.attackedAt = game.time;
-        game.hurtPlayer(attackOf(c, def) * BLOW_SHARE * THROW_HIT, `The ${def.name.toLowerCase()}'s stone finds you`, 'crush');
+        game.hurtPlayer(attackOf(c, def) * BLOW_SHARE * THROW_HIT, `The ${kindName(c).toLowerCase()}'s stone finds you`, 'crush');
       }
       return true;
     }
@@ -11368,7 +11380,7 @@ export class Creatures {
     // Killing one of the bad things is worth writing down.
     if (def.monster && killer === 'player') {
       game.note(`slew:${def.id}`);
-      if (!quiet) game.logMsg(`Killed: ${def.name.toLowerCase()}. Butcher it before it rots.`, 'fight');
+      if (!quiet) game.logMsg(`Killed: ${kindName(t).toLowerCase()}. Butcher it before it rots.`, 'fight');
     }
     const x = Math.floor(t.x);
     const y = Math.floor(t.y);
@@ -11383,9 +11395,9 @@ export class Creatures {
      */
     if (killer === 'player' && def.monster) mapFromBeast(game, def.health, x, y);
     if (quiet) return;
-    if (killer === 'player') game.logMsg(`Killed: wild ${def.name.toLowerCase()}.`, 'fight');
+    if (killer === 'player') game.logMsg(`Killed: wild ${kindName(t).toLowerCase()}.`, 'fight');
     else if (t.mode === 'active' || t.mode === 'deed') game.logMsg(`${t.name} died.`, 'fight');
-    else if (killer && killer.mode !== 'wild') game.logMsg(`${killer.name} killed a wild ${def.name.toLowerCase()}.`, 'fight');
+    else if (killer && killer.mode !== 'wild') game.logMsg(`${killer.name} killed a wild ${kindName(t).toLowerCase()}.`, 'fight');
   }
 
   describe(c: Creature): string {

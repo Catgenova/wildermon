@@ -38,7 +38,7 @@ import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH, STILL_CLOCK } from './growth';
 import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
-import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
+import { ageDef, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -4357,8 +4357,7 @@ export class Game {
     const at = foes.findIndex((c) => c.id === this.marked);
     const next = foes[(at + 1) % foes.length];
     this.marked = next.id;
-    const def = this.creatures.species(next);
-    this.logMsg(`Target: ${def.name.toLowerCase()}, ${Math.round(Math.hypot(next.x - p.x, next.y - p.y))} tiles, ${Math.ceil(next.health)} health.`, 'fight');
+    this.logMsg(`Target: ${kindName(next).toLowerCase()}, ${Math.round(Math.hypot(next.x - p.x, next.y - p.y))} tiles, ${Math.ceil(next.health)} health.`, 'fight');
     return next;
   }
 

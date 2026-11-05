@@ -5,28 +5,30 @@ import {
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 import { cut } from './beastkit';
 import { GLYPHS } from './runestone';
-import { glower, OGRE, OGRE_SPEC } from './wild-upright';
+import { glower, MONSTER_GROWTH, OGRE_SPEC } from './wild-upright';
 
 /**
- * Three proposals for the ogre in Runecut's look, each a `Kind` on the live
- * ogre's own bones (`OGRE_SPEC`), size, shadow and stride, so any one of them
- * can be put in its place (`wildermon.ts`, the `ogre` line) with nothing else
- * changed:
+ * The ogre's three subspecies (`SpeciesDef.subspecies`), one for each of its
+ * variants, which the island rolls evenly among: each a `Kind` on the ogre's
+ * own bones (`OGRE_SPEC`), size, shadow and stride, and each striking.
  *
- *   A, the Menhir-bearer: a standing stone for a club, its broad faces cut
+ *   0, the Menhir Ogre: a standing stone for a club, its broad faces cut
  *      with runes that glow, carried on the shoulder and brought down over
  *      the head;
- *   B, the Gatebreaker: iron cuffs riveted with runes, their chains
+ *   1, the Gatebreaker Ogre: iron cuffs riveted with runes, their chains
  *      snapped, a chain across its chest, a broken gate strapped to its back
  *      for a shield, and both fists brought down together;
- *   C, the Barrowback: a hill of moss for a back, standing stones grown up
- *      out of its shoulders and spine, a root-club dragged in one fist and
- *      swung up from the ground.
+ *   2, the Barrowback Ogre: a hill of moss for a back, standing stones grown
+ *      up out of its shoulders and spine, a root-club dragged in one fist and
+ *      swung round across its front.
  *
  * All three are made of the same stuff as the revamped wildermon: soft
  * chunky masses lit in three steps, inked, hewn stone in the runestones'
  * cream and mauve, the runes in the runestones' gold.
  */
+
+/** Every ogre's shadow, stride, size and blinks. */
+const OGRE_SHAPE = { shadow: [2.1, 1.7] as [number, number], stride: 1.3, size: 6.0 * MONSTER_GROWTH, blinks: 6 };
 
 /* ---- small sums -------------------------------------------------------------------- */
 
@@ -154,17 +156,21 @@ function handAt(k: 0 | 1, arm: readonly [number, number, number]): Xf {
 const GRIP_AT: V3 = [0, 0.12, -0.34];
 
 /**
- * How far to turn the right wrist (degrees) so that a club gripped along `Z`
- * (in the grip's frame) points `want` in the chest's frame, the arm held as
- * `arm` says: the best of every five degrees round.
+ * How far to bend and turn the right wrist (degrees: bent, turned) so that a
+ * club gripped along `Z` (in the grip's frame) points `want` in the chest's
+ * frame, the arm held as `arm` says: the best of every five degrees, bent
+ * either way and turned up to a right angle either way.
  */
-function wristFor(arm: readonly [number, number, number], Z: V3, want: V3): number {
+function wristFor(arm: readonly [number, number, number], Z: V3, want: V3): [number, number] {
   const h = handAt(1, arm), w = unit(want);
-  let best = 0, score = -Infinity;
+  let best: [number, number] = [0, 0], score = -Infinity;
   for (let d = -180; d < 180; d += 5) {
-    const g = joint(h, GRIP_AT, d);
-    const s = dot(sub(place(g, Z), g.t), w);
-    if (s > score) { score = s; best = d; }
+    for (let y = -90; y <= 90; y += 5) {
+      const g = joint(h, GRIP_AT, d, 0, y);
+      // A little for the least turn, so of two as good the straighter wrist wins.
+      const s = dot(sub(place(g, Z), g.t), w) - 0.0004 * Math.abs(y);
+      if (s > score) { score = s; best = [d, y]; }
+    }
   }
   return best;
 }
@@ -299,9 +305,9 @@ function body(o: Body, lod: number): Piece[] {
   for (const [kk, sd] of [[0, -1], [1, 1]] as Array<[number, number]>) {
     const front: V3 = [sd, 0.35, 0];
     out.push(
-      { key: `arm${kk}`, mesh: merge(tube([[0, 0, 0.14], [0, 0, -S.arm.len[0] * 0.5], [0, 0, -S.arm.len[0]]], [a0, a0 * 1.06, a1], [a0 * 0.95, a0, a1 * 0.95], n, 'coat', { seam: 'both' }),
+      { key: `arm${kk}`, mesh: merge(tube([[0, 0, a0 * 0.95], [0, 0, a0 * 0.45], [0, 0, 0], [0, 0, -S.arm.len[0] * 0.5], [0, 0, -S.arm.len[0]]], [a0 * 0.5, a0 * 0.9, a0, a0 * 1.06, a1], [a0 * 0.5, a0 * 0.86, a0 * 0.95, a0, a1 * 0.95], n, 'coat', { seam: 'end' }),
         o.brands && paint(rune(o.brands[kk], [sd * a0 * 1.0, 0.08, -S.arm.len[0] * 0.48], [0, -sd, 0], [0, 0, 1], [sd, 0, 0], a0 * 0.42, a0 * 0.16, 0.05, 'mark', null))), bone: `arm${kk}`, bias: 0.03, after: 'body', front, convex: true },
-      { key: `fore${kk}`, mesh: tube([[0, 0, 0.05], [0, 0, -S.arm.len[1] * 0.55], [0, 0, -S.arm.len[1]]], [f0, f1 * 1.04, f1 * 0.86], [f0 * 0.94, f1, f1 * 0.82], n, 'coat', { seam: 'both' }), bone: `elbow${kk}`, bias: 0.035, after: 'body', front, convex: true },
+      { key: `fore${kk}`, mesh: tube([[0, 0, f0 * 0.8], [0, 0, f0 * 0.35], [0, 0, -0.05], [0, 0, -S.arm.len[1] * 0.55], [0, 0, -S.arm.len[1]]], [f0 * 0.5, f0 * 0.9, f0, f1 * 1.04, f1 * 0.86], [f0 * 0.48, f0 * 0.86, f0 * 0.94, f1, f1 * 0.82], n, 'coat', { seam: 'end' }), bone: `elbow${kk}`, bias: 0.035, after: 'body', front, convex: true },
       { key: `hand${kk}`, mesh: o.hands[kk], bone: `hand${kk}`, bias: 0.04, after: 'body', front },
     );
   }
@@ -309,7 +315,7 @@ function body(o: Body, lod: number): Piece[] {
     const front: V3 = [sd * 0.8, 0.5, 0];
     out.push(
       { key: `${key}0`, mesh: tube([[0, 0, 0.12], [0, 0, -S.leg.len[0]]], [l0, l0 * 0.92], [l0, l0 * 0.9], n, 'coat', { seam: 'both' }), bone: `${key}0`, bias: 0.01, after: ['body', 'hips'], front, convex: true },
-      { key: `${key}1`, mesh: tube([[0, 0, 0.05], [0, 0, -S.leg.len[1]]], [l1, l1 * 0.95], [l1, l1 * 0.92], n, 'coat', { seam: 'both' }), bone: `${key}1`, bias: 0.015, after: 'body', front, convex: true },
+      { key: `${key}1`, mesh: tube([[0, 0, l1 * 0.75], [0, 0, l1 * 0.3], [0, 0, -0.05], [0, 0, -S.leg.len[1]]], [l1 * 0.5, l1 * 0.9, l1, l1 * 0.95], [l1 * 0.5, l1 * 0.9, l1, l1 * 0.92], n, 'coat', { seam: 'end' }), bone: `${key}1`, bias: 0.015, after: 'body', front, convex: true },
       { key: `${key}2`, mesh: sd < 0 ? mirrored(foot(fr, 0.95, n)) : foot(fr, 0.95, n), bone: `${key}2`, bias: 0.02, after: 'body', front },
     );
   }
@@ -368,7 +374,7 @@ function tattoos(hill: Array<[number, number, number, number]>, marks: Array<[st
 /** A palette on the live ogre's lines: the hide taken most of the way from the variant's beige to `hide`, and the rest as given. */
 function hidePalette(hideTo: RGB, own: Record<string, RGB>, belly: RGB): Kind['palette'] {
   return (coat, mark) => {
-    const c = mix(pastel(coat, 30), hideTo, 0.74);
+    const c = mix(pastel(coat, 30), hideTo, 0.9);
     return coatPalette(coat, mark, {
       coat: c, coatDark: darker(c, 0.26), coatLight: lighter(c, 0.2), lid: darker(c, 0.5), belly: mix(c, belly, 0.55),
       leather: [156, 118, 96], leatherDark: [116, 88, 76], tooth: [248, 240, 216], claw: [120, 100, 104], bloom: [255, 196, 84],
@@ -444,10 +450,17 @@ function runeLight(g: CanvasRenderingContext2D, view: View, x: Xf, p: V3, n: V3,
   g.restore();
 }
 
+/** A rune's soft light at a point, drawn only while the point is on the viewer's side of the middle of the body. */
+function runeLightNear(g: CanvasRenderingContext2D, view: View, b: Bones, p: V3, r: number, al: number): void {
+  const mid = place(b.chest, [0, 0.1, 1.0]);
+  if (dot(sub(p, mid), view.T) < -0.3) return;
+  runeLight(g, view, { m: [1, 0, 0, 0, 1, 0, 0, 0, 1], t: [0, 0, 0] }, p, view.T, r, al);
+}
+
 /* ---- A: the Menhir-bearer ----------------------------------------------------------- */
 
 /** The right arm with the menhir on its shoulder, and the club's line and broad face in the chest's frame there. */
-const A_HOLD: [number, number, number] = [56, 8, 98];
+const A_HOLD: [number, number, number] = [44, 26, 104];
 /** The menhir's rings from its butt up: how far along, how wide, how thick. */
 const MENHIR: Array<[number, number, number]> = [
   [-0.42, 0.13, 0.12], [-0.3, 0.17, 0.15], [0.42, 0.19, 0.16], [0.62, 0.3, 0.2], [1.2, 0.46, 0.27], [2.0, 0.52, 0.3], [2.65, 0.48, 0.28], [3.0, 0.36, 0.22], [3.18, 0.12, 0.1],
@@ -565,10 +578,11 @@ const MENHIR_BEARER: Kind = {
   bones: aBones,
   build: aBuild,
   palette: hidePalette([194, 172, 206], { moss: [146, 182, 104], lace: [222, 196, 146], spot: [232, 222, 160], mark: [138, 104, 150] }, [240, 218, 204]),
-  shadow: OGRE.shadow, stride: OGRE.stride, size: OGRE.size, blinks: OGRE.blinks,
+  ...OGRE_SHAPE,
   acts: ['strike'],
-  glow: (b) => [{ p: place(b.grip, scale(aGrip().Z, 1.85)), r: 1.3, c: [255, 214, 140], a: 0.22 }],
   extra: (g, view, b, a, under) => {
+    // The runes' light, while the stone is on the viewer's side of the body.
+    if (!under) runeLightNear(g, view, b, place(b.grip, scale(aGrip().Z, 1.85)), 1.3, 0.22);
     if (a.act?.kind === 'strike') impact(g, view, place(b.grip, A_TIP), a.act.t, under, [255, 217, 140], [214, 200, 186], 1.2);
   },
 };
@@ -711,7 +725,7 @@ const GATEBREAKER: Kind = {
     mark: [122, 70, 68],
     metal: [138, 147, 164], metalDark: [96, 102, 122], fitting: [222, 188, 112], wood: [196, 150, 100], woodDark: [158, 116, 82],
   }, [240, 210, 190]),
-  shadow: OGRE.shadow, stride: OGRE.stride, size: OGRE.size, blinks: OGRE.blinks,
+  ...OGRE_SHAPE,
   acts: ['strike'],
   extra: (g, view, b, a, under) => {
     // The light of the runes on the cuffs, on whichever is turned toward the viewer.
@@ -790,12 +804,12 @@ function rootClub(n: number): Mesh {
 }
 
 /** The root-club's size against the model it is built from. */
-const C_CLUB = 0.86;
+const C_CLUB = 0.76;
 
 /** The club's line in the hand's frame: hanging down out of the fist and a little forward, so its head trails by the right foot. */
 function cGrip(): { X: V3; Y: V3; Z: V3 } {
   const h = handAt(1, C_HANG);
-  const Z = unit(toLocal(h, unit([0.3, -0.78, -0.5]))), F = toLocal(h, [1, 0, 0]);
+  const Z = unit(toLocal(h, unit([0.25, -0.8, -0.75]))), F = toLocal(h, [1, 0, 0]);
   const Y = unit(sub(F, scale(Z, dot(F, Z))));
   return { X: cross(Y, Z), Y, Z };
 }
@@ -835,13 +849,13 @@ function cBuild(lod: number): Piece[] {
 
 /** The club swung up from the ground behind it, round and over in front, the body turning into it. */
 /** The arm wound up and out behind, and at the blow across the front; the club up and back behind it, then out across the front and down. */
-const C_WIND: [number, number, number] = [24, 74, 10], C_BLOW: [number, number, number] = [84, -30, 8];
-const C_WRIST: [number, number] = (() => {
+const C_WIND: [number, number, number] = [30, 80, 12], C_BLOW: [number, number, number] = [72, -42, 10];
+const C_WRIST: [[number, number], [number, number]] = (() => {
   const G = cGrip();
-  return [wristFor(C_WIND, G.Z, [0.55, -0.6, 0.55]), wristFor(C_BLOW, G.Z, [-0.6, 0.75, -0.25])];
+  return [wristFor(C_WIND, G.Z, [0.6, -0.5, 0.6]), wristFor(C_BLOW, G.Z, [-0.85, 0.45, -0.15])];
 })();
 
-function cStrike(p: BipedPose, t: number): number {
+function cStrike(p: BipedPose, t: number): [number, number] {
   const back = ramp(t, 0.02, 0.32) * (1 - ramp(t, 0.32, HIT));
   const sweep = ramp(t, 0.32, HIT) * (1 - ramp(t, 0.76, 1));
   const a = p.arms[1];
@@ -852,11 +866,11 @@ function cStrike(p: BipedPose, t: number): number {
   p.yaw += -10 * back + 12 * sweep;
   p.head[1] += 16 * back - 10 * sweep;
   crouch(p, 0.16 * back + 0.26 * sweep);
-  return C_WRIST[0] * back + C_WRIST[1] * sweep;
+  return [C_WRIST[0][0] * back + C_WRIST[1][0] * sweep, C_WRIST[0][1] * back + C_WRIST[1][1] * sweep];
 }
 
 const cBones = (a: Anim): Bones => {
-  let wrist = 0;
+  let wrist: [number, number] = [0, 0];
   const b = bipedBones(S, a, (p) => {
     const sw = a.go > 0 ? p.arms[1][0] * 0.35 : 0;
     p.arms[1] = [C_HANG[0] + sw, C_HANG[1], C_HANG[2]];
@@ -870,7 +884,7 @@ const cBones = (a: Anim): Bones => {
     const thump = beat(a.t, [5.6, 18.4], 1.2);
     p.arms[1] = [p.arms[1][0] + 22 * thump, p.arms[1][1], p.arms[1][2] + 8 * thump];
   });
-  b.grip = joint(b.hand1, GRIP_AT, wrist);
+  b.grip = joint(b.hand1, GRIP_AT, wrist[0], 0, wrist[1]);
   return b;
 };
 
@@ -881,35 +895,38 @@ const BARROWBACK: Kind = {
     moss: [118, 160, 88], leaf: [146, 184, 100], mark: [98, 118, 86], petal: [250, 214, 226], bloom: [255, 222, 120], bark: [138, 104, 82], lace: [210, 186, 138],
     shell: [200, 192, 180], shellDark: [150, 138, 154],
   }, [226, 220, 196]),
-  shadow: OGRE.shadow, stride: OGRE.stride, size: OGRE.size, blinks: OGRE.blinks,
+  ...OGRE_SHAPE,
   acts: ['strike'],
-  glow: (b) => [{ p: place(b.chest, [0, -0.6, 2.6]), r: 1.4, c: [255, 214, 140], a: 0.18 }],
   extra: (g, view, b, a, under) => {
+    if (!under) runeLightNear(g, view, b, place(b.chest, [0, -0.6, 2.6]), 1.4, 0.18);
     if (a.act?.kind === 'strike') impact(g, view, place(b.grip, scale(cGrip().Z, 2.9 * C_CLUB)), a.act.t, under, [255, 217, 140], [150, 120, 96], 1.2);
   },
 };
 
 /* ---- the proposals ------------------------------------------------------------------ */
 
-export interface OgreProposal { name: string; concept: string; kind: Kind; idle: number[] }
+/** The ogre's subspecies by variant, in `SpeciesDef.subspecies`'s order. */
+export const OGRES: readonly Kind[] = [MENHIR_BEARER, GATEBREAKER, BARROWBACK];
 
-export const OGRE_PROPOSALS: Record<string, OgreProposal> = {
+/** Each subspecies as the look-over pages show it (`tools/ogre`): what it is, and the moments of its standing loop worth seeing. */
+export interface OgreLook { name: string; concept: string; kind: Kind; idle: number[] }
+
+export const OGRE_LOOKS: Record<string, OgreLook> = {
   A: {
-    name: 'the Menhir-bearer', kind: MENHIR_BEARER, idle: [0, 3, 4.1, 6, 9.2, 12, 17.3, 21],
-    concept: 'A lilac-hided ogre carrying a hewn standing stone on its shoulder for a club, three runes cut down both broad faces glowing gold, '
-      + 'moss on its crown and a rope lashing at the grip; plum chevrons down its back and runes branded on its arms. Strike: heaved up over its head and brought down in front, dust and rune sparks at the blow.',
+    name: 'Menhir Ogre', kind: MENHIR_BEARER, idle: [0, 3, 4.1, 6, 9.2, 12, 17.3, 21],
+    concept: 'Lilac hide; a hewn standing stone carried on its shoulder for a club, three runes cut down both broad faces glowing gold, '
+      + 'moss on its crown and a rope lashing at the grip; plum chevrons down its back and runes on its arms. Strike: heaved up over its head and brought down in front, dust and rune sparks at the blow.',
   },
   B: {
-    name: 'the Gatebreaker', kind: GATEBREAKER, idle: [0, 3, 6, 9.2, 12, 15.4, 16, 21],
-    concept: 'A clay-red brute in rune-riveted iron: a cuff on each forearm with its chain snapped and hanging, a length of chain worn across its chest with a '
+    name: 'Gatebreaker Ogre', kind: GATEBREAKER, idle: [0, 3, 6, 9.2, 12, 15.4, 16, 21],
+    concept: 'Clay-red hide in rune-riveted iron: a cuff on each forearm with its chain snapped and hanging, a length of chain across its chest with a '
       + 'sprung padlock on it, iron over its knuckles, war paint down its flanks, and a broken gate strapped to its back for a shield. '
       + 'Strike: both fists raised over its head and slammed down together.',
   },
   C: {
-    name: 'the Barrowback', kind: BARROWBACK, idle: [0, 3, 5.6, 9.2, 12, 15, 18.4, 21],
-    concept: 'A sage-hided hill ogre whose back is a mossy barrow: five standing stones grown up out of its shoulders and spine, each with a glowing rune, '
-      + 'flowers in the moss and moss creeping over its shoulders, and a root-club with a rune-cut stone in its roots dragged behind it. '
-      + 'Strike: wound up and out behind, then swung round and down across its front.',
+    name: 'Barrowback Ogre', kind: BARROWBACK, idle: [0, 3, 5.6, 9.2, 12, 15, 18.4, 21],
+    concept: 'Sage hide; a mossy barrow for a back, five standing stones grown up out of its shoulders and spine, each with a glowing rune, '
+      + 'flowers in the moss and moss over its shoulders, and a root-club with a rune-cut stone in its roots dragged behind it. '
+      + 'Strike: wound up and out behind, then swung round across its front and out to its left.',
   },
 };
-
