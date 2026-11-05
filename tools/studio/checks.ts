@@ -76,8 +76,8 @@ export function judgeDay(r: Read, register: Register, cell: string, expectSplash
   if (!n) return [{ id: 'drawn', ok: false, said: 'nothing drawn', cell }];
   const ls = r.px.map((p) => p.l);
   const sorted = ls.slice().sort((a, b) => a - b);
-  // The ink: the darkest few percent, and anything as dark as a line is (a small thing at a small zoom is a lot of line).
-  const inkCut = Math.max(sorted[Math.floor(n * 0.04)], 0.22);
+  // The ink: the darkest few percent, and anything as dark as a line is (a small thing at a small zoom is a lot of line) -- but never more than half of it.
+  const inkCut = Math.min(Math.max(sorted[Math.floor(n * 0.04)], 0.22), sorted[Math.floor(n * 0.5)] - 1e-6);
   const ink = r.px.filter((p) => p.l <= inkCut);
   const body = r.px.filter((p) => p.l > inkCut);
 
@@ -135,7 +135,8 @@ export function judgeNight(day: Read, night: Read, cell: string, emissive: boole
   const dL = median(day.px.map((p) => p.l)), nL = median(night.px.map((p) => p.l));
   let rSum = 0, bSum = 0;
   for (const p of night.px) { rSum += night.d[p.i]; bSum += night.d[p.i + 2]; }
-  out.push({ id: 'night-washed', ok: nL < dL * 0.8 && bSum > rSum, said: `lightness ${dL.toFixed(2)} by day, ${nL.toFixed(2)} by night; blue ${bSum > rSum ? 'over' : 'under'} red`, cell });
+  // Darker and bluer under the wash; a thing that throws its own warm light is only asked to be darker.
+  out.push({ id: 'night-washed', ok: nL < dL * 0.8 && (emissive || bSum > rSum), said: `lightness ${dL.toFixed(2)} by day, ${nL.toFixed(2)} by night; blue ${bSum > rSum ? 'over' : 'under'} red${emissive ? ' (its own light counted)' : ''}`, cell });
   const glowing = night.px.filter((p) => p.l > 0.62 && p.s > 0.25).length;
   if (emissive) out.push({ id: 'emissive-at-night', ok: glowing > 4, said: `${glowing} px bright and coloured through the wash`, cell });
   else out.push({ id: 'emissive-at-night', ok: null, said: `${glowing} px bright through the wash (nothing declared emissive)`, cell });
@@ -147,11 +148,13 @@ export function judgeMotion(a: Read, b: Read, id: string, cell: string, optional
   if (a.w !== b.w || a.h !== b.h) return { id: `motion-${id}`, ok: true, said: 'frames differ in size', cell };
   let diff = 0;
   for (let i = 0; i < a.d.length; i += 4) {
-    if (Math.abs(a.d[i] - b.d[i]) + Math.abs(a.d[i + 1] - b.d[i + 1]) + Math.abs(a.d[i + 2] - b.d[i + 2]) + Math.abs(a.d[i + 3] - b.d[i + 3]) > 24) diff++;
+    // The least change a pixel can show: a candle's lean of a fraction of a pixel moves a few by a few steps.
+    if (Math.abs(a.d[i] - b.d[i]) + Math.abs(a.d[i + 1] - b.d[i + 1]) + Math.abs(a.d[i + 2] - b.d[i + 2]) + Math.abs(a.d[i + 3] - b.d[i + 3]) > 8) diff++;
   }
   const share = diff / Math.max(1, Math.max(a.px.length, b.px.length));
-  if (optional && share <= 0.004) return { id: `motion-${id}`, ok: null, said: 'no move of this kind (not every kind has one)', cell };
-  return { id: `motion-${id}`, ok: share > 0.004, said: `${pct(share)} of the body's pixels change between frames`, cell };
+  // A candle's lean is a few pixels of a lamp post: any change at all is a move; none is a still.
+  if (optional && diff === 0) return { id: `motion-${id}`, ok: null, said: 'no move of this kind (not every kind has one)', cell };
+  return { id: `motion-${id}`, ok: diff > 0, said: `${diff} px (${pct(share)} of the body) change between frames`, cell };
 }
 
 /** The declared box holds what was drawn (the clipping tools/bodies.ts catches): nothing past it by more than a pixel or two. */

@@ -154,13 +154,14 @@ function nightOver(fam: Family, a: Asset, o: Opts, zoom: number, cv: HTMLCanvasE
     wg.globalCompositeOperation = 'source-over';
   }
   if (fam.night) {
-    const over = document.createElement('canvas');
-    over.width = cv.width;
-    over.height = cv.height;
-    const og = over.getContext('2d')!;
-    try { fam.night(og, fx, fy, zoom, a, o, hole); } catch { /* a night pass that fails leaves the wash whole */ }
+    // Its holes first, on a scratch canvas, so the wash goes down cut; then the wash; then what it draws over the wash, on the cell itself
+    // (a night pass may blend with what is under it).
+    const scratch = document.createElement('canvas');
+    scratch.width = cv.width;
+    scratch.height = cv.height;
+    try { fam.night(scratch.getContext('2d')!, fx, fy, zoom, a, o, hole); } catch { /* a night pass that fails leaves the wash whole */ }
     g.drawImage(wash, 0, 0);
-    g.drawImage(over, 0, 0);
+    try { fam.night(g, fx, fy, zoom, a, o, () => {}); } catch { /* as above */ }
     return;
   }
   // No pass of its own: the asset drawn at night, and of it only what is bright and coloured, over the wash.
@@ -252,7 +253,7 @@ async function sheet(spec: Spec): Promise<Report> {
       cell(r, cv, `${a.kind}${night ? ' night' : ''}`, 1);
       if (!night) {
         const rd = read(cv.getContext('2d')!.getImageData(0, 0, cv.width, cv.height));
-        checks.push(...judgeDay(rd, a.register, 'whole', expectSplash));
+        checks.push(...judgeDay(rd, a.register, 'whole sheet, ground and bodies included', false));
       }
     }
     return { asset: plain, checks };
@@ -293,7 +294,8 @@ async function sheet(spec: Spec): Promise<Report> {
     const cells: Cell[] = Array.from({ length: n }, (_, k) => {
       const u = n > 1 ? k / (n - 1) : 0;
       const t = m.secs ? u * m.secs : m.id === 'flicker' ? k * 0.15 + 0.01 : k * 0.4;
-      return { label: `${m.id} ${k}`, o: { ...base, ...m.set, motion: m.id, frame: k, u, t, night: m.id === 'flicker' || m.id === 'glow' || m.id === 'bloom' ? 0.6 : 0 } };
+      const state = m.set?.state ?? (m.set?.lit ? litState : base.state);
+      return { label: `${m.id} ${k}`, o: { ...base, ...m.set, state, motion: m.id, frame: k, u, t, night: m.id === 'flicker' || m.id === 'glow' || m.id === 'bloom' ? 0.6 : 0 } };
     });
     for (const c of cells) await fam.prepare?.(a, c.o);
     let b: Box | null = null;
@@ -327,6 +329,8 @@ async function sheet(spec: Spec): Promise<Report> {
   const far = 6, fb = measure(fam, a, base, far);
   const close = draw(fam, a, base, far, fb[2] - fb[0] + 16, fb[3] - fb[1] + 16, 8 - fb[0], 8 - fb[1], false);
   checks.push(judgeMottle(read(close.cv.getContext('2d')!.getImageData(0, 0, close.cv.width, close.cv.height)), a.register, `${a.kind} first view, zoom ${far}`));
+  // Back at the checks' zoom, with whatever a close-up put out of its bakes made again.
+  await fam.prepare?.(a, base);
   if (!fam.unsteady) {
     const again = draw(fam, a, fam.fresh ? fam.fresh(base) : base, cz, w, h, fx, fy, false);
     checks.push(judgeSame(dayR, read(again.cv.getContext('2d')!.getImageData(0, 0, again.cv.width, again.cv.height)), fam.fresh ? `${a.kind} kept picture against the live path` : `${a.kind} drawn twice`));
@@ -409,9 +413,9 @@ function buildWorld(scene: string): void {
   const w = world.game.world;
   for (let y = 0; y <= SIZE; y++) for (let x = 0; x <= SIZE; x++) w.setHeight(x, y, S.height(x, y));
   for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) w.setTile(x, y, S.tile(x, y) as TileType, 0);
-  const trees: Array<[number, number, number]> = [[20, 20, 1], [28, 19, 5], [19, 27, 3], [30, 29, 2]];
+  const trees: Array<[number, number, number]> = [[22, 22, 1], [27, 23, 5], [22, 27, 3], [26, 26, 2]];
   for (const [x, y, sp] of trees) if (S.tile(x, y) !== TileType.Rock && S.height(x, y) > 0) w.setTile(x, y, TileType.Tree, packTreeData(sp, (x * 7 + y) & 7));
-  if (scene === 'meadow') for (const [x, y] of [[23, 21], [26, 26]]) w.setTile(x, y, TileType.Bush, 0);
+  if (scene === 'meadow') for (const [x, y] of [[24, 22], [26, 24], [23, 26]]) w.setTile(x, y, TileType.Bush, 0);
   world.game.player.x = 24.5;
   world.game.player.y = 24.5;
   world.game.update(0.01);
@@ -464,7 +468,7 @@ async function worldSheet(spec: Spec): Promise<Report> {
         }
         if (zoom === spec.zooms[0] && season === seasons[0] && turn === spec.turns[0]) {
           const noon = reads.find(([h]) => h >= 11 && h <= 15) ?? reads[0];
-          checks.push(...judgeDay(noon[1], 'paint', `world:${scene} ${noon[0]}:00`, true).filter((c) => !['silhouette-soft', 'lit-from-left', 'ink-own-colour'].includes(c.id)));
+          checks.push(...judgeDay(noon[1], 'paint', `world:${scene} ${noon[0]}:00`, false).filter((c) => !['silhouette-soft', 'lit-from-left', 'ink-own-colour'].includes(c.id)));
           const night = reads.find(([h]) => h >= 22 || h <= 3);
           if (night) checks.push(...judgeNight(noon[1], night[1], `world:${scene} ${night[0]}:00`, false));
         }

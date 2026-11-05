@@ -239,7 +239,8 @@ const furniture: Family = {
     if (!o.lit) return;
     for (const h of furnitureHoles(sx, sy, zoom, a.kind, view)) hole(h.x, h.y, h.r, h.a);
     withClock(o.t, () => {
-      if (glowsAtNight(a.kind)) drawLampBloom(ctx, sx, sy, zoom, a.kind, view, o.night);
+      // A lamp's bloom, as the renderer lays it over the wash for a lamp that burns (nothing for a piece with no lamp).
+      drawLampBloom(ctx, sx, sy, zoom, a.kind, view, o.night);
       drawFurnitureLive(ctx, sx, sy, zoom, a.kind, view, o.night);
     });
   },
