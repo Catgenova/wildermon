@@ -108,7 +108,7 @@ const BRAMBLET_LOOK: Deer = {
   body: { y: [-0.6, -0.5, -0.24, 0.0, 0.26, 0.46, 0.6], z: [0.22, 0.16, 0.2, 0.14, 0.1, 0.14, 0.26], w: [0.2, 0.37, 0.33, 0.4, 0.43, 0.4, 0.22], h: [0.26, 0.45, 0.37, 0.47, 0.53, 0.51, 0.3] },
   len: 1.12, legs: 1.24, thick: 0.2, hoof: 0.12,
   neck: { at: [0, 0.5, 0.42], len: 0.64, w: 0.2, lean: 30 },
-  head: sized(1.44, { skull: { c: [0, 0, 0.3], r: [0.44, 0.44, 0.44] }, muzzle: { c: [0, 0.38, 0.08], dir: [0, 1, -0.55], r: [0.19, 0.15, 0.2] }, pitch: -2 }),
+  head: sized(1.44, { skull: { c: [0, 0, 0.3], r: [0.44, 0.44, 0.44] }, muzzle: { c: [0, 0.36, 0.04], dir: [0, 1, -0.55], r: [0.16, 0.13, 0.22] }, pitch: -2 }),
   eye: { dir: [0.6, 0.62, 0.44], size: 0.2, lid: 0 },
   ear: { len: 0.74, w: 0.3, out: 66, back: 14, droop: 0.04 },
   antler: { r: 0.06, len: 0.5, rise: 30, sweep: 24, flare: 36, curl: 12, tines: 2, tine: 0.24, leaves: 6, wound: false },
@@ -134,7 +134,7 @@ const VINEHORN_LOOK: Deer = {
   body: { y: [-1.2, -1.04, -0.6, -0.04, 0.54, 0.96, 1.18], z: [0.2, 0.14, 0.22, 0.14, 0.08, 0.18, 0.34], w: [0.24, 0.47, 0.4, 0.49, 0.53, 0.48, 0.26], h: [0.28, 0.52, 0.42, 0.52, 0.68, 0.68, 0.38] },
   len: 2.1, legs: 1.64, thick: 0.24, hoof: 0.14,
   neck: { at: [0, 0.98, 0.62], len: 0.98, w: 0.27, lean: 28 },
-  head: sized(1.26, { skull: { c: [0, 0, 0.3], r: [0.43, 0.45, 0.42] }, muzzle: { c: [0, 0.42, 0.04], dir: [0, 1, -0.5], r: [0.18, 0.15, 0.25] }, pitch: 2 }),
+  head: sized(1.26, { skull: { c: [0, 0, 0.3], r: [0.43, 0.45, 0.42] }, muzzle: { c: [0, 0.42, 0.02], dir: [0, 1, -0.5], r: [0.17, 0.14, 0.3] }, pitch: 2 }),
   eye: { dir: [0.6, 0.62, 0.46], size: 0.16, lid: 0.12 },
   ear: { len: 0.66, w: 0.26, out: 70, back: 18, droop: 0.04 },
   antler: { r: 0.12, len: 1.6, rise: 62, sweep: 36, flare: 58, curl: 70, tines: 3, tine: 0.52, leaves: 13, wound: false },
@@ -160,7 +160,7 @@ const BRIARSTAG_LOOK: Deer = {
   body: { y: [-1.64, -1.44, -0.86, -0.04, 0.8, 1.36, 1.62], z: [0.24, 0.16, 0.26, 0.16, 0.06, 0.18, 0.44], w: [0.48, 0.88, 0.82, 1.0, 1.14, 1.08, 0.56], h: [0.5, 0.92, 0.8, 1.0, 1.22, 1.18, 0.64] },
   len: 2.9, legs: 1.9, thick: 0.36, hoof: 0.2,
   neck: { at: [0, 1.36, 0.92], len: 1.18, w: 0.5, lean: 26 },
-  head: sized(1.66, { skull: { c: [0, 0, 0.32], r: [0.44, 0.47, 0.42] }, muzzle: { c: [0, 0.44, 0.04], dir: [0, 1, -0.48], r: [0.2, 0.16, 0.27] }, pitch: 6 }),
+  head: sized(1.66, { skull: { c: [0, 0, 0.32], r: [0.44, 0.47, 0.42] }, muzzle: { c: [0, 0.46, 0.02], dir: [0, 1, -0.48], r: [0.2, 0.17, 0.34] }, pitch: 6 }),
   eye: { dir: [0.58, 0.64, 0.46], size: 0.17, lid: 0.22 },
   ear: { len: 0.62, w: 0.26, out: 72, back: 22, droop: 0.04 },
   antler: { r: 0.32, len: 3.2, rise: 70, sweep: 50, flare: 56, curl: 100, tines: 3, tine: 0.72, leaves: 26, wound: true },
@@ -1012,28 +1012,54 @@ function painted(m: Mesh, by: (c: V3) => Mat): Mesh {
   }));
 }
 
-/** The muzzle: an egg out of the front of the skull, cream, a light brown blaze down its top, a small nose and a smile. */
-function muzzleMesh(s: Deer, n: number, k: number): Mesh {
-  const M = s.head.muzzle;
-  const [x, y] = muzzleFrame(s);
-  // Tan over the top and the sides of the muzzle, cream under it.
-  const muzzle = painted(orbAlong(M.c, M.dir, M.r, n + 2, k + 1, 'mark'), (c) => {
-    const up = dot(sub(c, M.c), y) / M.r[1];
-    return up > -0.15 ? 'coat' : 'mark';
-  });
-  const tip = onMuzzle(s, [0, 0.35, 1]), nr = M.r[0] * 0.38;
-  const nose = paint([facing([0, 1, 2, 3, 4, 5, 6].map((q) => {
-    const t = Math.PI / 2 + (q / 7) * TAU;
-    return add(add(add(tip.p, scale(tip.n, 0.014)), scale(x, Math.cos(t) * nr * (1 - 0.38 * Math.max(0, Math.sin(t))))), scale(y, Math.sin(t) * nr * 0.8 * (Math.sin(t) > 0 ? 0.55 : 1)));
-  }), tip.n, 'nose')]);
-  const mouth = onMuzzle(s, [0, -0.45, 0.9]);
-  return merge(muzzle, nose, smile(add(mouth.p, scale(mouth.n, -0.01)), mouth.n, M.r[0] * 0.75, 'lid'));
+/**
+ * The muzzle's form, in the head's frame: one tapering run of sections from inside the face, where it is most of the skull's
+ * width, narrowing to a short snout and rounding off at the nose, its middle let up a little as it narrows so its chin runs
+ * nearly straight and its top line curves down from the brow; and its frame (across, up, along).
+ */
+function muzzleForm(s: Deer): { U: number[]; pts: V3[]; wid: number[]; hgt: number[]; f: [V3, V3, V3] } {
+  const M = s.head.muzzle, S = s.head.skull, f = muzzleFrame(s), [, y, z] = f;
+  const from = add(S.c, scale(z, S.r[1] * 0.15)), long = Math.hypot(...sub(noseOf(s), from));
+  const U = [0, 0.2, 0.4, 0.58, 0.72, 0.84, 0.92, 0.97, 1];
+  const rx0 = S.r[0] * 0.66, ry0 = S.r[2] * 0.6, rx1 = M.r[0], ry1 = M.r[1];
+  const cap = (u: number): number => (u < 0.84 ? 1 : Math.sqrt(Math.max(0.05, 1 - ((u - 0.84) / 0.16) ** 2)));
+  const wid = U.map((u) => lerp(rx0, rx1, smooth(Math.min(1, u / 0.8))) * cap(u));
+  const hgt = U.map((u) => lerp(ry0, ry1, smooth(Math.min(1, u / 0.8))) * cap(u));
+  const pts = U.map((u, q): V3 => add(add(from, scale(z, long * u)), scale(y, 0.3 * (ry0 - hgt[q] / cap(u)))));
+  return { U, pts, wid, hgt, f };
 }
 
-/** The chin, on the jaw's bone, so a chew shows: a small egg under the end of the muzzle. */
+/**
+ * The muzzle: drawn out of the face as one form (`muzzleForm`), no seam where it leaves the skull -- tan over its top with the
+ * brow's blaze running down it, cream under it on into the chin and the throat and in a band behind the nose -- a small dark
+ * nose pad on its tip, a line down from the pad to a small closed mouth.
+ */
+function muzzleMesh(s: Deer, n: number, k: number): Mesh {
+  const { U, pts, wid, hgt, f: [, y, z] } = muzzleForm(s), N = n + 3, L = pts.length - 1, end = pts[L];
+  const mat = (ring: number, j: number): Mat => {
+    const u = (U[ring] + U[ring + 1]) / 2, up = Math.sin(((j + 1) / N) * TAU);
+    if (up < -0.3) return 'mark';
+    if (u > 0.62 && u < 0.78 && up < 0.55) return 'mark';
+    if (up > 0.8 && u < 0.6) return 'coatDark';
+    return 'coat';
+  };
+  const form = tube(pts, wid, hgt, N, mat, { seam: 'start' });
+  const rx = s.head.muzzle.r[0], ry = s.head.muzzle.r[1];
+  // The nose pad: a small rounded dark pad over the front of the tip, wider than it is tall.
+  const padAt = add(add(end, scale(y, ry * 0.22)), scale(z, -rx * 0.12));
+  const pad = orbAlong(padAt, unit(add(z, scale(y, 0.35))), [rx * 0.5, ry * 0.36, rx * 0.3], n, k, 'nose');
+  // The line down from the pad, and the mouth, small and closed, under the tip.
+  const a = add(add(end, scale(y, -ry * 0.05)), scale(z, rx * 0.04)), b = add(add(end, scale(y, -ry * 0.5)), scale(z, -rx * 0.12));
+  const philtrum = paint([line([{ p: a, n: z }, { p: b, n: unit(add(z, scale(y, -0.4))) }], rx * 0.035, 'lid')]);
+  const q = 5, mouthAt = add(pts[q], scale(y, -hgt[q] * 0.9)), mouthN = unit(add(scale(z, 0.55), scale(y, -1)));
+  return merge(form, pad, philtrum, smile(add(mouthAt, scale(z, wid[q] * 0.1)), mouthN, rx * 0.55, 'lid'));
+}
+
+/** The chin, on the jaw's bone, so a chew shows: a small cream round under the muzzle behind its tip, running back into the throat. */
 function chinOf(s: Deer, n: number, k: number): Mesh {
-  const c = onMuzzle(s, [0, -0.7, 0.2]).p;
-  return orbAlong(add(c, [0, -0.02, 0.06]), [0, 1, -0.3], [s.head.muzzle.r[0] * 0.6, s.head.muzzle.r[1] * 0.42, s.head.muzzle.r[2] * 0.5], n, k, 'mark');
+  const { pts, wid, hgt, f: [, y, z] } = muzzleForm(s), q = 4;
+  const c = add(add(pts[q], scale(y, -hgt[q] * 0.82)), scale(z, -wid[q] * 0.2));
+  return orbAlong(c, unit(add(z, scale(y, -0.25))), [wid[q] * 0.62, hgt[q] * 0.32, wid[q] * 0.9], n, k, 'mark');
 }
 
 /**
@@ -1463,7 +1489,7 @@ function deerBuild(s: Deer, drops: readonly Drop[], lod: number): Piece[] {
   const skull = skullOf(s);
   const B = s.body;
   const extras: Piece[] = [
-    { key: 'muzzle', mesh: muzzleMesh(s, n, k), bone: 'head', bias: 0.205, after: ['head'], front: [0, 1, 0], lines: false },
+    { key: 'muzzle', mesh: muzzleMesh(s, n, k), bone: 'head', bias: 0.205, after: ['head'], front: [0, 1, 0], lines: false, hide: [skull] },
     { key: 'chin', mesh: chinOf(s, n - 1, k - 1), bone: 'jaw', bias: 0.2, after: ['head'], under: ['muzzle'], lines: false },
     { key: 'collar', mesh: collarOf(s, fine), bone: 'collar', bias: 0.085, after: ['neck', 'body', 'collarVine', 'chest', 'mantle'], hide: [{ c: [0, s.neck.w * 0.2, s.neck.len * 0.25], r: [s.neck.w * 0.85, s.neck.w * 0.85, s.neck.len * 0.5] }], thin: true },
     { key: 'chest', mesh: shagOf(s, 0, tn), bone: 'collar', bias: 0.075, after: ['neck', 'body'], front: [0, 1, -0.2], sheen: 'eyeWhite' },
