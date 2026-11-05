@@ -4250,6 +4250,18 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 496,
+    day: '2026-11-05',
+    lines: () => {
+      const names = SPECIES.dragon.subspecies!;
+      return [
+        `Added: ${names.length} dragon subspecies, 1 in ${names.length} wild each: ${listed(names)}. Same health, blow and speed. Name in hover, target bar, log and Examine; Field guide: Subspecies.`,
+        `Changed: dragon models, big wings on all three: ${names[0]}, bat wings and rune channels; ${names[1]}, stone wings, runestones on its back; ${names[2]}, hovering, fin wings, rune bands.`,
+        `Added: dragon strike drawn, ${ACT_SECS.strike} s: ${names[0]} fire, ${names[1]} gold fire with its runes lit, ${names[2]} lightning.`,
+      ];
+    },
+  },
+  {
     n: 495,
     day: '2026-11-05',
     lines: () => {

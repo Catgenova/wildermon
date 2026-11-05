@@ -3468,6 +3468,7 @@ export function helpText(): string {
       <li>${MONSTER_SORTS.length} untameable kinds: <b>goblin</b>, <b>orc</b>, <b>ogre</b>, <b>dragon</b>.</li>
       <li>Ogre subspecies, 1 in ${SPECIES.ogre.subspecies!.length} wild each, same health, blow and speed: ${listed(SPECIES.ogre.subspecies!.map((n) => `<b>${n}</b>`))}.</li>
       <li>Orc subspecies, 1 in ${SPECIES.orc.subspecies!.length} wild each, same health, blow and speed: ${listed(SPECIES.orc.subspecies!.map((n) => `<b>${n}</b>`))}.</li>
+      <li>Dragon subspecies, 1 in ${SPECIES.dragon.subspecies!.length} wild each, same health, blow and speed: ${listed(SPECIES.dragon.subspecies!.map((n) => `<b>${n}</b>`))}.</li>
       <li>Notice range ${NOTICED[0]} to ${NOTICED[NOTICED.length - 1]} tiles (other hunters ${HUNT_SIGHT}); they come straight at you and chase far.</li>
       <li><b>Rare</b>: ${percent(MONSTER_SHARE)} of wild spawns; of those ${listed(MONSTERS.map(([id, w]) => `${percent(w / MONSTER_WEIGHT)} ${SPECIES[id].name.toLowerCase()}s`))}.</li>
       <li>Max alive: ${listed(MONSTERS.map(([id]) => `${MONSTER_CAP[id] ?? 1} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) === 1 ? '' : 's'}`))}.
