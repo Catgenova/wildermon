@@ -15,6 +15,8 @@ import { itemDef, ITEM_DEFS, type Item, type ServeDef } from './items';
 
 /** What serving one is. */
 export const SERVE_DISH = 'serve_dish';
+/** Shares handed to each other player in reach when a dish is served; the island's `serve_dish` hands the same. */
+export const SHARES_EACH = 1;
 
 /** The dishes for a group, by item id. */
 export const serveDishes = (): Array<[string, ServeDef]> =>
@@ -50,7 +52,7 @@ export const FEAST_ACTIONS: ActionDef[] = [
       if (!it || !serve) return;
       const { ql, id } = it;
       if (!g.inventory.remove(it.uid, 1)) return;
-      const others = Math.min(Math.max(0, serve.count - 1), othersInReach(g, serve.reach));
+      const others = Math.min(Math.max(0, serve.count - SHARES_EACH), othersInReach(g, serve.reach) * SHARES_EACH);
       const mine = serve.count - others;
       g.inventory.add(serve.serving, { count: mine, ql });
       g.events.emit('inventory');

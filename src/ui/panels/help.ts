@@ -146,6 +146,7 @@ import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { CRAFT_REACH, FERMENT_CELLAR_SAYS, lockedRecipes, needRecipeSays, RECIPE_BY_ID, RECIPES, recipeTitle, SEALED_ITEM, STATION_NAME, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
 import { VESSEL_BACK_QL } from '../../game/ferment';
+import { SHARES_EACH } from '../../game/feast';
 import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { TREE_DEPTH } from '../recipetree';
@@ -1750,7 +1751,7 @@ export function helpText(): string {
       <li><b>Oven</b> recipes: a ${STATION_NAME.oven} within reach; a brazier does not count. Campfire recipes: a lit fire, oven or brazier.</li>
       <li><b>Ferments</b>: a go seals a <b>${itemDef(SEALED_ITEM).name.toLowerCase()}</b>, named for what it makes, at the go's QL and rarity; its vessel used up.
       <b>Open</b> when ready: the dish at that QL, the vessel back at QL ${VESSEL_BACK_QL}; sooner: time left. Some only in a cellar: "${FERMENT_CELLAR_SAYS}"</li>
-      <li><b>Serve</b> a dish for a group: 1 share to each other player in reach, nearest first; the rest to you.</li>
+      <li><b>Serve</b> a dish for a group: ${SHARES_EACH} share to each other player in reach, nearest first; the rest to you.</li>
       <li>Cooking recipes: in the crafting window, unlocked next to a lit fire. Failed dish: ingredients damaged by their QL.</li>
       <li>Burns fuel in real time; goes cold when out. Unlit: take apart for the wood.</li>
     </ul>
