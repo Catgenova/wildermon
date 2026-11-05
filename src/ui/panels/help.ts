@@ -146,7 +146,7 @@ import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { CRAFT_REACH, FERMENT_CELLAR_SAYS, lockedRecipes, needRecipeSays, RECIPE_BY_ID, RECIPES, recipeTitle, SEALED_ITEM, STATION_NAME, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
 import { VESSEL_BACK_QL } from '../../game/ferment';
-import { RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
+import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { TREE_DEPTH } from '../recipetree';
 import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, MIN_GAIN, playerGain, SKILL_BY_ID } from '../../game/skills';
@@ -404,6 +404,9 @@ function enchantingHelp(): string {
   return `<h4>Scrolls</h4>
     <ul>
       <li>Written at the crafting window with <b>enchanting</b>, one recipe per enchantment, at ${workedAt(`make_${first.scroll}`)}.</li>
+      <li>Every scroll shut until its <b>Formula</b> is read: greyed, padlocked, "${needRecipeSays(RECIPE_BY_ID.get(`make_${first.scroll}`)!)}".
+      A Formula: per butchering, ${listed(bookDrops('formula').map((d) => `${d.kind} ${percent(d.odds)}`))}; one not read first.
+      <b>${BOOKS.formula.label}</b>: opens it for good, Formula used up; already open: not read ("${BOOKS.formula.known}").</li>
       <li>Quality (QL): the usual craft check, capped at the papyrus sheet's QL.</li>
       <li>Failure: motes lost; the sheet takes ${SCROLL_HARM} damage (spread over its pile's sheets); a sheet that would reach ${BROKEN_AT} is used up.</li>
     </ul>
@@ -1736,7 +1739,7 @@ export function helpText(): string {
       <li><b>Cook</b> at a lit fire: cooked meat fills ${percent(itemDef('cooked_meat').food ?? 0)} of the food bar (raw ${percent(itemDef('meat').food ?? 0)}); baked potatoes;
       roast onions and nuts; with a <b>clay bowl</b>: berry compote, meat and vegetable stew.</li>
       <li><b>Cottage pie</b> (${workedAt('make_cottage_pie')}, clay bowl, lit fire, its Recipe read): ${bill('make_cottage_pie')}; makes ${made('make_cottage_pie')}, ${percent(itemDef('cottage_pie').food ?? 0)} food each.</li>
-      <li><b>Recipes</b>: ${listed(lockedRecipes().map((r) => recipeTitle(r).toLowerCase()))}: shut until read. Crafting window: greyed, padlocked, "${needRecipeSays(lockedRecipes()[0])}".
+      <li><b>Recipes</b>: ${listed(lockedRecipes('recipe').map((r) => recipeTitle(r).toLowerCase()))}: shut until read. Crafting window: greyed, padlocked, "${needRecipeSays(lockedRecipes('recipe')[0])}".
       A Recipe: ${percent(RECIPE_DROP_ODDS)} per butchering of a ${listedOr([...RECIPE_DROPPERS])} carcass; one not read first. <b>Read recipe</b>: opens it for good, Recipe used up; already open: not read.
       Simma: does not cook them.</li>
       <li><b>Oven</b> recipes: a ${STATION_NAME.oven} within reach; a brazier does not count. Campfire recipes: a lit fire, oven or brazier.</li>
@@ -3484,7 +3487,8 @@ export function helpText(): string {
       ${REGIONS.filter((R) => R.monsters).map((R) => `<li>${capital(islandName(R.name))}: monster country: every wild spawn is one of these; holds ${mul(R.monsters ?? 1)} the number the rest of the chart shares
       (${listed(MONSTERS.filter(([id]) => (lairOf(id) ?? R) === R).map(([id]) => `${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1)} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}).</li>`).join('')}
       ${REGIONS.filter((R) => R.lair?.length).map((R) => `<li>${capital(listed(R.lair!.map((id) => `${SPECIES[id].name.toLowerCase()}`)))}: only on ${islandName(R.name)}.</li>`).join('')}
-      <li>Butchering a ${listedOr([...RECIPE_DROPPERS])}: ${percent(RECIPE_DROP_ODDS)} chance of a <b>Recipe</b> (${listed(lockedRecipes().map((r) => recipeTitle(r).toLowerCase()))}).</li>
+      <li>Butchering a ${listedOr([...RECIPE_DROPPERS])}: ${percent(RECIPE_DROP_ODDS)} chance of a <b>Recipe</b> (${listed(lockedRecipes('recipe').map((r) => recipeTitle(r).toLowerCase()))}).</li>
+      <li>Butchering: ${listed(bookDrops('formula').map((d) => `${d.kind} ${percent(d.odds)}`))} chance of a <b>Formula</b> (one of the ${lockedRecipes('formula').length} enchantment scrolls; Enchanting).</li>
       <li>Butchering: the usual yields, plus <b>tusk</b> and <b>sinew</b> (orc, ogre); dragon: ${SPECIES.dragon.butcher.scale ?? 0} <b>dragon scales</b> and a <b>hoard</b> of ${HOARD_LUMPS} to
       ${HOARD_LUMPS + HOARD_MORE} lumps (by carcass kept) of the ${HOARD_DEEP.length} deep metals and ${HOARD_METALS.length - HOARD_DEEP.length} precious ones; the only source of them together.</li>
       <li><b>Composite bow</b>: ${bill('make_composite_bow')}, ${workedAt('make_composite_bow')}. Range <b>${COMPOSITE.range ?? 0}</b> tiles, ${COMPOSITE.damage} damage
