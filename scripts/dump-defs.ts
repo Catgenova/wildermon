@@ -445,6 +445,8 @@ out.push(`alter table item_def add column if not exists larder boolean not null 
 /* How many times as long the knack it gives lasts, past the ceiling its food
  * and drink have: a Cook's spirit. */
 out.push(`alter table item_def add column if not exists knack real;`);
+/* The skills a helping of a dish off a shut recipe raises the skill gain of (`ItemDef.knackSkills`, `boons.ts`). */
+out.push(`alter table item_def add column if not exists knack_skills text[];`);
 /* What a cup of it puts back of your stamina: a Naturalist's herb tea. */
 out.push(`alter table item_def add column if not exists stamina real;`);
 /* How much of the weather a bag keeps off what is in it, set down, and a bag
@@ -1393,6 +1395,7 @@ for (const [id, d] of Object.entries(ITEM_DEFS)) {
   if (d.food !== undefined) out.push(`update item_def set food = ${q(d.food)} where id = ${q(id)};`);
   if (d.drink !== undefined) out.push(`update item_def set drink = ${q(d.drink)} where id = ${q(id)};`);
   if (d.knack !== undefined) out.push(`update item_def set knack = ${q(d.knack)} where id = ${q(id)};`);
+  if (d.knackSkills?.length) out.push(`update item_def set knack_skills = array[${d.knackSkills.map(q).join(', ')}]::text[] where id = ${q(id)};`);
   if (d.stamina !== undefined) out.push(`update item_def set stamina = ${q(d.stamina)} where id = ${q(id)};`);
   if (d.description !== undefined) out.push(`update item_def set description = ${q(d.description)} where id = ${q(id)};`);
   if (d.holds !== undefined) out.push(`update item_def set holds = ${q(d.holds)} where id = ${q(id)};`);

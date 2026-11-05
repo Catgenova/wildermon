@@ -29,7 +29,7 @@ import { Game } from '../../src/game/game';
 import { SPECIES } from '../../src/game/creatures';
 import { ACTION_BY_ID, tasteSays } from '../../src/game/actions';
 import type { Target } from '../../src/game/actions';
-import { boonTime } from '../../src/game/boons';
+import { boonTime, knackSays } from '../../src/game/boons';
 import { ITEM_DEFS, markSays, type Item, type Mark } from '../../src/game/items';
 import { helpingOf, NUTRIENTS, TABLE_BEST } from '../../src/game/nutrition';
 import { perksOf, type PerkDef } from '../../src/game/perks';
@@ -236,6 +236,17 @@ begin
   ${item('eat', 'v_it')};
   insert into said values ('EAT', v_t || '|' || ${hungerNow} || ':' || ${flesh} || ':' || ${knackFor});
   ${clear('stew')};
+  -- And a cottage pie, a dish off a shut recipe and so a meal boost, plain and marked.
+  ${fresh()};
+  v_it := give(w, u, 'cottage_pie', 1, ${HANDS});
+  ${item('eat', 'v_it')};
+  v_t := ${knackFor} || ':' || (select string_agg(b->>'skill', ',') from player p, jsonb_array_elements(p.boons) b where p.world_id = w and p.uid = u)
+    || ':' || coalesce(${last('Ate: cottage pie.%')}, 'unsaid');
+  ${fresh()};
+  v_it := give(w, u, 'cottage_pie', 1, ${HANDS}, null, null, null, null, ${markSql(MARKED)});
+  ${item('eat', 'v_it')};
+  insert into said values ('EATPIE', v_t || '|' || ${knackFor});
+  ${clear('cottage_pie')};
 
   /* ---- Balanced Diet: a full table, and the helping that fills it. ---- */
   update player set boons = '[]'::jsonb, rested = 0,
@@ -465,17 +476,23 @@ check('and Frugal Cook gives back a bone from a broth, never the water',
 
 /* ---- Eating ------------------------------------------------------------------------------ */
 
-const [eatPlain, eatMarked] = say('EAT').split('|').map((s) => s.split(':').map(Number));
+const [eatPlainSaid, eatMarkedSaid] = say('EAT').split('|');
+const [eatPlain, eatMarked] = [eatPlainSaid, eatMarkedSaid].map((s) => s.split(':').map(Number));
 const food = ITEM_DEFS.stew.food ?? 0;
 const fleshFeeds = ITEM_DEFS.stew.feeds?.flesh ?? 0;
-check('a plain stew fills, feeds and gives a knack as the browser reckons it',
+check('a plain stew fills and feeds as the browser reckons it, and gives no meal boost (not off a shut recipe)',
   near(eatPlain[0], food * (0.7 + HANDS / 200), 1e-4) && near(eatPlain[1], fleshFeeds * helpingOf(HANDS), 1e-4)
-    && eatPlain[2] === boonTime('stew', HANDS), say('EAT'));
+    && eatPlainSaid.split(':')[2] === 'none' && eatMarkedSaid.split(':')[2] === 'none', say('EAT'));
+const [pieSaid, pieMarked] = say('EATPIE').split('|');
+const [pieKnack, pieSkills, ...pieLine] = pieSaid.split(':');
+check('a cottage pie, off a shut recipe, gives its meal boost on its own skill for as long as the browser reckons, and says so',
+  Number(pieKnack) === boonTime('cottage_pie', HANDS) && pieSkills === (ITEM_DEFS.cottage_pie.knackSkills ?? []).join(',')
+    && pieLine.join(':').includes(`${knackSays('cottage_pie')}, `), pieSaid);
 check(`${P('Filling').name}: a marked stew fills ${MARKED.fill} as much of the food bar`,
   near(eatMarked[0], food * (0.7 + HANDS / 200) * MARKED.fill!, 1e-4), `${eatMarked[0]}`);
 check(`${P('Hearty').name}: and feeds ${MARKED.feed} as much`, near(eatMarked[1], fleshFeeds * helpingOf(HANDS) * MARKED.feed!, 1e-4), `${eatMarked[1]}`);
-check(`${P('Flavoursome').name}: and its knack lasts ${MARKED.knack} as long`,
-  eatMarked[2] === boonTime('stew', HANDS, MARKED.knack), `${eatMarked[2]} (browser ${boonTime('stew', HANDS, MARKED.knack)})`);
+check(`${P('Flavoursome').name}: and a marked cottage pie's meal boost lasts ${MARKED.knack} as long`,
+  Number(pieMarked) === boonTime('cottage_pie', HANDS, MARKED.knack), `${pieMarked} (browser ${boonTime('cottage_pie', HANDS, MARKED.knack)})`);
 const [tableMult, tableWith, tableWithout] = say('TABLE').split('|');
 const [multPlain, multPerk] = tableMult.split(':').map(Number);
 const best = P('Balanced Diet').fx['table:best'];
@@ -522,9 +539,9 @@ const strong = P('Strong Brew').fx['brewed:ale'];
 check(`${P('Strong Brew').name}: a brew set going without it is plain, and with it carries ${strong}`,
   brew[0] === 'ale:none' && brew[1] === `ale:${strong}`, `${brew[0]} / ${brew[1]}`);
 check('a bucket drawn off it carries it', sameMark(json(brew[2].split(':').slice(1).join(':')), { knack: strong }) && brew[2].startsWith('ale_bucket:'), brew[2]);
-const [skinKnack, skinWant, barrelKnack, barrelWant] = brew[3].split(':');
-check('and the knack from a drink of it lasts that much longer, from the bucket and from the barrel, whoever drinks it',
-  skinKnack === skinWant && barrelKnack === barrelWant && Number(skinKnack) > 0, brew[3]);
+const [skinKnack, , barrelKnack] = brew[3].split(':');
+check('and a drink of it, from the bucket or the barrel, gives no meal boost: no brew does',
+  skinKnack === 'none' && barrelKnack === 'none', brew[3]);
 check('a plain bucket poured in leaves the barrel plain, and the bucket empty and unmarked',
   brew[4] === 'none:bucket:none', brew[4]);
 check('the strong bucket poured into an empty barrel makes it strong', brew[5].startsWith(`ale:5:${strong}:bucket:none`), brew[5]);

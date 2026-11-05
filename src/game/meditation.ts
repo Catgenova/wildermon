@@ -456,7 +456,7 @@ export const PATH_PICKS: PathPickDef[] = [
   love(3, 'discipline', 'steady_herd', 'Steady Herd', 0, 0, { steady: 1 },
     () => `Your companion never breaks off a fight for distance from you (base: ${COMPANION_LEASH} tiles, ${GUARD_RANGE} when guarding).`),
   love(3, 'discipline', 'long_table', 'Long Table', 0, 0, { table: 1.25 },
-    (fx) => `Meal and drink boost duration +${percent(fx.table - 1)}.`),
+    (fx) => `Meal boost duration (dishes off a shut recipe) +${percent(fx.table - 1)}.`),
 
   love(4, 'technique', 'lull', 'Lull', 40, 30 * 60, { reach: 8, secs: 60 },
     (fx) => `Every creature within ${fx.reach} tiles hunting you stops; no new hunt for ${fx.secs} s unless you strike it.`),

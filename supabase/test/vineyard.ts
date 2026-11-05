@@ -28,7 +28,6 @@ import { execFileSync } from 'node:child_process';
 import { Game, type IslandGround } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import { ageGain, ageingRule, brewQl, CELLAR_AGEING, fixedTo, WINE_AGE_CAP, WINE_AGE_RATE, wineAgeSays } from '../../src/game/ageing';
-import { boonTime } from '../../src/game/boons';
 import { BREW_BY_ID, BREWS, GRAPE_WINE_GRAPES, WINE_AGEING } from '../../src/game/brewing';
 import { cellarOutdoor } from '../../src/game/cellar';
 import { FURNITURE_BY_ID, furnitureCentre, type PlacedFurniture } from '../../src/game/furniture';
@@ -407,13 +406,13 @@ begin
     end loop;
   end loop;
 
-  -- 7. A drink straight from the barrel, ten days in a cellar: the knack is the aged QL's.
+  -- 7. A drink straight from the barrel, ten days in a cellar: no meal boost, as no brew gives one.
   update placed set ql = ${BASE}, level = -1, litres = 15, aged_from = v_now - 10 * day_seconds() where id = v_bar;
   update player set boons = '[]'::jsonb where world_id = w and uid = u;
   perform act_perform(w, u, 'drink_from_vessel', ${T('v_bar')});
   insert into said select 'D:left', pl.litres::text from placed pl where pl.id = v_bar;
   select (boons->0->>'until')::double precision - world_time(w) into v_boon from player where world_id = w and uid = u;
-  insert into said values ('D:boon', round(v_boon)::text);
+  insert into said values ('D:boon', coalesce(round(v_boon)::text, 'none'));
 
   -- 8. Drawn dry, it forgets its age; water poured in and a brew set going again stamps it anew.
   perform draw_from(v_bar, (select litres from placed where id = v_bar));
@@ -694,10 +693,7 @@ check(`Examine says its age and its gain, with the rate and the cap, the same on
   detail.slice(0, 2).join('; '));
 
 /* 7. A drink straight from the barrel. */
-const aged10 = q(10, true);
-const boonWant = boonTime('grape_wine_bucket', aged10);
-check(`a drink from the barrel ten days in a cellar leaves a knack at its aged QL ${aged10}: ${boonWant} seconds, not ${boonTime('grape_wine_bucket', BASE)}`,
-  Math.abs(Number(isle.get('D:boon')) - boonWant) <= 1 && boonWant !== boonTime('grape_wine_bucket', BASE), isle.get('D:boon'));
+check('a drink from the barrel ten days in a cellar gives no meal boost: no brew does', isle.get('D:boon') === 'none', isle.get('D:boon'));
 bar.ql = BASE;
 bar.level = -1;
 bar.litres = 15;
@@ -706,8 +702,7 @@ bar.agedFrom = Date.now() / 1000 - 10 * DAY;
 g.player.boons = [];
 g.player.stats.thirst = 0.2;
 act('drink_from_vessel').perform(piece(bar.id), g);
-const boonHere = (g.player.boons[0]?.until ?? 0) - g.time;
-check(`and the same in the browser: ${Math.round(boonHere)} seconds`, Math.abs(boonHere - boonWant) <= 1, String(boonHere));
+check('and the same in the browser', g.player.boons.length === 0, JSON.stringify(g.player.boons));
 
 /* 8. Drawn dry and set going again. */
 check('drawn dry it forgets its age; water poured in has none; a brew that does not age is stamped with none',

@@ -1,22 +1,21 @@
 import type { ActionDef, Target } from './actions';
-import { clockLeft, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS } from './boons';
+import { TINCTURE_SKILLS } from './boons';
 import type { Game } from './game';
-import { describeFrom, itemDef } from './items';
+import { itemDef } from './items';
 import { SKILL_DEFS } from './skills';
 import { listed, percent } from './words';
 import { onYour, PART_NAMES, salvable, worstWound, WOUND_CLOSED, WOUND_KINDS, woundNamed, type Wound } from './wounds';
 
 /**
  * A Naturalist's remedies, taken: a cup of herb tea drunk, a salve rubbed in
- * over a dressing, a tincture taken. Only a Naturalist who has learned one
+ * over a dressing. A tincture is taken no more: it gave a knack, and only a
+ * dish off a shut recipe gives one now (`boons.ts`). Only a Naturalist who has learned one
  * may make it; anybody who has one may use it. The island's `perform_item`
  * does the same, in the same words.
  */
 
-/** The trades a tincture lifts, by the names they go by. */
+/** The trades a tincture lifted, by the names they go by, for What's new. */
 export const TINCTURE_NAMES = listed(TINCTURE_SKILLS.map((id) => (SKILL_DEFS.find((d) => d.id === id)?.name ?? id).toLowerCase()));
-
-describeFrom('tincture', { skills: TINCTURE_NAMES, bonus: TINCTURE_BONUS, span: TINCTURE_SECONDS });
 
 const held = (g: Game, t: Target) => (t.kind === 'item' ? g.inventory.get(t.uid) : undefined);
 
@@ -98,21 +97,6 @@ export const REMEDY_ACTIONS: ActionDef[] = [
       w.salved = true;
       g.events.emit('stats');
       g.logMsg(`Salved: ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part}. It cannot go bad.`, 'event');
-    },
-  },
-  {
-    id: 'take_tincture',
-    label: 'Take it',
-    verb: 'taking a tincture',
-    stamina: 0,
-    baseTime: 2,
-    applies: (t, g) => held(g, t)?.id === 'tincture',
-    check: (t, g) => (held(g, t) ? null : 'It is gone.'),
-    perform: (t, g) => {
-      const it = held(g, t);
-      if (!it || !g.inventory.remove(it.uid, 1)) return;
-      g.takeTincture();
-      g.logMsg(`Tincture taken: ${TINCTURE_NAMES} ${percent(TINCTURE_BONUS)} faster for ${clockLeft(TINCTURE_SECONDS)}.`, 'event');
     },
   },
 ];

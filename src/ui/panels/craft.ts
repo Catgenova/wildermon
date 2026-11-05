@@ -2,7 +2,8 @@ import { capital } from '../../game/words';
 import { ACTION_BY_ID } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { itemDef } from '../../game/items';
-import { CRAFT_REACH, DEED_ONLY, liquidWord, needRecipeSays, RECIPE_BY_ID, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
+import { CRAFT_REACH, DEED_ONLY, liquidWord, needRecipeSays, RECIPE_BY_ID, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, recipeUnread, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
+import { lockedHiddenSays, recipeSearch } from '../../game/craftsearch';
 import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
 import type { UIWindow } from '../windows';
@@ -31,13 +32,15 @@ export const recipesMaking = (item: string): Recipe[] => MAKES.get(item) ?? [];
 interface Kept {
   pinned: string[];
   recent: string[];
+  /** "Show locked": shut recipes not yet read listed, greyed and padlocked. Off unless ticked. */
+  showLocked?: boolean;
 }
 
 function readKept(): Kept {
   try {
     const got = JSON.parse(localStorage.getItem(KEPT_KEY) ?? '{}') as Partial<Kept>;
     const ids = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && RECIPE_BY_ID.has(x)) : []);
-    return { pinned: ids(got.pinned), recent: ids(got.recent).slice(0, RECENT) };
+    return { pinned: ids(got.pinned), recent: ids(got.recent).slice(0, RECENT), showLocked: got.showLocked === true };
   } catch {
     return { pinned: [], recent: [] };
   }
@@ -71,6 +74,7 @@ export class CraftPanel {
   /** The tile you were on when the book last looked, since a step can bring a store into reach or take one out of it. */
   private tile = '';
   private readyBox: HTMLInputElement;
+  private lockBox: HTMLInputElement;
   /** Pinned and lately made, shown in their own groups above the book. */
   private kept: Kept = readKept();
   /** Only these recipes, when the book was opened onto what makes one thing (`showMaking`); cleared by typing. */
@@ -123,7 +127,15 @@ export class CraftPanel {
       this.render();
     });
     toggle.append(box, document.createTextNode('Makeable only'));
-    head.append(hint, toggle);
+    const lockToggle = document.createElement('label');
+    const lockBox = document.createElement('input');
+    lockBox.type = 'checkbox';
+    lockBox.id = 'craft-show-locked';
+    lockBox.checked = !!this.kept.showLocked;
+    this.lockBox = lockBox;
+    lockBox.addEventListener('change', () => this.setShowLocked(lockBox.checked));
+    lockToggle.append(lockBox, document.createTextNode('Show locked'));
+    head.append(hint, toggle, lockToggle);
     this.list = document.createElement('div');
     this.list.className = 'inv-list';
     this.footer = document.createElement('div');
@@ -177,6 +189,14 @@ export class CraftPanel {
     this.render(performance.now(), true);
   }
 
+  /** Tick or untick "Show locked", kept for next time. */
+  private setShowLocked(on: boolean): void {
+    this.kept.showLocked = on;
+    this.lockBox.checked = on;
+    this.putKept();
+    this.render(performance.now(), true);
+  }
+
   /** Clear the search and the switch, so whatever is asked for next is on the page. */
   private unfilter(): void {
     this.search.value = '';
@@ -188,8 +208,11 @@ export class CraftPanel {
 
   /** Open the book at one recipe, lit up. */
   showRecipe(id: string): void {
-    if (!RECIPE_BY_ID.has(id)) return;
+    const r = RECIPE_BY_ID.get(id);
+    if (!r) return;
     this.unfilter();
+    // A shut recipe unread is asked for by itself, "Show locked" or not.
+    if (recipeUnread(r, this.game) && !this.kept.showLocked) this.only = new Set([id]);
     this.reveal = id;
     this.win.open();
     this.render(performance.now(), true);
@@ -213,16 +236,14 @@ export class CraftPanel {
   }
 
   /**
-   * Whether a recipe answers to what has been typed. Everything on the row is
-   * searchable: what it makes, the trade it takes, where it is worked, what
-   * goes into it and the line under the name, so "leather", "mason", "nail"
-   * and "big axle" all find their own -- the last of those being a mould,
-   * which is the only way to an axle and was findable under no other word.
+   * Whether a recipe answers to what has been typed (`recipeSearch`): an open
+   * one to everything on its row, so "leather", "mason", "nail" and "big axle"
+   * all find their own -- the last of those being a mould, which is the only
+   * way to an axle and was findable under no other word; a shut one unread to
+   * its own name only, and only with "Show locked" ticked.
    */
-  private matches(r: Recipe): boolean {
-    if (!this.query) return true;
-    const parts = [itemDef(r.result).name, r.label, r.note ?? '', r.category, skillName(r.skill), r.tool ? lower(r.tool) : '', r.station ? stationName(r.station) : '', r.deed ? 'settlement deed' : '', ...r.inputs.map((i) => lower(i.item))];
-    return parts.join(' ').toLowerCase().includes(this.query);
+  private searched(r: Recipe): 'listed' | 'hidden' | 'no' {
+    return recipeSearch(r, this.query, recipeUnread(r, this.game), !!this.kept.showLocked);
   }
 
   /** Look again, on a beat, and redraw only if the book has changed. */
@@ -256,9 +277,9 @@ export class CraftPanel {
     // What the book would say. Standing at an anvil hammering, this is the
     // same from one second to the next, so nothing is touched.
     const { fromStores, spareRare } = this.game.settings;
-    const sig = `${this.query}\u0000${this.only ? [...this.only].join() : ''}\u0000${this.kept.pinned.join()}\u0000${this.kept.recent.join()}\u0000${this.readyOnly ? 1 : 0}${fromStores ? 1 : 0}${spareRare ? 1 : 0}\u0000${RECIPES.map((r) => {
+    const sig = `${this.query}\u0000${this.only ? [...this.only].join() : ''}\u0000${this.kept.pinned.join()}\u0000${this.kept.recent.join()}\u0000${this.readyOnly ? 1 : 0}${this.kept.showLocked ? 1 : 0}${fromStores ? 1 : 0}${spareRare ? 1 : 0}\u0000${RECIPES.map((r) => {
       const st = statuses.get(r);
-      return `${r.id}${st?.ready ? 1 : 0}${st?.max ?? 0}${st?.inputs.map((i) => `.${i.have}.${i.carried}`).join('') ?? ''}`;
+      return `${r.id}${st?.ready ? 1 : 0}${st?.unread ? 1 : 0}${st?.max ?? 0}${st?.inputs.map((i) => `.${i.have}.${i.carried}`).join('') ?? ''}`;
     }).join('')}`;
     if (!this.repaint.changed(now, sig) && !force) return;
     // What the counts count, which Settings decides.
@@ -274,7 +295,9 @@ export class CraftPanel {
     this.tree.hide();
     let shown = 0;
     let ready = 0;
-    const wanted = (r: Recipe): boolean => (this.only ? this.only.has(r.id) : this.matches(r)) && (!this.readyOnly || !!statuses.get(r)?.ready);
+    const wanted = (r: Recipe): boolean => (this.only ? this.only.has(r.id) : this.searched(r) === 'listed') && (!this.readyOnly || !!statuses.get(r)?.ready);
+    // Shut recipes unread a search would have found with "Show locked" ticked, for the line at the foot.
+    const hiddenLocked = this.query && !this.only && !this.readyOnly ? RECIPES.filter((r) => this.searched(r) === 'hidden').length : 0;
     /*
      * Pinned, and lately made, above the book and in the order they were
      * pinned or made: the few things somebody makes over and over, without
@@ -316,6 +339,14 @@ export class CraftPanel {
         ? `No recipe matches “${this.search.value.trim()}”${this.readyOnly ? ' (makeable only)' : ''}. Esc clears.`
         : `Nothing makeable with ${atHand}. Untick "Makeable only" to see requirements.`;
       this.list.append(empty);
+    }
+    if (hiddenLocked) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'craft-locked-more';
+      more.textContent = lockedHiddenSays(hiddenLocked);
+      more.addEventListener('click', () => this.setShowLocked(true));
+      this.list.append(more);
     }
     // What is at hand is said in the head; the foot only counts.
     this.footer.textContent = this.only

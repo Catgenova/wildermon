@@ -21,9 +21,8 @@ import { ARCHAEOLOGY_ACTION_BY_ID, FIND_DAMAGE, FIND_DAMAGE_SPREAD, LECTERN_GAIN
 import { BELT_MAX, QL_PER_LOOP } from '../../game/belt';
 import { HUNGER_RATE, staminaBarAbove, SWIM_LEARN } from '../../game/body';
 import { HEAL_FED } from '../../game/body';
-import { BOON_BONUS, BOON_FOODS, boonTime, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
+import { BOON_BONUS, BOON_FOODS, boonTime, knacksOf, skillWord } from '../../game/boons';
 import { bedRest, SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_FOOD, SLEEP_HEAL, SLEEP_WATER, sleepHm, sleepRate } from '../../game/sleep';
-import { TINCTURE_NAMES } from '../../game/remedies';
 import { BREW_BY_ID, BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID, BREWS, isBrew, UNDRINKABLE } from '../../game/brewing';
 import { AGEING_GROUPS, CELLAR_AGEING, keepsQl } from '../../game/ageing';
 import {
@@ -865,7 +864,6 @@ const POCKET = 5;
 const DEEP_METALS = [...RARE_METALS].filter((m) => !PRECIOUS_METALS.includes(m));
 /** A quality to show a hatchet at, and a helping at. */
 const HATCHET_QL = 40;
-const BOON_QL = 70;
 /** The brew a quern skips the barrel for. */
 const CIDER = BREW_BY_ID.get('cider') ?? BREWS[0];
 /** The trees that bear. */
@@ -1401,7 +1399,7 @@ export function helpText(): string {
     </table>
     <h4>Status marks</h4>
     <ul>
-      <li>Foot of the status panel. Left, round: in your favour (rest, a meal boost, a tincture boost, favour, Calm (meditation resource), a spell or technique, a light,
+      <li>Foot of the status panel. Left, round: in your favour (rest, a meal boost, favour, Calm (meditation resource), a spell or technique, a light,
       a worn enchantment, settlement baubles). Right, square red: against you (wounds, bleeding, venom, burn, hunger, thirst, overload, winded,
       tired arms, darkness).</li>
       <li>Under each: time left or count. Point or tap: exact effect and source.</li>
@@ -1591,7 +1589,7 @@ export function helpText(): string {
       ${CELLAR_AGEING} times as much in a barrel in a <b>cellar</b>; capped over the brewed QL; max QL ${QL_TOP}.</li>
       ${AGEING_GROUPS.map(({ ageing: a, brews }) => `<li>${listed(brews.map((b) => b.name.toLowerCase()))}: ${a.rate} QL a day (${a.rate * CELLAR_AGEING} in a cellar),
       up to ${a.cap} QL more; reached in ${a.cap / a.rate} days out of a cellar, ${a.cap / (a.rate * CELLAR_AGEING)} in one.</li>`).join('')}
-      <li>Ages until the barrel is empty. Examine the barrel: time kept, QL gained, current QL. Drinks and their drink boost are at the current QL.</li>
+      <li>Ages until the barrel is empty. Examine the barrel: time kept, QL gained, current QL. Drinks are at the current QL.</li>
       <li>A barrel poured into stops ageing (drawing off and pouring back cannot pass the cap).</li>
     </ul>
     <h4>Quern</h4>
@@ -1607,17 +1605,15 @@ export function helpText(): string {
       <li>Poured into an empty barrel: barrel takes the bucket's QL. Into a barrel of the same: average weighted by litres. Dye: the same in its mix (see Dye).</li>
       <li>Water: the QL of its container.</li>
     </ul>
-    <h4>Drink boosts</h4>
+    <h4>Meal boosts</h4>
     <ul>
-      <li>Any drink gives a drink boost, as a cooked dish gives a meal boost; brews last far longer. At QL ${BOON_QL}: baked potato ${dur(boonTime('baked_potato', BOON_QL))},
-      bucket of wine ${dur(boonTime('wine_bucket', BOON_QL))}.</li>
+      <li>Drinks, brews and spirit: no meal boost. Meal boosts: dishes off a shut recipe only (see <i>Sleep bonus, and what the cooking is for</i>).</li>
     </ul>
     <h4>Cook</h4>
     <ul>
-      <li><b>Distil</b>: ${bill('distil_wine')} over a campfire: a <b>bucket of spirit</b>; ${recipe('distil_wine').returns?.[0]?.[1] ?? 0} buckets back.
-      Spirit drink boost at QL ${BOON_QL}: ${dur(boonTime('spirit_bucket', BOON_QL))}.</li>
-      <li>Strong Brew: marks every barrel the Cook sets going; its drinks (and buckets drawn from it) give a drink boost ${percent((cook('Strong Brew')['brewed:wine'] ?? 1) - 1)} longer,
-      whoever drinks. Mixed brews: the weakest mark. An emptied barrel loses the mark.</li>
+      <li><b>Distil</b>: ${bill('distil_wine')} over a campfire: a <b>bucket of spirit</b>; ${recipe('distil_wine').returns?.[0]?.[1] ?? 0} buckets back.</li>
+      <li>Strong Brew: marks every barrel the Cook sets going: meal boost duration ${percent((cook('Strong Brew')['brewed:wine'] ?? 1) - 1)} longer on its drinks.
+      No brew gives a meal boost. Mixed brews: the weakest mark. An emptied barrel loses the mark.</li>
       <li><b>Broth</b>: ${bill('make_broth')} over a campfire: ${made('make_broth')} bowls, each feeding a little of all ${NUTRIENTS.length} nutrients.</li>
     </ul>
     <h3>Fishing</h3>
@@ -2420,9 +2416,10 @@ export function helpText(): string {
     <ul>
       <li><b>Sleep bonus</b>: +${sleepHm(3600 * sleepRate(1, 0))} to +${sleepHm(3600 * sleepRate(1, 100))} per hour logged off asleep in a bed, by QL; max ${sleepHm(SLEEP_BONUS_CAP)} stored. See <i>Beds</i>.</li>
       <li>On (<b>${keyName(BIND_BY_ID.get('sleep_bonus')?.keys[0] ?? '')}</b>, Skills window, status panel): skill gain <b>${mul(SLEEP_BONUS_MULT)}</b> while any is stored; drains in real time while on the island. Off: kept.</li>
-      <li>Every cooked dish <b>favours one skill</b>: eating it gives a <b>meal boost</b>: skill gain ${mul(1 + BOON_BONUS)} in that skill for ${dur(DISH_SHORTEST)} to
-      ${dur(DISH_LONGEST)}, by fill and quality (QL). A meal boost expires; a knack earned at work does not.</li>
-      <li>Dish-to-skill pairings are fixed per island, different on each: <b>examine</b> a dish to see its skill.</li>
+      <li><b>Meal boost</b>: dishes off a shut recipe only (${listed(BOON_FOODS.map((id) => `${itemDef(id).name.toLowerCase()}: ${listed(knacksOf(id).map(skillWord))}`))}).
+      Skill gain ${mul(1 + BOON_BONUS)} in each skill named on the dish for ${dur(DISH_SHORTEST)} to ${dur(DISH_LONGEST)}, by fill and quality (QL).
+      A meal boost expires; a knack earned at work does not.</li>
+      <li>Other food, drinks, brews, spirit and tinctures: no meal boost. <b>Examine</b> a dish to see its skills.</li>
       <li>A second helping of the same dish resets the timer (no stacking).</li>
     </ul>
     <h3>What is actually in a meal</h3>
@@ -2769,8 +2766,7 @@ export function helpText(): string {
       ${percent(itemDef('herb_tea').stamina ?? 0)} stamina a cup.</li>
       <li><b>Salve</b> (${recipe(`make_salve_${KINDS[0].herb}`).inputs[0].count ?? 1} herb + beeswax): on the worst dressed wound that could still go bad; while on, it never does.
       Goes over a dressing, not instead; scouring removes it.</li>
-      <li><b>Tincture</b> (${recipe(`make_tincture_${KINDS[0].herb}`).inputs[0].count ?? 1} herb): ${TINCTURE_NAMES} each +${percent(TINCTURE_BONUS)} skill gain for
-      ${dur(TINCTURE_SECONDS)}, alongside a meal boost for the same skill.</li>
+      <li><b>Tincture</b> (${recipe(`make_tincture_${KINDS[0].herb}`).inputs[0].count ?? 1} herb): no effect.</li>
     </ul>
     <h4>Others</h4>
     <ul>

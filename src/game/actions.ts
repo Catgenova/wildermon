@@ -77,9 +77,8 @@ import { CELLAR_DEPTH, CELLAR_LEVEL, floorOf, type FloorKind, type RoofShape, ty
 import { DEED_RADIUS, DEED_SPACING, DEED_STONE_GAP, deedNearStone, deedRadiusAt, deedTooClose, MAX_DEED_LEVEL, PROSPECT_MARK_TIME, type Game } from './game';
 import { isFounder, lacks } from './ranks';
 import { materialOfItem } from './materials';
-import { boonOf, boonTime, clockLeft } from './boons';
+import { boonTime, clockLeft, knackSays } from './boons';
 import { helpingOf, NUTRIENTS } from './nutrition';
-import { SKILL_DEFS } from './skills';
 import {
   describeFrom, DRINK_LITRES, itemDef, itemName, itemWeight, litresOf, markOf, VESSELS, markSays, rarityOf, bagAdd, bagRefuses, bagSpare, isBag, storedLine, RARITIES, RARITY_WORD, rollRarity,
   foodFill, NOT_RESTORED, unmendable, unmendableSays, unrestored, type Item,
@@ -87,7 +86,7 @@ import {
 import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
 import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
-import { knackable, RECIPE_ACTIONS } from './recipes';
+import { RECIPE_ACTIONS } from './recipes';
 import { BRUSH_TOOL, lacksTool, MORTAR_TOOL, REAP_TOOL, TOOL_JOBS } from './jobtools';
 
 /**
@@ -902,8 +901,8 @@ export function tasteSays(g: Game, item: Item): string {
   const feeds = NUTRIENTS.filter((k) => (def.feeds?.[k] ?? 0) > 0)
     .map((k) => `${k} +${wholePct((def.feeds?.[k] ?? 0) * helpingOf(item.ql) * markOf(item, 'feed'))}`);
   said.push(...feeds);
-  const skill = knackable(item.id) ? boonOf(g.seed, item.id) : null;
-  if (skill) said.push(`${(def.food ?? 0) > 0 ? 'meal' : 'drink'} boost ${clockLeft(boonTime(item.id, item.ql, markOf(item, 'knack')))}`);
+  const knack = knackSays(item.id);
+  if (knack) said.push(`${knack.charAt(0).toLowerCase()}${knack.slice(1)}, ${clockLeft(boonTime(item.id, item.ql, markOf(item, 'knack')))}`);
   return ` Per helping: ${said.join(', ')}.`;
 }
 
@@ -2493,10 +2492,9 @@ export const ACTIONS: ActionDef[] = [
       // And the square a map holds (`cartography.ts`): the island's `chart_item_says`.
       const cut = signableKind(item.id) ? '' : engravedItemSays(item);
       const by = `${makerSays(item)}${markSays(item.mark)}${enchantSays(item)}${cut}${chartItemSays(item)}`;
-      // A knack comes off something somebody made, so the examine line says so
-      // for the same things the eating does.
-      const skill = knackable(item.id) ? boonOf(g.seed, item.id) : null;
-      const favours = (skill ? ` ${(def.food ?? 0) > 0 ? 'Meal' : 'Drink'} boost: ${(SKILL_DEFS.find((d) => d.id === skill)?.name ?? skill).toLowerCase()}.` : '')
+      // A dish off a shut recipe says its knack, at this helping's quality, for the same things the eating does.
+      const knack = knackSays(item.id);
+      const favours = (knack ? ` ${knack}, ${clockLeft(boonTime(item.id, item.ql, markOf(item, 'knack')))}.` : '')
         // And what an Artisan's circlet has in it.
         + (item.id === CIRCLET ? circletSays(item) : '')
         // And how far a Telestone reaches and how long a journey on it makes you wait, at its own quality.
@@ -2535,8 +2533,7 @@ export const ACTIONS: ActionDef[] = [
       // Fuller, the more and the longer for its maker's hand in it (a Cook's
       // Filling, Hearty and Flavoursome), whoever is eating it.
       g.player.stats.hunger = Math.min(1, g.player.stats.hunger + foodFill(item.id, item.ql) * markOf(item, 'fill'));
-      // A dish favours a trade, and having eaten it you are better at that
-      // trade for a while.
+      // A dish off a shut recipe: the skills it names go in faster for a while.
       const favour = g.grantBoon(item.id, item.ql, markOf(item, 'knack'));
       const full = g.nourish(item.id, item.ql, markOf(item, 'feed'));
       g.logMsg(`Ate: ${def.name.toLowerCase()}.${favour ? ` ${favour}` : ''}${full ? ` ${full}` : ''}`, 'event');
@@ -2890,8 +2887,7 @@ export const ACTIONS: ActionDef[] = [
       else item.charges = Math.max(0, litresOf(item) - DRINK_LITRES);
       g.player.stats.thirst = Math.min(1, g.player.stats.thirst + (itemDef(id).drink ?? 0));
       g.inventory.onChange?.();
-      // Milk and anything brewed favour a trade the way a cooked dish does,
-      // and for longer for its brewer's hand in it (a Cook's Strong Brew).
+      // Only a dish off a shut recipe carries a knack (`knacksOf`); a brew, milk or a spirit gives none.
       const favour = g.grantBoon(id, ql, knack);
       const full = g.nourish(id, ql, feed);
       g.logMsg(`Drank: ${itemDef(id).name.toLowerCase()}.${favour ? ` ${favour}` : ''}${full ? ` ${full}` : ''}`, 'event');

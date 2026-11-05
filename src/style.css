@@ -3248,6 +3248,24 @@ button.goal-row:focus-visible {
   opacity: 0.55;
 }
 
+/* "Locked recipes: 3 · Show" at the foot of a search that found shut recipes left off the page (`craft.ts`). */
+.craft-locked-more {
+  display: block;
+  margin: 6px 0 2px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--t-dim, #9a9a9a);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.craft-locked-more:hover,
+.craft-locked-more:focus-visible {
+  text-decoration: underline;
+}
+
 .craft-lock {
   display: inline-block;
   margin-right: 5px;

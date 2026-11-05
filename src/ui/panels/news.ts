@@ -155,7 +155,7 @@ import { spellDef, spellForce, spellsOf } from '../../game/arcane';
 import { PERK_BY_ID, perksOf } from '../../game/perks';
 import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_ID, CLASS_SPELLS, classSpellsOf, FIRE_LOW, FIRE_TOP, skinOf, spellTerms } from '../../game/talents';
 import { HUSBANDRY_ACTIONS, ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES } from '../../game/husbandry';
-import { TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
+import { BOON_BONUS, BOON_FOODS, knacksOf, skillWord, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
 import { FED_SAID, SOUL_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
@@ -4258,6 +4258,16 @@ export const NEWS: News[] = [
       ...removedSays(GONE_503),
       `Changed: charging smelters: ${SPECIES.embra.name} line (was: ${REMOVED_KINDS.forga.name}). ${SPECIES.embra.name}: ${STOKE_SMELT_SAYS} (was: ${SPECIES.embra.stages![0].name} on).`,
       'Removed: making rope and distilling as worker tasks; by hand only.',
+    ],
+  },
+  {
+    n: 501,
+    day: '2026-11-05',
+    lines: () => [
+      'Changed: Crafting search: shut recipes not read are hidden; "Show locked" lists them, found by name only. "Locked recipes: N · Show" under a search that matched any.',
+      `Changed: meal boost (skill gain +${percent(BOON_BONUS)}): only dishes off a shut recipe, on fixed skills: ${listed(BOON_FOODS.map((id) => `${itemDef(id).name.toLowerCase()} ${listed(knacksOf(id).map(skillWord))}`))} (was: every dish and drink, one skill per island).`,
+      `Removed: meal boost from other food, brews, spirit and tinctures; Take tincture (was: ${TINCTURE_NAMES} +${percent(TINCTURE_BONUS)} for ${dur(TINCTURE_SECONDS)}).`,
+      'Added: Cherry preserves, its own dish (was: preserves).',
     ],
   },
   {

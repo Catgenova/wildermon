@@ -25,13 +25,12 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, GRASS_PER_CUT, REED_CUT, type Target } from '../../src/game/actions';
-import { TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS } from '../../src/game/boons';
 import { DRESS_CHECK } from '../../src/game/firstaid';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, rollsAt } from '../../src/game/forage';
 import { ITEM_DEFS, RARITIES } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
 import { RECIPE_BY_ID, RECIPE_PERK_SAYS } from '../../src/game/recipes';
-import { salveRefusal, TINCTURE_NAMES } from '../../src/game/remedies';
+import { salveRefusal } from '../../src/game/remedies';
 import { festerChance, woundClose, type Wound } from '../../src/game/wounds';
 import { percent } from '../../src/game/words';
 import { TileType } from '../../src/world/tiles';
@@ -174,7 +173,7 @@ create or replace function bauble_yield(p_world uuid, p_uid uuid, p_item text, p
 
 do $$
 declare w uuid; u uuid; tx int; ty int; v_t text; v_u text; v_it bigint; v_n int; v_other uuid;
-        v_hive bigint; v_c int; v_food text;
+        v_hive bigint; v_c int;
 begin
   -- The suite's own island and its first body, a Naturalist now, on flat grass on their settlement.
   select id into w from world where name = 'Stonehaven';
@@ -461,21 +460,13 @@ begin
     from player, jsonb_array_elements(wounds) w0 where world_id = w and uid = u));
   update player set wounds = '[]'::jsonb where world_id = w and uid = u;
 
-  /* ---- A tincture: its four trades, beside a dish's knack on one of them, and a second puts the clock back. ---- */
-  select i.id into v_food from item_def i where boon_of((select seed from world where id = w), i.id) = '${TINCTURE_SKILLS[0]}' limit 1;
+  /* ---- A tincture: taken no more, and nothing in it gives a meal boost; still made under the perk (above). ---- */
   update player set boons = '[]'::jsonb where world_id = w and uid = u;
-  perform grant_boon(w, u, v_food, 50);
-  ${onItem('take_tincture', newest('tincture'))};
-  insert into said values ('TINCTURE', (select string_agg(b->>'skill' || '/' || coalesce(b->>'kind', 'dish') || '/' || (b->>'bonus')
-      || '/' || round(((b->>'until')::double precision - world_time(w))::numeric), ',' order by b->>'skill', coalesce(b->>'kind', 'dish'))
-    from player, jsonb_array_elements(boons) b where world_id = w and uid = u)
-    || '|' || skill_mult(w, u, '${TINCTURE_SKILLS[0]}') || '|' || coalesce(${last('Tincture taken:%')}, 'unsaid'));
-  -- And a dish of the same trade now puts the clock back on the dish's, not the tincture's.
-  update player set boons = (select jsonb_agg(case when b->>'kind' = 'tincture' then b || jsonb_build_object('until', world_time(w) + 10) else b end)
-    from player, jsonb_array_elements(boons) b where world_id = w and uid = u) where world_id = w and uid = u;
-  perform grant_boon(w, u, v_food, 50);
-  insert into said values ('DISH', (select round(((b->>'until')::double precision - world_time(w))::numeric)::text
-    from player, jsonb_array_elements(boons) b where world_id = w and uid = u and b->>'kind' = 'tincture' and b->>'skill' = '${TINCTURE_SKILLS[0]}'));
+  perform grant_tincture(w, u);
+  perform grant_boon(w, u, 'tincture', 50);
+  insert into said values ('TINCTURE', (select count(*) from action_def where id = 'take_tincture') || '|'
+    || (select jsonb_array_length(boons) from player where world_id = w and uid = u) || '|'
+    || coalesce((select description from item_def where id = 'tincture'), 'none'));
   update player set boons = '[]'::jsonb where world_id = w and uid = u;
   ${clearAll};
 
@@ -617,17 +608,9 @@ check('and rubbed in over cloth, the wound under it never goes bad',
   salve[2] === 'ALLOWED' && Number(salve[3]) > 0 && salve[4] === 'true' && Number(salve[5]) === 0 && salve[6].startsWith('Salved: cut'),
   salve.slice(2, 7).join(' / '));
 check('and a wound scoured out has neither salve nor quick hands left on it', salve[7] === 'false/false/false', salve[7]);
-const [boons, mult, tinctureSaid] = say('TINCTURE').split('|');
-const secs = Math.round(TINCTURE_SECONDS);
-const want = [...TINCTURE_SKILLS.map((s) => `${s}/tincture/${TINCTURE_BONUS}/${secs}`)];
-check(`${P('Tincture').name}: taken, ${TINCTURE_NAMES} each go in ${percent(TINCTURE_BONUS)} faster for ${secs} seconds, beside a dish's knack on one of them`,
-  TINCTURE_SKILLS.every((s) => boons.includes(`${s}/tincture/${TINCTURE_BONUS}/${secs}`)) && boons.includes(`${TINCTURE_SKILLS[0]}/dish/`), boons);
-check('and both count', Number(mult) >= 1 + TINCTURE_BONUS + 0.5 - 1e-6, mult);
-check('and it says so, in the browser\'s words',
-  tinctureSaid.startsWith(`Tincture taken: ${TINCTURE_NAMES} ${percent(TINCTURE_BONUS)} faster for `),
-  tinctureSaid);
-check('and a dish of one of its trades puts back the clock on the dish\'s knack, not on the tincture\'s', Number(say('DISH')) <= 10, say('DISH'));
-void want;
+const [tinctureAct, tinctureBoons, tinctureDesc] = say('TINCTURE').split('|');
+check(`${P('Tincture').name}: a tincture is taken no more, gives no meal boost, and says so`,
+  tinctureAct === '0' && tinctureBoons === '0' && tinctureDesc === ITEM_DEFS.tincture.description, say('TINCTURE'));
 
 check('and the Naturalist\'s tree is gone', say('NODES') === '0:0', say('NODES'));
 
@@ -692,12 +675,9 @@ check(`foraging finds a gold coin one go in ${COIN_FIND_ONE_IN}, no more than ${
   goldDay === COIN_FINDS_A_DAY && goldNext === COIN_FINDS_A_DAY + 1 && goldOver === COIN_FINDS_A_DAY + 1 && goldSaid.startsWith('Found: gold coin'), say('GOLD'));
 check('its herb tea puts back as much', near(game.player.stats.stamina, 0.5 + stamina));
 game.player.boons = [];
-const drop = game.inventory.add('tincture', { ql: 40 });
-ACTION_BY_ID.get('take_tincture')!.perform?.({ kind: 'item', uid: drop.uid }, game);
-check('its tincture lifts the same four by as much for as long',
-  TINCTURE_SKILLS.every((s) => game.player.boons.some((b) => b.skill === s && b.kind === 'tincture' && b.bonus === TINCTURE_BONUS
-    && near(b.until - game.time, TINCTURE_SECONDS))),
-  JSON.stringify(game.player.boons));
+game.inventory.add('tincture', { ql: 40 });
+check('and in the browser a tincture has nothing to take it with, and gives no meal boost',
+  !ACTION_BY_ID.has('take_tincture') && game.grantBoon('tincture', 40) === null && game.player.boons.length === 0, JSON.stringify(game.player.boons));
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

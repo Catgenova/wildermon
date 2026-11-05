@@ -89,7 +89,7 @@ const resetHour = (): string =>
 import { article, capital, listed, listedOr, percent } from './words';
 import { helpingOf, NUTRIENTS, TABLE_BEST } from './nutrition';
 import { BREWS } from './brewing';
-import { boonTime, durationSaid, TINCTURE_BONUS, TINCTURE_SECONDS } from './boons';
+import { durationSaid, knacksOf, TINCTURE_BONUS, TINCTURE_SECONDS } from './boons';
 import { EMPTY_CHANCE, PER_ROLL } from './forage';
 import { DRESS_CHECK } from './firstaid';
 import { TINCTURE_NAMES } from './remedies';
@@ -1175,7 +1175,7 @@ const DISH_ITEMS = [...new Set(DISHES.map((r) => r.result))];
 const onDishes = (fam: string, v: number): Fx => Object.fromEntries(DISH_ITEMS.map((id) => [`${fam}:${id}`, v]));
 const onDishRecipes = (fam: string, v: number): Fx => Object.fromEntries(DISHES.map((r) => [`${fam}:${r.id}`, v]));
 /** What a Cook's Big Pot makes one more of, a go. */
-const BIG_POT = ['stew', 'pottage', 'porridge', 'preserves'];
+const BIG_POT = ['stew', 'pottage', 'porridge', 'preserves', 'cherry_preserves'];
 const madeOfItem = (id: string): number => RECIPES.find((r) => r.result === id)?.count ?? 1;
 /** What a Cook's Hide Keeper takes better off a carcass. */
 const HIDES = ['hide', 'fur', 'bone'];
@@ -1212,7 +1212,7 @@ const COOK: Seed[] = [
   {
     num: 11, name: 'Flavoursome',
     fx: onDishes('knack', 1.5),
-    note: (fx) => `Meal boost duration ${more(fx[`knack:${DISH_ITEMS[0]}`])}, dishes you cook, for whoever eats them.`,
+    note: (fx) => `Meal boost duration ${more(fx[`knack:${DISH_ITEMS[0]}`])}, dishes you cook off a shut recipe (${listed(DISH_ITEMS.filter((id) => knacksOf(id).length).map((id) => itemName(id).toLowerCase()))}), for whoever eats them.`,
   },
   {
     num: 14, name: 'Balanced Diet',
@@ -1242,8 +1242,8 @@ const COOK: Seed[] = [
   {
     num: 28, name: 'Strong Brew',
     fx: Object.fromEntries(BREWS.map((b) => [`brewed:${b.id}`, 1.5])),
-    note: (fx) => `Drink boost duration ${more(fx[`brewed:${BREWS[0].id}`])}: ${listed(BREWS.map((b) => b.name.toLowerCase()))} you brew, `
-      + 'for whoever drinks it, from the barrel or a bucket drawn off it.',
+    note: (fx) => `Meal boost duration ${more(fx[`brewed:${BREWS[0].id}`])}: ${listed(BREWS.map((b) => b.name.toLowerCase()))} you brew, `
+      + 'for whoever drinks it, from the barrel or a bucket drawn off it. No brew gives a meal boost.',
   },
   {
     num: 31, name: 'Pantry Reach',
@@ -1271,9 +1271,7 @@ const COOK: Seed[] = [
     num: 47, name: 'Distil',
     fx: { distil: 1 },
     note: () => `New recipe per brew: ${DISTIL_BUCKETS} buckets (${DISTIL_BUCKETS * BUCKET_LITRES} litres) over a campfire `
-      + `make one bucket of spirit (${BUCKET_LITRES} litres) and return ${DISTIL_BUCKETS - 1} empty buckets. Spirit drink boost at QL ${QL_TOP}: `
-      + `${durationSaid(boonTime('spirit_bucket', QL_TOP))} (${listed(BREWS.map((b) => `${b.name.toLowerCase()} `
-      + `${durationSaid(boonTime(`${b.id}_bucket`, QL_TOP))}`))}).`,
+      + `make one bucket of spirit (${BUCKET_LITRES} litres) and return ${DISTIL_BUCKETS - 1} empty buckets.`,
   },
   {
     num: 49, name: 'Bait Maker',
@@ -1285,7 +1283,7 @@ const COOK: Seed[] = [
     num: 50, name: 'Taste',
     fx: { taste: 1 },
     note: () => 'Examine on food or drink shows: food bar filled (or thirst quenched) per helping, '
-      + `each of the ${NUTRIENTS.length} nutrients fed, and meal or drink boost duration, at its QL and maker.`,
+      + `each of the ${NUTRIENTS.length} nutrients fed, and its meal boost (dishes off a shut recipe) and duration, at its QL and maker.`,
   },
 ];
 
@@ -1639,8 +1637,8 @@ const NATURALIST: Seed[] = [
   {
     num: 50, name: 'Tincture',
     fx: { tincture: 1 },
-    note: () => `New recipe: ${ofOneHerb(TINCTURE)} make a tincture. Effect: skill gain +${percent(TINCTURE_BONUS)} on ${TINCTURE_NAMES} `
-      + `for ${durationSaid(TINCTURE_SECONDS)}, alongside any dish effect.`,
+    note: () => `New recipe: ${ofOneHerb(TINCTURE)} make a tincture. Effect: none (was skill gain +${percent(TINCTURE_BONUS)} on ${TINCTURE_NAMES} `
+      + `for ${durationSaid(TINCTURE_SECONDS)}).`,
   },
 ];
 
