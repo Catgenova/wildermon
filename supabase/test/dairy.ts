@@ -3,9 +3,8 @@
  *
  * The butter churn, its recipe and churning, butter, the pastry baked with it,
  * cheese and the part bucket of milk, the same rows on both sides, and each
- * keeping longer than milk by its own `decay`; a Gorral milked as a Cudda is,
- * for `GORRAL_MILK` litres a milking into a part bucket of milk that becomes a
- * bucket of milk at `BUCKET_LITRES`; and churning, pressing and baking giving
+ * keeping longer than milk by its own `decay`; every kind that is milked filling
+ * a bucket a milking (the Gorral, the one that gave less, is gone); and churning, pressing and baking giving
  * the counts the browser says, the bucket back, on the island and in the
  * browser alike; pressing cheese hands the bucket back full of whey, which
  * `whey.ts` follows further.
@@ -22,7 +21,7 @@ import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/action
 import type { Creature } from '../../src/game/creatures';
 import { SPECIES } from '../../src/game/creatures';
 import {
-  BUTTER_CHURN, BUTTER_PATS, CHURN_BUTTER, GORRAL_MILK, MILK_PART, MILK_READY, milkedSays, milkLitres, toppedQl, WHEY_BUCKET,
+  BUTTER_CHURN, BUTTER_PATS, CHURN_BUTTER, MILK_PART, MILK_READY, milkedSays, milkLitres, WHEY_BUCKET,
 } from '../../src/game/dairy';
 import { BUCKET_LITRES, FURNITURE_BY_ID } from '../../src/game/furniture';
 import { ITEM_DEFS, type Item } from '../../src/game/items';
@@ -92,13 +91,13 @@ const feedsIsle = psql(`select string_agg(f.item || '=' || f.nutrient || ':' || 
 const feedsHere = ['butter', 'pastry'].flatMap((id) => feedsOf(id).split(',').map((x) => `${id}=${x}`)).join(',');
 check(`butter and pastry feed the same on both sides: ${feedsHere}`, feedsIsle === feedsHere, feedsIsle);
 
-const constsIsle = psql(`select concat_ws('|', milk_litres('cudda'), milk_litres('gorral'), bucket_litres()::int, milk_ready(),
-  (select milk::text || ':' || fleece from species_def where id = 'gorral'))`);
-const constsHere = [milkLitres('cudda'), milkLitres('gorral'), BUCKET_LITRES, MILK_READY, 'true'].join('|');
-const fleeceIsle = Number(constsIsle.split(':')[1]);
-check(`a Gorral is milked for ${GORRAL_MILK} litres where a Cudda fills a bucket of ${BUCKET_LITRES}, the same on both sides`,
-  constsIsle.split(':')[0] === constsHere && Math.abs(fleeceIsle - (SPECIES.gorral.fleece ?? 0)) < 1e-9 && GORRAL_MILK < BUCKET_LITRES && !!SPECIES.gorral.milk,
-  `${constsIsle} / ${constsHere}:${SPECIES.gorral.fleece}`);
+const milkers = Object.values(SPECIES).filter((d) => d.milk).map((d) => d.id).sort();
+const constsIsle = psql(`select concat_ws('|', bucket_litres()::int, milk_ready(),
+  (select string_agg(id || ':' || milk_litres(id), ',' order by id) from species_def where milk))`);
+const constsHere = [BUCKET_LITRES, MILK_READY, milkers.map((id) => `${id}:${milkLitres(id)}`).join(',')].join('|');
+check(`every kind that is milked (${milkers.join(', ')}) fills a bucket of ${BUCKET_LITRES} a milking, the same on both sides`,
+  constsIsle === constsHere && milkers.length > 0 && milkers.every((id) => milkLitres(id) === BUCKET_LITRES),
+  `${constsIsle} / ${constsHere}`);
 
 /* ---- on the island --------------------------------------------------------------- */
 
@@ -106,15 +105,13 @@ const MIRA = 'da1e7000-0000-4000-8000-0000000000a1';
 const count = (def: string): string => `coalesce((select sum(count) from item where world_id = w and holder_uid = u and def = '${def}'), 0)`;
 const charges = (def: string): string =>
   `coalesce((select string_agg(coalesce(charges::int::text, '-'), ',' order by id) from item where world_id = w and holder_uid = u and def = '${def}'), '-')`;
-const ql = (def: string): string =>
-  `coalesce((select string_agg(round(ql::numeric, 2)::text, ',' order by id) from item where world_id = w and holder_uid = u and def = '${def}'), '-')`;
 const lastSaid = "(select e.text from event e where e.world_id = w and e.uid = u and e.kind = 'wildermon' and e.text like 'Milked %' order by e.n desc limit 1)";
 const milkAt = (v: string): string => `jsonb_build_object('kind', 'creature', 'id', ${v})`;
 const refusal = (v: string): string => `coalesce(act_refusal(w, u, 'milk_creature', ${milkAt(v)}), 'none')`;
 const feed = (v: string, fleece: number, hunger: number): string =>
   `update creature set fleece = ${fleece}, hunger = ${hunger} where world_id = w and id = ${v};`;
 const craft = (r: string): string => `perform perform_craft(w, u, '${r}', jsonb_build_object('kind', 'item', 'uid', null));`;
-/** The hunger each of a Gorral's three milkings is made at, and a Cudda's one. */
+/** The hunger a Cudda's milking is made at. */
 const HUNGERS = [1, 0, 0.5];
 
 const out = psql(`
@@ -128,7 +125,7 @@ create or replace function skill_check(p_skill double precision, p_difficulty do
 create or replace function perk_rare(p_chance double precision) returns text language sql as 'select null::text';
 create or replace function rarity_roll() returns text language sql as 'select null::text';
 do $t$
-declare w uuid; u uuid := '${MIRA}'; v_cudda int; v_gorral int; v_x bigint; v_st bigint;
+declare w uuid; u uuid := '${MIRA}'; v_cudda int; v_x bigint; v_st bigint;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Dairy', 162, 64, 10, 10, true) returning id into w;
   perform land_blank(w, 64);
@@ -146,35 +143,20 @@ begin
 
   -- 1. A Cudda fills a bucket.
   select creature_spawn(w, 'cudda', 10.5, 9.5, 'deed', now() - interval '10 days', u) into v_cudda;
-  select creature_spawn(w, 'gorral', 11.5, 10.5, 'deed', now() - interval '10 days', u) into v_gorral;
   update creature set sex = 'female', traits = '{}', mode = 'deed', keeper = u, leg_at = now(), leg_ends = now(),
          until = now() + interval '1 hour', settled_at = now()
-   where world_id = w and id in (v_cudda, v_gorral);
+   where world_id = w and id = v_cudda;
   update creature set from_x = 10.5, from_y = 9.5, to_x = 10.5, to_y = 9.5 where world_id = w and id = v_cudda;
-  update creature set from_x = 11.5, from_y = 10.5, to_x = 11.5, to_y = 10.5 where world_id = w and id = v_gorral;
   ${feed('v_cudda', 1, HUNGERS[0])}
-  insert into said select 'NAMES', (select name from creature where world_id = w and id = v_cudda) || '|' || (select name from creature where world_id = w and id = v_gorral);
+  insert into said select 'NAMES', (select name from creature where world_id = w and id = v_cudda);
   insert into said values ('C:none', ${refusal('v_cudda')});
   perform give(w, u, 'bucket', 1, 30);
   insert into said values ('C:ask', ${refusal('v_cudda')});
   perform act_perform(w, u, 'milk_creature', ${milkAt('v_cudda')});
   insert into said values ('C', ${count('milk_bucket')} || '|' || ${count('bucket')} || '|' || ${charges('milk_bucket')} || '|' || ${lastSaid});
+  insert into said values ('C:again', ${refusal('v_cudda')});
   delete from item where world_id = w and holder_uid = u and def = 'milk_bucket';
 
-  -- 2. A Gorral: its litres into a bucket, then into the part bucket, until it is full.
-  ${feed('v_gorral', 1, HUNGERS[0])}
-  insert into said values ('G:none', ${refusal('v_gorral')});
-  perform give(w, u, 'bucket', 1, 30);
-  perform act_perform(w, u, 'milk_creature', ${milkAt('v_gorral')});
-  insert into said values ('G1', ${count(MILK_PART)} || '|' || ${count('bucket')} || '|' || ${charges(MILK_PART)} || '|' || ${ql(MILK_PART)} || '|' || ${lastSaid});
-  insert into said values ('G:again', ${refusal('v_gorral')});
-  ${feed('v_gorral', 1, HUNGERS[1])}
-  insert into said values ('G:partonly', ${refusal('v_gorral')});
-  perform act_perform(w, u, 'milk_creature', ${milkAt('v_gorral')});
-  insert into said values ('G2', ${count(MILK_PART)} || '|' || ${count('bucket')} || '|' || ${charges(MILK_PART)} || '|' || ${ql(MILK_PART)} || '|' || ${lastSaid});
-  ${feed('v_gorral', 1, HUNGERS[2])}
-  perform act_perform(w, u, 'milk_creature', ${milkAt('v_gorral')});
-  insert into said values ('G3', ${count(MILK_PART)} || '|' || ${count('milk_bucket')} || '|' || ${charges('milk_bucket')} || '|' || ${ql('milk_bucket')} || '|' || ${lastSaid});
   -- And a Cudda will not go into a part bucket.
   perform give(w, u, '${MILK_PART}', 1, 30);
   ${feed('v_cudda', 1, 1)}
@@ -211,7 +193,6 @@ rollback;`);
 const isle = new Map(out.split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)] as [string, string]));
 const part = (k: string, i = 0): string => (isle.get(k) ?? '').split('|')[i] ?? '';
 const isleCudda = part('NAMES', 0);
-const isleGorral = part('NAMES', 1);
 
 /* ---- in the browser, the same ----------------------------------------------------- */
 
@@ -249,58 +230,23 @@ const milk = (c: Creature, fleece: number, hunger: number): void => {
   act('milk_creature').perform(at(c), g);
 };
 const qlOf = (fleece: number, hunger: number): number => Math.max(1, Math.min(100, 20 + fleece * 40 + hunger * 30));
-const near = (a: string | number, b: number, by = 0.6): boolean => Math.abs(Number(a) - b) <= by;
 
 /* 1. A Cudda. */
 const cudda = tame('cudda', 10.5, 9.5);
-const gorral = tame('gorral', 11.5, 10.5);
 const cNone = ask(cudda);
 thing('bucket', 30);
 const cAsk = ask(cudda);
 milk(cudda, 1, HUNGERS[0]);
 const cSaid = lastMilk();
+const cAgain = ask(cudda);
 check(`a Cudda fills a bucket, the same on both sides: ${cSaid}`,
   cNone === 'Need an empty bucket.' && isle.get('C:none') === cNone && cAsk === 'none' && isle.get('C:ask') === 'none'
     && part('C', 0) === '1' && part('C', 1) === '0' && held('milk_bucket') === 1 && held('bucket') === 0
     && cSaid === milkedSays(cudda.name, BUCKET_LITRES, qlOf(1, HUNGERS[0])) && part('C', 3) === milkedSays(isleCudda, BUCKET_LITRES, qlOf(1, HUNGERS[0])),
   `${isle.get('C:none')} ${isle.get('C:ask')} ${isle.get('C')} / ${cNone} ${cAsk} ${cSaid}`);
-g.inventory.items.length = 0;
-
-/* 2. A Gorral, three milkings. */
-const gNone = ask(gorral);
-thing('bucket', 30);
-milk(gorral, 1, HUNGERS[0]);
-const g1 = one(MILK_PART);
-const q1 = qlOf(1, HUNGERS[0]);
-check(`a Gorral gives ${GORRAL_MILK} litres a milking into the bucket, which is a part bucket of milk, on both sides: ${lastMilk()}`,
-  gNone === 'Need an empty bucket.' && isle.get('G:none') === gNone
-    && part('G1', 0) === '1' && part('G1', 1) === '0' && part('G1', 2) === String(GORRAL_MILK) && near(part('G1', 3), q1)
-    && g1?.charges === GORRAL_MILK && held('bucket') === 0 && near(g1.ql, q1)
-    && lastMilk() === milkedSays(gorral.name, GORRAL_MILK, q1) && part('G1', 4) === milkedSays(isleGorral, GORRAL_MILK, Number(part('G1', 3)))
-    && lastMilk().includes(`bucket ${GORRAL_MILK}/${BUCKET_LITRES} litres.`),
-  `${isle.get('G1')} / ${g1?.charges} ${g1?.ql} ${lastMilk()}`);
-const gAgain = ask(gorral);
-gorral.fleece = 1;
-const gPartOnly = ask(gorral);
-check(`it will not be milked again until ${MILK_READY * 100}% of its milk is back, and then the part bucket is all it needs`,
-  gAgain === `${gorral.name}: no milk yet.` && isle.get('G:again') === `${isleGorral}: no milk yet.`
-    && gPartOnly === 'none' && isle.get('G:partonly') === 'none',
-  `${isle.get('G:again')} ${isle.get('G:partonly')} / ${gAgain} ${gPartOnly}`);
-milk(gorral, 1, HUNGERS[1]);
-const q2 = toppedQl(GORRAL_MILK, q1, GORRAL_MILK, qlOf(1, HUNGERS[1]));
-const g2 = one(MILK_PART);
-check(`a second milking tops it up to ${GORRAL_MILK * 2} litres, at the average quality by the litres of each, on both sides`,
-  part('G2', 0) === '1' && part('G2', 2) === String(GORRAL_MILK * 2) && near(part('G2', 3), q2) && g2?.charges === GORRAL_MILK * 2 && near(g2.ql, q2)
-    && lastMilk() === milkedSays(gorral.name, GORRAL_MILK * 2, q2) && part('G2', 4) === milkedSays(isleGorral, GORRAL_MILK * 2, Number(part('G2', 3))),
-  `${isle.get('G2')} / ${g2?.charges} ${g2?.ql} ${lastMilk()}`);
-milk(gorral, 1, HUNGERS[2]);
-const q3 = toppedQl(GORRAL_MILK * 2, q2, GORRAL_MILK, qlOf(1, HUNGERS[2]));
-const full = one('milk_bucket');
-check(`and a third fills it: a bucket of milk of ${BUCKET_LITRES} litres, the part bucket gone, on both sides`,
-  part('G3', 0) === '0' && part('G3', 1) === '1' && part('G3', 2) === String(ITEM_DEFS.milk_bucket.charges) && near(part('G3', 3), q3)
-    && held(MILK_PART) === 0 && held('milk_bucket') === 1 && full?.charges === ITEM_DEFS.milk_bucket.charges && near(full?.ql ?? 0, q3)
-    && lastMilk() === milkedSays(gorral.name, BUCKET_LITRES, q3) && part('G3', 4) === milkedSays(isleGorral, BUCKET_LITRES, Number(part('G3', 3))),
-  `${isle.get('G3')} / ${held(MILK_PART)} ${full?.charges} ${full?.ql} ${lastMilk()}`);
+check(`it will not be milked again until ${MILK_READY * 100}% of its milk is back, the same on both sides`,
+  cAgain === `${cudda.name}: no milk yet.` && isle.get('C:again') === `${isleCudda}: no milk yet.`,
+  `${isle.get('C:again')} / ${cAgain}`);
 g.inventory.items.length = 0;
 thing(MILK_PART, 30);
 cudda.fleece = 1;

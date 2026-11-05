@@ -100,19 +100,19 @@ begin
   update player set x = 104.5, y = 100.5, body_at = now(), swim_at = now(), seen_at = now(), away = false where world_id = w and uid = you;
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Fetchstead', 90, 90, 5, 5, me);
   insert into fd values
-    ('W1', creature_spawn(w, 'shaggan', 110.5, 100.5)),
+    ('W1', creature_spawn(w, 'roxxen', 110.5, 100.5)),
     ('W2', creature_spawn(w, 'rabba', 95.5, 105.5)),
-    ('W3', creature_spawn(w, 'shaggan', 120.5, 110.5)),
+    ('W3', creature_spawn(w, 'roxxen', 120.5, 110.5)),
     ('W4', creature_spawn(w, 'quarra', 130.5, 100.5)),
     ('W5', creature_spawn(w, 'rabba', 100.5, 120.5)),
-    ('W6', creature_spawn(w, 'shaggan', 85.5, 85.5)),
+    ('W6', creature_spawn(w, 'roxxen', 85.5, 85.5)),
     ('W7', creature_spawn(w, 'quarra', 115.5, 90.5)),
-    ('FAR', creature_spawn(w, 'shaggan', 170.5, 150.5)),
+    ('FAR', creature_spawn(w, 'roxxen', 170.5, 150.5)),
     ('O1', creature_spawn(w, 'tinka', 101.5, 101.5, 'active', now() - interval '30 days', me)),
     ('O2', creature_spawn(w, 'rabba', 100.5, 100.5, 'stored', now() - interval '30 days', me)),
     ('O3', creature_spawn(w, 'tinka', 90.5, 90.5, 'deed', now() - interval '60 days', me)),
     ('Y1', creature_spawn(w, 'bura', 104.5, 101.5, 'active', now() - interval '30 days', you)),
-    ('Y2', creature_spawn(w, 'shaggan', 104.5, 99.5, 'active', now() - interval '30 days', you)),
+    ('Y2', creature_spawn(w, 'roxxen', 104.5, 99.5, 'active', now() - interval '30 days', you)),
     ('Y3', creature_spawn(w, 'rabba', 106.5, 100.5, 'active', now() - interval '30 days', you));
   -- Nothing due: the read's own sweep (a database without pg_cron) and the clock leave them be until asked.
   update creature set until = now() + interval '1 day', leg_at = now() - interval '10 seconds', leg_ends = now() - interval '5 seconds',

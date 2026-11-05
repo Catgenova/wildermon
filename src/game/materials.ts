@@ -109,7 +109,7 @@ export const WOODS: MaterialDef[] = TREE_DEFS.map((t) => wood(t.name));
 export const METAL_MATERIALS: MaterialDef[] = METALS.map((m) => metal(m.id, m.name));
 export const GEM_MATERIALS: MaterialDef[] = GEMS.map(gem);
 export const MATERIALS: MaterialDef[] = [...WOODS, ...METAL_MATERIALS, ...GEM_MATERIALS];
-/** Anything that carries its own light (a Lume, an Embra) takes this many times the blow from a bane metal's edge. */
+/** Anything that carries its own light (an Embra, a dragon) takes this many times the blow from a bane metal's edge. */
 export const BANE_BONUS = 1.5;
 /** Each multiplier a material carries, by what it multiplies, in the order the examine line says them. */
 const NOTE_FACTORS: Array<[keyof Props, string]> = [
