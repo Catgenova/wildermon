@@ -116,7 +116,8 @@ interface Toad {
 /** A Brewtoad: small and round, sat in a little barrel with only its head and hands over the rim, a hop wreath, a big grin. */
 const BREWTOAD_LOOK: Toad = {
   stage: 0,
-  body: { y: [-0.42, -0.36, -0.18, 0, 0.18, 0.32, 0.4], z: [0.02, 0.02, 0.01, 0, 0, 0.02, 0.04], w: [0.36, 0.6, 0.7, 0.72, 0.68, 0.56, 0.32], h: [0.26, 0.4, 0.47, 0.49, 0.46, 0.39, 0.24] },
+  // Its body within its tub's walls at the rim (`cask.r`), so that none of it stands out through them from any side.
+  body: { y: [-0.42, -0.36, -0.18, 0, 0.18, 0.32, 0.4], z: [0.02, 0.02, 0.01, 0, 0, 0.02, 0.04], w: [0.33, 0.55, 0.64, 0.66, 0.62, 0.51, 0.29], h: [0.26, 0.4, 0.47, 0.49, 0.46, 0.39, 0.24] },
   high: 0.5, tilt: 22,
   head: { at: [0, 0.3, 0.2], fwd: 0.13, up: 0.12, r: [0.62, 0.46, 0.4], mouth: 0.2, smile: 0.22, pitch: -14 },
   eye: { at: [0.5, 0.3, 0.62], dome: 0.17, size: 0.15, lid: 0.04, round: 1 },
@@ -124,7 +125,7 @@ const BREWTOAD_LOOK: Toad = {
   fore: { hip: [0.4, 0.24, -0.1], len: [0.24, 0.22], at: [0.5, 0.4], foot: 0.08, toe: 0.11, toes: 4, w: 0.15, turn: 16 },
   hind: { hip: [0.36, -0.26, -0.14], len: [0.26, 0.24], at: [0.4, 0.0], foot: 0.1, toe: 0.1, toes: 4, w: 0.15, turn: 28 },
   hand: [42, 1.02, 0.02],
-  cask: { y: 0.04, r: 0.66, h: 0.66, bands: [0.2, 0.78], gold: false, rivets: 0, tub: true, crest: false },
+  cask: { y: 0.04, r: 0.78, h: 0.66, bands: [0.2, 0.78], gold: false, rivets: 0, tub: true, crest: false },
   dress: {
     wreath: [[0.55, -0.35, 0.75, 0.22], [0.2, -0.3, 0.95, 0.24], [-0.2, -0.3, 0.95, 0.24], [-0.55, -0.35, 0.75, 0.22], [0.75, -0.6, 0.35, 0.18], [-0.75, -0.6, 0.35, 0.18]],
     flowers: [[0.35, -0.05, 0.95, 0.14]],
@@ -146,7 +147,8 @@ const BROTHGUT_LOOK: Toad = {
   eye: { at: [0.5, 0.32, 0.6], dome: 0.21, size: 0.17, lid: 0.06, round: 1 },
   gape: 16,
   fore: { hip: [0.86, 0.36, -0.12], len: [0.46, 0.42], at: [0.92, 0.72], foot: 0.13, toe: 0.15, toes: 4, w: 0.18, turn: 18 },
-  hind: { hip: [0.74, -0.46, -0.36], len: [0.56, 0.5], at: [1.0, 0.85], foot: 0.2, toe: 0.18, toes: 4, w: 0.3, turn: 34 },
+  // Its hips out past its barrel's sides, so its thighs sit against the staves rather than in them.
+  hind: { hip: [0.92, -0.46, -0.36], len: [0.56, 0.5], at: [1.14, 0.85], foot: 0.2, toe: 0.18, toes: 4, w: 0.3, turn: 34 },
   hand: [42, 0.98, 0.02],
   cask: { y: 0.4, r: 0.86, h: 1.18, bands: [0.14, 0.5, 0.86], gold: false, rivets: 12, tub: false, crest: false },
   dress: {
@@ -172,7 +174,7 @@ const BARRELBURP_LOOK: Toad = {
   eye: { at: [0.5, 0.36, 0.6], dome: 0.24, size: 0.18, lid: 0.12, round: 1 },
   gape: 18,
   fore: { hip: [1.18, 0.5, -0.1], len: [0.62, 0.56], at: [1.2, 0.86], foot: 0.2, toe: 0.22, toes: 4, w: 0.27, turn: 16 },
-  hind: { hip: [1.0, -0.62, -0.42], len: [0.7, 0.62], at: [1.35, 1.05], foot: 0.26, toe: 0.24, toes: 4, w: 0.44, turn: 34 },
+  hind: { hip: [1.24, -0.62, -0.42], len: [0.7, 0.62], at: [1.5, 1.05], foot: 0.26, toe: 0.24, toes: 4, w: 0.44, turn: 34 },
   hand: [44, 0.98, 0.02],
   cask: { y: 0.46, r: 1.2, h: 1.66, bands: [0.12, 0.42, 0.66, 0.9], gold: true, rivets: 16, tub: false, crest: true },
   dress: {
@@ -1061,9 +1063,10 @@ function caskMesh(s: Toad, lod: number): Mesh {
 
 /**
  * Where its tap is: on its left side, turned this far toward its front (degrees), and up the barrel as a share of its height.
- * Asked for: "offset the spigot to one side" -- square on the side, so from in front it stands out from the barrel's edge.
+ * Asked for: "offset the spigot to one side" -- on the side, a little toward the back, so from in front it stands out from the
+ * barrel's edge; high, under the strap, where a Brothgut's or a Barrelburp's thigh against the staves below it does not reach.
  */
-const TAP_TURN = -24, TAP_UP = 0.64;
+const TAP_TURN = -12, TAP_UP = 0.85;
 /** The tap's way out of the barrel, and where it stands on it, in the barrel's frame. */
 function tapOf(s: Toad): { at: V3; out: V3 } {
   const C = s.cask, a = TAP_TURN * DEG, out: V3 = [-Math.cos(a), Math.sin(a), 0], z = TAP_UP * C.h, r = caskR(C, z);
@@ -1072,7 +1075,7 @@ function tapOf(s: Toad): { at: V3; out: V3 } {
 
 /**
  * Its tap, in the barrel's frame: a brass boss on the staves at its left side, a short pipe out from it, bent down into a spout,
- * and a key on the pipe's top. From in front it stands at the barrel's edge, half way up.
+ * and a key on the pipe's top. From in front it stands at the barrel's edge, high up.
  */
 function tapMesh(s: Toad): Mesh {
   const C = s.cask, T = tapOf(s), k = C.r * (C.tub ? 0.24 : 0.2), o = T.out, up: V3 = [0, 0, 1];
@@ -1138,6 +1141,12 @@ function crestMesh(s: Toad): Mesh {
 
 /** How far up its barrel the Brothgut's strap goes round it, as a share of its height. */
 const STRAP_UP = 0.95;
+/**
+ * Which way a belly barrel and what is on it face, in the barrel's frame, for drawing them over the body or under it: forward
+ * and well down, so that from in front and from the side they go over it, and from behind or from high above, where the
+ * chest and back are over the barrel, under it.
+ */
+const BELLY_FRONT: V3 = [0, 0.74, -0.67];
 /** The Brothgut's strap: a leather belt round the top of its barrel belly, under its chest, a brass buckle on its front, in the barrel's frame. */
 function strapMesh(s: Toad, n: number): Mesh {
   const C = s.cask, z = STRAP_UP * C.h, w = C.h * 0.05, N = n * 3, parts: Mesh[] = [];
@@ -1299,7 +1308,15 @@ function jawOf(s: Toad, n: number): Mesh {
   const z0 = mouthZ(s, 0);
   const floor = orb(sub([C[0], C[1] + H.r[1] * 0.12, z0 - H.r[2] * 0.2], hg), [H.r[0] * 0.8, H.r[1] * 0.78, H.r[2] * 0.16], n, 3, 'inner');
   const tongue = orb(sub([C[0], C[1] + H.r[1] * 0.38, z0 - H.r[2] * 0.1], hg), [H.r[0] * 0.42, H.r[1] * 0.42, H.r[2] * 0.14], n, 3, 'tongue');
-  return merge(flat(mesh(m.v.map((p) => sub(p, hg)), m.f)), floor, tongue);
+  // Its back corners drawn in to within the skull's width, so that seen from behind or three-quarters they do not stand out
+  // past the head as a thin blade: the jaw is as wide as the head at the mouth's corners and narrower toward the nape.
+  const tuck = (p: V3): V3 => {
+    const back = clamp((C[1] + 0.6 * r[1] - p[1]) / (1.6 * r[1])), k = 1 - 0.2 * back;
+    return [C[0] + (p[0] - C[0]) * k, p[1], p[2]];
+  };
+  // Its inside, a pink lining a little within it facing in, for a look down into its open mouth from above or from the side.
+  const lining = mesh(m.v.map((p) => sub(add(C, scale(sub(tuck(p), C), 0.95)), hg)), m.f.map((f) => ({ ...f, i: [...f.i].reverse(), m: 'inner' as Mat })));
+  return merge(flat(mesh(m.v.map((p) => sub(tuck(p), hg)), m.f)), lining, floor, tongue);
 }
 
 /** A mesh with its own faces painted over it again, flat, so cream under a chin is cream from above. */
@@ -1341,7 +1358,7 @@ function footOf(s: Toad, L: Leg, heel: number, hind: boolean, n: number): Mesh {
 
 function upperOf(s: Toad, L: Leg, l0: number, hind: boolean, _side: number, n: number, k: number): Mesh {
   // The smaller two's haunch is a toad's fat drumstick folded beside it; the Bastiontoad's a thick column, for its weight.
-  const w = L.w, top = hind ? 2.0 : 1.05, low = hind ? 1.1 : 0.9, fat = hind ? [1.4, 1.45, 1.4][s.stage] : 1;
+  const w = L.w, top = hind ? 2.0 : 1.05, low = hind ? 1.1 : 0.9, fat = hind ? [1.4, 1.25, 1.22][s.stage] : 1;
   const m = hind
     ? merge(orb([0, 0, -l0 * 0.48], [w * fat, w * fat * 0.95, l0 * 0.68], n + 1, k + 1, 'coat'), orb([0, 0, -l0], w * low, n, k, 'coat'))
     : merge(
@@ -1422,10 +1439,10 @@ function toadBuild(s: Toad, lod: number): Piece[] {
   const M = marksOf(s), bodyHide = { c: [0, 0, 0] as V3, r: [M.w[3] * 0.9, (M.y[6] - M.y[0]) * 0.45, M.h[3] * 0.9] as V3 };
   const caskHide = caskSolids(s);
   // A tub is drawn first and the toad in it after, all of it that is behind the tub's walls hidden; a belly barrel goes over the
-  // body from in front and under it from behind.
-  pieces.push({ key: 'cask', mesh: caskMesh(s, lod), bone: 'cask', bias: tub ? -0.02 : 0.025, ...(tub ? {} : { after: 'body', front: [0, 1, 0] as V3 }) });
+  // body from in front and under it from behind -- and from above, where the chest and the back are over it (`BELLY_FRONT`).
+  pieces.push({ key: 'cask', mesh: caskMesh(s, lod), bone: 'cask', bias: tub ? -0.02 : 0.025, ...(tub ? {} : { after: 'body', front: BELLY_FRONT }) });
   pieces.push({ key: 'tap', mesh: tapMesh(s), bone: 'cask', bias: 0.03, after: 'cask', front: tapOf(s).out, thin: true });
-  if (C.crest) pieces.push({ key: 'crest', mesh: crestMesh(s), bone: 'cask', bias: 0.03, after: 'cask', front: [0, 1, 0], thin: true });
+  if (C.crest) pieces.push({ key: 'crest', mesh: crestMesh(s), bone: 'cask', bias: 0.03, after: ['cask', 'body'], front: BELLY_FRONT, thin: true });
   pieces.push({
     key: 'body', mesh: skinOf(s, n + 3), bone: 'trunk', bias: 0, breathes: { c: [0, 0, 0], k: 0.035 },
     ...(tub ? { after: 'cask', hide: caskHide, hideIn: 'cask' } : {}),
@@ -1460,7 +1477,7 @@ function toadBuild(s: Toad, lod: number): Piece[] {
   }
   // The strap is above the solids' reach near the barrel's top: one more there for its far side.
   const strapHide = [...caskHide, { c: [0, 0, STRAP_UP * C.h] as V3, r: [caskR(C, STRAP_UP * C.h) * 1.02, caskR(C, STRAP_UP * C.h) * 1.02, C.h * 0.14] as V3 }];
-  if (s.dress.strap) pieces.push({ key: 'strap', mesh: strapMesh(s, n), bone: 'cask', bias: 0.03, after: ['cask'], front: [0, 1, 0], hide: strapHide });
+  if (s.dress.strap) pieces.push({ key: 'strap', mesh: strapMesh(s, n), bone: 'cask', bias: 0.03, after: ['cask', 'body'], front: BELLY_FRONT, hide: strapHide });
   if (s.dress.chain) pieces.push({ key: 'chain', mesh: chainMesh(s, n), bone: 'trunk', bias: 0.03, after: ['body', 'cask'], hide: [bodyHide] });
   return pieces;
 }
