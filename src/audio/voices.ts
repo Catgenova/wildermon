@@ -40,6 +40,8 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   embra: () => import('./voice-slug').then((m) => m.SLUG_VOICE),
   // The Whispet, the Lanternveil and the Hallowmire.
   whispet: () => import('./voice-ghost').then((m) => m.GHOST_VOICE),
+  // The Crumbud, the Gingerbark and the Yuleheart.
+  crumbud: () => import('./voice-ginger').then((m) => m.GINGER_VOICE),
   // The Brickling, the Mortarback and the Bastiondrake.
   cobbe: () => import('./voice-brick').then((m) => m.BRICK_VOICE),
   // The Cartling, the Wagonox and the Haulhorn.

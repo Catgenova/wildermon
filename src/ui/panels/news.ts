@@ -4252,6 +4252,21 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 510,
+    day: '2026-11-05',
+    lines: () => {
+      const d = SPECIES.crumbud;
+      const [one, two] = d.stages!;
+      const food = d.diet.map((id) => itemDef(id).name.toLowerCase());
+      return [
+        `Added: ${d.name}, wild only ${seasonSays(d.season!)}, every year, by UTC calendar. Other days: none spawn and wild ones vanish; tamed, kept or bred ones stay all year.`,
+        `Added: health ${d.health}, attack ${d.attack}; taming ${d.tameLevel}, base ${percent(d.tameChance)} per offering; takes ${listedOr(food)} from your hand. Tamed: uses ${abilityName(d.ability!)} in a fight: ${abilitySays(d.ability!)}. Wild: fights like any other and always strikes back when struck.`,
+        `Added: evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1, false)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2, false)}); both vs ${article(d.name)} ${d.name}. Stage 3 skill: ${two.name} ${perkSays('crumbud')}. Level = body strength, learned keeping watch over a settlement.`,
+        'Each stage: own model, animations and voice.',
+      ];
+    },
+  },
+  {
     n: 508,
     day: '2026-11-05',
     lines: () => {

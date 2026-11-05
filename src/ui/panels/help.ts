@@ -952,7 +952,9 @@ const evolves = (id: string): string => {
 /** The wildermon that fight in a way of their own (`FightStyle`), in the order the help gives them. */
 const FIGHTERS = ['thumpa', 'sparra'];
 /** The wildermon with an ability of their own (`AbilityId`), in the order the help gives them. */
-const ABLE = ['lungra', 'stona', 'whispet'];
+const ABLE = ['lungra', 'stona', 'whispet', 'crumbud'];
+/** The wildermon found wild only in a season of the year (`SpeciesDef.season`): the Halloween and the Christmas ones. */
+const SEASONAL = ['whispet', 'crumbud'];
 const HAND_NUMBERS: Record<string, string> = {
   kemma: `a brushing puts in ${percent(groomGain(1, 1))} care (${CARE_SAID}) at no husbandry and ${percent(groomGain(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}, as a keeper of its skill with a brush as good. Evolves: ${evolves('kemma')}`,
   sheela: `a full fleece gives ${SHEAR_WOOL} wool and a full crop of feathers ${SHEAR_FEATHERS}, and a milking a bucket of milk; evolves: ${evolves('sheela')}`,
@@ -3280,13 +3282,13 @@ export function helpText(): string {
         const d = SPECIES[id];
         return `<li><b>${d.name}</b> (taming ${d.tameLevel}), ${abilityName(d.ability!)}: ${abilitySays(d.ability!)}.</li>`;
       }).join('')}
-      <li>${((): string => {
-        const d = SPECIES.whispet;
+      ${SEASONAL.map((id) => {
+        const d = SPECIES[id];
         const [one, two] = d.stages!;
-        return `${d.name}: wild only ${d.nocturnal ? 'after dark, ' : ''}from ${seasonSays(d.season!)} (UTC calendar); on other days no wild ones; tamed, kept or bred ones stay all year.
+        return `<li>${d.name}: wild only ${d.nocturnal ? 'after dark, ' : ''}from ${seasonSays(d.season!)} (UTC calendar), every year; on other days no wild ones; tamed, kept or bred ones stay all year.
       Level = body strength. Evolves into ${article(one.name)} ${one.name} at ${EVOLVE_AT[0]} (${stageSays(1, false)}) and ${article(two.name)} ${two.name} at ${EVOLVE_AT[1]}
-      (${stageSays(2, false)}), against ${article(d.name)} ${d.name}.`;
-      })()}</li>
+      (${stageSays(2, false)}), against ${article(d.name)} ${d.name}.</li>`;
+      }).join('')}
     </ul>
     <h4>Settlement menu and upgrades</h4>
     <ul>

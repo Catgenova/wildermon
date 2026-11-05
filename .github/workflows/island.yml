@@ -5376,6 +5376,19 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/whispet.mjs --log-level=error
           node node_modules/.cache/whispet.mjs
 
+      - name: The Crumbud, out only from 1 December to 25 December
+        if: matrix.shard == 6
+        run: |
+          # A wild one is put down only in its season, by the calendar in UTC,
+          # any year, and the spawner takes the wild ones off once it is over;
+          # one you keep stays, and the Whispet's season is as it was. Tamed,
+          # fighting, it taunts: what is after anybody within its reach, and
+          # every hunter and monster there, turns on it, and it rests. The same
+          # on both sides, and never a wild one.
+          npx esbuild supabase/test/crumbud.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/crumbud.mjs --log-level=error
+          node node_modules/.cache/crumbud.mjs
+
       - name: A skill for every wildermon, and its level is that skill
         if: matrix.shard == 6
         run: |
