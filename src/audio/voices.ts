@@ -167,6 +167,8 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   scorcha: () => import('./voice-slag').then((m) => m.SLAG_VOICE),
   // The Wheybit, the Pressqueak and the Fromageon.
   frosta: () => import('./voice-mouse').then((m) => m.MOUSE_VOICE),
+  // The Padbloom, the Lilyback and the Lotushell.
+  spitta: () => import('./voice-lily').then((m) => m.LILY_VOICE),
 };
 
 /** Each voice that is in, by species; nothing for one that failed to come, until it is asked for again. */
