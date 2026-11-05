@@ -161,7 +161,7 @@ import {
 } from '../src/game/lamps';
 import { CANDLE_BURN, TORCH_BURN } from '../src/game/light';
 import {
-  ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, MOTE_ELEMENTS, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRL_DRAWS, SWIRL_SAID, SWIRL_TRIES, SWIRLS_A_DAY,
+  ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, MOTE_ELEMENTS, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_DRAWS, SWIRL_SAID, SWIRL_SEASON, SWIRL_TRIES, SWIRLS_A_DAY,
   WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH, LIFE_MOTE, LIFE_MOTE_NEED, LIFE_MOTES_EACH, POULTICE_HEAL, STATUE_MOTES,
 } from '../src/game/motes';
 import { patronStatue, STATUETTE } from '../src/game/patronlist';
@@ -2163,13 +2163,15 @@ out.push(`create or replace function knack_chance(p_id text, p_base double preci
 out.push(`create or replace function knack_chance(p_id text, p_base double precision, p_mul double precision) returns double precision language sql immutable as $fn$ select knack_chance(p_id, p_base) * p_mul $fn$;`);
 out.push(`create or replace function elementalism_skill() returns text language sql immutable as $fn$ select ${q(ELEMENTALISM)} $fn$;`);
 for (const [fn, v] of [
-  ['swirls_a_day', SWIRLS_A_DAY], ['swirl_tries', SWIRL_TRIES], ['swirl_draws', SWIRL_DRAWS], ['swirl_dark', SWIRL_DARK], ['swirl_light', SWIRL_LIGHT],
+  ['swirls_a_day', SWIRLS_A_DAY], ['swirl_tries', SWIRL_TRIES], ['swirl_draws', SWIRL_DRAWS], ['swirl_dark', SWIRL_DARK], ['swirl_light', SWIRL_LIGHT], ['swirl_season', SWIRL_SEASON],
   ['motes_least', MOTES_LEAST], ['motes_step', MOTES_STEP], ['motes_most', MOTES_MOST],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }
 out.push(`create or replace function mote_elements() returns text[] language sql immutable as $fn$ select array[${MOTE_ELEMENTS.map(q).join(', ')}]::text[] $fn$;`);
 out.push(`create or replace function land_elements() returns text[] language sql immutable as $fn$ select array[${LAND_ELEMENTS.map(q).join(', ')}]::text[] $fn$;`);
+/* The element each season puts down over land on every island (`SEASON_ELEMENT`); null for none. */
+out.push(`create or replace function season_element(p_season text) returns text language sql immutable as $fn$ select case p_season ${Object.entries(SEASON_ELEMENT).map(([s, e]) => `when ${q(s)} then ${q(e)} `).join('')}end $fn$;`);
 out.push(`create or replace function region_element(p_region int) returns text language sql immutable as $fn$ select case p_region ${REGIONS.map((R, i) => (ISLAND_ELEMENT[R.key] ? `when ${i} then ${q(ISLAND_ELEMENT[R.key])} ` : '')).join('')}end $fn$;`);
 /* What digging a spring or a pool takes and uses up, and what it is refused without (`WATER_MOTE_NEED`). */
 out.push(`create or replace function water_mote() returns text language sql immutable as $fn$ select ${q(WATER_MOTE)} $fn$;`);

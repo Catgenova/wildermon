@@ -9,7 +9,7 @@ import { article, capital, fill, listed, listedOr, numberWord, percent, timeWord
 import { PATRONS, patronStatue, statueName } from './patronlist';
 import { CIRCLET_SHARE, CIRCLET_STONES, JEWEL_BONUS } from './gems';
 import { TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, TELESTONE } from './runestones';
-import { elementIslands, LIFE_MOTES_EACH, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, POULTICE_HEAL, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, STATUE_MOTES, SWIRL_DARK, SWIRL_LIGHT } from './motes';
+import { elementIslands, elementSeasons, LIFE_MOTES_EACH, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, POULTICE_HEAL, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, STATUE_MOTES, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON } from './motes';
 import {
   ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantMarker, ON_WORDS, roomMul, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, type Enchant,
 } from './enchant';
@@ -712,7 +712,9 @@ for (const m of METALS) {
 for (const e of MOTE_ELEMENTS) {
   const where = e === 'water' ? 'over water, on every island'
     : e === 'dark' || e === 'light' ? `over land anywhere: ${percent(e === 'dark' ? SWIRL_DARK : SWIRL_LIGHT)} of the swirls on land`
-      : `over land on ${elementIslands(e)}`;
+      : `over land on ${elementIslands(e) || 'no island'}`
+        // And the season's, over land on every island (`SEASON_ELEMENT`).
+        + elementSeasons(e).map((s) => `; in ${s}, ${percent(SWIRL_SEASON)} of the swirls on land on every island`).join('');
   ITEM_DEFS[moteItem(e)] ??= {
     name: moteName(e),
     category: 'misc',

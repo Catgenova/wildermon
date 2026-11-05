@@ -9,7 +9,8 @@
  *   * on a tile with water on it (`World.hasWater`: the sea, a pond, a pool)
  *     the swirl is water, on any island;
  *   * on land it is dark one time in `1 / SWIRL_DARK`, light one time in
- *     `1 / SWIRL_LIGHT`, and otherwise the element of the island of the chart
+ *     `1 / SWIRL_LIGHT`, the season's element (`SEASON_ELEMENT`) `SWIRL_SEASON`
+ *     of the time on every island, and otherwise the element of the island of the chart
  *     it is on (`ISLAND_ELEMENT`), the same on every world: a world is laid
  *     over the chart by scale (`chartRegion`, the island's `region_at`), a
  *     game of your own as much as an island in Postgres. The chart gives every
@@ -36,6 +37,7 @@ import { chartRegion } from '../world/chart';
 import { TILE_DEFS, TREE_DAWN_UTC } from '../world/tiles';
 import { capital, listed } from './words';
 import { runestoneAt } from './runestones';
+import { SEASONS, type Season } from '../world/calendar';
 
 /** The daily reset as the hud's clock shows it: "13:00" (`TREE_DAWN_UTC`). */
 const resetHour = (): string =>
@@ -109,6 +111,16 @@ export const SWIRLS_A_DAY = 1500;
 export const SWIRL_DARK = 0.01;
 export const SWIRL_LIGHT = 0.01;
 /**
+ * Of swirls on land, the share that are the season's element (`SEASON_ELEMENT`), on every island. Asked for: "make
+ * ice motes spawn globally in winter, and life motes in spring, fire in summer, wind in autumn". The island's
+ * `swirl_season`.
+ */
+export const SWIRL_SEASON = 0.25;
+/** The element each season puts down over land on every island. The island's `season_element`. */
+export const SEASON_ELEMENT: Readonly<Record<Season, LandElement>> = { spring: 'life', summer: 'fire', autumn: 'wind', winter: 'ice' };
+/** The seasons whose swirls are this element, in the order they come round: "winter". */
+export const elementSeasons = (e: MoteElement): Season[] => SEASONS.filter((s) => SEASON_ELEMENT[s] === e);
+/**
  * How many rounds a day draws tiles in: each round draws as many as are still
  * wanted, and keeps those with room. Past this many a day puts down what it
  * found, which on any map with land and water on it is all of them.
@@ -134,12 +146,14 @@ export const motesFor = (skill: number): number => Math.min(MOTES_MOST, MOTES_LE
 export const landElement = (region: number): LandElement | null => ISLAND_ELEMENT[REGIONS[region]?.key ?? ''] ?? null;
 /**
  * What a swirl put down is: water on water, and on land dark for a roll under
- * `SWIRL_DARK`, light for one under that and `SWIRL_LIGHT` together, and the
- * land's own element otherwise -- and none at all on land that is no island's,
- * where the spot is passed over. The island's `swirl_element`.
+ * `SWIRL_DARK`, light for one under that and `SWIRL_LIGHT` together, the
+ * season's element (`SEASON_ELEMENT`) for one under those and `SWIRL_SEASON`,
+ * and the land's own element otherwise -- and none at all on land that is no
+ * island's, where the spot is passed over. The island's `swirl_element`.
  */
-export const swirlElement = (water: boolean, land: LandElement | null, roll: number): MoteElement | null =>
-  water ? 'water' : land === null ? null : roll < SWIRL_DARK ? 'dark' : roll < SWIRL_DARK + SWIRL_LIGHT ? 'light' : land;
+export const swirlElement = (water: boolean, land: LandElement | null, roll: number, season: Season | null = null): MoteElement | null =>
+  water ? 'water' : land === null ? null : roll < SWIRL_DARK ? 'dark' : roll < SWIRL_DARK + SWIRL_LIGHT ? 'light'
+    : season !== null && roll < SWIRL_DARK + SWIRL_LIGHT + SWIRL_SEASON ? SEASON_ELEMENT[season] : land;
 
 /** The islands of the chart whose land swirls are this element, by name: "Middle Isle and East Isle". */
 export const elementIslands = (e: MoteElement): string =>
@@ -215,7 +229,7 @@ export function swirlRoom(g: Game, x: number, y: number): boolean {
  * by scale as the island lays one (`chartRegion`). The island's `swirl_day`
  * draws the same way.
  */
-export function laySwirls(g: Game, firstId: number, rand: () => number): Swirl[] {
+export function laySwirls(g: Game, firstId: number, rand: () => number, season: Season | null = null): Swirl[] {
   const w = g.world;
   const out: Swirl[] = [];
   const taken = new Set<number>();
@@ -226,7 +240,7 @@ export function laySwirls(g: Game, firstId: number, rand: () => number): Swirl[]
       const y = Math.floor(rand() * w.h);
       const at = y * w.w + x;
       if (taken.has(at) || !swirlRoom(g, x, y)) continue;
-      const element = swirlElement(w.hasWater(x, y), landElement(chartRegion(x + 0.5, y + 0.5, w.w)), rand());
+      const element = swirlElement(w.hasWater(x, y), landElement(chartRegion(x + 0.5, y + 0.5, w.w)), rand(), season);
       if (element === null) continue;
       taken.add(at);
       out.push({ id: firstId + out.length, x, y, element });

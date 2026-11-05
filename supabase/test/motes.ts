@@ -46,8 +46,10 @@ import { ITEM_DEFS } from '../../src/game/items';
 import { groundSays } from '../../src/game/wildflowers';
 import {
   collectedSays, ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, landElement, laySwirls, MOTE_ELEMENTS, moteItem, MOTES_LEAST, MOTES_MOST, MOTES_STEP, motesFor,
-  motesWord, SWIRL_DARK, SWIRL_DRAWS, SWIRL_LIGHT, SWIRL_SAID, SWIRL_TRIES, swirlElement, swirlSays, SWIRLS_A_DAY, type MoteElement, type Swirl,
+  motesWord, SEASON_ELEMENT, SWIRL_DARK, SWIRL_DRAWS, SWIRL_LIGHT, SWIRL_SAID, SWIRL_SEASON, SWIRL_TRIES, swirlElement, swirlSays, SWIRLS_A_DAY,
+  type MoteElement, type Swirl,
 } from '../../src/game/motes';
+import { SEASONS, seasonAt } from '../../src/world/calendar';
 import { SOUL } from '../../src/game/sacrifice';
 import { REGIONS } from '../../src/world/regions';
 import { chartCells, chartRegion } from '../../src/world/chart';
@@ -91,6 +93,23 @@ check('what a swirl put down is, for water and every land and every roll, is the
 const nowhere = psql(`select coalesce(swirl_element(false, null, 0.5), 'none') || ' ' || coalesce(swirl_element(false, null, 0.001), 'none') || ' ' || swirl_element(true, null, 0.5)`);
 check('land that is no island\'s takes no swirl, not even a dark one, and water is water anywhere, on both sides',
   nowhere === [swirlElement(false, null, 0.5) ?? 'none', swirlElement(false, null, 0.001) ?? 'none', swirlElement(true, null, 0.5)].join(' ') && nowhere === 'none none water', nowhere);
+
+/* The season's element on every island (`SEASON_ELEMENT`, the island's `season_element` and `swirl_season`). */
+const NOW_ELEMENT = SEASON_ELEMENT[seasonAt(Date.now() / 1000).season];
+const S_ROLLS = [0.0199, 0.02, 0.1, 0.2699, 0.27, 0.5];
+const seasonal = psql(`select string_agg(swirl_element(w, l, r, s), ' ' order by s, w, l, o)
+  from unnest(array[${SEASONS.map((s) => `'${s}'`).join(', ')}]::text[]) s, unnest(array[false, true]) w,
+       unnest(array[${LAND_ELEMENTS.map((e) => `'${e}'`).join(', ')}]::text[]) l, unnest(array[${S_ROLLS.join(', ')}]::double precision[]) with ordinality q(r, o)`);
+const seasonalHere = [...SEASONS].sort().flatMap((s) => [false, true].flatMap((w) => [...LAND_ELEMENTS].sort().flatMap((l) => S_ROLLS.map((r) => swirlElement(w, l, r, s))))).join(' ');
+check(`in each season, ${SWIRL_SEASON * 100}% of land swirls on every island are its element (${SEASONS.map((s) => `${SEASON_ELEMENT[s]} in ${s}`).join(', ')}), the same on both sides`,
+  seasonal === seasonalHere && swirlElement(false, 'earth', 0.1, 'winter') === 'ice' && swirlElement(false, 'earth', 0.27, 'winter') === 'earth'
+    && swirlElement(false, 'earth', 0.1) === 'earth' && swirlElement(true, 'earth', 0.1, 'winter') === 'water' && swirlElement(false, null, 0.1, 'winter') === null,
+  seasonal === seasonalHere ? '' : `island ${seasonal}`);
+const seasonEl = psql(`select string_agg(coalesce(season_element(s), 'none'), ' ' order by o) from unnest(array[${SEASONS.map((s) => `'${s}'`).join(', ')}, 'monsoon']::text[]) with ordinality u(s, o)`);
+check('each season\'s element, and the share, the same on both sides',
+  seasonEl === [...SEASONS.map((s) => SEASON_ELEMENT[s]), 'none'].join(' ') && Number(psql('select swirl_season()')) === SWIRL_SEASON
+    && psql('select season_at(now())') === seasonAt(Date.now() / 1000).season,
+  `${seasonEl} ${psql('select swirl_season()')}`);
 
 const REGION_IDS = [...REGIONS.keys(), REGIONS.length, 255, -1];
 const regions = psql(`select string_agg(coalesce(region_element(r), 'none'), ' ' order by o) from unnest(array[${REGION_IDS.join(', ')}]::int[]) with ordinality u(r, o)`);
@@ -181,7 +200,8 @@ begin
     || '|' || count(*) filter (where m.x between 20 and 39 and m.y between 20 and 39)
     || '|' || count(*) filter (where (m.element = 'water') <> has_water(w, m.x, m.y))
     || '|' || count(*) filter (where m.element <> 'water'
-                               and m.element not in ('dark', 'light', region_element(region_at(w, m.x + 0.5, m.y + 0.5))))
+                               and m.element not in ('dark', 'light', region_element(region_at(w, m.x + 0.5, m.y + 0.5)),
+                                                     season_element(season_at(now()))))
     || '|' || count(*) filter (where m.region <> region_of(m.x, m.y))
     from mote_swirl m where m.world_id = w;
 
@@ -198,10 +218,19 @@ begin
   for i in 1..30 loop
     perform swirl_day(w);
     insert into tally select m.element, count(*) from mote_swirl m where m.world_id = w group by m.element;
+    -- On land whose island is not of the season's element: how many are.
+    insert into tally select 'season_of', count(*) filter (where m.element = season_element(season_at(now())))
+      from mote_swirl m where m.world_id = w and m.element <> 'water'
+       and region_element(region_at(w, m.x + 0.5, m.y + 0.5)) <> season_element(season_at(now()));
+    insert into tally select 'season_on', count(*)
+      from mote_swirl m where m.world_id = w and m.element <> 'water'
+       and region_element(region_at(w, m.x + 0.5, m.y + 0.5)) <> season_element(season_at(now()));
   end loop;
+  insert into said select 'SEASONAL', season_at(now()) || '|' || season_element(season_at(now())) || '|'
+    || sum(n) filter (where element = 'season_of') || '|' || sum(n) filter (where element = 'season_on') from tally;
   insert into said values ('MS', (extract(epoch from clock_timestamp() - v_t0) * 1000 / 30)::numeric(10, 1)::text);
   insert into said select 'RATES', sum(n) filter (where element = 'water') || '|' || sum(n) filter (where element = 'dark')
-    || '|' || sum(n) filter (where element = 'light') || '|' || sum(n) from tally;
+    || '|' || sum(n) filter (where element = 'light') || '|' || sum(n) filter (where element not like 'season_%') from tally;
   -- The ground that has room, land and water: the map less the trees and the hall.
   insert into said select 'ROOM', count(*) filter (where x >= 127) || '|' || count(*)
     from generate_series(0, 255) x, generate_series(0, 255) y
@@ -285,7 +314,7 @@ check(`and the first to ask has the day's ${SWIRLS_A_DAY}, all of them in the ni
 check('asking again puts no second day down', isle.get('AGAIN') === `${SWIRLS_A_DAY}|${SWIRLS_A_DAY}`, isle.get('AGAIN'));
 check('a day is as many as asked, one to a tile, all on the map, none on a tree or in the hall',
   [0, 1].every((i) => num('DAY', i) === SWIRLS_A_DAY) && [2, 3, 4].every((i) => num('DAY', i) === 0), isle.get('DAY'));
-check('water exactly where there is water, and on land only the land\'s element, dark or light; each in its own block',
+check('water exactly where there is water, and on land only the land\'s element, the season\'s, dark or light; each in its own block',
   [5, 6, 7].every((i) => num('DAY', i) === 0), isle.get('DAY'));
 {
   // A swirl on each island of the chart has that island's element, or is dark or light.
@@ -294,11 +323,11 @@ check('water exactly where there is water, and on land only the land\'s element,
   const wrong: string[] = [];
   for (const [x, y, e] of laid) {
     const r = chartRegion(Number(x) + 0.5, Number(y) + 0.5, 256);
-    if (e === 'dark' || e === 'light') continue;
+    if (e === 'dark' || e === 'light' || (e === NOW_ELEMENT && e !== ISLAND_ELEMENT[REGIONS[r]?.key ?? ''])) continue;
     onIsland.set(r, (onIsland.get(r) ?? 0) + 1);
     if (e !== ISLAND_ELEMENT[REGIONS[r]?.key ?? '']) wrong.push(`${x},${y} ${e} on ${REGIONS[r]?.key}`);
   }
-  check(`on a world of land, a swirl on every island has that island's element: ${REGIONS.map((R, i) => `${onIsland.get(i) ?? 0} ${ISLAND_ELEMENT[R.key]} on ${R.key}`).join(', ')}`,
+  check(`on a world of land, a swirl on every island has that island's element or the season's: ${REGIONS.map((R, i) => `${onIsland.get(i) ?? 0} ${ISLAND_ELEMENT[R.key]} on ${R.key}`).join(', ')}`,
     laid.length === SWIRLS_A_DAY && wrong.length === 0 && REGIONS.every((_, i) => (onIsland.get(i) ?? 0) > 0),
     wrong.slice(0, 5).join('; ') || `${laid.length} swirls`);
 }
@@ -311,6 +340,9 @@ check('water exactly where there is water, and on land only the land\'s element,
   check(`and about ${SWIRL_DARK * 100}% dark and ${SWIRL_LIGHT * 100}% light of the swirls on land`,
     Math.abs(dark / land - SWIRL_DARK) < 0.4 * SWIRL_DARK && Math.abs(light / land - SWIRL_LIGHT) < 0.4 * SWIRL_LIGHT,
     `${dark} dark and ${light} light of ${land}: ${(dark / land * 100).toFixed(2)}% and ${(light / land * 100).toFixed(2)}%`);
+  const [, el, of, on] = (isle.get('SEASONAL') ?? '').split('|');
+  check(`and about ${SWIRL_SEASON * 100}% of the swirls on land of another element are the season's (${part('SEASONAL')}: ${el})`,
+    el === NOW_ELEMENT && Number(on) > 0 && Math.abs(Number(of) / Number(on) - SWIRL_SEASON) < 0.03, `${of} of ${on}`);
   console.log(`  (a day's swirls on a 256 island: ${isle.get('MS')} ms)`);
 }
 check('the dawn\'s tick takes every swirl away, puts the day\'s down, and tells the block somebody stands in',
@@ -351,10 +383,10 @@ const islandOf = (s: Swirl): MoteElement | null => landElement(chartRegion(s.x +
 check(`a game of your own has the day's ${SWIRLS_A_DAY} swirls from its first frame, one to a tile, on the map`,
   day.length === SWIRLS_A_DAY && new Set(day.map((s) => s.y * w.w + s.x)).size === SWIRLS_A_DAY && day.every((s) => w.inBounds(s.x, s.y)),
   `${day.length}`);
-check('none on a tree or in a building, water exactly on water, and on land only the element of the island of the chart it is on, dark or light',
+check('none on a tree or in a building, water exactly on water, and on land only the element of the island of the chart it is on, the season\'s, dark or light',
   day.every((s) => !TILE_DEFS[w.getTile(s.x, s.y)].blocks && w.getTile(s.x, s.y) !== TileType.Tree && !g.buildings.buildingAt(s.x, s.y))
     && day.every((s) => (s.element === 'water') === w.hasWater(s.x, s.y))
-    && day.every((s) => s.element === 'water' || s.element === 'dark' || s.element === 'light' || s.element === islandOf(s)),
+    && day.every((s) => s.element === 'water' || s.element === 'dark' || s.element === 'light' || s.element === NOW_ELEMENT || s.element === islandOf(s)),
   [...new Set(day.filter((s) => s.element !== 'water').map((s) => s.element))].join(', '));
 {
   const rand = mulberry32(31);
@@ -367,6 +399,16 @@ check('none on a tree or in a building, water exactly on water, and on land only
       if (s.element === 'light') light++;
     }
   }
+  let of = 0, on = 0;
+  for (let d = 0; d < 10; d++) {
+    for (const s of laySwirls(g, 1, rand, 'winter')) {
+      if (s.element === 'water' || islandOf(s) === 'ice') continue;
+      on++;
+      if (s.element === 'ice') of++;
+    }
+  }
+  check(`and in winter about ${SWIRL_SEASON * 100}% of the swirls on land off the ice island are ice, as on the island`,
+    on > 0 && Math.abs(of / on - SWIRL_SEASON) < 0.03, `${of} of ${on}`);
   check(`and over thirty days about ${SWIRL_DARK * 100}% dark and ${SWIRL_LIGHT * 100}% light of the swirls on land, as on the island`,
     onLand > 0 && Math.abs(dark / onLand - SWIRL_DARK) < 0.4 * SWIRL_DARK && Math.abs(light / onLand - SWIRL_LIGHT) < 0.4 * SWIRL_LIGHT,
     `${dark} dark and ${light} light of ${onLand}`);

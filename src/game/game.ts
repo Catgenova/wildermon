@@ -10,7 +10,7 @@ import { brazierBurn, shoreNear } from './placeables';
 import { dyeChoice, dyeEnough, pickDyeAsks, sourceSays, type DyeSource } from './dyes';
 import type { Hoard } from './treasure';
 import { packTreeData, TILE_DEFS, TileType, TREE_DEFS, TREE_AGES, TREE_ROOM_ONE, TREE_ROOM_TWO, TREE_SEED_BOTH, TREE_SEED_NONE, TREE_SEED_REACH, TREE_SEEDS, lastDawn, treeAge, treeSpecies, treeVariant, LAWN_AFTER, mownDays, mownToday, FLOWERS_PICKED, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, trailGround, wears } from '../world/tiles';
-import { yearOf } from '../world/calendar';
+import { seasonAt, yearOf } from '../world/calendar';
 import { oreAt } from '../world/ore';
 import { World } from '../world/world';
 import { ACTIONS, ACTION_BY_ID, SPOIL_ORDER, spoilFrom, TEACHES_NOTHING, TRY_LEARN, WEAR_PER_GO, type ActionDef, type Target } from './actions';
@@ -10235,7 +10235,7 @@ export class Game {
    */
   private laySwirlsFor(dawn: number): void {
     const first = this.swirls.size ? Math.max(...this.swirls.keys()) + 1 : 1;
-    this.setSwirls(laySwirls(this, first, this.rand));
+    this.setSwirls(laySwirls(this, first, this.rand, seasonAt(dawn).season));
     this.swirlDawn = dawn;
   }
 

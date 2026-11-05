@@ -176,7 +176,7 @@ import {
 import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
-import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTE_ELEMENTS, MOTES_LEAST, STATUE_MOTES, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
+import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTE_ELEMENTS, MOTES_LEAST, STATUE_MOTES, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
 import { LANDING_STAND, RUNESTONES, SAFE_RING, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
@@ -2327,6 +2327,7 @@ export function helpText(): string {
       inside a building, or on a tile that has one.</li>
       <li>Element: on water, <b>water</b>. On land: <b>dark</b> ${percent(SWIRL_DARK)}, <b>light</b> ${percent(SWIRL_LIGHT)}, otherwise the island's:
       ${listed(REGIONS.map((R) => `<b>${ISLAND_ELEMENT[R.key]}</b> on ${islandName(R.name)}`))}.</li>
+      <li>Season's element, ${percent(SWIRL_SEASON)} of the swirls on land, on every island: ${listed(SEASONS.map((s) => `<b>${SEASON_ELEMENT[s]}</b> in ${s}`))}; taken before the island's.</li>
       <li><b>Collect motes</b> (bare hands, beside it; from the bank, swimming or a boat on water): motes of its element by elementalism before the action:
       ${listed(MOTE_COUNTS.map((n) => `${n} at elementalism ${n === MOTES_LEAST ? `under ${MOTES_STEP}` : `${(n - MOTES_LEAST) * MOTES_STEP}${n === MOTES_MOST ? ' and up' : ''}`}`))};
       Quality (QL) = your elementalism.</li>

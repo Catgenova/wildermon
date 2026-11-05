@@ -68,7 +68,7 @@ import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
 import { BURYABLE, BUSH_DEFS, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
-import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
+import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY } from '../../game/motes';
 import { HEMS_A_FRAME, LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { FLOWER_COLOURS } from '../../render/flowers';
 import { BUSH3D_SPECIES, LOGS_DRAWN, STUMP3D_SPECIES, SUN_STEPS, SWAY_MS, TREE3D_SPECIES } from '../../render/trees3d';
@@ -4244,6 +4244,13 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 489,
+    day: '2026-11-05',
+    lines: () => [
+      `Added: the season's motes on every island: ${percent(SWIRL_SEASON)} of mote swirls on land, after dark and light. ${listed(SEASONS.map((s) => `${capital(SEASON_ELEMENT[s])} in ${s}`))}.`,
+    ],
   },
   {
     n: 488,
