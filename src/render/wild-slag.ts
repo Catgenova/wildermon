@@ -71,13 +71,13 @@ interface Slag {
 /** A Slaglet: small and round, a brick crucible bowl of molten metal on it with its face on the front, two little copper chimneys, little claws. */
 const SLAGLET_LOOK: Slag = {
   body: { y: [-0.4, -0.24, 0.0, 0.24, 0.38, 0.46, 0.5], z: [0.1, 0.06, 0.02, 0.02, 0.04, 0.04, 0.04], w: [0.18, 0.3, 0.38, 0.4, 0.36, 0.28, 0.1], h: [0.1, 0.15, 0.18, 0.18, 0.17, 0.13, 0.05] },
-  high: 0.36,
+  high: 0.3,
   face: { at: [0, 0.6, 0.15], r: [0.36, 0.15, 0.3] },
   eye: { root: [0.16, 0.5, 0.3], len: 0.2, r: 0.13, out: 30, lean: 22, stagger: 10 },
-  bowl: { at: [0, 0.04, -0.2], tilt: 0, prof: [[0, 0.34], [0.08, 0.52], [0.2, 0.63], [0.33, 0.66], [0.43, 0.65], [0.5, 0.62]], segs: 10, wall: 0.1, sand: 0.07, heap: 0.04, face: true },
-  chimneys: [{ az: 140, r: 0.075, h: 0.26 }, { az: -140, r: 0.07, h: 0.2 }],
-  legs: { x: 0.32, z: -0.14, ys: [0.3, 0.1, -0.1, -0.3], fan: [46, 16, -14, -44], upper: 0.26, lower: 0.34, reach: 0.42, thick: 0.12, arch: 0.26 },
-  claw: { at: [0.3, 0.46, -0.2], arm: [0.22, 0.2], hand: [0.34, 0.38], rest: { fwd: 0.5, out: [0.5, 0.5], pitch: -30, open: 18, yaw: 40 }, thick: 0.08 },
+  bowl: { at: [0, 0.04, -0.12], tilt: 0, prof: [[0, 0.42], [0.08, 0.62], [0.18, 0.74], [0.28, 0.79], [0.36, 0.78], [0.42, 0.75]], segs: 11, wall: 0.1, sand: 0.07, heap: 0.04, face: true },
+  chimneys: [{ az: 145, r: 0.075, h: 0.26 }, { az: -145, r: 0.07, h: 0.2 }],
+  legs: { x: 0.46, z: -0.04, ys: [0.3, 0.1, -0.1, -0.3], fan: [50, 17, -17, -50], upper: 0.3, lower: 0.36, reach: 0.56, thick: 0.11, arch: 0.12 },
+  claw: { at: [0.38, 0.5, -0.1], arm: [0.22, 0.2], hand: [0.34, 0.34], rest: { fwd: 0.56, out: [0.56, 0.56], pitch: -20, open: 20, yaw: 22 }, thick: 0.08 },
   gait: { sweep: [0.3, 0.38], duty: [0.6, 0.52], lift: [0.14, 0.18], bob: 0.085, sway: 2, rock: 1.5, trickle: 0 },
   strike: 0,
   size: 2.2,
@@ -86,7 +86,7 @@ const SLAGLET_LOOK: Slag = {
 /** An Alloyster: a domed furnace of stone and copper with a riveted band, a cupola with a finial, a wide glowing mouth in front, two copper chimneys and chunky claws. */
 const ALLOYSTER_LOOK: Slag = {
   body: { y: [-0.7, -0.42, 0.0, 0.42, 0.66, 0.78, 0.84], z: [0.12, 0.06, 0.0, 0.0, 0.03, 0.04, 0.04], w: [0.28, 0.48, 0.6, 0.62, 0.58, 0.46, 0.16], h: [0.12, 0.2, 0.24, 0.24, 0.22, 0.18, 0.07] },
-  high: 0.8,
+  high: 0.62,
   face: { at: [0, 0.92, 0.2], r: [0.46, 0.2, 0.4] },
   eye: { root: [0.2, 0.8, 0.4], len: 0.26, r: 0.18, out: 30, lean: 22, stagger: 10 },
   bowl: {
@@ -94,8 +94,8 @@ const ALLOYSTER_LOOK: Slag = {
     band: 0.97, dome: 0.46, mouth: { w: 46, h: 0.56, f: 0.62 }, cupola: { r: 0.2, h: 0.16 },
   },
   chimneys: [{ az: 112, r: 0.11, h: 0.5, inset: 0.32 }, { az: 146, r: 0.1, h: 0.38, inset: 0.28 }],
-  legs: { x: 0.4, z: -0.17, ys: [0.46, 0.16, -0.14, -0.44], fan: [46, 16, -14, -44], upper: 0.48, lower: 0.66, reach: 0.6, thick: 0.19, arch: 0.2 },
-  claw: { at: [0.5, 0.7, -0.4], arm: [0.5, 0.46], hand: [0.72, 0.8], rest: { fwd: 0.45, out: [0.5, 0.5], pitch: -28, open: 22, yaw: 50 }, thick: 0.15 },
+  legs: { x: 0.66, z: -0.1, ys: [0.42, 0.14, -0.14, -0.42], fan: [50, 17, -17, -50], upper: 0.5, lower: 0.6, reach: 0.8, thick: 0.17, arch: 0.12 },
+  claw: { at: [0.64, 0.74, -0.2], arm: [0.46, 0.42], hand: [0.8, 0.8], rest: { fwd: 0.6, out: [0.36, 0.36], pitch: -18, open: 24, yaw: 26 }, thick: 0.15, hub: true },
   gait: { sweep: [0.42, 0.52], duty: [0.62, 0.52], lift: [0.18, 0.24], bob: 0.12, sway: 2.5, rock: 3, trickle: 0 },
   strike: 1,
   size: 2.3,
@@ -104,16 +104,16 @@ const ALLOYSTER_LOOK: Slag = {
 /** A Moltenex: a great open ring of a crucible in riveted blocks with glowing slots, a copper tower in its molten pool with two stirring pipes, four chimney stacks, a copper crest, massive riveted claws. */
 const MOLTENEX_LOOK: Slag = {
   body: { y: [-0.9, -0.52, 0.0, 0.54, 0.92, 1.14, 1.22], z: [0.16, 0.08, 0.0, 0.0, 0.04, 0.06, 0.06], w: [0.36, 0.62, 0.76, 0.78, 0.74, 0.6, 0.2], h: [0.16, 0.26, 0.3, 0.3, 0.28, 0.24, 0.1] },
-  high: 0.9,
+  high: 0.74,
   face: { at: [0, 1.2, 0.24], r: [0.6, 0.24, 0.5] },
   eye: { root: [0.26, 1.06, 0.5], len: 0.34, r: 0.22, out: 30, lean: 22, stagger: 10 },
   bowl: {
     at: [0, 0.0, -0.3], tilt: 0, prof: [[0, 0.8], [0.14, 1.3], [0.38, 1.64], [0.64, 1.76], [0.82, 1.76]], segs: 14, wall: 0.2, sand: 0.14, heap: 0.06,
-    band: 0.62, tower: { r: 0.3, h: 0.66 }, slots: 14, crest: { r: 0.44, f: 0.42 },
+    band: 0.95, tower: { r: 0.3, h: 0.66 }, slots: 14, crest: { r: 0.5, f: 0.52 },
   },
   chimneys: [{ az: -54, r: 0.13, h: 0.62 }, { az: 54, r: 0.13, h: 0.62 }, { az: -138, r: 0.15, h: 0.86 }, { az: 138, r: 0.15, h: 0.86 }],
-  legs: { x: 0.52, z: -0.2, ys: [0.62, 0.22, -0.18, -0.58], fan: [46, 16, -14, -44], upper: 0.62, lower: 0.84, reach: 0.78, thick: 0.26, arch: 0.18 },
-  claw: { at: [0.7, 0.96, -0.32], arm: [0.74, 0.7], hand: [1.1, 1.22], rest: { fwd: 0.42, out: [0.5, 0.5], pitch: -28, open: 26, yaw: 60 }, thick: 0.22, hub: true },
+  legs: { x: 0.98, z: -0.1, ys: [0.6, 0.2, -0.2, -0.6], fan: [50, 17, -17, -50], upper: 0.72, lower: 0.86, reach: 1.1, thick: 0.24, arch: 0.12 },
+  claw: { at: [1.0, 1.0, -0.2], arm: [0.7, 0.66], hand: [1.2, 1.2], rest: { fwd: 0.6, out: [0.44, 0.44], pitch: -18, open: 28, yaw: 30 }, thick: 0.22, hub: true },
   gait: { sweep: [0.6, 0.72], duty: [0.66, 0.54], lift: [0.2, 0.26], bob: 0.15, sway: 3, rock: 3, trickle: 1 },
   strike: 2,
   size: 2.5,
@@ -317,14 +317,22 @@ function bowlOf(s: Slag, n0: number): { mesh: Mesh; heap: number[] } {
   const d: Disc[] = [];
   if (!B.dome) {
     const zs = H - B.sand, rs = profAt(B, zs / H).r - B.wall;
-    // A swirl drawn in bright gold, two arms winding in to the middle.
+    // A swirl: two unbroken ribbons winding in to the middle, each orange-gold under a narrower bright gold, and the middle white-hot.
+    const zOf = (r: number, lift: number): number => zs + B.heap * (1 - (Math.min(r, rs) / rs) ** 2) + lift;
     for (let arm = 0; arm < 2; arm++) {
-      for (let q = 0; q < 30; q++) {
-        const u = q / 30, th = arm * Math.PI + u * TAU * 1.15, r = rs * (0.86 - 0.74 * u);
-        const k = 1 - (r / rs) ** 2, at: V3 = [Math.sin(th) * r, Math.cos(th) * r, zs + B.heap * k + 0.012];
-        d.push(disc(at, [0, 0, 1], rs * (0.1 - 0.05 * u), rs * 0.06, 6, 'bloom', { up: [Math.cos(th), -Math.sin(th), 0] }));
+      for (const [m, wk, lift] of [['flame', 2.1, 0.01], ['bloom', 0.9, 0.016]] as Array<[Mat, number, number]>) {
+        const outer: V3[] = [], inner: V3[] = [];
+        for (let q = 0; q <= 40; q++) {
+          const u = q / 40, th = arm * Math.PI + u * TAU * 1.3, r = rs * (0.92 - 0.8 * u), w = rs * 0.055 * wk * (1 - 0.55 * u);
+          const sn = Math.sin(th), cs = Math.cos(th);
+          outer.push([sn * (r + w), cs * (r + w), zOf(r + w, lift)]);
+          inner.push([sn * Math.max(0, r - w), cs * Math.max(0, r - w), zOf(r - w, lift)]);
+        }
+        d.push({ v: [...inner, ...outer.reverse()], m });
       }
     }
+    d.push(disc([0, 0, zs + B.heap + 0.02], [0, 0, 1], rs * 0.2, rs * 0.2, 12, 'bloom', { lit: true }));
+    d.push(disc([0, 0, zs + B.heap + 0.024], [0, 0, 1], rs * 0.09, rs * 0.09, 10, 'glint', { lit: true }));
   }
   if (B.mouth) {
     // The mouth of the furnace: a copper frame, its glow orange at the edge and white-gold in the middle, lumps glowing in it.
@@ -350,34 +358,51 @@ function bowlOf(s: Slag, n0: number): { mesh: Mesh; heap: number[] } {
   }
   if (B.face) {
     // Its face on the front of the crucible: two big brown eyes with glints, an open smile with a pink tongue, rosy cheeks.
-    const fz = 0.5;
+    const fz = 0.6;
     for (const sd of [-1, 1]) {
-      const e = onBowl(B, sd * 19, fz), r = 0.105;
+      const e = onBowl(B, sd * 18, fz), r = 0.125;
       d.push(disc(add(e.p, scale(e.n, 0.012)), e.n, r * 0.92, r, 12, 'eye', { up: [0, 0, 1] }));
       const g1 = add(e.p, add(scale(e.n, 0.02), [0, 0, r * 0.38]));
       d.push(disc(add(g1, [sd * -0.02, 0, 0]), e.n, r * 0.36, r * 0.36, 8, 'glint', { up: [0, 0, 1], lit: true }));
       d.push(disc(add(e.p, add(scale(e.n, 0.02), [sd * 0.03, 0, -r * 0.42])), e.n, r * 0.16, r * 0.16, 6, 'glint', { up: [0, 0, 1], lit: true }));
-      const c = onBowl(B, sd * 35, 0.36);
-      d.push(disc(add(c.p, scale(c.n, 0.011)), c.n, 0.085, 0.055, 10, 'petal', { up: [0, 0, 1] }));
+      const c = onBowl(B, sd * 30, 0.36);
+      d.push(disc(add(c.p, scale(c.n, 0.011)), c.n, 0.08, 0.05, 10, 'petal', { up: [0, 0, 1] }));
     }
-    const mo = onBowl(B, 0, 0.3);
-    d.push(disc(add(mo.p, scale(mo.n, 0.012)), mo.n, 0.085, 0.07, 12, 'nose', { up: [0, 0, 1] }));
-    d.push(disc(add(mo.p, add(scale(mo.n, 0.018), [0, 0, -0.025])), mo.n, 0.055, 0.035, 10, 'tongue', { up: [0, 0, 1] }));
+    // An open smile: a dark half-round, flat side up, a pink tongue in its bottom.
+    const mo = onBowl(B, 0, 0.3), smile: V3[] = [];
+    for (let q = 0; q <= 12; q++) {
+      const t = Math.PI * (q / 12), az = -Math.cos(t) * 7, at = onBowl(B, az, 0.36 - Math.sin(t) * 0.17);
+      smile.push(add(at.p, scale(at.n, 0.012)));
+    }
+    d.push({ v: smile.reverse(), m: 'nose' });
+    d.push(disc(add(mo.p, add(scale(mo.n, 0.018), [0, 0, -0.012])), mo.n, 0.045, 0.026, 10, 'tongue', { up: [0, 0, 1] }));
   }
   if (B.slots) {
     // Glowing slots round the top of the wall, one in each block.
     for (let q = 0; q < B.slots; q++) {
-      const az = (q + 0.5) * (360 / B.slots), at = onBowl(B, az, 0.86);
+      const az = (q + 0.5) * (360 / B.slots), at = onBowl(B, az, 0.64);
       if (B.crest && Math.abs(((az + 180) % 360) - 180) < 20) continue;
       d.push(disc(add(at.p, scale(at.n, 0.012)), at.n, 0.045, 0.1, 4, 'flame', { up: [0, 0, 1], lit: true, spin: Math.PI / 4 }));
     }
   }
   if (B.crest) {
     // A shield of copper on its front, its point down, a flame on it.
-    const C = B.crest, at = onBowl(B, 0, C.f);
-    d.push(disc(add(at.p, scale(at.n, 0.012)), at.n, C.r * 1.08, C.r * 1.2, 5, 'billDark', { up: [0, 0, -1] }));
-    d.push(disc(add(at.p, scale(at.n, 0.02)), at.n, C.r * 0.92, C.r * 1.02, 5, 'bill', { up: [0, 0, -1] }));
-    d.push(disc(add(at.p, add(scale(at.n, 0.028), [0, 0, C.r * 0.1])), at.n, C.r * 0.24, C.r * 0.44, 3, 'flame', { up: [0, 0, 1], lit: true }));
+    // Each outline laid on the wall point by point, so it follows its curve: across in degrees round it, up in fractions of it.
+    const C = B.crest, R0 = profAt(B, C.f).r;
+    const laid = (pts: ReadonlyArray<readonly [number, number]>, k: number, dv: number, lift: number): V3[] => pts.map(([u, v]) => {
+      const at = onBowl(B, ((u * C.r * k) / R0) / DEG, C.f + (dv + v * C.r * k) / H);
+      return add(at.p, scale(at.n, lift));
+    });
+    const SHIELD = [[-1, 0.85], [-0.5, 1], [0, 0.88], [0.5, 1], [1, 0.85], [1, 0.1], [0.62, -0.55], [0, -1.05], [-0.62, -0.55], [-1, 0.1]] as const;
+    const FLAME = [[0, 0.95], [0.22, 0.45], [0.42, 0.05], [0.38, -0.35], [0.18, -0.55], [0, -0.6], [-0.18, -0.55], [-0.38, -0.35], [-0.42, 0.05], [-0.1, 0.3]] as const;
+    d.push({ v: laid(SHIELD, 1.14, 0, 0.012), m: 'billDark' });
+    d.push({ v: laid(SHIELD, 1, 0, 0.02), m: 'bill' });
+    d.push({ v: laid(FLAME, 0.62, 0, 0.028), m: 'flame', lit: true });
+    d.push({ v: laid(FLAME, 0.34, -C.r * 0.1, 0.034), m: 'bloom', lit: true });
+    for (const [u, v] of [[-0.78, 0.7], [0.78, 0.7], [-0.72, 0.0], [0.72, 0.0]] as const) {
+      const at = onBowl(B, ((u * C.r) / R0) / DEG, C.f + (v * C.r) / H);
+      d.push(disc(add(at.p, scale(at.n, 0.03)), at.n, C.r * 0.07, C.r * 0.07, 6, 'billDark', { up: [0, 0, 1] }));
+    }
   }
   const sp = paint(d);
   return { mesh: merge(m, sp), heap: [...heap, ...sp.v.map(() => 0)] };
@@ -456,10 +481,11 @@ function fixturesOf(s: Slag, n: number, k: number): Array<{ mesh: Mesh; front: V
     const brim = tube([add(top, [0, 0, 0.04]), add(top, [0, 0, 0.08])], T.r * 1.6, T.r * 1.6, 12, 'billDark');
     const dome = orb(add(top, [0, 0, 0.08]), [T.r * 1.2, T.r * 1.2, T.r * 0.85], n, k, 'bill');
     const fin = merge(tube([add(top, [0, 0, 0.08 + T.r * 0.8]), add(top, [0, 0, 0.08 + T.r * 1.2])], T.r * 0.12, T.r * 0.12, 6, 'billDark'), orb(add(top, [0, 0, 0.1 + T.r * 1.3]), T.r * 0.2, 6, 3, 'bill'));
+    const slitBand = tube([add(top, [0, 0, -0.3]), add(top, [0, 0, -0.08])], T.r * 1.08, T.r * 1.08, 12, 'billDark');
     const wins: Disc[] = [];
-    for (let q = 0; q < 6; q++) {
-      const a = (q / 6) * TAU + Math.PI / 6, nn: V3 = [Math.sin(a), Math.cos(a), 0];
-      wins.push(disc(add(add(top, [0, 0, -0.18]), scale(nn, T.r + 0.012)), nn, 0.04, 0.09, 4, 'flame', { up: [0, 0, 1], lit: true, spin: Math.PI / 4 }));
+    for (let q = 0; q < 10; q++) {
+      const a = (q / 10) * TAU, nn: V3 = [Math.sin(a), Math.cos(a), 0];
+      wins.push(disc(add(add(top, [0, 0, -0.19]), scale(nn, T.r * 1.08 + 0.012)), nn, 0.026, 0.085, 8, 'flame', { up: [0, 0, 1], lit: true }));
     }
     const pipes: Mesh[] = [];
     for (const sd of [-1, 1]) {
@@ -472,7 +498,7 @@ function fixturesOf(s: Slag, n: number, k: number): Array<{ mesh: Mesh; front: V
       }
       pipes.push(tube(pts, 0.085, 0.085, 7, (ring) => (ring === 0 || ring === 9 ? 'billDark' : 'bill')));
     }
-    out.push({ mesh: merge(body, collar, brim, dome, fin, paint(wins), ...pipes), front: [0, 0.3, 1], anchor: base });
+    out.push({ mesh: merge(body, slitBand, collar, brim, dome, fin, paint(wins), ...pipes), front: [0, 0.3, 1], anchor: base });
   }
   return out;
 }
@@ -528,13 +554,23 @@ function handOf(h: number, n: number, k: number): Mesh {
   const wrist = tube([[0, -h * 0.06, 0], [0, h * 0.1, 0]], h * 0.15, h * 0.2, 6, 'horn');
   const finger = tube([[0, h * 0.58, -h * 0.18], [0, h * 0.86, -h * 0.25], [0, h * 1.12, -h * 0.22], [0, h * 1.27, -h * 0.13], tipOf(h)],
     [h * 0.16, h * 0.14, h * 0.1, h * 0.06, h * 0.015], [h * 0.19, h * 0.15, h * 0.1, h * 0.06, h * 0.015], 6, (ring) => (ring >= 1 ? 'hornDark' : 'horn'));
-  return merge(wrist, palm, finger);
+  // Teeth along the inside of the fixed finger, pointing up at the movable one.
+  const teeth = [[0.72, -0.045], [0.9, -0.09], [1.06, -0.11], [1.2, -0.09]].map(([y, z]) =>
+    tube([[0, h * y, h * (z - 0.02)], [0, h * (y + 0.03), h * (z + 0.08)]], [h * 0.05, h * 0.004], [h * 0.04, h * 0.004], 4, 'horn'));
+  return merge(wrist, palm, finger, ...teeth);
 }
 
 /** The movable finger, from its hinge along `y`: thick at the hinge, curving down to a peach tip that meets the fixed one shut. */
 function nipOf(h: number): Mesh {
   return tube([[0, -h * 0.05, 0], [0, h * 0.28, h * 0.04], [0, h * 0.54, -h * 0.07], [0, h * 0.75, -h * 0.28]], [h * 0.15, h * 0.13, h * 0.08, h * 0.015], [h * 0.17, h * 0.13, h * 0.08, h * 0.015], 6,
     (ring) => (ring >= 1 ? 'hornDark' : 'horn'));
+}
+
+/** The movable finger with teeth along its inside, pointing down at the fixed one. */
+function nipToothed(h: number): Mesh {
+  const teeth = [[0.34, -0.1], [0.5, -0.15], [0.63, -0.21]].map(([y, z]) =>
+    tube([[0, h * y, h * (z + 0.02)], [0, h * (y + 0.03), h * (z - 0.07)]], [h * 0.045, h * 0.004], [h * 0.035, h * 0.004], 4, 'horn'));
+  return merge(nipOf(h), ...teeth);
 }
 
 /** A copper rivet hub on the outside of a hand by its wrist, a dark boss in its middle: a Moltenex's. */
@@ -549,7 +585,7 @@ function hubOf(h: number): Mesh {
 function upperOf(s: Slag): Mesh {
   const L = s.legs.upper, w = s.legs.thick;
   return tube([[0, -w * 1.2, 0], [0, L * 0.2, 0], [0, L * 0.82, 0], [0, L + w * 0.3, 0]], [w, w * 1.05, w * 0.95, w * 0.85], [w, w * 1.05, w * 0.95, w * 0.85], 6,
-    (ring) => (ring === 2 ? 'horn' : 'coat'), { seam: 'start' });
+    (ring) => (ring === 2 ? 'coatDark' : 'horn'), { seam: 'start' });
 }
 
 /**
@@ -561,7 +597,7 @@ function lowerOf(s: Slag): Mesh {
   const L = s.legs.lower, w = s.legs.thick * 0.9, A = s.legs.arch * L;
   const pts: V3[] = [[0, -w * 0.4, 0], [0, L * 0.3, A * 0.8], [0, L * 0.5, A], [0, L * 0.56, A * 0.97], [0, L * 0.82, A * 0.55], [0, L - 0.012, 0.016]];
   const ws = [w * 0.95, w, w * 0.84, w * 0.82, w * 0.55, 0.008];
-  return tube(pts, ws, ws, 6, (ring) => (ring === 2 ? 'coatDark' : ring >= 3 ? 'hornDark' : 'coat'));
+  return tube(pts, ws, ws, 6, (ring) => (ring === 2 ? 'coatDark' : ring >= 4 ? 'hornDark' : 'horn'));
 }
 
 /* ---- its moves --------------------------------------------------------------------------- */
@@ -979,10 +1015,10 @@ function slagBuild(s: Slag, lod: number): Piece[] {
     const sd = q ? 1 : -1, h = s.claw.hand[q], T = s.claw.thick * (0.75 + 0.35 * h / s.claw.hand[1]);
     const front: V3 = [sd * 0.5, 1, 0];
     pieces.push(
-      { key: `arm${q}0`, mesh: tube([[0, -T, 0], [0, s.claw.arm[0] + T * 0.3, 0]], T, T, 6, 'coat', { seam: 'start' }), bone: `arm${q}0`, bias: 0.02, after: 'body', front, convex: true },
+      { key: `arm${q}0`, mesh: tube([[0, -T, 0], [0, s.claw.arm[0] + T * 0.3, 0]], T, T, 6, 'horn', { seam: 'start' }), bone: `arm${q}0`, bias: 0.02, after: 'body', front, convex: true },
       { key: `arm${q}1`, mesh: merge(orb([0, 0, 0], T * 1.05, 6, 3, 'coatDark'), tube([[0, 0, 0], [0, s.claw.arm[1] + T * 0.3, 0]], T * 1.05, T * 1.05, 6, 'horn')), bone: `arm${q}1`, bias: 0.025, after: 'body', front },
       { key: `claw${q}`, mesh: merge(handOf(h, n, k), s.claw.hub ? hubOf(h) : null), bone: `claw${q}`, bias: 0.03, after: [`arm${q}1`, 'body'], front },
-      { key: `nip${q}`, mesh: nipOf(h), bone: `nip${q}`, bias: 0.035, after: `claw${q}`, front: [sd, 0.3, 0.3], convex: true },
+      { key: `nip${q}`, mesh: nipToothed(h), bone: `nip${q}`, bias: 0.035, after: `claw${q}`, front: [sd, 0.3, 0.3] },
     );
     for (let i = 0; i < 4; i++) {
       const lf: V3 = [sd, 0, 0];
@@ -1153,23 +1189,31 @@ function sparkle(g: CanvasRenderingContext2D, view: View, s: Slag, b: Bones, sin
 }
 
 /**
- * Its steam: puffs rising one after another out of each chimney, growing
- * and drifting as they go and thinning away, always; thicker and quicker
- * for a moment after something goes into its metal (`boost`).
+ * Its steam: out of each chimney an unbroken plume of soft pink-cream lobes,
+ * the first sat on the chimney's mouth, each rising, growing and drifting
+ * as it goes and thinning away at the top, the next coming up under it;
+ * thicker and quicker for a moment after something goes into its metal
+ * (`boost`). Drawn top first, so each lobe's lit top rounds over the one
+ * above it, as a cloud's lumps do; a far chimney's behind the body.
  */
 function steam(g: CanvasRenderingContext2D, view: View, s: Slag, b: Bones, a: Anim, front: boolean, boost = 0): void {
-  if (!front) return;
-  const big = bigness(s), vents = ventsOf(s);
-  vents.forEach((vt, i) => {
-    const mouth = place(b.shell, vt.at), each = 4;
-    for (let q = 0; q < each; q++) {
-      const life = frac(a.t * (0.32 + 0.1 * boost) + q / each + jitter(i + 3) * 0.5);
-      const rise = (0.3 + 1.5 * life) * big * (0.8 + vt.r * 2);
-      const drift: V3 = [0.18 * big * life * Math.sin(i * 1.7 + a.t * 0.3), -0.12 * big * life, rise];
-      const r = vt.r * (2.2 + 6 * life) * (1 + 0.35 * boost);
-      const al = (0.95 - 0.95 * life ** 1.4) * ramp(life, 0, 0.08);
-      steamPuff(g, view, add(mouth, drift), r, al, i * 7 + q);
+  const big = bigness(s), mid = b.shell.t;
+  ventsOf(s).forEach((vt, i) => {
+    const mouth = place(b.shell, vt.at);
+    // A chimney on the far side steams behind the body, one on the near side in front of it.
+    if (nearSide(mouth, mid, view) !== front) return;
+    const n = 7, tall = (0.8 + 4 * vt.r) * big * (1 + 0.3 * boost);
+    const lobes: Array<[V3, number, number, number]> = [[add(mouth, [0, 0, vt.r * 0.5]), vt.r * 1.15, 0.92, 99 + i]];
+    for (let q = 0; q < n; q++) {
+      const u = frac(a.t * (0.3 + 0.25 * boost) + q / n + jitter(i + 3));
+      const sway = Math.sin(i * 1.7 + a.t * 0.6 + u * 3) * 0.1 * big * u;
+      const lean = 0.4 * big * u * u, out = Math.hypot(vt.at[0], vt.at[1]) || 1;
+      // Leaning out away from the middle as it rises, so a plume never stands over the crucible's own middle.
+      const at = add(mouth, [sway + (lean * vt.at[0]) / out, (lean * vt.at[1]) / out, vt.r * 0.5 + tall * u]);
+      lobes.push([at, vt.r * (1.3 + 9 * u * (1.4 - 0.4 * u)) * (1 + 0.25 * boost), 0.92 * ramp(u, 0, 0.06) * (1 - ramp(u, 0.7, 1)), i * 7 + q]);
     }
+    lobes.sort((p, q) => q[0][2] - p[0][2]);
+    for (const [at, r, al, seed] of lobes) steamPuff(g, view, at, r, al, seed);
   });
 }
 
@@ -1323,7 +1367,7 @@ function slagKind(s: Slag): Kind {
         coatLight: mix(body, [255, 246, 232], 0.4),
         mark: copper,
         muzzle: mix(body, [255, 244, 226], 0.18),
-        horn: mix(body, [255, 240, 220], 0.3),
+        horn: mix(body, [255, 242, 224], 0.45),
         hornDark: mix(copper, body, 0.2),
         spot: mix(copper, [255, 210, 160], 0.2),
         crystal: darker(copper, 0.12),
