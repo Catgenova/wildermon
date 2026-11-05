@@ -188,6 +188,20 @@ jobs:
             where d.world_id::text like 'f3a88670%' and d.founded_by in (select uid from player where lower(name) in ('catgenova') or lower(name) like 'meri%')"
           ask "diglett: its last 20 messages" "select to_char(e.at, 'MM-DD HH24:MI:SS') as at, e.text from event e join player p on p.world_id = e.world_id and p.uid = e.uid
              where lower(p.name) like 'meri%' and p.world_id::text like 'f3a88670%' and e.text ilike '%dig%' order by e.n desc limit 20"
+          ask "diglett 2: Diglett, whatever it is doing now" "select c.id, c.name, c.species, stage_of(c) as st, c.mode, c.phase, c.job, work_range(c) as rng,
+                 round(creature_x(c)::numeric) as x, round(creature_y(c)::numeric) as y, c.post, (my_deed(c.world_id, c.keeper)).name as home,
+                 (select st.kind || ':' || st.id || ' at ' || round(st.cx::numeric) || ',' || round(st.cy::numeric) from worker_store(c.world_id, c, 'clay', 1) st limit 1) as clay_store
+             from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper and lower(p.name) like 'meri%'
+            where p.world_id::text like 'f3a88670%' and c.name ilike 'dig%'"
+          ask "diglett 2: whose settlement stores Meri's workers put into today" "select folk_name(l.world_id, l.founder) as settlement_of, l.who, l.def, l.store, count(*) as puts, sum(l.count) as n,
+                 to_char(min(l.at), 'HH24:MI') as first, to_char(max(l.at), 'HH24:MI') as last
+             from deed_store_log l join player p on p.world_id = l.world_id and p.uid = l.uid and lower(p.name) like 'meri%'
+            where l.world_id::text like 'f3a88670%' and l.put and l.at > now() - interval '12 hours'
+            group by 1, 2, 3, 4 order by 1, 2, 3"
+          ask "diglett 2: clay ground within 40 tiles of Meri's settlement" "select g.x, h.y, greatest(abs(g.x - 2613), abs(h.y - 2990)) as from_meri,
+                 greatest(abs(g.x - 2576), abs(h.y - 3018)) as from_solara
+             from world w cross join generate_series(2573, 2653) g(x) cross join generate_series(2950, 3030) h(y)
+            where w.id::text like 'f3a88670%' and land_tile(w.id, g.x, h.y) = tile_id('Clay') order by 3 limit 20"
           ask "Meri and her settlements" "select p.name, round(p.x) as x, round(p.y) as y, d.name as deed, d.founded_by = p.uid as founder,
                  folk_name(d.world_id, d.founded_by) as founded_by, m.role
              from player p left join deed_member m on m.world_id = p.world_id and m.uid = p.uid
