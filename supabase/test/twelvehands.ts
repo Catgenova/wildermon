@@ -4,7 +4,8 @@
  * Asked for off a second list of work only a player did. This asks, of both
  * sides, that each of the twelve is a species with its trade, may be set to
  * work a settlement and says what it does in the island's words; and that
- * set to work it does it: the smelter and the kiln emptied and charged, the
+ * set to work it does it: the smelter (a Sluglow's work since the forga went,
+ * `REMOVED_KINDS`) and the kiln emptied and charged, the
  * ashes raked and leached, a brew set going, supper cooked, a relic restored,
  * a planter sown, tended and harvested, and worms, a sprout, tar, wildflowers
  * and bare stone off their tiles.
@@ -48,7 +49,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 };
 
 const HANDS: Array<[string, string]> = [
-  ['forga', 'smelt'], ['potta', 'kiln'], ['cindra', 'ash'], ['hoppa', 'brew'], ['simma', 'cook'], ['relka', 'restore'],
+  ['potta', 'kiln'], ['cindra', 'ash'], ['hoppa', 'brew'], ['simma', 'cook'], ['relka', 'restore'],
   ['bedda', 'patch'], ['wurla', 'worm'], ['sprigga', 'sprout'], ['ambra', 'resin'], ['petta', 'flower'], ['scurra', 'scrub'],
 ];
 const SEED = cropDef('wheat').seed;
@@ -88,13 +89,13 @@ begin
   insert into said values ('COOKS', array_to_string(tend_recipes('cook'), ','));
   insert into said values ('BREWS', array_to_string(brew_order(), ','));
 
-  -- Forga: a smelter with two lumps made and room, three ore in the crate.
+  -- The smelters (a Sluglow's since the forga went): a smelter with two lumps made and room, three ore in the crate.
   insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, lit, since, state, made_by)
     values (w, 'smelter', 19, 16, 0, 0, 19.75, 16.5, 50, 0, false, now(),
             jsonb_build_object('jobs', '[]'::jsonb, 'output', jsonb_build_array(jsonb_build_object('def', 'copper_lump', 'count', 2, 'ql', 30))), u)
     returning id into v_p;
   insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7201, 'copper_ore', 30, 3);
-  select id into v_id from hand where species = 'forga';
+  v_id := creature_spawn(w, 'embra', 16.6, 16.6, 'active', now() - interval '60 days', u);
   update creature set mode = 'deed', until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle' where world_id = w and id = v_id;
   perform worker_settle(w, v_id);
   insert into said select 'SMELT', coalesce((select string_agg(def || ' ' || count, ',' order by def) from item where world_id = w and holder = 'crate' and crate = 7201), '-')
@@ -265,7 +266,7 @@ check('the words of the trades that work at the stores say where what they make 
 /* ---- what each does, on the island --------------------------------------------------- */
 
 const [smeltStores, smeltJobs, smeltOut] = at('SMELT').split('|');
-check('on the island, a forga takes the lumps out of a smelter into the stores and charges it with the ore', smeltStores === 'copper_lump 2' && smeltJobs === '3' && smeltOut === '0', at('SMELT'));
+check(`on the island, a ${SPECIES.embra.name} takes the lumps out of a smelter into the stores and charges it with the ore`, smeltStores === 'copper_lump 2' && smeltJobs === '3' && smeltOut === '0', at('SMELT'));
 const [kilnStores, kilnJobs, kilnOut] = at('KILN').split('|');
 check('a potta takes a fired brick out of a kiln into the stores and packs it with the unfired ones', kilnStores === 'clay_brick 1' && kilnJobs === '2' && kilnOut === '0', at('KILN'));
 const WARES = [...POTTERY].sort((a, b) => a.unfired.localeCompare(b.unfired));
@@ -330,9 +331,9 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   const crate = stock(g, [['copper_ore', 3]]);
   const s = g.addSmelter(23, 21, 0, 0, 50);
   s.output.push({ uid: g.inventory.nextUid++, id: 'copper_lump', ql: 30, dmg: 0, count: 2 });
-  worker(g, 'forga');
+  worker(g, 'embra');
   run(g, 90);
-  check('in the browser, a forga takes the lumps out of a smelter into the stores and charges it with the ore',
+  check(`in the browser, a ${SPECIES.embra.name} takes the lumps out of a smelter into the stores and charges it with the ore`,
     held(crate) === 'copper_lump 2' && s.jobs.length === 3 && s.output.length === 0, `${held(crate)} ${s.jobs.length} ${s.output.length}`);
 }
 {

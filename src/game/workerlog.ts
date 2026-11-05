@@ -102,18 +102,18 @@ const IDLE_SOURCE: Partial<Record<GatherKind, string>> = {
   patch: 'planter of yours wanting work', paper: 'paper press of yours', spin: 'spindle of yours',
   nail: 'anvil of yours', ribbon: 'anvil of yours', glass: 'lit smelter of yours', moss: 'moss to cut',
   vine: 'trellis of yours with no vine, at ground level on soil', lily: 'still water on your settlement for a water plant',
-  churn: 'butter churn of yours', alloy: 'lit smelter of yours', distil: 'lit campfire or oven of yours',
+  churn: 'butter churn of yours', alloy: 'lit smelter of yours',
 };
 
 /** What it would do with what the stores do not hold: "nothing in your stores on the settlement to mend". */
 const IDLE_STOCK: Partial<Record<GatherKind, string>> = {
-  mend: 'mend', tan: 'tan', mill: 'mill', saw: 'saw', chisel: 'chisel', brick: 'shape', rope: 'lay up',
+  mend: 'mend', tan: 'tan', mill: 'mill', saw: 'saw', chisel: 'chisel', brick: 'shape',
   fletch: 'fletch', paper: 'press', restore: 'restore', brew: 'brew', cook: 'cook', smelt: 'smelt',
   kiln: 'fire', stoke: 'burn', plant: 'plant', hod: 'build with', fill: 'fill', lamp: 'put in a lantern', patch: 'sow',
   heal: 'dress a hurt with', dairy: 'milk into', ash: 'leach into lye', spin: 'spin', nail: 'smith into nails',
   ribbon: 'smith into ribbons', glass: 'melt into glass', vine: 'plant', lily: 'plant', concrete: 'mix into concrete',
   mortar: 'mix into mortar', timber: 'saw into timbers', shaft: 'carve into shafts', bandage: 'make into a dressing or salve',
-  cheese: 'press into cheese', churn: 'churn', alloy: 'mix into an alloy', distil: 'distil',
+  cheese: 'press into cheese', churn: 'churn', alloy: 'mix into an alloy',
 };
 
 /**

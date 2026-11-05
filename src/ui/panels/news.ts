@@ -183,7 +183,7 @@ import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS, JOURNAL } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
 import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
-import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HUNT_REST, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, ringKeepsOut, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
+import { type GatherKind, CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HUNT_REST, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, ringKeepsOut, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
 import {
   CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays, WINTER_FUR, WINTER_FUR_PART,
@@ -192,7 +192,7 @@ import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as
 import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
 import { CHANNELS, FIGHTING, gradeId, traitOf, traitSays, type TraitDef } from '../../game/traits';
 import { footing, PERK_STAGE, perkSays, STAGE_PERKS, WATER_RANGE } from '../../game/creatures';
-import { STOKE_SAYS, STOKE_SMELT_SAYS, STOKE_SMELTS_AT } from '../../game/creatures';
+import { STOKE_SAYS, STOKE_SMELT_SAYS } from '../../game/creatures';
 import { POTTERY } from '../../game/kiln';
 import { FIRE_CAPACITY as FIRE_CAPACITY_338, FUEL_VALUES as FUEL_VALUES_337 } from '../../game/campfire';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
@@ -2423,7 +2423,7 @@ export const NEWS: News[] = [
       const ids = ['forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra'];
       return [
         `Added: ${num(ids.length)} more wildermon with settlement tasks:`,
-        ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
+        ...ids.map((id) => `${kindNameOf(id)} (taming ${tamingOf(id)}): ${taskDoes(id)}.`),
         'Fixed: offline, a working plucka skipped every fruit tree round it.',
       ];
     },
@@ -2435,7 +2435,7 @@ export const NEWS: News[] = [
       const ids = ['rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa'];
       return [
         `Added: ${num(ids.length)} more wildermon with settlement tasks:`,
-        ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
+        ...ids.map((id) => `${kindNameOf(id)} (taming ${tamingOf(id)}): ${taskDoes(id)}.`),
         'Added: they never fail a cycle; output QL at their own skill. Locked stacks untouched.',
       ];
     },
@@ -4006,7 +4006,8 @@ export const NEWS: News[] = [
     n: 337,
     day: '2026-10-26',
     lines: () => [
-      `Changed: ${SPECIES.embra.stages![STOKE_SMELTS_AT - 1].name} and ${SPECIES.embra.stages![1].name}: ${STOKE_SMELT_SAYS}`,
+      // As it was then: the second stage on (`STOKE_SMELTS_AT` was 1).
+      `Changed: ${SPECIES.embra.stages![0].name} and ${SPECIES.embra.stages![1].name}: ${STOKE_SMELT_SAYS}`,
       `Changed: stokers: ${STOKE_SAYS} Pieces a trip: whole pieces that fit only (was: at least 1, past full). Also fuel ovens and braziers.`,
       `Changed: tar: fuel, ${FUEL_VALUES_337.tar} seconds a piece.`,
     ],
@@ -4249,6 +4250,15 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 503,
+    day: '2026-11-05',
+    lines: () => [
+      ...removedSays(GONE_503),
+      `Changed: charging smelters: ${SPECIES.embra.name} line (was: ${REMOVED_KINDS.forga.name}). ${SPECIES.embra.name}: ${STOKE_SMELT_SAYS} (was: ${SPECIES.embra.stages![0].name} on).`,
+      'Removed: making rope and distilling as worker tasks; by hand only.',
+    ],
   },
   {
     n: 500,
@@ -4942,14 +4952,12 @@ export const NEWS: News[] = [
     n: 405,
     day: '2026-11-01',
     lines: () => [
-      ...RETRADED.map(([id, was]) => `Changed: ${SPECIES[id].name} settlement task: ${GATHER_DO[SPECIES[id].gathers!]} (was: ${was}).`),
-      `Changed: ${listed(RETRADED.filter(([, was]) => was === 'guarding').map(([id]) => SPECIES[id].name))}: no longer guard; no fight style or ability `
+      ...RETRADED.map(([id, was]) => `Changed: ${kindNameOf(id)} settlement task: ${taskDoes(id)} (was: ${was}).`),
+      `Changed: ${listed(RETRADED.filter(([, was]) => was === 'guarding').map(([id]) => kindNameOf(id)))}: no longer guard; no fight style or ability `
         + `(was: ${listed([...STYLE_NEWS.filter(([id]) => RETRADED.some(([r]) => r === id)).map(([, st]) => st),
           ...ABLE_NEWS.filter(([id]) => RETRADED.some(([r]) => r === id)).map(([, ab]) => abilityName(ab))])}).`,
       'Removed: glazing and butchering as settlement tasks: by hand only.',
-      `Removed: ${listed(Object.values(REMOVED_KINDS).map((r) => r.name))}. Wild ones: gone. None spawn or breed.`,
-      ...[...new Set(Object.values(REMOVED_KINDS).map((r) => r.becomes))].map((to) =>
-        `Changed: owned ${listed(Object.values(REMOVED_KINDS).filter((r) => r.becomes === to).map((r) => r.name))} now ${SPECIES[to].name}: name, keeper, level, skills, traits and age kept.`),
+      ...removedSays(GONE_405),
       `Changed: no ${listedOr(workerSkipsTools())} needed in the settlement stores. No perk needed for distilling or salves.`,
     ],
   },
@@ -5239,6 +5247,27 @@ const STYLE_NEWS: ReadonlyArray<readonly [string, FightStyle]> = [
 ];
 /** What a kind asked of your taming when it was put in: a removed one's (`REMOVED_KINDS`) as it was. */
 const tamingOf = (id: string): number => SPECIES[id]?.tameLevel ?? REMOVED_KINDS[id]?.tameLevel ?? 0;
+/** The settlement task a kind had when it was put in: a removed one's (`REMOVED_KINDS`) as it was. */
+/** What a removed kind's settlement task did, as it was put then: the trades of making rope and distilling are gone too. */
+const WAS_DOES: Readonly<Record<string, () => string>> = {
+  forga: () => GATHER_DO.smelt,
+  cordra: () => `make rope from wemp in your settlement stores, ${RECIPE_BY_ID.get('make_rope')?.inputs[0].count ?? 1} fibres a rope`,
+  brittla: () => `distil ${listedOr(BREWS.map((b) => b.name.toLowerCase()))} at your lit campfires and ovens`,
+};
+/** What a kind's settlement task does: its own now, or a removed one's as it was (`WAS_DOES`). */
+const taskDoes = (id: string): string => (SPECIES[id]?.gathers ? GATHER_DO[SPECIES[id].gathers as GatherKind] : WAS_DOES[id]());
+/** The kinds each removal took out, so an entry says only its own (`REMOVED_KINDS` holds every one). */
+const GONE_405 = ['testa', 'skulka', 'gasha', 'hamma', 'bashka', 'executa', 'shova', 'howla', 'marka', 'wardo'];
+const GONE_503 = ['forga', 'cordra', 'brittla'];
+/** What a removal says: the kinds gone, and what an owned one of each became. */
+const removedSays = (ids: readonly string[]): string[] => {
+  const gone = ids.map((id) => REMOVED_KINDS[id]);
+  return [
+    `Removed: ${listed(gone.map((r) => r.name))}. Wild ones: gone. None spawn or breed.`,
+    ...[...new Set(gone.map((r) => r.becomes))].map((to) =>
+      `Changed: owned ${listed(gone.filter((r) => r.becomes === to).map((r) => r.name))} now ${SPECIES[to].name}: name, keeper, level, skills, traits and age kept.`),
+  ];
+};
 /** The twelve kinds What's new 405 gives a new settlement task, and what each did before. */
 const RETRADED: ReadonlyArray<readonly [string, string]> = [
   ['dulla', 'guarding'], ['rootle', 'guarding'], ['spitta', 'guarding'], ['crakka', 'guarding'], ['glossa', 'glazing pottery'],

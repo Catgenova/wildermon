@@ -934,9 +934,9 @@ const pedigreeSources = (): string => {
 /** The dressing quality the help works a salva's number at. */
 const SHOWN_QL = 50;
 const HANDS = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa',
-  'forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra',
-  'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa', 'ulva', 'dowse', 'glimmip',
-  'dulla', 'rootle', 'spitta', 'crakka', 'awla', 'scorcha', 'leecha', 'frosta', 'whirla', 'brittla'];
+  'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra',
+  'rippa', 'chissa', 'mudda', 'flecha', 'papra', 'glossa', 'dippa', 'ulva', 'dowse', 'glimmip',
+  'dulla', 'rootle', 'spitta', 'crakka', 'awla', 'scorcha', 'leecha', 'frosta', 'whirla'];
 /** What a Bandageweaver's skill makes of each of its recipes, per make: "bandages 3 to 4, healing covers 3 to 4, salves 1 to 2". */
 const firstAidMore = (): string => ['make_bandage', `make_cover_${HERBS[0]}`, `make_salve_${HERBS[0]}`].map((id) => {
   const r = RECIPE_BY_ID.get(id)!, n = r.count ?? 1;
@@ -3158,7 +3158,7 @@ export function helpText(): string {
       <tr><td><b>${SPECIES.crawler.name}</b></td><td>On sand; eats vegetables. Collects <b>sand</b> off the bed to the crate (ground height unchanged). Defensive: always hits back;
       tamed ones still sometimes attack whoever stands beside them (a helm stops the worst). Evolves: ${evolves('crawler')}.</td></tr>
       <tr><td><b>${SPECIES.quarra.name}</b></td><td>On bare rock; eats clay. Cuts rock, slate, marble and sandstone shards. Evolves: ${evolves('quarra')}.</td></tr>
-      <tr><td><b>${SPECIES.embra.name}</b></td><td>Marsh peat and tar; eats cooked food only. Keeps every campfire, oven, brazier, smelter and kiln on the settlement fuelled and lit from the stores, whole pieces that fit only. ${STOKE_SAYS} ${SPECIES.embra.stages![STOKE_SMELTS_AT - 1].name} on: ${STOKE_SMELT_SAYS}
+      <tr><td><b>${SPECIES.embra.name}</b></td><td>Marsh peat and tar; eats cooked food only. Keeps every campfire, oven, brazier, smelter and kiln on the settlement fuelled and lit from the stores, whole pieces that fit only. ${STOKE_SAYS} ${STOKE_SMELTS_AT > 0 ? `${SPECIES.embra.stages![STOKE_SMELTS_AT - 1].name} on: ` : ''}${STOKE_SMELT_SAYS}
       Evolves: ${evolves('embra')}.</td></tr>
       <tr><td><b>${SPECIES.magga.name}</b></td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range, sorts: a stack a load
       from a settlement crate, chest or other store into the raw or craft material bin that takes it, up to the bin's room; not from bins, padlocked or marked stores or locked items,
@@ -3249,7 +3249,7 @@ export function helpText(): string {
       <li>${HANDS.length} chore workers, set to a settlement as usual, working within their reach of the totem. ${HANDS.filter((id) => TEND_JOBS.has(SPECIES[id].gathers!)).length} work at the settlement stores
       or at one of your stations: output goes into that store, else any settlement store that takes it, else onto the ground there.
       No tools: no ${listedOr(workerSkipsTools())} needed in the stores, none worn. Stations still needed: spindle, paper press, butter churn, anvil, lit campfire or oven, smelter (lit, for glass and alloys), kiln, barrel, trellis.
-      No perk needed: distilling (${SPECIES.brittla.name}), salves (${SPECIES.leecha.name}).
+      No perk needed: salves (${SPECIES.leecha.name}).
       Alloy QL (${SPECIES.scorcha.name}): the lumps' QL &times; (${ALLOY_QL[0]} + smelting &divide; ${ALLOY_QL[1]}), as your own hands.
       Glazing and butchering: by hand only.</li>
       ${HANDS.map((id) => {

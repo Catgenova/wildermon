@@ -97,6 +97,8 @@ const S = STAGE_MUL.speed ?? 1;
 const G = STAGE_MUL.grow ?? 1;
 /** The kind that works each trade, or learns each way: its pace, and whether it evolves. */
 const kindOf = (at: GatherKind | LearnsBy): string => {
+  // The smelters are charged by the Slug line between stokes since the forga went (`STOKE_SMELTS_AT`).
+  if (at === 'smelt') return 'embra';
   // A spar on a settlement is the Sparra's, whose own way of learning is your spar (`bout`).
   const all = Object.values(SPECIES).filter((d) => d.gathers === at || (!d.gathers && (d.learns?.by === at || (at === 'bout' && d.style === 'spar'))));
   return (all.find((d) => d.stages) ?? all[0])?.id ?? 'rabba';
@@ -176,7 +178,6 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   saw: errand('saw', [[0, 'work', 0.25]]),
   chisel: errand('chisel', [[0, 'work', 0.25]]),
   brick: errand('brick', [[0, 'work', 0.25]]),
-  rope: errand('rope', [[0, 'work', 0.25]]),
   fletch: errand('fletch', [[0, 'work', 0.25]]),
   concrete: errand('concrete', [[0, 'work', 0.25]]),
   mortar: errand('mortar', [[0, 'work', 0.25]]),
@@ -189,8 +190,6 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   paper: errand('paper', [[0, 'work', 0.25]]),
   spin: errand('spin', [[0, 'work', 0.25]]),
   churn: errand('churn', [[0, 'work', 0.25]]),
-  // At a lit campfire or oven of yours, its brew out of the stores where it is.
-  distil: errand('distil', [[0, 'work', 0.25]]),
   // At an anvil of yours, a lump out of the stores where it is.
   nail: errand('nail', [[0, 'work', 0.25]]),
   ribbon: errand('ribbon', [[0, 'work', 0.25]]),
