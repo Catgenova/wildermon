@@ -154,6 +154,8 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   leecha: () => import('./voice-loomhare').then((m) => m.LOOMHARE_VOICE),
   // The Brothlet, the Stockbelly and the Cauldronthroat.
   simma: () => import('./voice-broth').then((m) => m.BROTH_VOICE),
+  // The Creamlet, the Churnsnail and the Butterwhorl.
+  whirla: () => import('./voice-churn').then((m) => m.CHURN_VOICE),
 };
 
 /** Each voice that is in, by species; nothing for one that failed to come, until it is asked for again. */

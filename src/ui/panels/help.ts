@@ -972,6 +972,7 @@ const HAND_NUMBERS: Record<string, string> = {
   glossa: `evolves: ${evolves('glossa')}; ${perkLine('glossa').toLowerCase()} (${RECIPE_BY_ID.get('make_mortar')!.count} to ${RECIPE_BY_ID.get('make_mortar')!.count! + STAGE_PERKS.glossa.n})`,
   crakka: `evolves: ${evolves('crakka')}; ${perkLine('crakka').toLowerCase()} (${RECIPE_BY_ID.get('mix_concrete')!.count ?? 1} to ${(RECIPE_BY_ID.get('mix_concrete')!.count ?? 1) + STAGE_PERKS.crakka.n})`,
   leecha: `evolves: ${evolves('leecha')}; ${perkLine('leecha').toLowerCase()} (${firstAidMore()})`,
+  whirla: `evolves: ${evolves('whirla')}; ${perkLine('whirla').toLowerCase()} (butter ${(RECIPE_BY_ID.get(CHURN_BUTTER)!.count ?? 1) * STAGE_LOADS[2]} to ${(RECIPE_BY_ID.get(CHURN_BUTTER)!.count ?? 1) * (STAGE_LOADS[2] + STAGE_PERKS.whirla.n)} a cycle)`,
 };
 
 /**

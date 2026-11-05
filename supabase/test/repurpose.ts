@@ -27,7 +27,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { deedJobLine } from '../../src/game/creaturecrate';
 import {
-  ALLOY_QL, EVOLVE_AT, GATHER_DO, perkN, stageLoads, STAGE_PERKS, GATHER_SKILL, HANDS_TRADES, kindNow, LEARN_PACE, levelSkill, LOAD_TRADES, REMOVED_KINDS, sparsAsGuard, SPECIES, TEND_JOBS, tradeRecipes, WILD_SPECIES,
+  ALLOY_QL, EVOLVE_AT, GATHER_DO, perkN, stageLoads, STAGE_LOADS, STAGE_PERKS, GATHER_SKILL, HANDS_TRADES, kindNow, LEARN_PACE, levelSkill, LOAD_TRADES, REMOVED_KINDS, sparsAsGuard, SPECIES, TEND_JOBS, tradeRecipes, WILD_SPECIES,
   workerSkipsTools, type Creature, type GatherKind,
 } from '../../src/game/creatures';
 import { idleSays } from '../../src/game/workerlog';
@@ -140,6 +140,16 @@ const WEAVE_SKILLS = { [GATHER_SKILL.bandage]: EVOLVE_AT[1] };
 const WEAVE_RECIPE = RECIPE_BY_ID.get(tradeRecipes('bandage')[0])!;
 const WEAVE_PUT: Array<[string, number]> = WEAVE_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
 const weaveWants = (): string => `${WEAVE_RECIPE.result} ${(WEAVE_RECIPE.count ?? 1) + STAGE_PERKS.leecha.n}`;
+/**
+ * A Butterwhorl churns its third stage's batches a go and its line's one more (`STAGE_LOADS`, `STAGE_PERKS`): that many buckets
+ * of milk in the stores all churned, each bucket handed back empty.
+ */
+const CHURN_SKILLS = { [GATHER_SKILL.churn]: EVOLVE_AT[1] };
+const CHURN_RECIPE = RECIPE_BY_ID.get(CHURN_BUTTER)!;
+const CHURN_GO = STAGE_LOADS[2] + STAGE_PERKS.whirla.n;
+const CHURN_PUT: Array<[string, number]> = [['milk_bucket', CHURN_GO]];
+const churnWants = (): string => [`${CHURN_RECIPE.result} ${(CHURN_RECIPE.count ?? 1) * CHURN_GO}`,
+  ...(CHURN_RECIPE.returns ?? []).map(([id, n]) => `${id} ${n * CHURN_GO}`)].sort().join(',');
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
 const listed = (m: Map<string, number>): string => [...m].filter(([, n]) => n > 0).map(([id, n]) => `${id} ${n}`).sort().join(',') || '-';
@@ -319,6 +329,13 @@ ${CASES.map((c) => `
   insert into said select 'WEAVE', ${held};
   ${after('leecha')}
 
+  -- BUTTER: the whirla, at its third stage a Butterwhorl, churns both buckets of milk in the one go at its churn.
+  ${stocked(CHURN_PUT)}
+  ${stationAt('churn')}
+  ${ready('whirla').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(CHURN_SKILLS)}'::jsonb`)}
+  insert into said select 'BUTTER', ${held} || '|' || (select stage_loads(c) from creature c where c.world_id = w and c.id = (select id from hand where species = 'whirla'));
+  ${after('whirla')}
+
   -- VINE: a trellis on grass with no vine, one with a vine already, one on sand; three cuttings.
   perform land_set_tile(w, 21, 14, tile_id('Sand'));
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, material) values
@@ -454,6 +471,7 @@ check(`on the island, a Fletchercrest fletches one batch into ${fletchWants()}`,
 check(`on the island, a ${SPECIES.glossa.stages![1].name} mixes one batch into ${mixWants()}`, at('MIX') === mixWants(), at('MIX'));
 check(`on the island, a ${MORTARIUM} mixes one batch into ${conWants()}`, at('CON') === conWants(), at('CON'));
 check(`on the island, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, at('WEAVE') === weaveWants(), at('WEAVE'));
+check(`on the island, a ${SPECIES.whirla.stages![1].name} churns ${CHURN_GO} buckets of milk a go: ${churnWants()}`, at('BUTTER') === `${churnWants()}|${CHURN_GO}`, at('BUTTER'));
 {
   // Two logs, both carved in the one go at its stage's batches, each its recipe's shafts and its line's one more.
   const each = RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n;
@@ -621,7 +639,7 @@ check('the stud book holds the forga\'s record as a scorcha\'s, and the ulva\'s 
  * wild lume a crakka of yours is fighting; a Shaggan carcass; a guide that has seen a gorral and tamed a lume; stud book
  * records for a gorral, and for a shaggan that a roxxen's better record outranks.
  */
-const MIGRATION6 = readFileSync('supabase/migrations/20261105170006_gorral_shaggan_lume_are_gone.sql', 'utf8');
+const MIGRATION6 = readFileSync('supabase/migrations/20261105170010_gorral_shaggan_lume_are_gone.sql', 'utf8');
 const conv6 = psql(`
 discard temp;
 begin;
@@ -813,6 +831,16 @@ for (const k of CASES) {
   c.skills = { ...WEAVE_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, inCrate(crate) === weaveWants(), inCrate(crate));
+}
+{
+  const g = body();
+  const crate = stock(g, CHURN_PUT);
+  g.addFurniture(BUTTER_CHURN, 19, 16, 0, 0, 30);
+  const c = worker(g, 'whirla');
+  c.skills = { ...CHURN_SKILLS };
+  run(g, 120);
+  check(`in the browser, a ${SPECIES.whirla.stages![1].name} churns ${CHURN_GO} buckets of milk a go: ${churnWants()}`,
+    stageLoads(c) === CHURN_GO && inCrate(crate) === churnWants(), `${stageLoads(c)} ${inCrate(crate)}`);
 }
 {
   const g = body();
