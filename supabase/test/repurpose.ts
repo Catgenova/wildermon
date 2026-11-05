@@ -20,7 +20,8 @@
  * enough; a carcass and a bare pot are left as they are. And a Spiralphant, an awla at its third stage, carves its line's
  * one more shaft from each log (`STAGE_PERKS`), a Fortigran, a chissa at its third stage, chisels its line's one more stone
  * brick from each shard, and a Bandageweaver, a leecha at its third stage, cuts its line's one more
- * bandage from each cloth, on both sides.
+ * bandage from each cloth, and a Moltenex, a scorcha at its third stage, its line's one more lump in each batch of
+ * alloy, on both sides.
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
@@ -156,6 +157,11 @@ const CHURN_GO = STAGE_LOADS[2] + STAGE_PERKS.whirla.n;
 const CHURN_PUT: Array<[string, number]> = [['milk_bucket', CHURN_GO]];
 const churnWants = (): string => [`${CHURN_RECIPE.result} ${(CHURN_RECIPE.count ?? 1) * CHURN_GO}`,
   ...(CHURN_RECIPE.returns ?? []).map(([id, n]) => `${id} ${n * CHURN_GO}`)].sort().join(',');
+/** A Moltenex's go at the makings of one batch of bronze at a lit smelter: what the recipe makes, and its line's third-stage lumps on top. */
+const SLAG_SKILLS = { [GATHER_SKILL.alloy]: EVOLVE_AT[1] };
+const SLAG_RECIPE = RECIPE_BY_ID.get('make_bronze')!;
+const SLAG_PUT: Array<[string, number]> = SLAG_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
+const slagWants = (): string => `${SLAG_RECIPE.result} ${(SLAG_RECIPE.count ?? 1) + STAGE_PERKS.scorcha.n}`;
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
 const listed = (m: Map<string, number>): string => [...m].filter(([, n]) => n > 0).map(([id, n]) => `${id} ${n}`).sort().join(',') || '-';
@@ -347,6 +353,12 @@ ${CASES.map((c) => `
   ${ready('whirla').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(CHURN_SKILLS)}'::jsonb`)}
   insert into said select 'BUTTER', ${held} || '|' || (select stage_loads(c) from creature c where c.world_id = w and c.id = (select id from hand where species = 'whirla'));
   ${after('whirla')}
+  -- SLAG: the scorcha, at its third stage a Moltenex, mixes one batch of bronze at a lit smelter, and its line's one lump more.
+  ${stocked(SLAG_PUT)}
+  ${stationAt('smelter')}
+  ${ready('scorcha').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(SLAG_SKILLS)}'::jsonb`)}
+  insert into said select 'SLAG', ${held};
+  ${after('scorcha')}
 
   -- VINE: a trellis on grass with no vine, one with a vine already, one on sand; three cuttings.
   perform land_set_tile(w, 21, 14, tile_id('Sand'));
@@ -485,6 +497,7 @@ check(`on the island, a ${MORTARIUM} mixes one batch into ${conWants()}`, at('CO
 check(`on the island, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, at('WEAVE') === weaveWants(), at('WEAVE'));
 check(`on the island, a ${SPECIES.chissa.stages![1].name} chisels one shard into ${chipWants()}`, at('CHIP') === chipWants(), at('CHIP'));
 check(`on the island, a ${SPECIES.whirla.stages![1].name} churns ${CHURN_GO} buckets of milk a go: ${churnWants()}`, at('BUTTER') === `${churnWants()}|${CHURN_GO}`, at('BUTTER'));
+check(`on the island, a ${SPECIES.scorcha.stages![1].name} mixes one batch into ${slagWants()}`, STAGE_PERKS.scorcha.kind === 'more' && at('SLAG') === slagWants(), at('SLAG'));
 {
   // Two logs, both carved in the one go at its stage's batches, each its recipe's shafts and its line's one more.
   const each = RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n;
@@ -862,6 +875,17 @@ for (const k of CASES) {
   run(g, 120);
   check(`in the browser, a ${SPECIES.whirla.stages![1].name} churns ${CHURN_GO} buckets of milk a go: ${churnWants()}`,
     stageLoads(c) === CHURN_GO && inCrate(crate) === churnWants(), `${stageLoads(c)} ${inCrate(crate)}`);
+}
+{
+  const g = body();
+  const crate = stock(g, SLAG_PUT);
+  const sm = g.addSmelter(19, 16, 0, 0, 50);
+  sm.lit = true;
+  sm.fuel = 100000;
+  const c = worker(g, 'scorcha');
+  c.skills = { ...SLAG_SKILLS };
+  run(g, 120);
+  check(`in the browser, a ${SPECIES.scorcha.stages![1].name} mixes one batch into ${slagWants()}`, perkN(c, 'more') === STAGE_PERKS.scorcha.n && inCrate(crate) === slagWants(), inCrate(crate));
 }
 {
   const g = body();

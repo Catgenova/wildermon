@@ -1,5 +1,5 @@
 import {
-  coatPalette, curve, merge, orb, quadBonesOf, taper, tube,
+  coatPalette, curve, merge, quadBonesOf, taper, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { cut, earMesh, quadPieces } from './beastkit';
@@ -10,7 +10,7 @@ import { barrel, OWN, paws } from './wild-hands2';
 
 /**
  * Six that had an ability of their own (`AbilityId`), settlement workers now: each wears what it
- * did -- a whirl of blades, embers, icicles, tendrils, a round sucking
+ * did -- a whirl of blades, icicles, tendrils, a round sucking
  * mouth for a leech (the brittla, a brittle shell, is gone: `REMOVED_KINDS`).
  */
 
@@ -71,18 +71,6 @@ function kindOf(l: Look): Kind {
 }
 
 const HEAD = (y: number, z: number, r: V3): { c: V3; r: V3 } => ({ c: [0, y, z], r });
-
-/* ---- the scorcha: embers on its back, a flame at its tail ---------------------------- */
-
-export const SCORCHA = kindOf({
-  spec: { ...pawed({ high: 1.3, len: 2.2, legs: 0.75, neck: 0.34, lean: 50, swing: [22, 36], ears: [35, 22], tail: [0.45, 20, 8] }), nose: 12 },
-  head: HEAD(0.32, 0.14, [1.0, 0.96, 0.88]), body: [2.2, 1.05, 0.88], neck: [0.6, 0.6, 0.34], ear: [0.32, 0.24, 35], legs: [0.75, 0.25, 0.23, 'coatDark'],
-  snout: [1.0, -0.2, [0.4, 0.32, 0.34], 0.11],
-  back: () => merge(...[[-0.7, 0.2], [-0.3, -0.25], [0.1, 0.2], [0.45, -0.2], [-0.05, 0]].map(([y, x]) => orb([x, y, 0.82], 0.11, 5, 3, 'ember'))),
-  tail: (n) => merge(root(n), tube([[0, -0.2, 0], [0, -0.75, 0.15]], 0.08, 0.08, 5, 'coat'),
-    taper([[0, -0.75, 0.15], [0, -0.95, 0.45]], 0.16, 0.01, 5, 'flame')),
-  own: { ember: [255, 140, 50], flame: [255, 196, 80] }, mark: 30, shadow: [1.5, 1.2], stride: 1.4, size: 1.65,
-});
 
 /* ---- the frosta: icicles hanging off its flanks --------------------------------------- */
 

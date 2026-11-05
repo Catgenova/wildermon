@@ -108,7 +108,7 @@ const LINES: Record<string, () => Promise<Line>> = {
   lungra: () => import('./wild-briar').then((m) => line(m.BLUSHKIT, [m.BRIARPOUNCE, m.THORNLANCE])),
   crakka: () => import('./wild-pestlet').then((m) => line(m.PESTLET, [m.CHURNSCALE, m.MORTARIUM])),
   whirla: () => import('./wild-churn').then((m) => line(m.CREAMLET, [m.CHURNSNAIL, m.BUTTERWHORL])),
-  scorcha: () => import('./wild-abilities').then((m) => line(m.SCORCHA)),
+  scorcha: () => import('./wild-slag').then((m) => line(m.SLAGLET, [m.ALLOYSTER, m.MOLTENEX])),
   frosta: () => import('./wild-abilities').then((m) => line(m.FROSTA)),
   rootle: () => import('./wild-abilities').then((m) => line(m.ROOTLE)),
   dulla: () => import('./wild-moss').then((m) => line(m.MOSSNIB, [m.MOSSSHEAR, m.MOSSREAVER])),

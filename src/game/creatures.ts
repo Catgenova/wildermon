@@ -887,6 +887,9 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   // Its butter is a recipe worked at a churn of yours, a batch after the first in the same go as an ulva's (`moreRecipes`, the
   // island's `errand_go` and `stage_loads`).
   whirla: { kind: 'loads', n: 1, what: 'batches per cycle' },
+  // Its alloys are recipes worked at a lit smelter of yours, as a glimmip's glass is, and both sides put its line's 'more' on each
+  // batch (`glassStep`, the island's `errand_do` 'alloy').
+  scorcha: { kind: 'more', n: 1, what: 'alloy lumps per mix' },
   // Cooking is worked at a fire rather than at the stores, and makes no `more` there: its line's skill is its reach.
   simma: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
 };
@@ -3451,9 +3454,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   scorcha: {
     id: 'scorcha',
-    name: 'Scorcha',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Slaglet',
+    was: ['Scorcha'],
+    // Asked for, with a reference sheet: Slaglet, Alloyster, Moltenex. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Alloyster', description: '' },
+      { name: 'Moltenex', description: '' },
+    ],
     health: 30,
     attack: 7,
     speed: 1.9,
@@ -3464,11 +3473,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'alloy',
     workRange: 10,
+    // [shell, copper]: the sheet's cream with copper joints, a peach with bronze, an ivory with rust, and an apricot with brass.
     variants: [
-      ['#5c3c2c', '#d89c6c'],
-      ['#4c3428', '#c88c5c'],
-      ['#6c4430', '#e4a878'],
-      ['#3c2c24', '#b47c50'],
+      ['#e8b48a', '#c8642e'],
+      ['#eabc94', '#bc5c2a'],
+      ['#ecc09c', '#b85232'],
+      ['#e4b080', '#c47a36'],
     ],
     butcher: { meat: 4, leather: 3, bone: 3 },
     wound: 'burn',
@@ -4212,6 +4222,7 @@ sayLineLater('crakka', `Level: ${GATHER_SKILL.concrete}.`);
 sayLineLater('leecha', `Level: ${GATHER_SKILL.bandage.replace(/_/g, ' ')}.`);
 sayLineLater('chissa', `Level: ${GATHER_SKILL.chisel.replace(/_/g, ' ')}.`);
 sayLineLater('whirla', `Level: ${GATHER_SKILL.churn.replace(/_/g, ' ')}.`);
+sayLineLater('scorcha', `Level: ${GATHER_SKILL.alloy}.`);
 sayLineLater('simma', `Level: ${GATHER_SKILL.cook}.`);
 
 /** Which species roam wild, by weight. */
