@@ -981,7 +981,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const ql = Math.max(1, Math.min(100, 20 + c.fleece * 40 + c.hunger * 30));
       const litres = milkLitres(c.species);
       if (litres < BUCKET_LITRES) {
-        // A Gorral: its litres into the part bucket it started, or into an empty one.
+        // Less than a bucket a milking: its litres into the part bucket it started, or into an empty one.
         const part = g.inventory.find(MILK_PART);
         const bucket = part ? undefined : g.inventory.find('bucket');
         if (!part && !bucket) return;

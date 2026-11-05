@@ -6,7 +6,7 @@
  * complete tasks". This asks, of both sides, that every kind that can be kept
  * has one skill to learn; that a kind with no trade and no traces is born
  * knowing a little of its own and learns it by what it does -- sheared,
- * plucked or milked, sparred with, out with you, out after dark -- and a wild
+ * plucked or milked, sparred with, out with you -- and a wild
  * one does not; and that its level is that skill.
  *
  * Runs against the database the suite leaves behind, in one transaction that
@@ -90,12 +90,6 @@ begin
   perform creature_settle(w, a);
   insert into said select 'WILDWATCH', coalesce(skills->>'awareness', '-') from creature where world_id = w and id = a;
 
-  -- A lume out for ten minutes: it learns only if it is dark.
-  a := creature_spawn(w, 'lume', 17, 15, 'active', now() - interval '60 days', u);
-  update creature set settled_at = now() - interval '10 minutes' where world_id = w and id = a;
-  perform creature_settle(w, a);
-  insert into said select 'LUME', is_night(w)::text || '|' || ((skills->>'awareness')::double precision > 1) from creature where world_id = w and id = a;
-
   -- A sparra sparred with.
   a := creature_spawn(w, 'sparra', 16.9, 16.5, 'active', now() - interval '60 days', u);
   for i in 1..60 loop perform perform_fight(w, u, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', a)); end loop;
@@ -112,8 +106,6 @@ check('a woola is born knowing a little animal husbandry', at('BORN') === '{"ani
 check('and learns more by being sheared', at('SHORN') === 'true', at('SHORN'));
 check('a cudda learns it by being milked', at('MILKED') === 'true', at('MILKED'));
 check(`a warda learns awareness out at your heel, a go for every ${OUT_EVERY} seconds, and a wild one none`, at('WATCHED') === 'true' && at('WILDWATCH') === '1', `${at('WATCHED')} ${at('WILDWATCH')}`);
-const [night, lumeLearnt] = at('LUME').split('|');
-check(`a lume learns awareness out after dark, and not by day (it is ${night === 'true' ? 'night' : 'day'})`, lumeLearnt === night, at('LUME'));
 check('a sparra learns fighting by being sparred with', at('SPARRED') === 'true', at('SPARRED'));
 
 /* ---- in the browser ---------------------------------------------------------------- */
@@ -153,17 +145,6 @@ const run = (secs: number): void => { for (let i = 0; i < secs * 10; i++) { g.ti
   run(OUT_EVERY * 12);
   check(`a warda learns awareness out at your heel, and a wild one none`, (w.skills.awareness ?? 0) > 1 && (wild.skills.awareness ?? 1) === 1,
     `${w.skills.awareness} ${wild.skills.awareness}`);
-}
-{
-  const l = mine('lume', 1.2);
-  const real = g.isNight.bind(g);
-  g.isNight = () => false;
-  run(OUT_EVERY * 12);
-  const byDay = l.skills.awareness;
-  g.isNight = () => true;
-  run(OUT_EVERY * 12);
-  g.isNight = real;
-  check('a lume learns awareness out after dark, and not by day', byDay === 1 && (l.skills.awareness ?? 0) > 1, `${byDay} ${l.skills.awareness}`);
 }
 {
   const s = mine('sparra');

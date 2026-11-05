@@ -858,6 +858,8 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   petta: { kind: 'more', n: 1, what: 'flowers per pick' },
   potta: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   rippa: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  // Its stone brick is a recipe worked at the stores, which the island's `errand_do` adds a line's 'more' to.
+  chissa: { kind: 'more', n: 1, what: 'stone brick per shard' },
   papra: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   glimmip: { kind: 'more', n: 1, what: 'glass lumps per batch' },
   kemma: { kind: 'loads', n: 1, what: 'wildermon brushed per cycle' },
@@ -882,6 +884,9 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   crakka: { kind: 'more', n: 1, what: 'concrete per mix' },
   // Its bandages, covers and salves are recipes worked at the stores, which the island's `errand_do` adds a line's 'more' to.
   leecha: { kind: 'more', n: 1, what: 'bandages, covers or salves per make' },
+  // Its butter is a recipe worked at a churn of yours, a batch after the first in the same go as an ulva's (`moreRecipes`, the
+  // island's `errand_go` and `stage_loads`).
+  whirla: { kind: 'loads', n: 1, what: 'batches per cycle' },
   // Cooking is worked at a fire rather than at the stores, and makes no `more` there: its line's skill is its reach.
   simma: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
   // A brew is set going in a barrel of yours, one a go, and makes no `more` at the stores: its line's skill is its reach, to
@@ -3034,8 +3039,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   chissa: {
     id: 'chissa',
-    name: 'Chissa',
+    name: 'Chipkin',
+    was: ['Chissa'],
+    // Asked for, with a reference sheet: Chipkin, Brickorn, Fortigran. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Brickorn', description: '' },
+      { name: 'Fortigran', description: '' },
+    ],
     health: 28,
     attack: 3,
     speed: 1.8,
@@ -3046,11 +3058,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'chisel',
     workRange: 6,
+    // [stone, brick]: the sheet's cream sandstone with terracotta, oatmeal with a deep red, pale limestone with ochre, and buff with rose.
     variants: [
-      ['#9a948c', '#dcd8d0'],
-      ['#8a8a90', '#d0d0d8'],
-      ['#a49a8c', '#e4dccc'],
-      ['#7c7c7c', '#c8c8c4'],
+      ['#e8d6b8', '#c8693e'],
+      ['#e2d0b4', '#b0503a'],
+      ['#ece2cc', '#c88a46'],
+      ['#e4cdb0', '#c06a5c'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 3 },
   },
@@ -3417,9 +3430,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   whirla: {
     id: 'whirla',
-    name: 'Whirla',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
+    name: 'Creamlet',
+    was: ['Whirla'],
+    // Asked for, with a reference sheet: Creamlet, Churnsnail, Butterwhorl. Its words are written once the recipes are here
+    // (`STORE_WORDS`), and each stage's with them (`sayLineLater`).
     description: '',
+    stages: [
+      { name: 'Churnsnail', description: '' },
+      { name: 'Butterwhorl', description: '' },
+    ],
     health: 32,
     attack: 7,
     speed: 2.1,
@@ -3430,11 +3449,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'churn',
     workRange: 10,
+    // [body, blush]: the sheet's cream with rose mottling, a buttermilk with peach, an ivory with pink, and a custard with apricot.
     variants: [
-      ['#a07c50', '#e8d0b0'],
-      ['#8c6c44', '#dcc0a0'],
-      ['#b08c5c', '#f0dcbc'],
-      ['#7c5c3c', '#ccb090'],
+      ['#fbe8d4', '#eea4a0'],
+      ['#fdf0dc', '#f2b496'],
+      ['#f8e4d6', '#e89cac'],
+      ['#fff2dc', '#f4bc90'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3 },
     wound: 'cut',
@@ -3686,37 +3706,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     pannier: [200, 500, 1000],
     learns: { skill: 'body_strength', by: 'out' },
   },
-  gorral: {
-    id: 'gorral',
-    wound: 'crush',
-    name: 'Gorral',
-    description: 'Mount: climbing counts ×{pitch} toward the slopes it takes a rider up.',
-    health: 44,
-    attack: 7,
-    speed: 2.4,
-    tameLevel: 40,
-    tameChance: 0.06,
-    diet: ['mixed_grass', 'cabbage', 'acorn', 'carrot'],
-    baitHint: 'grass or a root',
-    timid: false,
-    gathers: null,
-    workRange: 6,
-    variants: [
-      ['#8e8578', '#e2dbcd'],
-      ['#5d5751', '#aaa49b'],
-      ['#a8865c', '#e6cda4'],
-      ['#3f3d3b', '#8a8681'],
-    ],
-    butcher: { meat: 10, fur: 5, leather: 7, bone: 8, gland: 1 },
-    onStone: true,
-    defensive: true,
-    draught: true,
-    mount: 15,
-    pitch: 2,
-    // A female is milked too, for less than a Cudda gives (`GORRAL_MILK`), and what comes back on it comes back slowly.
-    fleece: 1 / 1200,
-    milk: true,
-  },
   wadd: {
     id: 'wadd',
     wound: 'crush',
@@ -3789,34 +3778,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     mount: 12,
     swims: true,
     deepWater: true,
-  },
-  shaggan: {
-    id: 'shaggan',
-    hide: 'thick',
-    heavy: true,
-    wound: 'crush',
-    name: 'Shaggan',
-    description: 'Traces: team pace +{pull:pct} (most wildermon: +{pullDefault:pct}). Slowest of the draught wildermon.',
-    health: 90,
-    attack: 12,
-    speed: 1,
-    tameLevel: 35,
-    tameChance: 0.06,
-    diet: ['mixed_grass', 'wheat', 'corn', 'cabbage'],
-    baitHint: 'grass or grain',
-    timid: false,
-    gathers: null,
-    workRange: 6,
-    variants: [
-      ['#6b5a44', '#b39a76'],
-      ['#4a4038', '#8d8076'],
-      ['#8a7050', '#d0b288'],
-      ['#585a56', '#a2a49e'],
-    ],
-    butcher: { meat: 30, fur: 10, leather: 16, bone: 20, gland: 1 },
-    defensive: true,
-    draught: true,
-    pull: 0.45,
   },
   // ---- Eyes, produce and the rare sort. ----
   warda: {
@@ -3981,32 +3942,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#34302c', '#d9d2c3'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3, gland: 3 },
-  },
-  lume: {
-    id: 'lume',
-    wound: 'burn',
-    name: 'Lume',
-    description: 'Lights {glow} tiles round itself at any hour. Out only after dark.',
-    health: 10,
-    attack: 1,
-    speed: 1.3,
-    tameLevel: 55,
-    tameChance: 0.05,
-    diet: ['gland', 'nuts', 'honey'],
-    baitHint: 'a gland or something sweet',
-    timid: true,
-    gathers: null,
-    workRange: 6,
-    variants: [
-      ['#dfe6c8', '#f6f8e6'],
-      ['#c8e0e6', '#e8f6f8'],
-      ['#e6d6c0', '#f8efdd'],
-      ['#d0c8e6', '#eee8f8'],
-    ],
-    butcher: { meat: 1, gland: 4 },
-    glow: 8,
-    nocturnal: true,
-    learns: { skill: 'awareness', by: 'dark' },
   },
 
   // ---- The things that are not wildermon ----
@@ -4286,6 +4221,8 @@ sayLineLater('flecha', `Level: ${GATHER_SKILL.fletch.replace(/_/g, ' ')}.`);
 sayLineLater('glossa', `Level: ${GATHER_SKILL.mortar}.`);
 sayLineLater('crakka', `Level: ${GATHER_SKILL.concrete}.`);
 sayLineLater('leecha', `Level: ${GATHER_SKILL.bandage.replace(/_/g, ' ')}.`);
+sayLineLater('chissa', `Level: ${GATHER_SKILL.chisel.replace(/_/g, ' ')}.`);
+sayLineLater('whirla', `Level: ${GATHER_SKILL.churn.replace(/_/g, ' ')}.`);
 sayLineLater('simma', `Level: ${GATHER_SKILL.cook}.`);
 
 /** Which species roam wild, by weight. */
@@ -4327,6 +4264,11 @@ export const REMOVED_KINDS: Readonly<Record<string, { name: string; tameLevel: n
   forga: { name: 'Forga', tameLevel: 20, becomes: 'scorcha' },
   cordra: { name: 'Cordra', tameLevel: 14, becomes: 'ulva' },
   brittla: { name: 'Brittla', tameLevel: 28, becomes: 'hoppa' },
+  // Asked for: "Remove gorral, shaggan, lume". An owned one becomes the kind nearest its use: the other land saddle mount,
+  // the other draught beast, the lamplighters.
+  gorral: { name: 'Gorral', tameLevel: 40, becomes: 'orse' },
+  shaggan: { name: 'Shaggan', tameLevel: 35, becomes: 'roxxen' },
+  lume: { name: 'Lume', tameLevel: 55, becomes: 'wicka' },
 };
 /** A kind's id as it is now: a removed kind's (`REMOVED_KINDS`) the kind it became, any other its own. */
 export const kindNow = (id: string): string => REMOVED_KINDS[id]?.becomes ?? id;
@@ -4387,13 +4329,10 @@ export const WILD_SPECIES: Array<[string, number]> = [
   ['dowse', 5],
   ['warda', 5],
   ['tinka', 4],
-  ['gorral', 4],
   ['wadd', 4],
   // Asked for: "Rarely found, only spawns in deep water" (`deepWater`).
   ['springlet', 1],
-  ['shaggan', 4],
   ['snout', 2],
-  ['lume', 2],
   ['kemma', 6],
   ['sheela', 5],
   ['salva', 4],
@@ -6670,10 +6609,10 @@ export class Creatures {
 
   /**
    * Whether a stretch of ground is the sort a species settles on. A Mola
-   * settles over metal, bare or buried, a Crawler on the sand and a Gorral on
+   * settles over metal, bare or buried, a Crawler on the sand and a Chiptail on
    * bare rock; the rest want something growing. Beyond the ground itself a
    * few of them want water, trees, clay or tar within sight of the door, and
-   * a Lume wants the sun down.
+   * a Glimmoth wants the sun down.
    */
   suits(game: Game, def: SpeciesDef | undefined, x: number, y: number): boolean {
     if (!def) return false;

@@ -218,7 +218,10 @@ check('a worse young one changes nothing', key(got<Row[]>('WORSE')) === key(last
   const better = got<Row[]>('BETTER');
   const wantBetter = last.map((r) => (bf[r.stat] > r.value + 1e-6 ? { ...r, value: bf[r.stat], id: b.id, name: 'Best', breeder: U2, at: b.born } : r));
   check('a better one takes each stat it beats, under its breeder, and leaves the rest',
-    key(better) === key(wantBetter) && better.find((r) => r.stat === 'traits')?.name === 'Best' && better.some((r) => r.name !== 'Best'),
+    // BEST is three fantastic traits, the most there is (TRAIT_SLOTS of them); a birth that rolled the same ties it, and a
+    // tie keeps the first, so the trait total is Best's only when it beat the births' best.
+    key(better) === key(wantBetter) && better.find((r) => r.stat === 'traits')?.name === wantBetter.find((r) => r.stat === 'traits')?.name
+      && better.some((r) => r.name !== 'Best'),
     `${isle.get('BETTER')}`);
   check('a record holder put down and another let go leave every record standing', key(got<Row[]>('AFTER')) === key(better) && isle.get('GONE') === '0',
     `${isle.get('AFTER')} (${isle.get('GONE')} left)`);
@@ -244,7 +247,8 @@ console.log('--- read back');
   const hardy = rpc.find((r) => r.stat === 'hardy')!;
   const traits = rpc.find((r) => r.stat === 'traits')!;
   check('a page says a record by its figures', recordSaid(hardy) === `Record: Health ${recordFigure('hardy', hardy.value)} (${hardy.name}, ${hardy.breeder}, ${dayOf(hardy.at)})`
-    && recordSaid(traits) === `Record: Trait total ${bredScore(BEST)} (Best, Onlooker, ${dayOf(traits.at)})`, `${recordSaid(hardy)} | ${recordSaid(traits)}`);
+    && recordSaid(traits) === `Record: Trait total ${recordFigure('traits', traits.value)} (${traits.name}, ${traits.breeder}, ${dayOf(traits.at)})`
+    && traits.value === bredScore(BEST), `${recordSaid(hardy)} | ${recordSaid(traits)}`);
   check('the board names what it keeps', RECORD_STATS.every((s) => BOARD_RULES.records.includes(s.name.toLowerCase())), BOARD_RULES.records);
 }
 {

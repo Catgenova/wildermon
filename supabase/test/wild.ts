@@ -91,7 +91,7 @@ say(placed >= HOW_MANY * 0.9, `${placed} of ${HOW_MANY} asked for were put down`
 
 console.log('');
 console.log('  species   weight   ground   was    now');
-const watched = ['rabba', 'vola', 'mola', 'dowse', 'crawler', 'quarra', 'gorral', 'wadd', 'bogga', 'lume'];
+const watched = ['rabba', 'vola', 'mola', 'dowse', 'crawler', 'quarra', 'wadd', 'bogga'];
 for (const id of watched) {
   if (!weight.has(id)) continue;
   const want = 100 * (weight.get(id) as number) / total;
