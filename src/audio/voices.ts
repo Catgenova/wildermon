@@ -163,6 +163,8 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   simma: () => import('./voice-broth').then((m) => m.BROTH_VOICE),
   // The Creamlet, the Churnsnail and the Butterwhorl.
   whirla: () => import('./voice-churn').then((m) => m.CHURN_VOICE),
+  // The Slaglet, the Alloyster and the Moltenex.
+  scorcha: () => import('./voice-slag').then((m) => m.SLAG_VOICE),
   // The Wheybit, the Pressqueak and the Fromageon.
   frosta: () => import('./voice-mouse').then((m) => m.MOUSE_VOICE),
 };
