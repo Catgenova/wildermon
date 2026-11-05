@@ -241,6 +241,15 @@ export function formLines(def: SpeciesDef, guide?: FieldGuide): string[] {
   });
 }
 
+/**
+ * A kind of subspecies' page, one line each (`SpeciesDef.subspecies`): its name and how often the wild puts one out,
+ * an even share of its variants. They differ in look only.
+ */
+export function subspeciesLines(def: SpeciesDef): string[] {
+  const names = def.subspecies ?? [];
+  return names.map((name) => `${name}: 1 in ${names.length} wild; health, blow and speed as every ${def.name.toLowerCase()}`);
+}
+
 /* ---- What a page says ------------------------------------------------------ */
 
 /** "a, b or c", for a choice rather than a list. */
@@ -454,6 +463,7 @@ export function guidePage(def: SpeciesDef, onIsland = false, stage = 0, guide?: 
     ].filter((s) => s.lines.length);
   }
   return [
+    { head: 'Subspecies', lines: subspeciesLines(def) },
     { head: 'Habitat', lines: whereItLives(def, onIsland) },
     { head: def.monster ? 'Not a wildermon' : 'Taming', lines: taming(def) },
     ...(def.monster ? [] : [{ head: 'Kept', lines: keeping(def) }]),

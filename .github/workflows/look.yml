@@ -168,6 +168,50 @@ jobs:
           # Asked about: "Meri's oremander is bringing copper to my storage". Meri, her settlement and what she belongs
           # to, her Oremanders (mola) and their posts, and where `worker_store` sends a load of copper from each, whose that
           # store is, and whether Meri may put into it (`crate_put_shut`, `store_shut_piece`).
+          # Asked about: "diglett is running to Cats place like Digimon was". Meri's workers by name, where each is
+          # going and whose settlement that is, what it carries or fetches, where the island sends it next, and where a
+          # load of what it carries goes (`worker_store`).
+          ask "diglett: Meri's workers, where each is going and whose ground that is" "select c.id, c.name, c.species, stage_of(c) as st, c.mode, c.phase, c.job,
+                 round(creature_x(c)::numeric) as x, round(creature_y(c)::numeric) as y, round(c.to_x::numeric) as tx, round(c.to_y::numeric) as ty,
+                 c.work_x, c.work_y, c.post, c.fetching, left(c.carrying::text, 60) as carrying, c.idle_why,
+                 (select d.name from deed d where d.world_id = c.world_id and greatest(abs(floor(c.to_x) - d.x), abs(floor(c.to_y) - d.y)) <= d.radius limit 1) as to_deed,
+                 (select d.name from deed d where d.world_id = c.world_id and c.work_x is not null and greatest(abs(c.work_x - d.x), abs(c.work_y - d.y)) <= d.radius limit 1) as work_deed,
+                 (my_deed(c.world_id, c.keeper)).name as home
+             from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper and lower(p.name) like 'meri%'
+            where p.world_id::text like 'f3a88670%' and c.mode = 'deed' order by (c.name ilike '%dig%') desc, c.id limit 40"
+          ask "diglett: where the island sends each named like it next, and where its load would go" "select c.id, c.name, c.species, s.*,
+                 (select st.kind || ':' || st.id || ' at ' || round(st.cx::numeric) || ',' || round(st.cy::numeric) from worker_store(c.world_id, c, coalesce(c.carrying->>'def', 'copper_ore'), 1) st limit 1) as store
+             from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper and lower(p.name) like 'meri%'
+             cross join lateral errand_step(c.world_id, c.id) s
+            where p.world_id::text like 'f3a88670%' and c.mode = 'deed' and (c.name ilike '%dig%' or c.name ilike '%digi%') order by c.id"
+          ask "diglett: Meri's settlement and catgenova's" "select d.name, d.x, d.y, d.radius, folk_name(d.world_id, d.founded_by) as founder from deed d
+            where d.world_id::text like 'f3a88670%' and d.founded_by in (select uid from player where lower(name) in ('catgenova') or lower(name) like 'meri%')"
+          ask "diglett: its last 20 messages" "select to_char(e.at, 'MM-DD HH24:MI:SS') as at, e.text from event e join player p on p.world_id = e.world_id and p.uid = e.uid
+             where lower(p.name) like 'meri%' and p.world_id::text like 'f3a88670%' and e.text ilike '%dig%' order by e.n desc limit 20"
+          ask "diglett 2: Diglett, whatever it is doing now" "select c.id, c.name, c.species, stage_of(c) as st, c.mode, c.phase, c.job, work_range(c) as rng,
+                 round(creature_x(c)::numeric) as x, round(creature_y(c)::numeric) as y, c.post, (my_deed(c.world_id, c.keeper)).name as home,
+                 (select st.kind || ':' || st.id || ' at ' || round(st.cx::numeric) || ',' || round(st.cy::numeric) from worker_store(c.world_id, c, 'clay', 1) st limit 1) as clay_store
+             from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper and lower(p.name) like 'meri%'
+            where p.world_id::text like 'f3a88670%' and c.name ilike 'dig%'"
+          ask "diglett 2: whose settlement stores Meri's workers put into today" "select folk_name(l.world_id, l.founder) as settlement_of, l.who, l.def, l.store, count(*) as puts, sum(l.count) as n,
+                 to_char(min(l.at), 'HH24:MI') as first, to_char(max(l.at), 'HH24:MI') as last
+             from deed_store_log l join player p on p.world_id = l.world_id and p.uid = l.uid and lower(p.name) like 'meri%'
+            where l.world_id::text like 'f3a88670%' and l.put and l.at > now() - interval '12 hours'
+            group by 1, 2, 3, 4 order by 1, 2, 3"
+          ask "diglett 2: clay ground within 40 tiles of Meri's settlement" "select g.x, h.y, greatest(abs(g.x - 2613), abs(h.y - 2990)) as from_meri,
+                 greatest(abs(g.x - 2576), abs(h.y - 3018)) as from_solara
+             from world w cross join generate_series(2573, 2653) g(x) cross join generate_series(2950, 3030) h(y)
+            where w.id::text like 'f3a88670%' and land_tile(w.id, g.x, h.y) = tile_id('Clay') order by 3 limit 20"
+          ask "diglett 3: furniture 151, its maker, and the settlements round 2648, 3043" "select q.id, q.sub, q.x, q.y, folk_name(q.world_id, q.made_by) as maker, q.store_of,
+                 (select string_agg(d.name || ' (' || folk_name(d.world_id, d.founded_by) || ', ' || d.x || ',' || d.y || ' r' || d.radius || ')', '; ')
+                    from deed d where d.world_id = q.world_id and greatest(abs(q.x - d.x), abs(q.y - d.y)) <= d.radius + 25) as deeds_near
+             from placed q where q.id = 151 and q.world_id::text like 'f3a88670%'"
+          ask "diglett 3: Diglett's work site and where its settlement work is reckoned from" "select c.id, s.* from creature c cross join lateral work_site(c.world_id, c) s
+            where c.world_id::text like 'f3a88670%' and c.id = 617"
+          ask "diglett 3: every settlement Meri and catgenova belong to" "select p.name, d.name as deed, d.x, d.y, d.radius, folk_name(d.world_id, d.founded_by) as founder, coalesce(m.role, 'founder') as role
+             from player p join deed d on d.world_id = p.world_id
+             left join deed_member m on m.world_id = d.world_id and m.founder = d.founded_by and m.uid = p.uid
+            where p.world_id::text like 'f3a88670%' and (lower(p.name) like 'meri%' or lower(p.name) = 'catgenova') and (d.founded_by = p.uid or m.uid is not null)"
           ask "Meri and her settlements" "select p.name, round(p.x) as x, round(p.y) as y, d.name as deed, d.founded_by = p.uid as founder,
                  folk_name(d.world_id, d.founded_by) as founded_by, m.role
              from player p left join deed_member m on m.world_id = p.world_id and m.uid = p.uid

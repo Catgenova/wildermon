@@ -3099,6 +3099,14 @@ jobs:
             --outfile=node_modules/.cache/flightfoot.mjs --log-level=error
           node node_modules/.cache/flightfoot.mjs
 
+      - name: The help's search puts the sections with it in their heading first
+        run: |
+          # "aqueduct" finds the Aqueducts section first, then the sections that
+          # only mention it, by how often; nothing for an empty search.
+          npx esbuild supabase/test/helpsearch.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/helpsearch.mjs --log-level=error
+          node node_modules/.cache/helpsearch.mjs
+
       - name: The Springlet, slow on land and a hare's pace in water, found only in deep water
         if: matrix.shard == 3
         run: |
@@ -3517,6 +3525,17 @@ jobs:
           npx esbuild supabase/test/wildforms.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/wildforms.mjs --log-level=error
           node node_modules/.cache/wildforms.mjs
+
+      - name: Every ogre is a Menhir, Gatebreaker or Barrowback Ogre, the same on both sides
+        if: matrix.shard == 3
+        run: |
+          # Three subspecies, one for each of the ogre's variants: the island
+          # puts them out evenly among its three and sends the variant; the
+          # browser names, states and draws each by its own, with the same
+          # health and blow. Both agree for a set of ids the island sends.
+          npx esbuild supabase/test/ogres.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/ogres.mjs --log-level=error
+          node node_modules/.cache/ogres.mjs
 
       - name: Live updates over Broadcast
         if: matrix.shard == 3

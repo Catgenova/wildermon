@@ -25,9 +25,10 @@ import type { V3 } from './figure';
 interface Tack { kinds: readonly Kind[]; seat: (stage: number) => number; grip: (stage: number) => V3; tuck: readonly number[] }
 /**
  * A line's models: its first stage; what it is drawn as at its second stage and its third (`SpeciesDef.stages`), when it
- * evolves -- with none, it is drawn as its first at every stage; and saddled, when it is ridden.
+ * evolves -- with none, it is drawn as its first at every stage; saddled, when it is ridden; and, for a kind of
+ * subspecies (`SpeciesDef.subspecies`), each subspecies by its variant.
  */
-interface Line { kind: Kind; stages?: readonly [Kind, Kind]; tacked?: Tack }
+interface Line { kind: Kind; stages?: readonly [Kind, Kind]; tacked?: Tack; subspecies?: readonly Kind[] }
 const line = (kind: Kind, stages?: readonly [Kind, Kind], tacked?: Tack): Line => ({ kind, stages, tacked });
 
 /* ---- the kinds ----------------------------------------------------------------------- */
@@ -70,7 +71,7 @@ const LINES: Record<string, () => Promise<Line>> = {
   tinka: () => import('./wild-mend').then((m) => line(m.STITCHKIT, [m.PATCHCOON, m.MENDERMASK])),
   goblin: () => import('./wild-upright').then((m) => line(m.GOBLIN)),
   orc: () => import('./wild-upright').then((m) => line(m.ORC)),
-  ogre: () => import('./wild-upright').then((m) => line(m.OGRE)),
+  ogre: () => import('./wild-ogre').then((m) => ({ kind: m.OGRES[0], subspecies: m.OGRES })),
   vesp: () => import('./wild-bee').then((m) => line(m.BUZZLET, [m.COMBWORKER, m.HIVEMASTER])),
   lume: () => import('./wild-air').then((m) => line(m.LUME)),
   dragon: () => import('./wild-dragon').then((m) => line(m.DRAGON)),
@@ -253,6 +254,7 @@ function keysOf(species: string, l: Line): { key: string; kind: Kind }[] {
   const out = [{ key: species, kind: l.kind }];
   l.stages?.forEach((kind, i) => out.push({ key: `${species}@${i + 1}`, kind }));
   l.tacked?.kinds.forEach((kind, i) => out.push({ key: `${species}@${i}+tack`, kind }));
+  l.subspecies?.forEach((kind, i) => out.push({ key: `${species}~${i}`, kind }));
   return out;
 }
 
@@ -293,10 +295,17 @@ function want(species: string): Line | undefined {
 /** Whether a kind is drawn as a model here, or still by hand. */
 export const modelled = (species: string | undefined): boolean => !!species && species in LINES;
 
-/** The model a kind is drawn as at a stage, and the name its pictures are kept under; nothing while its line is on its way. */
-export function wildermonKind(species: string, stage = 0, tacked = false): { key: string; kind: Kind } | null {
+/**
+ * The model a kind is drawn as at a stage (or, for a kind of subspecies, as its variant's subspecies), and the name its
+ * pictures are kept under; nothing while its line is on its way.
+ */
+export function wildermonKind(species: string, stage = 0, tacked = false, variant?: number): { key: string; kind: Kind } | null {
   const l = want(species);
   if (!l) return null;
+  if (l.subspecies && variant !== undefined) {
+    const v = l.subspecies[variant] ? variant : 0;
+    return { key: `${species}~${v}`, kind: l.subspecies[v] };
+  }
   const saddled = tacked ? l.tacked?.kinds[Math.max(0, Math.min(2, stage))] : undefined;
   if (saddled) return { key: `${species}@${stage}+tack`, kind: saddled };
   const later = stage > 0 ? l.stages?.[stage - 1] : undefined;
@@ -304,15 +313,16 @@ export function wildermonKind(species: string, stage = 0, tacked = false): { key
   return { key: species, kind: l.kind };
 }
 
-/** A wildermon with its feet at (sx, sy), as it is drawn at its stage. */
-export function drawWildermon(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, species: string, colors: [string, string], p: BeastPose, stage = 0, tacked = false): void {
-  const m = wildermonKind(species, stage, tacked);
+/** A wildermon with its feet at (sx, sy), as it is drawn at its stage, and for a kind of subspecies as its variant's. */
+export function drawWildermon(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, species: string, colors: [string, string], p: BeastPose, stage = 0, tacked = false,
+  variant?: number): void {
+  const m = wildermonKind(species, stage, tacked, variant);
   if (m) drawBeast(ctx, sx, sy, zoom, m.key, m.kind, colors, p);
 }
 
 /** How far over its feet the top of a kind is, standing, at zoom one: where its name and health bar go. */
-export function wildermonTop(species: string, stage = 0): number | undefined {
-  const m = wildermonKind(species, stage);
+export function wildermonTop(species: string, stage = 0, variant?: number): number | undefined {
+  const m = wildermonKind(species, stage, false, variant);
   if (!m) return undefined;
   return CLEARS.has(species) ? Math.max(topOf(m.key, m.kind), clearOf(m.key, m.kind)) : topOf(m.key, m.kind);
 }

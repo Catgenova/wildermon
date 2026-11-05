@@ -20,6 +20,8 @@
 import { Creatures } from '../../src/game/creatures';
 import type { IslandCreature } from '../../src/game/creatures';
 import { bodyForward, skillRises, tookOff, BODY_GAP, HURT_FLOOR, SKILL_FLOOR, type Body, type Rise } from '../../src/net/felt';
+import { Skills } from '../../src/game/skills';
+import { readFileSync } from 'node:fs';
 
 let fails = 0;
 let n = 0;
@@ -73,6 +75,25 @@ say('and one under the floor does not',
   skillRises(book({ mining: 12.5 + SKILL_FLOOR / 2 }), held, true), []);
 say('nor does one going the other way',
   skillRises(book({ mining: 12.4 }), held, true), []);
+
+/*
+ * Past a hundred. Reported: "i'm getting popups for digging levels on a lot of different activities,
+ * tracking/prospecting/drinking water ... persists after refresh": Digging past a hundred (the boards' whole of it) was
+ * read through `get`, which stops at `SKILL_TOP`, so every beat that brought the book floated "Digging +0.37".
+ * The browser's side reads a skill as it stands (`standing`), as `play.ts` does.
+ */
+{
+  const sk = new Skills({ digging: 100.37, tracking: 40 });
+  const asHeld = (id: string): number => sk.standing(id);
+  say('a skill past a hundred, the book unchanged: nothing floats',
+    skillRises(book({ digging: 100.37, tracking: 40 }), asHeld, true), []);
+  say('and read stopped at the top, it would have floated the overshoot every beat',
+    tidy(skillRises(book({ digging: 100.37 }), (id) => sk.get(id), true)), [{ id: 'digging', gain: 0.37 }]);
+  say('a real rise past a hundred floats only the rise',
+    tidy(skillRises(book({ digging: 100.5 }), asHeld, true)), [{ id: 'digging', gain: 0.13 }]);
+  say('and the beat\'s reading in play.ts is the skill as it stands',
+    /skillRises\(what\.skills, \(id\) => game\.skills\.standing\(id\)/.test(readFileSync(new URL('../../src/net/play.ts', import.meta.url), 'utf8')), true);
+}
 
 // A skill the browser has never heard of starts where every skill starts.
 say('a skill first heard of, from the one it started at',
