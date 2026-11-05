@@ -4193,12 +4193,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: null,
     workRange: 0,
+    // One hide each for its three subspecies, in their order: red, green, blue.
     variants: [
       ['#7a3b3b', '#d98a4a'],
-      ['#3b4f7a', '#5a9ad9'],
       ['#3f6b46', '#7fd07f'],
-      ['#4a3f5f', '#a98ad9'],
+      ['#3b4f7a', '#5a9ad9'],
     ],
+    subspecies: ['Runewing Dragon', 'Runestone Drake', 'Stormcoil Dragon'],
     butcher: { meat: 40, leather: 24, bone: 30, sinew: 20, scale: 24, gland: 6, hoard: 1 },
     hunter: true,
     defensive: true,

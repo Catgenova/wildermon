@@ -1,10 +1,10 @@
 /**
- * Sheets of the dragon proposals (`src/render/wild-dragon-runecut.ts`) beside
- * the live dragon (`src/render/wild-dragon.ts`), for choosing between them.
+ * Sheets of the dragon's three subspecies (`DRAGONS` in `src/render/wild-dragon.ts`),
+ * each in its own variant's colours, beside three revamped wildermon.
  *
  *   node tools/dragon/shot.mjs --out <dir>            # every sheet: dragon-A.png .. dragon-lineup.png, the close-ups
- *   node tools/dragon/shot.mjs --out <dir> --only A   # one proposal's sheet and close-up
- *   node tools/dragon/shot.mjs --bench                # milliseconds to draw a picture of each, live dragon first
+ *   node tools/dragon/shot.mjs --out <dir> --only A   # one subspecies' sheet and close-up
+ *   node tools/dragon/shot.mjs --bench                # milliseconds to draw a picture of each, and a check that none is cut
  *
  * Every body is drawn the way the island draws it (`drawBeast` in
  * `src/render/beasts.ts`): a picture at the nearest of the island's scales,
@@ -15,14 +15,13 @@
  */
 import { drawKind, extentOf, kitOf, paletteFor, type Anim, type Kind } from '../../src/render/beasts';
 import { loadWildermon, wildermonKind } from '../../src/render/wildermon';
-import { DRAGON } from '../../src/render/wild-dragon';
-import { DRAGON_PROPOSALS } from '../../src/render/wild-dragon-runecut';
+import { DRAGONS } from '../../src/render/wild-dragon';
 import { SPECIES } from '../../src/game/creatures';
 import { HALF_W } from '../../src/render/iso';
 import { NIGHT_WASH } from '../../src/render/nightwash';
 
 interface Cell {
-  who: string; facing?: number; pose?: string; zoom?: number; night?: boolean; w?: number; h?: number; label?: string; variant?: number;
+  who: string; facing?: number; pose?: string; zoom?: number; night?: boolean; w?: number; h?: number; label?: string;
   /** Several bodies side by side, for a lineup: each its own `who`, at one zoom, spaced by its own width. */
   row?: string[];
 }
@@ -32,11 +31,10 @@ const cfg = (window as unknown as { CFG: Cfg }).CFG;
 const STEPS = Array.from({ length: 21 }, (_, q) => 0.5 * 2 ** (q / 4));
 const inkAt = (step: number, size = 1): number => Math.max(1.1, (0.7 * step) / size) / step;
 
-/** The body a name stands for: the live dragon, a proposal, or a wildermon at a stage (`cobbe@2`). */
-function bodyOf(who: string): { key: string; kind: Kind; species: string } {
-  if (who === 'live') return { key: 'dragon', kind: DRAGON, species: 'dragon' };
-  const p = DRAGON_PROPOSALS[who];
-  if (p) return { key: `dragon~${who}`, kind: p, species: 'dragon' };
+/** The body a name stands for: a subspecies of the dragon by letter (A, B, C, in variant order), or a wildermon at a stage (`cobbe@2`). */
+function bodyOf(who: string): { key: string; kind: Kind; species: string; variant?: number } {
+  const v = 'ABC'.indexOf(who);
+  if (who.length === 1 && v >= 0) return { key: `dragon~${v}`, kind: DRAGONS[v], species: 'dragon', variant: v };
   const [species, stage] = who.split('@');
   const m = wildermonKind(species, Number(stage ?? 0));
   if (!m) throw new Error(`no body for ${who}`);
@@ -75,8 +73,8 @@ function reachOf(key: string, kind: Kind): { left: number; right: number; top: n
 }
 
 /** One body drawn as the island draws it, feet at (x, y) in CSS pixels on `ctx` (whose own scale is the device's). */
-function drawAsIsland(ctx: CanvasRenderingContext2D, x: number, y: number, who: string, facing: number, pose: string, camZoom: number, variant = 0): void {
-  const { key, kind, species } = bodyOf(who);
+function drawAsIsland(ctx: CanvasRenderingContext2D, x: number, y: number, who: string, facing: number, pose: string, camZoom: number): void {
+  const { key, kind, species, variant = 0 } = bodyOf(who);
   const dev = ctx.getTransform().a;
   const zoom = camZoom * (kind.size ?? 1);
   const step = STEPS.find((z) => z >= zoom * 0.98) ?? STEPS[STEPS.length - 1];
@@ -183,7 +181,7 @@ function drawCell(cell: Cell): HTMLElement {
       const facing = cell.facing ?? 1;
       const [fx, fy] = feetIn(cell.who, facing, zoom, w, h);
       ground(g, w, h, fx, fy, zoom);
-      drawAsIsland(g, fx, fy, cell.who, facing, cell.pose ?? 'stand:0', zoom, cell.variant ?? 0);
+      drawAsIsland(g, fx, fy, cell.who, facing, cell.pose ?? 'stand:0', zoom);
       lights.push([fx, fy]);
       if (cell.night) night(g, w, h, lights, zoom);
     }
@@ -199,19 +197,19 @@ function drawCell(cell: Cell): HTMLElement {
   return box;
 }
 
-const NAMES: Record<string, string> = { live: 'Live dragon', A: 'A Runewing', B: 'B Runestone Drake', C: 'C Stormcoil', 'cobbe@2': 'Bastiondrake', 'embra@2': 'Slugferno', 'whispet@2': 'Hallowmire' };
-const labelOf = (who: string): string => NAMES[who] ?? who;
+const NAMES: Record<string, string> = { 'cobbe@2': 'Bastiondrake', 'embra@2': 'Slugferno', 'whispet@2': 'Hallowmire' };
+const labelOf = (who: string): string => SPECIES.dragon.subspecies?.['ABC'.indexOf(who)] ?? NAMES[who] ?? who;
 
 /** Milliseconds to draw one picture of each body at the island's scale for zoom one, over a spread of poses. */
 function bench(): void {
   const out: string[] = [];
-  for (const who of ['live', 'A', 'B', 'C']) {
+  for (const who of ['A', 'B', 'C']) {
     const { key, kind } = bodyOf(who);
     const pic = document.createElement('canvas');
     pic.width = 900;
     pic.height = 700;
     const g = pic.getContext('2d')!;
-    const pal = paletteFor(key, kind, SPECIES.dragon.variants[0] as [string, string]);
+    const pal = paletteFor(key, kind, SPECIES.dragon.variants[bodyOf(who).variant ?? 0] as [string, string]);
     const poses = ['stand:0', 'stand:3', 'stand:7', 'stand:12', 'walk:0.1', 'walk:0.6', 'run:0.3', 'run:0.8', 'strike:0.3', 'strike:0.6'];
     for (const lod of [1]) {
       const kit = kitOf(key, kind, lod);
@@ -239,7 +237,7 @@ function bench(): void {
   }
   // Whether any picture of a strike, a stride or the standing loop puts ink on the edge of the box the island cuts its
   // pictures to (`reachOf`): breath or a wing cut off there would show as a straight edge.
-  for (const who of ['live', 'A', 'B', 'C']) {
+  for (const who of ['A', 'B', 'C']) {
     const { key, kind } = bodyOf(who);
     const r = reachOf(key, kind), k = 4;
     const w = Math.ceil((r.right - r.left) * k), h = Math.ceil((r.bottom - r.top) * k);
@@ -247,7 +245,7 @@ function bench(): void {
     pic.width = w;
     pic.height = h;
     const g = pic.getContext('2d', { willReadFrequently: true })!;
-    const pal = paletteFor(key, kind, SPECIES.dragon.variants[0] as [string, string]);
+    const pal = paletteFor(key, kind, SPECIES.dragon.variants[bodyOf(who).variant ?? 0] as [string, string]);
     const cut: string[] = [];
     const poses = [...Array.from({ length: 9 }, (_, q) => `strike:${(q + 0.5) / 9}`), 'stand:7.5', 'stand:18', 'run:0.25', 'run:0.75', 'walk:0.5'];
     for (const pose of poses) {

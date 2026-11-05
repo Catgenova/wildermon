@@ -1,5 +1,5 @@
-// Renders tools/dragon/sheet.ts: the dragon proposals' sheets, close-ups and lineup, or a timing of each.
-//   node tools/dragon/shot.mjs --out <dir> [--only A,B,C,lineup,live]
+// Renders tools/dragon/sheet.ts: each dragon subspecies' sheet and close-up, the lineup, or a timing of each.
+//   node tools/dragon/shot.mjs --out <dir> [--only A,B,C,lineup]
 //   node tools/dragon/shot.mjs --bench
 // Uses Playwright's Chromium and esbuild from node_modules; never `playwright install`.
 import { chromium } from 'playwright-core';
@@ -32,13 +32,14 @@ async function page(cfg, file, width) {
   await p.close();
 }
 
+const NAME = { A: 'Runewing Dragon', B: 'Runestone Drake', C: 'Stormcoil Dragon' };
 const W = 560, H = 440, BW = 700, BH = 580;
 const c = (who, facing, pose, more = {}) => ({ who, facing, pose, zoom: 0.8, w: W, h: H, label: `${['front', 'front-right', 'right', 'back-right', 'back', 'back-left', 'left', 'front-left'][facing]} · ${pose}`, ...more });
 
 function sheet(who) {
   return {
     rows: [
-      { title: `${who === 'live' ? 'Live dragon' : `Proposal ${who}`} — eight turns standing, camera zoom 1 (the island's default)`, cells: [0, 1, 2, 3].map((f) => c(who, f, 'stand:0', { zoom: 1, w: BW, h: BH })) },
+      { title: `${NAME[who]} — eight turns standing, camera zoom 1 (the island's default)`, cells: [0, 1, 2, 3].map((f) => c(who, f, 'stand:0', { zoom: 1, w: BW, h: BH })) },
       { cells: [4, 5, 6, 7].map((f) => c(who, f, 'stand:0', { zoom: 1, w: BW, h: BH })) },
       { title: 'Rows below at camera zoom 0.8', cells: [] },
       { title: 'Idle loop (seconds into its 24 s loop): breathing, looking round, wings stretched at 6 s and 17.5 s', cells: [['stand:2', 1], ['stand:7.5', 1], ['stand:12', 7], ['stand:19', 3]].map(([p, f]) => c(who, f, p)) },
@@ -46,7 +47,7 @@ function sheet(who) {
       { title: 'Strike: rear, lunge and breath (0.55 s), as the island keeps it in pictures', cells: [['strike:0.2', 1], ['strike:0.45', 1], ['strike:0.65', 1], ['strike:0.9', 1]].map(([p, f]) => c(who, f, p)) },
       { title: 'Breath at the other turns', cells: [['strike:0.65', 2], ['strike:0.65', 0], ['strike:0.65', 4], ['strike:0.65', 6]].map(([p, f]) => c(who, f, p)) },
       { title: 'Night: the island\'s wash, less the dragon\'s own 5-tile light', cells: [['stand:7.5', 1], ['walk:0.25', 3], ['strike:0.65', 2], ['stand:0', 5]].map(([p, f]) => c(who, f, p, { night: true, label: `night · ${p}` })) },
-      { title: 'Its four colourings, camera zoom 0.35 (the furthest out the island goes)', cells: [0, 1, 2, 3].map((v) => ({ who, facing: 1, pose: 'stand:0', zoom: 0.35, variant: v, w: W, h: 230, label: `variant ${v} · zoom 0.35` })) },
+      { title: 'Camera zoom 0.35 (the furthest out the island goes)', cells: [1, 3, 5, 7].map((f) => ({ who, facing: f, pose: 'stand:0', zoom: 0.35, w: W, h: 230, label: `turn ${f} · zoom 0.35` })) },
     ],
   };
 }
@@ -54,19 +55,19 @@ function sheet(who) {
 function close(who) {
   return {
     rows: [
-      { title: `${who === 'live' ? 'Live dragon' : `Proposal ${who}`} — close up (camera zoom 1.5)`, cells: [['stand:0', 1], ['stand:7.5', 7]].map(([p, f]) => ({ who, facing: f, pose: p, zoom: 1.5, w: 1100, h: 820, label: `close · ${p}` })) },
+      { title: `${NAME[who]} — close up (camera zoom 1.5)`, cells: [['stand:0', 1], ['stand:7.5', 7]].map(([p, f]) => ({ who, facing: f, pose: p, zoom: 1.5, w: 1100, h: 820, label: `close · ${p}` })) },
       { cells: [['strike:0.65', 1], ['run:0.6', 3]].map(([p, f]) => ({ who, facing: f, pose: p, zoom: 1.5, w: 1100, h: 820, label: `close · ${p}` })) },
     ],
   };
 }
 
-const LINE = ['live', 'A', 'B', 'C', 'cobbe@2', 'embra@2', 'whispet@2'];
+const LINE = ['A', 'B', 'C', 'cobbe@2', 'embra@2', 'whispet@2'];
 const lineup = {
   rows: [
-    { title: 'Lineup at camera zoom 0.6: the live dragon, the three proposals, and the Bastiondrake, Slugferno and Hallowmire', cells: [{ who: 'live', row: LINE, facing: 1, zoom: 0.6, w: 1900, h: 380, label: 'front-right' }] },
-    { cells: [{ who: 'live', row: LINE, facing: 7, zoom: 0.6, w: 1900, h: 380, label: 'front-left' }] },
-    { cells: [{ who: 'live', row: LINE, facing: 2, zoom: 0.6, w: 1900, h: 380, label: 'right' }] },
-    { title: 'Side by side for style: each dragon at camera zoom 0.5, each wildermon at zoom 5 (ten times closer)', cells: [['live', 0.5], ['A', 0.5], ['B', 0.5], ['C', 0.5]].map(([who, zoom]) => ({ who, facing: 1, pose: 'stand:0', zoom, w: 470, h: 300, label: who })) },
+    { title: 'Lineup at camera zoom 0.6: the three dragon subspecies, and the Bastiondrake, Slugferno and Hallowmire', cells: [{ who: 'A', row: LINE, facing: 1, zoom: 0.6, w: 1900, h: 380, label: 'front-right' }] },
+    { cells: [{ who: 'A', row: LINE, facing: 7, zoom: 0.6, w: 1900, h: 380, label: 'front-left' }] },
+    { cells: [{ who: 'A', row: LINE, facing: 2, zoom: 0.6, w: 1900, h: 380, label: 'right' }] },
+    { title: 'Side by side for style: each dragon at camera zoom 0.5, each wildermon at zoom 5 (ten times closer)', cells: [['A', 0.5], ['B', 0.5], ['C', 0.5]].map(([who, zoom]) => ({ who, facing: 1, pose: 'stand:0', zoom, w: 470, h: 300, label: who })) },
     { cells: [['cobbe@2', 5], ['embra@2', 5], ['whispet@2', 5], ['stona@2', 5]].map(([who, zoom]) => ({ who, facing: 1, pose: 'stand:0', zoom, w: 470, h: 300, label: `${who} at zoom 5` })) },
   ],
 };

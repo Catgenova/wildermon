@@ -3059,7 +3059,7 @@ update species_def set pack = true where id = 'orc';
 insert into species_def values ('ogre', 'Ogre', '', 170, 34, 1.8, 999, 0, 'nothing you would offer it', false, null, 0, 3, false, false, false, false, false, false, false, true, false, true, true, false, null, null, 'aggressive', null, 'crush', 12, null);
 update species_def set hide = 'thick' where id = 'ogre';
 update species_def set heavy = true where id = 'ogre';
-insert into species_def values ('dragon', 'Dragon', '', 700, 70, 2.9, 999, 0, 'nothing in the world', false, null, 0, 4, false, false, false, false, false, false, false, true, false, true, true, false, null, null, 'aggressive', null, 'burn', 20, null);
+insert into species_def values ('dragon', 'Dragon', '', 700, 70, 2.9, 999, 0, 'nothing in the world', false, null, 0, 3, false, false, false, false, false, false, false, true, false, true, true, false, null, null, 'aggressive', null, 'burn', 20, null);
 update species_def set glow = 5 where id = 'dragon';
 update species_def set hide = 'scaled' where id = 'dragon';
 update species_def set heavy = true where id = 'dragon';

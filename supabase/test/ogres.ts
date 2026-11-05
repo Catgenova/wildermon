@@ -50,7 +50,7 @@ const NAMES = OGRE.subspecies ?? [];
 
 check(`three subspecies, one for each of the ogre's variants: ${NAMES.join(', ')}`,
   NAMES.length === 3 && OGRE.variants.length === NAMES.length && new Set(NAMES).size === 3 && NAMES.every((n) => n.endsWith(' Ogre')));
-check('no other kind has subspecies', Object.values(SPECIES).every((d) => d.id === 'ogre' || !d.subspecies));
+check('no other kind has subspecies but the dragon (supabase/test/dragons.ts)', Object.values(SPECIES).every((d) => d.id === 'ogre' || d.id === 'dragon' || !d.subspecies));
 check('a kind without them is called its own name', subspeciesName({ species: 'orc', variant: 1 }) === null && kindName({ species: 'orc', skills: {}, variant: 1 }) === SPECIES.orc.name);
 
 const row = (id: number, variant: number): IslandCreature => ({ id, species: 'ogre', name: OGRE.name, variant, mode: 'wild', stance: 'aggressive', x: 5, y: 5, health: OGRE.health, traits: [] });
