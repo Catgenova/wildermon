@@ -70,11 +70,11 @@ const LINES: Record<string, () => Promise<Line>> = {
   quill: () => import('./wild-peafowl').then((m) => line(m.PEACHICK, [m.PLUMECREST, m.FEATHERBOURNE])),
   tinka: () => import('./wild-mend').then((m) => line(m.STITCHKIT, [m.PATCHCOON, m.MENDERMASK])),
   goblin: () => import('./goblin-runecut').then((m) => ({ kind: m.GOBLINS[0], subspecies: m.GOBLINS })),
-  orc: () => import('./wild-upright').then((m) => line(m.ORC)),
+  orc: () => import('./wild-orc').then((m) => ({ kind: m.ORCS[0], subspecies: m.ORCS })),
   ogre: () => import('./wild-ogre').then((m) => ({ kind: m.OGRES[0], subspecies: m.OGRES })),
   vesp: () => import('./wild-bee').then((m) => line(m.BUZZLET, [m.COMBWORKER, m.HIVEMASTER])),
   lume: () => import('./wild-air').then((m) => line(m.LUME)),
-  dragon: () => import('./wild-dragon').then((m) => line(m.DRAGON)),
+  dragon: () => import('./wild-dragon').then((m) => ({ kind: m.DRAGONS[0], subspecies: m.DRAGONS })),
   kemma: () => import('./wild-owl').then((m) => line(m.WHISPLING, [m.HUSHWING, m.SONGROOST])),
   sheela: () => import('./wild-shear').then((m) => line(m.SHEARLING, [m.CLIPPEROO, m.SHEARLORD])),
   // The Herbpup, the Herbfox and the Herbwarden.

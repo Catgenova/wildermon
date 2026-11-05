@@ -4262,6 +4262,18 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 496,
+    day: '2026-11-05',
+    lines: () => {
+      const names = SPECIES.dragon.subspecies!;
+      return [
+        `Added: ${names.length} dragon subspecies, 1 in ${names.length} wild each: ${listed(names)}. Same health, blow and speed. Name in hover, target bar, log and Examine; Field guide: Subspecies.`,
+        `Changed: dragon models, big wings on all three: ${names[0]}, bat wings and rune channels; ${names[1]}, stone wings, runestones on its back; ${names[2]}, hovering, fin wings, rune bands.`,
+        `Added: dragon strike drawn, ${ACT_SECS.strike} s: ${names[0]} fire, ${names[1]} gold fire with its runes lit, ${names[2]} lightning.`,
+      ];
+    },
+  },
+  {
     n: 495,
     day: '2026-11-05',
     lines: () => {
@@ -4270,6 +4282,18 @@ export const NEWS: News[] = [
         `Added: ${names.length} ogre subspecies, 1 in ${names.length} wild each: ${listed(names)}. Same health, blow and speed. Name in hover, target bar, log and Examine; Field guide: Subspecies.`,
         `Changed: ogre models (was: one ogre carrying a tree): ${names[0]}, rune-cut standing stone club; ${names[1]}, rune-riveted iron cuffs, chain and a gate on its back; ${names[2]}, standing stones and moss on its back, root club.`,
         `Added: ogre strike drawn, ${ACT_SECS.strike} s: club or both fists down, dust ring and rune sparks at the blow.`,
+      ];
+    },
+  },
+  {
+    n: 497,
+    day: '2026-11-05',
+    lines: () => {
+      const names = SPECIES.orc.subspecies!;
+      return [
+        `Added: ${names.length} orc subspecies, 1 in ${names.length} wild each: ${listed(names)}. Same health, blow and speed. Name in hover, target bar, log and Examine; Field guide: Subspecies.`,
+        `Changed: orc models (was: one grey orc with an axe): ${names[0]}, amber rune brands, spiked crest, cleaver; ${names[1]}, steel cuirass, horned helm, rune shield, bearded axe; ${names[2]}, hide cloak, glowing teal rune paint, skull staff.`,
+        `Added: orc strike drawn, ${ACT_SECS.strike} s: cleaver chop overhead; shield thrust and axe chop; staff stamp with a ring of light.`,
       ];
     },
   },

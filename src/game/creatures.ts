@@ -4134,11 +4134,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: null,
     workRange: 0,
+    // One hide each for its three subspecies, in their order: jade, olive, ash.
     variants: [
-      ['#5f6a63', '#b3bcb2'],
-      ['#4d5851', '#9aa49b'],
-      ['#6d7a6f', '#c2cbc0'],
+      ['#5a7a68', '#b4cabb'],
+      ['#6c7048', '#c2c49c'],
+      ['#606a5e', '#bcc4b8'],
     ],
+    subspecies: ['Runebrand Orc', 'Ironshield Orc', 'War-chanter Orc'],
     butcher: { meat: 5, leather: 6, bone: 7, sinew: 4, tusk: 2 },
     hunter: true,
     pack: true,
@@ -4195,12 +4197,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: null,
     workRange: 0,
+    // One hide each for its three subspecies, in their order: red, green, blue.
     variants: [
       ['#7a3b3b', '#d98a4a'],
-      ['#3b4f7a', '#5a9ad9'],
       ['#3f6b46', '#7fd07f'],
-      ['#4a3f5f', '#a98ad9'],
+      ['#3b4f7a', '#5a9ad9'],
     ],
+    subspecies: ['Runewing Dragon', 'Runestone Drake', 'Stormcoil Dragon'],
     butcher: { meat: 40, leather: 24, bone: 30, sinew: 20, scale: 24, gland: 6, hoard: 1 },
     hunter: true,
     defensive: true,

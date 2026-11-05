@@ -50,8 +50,8 @@ const NAMES = OGRE.subspecies ?? [];
 
 check(`three subspecies, one for each of the ogre's variants: ${NAMES.join(', ')}`,
   NAMES.length === 3 && OGRE.variants.length === NAMES.length && new Set(NAMES).size === 3 && NAMES.every((n) => n.endsWith(' Ogre')));
-check('no other kind has subspecies', Object.values(SPECIES).every((d) => d.id === 'ogre' || !d.subspecies));
-check('a kind without them is called its own name', subspeciesName({ species: 'orc', variant: 1 }) === null && kindName({ species: 'orc', skills: {}, variant: 1 }) === SPECIES.orc.name);
+check('every kind with subspecies has one for each of its variants', Object.values(SPECIES).every((d) => !d.subspecies || d.subspecies.length === d.variants.length));
+check('a kind without them is called its own name', subspeciesName({ species: 'rabba', variant: 1 }) === null && kindName({ species: 'rabba', skills: {}, variant: 1 }) === SPECIES.rabba.name);
 
 const row = (id: number, variant: number): IslandCreature => ({ id, species: 'ogre', name: OGRE.name, variant, mode: 'wild', stance: 'aggressive', x: 5, y: 5, health: OGRE.health, traits: [] });
 const game = Game.create(4242);
@@ -73,7 +73,7 @@ for (const c of [...game.creatures.list.values()]) game.creatures.remove(c.id);
   const page = guidePage(OGRE);
   const sub = page.find((s) => s.head === 'Subspecies');
   check('the field guide lists them, each 1 in 3 wild', !!sub && sub.lines.length === 3 && sub.lines.every((l, v) => l.startsWith(`${NAMES[v]}: 1 in 3 wild`)), sub?.lines.join(' / '));
-  check('and no other kind\'s page has the heading', subspeciesLines(SPECIES.orc).length === 0 && !guidePage(SPECIES.orc).some((s) => s.head === 'Subspecies'));
+  check('and no other kind\'s page has the heading', subspeciesLines(SPECIES.rabba).length === 0 && !guidePage(SPECIES.rabba).some((s) => s.head === 'Subspecies'));
 }
 
 /* ---- the island ------------------------------------------------------------------------------ */

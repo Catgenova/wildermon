@@ -3537,6 +3537,29 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/ogres.mjs --log-level=error
           node node_modules/.cache/ogres.mjs
 
+      - name: Every dragon is a Runewing Dragon, Runestone Drake or Stormcoil Dragon, the same on both sides
+        if: matrix.shard == 3
+        run: |
+          # Three subspecies, one for each of the dragon's variants, by the
+          # ogre's mechanism: the island puts them out evenly among its three
+          # and sends the variant, and no dragon is left in the fourth there
+          # was; the browser names, states and draws each by its own, with the
+          # same health and blow. Both agree for a set of ids the island sends.
+          npx esbuild supabase/test/dragons.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/dragons.mjs --log-level=error
+          node node_modules/.cache/dragons.mjs
+
+      - name: Every orc is a Runebrand, Ironshield or War-chanter Orc, the same on both sides
+        if: matrix.shard == 3
+        run: |
+          # Three subspecies, one for each of the orc's variants: the island
+          # puts them out evenly among its three and sends the variant; the
+          # browser names, states and draws each by its own, with the same
+          # health and blow. Both agree for a set of ids the island sends.
+          npx esbuild supabase/test/orcs.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/orcs.mjs --log-level=error
+          node node_modules/.cache/orcs.mjs
+
       - name: Live updates over Broadcast
         if: matrix.shard == 3
         run: |
