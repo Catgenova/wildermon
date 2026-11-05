@@ -202,6 +202,16 @@ jobs:
                  greatest(abs(g.x - 2576), abs(h.y - 3018)) as from_solara
              from world w cross join generate_series(2573, 2653) g(x) cross join generate_series(2950, 3030) h(y)
             where w.id::text like 'f3a88670%' and land_tile(w.id, g.x, h.y) = tile_id('Clay') order by 3 limit 20"
+          ask "diglett 3: furniture 151, its maker, and the settlements round 2648, 3043" "select q.id, q.sub, q.x, q.y, folk_name(q.world_id, q.made_by) as maker, q.store_of,
+                 (select string_agg(d.name || ' (' || folk_name(d.world_id, d.founded_by) || ', ' || d.x || ',' || d.y || ' r' || d.radius || ')', '; ')
+                    from deed d where d.world_id = q.world_id and greatest(abs(q.x - d.x), abs(q.y - d.y)) <= d.radius + 25) as deeds_near
+             from placed q where q.id = 151 and q.world_id::text like 'f3a88670%'"
+          ask "diglett 3: Diglett's work site and where its settlement work is reckoned from" "select c.id, s.* from creature c cross join lateral work_site(c.world_id, c) s
+            where c.world_id::text like 'f3a88670%' and c.id = 617"
+          ask "diglett 3: every settlement Meri and catgenova belong to" "select p.name, d.name as deed, d.x, d.y, d.radius, folk_name(d.world_id, d.founded_by) as founder, coalesce(m.role, 'founder') as role
+             from player p join deed d on d.world_id = p.world_id
+             left join deed_member m on m.world_id = d.world_id and m.founder = d.founded_by and m.uid = p.uid
+            where p.world_id::text like 'f3a88670%' and (lower(p.name) like 'meri%' or lower(p.name) = 'catgenova') and (d.founded_by = p.uid or m.uid is not null)"
           ask "Meri and her settlements" "select p.name, round(p.x) as x, round(p.y) as y, d.name as deed, d.founded_by = p.uid as founder,
                  folk_name(d.world_id, d.founded_by) as founded_by, m.role
              from player p left join deed_member m on m.world_id = p.world_id and m.uid = p.uid
