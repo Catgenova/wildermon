@@ -11293,6 +11293,27 @@ export const onScreen = (view: View, p: V3): Pt => [p[0] * view.ex[0] + p[1] * v
  */
 const gearLod = (zoom: number): number => (zoom < 1.5 ? 0.5 : zoom < STILL_BELOW ? 0.75 : 1);
 
+/**
+ * For tools: what a body comes to as parts, its palette and its view, at a
+ * zoom, cut at `lod` (the zoom's own when left out), and the ink `drawFigure`
+ * would draw it with, so another renderer can be tried on the same meshes.
+ */
+export interface FigureScene { parts: Part[]; pal: Palette; view: View; facing: number; ink: number }
+export function figureScene(pose: FigurePose, zoom: number, o: { lod?: number; gearLod?: number } = {}): FigureScene {
+  const look = pose.look ?? DEFAULT_LOOK;
+  const kit = kitFor(look, o.lod ?? (zoom < 1.5 ? 0.5 : 1));
+  const r = rigOf(pose, kit.fr);
+  const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
+  const b = skeleton(kit.fr, r);
+  const pal = paletteOf(pose, look);
+  const parts = partsOf(kit, r, b, pose.gear, pal, facing, o.gearLod ?? gearLod(zoom));
+  return { parts, pal, view: viewOf(facing), facing, ink: Math.max(0.9 / zoom, 0.7) };
+}
+/** The colour a facet of a material is filled with at a light level, as `render` has it. */
+export const figureTone = (P: Palette, m: Mat, k: number, gear: boolean): string => toneOf(P, m, k, gear);
+/** And the light on a facet turned along `n`, in the view's light. */
+export const figureLight = (n: V3, view: View): number => lightOn(n, view.L);
+
 export function drawFigure(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, opts: { ink?: number } = {}): void {
   const veil = pose.veil;
   if (veil && (veil.tint > 0.004 || veil.fade > 0.004)) {
