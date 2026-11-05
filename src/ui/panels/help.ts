@@ -3466,6 +3466,7 @@ export function helpText(): string {
     <h3>The things that are not wildermon</h3>
     <ul>
       <li>${MONSTER_SORTS.length} untameable kinds: <b>goblin</b>, <b>orc</b>, <b>ogre</b>, <b>dragon</b>.</li>
+      <li>Ogre subspecies, 1 in ${SPECIES.ogre.subspecies!.length} wild each, same health, blow and speed: ${listed(SPECIES.ogre.subspecies!.map((n) => `<b>${n}</b>`))}.</li>
       <li>Notice range ${NOTICED[0]} to ${NOTICED[NOTICED.length - 1]} tiles (other hunters ${HUNT_SIGHT}); they come straight at you and chase far.</li>
       <li><b>Rare</b>: ${percent(MONSTER_SHARE)} of wild spawns; of those ${listed(MONSTERS.map(([id, w]) => `${percent(w / MONSTER_WEIGHT)} ${SPECIES[id].name.toLowerCase()}s`))}.</li>
       <li>Max alive: ${listed(MONSTERS.map(([id]) => `${MONSTER_CAP[id] ?? 1} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) === 1 ? '' : 's'}`))}.
@@ -3724,6 +3725,26 @@ function waterGarden(): string {
  * than single lines, because half an explanation is worse than none, and marks
  * where in them it was found.
  */
+/**
+ * The sections that answer to a search, best first, as indexes into `sections`: those with it in their heading, then
+ * those with it only in their text, each by how many times it is found (heading and text), and the help's own order
+ * between equals. Nothing for an empty search.
+ */
+export function helpRank(sections: ReadonlyArray<{ title: string; body: string }>, query: string): number[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const times = (s: string): number => {
+    let n = 0;
+    for (let at = s.indexOf(q); at >= 0; at = s.indexOf(q, at + q.length)) n += 1;
+    return n;
+  };
+  return sections
+    .map(({ title, body }, i) => ({ i, head: times(title.toLowerCase()), all: times(`${title} ${body}`.toLowerCase()) }))
+    .filter((s) => s.all > 0)
+    .sort((a, b) => Number(b.head > 0) - Number(a.head > 0) || b.all - a.all || a.i - b.i)
+    .map((s) => s.i);
+}
+
 /** What the help can be asked to do once it is built: open at a section. */
 export interface HelpPages {
   /** Every section's heading, in order. */
@@ -3829,17 +3850,26 @@ export function buildHelp(host: HTMLElement): HelpPages {
     return pages.querySelector<HTMLElement>('mark.help-mark');
   };
 
-  /** Keep only the sections that answer to what has been typed, mark where, and say how many did. */
+  /**
+   * Keep only the sections that answer to what has been typed, mark where, and say how many did. Asked for: "could the
+   * help search prioritize by hits on section headers? i just did a search on aqueducts and the actual aqueducts section
+   * is a ways down on the results". Those found in their heading come first, then the rest by how often it is found in
+   * them (`helpRank`); with nothing typed, the help's own order.
+   */
   const show = (query: string): number => {
     const q = query.trim().toLowerCase();
     let kept = 0;
+    // A section's text begins with its own heading: the rest is its body.
+    const order = helpRank(sections.map(({ title, el }) => ({ title, body: (el.textContent ?? '').slice(title.length) })), q);
     for (let i = 0; i < sections.length; i += 1) {
-      const { title, el } = sections[i];
-      const hit = !q || `${title} ${el.textContent ?? ''}`.toLowerCase().includes(q);
-      el.hidden = !hit;
+      const hit = !q || order.includes(i);
+      sections[i].el.hidden = !hit;
       links[i].hidden = !hit;
       if (hit) kept += 1;
     }
+    const placed = q ? [...order, ...sections.keys()].filter((i, at, all) => all.indexOf(i) === at) : [...sections.keys()];
+    pages.append(...placed.map((i) => sections[i].el));
+    contents.append(...placed.map((i) => links[i]));
     toc.textContent = q ? `Contents: ${kept} of ${sections.length} sections` : `Contents: ${sections.length} sections`;
     toc.hidden = q !== '' && !kept;
     count.hidden = !q || kept > 0;

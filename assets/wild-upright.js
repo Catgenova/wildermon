@@ -1,1 +1,1 @@
-import{n as e,r as t,t as n}from"./wild-upright2.js";export{n as GOBLIN,e as OGRE,t as ORC};
+import{r as e,t}from"./wild-upright2.js";export{t as GOBLIN,e as ORC};

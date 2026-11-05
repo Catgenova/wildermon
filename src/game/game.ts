@@ -38,7 +38,7 @@ import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH, STILL_CLOCK } from './growth';
 import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
-import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
+import { ageDef, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -4357,8 +4357,7 @@ export class Game {
     const at = foes.findIndex((c) => c.id === this.marked);
     const next = foes[(at + 1) % foes.length];
     this.marked = next.id;
-    const def = this.creatures.species(next);
-    this.logMsg(`Target: ${def.name.toLowerCase()}, ${Math.round(Math.hypot(next.x - p.x, next.y - p.y))} tiles, ${Math.ceil(next.health)} health.`, 'fight');
+    this.logMsg(`Target: ${kindName(next).toLowerCase()}, ${Math.round(Math.hypot(next.x - p.x, next.y - p.y))} tiles, ${Math.ceil(next.health)} health.`, 'fight');
     return next;
   }
 
@@ -9911,7 +9910,11 @@ export class Game {
     const within = ([cx, cy]: [number, number]): boolean => Math.max(Math.abs(cx - (site.x + 0.5)), Math.abs(cy - (site.y + 0.5))) <= site.radius;
     const out: DeedStore[] = [];
     for (const cr of this.crates.values()) {
-      if (within(crateCentre(cr)) && !crateShut(this, cr, ', nothing goes in')) out.push(this.crateStore(cr));
+      // Only its keeper's to fill (`workerMay`), as at a post: the island's `around_stores` by `worker_crate_ok`.
+      if (within(crateCentre(cr)) && !crateShut(this, cr, ', nothing goes in')) {
+        const store = this.crateStore(cr);
+        if (store.workerMay) out.push(store);
+      }
     }
     const held = new Set<number>();
     for (const f of [this.driving(), this.aboardShip()]) if (f) held.add(f.id);
@@ -9921,7 +9924,8 @@ export class Game {
       if (!held.has(f.id) && !within(furnitureCentre(f))) continue;
       if (def.stall || f.kind === 'mailbox' || def.hive || def.pond || holdsLiquid(f) || pieceShut(this, f)) continue;
       const store = this.furnitureStore(f);
-      if (store) out.push(store);
+      // What you pull, drive or are aboard; otherwise only your own to fill (`workerMay`, `worker_piece_ok`).
+      if (store && (held.has(f.id) || store.workerMay)) out.push(store);
     }
     return out;
   }

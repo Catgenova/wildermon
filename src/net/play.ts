@@ -554,7 +554,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
        * the whole book arrives every beat, so the rise is the difference
        * between what it says and what we were holding.
        */
-      for (const r of skillRises(what.skills, (id) => game.skills.get(id), seeded)) {
+      // The whole of each skill, past a hundred too (`standing`): `get` stops at `SKILL_TOP`, and a skill past it read
+      // as a rise of the difference on every beat ("Digging +0.37" on tracking, prospecting and drinking).
+      for (const r of skillRises(what.skills, (id) => game.skills.standing(id), seeded)) {
         game.events.emit('skill', r.id, r.gain);
       }
       for (const [id, value] of Object.entries(what.skills)) game.skills.values.set(id, value);
