@@ -20,6 +20,35 @@ push it further: painterly, saturated, luminous, textured.
 | `06-moldling-gate.jpg` | A glowing creature (magenta-gold) and its light trail over a cool scene. Overgrown stone, hanging roots, scattered motes of light. |
 | `07-player-poncho-sheet.jpg` | The player at full detail: hooded printed poncho with tassels, brass clasp, strap and pouches, bracer and boots with glowing strips, swept chunky hair, a lit face with irises and a smile. A slight pixel grain. |
 
+## The painting: as in Scavengers Reign
+
+The references' colour and mood, painted the way that series is. Two registers,
+kept distinct:
+
+- **Figures, creatures, things you use** (the player, wildermon, monsters,
+  furniture, tools, devices): *ligne claire*. One clean line of even weight round
+  the silhouette and along every crease, a deep hue of the thing's own colour,
+  never feathered or sketchy. Inside the line, flat local colour broken only by
+  one shadow shape and one highlight shape per surface, each a hard-edged patch
+  in a shifted hue. Facet mottle is faint here (a grain, not a stroke), so the
+  shape reads first.
+- **The world they stand in** (ground, water, sky, cliffs, trees, bushes,
+  distance, weather): painted. Soft airbrushed gradients in sky and water,
+  textured broken colour on ground and rock, foliage as massed strokes with a
+  few drawn leaves at the edge for scale, no outline or a faint one. Depth by
+  atmosphere: far things lose contrast and drift toward the sky's hue.
+
+Across both: dusty saturation (teal, ochre, salmon, violet, moss) rather than
+candy; a sky that grades across the day (gold dawn, pale cyan noon, salmon and
+lilac dusk, indigo night) and tints everything under it; bioluminescence as the
+night's light, in cyan, magenta and gold; organic forms, with stone and plant
+growing into one another. Restraint: a scene is three or four hues and their
+neighbours, with one accent.
+
+This covers the whole island: the ground, the sky, the water, the night wash and
+the weather are assets to be reworked like any other, under a `world` family in
+the studio.
+
 ## Rules
 
 **Colour.**
