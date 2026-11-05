@@ -149,6 +149,15 @@ const WEAVE_SKILLS = { [GATHER_SKILL.bandage]: EVOLVE_AT[1] };
 const WEAVE_RECIPE = RECIPE_BY_ID.get(tradeRecipes('bandage')[0])!;
 const WEAVE_PUT: Array<[string, number]> = WEAVE_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
 const weaveWants = (): string => `${WEAVE_RECIPE.result} ${(WEAVE_RECIPE.count ?? 1) + STAGE_PERKS.leecha.n}`;
+/**
+ * A Fromageon, a frosta at its third stage, presses one bucket of milk into its recipe's cheese and its line's one more
+ * (`STAGE_PERKS`), the bucket handed back with the whey in it.
+ */
+const PRESS_SKILLS = { [GATHER_SKILL.cheese]: EVOLVE_AT[1] };
+const PRESS_RECIPE = RECIPE_BY_ID.get(tradeRecipes('cheese')[0])!;
+const PRESS_PUT: Array<[string, number]> = PRESS_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
+const pressWants = (): string => [`${PRESS_RECIPE.result} ${(PRESS_RECIPE.count ?? 1) + STAGE_PERKS.frosta.n}`,
+  ...(PRESS_RECIPE.returns ?? []).map(([id, n]) => `${id} ${n}`)].sort().join(',');
 /** A Fortigran's go at one shard: the stone brick its recipe chisels from it, and its line's third-stage one on top. */
 const CHIP_SKILLS = { [GATHER_SKILL.chisel]: EVOLVE_AT[1] };
 const CHIP_RECIPE = RECIPE_BY_ID.get(tradeRecipes('chisel')[0])!;
@@ -350,6 +359,12 @@ ${CASES.map((c) => `
   insert into said select 'WEAVE', ${held};
   ${after('leecha')}
 
+  -- PRESS: the frosta, at its third stage a Fromageon, presses one bucket of milk into cheese, and its line's third-stage cheese on top.
+  ${stocked(PRESS_PUT)}
+  ${ready('frosta').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(PRESS_SKILLS)}'::jsonb`)}
+  insert into said select 'PRESS', ${held};
+  ${after('frosta')}
+
   -- CHIP: the chissa, at its third stage a Fortigran, chisels one shard into stone brick, and makes its line's third-stage brick on top.
   insert into hand values ('chissa', creature_spawn(w, 'chissa', 16.6, 16.6, 'active', now() - interval '60 days', u));
   ${stocked(CHIP_PUT)}
@@ -520,6 +535,7 @@ check(`on the island, a Fletchercrest fletches one batch into ${fletchWants()}`,
 check(`on the island, a ${SPECIES.glossa.stages![1].name} mixes one batch into ${mixWants()}`, at('MIX') === mixWants(), at('MIX'));
 check(`on the island, a ${MORTARIUM} mixes one batch into ${conWants()}`, at('CON') === conWants(), at('CON'));
 check(`on the island, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, at('WEAVE') === weaveWants(), at('WEAVE'));
+check(`on the island, a ${SPECIES.frosta.stages![1].name} presses one bucket of milk into ${pressWants()}`, at('PRESS') === pressWants(), at('PRESS'));
 check(`on the island, a ${SPECIES.chissa.stages![1].name} chisels one shard into ${chipWants()}`, at('CHIP') === chipWants(), at('CHIP'));
 check(`on the island, a ${SPECIES.whirla.stages![1].name} churns ${CHURN_GO} buckets of milk a go: ${churnWants()}`, at('BUTTER') === `${churnWants()}|${CHURN_GO}`, at('BUTTER'));
 check(`on the island, a ${SPECIES.scorcha.stages![1].name} mixes one batch into ${slagWants()}`, STAGE_PERKS.scorcha.kind === 'more' && at('SLAG') === slagWants(), at('SLAG'));
@@ -983,6 +999,14 @@ for (const k of CASES) {
   c.skills = { ...WEAVE_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, inCrate(crate) === weaveWants(), inCrate(crate));
+}
+{
+  const g = body();
+  const crate = stock(g, PRESS_PUT);
+  const c = worker(g, 'frosta');
+  c.skills = { ...PRESS_SKILLS };
+  run(g, 120);
+  check(`in the browser, a ${SPECIES.frosta.stages![1].name} presses one bucket of milk into ${pressWants()}`, inCrate(crate) === pressWants(), inCrate(crate));
 }
 {
   const g = body();

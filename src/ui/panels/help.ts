@@ -978,6 +978,7 @@ const HAND_NUMBERS: Record<string, string> = {
   leecha: `evolves: ${evolves('leecha')}; ${perkLine('leecha').toLowerCase()} (${firstAidMore()})`,
   chissa: `evolves: ${evolves('chissa')}; ${perkLine('chissa').toLowerCase()} (${RECIPE_BY_ID.get('make_stone_brick')!.count ?? 1} to ${(RECIPE_BY_ID.get('make_stone_brick')!.count ?? 1) + STAGE_PERKS.chissa.n})`,
   scorcha: `evolves: ${evolves('scorcha')}; ${perkLine('scorcha').toLowerCase()} (bronze ${RECIPE_BY_ID.get('make_bronze')!.count ?? 1} to ${(RECIPE_BY_ID.get('make_bronze')!.count ?? 1) + STAGE_PERKS.scorcha.n})`,
+  frosta: `evolves: ${evolves('frosta')}; ${perkLine('frosta').toLowerCase()} (${RECIPE_BY_ID.get('make_cheese')!.count ?? 1} to ${(RECIPE_BY_ID.get('make_cheese')!.count ?? 1) + STAGE_PERKS.frosta.n})`,
   whirla: `evolves: ${evolves('whirla')}; ${perkLine('whirla').toLowerCase()} (butter ${(RECIPE_BY_ID.get(CHURN_BUTTER)!.count ?? 1) * STAGE_LOADS[2]} to ${(RECIPE_BY_ID.get(CHURN_BUTTER)!.count ?? 1) * (STAGE_LOADS[2] + STAGE_PERKS.whirla.n)} a cycle)`,
 };
 
