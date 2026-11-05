@@ -173,13 +173,32 @@ jobs:
           # version the repository has forgotten: "Remote migration versions
           # not found in local migrations directory". Replacing a function
           # means a NEW migration, never an edited or renamed one.
-          gone=$(git diff --diff-filter=DR --name-only HEAD~1 HEAD -- supabase/migrations/ || true)
+          # A file may go only when another still carries its version (a
+          # duplicate version, which the project holds once).
+          gone=""
+          for f in $(git diff --diff-filter=DR --name-only HEAD~1 HEAD -- supabase/migrations/ || true); do
+            v=$(basename "$f" | cut -c1-14)
+            ls supabase/migrations/"$v"_*.sql >/dev/null 2>&1 || gone="$gone $f"
+          done
           if [ -n "$gone" ]; then
             echo "::error::These migrations were deleted or renamed, which will break 'supabase db push':"
             echo "$gone"
             exit 1
           fi
           echo "no migrations removed"
+      - name: No two migrations share a version
+        if: matrix.shard == 1
+        run: |
+          # The project keys its history by the 14-digit stamp alone, so two
+          # files under one stamp fail the push: "duplicate key value violates
+          # unique constraint schema_migrations_pkey".
+          dup=$(ls supabase/migrations/*.sql | xargs -n1 basename | cut -c1-14 | sort | uniq -d)
+          if [ -n "$dup" ]; then
+            echo "::error::More than one migration under each of these versions:"
+            for v in $dup; do ls supabase/migrations/"$v"_*.sql; done
+            exit 1
+          fi
+          echo "every migration version is its own"
       - name: No migration has been added out of order
         if: matrix.shard == 1
         run: |
