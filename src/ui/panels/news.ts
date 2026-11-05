@@ -88,7 +88,7 @@ import { BARTER_IDLE, BARTER_REACH, BARTER_SAID } from '../../game/barter';
 import { GOALS_B } from '../../game/journal-b';
 import { FRUITING } from '../../game/fruiting';
 import { SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY } from '../../game/bees';
-import { BUTTER_PATS, GORRAL_MILK } from '../../game/dairy';
+import { BUTTER_PATS } from '../../game/dairy';
 import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
 import { CUT_VINE, GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
@@ -856,7 +856,7 @@ export const NEWS: News[] = [
     lines: () => {
       const kinds = ['rabba', 'woola', 'noot', 'seavic', 'vola', 'dowse', 'cudda', 'bura', 'sappa', 'cobbe', 'quarra', 'embra', 'bogga', 'wadd', 'holla', 'middun', 'sedra', 'warda', 'quill', 'lume'];
       return [
-        `Added: animated models (stand, walk, run, forage) for ${num(kinds.length)} wildermon: ${listed(kinds.map((k) => SPECIES[k]?.name ?? k))}. Others unchanged for now.`,
+        `Added: animated models (stand, walk, run, forage) for ${num(kinds.length)} wildermon: ${listed(kinds.map((k) => kindNameOf(k)))}. Others unchanged for now.`,
         'Changed: a modelled wildermon is clickable anywhere on it; name and health shown above it.',
       ];
     },
@@ -2181,7 +2181,7 @@ export const NEWS: News[] = [
       `Added: skep (ropemaking), set among wildflowers: 1 honey per ${SKEP_CLUMP_HOURS} h per flowering clump within ${num(SKEP_REACH)} tiles, `
         + `1 beeswax per ${num(SKEP_WAX_EVERY)} honey, up to ${SKEP_HOLDS} honey; nothing in ${SKEP_IDLE}. Take honey empties it, trains animal husbandry. Help: Bees.`,
       `Added: butter churn (carpentry): a bucket of milk into ${num(BUTTER_PATS)} pats of butter, bucket returned; butter and dough bake into pastries. `
-        + `Female Gorral milkable: ${num(GORRAL_MILK)} L a milking into a part bucket, full at ${num(BUCKET_LITRES)}. Help: Milk, butter and cheese.`,
+        + `Female Gorral milkable: ${num(2)} L a milking into a part bucket, full at ${num(BUCKET_LITRES)}. Help: Milk, butter and cheese.`,
       `Added: vineyards: build a trellis; cut a grape cutting from a thorn bush with a sickle; plant at the trellis foot. Bears from ${num(VINE_BEARS)} days after planting, `
         + `${GRAPE_SEASON} only; ${num(GRAPE_WINE_GRAPES)} grapes brew a barrel of grape wine. Wine and grape wine +${WINE_AGE_RATE} QL a day in their barrel `
         + `once finished, ageing ${mult(CELLAR_AGEING)} in a cellar, up to +${WINE_AGE_CAP} QL; drinking from the barrel uses the aged QL. Help: Vineyards.`,
@@ -3519,7 +3519,7 @@ export const NEWS: News[] = [
     n: 279,
     day: '2026-10-23',
     lines: () => [
-      `Changed: taming gained per attempt +${percent(1 / TAME_HARD)} per point of taming needed: offering (taken or refused), taking a catch out of a trap, Call of the Wild. ${['rabba', 'lume'].map((id) => `${SPECIES[id].name} ${mult(tameLearn({ species: id, skills: {} }))}`).join(', ')}.`,
+      `Changed: taming gained per attempt +${percent(1 / TAME_HARD)} per point of taming needed: offering (taken or refused), taking a catch out of a trap, Call of the Wild. ${SPECIES.rabba.name} ${mult(tameLearn({ species: 'rabba', skills: {} }))}, ${kindNameOf('lume')} ${mult(1 + REMOVED_KINDS.lume.tameLevel / TAME_HARD)}.`,
     ],
   },
   {
@@ -4250,6 +4250,15 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 507,
+    day: '2026-11-05',
+    lines: () => [
+      ...removedSays(GONE_507),
+      'Ridden or in the traces when it changed: got down from, let out of the traces.',
+      'Removed: part bucket of milk from milking (every kind milked fills a bucket).',
+    ],
   },
   {
     n: 505,
@@ -5295,6 +5304,7 @@ const taskDoes = (id: string): string => (SPECIES[id]?.gathers ? GATHER_DO[SPECI
 /** The kinds each removal took out, so an entry says only its own (`REMOVED_KINDS` holds every one). */
 const GONE_405 = ['testa', 'skulka', 'gasha', 'hamma', 'bashka', 'executa', 'shova', 'howla', 'marka', 'wardo'];
 const GONE_503 = ['forga', 'cordra', 'brittla'];
+const GONE_507 = ['gorral', 'shaggan', 'lume'];
 /** What a removal says: the kinds gone, and what an owned one of each became. */
 const removedSays = (ids: readonly string[]): string[] => {
   const gone = ids.map((id) => REMOVED_KINDS[id]);

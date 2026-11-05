@@ -2009,7 +2009,7 @@ for (const [fn, v] of [
 out.push(`create or replace function craft_reach() returns int language sql immutable as $fn$ select ${q(CRAFT_REACH)}::int $fn$;`);
 /*
  * Milk (`dairy.ts`): litres a milking gives by species -- a full bucket off a
- * Cudda, less off a Gorral (`bucket_litres` holds what a bucket does) -- and
+ * Cudda (`bucket_litres` holds what a bucket does) -- and
  * how much of its milk has to have come back on a beast before it is milked again.
  */
 out.push(`create or replace function milk_litres(p_species text) returns int language sql immutable as $fn$ select case p_species ${Object.entries(MILK_LITRES).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}else ${q(BUCKET_LITRES)} end $fn$;`);

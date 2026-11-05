@@ -68,7 +68,7 @@ import { PERK_STAGE, perkLine, perkSays, ringKeepsOut, STAGE_PERKS } from '../..
 import {
   ALLOY_QL, AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
-  BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_RESET_DAYS, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
+  BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_RESET_DAYS, WILD_STAY, POT_MOST, POT_STEP, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { FLIGHT_TILES, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
@@ -3190,7 +3190,7 @@ export function helpText(): string {
       <li><b>Keep at it</b>: after a refused offering, <b>+${percent(COAX_STEP)} chance</b> per attempt in a row, capped only by the overall cap. Lapses after ${dur(COAX_LAPSE)};
       <b>hitting it ends the run</b>. Examine shows progress.</li>
       <li><b>Taming gained</b> per attempt (offering, taking a catch out of a trap, Call of the Wild): <b>+${percent(1 / TAME_HARD)} per point of taming needed</b>.
-      ${['rabba', 'lume'].map((id) => `${SPECIES[id].name} ${mul(tameLearn({ species: id, skills: {} }))}`).join(', ')}.</li>
+      ${['rabba', 'snout'].map((id) => `${SPECIES[id].name} ${mul(tameLearn({ species: id, skills: {} }))}`).join(', ')}.</li>
       <li><b>Evolved in the wild</b>: ${((): string => {
         const [a, b] = stageLevels(1);
         const [c, d] = stageLevels(2);
@@ -3231,7 +3231,6 @@ export function helpText(): string {
       <li><b>${SPECIES.bura.name}</b>: no task. Panniers: <b>${SPECIES.bura.pannier!.join(' / ')} items</b> by stage, × its hauling blood. Open from its menu (keeper, and ranks with
       ${POWER.stores.label} where it stands on its keeper's settlement); a store within ${CRAFT_REACH} tiles for crafting and building. Crate, release, cull: panniers empty only.
       Evolves: ${evolves('bura')}; ${perkLine('bura').toLowerCase()}.</li>
-      <li><b>Gorral</b>: saddle mount; climbs ground ${article(SPECIES.orse.name)} ${SPECIES.orse.name} refuses.</li>
       <li><b>${SPECIES.wadd.name}</b>: mount; swims deep water with a rider. Evolves: ${evolves('wadd')}.</li>
       <li><b>${SPECIES.springlet.name}</b>: saddle mount; swims deep water with a rider. Ridden on land: ${+SPECIES.springlet.speed.toFixed(2)} tiles a second
       (${mul(SPECIES.springlet.speed / BASE_SPEED)} your walking pace), flat. Ridden in water (any water over the tile's bed): ${article(SPECIES.orse.name)} ${SPECIES.orse.name}'s pace,
@@ -3240,7 +3239,6 @@ export function helpText(): string {
       <li>Mounted, indoors: through an <b>arch</b>, <b>double door</b> or <b>gate</b>; no plain door, hidden door or iron-bound gate. Up a finished <b>wide staircase</b>
       from its foot, onto finished floors of that storey; no ${SINGLE_STAIRS_NAME}, ladder or roof; never over a staircase's rails. Mount and dismount on the ground floor only.
       A bridge's deck: end to end, on the ground and up a storey; not a rope bridge.</li>
-      <li><b>Shaggan</b>: slowest in the traces; +${percent(SPECIES.shaggan.pull ?? PULL_DEFAULT)} team pull each (most add ${percent(PULL_DEFAULT)}).</li>
       <li><b>${SPECIES.warda.name}</b>: sees ${SPECIES.warda.sight} tiles for you wherever it stands. Evolves: ${evolves('warda')}.</li>
       <li><b>${SPECIES.quill.name}</b>: <b>pluck</b> with a carving knife for <b>feathers</b>: up to ${SHEAR_FEATHERS} when full. Evolves: ${evolves('quill')}; ${perkLine('quill').toLowerCase()}.</li>
       <li><b>${SPECIES.cudda.name}</b>: <b>milked</b> into an empty bucket; a bucket of milk makes ${made('make_cheese')} <b>cheeses</b>. Evolves: ${evolves('cudda')}; ${perkLine('cudda').toLowerCase()}.</li>
@@ -3248,7 +3246,6 @@ export function helpText(): string {
       per go, out to one wildflower tile within ${SKEP_REACH} tiles of the hive, in turn, and back. <b>Honey</b> into the hive: a skep's rate there, a honey per ${SKEP_CLUMP_HOURS} hours worked
       per clump within ${SKEP_REACH} tiles, per ${SPECIES.vesp.name}; a <b>beeswax</b> per ${SKEP_WAX_EVERY} honey; none in ${SKEP_IDLE}. Quality (QL): as a gathered load, its ${SKILL_NAME(GATHER_SKILL.hive).toLowerCase()}.
       Idle: no hive in reach, hives full, no wildflowers within ${SKEP_REACH} tiles of its hive, ${SKEP_IDLE}. Following you: fills no hive. Evolves: ${evolves('vesp')}. ${capital(bill('make_candle'))}: ${made('make_candle')} <b>candles</b>.</li>
-      <li><b>Lume</b>: out only after dark; lights ${SPECIES.lume.glow ?? 0} tiles round itself.</li>
     </ul>
     <h4>The settlement's hands</h4>
     <ul>

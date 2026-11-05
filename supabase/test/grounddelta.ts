@@ -379,7 +379,7 @@ check('a browser out of step with the island lays nothing and asks for the whole
 
 /* ---- the creatures and the ground in one round trip ------------------------------------------------------------- */
 
-psql(`select creature_spawn(${W}, 'rabba', 101.5, 103.5); select creature_spawn(${W}, 'shaggan', 97.5, 99.5);
+psql(`select creature_spawn(${W}, 'rabba', 101.5, 103.5); select creature_spawn(${W}, 'roxxen', 97.5, 99.5);
 update creature set until = now() + interval '1 day' where world_id = ${W};`);
 for (const [what, near, mobs, ground] of [
   ['whole', `'', '{}', true, 40, true, ''`, `'', '{}', true`, `true, ''`],

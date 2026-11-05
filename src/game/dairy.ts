@@ -5,12 +5,12 @@ import { percent } from './words';
 /**
  * Milk, butter and cheese.
  *
- * A Cudda and a Gorral are milked (`milk_creature`). A Cudda fills an empty
- * bucket at a milking; a Gorral gives `GORRAL_MILK` litres of the
- * `BUCKET_LITRES` a bucket holds, into an empty bucket or a part bucket of
- * milk it has already started, and the bucket is a bucket of milk once the
- * litres in it reach a full one. What a part bucket holds is its `charges`,
- * on both sides.
+ * A Cudda is milked (`milk_creature`) and fills an empty bucket at a
+ * milking. A kind that gives less than the `BUCKET_LITRES` a bucket holds
+ * (`MILK_LITRES`; none since the Gorral went) gives its litres into an empty
+ * bucket or a part bucket of milk it has already started, and the bucket is a
+ * bucket of milk once the litres in it reach a full one. What a part bucket
+ * holds is its `charges`, on both sides.
  *
  * A bucket of milk is drunk, pressed into cheese in a clay bowl, or churned
  * into butter standing at a butter churn (`BUTTER_CHURN`), which hands the
@@ -28,22 +28,20 @@ export const BUTTER_CHURN = 'butter_churn';
 export const CHURN_BUTTER = 'churn_butter';
 /** Pats of butter one bucket of milk churns into. */
 export const BUTTER_PATS = 4;
-/** Litres of milk one milking of a Gorral gives, where a Cudda fills the bucket. */
-export const GORRAL_MILK = 2;
 /**
  * How much of its milk has to have come back on a beast before it can be
  * milked again: its `fleece`, which a milking or a shearing takes to nothing.
  * The island's `milk_ready`.
  */
 export const MILK_READY = 0.4;
-/** A bucket a Gorral has been milked into and that is not full yet. */
+/** A bucket milked into and not full yet. */
 export const MILK_PART = 'milk_part';
 
 /**
- * Litres one milking gives, by species: a full bucket off a Cudda, and less
- * off a Gorral. The island's `milk_litres` is generated from this.
+ * Litres one milking gives, by species: a full bucket off a Cudda. The
+ * island's `milk_litres` is generated from this.
  */
-export const MILK_LITRES: Record<string, number> = { cudda: BUCKET_LITRES, gorral: GORRAL_MILK };
+export const MILK_LITRES: Record<string, number> = { cudda: BUCKET_LITRES };
 export const milkLitres = (species: string): number => MILK_LITRES[species] ?? BUCKET_LITRES;
 
 /**
@@ -55,7 +53,7 @@ export const toppedQl = (had: number, hadQl: number, added: number, addedQl: num
 
 /**
  * What a milking says, by what the bucket holds after it. A full bucket off a
- * Cudda is said as it always was; a Gorral's says the litres. The island's
+ * Cudda is said as it always was; a part bucket's says the litres. The island's
  * `milked_says`.
  */
 export function milkedSays(name: string, litres: number, ql: number, another = false): string {
@@ -93,8 +91,7 @@ ITEM_DEFS[MILK_PART] ??= {
   weight: 3,
   decay: itemDef('milk_bucket').decay,
   fills: BUCKET_LITRES,
-  description: `Gorral milk: ${GORRAL_MILK} litres per milking. Milk a Gorral into it again; `
-    + `becomes a bucket of milk at ${BUCKET_LITRES} litres (excess lost). Not drinkable until full.`,
+  description: `Becomes a bucket of milk at ${BUCKET_LITRES} litres (excess lost). Not drinkable until full.`,
 };
 
 /**

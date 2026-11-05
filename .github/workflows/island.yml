@@ -3974,7 +3974,7 @@ jobs:
           # its quality, the refusal that names what it goes on, and what each
           # does, measured the same way: Venomfang's venom just under and just
           # over its chance, a Gale's swing, a Nightblade's critical chance, a
-          # Sunstrike on a goblin and on a shaggan, a Leeching's health back on
+          # Sunstrike on a goblin and on a cartling, a Leeching's health back on
           # every hit with no roll, and how far a Tidecaller puts a blow back;
           # a Farsight bow's reach, and a Flamearrow's burn and a Frostbite's
           # slow on a shot that lands, the slow in the creatures' door too;
@@ -4802,9 +4802,8 @@ jobs:
           # churned at it into the pats of butter the browser says, the bucket
           # back; a pastry baked with butter and cheese pressed, their counts;
           # butter and cheese keeping longer than milk by their decay, every row
-          # the same on both sides. And a Gorral milked as a Cudda is, for the
-          # litres the browser names a milking into a part bucket of milk, until
-          # it is a full bucket, at the quality and in the words of the browser.
+          # the same on both sides. And every kind that is milked filling a
+          # bucket a milking, at the quality and in the words of the browser.
           npx esbuild supabase/test/dairy.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/dairy.mjs --log-level=error
           node node_modules/.cache/dairy.mjs

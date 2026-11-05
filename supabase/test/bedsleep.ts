@@ -140,11 +140,11 @@ begin
   insert into said values ('BUSY', pg_temp.why(w, me, jsonb_build_object('kind', 'furniture', 'id', v_bed)));
   update player set act = null, act_target = null where world_id = w and uid = me;
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex, hunting) values
-    (w, 9801, 'shaggan', 'Hunter', 'wild', ${LIE.x + 3}, ${LIE.y}, ${LIE.x + 3}, ${LIE.y}, 90, 'female', me);
+    (w, 9801, 'roxxen', 'Hunter', 'wild', ${LIE.x + 3}, ${LIE.y}, ${LIE.x + 3}, ${LIE.y}, 90, 'female', me);
   insert into said values ('FIGHT', pg_temp.why(w, me, jsonb_build_object('kind', 'furniture', 'id', v_bed)));
   delete from creature where world_id = w and id = 9801;
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex, keeper, rider) values
-    (w, 9802, 'shaggan', 'Mount', 'active', ${LIE.x}, ${LIE.y}, ${LIE.x}, ${LIE.y}, 90, 'female', me, me);
+    (w, 9802, 'orse', 'Mount', 'active', ${LIE.x}, ${LIE.y}, ${LIE.x}, ${LIE.y}, 90, 'female', me, me);
   insert into said values ('MOUNTED', pg_temp.why(w, me, jsonb_build_object('kind', 'furniture', 'id', v_bed)));
   delete from creature where world_id = w and id = 9802;
 

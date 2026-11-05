@@ -112,8 +112,8 @@ begin
   insert into account (uid, name) values ('${A}', 'doorsadda'), ('${A2}', 'doorsaldo'), ('${C}', 'doorscato'),
     ('${B}', 'doorsbram'), ('${B2}', 'doorsbets') on conflict do nothing;
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex) values
-    (w1, 9401, 'shaggan', 'Shaggan', 'wild', 10.5, 10.5, 10.5, 10.5, 90, 'female'),
-    (w2, 9402, 'shaggan', 'Shaggan', 'wild', 10.5, 10.5, 10.5, 10.5, 90, 'female');
+    (w1, 9401, 'roxxen', 'Cartling', 'wild', 10.5, 10.5, 10.5, 10.5, 90, 'female'),
+    (w2, 9402, 'roxxen', 'Cartling', 'wild', 10.5, 10.5, 10.5, 10.5, 90, 'female');
   insert into deal (world_id, seller, buyer, want) values (w1, '${A}', '${A2}', 8), (w2, '${B}', '${B2}', 8);
   insert into crate (world_id, id, kind, x, y, sx, sy, made_by) values (w1, 9401, 'plank', 5, 5, 0, 0, '${A}'), (w2, 9402, 'plank', 5, 5, 0, 0, '${B}');
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w1, 'Ahold', 20, 20, 5, 1, '${A}'), (w2, 'Bhold', 20, 20, 5, 1, '${B}');

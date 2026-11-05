@@ -4020,8 +4020,8 @@ select '519. ' || (select text from event where uid = :'ivar' order by n desc li
 -- A herd. Two of them, put together, and what comes of it twelve minutes later.
 insert into skill (world_id, uid, id, value) values (:'world2', :'ivar', 'animal_husbandry', 70)
   on conflict (world_id, uid, id) do update set value = 70;
-select creature_spawn(:'world2', 'shaggan', 5.6, 7.6, 'deed', now() - interval '10 days') as ewe \gset
-select creature_spawn(:'world2', 'shaggan', 5.7, 7.7, 'deed', now() - interval '10 days') as ram \gset
+select creature_spawn(:'world2', 'roxxen', 5.6, 7.6, 'deed', now() - interval '10 days') as ewe \gset
+select creature_spawn(:'world2', 'roxxen', 5.7, 7.7, 'deed', now() - interval '10 days') as ram \gset
 update creature set sex = 'female', keeper = :'ivar', hunger = 1, care = 0.8,
     traits = array['biddable', 'bright'], from_x = to_x, from_y = to_y,
     leg_at = now(), leg_ends = now(), settled_at = now(), name = 'Snow' where id = :'ewe';

@@ -3695,37 +3695,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     pannier: [200, 500, 1000],
     learns: { skill: 'body_strength', by: 'out' },
   },
-  gorral: {
-    id: 'gorral',
-    wound: 'crush',
-    name: 'Gorral',
-    description: 'Mount: climbing counts ×{pitch} toward the slopes it takes a rider up.',
-    health: 44,
-    attack: 7,
-    speed: 2.4,
-    tameLevel: 40,
-    tameChance: 0.06,
-    diet: ['mixed_grass', 'cabbage', 'acorn', 'carrot'],
-    baitHint: 'grass or a root',
-    timid: false,
-    gathers: null,
-    workRange: 6,
-    variants: [
-      ['#8e8578', '#e2dbcd'],
-      ['#5d5751', '#aaa49b'],
-      ['#a8865c', '#e6cda4'],
-      ['#3f3d3b', '#8a8681'],
-    ],
-    butcher: { meat: 10, fur: 5, leather: 7, bone: 8, gland: 1 },
-    onStone: true,
-    defensive: true,
-    draught: true,
-    mount: 15,
-    pitch: 2,
-    // A female is milked too, for less than a Cudda gives (`GORRAL_MILK`), and what comes back on it comes back slowly.
-    fleece: 1 / 1200,
-    milk: true,
-  },
   wadd: {
     id: 'wadd',
     wound: 'crush',
@@ -3798,34 +3767,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     mount: 12,
     swims: true,
     deepWater: true,
-  },
-  shaggan: {
-    id: 'shaggan',
-    hide: 'thick',
-    heavy: true,
-    wound: 'crush',
-    name: 'Shaggan',
-    description: 'Traces: team pace +{pull:pct} (most wildermon: +{pullDefault:pct}). Slowest of the draught wildermon.',
-    health: 90,
-    attack: 12,
-    speed: 1,
-    tameLevel: 35,
-    tameChance: 0.06,
-    diet: ['mixed_grass', 'wheat', 'corn', 'cabbage'],
-    baitHint: 'grass or grain',
-    timid: false,
-    gathers: null,
-    workRange: 6,
-    variants: [
-      ['#6b5a44', '#b39a76'],
-      ['#4a4038', '#8d8076'],
-      ['#8a7050', '#d0b288'],
-      ['#585a56', '#a2a49e'],
-    ],
-    butcher: { meat: 30, fur: 10, leather: 16, bone: 20, gland: 1 },
-    defensive: true,
-    draught: true,
-    pull: 0.45,
   },
   // ---- Eyes, produce and the rare sort. ----
   warda: {
@@ -3990,32 +3931,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#34302c', '#d9d2c3'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3, gland: 3 },
-  },
-  lume: {
-    id: 'lume',
-    wound: 'burn',
-    name: 'Lume',
-    description: 'Lights {glow} tiles round itself at any hour. Out only after dark.',
-    health: 10,
-    attack: 1,
-    speed: 1.3,
-    tameLevel: 55,
-    tameChance: 0.05,
-    diet: ['gland', 'nuts', 'honey'],
-    baitHint: 'a gland or something sweet',
-    timid: true,
-    gathers: null,
-    workRange: 6,
-    variants: [
-      ['#dfe6c8', '#f6f8e6'],
-      ['#c8e0e6', '#e8f6f8'],
-      ['#e6d6c0', '#f8efdd'],
-      ['#d0c8e6', '#eee8f8'],
-    ],
-    butcher: { meat: 1, gland: 4 },
-    glow: 8,
-    nocturnal: true,
-    learns: { skill: 'awareness', by: 'dark' },
   },
 
   // ---- The things that are not wildermon ----
@@ -4338,6 +4253,11 @@ export const REMOVED_KINDS: Readonly<Record<string, { name: string; tameLevel: n
   forga: { name: 'Forga', tameLevel: 20, becomes: 'scorcha' },
   cordra: { name: 'Cordra', tameLevel: 14, becomes: 'ulva' },
   brittla: { name: 'Brittla', tameLevel: 28, becomes: 'hoppa' },
+  // Asked for: "Remove gorral, shaggan, lume". An owned one becomes the kind nearest its use: the other land saddle mount,
+  // the other draught beast, the lamplighters.
+  gorral: { name: 'Gorral', tameLevel: 40, becomes: 'orse' },
+  shaggan: { name: 'Shaggan', tameLevel: 35, becomes: 'roxxen' },
+  lume: { name: 'Lume', tameLevel: 55, becomes: 'wicka' },
 };
 /** A kind's id as it is now: a removed kind's (`REMOVED_KINDS`) the kind it became, any other its own. */
 export const kindNow = (id: string): string => REMOVED_KINDS[id]?.becomes ?? id;
@@ -4398,13 +4318,10 @@ export const WILD_SPECIES: Array<[string, number]> = [
   ['dowse', 5],
   ['warda', 5],
   ['tinka', 4],
-  ['gorral', 4],
   ['wadd', 4],
   // Asked for: "Rarely found, only spawns in deep water" (`deepWater`).
   ['springlet', 1],
-  ['shaggan', 4],
   ['snout', 2],
-  ['lume', 2],
   ['kemma', 6],
   ['sheela', 5],
   ['salva', 4],
@@ -6680,10 +6597,10 @@ export class Creatures {
 
   /**
    * Whether a stretch of ground is the sort a species settles on. A Mola
-   * settles over metal, bare or buried, a Crawler on the sand and a Gorral on
+   * settles over metal, bare or buried, a Crawler on the sand and a Chiptail on
    * bare rock; the rest want something growing. Beyond the ground itself a
    * few of them want water, trees, clay or tar within sight of the door, and
-   * a Lume wants the sun down.
+   * a Glimmoth wants the sun down.
    */
   suits(game: Game, def: SpeciesDef | undefined, x: number, y: number): boolean {
     if (!def) return false;
