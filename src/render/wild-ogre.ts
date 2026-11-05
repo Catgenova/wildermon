@@ -460,7 +460,7 @@ function runeLightNear(g: CanvasRenderingContext2D, view: View, b: Bones, p: V3,
 /* ---- A: the Menhir-bearer ----------------------------------------------------------- */
 
 /** The right arm with the menhir on its shoulder, and the club's line and broad face in the chest's frame there. */
-const A_HOLD: [number, number, number] = [44, 26, 104];
+const A_HOLD: [number, number, number] = [24, 54, 92];
 /** The menhir's rings from its butt up: how far along, how wide, how thick. */
 const MENHIR: Array<[number, number, number]> = [
   [-0.42, 0.13, 0.12], [-0.3, 0.17, 0.15], [0.42, 0.19, 0.16], [0.62, 0.3, 0.2], [1.2, 0.46, 0.27], [2.0, 0.52, 0.3], [2.65, 0.48, 0.28], [3.0, 0.36, 0.22], [3.18, 0.12, 0.1],
