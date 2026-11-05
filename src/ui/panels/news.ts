@@ -4249,6 +4249,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 494,
+    day: '2026-11-05',
+    lines: () => ["Fixed: Work around me: a worker fills and takes from only its keeper's storage, their settlement's, and what they pull, drive or are aboard. Was: any unlocked store in reach, a neighbour's too."],
+  },
+  {
     n: 493,
     day: '2026-11-05',
     lines: () => ['Changed: help search: sections with the words in their heading first, then the rest by number of matches.'],
