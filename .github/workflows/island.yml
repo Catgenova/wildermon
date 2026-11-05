@@ -5293,7 +5293,7 @@ jobs:
       - name: Twelve kinds take up new settlement tasks; the ten old guards are gone
         if: matrix.shard == 6
         run: |
-          # A dulla cuts moss, a rootle plants vines, a spitta water lilies and
+          # A dulla cuts moss, a brambo plants vines (the rootle's, gone), a spitta water lilies and
           # lotus, a crakka mixes concrete, a glossa mortar, a carra saws
           # timbers, an awla carves shafts, a scorcha mixes alloys at a lit
           # smelter, a leecha makes bandages, covers and salves, a frosta

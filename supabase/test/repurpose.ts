@@ -10,7 +10,8 @@
  * were not revamped are gone: an owned one becomes one of these, by fit (`REMOVED_KINDS`), and keeps everything but
  * its kind; a wild one is gone; none stands up wild or is bred again. So are the forga, the cordra and the brittla, the
  * same way: a forga becomes a scorcha, a cordra an ulva, a brittla a hoppa. And the gorral, the shaggan and the lume:
- * a gorral becomes an orse, a shaggan a roxxen, a lume a wicka, got down from and let out of the traces first.
+ * a gorral becomes an orse, a shaggan a roxxen, a lume a wicka, got down from and let out of the traces first. And the
+ * rootle: it becomes a brambo, and a brambo plants vines when it finds nothing to pick (`BUSH_VINES_AT`).
  *
  * Asked of both sides: each kind's trade, skill, words and learning pace are the same; set to work, each takes what
  * its recipe takes out of the stores and puts what it makes (and hands back) in, as the recipe says, only where its
@@ -28,7 +29,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { deedJobLine } from '../../src/game/creaturecrate';
 import {
-  ALLOY_QL, EVOLVE_AT, GATHER_DO, perkN, stageLoads, STAGE_LOADS, STAGE_PERKS, GATHER_SKILL, HANDS_TRADES, kindNow, LEARN_PACE, levelSkill, LOAD_TRADES, REMOVED_KINDS, sparsAsGuard, SPECIES, TEND_JOBS, tradeRecipes, WILD_SPECIES,
+  ALLOY_QL, BUSH_VINES_AT, bushVineSays, EVOLVE_AT, GATHER_DO, perkN, stageLoads, STAGE_LOADS, STAGE_PERKS, GATHER_SKILL, HANDS_TRADES, kindNow, LEARN_PACE, levelSkill, LOAD_TRADES, REMOVED_KINDS, sparsAsGuard, SPECIES, TEND_JOBS, tradeRecipes, WILD_SPECIES,
   workerSkipsTools, type Creature, type GatherKind,
 } from '../../src/game/creatures';
 import { idleSays } from '../../src/game/workerlog';
@@ -42,7 +43,9 @@ import { BUTTER_CHURN, CHURN_BUTTER } from '../../src/game/dairy';
 import { GRAPE_CUTTING, PLANT_VINE, TRELLIS } from '../../src/game/vineyard';
 import { WATER_PLANTS } from '../../src/world/waterplants';
 import { helpText } from '../../src/ui/panels/help';
-import { TileType } from '../../src/world/tiles';
+import { BUSH_DEFS, TileType } from '../../src/world/tiles';
+import { fruitsAt } from '../../src/game/fruiting';
+import { DAY_SECONDS } from '../../src/game/pace';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -66,11 +69,11 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 
 /** Each kind, its new trade, and the action your own hands do it by (for the skill it trains). */
 const KINDS: Array<[id: string, trade: GatherKind]> = [
-  ['dulla', 'moss'], ['rootle', 'vine'], ['spitta', 'lily'], ['crakka', 'concrete'], ['glossa', 'mortar'], ['carra', 'timber'],
+  ['dulla', 'moss'], ['spitta', 'lily'], ['crakka', 'concrete'], ['glossa', 'mortar'], ['carra', 'timber'],
   ['awla', 'shaft'], ['scorcha', 'alloy'], ['leecha', 'bandage'], ['frosta', 'cheese'], ['whirla', 'churn'],
 ];
 /** The ten that kept watch until now, but the brittla, which is gone. */
-const WERE_GUARDS = ['dulla', 'rootle', 'spitta', 'crakka', 'awla', 'scorcha', 'leecha', 'frosta', 'whirla'];
+const WERE_GUARDS = ['dulla', 'spitta', 'crakka', 'awla', 'scorcha', 'leecha', 'frosta', 'whirla'];
 /** The ten guards taken out of the game, and the kind an owned one becomes, as asked. */
 const GONE: Array<[id: string, becomes: string]> = [
   ['testa', 'crakka'], ['skulka', 'spitta'], ['gasha', 'carra'], ['hamma', 'awla'], ['bashka', 'glossa'],
@@ -87,6 +90,10 @@ const GONE6: Array<[id: string, becomes: string, from: string, to: string]> = [
   ['gorral', 'orse', 'climbing', 'climbing'], ['shaggan', 'roxxen', 'climbing', 'driving'], ['lume', 'wicka', 'awareness', 'carrying'],
 ];
 const GONE6_LIST = GONE6.map(([id]) => `'${id}'`).join(', ');
+/** And the rootle after them ("Remove rootle"), to the brambo, its forestry kept. */
+const GONE7: Array<[id: string, becomes: string, from: string, to: string]> = [['rootle', 'brambo', 'forestry', 'forestry']];
+/** A trade one kind took up beside its own: the brambo plants vines ("Planting vines should go to" it) when it has nothing to pick. */
+const ALSO: Array<[id: string, trade: GatherKind]> = [['brambo', 'vine']];
 /** The action each tile trade does as your own hands do it. */
 const OWN_ACTION: Partial<Record<GatherKind, string>> = { moss: 'cut_moss', vine: PLANT_VINE, lily: `plant_${WATER_PLANTS[0].id}` };
 const RECIPE_TRADES: GatherKind[] = ['concrete', 'mortar', 'timber', 'shaft', 'alloy', 'bandage', 'cheese', 'churn'];
@@ -238,8 +245,10 @@ begin
       || '|' || hands_trade(coalesce(s.gathers, '-')) || '|' || load_trade(coalesce(s.gathers, '-')) || '|' || coalesce(s.ability, '-') || '|' || coalesce(s.style, '-')
       || '|' || s.description
     from species_def s where s.id in (${all.map((id) => `'${id}'`).join(', ')});
-  insert into said select 'SKILL:' || g.id, g.skill || '|' || g.plain from gather_def g where g.id in (${KINDS.map(([, t]) => `'${t}'`).join(', ')});
-  insert into said select 'PACE:' || p.id, p.pace::text from learn_pace_def p where p.id in (${KINDS.map(([, t]) => `'${t}'`).join(', ')});
+  insert into said select 'ALSOWORDS:' || s.id, s.description from species_def s where s.id in (${ALSO.map(([id]) => `'${id}'`).join(', ')});
+  insert into said select 'BUSHVINESAT', bush_vines_at()::text;
+  insert into said select 'SKILL:' || g.id, g.skill || '|' || g.plain from gather_def g where g.id in (${[...KINDS, ...ALSO].map(([, t]) => `'${t}'`).join(', ')});
+  insert into said select 'PACE:' || p.id, p.pace::text from learn_pace_def p where p.id in (${[...KINDS, ...ALSO].map(([, t]) => `'${t}'`).join(', ')});
   insert into said select 'RECIPES:' || k, array_to_string(tend_recipes(k), ',') from unnest(array[${RECIPE_TRADES.map((t) => `'${t}'`).join(', ')}]) k;
   insert into said select 'RECIPE:' || r.id, r.result || ' ' || r.count || coalesce('/' || r.extra, '') || '|' || r.skill || '|' || coalesce(r.station, '-') || '|'
       || (select string_agg(ri.item || ' ' || ri.count, ',' order by ri.ord) from recipe_input ri where ri.recipe = r.id) || '|'
@@ -354,12 +363,28 @@ ${CASES.map((c) => `
     (w, 'furniture', '${TRELLIS}', 19, 14, 0, 0, 19.5, 14.1, 30, u, 'n', 'Oak'),
     (w, 'furniture', '${TRELLIS}', 20, 14, 0, 0, 20.5, 14.1, 30, u, 'n', 'Oak'),
     (w, 'furniture', '${TRELLIS}', 21, 14, 0, 0, 21.5, 14.1, 30, u, 'n', 'Oak');
-  update placed set vine_at = 1000 where world_id = w and x = 20 and y = 14;
+  -- Picked today, so never a ripe vine for a bush picker to pick, whatever the season.
+  update placed set vine_at = 1000, picked_at = vine_now() where world_id = w and x = 20 and y = 14;
+  insert into hand values ('brambo', creature_spawn(w, 'brambo', 16.6, 16.6, 'active', now() - interval '60 days', u));
   ${stocked([[GRAPE_CUTTING, 3]])}
-  ${ready('rootle')}
+  ${ready('brambo')}
   insert into said select 'VINE', ${held} || '|' || (select string_agg(x || ':' || coalesce((vine_at = 1000)::text, 'none'), ',' order by x) from placed where world_id = w and sub = '${TRELLIS}')
-      || '|' || coalesce((select skills->>'${GATHER_SKILL.vine}' from creature where world_id = w and id = (select id from hand where species = 'rootle')), '-');
-  ${after('rootle')}
+      || '|' || coalesce((select skills->>'${GATHER_SKILL.vine}' from creature where world_id = w and id = (select id from hand where species = 'brambo')), '-');
+  ${after('brambo')}
+
+  -- BUSHVINE: a bush in reach (one in its season if any is), a trellis on grass with no vine, one cutting.
+  perform land_set_tile(w, 15, 16, tile_id('Bush'));
+  perform land_set_data(w, 15, 16, coalesce((select min(b.id) from bush_def b where b.yields is not null and fruits_now(b.yields)),
+                                            (select min(b.id) from bush_def b where b.yields is not null)));
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, material) values
+    (w, 'furniture', '${TRELLIS}', 19, 14, 0, 0, 19.5, 14.1, 30, u, 'n', 'Oak');
+  ${stocked([[GRAPE_CUTTING, 1]])}
+  ${ready('brambo')}
+  insert into said select 'BUSHVINE', coalesce((select bool_or(fruits_now(b.yields)) from bush_def b where b.yields is not null), false)::text
+      || '|' || is_foraged(w, 15, 16, 'forage')::text || '|' || (select (vine_at is not null)::text from placed where world_id = w and sub = '${TRELLIS}')
+      || '|' || ${held};
+  ${after('brambo')}
+  perform land_set_tile(w, 15, 16, tile_id('Grass'));
 
   -- LILY: a pool of sea five deep, tiles 20..22 by 18..20 whole, its rim shallow; a lily root and lotus seeds.
   perform land_set_height(w, x, y, -5) from generate_series(20, 23) x, generate_series(18, 21) y;
@@ -494,8 +519,18 @@ check(`on the island, a ${SPECIES.whirla.stages![1].name} churns ${CHURN_GO} buc
 }
 {
   const [stores, vines] = at('VINE').split('|');
-  check('on the island, a rootle plants a cutting at the trellis on grass with no vine, and none at the one with a vine or the one on sand',
+  check(`on the island, a ${SPECIES.brambo.name} with nothing to pick plants a cutting at the trellis on grass with no vine, and none at the one with a vine or the one on sand`,
     stores === `${GRAPE_CUTTING} 2` && vines === '19:false,20:true,21:none', at('VINE'));
+{
+  const [season, picked, planted, left] = at('BUSHVINE').split('|');
+  if (season === 'true') {
+    check(`on the island, a ${SPECIES.brambo.name} with a bush in its season in reach picks it, and plants the cutting too`,
+      picked === 'true' && planted === 'true' && !left.includes(GRAPE_CUTTING), at('BUSHVINE'));
+  } else {
+    check(`on the island, a ${SPECIES.brambo.name} passes a bush out of its season by and plants the cutting`,
+      picked === 'false' && planted === 'true' && !left.includes(GRAPE_CUTTING), at('BUSHVINE'));
+  }
+}
 }
 const LILY_SPOTS = '20,18 20,19';
 {
@@ -718,6 +753,97 @@ check('the guide has seen an orse and tamed a wicka, and nothing of a gorral or 
 check('the stud book holds the gorral\'s record as an orse\'s, and the roxxen\'s better record over the shaggan\'s',
   cv6('STUD') === 'orse:hardy:3:Old Gorral,roxxen:tough:4:Cart', cv6('STUD'));
 
+/*
+ * And the migration that takes out the rootle, run twice on a world that holds one: an owned one, named, levelled in its
+ * forestry, with a mark on it and a grape cutting in its arms; a wild one a crakka of yours is fighting; a Rootle carcass;
+ * a guide that has tamed a rootle and seen a brambo; stud book records for a rootle, and a brambo's better one.
+ */
+const MIGRATION7 = readFileSync('supabase/migrations/20261105190000_the_rootle_is_gone.sql', 'utf8');
+const conv7 = psql(`
+discard temp;
+begin;
+create temp table said (k text, v text);
+create temp table kept (was text, id int);
+create temp table wld (w uuid, u uuid, wild int, fighter int);
+do $t$
+declare w uuid; u uuid := '${MARA}'; v_id int;
+begin
+  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Sevenfold', 507, 40, 16, 16, true) returning id into w;
+  perform land_blank(w, 40);
+  perform land_set_tile(w, x, y, tile_id('Grass')) from generate_series(0, 39) x, generate_series(0, 39) y;
+  perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
+  perform rpc_join(w, 'Mara');
+  insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Sevenfold', 16, 16, 8, 3, u);
+  insert into crate (world_id, id, kind, x, y, sx, sy, deed, made_by) values (w, 7607, 'plank', 17, 16, 0, 0, true, u);
+${GONE7.map(([id, , from]) => `  v_id := creature_spawn(w, 'crakka', 16.6, 16.6, 'active', now() - interval '60 days', u);
+  update creature set species = '${id}', name = 'My ${id}', skills = '{"${from}": 31.5, "fighting": 7}'::jsonb, traits = '{hardy}', health = 17, job = 'vine',
+         mode = 'deed', carrying = jsonb_build_object('def', '${GRAPE_CUTTING}', 'count', 1, 'ql', 30)
+   where world_id = w and id = v_id;
+  insert into kept values ('${id}', v_id);
+  insert into class_mark (world_id, creature_id, kind, val, until) values (w, v_id, 'ability', 1, now() + interval '1 hour');`).join('\n')}
+  insert into wld select w, u, creature_spawn(w, 'carra', 20.5, 20.5, 'wild', now() - interval '60 days', null),
+                         creature_spawn(w, 'crakka', 19.5, 20.5, 'active', now() - interval '60 days', u);
+  update creature set species = 'rootle' where world_id = w and id = (select wild from wld);
+  update creature set enemy = (select wild from wld) where world_id = w and id = (select fighter from wld);
+  insert into item (world_id, holder, crate, def, ql, count, extra) values (w, 'crate', 7607, 'corpse', 30, 1, 'Rootle');
+  insert into guide (world_id, uid, species, tamed) values (w, u, 'rootle', true), (w, u, 'brambo', false);
+  insert into bred_record (world_id, species, stat, value, creature_id, name, breeder, born_at) values
+    (w, 'rootle', 'hardy', 3, 1, 'Old Rootle', u, now()), (w, 'rootle', 'tough', 2, 2, 'Root', u, now()), (w, 'brambo', 'tough', 4, 3, 'Bramble', u, now());
+end $t$;
+${MIGRATION7}
+${MIGRATION7}
+do $t$
+declare w uuid := (select wld.w from wld); u uuid := (select wld.u from wld);
+begin
+  insert into said select 'TURNED:' || k.was, c.species || '|' || c.name || '|' || (c.keeper = u) || '|' || (c.skills->>'fighting')
+      || '|' || coalesce(c.skills->>'forestry', '-') || '|' || array_to_string(c.traits, ',') || '|' || c.health || '|' || coalesce(c.job, '-')
+      || '|' || (select count(*) from class_mark m where m.world_id = w and m.creature_id = c.id) || '|' || coalesce(c.carrying->>'def', '-')
+    from kept k join creature c on c.world_id = w and c.id = k.id;
+  insert into said select 'CUTTING', coalesce((select sum(count)::text from item where world_id = w and def = '${GRAPE_CUTTING}'), '0');
+  insert into said select 'WILD', (select count(*) from creature where world_id = w and id = (select wild from wld)) || '|'
+      || coalesce((select enemy::text from creature where world_id = w and id = (select fighter from wld)), '-');
+  insert into said select 'CORPSE', string_agg(extra, ',') from item where world_id = w and def = 'corpse';
+  insert into said select 'GUIDE', string_agg(species || ':' || tamed, ',' order by species) from guide where world_id = w and uid = u;
+  insert into said select 'STUD', string_agg(species || ':' || stat || ':' || value || ':' || name, ',' order by species, stat) from bred_record where world_id = w;
+  insert into said select 'GONE7', (select count(*) from species_def where id = 'rootle') || '|' || (select count(*) from wild_table where species = 'rootle')
+      || '|' || (select count(*) from species_butcher where species = 'rootle') || '|' || (select count(*) from species_diet where species = 'rootle')
+      || '|' || (select count(*) from creature where species = 'rootle') || '|' || (select count(*) from guide where species = 'rootle')
+      || '|' || (select count(*) from bred_record where species = 'rootle') || '|' || coalesce(private.kind_now('rootle'), '-');
+end $t$;
+select k || '=' || v from said order by k;
+rollback;`);
+const conved7 = new Map(conv7.split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)] as [string, string]));
+const cv7 = (k: string): string => conved7.get(k) ?? '(not said)';
+check('the rootle is gone from both sides: no kind, no wild weight, no carcass, no bait, none on the island, nothing in a guide or the stud book; the island turns one into a brambo',
+  GONE7.every(([id, to]) => !SPECIES[id] && !WILD_SPECIES.some(([wl]) => wl === id) && REMOVED_KINDS[id]?.becomes === to && kindNow(id) === to)
+    && cv7('GONE7') === '0|0|0|0|0|0|0|brambo', cv7('GONE7'));
+for (const [id, to, from, into] of GONE7) {
+  const [kind, name, mine, fighting, level, traits, health, job, marks, carrying] = cv7(`TURNED:${id}`).split('|');
+  check(`an owned ${REMOVED_KINDS[id].name} becomes a ${SPECIES[to].name}, its name, keeper, skills, traits and health kept, its ${from} its new kind's ${into}, its marks gone, its cutting into the stores`,
+    kind === to && name === `My ${id}` && mine === 'true' && fighting === '7' && level === '31.5' && levelSkill(SPECIES[to]) === into
+      && traits === 'hardy' && health === '17' && job === '-' && marks === '0' && carrying === '-' && cv7('CUTTING') === '1', `${cv7(`TURNED:${id}`)} ${cv7('CUTTING')}`);
+}
+check('a wild rootle is gone, and the crakka fighting it fights nothing', cv7('WILD') === '0|-', cv7('WILD'));
+check(`a Rootle carcass is a ${SPECIES.brambo.name} carcass`,
+  cv7('CORPSE') === SPECIES.brambo.name && corpseSpecies({ uid: 1, id: 'corpse', ql: 30, dmg: 0, count: 1, extra: cv7('CORPSE') })?.id === 'brambo'
+    && corpseSpecies({ uid: 1, id: 'corpse', ql: 30, dmg: 0, count: 1, extra: 'Rootle' })?.id === 'brambo', cv7('CORPSE'));
+check('the guide has tamed a brambo, and nothing of a rootle', cv7('GUIDE') === 'brambo:true', cv7('GUIDE'));
+check('the stud book holds the rootle\'s record as a brambo\'s, and the brambo\'s better record over the rootle\'s',
+  cv7('STUD') === 'brambo:hardy:3:Old Rootle,brambo:tough:4:Bramble', cv7('STUD'));
+
+/* ---- the brambo plants vines ------------------------------------------------------------- */
+
+for (const [id, trade] of ALSO) {
+  const d = SPECIES[id];
+  check(`a ${d.name} also plants vines from stage ${BUSH_VINES_AT + 1} on, and its words say so, the same on both sides`,
+    d.gathers === 'bush' && d.description.endsWith(bushVineSays()) && at(`ALSOWORDS:${id}`) === d.description && at('BUSHVINESAT') === String(BUSH_VINES_AT),
+    `${at(`ALSOWORDS:${id}`)} | ${d.description} | ${at('BUSHVINESAT')}`);
+  check(`its ${trade} trade levels ${GATHER_SKILL[trade]}, its words the same on both sides`, at(`SKILL:${trade}`) === `${GATHER_SKILL[trade]}|${GATHER_DO[trade]}`, at(`SKILL:${trade}`));
+  check(`its learning pace at it is the same on both sides: ${LEARN_PACE[trade]}`, Number(at(`PACE:${trade}`)) === LEARN_PACE[trade], at(`PACE:${trade}`));
+  const own = OWN_ACTION[trade];
+  if (own) check(`its skill at it is what your own hands train at it: ${ACTION_BY_ID.get(own)?.skill}`, ACTION_BY_ID.get(own)?.skill === GATHER_SKILL[trade]);
+}
+
 /* ---- idle words ------------------------------------------------------------------------- */
 
 check('with no butter churn it says so', idleSays({ why: 'range', n: 7 }, 'churn') === 'Idle: no butter churn of yours within 7 tiles of the totem.', idleSays({ why: 'range', n: 7 }, 'churn'));
@@ -868,12 +994,31 @@ for (const k of CASES) {
   g.world.setTile(21, 14, TileType.Sand, 0);
   const t = [19, 20, 21].map((x) => g.addFurniture(TRELLIS, x, 14, 0, 0, 30, [], 'Oak', 'n'));
   t[1].vineAt = 1000;
+  t[1].pickedAt = g.wallNow();
   const crate = stock(g, [[GRAPE_CUTTING, 3]]);
-  worker(g, 'rootle');
+  worker(g, 'brambo');
   run(g, 120);
-  check('in the browser, a rootle plants a cutting at the trellis on grass with no vine, and none at the one with a vine or the one on sand',
+  check(`in the browser, a ${SPECIES.brambo.name} with nothing to pick plants a cutting at the trellis on grass with no vine, and none at the one with a vine or the one on sand`,
     inCrate(crate) === `${GRAPE_CUTTING} 2` && t[0].vineAt !== undefined && t[0].vineAt !== 1000 && t[1].vineAt === 1000 && t[2].vineAt === undefined,
     `${inCrate(crate)} ${t.map((f) => f.vineAt).join(',')}`);
+}
+{
+  // A bush in reach on a day it fruits (the clock set to the first from now), a trellis on grass with no vine, one cutting.
+  const g = body();
+  const bush = BUSH_DEFS.findIndex((b) => !!b.yields);
+  const base = g.wallNow();
+  let day = 0;
+  while (day < 400 && !fruitsAt(BUSH_DEFS[bush].yields!, base + day * DAY_SECONDS)) day++;
+  const when = base + day * DAY_SECONDS;
+  g.wallNow = (): number => when;
+  g.world.setTile(15, 16, TileType.Bush, bush);
+  const f = g.addFurniture(TRELLIS, 19, 14, 0, 0, 30, [], 'Oak', 'n');
+  const crate = stock(g, [[GRAPE_CUTTING, 1]]);
+  worker(g, 'brambo');
+  run(g, 180);
+  check(`in the browser, a ${SPECIES.brambo.name} with a bush in its season in reach picks it, and plants the cutting too`,
+    day < 400 && g.isForaged(15, 16, 'forage') && f.vineAt !== undefined && !inCrate(crate).includes(GRAPE_CUTTING),
+    `day ${day} ${g.isForaged(15, 16, 'forage')} ${f.vineAt} ${inCrate(crate)}`);
 }
 {
   const g = body();

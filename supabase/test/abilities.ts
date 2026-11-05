@@ -6,10 +6,9 @@
  * lungra, a stona) uses its fighting trade's spell at that spell's numbers,
  * the first time it strikes and not again until its rest is out, and that a
  * wild one of its kind does not. The hamma, bashka, executa, shova, howla,
- * marka and wardo are gone from the game (What's new 405, `repurpose.ts`), and the brittla (What's new 503).
- * The seven that took up a settlement task have none: a crakka holds nothing, a whirla strikes only what
- * it strikes, a scorcha burns nothing, a frosta slows nothing, a rootle and a
- * dulla put no mark on it, and a leecha gets nothing back.
+ * marka and wardo are gone from the game (What's new 405, `repurpose.ts`), the brittla (What's new 503) and the rootle
+ * (What's new 511). The six that took up a settlement task have none: a crakka holds nothing, a whirla strikes only what
+ * it strikes, a scorcha burns nothing, a frosta slows nothing, a dulla puts no mark on it, and a leecha gets nothing back.
  *
  * Runs against the database the suite leaves behind, in one transaction that
  * is rolled back.
@@ -46,10 +45,10 @@ const GONE: Array<[string, AbilityId]> = [
   ['hamma', 'blade_hamstring'], ['bashka', 'blade_shield_bash'], ['executa', 'berserker_execute'], ['shova', 'pikeman_keep_away'],
   ['howla', 'blade_guardians_call'], ['marka', 'skirmisher_marked_for_death'], ['wardo', 'warder_ward'],
 ];
-/** The seven that had an ability until they took up a settlement task, and the ability each had (the brittla's gone). */
+/** The six that had an ability until they took up a settlement task, and the ability each had (the brittla's and the rootle's gone). */
 const RETIRED: Array<[string, AbilityId]> = [
   ['crakka', 'berserker_skull_crack'], ['whirla', 'berserker_whirlwind'], ['scorcha', 'kindler_scorch'], ['frosta', 'frost_breath'],
-  ['rootle', 'binder_root'], ['dulla', 'binder_dull_claws'], ['leecha', 'chirurgeon_leech'],
+  ['dulla', 'binder_dull_claws'], ['leecha', 'chirurgeon_leech'],
 ];
 const f = abilityFx;
 const listedAbilities = (): string => GONE.map(([, ab]) => ab).join(', ');
@@ -130,8 +129,8 @@ begin
   ${ready('FROSTREADY')}
   ${tidy}
 
-  -- Rootle, Dulla: no mark.
-${(['rootle:root', 'dulla:dull'] as const).map((s) => {
+  -- Dulla: no mark.
+${(['dulla:dull'] as const).map((s) => {
   const [k, m] = s.split(':');
   return `  ${pair(k)}
   perform creature_attack(w, a, t);
@@ -193,7 +192,7 @@ check('a whirla strikes only what it strikes, not the one beside it', at('WHIRL'
 check('a scorcha sets nothing burning', at('SCORCH') === '-', at('SCORCH'));
 check('a frosta slows nothing, and has no ability to rest from', at('FROST') === '-' && at('FROSTREADY') === '(not said)', `${at('FROST')} ${at('FROSTREADY')}`);
 const marks: Array<[string, AbilityId, string, number]> = [
-  ['rootle', 'binder_root', 'root', 0], ['dulla', 'binder_dull_claws', 'dull', f('binder_dull_claws', 'dealt')],
+  ['dulla', 'binder_dull_claws', 'dull', f('binder_dull_claws', 'dealt')],
 ];
 for (const [k, ab, m, val] of marks) {
   if (RETIRED.some(([id]) => id === k)) {

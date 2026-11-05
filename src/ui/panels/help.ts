@@ -938,7 +938,7 @@ const SHOWN_QL = 50;
 const HANDS = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa',
   'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra',
   'rippa', 'chissa', 'mudda', 'flecha', 'papra', 'glossa', 'dippa', 'ulva', 'dowse', 'glimmip',
-  'dulla', 'rootle', 'spitta', 'crakka', 'awla', 'scorcha', 'leecha', 'frosta', 'whirla'];
+  'dulla', 'spitta', 'crakka', 'awla', 'scorcha', 'leecha', 'frosta', 'whirla'];
 /** What a Bandageweaver's skill makes of each of its recipes, per make: "bandages 3 to 4, healing covers 3 to 4, salves 1 to 2". */
 const firstAidMore = (): string => ['make_bandage', `make_cover_${HERBS[0]}`, `make_salve_${HERBS[0]}`].map((id) => {
   const r = RECIPE_BY_ID.get(id)!, n = r.count ?? 1;

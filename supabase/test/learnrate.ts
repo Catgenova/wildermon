@@ -99,6 +99,8 @@ const G = STAGE_MUL.grow ?? 1;
 const kindOf = (at: GatherKind | LearnsBy): string => {
   // The smelters are charged by the Slug line between stokes since the forga went (`STOKE_SMELTS_AT`).
   if (at === 'smelt') return 'embra';
+  // Vines are planted by the brambo when it has nothing to pick since the rootle went (`BUSH_VINES_AT`).
+  if (at === 'vine') return 'brambo';
   // A spar on a settlement is the Sparra's, whose own way of learning is your spar (`bout`).
   const all = Object.values(SPECIES).filter((d) => d.gathers === at || (!d.gathers && (d.learns?.by === at || (at === 'bout' && d.style === 'spar'))));
   return (all.find((d) => d.stages) ?? all[0])?.id ?? 'rabba';
