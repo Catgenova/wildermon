@@ -22,7 +22,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID } from '../../src/game/actions';
-import { SPECIES } from '../../src/game/creatures';
+import { SPECIES, kindName } from '../../src/game/creatures';
 import {
   CIRCLE_ARC, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, BACK_SLACK, MONSTER_TURN,
   PACK_CALL, PACK_MOST, PACK_RANGE, THROW_HIT, THROW_REACH, turnsAt,
@@ -361,7 +361,7 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
   g.creatures.engage(g, a);
   step(g, 0.3);
   check('in the browser, one of a pack within reach of another on you comes too, and follows the first',
-    b.enemy !== null && b.packLead === a.id && lines(g).includes('Another goblin joins.'),
+    b.enemy !== null && b.packLead === a.id && lines(g).includes(`Another ${kindName(b).toLowerCase()} joins.`),
     `enemy ${b.enemy}, lead ${b.packLead}`);
 }
 {
@@ -391,7 +391,7 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
   g.creatures.engage(g, gob);
   gob.packLead = null;
   step(g, 1);
-  const thrown = lines(g).filter((t) => t.includes("The goblin's stone finds you")).length;
+  const thrown = lines(g).filter((t) => t.includes(`The ${kindName(gob).toLowerCase()}'s stone finds you`)).length;
   const stood = Math.hypot(gob.x - 20.5, gob.y - 20.5);
   gob.x = 22;
   gob.y = 20.5;
