@@ -4250,6 +4250,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 499,
+    day: '2026-11-05',
+    lines: () => [`Changed: butchered, ${SPECIES.siffa.name}, ${SPECIES.glimmip.name} and ${SPECIES.potta.name} lines give no dragon scale (was: 5, 4 and 2). Dragon scale: dragon only, ${SPECIES.dragon.butcher.scale} per carcass.`],
+  },
+  {
     n: 498,
     day: '2026-11-05',
     lines: () => {
