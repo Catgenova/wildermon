@@ -86,6 +86,21 @@ jobs:
           # Asked: "Find out why my bastiondrakes cant go up my stairs now". The keeper's Bricklings by stage, where
           # each stands and at what storey, why it idles, its way; the stairs of the buildings near them; and the way
           # the island finds from each to its work. Reads only.
+          ask "drakes 2: the work in range, where a hod carrier stands for it, and the way there" "select w.kind, w.level, w.dir, w.x, w.y, w.needed::text as needed,
+                 s.x as sx, s.y as sy, s.l as sl, hod_reached(c.world_id, w.kind, w.level, w.dir, w.x, w.y) as reached,
+                 case when s.l is not null then creature_way(c.world_id, floor(creature_x(c))::int, floor(creature_y(c))::int, 0, s.x, s.y, s.l) is not null end as way,
+                 left(case when s.l is not null then creature_way(c.world_id, floor(creature_x(c))::int, floor(creature_y(c))::int, 0, s.x, s.y, s.l)::text end, 120) as steps
+             from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
+             cross join lateral hod_work(c.world_id, floor(creature_x(c))::int, floor(creature_y(c))::int, work_range(c)) w
+             left join lateral hod_stand(c.world_id, w.kind, w.level, w.dir, w.x, w.y) s on true
+            where c.id = 607 and w.level >= 1 order by w.level, w.x, w.y limit 60"
+          ask "drakes 2: what is on each storey round 2580, 3025" "select f.level, f.x, f.y, f.kind, f.hand, f.facing, f.material, bill_done(f.needed) as done, f.building,
+                 frame_stands(f.world_id, f.x, f.y, f.level) as stands
+             from floor_tile f join player p on p.world_id = f.world_id and p.name = 'catgenova'
+            where f.x between 2577 and 2584 and f.y between 3021 and 3030 order by f.level, f.y, f.x"
+          ask "drakes 2: walls on storeys 1 to 3 round 2580, 3025" "select wl.level, wl.x, wl.y, wl.dir, wl.type, bill_done(wl.needed) as done, wl.lowered, t.passable, t.beast_proof
+             from wall wl join player p on p.world_id = wl.world_id and p.name = 'catgenova' left join wall_type_def t on t.id = wl.type
+            where wl.level between 1 and 3 and wl.x between 2577 and 2584 and wl.y between 3021 and 3030 order by wl.level, wl.y, wl.x, wl.dir"
           ask "drakes: the keeper's bricklings" "select c.id, c.name, stage_of(c), c.mode, c.phase, c.job, c.idle_why, c.idle_n, c.storey, c.storey_from,
                  round(creature_x(c)::numeric, 1) as cx, round(creature_y(c)::numeric, 1) as cy, round(c.to_x::numeric, 1) as tx, round(c.to_y::numeric, 1) as ty,
                  c.work_x, c.work_y, work_range(c) as rng, c.carrying, left(c.way::text, 200) as way, to_char(c.until, 'HH24:MI:SS') as until, c.post, c.form_size
