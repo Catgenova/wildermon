@@ -1308,7 +1308,7 @@ export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   fletch: 0.88, cook: 0.88, paper: 0.84, spin: 0.86, nail: 0.86, ribbon: 0.86, glass: 0.84, ash: 1.02, brew: 0.75,
   concrete: 0.88, mortar: 0.88, timber: 0.88, shaft: 0.88, bandage: 0.88, cheese: 0.88, churn: 0.88, alloy: 0.88,
   // To one of yours, or to a piece of yours, with something out of the stores for some.
-  groom: 0.87, dairy: 0.87, heal: 1.84, lamp: 2.16, smelt: 1.39, kiln: 1.32, patch: 1.04, vine: 1.86, lily: 1.84,
+  groom: 0.87, dairy: 0.87, heal: 1.84, lamp: 2.16, smelt: 1.39, kiln: 1.32, patch: 1.04, vine: 1.75, lily: 1.84,
   // Carrying between the stores, the water and the work.
   fill: 3.34, water: 2.32, hod: 1.01, stoke: 1.18, plant: 0.99, prospect: 1.01,
   // A spar with a Sparra on the settlement; and what wild things come onto the deed.

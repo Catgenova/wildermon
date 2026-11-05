@@ -4840,7 +4840,7 @@ insert into learn_pace_def values ('lamp', 2.16);
 insert into learn_pace_def values ('smelt', 1.39);
 insert into learn_pace_def values ('kiln', 1.32);
 insert into learn_pace_def values ('patch', 1.04);
-insert into learn_pace_def values ('vine', 1.86);
+insert into learn_pace_def values ('vine', 1.75);
 insert into learn_pace_def values ('lily', 1.84);
 insert into learn_pace_def values ('fill', 3.34);
 insert into learn_pace_def values ('water', 2.32);
