@@ -1,1 +1,1 @@
-import{t as e}from"./wild-hands23.js";export{e as HOPPA};
+import{t as e}from"./wild-hands2.js";export{e as HOPPA};

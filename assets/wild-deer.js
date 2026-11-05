@@ -1,0 +1,1 @@
+import{a as e,n as t,t as n}from"./wild-deer2.js";export{n as BRAMBLET,t as BRIARSTAG,e as VINEHORN};
