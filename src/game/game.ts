@@ -7821,6 +7821,8 @@ export class Game {
   /** Whether the player is standing somewhere a recipe's station requires. */
   atStation(station: Station): boolean {
     if (station === 'campfire') return this.litFireNear() !== undefined || this.hotOvenNear() !== undefined;
+    // An oven's own recipes want an oven, lit: a brazier is a hearth but bakes nothing (the island's `at_station`).
+    if (station === 'oven') return this.litOvenNear() !== undefined;
     if (station === 'smelter') return this.hotSmelterNear() !== undefined;
     return this.furnitureNear(station) !== undefined;
   }
@@ -7859,6 +7861,17 @@ export class Game {
       if (best || !s.lit) return;
       const [cx, cy] = smelterCentre(s);
       if (Math.hypot(cx - this.player.x, cy - this.player.y) <= range) best = s;
+    }, this.player.level);
+    return best;
+  }
+
+  /** An oven, and no other hearth, alight and within reach of the work: the `oven` station. */
+  litOvenNear(range = 2.6): PlacedFurniture | undefined {
+    let best: PlacedFurniture | undefined;
+    this.placed.furniture.around(this.player.x, this.player.y, range + 2, (f) => {
+      if (best || !f.lit || f.kind !== 'oven') return;
+      const [cx, cy] = furnitureCentre(f);
+      if (Math.hypot(cx - this.player.x, cy - this.player.y) <= range) best = f;
     }, this.player.level);
     return best;
   }

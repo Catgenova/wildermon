@@ -19,12 +19,27 @@ export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
 import type { Nutrient } from './nutrition';
 import { GEAR_ITEMS } from './wildgear';
 
+/** What a dish for a group gives out when it is served (`ItemDef.serve`). */
+export interface ServeDef {
+  /** The item each share is: a food of its own, eaten as any other. */
+  serving: string;
+  /** Shares in one dish. */
+  count: number;
+  /** Tiles from the server a player may stand and be handed one. */
+  reach: number;
+}
+
 export interface ItemDef {
   name: string;
   category: ItemCategory;
   /** Weight in kilograms per unit. */
   weight: number;
   stackable?: boolean;
+  /**
+   * A dish set out for a group (`feast.ts`): serving it hands one `serving` to each player in `reach` tiles, you
+   * among them, up to `count`, and the rest to you. The island's `serve_dishes`.
+   */
+  serve?: ServeDef;
   /**
    * Raw: it came out of the ground, off a tree, out of a vein, off a beast or
    * out of a field, and no bench, kiln, smelter or anvil has touched it — ore,
@@ -522,6 +537,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   // A shut recipe written down (`recipebook.ts`): the recipe it opens is its `extra`, by its title (`recipeTitle`).
   cooking_recipe: { name: 'Recipe', category: 'misc', weight: 0.05, decay: 14,
     description: 'Read: opens the recipe named on it in the crafting window; used up. Not read if already known. From {from} carcasses: {odds} per butchering.' },
+  sealed_vessel: { name: 'Sealed vessel', category: 'misc', weight: 2, decay: 2,
+    description: 'Open when ready: what is named on it, at its QL, and the vessel back at QL {back}. From a crafting recipe that ferments or ages.' },
   banner: { name: 'Banner', category: 'misc', weight: 4, decay: 5, description: 'Plant on the settlement: flies your colour.' },
   flagpole: { name: 'Flagpole', category: 'misc', weight: 8, decay: 5, description: 'Flag flies downwind: straight out in a gale, hanging in a calm. Dyed: your colour. On a settlement: the settlement\'s device.' },
   rose_arch: { name: 'Rose arch', category: 'misc', weight: 30, decay: 5, description: 'One tile across; walk through it. {rule}' },

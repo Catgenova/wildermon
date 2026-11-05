@@ -166,7 +166,9 @@ import {
 } from '../src/game/motes';
 import { patronStatue, STATUETTE } from '../src/game/patronlist';
 import { RECIPE_DROP_ODDS, RECIPE_DROPPERS, RECIPE_ITEM, RECIPE_KNOWN } from '../src/game/recipebook';
-import { lockedRecipes, recipeTitle } from '../src/game/recipes';
+import { FERMENT_CELLAR_SAYS, fermentRecipes, lockedRecipes, recipeTitle, SEALED_ITEM } from '../src/game/recipes';
+import { VESSEL_BACK_QL } from '../src/game/ferment';
+import { serveDishes } from '../src/game/feast';
 import {
   TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
 } from '../src/game/tracking';
@@ -2204,6 +2206,23 @@ out.push(`create or replace function recipe_known_says() returns text language s
 out.push(`create or replace function locked_recipes() returns table (id text, title text, ord int) language sql immutable as $fn$ select * from (values ${
   lockedRecipes().map((r, n) => `(${q(r.id)}, ${q(recipeTitle(r))}, ${n})`).join(', ') || `(null::text, null::text, null::int)`
 }) v (id, title, ord) where v.id is not null $fn$;`);
+/*
+ * Ferments and ageings (`Recipe.ferment`, `ferment.ts`): the item one is sealed in, the QL its vessel comes back at,
+ * what one that wants a cellar says elsewhere, and every ferment recipe with its time, its vessel and whether it wants
+ * a cellar, keyed by the title its sealed vessel carries in `extra`.
+ */
+out.push(`create or replace function sealed_item() returns text language sql immutable as $fn$ select ${q(SEALED_ITEM)} $fn$;`);
+out.push(`create or replace function vessel_back_ql() returns double precision language sql immutable as $fn$ select ${q(VESSEL_BACK_QL)}::double precision $fn$;`);
+out.push(`create or replace function ferment_cellar_says() returns text language sql immutable as $fn$ select ${q(FERMENT_CELLAR_SAYS)} $fn$;`);
+out.push(`create or replace function ferment_recipes() returns table (id text, title text, seconds double precision, vessel text, cellar boolean) language sql immutable as $fn$ select * from (values ${
+  fermentRecipes().map((r) => `(${q(r.id)}, ${q(recipeTitle(r))}, ${q(r.ferment!.seconds)}::double precision, ${q(r.ferment!.vessel)}, ${r.ferment!.cellar ? 'true' : 'false'})`).join(', ')
+    || `(null::text, null::text, null::double precision, null::text, null::boolean)`
+}) v (id, title, seconds, vessel, cellar) where v.id is not null $fn$;`);
+/* A dish for a group (`ItemDef.serve`, `feast.ts`): what each share of it is, how many, and how far off a player may be handed one. */
+out.push(`create or replace function serve_dishes() returns table (item text, serving text, count int, reach double precision) language sql immutable as $fn$ select * from (values ${
+  serveDishes().map(([id, sv]) => `(${q(id)}, ${q(sv.serving)}, ${q(sv.count)}::int, ${q(sv.reach)}::double precision)`).join(', ')
+    || `(null::text, null::text, null::int, null::double precision)`
+}) v (item, serving, count, reach) where v.item is not null $fn$;`);
 /*
  * A patron's statue (`relicuse.ts`, `faith.ts`): what it is enchanted out of, the motes of each element that takes, the
  * statue of each patron, and the patron of each statue (null for anything else).
