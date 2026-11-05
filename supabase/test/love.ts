@@ -362,16 +362,16 @@ begin
   update creature set enemy = null where world_id = w and id = c1;
   delete from creature where world_id = w and id = h1;
 
-  -- Long Table: a knack's time.
+  -- Long Table: a meal boost's time, off a dish from a shut recipe (nothing else gives one).
   perform pg_temp.hold(w, u, '{}');
   update player set boons = '[]'::jsonb where world_id = w and uid = u;
-  perform grant_boon(w, u, 'baked_potato', 50, 1);
+  perform grant_boon(w, u, 'cottage_pie', 50, 1);
   v_a := (select (b->>'until')::double precision - world_time(w) from player, jsonb_array_elements(boons) b where world_id = w and uid = u limit 1);
   perform pg_temp.hold(w, u, array[${q(P('long_table').id)}]);
   update player set boons = '[]'::jsonb where world_id = w and uid = u;
-  perform grant_boon(w, u, 'baked_potato', 50, 1);
+  perform grant_boon(w, u, 'cottage_pie', 50, 1);
   v_b := (select (b->>'until')::double precision - world_time(w) from player, jsonb_array_elements(boons) b where world_id = w and uid = u limit 1);
-  insert into said values ('TABLE', v_a || '|' || v_b || '|' || boon_time('baked_potato', 50, 1));
+  insert into said values ('TABLE', v_a || '|' || v_b || '|' || boon_time('cottage_pie', 50, 1));
 
   -- Good Stock: what a breeding passes to the blood, and what it adds to the dice.
   perform pg_temp.hold(w, u, array[${q(P('good_stock').id)}]);
@@ -532,7 +532,7 @@ check('and the others of that tier close, ditto', at('SHUT') === pathPickRefusal
   check(`and twenty pickings of fruit come to about ${P('abundance').fx.harvest} times, the same dice`, f1 > f0 && Math.abs(f1 / f0 - P('abundance').fx.harvest) < 0.12, at('FRUIT'));
   check('Steady Herd: a fight its keeper has left behind is given up without it and kept with it', at('STEADY') === `none|${part('STEADY', 2)}|${part('STEADY', 2)}`, at('STEADY'));
   const [b0, b1, knack] = at('TABLE').split('|').map(Number);
-  check(`Long Table: a knack lasts ${P('long_table').fx.table} times as long`, near(b0, knack, 1e-3) && near(b1, knack * P('long_table').fx.table, 1e-3), at('TABLE'));
+  check(`Long Table: a meal boost lasts ${P('long_table').fx.table} times as long`, near(b0, knack, 1e-3) && near(b1, knack * P('long_table').fx.table, 1e-3), at('TABLE'));
   check(`Good Stock: ${P('good_stock').fx.up} more on the chance a trait comes out a grade better, read where the breeding reads it`, at('STOCK') === `${P('good_stock').fx.up}|true`, at('STOCK'));
   const [u0, u1] = at('STOCKUP').split('|').map(Number);
   check('and four hundred young ones on the same dice come out a grade better more often with it', u1 > u0, at('STOCKUP'));
@@ -701,13 +701,13 @@ const hold = (...ids: string[]): void => {
   // Long Table.
   hold();
   p.boons = [];
-  g.grantBoon('baked_potato', 50, 1);
+  g.grantBoon('cottage_pie', 50, 1);
   const b0 = (p.boons[0]?.until ?? 0) - g.time;
   hold('long_table');
   p.boons = [];
-  g.grantBoon('baked_potato', 50, 1);
+  g.grantBoon('cottage_pie', 50, 1);
   const b1 = (p.boons[0]?.until ?? 0) - g.time;
-  check('Long Table in the browser: the island\'s share longer', near(b0, boonTime('baked_potato', 50, 1)) && near(b1, b0 * P('long_table').fx.table), `${b0} ${b1}`);
+  check('Long Table in the browser: the island\'s share longer', near(b0, boonTime('cottage_pie', 50, 1)) && near(b1, b0 * P('long_table').fx.table), `${b0} ${b1}`);
   // Good Stock: the young of a pairing, the same dice with it and without.
   const dam = g.creatures.spawn('rabba', p.x + 1, p.y, 'deed', g.rand, g.time - 1e6);
   const sire = g.creatures.spawn('rabba', p.x - 1, p.y, 'deed', g.rand, g.time - 1e6);

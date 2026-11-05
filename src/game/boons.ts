@@ -4,12 +4,12 @@ import { world } from './pace';
 
 /**
  * What makes the work go into you faster than it otherwise would, besides the
- * sleep bonus (`sleep.ts`). A cooked dish
- * carries a **knack** for one trade, and eating it leaves you better at
- * that trade for a while. This is the same idea as the knack a long day at a
- * trade leaves behind, except that this one wears off. Which dish favours which trade is settled when the
- * island is raised and never changes on it — no two islands agree, and the
- * only way to find out is to look at the food.
+ * sleep bonus (`sleep.ts`): a **knack**. Only a dish off a shut recipe
+ * (`Recipe.locked`, read from a Recipe) carries one, for the skills written on
+ * it (`ItemDef.knackSkills`), and eating it leaves those skills going in faster
+ * for a while. Plain food, brews, spirits and tinctures carry none. This is the
+ * same idea as the knack a long day at a trade leaves behind, except that this
+ * one wears off.
  */
 export interface Boon {
   /** Skill it lifts. */
@@ -20,11 +20,7 @@ export interface Boon {
   until: number;
   /** What gave it, for the hud. */
   from: string;
-  /**
-   * A tincture's, which stands beside a dish's rather than in its place: a
-   * dish puts back the clock on a dish's and a tincture on a tincture's, and
-   * both count while they last. Absent on a dish's.
-   */
+  /** A tincture's, from before tinctures stopped giving one: left to run out. Absent on a dish's. */
   kind?: 'tincture';
 }
 
@@ -32,45 +28,31 @@ export interface Boon {
 export const BOON_BONUS = 0.5;
 export const BOON_SECONDS = world(20 * 60);
 
-/** What a Naturalist's tincture lifts, by how much, and for how long: their own four trades, for as long as a dish's knack at its plainest. */
+/**
+ * What a Naturalist's tincture gave while it gave a knack: their own four
+ * trades, a tenth again, for twenty minutes. It gives none now; the numbers are
+ * kept for What's new, which says what it was.
+ */
 export const TINCTURE_SKILLS = ['foraging', 'botanizing', 'alchemy', 'first_aid'];
 export const TINCTURE_BONUS = 0.1;
 export const TINCTURE_SECONDS = world(20 * 60);
 
-/**
- * The trades a dish can favour: the ones you work at, not the ones you are --
- * and only the ones there were when the island's table was dealt. A dish's
- * trade is picked by its place in this list, so a trade added since would
- * move every dish on every island to another; glassblowing, prayer, driving,
- * sailing, elementalism, enchanting and tracking are left out instead, and the
- * table stays as everybody learned it.
- */
-const DEALT_AFTER: ReadonlySet<string> = new Set(['glassblowing', 'praying', 'driving', 'sailing', 'elementalism', 'enchanting', 'tracking']);
-export const BOON_SKILLS: string[] = SKILL_DEFS.filter((d) => d.group !== 'Characteristics' && !DEALT_AFTER.has(d.id)).map((d) => d.id);
+/** The skills a dish's knack may name: the ones you work at, not the ones you are. The island's `boon_skill`. */
+export const BOON_SKILLS: string[] = SKILL_DEFS.filter((d) => d.group !== 'Characteristics').map((d) => d.id);
 
-/** Everything cooked, which is everything that can carry a knack. */
-export const BOON_FOODS: string[] = Object.keys(ITEM_DEFS).filter((id) => nourishing(ITEM_DEFS[id]));
+/** The skills a helping of a thing raises the skill gain of: a dish off a shut recipe's own, none for anything else. */
+export const knacksOf = (itemId: string): string[] => ITEM_DEFS[itemId]?.knackSkills ?? [];
 
-/** Anything eaten or drunk that is worth a knack: not plain water. */
-function nourishing(def: { category?: string; food?: number; drink?: number }): boolean {
-  return def.category === 'food' && ((def.food ?? 0) > 0 || (def.drink ?? 0) > 0);
-}
+/** Everything that carries a knack. */
+export const BOON_FOODS: string[] = Object.keys(ITEM_DEFS).filter((id) => knacksOf(id).length > 0);
 
-/** A small, stable scramble, so an island's table is its own and never moves. */
-function hash(seed: number, id: string): number {
-  let h = (seed ^ 0x9e3779b9) >>> 0;
-  for (let i = 0; i < id.length; i++) {
-    h ^= id.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return h >>> 0;
-}
+/** A skill's name, lower case: what a meal boost names. */
+export const skillWord = (id: string): string => (SKILL_DEFS.find((d) => d.id === id)?.name ?? id).toLowerCase();
 
-/** Which trade this dish favours on this island. */
-export const boonOf = (seed: number, itemId: string): string | null => {
-  const def = ITEM_DEFS[itemId];
-  if (!def || !nourishing(def)) return null;
-  return BOON_SKILLS[hash(seed, itemId) % BOON_SKILLS.length];
+/** What a helping's meal boost is, as a label: "Meal boost: butchering skill gain +50%". The island's `knack_says`. */
+export const knackSays = (itemId: string): string => {
+  const skills = knacksOf(itemId);
+  return skills.length ? `Meal boost: ${skills.map(skillWord).join(', ')} skill gain +${Math.round(BOON_BONUS * 100)}%` : '';
 };
 
 /**
@@ -103,4 +85,15 @@ export function durationSaid(seconds: number): string {
   if (m < 60) return `${m} min`;
   const h = Math.floor(m / 60);
   return m % 60 ? `${h} h ${m % 60} min` : `${h} h`;
+}
+
+/*
+ * Every dish with a knack says it in its description, from the rule: what it
+ * lifts and how long, at the worst helping and the best. The island's
+ * `item_def.description` is dumped from the same text.
+ */
+for (const id of BOON_FOODS) {
+  const d = ITEM_DEFS[id];
+  const knack = `${knackSays(id)}, ${durationSaid(boonTime(id, 1))} (QL 1) to ${durationSaid(boonTime(id, 100))} (QL 100).`;
+  d.description = d.description ? `${d.description} ${knack}` : knack;
 }

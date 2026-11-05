@@ -39,7 +39,7 @@ import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_
 import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
 import { ageDef, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
-import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
+import { CRAFT_REACH, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
@@ -53,7 +53,7 @@ import { randomLook, type Look } from './look';
 import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS } from './pace';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, bagCarry, HIT_LOCATIONS, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
 import { asleepIn, SLEEP_BONUS_MULT, SLEEP_FOOD, SLEEP_HEAL, SLEEP_WATER } from './sleep';
-import { boonOf, boonTime, BOON_BONUS, clockLeft, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
+import { boonTime, BOON_BONUS, clockLeft, knacksOf, knackSays, type Boon } from './boons';
 import { cleanSaid } from './chat';
 import { cleanText, nameRefusal, NAMES_ASKED } from './playertext';
 import { ALL_GOALS } from './journal';
@@ -4451,42 +4451,26 @@ export class Game {
   }
 
   /**
-   * Eat or drink something that favours a trade, and be better at it for a
-   * while. A second helping of the same thing puts the clock back rather
-   * than stacking on itself.
+   * Eat or drink a dish off a shut recipe, and have the skills it names
+   * (`knacksOf`) go in faster for a while. A second helping puts the clock back
+   * rather than stacking on itself. Anything else gives nothing. The island's
+   * `grant_boon`.
    */
   grantBoon(itemId: string, ql: number, knack = 1): string | null {
-    // A knack comes off something somebody made. A berry off a bush is food.
-    if (!knackable(itemId)) return null;
-    const skill = boonOf(this.seed, itemId);
-    if (!skill) return null;
+    const skills = knacksOf(itemId);
+    if (!skills.length) return null;
     // And lasts longer for its maker's hand in it (a Cook's Flavoursome, Strong Brew), and for Love's Long Table.
     const seconds = boonTime(itemId, ql, knack) * this.pathFx('table', 1);
-    const def = SKILL_DEFS.find((d) => d.id === skill);
-    // A dish's own, never a tincture's: the two stand side by side.
-    const already = this.player.boons.find((b) => b.skill === skill && !b.kind && b.until > this.time);
-    if (already) already.until = Math.max(already.until, this.time + seconds);
-    else this.player.boons.push({ skill, bonus: BOON_BONUS, until: this.time + seconds, from: itemName({ id: itemId, uid: 0, ql, dmg: 0, count: 1 }) });
+    for (const skill of skills) {
+      // A dish's own, never one left over from a tincture.
+      const already = this.player.boons.find((b) => b.skill === skill && !b.kind && b.until > this.time);
+      if (already) already.until = Math.max(already.until, this.time + seconds);
+      else this.player.boons.push({ skill, bonus: BOON_BONUS, until: this.time + seconds, from: itemName({ id: itemId, uid: 0, ql, dmg: 0, count: 1 }) });
+    }
     // Keep the list from growing without end as things run out.
     this.player.boons = this.player.boons.filter((b) => b.until > this.time);
     this.events.emit('inventory');
-    return def ? `${def.name} comes easier for the next ${clockLeft(seconds)}.` : null;
-  }
-
-  /**
-   * A Naturalist's tincture taken: each of its trades goes in faster for a
-   * while, beside whatever a dish is doing for it. A second one puts the clock
-   * back on the first rather than stacking on it.
-   */
-  takeTincture(): void {
-    const until = this.time + TINCTURE_SECONDS;
-    for (const skill of TINCTURE_SKILLS) {
-      const already = this.player.boons.find((b) => b.skill === skill && b.kind === 'tincture' && b.until > this.time);
-      if (already) already.until = Math.max(already.until, until);
-      else this.player.boons.push({ skill, bonus: TINCTURE_BONUS, until, from: itemDef('tincture').name.toLowerCase(), kind: 'tincture' });
-    }
-    this.player.boons = this.player.boons.filter((b) => b.until > this.time);
-    this.events.emit('inventory');
+    return `${knackSays(itemId)}, ${clockLeft(seconds)}.`;
   }
 
   /**

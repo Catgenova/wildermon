@@ -691,7 +691,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const ql = brewQl(f, g.wallNow());
       if (!drawFrom(g, f, 1)) return;
       g.player.stats.thirst = Math.min(1, g.player.stats.thirst + 0.5);
-      // A brew straight out of the barrel favours a trade like any other.
+      // A brew straight out of the barrel: a knack only if one is written on it (`knacksOf`), which none is.
       const brew = isBrew(liquid) ? BUCKET_OF[liquid as LiquidKind] : null;
       // And for longer for its brewer's hand in it (a Cook's Strong Brew).
       const favour = brew ? g.grantBoon(brew, ql, knack) : null;

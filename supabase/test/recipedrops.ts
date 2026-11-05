@@ -20,9 +20,12 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { cookRecipes } from '../../src/game/creatures';
-import { itemDef } from '../../src/game/items';
+import { ITEM_DEFS, itemDef } from '../../src/game/items';
 import { dropRecipe, READ_RECIPE, RECIPE_DROP_ODDS, RECIPE_DROPPERS, RECIPE_ITEM, RECIPE_KNOWN, recipeOn, recipeToDrop } from '../../src/game/recipebook';
-import { lockedRecipes, needRecipeSays, RECIPE_BY_ID, recipeReason, recipeStatus, recipeTitle } from '../../src/game/recipes';
+import { lockedRecipes, needRecipeSays, RECIPE_BY_ID, recipeReason, RECIPES, recipeStatus, recipeTitle } from '../../src/game/recipes';
+import { lockedHiddenSays, recipeSearch } from '../../src/game/craftsearch';
+import { BOON_BONUS, BOON_FOODS, BOON_SKILLS, boonTime, knacksOf, knackSays } from '../../src/game/boons';
+import { BREWS } from '../../src/game/brewing';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -204,6 +207,44 @@ h.dropOnGround(x, y, { uid: h.inventory.nextUid++, id: 'corpse', ql: 30, dmg: 0,
 h.rand = () => 0;
 ACTION_BY_ID.get('butcher')!.perform({ kind: 'ground', x, y, uid: null }, h);
 check('butchering a goblin carcass in the browser gives one, the roll forced', h.inventory.items.some((it) => it.id === RECIPE_ITEM && it.ql === 30));
+
+/* ---- The crafting search: a shut recipe unread is off the page unless "Show locked", and then found by name only ---- */
+
+const pie = RECIPE_BY_ID.get('make_cottage_pie')!;
+const stew = RECIPE_BY_ID.get('make_stew')!;
+check('an open recipe answers to a material in it', recipeSearch(stew, 'potato', false, false) === 'listed');
+check('a shut recipe unread is not listed, and a search for its name counts it as hidden', recipeSearch(pie, '', true, false) === 'hidden'
+  && recipeSearch(pie, 'cottage', true, false) === 'hidden', `${recipeSearch(pie, '', true, false)} ${recipeSearch(pie, 'cottage', true, false)}`);
+check('and a search for a material in it neither lists nor counts it, with "Show locked" or without',
+  recipeSearch(pie, 'potato', true, false) === 'no' && recipeSearch(pie, 'potato', true, true) === 'no' && recipeSearch(pie, 'clay bowl', true, true) === 'no');
+check('with "Show locked" ticked it is listed, by its name', recipeSearch(pie, '', true, true) === 'listed' && recipeSearch(pie, 'cottage pie', true, true) === 'listed');
+check('once read it is an open recipe: listed, and found by its materials', recipeSearch(pie, 'potato', false, false) === 'listed'
+  && recipeSearch(pie, '', false, false) === 'listed');
+const matched = RECIPES.filter((r) => recipeSearch(r, 'preserves', !!r.locked, false) === 'hidden').length;
+check(`the line at the foot counts them: "${lockedHiddenSays(matched)}"`, matched === 1 && lockedHiddenSays(matched) === 'Locked recipes: 1 · Show', lockedHiddenSays(matched));
+
+/* ---- Meal boosts: only a dish off a shut recipe, on its own skills ---- */
+
+const dishes = lockedRecipes().map((r) => r.result);
+check('every dish off a shut recipe carries a meal boost, and nothing else does',
+  dishes.every((id) => knacksOf(id).length > 0) && BOON_FOODS.every((id) => dishes.includes(id)), `${dishes.join(',')} / ${BOON_FOODS.join(',')}`);
+check('every skill a meal boost names is one a meal boost may name', BOON_FOODS.every((id) => knacksOf(id).every((k) => BOON_SKILLS.includes(k))));
+const sets = BOON_FOODS.map((id) => [...knacksOf(id)].sort().join('+'));
+check('no two dishes give the same meal boost', new Set(sets).size === sets.length, sets.join(' '));
+check('cottage pie: butchering; cherry preserves: foraging, on a dish of their own',
+  knacksOf('cottage_pie').join() === 'butchering' && knacksOf('cherry_preserves').join() === 'foraging'
+    && RECIPE_BY_ID.get('make_cherry_preserves')!.result === 'cherry_preserves' && RECIPE_BY_ID.get('make_preserves')!.result === 'preserves'
+    && knacksOf('preserves').length === 0);
+const m = Game.create(4244);
+m.player.boons = [];
+const none = ['stew', 'baked_potato', 'bread', 'preserves', 'spirit_bucket', 'tincture', ...BREWS.map((b) => `${b.id}_bucket`)].map((id) => m.grantBoon(id, 60));
+check('plain food, brews, spirit and a tincture give none', none.every((x) => x === null) && m.player.boons.length === 0, JSON.stringify(m.player.boons));
+const said = m.grantBoon('cottage_pie', 60);
+check('a cottage pie gives its meal boost, for as long as its QL says, and says so',
+  m.player.boons.length === 1 && m.player.boons[0].skill === 'butchering' && m.player.boons[0].bonus === BOON_BONUS
+    && Math.abs(m.player.boons[0].until - m.time - boonTime('cottage_pie', 60)) < 1e-6 && said === `${knackSays('cottage_pie')}, ${Math.floor(boonTime('cottage_pie', 60) / 60)}m.`,
+  `${said} ${JSON.stringify(m.player.boons)}`);
+check('and its description says it, from the rule', (ITEM_DEFS.cottage_pie.description ?? '').startsWith(`${knackSays('cottage_pie')}, `), ITEM_DEFS.cottage_pie.description);
 
 for (const l of [...ok, ...bad]) console.log(l);
 console.log(`recipes found and read — ${ok.length} of ${ok.length + bad.length}`);

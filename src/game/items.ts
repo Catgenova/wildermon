@@ -73,6 +73,12 @@ export interface ItemDef {
    * down from a brew.
    */
   knack?: number;
+  /**
+   * The skills a helping of it raises the skill gain of for a while (a knack,
+   * `boons.ts`): only a dish off a shut recipe has any. The island's
+   * `item_def.knack_skills`.
+   */
+  knackSkills?: string[];
   /** Damage taken per real hour while lying on the ground; defaults by category. */
   decay?: number;
   description?: string;
@@ -390,11 +396,12 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   roast_lotus_seeds: { name: 'Roasted lotus seeds', category: 'food', weight: 0.06, stackable: true, food: 0.14, decay: 40, feeds: { starch: 0.1, fat: 0.04 } },
   berry_compote: { name: 'Berry compote', category: 'food', weight: 0.3, stackable: true, food: 0.3, decay: 60, feeds: { greens: 0.2, starch: 0.06 } },
   stew: { name: 'Stew', category: 'food', weight: 0.6, stackable: true, food: 0.75, decay: 70, feeds: { flesh: 0.26, starch: 0.22, greens: 0.2, fat: 0.12 } },
-  cottage_pie: { name: 'Cottage pie', category: 'food', weight: 0.9, stackable: true, food: 0.85, decay: 40, feeds: { flesh: 0.24, starch: 0.26, greens: 0.22, fat: 0.13 } },
+  cottage_pie: { name: 'Cottage pie', category: 'food', weight: 0.9, stackable: true, food: 0.85, decay: 40, feeds: { flesh: 0.24, starch: 0.26, greens: 0.22, fat: 0.13 }, knackSkills: ['butchering'] },
   pottage: { name: 'Pottage', category: 'food', weight: 0.7, stackable: true, food: 0.6, decay: 50, feeds: { starch: 0.24, greens: 0.22, fat: 0.1 } },
   bread: { name: 'Bread', category: 'food', weight: 0.35, stackable: true, food: 0.42, decay: 70, feeds: { starch: 0.3, fat: 0.04 } },
   porridge: { name: 'Porridge', category: 'food', weight: 0.4, stackable: true, food: 0.32, decay: 80, feeds: { starch: 0.24, fat: 0.08, greens: 0.05 } },
   preserves: { name: 'Preserves', category: 'food', weight: 0.3, stackable: true, food: 0.28, decay: 12, description: 'Rots slowly.', feeds: { greens: 0.18, starch: 0.1 } },
+  cherry_preserves: { name: 'Cherry preserves', category: 'food', weight: 0.3, stackable: true, food: 0.28, decay: 12, description: 'Rots slowly.', feeds: { greens: 0.18, starch: 0.1 }, knackSkills: ['foraging'] },
   flour: { name: 'Flour', category: 'material', weight: 0.1, stackable: true, decay: 30, larder: true, description: 'Wet it to make dough. Stored in a larder or craft material bin.' },
   cornmeal: { name: 'Cornmeal', category: 'material', weight: 0.12, stackable: true, decay: 30, larder: true, description: 'Boiled into porridge. Stored in a larder or craft material bin.' },
   dough: { name: 'Dough', category: 'material', weight: 0.3, stackable: true, decay: 150, larder: true, description: 'Cooked at a fire. Stored in a larder or craft material bin.' },
@@ -503,7 +510,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   deadfall: { name: 'Deadfall', category: 'misc', weight: 12, decay: 4, description: 'Trap: holds nearly anything that walks.' },
   herb_tea: { name: 'Herb tea', category: 'misc', weight: 0.3, stackable: true, decay: 30, stamina: 0.2, description: 'Drink: +{stamina:pct} stamina.' },
   salve: { name: 'Salve', category: 'misc', weight: 0.1, stackable: true, decay: 6, description: 'Rub in over a dressing: the wound cannot go bad until it closes.' },
-  tincture: { name: 'Tincture', category: 'misc', weight: 0.1, stackable: true, decay: 3, description: 'Taken: {skills} gain {bonus:pct} faster for {span:time}.' },
+  tincture: { name: 'Tincture', category: 'misc', weight: 0.1, stackable: true, decay: 3, description: 'Effect: none.' },
   cover: { name: 'Healing cover', category: 'tool', weight: 0.2, stackable: true, decay: 12, description: 'On the wound it suits: stops bleeding, keeps dirt out, closes it {cover.overCloth} times as fast as cloth.' },
   dye_bucket: { name: 'Bucket of dye', category: 'tool', weight: 6, decay: 10,
     description: 'Up to {bucketLitres} litres of one mix of red, yellow and blue at one QL, in the lye bucket it was boiled in. A boil: {dyeBoil} litres of one primary, {perKg} litre per kg of dyestuff. '
@@ -564,13 +571,13 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   lamp_pillar: { name: 'Lantern pillar', category: 'misc', weight: 60, decay: 3, description: 'Stand a lantern of yours in it: lights the night for everyone at the lantern\'s reach, {light.lanternNear} tiles at lowest QL, {light.lanternFar} at best. A candle in it lasts as long as in the hand, {light.candleShort:time} to {light.candleLong:time}. Lit, put out and given candles as a lantern.' },
   // And one with no lantern in it: see `runelantern.ts`.
   rune_lantern: { name: 'Rune lantern post', category: 'misc', weight: 60, decay: 3, description: 'Lights the night for everyone as a lantern of its QL: {light.lanternNear} tiles at lowest QL, {light.lanternFar} at best. No lantern, no candle; never goes out.' },
-  ale_bucket: { name: 'Bucket of ale', category: 'food', weight: 6, decay: 2, drink: 0.4, charges: 5, description: 'Drink: gives a drink boost.', feeds: { starch: 0.12 } },
-  cider_bucket: { name: 'Bucket of cider', category: 'food', weight: 6, decay: 2, drink: 0.45, charges: 5, description: 'Drink: gives a drink boost.', feeds: { greens: 0.1 } },
+  ale_bucket: { name: 'Bucket of ale', category: 'food', weight: 6, decay: 2, drink: 0.4, charges: 5, feeds: { starch: 0.12 } },
+  cider_bucket: { name: 'Bucket of cider', category: 'food', weight: 6, decay: 2, drink: 0.45, charges: 5, feeds: { greens: 0.1 } },
   juice_bucket: { name: 'Bucket of juice', category: 'food', weight: 6, decay: 6, drink: 0.5, charges: 5, feeds: { greens: 0.1 } },
   mead_bucket: { name: 'Bucket of mead', category: 'food', weight: 6, decay: 1.5, drink: 0.5, charges: 5, description: 'Honey and water, {brew.mead.time:time} in a barrel. Aged in its barrel: {ageing}', feeds: { starch: 0.12, greens: 0.04 } },
   wine_bucket: { name: 'Bucket of wine', category: 'food', weight: 6, decay: 1, drink: 0.5, charges: 5, description: 'Cherries and water, {brew.wine.time:time} in a barrel. Aged in its barrel: {ageing}', feeds: { greens: 0.1 } },
   grape_wine_bucket: { name: 'Bucket of grape wine', category: 'food', weight: 6, decay: 1, drink: 0.5, charges: 5, description: 'Grapes and water, {brew.grape_wine.time:time} in a barrel. Aged in its barrel: {ageing}', feeds: { greens: 0.1 } },
-  spirit_bucket: { name: 'Bucket of spirit', category: 'food', weight: 6, decay: 0.5, drink: 0.5, charges: 5, knack: 3, description: 'A drink gives a drink boost lasting {knack}× as long as a drink of {spirit.asStrong} at the same QL.', feeds: { starch: 0.06 } },
+  spirit_bucket: { name: 'Bucket of spirit', category: 'food', weight: 6, decay: 0.5, drink: 0.5, charges: 5, knack: 3, feeds: { starch: 0.06 } },
   fishing_rod: { name: 'Fishing rod', category: 'tool', weight: 1.4, decay: 3, description: 'Stand at water to fish.' },
   minnow: { name: 'Minnow', category: 'food', weight: 0.1, stackable: true, food: 0.06, decay: 9, description: 'Fishing bait.', feeds: { flesh: 0.04 } },
   perch: { name: 'Perch', category: 'food', weight: 0.5, stackable: true, food: 0.2, decay: 8, feeds: { flesh: 0.09 } },
@@ -1020,7 +1027,7 @@ export function markSays(mark: Mark | undefined | null): string {
     temper: (m) => `can be quenched once, for +${m} QL`,
     feed: (m) => `feeds each thing it feeds ${pct(m)} more`,
     fill: (m) => `fills ${pct(m)} more of the food bar`,
-    knack: (m) => `gives a meal or drink boost that lasts ${pct(m)} longer`,
+    knack: (m) => `gives a meal boost (dishes off a shut recipe) that lasts ${pct(m)} longer`,
     rot: (m) => `rots ${Math.round((1 - m) * 100)}% slower`,
     catch: (m) => `catches ${pct(m)} more`,
     seal: () => '',

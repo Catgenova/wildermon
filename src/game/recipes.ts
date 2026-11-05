@@ -393,7 +393,7 @@ export const RECIPES: Recipe[] = [
   { id: 'make_fishing_rod', category: 'Woodwork', result: 'fishing_rod', inputs: [{ item: 'shaft', count: 2 }, { item: 'bow_string' }, { item: 'ribbon' }], tool: 'carving_knife', skill: 'carpentry', material: 'wood', label: 'Splice a fishing rod', verb: 'splicing a rod', baseTime: 10, stamina: 0.03, difficulty: 14, done: '' },
   { id: 'bake_pastry', category: 'Cooking', result: 'pastry', count: 2, inputs: [{ item: 'dough' }, { item: 'butter', count: 2 }], station: 'campfire', skill: 'cooking', label: 'Bake pastry', verb: 'baking pastry', baseTime: 12, stamina: 0.03, difficulty: 14, done: '', spareOnFail: true },
   { id: 'make_apple_pie', category: 'Cooking', result: 'apple_pie', count: 2, inputs: [{ item: 'dough' }, { item: 'apple', count: 4 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Bake an apple pie', verb: 'baking a pie', baseTime: 18, stamina: 0.03, difficulty: 20, done: '', spareOnFail: true },
-  { id: 'make_cherry_preserves', category: 'Cooking', locked: true, title: 'Cherry preserves', result: 'preserves', count: 2, inputs: [{ item: 'cherry', count: 12 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Preserve cherries', verb: 'preserving cherries', baseTime: 14, stamina: 0.03, difficulty: 14, done: '', spareOnFail: true },
+  { id: 'make_cherry_preserves', category: 'Cooking', locked: true, title: 'Cherry preserves', result: 'cherry_preserves', count: 2, inputs: [{ item: 'cherry', count: 12 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Preserve cherries', verb: 'preserving cherries', baseTime: 14, stamina: 0.03, difficulty: 14, done: '', spareOnFail: true },
   { id: 'press_olives', category: 'Cooking', result: 'olive_oil', count: 2, inputs: [{ item: 'olive', count: 10 }], tool: 'quern', skill: 'milling', label: 'Press into oil', verb: 'pressing olives', baseTime: 16, stamina: 0.05, difficulty: 18, done: '', spareOnFail: true },
   { id: 'make_broth', category: 'Cooking', result: 'broth', count: 2, inputs: [{ item: 'bone', count: 2 }, { item: 'water_bucket', litres: 2 }], tool: 'clay_pot', station: 'campfire', skill: 'cooking', label: 'Boil a broth', verb: 'boiling a broth', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true, perk: 'broth' },
   { id: 'make_cottage_pie', category: 'Cooking', locked: true, result: 'cottage_pie', count: 2, inputs: [{ item: 'meat', count: 2 }, { item: 'potato', count: 2 }, { item: 'carrot' }, { item: 'onion' }, { item: 'corn' }, { item: 'flour' }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Bake a cottage pie', verb: 'baking a cottage pie', baseTime: 20, stamina: 0.03, difficulty: 22, done: '', spareOnFail: true },
@@ -1451,32 +1451,3 @@ export function recipeAction(r: Recipe): ActionDef {
 export const RECIPE_ACTIONS: ActionDef[] = RECIPES.map(recipeAction);
 export const RECIPE_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
-/**
- * Everything somebody made that is worth eating, worked out once.
- *
- * Reported: a knack off a raw berry. `boonOf` gated on "anything with
- * something in it", which is a handful of blueberries as much as a stew — so a
- * trade could be favoured for twenty minutes by eating fruit straight off a
- * bush, and the line over the list in `boons.ts` has said "everything cooked"
- * since the day it was written while the code under it said nothing of the
- * kind.
- *
- * It lives here rather than in `boons.ts` because the rule is "is there a
- * recipe for it", and `boons.ts` may not ask: `actions.ts` imports it, and
- * this file reaches back through traps to `actions.ts`. Everything that grants
- * a knack is already on this side of that ring.
- *
- * A dish off a fire, a cheese, an oil pressed under a quern, a barrel that has
- * finished working: things that took a fire, a tool or a month. Meat off a
- * kill, a fish off a line, a berry off a bush and milk out of a beast are food
- * and are not a knack.
- */
-let cooked: Set<string> | null = null;
-export function knackable(id: string): boolean {
-  if (!cooked) {
-    cooked = new Set(RECIPES.map((r) => r.result));
-    // A barrel that has finished working is drawn off into `<brew>_bucket`.
-    for (const brew of BREWS) cooked.add(`${brew.id}_bucket`);
-  }
-  return cooked.has(id);
-}
