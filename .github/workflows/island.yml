@@ -3089,6 +3089,16 @@ jobs:
             --outfile=node_modules/.cache/upstairs.mjs --log-level=error
           node node_modules/.cache/upstairs.mjs
 
+      - name: A worker stands at the foot of a flight a storey up, where the flight below comes off
+        run: |
+          # Two flights in a line, the second's foot where the first comes off:
+          # the way to that tile a storey up is found and stops there, the way
+          # on up still climbs both, and a hod carrier fits a wall planned on
+          # that tile's side and never says no stairs up.
+          npx esbuild supabase/test/flightfoot.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/flightfoot.mjs --log-level=error
+          node node_modules/.cache/flightfoot.mjs
+
       - name: The Springlet, slow on land and a hare's pace in water, found only in deep water
         if: matrix.shard == 3
         run: |

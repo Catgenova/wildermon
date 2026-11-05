@@ -4246,6 +4246,13 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 488,
+    day: '2026-11-05',
+    lines: () => [
+      'Fixed: a hod carrier stands at the foot of a flight a storey up, where the flight below comes off, to fit a wall there. Was: idle with no stairs up, all other building work waiting.',
+    ],
+  },
+  {
     n: 487,
     day: '2026-11-05',
     lines: () => [
