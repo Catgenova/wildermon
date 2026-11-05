@@ -155,6 +155,8 @@ export const TABLES: Record<string, Read> = {
   bred_record: 'none',
   building_column: 'none',
   buy_order: 'none',
+  // Which winter an island's critter caches were laid for, and where they lie (`winter.ts`): nobody's to read.
+  cache_winter: 'none',
   caller: 'none',
   class_mark: 'none',
   client_error: 'none',
@@ -162,6 +164,7 @@ export const TABLES: Record<string, Read> = {
   // A whole `item` row goes into a bag's room (`bag_room(b.*)`), and where a thing came from is no browser's
   // (20261026131100); no browser reads it.
   container: 'none',
+  critter_cache: 'none',
   crop_last: 'none',
   deed_bauble: 'none',
   deed_ledger: 'none',

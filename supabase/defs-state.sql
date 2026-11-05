@@ -1552,6 +1552,8 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('choose_path', 'Choose a path', 'choosing', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('use_ability', 'Use path ability', 'using it', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('track', 'Track', 'tracking', 'tracking', null, false, null, 0.03, 1.3333333333333333, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('search_caches', 'Search for caches', 'searching for caches', 'tracking', null, false, null, 0.03, 1.3333333333333333, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('dig_cache', 'Dig up cache', 'digging up a cache', 'tracking', null, false, null, 0.05, 2.6666666666666665, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('investigate', 'Investigate', 'investigating the ground', 'archaeology', 'trowel', false, null, 0.05, 10, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('restore_relic', 'Restore', 'restoring', 'restoration', 'brush', false, null, 0.07, 20, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('study_book', 'Study', 'studying', null, null, false, null, 0.02, 30, null, false, false);
@@ -6175,6 +6177,35 @@ create or replace function track_stage(p_band int) returns boolean language sql 
 create or replace function track_detail(p_band int) returns boolean language sql immutable as $fn$ select case p_band when 0 then false when 1 then false when 2 then false when 3 then true end $fn$;
 create or replace function track_far() returns int language sql immutable as $fn$ select 150 $fn$;
 create or replace function track_point(p_points int, p_i int) returns text language sql immutable as $fn$ select (array['north', 'north-north-east', 'north-east', 'east-north-east', 'east', 'east-south-east', 'south-east', 'south-south-east', 'south', 'south-south-west', 'south-west', 'west-south-west', 'west', 'west-north-west', 'north-west', 'north-north-west']::text[])[p_i * 16 / p_points + 1] $fn$;
+create or replace function winter_season() returns text language sql immutable as $fn$ select 'winter' $fn$;
+create or replace function winter_fur() returns double precision language sql immutable as $fn$ select 1.5::double precision $fn$;
+create or replace function winter_fur_part() returns text language sql immutable as $fn$ select 'fur' $fn$;
+create or replace function cache_search_action() returns text language sql immutable as $fn$ select 'search_caches' $fn$;
+create or replace function cache_dig_action() returns text language sql immutable as $fn$ select 'dig_cache' $fn$;
+create or replace function cache_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in ('search_caches', 'dig_cache') $fn$;
+create or replace function caches_for(p_size int) returns int language sql immutable as $fn$ select greatest(1, floor(p_size::double precision * p_size / 16384))::int $fn$;
+create or replace function cache_deed_gap() returns int language sql immutable as $fn$ select 20 $fn$;
+create or replace function cache_ground(p_tile int) returns boolean language sql immutable as $fn$ select p_tile in (0, 5, 6, 11, 12, 7) $fn$;
+create or replace function cache_spot_at(p_level int) returns int language sql immutable as $fn$ select 3 + floor(p_level::double precision / 20)::int $fn$;
+create or replace function cache_draws(p_level int) returns int language sql immutable as $fn$ select 2 + floor(p_level::double precision / 30)::int $fn$;
+create or replace function cache_loot() returns table (ord int, item text, n int, weight int, at int) language sql immutable as $fn$ values (0, 'ice_mote', 3, 30, 0), (1, 'life_mote', 2, 20, 0), (2, 'ancient_seed_jar', 1, 15, 0), (3, 'mithril_lump', 2, 10, 20), (4, 'tarnished_bauble', 1, 8, 30), (5, 'glimmersteel_lump', 2, 7, 40), (6, 'adamantine_lump', 2, 6, 60), (7, 'seryll_lump', 2, 4, 80) $fn$;
+create or replace function cache_pick(p_level int, p_roll double precision) returns int language plpgsql immutable as $fn$
+declare l record; v_r double precision; v_last int;
+begin
+  v_r := p_roll * (select sum(c.weight) from cache_loot() c where c.at <= p_level);
+  for l in select * from cache_loot() c where c.at <= p_level order by c.ord loop
+    if v_r < l.weight then return l.ord; end if;
+    v_r := v_r - l.weight;
+    v_last := l.ord;
+  end loop;
+  return v_last;
+end $fn$;
+create or replace function cache_said(p_key text) returns text language sql immutable as $fn$ select case p_key when 'season' then 'Caches: winter only.' when 'ground' then 'Caches lie in the ground.' when 'none' then 'No cache here.' end $fn$;
+create or replace function cache_arrow() returns text language sql immutable as $fn$ select 'Cache' $fn$;
+create or replace function cache_search_said(p_range int, p_reading jsonb, p_x int, p_y int) returns text language sql immutable as $fn$
+  select case when p_x is not null then 'Cache: at ' || p_x || ', ' || p_y || '.'
+              when p_reading is null then 'No cache within ' || p_range || ' tiles.'
+              else 'Cache: ' || (p_reading->>'way') || ', ' || track_dist_says(p_reading) || '.' end $fn$;
 create or replace function runestones() returns table (ord int, id text, name text, x int, y int) language sql immutable as $fn$ values (0, 'crownstone', 'The Crownstone', 2152, 2948), (1, 'mossmere', 'Mossmere Stone', 1606, 3004), (2, 'harrowmark', 'Harrowmark', 2550, 3000), (3, 'wardenfall', 'The Wardenfall', 1462, 3182), (4, 'sunreach', 'Sunreach Stone', 2768, 3175) $fn$;
 create or replace function landing_ring() returns table (k int, dx int, dy int) language sql immutable as $fn$ values (0, 0, 2), (1, -2, 0), (2, 2, 0), (3, 0, -2), (4, -1, 2), (5, 1, 2), (6, -2, 1), (7, 2, 1), (8, -2, -1), (9, 2, -1), (10, -1, -2), (11, 1, -2), (12, -2, 2), (13, 2, 2), (14, -2, -2), (15, 2, -2), (16, 0, 3), (17, -3, 0), (18, 3, 0), (19, 0, -3), (20, -1, 3), (21, 1, 3), (22, -3, 1), (23, 3, 1), (24, -3, -1), (25, 3, -1), (26, -1, -3), (27, 1, -3), (28, -2, 3), (29, 2, 3), (30, -3, 2), (31, 3, 2), (32, -3, -2), (33, 3, -2), (34, -2, -3), (35, 2, -3), (36, -3, 3), (37, 3, 3), (38, -3, -3), (39, 3, -3), (40, 0, 4), (41, -4, 0), (42, 4, 0), (43, 0, -4), (44, -1, 4), (45, 1, 4), (46, -4, 1), (47, 4, 1), (48, -4, -1), (49, 4, -1), (50, -1, -4), (51, 1, -4), (52, -2, 4), (53, 2, 4), (54, -4, 2), (55, 4, 2), (56, -4, -2), (57, 4, -2), (58, -2, -4), (59, 2, -4), (60, -3, 4), (61, 3, 4), (62, -4, 3), (63, 4, 3), (64, -4, -3), (65, 4, -3), (66, -3, -4), (67, 3, -4), (68, -4, 4), (69, 4, 4), (70, -4, -4), (71, 4, -4) $fn$;
 create or replace function safe_ring_on(p_size int, p_sx int, p_sy int, p_x double precision, p_y double precision) returns boolean language sql immutable as $fn$ select (p_x - (p_sx + 0.5)) ^ 2 + (p_y - (p_sy + 0.5)) ^ 2 <= 3600 or (p_size >= 1024 and ((p_x - (least(p_size - 2, greatest(1, floor(2152.5::double precision * p_size / 4096)::int)) + 0.5)) ^ 2 + (p_y - (least(p_size - 2, greatest(1, floor(2948.5::double precision * p_size / 4096)::int)) + 0.5)) ^ 2 <= 3600 or (p_x - (least(p_size - 2, greatest(1, floor(1606.5::double precision * p_size / 4096)::int)) + 0.5)) ^ 2 + (p_y - (least(p_size - 2, greatest(1, floor(3004.5::double precision * p_size / 4096)::int)) + 0.5)) ^ 2 <= 3600 or (p_x - (least(p_size - 2, greatest(1, floor(2550.5::double precision * p_size / 4096)::int)) + 0.5)) ^ 2 + (p_y - (least(p_size - 2, greatest(1, floor(3000.5::double precision * p_size / 4096)::int)) + 0.5)) ^ 2 <= 3600 or (p_x - (least(p_size - 2, greatest(1, floor(1462.5::double precision * p_size / 4096)::int)) + 0.5)) ^ 2 + (p_y - (least(p_size - 2, greatest(1, floor(3182.5::double precision * p_size / 4096)::int)) + 0.5)) ^ 2 <= 3600 or (p_x - (least(p_size - 2, greatest(1, floor(2768.5::double precision * p_size / 4096)::int)) + 0.5)) ^ 2 + (p_y - (least(p_size - 2, greatest(1, floor(3175.5::double precision * p_size / 4096)::int)) + 0.5)) ^ 2 <= 3600)) $fn$;

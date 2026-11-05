@@ -2,6 +2,7 @@ import type { ActionDef, Target } from './actions';
 import { REMOVED_KINDS, SPECIES, type ButcherPart } from './creatures';
 import { productQlRange, type Game } from './game';
 import { HOARD_METALS, itemDef, itemName, type Item } from './items';
+import { WINTER_FUR, WINTER_FUR_PART, winterFurSays, winterNow } from './winter';
 
 /**
  * Butchering a corpse. The Butchering skill decides how much of a carcass is
@@ -73,7 +74,10 @@ export function butcherPreview(g: Game, item: Item): string {
   if (!def) return '';
   const knife = g.inventory.tool('butchering_knife');
   const share = butcherShare(g, knife ? knife.ql : null);
-  const parts = BUTCHER_PARTS.filter(([p]) => (def.butcher[p] ?? 0) > 0).map(([, id]) => itemDef(id).name.toLowerCase());
+  // In winter the fur with its bonus (`WINTER_FUR`).
+  const winter = winterNow(g.wallNow());
+  const parts = BUTCHER_PARTS.filter(([p]) => (def.butcher[p] ?? 0) > 0)
+    .map(([p, id]) => (winter && p === WINTER_FUR_PART ? winterFurSays() : itemDef(id).name.toLowerCase()));
   const [lo, hi] = productQlRange(g.skills.get('butchering'), knife ? knife.ql : 0);
   const ql = Math.round(lo) === Math.round(hi) ? `QL ${Math.round(hi)}` : `QL ${Math.round(lo)}–${Math.round(hi)}`;
   return `about ${Math.round(share * 100)}% of its ${parts.join(', ')}, ${ql}`;
@@ -117,8 +121,10 @@ export const BUTCHER_ACTIONS: ActionDef[] = [
           g.logMsg(`In its belly: ${lumps.length} lumps. ${[...new Set(lumps)].join(', ')}.`, 'event');
         }
       }
+      const winter = winterNow(g.wallNow());
       for (const [part, id] of BUTCHER_PARTS) {
-        const base = def.butcher[part] ?? 0;
+        // More fur in winter (`WINTER_FUR`), as the island's `winter_fur`.
+        const base = (def.butcher[part] ?? 0) * (winter && part === WINTER_FUR_PART ? WINTER_FUR : 1);
         if (!base) continue;
         let count = Math.floor(base * share);
         // The remainder is a chance at one more, so a poor job still gives something.

@@ -146,6 +146,8 @@ export const HUSHED: ReadonlySet<string> = new Set([
   'tame', 'take_catch', 'pair_creature', 'take_honey',
   // Reading a trail, which is done by standing still and looking (`tracking.ts`).
   'track',
+  // And reading the ground for a critter cache, the same way (`winter.ts`).
+  'search_caches',
   // Ceremony. A stake going in has already made the noise of a stake going in.
   'found_settlement', 'upgrade_deed',
   // A lantern post's wick pinched out between finger and thumb (`lamps.ts`).
@@ -158,6 +160,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   // Ground.
   dig: 'earth', dredge: 'earth', flatten: 'earth', pack: 'earth', cultivate: 'earth',
   drop_dirt: 'earth', drop_dirt_here: 'earth', change_tile: 'earth', dig_stump: 'earth',
+  // A critter cache dug out of the winter ground by hand (`winter.ts`).
+  dig_cache: 'earth',
   take_ashes_oven: 'earth', take_ashes_fire: 'earth', take_ashes_smelter: 'earth', take_ashes_kiln: 'earth',
   // Stone, whether it is being cut or merely shifted.
   pave_cobble: 'stone', pave_slabs: 'stone', remove_paving: 'stone',

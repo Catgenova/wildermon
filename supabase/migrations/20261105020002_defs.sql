@@ -1007,6 +1007,8 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('choose_path', 'Choose a path', 'choosing', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('use_ability', 'Use path ability', 'using it', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('track', 'Track', 'tracking', 'tracking', null, false, null, 0.03, 1.3333333333333333, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('search_caches', 'Search for caches', 'searching for caches', 'tracking', null, false, null, 0.03, 1.3333333333333333, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('dig_cache', 'Dig up cache', 'digging up a cache', 'tracking', null, false, null, 0.05, 2.6666666666666665, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('investigate', 'Investigate', 'investigating the ground', 'archaeology', 'trowel', false, null, 0.05, 10, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('restore_relic', 'Restore', 'restoring', 'restoration', 'brush', false, null, 0.07, 20, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('study_book', 'Study', 'studying', null, null, false, null, 0.02, 30, null, false, false);
@@ -3283,13 +3285,13 @@ update item_def set description = 'Counts as 5 pewter lumps at the smelter, the 
 update item_def set description = 'Counts as 5 electrum lumps at the smelter, the anvil, the bench and the file. Weight: 50% of theirs, 2500 grams. What an action leaves of it comes back as lumps.' where id = 'electrum_ingot';
 update item_def set description = 'Counts as 5 steel lumps at the smelter, the anvil, the bench and the file. Weight: 50% of theirs, 2500 grams. What an action leaves of it comes back as lumps.' where id = 'steel_ingot';
 update item_def set description = 'Collect motes on an earth mote swirl, found over land on the Crescent. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80.' where id = 'earth_mote';
-update item_def set description = 'Collect motes on a wind mote swirl, found over land on Northwest Steppe and West Skerry; in autumn, 25% of the swirls on land on every island. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80.' where id = 'wind_mote';
-update item_def set description = 'Collect motes on a fire mote swirl, found over land on Volcano Isle; in summer, 25% of the swirls on land on every island. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80.' where id = 'fire_mote';
-update item_def set description = 'Collect motes on an ice mote swirl, found over land on Northeast Tundra; in winter, 25% of the swirls on land on every island. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80.' where id = 'ice_mote';
+update item_def set description = 'Collect motes on a wind mote swirl, found over land on Northwest Steppe and West Skerry. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80.' where id = 'wind_mote';
+update item_def set description = 'Collect motes on a fire mote swirl, found over land on Volcano Isle. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80.' where id = 'fire_mote';
+update item_def set description = 'Collect motes on an ice mote swirl, found over land on Northeast Tundra. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80.' where id = 'ice_mote';
 update item_def set description = 'Collect motes on a dark mote swirl, found over land anywhere: 1% of the swirls on land. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80.' where id = 'dark_mote';
 update item_def set description = 'Collect motes on a light mote swirl, found over land anywhere: 1% of the swirls on land. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80. Rune gate: 2 over its stone, one per pillar.' where id = 'light_mote';
 update item_def set description = 'Collect motes on a water mote swirl, found over water, on every island. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80. Spent on: Dig a spring 1, Dig a pool 1, Set a water mote (aqueduct) 1, Fish pond 1, Well 1, Tiered fountain 1, Brewer''s spring 1.' where id = 'water_mote';
-update item_def set description = 'Collect motes on a life mote swirl, found over land on Middle Isle and East Isle; in spring, 25% of the swirls on land on every island. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80. Healer''s poultice (Dress a wound with a life mote, Treat its wounds with a life mote): 1 per go that takes; health healed ×2; on a person, next worst uninfected wound closed. Slipped dressing, bad treatment: mote kept.' where id = 'life_mote';
+update item_def set description = 'Collect motes on a life mote swirl, found over land on Middle Isle and East Isle. Per swirl: 1 at Elementalism under 20, one more per 20 points, 5 from 80. Healer''s poultice (Dress a wound with a life mote, Treat its wounds with a life mote): 1 per go that takes; health healed ×2; on a person, next worst uninfected wound closed. Slipped dressing, bad treatment: mote kept.' where id = 'life_mote';
 update item_def set description = 'Travel to a Runestone: to a free tile beside any Runestone within reach of you. Reach: 300 tiles at QL 1, 5000 at QL 100, 47.5 tiles more per QL between. Wait after a journey: 1 day at QL 1, 1 hour at QL 100, 13.9 minutes less per QL between. The wait is yours, whichever Telestone you carry. Not used up.' where id = 'telestone';
 update item_def set description = 'Enchant (on the scroll): into melee weapons (not bows or thrown weapons) in your pack. Chance: the average of your enchanting and the scroll''s QL, as a percent, 5% to 95%. Enchantment QL: about that average, at most the scroll''s QL and the QL of what it goes into. Fail: the thing takes 30 damage, and 5% of the time is destroyed. Scroll used up either way. One enchantment per thing. At QL 100: Burn on 25% of hits. Burn: 1% of max health per second for 8 s, never the last of it. Linear below. Triggers on a landed ordinary melee swing only; not class blows, shots or throws. Failed writing: motes lost; the papyrus takes 25 damage.' where id = 'emberbrand_scroll';
 update item_def set description = 'Enchant (on the scroll): into melee weapons (not bows or thrown weapons) in your pack. Chance: the average of your enchanting and the scroll''s QL, as a percent, 5% to 95%. Enchantment QL: about that average, at most the scroll''s QL and the QL of what it goes into. Fail: the thing takes 30 damage, and 5% of the time is destroyed. Scroll used up either way. One enchantment per thing. At QL 100: Bleed on 25% of hits. Bleed: 15% of the blow per second for 6 s, never the last of it (as a knife). Linear below. Triggers on a landed ordinary melee swing only; not class blows, shots or throws. Failed writing: motes lost; the papyrus takes 25 damage.' where id = 'razoredge_scroll';
@@ -4975,8 +4977,35 @@ insert into tier_odds values ('common', 0, 0.86);
 insert into tier_odds values ('rare', 1, 0.11);
 insert into tier_odds values ('supreme', 2, 0.025);
 insert into tier_odds values ('fantastic', 3, 0.005);
-create or replace function swirl_season() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
-create or replace function season_element(p_season text) returns text language sql immutable as $fn$ select case p_season when 'spring' then 'life' when 'summer' then 'fire' when 'autumn' then 'wind' when 'winter' then 'ice' end $fn$;
+create or replace function winter_season() returns text language sql immutable as $fn$ select 'winter' $fn$;
+create or replace function winter_fur() returns double precision language sql immutable as $fn$ select 1.5::double precision $fn$;
+create or replace function winter_fur_part() returns text language sql immutable as $fn$ select 'fur' $fn$;
+create or replace function cache_search_action() returns text language sql immutable as $fn$ select 'search_caches' $fn$;
+create or replace function cache_dig_action() returns text language sql immutable as $fn$ select 'dig_cache' $fn$;
+create or replace function cache_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in ('search_caches', 'dig_cache') $fn$;
+create or replace function caches_for(p_size int) returns int language sql immutable as $fn$ select greatest(1, floor(p_size::double precision * p_size / 16384))::int $fn$;
+create or replace function cache_deed_gap() returns int language sql immutable as $fn$ select 20 $fn$;
+create or replace function cache_ground(p_tile int) returns boolean language sql immutable as $fn$ select p_tile in (0, 5, 6, 11, 12, 7) $fn$;
+create or replace function cache_spot_at(p_level int) returns int language sql immutable as $fn$ select 3 + floor(p_level::double precision / 20)::int $fn$;
+create or replace function cache_draws(p_level int) returns int language sql immutable as $fn$ select 2 + floor(p_level::double precision / 30)::int $fn$;
+create or replace function cache_loot() returns table (ord int, item text, n int, weight int, at int) language sql immutable as $fn$ values (0, 'ice_mote', 3, 30, 0), (1, 'life_mote', 2, 20, 0), (2, 'ancient_seed_jar', 1, 15, 0), (3, 'mithril_lump', 2, 10, 20), (4, 'tarnished_bauble', 1, 8, 30), (5, 'glimmersteel_lump', 2, 7, 40), (6, 'adamantine_lump', 2, 6, 60), (7, 'seryll_lump', 2, 4, 80) $fn$;
+create or replace function cache_pick(p_level int, p_roll double precision) returns int language plpgsql immutable as $fn$
+declare l record; v_r double precision; v_last int;
+begin
+  v_r := p_roll * (select sum(c.weight) from cache_loot() c where c.at <= p_level);
+  for l in select * from cache_loot() c where c.at <= p_level order by c.ord loop
+    if v_r < l.weight then return l.ord; end if;
+    v_r := v_r - l.weight;
+    v_last := l.ord;
+  end loop;
+  return v_last;
+end $fn$;
+create or replace function cache_said(p_key text) returns text language sql immutable as $fn$ select case p_key when 'season' then 'Caches: winter only.' when 'ground' then 'Caches lie in the ground.' when 'none' then 'No cache here.' end $fn$;
+create or replace function cache_arrow() returns text language sql immutable as $fn$ select 'Cache' $fn$;
+create or replace function cache_search_said(p_range int, p_reading jsonb, p_x int, p_y int) returns text language sql immutable as $fn$
+  select case when p_x is not null then 'Cache: at ' || p_x || ', ' || p_y || '.'
+              when p_reading is null then 'No cache within ' || p_range || ' tiles.'
+              else 'Cache: ' || (p_reading->>'way') || ', ' || track_dist_says(p_reading) || '.' end $fn$;
 insert into wall_type_def values ('solid', 'Solid', 1, false, null, false, false, false);
 update wall_type_def set trellis = true where id = 'solid';
 insert into wall_type_def values ('window', 'Window', 0.75, false, null, false, false, false);

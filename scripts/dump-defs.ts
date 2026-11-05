@@ -169,6 +169,10 @@ import {
   TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
 } from '../src/game/tracking';
 import {
+  CACHE_ARROW, CACHE_DEED_GAP, CACHE_DIG, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_GROUND, CACHE_LOOT, CACHE_SAID, CACHE_SEARCH,
+  CACHE_SPOT_BASE, CACHE_SPOT_EVERY, WINTER, WINTER_FUR, WINTER_FUR_PART,
+} from '../src/game/winter';
+import {
   LANDING, LANDING_STAND, RUNESTONES, SAFE_RING, START_RING, STONE_CHART, STONE_GUARDED, STONE_HALF, STONE_LEAST, TELE_FAR, TELE_FAST, TELE_GRACE, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW,
   TELESTONE, TELESTONE_SAID, TRAVEL,
 } from '../src/game/runestones';
@@ -2219,6 +2223,43 @@ out.push(`create or replace function track_stage(p_band int) returns boolean lan
 out.push(`create or replace function track_detail(p_band int) returns boolean language sql immutable as $fn$ select case p_band ${TRACK_BANDS.map((b, i) => `when ${i} then ${b.detail} `).join('')}end $fn$;`);
 out.push(`create or replace function track_far() returns int language sql immutable as $fn$ select ${TRACK_FAR} $fn$;`);
 out.push(`create or replace function track_point(p_points int, p_i int) returns text language sql immutable as $fn$ select (array[${TRACK_POINTS.map(q).join(', ')}]::text[])[p_i * ${TRACK_POINTS.length} / p_points + 1] $fn$;`);
+/*
+ * Winter (`winter.ts`): the season, the fur a carcass gives more of in it and how many times as much, and critter
+ * caches -- the two jobs, how many an island is laid, how far from a settlement, the ground they lie in, how near a
+ * search names the tile, the draws a dug one gives, the loot table and its pick, the refusals, the arrow's name and
+ * what a search says. `perform_cache`, `cache_refusal`, `caches_owed` and the butcher branch in the migration read these.
+ */
+out.push(`create or replace function winter_season() returns text language sql immutable as $fn$ select ${q(WINTER)} $fn$;`);
+out.push(`create or replace function winter_fur() returns double precision language sql immutable as $fn$ select ${q(WINTER_FUR)}::double precision $fn$;`);
+out.push(`create or replace function winter_fur_part() returns text language sql immutable as $fn$ select ${q(WINTER_FUR_PART)} $fn$;`);
+out.push(`create or replace function cache_search_action() returns text language sql immutable as $fn$ select ${q(CACHE_SEARCH)} $fn$;`);
+out.push(`create or replace function cache_dig_action() returns text language sql immutable as $fn$ select ${q(CACHE_DIG)} $fn$;`);
+out.push(`create or replace function cache_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in (${q(CACHE_SEARCH)}, ${q(CACHE_DIG)}) $fn$;`);
+out.push(`create or replace function caches_for(p_size int) returns int language sql immutable as $fn$ select greatest(1, floor(p_size::double precision * p_size / ${CACHE_EVERY * CACHE_EVERY}))::int $fn$;`);
+out.push(`create or replace function cache_deed_gap() returns int language sql immutable as $fn$ select ${CACHE_DEED_GAP} $fn$;`);
+out.push(`create or replace function cache_ground(p_tile int) returns boolean language sql immutable as $fn$ select p_tile in (${CACHE_GROUND.join(', ')}) $fn$;`);
+out.push(`create or replace function cache_spot_at(p_level int) returns int language sql immutable as $fn$ select ${CACHE_SPOT_BASE} + floor(p_level::double precision / ${CACHE_SPOT_EVERY})::int $fn$;`);
+out.push(`create or replace function cache_draws(p_level int) returns int language sql immutable as $fn$ select ${CACHE_DRAWS} + floor(p_level::double precision / ${CACHE_DRAW_EVERY})::int $fn$;`);
+out.push(`create or replace function cache_loot() returns table (ord int, item text, n int, weight int, at int) language sql immutable as $fn$ values ${CACHE_LOOT.map((l, i) => `(${i}, ${q(l.item)}, ${l.count}, ${l.weight}, ${l.at})`).join(', ')} $fn$;`);
+// The line a draw lands on (its `ord`), for a roll in [0, 1): by weight, in the table's order (`cachePick`).
+out.push(`create or replace function cache_pick(p_level int, p_roll double precision) returns int language plpgsql immutable as $fn$
+declare l record; v_r double precision; v_last int;
+begin
+  v_r := p_roll * (select sum(c.weight) from cache_loot() c where c.at <= p_level);
+  for l in select * from cache_loot() c where c.at <= p_level order by c.ord loop
+    if v_r < l.weight then return l.ord; end if;
+    v_r := v_r - l.weight;
+    v_last := l.ord;
+  end loop;
+  return v_last;
+end $fn$;`);
+out.push(`create or replace function cache_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${Object.entries(CACHE_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
+out.push(`create or replace function cache_arrow() returns text language sql immutable as $fn$ select ${q(CACHE_ARROW)} $fn$;`);
+// What a search says (`cacheSearchSaid`): the tile, none within reach, or the way and the distance as a track reads them.
+out.push(`create or replace function cache_search_said(p_range int, p_reading jsonb, p_x int, p_y int) returns text language sql immutable as $fn$
+  select case when p_x is not null then 'Cache: at ' || p_x || ', ' || p_y || '.'
+              when p_reading is null then 'No cache within ' || p_range || ' tiles.'
+              else 'Cache: ' || (p_reading->>'way') || ', ' || track_dist_says(p_reading) || '.' end $fn$;`);
 /*
  * The Runestones and the Telestone (`runestones.ts`): where each stone stands
  * on the chart's own island, how far a stone reaches from its centre, the

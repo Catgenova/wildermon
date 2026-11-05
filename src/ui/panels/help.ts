@@ -124,6 +124,10 @@ import { billWords, countOf, DEED_DECAY, DRINK_LITRES, foodFill, HOARD_METALS, i
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { entryTameLevel, guideEntries, guidePages, keepable } from '../../game/guide';
 import { TRACK_BANDS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
+import {
+  CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_GROUND, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays,
+  WINTER_FUR, WINTER_FUR_PART,
+} from '../../game/winter';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { MOBS_RANGE } from '../../game/keep';
 import { KILN_CAPACITY } from '../../game/kiln';
@@ -1807,6 +1811,7 @@ export function helpText(): string {
       <li>Quality (QL) with a knife of QL <i>n</i>: your Butchering <i>n</i>% of the time; otherwise knife QL × ${QL_LOW.toFixed(1)} to ${(QL_LOW + QL_SPAN).toFixed(1)}, capped at your Butchering.
       Bare hands: Butchering × ${QL_LOW.toFixed(1)} to ${(QL_LOW + QL_SPAN).toFixed(1)}, + ${QL_BARE}. The menu's <b>Butcher</b> line gives the range for your knife.</li>
       <li>Hides come off <b>raw</b>; useless until treated with lye.</li>
+      <li>${itemDef(WINTER_FUR_PART).name} in winter: ×${WINTER_FUR} a carcass.</li>
     </ul>
     <h3>Looking inside a building</h3>
     <ul>
@@ -2568,6 +2573,14 @@ export function helpText(): string {
       <li>Detail by Tracking: ${trackBandsSays().join('; ')}. North is up the map.</li>
       <li>An on-screen arrow points the read direction from where you stood for ${TRACK_SHOW} seconds.</li>
       <li>Trains Tracking: an action's worth when it finds one; ${percent(TRY_LEARN)} of one when it finds no sign.</li>
+    </ul>
+    <h4>Critter caches (winter)</h4>
+    <ul>
+      <li>Laid at the first dawn of winter: a cache per ${CACHE_EVERY}×${CACHE_EVERY} tiles of the island, on ${listed(CACHE_GROUND.map((t) => TILE_DEFS[t as TileType].name.toLowerCase()))}, not within ${CACHE_DEED_GAP} tiles of a settlement. Hidden. All gone when winter ends.</li>
+      <li><b>Search for caches</b> (tile menu, winter): nearest cache within Track's reach, way and distance as Track reads them; an on-screen arrow.
+      Within ${CACHE_SPOT_BASE} tiles, a tile further every ${CACHE_SPOT_EVERY} Tracking levels: its tile, x and y. Trains Tracking as Track does.</li>
+      <li><b>Dig up cache</b> (tile menu, winter, on that tile): the cache, gone for everybody; first to finish takes it. ${CACHE_DRAWS} draws, a draw more every ${CACHE_DRAW_EVERY} Tracking levels, at one QL of your Tracking. A full action of Tracking.</li>
+      <li>A draw, by Tracking (a line opens at its level): ${CACHE_LOOT.map((l) => `${lootSays(l)} from ${l.at}`).join(', ')}. Odds at ${SKILL_TOP}: ${cacheOddsSays(SKILL_TOP)}. Tarnished bauble: tier and damage as a trowel's find.</li>
     </ul>
     <h4>Sighted</h4>
     <ul>
