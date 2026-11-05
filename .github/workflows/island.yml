@@ -3099,6 +3099,14 @@ jobs:
             --outfile=node_modules/.cache/flightfoot.mjs --log-level=error
           node node_modules/.cache/flightfoot.mjs
 
+      - name: The help's search puts the sections with it in their heading first
+        run: |
+          # "aqueduct" finds the Aqueducts section first, then the sections that
+          # only mention it, by how often; nothing for an empty search.
+          npx esbuild supabase/test/helpsearch.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/helpsearch.mjs --log-level=error
+          node node_modules/.cache/helpsearch.mjs
+
       - name: The Springlet, slow on land and a hare's pace in water, found only in deep water
         if: matrix.shard == 3
         run: |

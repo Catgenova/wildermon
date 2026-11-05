@@ -95,6 +95,15 @@ begin
   update creature set post = v_post where world_id = w and id = 9901;
   select * into c from creature where world_id = w and id = 9901;
   insert into said select 'POST', coalesce((select s.kind || ':' || s.id from worker_store(w, c, 'copper_ore', 1) s limit 1), 'nowhere');
+
+  -- Working around Bo beside Ann's bin and crate (\`around_stores\`): neither, but his own wagon there.
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
+    values (w, 'furniture', 'wagon', 25, 22, 0, 0, 25.5, 22.5, 50, '${BO}') returning id into v_post;
+  insert into said values ('WAGON', 'furniture:' || v_post);
+  insert into said select 'AROUND_BO', coalesce(string_agg(s.kind || ':' || s.id, ',' order by s.kind, s.id), 'none')
+    from around_stores(w, '${BO}', 23, 21, 6) s;
+  insert into said select 'AROUND_ANN', coalesce(string_agg(s.kind || ':' || s.id, ',' order by s.kind, s.id), 'none')
+    from around_stores(w, '${ANN}', 23, 21, 6) s;
 end $t$;
 select k || '=' || v from said;
 rollback;`);
@@ -106,6 +115,11 @@ check('island: with his own bin, to it rather than Ann\'s nearer one', at('HOME'
 check('island: Ann\'s own worker still fills Ann\'s bin', at('ANNS') === at('ANN_BIN'), at('ANNS'));
 check('island: put down on Ann\'s bin\'s tile, none goes into it: into his own', at('PUT_ANN') === '0' && at('PUT_BO') === '3', `Ann's ${at('PUT_ANN')}, his ${at('PUT_BO')}`);
 check('island: off a post beside Ann\'s crate, not into the crate', at('POST') !== 'crate:77', at('POST'));
+// Reported: "diglett is running to Cats place like Digimon was": a worker round its keeper filled the neighbour's bins.
+check('island: working around Bo beside Ann\'s bin and crate, only his own wagon is his storage',
+  at('AROUND_BO') === at('WAGON'), `${at('AROUND_BO')} (his wagon ${at('WAGON')})`);
+check('island: working around Ann there, her bin and crate are hers',
+  at('AROUND_ANN').split(',').includes(at('ANN_BIN')) && at('AROUND_ANN').split(',').includes('crate:77'), at('AROUND_ANN'));
 
 /* ---- in the browser: Bo's game -------------------------------------------------------------------------------- */
 
@@ -131,6 +145,9 @@ check('browser: with his own bin, to it rather than Ann\'s nearer one', where() 
 const ann = { id: 77, kind: 'plank', x: 22, y: 21, sx: 1, sy: 1, items: [], mine: false } as unknown as PlacedCrate;
 g.crates.set(77, ann);
 check('browser: Ann\'s crate is not his worker\'s to fill', g.deedStores().every((s) => !(s.x === 22 && s.y === 21) || !s.workerMay), 'crate 77');
+const round = g.aroundStores({ x: 23, y: 21, radius: 6 } as Parameters<typeof g.aroundStores>[0]);
+check('browser: working around Bo there, neither Ann\'s bin nor her crate', round.every((s) => !(s.x === 24 && s.y === 20) && !(s.x === 22 && s.y === 21)),
+  round.map((s) => `${s.x},${s.y}`).join(' ') || 'none');
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\na worker fills its keeper's storage — ${ok.length} of ${ok.length + bad.length}`);

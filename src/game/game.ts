@@ -9911,7 +9911,11 @@ export class Game {
     const within = ([cx, cy]: [number, number]): boolean => Math.max(Math.abs(cx - (site.x + 0.5)), Math.abs(cy - (site.y + 0.5))) <= site.radius;
     const out: DeedStore[] = [];
     for (const cr of this.crates.values()) {
-      if (within(crateCentre(cr)) && !crateShut(this, cr, ', nothing goes in')) out.push(this.crateStore(cr));
+      // Only its keeper's to fill (`workerMay`), as at a post: the island's `around_stores` by `worker_crate_ok`.
+      if (within(crateCentre(cr)) && !crateShut(this, cr, ', nothing goes in')) {
+        const store = this.crateStore(cr);
+        if (store.workerMay) out.push(store);
+      }
     }
     const held = new Set<number>();
     for (const f of [this.driving(), this.aboardShip()]) if (f) held.add(f.id);
@@ -9921,7 +9925,8 @@ export class Game {
       if (!held.has(f.id) && !within(furnitureCentre(f))) continue;
       if (def.stall || f.kind === 'mailbox' || def.hive || def.pond || holdsLiquid(f) || pieceShut(this, f)) continue;
       const store = this.furnitureStore(f);
-      if (store) out.push(store);
+      // What you pull, drive or are aboard; otherwise only your own to fill (`workerMay`, `worker_piece_ok`).
+      if (store && (held.has(f.id) || store.workerMay)) out.push(store);
     }
     return out;
   }
