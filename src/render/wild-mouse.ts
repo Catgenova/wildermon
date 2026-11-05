@@ -981,9 +981,9 @@ function musBuild(s: Mus, lod: number): Piece[] {
   if (s.robe) {
     pieces.push({ key: 'belt', mesh: beltOf(s), bone: 'trunk', bias: 0.03, after: ['hips', 'apron', 'torso'], hide: belly });
     pieces.push({ key: 'cape', mesh: capeOf(s, n), bone: 'chest', bias: 0.02, after: ['torso', 'hips', 'apron', 'belt', ...legKeys], lines: false, hide: trunk });
-    pieces.push({ key: 'scarf', mesh: scarfOf(s, n), bone: 'chest', bias: 0.04, after: ['torso', 'cape'], under: 'head', lines: false, hide: trunk });
+    pieces.push({ key: 'scarf', mesh: scarfOf(s, n), bone: 'chest', bias: 0.04, after: ['hips', 'torso', 'cape', 'neck'], lines: false, hide: trunk });
   }
-  if (s.collar.count) pieces.push({ key: 'collar', mesh: collarOf(s), bone: 'chest', bias: 0.03, after: ['torso'], under: 'head', lines: false, hide: trunk });
+  if (s.collar.count) pieces.push({ key: 'collar', mesh: collarOf(s), bone: 'chest', bias: 0.03, after: ['hips', 'torso', 'neck'], lines: false, hide: trunk });
   const over = s.robe ? ['scarf', 'cape'] : s.collar.count ? ['collar'] : [];
   pieces.push({ key: 'neck', mesh: tube([[0, 0, -0.1], [0, 0, s.neck.len + 0.05]], s.neck.w, s.neck.w * 0.9, n, 'coat'), bone: 'neck', bias: 0, under: 'head' });
   pieces.push({ key: 'head', mesh: headOf(s, n, k), bone: 'head', bias: 0.2, hide });
