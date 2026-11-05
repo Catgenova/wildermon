@@ -1,8 +1,8 @@
 /**
  * Renders tools/orc/sheet.ts to a PNG at two pixels to the point.
  *
- *   node tools/orc/shot.mjs out.png A         # proposal A's sheet (or B, C, or orc for the orc on the island)
- *   node tools/orc/shot.mjs out.png close:A   # proposal A close up
+ *   node tools/orc/shot.mjs out.png A         # the Runebrand Orc's sheet (B the Ironshield, C the War-chanter)
+ *   node tools/orc/shot.mjs out.png close:A   # the Runebrand Orc close up
  *   node tools/orc/shot.mjs out.png lineup    # every orc beside a person, the goblin, the ogre and three wildermon
  *   node tools/orc/shot.mjs - bench           # each orc's drawing cost, printed
  *
@@ -19,7 +19,7 @@ const js = join(tmpdir(), 'orc-sheet.js');
 execFileSync('npx', ['esbuild', 'tools/orc/sheet.ts', '--bundle', '--format=iife', `--outfile=${js}`, '--log-level=warning'], { stdio: 'inherit' });
 
 const turns = [0, 1, 2, 3, 4, 5, 6, 7];
-const NAMES = { A: 'A: Runebrand brute', B: 'B: Ironshield veteran', C: 'C: War-chanter', orc: 'The orc on the island now' };
+const NAMES = { A: 'A: Runebrand Orc', B: 'B: Ironshield Orc', C: 'C: War-chanter Orc' };
 const game = (who, extra = {}) => ({ who, mode: 'game', zoom: 1, w: 165, h: 300, ...extra });
 const close = (who, extra = {}) => ({ who, mode: 'close', k: 27, w: 300, h: 430, ...extra });
 
@@ -43,11 +43,11 @@ function closeRows(who) {
 function lineup() {
   const row = (zoom, night, list) => [{ mode: 'game', zoom, night, w: 150 * zoom * list.length, h: 370 * zoom, label: `${list.map((b) => b.who).join(', ')} at zoom ${zoom}${night ? ', by night' : ''}`,
     lineup: list.map((b, i) => ({ ...b, dx: (i - (list.length - 1) / 2) * 146 * zoom })) }];
-  const main = ['person', 'goblin', 'orc', 'A', 'B', 'C', 'ogre'].map((who) => ({ who, facing: 1 }));
+  const main = ['person', 'goblin', 'A', 'B', 'C', 'ogre'].map((who) => ({ who, facing: 1 }));
   const kin = ['cobbe@2', 'A', 'whispet@2', 'B', 'relka@2', 'C', 'sparra@2'].map((who) => ({ who, facing: 1 }));
   const turned = ['A', 'B', 'C'].flatMap((who) => [{ who, facing: 7 }, { who, facing: 4 }]);
   return [
-    { title: 'Lineup at the island zoom: a person, the goblin, the orc now, A, B, C, the ogre', rows: [row(1, false, main), row(1, true, main)] },
+    { title: 'Lineup at the island zoom: a person, the goblin, the Runebrand, Ironshield and War-chanter Orcs, the ogre', rows: [row(1, false, main), row(1, true, main)] },
     { title: 'Beside three revamped wildermon (Bastiondrake, Hallowmire, Aureliax) and the Dummititan', rows: [row(1, false, kin)] },
     { title: 'Zoomed out (0.5), day and night', rows: [row(0.5, false, main), row(0.5, true, main)] },
     { title: 'Turned away: A, B, C at turns 7 and 4', rows: [row(1, false, turned)] },
@@ -55,7 +55,7 @@ function lineup() {
 }
 
 let spec;
-if (plan === 'bench') spec = { sections: [], bench: { who: (process.argv[4] ?? 'orc,A,B,C').split(','), n: 80, frames: 30 } };
+if (plan === 'bench') spec = { sections: [], bench: { who: (process.argv[4] ?? 'A,B,C').split(','), n: 80, frames: 30 } };
 else if (plan === 'lineup') spec = { sections: lineup() };
 // Chosen moments close up (the list inline, or `@file`): `frames '<title>' '[{"who":"A","pose":"run-strike:0.68","facing":2,"t":0}, ...]'`, eight to a row.
 // Every turn against a run of moments (strike, run, striking on the move, the bellow), small, for looking for what passes through

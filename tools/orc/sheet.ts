@@ -1,16 +1,16 @@
 /**
- * Sheets of the orc proposals (`src/render/wild-orc.ts`) beside the orc on
- * the island and the kinds round it, drawn by the game's own beast renderer:
+ * Sheets of the orc's three subspecies (`src/render/wild-orc.ts`) beside
+ * the kinds round them on the island, drawn by the game's own beast renderer:
  * at the island's zoom as the island puts them down (`drawBeast`, kept
  * pictures and all), close up (`drawKind`), by day and under the night's wash.
  *
- *   node tools/orc/shot.mjs out.png A       # one proposal's whole sheet
+ *   node tools/orc/shot.mjs out.png A       # the Runebrand Orc's whole sheet (B, C the others)
  *   node tools/orc/shot.mjs out.png lineup  # every orc beside the goblin, the ogre and three wildermon
- *   node tools/orc/shot.mjs out.png close:A # one proposal close up
+ *   node tools/orc/shot.mjs out.png close:A # the Runebrand Orc close up
  *   node tools/orc/shot.mjs - bench         # drawing cost of each orc, printed
  *
  * The page is given `window.SPEC`: sections, each a title and rows of cells. A
- * cell is one body (`who`: `A`, `B`, `C`, `orc`, a species, `species@stage`,
+ * cell is one body (`who`: `A`, `B`, `C`, a species, `species@stage`,
  * or `person`) or a `lineup` of them side by side, at the island's zoom
  * (`mode: 'game'`, at `zoom`) or close up (`mode: 'close'`, at `k` pixels a
  * unit), posed `stand` (at `t`), `walk:<u>`, `run:<u>` or `strike:<t>`.
@@ -20,7 +20,10 @@ import { SPECIES } from '../../src/game/creatures';
 import { beastFrame, beastsKept, forgetBeast, drawBeast, drawKind, kitOf, paletteFor, strideRate, type Anim, type Kind } from '../../src/render/beasts';
 import { drawFigure, mesh } from '../../src/render/figure';
 import { NIGHT_WASH } from '../../src/render/nightwash';
-import { ORC_PROPOSALS } from '../../src/render/wild-orc';
+import { ORCS } from '../../src/render/wild-orc';
+
+/** The three subspecies by letter, as the sheets call them, each in its own variant's colours. */
+const ORC_PROPOSALS: Record<string, (typeof ORCS)[number]> = { A: ORCS[0], B: ORCS[1], C: ORCS[2] };
 
 interface Body { who: string; facing?: number; pose?: string; t?: number; dx?: number; variant?: number }
 interface Cell extends Body { mode?: 'game' | 'close'; zoom?: number; k?: number; night?: boolean; w?: number; h?: number; label?: string; lineup?: Body[] }
@@ -30,12 +33,12 @@ interface Spec { sections: Section[]; bench?: { who: string[]; n: number; frames
 const W = window as unknown as { SPEC: Spec; DONE: boolean; BENCH: unknown };
 const spec = W.SPEC;
 
-/** The orcs' own variants, which the proposals are coloured from. */
+/** A species' variants' colours. */
 const colorsOf = (species: string, v = 0): [string, string] => SPECIES[species].variants[v] as [string, string];
 
 /** The kind a cell names, the name its pictures are kept under, and its colours. */
 function kindOf(who: string, v = 0): { kind: Kind; key: string; colors: [string, string] } | null {
-  if (who in ORC_PROPOSALS) return { kind: ORC_PROPOSALS[who], key: `orc${who}`, colors: colorsOf('orc', v) };
+  if (who in ORC_PROPOSALS) return { kind: ORC_PROPOSALS[who], key: `orc${who}`, colors: colorsOf('orc', 'ABC'.indexOf(who)) };
   const [species, st] = who.split('@');
   const m = wildermonKind(species, Number(st ?? 0));
   return m ? { kind: m.kind, key: m.key, colors: colorsOf(species, v) } : null;

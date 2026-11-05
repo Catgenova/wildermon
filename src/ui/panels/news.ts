@@ -4262,6 +4262,18 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 497,
+    day: '2026-11-05',
+    lines: () => {
+      const names = SPECIES.orc.subspecies!;
+      return [
+        `Added: ${names.length} orc subspecies, 1 in ${names.length} wild each: ${listed(names)}. Same health, blow and speed. Name in hover, target bar, log and Examine; Field guide: Subspecies.`,
+        `Changed: orc models (was: one grey orc with an axe): ${names[0]}, amber rune brands, spiked crest, cleaver; ${names[1]}, steel cuirass, horned helm, rune shield, bearded axe; ${names[2]}, hide cloak, glowing teal rune paint, skull staff.`,
+        `Added: orc strike drawn, ${ACT_SECS.strike} s: cleaver chop overhead; shield thrust and axe chop; staff stamp with a ring of light.`,
+      ];
+    },
+  },
+  {
     n: 494,
     day: '2026-11-05',
     lines: () => ["Fixed: Work around me: a worker fills and takes from only its keeper's storage, their settlement's, and what they pull, drive or are aboard. Was: any unlocked store in reach, a neighbour's too."],

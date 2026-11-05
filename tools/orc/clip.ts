@@ -1,5 +1,5 @@
 /**
- * Looks for the places an orc proposal (`src/render/wild-orc.ts`) passes through itself: an arm, a hand, a leg, a foot
+ * Looks for the places an orc subspecies (`src/render/wild-orc.ts`) passes through itself: an arm, a hand, a leg, a foot
  * or what it holds going into its trunk, hips, head or jaw, into the flaps hanging from its belt or its cloak, or into its
  * other limbs. Every frame of its loop standing (a twelfth of a second apart), of a walk and a run (a forty-eighth of a
  * stride apart) and of its strike standing and on the move (a fiftieth of it apart), in its own units.
@@ -13,7 +13,11 @@
  */
 import { add, scale, sub, type Anim, type Bones } from '../../src/render/beasts';
 import { place, type V3, type Xf } from '../../src/render/figure';
-import { ORC_PROPOSALS, ORC_SHAPES, type OrcShape } from '../../src/render/wild-orc';
+import { ORC_SHAPES, ORCS, type OrcShape } from '../../src/render/wild-orc';
+
+/** The three by letter, as the sheets call them: A the Runebrand, B the Ironshield, C the War-chanter Orc. */
+const ORC_PROPOSALS: Record<string, (typeof ORCS)[number]> = { A: ORCS[0], B: ORCS[1], C: ORCS[2] };
+const SHAPES: Record<string, OrcShape> = { A: ORC_SHAPES[0], B: ORC_SHAPES[1], C: ORC_SHAPES[2] };
 
 /** Deeper than this (a share of the kind's unit) is a clip. */
 const MIN = 0.05;
@@ -111,7 +115,7 @@ const joined = (a: string, b: string): boolean => {
 
 interface Hit { pair: string; depth: number; at: string }
 function check(who: string, a: Anim, label: string, out: Hit[]): void {
-  const kind = ORC_PROPOSALS[who], s = ORC_SHAPES[who];
+  const kind = ORC_PROPOSALS[who], s = SHAPES[who];
   const b = kind.bones(a);
   const caps = capsules(b, s);
   const hit = (pair: string, depth: number): void => { if (depth > MIN) out.push({ pair, depth, at: label }); };

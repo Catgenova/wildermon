@@ -10,7 +10,8 @@ import { MONSTER_GROWTH } from './monster-size';
  * The ones that stand up: the three bad things of the high ground -- the
  * goblin, the orc and the ogre -- each a chunky soft-edged body like every
  * other wildermon, and each with what it carries in its hand. (The tinka is
- * the mend line now, `./wild-mend`.)
+ * the mend line now, `./wild-mend`; the orc's three subspecies are drawn in
+ * `./wild-orc`.)
  */
 
 /** Arms and legs on the upright bones: an upper and a lower tube down each, a hand and a foot as the kind makes them. */
@@ -261,116 +262,6 @@ export const GOBLIN: Kind = {
   stride: 1.7,
   size: 2.0 * MONSTER_GROWTH,
   blinks: 3,
-};
-
-/* ---- the orc ----------------------------------------------------------------------- */
-
-/**
- * An orc: a head taller than you, grey, broad as a door at the shoulder and
- * narrow at the hip, tusked, with a knot of black hair, an iron plate on one
- * shoulder and an iron axe it has taken the trouble to sharpen.
- */
-const ORC_SPEC: BipedSpec = {
-  high: 1.5,
-  leg: { at: [0.46, 0, -0.1], len: [0.7, 0.7, 0.12], rest: [8, -16] },
-  chest: { at: [0, 0, 0.25], lean: 14 },
-  neck: { at: [0, 0.25, 1.75], len: 0.25, lean: 10 },
-  head: { pitch: -6 },
-  arm: { at: [1.25, 0.1, 1.45], len: [0.85, 0.8], rest: [8, 18, 22] },
-  swing: [26, 40],
-  waddle: 5,
-  armSwing: 18,
-};
-
-const ORC_HEAD = { c: [0, 0.18, 0.5] as V3, r: [0.78, 0.76, 0.74] as V3 };
-
-function orcBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 11), k = cut(lod, 5, 6);
-  // A chest wider than it is anything else, going up into the shoulders, and deep enough to be a barrel seen side on.
-  const chest = tube([[0, 0, -0.3], [0, 0.05, 0.3], [0, 0.14, 0.95], [0, 0.12, 1.5], [0, 0, 1.82]], [0.72, 0.95, 1.3, 1.45, 0.6], [0.7, 0.85, 0.98, 0.95, 0.5], n,
-    (ring, j) => (ring > 0 && ring < 4 && Math.abs(((j + 1) / n) * TAU - Math.PI * 0.5) < 0.9 ? 'mark' : 'coat'), { up: [0, 1, 0] });
-  const belt = merge(tube([[0, 0.02, -0.1], [0, 0.02, 0.08]], 0.8, 0.76, n, 'leatherDark', { up: [0, 1, 0] }), paint([disc([0, 0.78, 0], [0, 1, 0], 0.16, 0.13, 6, 'stone')]));
-  const kilt = tube([[0, 0, 0.0], [0, 0.04, -0.55]], [0.82, 0.92], [0.7, 0.8], n, 'leather', { up: [0, 1, 0] });
-  // The shoulder plate: a curved iron shell over the left shoulder.
-  const plate = merge(
-    orbAlong([-1.25, 0.1, 1.6], [-0.6, 0, 1], [0.55, 0.58, 0.28], n, 4, 'stone'),
-    orbAlong([-1.25, 0.1, 1.56], [-0.6, 0, 1], [0.42, 0.46, 0.26], n, 3, 'stoneDark'),
-  );
-  const H = ORC_HEAD;
-  const skull = orb(H.c, H.r, n + 1, k + 1, 'coat');
-  // Small eyes glowering under their lids and heavy brows, a flat broad nose, and a jaw jutting out in front in a darker skin with
-  // the tusks up out of its corners.
-  const eyeDir: V3 = [0.66, 0.8, 0.2];
-  const { lids, brows } = glower(H.c, H.r, eyeDir, 0.2, { tall: 0.9, drop: 0.45, slope: 0.35, brow: 0.09 });
-  const face = merge(
-    orbAlong(add(H.c, [0, 0.58, -0.42]), [0, 1, -0.25], [0.62, 0.44, 0.3], n, k, 'coatDark'),
-    ...[1, -1].map((s) => taper(curve(add(H.c, [s * 0.3, 0.92, -0.5]), add(H.c, [s * 0.4, 1.02, -0.34]), add(H.c, [s * 0.44, 0.98, -0.16]), 2), 0.09, 0.03, 5, 'tooth')),
-    orbAlong(add(H.c, [0, 0.8, 0.02]), [0, 1, 0.2], [0.2, 0.12, 0.13], 5, 3, 'coatDark'),
-  );
-  const look = (shut: boolean): Mesh => merge(eyes(H.c, H.r, eyeDir, 0.2, { tall: 0.9, shut, iris: 'bloom', pupil: 0.36, rim: 0 }), lids);
-  // Ears pointed and laid back, turned out so that they show their length seen side on.
-  const ear = (s: number): Mesh => tube(curve(add(H.c, [s * 0.66, 0, 0.1]), add(H.c, [s * 0.95, -0.35, 0.3]), add(H.c, [s * 1.08, -0.72, 0.52]), 3), [0.2, 0.18, 0.11, 0.01], 0.06, n, 'coat', { up: [s * 0.7, 0.7, 0.3] });
-  // A knot of black hair on the crown, tied with a ring.
-  const knot = merge(orb(add(H.c, [0, -0.25, 0.78]), [0.26, 0.26, 0.3], n, 4, 'hair'), tube([add(H.c, [0, -0.3, 0.98]), add(H.c, [0, -0.36, 1.08])], 0.14, 0.14, 6, 'crystal'), orbAlong(add(H.c, [0, -0.48, 1.22]), [0, -0.5, 1], [0.16, 0.16, 0.28], 5, 3, 'hair'));
-  // The axe: a long haft, a crescent of dark iron with its edge ground bright.
-  const axe = merge(
-    tube([[0, 0, -0.5], [0, 0, 1.75]], 0.07, 0.07, 5, 'bark'),
-    blade(curve([0, 0, 1.3], [0, 0.5, 1.45], [0, 0.82, 1.2], 3), [0.14, 0.46, 0.58, 0.5], [1, 0, 0], { mat: 'stone', rib: 'stoneDark', fold: 0.04, thick: 0.09 }),
-    blade(curve([0, 0.74, 0.7], [0, 1.0, 1.22], [0, 0.76, 1.74], 3), [0.05, 0.07, 0.07, 0.04], [1, 0, 0], { mat: 'spot', thick: 0.1 }),
-  );
-  const held = moved(axe, [0, 0.1, -0.1], 0, -75, 0);
-  const hide = [{ c: H.c, r: H.r }];
-  return [
-    { key: 'hips', mesh: orb([0, 0, 0], [0.8, 0.62, 0.55], n, k, 'leather'), bone: 'body', bias: 0 },
-    // The kilt a piece of its own, over the tops of both thighs from every side, so that the near one never comes out over it.
-    { key: 'kilt', mesh: kilt, bone: 'body', bias: 0.02, after: ['ll0', 'lr0', 'hips'] },
-    { key: 'body', mesh: merge(chest, belt), bone: 'chest', bias: 0.005, breathes: { c: [0, 0, 0.8], k: 0.05 } },
-    { key: 'plate', mesh: plate, bone: 'chest', bias: 0.06, after: ['body', 'arm0'] },
-    { key: 'head', mesh: merge(skull, face, look(false)), shut: merge(skull, face, look(true)), bone: 'head', bias: 0.2 },
-    { key: 'brows', mesh: brows, bone: 'head', bias: 0.21, after: 'head', hide },
-    { key: 'ear0', mesh: ear(-1), bone: 'head', bias: 0.21, after: 'head', hide },
-    { key: 'ear1', mesh: ear(1), bone: 'head', bias: 0.21, after: 'head', hide },
-    { key: 'knot', mesh: knot, bone: 'head', bias: 0.19, hide },
-    { key: 'axe', mesh: held, bone: 'hand1', bias: 0.05, after: ['hand1'], front: [1, 0.4, 0] },
-    ...limbs({ n, arm: [0.85, 0.8], armW: [0.34, 0.3], hand: hand(0.3, 4, 0.3, n), leg: [0.7, 0.7], legW: [0.36, 0.3], foot: pawFoot(0.3, 0.7, n, 'leatherDark'), legMat: 'coat' }),
-  ];
-}
-
-export const ORC: Kind = {
-  bones: (a) => bipedBones(ORC_SPEC, a, (p: BipedPose) => {
-    // The axe carried low in the right fist; at a run, up and ready.
-    p.arms[1] = [p.arms[1][0] * 0.5 + 12 + 50 * a.gait * a.go, p.arms[1][1] + 6, p.arms[1][2] + 20 + 40 * a.gait * a.go];
-    if (a.go > 0) return;
-    const t = a.t;
-    // Heavy breaths, the shoulders rolling; a slow look round to one side and then the other; and every ten seconds or so the axe
-    // hefted up in the fist and let down again.
-    const heave = cyc(t, 5);
-    p.chest[0] += 3 * heave;
-    p.arms[0][1] += 3 * heave;
-    // Its eyes are small and near the front of its head, so it looks about less far than most, and the look round takes over from
-    // the wandering look while it lasts rather than adding to it: turned away seen side on, its face is still there.
-    const round = beat(t, [2.5, 14.2], 3.4) - beat(t, [8.4, 19.8], 3.0);
-    const held = Math.abs(round);
-    p.head[1] = 0.6 * p.head[1] * (1 - held) + 14 * round;
-    p.neck[1] = 0.6 * p.neck[1] * (1 - held) + 4 * round;
-    const heft = beat(t, [5.2, 16.4], 1.5);
-    p.arms[1] = [p.arms[1][0] + 25 * heft, p.arms[1][1], p.arms[1][2] + 20 * heft];
-  }),
-  build: orcBuild,
-  palette: (coat, mark) => {
-    // Grey gone to slate: the variants' greys tinted blue rather than green, and lighter, since the green-grey they were is the
-    // colour of the grass it stands on.
-    const hide = mix(lighter(pastel(coat, 214), 0.15), [160, 178, 214], 0.2);
-    return coatPalette(coat, mark, {
-      coat: hide, coatLight: lighter(hide, 0.2), coatDark: darker(hide, 0.3), lid: darker(hide, 0.36),
-      leather: [150, 112, 92], leatherDark: [110, 82, 70], hair: [62, 56, 64], stone: [150, 158, 172], stoneDark: [112, 120, 138], spot: [236, 242, 250],
-      bark: [132, 98, 76], crystal: [214, 180, 110], tooth: [246, 238, 214], bloom: [240, 160, 70],
-    }, 214);
-  },
-  shadow: [1.6, 1.3],
-  stride: 1.5,
-  size: 4.1 * MONSTER_GROWTH,
-  blinks: 5,
 };
 
 /* ---- the ogre ---------------------------------------------------------------------- */

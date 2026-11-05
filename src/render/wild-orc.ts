@@ -9,21 +9,21 @@ import { MONSTER_GROWTH } from './monster-size';
 import { glower } from './wild-upright';
 
 /**
- * Three proposals for the orc in Runecut's look, each a kind that can be put
- * in the orc's place (`ORC_PROPOSALS`) with nothing else changed: the same
- * size (`Kind.size`), the bones every upright monster stands on
- * (`bipedBones`), two finenesses, the eight turns, its loop standing about,
- * and a strike of its own.
+ * The orc's three subspecies in Runecut's look, one for each of its variants
+ * (`SpeciesDef.subspecies`, `ORCS` in their order): every orc is one of them,
+ * by the variant the island puts it out in. All three are the same size
+ * (`Kind.size`), stand on the bones every upright monster stands on
+ * (`bipedBones`), and each has its loop standing about and a strike of its own.
  *
- * - A, the Runebrand brute: hunched, a hill of shoulder on bowed legs, its
+ * - The Runebrand Orc (A): hunched, a hill of shoulder on bowed legs, its
  *   head low and thrust out, a crest of spikes down its skull; runes branded
  *   into its chest, back and arm, burning amber; a great cleaver in its fist,
  *   brought down overhead.
- * - B, the Ironshield veteran: upright and square in a steel cuirass, a
+ * - The Ironshield Orc (B): upright and square in a steel cuirass, a
  *   horned helm with a gold rune band, stacked pauldrons, a red war-cloth; a
  *   round shield on the left arm with one big rune on it, and a bearded axe.
  *   Its runes are inlaid in gold, not lit.
- * - C, the War-chanter: lean and stooped under a shaggy hide mantle, runes
+ * - The War-chanter Orc (C): lean and stooped under a shaggy hide mantle, runes
  *   painted up its arms and chest in a glowing teal, a necklace of teeth; a
  *   totem staff taller than it, a horned skull and a rune crystal at its
  *   head, slammed into the ground in a ring of light.
@@ -601,7 +601,7 @@ function bruteBones(a: Anim): Bones {
   });
 }
 
-export const ORC_A: Kind = {
+const ORC_A: Kind = {
   bones: bruteBones,
   build: bruteBuild,
   palette: (coat, mark) => {
@@ -828,7 +828,7 @@ function veteranBones(a: Anim): Bones {
   });
 }
 
-export const ORC_B: Kind = {
+const ORC_B: Kind = {
   bones: veteranBones,
   build: veteranBuild,
   palette: (coat, mark) => {
@@ -1063,7 +1063,7 @@ function chantGlow(a: Anim): number {
   return 1 + 0.8 * beat(a.t, [8.0, 20.0], 2.0);
 }
 
-export const ORC_C: Kind = {
+const ORC_C: Kind = {
   bones: chanterBones,
   build: chanterBuild,
   palette: (coat, mark) => {
@@ -1105,25 +1105,25 @@ export const ORC_C: Kind = {
   },
 };
 
-/* ---- the proposals ------------------------------------------------------------------ */
+/* ---- the three ---------------------------------------------------------------------- */
 
-/** Each proposal, by its letter: put one in the orc's place (`LINES.orc` in `./wildermon`) to make it the orc. */
-export const ORC_PROPOSALS: Record<string, Kind> = { A: ORC_A, B: ORC_B, C: ORC_C };
+/** The orc's subspecies, one for each of its variants in their order: the Runebrand, the Ironshield and the War-chanter Orc. */
+export const ORCS: readonly Kind[] = [ORC_A, ORC_B, ORC_C];
 
 /**
- * What each proposal's body is, as solids, for the tool that looks for an arm, a leg or what is held passing through it
- * (`tools/orc/clip.ts`): the trunk's rings on the chest, the hips and the head, lumps on the chest (pauldrons), the flaps
- * hanging from the belt, a cloak's rings, the limbs, and the pieces held.
+ * What each subspecies' body is, as solids, in `ORCS`' order, for the tool that looks for an arm, a leg or what is held
+ * passing through it (`tools/orc/clip.ts`): the trunk's rings on the chest, the hips and the head, lumps on the chest
+ * (pauldrons), the flaps hanging from the belt, a cloak's rings, the limbs, and the pieces held.
  */
 export interface OrcShape {
   trunk: readonly Ring[]; hips: { c: V3; r: V3 }; face: Face; limbs: Limbs; flaps: ReadonlyArray<[number, number, number]>;
   lumps: ReadonlyArray<{ bone: string; c: V3; r: V3 }>; cloak?: readonly Ring[]; held: readonly string[];
 }
-export const ORC_SHAPES: Record<string, OrcShape> = {
-  A: { trunk: A_RINGS, hips: { c: [0, 0, 0], r: [0.8, 0.62, 0.5] }, face: A_FACE, limbs: A_LIMBS, flaps: A_FLAPS, lumps: [], held: ['cleaver'] },
-  B: {
+export const ORC_SHAPES: readonly OrcShape[] = [
+  { trunk: A_RINGS, hips: { c: [0, 0, 0], r: [0.8, 0.62, 0.5] }, face: A_FACE, limbs: A_LIMBS, flaps: A_FLAPS, lumps: [], held: ['cleaver'] },
+  {
     trunk: B_RINGS, hips: { c: [0, 0, 0], r: [0.82, 0.64, 0.56] }, face: B_FACE, limbs: B_LIMBS, flaps: B_FLAPS,
     lumps: [-1, 1].map((s) => ({ bone: 'chest', c: [s * 1.42, 0.06, 1.72] as V3, r: [0.62, 0.6, 0.26] as V3 })), held: ['axe', 'shield'],
   },
-  C: { trunk: C_RINGS, hips: { c: [0, 0, 0], r: [0.7, 0.58, 0.5] }, face: C_FACE, limbs: C_LIMBS, flaps: [], lumps: [], cloak: C_MANTLE, held: ['staff'] },
-};
+  { trunk: C_RINGS, hips: { c: [0, 0, 0], r: [0.7, 0.58, 0.5] }, face: C_FACE, limbs: C_LIMBS, flaps: [], lumps: [], cloak: C_MANTLE, held: ['staff'] },
+];
