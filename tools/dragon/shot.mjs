@@ -32,7 +32,7 @@ async function page(cfg, file, width) {
   await p.close();
 }
 
-const W = 560, H = 400, BW = 700, BH = 500;
+const W = 560, H = 440, BW = 700, BH = 580;
 const c = (who, facing, pose, more = {}) => ({ who, facing, pose, zoom: 0.8, w: W, h: H, label: `${['front', 'front-right', 'right', 'back-right', 'back', 'back-left', 'left', 'front-left'][facing]} · ${pose}`, ...more });
 
 function sheet(who) {

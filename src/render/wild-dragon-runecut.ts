@@ -15,17 +15,25 @@ import { GLYPHS } from './runestone';
  * turns, its standing loop, its walk and run, and a strike the island already
  * sends every creature (`acts`), which the live dragon has no move for.
  *
- *   A, the Runewing: a winged wyrm, gold rune channels down its spine and
- *   along the fingers of its wings, a rune in each panel of them; it rears,
- *   flares its wings and breathes a gout of fire.
+ *   A, the Runewing: a winged wyrm, its great bat wings held spread over
+ *   its back, gold rune channels down its spine and along their fingers, a
+ *   rune in each panel; it rears, raises its wings and breathes fire.
  *
  *   B, the Runestone Drake: low and broad, its back laid with slabs of
- *   runestone, a rune cut in each; it breathes gold, and as it draws breath
- *   the runes light from its tail to its head.
+ *   runestone, a rune cut in each, and great wings of grey stone on square
+ *   bones, a rune cut down each finger and in each panel; it breathes gold,
+ *   and as it draws breath the runes light from its tail to its wingtips.
  *
- *   C, the Stormcoil: a long sky-dragon in a wave down a long tail, rune bands
- *   round it, fins and whiskers; it lifts off the ground as it runs and
- *   spits a bolt of lightning.
+ *   C, the Stormcoil: a long sky-dragon hovering, a wave down a long tail,
+ *   rune bands round it, fins and whiskers, and two great fans of long fins
+ *   for wings, a band of runes across each; it beats them and lifts off the
+ *   ground as it runs, and spits a bolt of lightning.
+ *
+ * Every pair of wings is one bat's wing built open (`batWing`, `finWing`),
+ * folded at the wrist as far as it is shut (`foldAbout`) and turned on the
+ * shoulder from laid back along the flank to spread out over the back
+ * (`wingFrame`); `wingReach` puts the corners of the wings at their widest
+ * into the box the island cuts every picture of the kind to.
  *
  * Drawn in the island's light and ink like every wildermon (`render` in
  * `./figure`), in Runecut's colours: the runes in the runestones' gold
@@ -247,6 +255,61 @@ const A_EYE: V3 = [0.62, 0.62, 0.45];
 /** The wings' shape, the right one, in its bone's frame: the arm out to the wrist, four fingers, and where the membrane meets the body. */
 const W_E: V3 = [2.3, 0.4, 0.15], W_F: V3[] = [[5.4, 0.85, 0.6], [5.1, -1.75, -0.4], [3.85, -3.4, 0.3], [2.1, -3.75, -0.2]], W_B: V3 = [0.05, -2.5, -0.2];
 
+/** A wing at `k` times that size: its wrist, its four finger tips, and where its membrane meets the body. */
+interface Wing { E: V3; F: V3[]; B: V3; k: number }
+const wingOf = (k: number): Wing => ({ E: scale(W_E, k), F: W_F.map((f) => scale(f, k)), B: scale(W_B, k), k });
+
+/** A wing's four panels of membrane, each scalloped at its trailing edge, the last from the arm back to the body. */
+function panelsOf(W: Wing): V3[][] {
+  const mid = (a: V3, b: V3, inset: number): V3 => { const m = scale(add(a, b), 0.5); return add(m, scale(sub(W.E, m), inset)); };
+  return [
+    [W.E, W.F[0], mid(W.F[0], W.F[1], 0.2), W.F[1]],
+    [W.E, W.F[1], mid(W.F[1], W.F[2], 0.2), W.F[2]],
+    [W.E, W.F[2], mid(W.F[2], W.F[3], 0.18), W.F[3]],
+    [[0, 0, 0], W.E, W.F[3], mid(W.F[3], W.B, 0.15), W.B],
+  ];
+}
+
+/**
+ * A bat's wing, the right one, built open: an arm to the wrist, four fingers from it, membrane between, a claw at the wrist.
+ * `square`, its bones cut square, as stone is; `thick`, how heavy they are against the Runewing's.
+ */
+function batWing(W: Wing, o: { membrane: Mat; finger: Mat; arm: Mat; claw: Mat; square?: boolean; thick?: number; sheetThick?: number }): Mesh {
+  const t = (o.thick ?? 1) * W.k, sides = o.square ? 4 : 5;
+  const bone = (a: V3, b: V3, r0: number, r1: number, m: Mat): Mesh => (o.square ? tube([a, b], [r0, r1], [r0 * 0.8, r1 * 0.8], 4, m, { up: [0, 0, 1] }) : taper([a, b], r0, r1, sides, m));
+  return merge(
+    bone([0, 0, 0], W.E, 0.26 * t, 0.17 * t, o.arm),
+    ...W.F.map((F, q) => bone(W.E, F, (0.15 - q * 0.015) * t, 0.04 * t, o.finger)),
+    ...panelsOf(W).map((P) => sheet(P, (o.sheetThick ?? 0.03) * W.k, o.membrane)),
+    orb(W.E, 0.22 * t, sides + 1, 3, o.arm),
+    taper([W.E, add(W.E, scale([0.25, 0.55, 0.15], W.k))], 0.1 * t, 0.01, 4, o.claw),
+  );
+}
+
+/** The pieces of a pair of wings on the bones `wing0` and `wing1`, folded by `fold`, the left the right's mirror. */
+function wingPair(key: string, mesh: Mesh, fold: (v: readonly V3[], a: Anim) => V3[], after: string[], bias = 0.05, shown?: (a: Anim) => boolean): Piece[] {
+  return [
+    { key: `${key}0`, mesh: mirrored(mesh), bone: 'wing0', bias, after, front: [-1, 0, 0.3], bent: fold, shown },
+    { key: `${key}1`, mesh, bone: 'wing1', bias, after, front: [1, 0, 0.3], bent: fold, shown },
+  ];
+}
+
+/**
+ * Nothing drawn: corners only, where the wings reach fully spread and raised, on the body, so the box a kind's pictures are
+ * cut to (`reachOf` in `./beasts`, measured standing at the start of its loop) holds them stretched and striking as well as
+ * as they stand. Shown only at that moment, which is never a picture the island keeps of it standing or going.
+ */
+function wingReach(W: Wing, at: V3, downs: readonly number[]): Piece {
+  const v: V3[] = [];
+  for (const side of [1, -1]) {
+    for (const d of downs) {
+      const f = wingFrame({ m: [1, 0, 0, 0, 1, 0, 0, 0, 1], t: [0, 0, 0] }, at, side, 1, d);
+      for (const p of [W.E, ...W.F, W.B]) v.push(place(f, [p[0] * side, p[1], p[2]]));
+    }
+  }
+  return { key: 'reach', mesh: mesh(v, []), bone: 'body', shown: (a) => a.t === 0 && !a.act };
+}
+
 /** A head of a dragon: the skull, a long snout with its nostrils and the roof of its mouth, fangs, brows, slit eyes, open or shut. */
 function dragonHead(n: number, k: number, H: { c: V3; r: V3 }, eye: V3, shut: boolean, o: { snout: V3; snoutAt: V3; brow: Mat; iris: Mat; size: number; fangs: number }): Mesh {
   const parts: Mesh[] = [orb(H.c, H.r, n + 1, k + 1, 'coat')];
@@ -346,36 +409,23 @@ function runewingBuild(lod: number): Piece[] {
   });
   // A wing: an arm to the wrist, four fingers from it, membrane between them scalloped at the trailing edge, a gold channel down
   // the middle of each panel and a rune in it, on both faces.
-  const mid = (a: V3, b: V3, inset: number): V3 => { const m = scale(add(a, b), 0.5); return add(m, scale(sub(W_E, m), inset)); };
-  const panels: V3[][] = [
-    [W_E, W_F[0], mid(W_F[0], W_F[1], 0.2), W_F[1]],
-    [W_E, W_F[1], mid(W_F[1], W_F[2], 0.2), W_F[2]],
-    [W_E, W_F[2], mid(W_F[2], W_F[3], 0.18), W_F[3]],
-    [[0, 0, 0], W_E, W_F[3], mid(W_F[3], W_B, 0.15), W_B],
-  ];
+  const W = A_WING;
   const wingRunes: Disc[] = [];
   const PANEL_RUNES = ['sowilo', 'algiz', 'laguz', 'kenaz'];
-  panels.forEach((P, q) => {
+  panelsOf(W).forEach((P, q) => {
     const N = normalOf(P), c = centreOf(P);
-    const tipward = unit(sub(q === 3 ? W_F[3] : P[2], W_E));
+    const tipward = unit(sub(q === 3 ? W.F[3] : P[2], W.E));
     for (const side of [1, -1]) {
-      const nn = scale(N, side);
-      wingRunes.push(...glowingRune(PANEL_RUNES[q], add(c, scale(tipward, 0.2)), nn, tipward, q === 3 ? 0.36 : 0.42, 0.07, 0.05));
-      const vein = [W_E, add(W_E, scale(sub(c, W_E), 0.55))];
+      const nn = scale(N, side), lift = 0.05 * W.k;
+      wingRunes.push(...glowingRune(PANEL_RUNES[q], add(c, scale(tipward, 0.2 * W.k)), nn, tipward, (q === 3 ? 0.36 : 0.42) * W.k, 0.075, lift));
+      const vein = [W.E, add(W.E, scale(sub(c, W.E), 0.55))];
       if (q < 3) {
-        wingRunes.push(band(add(vein[0], scale(nn, 0.05)), add(vein[1], scale(nn, 0.05)), nn, 0.14, 'ember'));
-        wingRunes.push(band(add(vein[0], scale(nn, 0.062)), add(vein[1], scale(nn, 0.062)), nn, 0.06, 'flame'));
+        wingRunes.push(band(add(vein[0], scale(nn, lift)), add(vein[1], scale(nn, lift)), nn, 0.15, 'ember'));
+        wingRunes.push(band(add(vein[0], scale(nn, lift + 0.012)), add(vein[1], scale(nn, lift + 0.012)), nn, 0.065, 'flame'));
       }
     }
   });
-  const wing = merge(
-    taper([[0, 0, 0], W_E], 0.26, 0.17, 6, 'coat'),
-    ...W_F.map((F, q) => taper([W_E, F], 0.15 - q * 0.015, 0.04, 5, 'coatDark')),
-    ...panels.map((P) => sheet(P, 0.03, 'membrane')),
-    orb(W_E, 0.22, 6, 3, 'coat'),
-    taper([W_E, add(W_E, [0.25, 0.55, 0.15])], 0.1, 0.01, 4, 'horn'),
-    paint(wingRunes),
-  );
+  const wing = merge(batWing(W, { membrane: 'membrane', finger: 'coatDark', arm: 'coat', claw: 'horn' }), paint(wingRunes));
   const claws = (r: number): Mesh => merge(pawMesh(r, n, k, 'coat', 0.26), ...[-0.27, 0, 0.27].map((x) => taper([[x, 0.6, -0.2], [x * 1.3, 0.95, -0.26]], 0.11, 0.02, 4, 'horn')));
   const pieces = quadPieces({
     n, k,
@@ -391,8 +441,8 @@ function runewingBuild(lod: number): Piece[] {
       { key: 'spines', mesh: merge(...spines), bone: 'trunk', bias: 0.02, after: ['body'] },
       { key: 'runes', mesh: paint(runes), bone: 'trunk', bias: 0.025, after: ['body', 'fl0', 'fr0', 'hl0', 'hr0'], breathes: { c: [0, 0, 0], k: 0.04 } },
       { key: 'nspines', mesh: merge(neckSpines, neckChannel), bone: 'neck', bias: 0.01, after: 'neck' },
-      { key: 'wing0', mesh: mirrored(wing), bone: 'wing0', bias: 0.05, after: ['body', 'spines', 'runes'], front: [-1, 0, 0.3], bent: foldWing },
-      { key: 'wing1', mesh: wing, bone: 'wing1', bias: 0.05, after: ['body', 'spines', 'runes'], front: [1, 0, 0.3], bent: foldWing },
+      ...wingPair('wing', wing, (v, a) => foldAbout(v, A_WING.E, 1 - runewingOpen(a)), ['body', 'spines', 'runes']),
+      wingReach(A_WING, A_SHOULDER, [-0.7, 0.4]),
     ],
     breath: 0.04,
   });
@@ -405,12 +455,9 @@ function runewingBuild(lod: number): Piece[] {
 }
 
 /**
- * A wing folded as a bat folds one: the arm stays, and each finger is turned back about the wrist toward the last, its
- * membrane gathered between them, as far as the wing is shut.
+ * A wing folded as a bat folds one: the arm stays, and each finger is turned back about the wrist `E` toward the last, its
+ * membrane gathered between them, as far as the wing is `shut`.
  */
-function foldWing(v: readonly V3[], a: Anim): V3[] {
-  return foldAbout(v, W_E, 1 - runewingOpen(a));
-}
 function foldAbout(v: readonly V3[], E: V3, shut: number): V3[] {
   if (shut <= 0.001) return v as V3[];
   const back = -100 * (Math.PI / 180);
@@ -443,9 +490,11 @@ function mm3(a: readonly number[], b: readonly number[]): number[] {
  * A right wing's frame on the body, `open` nought to one: shut, its arm up from the shoulder with the fingers hanging back
  * along the flank; open, out to the side and up, its membrane to the sky. `down` beats it down (a strike's buffet).
  */
-function wingFrame(body: Xf, at: V3, side: number, open: number, down: number): Xf {
-  const xs: V3 = [0.3, -0.35, 0.89], xo: V3 = [0.68, -0.25, 0.69 - 0.45 * down];
-  const ys: V3 = [0, 0.93, 0.36], yo: V3 = [0.05, 0.94, -0.22];
+function wingFrame(body: Xf, at: V3, side: number, open0: number, down: number): Xf {
+  // The arm swings out sooner than the fingers spread: half open, it is most of the way out to the side.
+  const open = 1 - (1 - clamp(open0)) ** 2;
+  const xs: V3 = [0.3, -0.35, 0.89], xo: V3 = [0.82, -0.22, 0.52 - 0.45 * down];
+  const ys: V3 = [0, 0.93, 0.36], yo: V3 = [0.05, 0.94, -0.18];
   const x = unit([lerp(xs[0], xo[0], open), lerp(xs[1], xo[1], open), lerp(xs[2], xo[2], open)]);
   let y: V3 = [lerp(ys[0], yo[0], open), lerp(ys[1], yo[1], open), lerp(ys[2], yo[2], open)];
   y = unit(sub(y, scale(x, dot(x, y))));
@@ -456,6 +505,9 @@ function wingFrame(body: Xf, at: V3, side: number, open: number, down: number): 
   return { m: mm3(body.m, M) as Xf['m'], t: o };
 }
 
+/** The Runewing's wings: a third again as big as a plain wing, from the tops of its shoulders. */
+const A_WING = wingOf(1.32), A_SHOULDER: V3 = [1.05, 1.4, 1.0];
+
 /** When a strike rears, lunges and breathes, as shares of it. */
 const STRIKE = { rear: [0, 0.22, 0.3, 0.45], lunge: [0.3, 0.45, 0.75, 0.95], jaw: [0.28, 0.42, 0.8, 0.96], fire: [0.36, 0.5, 0.82, 0.98] } as const;
 const phase = (a: Anim, w: readonly [number, number, number, number]): number => (a.act?.kind === 'strike' ? hump(a.act.t, w[0], w[1], w[2], w[3]) : 0);
@@ -464,9 +516,14 @@ const phase = (a: Anim, w: readonly [number, number, number, number]): number =>
 function runewingOpen(a: Anim): number {
   const stretch = a.go > 0 ? 0 : smooth(beat(a.t, [6.0, 17.5], 3.0) * 1.4);
   // Standing, half open and held out behind its shoulders, as a bat's are; drawn in walking; half out and beating at a run.
-  const stand = 0.48 + 0.04 * cyc(a.t, 7) + 0.52 * stretch;
-  const base = lerp(stand, lerp(0.2, 0.45 + 0.12 * Math.sin(a.u * TAU * 2), a.gait), smooth(a.go));
-  return Math.max(base, phase(a, STRIKE.rear), 0.8 * phase(a, STRIKE.lunge));
+  const stand = 0.8 + 0.04 * cyc(a.t, 7) + 0.2 * stretch;
+  const base = lerp(stand, lerp(0.55, 0.78 + 0.1 * Math.sin(a.u * TAU * 2), a.gait), smooth(a.go));
+  return Math.max(base, phase(a, STRIKE.rear), 0.85 * phase(a, STRIKE.lunge));
+}
+/** Raised high as it rears and held up through the breath; beaten at a run. */
+function runewingDown(a: Anim): number {
+  const run = a.go * a.gait * 0.4 * Math.sin(a.u * TAU * 2);
+  return run - 0.6 * phase(a, STRIKE.rear) - 0.25 * phase(a, STRIKE.lunge);
 }
 
 function runewingOwn(p: QuadPose, a: Anim): void {
@@ -500,7 +557,9 @@ function strikeOwn(p: QuadPose, a: Anim, k: number): void {
 }
 
 /** The bones of a dragon on four legs: the jaw on its own hinge, and the wings, if it has them, from its shoulders. */
-function quadDragonBones(spec: QuadSpec, own: (p: QuadPose, a: Anim) => void, hinge: V3, gape: number, wings?: (a: Anim) => number,
+/** Where a kind's wings are on its body, how far open they are, and how far beaten down (raised, less than nought). */
+interface WingRig { at: V3; open: (a: Anim) => number; down: (a: Anim) => number }
+function quadDragonBones(spec: QuadSpec, own: (p: QuadPose, a: Anim) => void, hinge: V3, gape: number, wings?: WingRig,
   more?: (b: Bones, p: QuadPose, a: Anim) => void): (a: Anim) => Bones {
   return (a) => {
     const p = quadPose(spec, a);
@@ -508,9 +567,8 @@ function quadDragonBones(spec: QuadSpec, own: (p: QuadPose, a: Anim) => void, hi
     const b = quadBones(spec, p);
     b.maw = joint(b.head, hinge, -gape * p.jaw);
     if (wings) {
-      const open = wings(a);
-      const beatDown = phase(a, STRIKE.lunge);
-      for (let q = 0; q < 2; q++) b[`wing${q}`] = wingFrame(b.body, [1.05, 1.4, 1.0], q ? 1 : -1, open, 0.25 * beatDown - 0.6 * phase(a, STRIKE.rear) - 0.35 * beatDown);
+      const open = wings.open(a), down = wings.down(a);
+      for (let q = 0; q < 2; q++) b[`wing${q}`] = wingFrame(b.body, wings.at, q ? 1 : -1, open, down);
     }
     more?.(b, p, a);
     return b;
@@ -521,7 +579,7 @@ function quadDragonBones(spec: QuadSpec, own: (p: QuadPose, a: Anim) => void, hi
 const A_MOUTH: V3 = [0, 2.65, -0.4], A_AIM: V3 = [0, 1, -0.12];
 
 export const RUNEWING: Kind = {
-  bones: quadDragonBones(A_SPEC, runewingOwn, [0, 0.35, -0.3], 34, runewingOpen),
+  bones: quadDragonBones(A_SPEC, runewingOwn, [0, 0.35, -0.3], 34, { at: A_SHOULDER, open: runewingOpen, down: runewingDown }),
   build: runewingBuild,
   palette: (coat, mark) => {
     // Deeper than a wildermon's pastel, so it reads as the thing to keep away from: its coat halfway from its variant's own
@@ -660,6 +718,29 @@ function runestoneBuild(lod: number): Piece[] {
     return merge(link, plate, club, paint([...glowingRune('sowilo', [0.73, -1.25, 0.1], [1, 0, 0], [0, 0, 1], 0.3, 0.06), ...glowingRune('sowilo', [-0.73, -1.25, 0.1], [-1, 0, 0], [0, 0, 1], 0.3, 0.06)]));
   });
   const claws = (r: number): Mesh => merge(pawMesh(r, n, k, 'coat', 0.28), ...[-0.3, 0, 0.3].map((x) => tube([[x, 0.62, -0.18], [x * 1.25, 0.98, -0.26]], [0.12, 0.02], [0.12, 0.02], 4, 'stoneDark')));
+  // Wings of stone: bones cut square, heavy, a membrane of grey runestone between them, a rune cut down each finger and in each
+  // panel, both faces, dark until it draws breath and then lit with the slabs.
+  const W = B_WING;
+  const stoneWing = batWing(W, { membrane: 'membrane', finger: 'stone', arm: 'stone', claw: 'stoneDark', square: true, thick: 1.35, sheetThick: 0.045 });
+  const wingCut: Disc[] = [], wingLit: Disc[] = [];
+  const FINGER_RUNES = ['tiwaz', 'algiz', 'kenaz', 'laguz'];
+  const PANEL_B = ['sowilo', 'ingwaz', 'othala', 'dagaz'];
+  for (const side of [1, -1]) {
+    W.F.forEach((F, q) => {
+      const along = unit(sub(F, W.E)), N: V3 = [0, 0, side], r = (0.15 - q * 0.015) * 1.35 * W.k * 0.8;
+      for (const f of [0.5]) {
+        const at = add(add(W.E, scale(sub(F, W.E), f)), scale(N, r + 0.02));
+        const nm = FINGER_RUNES[(q + (f > 0.5 ? 1 : 0)) % 4];
+        wingCut.push(...runeOn(nm, at, N, along, 0.26 * W.k, 0.07, 'stoneDark', 0.004));
+        wingLit.push(...glowingRune(nm, at, N, along, 0.26 * W.k, 0.06, 0.004));
+      }
+    });
+    panelsOf(W).forEach((P, q) => {
+      const nn = scale(normalOf(P), side), c = centreOf(P), up = unit(sub(q === 3 ? W.F[3] : P[2], W.E)), lift = 0.065 * W.k;
+      wingCut.push(...runeOn(PANEL_B[q], c, nn, up, 0.42 * W.k, 0.09, 'stoneDark', lift));
+      wingLit.push(...glowingRune(PANEL_B[q], c, nn, up, 0.42 * W.k, 0.08, lift));
+    });
+  }
   const pieces = quadPieces({
     n, k,
     body: { ...R, belly: true },
@@ -671,10 +752,12 @@ function runestoneBuild(lod: number): Piece[] {
     extras: [
       { key: 'jaw', mesh: jaw, bone: 'maw', bias: 0.19, under: 'head' },
       { key: 'crown', mesh: merge(crown, crownRune), bone: 'head', bias: 0.22, after: ['head'] },
-      { key: 'slabs', mesh: merge(...slabs), bone: 'trunk', bias: 0.02, after: ['body', 'fl0', 'fr0', 'hl0', 'hr0'], breathes: { c: [0, 0, 0], k: 0.03 } },
-      { key: 'cut', mesh: paint(cutRunes), bone: 'trunk', bias: 0.025, after: ['slabs'], breathes: { c: [0, 0, 0], k: 0.03 }, shown: (a) => litAt(a, 0.5) < 0.5 },
+      { key: 'slabs', mesh: merge(...slabs, paint(cutRunes)), bone: 'trunk', bias: 0.02, after: ['body', 'fl0', 'fr0', 'hl0', 'hr0'], breathes: { c: [0, 0, 0], k: 0.03 } },
       { key: 'lit', mesh: paint(litRunes), bone: 'trunk', bias: 0.025, after: ['slabs'], breathes: { c: [0, 0, 0], k: 0.03 }, shown: (a) => litAt(a, 0.5) >= 0.5 },
       { key: 'stones', mesh: merge(...stones, paint(stoneRunes), ...moss), bone: 'trunk', bias: 0.03, after: ['body', 'slabs'] },
+      ...wingPair('wing', merge(stoneWing, paint(wingCut)), foldB, ['body', 'slabs', 'stones']),
+      ...wingPair('wlit', paint(wingLit), foldB, ['body', 'slabs', 'stones'], 0.055, (a) => litAt(a, 0.75) >= 0.5),
+      wingReach(B_WING, B_SHOULDER, [-0.7, 0.3]),
     ],
     breath: 0.03,
   });
@@ -686,6 +769,18 @@ function runestoneBuild(lod: number): Piece[] {
 }
 
 /** Heavy: no rearing; its head lowered and swung back as it draws breath, then thrust forward with the jaw wide. */
+/** The drake's wings: a fifth again as big as a plain wing, from the tops of its broad shoulders. */
+const B_WING = wingOf(1.22), B_SHOULDER: V3 = [1.3, 1.35, 1.0];
+const foldB = (v: readonly V3[], a: Anim): V3[] => foldAbout(v, B_WING.E, 1 - stoneOpen(a));
+/** Mantled standing, a stone canopy half over its back; drawn in going; raised wide as it draws breath. */
+function stoneOpen(a: Anim): number {
+  const stretch = a.go > 0 ? 0 : smooth(beat(a.t, [6.0, 17.5], 3.0) * 1.4);
+  const base = lerp(0.72 + 0.03 * cyc(a.t, 7) + 0.28 * stretch, lerp(0.5, 0.68 + 0.08 * Math.sin(a.u * TAU * 2), a.gait), smooth(a.go));
+  return Math.max(base, phase(a, B_STRIKE.draw), 0.9 * phase(a, B_STRIKE.thrust));
+}
+function stoneDown(a: Anim): number {
+  return a.go * a.gait * 0.25 * Math.sin(a.u * TAU * 2) - 0.55 * phase(a, B_STRIKE.draw) - 0.2 * phase(a, B_STRIKE.thrust) + 0.15 * (1 - smooth(a.go));
+}
 const B_STRIKE = { draw: [0, 0.2, 0.32, 0.45], thrust: [0.32, 0.45, 0.8, 0.95], jaw: [0.34, 0.45, 0.82, 0.96], fire: [0.4, 0.52, 0.84, 0.98] } as const;
 function runestoneOwn(p: QuadPose, a: Anim): void {
   const w = a.u - Math.floor(a.u);
@@ -717,14 +812,14 @@ function runestoneOwn(p: QuadPose, a: Anim): void {
 const B_MOUTH: V3 = [0, 2.6, -0.45], B_AIM: V3 = [0, 1, -0.16];
 
 export const RUNESTONE_DRAKE: Kind = {
-  bones: quadDragonBones(B_SPEC, runestoneOwn, [0, 0.3, -0.3], 32),
+  bones: quadDragonBones(B_SPEC, runestoneOwn, [0, 0.3, -0.3], 32, { at: B_SHOULDER, open: stoneOpen, down: stoneDown }),
   build: runestoneBuild,
   palette: (coat, mark) => {
     // Its hide its variant's colour halfway to the pastel, between stones of a runestone's cream; its runes in their gold.
     const c = richer(mix(coat, pastel(coat, 250), 0.5), 1.35);
     return coatPalette(coat, mark, {
       coat: c, coatDark: darker(c, 0.22), lid: darker(c, 0.45), mark: mix(hex('#e3d3b8'), c, 0.5), belly: mix(hex('#e3d3b8'), c, 0.62),
-      stone: STONE, stoneDark: hex('#7d6c66'), moss: hex('#7dad7d'),
+      stone: STONE, stoneDark: hex('#7d6c66'), moss: hex('#7dad7d'), membrane: mix(hex('#9d8f88'), c, 0.22),
       tooth: [246, 238, 220], tongue: [160, 70, 74], ember: RUNE_EDGE, flame: RUNE_GOLD, bloom: RUNE_WHITE, nose: darker(c, 0.4),
     }, 250);
   },
@@ -881,6 +976,8 @@ function stormBuild(lod: number): Piece[] {
       { key: 'nbits', mesh: neckBits, bone: 'neck', bias: 0.01, after: 'neck' },
       { key: 'efin0', mesh: elbowFin(-1), bone: 'fl0', bias: 0.015, after: ['body'] },
       { key: 'efin1', mesh: elbowFin(1), bone: 'fr0', bias: 0.015, after: ['body'] },
+      ...wingPair('wing', finWing(C_WING), foldC, ['body', 'fins', 'bands', 'neck', 'nbits']),
+      wingReach(C_WING, C_SHOULDER, [-0.8, 0.7]),
     ],
     breath: 0.04,
   });
@@ -902,6 +999,41 @@ function rotNeck(d: Disc): Disc {
 function stormLift(a: Anim): number {
   const stand = 1.0 + 0.25 * (0.5 + 0.5 * cyc(a.t, 8));
   return lerp(stand, lerp(0.25, 1.5 + 0.25 * Math.sin(a.u * TAU * 2), a.gait), smooth(a.go));
+}
+/**
+ * A sky-dragon's wing: an arm to the wrist, and a fan of long fins from the arm and the wrist in its markings' colour, each
+ * banded near its tip with a ring of runes, lying in the wing's plane as a bat's fingers do, so it folds as they do.
+ */
+function finWing(W: Wing): Mesh {
+  const parts: Mesh[] = [taper([[0, 0, 0], W.E], 0.24 * W.k, 0.15 * W.k, 5, 'coat'), orb(W.E, 0.2 * W.k, 6, 3, 'coat')];
+  const decals: Disc[] = [];
+  // From the wrist, toward each finger's tip and between them; from the arm, two shorter ones back toward the body.
+  const tips: V3[] = [W.F[0], scale(add(W.F[0], W.F[1]), 0.5), W.F[1], scale(add(W.F[1], W.F[2]), 0.5), W.F[2], W.F[3]];
+  const roots: V3[] = [...tips.map(() => W.E), scale(W.E, 0.62), scale(W.E, 0.3)];
+  const ends: V3[] = [...tips.map((t, q) => add(W.E, scale(sub(t, W.E), 1.05 - q * 0.02))), add(scale(W.E, 0.62), scale(sub(W.F[3], W.E), 0.8)), add(scale(W.E, 0.3), scale(sub(W.B, [0, 0, 0]), 1.05))];
+  roots.forEach((r, q) => {
+    const e = ends[q], d = sub(e, r), wide = (0.36 + 0.04 * (q % 2)) * W.k;
+    const pts = [0, 0.35, 0.82, 1].map((f): V3 => add(r, add(scale(d, f), [0, 0, Math.sin(f * Math.PI) * 0.08 * W.k])));
+    parts.push(blade(pts, [wide * 0.4, wide, wide * 0.75, 0.02], [0, 0, 1], { mat: 'membrane', rib: 'mark', fold: 0.08, thick: 0.05 }));
+    // The band of runes across it near its tip, on both faces.
+    const at = add(r, scale(d, 0.74)), across = unit(cross([0, 0, 1], d)), half = wide * 0.78;
+    for (const side of [1, -1]) {
+      const N: V3 = [0, 0, side], lift = add(at, [0, 0, side * 0.075]);
+      decals.push(band(sub(lift, scale(across, half)), add(lift, scale(across, half)), N, 0.17, 'ember'), band(sub(add(lift, [0, 0, side * 0.012]), scale(across, half)), add(add(lift, [0, 0, side * 0.012]), scale(across, half)), N, 0.07, 'flame'));
+    }
+  });
+  return merge(...parts, paint(decals));
+}
+const C_WING = wingOf(1.25), C_SHOULDER: V3 = [0.78, 1.45, 0.72];
+const foldC = (v: readonly V3[], a: Anim): V3[] => foldAbout(v, C_WING.E, 1 - stormOpen(a));
+/** Spread wide as it hovers, rippling; beaten slowly walking and hard as it flies at a run; flung up as it coils to strike. */
+function stormOpen(a: Anim): number {
+  const base = lerp(0.84 + 0.06 * cyc(a.t, 6), lerp(0.7, 0.92, a.gait), smooth(a.go));
+  return Math.max(base, phase(a, C_STRIKE.coil), 0.9 * phase(a, C_STRIKE.lunge));
+}
+function stormDown(a: Anim): number {
+  const beat = Math.sin(a.u * TAU) * lerp(0.25, 0.65, a.gait) * smooth(a.go);
+  return beat + 0.15 * cyc(a.t, 6) * (1 - smooth(a.go)) - 0.55 * phase(a, C_STRIKE.coil) - 0.2 * phase(a, C_STRIKE.lunge);
 }
 const C_STRIKE = { coil: [0, 0.22, 0.3, 0.42], lunge: [0.3, 0.42, 0.75, 0.95], jaw: [0.3, 0.42, 0.8, 0.96], bolt: [0.4, 0.46, 0.8, 0.92] } as const;
 function stormOwn(p: QuadPose, a: Anim): void {
@@ -939,7 +1071,7 @@ function stormTail(b: Bones, p: QuadPose, a: Anim): void {
   const tl = C_SPEC.tail!;
   const go = smooth(a.go), air = clamp(stormLift(a) - 0.4);
   const ph = a.go > 0 ? a.u * TAU : (a.t * TAU) / 4;
-  const amp = lerp(22, 20, go), lift = 9 * air + 10 * phase(a, C_STRIKE.coil);
+  const amp = lerp(22, 20, go), lift = 4 * air + 10 * phase(a, C_STRIKE.coil);
   let prev = joint(b.body, tl.at, -(tl.lift + p.tail[0]), 0, amp * 0.6 * Math.sin(ph));
   b.tail0 = prev;
   for (let q = 1; q < C_LINKS; q++) {
@@ -1007,7 +1139,7 @@ function bolt(g: CanvasRenderingContext2D, view: View, from: V3, dir: V3, len: n
 }
 
 export const STORMCOIL: Kind = {
-  bones: quadDragonBones(C_SPEC, stormOwn, [0, 0.3, -0.25], 36, undefined, stormTail),
+  bones: quadDragonBones(C_SPEC, stormOwn, [0, 0.3, -0.25], 36, { at: C_SHOULDER, open: stormOpen, down: stormDown }, stormTail),
   build: stormBuild,
   palette: (coat, mark) => {
     const c = richer(mix(coat, pastel(coat, 250), 0.5), 1.45);

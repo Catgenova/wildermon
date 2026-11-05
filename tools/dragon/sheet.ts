@@ -237,6 +237,35 @@ function bench(): void {
         Object.entries(times).map(([k, v]) => `${k} ${med(v).toFixed(2)}`).join('  '));
     }
   }
+  // Whether any picture of a strike, a stride or the standing loop puts ink on the edge of the box the island cuts its
+  // pictures to (`reachOf`): breath or a wing cut off there would show as a straight edge.
+  for (const who of ['live', 'A', 'B', 'C']) {
+    const { key, kind } = bodyOf(who);
+    const r = reachOf(key, kind), k = 4;
+    const w = Math.ceil((r.right - r.left) * k), h = Math.ceil((r.bottom - r.top) * k);
+    const pic = document.createElement('canvas');
+    pic.width = w;
+    pic.height = h;
+    const g = pic.getContext('2d', { willReadFrequently: true })!;
+    const pal = paletteFor(key, kind, SPECIES.dragon.variants[0] as [string, string]);
+    const cut: string[] = [];
+    const poses = [...Array.from({ length: 9 }, (_, q) => `strike:${(q + 0.5) / 9}`), 'stand:7.5', 'stand:18', 'run:0.25', 'run:0.75', 'walk:0.5'];
+    for (const pose of poses) {
+      for (let f = 0; f < 8; f++) {
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.clearRect(0, 0, w, h);
+        g.setTransform(k, 0, 0, k, -r.left * k, -r.top * k);
+        drawKind(g, kind, kitOf(key, kind, 1), pal, f, animOf(pose), inkAt(k, kind.size), 1 / k);
+        const d = g.getImageData(0, 0, w, h).data;
+        const at = (x: number, y: number): boolean => d[(y * w + x) * 4 + 3] > 8;
+        let hit = false;
+        for (let x = 0; x < w && !hit; x++) hit = at(x, 0) || at(x, h - 1);
+        for (let y = 0; y < h && !hit; y++) hit = at(0, y) || at(w - 1, y);
+        if (hit) cut.push(`${pose}@f${f}`);
+      }
+    }
+    out.push(`${who.padEnd(5)} box ${(r.right - r.left).toFixed(1)} x ${(r.bottom - r.top).toFixed(1)}  cut at the edge: ${cut.length ? cut.join(' ') : 'none'}`);
+  }
   (window as unknown as { BENCH: string }).BENCH = out.join('\n');
 }
 
