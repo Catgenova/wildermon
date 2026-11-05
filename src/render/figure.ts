@@ -6,6 +6,7 @@ import {
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { rarityOf } from '../game/items';
 import { BASE_SPEED, CADENCE } from '../game/player';
+import { PRINT_H, PRINT_W, printImage } from './prints';
 
 /**
  * People, as low-poly bodies.
@@ -91,7 +92,9 @@ type BodyMat = 'skin' | 'lip' | 'hair' | 'brow' | 'edge' | 'eye' | 'white' | 'gl
 export type GearMat = 'metal' | 'metalDark' | 'metalLit' | 'mail' | 'scale' | 'scaleDark' | 'leather' | 'leatherDark' | 'leatherLit' | 'lace'
   | 'cloth' | 'clothDark' | 'lining' | 'wood' | 'woodDark' | 'grip' | 'blade' | 'fitting' | 'gem' | 'string' | 'fletch' | 'rivet'
   // A circlet's three settings, each its stone or, while it is empty, its gold.
-  | 'stone1' | 'stone2' | 'stone3';
+  | 'stone1' | 'stone2' | 'stone3'
+  // A print's inks, related hues off the piece's dye; and a strip that glows, unlit by the light and the same at night.
+  | 'print1' | 'print2' | 'print3' | 'print4' | 'glow';
 /**
  * And what a wildermon is made of (`./beasts`), looked up in its own
  * palette: its coat and its markings, the colours of its variant, and the
@@ -107,7 +110,9 @@ export type Mat = BodyMat | GearMat | BeastMat;
  * enough to read: the rows of a mail shirt, the courses of scale, the channels
  * of a quilted coat, the lames of plate, the grain of a board.
  */
-export type Pattern = 'mail' | 'scale' | 'quilt' | 'lames' | 'grain' | 'studs';
+export type Pattern = 'mail' | 'scale' | 'quilt' | 'lames' | 'grain' | 'studs'
+  // Printed cloth: a mosaic of tiles in the print's inks, and a striped border.
+  | 'tiles' | 'bands';
 
 export interface Face {
   /** Corners, anticlockwise seen from outside. */
@@ -149,6 +154,8 @@ export interface Face {
   at?: V3;
   /** Worked into its surface where it is drawn big enough: see `Pattern`. */
   pat?: Pattern;
+  /** A print mapped onto it (`printImage`): which, and where each of its corners is on the print, in the print's pixels. */
+  tex?: { id: string; uv: Pt[] };
 }
 
 export interface Mesh {
@@ -6063,6 +6070,7 @@ export const GEAR_BASE: Record<GearMat, RGB> = {
   cloth: [194, 178, 142], clothDark: [156, 140, 108], lining: [210, 196, 164], wood: [176, 146, 114], woodDark: [124, 100, 80],
   grip: [100, 78, 62], blade: [220, 224, 228], fitting: [200, 168, 96], gem: [124, 184, 204], string: [228, 216, 192],
   fletch: [228, 220, 202], rivet: [200, 202, 208], stone1: [200, 168, 96], stone2: [200, 168, 96], stone3: [200, 168, 96],
+  print1: [179, 148, 208], print2: [226, 160, 138], print3: [220, 180, 90], print4: [159, 212, 184], glow: [132, 240, 204],
 };
 
 /**
@@ -6136,6 +6144,8 @@ function toneOf(P: Palette, m: Mat, k: number, gear: boolean): string {
   // A rare piece: the tone its own colours give it, glazed toward its rarity's hue, further on its lit side than in its shadow.
   const glaze = GLAZES.get(P);
   if (glaze) return glazedTone(toneOf(glaze.base, m, k, gear), glaze, k);
+  // A glow is its own light: the same whichever way it is turned, and not darkened by the shade it faces into.
+  if (m === 'glow') return shade(P.glow, 1.04);
   if (!gear) return shade(P[m], k);
   // Gear takes the same light as the body, harder, so its lit side and its shadow side are two planes whatever its colour: metal half as
   // much again between them, cloth and hide and wood well over a half, scale a third; and no metal goes darker than three-fifths lit.
@@ -6438,6 +6448,18 @@ function weatheredOf(P: Palette): Palette {
 /** The metals that are fittings in their own right, gilt rather than iron. */
 const YELLOW_METAL = new Set(['gold', 'brass', 'bronze', 'electrum', 'seryll']);
 
+/**
+ * A print's inks off a dye: the dye's hue turned a third of the way round the wheel and lighter (lilac off teal), half way
+ * round (salmon off teal), a gold that is the same on every print, and a sixth back the other way (mint off teal). Dusty: no
+ * more saturated than the dye, and most of the way to the chalk's value.
+ */
+function printInks(dye: RGB): Pick<Palette, 'print1' | 'print2' | 'print4'> {
+  const [h, s, v] = hsvOf(dye);
+  // The motifs are the splash of colour on a pastel ground: saturated where the dye was, a tenth of the way to the chalk and no more.
+  const ink = (turn: number, sat: number, val: number): RGB => mixRGB(fromHsv((h + turn + 360) % 360, Math.max(s, sat), Math.max(v, val)), CHALK, 0.1);
+  return { print1: ink(95, 0.52, 0.82), print2: ink(150, 0.6, 0.9), print4: ink(-40, 0.42, 0.84) };
+}
+
 /** Hide dyed `dye`: the dye's hue, as saturated as the dye or as undyed hide is, whichever is less, at undyed hide's value. */
 function dyedHide(dye: RGB): RGB {
   const [h, sat] = hsvOf(dye), [, hs, hv] = hsvOf(GEAR_BASE.leather);
@@ -6493,6 +6515,9 @@ function gearPalette(base: Palette, p: GearPiece, step = 0): Palette {
     woodDark: mixRGB(wood, COOL_SHADOW, 0.32),
     gem: GEM_TONE[mat] ?? GEAR_BASE.gem,
     grip: GEAR_BASE.grip, lace: GEAR_BASE.lace, string: GEAR_BASE.string, fletch: GEAR_BASE.fletch,
+    // A print's inks: hues related to the dye's -- a third and a half of the way round from it, lighter -- chalked as the dye is,
+    // its gold, and a mint; or, undyed, what the base has. A glow is what it is whatever the piece.
+    ...(dye ? printInks(dye) : {}),
   };
   // A circlet's stones, one after another as its label has them, and a setting with none in it its gold.
   const stones = mat.split(',').map((s) => GEM_TONE[s.trim()]);
@@ -6547,6 +6572,12 @@ interface GearBit {
   hide?: Array<{ c: V3; r: V3 }>;
   /** Left off while this piece is worn as well, which takes its place: a hauberk's short sleeve over a sleeve of mail. */
   unless?: string;
+  /**
+   * Hangs and swings as hair does (`Rig.tail`), this much of hair's swing: what of it is under `swayFrom` is pitched back
+   * about that height, and rolled to the side, the hem furthest. A poncho's skirt, its tassels.
+   */
+  sway?: number;
+  swayFrom?: number;
 }
 
 interface GearModel {
@@ -7130,6 +7161,177 @@ function splitSkirt(rs: number[][], fork: number, halves: Array<[number, number]
 const SLIT: Array<[number, number]> = [[-89, 89], [91, 269]];
 /** A leather jerkin's four panels, split a hair either side of straight ahead, behind and either side. */
 const JERKIN_PANELS: Array<[number, number]> = [[3, 87], [93, 177], [183, 267], [273, 357]];
+
+/* -- the Rover's poncho ------------------------------------------------------------------ */
+
+/** A mesh turned inside out: every facet wound the other way, for the inner face of a hood or a cowl. */
+const insideOut = (m: Mesh): Mesh => mesh(m.v, m.f.map((f) => ({ ...f, i: [...f.i].reverse() })));
+/** A quad on a surface, wound to face along `n`, as `plate` winds one. */
+const quadOut = (q: V3[], n: V3, m: Mat): { q: V3[]; m: Mat } => {
+  const k = newell(q);
+  return { q: k[0] * n[0] + k[1] * n[1] + k[2] * n[2] < 0 ? [...q].reverse() : q, m };
+};
+
+/** How the poncho is printed: not at all, by its print mapped on as a picture, by decals laid on it, or by a pattern worked in. */
+type Printed = 'plain' | 'tex' | 'decal' | 'pat';
+/** Where the poncho's cloud band and striped hem are, down it from the neck (nought) to the hem (one): the print's own rows. */
+const PONCHO_CLOUD = 0.62;
+const PONCHO_HEM = 0.86;
+/** How much of hair's swing the poncho takes, and the height on the chest it swings from: the shoulders. */
+const PONCHO_SWAY = 0.4;
+const PONCHO_FROM = 1.7;
+
+interface Drape {
+  cols: number;
+  /** The rows' places down the cloth, nought at the neck to one at the hem. */
+  ts: number[];
+  /** A point `a` round from the body's right toward its front, `t` of the way from the neck to the hem, `out` off the cloth. */
+  at: (a: number, t: number, out?: number) => V3;
+  /** The cloth's centre at `t`, for what faces out from it. */
+  centre: (t: number) => V3;
+}
+
+/**
+ * The poncho's cloth on the chest: a sheet hanging from a ring round the
+ * neck, out over the shoulders and down to the hips, round at the neck and
+ * coming to a soft point at the front and the back by the hem, which dips
+ * there, as a poncho is cut square and worn cornerwise.
+ */
+function drapeOf(b: Build): Drape {
+  const sh = b.fr.sh, fr = b.fr;
+  const prof: Array<[number, number, number, number]> = [
+    [2.3, 1.12 * sh, 0.84, -0.08], [1.78, 2.2 * sh, 1.3, -0.1], [1.0, 2.7 * sh, 1.7, -0.1], [-0.2, 3.15 * sh, 2.1, -0.1], [-1.4, 3.45 * sh, 2.4, -0.1], [-2.3, 3.6 * sh, 2.55, -0.1], [-2.9, 3.65 * sh, 2.6, -0.1],
+  ];
+  const ring = (t: number): [number, number, number, number] => {
+    const u = Math.max(0, Math.min(1, t)) * (prof.length - 1), k = Math.min(prof.length - 2, Math.floor(u)), w = u - k;
+    const a = prof[k], c = prof[k + 1];
+    return [a[0] + (c[0] - a[0]) * w, a[1] + (c[1] - a[1]) * w, a[2] + (c[2] - a[2]) * w, a[3] + (c[3] - a[3]) * w];
+  };
+  const at = (a: number, t: number, out = 0): V3 => {
+    const [z, rx, ry, cy] = ring(t);
+    const sm = t * t * (3 - 2 * t), p = 2 - 0.75 * sm;
+    const c = Math.cos(a), s = Math.sin(a);
+    const r = 1 / Math.pow(Math.pow(Math.abs(c) / rx, p) + Math.pow(Math.abs(s) / ry, p), 1 / p) + out;
+    // Worn cornerwise: the corners at the sides hang low over the arms, and the front and back ones stop at the belt.
+    const dip = 1.3 * Math.max(0, Math.cos(2 * a)) * sm;
+    return [c * r, cy + s * r, z - dip];
+  };
+  const cols = cut(fr, 16, 8, 2);
+  const ts = fr.lod < 1 ? [0, 0.3, PONCHO_CLOUD, PONCHO_HEM, 1] : [0, 0.2, 0.42, PONCHO_CLOUD, 0.75, PONCHO_HEM, 1];
+  return { cols, ts, at, centre: (t) => { const [z, , , cy] = ring(t); return [0, cy, z]; } };
+}
+
+/** The sheet of the poncho's cloth, in facets, printed `how`: every other column stands out a little so it hangs in folds. */
+function drapeSheet(d: Drape, how: Printed): Mesh {
+  const { cols, ts, at } = d;
+  const v: V3[] = [], f: Face[] = [];
+  const u = (j: number): number => j / cols;
+  for (const t of ts) for (let j = 0; j < cols; j++) v.push(at(((j + 0.5) / cols) * TAU, t, j % 2 ? 0.16 * Math.sin(Math.PI * t) : 0));
+  for (let k = 0; k < ts.length - 1; k++) {
+    const t0 = ts[k], t1 = ts[k + 1], mid = (t0 + t1) / 2;
+    const where = mid > PONCHO_HEM ? 'hem' : mid > PONCHO_CLOUD ? 'cloud' : 'top';
+    for (let j = 0; j < cols; j++) {
+      const j2 = (j + 1) % cols;
+      const face: Face = { i: [k * cols + j, k * cols + j2, (k + 1) * cols + j2, (k + 1) * cols + j], m: 'cloth' };
+      if (how === 'tex') face.tex = { id: 'rover_sun', uv: [[u(j) * PRINT_W, t0 * PRINT_H], [u(j + 1) * PRINT_W, t0 * PRINT_H], [u(j + 1) * PRINT_W, t1 * PRINT_H], [u(j) * PRINT_W, t1 * PRINT_H]] };
+      else if (how === 'pat' && where === 'cloud') face.pat = 'tiles';
+      else if (how === 'pat' && where === 'hem') face.pat = 'bands';
+      else if (how === 'decal' && where === 'hem') face.m = 'print1';
+      f.push(face);
+    }
+  }
+  return mesh(v, f);
+}
+
+/** The print laid on the poncho as decals: scalloped clouds along the band in two inks, three stripes round the hem, and the sun sigil on the left breast. */
+function ponchoDecals(d: Drape): Mesh {
+  const { cols, at, centre } = d;
+  const out = (p: V3, t: number): V3 => { const c = centre(t); return unit([p[0] - c[0], p[1] - c[1], 0.2]); };
+  const quads: Array<{ q: V3[]; m: Mat }> = [];
+  const lift = 0.03;
+  // Clouds: a rounded top over a flat foot on the hem's stripe, one to a column, and a second row half a column along behind them.
+  for (const [off, m, top] of [[0.5, 'print2', 0.66], [0, 'print1', 0.7]] as Array<[number, Mat, number]>) {
+    for (let j = 0; j < cols; j++) {
+      const a0 = ((j + off) / cols) * TAU, a1 = ((j + off + 1) / cols) * TAU, am = (a0 + a1) / 2;
+      const q: V3[] = [at(a0, PONCHO_HEM, lift), at(a0, top + 0.08, lift), at(a0 + (am - a0) * 0.5, top + 0.01, lift), at(am, top, lift), at(a1 - (a1 - am) * 0.5, top + 0.01, lift), at(a1, top + 0.08, lift), at(a1, PONCHO_HEM, lift)];
+      quads.push(quadOut(q, out(q[3], top), m));
+    }
+  }
+  // Stripes round the hem: gold, lilac, gold.
+  for (const [t0, t1, m] of [[PONCHO_HEM + 0.01, PONCHO_HEM + 0.045, 'print3'], [PONCHO_HEM + 0.06, PONCHO_HEM + 0.1, 'print1'], [0.965, 1, 'print3']] as Array<[number, number, Mat]>) {
+    for (let j = 0; j < cols; j++) {
+      const a0 = (j / cols) * TAU, a1 = ((j + 1) / cols) * TAU;
+      const q: V3[] = [at(a0, t0, lift), at(a1, t0, lift), at(a1, t1, lift), at(a0, t1, lift)];
+      quads.push(quadOut(q, out(q[0], t0), m));
+    }
+  }
+  // The sun on the left breast: an arc over a dot, and three rays under it.
+  const ac = (135 * Math.PI) / 180, tc = 0.34, ra = 0.5 / 2.6, rt = 0.5 / 4.2;
+  const sunAt = (da: number, dt: number): V3 => at(ac + da * ra, tc + dt * rt, lift + 0.01);
+  for (let s = 0; s < 6; s++) {
+    const p0 = Math.PI * (0.12 + (0.76 * s) / 6), p1 = Math.PI * (0.12 + (0.76 * (s + 1)) / 6);
+    const q: V3[] = [sunAt(Math.cos(p0) * 0.75, -Math.sin(p0) * 0.75), sunAt(Math.cos(p0), -Math.sin(p0)), sunAt(Math.cos(p1), -Math.sin(p1)), sunAt(Math.cos(p1) * 0.75, -Math.sin(p1) * 0.75)];
+    quads.push(quadOut(q, out(q[0], tc), 'print3'));
+  }
+  quads.push(quadOut([sunAt(-0.22, -0.4), sunAt(0.22, -0.4), sunAt(0.22, 0), sunAt(-0.22, 0)], out(sunAt(0, -0.2), tc), 'print3'));
+  for (const dx of [-0.7, 0, 0.7]) quads.push(quadOut([sunAt(dx - 0.1, 0.45), sunAt(dx + 0.1, 0.45), sunAt(dx + 0.1, dx ? 0.95 : 1.15), sunAt(dx - 0.1, dx ? 0.95 : 1.15)], out(sunAt(dx, 0.7), tc), 'print3'));
+  // The strap across it, from the left shoulder down to the right hip, with a buckle a third of the way down.
+  const N = 8, HW = 0.2, pts: V3[] = [], ns: V3[] = [];
+  for (let i = 0; i <= N; i++) {
+    const w = i / N, a = ((165 - 110 * w) * Math.PI) / 180, t = 0.06 + 0.46 * w;
+    pts.push(at(a, t, lift + 0.02));
+    ns.push(out(pts[i], t));
+  }
+  for (let i = 0; i < N; i++) {
+    const tg = unit(sub3(pts[i + 1], pts[i])), w0 = scale3(unit(cross(ns[i], tg)), HW), w1 = scale3(unit(cross(ns[i + 1], tg)), HW);
+    quads.push(quadOut([sub3(pts[i], w0), add3(pts[i], w0), add3(pts[i + 1], w1), sub3(pts[i + 1], w1)], ns[i], 'leatherDark'));
+  }
+  const bk = pts[3], bn = ns[3], bt = unit(sub3(pts[4], pts[2])), bw = unit(cross(bn, bt));
+  quads.push(quadOut([add3(add3(bk, scale3(bw, -0.26)), scale3(bt, -0.22)), add3(add3(bk, scale3(bw, 0.26)), scale3(bt, -0.22)), add3(add3(bk, scale3(bw, 0.26)), scale3(bt, 0.22)), add3(add3(bk, scale3(bw, -0.26)), scale3(bt, 0.22))].map((p) => add3(p, scale3(bn, 0.02))), bn, 'fitting'));
+  quads.push(quadOut([add3(add3(bk, scale3(bw, -0.12)), scale3(bt, -0.1)), add3(add3(bk, scale3(bw, 0.12)), scale3(bt, -0.1)), add3(add3(bk, scale3(bw, 0.12)), scale3(bt, 0.1)), add3(add3(bk, scale3(bw, -0.12)), scale3(bt, 0.1))].map((p) => add3(p, scale3(bn, 0.03))), bn, 'leatherDark'));
+  return decals(quads);
+}
+const add3 = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub3 = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const scale3 = (a: V3, k: number): V3 => [a[0] * k, a[1] * k, a[2] * k];
+
+/** Tassels round the poncho's hem, one to a column, in the print's gold. */
+function tasselsOf(d: Drape): Mesh {
+  const { cols, at } = d;
+  const ms: Mesh[] = [];
+  for (let j = 0; j < cols; j++) {
+    const p = at(((j + 0.5) / cols) * TAU, 1, 0.02);
+    ms.push(chain([p, [p[0], p[1], p[2] - 0.3], [p[0], p[1], p[2] - 0.85]], [0.06, 0.13, 0.07], 4, 'print3'));
+  }
+  return join(...ms);
+}
+
+/** The whole poncho, printed `how`: the sheet, its strap, the tassels, and the cowl and clasp at the neck. */
+function ponchoOf(b: Build, how: Printed): GearModel {
+  const d = drapeOf(b), sh = b.fr.sh;
+  const over: Covers[] = ['chest', 'neck', 'upper', 'abdomen', 'skirt', 'belt'];
+  const sheet = join(drapeSheet(d, how), how === 'decal' ? ponchoDecals(d) : strapOnly(d));
+  // The cowl: the hood down, bunched at the back of the neck, and its inside the darker cloth.
+  const rs = [[2.05, 1.6 * sh, 1.25, 0, -0.35], [2.45, 1.75 * sh, 1.35, 0, -0.45], [2.85, 1.45 * sh, 1.1, 0, -0.55]];
+  const cowl = join(arcs(rs, 8, 150, 390, 'cloth'), insideOut(arcs(rs.map((r) => [r[0], r[1] - 0.14, r[2] - 0.14, r[3], r[4]]), 8, 150, 390, 'clothDark')));
+  const c = d.at(Math.PI / 2, 0.1, 0.22);
+  const clasp = join(ball(c, [0.3, 0.14, 0.3], 6, 3, 'fitting'), decals([plate([c[0], c[1] + 0.13, c[2]], [0.14, 0, 0], [0, 0, 0.14], [0, 1, 0], 'leatherDark'), plate([c[0], c[1] + 0.14, c[2]], [0.06, 0, 0], [0, 0, 0.06], [0, 1, 0], 'fitting')]));
+  return {
+    layer: 4,
+    bits: [
+      { bone: 'chest', over, bias: 0.12, sway: PONCHO_SWAY, swayFrom: PONCHO_FROM, mesh: sheet },
+      { bone: 'chest', over, bias: 0.13, sway: PONCHO_SWAY, swayFrom: PONCHO_FROM, mesh: tasselsOf(d) },
+      { bone: 'chest', over: ['chest', 'neck'], bias: 0.14, mesh: join(cowl, clasp) },
+    ],
+  };
+}
+/** The strap alone, for a poncho printed other than by decals: the decals' strap and buckle. */
+function strapOnly(d: Drape): Mesh {
+  const all = ponchoDecals(d);
+  // The strap and its buckle are the last ten quads laid.
+  const keep = all.f.slice(-10);
+  return decals(keep.map((f) => ({ q: f.i.map((i) => all.v[i]), m: f.m })));
+}
 
 /**
  * Every piece, a model of its own, given the build of the body it is on, and
@@ -7755,6 +7957,128 @@ const MODELS: Record<string, (b: Build, fit: number) => GearModel> = {
   },
 
   /*
+   * The Rover's kit: prototypes of printed cloth and glowing trim, cut from
+   * the reference sheet (docs/aesthetic/07). A poncho that hangs from the
+   * neck over the shoulders to the hips and swings with the stride, printed
+   * three ways -- its print mapped on as a picture (`poncho_tex`), laid on as
+   * decals (`poncho_decal`), or worked in as a pattern (`poncho_pat`) -- with
+   * a cowl at the back of the neck, a brass clasp, a strap across it and
+   * tassels round its hem; its hood, up, in the head's place; cream sleeves
+   * rolled above the elbow with a bracer below carrying a glowing strip;
+   * trousers with a woven panel down the outside of each leg; and boots with
+   * a turned-down cuff, two buckled straps and a glowing strip up the shaft.
+   */
+  poncho: (b) => ponchoOf(b, 'plain'),
+  poncho_tex: (b) => ponchoOf(b, 'tex'),
+  poncho_decal: (b) => ponchoOf(b, 'decal'),
+  poncho_pat: (b) => ponchoOf(b, 'pat'),
+  poncho_hood: (b) => {
+    const fr = b.fr, rim = { f: 2.42, b: 1.95 };
+    const peak = skull(fr, CROWN)[2];
+    const rs = [skullRing(fr, 1.9, 0.6), skullRing(fr, 2.45, 0.62), skullRing(fr, 2.95, 0.58), skullRing(fr, CROWN + 0.1, 0.5), [CROWN + 0.45, 1.1, 1.05, 0, peak - 0.5], [CROWN + 0.6, 0.1, 0.1, 0, peak - 0.9]];
+    // The hood round the back three-quarters of the head, open at the face, its inside the darker cloth and seen only through the opening.
+    const outer = arcs(rs, 10, 140, 400, (band) => (band >= 4 ? 'clothDark' : 'cloth'));
+    const inner = insideOut(arcs(rs.map((r) => [r[0], r[1] - 0.12, r[2] - 0.12, r[3], r[4]]), 10, 140, 400, 'clothDark'));
+    return {
+      layer: 2,
+      bits: [{ bone: 'head', over: [...HEAD_OVER, 'neck'], bias: 0.08, mesh: grown(join(outer, inner)) }],
+      hides: ['top', 'tails'],
+      hairTo: rim,
+    };
+  },
+  rover_sleeves: (b) => ({
+    layer: 1,
+    bits: [
+      // Cream linen to above the elbow, rolled there in a thick cuff; the forearm bare below it.
+      {
+        bone: 'arm', side: 'both', over: ['upper'], bias: 0.01, convex: true,
+        mesh: capped(rings([[-2.2, 0.72 * b.arm, 0.7], [-2.0, 0.9 * b.arm, 0.88], [-1.75, 0.92 * b.arm, 0.9], [-1.65, 0.8 * b.arm, 0.78], ...deltoid(b.arm, 1.2)], 6, (band) => (band <= 1 ? 'lining' : 'cloth'), { bottom: false })),
+      },
+      // A hide bracer on the forearm, strapped top and bottom, with a strip down its outside that glows.
+      {
+        bone: 'elbow', side: 'both', over: ['lower'], bias: 0.02, convex: true,
+        mesh: join(
+          rings([[-2.4, 0.74, 0.7], [-2.15, 0.78, 0.74], [-1.5, 0.8, 0.76], [-1.3, 0.74, 0.7]], 6, (band) => (band === 0 || band === 2 ? 'leatherDark' : 'leather'), { top: false, bottom: false }),
+          decals([plate([0.81, 0, -1.84], [0, 0.07, 0], [0, 0, 0.3], [1, 0, 0], 'glow')]),
+        ),
+      },
+    ],
+    hides: ['upper'],
+  }),
+  rover_trousers: (b) => {
+    const rs = legRings(b, 1.08, -1.9), tube = legTube(rs, 6, 'cloth', true);
+    // A woven panel down the outside of each leg: the facet on the outer side of a six-sided leg, in tiles of the print's inks.
+    const panelled = (m: Mesh): Mesh => {
+      const wide = Math.max(...m.v.map((p) => Math.abs(p[0])));
+      return { ...m, f: m.f.map((f) => {
+        if (f.i.length !== 4 || f.seam || f.decal) return f;
+        const c = middle(f.i.map((i) => m.v[i]));
+        return c[0] > 0.6 * wide && Math.abs(c[1]) < 0.45 ? { ...f, pat: 'tiles' } : f;
+      }) };
+    };
+    const strip = (z: number, x: number): Mesh => decals([plate([x, 0, z], [0, 0.06, 0], [0, 0, 0.32], [1, 0, 0], 'glow')]);
+    return {
+      layer: 1,
+      bits: [
+        { bone: 'hip', side: 'both', bend: true, over: ['thigh'], bias: 0.01, convex: true, mesh: join(panelled(underHem(tube.thigh, b.fr)), strip(1.5, 0.92 * thighTop(b.fr) * 1.08 + 0.02)) },
+        { bone: 'knee', side: 'both', bend: true, over: ['shin', 'boot'], bias: 0.03, convex: true, mesh: join(panelled(tube.shin), strip(-1.1, 0.78)) },
+      ],
+      hides: ['thigh', 'shin'],
+      dyes: { pelvis: { trousers: 'cloth' } },
+    };
+  },
+  rover_boots: () => {
+    // To under the knee, the top turned down in a thick pale cuff, strapped twice round the shaft with a buckle on the outside of
+    // each, and a strip up the front of the shaft that glows.
+    const shaft = rings([
+      [-3.1, 0.7, 0.74], [-1.6, 0.84, 0.88], [-1.25, 0.86, 0.9], [-1.2, 1.02, 1.06], [-0.85, 1.04, 1.08], [-0.76, 0.98, 1.02],
+    ], 6, (band) => (band >= 3 ? 'leatherLit' : 'leather'), { top: false });
+    const strap = (z: number, r: number): Mesh => rings([[z - 0.1, r, r + 0.04], [z + 0.1, r, r + 0.04]], 6, 'leatherDark', { top: false, bottom: false });
+    return {
+      layer: 2,
+      bits: [
+        {
+          bone: 'knee', side: 'both', over: ['shin'], bias: 0.02, convex: true, front: SHAFT,
+          mesh: join(soled(shaft), strap(-2.45, 0.77), strap(-1.8, 0.85), decals([
+            plate([0.82, 0, -2.45], [0, 0.1, 0], [0, 0, 0.13], [1, 0, 0], 'fitting'), plate([0.9, 0, -1.8], [0, 0.1, 0], [0, 0, 0.13], [1, 0, 0], 'fitting'),
+            plate([0, 0.87, -2.1], [0.055, 0, 0], [0, 0, 0.28], [0, 1, 0], 'glow'),
+          ])),
+        },
+        { bone: 'ankle', side: 'both', over: ['foot'], bias: 0.02, mesh: recoloured(swelled(footMesh(), 1.06), { boot: 'leatherDark', sole: 'leatherDark' }) },
+      ],
+      hides: ['boot', 'foot'],
+    };
+  },
+  rover_belt: (b, fit) => {
+    const g = fit + 0.04, wa = b.fr.wa;
+    const X = 1.64 * wa * g, Y = 1.32 * g;
+    const front = Y * Math.cos(Math.PI / 8);
+    const onBelt = (m: Mesh, deg: number): Mesh => {
+      const a = deg * DEG;
+      return spun(moved(m, [0, 1 / Math.hypot(Math.sin(a) / X, Math.cos(a) / Y), 0]), deg);
+    };
+    return {
+      layer: 6,
+      bits: [
+        // A wide belt buckled at the front, and a second, narrower, slung under it.
+        {
+          bone: 'pelvis', over: ['belt', 'skirt', 'abdomen'], bias: 0.03, convex: true,
+          mesh: join(beltRing(b, g, 'leather', 0.9, 1.5), beltRing(b, g + 0.02, 'leatherDark', 0.5, 0.72),
+            decals([plate([0, front + 0.01, 1.2], [0.26, 0, 0], [0, 0, 0.26], [0, 1, 0], 'fitting'), plate([0, front + 0.02, 1.2], [0.12, 0, 0], [0, 0, 0.12], [0, 1, 0], 'leatherDark')])),
+        },
+        // A pouch at the right front with a bead on its flap that glows, and a flat case of papers at the left.
+        {
+          bone: 'pelvis', over: ['belt', 'skirt', 'thigh', 'abdomen'], bias: 0.06,
+          mesh: onBelt(join(box([-0.5, -0.02, -0.1], [0.5, 0.5, 1.25], 'leather', 'leatherDark'), box([-0.53, 0.36, 0.85], [0.53, 0.56, 1.32], 'leatherDark'),
+            decals([plate([0, 0.57, 1.0], [0.06, 0, 0], [0, 0, 0.1], [0, 1, 0], 'glow')])), 50),
+        },
+        { bone: 'pelvis', over: ['belt', 'skirt', 'thigh', 'abdomen'], bias: 0.06, mesh: onBelt(join(box([-0.45, -0.02, 0], [0.45, 0.3, 1.2], 'lining'), box([-0.47, 0.28, 0.9], [0.47, 0.34, 1.26], 'leatherDark')), 130) },
+      ],
+      hides: ['belt'],
+    };
+  },
+
+  /*
    * An Artisan's circlet, in the head's place for a helm: a thin gold band
    * round the brow over the hair, down a little to the nape as a hat is worn,
    * and its three settings over the brow, the middle one the largest.
@@ -7952,6 +8276,23 @@ function foldsOf(piece: GearPiece): number {
   for (const c of `${piece.id}:${piece.material ?? ''}:${piece.dye ?? ''}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
   return ((h >>> 0) / 4294967296) * 2 * Math.PI;
 }
+/**
+ * Cloth that hangs from a height and swings with the stride as hair does (`Rig.tail`, `GearBit.sway`): every corner under
+ * `from` pitched back about that height by `k` of the tail's swing, and rolled to the side by `k` of its roll, so the hem goes
+ * furthest and the shoulders not at all; above it, nothing moves. Standing, the tail's swing is the breath's, and the hem stirs.
+ */
+function swayed(v: V3[], r: Rig, k: number, from: number): V3[] {
+  const pitch = -r.tail[0] * k * DEG, roll = r.tail[1] * k * DEG;
+  if (Math.abs(pitch) < 1e-4 && Math.abs(roll) < 1e-4) return v;
+  const cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
+  return v.map((p) => {
+    if (p[2] >= from) return p;
+    const z = p[2] - from;
+    const y = cp * p[1] - sp * z, z1 = sp * p[1] + cp * z;
+    return [cr * p[0] + sr * z1, y, from - sr * p[0] + cr * z1];
+  });
+}
+
 function bentWith(v: V3[], r: Rig, fr: Frame, mail = false, phase = 0): V3[] {
   // How far apart the legs are, fore and aft: the hem swings out wider the longer the stride, as a skirt does at a run.
   const stride = Math.min(1, 1.2 * Math.abs(Math.sin(r.leg[0][0] * DEG) - Math.sin(r.leg[1][0] * DEG)));
@@ -9566,7 +9907,7 @@ function dress(parts: Part[], named: Map<string, Part[]>, kit: Kit, r: Rig, b: B
         const xf = bit.bend && bit.bone === 'hip' ? joint(bone, [0, 0, -THIGH * fr.tall])
           : bit.at || bit.turn || bit.whole ? joint(bone, bit.at ?? [0, 0, 0], ...(bit.turn ?? [0, 0, 0])) : bone;
         const v = bit.skirt ? bentWith(m.v, r, fr, bit.skirt === 'mail', foldsOf(piece)) : bit.bend ? kneeBent(m.v, kneeBend(b, k), bit.bone === 'knee', bit.point)
-          : bit.whole && bit.bone === 'arm' ? heldOnShoulder(m.v, r, k, capTop, capFoot) : undefined;
+          : bit.whole && bit.bone === 'arm' ? heldOnShoulder(m.v, r, k, capTop, capFoot) : bit.sway ? swayed(m.v, r, bit.sway, bit.swayFrom ?? 1.7) : undefined;
         const part: Part = { mesh: m, xf, bias: bit.bias ?? 0.02, pal: P, rare, seed: si + 1, convex: bit.convex, front: bit.front, v, hide: bit.hide };
         // What is worn on a thigh goes under the tunic's skirt as the thigh does, where the skirt is still to be seen.
         if (bit.bone === 'hip' && !bit.skirt && r.leg[k][0] < THIGH_UNDER) part.under = (named.get('skirt') ?? []).filter((p) => !hidden.has(p));
@@ -10264,7 +10605,68 @@ const PATTERN: Record<Pattern, { a: number; b: number; px: number }> = {
   lames: { a: 9, b: 0.5, px: 3.6 },
   grain: { a: 9, b: 0.35, px: 3 },
   studs: { a: 0.62, b: 0.62, px: 5.5 },
+  tiles: { a: 0.42, b: 0.42, px: 2.6 },
+  bands: { a: 9, b: 0.22, px: 2.2 },
 };
+
+/**
+ * A facet of printed cloth mapped onto its print (`Face.tex`): the print's
+ * picture put down through the facet's corners, so the print lies on the
+ * surface and turns with it, and clipped to the facet. Four corners take an
+ * affine map off three of them, which on a facet near a parallelogram is a
+ * hair out at the fourth and nothing to see; a three-cornered facet is exact.
+ * Over it, the garment's own shadow shape as one flat tint where the facet
+ * is in shade, and nothing where it is lit: the print stays flat, as a print
+ * is painted, and the drape reads by its shadow.
+ */
+function printed(g: CanvasRenderingContext2D, l: Laid, faces: number[], px: number): void {
+  const f = l.part.mesh.f;
+  for (const fi of faces) {
+    const face = f[fi], tex = face.tex;
+    if (!tex || face.i.length < 3) continue;
+    const img = printImage(tex.id);
+    if (!img) continue;
+    const s0 = l.s[face.i[0]], s1 = l.s[face.i[1]], s3 = l.s[face.i[face.i.length - 1]];
+    const [u0, v0] = tex.uv[0], [u1, v1] = tex.uv[1], [u3, v3] = tex.uv[tex.uv.length - 1];
+    const du1 = u1 - u0, dv1 = v1 - v0, du3 = u3 - u0, dv3 = v3 - v0;
+    const det = du1 * dv3 - du3 * dv1;
+    if (Math.abs(det) < 1e-9) continue;
+    const dx1 = s1[0] - s0[0], dy1 = s1[1] - s0[1], dx3 = s3[0] - s0[0], dy3 = s3[1] - s0[1];
+    const a = (dx1 * dv3 - dx3 * dv1) / det, b = (dy1 * dv3 - dy3 * dv1) / det;
+    const c = (dx3 * du1 - dx1 * du3) / det, d = (dy3 * du1 - dy1 * du3) / det;
+    const e = s0[0] - a * u0 - c * v0, ff = s0[1] - b * u0 - d * v0;
+    g.save();
+    const clip = new Path2D();
+    // Grown half a pixel as the facets are, so no seam of the ground shows between neighbours.
+    const n = face.i.length;
+    const pts = face.i.map((i) => l.s[i]);
+    let area = 0;
+    for (let q = 0; q < n; q++) { const p = pts[q], r = pts[(q + 1) % n]; area += p[0] * r[1] - r[0] * p[1]; }
+    const cx = pts.reduce((x, p) => x + p[0], 0) / n, cy = pts.reduce((y, p) => y + p[1], 0) / n;
+    const grow = 0.5 * px;
+    pts.forEach((p, q) => {
+      const dx = p[0] - cx, dy = p[1] - cy, dl = Math.hypot(dx, dy) || 1;
+      const x = p[0] + (dx / dl) * grow, y = p[1] + (dy / dl) * grow;
+      if (q === 0) clip.moveTo(x, y); else clip.lineTo(x, y);
+    });
+    clip.closePath();
+    void area;
+    g.clip(clip);
+    g.transform(a, b, c, d, e, ff);
+    g.imageSmoothingEnabled = px < 0.4;
+    g.drawImage(img, 0, 0);
+    g.restore();
+    // The shadow shape, flat, in a cool hue: plum over the print where the facet turns from the light; a breath of lemon where it is full in it.
+    const k = l.k[fi];
+    if (k < 0.93 || k > 1.1) {
+      g.save();
+      g.clip(clip);
+      g.fillStyle = k < 0.93 ? `rgba(70, 36, 96, ${Math.min(0.42, (0.93 - k) * 1.1).toFixed(3)})` : `rgba(255, 246, 196, ${Math.min(0.2, (k - 1.1) * 0.6).toFixed(3)})`;
+      g.fillRect(-1e4, -1e4, 2e4, 2e4);
+      g.restore();
+    }
+  }
+}
 
 /**
  * The patterns on the facets of one part just filled: each clipped to its
@@ -10274,7 +10676,15 @@ const PATTERN: Record<Pattern, { a: number; b: number; px: number }> = {
  * light. A four-cornered facet only, which is every band of a ring or a
  * chain; the ends are left plain.
  */
+/** A hash in [0, 1) for a tile of a print, the same every frame. */
+const h2cell = (x: number, y: number, s: number): number => {
+  let h = (x * 374761393 + y * 668265263 + s * 2246822519) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+};
+
 function worked(g: CanvasRenderingContext2D, l: Laid, faces: number[], P: Palette, px: number, hs: number): void {
+  printed(g, l, faces, px);
   const f = l.part.mesh.f;
   const v = l.part.mesh.v;
   // Mail's rows and rings, gathered by shade across the whole part and laid down together at the end.
@@ -10391,6 +10801,40 @@ function worked(g: CanvasRenderingContext2D, l: Laid, faces: number[], P: Palett
           heads.rect(p[0] - r0, p[1] - r0, 2 * r0, 2 * r0);
         }
       }
+      continue;
+    }
+    if (face.pat === 'tiles' || face.pat === 'bands') {
+      /*
+       * Printed cloth, in flat tiles of the print's inks (`print1`..`print4`
+       * off the piece's dye, and its gold): a mosaic of squares, each one
+       * ink by a hash of where it is, counted off the facet's own size so the
+       * tiles run on from facet to facet round the garment; or bands across
+       * it, a striped hem. Each tile is flat at the facet's own light, as a
+       * print is painted: no line round it, no grading inside it.
+       */
+      const nr = Math.max(1, Math.min(Math.floor(H / cut.b), Math.round((H * HEIGHT_SCALE) / (px * cut.px))));
+      const nc = face.pat === 'bands' ? 1 : Math.max(1, Math.min(Math.floor(W / cut.a), Math.round((W * hs) / (px * cut.px))));
+      if (nr < 2 && face.pat === 'bands') continue;
+      const kq = Math.round(k * 25) / 25;
+      const inks: Mat[] = face.pat === 'bands' ? ['print3', 'print1', 'print3', face.m] : [face.m, 'print1', 'print2', 'print4', face.m, 'print1'];
+      const paths = new Map<string, Path2D>();
+      const seed = fi * 31 + l.part.seed! * 7;
+      for (let r = 0; r < nr; r++) {
+        for (let c = 0; c < nc; c++) {
+          const pick = face.pat === 'bands' ? inks[r % inks.length] : inks[Math.floor(h2cell(c, r, seed) * inks.length)];
+          if (pick === face.m) continue;
+          const path = pathIn(paths, shade(P[pick], Math.min(1.2, kq)));
+          const a0 = c / nc, a1 = (c + 1) / nc, b0 = r / nr, b1 = (r + 1) / nr;
+          const p0 = at(a0, b0), p1 = at(a1, b0), p2 = at(a1, b1), p3 = at(a0, b1);
+          path.moveTo(p0[0], p0[1]); path.lineTo(p1[0], p1[1]); path.lineTo(p2[0], p2[1]); path.lineTo(p3[0], p3[1]); path.closePath();
+        }
+      }
+      g.save();
+      const clip = new Path2D();
+      clip.moveTo(s0[0], s0[1]); clip.lineTo(s1[0], s1[1]); clip.lineTo(s2[0], s2[1]); clip.lineTo(s3[0], s3[1]); clip.closePath();
+      g.clip(clip);
+      for (const [c, path] of paths) { g.fillStyle = c; g.fill(path); }
+      g.restore();
       continue;
     }
     // Quilting's channels are counted off the facet's own width, as mail's rings are, so they run on from facet to facet round a coat.
