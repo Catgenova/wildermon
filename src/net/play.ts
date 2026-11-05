@@ -609,6 +609,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     if (what.boons) game.player.boons = what.boons as typeof game.player.boons;
     if (what.knacks) game.player.knacks = what.knacks;
     if (what.titles) game.player.titles = what.titles;
+    // And the shut recipes you have read, which the crafting window opens (`recipebook.ts`).
+    if (what.recipes) game.knownRecipes = new Set(what.recipes);
     if (what.title !== undefined) game.player.title = what.title;
     if (what.nutrition) {
       const n = game.player.nutrition as unknown as Record<string, number>;

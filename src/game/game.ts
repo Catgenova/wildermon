@@ -1275,6 +1275,12 @@ export class Game {
     const v = this.perkFx[key];
     return typeof v === 'number' ? v : otherwise;
   }
+  /** The shut recipes whose Recipe you have read (`recipebook.ts`), as every beat says them (`private.recipe_known`). */
+  knownRecipes = new Set<string>();
+  /** Whether you have read the Recipe of a shut recipe. */
+  knowsRecipe(id: string): boolean {
+    return this.knownRecipes.has(id);
+  }
   /** Take the island's fold of your perks, and hand what it says on to the body and the pack. */
   setPerks(fx: Record<string, number> | null | undefined): void {
     this.perkFx = { ...(fx ?? {}) };

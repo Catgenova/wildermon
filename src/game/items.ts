@@ -512,6 +512,9 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   // A dye written down (`dyes.ts`, Make a recipe and Boil from recipe): the mix and QL are its `dye`.
   dye_recipe: { name: 'Dye recipe', category: 'misc', weight: 0.05, decay: 14,
     description: 'On {sheet}: one dye\'s mix and QL. Boil from recipe: a bucket of lye ({litres} L) and the dyestuffs listed; output {litres} L of exactly that mix, QL as a boil and at most the recipe\'s. Recipe not used up.' },
+  // A shut recipe written down (`recipebook.ts`): the recipe it opens is its `extra`, by its title (`recipeTitle`).
+  cooking_recipe: { name: 'Recipe', category: 'misc', weight: 0.05, decay: 14,
+    description: 'Read: opens the recipe named on it in the crafting window; used up. Not read if already known. From {from} carcasses: {odds} per butchering.' },
   banner: { name: 'Banner', category: 'misc', weight: 4, decay: 5, description: 'Plant on the settlement: flies your colour.' },
   flagpole: { name: 'Flagpole', category: 'misc', weight: 8, decay: 5, description: 'Flag flies downwind: straight out in a gale, hanging in a calm. Dyed: your colour. On a settlement: the settlement\'s device.' },
   rose_arch: { name: 'Rose arch', category: 'misc', weight: 30, decay: 5, description: 'One tile across; walk through it. {rule}' },

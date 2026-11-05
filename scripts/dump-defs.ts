@@ -165,6 +165,8 @@ import {
   WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH, LIFE_MOTE, LIFE_MOTE_NEED, LIFE_MOTES_EACH, POULTICE_HEAL, STATUE_MOTES,
 } from '../src/game/motes';
 import { patronStatue, STATUETTE } from '../src/game/patronlist';
+import { RECIPE_DROP_ODDS, RECIPE_DROPPERS, RECIPE_ITEM, RECIPE_KNOWN } from '../src/game/recipebook';
+import { lockedRecipes, recipeTitle } from '../src/game/recipes';
 import {
   TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
 } from '../src/game/tracking';
@@ -2187,6 +2189,18 @@ out.push(`create or replace function water_mote_need() returns text language sql
  */
 out.push(`create or replace function life_mote() returns text language sql immutable as $fn$ select ${q(LIFE_MOTE)} $fn$;`);
 out.push(`create or replace function life_motes_each() returns int language sql immutable as $fn$ select ${q(LIFE_MOTES_EACH)} $fn$;`);
+/*
+ * Recipes found and read (`recipebook.ts`): the item one is written on, the odds of one off a butchering, the kinds that
+ * carry one, what reading one already open says, and every shut recipe (`Recipe.locked`) with the title its Recipe
+ * carries in `extra`, in the order they are listed.
+ */
+out.push(`create or replace function recipe_item() returns text language sql immutable as $fn$ select ${q(RECIPE_ITEM)} $fn$;`);
+out.push(`create or replace function recipe_drop_odds() returns double precision language sql immutable as $fn$ select ${q(RECIPE_DROP_ODDS)}::double precision $fn$;`);
+out.push(`create or replace function recipe_droppers() returns text[] language sql immutable as $fn$ select array[${RECIPE_DROPPERS.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function recipe_known_says() returns text language sql immutable as $fn$ select ${q(RECIPE_KNOWN)} $fn$;`);
+out.push(`create or replace function locked_recipes() returns table (id text, title text, ord int) language sql immutable as $fn$ select * from (values ${
+  lockedRecipes().map((r, n) => `(${q(r.id)}, ${q(recipeTitle(r))}, ${n})`).join(', ') || `(null::text, null::text, null::int)`
+}) v (id, title, ord) where v.id is not null $fn$;`);
 /*
  * A patron's statue (`relicuse.ts`, `faith.ts`): what it is enchanted out of, the motes of each element that takes, the
  * statue of each patron, and the patron of each statue (null for anything else).

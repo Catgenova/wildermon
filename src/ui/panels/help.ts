@@ -145,7 +145,8 @@ import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STE
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
-import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
+import { CRAFT_REACH, lockedRecipes, needRecipeSays, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
+import { RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { TREE_DEPTH } from '../recipetree';
 import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, MIN_GAIN, playerGain, SKILL_BY_ID } from '../../game/skills';
@@ -1669,7 +1670,7 @@ export function helpText(): string {
       <li>Bushes: <b>Harvest</b> with a sickle cuts ${CUT_BUSHES.map((b) => `${lowName(b.yields ?? '')} off a ${b.name.toLowerCase()} only in ${listed(fruitingSeasons(b.yields ?? ''))}`).join('; ')}.</li>
       <li>Yield per picking: sapling none; mature about ${FRUIT_MATURE}; old about ${FRUIT_OLD}; more with forestry. A few minutes to regrow.</li>
       <li>${capital(countIn('apple', need('make_apple_pie', 'apple')))} + a dough: ${made('make_apple_pie')} <b>apple pies</b> (the best food).
-      ${capital(countIn('cherry', need('make_cherry_preserves', 'cherry')))}: ${made('make_cherry_preserves')} jars of <b>preserves</b>.
+      ${capital(countIn('cherry', need('make_cherry_preserves', 'cherry')))}: ${made('make_cherry_preserves')} jars of <b>preserves</b> (needs its Recipe read).
       ${capital(countIn('olive', need('press_olives', 'olive')))} under a <b>quern</b>: ${made('press_olives')} measures of <b>olive oil</b> (barely rots).</li>
       <li>As <b>wood</b>: apple wears like oak with a finer edge; cherry is the best handle wood; olive is very hard to work and outlasts everything. One log per tree.</li>
     </ul>
@@ -1737,7 +1738,10 @@ export function helpText(): string {
       <li>Peat: dug off a peat bed with a shovel; free.</li>
       <li><b>Cook</b> at a lit fire: cooked meat fills ${percent(itemDef('cooked_meat').food ?? 0)} of the food bar (raw ${percent(itemDef('meat').food ?? 0)}); baked potatoes;
       roast onions and nuts; with a <b>clay bowl</b>: berry compote, meat and vegetable stew.</li>
-      <li><b>Cottage pie</b> (${workedAt('make_cottage_pie')}, clay bowl, lit fire): ${bill('make_cottage_pie')}; makes ${made('make_cottage_pie')}, ${percent(itemDef('cottage_pie').food ?? 0)} food each.</li>
+      <li><b>Cottage pie</b> (${workedAt('make_cottage_pie')}, clay bowl, lit fire, its Recipe read): ${bill('make_cottage_pie')}; makes ${made('make_cottage_pie')}, ${percent(itemDef('cottage_pie').food ?? 0)} food each.</li>
+      <li><b>Recipes</b>: ${listed(lockedRecipes().map((r) => recipeTitle(r).toLowerCase()))}: shut until read. Crafting window: greyed, padlocked, "${needRecipeSays(lockedRecipes()[0])}".
+      A Recipe: ${percent(RECIPE_DROP_ODDS)} per butchering of a ${listedOr([...RECIPE_DROPPERS])} carcass; one not read first. <b>Read recipe</b>: opens it for good, Recipe used up; already open: not read.
+      Simma: does not cook them.</li>
       <li>Cooking recipes: in the crafting window, unlocked next to a lit fire. Failed dish: ingredients damaged by their QL.</li>
       <li>Burns fuel in real time; goes cold when out. Unlit: take apart for the wood.</li>
     </ul>
@@ -3479,6 +3483,7 @@ export function helpText(): string {
       ${REGIONS.filter((R) => R.monsters).map((R) => `<li>${capital(islandName(R.name))}: monster country: every wild spawn is one of these; holds ${mul(R.monsters ?? 1)} the number the rest of the chart shares
       (${listed(MONSTERS.filter(([id]) => (lairOf(id) ?? R) === R).map(([id]) => `${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1)} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}).</li>`).join('')}
       ${REGIONS.filter((R) => R.lair?.length).map((R) => `<li>${capital(listed(R.lair!.map((id) => `${SPECIES[id].name.toLowerCase()}`)))}: only on ${islandName(R.name)}.</li>`).join('')}
+      <li>Butchering a ${listedOr([...RECIPE_DROPPERS])}: ${percent(RECIPE_DROP_ODDS)} chance of a <b>Recipe</b> (${listed(lockedRecipes().map((r) => recipeTitle(r).toLowerCase()))}).</li>
       <li>Butchering: the usual yields, plus <b>tusk</b> and <b>sinew</b> (orc, ogre); dragon: ${SPECIES.dragon.butcher.scale ?? 0} <b>dragon scales</b> and a <b>hoard</b> of ${HOARD_LUMPS} to
       ${HOARD_LUMPS + HOARD_MORE} lumps (by carcass kept) of the ${HOARD_DEEP.length} deep metals and ${HOARD_METALS.length - HOARD_DEEP.length} precious ones; the only source of them together.</li>
       <li><b>Composite bow</b>: ${bill('make_composite_bow')}, ${workedAt('make_composite_bow')}. Range <b>${COMPOSITE.range ?? 0}</b> tiles, ${COMPOSITE.damage} damage

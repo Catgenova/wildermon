@@ -3243,6 +3243,18 @@ button.goal-row:focus-visible {
   opacity: 0.75;
 }
 
+/* A shut recipe whose Recipe has not been read: greyer still, and a padlock before its name (`craft.ts`). */
+.craft-row.craft-unread {
+  opacity: 0.55;
+}
+
+.craft-lock {
+  display: inline-block;
+  margin-right: 5px;
+  vertical-align: -1px;
+  color: var(--t-dim, #9a9a9a);
+}
+
 .craft-name {
   min-width: 0;
   font-weight: 600;
@@ -7593,6 +7605,14 @@ button.goal-row:focus-visible {
 [data-ui='runecut'] .trade-shut > :not(.trade-offer):not(.trade-acts),
 [data-ui='runecut'] .craft-row.locked {
   opacity: 1;
+}
+
+[data-ui='runecut'] .craft-row.craft-unread {
+  opacity: 0.7;
+}
+
+[data-ui='runecut'] .craft-lock {
+  color: var(--rc-carve);
 }
 
 [data-ui='runecut'] .trade-shut {

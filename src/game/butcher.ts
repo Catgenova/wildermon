@@ -3,6 +3,7 @@ import { REMOVED_KINDS, SPECIES, type ButcherPart } from './creatures';
 import { productQlRange, type Game } from './game';
 import { HOARD_METALS, itemDef, itemName, type Item } from './items';
 import { WINTER_FUR, WINTER_FUR_PART, winterFurSays, winterNow } from './winter';
+import { dropRecipe } from './recipebook';
 
 /**
  * Butchering a corpse. The Butchering skill decides how much of a carcass is
@@ -142,11 +143,11 @@ export const BUTCHER_ACTIONS: ActionDef[] = [
         taken.push(`${bait} × ${itemDef(BUTCHER_BAIT).name.toLowerCase()}`);
       }
       removeCorpse(g, t, item);
-      if (!taken.length) {
-        g.logMsg(`Butchering failed: ${def.name.toLowerCase()} carcass lost.`, 'event');
-        return;
-      }
-      g.logMsg(`Butchered: ${def.name.toLowerCase()}. Got ${taken.join(', ')}, QL ${ql.toFixed(1)}.${knife ? '' : ' No knife: most of the carcass wasted.'}`, 'event');
+      // And a Recipe, maybe, off a goblin or an orc, at the carcass's QL (`recipebook.ts`), however the butchering went.
+      const found = dropRecipe(g, def.id, item.ql);
+      if (!taken.length) g.logMsg(`Butchering failed: ${def.name.toLowerCase()} carcass lost.`, 'event');
+      else g.logMsg(`Butchered: ${def.name.toLowerCase()}. Got ${taken.join(', ')}, QL ${ql.toFixed(1)}.${knife ? '' : ' No knife: most of the carcass wasted.'}`, 'event');
+      if (found) g.logMsg(found, 'event');
     },
   },
 ];

@@ -102,6 +102,13 @@ export interface RecipeInput {
 export interface Recipe {
   id: string;
   category: RecipeCategory;
+  /**
+   * Shut until its recipe is read: a Recipe off a goblin's or an orc's carcass (`RECIPE_DROPPERS`), read and used up
+   * (`recipebook.ts`). Listed, greyed and padlocked in the crafting window until then. The island's `locked_recipes`.
+   */
+  locked?: boolean;
+  /** What its recipe is called, where the thing it makes does not say it: "Cherry preserves" (`recipeTitle`). */
+  title?: string;
   /** Item id made. */
   result: string;
   /** Units of the result per craft. */
@@ -386,10 +393,10 @@ export const RECIPES: Recipe[] = [
   { id: 'make_fishing_rod', category: 'Woodwork', result: 'fishing_rod', inputs: [{ item: 'shaft', count: 2 }, { item: 'bow_string' }, { item: 'ribbon' }], tool: 'carving_knife', skill: 'carpentry', material: 'wood', label: 'Splice a fishing rod', verb: 'splicing a rod', baseTime: 10, stamina: 0.03, difficulty: 14, done: '' },
   { id: 'bake_pastry', category: 'Cooking', result: 'pastry', count: 2, inputs: [{ item: 'dough' }, { item: 'butter', count: 2 }], station: 'campfire', skill: 'cooking', label: 'Bake pastry', verb: 'baking pastry', baseTime: 12, stamina: 0.03, difficulty: 14, done: '', spareOnFail: true },
   { id: 'make_apple_pie', category: 'Cooking', result: 'apple_pie', count: 2, inputs: [{ item: 'dough' }, { item: 'apple', count: 4 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Bake an apple pie', verb: 'baking a pie', baseTime: 18, stamina: 0.03, difficulty: 20, done: '', spareOnFail: true },
-  { id: 'make_cherry_preserves', category: 'Cooking', result: 'preserves', count: 2, inputs: [{ item: 'cherry', count: 12 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Preserve cherries', verb: 'preserving cherries', baseTime: 14, stamina: 0.03, difficulty: 14, done: '', spareOnFail: true },
+  { id: 'make_cherry_preserves', category: 'Cooking', locked: true, title: 'Cherry preserves', result: 'preserves', count: 2, inputs: [{ item: 'cherry', count: 12 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Preserve cherries', verb: 'preserving cherries', baseTime: 14, stamina: 0.03, difficulty: 14, done: '', spareOnFail: true },
   { id: 'press_olives', category: 'Cooking', result: 'olive_oil', count: 2, inputs: [{ item: 'olive', count: 10 }], tool: 'quern', skill: 'milling', label: 'Press into oil', verb: 'pressing olives', baseTime: 16, stamina: 0.05, difficulty: 18, done: '', spareOnFail: true },
   { id: 'make_broth', category: 'Cooking', result: 'broth', count: 2, inputs: [{ item: 'bone', count: 2 }, { item: 'water_bucket', litres: 2 }], tool: 'clay_pot', station: 'campfire', skill: 'cooking', label: 'Boil a broth', verb: 'boiling a broth', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true, perk: 'broth' },
-  { id: 'make_cottage_pie', category: 'Cooking', result: 'cottage_pie', count: 2, inputs: [{ item: 'meat', count: 2 }, { item: 'potato', count: 2 }, { item: 'carrot' }, { item: 'onion' }, { item: 'corn' }, { item: 'flour' }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Bake a cottage pie', verb: 'baking a cottage pie', baseTime: 20, stamina: 0.03, difficulty: 22, done: '', spareOnFail: true },
+  { id: 'make_cottage_pie', category: 'Cooking', locked: true, result: 'cottage_pie', count: 2, inputs: [{ item: 'meat', count: 2 }, { item: 'potato', count: 2 }, { item: 'carrot' }, { item: 'onion' }, { item: 'corn' }, { item: 'flour' }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Bake a cottage pie', verb: 'baking a cottage pie', baseTime: 20, stamina: 0.03, difficulty: 22, done: '', spareOnFail: true },
   { id: 'make_stew', category: 'Cooking', result: 'stew', inputs: [{ item: 'cooked_meat' }, { item: 'potato' }, { item: 'onion' }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Simmer a stew', verb: 'simmering a stew', baseTime: 16, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true },
   // A stone goes into a plain casting with a file. The piece takes the stone's name, the way a chest takes its wood, and the rarer the stone the harder the seating.
   { id: 'set_focus', category: 'Jewellery', result: 'focus', inputs: [{ item: 'gem' }, { item: 'silver_lump' }], tool: 'file', skill: 'jewellery', material: 'gem', label: 'Set a focus', verb: 'setting a focus', baseTime: 14, stamina: 0.04, difficulty: 20, done: '', spareOnFail: true },
@@ -832,6 +839,8 @@ export interface RecipeStatus {
   second: boolean;
   /** Each input: how many a go takes, how many are at hand, and how many of those are on you rather than stored nearby. */
   inputs: Array<{ item: string; litres: boolean; need: number; have: number; carried: number }>;
+  /** Shut, and its Recipe not read (`recipeUnread`): greyed and padlocked, never ready. */
+  unread: boolean;
   /** Everything is at hand for at least one craft. */
   ready: boolean;
   /** How many times it can be made with what is carried and stored within reach. */
@@ -963,8 +972,9 @@ export function recipeStatus(r: Recipe, g: Game, want?: string, stock: readonly 
     }
     return { item: i.item, litres: false, need: needOf(g, r, i), have: countFor(stock, r, i.item, material), carried: countFor(stock, r, i.item, material, true) };
   });
-  const max = tool && station && deed && !second ? Math.min(...inputs.map((i) => Math.floor(i.have / i.need))) : 0;
-  return { tool, station, deed, second, inputs, ready: max >= 1, max, material };
+  const unread = recipeUnread(r, g);
+  const max = tool && station && deed && !second && !unread ? Math.min(...inputs.map((i) => Math.floor(i.have / i.need))) : 0;
+  return { tool, station, deed, second, unread, inputs, ready: max >= 1, max, material };
 }
 
 /**
@@ -1062,9 +1072,20 @@ export function chooseMaterial(g: Game, r: Recipe, preferUid?: number, want?: st
   return undefined;
 }
 
+/** What a recipe's own Recipe is called: its `title`, or the name of what it makes. "Cottage pie". */
+export const recipeTitle = (r: Recipe): string => r.title ?? itemDef(r.result).name;
+/** Every recipe shut until its Recipe is read, in the order they are listed. The island's `locked_recipes`. */
+export const lockedRecipes = (): Recipe[] => RECIPES.filter((r) => r.locked);
+/** A shut recipe you have not read the Recipe of. */
+export const recipeUnread = (r: Recipe, g: Game): boolean => !!r.locked && !g.knowsRecipe(r.id);
+/** What a shut recipe unread says, as the island's `craft_refusal`: "Need recipe: Cottage pie." */
+export const needRecipeSays = (r: Recipe): string => `Need recipe: ${recipeTitle(r)}.`;
+
 /** Why a recipe cannot be made right now, or null. */
 export function recipeReason(r: Recipe, g: Game, preferUid?: number, stock: readonly CraftStock[] = g.craftStock(preferUid, false, reachFor(g, r))): string | null {
   if (r.perk && g.perk(r.perk, 0) <= 0) return RECIPE_PERK_SAYS[r.perk] ?? 'Need a perk.';
+  // And a shut one, until its Recipe is read (`recipebook.ts`); a perk it also wants is said first.
+  if (recipeUnread(r, g)) return needRecipeSays(r);
   // A book on a trade is written only by somebody who knows enough of it.
   if (r.writes && g.skills.get(r.writes) < TRADE_BOOK_AT) {
     return `Need ${skillName(r.writes).toLowerCase()} ${TRADE_BOOK_AT}.`;

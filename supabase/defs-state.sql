@@ -983,6 +983,7 @@ insert into item_def values ('tincture', 'Tincture', 'misc', 0.1, true, 3, null)
 insert into item_def values ('cover', 'Healing cover', 'tool', 0.2, true, 12, null);
 insert into item_def values ('dye_bucket', 'Bucket of dye', 'tool', 6, false, 10, null);
 insert into item_def values ('dye_recipe', 'Dye recipe', 'misc', 0.05, false, 14, null);
+insert into item_def values ('cooking_recipe', 'Recipe', 'misc', 0.05, false, 14, null);
 insert into item_def values ('banner', 'Banner', 'misc', 4, false, 5, null);
 insert into item_def values ('flagpole', 'Flagpole', 'misc', 8, false, 5, null);
 insert into item_def values ('rose_arch', 'Rose arch', 'misc', 30, false, 5, null);
@@ -1561,6 +1562,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('open_seed_jar', 'Open', 'opening the jar', null, null, false, null, 0.01, 2, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('read_rune_tablet', 'Read the rune tablet', 'reading the tablet', null, null, false, null, 0.01, 5, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('enchant_statue', 'Enchant', 'enchanting', 'enchanting', null, false, null, 0.02, 8, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('read_recipe', 'Read recipe', 'reading the recipe', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('fit_gear_pack', 'Fit a wildermon pack', 'fitting the pack', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('remove_gear_pack', 'Remove the pack', 'removing the pack', null, null, false, null, 0.01, 2, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('fit_gear_harness', 'Fit a wildermon harness', 'fitting the harness', null, null, false, null, 0.01, 3, null, false, false);
@@ -3634,6 +3636,7 @@ update item_def set description = 'Taken: foraging, botanizing, alchemy and firs
 update item_def set description = 'On the wound it suits: stops bleeding, keeps dirt out, closes it 2.3 times as fast as cloth.' where id = 'cover';
 update item_def set description = 'Up to 5 litres of one mix of red, yellow and blue at one QL, in the lye bucket it was boiled in. A boil: 5 litres of one primary, 1 litre per kg of dyestuff. Poured into an empty or dye barrel: mixes; each primary''s percentage and the QL average by litres. QL is brightness: black at 1, the mix at 50, white at 100. Litres per dyeing: garment, cloth, bag, saddle or bridle 3; banner or flag 6; sailing boat 30; caravel 100; wall side or floor tile 3. From one bucket in your pack or one dye barrel within reach.' where id = 'dye_bucket';
 update item_def set description = 'On papyrus: one dye''s mix and QL. Boil from recipe: a bucket of lye (5 L) and the dyestuffs listed; output 5 L of exactly that mix, QL as a boil and at most the recipe''s. Recipe not used up.' where id = 'dye_recipe';
+update item_def set description = 'Read: opens the recipe named on it in the crafting window; used up. Not read if already known. From goblin and orc carcasses: 5% per butchering.' where id = 'cooking_recipe';
 update item_def set description = 'Plant on the settlement: flies your colour.' where id = 'banner';
 update item_def set description = 'Flag flies downwind: straight out in a gale, hanging in a calm. Dyed: your colour. On a settlement: the settlement''s device.' where id = 'flagpole';
 update item_def set description = 'One tile across; walk through it. Roses: in leaf 1 day after it is set down, in bud after 2 days, in flower after 3 days, in spring and summer; in leaf the rest of the year. Picking it up and setting it down restarts its roses.' where id = 'rose_arch';
@@ -6154,6 +6157,11 @@ create or replace function water_motes_each() returns int language sql immutable
 create or replace function water_mote_need() returns text language sql immutable as $fn$ select 'Need 1 water mote.' $fn$;
 create or replace function life_mote() returns text language sql immutable as $fn$ select 'life_mote' $fn$;
 create or replace function life_motes_each() returns int language sql immutable as $fn$ select 1 $fn$;
+create or replace function recipe_item() returns text language sql immutable as $fn$ select 'cooking_recipe' $fn$;
+create or replace function recipe_drop_odds() returns double precision language sql immutable as $fn$ select 0.05::double precision $fn$;
+create or replace function recipe_droppers() returns text[] language sql immutable as $fn$ select array['goblin', 'orc']::text[] $fn$;
+create or replace function recipe_known_says() returns text language sql immutable as $fn$ select 'Recipe known.' $fn$;
+create or replace function locked_recipes() returns table (id text, title text, ord int) language sql immutable as $fn$ select * from (values ('make_cherry_preserves', 'Cherry preserves', 0), ('make_cottage_pie', 'Cottage pie', 1)) v (id, title, ord) where v.id is not null $fn$;
 create or replace function statuette() returns text language sql immutable as $fn$ select 'statuette' $fn$;
 create or replace function statue_motes() returns int language sql immutable as $fn$ select 1 $fn$;
 create or replace function patron_statue(p_patron text) returns text language sql immutable as $fn$ select case p_patron when 'blessing' then 'patron_statue_blessing' when 'justice' then 'patron_statue_justice' when 'chaos' then 'patron_statue_chaos' end $fn$;

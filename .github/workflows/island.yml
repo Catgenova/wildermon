@@ -3107,6 +3107,18 @@ jobs:
             --outfile=node_modules/.cache/helpsearch.mjs --log-level=error
           node node_modules/.cache/helpsearch.mjs
 
+      - name: Recipes found off a goblin or an orc, read and used up, and the recipes they open
+        if: matrix.shard == 6
+        run: |
+          # Cherry preserves and cottage pie shut until read, in the same words
+          # on both sides; a Recipe off a goblin's or an orc's carcass at the
+          # odds (the roll forced), one not read first; reading it opens the
+          # recipe and uses it up, and one already open is refused and kept; a
+          # simma cooks neither; and the beat says what is read.
+          npx esbuild supabase/test/recipedrops.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/recipedrops.mjs --log-level=error
+          node node_modules/.cache/recipedrops.mjs
+
       - name: The Springlet, slow on land and a hare's pace in water, found only in deep water
         if: matrix.shard == 3
         run: |

@@ -1059,6 +1059,8 @@ export interface IslandHooks {
     titles?: string[];
     title?: string | null;
     nutrition?: Record<string, number>;
+    /** The shut recipes whose Recipe you have read (`private.recipe_known`, `recipebook.ts`). */
+    recipes?: string[];
     /** And what you have on, which the island writes on every equip and never said. */
     equipped?: Record<string, number | null>;
     /**
@@ -2293,6 +2295,7 @@ export class Island {
         path?: PathBeat | null;
         rested?: number; favour?: number; boons?: unknown[]; knacks?: Record<string, number>;
         titles?: string[]; title?: string | null; nutrition?: Record<string, number>;
+        recipes?: string[];
         equipped?: Record<string, number | null>;
         blessings?: unknown; skin?: SkinSaid | null;
         sleep_on?: boolean; asleep?: string | null;
@@ -2347,6 +2350,7 @@ export class Island {
         rested: said.rested, sleepOn: typeof said.sleep_on === 'boolean' ? said.sleep_on : undefined,
         favour: said.favour, boons: said.boons, knacks: said.knacks,
         titles: said.titles, title: said.title, nutrition: said.nutrition,
+        recipes: Array.isArray(said.recipes) ? said.recipes.filter((x): x is string => typeof x === 'string') : undefined,
         equipped: said.equipped,
         // An island from before these says neither, and what is held stands.
         held: said.blessings && typeof said.blessings === 'object' ? this.held(said.blessings) : undefined,

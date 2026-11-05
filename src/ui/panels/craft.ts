@@ -2,7 +2,7 @@ import { capital } from '../../game/words';
 import { ACTION_BY_ID } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { itemDef } from '../../game/items';
-import { CRAFT_REACH, DEED_ONLY, liquidWord, RECIPE_BY_ID, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
+import { CRAFT_REACH, DEED_ONLY, liquidWord, needRecipeSays, RECIPE_BY_ID, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
 import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
 import type { UIWindow } from '../windows';
@@ -339,12 +339,14 @@ export class CraftPanel {
 
   private row(r: Recipe, st: RecipeStatus, stock: readonly CraftStock[]): HTMLDivElement {
     const row = document.createElement('div');
-    row.className = 'craft-row' + (st.ready ? '' : ' locked');
+    row.className = 'craft-row' + (st.ready ? '' : ' locked') + (st.unread ? ' craft-unread' : '');
     row.dataset.recipe = r.id;
     const name = document.createElement('div');
     name.className = 'craft-name';
     const count = this.game.madeAGo(r);
     name.textContent = count > 1 ? `${itemDef(r.result).name} × ${count}` : itemDef(r.result).name;
+    // A shut recipe whose Recipe you have not read: a padlock before its name, and the row greyed (`recipebook.ts`).
+    if (st.unread) name.prepend(padlock(needRecipeSays(r)));
     const meta = document.createElement('small');
     meta.className = 'craft-meta';
     meta.textContent = `${skillName(r.skill)} · ${this.game.duration(ACTION_BY_ID.get(r.id)!).toFixed(0)} s`;
@@ -681,4 +683,32 @@ export class CraftPanel {
     this.game.requestAction(def, { kind: 'item', uid: material.uid }, times);
     return true;
   }
+}
+
+/** A padlock, drawn: before the name of a shut recipe whose Recipe has not been read. Its title is what it wants. */
+function padlock(title: string): SVGSVGElement {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('class', 'craft-lock');
+  svg.setAttribute('viewBox', '0 0 12 14');
+  svg.setAttribute('width', '11');
+  svg.setAttribute('height', '13');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', title);
+  const t = document.createElementNS(ns, 'title');
+  t.textContent = title;
+  const shackle = document.createElementNS(ns, 'path');
+  shackle.setAttribute('d', 'M3 6V4a3 3 0 0 1 6 0v2');
+  shackle.setAttribute('fill', 'none');
+  shackle.setAttribute('stroke', 'currentColor');
+  shackle.setAttribute('stroke-width', '1.6');
+  const body = document.createElementNS(ns, 'rect');
+  body.setAttribute('x', '1');
+  body.setAttribute('y', '6');
+  body.setAttribute('width', '10');
+  body.setAttribute('height', '8');
+  body.setAttribute('rx', '1.5');
+  body.setAttribute('fill', 'currentColor');
+  svg.append(t, shackle, body);
+  return svg;
 }

@@ -456,9 +456,9 @@ const firstAidSays = (): string => {
 const waterPlantDepths = (): string => `${(WATER_PLANT_SHALLOWEST / 10).toFixed(1)} to ${(WATER_PLANT_DEEPEST / 10).toFixed(1)} m`;
 /**
  * What a simma cooks, in the order it tries them: every recipe worked at a lit campfire or oven that no perk
- * gates, as the recipes are listed. The island's `tend_recipes('cook')` names the same.
+ * gates and no Recipe shuts (`Recipe.locked`), as the recipes are listed. The island's `tend_recipes('cook')` names the same.
  */
-export const cookRecipes = (): string[] => RECIPES.filter((r) => r.station === 'campfire' && !r.perk).map((r) => r.id);
+export const cookRecipes = (): string[] => RECIPES.filter((r) => r.station === 'campfire' && !r.perk && !r.locked).map((r) => r.id);
 /**
  * What a brittla distils at a lit campfire or oven of yours, in the order it tries them: a Cook's Distil of each brew
  * (`BREWS`), which a brittla works with no Distil learned. The island's `tend_recipes('distil')`.
