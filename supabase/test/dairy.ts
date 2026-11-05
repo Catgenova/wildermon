@@ -154,14 +154,16 @@ begin
   insert into said values ('C:ask', ${refusal('v_cudda')});
   perform act_perform(w, u, 'milk_creature', ${milkAt('v_cudda')});
   insert into said values ('C', ${count('milk_bucket')} || '|' || ${count('bucket')} || '|' || ${charges('milk_bucket')} || '|' || ${lastSaid});
+  perform give(w, u, 'bucket', 1, 30);
   insert into said values ('C:again', ${refusal('v_cudda')});
-  delete from item where world_id = w and holder_uid = u and def = 'milk_bucket';
+  delete from item where world_id = w and holder_uid = u and def in ('milk_bucket', 'bucket');
 
   -- And a Cudda will not go into a part bucket.
   perform give(w, u, '${MILK_PART}', 1, 30);
   ${feed('v_cudda', 1, 1)}
   insert into said values ('C:part', ${refusal('v_cudda')});
   delete from item where world_id = w and holder_uid = u and def = '${MILK_PART}';
+  perform give(w, u, 'milk_bucket', 1, 40);
 
   -- 3. The churn, built and set down; churned at, the bucket comes back.
   insert into said values ('CH:away', coalesce(craft_refusal(w, u, '${CHURN_BUTTER}', null), 'ALLOWED'));
@@ -238,12 +240,13 @@ thing('bucket', 30);
 const cAsk = ask(cudda);
 milk(cudda, 1, HUNGERS[0]);
 const cSaid = lastMilk();
-const cAgain = ask(cudda);
 check(`a Cudda fills a bucket, the same on both sides: ${cSaid}`,
   cNone === 'Need an empty bucket.' && isle.get('C:none') === cNone && cAsk === 'none' && isle.get('C:ask') === 'none'
     && part('C', 0) === '1' && part('C', 1) === '0' && held('milk_bucket') === 1 && held('bucket') === 0
     && cSaid === milkedSays(cudda.name, BUCKET_LITRES, qlOf(1, HUNGERS[0])) && part('C', 3) === milkedSays(isleCudda, BUCKET_LITRES, qlOf(1, HUNGERS[0])),
   `${isle.get('C:none')} ${isle.get('C:ask')} ${isle.get('C')} / ${cNone} ${cAsk} ${cSaid}`);
+thing('bucket', 30);
+const cAgain = ask(cudda);
 check(`it will not be milked again until ${MILK_READY * 100}% of its milk is back, the same on both sides`,
   cAgain === `${cudda.name}: no milk yet.` && isle.get('C:again') === `${isleCudda}: no milk yet.`,
   `${isle.get('C:again')} / ${cAgain}`);
