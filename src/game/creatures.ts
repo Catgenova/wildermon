@@ -723,6 +723,8 @@ export interface WildSeason {
 }
 /** The Whispet's: asked for, "only available October 15-november 15". */
 export const HALLOW_SEASON: WildSeason = { from: [10, 15], to: [11, 15] };
+/** The Crumbud's: asked for, "Christmas special running dec 1 > dec 25th annually". */
+export const YULE_SEASON: WildSeason = { from: [12, 1], to: [12, 25] };
 /** A day of the year as the island keeps it: `month * 100 + day`. */
 export const seasonDay = ([month, day]: readonly [number, number]): number => month * 100 + day;
 /** Whether a season holds at a moment, in epoch seconds: the day it falls on in UTC is one of its days. */
@@ -837,6 +839,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   lungra: { kind: 'rest', n: 0.2 },
   stona: { kind: 'rest', n: 0.2 },
   whispet: { kind: 'rest', n: 0.2 },
+  crumbud: { kind: 'rest', n: 0.2 },
   magga: { kind: 'loads', n: 1, what: 'items per trip' },
   grazza: { kind: 'more', n: 1, what: 'grass or moss per cut' },
   grubba: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
@@ -1397,9 +1400,9 @@ export const STYLE_SAYS: Record<FightStyle, string> = {
 export type AbilityId = 'beastmaster_pounce' | 'blade_hamstring' | 'berserker_skull_crack' | 'blade_shield_bash'
   | 'berserker_execute' | 'berserker_whirlwind' | 'kindler_scorch' | 'frost_breath' | 'binder_root' | 'binder_dull_claws'
   | 'binder_brittle' | 'pikeman_keep_away' | 'blade_guardians_call' | 'skirmisher_marked_for_death' | 'warder_ward'
-  | 'warder_stoneskin' | 'chirurgeon_leech' | 'fear';
+  | 'warder_stoneskin' | 'chirurgeon_leech' | 'fear' | 'taunt';
 /** What is on a creature for a while (`Creature.marks`). */
-export type MarkKind = 'ability' | 'root' | 'dull' | 'brittle' | 'marked' | 'stone' | 'keep_away' | 'fear';
+export type MarkKind = 'ability' | 'root' | 'dull' | 'brittle' | 'marked' | 'stone' | 'keep_away' | 'fear' | 'taunt';
 /** Seconds between a frost breath and the next. */
 export const FROST_BREATH_REST = 15;
 /**
@@ -1408,21 +1411,30 @@ export const FROST_BREATH_REST = 15;
  */
 export const FEAR_SECS = 5;
 export const FEAR_REST = 20;
+/**
+ * A Taunt (a Crumbud's): every wild thing within `TAUNT_REACH` tiles that is after anybody, and every hunter and monster
+ * there, turns on it for `TAUNT_SECS` seconds (as a Guardian's Call turns them on you), and not again for its rest. Asked
+ * for: "Combat pet that taunts all nearby targets on a cooldown".
+ */
+export const TAUNT_REACH = 6;
+export const TAUNT_SECS = 6;
+export const TAUNT_REST = 20;
 /** The skin a Warder's Ward lays over you, as a share of your full health: it takes that much of the blows that come at you. */
 export const WARD_SKIN = 0.1;
 /** Seconds between goes at an ability. */
 export const abilityRest = (id: AbilityId): number =>
-  (id === 'frost_breath' ? FROST_BREATH_REST : id === 'fear' ? FEAR_REST : CLASS_SPELL_BY_ID.get(id)?.rest ?? 0);
+  (id === 'frost_breath' ? FROST_BREATH_REST : id === 'fear' ? FEAR_REST : id === 'taunt' ? TAUNT_REST : CLASS_SPELL_BY_ID.get(id)?.rest ?? 0);
 /**
  * Seconds between one wildermon's goes at its ability: its line's third-stage `rest` off it (`perkN`), and its blood's
  * `cooldown`. The island's `beast_ability`.
  */
 export const abilityRestOf = (c: Creature, id: AbilityId): number => abilityRest(id) * (1 - perkN(c, 'rest')) * bloodMul(c, 'cooldown');
 /** A number an ability is used at: its spell's own. */
-export const abilityFx = (id: AbilityId, k: string): number => (id === 'fear' ? ({ secs: FEAR_SECS } as Record<string, number>)[k] ?? 0 : CLASS_SPELL_BY_ID.get(id)?.fx[k] ?? 0);
+export const abilityFx = (id: AbilityId, k: string): number => (id === 'fear' ? ({ secs: FEAR_SECS } as Record<string, number>)[k] ?? 0
+  : id === 'taunt' ? ({ reach: TAUNT_REACH, secs: TAUNT_SECS } as Record<string, number>)[k] ?? 0 : CLASS_SPELL_BY_ID.get(id)?.fx[k] ?? 0);
 /** An ability's name: its spell's. */
 export const abilityName = (id: AbilityId): string =>
-  (id === 'frost_breath' ? 'Frost Breath' : id === 'fear' ? 'Fear' : CLASS_SPELL_BY_ID.get(id)?.name ?? id);
+  (id === 'frost_breath' ? 'Frost Breath' : id === 'fear' ? 'Fear' : id === 'taunt' ? 'Taunt' : CLASS_SPELL_BY_ID.get(id)?.name ?? id);
 /** What an ability does, in the game's own terms, for a species' words, the help and What's new. */
 export function abilitySays(id: AbilityId): string {
   const f = (k: string): number => abilityFx(id, k);
@@ -1445,6 +1457,7 @@ export function abilitySays(id: AbilityId): string {
     warder_stoneskin: () => `damage taken −${percent(f('cut'))} for ${f('secs')} seconds`,
     chirurgeon_leech: () => `blow ×${percent(f('more'))}; heals the same % of its health as the blow took of the target's`,
     fear: () => `target (not a monster) flees and strikes nothing for ${f('secs')} seconds or until you strike it`,
+    taunt: () => `every wild creature within ${f('reach')} tiles that is after anybody, and every hunter and monster there, turns on it for ${f('secs')} seconds`,
   };
   return `${said[id]()}; cooldown ${abilityRest(id)} seconds`;
 }
@@ -3656,6 +3669,41 @@ export const SPECIES: Record<string, SpeciesDef> = {
     season: HALLOW_SEASON,
     ability: 'fear',
   },
+  crumbud: {
+    id: 'crumbud',
+    // Asked for: "New wildermon, Christmas special running dec 1 > dec 25th annually. Crumbud gingerbark yuleheart. Combat
+    // pet that taunts all nearby targets on a cooldown". Its words, and each stage's, are written once every number is here.
+    name: 'Crumbud',
+    description: '',
+    stages: [
+      { name: 'Gingerbark', description: '' },
+      { name: 'Yuleheart', description: '' },
+    ],
+    // The one that stands in front: the most health of the fighting kinds, the least blow.
+    health: 52,
+    attack: 4,
+    speed: 1.5,
+    tameLevel: 28,
+    tameChance: 0.06,
+    diet: ['honey', 'nuts', 'apple'],
+    baitHint: 'honey or nuts',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    // [gingerbread, icing]: the sheet's ginger with white icing, a darker molasses, a golden honey, and a cinnamon red-brown.
+    variants: [
+      ['#c47a3c', '#fbf7f1'],
+      ['#9c5a2a', '#fbf5ee'],
+      ['#d69a4e', '#fffaf0'],
+      ['#b06838', '#f8f0e8'],
+    ],
+    // Glands only, as the Whispet's: a seasonal kind is not stock.
+    butcher: { gland: 2 },
+    wound: 'crush',
+    defensive: true,
+    season: YULE_SEASON,
+    ability: 'taunt',
+  },
   // ---- Backs and saddles. ----
   bura: {
     id: 'bura',
@@ -4368,6 +4416,8 @@ export const WILD_SPECIES: Array<[string, number]> = [
   // Only out after dark and only in its season, so put down twice as often as the kinds with an ability that are out
   // all year whenever it may be.
   ['whispet', 4],
+  // Only in its season, day and night.
+  ['crumbud', 3],
 ];
 
 /**
@@ -4590,6 +4640,8 @@ sayLine('noot', `Settlement task: collect clay off clay ground ${reach('noot')},
 sayLine('crawler', `Settlement task: collect sand off sandy ground ${reach('crawler')}, 1 heap a collect. QL: ${yieldQl('digging')}. Output to the crate. Wild bite: venom, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless dressed. Kept: ${percent(SPECIES.crawler.unruly!)} chance every ${NIP_EVERY} seconds to attack you when beside you. Strikes back every time.`,
   'Level: digging.');
 sayLine('whispet', `Tamed, ${abilityName('fear')}: ${abilitySays('fear')}. Strikes back every time. Wild: after dark only, ${seasonSays(SPECIES.whispet.season!)} (UTC); none wild on other days. Tamed, kept or bred ones stay all year.`,
+  GUARD_LEVEL);
+sayLine('crumbud', `Tamed, ${abilityName('taunt')}: ${abilitySays('taunt')}. Strikes back every time. Wild: ${seasonSays(SPECIES.crumbud.season!)} (UTC); none wild on other days. Tamed, kept or bred ones stay all year.`,
   GUARD_LEVEL);
 sayLine('warda', `Sight for you, at your heel or keeping a settlement: ${SPECIES.warda.sight} tiles (most: ${KEPT_SIGHT}), −${percent(KEPT_NIGHT_LOSS / 2)} at the dead of night. Strikes back every time.`,
   `Level: awareness, learned ${LEARNS_SAYS.out}.`);
@@ -11075,6 +11127,26 @@ export class Creatures {
         if (tdef.monster || secs <= 0 || markOn(game, t, 'fear', 0) > 0 || t.mode !== 'wild') return false;
         this.fleeFrom(game, t, a.x, a.y, secs);
         putMark(game, t, 'fear', 1, secs);
+        break;
+      }
+      case 'taunt': {
+        // As a Guardian's Call, onto itself: what is after anybody, and any hunter or monster, within its reach. One
+        // frightened is left to run; one already on it is not counted.
+        let n = 0;
+        for (const o of this.list.values()) {
+          if (o.mode !== 'wild' || o.health <= 0 || o.brawl === a.id || markOn(game, o, 'fear', 0) > 0) continue;
+          const od = this.species(o);
+          if (od.timid) continue;
+          const after = o.enemy === PLAYER_ATTACKER || o.brawl !== null || (o.enemy !== null && this.list.get(o.enemy)?.mode !== 'wild');
+          if (!(after || od.monster || od.hunter) || Math.hypot(o.x - a.x, o.y - a.y) > f('reach')) continue;
+          o.brawl = a.id;
+          o.threatAt = game.time + f('secs') - THREAT_HOLD;
+          o.windup = 0;
+          putMark(game, o, 'taunt', 1, f('secs'));
+          n += 1;
+        }
+        if (n === 0) return false;
+        spent = false;
         break;
       }
       case 'chirurgeon_leech': {

@@ -105,7 +105,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, HEAD_ROOM, RAMP_SLOPE, STALL_WIDTH, WAGON
 import { BREWS } from '../src/game/brewing';
 import { BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, DYE_RECIPE_SAID, DYE_SKILL, DYEABLE_ITEMS, MAKE_DYE_RECIPE } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { ALLOY_QL, BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason, GUARD_LEARN, SPAR_REACH } from '../src/game/creatures';
+import { ALLOY_QL, BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, TAUNT_REACH, TAUNT_REST, TAUNT_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason, GUARD_LEARN, SPAR_REACH } from '../src/game/creatures';
 import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, SLEEP_SAID } from '../src/game/sleep';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -1695,6 +1695,8 @@ for (const [fn, v] of [
   /* A wildermon's own ability: the seconds between frost breaths, and the skin a wardo lays over you; and a Fear's
      run, and its rest. */
   ['frost_breath_rest', FROST_BREATH_REST], ['ward_skin', WARD_SKIN], ['fear_secs', FEAR_SECS], ['fear_rest', FEAR_REST],
+  /* A Taunt's reach in tiles, how long what it turns stays on it, and its rest. */
+  ['taunt_reach', TAUNT_REACH], ['taunt_secs', TAUNT_SECS], ['taunt_rest', TAUNT_REST],
   /* A kind that learns its own skill: the seconds of being out that are one go at it, and what each kind of go teaches. */
   ['out_every', OUT_EVERY], ['learns_gain_tended', LEARNS_GAIN.tended], ['learns_gain_spar', LEARNS_GAIN.spar],
   ['learns_gain_out', LEARNS_GAIN.out], ['learns_gain_dark', LEARNS_GAIN.dark], ['learns_gain_pull', LEARNS_GAIN.pull],
