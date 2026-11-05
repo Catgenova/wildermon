@@ -97,8 +97,33 @@ export interface Sheet {
   wet: boolean;
   /** How much of the way down the first water has got, 0 to 1. */
   grow: number;
-  /** Half the width of the water coming to the lip, in tiles, where that is narrower than the sheet: a stream's. */
+  /**
+   * How far past each end of the lip the water coming to it reaches, in
+   * tiles, where that is less than `half`: a stream's half width over a lip
+   * of one corner, nought for a pond going over its sill from end to end.
+   * The sheet leaves the lip that wide and spreads to its own width as it
+   * curls over (`SPREAD`).
+   */
   feed?: number;
+  /** The colour of the water coming to the lip, which the top of the sheet is and which the water drawn into the lip goes to; spring water if left out. */
+  source?: RGB;
+  /**
+   * The paler water down the middle of the water coming to the lip, as a
+   * stream draws it: each band's share of the width of the water and its
+   * colour, widest first. Carried over the lip at the same shares of the
+   * sheet's width, going into the sheet's own colours by `BANDS_FADE` of
+   * the way down.
+   */
+  bands?: ReadonlyArray<readonly [number, RGB]>;
+  /**
+   * How far the water behind the lip runs on out past each end of it, from
+   * the end at `from` and the end at `to`, for each tile back from the lip,
+   * in tiles: a pond's shore leaving the end of its sill on a slant. The
+   * water drawn into the lip is taken out that far. Less than nought where
+   * the shore comes in instead, and left out, the water drawn in narrows
+   * toward each end.
+   */
+  splay?: readonly [number, number];
   /**
    * A lip that runs round in a ring rather than along an axis: its middle,
    * in tiles, and its radius. `u` then runs round it from the world's east
@@ -108,7 +133,7 @@ export interface Sheet {
    * along it, so give each ring a `line` of its own.
    */
   ring?: { x: number; y: number; r: number };
-  /** How far back from the lip the smooth water drawn into it begins, in tiles, where that is not `TONGUE`: a basin's rim, a hand's width in from its edge. */
+  /** How far back from the lip the water drawn into it begins, in tiles, where that is not `TONGUE`: a basin's rim, a hand's width in from its edge; nought for a stream, which runs to the lip in its own colours. */
   back?: number;
   /**
    * How much water goes over, as a share of what a stream or a pond sends
@@ -148,6 +173,12 @@ export interface Placed {
   dn: Float64Array;
   /** For a ring (`Sheet.ring`), with `x0` and `y0` its middle: its radius and reach in tiles, and the screen step for a tile along x and along y. */
   ring?: { r: number; reach: number; xx: number; xy: number; yx: number; yy: number };
+  /** How far in from each end of the sheet the water is where it leaves the lip, in tiles (`Sheet.feed`); null where it leaves it as wide as the sheet. */
+  mouth: number | null;
+  /** The colour of the water coming to the lip (`Sheet.source`), and the light along the lip in it. */
+  sourceRgb: RGB;
+  source: string;
+  lipLight: string;
 }
 
 /** A fall this tall, in height units, is white by its foot and throws up the most spray and mist there is. */
@@ -163,8 +194,24 @@ const UNITS_A_METRE = 10;
 const ROPE_EVERY = 0.34;
 const ROPE_HALF = 0.115;
 const ROPE_WANDER = 0.016;
-/** How far back from the lip the smooth water drawn into it begins, in tiles. */
+/** How far back from the lip the water drawn into it begins, in tiles; and how far over the edge it is laid, as a share of the fall. */
 const TONGUE = 0.16;
+const TONGUE_OVER = 0.03;
+/** How far short of a pond's shore the water drawn into a lip stops where the shore runs on past its end, in tiles (`Sheet.splay`). */
+const SHORE_CLEAR = 0.06;
+/**
+ * How far down a sheet leaving a lip narrower than itself has spread to its
+ * own width, as a share of its fall (`Sheet.feed`); and how far down the
+ * colour of the water coming to the lip has gone into the sheet's own, as a
+ * share of how far below the lip on the screen its foot is.
+ */
+const SPREAD = 0.3;
+const ROLL = 0.1;
+/** How far down a sheet the paler water down the middle of a stream feeding it goes into the sheet's own colours, as a share of its fall (`Sheet.bands`). */
+const BANDS_FADE = 0.3;
+/** How far down the light along a lip lies, as a share of the fall; and how far short of each end of the water it stops, in tiles. */
+const LIP_AT = 0.02;
+const LIP_SHORT = 0.05;
 /** How long the lengths the light along a lip is broken into are, in tiles. */
 const LIP_EVERY = 0.37;
 /** How far apart the glints along a lip are, at most one to each, in tiles. */
@@ -254,6 +301,8 @@ export function place(v: FallView, s: Sheet): Placed {
     fallTime: Math.sqrt((2 * Math.max(drop, 4)) / UNITS_A_METRE / FALL_G),
     thin: Math.max(0, Math.min(1, (width - 1.2) / 6)),
     grow: s.grow, n, al, dn,
+    mouth: s.feed === undefined ? null : Math.max(0, s.half - s.feed),
+    ...sourceInks(s),
   };
 }
 
@@ -287,6 +336,8 @@ function placeRing(v: FallView, s: Sheet, g: { x: number; y: number; r: number }
     thin: Math.max(0, Math.min(1, Math.max((s.to - s.from - 1.2) / 6, 1 - (s.flow ?? 1)))),
     grow: s.grow, n, al, dn,
     ring: { r: g.r, reach: s.reach, xx: v.xx, xy: v.xy, yx: v.yx, yy: v.yy },
+    mouth: null,
+    ...sourceInks(s),
   };
 }
 
@@ -404,7 +455,12 @@ function ropeAt(list: number[], r: number, f: number): number {
 /** How wide rope `r` of a list is either side of its middle `f` of the way down, narrowing as it falls. */
 const ropeHalf = (list: number[], r: number, f: number): number => list[r + 1] * (1 - 0.3 * f);
 
-/** How far in from each end of a sheet its water has drawn back at a point `f` of the way down, and ragged with it, in tiles. */
+/**
+ * How far in from each end of a sheet its water is at a point `f` of the way
+ * down, in tiles: as wide as the water coming to the lip where it leaves it,
+ * spread to the sheet's own width over the curl, then drawing back as it
+ * falls, and ragged with it.
+ */
 function fray(p: Placed, end: number, f: number, t: number): number {
   const s = p.sheet;
   const k = Math.floor(f * 9);
@@ -412,7 +468,10 @@ function fray(p: Placed, end: number, f: number, t: number): number {
   const a = keyed(s, end * 101 + k, 31);
   const b = keyed(s, end * 101 + k + 1, 31);
   const wob = a + (b - a) * w * w * (3 - 2 * w);
-  return s.half * (0.05 + 0.2 * f + 0.22 * f * wob) + Math.sin(t * 2.3 + f * 7 + end * 2.1) * 0.01 * f;
+  const back = s.half * (0.05 + 0.2 * f + 0.22 * f * wob) + Math.sin(t * 2.3 + f * 7 + end * 2.1) * 0.01 * f;
+  if (p.mouth === null || f >= SPREAD) return back;
+  const e = f / SPREAD;
+  return p.mouth + (back - p.mouth) * e * e * (3 - 2 * e);
 }
 
 /* ---- The sheet -------------------------------------------------------------- */
@@ -446,6 +505,8 @@ function downSheet(ctx: CanvasRenderingContext2D, p: Placed, inks: string[][], u
   const x1 = PT[0] + nx * depth;
   const y1 = PT[1] + ny * depth;
   const g = ctx.createLinearGradient(PT[0], PT[1], x1, y1);
+  // From the colour of the water coming to the lip into the sheet's own, then its own flat tones down it.
+  g.addColorStop(0, p.source);
   for (let k = 0; k < STOPS.length; k++) g.addColorStop(STOPS[k], inks[tone][k]);
   return g;
 }
@@ -832,11 +893,11 @@ function strand(ctx: CanvasRenderingContext2D, p: Placed, u: number, f0: number,
 
 /**
  * Where the water goes over, from `u0` to `u1` along the lip: the water
- * coming to it drawn smooth and glassy, brightening to where it turns over,
- * with lines of it drawn in toward the edge and quickening; the light along
- * the edge where it rounds, heavier where a rope of water comes off it.
- * Narrowing to nothing at the ends of the lip, where the rim comes up out of
- * the water.
+ * coming to it, on its surface, taken into the colour it goes over in, with
+ * lines of it drawn in toward the edge and quickening; and the light along
+ * the edge where it rounds. As wide as the water going over where it leaves
+ * the lip (`Sheet.feed`), and narrowing to nothing at its ends, where the rim
+ * comes up out of the water.
  */
 export function drawLip(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, u0: number, u1: number): void {
   const s = p.sheet;
@@ -847,102 +908,134 @@ export function drawLip(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, u
   if (b <= a || !seen(v, p, a, b, 20 * v.zoom)) return;
   const z = v.zoom;
   const t = v.t;
-  const first = !p.ring && a <= lo + 1e-6;
-  const last = !p.ring && b >= hi - 1e-6;
   const hair = hairOf(p);
-  const aw = first ? a : a - hair;
-  const bw = last ? b : b + hair;
-  // How far back the smooth water reaches: all the way along the lip, and less toward its ends; and where a stream
-  // feeds it, drawn in from the stream's own width to the sheet's. Round a ring, the same the whole way.
+  // Where the water is as it leaves the lip: the whole of a ring; and this piece's stretch of it, a hair over where another piece meets it.
+  const m0 = p.ring ? lo : lo + fray(p, 0, 0, t);
+  const m1 = p.ring ? hi : hi - fray(p, 1, 0, t);
+  const ma = Math.max(m0, a > lo + 1e-6 ? a - hair : a);
+  const mb = Math.min(m1, b < hi - 1e-6 ? b + hair : b);
+  if (mb <= ma) return;
   const tongue = s.back ?? TONGUE;
+  // How far back the water drawn in reaches: the whole way round a ring; along a lip, less toward each end the shore does not run on past.
+  const sp0 = s.splay?.[0] ?? -1;
+  const sp1 = s.splay?.[1] ?? -1;
   const reachBack = (u: number): number =>
-    p.ring ? tongue : tongue * Math.min(1, 0.3 + Math.min(u - lo, hi - u) / (s.half * 1.6)) * (s.feed ? 0.55 : 1);
-  const mid = (lo + hi) / 2;
-  const narrow = s.feed ? Math.min(1, s.feed / ((hi - lo) / 2)) : 1;
-  const inward = (u: number): number => mid + (u - mid) * narrow;
-  const steps = Math.max(1, Math.ceil((b - a) / 0.25));
-  // The water drawn in, on its surface, from clear to bright at the edge: shaded square to the lip, so every piece matches.
-  const um = p.ring ? (a + b) / 2 : s.from;
-  alongAt(p, um);
-  const el = Math.hypot(LIP[4], LIP[5]) || 1;
-  let nx = -LIP[5] / el;
-  let ny = LIP[4] / el;
-  atSlice(p, um, 0, PT, 0);
-  at(p, um, 0, -tongue, PT, 2);
-  let depth = (PT[0] - PT[2]) * nx + (PT[1] - PT[3]) * ny;
-  if (depth < 0) {
-    nx = -nx;
-    ny = -ny;
-    depth = -depth;
-  }
-  if (depth > 0.5) {
-    const g = ctx.createLinearGradient(PT[0] - nx * depth, PT[1] - ny * depth, PT[0], PT[1]);
-    // Two flat tones stepped hard, as the kit paints a face, over the water still clear behind them.
-    for (let k = 0; k < TONGUE_STOPS.length; k++) g.addColorStop(TONGUE_STOPS[k], TONGUE_INK[k >> 1]);
-    ctx.fillStyle = g;
-  } else ctx.fillStyle = TONGUE_INK[1];
-  ctx.beginPath();
-  for (let q = 0; q <= steps; q++) {
-    const u = a + ((b - a) * q) / steps;
-    at(p, inward(u), 0, -reachBack(u), PT, 0);
-    if (q === 0) ctx.moveTo(PT[0], PT[1]);
-    else ctx.lineTo(PT[0], PT[1]);
-  }
-  for (let q = steps; q >= 0; q--) {
-    const u = a + ((b - a) * q) / steps;
-    at(p, u, 0.04, 0, PT, 0);
-    ctx.lineTo(PT[0], PT[1]);
-  }
-  ctx.closePath();
-  ctx.fill();
-  if (z >= DETAIL_FROM && s.grow >= 1) {
-    // Lines of water drawn in toward the edge and quickening, each keeping to its place along the lip.
-    const every = z >= 1.5 ? 0.16 : 0.26;
-    ctx.strokeStyle = TONGUE_LINE;
-    ctx.lineWidth = Math.max(0.8, 0.9 * z);
-    ctx.lineCap = 'round';
+    p.ring ? tongue : Math.min(tongue, sp0 >= 0 ? tongue : 0.04 + u - m0, sp1 >= 0 ? tongue : 0.04 + m1 - u);
+  // And out past each end, short of the shore, so its edge still shows.
+  const out0 = !p.ring && sp0 > 0 && ma <= m0 + 1e-6 ? Math.max(0, sp0 * tongue - SHORE_CLEAR) : 0;
+  const out1 = !p.ring && sp1 > 0 && mb >= m1 - 1e-6 ? Math.max(0, sp1 * tongue - SHORE_CLEAR) : 0;
+  const steps = Math.max(1, Math.ceil((mb - ma) / 0.25));
+  if (tongue > 0) {
+    // The water drawn in, from clear to the colour it goes over in at the edge: shaded square to the lip, so every piece matches.
+    const um = p.ring ? (a + b) / 2 : s.from;
+    alongAt(p, um);
+    const el = Math.hypot(LIP[4], LIP[5]) || 1;
+    let nx = -LIP[5] / el;
+    let ny = LIP[4] / el;
+    atSlice(p, um, 0, PT, 0);
+    at(p, um, 0, -tongue, PT, 2);
+    let depth = (PT[0] - PT[2]) * nx + (PT[1] - PT[3]) * ny;
+    if (depth < 0) {
+      nx = -nx;
+      ny = -ny;
+      depth = -depth;
+    }
+    if (depth > 0.5) {
+      const g = ctx.createLinearGradient(PT[0] - nx * depth, PT[1] - ny * depth, PT[0], PT[1]);
+      for (let k = 0; k < TONGUE_STOPS.length; k++) g.addColorStop(TONGUE_STOPS[k], rgba(p.sourceRgb, TONGUE_ALPHA[k]));
+      ctx.fillStyle = g;
+    } else ctx.fillStyle = p.source;
     ctx.beginPath();
-    for (let k = Math.floor(a / every) - 1; k * every < b + every; k++) {
-      const u = (k + 0.5 + (keyed(s, k, 95) - 0.5) * 0.6) * every;
-      if (u < a || u >= b || u < lo + s.half * 0.7 || u > hi - s.half * 0.7) continue;
-      const age = (((t / (1.1 + 0.5 * keyed(s, k, 96)) + keyed(s, k, 97) * 3) % 1) + 1) % 1;
-      const back = reachBack(u) * 1.6;
-      const f0 = -back * (1 - age) * (1 - age);
-      const f1 = Math.min(0, f0 + back * (0.18 + 0.3 * age));
-      if (f1 <= f0) continue;
-      at(p, u, 0, f0, PT, 0);
-      ctx.moveTo(PT[0], PT[1]);
-      at(p, u, 0, f1, PT, 0);
+    for (let q = 0; q <= steps; q++) {
+      const u = ma + ((mb - ma) * q) / steps;
+      at(p, u - (q === 0 ? out0 : 0) + (q === steps ? out1 : 0), 0, -reachBack(u), PT, 0);
+      if (q === 0) ctx.moveTo(PT[0], PT[1]);
+      else ctx.lineTo(PT[0], PT[1]);
+    }
+    // A little way over the edge, onto the top of the sheet, which is the same colour there, so no line of the rock shows between them.
+    for (let q = steps; q >= 0; q--) {
+      const u = ma + ((mb - ma) * q) / steps;
+      at(p, u, TONGUE_OVER, 0, PT, 0);
       ctx.lineTo(PT[0], PT[1]);
     }
-    ctx.stroke();
-  }
-  /*
-   * The light along the edge where it rounds over, in lengths fixed to the
-   * world, broken short of each end and here and there along it, over an
-   * unbroken crease where the water rolled over meets the face of the sheet:
-   * the kit's lit arris and the crease under it, both solid where two pieces
-   * both lay them.
-   */
-  const e0 = Math.max(aw, lo + s.half * 0.45);
-  const e1 = Math.min(bw, hi - s.half * 0.45);
-  if (e1 > e0) {
-    ctx.lineCap = 'round';
+    ctx.closePath();
+    ctx.fill();
     if (z >= DETAIL_FROM && s.grow >= 1) {
-      // The crease unbroken, from one end of the light to the other.
-      ctx.strokeStyle = LIP_CREASE;
-      ctx.lineWidth = Math.max(0.8, 0.8 * z);
+      // Lines of water drawn in toward the edge and quickening, each keeping to its place along the lip.
+      const every = z >= 1.5 ? 0.16 : 0.26;
+      ctx.strokeStyle = TONGUE_LINE;
+      ctx.lineWidth = Math.max(0.8, 0.9 * z);
+      ctx.lineCap = 'round';
       ctx.beginPath();
-      const q1 = Math.max(1, Math.ceil((e1 - e0) / 0.1));
-      for (let q = 0; q <= q1; q++) {
-        at(p, e0 + ((e1 - e0) * q) / q1, 0.075, 0, PT, 0);
-        if (q === 0) ctx.moveTo(PT[0], PT[1]);
-        else ctx.lineTo(PT[0], PT[1]);
+      for (let k = Math.floor(a / every) - 1; k * every < b + every; k++) {
+        const u = (k + 0.5 + (keyed(s, k, 95) - 0.5) * 0.6) * every;
+        if (u < a || u >= b || u < m0 + 0.08 || u > m1 - 0.08) continue;
+        const age = (((t / (1.1 + 0.5 * keyed(s, k, 96)) + keyed(s, k, 97) * 3) % 1) + 1) % 1;
+        const back = Math.min(reachBack(u), TONGUE) * 1.6;
+        const f0 = -back * (1 - age) * (1 - age);
+        const f1 = Math.min(-0.02, f0 + back * (0.18 + 0.3 * age));
+        if (f1 <= f0) continue;
+        at(p, u, 0, f0, PT, 0);
+        ctx.moveTo(PT[0], PT[1]);
+        at(p, u, 0, f1, PT, 0);
+        ctx.lineTo(PT[0], PT[1]);
       }
       ctx.stroke();
     }
-    ctx.strokeStyle = LIP_LIGHT;
-    ctx.lineWidth = Math.max(1, 1.5 * z);
+  }
+  if (s.bands && !p.ring) {
+    // The paler water down the middle of a stream, carried over the lip and going into the sheet, shaded square to the lip.
+    alongAt(p, s.from);
+    const el = Math.hypot(LIP[4], LIP[5]) || 1;
+    let nx = -LIP[5] / el;
+    let ny = LIP[4] / el;
+    atSlice(p, s.from, 0, PT, 0);
+    at(p, s.from, BANDS_FADE, 0, PT, 2);
+    let depth = (PT[2] - PT[0]) * nx + (PT[3] - PT[1]) * ny;
+    if (depth < 0) {
+      nx = -nx;
+      ny = -ny;
+      depth = -depth;
+    }
+    if (depth > 1) {
+      const mid = (lo + hi) / 2;
+      const q = 6;
+      for (const [share, c] of s.bands) {
+        const g = ctx.createLinearGradient(PT[0], PT[1], PT[0] + nx * depth, PT[1] + ny * depth);
+        g.addColorStop(0, rgba(c, 1));
+        g.addColorStop(0.35, rgba(c, 0.7));
+        g.addColorStop(1, rgba(c, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        for (let side = 0; side < 2; side++) {
+          for (let j = 0; j <= q; j++) {
+            const i = side === 0 ? j : q - j;
+            const f = (BANDS_FADE * i) / q;
+            const half = ((hi - fray(p, 1, f, t)) - (lo + fray(p, 0, f, t))) / 2;
+            const u = Math.max(ma, Math.min(mb, mid + (side === 0 ? -1 : 1) * share * half));
+            at(p, u, f, i === 0 ? -0.01 : 0, PT, 0);
+            if (side === 0 && j === 0) ctx.moveTo(PT[0], PT[1]);
+            else ctx.lineTo(PT[0], PT[1]);
+          }
+        }
+        ctx.closePath();
+        ctx.fill();
+        // `at` above wrote the first point: put the lip back for the next band's gradient.
+        atSlice(p, s.from, 0, PT, 0);
+      }
+    }
+  }
+  /*
+   * The light along the edge where it rounds over, in lengths fixed to the
+   * world, broken short of each end and here and there along it: the water's
+   * own colour, lit, solid where two pieces both lay it.
+   */
+  const e0 = Math.max(ma, p.ring ? lo : m0 + LIP_SHORT);
+  const e1 = Math.min(mb, p.ring ? hi : m1 - LIP_SHORT);
+  if (e1 > e0) {
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = p.lipLight;
+    ctx.lineWidth = Math.max(1, 1.2 * z);
     ctx.beginPath();
     for (let k = Math.floor(e0 / LIP_EVERY) - 1; k * LIP_EVERY < e1; k++) {
       const g0 = Math.max(e0, k * LIP_EVERY + (keyed(s, k, 98) < 0.3 ? 0.04 + 0.05 * keyed(s, k, 99) : 0));
@@ -951,34 +1044,14 @@ export function drawLip(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, u
       const q1 = Math.max(1, Math.ceil((g1 - g0) / 0.1));
       for (let q = 0; q <= q1; q++) {
         const u = g0 + ((g1 - g0) * q) / q1;
-        at(p, u, 0.02, 0, PT, 0);
+        at(p, u, LIP_AT, 0, PT, 0);
         if (q === 0) ctx.moveTo(PT[0], PT[1]);
         else ctx.lineTo(PT[0], PT[1]);
       }
     }
     ctx.stroke();
-    // Heavier where a rope comes off the lip.
-    const list = ROPES;
-    list.length = 0;
-    ropes(p, a - ROPE_HALF, b + ROPE_HALF, list);
-    if (z >= DETAIL_FROM && list.length) {
-      ctx.lineWidth = Math.max(1.3, 2.1 * z);
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      for (let r = 0; r < list.length; r += 3) {
-        if (list[r] < a || list[r] >= b || list[r + 1] < ROPE_HALF * 0.55) continue;
-        const r0 = Math.max(lo + s.half * 0.45, list[r] - list[r + 1] * 0.5);
-        const r1 = Math.min(hi - s.half * 0.45, list[r] + list[r + 1] * 0.5);
-        if (r1 <= r0) continue;
-        at(p, r0, 0.035, 0, PT, 0);
-        ctx.moveTo(PT[0], PT[1]);
-        at(p, r1, 0.035, 0, PT, 0);
-        ctx.lineTo(PT[0], PT[1]);
-      }
-      ctx.stroke();
-    }
     ctx.lineCap = 'butt';
-    if (z >= DETAIL_FROM && s.grow >= 1) glints(ctx, p, a, b, lo, hi, z, t);
+    if (z >= DETAIL_FROM && s.grow >= 1) glints(ctx, p, Math.max(a, e0), Math.min(b, e1), z, t);
   }
   ctx.lineWidth = 1;
 }
@@ -989,18 +1062,18 @@ export function drawLip(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, u
  * over, each on a place of its own along the lip, keeping a beat of its own,
  * and laid by the piece it is in.
  */
-function glints(ctx: CanvasRenderingContext2D, p: Placed, a: number, b: number, lo: number, hi: number, z: number, t: number): void {
+function glints(ctx: CanvasRenderingContext2D, p: Placed, a: number, b: number, z: number, t: number): void {
   const s = p.sheet;
   ctx.fillStyle = GLINT;
   for (let k = Math.floor(a / GLINT_EVERY) - 1; k * GLINT_EVERY < b; k++) {
     const h = keyed(s, k, 111);
     const u = (k + 0.5 + (h - 0.5) * 0.6) * GLINT_EVERY;
-    if (u < a || u >= b || u < lo + s.half * 0.6 || u > hi - s.half * 0.6) continue;
+    if (u < a || u >= b) continue;
     const beat = Math.sin(t * (1.3 + 0.9 * keyed(s, k, 112)) + h * 40);
     if (beat < 0.55) continue;
     const k2 = (beat - 0.55) / 0.45;
     const r = (2.2 + 1.6 * keyed(s, k, 113)) * z * (0.5 + 0.5 * k2);
-    at(p, u, 0.025, 0, PT, 0);
+    at(p, u, LIP_AT, 0, PT, 0);
     const x = PT[0];
     const y = PT[1] - r * 0.15;
     const w = r * 0.3;
@@ -1272,18 +1345,17 @@ const WARM_WHITE: RGB = mixRgb(SPRING_FOAM, [255, 251, 234], 0.6);
 const LILAC: RGB = [170, 168, 206];
 
 /**
- * Where down a sheet its colours change, from the lip to the foot, as shares
- * of how far below the lip on the screen: four flat tones, as the kit paints
- * a face, each stepped hard into the next -- the roll over the lip, the glassy water under it,
+ * Where down a sheet its own colours change, from where the colour of the
+ * water coming to the lip has gone into them (`ROLL`) to the foot, as shares
+ * of how far below the lip on the screen: three flat tones, as the kit paints
+ * a face, each stepped hard into the next -- the glassy water over the lip,
  * the paler water breaking up, and the white over the foot.
  */
-const STOPS = [0, 0.045, 0.07, 0.34, 0.36, 0.64, 0.66, 1];
+const STOPS = [ROLL, 0.34, 0.36, 0.64, 0.66, 1];
 /** The sheet down its length at each stop, for each of eleven steps of how white it goes by the foot. */
 const BODY: RGB[][] = Array.from({ length: 11 }, (_, i) => {
   const w = i / 10;
   return [
-    mixRgb(SPRING_WATER, SPRING_PALE, 0.66),
-    mixRgb(SPRING_WATER, SPRING_PALE, 0.56),
     mixRgb(SPRING_WATER, SPRING_PALE, 0.1),
     mixRgb(SPRING_WATER, SPRING_PALE, 0.16),
     mixRgb(SPRING_WATER, SPRING_PALE, 0.36 + 0.14 * w),
@@ -1298,11 +1370,11 @@ const BODY: RGB[][] = Array.from({ length: 11 }, (_, i) => {
  * its shaded side, the rope's own colour taken toward the ink. Solid, so
  * pieces of one sheet laid over each other's edges meet without a seam.
  */
-const VEIL: string[][] = BODY.map((row) => row.map((c, k) => rgb(mixRgb(c, SPRING_EDGE, [0.1, 0.12, 0.46, 0.42, 0.26, 0.22, 0.06, 0.03][k]))));
-const ROPE_RGB: RGB[][] = BODY.map((row) => row.map((c, k) => mixRgb(c, SPRING_PALE, [0.3, 0.3, 0.26, 0.3, 0.26, 0.24, 0.12, 0.05][k])));
+const VEIL: string[][] = BODY.map((row) => row.map((c, k) => rgb(mixRgb(c, SPRING_EDGE, [0.46, 0.42, 0.26, 0.22, 0.06, 0.03][k]))));
+const ROPE_RGB: RGB[][] = BODY.map((row) => row.map((c, k) => mixRgb(c, SPRING_PALE, [0.26, 0.3, 0.26, 0.24, 0.12, 0.05][k])));
 const ROPE: string[][] = ROPE_RGB.map((row) => row.map(rgb));
-const CORE: string[][] = BODY.map((row) => row.map((c, k) => rgb(mixRgb(mixRgb(c, SPRING_PALE, [0.55, 0.55, 0.6, 0.66, 0.6, 0.55, 0.3, 0.15][k]), WARM_WHITE, 0.2))));
-const CREASE: string[][] = ROPE_RGB.map((row) => row.map((c, k) => rgb(mixRgb(c, WATER_INK, [0.3, 0.3, 0.55, 0.52, 0.42, 0.38, 0.2, 0.12][k]))));
+const CORE: string[][] = BODY.map((row) => row.map((c, k) => rgb(mixRgb(mixRgb(c, SPRING_PALE, [0.6, 0.66, 0.6, 0.55, 0.3, 0.15][k]), WARM_WHITE, 0.2))));
+const CREASE: string[][] = ROPE_RGB.map((row) => row.map((c, k) => rgb(mixRgb(c, WATER_INK, [0.55, 0.52, 0.42, 0.38, 0.2, 0.12][k]))));
 /** The wet rock behind a sheet. */
 const WET_ROCK = 'rgba(40,58,78,0.3)';
 /** The wet rock seen through a tear in a sheet. */
@@ -1317,15 +1389,25 @@ const THREAD = rgba(WARM_WHITE, 0.7);
 /** Flecks of white breaking out of the lower part of a tall fall. */
 const FLECK = rgba(WARM_WHITE, 0.8);
 const EDGE_LIGHT = rgba(WARM_WHITE, 0.75);
-/** The water drawn into a lip, from clear to where it turns over; and the light along the edge. */
-const TONGUE_INK = [rgba(SPRING_PALE, 0), rgba(mixRgb(SPRING_WATER, SPRING_PALE, 0.5), 0.42), rgba(mixRgb(SPRING_PALE, WARM_WHITE, 0.3), 0.85)];
-/** Where down the water drawn into a lip each of those begins and ends, from the back of it to the edge. */
-const TONGUE_STOPS = [0, 0.34, 0.34, 0.74, 0.74, 1];
+/** How strong the colour of the water coming to a lip is laid over its surface, from the back of the water drawn in to the edge, and where. */
+const TONGUE_STOPS = [0, 0.45, 0.8, 1];
+const TONGUE_ALPHA = [0, 0.3, 0.85, 1];
 /** The lines of water drawn in toward a lip. */
-const TONGUE_LINE = rgba(WARM_WHITE, 0.6);
-const LIP_LIGHT = rgb(WARM_WHITE);
-/** The crease under the light along a lip, where the water rolled over meets the face of the sheet. */
-const LIP_CREASE = rgb(mixRgb(mixRgb(SPRING_WATER, SPRING_PALE, 0.3), WATER_INK, 0.45));
+const TONGUE_LINE = rgba(WARM_WHITE, 0.45);
+/** How far the light along a lip is taken from the water's colour toward white. */
+const LIP_LIT = 0.22;
+/** The colour of the water coming to a lip, spring water if it does not say, and the light along its edge, each worked out once a colour. */
+const SOURCES = new Map<string, { sourceRgb: RGB; source: string; lipLight: string }>();
+function sourceInks(s: Sheet): { sourceRgb: RGB; source: string; lipLight: string } {
+  const c = s.source ?? SPRING_WATER;
+  const key = `${c[0] | 0},${c[1] | 0},${c[2] | 0}`;
+  let got = SOURCES.get(key);
+  if (!got) {
+    got = { sourceRgb: c, source: rgb(c), lipLight: rgb(mixRgb(c, WARM_WHITE, LIP_LIT)) };
+    SOURCES.set(key, got);
+  }
+  return got;
+}
 /** A glint where the light catches the water turning over: the runes' white. */
 const GLINT = RUNE_WHITE;
 /** Foam: its top, the shade under a puff of it, and the ink it is ruled round with. */

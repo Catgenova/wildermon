@@ -4249,6 +4249,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 491,
+    day: '2026-11-05',
+    lines: () => ['Changed: top of a waterfall: the colour and width of the water above it, no pale band or white edge line at the lip; pool curtains and aqueduct spouts the same.'],
+  },
+  {
     n: 490,
     day: '2026-11-05',
     lines: () => [

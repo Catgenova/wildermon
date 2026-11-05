@@ -31,7 +31,7 @@ import { DETAIL_FROM, drawFoot, drawLip, drawMist, drawSheet, footPoint, place, 
 import { HALF_H, HALF_W, HEIGHT_SCALE } from './iso';
 import { paintPads } from './pads';
 import { depthOf, type View } from './view';
-import { SPRING_EDGE, SPRING_FOAM, SPRING_PALE, SPRING_WATER } from './water';
+import { SPRING_EDGE, SPRING_FOAM, SPRING_PALE, SPRING_WATER, waterRgb } from './water';
 
 /** What a frame of the water is drawn with, handed over by the renderer before the ground. */
 export interface WaterFrame {
@@ -96,6 +96,8 @@ const STREAK_LONG = 0.24;
 /** Half the width of a falling sheet over a single corner, in tiles, and how much wider one is that spills straight out of a pond: the width carried past each end of a wider lip. */
 const SHEET_HALF = 0.22;
 const SHEET_SPILL = 1.4;
+/** How far back from its sill a pond's water is taken into the colour it goes over in, in tiles. */
+const POND_TONGUE = 1;
 /** A fall this tall, in height units, is as wide over a single corner as a fall gets. */
 const FALL_TALL = 50;
 /** The most corners a pond's sill is followed along its rim either way from its lip. */
@@ -654,8 +656,9 @@ export class SpringWater {
     const above = this.ponds.find((d) => d.pond.spring === st.src.spring && d.pond.index === st.src.from)?.pond;
     for (let k = 0; k < n - 1; k++) {
       if (st.ph[k] - st.ph[k + 1] < FALL_DROP) continue;
-      if (k > first) this.runs.push(this.run(st, index, first, k, world));
-      this.falls.push(this.fall(st, index, k, k === st.lead && above?.wet.size ? above : null, world));
+      const run = k > first ? this.run(st, index, first, k, world) : null;
+      if (run) this.runs.push(run);
+      this.falls.push(this.fall(st, index, k, k === st.lead && above?.wet.size ? above : null, run, world));
       first = k + 1;
     }
     if (n - 1 > first) this.runs.push(this.run(st, index, first, n - 1, world));
@@ -670,7 +673,7 @@ export class SpringWater {
    * Partway down a stream it is the stream's own width. Either way the
    * stream carries on from the rules' own foot, `at + 1`.
    */
-  private fall(st: StreamDraw, stream: number, k: number, pond: PondWater | null, world: World): Fall {
+  private fall(st: StreamDraw, stream: number, k: number, pond: PondWater | null, run: Run | null, world: World): Fall {
     const ax = st.px[k];
     const ay = st.py[k];
     const bx = st.px[k + 1];
@@ -711,10 +714,23 @@ export class SpringWater {
     const cuts = [from - half];
     for (let u = from + 1; u < to; u++) cuts.push(u);
     cuts.push(to + half);
+    /*
+     * It leaves the lip as wide as the water coming to it, in that water's
+     * colour: a stream's width where it ends at the lip, in the stream's
+     * water; or a pond's whole sill (a little either side of a sill of one
+     * corner), in the pond's colour a corner back from it, at the pond's own
+     * surface, its water taken into that colour a tile back from the sill
+     * and out to its shore past each end.
+     */
+    const depth = pond ? pond.level - world.getHeight(ax - dx, ay - dy) : 0;
     const sheet: Sheet = {
       axis, line: axis === 1 ? ax : ay, from, to, half, way: (axis === 1 ? dx : dy) as 1 | -1, reach: 1, curl: 1,
-      top: st.ph[k] + FILM, landFrom: from, land: new Float64Array(count), wet: false, grow: 1,
-      feed: k === st.lead ? undefined : STREAM_HALF,
+      top: st.ph[k] + (pond ? 0 : FILM), landFrom: from, land: new Float64Array(count), wet: false, grow: 1,
+      feed: pond ? (to > from ? 0 : SHEET_HALF * 0.6) : k === st.lead ? undefined : (run?.half[run.n - 1] ?? STREAM_HALF),
+      source: pond ? waterRgb(Math.max(1, depth)) : STREAM_WATER,
+      bands: pond ? undefined : STREAM_MIDDLE,
+      back: pond ? POND_TONGUE : k === st.lead ? undefined : 0,
+      splay: pond ? [splayOf(world, pond, from, ax, ay, ex, ey, dx, dy, -1), splayOf(world, pond, to, ax, ay, ex, ey, dx, dy, 1)] : undefined,
     };
     return {
       stream, at: k, ax, ay, top: st.ph[k], bx, by, foot: st.ph[k + 1], dx, dy, spill: k === st.lead, sheet, feet,
@@ -1582,8 +1598,44 @@ export class SpringWater {
   }
 }
 
+/**
+ * How far a pond's shore runs on out past one end of its sill for each tile
+ * back from it, in tiles (`Sheet.splay`): `c` the corner the end is at along
+ * the sill's axis, the sill's first corner at `ax`, `ay`, the step along it
+ * `ex`, `ey`, the step it falls `dx`, `dy`, and `side` the way out past the
+ * end. Read off the tile behind the sill past the end, where the shore
+ * crosses its far side; less than nought where the corner behind the end is
+ * not under water, so the shore comes in.
+ */
+function splayOf(world: World, pond: PondWater, c: number, ax: number, ay: number, ex: number, ey: number, dx: number, dy: number, side: number): number {
+  const cw = world.w + 1;
+  const ix = ex ? c : ax;
+  const iy = ey ? c : ay;
+  const wet = (x: number, y: number): boolean => pond.wet.has(y * cw + x);
+  const L = pond.level;
+  const bx = ix + ex * side;
+  const by = iy + ey * side;
+  if (!wet(ix - dx, iy - dy)) return -1;
+  const hb = world.getHeight(bx, by);
+  const hc = world.getHeight(ix - dx, iy - dy);
+  const hd = world.getHeight(bx - dx, by - dy);
+  // Water on along the lip's own line past the end: as far out as it is drawn in at all.
+  if (hb <= L) return 2;
+  // Under water past the end and behind it too: the shore crosses the side out past the end, that far back from the lip.
+  if (wet(bx - dx, by - dy)) return hb > hd ? Math.min(2, (hb - hd) / Math.max(0.01, hb - L)) : 2;
+  // Otherwise it crosses the far side of the tile, that far out past the end.
+  return hd > hc ? Math.max(0, Math.min(1, (L - hc) / (hd - hc))) : 0;
+}
+
 /** A colour from one to another, `t` of the way. */
 const mix = (a: readonly number[], b: readonly number[], t: number): number[] => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+type RGB = readonly [number, number, number];
+/** A stream's water, which a fall down it starts in (`Sheet.source`); and the sky down its middle, as shares of its width, carried over the fall (`Sheet.bands`). */
+const STREAM_WATER = mix(SPRING_WATER, SPRING_EDGE, 0.08) as [number, number, number];
+const STREAM_MIDDLE: ReadonlyArray<readonly [number, RGB]> = [
+  [0.52, mix(SPRING_WATER, SPRING_PALE, 0.3) as [number, number, number]],
+  [0.24, mix(SPRING_WATER, SPRING_PALE, 0.55) as [number, number, number]],
+];
 const rgb = (c: readonly number[]): string => `rgb(${c[0]},${c[1]},${c[2]})`;
 const rgba = (c: readonly number[], a: number): string => `rgba(${c[0]},${c[1]},${c[2]},${a.toFixed(3)})`;
 /** Foam white at a strength, for the rings that fade as they spread. */
@@ -1598,9 +1650,9 @@ const foam = (a: number): string => rgba(SPRING_FOAM, a);
  */
 const STREAM_BANDS: ReadonlyArray<readonly [number, string, number]> = [
   [1, rgb(SPRING_EDGE), SEAM],
-  [0.8, rgb(mix(SPRING_WATER, SPRING_EDGE, 0.08)), SEAM * 1.4],
-  [0.52, rgb(mix(SPRING_WATER, SPRING_PALE, 0.3)), SEAM * 1.8],
-  [0.24, rgb(mix(SPRING_WATER, SPRING_PALE, 0.55)), SEAM * 2.2],
+  [0.8, rgb(STREAM_WATER), SEAM * 1.4],
+  [0.52, rgb(STREAM_MIDDLE[0][1]), SEAM * 1.8],
+  [0.24, rgb(STREAM_MIDDLE[1][1]), SEAM * 2.2],
 ];
 const STREAM_DAMP = 'rgba(30,70,62,0.16)';
 /** The streaks down a stream, the fainter and the brighter, and its white water. */
