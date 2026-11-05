@@ -56,6 +56,8 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   stona: () => import('./voice-zephyr').then((m) => m.ZEPHYR_VOICE),
   // The Mosskip, the Craghopper and the Bastiontoad.
   bogga: () => import('./voice-toad').then((m) => m.TOAD_VOICE),
+  // The Brewtoad, the Brothgut and the Barrelburp.
+  hoppa: () => import('./voice-brewtoad').then((m) => m.BREW_VOICE),
   // The Glimmoth, the Lurewing and the Noctilure.
   wicka: () => import('./voice-moth').then((m) => m.MOTH_VOICE),
   // The Pipseed, the Sprigwing and the Arborcrest.
