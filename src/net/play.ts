@@ -452,6 +452,10 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
   island.hooks.tracked = (name, bearing, dist) => {
     game.trail = { name, bearing, dist, x: game.player.x, y: game.player.y, at: game.time };
   };
+  // And the critter cache a search named, for Dig up cache on its tile (`winter.ts`).
+  island.hooks.cached = (spot) => {
+    game.cacheSpot = spot;
+  };
   /*
    * And the crates our own ask touched, which come back with the answer to it.
    *

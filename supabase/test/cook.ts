@@ -111,6 +111,9 @@ const markSql = (m: Mark | null): string => (m ? `${q(JSON.stringify(m))}::jsonb
 
 const out = psql(`
 begin;
+-- Out of winter, whatever the season is: in winter a carcass gives more fur (winter_fur), and the knife's counts are of
+-- the plain share.
+set local wurm.season = 'spring';
 -- Nothing made or restored here comes up rare at the plain odds, one in a hundred, which is
 -- what a craft or a restoring rolls with no perk to set them: a rare one is a pile of its own
 -- and holds, wears and is marked otherwise, so a check that was not asking about it failed a

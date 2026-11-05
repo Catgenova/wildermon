@@ -183,6 +183,9 @@ import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal
 import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
 import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HUNT_REST, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, ringKeepsOut, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
+import {
+  CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays, WINTER_FUR, WINTER_FUR_PART,
+} from '../../game/winter';
 import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
 import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
 import { CHANNELS, FIGHTING, gradeId, traitOf, traitSays, type TraitDef } from '../../game/traits';
@@ -4244,6 +4247,17 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 488,
+    day: '2026-11-05',
+    lines: () => [
+      `Added: ${itemDef(WINTER_FUR_PART).name.toLowerCase()} from butchering in winter ×${WINTER_FUR}.`,
+      `Added: critter caches, winter only: a cache per ${CACHE_EVERY}×${CACHE_EVERY} tiles, hidden, not within ${CACHE_DEED_GAP} tiles of a settlement, gone when winter ends.`
+        + ` Search for caches (tile menu): nearest within Track's reach, read as Track reads; its tile within ${CACHE_SPOT_BASE} tiles, a tile further every ${CACHE_SPOT_EVERY} Tracking levels.`
+        + ` Dig up cache (on that tile, first to finish takes it): ${CACHE_DRAWS} draws, a draw more every ${CACHE_DRAW_EVERY} Tracking levels, QL by Tracking.`,
+      `Cache draws, opening by Tracking: ${CACHE_LOOT.map((l) => `${lootSays(l)} from ${l.at}`).join(', ')}. Odds at ${SKILL_TOP}: ${cacheOddsSays(SKILL_TOP)}.`,
+    ],
   },
   {
     n: 487,

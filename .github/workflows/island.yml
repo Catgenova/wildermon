@@ -4911,6 +4911,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/seatgate.mjs --log-level=error
           node node_modules/.cache/seatgate.mjs
 
+      - name: Winter fur, and critter caches found by Tracking
+        if: matrix.shard == 6
+        run: |
+          # Both sides: the fur multiplier, the loot table, draws and picks the
+          # same; more fur in winter only; caches laid in winter only, once; a
+          # search reads the nearest, names its tile near it; a dig gives its
+          # draws and takes it; a second dig and one after winter refused in
+          # the same words. The season pinned on each side.
+          npx esbuild supabase/test/wintercache.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/wintercache.mjs --log-level=error
+          node node_modules/.cache/wintercache.mjs
+
       - name: A rare thing put into a crate stays rare, a pile of its own
         if: matrix.shard == 5
         run: |

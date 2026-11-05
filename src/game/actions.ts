@@ -68,6 +68,7 @@ import { SACRIFICE_ACTIONS } from './sacrifice';
 import { ENCHANT_ACTIONS, enchantSays, knowJobs } from './enchanting';
 import { MEDITATION_ACTIONS } from './meditation';
 import { TRACK_ACTIONS } from './trackAction';
+import { CACHE_ACTIONS } from './cacheAction';
 import { SPECIES, type Stance, takeArms } from './creatures';
 import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollTable } from './forage';
 import { atWaterEdge, WATER_GARDEN_ACTIONS } from './watergarden';
@@ -3359,6 +3360,8 @@ export const ACTIONS: ActionDef[] = [
   ...MEDITATION_ACTIONS,
   // Reading a trail back to the nearest wild one of a kind, from the field guide (`tracking.ts`).
   ...TRACK_ACTIONS,
+  // Critter caches, in winter (`winter.ts`).
+  ...CACHE_ACTIONS,
   ...ARCHAEOLOGY_ACTIONS,
   ...RELIC_USE_ACTIONS,
   // Wildermon gear fitted and taken off (`wildgearActions.ts`).

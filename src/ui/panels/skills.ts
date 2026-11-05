@@ -9,6 +9,7 @@ import type { UIWindow } from '../windows';
 import { nextFrame } from '../repaint';
 import { raisedBySays } from '../raisedBy';
 import { TRACKING, trackingSays } from '../../game/tracking';
+import { cacheSkillSays } from '../../game/winter';
 import { metres } from '../../game/piers';
 import { ACTION_BY_ID, maxDigSlope } from '../../game/actions';
 import { TABLET, TABLET_BELOW, TABLET_GAIN } from '../../game/relicuse';
@@ -367,8 +368,11 @@ export class SkillsPanel {
             + `Hit chance in full dark +${share}. Animal husbandry to read a trait −${ease} levels.`];
       }
       // What a go of Track reaches and reads at this level, and what each band of it says (`tracking.ts`).
-      case TRACKING:
-        return trackingSays(v, g.awareShare());
+      case TRACKING: {
+        // And what it is worth for critter caches in winter (`winter.ts`).
+        const [short, long] = trackingSays(v, g.awareShare());
+        return [short, `${long} ${cacheSkillSays(v)}`];
+      }
       default:
         return null;
     }

@@ -29,6 +29,7 @@ import type { GuideBook } from '../game/guide';
 import { packFog, unpackFog } from './fogpack';
 import { chartedSquare } from '../game/cartography';
 import { trackedArrow } from '../game/tracking';
+import { cachedSpot } from '../game/winter';
 import type { Away } from '../game/away';
 import type { WatchFlag, WatchFlags } from '../game/watch';
 import { isBarred, type Kept, type KeptBody, type KeptReport } from '../game/keeper';
@@ -1174,6 +1175,8 @@ export interface IslandHooks {
   charted?: (x: number, y: number, r: number) => void;
   /** A trail read by a go of Track (`tracking.ts`), said live as a `tracked` line: what the arrow is labelled, and the way it points. */
   tracked?: (name: string, bearing: number, dist: string) => void;
+  /** The critter cache a search named (`winter.ts`), said live as a `cached` line: its tile, or null once it is dug. */
+  cached?: (spot: { x: number; y: number } | null) => void;
   /** Somebody logged on or off (`presence.ts`), said to everybody as a `presence` line, with when. */
   presence?: (name: string, on: boolean, at: number | undefined) => void;
   /** A spell made your walk on foot this many times as quick for so many seconds. */
@@ -3006,6 +3009,12 @@ export class Island {
     if (e.kind === 'tracked') {
       const t = trackedArrow(e.text);
       if (t) this.hooks.tracked?.(t.name, t.bearing, t.dist);
+      return;
+    }
+    // A critter cache's tile named, or the one named dug (`winter.ts`): kept for Dig up cache, not a line for the log.
+    if (e.kind === 'cached') {
+      const spot = cachedSpot(e.text);
+      if (spot !== undefined) this.hooks.cached?.(spot);
       return;
     }
     this.sayLine(e.text, e.kind, e.at);

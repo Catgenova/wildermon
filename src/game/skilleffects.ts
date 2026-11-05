@@ -15,6 +15,7 @@ import { calmCap } from './meditation';
 import { motesFor } from './motes';
 import { sightedAt } from './sighted';
 import { trackErr, trackLevel, trackRange } from './tracking';
+import { cacheDraws, cacheSpotAt } from './winter';
 import { grapesFor } from './vineyard';
 import { woundClose, type Wound } from './wounds';
 import { ROCK_VARIANTS } from '../world/tiles';
@@ -301,6 +302,9 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Track reach', at: (g) => trackRange(trackLevel(g.skills.get('tracking'))), say: (v) => `${v} tiles` },
       { label: 'Bearing error', at: (g) => trackErr(trackLevel(g.skills.get('tracking'))), say: (v) => `±${v.toFixed(0)}°` },
       { label: 'Wild ones sighted in view', at: (g) => trackLevel(g.skills.get('tracking')), say: sightedAt },
+      // Critter caches, in winter (`winter.ts`).
+      { label: 'Cache tile named within', at: (g) => cacheSpotAt(trackLevel(g.skills.get('tracking'))), say: (v) => `${v} tiles`, note: 'Winter' },
+      { label: 'Draws per cache dug', at: (g) => cacheDraws(trackLevel(g.skills.get('tracking'))), say: (v) => `${v}`, note: 'Winter' },
     ],
     fishing: [{ label: 'Fish stays on the hook', at: (g) => staysOn(g.skills.get('fishing'), EXAMPLE_QL, false), say: percent, note: `Rod QL ${EXAMPLE_QL}, no bait` }],
     masonry: [{ label: 'Steepest rock you may raise', at: (g) => maxMasonSlope(g), say: height }],

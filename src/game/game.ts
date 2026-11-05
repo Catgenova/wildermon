@@ -1211,6 +1211,9 @@ export class Game {
    */
   trail: Trail | null = null;
 
+  /** The tile of the critter cache a search of yours last named (`winter.ts`), off the island's `cached` line; null once dug. Not saved. */
+  cacheSpot: { x: number; y: number } | null = null;
+
   /** The last log on or off the island said (`src/net/presence.ts`), for the banner: who, which, and when it came in. Not saved. */
   loggedSaid: { name: string; on: boolean; at: number } | null = null;
 
