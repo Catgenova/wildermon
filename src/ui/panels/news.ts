@@ -127,7 +127,7 @@ import { POST_LIFE_MIN } from '../../game/posts';
 import { ACTION_BY_ID, deedAcrossAt, DROP_RAISE, PACKED_FIRST, SPADEFUL, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
 import { CRAFT_REACH, lockedRecipes, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
-import { RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
+import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
 import { BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
@@ -4251,10 +4251,18 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 502,
+    day: '2026-11-05',
+    lines: () => [
+      `Added: Formula, per butchering: ${listed(bookDrops('formula').map((d) => `${d.kind} ${percent(d.odds)}`))}; one not read first. ${BOOKS.formula.label}: opens it for good, Formula used up; already open: not read.`,
+      `Changed: all ${lockedRecipes('formula').length} enchantment scrolls: shut until its Formula is read (was: open to all). Crafting window: greyed, padlocked.`,
+    ],
+  },
+  {
     n: 500,
     day: '2026-11-05',
     lines: () => {
-      const shut = lockedRecipes().map((r) => recipeTitle(r).toLowerCase());
+      const shut = lockedRecipes('recipe').map((r) => recipeTitle(r).toLowerCase());
       return [
         `Added: Recipe, ${percent(RECIPE_DROP_ODDS)} per butchering of a ${listedOr([...RECIPE_DROPPERS])} carcass; one not read first. Read recipe: opens it for good, Recipe used up; already open: not read.`,
         `Changed: ${listed(shut)}: shut until its Recipe is read (was: open to all). Crafting window: greyed, padlocked. Simma: does not cook them.`,

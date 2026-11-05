@@ -166,7 +166,8 @@ import {
 } from '../src/game/motes';
 import { patronStatue, STATUETTE } from '../src/game/patronlist';
 import { RECIPE_DROP_ODDS, RECIPE_DROPPERS, RECIPE_ITEM, RECIPE_KNOWN } from '../src/game/recipebook';
-import { lockedRecipes, recipeTitle } from '../src/game/recipes';
+import { BOOK_DROPS, BOOK_KINDS, BOOKS } from '../src/game/bookdrops';
+import { bookOf, lockedRecipes, recipeTitle } from '../src/game/recipes';
 import {
   TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
 } from '../src/game/tracking';
@@ -2201,6 +2202,20 @@ out.push(`create or replace function recipe_known_says() returns text language s
 out.push(`create or replace function locked_recipes() returns table (id text, title text, ord int) language sql immutable as $fn$ select * from (values ${
   lockedRecipes().map((r, n) => `(${q(r.id)}, ${q(recipeTitle(r))}, ${n})`).join(', ') || `(null::text, null::text, null::int)`
 }) v (id, title, ord) where v.id is not null $fn$;`);
+/*
+ * And the kinds of book (`recipebook.ts`): the book each shut recipe is opened by (`bookOf`: a Formula for an
+ * enchantment scroll, a Recipe for anything else), the item each is written on, what reading one already open says, and
+ * the kinds whose carcasses carry one, with the odds per butchering (`BOOK_DROPS`).
+ */
+out.push(`create or replace function recipe_book(p_recipe text) returns text language sql immutable as $fn$ select case ${
+  lockedRecipes().map((r) => `when p_recipe = ${q(r.id)} then ${q(bookOf(r))} `).join('')
+}else null end $fn$;`);
+out.push(`create or replace function book_item(p_book text) returns text language sql immutable as $fn$ select case p_book ${BOOK_KINDS.map((b) => `when ${q(b)} then ${q(BOOKS[b].item)} `).join('')}end $fn$;`);
+out.push(`create or replace function book_known_says(p_book text) returns text language sql immutable as $fn$ select case p_book ${BOOK_KINDS.map((b) => `when ${q(b)} then ${q(BOOKS[b].known)} `).join('')}end $fn$;`);
+out.push(`create or replace function book_of_item(p_def text) returns text language sql immutable as $fn$ select case p_def ${BOOK_KINDS.map((b) => `when ${q(BOOKS[b].item)} then ${q(b)} `).join('')}end $fn$;`);
+out.push(`create or replace function book_drops() returns table (kind text, book text, odds double precision) language sql immutable as $fn$ select * from (values ${
+  BOOK_DROPS.map((d) => `(${q(d.kind)}, ${q(d.book)}, ${q(d.odds)}::double precision)`).join(', ')
+}) v (kind, book, odds) $fn$;`);
 /*
  * A patron's statue (`relicuse.ts`, `faith.ts`): what it is enchanted out of, the motes of each element that takes, the
  * statue of each patron, and the patron of each statue (null for anything else).

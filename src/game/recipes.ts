@@ -1,3 +1,4 @@
+import type { BookKind } from './bookdrops';
 import { MIND_GAIN, tryGain } from './learn';
 import { madeBy } from './signing';
 import type { ActionDef, Target } from './actions';
@@ -103,8 +104,9 @@ export interface Recipe {
   id: string;
   category: RecipeCategory;
   /**
-   * Shut until its recipe is read: a Recipe off a goblin's or an orc's carcass (`RECIPE_DROPPERS`), read and used up
-   * (`recipebook.ts`). Listed, greyed and padlocked in the crafting window until then. The island's `locked_recipes`.
+   * Shut until its book is read: a Recipe (Cooking) off a goblin's or an orc's carcass, a Formula (Enchanting) off an
+   * ogre's or a dragon's (`BOOK_DROPS`), read and used up (`recipebook.ts`; which one by `bookOf`). Listed, greyed and
+   * padlocked in the crafting window until then. The island's `locked_recipes` and `recipe_book`.
    */
   locked?: boolean;
   /** What its recipe is called, where the thing it makes does not say it: "Cherry preserves" (`recipeTitle`). */
@@ -364,7 +366,8 @@ export const RECIPES: Recipe[] = [
    * better than the sheet it was written on.
    */
   ...ENCHANTMENT_LIST.map((e): Recipe => ({
-    id: `make_${e.scroll}`, category: 'Enchanting', result: e.scroll,
+    // Every one shut until its Formula is read (`bookOf`, `recipebook.ts`).
+    id: `make_${e.scroll}`, category: 'Enchanting', locked: true, result: e.scroll,
     inputs: [{ item: 'papyrus', count: SCROLL_SHEETS }, ...e.motes.map(([item, count]) => ({ item, count }))],
     skill: ENCHANTING, label: `Write ${article(e.name)}${e.name} scroll`, verb: 'writing a scroll', baseTime: 12, stamina: 0.03, difficulty: SCROLL_DIFFICULTY,
     note: 'QL at most the papyrus QL',
@@ -1074,12 +1077,18 @@ export function chooseMaterial(g: Game, r: Recipe, preferUid?: number, want?: st
 
 /** What a recipe's own Recipe is called: its `title`, or the name of what it makes. "Cottage pie". */
 export const recipeTitle = (r: Recipe): string => r.title ?? itemDef(r.result).name;
-/** Every recipe shut until its Recipe is read, in the order they are listed. The island's `locked_recipes`. */
-export const lockedRecipes = (): Recipe[] => RECIPES.filter((r) => r.locked);
-/** A shut recipe you have not read the Recipe of. */
+/**
+ * What a shut recipe is opened by: a Formula for an enchantment scroll, a Recipe for anything else. The island's
+ * `recipe_book`.
+ */
+export type { BookKind };
+export const bookOf = (r: Pick<Recipe, 'category'>): BookKind => (r.category === 'Enchanting' ? 'formula' : 'recipe');
+/** Every recipe shut until its book is read (of one kind, or of both), in the order they are listed. The island's `locked_recipes`. */
+export const lockedRecipes = (book?: BookKind): Recipe[] => RECIPES.filter((r) => r.locked && (!book || bookOf(r) === book));
+/** A shut recipe you have not read the book of. */
 export const recipeUnread = (r: Recipe, g: Game): boolean => !!r.locked && !g.knowsRecipe(r.id);
-/** What a shut recipe unread says, as the island's `craft_refusal`: "Need recipe: Cottage pie." */
-export const needRecipeSays = (r: Recipe): string => `Need recipe: ${recipeTitle(r)}.`;
+/** What a shut recipe unread says, as the island's `craft_refusal`: "Need recipe: Cottage pie.", "Need formula: Emberbrand scroll." */
+export const needRecipeSays = (r: Recipe): string => `Need ${bookOf(r)}: ${recipeTitle(r)}.`;
 
 /** Why a recipe cannot be made right now, or null. */
 export function recipeReason(r: Recipe, g: Game, preferUid?: number, stock: readonly CraftStock[] = g.craftStock(preferUid, false, reachFor(g, r))): string | null {
