@@ -38,7 +38,7 @@ interface Leg {
 }
 
 /** A course of pads round the dome: the elevation of their middles (radians), how many, how big, and how far off the dome. */
-interface Course { ph: number; n: number; r: number; lift: number }
+interface Course { ph: number; n: number; r: number; lift: number; droop: number }
 
 /** A flower on its stalk: where its stalk stands (on the shell's frame), how tall, which way it leans, how big, and open or a bud. */
 interface Flower { at: V3; tall: number; lean: V3; r: number; open: boolean }
@@ -87,14 +87,14 @@ const PADBLOOM_LOOK: Lily = {
   flare: 0.1,
   band: { ph: -0.02, h: 0.08, t: 0.055, waves: 7, amp: 0.07 },
   courses: [
-    { ph: 0.36, n: 7, r: 0.42, lift: 0.025 },
-    { ph: 0.9, n: 4, r: 0.34, lift: 0.055 },
+    { ph: 0.3, n: 6, r: 0.56, lift: 0.03, droop: 0.3 },
+    { ph: 0.88, n: 3, r: 0.44, lift: 0.055, droop: 0.2 },
   ],
-  cap: 0.36,
+  cap: 0.4,
   pond: null,
   flowers: [{ at: [0, -0.04, 0], tall: 0.1, lean: [0, -0.15, 1], r: 0.13, open: false }],
   curls: [],
-  hang: 5,
+  hang: 3,
   hangLen: 0.16,
   head: { at: [0, 0.72, 0.08], r: [0.4, 0.46, 0.38], neck: 0.36, lift: 52, thick: 0.27 },
   frill: 7,
@@ -117,10 +117,10 @@ const LILYBACK_LOOK: Lily = {
   flare: 0.12,
   band: { ph: -0.02, h: 0.09, t: 0.06, waves: 8, amp: 0.08 },
   courses: [
-    { ph: 0.3, n: 9, r: 0.44, lift: 0.025 },
-    { ph: 0.78, n: 6, r: 0.38, lift: 0.05 },
+    { ph: 0.26, n: 7, r: 0.58, lift: 0.03, droop: 0.3 },
+    { ph: 0.82, n: 4, r: 0.46, lift: 0.06, droop: 0.2 },
   ],
-  cap: 0.3,
+  cap: 0.34,
   pond: null,
   flowers: [
     { at: [0.02, -0.08, 0], tall: 0.08, lean: [0, -0.1, 1], r: 0.36, open: true },
@@ -128,11 +128,11 @@ const LILYBACK_LOOK: Lily = {
     { at: [0.5, -0.5, 0], tall: 0.3, lean: [0.4, -0.4, 1], r: 0.11, open: false },
   ],
   curls: [],
-  hang: 8,
+  hang: 4,
   hangLen: 0.2,
-  head: { at: [0, 0.98, 0.08], r: [0.34, 0.45, 0.33], neck: 0.9, lift: 70, thick: 0.33 },
-  frill: 9,
-  mane: 0,
+  head: { at: [0, 1.0, 0.1], r: [0.34, 0.45, 0.33], neck: 1.2, lift: 72, thick: 0.33 },
+  frill: 7,
+  mane: 6,
   legLeaves: true,
   stars: false,
   shut: false,
@@ -151,8 +151,8 @@ const LOTUSHELL_LOOK: Lily = {
   flare: 0.14,
   band: { ph: -0.02, h: 0.1, t: 0.065, waves: 9, amp: 0.08 },
   courses: [
-    { ph: 0.28, n: 11, r: 0.46, lift: 0.025 },
-    { ph: 0.66, n: 8, r: 0.42, lift: 0.05 },
+    { ph: 0.22, n: 8, r: 0.6, lift: 0.03, droop: 0.3 },
+    { ph: 0.62, n: 7, r: 0.46, lift: 0.055, droop: 0.2 },
   ],
   cap: 0,
   pond: { r: 0.82, wall: 0.08, y: -0.08, z: 0.32, h: 0.15, down: 0.045 },
@@ -165,17 +165,17 @@ const LOTUSHELL_LOOK: Lily = {
     { at: [0.42, 0.62, 0], tall: 0.34, lean: [0.25, 0.4, 1], r: 0.1, open: false },
   ],
   curls: [{ at: [-0.18, -0.64, 0], tall: 0.38, turn: -1 }, { at: [0.66, -0.2, 0], tall: 0.3, turn: 1 }],
-  hang: 11,
+  hang: 5,
   hangLen: 0.25,
-  head: { at: [0, 1.04, 0.08], r: [0.34, 0.48, 0.32], neck: 1.08, lift: 66, thick: 0.42 },
-  frill: 10,
-  mane: 9,
+  head: { at: [0, 1.06, 0.1], r: [0.34, 0.48, 0.32], neck: 1.5, lift: 68, thick: 0.44 },
+  frill: 8,
+  mane: 10,
   legLeaves: true,
   stars: true,
   shut: true,
   high: 0.58,
-  fore: { hip: [0.6, 0.62, 0], len: [0.3, 0.3], at: [0.86, 0.82], foot: 0.08, toes: 4, w: 0.38, turn: 16 },
-  hind: { hip: [0.58, -0.66, 0], len: [0.3, 0.3], at: [0.84, -0.78], foot: 0.08, toes: 4, w: 0.39, turn: 20 },
+  fore: { hip: [0.62, 0.62, 0], len: [0.3, 0.3], at: [0.9, 0.84], foot: 0.09, toes: 4, w: 0.47, turn: 16 },
+  hind: { hip: [0.6, -0.66, 0], len: [0.3, 0.3], at: [0.88, -0.8], foot: 0.09, toes: 4, w: 0.48, turn: 20 },
   tail: 0.22,
   gait: { duty: 0.74, swing: [0.14, 0.18], step: 0.18, bob: 0.018, roll: 3 },
   size: 5.6,
@@ -671,8 +671,6 @@ function domeOf(s: Lily, n: number, k: number): Mesh {
   return merge(out, paint(decals));
 }
 
-/** Where the band's top edge is, round the shell: the lowest a pad comes down to. */
-const bandTop = (s: Lily, th: number): number => s.band.ph + 0.05 + s.band.amp * Math.sin(s.band.waves * th + 0.6);
 
 /** The wavy band round the shell's edge: a rounded tan ribbon going up and down between the pads and the cream below. */
 function bandOf(s: Lily, n: number): Mesh {
@@ -684,73 +682,83 @@ function bandOf(s: Lily, n: number): Mesh {
   return tube(pts, B.t, B.h, n, (_r, j) => (j < n / 2 ? 'shell' : 'shellDark'), { start: false, end: false, up: [0, 0, 1] });
 }
 
+/** The three greens a pad comes in, by its number. */
+const PAD_TONES: readonly Mat[] = ['leaf', 'feather', 'moss'];
+const padTone = (id: number): Mat => PAD_TONES[Math.floor(jitter(id + 50) * 3) % 3];
+
 /**
- * A lily pad laid on the dome, `r` across round its middle at (`th`, `ph`): round, with a notch cut in to its middle pointing up
- * the dome, where the pad above lies over it; its edge turned up a little; its veins drawn out from the middle. Each corner is
- * found on the dome itself, so the pad lies on it however it curves.
+ * A lily pad as a thing of its own: round, with a notch cut in to its middle, its top at `top` (a point by `a` round and `u`
+ * out from the middle to its rim), `T` thick with its underside dark and its rim a strip all round -- so it is outlined where
+ * its rim turns away, and the dark of its underside shows at a drooping edge -- its veins pale, drawn out from the middle.
  */
-function padOn(s: Lily, th: number, ph: number, r: number, lift: number, id: number, lod: number): Mesh {
-  const e = 1e-3;
-  const dTh = len3(sub(domeAt(s, th + e, ph).p, domeAt(s, th - e, ph).p)) / (2 * e);
-  const dPh = len3(sub(domeAt(s, th, ph + e).p, domeAt(s, th, ph - e).p)) / (2 * e);
-  const notch = Math.PI / 2 + (jitter(id + 3) - 0.5) * 0.9, gap = 0.2;
-  const K = lod ? 14 : 10;
-  const at = (a: number, u: number): V3 => {
-    const wob = 1 + 0.06 * Math.sin(a * 3 + id) * u;
-    const t2 = th + (Math.cos(a) * r * u * wob) / Math.max(0.05, dTh);
-    const p2 = Math.max(bandTop(s, t2), ph + (Math.sin(a) * r * u * wob) / dPh);
-    return domeAt(s, t2, p2, lift + 0.035 * u * u * r).p;
-  };
-  const v: V3[] = [at(0, 0)];
+function padShape(top: (a: number, u: number) => V3, nrm: V3, T: number, tone: Mat, notch: number, id: number, lod: number, r: number): Mesh {
+  const gap = 0.26, K = lod ? 14 : 10;
   const angles: number[] = [];
   for (let q = 0; q <= K; q++) angles.push(notch + gap + (q / K) * (TAU - 2 * gap));
-  for (const a of angles) v.push(at(a, 0.55));
-  for (const a of angles) v.push(at(a, 1));
+  const under = (a: number, u: number): V3 => sub(top(a, u), scale(nrm, T));
+  // 0: the middle, top. 1..K+1: the inner ring, top. K+2..2K+2: the rim, top. 2K+3..3K+3: the rim, under. 3K+4: the middle, under.
+  const v: V3[] = [top(0, 0)];
+  for (const a of angles) v.push(top(a, 0.55));
+  for (const a of angles) v.push(top(a, 1));
+  for (const a of angles) v.push(under(a, 1));
+  v.push(under(0, 0));
+  const inner = (q: number): number => 1 + q, rim = (q: number): number => K + 2 + q, low = (q: number): number => 2 * K + 3 + q, bottom = 3 * K + 4;
   const f: Face[] = [], want: V3[] = [];
-  const nrm = domeAt(s, th, ph).n;
   for (let q = 0; q < K; q++) {
-    f.push({ i: [0, 1 + q, 2 + q], m: 'leaf' });
+    f.push({ i: [0, inner(q), inner(q + 1)], m: tone });
     want.push(nrm);
-    f.push({ i: [1 + q, 2 + K + q, 3 + K + q, 2 + q], m: 'leaf' });
+    f.push({ i: [inner(q), rim(q), rim(q + 1), inner(q + 1)], m: tone });
     want.push(nrm);
+    // The rim's edge, a strip facing out.
+    const out = sub(v[rim(q)], v[0]);
+    f.push({ i: [rim(q), low(q), low(q + 1), rim(q + 1)], m: 'leafDark' });
+    want.push(unit([out[0], out[1], out[2] * 0.2]));
+    f.push({ i: [bottom, low(q), low(q + 1)], m: 'leafDark' });
+    want.push(scale(nrm, -1));
   }
-  // Its veins: from the middle out toward its edge, between the notch's two sides.
+  // The notch's two sides, each a strip from the middle out to the rim.
+  for (const q of [0, K]) {
+    const side = sub(v[rim(q)], v[0]);
+    f.push({ i: [0, rim(q), low(q), bottom], m: 'leafDark' });
+    want.push(unit(cross(nrm, side)));
+  }
   const decals: Disc[] = [];
   const veins = lod ? 6 : 4;
   for (let q = 0; q < veins; q++) {
     const a = notch + gap + ((q + 0.5) / veins) * (TAU - 2 * gap);
-    decals.push(...band([at(a, 0.1), at(a, 0.45), at(a, 0.78)], nrm, r * 0.014, 'moss', 0.006));
+    decals.push(...band([top(a, 0.12), top(a, 0.5), top(a, 0.8)], nrm, r * 0.016, 'coatLight', 0.006));
   }
   return merge(mesh(v, woundTo(v, f, want)), paint(decals));
 }
 
-/** A pad laid flat over a point of the ground under the shell (the top of the dome, or the water): `z` its height there, or the dome's. */
-function padFlat(c: V3, r: number, notch: number, id: number, lod: number, height: (x: number, y: number) => number, nrm: V3 = [0, 0, 1]): Mesh {
-  const gap = 0.2, K = lod ? 14 : 10;
-  const at = (a: number, u: number): V3 => {
-    const wob = 1 + 0.06 * Math.sin(a * 3 + id) * u;
-    const x = c[0] + Math.cos(a) * r * u * wob, y = c[1] + Math.sin(a) * r * u * wob;
-    return [x, y, height(x, y) + 0.03 * u * u * r];
+/**
+ * A lily pad laid on the dome, `r` across round its middle at (`th`, `ph`), its notch pointing up the dome to the pad that lies
+ * over it, its rim drooping down by `droop` of its radius -- the lowest course's past the band. Each point is found on the dome
+ * itself, so the pad lies on it however it curves.
+ */
+function padOn(s: Lily, th: number, ph: number, r: number, lift: number, droop: number, id: number, lod: number): Mesh {
+  const e = 1e-3;
+  const dTh = len3(sub(domeAt(s, th + e, ph).p, domeAt(s, th - e, ph).p)) / (2 * e);
+  const dPh = len3(sub(domeAt(s, th, ph + e).p, domeAt(s, th, ph - e).p)) / (2 * e);
+  const notch = Math.PI / 2 + (jitter(id + 3) - 0.5) * 0.7;
+  const T = 0.018 + 0.006 * s.stage;
+  const top = (a: number, u: number): V3 => {
+    const wob = 1 + 0.05 * Math.sin(a * 3 + id) * u;
+    const t2 = th + (Math.cos(a) * r * u * wob) / Math.max(0.05, dTh), p2 = ph + (Math.sin(a) * r * u * wob) / dPh;
+    const fall = u > 0.6 ? ((u - 0.6) / 0.4) ** 2 : 0;
+    return domeAt(s, t2, p2, lift + T - droop * r * fall).p;
   };
-  const v: V3[] = [at(0, 0)];
-  const angles: number[] = [];
-  for (let q = 0; q <= K; q++) angles.push(notch + gap + (q / K) * (TAU - 2 * gap));
-  for (const a of angles) v.push(at(a, 0.55));
-  for (const a of angles) v.push(at(a, 1));
-  const f: Face[] = [], want: V3[] = [];
-  for (let q = 0; q < K; q++) {
-    f.push({ i: [0, 1 + q, 2 + q], m: 'leaf' });
-    want.push(nrm);
-    f.push({ i: [1 + q, 2 + K + q, 3 + K + q, 2 + q], m: 'leaf' });
-    want.push(nrm);
-  }
-  const decals: Disc[] = [];
-  const veins = lod ? 6 : 4;
-  for (let q = 0; q < veins; q++) {
-    const a = notch + gap + ((q + 0.5) / veins) * (TAU - 2 * gap);
-    decals.push(...band([at(a, 0.1), at(a, 0.45), at(a, 0.78)], nrm, r * 0.014, 'moss', 0.006));
-  }
-  return merge(mesh(v, woundTo(v, f, want)), paint(decals));
+  return padShape(top, domeAt(s, th, ph).n, T, padTone(id), notch, id, lod, r);
+}
+
+/** A pad laid flat over a point of the ground under the shell (the top of the dome, the water, the crown of the head): `height` says how high there. */
+function padFlat(c: V3, r: number, notch: number, id: number, lod: number, height: (x: number, y: number) => number, nrm: V3 = [0, 0, 1], tone: Mat = 'leaf', T = 0.012): Mesh {
+  const top = (a: number, u: number): V3 => {
+    const wob = 1 + 0.05 * Math.sin(a * 3 + id) * u;
+    const x = c[0] + Math.cos(a) * r * u * wob, y = c[1] + Math.sin(a) * r * u * wob;
+    return [x, y, height(x, y) + T - 0.08 * r * (u > 0.7 ? ((u - 0.7) / 0.3) ** 2 : 0)];
+  };
+  return padShape(top, nrm, T, tone, notch, id, lod, r);
 }
 
 /**
@@ -830,7 +838,7 @@ function courseOf(s: Lily, C: Course, ci: number, lod: number, odd: boolean): Me
       const p = domeAt(s, th, ph).p;
       if (Math.hypot(p[0], p[1] - s.pond.y) < s.pond.r * 0.7) continue;
     }
-    parts.push(padOn(s, th, ph, C.r * (0.9 + 0.2 * jitter(id + 2)), C.lift + (j % 2 ? 0.012 : 0), id, lod));
+    parts.push(padOn(s, th, ph, C.r * (0.9 + 0.2 * jitter(id + 2)), C.lift + (j % 2 ? 0.016 : 0), C.droop, id, lod));
   }
   return merge(...parts);
 }
@@ -850,14 +858,15 @@ function frameUp(up: V3): [V3, V3, V3] {
  * A petal: from its foot at `base`, out along `dir` and up, cupped, pointed: pale near its foot, pink up to its tip, deeper pink
  * outside (`bloom`). Seen from either side.
  */
-function petalOf(base: V3, dir: V3, up: V3, len: number, w: number, cup: number, n: number): Mesh {
+function petalOf(base: V3, dir: V3, up: V3, len: number, w: number, cup: number, n: number, face: Mat): Mesh {
   const d = unit(dir), side = unit(cross(up, d)), N = unit(cross(d, side));
   const rows = n, cols = 2;
   const v: V3[] = [];
   for (let q = 0; q <= rows; q++) {
     const u = q / rows;
     const c = add(add(base, scale(d, len * u)), scale(N, len * 0.12 * u * u));
-    const wd = w * Math.sin(Math.PI * Math.min(0.97, 0.1 + u * 0.88)) ** 0.55;
+    // Widest a third of the way out, then drawn in to a point at its tip.
+    const wd = w * Math.sin(Math.PI * Math.min(1, 0.06 + u * 0.94)) ** 0.7;
     for (let k = 0; k <= cols; k++) {
       const x = (k / cols) * 2 - 1;
       v.push(add(add(c, scale(side, wd * x)), scale(N, cup * wd * x * x)));
@@ -867,8 +876,7 @@ function petalOf(base: V3, dir: V3, up: V3, len: number, w: number, cup: number,
   for (let q = 0; q < rows; q++) {
     for (let k = 0; k < cols; k++) {
       const a = q * (cols + 1) + k, b = (q + 1) * (cols + 1) + k;
-      const pale = q < rows * 0.35;
-      f.push({ i: [a, a + 1, b + 1, b], m: pale ? 'eyeWhite' : 'petal' });
+      f.push({ i: [a, a + 1, b + 1, b], m: face });
       want.push(N);
       f.push({ i: [a, a + 1, b + 1, b], m: 'bloom' });
       want.push(scale(N, -1));
@@ -877,15 +885,16 @@ function petalOf(base: V3, dir: V3, up: V3, len: number, w: number, cup: number,
   return mesh(v, woundTo(v, f, want));
 }
 
-/** An open lotus on its stalk: three rings of petals opening out wider each ring further out, a yellow middle and its stamens. */
+/** An open lotus on its stalk: two rings of pointed petals, the outer pale and wide, the inner pink and up, round a yellow disc and its stamens. */
 function lotusOf(c: V3, up: V3, R: number, lod: number, id: number): Mesh {
   const [X, Y, Z] = frameUp(up);
   const parts: Mesh[] = [];
-  const rings = [
-    { n: 8, el: 12, len: 1.0, w: 0.52, cup: 0.3 },
-    { n: 5, el: 46, len: 0.78, w: 0.5, cup: 0.36 },
+  // The outer ring pale and laid out wide, the inner pink and held up round the middle.
+  const rings: Array<{ n: number; el: number; len: number; w: number; cup: number; face: Mat }> = [
+    { n: 8, el: 14, len: 1.0, w: 0.42, cup: 0.3, face: 'eyeWhite' },
+    { n: 7, el: 50, len: 0.8, w: 0.4, cup: 0.36, face: 'petal' },
   ];
-  const rows = lod ? 4 : 3;
+  const rows = lod ? 5 : 4;
   rings.forEach((g, gi) => {
     for (let q = 0; q < g.n; q++) {
       const a = ((q + (gi % 2 ? 0.5 : 0)) / g.n) * TAU + id * 0.7 + (jitter(id + q * 7 + gi) - 0.5) * 0.2;
@@ -893,12 +902,12 @@ function lotusOf(c: V3, up: V3, R: number, lod: number, id: number): Mesh {
       const el = (g.el + (jitter(id + q + gi * 13) - 0.5) * 10) * DEG;
       const dir = add(scale(radial, Math.cos(el)), scale(Z, Math.sin(el)));
       const base = add(add(c, scale(radial, R * 0.1)), scale(Z, R * 0.04 * gi));
-      parts.push(petalOf(base, dir, Z, R * g.len, R * g.w, g.cup, rows));
+      parts.push(petalOf(base, dir, Z, R * g.len, R * g.w, g.cup, rows, g.face));
     }
   });
   // The middle: a yellow cup of a seed head, its top flat, a ring of stamens round it.
-  const mid = add(c, scale(Z, R * 0.22));
-  parts.push(orbAlong(mid, Z, [R * 0.27, R * 0.27, R * 0.14], lod ? 10 : 8, 4, 'cap'));
+  const mid = add(c, scale(Z, R * 0.2));
+  parts.push(orbAlong(mid, Z, [R * 0.3, R * 0.3, R * 0.1], lod ? 12 : 9, 4, 'cap'));
   for (let q = 0; q < 10; q++) {
     const a = (q / 10) * TAU + id;
     const p = add(add(mid, add(scale(X, Math.cos(a) * R * 0.25), scale(Y, Math.sin(a) * R * 0.25))), scale(Z, R * 0.05));
@@ -1042,7 +1051,7 @@ function waterOf(s: Lily, n: number, lod: number): { water: Mesh; floats: Mesh }
   // Little pads floating.
   const pads: Mesh[] = [];
   const floats: Array<[number, number, number]> = [[-ri * 0.45, ri * 0.4, 0.12], [ri * 0.5, -ri * 0.1, 0.1], [-ri * 0.05, -ri * 0.6, 0.11], [ri * 0.02, ri * 0.68, 0.09]];
-  floats.forEach(([x, y, r], q) => pads.push(padFlat([x, y, 0], r, 0.8 + q * 2.1, 300 + q, lod, () => 0.012)));
+  floats.forEach(([x, y, r], q) => pads.push(padFlat([x, y, 0], r, 0.8 + q * 2.1, 300 + q, lod, () => 0.004, [0, 0, 1], padTone(300 + q), 0.008)));
   return { water: merge(water, paint(out)), floats: merge(...pads) };
 }
 
@@ -1190,16 +1199,16 @@ function frillOf(s: Lily, lod: number): Mesh {
   return merge(...parts);
 }
 
-/** The Lotushell's mane: long leaves down the back of its neck either side, from its head to the shell. */
+/** The mane: a row of leaves down the back of the neck from the head to the shell, each lying back along it and out, drooping. */
 function maneOf(s: Lily, lod: number): Mesh {
   const H = s.head, w = H.thick, L = H.neck, parts: Mesh[] = [], n = lod ? 5 : 4;
   for (let q = 0; q < s.mane; q++) {
-    const u = 0.15 + 0.85 * (q / Math.max(1, s.mane - 1)), sd = q % 2 ? 1 : -1;
-    const a = sd * (0.5 + 0.25 * jitter(q + 60));
+    const u = 0.1 + 0.82 * (q / Math.max(1, s.mane - 1)), sd = q % 2 ? 1 : -1;
+    const a = sd * (0.22 + 0.12 * jitter(q + 60));
     const out: V3 = [Math.sin(a), 0, Math.cos(a)];
-    const root: V3 = [out[0] * w * 0.85, L * u, out[2] * w * 0.75];
-    const len = w * (0.9 + 0.5 * jitter(q + 61));
-    parts.push(leafOf(root, unit([sd * 0.7, -0.5, 0.2]), unit([sd * 0.6, 0, 0.8]), len, len * 0.36, [sd * len * 0.1, 0, -len * 0.35], n, undefined, 'moss'));
+    const root: V3 = [out[0] * w * 0.82, L * u, out[2] * w * 0.74];
+    const len = w * (1.0 + 0.5 * jitter(q + 61));
+    parts.push(leafOf(root, unit([sd * 0.25, -0.8, 0.5]), unit([sd * 0.3, 0.1, 1]), len, len * 0.36, [sd * len * 0.05, 0, -len * 0.3], n, 'leafDark', 'moss', true));
   }
   return merge(...parts);
 }
@@ -1218,17 +1227,16 @@ function capOf(s: Lily, lod: number): Mesh {
     parts.push(lotusOf(add(crown.p, [r[0] * 0.15, -r[1] * 0.05, r[2] * 0.05]), unit([0.12, 0.45, 1]), r[0] * 0.62, lod, 9));
     return merge(...parts);
   }
-  // The cap: a pad over the crown, cupped over it.
-  const R = r[0] * 0.78, c: V3 = [0, -r[1] * 0.22, 0];
-  const height = (x: number, y: number): number => {
-    const k = (x / r[0]) ** 2 + (y / r[1]) ** 2;
-    return (k < 1 ? r[2] * Math.sqrt(1 - k) : -(Math.sqrt(k) - 1) * r[2] * 2.2) + 0.03;
-  };
-  parts.push(padFlat(c, R, Math.PI / 2, 77 + s.stage, lod, height));
-  for (const sd of [1, -1]) {
-    const root: V3 = [sd * r[0] * 0.6, -r[1] * 0.45, r[2] * 0.62];
-    parts.push(leafOf(root, unit([sd * 0.5, -0.6, -0.55]), unit([sd * 1, -0.2, 0.3]), r[0] * 0.7, r[0] * 0.32, [0, -r[1] * 0.08, 0], n, undefined, 'moss'));
-  }
+  // The cap: one pad lying flat on the crown, its notch to the front, drooping down over the back of the head; a stem out of
+  // its notch.
+  // The head is held nose-down a little at rest; the pad lies level on the ground's terms, so its slope in the head's own frame
+  // undoes that pitch (the head's forward axis, as the rest bones have it).
+  const hm = restBones(s).head.m, lvl = -hm[7] / Math.max(0.2, Math.hypot(hm[1], hm[4]));
+  const R = r[0] * 0.9, c: V3 = [0, -r[1] * 0.18, 0], top = r[2] * 0.96;
+  const height = (_x: number, y: number): number => top + lvl * (y - c[1]) - 0.9 * Math.max(0, c[1] - y) ** 1.5;
+  parts.push(padFlat(c, R, Math.PI / 2, 77 + s.stage, lod, height, [0, 0, 1], 'feather', 0.018));
+  const foot: V3 = [0, c[1] + R * 0.08, height(0, c[1] + R * 0.08) + 0.03];
+  parts.push(tube(curve(foot, [0, c[1] + R * 0.4, height(0, c[1] + R * 0.4) + 0.1], [0, c[1] + R * 0.75, height(0, c[1] + R * 0.75) + 0.07], 4), 0.022, 0.022, 5, 'stem', { seam: 'start' }));
   return merge(...parts);
 }
 
@@ -1259,7 +1267,7 @@ function star(c: V3, n: V3, r: number): Disc[] {
 
 function upperOf(L: Leg, l0: number, n: number, k: number, i: number): Mesh {
   const w = L.w;
-  const decals: Disc[] = speckle(w * 1.15, l0, 8, 11 + i);
+  const decals: Disc[] = speckle(w * 1.15, l0, 9, 11 + i);
   const parts: Mesh[] = [
     orb([0, 0, -l0 * 0.1], [w * 1.3, w * 1.25, w * 1.3], n, k, 'mark'),
     tube([[0, 0, 0], [0, 0, -l0 * 0.55], [0, 0, -l0]], [w * 1.25, w * 1.12, w * 1.04], [w * 1.25, w * 1.12, w * 1.04], n, 'mark', { seam: 'start' }),
@@ -1335,7 +1343,7 @@ function lilyBuild(s: Lily, lod: number): Piece[] {
   });
   if (s.cap) {
     const c: V3 = [0, -0.04 * s.shell.l, 0];
-    pieces.push({ key: 'cap', mesh: padFlat(c, s.cap, Math.PI / 2 + 0.3, 900 + s.stage, lod, (x, y) => domeOver(s, x, y).p[2] + s.courses[s.courses.length - 1].lift + 0.025), bone: 'trunk', bias: 0.06, after: [...below] });
+    pieces.push({ key: 'cap', mesh: padFlat(c, s.cap, Math.PI / 2 + 0.3, 900 + s.stage, lod, (x, y) => domeOver(s, x, y).p[2] + s.courses[s.courses.length - 1].lift + 0.03, [0, 0, 1], 'feather', 0.02), bone: 'trunk', bias: 0.06, after: [...below] });
     below.push('cap');
   }
   if (s.pond) {
@@ -1346,15 +1354,15 @@ function lilyBuild(s: Lily, lod: number): Piece[] {
     pieces.push({ key: 'pond', mesh: pondOf(s, ring), bone: 'trunk', bias: 0.06, after: [...below, 'water', 'floats'] });
     // Great pads round the bank, lying out over its rim, partly over the water.
     const bank: Mesh[] = [];
-    const nB = 9;
+    const nB = 7;
     for (let q = 0; q < nB; q++) {
       const a = (q / nB) * TAU + 0.3 + (jitter(q + 500) - 0.5) * 0.3;
-      const rr = P.r * (1.0 + 0.08 * jitter(q + 501)), r = 0.17 + 0.07 * jitter(q + 502);
+      const rr = P.r * (1.0 + 0.08 * jitter(q + 501)), r = 0.24 + 0.08 * jitter(q + 502);
       const cx = Math.cos(a) * rr, cy = P.y + Math.sin(a) * rr;
       bank.push(padFlat([cx, cy, 0], r, a + Math.PI + (jitter(q + 503) - 0.5), 600 + q, lod, (x, y) => {
         const d = Math.hypot(x, y - P.y);
         return d < P.r ? P.z + P.h + 0.02 - 0.03 * (1 - d / P.r) : Math.max(domeOver(s, x, y).p[2] + 0.07, P.z + P.h + 0.02 - (d - P.r) * 0.5);
-      }));
+      }, [0, 0, 1], padTone(600 + q), 0.02));
     }
     pieces.push({ key: 'bank', mesh: merge(...bank), bone: 'trunk', bias: 0.062, after: [...below, 'pond', 'water', 'floats'] });
     below.push('water', 'floats', 'pond', 'bank');
@@ -1565,9 +1573,11 @@ function lilyKind(s: Lily): Kind {
         shellDark: [176, 148, 98],
         claw: [236, 218, 172],
         pad: [232, 214, 176],
-        leaf: [158, 194, 80],
-        leafDark: [84, 124, 50],
-        moss: [118, 162, 64],
+        leaf: [152, 188, 80],
+        leafDark: [72, 112, 46],
+        moss: [112, 156, 62],
+        feather: [184, 210, 98],
+        featherDark: [140, 170, 70],
         stem: [112, 156, 70],
         petal: [252, 178, 202],
         bloom: [244, 164, 192],
