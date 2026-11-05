@@ -183,7 +183,7 @@ import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS, JOURNAL } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
 import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
-import { type GatherKind, CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HUNT_REST, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, ringKeepsOut, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
+import { type GatherKind, bushVineSays, CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HUNT_REST, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, ringKeepsOut, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
 import {
   CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays, WINTER_FUR, WINTER_FUR_PART,
@@ -4252,6 +4252,14 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 511,
+    day: '2026-11-05',
+    lines: () => [
+      ...removedSays(GONE_511),
+      `Changed: planting vines: ${SPECIES.brambo.name} line (was: ${REMOVED_KINDS.rootle.name}). ${bushVineSays()}`,
+    ],
+  },
+  {
     n: 507,
     day: '2026-11-05',
     lines: () => [
@@ -5298,6 +5306,7 @@ const WAS_DOES: Readonly<Record<string, () => string>> = {
   forga: () => GATHER_DO.smelt,
   cordra: () => `make rope from wemp in your settlement stores, ${RECIPE_BY_ID.get('make_rope')?.inputs[0].count ?? 1} fibres a rope`,
   brittla: () => `distil ${listedOr(BREWS.map((b) => b.name.toLowerCase()))} at your lit campfires and ovens`,
+  rootle: () => GATHER_DO.vine,
 };
 /** What a kind's settlement task does: its own now, or a removed one's as it was (`WAS_DOES`). */
 const taskDoes = (id: string): string => (SPECIES[id]?.gathers ? GATHER_DO[SPECIES[id].gathers as GatherKind] : WAS_DOES[id]());
@@ -5305,6 +5314,7 @@ const taskDoes = (id: string): string => (SPECIES[id]?.gathers ? GATHER_DO[SPECI
 const GONE_405 = ['testa', 'skulka', 'gasha', 'hamma', 'bashka', 'executa', 'shova', 'howla', 'marka', 'wardo'];
 const GONE_503 = ['forga', 'cordra', 'brittla'];
 const GONE_507 = ['gorral', 'shaggan', 'lume'];
+const GONE_511 = ['rootle'];
 /** What a removal says: the kinds gone, and what an owned one of each became. */
 const removedSays = (ids: readonly string[]): string[] => {
   const gone = ids.map((id) => REMOVED_KINDS[id]);

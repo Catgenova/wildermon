@@ -204,8 +204,8 @@ export type GatherKind =
   | 'glass'
   // A dulla cuts moss, and walks home with it.
   | 'moss'
-  // Two that carry what they plant out of the stores (`TEND_JOBS`): a rootle plants grape cuttings at your trellises,
-  // a spitta water lily roots and lotus seeds in your still water.
+  // Two that carry what they plant out of the stores (`TEND_JOBS`): grape cuttings at your trellises (a brambo, from
+  // `BUSH_VINES_AT`, since the rootle went), and a spitta water lily roots and lotus seeds in your still water.
   | 'vine'
   | 'lily'
   // And nine that work a recipe out of the stores: at the stores, a crakka mixes concrete, a glossa mortar, a carra
@@ -3499,31 +3499,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     wound: 'bite',
     defensive: true,
   },
-  rootle: {
-    id: 'rootle',
-    name: 'Rootle',
-    // Its words are written once the recipes are here (`STORE_WORDS`).
-    description: '',
-    health: 34,
-    attack: 5,
-    speed: 1.6,
-    tameLevel: 24,
-    tameChance: 0.07,
-    diet: ['carrot', 'cabbage', 'apple', 'meat'],
-    baitHint: 'a vegetable or meat',
-    timid: false,
-    gathers: 'vine',
-    workRange: 10,
-    variants: [
-      ['#6c5c3c', '#c8b890'],
-      ['#5c4c34', '#b8a880'],
-      ['#7c6c44', '#d8c8a0'],
-      ['#4c4030', '#a89878'],
-    ],
-    butcher: { meat: 3, fur: 2, leather: 3, bone: 2 },
-    wound: 'pierce',
-    defensive: true,
-  },
   dulla: {
     id: 'dulla',
     name: 'Mossnib',
@@ -4149,7 +4124,6 @@ const STORE_WORDS: Record<string, () => string> = {
   simma: () => `Settlement task: cook from your settlement stores at your lit campfires and ovens, recipes tried in list order. No ${listedOr(cookTools())} needed. Output: your settlement stores. Never burns.`,
   glimmip: () => `Settlement task: ${glassSays()}. Any lit smelter, charged or not. Does not light or fuel it. Output: your settlement stores. Never fails.`,
   dulla: () => `Settlement task: ${GATHER_DO.moss}; output home. Moss only.`,
-  rootle: () => `Settlement task: ${GATHER_DO.vine}.`,
   spitta: () => `Wild: venomous bite. Settlement task: ${GATHER_DO.lily}.`,
   crakka: () => `Settlement task: ${GATHER_DO.concrete}. ${skips('concrete')}Never fails.`,
   glossa: () => `Settlement task: ${GATHER_DO.mortar}. ${skips('mortar')}Never fails.`,
@@ -4258,6 +4232,9 @@ export const REMOVED_KINDS: Readonly<Record<string, { name: string; tameLevel: n
   gorral: { name: 'Gorral', tameLevel: 40, becomes: 'orse' },
   shaggan: { name: 'Shaggan', tameLevel: 35, becomes: 'roxxen' },
   lume: { name: 'Lume', tameLevel: 55, becomes: 'wicka' },
+  // Asked for: "Remove rootle". An owned one becomes the kind nearest its trade: the brambo (bushes, the same
+  // forestry), which plants vines (`vine`) after it when it has nothing to pick (`BUSH_VINES_AT`).
+  rootle: { name: 'Rootle', tameLevel: 24, becomes: 'brambo' },
 };
 /** A kind's id as it is now: a removed kind's (`REMOVED_KINDS`) the kind it became, any other its own. */
 export const kindNow = (id: string): string => REMOVED_KINDS[id]?.becomes ?? id;
@@ -4361,7 +4338,6 @@ export const WILD_SPECIES: Array<[string, number]> = [
   ['whirla', 2],
   ['scorcha', 2],
   ['frosta', 2],
-  ['rootle', 2],
   ['dulla', 2],
   ['stona', 2],
   ['leecha', 2],
@@ -4439,6 +4415,12 @@ export const stokeRank = (id: string): number => {
  * Its first, since the forga went ("The slug line"; was its second). The island's `stoke_smelts_at`.
  */
 export const STOKE_SMELTS_AT = 0;
+/**
+ * The stage (`stageOf`) from which a bush picker also does a vine planter's work when it finds nothing to pick in its
+ * reach (`vineStep`): grape cuttings out of your settlement stores, planted at your trellises with no vine. Its first,
+ * since the rootle went ("Planting vines should go to" the brambo). The island's `bush_vines_at`.
+ */
+export const BUSH_VINES_AT = 0;
 /** A deed worker goes looking for a meal once its belly is down to this. */
 export const HUNGRY = 0.25;
 /** What a clearer takes off the ground to turn into compost: a carcass, or anything this damaged or worse. */
@@ -4548,6 +4530,8 @@ export const GUARD_LEVEL = `Level: ${GATHER_SKILL.guard.replace(/_/g, ' ')}, lea
 /** A stoker's fuel order (`STOKE_FIRST`), as its words and What's new say it. */
 export const STOKE_SAYS = `Fuel order: ${STOKE_FIRST.map((id) => FUELS.find((f) => f.id === id)!.said).join(', ')}, then any other.`;
 /** What a stoker does from `STOKE_SMELTS_AT` on, as its stages' words say it. */
+/** What a bush picker does from `BUSH_VINES_AT` on, as its words say it (`GATHER_DO.vine`). */
+export const bushVineSays = (): string => `Nothing to pick in reach: ${GATHER_DO.vine.replace(/^plant /, 'plants ')}.`;
 export const STOKE_SMELT_SAYS = 'No hearth to fuel, or no fuel: empties your smelters into your settlement stores, then charges them with ore from your settlement stores.';
 const reach = (id: string): string =>
   `within ${SPECIES[id].workRange} tiles of the totem, +${SPECIES[id].rangePerStep ?? RANGE_PER_STEP} per ${SKILL_STEP} levels`;
@@ -9139,7 +9123,7 @@ export class Creatures {
     const held = c.carrying;
     if (held) {
       // Ore, at a stage that charges smelters: into one, or back to the stores when none has room.
-      if (smelts && !isFuel(held.id) && this.stokeSmelt(game, c, dt, site)) return true;
+      if (smelts && !isFuel(held.id) && this.otherErrand(game, c, dt, site, 'smelt')) return true;
       // Fuel: to the nearest hearth with room for a piece of it, or back to the stores.
       const to = isFuel(held.id) ? this.coldHearth(game, c, range, held.id) : null;
       if (to) {
@@ -9153,7 +9137,7 @@ export class Creatures {
     const hearth = this.coldHearth(game, c, range, null);
     const fuel = hearth && this.stokeFuel(game, c, hearth.cap - hearth.fuel);
     if (!hearth || !fuel) {
-      if (smelts && this.stokeSmelt(game, c, dt, site)) return true;
+      if (smelts && this.otherErrand(game, c, dt, site, 'smelt')) return true;
       // No hearth wanting fuel: why the smelter work found nothing, at a stage that does it.
       if (!hearth) return smelts ? false : this.why(c, 'range', range);
       return this.why(c, 'stock');
@@ -9182,10 +9166,11 @@ export class Creatures {
   }
 
   /**
-   * A stoker's smelter work: `furnaceStep` for `smelt`, through `errandStep`, with what went in and what it made
-   * (`making`) counted to its ledger as an errand's go is. The island's `errand_step` and `errand_do` asked for `smelt`.
+   * A second trade's errand worked by a worker of another (`kind`): a stoker's smelter work (`smelt`, `furnaceStep`), a
+   * bush picker's vine planting (`vine`, `vineStep`), through `errandStep`, with what went in and what it made
+   * (`making`) counted to its ledger as an errand's go is. The island's `errand_step` and `errand_do` asked for `kind`.
    */
-  private stokeSmelt(game: Game, c: Creature, dt: number, site: WorkSite): boolean {
+  private otherErrand(game: Game, c: Creature, dt: number, site: WorkSite, kind: GatherKind): boolean {
     c.idle = null;
     const held = c.carrying ? { id: c.carrying.id, n: c.carrying.count } : null;
     this.went = false;
@@ -9193,7 +9178,7 @@ export class Creatures {
     let busy: boolean;
     let made: Array<[string, number]>;
     try {
-      busy = this.errandStep(game, c, dt, 'smelt', site);
+      busy = this.errandStep(game, c, dt, kind, site);
     } finally {
       made = this.making ?? [];
       this.making = null;
@@ -10475,6 +10460,11 @@ export class Creatures {
     if (kind === 'hunt' && !c.carrying && c.state !== 'forage') {
       if (this.packHunt(game, c, dt, deed)) return;
     }
+    // A bush picker with a grape cutting in its arms is planting it (`otherErrand` for `vine`), as the island's
+    // `worker_settle` sends it to `errand_step` asked for `vine`.
+    if (kind === 'bush' && c.carrying?.id === GRAPE_CUTTING && c.state !== 'forage' && stageOf(c) >= BUSH_VINES_AT) {
+      if (this.otherErrand(game, c, dt, deed, 'vine')) return;
+    }
     // Round its keeper and off its ground, its keeper having walked on: back toward them before anything else, between
     // jobs, as the island's `worker_settle` walks one back that is past its range and `HOME_SLACK`.
     if (c.around && (c.state === 'idle' || c.state === 'wander')
@@ -10703,6 +10693,9 @@ export class Creatures {
         c.homeward = true;
         return;
       }
+      // Nothing to pick in its reach: a bush picker from `BUSH_VINES_AT` on plants vines (`otherErrand` for `vine`), as
+      // the island's `worker_settle` does when `find_work_tile` comes back empty.
+      if (kind === 'bush' && stageOf(c) >= BUSH_VINES_AT && this.otherErrand(game, c, dt, deed, 'vine')) return;
     }
     // Nothing of its trade within its range of the token: the island's `find_work_tile` coming back empty. An errand
     // trade has said its own why already.
@@ -11355,4 +11348,14 @@ export class Creatures {
     }
     return cs;
   }
+}
+
+/*
+ * A bush picker's words say the vine planting it took up when the rootle went (`BUSH_VINES_AT`, `bushVineSays`), its
+ * stages' with them; added here, after every kind's own words are written.
+ */
+for (const d of [SPECIES.brambo]) {
+  if (!d) continue;
+  d.description = `${d.description} ${bushVineSays()}`.trim();
+  for (const st of d.stages ?? []) st.description = `${st.description} ${bushVineSays()}`.trim();
 }

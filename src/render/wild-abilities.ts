@@ -1,5 +1,5 @@
 import {
-  coatPalette, curve, merge, orb, quadBonesOf, taper, tube,
+  coatPalette, merge, orb, quadBonesOf, taper, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { cut, earMesh, quadPieces } from './beastkit';
@@ -95,18 +95,4 @@ export const FROSTA = kindOf({
   tail: (n) => merge(root(n), taper([[0, -0.2, 0], [0, -0.7, 0.1]], 0.16, 0.06, n, 'coatLight')),
   own: { crystal: [190, 230, 250] }, mark: 30, shadow: [1.55, 1.25], stride: 1.4, size: 1.7,
 });
-
-/* ---- the rootle: tendrils down into the ground ---------------------------------------- */
-
-export const ROOTLE = kindOf({
-  spec: { ...pawed({ high: 1.15, len: 2.3, legs: 0.6, neck: 0.32, lean: 60, swing: [16, 26], ears: [40, 18], tail: [0.4, 4, 2] }), nose: 10 },
-  head: HEAD(0.35, 0.1, [1.02, 0.98, 0.88]), body: [2.3, 1.2, 0.9, 0.06], neck: [0.66, 0.64, 0.32], ear: [0.28, 0.24, 40], legs: [0.6, 0.3, 0.27, 'bark'],
-  snout: [1.0, -0.22, [0.42, 0.3, 0.34], 0.11],
-  back: () => merge(...[[-0.7, 1], [-0.2, -1], [0.3, 1], [0.6, -1]].map(([y, s]) =>
-    tube(curve([s * 0.5, y, 0.3], [s * 0.85, y + 0.1, -0.1], [s * 1.0, y - 0.1, -0.55], 4), [0.06, 0.04, 0.02], [0.06, 0.04, 0.02], 4, 'stem'))),
-  thin: true,
-  tail: (n) => merge(root(n), tube(curve([0, -0.2, 0], [0.1, -0.6, -0.2], [-0.05, -0.85, -0.5], 4), [0.08, 0.05, 0.02], [0.08, 0.05, 0.02], 5, 'stem')),
-  own: { bark: [96, 76, 50], stem: [120, 96, 60] }, mark: 30, shadow: [1.6, 1.3], stride: 1.25, size: 1.65,
-});
-
 
