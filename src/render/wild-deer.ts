@@ -105,16 +105,16 @@ const sized = (k: number, H: Deer['head']): Deer['head'] => ({
 /** A Bramblet: a small fawn, a big head and ears, short twiggy antlers in leaf, dapples, a mantle of leaves and white berries. */
 const BRAMBLET_LOOK: Deer = {
   stage: 0,
-  body: { y: [-0.7, -0.6, -0.3, 0.02, 0.34, 0.58, 0.7], z: [0.2, 0.14, 0.08, 0.06, 0.08, 0.14, 0.22], w: [0.2, 0.4, 0.48, 0.5, 0.49, 0.44, 0.22], h: [0.26, 0.5, 0.57, 0.58, 0.58, 0.56, 0.3] },
-  len: 1.3, legs: 1.06, thick: 0.21, hoof: 0.13,
-  neck: { at: [0, 0.6, 0.4], len: 0.56, w: 0.24, lean: 30 },
-  head: sized(1.4, { skull: { c: [0, 0, 0.3], r: [0.42, 0.45, 0.42] }, muzzle: { c: [0, 0.46, 0.1], dir: [0, 1, -0.36], r: [0.16, 0.13, 0.27] }, pitch: -2 }),
+  body: { y: [-0.6, -0.5, -0.24, 0.0, 0.26, 0.46, 0.6], z: [0.22, 0.16, 0.2, 0.14, 0.1, 0.14, 0.26], w: [0.2, 0.37, 0.33, 0.4, 0.43, 0.4, 0.22], h: [0.26, 0.45, 0.37, 0.47, 0.53, 0.51, 0.3] },
+  len: 1.12, legs: 1.24, thick: 0.2, hoof: 0.12,
+  neck: { at: [0, 0.5, 0.42], len: 0.64, w: 0.2, lean: 30 },
+  head: sized(1.44, { skull: { c: [0, 0, 0.3], r: [0.44, 0.44, 0.44] }, muzzle: { c: [0, 0.38, 0.08], dir: [0, 1, -0.55], r: [0.19, 0.15, 0.2] }, pitch: -2 }),
   eye: { dir: [0.6, 0.62, 0.44], size: 0.2, lid: 0 },
   ear: { len: 0.74, w: 0.3, out: 66, back: 14, droop: 0.04 },
-  antler: { r: 0.055, len: 0.52, rise: 22, sweep: 30, flare: 28, curl: 0, tines: 2, tine: 0.24, leaves: 6, wound: false },
+  antler: { r: 0.06, len: 0.5, rise: 30, sweep: 24, flare: 36, curl: 12, tines: 2, tine: 0.24, leaves: 6, wound: false },
   hangs: { n: 0, len: 0 },
-  shag: { chest: 0.24, leg: 0, skirt: 0 },
-  cream: [-0.86, -0.42],
+  shag: { chest: 0.2, leg: 0, skirt: 0 },
+  cream: [-0.9, -0.55],
   dapples: [[0.06, 0.55, 0.07], [0.14, 0.85, 0.065], [0.2, 0.4, 0.06], [0.28, 0.75, 0.07], [0.1, 1.1, 0.055], [0.34, 1.0, 0.06], [0.24, 1.25, 0.05], [0.42, 0.5, 0.05]],
   diamonds: [],
   collar: { rows: 1, count: 11, len: 0.32, w: 0.11, flowers: 0 },
@@ -131,22 +131,22 @@ const BRAMBLET_LOOK: Deer = {
 /** A Vinehorn: a slender young stag, branching antlers hung with berries, a basket of berries, a leafy mantle, vines round its legs. */
 const VINEHORN_LOOK: Deer = {
   stage: 1,
-  body: { y: [-1.22, -1.08, -0.64, 0, 0.62, 1.02, 1.18], z: [0.2, 0.14, 0.08, 0.08, 0.12, 0.2, 0.28], w: [0.24, 0.46, 0.52, 0.53, 0.53, 0.5, 0.26], h: [0.28, 0.54, 0.6, 0.62, 0.65, 0.65, 0.36] },
-  len: 2.2, legs: 1.56, thick: 0.25, hoof: 0.15,
-  neck: { at: [0, 1.02, 0.58], len: 0.98, w: 0.32, lean: 34 },
-  head: sized(1.22, { skull: { c: [0, 0, 0.3], r: [0.42, 0.46, 0.4] }, muzzle: { c: [0, 0.52, 0.06], dir: [0, 1, -0.4], r: [0.17, 0.14, 0.36] }, pitch: 2 }),
+  body: { y: [-1.2, -1.04, -0.6, -0.04, 0.54, 0.96, 1.18], z: [0.2, 0.14, 0.22, 0.14, 0.08, 0.18, 0.34], w: [0.24, 0.47, 0.4, 0.49, 0.53, 0.48, 0.26], h: [0.28, 0.52, 0.42, 0.52, 0.68, 0.68, 0.38] },
+  len: 2.1, legs: 1.64, thick: 0.24, hoof: 0.14,
+  neck: { at: [0, 0.98, 0.62], len: 0.98, w: 0.27, lean: 28 },
+  head: sized(1.26, { skull: { c: [0, 0, 0.3], r: [0.43, 0.45, 0.42] }, muzzle: { c: [0, 0.42, 0.04], dir: [0, 1, -0.5], r: [0.18, 0.15, 0.25] }, pitch: 2 }),
   eye: { dir: [0.6, 0.62, 0.46], size: 0.16, lid: 0.12 },
   ear: { len: 0.66, w: 0.26, out: 70, back: 18, droop: 0.04 },
-  antler: { r: 0.11, len: 1.55, rise: 36, sweep: 84, flare: 32, curl: 26, tines: 3, tine: 0.56, leaves: 13, wound: false },
+  antler: { r: 0.12, len: 1.6, rise: 62, sweep: 36, flare: 58, curl: 70, tines: 3, tine: 0.52, leaves: 13, wound: false },
   hangs: { n: 2, len: 0.42 },
-  shag: { chest: 0.24, leg: 0, skirt: 0 },
-  cream: [-0.86, -0.4],
+  shag: { chest: 0.3, leg: 0, skirt: 0 },
+  cream: [-0.9, -0.5],
   dapples: [],
-  diamonds: [[0.24, 0.35, 0.17], [0.44, 0.15, 0.1]],
+  diamonds: [[0.16, 0.0, 0.16], [0.84, -0.05, 0.12]],
   collar: { rows: 2, count: 13, len: 0.5, w: 0.17, flowers: 3 },
   mantle: { n: 6, len: 0.66, berries: 2 },
   basket: { y: -0.08, R: 0.72, H: 0.5, heap: 0.7, berries: 7, leaves: 12 },
-  cloak: { n: 6, len: 0.78 },
+  cloak: { n: 7, len: 0.58 },
   wraps: 'all',
   vineTail: false,
   gait: { bounce: [0.04, 0.3], nod: 4, swing: [24, 34], duty: [0.62, 0.4], skip: false },
@@ -157,22 +157,22 @@ const VINEHORN_LOOK: Deer = {
 /** A Briarstag: a big stag, huge sweeping antlers draped in vines and berries, a heaped basket, a thick leaf mantle, a vine tail. */
 const BRIARSTAG_LOOK: Deer = {
   stage: 2,
-  body: { y: [-1.64, -1.46, -0.9, -0.04, 0.84, 1.38, 1.58], z: [0.2, 0.16, 0.1, 0.12, 0.2, 0.3, 0.38], w: [0.42, 0.76, 0.88, 0.9, 0.92, 0.86, 0.44], h: [0.46, 0.84, 0.98, 1.04, 1.1, 1.06, 0.56] },
-  len: 2.95, legs: 1.74, thick: 0.34, hoof: 0.2,
-  neck: { at: [0, 1.38, 0.86], len: 1.22, w: 0.48, lean: 32 },
-  head: sized(1.7, { skull: { c: [0, 0, 0.32], r: [0.42, 0.48, 0.4] }, muzzle: { c: [0, 0.54, 0.06], dir: [0, 1, -0.38], r: [0.18, 0.15, 0.38] }, pitch: 6 }),
+  body: { y: [-1.64, -1.44, -0.86, -0.04, 0.8, 1.36, 1.62], z: [0.24, 0.16, 0.26, 0.16, 0.06, 0.18, 0.44], w: [0.48, 0.88, 0.82, 1.0, 1.14, 1.08, 0.56], h: [0.5, 0.92, 0.8, 1.0, 1.22, 1.18, 0.64] },
+  len: 2.9, legs: 1.9, thick: 0.36, hoof: 0.2,
+  neck: { at: [0, 1.36, 0.92], len: 1.18, w: 0.5, lean: 26 },
+  head: sized(1.66, { skull: { c: [0, 0, 0.32], r: [0.44, 0.47, 0.42] }, muzzle: { c: [0, 0.44, 0.04], dir: [0, 1, -0.48], r: [0.2, 0.16, 0.27] }, pitch: 6 }),
   eye: { dir: [0.58, 0.64, 0.46], size: 0.17, lid: 0.22 },
   ear: { len: 0.62, w: 0.26, out: 72, back: 22, droop: 0.04 },
-  antler: { r: 0.3, len: 3.4, rise: 30, sweep: 120, flare: 40, curl: 100, tines: 3, tine: 0.8, leaves: 24, wound: true },
-  hangs: { n: 3, len: 0.6 },
-  shag: { chest: 0.4, leg: 0.3, skirt: 0 },
-  cream: [-0.8, -0.3],
+  antler: { r: 0.32, len: 3.2, rise: 70, sweep: 50, flare: 56, curl: 100, tines: 3, tine: 0.72, leaves: 26, wound: true },
+  hangs: { n: 4, len: 0.6 },
+  shag: { chest: 0.5, leg: 0.34, skirt: 0 },
+  cream: [-0.85, -0.45],
   dapples: [],
-  diamonds: [[0.14, 0.45, 0.24], [0.86, 0.32, 0.24]],
+  diamonds: [[0.13, 0.02, 0.34], [0.86, -0.02, 0.32]],
   collar: { rows: 2, count: 14, len: 0.66, w: 0.22, flowers: 4 },
   mantle: { n: 7, len: 0.9, berries: 3 },
   basket: { y: -0.16, R: 1.08, H: 0.66, heap: 1.0, berries: 12, leaves: 18 },
-  cloak: { n: 8, len: 1.2 },
+  cloak: { n: 9, len: 0.84 },
   wraps: 'all',
   vineTail: true,
   gait: { bounce: [0, 0.32], nod: 2.5, swing: [18, 27], duty: [0.64, 0.42], skip: false },
@@ -291,11 +291,11 @@ const earRoot = (s: Deer): V3 => onSkull(s, [0.86, -0.22, 0.4]).p;
 const antlerRoot = (s: Deer): V3 => onSkull(s, [0.34, -0.02, 0.94]).p;
 
 /** How the legs hang from the body standing: the hips and shoulders, and each leg's two parts' pitch (degrees, forward positive). */
-const FORE_REST: [number, number, number] = [-4, 8, 0], HIND_REST: [number, number, number] = [16, -30, 0];
+const FORE_REST: [number, number, number] = [-4, 8, 0], HIND_REST: [number, number, number] = [-22, 44, 0];
 const foreLen = (s: Deer): number => s.legs * 0.5;
 /** How far down the barrel the shoulder and the hip are: lower the deeper the barrel, so a deep body stands on short legs. */
 const foreAt = (s: Deer): number => -0.34 * s.body.h[4];
-const hindAt = (s: Deer): number => -0.24 * s.body.h[2];
+const hindAt = (s: Deer): number => -0.26 * s.body.h[1];
 /** A hind leg long enough, bent as it stands, for its hoof to stand on the ground the fore hooves stand on. */
 function hindLen(s: Deer): number {
   const c = (d: number): number => Math.cos(d * DEG);
@@ -307,7 +307,7 @@ function hindLen(s: Deer): number {
 const specOf = (s: Deer): QuadSpec => ({
   high: s.legs + 0.6,
   fore: { at: [s.body.w[4] * 0.46, s.len * 0.44, foreAt(s)], len: [foreLen(s), foreLen(s), s.hoof], rest: FORE_REST, fold: [55, 90], toe: [s.thick * 0.7, s.thick * 0.3] },
-  hind: { at: [s.body.w[2] * 0.46, -s.len * 0.4, hindAt(s)], len: [hindLen(s), hindLen(s), s.hoof], rest: HIND_REST, fold: [35, 60], toe: [s.thick * 0.7, s.thick * 0.3] },
+  hind: { at: [s.body.w[2] * 0.46, -s.len * 0.4, hindAt(s)], len: [hindLen(s), hindLen(s), s.hoof], rest: HIND_REST, fold: [-35, -60], toe: [s.thick * 0.7, s.thick * 0.3] },
   neck: { at: s.neck.at, len: s.neck.len, lean: s.neck.lean },
   head: { pitch: s.head.pitch },
   tail: { at: [0, s.body.y[0] + 0.1, s.body.z[0] + s.body.h[1] * 0.6], links: 2, len: 0.1 + 0.04 * s.stage, lift: 52 - 8 * s.stage, curl: -14, sway: 10 },
@@ -382,7 +382,7 @@ function turned(spec: QuadSpec, p: QuadPose, i: number, deg: number): void {
   if (!deg) return;
   const L = i < 2 ? spec.fore : spec.hind, [sw0, fold0, off] = p.legs[i], w = 1 - smooth(off * 3);
   const [y, z] = ankleOf(L, sw0, fold0), vy = y - L.at[1], vz = z - L.at[2], c = Math.cos(deg * DEG), s = Math.sin(deg * DEG);
-  const [sw, fold] = w > 0 ? legTo(L, L.at[1] + vy * c - vz * s, L.at[2] + vy * s + vz * c, i < 2) : [sw0 + deg, fold0];
+  const [sw, fold] = w > 0 ? legTo(L, L.at[1] + vy * c - vz * s, L.at[2] + vy * s + vz * c, true) : [sw0 + deg, fold0];
   p.legs[i][0] = lerp(sw0 + deg, sw, w);
   p.legs[i][1] = lerp(fold0, fold, w);
 }
@@ -403,7 +403,7 @@ function sunk(spec: QuadSpec, p: QuadPose, dz: number): void {
       p.legs[i][1] = hi;
       continue;
     }
-    const [sw, fold] = legTo(L, y, z + dz, i < 2);
+    const [sw, fold] = legTo(L, y, z + dz, true);
     p.legs[i][0] = sw;
     p.legs[i][1] = fold;
   }
@@ -429,7 +429,7 @@ function tipped(spec: QuadSpec, p: QuadPose, deg: number, keep: 'fore' | 'hind' 
     const over = worldZ(y, z, P0) - ground0, along = along0(y, z, P0) + shift;
     const wz = ground1 + over;
     const ty = along * Math.cos(P1) + wz * Math.sin(P1), tz = -along * Math.sin(P1) + wz * Math.cos(P1);
-    const [sw, fold] = legTo(M, ty, tz, i < 2);
+    const [sw, fold] = legTo(M, ty, tz, true);
     p.legs[i][0] = lerp(sw0, sw, w);
     p.legs[i][1] = lerp(fold0, fold, w);
   }
@@ -450,7 +450,7 @@ function grounded(spec: QuadSpec, p: QuadPose): void {
     const want = ground + (1 - f.w) * (f.wz - ground);
     const ty = f.along * Math.cos(P) + want * Math.sin(P), tz = -f.along * Math.sin(P) + want * Math.cos(P);
     const [y0, z0] = ankleOf(f.L, p.legs[f.i][0], p.legs[f.i][1]), now = Math.hypot(y0 - f.L.at[1], z0 - f.L.at[2]) / (f.L.len[0] + f.L.len[1]);
-    const [sw, fold] = legTo(f.L, ty, tz, f.i < 2, Math.max(0.985, Math.min(0.999, now)));
+    const [sw, fold] = legTo(f.L, ty, tz, true, Math.max(0.985, Math.min(0.999, now)));
     p.legs[f.i][0] = lerp(p.legs[f.i][0], sw, f.w * air);
     p.legs[f.i][1] = lerp(p.legs[f.i][1], fold, f.w * air);
   }
@@ -924,7 +924,7 @@ function tuftOf(root: V3, dir: V3, len: number, w: number, mat: Mat, droop: V3 =
 function onNeck(s: Deer, t: number, th: number, out = 0): { p: V3; n: V3 } {
   const lean = s.neck.lean * DEG, A: V3 = [0, Math.sin(lean), Math.cos(lean)], v = cross(A, [1, 0, 0]);
   const n = add(scale([1, 0, 0], Math.cos(th)), scale(v, -Math.sin(th)));
-  return { p: add(scale(A, t), scale(n, s.neck.w * 0.95 + out)), n };
+  return { p: add(scale(A, t), scale(n, s.neck.w * 0.95 * neckGirth(s, t) + out)), n };
 }
 
 /**
@@ -988,6 +988,20 @@ function headOf(s: Deer, n: number, k: number, shut: boolean): Mesh {
   });
   return merge(skull, eyesOf(s, shut));
 }
+
+/**
+ * The neck, on its bone: thick and deep where it comes out of the chest, bowed forward at its root and back under the head, an
+ * S of a deer's neck, drawn in to the throat.
+ */
+function neckMesh(s: Deer, n: number): Mesh {
+  const L = s.neck.len, w = s.neck.w;
+  const pts: V3[] = [[0, 0.06, -0.3], [0, 0.1 * w, L * 0.25], [0, -0.04 * w, L * 0.62], [0, 0.05, L]];
+  const ws = [1, 2, 3, 4].map((q) => w * neckGirth(s, pts[q - 1][2]));
+  return tube(pts, ws, ws.map((x) => x * 1.18), n, 'coat', { seam: 'both' });
+}
+
+/** How thick the neck is `t` up it, against its own width: deep at the chest, drawn in toward the head. */
+const neckGirth = (s: Deer, t: number): number => lerp(1.6, 0.86, smooth(clamp((t + 0.1) / (s.neck.len * 0.9))));
 
 /** A mesh with each face given its stuff by where its middle is. */
 function painted(m: Mesh, by: (c: V3) => Mat): Mesh {
@@ -1079,7 +1093,7 @@ function tinesOf(s: Deer): Array<{ u: number; dir: V3; len: number }> {
   for (let k = 0; k < A.tines; k++) {
     const f = A.tines > 1 ? k / (A.tines - 1) : 0;
     if (k === 0) out.push({ u: 0.18, dir: unit([0.15, 1, 0.35]), len: A.tine * 0.75 });
-    else out.push({ u: lerp(0.36, 0.82, f), dir: unit([0.3 + 0.1 * f, 0.75 - 0.3 * f, 1]), len: A.tine * (1.05 - 0.35 * f) });
+    else out.push({ u: lerp(0.32, 0.74, f), dir: unit([0.5 + 0.15 * f, 0.15 - 0.35 * f, 1]), len: A.tine * (1.05 - 0.35 * f) });
   }
   return out;
 }
@@ -1167,9 +1181,9 @@ function collarOf(s: Deer, fine: boolean): Mesh {
       const id = r * 41 + q, th = lerp(-0.35, Math.PI + 0.35, (q + 0.5 * r) / Math.max(1, C.count - 1)) + 0.12 * (jitter(id) - 0.5);
       const back = Math.max(0, Math.sin(th)), at = onNeck(s, 0.06 - r * C.len * 0.32, th, -0.04 + r * 0.07);
       const root = add(at.p, [0, -r * C.len * 0.42 * (0.3 + 0.7 * back), r * C.len * 0.12 * back]);
-      const dn = unit(add(scale(at.n, 0.55), [0, -0.35 - 0.75 * back, -0.7 + 0.3 * back]));
+      const dn = unit(add(scale(at.n, 0.14), [0, -0.35 - 0.75 * back, -0.7 + 0.3 * back]));
       const L = C.len * (0.8 + 0.25 * jitter(id + 3)) * (1 + 0.2 * r);
-      out.push(leafOf(root, dn, add(at.n, [0, 0, 0.8]), L, C.w * (0.9 + 0.2 * jitter(id + 5)), id % 3 ? ['leaf', 'leafDark', 'leafDark'] : ['moss', 'leafDark', 'leafDark'], 0, 0.1));
+      out.push(leafOf(root, dn, add(at.n, [0, 0, 0.3]), L, C.w * (0.9 + 0.2 * jitter(id + 5)), id % 3 ? ['leaf', 'leafDark', 'leafDark'] : ['moss', 'leafDark', 'leafDark'], 0, 0.05, undefined, 0.12));
     }
   }
   for (let q = 0; q < C.flowers; q++) {
@@ -1251,10 +1265,10 @@ function cloakOf(s: Deer, side: number): Mesh {
       const u = (q + 0.5 * r) / C.n, y = lerp(s.body.y[4] - 0.05, s.body.y[1] - 0.1, u);
       const th = 1.25 - 0.45 * r, e = onBody(s, y, th), root = add(e.p, scale(e.n, 0.08 + 0.03 * r));
       // Laid down the flank and back toward the tail, the hindmost trailing out behind.
-      const dir: V3 = [0.16, -0.45 - 1.1 * u * u, -1];
+      const dir: V3 = [0.04, -0.5 - 1.1 * u * u, -1];
       const L = C.len * (0.7 + 0.5 * u) * (r ? 0.82 : 1);
       const m: readonly [Mat, Mat, Mat] = (q + r) % 2 ? ['leafDark', 'leaf', 'leafDark'] : ['leaf', 'leafDark', 'leafDark'];
-      const leaf = leafOf(root, dir, [1, 0, 0.1], L, L * 0.3, m, 4, 0.14, 'moss', 0.4);
+      const leaf = leafOf(root, dir, [1, 0, 0.1], L, L * 0.32, m, 4, 0.06, 'moss', 0.15);
       out.push(side > 0 ? leaf : mirrorX(leaf));
     }
   }
@@ -1268,7 +1282,7 @@ function cloakOf(s: Deer, side: number): Mesh {
  * with leaves round it on the Briarstag.
  */
 function legFur(s: Deer, lower: number, seed: number, n: number, wrapped: boolean): Mesh {
-  const out: Mesh[] = [], R = s.thick * 0.42, L = s.shag.leg;
+  const out: Mesh[] = [], R = s.thick * 0.3, L = s.shag.leg;
   if (L) {
     // The fetlock: a ring of round puffs low on the leg, and soft locks hanging over the hoof from under them.
     const top = n > 3 ? 6 : 4, low = n > 3 ? 6 : 4;
@@ -1309,15 +1323,17 @@ function legFur(s: Deer, lower: number, seed: number, n: number, wrapped: boolea
 function shagOf(s: Deer, side: number, n: number): Mesh {
   const out: Mesh[] = [], B = s.body;
   if (side === 0) {
-    // Round puffs of fluff over the front of the chest, and soft locks hanging from under them.
-    const L = s.shag.chest, N = 6 + s.stage * 2, P = L * 0.45 + 0.04;
-    for (let q = 0; q < N; q++) {
-      const f = N > 1 ? q / (N - 1) : 0.5, th = lerp(-0.3, -Math.PI + 0.3, f), front = Math.max(0, -Math.sin(th));
-      const at = onNeck(s, -0.1 - 0.12 * front, th, P * 0.2);
-      out.push(puffOf(at.p, [P * (0.9 + 0.3 * front), P * (0.9 + 0.3 * front), P * (0.8 + 0.2 * jitter(q))], n, jitter(q + 40) > 0.2 ? 'mark' : 'muzzle'));
-      for (const r of n > 3 ? [0, 1] : [0]) {
-        const lo = onNeck(s, -0.2 - r * L * 0.5 - 0.15 * front, th + 0.18 * r, -0.02);
-        out.push(tuftOf(lo.p, add(scale(lo.n, 0.35), [0, 0.1, -1]), L * (0.8 + 0.4 * jitter(q * 3 + r)) * (0.7 + 0.5 * front), 0.06 + 0.04 * s.stage + 0.04 * front, 'mark', [0, 0.3, -1], n));
+    // A ruff down the throat and over the chest: rows of soft pointed locks, each row lying over the top of the one under it,
+    // longest down the middle of the chest.
+    const L = s.shag.chest, rows = 3 + s.stage, C = 4 + s.stage;
+    for (let r = rows - 1; r >= 0; r--) {
+      for (let q = 0; q < C; q++) {
+        const id = r * 13 + q * 3, f = (q + 0.5 * (r % 2)) / (C - 0.5), th = lerp(-0.25, -Math.PI + 0.25, f) + 0.1 * (jitter(id) - 0.5);
+        const front = Math.max(0, -Math.sin(th)), t = s.neck.len * 0.42 - r * L * 0.5;
+        const at = onNeck(s, t, th, 0.015 + 0.012 * r);
+        const len = L * (0.8 + 0.18 * r) * (0.55 + 0.45 * front) * (0.85 + 0.3 * jitter(id + 1));
+        const mats: readonly [Mat, Mat, Mat] = jitter(id + 2) > 0.3 ? ['mark', 'mark', 'muzzle'] : ['muzzle', 'mark', 'mark'];
+        out.push(leafOf(at.p, add(scale(at.n, 0.22), [0, 0.12, -1]), at.n, len, len * 0.56, mats, 0, 0.16, undefined, 0.3));
       }
     }
     return merge(...out);
@@ -1370,10 +1386,10 @@ function mantleOf(s: Deer, fine: boolean): Mesh {
   }
   at.forEach((y, q) => {
     for (const [th, side] of [[Math.PI / 2 - 0.55, 1], [Math.PI / 2 + 0.55, -1], [Math.PI / 2, 0]] as const) {
-      const id = q * 7 + side + 3, e = onBody(s, y + 0.04 * side, th), root = add(e.p, scale(e.n, 0.03));
+      const id = q * 7 + side + 3, e = onBody(s, y + 0.04 * side, th), root = add(e.p, scale(e.n, 0.02));
       // Lying back along the back and down its side, the one on top lying straight back.
-      const dir: V3 = [side * 0.75, -1, side ? -0.55 : 0.15];
-      out.push(leafOf(root, dir, e.n, M.len * (side ? 1 : 0.85) * (0.85 + 0.3 * jitter(id)), M.len * 0.34, id % 3 ? ['leaf', 'leafDark', 'leafDark'] : ['moss', 'leafDark', 'leafDark'], 0, 0.1));
+      const d0 = unit([side * 0.75, -1, side ? -0.55 : 0.15]), dir = add(sub(d0, scale(e.n, dot(d0, e.n))), scale(e.n, -0.04));
+      out.push(leafOf(root, dir, e.n, M.len * (side ? 1 : 0.85) * (0.85 + 0.3 * jitter(id)), M.len * 0.34, id % 3 ? ['leaf', 'leafDark', 'leafDark'] : ['moss', 'leafDark', 'leafDark'], 0, 0.04, undefined, 0.1));
     }
   });
   for (let q = 0; q < Math.min(M.berries, at.length); q++) {
@@ -1450,7 +1466,7 @@ function deerBuild(s: Deer, drops: readonly Drop[], lod: number): Piece[] {
     { key: 'muzzle', mesh: muzzleMesh(s, n, k), bone: 'head', bias: 0.205, after: ['head'], front: [0, 1, 0], lines: false },
     { key: 'chin', mesh: chinOf(s, n - 1, k - 1), bone: 'jaw', bias: 0.2, after: ['head'], under: ['muzzle'], lines: false },
     { key: 'collar', mesh: collarOf(s, fine), bone: 'collar', bias: 0.085, after: ['neck', 'body', 'collarVine', 'chest', 'mantle'], hide: [{ c: [0, s.neck.w * 0.2, s.neck.len * 0.25], r: [s.neck.w * 0.85, s.neck.w * 0.85, s.neck.len * 0.5] }], thin: true },
-    { key: 'chest', mesh: shagOf(s, 0, tn), bone: 'collar', bias: 0.075, after: ['neck', 'body'], front: [0, 1, -0.2], ...FLUFF },
+    { key: 'chest', mesh: shagOf(s, 0, tn), bone: 'collar', bias: 0.075, after: ['neck', 'body'], front: [0, 1, -0.2], sheen: 'eyeWhite' },
     { key: 'mantle', mesh: mantleOf(s, fine), bone: 'trunk', bias: 0.06, after: ['body', 'girth'], hide: bodySolids(s, 0.97), thin: true },
   ];
   if (s.basket) {
@@ -1488,7 +1504,7 @@ function deerBuild(s: Deer, drops: readonly Drop[], lod: number): Piece[] {
     const L = fore ? foreLen(s) : hindLen(s), w = s.thick;
     // The upper leg rooted well up inside the barrel and no wider than fits in it, so however it swings its top never shows past it;
     // the lower slender, as a deer's is.
-    return { upper: [fore ? 0.22 : 0.2, -L, w * (fore ? 1.1 : 1.25), w * 0.85], lower: [0, -L, w * 0.66, w * 0.5], foot: cloven(w * 0.66, s.hoof, n), mat: 'coat' };
+    return { upper: [fore ? 0.24 : 0.34, -L, w * (fore ? 1.35 : 1.95), w * (fore ? 0.58 : 0.6)], lower: [0, -L, w * 0.5, w * 0.34], foot: cloven(w * 0.48, s.hoof, n), mat: 'coat' };
   };
   // A deer's tail: short, tan on top and cream under, its tip a little tuft.
   const T = 0.09 + 0.03 * s.stage;
@@ -1506,6 +1522,11 @@ function deerBuild(s: Deer, drops: readonly Drop[], lod: number): Piece[] {
     breath: 0.03,
     extras,
   });
+  // A knob at each joint, so the leg reads as jointed: a knee on the fore legs, the point of the hock behind on the hind.
+  for (const [key, side, fore] of [['fl', -1, true], ['fr', 1, true], ['hl', -1, false], ['hr', 1, false]] as Array<[string, number, boolean]>) {
+    const w = s.thick, knob = fore ? orb([0, w * 0.04, -w * 0.1], [w * 0.3, w * 0.32, w * 0.36], n, k, 'coat') : orb([0, -w * 0.14, -w * 0.02], [w * 0.3, w * 0.36, w * 0.34], n, k, 'coat');
+    pieces.push({ key: `${key}knob`, mesh: knob, bone: `${key}1`, bias: 0.021, after: [`${key}0`, `${key}1`], front: [side * 0.7, fore ? 0.7 : -0.7, 0], convex: true, lines: false });
+  }
   // The fetlocks and the vines round the legs: round each on the stags, round one fore leg on the fawn.
   for (const [key, side, fore] of [['fl', -1, true], ['fr', 1, true], ['hl', -1, false], ['hr', 1, false]] as Array<[string, number, boolean]>) {
     const wrapped = s.wraps === 'all' || (s.wraps === 'one' && key === 'fr');
@@ -1517,6 +1538,7 @@ function deerBuild(s: Deer, drops: readonly Drop[], lod: number): Piece[] {
     if (pc.key === 'head') return { ...pc, mesh: headOf(s, n, k, false), shut: headOf(s, n, k, true), hide: [skull, muzzleOf(s)] };
     if (pc.key === 'tail1') return { ...pc, ...FLUFF };
     if (pc.key === 'body') return { ...pc, mesh: bodyMesh(s, lod) };
+    if (pc.key === 'neck') return { ...pc, mesh: neckMesh(s, n) };
     if (pc.key === 'ear0' || pc.key === 'ear1') return { ...pc, bias: 0.215, after: ['head'] };
     return pc;
   });
@@ -1567,7 +1589,7 @@ function bodyMesh(s: Deer, lod: number): Mesh {
   const mat = (ring: number, j: number): Mat => {
     const t = ((j + 1) / N) * TAU, up = Math.sin(t), y = Y[Math.min(Y.length - 1, ring)];
     const along = clamp((y - B.y[1]) / (B.y[5] - B.y[1]));
-    const level = lerp(s.cream[0], s.cream[1], smooth(along)) + 0.12 * (jitter(ring * 3 + j) - 0.5) + (y > B.y[5] ? 0.4 : 0);
+    const level = lerp(s.cream[0], s.cream[1], smooth(along)) + 0.12 * (jitter(ring * 3 + j) - 0.5) + (y > B.y[5] ? 0.15 : 0);
     return up < level ? 'mark' : 'coat';
   };
   const barrel = tube(Y.map((y, q) => [0, y, Z[q]] as V3), Wd, H, N, mat);
