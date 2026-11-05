@@ -113,9 +113,9 @@ export const SWIRL_LIGHT = 0.01;
 /**
  * Of swirls on land, the share that are the season's element (`SEASON_ELEMENT`), on every island. Asked for: "make
  * ice motes spawn globally in winter, and life motes in spring, fire in summer, wind in autumn". The island's
- * `swirl_season`.
+ * `swirl_season`. Asked for: "Seasonal motes spawn at 10% (10x light/dark rate)".
  */
-export const SWIRL_SEASON = 0.25;
+export const SWIRL_SEASON = 0.1;
 /** The element each season puts down over land on every island. The island's `season_element`. */
 export const SEASON_ELEMENT: Readonly<Record<Season, LandElement>> = { spring: 'life', summer: 'fire', autumn: 'wind', winter: 'ice' };
 /** The seasons whose swirls are this element, in the order they come round: "winter". */
