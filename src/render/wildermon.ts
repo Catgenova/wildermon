@@ -88,7 +88,7 @@ const LINES: Record<string, () => Promise<Line>> = {
   siffa: () => import('./wild-ribbon').then((m) => line(m.RIBBONIP, [m.STRIPFORGE, m.METALLOCURL])),
   potta: () => import('./wild-kiln').then((m) => line(m.KILNLET, [m.TERRABRICK, m.KILNSPIRE])),
   cindra: () => import('./wild-ember').then((m) => line(m.EMBERKIT, [m.EMBERBRUSH, m.ASHSWEEPER])),
-  hoppa: () => import('./wild-hands2').then((m) => line(m.HOPPA)),
+  hoppa: () => import('./wild-brewtoad').then((m) => line(m.BREWTOAD, [m.BROTHGUT, m.BARRELBURP])),
   simma: () => import('./wild-broth').then((m) => line(m.BROTHLET, [m.STOCKBELLY, m.CAULDRONTHROAT])),
   relka: () => import('./wild-relic').then((m) => line(m.KINTSU, [m.RELICRAWLER, m.AURELIAX])),
   bedda: () => import('./wild-calico').then((m) => line(m.SPRIGKIT, [m.BLOOMWHISK, m.FLORAMANE])),

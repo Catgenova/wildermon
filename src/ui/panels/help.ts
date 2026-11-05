@@ -957,7 +957,7 @@ const HAND_NUMBERS: Record<string, string> = {
   kemma: `a brushing puts in ${percent(groomGain(1, 1))} care (${CARE_SAID}) at no husbandry and ${percent(groomGain(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}, as a keeper of its skill with a brush as good. Evolves: ${evolves('kemma')}`,
   sheela: `a full fleece gives ${SHEAR_WOOL} wool and a full crop of feathers ${SHEAR_FEATHERS}, and a milking a bucket of milk; evolves: ${evolves('sheela')}`,
   salva: `a QL ${SHOWN_QL} dressing puts back ${percent(healAmount(1, SHOWN_QL))} of a life at no first aid and ${percent(healAmount(SKILL_TOP, SHOWN_QL))} at ${SKILL_TOP}. Evolves: ${evolves('salva')}; ${perkLine('salva').toLowerCase()}`,
-  hoppa: `it tries ${listed(BREWS.map((b) => b.name.toLowerCase()))} in that order`,
+  hoppa: `it tries ${listed(BREWS.map((b) => b.name.toLowerCase()))} in that order. Evolves: ${evolves('hoppa')}; ${perkLine('hoppa').toLowerCase()}`,
   simma: `it tries ${cookRecipes().length} recipes in the order the recipes are listed, from ${itemDef(RECIPE_BY_ID.get(cookRecipes()[0])!.result).name.toLowerCase()} on. Evolves: ${evolves('simma')}; ${perkLine('simma').toLowerCase()}`,
   relka: `a relic comes out at what its pieces were worth less their damage, times ${percent(restoredMul(1))} at no restoration and ${percent(restoredMul(SKILL_TOP))} at ${SKILL_TOP}`,
   ambra: `${RESIN_TAPPED} tar a pine a day`,

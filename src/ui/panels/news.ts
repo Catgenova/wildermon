@@ -4252,6 +4252,15 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 508,
+    day: '2026-11-05',
+    lines: () => {
+      const d = SPECIES.hoppa, [one, two] = d.stages!;
+      return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('hoppa')}.`,
+        'Each stage: own model, animations and voice; barrel tap on its left side.'];
+    },
+  },
+  {
     n: 503,
     day: '2026-11-05',
     lines: () => [

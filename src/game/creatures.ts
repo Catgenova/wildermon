@@ -884,6 +884,9 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   leecha: { kind: 'more', n: 1, what: 'bandages, covers or salves per make' },
   // Cooking is worked at a fire rather than at the stores, and makes no `more` there: its line's skill is its reach.
   simma: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  // A brew is set going in a barrel of yours, one a go, and makes no `more` at the stores: its line's skill is its reach, to
+  // barrels further out (as a Kilnlet line's is to kilns).
+  hoppa: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -2741,8 +2744,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   hoppa: {
     id: 'hoppa',
-    name: 'Hoppa',
+    name: 'Brewtoad',
+    was: ['Hoppa'],
+    // Asked for, with a reference sheet: Brewtoad, Brothgut, Barrelburp. Its words, and each stage's, are written from these once
+    // every number they read is here (`sayLine`).
     description: 'Settlement task: start a brew in each idle barrel of yours with enough water, from makings in your settlement stores, brews tried in list order. Never spoils a brew. Brew QL: half the makings\' QL plus half its brewing.',
+    stages: [
+      { name: 'Brothgut', description: '' },
+      { name: 'Barrelburp', description: '' },
+    ],
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -2753,11 +2763,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'brew',
     workRange: 6,
+    // [skin, spots]: the sheet's olive with grey-olive spots, a yellower olive, a mossier one, and a pale straw olive.
     variants: [
-      ['#b8925a', '#f0dca8'],
-      ['#9c7a4a', '#e2c890'],
-      ['#c4a070', '#f4e2bc'],
-      ['#8a6c48', '#d6bc8c'],
+      ['#a8b45a', '#7c8058'],
+      ['#b8bc5c', '#888a5c'],
+      ['#98ac54', '#727a4e'],
+      ['#c0c070', '#8e8c62'],
     ],
     butcher: { meat: 3, fur: 2, leather: 2, bone: 2 },
   },
@@ -4678,6 +4689,7 @@ sayLine('papra', SPECIES.papra.description, 'Level: papyrusmaking.');
 sayLine('ambra', SPECIES.ambra.description, 'Level: forestry.');
 sayLine('snedda', SPECIES.snedda.description, 'Level: forestry.');
 sayLine('cindra', SPECIES.cindra.description, `Level: ${GATHER_SKILL.ash}.`);
+sayLine('hoppa', SPECIES.hoppa.description, `Level: ${GATHER_SKILL.brew}.`);
 sayLine('scurra', SPECIES.scurra.description, `Level: ${GATHER_SKILL.scrub}.`);
 sayLine('salva', SPECIES.salva.description, `Level: ${GATHER_SKILL.heal.replace(/_/g, ' ')}.`);
 describeFrom('hive', { vesp: SPECIES.vesp.name });
