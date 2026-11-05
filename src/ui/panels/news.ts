@@ -4249,6 +4249,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 493,
+    day: '2026-11-05',
+    lines: () => ['Changed: help search: sections with the words in their heading first, then the rest by number of matches.'],
+  },
+  {
     n: 492,
     day: '2026-11-05',
     lines: () => [`Fixed: skill gain numbers: a skill past ${SKILL_TOP} showed its amount past ${SKILL_TOP} as a gain on every update ("Digging +0.37" on tracking, prospecting, drinking).`],
