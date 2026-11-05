@@ -88,13 +88,13 @@ const WHEYBIT_LOOK: Mus = {
   arm: [0.15, 0.14], armW: [0.065, 0.058], hand: 0.08,
   paw: [0.07, 0.34, 0.17],
   neck: { at: [0, 0.02, 0.28], len: 0.03, w: 0.17 },
-  head: { r: [0.38, 0.34, 0.31], up: 0.22, pitch: 20 },
-  snout: { at: [0, 0.72, -0.08], r: [0.54, 0.5, 0.44] },
-  eye: { dir: [0.42, 0.72, 0.5], size: 0.075 },
-  ear: { len: 0.48, w: 0.27, dir: [0.62, -0.4, 0.74] },
+  head: { r: [0.41, 0.35, 0.34], up: 0.24, pitch: 12 },
+  snout: { at: [0, 0.82, -0.12], r: [0.5, 0.46, 0.42] },
+  eye: { dir: [0.5, 0.78, 0.36], size: 0.1 },
+  ear: { len: 0.5, w: 0.27, dir: [0.86, -0.2, 0.56] },
   tail: { at: [0, -0.36, -0.16], len: 0.95, w: 0.06 },
-  collar: { count: 12, len: 0.17, rows: 1 },
-  apron: { top: 0.09, bottom: -0.2, spread: 1.05, border: false, bow: 0.065, flare: 0.03 },
+  collar: { count: 7, len: 0.26, rows: 1 },
+  apron: { top: 0.15, bottom: -0.2, spread: 1.05, border: false, bow: 0.09, flare: 0.03 },
   cap: null,
   robe: false,
   round: [0.14, 0.075],
@@ -115,13 +115,13 @@ const PRESSQUEAK_LOOK: Mus = {
   arm: [0.2, 0.19], armW: [0.085, 0.075], hand: 0.1,
   paw: [0.09, 0.45, 0.2],
   neck: { at: [0, 0.02, 0.36], len: 0.04, w: 0.21 },
-  head: { r: [0.45, 0.41, 0.36], up: 0.27, pitch: 20 },
-  snout: { at: [0, 0.72, -0.08], r: [0.54, 0.5, 0.44] },
-  eye: { dir: [0.42, 0.72, 0.5], size: 0.088 },
-  ear: { len: 0.58, w: 0.32, dir: [0.66, -0.42, 0.7] },
+  head: { r: [0.48, 0.42, 0.4], up: 0.29, pitch: 12 },
+  snout: { at: [0, 0.82, -0.12], r: [0.5, 0.46, 0.42] },
+  eye: { dir: [0.5, 0.78, 0.36], size: 0.118 },
+  ear: { len: 0.58, w: 0.31, dir: [0.88, -0.22, 0.54] },
   tail: { at: [0, -0.48, -0.2], len: 1.2, w: 0.075 },
-  collar: { count: 15, len: 0.21, rows: 2 },
-  apron: { top: 0.3, bottom: -0.3, spread: 1.2, border: true, bow: 0.085, flare: 0.05 },
+  collar: { count: 9, len: 0.32, rows: 1 },
+  apron: { top: 0.34, bottom: -0.3, spread: 1.2, border: true, bow: 0.12, flare: 0.05 },
   cap: { puff: 1, pattern: false },
   robe: false,
   round: [0.18, 0.095],
@@ -142,13 +142,13 @@ const FROMAGEON_LOOK: Mus = {
   arm: [0.27, 0.26], armW: [0.11, 0.1], hand: 0.125,
   paw: [0.13, 0.6, 0.26],
   neck: { at: [0, 0.03, 0.46], len: 0.05, w: 0.27 },
-  head: { r: [0.55, 0.5, 0.44], up: 0.33, pitch: 20 },
-  snout: { at: [0, 0.72, -0.08], r: [0.54, 0.5, 0.44] },
-  eye: { dir: [0.42, 0.72, 0.5], size: 0.105 },
-  ear: { len: 0.7, w: 0.39, dir: [0.68, -0.44, 0.68] },
+  head: { r: [0.58, 0.51, 0.48], up: 0.35, pitch: 13 },
+  snout: { at: [0, 0.82, -0.12], r: [0.5, 0.46, 0.42] },
+  eye: { dir: [0.5, 0.78, 0.36], size: 0.14 },
+  ear: { len: 0.7, w: 0.37, dir: [0.9, -0.24, 0.52] },
   tail: { at: [0, -0.64, -0.26], len: 1.5, w: 0.095 },
   collar: { count: 0, len: 0, rows: 0 },
-  apron: { top: 0.42, bottom: -0.44, spread: 1.15, border: true, bow: 0, flare: 0.08 },
+  apron: { top: 0.46, bottom: -0.44, spread: 1.15, border: true, bow: 0, flare: 0.08 },
   cap: { puff: 1.1, pattern: true },
   robe: true,
   round: [0.23, 0.125],
@@ -538,7 +538,7 @@ function musBones(s: Mus): (a: Anim) => Bones {
     b.chest = joint(body, s.chest.at, -lean, P.chest[2], P.chest[1]);
     b.neck = joint(b.chest, s.neck.at, -P.neck[0], 0, P.neck[1]);
     // The head carried level whatever the hips and the chest do under it, then pitched nose-up as the stage carries it.
-    b.head = joint(b.neck, [0, 0, s.neck.len], lean + P.neck[0] - P.pitch - s.head.pitch + P.head[0], P.head[2] - P.chest[2] - P.roll, P.head[1]);
+    b.head = joint(b.neck, [0, 0, s.neck.len], lean + P.neck[0] - P.pitch + s.head.pitch + P.head[0], P.head[2] - P.chest[2] - P.roll, P.head[1]);
     // Each ear on a bone of its own at its root, laid back and up as the pose pricks it.
     for (let i = 0; i < 2; i++) {
       const sd = i ? 1 : -1, e = onEgg(skullAt(s), s.head.r, [sd * s.ear.dir[0], s.ear.dir[1], s.ear.dir[2]]);
@@ -611,6 +611,10 @@ const lobe = (root: V3, tip: V3, r: number, face: V3, mat: Mat, bend = 0): Mesh 
   return tube([root, mid, tip], [r * 0.7, r, 0], [r * 0.35, r * 0.45, 0], 5, mat, { up: face });
 };
 
+/** A pointed leaf: flat, widest a third of the way out, to a point. */
+const leaf = (root: V3, tip: V3, r: number, face: V3, mat: Mat): Mesh =>
+  tube([root, mixV(root, tip, 0.35), mixV(root, tip, 0.7), tip], [r * 0.35, r, r * 0.7, 0], [r * 0.12, r * 0.2, r * 0.14, 0], 4, mat, { up: face });
+
 /** The muzzle's middle and half-sizes in the head's frame. */
 function snoutOf(s: Mus): { c: V3; r: V3 } {
   const C = skullAt(s), R = s.head.r, S = s.snout;
@@ -636,10 +640,10 @@ function headOf(s: Mus, n: number, k: number): Mesh {
     return d[2] > 0.55 && d[1] < 0.6 ? 'coatLight' : 'muzzle';
   });
   // The nose: a small pink ball on the tip of the muzzle, a little up.
-  const nose = orb(add(S.c, [0, S.r[1] * 0.95, S.r[2] * 0.3]), [R[0] * 0.085, R[0] * 0.065, R[0] * 0.065], 6, 3, 'nose');
+  const nose = orb(add(S.c, [0, S.r[1] * 0.95, S.r[2] * 0.32]), [R[0] * 0.11, R[0] * 0.085, R[0] * 0.08], 6, 3, 'nose');
   // The mouth, open: a dark D under the nose, its round side down, the tongue in the bottom of it and two teeth under the top lip.
   const out: Disc[] = [];
-  const mDir: V3 = [0, 0.9, -0.36], mw = S.r[0] * 0.78;
+  const mDir: V3 = [0, 0.9, -0.36], mw = S.r[0] * 0.86;
   const D: Array<[number, number]> = [];
   for (let q = 0; q <= 12; q++) { const a = Math.PI + (q / 12) * Math.PI; D.push([Math.cos(a) * 1, Math.sin(a) * 1.05 + 0.32]); }
   D.push([0.9, 0.42], [0.5, 0.5], [0, 0.42], [-0.5, 0.5], [-0.9, 0.42]);
@@ -648,14 +652,14 @@ function headOf(s: Mus, n: number, k: number): Mesh {
   for (let q = 0; q <= 10; q++) { const a = Math.PI + (q / 10) * Math.PI; T.push([Math.cos(a) * 0.62, Math.sin(a) * 0.55 - 0.2]); }
   T.push([0.5, -0.05], [0, 0.05], [-0.5, -0.05]);
   out.push(shapeOn(S.c, S.r, mDir, T, mw, 'tongue', 0.02));
-  for (const sd of [1, -1]) out.push(shapeOn(S.c, S.r, mDir, [[sd * 0.05, 0.4], [sd * 0.38, 0.42], [sd * 0.34, 0.12], [sd * 0.08, 0.14]].map(([u, w]) => [u, w] as [number, number]), mw, 'tooth', 0.024));
+  for (const sd of [1, -1]) out.push(shapeOn(S.c, S.r, mDir, [[sd * 0.04, 0.42], [sd * 0.26, 0.43], [sd * 0.23, 0.2], [sd * 0.06, 0.22]].map(([u, w]) => [u, w] as [number, number]), mw, 'tooth', 0.024));
   // Blush on each cheek, out under the eye.
-  for (const sd of [1, -1]) out.push(patchOn(C, R, [sd * (E.dir[0] + 0.3), E.dir[1] - 0.1, E.dir[2] - 0.38], E.size * 1.15, E.size * 0.7, 'inner', sd * 0.25, 0.03, 10));
+  for (const sd of [1, -1]) out.push(patchOn(C, R, [sd * (E.dir[0] + 0.35), E.dir[1] - 0.05, E.dir[2] - 0.42], E.size * 1.0, E.size * 0.62, 'inner', sd * 0.25, 0.03, 10));
   // The eyes, shut tight in a laugh: each a thick arc bowed up.
   for (const sd of [1, -1]) {
     const arc: Array<[number, number]> = [];
-    for (let q = 0; q <= 8; q++) { const u = -1 + q / 4; arc.push([u, Math.cos((u * Math.PI) / 2) * 0.55 + 0.16]); }
-    for (let q = 8; q >= 0; q--) { const u = -1 + q / 4; arc.push([u * 0.86, Math.cos((u * Math.PI) / 2) * 0.55 - 0.16]); }
+    for (let q = 0; q <= 8; q++) { const u = -1 + q / 4; arc.push([u, Math.cos((u * Math.PI) / 2) * 0.6 + 0.24]); }
+    for (let q = 8; q >= 0; q--) { const u = -1 + q / 4; arc.push([u * 0.84, Math.cos((u * Math.PI) / 2) * 0.6 - 0.24]); }
     out.push(shapeOn(C, R, [sd * E.dir[0], E.dir[1], E.dir[2]], arc, E.size, 'lid', 0.03));
   }
   return merge(skull, muzzle, nose, paint(out));
@@ -678,17 +682,16 @@ function whiskersOf(s: Mus): Mesh {
 /** An ear: a big round flap, pink, a paler rim, the deeper pink of its hollow, cupped forward; in its own bone's frame. */
 function earOf(s: Mus, sd: number, n: number): Mesh {
   const E = s.ear;
-  // Up and out, its hollow turned toward the front and well out.
-  const up = unit([sd * 0.75, -0.15, 1]), want: V3 = [sd * 0.9, 1, 0.1], face = unit(sub(want, scale(up, dot(want, up))));
+  // Up and a little out, the disc's face turned forward and a little out: cupped toward whatever it is listening to.
+  const up = unit([sd * 0.6, -0.1, 1]), want: V3 = [sd * 0.35, 1, 0.1], face = unit(sub(want, scale(up, dot(want, up))));
   const f: [V3, V3, V3] = [cross(face, up), face, up];
-  const h = E.len / 2, mid = scale(up, h * 0.8);
-  // A round flap, thin: its back pale pink, its hollow the deeper pink.
-  const deep = E.w * 0.14 + 0.006;
-  const flap = egg(mid, f, [E.w, deep, h], n + 4, 6, 'membrane');
-  // The hollow, painted on the front of the flap over its curve.
+  const h = E.len / 2, mid = scale(up, h * 0.82);
+  // A round flap, thin and a little dished toward its face: its back pale pink, its hollow the deeper pink.
+  const deep = E.w * 0.12 + 0.006;
+  const flap = egg(mid, f, [E.w, deep, h], n + 6, 6, 'membrane');
   const X = f[0], rim: V3[] = [];
-  for (let q = 0; q < 16; q++) {
-    const t = (q / 16) * TAU, u = Math.cos(t) * 0.74, w = Math.sin(t) * 0.76 + 0.04;
+  for (let q = 0; q < 18; q++) {
+    const t = (q / 18) * TAU, u = Math.cos(t) * 0.76, w = Math.sin(t) * 0.78 + 0.02;
     rim.push(add(mid, add(add(scale(X, u * E.w), scale(up, w * h)), scale(face, deep * Math.sqrt(Math.max(0, 1 - u * u - w * w)) + 0.003))));
   }
   const hollow = paint([facing({ v: rim, m: 'inner', at: mid }, face)]);
@@ -707,7 +710,7 @@ function collarOf(s: Mus): Mesh {
       const o = unit([Math.cos(a), Math.sin(a), 0]);
       const L = C.len * (0.85 + 0.3 * jitter(q + row * 31)) * (1 + 0.15 * row);
       const tip = add(add(root, scale(o, L * 0.9)), [0, 0, -L * (0.28 + 0.15 * row)]);
-      out.push(lobe(root, tip, L * 0.42, unit(add(o, [0, 0, 0.7])), (q + row) % 3 === 1 ? 'leafDark' : 'leaf', L * 0.08));
+      out.push(leaf(root, tip, L * 0.36, unit(add(o, [0, 0, 0.7])), (q + row) % 3 === 1 ? 'leafDark' : 'leaf'));
     }
   }
   return merge(...out);
@@ -756,11 +759,10 @@ function apronOf(s: Mus, n: number): Mesh {
     grid.push(row);
   }
   out.push(sheet(grid, 'cloth', 'clothDark'));
-  // The waistband: across the top of the apron and round to the bow, tied off at the sides (from above, a band right round
-  // a belly this round would show its back half over the chest).
-  const band: V3[] = [], b0 = Math.PI / 2 - A.spread * 0.82 - 0.3, b1 = Math.PI / 2 + A.spread * 0.82 + 0.3;
-  for (let q = 0; q <= 16; q++) band.push(at(A.top, lerp(b0, b1, q / 16), 0.035));
-  out.push(tube(band, 0.012 + s.stage * 0.003, 0.024 + s.stage * 0.008, 4, 'cloth', { start: false, end: false }));
+  // The waistband: right round the belly (what of it is round the far side goes behind the belly's solid, `hide`).
+  const band: V3[] = [];
+  for (let q = 0; q <= 32; q++) band.push(at(A.top, (q / 32) * TAU, 0.034));
+  out.push(tube(band, 0.006 + s.stage * 0.002, 0.022 + s.stage * 0.007, 4, 'cloth', { start: false, end: false }));
   // The gold border: a band along the hem and sprigs of leaves above it.
   if (A.border) {
     const decals: Disc[] = [];
@@ -778,9 +780,9 @@ function apronOf(s: Mus, n: number): Mesh {
     }
     out.push(paint(decals));
   }
-  // The bow at the left side, a little forward: two loops, a knot and two tails.
+  // The bow at the back, where the strings are tied: two loops, a knot and two tails.
   if (A.bow > 0) {
-    const a = Math.PI / 2 - A.spread * 1.05, p = at(A.top, a, 0.08), o = unit([Math.cos(a), Math.sin(a), 0]);
+    const a = -Math.PI / 2, p = at(A.top, a, 0.1), o = unit([Math.cos(a), Math.sin(a), 0]);
     const along = unit(cross([0, 0, 1], o)), B = A.bow;
     for (const sd of [1, -1]) {
       const tip = add(add(p, scale(along, sd * B * 1.1)), [0, 0, B * 0.35]);
@@ -800,27 +802,28 @@ function apronOf(s: Mus, n: number): Mesh {
 function capOf(s: Mus, n: number, k: number): Mesh {
   const C = skullAt(s), R = s.head.r, P = s.cap!, out: Mesh[] = [];
   // Over the top and a little back: the crown's middle above the skull's, puffed.
-  const cc: V3 = add(C, [0, -R[1] * 0.16, R[2] * 0.62]), cr: V3 = [R[0] * 0.9 * P.puff, R[1] * 0.86 * P.puff, R[2] * 0.6 * P.puff];
+  const cc: V3 = add(C, [0, -R[1] * 0.06, R[2] * 0.82]), cr: V3 = [R[0] * 1.0 * P.puff, R[1] * 0.96 * P.puff, R[2] * 0.58 * P.puff];
   const crown = orb(cc, cr, n + (P.pattern ? 10 : 4), k + (P.pattern ? 6 : 2), 'cap');
   out.push(P.pattern ? painted(crown, (c) => {
     const d = onEggDir(cc, cr, c);
-    return Math.sin(d[0] * 9 + Math.sin(d[1] * 7) * 1.4) * Math.sin(d[1] * 9 + d[2] * 6) > 0.55 ? 'fitting' : 'cap';
+    // Gold dots in rows over the cream.
+    return Math.sin(d[0] * 9) * Math.sin(d[1] * 9 + d[2] * 4) > 0.45 ? 'fitting' : 'cap';
   }) : crown);
   // The band and the frill round its rim, tilted to follow the skull: lower at the back than at the front.
   const ring = (a: number, up: number, out0: number): V3 => {
-    const d: V3 = [Math.cos(a), Math.sin(a), 0.86 + 0.3 * Math.sin(a) + up];
+    const d: V3 = [Math.cos(a), Math.sin(a), 0.6 + 0.22 * Math.sin(a) + up];
     const e = onEgg(C, R, d);
     return add(e.p, scale(e.n, out0));
   };
   const band: V3[] = [];
   for (let q = 0; q <= 28; q++) band.push(ring((q / 28) * TAU, 0.06, R[0] * 0.05));
-  out.push(tube(band, R[0] * 0.07, R[0] * 0.035, 4, 'trim', { start: false, end: false }));
+  out.push(tube(band, R[0] * 0.08, R[0] * 0.045, 4, 'trim', { start: false, end: false }));
   const N = 20 + 4 * s.stage;
   for (let q = 0; q < N; q++) {
     const a = (q / N) * TAU;
     const root = ring(a, -0.04, R[0] * 0.04), e = unit(sub(root, add(C, [0, 0, R[2] * 0.2])));
-    const tip = add(root, add(scale(e, R[0] * 0.17), [0, 0, -R[0] * 0.07]));
-    out.push(lobe(root, tip, R[0] * 0.14, unit(add(e, [0, 0, 0.8])), q % 2 ? 'lining' : 'cap'));
+    const tip = add(root, add(scale(e, R[0] * 0.2), [0, 0, -R[0] * 0.1]));
+    out.push(lobe(root, tip, R[0] * 0.16, unit(add(e, [0, 0, 0.8])), q % 2 ? 'lining' : 'cap'));
   }
   return merge(...out);
 }
@@ -879,7 +882,7 @@ function capeOf(s: Mus, n: number): Mesh {
   // The cheese: a wedge, its rind along the top, three holes; on the left front of the cape at the height of the chest.
   {
     const c = cols - 4, r = 2, p = mixV(grid[r][c], grid[r + 1][c + 1], 0.5), nrm = unit([p[0], p[1], 0]);
-    const across = unit(cross([0, 0, 1], nrm)), up: V3 = [0, 0, 1], k = 0.13;
+    const across = unit(cross([0, 0, 1], nrm)), up: V3 = [0, 0, 1], k = 0.19;
     const at = (u: number, v: number): V3 => add(add(add(p, scale(nrm, 0.016)), scale(across, u * k)), scale(up, v * k));
     decals.push(facing({ v: [at(-0.9, 0.5), at(0.9, 0.5), at(-0.6, -0.65)], m: 'bloom' }, nrm));
     decals.push(facing({ v: [at(-0.9, 0.5), at(0.9, 0.5), at(0.85, 0.66), at(-0.9, 0.62)], m: 'billDark' }, nrm));
@@ -897,8 +900,8 @@ function scarfOf(s: Mus, n: number): Mesh {
   const N = 14;
   for (let q = 0; q < N; q++) {
     const a = (q / N) * TAU + Math.PI / 2;
-    const p = onBody(s, zt - 0.04, a, 0.09 + 0.04 * Math.sin(a));
-    const r = s.neck.w * (0.62 + 0.08 * jitter(q + 5));
+    const p = onBody(s, zt - 0.03, a, 0.1 + 0.05 * Math.sin(a));
+    const r = s.neck.w * (0.68 + 0.08 * jitter(q + 5));
     out.push(orb(add(p, [0, 0, 0.02]), [r, r, r * 0.8], n, 4, q % 3 === 1 ? 'fitting' : 'cap'));
   }
   return merge(...out);
@@ -911,11 +914,11 @@ function beltOf(s: Mus): Mesh {
   const ring: V3[] = [];
   for (let q = 0; q <= 32; q++) { const a = (q / 32) * TAU; ring.push([Math.cos(a) * hx * 1.08, Hc[1] + Math.sin(a) * hy * 1.08, z]); }
   out.push(tube(ring, 0.05, 0.05, 5, (r) => (r % 2 ? 'fitting' : 'hornDark'), { start: false, end: false }));
-  const a = Math.PI / 2 - 0.35, o = unit([Math.cos(a), Math.sin(a), 0]);
+  const a = Math.PI / 2 - 0.12, o = unit([Math.cos(a), Math.sin(a), 0]);
   const knot: V3 = [Math.cos(a) * hx * 1.12, Hc[1] + Math.sin(a) * hy * 1.12, z];
   out.push(orb(knot, [0.09, 0.075, 0.085], 7, 4, 'fitting'));
   for (const sd of [1, -1]) out.push(orb(add(knot, add(scale(unit(cross([0, 0, 1], o)), sd * 0.08), [0, 0, 0.01])), [0.05, 0.04, 0.045], 6, 4, 'hornDark'));
-  for (const [dx, drop] of [[-0.05, 0.42], [0.05, 0.34]] as Array<[number, number]>) {
+  for (const [dx, drop] of [[-0.07, 0.46], [0.07, 0.38]] as Array<[number, number]>) {
     const side = unit(cross([0, 0, 1], o));
     const top = add(add(knot, scale(side, dx)), scale(o, 0.03));
     const bot = add(add(top, [0, 0, -drop]), scale(o, 0.05));
@@ -927,16 +930,28 @@ function beltOf(s: Mus): Mesh {
   return merge(...out);
 }
 
-/** The tail: long and pink and thin, back from its root, down near the ground and up behind it in a curl at the tip. */
+/** A smooth line through its keys (Catmull-Rom), `per` points a span. */
+function spline(ks: V3[], per: number): V3[] {
+  const out: V3[] = [];
+  for (let i = 0; i < ks.length - 1; i++) {
+    const p0 = ks[Math.max(0, i - 1)], p1 = ks[i], p2 = ks[i + 1], p3 = ks[Math.min(ks.length - 1, i + 2)];
+    for (let q = 0; q < per; q++) {
+      const t = q / per, t2 = t * t, t3 = t2 * t;
+      out.push([0, 1, 2].map((j) => 0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3)) as V3);
+    }
+  }
+  out.push(ks[ks.length - 1]);
+  return out;
+}
+
+/** The tail: long, pink and tapering, out of its root and down toward the ground, then sweeping up behind it in a smooth S and curling over at the tip. */
 function tailOf(s: Mus): Mesh {
   const T = s.tail, L = T.len;
-  const pts: V3[] = [
-    [0, 0, 0], [0.02 * L, -0.16 * L, -0.08 * L], [0.04 * L, -0.34 * L, -0.08 * L], [0.05 * L, -0.48 * L, 0.04 * L],
-    [0.05 * L, -0.54 * L, 0.22 * L], [0.04 * L, -0.52 * L, 0.4 * L], [0.03 * L, -0.42 * L, 0.52 * L],
-    [0.02 * L, -0.32 * L, 0.5 * L], [0.015 * L, -0.3 * L, 0.42 * L], [0.015 * L, -0.36 * L, 0.38 * L],
-  ];
-  const ws = pts.map((_, k) => lerp(T.w, T.w * 0.35, k / (pts.length - 1)));
-  return tube(pts, ws, ws, 6, 'spot');
+  const keys: V3[] = [[0, 0, 0], [0.04, -0.2, -0.09], [0.07, -0.42, -0.08], [0.09, -0.58, 0.12], [0.08, -0.56, 0.38], [0.05, -0.42, 0.54], [0.03, -0.27, 0.5], [0.02, -0.24, 0.38], [0.03, -0.31, 0.32]]
+    .map((k) => scale(k as V3, L));
+  const pts = spline(keys, 4);
+  const ws = pts.map((_, k) => lerp(T.w, T.w * 0.3, Math.pow(k / (pts.length - 1), 0.8)));
+  return tube(pts, ws, ws, 7, 'spot', { up: [1, 0, 0] });
 }
 
 /** The round of curd it presses: a short drum, flat side up, a golden rind round it and a pale yellow top; in its own frame. */
