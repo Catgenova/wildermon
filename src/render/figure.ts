@@ -82,7 +82,58 @@ const middle = (ps: V3[]): V3 => { const c: V3 = [0, 0, 0]; for (const p of ps) 
 /* ---- meshes ----------------------------------------------------------------- */
 
 /** What a facet is made of, looked up per body when it is drawn. */
-type BodyMat = 'skin' | 'lip' | 'hair' | 'brow' | 'edge' | 'eye' | 'white' | 'glint' | 'tunic' | 'trim' | 'trousers' | 'boot' | 'cuff' | 'sole' | 'belt' | 'buckle' | 'stubble' | 'shaved' | 'rein' | 'haft' | 'iron';
+type BodyMat = 'skin' | 'lip' | 'hair' | 'brow' | 'edge' | 'eye' | 'white' | 'glint' | 'tunic' | 'trim' | 'trousers' | 'boot' | 'cuff' | 'sole' | 'belt' | 'buckle' | 'stubble' | 'shaved' | 'rein' | 'haft' | 'iron'
+  // The coloured ring of the eye and the warmth of the cheek, drawn on a face under the painted style (`FIGURE_STYLE.face`).
+  | 'iris' | 'cheek';
+
+/* ---- the paint: how a body is shaded, lined and finished ---------------------------- */
+
+/**
+ * How every body is painted: a switch for each way of shading, lining and
+ * finishing a figure, so they can be set side by side (`tools/figure/`). What
+ * the island draws today is every switch at its first value.
+ */
+export interface FigureStyle {
+  /**
+   * `flat`: each facet one colour, as the island draws. `smooth`: each facet
+   * graded across from the light at one corner to the shade at another, off
+   * the normals where its corners meet their neighbours. `painted`: hard-edged
+   * facets, each carrying broken colour: a mottle of two or three close values
+   * of its own colour, in pixels, so it reads as paint at the game's zoom and
+   * as grain close up.
+   */
+  shade: 'flat' | 'smooth' | 'claire';
+  /**
+   * Broken colour within every facet: a mottle of two or three close values of
+   * its colour, this far either side of it (nought for none; a faint grain
+   * about 0.04, paint about 0.1).
+   */
+  grain: number;
+  /**
+   * The light as a painter has it: the shadow a shift of hue (teal, plum,
+   * indigo) as much as a drop, the highlight tinted (lemon on warm colours,
+   * cyan or pink on cool), and a rim of light along the edge away from the key.
+   */
+  warm: boolean;
+  /** Darker where a part is under another: the neck under the chin, the hips under the tunic's skirt. */
+  occlude: boolean;
+  /**
+   * `own`: as the island draws, a rim under the figure and thin folds. `even`: one clean line of one weight round the
+   * silhouette and along every crease where parts meet (ligne claire). `weighted`: a heavy silhouette and thin creases.
+   * Other than `own`, every line is a deep hue of what it is round.
+   */
+  ink: 'own' | 'even' | 'weighted';
+  /** `pixel`: the picture's colours stepped to a few per material, its edges hard, and close up snapped to a coarser grid. */
+  finish: 'none' | 'pixel';
+  /** Steps of light under the pixel finish. */
+  steps: number;
+  /** A face with irises, brows, a soft cheek and a smile. */
+  face: boolean;
+}
+export const FIGURE_STYLE: FigureStyle = { shade: 'flat', grain: 0, warm: false, occlude: false, ink: 'own', finish: 'none', steps: 6, face: false };
+export function setFigureStyle(s: Partial<FigureStyle>): void {
+  Object.assign(FIGURE_STYLE, s);
+}
 /**
  * And what a piece of gear is made of, looked up in the piece's own palette
  * (`gearPalette` in `./gear`): the same names on every piece, each piece its
@@ -566,6 +617,7 @@ function headMesh(fr: Frame, blink: boolean, open = 0): Mesh {
   // The white of the eye showing round the dark of it, most at the outer corner.
   const [eu, ez] = [eye.reduce((a, p) => a + p[0], 0) / eye.length, eye.reduce((a, p) => a + p[1], 0) / eye.length];
   const white: Pt[] = eye.map(([u, z]) => [eu + (u - eu) * 1.22 + 0.012, ez + (z - ez) * 1.15]);
+  if (FIGURE_STYLE.face) return paintedHead(fr, face, blink, open, mouth);
   const marks = [
     ...[-1, 1].flatMap((s) => [
       ...(blink ? [] : faceMarks(fr, s, white, 'white')),
@@ -579,6 +631,55 @@ function headMesh(fr: Frame, blink: boolean, open = 0): Mesh {
     ]),
     ...(open > 0 ? shouted(fr, 0.21 - fr.fem * 0.03, 1, open) : [{ q: mouth(0.21 - fr.fem * 0.03, 1), m: 'lip' as Mat }]),
   ];
+  return join(face, decals(marks.map((d: { q: V3[]; m: Mat; unless?: V3 }) => {
+    const k = newell(d.q);
+    return { ...d, q: k[1] < -1e-9 && d.m === 'lip' ? [...d.q].reverse() : d.q };
+  })));
+}
+
+/**
+ * The face under the painted style (`FIGURE_STYLE.face`): eyes a third again as big with the white round them, an iris
+ * of the eye's own colour with a dark pupil and a catch of light at its top, brows fuller and arched, a warmth over
+ * each cheek, and the mouth a smile with its corners up -- as the reference sheet has them.
+ */
+function paintedHead(fr: Frame, face: Mesh, blink: boolean, open: number, mouth: (w: number, z: number) => V3[]): Mesh {
+  const cu = -0.11, cz = 1.555;
+  // An almond, about its middle, `k` times the size.
+  const almond = (k: number, du = 0): Pt[] => ([[-0.19, 1.54], [-0.1, 1.68], [0.07, 1.69], [0.18, 1.57], [0.08, 1.42], [-0.1, 1.42]] as Pt[])
+    .map(([u, z]) => [cu + du + (u - 0) * k, cz + (z - cz) * k]);
+  const ring = (r: number, du: number, dz: number, n = 8): Pt[] => Array.from({ length: n }, (_, q): Pt => {
+    const a = (q / n) * TAU;
+    return [cu + du + Math.cos(a) * r * 0.78, cz + dz + Math.sin(a) * r];
+  });
+  const lid: Pt[] = [[-0.19, 1.53], [0.18, 1.55], [0.18, 1.585], [-0.19, 1.565]].map(([u, z]) => [u + cu, z]);
+  const brow: Pt[] = [[-0.36, 1.78 + fr.fem * 0.02], [0.1, 1.81], [0.13, 1.885 - fr.fem * 0.02], [-0.14, 1.93 + fr.fem * 0.02], [-0.37, 1.865]];
+  const cheek: Pt[] = ring(0.11, 0.2, -0.2, 7).map(([u, z]) => [u + 0.02, z]);
+  // The smile: a thin line curving up to its corners, a lip's thickness, with a touch of lower lip under its middle.
+  const smile = (w: number, z: number): V3[] => {
+    const y = faceFront(fr, z) + 0.005, up = 0.075, th = 0.028;
+    const arc = (t: number): number => z + up * t * t;
+    return [[-w, y, arc(1)], [-w * 0.5, y + 0.01, arc(0.5)], [0, y + 0.02, arc(0)], [w * 0.5, y + 0.01, arc(0.5)], [w, y, arc(1)],
+      [w * 0.92, y, arc(1) + th * 0.6], [w * 0.5, y + 0.01, arc(0.5) + th], [0, y + 0.02, arc(0) + th * 1.3], [-w * 0.5, y + 0.01, arc(0.5) + th], [-w * 0.92, y, arc(1) + th * 0.6]];
+  };
+  const marks = [
+    ...[-1, 1].flatMap((s) => [
+      ...(blink ? faceMarks(fr, s, lid, 'eye') : [
+        ...faceMarks(fr, s, almond(1.5), 'white'),
+        // The iris most of the eye's height, the pupil in it, and the catch of light high on its left.
+        ...faceMarks(fr, s, ring(0.15, 0.01, -0.01), 'iris'),
+        ...faceMarks(fr, s, ring(0.075, 0.01, -0.02), 'eye'),
+        // The upper lid's line over the white.
+        ...faceMarks(fr, s, [[-0.27, 1.63], [-0.12, 1.72], [0.1, 1.725], [0.25, 1.62], [0.1, 1.685], [-0.12, 1.68]].map(([u, z]): Pt => [u + cu, z]), 'eye'),
+        ...faceMarks(fr, s, ring(0.04, -0.045, 0.05, 6), 'glint'),
+      ]),
+      ...faceMarks(fr, s, brow, 'brow'),
+      ...faceMarks(fr, s, cheek, 'cheek'),
+      ...faceMarks(fr, s, blink ? [[0.01, 1.52], [0.13, 1.54], [0.13, 1.57], [0.01, 1.55]] : [[0.01, 1.43], [0.13, 1.45], [0.14, 1.67], [0.01, 1.69]], 'eye')
+        .map((d) => ({ ...d, unless: [0, 1, 0] as V3 })),
+    ]),
+    ...(open > 0 ? shouted(fr, 0.21 - fr.fem * 0.03, 1, open) : [{ q: smile(0.25 - fr.fem * 0.03, 1.02), m: 'lip' as Mat }]),
+  ];
+  void mouth;
   return join(face, decals(marks.map((d: { q: V3[]; m: Mat; unless?: V3 }) => {
     const k = newell(d.q);
     return { ...d, q: k[1] < -1e-9 && d.m === 'lip' ? [...d.q].reverse() : d.q };
@@ -1249,6 +1350,37 @@ function hairOf(fr: Frame, id: string): HairKit {
         ),
         tails,
       };
+    case 'tufts': {
+      // Swept and chunky, as the reference sheet has it: thick locks in big points standing off the crown, brushed forward
+      // and to one side over the brow, with three tufts standing up out of the crown and leaning forward.
+      // The hairline comes down over the brow on the right (the viewer's left), where the locks are swept to.
+      const line = (a: number): number => hairline(2.42, 2.22, 2.08, 1.88, 0.15)(a) - 0.3 * Math.pow(Math.max(0, Math.cos(a - 1.05)), 3);
+      const crownLocks = crown({
+        edge: line,
+        floor: 2.0,
+        loft: (t, lam) => 0.16 + 0.42 * Math.sin(Math.PI * Math.min(1, t * 0.9)) + 0.16 * Math.max(0, Math.sin(lam)) * t,
+        ridge: (a) => 0.12 + 0.1 * Math.sin(a * 3.1),
+        // Points of uneven length, longest over the brow where the hair is swept to.
+        tip: (a) => 0.22 + 0.22 * Math.max(0, Math.sin(a)) + 0.1 * Math.sin(a * 2.3 + 1),
+        rows: 4,
+        n: 9,
+      });
+      // A tuft: rooted in the crown at (x, y), rising `len` and leaning `lean` forward and `side` to the right as it goes, in a point.
+      const tuft = (x: number, y: number, lean: number, side: number, len: number, w: number): Mesh => {
+        // Rooted on top of the cap, not in the skull, so none of it is hidden behind the head's solid and lined round.
+        const base: V3 = [x, y, CROWN + 0.3];
+        const pts: V3[] = [0, 0.3, 0.65, 1].map((t): V3 => [base[0] + side * t * t, base[1] + lean * t * t + 0.1 * t, base[2] + len * t * (1 - 0.3 * t)]);
+        // A round clump, not a ribbon: a tube that swells and goes to a point.
+        // Built tip first, the way a hanging lock is, so its facets face out.
+        return chain(pts.reverse(), [w * 0.1, w * 0.7, w * 1.05, w * 0.9], fr.lod < 1 ? 4 : 6, 'hair');
+      };
+      return {
+        cap: join(shaved(2.15), crownLocks),
+        // A cowlick standing up at the back, and two thick locks swept forward and to the left over the brow.
+        top: join(tuft(0.15, -0.7, -0.3, 0.25, 0.9, 0.3), tuft(-0.35, -0.05, 0.7, -0.45, 0.55, 0.34), tuft(0.4, 0.1, 0.6, -0.3, 0.45, 0.3)),
+        tails,
+      };
+    }
     case 'bowl':
       // Cut round a bowl: one line all the way round over the tops of the ears.
       return { cap: crown({ edge: hairline(2.02, 1.98, 1.84, 1.58), loft: (t) => 0.2 + 0.1 * Math.sin(Math.PI * t * 0.9), ridge: 0.04, tip: 0.06, n: 24 }), tails };
@@ -2040,7 +2172,7 @@ function kitOf(look: Look, lod: number): Kit {
 
 const kits = new Map<string, Kit>();
 function kitFor(look: Look, lod = 1): Kit {
-  const key = `${look.gender}|${look.hair}|${look.beard}|${lod}`;
+  const key = `${look.gender}|${look.hair}|${look.beard}|${lod}|${FIGURE_STYLE.face ? 'f' : ''}`;
   let k = kits.get(key);
   if (!k) {
     k = kitOf(look, lod);
@@ -6090,6 +6222,9 @@ function paletteOf(p: FigurePose, look: Look): Palette {
     hair,
     brow: mixRGB(hair, [22, 16, 14], 0.3),
     eye: mixRGB(hex(eyeColour(look)), [10, 8, 8], 0.35),
+    // The iris its own colour at full strength, lit from under its lid; the cheek a warmth over the skin.
+    iris: mixRGB(hex(eyeColour(look)), [255, 214, 150], 0.22),
+    cheek: mixRGB(skin, [236, 118, 128], 0.38),
     glint: [250, 246, 236],
     // The white of the eye, a little of it round the dark: what makes an eye read on the darkest skins.
     white: mixRGB(skin, [248, 244, 236], 0.62),
@@ -6157,6 +6292,102 @@ function toneOf(P: Palette, m: Mat, k: number, gear: boolean): string {
   if (!cool || kk >= from) return shade(P[m], Math.min(kk, 250 / Math.max(1, P[m][0], P[m][1], P[m][2])));
   return shade(mixRGB(P[m], green ? VERDIGRIS : COOL_TINT, Math.min(green ? 0.6 : 0.32, (from - kk) * (green ? 2.0 : 1.1))), kk);
 }
+/* ---- the painter's light (`FIGURE_STYLE.warm`) ------------------------------------------- */
+
+/** What a shadow shifts toward: plum on a warm colour, teal on a cool one; and what a highlight is tinted: lemon, cyan or pink. */
+const SHADOW_PLUM: RGB = [142, 66, 118];
+const SHADOW_TEAL: RGB = [44, 104, 130];
+const LIGHT_LEMON: RGB = [255, 244, 176];
+const LIGHT_CYAN: RGB = [196, 246, 255];
+const LIGHT_PINK: RGB = [255, 206, 236];
+/** Whether a colour is on the warm side of the wheel: reds, oranges, yellows and magentas. */
+const isWarm = (c: RGB): boolean => { const h = hsvOf(c)[0]; return h < 80 || h > 310; };
+/**
+ * A colour at a light level as a painter has it: in shadow shifted toward plum or teal as much as darkened, and in the light
+ * tinted lemon, cyan or pink rather than pushed to white. The step from `k` is the same slope the flat light has (`lightOn`).
+ */
+const warmTones = new Map<number, string>();
+function warmTone(c: RGB, k: number): string {
+  const key = (((Math.round(c[0]) & 255) << 16) | ((Math.round(c[1]) & 255) << 8) | (Math.round(c[2]) & 255)) * 64 + Math.max(0, Math.min(63, Math.round((k - 0.6) * 100)));
+  let s = warmTones.get(key);
+  if (s) return s;
+  const warm = isWarm(c);
+  if (k < 0.97) {
+    const a = Math.min(1, (0.97 - k) / 0.3);
+    s = shade(mixRGB(c, warm ? SHADOW_PLUM : SHADOW_TEAL, 0.3 * a), 1 - 0.2 * a);
+  } else if (k > 1.0) {
+    const a = Math.min(1, (k - 1) / 0.08);
+    const h = hsvOf(c)[0];
+    s = shade(mixRGB(c, warm ? LIGHT_LEMON : h < 200 ? LIGHT_CYAN : LIGHT_PINK, 0.16 * a), Math.min(1 + 0.05 * a, 250 / Math.max(1, c[0], c[1], c[2])));
+  } else s = shade(c, 1);
+  if (warmTones.size > 8192) warmTones.clear();
+  warmTones.set(key, s);
+  return s;
+}
+/** A colour's tone under whichever light the style asks for. */
+const styledTone = (P: Palette, m: Mat, k: number, gear: boolean): string => (FIGURE_STYLE.warm ? warmTone(P[m], k) : toneOf(P, m, k, gear));
+/**
+ * Ink as a deep hue of the colour it is round (`FIGURE_STYLE.ink` other than `own`): the colour's own hue, fuller, taken down
+ * to a deep lightness -- never the body's warm near-black, and never grey. Pale cloth is lined in a deep of its own tint.
+ */
+const deepInk = (c: RGB): RGB => {
+  const [h, s, v] = hsvOf(c);
+  const full = fromHsv(h, Math.min(1, s * 1.3 + 0.25), Math.max(0.35, v));
+  return atLightness(full, Math.max(8, Math.min(lightness(c) * 0.5, 26)));
+};
+/**
+ * The three steps a `claire` facet is lit in (`FIGURE_STYLE.shade`): flat local colour in the middle, one hard-edged shadow
+ * shape shifted toward plum or teal, one highlight shape tinted lemon, cyan or pink -- the toon steps (`toonTone`) with a
+ * painter's hues.
+ */
+const claireTone = (c: RGB, k: number): string => (k >= TOON_LIT ? warmTone(c, 1.08) : k >= TOON_MID ? shade(c, 1) : warmTone(c, 0.7));
+
+/**
+ * Broken colour within a facet (`FIGURE_STYLE.grain`): the facet's colour as a tile of two or three close values of itself in
+ * random cells, each cell a device pixel or two, lighter cells tinted toward the light and darker ones toward the shadow. Made
+ * once for each colour and kept; the tile is in device pixels whatever the zoom, so it reads as paint at the game's size and as
+ * grain close up.
+ */
+const grains = new Map<string, CanvasPattern>();
+let grainCanvas: HTMLCanvasElement | null = null;
+const GRAIN_TILE = 8;
+function grainOf(g: CanvasRenderingContext2D, colour: string, px: number, amount: number): CanvasPattern | string {
+  const key = `${colour}|${amount}`;
+  let p = grains.get(key);
+  if (!p) {
+    const m = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(colour);
+    if (!m) return colour;
+    const c: RGB = [Number(m[1]), Number(m[2]), Number(m[3])];
+    const warm = isWarm(c);
+    const lit = mixRGB(c, warm ? LIGHT_LEMON : LIGHT_CYAN, amount * 1.6), dark = mixRGB(c, warm ? SHADOW_PLUM : SHADOW_TEAL, amount * 1.6);
+    const tones = [shade(c, 1), shade(lit, 1 + amount * 0.5), shade(dark, 1 - amount * 0.6)];
+    grainCanvas ??= document.createElement('canvas');
+    grainCanvas.width = GRAIN_TILE;
+    grainCanvas.height = GRAIN_TILE;
+    const t = grainCanvas.getContext('2d') as CanvasRenderingContext2D;
+    t.fillStyle = tones[0];
+    t.fillRect(0, 0, GRAIN_TILE, GRAIN_TILE);
+    // Cells laid by a fixed hash of the colour, so the tile is the same every time a colour is drawn.
+    let seed = (c[0] * 73 + c[1] * 151 + c[2] * 199) | 1;
+    const next = (): number => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    for (let y = 0; y < GRAIN_TILE; y += 2) for (let x = 0; x < GRAIN_TILE; x += 2) {
+      const r = next();
+      if (r < 0.28) t.fillStyle = tones[1];
+      else if (r < 0.56) t.fillStyle = tones[2];
+      else continue;
+      t.fillRect(x, y, 2, 2);
+    }
+    const made = g.createPattern(grainCanvas, 'repeat');
+    if (!made) return colour;
+    p = made;
+    if (grains.size > 2048) grains.clear();
+    grains.set(key, p);
+  }
+  // The tile in device pixels: `px` is how many of the body's units one device pixel is.
+  p.setTransform(new DOMMatrix([px, 0, 0, px, 0, 0]));
+  return p;
+}
+
 /** The ink round a piece of gear: the body's own warm dark, with a breath of the colour it is round. */
 const gearInk = (c: RGB): RGB => {
   const m = mixRGB(INK, c, 0.14);
@@ -6199,6 +6430,8 @@ export interface Part {
   v?: V3[];
   /** Pushed nearer in the drawing order than where it stands says. */
   bias: number;
+  /** Lit this much of what it would be, for a part in the shadow of another (`FIGURE_STYLE.occlude`): the neck under the chin. */
+  dim?: number;
   /**
    * Drawn just after this other part, whatever their middles say: hair lies
    * on the head, so it goes down after it from every side, and a belt goes
@@ -10084,14 +10317,15 @@ function partsOf(kit: Kit, r: Rig, b: Bones, gear?: GearLook, pal?: Palette, fac
   const skirt = name('skirt', { mesh: kit.skirt, xf: b.pelvis, v: bentWith(kit.skirt.v, r, kit.fr), bias: 0.15 });
   const abdomen = name('abdomen', { mesh: kit.abdomen, xf: b.spine, bias: 0.05, convex: true });
   const head = name('head', { mesh: headFor(kit, r), xf: b.head, bias: 0.2 });
+  const occ = FIGURE_STYLE.occlude;
   const parts: Part[] = [
-    name('pelvis', { mesh: kit.pelvis, xf: b.pelvis, bias: 0, convex: true }),
+    name('pelvis', { mesh: kit.pelvis, xf: b.pelvis, bias: 0, convex: true, dim: occ ? 0.9 : undefined }),
     skirt,
     // Round the waist, over both the tunic's skirt and its body, whichever of them is drawn later.
     name('belt', { mesh: kit.belt, xf: b.pelvis, bias: 0.01, after: [skirt, abdomen], convex: true }),
     abdomen,
     name('chest', { mesh: kit.chest, xf: b.chest, bias: 0.1, convex: true }),
-    name('neck', { mesh: kit.neck, xf: b.neck, bias: 0, under: head, convex: true }),
+    name('neck', { mesh: kit.neck, xf: b.neck, bias: 0, under: head, convex: true, dim: occ ? 0.82 : undefined }),
     head,
     // The ears on the head, the far one hidden behind the skull rather than drawn through it.
     name('ears', { mesh: kit.ears, xf: b.head, bias: 0.005, after: head, hide: [SKULL] }),
@@ -10244,6 +10478,10 @@ interface Laid {
   key: number;
   /** For a `toon` part, how fine it is drawn: nought as anything else, one lined thinly (`TOON_THIN_PX`), two not lined at all. */
   fine: number;
+  /** Lit in steps, as a `toon` part is: a `toon` part, or any part under the `claire` style. */
+  step: boolean;
+  /** Under the `smooth` style, the normal at each corner, three numbers each: the area-weighted sum of its facets' normals. */
+  vn?: Float64Array;
 }
 
 /* ---- what is worked into a surface ------------------------------------------------ */
@@ -11003,6 +11241,10 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
     const vis: boolean[] = [], k: number[] = [], d: number[] = [], t: number[] = [];
     const tests = (part.hide ?? []).map((solid) => behind(solid.in ?? part.hideIn ?? part.xf, solid, T));
     const hidden = tests.length ? (p: V3): boolean => tests.some((t) => t(p)) : undefined;
+    const stepped = !!part.toon || FIGURE_STYLE.shade === 'claire';
+    const smoothed = FIGURE_STYLE.shade === 'smooth' && !stepped;
+    const vn = smoothed ? new Float64Array(nv * 3) : undefined;
+    const dim = part.dim ?? 1;
     for (const face of part.mesh.f) {
       // Its normal the long way round (Newell's), and its middle, straight off the corners.
       const idx = face.i, m = idx.length;
@@ -11021,9 +11263,16 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
       const toward = u[0] * T[0] + u[1] * T[1] + u[2] * T[2];
       vis.push(l > 1e-9 && toward > 1e-4 && !(hidden && hidden(face.at ? place(part.xf, face.at) : [mx, my, mz])) && !(off && off[0] * T[0] + off[1] * T[1] + off[2] * T[2] > 0.05));
       t.push(toward);
-      k.push(part.toon ? toonK(u, L) : face.crease ? lightOn(creased(u), L) : lightOn(u, L));
+      if (stepped) k.push(toonK(u, L));
+      else {
+        let kk = face.crease ? lightOn(creased(u), L) : lightOn(u, L);
+        // A rim of light along the edge turned away from the key: the facets nearly edge-on to the viewer on the shadow side.
+        if (FIGURE_STYLE.warm && toward < 0.3 && u[0] * L[0] + u[1] * L[1] + u[2] * L[2] < 0.1) kk += 0.22 * (1 - toward / 0.3);
+        k.push(kk * dim);
+      }
       d.push(mx * T[0] + my * T[1] + mz * T[2]);
-      if (part.toon) { normals.push(u); areas.push(l); }
+      if (stepped) { normals.push(u); areas.push(l); }
+      if (vn) for (let q = 0; q < m; q++) { const a = idx[q] * 3; vn[a] += u[0] * l; vn[a + 1] += u[1] * l; vn[a + 2] += u[2] * l; }
     }
     if (part.flat) {
       let lo = Infinity;
@@ -11033,11 +11282,11 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
     let cx = 0, cy = 0, cz = 0;
     for (let q = 0; q < nv * 3; q += 3) { cx += pv[q]; cy += pv[q + 1]; cz += pv[q + 2]; }
     cx /= nv; cy /= nv; cz /= nv;
-    const split = part.toon && part.even ? evenSteps(part.mesh, vis, k, normals, areas, L) : part.toon ? toonSplit(part.mesh, s, vis, k, normals, areas, L, part.sheen ? t : undefined) : undefined;
+    const split = part.toon && part.even ? evenSteps(part.mesh, vis, k, normals, areas, L) : stepped ? toonSplit(part.mesh, s, vis, k, normals, areas, L, part.sheen ? t : undefined) : undefined;
     normals.length = 0;
     areas.length = 0;
     const across = part.toon ? acrossOf(part.mesh) / px : Infinity;
-    return { part, s, vis, k, split, d, t, key: cx * H[0] + cy * H[1] + cz * 0.02 + part.bias, fine: across < TOON_FLECK_PX ? 2 : across < TOON_THIN_PX ? 1 : 0 };
+    return { part, s, vis, k, split, d, t, key: cx * H[0] + cy * H[1] + cz * 0.02 + part.bias, fine: across < TOON_FLECK_PX ? 2 : across < TOON_THIN_PX ? 1 : 0, step: stepped, vn };
   });
   // Each part goes after (or before) what it follows once that has itself been put in its place, whichever was made first: a
   // hand made with the body follows a grip made after it, and from behind the grip goes under the chest and the hand with it.
@@ -11088,15 +11337,25 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
   const palOf = (l: Laid): Palette => (l.part.rare ? rarePalette(l.part.pal ?? pal, l.part.rare) : l.part.pal ?? pal);
   const partInks = new Map<Palette, Partial<Record<Mat, string>>>();
   const airyInks: Partial<Record<Mat, string>> = {};
+  // Under a style other than the island's own, every line is a deep hue of the colour it is round (`deepInk`).
+  const deep = FIGURE_STYLE.ink !== 'own';
+  const bodyInk = deep ? deepInk : inkOf, pieceInk = deep ? deepInk : gearInk;
+  /*
+   * The weights of the lines: the rim under the whole figure, of which half shows outside the fills; the line along each part's
+   * edge after its fills, which is the crease where a part lies over another; and the thin rim of a thin part. The island's own:
+   * a rim of one ink and folds at six-tenths. Ligne claire (`even`): one weight for the silhouette and the creases alike.
+   * `weighted`: a heavy silhouette and light creases.
+   */
+  const [rimW, creaseW] = FIGURE_STYLE.ink === 'even' ? [ink, ink] : FIGURE_STYLE.ink === 'weighted' ? [ink * 3, ink * 0.5] : [ink * 2, ink * 0.6];
   const inkIn = (l: Laid, m: Mat): string => {
     if (l.part.airy) return (airyInks[m] ??= shade(mixRGB((l.part.pal ?? pal)[m], INK, 0.3), 1));
-    if (!l.part.pal) return (inks[m] ??= shade(inkOf(pal[m]), 1));
+    if (!l.part.pal) return (inks[m] ??= shade(bodyInk(pal[m]), 1));
     const P = palOf(l);
     let c = partInks.get(P);
     if (!c) { c = {}; partInks.set(P, c); }
     // A rare piece's ink half a dark of its rarity's own hue, so the line round it is the one place its colour is at full strength.
     const glaze = GLAZES.get(P);
-    return (c[m] ??= shade(glaze ? mixRGB(gearInk(P[m]), fromHsv(glaze.hue, 0.7, 0.36), 0.55) : gearInk(P[m]), 1));
+    return (c[m] ??= shade(glaze ? mixRGB(pieceInk(P[m]), fromHsv(glaze.hue, 0.7, 0.36), 0.55) : pieceInk(P[m]), 1));
   };
   const grow = 0.5 * px;
   const add = (path: Path2D, l: Laid, fi: number, fat = grow): void => {
@@ -11168,15 +11427,48 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
     if (!path) { path = new Path2D(); batch.set(c, path); }
     return path;
   };
+  const grain = FIGURE_STYLE.grain;
   const flush = (width: number, fill: boolean): void => {
     g.lineWidth = width;
     for (const [c, path] of batch) {
-      g.fillStyle = c;
+      // A filled facet in broken colour: a tile of close values of its colour rather than the colour flat (`grainOf`).
+      g.fillStyle = fill && grain > 0 ? grainOf(g, c, px, grain) : c;
       g.strokeStyle = c;
       if (fill) g.fill(path);
       if (width > 0) g.stroke(path);
     }
     batch.clear();
+  };
+  /**
+   * Under the `smooth` style, a facet graded from its darkest corner to its lightest off the normals at its corners, in a fill
+   * of its own; or nothing, when it is as good as one colour across, and it goes down flat with the rest.
+   */
+  const graded = (l: Laid, P: Palette, fi: number): boolean => {
+    const vn = l.vn;
+    if (!vn) return false;
+    const face = l.part.mesh.f[fi], idx = face.i, n = idx.length;
+    let lo = Infinity, hi = -Infinity, qlo = 0, qhi = 0;
+    const ks: number[] = [];
+    for (let q = 0; q < n; q++) {
+      const a = idx[q] * 3, len = Math.hypot(vn[a], vn[a + 1], vn[a + 2]) || 1;
+      const u: V3 = [vn[a] / len, vn[a + 1] / len, vn[a + 2] / len];
+      const kq = (face.crease ? lightOn(creased(u), L) : lightOn(u, L)) * (l.part.dim ?? 1);
+      ks.push(kq);
+      if (kq < lo) { lo = kq; qlo = q; }
+      if (kq > hi) { hi = kq; qhi = q; }
+    }
+    if (hi - lo < 0.025) return false;
+    const a = l.s[idx[qlo]], b = l.s[idx[qhi]];
+    const grad = g.createLinearGradient(a[0], a[1], b[0], b[1]);
+    const m = face.m;
+    grad.addColorStop(0, styledTone(P, m, lo, P !== pal));
+    grad.addColorStop(0.5, styledTone(P, m, (lo + hi) / 2, P !== pal));
+    grad.addColorStop(1, styledTone(P, m, hi, P !== pal));
+    const path = new Path2D();
+    add(path, l, fi);
+    g.fillStyle = grad;
+    g.fill(path);
+    return true;
   };
   const line = (l: Laid, a: number, b: number, fi: number): void => {
     const to = into(inkIn(l, l.part.mesh.f[fi].m));
@@ -11192,7 +11484,7 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
     const m = l.part.mesh.f[fi].m;
     const to = into(l.part.pal || l.part.airy ? inkIn(l, m)
       : l.part.toon ? (l.fine ? (thinOutlines[m] ??= shade(toonThinInk(pal[m]), 1)) : (toonOutlines[m] ??= shade(toonInk(gearInk(pal[m])), 1)))
-        : (outlines[m] ??= shade(gearInk(pal[m]), 1)));
+        : (outlines[m] ??= shade(pieceInk(pal[m]), 1)));
     to.moveTo(l.s[a][0], l.s[a][1]);
     to.lineTo(l.s[b][0], l.s[b][1]);
   };
@@ -11201,7 +11493,7 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
   const edges = laid.map(edgesOf);
   // The outline: every part's own outline in its ink, fattened, so that only a rim shows round the outside once the facets go over it.
   laid.forEach((l, li) => { if (l.part.rim !== false && !l.part.thin && !l.fine) for (const [a, b, fi] of edges[li]) rimLine(l, a, b, fi); });
-  flush(ink * 2, false);
+  flush(rimW, false);
   laid.forEach((l, li) => { if (l.part.rim !== false && (l.part.thin || l.fine === 1)) for (const [a, b, fi] of edges[li]) rimLine(l, a, b, fi); });
   flush(ink, false);
   const shines = laid.some((l) => l.part.rare) ? shinesOf(laid, now) : null;
@@ -11211,7 +11503,8 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
     for (let fi = 0; fi < f.length; fi++) if (l.vis[fi] && !f[fi].decal) shown.push(fi);
     const P = palOf(l);
     const sh = shines && l.part.rare ? shines.get(l.part.rare) : undefined;
-    const tone = (fi: number, k = l.k[fi]): string => (l.part.toon ? (k === TOON_SHEEN && l.part.sheen ? toonTone(P[l.part.sheen], TOON_LIT) : toonTone(P[f[fi].m], accent(l, k))) : toneOf(P, f[fi].m, k, P !== pal));
+    const tone = (fi: number, k = l.k[fi]): string => (l.part.toon ? (k === TOON_SHEEN && l.part.sheen ? toonTone(P[l.part.sheen], TOON_LIT) : toonTone(P[f[fi].m], accent(l, k)))
+      : l.step ? claireTone(P[f[fi].m], k) : styledTone(P, f[fi].m, k, P !== pal));
     // The links of a chain: the lines of this link and every one straight after it go down now, fattened, before any of them does.
     const chain = l.part.chain;
     if (chain !== undefined && (li === 0 || laid[li - 1].part.chain !== chain)) {
@@ -11226,12 +11519,12 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
       for (const fi of shown) {
         const pieces = l.split?.get(fi);
         if (pieces) addSplit(l, P, fi, pieces);
-        else add(into(tone(fi)), l, fi);
+        else if (!graded(l, P, fi)) add(into(tone(fi)), l, fi);
       }
       flush(0, true);
       worked(g, l, shown, P, px, hs);
       if (lined) for (const [a, b, fi] of edges[li]) line(l, a, b, fi);
-      flush(ink * 0.6, false);
+      flush(creaseW, false);
     } else {
       // Far to near, a run of one shade at a time, and after each run the lines along its edges.
       const mine = new Map<number, Array<[number, number, boolean]>>();
@@ -11245,11 +11538,11 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
       while (q < shown.length) {
         // A facet the light's steps cut across goes down on its own, in its pieces, and its lines after it.
         const pieces = l.split?.get(shown[q]);
-        if (pieces) {
-          addSplit(l, P, shown[q], pieces);
+        if (pieces || (l.vn && graded(l, P, shown[q]))) {
+          if (pieces) addSplit(l, P, shown[q], pieces);
           flush(0, true);
           if (lined) for (const [a, b] of mine.get(shown[q]) ?? []) line(l, a, b, shown[q]);
-          flush(ink * 0.6, false);
+          flush(creaseW, false);
           q++;
           continue;
         }
@@ -11260,7 +11553,7 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
         flush(0, true);
         worked(g, l, shown.slice(q, end), P, px, hs);
         if (lined) for (let r = q; r < end; r++) for (const [a, b] of mine.get(shown[r]) ?? []) line(l, a, b, shown[r]);
-        flush(ink * 0.6, false);
+        flush(creaseW, false);
         q = end;
       }
     }
@@ -11270,7 +11563,8 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
       const path = new Path2D();
       add(path, l, fi, 0);
       // Painted on a wildermon, flat: an eye is the same dark whichever way the head is turned, and a glint is always lit.
-      g.fillStyle = l.part.toon ? toonTone(P[f[fi].m], f[fi].lit ? TOON_LIT : TOON_MID) : toneOf(P, f[fi].m, f[fi].lit ? Math.max(l.k[fi], 1.06) : l.k[fi], P !== pal);
+      g.fillStyle = l.part.toon ? toonTone(P[f[fi].m], f[fi].lit ? TOON_LIT : TOON_MID)
+        : l.step ? claireTone(P[f[fi].m], f[fi].lit ? TOON_LIT : TOON_MID) : styledTone(P, f[fi].m, f[fi].lit ? Math.max(l.k[fi], 1.06) : l.k[fi], P !== pal);
       g.fill(path);
     }
     // And if it is rare, the rest of its shine, before anything in front of it goes down.
@@ -12161,7 +12455,94 @@ function ringSets(pose: FigurePose, now: number): RingSet[] {
   ];
 }
 
+/**
+ * A body drawn afresh: straight onto the context, or, under the pixel finish
+ * (`FIGURE_STYLE.finish`), into a layer of its own that is finished and put
+ * down -- its colours stepped to a few, its edges made hard, and close up
+ * snapped to a grid a couple of device pixels across.
+ */
 function drawLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, ink: number, now: number): void {
+  if (FIGURE_STYLE.finish === 'none') {
+    drawBody(ctx, sx, sy, zoom, pose, kit, r, facing, ink, now);
+    return;
+  }
+  const t = ctx.getTransform();
+  const dev = Math.hypot(t.a, t.b) || 1, k = zoom * dev;
+  const w = Math.ceil((STILL_BOX.right - STILL_BOX.left) * k), h = Math.ceil((STILL_BOX.bottom - STILL_BOX.top) * k);
+  if (!finishLayer) {
+    const canvas = document.createElement('canvas');
+    finishLayer = { canvas, g: canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D };
+  }
+  const { canvas, g } = finishLayer;
+  if (canvas.width < w || canvas.height < h) {
+    canvas.width = Math.max(canvas.width, w);
+    canvas.height = Math.max(canvas.height, h);
+  }
+  const ox = Math.round(-STILL_BOX.left * k), oy = Math.round(-STILL_BOX.top * k);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, w, h);
+  g.setTransform(dev, 0, 0, dev, ox, oy);
+  drawBody(g, 0, 0, zoom, pose, kit, r, facing, ink, now);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  pixelFinish(g, w, h, FIGURE_STYLE.steps);
+  // Close up, snapped to a grid: every cell of a few device pixels one colour, as a picture drawn in pixels and blown up is.
+  const cell = k >= 3 ? Math.round(k / 3) : 1;
+  const x = sx - ox / dev, y = sy - oy / dev;
+  if (cell > 1) {
+    const cw = Math.ceil(w / cell), ch = Math.ceil(h / cell);
+    if (!snapLayer) {
+      const c2 = document.createElement('canvas');
+      snapLayer = { canvas: c2, g: c2.getContext('2d') as CanvasRenderingContext2D };
+    }
+    if (snapLayer.canvas.width < cw || snapLayer.canvas.height < ch) {
+      snapLayer.canvas.width = Math.max(snapLayer.canvas.width, cw);
+      snapLayer.canvas.height = Math.max(snapLayer.canvas.height, ch);
+    }
+    const s = snapLayer.g;
+    s.setTransform(1, 0, 0, 1, 0, 0);
+    s.clearRect(0, 0, cw, ch);
+    s.imageSmoothingEnabled = false;
+    s.drawImage(canvas, 0, 0, w, h, 0, 0, cw, ch);
+    const was = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(snapLayer.canvas, 0, 0, cw, ch, x, y, w / dev, h / dev);
+    ctx.imageSmoothingEnabled = was;
+    return;
+  }
+  ctx.drawImage(canvas, 0, 0, w, h, x, y, w / dev, h / dev);
+}
+let finishLayer: { canvas: HTMLCanvasElement; g: CanvasRenderingContext2D } | null = null;
+let snapLayer: { canvas: HTMLCanvasElement; g: CanvasRenderingContext2D } | null = null;
+
+/**
+ * The pixel finish on a picture: every pixel's lightness stepped to one of
+ * `steps` levels with its hue and its saturation kept, so each surface is a
+ * few flat colours, and its edges made hard -- a pixel is in the picture or
+ * out of it.
+ */
+function pixelFinish(g: CanvasRenderingContext2D, w: number, h: number, steps: number): void {
+  const img = g.getImageData(0, 0, w, h), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3];
+    if (a < 8) continue;
+    if (a < 110) { d[i + 3] = 0; continue; }
+    d[i + 3] = 255;
+    const r = d[i] / 255, gg = d[i + 1] / 255, b = d[i + 2] / 255;
+    const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), l = (mx + mn) / 2;
+    const ql = Math.max(0.06, Math.min(0.96, Math.round(l * steps) / steps));
+    if (mx === mn) { d[i] = d[i + 1] = d[i + 2] = Math.round(ql * 255); continue; }
+    const dd = mx - mn, s = l > 0.5 ? dd / (2 - mx - mn) : dd / (mx + mn);
+    const hh = mx === r ? (gg - b) / dd + (gg < b ? 6 : 0) : mx === gg ? (b - r) / dd + 2 : (r - gg) / dd + 4;
+    const q = ql < 0.5 ? ql * (1 + s) : ql + s - ql * s, p = 2 * ql - q;
+    const f = (t: number): number => { const u = ((t % 1) + 1) % 1; return u < 1 / 6 ? p + (q - p) * 6 * u : u < 0.5 ? q : u < 2 / 3 ? p + (q - p) * (2 / 3 - u) * 6 : p; };
+    d[i] = Math.round(f(hh / 6 + 1 / 3) * 255);
+    d[i + 1] = Math.round(f(hh / 6) * 255);
+    d[i + 2] = Math.round(f(hh / 6 - 1 / 3) * 255);
+  }
+  g.putImageData(img, 0, 0);
+}
+
+function drawBody(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, ink: number, now: number): void {
   const look = pose.look ?? DEFAULT_LOOK;
   const b = skeleton(kit.fr, r);
   const view = viewOf(facing);
