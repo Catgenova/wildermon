@@ -38,8 +38,9 @@ kept distinct:
   few drawn leaves at the edge for scale, no outline or a faint one. Depth by
   atmosphere: far things lose contrast and drift toward the sky's hue.
 
-Across both: dusty saturation (teal, ochre, salmon, violet, moss) rather than
-candy; a sky that grades across the day (gold dawn, pale cyan noon, salmon and
+Across both: the kit's pastel as the base (`pastel()`: chalk greens, dove and
+lilac greys, caramel browns, nothing darker than slate), with vibrant colour kept
+for splashes; a sky that grades across the day (gold dawn, pale cyan noon, salmon and
 lilac dusk, indigo night) and tints everything under it; bioluminescence as the
 night's light, in cyan, magenta and gold; organic forms, with stone and plant
 growing into one another. Restraint: a scene is three or four hues and their
@@ -52,8 +53,9 @@ the studio.
 ## Rules
 
 **Colour.**
-- Hues: teal, cyan, mint, lilac, violet, magenta, pink, coral, gold, ochre. Browns are warmed to caramel and ochre; greys are tinted (dove, lilac, slate-blue).
-- Saturation is higher than the kit's chalk: mid-tones carry colour; nothing is muddy.
+- **Base: the rune pastel kit's palette, unchanged.** Every large surface -- ground, stone, wood, coat, cloth, sky -- stays in `pastel()`'s range: chalk and pastel, browns warmed to caramel, greys tinted dove, lilac or slate-blue, nothing darker than slate. This is what the references share with the kit, and it is the ground the splashes sit on.
+- **Splash: vibrant colour as contrast and energy, in small areas.** Blossom and moss masses, emissives (runes, strips, gems, motes, trails), prints and trims, a creature's crest or markings, a roof, a flower: fully saturated teal, cyan, magenta, pink, coral, gold. A splash is a tenth of an asset's area or less and never the whole of it; a scene has one or two.
+- Hues for both: teal, cyan, mint, lilac, violet, magenta, pink, coral, gold, ochre.
 - Shadows are a colour, not a darker grey of the surface: a cool hue shift (teal, plum, indigo) at least as much as a drop in lightness.
 - Highlights are tinted: lemon on warm surfaces, cyan or pink on cool ones. Lit edges of metal and stone are gold.
 - Pure black and pure white do not appear. Ink is a deep hue of the surface's own colour (`darker()` toward DUSK, never `#000`). The brightest point is a tinted off-white.
