@@ -4901,6 +4901,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/packimprove.mjs --log-level=error
           node node_modules/.cache/packimprove.mjs
 
+      - name: One device at a time on an account
+        if: matrix.shard == 5
+        run: |
+          # The first seat holds it, a second is refused "Playing on another
+          # device.", no seat is not asked, Play here takes over, a stale seat
+          # is free; the browser's calls carry the tab's seat.
+          npx esbuild supabase/test/seatgate.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/seatgate.mjs --log-level=error
+          node node_modules/.cache/seatgate.mjs
+
       - name: A rare thing put into a crate stays rare, a pile of its own
         if: matrix.shard == 5
         run: |

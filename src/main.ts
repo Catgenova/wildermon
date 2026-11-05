@@ -74,6 +74,7 @@ import { smeltSeconds } from './game/metal';
 import { needsIron } from './world/ore';
 import { tileUses } from './ui/tileinfo';
 import { startIsland } from './net/play';
+import { holdSeat, onElsewhere, SEAT_ELSEWHERE, takeSeat } from './net/supabase';
 import { pickStone } from './ui/stonestart';
 import { watchErrors } from './net/errors';
 import { mountSavingBanner } from './ui/saving';
@@ -194,10 +195,61 @@ function cannotReach(why: string, stale = false): void {
   again.addEventListener('click', () => (stale ? void reloadFresh() : location.reload()));
   card?.append(again);
 }
+/**
+ * One device at a time on an account (`holdSeat`, `private.seat_check`): another device holds the seat. The boot
+ * card says so, with Play here, which takes the seat (`rpc_take_seat`) and comes ashore again; the other device is
+ * told and stops. `stop` is whatever this page still has running.
+ */
+let elsewhereShown = false;
+function playingElsewhere(stop?: () => void): void {
+  if (elsewhereShown) return;
+  elsewhereShown = true;
+  stop?.();
+  document.getElementById('boot')?.remove();
+  const root = document.createElement('div');
+  root.id = 'boot';
+  const card = document.createElement('div');
+  card.className = 'boot-card';
+  const name = document.createElement('div');
+  name.className = 'boot-name';
+  name.textContent = 'Wildermon';
+  const now = document.createElement('div');
+  now.className = 'boot-now';
+  const line = document.createElement('span');
+  line.textContent = SEAT_ELSEWHERE;
+  now.append(line);
+  const here = document.createElement('button');
+  here.className = 'boot-retry';
+  here.type = 'button';
+  here.textContent = 'Play here';
+  here.addEventListener('click', () => {
+    here.disabled = true;
+    void takeSeat().then((why) => {
+      if (why) {
+        line.textContent = why;
+        here.disabled = false;
+        return;
+      }
+      location.reload();
+    });
+  });
+  card.append(name, now, here);
+  root.append(card);
+  const ui = document.getElementById('ui');
+  if (ui) ui.hidden = true;
+  document.body.append(root);
+  here.focus();
+}
 // Before anything that could throw: what goes wrong from here on is written down (see `errors.ts`).
 watchErrors();
+// This tab's seat on the account, before the first call (`holdSeat`).
+holdSeat();
 const started = await startIsland(params, boot.say, (stones) => pickStone(document.querySelector('#boot .boot-card'), stones)).catch((e: unknown) => {
   boot.stop();
+  if (e instanceof Error && e.message.includes(SEAT_ELSEWHERE)) {
+    playingElsewhere();
+    return new Promise<never>(() => {});
+  }
   cannotReach(e instanceof Error ? e.message : 'The island keeper did not answer.', e instanceof StaleBuild);
   // Nothing past here runs without an island: the page stays on its Retry.
   return new Promise<never>(() => {});
@@ -705,6 +757,12 @@ island.hooks.asleep = (what) => {
   document.body.append(root);
   wake.focus();
 };
+// Played on another device: the world stops and the island is let go, as asleep (`playingElsewhere`).
+onElsewhere(() => playingElsewhere(() => {
+  loggedOff = true;
+  loop.stop();
+  onExit();
+}));
 window.addEventListener('pagehide', onExit);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) onExit();

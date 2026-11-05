@@ -361,6 +361,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_take_path_pick(uuid,text)",
     "rpc_take_patron(uuid,text)",
     "rpc_take_perk(uuid,text)",
+    "rpc_take_seat()",
     "rpc_takings(uuid,bigint)",
     "rpc_treasure_map(uuid,bigint)",
     "rpc_treasure_warm(uuid,bigint)",

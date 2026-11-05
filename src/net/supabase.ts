@@ -76,6 +76,70 @@ const RETRY_STATUS = new Set([502, 503, 504]);
 const newKey = (): string => crypto.randomUUID();
 
 /**
+ * One device at a time on an account (`private.seat_check` on the island).
+ *
+ * A game tab holds the account's seat and sends it with every call (`SEAT_HEADER`): a fresh one for each tab,
+ * kept in the tab's own session storage so a reload keeps the seat it had. Pages that are not the game -- the
+ * account page, the stud book -- send none and are not asked. A call refused for another device's seat says
+ * `SEAT_ELSEWHERE`, and whoever is watching (`onElsewhere`) is told; `takeSeat` is Play here.
+ */
+export const SEAT_HEADER = 'x-wurm-seat';
+export const SEAT_ELSEWHERE = 'Playing on another device.';
+/** Seconds a seat goes unheard before another device may take it by calling: the island's `seat_stale`. */
+export const SEAT_STALE_S = 45;
+const SEAT_KEY = 'wurm.seat';
+let seat: string | null = null;
+const elsewhereWatchers = new Set<() => void>();
+
+/** Hold a seat in this tab: every call from here on carries it. The game page, once, before its first call. */
+export function holdSeat(): void {
+  if (seat) return;
+  try {
+    seat = sessionStorage.getItem(SEAT_KEY);
+  } catch {
+    seat = null;
+  }
+  if (!seat || !/^[0-9a-f-]{36}$/i.test(seat)) {
+    seat = newKey();
+    try {
+      sessionStorage.setItem(SEAT_KEY, seat);
+    } catch {
+      // A tab that keeps nothing holds its seat until it is closed or reloaded.
+    }
+  }
+}
+
+/** The seat this tab holds, or null: not a game tab. */
+export const heldSeat = (): string | null => seat;
+
+/** Be told when the island refuses this tab for another device's seat, or says another device took it. */
+export function onElsewhere(watch: () => void): () => void {
+  elsewhereWatchers.add(watch);
+  return () => elsewhereWatchers.delete(watch);
+}
+
+/** Tell the watchers: this tab no longer holds the seat. */
+export function seatLost(): void {
+  for (const watch of elsewhereWatchers) watch();
+}
+
+/** Play here: the seat to this tab, and the other device told (`rpc_take_seat`). Null when done, else why not. */
+export async function takeSeat(): Promise<string | null> {
+  holdSeat();
+  const { data, error } = await supabase().rpc('rpc_take_seat');
+  if (error) return error.message;
+  return (data as { why?: string } | null)?.why ?? null;
+}
+
+/** The call as sent, carrying this tab's seat when it holds one. */
+const seated = (init?: RequestInit): RequestInit | undefined => {
+  if (!seat) return init;
+  const headers = new Headers(init?.headers);
+  headers.set(SEAT_HEADER, seat);
+  return { ...init, headers };
+};
+
+/**
  * Whether calls carry keys. A gateway that will not let the header through answers every call with it as
  * a dropped connection; found so once -- every try with the key dropped, the same call without it
  * answered -- the rest of the session's calls go without, and the island is told.
@@ -121,14 +185,15 @@ export async function watchedFetch(input: RequestInfo | URL, init?: RequestInit)
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   const door = /\/rest\/v1\/rpc\/([\w]+)/.exec(url)?.[1];
   if (!door) return fetch(input, init);
-  const res = await onceFetch(input, init);
+  const res = await onceFetch(input, seated(init));
   if (res.ok) {
     if (refused.has(door)) {
       refused.clear();
       for (const watch of savingWatchers) watch(true);
     }
   } else {
-    const body = (await res.clone().json().catch(() => null)) as { code?: string } | null;
+    const body = (await res.clone().json().catch(() => null)) as { code?: string; message?: string } | null;
+    if (body?.message === SEAT_ELSEWHERE) seatLost();
     if (body?.code === READ_ONLY) {
       const was = refused.size;
       refused.add(door);

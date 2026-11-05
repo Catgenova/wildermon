@@ -12,7 +12,7 @@ import { CHUNK, World } from '../world/world';
 import { PAVED } from '../world/tiles';
 import { blankWorld, layChange, layHistory, layRows, rowsOf, type LandRow, type TileChange } from './landpack';
 import { generateAtlasWindow, loadAtlas, type Atlas } from '../world/atlas-world';
-import { CANNOT_SAVE, PROJECT, supabase, signIn } from './supabase';
+import { CANNOT_SAVE, heldSeat, PROJECT, seatLost, supabase, signIn } from './supabase';
 import type { IslandCreature } from '../game/creatures';
 import type { IslandSpring } from '../game/springs';
 import type { BredRecord } from '../game/boards';
@@ -224,6 +224,8 @@ interface HeardLine {
 
 /** What a Broadcast message from the island carries: rows, lines or a pack, or how far the island has got. */
 interface HeardBody {
+  /** The seat that took the account's (`rpc_take_seat`, `elsewhere`). */
+  seat?: unknown;
   rows?: unknown;
   lines?: unknown;
   set?: unknown;
@@ -2816,6 +2818,10 @@ export class Island {
         .on('broadcast', { event: 'moved' }, (m) => this.heardMoved(heardBody(m)))
         // Logged off by a keeper, and perhaps barred (`rpc_owner_kick`): off to the landing page.
         .on('broadcast', { event: 'kicked' }, () => this.hooks.kicked?.())
+        // Played on another device now (`rpc_take_seat`): this tab no longer holds the seat.
+        .on('broadcast', { event: 'elsewhere' }, (m) => {
+          if (heardBody(m).seat !== heldSeat()) seatLost();
+        })
         // A trade we are in changed, on either side: the window asks again (`barter_send`).
         .on('broadcast', { event: 'barter' }, () => this.hooks.barter?.())
         // Something of one of our spells fired after its cast (`fx_fired`): drawn here, and passed on for everybody watching.
