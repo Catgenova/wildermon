@@ -107,6 +107,8 @@ void main() {
       light = hsv2rgb(vec3(fract(h.x + dL * 0.08), h.y * (metal ? 0.6 : 0.88), min(1.0, h.z * (metal ? 1.2 : 1.1) + 0.02)));
     }
     c = mix(mix(base, light, li), shadow, sh);
+    // Skin takes a breath of value with the light besides, so the head's facets each read as their own plane.
+    if (skin) c *= 0.94 + 0.1 * clamp(dl * 0.5 + 0.5, 0.0, 1.0);
     // A rim where the surface turns from the viewer, in the shadow's hue: the form's edge read without a line.
     float rim = pow(1.0 - clamp(dot(n, uT), 0.0, 1.0), 4.0);
     c = mix(c, shadow, rim * 0.2 * (1.0 - li));

@@ -477,7 +477,7 @@ const api = {
     const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
     const shots: Array<[number, string, [number, number], [number, number]]> = [
       [1, 'idle:0', [-20, -2], [-10, 6]], [7, 'idle:0', [-20, -2], [-6, 10]], [1, 'walk:0.25', [-22, -4], [-10, 6]], [5, 'walk:0.25', [-22, -4], [-10, 6]],
-      [1, 'wave:0.5', [-43, -24], [-10, 6]], [7, 'wave:0.5', [-43, -24], [-6, 10]], [3, 'work:0.5', [-34, -16], [-8, 8]], [1, 'work:0.5', [-34, -16], [-8, 8]],
+      [1, 'wave:0.5', [-43, -24], [-10, 6]], [7, 'wave:0.5', [-43, -24], [-6, 10]], [3, 'work:0.5', [-26, -12], [-8, 8]], [1, 'work:0.5', [-26, -12], [-8, 8]],
     ];
     for (const [f, what, crop, wide] of shots) { const c = cell(zoom, crop, wide); drawOne(c, zoom, who, poseOf(f, what)); cells.push({ cv: c.cv, label: `f${f} ${what}` }); }
     row(cells);
