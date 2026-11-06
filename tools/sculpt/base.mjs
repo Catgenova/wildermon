@@ -270,7 +270,8 @@ for (const [name, targets] of Object.entries(BODIES)) {
 }
 // The cut, on the man's body (the same vertices on the woman's): everything of the head, the neck above a little over its
 // joint, and the hands.
-const yCutMan = boneEnds(bodies.man.verts, 'neck01')[0][1] + 0.08;
+// The body's neck is cut below the traced throat's base ring, so its edge sits inside the loft and never pokes through.
+const yCutMan = boneEnds(bodies.man.verts, 'neck01')[0][1] - 0.02;
 // The forearm is cut a little above the wrist too, so its cut edge sits inside the mitt's cuff and not at its hem.
 const forearmCut = {};
 for (const S of ['L', 'R']) {

@@ -78,7 +78,7 @@ const HV = {
   N0: [[0.03, 0.618, 0.3], [0.025, 0.598, 0.285]], N1: [[0.08, 0.54, 0.29], [0.07, 0.51, 0.275]], N2: [[0.045, 0.38, 0.48], [0.04, 0.35, 0.435]],
   N3: [[0.115, 0.4, 0.34], [0.1, 0.37, 0.31]], N4: [[0, 0.332, 0.38], [0, 0.312, 0.35]], N5: [[0.09, 0.332, 0.33], [0.08, 0.312, 0.3]],
   // The cheekbone, the hollow cheek, the jaw and the chin.
-  C0: [[0.31, 0.3, 0.08], [0.3, 0.31, 0.08]], C1: [[0.18, 0.45, 0.31], [0.17, 0.42, 0.29]], C2: [[0.12, 0.26, 0.33], [0.11, 0.24, 0.3]], C3: [[0.26, 0.19, 0.17], [0.24, 0.17, 0.16]],
+  C0: [[0.31, 0.3, 0.08], [0.3, 0.31, 0.08]], C1: [[0.18, 0.45, 0.24], [0.17, 0.42, 0.23]], C2: [[0.12, 0.26, 0.31], [0.11, 0.24, 0.29]], C3: [[0.26, 0.19, 0.17], [0.24, 0.17, 0.16]],
   J0: [[0.27, 0.16, -0.07], [0.255, 0.18, -0.05]], J1: [[0.095, 0.03, 0.27], [0.1, 0.02, 0.24]], J2: [[0.09, 0.17, 0.31], [0.09, 0.15, 0.28]],
   CH0: [[0, 0.0, 0.26], [0, 0.0, 0.23]], CH1: [[0, 0.17, 0.33], [0, 0.15, 0.3]],
   // The throat ring under the jaw: front centre, the cord, side front, side, side back, back side, back centre.
@@ -88,7 +88,7 @@ const HV = {
   // The ear's root sits inside the skull at every height, so it joins it with no gap; its outer face a touch further out
   // than the picture's, for the island's small view.
   EA0: [[0.29, 0.56, -0.01], [0.285, 0.51, -0.01]], EA1: [[0.285, 0.55, -0.17], [0.28, 0.5, -0.16]], EA2: [[0.27, 0.28, -0.17], [0.265, 0.27, -0.16]], EA3: [[0.275, 0.28, -0.01], [0.27, 0.27, -0.01]],
-  EF0: [[0.45, 0.54, -0.02], [0.43, 0.49, -0.02]], EB0: [[0.415, 0.52, -0.12], [0.395, 0.47, -0.11]], EF1: [[0.435, 0.32, -0.02], [0.415, 0.3, -0.02]], EB1: [[0.4, 0.31, -0.12], [0.38, 0.29, -0.11]],
+  EF0: [[0.45, 0.54, 0.0], [0.43, 0.49, 0.0]], EB0: [[0.415, 0.55, -0.13], [0.395, 0.5, -0.12]], EF1: [[0.42, 0.31, -0.05], [0.4, 0.29, -0.05]], EB1: [[0.395, 0.33, -0.11], [0.375, 0.31, -0.1]],
 };
 /** The facets, right half, as names round each; `d` a direction hint for the normal where the head's middle misleads. */
 const HF = [
@@ -122,7 +122,7 @@ const HF = [
 const THROAT = ['K0', 'K1', 'K2', 'K3', 'K4', 'K5', 'K6', "K5'", "K4'", "K3'", "K2'", "K1'"];
 /** The eyes and the brows: [u0, u1, v0, v1] of the rectangle, man and woman; the brow's ends and middle heights. */
 const EYE = { man: [0.13, 0.178, 0.53, 0.572], woman: [0.135, 0.191, 0.473, 0.526] };
-const BROW = { man: { u: [0.075, 0.18, 0.285], top: [0.656, 0.658, 0.648], h: 0.03 }, woman: { u: [0.085, 0.19, 0.3], top: [0.621, 0.634, 0.616], h: 0.02 } };
+const BROW = { man: { u: [0.075, 0.18, 0.27], top: [0.656, 0.658, 0.65], h: [0.03, 0.03, 0.018] }, woman: { u: [0.085, 0.19, 0.285], top: [0.621, 0.634, 0.618], h: [0.02, 0.02, 0.012] } };
 
 /**
  * The head for one body in MakeHuman's space. `L`: chin and crown heights, the skull's centre depth `zc`; `base`: the
@@ -159,10 +159,10 @@ export function tracedHead(L, base, style, f) {
     // The brow lies on the shelf's front: its inner plane to the corner at B1, the outer plane past it round the temple.
     const shelfIn = plane(s > 0 ? ['B0', 'B1', 'S1', 'S0'] : ["B0'", "B1'", "S1'", "S0'"]), shelfOut = plane(s > 0 ? ['B1', 'B2', 'S2', 'S1'] : ["B1'", "B2'", "S2'", "S1'"]);
     const corner = HV.B1[col][0];
-    const on = (u, v) => { const sh = Math.abs(u) <= corner ? shelfIn : shelfOut; return add(sh.at(u, v), mul(sh.n, 0.015 * H)); };
+    const on = (u, v) => { const sh = Math.abs(u) <= corner ? shelfIn : shelfOut; return add(sh.at(u, v), mul(sh.n, 0.01 * H)); };
     for (let i = 0; i + 1 < bw.u.length; i++) {
-      const u0 = s * bw.u[i], u1 = s * bw.u[i + 1], t0 = bw.top[i], t1 = bw.top[i + 1];
-      const a = on(u0, t0), b = on(u1, t1), c = on(u1, t1 - bw.h), d = on(u0, t0 - bw.h);
+      const u0 = s * bw.u[i], u1 = s * bw.u[i + 1], t0 = bw.top[i], t1 = bw.top[i + 1], h0 = bw.h[i], h1 = bw.h[i + 1];
+      const a = on(u0, t0), b = on(u1, t1), c = on(u1, t1 - h1), d = on(u0, t0 - h0);
       f.facet([a, b, c, d], 8, HEAD, (Math.abs(u1) <= corner ? shelfIn : shelfOut).n, true);
     }
   }
@@ -188,7 +188,7 @@ export function neckBase(L, pts, y, style) {
       let da = Math.atan2(dz, dx) - a; da = Math.atan2(Math.sin(da), Math.cos(da));
       if (Math.abs(da) < Math.PI / 10) r = Math.max(r, rr);
     }
-    r = (r || H * 0.25) + 0.035;
+    r = (r || H * 0.25) + 0.005;
     return [Math.cos(a) * r, y, cz + Math.sin(a) * r];
   });
 }
@@ -235,7 +235,7 @@ export function mitt(J, pts, k, detail, f) {
       rx = Math.max(rx, Math.abs(x)); ry = Math.max(ry, Math.abs(y));
     }
     rx = (rx || 0.2 * L) + 0.035; ry = (ry || 0.2 * L) + 0.035;
-    return Array.from({ length: N }, (_, i) => { const ang = (i / N) * Math.PI * 2; return add(add(c, mul(s, Math.cos(ang) * rx)), mul(n, Math.sin(ang) * ry)); });
+    return Array.from({ length: N }, (_, i) => { const ang = Math.PI - (i / N) * Math.PI * 2; return add(add(c, mul(s, Math.cos(ang) * rx)), mul(n, Math.sin(ang) * ry)); });
   })();
   // Rings across the hand: the wrist (a box), and the knuckle line, the back raised to a ridge and cut by the grooves.
   // Points go round from the thumb side over the back, then under the palm; each knows its place across and through.
@@ -252,7 +252,7 @@ export function mitt(J, pts, k, detail, f) {
   };
   // The forefinger's strip of the knuckle ring (the thumb side, x < 0) takes the index bone; the valley between is shared.
   const weigh = (r, outer, inner) => (i) => { const x = r.xy[i][0]; return x < -0.5 * half - 1e-6 ? inner : x > -0.5 * half + 1e-6 ? outer : inner === KNI ? KN : [...inner, ...outer].map(([b, w]) => [b, w / 2]); };
-  const wrist = ring(0.0, 0.19, 0.085, 0.085, 0);
+  const wrist = ring(0.0, 0.21, 0.1, 0.1, 0);
   const heel = ring(0.12, 0.27, 0.095, 0.095, 0);
   const knuckle = ring(0.52, half, T * 1.15, T, g);
   f.loft(cuff, wrist, 2, CUFF, WR);
