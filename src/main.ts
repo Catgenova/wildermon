@@ -55,7 +55,7 @@ import { Asker } from './ui/ask';
 import { mountRespawn } from './ui/respawn';
 import { asleepIn } from './game/sleep';
 import { UI } from './ui/ui';
-import { dragging } from './ui/dragdrop';
+import { makeDropZone } from './ui/dragdrop';
 // Debug surface only. These come last on purpose: main is the entry point, so
 // the order of its imports is the order the module graph is evaluated in.
 import { groundRoll, ROCK_VARIANTS, TILE_DEFS } from './world/tiles';
@@ -403,27 +403,20 @@ input.onClick = (x, y, button) => {
  * Something dragged out of the pack and let go over a crate, a chest, a cart --
  * anything standing in the world that holds things -- goes into it.
  *
- * The browser's own drag and drop holds pointer events back while it lasts, so
- * the frame loop below cannot see where the cursor is. What is under it is
+ * The row carrying it holds the pointer while the drag lasts (`dragdrop.ts`),
+ * so the frame loop below cannot see where the cursor is. What is under it is
  * asked here, of the drag itself, and kept for the loop to outline.
  */
 let dropOver: { pick: Pick; x: number; y: number } | null = null;
-canvasEl.addEventListener('dragover', (e) => {
-  const carried = dragging();
-  if (!carried || carried.from !== 'inventory') return;
-  const pick = renderer.pick(e.clientX, e.clientY);
-  dropOver = pick && ui.storeAt(pick) ? { pick, x: e.clientX, y: e.clientY } : null;
-  if (!dropOver) return;
-  e.preventDefault();
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-});
-canvasEl.addEventListener('dragleave', () => (dropOver = null));
-window.addEventListener('dragend', () => (dropOver = null));
-canvasEl.addEventListener('drop', (e) => {
-  const carried = dragging();
+makeDropZone(canvasEl, (carried, x, y) => {
+  if (carried.from !== 'inventory') return false;
+  const pick = renderer.pick(x, y);
+  dropOver = pick && ui.storeAt(pick) ? { pick, x, y } : null;
+  return dropOver !== null;
+}, (carried, x, y) => {
   dropOver = null;
-  if (carried && ui.dropOnWorld(carried, renderer.pick(e.clientX, e.clientY))) e.preventDefault();
-});
+  ui.dropOnWorld(carried, renderer.pick(x, y));
+}, () => (dropOver = null));
 
 input.onDrag = (dx, dy, button) => {
   if (button === 0 || button === 1) camera.panBy(dx, dy);

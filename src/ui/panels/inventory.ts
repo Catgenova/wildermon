@@ -7,7 +7,7 @@ import { itemDef, itemName, type Item, type ItemCategory, itemWeight, bagRoom, b
 import { damageCell, headRow, nameCell, qualityCell } from '../itemcells';
 import { occupantOf } from '../../game/creaturecrate';
 import type { ContextMenu, MenuItem } from '../contextmenu';
-import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
+import { dragging, makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
 import { Picking } from '../picking';
 import { nextFrame } from '../repaint';
 import type { UIWindow } from '../windows';
@@ -283,7 +283,7 @@ export class InventoryPanel {
     });
     row.addEventListener('contextmenu', open);
     if (this.hover) {
-      row.addEventListener('mousemove', (e) => this.hover?.(item, e.clientX, e.clientY));
+      row.addEventListener('mousemove', (e) => { if (!dragging()) this.hover?.(item, e.clientX, e.clientY); });
       row.addEventListener('mouseleave', () => this.hover?.(null, 0, 0));
     }
     makeDraggable(row, () => ({ uid: item.uid, from: 'inventory', name: itemName(item), uids: this.picking.carried(item.uid) }));

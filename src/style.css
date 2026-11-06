@@ -3168,6 +3168,24 @@ button.goal-row:focus-visible {
   opacity: 0.45;
 }
 
+/* A thing carried between windows (src/ui/dragdrop.ts): its name beside the cursor, the cursor a hand, a bar where it will not go. */
+.drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 20001;
+  pointer-events: none !important;
+  padding: 3px 8px;
+  background: var(--ui-bg-2);
+  border: 1px solid var(--ui-accent);
+  border-radius: 4px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+body.dragging, body.dragging * { cursor: grabbing !important; user-select: none; }
+body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
+
 .inv-list.drop-target {
   background: var(--t-wash-soft, rgba(227, 182, 87, 0.1));
   box-shadow: inset 0 0 0 1px var(--ui-accent);

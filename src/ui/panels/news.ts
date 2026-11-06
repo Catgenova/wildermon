@@ -4257,6 +4257,7 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: ${SPECIES.roxxen.name} line driving learned ${LEARNS_SAYS.pull} (was ${percent(LEARN_PACE.pull / PULL_PACE_TIMES)}): ${PULL_PACE_TIMES}× the rate.`,
       'Changed: Work around me storage: no crate or storage furniture on any settlement; the cart you pull, what you drive and the boat you are in still count.',
+      'Fixed: dragging a thing between windows or onto a crate dropped the frame rate to a few a second while the button was down. Escape lets go of what is carried.',
     ],
   },
   {

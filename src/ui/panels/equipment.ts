@@ -204,7 +204,7 @@ export class EquipmentPanel {
       // A thing in it can be carried back to the shelf to take it off.
       makeDraggable(box, () => {
         const it = this.game.worn(slot);
-        return { uid: it?.uid ?? -1, from: 'inventory', name: it ? itemName(it) : '' };
+        return it ? { uid: it.uid, from: 'inventory', name: itemName(it) } : null;
       });
       makeDropZone(box, (p) => this.fits(p, slot), (p) => this.putOn(p.uid));
       (LEFT.includes(slot) ? colL : colR).append(box);
@@ -450,7 +450,6 @@ export class EquipmentPanel {
       (s.box.querySelector('.eq-up') as HTMLElement).textContent = v.upgrade === 'trade' ? '◆' : '▲';
       const held = !v.item && v.slot === 'offhand' && !!v.does;
       s.box.classList.toggle('eq-held', held);
-      s.box.draggable = !!v.item;
       s.box.style.setProperty('--eq-tint', v.tint ?? 'var(--eq-metal)');
       s.box.style.setProperty('--eq-wear', String(1 - v.wear));
       s.pic.replaceChildren(glyph(v.slot, v.item?.id));
