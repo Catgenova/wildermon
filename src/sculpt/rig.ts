@@ -84,11 +84,11 @@ export const FEMALE: Proportions = {
   id: 'female', heads: 7.6, fem: 1,
   hip: 8.35, spine: 1.5, chest: 1.7, neck: 1.6, headJ: 0.8, armAt: 0.3,
   upper: 2.35, lower: 2.0, thigh: 4.1, shin: 3.45,
-  shoulder: 1.57, hipW: 0.95,
+  shoulder: 1.6, hipW: 0.78,
   head: 2.0, headW: 0.74, headD: 0.88,
   sole: 0.5, foot: 1.45,
   palm: 0.7, finger: 0.55,
-  r: { neck: 0.36, upper: 0.42, fore: 0.37, wrist: 0.25, thigh: 0.6, shin: 0.23, ankle: 0.125, chest: 1.3, waist: 0.75, pelvis: 1.35 },
+  r: { neck: 0.36, upper: 0.42, fore: 0.37, wrist: 0.25, thigh: 0.6, shin: 0.2, ankle: 0.1, chest: 1.3, waist: 0.75, pelvis: 1.35 },
 };
 /** Proportions `t` of the way from `a` to `b`, every number. */
 export function lerpProportions(a: Proportions, b: Proportions, t: number, id: string): Proportions {

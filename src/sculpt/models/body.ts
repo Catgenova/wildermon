@@ -177,11 +177,11 @@ export function bodyModel(P: Proportions, rest: Bones, look: Look, wear: Wear = 
   if (!bare) prims.push(torus([0, neckJ[1], neckJ[2] - 0.18], [0, 0, 1], [1, 0, 0], P.r.neck + 0.06, 0.13, { m: M.shirt, bone: 'chest', blend: 0.15, band: BAND_GAME, name: 'collar' }));
   prims.push(top(capsule([0, chestJ[1] - 0.1, chestJ[2] + Z * 0.3], [0, spA[1], spA[2] + 0.1], P.r.chest * (1.07 - 0.37 * f), P.r.waist * (1.16 - 0.2 * f), { m: cm(M.shirt), bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + 0.4], axis: [0, 0, -1], span: P.chest }, blend: 0.4, name: 'ribs' })));
   prims.push(stamped(ellipsoid([0, spA[1], spA[2] + 0.1 + 0.25 * f], [P.r.waist, P.r.waist * 0.74, P.spine * 0.9], { m: cm(M.shirt), bone: 'spineA', blend: 0.4, name: 'waist' }), { at: trousersBelow }));
-  prims.push(stamped(ellipsoid([0, pelvisJ[1] - 0.05, pelvisJ[2] - 0.55], [P.r.pelvis, P.r.pelvis * (0.78 + 0.12 * f), 1.3], { m: bare ? M.shorts : M.trousers, bone: 'pelvis', blend: 0.4, name: 'pelvis' }), { at: shirtAbove }));
+  prims.push(stamped(ellipsoid([0, pelvisJ[1] - 0.05, pelvisJ[2] - 0.55 - 0.5 * f], [P.r.pelvis * (1 - 0.05 * f), P.r.pelvis * (0.78 - 0.1 * f), 1.3 * (1 + 0.15 * f)], { m: bare ? M.shorts : M.trousers, bone: 'pelvis', blend: 0.4, name: 'pelvis' }), { at: shirtAbove }));
   // The hips' rounds, on a woman.
   if (f > 0.3) for (const s of [-1, 1]) {
-    prims.push(stamped(sphere([s * P.r.pelvis * 0.62, pelvisJ[1] - 0.1, pelvisJ[2] - 1.1], P.r.pelvis * 0.32 * f, { m: bare ? M.shorts : M.trousers, bone: 'pelvis', blend: 0.35, name: 'hip' }), { at: shirtAbove }));
-    prims.push(stamped(sphere([s * P.r.pelvis * 0.4, pelvisJ[1] - P.r.pelvis * 0.5, pelvisJ[2] - 1.25], P.r.pelvis * 0.42 * f, { m: bare ? M.shorts : M.trousers, bone: 'pelvis', blend: 0.3, name: 'seat' }), { at: shirtAbove }));
+    prims.push(stamped(sphere([s * P.r.pelvis * 0.72, pelvisJ[1] - 0.1, pelvisJ[2] - 1.5], P.r.pelvis * 0.4 * f, { m: bare ? M.shorts : M.trousers, bone: 'pelvis', blend: 0.35, name: 'hip' }), { at: shirtAbove }));
+    prims.push(stamped(sphere([s * P.r.pelvis * 0.4, pelvisJ[1] - P.r.pelvis * 0.42, pelvisJ[2] - 1.55], P.r.pelvis * 0.34 * f, { m: bare ? M.shorts : M.trousers, bone: 'pelvis', blend: 0.3, name: 'seat' }), { at: shirtAbove }));
   }
   if (!bare) prims.push(ellipsoid([0, spA[1] - 0.02, waistZ], [P.r.waist * 1.03, P.r.waist * 0.75, 0.18], { m: M.sole, bone: 'spineA', blend: 0.05, band: BAND_GAME, name: 'waistband' }));
 
@@ -242,7 +242,7 @@ export function bodyModel(P: Proportions, rest: Bones, look: Look, wear: Wear = 
     prims.push(sphere(add(knee, [0, 0.05, 0]), P.r.shin * 0.75, { m: legM, bone: `knee${k}`, blend: 0.1, name: 'knee' }));
     prims.push(ellipsoid(add(knee, [0, P.r.shin * 0.62, 0.05]), [P.r.shin * 0.5, P.r.shin * 0.3, P.r.shin * 0.6], { m: legM, bone: `knee${k}`, blend: 0.06, band: BAND_GAME, name: 'kneecap' }));
     const sl = unit(sub(ank, knee));
-    prims.push(tube([knee, along(knee, ank, 0.3), add(ank, [0, 0, 0.1])], (t) => (t < 0.3 ? P.r.shin * (0.75 + 1.33 * t) : P.r.shin * 1.15 + (P.r.ankle * 1.05 - P.r.shin * 1.15) * Math.pow((t - 0.3) / 0.7, 1 + 0.4 * f)), { m: legM, bone: `knee${k}`, bone2: `ankle${k}`, split: { from: along(knee, ank, 0.8), axis: sl, span: P.shin * 0.2 }, blend: 0.22, name: 'shin' }, 8));
+    prims.push(tube([knee, along(knee, ank, 0.3), add(ank, [0, 0, 0.1])], (t) => (t < 0.3 ? P.r.shin * (0.75 + 1.33 * t) : P.r.shin * 1.15 + (P.r.ankle * 1.05 - P.r.shin * 1.15) * Math.pow((t - 0.3) / 0.7, 1 + 0.6 * f)), { m: legM, bone: `knee${k}`, bone2: `ankle${k}`, split: { from: along(knee, ank, 0.8), axis: sl, span: P.shin * 0.2 }, blend: 0.22, name: 'shin' }, 8));
     prims.push(sphere(ank, P.r.ankle, { m: M.skin, bone: `ankle${k}`, blend: 0.15, name: 'ankle' }));
     // The foot in a soft shoe (or bare): heel and instep off the ankle, the toes off the ball so they bend; a darker sole under.
     const soleStamp: Stamp = (p, n) => ({ m: M.sole, d: Math.max(-0.45 - n[2], 0.14 - p[2]) });
