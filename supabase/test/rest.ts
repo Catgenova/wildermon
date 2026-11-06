@@ -23,6 +23,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import {
   BED_REST, DEN_HEALTH, denClass, EVOLVE_AT, REST_FOR, restFor, SPECIES, staminaOf, staminaSays, TIRE_GOES, type Creature,
+  type SpeciesDef,
 } from '../../src/game/creatures';
 import { furnitureCentre, type PlacedFurniture } from '../../src/game/furniture';
 import { idleSays } from '../../src/game/workerlog';
@@ -56,12 +57,21 @@ const U = '7e5b0000-0000-4000-8000-0000000000e3';
 // Every kind at a level of each stage, for its bed class on both sides.
 const KINDS = Object.values(SPECIES).filter((d) => !d.monster).map((d) => d.id);
 const LEVELS = [10, AT1, AT2];
-/** A worker kind that does not evolve and is small (once the papra; it evolves now). */
-const SMALL = Object.values(SPECIES).find((d) => !d.stages && !d.monster && d.gathers && d.health < DEN_HEALTH[0])!.id;
-// And one that does not evolve with a medium bed's health.
-const MEDIUM = Object.values(SPECIES).find((d) => !d.stages && !d.monster && d.gathers && d.health >= DEN_HEALTH[0] && d.health < DEN_HEALTH[1])!.id;
-// And one that does not evolve with a large bed's health (once the crakka; it evolves now): no worker kind is, so any kind.
-const LARGE = Object.values(SPECIES).find((d) => !d.stages && d.health >= DEN_HEALTH[1])!.id;
+/**
+ * A kind that does not evolve, of each bed's health: a worker kind where one is left (once the papra, the crakka; every
+ * wildermon line has its stages now), else a monster of that health (a goblin, an orc), which a bed takes by its health
+ * like any kind without stages.
+ */
+const still = (fits: (d: SpeciesDef) => boolean): string | undefined =>
+  (Object.values(SPECIES).find((d) => !d.stages && !d.monster && d.gathers && fits(d))
+    ?? Object.values(SPECIES).find((d) => !d.stages && fits(d)))?.id;
+const SMALL = still((d) => d.health < DEN_HEALTH[0]);
+const MEDIUM = still((d) => d.health >= DEN_HEALTH[0] && d.health < DEN_HEALTH[1]);
+const LARGE = still((d) => d.health >= DEN_HEALTH[1])!;
+/** The kinds without stages there are of a small or a medium bed's health, each with its bed: none, where every such kind is of a large bed's. */
+const STILLS: Array<[string, 'den_medium' | 'den_small', 0 | 1]> = [];
+if (MEDIUM) STILLS.push([MEDIUM, 'den_medium', 1]);
+if (SMALL) STILLS.push([SMALL, 'den_small', 0]);
 
 /* ---- on the island ----------------------------------------------------------------------------------------------- */
 
@@ -217,7 +227,7 @@ begin
   delete from creature where world_id = w and id = a;
 
   -- A kind that does not evolve sleeps by its health: one in the medium bed, one in the small.
-  ${[[MEDIUM, 'MEDIUM'], [SMALL, 'SMALL']].map(([sp, k]) => `
+  ${STILLS.map(([sp]) => `
   a := creature_spawn(w, '${sp}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
   update creature set traits = '{}', rare = null, care = 0, hunger = 1, stance = 'passive', carrying = null, worn = ${TIRE_GOES},
          phase = 'idle', from_x = ${T} + 0.5, from_y = ${T} + 0.5, to_x = ${T} + 0.5, to_y = ${T} + 0.5,
@@ -250,8 +260,12 @@ check(`the numbers are the same on both sides: ${TIRE_GOES} goes, ${REST_FOR} se
 check('a kind that evolves sleeps in the bed of its stage: small, medium, large',
   LEVELS.every((lv, i) => denClass({ species: 'sedra', skills: { foraging: lv } }) === i));
 check(`a kind that does not evolve sleeps by its health: under ${DEN_HEALTH[0]} small, under ${DEN_HEALTH[1]} medium, else large`,
-  denClass({ species: SMALL, skills: {} }) === 0 && denClass({ species: MEDIUM, skills: {} }) === 1 && denClass({ species: LARGE, skills: {} }) === 2
-  && SPECIES[SMALL].health < DEN_HEALTH[0] && SPECIES[MEDIUM].health >= DEN_HEALTH[0] && SPECIES[MEDIUM].health < DEN_HEALTH[1] && SPECIES[LARGE].health >= DEN_HEALTH[1]);
+  denClass({ species: LARGE, skills: {} }) === 2 && SPECIES[LARGE].health >= DEN_HEALTH[1]
+  && STILLS.every(([sp, , cls]) => denClass({ species: sp, skills: {} }) === cls
+    && (cls === 0 ? SPECIES[sp].health < DEN_HEALTH[0] : SPECIES[sp].health >= DEN_HEALTH[0] && SPECIES[sp].health < DEN_HEALTH[1])));
+// Where no kind without stages is of a smaller bed's health, say so, so the rule is exercised again the day one is.
+check('the kinds without stages of a small or a medium bed\'s health are tried, or there are none',
+  STILLS.length === Object.values(SPECIES).filter((d) => !d.stages && d.health < DEN_HEALTH[1]).length);
 
 /* ---- on the island ----------------------------------------------------------------------------------------------- */
 
@@ -294,8 +308,8 @@ check('at its second stage the small bed is not its size and the medium one is',
   const [phase, bed, secs] = at('STAGE2').split(',');
   check('at its third, with no large bed, it rests where it stands', phase === 'rest' && bed === '-' && near(Number(secs), REST_FOR), at('STAGE2'));
 }
-check(`a kind that does not evolve goes to the bed of its health: a ${SPECIES[MEDIUM].name} to the medium, a ${SPECIES[SMALL].name} to the small`,
-  at(`KIND_${MEDIUM}`) === 'bed,den_medium' && at(`KIND_${SMALL}`) === 'bed,den_small', `${at(`KIND_${MEDIUM}`)} / ${at(`KIND_${SMALL}`)}`);
+check(`a kind that does not evolve goes to the bed of its health: ${STILLS.map(([sp, bed]) => `a ${SPECIES[sp].name} to the ${bed}`).join(', ') || 'none is of a small or a medium bed\'s'}`,
+  STILLS.every(([sp, bed]) => at(`KIND_${sp}`) === `bed,${bed}`), STILLS.map(([sp]) => at(`KIND_${sp}`)).join(' / '));
 
 /* ---- in the browser ---------------------------------------------------------------------------------------------- */
 
@@ -423,7 +437,7 @@ const walkTo = (c: Creature, f: PlacedFurniture): void => {
   check('and at its third, with no large bed, it rests where it stands', c.state === 'rest' && c.bed === undefined, `${c.state} ${c.bed}`);
   g.creatures.remove(c.id);
 }
-for (const [sp, f] of [[MEDIUM, medium], [SMALL, small]] as const) {
+for (const [sp, f] of STILLS.map(([sp, bed]) => [sp, bed === 'den_medium' ? medium : small] as const)) {
   const c = tired(sp, {});
   step(c);
   check(`in the browser, a ${SPECIES[sp].name}, which does not evolve, goes to the ${f.kind === 'den_small' ? 'small' : 'medium'} bed by its health`, c.state === 'toBed' && c.bed === f.id, `${c.state} ${c.bed}`);
