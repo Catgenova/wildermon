@@ -33,13 +33,15 @@ const ref8Path = join(ROOT, 'docs/aesthetic/08-male-body-proportions.jpg');
 const ref8 = existsSync(ref8Path) ? `data:image/jpeg;base64,${readFileSync(ref8Path).toString('base64')}` : '';
 const ref9Path = join(ROOT, 'docs/aesthetic/09-female-body-proportions.jpg');
 const ref9 = existsSync(ref9Path) ? `data:image/jpeg;base64,${readFileSync(ref9Path).toString('base64')}` : '';
+const ref10Path = join(ROOT, 'docs/aesthetic/10-player-design-sheet.jpg');
+const ref10 = existsSync(ref10Path) ? `data:image/jpeg;base64,${readFileSync(ref10Path).toString('base64')}` : '';
 
 const kept = '/opt/pw-browsers/chromium';
 const b = await chromium.launch({ ...(existsSync(kept) ? { executablePath: kept } : {}), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'] });
 const p = await b.newPage({ viewport: { width: 2000, height: 1000 }, deviceScaleFactor: 2 });
 p.on('pageerror', (e) => console.log('ERR', e.message));
 p.on('console', (m) => { if (m.type() === 'error' || m.text().startsWith('ERR')) console.log('console', m.text()); });
-await p.setContent(`<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding:4px"></div><script>window.REF=${JSON.stringify(ref)};window.REF8=${JSON.stringify(ref8)};window.REF9=${JSON.stringify(ref9)}</script></body></html>`);
+await p.setContent(`<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding:4px"></div><script>window.REF=${JSON.stringify(ref)};window.REF8=${JSON.stringify(ref8)};window.REF9=${JSON.stringify(ref9)};window.REF10=${JSON.stringify(ref10)}</script></body></html>`);
 await p.addScriptTag({ content: js });
 await p.waitForFunction('window.READY');
 console.log('gl:', await p.evaluate(() => window.SCULPT.glInfo()));
@@ -67,6 +69,7 @@ if (flag('stats') || only.includes('stats')) {
   if (flag('stats')) { await b.close(); process.exit(0); }
 }
 if (only.includes('compare')) await shoot(`compare-${who}`, async (w) => { await window.SCULPT.compare(w, 6.5); });
+if (only.includes('design')) await shoot(`design-${who}`, async (w) => { await window.SCULPT.design(w); });
 if (only.includes('compare') || only.includes('iou')) { await p.evaluate(() => window.SCULPT.clear()); const r = await p.evaluate((w) => window.SCULPT.iou(w), who); console.log(`iou ${who}`, JSON.stringify(r)); await p.locator('#root').screenshot({ path: join(out, `iou-${who}.png`), timeout: 180000, animations: 'disabled' }); console.log('wrote', join(out, `iou-${who}.png`)); }
 if (only.includes('lineup')) await shoot('lineup', async () => { await window.SCULPT.lineup(6, 'idle:0'); await window.SCULPT.lineup(2.5, 'walk:0.25'); });
 if (only.includes('facings')) await shoot(`facings-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 1); window.SCULPT.facings(w, 'walk:0.25', 1); window.SCULPT.facings(w, 'idle:0', 2); window.SCULPT.facings(w, 'walk:0.25', 2); window.SCULPT.facings(w, 'idle:0', 4); window.SCULPT.facings(w, 'walk:0.6', 4); window.SCULPT.facings('figure', 'idle:0', 2); });

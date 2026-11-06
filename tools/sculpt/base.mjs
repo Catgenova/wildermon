@@ -303,13 +303,13 @@ function extras(b, shared) {
     // An almond on a sphere a little larger than the eyeball, its front just proud of the lids; the outer corner a touch lower.
     const R = e.r * 1.6, lid = skinZ(e.c[0], e.c[1]);
     const c = [e.c[0], e.c[1] + 0.02, lid + 0.025 - R];
-    const N = 16, rings = [0, 0.45, 0.8, 1.0, 1.14];
+    const N = 16, rings = [0, 0.45, 0.8, 1.0, 1.1];
     const on = (t, f) => {
-      const outer = Math.cos(t) * s, th = 0.74 * Math.cos(t) * f, up = Math.sin(t) >= 0 ? 0.44 : 0.36;
+      const outer = Math.cos(t) * s, th = 1.0 * Math.cos(t) * f, up = Math.sin(t) >= 0 ? 0.4 : 0.3;
       const tv = (up * Math.sin(t) * (1 - 0.2 * Math.cos(t) * Math.cos(t)) - 0.1 * Math.max(0, outer)) * f;
       return [c[0] + R * Math.sin(th) * Math.cos(tv), c[1] + R * Math.sin(tv), c[2] + R * Math.cos(th) * Math.cos(tv)];
     };
-    const irisC = [c[0], c[1] - 0.01, c[2] + R], irisR = R * 0.62;
+    const irisC = [c[0] - s * R * 0.04, c[1] - 0.01, c[2] + R], irisR = R * 0.5;
     const centre = add(irisC, 5, irisR);
     const ring = rings.slice(1).map((f, ri) => Array.from({ length: N }, (_, i) => {
       const p = on((i / N) * Math.PI * 2, f);
@@ -323,7 +323,7 @@ function extras(b, shared) {
     const pring = Array.from({ length: 10 }, (_, i) => { const t = (i / 10) * Math.PI * 2; return add([irisC[0] + pr * Math.cos(t), irisC[1] + pr * Math.sin(t), irisC[2] + 0.006 - (pr * pr) / (2 * R)], 6); });
     for (let i = 0; i < 10; i++) out.tris.push([pc, pring[i], pring[(i + 1) % 10]]);
     // The brow: a ribbon over the eye, thick at the inner end, lying on the skin.
-    const bx = [0.12, 0.3, 0.48, 0.64], by = [0.4, 0.47, 0.47, 0.4], bh = [0.09, 0.08, 0.065, 0.045];
+    const bx = [0.08, 0.28, 0.48, 0.66], by = [0.36, 0.41, 0.41, 0.34], bh = [0.1, 0.085, 0.07, 0.05];
     const top = [], bot = [];
     for (let i = 0; i < bx.length; i++) {
       const x = e.c[0] + s * (bx[i] - 0.3), yTop = e.c[1] + by[i], yBot = yTop - bh[i];
@@ -335,7 +335,7 @@ function extras(b, shared) {
   // The hair: the scalp's own faces, pushed out along their normals with a tousle, over a hairline at the brow in front
   // and the nape behind; the fringe a row of wedges reaching toward the brows.
   const ey = (b.eyes[0].c[1] + b.eyes[1].c[1]) / 2;
-  const hairline = (p) => (p[2] > 0.3 ? ey + 0.72 : p[2] > -0.3 ? ey + 0.3 : ey - 0.1);
+  const hairline = (p) => (p[2] > 0.3 ? ey + 0.6 : p[2] > -0.3 ? ey + 0.3 : ey - 0.1);
   const scalp = shared ?? new Set(face.filter((i) => V[i][1] > hairline(V[i])));
   out.scalp = scalp;
   const nrm = new Map();
@@ -351,8 +351,11 @@ function extras(b, shared) {
     const n = nrm.get(i); if (!n) continue; const l = Math.hypot(...n) || 1;
     const p = V[i], edge = p[1] < hairline(p) + 0.25;
     // Thicker on top, thinner at the edge, tousled by a hash of the vertex; the edge dropped a little to hang over the line.
-    const h = (edge ? 0.12 : 0.22) + 0.1 * hash(i);
-    hid.set(i, add([p[0] + (n[0] / l) * h, p[1] + (n[1] / l) * h - (edge ? 0.12 : 0), p[2] + (n[2] / l) * h], 9));
+    const front = p[2] > 0.3;
+    const h = (edge ? 0.14 : 0.24) + 0.12 * hash(i);
+    // The fringe: the front edge dropped toward the brows, unevenly, so it hangs in wedges.
+    const drop = edge ? (front ? 0.22 + 0.18 * hash(i * 7) : 0.1) : 0;
+    hid.set(i, add([p[0] + (n[0] / l) * h, p[1] + (n[1] / l) * h - drop, p[2] + (n[2] / l) * h + (front && edge ? 0.06 : 0)], 9));
   }
   for (const tr of tris) if (tr.every((i) => hid.has(i))) out.tris.push(tr.map((i) => hid.get(i)));
   return out;

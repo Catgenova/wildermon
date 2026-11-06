@@ -23,6 +23,7 @@ const MALE = PROPS.male;
 const kindOf = (who: string): Kind => (who === 'seven' || who === 'five' ? 'sdf' : 'human');
 const REF8 = (window as unknown as { REF8?: string }).REF8;
 const REF9 = (window as unknown as { REF9?: string }).REF9;
+const REF10 = (window as unknown as { REF10?: string }).REF10;
 const LOOK: Look = { gender: 'man', skin: 'light', hair: 'tousled', hairColour: 'chestnut', eyes: 'brown', beard: 'none', shirt: 'teal', trousers: 'brown' };
 const REF = (window as unknown as { REF?: string }).REF;
 
@@ -107,6 +108,47 @@ const img = (src: string, h: number): Promise<HTMLCanvasElement> => new Promise(
 
 const api = {
   clear(): void { root.innerHTML = ''; },
+  /**
+   * The body beside the island's design sheet (docs/aesthetic/10): the sheet's front and back figures with ours at the same
+   * height in the game's clothes, then the sheet's face and profile beside our head at the same size.
+   */
+  async design(who: Who = 'male'): Promise<void> {
+    if (!REF10) return;
+    const im = new Image(); im.src = REF10; await im.decode();
+    const W = im.naturalWidth, H = im.naturalHeight;
+    // Where the sheet's figures and heads are, as fractions of the sheet.
+    const front = { x0: 0.04, x1: 0.28, y0: 0.02, y1: 0.985 }, back = { x0: 0.3, x1: 0.56, y0: 0.02, y1: 0.985 };
+    const face = { x0: 0.61, x1: 0.92, y0: 0.01, y1: 0.56 }, profile = { x0: 0.6, x1: 0.78, y0: 0.56, y1: 0.82 }, nape = { x0: 0.78, x1: 0.94, y0: 0.56, y1: 0.82 };
+    const crop = (r: { x0: number; x1: number; y0: number; y1: number }, h: number): HTMLCanvasElement => {
+      const sw = (r.x1 - r.x0) * W, sh = (r.y1 - r.y0) * H, w = Math.round((sw * h) / sh);
+      const cv = document.createElement('canvas'); cv.width = w * DPR; cv.height = h * DPR; cv.style.width = `${w}px`; cv.style.height = `${h}px`;
+      cv.getContext('2d')!.drawImage(im, r.x0 * W, r.y0 * H, sw, sh, 0, 0, w * DPR, h * DPR);
+      return cv;
+    };
+    heading(`${who} beside the design sheet (10): the sheet's front and back | ours, front and back, level view, in the game's clothes | the sheet's face, profile and nape | ours`);
+    const zoom = 6.5, bodyPx = heightOf(PROPS[who]) * 2.25 * zoom;
+    // The sheet's figures stand about 93% of their crop's height (the hair's top to the sandals).
+    const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [{ cv: crop(front, Math.round(bodyPx / 0.93)), label: 'sheet, front' }, { cv: crop(back, Math.round(bodyPx / 0.93)), label: 'sheet, back' }];
+    for (const [name, f, deg] of [['front', 0, 0], ['back', 4, 180], ['side', 2, 90]] as Array<[string, number, number]>) {
+      const c = cell(zoom, [-41, 3], [-11, 11]);
+      drawOne(c, zoom, who, poseOf(f, 'idle:0'), { stance: 'ref', view: levelView((deg * Math.PI) / 180) });
+      cells.push({ cv: c.cv, label: `ours, ${name}` });
+    }
+    row(cells);
+    // The heads: the sheet's face is about 2.3 of our units from crown to chin; ours drawn at the zoom that makes them the same.
+    const hz = 20, headPx = 2.4 * 2.25 * hz;
+    const heads: Array<{ cv: HTMLCanvasElement; label: string }> = [{ cv: crop(face, Math.round(headPx / 0.7)), label: 'sheet, face' }];
+    for (const [name, f, deg] of [['front', 0, 0], ['3/4', 7, -40]] as Array<[string, number, number]>) {
+      const c = cell(hz, [-40.5, -28], [-7, 7]);
+      drawOne(c, hz, who, poseOf(f, 'idle:0'), { stance: 'ref', view: levelView((deg * Math.PI) / 180) });
+      heads.push({ cv: c.cv, label: `ours, ${name}` });
+    }
+    heads.push({ cv: crop(profile, Math.round(headPx / 0.8)), label: 'sheet, profile' });
+    { const c = cell(hz, [-40.5, -28], [-7, 7]); drawOne(c, hz, who, poseOf(2, 'idle:0'), { stance: 'ref', view: levelView(Math.PI / 2) }); heads.push({ cv: c.cv, label: 'ours, profile' }); }
+    heads.push({ cv: crop(nape, Math.round(headPx / 0.8)), label: 'sheet, nape' });
+    { const c = cell(hz, [-40.5, -28], [-7, 7]); drawOne(c, hz, who, poseOf(4, 'idle:0'), { stance: 'ref', view: levelView(Math.PI) }); heads.push({ cv: c.cv, label: 'ours, nape' }); }
+    row(heads);
+  },
   /**
    * How well our silhouette covers the reference's, at the picture's own size: the picture's two figures masked out of its
    * background, ours drawn over each at the same height, feet and middle, and the overlap over the union -- for the whole,
