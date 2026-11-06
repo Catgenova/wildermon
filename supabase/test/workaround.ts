@@ -264,7 +264,7 @@ begin
   v_b := pg_temp.pet(w, u, 'rabba', 100.5, 161.5);
   v_y := give(w, u, 'creature_crate', 1, 40, null);
   j := rpc_act(w, 'stop_work_around', jsonb_build_object('kind', 'creature', 'id', v_a));
-  insert into said select 'J_A', mode || '|' || coalesce((select (creature = v_a)::text from item where id = v_y), 'gone') from creature where world_id = w and id = v_a;
+  insert into said select 'J_A', mode || '|' || coalesce((select (creature = v_a)::text from item where id = v_y), 'gone') || '|' || coalesce(around::text, 'none') from creature where world_id = w and id = v_a;
   insert into said select 'J_B', mode from creature where world_id = w and id = v_b;
   insert into said select 'J_TOLD', string_agg(regexp_replace(text, 'Pip[0-9]+', 'Pip', 'g'), ' / ' order by n)
     from (select text, n from event where world_id = w and uid = u and text like 'Work around me stopped:%' order by n desc limit 1) e;
@@ -520,8 +520,8 @@ check('its keeper not seen for the logout time: its own settle sends it back', i
   const spare = { uid: g.inventory.nextUid++, id: 'creature_crate', ql: 40, dmg: 0, count: 1 };
   g.inventory.addItem(spare);
   stop.perform({ kind: 'creature', id: a.id }, g);
-  check('another following you by then: into the empty crate in your pack, as a post\'s worker goes, on both sides',
-    a.mode === 'stored' && g.inventory.items.find((it) => it.uid === spare.uid)?.creature === a.id && isle.get('J_A') === 'stored|true', `browser ${a.mode} / island ${isle.get('J_A')}`);
+  check('another following you by then: into the empty crate in your pack, as a post\'s worker goes, round nobody now, on both sides',
+    a.mode === 'stored' && !a.around && g.inventory.items.find((it) => it.uid === spare.uid)?.creature === a.id && isle.get('J_A') === 'stored|true|none', `browser ${a.mode} ${a.around ? 'around' : 'nobody'} / island ${isle.get('J_A')}`);
   check('and the other still following, on both sides', b.mode === 'active' && isle.get('J_B') === 'active', `${b.mode} / ${isle.get('J_B')}`);
   const told = said.filter((m) => m.startsWith(`${AROUND_STOPPED}:`)).join(' / ');
   check('told in the same words on both sides', told === isle.get('J_TOLD'), `browser "${told}" / island "${isle.get('J_TOLD')}"`);
