@@ -198,6 +198,23 @@ begin
   insert into said select 'SHUT_CART', (select count(*) from item i where i.world_id = w and i.crate = 77001) || '|' || (pg_temp.inside(v_cart) <> 'empty');
   delete from creature where world_id = w and id = v_a;
 
+  -- Its keeper's own crate on a settlement: not storage round them; a cart of theirs on it, pulled by them, still is.
+  delete from placed where world_id = w and id = v_cart;
+  perform pg_temp.at(w, u, 100.5, 100.5);
+  v_a := pg_temp.pet(w, u, 'rabba', 101.5, 100.5);
+  insert into crate (world_id, id, kind, x, y, sx, sy, made_by) values (w, 77002, 'plank', 102, 100, 1, 1, u);
+  insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Crateham', 104, 100, 2, 1, s);
+  j := rpc_act(w, 'work_around', jsonb_build_object('kind', 'creature', 'id', v_a));
+  perform pg_temp.run(w, v_a, 6);
+  insert into said select 'DEED', coalesce(idle_why, '') || '|' || (select count(*) from item i where i.world_id = w and i.crate = 77002)
+    from creature where world_id = w and id = v_a;
+  v_cart := pg_temp.piece(w, u, 'cart', 103, 101);
+  update placed set puller = u where world_id = w and id = v_cart;
+  perform pg_temp.run(w, v_a, 6);
+  insert into said select 'DEED_CART', (select count(*) from item i where i.world_id = w and i.crate = 77002) || '|' || (pg_temp.inside(v_cart) <> 'empty');
+  delete from deed where world_id = w and name = 'Crateham';
+  delete from creature where world_id = w and id = v_a;
+
   -- Stop: back to following. And one at a time: a second following it, refused while it works.
   perform pg_temp.at(w, u, 160.5, 100.5);
   v_a := pg_temp.pet(w, u, 'rabba', 161.5, 100.5);
@@ -439,6 +456,24 @@ const groundCount = (g: Game): number => [...g.ground.values()].reduce((n, pile)
   run(g, [c], 600);
   check('and with a cart of its own beside it, everything goes in the cart, nothing in that crate, on both sides',
     crate.items.length === 0 && inside(cart.items) > 0 && isle.get('SHUT_CART') === '0|true', `browser ${crate.items.length} / ${inside(cart.items)}; island ${isle.get('SHUT_CART')}`);
+}
+
+// Its keeper's own crate on a settlement.
+{
+  const { g } = fresh();
+  const c = pet(g, 'rabba', T + 1.5, T + 0.5);
+  const crate = g.addCrate('plank', T + 2, T, 1, 1, []);
+  g.neighbourDeeds.push({ name: 'Crateham', x: T + 4, y: T, radius: 2, level: 1, holder: null });
+  work.perform({ kind: 'creature', id: c.id }, g);
+  run(g, [c], 300);
+  check('its keeper\'s own crate on a settlement is not storage: idle, no storage in reach, on both sides',
+    c.idle?.why === 'nostore' && crate.items.length === 0 && isle.get('DEED') === 'nostore|0', `browser ${c.idle?.why} ${crate.items.length} / island ${isle.get('DEED')}`);
+  const cart = g.addFurniture('cart', T + 3, T + 1, 0, 0, 40, []);
+  cart.hitched = true;
+  run(g, [c], 600);
+  check('a cart its keeper pulls on that settlement still is: everything goes in the cart, nothing in the crate, on both sides',
+    crate.items.length === 0 && inside(cart.items) > 0 && isle.get('DEED_CART') === '0|true', `browser ${crate.items.length} / ${inside(cart.items)}; island ${isle.get('DEED_CART')}`);
+  g.neighbourDeeds.length = 0;
 }
 
 // Stop: back to following; one at a time.

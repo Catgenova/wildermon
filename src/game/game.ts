@@ -9906,15 +9906,18 @@ export class Game {
   /**
    * Storage within a worker's range of you that you may put into, the island's `around_stores`: crates you may put
    * into (`crateShut`) and furniture that holds things you may open (`pieceShut`), carts, wagons and boats among it,
-   * within `site.radius` tiles of your tile (a square, from its middle); and the cart you pull, what you drive and the
-   * boat you ride in wherever they are. Not a stall, a trash crate, a mailbox, a hive, a pond or a barrel.
+   * within `site.radius` tiles of your tile (a square, from its middle), none of it on any settlement (`deedAt`); and
+   * the cart you pull, what you drive and the boat you ride in wherever they are, on a settlement or off. Not a
+   * stall, a trash crate, a mailbox, a hive, a pond or a barrel. Asked for: "a Work Around Me wildermon will not
+   * store into containers on a settlement".
    */
   aroundStores(site: WorkSite): DeedStore[] {
     const within = ([cx, cy]: [number, number]): boolean => Math.max(Math.abs(cx - (site.x + 0.5)), Math.abs(cy - (site.y + 0.5))) <= site.radius;
     const out: DeedStore[] = [];
     for (const cr of this.crates.values()) {
-      // Only its keeper's to fill (`workerMay`), as at a post: the island's `around_stores` by `worker_crate_ok`.
-      if (within(crateCentre(cr)) && !crateShut(this, cr, ', nothing goes in')) {
+      // Only its keeper's to fill (`workerMay`), as at a post, and off every settlement: the island's `around_stores`
+      // by `worker_crate_ok` and `deed_covers`.
+      if (within(crateCentre(cr)) && !this.deedAt(cr.x, cr.y) && !crateShut(this, cr, ', nothing goes in')) {
         const store = this.crateStore(cr);
         if (store.workerMay) out.push(store);
       }
@@ -9927,8 +9930,9 @@ export class Game {
       if (!held.has(f.id) && !within(furnitureCentre(f))) continue;
       if (def.stall || f.kind === 'mailbox' || def.hive || def.pond || holdsLiquid(f) || pieceShut(this, f)) continue;
       const store = this.furnitureStore(f);
-      // What you pull, drive or are aboard; otherwise only your own to fill (`workerMay`, `worker_piece_ok`).
-      if (store && (held.has(f.id) || store.workerMay)) out.push(store);
+      // What you pull, drive or are aboard; otherwise only your own to fill (`workerMay`, `worker_piece_ok`), and
+      // not on any settlement (`deed_covers`).
+      if (store && (held.has(f.id) || (store.workerMay && !this.deedAt(f.x, f.y)))) out.push(store);
     }
     return out;
   }

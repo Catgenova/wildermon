@@ -9,7 +9,8 @@
  * Ann's settlement at 20, 20 (5 out) and her raw bin at 24, 20; Bo's settlement at 34, 20, its square reaching to 24, and
  * his own bin at 40, 20; Bo's Oremander at 25, 20. Both sides: the load goes to Bo's bin, not Ann's nearer one; off a
  * post beside Ann's crate, not into her crate; put down on Ann's bin's tile, not into it. Ann's own worker still fills
- * Ann's bin, and with no bin of Bo's the load stays out of Ann's.
+ * Ann's bin, and with no bin of Bo's the load stays out of Ann's. Round their keeper, neither fills anything on a
+ * settlement, their own included (`around_stores`).
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
@@ -96,10 +97,14 @@ begin
   select * into c from creature where world_id = w and id = 9901;
   insert into said select 'POST', coalesce((select s.kind || ':' || s.id from worker_store(w, c, 'copper_ore', 1) s limit 1), 'nowhere');
 
-  -- Working around Bo beside Ann's bin and crate (\`around_stores\`): neither, but his own wagon there.
+  -- Working around Bo beside Ann's bin and crate (\`around_stores\`): neither, nor his own wagon standing there on a
+  -- settlement; the wagon once he pulls it.
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'furniture', 'wagon', 25, 22, 0, 0, 25.5, 22.5, 50, '${BO}') returning id into v_post;
   insert into said values ('WAGON', 'furniture:' || v_post);
+  insert into said select 'AROUND_BO_STANDING', coalesce(string_agg(s.kind || ':' || s.id, ',' order by s.kind, s.id), 'none')
+    from around_stores(w, '${BO}', 23, 21, 6) s;
+  update placed set puller = '${BO}' where world_id = w and id = v_post;
   insert into said select 'AROUND_BO', coalesce(string_agg(s.kind || ':' || s.id, ',' order by s.kind, s.id), 'none')
     from around_stores(w, '${BO}', 23, 21, 6) s;
   insert into said select 'AROUND_ANN', coalesce(string_agg(s.kind || ':' || s.id, ',' order by s.kind, s.id), 'none')
@@ -116,10 +121,14 @@ check('island: Ann\'s own worker still fills Ann\'s bin', at('ANNS') === at('ANN
 check('island: put down on Ann\'s bin\'s tile, none goes into it: into his own', at('PUT_ANN') === '0' && at('PUT_BO') === '3', `Ann's ${at('PUT_ANN')}, his ${at('PUT_BO')}`);
 check('island: off a post beside Ann\'s crate, not into the crate', at('POST') !== 'crate:77', at('POST'));
 // Reported: "diglett is running to Cats place like Digimon was": a worker round its keeper filled the neighbour's bins.
-check('island: working around Bo beside Ann\'s bin and crate, only his own wagon is his storage',
+// And asked for: "a Work Around Me wildermon will not store into containers on a settlement": nothing on any
+// settlement, the keeper's own included; what they pull, drive or are aboard wherever it stands.
+check('island: working around Bo beside Ann\'s bin and crate, his own wagon standing on a settlement is not his storage',
+  at('AROUND_BO_STANDING') === 'none', at('AROUND_BO_STANDING'));
+check('island: and pulling that wagon, it is his storage, and nothing else there',
   at('AROUND_BO') === at('WAGON'), `${at('AROUND_BO')} (his wagon ${at('WAGON')})`);
-check('island: working around Ann there, her bin and crate are hers',
-  at('AROUND_ANN').split(',').includes(at('ANN_BIN')) && at('AROUND_ANN').split(',').includes('crate:77'), at('AROUND_ANN'));
+check('island: working around Ann on her own settlement, her bin and crate there are not storage',
+  at('AROUND_ANN') === 'none', at('AROUND_ANN'));
 
 /* ---- in the browser: Bo's game -------------------------------------------------------------------------------- */
 

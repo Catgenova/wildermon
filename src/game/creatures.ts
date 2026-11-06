@@ -1306,6 +1306,12 @@ export const LEARN_PACE_MOST = 4;
  * go of its that comes round at a rate. A hunt is 1: what it learns by is what wild things come onto the deed, which
  * no deed sets. The island's `learn_pace`, off `learn_pace_def`.
  */
+/**
+ * Asked for, on top of the evening out: "Increase the rate the Cartling line gains experience by 3". Its driving's
+ * factor is this many times what the model makes of it (`supabase/test/learnrate.ts` holds it there), so a Wagonox
+ * in the traces levels three times as fast as the median trade, past `LEARN_PACE_MOST`, which bounds only the model.
+ */
+export const PULL_PACE_TIMES = 3;
 export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // Out to the ground and home with a load.
   forage: 0.99, botanize: 1, woodcut: 0.97, farm: 0.96, mine: 1.07, quarry: 1.1, sand: 1.05, clay: 1.07, peat: 1.04,
@@ -1322,7 +1328,7 @@ export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // A spar with a Sparra on the settlement; and what wild things come onto the deed.
   guard: 2.02, hunt: 1,
   // A kind with no trade.
-  out: 1, dark: 3.86, tended: LEARN_PACE_MOST, spar: 0.27, pull: 1.62,
+  out: 1, dark: 3.86, tended: LEARN_PACE_MOST, spar: 0.27, pull: 1.62 * PULL_PACE_TIMES,
   // A Sparra's spar with a guard on a settlement.
   bout: LEARN_PACE_MOST,
 };

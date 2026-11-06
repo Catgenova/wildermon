@@ -2140,7 +2140,7 @@ export function helpText(): string {
     <ul>
       <li><b>Work around me</b> (a wildermon's menu, or its row in the Wildermon window): the wildermon <b>following you</b>, within ${POST_FOLLOW_REACH} tiles; <b>${AROUND_MOST}</b> at a time. Not one in a crate.
       Works its task within <b>its own work range of you</b>, measured from the tile you stand on as you move.</li>
-      <li>Storage: crates and storage furniture you may put into, carts, wagons and boats included, within that range; the cart you pull, what you drive and the boat you are in, wherever they are. Not stalls, trash crates, mailboxes, hives, ponds or barrels.</li>
+      <li>Storage: crates and storage furniture you may put into, carts, wagons and boats included, within that range and <b>not on any settlement</b>; the cart you pull, what you drive and the boat you are in, wherever they are. Not stalls, trash crates, mailboxes, hives, ponds or barrels.</li>
       <li>Loads: the bin that takes them first, then the nearest store with room. No storage in reach: &ldquo;${idleSays({ why: 'nostore', n: SPECIES.rabba.workRange, around: true }, 'forage')}&rdquo; Full: &ldquo;${idleSays({ why: 'full', n: 0, around: true }, 'forage')}&rdquo; Nothing is dropped.</li>
       <li>Tasks: every gathering task, as on a post; and at the stores ${listed(aroundStoreTrades())}, makings out of storage in reach. Settlement only: guarding, stoking, sparring and every task at settlement stations, buildings or wildermon.</li>
       <li><b>Stop</b> (status panel, or <b>Stop work around me</b> on its menu): back to following you; with another following you by then, as a post's worker goes. On the island it also stops when you go offline.</li>

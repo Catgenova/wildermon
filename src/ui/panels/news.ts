@@ -97,7 +97,7 @@ import { BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID
 import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
-import { GATHER_SKILL, LEARN_PACE as PACE_258, sparTaskSays } from '../../game/creatures';
+import { GATHER_SKILL, LEARN_PACE as PACE_258, LEARN_PACE, PULL_PACE_TIMES, sparTaskSays } from '../../game/creatures';
 import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
@@ -4250,6 +4250,14 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 514,
+    day: '2026-11-06',
+    lines: () => [
+      `Changed: ${SPECIES.roxxen.name} line driving learned ${LEARNS_SAYS.pull} (was ${percent(LEARN_PACE.pull / PULL_PACE_TIMES)}): ${PULL_PACE_TIMES}× the rate.`,
+      'Changed: Work around me storage: no crate or storage furniture on any settlement; the cart you pull, what you drive and the boat you are in still count.',
+    ],
   },
   {
     n: 513,

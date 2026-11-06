@@ -36,7 +36,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import {
-  CARE_BONUS, DAIRY_FULL, EVOLVE_AT, footing, GUARD_LEARN, LEARN_PACE, LEARN_PACE_LEAST, LEARN_PACE_MOST, learnPace,
+  CARE_BONUS, DAIRY_FULL, EVOLVE_AT, footing, GUARD_LEARN, LEARN_PACE, LEARN_PACE_LEAST, LEARN_PACE_MOST, learnPace, PULL_PACE_TIMES,
   LEARNS_GAIN, OUT_EVERY, PULL_LEARN, restFor, SPECIES, STAGE_LOADS, STAGE_MUL, TIRE_GOES, workDuration, type GatherKind, type LearnsBy,
 } from '../../src/game/creatures';
 import { skillGain } from '../../src/game/skills';
@@ -268,10 +268,13 @@ const span = (at: GatherKind | LearnsBy, pace: number, now: boolean, rest: Rest 
 // Before: the rules as they were, every trade at 1 and a load a trip. The mark: the median trade then.
 const before = new Map(MEASURED.map((at) => [at, span(at, 1, false)]));
 const MARK: [number, number] = [median(MEASURED.map((at) => before.get(at)![0])), median(MEASURED.map((at) => before.get(at)![1]))];
+/** Asked for on top of the evening out: a factor so many times what the model makes of it (`PULL_PACE_TIMES`). */
+const TIMES: Partial<Record<GatherKind | LearnsBy, number>> = { pull: PULL_PACE_TIMES };
+const timesOf = (at: GatherKind | LearnsBy): number => TIMES[at] ?? 1;
 const ROWS: Row[] = MEASURED.map((at) => {
   // The rules as they are now, at 1: what the factor is worked out from.
   const plain = span(at, 1, true);
-  const derived = Math.min(LEARN_PACE_MOST, Math.max(LEARN_PACE_LEAST, Math.sqrt((plain[0] / MARK[0]) * (plain[1] / MARK[1]))));
+  const derived = Math.min(LEARN_PACE_MOST, Math.max(LEARN_PACE_LEAST, Math.sqrt((plain[0] / MARK[0]) * (plain[1] / MARK[1])))) * timesOf(at);
   return { at, before: before.get(at)!, plain, after: span(at, LEARN_PACE[at], true), derived };
 });
 
@@ -300,11 +303,13 @@ if (process.argv.includes('--table')) {
 for (const r of ROWS) {
   check(`${r.at}: its factor is what its measured go rate makes of it (${r.derived.toFixed(2)})`,
     Math.abs(LEARN_PACE[r.at] - r.derived) <= DRIFT * r.derived, `${LEARN_PACE[r.at]}`);
-  const held = r.derived <= LEARN_PACE_LEAST || r.derived >= LEARN_PACE_MOST;
-  const near = r.after.every((m, i) => Math.abs(m / MARK[i] - 1) <= WITHIN);
-  check(`${r.at}: ${held ? `held at ${r.derived}, as far toward the mark as it may go` : `to level ${EVOLVE_AT[0]} and on to ${EVOLVE_AT[1]} within ${WITHIN * 100}% of the median trade's`}`,
-    held ? Math.abs(r.after[0] / MARK[0] - 1) < Math.abs(r.before[0] / MARK[0] - 1) || near : near,
-    `${r.after.map((m) => Math.round(m)).join(' and ')} minutes against ${MARK.map((m) => Math.round(m)).join(' and ')}`);
+  const times = timesOf(r.at);
+  const mark = MARK.map((m) => m / times) as [number, number];
+  const held = r.derived / times <= LEARN_PACE_LEAST || r.derived / times >= LEARN_PACE_MOST;
+  const near = r.after.every((m, i) => Math.abs(m / mark[i] - 1) <= WITHIN);
+  check(`${r.at}: ${held ? `held at ${r.derived}, as far toward the mark as it may go` : `to level ${EVOLVE_AT[0]} and on to ${EVOLVE_AT[1]} within ${WITHIN * 100}% of the median trade's${times !== 1 ? ` over ${times}` : ''}`}`,
+    held ? Math.abs(r.after[0] / mark[0] - 1) < Math.abs(r.before[0] / mark[0] - 1) || near : near,
+    `${r.after.map((m) => Math.round(m)).join(' and ')} minutes against ${mark.map((m) => Math.round(m)).join(' and ')}`);
 }
 check('every trade and way of learning is measured but a hunt, which is 1',
   (Object.keys(LEARN_PACE) as Array<GatherKind | LearnsBy>).every((at) => MEASURED.includes(at) || (at === 'hunt' && LEARN_PACE[at] === 1)),
