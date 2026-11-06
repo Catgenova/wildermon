@@ -44,8 +44,10 @@ export interface Material {
   metal?: boolean;
   /** The eye's parts: drawn in the lid's colour (the first material's, a shade darker) while the lids are shut. */
   eye?: boolean;
-  /** The face's planes: the shadow tone only on a plane turned well away from the light, so a lit face keeps its facets in the base and light tones. */
+  /** The face's planes: four tones rather than three, a half-shadow between the base and the shadow, so a plane turned a little from the light steps down rather than falling to the dark. */
   soft?: boolean;
+  /** A small part standing off the body (an ear): the silhouette ink next to it is thin, so it reads as the part and not as its line. */
+  thinInk?: boolean;
   /** No ink inside the silhouette: a mitt's grooves and tips are read by their shading alone. */
   noInk?: boolean;
   /** No ink along a crease between two of its facets (a part standing in front of another is still inked): the face's planes. */

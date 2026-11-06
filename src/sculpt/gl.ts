@@ -77,7 +77,7 @@ void main() {
   int flags = int(uMat[mi].a + 0.5);
   // Lids shut: the eye's parts take the lid's colour, the first material's a shade darker, and shade as skin.
   if (uBlink > 0.5 && (flags & 8) != 0) { base = uMat[0].rgb * 0.94; flags = 2; }
-  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0;
+  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0;
   float dl = dot(n, uL);
   vec3 c = base;
   if (uMode > 0.5) {
@@ -94,12 +94,13 @@ void main() {
     bool warm = h.x < 0.2 || h.x > 0.9;
     float aa = fwidth(dl) * 1.2;
     float shadowAt = soft ? -0.62 : (skin ? -0.35 : -0.1), lightAt = metal ? 0.78 : (skin ? 0.72 : 0.64);
+    // The face's half-shadow: a plane turned a little from the light, between the base and the shadow.
+    float halfSh = soft ? (1.0 - smoothstep(-0.25 - aa, -0.25 + aa, dl)) * 0.5 : 0.0;
     float sh = 1.0 - smoothstep(shadowAt - aa, shadowAt + aa, dl);
     float li = smoothstep(lightAt - aa, lightAt + aa, dl);
     vec3 shadow, light;
     if (skin) {
-      // The face's planes take a gentler shadow: a plane turned from the light is one step darker, not a hole.
-      shadow = soft ? hsv2rgb(vec3(fract(h.x - 0.025), min(1.0, h.y * 1.12), h.z * 0.86)) : hsv2rgb(vec3(fract(h.x - 0.035), min(1.0, h.y * 1.22), h.z * 0.74));
+      shadow = hsv2rgb(vec3(fract(h.x - 0.035), min(1.0, h.y * 1.22), h.z * 0.74));
       light = hsv2rgb(vec3(h.x, h.y * 0.9, min(1.0, h.z * 1.05)));
     } else {
       float toS = warm ? 0.02 : 0.78; float dS = toS - h.x; dS -= floor(dS + 0.5);
@@ -107,7 +108,7 @@ void main() {
       float toL = warm ? 0.15 : 0.5; float dL = toL - h.x; dL -= floor(dL + 0.5);
       light = hsv2rgb(vec3(fract(h.x + dL * 0.08), h.y * (metal ? 0.6 : 0.88), min(1.0, h.z * (metal ? 1.2 : 1.1) + 0.02)));
     }
-    c = mix(mix(base, light, li), shadow, sh);
+    c = mix(mix(base, light, li), shadow, max(sh, halfSh));
     // A rim where the surface turns from the viewer, in the shadow's hue: the form's edge read without a line.
     float rim = pow(1.0 - clamp(dot(n, uT), 0.0, 1.0), 4.0);
     c = mix(c, shadow, rim * 0.2 * (1.0 - li));
@@ -117,7 +118,7 @@ void main() {
   if (!emissive && uMode < 0.5) c = mix(c, vec3(12.0, 20.0, 44.0) / 255.0, uNight * 0.68);
   oCol = vec4(c, 1.0);
   oNd = vec4(n * 0.5 + 0.5, vDepth);
-  oId = vec4(float(mi) / 255.0, emissive ? 1.0 : 0.0, noInk ? 1.0 : (noCrease ? 0.5 : 0.0), 1.0);
+  oId = vec4(float(mi) / 255.0, emissive ? 1.0 : 0.0, noInk ? 1.0 : (noCrease ? 0.5 : 0.0), thinInk ? 0.5 : 1.0);
 }`;
 
 const EDGE_VS = `#version 300 es
@@ -143,7 +144,7 @@ void main() {
         float t = float(k) / 6.0 * uInk;
         if (t >= best) break;
         vec4 sm = texture(uCol, vUv + dir * t);
-        if (sm.a > 0.5) { sil = 1.0; best = t; near = sm.rgb; break; }
+        if (sm.a > 0.5) { if (texture(uId, vUv + dir * t).a > 0.75 || t <= uInk * 0.4) { sil = 1.0; best = t; near = sm.rgb; } break; }
       }
     }
   }
@@ -289,7 +290,7 @@ function matsOf(ms: Material[]): Float32Array {
   ms.forEach((m, i) => {
     if (i >= MAX_MATS) return;
     const c = hexOf(m.colour);
-    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0)], i * 4);
+    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0)], i * 4);
   });
   MATS.set(ms, f);
   return f;

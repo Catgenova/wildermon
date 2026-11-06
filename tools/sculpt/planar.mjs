@@ -75,7 +75,7 @@ const HV = {
   E0: [[0.05, 0.565, 0.31], [0.05, 0.545, 0.29]], E1: [[0.29, 0.56, 0.21], [0.29, 0.54, 0.19]], E2: [[0.29, 0.44, 0.23], [0.285, 0.4, 0.21]], E3: [[0.08, 0.45, 0.33], [0.08, 0.41, 0.31]],
   // The nose: a long wedge from the glabella to the tip, a third of the face: a ridge plane catching the light, a side
   // plane each way turned well round, a flat underside.
-  N0: [[0.03, 0.578, 0.365], [0.025, 0.558, 0.345]], N1: [[0.08, 0.5, 0.33], [0.07, 0.47, 0.31]], N2: [[0.045, 0.31, 0.5], [0.04, 0.28, 0.45]],
+  N0: [[0.03, 0.578, 0.315], [0.025, 0.558, 0.3]], N1: [[0.08, 0.5, 0.3], [0.07, 0.47, 0.285]], N2: [[0.045, 0.31, 0.52], [0.04, 0.28, 0.465]],
   N3: [[0.115, 0.33, 0.35], [0.1, 0.3, 0.32]], N4: [[0, 0.262, 0.4], [0, 0.242, 0.37]], N5: [[0.09, 0.262, 0.34], [0.08, 0.242, 0.31]],
   // The cheekbone, the hollow cheek, the jaw and the chin.
   C0: [[0.31, 0.3, 0.08], [0.29, 0.31, 0.08]], C1: [[0.18, 0.41, 0.31], [0.17, 0.38, 0.29]], C2: [[0.12, 0.26, 0.33], [0.1, 0.24, 0.3]], C3: [[0.26, 0.19, 0.17], [0.21, 0.17, 0.16]],
@@ -85,8 +85,10 @@ const HV = {
   K0: [[0, -0.03, 0.08], [0, -0.02, 0.06]], K1: [[0.17, -0.03, 0.03], [0.12, -0.02, 0.02]], K2: [[0.24, -0.02, -0.1], [0.16, -0.01, -0.08]], K3: [[0.25, 0.0, -0.2], [0.165, 0.0, -0.17]],
   K4: [[0.2, 0.02, -0.3], [0.13, 0.02, -0.26]], K5: [[0.11, 0.03, -0.35], [0.07, 0.03, -0.3]], K6: [[0, 0.04, -0.37], [0, 0.04, -0.32]],
   // The ear: a wedge off the skull's side, its outer face flat.
-  EA0: [[0.335, 0.54, -0.02], [0.33, 0.49, -0.02]], EA1: [[0.33, 0.53, -0.16], [0.325, 0.48, -0.15]], EA2: [[0.33, 0.3, -0.16], [0.325, 0.29, -0.15]], EA3: [[0.335, 0.3, -0.02], [0.33, 0.29, -0.02]],
-  EF0: [[0.4, 0.52, -0.03], [0.4, 0.47, -0.03]], EB0: [[0.41, 0.5, -0.11], [0.41, 0.45, -0.1]], EF1: [[0.385, 0.34, -0.03], [0.385, 0.32, -0.03]], EB1: [[0.39, 0.33, -0.11], [0.39, 0.31, -0.1]],
+  // The ear's root sits inside the skull at every height, so it joins it with no gap; its outer face a touch further out
+  // than the picture's, for the island's small view.
+  EA0: [[0.29, 0.54, -0.02], [0.285, 0.49, -0.02]], EA1: [[0.285, 0.53, -0.16], [0.28, 0.48, -0.15]], EA2: [[0.27, 0.3, -0.16], [0.265, 0.29, -0.15]], EA3: [[0.275, 0.3, -0.02], [0.27, 0.29, -0.02]],
+  EF0: [[0.44, 0.52, -0.03], [0.42, 0.47, -0.03]], EB0: [[0.45, 0.5, -0.11], [0.43, 0.45, -0.1]], EF1: [[0.425, 0.34, -0.03], [0.405, 0.32, -0.03]], EB1: [[0.43, 0.33, -0.11], [0.41, 0.31, -0.1]],
 };
 /** The facets, right half, as names round each; `d` a direction hint for the normal where the head's middle misleads. */
 const HF = [
@@ -113,14 +115,14 @@ const HF = [
   { f: ['CH0', 'J1', 'K1', 'K0'], d: [0, -1, 0] }, { f: ['J1', 'J0', 'K2', 'K1'], d: [0, -1, 0] }, { f: ['J0', 'Q0', 'K3', 'K2'], d: [0, -1, 0] },
   { f: ['Q0', 'Q1', 'K4', 'K3'], d: [0, -1, 0] }, { f: ['Q1', 'Q2', 'K6', 'K5', 'K4'], d: [0, -1, 0] },
   // The ear.
-  { f: ['EF0', 'EB0', 'EB1', 'EF1'], d: [1, 0, 0] }, { f: ['EA0', 'EF0', 'EF1', 'EA3'], d: [0, 0, 1] }, { f: ['EA1', 'EA2', 'EB1', 'EB0'], d: [0, 0, -1] },
-  { f: ['EA0', 'EA1', 'EB0', 'EF0'], d: [0, 1, 0] }, { f: ['EA3', 'EF1', 'EB1', 'EA2'], d: [0, -1, 0] }, { f: ['EA0', 'EA1', 'EA2', 'EA3'], d: [-1, 0, 0] },
+  { f: ['EF0', 'EB0', 'EB1', 'EF1'], d: [1, 0, 0], r: 14 }, { f: ['EA0', 'EF0', 'EF1', 'EA3'], d: [0, 0, 1], r: 14 }, { f: ['EA1', 'EA2', 'EB1', 'EB0'], d: [0, 0, -1], r: 14 },
+  { f: ['EA0', 'EA1', 'EB0', 'EF0'], d: [0, 1, 0], r: 14 }, { f: ['EA3', 'EF1', 'EB1', 'EA2'], d: [0, -1, 0], r: 14 }, { f: ['EA0', 'EA1', 'EA2', 'EA3'], d: [-1, 0, 0], r: 14 },
 ];
 /** The throat ring's order, round from the front centre over the body's left (u > 0) to the back and round. */
 const THROAT = ['K0', 'K1', 'K2', 'K3', 'K4', 'K5', 'K6', "K5'", "K4'", "K3'", "K2'", "K1'"];
 /** The eyes and the brows: [u0, u1, v0, v1] of the rectangle, man and woman; the brow's ends and middle heights. */
 const EYE = { man: [0.13, 0.178, 0.49, 0.532], woman: [0.135, 0.191, 0.433, 0.486] };
-const BROW = { man: { u: [0.075, 0.18, 0.285], top: [0.612, 0.614, 0.604], h: 0.022 }, woman: { u: [0.085, 0.19, 0.3], top: [0.578, 0.591, 0.573], h: 0.015 } };
+const BROW = { man: { u: [0.075, 0.18, 0.285], top: [0.616, 0.618, 0.608], h: 0.03 }, woman: { u: [0.085, 0.19, 0.3], top: [0.581, 0.594, 0.576], h: 0.02 } };
 
 /**
  * The head for one body in MakeHuman's space. `L`: chin and crown heights, the skull's centre depth `zc`; `base`: the
@@ -135,13 +137,13 @@ export function tracedHead(L, base, style, f) {
   const HEAD = [['head', 1]], THR = [['head', 0.5], ['neck', 0.5]], NECK = [['neck', 1]];
   const wOf = (name) => (name.startsWith('K') ? THR : HEAD);
   const inside = P([0, 0.5, -0.05]);
-  const push = (names, d, mirror) => {
+  const push = (names, d, mirror, region = 1) => {
     const list = mirror ? names.map((n) => (HV[n][col][0] === 0 ? n : `${n}'`)) : names;
     const pts = list.map(V);
     const dir = d ? (mirror ? [-d[0], d[1], d[2]] : d) : null;
-    f.facet(pts, 1, pts.map((_, i) => wOf(list[i])), dir ?? inside, !!dir);
+    f.facet(pts, region, pts.map((_, i) => wOf(list[i])), dir ?? inside, !!dir);
   };
-  for (const { f: names, d } of HF) { push(names, d, false); if (!names.some((n) => n.endsWith("'"))) push(names, d, true); }
+  for (const { f: names, d, r } of HF) { push(names, d, false, r); if (!names.some((n) => n.endsWith("'"))) push(names, d, true, r); }
   f.loft(base, THROAT.map(V), 1, NECK, THR);
   // The eyes: a dark rectangle a hair off the socket plane; the brows: a slab on the shelf's front, its top lit.
   const plane = (names) => { const pts = names.map(V); const n = unit(newellOf(pts)); return { pts, n, at: (u, v) => { const p = pts[0]; const uu = u * H, vv = L.chin + v * H; return [uu, vv, n[2] !== 0 ? p[2] - (n[0] * (uu - p[0]) + n[1] * (vv - p[1])) / n[2] : p[2]]; } }; };
@@ -153,12 +155,14 @@ export function tracedHead(L, base, style, f) {
     // The rectangle's top edge a lighter slate, a hair in front, so it reads set in.
     const le = eye[3], lb = eye[3] - 0.007;
     f.facet([[s * eye[0], le], [s * eye[1], le], [s * eye[1], lb], [s * eye[0], lb]].map(([u, v]) => add(sock.at(u, v), mul(sock.n, 0.016 * H))), 7, HEAD, sock.n, true);
-    const shelf = plane(s > 0 ? ['B0', 'B1', 'S1', 'S0'] : ["B0'", "B1'", "S1'", "S0'"]);
-    const out = mul(shelf.n, 0.015 * H);
+    // The brow lies on the shelf's front: its inner plane to the corner at B1, the outer plane past it round the temple.
+    const shelfIn = plane(s > 0 ? ['B0', 'B1', 'S1', 'S0'] : ["B0'", "B1'", "S1'", "S0'"]), shelfOut = plane(s > 0 ? ['B1', 'B2', 'S2', 'S1'] : ["B1'", "B2'", "S2'", "S1'"]);
+    const corner = HV.B1[col][0];
+    const on = (u, v) => { const sh = Math.abs(u) <= corner ? shelfIn : shelfOut; return add(sh.at(u, v), mul(sh.n, 0.015 * H)); };
     for (let i = 0; i + 1 < bw.u.length; i++) {
       const u0 = s * bw.u[i], u1 = s * bw.u[i + 1], t0 = bw.top[i], t1 = bw.top[i + 1];
-      const a = add(shelf.at(u0, t0), out), b = add(shelf.at(u1, t1), out), c = add(shelf.at(u1, t1 - bw.h), out), d = add(shelf.at(u0, t0 - bw.h), out);
-      f.facet([a, b, c, d], 8, HEAD, shelf.n, true);
+      const a = on(u0, t0), b = on(u1, t1), c = on(u1, t1 - bw.h), d = on(u0, t0 - bw.h);
+      f.facet([a, b, c, d], 8, HEAD, (Math.abs(u1) <= corner ? shelfIn : shelfOut).n, true);
     }
   }
   return { chin: V('CH0'), crown: V('A0'), skull: Object.keys(HV).flatMap((n) => [V(n), V(`${n}'`)]) };

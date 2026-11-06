@@ -4,6 +4,7 @@
 //   node tools/sculpt/shot.mjs --out /some/dir --only lineup,close    # also: design, garment, overlay, live, iou, hands, stats
 //   node tools/sculpt/shot.mjs --out /some/dir --who female     # the woman (default male; also neither, seven, five)
 //   node tools/sculpt/shot.mjs --out /some/dir --hair bald      # the look's hairstyle: tousled (default) or bald
+//   node tools/sculpt/shot.mjs --out /some/dir --ink 0          # the ink's width in px on every sheet (0: none), for looking at the shapes alone
 //   node tools/sculpt/shot.mjs --stats                          # the bake's numbers and the cost of a crowd, no sheets
 //
 // Uses Playwright's Chromium at /opt/pw-browsers/chromium with software GL, and esbuild from node_modules; never `playwright install`.
@@ -18,6 +19,8 @@ const flag = (name) => args.includes(`--${name}`);
 const out = resolve(opt('out', 'tmp/sculpt'));
 const who = opt('who', 'male');
 const hair = opt('hair', 'tousled'); // the look's hairstyle: tousled (the sheet's) or bald
+const pitch = opt('pitch', ''); // the head's pitch up on the island, degrees, in place of the sculpt's own
+const ink = opt('ink', ''); // the ink's width in screen px for every sheet, in place of the renderer's own (0 for none)
 const only = opt('only', 'compare,lineup,facings,motion,close,night,debug').split(',');
 mkdirSync(out, { recursive: true });
 
@@ -43,7 +46,7 @@ const b = await chromium.launch({ ...(existsSync(kept) ? { executablePath: kept 
 const p = await b.newPage({ viewport: { width: 2000, height: 1000 }, deviceScaleFactor: 2 });
 p.on('pageerror', (e) => console.log('ERR', e.message));
 p.on('console', (m) => { if (m.type() === 'error' || m.text().startsWith('ERR')) console.log('console', m.text()); });
-await p.setContent(`<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding:4px"></div><script>window.REF=${JSON.stringify(ref)};window.REF8=${JSON.stringify(ref8)};window.REF9=${JSON.stringify(ref9)};window.REF10=${JSON.stringify(ref10)};window.HAIR=${JSON.stringify(hair)}</script></body></html>`);
+await p.setContent(`<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding:4px"></div><script>window.REF=${JSON.stringify(ref)};window.REF8=${JSON.stringify(ref8)};window.REF9=${JSON.stringify(ref9)};window.REF10=${JSON.stringify(ref10)};window.HAIR=${JSON.stringify(hair)};window.INK=${ink === '' ? 'undefined' : +ink};window.PITCH=${pitch === '' ? 'undefined' : +pitch}</script></body></html>`);
 await p.addScriptTag({ content: js });
 await p.waitForFunction('window.READY');
 console.log('gl:', await p.evaluate(() => window.SCULPT.glInfo()));

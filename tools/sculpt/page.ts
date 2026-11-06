@@ -92,7 +92,8 @@ function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?:
       if (o.night) { c.g.fillStyle = `rgba(12, 20, 44, ${0.68 * o.night})`; c.g.fillRect(0, 0, c.w, c.h); }
       return;
     }
-    if (!drawSculpt(c.g, c.fx, c.fy, zoom, { ...pose, look: lookOf(who) }, { P: PROPS[who], kind: kindOf(who), dpr: DPR, now: 1, ...o })) drawFigure(c.g, c.fx, c.fy, zoom, pose);
+    const { INK: ink, PITCH: pitch } = window as unknown as { INK?: number; PITCH?: number };
+    if (!drawSculpt(c.g, c.fx, c.fy, zoom, { ...pose, look: lookOf(who) }, { P: PROPS[who], kind: kindOf(who), dpr: DPR, now: 1, ...(ink === undefined ? {} : { ink }), ...(pitch === undefined ? {} : { pitch }), ...o })) drawFigure(c.g, c.fx, c.fy, zoom, pose);
   } catch (e) {
     c.g.fillStyle = 'red'; c.g.font = '10px sans-serif';
     c.g.fillText(String(e).slice(0, 80), 2, 12);

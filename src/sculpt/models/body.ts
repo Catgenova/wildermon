@@ -21,7 +21,7 @@ import {
 } from '../sdf';
 
 /** The materials, by index. */
-export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19, face: 20, hand: 21, lid: 22 } as const;
+export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19, face: 20, hand: 21, lid: 22, ear: 23 } as const;
 
 /** What the body wears: the game's undershirt and trousers, or the reference sheet's shorts over bare skin. */
 export type Wear = 'base' | 'shorts';
@@ -45,7 +45,7 @@ export function bodyMaterials(look: Look): Material[] {
   out[M.pupil] = { colour: mixHex(eye, '#262a33', 0.85), eye: true };
   out[M.glint] = { colour: '#fffaf0', eye: true };
   // The brow: a deep warm brown, the hair's colour toward the skin's ink.
-  out[M.brow] = { colour: mixHex(mixHex(hair, inkOf(out[M.skin].colour), 0.6), '#8a5a3a', 0.3) };
+  out[M.brow] = { colour: mixHex(mixHex(hair, inkOf(out[M.skin].colour), 0.7), '#7a4a30', 0.3) };
   out[M.lash] = { colour: mixHex(hair, '#2a1a24', 0.7) };
   out[M.shorts] = { colour: '#454a54' };
   // The hair's highlight shape, a lilac of the hair's own, and the teal that streaks two clumps, as the sheet's palette.
@@ -64,6 +64,7 @@ export function bodyMaterials(look: Look): Material[] {
   out[M.crease] = { colour: inkOf(out[M.skin].colour) };
   // The face's planes shade soft (the shadow tone only well away from the light); the mitt has no ink inside its edge.
   out[M.face] = { ...out[M.skin], soft: true, noCrease: true };
+  out[M.ear] = { ...out[M.skin], noInk: true, thinInk: true };
   out[M.brow].noCrease = true; out[M.pupil].noCrease = true;
   out[M.hand] = { ...out[M.skin], noInk: true };
   // The eye's top edge, a lighter slate, so the rectangle reads set in.
