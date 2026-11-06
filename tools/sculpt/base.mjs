@@ -71,7 +71,8 @@ const STYLE = [
   ['head/head-scale-vert-incr', 0.1], ['head/head-scale-horiz-incr', 0.1], ['head/head-scale-depth-incr', 0.05],
   ['eyes/l-eye-scale-incr', 0.4], ['eyes/r-eye-scale-incr', 0.4], ['eyes/l-eye-height2-incr', 1.0], ['eyes/r-eye-height2-incr', 1.0], ['eyes/l-eye-height1-incr', 0.5], ['eyes/r-eye-height1-incr', 0.5],
   ['nose/nose-scale-vert-decr', 0.25], ['nose/nose-scale-horiz-decr', 0.1],
-  ['chin/chin-width-decr', 0.5], ['chin/chin-prominent-decr', 0.3],
+  ['chin/chin-width-decr', 0.8], ['chin/chin-prominent-decr', 0.2], ['chin/chin-triangle', 0.35], ['head/head-invertedtriangular', 0.4],
+  ['cheek/l-cheek-bones-incr', 0.3], ['cheek/r-cheek-bones-incr', 0.3], ['cheek/l-cheek-trans-up', 0.3], ['cheek/r-cheek-trans-up', 0.3],
 ];
 const BODIES = {
   man: macro('male', { muscle: 1.0, weight: 0.55, proportions: 1.0, extra: [...STYLE, ['torso/torso-scale-horiz-incr', 0.35], ['torso/torso-vshape-incr', 0.4], ['armslegs/l-upperarm-shoulder-muscle-incr', 0.6], ['armslegs/r-upperarm-shoulder-muscle-incr', 0.6]] }),
@@ -304,15 +305,17 @@ function extras(b, shared) {
     const s = e.c[0] < 0 ? -1 : 1;
     // An almond on a sphere larger than the eyeball, set a little wider than the base's, its front just proud of the lids;
     // the outer corner a touch lower. The white shows at the corners round a large dark iris.
-    const R = e.r * 1.5, lid = skinZ(e.c[0], e.c[1]);
+    const R = e.r * 1.95, lid = skinZ(e.c[0], e.c[1]);
     const c = [e.c[0] + s * 0.04, e.c[1] + 0.02, lid + 0.025 - R];
     const N = 16, rings = [0, 0.45, 0.8, 1.0];
     const on = (t, f) => {
-      const outer = Math.cos(t) * s, th = 1.05 * Math.cos(t) * f, up = Math.sin(t) >= 0 ? 0.42 : 0.34;
-      const tv = (up * Math.sin(t) * (1 - 0.2 * Math.cos(t) * Math.cos(t)) - 0.1 * Math.max(0, outer)) * f;
+      const outer = Math.cos(t) * s, th = 1.0 * Math.cos(t) * f, up = Math.sin(t) >= 0 ? 0.48 : 0.38;
+      const tv = (up * Math.sin(t) * (1 - 0.2 * Math.cos(t) * Math.cos(t)) - 0.12 * Math.max(0, -outer)) * f;
       return [c[0] + R * Math.sin(th) * Math.cos(tv), c[1] + R * Math.sin(tv), c[2] + R * Math.cos(th) * Math.cos(tv)];
     };
-    const irisC = [c[0] - s * R * 0.04, c[1] - 0.02, c[2] + R], irisR = R * 0.5;
+    const irisC = [c[0] - s * R * 0.04, c[1] - 0.02, c[2] + R], irisR = R * 0.46;
+    // A lash tick at the outer corner, flicked up and out.
+    { const o = on(s > 0 ? 0 : Math.PI, 1.0); const q = (dx, dy) => [o[0] + s * dx, o[1] + dy, o[2] + 0.006]; const t0 = add(q(0, 0.03), 7), t1 = add(q(0, -0.02), 7), t2 = add(q(0.12, 0.09), 7); out.tris.push([t0, t1, t2], [t0, t2, t1]); }
     const dist = (p) => Math.hypot(p[0] - irisC[0], p[1] - irisC[1], p[2] - irisC[2]);
     const centre = add(irisC, 5, irisR);
     const ring = rings.slice(1).map((f) => Array.from({ length: N }, (_, i) => { const p = on((i / N) * Math.PI * 2, f); return add(p, 5, irisR - dist(p)); }));
@@ -346,7 +349,7 @@ function extras(b, shared) {
   }
   // The hair: a shell of the scalp's own faces pushed out, and over it the sheet's wedges -- a fringe mass swept over the
   // forehead with pointed tips, side masses over the ears, a tousled top with two cowlicks, a mass down the nape.
-  const hairline = (p) => (p[2] > 0.3 ? ey + 0.55 : p[2] > -0.3 ? ey + 0.25 : ey - 0.15);
+  const hairline = (p) => (p[2] > 0.3 ? ey + 0.55 : p[2] > -0.3 ? ey + 0.1 : ey + 0.05);
   const scalp = shared ?? new Set(face.filter((i) => V[i][1] > hairline(V[i])));
   out.scalp = scalp;
   const nrm = new Map();
@@ -361,7 +364,7 @@ function extras(b, shared) {
   for (const i of scalp) {
     const n = nrm.get(i); if (!n) continue; const l = Math.hypot(...n) || 1;
     const p = V[i], edge = p[1] < hairline(p) + 0.2;
-    const h = (edge ? 0.2 : 0.34) + 0.08 * hash(i);
+    const h = (edge ? 0.08 : 0.14) + 0.04 * hash(i);
     hid.set(i, add([p[0] + (n[0] / l) * h, p[1] + (n[1] / l) * h - (edge ? 0.08 : 0), p[2] + (n[2] / l) * h], 9));
   }
   for (const tr of tris) if (tr.every((i) => hid.has(i))) out.tris.push(tr.map((i) => hid.get(i)));
@@ -393,20 +396,21 @@ function extras(b, shared) {
     if (!r) r = 0.9;
     return [c0[0] + d[0] * (r + out), c0[1] + d[1] * (r + out), c0[2] + d[2] * (r + out)];
   };
-  const W = (a, b, c, w0, w1, h0, h1) => { const p1 = H(...b); const up = [p1[0] - c0[0], p1[1] - c0[1], p1[2] - c0[2]]; wedge([H(...a), p1, H(...c)], w0 * 1.4, w1 * 1.4, h0 * 1.5, h1 * 1.5, up); };
-  W([-55, 40, 0.14], [-5, 50, 0.24], [52, 6, 0.1], 0.42, 0.2, 0.24, 0.08);
-  W([-26, 36, 0.14], [-22, 14, 0.17], [-16, -6, 0.1], 0.18, 0.03, 0.09, 0.02);
-  W([4, 40, 0.16], [10, 14, 0.19], [17, -8, 0.1], 0.2, 0.03, 0.09, 0.02);
-  W([34, 34, 0.14], [42, 10, 0.16], [52, -10, 0.08], 0.18, 0.03, 0.08, 0.02);
-  W([-50, 30, 0.12], [-60, 8, 0.14], [-66, -12, 0.08], 0.16, 0.03, 0.08, 0.02);
-  for (const s of [-1, 1]) {
-    W([s * 70, 42, 0.12], [s * 96, 10, 0.2], [s * 102, -32, 0.12], 0.32, 0.14, 0.2, 0.07);
-    W([s * 128, 32, 0.14], [s * 146, -4, 0.2], [s * 142, -46, 0.08], 0.3, 0.14, 0.18, 0.07);
+  const W = (a, b, c, w0, w1, h0, h1) => { const p1 = H(...b); const up = [p1[0] - c0[0], p1[1] - c0[1], p1[2] - c0[2]]; wedge([H(...a), p1, H(...c)], w0, w1, h0, h1, up); };
+  // Wedges radiating from the crown, each a flattened taper with a wide base on the skull and a pointed free end, the
+  // lengths varied so it reads tousled: four long ones swept across to the body's left and down over the forehead to
+  // just above the brows; two at each temple pointing down over the ear; six on top pointing up and back every way;
+  // three down the nape to the collar.
+  const vary = (k, x) => x * (0.85 + 0.3 * hash(k * 31 + 7));
+  const fringe = [[-48, 62, 30, 4], [-30, 64, 40, -2], [-10, 66, 50, -8], [12, 64, 58, -10]];
+  fringe.forEach(([a0, e0, a1, e1], k) => { const mid = [(a0 + a1) / 2 - 8, (e0 + e1) / 2 + 10, 0.34]; W([a0, e0, 0.28], mid, [a1, vary(k, e1 + 10) - 10, 0.06], 0.3, 0.03, 0.2, 0.02); });
+  for (const sd of [-1, 1]) {
+    W([sd * 58, 48, 0.24], [sd * 82, 20, 0.26], [sd * 96, vary(sd + 3, -12), 0.06], 0.26, 0.03, 0.17, 0.02);
+    W([sd * 78, 42, 0.22], [sd * 104, 16, 0.24], [sd * 114, vary(sd + 5, -22), 0.05], 0.22, 0.03, 0.15, 0.02);
   }
-  W([-40, 70, 0.14], [0, 85, 0.26], [45, 62, 0.14], 0.44, 0.24, 0.24, 0.1);
-  W([165, 62, 0.16], [150, 74, 0.5], [120, 78, 0.78], 0.13, 0.02, 0.1, 0.02);
-  W([-30, 72, 0.16], [-60, 80, 0.46], [-92, 82, 0.72], 0.12, 0.02, 0.09, 0.02);
-  W([180, 42, 0.14], [180, 0, 0.26], [180, -52, 0.1], 0.72, 0.45, 0.26, 0.12);
+  const crownWedges = [[-20, 66, 150, 40], [40, 64, 205, 44], [100, 62, 245, 38], [160, 66, 295, 42], [220, 62, 335, 40], [290, 64, 30, 44]];
+  crownWedges.forEach(([a0, e0, a1, e1], k) => W([a0, e0, 0.16], [(a0 + a1) / 2, (e0 + e1) / 2 + 22, vary(k + 11, 0.34)], [a1, e1, vary(k + 17, 0.3)], 0.3, 0.03, 0.18, 0.02));
+  for (const [k, az] of [[0, 150], [1, 180], [2, 210]]) W([az, 34, 0.22], [az + (az - 180) * 0.2, -10, 0.24], [az + (az - 180) * 0.3, vary(k + 23, -58), 0.05], 0.3, 0.04, 0.18, 0.02);
   return out;
 }
 const exMan = extras(bodies.man), exWoman = extras(bodies.woman, exMan.scalp);
