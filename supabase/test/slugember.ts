@@ -300,8 +300,11 @@ for (const [want, near, far] of [
   const f = g.addCampfire(23, 20, 0, 0, 0, false);
   const c = worker(g, LOW);
   run(g, 30);
+  // How many trips fit in the thirty seconds is the walk's, so the fire holds one or more pieces of the wanted fuel
+  // and nothing else: a whole number of its value, and only tar gone from the far store.
+  const pieces = f.fuel / FUEL_VALUES[want];
   check(`in the browser, a stoker takes ${want} first${want === 'tar' ? ', from the far store' : ''}`,
-    f.fuel === FUEL_VALUES[want] && (want !== 'tar' || inCrate(farCrate) === 'tar 4'), `${f.fuel} ${inCrate(farCrate)} ${c.idle?.why}`);
+    pieces >= 1 && Number.isInteger(pieces) && (want !== 'tar' || inCrate(farCrate) === `tar ${5 - pieces}`), `${f.fuel} ${inCrate(farCrate)} ${c.idle?.why}`);
 }
 {
   const g = body();
