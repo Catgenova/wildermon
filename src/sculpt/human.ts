@@ -89,7 +89,7 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
 }
 
 /** The base at a band, carried onto `rest` (our rig at the asset's proportions), in the look's wear, as a bake. */
-export function humanBaked(fem: number, band: Band, rest: Bones, order: string[], wear: Wear): Baked {
+export function humanBaked(fem: number, band: Band, rest: Bones, order: string[], wear: Wear, bald = false): Baked {
   const t0 = performance.now();
   const ab = A.bands[band];
   const P = humanProportions(fem);
@@ -119,8 +119,9 @@ export function humanBaked(fem: number, band: Band, rest: Bones, order: string[]
       y += w * (c.joint[1] + R[3] * d[0] + R[4] * d[1] + R[5] * d[2]);
       z += w * (c.joint[2] + R[6] * d[0] + R[7] * d[1] + R[8] * d[2]);
     }
-    // Bare for the reference sheets means bald too: the pictures are, and the hair would count against the overlap.
-    if (wear === 'shorts' && ab.region[i] === 9) { const h = at(rest, 'head'); x = h[0]; y = h[1]; z = h[2]; }
+    // Bald (the look's hairstyle, or bare for the reference sheets: the pictures are, and the hair would count against the
+    // overlap) folds the hair's shell and clumps into the head's joint, where they draw nothing.
+    if ((bald || wear === 'shorts') && (ab.region[i] === 9 || ab.region[i] === 12)) { const h = at(rest, 'head'); x = h[0]; y = h[1]; z = h[2]; }
     pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
   }
   // Smooth normals from the carried mesh.
