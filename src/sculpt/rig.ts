@@ -288,7 +288,8 @@ export function bonesOf(r: Rig, P: Proportions, chains: Chain[], x: Extras): Bon
     b[`index${k}`] = joint(b[`wrist${k}`], P.handIndex ? inHand(P.handIndex) : [0, P.r.wrist * 1.1, -P.palm], 0, s * ci * 100, 0);
     const thumbAt: V3 = P.handThumb ? inHand(P.handThumb) : [-s * P.r.wrist * 0.3, P.r.wrist * 1.1, -P.palm * 0.3];
     const open: V3 = P.handThumbDir ? inHand(P.handThumbDir) : [-s * 0.2, 0.5, -0.84];
-    const fist: V3 = [-s * 0.9, -0.1, -0.42];
+    // Closed, the thumb lies across the folded fingers toward the little finger, on the palm's side, angled down the hand.
+    const fist: V3 = [-s * 0.3, -0.8, -0.52];
     const d = unit([open[0] + (fist[0] - open[0]) * c, open[1] + (fist[1] - open[1]) * c, open[2] + (fist[2] - open[2]) * c]);
     // The frame whose down axis lies along `d`: a pitch about x then a roll about y.
     b[`thumb${k}`] = joint(b[`wrist${k}`], thumbAt, Math.asin(clamp(d[1], -1, 1)) / DEG, Math.atan2(-d[0], -d[2]) / DEG, 0);
