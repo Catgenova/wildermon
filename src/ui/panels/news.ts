@@ -4253,6 +4253,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 517,
+    day: '2026-11-06',
+    lines: () => ['Fixed: a repeated mould pour takes the same metal from the same place as the first pour (was: queued, the pack\'s stack of that metal in place of a store\'s).'],
+  },
+  {
     n: 516,
     day: '2026-11-06',
     lines: () => [
