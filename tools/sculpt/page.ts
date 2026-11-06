@@ -193,6 +193,8 @@ const api = {
     row([0, 1, 3, 5].map((f) => { const c = cell(zoom); drawOne(c, zoom, who, poseOf(f, 'idle:0')); return { cv: c.cv, label: `f${f}` }; }));
     const hz = zoom * 2.2;
     const heads = [0, 1, 2, 3, 5, 7].map((f) => { const c = cell(hz, [-40.5, -28], [-7, 7]); drawOne(c, hz, who, poseOf(f, f === 7 ? 'talk:0.3' : 'idle:0')); return { cv: c.cv, label: `head f${f}${f === 7 ? ' talk' : ''}` }; });
+    // A blink: the clock's window lands on an id of thirty-four letters at the sheet's time.
+    { const c = cell(hz, [-40.5, -28], [-7, 7]); drawOne(c, hz, who, { ...poseOf(0, 'idle:0'), id: 'studio-blink-xxxxxxxxxxxxxxxxxxxxx' }); heads.push({ cv: c.cv, label: 'head f0 blink' }); }
     row(heads);
     const hands = [1, 3].flatMap((f) => ['idle:0', 'wave:0.5', 'work:0.5'].map((w) => { const c = cell(hz * 0.6, [-38, -4], [-14, 14]); drawOne(c, hz * 0.6, who, poseOf(f, w)); return { cv: c.cv, label: `hands f${f} ${w}` }; }));
     row(hands);

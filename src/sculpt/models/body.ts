@@ -36,10 +36,10 @@ export function bodyMaterials(look: Look): Material[] {
   // Skin a touch warmer than the swatch, the pastel of the kit.
   out[M.skin] = { colour: mixHex(skin, '#f2b48c', 0.15), skin: true };
   out[M.hair] = { colour: hair };
-  out[M.white] = { colour: mixHex(skin, '#f8f4ec', 0.7) };
-  out[M.iris] = { colour: mixHex(eye, '#2a1a18', 0.2) };
-  out[M.pupil] = { colour: mixHex(eye, '#1a1016', 0.7) };
-  out[M.glint] = { colour: '#fffaf0' };
+  out[M.white] = { colour: mixHex(skin, '#f8f4ec', 0.7), eye: true };
+  out[M.iris] = { colour: mixHex(eye, '#2a1a18', 0.2), eye: true };
+  out[M.pupil] = { colour: mixHex(eye, '#1a1016', 0.7), eye: true };
+  out[M.glint] = { colour: '#fffaf0', eye: true };
   out[M.brow] = { colour: mixHex(hair, '#16100e', 0.45) };
   out[M.lash] = { colour: mixHex(hair, '#2a1a24', 0.7) };
   out[M.shorts] = { colour: '#454a54' };
@@ -115,15 +115,15 @@ export function bodyModel(P: Proportions, rest: Bones, look: Look, wear: Wear = 
   // Hair: a slight volume over the skull, cut at the hairline in front and down from the temples to the nape behind, and chunky
   // wedges over it -- three big ones swept to the body's left over the brow, a mass over the crown, a mass over each ear, a mass
   // down the nape on the chain -- each a ribbon with one shadow shape, and a few thin strands as accents.
-  const hairline: V3 = [0, hy(0.6), hz(0.82)];
+  const hairline: V3 = [0, hy(0.6), hz(0.86)];
   const volume = ellipsoid([0, hy(-0.08), hz(0.7)], [P.headW * 1.04, P.headD * 1.02, H * 0.42], { m: M.hair, bone: 'head', name: 'hair volume' });
   prims.push(clip(volume, [hairline, unit([0, 0.6, -1])], [[0, headJ[1], hz(0.56)], unit([0, 0.3, -1])]));
   const W = (pts: V3[], w0: number, w1: number, h0: number, h1: number, up: V3, bone = 'head', band = BAND_GAME, bl = 0.12): Prim =>
     wedge(pts, (t) => H * (w0 + (w1 - w0) * t), (t) => H * (h0 + (h1 - h0) * t), up, { m: M.hair, bone, blend: bl, band, name: 'wedge' }, 8);
   // The fringe ends over the brow, clear of the eyes; the longest wedge reaches the left temple.
-  prims.push(W([[P.headW * 0.3, hy(0.1), hz(1.03)], [-P.headW * 0.12, hy(0.6), hz(0.97)], [-P.headW * 0.6, hy(0.66), hz(0.8)]], 0.3, 0.12, 0.11, 0.04, [0, 0.6, 1]));
-  prims.push(W([[P.headW * 0.55, hy(0.0), hz(0.99)], [P.headW * 0.25, hy(0.6), hz(0.93)], [-P.headW * 0.08, hy(0.84), hz(0.82)]], 0.28, 0.12, 0.1, 0.04, [0, 0.6, 1]));
-  prims.push(W([[P.headW * 0.72, hy(-0.1), hz(0.93)], [P.headW * 0.72, hy(0.42), hz(0.87)], [P.headW * 0.68, hy(0.7), hz(0.79)]], 0.26, 0.11, 0.1, 0.04, [0.4, 0.5, 1]));
+  prims.push(W([[P.headW * 0.3, hy(0.1), hz(1.03)], [-P.headW * 0.12, hy(0.6), hz(1.0)], [-P.headW * 0.6, hy(0.66), hz(0.89)]], 0.3, 0.12, 0.11, 0.03, [0, 0.6, 1]));
+  prims.push(W([[P.headW * 0.55, hy(0.0), hz(0.99)], [P.headW * 0.25, hy(0.6), hz(0.95)], [-P.headW * 0.08, hy(0.8), hz(0.9)]], 0.28, 0.12, 0.1, 0.03, [0, 0.6, 1]));
+  prims.push(W([[P.headW * 0.72, hy(-0.1), hz(0.93)], [P.headW * 0.72, hy(0.42), hz(0.89)], [P.headW * 0.68, hy(0.66), hz(0.86)]], 0.26, 0.11, 0.1, 0.03, [0.4, 0.5, 1]));
   prims.push(W([[-P.headW * 0.45, hy(0.25), hz(1.0)], [0, hy(-0.3), hz(1.08)], [P.headW * 0.45, hy(-0.65), hz(0.92)]], 0.36, 0.3, 0.11, 0.07, [0, 0, 1]));
   prims.push(W([[P.headW * 0.1, hy(-0.3), hz(1.0)], [P.headW * 0.22, hy(-0.22), hz(1.14)], [P.headW * 0.34, hy(-0.1), hz(1.2)]], 0.12, 0.04, 0.07, 0.025, [0, 1, 0]));
   // The side masses end at the top of the ear; the nape mass is short, on the chain.

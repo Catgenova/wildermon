@@ -87,7 +87,7 @@ export function sculptScene(pose: FigurePose, zoom: number, P?: Proportions, now
   if (rig.blink) x.blink = 1;
   const posed = bonesOf(rig, P, b.chains, x);
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
-  return { baked: bakedAt(b, band), bones: skinMatrices(posed, b.rest, b.order), materials: b.model.materials, view: o.view ?? viewOf(facing), facing, band, P };
+  return { baked: bakedAt(b, band), bones: skinMatrices(posed, b.rest, b.order), materials: b.model.materials, view: o.view ?? viewOf(facing), facing, band, P, blink: x.blink };
 }
 
 /** A body drawn with its feet at (sx, sy): the sculpt by the GPU, or false where there is no GPU to draw it (the caller draws the 2D figure). */

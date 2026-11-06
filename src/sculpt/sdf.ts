@@ -42,6 +42,8 @@ export interface Material {
   skin?: boolean;
   /** Metal: a sharper, brighter highlight. */
   metal?: boolean;
+  /** The eye's parts: drawn in the lid's colour (the first material's, a shade darker) while the lids are shut. */
+  eye?: boolean;
 }
 
 /** Where a primitive hangs: one of the rig's bones (`./rig`), or a chain link of a sway chain. */

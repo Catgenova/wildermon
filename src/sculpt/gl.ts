@@ -60,7 +60,7 @@ const FS = `#version 300 es
 precision highp float;
 in vec3 vNrm; in vec3 vPos; flat in float vMat; flat in float vBone; in float vDepth; flat in float vMatB; in float vStamp;
 uniform vec4 uMat[${MAX_MATS}];
-uniform vec3 uL; uniform vec3 uT; uniform float uGrain; uniform float uNight; uniform float uMode; uniform float uFlat;
+uniform vec3 uL; uniform vec3 uT; uniform float uGrain; uniform float uNight; uniform float uMode; uniform float uFlat; uniform float uBlink;
 layout(location=0) out vec4 oCol; layout(location=1) out vec4 oNd; layout(location=2) out vec4 oId;
 vec3 hsv2rgb(vec3 c){ vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0); vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www); return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y); }
 vec3 rgb2hsv(vec3 c){ vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0); vec4 p = c.g < c.b ? vec4(c.bg, K.wz) : vec4(c.gb, K.xy); vec4 q = c.r < p.x ? vec4(p.xyw, c.r) : vec4(c.r, p.yzx); float d = q.x - min(q.w, q.y); float e = 1.0e-10; return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x); }
@@ -74,6 +74,8 @@ void main() {
   vec4 M = mix(uMat[int(vMat + 0.5)], uMat[int(vMatB + 0.5)], inStamp);
   vec3 base = M.rgb;
   int flags = int(uMat[mi].a + 0.5);
+  // Lids shut: the eye's parts take the lid's colour, the first material's a shade darker, and shade as skin.
+  if (uBlink > 0.5 && (flags & 8) != 0) { base = uMat[0].rgb * 0.94; flags = 2; }
   bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0;
   float dl = dot(n, uL);
   vec3 c = base;
@@ -211,7 +213,7 @@ export function glContext(): Ctx | null {
   const quad = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat'];
+  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
   const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight'].map((n) => [n, gl.getUniformLocation(edge, n)]));
@@ -276,14 +278,14 @@ function matsOf(ms: Material[]): Float32Array {
   ms.forEach((m, i) => {
     if (i >= MAX_MATS) return;
     const c = hexOf(m.colour);
-    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0)], i * 4);
+    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0)], i * 4);
   });
   MATS.set(ms, f);
   return f;
 }
 
 /** What one draw needs: the bake, the pose's skinning frames, the materials and the view. */
-export interface SculptDraw { baked: Baked; bones: Float32Array; materials: Material[]; view: View }
+export interface SculptDraw { baked: Baked; bones: Float32Array; materials: Material[]; view: View; /** Lids shut, past a half. */ blink?: number }
 
 /**
  * A body drawn on `ctx` with its feet at (sx, sy) at `zoom`, or false where
@@ -322,6 +324,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.uniform1f(u.uNight, o.night ?? 0);
     gl.uniform1f(u.uMode, o.debug === 'normals' ? 1 : o.debug === 'mats' ? 2 : o.debug === 'bones' ? 3 : 0);
     gl.uniform1f(u.uFlat, o.flat ? 1 : 0);
+    gl.uniform1f(u.uBlink, d.blink ?? 0);
   };
   setCommon(C.prog, C.u);
   gl.bindBuffer(gl.ARRAY_BUFFER, bf.vbo);
