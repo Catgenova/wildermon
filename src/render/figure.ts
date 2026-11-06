@@ -11281,6 +11281,17 @@ export function render(g: CanvasRenderingContext2D, parts: Part[], pal: Palette,
 export const onScreen = (view: View, p: V3): Pt => [p[0] * view.ex[0] + p[1] * view.ey[0], p[0] * view.ex[1] + p[1] * view.ey[1] - p[2] * HEIGHT_SCALE];
 
 /**
+ * For the sculpted bodies (`../sculpt`): the pose a body is in as its rig --
+ * the same joint angles every poser here puts a body into, walking, working,
+ * swimming, waving -- and the rig at rest, which is what a sculpt is modelled
+ * in. The sculpt builds its own skeleton from these at its own proportions, so
+ * every animation carries over to a body of any build.
+ */
+export function sculptRig(pose: FigurePose): { rig: Rig; rest: Rig } {
+  return { rig: rigOf(pose, frameOf(pose.look ?? DEFAULT_LOOK)), rest: rest() };
+}
+
+/**
  * A body with its feet at (sx, sy): the player, and everybody else on the
  * island. `ink` overrides the width of the outline in screen pixels, for a
  * figure drawn big.
