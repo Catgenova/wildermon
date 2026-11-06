@@ -67,10 +67,10 @@ export const SEVEN: Proportions = {
 export const MALE: Proportions = {
   id: 'male', heads: 7.5, fem: 0,
   hip: 8.4, spine: 1.5, chest: 1.8, neck: 1.9, headJ: 0.6, armAt: 0.3,
-  upper: 2.6, lower: 2.2, thigh: 4.1, shin: 3.5,
+  upper: 2.6, lower: 2.35, thigh: 4.1, shin: 3.5,
   shoulder: 2.1, hipW: 1.0,
   head: 2.2, headW: 0.88, headD: 1.0,
-  sole: 0.5, foot: 1.7,
+  sole: 0.5, foot: 1.55,
   palm: 0.75, finger: 0.6,
   r: { neck: 0.6, upper: 0.55, fore: 0.48, wrist: 0.3, thigh: 0.78, shin: 0.5, ankle: 0.28, chest: 1.75, waist: 0.92, pelvis: 1.6 },
 };
@@ -81,14 +81,14 @@ export const MALE: Proportions = {
  * the ankle, slim arms, and hands and feet full size.
  */
 export const FEMALE: Proportions = {
-  id: 'female', heads: 7.4, fem: 1,
-  hip: 8.2, spine: 1.5, chest: 1.7, neck: 1.4, headJ: 1.0, armAt: 0.3,
-  upper: 2.5, lower: 2.15, thigh: 4.0, shin: 3.4,
-  shoulder: 1.55, hipW: 0.95,
-  head: 2.15, headW: 0.76, headD: 0.9,
-  sole: 0.5, foot: 1.6,
+  id: 'female', heads: 7.6, fem: 1,
+  hip: 8.35, spine: 1.5, chest: 1.7, neck: 1.6, headJ: 0.8, armAt: 0.3,
+  upper: 2.35, lower: 2.0, thigh: 4.1, shin: 3.45,
+  shoulder: 1.65, hipW: 0.95,
+  head: 2.0, headW: 0.74, headD: 0.88,
+  sole: 0.5, foot: 1.45,
   palm: 0.7, finger: 0.55,
-  r: { neck: 0.4, upper: 0.42, fore: 0.38, wrist: 0.25, thigh: 0.66, shin: 0.36, ankle: 0.2, chest: 1.3, waist: 0.8, pelvis: 1.35 },
+  r: { neck: 0.36, upper: 0.42, fore: 0.37, wrist: 0.25, thigh: 0.64, shin: 0.25, ankle: 0.14, chest: 1.3, waist: 0.8, pelvis: 1.35 },
 };
 /** Proportions `t` of the way from `a` to `b`, every number. */
 export function lerpProportions(a: Proportions, b: Proportions, t: number, id: string): Proportions {
@@ -110,7 +110,7 @@ export const heightOf = (P: Proportions): number => P.hip + P.spine + P.chest + 
 
 /** The reference sheet's stance: stood square, feet a little apart, arms a little out from the sides with the palms turned back. */
 export function referenceStance(r: Rig): Rig {
-  const o: Rig = { ...r, arm: [[3, 26, 0], [3, 26, 0]], elbow: [8, 8], hand: [[0, 0, -20], [0, 0, 20]], leg: [[0, 4, 0], [0, 4, 0]], knee: [2, 2], flat: [true, true] };
+  const o: Rig = { ...r, arm: [[3, 30, 0], [3, 30, 0]], elbow: [8, 8], hand: [[0, 0, -20], [0, 0, 20]], leg: [[0, 4, 0], [0, 4, 0]], knee: [2, 2], flat: [true, true] };
   o.pelvis = [0, 0, 0]; o.spine = [0, 0, 0]; o.chest = [0, 0, 0]; o.neck = [0, 0, 0]; o.head = [0, 0, 0];
   o.loose = [true, true]; o.curl = [0.2, 0.2]; o.open = [0, 0]; o.shrug = [0, 0];
   o.hover = undefined; o.plant = undefined; o.lift = 0;

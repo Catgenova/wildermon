@@ -160,9 +160,9 @@ export function bodyModel(P: Proportions, rest: Bones, look: Look, wear: Wear = 
   for (const s of [-1, 1]) prims.push(top(ellipsoid([s * P.r.chest * (0.48 - 0.06 * f), chestJ[1] + P.r.chest * (0.5 + 0.12 * f), chestJ[2] + Z * (0.52 - 0.06 * f)], [P.r.chest * (0.52 - 0.12 * f), P.r.chest * (0.26 + 0.16 * f), Z * 0.28 * (1 - f) + P.r.chest * 0.4 * f], { m: cm(M.shirt), bone: 'chest', blend: 0.3 - 0.1 * f, band: 0, name: woman ? 'breast' : 'pectoral' }, [[1, 0, 0], [0, 1, 0.08], [0, -0.08, 1]])));
   prims.push(roundBox([0, chestJ[1] + P.r.chest * 0.36, chestJ[2] + Z * 0.05], [P.r.waist * 0.62, P.r.chest * 0.16, Z * 0.3], 0.3, { m: cm(M.shirt), bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + Z * 0.2], axis: [0, 0, -1], span: P.chest }, blend: 0.4, name: 'abdomen' }));
   prims.push(top(ellipsoid([0, chestJ[1] - P.r.chest * 0.42, chestJ[2] + Z * 0.62], [P.r.chest * (1.02 - 0.12 * f), P.r.chest * 0.3, Z * 0.42], { m: cm(M.shirt), bone: 'chest', blend: 0.4, name: 'upper back' })));
-  for (const s of [-1, 1]) prims.push(top(capsule([s * P.r.chest * 0.92, chestJ[1] - P.r.chest * 0.2, chestJ[2] + Z * 0.5], [s * P.r.waist * 0.72, spA[1] - P.r.waist * 0.25, spA[2] + 0.2], P.r.chest * 0.34 * (1 - 0.3 * f), P.r.waist * 0.3 * (1 - 0.3 * f), { m: cm(M.shirt), bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + Z * 0.3], axis: [0, 0, -1], span: P.chest }, blend: 0.45, name: 'lat' })));
+  for (const s of [-1, 1]) prims.push(top(capsule([s * P.r.chest * 0.92, chestJ[1] - P.r.chest * 0.2, chestJ[2] + Z * 0.5], [s * P.r.waist * 0.72, spA[1] - P.r.waist * 0.25, spA[2] + 0.2], P.r.chest * 0.38 * (1 - 0.35 * f), P.r.waist * 0.3 * (1 - 0.3 * f), { m: cm(M.shirt), bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + Z * 0.3], axis: [0, 0, -1], span: P.chest }, blend: 0.45, name: 'lat' })));
   if (!bare) prims.push(torus([0, neckJ[1], neckJ[2] - 0.18], [0, 0, 1], [1, 0, 0], P.r.neck + 0.06, 0.13, { m: M.shirt, bone: 'chest', blend: 0.15, band: BAND_GAME, name: 'collar' }));
-  prims.push(top(capsule([0, chestJ[1] - 0.1, chestJ[2] + Z * 0.3], [0, spA[1], spA[2] + 0.1], P.r.chest * (0.85 - 0.15 * f), P.r.waist * (1.05 - 0.1 * f), { m: cm(M.shirt), bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + 0.4], axis: [0, 0, -1], span: P.chest }, blend: 0.4, name: 'ribs' })));
+  prims.push(top(capsule([0, chestJ[1] - 0.1, chestJ[2] + Z * 0.3], [0, spA[1], spA[2] + 0.1], P.r.chest * (1.0 - 0.3 * f), P.r.waist * (1.1 - 0.15 * f), { m: cm(M.shirt), bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + 0.4], axis: [0, 0, -1], span: P.chest }, blend: 0.4, name: 'ribs' })));
   prims.push(stamped(ellipsoid([0, spA[1], spA[2] + 0.1], [P.r.waist, P.r.waist * 0.74, P.spine * 0.9], { m: cm(M.shirt), bone: 'spineA', blend: 0.4, name: 'waist' }), { at: trousersBelow }));
   prims.push(stamped(ellipsoid([0, pelvisJ[1] - 0.05, pelvisJ[2] - 0.55], [P.r.pelvis, P.r.pelvis * (0.78 + 0.12 * f), 1.3], { m: bare ? M.shorts : M.trousers, bone: 'pelvis', blend: 0.4, name: 'pelvis' }), { at: shirtAbove }));
   // The hips' rounds, on a woman.
@@ -217,19 +217,19 @@ export function bodyModel(P: Proportions, rest: Bones, look: Look, wear: Wear = 
     const hip = at(rest, `hip${k}`), knee = at(rest, `knee${k}`), ank = at(rest, `ankle${k}`);
     // The thigh narrows to the knee, the knee's round stands a little proud, the shin swells at the calf and narrows to the ankle.
     const legM = bare ? M.skin : M.trousers;
-    const thigh = capsule(add(hip, [0, 0, 0.3]), knee, P.r.thigh, P.r.thigh * (0.52 + 0.04 * f), { m: legM, bone: `hip${k}`, bone2: `knee${k}`, split: { from: along(hip, knee, 0.74), axis: unit(sub(knee, hip)), span: P.thigh * 0.26 }, blend: 0.2, name: 'thigh' });
+    const thigh = capsule(add(hip, [0, 0, 0.3]), knee, P.r.thigh, P.r.thigh * (0.52 - 0.06 * f), { m: legM, bone: `hip${k}`, bone2: `knee${k}`, split: { from: along(hip, knee, 0.74), axis: unit(sub(knee, hip)), span: P.thigh * 0.26 }, blend: 0.2, name: 'thigh' });
     prims.push(bare ? stamped(thigh, { at: shorts }) : thigh);
     // The quadriceps on the front of the thigh, and the knee's round standing proud.
     const quad = ellipsoid(add(along(hip, knee, 0.42), [0, P.r.thigh * 0.28, 0]), [P.r.thigh * 0.7, P.r.thigh * 0.8, P.thigh * 0.28], { m: legM, bone: `hip${k}`, blend: 0.25, name: 'quadriceps' }, [[1, 0, 0], [0, 1, 0], unit(sub(hip, knee))]);
     prims.push(bare ? stamped(quad, { at: shorts }) : quad);
-    prims.push(sphere(add(knee, [0, 0.08, 0]), P.r.shin * 0.8, { m: legM, bone: `knee${k}`, blend: 0.1, name: 'knee' }));
+    prims.push(sphere(add(knee, [0, 0.08, 0]), P.r.shin * 0.75, { m: legM, bone: `knee${k}`, blend: 0.1, name: 'knee' }));
     const sl = unit(sub(ank, knee));
-    prims.push(tube([knee, along(knee, ank, 0.3), add(ank, [0, 0, 0.1])], (t) => (t < 0.3 ? P.r.shin * (0.8 + 1.17 * t) : P.r.shin * 1.15 + (P.r.ankle * 1.05 - P.r.shin * 1.15) * ((t - 0.3) / 0.7)), { m: legM, bone: `knee${k}`, bone2: `ankle${k}`, split: { from: along(knee, ank, 0.8), axis: sl, span: P.shin * 0.2 }, blend: 0.22, name: 'shin' }, 8));
+    prims.push(tube([knee, along(knee, ank, 0.3), add(ank, [0, 0, 0.1])], (t) => (t < 0.3 ? P.r.shin * (0.75 + 1.33 * t) : P.r.shin * 1.15 + (P.r.ankle * 1.05 - P.r.shin * 1.15) * ((t - 0.3) / 0.7)), { m: legM, bone: `knee${k}`, bone2: `ankle${k}`, split: { from: along(knee, ank, 0.8), axis: sl, span: P.shin * 0.2 }, blend: 0.22, name: 'shin' }, 8));
     prims.push(sphere(ank, P.r.ankle, { m: M.skin, bone: `ankle${k}`, blend: 0.15, name: 'ankle' }));
     // The foot in a soft shoe (or bare): heel and instep off the ankle, the toes off the ball so they bend; a darker sole under.
     const soleStamp: Stamp = (p, n) => ({ m: M.sole, d: Math.max(-0.45 - n[2], 0.14 - p[2]) });
-    const foot = roundBox(inBone(`ankle${k}`, [0, P.foot * 0.22, -P.sole * 0.5 + 0.02]), [P.r.ankle * 1.15, P.foot * 0.42, P.sole * 0.5], 0.22, { m: cm(M.shoe), bone: `ankle${k}`, blend: 0.3, name: 'foot' }, axesOf(`ankle${k}`));
-    const toes = roundBox(inBone(`toe${k}`, [0, P.foot * 0.2, -0.17]), [P.r.ankle * 1.15, P.foot * 0.26, P.sole * 0.3], 0.2, { m: cm(M.shoe), bone: `toe${k}`, blend: 0.22, name: 'toes' }, axesOf(`toe${k}`));
+    const foot = roundBox(inBone(`ankle${k}`, [0, P.foot * 0.22, -P.sole * 0.5 + 0.02]), [P.r.ankle * 1.0, P.foot * 0.42, P.sole * 0.5], 0.2, { m: cm(M.shoe), bone: `ankle${k}`, blend: 0.3, name: 'foot' }, axesOf(`ankle${k}`));
+    const toes = roundBox(inBone(`toe${k}`, [0, P.foot * 0.2, -0.17]), [P.r.ankle * 1.0, P.foot * 0.26, P.sole * 0.3], 0.18, { m: cm(M.shoe), bone: `toe${k}`, blend: 0.22, name: 'toes' }, axesOf(`toe${k}`));
     prims.push(bare ? foot : stamped(foot, { at: soleStamp }));
     prims.push(bare ? toes : stamped(toes, { at: soleStamp }));
   }
