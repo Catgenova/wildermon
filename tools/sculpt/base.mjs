@@ -10,7 +10,7 @@
 import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join, resolve, dirname } from 'node:path';
-import { facets, mitt, neckBase, planarHead } from './planar.mjs';
+import { facets, HEAD_WIDEN, mitt, neckBase, planarHead } from './planar.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
@@ -105,7 +105,8 @@ function ourBone(mh) {
   if (n.startsWith('lowerarm')) return `elbow${k}`;
   if (n === 'wrist' || n.startsWith('metacarpal')) return `wrist${k}`;
   if (/^finger1-[123]$/.test(n)) return `thumb${k}`;
-  if (/^finger[2-5]-[123]$/.test(n)) return `fing${k}`;
+  if (/^finger2-[123]$/.test(n)) return `index${k}`;
+  if (/^finger[3-5]-[123]$/.test(n)) return `fing${k}`;
   if (n.startsWith('upperleg')) return `hip${k}`;
   if (n.startsWith('lowerleg')) return `knee${k}`;
   if (n === 'foot') return `ankle${k}`;
@@ -120,7 +121,7 @@ const FRAME_OF = {
 for (const [k, s] of [[0, 'L'], [1, 'R']]) Object.assign(FRAME_OF, {
   [`eye${k}`]: [`eye.${s}`, `eye.${s}`], [`clav${k}`]: [`clavicle.${s}`, `clavicle.${s}`],
   [`arm${k}`]: [`upperarm01.${s}`, `upperarm02.${s}`], [`elbow${k}`]: [`lowerarm01.${s}`, `lowerarm02.${s}`],
-  [`wrist${k}`]: [`wrist.${s}`, `metacarpal2.${s}`], [`fing${k}`]: [`finger3-1.${s}`, `finger3-3.${s}`],
+  [`wrist${k}`]: [`wrist.${s}`, `metacarpal2.${s}`], [`fing${k}`]: [`finger3-1.${s}`, `finger3-3.${s}`], [`index${k}`]: [`finger2-1.${s}`, `finger2-3.${s}`],
   [`thumb${k}`]: [`finger1-1.${s}`, `finger1-3.${s}`],
   [`hip${k}`]: [`upperleg01.${s}`, `upperleg02.${s}`], [`knee${k}`]: [`lowerleg01.${s}`, `lowerleg02.${s}`],
   [`ankle${k}`]: [`foot.${s}`, `foot.${s}`], [`toe${k}`]: [`toe3-1.${s}`, `toe3-1.${s}`],
@@ -332,6 +333,7 @@ function extras(b, shared, style = 'man', detail = true) {
   }
   // The hair: a shell of the scalp's own faces pushed out, and over it the sheet's wedges -- a fringe mass swept over the
   // forehead with pointed tips, side masses over the ears, a tousled top with two cowlicks, a mass down the nape.
+  const hairStart = out.pos.length;
   const hairline = (p) => (p[2] > 0.3 ? ey + 0.55 : p[2] > -0.3 ? ey + 0.1 : ey + 0.05);
   const scalp = shared ?? new Set(face.filter((i) => V[i][1] > hairline(V[i])));
   out.scalp = scalp;
@@ -412,6 +414,8 @@ function extras(b, shared, style = 'man', detail = true) {
   C([150, 32, -0.04], [148, L ? -10 : 0, 0.62], [158, L ? -62 : -26, L ? 0.14 : 0.22, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
   C([180, 36, -0.04], [180, L ? -12 : -2, 0.66], [180, L ? -72 : -40, L ? 0.14 : 0.16, L ? 1.6 : 1.0], L ? 0.25 : 0.2, 0.07);
   C([210, 32, -0.04], [212, L ? -10 : 0, 0.62], [202, L ? -62 : -32, L ? 0.14 : 0.26, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
+  // The hair sits on the planar skull, which is wider than the one it was shaped on.
+  for (let i = hairStart; i < out.pos.length; i++) out.pos[i][0] *= HEAD_WIDEN;
   return out;
 }
 const exMan = extras(bodies.man, undefined, 'man', true), exWoman = extras(bodies.woman, exMan.scalp, 'woman', true);

@@ -36,7 +36,7 @@ const CHILD: Record<string, string | V3> = {
   pelvis: 'spineA', spineA: 'spineB', spineB: 'chest', chest: 'neck', neck: 'head', head: [0, 0, 1], jaw: [0, 0.7, -0.7],
 };
 for (const k of [0, 1]) Object.assign(CHILD, {
-  [`eye${k}`]: [0, 1, 0], [`clav${k}`]: `arm${k}`, [`arm${k}`]: `elbow${k}`, [`elbow${k}`]: `wrist${k}`, [`wrist${k}`]: `fing${k}`, [`fing${k}`]: [0, 0, -1],
+  [`eye${k}`]: [0, 1, 0], [`clav${k}`]: `arm${k}`, [`arm${k}`]: `elbow${k}`, [`elbow${k}`]: `wrist${k}`, [`wrist${k}`]: `fing${k}`, [`fing${k}`]: [0, 0, -1], [`index${k}`]: [0, 0, -1],
   [`thumb${k}`]: [0, 0, -1], [`hip${k}`]: `knee${k}`, [`knee${k}`]: `ankle${k}`, [`ankle${k}`]: `toe${k}`, [`toe${k}`]: [0, 1, 0],
 });
 const unit = (v: V3): V3 => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
@@ -61,7 +61,7 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
   const shortsTop = pelvisZ + 0.3, shortsHem = hipZ - P.thigh * 0.46;
   const braLow = armZ - 2.3, braTop = armZ - 0.6;
   void spA; void neckZ;
-  const arm = (bone: string): boolean => /^(clav|arm|elbow|wrist|fing|thumb)/.test(bone);
+  const arm = (bone: string): boolean => /^(clav|arm|elbow|wrist|fing|index|thumb)/.test(bone);
   const leg = (bone: string): boolean => /^(hip|knee|ankle|toe)/.test(bone);
   return (region, bone, p, irisD) => {
     // The face, the hands and the hair drawn over the base: an eye's dark rectangle, a brow, hair, the groove between two fingers.

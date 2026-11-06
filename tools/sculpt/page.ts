@@ -10,11 +10,12 @@
 import { drawFigure, sculptedFigures, type FigurePose } from '../../src/render/figure';
 import type { Look } from '../../src/game/look';
 import { bandOf, CELL } from '../../src/sculpt/bake';
+import { HEIGHT_SCALE } from '../../src/render/iso';
 import { built, bakedAt, drawSculpt, heightOf, humanProportions, levelView, sculptScene, FIVE, SEVEN, type Debug, type Kind, type Wear } from '../../src/sculpt/index';
 import { GARMENT_FILE } from '../../src/sculpt/cloth';
 import { HUMAN_HEIGHT } from '../../src/sculpt/human';
 import { at } from '../../src/sculpt/rig';
-import type { View } from '../../src/render/figure';
+import type { HandShape, View } from '../../src/render/figure';
 import type { Proportions } from '../../src/sculpt/rig';
 import { glContext } from '../../src/sculpt/gl';
 
@@ -83,7 +84,7 @@ function row(cells: Array<{ cv: HTMLCanvasElement; label: string }>): void {
 type Who = 'male' | 'female' | 'neither' | 'seven' | 'five' | 'figure';
 /** The studio's look in the body's own gender. */
 const lookOf = (who: Who): Look => ({ ...LOOK, gender: who === 'female' ? 'woman' : who === 'neither' ? 'neither' : 'man' });
-function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean; wear?: Wear; stance?: 'ref'; view?: View } = {}): void {
+function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean; wear?: Wear; stance?: 'ref'; view?: View; hands?: HandShape } = {}): void {
   try {
     if (who === 'figure') {
       drawFigure(c.g, c.fx, c.fy, zoom, pose);
@@ -471,15 +472,39 @@ const api = {
     const hands = [1, 3].flatMap((f) => ['idle:0', 'wave:0.5', 'work:0.5'].map((w) => { const c = cell(hz * 0.6, [-38, -4], [-14, 14]); drawOne(c, hz * 0.6, who, poseOf(f, w)); return { cv: c.cv, label: `hands f${f} ${w}` }; }));
     row(hands);
   },
-  /** The hands close: each pose the mitt takes, cropped round the hand. */
+  /** The hands close: each pose the mitt takes, each hand cropped round where the rig has it. */
   hands(who: Who, zoom = 20): void {
-    heading(`${who} hands, zoom ${zoom}: hanging relaxed (idle) and loose (walk), open (wave), a fist (work), from the front and the back`);
+    heading(`${who} hands, zoom ${zoom}: hanging relaxed (idle) and loose (walk), open (wave), a fist (work), pointing, a pinch (claw), cupped; bare-armed where the sleeve would hide them; each hand of the pair`);
     const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
-    const shots: Array<[number, string, [number, number], [number, number]]> = [
-      [1, 'idle:0', [-20, -2], [-10, 6]], [7, 'idle:0', [-20, -2], [-6, 10]], [1, 'walk:0.25', [-22, -4], [-10, 6]], [5, 'walk:0.25', [-22, -4], [-10, 6]],
-      [1, 'wave:0.5', [-43, -24], [-10, 6]], [7, 'wave:0.5', [-43, -24], [-6, 10]], [3, 'work:0.5', [-26, -12], [-8, 8]], [1, 'work:0.5', [-26, -12], [-8, 8]],
+    const shots: Array<[number, string, { wear?: Wear; hands?: HandShape }?]> = [
+      [1, 'idle:0'], [7, 'idle:0'], [1, 'walk:0.25'], [5, 'walk:0.25'], [1, 'wave:0.5'], [7, 'wave:0.5'],
+      [3, 'work:0.5', { wear: 'shorts' }], [1, 'work:0.5', { wear: 'shorts' }],
+      [1, 'idle:0', { wear: 'shorts', hands: { point: 1 } }], [7, 'idle:0', { wear: 'shorts', hands: { point: 1 } }],
+      [1, 'idle:0', { wear: 'shorts', hands: { claw: 1 } }], [7, 'idle:0', { wear: 'shorts', hands: { cup: 1 } }],
     ];
-    for (const [f, what, crop, wide] of shots) { const c = cell(zoom, crop, wide); drawOne(c, zoom, who, poseOf(f, what)); cells.push({ cv: c.cv, label: `f${f} ${what}` }); }
+    const half = 3.2;
+    for (const [f, what, o] of shots) {
+      const pose = poseOf(f, what);
+      const c = cell(zoom);
+      drawOne(c, zoom, who, pose, o ?? {});
+      // Where each hand is on the cell: the wrist and the knuckles, posed, projected as the renderer projects them.
+      const look = lookOf(who), P = PROPS[who];
+      const scene = sculptScene({ ...pose, look }, zoom, P, 1, undefined, { wear: o?.wear, hands: o?.hands, kind: kindOf(who) });
+      const b = built(P, look, o?.wear ?? 'base', kindOf(who));
+      const posed = (name: string): [number, number, number] => { const i = b.order.indexOf(name) * 12, m = scene.bones, t = b.rest[name].t; return [m[i] * t[0] + m[i + 1] * t[1] + m[i + 2] * t[2] + m[i + 3], m[i + 4] * t[0] + m[i + 5] * t[1] + m[i + 6] * t[2] + m[i + 7], m[i + 8] * t[0] + m[i + 9] * t[1] + m[i + 10] * t[2] + m[i + 11]]; };
+      for (const k of [0, 1]) {
+        const w = posed(`wrist${k}`), kn = posed(`fing${k}`), p = [(w[0] + kn[0]) / 2, (w[1] + kn[1]) / 2, (w[2] + kn[2]) / 2];
+        const v = scene.view;
+        const sx = c.fx + zoom * (p[0] * v.ex[0] + p[1] * v.ey[0]), sy = c.fy + zoom * (p[0] * v.ex[1] + p[1] * v.ey[1] - p[2] * HEIGHT_SCALE);
+        const size = Math.round(half * 2 * zoom);
+        const cv = document.createElement('canvas');
+        cv.width = size * DPR; cv.height = size * DPR; cv.style.width = `${size}px`; cv.style.height = `${size}px`;
+        const g = cv.getContext('2d')!;
+        g.fillStyle = GRASS; g.fillRect(0, 0, cv.width, cv.height);
+        g.drawImage(c.cv, (sx - half * zoom) * DPR, (sy - half * zoom) * DPR, size * DPR, size * DPR, 0, 0, size * DPR, size * DPR);
+        cells.push({ cv, label: `f${f} ${what}${o?.hands ? ' ' + Object.keys(o.hands).join('') : ''}${o?.wear ? ' bare' : ''} ${k ? 'R' : 'L'}` });
+      }
+    }
     row(cells);
   },
   /** The debug views, one facing big. */

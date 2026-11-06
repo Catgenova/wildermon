@@ -12,7 +12,7 @@
  *   - the spine in three (`spineA`, `spineB`, `chest`), the figure's one bend shared out;
  *   - a clavicle each side, raised with the arm and with a shrug;
  *   - a jaw, and a lid and a brow each side (a blink, a frown, a smile);
- *   - a thumb and one finger group per hand (a mitt), curled by what the hand is doing;
+ *   - a thumb, the forefinger and the other three fingers as one, per hand (a mitt), curled by what the hand is doing;
  *   - the ball of each foot, bent as the heel lifts;
  *   - sway chains -- hair now, cloth later -- hung off a bone and swung by the rig's `tail`, each with its own stiffness.
  *
@@ -173,7 +173,7 @@ const DEG = Math.PI / 180;
  * loose (curled by `curl`: relaxed, or cupped round what it carries), a fist round a tool, and the figure's hand shapes
  * laid over (flat open, cupped, a claw, pointing and the two-finger vee as a near fist: the mitt's fingers go together).
  */
-export function curlOf(r: Rig, k: number): number {
+export function curlOf(r: Rig, k: number, index = false): number {
   const open = r.open[k];
   const o = typeof open === 'boolean' ? (open ? 1 : 0) : open;
   let c: number;
@@ -183,7 +183,8 @@ export function curlOf(r: Rig, k: number): number {
   else c = r.tool ? 1 : 0.3;
   const sh = r.shape?.[k];
   if (sh) {
-    const want = { flat: 0, cup: 0.55, claw: 0.7, point: 0.85, two: 0.85 };
+    // The forefinger stays straight to point (and for the vee); a claw brings it to the thumb, a pinch.
+    const want = index ? { flat: 0, cup: 0.55, claw: 0.55, point: 0.05, two: 0.05 } : { flat: 0, cup: 0.55, claw: 0.7, point: 0.9, two: 0.9 };
     let sum = 0, acc = 0;
     for (const key of Object.keys(want) as Array<keyof typeof want>) { const w = sh[key] ?? 0; sum += w; acc += w * want[key]; }
     if (sum > 0) c = c * Math.max(0, 1 - sum) + acc;
@@ -261,10 +262,11 @@ export function bonesOf(r: Rig, P: Proportions, chains: Chain[], x: Extras): Bon
     b[`wrist${k}`] = joint(b[`elbow${k}`], [0, 0, -P.lower], ...r.hand[k]);
     // The mitt: the fingers as one block hinged at the knuckles, folding to the palm at a fist, and the thumb, out from
     // the hand when open and turned in across the fingers as they close.
-    const c = curlOf(r, k);
+    const c = curlOf(r, k), ci = curlOf(r, k, true);
     const knuckle: V3 = [0, 0.05, -P.palm];
     b[`fing${k}`] = joint(b[`wrist${k}`], knuckle, -c * 100);
-    b[`thumb${k}`] = joint(b[`wrist${k}`], [-s * P.r.wrist * 0.9, 0.3, -P.palm * 0.35], -c * 40, s * (35 - c * 30), 0);
+    b[`index${k}`] = joint(b[`wrist${k}`], [-s * P.r.wrist * 1.2, 0.05, -P.palm], -ci * 100);
+    b[`thumb${k}`] = joint(b[`wrist${k}`], [-s * P.r.wrist * 0.9, 0.3, -P.palm * 0.35], -8 - c * 40, s * (22 - c * 30), 0);
     const [lp, la, lt] = r.leg[k];
     b[`hip${k}`] = joint(pelvis, [s * P.hipW, 0, -0.1], lp, -s * la, s * lt);
     b[`knee${k}`] = joint(b[`hip${k}`], [0, 0, -P.thigh], -r.knee[k]);
