@@ -59,7 +59,7 @@ export function bodyMaterials(look: Look): Material[] {
   out[M.sole] = { colour: '#6e4e3a' };
   out[M.mouth] = { colour: '#5a2a3c' };
   out[M.teeth] = { colour: '#fbf6ea' };
-  out[M.trim] = { colour: '#d4c3a0' };
+  out[M.trim] = { colour: '#d4c3a0', noCrease: true };
   // The groove between two fingers: the ink rule, a dark of the skin's own colour.
   out[M.crease] = { colour: inkOf(out[M.skin].colour) };
   // The face's planes shade soft (the shadow tone only well away from the light); the mitt has no ink inside its edge.

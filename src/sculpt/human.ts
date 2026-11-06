@@ -86,6 +86,8 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
       return [M.skin, M.shorts, d];
     }
     if (region === 3 || leg(bone)) return [M.skin, M.shoe, ankleZ + 0.1 - p[2]];
+    // The body's own neck shades with the face's planes, so no dark skin shows inside the collar.
+    if (bone === 'neck' || bone === 'head') return [M.face, M.face, -1];
     return [M.skin, M.skin, -1];
   };
 }

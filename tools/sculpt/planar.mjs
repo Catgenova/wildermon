@@ -122,7 +122,7 @@ const HF = [
 const THROAT = ['K0', 'K1', 'K2', 'K3', 'K4', 'K5', 'K6', "K5'", "K4'", "K3'", "K2'", "K1'"];
 /** The eyes and the brows: [u0, u1, v0, v1] of the rectangle, man and woman; the brow's ends and middle heights. */
 const EYE = { man: [0.13, 0.178, 0.53, 0.572], woman: [0.135, 0.191, 0.473, 0.526] };
-const BROW = { man: { u: [0.075, 0.18, 0.27], top: [0.656, 0.658, 0.65], h: [0.03, 0.03, 0.018] }, woman: { u: [0.085, 0.19, 0.285], top: [0.621, 0.634, 0.618], h: [0.02, 0.02, 0.012] } };
+const BROW = { man: { u: [0.075, 0.18, 0.25], top: [0.656, 0.658, 0.652], h: [0.03, 0.03, 0.014] }, woman: { u: [0.085, 0.19, 0.27], top: [0.621, 0.634, 0.62], h: [0.02, 0.02, 0.01] } };
 
 /**
  * The head for one body in MakeHuman's space. `L`: chin and crown heights, the skull's centre depth `zc`; `base`: the
@@ -132,7 +132,8 @@ const BROW = { man: { u: [0.075, 0.18, 0.27], top: [0.656, 0.658, 0.65], h: [0.0
 export function tracedHead(L, base, style, f) {
   const woman = style === 'woman', col = woman ? 1 : 0;
   const H = L.crown - L.chin;
-  const P = ([u, v, z]) => [u * H, L.chin + v * H, L.zc + (z + 0.05) * H];
+  // The woman's face is shorter between the brow and the chin: everything under the brow line drawn up toward it.
+  const P = ([u, v, z]) => { const vv = woman && v < 0.62 ? 0.62 + (v - 0.62) * 0.97 : v; return [u * H, L.chin + vv * H, L.zc + (z + 0.05) * H]; };
   const V = (name) => { const m = name.endsWith("'"); const [u, v, z] = HV[name.slice(0, m ? -1 : undefined)][col]; return P([m ? -u : u, v, z]); };
   const HEAD = [['head', 1]], THR = [['head', 0.5], ['neck', 0.5]], NECK = [['neck', 1]];
   const wOf = (name) => (name.startsWith('K') ? THR : HEAD);
@@ -276,12 +277,12 @@ export function mitt(J, pts, k, detail, f) {
     f.facet(r2, 2, bone, [0, 0, 0].map((_, i) => a[i]), true);
   }
   // The thumb: a square wedge from inside the palm's thumb edge, out and forward of the palm, in two segments.
-  const root = at(-half * 0.72, -0.01, 0.16);
+  const root = at(-half * 0.72, -0.06, 0.16);
   const dir1 = unit(add(add(mul(s, -0.72), mul(n, -0.3)), mul(a, 0.63)));
   const dir2 = unit(add(add(mul(s, -0.5), mul(n, -0.4)), mul(a, 0.77)));
   const kn = add(root, mul(dir1, 0.27 * L)), tipT = add(kn, mul(dir2, 0.19 * L));
   const box = (c, d, hw, ht) => { const u = unit(cross(d, n)), v = unit(cross(u, d)); return [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([x, y]) => add(add(c, mul(u, x * hw * L)), mul(v, y * ht * L))); };
-  const t0 = box(root, dir1, 0.14, 0.13), t1 = box(kn, dir1, 0.11, 0.1), t2 = box(add(kn, mul(dir2, 0.02 * L)), dir2, 0.095, 0.085), t3 = box(add(kn, mul(dir2, 0.17 * L)), dir2, 0.07, 0.06);
+  const t0 = box(root, dir1, 0.13, 0.1), t1 = box(kn, dir1, 0.11, 0.09), t2 = box(add(kn, mul(dir2, 0.02 * L)), dir2, 0.095, 0.085), t3 = box(add(kn, mul(dir2, 0.17 * L)), dir2, 0.07, 0.06);
   f.loft(t0, t1, 2, THB, TH);
   f.loft(t1, t2, 2, TH);
   f.loft(t2, t3, 2, TH);
