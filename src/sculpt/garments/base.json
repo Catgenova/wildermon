@@ -1,0 +1,45 @@
+{
+  "_": "The base's clothes, traced from the design sheet (docs/aesthetic/10). Lengths are fractions of the body's height: z up from the sole, x out from a piece's own axis, y forward. A piece is a tube lofted along a chain of joints (a joint name, or [joint, dz] for a point dz heights above it), from t to t along the chain, at least `offset` off the body; where a view's polyline is wider than the body, the tube follows the polyline. Angles are degrees from the front toward the body's left. Garments are lofted in the order written, each over the body and the garments before it. Prints are stamps on the cloth: a border up from the hem, a collar down from the top, a band between two t, a sigil at (angle, t).",
+  "sheet": {
+    "front": { "crown": 0.032, "sole": 0.97, "x": 0.506 },
+    "back": { "crown": 0.032, "sole": 0.97, "x": 0.5 }
+  },
+  "garments": {
+    "trousers": {
+      "material": "trousers",
+      "pieces": [
+        {
+          "name": "body", "chain": [["spineA", 0.035], "pelvis", ["pelvis", -0.07]], "t": [0, 1], "rings": 7, "sides": 20, "offset": 0.009,
+          "bones": "^(spine|pelvis|hip)",
+          "front": [[0.075, 0.56], [0.082, 0.52], [0.08, 0.48], [0.07, 0.44]]
+        },
+        {
+          "name": "leg", "mirror": true, "chain": ["hip", "knee", "ankle"], "t": [0.06, 0.8], "rings": 10, "sides": 14, "offset": 0.012,
+          "bones": "^(hip|knee|ankle)",
+          "front": [[0.052, 0.5], [0.05, 0.42], [0.046, 0.34], [0.044, 0.27], [0.046, 0.2], [0.04, 0.17]],
+          "sway": { "from": 0.55, "links": 1, "step": 0.1, "stiffness": 0.8 },
+          "prints": [{ "kind": "border", "width": 0.018, "material": "trim" }]
+        }
+      ]
+    },
+    "shirt": {
+      "material": "shirt",
+      "pieces": [
+        {
+          "name": "body", "chain": [["neck", 0.008], "chest", "spineB", "spineA", ["pelvis", 0.01]], "t": [0, 1], "rings": 20, "sides": 20, "offset": 0.016,
+          "bones": "^(neck|chest|spine|pelvis|clav)", "include": [{ "bones": "^arm", "above": ["arm0", -0.018] }, { "bones": "^hip", "above": ["pelvis", -0.05] }],
+          "prints": [{ "kind": "collar", "width": 0.012, "material": "trim" }]
+        },
+        {
+          "name": "sleeve", "mirror": true, "chain": ["arm", "elbow", "wrist"], "t": [0.02, 0.72], "rings": 7, "sides": 12, "offset": 0.012,
+          "bones": "^(arm|elbow|wrist)",
+          "hem": [[0, 0], [90, -0.02], [180, 0], [270, 0.02]]
+        }
+      ]
+    }
+  },
+  "demo": {
+    "shirt": { "body": [{ "kind": "sigil", "at": [0, 0.35], "r": 0.03, "material": "trim", "shape": "diamond" }, { "kind": "border", "width": 0.02, "material": "trim" }, { "kind": "sigil", "at": [180, 0.45], "r": 0.035, "material": "trim", "shape": "disc" }], "sleeve": [{ "kind": "border", "width": 0.014, "material": "trim" }] },
+    "trousers": { "leg": [{ "kind": "band", "t": [0.3, 0.36], "material": "trim" }] }
+  }
+}

@@ -14,7 +14,8 @@ import { HEIGHT_SCALE } from '../render/iso';
 import { sculptRig, viewOf, type FigurePose, type View } from '../render/figure';
 import { bake, bandOf, type Baked } from './bake';
 import { drawSculptGL, type DrawOpts, type SculptDraw } from './gl';
-import { femOf, humanBaked, humanProportions } from './human';
+import { clothe, GARMENT_FILE, garmentChains } from './cloth';
+import { femOf, HUMAN_HEIGHT, humanBaked, humanProportions } from './human';
 import { bodyMaterials, bodyModel } from './models/body';
 import { bonesOf, HAIR_CHAIN, referenceStance, relaxedIdle, REST_EXTRAS, skinMatrices, type Bones, type Chain, type Extras, type Proportions } from './rig';
 import type { Band, Material, Model } from './sdf';
@@ -27,8 +28,11 @@ export type { Band } from './sdf';
 
 /** What the body is made of: the human base, or the distance-field body. */
 export type Kind = 'human' | 'sdf';
-/** What the base body wears: the undershirt and trousers the game shows, or the reference sheet's shorts (a top too on a woman), for the body alone. */
-export type Wear = 'base' | 'shorts';
+/**
+ * What the base body wears: the undershirt and trousers the game shows (cloth lofted over the body, `./cloth`), the same
+ * with the print library's demonstrations on them, or the reference sheet's shorts (a top too on a woman), for the body alone.
+ */
+export type Wear = 'base' | 'shorts' | 'prints';
 
 interface Built { kind: Kind; fem: number; wear: Wear; model: Model | null; materials: Material[]; rest: Bones; order: string[]; chains: Chain[]; bakes: Map<Band, Baked> }
 const BUILT = new Map<string, Built>();
@@ -44,9 +48,11 @@ export function built(P: Proportions, look: Look, wear: Wear = 'base', kind: Kin
   let b = BUILT.get(key);
   if (b) return b;
   const { rest } = sculptRig({ phase: 0, moving: false, facing: 0, swimming: false, working: false, look });
+  // The hair's chain, then the garments' sway chains, which hang where the rig at rest puts their hems.
   const chains = [HAIR_CHAIN(P)];
+  if (kind === 'human' && wear !== 'shorts') chains.push(...garmentChains(GARMENT_FILE.garments, bonesOf(rest, P, chains, REST_EXTRAS), HUMAN_HEIGHT));
   const restBones = bonesOf(rest, P, chains, REST_EXTRAS);
-  const model = kind === 'sdf' ? bodyModel(P, restBones, look, wear) : null;
+  const model = kind === 'sdf' ? bodyModel(P, restBones, look, wear === 'shorts' ? 'shorts' : 'base') : null;
   b = { kind, fem: femOf(look), wear, model, materials: model ? model.materials : bodyMaterials(look), rest: restBones, order: Object.keys(restBones), chains, bakes: new Map() };
   BUILT.set(key, b);
   return b;
@@ -55,7 +61,11 @@ export function built(P: Proportions, look: Look, wear: Wear = 'base', kind: Kin
 /** The bake of a built body at a band, made on first use. */
 export function bakedAt(b: Built, band: Band): Baked {
   let k = b.bakes.get(band);
-  if (!k) { k = b.model ? bake(b.model, band, b.order) : humanBaked(b.fem, band, b.rest, b.order, b.wear); b.bakes.set(band, k); }
+  if (!k) {
+    k = b.model ? bake(b.model, band, b.order) : humanBaked(b.fem, band, b.rest, b.order, b.wear);
+    if (!b.model && b.wear !== 'shorts') k = clothe(k, GARMENT_FILE.garments, b.rest, b.order, HUMAN_HEIGHT, b.wear === 'prints' ? GARMENT_FILE.demo : undefined);
+    b.bakes.set(band, k);
+  }
   return k;
 }
 

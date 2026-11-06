@@ -17,6 +17,8 @@ import type { Wear } from './index';
 interface AssetBand { band: number; verts: number; tris: number[]; man: number[]; woman: number[]; region: number[]; bw: number[]; stamp: number[] }
 interface Asset { height: number; bones: string[]; frames: Record<'man' | 'woman', Record<string, number[]>>; proportions: Record<'man' | 'woman', Proportions>; bands: AssetBand[] }
 const A = ASSET as unknown as Asset;
+/** The base's height, sole to crown, in units. */
+export const HUMAN_HEIGHT = A.height;
 
 /** Nought a man, one a woman, half for neither. */
 export const femOf = (look: Look): number => (look.gender === 'woman' ? 1 : look.gender === 'man' ? 0 : 0.5);
@@ -50,16 +52,15 @@ function turn(a: V3, b: V3): number[] {
 
 /**
  * What the clothed and the bare looks put on each part: a base material and one stamp with its signed distance, the stamp
- * winning where the distance is positive. Each zone's neighbours share its stamp cloth with the distance of one sign across
- * the join, so no triangle is pulled between two edges: the shirt zone (neck, torso, arms) is shirt with skin stamped
- * outside the collar and the sleeves; the trousers zone is shirt with trousers stamped under the waist; the legs are
- * trousers with the shoe stamped under the ankle. Bare, everything is skin with the shorts (and the woman's top, the same
- * cloth) stamped on.
+ * winning where the distance is positive. Clothed, the body is skin with the shoe stamped under the ankle, and the clothes
+ * are cloth lofted over it (`./cloth`). Bare, everything is skin with the shorts (and the woman's top, the same cloth)
+ * stamped on.
  */
 function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: number, bone: string, p: V3, irisD: number) => [number, number, number] {
   const armZ = at(rest, 'arm0')[2], hipZ = at(rest, 'hip0')[2], pelvisZ = at(rest, 'pelvis')[2], spA = at(rest, 'spineA')[2], neckZ = at(rest, 'neck')[2], ankleZ = at(rest, 'ankle0')[2];
-  const waistZ = spA + 0.2 + 0.25 * fem, shortsTop = pelvisZ + 0.3, shortsHem = hipZ - P.thigh * 0.46, sleeve = armZ - 1.3, collar = neckZ + 0.15;
+  const shortsTop = pelvisZ + 0.3, shortsHem = hipZ - P.thigh * 0.46;
   const braLow = armZ - 2.3, braTop = armZ - 0.6;
+  void spA; void neckZ;
   const arm = (bone: string): boolean => /^(clav|arm|elbow|wrist|fing|thumb)/.test(bone);
   const leg = (bone: string): boolean => /^(hip|knee|ankle|toe)/.test(bone);
   return (region, bone, p, irisD) => {
@@ -82,11 +83,8 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
       }
       return [M.skin, M.shorts, d];
     }
-    if (region === 3 || leg(bone)) return [M.trousers, M.shoe, ankleZ + 0.1 - p[2]];
-    if (p[2] < waistZ + 1.2 && !arm(bone) && region === 0) return [M.shirt, M.trousers, waistZ - p[2]];
-    // The shirt zone: skin shows past the collar, below the sleeves, and on the hands and head.
-    const d = region === 2 || arm(bone) ? sleeve - p[2] : p[2] - collar;
-    return [M.shirt, M.skin, d];
+    if (region === 3 || leg(bone)) return [M.skin, M.shoe, ankleZ + 0.1 - p[2]];
+    return [M.skin, M.skin, -1];
   };
 }
 

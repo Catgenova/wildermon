@@ -11,6 +11,9 @@ import { drawFigure, type FigurePose } from '../../src/render/figure';
 import type { Look } from '../../src/game/look';
 import { bandOf, CELL } from '../../src/sculpt/bake';
 import { built, bakedAt, drawSculpt, heightOf, humanProportions, levelView, sculptScene, FIVE, SEVEN, type Debug, type Kind, type Wear } from '../../src/sculpt/index';
+import { GARMENT_FILE } from '../../src/sculpt/cloth';
+import { HUMAN_HEIGHT } from '../../src/sculpt/human';
+import { at } from '../../src/sculpt/rig';
 import type { View } from '../../src/render/figure';
 import type { Proportions } from '../../src/sculpt/rig';
 import { glContext } from '../../src/sculpt/gl';
@@ -296,6 +299,64 @@ const api = {
       game.push({ cv: c.cv, label: `game zoom 2 f${f}, clothed, at ease` });
     }
     row(game);
+  },
+  /**
+   * The garment pipeline's sheet: the design sheet's front and back with the garments' traced edges drawn over them (each
+   * piece's polyline about its own axis, where our rig at rest puts that axis), ours dressed by the same tracing in the
+   * level view, ours with the print library's demonstrations on, and the dressed body at the eight facings.
+   */
+  async garment(who: Who = 'male'): Promise<void> {
+    if (!REF10) return;
+    const im = new Image(); im.src = REF10; await im.decode();
+    const W = im.naturalWidth, Hh = im.naturalHeight;
+    const front = { x0: 0.04, x1: 0.28, y0: 0.02, y1: 0.985 }, back = { x0: 0.3, x1: 0.56, y0: 0.02, y1: 0.985 };
+    const zoom = 6.5, bodyPx = HUMAN_HEIGHT * 2.25 * zoom, cropH = Math.round(bodyPx / 0.93);
+    const rest = built(PROPS[who], lookOf(who), 'base').rest;
+    const traced = (r: { x0: number; x1: number; y0: number; y1: number }, view: 'front' | 'back'): HTMLCanvasElement => {
+      const sw = (r.x1 - r.x0) * W, sh = (r.y1 - r.y0) * Hh, w = Math.round((sw * cropH) / sh);
+      const cv = document.createElement('canvas'); cv.width = w * DPR; cv.height = cropH * DPR; cv.style.width = `${w}px`; cv.style.height = `${cropH}px`;
+      const g = cv.getContext('2d')!;
+      g.drawImage(im, r.x0 * W, r.y0 * Hh, sw, sh, 0, 0, w * DPR, cropH * DPR);
+      g.scale(DPR, DPR);
+      const sv = GARMENT_FILE.sheet[view], figPx = (sv.sole - sv.crown) * cropH, cx = sv.x * w, soleY = sv.sole * cropH;
+      const px = (x: number, z: number): [number, number] => [cx + x * figPx, soleY - z * figPx];
+      g.lineWidth = 1.5; g.strokeStyle = '#ff2a2a'; g.fillStyle = 'rgba(255,42,42,0.12)';
+      for (const gar of Object.values(GARMENT_FILE.garments)) for (const piece of gar.pieces) {
+        if (!piece.front) continue;
+        for (const k of piece.mirror ? [0, 1] : [0]) {
+          const e = piece.chain[0], name = typeof e === 'string' ? e : e[0];
+          // The piece's axis across the figure, from our rig at rest, mirrored for the back view.
+          let ax = at(rest, piece.mirror ? `${name}${k}` : name)[0] / HUMAN_HEIGHT;
+          if (view === 'back') ax = -ax;
+          for (const s of [-1, 1]) {
+            g.beginPath();
+            piece.front.forEach(([x, z], i) => { const [px0, py0] = px(ax + s * x, z); if (i) g.lineTo(px0, py0); else g.moveTo(px0, py0); });
+            g.stroke();
+          }
+        }
+      }
+      // The figure's crown and sole as the file places them.
+      g.strokeStyle = 'rgba(255,255,255,0.6)'; g.setLineDash([3, 3]);
+      for (const z of [0, 1]) { const [, y] = px(0, z); g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+      g.setLineDash([]);
+      return cv;
+    };
+    heading(`${who} garments: the sheet's front and back with the traced edges (red) about our axes | ours dressed by the tracing, level view | ours with the print demonstrations | the eight facings dressed`);
+    const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [{ cv: traced(front, 'front'), label: 'sheet front, traced' }, { cv: traced(back, 'back'), label: 'sheet back, traced' }];
+    for (const [name, f, deg] of [['front', 0, 0], ['back', 4, 180], ['side', 2, 90]] as Array<[string, number, number]>) {
+      const c = cell(zoom, [-41, 3], [-11, 11]);
+      drawOne(c, zoom, who, poseOf(f, 'idle:0'), { stance: 'ref', view: levelView((deg * Math.PI) / 180) });
+      cells.push({ cv: c.cv, label: `ours, ${name}` });
+    }
+    for (const [name, f, deg] of [['front', 0, 0], ['back', 4, 180]] as Array<[string, number, number]>) {
+      const c = cell(zoom, [-41, 3], [-11, 11]);
+      drawOne(c, zoom, who, poseOf(f, 'idle:0'), { stance: 'ref', view: levelView((deg * Math.PI) / 180), wear: 'prints' });
+      cells.push({ cv: c.cv, label: `prints, ${name}` });
+    }
+    { const c = cell(zoom, [-41, 3], [-11, 11]); drawOne(c, zoom, who, poseOf(0, 'idle:0'), { stance: 'ref', view: levelView(0), debug: 'wire' }); cells.push({ cv: c.cv, label: 'ours, wire' }); }
+    row(cells);
+    this.facings(who, 'idle:0', 4);
+    this.facings(who, 'walk:0.3', 4);
   },
   /** The lineup: the reference, the seven-head sculpt, the five-head sculpt and the 2D figure, all at one height. */
   async lineup(zoom = 6, what = 'idle:0'): Promise<void> {
