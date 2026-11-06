@@ -4395,6 +4395,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/haulshoes.mjs --log-level=error
           node node_modules/.cache/haulshoes.mjs
 
+      - name: A repeated mould pour takes the first pour's metal
+        if: matrix.shard == 4
+        run: |
+          # Reported: a pour from lower QL mithril in a wagon, repeated, took
+          # the pack's higher QL mithril. A repeat queued behind the pour names
+          # the wagon's stack, and is poured from it or refused: never a stand-in
+          # from the pack for a stack in a store, on both sides.
+          npx esbuild supabase/test/repour.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/repour.mjs --log-level=error
+          node node_modules/.cache/repour.mjs
+
       - name: Climbing in the traces at a Wagonox's rate, level off the level skill
         if: matrix.shard == 4
         run: |
