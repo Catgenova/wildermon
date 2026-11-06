@@ -10,14 +10,17 @@
 import { drawFigure, type FigurePose } from '../../src/render/figure';
 import type { Look } from '../../src/game/look';
 import { bandOf, CELL } from '../../src/sculpt/bake';
-import { built, bakedAt, drawSculpt, heightOf, levelView, sculptScene, FEMALE, FIVE, MALE, NEITHER, SEVEN, type Debug, type Wear } from '../../src/sculpt/index';
+import { built, bakedAt, drawSculpt, heightOf, humanProportions, levelView, sculptScene, FIVE, SEVEN, type Debug, type Kind, type Wear } from '../../src/sculpt/index';
 import type { View } from '../../src/render/figure';
 import type { Proportions } from '../../src/sculpt/rig';
 import { glContext } from '../../src/sculpt/gl';
 
 const DPR = window.devicePixelRatio || 1;
 const GRASS = '#7d9b5e';
-const PROPS: Record<string, Proportions> = { male: MALE, female: FEMALE, neither: NEITHER, seven: SEVEN, five: FIVE };
+const PROPS: Record<string, Proportions> = { male: humanProportions(0), female: humanProportions(1), neither: humanProportions(0.5), seven: SEVEN, five: FIVE };
+const MALE = PROPS.male;
+/** The island's five and the reference's seven are the distance-field body; the rest the human base. */
+const kindOf = (who: string): Kind => (who === 'seven' || who === 'five' ? 'sdf' : 'human');
 const REF8 = (window as unknown as { REF8?: string }).REF8;
 const REF9 = (window as unknown as { REF9?: string }).REF9;
 const LOOK: Look = { gender: 'man', skin: 'light', hair: 'tousled', hairColour: 'chestnut', eyes: 'brown', beard: 'none', shirt: 'teal', trousers: 'brown' };
@@ -82,7 +85,7 @@ function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?:
       if (o.night) { c.g.fillStyle = `rgba(12, 20, 44, ${0.68 * o.night})`; c.g.fillRect(0, 0, c.w, c.h); }
       return;
     }
-    if (!drawSculpt(c.g, c.fx, c.fy, zoom, { ...pose, look: lookOf(who) }, { P: PROPS[who], dpr: DPR, now: 1, ...o })) drawFigure(c.g, c.fx, c.fy, zoom, pose);
+    if (!drawSculpt(c.g, c.fx, c.fy, zoom, { ...pose, look: lookOf(who) }, { P: PROPS[who], kind: kindOf(who), dpr: DPR, now: 1, ...o })) drawFigure(c.g, c.fx, c.fy, zoom, pose);
   } catch (e) {
     c.g.fillStyle = 'red'; c.g.font = '10px sans-serif';
     c.g.fillText(String(e).slice(0, 80), 2, 12);
@@ -104,6 +107,101 @@ const img = (src: string, h: number): Promise<HTMLCanvasElement> => new Promise(
 
 const api = {
   clear(): void { root.innerHTML = ''; },
+  /**
+   * How well our silhouette covers the reference's, at the picture's own size: the picture's two figures masked out of its
+   * background, ours drawn over each at the same height, feet and middle, and the overlap over the union -- for the whole,
+   * and by region (bands of the height, and the arms as what stands out from the middle).
+   */
+  async iou(who: Who = 'male'): Promise<Record<string, number>> {
+    const female = who === 'female';
+    const src = female ? REF9 : REF8;
+    if (!src) return {};
+    const im = new Image(); im.src = src; await im.decode();
+    const W = im.naturalWidth, H = im.naturalHeight;
+    const pc = document.createElement('canvas'); pc.width = W; pc.height = H;
+    const pg = pc.getContext('2d', { willReadFrequently: true })!; pg.drawImage(im, 0, 0);
+    const px = pg.getImageData(0, 0, W, H).data;
+    const ref = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i++) {
+      const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2], v = Math.max(r, g, b);
+      const skin = r > 60 && r > g + 8 && g >= b - 6 && r - b > 18;
+      const dark = v > 22 && v < 105 && v - Math.min(r, g, b) < 24;
+      ref[i] = female ? (v > 24 ? 1 : 0) : (skin || dark ? 1 : 0);
+    }
+    const out: Record<string, number> = {};
+    const views: Array<[string, number, number, number, number]> = [['front', 0, W / 2, -45, 7], ['back', W / 2, W, 135, 3]];
+    let inter = 0, union = 0;
+    for (const [name, x0, x1, deg, facing] of views) {
+      // Opened by a pixel (eroded, then grown back), so the checker's thin edges fall away from the figure.
+      const er = new Uint8Array(W * H);
+      for (let y = 1; y < H - 1; y++) for (let x = Math.max(1, x0); x < Math.min(W - 1, x1); x++) { const i = y * W + x; er[i] = ref[i] && ref[i - 1] && ref[i + 1] && ref[i - W] && ref[i + W] ? 1 : 0; }
+      for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) { const i = y * W + x; ref[i] = er[i] || (x > x0 && er[i - 1]) || (x < x1 - 1 && er[i + 1]) || (y > 0 && er[i - W]) || (y < H - 1 && er[i + W]) ? 1 : 0; }
+      // The figure is the largest connected blob of its half; the speckles round the checker are not it.
+      const seen = new Int32Array(W * H).fill(-1);
+      let best = -1, bestN = 0, label = 0;
+      for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) {
+        const i0 = y * W + x; if (!ref[i0] || seen[i0] >= 0) continue;
+        const stack = [i0]; seen[i0] = label; let n = 0;
+        while (stack.length) {
+          const i = stack.pop()!; n++;
+          const xx = i % W, yy = (i - xx) / W;
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = xx + dx, ny = yy + dy; if (nx < x0 || nx >= x1 || ny < 0 || ny >= H) continue; const j = ny * W + nx; if (ref[j] && seen[j] < 0) { seen[j] = label; stack.push(j); } }
+        }
+        if (n > bestN) { bestN = n; best = label; }
+        label++;
+      }
+      for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) if (ref[y * W + x] && seen[y * W + x] !== best) ref[y * W + x] = 0;
+      let top = H, bot = -1, left = W, right = -1;
+      for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) if (ref[y * W + x]) { if (y < top) top = y; if (y > bot) bot = y; if (x < left) left = x; if (x > right) right = x; }
+      if (bot < 0) continue;
+      const hh = bot - top + 1;
+      // The body's middle is the head's: the arms hang to one side of the picture.
+      let sx = 0, sn = 0;
+      for (let y = top; y < top + hh * 0.1; y++) for (let x = x0; x < x1; x++) if (ref[y * W + x]) { sx += x; sn++; }
+      const cx = sn ? sx / sn : (left + right) / 2;
+      const zoom = hh / (heightOf(PROPS[who]) * 2.25);
+      const oc = document.createElement('canvas'); oc.width = W; oc.height = H;
+      const og = oc.getContext('2d', { willReadFrequently: true })!;
+      og.fillStyle = '#ff00ff'; og.fillRect(0, 0, W, H);
+      const p = { ...poseOf(facing, 'idle:0'), look: lookOf(who) };
+      drawSculpt(og, cx, bot + 1, zoom, p, { P: PROPS[who], kind: kindOf(who), dpr: 1, now: 1, wear: 'shorts', stance: 'ref', view: levelView((deg * Math.PI) / 180), ink: 0.5 });
+      const ox = og.getImageData(0, 0, W, H).data;
+      const ours = new Uint8Array(W * H);
+      for (let i = 0; i < W * H; i++) ours[i] = ox[i * 4] > 240 && ox[i * 4 + 1] < 20 && ox[i * 4 + 2] > 240 ? 0 : 1;
+      // Where ours landed against the picture's figure: crown, sole and the head's middle, in the picture's pixels.
+      { let oTop = H, oBot = -1, osx = 0, osn = 0;
+        for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) if (ours[y * W + x]) { if (y < oTop) oTop = y; if (y > oBot) oBot = y; }
+        for (let y = oTop; y < oTop + (oBot - oTop) * 0.1; y++) for (let x = x0; x < x1; x++) if (ours[y * W + x]) { osx += x; osn++; }
+        out[`${name} crown dy`] = oTop - top; out[`${name} sole dy`] = oBot - bot; out[`${name} head dx`] = (osn ? osx / osn : 0) - cx; }
+      const score = (test: (x: number, y: number) => boolean): number => {
+        let a = 0, u = 0;
+        for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) { if (!test(x, y)) continue; const r = ref[y * W + x], o = ours[y * W + x]; if (r && o) a++; if (r || o) u++; }
+        if (name === 'front' && test === all) { inter += a; union += u; }
+        return u ? a / u : 1;
+      };
+      const all = (): boolean => true;
+      const band = (f0: number, f1: number) => (_x: number, y: number): boolean => y >= top + hh * f0 && y < top + hh * f1;
+      out[`${name}`] = score(all);
+      out[`${name} head`] = score(band(0, 0.13));
+      out[`${name} shoulders`] = score(band(0.13, 0.34));
+      out[`${name} waist`] = score(band(0.34, 0.56));
+      out[`${name} thighs`] = score(band(0.56, 0.78));
+      out[`${name} shins`] = score(band(0.78, 0.94));
+      out[`${name} feet`] = score(band(0.94, 1.0));
+      out[`${name} arms`] = score((x, y) => y >= top + hh * 0.22 && y < top + hh * 0.62 && Math.abs(x - cx) > hh * 0.11);
+      // The overlay itself, for the eye: ours in green over the picture.
+      const c = cell(1, [-1, 1], [-1, 1]); c.cv.width = W; c.cv.height = H; c.cv.style.width = `${W}px`; c.cv.style.height = `${H}px`;
+      const g = c.cv.getContext('2d')!; g.drawImage(pc, 0, 0);
+      g.globalAlpha = 0.45; g.globalCompositeOperation = 'source-over';
+      const tint = document.createElement('canvas'); tint.width = W; tint.height = H;
+      const tg = tint.getContext('2d')!; const td = tg.createImageData(W, H);
+      for (let i = 0; i < W * H; i++) { if (ours[i] || ref[i]) { td.data[i * 4] = ref[i] ? 230 : 40; td.data[i * 4 + 1] = ours[i] ? 230 : 40; td.data[i * 4 + 2] = 60; td.data[i * 4 + 3] = 255; } }
+      tg.putImageData(td, 0, 0); g.drawImage(tint, 0, 0);
+      row([{ cv: c.cv, label: `${name}: ours (green) over the picture, overlap ${(out[name] * 100).toFixed(1)}%` }]);
+    }
+    for (const k of Object.keys(out)) out[k] = +out[k].toFixed(3);
+    return out;
+  },
   /**
    * The body against the male reference (docs/aesthetic/08): the picture, then our sculpt bare in the sheet's stance at the
    * picture's two views, at one height; then the picture laid half over our two bodies for the silhouettes; then at game zoom.
@@ -136,7 +234,7 @@ const api = {
       const feetY = h * feet;
       for (const [f, x, deg] of [[7, xs[0], -35], [3, xs[1], 145]] as Array<[number, number, number]>) {
         const p = { ...poseOf(f, 'idle:0'), look: lookOf(who) };
-        if (!drawSculpt(g, w * x, feetY, zoom, p, { P: PROPS[who] ?? MALE, dpr: DPR, now: 1, wear: 'shorts', stance: 'ref', view: levelView((deg * Math.PI) / 180) })) drawFigure(g, w * x, feetY, zoom, p);
+        if (!drawSculpt(g, w * x, feetY, zoom, p, { P: PROPS[who] ?? MALE, kind: kindOf(who), dpr: DPR, now: 1, wear: 'shorts', stance: 'ref', view: levelView((deg * Math.PI) / 180) })) drawFigure(g, w * x, feetY, zoom, p);
       }
       g.globalAlpha = 0.5;
       g.drawImage(pic, 0, 0, w, h);
@@ -195,6 +293,8 @@ const api = {
     const heads = [0, 1, 2, 3, 5, 7].map((f) => { const c = cell(hz, [-40.5, -28], [-7, 7]); drawOne(c, hz, who, poseOf(f, f === 7 ? 'talk:0.3' : 'idle:0')); return { cv: c.cv, label: `head f${f}${f === 7 ? ' talk' : ''}` }; });
     // A blink: the clock's window lands on an id of thirty-four letters at the sheet's time.
     { const c = cell(hz, [-40.5, -28], [-7, 7]); drawOne(c, hz, who, { ...poseOf(0, 'idle:0'), id: 'studio-blink-xxxxxxxxxxxxxxxxxxxxx' }); heads.push({ cv: c.cv, label: 'head f0 blink' }); }
+    { const c = cell(hz, [-40.5, -28], [-7, 7]); drawOne(c, hz, who, poseOf(0, 'idle:0'), { flat: true }); heads.push({ cv: c.cv, label: 'head f0 flat' }); }
+    for (const d of ['wire', 'mats', 'bones'] as Debug[]) { const c = cell(hz, [-40.5, -28], [-7, 7]); drawOne(c, hz, who, poseOf(0, 'idle:0'), { debug: d }); heads.push({ cv: c.cv, label: `head f0 ${d}` }); }
     row(heads);
     const hands = [1, 3].flatMap((f) => ['idle:0', 'wave:0.5', 'work:0.5'].map((w) => { const c = cell(hz * 0.6, [-38, -4], [-14, 14]); drawOne(c, hz * 0.6, who, poseOf(f, w)); return { cv: c.cv, label: `hands f${f} ${w}` }; }));
     row(hands);
@@ -211,9 +311,9 @@ const api = {
     row(cells);
   },
   /** The bake's numbers per band, and the draw's cost. */
-  stats(who: 'seven' | 'five'): Record<string, unknown> {
-    const b = built(PROPS[who], LOOK);
-    const out: Record<string, unknown> = { prims: b.model.prims.length, bones: b.order.length, boneNames: b.order.join(' ') };
+  stats(who: Who): Record<string, unknown> {
+    const b = built(PROPS[who], LOOK, 'base', kindOf(who));
+    const out: Record<string, unknown> = { prims: b.model ? b.model.prims.length : 0, bones: b.order.length, boneNames: b.order.join(' ') };
     for (const band of [0, 1, 2] as const) {
       const k = bakedAt(b, band);
       out[`band${band}`] = { cell: CELL[band], grid: k.grid.join('×'), verts: k.nVerts, tris: k.nTris, bakeMs: Math.round(k.ms) };
@@ -223,9 +323,9 @@ const api = {
   bench(who: 'seven' | 'five', n = 20, frames = 10, zoom = 1): { msPerFrame: number; msPerBody: number; band: number } {
     const c = cell(zoom);
     const poses = Array.from({ length: n }, (_, i) => poseOf(i % 8, i % 2 ? 'walk:0.3' : 'idle:0.2'));
-    for (const p of poses) drawSculpt(c.g, c.fx, c.fy, zoom, p, { P: PROPS[who], dpr: DPR });
+    for (const p of poses) drawSculpt(c.g, c.fx, c.fy, zoom, p, { P: PROPS[who], kind: kindOf(who), dpr: DPR });
     const t0 = performance.now();
-    for (let f = 0; f < frames; f++) for (const p of poses) { p.phase += 0.05; drawSculpt(c.g, c.fx, c.fy, zoom, p, { P: PROPS[who], dpr: DPR, now: f * 0.1 }); }
+    for (let f = 0; f < frames; f++) for (const p of poses) { p.phase += 0.05; drawSculpt(c.g, c.fx, c.fy, zoom, p, { P: PROPS[who], kind: kindOf(who), dpr: DPR, now: f * 0.1 }); }
     const ms = (performance.now() - t0) / frames;
     return { msPerFrame: ms, msPerBody: ms / n, band: bandOf(zoom) };
   },

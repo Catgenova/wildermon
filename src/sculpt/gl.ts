@@ -69,7 +69,8 @@ vec3 hashCol(float i){ return 0.35 + 0.6 * vec3(hash(vec2(i, 1.0)), hash(vec2(i,
 void main() {
   vec3 n = normalize(vNrm);
   // The stamp's material where the stamp's distance says inside, its edge one pixel soft across the interpolated distance.
-  float inStamp = smoothstep(-fwidth(vStamp), fwidth(vStamp), vStamp);
+  float fw = max(fwidth(vStamp), 1e-4);
+  float inStamp = smoothstep(-fw, fw, vStamp);
   int mi = inStamp > 0.5 ? int(vMatB + 0.5) : int(vMat + 0.5);
   vec4 M = mix(uMat[int(vMat + 0.5)], uMat[int(vMatB + 0.5)], inStamp);
   vec3 base = M.rgb;
@@ -92,7 +93,7 @@ void main() {
     vec3 h = rgb2hsv(base);
     bool warm = h.x < 0.2 || h.x > 0.9;
     float aa = fwidth(dl) * 1.2;
-    float shadowAt = skin ? 0.0 : 0.12, lightAt = metal ? 0.78 : (skin ? 0.72 : 0.64);
+    float shadowAt = skin ? -0.35 : -0.1, lightAt = metal ? 0.78 : (skin ? 0.72 : 0.64);
     float sh = 1.0 - smoothstep(shadowAt - aa, shadowAt + aa, dl);
     float li = smoothstep(lightAt - aa, lightAt + aa, dl);
     vec3 shadow, light;
@@ -100,15 +101,15 @@ void main() {
       shadow = hsv2rgb(vec3(fract(h.x - 0.035), min(1.0, h.y * 1.22), h.z * 0.74));
       light = hsv2rgb(vec3(h.x, h.y * 0.9, min(1.0, h.z * 1.05)));
     } else {
-      float toS = warm ? 0.5 : 0.78; float dS = toS - h.x; dS -= floor(dS + 0.5);
-      shadow = hsv2rgb(vec3(fract(h.x + dS * 0.2), min(1.0, h.y * 1.15 + 0.08), h.z * 0.7));
+      float toS = warm ? 0.02 : 0.78; float dS = toS - h.x; dS -= floor(dS + 0.5);
+      shadow = hsv2rgb(vec3(fract(h.x + dS * 0.1), min(1.0, h.y * 1.15 + 0.08), h.z * 0.78));
       float toL = warm ? 0.15 : 0.5; float dL = toL - h.x; dL -= floor(dL + 0.5);
       light = hsv2rgb(vec3(fract(h.x + dL * 0.08), h.y * (metal ? 0.6 : 0.88), min(1.0, h.z * (metal ? 1.2 : 1.1) + 0.02)));
     }
     c = mix(mix(base, light, li), shadow, sh);
     // A rim where the surface turns from the viewer, in the shadow's hue: the form's edge read without a line.
     float rim = pow(1.0 - clamp(dot(n, uT), 0.0, 1.0), 4.0);
-    c = mix(c, shadow, rim * 0.35 * (1.0 - li));
+    c = mix(c, shadow, rim * 0.2 * (1.0 - li));
     // The grain, a breath of broken colour.
     c += (hash(floor(gl_FragCoord.xy / 2.0)) - 0.5) * uGrain;
   }

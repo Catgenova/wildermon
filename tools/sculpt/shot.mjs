@@ -67,6 +67,7 @@ if (flag('stats') || only.includes('stats')) {
   if (flag('stats')) { await b.close(); process.exit(0); }
 }
 if (only.includes('compare')) await shoot(`compare-${who}`, async (w) => { await window.SCULPT.compare(w, 6.5); });
+if (only.includes('compare') || only.includes('iou')) { await p.evaluate(() => window.SCULPT.clear()); const r = await p.evaluate((w) => window.SCULPT.iou(w), who); console.log(`iou ${who}`, JSON.stringify(r)); await p.locator('#root').screenshot({ path: join(out, `iou-${who}.png`), timeout: 180000, animations: 'disabled' }); console.log('wrote', join(out, `iou-${who}.png`)); }
 if (only.includes('lineup')) await shoot('lineup', async () => { await window.SCULPT.lineup(6, 'idle:0'); await window.SCULPT.lineup(2.5, 'walk:0.25'); });
 if (only.includes('facings')) await shoot(`facings-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 1); window.SCULPT.facings(w, 'walk:0.25', 1); window.SCULPT.facings(w, 'idle:0', 2); window.SCULPT.facings(w, 'walk:0.25', 2); window.SCULPT.facings(w, 'idle:0', 4); window.SCULPT.facings(w, 'walk:0.6', 4); window.SCULPT.facings('figure', 'idle:0', 2); });
 if (only.includes('motion')) await shoot(`motion-${who}`, (w) => { window.SCULPT.strip(w, 1, 2.5); window.SCULPT.strip(w, 3, 2.5); window.SCULPT.strip(w, 6, 2.5); window.SCULPT.strip('figure', 1, 2.5); });

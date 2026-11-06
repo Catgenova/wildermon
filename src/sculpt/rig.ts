@@ -43,6 +43,8 @@ export interface Proportions {
   /** Hand: palm length, and the fingers' length. */
   palm: number; finger: number;
   /** Radii: neck, upper arm, forearm, wrist, thigh, shin, ankle, chest half-width, waist half-width. */
+  /** Where the eyes and the jaw hinge are, from the head joint (the right eye; the left mirrors), when the body says. */
+  eye?: V3; jaw?: V3;
   r: { neck: number; upper: number; fore: number; wrist: number; thigh: number; shin: number; ankle: number; chest: number; waist: number; pelvis: number };
 }
 
@@ -110,10 +112,13 @@ export const heightOf = (P: Proportions): number => P.hip + P.spine + P.chest + 
 
 /** The reference sheet's stance: stood square, feet a little apart, arms a little out from the sides with the palms turned back. */
 export function referenceStance(r: Rig): Rig {
-  const o: Rig = { ...r, arm: [[3, 30, 0], [3, 30, 0]], elbow: [8, 8], hand: [[0, 0, -20], [0, 0, 20]], leg: [[0, 4, 0], [0, 4, 0]], knee: [2, 2], flat: [true, true] };
+  const o: Rig = { ...r, arm: [[3, 10, 0], [3, 10, 0]], elbow: [8, 8], hand: [[0, 0, -20], [0, 0, 20]], leg: [[0, 9, 0], [0, 9, 0]], knee: [2, 2], flat: [true, true] };
   o.pelvis = [0, 0, 0]; o.spine = [0, 0, 0]; o.chest = [0, 0, 0]; o.neck = [0, 0, 0]; o.head = [0, 0, 0];
   o.loose = [true, true]; o.curl = [0.2, 0.2]; o.open = [0, 0]; o.shrug = [0, 0];
   o.hover = undefined; o.plant = undefined; o.lift = 0;
+  // The picture's weight is on one leg: the hips a little to the body's left, the spine leaning back over them.
+  o.at = [-0.45, 0, 0]; o.tail = [0, 0, 0]; o.foot = [0, 0]; o.sink = 0; o.spin = 0;
+  o.spine = [0, 6, 0];
   return o;
 }
 
@@ -218,10 +223,10 @@ export function bonesOf(r: Rig, P: Proportions, chains: Chain[], x: Extras): Bon
   const head = joint(neck, [0, 0.06, P.headJ], ...r.head);
   const b: Bones = { pelvis, spineA, spineB, chest, neck, head };
   // The face: a jaw hinged under the ears, a lid and a brow over each eye.
-  b.jaw = joint(head, [0, 0.1, P.head * 0.42], x.jaw * 18);
+  b.jaw = joint(head, P.jaw ?? [0, 0.1, P.head * 0.42], x.jaw * 18);
   for (let k = 0; k < 2; k++) {
     const s = k ? 1 : -1;
-    const eye: V3 = [s * P.headW * 0.47, P.headD * 0.74, P.head * 0.58];
+    const eye: V3 = P.eye ? [s * P.eye[0], P.eye[1], P.eye[2]] : [s * P.headW * 0.47, P.headD * 0.74, P.head * 0.58];
     b[`eye${k}`] = joint(head, eye);
     b[`lid${k}`] = joint(head, eye, -x.blink * 75);
     b[`brow${k}`] = joint(head, [eye[0], eye[1], eye[2] + P.head * 0.14], 0, 0, s * x.brow * -8);

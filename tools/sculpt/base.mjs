@@ -1,0 +1,331 @@
+// The sculpt's human base from MakeHuman's base mesh (CC0: see src/sculpt/NOTICE.md), as src/sculpt/assets/human.json:
+//
+//   node tools/sculpt/base.mjs --mh /path/to/makehuman/makehuman/data        # writes the asset and prints its sizes
+//   node tools/sculpt/base.mjs --mh ... --out /some/dir/human.json
+//
+// What it does: reads base.obj, keeps the body and the two eyeballs, applies the macro targets for a man and a woman
+// (and the stylising targets below), measures each one's skeleton from the rig's joint helpers, turns both into our units
+// (z up, y forward, x the body's right, sixteen and a half units to the crown), maps the rig's weights onto our bones,
+// decimates the body to the three bands with the same topology for both, and writes it all out, quantised.
+import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
+import { join, resolve, dirname } from 'node:path';
+
+const args = process.argv.slice(2);
+const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
+const MH = resolve(opt('mh', '/home/user/makehumancommunity/makehuman/makehuman/data'));
+const ROOT = new URL('../..', import.meta.url).pathname;
+const OUT = resolve(opt('out', join(ROOT, 'src/sculpt/assets/human.json')));
+const HEIGHT = 16.5;
+
+/* ---- the mesh ------------------------------------------------------------------------------------------------------ */
+function readObj(path) {
+  const verts = [], faces = [], groups = {};
+  let g = '';
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (line.startsWith('v ')) { const p = line.split(/\s+/); verts.push([+p[1], +p[2], +p[3]]); }
+    else if (line.startsWith('g ')) { g = line.split(/\s+/)[1]; groups[g] ??= []; }
+    else if (line.startsWith('f ')) { const idx = line.split(/\s+/).slice(1).filter(Boolean).map((s) => +s.split('/')[0] - 1); faces.push({ g, idx }); groups[g].push(faces.length - 1); }
+  }
+  return { verts, faces, groups };
+}
+function readTarget(path) {
+  const out = [];
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (!line || line[0] === '#') continue;
+    const p = line.trim().split(/\s+/);
+    if (p.length >= 4) out.push([+p[0], +p[1], +p[2], +p[3]]);
+  }
+  return out;
+}
+const T = (rel) => join(MH, 'targets', rel + '.target');
+function applyTargets(verts, list) {
+  const out = verts.map((v) => [v[0], v[1], v[2]]);
+  for (const [rel, w] of list) {
+    if (!w) continue;
+    for (const [i, dx, dy, dz] of readTarget(T(rel))) { const v = out[i]; if (v) { v[0] += dx * w; v[1] += dy * w; v[2] += dz * w; } }
+  }
+  return out;
+}
+
+/* ---- the targets for each body: MakeHuman's macro mix for a young adult, average build, the three ethnic shapes evened ---- */
+const macro = (gender, o = {}) => {
+  const list = [];
+  for (const e of ['african', 'asian', 'caucasian']) list.push([`macrodetails/${e}-${gender}-young`, 1 / 3]);
+  // Muscle and weight: nought to one each, half being average (the average target is empty, the base itself).
+  const m = o.muscle ?? 0.5, w = o.weight ?? 0.5;
+  const mm = m < 0.5 ? [['minmuscle', 1 - 2 * m], ['averagemuscle', 2 * m]] : [['averagemuscle', 2 - 2 * m], ['maxmuscle', 2 * m - 1]];
+  const ww = w < 0.5 ? [['minweight', 1 - 2 * w], ['averageweight', 2 * w]] : [['averageweight', 2 - 2 * w], ['maxweight', 2 * w - 1]];
+  for (const [mn, mw] of mm) for (const [wn, wgt] of ww) if (mw * wgt > 0) list.push([`macrodetails/universal-${gender}-young-${mn}-${wn}`, mw * wgt]);
+  // Proportions: half is the base; toward one the ideal, toward nought the uncommon.
+  const p = o.proportions ?? 0.5;
+  for (const [mn, mw] of mm) for (const [wn, wgt] of ww) if (mw * wgt > 0) {
+    if (p > 0.5) list.push([`macrodetails/proportions/${gender}-young-${mn}-${wn}-idealproportions`, (2 * p - 1) * mw * wgt]);
+    if (p < 0.5) list.push([`macrodetails/proportions/${gender}-young-${mn}-${wn}-uncommonproportions`, (1 - 2 * p) * mw * wgt]);
+  }
+  for (const [rel, w] of o.extra ?? []) list.push([rel, w]);
+  return list;
+};
+// Stylising toward the island's sheet: the head a touch larger, the eyes larger, the nose and jaw simpler.
+const STYLE = [
+  ['head/head-scale-vert-incr', 0.1], ['head/head-scale-horiz-incr', 0.1], ['head/head-scale-depth-incr', 0.05],
+  ['eyes/l-eye-scale-incr', 0.4], ['eyes/r-eye-scale-incr', 0.4],
+  ['nose/nose-scale-vert-decr', 0.25], ['nose/nose-scale-horiz-decr', 0.1],
+];
+const BODIES = {
+  man: macro('male', { muscle: 1.0, weight: 0.55, proportions: 1.0, extra: [...STYLE, ['torso/torso-scale-horiz-incr', 0.35], ['torso/torso-vshape-incr', 0.4], ['armslegs/l-upperarm-shoulder-muscle-incr', 0.6], ['armslegs/r-upperarm-shoulder-muscle-incr', 0.6]] }),
+  woman: macro('female', { muscle: 0.5, weight: 0.45, proportions: 0.75, extra: STYLE }),
+};
+
+/* ---- the skeleton: MakeHuman's joints, measured on each body, and the map onto our bones ---------------------------- */
+const skel = JSON.parse(readFileSync(join(MH, 'rigs/default.mhskel'), 'utf8'));
+const mhw = JSON.parse(readFileSync(join(MH, 'rigs/default_weights.mhw'), 'utf8')).weights;
+const centroid = (verts, ids) => { const c = [0, 0, 0]; for (const i of ids) { c[0] += verts[i][0]; c[1] += verts[i][1]; c[2] += verts[i][2]; } return c.map((x) => x / ids.length); };
+const jointAt = (verts, name) => centroid(verts, skel.joints[name]);
+const boneEnds = (verts, bone) => { const b = skel.bones[bone]; return [jointAt(verts, b.head), jointAt(verts, b.tail)]; };
+
+/** Our bone for one of MakeHuman's; the body's left (.L) is our k = 0. */
+function ourBone(mh) {
+  const side = mh.endsWith('.L') ? 0 : mh.endsWith('.R') ? 1 : -1;
+  const n = side < 0 ? mh : mh.slice(0, -2);
+  const k = side < 0 ? '' : String(side);
+  if (['root', 'spine05', 'pelvis'].includes(n)) return 'pelvis';
+  if (n === 'spine04') return 'spineA';
+  if (n === 'spine03') return 'spineB';
+  if (n === 'spine02' || n === 'spine01' || n === 'breast') return 'chest';
+  if (n.startsWith('neck')) return 'neck';
+  if (n === 'jaw' || n === 'special04' || /^tongue/.test(n)) return 'jaw';
+  if (n === 'eye') return `eye${k}`;
+  if (n === 'head' || /^(special|levator|oculi|orbicularis|oris|risorius|temporalis)/.test(n)) return 'head';
+  if (n === 'clavicle' || n === 'shoulder01') return `clav${k}`;
+  if (n.startsWith('upperarm')) return `arm${k}`;
+  if (n.startsWith('lowerarm')) return `elbow${k}`;
+  if (n === 'wrist' || n.startsWith('metacarpal')) return `wrist${k}`;
+  if (/^finger1-[12]$/.test(n)) return `thumb${k}`;
+  if (n === 'finger1-3') return `thumbTip${k}`;
+  if (/^finger[2-5]-1$/.test(n)) return `fing${k}`;
+  if (/^finger[2-5]-[23]$/.test(n)) return `fingTip${k}`;
+  if (n.startsWith('upperleg')) return `hip${k}`;
+  if (n.startsWith('lowerleg')) return `knee${k}`;
+  if (n === 'foot') return `ankle${k}`;
+  if (n.startsWith('toe')) return `toe${k}`;
+  throw new Error(`no bone of ours for ${mh}`);
+}
+/** The MakeHuman bone (head, tail) that stands for each of ours, for the frames the mesh is carried over by. */
+const FRAME_OF = {
+  pelvis: ['spine05', 'spine05'], spineA: ['spine04', 'spine04'], spineB: ['spine03', 'spine03'], chest: ['spine02', 'spine01'],
+  neck: ['neck01', 'neck03'], head: ['head', 'head'], jaw: ['jaw', 'jaw'],
+};
+for (const [k, s] of [[0, 'L'], [1, 'R']]) Object.assign(FRAME_OF, {
+  [`eye${k}`]: [`eye.${s}`, `eye.${s}`], [`clav${k}`]: [`clavicle.${s}`, `clavicle.${s}`],
+  [`arm${k}`]: [`upperarm01.${s}`, `upperarm02.${s}`], [`elbow${k}`]: [`lowerarm01.${s}`, `lowerarm02.${s}`],
+  [`wrist${k}`]: [`wrist.${s}`, `metacarpal2.${s}`], [`fing${k}`]: [`finger3-1.${s}`, `finger3-1.${s}`], [`fingTip${k}`]: [`finger3-2.${s}`, `finger3-3.${s}`],
+  [`thumb${k}`]: [`finger1-1.${s}`, `finger1-2.${s}`], [`thumbTip${k}`]: [`finger1-3.${s}`, `finger1-3.${s}`],
+  [`hip${k}`]: [`upperleg01.${s}`, `upperleg02.${s}`], [`knee${k}`]: [`lowerleg01.${s}`, `lowerleg02.${s}`],
+  [`ankle${k}`]: [`foot.${s}`, `foot.${s}`], [`toe${k}`]: [`toe3-1.${s}`, `toe3-1.${s}`],
+});
+const BONES = Object.keys(FRAME_OF);
+
+/* ---- our coordinates: x the body's right, y forward, z up from the ground, scaled to the height ------------------------ */
+function framesAndProportions(verts, body) {
+  const ys = body.map((i) => verts[i][1]);
+  const ground = Math.min(...ys), crown = Math.max(...ys);
+  const s = HEIGHT / (crown - ground);
+  const ours = (p) => [-p[0] * s, p[2] * s, (p[1] - ground) * s];
+  const frames = {};
+  for (const [b, [h, t]] of Object.entries(FRAME_OF)) {
+    const H = ours(boneEnds(verts, h)[0]), Tl = ours(boneEnds(verts, t)[1]);
+    frames[b] = [...H, ...Tl];
+  }
+  // The pelvis's frame stands over the hip joints, where our rig puts it.
+  const hipL = ours(boneEnds(verts, 'upperleg01.L')[0]), hipR = ours(boneEnds(verts, 'upperleg01.R')[0]);
+  frames.pelvis = [0, (hipL[1] + hipR[1]) / 2, (hipL[2] + hipR[2]) / 2 + 0.1, ...frames.pelvis.slice(3)];
+  const J = (b) => frames[b].slice(0, 3), E = (b) => frames[b].slice(3, 6);
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  const z = (b) => J(b)[2];
+  // Half-widths of the body at a height, for the radii the stamps and the hair chain use.
+  const halfAt = (zz, lo, hi) => { let w = 0; for (const i of body) { const p = ours(verts[i]); if (Math.abs(p[2] - zz) < 0.25 && Math.abs(p[0]) >= lo && Math.abs(p[0]) <= hi) w = Math.max(w, Math.abs(p[0])); } return w; };
+  const headV = body.map((i) => ours(verts[i])).filter((p) => p[2] > z('head'));
+  const headW = Math.max(...headV.map((p) => Math.abs(p[0]))), headY = headV.map((p) => p[1]);
+  const chin = E('jaw');
+  const P = {
+    heads: HEIGHT / (HEIGHT - chin[2]),
+    hip: z('pelvis'), spine: z('spineB') - z('pelvis'), chest: z('chest') - z('spineB'), neck: z('neck') - z('chest'), headJ: z('head') - z('neck'),
+    armAt: z('arm0') - z('chest'),
+    upper: dist(J('arm0'), J('elbow0')), lower: dist(J('elbow0'), J('wrist0')), thigh: dist(J('hip0'), J('knee0')), shin: dist(J('knee0'), J('ankle0')),
+    shoulder: Math.abs(J('arm0')[0]), hipW: Math.abs(J('hip0')[0]),
+    head: (HEIGHT - z('head')) / 1.04, headW, headD: (Math.max(...headY) - Math.min(...headY)) / 2,
+    sole: z('ankle0'), foot: E('toe0')[1] - J('ankle0')[1],
+    palm: dist(J('wrist0'), J('fing0')), finger: dist(J('fing0'), E('fingTip0')),
+    eye: [Math.abs(J('eye1')[0] - J('head')[0]), J('eye1')[1] - J('head')[1], J('eye1')[2] - J('head')[2]].map((x) => +x.toFixed(3)),
+    jaw: [0, J('jaw')[1] - J('head')[1], J('jaw')[2] - J('head')[2]].map((x) => +x.toFixed(3)),
+    r: {
+      neck: halfAt(z('neck') + 0.4, 0, 1.2), upper: 0.55,
+      fore: 0.45, wrist: 0.3, thigh: 0.8, shin: 0.5, ankle: 0.3,
+      chest: halfAt(z('arm0') - 1.4, 0, 1.6), waist: halfAt(z('spineB') + 0.3, 0, 1.6), pelvis: halfAt(z('pelvis') - 0.6, 0, 2.2),
+    },
+  };
+  for (const k of Object.keys(P)) if (typeof P[k] === 'number') P[k] = +P[k].toFixed(3);
+  for (const k of Object.keys(P.r)) P.r[k] = +P.r[k].toFixed(3);
+  return { frames, P, ours, s };
+}
+
+/* ---- decimation: quadric edge collapses on the triangles, the face and hands kept dear ----------------------------------- */
+function decimate(pos, tris, keepWeight, target) {
+  // pos: array of [x,y,z]; tris: array of [a,b,c]; keepWeight: per vertex multiplier on the error; returns { map, tris } with map old->new (or -1).
+  const n = pos.length;
+  const Q = new Float64Array(n * 10);
+  const addPlane = (v, a, b, c, d, w) => { const o = v * 10, q = Q; q[o] += a * a * w; q[o + 1] += a * b * w; q[o + 2] += a * c * w; q[o + 3] += a * d * w; q[o + 4] += b * b * w; q[o + 5] += b * c * w; q[o + 6] += b * d * w; q[o + 7] += c * c * w; q[o + 8] += c * d * w; q[o + 9] += d * d * w; };
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const planeOf = (t) => { const p0 = pos[t[0]], e1 = sub(pos[t[1]], p0), e2 = sub(pos[t[2]], p0); const nrm = cross(e1, e2); const l = Math.hypot(...nrm); if (l < 1e-12) return null; const a = nrm[0] / l, b = nrm[1] / l, c = nrm[2] / l; return [a, b, c, -(a * p0[0] + b * p0[1] + c * p0[2]), l / 2]; };
+  const alive = new Uint8Array(tris.length).fill(1);
+  const vt = Array.from({ length: n }, () => new Set());
+  tris.forEach((t, i) => { for (const v of t) vt[v].add(i); });
+  const edgeCount = new Map();
+  const ek = (a, b) => (a < b ? a * n + b : b * n + a);
+  for (const t of tris) { for (let i = 0; i < 3; i++) { const k = ek(t[i], t[(i + 1) % 3]); edgeCount.set(k, (edgeCount.get(k) ?? 0) + 1); } }
+  tris.forEach((t) => {
+    const pl = planeOf(t); if (!pl) return;
+    for (const v of t) addPlane(v, pl[0], pl[1], pl[2], pl[3], pl[4] * keepWeight[v]);
+    // A boundary edge pins its ends with a plane through it, perpendicular to the face.
+    for (let i = 0; i < 3; i++) {
+      const a = t[i], b = t[(i + 1) % 3];
+      if (edgeCount.get(ek(a, b)) === 1) {
+        const e = sub(pos[b], pos[a]), nn = cross(e, [pl[0], pl[1], pl[2]]), l = Math.hypot(...nn) || 1;
+        const q = [nn[0] / l, nn[1] / l, nn[2] / l]; const d = -(q[0] * pos[a][0] + q[1] * pos[a][1] + q[2] * pos[a][2]);
+        addPlane(a, q[0], q[1], q[2], d, 50 * pl[4]); addPlane(b, q[0], q[1], q[2], d, 50 * pl[4]);
+      }
+    }
+  });
+  const qErr = (v, p) => { const o = v * 10, q = Q, [x, y, z] = p; return q[o] * x * x + 2 * q[o + 1] * x * y + 2 * q[o + 2] * x * z + 2 * q[o + 3] * x + q[o + 4] * y * y + 2 * q[o + 5] * y * z + 2 * q[o + 6] * y + q[o + 7] * z * z + 2 * q[o + 8] * z + q[o + 9]; };
+  const costOf = (a, b) => {
+    const pa = pos[a], pb = pos[b], mid = [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2, (pa[2] + pb[2]) / 2];
+    let best = null;
+    for (const p of [mid, pa, pb]) { const c = qErr(a, p) + qErr(b, p); if (!best || c < best[0]) best = [c, p]; }
+    return best;
+  };
+  // A binary heap of [cost, a, b, version].
+  const heap = [];
+  const push = (x) => { heap.push(x); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+  const ver = new Uint32Array(n);
+  const edgesOf = (v) => { const s = new Set(); for (const ti of vt[v]) if (alive[ti]) for (const u of tris[ti]) if (u !== v) s.add(u); return s; };
+  for (const k of edgeCount.keys()) { const a = Math.floor(k / n), b = k % n; const [c] = costOf(a, b); push([c, a, b, ver[a] + ver[b]]); }
+  const map = new Int32Array(n); for (let i = 0; i < n; i++) map[i] = i;
+  const find = (v) => { while (map[v] !== v) v = map[v]; return v; };
+  let nTris = tris.length;
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  while (nTris > target && heap.length) {
+    const [, a0, b0, v] = pop();
+    const a = find(a0), b = find(b0);
+    if (a === b || a0 !== a || b0 !== b || v !== ver[a] + ver[b]) continue;
+    const [, p] = costOf(a, b);
+    // No triangle may flip or flatten when its corner moves to p.
+    let ok = true;
+    for (const vv of [a, b]) for (const ti of vt[vv]) {
+      if (!alive[ti]) continue;
+      const t = tris[ti]; if (t.includes(a) && t.includes(b)) continue;
+      const before = planeOf(t); if (!before) continue;
+      const moved = t.map((u) => (u === a || u === b ? p : pos[u]));
+      const e1 = sub(moved[1], moved[0]), e2 = sub(moved[2], moved[0]), nn = cross(e1, e2), l = Math.hypot(...nn);
+      if (l < 1e-9 || dot([nn[0] / l, nn[1] / l, nn[2] / l], before) < 0.2) { ok = false; break; }
+    }
+    if (!ok) continue;
+    // Collapse b into a at p.
+    pos[a] = p; map[b] = a; ver[a]++;
+    for (let i = 0; i < 10; i++) Q[a * 10 + i] += Q[b * 10 + i];
+    keepWeight[a] = Math.max(keepWeight[a], keepWeight[b]);
+    for (const ti of vt[b]) {
+      if (!alive[ti]) continue;
+      const t = tris[ti];
+      if (t.includes(a)) { alive[ti] = 0; nTris--; continue; }
+      for (let i = 0; i < 3; i++) if (t[i] === b) t[i] = a;
+      vt[a].add(ti);
+    }
+    vt[b].clear();
+    for (const u of edgesOf(a)) { const [c] = costOf(a, u); push([c, Math.min(a, u), Math.max(a, u), ver[a] + ver[u]]); }
+  }
+  return { map: Array.from({ length: n }, (_, i) => find(i)), tris: tris.filter((_, i) => alive[i]), nTris };
+}
+
+/* ---- build ------------------------------------------------------------------------------------------------------------ */
+const obj = readObj(join(MH, '3dobjs/base.obj'));
+const KEEP = ['body', 'helper-l-eye', 'helper-r-eye'];
+const keptFaces = KEEP.flatMap((g) => obj.groups[g] ?? []);
+const used = new Set(); for (const fi of keptFaces) for (const i of obj.faces[fi].idx) used.add(i);
+const bodyIds = [...used].sort((a, b) => a - b);
+const bodies = {};
+for (const [name, targets] of Object.entries(BODIES)) {
+  const v = applyTargets(obj.verts, targets);
+  bodies[name] = { verts: v, ...framesAndProportions(v, obj.groups.body.flatMap((fi) => obj.faces[fi].idx)) };
+  console.log(name, JSON.stringify(bodies[name].P));
+}
+// Our bone weights per vertex, from the rig's, merged where several of its bones are one of ours, the top four kept.
+const bw = new Map();
+for (const [mh, list] of Object.entries(mhw)) {
+  const ob = ourBone(mh); const bi = BONES.indexOf(ob); if (bi < 0) throw new Error(`frame for ${ob}`);
+  for (const [i, w] of list) { if (!used.has(i)) continue; let m = bw.get(i); if (!m) { m = new Map(); bw.set(i, m); } m.set(bi, (m.get(bi) ?? 0) + w); }
+}
+const top4 = (i) => { const m = bw.get(i); if (!m) return [[BONES.indexOf('pelvis'), 1]]; const l = [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4); const s = l.reduce((t, x) => t + x[1], 0) || 1; return l.map(([b, w]) => [b, w / s]); };
+// Triangles of the kept faces (quads split along the shorter diagonal, on the man's shape), in a compact vertex numbering.
+const idOf = new Map(bodyIds.map((v, i) => [v, i]));
+const manPos = bodyIds.map((i) => bodies.man.ours(bodies.man.verts[i]));
+const womanPos = bodyIds.map((i) => bodies.woman.ours(bodies.woman.verts[i]));
+const eyeIds = new Set(['helper-l-eye', 'helper-r-eye'].flatMap((g) => obj.groups[g].flatMap((fi) => obj.faces[fi].idx)).map((i) => idOf.get(i)));
+let bodyTris = [], eyeTris = [];
+for (const fi of keptFaces) {
+  const f = obj.faces[fi], q = f.idx.map((i) => idOf.get(i));
+  const d = (a, b) => Math.hypot(...[0, 1, 2].map((k) => manPos[a][k] - manPos[b][k]));
+  const out = f.g === 'body' ? bodyTris : eyeTris;
+  if (q.length === 4) { if (d(q[0], q[2]) <= d(q[1], q[3])) out.push([q[0], q[1], q[2]], [q[0], q[2], q[3]]); else out.push([q[0], q[1], q[3]], [q[1], q[2], q[3]]); }
+  else out.push(q);
+}
+// What each vertex is, for the error weights and the materials: the face, the hands and the feet are kept dear.
+const region = bodyIds.map((i) => {
+  const [b] = top4(i)[0]; const name = BONES[b];
+  if (/^(head|jaw|eye)/.test(name)) return 1; if (/^(wrist|fing|thumb)/.test(name)) return 2; if (/^(ankle|toe)/.test(name)) return 3; return 0;
+});
+const eyeVerts = [...eyeIds];
+const eyeCentre = (ids) => { const c = [0, 0, 0]; for (const i of ids) for (let k = 0; k < 3; k++) c[k] += manPos[i][k] / ids.length; return c; };
+const lEye = eyeVerts.filter((i) => manPos[i][0] < 0), rEye = eyeVerts.filter((i) => manPos[i][0] > 0);
+const eyeC = [eyeCentre(lEye), eyeCentre(rEye)];
+
+const BANDS = [[0, 1100], [1, 3200], [2, 10000]];
+const bands = [];
+for (const [band, target] of BANDS) {
+  const pos = manPos.map((p) => [...p]);
+  const tris = bodyTris.map((t) => [...t]);
+  const kw = region.map((r) => (r === 1 ? 6 : r === 2 ? 5 : r === 3 ? 2.5 : 1));
+  const dec = decimate(pos, tris, kw, target - (band ? eyeTris.length : 0));
+  const keptSet = new Set(dec.tris.flat()); if (band) for (const t of eyeTris) for (const v of t) keptSet.add(v);
+  const kept = [...keptSet].sort((a, b) => a - b), newId = new Map(kept.map((v, i) => [v, i]));
+  const tri = [...dec.tris, ...(band ? eyeTris : [])].map((t) => t.map((v) => newId.get(v)));
+  const q = (p) => p.map((x) => Math.round(x * 500));
+  const eye = [];
+  for (const v of kept) if (eyeIds.has(v)) {
+    const c = eyeC[manPos[v][0] < 0 ? 0 : 1], d = [manPos[v][0] - c[0], manPos[v][1] - c[1], manPos[v][2] - c[2]], l = Math.hypot(...d) || 1;
+    const ang = Math.acos(Math.max(-1, Math.min(1, d[1] / l)));
+    eye.push(newId.get(v), Math.round((0.5 - ang) * l * 1000), ang < 0.22 ? 1 : 0);
+  }
+  bands.push({
+    band, verts: kept.length, tris: tri.flat(),
+    man: kept.flatMap((v) => q(manPos[v])), woman: kept.flatMap((v) => q(womanPos[v])),
+    region: kept.map((v) => (eyeIds.has(v) ? 4 : region[v])),
+    bw: kept.flatMap((v) => { const l = top4(bodyIds[v]); const out = []; for (let i = 0; i < 4; i++) out.push(l[i] ? l[i][0] : 0, l[i] ? Math.round(l[i][1] * 255) : 0); return out; }),
+    eye,
+  });
+  console.log(`band ${band}: ${kept.length} verts, ${tri.length} tris`);
+}
+const asset = {
+  licence: 'Base mesh, targets and rig from MakeHuman (makehumancommunity/makehuman), CC0 1.0: see src/sculpt/NOTICE.md',
+  height: HEIGHT, bones: BONES,
+  frames: { man: bodies.man.frames, woman: bodies.woman.frames },
+  proportions: { man: bodies.man.P, woman: bodies.woman.P },
+  bands,
+};
+for (const f of Object.values(asset.frames)) for (const k of Object.keys(f)) f[k] = f[k].map((x) => +x.toFixed(3));
+mkdirSync(dirname(OUT), { recursive: true });
+const text = JSON.stringify(asset);
+writeFileSync(OUT, text);
+console.log(`wrote ${OUT}: ${(statSync(OUT).size / 1024).toFixed(0)} KB, gzip ${(gzipSync(text).length / 1024).toFixed(0)} KB`);
