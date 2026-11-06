@@ -513,7 +513,7 @@ export const FURNITURE: FurnitureDef[] = [
    */
   piece('fountain', 'Tiered fountain', 3, 3, [['stone_brick', 32], ['stone_slab', 3], ['mortar', 16], [WATER_MOTE, WATER_MOTES_EACH]], 32, 26, '', undefined, { skill: 'masonry', tool: 'trowel', well: FOUNTAIN_HOLDS }),
   // Storage of a different sort: raw materials, rubbish, and something to pull it in.
-  piece('bulk_bin', 'Raw material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', 400, { takes: 'raw' }),
+  piece('bulk_bin', 'Raw material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', 2500, { takes: 'raw' }),
   /*
    * Its opposite number, off the same bill of materials.
    *
@@ -523,11 +523,12 @@ export const FURNITURE: FurnitureDef[] = [
    * afternoon because a chest counts things.
    *
    * Counting is the wrong unit for them. This one is measured in kilograms
-   * instead: two and a half tonnes of whatever a bench has touched, which is
-   * two hundred and fifty thousand nails or twelve hundred planks. There is
-   * no count limit on it at all.
+   * instead: ten tonnes of whatever a bench has touched, which is a million
+   * nails or five thousand planks. There is no count limit on it at all.
+   * (It began at two and a half tonnes, and the raw bin at four hundred
+   * things; both were raised fourfold and more on 2026-11-06.)
    */
-  piece('craft_bin', 'Craft material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', undefined, { heft: 2500, takes: 'worked' }),
+  piece('craft_bin', 'Craft material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', undefined, { heft: 10000, takes: 'worked' }),
   /*
    * And the two small ones, for the two things a farmer and a forester carry
    * home by the handful.

@@ -4259,6 +4259,7 @@ export const NEWS: News[] = [
       'Changed: Work around me storage: no crate or storage furniture on any settlement; the cart you pull, what you drive and the boat you are in still count.',
       'Fixed: dragging a thing between windows or onto a crate dropped the frame rate to a few a second while the button was down. Escape lets go of what is carried.',
       'Fixed: the frame rate at sea fell the longer you sailed, as the remembered sea round you grew; the sea picture now clips it by rows, not by tiles.',
+      `Changed: ${itemDef('bulk_bin').name} holds ${furnitureDef('bulk_bin').capacity} (was 400); ${itemDef('craft_bin').name} holds ${furnitureDef('craft_bin').heft} kg (was 2500). Every bin standing, before wood, perk and rarity.`,
       'Fixed: a wildermon shut into its crate from Work around me still counted as working round you, and one set to a post out of that crate was on the post and round you at once. A crated wildermon holds no post and works round nobody, whatever put it in its crate; every one left that way is put right.',
     ],
   },
