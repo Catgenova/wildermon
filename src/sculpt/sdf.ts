@@ -44,6 +44,12 @@ export interface Material {
   metal?: boolean;
   /** The eye's parts: drawn in the lid's colour (the first material's, a shade darker) while the lids are shut. */
   eye?: boolean;
+  /** The face's planes: the shadow tone only on a plane turned well away from the light, so a lit face keeps its facets in the base and light tones. */
+  soft?: boolean;
+  /** No ink inside the silhouette: a mitt's grooves and tips are read by their shading alone. */
+  noInk?: boolean;
+  /** No ink along a crease between two of its facets (a part standing in front of another is still inked): the face's planes. */
+  noCrease?: boolean;
 }
 
 /** Where a primitive hangs: one of the rig's bones (`./rig`), or a chain link of a sway chain. */

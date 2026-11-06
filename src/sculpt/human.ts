@@ -66,10 +66,13 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
   return (region, bone, p, irisD) => {
     // The face, the hands and the hair drawn over the base: an eye's dark rectangle, a brow, hair, the groove between two fingers.
     if (region === 6) return [M.pupil, M.pupil, -1];
+    if (region === 7) return [M.lid, M.lid, -1];
     if (region === 8) return [M.brow, M.brow, -1];
     if (region === 9) return [M.hair, M.hairLight, irisD];
     if (region === 12) return [M.hair, M.hairGlint, irisD];
     if (region === 13) return [M.crease, M.crease, -1];
+    if (region === 1) return [M.face, M.face, -1];
+    if (region === 2) return [M.hand, M.hand, -1];
     if (wear === 'shorts') {
       let d = region === 1 || region === 2 || region === 3 || arm(bone) ? -1 : Math.min(p[2] - shortsHem, shortsTop - p[2]);
       if (fem >= 0.5 && !arm(bone) && region === 0 && p[2] > shortsTop + 0.5) {
