@@ -95,6 +95,9 @@ begin
   v_worker := creature_spawn(w, 'ambra', 100.5, 101, 'deed', now() - interval '60 days', a);
   v_far := creature_spawn(w, 'ambra', 100.5 + ${POST_FOLLOW_REACH + 1}, 100.5, 'active', now() - interval '60 days', a);
   v_lost := creature_spawn(w, 'ambra', 100.5, 100.5, 'stored', now() - interval '60 days', a);
+  -- A stored wildermon holds no post, whatever writes one onto its row (creature_stored_rests).
+  update creature set post = v_post2, around = '{"was": "follow"}' where world_id = w and id = v_lost;
+  insert into said select 'stored-rests', coalesce(post::text, 'none') || ',' || coalesce(around::text, 'none') from creature where world_id = w and id = v_lost;
   update creature set name = 'Pip' where world_id = w and id in (v_pet, v_crated, v_theirs, v_worker, v_far, v_lost);
 
   insert into said values ('stranger', coalesce(act_refusal(w, a, 'assign_post', jsonb_build_object('kind', 'post', 'id', v_post, 'creature', v_theirs)), 'none'));
@@ -134,6 +137,7 @@ const island = new Map(out.split('\n').filter((l) => l.includes('=')).map((l) =>
 
 check('the island lets one following you, near, go to the post', island.get('near') === 'none', island.get('near'));
 check('and it works out of the post', island.get('near-after') === 'deed,true', island.get('near-after'));
+check('a stored wildermon holds no post and works round nobody, whatever is written onto its row', island.get('stored-rests') === 'none,none', island.get('stored-rests'));
 check('the island lets one in a crate in your pack go to the post', island.get('crated') === 'none', island.get('crated'));
 check('and it comes out of the crate at the post and works out of it, round nobody', island.get('crated-after') === 'deed,true,101.4,101.0,none', island.get('crated-after'));
 check('and the crate in the pack is empty', island.get('crate-empty') === 'true', island.get('crate-empty'));
