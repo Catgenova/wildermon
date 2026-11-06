@@ -153,17 +153,20 @@ function begin(row: HTMLElement, p: DragPayload, id: number, x: number, y: numbe
   moveTo(x, y);
 }
 
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && carried) end(null);
-});
-window.addEventListener('blur', () => end(null));
-// The release that ends a drag is no click on the row it began on or the thing it was let go over.
-window.addEventListener('click', (e) => {
-  if (!justDropped) return;
-  justDropped = false;
-  e.stopPropagation();
-  e.preventDefault();
-}, { capture: true });
+// Heard from the page's first script on; the rules' tests run these modules under Node, where there is no window.
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && carried) end(null);
+  });
+  window.addEventListener('blur', () => end(null));
+  // The release that ends a drag is no click on the row it began on or the thing it was let go over.
+  window.addEventListener('click', (e) => {
+    if (!justDropped) return;
+    justDropped = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }, { capture: true });
+}
 
 /**
  * A press on a row that may become a drag: kept here rather than on the row,
@@ -171,18 +174,20 @@ window.addEventListener('click', (e) => {
  * pressed may be gone by the time the pointer has travelled.
  */
 let press: { id: number; x: number; y: number; shift: boolean; row: HTMLElement; payload: DragPayload | null | (() => DragPayload | null) } | null = null;
-window.addEventListener('pointermove', (e) => {
-  if (!press || carried || e.pointerId !== press.id) return;
-  if (e.pointerType === 'mouse' && e.buttons === 0) { press = null; return; }
-  if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < DRAG_START) return;
-  const { row, payload, shift } = press;
-  press = null;
-  const p = typeof payload === 'function' ? payload() : payload;
-  if (!p || p.uid < 0) return;
-  // A part of a stack is asked for only when one stack is carried.
-  begin(row, { ...p, split: shift && !(p.uids && p.uids.length > 1) }, e.pointerId, e.clientX, e.clientY);
-}, true);
-for (const t of ['pointerup', 'pointercancel'] as const) window.addEventListener(t, (e) => { if (press && e.pointerId === press.id) press = null; }, true);
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointermove', (e) => {
+    if (!press || carried || e.pointerId !== press.id) return;
+    if (e.pointerType === 'mouse' && e.buttons === 0) { press = null; return; }
+    if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < DRAG_START) return;
+    const { row, payload, shift } = press;
+    press = null;
+    const p = typeof payload === 'function' ? payload() : payload;
+    if (!p || p.uid < 0) return;
+    // A part of a stack is asked for only when one stack is carried.
+    begin(row, { ...p, split: shift && !(p.uids && p.uids.length > 1) }, e.pointerId, e.clientX, e.clientY);
+  }, true);
+  for (const t of ['pointerup', 'pointercancel'] as const) window.addEventListener(t, (e) => { if (press && e.pointerId === press.id) press = null; }, true);
+}
 
 /** Make a row something that can be picked up and carried to another window. A payload of null is nothing to carry. */
 export function makeDraggable(row: HTMLElement, payload: DragPayload | null | (() => DragPayload | null)): void {
