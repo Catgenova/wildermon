@@ -366,7 +366,7 @@ function extras(b, shared, style = 'man') {
   for (const i of scalp) {
     const n = nrm.get(i); if (!n) continue; const l = Math.hypot(...n) || 1;
     const p = V[i], edge = p[1] < hairline(p) + 0.2;
-    const h = (edge ? 0.08 : 0.14 + 0.22 * Math.max(0, n[1] / l)) + 0.04 * hash(i);
+    const h = (edge ? 0.08 : 0.14 + 0.22 * Math.max(0, n[1] / l) + 0.26 * Math.max(0, -n[2] / l)) + 0.04 * hash(i);
     hid.set(i, add([p[0] + (n[0] / l) * h, p[1] + (n[1] / l) * h - (edge ? 0.08 : 0), p[2] + (n[2] / l) * h], 9));
   }
   for (const tr of tris) if (tr.every((i) => hid.has(i))) out.tris.push(tr.map((i) => hid.get(i)));
@@ -410,27 +410,27 @@ function extras(b, shared, style = 'man') {
   // The fringe: three big clumps from the right temple sweeping left across the forehead, tips over the brows (one between
   // them), and a small clump flicking up off the forehead at the parting. Two of them carry the teal. (A clump's middle
   // control point pulls its curve only half way, so the middles stand at twice the mass wanted.)
-  C([-70, 28, -0.04], [-40, 32, 0.55], [-14, 4, 0.18], 0.17, 0.06, 12);
-  C([-55, 36, -0.04], [-15, 38, 0.6], [2, 2, 0.18], 0.18, 0.06);
-  C([-35, 42, -0.04], [12, 38, 0.56], [30, 6, 0.18], 0.17, 0.06);
-  C([-45, 42, -0.02], [-52, 62, 0.5], [-72, 74, 0.6], 0.09, 0.04);
+  C([-70, 24, -0.04], [-42, 24, 0.55], [-16, -1, 0.2], 0.17, 0.06, 12);
+  C([-55, 30, -0.04], [-16, 28, 0.6], [2, -3, 0.2], 0.18, 0.06);
+  C([-35, 36, -0.04], [12, 28, 0.56], [32, 1, 0.22], 0.17, 0.06);
+  C([-45, 40, -0.02], [-54, 60, 0.5], [-76, 70, 0.62], 0.09, 0.04);
   // The top: four clumps fanning up and back from the front of the crown, the tips splaying apart.
-  C([-30, 50, -0.04], [-40, 82, 0.85], [-118, 38, 0.56], 0.2, 0.075, 12);
-  C([-10, 56, -0.04], [0, 90, 0.9], [180, 42, 0.6], 0.21, 0.075);
-  C([15, 52, -0.04], [40, 82, 0.85], [122, 38, 0.56], 0.2, 0.075);
-  C([40, 44, -0.04], [70, 72, 0.75], [150, 28, 0.5], 0.2, 0.075);
+  C([-30, 46, -0.04], [-42, 80, 0.85], [-122, 44, 0.7], 0.2, 0.075, 12);
+  C([-10, 52, -0.04], [-4, 88, 0.95], [184, 30, 0.75], 0.21, 0.075);
+  C([15, 48, -0.04], [44, 80, 0.85], [118, 50, 0.5], 0.2, 0.075);
+  C([40, 42, -0.04], [72, 70, 0.75], [152, 18, 0.62], 0.2, 0.075);
   // The sides: two clumps a side sweeping back over the top third of the ear, and one behind it to the nape. The woman's
   // fall to the jaw and the nape's to the shoulders: the same clumps on longer curves, so the two bodies keep one topology.
   const L = style === 'woman';
   for (const sd of [-1, 1]) {
     C([sd * 40, 36, -0.04], [sd * 78, L ? 8 : 18, 0.34], [sd * 104, L ? -34 : -8, L ? 0.2 : 0.26, 1.15], 0.16, 0.06);
     C([sd * 60, 30, -0.04], [sd * 96, L ? 0 : 8, 0.32], [sd * 122, L ? -42 : -16, L ? 0.16 : 0.22, 1.15], 0.15, 0.06);
-    C([sd * 118, 40, -0.04], [sd * 132, L ? 0 : 8, 0.42], [sd * 140, L ? -52 : -20, L ? 0.14 : 0.12, L ? 1.3 : 1.0], L ? 0.2 : 0.16, 0.06);
+    C([sd * 118, 40, -0.04], [sd * 132, L ? 0 : 8, 0.56], [sd * 142, L ? -52 : -24, L ? 0.16 : 0.2, L ? 1.3 : 1.0], L ? 0.2 : 0.16, 0.06);
   }
   // The nape: three clumps down the neck, the middle one longest.
-  C([150, 32, -0.04], [148, L ? -10 : -2, 0.46], [156, L ? -62 : -30, L ? 0.14 : 0.12, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
-  C([180, 36, -0.04], [180, L ? -12 : -4, 0.5], [180, L ? -72 : -40, L ? 0.14 : 0.12, L ? 1.6 : 1.0], L ? 0.25 : 0.2, 0.07);
-  C([210, 32, -0.04], [212, L ? -10 : -2, 0.46], [204, L ? -62 : -30, L ? 0.14 : 0.12, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
+  C([150, 32, -0.04], [148, L ? -10 : 0, 0.62], [158, L ? -62 : -26, L ? 0.14 : 0.22, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
+  C([180, 36, -0.04], [180, L ? -12 : -2, 0.66], [180, L ? -72 : -40, L ? 0.14 : 0.16, L ? 1.6 : 1.0], L ? 0.25 : 0.2, 0.07);
+  C([210, 32, -0.04], [212, L ? -10 : 0, 0.62], [202, L ? -62 : -32, L ? 0.14 : 0.26, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
   return out;
 }
 const exMan = extras(bodies.man), exWoman = extras(bodies.woman, exMan.scalp, 'woman');
