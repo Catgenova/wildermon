@@ -21,7 +21,7 @@ import {
 } from '../sdf';
 
 /** The materials, by index. */
-export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19, face: 20, hand: 21, lid: 22, ear: 23 } as const;
+export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19, face: 20, hand: 21, lid: 22, ear: 23, faceUnder: 24 } as const;
 
 /** What the body wears: the game's undershirt and trousers, or the reference sheet's shorts over bare skin. */
 export type Wear = 'base' | 'shorts';
@@ -65,6 +65,8 @@ export function bodyMaterials(look: Look): Material[] {
   // The face's planes shade soft (the shadow tone only well away from the light); the mitt has no ink inside its edge.
   out[M.face] = { ...out[M.skin], soft: true, noCrease: true };
   out[M.ear] = { ...out[M.skin], noInk: true, thinInk: true };
+  // The nose's underside and under the jaw: the ordinary three tones, so they take the shadow a lit face's planes do not.
+  out[M.faceUnder] = { ...out[M.skin], noCrease: true };
   out[M.brow].noCrease = true; out[M.pupil].noCrease = true;
   out[M.hand] = { ...out[M.skin], noInk: true };
   // The eye's top edge, a lighter slate, so the rectangle reads set in.

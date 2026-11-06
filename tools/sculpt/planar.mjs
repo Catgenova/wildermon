@@ -107,13 +107,13 @@ const HF = [
   // The socket, the side of the face, the nose, the cheek.
   { f: ['E0', 'E1', 'E2', 'E3'] }, { f: ['S2', 'E1', 'E2', 'C0', 'SK0'] },
   { f: ['N0', "N0'", "N2'", 'N2'] }, { f: ['S0', 'N0', "N0'"] }, { f: ['N0', 'N2', 'N3', 'N1'] }, { f: ['S0', 'N0', 'E0'] }, { f: ['E0', 'N1', 'E3'] }, { f: ['N0', 'N1', 'E0'] }, { f: ['N1', 'N3', 'E3'] },
-  { f: ['N2', "N2'", 'N4'], d: [0, -1, 0.2] }, { f: ['N2', 'N4', 'N5', 'N3'], d: [0, -1, 0.2] }, { f: ['N3', 'N5', 'C2'] },
+  { f: ['N2', "N2'", 'N4'], d: [0, -1, 0.2], r: 15 }, { f: ['N2', 'N4', 'N5', 'N3'], d: [0, -1, 0.2], r: 15 }, { f: ['N3', 'N5', 'C2'] },
   { f: ['E3', 'C1', 'C2', 'N3'] }, { f: ['E3', 'E2', 'C1'] }, { f: ['E2', 'C0', 'C1'] }, { f: ['C1', 'C0', 'C3', 'C2'] },
   // The mouthless lower face, the chin, the jaw.
   { f: ['N4', 'N5', 'C2', 'J2', 'CH1'] }, { f: ['CH1', 'J2', 'J1', 'CH0'] }, { f: ['J2', 'C2', 'C3', 'J1'] }, { f: ['C3', 'C0', 'J0'] }, { f: ['C3', 'J0', 'J1'] },
   // Under the jaw and the skull, to the throat.
-  { f: ['CH0', 'J1', 'K1', 'K0'], d: [0, -1, 0] }, { f: ['J1', 'J0', 'K2', 'K1'], d: [0, -1, 0] }, { f: ['J0', 'Q0', 'K3', 'K2'], d: [0, -1, 0] },
-  { f: ['Q0', 'Q1', 'K4', 'K3'], d: [0, -1, 0] }, { f: ['Q1', 'Q2', 'K6', 'K5', 'K4'], d: [0, -1, 0] },
+  { f: ['CH0', 'J1', 'K1', 'K0'], d: [0, -1, 0], r: 15 }, { f: ['J1', 'J0', 'K2', 'K1'], d: [0, -1, 0], r: 15 }, { f: ['J0', 'Q0', 'K3', 'K2'], d: [0, -1, 0], r: 15 },
+  { f: ['Q0', 'Q1', 'K4', 'K3'], d: [0, -1, 0], r: 15 }, { f: ['Q1', 'Q2', 'K6', 'K5', 'K4'], d: [0, -1, 0], r: 15 },
   // The ear.
   { f: ['EF0', 'EB0', 'EB1', 'EF1'], d: [1, 0, 0], r: 14 }, { f: ['EA0', 'EF0', 'EF1', 'EA3'], d: [0, 0, 1], r: 14 }, { f: ['EA1', 'EA2', 'EB1', 'EB0'], d: [0, 0, -1], r: 14 },
   { f: ['EA0', 'EA1', 'EB0', 'EF0'], d: [0, 1, 0], r: 14 }, { f: ['EA3', 'EF1', 'EB1', 'EA2'], d: [0, -1, 0], r: 14 }, { f: ['EA0', 'EA1', 'EA2', 'EA3'], d: [-1, 0, 0], r: 14 },
@@ -146,7 +146,8 @@ export function tracedHead(L, base, style, f) {
   for (const { f: names, d, r } of HF) { push(names, d, false, r); if (!names.some((n) => n.endsWith("'"))) push(names, d, true, r); }
   f.loft(base, THROAT.map(V), 1, NECK, THR);
   // The eyes: a dark rectangle a hair off the socket plane; the brows: a slab on the shelf's front, its top lit.
-  const plane = (names) => { const pts = names.map(V); const n = unit(newellOf(pts)); return { pts, n, at: (u, v) => { const p = pts[0]; const uu = u * H, vv = L.chin + v * H; return [uu, vv, n[2] !== 0 ? p[2] - (n[0] * (uu - p[0]) + n[1] * (vv - p[1])) / n[2] : p[2]]; } }; };
+  // A plane through four of the head's points, its normal turned outward (the mirrored half winds the other way).
+  const plane = (names) => { const pts = names.map(V); let n = unit(newellOf(pts)); if (dot(n, sub(pts[0], inside)) < 0) n = mul(n, -1); return { pts, n, at: (u, v) => { const p = pts[0]; const uu = u * H, vv = L.chin + v * H; return [uu, vv, n[2] !== 0 ? p[2] - (n[0] * (uu - p[0]) + n[1] * (vv - p[1])) / n[2] : p[2]]; } }; };
   const eye = EYE[style], bw = BROW[style];
   for (const s of [1, -1]) {
     const sock = plane(s > 0 ? ['E0', 'E1', 'E2', 'E3'] : ["E0'", "E1'", "E2'", "E3'"]);

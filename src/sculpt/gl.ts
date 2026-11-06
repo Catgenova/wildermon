@@ -93,7 +93,7 @@ void main() {
     vec3 h = rgb2hsv(base);
     bool warm = h.x < 0.2 || h.x > 0.9;
     float aa = fwidth(dl) * 1.2;
-    float shadowAt = soft ? -0.62 : (skin ? -0.35 : -0.1), lightAt = metal ? 0.78 : (skin ? 0.72 : 0.64);
+    float shadowAt = soft ? -0.75 : (skin ? -0.35 : -0.1), lightAt = metal ? 0.78 : (skin ? 0.72 : 0.64);
     // The face's half-shadow: a plane turned a little from the light, between the base and the shadow.
     float halfSh = soft ? (1.0 - smoothstep(-0.25 - aa, -0.25 + aa, dl)) * 0.5 : 0.0;
     float sh = 1.0 - smoothstep(shadowAt - aa, shadowAt + aa, dl);

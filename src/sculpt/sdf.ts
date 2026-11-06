@@ -44,7 +44,7 @@ export interface Material {
   metal?: boolean;
   /** The eye's parts: drawn in the lid's colour (the first material's, a shade darker) while the lids are shut. */
   eye?: boolean;
-  /** The face's planes: four tones rather than three, a half-shadow between the base and the shadow, so a plane turned a little from the light steps down rather than falling to the dark. */
+  /** The face's planes: four tones rather than three, a half-shadow from a quarter turned from the light to three quarters, the shadow only past that, so a plane turned a little from the light steps down rather than falling to the dark. */
   soft?: boolean;
   /** A small part standing off the body (an ear): the silhouette ink next to it is thin, so it reads as the part and not as its line. */
   thinInk?: boolean;
