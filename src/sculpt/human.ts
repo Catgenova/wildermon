@@ -85,10 +85,10 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
       }
       return [M.skin, M.shorts, d];
     }
-    if (region === 3 || leg(bone)) return [M.skin, M.shoe, ankleZ + 0.1 - p[2]];
-    // The body's own neck shades with the face's planes, so no dark skin shows inside the collar.
-    if (bone === 'neck' || bone === 'head') return [M.face, M.face, -1];
-    return [M.skin, M.skin, -1];
+    // Clothed, all the body's bare skin shades as the face's planes do (four gentle tones, no crease ink), so the neck and
+    // the collarbones inside the collar, and the arms, are not a darker skin than the head.
+    if (region === 3 || leg(bone)) return [M.face, M.shoe, ankleZ + 0.1 - p[2]];
+    return [M.face, M.face, -1];
   };
 }
 
