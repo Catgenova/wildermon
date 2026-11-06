@@ -4729,7 +4729,9 @@ export class Renderer {
           ctx.globalAlpha = 1;
         }
         // The sea's outline, for a wake and remembered ground's wash; and its shore's wet band and the land's side of its foam (`shore.ts`).
-        if (sea) this.drawWater(V, x, y, c, fogged && !lit ? lineFog : undefined);
+        // A remembered tile all under the sea has its wash in the sea's picture already (`seaStill`).
+        const seaWashed = this.seaUnder && c[0] < 0 && c[1] < 0 && c[2] < 0 && c[3] < 0 && world.hasSea(x, y);
+        if (sea) this.drawWater(V, x, y, c, fogged && !lit && !seaWashed ? lineFog : undefined);
         if ((sea || (c[0] < SHORE_HIGH && c[1] < SHORE_HIGH && c[2] < SHORE_HIGH && c[3] < SHORE_HIGH)) && !this.fast) this.seaShore(V, x, y, c, !run, lit);
         if (pond) this.drawPonds(V, x, y, c, lit, fogged && !lit ? lineFog : undefined);
         // The water lapping round the feet of piers this tile is in front of, now its water is down (`piers.ts`).
@@ -16744,10 +16746,51 @@ export class Renderer {
       path.closePath();
     });
     let mem: Path2D | null = null;
+    let memFog: Path2D | null = null;
     if (fog) {
+      /*
+       * The sea only remembered, a run of tiles along a row at a time: one
+       * piece of the path for each run rather than one for each tile.
+       * Reported: "frame rate in the ocean while sailing has plummeted ...
+       * better on refresh, may have been a leak". It was the remembered sea:
+       * every tile of it in the picture's reach was its own square in this
+       * path, thousands of them once the sea round a long sail was all
+       * remembered, and the picture clipped to all of them and painted again
+       * each time it was made -- 3 ms grown to 30 on a sail of a minute. Runs
+       * cut the path to a few dozen pieces.
+       */
       const vision = game.vision;
+      const run = (y: number, xa: number, xb: number, into: 'mem' | 'fog'): void => {
+        const path = into === 'mem' ? (mem ??= new Path2D()) : (memFog ??= new Path2D());
+        path.moveTo(cam.worldToScreenX(xa, y), cam.worldToScreenY(xa, y, 0));
+        path.lineTo(cam.worldToScreenX(xb + 1, y), cam.worldToScreenY(xb + 1, y, 0));
+        path.lineTo(cam.worldToScreenX(xb + 1, y + 1), cam.worldToScreenY(xb + 1, y + 1, 0));
+        path.lineTo(cam.worldToScreenX(xa, y + 1), cam.worldToScreenY(xa, y + 1, 0));
+        path.closePath();
+      };
+      /*
+       * And the wash over the remembered sea where the tile is all under water,
+       * laid here in the picture rather than gathered a tile at a time with
+       * the ground (`drawWater`'s `fogInto`), which was the other half of that
+       * cost. A tile the shore crosses keeps its own outline there, so the
+       * wash meets the land's where the water does.
+       */
       for (let y = y0; y <= y1; y++) {
-        for (let x = x0; x <= x1; x++) if (vision.state(x, y) === KNOWN && world.hasSea(x, y)) tile((mem ??= new Path2D()), x, y);
+        let from = -1, fogFrom = -1;
+        for (let x = x0; x <= x1 + 1; x++) {
+          const on = x <= x1 && vision.state(x, y) === KNOWN && world.hasSea(x, y);
+          const under = on && world.getHeight(x, y) < 0 && world.getHeight(x + 1, y) < 0 && world.getHeight(x + 1, y + 1) < 0 && world.getHeight(x, y + 1) < 0;
+          if (on && from < 0) from = x;
+          else if (!on && from >= 0) {
+            run(y, from, x - 1, 'mem');
+            from = -1;
+          }
+          if (under && fogFrom < 0) fogFrom = x;
+          else if (!under && fogFrom >= 0) {
+            run(y, fogFrom, x - 1, 'fog');
+            fogFrom = -1;
+          }
+        }
       }
     }
     for (const path of [calm, mem]) {
@@ -16760,6 +16803,12 @@ export class Renderer {
         h.fillStyle = `rgba(128,128,128,${(1 - MEMORY_SEA).toFixed(3)})`;
         h.fillRect(sx0, sy0, sx1 - sx0, sy1 - sy0);
       }
+      h.restore();
+    }
+    if (memFog) {
+      h.save();
+      h.fillStyle = FOG_COLOR;
+      h.fill(memFog);
       h.restore();
     }
   }
