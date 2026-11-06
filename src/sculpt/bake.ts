@@ -12,7 +12,7 @@ import {
 
 export interface Baked {
   band: Band;
-  /** Per vertex: rest position (3), normal (3), material (1), bones (4), weights (4): 15 floats. */
+  /** Per vertex: rest position (3), normal (3), material (1), bones (4), weights (4), the stamp's material and how far inside it (2): 17 floats. */
   verts: Float32Array;
   /** Triangles, three vertex indices each. */
   tris: Uint32Array;
@@ -25,6 +25,9 @@ export interface Baked {
   grid: [number, number, number];
   cell: number;
 }
+
+/** Floats per vertex. */
+export const STRIDE = 17;
 
 /** The grid cell per band, in units: a body is seventeen tall. */
 export const CELL: Record<Band, number> = { 0: 0.3, 1: 0.17, 2: 0.085 };
@@ -108,7 +111,7 @@ export function bake(model: Model, band: Band, boneOrder: string[], cell = CELL[
   }
   // Per vertex: the normal from the field's gradient, the material from the nearest primitive and its stamps, the bones from what reaches it.
   const nV = pos.length / 3;
-  const verts = new Float32Array(nV * 15);
+  const verts = new Float32Array(nV * STRIDE);
   const boneIndex = new Map(boneOrder.map((b, i) => [b, i]));
   const hit: Hit = { d: 0, prim: null };
   const e = cell * 0.5;
@@ -127,13 +130,11 @@ export function bake(model: Model, band: Band, boneOrder: string[], cell = CELL[
     const n = unit([dx1 - dx0, dy1 - dy0, dz1 - dz0]);
     q[2] = vz;
     distanceAt(ps, q, band, hit);
-    let m = hit.prim ? hit.prim.m : 0;
+    const m = hit.prim ? hit.prim.m : 0;
     const vp: V3 = [vx, vy, vz];
-    if (hit.prim?.stamps) for (const s of hit.prim.stamps) {
-      if (s.band > band) continue;
-      const sm = s.at(vp, n);
-      if (sm !== undefined) { m = sm; break; }
-    }
+    // The stamp with most say here, over every primitive the vertex is near (a blend between two is either's surface): inside one,
+    // the one it is deepest in; outside all, the nearest edge, so the edge interpolates straight across.
+    let mB = m, dB = -1;
     // Bones: every primitive within reach weighs in by how near it is, split between its two bones where it has two.
     weights.clear();
     for (const pr of ps) {
@@ -142,6 +143,11 @@ export function bake(model: Model, band: Band, boneOrder: string[], cell = CELL[
       if (vx < b[0][0] - REACH || vx > b[1][0] + REACH || vy < b[0][1] - REACH || vy > b[1][1] + REACH || vz < b[0][2] - REACH || vz > b[1][2] + REACH) continue;
       const d = pr.d(vp);
       if (d > REACH) continue;
+      if (pr.stamps && d < (pr.blend ?? 0) + e * 2) for (const s of pr.stamps) {
+        if (s.band > band) continue;
+        const sh = s.at(vp, n);
+        if (sh && sh.d > dB) { dB = sh.d; mB = sh.m; }
+      }
       const w = d <= 0 ? 1 : 1 - d / REACH;
       const bi = boneIndex.get(pr.bone) ?? 0;
       if (pr.bone2 && pr.split) {
@@ -153,11 +159,12 @@ export function bake(model: Model, band: Band, boneOrder: string[], cell = CELL[
     }
     const top = [...weights.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
     const sum = top.reduce((s, [, w]) => s + w, 0) || 1;
-    const o = i * 15;
+    const o = i * STRIDE;
     verts[o] = vx; verts[o + 1] = vy; verts[o + 2] = vz;
     verts[o + 3] = n[0]; verts[o + 4] = n[1]; verts[o + 5] = n[2];
     verts[o + 6] = m;
     for (let k = 0; k < 4; k++) { verts[o + 7 + k] = top[k] ? top[k][0] : 0; verts[o + 11 + k] = top[k] ? top[k][1] / sum : 0; }
+    verts[o + 15] = mB; verts[o + 16] = dB;
   }
   return { band, verts, tris: Uint32Array.from(tris), nVerts: nV, nTris: tris.length / 3, bones: boneOrder, ms: performance.now() - t0, grid: [nx, ny, nz], cell };
 }

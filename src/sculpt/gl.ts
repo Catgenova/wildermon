@@ -12,7 +12,7 @@
  */
 import { HEIGHT_SCALE } from '../render/iso';
 import type { View } from '../render/figure';
-import type { Baked } from './bake';
+import { STRIDE, type Baked } from './bake';
 import type { Material } from './sdf';
 
 export type Debug = 'none' | 'wire' | 'normals' | 'mats' | 'bones' | 'edges';
@@ -36,10 +36,10 @@ const MAX_MATS = 32;
 
 const VS = `#version 300 es
 precision highp float;
-in vec3 aPos; in vec3 aNrm; in float aMat; in vec4 aBones; in vec4 aW;
+in vec3 aPos; in vec3 aNrm; in float aMat; in vec4 aBones; in vec4 aW; in vec2 aStamp;
 uniform vec4 uBones[${MAX_BONES * 3}];
 uniform vec2 uEx, uEy; uniform float uHS; uniform vec3 uT; uniform vec2 uHalf; uniform float uDepth; uniform vec2 uOff;
-out vec3 vNrm; out vec3 vPos; flat out float vMat; flat out float vBone; out float vDepth;
+out vec3 vNrm; out vec3 vPos; flat out float vMat; flat out float vBone; out float vDepth; flat out float vMatB; out float vStamp;
 vec3 skinP(int b, vec3 p) { vec4 q = vec4(p, 1.0); return vec3(dot(uBones[b*3], q), dot(uBones[b*3+1], q), dot(uBones[b*3+2], q)); }
 vec3 skinN(int b, vec3 n) { return vec3(dot(uBones[b*3].xyz, n), dot(uBones[b*3+1].xyz, n), dot(uBones[b*3+2].xyz, n)); }
 void main() {
@@ -52,13 +52,13 @@ void main() {
   float sx = p.x * uEx.x + p.y * uEy.x - uOff.x;
   float sy = p.x * uEx.y + p.y * uEy.y - p.z * uHS - uOff.y;
   float d = -dot(p, uT);
-  vNrm = normalize(n); vPos = p; vMat = aMat; vBone = aBones.x; vDepth = d;
+  vNrm = normalize(n); vPos = p; vMat = aMat; vBone = aBones.x; vDepth = d; vMatB = aStamp.x; vStamp = aStamp.y;
   gl_Position = vec4(sx / uHalf.x, -sy / uHalf.y, d / uDepth, 1.0);
 }`;
 
 const FS = `#version 300 es
 precision highp float;
-in vec3 vNrm; in vec3 vPos; flat in float vMat; flat in float vBone; in float vDepth;
+in vec3 vNrm; in vec3 vPos; flat in float vMat; flat in float vBone; in float vDepth; flat in float vMatB; in float vStamp;
 uniform vec4 uMat[${MAX_MATS}];
 uniform vec3 uL; uniform vec3 uT; uniform float uGrain; uniform float uNight; uniform float uMode; uniform float uFlat;
 layout(location=0) out vec4 oCol; layout(location=1) out vec4 oNd; layout(location=2) out vec4 oId;
@@ -68,16 +68,18 @@ float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); 
 vec3 hashCol(float i){ return 0.35 + 0.6 * vec3(hash(vec2(i, 1.0)), hash(vec2(i, 7.0)), hash(vec2(i, 13.0))); }
 void main() {
   vec3 n = normalize(vNrm);
-  int mi = int(vMat + 0.5);
-  vec4 M = uMat[mi];
+  // The stamp's material where the stamp's distance says inside, its edge one pixel soft across the interpolated distance.
+  float inStamp = smoothstep(-fwidth(vStamp), fwidth(vStamp), vStamp);
+  int mi = inStamp > 0.5 ? int(vMatB + 0.5) : int(vMat + 0.5);
+  vec4 M = mix(uMat[int(vMat + 0.5)], uMat[int(vMatB + 0.5)], inStamp);
   vec3 base = M.rgb;
-  int flags = int(M.a + 0.5);
+  int flags = int(uMat[mi].a + 0.5);
   bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0;
   float dl = dot(n, uL);
   vec3 c = base;
   if (uMode > 0.5) {
     if (uMode < 1.5) c = n * 0.5 + 0.5;
-    else if (uMode < 2.5) c = hashCol(vMat);
+    else if (uMode < 2.5) c = hashCol(float(mi));
     else c = hashCol(vBone);
   } else if (emissive) {
     c = base;
@@ -111,7 +113,7 @@ void main() {
   if (!emissive && uMode < 0.5) c = mix(c, vec3(12.0, 20.0, 44.0) / 255.0, uNight * 0.68);
   oCol = vec4(c, 1.0);
   oNd = vec4(n * 0.5 + 0.5, vDepth);
-  oId = vec4(vMat / 255.0, emissive ? 1.0 : 0.0, 0.0, 1.0);
+  oId = vec4(float(mi) / 255.0, emissive ? 1.0 : 0.0, 0.0, 1.0);
 }`;
 
 const EDGE_VS = `#version 300 es
@@ -250,7 +252,7 @@ function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
   if (bf) return bf;
   const vbo = gl.createBuffer()!, ibo = gl.createBuffer()!, lines = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-  gl.bufferData(gl.ARRAY_BUFFER, b.verts.subarray(0, b.nVerts * 15), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, b.verts.subarray(0, b.nVerts * STRIDE), gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, b.tris, gl.STATIC_DRAW);
   const ln = new Uint32Array(b.nTris * 6);
@@ -323,8 +325,8 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   };
   setCommon(C.prog, C.u);
   gl.bindBuffer(gl.ARRAY_BUFFER, bf.vbo);
-  const stride = 60;
-  for (const [i, sz, off] of [[0, 3, 0], [1, 3, 12], [2, 1, 24], [3, 4, 28], [4, 4, 44]]) {
+  const stride = STRIDE * 4;
+  for (const [i, sz, off] of [[0, 3, 0], [1, 3, 12], [2, 1, 24], [3, 4, 28], [4, 4, 44], [5, 2, 60]]) {
     gl.enableVertexAttribArray(i);
     gl.vertexAttribPointer(i, sz, gl.FLOAT, false, stride, off);
   }
@@ -343,7 +345,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.useProgram(C.edge);
   gl.bindBuffer(gl.ARRAY_BUFFER, C.quad);
-  for (let i = 1; i < 5; i++) gl.disableVertexAttribArray(i);
+  for (let i = 1; i < 6; i++) gl.disableVertexAttribArray(i);
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, C.tCol); gl.uniform1i(C.eu.uCol, 0);

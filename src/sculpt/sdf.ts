@@ -57,8 +57,18 @@ export interface Join {
   keep?: boolean;
 }
 
-/** A stamp: a region painted on a primitive's surface in another material, given the surface point and its outward normal. */
-export type Stamp = (p: V3, n: V3) => number | undefined;
+/**
+ * A stamp: a region painted on a primitive's surface in another material.
+ * Given a surface point and its outward normal it says the material and how
+ * far inside the region the point is (`d` > 0 inside, < 0 outside); near its
+ * edge it answers on both sides, so the edge is drawn straight between the
+ * vertices rather than along the mesh's cells. Nothing, where it has no say.
+ */
+export interface StampHit { m: number; d: number }
+export type Stamp = (p: V3, n: V3) => StampHit | undefined;
+/** How far outside its edge a stamp still answers, in units. */
+export const STAMP_MARGIN = 0.6;
+const hit = (m: number, d: number): StampHit | undefined => (d > -STAMP_MARGIN ? { m, d } : undefined);
 
 export interface Prim extends Join {
   /** Signed distance to the primitive at `p`. */
@@ -294,19 +304,19 @@ export const halfSpace = (at: V3, n: V3, t: Tag): Prim => {
 
 /** A disc of material `m` on the surface round `c`, radius `r`, facing roughly `n` (a point on the far side of the body is left alone). */
 export const disc = (c: V3, r: number, m: number, n?: V3): Stamp => (p, pn) =>
-  (len(sub(p, c)) < r && (!n || dot(pn, n) > 0) ? m : undefined);
+  (!n || dot(pn, n) > 0 ? hit(m, r - len(sub(p, c))) : undefined);
 
 /** A ring of material `m`: between radii `r0` and `r1` round `c`. */
 export const ring = (c: V3, r0: number, r1: number, m: number, n?: V3): Stamp => (p, pn) => {
   const l = len(sub(p, c));
-  return l >= r0 && l < r1 && (!n || dot(pn, n) > 0) ? m : undefined;
+  return !n || dot(pn, n) > 0 ? hit(m, Math.min(l - r0, r1 - l)) : undefined;
 };
 
 /** A band of material `m` between heights `z0` and `z1`, the boundary wavy by `wave(theta)` round the body's axis at `(cx, cy)`. */
 export const band = (z0: number, z1: number, m: number, o: { cx?: number; cy?: number; wave?: (theta: number) => number; only?: (p: V3, n: V3) => boolean } = {}): Stamp => (p, n) => {
   const th = Math.atan2(p[1] - (o.cy ?? 0), p[0] - (o.cx ?? 0));
   const w = o.wave ? o.wave(th) : 0;
-  return p[2] >= z0 + w && p[2] < z1 + w && (!o.only || o.only(p, n)) ? m : undefined;
+  return !o.only || o.only(p, n) ? hit(m, Math.min(p[2] - z0 - w, z1 + w - p[2])) : undefined;
 };
 
 /** Stripes of material `m` along `axis`, `period` apart, each `width` wide, from `phase`. */
@@ -314,7 +324,7 @@ export const stripes = (axis: V3, period: number, width: number, m: number, phas
   const a = unit(axis);
   return (p, n) => {
     const t = ((dot(p, a) + phase) % period + period) % period;
-    return t < width && (!only || only(p, n)) ? m : undefined;
+    return !only || only(p, n) ? hit(m, Math.min(t, width - t)) : undefined;
   };
 };
 
@@ -327,11 +337,11 @@ export const curveStamp = (pts: V3[], width: number, m: number, n?: V3): Stamp =
     const ap = sub(p, a), h = clamp(dot(ap, ab) / l2);
     best = Math.min(best, len(sub(ap, mul(ab, h))));
   }
-  return best < width ? m : undefined;
+  return hit(m, width - best);
 };
 
 /** The first stamp that paints, of several. */
-export const firstOf = (...ss: Stamp[]): Stamp => (p, n) => { for (const s of ss) { const m = s(p, n); if (m !== undefined) return m; } return undefined; };
+export const firstOf = (...ss: Stamp[]): Stamp => (p, n) => { for (const s of ss) { const h = s(p, n); if (h && h.d > 0) return h; } for (const s of ss) { const h = s(p, n); if (h) return h; } return undefined; };
 
 /**
  * A sun sigil: a disc, a gap, a ring, and `rays` short rays out of it, on
@@ -344,14 +354,13 @@ export function sun(c: V3, u: V3, v: V3, r: number, m: number, rays = 8, n?: V3)
     if (n && dot(pn, n) <= 0) return undefined;
     const q = sub(p, c), x = dot(q, U), y = dot(q, V);
     const l = Math.hypot(x, y);
-    if (l < r * 0.36) return m;
-    if (l > r * 0.5 && l < r * 0.64) return m;
-    if (l > r * 0.74 && l < r) {
-      const a = Math.atan2(y, x), per = (Math.PI * 2) / rays;
-      const f = ((a % per) + per) % per;
-      if (Math.min(f, per - f) < per * 0.14) return m;
-    }
-    return undefined;
+    let d = r * 0.36 - l;
+    d = Math.max(d, Math.min(l - r * 0.5, r * 0.64 - l));
+    const a = Math.atan2(y, x), per = (Math.PI * 2) / rays;
+    const f = ((a % per) + per) % per;
+    // A ray: inside its angle and its radii; the angle's distance taken at the radius.
+    d = Math.max(d, Math.min(Math.min(l - r * 0.74, r - l), (per * 0.14 - Math.min(f, per - f)) * l));
+    return hit(m, d);
   };
 }
 
@@ -360,10 +369,13 @@ export function patchwork(u: V3, v: V3, size: number, ms: number[], keep = 0.4, 
   const U = unit(u), V = unit(v);
   return (p, n) => {
     if (only && !only(p, n)) return undefined;
-    const i = Math.floor(dot(p, U) / size), j = Math.floor(dot(p, V) / size);
+    const su = dot(p, U) / size, sv = dot(p, V) / size;
+    const i = Math.floor(su), j = Math.floor(sv);
     const h = Math.abs(Math.sin(i * 127.1 + j * 311.7) * 43758.5453) % 1;
     if (h < keep) return undefined;
-    return ms[Math.floor(((h - keep) / (1 - keep)) * ms.length) % ms.length];
+    // Inside its cell by how far from the cell's nearest edge.
+    const d = Math.min(su - i, i + 1 - su, sv - j, j + 1 - sv) * size;
+    return hit(ms[Math.floor(((h - keep) / (1 - keep)) * ms.length) % ms.length], d);
   };
 }
 
@@ -383,7 +395,7 @@ export function modelOf(prims: Prim[], materials: Material[]): Model {
 
 /** The model's distance at `p`, over the primitives of bands up to `band`, from a list already culled to those whose box holds `p`. */
 export function distanceAt(prims: Prim[], p: V3, band: Band, out?: Hit): number {
-  let d = Infinity, near: Prim | null = null, nd = Infinity;
+  let d = 1e3, near: Prim | null = null, nd = Infinity;
   for (const pr of prims) {
     if (pr.band > band || (pr.until !== undefined && band > pr.until)) continue;
     const b = pr.box;

@@ -43,7 +43,7 @@ console.log('gl:', await p.evaluate(() => window.SCULPT.glInfo()));
 const shoot = async (name, fn) => {
   await p.evaluate(() => window.SCULPT.clear());
   await p.evaluate(fn, who);
-  await p.locator('#root').screenshot({ path: join(out, `${name}.png`) });
+  await p.locator('#root').screenshot({ path: join(out, `${name}.png`), timeout: 180000, animations: 'disabled' });
   console.log('wrote', join(out, `${name}.png`));
 };
 
@@ -64,7 +64,7 @@ if (flag('stats') || only.includes('stats')) {
 }
 if (only.includes('lineup')) await shoot('lineup', async () => { await window.SCULPT.lineup(6, 'idle:0'); await window.SCULPT.lineup(2.5, 'walk:0.25'); });
 if (only.includes('facings')) await shoot(`facings-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 1); window.SCULPT.facings(w, 'walk:0.25', 1); window.SCULPT.facings(w, 'idle:0', 2); window.SCULPT.facings(w, 'walk:0.25', 2); window.SCULPT.facings(w, 'idle:0', 4); window.SCULPT.facings(w, 'walk:0.6', 4); window.SCULPT.facings('figure', 'idle:0', 2); });
-if (only.includes('motion')) await shoot(`motion-${who}`, (w) => { window.SCULPT.strip(w, 1, 3); window.SCULPT.strip(w, 3, 3); window.SCULPT.strip(w, 6, 3); window.SCULPT.strip('figure', 1, 3); });
+if (only.includes('motion')) await shoot(`motion-${who}`, (w) => { window.SCULPT.strip(w, 1, 2.5); window.SCULPT.strip(w, 3, 2.5); window.SCULPT.strip(w, 6, 2.5); window.SCULPT.strip('figure', 1, 2.5); });
 if (only.includes('close')) await shoot(`close-${who}`, (w) => window.SCULPT.close(w, 9));
 if (only.includes('night')) await shoot(`night-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 3, { night: 1 }); window.SCULPT.facings(w, 'walk:0.25', 3, { night: 1 }); });
 if (only.includes('debug')) await shoot(`debug-${who}`, (w) => { window.SCULPT.debug(w, 6, 1, 'walk:0.25'); window.SCULPT.debug(w, 6, 3, 'idle:0'); window.SCULPT.debug(w, 6, 5, 'work:0.5'); });

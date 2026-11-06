@@ -10,7 +10,7 @@
 import { drawFigure, type FigurePose } from '../../src/render/figure';
 import type { Look } from '../../src/game/look';
 import { bandOf, CELL } from '../../src/sculpt/bake';
-import { built, bakedAt, drawSculpt, sculptScene, BOX, FIVE, SEVEN, type Debug } from '../../src/sculpt/index';
+import { built, bakedAt, drawSculpt, sculptScene, FIVE, SEVEN, type Debug } from '../../src/sculpt/index';
 import type { Proportions } from '../../src/sculpt/rig';
 import { glContext } from '../../src/sculpt/gl';
 
@@ -37,8 +37,8 @@ function poseOf(facing: number, what: string): FigurePose {
 interface Cell { cv: HTMLCanvasElement; g: CanvasRenderingContext2D; fx: number; fy: number; w: number; h: number }
 /** A cell the body's box fits in at `zoom`, or a crop of it: `crop` as [top, bottom] in box units. */
 function cell(zoom: number, crop?: [number, number], wide?: [number, number]): Cell {
-  const top = crop ? crop[0] : BOX.top, bottom = crop ? crop[1] : BOX.bottom;
-  const left = wide ? wide[0] : BOX.left, right = wide ? wide[1] : BOX.right;
+  const top = crop ? crop[0] : -43, bottom = crop ? crop[1] : 5;
+  const left = wide ? wide[0] : -17, right = wide ? wide[1] : 17;
   const w = Math.ceil((right - left) * zoom), h = Math.ceil((bottom - top) * zoom);
   const cv = document.createElement('canvas');
   cv.width = Math.ceil(w * DPR); cv.height = Math.ceil(h * DPR);
@@ -59,7 +59,7 @@ function heading(text: string): void {
 }
 function row(cells: Array<{ cv: HTMLCanvasElement; label: string }>): void {
   const line = document.createElement('div');
-  line.style.cssText = 'white-space:nowrap;margin:1px 0';
+  line.style.cssText = 'white-space:normal;max-width:3300px;margin:1px 0';
   for (const c of cells) {
     const box = document.createElement('div');
     box.style.cssText = 'display:inline-block;margin:1px;font:10px sans-serif;text-align:center;color:#ddd;vertical-align:top';
@@ -135,9 +135,9 @@ const api = {
     heading(`${who} close, zoom ${zoom}: idle at four facings; then the head at ${zoom * 2.2} and the hands at ${zoom * 2}`);
     row([0, 1, 3, 5].map((f) => { const c = cell(zoom); drawOne(c, zoom, who, poseOf(f, 'idle:0')); return { cv: c.cv, label: `f${f}` }; }));
     const hz = zoom * 2.2;
-    const heads = [0, 1, 2, 3, 5, 7].map((f) => { const c = cell(hz, [BOX.top, BOX.top + 22], [-14, 14]); drawOne(c, hz, who, poseOf(f, f === 7 ? 'talk:0.3' : 'idle:0')); return { cv: c.cv, label: `head f${f}${f === 7 ? ' talk' : ''}` }; });
+    const heads = [0, 1, 2, 3, 5, 7].map((f) => { const c = cell(hz, [-40.5, -28], [-7, 7]); drawOne(c, hz, who, poseOf(f, f === 7 ? 'talk:0.3' : 'idle:0')); return { cv: c.cv, label: `head f${f}${f === 7 ? ' talk' : ''}` }; });
     row(heads);
-    const hands = [1, 3].flatMap((f) => ['idle:0', 'wave:0.5', 'work:0.5'].map((w) => { const c = cell(hz, [-30, 14], [-30, 30]); drawOne(c, hz, who, poseOf(f, w)); return { cv: c.cv, label: `hands f${f} ${w}` }; }));
+    const hands = [1, 3].flatMap((f) => ['idle:0', 'wave:0.5', 'work:0.5'].map((w) => { const c = cell(hz * 0.6, [-38, -4], [-14, 14]); drawOne(c, hz * 0.6, who, poseOf(f, w)); return { cv: c.cv, label: `hands f${f} ${w}` }; }));
     row(hands);
   },
   /** The debug views, one facing big. */
