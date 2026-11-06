@@ -77,7 +77,9 @@ const KIND = 'sedra';
 const def = SPECIES[KIND];
 const SKILL = levelSkill(def)!;
 /** A wild kind that does not evolve: the first of the wild's that has no stages. */
-const STILL = WILD_SPECIES.map(([id]) => id).find((id) => !SPECIES[id].stages)!;
+// Every wildermon line has its stages now, so where no wild kind is without them a monster (a goblin) stands in.
+const STILL = WILD_SPECIES.map(([id]) => id).find((id) => !SPECIES[id].stages)
+  ?? Object.entries(SPECIES).find(([, d]) => !d.stages && d.monster)![0];
 const ROLLS = [0, 0.001, 1 / WILD_STAGE_ODDS[1] - 1e-9, 1 / WILD_STAGE_ODDS[1], 0.03, 1 / WILD_STAGE_ODDS[1] + 1 / WILD_STAGE_ODDS[0] - 1e-9,
   1 / WILD_STAGE_ODDS[1] + 1 / WILD_STAGE_ODDS[0], 0.5, 0.999];
 const N = 20000;
@@ -284,7 +286,9 @@ check(`in a game of your own, ${N} put out: about one in ${WILD_STAGE_ODDS[0]} a
 let still = 0;
 for (let i = 0; i < 2000; i++) {
   const c = game.creatures.standWild(game, STILL, px + 20, py + 20);
-  if (stageOf(c) || c.skills[levelSkill(SPECIES[STILL]) ?? ''] !== 1) still++;
+  // At its first stage and, where its kind levels a skill, at level one of it (a monster levels none).
+  const stillSkill = levelSkill(SPECIES[STILL]);
+  if (stageOf(c) || (stillSkill && c.skills[stillSkill] !== 1)) still++;
   game.creatures.list.delete(c.id);
 }
 check('and a kind that does not evolve never does', still === 0, `${still}`);

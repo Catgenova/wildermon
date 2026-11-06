@@ -88,6 +88,9 @@ begin
   select uid into u from player where world_id = w and name = 'Dane';
   -- Somebody who is not Dane, and need not be on the island: whoever set a crate down is all that is asked of them.
   them := '99999999-9999-9999-9999-999999999999';
+  -- A crate is yours when you set it down or a settlement whose stores you may use covers it (crate_yours): no
+  -- settlement of this world may cover the rack, or the crate that is not Dane's would be.
+  delete from deed d where d.world_id = w and deed_covers(d, ${X}, ${Y});
   delete from item i where i.world_id = w and i.holder = 'crate';
   delete from crate where world_id = w;
   delete from placed where world_id = w and kind = 'furniture' and sub = 'crate_shelf';
