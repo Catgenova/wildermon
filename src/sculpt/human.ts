@@ -68,7 +68,8 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
     if (region === 6) return [M.pupil, M.pupil, -1];
     if (region === 7) return [M.lash, M.lash, -1];
     if (region === 8) return [M.brow, M.brow, -1];
-    if (region === 9) return [M.hair, M.hair, -1];
+    if (region === 9) return [M.hair, M.hairLight, irisD];
+    if (region === 12) return [M.hair, M.hairGlint, irisD];
     if (region === 10) return [M.glint, M.glint, -1];
     if (region === 11) return [M.mouth, M.mouth, -1];
     if (wear === 'shorts') {

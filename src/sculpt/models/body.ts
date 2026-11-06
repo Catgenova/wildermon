@@ -21,7 +21,7 @@ import {
 } from '../sdf';
 
 /** The materials, by index. */
-export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16 } as const;
+export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18 } as const;
 
 /** What the body wears: the game's undershirt and trousers, or the reference sheet's shorts over bare skin. */
 export type Wear = 'base' | 'shorts';
@@ -44,6 +44,9 @@ export function bodyMaterials(look: Look): Material[] {
   out[M.brow] = { colour: mixHex(hair, '#16100e', 0.45) };
   out[M.lash] = { colour: mixHex(hair, '#2a1a24', 0.7) };
   out[M.shorts] = { colour: '#454a54' };
+  // The hair's highlight shape, a lilac of the hair's own, and the teal that streaks two clumps, as the sheet's palette.
+  out[M.hairLight] = { colour: mixHex(hair, '#b69de2', 0.5) };
+  out[M.hairGlint] = { colour: mixHex(hair, '#5fb3ae', 0.55) };
   out[M.lip] = { colour: mixHex(skin, '#a4484a', 0.42) };
   // The undershirt a pastel cream, the trousers a dusty slate-teal, the shoes caramel: the kit's pastel base, no splash yet.
   out[M.shirt] = { colour: '#ecdcb8' };

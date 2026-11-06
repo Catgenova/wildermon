@@ -364,53 +364,69 @@ function extras(b, shared) {
   for (const i of scalp) {
     const n = nrm.get(i); if (!n) continue; const l = Math.hypot(...n) || 1;
     const p = V[i], edge = p[1] < hairline(p) + 0.2;
-    const h = (edge ? 0.08 : 0.14) + 0.04 * hash(i);
+    const h = (edge ? 0.08 : 0.14 + 0.22 * Math.max(0, n[1] / l)) + 0.04 * hash(i);
     hid.set(i, add([p[0] + (n[0] / l) * h, p[1] + (n[1] / l) * h - (edge ? 0.08 : 0), p[2] + (n[2] / l) * h], 9));
   }
   for (const tr of tris) if (tr.every((i) => hid.has(i))) out.tris.push(tr.map((i) => hid.get(i)));
-  // A wedge: a flattened tube along a curve through three points, half-width w and half-thickness h tapering to a point.
-  const top = Math.max(...[...scalp].map((i) => V[i][1]));
-  const wedge = (pts, w0, w1, h0, h1, up) => {
+  // A clump of hair: a lofted flattened teardrop along a curve through three points -- a thick rounded base sunk a
+  // little into the shell, the body standing off the skull, tapering to a point. Its upper face carries a highlight
+  // stamp (region 9 lilac, region 12 teal), positive where the ring faces up and out.
+  const clump = (pts, w0, h0, up, region = 9) => {
     const P = (t) => [0, 1, 2].map((k) => (1 - t) * (1 - t) * pts[0][k] + 2 * (1 - t) * t * pts[1][k] + t * t * pts[2][k]);
-    const S = 7, M = 8, rings = [];
+    const S = 8, M = 10, rings = [];
     for (let i = 0; i <= S; i++) {
       const t = i / S, c = P(t), d = [0, 1, 2].map((k) => P(Math.min(1, t + 0.01))[k] - P(Math.max(0, t - 0.01))[k]), dl = Math.hypot(...d) || 1;
       const tg = d.map((x) => x / dl);
       let side = [tg[1] * up[2] - tg[2] * up[1], tg[2] * up[0] - tg[0] * up[2], tg[0] * up[1] - tg[1] * up[0]]; const sl = Math.hypot(...side) || 1; side = side.map((x) => x / sl);
       const u = [side[1] * tg[2] - side[2] * tg[1], side[2] * tg[0] - side[0] * tg[2], side[0] * tg[1] - side[1] * tg[0]];
-      const taper = i === S ? 0.02 : 1 - 0.5 * t * t, w = (w0 + (w1 - w0) * t) * taper, h = (h0 + (h1 - h0) * t) * taper;
-      rings.push(Array.from({ length: M }, (_, j) => { const a = (j / M) * Math.PI * 2; return add([c[0] + side[0] * w * Math.cos(a) + u[0] * h * Math.sin(a), c[1] + side[1] * w * Math.cos(a) + u[1] * h * Math.sin(a), c[2] + side[2] * w * Math.cos(a) + u[2] * h * Math.sin(a)], 9); }));
+      // Rounded at the base (a quarter circle over the first fifth), then tapering to the point.
+      const g = t < 0.2 ? Math.sqrt(1 - (1 - t / 0.2) * (1 - t / 0.2)) : 1 - ((t - 0.2) / 0.8) * ((t - 0.2) / 0.8) * 0.96;
+      const taper = i === S ? 0.02 : Math.max(0.02, g), w = w0 * taper, h = h0 * taper;
+      rings.push(Array.from({ length: M }, (_, j) => {
+        const a = (j / M) * Math.PI * 2, lit = Math.sin(a) - 0.25;
+        return add([c[0] + side[0] * w * Math.cos(a) + u[0] * h * Math.sin(a), c[1] + side[1] * w * Math.cos(a) + u[1] * h * Math.sin(a), c[2] + side[2] * w * Math.cos(a) + u[2] * h * Math.sin(a)], region, lit * 0.3);
+      }));
     }
-    const cap = add(P(0), 9);
+    const p0 = P(0), b = [0, 1, 2].map((k) => p0[k] - (P(0.05)[k] - p0[k]) * 1.5);
+    const cap = add(b, region, -0.3);
     for (let j = 0; j < M; j++) out.tris.push([cap, rings[0][(j + 1) % M], rings[0][j]]);
     for (let i = 0; i + 1 < rings.length; i++) for (let j = 0; j < M; j++) { const a = rings[i][j], d = rings[i][(j + 1) % M], e2 = rings[i + 1][j], f2 = rings[i + 1][(j + 1) % M]; out.tris.push([a, d, f2], [a, f2, e2]); }
   };
-  // The wedges are set by direction from the head's middle, each point so far out past the skull there: azimuth from the
-  // front (toward the body's left positive), elevation, and the hair's thickness over the skin. The flat of each wedge
-  // faces out. The sheet's fringe sweeps to the body's left over the forehead; two cowlicks stand up behind the crown.
-  const c0 = [0, ey + 0.45, 0.05];
+  // The clumps are set by direction from the skull's middle: azimuth from the front (toward the body's left positive),
+  // elevation, and how far out past the skull. The flat of each faces out. Sizes in head widths.
+  const c0 = [0, ey + 0.15, 0.3];
   const skull = face.map((i) => { const d = [V[i][0] - c0[0], V[i][1] - c0[1], V[i][2] - c0[2]]; const l = Math.hypot(...d) || 1; return [d[0] / l, d[1] / l, d[2] / l, l]; });
-  const H = (az, el, out) => {
+  const H = (az, el, out, cap = 9) => {
     const a = (az * Math.PI) / 180, e = (el * Math.PI) / 180, d = [Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)];
-    let r = 0; for (const v of skull) if (v[0] * d[0] + v[1] * d[1] + v[2] * d[2] > 0.975) r = Math.max(r, v[3]);
-    if (!r) r = 0.9;
+    // The skull's radius along d: the furthest vertex within a narrow cone, widening the cone until one is found.
+    let r = 0; for (const cone of [0.99, 0.975, 0.95, 0.9]) { for (const v of skull) if (v[0] * d[0] + v[1] * d[1] + v[2] * d[2] > cone) r = Math.max(r, v[3]); if (r) break; }
+    r = Math.min(r || 0.9, cap);
     return [c0[0] + d[0] * (r + out), c0[1] + d[1] * (r + out), c0[2] + d[2] * (r + out)];
   };
-  const W = (a, b, c, w0, w1, h0, h1) => { const p1 = H(...b); const up = [p1[0] - c0[0], p1[1] - c0[1], p1[2] - c0[2]]; wedge([H(...a), p1, H(...c)], w0, w1, h0, h1, up); };
-  // Wedges radiating from the crown, each a flattened taper with a wide base on the skull and a pointed free end, the
-  // lengths varied so it reads tousled: four long ones swept across to the body's left and down over the forehead to
-  // just above the brows; two at each temple pointing down over the ear; six on top pointing up and back every way;
-  // three down the nape to the collar.
-  const vary = (k, x) => x * (0.85 + 0.3 * hash(k * 31 + 7));
-  const fringe = [[-48, 62, 30, 4], [-30, 64, 40, -2], [-10, 66, 50, -8], [12, 64, 58, -10]];
-  fringe.forEach(([a0, e0, a1, e1], k) => { const mid = [(a0 + a1) / 2 - 8, (e0 + e1) / 2 + 10, 0.34]; W([a0, e0, 0.28], mid, [a1, vary(k, e1 + 10) - 10, 0.06], 0.3, 0.03, 0.2, 0.02); });
+  const HW = 1.7;
+  const C = (a, b, c, w, h, region) => { const p1 = H(...b); const up = [p1[0] - c0[0], p1[1] - c0[1], p1[2] - c0[2]]; clump([H(...a), p1, H(...c)], w * HW, h * HW, up, region); };
+  // The fringe: three big clumps from the right temple sweeping left across the forehead, tips over the brows (one between
+  // them), and a small clump flicking up off the forehead at the parting. Two of them carry the teal. (A clump's middle
+  // control point pulls its curve only half way, so the middles stand at twice the mass wanted.)
+  C([-70, 28, -0.04], [-40, 32, 0.55], [-14, 4, 0.18], 0.17, 0.06, 12);
+  C([-55, 36, -0.04], [-15, 38, 0.6], [2, 2, 0.18], 0.18, 0.06);
+  C([-35, 42, -0.04], [12, 38, 0.56], [30, 6, 0.18], 0.17, 0.06);
+  C([-45, 42, -0.02], [-52, 62, 0.5], [-72, 74, 0.6], 0.09, 0.04);
+  // The top: four clumps fanning up and back from the front of the crown, the tips splaying apart.
+  C([-30, 50, -0.04], [-40, 82, 0.85], [-118, 38, 0.56], 0.2, 0.075, 12);
+  C([-10, 56, -0.04], [0, 90, 0.9], [180, 42, 0.6], 0.21, 0.075);
+  C([15, 52, -0.04], [40, 82, 0.85], [122, 38, 0.56], 0.2, 0.075);
+  C([40, 44, -0.04], [70, 72, 0.75], [150, 28, 0.5], 0.2, 0.075);
+  // The sides: two clumps a side sweeping back over the top third of the ear, and one behind it to the nape.
   for (const sd of [-1, 1]) {
-    W([sd * 58, 48, 0.24], [sd * 82, 20, 0.26], [sd * 96, vary(sd + 3, -12), 0.06], 0.26, 0.03, 0.17, 0.02);
-    W([sd * 78, 42, 0.22], [sd * 104, 16, 0.24], [sd * 114, vary(sd + 5, -22), 0.05], 0.22, 0.03, 0.15, 0.02);
+    C([sd * 40, 36, -0.04], [sd * 75, 18, 0.34], [sd * 104, -8, 0.26], 0.16, 0.06);
+    C([sd * 60, 30, -0.04], [sd * 95, 8, 0.32], [sd * 122, -16, 0.22], 0.15, 0.06);
+    C([sd * 118, 40, -0.04], [sd * 132, 8, 0.42], [sd * 138, -20, 0.12, 1.0], 0.16, 0.06);
   }
-  const crownWedges = [[-20, 66, 150, 40], [40, 64, 205, 44], [100, 62, 245, 38], [160, 66, 295, 42], [220, 62, 335, 40], [290, 64, 30, 44]];
-  crownWedges.forEach(([a0, e0, a1, e1], k) => W([a0, e0, 0.16], [(a0 + a1) / 2, (e0 + e1) / 2 + 22, vary(k + 11, 0.34)], [a1, e1, vary(k + 17, 0.3)], 0.3, 0.03, 0.18, 0.02));
-  for (const [k, az] of [[0, 150], [1, 180], [2, 210]]) W([az, 34, 0.22], [az + (az - 180) * 0.2, -10, 0.24], [az + (az - 180) * 0.3, vary(k + 23, -58), 0.05], 0.3, 0.04, 0.18, 0.02);
+  // The nape: three clumps down the neck, the middle one longest.
+  C([150, 32, -0.04], [146, -2, 0.46], [154, -30, 0.12, 1.0], 0.2, 0.06);
+  C([180, 36, -0.04], [180, -4, 0.5], [180, -40, 0.12, 1.0], 0.2, 0.07);
+  C([210, 32, -0.04], [214, -2, 0.46], [206, -30, 0.12, 1.0], 0.2, 0.06);
   return out;
 }
 const exMan = extras(bodies.man), exWoman = extras(bodies.woman, exMan.scalp);
