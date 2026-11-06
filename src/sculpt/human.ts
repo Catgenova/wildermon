@@ -14,7 +14,7 @@ import { at, lerpProportions, type Bones, type Proportions } from './rig';
 import type { Band, V3 } from './sdf';
 import type { Wear } from './index';
 
-interface AssetBand { band: number; verts: number; tris: number[]; man: number[]; woman: number[]; region: number[]; bw: number[]; eye: number[] }
+interface AssetBand { band: number; verts: number; tris: number[]; man: number[]; woman: number[]; region: number[]; bw: number[]; stamp: number[] }
 interface Asset { height: number; bones: string[]; frames: Record<'man' | 'woman', Record<string, number[]>>; proportions: Record<'man' | 'woman', Proportions>; bands: AssetBand[] }
 const A = ASSET as unknown as Asset;
 
@@ -56,14 +56,19 @@ function turn(a: V3, b: V3): number[] {
  * trousers with the shoe stamped under the ankle. Bare, everything is skin with the shorts (and the woman's top, the same
  * cloth) stamped on.
  */
-function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: number, bone: string, p: V3, pupil: boolean, irisD: number) => [number, number, number] {
+function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: number, bone: string, p: V3, irisD: number) => [number, number, number] {
   const armZ = at(rest, 'arm0')[2], hipZ = at(rest, 'hip0')[2], pelvisZ = at(rest, 'pelvis')[2], spA = at(rest, 'spineA')[2], neckZ = at(rest, 'neck')[2], ankleZ = at(rest, 'ankle0')[2];
   const waistZ = spA + 0.2 + 0.25 * fem, shortsTop = pelvisZ + 0.3, shortsHem = hipZ - P.thigh * 0.46, sleeve = armZ - 1.3, collar = neckZ + 0.15;
   const braLow = armZ - 2.3, braTop = armZ - 0.6;
   const arm = (bone: string): boolean => /^(clav|arm|elbow|wrist|fing|thumb)/.test(bone);
   const leg = (bone: string): boolean => /^(hip|knee|ankle|toe)/.test(bone);
-  return (region, bone, p, pupil, irisD) => {
-    if (region === 4) return pupil ? [M.pupil, M.iris, 1] : [M.white, M.iris, irisD];
+  return (region, bone, p, irisD) => {
+    // The face and the hair drawn over the base: the eye's white with the iris stamped, the pupil, the lid line, a brow, hair.
+    if (region === 5) return [M.white, M.iris, irisD];
+    if (region === 6) return [M.pupil, M.pupil, -1];
+    if (region === 7) return [M.lash, M.lash, -1];
+    if (region === 8) return [M.brow, M.brow, -1];
+    if (region === 9) return [M.hair, M.hair, -1];
     if (wear === 'shorts') {
       let d = region === 1 || region === 2 || region === 3 || arm(bone) ? -1 : Math.min(p[2] - shortsHem, shortsTop - p[2]);
       if (fem >= 0.5 && !arm(bone) && region === 0 && p[2] > shortsTop + 0.5) {
@@ -136,16 +141,15 @@ export function humanBaked(fem: number, band: Band, rest: Bones, order: string[]
     }
     nrm.set(sm);
   }
-  const eyeOf = new Map<number, [number, boolean]>();
-  for (let i = 0; i < ab.eye.length; i += 3) eyeOf.set(ab.eye[i], [ab.eye[i + 1] / 1000, ab.eye[i + 2] === 1]);
+  const stampOf = new Map<number, number>();
+  for (let i = 0; i < ab.stamp.length; i += 2) stampOf.set(ab.stamp[i], ab.stamp[i + 1] / 1000);
   const put = dress(wear, fem, P, rest);
   const verts = new Float32Array(n * STRIDE);
   for (let i = 0; i < n; i++) {
     const o = i * STRIDE;
     const p: V3 = [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]];
     const nn = unit([nrm[i * 3], nrm[i * 3 + 1], nrm[i * 3 + 2]]);
-    const eye = eyeOf.get(i);
-    const [mat, stampMat, stampDist] = put(ab.region[i], A.bones[ab.bw[i * 8]], p, eye?.[1] ?? false, eye?.[0] ?? -1);
+    const [mat, stampMat, stampDist] = put(ab.region[i], A.bones[ab.bw[i * 8]], p, stampOf.get(i) ?? -1);
     verts.set([p[0], p[1], p[2], nn[0], nn[1], nn[2], mat], o);
     for (let j = 0; j < 4; j++) { verts[o + 7 + j] = carry[ab.bw[i * 8 + j * 2]].slot; verts[o + 11 + j] = ab.bw[i * 8 + j * 2 + 1] / 255; }
     verts[o + 15] = stampMat; verts[o + 16] = stampDist;

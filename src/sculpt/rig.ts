@@ -98,7 +98,11 @@ export function lerpProportions(a: Proportions, b: Proportions, t: number, id: s
   const r = {} as Proportions['r'];
   for (const k of Object.keys(a.r) as Array<keyof Proportions['r']>) r[k] = m(a.r[k], b.r[k]);
   const out: Record<string, unknown> = { ...a, id, r };
-  for (const k of Object.keys(a) as Array<keyof Proportions>) if (k !== 'id' && k !== 'r') out[k] = m(a[k] as number, b[k] as number);
+  for (const k of Object.keys(a) as Array<keyof Proportions>) {
+    if (k === 'id' || k === 'r') continue;
+    const x = a[k], y = b[k];
+    out[k] = Array.isArray(x) && Array.isArray(y) ? x.map((v, i) => m(v, y[i])) : m(x as number, y as number);
+  }
   return out as unknown as Proportions;
 }
 /** Neither a man's frame nor a woman's: halfway between the two. */
@@ -112,7 +116,7 @@ export const heightOf = (P: Proportions): number => P.hip + P.spine + P.chest + 
 
 /** The reference sheet's stance: stood square, feet a little apart, arms a little out from the sides with the palms turned back. */
 export function referenceStance(r: Rig): Rig {
-  const o: Rig = { ...r, arm: [[3, 10, 0], [3, 10, 0]], elbow: [8, 8], hand: [[0, 0, -20], [0, 0, 20]], leg: [[0, 9, 0], [0, 9, 0]], knee: [2, 2], flat: [true, true] };
+  const o: Rig = { ...r, arm: [[2, 6, 0], [2, 6, 0]], elbow: [14, 14], hand: [[0, 0, -20], [0, 0, 20]], leg: [[0, 9, 0], [0, 9, 0]], knee: [2, 2], flat: [true, true] };
   o.pelvis = [0, 0, 0]; o.spine = [0, 0, 0]; o.chest = [0, 0, 0]; o.neck = [0, 0, 0]; o.head = [0, 0, 0];
   o.loose = [true, true]; o.curl = [0.2, 0.2]; o.open = [0, 0]; o.shrug = [0, 0];
   o.hover = undefined; o.plant = undefined; o.lift = 0;
