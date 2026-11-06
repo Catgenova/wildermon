@@ -110,6 +110,8 @@ export function sculptScene(pose: FigurePose, zoom: number, P?: Proportions, now
   // Stood doing nothing, the sculpt stands its own way (`relaxedIdle`); every other pose is the figure's, as is.
   const idle = !pose.moving && !pose.working && !pose.swimming && !pose.driving && !pose.emote && !pose.cast;
   const rig = o.stance === 'ref' ? referenceStance(figure) : idle ? relaxedIdle(figure, pose.phase / 6, pose.facing) : figure;
+  // Talking: the head nods and tilts a little (the sculpt has no mouth to move).
+  if (pose.emote === 'talk') rig.head = [rig.head[0] + 5 * Math.sin(now * 7), rig.head[1] + 2 * Math.sin(now * 3.1), rig.head[2] + 3 * Math.sin(now * 2.3)];
   const x = extrasOf(pose, now);
   if (rig.blink) x.blink = 1;
   const posed = bonesOf(rig, P, b.chains, x);

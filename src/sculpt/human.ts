@@ -36,8 +36,8 @@ const CHILD: Record<string, string | V3> = {
   pelvis: 'spineA', spineA: 'spineB', spineB: 'chest', chest: 'neck', neck: 'head', head: [0, 0, 1], jaw: [0, 0.7, -0.7],
 };
 for (const k of [0, 1]) Object.assign(CHILD, {
-  [`eye${k}`]: [0, 1, 0], [`clav${k}`]: `arm${k}`, [`arm${k}`]: `elbow${k}`, [`elbow${k}`]: `wrist${k}`, [`wrist${k}`]: `fing${k}`, [`fing${k}`]: `fingTip${k}`, [`fingTip${k}`]: [0, 0, -1],
-  [`thumb${k}`]: `thumbTip${k}`, [`thumbTip${k}`]: [0, 0, -1], [`hip${k}`]: `knee${k}`, [`knee${k}`]: `ankle${k}`, [`ankle${k}`]: `toe${k}`, [`toe${k}`]: [0, 1, 0],
+  [`eye${k}`]: [0, 1, 0], [`clav${k}`]: `arm${k}`, [`arm${k}`]: `elbow${k}`, [`elbow${k}`]: `wrist${k}`, [`wrist${k}`]: `fing${k}`, [`fing${k}`]: [0, 0, -1],
+  [`thumb${k}`]: [0, 0, -1], [`hip${k}`]: `knee${k}`, [`knee${k}`]: `ankle${k}`, [`ankle${k}`]: `toe${k}`, [`toe${k}`]: [0, 1, 0],
 });
 const unit = (v: V3): V3 => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
 const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -64,15 +64,12 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
   const arm = (bone: string): boolean => /^(clav|arm|elbow|wrist|fing|thumb)/.test(bone);
   const leg = (bone: string): boolean => /^(hip|knee|ankle|toe)/.test(bone);
   return (region, bone, p, irisD) => {
-    // The face and the hair drawn over the base: the eye's white with the iris stamped, the pupil, the lid line, a brow, hair.
-    if (region === 5) return [M.white, M.iris, irisD];
+    // The face, the hands and the hair drawn over the base: an eye's dark rectangle, a brow, hair, the groove between two fingers.
     if (region === 6) return [M.pupil, M.pupil, -1];
-    if (region === 7) return [M.lash, M.lash, -1];
     if (region === 8) return [M.brow, M.brow, -1];
     if (region === 9) return [M.hair, M.hairLight, irisD];
     if (region === 12) return [M.hair, M.hairGlint, irisD];
-    if (region === 10) return [M.glint, M.glint, -1];
-    if (region === 11) return [M.mouth, M.mouth, -1];
+    if (region === 13) return [M.crease, M.crease, -1];
     if (wear === 'shorts') {
       let d = region === 1 || region === 2 || region === 3 || arm(bone) ? -1 : Math.min(p[2] - shortsHem, shortsTop - p[2]);
       if (fem >= 0.5 && !arm(bone) && region === 0 && p[2] > shortsTop + 0.5) {
@@ -124,7 +121,7 @@ export function humanBaked(fem: number, band: Band, rest: Bones, order: string[]
     if ((bald || wear === 'shorts') && (ab.region[i] === 9 || ab.region[i] === 12)) { const h = at(rest, 'head'); x = h[0]; y = h[1]; z = h[2]; }
     pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
   }
-  // Smooth normals from the carried mesh.
+  // Smooth normals from the carried mesh. The head and the hands share no vertices between facets, so they stay flat.
   const nrm = new Float32Array(n * 3);
   const tris = Uint32Array.from(ab.tris);
   for (let t = 0; t < tris.length; t += 3) {

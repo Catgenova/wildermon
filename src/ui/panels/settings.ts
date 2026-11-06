@@ -446,8 +446,8 @@ export class SettingsPanel {
     );
     add(
       'Sculpted figures',
-      'Bodies drawn from the sculpted base by WebGL2 in place of the flat figure. A new look: the flat figure until its '
-        + 'bake lands, made in idle time off the frame. Not yet sculpted: held gear, swimming, seats, veils. No WebGL2: the flat figure.',
+      'Bodies from the sculpted base, drawn by the graphics chip, in place of the flat figure. New look: the flat figure until '
+        + 'its bake is made, in idle time. Not sculpted yet: held gear, swimming, seats, veils. No WebGL: the flat figure.',
       () => game.settings.sculpted,
       (v) => (game.settings.sculpted = v),
     );

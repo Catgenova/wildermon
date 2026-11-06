@@ -10,6 +10,7 @@
 import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join, resolve, dirname } from 'node:path';
+import { facets, mitt, neckBase, planarHead } from './planar.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
@@ -103,10 +104,8 @@ function ourBone(mh) {
   if (n.startsWith('upperarm')) return `arm${k}`;
   if (n.startsWith('lowerarm')) return `elbow${k}`;
   if (n === 'wrist' || n.startsWith('metacarpal')) return `wrist${k}`;
-  if (/^finger1-[12]$/.test(n)) return `thumb${k}`;
-  if (n === 'finger1-3') return `thumbTip${k}`;
-  if (/^finger[2-5]-1$/.test(n)) return `fing${k}`;
-  if (/^finger[2-5]-[23]$/.test(n)) return `fingTip${k}`;
+  if (/^finger1-[123]$/.test(n)) return `thumb${k}`;
+  if (/^finger[2-5]-[123]$/.test(n)) return `fing${k}`;
   if (n.startsWith('upperleg')) return `hip${k}`;
   if (n.startsWith('lowerleg')) return `knee${k}`;
   if (n === 'foot') return `ankle${k}`;
@@ -121,8 +120,8 @@ const FRAME_OF = {
 for (const [k, s] of [[0, 'L'], [1, 'R']]) Object.assign(FRAME_OF, {
   [`eye${k}`]: [`eye.${s}`, `eye.${s}`], [`clav${k}`]: [`clavicle.${s}`, `clavicle.${s}`],
   [`arm${k}`]: [`upperarm01.${s}`, `upperarm02.${s}`], [`elbow${k}`]: [`lowerarm01.${s}`, `lowerarm02.${s}`],
-  [`wrist${k}`]: [`wrist.${s}`, `metacarpal2.${s}`], [`fing${k}`]: [`finger3-1.${s}`, `finger3-1.${s}`], [`fingTip${k}`]: [`finger3-2.${s}`, `finger3-3.${s}`],
-  [`thumb${k}`]: [`finger1-1.${s}`, `finger1-2.${s}`], [`thumbTip${k}`]: [`finger1-3.${s}`, `finger1-3.${s}`],
+  [`wrist${k}`]: [`wrist.${s}`, `metacarpal2.${s}`], [`fing${k}`]: [`finger3-1.${s}`, `finger3-3.${s}`],
+  [`thumb${k}`]: [`finger1-1.${s}`, `finger1-3.${s}`],
   [`hip${k}`]: [`upperleg01.${s}`, `upperleg02.${s}`], [`knee${k}`]: [`lowerleg01.${s}`, `lowerleg02.${s}`],
   [`ankle${k}`]: [`foot.${s}`, `foot.${s}`], [`toe${k}`]: [`toe3-1.${s}`, `toe3-1.${s}`],
 });
@@ -158,7 +157,7 @@ function framesAndProportions(verts, body) {
     shoulder: Math.abs(J('arm0')[0]), hipW: Math.abs(J('hip0')[0]),
     head: (HEIGHT - z('head')) / 1.04, headW, headD: (Math.max(...headY) - Math.min(...headY)) / 2,
     sole: z('ankle0'), foot: E('toe0')[1] - J('ankle0')[1],
-    palm: dist(J('wrist0'), J('fing0')), finger: dist(J('fing0'), E('fingTip0')),
+    palm: dist(J('wrist0'), J('fing0')), finger: dist(J('fing0'), E('fing0')),
     eye: [Math.abs(J('eye1')[0] - J('head')[0]), J('eye1')[1] - J('head')[1], J('eye1')[2] - J('head')[2]].map((x) => +x.toFixed(3)),
     jaw: [0, J('jaw')[1] - J('head')[1], J('jaw')[2] - J('head')[2]].map((x) => +x.toFixed(3)),
     r: {
@@ -253,10 +252,11 @@ function decimate(pos, tris, keepWeight, target) {
 
 /* ---- build ------------------------------------------------------------------------------------------------------------ */
 const obj = readObj(join(MH, '3dobjs/base.obj'));
-const KEEP = ['body'];
-const keptFaces = KEEP.flatMap((g) => obj.groups[g] ?? []);
-const used = new Set(); for (const fi of keptFaces) for (const i of obj.faces[fi].idx) used.add(i);
-const bodyIds = [...used].sort((a, b) => a - b);
+// The rig's top bone of each vertex: the head, the neck's top and the hands are cut away for the planar head and the mitts.
+const topBone = new Map();
+for (const [mh, list] of Object.entries(mhw)) for (const [i, w] of list) { const m = topBone.get(i); if (!m || w > m[1]) topBone.set(i, [mh, w]); }
+const headGroup = (mh) => /^(head|jaw|eye|special|levator|oculi|orbicularis|oris|risorius|temporalis|tongue)/.test(mh);
+const handGroup = (mh) => /^(wrist|metacarpal|finger)/.test(mh);
 const eyeHelper = (g) => [...new Set(obj.groups[g].flatMap((fi) => obj.faces[fi].idx))];
 const bodies = {};
 for (const [name, targets] of Object.entries(BODIES)) {
@@ -267,6 +267,14 @@ for (const [name, targets] of Object.entries(BODIES)) {
   bodies[name] = { verts: v, eyes, ...framesAndProportions(v, body) };
   console.log(name, JSON.stringify(bodies[name].P));
 }
+// The cut, on the man's body (the same vertices on the woman's): everything of the head, the neck above a little over its
+// joint, and the hands.
+const yCutMan = boneEnds(bodies.man.verts, 'neck01')[0][1] + 0.08;
+const cutVert = (i) => { const [mh] = topBone.get(i) ?? ['']; return headGroup(mh) || handGroup(mh) || bodies.man.verts[i][1] > yCutMan; };
+const KEEP = ['body'];
+const keptFaces = KEEP.flatMap((g) => obj.groups[g] ?? []).filter((fi) => !obj.faces[fi].idx.some(cutVert));
+const used = new Set(); for (const fi of keptFaces) for (const i of obj.faces[fi].idx) used.add(i);
+const bodyIds = [...used].sort((a, b) => a - b);
 // Our bone weights per vertex, from the rig's, merged where several of its bones are one of ours, the top four kept.
 const bw = new Map();
 for (const [mh, list] of Object.entries(mhw)) {
@@ -285,69 +293,42 @@ for (const fi of keptFaces) {
   if (q.length === 4) { if (d(q[0], q[2]) <= d(q[1], q[3])) bodyTris.push([q[0], q[1], q[2]], [q[0], q[2], q[3]]); else bodyTris.push([q[0], q[1], q[3]], [q[1], q[2], q[3]]); }
   else bodyTris.push(q);
 }
-// What each vertex is, for the error weights and the materials: the face, the hands and the feet are kept dear.
+// What each vertex is, for the error weights and the materials: the feet are kept dear (the face and the hands are built below).
 const region = bodyIds.map((i) => {
   const [b] = top4(i)[0]; const name = BONES[b];
   if (/^(head|jaw|eye)/.test(name)) return 1; if (/^(wrist|fing|thumb)/.test(name)) return 2; if (/^(ankle|toe)/.test(name)) return 3; return 0;
 });
 
-/* ---- the face and the hair the island draws over the base: the eyes as almonds on the face, brows, a shell of hair -------
- * Built per body in MakeHuman's space (y up, z forward), the same topology for both, bound to our head bone. Regions:
- * 5 the eye's white with the iris stamped, 6 the pupil, 7 the lid line, 8 a brow, 9 hair. */
-function extras(b, shared, style = 'man') {
-  const V = b.verts, out = { pos: [], tris: [], region: [], stamp: [] };
-  const face = obj.groups.body.flatMap((fi) => obj.faces[fi].idx).filter((i) => V[i][1] > b.eyes[0].c[1] - 1.5);
-  // The skin's front at (x, y): the furthest-forward face vertex near it.
-  const skinZ = (x, y, w = 0.14) => { let z = -9; for (const i of face) if (Math.abs(V[i][0] - x) < w && Math.abs(V[i][1] - y) < w) z = Math.max(z, V[i][2]); return z; };
-  const add = (p, region, stamp = -1) => { out.pos.push(p); out.region.push(region); out.stamp.push(stamp); return out.pos.length - 1; };
+/* ---- the head, the hands and the hair the island draws over the base ------------------------------------------------------
+ * The planar head and the mitts (`./planar.mjs`), and a shell of hair with the sheet's clumps over it. Built per body in
+ * MakeHuman's space (y up, z forward), the same topology for both. Regions: 1 the face's skin, 2 a hand's, 6 an eye, 8 a
+ * brow, 9 hair, 12 a hair clump with the teal, 13 a finger groove. `detail` false is the far band's plainer mitt. */
+function extras(b, shared, style = 'man', detail = true) {
+  const V = b.verts, out = facets();
+  const bodyV = obj.groups.body.flatMap((fi) => obj.faces[fi].idx);
+  const face = bodyV.filter((i) => V[i][1] > b.eyes[0].c[1] - 1.5);
+  const HEADB = [['head', 1]];
+  const add = (p, region, stamp = -1) => { out.pos.push(p); out.region.push(region); out.stamp.push(stamp); out.bones.push(HEADB); return out.pos.length - 1; };
   const ey = (b.eyes[0].c[1] + b.eyes[1].c[1]) / 2;
-  for (const e of b.eyes) {
-    const s = e.c[0] < 0 ? -1 : 1;
-    // An almond on a sphere larger than the eyeball, set a little wider than the base's, its front just proud of the lids;
-    // the outer corner a touch lower. The white shows at the corners round a large dark iris.
-    const R = e.r * 1.95, lid = skinZ(e.c[0], e.c[1]);
-    const c = [e.c[0] + s * 0.04, e.c[1] + 0.02, lid + 0.025 - R];
-    const N = 16, rings = [0, 0.45, 0.8, 1.0];
-    const on = (t, f) => {
-      const outer = Math.cos(t) * s, th = 1.0 * Math.cos(t) * f, up = Math.sin(t) >= 0 ? 0.48 : 0.38;
-      const tv = (up * Math.sin(t) * (1 - 0.2 * Math.cos(t) * Math.cos(t)) - 0.12 * Math.max(0, -outer)) * f;
-      return [c[0] + R * Math.sin(th) * Math.cos(tv), c[1] + R * Math.sin(tv), c[2] + R * Math.cos(th) * Math.cos(tv)];
-    };
-    const irisC = [c[0] - s * R * 0.04, c[1] - 0.02, c[2] + R], irisR = R * 0.46;
-    // A lash tick at the outer corner, flicked up and out.
-    { const o = on(s > 0 ? 0 : Math.PI, 1.0); const q = (dx, dy) => [o[0] + s * dx, o[1] + dy, o[2] + 0.006]; const t0 = add(q(0, 0.03), 7), t1 = add(q(0, -0.02), 7), t2 = add(q(0.12, 0.09), 7); out.tris.push([t0, t1, t2], [t0, t2, t1]); }
-    const dist = (p) => Math.hypot(p[0] - irisC[0], p[1] - irisC[1], p[2] - irisC[2]);
-    const centre = add(irisC, 5, irisR);
-    const ring = rings.slice(1).map((f) => Array.from({ length: N }, (_, i) => { const p = on((i / N) * Math.PI * 2, f); return add(p, 5, irisR - dist(p)); }));
-    for (let i = 0; i < N; i++) out.tris.push([centre, ring[0][i], ring[0][(i + 1) % N]]);
-    for (let r = 0; r + 1 < ring.length; r++) for (let i = 0; i < N; i++) { const a = ring[r][i], d = ring[r][(i + 1) % N], e2 = ring[r + 1][i], f2 = ring[r + 1][(i + 1) % N]; out.tris.push([a, e2, f2], [a, f2, d]); }
-    // The lid line: a dark band round the almond, thick along the upper lid, thin below, a hair in front.
-    const lidIn = Array.from({ length: N }, (_, i) => { const p = on((i / N) * Math.PI * 2, 1.0); return add([p[0], p[1], p[2] + 0.004], 7); });
-    const lidOut = Array.from({ length: N }, (_, i) => { const t = (i / N) * Math.PI * 2; const p = on(t, Math.sin(t) >= 0 ? 1.24 : 1.07); return add([p[0], p[1], p[2] + 0.004], 7); });
-    for (let i = 0; i < N; i++) { const a = lidIn[i], d = lidIn[(i + 1) % N], e2 = lidOut[i], f2 = lidOut[(i + 1) % N]; out.tris.push([a, e2, f2], [a, f2, d]); }
-    // The pupil, a disc a hair in front of the iris's middle, and one glint up and to the body's right of it.
-    const disc = (cc, r, region, lift) => { const pc = add([cc[0], cc[1], cc[2] + lift], region); const pr = Array.from({ length: 10 }, (_, i) => { const t = (i / 10) * Math.PI * 2; return add([cc[0] + r * Math.cos(t), cc[1] + r * Math.sin(t), cc[2] + lift - (r * r) / (2 * R)], region); }); for (let i = 0; i < 10; i++) out.tris.push([pc, pr[i], pr[(i + 1) % 10]]); };
-    disc(irisC, irisR * 0.45, 6, 0.006);
-    disc([irisC[0] - 0.35 * irisR, irisC[1] + 0.4 * irisR, irisC[2]], irisR * 0.18, 10, 0.012);
-    // The brow: a thick dark arc on the brow ridge, tapering outward, lying on the skin.
-    const bx = [0.06, 0.24, 0.42, 0.58, 0.7], by = [0.36, 0.42, 0.44, 0.4, 0.33], bh = [0.1, 0.09, 0.08, 0.06, 0.035];
-    const top = [], bot = [];
-    for (let i = 0; i < bx.length; i++) {
-      const x = e.c[0] + s * (bx[i] - 0.3), yTop = e.c[1] + by[i], yBot = yTop - bh[i];
-      top.push(add([x, yTop, skinZ(x, yTop) + 0.02], 8)); bot.push(add([x, yBot, skinZ(x, yBot) + 0.02], 8));
-    }
-    for (let i = 0; i + 1 < bx.length; i++) out.tris.push([top[i], bot[i], bot[i + 1]], [top[i], bot[i + 1], top[i + 1]]);
-  }
-  // The mouth: a dark line a little below the nose, its ends turned slightly down, the calm mouth of the sheet.
-  {
-    let chin = ey; for (const i of face) if (Math.abs(V[i][0]) < 0.12 && V[i][2] > 0.6) chin = Math.min(chin, V[i][1]);
-    const my = ey + (chin - ey) * 0.64, mt = [], mb = [];
-    if (process.env.DBG) console.error('mouth', style, (my - ey).toFixed(3), 'chin', (chin - ey).toFixed(3));
-    for (let i = 0; i < 7; i++) {
-      const u = i / 6, x = -0.3 + 0.6 * u, y = my - 0.035 * Math.pow(Math.abs(u - 0.5) * 2, 2), z = skinZ(x, y, 0.1) + 0.02;
-      mt.push(add([x, y + 0.015, z], 11)); mb.push(add([x, y - 0.015, z], 11));
-    }
-    for (let i = 0; i < 6; i++) out.tris.push([mt[i], mb[i], mb[i + 1]], [mt[i], mb[i + 1], mt[i + 1]]);
+  // The head's landmarks: the chin, the crown, the skull's centre and half-depth at the eyes, its half-width above the ears.
+  const headV = bodyV.filter((i) => headGroup((topBone.get(i) ?? [''])[0]));
+  const jawT = boneEnds(V, 'jaw')[1];
+  let chin = Infinity; for (const i of headV) if (Math.abs(V[i][0]) < 0.1 && V[i][2] > jawT[2] - 0.5) chin = Math.min(chin, V[i][1]);
+  const crown = Math.max(...headV.map((i) => V[i][1]));
+  const atEye = headV.filter((i) => Math.abs(V[i][1] - ey) < 0.2);
+  const front = Math.max(...atEye.map((i) => V[i][2])), back = Math.min(...atEye.map((i) => V[i][2]));
+  const W = Math.max(...headV.filter((i) => V[i][1] > ey + 0.15 && V[i][1] < ey + 0.35).map((i) => Math.abs(V[i][0])));
+  const LM = { chin, crown, zc: (front + back) / 2, D: (front - back) / 2, W };
+  const neck01 = boneEnds(V, 'neck01')[0][1];
+  const base = neckBase(LM, bodyV.map((i) => V[i]), neck01 - 0.06, style);
+  if (process.env.DBG) console.error(style, 'head', JSON.stringify(LM), "neck01", neck01.toFixed(3));
+  planarHead(LM, base, style, out);
+  // The hands, each from its own joints and forearm.
+  for (const [k, S] of [[0, 'L'], [1, 'R']]) {
+    const H = (bone) => boneEnds(V, `${bone}.${S}`)[0], T = (bone) => boneEnds(V, `${bone}.${S}`)[1];
+    const J = { wrist: H('wrist'), k2: H('finger2-1'), k3: H('finger3-1'), k4: H('finger4-1'), k5: H('finger5-1'), tip3: T('finger3-3'), t0: H('finger1-1'), t1: H('finger1-2'), tip1: T('finger1-3') };
+    const forearm = bodyV.filter((i) => new RegExp(`^lowerarm0[12]\\.${S}$`).test((topBone.get(i) ?? [''])[0])).map((i) => V[i]);
+    mitt(J, forearm, k, detail, out);
   }
   // The hair: a shell of the scalp's own faces pushed out, and over it the sheet's wedges -- a fringe mass swept over the
   // forehead with pointed tips, side masses over the ears, a tousled top with two cowlicks, a mass down the nape.
@@ -433,36 +414,39 @@ function extras(b, shared, style = 'man') {
   C([210, 32, -0.04], [212, L ? -10 : 0, 0.62], [202, L ? -62 : -32, L ? 0.14 : 0.26, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
   return out;
 }
-const exMan = extras(bodies.man), exWoman = extras(bodies.woman, exMan.scalp, 'woman');
-if (exMan.pos.length !== exWoman.pos.length) throw new Error('the extras differ between the bodies');
-const exManPos = exMan.pos.map((p) => bodies.man.ours(p)), exWomanPos = exWoman.pos.map((p) => bodies.woman.ours(p));
-console.log(`extras: ${exMan.pos.length} verts, ${exMan.tris.length} tris`);
+const exMan = extras(bodies.man, undefined, 'man', true), exWoman = extras(bodies.woman, exMan.scalp, 'woman', true);
+const exManFar = extras(bodies.man, exMan.scalp, 'man', false), exWomanFar = extras(bodies.woman, exMan.scalp, 'woman', false);
+if (exMan.pos.length !== exWoman.pos.length || exManFar.pos.length !== exWomanFar.pos.length) throw new Error('the extras differ between the bodies');
+console.log(`extras: ${exMan.pos.length} verts, ${exMan.tris.length} tris (far band ${exManFar.pos.length} verts, ${exManFar.tris.length} tris)`);
 
-const BANDS = [[0, 1100], [1, 3200], [2, 10000]];
+const BANDS = [[0, 900], [1, 2600], [2, 9000]];
 const bands = [];
-const headSlot = BONES.indexOf('head');
+const slotOf = (name) => { const i = BONES.indexOf(name); if (i < 0) throw new Error(`no bone ${name}`); return i; };
 for (const [band, target] of BANDS) {
   const pos = manPos.map((p) => [...p]);
   const tris = bodyTris.map((t) => [...t]);
-  // The face and the hands keep the close band's density at every band; the body pays for it.
-  const keep = band === 2 ? [6, 5, 2.5] : band === 1 ? [40, 20, 5] : [12, 6, 2];
+  // The feet keep more of their density at every band; the body pays for it.
+  const keep = band === 2 ? [1, 1, 2.5] : band === 1 ? [1, 1, 5] : [1, 1, 2];
   const kw = region.map((r) => (r === 1 ? keep[0] : r === 2 ? keep[1] : r === 3 ? keep[2] : 1));
   const dec = decimate(pos, tris, kw, target);
   const keptSet = new Set(dec.tris.flat());
   const kept = [...keptSet].sort((a, b) => a - b), newId = new Map(kept.map((v, i) => [v, i]));
   const n0 = kept.length;
-  const tri = [...dec.tris.map((t) => t.map((v) => newId.get(v))), ...exMan.tris.map((t) => t.map((v) => v + n0))];
+  const ex = band === 0 ? exManFar : exMan, exW = band === 0 ? exWomanFar : exWoman;
+  const exManPos = ex.pos.map((p) => bodies.man.ours(p)), exWomanPos = exW.pos.map((p) => bodies.woman.ours(p));
+  const tri = [...dec.tris.map((t) => t.map((v) => newId.get(v))), ...ex.tris.map((t) => t.map((v) => v + n0))];
   const q = (p) => p.map((x) => Math.round(x * 500));
   const stamp = [];
-  exMan.stamp.forEach((d, i) => { if (d > -1) stamp.push(n0 + i, Math.round(d * 1000)); });
+  ex.stamp.forEach((d, i) => { if (d > -1) stamp.push(n0 + i, Math.round(d * 1000)); });
   bands.push({
-    band, verts: n0 + exMan.pos.length, tris: tri.flat(),
+    band, verts: n0 + ex.pos.length, tris: tri.flat(),
     man: [...kept.flatMap((v) => q(manPos[v])), ...exManPos.flatMap(q)], woman: [...kept.flatMap((v) => q(womanPos[v])), ...exWomanPos.flatMap(q)],
-    region: [...kept.map((v) => region[v]), ...exMan.region],
-    bw: [...kept.flatMap((v) => { const l = top4(bodyIds[v]); const out = []; for (let i = 0; i < 4; i++) out.push(l[i] ? l[i][0] : 0, l[i] ? Math.round(l[i][1] * 255) : 0); return out; }), ...exMan.pos.flatMap(() => [headSlot, 255, 0, 0, 0, 0, 0, 0])],
+    region: [...kept.map((v) => region[v]), ...ex.region],
+    bw: [...kept.flatMap((v) => { const l = top4(bodyIds[v]); const out = []; for (let i = 0; i < 4; i++) out.push(l[i] ? l[i][0] : 0, l[i] ? Math.round(l[i][1] * 255) : 0); return out; }),
+      ...ex.bones.flatMap((l) => { const out = []; for (let i = 0; i < 4; i++) out.push(l[i] ? slotOf(l[i][0]) : 0, l[i] ? Math.round(l[i][1] * 255) : 0); return out; })],
     stamp,
   });
-  console.log(`band ${band}: ${n0 + exMan.pos.length} verts, ${tri.length} tris`);
+  console.log(`band ${band}: ${n0 + ex.pos.length} verts, ${tri.length} tris (body ${dec.tris.length})`);
 }
 const asset = {
   licence: 'Base mesh, targets and rig from MakeHuman (makehumancommunity/makehuman), CC0 1.0: see src/sculpt/NOTICE.md',

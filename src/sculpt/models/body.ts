@@ -21,7 +21,7 @@ import {
 } from '../sdf';
 
 /** The materials, by index. */
-export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18 } as const;
+export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19 } as const;
 
 /** What the body wears: the game's undershirt and trousers, or the reference sheet's shorts over bare skin. */
 export type Wear = 'base' | 'shorts';
@@ -29,6 +29,8 @@ export type Wear = 'base' | 'shorts';
 const hex = (h: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
 const toHex = (c: [number, number, number]): string => `#${c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
 const mixHex = (a: string, b: string, t: number): string => { const A = hex(a), B = hex(b); return toHex([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]); };
+/** The renderer's ink of a colour: toward a warm dark, never lighter than half. */
+const inkOf = (a: string): string => { const A = hex(a), m = hex(mixHex(a, '#281c1a', 0.62)); return toHex([Math.min(m[0], A[0] * 0.5), Math.min(m[1], A[1] * 0.5), Math.min(m[2], A[2] * 0.5)]); };
 
 export function bodyMaterials(look: Look): Material[] {
   // A look may name a colour outright (the studio's sheet colours) rather than a swatch.
@@ -39,7 +41,8 @@ export function bodyMaterials(look: Look): Material[] {
   out[M.hair] = { colour: hair };
   out[M.white] = { colour: mixHex(skin, '#f8f4ec', 0.7), eye: true };
   out[M.iris] = { colour: mixHex(eye, '#2a1a18', 0.2), eye: true };
-  out[M.pupil] = { colour: mixHex(eye, '#1a1016', 0.7), eye: true };
+  // The base's eye: a dark slate rectangle, the look's eye colour a tint in it.
+  out[M.pupil] = { colour: mixHex(eye, '#3a3f4c', 0.78), eye: true };
   out[M.glint] = { colour: '#fffaf0', eye: true };
   out[M.brow] = { colour: mixHex(hair, '#16100e', 0.45) };
   out[M.lash] = { colour: mixHex(hair, '#2a1a24', 0.7) };
@@ -56,6 +59,8 @@ export function bodyMaterials(look: Look): Material[] {
   out[M.mouth] = { colour: '#5a2a3c' };
   out[M.teeth] = { colour: '#fbf6ea' };
   out[M.trim] = { colour: '#d4c3a0' };
+  // The groove between two fingers: the ink rule, a dark of the skin's own colour.
+  out[M.crease] = { colour: inkOf(out[M.skin].colour) };
   return out;
 }
 
@@ -211,26 +216,24 @@ export function bodyModel(P: Proportions, rest: Bones, look: Look, wear: Wear = 
     prims.push(tube([el, along(el, wr, 0.3), wr], (t) => (t < 0.3 ? P.r.fore * (0.92 + 0.3 * t) : P.r.fore * 1.01 + (P.r.wrist - P.r.fore * 1.01) * ((t - 0.3) / 0.7)), { m: M.skin, bone: `elbow${k}`, bone2: `wrist${k}`, split: { from: along(el, wr, 0.78), axis: fl, span: P.lower * 0.22 }, blend: 0.2, name: 'forearm' }, 8));
     // The hand, in its bones' own frames: a palm block off the wrist, the fingers as one curved group off the knuckles (four fingers
     // close up), the thumb a mass set across from the palm's inner edge.
-    const wax = axesOf(`wrist${k}`), fax = axesOf(`fing${k}`), tax = axesOf(`fingTip${k}`), thax = axesOf(`thumb${k}`), thtax = axesOf(`thumbTip${k}`);
+    const wax = axesOf(`wrist${k}`), fax = axesOf(`fing${k}`);
     const W = P.r.wrist;
     prims.push(roundBox(inBone(`wrist${k}`, [0, 0.05, -P.palm * 0.5]), [W * 0.42, W * 1.02, P.palm * 0.52], 0.18, { m: M.skin, bone: `wrist${k}`, blend: 0.22, name: 'palm' }, wax));
     prims.push(sphere(inBone(`wrist${k}`, [-s * W * 0.25, W * 0.6, -P.palm * 0.3]), W * 0.5, { m: M.skin, bone: `wrist${k}`, blend: 0.25, name: 'thumb mass' }));
     const F = P.finger;
-    prims.push(roundBox(inBone(`fing${k}`, [0, 0.05, -F * 0.28]), [W * 0.36, W * 0.98, F * 0.3], 0.17, { m: M.skin, bone: `fing${k}`, blend: 0.14, band: 0, until: BAND_GAME, name: 'fingers' }, fax));
-    prims.push(roundBox(inBone(`fingTip${k}`, [0, 0.05, -F * 0.22]), [W * 0.3, W * 0.9, F * 0.24], 0.16, { m: M.skin, bone: `fingTip${k}`, blend: 0.14, band: 0, until: BAND_GAME, name: 'fingertips' }, tax));
+    prims.push(roundBox(inBone(`fing${k}`, [0, 0.05, -F * 0.5]), [W * 0.36, W * 0.98, F * 0.52], 0.17, { m: M.skin, bone: `fing${k}`, blend: 0.14, band: 0, until: BAND_GAME, name: 'fingers' }, fax));
     for (let f = 0; f < 4; f++) {
       const y = (f - 1.5) * W * 0.5 + 0.05;
       const l = F * (f === 1 ? 1 : f === 2 ? 0.96 : f === 0 ? 0.86 : 0.78);
       // The knuckle row curves: the middle fingers start a touch further out.
       const dz = -F * 0.04 * (1.5 - Math.abs(f - 1.5));
       const base = inBone(`fing${k}`, [0, y, dz]), mid = inBone(`fing${k}`, [0, y, dz - l * 0.56]);
-      const tip0 = inBone(`fingTip${k}`, [0, y, 0]), tip1 = inBone(`fingTip${k}`, [0, y, -l * 0.46]);
+      const tip1 = inBone(`fing${k}`, [0, y, dz - l]);
       prims.push(capsule(base, mid, W * 0.24, W * 0.22, { m: M.skin, bone: `fing${k}`, blend: 0.1, band: BAND_CLOSE, name: 'finger' }));
-      prims.push(capsule(tip0, tip1, W * 0.22, W * 0.17, { m: M.skin, bone: `fingTip${k}`, blend: 0.1, band: BAND_CLOSE, name: 'fingertip' }));
+      prims.push(capsule(mid, tip1, W * 0.22, W * 0.17, { m: M.skin, bone: `fing${k}`, blend: 0.1, band: BAND_CLOSE, name: 'fingertip' }));
     }
     prims.push(capsule(inBone(`thumb${k}`, [0, 0, 0.1]), inBone(`thumb${k}`, [0, 0, -F * 0.5]), W * 0.32, W * 0.27, { m: M.skin, bone: `thumb${k}`, blend: 0.18, name: 'thumb' }));
-    prims.push(capsule(inBone(`thumbTip${k}`, [0, 0, 0]), inBone(`thumbTip${k}`, [0, 0, -F * 0.42]), W * 0.26, W * 0.19, { m: M.skin, bone: `thumbTip${k}`, blend: 0.12, band: BAND_GAME, name: 'thumb tip' }));
-    void thax; void thtax;
+    prims.push(capsule(inBone(`thumb${k}`, [0, 0, -F * 0.5]), inBone(`thumb${k}`, [0, 0, -F * 0.92]), W * 0.26, W * 0.19, { m: M.skin, bone: `thumb${k}`, blend: 0.12, band: BAND_GAME, name: 'thumb tip' }));
   }
 
   /* ---- legs and feet ------------------------------------------------------------------ */

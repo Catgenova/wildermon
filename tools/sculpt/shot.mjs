@@ -1,7 +1,7 @@
 // Sheets of a sculpted body (src/sculpt), drawn by tools/sculpt/page.ts at twice the pixels:
 //
 //   node tools/sculpt/shot.mjs --out /some/dir                 # every sheet: lineup, facings, motion, close, night, debug, stats
-//   node tools/sculpt/shot.mjs --out /some/dir --only lineup,close
+//   node tools/sculpt/shot.mjs --out /some/dir --only lineup,close    # also: design, garment, overlay, live, iou, hands, stats
 //   node tools/sculpt/shot.mjs --out /some/dir --who female     # the woman (default male; also neither, seven, five)
 //   node tools/sculpt/shot.mjs --out /some/dir --hair bald      # the look's hairstyle: tousled (default) or bald
 //   node tools/sculpt/shot.mjs --stats                          # the bake's numbers and the cost of a crowd, no sheets
@@ -56,7 +56,7 @@ const shoot = async (name, fn) => {
 };
 
 if (flag('stats') || only.includes('stats')) {
-  for (const w of ['seven', 'five']) {
+  for (const w of ['male', 'female', 'seven', 'five']) {
     const s = await p.evaluate((w) => window.SCULPT.stats(w), w);
     console.log(w, JSON.stringify(s, null, 1));
     for (const zoom of [1, 2, 4]) {
@@ -80,6 +80,7 @@ if (only.includes('lineup')) await shoot('lineup', async () => { await window.SC
 if (only.includes('facings')) await shoot(`facings-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 1); window.SCULPT.facings(w, 'walk:0.25', 1); window.SCULPT.facings(w, 'idle:0', 2); window.SCULPT.facings(w, 'walk:0.25', 2); window.SCULPT.facings(w, 'idle:0', 4); window.SCULPT.facings(w, 'walk:0.6', 4); window.SCULPT.facings('figure', 'idle:0', 2); });
 if (only.includes('motion')) await shoot(`motion-${who}`, (w) => { window.SCULPT.strip(w, 1, 2.5); window.SCULPT.strip(w, 3, 2.5); window.SCULPT.strip(w, 6, 2.5); window.SCULPT.strip('figure', 1, 2.5); });
 if (only.includes('close')) await shoot(`close-${who}`, (w) => window.SCULPT.close(w, 9));
+if (only.includes('hands')) await shoot(`hands-${who}`, (w) => window.SCULPT.hands(w, 20));
 if (only.includes('night')) await shoot(`night-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 3, { night: 1 }); window.SCULPT.facings(w, 'walk:0.25', 3, { night: 1 }); });
 if (only.includes('debug')) await shoot(`debug-${who}`, (w) => { window.SCULPT.debug(w, 6, 1, 'walk:0.25'); window.SCULPT.debug(w, 6, 3, 'idle:0'); window.SCULPT.debug(w, 6, 5, 'work:0.5'); });
 await b.close();

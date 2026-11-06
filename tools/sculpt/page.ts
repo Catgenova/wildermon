@@ -471,6 +471,17 @@ const api = {
     const hands = [1, 3].flatMap((f) => ['idle:0', 'wave:0.5', 'work:0.5'].map((w) => { const c = cell(hz * 0.6, [-38, -4], [-14, 14]); drawOne(c, hz * 0.6, who, poseOf(f, w)); return { cv: c.cv, label: `hands f${f} ${w}` }; }));
     row(hands);
   },
+  /** The hands close: each pose the mitt takes, cropped round the hand. */
+  hands(who: Who, zoom = 20): void {
+    heading(`${who} hands, zoom ${zoom}: hanging relaxed (idle) and loose (walk), open (wave), a fist (work), from the front and the back`);
+    const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
+    const shots: Array<[number, string, [number, number], [number, number]]> = [
+      [1, 'idle:0', [-20, -2], [-10, 6]], [7, 'idle:0', [-20, -2], [-6, 10]], [1, 'walk:0.25', [-22, -4], [-10, 6]], [5, 'walk:0.25', [-22, -4], [-10, 6]],
+      [1, 'wave:0.5', [-43, -24], [-10, 6]], [7, 'wave:0.5', [-43, -24], [-6, 10]], [3, 'work:0.5', [-34, -16], [-8, 8]], [1, 'work:0.5', [-34, -16], [-8, 8]],
+    ];
+    for (const [f, what, crop, wide] of shots) { const c = cell(zoom, crop, wide); drawOne(c, zoom, who, poseOf(f, what)); cells.push({ cv: c.cv, label: `f${f} ${what}` }); }
+    row(cells);
+  },
   /** The debug views, one facing big. */
   debug(who: Who, zoom = 6, facing = 1, what = 'walk:0.25'): void {
     heading(`${who} debug, zoom ${zoom}, facing ${facing}, ${what}: shaded | flat | wire | normals | materials | bones | edges`);
@@ -492,7 +503,7 @@ const api = {
     }
     return out;
   },
-  bench(who: 'seven' | 'five', n = 20, frames = 10, zoom = 1): { msPerFrame: number; msPerBody: number; band: number } {
+  bench(who: Who, n = 20, frames = 10, zoom = 1): { msPerFrame: number; msPerBody: number; band: number } {
     const c = cell(zoom);
     const poses = Array.from({ length: n }, (_, i) => poseOf(i % 8, i % 2 ? 'walk:0.3' : 'idle:0.2'));
     for (const p of poses) drawSculpt(c.g, c.fx, c.fy, zoom, p, { P: PROPS[who], kind: kindOf(who), dpr: DPR });
