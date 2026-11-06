@@ -229,7 +229,8 @@ const held = `coalesce((select string_agg(k || ' ' || n, ',' order by k) from (s
   from item where world_id = w and holder = 'crate' and crate = ${CRATE} and def <> 'corpse' group by 1
   union all select 'corpse', sum(count) from item where world_id = w and holder = 'crate' and crate = ${CRATE} and def = 'corpse' having sum(count) > 0) q), '-')`;
 const ready = (who: string): string => `
-  update creature set mode = 'deed', carrying = null, skills = '{}'::jsonb, traits = '{}'::text[], stance = 'passive', hunger = 1,
+  -- Rolled at its spawn, a rarity or a bigger form would multiply what it makes (beast_mul): pinned, so both sides make the same.
+  update creature set mode = 'deed', carrying = null, skills = '{}'::jsonb, traits = '{}'::text[], rare = null, form_size = null, stance = 'passive', hunger = 1,
          until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle', idle_why = null,
          work_x = null, work_y = null, from_x = 16.6, from_y = 16.6, to_x = 16.6, to_y = 16.6
    where world_id = w and id = (select id from hand where species = '${who}');

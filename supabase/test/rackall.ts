@@ -79,6 +79,9 @@ const tidy = `
     and c.world_id = ${W} and c.x = ${X} and c.y = ${Y};
   delete from crate where world_id = ${W} and x = ${X} and y = ${Y};
   delete from placed where world_id = ${W} and kind = 'furniture' and sub = 'crate_shelf' and x = ${X} and y = ${Y};
+  -- A crate is yours when a settlement whose stores you may use covers it (crate_yours): none may cover the rack, or
+  -- the crate that is not Dane's would be.
+  delete from deed d where d.world_id = ${W} and deed_covers(d, ${X}, ${Y});
   delete from item i where i.world_id = ${W} and i.holder = 'player' and i.holder_uid = ${DANE} and i.def in ('cotton_seed', 'wheat_seed');`;
 
 // The island's rows, made first so the browser's can carry the same uids: a plan made here names rows there.
