@@ -64,7 +64,7 @@ export function bodyMaterials(look: Look): Material[] {
   out[M.crease] = { colour: inkOf(out[M.skin].colour) };
   // The face's planes shade soft (the shadow tone only well away from the light); the mitt has no ink inside its edge.
   out[M.face] = { ...out[M.skin], soft: true, noCrease: true };
-  out[M.ear] = { ...out[M.skin], noInk: true, thinInk: true };
+  out[M.ear] = { ...out[M.skin], noInk: true, thinInk: true, soft: true };
   // The nose's underside and under the jaw: the ordinary three tones, so they take the shadow a lit face's planes do not.
   out[M.faceUnder] = { ...out[M.skin], noCrease: true };
   out[M.brow].noCrease = true; out[M.pupil].noCrease = true;

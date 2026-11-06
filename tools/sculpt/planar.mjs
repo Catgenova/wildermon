@@ -75,20 +75,20 @@ const HV = {
   E0: [[0.05, 0.605, 0.31], [0.05, 0.585, 0.29]], E1: [[0.29, 0.6, 0.21], [0.29, 0.58, 0.19]], E2: [[0.29, 0.48, 0.23], [0.285, 0.44, 0.21]], E3: [[0.08, 0.49, 0.33], [0.08, 0.45, 0.31]],
   // The nose: a long wedge from the glabella to the tip, a third of the face: a ridge plane catching the light, a side
   // plane each way turned well round, a flat underside.
-  N0: [[0.03, 0.618, 0.315], [0.025, 0.598, 0.3]], N1: [[0.08, 0.54, 0.3], [0.07, 0.51, 0.285]], N2: [[0.045, 0.38, 0.52], [0.04, 0.35, 0.465]],
-  N3: [[0.115, 0.4, 0.35], [0.1, 0.37, 0.32]], N4: [[0, 0.332, 0.4], [0, 0.312, 0.37]], N5: [[0.09, 0.332, 0.34], [0.08, 0.312, 0.31]],
+  N0: [[0.03, 0.618, 0.3], [0.025, 0.598, 0.285]], N1: [[0.08, 0.54, 0.29], [0.07, 0.51, 0.275]], N2: [[0.045, 0.38, 0.48], [0.04, 0.35, 0.435]],
+  N3: [[0.115, 0.4, 0.34], [0.1, 0.37, 0.31]], N4: [[0, 0.332, 0.38], [0, 0.312, 0.35]], N5: [[0.09, 0.332, 0.33], [0.08, 0.312, 0.3]],
   // The cheekbone, the hollow cheek, the jaw and the chin.
-  C0: [[0.31, 0.3, 0.08], [0.29, 0.31, 0.08]], C1: [[0.18, 0.45, 0.31], [0.17, 0.42, 0.29]], C2: [[0.12, 0.26, 0.33], [0.1, 0.24, 0.3]], C3: [[0.26, 0.19, 0.17], [0.21, 0.17, 0.16]],
-  J0: [[0.27, 0.16, -0.07], [0.235, 0.18, -0.05]], J1: [[0.095, 0.03, 0.27], [0.07, 0.02, 0.24]], J2: [[0.09, 0.17, 0.31], [0.07, 0.15, 0.28]],
+  C0: [[0.31, 0.3, 0.08], [0.3, 0.31, 0.08]], C1: [[0.18, 0.45, 0.31], [0.17, 0.42, 0.29]], C2: [[0.12, 0.26, 0.33], [0.11, 0.24, 0.3]], C3: [[0.26, 0.19, 0.17], [0.24, 0.17, 0.16]],
+  J0: [[0.27, 0.16, -0.07], [0.255, 0.18, -0.05]], J1: [[0.095, 0.03, 0.27], [0.1, 0.02, 0.24]], J2: [[0.09, 0.17, 0.31], [0.09, 0.15, 0.28]],
   CH0: [[0, 0.0, 0.26], [0, 0.0, 0.23]], CH1: [[0, 0.17, 0.33], [0, 0.15, 0.3]],
   // The throat ring under the jaw: front centre, the cord, side front, side, side back, back side, back centre.
-  K0: [[0, -0.03, 0.08], [0, -0.02, 0.06]], K1: [[0.17, -0.03, 0.03], [0.12, -0.02, 0.02]], K2: [[0.24, -0.02, -0.1], [0.16, -0.01, -0.08]], K3: [[0.25, 0.0, -0.2], [0.165, 0.0, -0.17]],
-  K4: [[0.2, 0.02, -0.3], [0.13, 0.02, -0.26]], K5: [[0.11, 0.03, -0.35], [0.07, 0.03, -0.3]], K6: [[0, 0.04, -0.37], [0, 0.04, -0.32]],
+  K0: [[0, -0.03, 0.08], [0, -0.02, 0.065]], K1: [[0.17, -0.03, 0.03], [0.135, -0.02, 0.025]], K2: [[0.24, -0.02, -0.1], [0.18, -0.01, -0.085]], K3: [[0.25, 0.0, -0.2], [0.185, 0.0, -0.175]],
+  K4: [[0.2, 0.02, -0.3], [0.15, 0.02, -0.265]], K5: [[0.11, 0.03, -0.35], [0.08, 0.03, -0.305]], K6: [[0, 0.04, -0.37], [0, 0.04, -0.325]],
   // The ear: a wedge off the skull's side, its outer face flat.
   // The ear's root sits inside the skull at every height, so it joins it with no gap; its outer face a touch further out
   // than the picture's, for the island's small view.
-  EA0: [[0.29, 0.54, -0.02], [0.285, 0.49, -0.02]], EA1: [[0.285, 0.53, -0.16], [0.28, 0.48, -0.15]], EA2: [[0.27, 0.3, -0.16], [0.265, 0.29, -0.15]], EA3: [[0.275, 0.3, -0.02], [0.27, 0.29, -0.02]],
-  EF0: [[0.44, 0.52, -0.03], [0.42, 0.47, -0.03]], EB0: [[0.45, 0.5, -0.11], [0.43, 0.45, -0.1]], EF1: [[0.425, 0.34, -0.03], [0.405, 0.32, -0.03]], EB1: [[0.43, 0.33, -0.11], [0.41, 0.31, -0.1]],
+  EA0: [[0.29, 0.56, -0.01], [0.285, 0.51, -0.01]], EA1: [[0.285, 0.55, -0.17], [0.28, 0.5, -0.16]], EA2: [[0.27, 0.28, -0.17], [0.265, 0.27, -0.16]], EA3: [[0.275, 0.28, -0.01], [0.27, 0.27, -0.01]],
+  EF0: [[0.45, 0.54, -0.02], [0.43, 0.49, -0.02]], EB0: [[0.415, 0.52, -0.12], [0.395, 0.47, -0.11]], EF1: [[0.435, 0.32, -0.02], [0.415, 0.3, -0.02]], EB1: [[0.4, 0.31, -0.12], [0.38, 0.29, -0.11]],
 };
 /** The facets, right half, as names round each; `d` a direction hint for the normal where the head's middle misleads. */
 const HF = [
@@ -107,7 +107,7 @@ const HF = [
   // The socket, the side of the face, the nose, the cheek.
   { f: ['E0', 'E1', 'E2', 'E3'] }, { f: ['S2', 'E1', 'E2', 'C0', 'SK0'] },
   { f: ['N0', "N0'", "N2'", 'N2'] }, { f: ['S0', 'N0', "N0'"] }, { f: ['N0', 'N2', 'N3', 'N1'] }, { f: ['S0', 'N0', 'E0'] }, { f: ['E0', 'N1', 'E3'] }, { f: ['N0', 'N1', 'E0'] }, { f: ['N1', 'N3', 'E3'] },
-  { f: ['N2', "N2'", 'N4'], d: [0, -1, 0.2], r: 15 }, { f: ['N2', 'N4', 'N5', 'N3'], d: [0, -1, 0.2], r: 15 }, { f: ['N3', 'N5', 'C2'] },
+  { f: ['N2', "N2'", 'N4'], d: [0, -1, 0.2] }, { f: ['N2', 'N4', 'N5', 'N3'], d: [0, -1, 0.2] }, { f: ['N3', 'N5', 'C2'] },
   { f: ['E3', 'C1', 'C2', 'N3'] }, { f: ['E3', 'E2', 'C1'] }, { f: ['E2', 'C0', 'C1'] }, { f: ['C1', 'C0', 'C3', 'C2'] },
   // The mouthless lower face, the chin, the jaw.
   { f: ['N4', 'N5', 'C2', 'J2', 'CH1'] }, { f: ['CH1', 'J2', 'J1', 'CH0'] }, { f: ['J2', 'C2', 'C3', 'J1'] }, { f: ['C3', 'C0', 'J0'] }, { f: ['C3', 'J0', 'J1'] },
@@ -223,20 +223,20 @@ export function mitt(J, pts, k, detail, f) {
   const WR = [[`wrist${k}`, 1]], FG = [[`fing${k}`, 1]], IX = [[`index${k}`, 1]], CUFF = [[`elbow${k}`, 0.6], [`wrist${k}`, 0.4]], TH = [[`thumb${k}`, 1]], THB = [[`wrist${k}`, 0.5], [`thumb${k}`, 0.5]];
   const KN = [[`wrist${k}`, 0.5], [`fing${k}`, 0.5]], KNI = [[`wrist${k}`, 0.5], [`index${k}`, 0.5]];
   // The cuff over the forearm, from the body's own surface.
-  const cuffZ = -0.07;
+  const cuffZ = -0.2;
   const N = detail ? 18 : 8;
-  const cuff = Array.from({ length: N }, (_, i) => (i / N) * Math.PI * 2).map((ang) => {
+  // An ellipse round the forearm's own width and depth there, a hair outside it: smooth, so its facets shade evenly.
+  const cuff = (() => {
     const c = at(0, 0, cuffZ);
-    let r = 0;
+    let rx = 0, ry = 0;
     for (const p of pts) {
       const d = sub(p, c); const along = dot(d, a); if (Math.abs(along) > 0.08 * L) continue;
-      const x = dot(d, s), y = dot(d, n), rr = Math.hypot(x, y); if (rr > 0.5 * L) continue;
-      let da = Math.atan2(y, x) - ang; da = Math.atan2(Math.sin(da), Math.cos(da));
-      if (Math.abs(da) < Math.PI / 6) r = Math.max(r, rr);
+      const x = dot(d, s), y = dot(d, n); if (Math.hypot(x, y) > 0.5 * L) continue;
+      rx = Math.max(rx, Math.abs(x)); ry = Math.max(ry, Math.abs(y));
     }
-    r = (r || 0.2 * L) + 0.02;
-    return add(add(c, mul(s, Math.cos(ang) * r)), mul(n, Math.sin(ang) * r));
-  });
+    rx = (rx || 0.2 * L) + 0.035; ry = (ry || 0.2 * L) + 0.035;
+    return Array.from({ length: N }, (_, i) => { const ang = (i / N) * Math.PI * 2; return add(add(c, mul(s, Math.cos(ang) * rx)), mul(n, Math.sin(ang) * ry)); });
+  })();
   // Rings across the hand: the wrist (a box), and the knuckle line, the back raised to a ridge and cut by the grooves.
   // Points go round from the thumb side over the back, then under the palm; each knows its place across and through.
   const half = 0.315, T = 0.1, g = 0.035;
@@ -281,7 +281,7 @@ export function mitt(J, pts, k, detail, f) {
   const dir2 = unit(add(add(mul(s, -0.5), mul(n, -0.4)), mul(a, 0.77)));
   const kn = add(root, mul(dir1, 0.27 * L)), tipT = add(kn, mul(dir2, 0.19 * L));
   const box = (c, d, hw, ht) => { const u = unit(cross(d, n)), v = unit(cross(u, d)); return [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([x, y]) => add(add(c, mul(u, x * hw * L)), mul(v, y * ht * L))); };
-  const t0 = box(root, dir1, 0.115, 0.1), t1 = box(kn, dir1, 0.095, 0.085), t2 = box(add(kn, mul(dir2, 0.02 * L)), dir2, 0.09, 0.08), t3 = box(add(kn, mul(dir2, 0.17 * L)), dir2, 0.07, 0.06);
+  const t0 = box(root, dir1, 0.14, 0.13), t1 = box(kn, dir1, 0.11, 0.1), t2 = box(add(kn, mul(dir2, 0.02 * L)), dir2, 0.095, 0.085), t3 = box(add(kn, mul(dir2, 0.17 * L)), dir2, 0.07, 0.06);
   f.loft(t0, t1, 2, THB, TH);
   f.loft(t1, t2, 2, TH);
   f.loft(t2, t3, 2, TH);

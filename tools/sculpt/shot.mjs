@@ -51,9 +51,9 @@ await p.addScriptTag({ content: js });
 await p.waitForFunction('window.READY');
 console.log('gl:', await p.evaluate(() => window.SCULPT.glInfo()));
 
-const shoot = async (name, fn) => {
+const shoot = async (name, fn, arg) => {
   await p.evaluate(() => window.SCULPT.clear());
-  await p.evaluate(fn, who);
+  await p.evaluate(fn, arg ?? who);
   await p.locator('#root').screenshot({ path: join(out, `${name}.png`), timeout: 180000, animations: 'disabled' });
   console.log('wrote', join(out, `${name}.png`));
 };
@@ -97,4 +97,7 @@ if (only.includes('trace')) {
 }
 if (only.includes('night')) await shoot(`night-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 3, { night: 1 }); window.SCULPT.facings(w, 'walk:0.25', 3, { night: 1 }); });
 if (only.includes('debug')) await shoot(`debug-${who}`, (w) => { window.SCULPT.debug(w, 6, 1, 'walk:0.25'); window.SCULPT.debug(w, 6, 3, 'idle:0'); window.SCULPT.debug(w, 6, 5, 'work:0.5'); });
+// One debug row of a pose at a zoom: --debug zoom,facing,what (e.g. --debug 14,2,idle:0).
+const dbg = opt('debug', '');
+if (dbg) { const [z, fc, what] = dbg.split(','); await shoot(`debug-${who}-${fc}`, ([w, z, fc, what]) => window.SCULPT.debug(w, +z, +fc, what), [who, z, fc, what]); }
 await b.close();

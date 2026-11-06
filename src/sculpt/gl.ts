@@ -158,9 +158,11 @@ void main() {
     float aA = texture(uCol, vUv + vec2(uPx.x, 0.0)).a, aB = texture(uCol, vUv - vec2(uPx.x, 0.0)).a, aC = texture(uCol, vUv + vec2(0.0, uPx.y)).a, aD = texture(uCol, vUv - vec2(0.0, uPx.y)).a;
     bool rim = min(min(aA, aB), min(aC, aD)) < 0.5;
     if (rim) inner = 1.0;
-    else if (id.b > 0.75) inner = 0.0;
+    // A part with no ink of its own (an ear, a mitt) still takes a line where it stands well off what is behind it.
+    else if (id.b > 0.75) inner = dz > uDepthStep * 0.3 ? 0.55 : 0.0;
+    else if (id.b > 0.25) inner = 0.0;
     else if (dz > uDepthStep) inner = 0.85;
-    else if (crease < 0.15 && id.b < 0.25) inner = 0.6;
+    else if (crease < 0.15) inner = 0.6;
   }
   // Emissive bloom: the glow of any emissive pixel within four px, stronger at night.
   vec3 glow = vec3(0.0);

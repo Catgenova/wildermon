@@ -271,7 +271,15 @@ for (const [name, targets] of Object.entries(BODIES)) {
 // The cut, on the man's body (the same vertices on the woman's): everything of the head, the neck above a little over its
 // joint, and the hands.
 const yCutMan = boneEnds(bodies.man.verts, 'neck01')[0][1] + 0.08;
-const cutVert = (i) => { const [mh] = topBone.get(i) ?? ['']; return headGroup(mh) || handGroup(mh) || bodies.man.verts[i][1] > yCutMan; };
+// The forearm is cut a little above the wrist too, so its cut edge sits inside the mitt's cuff and not at its hem.
+const forearmCut = {};
+for (const S of ['L', 'R']) {
+  const V = bodies.man.verts, H = (bone) => boneEnds(V, `${bone}.${S}`)[0], T = (bone) => boneEnds(V, `${bone}.${S}`)[1];
+  const J = { wrist: H('wrist'), k2: H('finger2-1'), k3: H('finger3-1'), k4: H('finger4-1'), k5: H('finger5-1'), tip3: T('finger3-3'), t0: H('finger1-1'), t1: H('finger1-2'), tip1: T('finger1-3') };
+  const F = handFrame(J);
+  forearmCut[S] = (p) => (p[0] - J.wrist[0]) * F.a[0] + (p[1] - J.wrist[1]) * F.a[1] + (p[2] - J.wrist[2]) * F.a[2] > -0.1 * F.L;
+}
+const cutVert = (i) => { const [mh] = topBone.get(i) ?? ['']; const arm = /^lowerarm0[12]\.([LR])$/.exec(mh); return headGroup(mh) || handGroup(mh) || bodies.man.verts[i][1] > yCutMan || (!!arm && forearmCut[arm[1]](bodies.man.verts[i])); };
 const KEEP = ['body'];
 const keptFaces = KEEP.flatMap((g) => obj.groups[g] ?? []).filter((fi) => !obj.faces[fi].idx.some(cutVert));
 const used = new Set(); for (const fi of keptFaces) for (const i of obj.faces[fi].idx) used.add(i);
