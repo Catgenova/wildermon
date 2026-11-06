@@ -19,6 +19,7 @@ push it further: painterly, saturated, luminous, textured.
 | `05-mosaic-herald.jpg` | Mosaic and patchwork as texture: a cloth or a ground as tiles of related hues. Gold used for trims, edges and glints only. Backgrounds of broken colour, not flat. |
 | `06-moldling-gate.jpg` | A glowing creature (magenta-gold) and its light trail over a cool scene. Overgrown stone, hanging roots, scattered motes of light. |
 | `08-male-body-proportions.jpg` | The male body: proportions and masses for every sculpted man. About 7.5 heads; broad shoulders over a narrow waist, a defined chest, abdomen and back, lats, round deltoids, forearms and calves that taper to the joints, hands and feet at full size. Low-poly in the picture; the sculpt is smooth with these masses. |
+| `09-female-body-proportions.jpg` | The female body: proportions and masses for every sculpted woman. About 7.5 heads; shoulders a little narrower than the hips, a defined but slim chest and back, a narrow waist above rounded hips and thighs, long legs, calves tapering to the ankle, arms slimmer than the man's with the same joints, hands and feet at full size. |
 | `07-player-poncho-sheet.jpg` | The player at full detail: hooded printed poncho with tassels, brass clasp, strap and pouches, bracer and boots with glowing strips, swept chunky hair, a lit face with irises and a smile. A slight pixel grain. |
 
 ## The painting: as in Scavengers Reign
