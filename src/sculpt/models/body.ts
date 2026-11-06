@@ -31,7 +31,8 @@ const toHex = (c: [number, number, number]): string => `#${c.map((v) => Math.max
 const mixHex = (a: string, b: string, t: number): string => { const A = hex(a), B = hex(b); return toHex([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]); };
 
 export function bodyMaterials(look: Look): Material[] {
-  const skin = skinColour(look), hair = hairColour(look), eye = eyeColour(look);
+  // A look may name a colour outright (the studio's sheet colours) rather than a swatch.
+  const skin = look.skin.startsWith('#') ? look.skin : skinColour(look), hair = look.hairColour.startsWith('#') ? look.hairColour : hairColour(look), eye = eyeColour(look);
   const out: Material[] = [];
   // Skin a touch warmer than the swatch, the pastel of the kit.
   out[M.skin] = { colour: mixHex(skin, '#f2b48c', 0.15), skin: true };

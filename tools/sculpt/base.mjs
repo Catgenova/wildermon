@@ -71,6 +71,7 @@ const STYLE = [
   ['head/head-scale-vert-incr', 0.1], ['head/head-scale-horiz-incr', 0.1], ['head/head-scale-depth-incr', 0.05],
   ['eyes/l-eye-scale-incr', 0.4], ['eyes/r-eye-scale-incr', 0.4], ['eyes/l-eye-height2-incr', 1.0], ['eyes/r-eye-height2-incr', 1.0], ['eyes/l-eye-height1-incr', 0.5], ['eyes/r-eye-height1-incr', 0.5],
   ['nose/nose-scale-vert-decr', 0.25], ['nose/nose-scale-horiz-decr', 0.1],
+  ['chin/chin-width-decr', 0.5], ['chin/chin-prominent-decr', 0.3],
 ];
 const BODIES = {
   man: macro('male', { muscle: 1.0, weight: 0.55, proportions: 1.0, extra: [...STYLE, ['torso/torso-scale-horiz-incr', 0.35], ['torso/torso-vshape-incr', 0.4], ['armslegs/l-upperarm-shoulder-muscle-incr', 0.6], ['armslegs/r-upperarm-shoulder-muscle-incr', 0.6]] }),
@@ -298,44 +299,54 @@ function extras(b, shared) {
   // The skin's front at (x, y): the furthest-forward face vertex near it.
   const skinZ = (x, y, w = 0.14) => { let z = -9; for (const i of face) if (Math.abs(V[i][0] - x) < w && Math.abs(V[i][1] - y) < w) z = Math.max(z, V[i][2]); return z; };
   const add = (p, region, stamp = -1) => { out.pos.push(p); out.region.push(region); out.stamp.push(stamp); return out.pos.length - 1; };
-  for (const [k, e] of b.eyes.entries()) {
+  const ey = (b.eyes[0].c[1] + b.eyes[1].c[1]) / 2;
+  for (const e of b.eyes) {
     const s = e.c[0] < 0 ? -1 : 1;
-    // An almond on a sphere a little larger than the eyeball, its front just proud of the lids; the outer corner a touch lower.
-    const R = e.r * 1.6, lid = skinZ(e.c[0], e.c[1]);
-    const c = [e.c[0], e.c[1] + 0.02, lid + 0.025 - R];
-    const N = 16, rings = [0, 0.45, 0.8, 1.0, 1.1];
+    // An almond on a sphere larger than the eyeball, set a little wider than the base's, its front just proud of the lids;
+    // the outer corner a touch lower. The white shows at the corners round a large dark iris.
+    const R = e.r * 1.5, lid = skinZ(e.c[0], e.c[1]);
+    const c = [e.c[0] + s * 0.04, e.c[1] + 0.02, lid + 0.025 - R];
+    const N = 16, rings = [0, 0.45, 0.8, 1.0];
     const on = (t, f) => {
-      const outer = Math.cos(t) * s, th = 1.0 * Math.cos(t) * f, up = Math.sin(t) >= 0 ? 0.4 : 0.3;
+      const outer = Math.cos(t) * s, th = 1.05 * Math.cos(t) * f, up = Math.sin(t) >= 0 ? 0.42 : 0.34;
       const tv = (up * Math.sin(t) * (1 - 0.2 * Math.cos(t) * Math.cos(t)) - 0.1 * Math.max(0, outer)) * f;
       return [c[0] + R * Math.sin(th) * Math.cos(tv), c[1] + R * Math.sin(tv), c[2] + R * Math.cos(th) * Math.cos(tv)];
     };
-    const irisC = [c[0] - s * R * 0.04, c[1] - 0.01, c[2] + R], irisR = R * 0.5;
+    const irisC = [c[0] - s * R * 0.04, c[1] - 0.02, c[2] + R], irisR = R * 0.5;
+    const dist = (p) => Math.hypot(p[0] - irisC[0], p[1] - irisC[1], p[2] - irisC[2]);
     const centre = add(irisC, 5, irisR);
-    const ring = rings.slice(1).map((f, ri) => Array.from({ length: N }, (_, i) => {
-      const p = on((i / N) * Math.PI * 2, f);
-      const reg = ri >= 3 ? 7 : 5;
-      return add(p, reg, reg === 5 ? irisR - Math.hypot(p[0] - irisC[0], p[1] - irisC[1], p[2] - irisC[2]) : -1);
-    }));
+    const ring = rings.slice(1).map((f) => Array.from({ length: N }, (_, i) => { const p = on((i / N) * Math.PI * 2, f); return add(p, 5, irisR - dist(p)); }));
     for (let i = 0; i < N; i++) out.tris.push([centre, ring[0][i], ring[0][(i + 1) % N]]);
     for (let r = 0; r + 1 < ring.length; r++) for (let i = 0; i < N; i++) { const a = ring[r][i], d = ring[r][(i + 1) % N], e2 = ring[r + 1][i], f2 = ring[r + 1][(i + 1) % N]; out.tris.push([a, e2, f2], [a, f2, d]); }
-    // The pupil, a disc a hair in front of the iris's middle.
-    const pc = add([irisC[0], irisC[1], irisC[2] + 0.006], 6), pr = irisR * 0.42;
-    const pring = Array.from({ length: 10 }, (_, i) => { const t = (i / 10) * Math.PI * 2; return add([irisC[0] + pr * Math.cos(t), irisC[1] + pr * Math.sin(t), irisC[2] + 0.006 - (pr * pr) / (2 * R)], 6); });
-    for (let i = 0; i < 10; i++) out.tris.push([pc, pring[i], pring[(i + 1) % 10]]);
-    // The brow: a ribbon over the eye, thick at the inner end, lying on the skin.
-    const bx = [0.08, 0.28, 0.48, 0.66], by = [0.36, 0.41, 0.41, 0.34], bh = [0.1, 0.085, 0.07, 0.05];
+    // The lid line: a dark band round the almond, thick along the upper lid, thin below, a hair in front.
+    const lidIn = Array.from({ length: N }, (_, i) => { const p = on((i / N) * Math.PI * 2, 1.0); return add([p[0], p[1], p[2] + 0.004], 7); });
+    const lidOut = Array.from({ length: N }, (_, i) => { const t = (i / N) * Math.PI * 2; const p = on(t, Math.sin(t) >= 0 ? 1.24 : 1.07); return add([p[0], p[1], p[2] + 0.004], 7); });
+    for (let i = 0; i < N; i++) { const a = lidIn[i], d = lidIn[(i + 1) % N], e2 = lidOut[i], f2 = lidOut[(i + 1) % N]; out.tris.push([a, e2, f2], [a, f2, d]); }
+    // The pupil, a disc a hair in front of the iris's middle, and one glint up and to the body's right of it.
+    const disc = (cc, r, region, lift) => { const pc = add([cc[0], cc[1], cc[2] + lift], region); const pr = Array.from({ length: 10 }, (_, i) => { const t = (i / 10) * Math.PI * 2; return add([cc[0] + r * Math.cos(t), cc[1] + r * Math.sin(t), cc[2] + lift - (r * r) / (2 * R)], region); }); for (let i = 0; i < 10; i++) out.tris.push([pc, pr[i], pr[(i + 1) % 10]]); };
+    disc(irisC, irisR * 0.45, 6, 0.006);
+    disc([irisC[0] - 0.35 * irisR, irisC[1] + 0.4 * irisR, irisC[2]], irisR * 0.18, 10, 0.012);
+    // The brow: a thick dark arc on the brow ridge, tapering outward, lying on the skin.
+    const bx = [0.06, 0.24, 0.42, 0.58, 0.7], by = [0.36, 0.42, 0.44, 0.4, 0.33], bh = [0.1, 0.09, 0.08, 0.06, 0.035];
     const top = [], bot = [];
     for (let i = 0; i < bx.length; i++) {
       const x = e.c[0] + s * (bx[i] - 0.3), yTop = e.c[1] + by[i], yBot = yTop - bh[i];
       top.push(add([x, yTop, skinZ(x, yTop) + 0.02], 8)); bot.push(add([x, yBot, skinZ(x, yBot) + 0.02], 8));
     }
     for (let i = 0; i + 1 < bx.length; i++) out.tris.push([top[i], bot[i], bot[i + 1]], [top[i], bot[i + 1], top[i + 1]]);
-    void k;
   }
-  // The hair: the scalp's own faces, pushed out along their normals with a tousle, over a hairline at the brow in front
-  // and the nape behind; the fringe a row of wedges reaching toward the brows.
-  const ey = (b.eyes[0].c[1] + b.eyes[1].c[1]) / 2;
-  const hairline = (p) => (p[2] > 0.3 ? ey + 0.6 : p[2] > -0.3 ? ey + 0.3 : ey - 0.1);
+  // The mouth: a dark line a little below the nose, its ends turned slightly down, the calm mouth of the sheet.
+  {
+    const my = ey - 0.98, mt = [], mb = [];
+    for (let i = 0; i < 7; i++) {
+      const u = i / 6, x = -0.3 + 0.6 * u, y = my - 0.035 * Math.pow(Math.abs(u - 0.5) * 2, 2), z = skinZ(x, y, 0.1) + 0.02;
+      mt.push(add([x, y + 0.015, z], 11)); mb.push(add([x, y - 0.015, z], 11));
+    }
+    for (let i = 0; i < 6; i++) out.tris.push([mt[i], mb[i], mb[i + 1]], [mt[i], mb[i + 1], mt[i + 1]]);
+  }
+  // The hair: a shell of the scalp's own faces pushed out, and over it the sheet's wedges -- a fringe mass swept over the
+  // forehead with pointed tips, side masses over the ears, a tousled top with two cowlicks, a mass down the nape.
+  const hairline = (p) => (p[2] > 0.3 ? ey + 0.55 : p[2] > -0.3 ? ey + 0.25 : ey - 0.15);
   const scalp = shared ?? new Set(face.filter((i) => V[i][1] > hairline(V[i])));
   out.scalp = scalp;
   const nrm = new Map();
@@ -349,15 +360,53 @@ function extras(b, shared) {
   const hid = new Map();
   for (const i of scalp) {
     const n = nrm.get(i); if (!n) continue; const l = Math.hypot(...n) || 1;
-    const p = V[i], edge = p[1] < hairline(p) + 0.25;
-    // Thicker on top, thinner at the edge, tousled by a hash of the vertex; the edge dropped a little to hang over the line.
-    const front = p[2] > 0.3;
-    const h = (edge ? 0.14 : 0.24) + 0.12 * hash(i);
-    // The fringe: the front edge dropped toward the brows, unevenly, so it hangs in wedges.
-    const drop = edge ? (front ? 0.22 + 0.18 * hash(i * 7) : 0.1) : 0;
-    hid.set(i, add([p[0] + (n[0] / l) * h, p[1] + (n[1] / l) * h - drop, p[2] + (n[2] / l) * h + (front && edge ? 0.06 : 0)], 9));
+    const p = V[i], edge = p[1] < hairline(p) + 0.2;
+    const h = (edge ? 0.2 : 0.34) + 0.08 * hash(i);
+    hid.set(i, add([p[0] + (n[0] / l) * h, p[1] + (n[1] / l) * h - (edge ? 0.08 : 0), p[2] + (n[2] / l) * h], 9));
   }
   for (const tr of tris) if (tr.every((i) => hid.has(i))) out.tris.push(tr.map((i) => hid.get(i)));
+  // A wedge: a flattened tube along a curve through three points, half-width w and half-thickness h tapering to a point.
+  const top = Math.max(...[...scalp].map((i) => V[i][1]));
+  const wedge = (pts, w0, w1, h0, h1, up) => {
+    const P = (t) => [0, 1, 2].map((k) => (1 - t) * (1 - t) * pts[0][k] + 2 * (1 - t) * t * pts[1][k] + t * t * pts[2][k]);
+    const S = 7, M = 8, rings = [];
+    for (let i = 0; i <= S; i++) {
+      const t = i / S, c = P(t), d = [0, 1, 2].map((k) => P(Math.min(1, t + 0.01))[k] - P(Math.max(0, t - 0.01))[k]), dl = Math.hypot(...d) || 1;
+      const tg = d.map((x) => x / dl);
+      let side = [tg[1] * up[2] - tg[2] * up[1], tg[2] * up[0] - tg[0] * up[2], tg[0] * up[1] - tg[1] * up[0]]; const sl = Math.hypot(...side) || 1; side = side.map((x) => x / sl);
+      const u = [side[1] * tg[2] - side[2] * tg[1], side[2] * tg[0] - side[0] * tg[2], side[0] * tg[1] - side[1] * tg[0]];
+      const taper = i === S ? 0.02 : 1 - 0.5 * t * t, w = (w0 + (w1 - w0) * t) * taper, h = (h0 + (h1 - h0) * t) * taper;
+      rings.push(Array.from({ length: M }, (_, j) => { const a = (j / M) * Math.PI * 2; return add([c[0] + side[0] * w * Math.cos(a) + u[0] * h * Math.sin(a), c[1] + side[1] * w * Math.cos(a) + u[1] * h * Math.sin(a), c[2] + side[2] * w * Math.cos(a) + u[2] * h * Math.sin(a)], 9); }));
+    }
+    const cap = add(P(0), 9);
+    for (let j = 0; j < M; j++) out.tris.push([cap, rings[0][(j + 1) % M], rings[0][j]]);
+    for (let i = 0; i + 1 < rings.length; i++) for (let j = 0; j < M; j++) { const a = rings[i][j], d = rings[i][(j + 1) % M], e2 = rings[i + 1][j], f2 = rings[i + 1][(j + 1) % M]; out.tris.push([a, d, f2], [a, f2, e2]); }
+  };
+  // The wedges are set by direction from the head's middle, each point so far out past the skull there: azimuth from the
+  // front (toward the body's left positive), elevation, and the hair's thickness over the skin. The flat of each wedge
+  // faces out. The sheet's fringe sweeps to the body's left over the forehead; two cowlicks stand up behind the crown.
+  const c0 = [0, ey + 0.45, 0.05];
+  const skull = face.map((i) => { const d = [V[i][0] - c0[0], V[i][1] - c0[1], V[i][2] - c0[2]]; const l = Math.hypot(...d) || 1; return [d[0] / l, d[1] / l, d[2] / l, l]; });
+  const H = (az, el, out) => {
+    const a = (az * Math.PI) / 180, e = (el * Math.PI) / 180, d = [Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)];
+    let r = 0; for (const v of skull) if (v[0] * d[0] + v[1] * d[1] + v[2] * d[2] > 0.975) r = Math.max(r, v[3]);
+    if (!r) r = 0.9;
+    return [c0[0] + d[0] * (r + out), c0[1] + d[1] * (r + out), c0[2] + d[2] * (r + out)];
+  };
+  const W = (a, b, c, w0, w1, h0, h1) => { const p1 = H(...b); const up = [p1[0] - c0[0], p1[1] - c0[1], p1[2] - c0[2]]; wedge([H(...a), p1, H(...c)], w0 * 1.4, w1 * 1.4, h0 * 1.5, h1 * 1.5, up); };
+  W([-55, 40, 0.14], [-5, 50, 0.24], [52, 6, 0.1], 0.42, 0.2, 0.24, 0.08);
+  W([-26, 36, 0.14], [-22, 14, 0.17], [-16, -6, 0.1], 0.18, 0.03, 0.09, 0.02);
+  W([4, 40, 0.16], [10, 14, 0.19], [17, -8, 0.1], 0.2, 0.03, 0.09, 0.02);
+  W([34, 34, 0.14], [42, 10, 0.16], [52, -10, 0.08], 0.18, 0.03, 0.08, 0.02);
+  W([-50, 30, 0.12], [-60, 8, 0.14], [-66, -12, 0.08], 0.16, 0.03, 0.08, 0.02);
+  for (const s of [-1, 1]) {
+    W([s * 70, 42, 0.12], [s * 96, 10, 0.2], [s * 102, -32, 0.12], 0.32, 0.14, 0.2, 0.07);
+    W([s * 128, 32, 0.14], [s * 146, -4, 0.2], [s * 142, -46, 0.08], 0.3, 0.14, 0.18, 0.07);
+  }
+  W([-40, 70, 0.14], [0, 85, 0.26], [45, 62, 0.14], 0.44, 0.24, 0.24, 0.1);
+  W([165, 62, 0.16], [150, 74, 0.5], [120, 78, 0.78], 0.13, 0.02, 0.1, 0.02);
+  W([-30, 72, 0.16], [-60, 80, 0.46], [-92, 82, 0.72], 0.12, 0.02, 0.09, 0.02);
+  W([180, 42, 0.14], [180, 0, 0.26], [180, -52, 0.1], 0.72, 0.45, 0.26, 0.12);
   return out;
 }
 const exMan = extras(bodies.man), exWoman = extras(bodies.woman, exMan.scalp);
@@ -371,7 +420,9 @@ const headSlot = BONES.indexOf('head');
 for (const [band, target] of BANDS) {
   const pos = manPos.map((p) => [...p]);
   const tris = bodyTris.map((t) => [...t]);
-  const kw = region.map((r) => (r === 1 ? 6 : r === 2 ? 5 : r === 3 ? 2.5 : 1));
+  // The face and the hands keep the close band's density at every band; the body pays for it.
+  const keep = band === 2 ? [6, 5, 2.5] : band === 1 ? [40, 20, 5] : [12, 6, 2];
+  const kw = region.map((r) => (r === 1 ? keep[0] : r === 2 ? keep[1] : r === 3 ? keep[2] : 1));
   const dec = decimate(pos, tris, kw, target);
   const keptSet = new Set(dec.tris.flat());
   const kept = [...keptSet].sort((a, b) => a - b), newId = new Map(kept.map((v, i) => [v, i]));

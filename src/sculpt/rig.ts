@@ -116,7 +116,7 @@ export const heightOf = (P: Proportions): number => P.hip + P.spine + P.chest + 
 
 /** The reference sheet's stance: stood square, feet a little apart, arms a little out from the sides with the palms turned back. */
 export function referenceStance(r: Rig): Rig {
-  const o: Rig = { ...r, arm: [[2, 6, 0], [2, 6, 0]], elbow: [14, 14], hand: [[0, 0, -20], [0, 0, 20]], leg: [[0, 9, 0], [0, 9, 0]], knee: [2, 2], flat: [true, true] };
+  const o: Rig = { ...r, arm: [[3, 20, 0], [3, 20, 0]], elbow: [10, 10], hand: [[0, 0, -20], [0, 0, 20]], leg: [[0, 9, 0], [0, 9, 0]], knee: [2, 2], flat: [true, true] };
   o.pelvis = [0, 0, 0]; o.spine = [0, 0, 0]; o.chest = [0, 0, 0]; o.neck = [0, 0, 0]; o.head = [0, 0, 0];
   o.loose = [true, true]; o.curl = [0.2, 0.2]; o.open = [0, 0]; o.shrug = [0, 0];
   o.hover = undefined; o.plant = undefined; o.lift = 0;

@@ -69,6 +69,8 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
     if (region === 7) return [M.lash, M.lash, -1];
     if (region === 8) return [M.brow, M.brow, -1];
     if (region === 9) return [M.hair, M.hair, -1];
+    if (region === 10) return [M.glint, M.glint, -1];
+    if (region === 11) return [M.mouth, M.mouth, -1];
     if (wear === 'shorts') {
       let d = region === 1 || region === 2 || region === 3 || arm(bone) ? -1 : Math.min(p[2] - shortsHem, shortsTop - p[2]);
       if (fem >= 0.5 && !arm(bone) && region === 0 && p[2] > shortsTop + 0.5) {

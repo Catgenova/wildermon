@@ -24,7 +24,8 @@ const kindOf = (who: string): Kind => (who === 'seven' || who === 'five' ? 'sdf'
 const REF8 = (window as unknown as { REF8?: string }).REF8;
 const REF9 = (window as unknown as { REF9?: string }).REF9;
 const REF10 = (window as unknown as { REF10?: string }).REF10;
-const LOOK: Look = { gender: 'man', skin: 'light', hair: 'tousled', hairColour: 'chestnut', eyes: 'brown', beard: 'none', shirt: 'teal', trousers: 'brown' };
+// The design sheet's colours: a warm tan and a dark plum-blue, named outright.
+const LOOK = { gender: 'man', skin: '#c98a5a', hair: 'tousled', hairColour: '#2e2440', eyes: 'dark', beard: 'none', shirt: 'teal', trousers: 'brown' } as unknown as Look;
 const REF = (window as unknown as { REF?: string }).REF;
 
 function poseOf(facing: number, what: string): FigurePose {
