@@ -149,6 +149,15 @@ const WEAVE_SKILLS = { [GATHER_SKILL.bandage]: EVOLVE_AT[1] };
 const WEAVE_RECIPE = RECIPE_BY_ID.get(tradeRecipes('bandage')[0])!;
 const WEAVE_PUT: Array<[string, number]> = WEAVE_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
 const weaveWants = (): string => `${WEAVE_RECIPE.result} ${(WEAVE_RECIPE.count ?? 1) + STAGE_PERKS.leecha.n}`;
+/**
+ * A Fromageon, a frosta at its third stage, presses one bucket of milk into its recipe's cheese and its line's one more
+ * (`STAGE_PERKS`), the bucket handed back with the whey in it.
+ */
+const PRESS_SKILLS = { [GATHER_SKILL.cheese]: EVOLVE_AT[1] };
+const PRESS_RECIPE = RECIPE_BY_ID.get(tradeRecipes('cheese')[0])!;
+const PRESS_PUT: Array<[string, number]> = PRESS_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
+const pressWants = (): string => [`${PRESS_RECIPE.result} ${(PRESS_RECIPE.count ?? 1) + STAGE_PERKS.frosta.n}`,
+  ...(PRESS_RECIPE.returns ?? []).map(([id, n]) => `${id} ${n}`)].sort().join(',');
 /** A Fortigran's go at one shard: the stone brick its recipe chisels from it, and its line's third-stage one on top. */
 const CHIP_SKILLS = { [GATHER_SKILL.chisel]: EVOLVE_AT[1] };
 const CHIP_RECIPE = RECIPE_BY_ID.get(tradeRecipes('chisel')[0])!;
@@ -169,6 +178,9 @@ const SLAG_SKILLS = { [GATHER_SKILL.alloy]: EVOLVE_AT[1] };
 const SLAG_RECIPE = RECIPE_BY_ID.get('make_bronze')!;
 const SLAG_PUT: Array<[string, number]> = SLAG_RECIPE.inputs.map((i) => [i.item, i.count ?? 1]);
 const slagWants = (): string => `${SLAG_RECIPE.result} ${(SLAG_RECIPE.count ?? 1) + STAGE_PERKS.scorcha.n}`;
+/** A Lotushell carries its third stage's roots or seeds a trip and its line's one more (`STAGE_LOADS`, `STAGE_PERKS`). */
+const LILY_SKILLS = { [GATHER_SKILL.lily]: EVOLVE_AT[1] };
+const LILY_GO = STAGE_LOADS[2] + STAGE_PERKS.spitta.n;
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
 const listed = (m: Map<string, number>): string => [...m].filter(([, n]) => n > 0).map(([id, n]) => `${id} ${n}`).sort().join(',') || '-';
@@ -217,7 +229,8 @@ const held = `coalesce((select string_agg(k || ' ' || n, ',' order by k) from (s
   from item where world_id = w and holder = 'crate' and crate = ${CRATE} and def <> 'corpse' group by 1
   union all select 'corpse', sum(count) from item where world_id = w and holder = 'crate' and crate = ${CRATE} and def = 'corpse' having sum(count) > 0) q), '-')`;
 const ready = (who: string): string => `
-  update creature set mode = 'deed', carrying = null, skills = '{}'::jsonb, traits = '{}'::text[], stance = 'passive', hunger = 1,
+  -- Rolled at its spawn, a rarity or a bigger form would multiply what it makes (beast_mul): pinned, so both sides make the same.
+  update creature set mode = 'deed', carrying = null, skills = '{}'::jsonb, traits = '{}'::text[], rare = null, form_size = null, stance = 'passive', hunger = 1,
          until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle', idle_why = null,
          work_x = null, work_y = null, from_x = 16.6, from_y = 16.6, to_x = 16.6, to_y = 16.6
    where world_id = w and id = (select id from hand where species = '${who}');
@@ -350,6 +363,12 @@ ${CASES.map((c) => `
   insert into said select 'WEAVE', ${held};
   ${after('leecha')}
 
+  -- PRESS: the frosta, at its third stage a Fromageon, presses one bucket of milk into cheese, and its line's third-stage cheese on top.
+  ${stocked(PRESS_PUT)}
+  ${ready('frosta').replace("skills = '{}'::jsonb", `skills = '${JSON.stringify(PRESS_SKILLS)}'::jsonb`)}
+  insert into said select 'PRESS', ${held};
+  ${after('frosta')}
+
   -- CHIP: the chissa, at its third stage a Fortigran, chisels one shard into stone brick, and makes its line's third-stage brick on top.
   insert into hand values ('chissa', creature_spawn(w, 'chissa', 16.6, 16.6, 'active', now() - interval '60 days', u));
   ${stocked(CHIP_PUT)}
@@ -406,6 +425,9 @@ ${CASES.map((c) => `
       || '|' || coalesce((select string_agg(kind, ',' order by kind) from water_plant where world_id = w), '-')
       || '|' || coalesce((select bool_and(planted_by = u)::text from water_plant where world_id = w), '-')
       || '|' || coalesce((select skills->>'${GATHER_SKILL.lily}' from creature where world_id = w and id = (select id from hand where species = 'spitta')), '-');
+  -- LILYLOADS: at its third stage, a Lotushell, it carries its stage's roots or seeds a trip and its line's one more.
+  update creature set skills = '${JSON.stringify(LILY_SKILLS)}'::jsonb where world_id = w and id = (select id from hand where species = 'spitta');
+  insert into said select 'LILYLOADS', (select stage_loads(c)::text from creature c where c.world_id = w and c.id = (select id from hand where species = 'spitta'));
   ${after('spitta')}
 end $t$;
 select k || '=' || v from said order by k;
@@ -520,6 +542,7 @@ check(`on the island, a Fletchercrest fletches one batch into ${fletchWants()}`,
 check(`on the island, a ${SPECIES.glossa.stages![1].name} mixes one batch into ${mixWants()}`, at('MIX') === mixWants(), at('MIX'));
 check(`on the island, a ${MORTARIUM} mixes one batch into ${conWants()}`, at('CON') === conWants(), at('CON'));
 check(`on the island, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, at('WEAVE') === weaveWants(), at('WEAVE'));
+check(`on the island, a ${SPECIES.frosta.stages![1].name} presses one bucket of milk into ${pressWants()}`, at('PRESS') === pressWants(), at('PRESS'));
 check(`on the island, a ${SPECIES.chissa.stages![1].name} chisels one shard into ${chipWants()}`, at('CHIP') === chipWants(), at('CHIP'));
 check(`on the island, a ${SPECIES.whirla.stages![1].name} churns ${CHURN_GO} buckets of milk a go: ${churnWants()}`, at('BUTTER') === `${churnWants()}|${CHURN_GO}`, at('BUTTER'));
 check(`on the island, a ${SPECIES.scorcha.stages![1].name} mixes one batch into ${slagWants()}`, STAGE_PERKS.scorcha.kind === 'more' && at('SLAG') === slagWants(), at('SLAG'));
@@ -550,6 +573,11 @@ const LILY_SPOTS = '20,18 20,19';
   const [stores, spots, kinds, mine] = at('LILY').split('|');
   check(`on the island, a spitta plants the lily root and the lotus seeds in the deep water, ring by ring from the totem: ${LILY_SPOTS}`,
     stores === '-' && spots === LILY_SPOTS && kinds === WATER_PLANTS.map((d) => d.id).sort().join(',') && mine === 'true', at('LILY'));
+}
+check(`on the island, a ${SPECIES.spitta.stages![1].name} carries ${LILY_GO} roots or seeds a trip`, at('LILYLOADS') === String(LILY_GO), at('LILYLOADS'));
+{
+  const lotushell = { species: 'spitta', skills: LILY_SKILLS } as unknown as Creature;
+  check(`in the browser, a ${SPECIES.spitta.stages![1].name} carries ${LILY_GO} roots or seeds a trip`, stageLoads(lotushell) === LILY_GO, String(stageLoads(lotushell)));
 }
 
 /* ---- the conversion, on the island ---------------------------------------------------- */
@@ -983,6 +1011,14 @@ for (const k of CASES) {
   c.skills = { ...WEAVE_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, inCrate(crate) === weaveWants(), inCrate(crate));
+}
+{
+  const g = body();
+  const crate = stock(g, PRESS_PUT);
+  const c = worker(g, 'frosta');
+  c.skills = { ...PRESS_SKILLS };
+  run(g, 120);
+  check(`in the browser, a ${SPECIES.frosta.stages![1].name} presses one bucket of milk into ${pressWants()}`, inCrate(crate) === pressWants(), inCrate(crate));
 }
 {
   const g = body();

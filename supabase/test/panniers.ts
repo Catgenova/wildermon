@@ -224,6 +224,8 @@ begin
   delete from deed_member where world_id = w and (uid in (me, them) or founder in (me, them));
   delete from deed where world_id = w and founded_by in (me, them);
   perform creature_spawn(w, 'bura', v_x + 1.5, v_y + 0.5, 'active', now() - interval '1 day', me);
+  -- Its spawn rolls a rarity, a form and traits, each a multiplier on what it carries (beast_mul): pinned, so both sides hold the same.
+  update creature set rare = null, form_size = null, traits = '{}'::text[] where world_id = w and species = 'bura';
   select id into v_b from creature where world_id = w and keeper = me and species = 'bura';
   update creature set name = '${NAME}', traits = '{}', skills = '{}', settled_at = now(), until = now() + interval '1 hour',
       from_x = v_x + 1.5, from_y = v_y + 0.5, to_x = v_x + 1.5, to_y = v_y + 0.5, leg_at = now(), leg_ends = now()

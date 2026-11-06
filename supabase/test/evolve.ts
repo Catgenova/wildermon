@@ -22,8 +22,11 @@ import { BUTCHER_PARTS } from '../../src/game/butcher';
 import { attackOf, bloodMul, EVOLVE_AT, kindName, levelSkill, maxHealth, SPECIES, STAGE_MUL, STAGE_PERKS, stageOf, type Creature } from '../../src/game/creatures';
 
 /** A kind that does not evolve, and the skill it levels by: the first with no stages that levels at all. */
-const STILL = Object.values(SPECIES).find((d) => !d.stages && !d.monster && levelSkill(d))!;
-const STILL_SKILL = levelSkill(STILL)!;
+// A kind with no stages: every wildermon line has its stages now, so a monster (a goblin), which levels fighting and
+// never evolves, where no still wildermon is left.
+const STILL = Object.values(SPECIES).find((d) => !d.stages && !d.monster && levelSkill(d))
+  ?? Object.values(SPECIES).find((d) => !d.stages && d.monster)!;
+const STILL_SKILL = levelSkill(STILL) ?? 'fighting';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -351,8 +354,10 @@ for (const [skill, stage, name] of [[AT1 - 0.01, 0, 'Snufflet'], [AT1, 1, 'Snuff
   check(`in the browser, a Cloudborne grows its fleece back ${G} squared as fast`, stageOf(sheep) === 2 && near(bloodMul(sheep, 'grow'), G ** 2), `${stageOf(sheep)} ${bloodMul(sheep, 'grow')}`);
 }
 const still = mine(STILL.id);
+// Its name as it is before any level (a monster's is its subspecies').
+const stillName = kindName(still);
 still.skills = { [STILL_SKILL]: 80 };
-check(`a ${STILL.name} is not touched at any level`, stageOf(still) === 0 && kindName(still) === STILL.name && near(g.creatures.speedMul(still), 1));
+check(`a ${STILL.name} is not touched at any level`, stageOf(still) === 0 && kindName(still) === stillName && near(g.creatures.speedMul(still), 1));
 {
   r.skills = { foraging: AT1 - 0.0001 };
   r.health = 10;
