@@ -163,7 +163,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   jewelled_pendant: { name: 'Jewelled pendant', category: 'misc', weight: 0.12, decay: 1, description: 'Worn: {bonus:pct} more skill per action in its gem\'s skill.' },
   // An Artisan's Circlet.
   circlet: { name: 'Circlet', category: 'misc', weight: 0.2, decay: 1, description: 'Head slot, in place of a helm. Up to {stones} gems, each set from the gem\'s menu. Worn: each gives {share:pct} of a ring\'s bonus, {each:pct} more skill per action in its skill.' },
-  horseshoe: { name: 'Horseshoes', category: 'material', weight: 0.25, stackable: true, decay: 1, description: '{per} per lump; {shoes.perMount} per mount, nailed on by a farrier with a mallet. Lasts {shoes.days} days. Mount speed on laid stone: +{shoes.quicker:pct}. Climbs a step {shoes.step:m} steeper.' },
+  horseshoe: { name: 'Horseshoes', category: 'material', weight: 0.25, stackable: true, decay: 1, description: '{per} per lump; {shoes.perMount} per mount or draught beast, nailed on by a farrier with a mallet. Lasts {shoes.days} days. Mount speed on laid stone: +{shoes.quicker:pct}. Climbs a step {shoes.step:m} steeper. Draught beast in the traces, at its share of the team: speed on laid stone +{shoes.haulQuicker:pct}; step {shoes.haulStep:m} steeper.' },
   horseshoe_mould: { name: 'Horseshoe mould', category: 'tool', weight: 1.2, decay: 1 },
   coin_die: { name: 'Coin die', category: 'tool', weight: 1.5, description: 'Strike a gold lump at an anvil: {coinsPerLump} coins. Wears each strike.' },
   coin_die_mould: { name: 'Coin die mould', category: 'tool', weight: 1.2, decay: 1 },

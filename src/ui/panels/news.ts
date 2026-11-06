@@ -193,6 +193,7 @@ import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
 import { CHANNELS, FIGHTING, gradeId, traitOf, traitSays, type TraitDef } from '../../game/traits';
 import { footing, PERK_STAGE, perkSays, STAGE_PERKS, WATER_RANGE } from '../../game/creatures';
 import { STOKE_SAYS, STOKE_SMELT_SAYS } from '../../game/creatures';
+import { HAUL_SHOE_SHARE, SHOE_PACE, SHOE_STEP } from '../../game/creatures';
 import { POTTERY } from '../../game/kiln';
 import { FIRE_CAPACITY as FIRE_CAPACITY_338, FUEL_VALUES as FUEL_VALUES_337 } from '../../game/campfire';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
@@ -4250,6 +4251,13 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 515,
+    day: '2026-11-06',
+    lines: () => [
+      `New: horseshoes on draught beasts (${SPECIES.roxxen.name} line). In the traces, at the shod share of the team: speed on laid stone +${percent((SHOE_PACE - 1) * HAUL_SHOE_SHARE)}; step ${metres(SHOE_STEP * HAUL_SHOE_SHARE)} m steeper.`,
+    ],
   },
   {
     n: 514,

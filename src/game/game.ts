@@ -38,7 +38,7 @@ import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH, STILL_CLOCK } from './growth';
 import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
-import { ageDef, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
+import { ageDef, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, shoeTeam, shoeTeamStep, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
 import { CRAFT_REACH, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -8195,7 +8195,9 @@ export class Game {
     // Carpenter's Smooth Axle is its whole share at the top of the range too;
     // and so does the driver's hand on the reins (`drivingPace`), and how well the thing was built (`vehicleQlPace`).
     // And the team's ancient bridles (`bridleTeam`), past the cap as tack is, and its wildermon harnesses (`harnessTeam`).
-    return Math.min(MAX_VEHICLE_SPEED, mean * pull * worst * footing(this.teamClimb(f)) * rollEase(f.material)) * markOf(f, 'speed')
+    // And its shod beasts, on laid stone, at half a mount's shoes (`shoeTeam`), under the cap as a mount's shoes are.
+    const shod = shoeTeam(this.time, team, !!TILE_DEFS[this.world.getTile(f.x, f.y)]?.paved);
+    return Math.min(MAX_VEHICLE_SPEED, mean * pull * worst * footing(this.teamClimb(f)) * rollEase(f.material) * shod) * markOf(f, 'speed')
       * drivingPace(this.skills.get(DRIVING)) * vehicleQlPace(f.ql) * bridleTeam(team) * harnessTeam(team);
   }
 
@@ -8225,7 +8227,8 @@ export class Game {
    * beast learns in the traces is which lines it can hold.
    */
   vehicleStep(f: PlacedFurniture | undefined): number {
-    return VEHICLE_STEP + (f ? this.teamClimb(f) * CLIMB_PITCH : 0);
+    // And its shod beasts' shoes, at half a mount's (`shoeTeamStep`).
+    return VEHICLE_STEP + (f ? this.teamClimb(f) * CLIMB_PITCH + shoeTeamStep(this.time, this.team(f)) : 0);
   }
 
   /**

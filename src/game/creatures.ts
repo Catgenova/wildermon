@@ -5703,7 +5703,14 @@ export const SHOES_PER_MOUNT = 4;
 export const SHOE_DAYS = 7;
 export const SHOE_PACE = 1.15;
 export const SHOE_STEP = 8;
-describeWith({ shoes: { perMount: SHOES_PER_MOUNT, days: SHOE_DAYS, quicker: SHOE_PACE - 1, step: SHOE_STEP } });
+/**
+ * Asked for: "Allow shoeing haulers at half bonus". A draught beast takes shoes as a mount does, and in the traces a
+ * shod one is worth this share of a mount's shoes: that share of `SHOE_PACE`'s gain on laid stone and of `SHOE_STEP`,
+ * at its share of the team (`shoeTeam`, `shoeTeamStep`). The island's `haul_shoe_share`.
+ */
+export const HAUL_SHOE_SHARE = 0.5;
+describeWith({ shoes: { perMount: SHOES_PER_MOUNT, days: SHOE_DAYS, quicker: SHOE_PACE - 1, step: SHOE_STEP,
+  haulQuicker: (SHOE_PACE - 1) * HAUL_SHOE_SHARE, haulStep: SHOE_STEP * HAUL_SHOE_SHARE } });
 /** Whether the shoes are still on: a week from the fitting, in the clock that fitted them. */
 
 /** What a mount wears to be ridden: a saddle and a bridle. */
@@ -5724,6 +5731,17 @@ export const tackEnchant = (c: { tackEnchant?: Record<string, Enchant> }, effect
   Math.max(0, ...TACK.map((id) => swingEnchant({ enchant: c.tackEnchant?.[id] }, effect)));
 
 export const isShod = (now: number, c: { shodAt: number }): boolean => now - c.shodAt < SHOE_DAYS * DAY_SECONDS;
+/** Whether a kind takes shoes: a mount, or a draught beast. The island's `ride_refusal` on `shoe_creature`. */
+export const shoeable = (def: Pick<SpeciesDef, 'mount' | 'draught'>): boolean => !!def.mount || !!def.draught;
+/** How much of a team in the traces is shod, 0 to 1. The island's `shod_share`. */
+export const shodShare = (now: number, team: ReadonlyArray<{ shodAt: number }>): number =>
+  team.length ? team.filter((c) => isShod(now, c)).length / team.length : 0;
+/** A team's shoes on its pace, on laid stone only: `HAUL_SHOE_SHARE` of a mount's, at the shod share of the team. */
+export const shoeTeam = (now: number, team: ReadonlyArray<{ shodAt: number }>, paved: boolean): number =>
+  paved ? 1 + (SHOE_PACE - 1) * HAUL_SHOE_SHARE * shodShare(now, team) : 1;
+/** A team's shoes on the step its vehicle takes: `HAUL_SHOE_SHARE` of `SHOE_STEP`, at the shod share of the team. */
+export const shoeTeamStep = (now: number, team: ReadonlyArray<{ shodAt: number }>): number =>
+  SHOE_STEP * HAUL_SHOE_SHARE * shodShare(now, team);
 /** How close it comes before standing still, well inside arm's reach. */
 const CALL_DISTANCE = 0.9;
 

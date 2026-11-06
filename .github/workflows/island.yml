@@ -4384,6 +4384,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/haulclimb.mjs --log-level=error
           node node_modules/.cache/haulclimb.mjs
 
+      - name: Haulers take shoes, at half a mount's
+        if: matrix.shard == 4
+        run: |
+          # Asked for: "Allow shoeing haulers at half bonus". A draught beast
+          # takes shoes as a mount does; in a vehicle's traces a shod one is
+          # worth `haul_shoe_share` of a mount's shoes at its share of the team,
+          # on the pace on laid stone and on the step, on both sides.
+          npx esbuild supabase/test/haulshoes.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/haulshoes.mjs --log-level=error
+          node node_modules/.cache/haulshoes.mjs
+
       - name: Climbing in the traces at a Wagonox's rate, level off the level skill
         if: matrix.shard == 4
         run: |

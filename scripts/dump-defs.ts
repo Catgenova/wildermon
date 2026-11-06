@@ -31,7 +31,7 @@ import { cellarOutdoor } from '../src/game/cellar';
 import { REPOINT_BACK } from '../src/game/buildActions';
 import { CONCRETE_PER_STEP } from '../src/game/foundations';
 import { PIER_CLEAR, PIER_DROP, PIER_SHOO, PIER_WALL_DROP, PIER_WATER } from '../src/game/piers';
-import { COAX_LAPSE, COAX_STEP, HERD_REACH, WILD_STAY, HUNT_HOME, HUNT_LEASH, HUNT_REST, OLD_AT, OLD_FOR, YOUNG_FOR, SITE_LOOKS, WILD_RANGE, WILD_REACH, WILD_REST, WILD_REST_SPREAD, SHOE_DAYS, SHOE_PACE, SHOE_STEP, SHOES_PER_MOUNT,
+import { COAX_LAPSE, COAX_STEP, HERD_REACH, WILD_STAY, HUNT_HOME, HUNT_LEASH, HUNT_REST, OLD_AT, OLD_FOR, YOUNG_FOR, SITE_LOOKS, WILD_RANGE, WILD_REACH, WILD_REST, WILD_REST_SPREAD, SHOE_DAYS, SHOE_PACE, SHOE_STEP, SHOES_PER_MOUNT, HAUL_SHOE_SHARE,
          COMPANION_SIGHT, COMPANION_LEASH, COMPANION_REACH, COMPANION_BLOW, COMPANION_PACE, BLOW_MEMORY, FIGHT_BACK_GOES } from '../src/game/creatures';
 import { FAMILY_OF, KNACK_BONUS, KNACK_BY_LEARNING, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLES } from '../src/game/titles';
 import { KEPT_BEST, NUTRIENT_DECAY, TABLE_BEST } from '../src/game/nutrition';
@@ -1796,7 +1796,7 @@ for (const [fn, v] of [
   /* And how long a buy order stands before it lapses and gives back what it still holds. */
   ['order_life', ORDER_LIFE],
   /* Horseshoes: four to a mount, a week on, a share quicker on stone and a step higher. */
-  ['shoes_per_mount', SHOES_PER_MOUNT], ['shoe_days', SHOE_DAYS], ['shoe_pace', SHOE_PACE], ['shoe_step', SHOE_STEP],
+  ['shoes_per_mount', SHOES_PER_MOUNT], ['shoe_days', SHOE_DAYS], ['shoe_pace', SHOE_PACE], ['shoe_step', SHOE_STEP], ['haul_shoe_share', HAUL_SHOE_SHARE],
   /* The hour, UTC, at which the woods turn over — six in the morning at UTC-7 — and what a tree leaves. */
   ['tree_dawn_utc', TREE_DAWN_UTC], ['tree_seeds', TREE_SEEDS], ['tree_seed_reach', TREE_SEED_REACH],
   ['tree_seed_none', TREE_SEED_NONE], ['tree_seed_both', TREE_SEED_BOTH],

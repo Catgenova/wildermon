@@ -3318,7 +3318,7 @@ update item_def set description = 'Spells are cast from it. Each cast wears it; 
 update item_def set description = 'Worn: 10% more skill per action in its gem''s skill.' where id = 'jewelled_ring';
 update item_def set description = 'Worn: 10% more skill per action in its gem''s skill.' where id = 'jewelled_pendant';
 update item_def set description = 'Head slot, in place of a helm. Up to 3 gems, each set from the gem''s menu. Worn: each gives 50% of a ring''s bonus, 5% more skill per action in its skill.' where id = 'circlet';
-update item_def set description = '4 per lump; 4 per mount, nailed on by a farrier with a mallet. Lasts 7 days. Mount speed on laid stone: +15%. Climbs a step 0.8 m steeper.' where id = 'horseshoe';
+update item_def set description = '4 per lump; 4 per mount or draught beast, nailed on by a farrier with a mallet. Lasts 7 days. Mount speed on laid stone: +15%. Climbs a step 0.8 m steeper. Draught beast in the traces, at its share of the team: speed on laid stone +7.5%; step 0.4 m steeper.' where id = 'horseshoe';
 update item_def set description = '4 horseshoes per filling. Wears each filling; cannot be mended.' where id = 'horseshoe_mould';
 update item_def set description = 'Strike a gold lump at an anvil: 20 coins. Wears each strike.' where id = 'coin_die';
 update item_def set description = 'Wears each filling; cannot be mended.' where id = 'coin_die_mould';
@@ -5794,6 +5794,7 @@ create or replace function shoes_per_mount() returns double precision language s
 create or replace function shoe_days() returns double precision language sql immutable as $fn$ select 7::double precision $fn$;
 create or replace function shoe_pace() returns double precision language sql immutable as $fn$ select 1.15::double precision $fn$;
 create or replace function shoe_step() returns double precision language sql immutable as $fn$ select 8::double precision $fn$;
+create or replace function haul_shoe_share() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
 create or replace function tree_dawn_utc() returns double precision language sql immutable as $fn$ select 13::double precision $fn$;
 create or replace function tree_seeds() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
 create or replace function tree_seed_reach() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
