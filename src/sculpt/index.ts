@@ -12,7 +12,7 @@ import { sculptRig, viewOf, type FigurePose } from '../render/figure';
 import { bake, bandOf, type Baked } from './bake';
 import { drawSculptGL, type DrawOpts, type SculptDraw } from './gl';
 import { bodyModel } from './models/body';
-import { bonesOf, HAIR_CHAIN, REST_EXTRAS, SEVEN, skinMatrices, type Bones, type Chain, type Extras, type Proportions } from './rig';
+import { bonesOf, HAIR_CHAIN, relaxedIdle, REST_EXTRAS, SEVEN, skinMatrices, type Bones, type Chain, type Extras, type Proportions } from './rig';
 import type { Band, Model } from './sdf';
 
 export { SEVEN, FIVE } from './rig';
@@ -59,7 +59,10 @@ export interface SculptScene extends SculptDraw { facing: number; band: Band; P:
 export function sculptScene(pose: FigurePose, zoom: number, P: Proportions = SEVEN, now = performance.now() / 1000, band = bandOf(zoom)): SculptScene {
   const look = pose.look ?? DEFAULT_LOOK;
   const b = built(P, look);
-  const { rig } = sculptRig(pose);
+  const figure = sculptRig(pose).rig;
+  // Stood doing nothing, the sculpt stands its own way (`relaxedIdle`); every other pose is the figure's, as is.
+  const idle = !pose.moving && !pose.working && !pose.swimming && !pose.driving && !pose.emote && !pose.cast;
+  const rig = idle ? relaxedIdle(figure, pose.phase / 6, pose.facing) : figure;
   const x = extrasOf(pose, now);
   if (rig.blink) x.blink = 1;
   const posed = bonesOf(rig, P, b.chains, x);

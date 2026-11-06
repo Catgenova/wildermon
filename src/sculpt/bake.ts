@@ -143,10 +143,16 @@ export function bake(model: Model, band: Band, boneOrder: string[], cell = CELL[
       if (vx < b[0][0] - REACH || vx > b[1][0] + REACH || vy < b[0][1] - REACH || vy > b[1][1] + REACH || vz < b[0][2] - REACH || vz > b[1][2] + REACH) continue;
       const d = pr.d(vp);
       if (d > REACH) continue;
-      if (pr.stamps && d < (pr.blend ?? 0) + e * 2) for (const s of pr.stamps) {
-        if (s.band > band) continue;
-        const sh = s.at(vp, n);
-        if (sh && sh.d > dB) { dB = sh.d; mB = sh.m; }
+      // Of a primitive's stamps, the first the vertex is inside wins (a pupil listed before its iris); outside all, the nearest edge.
+      if (pr.stamps && d < (pr.blend ?? 0) + e * 2) {
+        let inside = false;
+        for (const s of pr.stamps) {
+          if (s.band > band) continue;
+          const sh = s.at(vp, n);
+          if (!sh) continue;
+          if (sh.d > 0 && !inside) { dB = sh.d; mB = sh.m; inside = true; }
+          else if (!inside && sh.d > dB) { dB = sh.d; mB = sh.m; }
+        }
       }
       const w = d <= 0 ? 1 : 1 - d / REACH;
       const bi = boneIndex.get(pr.bone) ?? 0;

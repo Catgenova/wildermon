@@ -90,16 +90,16 @@ void main() {
     vec3 h = rgb2hsv(base);
     bool warm = h.x < 0.2 || h.x > 0.9;
     float aa = fwidth(dl) * 1.2;
-    float shadowAt = skin ? -0.05 : 0.02, lightAt = metal ? 0.78 : (skin ? 0.72 : 0.62);
+    float shadowAt = skin ? 0.0 : 0.12, lightAt = metal ? 0.78 : (skin ? 0.72 : 0.64);
     float sh = 1.0 - smoothstep(shadowAt - aa, shadowAt + aa, dl);
     float li = smoothstep(lightAt - aa, lightAt + aa, dl);
     vec3 shadow, light;
     if (skin) {
-      shadow = hsv2rgb(vec3(fract(h.x - 0.025), min(1.0, h.y * 1.1), h.z * 0.82));
+      shadow = hsv2rgb(vec3(fract(h.x - 0.03), min(1.0, h.y * 1.15), h.z * 0.78));
       light = hsv2rgb(vec3(h.x, h.y * 0.9, min(1.0, h.z * 1.05)));
     } else {
       float toS = warm ? 0.5 : 0.78; float dS = toS - h.x; dS -= floor(dS + 0.5);
-      shadow = hsv2rgb(vec3(fract(h.x + dS * 0.14), min(1.0, h.y * 1.05 + 0.04), h.z * 0.76));
+      shadow = hsv2rgb(vec3(fract(h.x + dS * 0.2), min(1.0, h.y * 1.15 + 0.08), h.z * 0.7));
       float toL = warm ? 0.15 : 0.5; float dL = toL - h.x; dL -= floor(dL + 0.5);
       light = hsv2rgb(vec3(fract(h.x + dL * 0.08), h.y * (metal ? 0.6 : 0.88), min(1.0, h.z * (metal ? 1.2 : 1.1) + 0.02)));
     }

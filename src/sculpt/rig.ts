@@ -48,11 +48,11 @@ export const SEVEN: Proportions = {
   id: 'seven', heads: 7,
   hip: 8.4, spine: 1.4, chest: 2.2, neck: 1.6, headJ: 0.55, armAt: 1.3,
   upper: 3.3, lower: 2.7, thigh: 3.8, shin: 3.7,
-  shoulder: 2.05, hipW: 0.95,
+  shoulder: 2.25, hipW: 0.95,
   head: 2.36, headW: 1.0, headD: 1.15,
   sole: 0.8, foot: 2.3,
   palm: 1.0, finger: 0.95,
-  r: { neck: 0.5, upper: 0.52, fore: 0.44, wrist: 0.36, thigh: 0.72, shin: 0.5, ankle: 0.36, chest: 1.9, waist: 1.25, pelvis: 1.55 },
+  r: { neck: 0.5, upper: 0.54, fore: 0.44, wrist: 0.36, thigh: 0.72, shin: 0.5, ankle: 0.36, chest: 2.0, waist: 1.25, pelvis: 1.55 },
 };
 
 /** The island's build as it is drawn today: a head a quarter of the height, a long body over short sturdy legs. */
@@ -101,9 +101,44 @@ const DEG = Math.PI / 180;
 export function curlOf(r: Rig, k: number): number {
   const open = r.open[k];
   const o = typeof open === 'boolean' ? (open ? 1 : 0) : open;
-  if (o > 0) return clamp(1 - o) * 0.25;
-  if (r.loose[k]) return 0.25 + 0.5 * clamp(r.curl[k]);
-  return r.tool || !r.stowed ? 0.85 : 0.6;
+  if (o > 0) return clamp(1 - o) * 0.2;
+  if (r.loose[k]) return 0.3 + 0.45 * clamp(r.curl[k]);
+  // A fist round a tool; otherwise a hand at rest, its fingers a little curled.
+  return r.tool ? 0.85 : 0.3;
+}
+
+/**
+ * The sculpt's own stance for a body stood doing nothing: weight a little on
+ * one leg, the hips over it, arms hanging at the sides with a soft bend at
+ * the elbow and the hands loose, shoulders down, head level, breathing. Laid
+ * over the figure's idle rig, which keeps the blink and whatever it carries.
+ */
+export function relaxedIdle(r: Rig, t: number, facing = 1): Rig {
+  const breath = Math.sin(t * 1.9) * 0.5 + 0.5;
+  // Weight on the leg away from the viewer's side, so the near shoulder drops a little: the reference's stance.
+  const side = facing >= 4 ? 1 : 0, s = side ? 1 : -1;
+  const o: Rig = { ...r, arm: [[...r.arm[0]] as Euler, [...r.arm[1]] as Euler], hand: [[...r.hand[0]] as Euler, [...r.hand[1]] as Euler], leg: [[...r.leg[0]] as Euler, [...r.leg[1]] as Euler] };
+  o.pelvis = [1, s * 2.5, s * -3];
+  o.spine = [-1, s * -1.5, s * 2];
+  o.chest = [-1 + breath * 1.2, 0, s * 1];
+  o.neck = [1, s * 0.5, s * -2];
+  o.head = [-1, s * 0.8, s * 1.5];
+  o.leg = [[2, 3, 0], [2, 3, 0]];
+  o.leg[side] = [0, 1.5, 0];
+  o.leg[1 - side] = [4, 6, s * 4];
+  o.knee = [2, 2];
+  o.knee[1 - side] = 12;
+  o.flat = [true, true];
+  o.arm = [[6, 7, 2], [6, 7, 2]];
+  o.elbow = [16 + breath * 1.5, 16 + breath * 1.5];
+  o.hand = [[2, 0, -8], [2, 0, 8]];
+  o.loose = [true, true];
+  o.curl = [0.35, 0.35];
+  o.open = [0, 0];
+  o.shrug = [-0.05, -0.05];
+  o.hover = undefined;
+  o.plant = undefined;
+  return o;
 }
 
 /**
@@ -124,7 +159,7 @@ export function bonesOf(r: Rig, P: Proportions, chains: Chain[], x: Extras): Bon
   b.jaw = joint(head, [0, 0.1, P.head * 0.42], x.jaw * 18);
   for (let k = 0; k < 2; k++) {
     const s = k ? 1 : -1;
-    const eye: V3 = [s * P.headW * 0.42, P.headD * 0.78, P.head * 0.58];
+    const eye: V3 = [s * P.headW * 0.47, P.headD * 0.74, P.head * 0.58];
     b[`eye${k}`] = joint(head, eye);
     b[`lid${k}`] = joint(head, eye, -x.blink * 75);
     b[`brow${k}`] = joint(head, [eye[0], eye[1], eye[2] + P.head * 0.14], 0, 0, s * x.brow * -8);
@@ -155,9 +190,24 @@ export function bonesOf(r: Rig, P: Proportions, chains: Chain[], x: Extras): Bon
   }
   // Stood on the lowest sole: heel and toe of each foot.
   const soles: V3[] = [[0, -0.5, -P.sole], [0, P.foot, -P.sole]];
+  const lowest = (k: number): number => { let low = Infinity; for (const p of soles) low = Math.min(low, place(b[`ankle${k}`], p)[2]); return low; };
   let low = Infinity;
-  for (let k = 0; k < 2; k++) for (const p of soles) low = Math.min(low, place(b[`ankle${k}`], p)[2]);
-  const dz = -low + r.lift - (r.sink > 0 ? Math.min(r.sink, 10.2) : 0);
+  for (let k = 0; k < 2; k++) low = Math.min(low, lowest(k));
+  let dz = -low + r.lift - (r.sink > 0 ? Math.min(r.sink, 10.2) : 0);
+  if (r.hover && r.hover.w > 0) {
+    // A run carried on a curve (the figure's `hover`): the hips where the stance leg puts them at mid-stance, and each foot the pose has on
+    // the ground kept on it by bending or straightening its knee (`plant`), so the feet neither skate nor hang.
+    const { h, w, thigh, knee } = r.hover;
+    const stood = 0.1 + P.thigh * Math.cos(thigh * DEG) + P.shin * Math.cos((thigh - knee) * DEG) + P.sole;
+    const want = stood + h - P.hip - r.at[2];
+    if (r.plant) {
+      dz += w * (want - dz);
+      for (let k = 0; k < 2; k++) plantFoot(b, r, P, k, dz, r.plant[k], r.plant[k] <= 0);
+      let under = Infinity;
+      for (let k = 0; k < 2; k++) under = Math.min(under, lowest(k) + dz);
+      if (under < 0) dz -= under;
+    } else dz += w * Math.max(0, want - dz);
+  }
   for (const key of Object.keys(b)) b[key] = { m: b[key].m, t: [b[key].t[0], b[key].t[1], b[key].t[2] + dz] };
   // The ball of each foot: bent up as the heel comes off the ground, so the toes stay down.
   for (let k = 0; k < 2; k++) {
@@ -180,6 +230,35 @@ export function bonesOf(r: Rig, P: Proportions, chains: Chain[], x: Extras): Bon
     }
   }
   return b;
+}
+
+/**
+ * A foot put down on the ground `weight` of the way (or, `clear`, only lifted out of it) by turning the leg at the hip and
+ * the knee together so the foot goes straight down to it and stays where it is along the ground: the figure's `plantFoot`,
+ * at the sculpt's proportions.
+ */
+function plantFoot(b: Bones, r: Rig, P: Proportions, k: number, dz: number, weight: number, clear = false): void {
+  const A = P.thigh, B = P.shin;
+  const s = k ? 1 : -1, [, la, lt] = r.leg[k];
+  const F = joint(b.pelvis, [s * P.hipW, 0, -0.1], 0, -s * la, s * lt);
+  const m = F.m;
+  const soles: V3[] = [[0, -0.5, -P.sole], [0, P.foot, -P.sole]];
+  for (let q = 0; q < 2; q++) {
+    let low = Infinity;
+    for (const p of soles) low = Math.min(low, place(b[`ankle${k}`], p)[2]);
+    const off = clear || low + dz < 0 ? Math.min(0, low + dz) : (low + dz) * weight;
+    if (Math.abs(off) < 1e-3) return;
+    const at = b[`ankle${k}`].t;
+    const w: V3 = [at[0] - F.t[0], at[1] - F.t[1], at[2] - off - F.t[2]];
+    const y = m[1] * w[0] + m[4] * w[1] + m[7] * w[2], z = m[2] * w[0] + m[5] * w[1] + m[8] * w[2];
+    const d = Math.max(Math.abs(A - B) + 1e-3, Math.min(0.9995 * (A + B), Math.hypot(y, z)));
+    const bend = Math.acos(Math.max(-1, Math.min(1, (d * d - A * A - B * B) / (2 * A * B))));
+    const lp = (Math.atan2(y, -z) - Math.atan2(-B * Math.sin(bend), A + B * Math.cos(bend))) / DEG, deg = bend / DEG;
+    b[`hip${k}`] = joint(b.pelvis, [s * P.hipW, 0, -0.1], lp, -s * la, s * lt);
+    b[`knee${k}`] = joint(b[`hip${k}`], [0, 0, -A], -deg);
+    const level = r.flat[k] ? -(r.pelvis[0] + lp - deg) : 0;
+    b[`ankle${k}`] = joint(b[`knee${k}`], [0, 0, -B], level + r.foot[k]);
+  }
 }
 
 /** The rest pose's frames: what a sculpt is modelled against. */
