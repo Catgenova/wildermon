@@ -35,6 +35,8 @@ export interface Piece {
   sides: number;
   /** How far off the body the cloth stays, in body heights. */
   offset: number;
+  /** The slope the cloth drapes over a ledge in what is under it at, in reach per unit along the tube (1.2 unless said). */
+  drape?: number;
   /** Which body vertices are under this tube, by the name of their first bone. */
   bones: string;
   /** More of them: vertices on these bones that stand above a joint (by dz heights), so a shirt's body takes in the shoulders. */
@@ -140,25 +142,6 @@ function tube(gname: string, piece: Piece, k: number, mat: number, prints: Print
     if (side && (re.test(name) || more.some((m) => m.re.test(name) && body.verts[i * STRIDE + 2] > m.z))) under.push(i);
   }
   const bv = body.verts;
-  const slab = Math.max(0.3, (0.8 * ax.L) / piece.rings);
-  // The body's reach from an axis point along a direction: the furthest vertex within the ring's slab and an angle of
-  // the direction, the angle widened until one is found.
-  const reach = (c: V3, tg: V3, d: V3, u: V3, v: V3, a: number): number => {
-    const windows = [Math.PI / piece.sides + 0.2, 0.7, 1.5, Math.PI];
-    for (const win of windows) {
-      let r = -1;
-      for (const i of under) {
-        const o = i * STRIDE, q: V3 = [bv[o] - c[0], bv[o + 1] - c[1], bv[o + 2] - c[2]];
-        if (Math.abs(dot(q, tg)) > slab) continue;
-        const qa = Math.atan2(-dot(q, u), dot(q, v));
-        let da = qa - a; da = Math.atan2(Math.sin(da), Math.cos(da));
-        if (Math.abs(da) > win) continue;
-        r = Math.max(r, dot(q, d));
-      }
-      if (r >= 0) return r;
-    }
-    return piece.offset * H * 2;
-  };
   const nearest = (p: V3): number => {
     let best = under[0] ?? 0, bd = Infinity;
     for (const i of under) { const o = i * STRIDE, dd = (bv[o] - p[0]) ** 2 + (bv[o + 1] - p[1]) ** 2 + (bv[o + 2] - p[2]) ** 2; if (dd < bd) { bd = dd; best = i; } }
@@ -166,32 +149,65 @@ function tube(gname: string, piece: Piece, k: number, mat: number, prints: Print
   };
   const [t0, t1] = piece.t, off = piece.offset * H;
   const N = piece.sides, R = piece.rings;
+  const spacing = (ax.L * Math.abs(t1 - t0)) / R, core = Math.max(0.15, 0.5 * spacing), wide = Math.max(0.6, 1.5 * spacing), drape = piece.drape ?? 1.2;
+  /*
+   * How far the body reaches from a ring's axis point, by sector round it: the furthest vertex in each sector, those
+   * near the ring's plane as they are and those further up or down the tube less by `drape` for each unit they are
+   * off it, so a ledge in the body below (the deltoid under a shirt's shoulder) is draped over at that slope rather
+   * than sat on, and a sparse mesh still has something in reach. One table a ring, read for every vertex on it.
+   */
+  const frame = (t: number): { c: V3; tg: V3; u: V3; v: V3 } => {
+    const c = ax.P(t), tg = ax.T(t);
+    let u = cross([0, 1, 0], tg); if (Math.hypot(...u) < 1e-4) u = [1, 0, 0]; u = unit(u);
+    return { c, tg, u, v: unit(cross(tg, u)) };
+  };
+  const table = (f: { c: V3; tg: V3; u: V3; v: V3 }): Float64Array => {
+    const sect = new Float64Array(N).fill(-1);
+    for (const i of under) {
+      const o = i * STRIDE, q: V3 = [bv[o] - f.c[0], bv[o + 1] - f.c[1], bv[o + 2] - f.c[2]];
+      const dz = Math.abs(dot(q, f.tg)); if (dz > wide) continue;
+      const qu = dot(q, f.u), qv = dot(q, f.v);
+      const eff = Math.hypot(qu, qv) - drape * Math.max(0, dz - core);
+      const sidx = ((Math.round((Math.atan2(-qu, qv) / (Math.PI * 2)) * N) % N) + N) % N;
+      if (eff > sect[sidx]) sect[sidx] = eff;
+    }
+    return sect;
+  };
+  const reach = (sect: Float64Array, j: number): number => {
+    for (const w of [1, 2, 4, Math.ceil(N / 2)]) {
+      let r = -1;
+      for (let s = j - w; s <= j + w; s++) r = Math.max(r, sect[((s % N) + N) % N]);
+      if (r >= 0) return r;
+    }
+    return off * 2;
+  };
   const pos: V3[] = [], dirs: V3[] = [], param: Array<{ a: number; t: number; th: number; r: number }> = [];
   // The rings down the tube, then a lip: the hem ring again, drawn in under the cloth, so the hem has a thickness and
   // the cloth's colour shows where the inside would.
-  for (let i = 0; i <= R + 1; i++) for (let j = 0; j < N; j++) {
-    const lip = i > R;
-    const a = (j / N) * Math.PI * 2, deg = (j / N) * 360;
-    const th = t1 + hemAt(piece.hem, deg), t = t0 + (th - t0) * (Math.min(i, R) / R) - (lip ? 0.015 : 0);
-    const c = ax.P(t), tg = ax.T(t);
-    let u = cross([0, 1, 0], tg); if (Math.hypot(...u) < 1e-4) u = [1, 0, 0]; u = unit(u);
-    const v = unit(cross(tg, u));
-    const d: V3 = [Math.cos(a) * v[0] - Math.sin(a) * u[0], Math.cos(a) * v[1] - Math.sin(a) * u[1], Math.cos(a) * v[2] - Math.sin(a) * u[2]];
-    let r = reach(c, tg, d, u, v, a) + off;
-    // The traced silhouette, where it stands wider than the body: an ellipse through the front view's width and the
-    // profile's depths (or the body's own depth at the front and back where there is no profile).
-    if (piece.front) {
-      const z = c[2] / H, w = along(piece.front, z) * H;
-      const fr = piece.profile ? along(piece.profile.front, z) * H : reach(c, tg, v, u, v, 0) + off;
-      const bk = piece.profile ? along(piece.profile.back, z) * H : reach(c, tg, [-v[0], -v[1], -v[2]], u, v, Math.PI) + off;
-      const dep = Math.cos(a) >= 0 ? fr : bk;
-      const sil = 1 / Math.sqrt((Math.sin(a) / Math.max(w, 1e-3)) ** 2 + (Math.cos(a) / Math.max(dep, 1e-3)) ** 2);
-      r = Math.max(r, sil);
+  for (let i = 0; i <= R + 1; i++) {
+    const lip = i > R, ti = t0 + (t1 - t0) * (Math.min(i, R) / R);
+    const sect = table(frame(ti));
+    for (let j = 0; j < N; j++) {
+      const a = (j / N) * Math.PI * 2, deg = (j / N) * 360;
+      const th = t1 + hemAt(piece.hem, deg), t = t0 + (th - t0) * (Math.min(i, R) / R) - (lip ? 0.015 : 0);
+      const { c, u, v } = frame(t);
+      const d: V3 = [Math.cos(a) * v[0] - Math.sin(a) * u[0], Math.cos(a) * v[1] - Math.sin(a) * u[1], Math.cos(a) * v[2] - Math.sin(a) * u[2]];
+      let r = reach(sect, j) + off;
+      // The traced silhouette, where it stands wider than the body: an ellipse through the front view's width and the
+      // profile's depths (or the body's own depth at the front and back where there is no profile).
+      if (piece.front) {
+        const z = c[2] / H, w = along(piece.front, z) * H;
+        const fr = piece.profile ? along(piece.profile.front, z) * H : reach(sect, 0) + off;
+        const bk = piece.profile ? along(piece.profile.back, z) * H : reach(sect, N >> 1) + off;
+        const dep = Math.cos(a) >= 0 ? fr : bk;
+        const sil = 1 / Math.sqrt((Math.sin(a) / Math.max(w, 1e-3)) ** 2 + (Math.cos(a) / Math.max(dep, 1e-3)) ** 2);
+        r = Math.max(r, sil);
+      }
+      if (lip) r = Math.max(r - 0.5 * off, 0.05);
+      pos.push([c[0] + d[0] * r, c[1] + d[1] * r, c[2] + d[2] * r]);
+      dirs.push(lip ? [-d[0], -d[1], -d[2]] : d);
+      param.push({ a: deg, t, th, r });
     }
-    if (lip) r = Math.max(r - 0.5 * off, 0.05);
-    pos.push([c[0] + d[0] * r, c[1] + d[1] * r, c[2] + d[2] * r]);
-    dirs.push(lip ? [-d[0], -d[1], -d[2]] : d);
-    param.push({ a: deg, t, th, r });
   }
   const tris: number[] = [];
   for (let i = 0; i <= R; i++) for (let j = 0; j < N; j++) {

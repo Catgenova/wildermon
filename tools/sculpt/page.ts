@@ -7,7 +7,7 @@
  * views (wireframe, normals, materials, bones, edges), with the bake's
  * numbers and the cost of a crowd.
  */
-import { drawFigure, type FigurePose } from '../../src/render/figure';
+import { drawFigure, sculptedFigures, type FigurePose } from '../../src/render/figure';
 import type { Look } from '../../src/game/look';
 import { bandOf, CELL } from '../../src/sculpt/bake';
 import { built, bakedAt, drawSculpt, heightOf, humanProportions, levelView, sculptScene, FIVE, SEVEN, type Debug, type Kind, type Wear } from '../../src/sculpt/index';
@@ -96,6 +96,19 @@ function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?:
     c.g.fillText(String(e).slice(0, 80), 2, 12);
     console.log('ERR', String(e), (e as Error).stack);
   }
+}
+
+/** Where a drawing's lowest pixel and the middle of its width fall in a cell, in the cell's device pixels. */
+function footprint(c: Cell): [number, number] {
+  const W = c.cv.width, Hh = c.cv.height, d = c.g.getImageData(0, 0, W, Hh).data;
+  const grass = [0x7d, 0x9b, 0x5e];
+  let bottom = 0, left = W, right = 0;
+  for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) {
+    const o = (y * W + x) * 4;
+    if (Math.abs(d[o] - grass[0]) + Math.abs(d[o + 1] - grass[1]) + Math.abs(d[o + 2] - grass[2]) < 24) continue;
+    bottom = Math.max(bottom, y); left = Math.min(left, x); right = Math.max(right, x);
+  }
+  return [bottom, (left + right) / 2];
 }
 
 const img = (src: string, h: number): Promise<HTMLCanvasElement> => new Promise((res) => {
@@ -370,6 +383,61 @@ const api = {
       cells.push({ cv: c.cv, label: `${who} f${f}` });
     }
     row(cells);
+  },
+  /**
+   * Placement against the flat figure: at each zoom and facing, the figure, the sculpt, and the two laid over each other
+   * (the sculpt half seen), all with their feet at the same point; and the numbers -- where each one's lowest pixel and
+   * the middle of its width fall, and the difference between the two, in screen pixels.
+   */
+  overlay(who: Who = 'male', zooms: number[] = [1, 2, 4]): Record<string, number[]> {
+    const out: Record<string, number[]> = {};
+    for (const zoom of zooms) {
+      heading(`${who} placement against the flat figure at zoom ${zoom}: figure | sculpt | both (sculpt half seen), feet at one point; dy = sculpt's lowest pixel below the figure's, dx = its middle right of the figure's, screen px`);
+      const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
+      for (const f of [0, 1, 2, 3, 4, 5, 6, 7]) {
+        const a = cell(zoom), b = cell(zoom), c = cell(zoom);
+        const pose = poseOf(f, 'idle:0');
+        drawFigure(a.g, a.fx, a.fy, zoom, pose);
+        drawOne(b, zoom, who, pose);
+        drawFigure(c.g, c.fx, c.fy, zoom, pose);
+        c.g.globalAlpha = 0.55;
+        drawOne(c, zoom, who, pose);
+        c.g.globalAlpha = 1;
+        const [ab, ax] = footprint(a), [bb, bx] = footprint(b);
+        const dy = +((bb - ab) / DPR).toFixed(1), dx = +((bx - ax) / DPR).toFixed(1);
+        out[`z${zoom} f${f}`] = [dy, dx];
+        cells.push({ cv: a.cv, label: `f${f} figure` }, { cv: b.cv, label: `f${f} sculpt` }, { cv: c.cv, label: `f${f} both dy ${dy} dx ${dx}` });
+      }
+      row(cells);
+    }
+    return out;
+  },
+  /**
+   * The island's own path: the figure drawn by `drawFigure` with the "Sculpted figures" switch on, with ids, so it goes
+   * through the kept pictures (stills, the idle loop, the stride), and the sculpt lands once its bake is made in idle time.
+   * Drawn `frames` times with a wait between, as the island would; the last frame is what is shown.
+   */
+  async live(who: Who = 'male', zoom = 2, frames = 12): Promise<{ memory: unknown; sculpted: boolean }> {
+    const look = lookOf(who);
+    sculptedFigures(true);
+    const facings = [0, 1, 2, 3, 4, 5, 6, 7];
+    const what = ['idle:0', 'walk:0.3', 'idle:0.5', 'walk:0.7'];
+    let cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
+    for (let n = 0; n < frames; n++) {
+      cells = [];
+      for (const w of what) for (const f of facings) {
+        const c = cell(zoom);
+        const p = { ...poseOf(f, w), look, id: `live-${w}-${f}`, phase: w.startsWith('walk') ? Number(w.split(':')[1]) * Math.PI * 2 + n * 0.4 : n * 0.3 };
+        drawFigure(c.g, c.fx, c.fy, zoom, p);
+        cells.push({ cv: c.cv, label: `${w} f${f}` });
+      }
+      await new Promise((r) => setTimeout(r, 60));
+    }
+    const m = await import('../../src/sculpt/sculpted');
+    heading(`${who} through the island's own path (drawFigure, switch on, kept pictures) at zoom ${zoom} after ${frames} frames: ${JSON.stringify(m.sculptMemory())}`);
+    row(cells.slice(0, 16));
+    row(cells.slice(16));
+    return { memory: m.sculptMemory(), sculpted: m.sculptMemory().bakes > 0 };
   },
   /** Eight facings of one body in one pose. */
   facings(who: Who, what: string, zoom: number, o: { night?: number; debug?: Debug } = {}): void {

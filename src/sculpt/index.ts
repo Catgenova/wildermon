@@ -34,7 +34,7 @@ export type Kind = 'human' | 'sdf';
  */
 export type Wear = 'base' | 'shorts' | 'prints';
 
-interface Built { kind: Kind; fem: number; wear: Wear; model: Model | null; materials: Material[]; rest: Bones; order: string[]; chains: Chain[]; bakes: Map<Band, Baked> }
+export interface Built { kind: Kind; fem: number; wear: Wear; model: Model | null; materials: Material[]; rest: Bones; order: string[]; chains: Chain[]; bakes: Map<Band, Baked> }
 const BUILT = new Map<string, Built>();
 
 const lookKey = (l: Look): string => `${l.gender}|${l.skin}|${l.hair}|${l.hairColour}|${l.eyes}|${l.beard}`;
@@ -56,6 +56,12 @@ export function built(P: Proportions, look: Look, wear: Wear = 'base', kind: Kin
   b = { kind, fem: femOf(look), wear, model, materials: model ? model.materials : bodyMaterials(look), rest: restBones, order: Object.keys(restBones), chains, bakes: new Map() };
   BUILT.set(key, b);
   return b;
+}
+
+/** A built body let go, with its bakes: the next ask builds it again. */
+export function forgetBuilt(b: Built): void {
+  for (const [k, v] of BUILT) if (v === b) BUILT.delete(k);
+  b.bakes.clear();
 }
 
 /** The bake of a built body at a band, made on first use. */
@@ -93,7 +99,7 @@ export function levelView(turn: number): View {
   return { ex: [(R[0] - R[1]) * k, 0], ey: [(F[0] - F[1]) * k, 0], T: [T[0] / tl, T[1] / tl, 0], L: [L[0] / ll, L[1] / ll, L[2] / ll], H: [T[0] / tl, T[1] / tl] };
 }
 
-export interface SceneOpts { wear?: Wear; stance?: 'ref'; view?: View; kind?: Kind }
+export interface SceneOpts { wear?: Wear; stance?: 'ref'; view?: View; kind?: Kind; /** The bake to draw from, made already, instead of one made now. */ bake?: Baked }
 
 /** A pose as everything a draw needs, at `zoom`, at proportions `P` (the look's own unless said). */
 export function sculptScene(pose: FigurePose, zoom: number, P?: Proportions, now = performance.now() / 1000, band = bandOf(zoom), o: SceneOpts = {}): SculptScene {
@@ -108,7 +114,7 @@ export function sculptScene(pose: FigurePose, zoom: number, P?: Proportions, now
   if (rig.blink) x.blink = 1;
   const posed = bonesOf(rig, P, b.chains, x);
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
-  return { baked: bakedAt(b, band), bones: skinMatrices(posed, b.rest, b.order), materials: b.materials, view: o.view ?? viewOf(facing), facing, band, P, blink: x.blink };
+  return { baked: o.bake ?? bakedAt(b, band), bones: skinMatrices(posed, b.rest, b.order), materials: b.materials, view: o.view ?? viewOf(facing), facing, band, P, blink: x.blink };
 }
 
 /** A body drawn with its feet at (sx, sy): the sculpt by the GPU, or false where there is no GPU to draw it (the caller draws the 2D figure). */

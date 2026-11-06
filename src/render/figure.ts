@@ -11304,6 +11304,28 @@ export function sculptRig(pose: FigurePose): { rig: Rig; rest: Rig } {
  */
 const gearLod = (zoom: number): number => (zoom < 1.5 ? 0.5 : zoom < STILL_BELOW ? 0.75 : 1);
 
+/**
+ * The sculpted bodies (`src/sculpt/sculpted.ts`), behind the "Sculpted figures" setting: loaded as a chunk of their own
+ * the first time it is on, and from then drawn in place of the flat figure wherever a body is drawn (`drawLive`), once a
+ * look's bake has landed. Off, nothing here is loaded and the figure is drawn as it always was.
+ */
+const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number } =
+  { on: false, flips: 0, loading: false, draw: null, gen: () => 0 };
+export function sculptedFigures(on: boolean): void {
+  if (on === SCULPT.on) return;
+  SCULPT.on = on;
+  SCULPT.flips++;
+  if (on && !SCULPT.draw && !SCULPT.loading) {
+    SCULPT.loading = true;
+    import('../sculpt/sculpted').then((m) => { SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.flips++; }).catch(() => { SCULPT.loading = false; });
+  }
+}
+/** What of the sculpted bodies a kept picture depends on: whether they are on, and which bakes have landed. */
+const sculptKey = (): string => (SCULPT.on ? `s${SCULPT.flips}.${SCULPT.gen()}` : '');
+/** The sculpted body in the figure's place, where it is on, can be, and is baked. */
+const drawSculpted = (ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose): boolean =>
+  SCULPT.on && !!SCULPT.draw && !pose.swimming && !pose.driving && !pose.seat && SCULPT.draw(ctx, sx, sy, zoom, pose);
+
 export function drawFigure(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, opts: { ink?: number } = {}): void {
   const veil = pose.veil;
   if (veil && (veil.tint > 0.004 || veil.fade > 0.004)) {
@@ -12173,6 +12195,7 @@ function ringSets(pose: FigurePose, now: number): RingSet[] {
 }
 
 function drawLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, ink: number, now: number): void {
+  if (drawSculpted(ctx, sx, sy, zoom, { ...pose, facing })) return;
   const look = pose.look ?? DEFAULT_LOOK;
   const b = skeleton(kit.fr, r);
   const view = viewOf(facing);
@@ -12323,7 +12346,7 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   const dev = was !== undefined && Math.abs(seen - was) < 0.05 * was ? was : Math.max(1, Math.round(seen * 16)) / 16;
   const look = pose.look ?? DEFAULT_LOOK;
   const key = [look.gender, look.skin, look.hair, look.hairColour, look.eyes, look.beard, look.shirt, look.trousers, pose.tunic, pose.trousers,
-    Math.round(facing * 100), zoom.toFixed(3), dev, doing(pose), pose.emote ?? '', gearKey(pose.gear)].join('|');
+    Math.round(facing * 100), zoom.toFixed(3), dev, doing(pose), pose.emote ?? '', gearKey(pose.gear), sculptKey()].join('|');
   if (stride(ctx, sx, sy, zoom, pose, kit, facing, changing, ink, key, dev)) return;
   let st = stills.get(id);
   if (now - lately.since > 0.25 || now < lately.since) {

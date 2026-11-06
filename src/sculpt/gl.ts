@@ -270,6 +270,14 @@ function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
   return bf;
 }
 
+/** A bake's buffers on the graphics chip let go, for a bake that is going. */
+export function forgetBuffers(b: Baked): void {
+  const bf = BUFFERS.get(b);
+  if (!bf || !CTX) return;
+  CTX.gl.deleteBuffer(bf.vbo); CTX.gl.deleteBuffer(bf.ibo); CTX.gl.deleteBuffer(bf.lines);
+  BUFFERS.delete(b);
+}
+
 const hexOf = (h: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as [number, number, number];
 const MATS = new WeakMap<Material[], Float32Array>();
 function matsOf(ms: Material[]): Float32Array {

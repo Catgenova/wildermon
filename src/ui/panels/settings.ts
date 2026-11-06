@@ -444,6 +444,13 @@ export class SettingsPanel {
         game.graphicsChanged?.();
       },
     );
+    add(
+      'Sculpted figures',
+      'Bodies drawn from the sculpted base by WebGL2 in place of the flat figure. A new look: the flat figure until its '
+        + 'bake lands, made in idle time off the frame. Not yet sculpted: held gear, swimming, seats, veils. No WebGL2: the flat figure.',
+      () => game.settings.sculpted,
+      (v) => (game.settings.sculpted = v),
+    );
     choose<number>(
       'Frame rate limit',
       `Max frames per second. No limit: one frame per screen refresh, even above ${FRAME_CAPS[1]} Hz (more cost, same look).`,
