@@ -16,12 +16,15 @@ import { eyeColour, hairColour, skinColour, type Look } from '../../game/look';
 import { place } from '../../render/figure';
 import { at, along, type Bones, type Proportions } from '../rig';
 import {
-  BAND_CLOSE, BAND_GAME, band, capsule, clip, curveStamp, disc, ellipsoid, modelOf, roundBox, sphere, stamped, sub, unit, add, mul, tube,
+  BAND_CLOSE, BAND_GAME, band, capsule, clip, clipBy, curveStamp, disc, ellipsoid, firstOf, modelOf, roundBox, sphere, stamped, sub, unit, add, torus, tube, wedge,
   type Material, type Model, type Prim, type Stamp, type V3,
 } from '../sdf';
 
 /** The materials, by index. */
-export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14 } as const;
+export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16 } as const;
+
+/** What the body wears: the game's undershirt and trousers, or the reference sheet's shorts over bare skin. */
+export type Wear = 'base' | 'shorts';
 
 const hex = (h: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
 const toHex = (c: [number, number, number]): string => `#${c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
@@ -30,13 +33,16 @@ const mixHex = (a: string, b: string, t: number): string => { const A = hex(a), 
 export function bodyMaterials(look: Look): Material[] {
   const skin = skinColour(look), hair = hairColour(look), eye = eyeColour(look);
   const out: Material[] = [];
-  out[M.skin] = { colour: skin, skin: true };
+  // Skin a touch warmer than the swatch, the pastel of the kit.
+  out[M.skin] = { colour: mixHex(skin, '#f2b48c', 0.15), skin: true };
   out[M.hair] = { colour: hair };
   out[M.white] = { colour: mixHex(skin, '#f8f4ec', 0.7) };
   out[M.iris] = { colour: mixHex(eye, '#2a1a18', 0.2) };
   out[M.pupil] = { colour: mixHex(eye, '#1a1016', 0.7) };
   out[M.glint] = { colour: '#fffaf0' };
-  out[M.brow] = { colour: mixHex(hair, '#16100e', 0.3) };
+  out[M.brow] = { colour: mixHex(hair, '#16100e', 0.45) };
+  out[M.lash] = { colour: mixHex(hair, '#2a1a24', 0.7) };
+  out[M.shorts] = { colour: '#454a54' };
   out[M.lip] = { colour: mixHex(skin, '#a4484a', 0.42) };
   // The undershirt a pastel cream, the trousers a dusty slate-teal, the shoes caramel: the kit's pastel base, no splash yet.
   out[M.shirt] = { colour: '#ecdcb8' };
@@ -49,9 +55,14 @@ export function bodyMaterials(look: Look): Material[] {
   return out;
 }
 
-export function bodyModel(P: Proportions, rest: Bones, look: Look): Model {
+export function bodyModel(P: Proportions, rest: Bones, look: Look, wear: Wear = 'base'): Model {
   const prims: Prim[] = [];
   const H = P.head;
+  const bare = wear === 'shorts';
+  // How far toward a woman's masses: the pectorals round into breasts, the lats, deltoids and trapezius lighten, the hips round.
+  const f = P.fem, woman = f >= 0.5;
+  /** A clothed material, or skin where the body is bare. */
+  const cm = (m: number): number => (bare && (m === M.shirt || m === M.trousers || m === M.shoe || m === M.sole || m === M.trim) ? M.skin : m);
   const headJ = at(rest, 'head');
   const hz = (f: number): number => headJ[2] + H * f;
   const hy = (f: number): number => headJ[1] + P.headD * f;
@@ -63,111 +74,117 @@ export function bodyModel(P: Proportions, rest: Bones, look: Look): Model {
   // Cranium and face: two eggs, the lower narrower, blended into one head; the chin on the jaw so the mouth can open.
   prims.push(ellipsoid([0, hy(-0.05), hz(0.6)], [P.headW, P.headD * 0.98, H * 0.44], { m: M.skin, bone: 'head', name: 'cranium' }));
   const face = ellipsoid([0, hy(0.12), hz(0.34)], [P.headW * 0.86, P.headD * 0.82, H * 0.36], { m: M.skin, bone: 'head', blend: 0.45, name: 'face' });
-  // The mouth: the line between the lips, stamped on the face so it reads as one dark line at any zoom.
+  // The mouth: a closed smile, one dark line curving up at its corners, stamped on the face; a little lower-lip volume under it.
   const mz = hz(0.27), my = hy(0.9);
-  const mouthPts: V3[] = [-1, -0.5, 0, 0.5, 1].map((u) => [u * H * 0.17, my - Math.abs(u) * 0.14, mz + u * u * H * 0.04] as V3);
-  prims.push(stamped(face, { at: curveStamp(mouthPts, H * 0.02, M.mouth, [0, 1, 0]), band: BAND_GAME }));
+  const mouthPts: V3[] = [-1, -0.6, -0.2, 0.2, 0.6, 1].map((u) => [u * H * 0.155, my - u * u * 0.16, mz + u * u * H * 0.05] as V3);
+  prims.push(stamped(face, { at: curveStamp(mouthPts, H * 0.022, M.mouth, [0, 1, 0]), band: BAND_GAME }));
+  prims.push(capsule([-H * 0.1, my - 0.03, mz - H * 0.05], [H * 0.1, my - 0.03, mz - H * 0.05], H * 0.032, H * 0.032, { m: M.lip, bone: 'jaw', blend: 0.1, band: BAND_GAME, name: 'lower lip' }));
   prims.push(ellipsoid([0, hy(0.22), hz(0.1)], [P.headW * 0.5, P.headD * 0.5, H * 0.14], { m: M.skin, bone: 'jaw', blend: 0.3, name: 'chin' }));
   // Cheek planes, so the shadow shape has a plane to sit on.
-  for (const s of [-1, 1]) prims.push(ellipsoid([s * P.headW * 0.58, hy(0.5), hz(0.42)], [H * 0.17, H * 0.17, H * 0.15], { m: M.skin, bone: 'head', blend: 0.35, band: BAND_GAME, name: 'cheek' }));
-  // The brow ridge across the eyes, and the nose: a bridge from between the brows to a round tip with nostrils.
+  for (const s of [-1, 1]) prims.push(ellipsoid([s * P.headW * 0.6, hy(0.45), hz(0.4)], [H * 0.2, H * 0.18, H * 0.17], { m: M.skin, bone: 'head', blend: 0.3, band: BAND_GAME, name: 'cheek' }));
+  // The brow ridge across the eyes, and the nose: a bridge from between the brows to a soft round tip.
   prims.push(capsule([-P.headW * 0.55, hy(0.7), hz(0.68)], [P.headW * 0.55, hy(0.7), hz(0.68)], H * 0.09, H * 0.09, { m: M.skin, bone: 'head', blend: 0.3, band: BAND_GAME, name: 'brow ridge' }));
-  prims.push(capsule([0, hy(0.86), hz(0.6)], [0, hy(1.03), hz(0.42)], H * 0.04, H * 0.07, { m: M.skin, bone: 'head', blend: 0.12, band: BAND_GAME, name: 'nose' }));
-  for (const s of [-1, 1]) prims.push(sphere([s * H * 0.06, hy(0.98), hz(0.4)], H * 0.045, { m: M.skin, bone: 'head', blend: 0.08, band: BAND_CLOSE, name: 'nostril' }));
+  prims.push(capsule([0, hy(0.86), hz(0.6)], [0, hy(1.0), hz(0.44)], H * 0.04, H * 0.05, { m: M.skin, bone: 'head', blend: 0.14, band: BAND_GAME, name: 'nose' }));
+  prims.push(sphere([0, hy(1.0), hz(0.41)], H * 0.065, { m: M.skin, bone: 'head', blend: 0.2, band: BAND_GAME, name: 'nose tip' }));
   // Ears: flattened eggs on the sides, a little back.
   for (const s of [-1, 1]) prims.push(ellipsoid([s * P.headW * 0.97, hy(-0.12), hz(0.5)], [H * 0.05, H * 0.1, H * 0.13], { m: M.skin, bone: 'head', blend: 0.08, band: BAND_GAME, name: 'ear' }));
-  // Eyes: a white ball with the iris (and close up the pupil and a glint) stamped on its front; a lid over it that blinks, with a
-  // dark lash line along its rim; a brow above.
+  // Eyes: an almond -- a white egg cut by a curved upper lid and a curved lower one, the upper lid line a dark stamp thickening
+  // toward the outer corner -- with a large dark iris, a pupil and one glint; a thick tapered brow on the ridge over it.
   for (let k = 0; k < 2; k++) {
     const s = k ? 1 : -1;
     const e = at(rest, `eye${k}`);
-    const r = H * 0.12;
+    const ew = H * 0.15, hUp = H * 0.082, hLo = H * 0.06;
+    const tOf = (x: number): number => ((x - e[0]) * s) / ew;
+    const zHi = (x: number): number => { const t = tOf(x); return e[2] + hUp * Math.max(0, 1 - t * t) * (1 + 0.12 * t); };
+    const zLo = (x: number): number => { const t = tOf(x); return e[2] - hLo * Math.max(0, 1 - t * t); };
+    const white = ellipsoid([e[0], e[1] - H * 0.03, e[2]], [ew * 1.04, H * 0.085, H * 0.11], { m: M.white, bone: `eye${k}`, band: BAND_GAME, name: 'eye' });
+    const cut = clipBy(white, (p) => Math.max(p[2] - zHi(p[0]), zLo(p[0]) - p[2], (e[1] - p[1]) * 0.5));
     const fwd: V3 = unit([s * 0.1, 1, 0.05]);
-    const irisC = add(e, mul(fwd, r));
-    const eye = sphere(e, r, { m: M.white, bone: `eye${k}`, band: BAND_GAME, name: 'eye' });
-    const glintC = add(irisC, [-s * r * 0.22, 0, r * 0.26]);
-    prims.push(stamped(eye,
-      { at: disc(glintC, r * 0.14, M.glint, fwd), band: BAND_CLOSE },
-      { at: disc(irisC, r * 0.26, M.pupil, fwd), band: BAND_CLOSE },
-      { at: disc(irisC, r * 0.6, M.iris, fwd), band: BAND_GAME },
+    const irisC: V3 = [e[0] + s * ew * 0.04, e[1] + H * 0.075, e[2] - H * 0.004];
+    const ir = H * 0.052;
+    const lash: Stamp = (p) => { const t = tOf(p[0]); if (Math.abs(t) > 1.05) return undefined; const w = H * (0.014 + 0.024 * Math.max(0, Math.min(1, (t + 1) / 2))); return { m: M.lash, d: w - (zHi(p[0]) - p[2]) }; };
+    prims.push(stamped(cut,
+      { at: lash, band: BAND_GAME },
+      { at: disc([irisC[0] - s * ir * 0.3, irisC[1], irisC[2] + ir * 0.35], ir * 0.26, M.glint, fwd), band: BAND_CLOSE },
+      { at: disc(irisC, ir * 0.45, M.pupil, fwd), band: BAND_CLOSE },
+      { at: disc(irisC, ir, M.iris, fwd), band: BAND_GAME },
     ));
-    const lid = sphere(e, r * 1.1, { m: M.skin, bone: `lid${k}`, band: BAND_GAME, name: 'lid' });
-    prims.push(clip(lid, [[e[0], e[1], e[2] - r * 0.05], [0, 0, -1]], [e, [0, -1, 0]]));
-    prims.push(clip(sphere(e, r * 1.12, { m: M.brow, bone: `lid${k}`, band: BAND_GAME, name: 'lash' }), [[e[0], e[1], e[2] - r * 0.05], [0, 0, -1]], [[e[0], e[1], e[2] + r * 0.14], [0, 0, 1]], [e, [0, -1, 0]]));
     const b = at(rest, `brow${k}`);
-    const bw = H * 0.19;
-    prims.push(capsule([b[0] - s * bw, b[1] + 0.04, b[2] - H * 0.02], [b[0] + s * bw * 0.85, b[1] - 0.02, b[2] + H * 0.035], H * 0.045, H * 0.03, { m: M.brow, bone: `brow${k}`, band: BAND_GAME, name: 'brow' }));
+    prims.push(tube([[b[0] - s * H * 0.09, b[1] + 0.05, b[2] - H * 0.02], [b[0] + s * H * 0.06, b[1] + 0.02, b[2] + H * 0.03], [b[0] + s * H * 0.21, b[1] - 0.06, b[2] - H * 0.005]], (t) => H * (0.05 - 0.024 * t), { m: M.brow, bone: `brow${k}`, blend: 0.04, band: BAND_GAME, name: 'brow' }, 6));
   }
-  // Lips: the upper a thin arc on the head, the lower fuller on the jaw.
-  const lipPts: V3[] = [-1, 0, 1].map((u) => [u * H * 0.15, my - Math.abs(u) * 0.1 - 0.01, mz + H * 0.035 + u * u * H * 0.03] as V3);
-  prims.push(tube(lipPts, () => H * 0.028, { m: M.lip, bone: 'head', blend: 0.05, band: BAND_GAME, name: 'upper lip' }, 6));
-  prims.push(capsule([-H * 0.12, my - 0.03, mz - H * 0.035], [H * 0.12, my - 0.03, mz - H * 0.035], H * 0.034, H * 0.034, { m: M.lip, bone: 'jaw', blend: 0.05, band: BAND_GAME, name: 'lower lip' }));
-  // Hair: a slight volume over the skull, cut at the hairline in front and down from the temples to the nape behind, and locks over it:
-  // a swept fringe, locks over the ears, locks down the nape on the chain. Each lock its own shape, so each has its own shadow.
+  // Hair: a slight volume over the skull, cut at the hairline in front and down from the temples to the nape behind, and chunky
+  // wedges over it -- three big ones swept to the body's left over the brow, a mass over the crown, a mass over each ear, a mass
+  // down the nape on the chain -- each a ribbon with one shadow shape, and a few thin strands as accents.
   const hairline: V3 = [0, hy(0.6), hz(0.82)];
   const volume = ellipsoid([0, hy(-0.08), hz(0.7)], [P.headW * 1.04, P.headD * 1.02, H * 0.42], { m: M.hair, bone: 'head', name: 'hair volume' });
   prims.push(clip(volume, [hairline, unit([0, 0.6, -1])], [[0, headJ[1], hz(0.56)], unit([0, 0.3, -1])]));
-  const lock = (pts: V3[], r0: number, r1: number, bone = 'head', band = BAND_GAME, bl = 0.1): Prim =>
-    tube(pts, (t) => r0 + (r1 - r0) * t, { m: M.hair, bone, blend: bl, band, name: 'lock' }, 8);
-  const crown: V3 = [P.headW * 0.1, hy(-0.05), hz(1.06)];
-  // The fringe: four locks off the crown sweeping to the body's left over the brow, the longest reaching the temple.
-  prims.push(lock([crown, [-P.headW * 0.2, hy(0.55), hz(0.98)], [-P.headW * 0.66, hy(0.68), hz(0.74)]], H * 0.11, H * 0.05));
-  prims.push(lock([[P.headW * 0.25, hy(0.2), hz(1.03)], [-P.headW * 0.05, hy(0.78), hz(0.9)], [-P.headW * 0.3, hy(0.9), hz(0.76)]], H * 0.1, H * 0.045));
-  prims.push(lock([[P.headW * 0.45, hy(0.15), hz(1.0)], [P.headW * 0.3, hy(0.75), hz(0.9)], [P.headW * 0.12, hy(0.92), hz(0.78)]], H * 0.1, H * 0.045));
-  prims.push(lock([[P.headW * 0.62, hy(0.05), hz(0.94)], [P.headW * 0.75, hy(0.5), hz(0.84)], [P.headW * 0.92, hy(0.55), hz(0.7)]], H * 0.095, H * 0.045));
-  // A cowlick up off the crown, and a lock lying back over it.
-  prims.push(lock([[P.headW * 0.05, hy(-0.3), hz(1.0)], [P.headW * 0.2, hy(-0.25), hz(1.14)], [P.headW * 0.32, hy(-0.15), hz(1.2)]], H * 0.07, H * 0.025));
-  prims.push(lock([[-P.headW * 0.3, hy(0.1), hz(1.04)], [-P.headW * 0.55, hy(-0.3), hz(1.0)], [-P.headW * 0.75, hy(-0.6), hz(0.84)]], H * 0.1, H * 0.05));
-  // Side locks over the ears, ending at the ear's top; and the far side's.
-  for (const s of [-1, 1]) {
-    prims.push(lock([[s * P.headW * 0.75, hy(0.15), hz(0.92)], [s * P.headW * 0.98, hy(0.0), hz(0.74)], [s * P.headW * 1.02, hy(-0.15), hz(0.6)]], H * 0.09, H * 0.045));
-    prims.push(lock([[s * P.headW * 0.6, hy(-0.4), hz(0.95)], [s * P.headW * 0.9, hy(-0.6), hz(0.74)], [s * P.headW * 0.85, hy(-0.72), hz(0.52)]], H * 0.1, H * 0.05));
-  }
-  // The nape: three locks on the hair chain, which swings.
+  const W = (pts: V3[], w0: number, w1: number, h0: number, h1: number, up: V3, bone = 'head', band = BAND_GAME, bl = 0.12): Prim =>
+    wedge(pts, (t) => H * (w0 + (w1 - w0) * t), (t) => H * (h0 + (h1 - h0) * t), up, { m: M.hair, bone, blend: bl, band, name: 'wedge' }, 8);
+  // The fringe ends over the brow, clear of the eyes; the longest wedge reaches the left temple.
+  prims.push(W([[P.headW * 0.3, hy(0.1), hz(1.03)], [-P.headW * 0.12, hy(0.6), hz(0.97)], [-P.headW * 0.6, hy(0.66), hz(0.8)]], 0.3, 0.12, 0.11, 0.04, [0, 0.6, 1]));
+  prims.push(W([[P.headW * 0.55, hy(0.0), hz(0.99)], [P.headW * 0.25, hy(0.6), hz(0.93)], [-P.headW * 0.08, hy(0.84), hz(0.82)]], 0.28, 0.12, 0.1, 0.04, [0, 0.6, 1]));
+  prims.push(W([[P.headW * 0.72, hy(-0.1), hz(0.93)], [P.headW * 0.72, hy(0.42), hz(0.87)], [P.headW * 0.68, hy(0.7), hz(0.79)]], 0.26, 0.11, 0.1, 0.04, [0.4, 0.5, 1]));
+  prims.push(W([[-P.headW * 0.45, hy(0.25), hz(1.0)], [0, hy(-0.3), hz(1.08)], [P.headW * 0.45, hy(-0.65), hz(0.92)]], 0.36, 0.3, 0.11, 0.07, [0, 0, 1]));
+  prims.push(W([[P.headW * 0.1, hy(-0.3), hz(1.0)], [P.headW * 0.22, hy(-0.22), hz(1.14)], [P.headW * 0.34, hy(-0.1), hz(1.2)]], 0.12, 0.04, 0.07, 0.025, [0, 1, 0]));
+  // The side masses end at the top of the ear; the nape mass is short, on the chain.
+  for (const s of [-1, 1]) prims.push(W([[s * P.headW * 0.7, hy(0.25), hz(0.94)], [s * P.headW * 0.98, hy(-0.05), hz(0.78)], [s * P.headW * 0.96, hy(-0.3), hz(0.64)]], 0.26, 0.14, 0.09, 0.05, [s, 0, 0.3]));
   const h0 = at(rest, 'hair0'), h1 = at(rest, 'hair1');
-  for (const s of [-1, 0, 1]) {
-    const a: V3 = [h0[0] + s * H * 0.22, h0[1] + 0.1, h0[2] + H * 0.15], b: V3 = [h1[0] + s * H * 0.2, h1[1] - 0.05, h1[2] + H * 0.02], c: V3 = [h1[0] + s * H * 0.16, h1[1] - 0.12, h1[2] - H * 0.14];
-    prims.push(lock([a, b, c], H * 0.1, H * 0.04, 'hair0', 0 as 0, 0.1));
-    void c;
-  }
-  prims.push(lock([[h1[0], h1[1] - 0.02, h1[2] + H * 0.05], [h1[0] - H * 0.05, h1[1] - 0.1, h1[2] - H * 0.12], [h1[0] - H * 0.1, h1[1] - 0.14, h1[2] - H * 0.22]], H * 0.09, H * 0.035, 'hair1'));
+  prims.push(W([[h0[0], h0[1] + 0.1, h0[2] + H * 0.2], [h1[0], h1[1] - 0.02, h1[2] + H * 0.1], [h1[0], h1[1] - 0.08, h1[2] - H * 0.04]], 0.46, 0.28, 0.12, 0.07, [0, -1, 0], 'hair0', 0 as 0));
+  prims.push(W([[h1[0] + H * 0.12, h1[1] - 0.02, h1[2] + H * 0.04], [h1[0] + H * 0.08, h1[1] - 0.08, h1[2] - H * 0.06], [h1[0], h1[1] - 0.12, h1[2] - H * 0.14]], 0.18, 0.09, 0.07, 0.035, [0, -1, 0], 'hair1'));
   // Fine strands close up.
-  prims.push(lock([[-P.headW * 0.35, hy(0.82), hz(0.78)], [-P.headW * 0.48, hy(0.88), hz(0.66)]], H * 0.03, H * 0.012, 'head', BAND_CLOSE));
-  prims.push(lock([[P.headW * 0.5, hy(0.74), hz(0.78)], [P.headW * 0.6, hy(0.76), hz(0.64)]], H * 0.03, H * 0.012, 'head', BAND_CLOSE));
+  const strand = (pts: V3[], r0: number, r1: number): Prim => tube(pts, (t) => r0 + (r1 - r0) * t, { m: M.hair, bone: 'head', blend: 0.06, band: BAND_CLOSE, name: 'strand' }, 6);
+  prims.push(strand([[-P.headW * 0.35, hy(0.82), hz(0.78)], [-P.headW * 0.5, hy(0.86), hz(0.64)]], H * 0.03, H * 0.012));
+  prims.push(strand([[P.headW * 0.45, hy(0.76), hz(0.78)], [P.headW * 0.56, hy(0.78), hz(0.64)]], H * 0.03, H * 0.012));
+  prims.push(strand([[-P.headW * 0.05, hy(0.9), hz(0.8)], [-P.headW * 0.12, hy(0.95), hz(0.68)]], H * 0.028, H * 0.01));
 
   /* ---- neck and torso ---------------------------------------------------------------- */
   const neckJ = at(rest, 'neck'), chestJ = at(rest, 'chest'), spA = at(rest, 'spineA'), pelvisJ = at(rest, 'pelvis');
   prims.push(capsule([neckJ[0], neckJ[1] + 0.05, neckJ[2] - 0.3], [headJ[0], headJ[1] + 0.1, headJ[2] + H * 0.12], P.r.neck, P.r.neck * 0.92, { m: M.skin, bone: 'neck', bone2: 'head', split: { from: neckJ, axis: [0, 0, 1], span: P.headJ + 0.2 }, blend: 0.3, name: 'neck' }));
   const waistZ = spA[2] + 0.2;
-  const shirtAbove: Stamp = band(waistZ, 99, M.shirt);
-  const trousersBelow: Stamp = band(-99, waistZ, M.trousers);
-  // The chest: a broad egg, its top at the collarbones, deeper at the back where the shoulder blades are.
-  const chest = ellipsoid([0, chestJ[1] + 0.05, chestJ[2] + P.armAt * 0.35], [P.r.chest, P.r.chest * 0.68, P.armAt * 0.9], { m: M.shirt, bone: 'chest', blend: 0.35, name: 'chest' });
-  // A crew neck: a thin hem of trim round the neck where the shirt meets it.
-  const opening = (p: V3, rx: number, rz: number): number => (1 - Math.hypot(p[0] / rx, (p[2] - neckJ[2] - 0.1) / rz)) * Math.min(rx, rz);
-  const collarTrim: Stamp = (p) => ({ m: M.trim, d: Math.min(opening(p, 0.82, 0.62), -opening(p, 0.66, 0.46)) });
-  prims.push(stamped(chest, { at: collarTrim, band: BAND_GAME }));
-  prims.push(capsule([0, chestJ[1] - 0.55, chestJ[2] + P.armAt * 0.9], [0, spA[1] - 0.25, spA[2] + 0.4], P.r.chest * 0.72, P.r.waist * 0.78, { m: M.shirt, bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + 0.6], axis: [0, 0, -1], span: P.chest }, blend: 0.45, name: 'back' }));
-  // Ribs to waist: a tube narrowing from the chest to the waist, then the waist itself, and the pelvis in trousers.
-  prims.push(capsule([0, chestJ[1] + 0.05, chestJ[2] + 0.4], [0, spA[1], spA[2] + 0.1], P.r.chest * 0.82, P.r.waist, { m: M.shirt, bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + 0.4], axis: [0, 0, -1], span: P.chest }, blend: 0.4, name: 'ribs' }));
-  prims.push(stamped(ellipsoid([0, spA[1], spA[2] + 0.1], [P.r.waist, P.r.waist * 0.72, P.spine * 0.9], { m: M.shirt, bone: 'spineA', blend: 0.4, name: 'waist' }), { at: trousersBelow }));
-  prims.push(stamped(ellipsoid([0, pelvisJ[1] - 0.05, pelvisJ[2] - 0.55], [P.r.pelvis, P.r.pelvis * 0.74, 1.25], { m: M.trousers, bone: 'pelvis', blend: 0.4, name: 'pelvis' }), { at: shirtAbove }));
-  prims.push(ellipsoid([0, spA[1] - 0.02, waistZ], [P.r.waist * 1.03, P.r.waist * 0.75, 0.18], { m: M.sole, bone: 'spineA', blend: 0.05, band: BAND_GAME, name: 'waistband' }));
+  // The shorts, bare: from the hips to mid-thigh; the trousers, clothed: everything below the waist.
+  const shortsTop = pelvisJ[2] + 0.3, shortsHem = at(rest, 'hip0')[2] - P.thigh * 0.46;
+  const shorts: Stamp = band(shortsHem, shortsTop, M.shorts);
+  const shirtAbove: Stamp = bare ? band(shortsTop, 99, M.skin) : band(waistZ, 99, M.shirt);
+  const trousersBelow: Stamp = bare ? shorts : band(-99, waistZ, M.trousers);
+  const Z = P.chest + P.armAt;
+  // The woman's top, bare: a band over the chest and a strap each side over the shoulder, in the shorts' cloth.
+  const topBand: Stamp = band(chestJ[2] + Z * 0.15, chestJ[2] + Z * 0.8, M.shorts);
+  const straps: Stamp = firstOf(...[-1, 1].map((s) => curveStamp([[s * P.r.chest * 0.5, chestJ[1] + P.r.chest * 0.6, chestJ[2] + Z * 0.78], [s * P.r.chest * 0.62, chestJ[1] + 0.05, neckJ[2] - 0.2], [s * P.r.chest * 0.55, chestJ[1] - P.r.chest * 0.55, chestJ[2] + Z * 0.78]], 0.14, M.shorts)));
+  const top = (p: Prim): Prim => (bare && woman ? stamped(p, { at: straps }, { at: topBand }) : p);
+  // The torso: the ribcage a broad egg deepest at the back; the pectorals two planes on its front; the abdomen a block below them
+  // down to the waist; the back a V from the shoulders in to the waist with a lat each side under the arm; the waist narrow; the
+  // pelvis in the shorts or the trousers.
+  const chest = ellipsoid([0, chestJ[1] - 0.1, chestJ[2] + Z * 0.55], [P.r.chest, P.r.chest * 0.62, Z * 0.5], { m: cm(M.shirt), bone: 'chest', blend: 0.4, name: 'chest' });
+  prims.push(top(chest));
+  // The pectorals, two planes on the ribcage's front; on a woman, two rounds set lower and closer, standing further out.
+  for (const s of [-1, 1]) prims.push(top(ellipsoid([s * P.r.chest * (0.48 - 0.06 * f), chestJ[1] + P.r.chest * (0.5 + 0.12 * f), chestJ[2] + Z * (0.52 - 0.06 * f)], [P.r.chest * (0.52 - 0.12 * f), P.r.chest * (0.26 + 0.16 * f), Z * 0.28 * (1 - f) + P.r.chest * 0.4 * f], { m: cm(M.shirt), bone: 'chest', blend: 0.3 - 0.1 * f, band: 0, name: woman ? 'breast' : 'pectoral' }, [[1, 0, 0], [0, 1, 0.08], [0, -0.08, 1]])));
+  prims.push(roundBox([0, chestJ[1] + P.r.chest * 0.36, chestJ[2] + Z * 0.05], [P.r.waist * 0.62, P.r.chest * 0.16, Z * 0.3], 0.3, { m: cm(M.shirt), bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + Z * 0.2], axis: [0, 0, -1], span: P.chest }, blend: 0.4, name: 'abdomen' }));
+  prims.push(top(ellipsoid([0, chestJ[1] - P.r.chest * 0.42, chestJ[2] + Z * 0.62], [P.r.chest * (1.02 - 0.12 * f), P.r.chest * 0.3, Z * 0.42], { m: cm(M.shirt), bone: 'chest', blend: 0.4, name: 'upper back' })));
+  for (const s of [-1, 1]) prims.push(top(capsule([s * P.r.chest * 0.92, chestJ[1] - P.r.chest * 0.2, chestJ[2] + Z * 0.5], [s * P.r.waist * 0.72, spA[1] - P.r.waist * 0.25, spA[2] + 0.2], P.r.chest * 0.34 * (1 - 0.3 * f), P.r.waist * 0.3 * (1 - 0.3 * f), { m: cm(M.shirt), bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + Z * 0.3], axis: [0, 0, -1], span: P.chest }, blend: 0.45, name: 'lat' })));
+  if (!bare) prims.push(torus([0, neckJ[1], neckJ[2] - 0.18], [0, 0, 1], [1, 0, 0], P.r.neck + 0.06, 0.13, { m: M.shirt, bone: 'chest', blend: 0.15, band: BAND_GAME, name: 'collar' }));
+  prims.push(top(capsule([0, chestJ[1] - 0.1, chestJ[2] + Z * 0.3], [0, spA[1], spA[2] + 0.1], P.r.chest * (0.85 - 0.15 * f), P.r.waist * (1.05 - 0.1 * f), { m: cm(M.shirt), bone: 'chest', bone2: 'spineB', split: { from: [0, 0, chestJ[2] + 0.4], axis: [0, 0, -1], span: P.chest }, blend: 0.4, name: 'ribs' })));
+  prims.push(stamped(ellipsoid([0, spA[1], spA[2] + 0.1], [P.r.waist, P.r.waist * 0.74, P.spine * 0.9], { m: cm(M.shirt), bone: 'spineA', blend: 0.4, name: 'waist' }), { at: trousersBelow }));
+  prims.push(stamped(ellipsoid([0, pelvisJ[1] - 0.05, pelvisJ[2] - 0.55], [P.r.pelvis, P.r.pelvis * (0.78 + 0.12 * f), 1.3], { m: bare ? M.shorts : M.trousers, bone: 'pelvis', blend: 0.4, name: 'pelvis' }), { at: shirtAbove }));
+  // The hips' rounds, on a woman.
+  if (f > 0.3) for (const s of [-1, 1]) prims.push(stamped(sphere([s * P.r.pelvis * 0.62, pelvisJ[1] - 0.1, pelvisJ[2] - 1.1], P.r.pelvis * 0.32 * f, { m: bare ? M.shorts : M.trousers, bone: 'pelvis', blend: 0.35, name: 'hip' }), { at: shirtAbove }));
+  if (!bare) prims.push(ellipsoid([0, spA[1] - 0.02, waistZ], [P.r.waist * 1.03, P.r.waist * 0.75, 0.18], { m: M.sole, bone: 'spineA', blend: 0.05, band: BAND_GAME, name: 'waistband' }));
 
   /* ---- arms and hands ----------------------------------------------------------------- */
   for (let k = 0; k < 2; k++) {
     const s = k ? 1 : -1;
     const sh = at(rest, `arm${k}`), el = at(rest, `elbow${k}`), wr = at(rest, `wrist${k}`);
     // The shoulder's round, in the shirt's short sleeve, and the slope of the trapezius from the neck down to it.
-    prims.push(sphere(add(sh, [s * 0.02, 0, -0.3]), P.r.upper * 0.98, { m: M.shirt, bone: `arm${k}`, blend: 0.6, name: 'shoulder' }));
-    prims.push(capsule([s * 0.45, neckJ[1] - 0.15, neckJ[2] - 0.25], [sh[0] * 0.8, sh[1] - 0.1, sh[2] - 0.05], 0.62, 0.42, { m: M.shirt, bone: 'chest', blend: 0.55, name: 'trapezius' }));
-    // Upper arm: skin, the sleeve stamped on its top half; it narrows to the elbow so the elbow's round shows in the silhouette.
+    // The deltoid, a round over the shoulder joint; the trapezius sloping from the neck to it.
+    prims.push(sphere(add(sh, [s * 0.18, 0.05, 0.05]), P.r.upper * (1.3 - 0.25 * f), { m: cm(M.shirt), bone: `arm${k}`, blend: 0.5, name: 'deltoid' }));
+    prims.push(top(capsule([s * 0.5, neckJ[1] - 0.2, neckJ[2] - 0.1], [sh[0] * 0.85, sh[1] - 0.15, sh[2] + 0.1], 0.55 * (1 - 0.25 * f), 0.42 * (1 - 0.25 * f), { m: cm(M.shirt), bone: 'chest', blend: 0.55, name: 'trapezius' })));
+    // Upper arm: the sleeve stamped on its top half; a biceps on its front and the arm narrowing to the elbow.
     const axis = unit(sub(el, sh));
-    const upper = capsule(sh, el, P.r.upper, P.r.upper * 0.72, { m: M.skin, bone: `arm${k}`, bone2: `elbow${k}`, split: { from: along(sh, el, 0.72), axis, span: P.upper * 0.28 }, blend: 0.22, name: 'upper arm' });
+    const upper = capsule(sh, el, P.r.upper, P.r.upper * 0.7, { m: M.skin, bone: `arm${k}`, bone2: `elbow${k}`, split: { from: along(sh, el, 0.72), axis, span: P.upper * 0.28 }, blend: 0.22, name: 'upper arm' });
     const alongArm = (p: V3): number => (p[0] - sh[0]) * axis[0] + (p[1] - sh[1]) * axis[1] + (p[2] - sh[2]) * axis[2];
-    const sleeve: Stamp = (p) => ({ m: M.shirt, d: P.upper * 0.42 - alongArm(p) });
-    const hem: Stamp = (p) => { const t = alongArm(p); return { m: M.trim, d: Math.min(t - P.upper * 0.34, P.upper * 0.42 - t) }; };
-    prims.push(stamped(upper, { at: hem, band: BAND_GAME }, { at: sleeve }));
+    const sleeve: Stamp = (p) => ({ m: cm(M.shirt), d: P.upper * 0.42 - alongArm(p) });
+    const hem: Stamp = (p) => { const t = alongArm(p); return { m: cm(M.trim), d: Math.min(t - P.upper * 0.34, P.upper * 0.42 - t) }; };
+    prims.push(bare ? upper : stamped(upper, { at: hem, band: BAND_GAME }, { at: sleeve }));
+    prims.push(ellipsoid(add(along(sh, el, 0.48), [0, P.r.upper * 0.3, 0]), [P.r.upper * 0.7, P.r.upper * 0.75, P.upper * 0.3], { m: M.skin, bone: `arm${k}`, blend: 0.3, name: 'biceps' }, [[1, 0, 0], [0, 1, 0], axis]));
     prims.push(sphere(el, P.r.fore * 1.08, { m: M.skin, bone: `elbow${k}`, blend: 0.2, name: 'elbow' }));
     const fl = unit(sub(wr, el));
     prims.push(tube([el, along(el, wr, 0.3), wr], (t) => (t < 0.3 ? P.r.fore * (0.92 + 0.3 * t) : P.r.fore * 1.01 + (P.r.wrist - P.r.fore * 1.01) * ((t - 0.3) / 0.7)), { m: M.skin, bone: `elbow${k}`, bone2: `wrist${k}`, split: { from: along(el, wr, 0.78), axis: fl, span: P.lower * 0.22 }, blend: 0.2, name: 'forearm' }, 8));
@@ -199,15 +216,22 @@ export function bodyModel(P: Proportions, rest: Bones, look: Look): Model {
   for (let k = 0; k < 2; k++) {
     const hip = at(rest, `hip${k}`), knee = at(rest, `knee${k}`), ank = at(rest, `ankle${k}`);
     // The thigh narrows to the knee, the knee's round stands a little proud, the shin swells at the calf and narrows to the ankle.
-    prims.push(capsule(add(hip, [0, 0, 0.3]), knee, P.r.thigh, P.r.thigh * 0.64, { m: M.trousers, bone: `hip${k}`, bone2: `knee${k}`, split: { from: along(hip, knee, 0.74), axis: unit(sub(knee, hip)), span: P.thigh * 0.26 }, blend: 0.3, name: 'thigh' }));
-    prims.push(sphere(add(knee, [0, 0.06, 0]), P.r.shin * 1.12, { m: M.trousers, bone: `knee${k}`, blend: 0.22, name: 'knee' }));
+    const legM = bare ? M.skin : M.trousers;
+    const thigh = capsule(add(hip, [0, 0, 0.3]), knee, P.r.thigh, P.r.thigh * (0.52 + 0.04 * f), { m: legM, bone: `hip${k}`, bone2: `knee${k}`, split: { from: along(hip, knee, 0.74), axis: unit(sub(knee, hip)), span: P.thigh * 0.26 }, blend: 0.2, name: 'thigh' });
+    prims.push(bare ? stamped(thigh, { at: shorts }) : thigh);
+    // The quadriceps on the front of the thigh, and the knee's round standing proud.
+    const quad = ellipsoid(add(along(hip, knee, 0.42), [0, P.r.thigh * 0.28, 0]), [P.r.thigh * 0.7, P.r.thigh * 0.8, P.thigh * 0.28], { m: legM, bone: `hip${k}`, blend: 0.25, name: 'quadriceps' }, [[1, 0, 0], [0, 1, 0], unit(sub(hip, knee))]);
+    prims.push(bare ? stamped(quad, { at: shorts }) : quad);
+    prims.push(sphere(add(knee, [0, 0.08, 0]), P.r.shin * 0.8, { m: legM, bone: `knee${k}`, blend: 0.1, name: 'knee' }));
     const sl = unit(sub(ank, knee));
-    prims.push(tube([knee, along(knee, ank, 0.3), add(ank, [0, 0, 0.1])], (t) => (t < 0.3 ? P.r.shin * (0.92 + 0.5 * t) : P.r.shin * 1.07 + (P.r.ankle * 1.1 - P.r.shin * 1.07) * ((t - 0.3) / 0.7)), { m: M.trousers, bone: `knee${k}`, bone2: `ankle${k}`, split: { from: along(knee, ank, 0.8), axis: sl, span: P.shin * 0.2 }, blend: 0.22, name: 'shin' }, 8));
+    prims.push(tube([knee, along(knee, ank, 0.3), add(ank, [0, 0, 0.1])], (t) => (t < 0.3 ? P.r.shin * (0.8 + 1.17 * t) : P.r.shin * 1.15 + (P.r.ankle * 1.05 - P.r.shin * 1.15) * ((t - 0.3) / 0.7)), { m: legM, bone: `knee${k}`, bone2: `ankle${k}`, split: { from: along(knee, ank, 0.8), axis: sl, span: P.shin * 0.2 }, blend: 0.22, name: 'shin' }, 8));
     prims.push(sphere(ank, P.r.ankle, { m: M.skin, bone: `ankle${k}`, blend: 0.15, name: 'ankle' }));
-    // The foot in a soft shoe: heel and instep off the ankle, the toes off the ball so they bend; a darker sole under.
+    // The foot in a soft shoe (or bare): heel and instep off the ankle, the toes off the ball so they bend; a darker sole under.
     const soleStamp: Stamp = (p, n) => ({ m: M.sole, d: Math.max(-0.45 - n[2], 0.14 - p[2]) });
-    prims.push(stamped(roundBox(inBone(`ankle${k}`, [0, P.foot * 0.22, -P.sole * 0.5 + 0.02]), [P.r.ankle * 1.15, P.foot * 0.42, P.sole * 0.5], 0.22, { m: M.shoe, bone: `ankle${k}`, blend: 0.3, name: 'foot' }, axesOf(`ankle${k}`)), { at: soleStamp }));
-    prims.push(stamped(roundBox(inBone(`toe${k}`, [0, P.foot * 0.2, -0.17]), [P.r.ankle * 1.2, P.foot * 0.26, P.sole * 0.38], 0.24, { m: M.shoe, bone: `toe${k}`, blend: 0.28, name: 'toes' }, axesOf(`toe${k}`)), { at: soleStamp }));
+    const foot = roundBox(inBone(`ankle${k}`, [0, P.foot * 0.22, -P.sole * 0.5 + 0.02]), [P.r.ankle * 1.15, P.foot * 0.42, P.sole * 0.5], 0.22, { m: cm(M.shoe), bone: `ankle${k}`, blend: 0.3, name: 'foot' }, axesOf(`ankle${k}`));
+    const toes = roundBox(inBone(`toe${k}`, [0, P.foot * 0.2, -0.17]), [P.r.ankle * 1.15, P.foot * 0.26, P.sole * 0.3], 0.2, { m: cm(M.shoe), bone: `toe${k}`, blend: 0.22, name: 'toes' }, axesOf(`toe${k}`));
+    prims.push(bare ? foot : stamped(foot, { at: soleStamp }));
+    prims.push(bare ? toes : stamped(toes, { at: soleStamp }));
   }
   return modelOf(prims, bodyMaterials(look));
 }

@@ -20,6 +20,7 @@
  * the default, the island's five kept for comparison. Both stand sixteen and
  * a half units to the crown, the height the island was drawn round.
  */
+import type { Look } from '../game/look';
 import { joint, place, ROOT, type Rig, type Xf, type Euler } from '../render/figure';
 import { add, clamp, lerp, mul, sub, type V3 } from './sdf';
 
@@ -28,6 +29,8 @@ export interface Proportions {
   id: string;
   /** Heads to the crown. */
   heads: number;
+  /** How far toward a woman's frame the masses go: 0 a man, 1 a woman, 0.5 neither. */
+  fem: number;
   /** Joint heights and lengths, in units: see `skeleton()` in figure.ts for the figure's. */
   hip: number; spine: number; chest: number; neck: number; headJ: number; armAt: number;
   upper: number; lower: number; thigh: number; shin: number;
@@ -45,7 +48,7 @@ export interface Proportions {
 
 /** The reference's build: seven heads to the crown, long legs, a real neck, a narrow waist. */
 export const SEVEN: Proportions = {
-  id: 'seven', heads: 7,
+  id: 'seven', heads: 7, fem: 0.5,
   hip: 8.4, spine: 1.4, chest: 2.2, neck: 1.6, headJ: 0.55, armAt: 1.3,
   upper: 3.3, lower: 2.7, thigh: 3.8, shin: 3.7,
   shoulder: 2.25, hipW: 0.95,
@@ -55,9 +58,68 @@ export const SEVEN: Proportions = {
   r: { neck: 0.5, upper: 0.54, fore: 0.44, wrist: 0.36, thigh: 0.72, shin: 0.5, ankle: 0.36, chest: 2.0, waist: 1.25, pelvis: 1.55 },
 };
 
+/**
+ * The male body as docs/aesthetic/08 has it: seven and a half heads to the
+ * crown, broad shoulders over a narrow waist, long legs, hands and feet at
+ * full size. The masses -- chest, abdomen, back, lats, deltoids, biceps,
+ * forearms, thighs, calves -- are the body model's (`models/body.ts`).
+ */
+export const MALE: Proportions = {
+  id: 'male', heads: 7.5, fem: 0,
+  hip: 8.4, spine: 1.5, chest: 1.8, neck: 1.9, headJ: 0.6, armAt: 0.3,
+  upper: 2.6, lower: 2.2, thigh: 4.1, shin: 3.5,
+  shoulder: 2.1, hipW: 1.0,
+  head: 2.2, headW: 0.88, headD: 1.0,
+  sole: 0.5, foot: 1.7,
+  palm: 0.75, finger: 0.6,
+  r: { neck: 0.6, upper: 0.55, fore: 0.48, wrist: 0.3, thigh: 0.78, shin: 0.5, ankle: 0.28, chest: 1.75, waist: 0.92, pelvis: 1.6 },
+};
+/**
+ * The female body reference (docs/aesthetic/09): sixteen units to the crown
+ * at seven and a half heads, the shoulders narrower than the hips, a slim
+ * chest and back, a narrow waist over round hips, long legs that taper to
+ * the ankle, slim arms, and hands and feet full size.
+ */
+export const FEMALE: Proportions = {
+  id: 'female', heads: 7.4, fem: 1,
+  hip: 8.2, spine: 1.5, chest: 1.7, neck: 1.4, headJ: 1.0, armAt: 0.3,
+  upper: 2.5, lower: 2.15, thigh: 4.0, shin: 3.4,
+  shoulder: 1.55, hipW: 0.95,
+  head: 2.15, headW: 0.76, headD: 0.9,
+  sole: 0.5, foot: 1.6,
+  palm: 0.7, finger: 0.55,
+  r: { neck: 0.4, upper: 0.42, fore: 0.38, wrist: 0.25, thigh: 0.66, shin: 0.36, ankle: 0.2, chest: 1.3, waist: 0.8, pelvis: 1.35 },
+};
+/** Proportions `t` of the way from `a` to `b`, every number. */
+export function lerpProportions(a: Proportions, b: Proportions, t: number, id: string): Proportions {
+  const m = (x: number, y: number): number => x + (y - x) * t;
+  const r = {} as Proportions['r'];
+  for (const k of Object.keys(a.r) as Array<keyof Proportions['r']>) r[k] = m(a.r[k], b.r[k]);
+  const out: Record<string, unknown> = { ...a, id, r };
+  for (const k of Object.keys(a) as Array<keyof Proportions>) if (k !== 'id' && k !== 'r') out[k] = m(a[k] as number, b[k] as number);
+  return out as unknown as Proportions;
+}
+/** Neither a man's frame nor a woman's: halfway between the two. */
+export const NEITHER: Proportions = lerpProportions(MALE, FEMALE, 0.5, 'neither');
+/** The proportions a look stands at: a man's, a woman's, or halfway between. */
+export function proportionsOf(look: Look): Proportions {
+  return look.gender === 'woman' ? FEMALE : look.gender === 'man' ? MALE : NEITHER;
+}
+/** Sole to crown, in units. */
+export const heightOf = (P: Proportions): number => P.hip + P.spine + P.chest + P.neck + P.headJ + P.head * 1.04;
+
+/** The reference sheet's stance: stood square, feet a little apart, arms a little out from the sides with the palms turned back. */
+export function referenceStance(r: Rig): Rig {
+  const o: Rig = { ...r, arm: [[3, 26, 0], [3, 26, 0]], elbow: [8, 8], hand: [[0, 0, -20], [0, 0, 20]], leg: [[0, 4, 0], [0, 4, 0]], knee: [2, 2], flat: [true, true] };
+  o.pelvis = [0, 0, 0]; o.spine = [0, 0, 0]; o.chest = [0, 0, 0]; o.neck = [0, 0, 0]; o.head = [0, 0, 0];
+  o.loose = [true, true]; o.curl = [0.2, 0.2]; o.open = [0, 0]; o.shrug = [0, 0];
+  o.hover = undefined; o.plant = undefined; o.lift = 0;
+  return o;
+}
+
 /** The island's build as it is drawn today: a head a quarter of the height, a long body over short sturdy legs. */
 export const FIVE: Proportions = {
-  id: 'five', heads: 4.6,
+  id: 'five', heads: 4.6, fem: 0.5,
   hip: 7.25, spine: 1.1, chest: 1.8, neck: 2.12, headJ: 0.62, armAt: 1.66,
   upper: 2.8, lower: 2.4, thigh: 3.3, shin: 3.1,
   shoulder: 2.1, hipW: 1.0,

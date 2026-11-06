@@ -2,7 +2,7 @@
 //
 //   node tools/sculpt/shot.mjs --out /some/dir                 # every sheet: lineup, facings, motion, close, night, debug, stats
 //   node tools/sculpt/shot.mjs --out /some/dir --only lineup,close
-//   node tools/sculpt/shot.mjs --out /some/dir --who five       # the island's proportions (default seven)
+//   node tools/sculpt/shot.mjs --out /some/dir --who female     # the woman (default male; also neither, seven, five)
 //   node tools/sculpt/shot.mjs --stats                          # the bake's numbers and the cost of a crowd, no sheets
 //
 // Uses Playwright's Chromium at /opt/pw-browsers/chromium with software GL, and esbuild from node_modules; never `playwright install`.
@@ -15,8 +15,8 @@ const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
 const flag = (name) => args.includes(`--${name}`);
 const out = resolve(opt('out', 'tmp/sculpt'));
-const who = opt('who', 'seven');
-const only = opt('only', 'lineup,facings,motion,close,night,debug').split(',');
+const who = opt('who', 'male');
+const only = opt('only', 'compare,lineup,facings,motion,close,night,debug').split(',');
 mkdirSync(out, { recursive: true });
 
 const ROOT = new URL('../..', import.meta.url).pathname;
@@ -29,13 +29,17 @@ const bundled = await build({
 const js = bundled.outputFiles[0].text;
 const refPath = join(ROOT, 'docs/aesthetic/07-player-poncho-sheet.jpg');
 const ref = existsSync(refPath) ? `data:image/jpeg;base64,${readFileSync(refPath).toString('base64')}` : '';
+const ref8Path = join(ROOT, 'docs/aesthetic/08-male-body-proportions.jpg');
+const ref8 = existsSync(ref8Path) ? `data:image/jpeg;base64,${readFileSync(ref8Path).toString('base64')}` : '';
+const ref9Path = join(ROOT, 'docs/aesthetic/09-female-body-proportions.jpg');
+const ref9 = existsSync(ref9Path) ? `data:image/jpeg;base64,${readFileSync(ref9Path).toString('base64')}` : '';
 
 const kept = '/opt/pw-browsers/chromium';
 const b = await chromium.launch({ ...(existsSync(kept) ? { executablePath: kept } : {}), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'] });
 const p = await b.newPage({ viewport: { width: 2000, height: 1000 }, deviceScaleFactor: 2 });
 p.on('pageerror', (e) => console.log('ERR', e.message));
 p.on('console', (m) => { if (m.type() === 'error' || m.text().startsWith('ERR')) console.log('console', m.text()); });
-await p.setContent(`<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding:4px"></div><script>window.REF=${JSON.stringify(ref)}</script></body></html>`);
+await p.setContent(`<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding:4px"></div><script>window.REF=${JSON.stringify(ref)};window.REF8=${JSON.stringify(ref8)};window.REF9=${JSON.stringify(ref9)}</script></body></html>`);
 await p.addScriptTag({ content: js });
 await p.waitForFunction('window.READY');
 console.log('gl:', await p.evaluate(() => window.SCULPT.glInfo()));
@@ -62,6 +66,7 @@ if (flag('stats') || only.includes('stats')) {
   }
   if (flag('stats')) { await b.close(); process.exit(0); }
 }
+if (only.includes('compare')) await shoot(`compare-${who}`, async (w) => { await window.SCULPT.compare(w, 6.5); });
 if (only.includes('lineup')) await shoot('lineup', async () => { await window.SCULPT.lineup(6, 'idle:0'); await window.SCULPT.lineup(2.5, 'walk:0.25'); });
 if (only.includes('facings')) await shoot(`facings-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 1); window.SCULPT.facings(w, 'walk:0.25', 1); window.SCULPT.facings(w, 'idle:0', 2); window.SCULPT.facings(w, 'walk:0.25', 2); window.SCULPT.facings(w, 'idle:0', 4); window.SCULPT.facings(w, 'walk:0.6', 4); window.SCULPT.facings('figure', 'idle:0', 2); });
 if (only.includes('motion')) await shoot(`motion-${who}`, (w) => { window.SCULPT.strip(w, 1, 2.5); window.SCULPT.strip(w, 3, 2.5); window.SCULPT.strip(w, 6, 2.5); window.SCULPT.strip('figure', 1, 2.5); });

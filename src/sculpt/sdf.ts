@@ -284,6 +284,48 @@ export function sheet(rings: Ring[], thick: number, t: Tag, o: { closed?: boolea
   return tagged(d, [[-R * fl - thick, -R * fl - thick, zmin - thick], [R * fl + thick, R * fl + thick, zhi + (o.closed ? R : 0) + thick]], t);
 }
 
+/** The primitive with whatever `cut(p) > 0` taken off: a curved lid, a hairline that is not a plane. `cut` should be about a distance. */
+export const clipBy = (pr: Prim, cut: (p: V3) => number): Prim => {
+  const d0 = pr.d;
+  return { ...pr, d: (p) => Math.max(d0(p), cut(p)) };
+};
+
+/**
+ * A wedge: a tube along a spline with a flattened, elliptical section --
+ * `w(t)` wide across and `h(t)` thick along `up` -- for a lock of hair that
+ * is a ribbon rather than a string, a strap, a leaf.
+ */
+export function wedge(pts: V3[], w: (t: number) => number, h: (t: number) => number, up: V3, t: Tag, segs = 10): Prim {
+  const line = spline(pts, segs);
+  const U = unit(up);
+  const d = (p: V3): number => {
+    let best = Infinity;
+    for (let k = 0; k < line.length - 1; k++) {
+      const a = line[k], b = line[k + 1], ab = sub(b, a), l2 = dot(ab, ab) || 1e-9;
+      const ap = sub(p, a), s = clamp(dot(ap, ab) / l2);
+      const v = sub(ap, mul(ab, s));
+      const dir = unit(ab);
+      // Across the wedge, square to its run and to `up`; and along `up`.
+      let across = cross(U, dir);
+      if (len(across) < 1e-4) across = cross([1, 0, 0], dir);
+      across = unit(across);
+      const n = unit(cross(dir, across));
+      const va = dot(v, across), vn = dot(v, n), vd = dot(v, dir);
+      const tt = (k + s) / (line.length - 1);
+      const ww = w(tt), hh = h(tt);
+      const kk = Math.hypot(va / ww, vn / hh);
+      let dd = (kk - 1) * Math.min(ww, hh);
+      // Rounded ends: past either end of the run, the distance along it counts too.
+      if (Math.abs(vd) > 1e-6) dd = Math.hypot(Math.max(dd, 0), vd) + Math.min(dd, 0);
+      if (dd < best) best = dd;
+    }
+    return best;
+  };
+  let rm = 0;
+  for (let k = 0; k <= 8; k++) rm = Math.max(rm, w(k / 8), h(k / 8));
+  return tagged(d, boxOf(line, rm), t);
+}
+
 /** The primitive with the side of each plane its normal points to taken off: the plane through `at` facing `n`. */
 export function clip(pr: Prim, ...planes: Array<[V3, V3]>): Prim {
   const ps = planes.map(([at, n]) => [at, unit(n)] as [V3, V3]);

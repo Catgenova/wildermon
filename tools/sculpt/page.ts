@@ -10,13 +10,16 @@
 import { drawFigure, type FigurePose } from '../../src/render/figure';
 import type { Look } from '../../src/game/look';
 import { bandOf, CELL } from '../../src/sculpt/bake';
-import { built, bakedAt, drawSculpt, sculptScene, FIVE, SEVEN, type Debug } from '../../src/sculpt/index';
+import { built, bakedAt, drawSculpt, heightOf, levelView, sculptScene, FEMALE, FIVE, MALE, NEITHER, SEVEN, type Debug, type Wear } from '../../src/sculpt/index';
+import type { View } from '../../src/render/figure';
 import type { Proportions } from '../../src/sculpt/rig';
 import { glContext } from '../../src/sculpt/gl';
 
 const DPR = window.devicePixelRatio || 1;
 const GRASS = '#7d9b5e';
-const PROPS: Record<string, Proportions> = { seven: SEVEN, five: FIVE };
+const PROPS: Record<string, Proportions> = { male: MALE, female: FEMALE, neither: NEITHER, seven: SEVEN, five: FIVE };
+const REF8 = (window as unknown as { REF8?: string }).REF8;
+const REF9 = (window as unknown as { REF9?: string }).REF9;
 const LOOK: Look = { gender: 'man', skin: 'light', hair: 'tousled', hairColour: 'chestnut', eyes: 'brown', beard: 'none', shirt: 'teal', trousers: 'brown' };
 const REF = (window as unknown as { REF?: string }).REF;
 
@@ -69,15 +72,17 @@ function row(cells: Array<{ cv: HTMLCanvasElement; label: string }>): void {
   root.append(line);
 }
 
-type Who = 'seven' | 'five' | 'figure';
-function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean } = {}): void {
+type Who = 'male' | 'female' | 'neither' | 'seven' | 'five' | 'figure';
+/** The studio's look in the body's own gender. */
+const lookOf = (who: Who): Look => ({ ...LOOK, gender: who === 'female' ? 'woman' : who === 'neither' ? 'neither' : 'man' });
+function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean; wear?: Wear; stance?: 'ref'; view?: View } = {}): void {
   try {
     if (who === 'figure') {
       drawFigure(c.g, c.fx, c.fy, zoom, pose);
       if (o.night) { c.g.fillStyle = `rgba(12, 20, 44, ${0.68 * o.night})`; c.g.fillRect(0, 0, c.w, c.h); }
       return;
     }
-    if (!drawSculpt(c.g, c.fx, c.fy, zoom, pose, { P: PROPS[who], dpr: DPR, now: 1, ...o })) drawFigure(c.g, c.fx, c.fy, zoom, pose);
+    if (!drawSculpt(c.g, c.fx, c.fy, zoom, { ...pose, look: lookOf(who) }, { P: PROPS[who], dpr: DPR, now: 1, ...o })) drawFigure(c.g, c.fx, c.fy, zoom, pose);
   } catch (e) {
     c.g.fillStyle = 'red'; c.g.font = '10px sans-serif';
     c.g.fillText(String(e).slice(0, 80), 2, 12);
@@ -99,6 +104,58 @@ const img = (src: string, h: number): Promise<HTMLCanvasElement> => new Promise(
 
 const api = {
   clear(): void { root.innerHTML = ''; },
+  /**
+   * The body against the male reference (docs/aesthetic/08): the picture, then our sculpt bare in the sheet's stance at the
+   * picture's two views, at one height; then the picture laid half over our two bodies for the silhouettes; then at game zoom.
+   */
+  async compare(who: Who = 'male', zoom = 6.5): Promise<void> {
+    const female = who === 'female';
+    heading(`${who} against the ${female ? 'female' : 'male'} reference at zoom ${zoom}, level view: picture | ours front 3/4, back 3/4, front, side | picture over ours | game zoom 2 (the island's view)`);
+    const bodyPx = heightOf(PROPS[who] ?? MALE) * 2.25 * zoom;
+    const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
+    // The picture's figures stand about 94% of its height (93% in the woman's), feet at 95.5% (96.3%), at 27.5% and 72% across (28%, 73%).
+    const [ref, stand, feet, xs, refName] = female ? [REF9, 0.93, 0.963, [0.28, 0.73], '09'] : [REF8, 0.94, 0.955, [0.275, 0.72], '08'];
+    const pic = ref ? await img(ref, Math.round(bodyPx / stand)) : null;
+    if (pic) cells.push({ cv: pic, label: `reference ${refName}` });
+    // The picture's figures are turned about 35 degrees from the viewer, front and back.
+    const turns: Array<[string, number, number]> = [['front 3/4', 7, -35], ['back 3/4', 3, 145], ['front', 0, 0], ['side', 2, 90]];
+    for (const [name, f, deg] of turns) {
+      const c = cell(zoom, [-41, 3], [-11, 11]);
+      drawOne(c, zoom, who, poseOf(f, 'idle:0'), { wear: 'shorts', stance: 'ref', view: levelView((deg * Math.PI) / 180) });
+      cells.push({ cv: c.cv, label: `ours ${name}` });
+    }
+    if (pic) {
+      // The picture over our front and back views, each stood where the picture's figure stands.
+      const over = document.createElement('canvas');
+      over.width = pic.width; over.height = pic.height;
+      over.style.width = pic.style.width; over.style.height = pic.style.height;
+      const g = over.getContext('2d')!;
+      g.fillStyle = GRASS; g.fillRect(0, 0, over.width, over.height);
+      g.scale(DPR, DPR);
+      const w = pic.width / DPR, h = pic.height / DPR;
+      const feetY = h * feet;
+      for (const [f, x, deg] of [[7, xs[0], -35], [3, xs[1], 145]] as Array<[number, number, number]>) {
+        const p = { ...poseOf(f, 'idle:0'), look: lookOf(who) };
+        if (!drawSculpt(g, w * x, feetY, zoom, p, { P: PROPS[who] ?? MALE, dpr: DPR, now: 1, wear: 'shorts', stance: 'ref', view: levelView((deg * Math.PI) / 180) })) drawFigure(g, w * x, feetY, zoom, p);
+      }
+      g.globalAlpha = 0.5;
+      g.drawImage(pic, 0, 0, w, h);
+      cells.push({ cv: over, label: 'picture over ours (50%)' });
+    }
+    row(cells);
+    const game: Array<{ cv: HTMLCanvasElement; label: string }> = [];
+    for (const f of [7, 1, 3, 5]) {
+      const c = cell(2, [-41, 3], [-11, 11]);
+      drawOne(c, 2, who, poseOf(f, 'idle:0'), { wear: 'shorts', stance: 'ref' });
+      game.push({ cv: c.cv, label: `game zoom 2 f${f}` });
+    }
+    for (const f of [7, 3]) {
+      const c = cell(2, [-41, 3], [-11, 11]);
+      drawOne(c, 2, who, poseOf(f, 'idle:0'));
+      game.push({ cv: c.cv, label: `game zoom 2 f${f}, clothed, at ease` });
+    }
+    row(game);
+  },
   /** The lineup: the reference, the seven-head sculpt, the five-head sculpt and the 2D figure, all at one height. */
   async lineup(zoom = 6, what = 'idle:0'): Promise<void> {
     heading(`lineup at zoom ${zoom}: reference | sculpt seven heads | sculpt five heads | the 2D figure today (${what})`);

@@ -95,7 +95,7 @@ void main() {
     float li = smoothstep(lightAt - aa, lightAt + aa, dl);
     vec3 shadow, light;
     if (skin) {
-      shadow = hsv2rgb(vec3(fract(h.x - 0.03), min(1.0, h.y * 1.15), h.z * 0.78));
+      shadow = hsv2rgb(vec3(fract(h.x - 0.035), min(1.0, h.y * 1.22), h.z * 0.74));
       light = hsv2rgb(vec3(h.x, h.y * 0.9, min(1.0, h.z * 1.05)));
     } else {
       float toS = warm ? 0.5 : 0.78; float dS = toS - h.x; dS -= floor(dS + 0.5);
