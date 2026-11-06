@@ -373,6 +373,7 @@ const api = {
     }
     { const c = cell(zoom, [-41, 3], [-11, 11]); drawOne(c, zoom, who, poseOf(0, 'idle:0'), { stance: 'ref', view: levelView(0), debug: 'wire' }); cells.push({ cv: c.cv, label: 'ours, wire' }); }
     row(cells);
+    this.facings(who, 'idle:0', 9);
     this.facings(who, 'idle:0', 4);
     this.facings(who, 'walk:0.3', 4);
   },

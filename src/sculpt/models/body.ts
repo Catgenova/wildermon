@@ -21,7 +21,7 @@ import {
 } from '../sdf';
 
 /** The materials, by index. */
-export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19, face: 20, hand: 21, lid: 22, ear: 23, faceUnder: 24 } as const;
+export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19, face: 20, hand: 21, lid: 22, ear: 23, faceUnder: 24, poncho: 25, gold: 26 } as const;
 
 /** What the body wears: the game's undershirt and trousers, or the reference sheet's shorts over bare skin. */
 export type Wear = 'base' | 'shorts';
@@ -60,6 +60,9 @@ export function bodyMaterials(look: Look): Material[] {
   out[M.mouth] = { colour: '#5a2a3c' };
   out[M.teeth] = { colour: '#fbf6ea' };
   out[M.trim] = { colour: '#d4c3a0', noCrease: true };
+  // The poncho: the sheet's cream, its border and sun sigil the sheet's gold.
+  out[M.poncho] = { colour: '#ece0d2' };
+  out[M.gold] = { colour: '#dcab5a', noCrease: true };
   // The groove between two fingers: the ink rule, a dark of the skin's own colour.
   out[M.crease] = { colour: inkOf(out[M.skin].colour) };
   // The face's planes shade soft (the shadow tone only well away from the light); the mitt has no ink inside its edge.
