@@ -294,7 +294,7 @@ const region = bodyIds.map((i) => {
 /* ---- the face and the hair the island draws over the base: the eyes as almonds on the face, brows, a shell of hair -------
  * Built per body in MakeHuman's space (y up, z forward), the same topology for both, bound to our head bone. Regions:
  * 5 the eye's white with the iris stamped, 6 the pupil, 7 the lid line, 8 a brow, 9 hair. */
-function extras(b, shared) {
+function extras(b, shared, style = 'man') {
   const V = b.verts, out = { pos: [], tris: [], region: [], stamp: [] };
   const face = obj.groups.body.flatMap((fi) => obj.faces[fi].idx).filter((i) => V[i][1] > b.eyes[0].c[1] - 1.5);
   // The skin's front at (x, y): the furthest-forward face vertex near it.
@@ -340,7 +340,9 @@ function extras(b, shared) {
   }
   // The mouth: a dark line a little below the nose, its ends turned slightly down, the calm mouth of the sheet.
   {
-    const my = ey - 0.98, mt = [], mb = [];
+    let chin = ey; for (const i of face) if (Math.abs(V[i][0]) < 0.12 && V[i][2] > 0.6) chin = Math.min(chin, V[i][1]);
+    const my = ey + (chin - ey) * 0.64, mt = [], mb = [];
+    if (process.env.DBG) console.error('mouth', style, (my - ey).toFixed(3), 'chin', (chin - ey).toFixed(3));
     for (let i = 0; i < 7; i++) {
       const u = i / 6, x = -0.3 + 0.6 * u, y = my - 0.035 * Math.pow(Math.abs(u - 0.5) * 2, 2), z = skinZ(x, y, 0.1) + 0.02;
       mt.push(add([x, y + 0.015, z], 11)); mb.push(add([x, y - 0.015, z], 11));
@@ -417,19 +419,21 @@ function extras(b, shared) {
   C([-10, 56, -0.04], [0, 90, 0.9], [180, 42, 0.6], 0.21, 0.075);
   C([15, 52, -0.04], [40, 82, 0.85], [122, 38, 0.56], 0.2, 0.075);
   C([40, 44, -0.04], [70, 72, 0.75], [150, 28, 0.5], 0.2, 0.075);
-  // The sides: two clumps a side sweeping back over the top third of the ear, and one behind it to the nape.
+  // The sides: two clumps a side sweeping back over the top third of the ear, and one behind it to the nape. The woman's
+  // fall to the jaw and the nape's to the shoulders: the same clumps on longer curves, so the two bodies keep one topology.
+  const L = style === 'woman';
   for (const sd of [-1, 1]) {
-    C([sd * 40, 36, -0.04], [sd * 75, 18, 0.34], [sd * 104, -8, 0.26], 0.16, 0.06);
-    C([sd * 60, 30, -0.04], [sd * 95, 8, 0.32], [sd * 122, -16, 0.22], 0.15, 0.06);
-    C([sd * 118, 40, -0.04], [sd * 132, 8, 0.42], [sd * 138, -20, 0.12, 1.0], 0.16, 0.06);
+    C([sd * 40, 36, -0.04], [sd * 78, L ? 8 : 18, 0.34], [sd * 104, L ? -34 : -8, L ? 0.2 : 0.26, 1.15], 0.16, 0.06);
+    C([sd * 60, 30, -0.04], [sd * 96, L ? 0 : 8, 0.32], [sd * 122, L ? -42 : -16, L ? 0.16 : 0.22, 1.15], 0.15, 0.06);
+    C([sd * 118, 40, -0.04], [sd * 132, L ? 0 : 8, 0.42], [sd * 140, L ? -52 : -20, L ? 0.14 : 0.12, L ? 1.3 : 1.0], L ? 0.2 : 0.16, 0.06);
   }
   // The nape: three clumps down the neck, the middle one longest.
-  C([150, 32, -0.04], [146, -2, 0.46], [154, -30, 0.12, 1.0], 0.2, 0.06);
-  C([180, 36, -0.04], [180, -4, 0.5], [180, -40, 0.12, 1.0], 0.2, 0.07);
-  C([210, 32, -0.04], [214, -2, 0.46], [206, -30, 0.12, 1.0], 0.2, 0.06);
+  C([150, 32, -0.04], [148, L ? -10 : -2, 0.46], [156, L ? -62 : -30, L ? 0.14 : 0.12, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
+  C([180, 36, -0.04], [180, L ? -12 : -4, 0.5], [180, L ? -72 : -40, L ? 0.14 : 0.12, L ? 1.6 : 1.0], L ? 0.25 : 0.2, 0.07);
+  C([210, 32, -0.04], [212, L ? -10 : -2, 0.46], [204, L ? -62 : -30, L ? 0.14 : 0.12, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
   return out;
 }
-const exMan = extras(bodies.man), exWoman = extras(bodies.woman, exMan.scalp);
+const exMan = extras(bodies.man), exWoman = extras(bodies.woman, exMan.scalp, 'woman');
 if (exMan.pos.length !== exWoman.pos.length) throw new Error('the extras differ between the bodies');
 const exManPos = exMan.pos.map((p) => bodies.man.ours(p)), exWomanPos = exWoman.pos.map((p) => bodies.woman.ours(p));
 console.log(`extras: ${exMan.pos.length} verts, ${exMan.tris.length} tris`);
