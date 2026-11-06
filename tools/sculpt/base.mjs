@@ -10,7 +10,7 @@
 import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join, resolve, dirname } from 'node:path';
-import { facets, mitt, neckBase, tracedHead } from './planar.mjs';
+import { facets, handFrame, mitt, neckBase, tracedHead } from './planar.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
@@ -422,6 +422,18 @@ const exManFar = extras(bodies.man, undefined, 'man', false), exWomanFar = extra
 for (const [name, ex] of [['man', exMan], ['woman', exWoman]]) {
   const b = bodies[name], hj = b.frames.head.slice(0, 3);
   for (const k of ['chin', 'crown']) { const p = b.ours(ex[k]); b.P[k] = [0, 1, 2].map((i) => +(p[i] - hj[i]).toFixed(3)); }
+  // The hand's frame (across from the forefinger, out of the back, along the palm) in our space, and the forefinger's and the
+  // thumb's joints and the thumb's line in it, as the rig needs them to hold the mitt the way the body holds its hand.
+  const V = b.verts, H = (bone) => boneEnds(V, `${bone}.L`)[0], T = (bone) => boneEnds(V, `${bone}.L`)[1];
+  const J = { wrist: H('wrist'), k2: H('finger2-1'), k3: H('finger3-1'), k4: H('finger4-1'), k5: H('finger5-1'), tip3: T('finger3-3'), t0: H('finger1-1'), t1: H('finger1-2'), tip1: T('finger1-3') };
+  const F = handFrame(J);
+  const dir = (d) => [-d[0], d[2], d[1]].map((x) => +x.toFixed(4));
+  const inHand = (p) => { const d = [p[0] - J.wrist[0], p[1] - J.wrist[1], p[2] - J.wrist[2]]; return [d[0] * F.s[0] + d[1] * F.s[1] + d[2] * F.s[2], d[0] * F.n[0] + d[1] * F.n[1] + d[2] * F.n[2], d[0] * F.a[0] + d[1] * F.a[1] + d[2] * F.a[2]].map((x) => +(x * b.s).toFixed(3)); };
+  const td = [J.tip1[0] - J.t0[0], J.tip1[1] - J.t0[1], J.tip1[2] - J.t0[2]];
+  b.P.handFrame = [...dir(F.s), ...dir(F.n), ...dir(F.a)];
+  b.P.handIndex = inHand(J.k2); b.P.handThumb = inHand(J.t0);
+  b.P.handThumbDir = [td[0] * F.s[0] + td[1] * F.s[1] + td[2] * F.s[2], td[0] * F.n[0] + td[1] * F.n[1] + td[2] * F.n[2], td[0] * F.a[0] + td[1] * F.a[1] + td[2] * F.a[2]].map((x) => +(x / (Math.hypot(...td) || 1)).toFixed(4));
+  console.log(name, 'hand', JSON.stringify({ frame: b.P.handFrame, index: b.P.handIndex, thumb: b.P.handThumb, thumbDir: b.P.handThumbDir }));
 }
 if (exMan.pos.length !== exWoman.pos.length || exManFar.pos.length !== exWomanFar.pos.length) throw new Error('the extras differ between the bodies');
 console.log(`extras: ${exMan.pos.length} verts, ${exMan.tris.length} tris (far band ${exManFar.pos.length} verts, ${exManFar.tris.length} tris)`);

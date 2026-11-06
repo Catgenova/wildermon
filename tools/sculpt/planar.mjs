@@ -69,16 +69,16 @@ const HV = {
   R1: [[0.2, 0.6, -0.43], [0.2, 0.6, -0.4]], R2: [[0, 0.6, -0.48], [0, 0.6, -0.45]], R3: [[0.18, 0.8, -0.39], [0.17, 0.82, -0.36]], R4: [[0, 0.82, -0.43], [0, 0.84, -0.4]],
   Q0: [[0.3, 0.26, -0.24], [0.28, 0.28, -0.22]], Q1: [[0.18, 0.28, -0.41], [0.17, 0.3, -0.38]], Q2: [[0, 0.3, -0.45], [0, 0.32, -0.42]],
   // The brow shelf: its top, and its front's lower edge.
-  B0: [[0, 0.64, 0.34], [0, 0.62, 0.32]], B1: [[0.2, 0.64, 0.32], [0.2, 0.62, 0.3]], B2: [[0.33, 0.63, 0.12], [0.325, 0.61, 0.11]],
-  S0: [[0, 0.585, 0.36], [0, 0.565, 0.34]], S1: [[0.2, 0.58, 0.345], [0.2, 0.56, 0.325]], S2: [[0.33, 0.575, 0.14], [0.325, 0.555, 0.13]],
+  B0: [[0, 0.68, 0.34], [0, 0.66, 0.32]], B1: [[0.2, 0.68, 0.32], [0.2, 0.66, 0.3]], B2: [[0.33, 0.67, 0.12], [0.325, 0.65, 0.11]],
+  S0: [[0, 0.625, 0.36], [0, 0.605, 0.34]], S1: [[0.2, 0.62, 0.345], [0.2, 0.6, 0.325]], S2: [[0.33, 0.615, 0.14], [0.325, 0.595, 0.13]],
   // The socket plane under the shelf.
-  E0: [[0.05, 0.565, 0.31], [0.05, 0.545, 0.29]], E1: [[0.29, 0.56, 0.21], [0.29, 0.54, 0.19]], E2: [[0.29, 0.44, 0.23], [0.285, 0.4, 0.21]], E3: [[0.08, 0.45, 0.33], [0.08, 0.41, 0.31]],
+  E0: [[0.05, 0.605, 0.31], [0.05, 0.585, 0.29]], E1: [[0.29, 0.6, 0.21], [0.29, 0.58, 0.19]], E2: [[0.29, 0.48, 0.23], [0.285, 0.44, 0.21]], E3: [[0.08, 0.49, 0.33], [0.08, 0.45, 0.31]],
   // The nose: a long wedge from the glabella to the tip, a third of the face: a ridge plane catching the light, a side
   // plane each way turned well round, a flat underside.
-  N0: [[0.03, 0.578, 0.315], [0.025, 0.558, 0.3]], N1: [[0.08, 0.5, 0.3], [0.07, 0.47, 0.285]], N2: [[0.045, 0.31, 0.52], [0.04, 0.28, 0.465]],
-  N3: [[0.115, 0.33, 0.35], [0.1, 0.3, 0.32]], N4: [[0, 0.262, 0.4], [0, 0.242, 0.37]], N5: [[0.09, 0.262, 0.34], [0.08, 0.242, 0.31]],
+  N0: [[0.03, 0.618, 0.315], [0.025, 0.598, 0.3]], N1: [[0.08, 0.54, 0.3], [0.07, 0.51, 0.285]], N2: [[0.045, 0.38, 0.52], [0.04, 0.35, 0.465]],
+  N3: [[0.115, 0.4, 0.35], [0.1, 0.37, 0.32]], N4: [[0, 0.332, 0.4], [0, 0.312, 0.37]], N5: [[0.09, 0.332, 0.34], [0.08, 0.312, 0.31]],
   // The cheekbone, the hollow cheek, the jaw and the chin.
-  C0: [[0.31, 0.3, 0.08], [0.29, 0.31, 0.08]], C1: [[0.18, 0.41, 0.31], [0.17, 0.38, 0.29]], C2: [[0.12, 0.26, 0.33], [0.1, 0.24, 0.3]], C3: [[0.26, 0.19, 0.17], [0.21, 0.17, 0.16]],
+  C0: [[0.31, 0.3, 0.08], [0.29, 0.31, 0.08]], C1: [[0.18, 0.45, 0.31], [0.17, 0.42, 0.29]], C2: [[0.12, 0.26, 0.33], [0.1, 0.24, 0.3]], C3: [[0.26, 0.19, 0.17], [0.21, 0.17, 0.16]],
   J0: [[0.27, 0.16, -0.07], [0.235, 0.18, -0.05]], J1: [[0.095, 0.03, 0.27], [0.07, 0.02, 0.24]], J2: [[0.09, 0.17, 0.31], [0.07, 0.15, 0.28]],
   CH0: [[0, 0.0, 0.26], [0, 0.0, 0.23]], CH1: [[0, 0.17, 0.33], [0, 0.15, 0.3]],
   // The throat ring under the jaw: front centre, the cord, side front, side, side back, back side, back centre.
@@ -121,8 +121,8 @@ const HF = [
 /** The throat ring's order, round from the front centre over the body's left (u > 0) to the back and round. */
 const THROAT = ['K0', 'K1', 'K2', 'K3', 'K4', 'K5', 'K6', "K5'", "K4'", "K3'", "K2'", "K1'"];
 /** The eyes and the brows: [u0, u1, v0, v1] of the rectangle, man and woman; the brow's ends and middle heights. */
-const EYE = { man: [0.13, 0.178, 0.49, 0.532], woman: [0.135, 0.191, 0.433, 0.486] };
-const BROW = { man: { u: [0.075, 0.18, 0.285], top: [0.616, 0.618, 0.608], h: 0.03 }, woman: { u: [0.085, 0.19, 0.3], top: [0.581, 0.594, 0.576], h: 0.02 } };
+const EYE = { man: [0.13, 0.178, 0.53, 0.572], woman: [0.135, 0.191, 0.473, 0.526] };
+const BROW = { man: { u: [0.075, 0.18, 0.285], top: [0.656, 0.658, 0.648], h: 0.03 }, woman: { u: [0.085, 0.19, 0.3], top: [0.621, 0.634, 0.616], h: 0.02 } };
 
 /**
  * The head for one body in MakeHuman's space. `L`: chin and crown heights, the skull's centre depth `zc`; `base`: the
@@ -203,12 +203,20 @@ export function neckBase(L, pts, y, style) {
  * the body's own length; `pts` the forearm surface for the cuff; `k` the side (0 the body's left). Bones: wrist, fing
  * (the three outer fingers), index, thumb; the elbow for the cuff. `detail` false is the far band's plainer mitt.
  */
-export function mitt(J, pts, k, detail, f) {
+/**
+ * The hand's own frame from the body's joints: `a` along the palm from the wrist to the middle knuckle, `s` across from
+ * the forefinger to the little finger (so the thumb's side is x < 0), `n` out of the back of the hand (the thumb leans
+ * the other way); and the hand's length, the wrist to the middle fingertip.
+ */
+export function handFrame(J) {
   const a = unit(sub(J.k3, J.wrist));
-  // Across: from the forefinger to the little finger, so the thumb's side is x < 0; `n` out of the back of the hand.
   let s = sub(J.k5, J.k2); s = unit(sub(s, mul(a, dot(s, a))));
   let n = cross(a, s);
   if (dot(sub(J.t1, J.wrist), n) > 0) n = mul(n, -1);
+  return { a, s, n, L: Math.hypot(...sub(J.k3, J.wrist)) + Math.hypot(...sub(J.tip3, J.k3)) };
+}
+export function mitt(J, pts, k, detail, f) {
+  const { a, s, n } = handFrame(J);
   const L = Math.hypot(...sub(J.k3, J.wrist)) + Math.hypot(...sub(J.tip3, J.k3));
   // The block sits a touch toward the little finger from the wrist's line, as the picture has it.
   const at = (x, y, z) => add(add(add(J.wrist, mul(s, (x + 0.01) * L)), mul(n, y * L)), mul(a, z * L));

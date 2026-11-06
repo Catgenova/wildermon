@@ -102,7 +102,7 @@ export function levelView(turn: number): View {
   return { ex: [(R[0] - R[1]) * k, 0], ey: [(F[0] - F[1]) * k, 0], T: [T[0] / tl, T[1] / tl, 0], L: [L[0] / ll, L[1] / ll, L[2] / ll], H: [T[0] / tl, T[1] / tl] };
 }
 
-export interface SceneOpts { wear?: Wear; stance?: 'ref' | 'straight'; view?: View; kind?: Kind; /** The bake to draw from, made already, instead of one made now. */ bake?: Baked; /** A hand shape laid on both hands, for the sheets. */ hands?: HandShape; /** The head's pitch up on the island, in place of `HEAD_PITCH`, for the sheets. */ pitch?: number }
+export interface SceneOpts { wear?: Wear; stance?: 'ref' | 'straight'; view?: View; kind?: Kind; /** The bake to draw from, made already, instead of one made now. */ bake?: Baked; /** A hand shape laid on both hands, for the sheets. */ hands?: HandShape; /** The head's pitch up on the island, in place of `HEAD_PITCH`, for the sheets. */ pitch?: number; /** The hands turned about the forearm, degrees (the left the other way), for a sheet that looks at a hand's back. */ handTwist?: number }
 
 /** A pose as everything a draw needs, at `zoom`, at proportions `P` (the look's own unless said). */
 export function sculptScene(pose: FigurePose, zoom: number, P?: Proportions, now = performance.now() / 1000, band = bandOf(zoom), o: SceneOpts = {}): SculptScene {
@@ -116,6 +116,7 @@ export function sculptScene(pose: FigurePose, zoom: number, P?: Proportions, now
   // Talking: the head nods and tilts a little (the sculpt has no mouth to move).
   if (pose.emote === 'talk') rig.head = [rig.head[0] + 5 * Math.sin(now * 7), rig.head[1] + 2 * Math.sin(now * 3.1), rig.head[2] + 3 * Math.sin(now * 2.3)];
   if (o.hands) rig.shape = [o.hands, o.hands];
+  if (o.handTwist) rig.hand = [[rig.hand[0][0], rig.hand[0][1], rig.hand[0][2] - o.handTwist], [rig.hand[1][0], rig.hand[1][1], rig.hand[1][2] + o.handTwist]];
   if (!o.stance && !pose.swimming) rig.head = [rig.head[0] + (o.pitch ?? HEAD_PITCH), rig.head[1], rig.head[2]];
   const x = extrasOf(pose, now);
   if (rig.blink) x.blink = 1;
@@ -126,6 +127,6 @@ export function sculptScene(pose: FigurePose, zoom: number, P?: Proportions, now
 
 /** A body drawn with its feet at (sx, sy): the sculpt by the GPU, or false where there is no GPU to draw it (the caller draws the 2D figure). */
 export function drawSculpt(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, o: DrawOpts & SceneOpts & { P?: Proportions; band?: Band; now?: number } = {}): boolean {
-  const scene = sculptScene(pose, zoom, o.P, o.now, o.band, { wear: o.wear, stance: o.stance, view: o.view, kind: o.kind, hands: o.hands, pitch: o.pitch });
+  const scene = sculptScene(pose, zoom, o.P, o.now, o.band, { wear: o.wear, stance: o.stance, view: o.view, kind: o.kind, hands: o.hands, pitch: o.pitch, handTwist: o.handTwist });
   return drawSculptGL(ctx, sx, sy, zoom, scene, o);
 }

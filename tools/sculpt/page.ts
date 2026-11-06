@@ -9,7 +9,7 @@
  */
 import { drawFigure, sculptedFigures, type FigurePose } from '../../src/render/figure';
 import type { Look } from '../../src/game/look';
-import { bandOf, CELL } from '../../src/sculpt/bake';
+import { bandOf, CELL, STRIDE } from '../../src/sculpt/bake';
 import { HEIGHT_SCALE } from '../../src/render/iso';
 import { built, bakedAt, drawSculpt, heightOf, humanProportions, levelView, sculptScene, FIVE, SEVEN, type Debug, type Kind, type Wear } from '../../src/sculpt/index';
 import { GARMENT_FILE } from '../../src/sculpt/cloth';
@@ -64,6 +64,8 @@ function cell(zoom: number, crop?: [number, number], wide?: [number, number]): C
 }
 
 const root = document.getElementById('root')!;
+/** The hands sheet's audit: where each mitt's back and thumb point, per cell. */
+const AUDIT: Array<Record<string, string | number>> = [];
 function heading(text: string): void {
   const h = document.createElement('div');
   h.style.cssText = 'font:13px sans-serif;color:#eee;margin:6px 2px 2px';
@@ -478,8 +480,9 @@ const api = {
   hands(who: Who, zoom = 20): void {
     heading(`${who} hands, zoom ${zoom}: hanging relaxed (idle) and loose (walk), open (wave), a fist (work), pointing, a pinch (claw), cupped; bare-armed where the sleeve would hide them; each hand of the pair`);
     const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
+    AUDIT.length = 0;
     const shots: Array<[number, string, { wear?: Wear; hands?: HandShape }?]> = [
-      [1, 'idle:0'], [7, 'idle:0'], [1, 'walk:0.25'], [5, 'walk:0.25'], [1, 'wave:0.5'], [7, 'wave:0.5'],
+      [0, 'idle:0'], [1, 'idle:0'], [7, 'idle:0'], [1, 'walk:0.25'], [5, 'walk:0.25'], [0, 'wave:0.5'], [1, 'wave:0.5'], [7, 'wave:0.5'],
       [3, 'work:0.5', { wear: 'shorts' }], [1, 'work:0.5', { wear: 'shorts' }],
       [1, 'idle:0', { wear: 'shorts', hands: { point: 1 } }], [7, 'idle:0', { wear: 'shorts', hands: { point: 1 } }],
       [1, 'idle:0', { wear: 'shorts', hands: { claw: 1 } }], [7, 'idle:0', { wear: 'shorts', hands: { cup: 1 } }],
@@ -504,6 +507,36 @@ const api = {
         const g = cv.getContext('2d')!;
         g.fillStyle = GRASS; g.fillRect(0, 0, cv.width, cv.height);
         g.drawImage(c.cv, (sx - half * zoom) * DPR, (sy - half * zoom) * DPR, size * DPR, size * DPR, 0, 0, size * DPR, size * DPR);
+        // The audit's marks: the mitt's thumb tip (T) and its little-finger edge (L), from the bake's own vertices posed by the
+        // scene's bones, so they show where the mesh is and not where the rig thinks it is.
+        const bk = scene.baked, bv = bk.verts, thumbSlot = b.order.indexOf(`thumb${k}`), fingSlot = b.order.indexOf(`fing${k}`), indexSlot = b.order.indexOf(`index${k}`);
+        const posedV = (i: number): [number, number, number] => { const o2 = i * STRIDE; const out: [number, number, number] = [0, 0, 0]; for (let j = 0; j < 4; j++) { const wgt = bv[o2 + 11 + j]; if (!wgt) continue; const bi = bv[o2 + 7 + j] * 12, m = scene.bones, t = [bv[o2], bv[o2 + 1], bv[o2 + 2]]; out[0] += wgt * (m[bi] * t[0] + m[bi + 1] * t[1] + m[bi + 2] * t[2] + m[bi + 3]); out[1] += wgt * (m[bi + 4] * t[0] + m[bi + 5] * t[1] + m[bi + 6] * t[2] + m[bi + 7]); out[2] += wgt * (m[bi + 8] * t[0] + m[bi + 9] * t[1] + m[bi + 10] * t[2] + m[bi + 11]); } return out; };
+        const dist = (a: number[], q: number[]): number => Math.hypot(a[0] - q[0], a[1] - q[1], a[2] - q[2]);
+        let tip: [number, number, number] | null = null, tipD = -1; const idx: number[] = [0, 0, 0]; let nIdx = 0; const fg: number[] = [0, 0, 0]; let nFg = 0;
+        for (let i = 0; i < bk.nVerts; i++) { const o2 = i * STRIDE; const slot = bv[o2 + 7], wgt = bv[o2 + 11]; if (wgt < 0.99) continue; if (slot === thumbSlot) { const q = posedV(i), d = dist(q, w); if (d > tipD) { tipD = d; tip = q; } } else if (slot === indexSlot) { const q = posedV(i); idx[0] += q[0]; idx[1] += q[1]; idx[2] += q[2]; nIdx++; } else if (slot === fingSlot) { const q = posedV(i); fg[0] += q[0]; fg[1] += q[1]; fg[2] += q[2]; nFg++; } }
+        let little: [number, number, number] | null = null;
+        if (nIdx && nFg) { const ic = idx.map((x) => x / nIdx), fc = fg.map((x) => x / nFg), dir = [fc[0] - ic[0], fc[1] - ic[1], fc[2] - ic[2]]; let best = -Infinity; for (let i = 0; i < bk.nVerts; i++) { const o2 = i * STRIDE; if (bv[o2 + 7] !== fingSlot || bv[o2 + 11] < 0.99) continue; const q = posedV(i), along = q[0] * dir[0] + q[1] * dir[1] + q[2] * dir[2]; if (along > best) { best = along; little = q; } } }
+        const mark = (q: [number, number, number] | null, text: string, col: string): void => { if (!q) return; const mx = c.fx + zoom * (q[0] * v.ex[0] + q[1] * v.ey[0]) - (sx - half * zoom), my = c.fy + zoom * (q[0] * v.ex[1] + q[1] * v.ey[1] - q[2] * HEIGHT_SCALE) - (sy - half * zoom); g.save(); g.scale(DPR, DPR); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1.5; g.beginPath(); g.arc(mx, my, 5, 0, Math.PI * 2); g.stroke(); g.font = 'bold 11px sans-serif'; g.fillText(text, mx + 7, my + 4); g.restore(); };
+        // The back of the hand, from the finger block's own vertices: the block's thin axis (across the block's width and its
+        // length), signed toward the knuckle ridge, which stands further off the block's middle than the palm does. Marked B
+        // (the ridge's side) and P (the palm's); and the audit's numbers: how far the back faces the viewer, outward from the
+        // body, and forward, and the thumb's tip outward and forward of the block, each -1..1.
+        if (tip && nIdx && nFg) {
+          const ic = idx.map((x) => x / nIdx), fc = fg.map((x) => x / nFg), C = [(ic[0] + fc[0]) / 2, (ic[1] + fc[1]) / 2, (ic[2] + fc[2]) / 2];
+          const un = (q: number[]): number[] => { const l = Math.hypot(q[0], q[1], q[2]) || 1; return [q[0] / l, q[1] / l, q[2] / l]; };
+          const sd = un([fc[0] - ic[0], fc[1] - ic[1], fc[2] - ic[2]]), ad0 = [C[0] - w[0], C[1] - w[1], C[2] - w[2]];
+          const dsa = ad0[0] * sd[0] + ad0[1] * sd[1] + ad0[2] * sd[2], ad = un([ad0[0] - dsa * sd[0], ad0[1] - dsa * sd[1], ad0[2] - dsa * sd[2]]);
+          let nd = un([sd[1] * ad[2] - sd[2] * ad[1], sd[2] * ad[0] - sd[0] * ad[2], sd[0] * ad[1] - sd[1] * ad[0]]);
+          let far = 0, farD = 0;
+          for (let i = 0; i < bk.nVerts; i++) { const o2 = i * STRIDE; if ((bv[o2 + 7] !== fingSlot && bv[o2 + 7] !== indexSlot) || bv[o2 + 11] < 0.99) continue; const q = posedV(i), d = (q[0] - C[0]) * nd[0] + (q[1] - C[1]) * nd[1] + (q[2] - C[2]) * nd[2]; if (Math.abs(d) > farD) { farD = Math.abs(d); far = d; } }
+          if (far < 0) nd = [-nd[0], -nd[1], -nd[2]];
+          let bBest = -Infinity, pBest = -Infinity, bPt: [number, number, number] | null = null, pPt: [number, number, number] | null = null;
+          for (let i = 0; i < bk.nVerts; i++) { const o2 = i * STRIDE; if ((bv[o2 + 7] !== fingSlot && bv[o2 + 7] !== indexSlot) || bv[o2 + 11] < 0.99) continue; const q = posedV(i), d = (q[0] - C[0]) * nd[0] + (q[1] - C[1]) * nd[1] + (q[2] - C[2]) * nd[2]; if (d > bBest) { bBest = d; bPt = q; } if (-d > pBest) { pBest = -d; pPt = q; } }
+          mark(bPt, 'B', '#30e060'); mark(pPt, 'P', '#ffe040');
+          const toViewer = v.T, out = k ? 1 : -1, tl = Math.hypot(tip[0] - C[0], tip[1] - C[1], tip[2] - C[2]) || 1;
+          AUDIT.push({ cell: `f${f} ${what}${o?.hands ? ' ' + Object.keys(o.hands).join('') : ''} ${k ? 'R' : 'L'}`, backToViewer: +(nd[0] * toViewer[0] + nd[1] * toViewer[1] + nd[2] * toViewer[2]).toFixed(2), backOutward: +(nd[0] * out).toFixed(2), backForward: +nd[1].toFixed(2), thumbOutward: +(((tip[0] - C[0]) * out) / tl).toFixed(2), thumbForward: +((tip[1] - C[1]) / tl).toFixed(2), thumbToPalm: +(-((tip[0] - C[0]) * nd[0] + (tip[1] - C[1]) * nd[1] + (tip[2] - C[2]) * nd[2]) / tl).toFixed(2) });
+        }
+        mark(tip, 'T', '#ff3030'); mark(little, 'L', '#30c0ff');
         cells.push({ cv, label: `f${f} ${what}${o?.hands ? ' ' + Object.keys(o.hands).join('') : ''}${o?.wear ? ' bare' : ''} ${k ? 'R' : 'L'}` });
       }
     }
@@ -536,13 +569,13 @@ const api = {
     return { chin: [fx + chin[0], fy + chin[1]], crown: [fx + crown[0], fy + crown[1]], w, h };
   },
   /** The right hand alone, open and flat, its back to the viewer, `px` pixels from the wrist to the middle fingertip. */
-  handShot(who: Who, px = 250): { wrist: [number, number]; tip: [number, number]; w: number; h: number } {
+  handShot(who: Who, px = 250, twist = 90): { wrist: [number, number]; tip: [number, number]; w: number; h: number } {
     const look = { ...lookOf(who), hair: 'bald' } as Look, P = PROPS[who];
     const zoom = px / ((P.palm + P.finger) * HEIGHT_SCALE);
     const view = levelView(0);
     const pose: FigurePose = { ...poseOf(0, 'idle:0'), look };
     const hands: HandShape = { flat: 1 };
-    const scene = sculptScene(pose, zoom, P, 1, undefined, { wear: 'shorts', stance: 'straight', view, kind: kindOf(who), hands });
+    const scene = sculptScene(pose, zoom, P, 1, undefined, { wear: 'shorts', stance: 'straight', view, kind: kindOf(who), hands, handTwist: twist });
     const b = built(P, look, 'shorts', kindOf(who));
     const posed = (name: string, off: V3): V3 => { const i = b.order.indexOf(name) * 12, m = scene.bones, r = b.rest[name], t: V3 = [r.t[0] + r.m[0] * off[0] + r.m[1] * off[1] + r.m[2] * off[2], r.t[1] + r.m[3] * off[0] + r.m[4] * off[1] + r.m[5] * off[2], r.t[2] + r.m[6] * off[0] + r.m[7] * off[1] + r.m[8] * off[2]]; return [m[i] * t[0] + m[i + 1] * t[1] + m[i + 2] * t[2] + m[i + 3], m[i + 4] * t[0] + m[i + 5] * t[1] + m[i + 6] * t[2] + m[i + 7], m[i + 8] * t[0] + m[i + 9] * t[1] + m[i + 10] * t[2] + m[i + 11]]; };
     const screen = (p: V3): [number, number] => [zoom * (p[0] * view.ex[0] + p[1] * view.ey[0]), zoom * (p[0] * view.ex[1] + p[1] * view.ey[1] - p[2] * HEIGHT_SCALE)];
@@ -551,7 +584,7 @@ const api = {
     const c = cell(zoom, [0, h / zoom], [0, w / zoom]);
     const fx = w / 2 - wrist[0], fy = h * 0.3 - wrist[1];
     c.g.fillStyle = GRASS; c.g.fillRect(0, 0, w, h);
-    if (!drawSculpt(c.g, fx, fy, zoom, pose, { P, kind: kindOf(who), dpr: DPR, now: 1, wear: 'shorts', stance: 'straight', view, hands, ink: 0 })) drawFigure(c.g, fx, fy, zoom, pose);
+    if (!drawSculpt(c.g, fx, fy, zoom, pose, { P, kind: kindOf(who), dpr: DPR, now: 1, wear: 'shorts', stance: 'straight', view, hands, ink: 0, handTwist: twist })) drawFigure(c.g, fx, fy, zoom, pose);
     heading(`${who} right hand, open, from the back, ${px}px wrist to tip`);
     row([{ cv: c.cv, label: 'hand' }]);
     return { wrist: [fx + wrist[0], fy + wrist[1]], tip: [fx + tip[0], fy + tip[1]], w, h };
@@ -602,6 +635,7 @@ const api = {
     return d ? String(C.gl.getParameter(d.UNMASKED_RENDERER_WEBGL)) : 'webgl2';
   },
   scene: sculptScene,
+  audit: (): Array<Record<string, string | number>> => AUDIT,
 };
 (window as unknown as { SCULPT: typeof api }).SCULPT = api;
 (window as unknown as { READY: boolean }).READY = true;

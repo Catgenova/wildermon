@@ -106,7 +106,22 @@ export function humanBaked(fem: number, band: Band, rest: Bones, order: string[]
     let ourAxis: V3;
     if (typeof c === 'string') ourAxis = unit([at(rest, c)[0] - joint[0], at(rest, c)[1] - joint[1], at(rest, c)[2] - joint[2]]);
     else { const m = rest[name].m; ourAxis = unit([m[0] * c[0] + m[1] * c[1] + m[2] * c[2], m[3] * c[0] + m[4] * c[1] + m[5] * c[2], m[6] * c[0] + m[7] * c[1] + m[8] * c[2]]); }
-    return { joint, mhHead, R: turn(mhAxis, ourAxis), slot: order.indexOf(name) };
+    // The hands come over by the hand's own frame, not the bone's line: the base's across, back and along axes onto the
+    // rig's (across is backward, the back outward, along down, in the wrist's rest frame), one turn for all a hand's bones,
+    // so the mitt lands whole and held the figure's way whatever roll MakeHuman's rest gives its wrist.
+    const hand = /^(wrist|fing|index|thumb)([01])$/.exec(name);
+    let R = turn(mhAxis, ourAxis);
+    if (hand && P.handFrame) {
+      const k = +hand[2], sgn = k ? 1 : -1, hf = P.handFrame, m = rest[`wrist${k}`].m;
+      const col = (i: number): V3 => [m[i], m[3 + i], m[6 + i]];
+      const X = col(0), Y = col(1), Z = col(2);
+      const ours = [[-Y[0], -Y[1], -Y[2]], [sgn * X[0], sgn * X[1], sgn * X[2]], [-Z[0], -Z[1], -Z[2]]];
+      // The left hand's frame is the asset's; the right's is its mirror in x, the right hand being the left's mirror.
+      const mh = [[hf[0], hf[1], hf[2]], [hf[3], hf[4], hf[5]], [hf[6], hf[7], hf[8]]].map((v) => (k ? [-v[0], v[1], v[2]] : v));
+      // R = ours · mhᵀ: columns of ours against rows of mh.
+      R = [0, 1, 2].flatMap((row) => [0, 1, 2].map((colI) => ours[0][row] * mh[0][colI] + ours[1][row] * mh[1][colI] + ours[2][row] * mh[2][colI]));
+    }
+    return { joint, mhHead, R, slot: order.indexOf(name) };
   });
   const pos = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {

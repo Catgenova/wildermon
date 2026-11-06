@@ -83,11 +83,11 @@ if (only.includes('lineup')) await shoot('lineup', async () => { await window.SC
 if (only.includes('facings')) await shoot(`facings-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 1); window.SCULPT.facings(w, 'walk:0.25', 1); window.SCULPT.facings(w, 'idle:0', 2); window.SCULPT.facings(w, 'walk:0.25', 2); window.SCULPT.facings(w, 'idle:0', 4); window.SCULPT.facings(w, 'walk:0.6', 4); window.SCULPT.facings('figure', 'idle:0', 2); });
 if (only.includes('motion')) await shoot(`motion-${who}`, (w) => { window.SCULPT.strip(w, 1, 2.5); window.SCULPT.strip(w, 3, 2.5); window.SCULPT.strip(w, 6, 2.5); window.SCULPT.strip('figure', 1, 2.5); });
 if (only.includes('close')) await shoot(`close-${who}`, (w) => window.SCULPT.close(w, 9));
-if (only.includes('hands')) await shoot(`hands-${who}`, (w) => window.SCULPT.hands(w, 20));
+if (only.includes('hands')) { await shoot(`hands-${who}`, (w) => window.SCULPT.hands(w, 20)); for (const a of await p.evaluate(() => window.SCULPT.audit())) console.log('audit', JSON.stringify(a)); }
 if (only.includes('trace')) {
   // The head and the hand alone for the overlays on the pictures: each cell's png with where its landmarks fell, as json.
   const marks = {};
-  for (const [name, fn] of [['head-front', (w) => window.SCULPT.headShot(w, 0, 150)], ['head-34', (w) => window.SCULPT.headShot(w, 20, 150)], ['head-34b', (w) => window.SCULPT.headShot(w, 35, 150)], ['hand', (w) => window.SCULPT.handShot(w, 120)]]) {
+  for (const [name, fn] of [['head-front', (w) => window.SCULPT.headShot(w, 0, 150)], ['head-34', (w) => window.SCULPT.headShot(w, 20, 150)], ['head-34b', (w) => window.SCULPT.headShot(w, 35, 150)], ['hand', (w) => window.SCULPT.handShot(w, 120, 90)]]) {
     await p.evaluate(() => window.SCULPT.clear());
     marks[name] = await p.evaluate(fn, who);
     await p.locator('#root canvas').first().screenshot({ path: join(out, `trace-${name}-${who}.png`), timeout: 180000, animations: 'disabled' });

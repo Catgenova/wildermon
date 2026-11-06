@@ -47,6 +47,13 @@ export interface Proportions {
   eye?: V3; jaw?: V3;
   /** The chin's bottom and the crown, from the head joint, when the body says: the sheets hold the head against the picture by them. */
   chin?: V3; crown?: V3;
+  /**
+   * The body's own hand, when it says (the left hand's, the right the mirror): its frame in the base's space, across from the
+   * forefinger to the little finger, out of the back, along the palm (nine numbers), and in that frame the forefinger's
+   * knuckle, the thumb's root and the thumb's line from the wrist. The rig holds its hand the figure's way, the palm to the
+   * thigh: across is backward, the back is outward, along is down.
+   */
+  handFrame?: number[]; handIndex?: V3; handThumb?: V3; handThumbDir?: V3;
   r: { neck: number; upper: number; fore: number; wrist: number; thigh: number; shin: number; ankle: number; chest: number; waist: number; pelvis: number };
 }
 
@@ -176,6 +183,7 @@ export interface Extras {
 }
 
 const DEG = Math.PI / 180;
+const unit = (v: V3): V3 => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
 
 /**
  * The mitt's curl, nought the fingers straight to one a fist, from what the rig has the hand doing: open to wave, hanging
@@ -269,13 +277,21 @@ export function bonesOf(r: Rig, P: Proportions, chains: Chain[], x: Extras): Bon
     b[`arm${k}`] = joint(clav, [s * (P.shoulder - 0.4), -0.3, -0.15 + r.shrug[k] + raise * 0.01], ap, -s * aa, s * at);
     b[`elbow${k}`] = joint(b[`arm${k}`], [0, 0, -P.upper], r.elbow[k]);
     b[`wrist${k}`] = joint(b[`elbow${k}`], [0, 0, -P.lower], ...r.hand[k]);
-    // The mitt: the fingers as one block hinged at the knuckles, folding to the palm at a fist, and the thumb, out from
-    // the hand when open and turned in across the fingers as they close.
+    // The mitt, held the figure's way: the fingers side by side from the forefinger at the front to the little finger at
+    // the back, the palm to the thigh, the thumb at the front edge. The fingers are one block hinged at the knuckles about
+    // the body's forward axis, folding in to the palm at a fist (the forefinger on its own hinge, so it can stay out to
+    // point); the thumb stands forward and down from its root when open and turns in across the fingers as they close.
     const c = curlOf(r, k), ci = curlOf(r, k, true);
-    const knuckle: V3 = [0, 0.05, -P.palm];
-    b[`fing${k}`] = joint(b[`wrist${k}`], knuckle, -c * 100);
-    b[`index${k}`] = joint(b[`wrist${k}`], [-s * P.r.wrist * 1.2, 0.05, -P.palm], -ci * 100);
-    b[`thumb${k}`] = joint(b[`wrist${k}`], [-s * P.r.wrist * 0.9, 0.3, -P.palm * 0.35], -8 - c * 40, s * (22 - c * 30), 0);
+    const inHand = (o: V3): V3 => [s * o[1], -o[0], -o[2]];
+    const knuckle: V3 = [0, 0, -P.palm];
+    b[`fing${k}`] = joint(b[`wrist${k}`], knuckle, 0, s * c * 100, 0);
+    b[`index${k}`] = joint(b[`wrist${k}`], P.handIndex ? inHand(P.handIndex) : [0, P.r.wrist * 1.1, -P.palm], 0, s * ci * 100, 0);
+    const thumbAt: V3 = P.handThumb ? inHand(P.handThumb) : [-s * P.r.wrist * 0.3, P.r.wrist * 1.1, -P.palm * 0.3];
+    const open: V3 = P.handThumbDir ? inHand(P.handThumbDir) : [-s * 0.2, 0.5, -0.84];
+    const fist: V3 = [-s * 0.9, -0.1, -0.42];
+    const d = unit([open[0] + (fist[0] - open[0]) * c, open[1] + (fist[1] - open[1]) * c, open[2] + (fist[2] - open[2]) * c]);
+    // The frame whose down axis lies along `d`: a pitch about x then a roll about y.
+    b[`thumb${k}`] = joint(b[`wrist${k}`], thumbAt, Math.asin(clamp(d[1], -1, 1)) / DEG, Math.atan2(-d[0], -d[2]) / DEG, 0);
     const [lp, la, lt] = r.leg[k];
     b[`hip${k}`] = joint(pelvis, [s * P.hipW, 0, -0.1], lp, -s * la, s * lt);
     b[`knee${k}`] = joint(b[`hip${k}`], [0, 0, -P.thigh], -r.knee[k]);
