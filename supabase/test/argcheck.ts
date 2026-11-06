@@ -59,7 +59,6 @@ const targets: Array<[string, Target & Record<string, unknown>]> = [
   ['plan_aqueduct', { kind: 'tile', x: AT + 1, y: AT, cx: AT + 1, cy: AT, head: [AT, AT] }],
   ['place_furniture', { kind: 'tile', x: AT + 1, y: AT, cx: AT + 1, cy: AT, sx: 1, sy: 2, itemUid: 1, facing: 'e', level: 0 }],
   ['track', { kind: 'tile', x: AT, y: AT, cx: AT, cy: AT, species: 'roxxen' }],
-  ['cast', { kind: 'tile', x: AT, y: AT, cx: AT, cy: AT, spell: 'none' }],
   ['store_in_crate', { kind: 'crate', id: 1, scroll: 2 }],
   ['bind_wound', { kind: 'person', uid: YOU, name: 'Yonne' }],
   ['fuel_campfire', { kind: 'campfire', id: 1, itemUid: 1, count: 3 }],

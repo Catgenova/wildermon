@@ -3748,8 +3748,6 @@ update player set x = 5.5, y = 7.5, favour = 0, favour_at = now(), prayed_at = n
     sat_at = null, way = null, used_at = '{}'::jsonb, wounds = '[]'::jsonb
   where world_id = :'world2' and uid = :'ivar';
 delete from skill where world_id = :'world2' and uid = :'ivar' and id in ('prayer', 'meditation');
-select '486. what a prayer buys: ' || (select string_agg(name || ' (' || cost || ' favour at prayer '
-       || level || ', on ' || on_what || ')', ', ' order by level) from cast_def);
 -- Every path on tiers now: what each offers at its first, a technique and two disciplines.
 select '487. and the three ways: ' || (select string_agg(d.name || ' — ' ||
        (select string_agg(k.name, ', ' order by k.num) from path_pick k where k.path = d.id and k.tier = 1),
@@ -3793,31 +3791,6 @@ select '492. four favour and an hour nobody looked: ' || round(favour_settle(:'w
      || ' — it fills at ' || favour_trickle() || ' a second up to '
      || round(favour_cap(skill_of(:'world2', :'ivar', 'prayer'))::numeric, 1)
      || ', which is what this much faith carries';
-select '493. calling for something beyond us: ' || coalesce(act_refusal(:'world2', :'ivar', 'cast',
-       '{"kind":"item","spell":"bounty"}'::jsonb), 'allowed');
-insert into skill (world_id, uid, id, value) values (:'world2', :'ivar', 'prayer', 40)
-  on conflict (world_id, uid, id) do update set value = 40;
-update player set favour = 100, favour_at = now() where world_id = :'world2' and uid = :'ivar';
--- The first by id, which is the hatchet: without the order this picked whatever the index
--- handed over first, and read one way in three runs of thirty-five and the other in the rest.
-select id as issued from item where world_id = :'world2' and holder_uid = :'ivar' and issued order by id limit 1 \gset
-select '494. the circle on something we washed ashore with: ' || coalesce(act_refusal(:'world2', :'ivar',
-       'cast', ('{"kind":"item","spell":"cunning","uid":' || :'issued' || '}')::jsonb), 'allowed');
-select give(:'world2', :'ivar', 'hatchet', 1, 50, 'Steel') as made \gset
-delete from event where uid = :'ivar';
-select act_perform(:'world2', :'ivar', 'cast',
-  ('{"kind":"item","spell":"cunning","uid":' || :'made' || '}')::jsonb) \g /dev/null
-select '495. ' || (select text from event where uid = :'ivar' and kind = 'event' order by n desc limit 1)
-     || ' — a steel hatchet at QL 50 was worth ' || round(tool_worth(50, 0, 'Steel', null, 0)::numeric, 1)
-     || ' to work with and is now worth ' || round(tool_worth(50, 0, 'Steel', null, 1)::numeric, 1);
-update item set bless = 3 where id = :'made';
-update player set favour = 100, favour_at = now() where world_id = :'world2' and uid = :'ivar';
-select '496. and a fourth time: ' || coalesce(act_refusal(:'world2', :'ivar', 'cast',
-       ('{"kind":"item","spell":"cunning","uid":' || :'made' || '}')::jsonb), 'allowed')
-     || ' — mending a thing with nothing wrong with it: '
-     || coalesce(act_refusal(:'world2', :'ivar', 'cast',
-        ('{"kind":"item","spell":"mend","uid":' || :'made' || '}')::jsonb), 'allowed');
-
 -- The rug, and what comes of sitting on it.
 select '497. sitting with nothing to sit on: ' || coalesce(act_refusal(:'world2', :'ivar', 'meditate',
        '{"kind":"tile","x":5,"y":7}'::jsonb), 'allowed');
@@ -7950,8 +7923,6 @@ select '873. and breeding: "'
      || coalesce(last_refusal(:'world2', :'hild', 'pair_creature', ('{"id":' || :'cit_doe' || '}')::jsonb), 'ALLOWED')
      || '" against "'
      || coalesce(last_refusal(:'world2', :'alice', 'pair_creature', ('{"id":' || :'out_doe' || '}')::jsonb), 'ALLOWED')
-     || '"; the harvest: "' || coalesce(cast_reason(:'world2', :'hild', 'bounty', null), 'ALLOWED')
-     || '" against "' || coalesce(cast_reason(:'world2', :'alice', 'bounty', null), 'ALLOWED')
      || '"; and the walk home: "' || work_ability(:'world2', :'hild', 'recall')
      || '" against "' || work_ability(:'world2', :'alice', 'recall') || '"';
 select '874. and the hands she may set to it: ' || worker_cap(:'world2', :'hild') || ' against '

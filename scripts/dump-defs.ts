@@ -88,7 +88,7 @@ import { ORDER_LIFE } from '../src/game/orders';
 import { VESSELS, LIQUID_NAME, type LiquidKind } from '../src/game/furniture';
 import { isBrew, drinkable } from '../src/game/brewing';
 import { TACK } from '../src/game/creatureActions';
-import { CASTS, FAVOUR_TRICKLE, PRAYER, PRAYER_FAVOUR, PRAYER_GAIN, PRAYER_REST, FAVOUR_CEILING, BLESS_CAP, BLESS_STEP } from '../src/game/faith';
+import { FAVOUR_TRICKLE, PRAYER, PRAYER_FAVOUR, PRAYER_GAIN, PRAYER_REST, FAVOUR_CEILING, BLESS_CAP, BLESS_STEP } from '../src/game/faith';
 import { DRIVING, DRIVING_LEARN, DRIVING_TOP, SAILING, SAILING_LEARN, SAILING_TOP, TRAVEL_TOP_AT } from '../src/game/travel';
 import {
   CHOOSE_AT, GATHER_RING, PATH_LIST, PATH_PICKS, PATH_TIER_AT, PICKS_PER_TIER, SIT_CALM, SIT_GAIN, SIT_REST, SIT_WORTH, SIT_STALE_SAID, SIT_STONE_SAID, SIT_SWIRL_SAID, STRUCK_SAID, TECHNIQUE_GAIN,
@@ -641,16 +641,12 @@ out.push(`alter table tier_odds add column if not exists level real not null def
 /* The name a fighting trait's four grades share. */
 out.push(`alter table trait_def add column if not exists family text;`);
 /*
- * What a prayer buys, and the three ways of looking at the island.
+ * The three ways of looking at the island.
  *
  * A path's steps are a table rather than a list in a function because the
  * only thing ever asked of them is "how many of these are behind you" and
  * "which of them is called on by this name" — both of which are a `where`.
  */
-out.push(`create table if not exists cast_def (
-  id text primary key, name text not null, cost real not null, level real not null,
-  on_what text not null, note text not null
-);`);
 /*
  * The trades. A class is a card somebody locks in, and `class_skill` is the
  * set of skills it covers -- fifty in any one of them opens the card, and no
@@ -757,7 +753,7 @@ out.push(`create table if not exists pan_ore (
 /*
  * The three schools, the stones each works, and what may be cast out of them.
  *
- * `spell_def` is `cast_def`'s shape asked of a stone rather than of a god: a
+ * `spell_def` is asked of a stone: a
  * name, what it takes, what it costs and what it reaches. The cost is in marks
  * of wear on the focus rather than in favour, which is the whole difference
  * between the two arts.
@@ -1282,7 +1278,7 @@ out.push(emptied(['melt_def', 'wall_fitting', 'recipe', 'recipe_input', 'recipe_
   'wound_kind_def', 'butcher_part', 'species_butcher', 'hoard_metal', 'crate_def', 'metal_def',
   'pottery_def', 'mould_def', 'improve_material_def', 'improve_tool', 'improve_stock',
   'improvable_def', 'item_feeds', 'boon_skill', 'plantable', 'buryable', 'flower_octave', 'flower_season', 'stone_bed', 'title_def',
-  'knack_kin', 'category_decay', 'vehicle_def', 'boat_def', 'tack_def', 'cast_def', 'path_def',
+  'knack_kin', 'category_decay', 'vehicle_def', 'boat_def', 'tack_def', 'path_def',
   'path_step', 'path_tier', 'path_pick', 'class_def', 'class_skill', 'class_channel', 'class_node', 'class_perk',
   'perk_fx_rule', 'perk_tier', 'class_tier', 'class_spell', 'patron_def', 'faith_tier', 'faith_spell', 'spell_on_def', 'spell_slot', 'pan_ore', 'rite_def',
   'school_def', 'school_stone', 'spell_def', 'bridge_def', 'bridge_bill', 'bridge_winch', 'brew_def',
@@ -2500,9 +2496,6 @@ for (const f of FURNITURE as unknown as A[]) {
   if (b) out.push(`insert into boat_def (id, speed, draught, seat, sail, passengers) values (${q(f.id)}, ${q(b.speed)}, ${q(b.draught)}, ${q(b.seat)}, ${q(!!b.sail)}, ${q(b.passengers ?? 0)});`);
 }
 TACK.forEach((id, ord) => out.push(`insert into tack_def values (${q(ord)}, ${q(id)});`));
-for (const c of CASTS) {
-  out.push(`insert into cast_def values (${q(c.id)}, ${q(c.name)}, ${q(c.cost)}, ${q(c.level)}, ${q(c.on)}, ${q(c.note)});`);
-}
 for (const b of Object.values(BRIDGES)) {
   out.push(`insert into bridge_def values (` + [q(b.id), q(b.name), q(b.span), q(b.tool),
     q(b.skill), q(b.difficulty), q(b.carts), q(b.note)].join(', ') + `);`);

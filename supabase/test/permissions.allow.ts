@@ -46,7 +46,6 @@ export const TABLES: Record<string, Read> = {
   buryable: 'rules',
   bush_def: 'rules',
   butcher_part: 'rules',
-  cast_def: 'rules',
   category_decay: 'rules',
   channel_def: 'rules',
   chart_region: 'rules',

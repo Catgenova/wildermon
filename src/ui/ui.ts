@@ -69,11 +69,10 @@ import { BRIDGES, bridgeDef, bridgeDone, bridgeName, bridgeState, isMaterialBrid
 import { aqueductEntries, aqueductMenu } from './aqueducts';
 import { drawbridgeState, fitsMaterial, gateHoverLine, gatePlanRefusal, hiddenDoorIronWords, hiddenDoorWants, isDrawbridge, planHiddenDoor, portcullisAt, portcullisState } from '../game/gates';
 import { foundationState } from '../game/foundations';
-import { BLESS_CAP, CASTS, FAITH, favourCap } from '../game/faith';
+import { FAITH, favourCap } from '../game/faith';
 import { BAUBLE_SAID, BAUBLE_TIER_BY_ID, BAUBLE_TIERS, readBauble, socketsOf, socketText, TARNISHED } from '../game/baubles';
 import { FED_SAID, SACRIFICE_SAID, sacrificeable } from '../game/sacrifice';
 import { abilitiesOf, CHOOSE_AT, MEDITATION, nextStep, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, PATH_LIST, picksOf, sittingWorth } from '../game/meditation';
-import { canImprove } from '../game/improve';
 import { brewTime, BREWS } from '../game/brewing';
 import { fireAnchor, fireState, FIRE_COST, isFuel, type PlacedCampfire } from '../game/campfire';
 import { COIN_METALS, COIN_REFUSAL, DIE_WEAR, INGOT_LUMPS, MOULD_BY_ID, MOULD_BY_MAKES, isCasting, isIngot, isLump, isMetalStock, isMould, isOreItem, lumpsIn, metalOfBar, mouldLumps, mouldUsesLeft } from '../game/metal';
@@ -92,7 +91,7 @@ import { cornerReading, groundReading, yieldLines } from './tileinfo';
 import { deedWorkersAt, MAX_DEED_LEVEL, type Deed } from '../game/game';
 import { isFounder, lacks } from '../game/ranks';
 import { pannierRefusal, panniersOffered } from '../game/panniers';
-import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, skillName, type CraftStock, type Recipe } from '../game/recipes';
+import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, type CraftStock, type Recipe } from '../game/recipes';
 import { CraftPanel } from './panels/craft';
 import { unseenNews } from './panels/news';
 import { CratePanel } from './panels/crate';
@@ -2794,39 +2793,6 @@ export class UI {
       if (pray) {
         const why = pray.check?.(ft, g) ?? null;
         entries.push({ label: 'Pray', hint: why ?? undefined, disabled: !!why, onSelect: () => g.requestAction(pray, ft) });
-      }
-      const cast = ACTION_BY_ID.get('cast');
-      if (cast) {
-        entries.push({
-          label: 'Call on it',
-          children: CASTS.map((c) => {
-            const wantsItem = c.on === 'item';
-            const targets = wantsItem ? g.inventory.items.filter((it) => canImprove(it.id) || it.dmg > 0) : [];
-            // Called on where you stand: the call needs the altar's menu, not a walk to its corner tile (a big altar's far side was out of reach).
-            const plain: Target = { kind: 'tile', x: g.player.tileX, y: g.player.tileY, cx: 0, cy: 0, spell: c.id };
-            const why = cast.check?.(wantsItem ? { kind: 'item', uid: targets[0]?.uid ?? -1, spell: c.id } : plain, g) ?? null;
-            return {
-              label: c.name,
-              note: `${c.cost} favour · ${skillName(FAITH).toLowerCase()} ${c.level}`,
-              hint: why ?? c.note,
-              disabled: !!why && !wantsItem,
-              children: wantsItem
-                ? targets.slice(0, 20).map((it) => {
-                    const t: Target = { kind: 'item', uid: it.uid, spell: c.id };
-                    const reason = cast.check?.(t, g) ?? null;
-                    return {
-                      label: itemName(it),
-                      note: it.bless ? `already ${it.bless} of ${BLESS_CAP}` : it.dmg > 0 ? `damage ${it.dmg.toFixed(1)}` : undefined,
-                      hint: reason ?? undefined,
-                      disabled: !!reason,
-                      onSelect: () => g.requestAction(cast, t),
-                    };
-                  })
-                : undefined,
-              onSelect: wantsItem ? undefined : () => g.requestAction(cast, plain),
-            };
-          }),
-        });
       }
       entries.push(this.sacrificeEntry(f));
       entries.push(this.baubleEntry(f));

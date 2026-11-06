@@ -252,10 +252,6 @@ create table if not exists dyeable_item (id text primary key);
 create table if not exists dyeable_class (cls text primary key);
 alter table tier_odds add column if not exists level real not null default 0;
 alter table trait_def add column if not exists family text;
-create table if not exists cast_def (
-  id text primary key, name text not null, cost real not null, level real not null,
-  on_what text not null, note text not null
-);
 create table if not exists class_def (
   id text primary key, kind text not null, name text not null, note text not null,
   main text not null, lever text not null
@@ -1539,7 +1535,6 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('lay_steps', 'Lay stone steps', 'laying steps', 'masonry', 'trowel', false, null, 0.06, 20, 15, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('lay_timber_steps', 'Lay timber steps', 'laying steps', 'carpentry', 'mallet', false, null, 0.05, 16, 12, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('take_up_steps', 'Take up the steps', 'taking up the steps', 'paving', 'pickaxe', false, null, 0.05, 10, null, false, false);
-insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('cast', 'Call on it', 'calling on it', 'prayer', null, false, null, 0.03, 6, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pray', 'Pray', 'praying', 'praying', null, false, null, 0.02, 14, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pray_statue', 'Pray', 'praying', 'praying', null, false, null, 0.02, 14, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('set_bauble', 'Set into the altar', 'setting a bauble', null, null, false, null, 0.01, 4, null, false, false);
@@ -2124,7 +2119,6 @@ delete from category_decay;
 delete from vehicle_def;
 delete from boat_def;
 delete from tack_def;
-delete from cast_def;
 delete from path_def;
 delete from path_step;
 delete from path_tier;
@@ -6651,12 +6645,6 @@ insert into furniture_def values ('great_sign', 'Signboard', 2, 1, null, false, 
 insert into furniture_def values ('grave', 'Grave', 1, 2, null, false, false);
 insert into tack_def values (0, 'saddle');
 insert into tack_def values (1, 'bridle');
-insert into cast_def values ('call', 'Call', 12, 3, 'self', 'Your active companion teleports to you.');
-insert into cast_def values ('mend', 'Mend', 18, 8, 'item', 'Removes all damage from an item.');
-insert into cast_def values ('dawnlight', 'Light of the dawn', 26, 16, 'self', 'Heals all your wounds; cures infection.');
-insert into cast_def values ('cunning', 'Circle of cunning', 34, 24, 'item', 'Tool works +9% better, permanently. Max 3 casts per tool.');
-insert into cast_def values ('fairwind', 'Fair wind', 30, 30, 'self', 'Wind turns to blow from behind you and holds 6 min.');
-insert into cast_def values ('bounty', 'Bounty', 44, 40, 'self', 'Every crop on your settlement grows one growth stage.');
 insert into bridge_def values ('rope', 'Rope bridge', 14, 'mallet', 'carpentry', 18, false, 'Longest span: 14 tiles. Foot traffic only.');
 insert into bridge_bill values ('rope', 'thick_rope', 60);
 insert into bridge_bill values ('rope', 'plank', 120);

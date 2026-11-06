@@ -6,7 +6,6 @@ import { FIRE_COST } from './campfire';
 import { billWords, DEED_DECAY, rarityChance } from './items';
 import { CHOOSE_AT, PATH_LIST, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, type PathId } from './meditation';
 import { KNACK_CAP, KNACK_ODDS, TITLE_STEPS } from './titles';
-import { BLESS_CAP } from './faith';
 import { FURNITURE_BY_ID } from './furniture';
 import { ENCHANTMENTS } from './enchant';
 import { GOAL_HOW } from './journalhow';
@@ -229,8 +228,6 @@ export const JOURNAL: Chapter[] = [
         met: (g) => ours(g.furniture.values()).some((f) => f.kind === 'altar'),
       },
       { id: 'prayed', text: 'Pray at an altar', met: did('prayed') },
-      { id: 'cunning', text: 'Cast a circle of cunning on a tool', hint: 'Favour bought at an altar', met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) > 0) },
-      { id: 'thrice', text: `Cast ${BLESS_CAP} circles of cunning on one tool`, met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) >= BLESS_CAP) },
       // A scroll written at the crafting window and put into a weapon (`enchant.ts`): held, not counted, so the island has nothing to note.
       // A melee weapon, as it says: any enchanted thing in the pack did, a ring or a bow among them.
       { id: 'enchanted', text: 'Enchant a melee weapon', hint: 'Formula read, scroll from papyrus and motes, then Enchant on the scroll', met: (g) => g.inventory.items.some((it) => !!it.enchant && ENCHANTMENTS[it.enchant.id]?.on === 'melee') },

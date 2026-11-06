@@ -91,7 +91,7 @@ import {
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
 import { CROP_BY_SEED, CROP_LIST, CROPS, cropYield, seedSays, growthWords, PATCH_TIME, RIPE, STAGE_NAMES } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS, YEARLESS_GROWTH } from '../../game/growth';
-import { CASTS, FAVOUR_TRICKLE, favourCap, PRAYER_BASE, PRAYER_GAIN, PRAYER_LIFT, PRAYER_PEAKS, PRAYER_REST, PRAYER_TAPER, prayerWorth } from '../../game/faith';
+import { FAVOUR_TRICKLE, favourCap, PRAYER_BASE, PRAYER_GAIN, PRAYER_LIFT, PRAYER_PEAKS, PRAYER_REST, PRAYER_TAPER, prayerWorth } from '../../game/faith';
 import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
@@ -1031,7 +1031,7 @@ function artifactHelp(): string {
     <ul>
       <li>${fromRelic(ANCIENT_HELM)}: head slot, plate. Worn: sight radius +${ANCIENT_HELM_SIGHT} tiles.</li>
       <li>${fromRelic(ANCIENT_SWORD)}: swing time ×${ANCIENT_SWORD_SWING} a ${lowName(SWORD_PLAIN.id)}'s: ${SWORD_ANCIENT.swing} seconds against ${SWORD_PLAIN.swing}, before skill.</li>
-      <li>Neither: Improve, Repair, repair kit, Mend, ancient whetstone, a mender in the stores. Refused: <i>${unmendableSays({ id: ANCIENT_HELM })}</i></li>
+      <li>Neither: Improve, Repair, repair kit, ancient whetstone, a mender in the stores. Refused: <i>${unmendableSays({ id: ANCIENT_HELM })}</i></li>
     </ul>
     <p>Helms and short swords restored before these existed stay a plain helm and short sword.</p>`;
 }
@@ -1738,7 +1738,7 @@ export function helpText(): string {
       <li>Sow, tend and harvest from its menu: the field's seeds, growth stages and yields. <b>Pull it up</b>: what grows goes back into the soil.</li>
       <li>Farmer perks that work on it: ${listed(planterPerks().map((p) => p.name))}; ${farmerPerk('rotate:plant_seed')} reads the planter's own last crop.
       Fields only: ${listed(['sow_patch', 'tend_patch', 'harvest_patch'].map(farmerPerk))}.</li>
-      <li>Cannot be picked up while growing. Bounty covers planters on your settlement along with its fields.</li>
+      <li>Cannot be picked up while growing.</li>
     </ul>
     <h3>Campfires and cooking</h3>
     <ul>
@@ -1897,7 +1897,7 @@ export function helpText(): string {
       <li><b>Plan wall</b>, <b>Solid</b> offers <b>glass</b>: ${glassWall()} a wall; mallet; trains carpentry. Seen through. ${onlySaid(GLASS_ROOF)}</li>
       <li><b>Glasshouse</b>: one storey, <b>walled all round to full height</b> (door, window, arch, glass ${glassWallTypes()} count; ${lowWalls()} too low), every footprint tile under finished glass.
       Its menu lists what is missing.</li>
-      <li>Ground-floor tiles with no floor planned and no slab poured: <b>Till</b> with a rake into fields (all field rules, Farmer patches, perks and Bounty included).</li>
+      <li>Ground-floor tiles with no floor planned and no slab poured: <b>Till</b> with a rake into fields (all field rules, Farmer patches and perks included).</li>
       <li>With a field inside: no floor over the field, no roof but glass, no storey above. <b>Clear the field</b> packs it flat again.</li>
       <li>Growth: <b>${growthWords(GLASSHOUSE_GROWTH)} in every season</b>, winter included (open field: ${listed(SEASONS.map((s) => `${growthWords(SEASON_GROWTH[s])} in ${s}`))}).
       Cotton growth stage: ${dur(CROPS.cotton.stageSeconds / GLASSHOUSE_GROWTH)} all year.</li>
@@ -1908,7 +1908,7 @@ export function helpText(): string {
     <ul>
       <li><b>Plan floor</b> offers <b>${GARDEN_BED.name.toLowerCase()}</b>, any storey: ${bedTile()} per tile; mallet; trains carpentry. ${onlySaid(GARDEN_BED)}</li>
       <li>Ribbons: ${bedMake()} only. Hod carriers: timber and dirt only.</li>
-      <li>Finished: a field, no tilling. Sow, tend, harvest and patches from the storey you stand on (all field rules, Farmer perks and Bounty included).</li>
+      <li>Finished: a field, no tilling. Sow, tend, harvest and patches from the storey you stand on (all field rules and Farmer perks included).</li>
       <li>Growth: <b>${growthWords(GLASSHOUSE_GROWTH)} in every season</b>, winter included, while open: nothing finished above it, or the nearest finished thing above a glass roof.</li>
       <li>Covered (floor, staircase or roof not of glass above): "${BED_COVERED}" Growing crop: holds its progress until uncovered.</li>
       <li>One crop per tile, any storey: "${BED_ONE_CROP}"</li>
@@ -3123,7 +3123,7 @@ export function helpText(): string {
     <ul>
       <li><b>Investigate</b> (right-click soil, sand or a trail): <b>trowel</b>, <b>Archaeology</b>; sometimes a <b>fragment</b>. A searched tile is empty for a while.</li>
       <li>A fragment names its relic and piece (<i>${LAST_RELIC.name} ${LAST_RELIC.parts - 1}/${LAST_RELIC.parts}</i>); found at ${FIND_DAMAGE} to ${FIND_DAMAGE + FIND_DAMAGE_SPREAD} damage.</li>
-      <li><b>Fragments and tarnished baubles cannot be repaired until restored</b> (no Repair, repair kit, Mend or worker mending). Damage only rises (failed restoring, weather);
+      <li><b>Fragments and tarnished baubles cannot be repaired until restored</b> (no Repair, repair kit or worker mending). Damage only rises (failed restoring, weather);
       at ${DAMAGE_MAX} it breaks. Restored, it mends like anything else, but for ${unmendableSaid()}.</li>
       <li>${RELICS.length} relics, from ${article(RELICS[0].name)} <b>${RELICS[0].name}</b> in ${RELICS[0].parts} pieces to ${article(LAST_RELIC.name)} <b>${LAST_RELIC.name}</b> in ${LAST_RELIC.parts};
       each recognised only at enough archaeology. Common ones turn up far more often; pieces you lack are favoured.</li>
@@ -3452,10 +3452,6 @@ export function helpText(): string {
       <li>${percent(SOUL_CHANCE)} of sacrifices leave a <b>soul</b> of the item's rarity. <b>Absorb into</b> (on the soul) an ordinary pack item (one of a stack): it takes that rarity.</li>
       <li>Not sacrificable: locked or worn items, bags with contents, occupied wildermon crates. Baubles take no soul (rarity drawn on restoring).</li>
     </ul>
-    <p>${CASTS.length} favour casts, found nowhere else:</p>
-    <table>
-      ${CASTS.map((c) => `<tr><td><b>${c.name}</b></td><td>${c.cost} favour, ${SKILL_NAME('prayer')} ${c.level}. ${c.note}</td></tr>`).join('\n      ')}
-    </table>
     <h3>Patrons and the spell bar</h3>
     <ul>
       <li>At <b>${PATRON_AT} ${SKILL_NAME('prayer')}</b>: take a <b>patron</b> in the <b>Faith</b> window: ${listed(PATRONS.map((p) => `<b>${p.name}</b> (${ALIGNMENT_NAMES[p.alignment].toLowerCase()})`))}.</li>

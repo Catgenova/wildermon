@@ -4253,6 +4253,13 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 516,
+    day: '2026-11-06',
+    lines: () => [
+      'Removed: the altar\'s Call on it casts (Call, Mend, Light of the dawn, Circle of cunning, Fair wind, Bounty), and the two journal goals for Circle of cunning. Blessings already on a tool stay. Praying, favour and patron spells unchanged.',
+    ],
+  },
+  {
     n: 515,
     day: '2026-11-06',
     lines: () => [

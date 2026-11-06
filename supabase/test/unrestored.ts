@@ -8,7 +8,6 @@
  *
  *   * Repair and a repair kit (`item_refusal`, and the actions' own checks),
  *     neither of them offered on one in the browser;
- *   * Mend (`cast_reason`, `castReason`);
  *   * a worker mending the stores, who passes them by for the worst of the
  *     rest (`damaged_in_stores`, `damagedInStores`);
  *
@@ -22,7 +21,6 @@ import { RESTORE_TOOL, RESTORE_TOOL_NEED } from '../../src/game/archaeology';
 import { execFileSync } from 'node:child_process';
 import { DAMAGE_MAX, Game, type DeedStore } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
-import { CAST_BY_ID, castReason } from '../../src/game/faith';
 import { itemDef, NOT_RESTORED, UNRESTORED, type Item } from '../../src/game/items';
 
 const psql = (sql: string): string =>
@@ -83,17 +81,14 @@ begin
   update item set dmg = ${DMG} where id in (f1, f2, b, t);
   perform give(w, u, 'repair_kit', 2, ${QL});
 
-  /* Repair, a repair kit and Mend: refused on a find, as ever on the tool. */
+  /* Repair and a repair kit: refused on a find, as ever on the tool. */
   insert into said values
     ('REPAIR|f', coalesce(act_refusal(w, u, 'repair_item', jsonb_build_object('kind', item_t, 'uid', f1)), 'ALLOWED')),
     ('REPAIR|b', coalesce(act_refusal(w, u, 'repair_item', jsonb_build_object('kind', item_t, 'uid', b)), 'ALLOWED')),
     ('REPAIR|t', coalesce(act_refusal(w, u, 'repair_item', jsonb_build_object('kind', item_t, 'uid', t)), 'ALLOWED')),
     ('KIT|f', coalesce(act_refusal(w, u, 'mend_kit', jsonb_build_object('kind', item_t, 'uid', f1)), 'ALLOWED')),
     ('KIT|b', coalesce(act_refusal(w, u, 'mend_kit', jsonb_build_object('kind', item_t, 'uid', b)), 'ALLOWED')),
-    ('KIT|t', coalesce(act_refusal(w, u, 'mend_kit', jsonb_build_object('kind', item_t, 'uid', t)), 'ALLOWED')),
-    ('MEND|f', coalesce(cast_reason(w, u, 'mend', f1), 'ALLOWED')),
-    ('MEND|b', coalesce(cast_reason(w, u, 'mend', b), 'ALLOWED')),
-    ('MEND|t', coalesce(cast_reason(w, u, 'mend', t), 'ALLOWED'));
+    ('KIT|t', coalesce(act_refusal(w, u, 'mend_kit', jsonb_build_object('kind', item_t, 'uid', t)), 'ALLOWED'));
 
   /* Restore, on finds far past where it used to send you to repair them first. */
   update item set dmg = ${WORSE} where id in (f1, b);
@@ -132,7 +127,7 @@ const say = (k: string): string => said.get(k) ?? '(nothing)';
 
 check('the island says why in the browser\'s words', say('SAYS') === NOT_RESTORED, say('SAYS'));
 check('and counts the same things as finds nobody has restored', say('KINDS') === [...UNRESTORED].sort().join(','), say('KINDS'));
-for (const [what, key] of [['Repair', 'REPAIR'], ['A repair kit', 'KIT'], ['Mend', 'MEND']] as const) {
+for (const [what, key] of [['Repair', 'REPAIR'], ['A repair kit', 'KIT']] as const) {
   check(`${what} is refused on a fragment and a tarnished bauble on the island`,
     say(`${key}|f`) === NOT_RESTORED && say(`${key}|b`) === NOT_RESTORED, `${say(`${key}|f`)} / ${say(`${key}|b`)}`);
   check(`and still goes on a ${TOOL}`, say(`${key}|t`) === 'ALLOWED', say(`${key}|t`));
@@ -164,7 +159,6 @@ const on = (it: Item): Target => ({ kind: 'item', uid: it.uid });
 const repair = ACTION_BY_ID.get('repair_item')!;
 const kit = ACTION_BY_ID.get('mend_kit')!;
 const restore = ACTION_BY_ID.get('restore_relic')!;
-const mend = CAST_BY_ID.get('mend')!;
 
 for (const [what, def, key] of [['Repair', repair, 'REPAIR'], ['A repair kit', kit, 'KIT']] as const) {
   check(`${what} is not offered on a fragment or a tarnished bauble in the browser`, !def.applies(on(f1), game) && !def.applies(on(b), game));
@@ -172,9 +166,6 @@ for (const [what, def, key] of [['Repair', repair, 'REPAIR'], ['A repair kit', k
     def.check?.(on(f1), game) === say(`${key}|f`) && def.check?.(on(b), game) === say(`${key}|b`));
   check(`and offered on a ${TOOL} as ever`, def.applies(on(t), game) && (def.check?.(on(t), game) ?? null) === null);
 }
-check('Mend is refused on a fragment and a tarnished bauble in the island\'s words',
-  castReason(game, mend, f1) === say('MEND|f') && castReason(game, mend, b) === say('MEND|b'), String(castReason(game, mend, f1)));
-check(`and goes on a ${TOOL}`, castReason(game, mend, t) === null, String(castReason(game, mend, t)));
 
 f1.dmg = WORSE;
 b.dmg = WORSE;
