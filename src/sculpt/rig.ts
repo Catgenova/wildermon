@@ -45,6 +45,8 @@ export interface Proportions {
   /** Radii: neck, upper arm, forearm, wrist, thigh, shin, ankle, chest half-width, waist half-width. */
   /** Where the eyes and the jaw hinge are, from the head joint (the right eye; the left mirrors), when the body says. */
   eye?: V3; jaw?: V3;
+  /** The chin's bottom and the crown, from the head joint, when the body says: the sheets hold the head against the picture by them. */
+  chin?: V3; crown?: V3;
   r: { neck: number; upper: number; fore: number; wrist: number; thigh: number; shin: number; ankle: number; chest: number; waist: number; pelvis: number };
 }
 
@@ -123,6 +125,13 @@ export function referenceStance(r: Rig): Rig {
   // The picture's weight is on one leg: the hips a little to the body's left, the spine leaning back over them.
   o.at = [-0.45, 0, 0]; o.tail = [0, 0, 0]; o.foot = [0, 0]; o.sink = 0; o.spin = 0;
   o.spine = [0, 6, 0];
+  return o;
+}
+
+/** The reference stance stood dead straight: no lean, the hips centred, for a head or a hand held against a picture. */
+export function straightStance(r: Rig): Rig {
+  const o = referenceStance(r);
+  o.spine = [0, 0, 0]; o.at = [0, 0, 0];
   return o;
 }
 

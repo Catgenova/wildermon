@@ -17,6 +17,7 @@ import { HUMAN_HEIGHT } from '../../src/sculpt/human';
 import { at } from '../../src/sculpt/rig';
 import type { HandShape, View } from '../../src/render/figure';
 import type { Proportions } from '../../src/sculpt/rig';
+import type { V3 } from '../../src/sculpt/sdf';
 import { glContext } from '../../src/sculpt/gl';
 
 const DPR = window.devicePixelRatio || 1;
@@ -84,7 +85,7 @@ function row(cells: Array<{ cv: HTMLCanvasElement; label: string }>): void {
 type Who = 'male' | 'female' | 'neither' | 'seven' | 'five' | 'figure';
 /** The studio's look in the body's own gender. */
 const lookOf = (who: Who): Look => ({ ...LOOK, gender: who === 'female' ? 'woman' : who === 'neither' ? 'neither' : 'man' });
-function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean; wear?: Wear; stance?: 'ref'; view?: View; hands?: HandShape } = {}): void {
+function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean; wear?: Wear; stance?: 'ref' | 'straight'; view?: View; hands?: HandShape } = {}): void {
   try {
     if (who === 'figure') {
       drawFigure(c.g, c.fx, c.fy, zoom, pose);
@@ -506,6 +507,53 @@ const api = {
       }
     }
     row(cells);
+  },
+  /**
+   * The bald head alone, bare, level, turned `turn` degrees to screen right, at `px` pixels chin to crown: for the sheets
+   * that hold it against the pictures. Returns the chin's and the crown's places on the cell, in CSS pixels.
+   */
+  headShot(who: Who, turn = 0, px = 520): { chin: [number, number]; crown: [number, number]; w: number; h: number } {
+    const look = { ...lookOf(who), hair: 'bald' } as Look, P = PROPS[who];
+    const chinOff = P.chin ?? [0, 0, -P.head * 0.9], crownOff = P.crown ?? [0, 0, P.head];
+    const zoom = px / ((crownOff[2] - chinOff[2]) * HEIGHT_SCALE);
+    const view = levelView((turn * Math.PI) / 180);
+    const pose: FigurePose = { ...poseOf(0, 'idle:0'), look };
+    const scene = sculptScene(pose, zoom, P, 1, undefined, { wear: 'shorts', stance: 'straight', view, kind: kindOf(who) });
+    const b = built(P, look, 'shorts', kindOf(who));
+    const posed = (name: string, off: V3): V3 => { const i = b.order.indexOf(name) * 12, m = scene.bones, r = b.rest[name], t: V3 = [r.t[0] + r.m[0] * off[0] + r.m[1] * off[1] + r.m[2] * off[2], r.t[1] + r.m[3] * off[0] + r.m[4] * off[1] + r.m[5] * off[2], r.t[2] + r.m[6] * off[0] + r.m[7] * off[1] + r.m[8] * off[2]]; return [m[i] * t[0] + m[i + 1] * t[1] + m[i + 2] * t[2] + m[i + 3], m[i + 4] * t[0] + m[i + 5] * t[1] + m[i + 6] * t[2] + m[i + 7], m[i + 8] * t[0] + m[i + 9] * t[1] + m[i + 10] * t[2] + m[i + 11]]; };
+    const screen = (p: V3): [number, number] => [zoom * (p[0] * view.ex[0] + p[1] * view.ey[0]), zoom * (p[0] * view.ex[1] + p[1] * view.ey[1] - p[2] * HEIGHT_SCALE)];
+    const chin = screen(posed('head', chinOff)), crown = screen(posed('head', crownOff));
+    const w = Math.ceil(px * 1.3), h = Math.ceil(px * 1.35);
+    const c = cell(zoom, [0, h / zoom], [0, w / zoom]);
+    // The feet at the point that puts the chin at the cell's lower third, centred.
+    const fx = w / 2 - chin[0], fy = h - px * 0.12 - chin[1];
+    c.g.fillStyle = GRASS; c.g.fillRect(0, 0, w, h);
+    // No ink: the pictures' silhouettes have none, and the overlay measures the body's own edge.
+    if (!drawSculpt(c.g, fx, fy, zoom, pose, { P, kind: kindOf(who), dpr: DPR, now: 1, wear: 'shorts', stance: 'straight', view, ink: 0 })) drawFigure(c.g, fx, fy, zoom, pose);
+    heading(`${who} head, turned ${turn}, ${px}px chin to crown`);
+    row([{ cv: c.cv, label: `head ${turn}` }]);
+    return { chin: [fx + chin[0], fy + chin[1]], crown: [fx + crown[0], fy + crown[1]], w, h };
+  },
+  /** The right hand alone, open and flat, its back to the viewer, `px` pixels from the wrist to the middle fingertip. */
+  handShot(who: Who, px = 250): { wrist: [number, number]; tip: [number, number]; w: number; h: number } {
+    const look = { ...lookOf(who), hair: 'bald' } as Look, P = PROPS[who];
+    const zoom = px / ((P.palm + P.finger) * HEIGHT_SCALE);
+    const view = levelView(0);
+    const pose: FigurePose = { ...poseOf(0, 'idle:0'), look };
+    const hands: HandShape = { flat: 1 };
+    const scene = sculptScene(pose, zoom, P, 1, undefined, { wear: 'shorts', stance: 'straight', view, kind: kindOf(who), hands });
+    const b = built(P, look, 'shorts', kindOf(who));
+    const posed = (name: string, off: V3): V3 => { const i = b.order.indexOf(name) * 12, m = scene.bones, r = b.rest[name], t: V3 = [r.t[0] + r.m[0] * off[0] + r.m[1] * off[1] + r.m[2] * off[2], r.t[1] + r.m[3] * off[0] + r.m[4] * off[1] + r.m[5] * off[2], r.t[2] + r.m[6] * off[0] + r.m[7] * off[1] + r.m[8] * off[2]]; return [m[i] * t[0] + m[i + 1] * t[1] + m[i + 2] * t[2] + m[i + 3], m[i + 4] * t[0] + m[i + 5] * t[1] + m[i + 6] * t[2] + m[i + 7], m[i + 8] * t[0] + m[i + 9] * t[1] + m[i + 10] * t[2] + m[i + 11]]; };
+    const screen = (p: V3): [number, number] => [zoom * (p[0] * view.ex[0] + p[1] * view.ey[0]), zoom * (p[0] * view.ex[1] + p[1] * view.ey[1] - p[2] * HEIGHT_SCALE)];
+    const wrist = screen(posed('wrist1', [0, 0, 0])), tip = screen(posed('fing1', [0, 0, -P.finger]));
+    const w = Math.ceil(px * 1.4), h = Math.ceil(px * 1.6);
+    const c = cell(zoom, [0, h / zoom], [0, w / zoom]);
+    const fx = w / 2 - wrist[0], fy = h * 0.3 - wrist[1];
+    c.g.fillStyle = GRASS; c.g.fillRect(0, 0, w, h);
+    if (!drawSculpt(c.g, fx, fy, zoom, pose, { P, kind: kindOf(who), dpr: DPR, now: 1, wear: 'shorts', stance: 'straight', view, hands, ink: 0 })) drawFigure(c.g, fx, fy, zoom, pose);
+    heading(`${who} right hand, open, from the back, ${px}px wrist to tip`);
+    row([{ cv: c.cv, label: 'hand' }]);
+    return { wrist: [fx + wrist[0], fy + wrist[1]], tip: [fx + tip[0], fy + tip[1]], w, h };
   },
   /** The debug views, one facing big. */
   debug(who: Who, zoom = 6, facing = 1, what = 'walk:0.25'): void {

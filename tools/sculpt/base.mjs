@@ -10,7 +10,7 @@
 import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join, resolve, dirname } from 'node:path';
-import { facets, HEAD_WIDEN, mitt, neckBase, planarHead } from './planar.mjs';
+import { facets, mitt, neckBase, tracedHead } from './planar.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
@@ -323,7 +323,10 @@ function extras(b, shared, style = 'man', detail = true) {
   const neck01 = boneEnds(V, 'neck01')[0][1];
   const base = neckBase(LM, bodyV.map((i) => V[i]), neck01 - 0.06, style);
   if (process.env.DBG) console.error(style, 'head', JSON.stringify(LM), "neck01", neck01.toFixed(3));
-  planarHead(LM, base, style, out);
+  const headStart = out.tris.length;
+  const traced = tracedHead(LM, base, style, out);
+  const headEnd = out.tris.length;
+  out.chin = traced.chin; out.crown = traced.crown;
   // The hands, each from its own joints and forearm.
   for (const [k, S] of [[0, 'L'], [1, 'R']]) {
     const H = (bone) => boneEnds(V, `${bone}.${S}`)[0], T = (bone) => boneEnds(V, `${bone}.${S}`)[1];
@@ -335,24 +338,21 @@ function extras(b, shared, style = 'man', detail = true) {
   // forehead with pointed tips, side masses over the ears, a tousled top with two cowlicks, a mass down the nape.
   const hairStart = out.pos.length;
   const hairline = (p) => (p[2] > 0.3 ? ey + 0.55 : p[2] > -0.3 ? ey + 0.1 : ey + 0.05);
-  const scalp = shared ?? new Set(face.filter((i) => V[i][1] > hairline(V[i])));
-  out.scalp = scalp;
-  const nrm = new Map();
-  const tris = [];
-  for (const fi of obj.groups.body) {
-    const q = obj.faces[fi].idx; if (!q.every((i) => scalp.has(i))) continue;
-    const t = q.length === 4 ? [[q[0], q[1], q[2]], [q[0], q[2], q[3]]] : [q];
-    for (const tr of t) { tris.push(tr); const [a, bb, cc] = tr.map((i) => V[i]); const e1 = [bb[0] - a[0], bb[1] - a[1], bb[2] - a[2]], e2 = [cc[0] - a[0], cc[1] - a[1], cc[2] - a[2]]; const n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]; for (const i of tr) { const m = nrm.get(i) ?? [0, 0, 0]; nrm.set(i, [m[0] + n[0], m[1] + n[1], m[2] + n[2]]); } }
-  }
+  // The shell: the traced skull's own facets above the hairline, pushed out from the skull's middle (the same way for
+  // every copy of a vertex, so the shell has no cracks), further on top and at the back than at the hairline.
+  const c0 = [0, ey + 0.15, 0.3];
   const hash = (i) => { const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
-  const hid = new Map();
-  for (const i of scalp) {
-    const n = nrm.get(i); if (!n) continue; const l = Math.hypot(...n) || 1;
-    const p = V[i], edge = p[1] < hairline(p) + 0.2;
-    const h = (edge ? 0.08 : 0.14 + 0.22 * Math.max(0, n[1] / l) + 0.26 * Math.max(0, -n[2] / l)) + 0.04 * hash(i);
-    hid.set(i, add([p[0] + (n[0] / l) * h, p[1] + (n[1] / l) * h - (edge ? 0.08 : 0), p[2] + (n[2] / l) * h], 9));
+  for (let t = headStart; t < headEnd; t++) {
+    const tr = out.tris[t];
+    if (!tr.every((i) => out.region[i] === 1 && out.pos[i][1] > hairline(out.pos[i]))) continue;
+    const ids = tr.map((i) => {
+      const p = out.pos[i], d = [p[0] - c0[0], p[1] - c0[1], p[2] - c0[2]], l = Math.hypot(...d) || 1;
+      const edge = p[1] < hairline(p) + 0.2;
+      const h = (edge ? 0.08 : 0.14 + 0.22 * Math.max(0, d[1] / l) + 0.26 * Math.max(0, -d[2] / l)) + 0.04 * hash(Math.round(p[0] * 97 + p[1] * 31 + p[2] * 13));
+      return add([p[0] + (d[0] / l) * h, p[1] + (d[1] / l) * h - (edge ? 0.08 : 0), p[2] + (d[2] / l) * h], 9);
+    });
+    out.tris.push(ids);
   }
-  for (const tr of tris) if (tr.every((i) => hid.has(i))) out.tris.push(tr.map((i) => hid.get(i)));
   // A clump of hair: a lofted flattened teardrop along a curve through three points -- a thick rounded base sunk a
   // little into the shell, the body standing off the skull, tapering to a point. Its upper face carries a highlight
   // stamp (region 9 lilac, region 12 teal), positive where the ring faces up and out.
@@ -379,8 +379,7 @@ function extras(b, shared, style = 'man', detail = true) {
   };
   // The clumps are set by direction from the skull's middle: azimuth from the front (toward the body's left positive),
   // elevation, and how far out past the skull. The flat of each faces out. Sizes in head widths.
-  const c0 = [0, ey + 0.15, 0.3];
-  const skull = face.map((i) => { const d = [V[i][0] - c0[0], V[i][1] - c0[1], V[i][2] - c0[2]]; const l = Math.hypot(...d) || 1; return [d[0] / l, d[1] / l, d[2] / l, l]; });
+  const skull = traced.skull.map((p) => { const d = [p[0] - c0[0], p[1] - c0[1], p[2] - c0[2]]; const l = Math.hypot(...d) || 1; return [d[0] / l, d[1] / l, d[2] / l, l]; });
   const H = (az, el, out, cap = 9) => {
     const a = (az * Math.PI) / 180, e = (el * Math.PI) / 180, d = [Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)];
     // The skull's radius along d: the furthest vertex within a narrow cone, widening the cone until one is found.
@@ -414,12 +413,16 @@ function extras(b, shared, style = 'man', detail = true) {
   C([150, 32, -0.04], [148, L ? -10 : 0, 0.62], [158, L ? -62 : -26, L ? 0.14 : 0.22, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
   C([180, 36, -0.04], [180, L ? -12 : -2, 0.66], [180, L ? -72 : -40, L ? 0.14 : 0.16, L ? 1.6 : 1.0], L ? 0.25 : 0.2, 0.07);
   C([210, 32, -0.04], [212, L ? -10 : 0, 0.62], [202, L ? -62 : -32, L ? 0.14 : 0.26, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
-  // The hair sits on the planar skull, which is wider than the one it was shaped on.
-  for (let i = hairStart; i < out.pos.length; i++) out.pos[i][0] *= HEAD_WIDEN;
+  void hairStart;
   return out;
 }
-const exMan = extras(bodies.man, undefined, 'man', true), exWoman = extras(bodies.woman, exMan.scalp, 'woman', true);
-const exManFar = extras(bodies.man, exMan.scalp, 'man', false), exWomanFar = extras(bodies.woman, exMan.scalp, 'woman', false);
+const exMan = extras(bodies.man, undefined, 'man', true), exWoman = extras(bodies.woman, undefined, 'woman', true);
+const exManFar = extras(bodies.man, undefined, 'man', false), exWomanFar = extras(bodies.woman, undefined, 'woman', false);
+// The chin's and the crown's points from the head joint, for the sheets that hold the head against the picture.
+for (const [name, ex] of [['man', exMan], ['woman', exWoman]]) {
+  const b = bodies[name], hj = b.frames.head.slice(0, 3);
+  for (const k of ['chin', 'crown']) { const p = b.ours(ex[k]); b.P[k] = [0, 1, 2].map((i) => +(p[i] - hj[i]).toFixed(3)); }
+}
 if (exMan.pos.length !== exWoman.pos.length || exManFar.pos.length !== exWomanFar.pos.length) throw new Error('the extras differ between the bodies');
 console.log(`extras: ${exMan.pos.length} verts, ${exMan.tris.length} tris (far band ${exManFar.pos.length} verts, ${exManFar.tris.length} tris)`);
 

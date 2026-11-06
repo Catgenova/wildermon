@@ -42,10 +42,10 @@ export function bodyMaterials(look: Look): Material[] {
   out[M.white] = { colour: mixHex(skin, '#f8f4ec', 0.7), eye: true };
   out[M.iris] = { colour: mixHex(eye, '#2a1a18', 0.2), eye: true };
   // The base's eye: a dark slate rectangle, the look's eye colour a tint in it.
-  out[M.pupil] = { colour: mixHex(eye, '#2e333e', 0.8), eye: true };
+  out[M.pupil] = { colour: mixHex(eye, '#262a33', 0.85), eye: true };
   out[M.glint] = { colour: '#fffaf0', eye: true };
   // The brow: a deep brown of the hair's colour.
-  out[M.brow] = { colour: mixHex(hair, '#5a3a2a', 0.55) };
+  out[M.brow] = { colour: mixHex(hair, '#6b4a38', 0.65) };
   out[M.lash] = { colour: mixHex(hair, '#2a1a24', 0.7) };
   out[M.shorts] = { colour: '#454a54' };
   // The hair's highlight shape, a lilac of the hair's own, and the teal that streaks two clumps, as the sheet's palette.
