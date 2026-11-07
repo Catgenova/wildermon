@@ -16,6 +16,8 @@ import { M, bodyMaterials } from './models/body';
 import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, type Proportions } from './rig';
 import { humanProportions } from './human';
 import type { SculptDraw } from './gl';
+import { animate } from './anim';
+import { skeleton, type AnimAsset } from './anim/skeleton';
 
 type M3 = number[];
 type V = [number, number, number];
@@ -89,10 +91,12 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
   const REL = BONES.map((b) => (b.p >= 0 ? mm(tr(BONES[b.p].R), b.R) : b.R));
   const OFF = BONES.map((b) => (b.p >= 0 ? mv(tr(BONES[b.p].R), sub(b.head, BONES[b.p].head)) : b.head));
   const T = A.T;
+  /** The body as the clip player sees it, the clips authored in the man's bone frames. */
+  const SK = skeleton(A as unknown as AnimAsset, MALE_ASSET as unknown as AnimAsset);
 
   interface Frame { W: M3; P: V }
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
-  function posed(local: Array<M3 | undefined>): Frame[] {
+  function posed(local: Array<M3 | undefined>, move: V = [0, 0, 0]): Frame[] {
     const out: Frame[] = [];
     BONES.forEach((b, i) => {
       let L = local[i] ?? I3;
@@ -103,7 +107,7 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
         else if (b.drive === 'wrist') { const { swing, twist } = swingTwist(q); L = qmat(qmul(qpow(swing, f), twist)); }
         else if (b.drive === 'twist') { const tw = qmat(qpow(swingTwist(q).twist, f)), Rr = mm(tr(b.R), BONES[b.from].R); L = mm(Rr, mm(tw, tr(Rr))); }
       }
-      if (b.p < 0) { out.push({ W: mm(b.R, L), P: b.head }); return; }
+      if (b.p < 0) { out.push({ W: mm(b.R, L), P: add(b.head, move) }); return; }
       const pa = out[b.p];
       out.push({ W: mm(pa.W, mm(REL[i], L)), P: add(pa.P, mv(pa.W, OFF[i])) });
     });
@@ -238,8 +242,9 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
 
   /** The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole. */
   function lowBones(pose: FigurePose): Float32Array {
-    const local = fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest());
-    const F = posed(local);
+    // a clip where the state has one (./anim), else the figure's pose on the rig
+    const { local, move } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()));
+    const F = posed(local, move);
     // each bone's skinning turn and shift in the mesh's frame: v -> S v + t
     const S = F.map((f, i) => mm(f.W, tr(BONES[i].R)));
     const t = F.map((f, i) => sub(f.P, mv(S[i], BONES[i].head)));
