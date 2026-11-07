@@ -133,9 +133,12 @@ function bodyRow(row, y, W, F, B, n = 2.6, dy = []) {
 }
 // A leg ring of eight round its centre: x from xi (inside) to xo (outside), z from zb (back) to zf (front); the diagonal
 // points at a share a of the way out (an octagon at 0.71); dy each point's own drop.
-function legRing(row, y, xi, xo, zb, zf, a = 0.72, dy = []) {
+// tw turns the eight round the ring (radians, the front point toward the outside): the thigh's columns running on the
+// diagonal from the hip's outside down onto the kneecap, as the references draw the thigh's front planes.
+function legRing(row, y, xi, xo, zb, zf, a = 0.72, dy = [], tw = 0) {
   const cx = (xi + xo) / 2, w = (xo - xi) / 2, cz = (zb + zf) / 2, d = (zf - zb) / 2;
-  const P = [[0, 1], [a, a], [1, 0], [a, -a], [0, -1], [-a, -a], [-1, 0], [-a, a]];
+  const P = tw ? Array.from({ length: 8 }, (_, j) => { const t = Math.PI / 2 - (j * Math.PI) / 4 - tw; return [Math.cos(t), Math.sin(t)]; })
+    : [[0, 1], [a, a], [1, 0], [a, -a], [0, -1], [-a, -a], [-1, 0], [-a, a]];
   const out = {};
   P.forEach(([u, v], j) => { out[`${row}${j}`] = [+(cx + u * w).toFixed(3), +(y + (dy[j] ?? 0)).toFixed(3), +(cz + v * d).toFixed(3)]; });
   return out;
@@ -189,8 +192,9 @@ export const PRESETS = {
     },
     D: { th: [0, 0, 0, -0.4, -0.6, -0.45, -0.17, -0.05], ka: [0, 0, 0, 0, 0, 0, 0, 0], kb: [0.12, 0, 0, 0, 0, 0, 0, 0], kc: [-0.12, 0, 0, 0, 0, 0, 0, 0] },
     // the pelvis' front and back under the loincloth (the sheet's views hide them), from the bare topology panel's
-    // profile; the foot's block heights from the same panel
-    fixed: ['gl.2', 'gl.3', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf'],
+    // profile; the foot's block heights from the same panel; the toe's half-width off the full-body front's toe face;
+    // the hip line's height at the side off the topology panels' front (the hip's outer corner, 12% down the leg)
+    fixed: ['gl.0', 'gl.2', 'gl.3', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf', 'foot.wt'],
     split: ['kb0/', 'kb7'],
     merge: KNEECAP,
   },
@@ -208,7 +212,10 @@ export const PRESETS = {
       foot: { x: 1.45, zh: -0.92, zt: 0.76, zb: 0.2, wt: 0.33, wb: 0.4, wh: 0.28, ht: 0.32, hh: 0.5, turn: 12 },
     },
     D: { th: [0, 0, 0, -0.4, -0.65, -0.5, -0.15, -0.05], ka: [0, 0, 0, 0, 0, 0, 0, 0], kb: [0.1, 0, 0, 0, 0, 0, 0, 0], kc: [-0.1, 0, 0, 0, 0, 0, 0, 0] },
-    fixed: ['gl.2', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf'],
+    // the thigh's middle ring half way between its top and the knee, so the thigh tapers straight into the knee as her
+    // full-body front draws it (no step above the knee)
+    // the crotch under the loincloth, between the thighs' inner sides (the fit had pushed it out in front of the body)
+    fixed: ['gl.0', 'gl.2', 'tm.0', 'cx.1', 'cx.2', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf', 'foot.wt'],
     split: ['kb0/', 'kb7'],
     merge: KNEECAP,
   },
@@ -219,7 +226,7 @@ export function ringVerts(P) {
   const R = P.R, V = {};
   Object.assign(V, bodyRow('gl', R.gl[0], R.gl[1], R.gl[2], R.gl[3], 2.6, R.gD ?? P.R.gD));
   V.cx = [0, R.cx[1], R.cx[2]];
-  for (const r of LEG_RINGS) Object.assign(V, legRing(r, R[r][0], R[r][1], R[r][2], R[r][3], R[r][4], 0.72, P.D?.[r] ?? []));
+  for (const r of LEG_RINGS) Object.assign(V, legRing(r, R[r][0], R[r][1], R[r][2], R[r][3], R[r][4], 0.72, P.D?.[r] ?? [], R[r][5] ?? 0));
   Object.assign(V, ankle(...R.an));
   Object.assign(V, foot({ ...R.foot, floor: P.floor }));
   return V;

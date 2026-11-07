@@ -47,3 +47,8 @@ Decisions
   (top to point 1.4 units, the crease a V, its outer corner higher than its inner); its upper face set flat on its
   least-squares plane. Her sheet's profile puts the kneecap 16-21 pixels lower against the knee's back than the full-body
   front's proportions allow; the full-body reference wins.
+- 2026-11-07: her hip line at the side at y -5.0 (held) as the male's; the mid-thigh ring held half way between the thigh's
+  top and the knee (y -6.45), so the thigh tapers straight into the knee as her full-body front draws it, no step; the
+  crotch held under the loincloth between the thighs (y -5.3, z 0; the fit had pushed it in front of the body); her feet
+  larger as her full-body front: the toe's half-width 0.36 (was 0.24), the ball's 0.50, landmarks on the toe face's corners.
+- 2026-11-07, the user's decision: the legs are approved after this round (male and female); no further rounds.

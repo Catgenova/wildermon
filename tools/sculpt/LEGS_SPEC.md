@@ -69,3 +69,8 @@ Decisions
   its point kc0; facing down); together the topology panel's hexagon. Its seven points are placed by hand (lowlfit-*.json
   V) on landmarks off the sheet's front, three-quarter and profile and the full-body front: its top, crease, bottom point
   and corners.
+- 2026-11-07: the hip line's height at the side measured off the topology panel's front (about 12% down the leg, the hip's
+  outer corner; y -4.9, held), the groin's V dropping 0.4 to the pubic point; the mid-thigh ring may turn (R.tm[5],
+  radians) so the thigh's front columns run on the diagonal onto the kneecap. The toe's half-width off the full-body front's
+  toe face (0.33, held; the sheet's views had narrowed it to a point); landmarks on the toe face's corners.
+- 2026-11-07, the user's decision: the legs are approved after this round (male and female); no further rounds.
