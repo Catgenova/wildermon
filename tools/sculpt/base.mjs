@@ -10,7 +10,7 @@
 import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join, resolve, dirname } from 'node:path';
-import { facets, handFrame, mitt, neckBase, tracedHead } from './planar.mjs';
+import { facets, handFrame, mitt, tracedHead } from './planar.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
@@ -173,8 +173,9 @@ function framesAndProportions(verts, body) {
 }
 
 /* ---- decimation: quadric edge collapses on the triangles, the face and hands kept dear ----------------------------------- */
-function decimate(pos, tris, keepWeight, target) {
-  // pos: array of [x,y,z]; tris: array of [a,b,c]; keepWeight: per vertex multiplier on the error; returns { map, tris } with map old->new (or -1).
+function decimate(pos, tris, keepWeight, target, pinned = new Set()) {
+  // pos: array of [x,y,z]; tris: array of [a,b,c]; keepWeight: per vertex multiplier on the error; `pinned` vertices never move or
+  // go; returns { map, tris } with map old->new (or -1).
   const n = pos.length;
   const Q = new Float64Array(n * 10);
   const addPlane = (v, a, b, c, d, w) => { const o = v * 10, q = Q; q[o] += a * a * w; q[o + 1] += a * b * w; q[o + 2] += a * c * w; q[o + 3] += a * d * w; q[o + 4] += b * b * w; q[o + 5] += b * c * w; q[o + 6] += b * d * w; q[o + 7] += c * c * w; q[o + 8] += c * d * w; q[o + 9] += d * d * w; };
@@ -221,7 +222,7 @@ function decimate(pos, tris, keepWeight, target) {
   while (nTris > target && heap.length) {
     const [, a0, b0, v] = pop();
     const a = find(a0), b = find(b0);
-    if (a === b || a0 !== a || b0 !== b || v !== ver[a] + ver[b]) continue;
+    if (a === b || a0 !== a || b0 !== b || v !== ver[a] + ver[b] || pinned.has(a) || pinned.has(b)) continue;
     const [, p] = costOf(a, b);
     // No triangle may flip or flatten when its corner moves to p.
     let ok = true;
@@ -268,41 +269,97 @@ for (const [name, targets] of Object.entries(BODIES)) {
   bodies[name] = { verts: v, eyes, ...framesAndProportions(v, body) };
   console.log(name, JSON.stringify(bodies[name].P));
 }
-// The cut, on the man's body (the same vertices on the woman's): everything of the head, the neck above a little over its
-// joint, and the hands.
-// The body's neck is cut below the traced throat's base ring, so its edge sits inside the loft and never pokes through.
-const yCutMan = boneEnds(bodies.man.verts, 'neck01')[0][1] - 0.02;
-// The forearm is cut a little above the wrist too, so its cut edge sits inside the mitt's cuff and not at its hem.
-const forearmCut = {};
+// The cut, on the man's body (the same vertices on the woman's): the head and the hands go, and the body is sliced across
+// by planes: level across the neck a little under its joint, and square across each forearm 0.17 hand lengths up from the
+// wrist. A face across a plane is cut at it, new vertices on its edges the same fraction along on both bodies with their
+// weights blended, so each cut's edge is a smooth loop on one plane, for the head's and the mitts' lofts to start from.
+const yCutMan = boneEnds(bodies.man.verts, 'neck01')[0][1] - 0.03;
+const armPlane = {};
 for (const S of ['L', 'R']) {
   const V = bodies.man.verts, H = (bone) => boneEnds(V, `${bone}.${S}`)[0], T = (bone) => boneEnds(V, `${bone}.${S}`)[1];
   const J = { wrist: H('wrist'), k2: H('finger2-1'), k3: H('finger3-1'), k4: H('finger4-1'), k5: H('finger5-1'), tip3: T('finger3-3'), t0: H('finger1-1'), t1: H('finger1-2'), tip1: T('finger1-3') };
   const F = handFrame(J);
-  forearmCut[S] = (p) => (p[0] - J.wrist[0]) * F.a[0] + (p[1] - J.wrist[1]) * F.a[1] + (p[2] - J.wrist[2]) * F.a[2] > -0.1 * F.L;
+  armPlane[S] = (p) => (p[0] - J.wrist[0]) * F.a[0] + (p[1] - J.wrist[1]) * F.a[1] + (p[2] - J.wrist[2]) * F.a[2] + 0.17 * F.L;
 }
-const cutVert = (i) => { const [mh] = topBone.get(i) ?? ['']; const arm = /^lowerarm0[12]\.([LR])$/.exec(mh); return headGroup(mh) || handGroup(mh) || bodies.man.verts[i][1] > yCutMan || (!!arm && forearmCut[arm[1]](bodies.man.verts[i])); };
+/** How far past a cut a vertex of the man's lies (positive: cut away). */
+const past = (i) => {
+  const p = bodies.man.verts[i], [mh] = topBone.get(i) ?? [''];
+  const arm = /^(?:lowerarm0[12]|wrist|metacarpal\d|finger\d-\d)\.([LR])$/.exec(mh);
+  return Math.max(p[1] - yCutMan, arm ? armPlane[arm[1]](p) : -Infinity);
+};
+const pastOf = new Map();
 const KEEP = ['body'];
-const keptFaces = KEEP.flatMap((g) => obj.groups[g] ?? []).filter((fi) => !obj.faces[fi].idx.some(cutVert));
-const used = new Set(); for (const fi of keptFaces) for (const i of obj.faces[fi].idx) used.add(i);
+const cutTris = [], cutBlend = [];
+{
+  const P = (i) => { let v = pastOf.get(i); if (v === undefined) { v = past(i); pastOf.set(i, v); } return v; };
+  const at = new Map();
+  const onCut = (a, b) => {
+    const k = a < b ? `${a},${b}` : `${b},${a}`; let id = at.get(k);
+    if (id === undefined) {
+      const t = P(a) / (P(a) - P(b)); id = bodies.man.verts.length;
+      for (const body of [bodies.man, bodies.woman]) body.verts.push([0, 1, 2].map((c) => body.verts[a][c] + (body.verts[b][c] - body.verts[a][c]) * t));
+      at.set(k, id); cutBlend.push([id, a, b, t]); pastOf.set(id, 0);
+    }
+    return id;
+  };
+  const V = bodies.man.verts, d = (a, b) => Math.hypot(V[a][0] - V[b][0], V[a][1] - V[b][1], V[a][2] - V[b][2]);
+  for (const fi of KEEP.flatMap((g) => obj.groups[g] ?? [])) {
+    const q = obj.faces[fi].idx;
+    if (q.some((i) => (headGroup((topBone.get(i) ?? [''])[0]) || handGroup((topBone.get(i) ?? [''])[0])) && P(i) <= 0)) throw new Error(`a head or hand vertex below the cut in face ${fi}`);
+    const tris = q.length === 4 ? (d(q[0], q[2]) <= d(q[1], q[3]) ? [[q[0], q[1], q[2]], [q[0], q[2], q[3]]] : [[q[0], q[1], q[3]], [q[1], q[2], q[3]]]) : [q];
+    for (const t of tris) {
+      if (t.every((i) => P(i) > 0)) continue;
+      if (t.every((i) => P(i) <= 0)) { cutTris.push(t); continue; }
+      const poly = [];
+      for (let k = 0; k < 3; k++) { const a = t[k], b = t[(k + 1) % 3]; if (P(a) <= 0) poly.push(a); if ((P(a) <= 0) !== (P(b) <= 0)) poly.push(P(a) === 0 ? a : P(b) === 0 ? b : onCut(a, b)); }
+      const u = poly.filter((v, k) => v !== poly[(k + 1) % poly.length]);
+      for (let k = 1; k + 1 < u.length; k++) cutTris.push([u[0], u[k], u[k + 1]]);
+    }
+  }
+}
+const used = new Set(cutTris.flat());
 const bodyIds = [...used].sort((a, b) => a - b);
-// Our bone weights per vertex, from the rig's, merged where several of its bones are one of ours, the top four kept.
+// Our bone weights per vertex, from the rig's, merged where several of its bones are one of ours, the top four kept; a vertex
+// made on a cut takes its edge's two ends' weights, blended by where it lies.
 const bw = new Map();
 for (const [mh, list] of Object.entries(mhw)) {
   const ob = ourBone(mh); const bi = BONES.indexOf(ob); if (bi < 0) throw new Error(`frame for ${ob}`);
-  for (const [i, w] of list) { if (!used.has(i)) continue; let m = bw.get(i); if (!m) { m = new Map(); bw.set(i, m); } m.set(bi, (m.get(bi) ?? 0) + w); }
+  for (const [i, w] of list) { let m = bw.get(i); if (!m) { m = new Map(); bw.set(i, m); } m.set(bi, (m.get(bi) ?? 0) + w); }
+}
+for (const [id, a, b, t] of cutBlend) {
+  const m = new Map();
+  for (const [src, k] of [[a, 1 - t], [b, t]]) for (const [bi, w] of bw.get(src) ?? []) m.set(bi, (m.get(bi) ?? 0) + w * k);
+  bw.set(id, m);
 }
 const top4 = (i) => { const m = bw.get(i); if (!m) return [[BONES.indexOf('pelvis'), 1]]; const l = [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4); const s = l.reduce((t, x) => t + x[1], 0) || 1; return l.map(([b, w]) => [b, w / s]); };
 // Triangles of the body (quads split along the shorter diagonal, on the man's shape), in a compact vertex numbering.
 const idOf = new Map(bodyIds.map((v, i) => [v, i]));
 const manPos = bodyIds.map((i) => bodies.man.ours(bodies.man.verts[i]));
 const womanPos = bodyIds.map((i) => bodies.woman.ours(bodies.woman.verts[i]));
-const bodyTris = [];
-for (const fi of keptFaces) {
-  const f = obj.faces[fi], q = f.idx.map((i) => idOf.get(i));
-  const d = (a, b) => Math.hypot(...[0, 1, 2].map((k) => manPos[a][k] - manPos[b][k]));
-  if (q.length === 4) { if (d(q[0], q[2]) <= d(q[1], q[3])) bodyTris.push([q[0], q[1], q[2]], [q[0], q[2], q[3]]); else bodyTris.push([q[0], q[1], q[3]], [q[1], q[2], q[3]]); }
-  else bodyTris.push(q);
-}
+const bodyTris = cutTris.map((t) => t.map((i) => idOf.get(i)));
+// The cuts' open edges: a loop round the neck and one round each forearm (vertex ids, in walking order). The decimation keeps
+// their vertices, and the head's and the mitts' lofts start from them, so the joins are one surface.
+const seams = (() => {
+  const next = new Map(), count = new Map(), key = (a, b) => (a < b ? `${a},${b}` : `${b},${a}`);
+  for (const t of bodyTris) for (let i = 0; i < 3; i++) { const k = key(t[i], t[(i + 1) % 3]); count.set(k, (count.get(k) ?? 0) + 1); }
+  for (const t of bodyTris) for (let i = 0; i < 3; i++) { const a = t[i], b = t[(i + 1) % 3]; if (count.get(key(a, b)) === 1) { if (next.has(a)) throw new Error(`the cut's edge meets itself at ${bodyIds[a]}`); next.set(a, b); } }
+  const loops = [], seen = new Set();
+  for (const s of next.keys()) {
+    if (seen.has(s)) continue;
+    const loop = []; let v = s;
+    while (!seen.has(v)) { seen.add(v); loop.push(bodyIds[v]); v = next.get(v); if (v === undefined) throw new Error('an open seam'); }
+    loops.push(loop);
+  }
+  const V = bodies.man.verts, mean = (l) => [0, 1, 2].map((k) => l.reduce((s, i) => s + V[i][k], 0) / l.length);
+  const wrist = (S) => boneEnds(V, `wrist.${S}`)[0];
+  const near = (l, p) => { const c = mean(l); return Math.hypot(c[0] - p[0], c[1] - p[1], c[2] - p[2]); };
+  if (loops.length !== 3) throw new Error(`the cut leaves ${loops.length} open loops, not 3`);
+  const neck = loops.reduce((a, b) => (mean(a)[1] > mean(b)[1] ? a : b));
+  const arm = (S) => loops.filter((l) => l !== neck).reduce((a, b) => (near(a, wrist(S)) < near(b, wrist(S)) ? a : b));
+  return { neck, L: arm('L'), R: arm('R') };
+})();
+const pinned = new Set([...seams.neck, ...seams.L, ...seams.R].map((i) => idOf.get(i)));
+console.log(`seams: neck ${seams.neck.length}, left forearm ${seams.L.length}, right ${seams.R.length}`);
 // What each vertex is, for the error weights and the materials: the feet are kept dear (the face and the hands are built below).
 const region = bodyIds.map((i) => {
   const [b] = top4(i)[0]; const name = BONES[b];
@@ -329,19 +386,22 @@ function extras(b, shared, style = 'man', detail = true) {
   const front = Math.max(...atEye.map((i) => V[i][2])), back = Math.min(...atEye.map((i) => V[i][2]));
   const W = Math.max(...headV.filter((i) => V[i][1] > ey + 0.15 && V[i][1] < ey + 0.35).map((i) => Math.abs(V[i][0])));
   const LM = { chin, crown, zc: (front + back) / 2, D: (front - back) / 2, W };
-  const neck01 = boneEnds(V, 'neck01')[0][1];
-  const base = neckBase(LM, bodyV.map((i) => V[i]), neck01 - 0.06, style);
-  if (process.env.DBG) console.error(style, 'head', JSON.stringify(LM), "neck01", neck01.toFixed(3));
+  if (process.env.DBG) console.error(style, 'head', JSON.stringify(LM));
   const headStart = out.tris.length;
-  const traced = tracedHead(LM, base, style, out);
+  const traced = tracedHead(LM, style, out);
   const headEnd = out.tris.length;
   out.chin = traced.chin; out.crown = traced.crown;
-  // The hands, each from its own joints and forearm.
+  // The neck: the body's own cut edge joined straight to the throat ring under the jaw, one smooth surface (the body's
+  // vertices themselves, so the two shade and skin as one, with no step and no line between).
+  const seam = (ids) => ids.map((i) => out.ref(i, V[i]));
+  out.zip(seam(seams.neck), traced.throat.map((p) => out.vert(p, 1, traced.throatBones)), [0, 1, 0], [0, 0, 1]);
+  // The hands, each from its own joints and forearm, the forearm's cut edge joined to the mitt's wrist ring the same way.
   for (const [k, S] of [[0, 'L'], [1, 'R']]) {
     const H = (bone) => boneEnds(V, `${bone}.${S}`)[0], T = (bone) => boneEnds(V, `${bone}.${S}`)[1];
     const J = { wrist: H('wrist'), k2: H('finger2-1'), k3: H('finger3-1'), k4: H('finger4-1'), k5: H('finger5-1'), tip3: T('finger3-3'), t0: H('finger1-1'), t1: H('finger1-2'), tip1: T('finger1-3') };
     const forearm = bodyV.filter((i) => new RegExp(`^lowerarm0[12]\\.${S}$`).test((topBone.get(i) ?? [''])[0])).map((i) => V[i]);
-    mitt(J, forearm, k, detail, out);
+    const m = mitt(J, forearm, k, detail, out);
+    out.zip(seam(seams[S]), m.wrist.map((p) => out.vert(p, 2, m.bones)), m.axis, m.front);
   }
   // The hair: a shell of the scalp's own faces pushed out, and over it the sheet's wedges -- a fringe mass swept over the
   // forehead with pointed tips, side masses over the ears, a tousled top with two cowlicks, a mass down the nape.
@@ -456,13 +516,15 @@ for (const [band, target] of BANDS) {
   // The feet keep more of their density at every band; the body pays for it.
   const keep = band === 2 ? [1, 1, 2.5] : band === 1 ? [1, 1, 5] : [1, 1, 2];
   const kw = region.map((r) => (r === 1 ? keep[0] : r === 2 ? keep[1] : r === 3 ? keep[2] : 1));
-  const dec = decimate(pos, tris, kw, target);
+  const dec = decimate(pos, tris, kw, target, pinned);
   const keptSet = new Set(dec.tris.flat());
   const kept = [...keptSet].sort((a, b) => a - b), newId = new Map(kept.map((v, i) => [v, i]));
   const n0 = kept.length;
   const ex = band === 0 ? exManFar : exMan, exW = band === 0 ? exWomanFar : exWoman;
   const exManPos = ex.pos.map((p) => bodies.man.ours(p)), exWomanPos = exW.pos.map((p) => bodies.woman.ours(p));
-  const tri = [...dec.tris.map((t) => t.map((v) => newId.get(v))), ...ex.tris.map((t) => t.map((v) => v + n0))];
+  // An extra vertex standing for a body vertex is that vertex (the seams' vertices are pinned, so every band keeps them).
+  const exId = (v) => { const id = ex.refs.get(v); if (id === undefined) return v + n0; const c = newId.get(idOf.get(id)); if (c === undefined) throw new Error(`seam vertex ${id} lost`); return c; };
+  const tri = [...dec.tris.map((t) => t.map((v) => newId.get(v))), ...ex.tris.map((t) => t.map(exId))];
   const q = (p) => p.map((x) => Math.round(x * 500));
   const stamp = [];
   ex.stamp.forEach((d, i) => { if (d > -1) stamp.push(n0 + i, Math.round(d * 1000)); });

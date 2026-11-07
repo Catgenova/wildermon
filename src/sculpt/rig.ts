@@ -135,6 +135,16 @@ export function referenceStance(r: Rig): Rig {
   return o;
 }
 
+/** A T-pose: upright, the arms straight out level at the shoulders with the palms down, the feet a shoulder's width apart. */
+export function tposeStance(r: Rig): Rig {
+  const o: Rig = { ...r, arm: [[0, 90, 0], [0, 90, 0]], elbow: [0, 0], hand: [[0, 0, 0], [0, 0, 0]], leg: [[0, 7, 0], [0, 7, 0]], knee: [0, 0], flat: [true, true] };
+  o.pelvis = [0, 0, 0]; o.spine = [0, 0, 0]; o.chest = [0, 0, 0]; o.neck = [0, 0, 0]; o.head = [0, 0, 0];
+  o.loose = [false, false]; o.curl = [0, 0]; o.open = [0, 0]; o.shrug = [0, 0]; o.shape = [{ flat: 1 }, { flat: 1 }];
+  o.hover = undefined; o.plant = undefined; o.lift = 0;
+  o.at = [0, 0, 0]; o.tail = [0, 0, 0]; o.foot = [0, 0]; o.sink = 0; o.spin = 0;
+  return o;
+}
+
 /** The reference stance stood dead straight: no lean, the hips centred, for a head or a hand held against a picture. */
 export function straightStance(r: Rig): Rig {
   const o = referenceStance(r);

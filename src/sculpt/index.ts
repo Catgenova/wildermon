@@ -17,7 +17,7 @@ import { drawSculptGL, type DrawOpts, type SculptDraw } from './gl';
 import { clothe, GARMENT_FILE, garmentChains } from './cloth';
 import { femOf, HUMAN_HEIGHT, humanBaked, humanProportions } from './human';
 import { bodyMaterials, bodyModel } from './models/body';
-import { bonesOf, HAIR_CHAIN, referenceStance, relaxedIdle, REST_EXTRAS, skinMatrices, straightStance, type Bones, type Chain, type Extras, type Proportions } from './rig';
+import { bonesOf, HAIR_CHAIN, referenceStance, relaxedIdle, REST_EXTRAS, skinMatrices, straightStance, tposeStance, type Bones, type Chain, type Extras, type Proportions } from './rig';
 import type { Band, Material, Model } from './sdf';
 
 export { SEVEN, FIVE, MALE, FEMALE, NEITHER, heightOf } from './rig';
@@ -102,7 +102,7 @@ export function levelView(turn: number): View {
   return { ex: [(R[0] - R[1]) * k, 0], ey: [(F[0] - F[1]) * k, 0], T: [T[0] / tl, T[1] / tl, 0], L: [L[0] / ll, L[1] / ll, L[2] / ll], H: [T[0] / tl, T[1] / tl] };
 }
 
-export interface SceneOpts { wear?: Wear; stance?: 'ref' | 'straight'; view?: View; kind?: Kind; /** The bake to draw from, made already, instead of one made now. */ bake?: Baked; /** A hand shape laid on both hands, for the sheets. */ hands?: HandShape; /** The head's pitch up on the island, in place of `HEAD_PITCH`, for the sheets. */ pitch?: number; /** The hands turned about the forearm, degrees (the left the other way), for a sheet that looks at a hand's back. */ handTwist?: number }
+export interface SceneOpts { wear?: Wear; stance?: 'ref' | 'straight' | 'tpose'; view?: View; kind?: Kind; /** The bake to draw from, made already, instead of one made now. */ bake?: Baked; /** A hand shape laid on both hands, for the sheets. */ hands?: HandShape; /** The head's pitch up on the island, in place of `HEAD_PITCH`, for the sheets. */ pitch?: number; /** The hands turned about the forearm, degrees (the left the other way), for a sheet that looks at a hand's back. */ handTwist?: number }
 
 /** A pose as everything a draw needs, at `zoom`, at proportions `P` (the look's own unless said). */
 export function sculptScene(pose: FigurePose, zoom: number, P?: Proportions, now = performance.now() / 1000, band = bandOf(zoom), o: SceneOpts = {}): SculptScene {
@@ -112,7 +112,7 @@ export function sculptScene(pose: FigurePose, zoom: number, P?: Proportions, now
   const figure = sculptRig(pose).rig;
   // Stood doing nothing, the sculpt stands its own way (`relaxedIdle`); every other pose is the figure's, as is.
   const idle = !pose.moving && !pose.working && !pose.swimming && !pose.driving && !pose.emote && !pose.cast;
-  const rig = o.stance === 'ref' ? referenceStance(figure) : o.stance === 'straight' ? straightStance(figure) : idle ? relaxedIdle(figure, pose.phase / 6, pose.facing) : figure;
+  const rig = o.stance === 'ref' ? referenceStance(figure) : o.stance === 'straight' ? straightStance(figure) : o.stance === 'tpose' ? tposeStance(figure) : idle ? relaxedIdle(figure, pose.phase / 6, pose.facing) : figure;
   // Talking: the head nods and tilts a little (the sculpt has no mouth to move).
   if (pose.emote === 'talk') rig.head = [rig.head[0] + 5 * Math.sin(now * 7), rig.head[1] + 2 * Math.sin(now * 3.1), rig.head[2] + 3 * Math.sin(now * 2.3)];
   if (o.hands) rig.shape = [o.hands, o.hands];

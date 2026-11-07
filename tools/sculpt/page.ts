@@ -87,7 +87,7 @@ function row(cells: Array<{ cv: HTMLCanvasElement; label: string }>): void {
 type Who = 'male' | 'female' | 'neither' | 'seven' | 'five' | 'figure';
 /** The studio's look in the body's own gender. */
 const lookOf = (who: Who): Look => ({ ...LOOK, gender: who === 'female' ? 'woman' : who === 'neither' ? 'neither' : 'man' });
-function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean; wear?: Wear; stance?: 'ref' | 'straight'; view?: View; hands?: HandShape } = {}): void {
+function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean; wear?: Wear; stance?: 'ref' | 'straight' | 'tpose'; view?: View; hands?: HandShape } = {}): void {
   try {
     if (who === 'figure') {
       drawFigure(c.g, c.fx, c.fy, zoom, pose);
@@ -267,12 +267,13 @@ const api = {
     return out;
   },
   /**
-   * The body against the male reference (docs/aesthetic/08): the picture, then our sculpt bare in the sheet's stance at the
-   * picture's two views, at one height; then the picture laid half over our two bodies for the silhouettes; then at game zoom.
+   * The body against the male reference (docs/aesthetic/08): the picture, then our sculpt bare in the T-pose at the picture's
+   * two views, front and side, at one height; then the picture laid half over our two bodies in the picture's stance for the
+   * silhouettes; then at game zoom, at ease.
    */
   async compare(who: Who = 'male', zoom = 6.5): Promise<void> {
     const female = who === 'female';
-    heading(`${who} against the ${female ? 'female' : 'male'} reference at zoom ${zoom}, level view: picture | ours front 3/4, back 3/4, front, side | picture over ours | game zoom 2 (the island's view)`);
+    heading(`${who} against the ${female ? 'female' : 'male'} reference at zoom ${zoom}, level view: picture | ours in the T-pose front 3/4, back 3/4, front, side | picture over ours (the picture's stance) | game zoom 2 at ease (the island's view)`);
     const bodyPx = heightOf(PROPS[who] ?? MALE) * 2.25 * zoom;
     const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
     // The picture's figures stand about 94% of its height (93% in the woman's), feet at 95.5% (96.3%), at 27.5% and 72% across (28%, 73%).
@@ -281,10 +282,11 @@ const api = {
     if (pic) cells.push({ cv: pic, label: `reference ${refName}` });
     // The picture's figures are turned about 35 degrees from the viewer, front and back.
     const turns: Array<[string, number, number]> = [['front 3/4', 7, -35], ['back 3/4', 3, 145], ['front', 0, 0], ['side', 2, 90]];
+    // Ours in the T-pose, each cell wide enough for the arms (the picture over ours, below, stands as the picture does).
     for (const [name, f, deg] of turns) {
-      const c = cell(zoom, [-41, 3], [-11, 11]);
-      drawOne(c, zoom, who, poseOf(f, 'idle:0'), { wear: 'shorts', stance: 'ref', view: levelView((deg * Math.PI) / 180) });
-      cells.push({ cv: c.cv, label: `ours ${name}` });
+      const c = cell(zoom, [-41, 3], deg % 180 === 90 ? [-11, 11] : [-21, 21]);
+      drawOne(c, zoom, who, poseOf(f, 'idle:0'), { wear: 'shorts', stance: 'tpose', view: levelView((deg * Math.PI) / 180) });
+      cells.push({ cv: c.cv, label: `ours ${name}, T-pose` });
     }
     if (pic) {
       // The picture over our front and back views, each stood where the picture's figure stands.
@@ -308,8 +310,8 @@ const api = {
     const game: Array<{ cv: HTMLCanvasElement; label: string }> = [];
     for (const f of [7, 1, 3, 5]) {
       const c = cell(2, [-41, 3], [-11, 11]);
-      drawOne(c, 2, who, poseOf(f, 'idle:0'), { wear: 'shorts', stance: 'ref' });
-      game.push({ cv: c.cv, label: `game zoom 2 f${f}` });
+      drawOne(c, 2, who, poseOf(f, 'idle:0'), { wear: 'shorts' });
+      game.push({ cv: c.cv, label: `game zoom 2 f${f}, at ease` });
     }
     for (const f of [7, 3]) {
       const c = cell(2, [-41, 3], [-11, 11]);
@@ -379,11 +381,11 @@ const api = {
   },
   /** The lineup: the reference, the seven-head sculpt, the five-head sculpt and the 2D figure, all at one height. */
   async lineup(zoom = 6, what = 'idle:0'): Promise<void> {
-    heading(`lineup at zoom ${zoom}: reference | sculpt seven heads | sculpt five heads | the 2D figure today (${what})`);
+    heading(`lineup at zoom ${zoom}: reference | the island's sculpt, man and woman | sculpt seven heads | sculpt five heads | the 2D figure today (${what})`);
     const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
     const bodyPx = 16.5 * 2.25 * zoom;
     if (REF) cells.push({ cv: await img(REF, Math.round(bodyPx * 1.14)), label: 'reference 07' });
-    for (const who of ['seven', 'five', 'figure'] as Who[]) for (const f of [1, 0, 3]) {
+    for (const who of ['male', 'female', 'seven', 'five', 'figure'] as Who[]) for (const f of [1, 0, 3]) {
       const c = cell(zoom);
       drawOne(c, zoom, who, poseOf(f, what));
       cells.push({ cv: c.cv, label: `${who} f${f}` });
@@ -446,8 +448,8 @@ const api = {
     return { memory: m.sculptMemory(), sculpted: m.sculptMemory().bakes > 0 };
   },
   /** Eight facings of one body in one pose. */
-  facings(who: Who, what: string, zoom: number, o: { night?: number; debug?: Debug } = {}): void {
-    heading(`${who} ${what} zoom ${zoom}${o.night ? ' night' : ''}${o.debug ? ` ${o.debug}` : ''}`);
+  facings(who: Who, what: string, zoom: number, o: { night?: number; debug?: Debug; wear?: Wear } = {}): void {
+    heading(`${who} ${what} zoom ${zoom}${o.night ? ' night' : ''}${o.debug ? ` ${o.debug}` : ''}${o.wear ? ` ${o.wear}` : ''}`);
     const cells = [0, 1, 2, 3, 4, 5, 6, 7].map((f) => { const c = cell(zoom); drawOne(c, zoom, who, poseOf(f, what), o); return { cv: c.cv, label: `f${f}` }; });
     row(cells);
   },
@@ -589,6 +591,53 @@ const api = {
     heading(`${who} right hand, open, from the back, ${px}px wrist to tip`);
     row([{ cv: c.cv, label: 'hand' }]);
     return { wrist: [fx + wrist[0], fy + wrist[1]], tip: [fx + tip[0], fy + tip[1]], w, h };
+  },
+  /** The bare body's eight facings on the island, at ease, at a zoom. */
+  bare(who: Who, zoom: number): void { this.facings(who, 'idle:0', zoom, { wear: 'shorts' }); },
+  /** The joins close, bare: the neck at five facings in the T-pose and at ease, and the wrists in the T-pose and at ease, at `zoom`. */
+  joins(who: Who, zoom = 20): void {
+    heading(`${who} joins, zoom ${zoom}, bare: the neck at facings 0, 1, 2, 3, 5 in the T-pose and at ease; the wrists in the T-pose (front, back) and at ease (f1, f7)`);
+    const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
+    const put = (label: string, f: number, stance: 'tpose' | undefined, crop: [number, number], wide: [number, number]): void => {
+      const c = cell(zoom, crop, wide); drawOne(c, zoom, who, poseOf(f, 'idle:0'), { wear: 'shorts', stance }); cells.push({ cv: c.cv, label });
+    };
+    for (const stance of ['tpose', undefined] as Array<'tpose' | undefined>) for (const f of [0, 1, 2, 3, 5]) put(`neck f${f} ${stance ?? 'at ease'}`, f, stance, [-35, -26], [-7, 7]);
+    put('wrist tpose f0 right', 0, 'tpose', [-34, -26], [8, 18]); put('wrist tpose f0 left', 0, 'tpose', [-34, -26], [-18, -8]);
+    put('wrist tpose f4 right', 4, 'tpose', [-34, -26], [-18, -8]);
+    put('wrist at ease f1 left', 1, undefined, [-24, -14], [-5, 3]); put('wrist at ease f1 right', 1, undefined, [-24, -14], [1, 9]);
+    put('wrist at ease f7 left', 7, undefined, [-24, -14], [-9, -1]); put('wrist at ease f7 right', 7, undefined, [-24, -14], [-3, 5]);
+    row(cells);
+  },
+  /** The stances side on and three-quarter, bare: at ease on the island (with the 2D figure at ease beside it), the T-pose, the reference stance. */
+  stances(who: Who, zoom = 6): void {
+    heading(`${who} stances, zoom ${zoom}, bare, facings 2, 6, 1, 7: at ease | 2D figure at ease | T-pose | reference`);
+    const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
+    for (const [label, stance] of [['at ease', undefined], ['figure', undefined], ['tpose', 'tpose'], ['ref', 'ref']] as Array<[string, 'tpose' | 'ref' | undefined]>) for (const f of [2, 6, 1, 7]) {
+      const c = cell(zoom, [-43, 3], [-12, 12]);
+      drawOne(c, zoom, label === 'figure' ? 'figure' : who, poseOf(f, 'idle:0'), { wear: 'shorts', stance });
+      cells.push({ cv: c.cv, label: `${label} f${f}` });
+    }
+    row(cells);
+    // Level side views, the plumb line through the root drawn: the stance's lean read straight off.
+    const level: Array<{ cv: HTMLCanvasElement; label: string }> = [];
+    for (const [label, stance, f] of [['at ease, left side', undefined, 2], ['at ease, right side', undefined, 6], ['tpose', 'tpose', 2], ['ref', 'ref', 2]] as Array<[string, 'tpose' | 'ref' | undefined, number]>) {
+      const c = cell(zoom, [-43, 3], [-12, 12]);
+      drawOne(c, zoom, who, poseOf(f, 'idle:0'), { wear: 'shorts', stance, view: levelView(f === 6 ? -Math.PI / 2 : Math.PI / 2) });
+      c.g.strokeStyle = 'rgba(255,255,255,0.7)'; c.g.lineWidth = 1; c.g.beginPath(); c.g.moveTo(c.fx, 0); c.g.lineTo(c.fx, c.h); c.g.stroke();
+      level.push({ cv: c.cv, label: `level ${label}` });
+    }
+    row(level);
+  },
+  /** One crop of a pose in the debug views, for looking at a join: shaded, flat, normals, materials, edges. */
+  joinDebug(who: Who, zoom: number, facing: number, stance: 'tpose' | 'ref' | undefined, crop: [number, number], wide: [number, number], what = 'idle:0'): void {
+    heading(`${who} join debug, zoom ${zoom}, facing ${facing}, ${stance ?? 'at ease'}: shaded | flat | normals | materials | edges`);
+    const cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];
+    for (const [label, o] of [['shaded', {}], ['flat', { flat: true }], ['normals', { debug: 'normals' }], ['materials', { debug: 'mats' }], ['edges', { debug: 'edges' }]] as Array<[string, { debug?: Debug; flat?: boolean }]>) {
+      const c = cell(zoom, crop, wide);
+      drawOne(c, zoom, who, poseOf(facing, what), { wear: 'shorts', stance, ...o });
+      cells.push({ cv: c.cv, label });
+    }
+    row(cells);
   },
   /** The debug views, one facing big. */
   debug(who: Who, zoom = 6, facing = 1, what = 'walk:0.25'): void {

@@ -71,7 +71,7 @@ export function bodyMaterials(look: Look): Material[] {
   // The nose's underside and under the jaw: the ordinary three tones, so they take the shadow a lit face's planes do not.
   out[M.faceUnder] = { ...out[M.skin], noCrease: true };
   out[M.brow].noCrease = true; out[M.pupil].noCrease = true;
-  out[M.hand] = { ...out[M.skin], noInk: true };
+  out[M.hand] = { ...out[M.skin], noInk: true, soft: true };
   // The eye's top edge, a lighter slate, so the rectangle reads set in.
   out[M.lid] = { colour: mixHex(out[M.pupil].colour, out[M.skin].colour, 0.45), eye: true, noCrease: true };
   return out;

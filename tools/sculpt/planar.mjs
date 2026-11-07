@@ -48,6 +48,45 @@ export function facets() {
     const wR = typeof bonesRing === 'function' ? bonesRing : () => bonesRing, wX = typeof bonesApex === 'function' ? bonesApex : () => bonesApex;
     for (let i = 0; i < n; i++) out.facet([ring[i], ring[(i + 1) % n], apex], region, [wR(i), wR((i + 1) % n), wX(i)], inside);
   };
+  /** One vertex, shared by the triangles that name it, so they shade smooth across it. */
+  out.vert = (p, region, w) => { out.pos.push([...p]); out.region.push(region); out.bones.push(w); out.stamp.push(-1); return out.pos.length - 1; };
+  /** A vertex standing for the body's own vertex `id` (MakeHuman's), so a triangle on it is joined to the body's surface. */
+  out.refs = new Map();
+  out.ref = (id, p) => { const v = out.vert(p, 0, [['pelvis', 1]]); out.refs.set(v, id); return v; };
+  /**
+   * Two loops of shared vertices (any lengths, each in its own walking order) joined by triangles, smooth: each loop turned to
+   * go the same way round `axis` and started at its vertex nearest `front` (by angle about its own middle), and the triangles
+   * laid along both together by that angle, so every edge of either loop takes one, each facing away from the axis.
+   */
+  out.zip = (A, B, axis, front) => {
+    const ax = unit(axis), flat = (v) => sub(v, mul(ax, dot(v, ax)));
+    const f0 = unit(flat(front)), f1 = cross(ax, f0);
+    const wrap = (d) => Math.atan2(Math.sin(d), Math.cos(d));
+    const order = (loop) => {
+      const c = centroid(loop.map((i) => out.pos[i]));
+      const ang = (i) => { const d = flat(sub(out.pos[i], c)); let a = Math.atan2(dot(d, f1), dot(d, f0)); if (a < 0) a += Math.PI * 2; return a; };
+      let l = loop.slice();
+      if (l.reduce((t, v, k) => t + wrap(ang(l[(k + 1) % l.length]) - ang(v)), 0) < 0) l.reverse();
+      const k0 = l.reduce((b, v, k) => (ang(v) < ang(l[b]) ? k : b), 0);
+      l = [...l.slice(k0), ...l.slice(0, k0)];
+      const out2 = [[l[0], ang(l[0])]];
+      for (let k = 1; k < l.length; k++) out2.push([l[k], out2[k - 1][1] + wrap(ang(l[k]) - ang(l[k - 1]))]);
+      return out2;
+    };
+    const a = order(A), b = order(B), nA = a.length, nB = b.length;
+    const angA = (i) => a[i % nA][1] + Math.PI * 2 * Math.floor(i / nA), angB = (j) => b[j % nB][1] + Math.PI * 2 * Math.floor(j / nB);
+    const mid = centroid([...A, ...B].map((i) => out.pos[i]));
+    const tri = (p, q, r) => {
+      const P = out.pos[p], n = cross(sub(out.pos[q], P), sub(out.pos[r], P));
+      const c = mul(add(add(P, out.pos[q]), out.pos[r]), 1 / 3);
+      out.tris.push(dot(n, flat(sub(c, mid))) < 0 ? [p, r, q] : [p, q, r]);
+    };
+    let i = 0, j = 0;
+    while (i < nA || j < nB) {
+      if (j >= nB || (i < nA && angA(i + 1) <= angB(j + 1))) { tri(a[i % nA][0], a[(i + 1) % nA][0], b[j % nB][0]); i++; }
+      else { tri(a[i % nA][0], b[j % nB][0], b[(j + 1) % nB][0]); j++; }
+    }
+  };
   return out;
 }
 
@@ -111,9 +150,11 @@ const HF = [
   { f: ['E3', 'C1', 'C2', 'N3'] }, { f: ['E3', 'E2', 'C1'] }, { f: ['E2', 'C0', 'C1'] }, { f: ['C1', 'C0', 'C3', 'C2'] },
   // The mouthless lower face, the chin, the jaw.
   { f: ['N4', 'N5', 'C2', 'J2', 'CH1'] }, { f: ['CH1', 'J2', 'J1', 'CH0'] }, { f: ['J2', 'C2', 'C3', 'J1'] }, { f: ['C3', 'C0', 'J0'] }, { f: ['C3', 'J0', 'J1'] },
-  // Under the jaw and the skull, to the throat.
-  { f: ['CH0', 'J1', 'K1', 'K0'], d: [0, -1, 0], r: 15 }, { f: ['J1', 'J0', 'K2', 'K1'], d: [0, -1, 0], r: 15 }, { f: ['J0', 'Q0', 'K3', 'K2'], d: [0, -1, 0], r: 15 },
-  { f: ['Q0', 'Q1', 'K4', 'K3'], d: [0, -1, 0], r: 15 }, { f: ['Q1', 'Q2', 'K6', 'K5', 'K4'], d: [0, -1, 0], r: 15 },
+  // Under the chin, to the throat: the chin's underside, which takes the shadow. From the jaw's sides round under the skull to
+  // the nape: the neck's own tone (the face's soft planes, as the body's neck below), so no dark patch shows at the jaw's corner
+  // or the back of the neck.
+  { f: ['CH0', 'J1', 'K1', 'K0'], d: [0, -1, 0], r: 15 }, { f: ['J1', 'J0', 'K2', 'K1'], d: [0, -1, 0] }, { f: ['J0', 'Q0', 'K3', 'K2'], d: [0, -1, 0] },
+  { f: ['Q0', 'Q1', 'K4', 'K3'], d: [0, -1, 0] }, { f: ['Q1', 'Q2', 'K6', 'K5', 'K4'], d: [0, -1, 0] },
   // The ear.
   { f: ['EF0', 'EB0', 'EB1', 'EF1'], d: [1, 0, 0], r: 14 }, { f: ['EA0', 'EF0', 'EF1', 'EA3'], d: [0, 0, 1], r: 14 }, { f: ['EA1', 'EA2', 'EB1', 'EB0'], d: [0, 0, -1], r: 14 },
   { f: ['EA0', 'EA1', 'EB0', 'EF0'], d: [0, 1, 0], r: 14 }, { f: ['EA3', 'EF1', 'EB1', 'EA2'], d: [0, -1, 0], r: 14 }, { f: ['EA0', 'EA1', 'EA2', 'EA3'], d: [-1, 0, 0], r: 14 },
@@ -125,17 +166,17 @@ const EYE = { man: [0.13, 0.178, 0.53, 0.572], woman: [0.135, 0.191, 0.473, 0.52
 const BROW = { man: { u: [0.075, 0.18, 0.25], top: [0.656, 0.658, 0.652], h: [0.03, 0.03, 0.014] }, woman: { u: [0.085, 0.19, 0.27], top: [0.621, 0.634, 0.62], h: [0.02, 0.02, 0.01] } };
 
 /**
- * The head for one body in MakeHuman's space. `L`: chin and crown heights, the skull's centre depth `zc`; `base`: the
- * neck's base ring (twelve points round the body's own surface, in `THROAT`'s order); `style` 'man' or 'woman'.
- * Returns the chin's and the crown's points, for the sheets that hold the head against the picture.
+ * The head for one body in MakeHuman's space. `L`: chin and crown heights, the skull's centre depth `zc`; `style` 'man' or
+ * 'woman'. The throat ring under the jaw is left open: the caller joins it to the body's own neck.
+ * Returns the chin's and the crown's points, for the sheets that hold the head against the picture, and the throat ring.
  */
-export function tracedHead(L, base, style, f) {
+export function tracedHead(L, style, f) {
   const woman = style === 'woman', col = woman ? 1 : 0;
   const H = L.crown - L.chin;
   // The woman's face is shorter between the brow and the chin: everything under the brow line drawn up toward it.
   const P = ([u, v, z]) => { const vv = woman && v < 0.62 ? 0.62 + (v - 0.62) * 0.97 : v; return [u * H, L.chin + vv * H, L.zc + (z + 0.05) * H]; };
   const V = (name) => { const m = name.endsWith("'"); const [u, v, z] = HV[name.slice(0, m ? -1 : undefined)][col]; return P([m ? -u : u, v, z]); };
-  const HEAD = [['head', 1]], THR = [['head', 0.5], ['neck', 0.5]], NECK = [['neck', 1]];
+  const HEAD = [['head', 1]], THR = [['head', 0.5], ['neck', 0.5]];
   const wOf = (name) => (name.startsWith('K') ? THR : HEAD);
   const inside = P([0, 0.5, -0.05]);
   const push = (names, d, mirror, region = 1) => {
@@ -145,7 +186,6 @@ export function tracedHead(L, base, style, f) {
     f.facet(pts, region, pts.map((_, i) => wOf(list[i])), dir ?? inside, !!dir);
   };
   for (const { f: names, d, r } of HF) { push(names, d, false, r); if (!names.some((n) => n.endsWith("'"))) push(names, d, true, r); }
-  f.loft(base, THROAT.map(V), 1, NECK, THR);
   // The eyes: a dark rectangle a hair off the socket plane; the brows: a slab on the shelf's front, its top lit.
   // A plane through four of the head's points, its normal turned outward (the mirrored half winds the other way).
   const plane = (names) => { const pts = names.map(V); let n = unit(newellOf(pts)); if (dot(n, sub(pts[0], inside)) < 0) n = mul(n, -1); return { pts, n, at: (u, v) => { const p = pts[0]; const uu = u * H, vv = L.chin + v * H; return [uu, vv, n[2] !== 0 ? p[2] - (n[0] * (uu - p[0]) + n[1] * (vv - p[1])) / n[2] : p[2]]; } }; };
@@ -167,32 +207,9 @@ export function tracedHead(L, base, style, f) {
       f.facet([a, b, c, d], 8, HEAD, (Math.abs(u1) <= corner ? shelfIn : shelfOut).n, true);
     }
   }
-  return { chin: V('CH0'), crown: V('A0'), skull: Object.keys(HV).flatMap((n) => [V(n), V(`${n}'`)]) };
+  return { chin: V('CH0'), crown: V('A0'), skull: Object.keys(HV).flatMap((n) => [V(n), V(`${n}'`)]), throat: THROAT.map(V), throatBones: THR };
 }
 const newellOf = (pts) => { let n = [0, 0, 0]; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; n = add(n, [(a[1] - b[1]) * (a[2] + b[2]), (a[2] - b[2]) * (a[0] + b[0]), (a[0] - b[0]) * (a[1] + b[1])]); } return n; };
-
-/**
- * The neck's base ring: twelve points round the body's own surface at height `y`, in the throat ring's directions about
- * the neck's middle, a hair outside it, so the body's cut edge above is hidden inside the lofted neck.
- */
-export function neckBase(L, pts, y, style) {
-  const col = style === 'woman' ? 1 : 0;
-  const H = L.crown - L.chin, cz = L.zc - 0.1 * H;
-  const dirs = THROAT.map((n) => { const m = n.endsWith("'"); const [u, , z] = HV[n.slice(0, m ? -1 : undefined)][col]; return Math.atan2((z + 0.05) * H + 0.1 * H, (m ? -u : u) * H); });
-  const cap = H * 0.5;
-  return dirs.map((a) => {
-    let r = 0;
-    for (const p of pts) {
-      if (Math.abs(p[1] - y) > 0.08) continue;
-      const dx = p[0], dz = p[2] - cz, rr = Math.hypot(dx, dz);
-      if (rr > cap) continue;
-      let da = Math.atan2(dz, dx) - a; da = Math.atan2(Math.sin(da), Math.cos(da));
-      if (Math.abs(da) < Math.PI / 10) r = Math.max(r, rr);
-    }
-    r = (r || H * 0.25) + 0.005;
-    return [Math.cos(a) * r, y, cz + Math.sin(a) * r];
-  });
-}
 
 /* ---- the hands: traced ---------------------------------------------------------------------------------------------- */
 
@@ -201,8 +218,9 @@ export function neckBase(L, pts, y, style) {
  * 0.59 wide, the wrist 0.38, the knuckle line 0.52 up; four finger strips with a V-groove between each pair (the index
  * 0.9 long, the middle 1.0, the ring 0.935, the little 0.82); the thumb a square wedge in two segments off the palm's
  * edge, out and forward. Built in the body's own hand frame from its joints `J` (wrist, k2..k5, tip3, t0, t1, tip1) at
- * the body's own length; `pts` the forearm surface for the cuff; `k` the side (0 the body's left). Bones: wrist, fing
- * (the three outer fingers), index, thumb; the elbow for the cuff. `detail` false is the far band's plainer mitt.
+ * the body's own length; `pts` the forearm's surface, for the wrist's section; `k` the side (0 the body's left). Bones:
+ * wrist, fing (the three outer fingers), index, thumb. `detail` false is the far band's plainer mitt. The wrist ring is
+ * left open and returned, with its bones and the hand's frame, for the caller to join to the body's own forearm.
  */
 /**
  * The hand's own frame from the body's joints: `a` along the palm from the wrist to the middle knuckle, `s` across from
@@ -221,23 +239,20 @@ export function mitt(J, pts, k, detail, f) {
   const L = Math.hypot(...sub(J.k3, J.wrist)) + Math.hypot(...sub(J.tip3, J.k3));
   // The block sits a touch toward the little finger from the wrist's line, as the picture has it.
   const at = (x, y, z) => add(add(add(J.wrist, mul(s, (x + 0.01) * L)), mul(n, y * L)), mul(a, z * L));
-  const WR = [[`wrist${k}`, 1]], FG = [[`fing${k}`, 1]], IX = [[`index${k}`, 1]], CUFF = [[`elbow${k}`, 0.6], [`wrist${k}`, 0.4]], TH = [[`thumb${k}`, 1]], THB = [[`wrist${k}`, 0.5], [`thumb${k}`, 0.5]];
+  const WR = [[`wrist${k}`, 1]], FG = [[`fing${k}`, 1]], IX = [[`index${k}`, 1]], TH = [[`thumb${k}`, 1]], THB = [[`wrist${k}`, 0.5], [`thumb${k}`, 0.5]];
   const KN = [[`wrist${k}`, 0.5], [`fing${k}`, 0.5]], KNI = [[`wrist${k}`, 0.5], [`index${k}`, 0.5]];
-  // The cuff over the forearm, from the body's own surface.
-  const cuffZ = -0.2;
-  const N = detail ? 18 : 8;
-  // An ellipse round the forearm's own width and depth there, a hair outside it: smooth, so its facets shade evenly.
-  const cuff = (() => {
-    const c = at(0, 0, cuffZ);
+  // The forearm's own half-width and half-depth at a height along the palm's line (from the body's vertices in a window).
+  const extents = (z, win) => {
+    const c = at(0, 0, z);
     let rx = 0, ry = 0;
     for (const p of pts) {
-      const d = sub(p, c); const along = dot(d, a); if (Math.abs(along) > 0.08 * L) continue;
+      const d = sub(p, c); const along = dot(d, a); if (Math.abs(along) > win * L) continue;
       const x = dot(d, s), y = dot(d, n); if (Math.hypot(x, y) > 0.5 * L) continue;
       rx = Math.max(rx, Math.abs(x)); ry = Math.max(ry, Math.abs(y));
     }
-    rx = (rx || 0.2 * L) + 0.035; ry = (ry || 0.2 * L) + 0.035;
-    return Array.from({ length: N }, (_, i) => { const ang = Math.PI - (i / N) * Math.PI * 2; return add(add(c, mul(s, Math.cos(ang) * rx)), mul(n, Math.sin(ang) * ry)); });
-  })();
+    return [rx || 0.2 * L, ry || 0.2 * L];
+  };
+  const [wrx, wry] = extents(-0.04, 0.05);
   // Rings across the hand: the wrist (a box), and the knuckle line, the back raised to a ridge and cut by the grooves.
   // Points go round from the thumb side over the back, then under the palm; each knows its place across and through.
   const half = 0.315, T = 0.1, g = 0.035;
@@ -253,10 +268,10 @@ export function mitt(J, pts, k, detail, f) {
   };
   // The forefinger's strip of the knuckle ring (the thumb side, x < 0) takes the index bone; the valley between is shared.
   const weigh = (r, outer, inner) => (i) => { const x = r.xy[i][0]; return x < -0.5 * half - 1e-6 ? inner : x > -0.5 * half + 1e-6 ? outer : inner === KNI ? KN : [...inner, ...outer].map(([b, w]) => [b, w / 2]); };
-  const wrist = ring(0.0, 0.21, 0.1, 0.1, 0);
+  // The wrist ring the forearm's own section at the wrist, so the mitt carries the arm's width on without a step.
+  const wrist = ring(0.0, (wrx + 0.008) / L, (wry + 0.008) / L, (wry + 0.008) / L, 0);
   const heel = ring(0.12, 0.27, 0.095, 0.095, 0);
   const knuckle = ring(0.52, half, T * 1.15, T, g);
-  f.loft(cuff, wrist, 2, CUFF, WR);
   // The wrist block flares to the palm's heel, then runs to the knuckles: the back rising to the ridge, the palm flat.
   f.loft(wrist, heel, 2, WR);
   f.loft(heel, knuckle, 2, WR, weigh(knuckle, KN, KNI));
@@ -288,5 +303,5 @@ export function mitt(J, pts, k, detail, f) {
   f.loft(t2, t3, 2, TH);
   f.cap(t3, tipT, 2, TH);
   f.cap(t0.slice().reverse(), add(root, mul(dir1, -0.06 * L)), 2, THB);
-  return f;
+  return { wrist, bones: WR, axis: a, front: n };
 }

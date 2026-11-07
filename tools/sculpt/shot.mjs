@@ -1,7 +1,7 @@
 // Sheets of a sculpted body (src/sculpt), drawn by tools/sculpt/page.ts at twice the pixels:
 //
 //   node tools/sculpt/shot.mjs --out /some/dir                 # every sheet: lineup, facings, motion, close, night, debug, stats
-//   node tools/sculpt/shot.mjs --out /some/dir --only lineup,close    # also: design, garment, overlay, live, iou, hands, stats
+//   node tools/sculpt/shot.mjs --out /some/dir --only lineup,close    # also: design, garment, overlay, live, iou, hands, joins, stats
 //   node tools/sculpt/shot.mjs --out /some/dir --who female     # the woman (default male; also neither, seven, five)
 //   node tools/sculpt/shot.mjs --out /some/dir --hair bald      # the look's hairstyle: tousled (default) or bald
 //   node tools/sculpt/shot.mjs --out /some/dir --ink 0          # the ink's width in px on every sheet (0: none), for looking at the shapes alone
@@ -73,7 +73,8 @@ if (flag('stats') || only.includes('stats')) {
   }
   if (flag('stats')) { await b.close(); process.exit(0); }
 }
-if (only.includes('compare')) await shoot(`compare-${who}`, async (w) => { await window.SCULPT.compare(w, 6.5); });
+if (only.includes('compare')) await shoot(`compare-${who}`, async (w) => { await window.SCULPT.compare(w, 6.5); window.SCULPT.bare(w, 6.5); window.SCULPT.bare(w, 2); });
+if (only.includes('joins')) await shoot(`joins-${who}`, (w) => window.SCULPT.joins(w, 20));
 if (only.includes('design')) await shoot(`design-${who}`, async (w) => { await window.SCULPT.design(w); });
 if (only.includes('garment')) await shoot(`garment-${who}`, async (w) => { await window.SCULPT.garment(w); });
 if (only.includes('overlay')) { await p.evaluate(() => window.SCULPT.clear()); const r = await p.evaluate((w) => window.SCULPT.overlay(w), who); console.log(`overlay ${who}`, JSON.stringify(r)); await p.locator('#root').screenshot({ path: join(out, `overlay-${who}.png`), timeout: 180000, animations: 'disabled' }); console.log('wrote', join(out, `overlay-${who}.png`)); }

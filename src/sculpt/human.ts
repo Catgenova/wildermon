@@ -83,7 +83,7 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
         const top = front ? braLow + (braTop - braLow) * (0.75 + 0.5 * x) : braTop;
         d = Math.max(d, Math.min(p[2] - braLow, top - p[2]));
       }
-      return [M.skin, M.shorts, d];
+      return [M.face, M.shorts, d];
     }
     // Clothed, all the body's bare skin shades as the face's planes do (four gentle tones, no crease ink), so the neck and
     // the collarbones inside the collar, and the arms, are not a darker skin than the head.
