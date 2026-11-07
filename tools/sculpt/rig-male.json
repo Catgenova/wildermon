@@ -5,9 +5,9 @@
  "frames": "Y head to tail; X the bend axis (Y × flex); Z = X × Y. Local pose [rx, ry, rz] degrees as Rz·Rx·Ry; +rx carries the tail toward flex. Right side: the left mirrored with X negated (a pose mirrors as [rx, -ry, -rz]).",
  "skinning": "linear blend: v' = Σ w_i (W_i R_iᵀ (v - head_i) + P_i), W_i the posed world rotation, P_i the posed head; helpers driven from their `driver` (half: the source's local turn halved; twist: half the hand's twist about its own axis; wrist: half the swing and all the twist; untwist: the source's twist undone by f).",
  "counts": {
-  "bones": 51,
+  "bones": 55,
   "control": 35,
-  "helpers": 16,
+  "helpers": 20,
   "vertices": 962,
   "maxInfluences": 4
  },
@@ -17,49 +17,49 @@
   "rest": {
    "arm": [
     [
-     -4.1,
-     10.5,
-     -0.15
+     -5.75,
+     11.5,
+     0.85
     ],
     [
-     -4.1,
-     10.5,
-     -0.15
+     -5.75,
+     11.5,
+     0.85
     ]
    ],
    "elbow": [
-    8.5,
-    8.5
+    10,
+    10
    ],
    "hand": [
     [
-     8,
-     10,
+     9,
+     1.5,
      -81.5
     ],
     [
-     8,
-     -10,
+     9,
+     -1.5,
      81.5
     ]
    ],
    "leg": [
     [
-     -4,
-     5.35,
-     0
+     -13.4,
+     4.1,
+     -0.5
     ],
     [
-     -4,
-     5.35,
-     0
+     -13.4,
+     4.1,
+     -0.5
     ]
    ],
    "knee": [
-    -4.5,
-    -4.5
+    -14,
+    -14
    ],
-   "residualDeg": 46
+   "residualDeg": 43.7
   },
   "restNote": "the figure rig (rest() with these limb angles) whose bones lie as ours at bind: fromGame takes each game bone's turn from bonesOf(this rest)"
  },
@@ -355,7 +355,7 @@
    "tail": [
     1.5934,
     -1.3374,
-    -0.1557
+    -0.0057
    ],
    "x": [
     -0.4578,
@@ -363,14 +363,14 @@
     0
    ],
    "y": [
-    0.8633,
-    -0.4445,
-    -0.239
+    0.8792,
+    -0.4527,
+    -0.1487
    ],
    "z": [
-    0.2125,
-    -0.1094,
-    0.971
+    0.1322,
+    -0.0681,
+    0.9889
    ],
    "game": "clav0"
   },
@@ -381,7 +381,7 @@
    "head": [
     1.5934,
     -1.3374,
-    -0.1557
+    -0.0057
    ],
    "tail": [
     2.1486,
@@ -394,14 +394,14 @@
     0
    ],
    "y": [
-    0.2844,
-    -0.9586,
-    -0.0148
+    0.2832,
+    -0.9547,
+    -0.0912
    ],
    "z": [
-    0.0042,
-    -0.0141,
-    0.9999
+    0.0259,
+    -0.0874,
+    0.9958
    ],
    "game": "arm0"
   },
@@ -446,24 +446,24 @@
     -0.1243
    ],
    "tail": [
-    2.3843,
-    -5.4732,
-    0.0682
+    2.3704,
+    -5.4788,
+    -0.0373
    ],
    "x": [
-    0.9928,
-    0.0353,
-    -0.1146
+    0.9929,
+    0.0324,
+    -0.1145
    ],
    "y": [
-    0.0648,
-    -0.9621,
-    0.265
+    0.0465,
+    -0.9914,
+    0.1224
    ],
    "z": [
-    -0.1009,
-    -0.2705,
-    -0.9574
+    -0.1095,
+    -0.1269,
+    -0.9859
    ],
    "game": "wrist0"
   },
@@ -563,29 +563,29 @@
    "parent": "hand_l",
    "kind": "control",
    "head": [
-    2.3843,
-    -5.4732,
-    0.0682
+    2.3704,
+    -5.4788,
+    -0.0373
    ],
    "tail": [
-    2.2865,
-    -5.952,
-    0.0396
+    2.2776,
+    -5.9538,
+    -0.038
    ],
    "x": [
-    0.9759,
-    -0.1934,
-    -0.1006
+    0.9765,
+    -0.1906,
+    -0.1008
    ],
    "y": [
-    -0.1998,
-    -0.9781,
-    -0.0584
+    -0.1917,
+    -0.9814,
+    -0.0014
    ],
    "z": [
-    -0.0871,
-    0.0771,
-    -0.9932
+    -0.0987,
+    0.0207,
+    -0.9949
    ],
    "game": "fing0/2"
   },
@@ -594,9 +594,9 @@
    "parent": "fingers_01_l",
    "kind": "control",
    "head": [
-    2.2865,
-    -5.952,
-    0.0396
+    2.2776,
+    -5.9538,
+    -0.038
    ],
    "tail": [
     2.2283,
@@ -604,19 +604,19 @@
     -0.0191
    ],
    "x": [
-    0.9591,
-    -0.2665,
-    -0.0948
+    0.9601,
+    -0.2629,
+    -0.0951
    ],
    "y": [
-    -0.2827,
-    -0.9159,
-    -0.285
+    -0.2539,
+    -0.9623,
+    0.0972
    ],
    "z": [
-    -0.0109,
-    0.3001,
-    -0.9538
+    -0.1171,
+    -0.0691,
+    -0.9907
    ],
    "game": "fing0"
   },
@@ -627,7 +627,7 @@
    "head": [
     0.855,
     -5.106,
-    -0.025
+    0.375
    ],
    "tail": [
     0.8838,
@@ -640,14 +640,14 @@
     0
    ],
    "y": [
-    0.0121,
-    -0.9975,
-    -0.0692
+    0.0118,
+    -0.9727,
+    -0.2319
    ],
    "z": [
-    0.0008,
-    -0.0692,
-    0.9976
+    0.0028,
+    -0.2319,
+    0.9727
    ],
    "game": "hip0"
   },
@@ -756,7 +756,7 @@
    "tail": [
     -1.5934,
     -1.3374,
-    -0.1557
+    -0.0057
    ],
    "x": [
     -0.4578,
@@ -764,14 +764,14 @@
     0
    ],
    "y": [
-    -0.8633,
-    -0.4445,
-    -0.239
+    -0.8792,
+    -0.4527,
+    -0.1487
    ],
    "z": [
-    -0.2125,
-    -0.1094,
-    0.971
+    -0.1322,
+    -0.0681,
+    0.9889
    ],
    "game": "clav1"
   },
@@ -782,7 +782,7 @@
    "head": [
     -1.5934,
     -1.3374,
-    -0.1557
+    -0.0057
    ],
    "tail": [
     -2.1486,
@@ -795,14 +795,14 @@
     0
    ],
    "y": [
-    -0.2844,
-    -0.9586,
-    -0.0148
+    -0.2832,
+    -0.9547,
+    -0.0912
    ],
    "z": [
-    -0.0042,
-    -0.0141,
-    0.9999
+    -0.0259,
+    -0.0874,
+    0.9958
    ],
    "game": "arm1"
   },
@@ -847,24 +847,24 @@
     -0.1243
    ],
    "tail": [
-    -2.3843,
-    -5.4732,
-    0.0682
+    -2.3704,
+    -5.4788,
+    -0.0373
    ],
    "x": [
-    0.9928,
-    -0.0353,
-    0.1146
+    0.9929,
+    -0.0324,
+    0.1145
    ],
    "y": [
-    -0.0648,
-    -0.9621,
-    0.265
+    -0.0465,
+    -0.9914,
+    0.1224
    ],
    "z": [
-    0.1009,
-    -0.2705,
-    -0.9574
+    0.1095,
+    -0.1269,
+    -0.9859
    ],
    "game": "wrist1"
   },
@@ -964,29 +964,29 @@
    "parent": "hand_r",
    "kind": "control",
    "head": [
-    -2.3843,
-    -5.4732,
-    0.0682
+    -2.3704,
+    -5.4788,
+    -0.0373
    ],
    "tail": [
-    -2.2865,
-    -5.952,
-    0.0396
+    -2.2776,
+    -5.9538,
+    -0.038
    ],
    "x": [
-    0.9759,
-    0.1934,
-    0.1006
+    0.9765,
+    0.1906,
+    0.1008
    ],
    "y": [
-    0.1998,
-    -0.9781,
-    -0.0584
+    0.1917,
+    -0.9814,
+    -0.0014
    ],
    "z": [
-    0.0871,
-    0.0771,
-    -0.9932
+    0.0987,
+    0.0207,
+    -0.9949
    ],
    "game": "fing1/2"
   },
@@ -995,9 +995,9 @@
    "parent": "fingers_01_r",
    "kind": "control",
    "head": [
-    -2.2865,
-    -5.952,
-    0.0396
+    -2.2776,
+    -5.9538,
+    -0.038
    ],
    "tail": [
     -2.2283,
@@ -1005,19 +1005,19 @@
     -0.0191
    ],
    "x": [
-    0.9591,
-    0.2665,
-    0.0948
+    0.9601,
+    0.2629,
+    0.0951
    ],
    "y": [
-    0.2827,
-    -0.9159,
-    -0.285
+    0.2539,
+    -0.9623,
+    0.0972
    ],
    "z": [
-    0.0109,
-    0.3001,
-    -0.9538
+    0.1171,
+    -0.0691,
+    -0.9907
    ],
    "game": "fing1"
   },
@@ -1028,7 +1028,7 @@
    "head": [
     -0.855,
     -5.106,
-    -0.025
+    0.375
    ],
    "tail": [
     -0.8838,
@@ -1041,14 +1041,14 @@
     0
    ],
    "y": [
-    -0.0121,
-    -0.9975,
-    -0.0692
+    -0.0118,
+    -0.9727,
+    -0.2319
    ],
    "z": [
-    -0.0008,
-    -0.0692,
-    0.9976
+    -0.0028,
+    -0.2319,
+    0.9727
    ],
    "game": "hip1"
   },
@@ -1152,7 +1152,7 @@
    "head": [
     1.5934,
     -1.3374,
-    -0.1557
+    -0.0057
    ],
    "tail": [
     2.1486,
@@ -1165,14 +1165,14 @@
     0
    ],
    "y": [
-    0.2844,
-    -0.9586,
-    -0.0148
+    0.2832,
+    -0.9547,
+    -0.0912
    ],
    "z": [
-    0.0042,
-    -0.0141,
-    0.9999
+    0.0259,
+    -0.0874,
+    0.9958
    ],
    "driver": {
     "from": "upperarm_l",
@@ -1187,7 +1187,7 @@
    "head": [
     1.5934,
     -1.3374,
-    -0.1557
+    -0.0057
    ],
    "tail": [
     2.1486,
@@ -1200,14 +1200,14 @@
     0
    ],
    "y": [
-    0.2844,
-    -0.9586,
-    -0.0148
+    0.2832,
+    -0.9547,
+    -0.0912
    ],
    "z": [
-    0.0042,
-    -0.0141,
-    0.9999
+    0.0259,
+    -0.0874,
+    0.9958
    ],
    "driver": {
     "from": "upperarm_l",
@@ -1251,13 +1251,13 @@
    }
   },
   {
-   "name": "lowerarm_twist_l",
+   "name": "lowerarm_twist_01_l",
    "parent": "lowerarm_l",
    "kind": "helper",
    "head": [
-    2.2429,
-    -3.9917,
-    -0.1544
+    2.2115,
+    -3.7309,
+    -0.1645
    ],
    "tail": [
     2.3373,
@@ -1282,7 +1282,42 @@
    "driver": {
     "from": "hand_l",
     "kind": "twist",
-    "f": 0.5
+    "f": 0.3333333333333333
+   }
+  },
+  {
+   "name": "lowerarm_twist_02_l",
+   "parent": "lowerarm_l",
+   "kind": "helper",
+   "head": [
+    2.2744,
+    -4.2526,
+    -0.1444
+   ],
+   "tail": [
+    2.3373,
+    -4.7744,
+    -0.1243
+   ],
+   "x": [
+    -0.9928,
+    -0.1197,
+    0
+   ],
+   "y": [
+    0.1196,
+    -0.9921,
+    0.0382
+   ],
+   "z": [
+    -0.0046,
+    0.0379,
+    0.9993
+   ],
+   "driver": {
+    "from": "hand_l",
+    "kind": "twist",
+    "f": 0.6666666666666666
    }
   },
   {
@@ -1295,24 +1330,24 @@
     -0.1243
    ],
    "tail": [
-    2.3843,
-    -5.4732,
-    0.0682
+    2.3704,
+    -5.4788,
+    -0.0373
    ],
    "x": [
-    0.9928,
-    0.0353,
-    -0.1146
+    0.9929,
+    0.0324,
+    -0.1145
    ],
    "y": [
-    0.0648,
-    -0.9621,
-    0.265
+    0.0465,
+    -0.9914,
+    0.1224
    ],
    "z": [
-    -0.1009,
-    -0.2705,
-    -0.9574
+    -0.1095,
+    -0.1269,
+    -0.9859
    ],
    "driver": {
     "from": "hand_l",
@@ -1325,32 +1360,67 @@
    "parent": "hand_l",
    "kind": "helper",
    "head": [
-    2.3843,
-    -5.4732,
-    0.0682
+    2.3704,
+    -5.4788,
+    -0.0373
    ],
    "tail": [
-    2.2865,
-    -5.952,
-    0.0396
+    2.2776,
+    -5.9538,
+    -0.038
    ],
    "x": [
-    0.9759,
-    -0.1934,
-    -0.1006
+    0.9765,
+    -0.1906,
+    -0.1008
    ],
    "y": [
-    -0.1998,
-    -0.9781,
-    -0.0584
+    -0.1917,
+    -0.9814,
+    -0.0014
    ],
    "z": [
-    -0.0871,
-    0.0771,
-    -0.9932
+    -0.0987,
+    0.0207,
+    -0.9949
    ],
    "driver": {
     "from": "fingers_01_l",
+    "kind": "half",
+    "f": 0.5
+   }
+  },
+  {
+   "name": "fingers_mid_l",
+   "parent": "fingers_01_l",
+   "kind": "helper",
+   "head": [
+    2.2776,
+    -5.9538,
+    -0.038
+   ],
+   "tail": [
+    2.2283,
+    -6.1407,
+    -0.0191
+   ],
+   "x": [
+    0.9601,
+    -0.2629,
+    -0.0951
+   ],
+   "y": [
+    -0.2539,
+    -0.9623,
+    0.0972
+   ],
+   "z": [
+    -0.1171,
+    -0.0691,
+    -0.9907
+   ],
+   "driver": {
+    "from": "fingers_02_l",
     "kind": "half",
     "f": 0.5
    }
@@ -1362,7 +1432,7 @@
    "head": [
     0.855,
     -5.106,
-    -0.025
+    0.375
    ],
    "tail": [
     0.8838,
@@ -1375,14 +1445,14 @@
     0
    ],
    "y": [
-    0.0121,
-    -0.9975,
-    -0.0692
+    0.0118,
+    -0.9727,
+    -0.2319
    ],
    "z": [
-    0.0008,
-    -0.0692,
-    0.9976
+    0.0028,
+    -0.2319,
+    0.9727
    ],
    "driver": {
     "from": "thigh_l",
@@ -1432,7 +1502,7 @@
    "head": [
     -1.5934,
     -1.3374,
-    -0.1557
+    -0.0057
    ],
    "tail": [
     -2.1486,
@@ -1445,14 +1515,14 @@
     0
    ],
    "y": [
-    -0.2844,
-    -0.9586,
-    -0.0148
+    -0.2832,
+    -0.9547,
+    -0.0912
    ],
    "z": [
-    -0.0042,
-    -0.0141,
-    0.9999
+    -0.0259,
+    -0.0874,
+    0.9958
    ],
    "driver": {
     "from": "upperarm_r",
@@ -1467,7 +1537,7 @@
    "head": [
     -1.5934,
     -1.3374,
-    -0.1557
+    -0.0057
    ],
    "tail": [
     -2.1486,
@@ -1480,14 +1550,14 @@
     0
    ],
    "y": [
-    -0.2844,
-    -0.9586,
-    -0.0148
+    -0.2832,
+    -0.9547,
+    -0.0912
    ],
    "z": [
-    -0.0042,
-    -0.0141,
-    0.9999
+    -0.0259,
+    -0.0874,
+    0.9958
    ],
    "driver": {
     "from": "upperarm_r",
@@ -1531,13 +1601,13 @@
    }
   },
   {
-   "name": "lowerarm_twist_r",
+   "name": "lowerarm_twist_01_r",
    "parent": "lowerarm_r",
    "kind": "helper",
    "head": [
-    -2.2429,
-    -3.9917,
-    -0.1544
+    -2.2115,
+    -3.7309,
+    -0.1645
    ],
    "tail": [
     -2.3373,
@@ -1562,7 +1632,42 @@
    "driver": {
     "from": "hand_r",
     "kind": "twist",
-    "f": 0.5
+    "f": 0.3333333333333333
+   }
+  },
+  {
+   "name": "lowerarm_twist_02_r",
+   "parent": "lowerarm_r",
+   "kind": "helper",
+   "head": [
+    -2.2744,
+    -4.2526,
+    -0.1444
+   ],
+   "tail": [
+    -2.3373,
+    -4.7744,
+    -0.1243
+   ],
+   "x": [
+    -0.9928,
+    0.1197,
+    0
+   ],
+   "y": [
+    -0.1196,
+    -0.9921,
+    0.0382
+   ],
+   "z": [
+    0.0046,
+    0.0379,
+    0.9993
+   ],
+   "driver": {
+    "from": "hand_r",
+    "kind": "twist",
+    "f": 0.6666666666666666
    }
   },
   {
@@ -1575,24 +1680,24 @@
     -0.1243
    ],
    "tail": [
-    -2.3843,
-    -5.4732,
-    0.0682
+    -2.3704,
+    -5.4788,
+    -0.0373
    ],
    "x": [
-    0.9928,
-    -0.0353,
-    0.1146
+    0.9929,
+    -0.0324,
+    0.1145
    ],
    "y": [
-    -0.0648,
-    -0.9621,
-    0.265
+    -0.0465,
+    -0.9914,
+    0.1224
    ],
    "z": [
-    0.1009,
-    -0.2705,
-    -0.9574
+    0.1095,
+    -0.1269,
+    -0.9859
    ],
    "driver": {
     "from": "hand_r",
@@ -1605,32 +1710,67 @@
    "parent": "hand_r",
    "kind": "helper",
    "head": [
-    -2.3843,
-    -5.4732,
-    0.0682
+    -2.3704,
+    -5.4788,
+    -0.0373
    ],
    "tail": [
-    -2.2865,
-    -5.952,
-    0.0396
+    -2.2776,
+    -5.9538,
+    -0.038
    ],
    "x": [
-    0.9759,
-    0.1934,
-    0.1006
+    0.9765,
+    0.1906,
+    0.1008
    ],
    "y": [
-    0.1998,
-    -0.9781,
-    -0.0584
+    0.1917,
+    -0.9814,
+    -0.0014
    ],
    "z": [
-    0.0871,
-    0.0771,
-    -0.9932
+    0.0987,
+    0.0207,
+    -0.9949
    ],
    "driver": {
     "from": "fingers_01_r",
+    "kind": "half",
+    "f": 0.5
+   }
+  },
+  {
+   "name": "fingers_mid_r",
+   "parent": "fingers_01_r",
+   "kind": "helper",
+   "head": [
+    -2.2776,
+    -5.9538,
+    -0.038
+   ],
+   "tail": [
+    -2.2283,
+    -6.1407,
+    -0.0191
+   ],
+   "x": [
+    0.9601,
+    0.2629,
+    0.0951
+   ],
+   "y": [
+    0.2539,
+    -0.9623,
+    0.0972
+   ],
+   "z": [
+    0.1171,
+    -0.0691,
+    -0.9907
+   ],
+   "driver": {
+    "from": "fingers_02_r",
     "kind": "half",
     "f": 0.5
    }
@@ -1642,7 +1782,7 @@
    "head": [
     -0.855,
     -5.106,
-    -0.025
+    0.375
    ],
    "tail": [
     -0.8838,
@@ -1655,14 +1795,14 @@
     0
    ],
    "y": [
-    -0.0121,
-    -0.9975,
-    -0.0692
+    -0.0118,
+    -0.9727,
+    -0.2319
    ],
    "z": [
-    -0.0008,
-    -0.0692,
-    0.9976
+    -0.0028,
+    -0.2319,
+    0.9727
    ],
    "driver": {
     "from": "thigh_r",
@@ -1739,7 +1879,7 @@
   "k3.L":[["head",1]],
   "k4.L":[["head",1]],
   "k5.L":[["head",1]],
-  "n6.L":[["neck_02",0.7],["head",0.3]],
+  "n6.L":[["neck_02",0.8],["head",0.2]],
   "ch0":[["jaw",0.75],["head",0.25]],
   "ch1.L":[["jaw",0.75],["head",0.25]],
   "jl.L":[["head",0.6],["jaw",0.4]],
@@ -1749,8 +1889,8 @@
   "u1.L":[["jaw",0.75],["head",0.25]],
   "g1.L":[["neck_02",0.7],["head",0.15],["jaw",0.15]],
   "g0":[["neck_02",0.7],["head",0.15],["jaw",0.15]],
-  "g2.L":[["neck_02",0.75],["head",0.25]],
-  "g3.L":[["neck_02",0.75],["head",0.25]],
+  "g2.L":[["neck_02",0.8],["head",0.2]],
+  "g3.L":[["neck_02",0.8],["head",0.2]],
   "nm0":[["neck_01",0.7],["spine_03",0.3]],
   "nm1.L":[["neck_01",0.7],["spine_03",0.3]],
   "nm2.L":[["neck_01",0.7674],["spine_03",0.2326]],
@@ -1782,15 +1922,15 @@
   "k2.R":[["head",1]],
   "k4.R":[["head",1]],
   "k5.R":[["head",1]],
-  "n6.R":[["neck_02",0.7],["head",0.3]],
+  "n6.R":[["neck_02",0.8],["head",0.2]],
   "ch1.R":[["jaw",0.75],["head",0.25]],
   "jl.R":[["head",0.6],["jaw",0.4]],
   "j.R":[["head",1]],
   "m5.R":[["head",1]],
   "u1.R":[["jaw",0.75],["head",0.25]],
   "g1.R":[["neck_02",0.7],["head",0.15],["jaw",0.15]],
-  "g2.R":[["neck_02",0.75],["head",0.25]],
-  "g3.R":[["neck_02",0.75],["head",0.25]],
+  "g2.R":[["neck_02",0.8],["head",0.2]],
+  "g3.R":[["neck_02",0.8],["head",0.2]],
   "nm1.R":[["neck_01",0.7],["spine_03",0.3]],
   "nm2.R":[["neck_01",0.7674],["spine_03",0.2326]],
   "nm3.R":[["neck_01",0.8472],["spine_03",0.1528]],
@@ -1983,10 +2123,10 @@
   "dc1.L":[["spine_03",0.4595],["clavicle_l",0.278],["spine_02",0.2625]],
   "db1.L":[["spine_03",0.5164],["clavicle_l",0.4831],["spine_02",0.0005]],
   "db0":[["spine_03",1]],
-  "dc2.L":[["clavicle_l",0.51],["spine_03",0.4884],["spine_02",0.0016]],
-  "db2.L":[["clavicle_l",0.6864],["spine_03",0.2636],["shoulder_l",0.05]],
-  "dc3.L":[["clavicle_l",0.4335],["spine_03",0.3647],["shoulder_l",0.15],["spine_02",0.0518]],
-  "db3.L":[["clavicle_l",0.5635],["shoulder_l",0.22],["spine_03",0.2165]],
+  "dc2.L":[["clavicle_l",0.4335],["spine_03",0.4152],["shoulder_l",0.15],["spine_02",0.0013]],
+  "db2.L":[["clavicle_l",0.6358],["spine_03",0.2442],["shoulder_l",0.12]],
+  "dc3.L":[["shoulder_l",0.45],["clavicle_l",0.2805],["spine_03",0.236],["spine_02",0.0335]],
+  "db3.L":[["shoulder_l",0.45],["clavicle_l",0.3974],["spine_03",0.1526]],
   "dc5.L":[["clavicle_l",0.4335],["spine_03",0.3506],["shoulder_l",0.15],["spine_02",0.0659]],
   "dc6.L":[["clavicle_l",0.51],["spine_03",0.4884],["spine_02",0.0016]],
   "ra0":[["spine_02",0.8278],["spine_03",0.1722]],
@@ -2084,10 +2224,10 @@
   "db5.R":[["clavicle_r",0.5635],["shoulder_r",0.22],["spine_03",0.2165]],
   "db1.R":[["spine_03",0.5164],["clavicle_r",0.4831],["spine_02",0.0005]],
   "dc1.R":[["spine_03",0.4595],["clavicle_r",0.278],["spine_02",0.2625]],
-  "db2.R":[["clavicle_r",0.6864],["spine_03",0.2636],["shoulder_r",0.05]],
-  "dc2.R":[["clavicle_r",0.51],["spine_03",0.4884],["spine_02",0.0016]],
-  "db3.R":[["clavicle_r",0.5635],["shoulder_r",0.22],["spine_03",0.2165]],
-  "dc3.R":[["clavicle_r",0.4335],["spine_03",0.3647],["shoulder_r",0.15],["spine_02",0.0518]],
+  "db2.R":[["clavicle_r",0.6358],["spine_03",0.2442],["shoulder_r",0.12]],
+  "dc2.R":[["clavicle_r",0.4335],["spine_03",0.4152],["shoulder_r",0.15],["spine_02",0.0013]],
+  "db3.R":[["shoulder_r",0.45],["clavicle_r",0.3974],["spine_03",0.1526]],
+  "dc3.R":[["shoulder_r",0.45],["clavicle_r",0.2805],["spine_03",0.236],["spine_02",0.0335]],
   "dc6.R":[["clavicle_r",0.51],["spine_03",0.4884],["spine_02",0.0016]],
   "dc5.R":[["clavicle_r",0.4335],["spine_03",0.3506],["shoulder_r",0.15],["spine_02",0.0659]],
   "ra1.R":[["spine_02",0.9166],["clavicle_r",0.061],["spine_03",0.0224]],
@@ -2151,9 +2291,9 @@
   "wa7.R":[["spine_01",1]],
   "hi7.R":[["spine_01",0.7599],["pelvis",0.2401]],
   "gl0":[["pelvis",1]],
-  "gl1.L":[["pelvis",0.75],["hip_l",0.25]],
-  "gl2.L":[["pelvis",0.6],["hip_l",0.4]],
-  "gl3.L":[["pelvis",0.55],["hip_l",0.45]],
+  "gl1.L":[["pelvis",0.6],["hip_l",0.4]],
+  "gl2.L":[["pelvis",0.5],["hip_l",0.5]],
+  "gl3.L":[["pelvis",0.5],["hip_l",0.5]],
   "gl4.L":[["pelvis",0.55],["hip_l",0.45]],
   "gl5.L":[["pelvis",0.6],["hip_l",0.4]],
   "gl6.L":[["pelvis",0.7],["hip_l",0.3]],
@@ -2240,9 +2380,9 @@
   "so4.L":[["foot_l",1]],
   "so5.L":[["foot_l",1]],
   "kb0.L":[["knee_l",1]],
-  "gl1.R":[["pelvis",0.75],["hip_r",0.25]],
-  "gl2.R":[["pelvis",0.6],["hip_r",0.4]],
-  "gl3.R":[["pelvis",0.55],["hip_r",0.45]],
+  "gl1.R":[["pelvis",0.6],["hip_r",0.4]],
+  "gl2.R":[["pelvis",0.5],["hip_r",0.5]],
+  "gl3.R":[["pelvis",0.5],["hip_r",0.5]],
   "gl4.R":[["pelvis",0.55],["hip_r",0.45]],
   "gl5.R":[["pelvis",0.6],["hip_r",0.4]],
   "gl6.R":[["pelvis",0.7],["hip_r",0.3]],
@@ -2375,54 +2515,54 @@
   "arm/el5.R":[["elbow_r",1]],
   "arm/el6.R":[["elbow_r",1]],
   "arm/el7.R":[["elbow_r",1]],
-  "arm/fa1.R":[["lowerarm_r",0.6],["elbow_r",0.4]],
-  "arm/fa0.R":[["lowerarm_r",0.6],["elbow_r",0.4]],
-  "arm/fa2.R":[["lowerarm_r",0.6],["elbow_r",0.4]],
-  "arm/fa3.R":[["lowerarm_r",0.6],["elbow_r",0.4]],
-  "arm/fa4.R":[["lowerarm_r",0.6],["elbow_r",0.4]],
-  "arm/fa5.R":[["lowerarm_r",0.6],["elbow_r",0.4]],
-  "arm/fa6.R":[["lowerarm_r",0.6],["elbow_r",0.4]],
-  "arm/fa7.R":[["lowerarm_r",0.6],["elbow_r",0.4]],
-  "arm/fb1.R":[["lowerarm_r",0.85],["lowerarm_twist_r",0.15]],
-  "arm/fb0.R":[["lowerarm_r",0.85],["lowerarm_twist_r",0.15]],
-  "arm/fb2.R":[["lowerarm_r",0.85],["lowerarm_twist_r",0.15]],
-  "arm/fb3.R":[["lowerarm_r",0.85],["lowerarm_twist_r",0.15]],
-  "arm/fb4.R":[["lowerarm_r",0.85],["lowerarm_twist_r",0.15]],
-  "arm/fb5.R":[["lowerarm_r",0.85],["lowerarm_twist_r",0.15]],
-  "arm/fb6.R":[["lowerarm_r",0.85],["lowerarm_twist_r",0.15]],
-  "arm/fb7.R":[["lowerarm_r",0.85],["lowerarm_twist_r",0.15]],
-  "arm/fc1.R":[["lowerarm_r",0.6],["lowerarm_twist_r",0.4]],
-  "arm/fc0.R":[["lowerarm_r",0.6],["lowerarm_twist_r",0.4]],
-  "arm/fc2.R":[["lowerarm_r",0.6],["lowerarm_twist_r",0.4]],
-  "arm/fc3.R":[["lowerarm_r",0.6],["lowerarm_twist_r",0.4]],
-  "arm/fc4.R":[["lowerarm_r",0.6],["lowerarm_twist_r",0.4]],
-  "arm/fc5.R":[["lowerarm_r",0.6],["lowerarm_twist_r",0.4]],
-  "arm/fc6.R":[["lowerarm_r",0.6],["lowerarm_twist_r",0.4]],
-  "arm/fc7.R":[["lowerarm_r",0.6],["lowerarm_twist_r",0.4]],
-  "arm/fd1.R":[["lowerarm_twist_r",0.7],["lowerarm_r",0.3]],
-  "arm/fd0.R":[["lowerarm_twist_r",0.7],["lowerarm_r",0.3]],
-  "arm/fd2.R":[["lowerarm_twist_r",0.7],["lowerarm_r",0.3]],
-  "arm/fd3.R":[["lowerarm_twist_r",0.7],["lowerarm_r",0.3]],
-  "arm/fd4.R":[["lowerarm_twist_r",0.7],["lowerarm_r",0.3]],
-  "arm/fd5.R":[["lowerarm_twist_r",0.7],["lowerarm_r",0.3]],
-  "arm/fd6.R":[["lowerarm_twist_r",0.7],["lowerarm_r",0.3]],
-  "arm/fd7.R":[["lowerarm_twist_r",0.7],["lowerarm_r",0.3]],
-  "arm/fe1.R":[["lowerarm_twist_r",0.95],["wrist_r",0.05]],
-  "arm/fe0.R":[["lowerarm_twist_r",0.95],["wrist_r",0.05]],
-  "arm/fe2.R":[["lowerarm_twist_r",0.95],["wrist_r",0.05]],
-  "arm/fe3.R":[["lowerarm_twist_r",0.95],["wrist_r",0.05]],
-  "arm/fe4.R":[["lowerarm_twist_r",0.95],["wrist_r",0.05]],
-  "arm/fe5.R":[["lowerarm_twist_r",0.95],["wrist_r",0.05]],
-  "arm/fe6.R":[["lowerarm_twist_r",0.95],["wrist_r",0.05]],
-  "arm/fe7.R":[["lowerarm_twist_r",0.95],["wrist_r",0.05]],
-  "arm/fg1.R":[["lowerarm_twist_r",0.55],["wrist_r",0.45]],
-  "arm/fg0.R":[["lowerarm_twist_r",0.55],["wrist_r",0.45]],
-  "arm/fg2.R":[["lowerarm_twist_r",0.55],["wrist_r",0.45]],
-  "arm/fg3.R":[["lowerarm_twist_r",0.55],["wrist_r",0.45]],
-  "arm/fg4.R":[["lowerarm_twist_r",0.55],["wrist_r",0.45]],
-  "arm/fg5.R":[["lowerarm_twist_r",0.55],["wrist_r",0.45]],
-  "arm/fg6.R":[["lowerarm_twist_r",0.55],["wrist_r",0.45]],
-  "arm/fg7.R":[["lowerarm_twist_r",0.55],["wrist_r",0.45]],
+  "arm/fa1.R":[["elbow_r",0.4],["lowerarm_r",0.35],["lowerarm_twist_01_r",0.25]],
+  "arm/fa0.R":[["elbow_r",0.4],["lowerarm_r",0.35],["lowerarm_twist_01_r",0.25]],
+  "arm/fa2.R":[["elbow_r",0.4],["lowerarm_r",0.35],["lowerarm_twist_01_r",0.25]],
+  "arm/fa3.R":[["elbow_r",0.4],["lowerarm_r",0.35],["lowerarm_twist_01_r",0.25]],
+  "arm/fa4.R":[["elbow_r",0.4],["lowerarm_r",0.35],["lowerarm_twist_01_r",0.25]],
+  "arm/fa5.R":[["elbow_r",0.4],["lowerarm_r",0.35],["lowerarm_twist_01_r",0.25]],
+  "arm/fa6.R":[["elbow_r",0.4],["lowerarm_r",0.35],["lowerarm_twist_01_r",0.25]],
+  "arm/fa7.R":[["elbow_r",0.4],["lowerarm_r",0.35],["lowerarm_twist_01_r",0.25]],
+  "arm/fb1.R":[["lowerarm_twist_01_r",0.7],["lowerarm_r",0.3]],
+  "arm/fb0.R":[["lowerarm_twist_01_r",0.7],["lowerarm_r",0.3]],
+  "arm/fb2.R":[["lowerarm_twist_01_r",0.7],["lowerarm_r",0.3]],
+  "arm/fb3.R":[["lowerarm_twist_01_r",0.7],["lowerarm_r",0.3]],
+  "arm/fb4.R":[["lowerarm_twist_01_r",0.7],["lowerarm_r",0.3]],
+  "arm/fb5.R":[["lowerarm_twist_01_r",0.7],["lowerarm_r",0.3]],
+  "arm/fb6.R":[["lowerarm_twist_01_r",0.7],["lowerarm_r",0.3]],
+  "arm/fb7.R":[["lowerarm_twist_01_r",0.7],["lowerarm_r",0.3]],
+  "arm/fc1.R":[["lowerarm_twist_01_r",0.9],["lowerarm_twist_02_r",0.1]],
+  "arm/fc0.R":[["lowerarm_twist_01_r",0.9],["lowerarm_twist_02_r",0.1]],
+  "arm/fc2.R":[["lowerarm_twist_01_r",0.9],["lowerarm_twist_02_r",0.1]],
+  "arm/fc3.R":[["lowerarm_twist_01_r",0.9],["lowerarm_twist_02_r",0.1]],
+  "arm/fc4.R":[["lowerarm_twist_01_r",0.9],["lowerarm_twist_02_r",0.1]],
+  "arm/fc5.R":[["lowerarm_twist_01_r",0.9],["lowerarm_twist_02_r",0.1]],
+  "arm/fc6.R":[["lowerarm_twist_01_r",0.9],["lowerarm_twist_02_r",0.1]],
+  "arm/fc7.R":[["lowerarm_twist_01_r",0.9],["lowerarm_twist_02_r",0.1]],
+  "arm/fd1.R":[["lowerarm_twist_01_r",0.53],["lowerarm_twist_02_r",0.47]],
+  "arm/fd0.R":[["lowerarm_twist_01_r",0.53],["lowerarm_twist_02_r",0.47]],
+  "arm/fd2.R":[["lowerarm_twist_01_r",0.53],["lowerarm_twist_02_r",0.47]],
+  "arm/fd3.R":[["lowerarm_twist_01_r",0.53],["lowerarm_twist_02_r",0.47]],
+  "arm/fd4.R":[["lowerarm_twist_01_r",0.53],["lowerarm_twist_02_r",0.47]],
+  "arm/fd5.R":[["lowerarm_twist_01_r",0.53],["lowerarm_twist_02_r",0.47]],
+  "arm/fd6.R":[["lowerarm_twist_01_r",0.53],["lowerarm_twist_02_r",0.47]],
+  "arm/fd7.R":[["lowerarm_twist_01_r",0.53],["lowerarm_twist_02_r",0.47]],
+  "arm/fe1.R":[["lowerarm_twist_02_r",0.88],["lowerarm_twist_01_r",0.12]],
+  "arm/fe0.R":[["lowerarm_twist_02_r",0.88],["lowerarm_twist_01_r",0.12]],
+  "arm/fe2.R":[["lowerarm_twist_02_r",0.88],["lowerarm_twist_01_r",0.12]],
+  "arm/fe3.R":[["lowerarm_twist_02_r",0.88],["lowerarm_twist_01_r",0.12]],
+  "arm/fe4.R":[["lowerarm_twist_02_r",0.88],["lowerarm_twist_01_r",0.12]],
+  "arm/fe5.R":[["lowerarm_twist_02_r",0.88],["lowerarm_twist_01_r",0.12]],
+  "arm/fe6.R":[["lowerarm_twist_02_r",0.88],["lowerarm_twist_01_r",0.12]],
+  "arm/fe7.R":[["lowerarm_twist_02_r",0.88],["lowerarm_twist_01_r",0.12]],
+  "arm/fg1.R":[["wrist_r",0.62],["lowerarm_twist_02_r",0.38]],
+  "arm/fg0.R":[["wrist_r",0.62],["lowerarm_twist_02_r",0.38]],
+  "arm/fg2.R":[["wrist_r",0.62],["lowerarm_twist_02_r",0.38]],
+  "arm/fg3.R":[["wrist_r",0.62],["lowerarm_twist_02_r",0.38]],
+  "arm/fg4.R":[["wrist_r",0.62],["lowerarm_twist_02_r",0.38]],
+  "arm/fg5.R":[["wrist_r",0.62],["lowerarm_twist_02_r",0.38]],
+  "arm/fg6.R":[["wrist_r",0.62],["lowerarm_twist_02_r",0.38]],
+  "arm/fg7.R":[["wrist_r",0.62],["lowerarm_twist_02_r",0.38]],
   "arm/wk.R":[["wrist_r",1]],
   "arm/wb0.R":[["wrist_r",1]],
   "arm/wp0.R":[["wrist_r",1]],
@@ -2447,16 +2587,16 @@
   "arm/kp1.R":[["knuckles_r",1]],
   "arm/kp3.R":[["knuckles_r",1]],
   "arm/kp2.R":[["knuckles_r",1]],
-  "arm/mb0.R":[["fingers_01_r",0.5],["fingers_02_r",0.5]],
-  "arm/mb1.R":[["fingers_01_r",0.5],["fingers_02_r",0.5]],
-  "arm/mb2.R":[["fingers_01_r",0.5],["fingers_02_r",0.5]],
-  "arm/mb3.R":[["fingers_01_r",0.5],["fingers_02_r",0.5]],
-  "arm/mb4.R":[["fingers_01_r",0.5],["fingers_02_r",0.5]],
-  "arm/mp4.R":[["fingers_01_r",0.5],["fingers_02_r",0.5]],
-  "arm/mp3.R":[["fingers_01_r",0.5],["fingers_02_r",0.5]],
-  "arm/mp2.R":[["fingers_01_r",0.5],["fingers_02_r",0.5]],
-  "arm/mp1.R":[["fingers_01_r",0.5],["fingers_02_r",0.5]],
-  "arm/mp0.R":[["fingers_01_r",0.5],["fingers_02_r",0.5]],
+  "arm/mb0.R":[["fingers_mid_r",1]],
+  "arm/mb1.R":[["fingers_mid_r",1]],
+  "arm/mb2.R":[["fingers_mid_r",1]],
+  "arm/mb3.R":[["fingers_mid_r",1]],
+  "arm/mb4.R":[["fingers_mid_r",1]],
+  "arm/mp4.R":[["fingers_mid_r",1]],
+  "arm/mp3.R":[["fingers_mid_r",1]],
+  "arm/mp2.R":[["fingers_mid_r",1]],
+  "arm/mp1.R":[["fingers_mid_r",1]],
+  "arm/mp0.R":[["fingers_mid_r",1]],
   "arm/nb0.R":[["fingers_02_r",1]],
   "arm/nb1.R":[["fingers_02_r",1]],
   "arm/nb2.R":[["fingers_02_r",1]],
@@ -2523,54 +2663,54 @@
   "arm/el5.L":[["elbow_l",1]],
   "arm/el6.L":[["elbow_l",1]],
   "arm/el7.L":[["elbow_l",1]],
-  "arm/fa0.L":[["lowerarm_l",0.6],["elbow_l",0.4]],
-  "arm/fa1.L":[["lowerarm_l",0.6],["elbow_l",0.4]],
-  "arm/fa2.L":[["lowerarm_l",0.6],["elbow_l",0.4]],
-  "arm/fa3.L":[["lowerarm_l",0.6],["elbow_l",0.4]],
-  "arm/fa4.L":[["lowerarm_l",0.6],["elbow_l",0.4]],
-  "arm/fa5.L":[["lowerarm_l",0.6],["elbow_l",0.4]],
-  "arm/fa6.L":[["lowerarm_l",0.6],["elbow_l",0.4]],
-  "arm/fa7.L":[["lowerarm_l",0.6],["elbow_l",0.4]],
-  "arm/fb0.L":[["lowerarm_l",0.85],["lowerarm_twist_l",0.15]],
-  "arm/fb1.L":[["lowerarm_l",0.85],["lowerarm_twist_l",0.15]],
-  "arm/fb2.L":[["lowerarm_l",0.85],["lowerarm_twist_l",0.15]],
-  "arm/fb3.L":[["lowerarm_l",0.85],["lowerarm_twist_l",0.15]],
-  "arm/fb4.L":[["lowerarm_l",0.85],["lowerarm_twist_l",0.15]],
-  "arm/fb5.L":[["lowerarm_l",0.85],["lowerarm_twist_l",0.15]],
-  "arm/fb6.L":[["lowerarm_l",0.85],["lowerarm_twist_l",0.15]],
-  "arm/fb7.L":[["lowerarm_l",0.85],["lowerarm_twist_l",0.15]],
-  "arm/fc0.L":[["lowerarm_l",0.6],["lowerarm_twist_l",0.4]],
-  "arm/fc1.L":[["lowerarm_l",0.6],["lowerarm_twist_l",0.4]],
-  "arm/fc2.L":[["lowerarm_l",0.6],["lowerarm_twist_l",0.4]],
-  "arm/fc3.L":[["lowerarm_l",0.6],["lowerarm_twist_l",0.4]],
-  "arm/fc4.L":[["lowerarm_l",0.6],["lowerarm_twist_l",0.4]],
-  "arm/fc5.L":[["lowerarm_l",0.6],["lowerarm_twist_l",0.4]],
-  "arm/fc6.L":[["lowerarm_l",0.6],["lowerarm_twist_l",0.4]],
-  "arm/fc7.L":[["lowerarm_l",0.6],["lowerarm_twist_l",0.4]],
-  "arm/fd0.L":[["lowerarm_twist_l",0.7],["lowerarm_l",0.3]],
-  "arm/fd1.L":[["lowerarm_twist_l",0.7],["lowerarm_l",0.3]],
-  "arm/fd2.L":[["lowerarm_twist_l",0.7],["lowerarm_l",0.3]],
-  "arm/fd3.L":[["lowerarm_twist_l",0.7],["lowerarm_l",0.3]],
-  "arm/fd4.L":[["lowerarm_twist_l",0.7],["lowerarm_l",0.3]],
-  "arm/fd5.L":[["lowerarm_twist_l",0.7],["lowerarm_l",0.3]],
-  "arm/fd6.L":[["lowerarm_twist_l",0.7],["lowerarm_l",0.3]],
-  "arm/fd7.L":[["lowerarm_twist_l",0.7],["lowerarm_l",0.3]],
-  "arm/fe0.L":[["lowerarm_twist_l",0.95],["wrist_l",0.05]],
-  "arm/fe1.L":[["lowerarm_twist_l",0.95],["wrist_l",0.05]],
-  "arm/fe2.L":[["lowerarm_twist_l",0.95],["wrist_l",0.05]],
-  "arm/fe3.L":[["lowerarm_twist_l",0.95],["wrist_l",0.05]],
-  "arm/fe4.L":[["lowerarm_twist_l",0.95],["wrist_l",0.05]],
-  "arm/fe5.L":[["lowerarm_twist_l",0.95],["wrist_l",0.05]],
-  "arm/fe6.L":[["lowerarm_twist_l",0.95],["wrist_l",0.05]],
-  "arm/fe7.L":[["lowerarm_twist_l",0.95],["wrist_l",0.05]],
-  "arm/fg0.L":[["lowerarm_twist_l",0.55],["wrist_l",0.45]],
-  "arm/fg1.L":[["lowerarm_twist_l",0.55],["wrist_l",0.45]],
-  "arm/fg2.L":[["lowerarm_twist_l",0.55],["wrist_l",0.45]],
-  "arm/fg3.L":[["lowerarm_twist_l",0.55],["wrist_l",0.45]],
-  "arm/fg4.L":[["lowerarm_twist_l",0.55],["wrist_l",0.45]],
-  "arm/fg5.L":[["lowerarm_twist_l",0.55],["wrist_l",0.45]],
-  "arm/fg6.L":[["lowerarm_twist_l",0.55],["wrist_l",0.45]],
-  "arm/fg7.L":[["lowerarm_twist_l",0.55],["wrist_l",0.45]],
+  "arm/fa0.L":[["elbow_l",0.4],["lowerarm_l",0.35],["lowerarm_twist_01_l",0.25]],
+  "arm/fa1.L":[["elbow_l",0.4],["lowerarm_l",0.35],["lowerarm_twist_01_l",0.25]],
+  "arm/fa2.L":[["elbow_l",0.4],["lowerarm_l",0.35],["lowerarm_twist_01_l",0.25]],
+  "arm/fa3.L":[["elbow_l",0.4],["lowerarm_l",0.35],["lowerarm_twist_01_l",0.25]],
+  "arm/fa4.L":[["elbow_l",0.4],["lowerarm_l",0.35],["lowerarm_twist_01_l",0.25]],
+  "arm/fa5.L":[["elbow_l",0.4],["lowerarm_l",0.35],["lowerarm_twist_01_l",0.25]],
+  "arm/fa6.L":[["elbow_l",0.4],["lowerarm_l",0.35],["lowerarm_twist_01_l",0.25]],
+  "arm/fa7.L":[["elbow_l",0.4],["lowerarm_l",0.35],["lowerarm_twist_01_l",0.25]],
+  "arm/fb0.L":[["lowerarm_twist_01_l",0.7],["lowerarm_l",0.3]],
+  "arm/fb1.L":[["lowerarm_twist_01_l",0.7],["lowerarm_l",0.3]],
+  "arm/fb2.L":[["lowerarm_twist_01_l",0.7],["lowerarm_l",0.3]],
+  "arm/fb3.L":[["lowerarm_twist_01_l",0.7],["lowerarm_l",0.3]],
+  "arm/fb4.L":[["lowerarm_twist_01_l",0.7],["lowerarm_l",0.3]],
+  "arm/fb5.L":[["lowerarm_twist_01_l",0.7],["lowerarm_l",0.3]],
+  "arm/fb6.L":[["lowerarm_twist_01_l",0.7],["lowerarm_l",0.3]],
+  "arm/fb7.L":[["lowerarm_twist_01_l",0.7],["lowerarm_l",0.3]],
+  "arm/fc0.L":[["lowerarm_twist_01_l",0.9],["lowerarm_twist_02_l",0.1]],
+  "arm/fc1.L":[["lowerarm_twist_01_l",0.9],["lowerarm_twist_02_l",0.1]],
+  "arm/fc2.L":[["lowerarm_twist_01_l",0.9],["lowerarm_twist_02_l",0.1]],
+  "arm/fc3.L":[["lowerarm_twist_01_l",0.9],["lowerarm_twist_02_l",0.1]],
+  "arm/fc4.L":[["lowerarm_twist_01_l",0.9],["lowerarm_twist_02_l",0.1]],
+  "arm/fc5.L":[["lowerarm_twist_01_l",0.9],["lowerarm_twist_02_l",0.1]],
+  "arm/fc6.L":[["lowerarm_twist_01_l",0.9],["lowerarm_twist_02_l",0.1]],
+  "arm/fc7.L":[["lowerarm_twist_01_l",0.9],["lowerarm_twist_02_l",0.1]],
+  "arm/fd0.L":[["lowerarm_twist_01_l",0.53],["lowerarm_twist_02_l",0.47]],
+  "arm/fd1.L":[["lowerarm_twist_01_l",0.53],["lowerarm_twist_02_l",0.47]],
+  "arm/fd2.L":[["lowerarm_twist_01_l",0.53],["lowerarm_twist_02_l",0.47]],
+  "arm/fd3.L":[["lowerarm_twist_01_l",0.53],["lowerarm_twist_02_l",0.47]],
+  "arm/fd4.L":[["lowerarm_twist_01_l",0.53],["lowerarm_twist_02_l",0.47]],
+  "arm/fd5.L":[["lowerarm_twist_01_l",0.53],["lowerarm_twist_02_l",0.47]],
+  "arm/fd6.L":[["lowerarm_twist_01_l",0.53],["lowerarm_twist_02_l",0.47]],
+  "arm/fd7.L":[["lowerarm_twist_01_l",0.53],["lowerarm_twist_02_l",0.47]],
+  "arm/fe0.L":[["lowerarm_twist_02_l",0.88],["lowerarm_twist_01_l",0.12]],
+  "arm/fe1.L":[["lowerarm_twist_02_l",0.88],["lowerarm_twist_01_l",0.12]],
+  "arm/fe2.L":[["lowerarm_twist_02_l",0.88],["lowerarm_twist_01_l",0.12]],
+  "arm/fe3.L":[["lowerarm_twist_02_l",0.88],["lowerarm_twist_01_l",0.12]],
+  "arm/fe4.L":[["lowerarm_twist_02_l",0.88],["lowerarm_twist_01_l",0.12]],
+  "arm/fe5.L":[["lowerarm_twist_02_l",0.88],["lowerarm_twist_01_l",0.12]],
+  "arm/fe6.L":[["lowerarm_twist_02_l",0.88],["lowerarm_twist_01_l",0.12]],
+  "arm/fe7.L":[["lowerarm_twist_02_l",0.88],["lowerarm_twist_01_l",0.12]],
+  "arm/fg0.L":[["wrist_l",0.62],["lowerarm_twist_02_l",0.38]],
+  "arm/fg1.L":[["wrist_l",0.62],["lowerarm_twist_02_l",0.38]],
+  "arm/fg2.L":[["wrist_l",0.62],["lowerarm_twist_02_l",0.38]],
+  "arm/fg3.L":[["wrist_l",0.62],["lowerarm_twist_02_l",0.38]],
+  "arm/fg4.L":[["wrist_l",0.62],["lowerarm_twist_02_l",0.38]],
+  "arm/fg5.L":[["wrist_l",0.62],["lowerarm_twist_02_l",0.38]],
+  "arm/fg6.L":[["wrist_l",0.62],["lowerarm_twist_02_l",0.38]],
+  "arm/fg7.L":[["wrist_l",0.62],["lowerarm_twist_02_l",0.38]],
   "arm/wb0.L":[["wrist_l",1]],
   "arm/wk.L":[["wrist_l",1]],
   "arm/wp0.L":[["wrist_l",1]],
@@ -2595,16 +2735,16 @@
   "arm/kp1.L":[["knuckles_l",1]],
   "arm/kp2.L":[["knuckles_l",1]],
   "arm/kp3.L":[["knuckles_l",1]],
-  "arm/mb1.L":[["fingers_01_l",0.5],["fingers_02_l",0.5]],
-  "arm/mb0.L":[["fingers_01_l",0.5],["fingers_02_l",0.5]],
-  "arm/mb2.L":[["fingers_01_l",0.5],["fingers_02_l",0.5]],
-  "arm/mb3.L":[["fingers_01_l",0.5],["fingers_02_l",0.5]],
-  "arm/mb4.L":[["fingers_01_l",0.5],["fingers_02_l",0.5]],
-  "arm/mp4.L":[["fingers_01_l",0.5],["fingers_02_l",0.5]],
-  "arm/mp3.L":[["fingers_01_l",0.5],["fingers_02_l",0.5]],
-  "arm/mp2.L":[["fingers_01_l",0.5],["fingers_02_l",0.5]],
-  "arm/mp1.L":[["fingers_01_l",0.5],["fingers_02_l",0.5]],
-  "arm/mp0.L":[["fingers_01_l",0.5],["fingers_02_l",0.5]],
+  "arm/mb1.L":[["fingers_mid_l",1]],
+  "arm/mb0.L":[["fingers_mid_l",1]],
+  "arm/mb2.L":[["fingers_mid_l",1]],
+  "arm/mb3.L":[["fingers_mid_l",1]],
+  "arm/mb4.L":[["fingers_mid_l",1]],
+  "arm/mp4.L":[["fingers_mid_l",1]],
+  "arm/mp3.L":[["fingers_mid_l",1]],
+  "arm/mp2.L":[["fingers_mid_l",1]],
+  "arm/mp1.L":[["fingers_mid_l",1]],
+  "arm/mp0.L":[["fingers_mid_l",1]],
   "arm/nb1.L":[["fingers_02_l",1]],
   "arm/nb0.L":[["fingers_02_l",1]],
   "arm/nb2.L":[["fingers_02_l",1]],
@@ -2623,21 +2763,21 @@
   "arm/t2b.L":[["thumb_03_l",1]],
   "arm/t2c.L":[["thumb_03_l",1]],
   "arm/t2d.L":[["thumb_03_l",1]],
-  "nk0":[["neck_02",0.3783],["neck_01",0.3784],["spine_03",0.1622],["head",0.0811]],
-  "nk1.L":[["neck_02",0.3783],["neck_01",0.3784],["spine_03",0.1622],["head",0.0811]],
-  "nk2.L":[["neck_01",0.3837],["neck_02",0.375],["head",0.125],["spine_03",0.1163]],
-  "nk3.L":[["neck_01",0.4236],["neck_02",0.375],["head",0.125],["spine_03",0.0764]],
-  "nk4.L":[["neck_01",0.4296],["neck_02",0.35],["head",0.15],["spine_03",0.0704]],
-  "nk4.R":[["neck_01",0.4296],["neck_02",0.35],["head",0.15],["spine_03",0.0704]],
-  "nk3.R":[["neck_01",0.4236],["neck_02",0.375],["head",0.125],["spine_03",0.0764]],
-  "nk2.R":[["neck_01",0.3837],["neck_02",0.375],["head",0.125],["spine_03",0.1163]],
-  "nk1.R":[["neck_02",0.3783],["neck_01",0.3784],["spine_03",0.1622],["head",0.0811]],
-  "arm/ax6.L":[["shoulder_l",0.4249],["clavicle_l",0.3668],["spine_03",0.1824],["spine_02",0.0259]],
-  "arm/ax7.L":[["shoulder_l",0.4599],["clavicle_l",0.4318],["spine_03",0.1083]],
+  "nk0":[["neck_02",0.6],["neck_01",0.4]],
+  "nk1.L":[["neck_02",0.6],["neck_01",0.4]],
+  "nk2.L":[["neck_02",0.6],["neck_01",0.4]],
+  "nk3.L":[["neck_02",0.6],["neck_01",0.4]],
+  "nk4.L":[["neck_02",0.6],["neck_01",0.4]],
+  "nk4.R":[["neck_02",0.6],["neck_01",0.4]],
+  "nk3.R":[["neck_02",0.6],["neck_01",0.4]],
+  "nk2.R":[["neck_02",0.6],["neck_01",0.4]],
+  "nk1.R":[["neck_02",0.6],["neck_01",0.4]],
+  "arm/ax6.L":[["shoulder_l",0.5749],["clavicle_l",0.2903],["spine_03",0.118],["spine_02",0.0168]],
+  "arm/ax7.L":[["shoulder_l",0.575],["clavicle_l",0.3487],["spine_03",0.0763]],
   "arm/ax0.L":[["shoulder_l",0.49],["clavicle_l",0.456],["spine_03",0.054]],
-  "gf0.L":[["pelvis",0.475],["hip_l",0.425],["thigh_l",0.1]],
-  "gf1.L":[["hip_l",0.5],["pelvis",0.4],["thigh_l",0.1]],
-  "gf2.L":[["hip_l",0.525],["pelvis",0.375],["thigh_l",0.1]],
+  "gf0.L":[["hip_l",0.5],["pelvis",0.4],["thigh_l",0.1]],
+  "gf1.L":[["hip_l",0.55],["pelvis",0.35],["thigh_l",0.1]],
+  "gf2.L":[["hip_l",0.55],["pelvis",0.35],["thigh_l",0.1]],
   "gf3.L":[["hip_l",0.525],["pelvis",0.375],["thigh_l",0.1]],
   "gf4.L":[["hip_l",0.5],["pelvis",0.4],["thigh_l",0.1]],
   "gf5.L":[["pelvis",0.45],["hip_l",0.45],["thigh_l",0.1]],
@@ -2645,17 +2785,17 @@
   "gf7.L":[["pelvis",0.56],["hip_l",0.33],["thigh_l",0.11]],
   "gf8.L":[["pelvis",0.4],["hip_l",0.4],["hip_r",0.1],["thigh_l",0.1]],
   "gf9.L":[["pelvis",0.6],["hip_l",0.3],["thigh_l",0.1]],
-  "arm/qp0.L":[["knuckles_l",0.65],["fingers_01_l",0.175],["fingers_02_l",0.175]],
-  "arm/qp1.L":[["knuckles_l",0.65],["fingers_01_l",0.175],["fingers_02_l",0.175]],
-  "arm/qp2.L":[["knuckles_l",0.65],["fingers_01_l",0.175],["fingers_02_l",0.175]],
-  "arm/qp3.L":[["knuckles_l",0.65],["fingers_01_l",0.175],["fingers_02_l",0.175]],
-  "arm/qp4.L":[["knuckles_l",0.65],["fingers_01_l",0.175],["fingers_02_l",0.175]],
-  "arm/ax6.R":[["shoulder_r",0.4249],["clavicle_r",0.3668],["spine_03",0.1824],["spine_02",0.0259]],
-  "arm/ax7.R":[["shoulder_r",0.4599],["clavicle_r",0.4318],["spine_03",0.1083]],
+  "arm/qp0.L":[["fingers_01_l",0.6],["knuckles_l",0.4]],
+  "arm/qp1.L":[["fingers_01_l",0.6],["knuckles_l",0.4]],
+  "arm/qp2.L":[["fingers_01_l",0.6],["knuckles_l",0.4]],
+  "arm/qp3.L":[["fingers_01_l",0.6],["knuckles_l",0.4]],
+  "arm/qp4.L":[["fingers_01_l",0.6],["knuckles_l",0.4]],
+  "arm/ax6.R":[["shoulder_r",0.5749],["clavicle_r",0.2903],["spine_03",0.118],["spine_02",0.0168]],
+  "arm/ax7.R":[["shoulder_r",0.575],["clavicle_r",0.3487],["spine_03",0.0763]],
   "arm/ax0.R":[["shoulder_r",0.49],["clavicle_r",0.456],["spine_03",0.054]],
-  "gf0.R":[["pelvis",0.475],["hip_r",0.425],["thigh_r",0.1]],
-  "gf1.R":[["hip_r",0.5],["pelvis",0.4],["thigh_r",0.1]],
-  "gf2.R":[["hip_r",0.525],["pelvis",0.375],["thigh_r",0.1]],
+  "gf0.R":[["hip_r",0.5],["pelvis",0.4],["thigh_r",0.1]],
+  "gf1.R":[["hip_r",0.55],["pelvis",0.35],["thigh_r",0.1]],
+  "gf2.R":[["hip_r",0.55],["pelvis",0.35],["thigh_r",0.1]],
   "gf3.R":[["hip_r",0.525],["pelvis",0.375],["thigh_r",0.1]],
   "gf4.R":[["hip_r",0.5],["pelvis",0.4],["thigh_r",0.1]],
   "gf5.R":[["pelvis",0.45],["hip_r",0.45],["thigh_r",0.1]],
@@ -2663,9 +2803,9 @@
   "gf7.R":[["pelvis",0.56],["hip_r",0.33],["thigh_r",0.11]],
   "gf8.R":[["pelvis",0.4],["hip_r",0.4],["hip_l",0.1],["thigh_r",0.1]],
   "gf9.R":[["pelvis",0.6],["hip_r",0.3],["thigh_r",0.1]],
-  "arm/qp0.R":[["knuckles_r",0.65],["fingers_01_r",0.175],["fingers_02_r",0.175]],
-  "arm/qp1.R":[["knuckles_r",0.65],["fingers_01_r",0.175],["fingers_02_r",0.175]],
-  "arm/qp2.R":[["knuckles_r",0.65],["fingers_01_r",0.175],["fingers_02_r",0.175]],
-  "arm/qp3.R":[["knuckles_r",0.65],["fingers_01_r",0.175],["fingers_02_r",0.175]],
-  "arm/qp4.R":[["knuckles_r",0.65],["fingers_01_r",0.175],["fingers_02_r",0.175]]}
+  "arm/qp0.R":[["fingers_01_r",0.6],["knuckles_r",0.4]],
+  "arm/qp1.R":[["fingers_01_r",0.6],["knuckles_r",0.4]],
+  "arm/qp2.R":[["fingers_01_r",0.6],["knuckles_r",0.4]],
+  "arm/qp3.R":[["fingers_01_r",0.6],["knuckles_r",0.4]],
+  "arm/qp4.R":[["fingers_01_r",0.6],["knuckles_r",0.4]]}
 }

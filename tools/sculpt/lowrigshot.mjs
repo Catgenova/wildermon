@@ -52,7 +52,7 @@ export const POSES = [
   { id: 'twist', label: 'Spine twisted', pose: { spine_01: [0, 14, 0], spine_02: [0, 16, 0], spine_03: [0, 14, 0], neck_01: [0, 8, 0] }, ground: true },
   { id: 'headturn', label: 'Head turned 70°', pose: { neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] } },
   { id: 'nod', label: 'Head nod (down 40°)', pose: { neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] } },
-  { id: 'fist', label: 'Fist (left) and grip (right)', pose: (() => { const p = symW({}, 'upperarm', X, -40); sym(p, 'lowerarm', [60, 0, 0]); sym(p, 'fingers_01', [80, 0, 0]); sym(p, 'fingers_02', [50, 0, 0]); p.thumb_01_l = [20, 0, -35]; p.thumb_02_l = [25, 0, 0]; p.thumb_03_l = [35, 0, 0]; p.fingers_01_r = [45, 0, 0]; p.fingers_02_r = [35, 0, 0]; p.thumb_01_r = [10, 0, 15]; p.thumb_02_r = [15, 0, 0]; p.thumb_03_r = [20, 0, 0]; return p; })() },
+  { id: 'fist', label: 'Fist (left) and grip (right)', pose: (() => { const p = symW({}, 'upperarm', X, -40); sym(p, 'lowerarm', [60, 0, 0]); sym(p, 'fingers_01', [80, 0, 0]); sym(p, 'fingers_02', [50, 0, 0]); p.thumb_01_l = [40, 0, -10]; p.thumb_02_l = [25, 0, 0]; p.thumb_03_l = [35, 0, 0]; p.fingers_01_r = [45, 0, 0]; p.fingers_02_r = [35, 0, 0]; p.thumb_01_r = [10, 0, 15]; p.thumb_02_r = [15, 0, 0]; p.thumb_03_r = [20, 0, 0]; return p; })() },
 ];
 
 /* ---- the game's rig: walk and run -------------------------------------------------------------------------------- */
@@ -416,7 +416,7 @@ if (only.includes('walk')) {
 
 if (only.includes('weights')) {
   const show = [
-    ['shoulder_l', 0], ['clavicle_l', 0], ['upperarm_twist_l', 30], ['elbow_l', 30], ['lowerarm_twist_l', 30], ['wrist_l', 20],
+    ['shoulder_l', 0], ['clavicle_l', 0], ['upperarm_twist_l', 30], ['elbow_l', 30], ['lowerarm_twist_02_l', 30], ['wrist_l', 20],
     ['hip_l', 30], ['knee_l', 30], ['spine_02', 30], ['neck_01', 30], ['fingers_02_l', 20], ['thumb_01_l', 20],
   ];
   const cells = [], cw = 280, chh = 380, perRow = 6;

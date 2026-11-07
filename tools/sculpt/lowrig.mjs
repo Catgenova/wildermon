@@ -17,10 +17,11 @@
 // about the bone's own axis. The right side's frames are the left's mirrored with X negated, so a pose mirrors as
 // [rx, -ry, -rz] (sym()).
 //
-// Bones: 35 posed (control) bones and 16 driven helpers (51 deforming). The helpers are what keeps the volume at the
+// Bones: 35 posed (control) bones and 20 driven helpers (55 deforming). The helpers are what keeps the volume at the
 // joints of a low-poly mesh that has one ring at each: a joint helper sits on the joint's pivot and turns rigidly by half
 // the child's turn, so the ring on the joint keeps its size (linear blending of the two bones would shrink it by the
-// cosine of half the bend); the twist helpers share a forearm's or an upper arm's twist out along it.
+// cosine of half the bend); the twist helpers share a forearm's twist out along it (two, at a third and two thirds) or an
+// upper arm's.
 //
 // The game's figure rig (src/render/figure.ts, src/sculpt/rig.ts bonesOf) drives it through fromGame(): each of its bones'
 // turns from its rest, taken onto ours, our own joint positions kept (see the report in rig-<who>.json, `game`).
@@ -129,7 +130,9 @@ export function buildNamedBody(who = 'male') {
 export function fanTris(m) {
   let T = m.tris.map((t) => ({ ...t, v: [...t.v] }));
   const area = (t) => Math.hypot(...cross(sub(m.verts[t.v[1]], m.verts[t.v[0]]), sub(m.verts[t.v[2]], m.verts[t.v[0]]))) / 2;
-  const thin = (t) => area(t) < 2e-3 && Math.max(...[0, 1, 2].map((k) => Math.hypot(...sub(m.verts[t.v[k]], m.verts[t.v[(k + 1) % 3]])))) > 0.05;
+  const longest = (t) => Math.max(...[0, 1, 2].map((k) => Math.hypot(...sub(m.verts[t.v[k]], m.verts[t.v[(k + 1) % 3]]))));
+  // a sliver: under TUNE.SLIVER high across its longest edge (and that edge longer than 0.05)
+  const thin = (t) => longest(t) > 0.05 && (2 * area(t)) / longest(t) < TUNE.SLIVER;
   // a sliver is mended against a neighbour that is not one itself; a run of them in a line, from its end inward
   for (let changed = true, guard = 0; changed && guard < 50; guard++) {
     changed = false;
@@ -164,7 +167,7 @@ export function measure(B) {
   J.root = [0, floor, 0];
   // the hip: under the thigh's top ring's centre, halfway between the body row under the waist and that ring
   const th = ring('th', 8), gl = ring('gl', 9);
-  J.hip = [th[0] + TUNE.PIV.hipOut, gl[1] + TUNE.PIV.hipDown * (th[1] - gl[1]), th[2]];
+  J.hip = [th[0] + TUNE.PIV.hipOut, gl[1] + TUNE.PIV.hipDown * (th[1] - gl[1]), th[2] + (TUNE.PIV.hipFwd ?? 0)];
   J.pelvis = [0, J.hip[1] + 0.45, spineZ('bt')];
   J.spine1 = [0, (ring('hi', 9)[1] + ring('hw', 9)[1]) / 2, spineZ('hi')];
   J.spine2 = [0, (ring('rb', 9)[1] + ring('rc', 9)[1]) / 2, spineZ('rb')];
@@ -188,8 +191,10 @@ export function measure(B) {
   J.elbow = lerp(el, A('el3.L'), TUNE.PIV.elbowBack);
   const W = ['wk', 'wb0', 'wb1', 'wt', 'wp1', 'wp0'].map((n) => A(`${n}.L`));
   J.wrist = mean(W);
-  J.knuckle = mean([0, 1, 2, 3, 4].flatMap((k) => [A(`kb${k}.L`), A(`kp${k}.L`)]));
-  J.mid = mean([0, 1, 2, 3, 4].flatMap((k) => [A(`mb${k}.L`), A(`mp${k}.L`)]));
+  // the finger joints' pivots from the back's knuckle line toward the palm's (TUNE.PIV.palm: 0.5 halfway)
+  const across = (b, p) => lerp(mean([0, 1, 2, 3, 4].map((k) => A(`${b}${k}.L`))), mean([0, 1, 2, 3, 4].map((k) => A(`${p}${k}.L`))), TUNE.PIV.palm ?? 0.5);
+  J.knuckle = across('kb', 'kp');
+  J.mid = across('mb', 'mp');
   J.tip = mean([0, 1, 2, 3, 4].flatMap((k) => [A(`nb${k}.L`), A(`np${k}.L`)]));
   // the palm's way (from the back of the hand through to the palm), for the hand's bend axes
   J.palm = unit(sub(mean([0, 1, 2, 3, 4].map((k) => A(`kp${k}.L`)).concat([A('wp0.L'), A('wp1.L')])), mean([0, 1, 2, 3, 4].map((k) => A(`kb${k}.L`)).concat([A('wb0.L'), A('wb1.L')]))));
@@ -272,9 +277,13 @@ export function skeleton(J) {
     h(S('shoulder'), S('clavicle'), S('upperarm'), { from: S('upperarm'), kind: 'half', f: 0.5 });
     h(S('upperarm_twist'), S('upperarm'), S('upperarm'), { from: S('upperarm'), kind: 'untwist', f: 0.5 });
     h(S('elbow'), S('upperarm'), S('lowerarm'), { from: S('lowerarm'), kind: 'half', f: 0.5 });
-    h(S('lowerarm_twist'), S('lowerarm'), S('lowerarm'), { from: S('hand'), kind: 'twist', f: 0.5 }, lerp(B('lowerarm').head, B('lowerarm').tail, 0.5));
+    // the forearm's twist (the hand's turn about its own axis, the radius over the ulna) spread over three segments: a
+    // third at a third of the way down, two thirds at two thirds, all of it at the wrist
+    h(S('lowerarm_twist_01'), S('lowerarm'), S('lowerarm'), { from: S('hand'), kind: 'twist', f: 1 / 3 }, lerp(B('lowerarm').head, B('lowerarm').tail, 1 / 3));
+    h(S('lowerarm_twist_02'), S('lowerarm'), S('lowerarm'), { from: S('hand'), kind: 'twist', f: 2 / 3 }, lerp(B('lowerarm').head, B('lowerarm').tail, 2 / 3));
     h(S('wrist'), S('lowerarm'), S('hand'), { from: S('hand'), kind: 'wrist', f: 0.5 });
     h(S('knuckles'), S('hand'), S('fingers_01'), { from: S('fingers_01'), kind: 'half', f: 0.5 });
+    h(S('fingers_mid'), S('fingers_01'), S('fingers_02'), { from: S('fingers_02'), kind: 'half', f: 0.5 });
     h(S('hip'), 'pelvis', S('thigh'), { from: S('thigh'), kind: 'half', f: 0.5 });
     h(S('knee'), S('thigh'), S('calf'), { from: S('calf'), kind: 'half', f: 0.5 });
   }
@@ -296,9 +305,11 @@ export function skeleton(J) {
 export const TUNE = {
   // the mesh's centre-line slivers mended (fanTris): on (proposed; set false for the approved triangles exactly)
   MEND: true,
+  // the height across its longest edge under which a triangle counts as a sliver to mend
+  SLIVER: 0.045,
   // where the measured pivots sit: the elbow from its ring's centre toward its back (el3), the knee's depth from the back,
   // the hip between the body row under the waist (0) and the thigh's top ring (1), and out from the thigh's centre
-  PIV: { elbowBack: -0.15, kneeDepth: 0.3, hipDown: 0.3, hipOut: 0.15, shoulder: [0.1, 0, 0] },
+  PIV: { elbowBack: -0.15, kneeDepth: 0.3, hipDown: 0.3, hipOut: 0.15, hipFwd: 0.4, shoulder: [0.1, 0, 0.15], palm: 0.85 },
   // the arm's rings: their share along the chain (ring -> {bone: w})
   ARM: {
     ja: { clavicle: 0.3, shoulder: 0.7 },
@@ -307,12 +318,14 @@ export const TUNE = {
     uc: { upperarm_twist: 0.35, upperarm: 0.65 },
     ue: { upperarm: 0.6, elbow: 0.4 },
     el: { elbow: 1 },
-    fa: { elbow: 0.4, lowerarm: 0.6 },
-    fb: { lowerarm: 0.85, lowerarm_twist: 0.15 },
-    fc: { lowerarm: 0.6, lowerarm_twist: 0.4 },
-    fd: { lowerarm: 0.3, lowerarm_twist: 0.7 },
-    fe: { lowerarm_twist: 0.95, wrist: 0.05 },
-    fg: { lowerarm_twist: 0.55, wrist: 0.45 },
+    // the forearm's rings take the twist by where they lie along it (fa 0.12, fb 0.24, fc 0.36, fd 0.49, fe 0.63, fg 0.87 of
+    // the way to the wrist), between the bones at 0 (lowerarm), 1/3 and 2/3 (the twists) and 1 (the wrist)
+    fa: { elbow: 0.4, lowerarm: 0.35, lowerarm_twist_01: 0.25 },
+    fb: { lowerarm: 0.3, lowerarm_twist_01: 0.7 },
+    fc: { lowerarm_twist_01: 0.9, lowerarm_twist_02: 0.1 },
+    fd: { lowerarm_twist_01: 0.53, lowerarm_twist_02: 0.47 },
+    fe: { lowerarm_twist_01: 0.12, lowerarm_twist_02: 0.88 },
+    fg: { lowerarm_twist_02: 0.38, wrist: 0.62 },
   },
   LEG: {
     th: { pelvis: 0.2, hip: 0.6, thigh: 0.2 },
@@ -325,21 +338,27 @@ export const TUNE = {
     fc: { calf: 0.1, foot: 0.9 },
   },
   // the extra loops (tools/sculpt/lowloops.mjs), by ring and index (or `all`): unset, a loop vertex blends its edge's ends
-  LOOP: {},
+  LOOP: { qp: { all: { knuckles: 0.4, fingers_01: 0.6 } }, nk: { all: { neck_01: 0.4, neck_02: 0.6 } } },
   // the crotch's point, shared by both legs; the thigh's top ring's inner points (by the crotch)
   CX: { pelvis: 0.6, hip_l: 0.2, hip_r: 0.2 },
   TH_IN: {},
-  GL: { gl0: 0, gl1: 0.25, gl2: 0.4, gl3: 0.45, gl4: 0.45, gl5: 0.4, gl6: 0.3, gl7: 0.12, gl8: 0 },
-  HAND_FING: { k: { knuckles: 1 }, m: { fingers_01: 0.5, fingers_02: 0.5 }, n: { fingers_02: 1 } },
+  GL: { gl0: 0, gl1: 0.4, gl2: 0.5, gl3: 0.5, gl4: 0.45, gl5: 0.4, gl6: 0.3, gl7: 0.12, gl8: 0 },
+  HAND_FING: { k: { knuckles: 1 }, m: { fingers_mid: 1 }, n: { fingers_02: 1 } },
+  // (the finger joints' pivots: PIV.palm)
   THUMB: { ta: { hand: 0.35, thumb_01: 0.65 }, tb: { hand: 0.45, thumb_01: 0.55 }, tc: { hand: 0.45, thumb_01: 0.55 }, td: { hand: 0.4, thumb_01: 0.6 }, t1: { thumb_02: 0.5, thumb_03: 0.5 }, t2: { thumb_03: 1 } },
   // the shoulder girdle's share by row, and the shoulder helper's share round the arm's cut
   ROWF: { tr: 1, sd: 1, da: 1, db: 0.85, dc: 0.6, ra: 0.25 },
+  // from how far out (|x|) the girdle's share begins, to where it is whole
+  ROWX: [0.32, 1.15],
   // the chest's front (the pectorals, columns 0 to 2) takes this share of it
   CLAV_FRONT: 1,
-  NEAR: { da3: 0.28, da4: 0.3, da5: 0.28, db3: 0.22, db5: 0.22, dc3: 0.15, dc4: 0.12, dc5: 0.15, sd3: 0.1, sd4: 0.14, sd5: 0.1, da2: 0.06, da6: 0.06, db2: 0.05, db6: 0.05 },
+  // (the front of the armpit, dc3 db3 and the pectoral's edge dc2 db2, more: it goes forward with the arm)
+  NEAR: { da3: 0.28, da4: 0.3, da5: 0.28, db3: 0.45, db5: 0.22, dc3: 0.45, dc4: 0.12, dc5: 0.15, sd3: 0.1, sd4: 0.14, sd5: 0.1, da2: 0.06, da6: 0.06, db2: 0.12, db6: 0.05, dc2: 0.15 },
   // the neck's foot (front, nape) and the neck's top ring (under the jaw, the nape)
   NM: { front: { spine_03: 0.3, neck_01: 0.7 }, back: { spine_03: 0.1, neck_01: 0.9 } },
-  NECK: { g: { neck_02: 0.75, head: 0.25 }, n6: { neck_02: 0.7, head: 0.3 }, gFront: { neck_02: 0.7, head: 0.15, jaw: 0.15 } },
+  // the game's poses onto ours (fromGame): how far in an upper arm may lean, as a share of its rest lean out
+  GAME: { armIn: 1, thumbCurl: 0.4 },
+  NECK: { g: { neck_02: 0.8, head: 0.2 }, n6: { neck_02: 0.8, head: 0.2 }, gFront: { neck_02: 0.7, head: 0.15, jaw: 0.15 } },
 };
 
 /**
@@ -418,7 +437,7 @@ export function skinWeights(B, J) {
         w = spine(p[1]);
         // the shoulder girdle: out from the neck, over the upper chest and the shoulder blades, onto the clavicle
         const col = +base.slice(ringOf.length) || 0, front = col <= 2 && p[2] > 0 ? TUNE.CLAV_FRONT : 1;
-        const f = (ROWF[ringOf] ?? 0) * front * sstep(0.32, 1.15, Math.abs(p[0]));
+        const f = (ROWF[ringOf] ?? 0) * front * sstep(TUNE.ROWX[0], TUNE.ROWX[1], Math.abs(p[0]));
         if (f > 0 && side) move(w, ['spine_03', 'spine_02'], f * 0.85, { [S('clavicle')]: 1 });
         // the arm's cut and the planes round it give a little to the shoulder's helper, the armpit's least
         if (side && near[base]) move(w, ['spine_03', 'spine_02', S('clavicle')], near[base], { [S('shoulder')]: 1 });
@@ -542,6 +561,24 @@ export function fromGame(rig, gPosed, gRest) {
     else d = D(b.game);
     Wd[b.name] = mm(d, b.R);
   }
+  // the arms kept off the body: the figure's arms hang nearer its body than his wider ribcage and hips allow, so an upper
+  // arm (then a forearm) the game swings across the body is turned out, with all below it, until, seen from the chest, it
+  // leans in no further than at rest (TUNE.GAME.armIn of its rest lean, 1: as at rest)
+  const chest = D('chest');
+  const below = (name) => { const out = [name]; for (let k = 0; k < out.length; k++) for (const c of rig.bones) if (c.parent === out[k] && c.kind === 'control') out.push(c.name); return out; };
+  for (const s of ['l', 'r']) for (const seg of ['upperarm', 'lowerarm']) {
+    const b = rig.bones[rig.at.get(`${seg}_${s}`)], w = Wd[b.name];
+    if (!w) continue;
+    const r0 = colOf(b.R, 1), side = Math.sign(r0[0]), xmin = Math.min(0.95, Math.abs(r0[0]) * TUNE.GAME.armIn);
+    const v = mv(tr(chest), colOf(w, 1));
+    if (side * v[0] >= xmin) continue;
+    const k = Math.sqrt((1 - xmin * xmin) / Math.max(1e-9, v[1] * v[1] + v[2] * v[2]));
+    const v2 = [side * xmin, v[1] * k, v[2] * k];
+    const ax = cross(v, v2), ang = Math.asin(Math.min(1, Math.hypot(...ax))) * 180 / Math.PI;
+    if (ang < 1e-6) continue;
+    const C = mm(chest, mm(axisAngle(ax, ang), tr(chest)));
+    for (const n of below(b.name)) if (Wd[n]) Wd[n] = mm(C, Wd[n]);
+  }
   // locals, parents first
   const W = {}, pose = {};
   for (const b of rig.bones) {
@@ -551,6 +588,16 @@ export function fromGame(rig, gPosed, gRest) {
     const want = Wd[b.name] ?? base;
     pose[b.name] = mm(tr(base), want);
     W[b.name] = want;
+  }
+  // the thumbs: the figure's thumb lies otherwise than ours, so its turn taken in the world swings ours across the palm;
+  // its turn from its hand's, as an angle, closes ours toward the palm instead (thumb_01, and TUNE.GAME.thumbCurl of it on
+  // each of thumb_02 and thumb_03)
+  for (const [s, k] of [['l', 0], ['r', 1]]) {
+    if (!gPosed[`thumb${k}`]) continue;
+    const q = quat(mm(tr(D(`wrist${k}`)), D(`thumb${k}`))), a = (2 * Math.acos(Math.min(1, Math.abs(q[0]))) * 180) / Math.PI;
+    pose[`thumb_01_${s}`] = euler([a, 0, 0]);
+    pose[`thumb_02_${s}`] = euler([a * TUNE.GAME.thumbCurl, 0, 0]);
+    pose[`thumb_03_${s}`] = euler([a * TUNE.GAME.thumbCurl, 0, 0]);
   }
   return pose;
 }
