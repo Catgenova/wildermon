@@ -88,7 +88,18 @@ export const RIG = { amb: 0.57, key: 0.42, warm: 0.32, cool: 2, rim: 0.42, upr: 
 if (who === 'female') Object.assign(RIG, { cool: 0.2, cpow: 0.8, ky: 0.7 });
 const BASE = { skin: [0.68, 0.49, 0.41], brow: [0.36, 0.22, 0.15], pupil: [0.21, 0.2, 0.22], lid: [0.36, 0.24, 0.2] };
 const dotp = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+// The light fitted to the reference (tools/sculpt/lowlight-<who>.json, as tools/sculpt/lowshot.mjs draws it), unless --rig
+const LIGHT_FILE = join(DIR, `lowlight-${who}.json`);
+const LIGHT = !args.includes('--rig') && existsSync(LIGHT_FILE) ? JSON.parse(readFileSync(LIGHT_FILE, 'utf8')) : null;
+const LB3 = nrm([-0.95, 0.25, -0.2]);
+const shBasis = ([x, y, z]) => [1, x, y, z, x * y, y * z, 3 * z * z - 1, x * z, x * x - y * y, y * (3 * x * x - y * y), x * y * z, y * (5 * z * z - 1), z * (5 * z * z - 3), x * (5 * z * z - 1), z * (x * x - y * y), x * (x * x - 3 * y * y),
+  Math.max(0, x * LB3[0] + y * LB3[1] + z * LB3[2]) ** 8, Math.max(-x, 0) * (1 - Math.max(z, 0)) ** 3, Math.max(x, 0) * (1 - Math.max(z, 0)) ** 3];
 export function lightLum(n, mat) {
+  if (LIGHT) {
+    const b = shBasis(n), base = BASE[mat] ?? BASE.skin;
+    const c = LIGHT.global.map((C, ch) => Math.max(0, C.reduce((a, k, i) => a + k * (b[i] ?? 0), 0)) * base[ch] / BASE.skin[ch]);
+    return Math.min(255, 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]);
+  }
   const R = RIG;
   const LK = nrm([R.kx, R.ky, 0.84]), LR = nrm([1, 0.45, 0.05]), LC = nrm([-0.7, 0.6, R.lcz]), LB = nrm([-0.95, 0.25, R.lbz]), LU = nrm([0.6, 0.75, 0.3]);
   const base = BASE[mat] ?? BASE.skin, k = 0.3 + (0.7 * base[0]) / 0.68;
