@@ -514,12 +514,11 @@ async function main(): Promise<void> {
     /*
      * An altar and the three paths, which need a stone table and a rug and so
      * cannot be played from out here. What reaches this far is the rulebook
-     * behind them and the two refusals in front.
+     * behind the paths and the two refusals in front. (The altar's casts are
+     * gone, and their table with them.)
      */
-    const { data: casts, error: castErr } = await supabase().from('cast_def').select('id,name,cost,level');
-    const spells = (casts ?? []) as Array<{ name: string; cost: number; level: number }>;
-    check('what a prayer buys is on the project', !castErr && spells.length === 6,
-      castErr ? castErr.message : spells.map((c) => `${c.name} ${c.cost}@${c.level}`).join(', '));
+    const { error: castGone } = await supabase().from('cast_def').select('id').limit(1);
+    check('the altar\'s casts are gone from the project', !!castGone, castGone ? castGone.message : 'cast_def still answers');
     const { data: steps, error: stepErr } = await supabase().from('path_step').select('path,n,at,ability');
     const rungs = (steps ?? []) as Array<{ path: string; ability: string | null }>;
     // The steps of the paths still on them: a path moved onto tiers has none (`meditation.ts`).
