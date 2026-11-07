@@ -8,6 +8,10 @@
 //   shawlBones(rig, design, cols) → the cape's bones (lowgarment.mjs garmentBone), six: cape_l, cape_front_l,
 //   cape_back_l and the right's, driven from the upper arms (59 + 6 = 65 bones, within the renderer's 80)
 //
+//   node tools/sculpt/garments/shawl.mjs
+//     writes the game's copy beside each body: src/sculpt/assets/lowshawl-male.json and lowshawl-female.json
+//     (lowgarment.mjs garmentAsset; loaded by src/sculpt/lowpoly.ts)
+//
 // The shape, in columns: N columns round a vertical axis through the neck (azimuth 0 the front, 90 the body's left),
 // each a closed section in its half-plane (radius r from the axis, height y), the rows of every section joined round:
 //   the cape outside, down from under the cowl: T0 (under the cowl's swag), T1 (where the cloth turns over the shoulder
@@ -359,4 +363,19 @@ export function shawlWeights(rig, G, o = {}) {
   }
   for (let k = 0; k < N; k++) vw[G.apex[k]] = mix(vw[R.T5[k]], vw[R.T5[(k + 1) % N]], 0.5);
   return vw;
+}
+
+/* ---- the game's copy ------------------------------------------------------------------------------------------------ */
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const { writeFileSync } = await import('node:fs');
+  const { buildRig } = await import('../lowrig.mjs');
+  const { garmentAsset } = await import('../lowgarment.mjs');
+  for (const who of ['male', 'female']) {
+    const rig = buildRig(who), G = buildShawl(rig);
+    G.vw = shawlWeights(rig, G);
+    const file = new URL(`../../../src/sculpt/assets/lowshawl-${who}.json`, import.meta.url);
+    const A = { built: 'node tools/sculpt/garments/shawl.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS) };
+    writeFileSync(file, JSON.stringify(A));
+    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones: wrote`, file.pathname);
+  }
 }

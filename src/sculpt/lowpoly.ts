@@ -8,13 +8,21 @@
  * own axes, the thumbs closed toward the palm), the helpers driven from those, and the body stood on its lowest sole.
  * Shaded as the review renders shade it: one colour a polygon, from its normal in view space, by the light fitted for
  * that body (`tools/sculpt/lowlight-<who>.json`, written by `tools/sculpt/lowlight.py`), in the look's skin.
+ *
+ * Over the body, a garment (`tools/sculpt/lowgarment.mjs` garmentAsset, written beside each body: the first outfit's
+ * shawl, `assets/lowshawl-<who>.json` by `tools/sculpt/garments/shawl.mjs`): laid out flat with the body in one bake,
+ * skinned to the body's bones and its own (the cape's, appended after the body's, each driven from the body's pose by
+ * `liftOf`, the 'lift' rule of lowgarment.mjs), lit by the same light in its own colours, inked with the body as one
+ * silhouette.
  */
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
+import MALE_SHAWL from './assets/lowshawl-male.json';
+import FEMALE_SHAWL from './assets/lowshawl-female.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
 import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
-import { DEFAULT_LOOK } from '../game/look';
+import { DEFAULT_LOOK, type Look } from '../game/look';
 import { STRIDE, type Baked } from './bake';
 import { M, bodyMaterials } from './models/body';
 import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, type Proportions } from './rig';
@@ -30,6 +38,23 @@ interface Asset {
   floor: number; T: M3; verts: number[]; polys: Array<[number[], number, number[]?]>; tris: number[]; weights: number[][]; soles: number[];
   bones: Bone[]; rest: Pick<Rig, 'arm' | 'elbow' | 'hand' | 'leg' | 'knee'>;
   game: { armIn: number; thumbCurl: number; armSwing?: [number, number]; armSwingAt?: number };
+}
+/**
+ * The 'lift' drive's settings (`tools/sculpt/lowgarment.mjs` liftOf): of the source's swing θ (degrees; with `axis`, only
+ * its part about that axis of the source's own, taken `sign` as a raise) the bone turns a θ + (b - a) max(0, θ - knee), at
+ * most max; `also`, a share of the swing about the other axis, either way, at most its max.
+ */
+export interface Lift { a: number; knee: number; b: number; max: number; axis?: 'x' | 'z' | null; sign?: number; also?: { axis: 'x' | 'z'; a: number; max: number } }
+/** A garment's own bone: parent `p` and driver `from` the body's bone indices, its rest head and frame, the drive. */
+interface GarmentBone extends Lift { name: string; p: number; kind: 'helper'; head: V; R: M3; from: number; drive: 'lift' }
+/**
+ * A garment as `tools/sculpt/lowgarment.mjs` garmentAsset writes it beside its body: vertices in the body's units and
+ * axes, polygons (corners, material index into `mats`), triangles (three corners and the polygon), each vertex's (bone,
+ * weight) list (the body's bones, then its own from `base` on), its materials' colours (red, green, blue nought to one).
+ */
+export interface GarmentAsset {
+  who: string; base: number; mats: string[]; colours: Array<[number, number, number]>;
+  verts: number[]; polys: Array<[number[], number]>; tris: number[]; weights: number[][]; bones: GarmentBone[];
 }
 
 /* ---- 3x3 rotations (row-major) and quaternions [w, x, y, z], as lowrig.mjs ------------------------------------- */
@@ -80,22 +105,82 @@ function swingTwist(q: Q): { swing: Q; twist: Q } {
   t = l < 1e-9 ? [1, 0, 0, 0] : [t[0] / l, 0, t[2] / l, 0];
   return { swing: qmul(q, qinv(t)), twist: t };
 }
+/** The twist about a unit local axis k, and the swing left: q = swing · twist (lowrig.mjs swingTwist). */
+function swingTwistAbout(q: Q, k: V): { swing: Q; twist: Q } {
+  const p = q[1] * k[0] + q[2] * k[1] + q[3] * k[2];
+  let t: Q = [q[0], k[0] * p, k[1] * p, k[2] * p];
+  const l = Math.hypot(t[0], t[1], t[2], t[3]);
+  t = l < 1e-9 ? [1, 0, 0, 0] : [t[0] / l, t[1] / l, t[2] / l, t[3] / l];
+  return { swing: qmul(q, qinv(t)), twist: t };
+}
+
+/**
+ * A garment bone's turn from its source bone's local turn `Lsrc`, by the 'lift' rule of `tools/sculpt/lowgarment.mjs`
+ * liftOf (ported as it is; `tools/sculpt/lowgarmentcheck.mjs` holds the two to the same result): the source's swing (its
+ * turn less its twist about its own Y); with `axis` only the swing's part about that axis, taken `sign` as a raise and
+ * nothing the other way; turned g(θ) = a θ + (b - a) max(0, θ - knee), at most max; `also` a share of the swing about the
+ * other axis, either way, at most its max.
+ */
+export function liftOf(Lsrc: M3, d: Lift): M3 {
+  const { swing } = swingTwist(quat(Lsrc)), s: Q = swing[0] < 0 ? [-swing[0], -swing[1], -swing[2], -swing[3]] : swing;
+  const g = (th: number): number => Math.min(d.max, d.a * th + (d.b - d.a) * Math.max(0, th - d.knee));
+  if (!d.axis) {
+    const th = (2 * Math.acos(Math.min(1, s[0])) * 180) / Math.PI;
+    return th < 1e-6 ? I3 : qmat(qpow(s, g(th) / th));
+  }
+  // (the swing's part about a local axis, degrees, signed)
+  const about = (ax: 'x' | 'z'): [V, number] => {
+    const k: V = ax === 'x' ? [1, 0, 0] : [0, 0, 1], { twist } = swingTwistAbout(s, k);
+    return [k, (2 * Math.atan2(twist[1] * k[0] + twist[3] * k[2], twist[0]) * 180) / Math.PI];
+  };
+  const turn = (k: V, deg: number): Q => { const h = ((deg / 2) * Math.PI) / 180; return [Math.cos(h), k[0] * Math.sin(h), 0, k[2] * Math.sin(h)]; };
+  const sign = d.sign ?? 1, [k, th0] = about(d.axis), th = sign * th0;
+  let q: Q = th > 1e-6 ? turn(k, sign * g(th)) : [1, 0, 0, 0];
+  // (and a share of the swing about the other axis, either way, at most also.max)
+  if (d.also) { const [k2, t2] = about(d.also.axis); q = qmul(turn(k2, Math.max(-d.also.max, Math.min(d.also.max, d.also.a * t2))), q); }
+  return qmat(q);
+}
 const angleOf = (q: Q): number => (2 * Math.acos(Math.min(1, Math.abs(q[0]))) * 180) / Math.PI;
 
 /** The low-poly woman's height, sole to crown, as a share of the low-poly man's. */
 export const WOMAN_OF_MAN = 0.85;
 
-/** One body: its asset, the figure's proportions it is posed with, and its height as a share of the base man's. */
-function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked; bones: (pose: FigurePose) => Float32Array } {
+/** A body's frames: each bone's world rotation and head, and its local turn (what a garment bone's drive reads). */
+interface Frame { W: M3; P: V; L: M3 }
+/**
+ * The garment's own bones' frames, appended to the body's (`tools/sculpt/lowgarment.mjs` garmentFrames): each hung
+ * from its body parent as at rest, turned by its drive from its source bone's local turn.
+ */
+export function garmentFrames(body: ReadonlyArray<{ R: M3; head: V }>, own: readonly GarmentBone[], F: readonly Frame[]): Frame[] {
+  return own.map((b) => {
+    const pb = body[b.p], pa = F[b.p];
+    const Rrel = mm(tr(pb.R), b.R), off = mv(tr(pb.R), sub(b.head, pb.head));
+    const L = b.drive === 'lift' ? liftOf(F[b.from].L, b) : I3;
+    return { W: mm(pa.W, mm(Rrel, L)), P: add(pa.P, mv(pa.W, off)), L };
+  });
+}
+
+/** Colour channels nought to one as a hex colour. */
+const hexOf = (c: readonly number[]): string => `#${c.map((x) => Math.round(Math.max(0, Math.min(1, x)) * 255).toString(16).padStart(2, '0')).join('')}`;
+/** Where a garment's materials start among a low-poly body's: after the body's own (`bodyMaterials`, indexed by `M`). */
+const GARMENT_MAT = Object.keys(M).length;
+
+/**
+ * One body: its asset, the figure's proportions it is posed with, its height as a share of the base man's, and the
+ * garment it can wear (its own bones posed with the body's always; drawn when the bake is asked for with it).
+ */
+function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset): { baked: (dressed: boolean) => Baked; bones: (pose: FigurePose) => Float32Array } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
+  if (garment.base !== BONES.length) throw new Error(`garment for ${garment.base} bones on a body of ${BONES.length}`);
+  /** The body's bones and the garment's, in the order the weights index them. */
+  const ALL = [...BONES, ...garment.bones];
 
   /* ---- the rig's rest, done once ----------------------------------------------------------------------------------- */
   const REL = BONES.map((b) => (b.p >= 0 ? mm(tr(BONES[b.p].R), b.R) : b.R));
   const OFF = BONES.map((b) => (b.p >= 0 ? mv(tr(BONES[b.p].R), sub(b.head, BONES[b.p].head)) : b.head));
   const T = A.T;
 
-  interface Frame { W: M3; P: V }
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
   function posed(local: Array<M3 | undefined>): Frame[] {
     const out: Frame[] = [];
@@ -108,9 +193,9 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
         else if (b.drive === 'wrist') { const { swing, twist } = swingTwist(q); L = qmat(qmul(qpow(swing, f), twist)); }
         else if (b.drive === 'twist') { const tw = qmat(qpow(swingTwist(q).twist, f)), Rr = mm(tr(b.R), BONES[b.from].R); L = mm(Rr, mm(tw, tr(Rr))); }
       }
-      if (b.p < 0) { out.push({ W: mm(b.R, L), P: b.head }); return; }
+      if (b.p < 0) { out.push({ W: mm(b.R, L), P: b.head, L }); return; }
       const pa = out[b.p];
-      out.push({ W: mm(pa.W, mm(REL[i], L)), P: add(pa.P, mv(pa.W, OFF[i])) });
+      out.push({ W: mm(pa.W, mm(REL[i], L)), P: add(pa.P, mv(pa.W, OFF[i])), L });
     });
     return out;
   }
@@ -192,46 +277,55 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
   const toGame = (p: V): V => { const s = scale(), q = mv(T, sub(p, FLOOR)); return [q[0] * s, q[1] * s, q[2] * s]; };
   const vert = (i: number): V => [A.verts[i * 3], A.verts[i * 3 + 1], A.verts[i * 3 + 2]];
 
-  let BAKED: Baked | null = null;
-  /** The body laid out for the GPU: every polygon its own corners, each with the polygon's normal, so it is drawn flat. */
-  function lowBaked(): Baked {
-    if (BAKED) return BAKED;
+  const BAKED: Partial<Record<'bare' | 'dressed', Baked>> = {};
+  /**
+   * The body, and the garment over it when `dressed`, laid out for the GPU in one bake: every polygon its own corners,
+   * each with the polygon's normal, so it is drawn flat.
+   */
+  function lowBaked(dressed: boolean): Baked {
+    const key = dressed ? 'dressed' : 'bare', had = BAKED[key];
+    if (had) return had;
     const t0 = performance.now();
-    const MATS = [M.skin, M.hair, M.pupil];
-    const corner = new Map<string, number>();
     const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
-    // Each polygon's weights, its corners' summed, the heaviest four kept: one turn for the face's normal at every corner.
-    const faceWeights = A.polys.map(([v]) => {
-      const sum = new Map<number, number>();
-      for (const i of v) { const w = A.weights[i]; for (let j = 0; j < w.length; j += 2) sum.set(w[j], (sum.get(w[j]) ?? 0) + w[j + 1]); }
-      const top = [...sum].sort((a, b) => b[1] - a[1]).slice(0, 4), tot = top.reduce((t, [, w]) => t + w, 0) || 1;
-      const out = [0, 0, 0, 0, 0, 0, 0, 0];
-      top.forEach(([b, w], j) => { out[j] = b; out[4 + j] = w / tot; });
-      return out;
-    });
-    const normals = A.polys.map(([v, , nv]) => {
-      const pts = (nv ?? v).map((i) => toGame(vert(i)));
-      let n: V = [0, 0, 0];
-      for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
-      const l = Math.hypot(n[0], n[1], n[2]) || 1;
-      return [n[0] / l, n[1] / l, n[2] / l] as V;
-    });
-    const idx = (i: number, pi: number): number => {
-      const key = `${pi}:${i}`;
-      let k = corner.get(key);
-      if (k !== undefined) return k;
-      k = verts.length / STRIDE;
-      corner.set(key, k);
-      const p = toGame(vert(i)), n = normals[pi], mat = MATS[A.polys[pi][1]] ?? M.skin, w = A.weights[i];
-      const bi = [0, 0, 0, 0], bw = [0, 0, 0, 0];
-      for (let j = 0; j < 4 && j * 2 < w.length; j++) { bi[j] = w[j * 2]; bw[j] = w[j * 2 + 1]; }
-      verts.push(p[0], p[1], p[2], n[0], n[1], n[2], mat, ...bi, ...bw, mat, -1);
-      faceSkin.push(...faceWeights[pi]);
-      return k;
+    /** One mesh's polygons added: its vertices (the body's units), polygons (corners, the outline whose normal shades them), triangles and weights, and each polygon's material index. */
+    const lay = (V3s: number[], polys: Array<[number[], number, number[]?]>, T3: number[], weights: number[][], matOf: (pi: number) => number): void => {
+      const at = (i: number): V => [V3s[i * 3], V3s[i * 3 + 1], V3s[i * 3 + 2]];
+      const corner = new Map<number, number>();
+      // Each polygon's weights, its corners' summed, the heaviest four kept: one turn for the face's normal at every corner.
+      const faceWeights = polys.map(([v]) => {
+        const sum = new Map<number, number>();
+        for (const i of v) { const w = weights[i]; for (let j = 0; j < w.length; j += 2) sum.set(w[j], (sum.get(w[j]) ?? 0) + w[j + 1]); }
+        const top = [...sum].sort((a, b) => b[1] - a[1]).slice(0, 4), tot = top.reduce((t, [, w]) => t + w, 0) || 1;
+        const out = [0, 0, 0, 0, 0, 0, 0, 0];
+        top.forEach(([b, w], j) => { out[j] = b; out[4 + j] = w / tot; });
+        return out;
+      });
+      const normals = polys.map(([v, , nv]) => {
+        const pts = (nv ?? v).map((i) => toGame(at(i)));
+        let n: V = [0, 0, 0];
+        for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
+        const l = Math.hypot(n[0], n[1], n[2]) || 1;
+        return [n[0] / l, n[1] / l, n[2] / l] as V;
+      });
+      const idx = (i: number, pi: number): number => {
+        const key = pi * 65536 + i;
+        let k = corner.get(key);
+        if (k !== undefined) return k;
+        k = verts.length / STRIDE;
+        corner.set(key, k);
+        const p = toGame(at(i)), n = normals[pi], mat = matOf(pi), w = weights[i];
+        const bi = [0, 0, 0, 0], bw = [0, 0, 0, 0];
+        for (let j = 0; j < 4 && j * 2 < w.length; j++) { bi[j] = w[j * 2]; bw[j] = w[j * 2 + 1]; }
+        verts.push(p[0], p[1], p[2], n[0], n[1], n[2], mat, ...bi, ...bw, mat, -1);
+        faceSkin.push(...faceWeights[pi]);
+        return k;
+      };
+      for (let t = 0; t < T3.length; t += 4) { const pi = T3[t + 3]; tris.push(idx(T3[t], pi), idx(T3[t + 1], pi), idx(T3[t + 2], pi)); }
     };
-    for (let t = 0; t < A.tris.length; t += 4) { const pi = A.tris[t + 3]; tris.push(idx(A.tris[t], pi), idx(A.tris[t + 1], pi), idx(A.tris[t + 2], pi)); }
-    BAKED = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: BONES.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
-    return BAKED;
+    const MATS = [M.skin, M.hair, M.pupil];
+    lay(A.verts, A.polys, A.tris, A.weights, (pi) => MATS[A.polys[pi][1]] ?? M.skin);
+    if (dressed) lay(garment.verts, garment.polys, garment.tris, garment.weights, (pi) => GARMENT_MAT + garment.polys[pi][1]);
+    return (BAKED[key] = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) });
   }
 
   let G_REST: Bones | null = null;
@@ -254,10 +348,10 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
   /** The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole. */
   function lowBones(pose: FigurePose): Float32Array {
     const local = fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest());
-    const F = posed(local);
+    const Fb = posed(local), F = [...Fb, ...garmentFrames(BONES, garment.bones, Fb)];
     // each bone's skinning turn and shift in the mesh's frame: v -> S v + t
-    const S = F.map((f, i) => mm(f.W, tr(BONES[i].R)));
-    const t = F.map((f, i) => sub(f.P, mv(S[i], BONES[i].head)));
+    const S = F.map((f, i) => mm(f.W, tr(ALL[i].R)));
+    const t = F.map((f, i) => sub(f.P, mv(S[i], ALL[i].head)));
     // stood on the lowest sole: the sole's vertices skinned
     let low = Infinity;
     for (const vi of A.soles) {
@@ -267,8 +361,8 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
       low = Math.min(low, y);
     }
     const dy = A.floor - low, s = scale();
-    const out = new Float32Array(BONES.length * 12);
-    BONES.forEach((_, i) => {
+    const out = new Float32Array(ALL.length * 12);
+    ALL.forEach((_, i) => {
       const Ag = mm(T, mm(S[i], T));
       const sh = mv(T, add(sub(add(mv(S[i], FLOOR), t[i]), FLOOR), [0, dy, 0]));
       out.set([Ag[0], Ag[1], Ag[2], sh[0] * s, Ag[3], Ag[4], Ag[5], sh[1] * s, Ag[6], Ag[7], Ag[8], sh[2] * s], i * 12);
@@ -279,7 +373,14 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
   return { baked: lowBaked, bones: lowBones };
 }
 
-const BODIES = { man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1), woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN) };
+const BODIES = {
+  man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, MALE_SHAWL as unknown as GarmentAsset),
+  woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, FEMALE_SHAWL as unknown as GarmentAsset),
+};
+/** The garment's materials after the body's (both shawls share them), lit by the body's light in their own colours. */
+const GARMENT_MATS: Material[] = (MALE_SHAWL as unknown as GarmentAsset).colours.map((c) => ({ colour: hexOf(c), cloth: true }));
+/** The skin colour the bodies' light was fitted to (`tools/sculpt/lowlight.py`), red, green and blue nought to one: a cloth's colour over it tints the light. */
+const FIT_SKIN: [number, number, number] = [0.68, 0.49, 0.41];
 
 /** A fitted light's coefficients ([channel][term], nought to 255) as the shader takes them: per term, red, green and blue nought to one. */
 function shOf(fit: { global: number[][] }): Float32Array {
@@ -299,11 +400,31 @@ function toneOf(materials: Material[]): [number, number, number] {
 /** Whether a look is drawn as a low-poly body: a man or a woman (neither keeps the sculpted base). */
 export const hasLowBody = (look: { gender: string }): boolean => look.gender === 'man' || look.gender === 'woman';
 
-/** Everything a draw needs for a pose (`drawSculptGL`): the man's body for a man, the woman's for a woman. */
+/**
+ * Whether a figure wears the shawl over its low-poly body. The wear switch hooks in here: what a figure has on (its
+ * look, or what it has equipped) would choose the bake (`baked(dressed)`); for now every figure wears it.
+ */
+const wearsShawl = (_pose: FigurePose): boolean => true;
+
+/** The look's materials with the garment's after them, kept per look's materials so the renderer's copy is reused. */
+const DRESSED = new Map<string, Material[]>();
+function materialsOf(look: Look): Material[] {
+  const body = bodyMaterials(look), key = body.map((m) => m.colour).join();
+  let out = DRESSED.get(key);
+  if (!out) {
+    out = [...body];
+    GARMENT_MATS.forEach((m, k) => { (out as Material[])[GARMENT_MAT + k] = m; });
+    if (DRESSED.size > 64) DRESSED.clear();
+    DRESSED.set(key, out);
+  }
+  return out;
+}
+
+/** Everything a draw needs for a pose (`drawSculptGL`): the man's body for a man, the woman's for a woman, the shawl over it. */
 export function lowScene(pose: FigurePose): SculptDraw {
   const look = pose.look ?? DEFAULT_LOOK;
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
-  const materials = bodyMaterials(look), low: LowLight = { sh: SH[who], tone: toneOf(materials) };
-  return { baked: body.baked(), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
+  const materials = materialsOf(look), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
+  return { baked: body.baked(wearsShawl(pose)), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
 }

@@ -52,6 +52,8 @@ export interface Material {
   noInk?: boolean;
   /** No ink along a crease between two of its facets (a part standing in front of another is still inked): the face's planes. */
   noCrease?: boolean;
+  /** Cloth over a low-poly body (`./lowpoly`): lit by the body's light, in its own colour over the skin the light was fitted to. */
+  cloth?: boolean;
 }
 
 /** Where a primitive hangs: one of the rig's bones (`./rig`), or a chain link of a sway chain. */

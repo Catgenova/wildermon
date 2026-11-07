@@ -32,7 +32,8 @@ export interface DrawOpts {
 /** The screen box a body fits in at zoom one, in figure units, as the 2D figure's `STILL_BOX`. */
 export const BOX = { left: -42, right: 42, top: -66, bottom: 14 };
 const MAX_BONES = 80;
-const MAX_MATS = 32;
+/** Materials a draw may use: a low-poly body's own (`bodyMaterials`) and its garment's after them. */
+const MAX_MATS = 40;
 /** Terms of the review renders' light (`LowLight.sh`). */
 export const SH_TERMS = 19;
 /** Degrees the whole-body review renders' camera looks down (their fitted cameras: the man's 8, the woman's 7.5). */
@@ -77,7 +78,7 @@ precision highp float;
 in vec3 vNrm; in vec3 vPos; flat in float vMat; flat in float vBone; in float vDepth; flat in float vMatB; in float vStamp; flat in vec3 vFace;
 uniform vec4 uMat[${MAX_MATS}];
 uniform vec3 uL; uniform vec3 uT; uniform float uGrain; uniform float uNight; uniform float uMode; uniform float uFlat; uniform float uBlink;
-uniform float uLow; uniform vec3 uSH[${SH_TERMS}]; uniform vec3 uTone; uniform vec3 uXv, uYv, uZv;
+uniform float uLow; uniform vec3 uSH[${SH_TERMS}]; uniform vec3 uTone; uniform vec3 uFit; uniform vec3 uXv, uYv, uZv;
 layout(location=0) out vec4 oCol; layout(location=1) out vec4 oNd; layout(location=2) out vec4 oId;
 vec3 hsv2rgb(vec3 c){ vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0); vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www); return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y); }
 vec3 rgb2hsv(vec3 c){ vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0); vec4 p = c.g < c.b ? vec4(c.bg, K.wz) : vec4(c.gb, K.xy); vec4 q = c.r < p.x ? vec4(p.xyw, c.r) : vec4(c.r, p.yzx); float d = q.x - min(q.w, q.y); float e = 1.0e-10; return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x); }
@@ -105,7 +106,7 @@ void main() {
   int flags = int(uMat[mi].a + 0.5);
   // Lids shut: the eye's parts take the lid's colour, the first material's a shade darker, and shade as skin.
   if (uBlink > 0.5 && (flags & 8) != 0) { base = uMat[0].rgb * 0.94; flags = 2; }
-  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0;
+  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0, cloth = (flags & 256) != 0;
   float dl = dot(n, uL);
   vec3 c = base;
   if (uMode > 0.5) {
@@ -115,8 +116,10 @@ void main() {
   } else if (emissive) {
     c = base;
   } else if (uLow > 0.5) {
-    // A low-poly body as its review renders: one shade a polygon, skin lit by their light in the look's tone, the rest its colour.
-    c = skin ? min(lowLight(vec3(dot(n, uXv), dot(n, uYv), dot(n, uZv))) * uTone, 1.0) : base;
+    // A low-poly body as its review renders: one shade a polygon, skin lit by their light in the look's tone, cloth by the
+    // same light in its own colour over the skin it was fitted to, the rest its colour.
+    vec3 lit = lowLight(vec3(dot(n, uXv), dot(n, uYv), dot(n, uZv)));
+    c = skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : base;
   } else if (uFlat > 0.5) {
     c = base;
   } else {
@@ -250,7 +253,7 @@ export function glContext(): Ctx | null {
   const quad = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uXv', 'uYv', 'uZv'];
+  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
   const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner'].map((n) => [n, gl.getUniformLocation(edge, n)]));
@@ -330,7 +333,7 @@ function matsOf(ms: Material[]): Float32Array {
   ms.forEach((m, i) => {
     if (i >= MAX_MATS) return;
     const c = hexOf(m.colour);
-    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0)], i * 4);
+    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.cloth ? 256 : 0)], i * 4);
   });
   MATS.set(ms, f);
   return f;
@@ -338,9 +341,14 @@ function matsOf(ms: Material[]): Float32Array {
 
 /**
  * A low-poly body's light, as its review renders (`tools/sculpt/lowlight.py`): per term (`SH_TERMS`) the red, green and
- * blue coefficients nought to one, and the look's skin over the skin the light was fitted to, per channel.
+ * blue coefficients nought to one, and the look's skin over the skin the light was fitted to, per channel; a garment's
+ * cloth is lit by the same light in its own colour over that skin.
  */
-export interface LowLight { sh: Float32Array; tone: [number, number, number] }
+export interface LowLight {
+  sh: Float32Array; tone: [number, number, number];
+  /** The skin the light was fitted to, red, green and blue nought to one: a cloth's colour over it tints the light. */
+  fit: [number, number, number];
+}
 /** What one draw needs: the bake, the pose's skinning frames, the materials and the view. */
 export interface SculptDraw {
   baked: Baked; bones: Float32Array; materials: Material[]; view: View; /** Lids shut, past a half. */ blink?: number;
@@ -391,6 +399,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     if (low) {
       gl.uniform3fv(u.uSH, low.sh);
       gl.uniform3f(u.uTone, low.tone[0], low.tone[1], low.tone[2]);
+      gl.uniform3f(u.uFit, low.fit[0], low.fit[1], low.fit[2]);
       // The normal in the review camera's view space: the screen's right, and up and toward the viewer pitched down as
       // that camera is rather than as the island's, so a face turned as in a review render takes its tone there.
       const xr = Math.hypot(v.ex[0], v.ey[0]) || 1, hr = Math.hypot(v.T[0], v.T[1]) || 1;
