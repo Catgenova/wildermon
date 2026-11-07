@@ -147,6 +147,11 @@ export function viewError(mesh, view, cam) {
       feat.push({ mat, d });
     }
   }
+  // the nose's underside and the chin's, down the front view's centre line: the tip's edge and the chin's front edge
+  for (const [mark, name] of [['cliff', 'tc'], ['chin', 'ch0']]) {
+    const at = r.marks?.[mark];
+    if (at && mesh.V?.[name]) feat.push({ mat: mark, d: Math.abs(project(mesh.V[name], cam)[1] - at[1]) });
+  }
   const fmean = feat.length ? feat.reduce((x, f) => x + f.d, 0) / feat.length : 0;
   return { mean, worst, feat, iou: inter / uni, score: mean + 0.15 * worst + FW.w * fmean };
 }
@@ -177,24 +182,25 @@ function descend(params, f, rounds = 6) {
   return best;
 }
 
-// The views' angles stay near what their labels say: yaw within 10 degrees, pitch within 12 (the top and bottom views'
+// The views' angles stay near what their labels say: yaw within 20 degrees, pitch within 12 (the top and bottom views'
 // pitch within 25 of their defaults); a camera that wanders further is fitting the head's errors, not the view.
 function limit(v, k, x) {
   const d = DEFAULT_CAMS[v];
   if (k === 'f') return Math.max(2.5, x);
-  if (k === 'yaw') return Math.min(d.yaw + 10, Math.max(d.yaw - 10, x));
+  if (k === 'yaw') return Math.min(d.yaw + 20, Math.max(d.yaw - 20, x));
   if (k === 'pitch') { const r = v === 'top' || v === 'bottom' ? 25 : 12; return Math.min(d.pitch + r, Math.max(d.pitch - r, x)); }
   return x;
 }
 const preset = structuredClone(PRESETS[who]);
 let mesh = buildLowHead(who, preset);
+mesh.V = preset.V;
 const cams = loadCams();
 
 function report(tag) {
   const rows = [];
   for (const v of VIEWS) {
     const e = viewError(mesh, v, cams[v]);
-    const f = e.feat.length ? e.feat.map((x) => `${x.mat[0]}${((100 * x.d) / HEAD_H).toFixed(1)}`).join(' ') : '';
+    const f = e.feat.length ? e.feat.map((x) => `${({ pupil: 'eye', brow: 'brow', cliff: 'nose', chin: 'chin' })[x.mat]} ${((100 * x.d) / HEAD_H).toFixed(1)}`).join(' ') : '';
     rows.push(`${v.padEnd(8)} outline mean ${((100 * e.mean) / HEAD_H).toFixed(1)}% worst ${((100 * e.worst) / HEAD_H).toFixed(1)}%  IoU ${e.iou.toFixed(3)}  ${f ? 'features ' + f + ' (%)' : ''}`);
   }
   console.log(`${who} ${tag}\n` + rows.join('\n'));
@@ -231,7 +237,7 @@ if (stage === 'mesh') {
   // the brows move as a whole, up and down and out and in
   const shift = (key, d) => { preset.brow[key] = preset.brow[key].map((v) => v + d); };
   for (const key of ['x', 'yb']) { let at = 0; ps.push({ step: 0.02, get: () => at, set: (x) => { shift(key, x - at); at = x; } }); }
-  const total = () => { mesh = buildLowHead(who, preset); return VIEWS.reduce((s, v) => s + viewError(mesh, v, cams[v]).score, 0); };
+  const total = () => { mesh = buildLowHead(who, preset); mesh.V = preset.V; return VIEWS.reduce((s, v) => s + viewError(mesh, v, cams[v]).score, 0); };
   const both = args.includes('--with-camera');
   const camPs = both ? VIEWS.flatMap((v) => ['cx', 'cy', ...(v === 'front' ? [] : ['s']), 'yaw', 'pitch'].map((k) => ({ step: k === 's' ? 2 : 2, get: () => cams[v][k], set: (x) => { cams[v][k] = limit(v, k, x); } }))) : [];
   for (let r = 0; r < +opt('rounds', 3); r++) {
@@ -290,16 +296,25 @@ if (stage === 'ffd') {
     for (let q = 0; q < 2; q++) ps.push({ step: 0.05, get: () => n.c[q], set: (x) => { n.c[q] = x; } });
     for (let q = 0; q < 3; q++) ps.push({ step: 0.05, get: () => n.s[q], set: (x) => { n.s[q] = x; } });
   }
+  // the eyes and the brows: where they sit on the head
+  const P0 = PRESETS[who];
+  const feat = { ex: 0, ey: 0, bx: 0, by: 0 };
+  const featPs = Object.keys(feat).map((k) => ({ step: 0.02, get: () => feat[k], set: (x) => { feat[k] = x; } }));
+  const applyFeat = (P) => {
+    P.eye = { ...P0.eye, x: P0.eye.x + feat.ex, y: P0.eye.y + feat.ey };
+    P.brow = { ...P0.brow, x: P0.brow.x.map((v) => v + feat.bx), yb: P0.brow.yb.map((v) => v + feat.by) };
+    return P;
+  };
   const camPs = VIEWS.flatMap((v) => ['cx', 'cy', ...(v === 'front' ? [] : ['s']), 'yaw', 'pitch'].map((k) => ({ step: 1.5, get: () => cams[v][k], set: (x) => { cams[v][k] = limit(v, k, x); } })));
-  let P = deformed(L);
+  let P = applyFeat(deformed(L));
   const total = () => {
-    P = deformed(L); mesh = buildLowHead(who, P);
+    P = applyFeat(deformed(L)); mesh = buildLowHead(who, P); mesh.V = P.V;
     return VIEWS.reduce((s, v) => s + viewError(mesh, v, cams[v]).score, 0) + 20 * folds(mesh, base);
   };
-  for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...ps, ...camPs], total, 1).toFixed(1));
-  P = deformed(L); mesh = buildLowHead(who, P);
+  for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...ps, ...camPs, ...featPs], total, 1).toFixed(1));
+  P = applyFeat(deformed(L)); mesh = buildLowHead(who, P); mesh.V = P.V;
   console.log('folds', folds(mesh, base));
-  writeFileSync(join(DIR, `lowfit-${who}.json`), JSON.stringify({ V: P.V, ear: P.ear }, null, 1));
+  writeFileSync(join(DIR, `lowfit-${who}.json`), JSON.stringify({ V: P.V, ear: P.ear, eye: P.eye, brow: P.brow }, null, 1));
   saveCams(cams);
   report('after');
 }

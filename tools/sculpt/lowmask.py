@@ -12,7 +12,7 @@ from PIL import Image
 BOXES = {
     'front': (20, 25, 324, 455), 'q3': (326, 25, 630, 455), 'profile': (630, 25, 934, 455),
     'r3': (934, 25, 1238, 455), 'back': (1238, 25, 1530, 455),
-    'top': (30, 560, 336, 915), 'bottom': (340, 560, 664, 915),
+    'top': (30, 560, 336, 915), 'bottom': (340, 560, 652, 915),
 }
 K = 2  # half resolution
 
@@ -76,7 +76,18 @@ def views(src):
         for e in eyes:
             got = blobs(brow, lambda x, y, e=e: abs(x - e[0]) < 42 and -40 < y - e[1] < -8, single=True)
             if got: brows.append(got[0])
-        out['views'][name] = {'box': [x0, y0, x1, y1], 'w': w, 'h': h, 'mask': mask, 'pupils': eyes, 'brows': brows}
+        marks = {}
+        if name == 'front' and len(eyes) == 2:
+            # down the face's centre line below the eyes: the first sharp drop into shadow is the nose's underside (the
+            # cliff), the last before the neck the chin's underside
+            cx = round((eyes[0][0] + eyes[1][0]) / 2); ey = round(max(e[1] for e in eyes))
+            lum = lambda y: sum(0.3 * px[x, y][0] + 0.59 * px[x, y][1] + 0.11 * px[x, y][2] for x in range(cx - 4, cx + 5)) / 9
+            drops = [y for y in range(ey + 15, y1 - 60) if lum(y - 2) - lum(y + 1) > 35]
+            runs = [y for i, y in enumerate(drops) if i == 0 or y - drops[i - 1] > 6]
+            if runs:
+                marks['cliff'] = [cx, runs[0]]
+                marks['chin'] = [cx, runs[-1]]
+        out['views'][name] = {'box': [x0, y0, x1, y1], 'w': w, 'h': h, 'mask': mask, 'pupils': eyes, 'brows': brows, 'marks': marks}
     return out
 
 def main(src, dst):
