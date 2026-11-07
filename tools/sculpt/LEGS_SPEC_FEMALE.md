@@ -52,3 +52,12 @@ Decisions
   crotch held under the loincloth between the thighs (y -5.3, z 0; the fit had pushed it in front of the body); her feet
   larger as her full-body front: the toe's half-width 0.36 (was 0.24), the ball's 0.50, landmarks on the toe face's corners.
 - 2026-11-07, the user's decision: the legs are approved after this round (male and female); no further rounds.
+- 2026-11-07, the user's request ("make the seam better from waist to knee; very boxed out and a bad transition"): the
+  waist, hips and thighs one continuous outline as her full-body front draws it (the waist narrowing, the hips flaring,
+  the thighs tapering to the knee), no ledge at the hip line. At the side the hip line stays at y -5.0 but in to the
+  full-body front's outline there (gl half-width 1.46, was 1.62); the thigh's top ring lowered at the front and the side
+  to -5.6 and in to the outline's widest (th outer 1.56, was 1.73 at -5.0, level with the hip line, so the faces between
+  were a flat ledge); at the back the buttock's lower fold to -5.5. In profile, off her leg sheet's profile: the
+  buttock's peak at the hip row's back (-1.15), the thigh's top ring's back -1.12, the mid-thigh ring's back in to -0.86
+  (was -1.07) and its front out to 0.58 (was 0.41), so the buttock rounds into the thigh and the thigh's front runs
+  straight onto the kneecap; the pubic point back to 0.58 (was 0.76, a spike in profile; under the loincloth).

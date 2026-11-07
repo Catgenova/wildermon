@@ -59,3 +59,10 @@ Decisions
   keep the middle ring that rounds them. The point at her reference's front (213, 184), where its facets meet.
 
 - 2026-11-07: the user approved the female torso ("Chest looks good"). Frozen at d3c98201, like the male.
+- 2026-11-07, the user's request to make her waist-to-knee one continuous form (tools/sculpt/LEGS_SPEC_FEMALE.md): below
+  the waist row only, her hip rows follow her full-body front's outline from the waist to the hip cut: hi across by 0.89
+  (side 0.75, was 0.845), hw by 0.94 (side 0.95, was 1.01), so the outline flares steadily into the legs' hips; the hip
+  cut's back moved back onto the buttock's curve that the legs continue (bt5 -0.36, bt6 -0.62, bt7 and bt8 -0.88; it was
+  -0.58, behind which the legs' hip row jumped out to -1.18). The cut's width (1.10) and height are kept. Everything from
+  the waist row up is unchanged (the vertices and faces; only the ambient occlusion on faces near the hips shades up to 3
+  levels differently on the torso sheet).
