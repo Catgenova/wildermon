@@ -12,14 +12,14 @@
 //   or the chest: the drape's corner), T2 T3 (the border's line), T4 (the teeth's points, between columns), T5 (the hem);
 //   the hem's edge (bevelled, so it shows from the front) to the underside I5, up the underside I1 (under T1) and IT
 //   (under T0);
-//   the cowl from IT: up its inside to the rim d, over the upper roll c, into the crease b, out over the swag a and back
-//   under it to T0.
+//   the cowl from IT: up its inside to the rim d, over the upper roll (u1 its top, u2 its outside), into the crease b,
+//   over the lower roll (l1 its top, l2 its outside) and back under it to T0.
 // One closed surface. The cape's outside is the cloth's drape (lowgarment.mjs drape) over the body grown by the
 // clearance OUT; the underside is the outside moved in by THICK, so the body is at least OUT - THICK under it. The
-// cowl's points lie along the body's own line down from the neck's foot (the ring nm0..nm5): down the chest in front,
-// out over the shoulder at the side, down the back behind (DESIGN.cowl: a length along it and a height off it), the rim
-// standing off the foot itself; each then pushed out until it clears the body. Materials: fabric, trim, pattern (the
-// cream between the teeth), inner (the underside and the cowl's inside).
+// cowl is two rolls (ellipses in the section) lying on the body's own line down from the neck's foot (the ring
+// nm0..nm5): down the chest in front, out over the shoulder at the side, down the back behind (DESIGN.roll), each
+// point then pushed out until it clears the body. 20 columns, 14 rings: 600 triangles. Materials: fabric, trim,
+// pattern (the cream between the teeth), inner (the underside and the cowl's inside).
 import { offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, sub, lerp } from '../lowgarment.mjs';
 
 export const MATS = {
@@ -37,31 +37,38 @@ export const MATS = {
  *   flare: how far out the hanging cloth leans per unit of drop; soften: how far the shoulder's corner moves toward the
  *   straight line from the cowl to the hem; armLift: the share of the upper arm's turn the hem takes over each arm;
  *   border: the strip under the teeth, the teeth, the line over them (from the hem up, along the cloth);
- *   rim: the cowl's inner edge, out from the neck's foot and up from it (its height a V round the front view);
- *   cowl: its points as [length along the body's line from the neck's foot, height off it] (the height leaned out from
- *   the axis): c the upper roll, b the crease, a the swag, T0 the cape's top under it; vee: those whose values run
- *   linearly in the front view's x (a V) rather than by the cosine;
+ *   roll: the cowl's two rolls: lean (their line's normal leaned out from the axis), flat (each roll's height off the
+ *   line over its radius along it), at (the upper roll's centre, its length down the body's line from the neck's foot),
+ *   drop (the lower roll further down, linear in the front view's x: a V), ru, rl (the rolls' radii), gap (the lower
+ *   roll's centre this many of the two radii further), crease (how far out from the line between the centres the
+ *   crease lies, of their mean radius);
+ *   turns: where each ring lies round its roll, degrees in the section (0 out from the axis, 90 up); dip: how far the
+ *   crease stays inside the rolls;
  */
 export const DESIGN = {
   male: {
-    z0: -0.12, front: 6, back: 5, OUT: 0.16, IN: 0.05, THICK: 0.11, bevel: 0.09, flare: 0.15, soften: 0.6, armLift: 0.35,
-    hem: { front: -3.55, corner: -2.3, back: -3.35, p: 1.2 },
+    z0: -0.12, front: 5, back: 5, OUT: 0.16, IN: 0.05, THICK: 0.11, bevel: 0.09, flare: [0.4, 0.2, 0.4], soften: 0.95, armLift: 0.35,
+    hem: { front: -3.9, corner: -2.5, back: -3.6, p: 1.2 },
     border: [0.08, 0.3, 0.06],
-    rim: { r: [0.55, 0.42, 0.48], up: [-0.15, 0.4, 0.35] },
-    vee: ['T0', 'a'], cowl: { T0: [[1.5, 0.15], [1.05, 0.15], [1.5, 0.15]], a: [[1.35, 0.3], [0.92, 0.28], [1.35, 0.3]], b: [[1.0, 0.35], [0.5, 0.35], [0.75, 0.38]], c: [[0.6, 0.75], [0.25, 0.8], [0.3, 0.8]] },
+    dip: 0.12,
+    roll: { lean: [0.3, 0.2, 0.3], flat: [0.75, 0.95, 1.1], at: [0.6, 0.45, -0.15], drop: [0.1, 0, 0.3], ru: [0.4, 0.27, 0.5], rl: [0.4, 0.2, 0.4], gap: 1.05, crease: 0.45 },
+    turns: { d: 165, u1: 95, u2: 15, l1: 50, l2: -25, T0: -115 },
   },
   female: {
-    z0: -0.14, front: 6, back: 5, OUT: 0.14, IN: 0.045, THICK: 0.095, bevel: 0.08, flare: 0.15, soften: 0.4, armLift: 0.45,
-    hem: { front: -2.95, corner: -1.85, back: -2.75, p: 1.2 },
+    z0: -0.14, front: 5, back: 5, OUT: 0.14, IN: 0.045, THICK: 0.095, bevel: 0.08, flare: [0.4, 0.15, 0.4], soften: 0.85, armLift: 0.45,
+    hem: { front: -3.25, corner: -2.05, back: -3.0, p: 1.2 },
     border: [0.07, 0.26, 0.05],
-    rim: { r: [0.46, 0.35, 0.4], up: [-0.2, 0.34, 0.2] },
-    vee: ['T0', 'a'], cowl: { T0: [[1.28, 0.14], [0.9, 0.14], [1.28, 0.14]], a: [[1.15, 0.26], [0.78, 0.24], [1.15, 0.26]], b: [[0.85, 0.3], [0.42, 0.3], [0.64, 0.32]], c: [[0.5, 0.64], [0.2, 0.68], [0.25, 0.6]] },
+    dip: 0.1,
+    roll: { lean: [0.3, 0.2, 0.3], flat: [0.75, 1.0, 1.1], at: [0.5, 0.25, -0.12], drop: [0.08, 0, 0.25], ru: [0.36, 0.23, 0.42], rl: [0.34, 0.17, 0.34], gap: 1.05, crease: 0.45 },
+    turns: { d: 165, u1: 95, u2: 15, l1: 50, l2: -25, T0: -115 },
   },
 };
 
+/** The cowl's rings from the cape's top up to the rim: the lower roll (l2 its underside's turn, l1 its top), the crease b,
+ * the upper roll (u2 its outside, u1 its top); T0 the cape's top tucked under the lower roll. */
+export const COWL = ['l2', 'l1', 'b', 'u2', 'u1'];
 /** A value round the azimuth from its [front, side, back]: by the cosine, or (v) linearly in the front view's x, a V. */
 const blend = ([f, s, b], deg, v = false) => { const c = Math.cos(deg * Math.PI / 180), x = Math.abs(Math.sin(deg * Math.PI / 180)), wf = c > 0 ? (v ? 1 - x : c) : 0, wb = c < 0 ? (v ? 1 - x : -c) : 0; return f * wf + b * wb + s * (1 - wf - wb); };
-const blend2 = (v, deg, vee) => [blend(v.map((x) => x[0]), deg, vee), blend(v.map((x) => x[1]), deg, vee)];
 
 /** The neck's foot (the body's ring nm0..nm5, both sides) where the half-plane of azimuth deg crosses it: [r, y]. */
 function neckFoot(B, z0, deg) {
@@ -129,42 +136,55 @@ export function buildShawl(rig, design = DESIGN[rig.who]) {
     const deg = angles[k], half = Math.max(((angles[(k + 1) % N] - deg + 360) % 360), ((deg - angles[(k + N - 1) % N] + 360) % 360));
     const F = neckFoot(B, z0, deg);
     const yH = hemY(deg);
-    // the cowl's section on the body's own line down from the neck's foot (the bare drape: down the chest in front, out
-    // over the shoulder at the side, down the back behind): each point at a length along it (al) and a height off it
-    // (be); a negative length is up the neck from its foot; the rim d stands off the foot (out, up); every point then
-    // pushed out from the axis until it clears the body (the rim by IN, the rest by OUT)
+    // the cowl's section: two rolls lying on the body's own line down from the neck's foot F (the bare drape: down the
+    // chest in front, out over the shoulder at the side, down the back behind; a negative length is up the neck), the
+    // upper roll's centre `at` along it, the lower roll's `gap` of the two radii further, each its radius plus OUT off the
+    // line (along the line's normal leaned out from the axis by `lean`); the rings at fixed turns round them (D.turns,
+    // degrees in the section: 0 out from the axis, 90 up), the crease where the rolls meet, `crease` plus OUT off the
+    // line; every point then pushed out from the axis until it clears the body (the rim by IN, the rest by OUT)
     const EI = envelope(S, z0, deg, half, D.IN, -6, 3), EO = envelope(S, z0, deg, half, D.OUT, -6, 3);
     const L0 = drape(envelope(S, z0, deg, half, 0, F[1] - 3, F[1] + 0.01), F, F[1] - 2.5);
-    // (off the line along its normal leaned out from the axis: lean 0 for the cape's top, which rests on the body)
-    const onLine = ([al, be], lean = 0.7) => {
-      if (al < 0) return [F[0] + be, F[1] - al];
+    const R = D.roll, at = blend(R.at, deg), ru = blend(R.ru, deg), rl = blend(R.rl, deg), lean = blend(R.lean, deg);
+    // (a point `off` plus OUT off the line at length al, and the line's direction there)
+    const on = (al, off) => {
+      if (al < 0) return { p: [F[0] + D.OUT + off, F[1] - al], t: [0, -1] };
       let s0 = al;
       for (let i = 0; i + 1 < L0.length; i++) {
         const l = Math.hypot(L0[i + 1][0] - L0[i][0], L0[i + 1][1] - L0[i][1]);
-        if (s0 <= l || i + 2 === L0.length) { const p = along([L0[i], L0[i + 1]], s0), n0 = outN(L0[i], L0[i + 1]), n = unit2([n0[0] + lean, n0[1]]); return P2.add(p, P2.mul(n, be)); }
+        if (s0 <= l || i + 2 === L0.length) { const n0 = outN(L0[i], L0[i + 1]); return { p: P2.add(along([L0[i], L0[i + 1]], s0), P2.mul(unit2([n0[0] + lean, n0[1]]), D.OUT + off)), t: unit2(P2.sub(L0[i + 1], L0[i])) }; }
         s0 -= l;
       }
     };
+    // (each roll an ellipse: its radius along the line, `flat` of it off the line)
+    const fl = blend(R.flat, deg), cu = on(at, ru * fl), cl = on(at + R.gap * (ru + rl) + blend(R.drop, deg, true), rl * fl);
+    // (turns in the section: 0 out from the axis, 90 up; the ellipse `flat` of its radius tall)
+    const turn = (c, rho, th) => { const a = th * Math.PI / 180; return P2.add(c.p, [rho * Math.cos(a), rho * fl * Math.sin(a)]); };
     const clear = (p, E) => { const r = reachAt(E, p[1], 0.04); return [Math.max(p[0], r), p[1]]; };
-    const sec = (key, E, lean) => clear(onLine(blend2(D.cowl[key], deg, D.vee.includes(key)), lean), E);
-    const d = clear([F[0] + blend(D.rim.r, deg), F[1] + blend(D.rim.up, deg, true)], EI);
-    const c = sec('c', EO), b = sec('b', EO), a = sec('a', EO);
-    let T0 = sec('T0', EO, 0);
-    cowls.push({ deg, half, F, yH, EO, EI, d, c, b, a, T0 });
+    const Tn = D.turns;
+    // (the crease: on the line between the rolls' centres where they meet, `crease` of their mean radius out from it)
+    const cc = P2.sub(cl.p, cu.p), cn = outN(cu.p, cl.p), crease = P2.add(P2.add(cu.p, P2.mul(cc, ru / (ru + rl))), P2.mul(cn, R.crease * fl * (ru + rl) / 2));
+    const d = clear(turn(cu, ru, Tn.d), EI);
+    const q = { u1: clear(turn(cu, ru, Tn.u1), EO), u2: clear(turn(cu, ru, Tn.u2), EO), b: clear(crease, EO), l1: clear(turn(cl, rl, Tn.l1), EO), l2: clear(turn(cl, rl, Tn.l2), EO) };
+    const T0 = clear(turn(cl, rl, Tn.T0), EO);
+    cowls.push({ deg, half, F, yH, EO, EI, d, T0, ...q });
   }
   // the cowl's points smoothed round the neck (the neck's foot turns sharply behind the shoulders), then cleared again
-  for (const key of ['d', 'c', 'b', 'a', 'T0']) {
+  for (const key of ['d', ...COWL, 'T0']) {
     const v = cowls.map((q) => q[key]);
     cowls.forEach((q, k) => { const p = v[(k + N - 1) % N], n = v[(k + 1) % N], m = v[k]; q[key] = [0.25 * p[0] + 0.5 * m[0] + 0.25 * n[0], 0.25 * p[1] + 0.5 * m[1] + 0.25 * n[1]]; });
   }
   for (let k = 0; k < N; k++) {
     const { deg, half, F, yH, EO, EI } = cowls[k];
     const clr = (p, E = EO) => { const r = reachAt(E, p[1], 0.04); return [Math.max(p[0], r), p[1]]; };
-    let T0 = clr(cowls[k].T0), a = clr(cowls[k].a), b = clr(cowls[k].b), c = clr(cowls[k].c);
+    let T0 = clr(cowls[k].T0);
+    const q = Object.fromEntries(COWL.map((key) => [key, clr(cowls[k][key])]));
     const d = clr(cowls[k].d, EI);
-    // the crease stays inside the roll over it and the swag under it (no ridge standing out between them): where the
-    // body pushes it out, the roll and the swag go out with it
-    if (b[0] > Math.min(a[0], c[0]) - 0.08) { a = [Math.max(a[0], b[0] + 0.08), a[1]]; c = [Math.max(c[0], b[0] + 0.06), c[1]]; }
+    // the crease stays inside the rolls over and under it (no ridge standing out between them): where the body pushes it
+    // out, the rolls go out with it
+    const dip = D.dip ?? 0.08;
+    // (and off the cowl's inside, the wall from the rim down under the cape's top, by THICK)
+    { const n = outN(d, T0), h = (q.b[0] - d[0]) * n[0] + (q.b[1] - d[1]) * n[1], m = D.THICK + 0.04; if (h < m) q.b = P2.add(q.b, P2.mul(n, m - h)); }
+    if (q.b[0] > Math.min(q.l1[0], q.u2[0]) - dip) { q.l1 = [Math.max(q.l1[0], q.b[0] + dip), q.l1[1]]; q.u2 = [Math.max(q.u2[0], q.b[0] + dip), q.u2[1]]; }
     // the cape: the drape over the body grown by OUT, from under the swag down to the hem
     const E = envelope(S, z0, deg, half, D.OUT, yH - 0.05, T0[1] + 0.6);
     const L = drape(E, T0, yH);
@@ -175,7 +195,7 @@ export function buildShawl(rig, design = DESIGN[rig.who]) {
     if (best < 0.02) T1 = [T0[0] + (Hm[0] - T0[0]) * 0.3, T0[1] + (Hm[1] - T0[1]) * 0.3];
     let T5 = [Hm[0], yH];
     // the hanging part leans out by the flare
-    T5 = [T5[0] + D.flare * (T1[1] - yH), yH];
+    T5 = [T5[0] + blend(D.flare, deg) * (T1[1] - yH), yH];
     // the corner softened toward the straight line from T0 to the hem (a poncho's sloped shoulder), then pushed back out
     // as far as the body needs
     const mid = P2.add(T0, P2.mul(P2.sub(T5, T0), ((T0[1] - T1[1]) / Math.max(1e-6, T0[1] - T5[1]))));
@@ -191,7 +211,7 @@ export function buildShawl(rig, design = DESIGN[rig.who]) {
     const I5 = P2.sub(P2.sub(T5, P2.mul(n2, D.THICK)), P2.mul(up, D.bevel));
     const I1 = meet(P2.sub(T0, P2.mul(n1, D.THICK)), P2.sub(T1, P2.mul(n1, D.THICK)), P2.sub(T1, P2.mul(n2, D.THICK)), I5);
     const IT = P2.sub(T0, P2.mul(n1, D.THICK));
-    cols.push({ deg, F, d, c, b, a, T0, T1, T2, T3, T4, T5, I5, I1, IT, yH });
+    cols.push({ deg, F, d, ...q, T0, T1, T2, T3, T4, T5, I5, I1, IT, yH });
   }
   return meshOfShawl(rig, D, cols, S);
 }
@@ -209,7 +229,7 @@ function meshOfShawl(rig, D, cols, S) {
   const ring = (key, part) => cols.map((c) => G.vert(atRY(c.deg, c[key][0], c[key][1], z0), part));
   const R = {};
   for (const key of ['T5', 'T3', 'T2', 'T1', 'T0']) R[key] = ring(key, 'cape');
-  for (const key of ['a', 'b', 'c', 'd']) R[key] = ring(key, 'cowl');
+  for (const key of [...COWL, 'd']) R[key] = ring(key, 'cowl');
   for (const key of ['IT', 'I1', 'I5']) R[key] = ring(key, 'cape');
   // the teeth's points: between each two columns, on the chord of their T4s
   const apex = cols.map((c, k) => { const c2 = cols[(k + 1) % N]; return G.vert(lerp(atRY(c.deg, c.T4[0], c.T4[1], z0), atRY(c2.deg, c2.T4[0], c2.T4[1], z0), 0.5), 'cape'); });
@@ -238,10 +258,7 @@ function meshOfShawl(rig, D, cols, S) {
   band(R.T3, R.T2, 'trim', 'cape', 'T3-T2');
   band(R.T2, R.T1, 'fabric', 'cape', 'T2-T1');
   band(R.T1, R.T0, 'fabric', 'cape', 'T1-T0');
-  band(R.T0, R.a, 'fabric', 'cowl', 'T0-a');
-  band(R.a, R.b, 'fabric', 'cowl', 'a-b');
-  band(R.b, R.c, 'fabric', 'cowl', 'b-c');
-  band(R.c, R.d, 'fabric', 'cowl', 'c-d');
+  [['T0', ...COWL, 'd']].forEach((L) => L.slice(1).forEach((key, i) => band(R[L[i]], R[key], 'fabric', 'cowl', `${L[i]}-${key}`)));
   band(R.d, R.IT, 'inner', 'cowl', 'd-IT', -1);
   band(R.IT, R.I1, 'inner', 'cape', 'IT-I1', -1);
   band(R.I1, R.I5, 'inner', 'cape', 'I1-I5', -1);
