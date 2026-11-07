@@ -40,36 +40,65 @@ const FOOT_COL = [0, 1, 2, 4, 6, 8];
 const ARM = { rows: ['da', 'db', 'dc'], cols: [3, 4, 5] };
 const BREAST = { rows: ['da', 'db', 'dc'], cols: [0, 1, 2] };
 
-/** The faces of one half, by vertex name: [names, part, name of the polygon]. */
-export function halfFaces(breasts) {
-  const F = [];
-  const f = (v, part, name) => F.push({ v, part, name: name ?? v.join('-') });
+/** The faces of one half, by vertex name: { v: names, part, name }. The grid's cells are keyed by their upper row and
+ * left column ('da2' the cell from da2 down to db3); the faces from the neck's foot 'nb0'..'nb4' (with 'nb2t' and so
+ * on for the triangles closing a column between). P.merge lists the groups of cells (or of those faces) that are one
+ * plane in the reference: each becomes one polygon round the group's outline, its inner vertices left out. */
+export function halfFaces(P) {
+  const breasts = !!P.breasts;
+  const F = new Map();
+  const f = (key, v, part, name) => F.set(key, { v, part, name: name ?? v.join('-') });
   // the neck, standing alone: from the foot up to the flat cut nt0..nt5
-  for (let i = 0; i < 5; i++) f([NECK_FOOT[i], NECK_FOOT[i + 1], `nt${i + 1}`, `nt${i}`], 'neck');
+  for (let i = 0; i < 5; i++) f(`nk${i}`, [NECK_FOOT[i], NECK_FOOT[i + 1], `nt${i + 1}`, `nt${i}`], 'neck');
   // from the neck's foot to tr: a quad where the columns meet one to one, else a triangle to the column between and a quad
   for (let i = 0; i < 5; i++) {
     const a = NECK_FOOT[i], b = NECK_FOOT[i + 1], ja = FOOT_COL[i], jb = FOOT_COL[i + 1];
-    if (jb - ja === 1) f([a, b, `tr${jb}`, `tr${ja}`], 'torso');
-    else { f([a, `tr${ja + 1}`, `tr${ja}`], 'torso'); f([a, b, `tr${jb}`, `tr${ja + 1}`], 'torso'); }
+    if (jb - ja === 1) f(`nb${i}`, [a, b, `tr${jb}`, `tr${ja}`], 'torso');
+    else { f(`nb${i}t`, [a, `tr${ja + 1}`, `tr${ja}`], 'torso'); f(`nb${i}`, [a, b, `tr${jb}`, `tr${ja + 1}`], 'torso'); }
   }
   const inArm = (r, j) => ARM.rows.indexOf(r) >= 0 && ARM.rows.indexOf(r) < 2 && j >= ARM.cols[0] && j < ARM.cols[2];
   const inBreast = (r, j) => breasts && BREAST.rows.indexOf(r) >= 0 && BREAST.rows.indexOf(r) < 2 && j >= BREAST.cols[0] && j < BREAST.cols[2];
   for (let i = 0; i + 1 < ROWS.length; i++) for (let j = 0; j < COLS - 1; j++) {
     const r = ROWS[i], s = ROWS[i + 1];
     if (inArm(r, j) || inBreast(r, j)) continue;
-    f([`${r}${j}`, `${r}${j + 1}`, `${s}${j + 1}`, `${s}${j}`], 'torso');
+    const k = `${r}${j}`, A = `${r}${j}`, B = `${r}${j + 1}`, C = `${s}${j + 1}`, D = `${s}${j}`;
+    // P.split: a cell the reference cuts on a diagonal, two triangles: 'a' the lower left one, 'b' the upper right
+    // (the diagonal from its upper left corner, or with '/' from its upper right)
+    const sp = (P.split ?? []).find((x) => x.replace('/', '') === k);
+    if (!sp) f(k, [A, B, C, D], 'torso');
+    else if (sp.includes('/')) { f(k + 'a', [A, B, D], 'torso'); f(k + 'b', [B, C, D], 'torso'); }
+    else { f(k + 'a', [A, C, D], 'torso'); f(k + 'b', [A, B, C], 'torso'); }
   }
   // the arm's cut: one flat face
-  f(['da3', 'da4', 'da5', 'db5', 'dc5', 'dc4', 'dc3', 'db3'], 'torso', 'arm cut');
+  f('arm', ['da3', 'da4', 'da5', 'db5', 'dc5', 'dc4', 'dc3', 'db3'], 'torso', 'arm cut');
   if (breasts) {
     const B = ['da0', 'da1', 'da2', 'db2', 'dc2', 'dc1', 'dc0', 'db0'];
     for (let k = 0; k < 8; k++) {
       const k1 = (k + 1) % 8;
-      f([B[k], B[k1], `br${k1}`, `br${k}`], 'torso');
-      f([`br${k}`, `br${k1}`, 'db1'], 'torso');
+      f(`bq${k}`, [B[k], B[k1], `br${k1}`, `br${k}`], 'torso');
+      f(`bt${k}`, [`br${k}`, `br${k1}`, 'db1'], 'torso');
     }
   }
-  return F;
+  // the reference's single planes: each group's cells one polygon, round the outline of their union
+  for (const { name, cells, region } of P.merge ?? []) {
+    const edges = new Map();
+    for (const c of cells) {
+      const face = F.get(c);
+      if (!face) throw new Error(`merge ${name}: no cell ${c}`);
+      F.delete(c);
+      face.v.forEach((u, i) => {
+        const w = face.v[(i + 1) % face.v.length];
+        if (edges.has(`${w}>${u}`)) edges.delete(`${w}>${u}`); else edges.set(`${u}>${w}`, [u, w]);
+      });
+    }
+    const next = new Map([...edges.values()].map(([u, w]) => [u, w]));
+    if (next.size !== edges.size) throw new Error(`merge ${name}: its outline is not one loop`);
+    const start = next.keys().next().value, loop = [start];
+    for (let u = next.get(start); u !== start; u = next.get(u)) { loop.push(u); if (loop.length > next.size) throw new Error(`merge ${name}: open outline`); }
+    if (loop.length !== next.size) throw new Error(`merge ${name}: its outline is more than one loop`);
+    F.set(name, { v: loop, part: 'torso', name, region });
+  }
+  return [...F.values()];
 }
 /** The faces across the centre line, emitted once; a name with ' is the other side's vertex. */
 export function spanFaces() {
@@ -113,21 +142,39 @@ export const PRESETS = {
     // measured off his reference: x and y of the front-facing points off the front view, of the back-facing off the back
     // view, z off the profile (66 sheet pixels a unit, the pivot [0, -2, 0] at the front view's (163, 239))
     V: {
-      nt0: [0, 0.33, 0.39], nt1: [0.22, 0.35, 0.33], nt2: [0.42, 0.4, -0.02], nt3: [0.4, 0.45, -0.32], nt4: [0.24, 0.48, -0.46], nt5: [0, 0.49, -0.5],
-      tr0: [0, -0.64, 0.55], tr1: [0.47, -0.59, 0.55], tr2: [0.85, -0.55, 0.45], tr3: [1.17, -0.53, 0.25], tr4: [1.45, -0.53, -0.05], tr5: [1.35, -0.5, -0.45], tr6: [0.91, -0.53, -0.85], tr7: [0.45, -0.45, -0.92], tr8: [0, -0.35, -0.88],
-      sd0: [0, -0.88, 0.72], sd1: [0.5, -0.86, 0.78], sd2: [1.0, -0.79, 0.62], sd3: [1.5, -0.92, 0.38], sd4: [1.83, -1.06, 0], sd5: [1.5, -0.92, -0.55], sd6: [1.0, -0.7, -1.1], sd7: [0.5, -0.72, -1.12], sd8: [0, -0.72, -1.08],
-      da0: [0, -1.11, 0.85], da1: [0.6, -1.11, 0.9], da2: [1.17, -1.03, 0.75], da3: [1.6, -1.55, 0.35], da4: [1.79, -1.6, 0], da5: [1.6, -1.55, -0.45], da6: [1.05, -1.0, -1.15], da7: [0.5, -1.0, -1.18], da8: [0, -1.0, -1.15],
-      db0: [0, -1.48, 0.92], db1: [0.77, -1.45, 0.95], db2: [1.32, -1.26, 0.7], db3: [1.45, -1.66, 0.45], db5: [1.45, -1.66, -0.5], db6: [1.1, -1.3, -1.12], db7: [0.45, -1.3, -1.15], db8: [0, -1.3, -1.12],
-      dc0: [0, -1.55, 0.82], dc1: [0.8, -1.81, 0.82], dc2: [1.17, -1.6, 0.6], dc3: [1.3, -1.66, 0.35], dc4: [1.32, -1.68, 0], dc5: [1.3, -1.66, -0.42], dc6: [1.1, -1.6, -1.05], dc7: [0.4, -1.56, -1.08], dc8: [0, -1.6, -1.05],
-      ...ring('ra', -2.03, 1.14, 0.9, -0.9, 2.6, [0, -0.09, -0.21, -0.2, -0.15]),
-      ...ring('rb', -2.38, 0.95, 0.85, -0.8, 2.6, [0, -0.06, -0.08, -0.05]),
-      ...ring('rc', -2.73, 0.89, 0.79, -0.65, 2.6, [0, -0.03, 0.05, 0.1, 0.12, 0.1]),
-      ...ring('wa', -3.0, 0.92, 0.76, -0.64),
-      ...ring('hi', -3.3, 0.98, 0.76, -0.72, 2.6, [0, 0, 0.06, 0.04]),
-      ...ring('hw', -3.6, 1.05, 0.72, -0.8, 2.6, [0, -0.08, -0.04, 0, 0.05]),
-      ...ring('bt', -3.97, 0.55, 0.65, -0.55, 2.2),
+      nt0: [0, 0.33, 0.4], nt1: [0.3, 0.36, 0.29], nt2: [0.43, 0.4, -0.04], nt3: [0.36, 0.45, -0.36], nt4: [0.2, 0.48, -0.5], nt5: [0, 0.49, -0.54],
+      tr0: [0, -0.64, 0.6], tr1: [0.47, -0.6, 0.55], tr2: [0.85, -0.55, 0.52], tr3: [1.17, -0.53, 0.25], tr4: [1.45, -0.53, -0.15], tr5: [1.2, -0.5, -0.55], tr6: [0.91, -0.55, -1.109], tr7: [0.42, -0.56, -1.096], tr8: [0, -0.5, -1.08],
+      sd0: [0, -0.9, 0.71], sd1: [0.5, -0.9, 0.7], sd2: [1.27, -1.15, 0.76], sd3: [1.57, -1.18, 0.38], sd4: [1.85, -1.08, -0.15], sd5: [1.55, -1.0, -0.75], sd6: [1.14, -0.73, -1.13], sd7: [0.58, -0.65, -1.108], sd8: [0, -0.65, -1.093],
+      da0: [0, -1.15, 0.82], da1: [0.6, -1.15, 0.8], da2: [1.3, -1.22, 0.74], da3: [1.71, -1.57, 0.14], da4: [1.78, -1.52, -0.2], da5: [1.71, -1.57, -0.54], da6: [1.33, -1.1, -0.85], da7: [0.89, -1.02, -1.148], da8: [0, -1.1, -1.131],
+      db0: [0, -1.48, 0.97], db1: [0.77, -1.45, 0.9], db2: [1.32, -1.26, 0.72], db3: [1.55, -1.68, 0.28], db5: [1.55, -1.68, -0.68], db6: [1.26, -1.41, -0.85], db7: [0.67, -1.3, -1.166], db8: [0, -1.41, -1.157],
+      dc0: [0, -1.56, 0.8], dc1: [0.8, -1.82, 0.78], dc2: [1.17, -1.62, 0.6], dc3: [1.39, -1.79, 0.14], dc4: [1.32, -1.84, -0.2], dc5: [1.39, -1.79, -0.54], dc6: [1.18, -1.62, -0.8], dc7: [0.42, -1.59, -1.184], dc8: [0, -1.68, -1.18],
+      ra0: [0, -2.03, 0.9], ra1: [0.56, -2.12, 0.86], ra2: [0.86, -2.24, 0.7], ra3: [1.05, -2.2, 0.42], ra4: [1.13, -2.15, 0], ra5: [1.08, -2.0, -0.5], ra6: [0.85, -2.05, -0.8], ra7: [0.42, -2.03, -0.9], ra8: [0, -2.05, -0.88],
+      rb0: [0, -2.38, 0.86], rb1: [0.5, -2.44, 0.83], rb2: [0.78, -2.45, 0.66], rb3: [0.93, -2.45, 0.38], rb4: [0.98, -2.4, 0], rb5: [0.92, -2.38, -0.4], rb6: [0.68, -2.4, -0.68], rb7: [0.3, -2.38, -0.78], rb8: [0, -2.38, -0.78],
+      rc0: [0, -2.73, 0.8], rc1: [0.5, -2.76, 0.77], rc2: [0.72, -2.75, 0.6], rc3: [0.85, -2.66, 0.38], rc4: [0.89, -2.61, 0], rc5: [0.85, -2.6, -0.32], rc6: [0.62, -2.68, -0.55], rc7: [0.26, -2.7, -0.64], rc8: [0, -2.72, -0.62],
+      wa0: [0, -3.0, 0.77], wa1: [0.5, -3.0, 0.74], wa2: [0.63, -3.0, 0.62], wa3: [0.85, -2.95, 0.4], wa4: [0.92, -2.95, 0], wa5: [0.88, -3.0, -0.3], wa6: [0.62, -3.0, -0.55], wa7: [0.25, -3.0, -0.63], wa8: [0, -3.0, -0.63],
+      hi0: [0, -3.3, 0.76], hi1: [0.45, -3.3, 0.73], hi2: [0.8, -3.24, 0.55], hi3: [0.97, -3.3, 0.38], hi4: [1.02, -3.3, 0], hi5: [0.95, -3.3, -0.36], hi6: [0.68, -3.3, -0.62], hi7: [0.28, -3.3, -0.72], hi8: [0, -3.3, -0.72],
+      hw0: [0, -3.65, 0.73], hw1: [0.42, -3.67, 0.7], hw2: [0.8, -3.6, 0.5], hw3: [1.0, -3.58, 0.36], hw4: [1.05, -3.56, 0], hw5: [1.0, -3.56, -0.42], hw6: [0.72, -3.58, -0.7], hw7: [0.33, -3.6, -0.8], hw8: [0, -3.6, -0.82],
+      bt0: [0, -3.97, 0.66], bt1: [0.22, -3.97, 0.62], bt2: [0.4, -3.97, 0.48], bt3: [0.5, -3.97, 0.32], bt4: [0.55, -3.97, 0], bt5: [0.52, -3.97, -0.3], bt6: [0.4, -3.97, -0.45], bt7: [0.2, -3.97, -0.53], bt8: [0, -3.97, -0.55],
     },
     breasts: false,
+    // his reference's single planes (its front view and the topology panel)
+    merge: [
+      { name: 'collarbone', cells: ['nb0', 'nb1'], region: 'shoulder' },
+      { name: 'trapezius front', cells: ['nb2t', 'nb2'], region: 'shoulder' },
+      { name: 'pectoral', cells: ['tr0', 'tr1', 'sd0', 'sd1', 'da0', 'da1'], region: 'chest' },
+      { name: 'deltoid top', cells: ['tr2', 'tr3'], region: 'shoulder' },
+      { name: 'deltoid front', cells: ['sd2', 'sd3', 'da2'], region: 'shoulder' },
+      { name: 'lower abs', cells: ['wa0', 'hi0', 'hw0'], region: 'pelvis' },
+      // the back: the shoulder blade's plane from under the trapezius to the spine, cut from the plane beside it by a
+      // diagonal down and in to the blade's tip (dc7); the lat beside the spine's muscles down to the waist
+      { name: 'shoulder blade', cells: ['tr6', 'tr7', 'sd6b', 'sd7', 'da7', 'db7'], region: 'shoulder' },
+      { name: 'teres', cells: ['sd6a', 'da6', 'db6'], region: 'shoulder' },
+      { name: 'lat', cells: ['dc6', 'ra6', 'rb6', 'rc6'], region: 'abdomen' },
+      { name: 'spine', cells: ['dc7', 'ra7', 'rb7', 'rc7'], region: 'abdomen' },
+      { name: 'lower back', cells: ['wa6', 'hi6'], region: 'pelvis' },
+      { name: 'sacrum', cells: ['wa7', 'hi7'], region: 'pelvis' },
+    ],
+    split: ['sd6'],
   },
 };
 
@@ -192,9 +239,9 @@ export function buildLowTorso(who = 'male', preset = null) {
   const poly = (v, part, name, region) => polys.push({ v, part, region, mat: 'skin', name });
   for (const s of [1, -1]) {
     const sd = s > 0 ? 'R' : 'L';
-    for (const f of halfFaces(P.breasts)) {
+    for (const f of halfFaces(P)) {
       const v = outward(f.v.map((n) => ids[s][n]), f.name);
-      poly(v, f.part, f.name + ':' + sd, regionOf(f.name, who));
+      poly(v, f.part, f.name + ':' + sd, f.region ?? regionOf(f.name, who));
     }
   }
   const span = (n) => (n.endsWith("'") ? ids[-1][n.slice(0, -1)] : ids[1][n]);
@@ -207,7 +254,8 @@ export function buildLowTorso(who = 'male', preset = null) {
   return { verts, polys, tris: triList, counts, V, ids };
 }
 
-/** Each polygon fanned along its shorter diagonal (quads) or from its first point. */
+/** Each polygon in triangles: a quad split so it folds outward, a larger polygon ear-clipped in its own plane (a merged
+ * plane's outline need not be convex). */
 function tris(v, verts) {
   if (v.length === 3) return [v];
   if (v.length === 4 && verts) {
@@ -215,8 +263,28 @@ function tris(v, verts) {
     const behind = dot(cross(sub(b, a), sub(c, a)), sub(d, a)) < 0;
     return behind ? [[v[0], v[1], v[2]], [v[0], v[2], v[3]]] : [[v[0], v[1], v[3]], [v[1], v[2], v[3]]];
   }
-  const out = [];
-  for (let i = 1; i + 1 < v.length; i++) out.push([v[0], v[i], v[i + 1]]);
+  const pts = v.map((i) => verts[i]);
+  let n = [0, 0, 0];
+  for (let i = 0; i < pts.length; i++) n = add(n, cross(pts[i], pts[(i + 1) % pts.length]));
+  const u = Math.abs(n[0]) < 0.9 * Math.hypot(...n) ? cross(n, [1, 0, 0]) : cross(n, [0, 1, 0]), w = cross(n, u);
+  const P2 = pts.map((p) => [dot(p, u), dot(p, w)]);
+  const area2 = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  let sgn = 0; for (let i = 0; i < P2.length; i++) sgn += area2([0, 0], P2[i], P2[(i + 1) % P2.length]);
+  const idx = v.map((_, i) => i), out = [];
+  let guard = 0;
+  while (idx.length > 3 && guard++ < 500) {
+    let cut = -1;
+    for (let k = 0; k < idx.length && cut < 0; k++) {
+      const a = idx[(k + idx.length - 1) % idx.length], b = idx[k], c = idx[(k + 1) % idx.length];
+      if (area2(P2[a], P2[b], P2[c]) * sgn <= 1e-12) continue;
+      const inside = idx.some((q) => q !== a && q !== b && q !== c && area2(P2[a], P2[b], P2[q]) * sgn > 0 && area2(P2[b], P2[c], P2[q]) * sgn > 0 && area2(P2[c], P2[a], P2[q]) * sgn > 0);
+      if (!inside) cut = k;
+    }
+    if (cut < 0) cut = 0;
+    const a = idx[(cut + idx.length - 1) % idx.length], b = idx[cut], c = idx[(cut + 1) % idx.length];
+    out.push([v[a], v[b], v[c]]); idx.splice(cut, 1);
+  }
+  out.push(idx.map((i) => v[i]));
   return out;
 }
 

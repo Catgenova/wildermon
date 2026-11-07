@@ -81,20 +81,10 @@
     142,
     "tr4"
    ],
-   "pectoral outer edge, upper": [
-    229,
-    159,
-    "sd2"
-   ],
    "shoulder widest": [
     284,
     179,
     "sd4"
-   ],
-   "pectoral outer edge, lower": [
-    240,
-    175,
-    "da2"
    ],
    "pectoral front lower edge, centre": [
     170,
@@ -220,6 +210,16 @@
     165,
     369,
     "bt0"
+   ],
+   "deltoid facets' edge": [
+    266,
+    184,
+    "sd3"
+   ],
+   "deltoid facets' edge, inner": [
+    247,
+    187,
+    "sd2"
    ]
   },
   "q3": {
@@ -422,13 +422,13 @@
     "dc4'"
    ],
    "shoulder blade top": [
-    1011.7,
-    153.3,
+    1003,
+    155,
     "sd6"
    ],
    "shoulder blade top'": [
-    1136.7,
-    153.3,
+    1153,
+    155,
     "sd6'"
    ],
    "shoulder blade tip": [
@@ -472,9 +472,19 @@
     "bt4'"
    ],
    "trapezius point": [
-    1078.3,
-    130,
+    1078,
+    140,
     "tr8"
+   ],
+   "trapezius edge": [
+    1018,
+    143,
+    "tr6"
+   ],
+   "spine at the blades' tips": [
+    1078,
+    218,
+    "dc8"
    ]
   },
   "r3": {

@@ -17,7 +17,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildLowTorso, PRESETS, NECK_FOOT } from './lowtorso.mjs';
-import { CAMS_FILE, TORSO_CAMS, TORSO_VIEWS as VIEWS, loadCams, project } from './lowcam.mjs';
+import { CAMS_FILE, TORSO_CAMS, TORSO_VIEWS as VIEWS, loadCams, project, rotation } from './lowcam.mjs';
 import { rasterSilhouette, outline, distanceTo, descend } from './lowsil.mjs';
 
 const args = process.argv.slice(2);
@@ -192,11 +192,20 @@ if (stage === 'mesh') {
   const start = structuredClone(preset.V);
   const moved = () => { let t = 0; for (const n of names) for (let k = 0; k < 3; k++) t += (preset.V[n][k] - start[n][k]) ** 2; return t; };
   const camPs = args.includes('--with-camera') ? camParams(only, 1) : [];
+  // --shift: the whole torso moved up and down and back and forth against the neck's foot (which never moves), free of
+  // --reg; every camera moved with it, so only the neck's foot moves on the sheet
+  const shift = [0, 0];
+  const shiftPs = args.includes('--shift') ? [1, 2].map((k, q) => ({ step: 0.02, get: () => shift[q], set: (x) => {
+    const d = x - shift[q]; shift[q] = x;
+    for (const n of Object.keys(preset.V)) { if (NECK_FOOT.includes(n)) continue; preset.V[n][k] += d; if (start[n]) start[n][k] += d; }
+    for (const v of VIEWS) { const c = cams[v], r = rotation(c); c.cx -= c.s * r[k] * d; c.cy += c.s * r[3 + k] * d; }
+  } })) : [];
   const total = () => { mesh = buildLowTorso(who, preset); return score() + 20 * folds(mesh, base0) + reg * moved() + flatW * warp(mesh); };
-  for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...ps, ...camPs], total, 1).toFixed(1));
+  for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...shiftPs, ...ps, ...camPs], total, 1).toFixed(1));
+  if (shiftPs.length) console.log('shift', shift.map((x) => x.toFixed(3)).join(' '));
   mesh = buildLowTorso(who, preset);
   writeFileSync(join(DIR, `lowtfit-${who}.json`), JSON.stringify({ V: preset.V }, null, 1));
-  if (camPs.length) saveCams(cams);
+  if (camPs.length || shiftPs.length) saveCams(cams);
   report('after');
 }
 
