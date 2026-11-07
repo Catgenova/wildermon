@@ -136,7 +136,7 @@ const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform int
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
   ' vec3 nn = normalize(vn); if (!gl_FrontFacing) nn = -nn;' +
   ' vec3 base = vec3(0.68, 0.49, 0.41);' +
-  ' float jit = fract(vm.z) - 0.5, occ = floor(vm.z) / 100.0; base *= 1.0 + jit*0.03; base.r += jit*0.01;' +
+  ' float jit = fract(vm.z) - 0.5, occ = floor(vm.z) / 100.0; base *= 1.0 + jit*0.02; base.r += jit*0.01;' +
   ' if (vm.x > 0.5 && vm.x < 1.5) base = vec3(0.27, 0.17, 0.13);' +
   ' else if (vm.x > 1.5 && vm.x < 2.5) base = pupc;' +
   ' else if (vm.x > 2.5 && vm.x < 3.5) base = lidc;' +
@@ -149,7 +149,7 @@ const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform int
   // upper left, planes facing down darker; other materials take it times their colour.
   ' vec3 Lk = normalize(vec3(0.15,0.2,0.97)), Lr = normalize(vec3(1.0,0.1,0.1)), Lc = normalize(vec3(-0.7,0.6,0.35));' +
   ' float dk = max(dot(nn,Lk),0.0), dr = max(dot(nn,Lr),0.0), dc = max(dot(nn,Lc),0.0);' +
-  ' vec3 L = vec3(0.74 + 0.48*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) + 0.25*dk*vec3(1.0,0.98,0.95) + 0.31*dr*vec3(1.04,0.98,0.86);' +
+  ' vec3 L = vec3(0.74 + 0.32*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) + 0.25*dk*vec3(1.0,0.98,0.95) + 0.31*dr*vec3(1.04,0.98,0.86);' +
   ' vec3 c = (base*L + vec3(0.08,0.38,0.78)*pow(dc,6.0)*(0.3+0.7*base.r/0.68)) * mix(0.3, 1.0, occ);' +
   ' gl_FragColor = vec4(c, 1.0); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
