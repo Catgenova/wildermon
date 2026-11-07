@@ -13,6 +13,7 @@ Facial Features
 - Eyebrows: Thin, gently arched, dark-brown geometric strips.
 - Nose: Small, narrow, angular wedge with a subtly protruding tip. No detailed nostrils.
 - Lips: Minimal geometric upper and lower lips in muted rose-brown, with a subtle cupid's bow.
+  - Removed at the user's request (2026-11-07): no mouth on the female head.
 - Ears: Small, simplified polygonal ears positioned slightly away from the skull.
 - Expression: Neutral, relaxed, and symmetrical.
 

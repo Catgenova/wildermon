@@ -27,7 +27,7 @@ const mesh = buildLowHead(who);
 console.log(who, 'triangles', JSON.stringify(mesh.counts), `head ${mesh.counts.head} (budget 350-700${mesh.counts.head >= 350 && mesh.counts.head <= 700 ? ', in' : ', OUT'})`);
 
 // Flat buffers per part: each triangle its own three vertices, its normal and its material and region.
-const MAT = { skin: 0, brow: 1, pupil: 2, lid: 3, lip: 4 };
+const MAT = { skin: 0, brow: 1, pupil: 2, lid: 3 };
 const REG = { skull: 0, face: 1, neck: 2 };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -109,7 +109,7 @@ mesh.tris.forEach((t, i) => {
 // The wireframe: each polygon's outline once (the quads' diagonals left out), the head and the neck and the stub.
 const seen = new Set(), lines = [];
 for (const p of mesh.polys) {
-  if (p.mat !== 'skin' && p.mat !== 'lip') continue;
+  if (p.mat !== 'skin') continue;
   for (let i = 0; i < p.v.length; i++) {
     const a = p.v[i], b = p.v[(i + 1) % p.v.length];
     const key = a < b ? `${a}-${b}` : `${b}-${a}`;
@@ -124,13 +124,13 @@ const DATA = {
   grad: +opt('grad', '0.4'),
   clip: female ? -0.36 : -0.24, // where the bottom view cuts the shoulders off, as the references' do
   // the lights' strengths: the ambient, the key from the front right, the warm fill from the right, the cool rim from behind left
-  amb: +opt('amb', '0.62'), key: +opt('key', '0.28'), warm: +opt('warm', '0.24'), cool: +opt('cool', '1.2'), // the gradient over each face toward the key light, per unit of the head (0: none)
+  amb: +opt('amb', '0.68'), key: +opt('key', '0.34'), warm: +opt('warm', '0.24'), cool: +opt('cool', '1.2'), rim: +opt('rim', '0.6'), cspec: +opt('cspec', '0.4'), kx: +opt('kx', '0.3'), ky: +opt('ky', '0.5'), aolo: +opt('aolo', '0.5'), // the gradient over each face toward the key light, per unit of the head (0: none)
   parts, lines, pitch, topPitch, normals, counts: mesh.counts,
   pupil: female ? [0.2, 0.21, 0.25] : [0.09, 0.09, 0.11],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
   title: female ? 'Female Head Modeling Guide' : 'Modeling Guide',
   checks: female
-    ? ['Stylized low-poly head', 'Feminine proportions', 'Bald (no hair)', 'Soft, tapered jawline', 'Small, angular nose and lips', 'Game-ready topology']
+    ? ['Stylized low-poly head', 'Feminine proportions', 'Bald (no hair)', 'Soft, tapered jawline', 'Small, angular nose', 'Game-ready topology']
     : ['Stylized low-poly head', 'Angular, faceted planes', 'Bald (no hair)', 'Strong brow and jaw', 'Simple, solid features', 'Game-ready topology'],
   legend: female ? ['Skull / Forehead', 'Face Planes', 'Neck'] : ['Forehead / Skull', 'Face Planes', 'Neck'],
 };
@@ -158,7 +158,7 @@ const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true
 const vs = 'attribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift;' +
   'varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; void main(){ vec3 q = R*(p - piv); vn = R*n; vd = q - R*(s - piv); vm = m; vy = p.y;' +
   ' gl_Position = vec4(off + sc*q.xy, -q.z/8.0 - lift, 1.0); }';
-const fs = '#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; uniform float clipY; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
+const fs = '#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\n#define RIM ' + D.rim.toFixed(3) + '\n#define CSPEC ' + D.cspec.toFixed(3) + '\n#define KX ' + D.kx.toFixed(3) + '\n#define KY ' + D.ky.toFixed(3) + '\n#define AOLO ' + D.aolo.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; uniform float clipY; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
   // the bottom view cuts the shoulders off at clipY, and the cut reads as a flat cap: the inside seen through it
   ' if (vy < clipY) discard; if (clipY > -9.0 && vn.z < 0.0) { gl_FragColor = vec4(vec3(0.68, 0.49, 0.41)*vec3(0.78,0.74,0.72), 1.0); return; }' +
@@ -170,18 +170,17 @@ const fs = '#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixe
   ' if (vm.x > 0.5 && vm.x < 1.5) base = vec3(0.36, 0.22, 0.15);' +
   ' else if (vm.x > 1.5 && vm.x < 2.5) base = pupc;' +
   ' else if (vm.x > 2.5 && vm.x < 3.5) base = lidc;' +
-  ' else if (vm.x > 3.5) base = vec3(0.52, 0.32, 0.32);' +
   ' if (mode == 3) { gl_FragColor = vm.x < 0.5 ? vec4(nn*0.5+0.5, 1.0) : vec4(0.0,0.0,0.0,1.0); return; }' +
   ' if (mode == 1) { vec3 rc = vm.y < 0.5 ? vec3(0.62,0.60,0.60) : (vm.y < 1.5 ? vec3(0.82,0.62,0.45) : vec3(0.70,0.52,0.50));' +
   '   if (vm.x > 0.5) rc = vm.x < 2.5 ? vec3(0.2,0.16,0.15) : rc;' +
   '   float l = 0.82 + 0.18*max(dot(nn, normalize(vec3(-0.4,0.5,0.8))),0.0); gl_FragColor = vec4(rc*l,1.0); return; }' +
   // The light, in view space: a warm key from the front and above, a warm fill from the right, a cool rim from the
   // upper left, planes facing down darker; other materials take it times their colour.
-  ' vec3 Lk = normalize(vec3(0.45,0.3,0.84)), Lr = normalize(vec3(1.0,0.45,0.05)), Lc = normalize(vec3(-0.7,0.6,0.35)), Lb = normalize(vec3(-0.95,0.25,-0.2));' +
+  ' vec3 Lk = normalize(vec3(KX,KY,0.84)), Lr = normalize(vec3(1.0,0.45,0.05)), Lc = normalize(vec3(-0.7,0.6,0.35)), Lb = normalize(vec3(-0.95,0.25,-0.2));' +
   ' float dk = max(dot(nn,Lk),0.0), dr = max(dot(nn,Lr),0.0), dc = max(dot(nn,Lc),0.0);' +
   ' vec3 L = vec3(AMB + 0.14*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) * vec3(1.02,0.98,0.94) + KEY*dk*vec3(1.0,0.97,0.92) + WARM*dr*vec3(1.04,0.96,0.84);' +
   ' L *= grad;' +
-  ' vec3 c = (base*L + vec3(0.12,0.34,0.6)*pow(dc,6.0)*(0.3+0.7*base.r/0.68) + COOL*vec3(0.2,0.27,0.36)*pow(max(dot(nn,Lb),0.0),2.5)*(0.3+0.7*base.r/0.68)) * mix(0.2, 1.06, occ*occ);' +
+  ' vec3 c = (base*L + CSPEC*vec3(0.12,0.34,0.6)*pow(dc,6.0)*(0.3+0.7*base.r/0.68) + COOL*vec3(0.2,0.27,0.36)*pow(max(dot(nn,Lb),0.0),2.5)*(0.3+0.7*base.r/0.68) + RIM*vec3(0.5,0.62,0.85)*max(-nn.x,0.0)*pow(1.0-max(nn.z,0.0),3.0)*(0.3+0.7*base.r/0.68)) * mix(AOLO, 1.06, occ*occ);' +
   ' gl_FragColor = vec4(c, 1.0); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);

@@ -3,13 +3,13 @@
 //
 //   node tools/sculpt/lowhead.mjs --who male|female        # prints the triangle counts per part
 //
-// One mesh per head: the head (hand-authored after the references' wireframes, mirrored, plus the ears, nose, brows, eyes, lids and lips
+// One mesh per head: the head (hand-authored after the references' wireframes, mirrored, plus the ears, nose, brows, eyes, lids and the male's mouth line
 // as closed pieces set into it), the neck, and a shoulder stub. Units: the head two tall from the chin's underside
 // (y 0) to the crown (y 2), z forward, x the head's left (the viewer's right in the front view), the ear's centre near
 // z 0. Every polygon keeps its own normal when drawn (flat shading); `polys` keeps the quads for the wireframe.
 //
 // Parts: head (counted against the 350-700 triangle budget), neck, shoulders (the stub; left out of the top and the
-// bottom views). Regions, for the proportion diagram: skull, face, neck. Materials: skin, brow, pupil, lid, lip.
+// bottom views). Regions, for the proportion diagram: skull, face, neck. Materials: skin, brow, pupil, lid.
 
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -83,7 +83,6 @@ export const PRESETS = {
     nose: { top: 1.13, tip: 0.6, under: 0.54, wTop: 0.08, wBridge: 0.115, wWing: 0.14, out: 0.1, tipOut: 0.14 },
     brow: { x: [0.17, 0.32, 0.46, 0.56], yb: [1.155, 1.165, 1.16, 1.15], h: [0.085, 0.085, 0.075, 0.06], out: 0.055 },
     eye: { x: 0.31, y: 1.0, w: 0.11, h: 0.09, lid: 0.03, almond: 0 },
-    lips: null,
     mouth: { y: 0.27, w: 0.15, d: 0.008 },
   },
 };
@@ -112,7 +111,6 @@ PRESETS.female = {
   nose: { top: 1.06, tip: 0.6, under: 0.55, wTop: 0.045, wBridge: 0.065, wWing: 0.095, out: 0.09, tipOut: 0.12 },
   brow: { x: [0.18, 0.31, 0.43, 0.54], yb: [1.19, 1.235, 1.235, 1.195], h: [0.045, 0.045, 0.035, 0.022], out: 0.03 },
   eye: { x: 0.345, y: 0.975, w: 0.14, h: 0.13, lid: 0.035, almond: 1 },
-  lips: { y: 0.38, w: 0.16, upper: 0.06, lower: 0.065 },
 };
 
 /* ---- the builder ------------------------------------------------------------------------------------------------ */
@@ -241,27 +239,6 @@ export function buildLowHead(who = 'male') {
         o([A[3], B[3], B[0], A[0]]);
       }
       o([...ids[0]].reverse()); o(ids[ids.length - 1]);
-    });
-  }
-
-  // The lips (the female head): an upper lip with a cupid's bow, a lower lip, each a low wedge on the face.
-  if (P.lips) {
-    const L = P.lips;
-    const y = L.y, w = L.w;
-    // upper: corner, bow peak, centre dip; its lower edge the mouth's line
-    const up = [[w, y, 0.0], [w * 0.38, y + L.upper, 0.03], [0, y + L.upper * 0.7, 0.032]];
-    const mid = [[w, y, 0.0], [w * 0.4, y, 0.03], [0, y, 0.035]];
-    const lo = [[w * 0.75, y - L.lower * 0.6, 0.008], [w * 0.35, y - L.lower, 0.025], [0, y - L.lower, 0.026]];
-    const place = (p) => on(p[0], p[1], p[2]);
-    const U = up.map(place), M = mid.map(place), Lo = lo.map(place);
-    // the mouth's line sunk a touch
-    const Mi = M.map((p, i) => [p[0], p[1] - 0.004, p[2] - (i === 0 ? 0 : 0.012)]);
-    both((s) => {
-      const o = (v) => poly(s > 0 ? v : [...v].reverse(), 'head', 'face', 'lip');
-      const u = U.map((p) => vert(flip(p, s))), m = M.map((p) => vert(flip(p, s))), mi = Mi.map((p) => vert(flip(p, s))), l = Lo.map((p) => vert(flip(p, s)));
-      // the centre points are shared across the halves: make them once per side (they meet at x 0)
-      o([m[1], m[0], u[1]]); o([m[1], u[1], u[2], m[2]]);
-      o([l[0], mi[0], mi[1], l[1]]); o([l[1], mi[1], mi[2], l[2]]);
     });
   }
 
