@@ -86,21 +86,12 @@ const polyN = mesh.polys.map((p) => {
   return n;
 });
 const polyAo = new Map();
-mesh.tris.forEach((t, i) => { const e = polyAo.get(t.poly) ?? [0, 0]; e[0] += ao[i]; e[1]++; polyAo.set(t.poly, e); });
-// A smooth normal per vertex position (the skin's polygons around it, area-weighted, each turned away from the head's
-// axis), blended a little into the flat one in the shader for the gradient the references' planes carry; where the two
-// differ by more than 40 degrees (a crease: the chin's underside, the brow, the ears) the plane stays flat.
-const keyOf = (p) => p.map((v) => v.toFixed(4)).join(',');
-const smoothAcc = new Map();
-const outFrom = (c) => [c[0], 0, c[2] - (c[1] > 0.5 ? 0.1 : 0)];
-mesh.polys.forEach((p, pi) => {
-  if (p.mat !== 'skin') return;
-  const pts = p.v.map((k) => mesh.verts[k]);
-  const c = pts.reduce((a, q) => [a[0] + q[0] / pts.length, a[1] + q[1] / pts.length, a[2] + q[2] / pts.length], [0, 0, 0]);
-  let n = polyN[pi];
-  if (dot(n, outFrom(c)) < 0) n = n.map((v) => -v);
-  for (const q of pts) { const k = keyOf(q); const e = smoothAcc.get(k) ?? [0, 0, 0]; smoothAcc.set(k, [e[0] + n[0], e[1] + n[1], e[2] + n[2]]); }
-});
+// An ear's facets read as lit skin in the references, not as a pocket by the skull: their occlusion is held light.
+mesh.tris.forEach((t, i) => { const e = polyAo.get(t.poly) ?? [0, 0]; e[0] += mesh.polys[t.poly].ear ? Math.max(ao[i], 0.85) : ao[i]; e[1]++; polyAo.set(t.poly, e); });
+// Each polygon's centre, for the gradient across its face: the shading leans brighter toward the side of the polygon the
+// light comes from, so a plane keeps one normal (no smoothing across edges, no shared normals) and the reference's soft
+// falloff over it.
+const polyC = mesh.polys.map((p) => { const pts = p.v.map((k) => mesh.verts[k]); return pts.reduce((a, q) => [a[0] + q[0] / pts.length, a[1] + q[1] / pts.length, a[2] + q[2] / pts.length], [0, 0, 0]); });
 const parts = {};
 mesh.tris.forEach((t, i) => {
   const [a, b, c] = T[i];
@@ -112,12 +103,8 @@ mesh.tris.forEach((t, i) => {
   // m.z: the occlusion in hundredths, plus the facet's colour jitter as the fraction
   const [aoSum, aoN] = polyAo.get(t.poly);
   const mz = Math.round((aoSum / aoN) * 100) + ((t.poly * 2654435761) % 1000) / 1001;
-  for (const p of [a, b, c]) {
-    let sn = t.mat === 'skin' ? smoothAcc.get(keyOf(p)) : null;
-    if (sn) { const sl = Math.hypot(...sn) || 1; sn = sn.map((v) => v / sl); if (dot(sn, n) < 0) sn = sn.map((v) => -v); }
-    else sn = n.map((v) => v / l);
-    P.push(p[0], p[1], p[2], n[0] / l, n[1] / l, n[2] / l, MAT[t.mat], REG[t.region], mz, sn[0], sn[1], sn[2]);
-  }
+  const pc = polyC[t.poly];
+  for (const p of [a, b, c]) P.push(p[0], p[1], p[2], n[0] / l, n[1] / l, n[2] / l, MAT[t.mat], REG[t.region], mz, pc[0], pc[1], pc[2]);
 });
 // The wireframe: each polygon's outline once (the quads' diagonals left out), the head and the neck and the stub.
 const seen = new Set(), lines = [];
@@ -134,7 +121,9 @@ for (const p of mesh.polys) {
 
 const female = who === 'female';
 const DATA = {
-  smooth: +opt('smooth', '0.3'), // how far the shading leans to the smooth normal, 0 for strictly flat
+  grad: +opt('grad', '0.4'),
+  // the lights' strengths: the ambient, the key from the front right, the warm fill from the right, the cool rim from behind left
+  amb: +opt('amb', '0.62'), key: +opt('key', '0.28'), warm: +opt('warm', '0.24'), cool: +opt('cool', '1.2'), // the gradient over each face toward the key light, per unit of the head (0: none)
   parts, lines, pitch, topPitch, normals, counts: mesh.counts,
   pupil: female ? [0.2, 0.21, 0.25] : [0.09, 0.09, 0.11],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
@@ -166,11 +155,13 @@ const cv = document.getElementById('gl');
 cv.width = 1536 * dpr; cv.height = 1024 * dpr;
 const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true, alpha: true, premultipliedAlpha: false });
 const vs = 'attribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift;' +
-  'varying vec3 vn; varying vec3 vm; varying vec3 vs; void main(){ vec3 q = R*(p - piv); vn = R*n; vs = R*s; vm = m;' +
+  'varying vec3 vn; varying vec3 vm; varying vec3 vd; void main(){ vec3 q = R*(p - piv); vn = R*n; vd = q - R*(s - piv); vm = m;' +
   ' gl_Position = vec4(off + sc*q.xy, -q.z/8.0 - lift, 1.0); }';
-const fs = '#define SMOOTH ' + D.smooth.toFixed(2) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vs; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
+const fs = '#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
-  ' vec3 nf = normalize(vn), ns = normalize(vs); vec3 nn = dot(nf, ns) > 0.766 ? normalize(mix(nf, ns, SMOOTH)) : nf; if (!gl_FrontFacing) nn = -nn;' +
+  ' vec3 nn = normalize(vn); if (!gl_FrontFacing) nn = -nn;' +
+  // the gradient over the face: toward the key light (upper right, front) along the plane, brighter; a skin facet only
+  ' vec3 Lg = normalize(vec3(0.45,0.55,0.7)); vec3 tg = Lg - nn*dot(nn,Lg); float grad = vm.x < 0.5 ? 1.0 + GRAD*dot(vd, tg) : 1.0;' +
   ' vec3 base = vec3(0.68, 0.49, 0.41);' +
   ' float jit = fract(vm.z) - 0.5, occ = floor(vm.z) / 100.0; base *= 1.0 + jit*0.02; base.r += jit*0.01;' +
   ' if (vm.x > 0.5 && vm.x < 1.5) base = vec3(0.27, 0.17, 0.13);' +
@@ -183,10 +174,11 @@ const fs = '#define SMOOTH ' + D.smooth.toFixed(2) + '\nprecision highp float; v
   '   float l = 0.82 + 0.18*max(dot(nn, normalize(vec3(-0.4,0.5,0.8))),0.0); gl_FragColor = vec4(rc*l,1.0); return; }' +
   // The light, in view space: a warm key from the front and above, a warm fill from the right, a cool rim from the
   // upper left, planes facing down darker; other materials take it times their colour.
-  ' vec3 Lk = normalize(vec3(0.45,0.3,0.84)), Lr = normalize(vec3(1.0,0.1,0.1)), Lc = normalize(vec3(-0.7,0.6,0.35)), Lb = normalize(vec3(-0.95,0.25,-0.2));' +
+  ' vec3 Lk = normalize(vec3(0.45,0.3,0.84)), Lr = normalize(vec3(1.0,0.45,0.05)), Lc = normalize(vec3(-0.7,0.6,0.35)), Lb = normalize(vec3(-0.95,0.25,-0.2));' +
   ' float dk = max(dot(nn,Lk),0.0), dr = max(dot(nn,Lr),0.0), dc = max(dot(nn,Lc),0.0);' +
-  ' vec3 L = vec3(0.62 + 0.14*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) * vec3(1.02,0.98,0.94) + 0.34*dk*vec3(1.0,0.97,0.92) + 0.16*dr*vec3(1.04,0.96,0.84);' +
-  ' vec3 c = (base*L + vec3(0.12,0.34,0.6)*pow(dc,6.0)*(0.3+0.7*base.r/0.68) + vec3(0.2,0.27,0.36)*pow(max(dot(nn,Lb),0.0),2.5)*(0.3+0.7*base.r/0.68)) * mix(0.2, 1.06, occ*occ);' +
+  ' vec3 L = vec3(AMB + 0.14*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) * vec3(1.02,0.98,0.94) + KEY*dk*vec3(1.0,0.97,0.92) + WARM*dr*vec3(1.04,0.96,0.84);' +
+  ' L *= grad;' +
+  ' vec3 c = (base*L + vec3(0.12,0.34,0.6)*pow(dc,6.0)*(0.3+0.7*base.r/0.68) + COOL*vec3(0.2,0.27,0.36)*pow(max(dot(nn,Lb),0.0),2.5)*(0.3+0.7*base.r/0.68)) * mix(0.2, 1.06, occ*occ);' +
   ' gl_FragColor = vec4(c, 1.0); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
