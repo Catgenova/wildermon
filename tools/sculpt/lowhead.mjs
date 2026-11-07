@@ -234,7 +234,7 @@ export function buildLowHead(who = 'male', preset = null) {
       const a = e.almond;
       const xs = a ? [x0 - 0.035, e.x, x1 + 0.05, x1 + 0.17] : [x0 - 0.035, e.x, x1 + 0.035];
       const yb = a ? [y1 - 0.03, y1 - 0.012, y1 - 0.0, y1 + 0.065] : [y1 - 0.004, y1, y1 - 0.006];
-      const hh = a ? [0.03, 0.05, 0.045, 0.012] : [0.03, 0.034, 0.026];
+      const hh = a ? [0.016, 0.026, 0.024, 0.008] : [0.03, 0.034, 0.026];
       // each section stands off the skin along the head's outward direction there, so the wing clears the side of the face
       const off = (x, y, d) => { const p = on(x, y, 0); const o = unit([p[0], 0, p[2] - 0.1]); return add(p, mul(o, d)); };
       const sec = xs.map((x, i) => [off(x, yb[i], e.lid), off(x, yb[i] + hh[i], e.lid * 0.5), off(x, yb[i] + hh[i], -0.03), off(x, yb[i], -0.03)]);
