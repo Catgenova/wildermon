@@ -22,7 +22,7 @@ const CAMS = JSON.parse(readFileSync(join(DIR, 'lowacams.json'), 'utf8'))[who];
 // (the outline at a ring's row is the ball's widest there, the ring's corners a little inside it)
 export const CAP = {
   female: { top: { front: [210, 65], q3: [403, 65], profile: [588, 62] }, rings: { cc: [76, 1.06], cb: [94, 1.14], ca: [124, 1.18] } },
-  male: { top: { front: [178, 67], q3: [378, 67], profile: [568, 67] }, rings: { cc: [78], cb: [100], ca: [140] } },
+  male: { top: { front: [178, 67], q3: [378, 67], profile: [568, 67] }, rings: { cc: [78, 1], cb: [100, 1.07], ca: [136, 1.02] } },
 };
 const VIEWS = ['front', 'q3', 'profile', 'r3', 'back'], VW = { front: 1, q3: 1, profile: 1, r3: 0.7, back: 0.7 };
 
