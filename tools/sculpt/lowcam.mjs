@@ -19,7 +19,7 @@ export const DEFAULT_CAMS = {
   bottom: { yaw: 0, pitch: -45, s: 140, cx: 502, cy: 726, f: 0, clip: -0.3 },
 };
 /** The parts each view shows (the rest show the head, the neck and the shoulders). */
-export const PARTS = { top: ['head', 'neck'], bottom: ['head', 'neck'] };
+export const PARTS = { top: ['head', 'neck'] };
 
 export function loadCams(who) {
   const all = existsSync(CAMS_FILE) ? JSON.parse(readFileSync(CAMS_FILE, 'utf8')) : {};

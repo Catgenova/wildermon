@@ -27,7 +27,7 @@ const mx = (p) => [-p[0], p[1], p[2]];
 // the centre line at x 0 is shared), and one list of faces both heads use, mirrored for the other half. Rings, top to
 // bottom: the crown c; t the skull's top; f the temple and the skull's side and back; b the brow; e under the eyes; k the cheekbones
 // and the nose's base; j the jaw's corner and m5 behind it; ch the chin with jl the jaw line; u the chin's flat
-// underside; g the neck's top under the jaw; n6 the nape; tb tc the nose's tip edge; nm and nf the neck (nf inside the shoulders).
+// underside; g the neck's top under the jaw; n6 the nape; tb tc the nose's tip edge; nm the neck's foot, where the shoulders begin.
 export const FACES = [
   // the crown: a flat cap of three facets a side on the top ring a, then a band down to the ring t
   ['c', 'a0', 'a1'], ['c', 'a1', 'a2'], ['c', 'a2', 'a3'],
@@ -62,14 +62,13 @@ export const SPAN_FACES = [
 export const SPAN_NECK_FACES = [["n6'", 'n6', 'nm4', 'nm5', "nm4'"]];
 export const NECK_FACES = [
   ['g0', 'g1', 'nm1', 'nm0'], ['g1', 'g2', 'nm2', 'nm1'], ['g2', 'g3', 'nm3', 'nm2'], ['g3', 'n6', 'nm4', 'nm3'],
-  ['nm0', 'nm1', 'nf1', 'nf0'], ['nm1', 'nm2', 'nf2', 'nf1'], ['nm2', 'nm3', 'nf3', 'nf2'], ['nm3', 'nm4', 'nf4', 'nf3'], ['nm4', 'nm5', 'nf5', 'nf4'],
-  ['nf0', 'nf1', 'nfc'], ['nf1', 'nf2', 'nfc'], ['nf2', 'nf3', 'nfc'], ['nf3', 'nf4', 'nfc'], ['nf4', 'nf5', 'nfc'],
 ];
 
-// The shoulder stub, its own closed piece: the collar sc inside the neck (rising at the back, where the trapezius climbs
-// toward the nape), the shoulders' line ss, the cut sb; eight round, so its planes stay as large as the reference's.
+// The shoulder stub, one surface with the neck as the references draw it: the neck's foot nm is where the trapezius and
+// the chest begin (low at the front, at the notch, high at the back, where the trapezius climbs toward the nape); the
+// shoulders' line ss; the cut sb; eight round, so its planes stay as large as the reference's.
 export const STUB_FACES = [
-  ['sc0', 'sc1', 'ss1', 'ss0'], ['sc1', 'sc2', 'ss2', 'ss1'], ['sc2', 'sc3', 'ss3', 'ss2'], ['sc3', 'sc4', 'ss4', 'ss3'],
+  ['nm0', 'nm1', 'ss1', 'ss0'], ['nm1', 'nm2', 'ss2', 'ss1'], ['nm2', 'nm3', 'nm4', 'ss3', 'ss2'], ['nm4', 'nm5', 'ss4', 'ss3'],
   ['ss0', 'ss1', 'sb1', 'sb0'], ['ss1', 'ss2', 'sb2', 'sb1'], ['ss2', 'ss3', 'sb3', 'sb2'], ['ss3', 'ss4', 'sb4', 'sb3'],
   ['sb0', 'sb1', 'sbc'], ['sb1', 'sb2', 'sbc'], ['sb2', 'sb3', 'sbc'], ['sb3', 'sb4', 'sbc'],
 ];
@@ -90,8 +89,8 @@ export const PRESETS = {
       u0: [0, -0.01, 0.62], u1: [0.19, -0.01, 0.6],
       g0: [0, -0.02, 0.38], g1: [0.33, 0.03, 0.3], g2: [0.524, 0.28, 0.05], g3: [0.536, 0.42, -0.28],
       nm0: [0, -0.15, 0.43], nm1: [0.365, -0.12, 0.34], nm2: [0.547, -0.08, 0.02], nm3: [0.524, -0.02, -0.3], nm4: [0.365, 0.02, -0.48], nm5: [0, 0.04, -0.52],
-      nf0: [0, -0.5, 0.42], nf1: [0.342, -0.48, 0.33], nf2: [0.513, -0.45, 0.01], nf3: [0.49, -0.42, -0.28], nf4: [0.342, -0.4, -0.45], nf5: [0, -0.4, -0.49], nfc: [0, -0.46, -0.03],
-      sc0: [0, -0.18, 0.34], sc1: [0.342, -0.13, 0.25], sc2: [0.479, -0.08, -0.1], sc3: [0.376, -0.1, -0.4], sc4: [0, -0.1, -0.48],
+     
+     
       ss0: [0, -0.66, 0.52], ss1: [0.6, -0.55, 0.4], ss2: [0.92, -0.44, -0.1], ss3: [0.62, -0.42, -0.68], ss4: [0, -0.48, -0.86],
       sb0: [0, -0.92, 0.6], sb1: [0.55, -0.92, 0.42], sb2: [0.66, -0.92, -0.06], sb3: [0.52, -0.92, -0.48], sb4: [0, -0.92, -0.56], sbc: [0, -0.92, 0],
     },
@@ -118,8 +117,8 @@ PRESETS.female = {
     u0: [0, 0.14, 0.66], u1: [0.09, 0.14, 0.64],
     g0: [0, 0.15, 0.26], g1: [0.19, 0.19, 0.21], g2: [0.31, 0.3, 0.02], g3: [0.33, 0.42, -0.24],
     nm0: [0, -0.2, 0.28], nm1: [0.21, -0.18, 0.22], nm2: [0.32, -0.14, 0], nm3: [0.31, -0.08, -0.26], nm4: [0.22, -0.04, -0.38], nm5: [0, -0.02, -0.42],
-    nf0: [0, -0.55, 0.26], nf1: [0.2, -0.53, 0.2], nf2: [0.3, -0.5, 0], nf3: [0.29, -0.47, -0.24], nf4: [0.2, -0.45, -0.35], nf5: [0, -0.45, -0.39], nfc: [0, -0.5, -0.06],
-    sc0: [0, -0.32, 0.22], sc1: [0.2, -0.29, 0.17], sc2: [0.29, -0.25, -0.06], sc3: [0.21, -0.2, -0.29], sc4: [0, -0.12, -0.36],
+   
+   
     ss0: [0, -0.76, 0.4], ss1: [0.52, -0.66, 0.3], ss2: [0.83, -0.64, -0.08], ss3: [0.52, -0.62, -0.52], ss4: [0, -0.64, -0.7],
     sb0: [0, -0.98, 0.52], sb1: [0.44, -0.98, 0.38], sb2: [0.55, -0.98, -0.06], sb3: [0.42, -0.98, -0.38], sb4: [0, -0.98, -0.46], sbc: [0, -0.98, 0],
   },

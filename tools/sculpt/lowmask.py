@@ -77,16 +77,31 @@ def views(src):
             got = blobs(brow, lambda x, y, e=e: abs(x - e[0]) < 42 and -40 < y - e[1] < -8, single=True)
             if got: brows.append(got[0])
         marks = {}
-        if name == 'front' and len(eyes) == 2:
-            # down the face's centre line below the eyes: the first sharp drop into shadow is the nose's underside (the
-            # cliff), the last before the neck the chin's underside
-            cx = round((eyes[0][0] + eyes[1][0]) / 2); ey = round(max(e[1] for e in eyes))
+        if name in ('front', 'bottom') and eyes:
+            # down the face's centre line below the eyes (between the two, or the silhouette's middle at their height):
+            # the first sharp drop into shadow is the nose's underside (the cliff), the last before the neck the chin's
+            ey = round(max(e[1] for e in eyes))
+            if len(eyes) == 2:
+                cx = round((eyes[0][0] + eyes[1][0]) / 2)
+            else:
+                row = mask[(ey - y0) // K]
+                cx = x0 + K * (row.index('1') + len(row) - row[::-1].index('1')) // 2
             lum = lambda y: sum(0.3 * px[x, y][0] + 0.59 * px[x, y][1] + 0.11 * px[x, y][2] for x in range(cx - 4, cx + 5)) / 9
-            drops = [y for y in range(ey + 15, y1 - 60) if lum(y - 2) - lum(y + 1) > 35]
+            drops = [y for y in range(ey + 2, y1 - 8) if lum(y - 2) - lum(y + 1) > 35]
             runs = [y for i, y in enumerate(drops) if i == 0 or y - drops[i - 1] > 6]
-            if runs:
-                marks['cliff'] = [cx, runs[0]]
-                marks['chin'] = [cx, runs[-1]]
+            # each drop's dark run: how far below it the line stays dark; a run that never comes back to the light is
+            # the neck's end, not a feature
+            def run(y):
+                base = lum(y + 3)
+                for z in range(y + 3, y1 - 2):
+                    if lum(z) > base + 30:
+                        return z - y
+                return None
+            spans = [(y, run(y)) for y in runs if y > ey + (0 if name == 'bottom' else 12)]
+            spans = [(y, r) for y, r in spans if r is not None]
+            if spans:
+                marks['cliff'] = [cx, spans[0][0]]
+                marks['chin'] = [cx, max(spans[1:] or spans, key=lambda t: t[1])[0]]
         # the luminance at the mask's resolution, the mean of each 2x2 block
         Y = lambda c: 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]
         lum = [[round(sum(Y(px[x0 + i * K + a, y0 + j * K + b]) for a in range(K) for b in range(K)) / (K * K)) for i in range(w)] for j in range(h)]

@@ -282,7 +282,7 @@ function report(tag) {
 }
 
 if (stage === 'camera') {
-  FW.w = 0.1;
+  FW.w = +opt('fw', '0.1');
   report('before');
   const persp = args.includes('--perspective');
   for (const v of VIEWS) {
@@ -290,7 +290,7 @@ if (stage === 'camera') {
     if (persp && !c.f) c.f = 12;
     const ps = [
       { k: 'cx', step: 8 }, { k: 'cy', step: 8 }, { k: 's', step: 6 }, { k: 'yaw', step: 6 }, { k: 'pitch', step: 6 },
-      ...(c.clip != null ? [{ k: 'clip', step: 0.08 }] : []), ...(persp ? [{ k: 'f', step: 3 }] : []),
+      ...(c.clip != null && !args.includes('--fixclip') ? [{ k: 'clip', step: 0.08 }] : []), ...(persp ? [{ k: 'f', step: 3 }] : []),
     ].filter((p) => !(v === 'front' && p.k === 's'));
     descend(ps.map((p) => ({ step: p.step, get: () => c[p.k], set: (x) => { c[p.k] = limit(v, p.k, x); } })), () => viewError(mesh, v, c).score, +opt('rounds', 8));
   }
