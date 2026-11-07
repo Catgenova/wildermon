@@ -37,7 +37,7 @@ export const MATS = {
 /** The leg's own columns L0..L5 and its inside ones I0..I3, degrees round the leg from its front toward its outside. */
 export const LEG_AZ = [-20, 25, 70, 110, 155, 200], IN_AZ = [235, 260, 290, 320];
 /** The leg's rings below the crotch row, top to bottom; the hip's above it, bottom to top. */
-export const LEG_ROWS = ['S1', 'S2', 'K', 'B1', 'B2', 'Bu', 'B3', 'E', 'Ei'];
+export const LEG_ROWS = ['S1', 'S2', 'K', 'B1', 'B2', 'Bu', 'B3', 'F', 'E', 'Ei'];
 export const HIP_ROWS = ['H2', 'H1', 'W1', 'Wt', 'W0', 'Wi'];
 
 /**
@@ -60,12 +60,12 @@ export const DESIGN = {
     waist: -3.35, rim: 0.1, band: 0.24, notch: { top: 0.14, bottom: 0.26, at: 9 }, lip: 0.14,
     hips: [-4.4, -5.05], hipEase: { H1: [0.08, 0.1, 0.12], H2: [0.1, 0.14, 0.2] },
     crotch: { y: -6.2, rise: 0.55, dip: 0.14, front: 0.5, back: 0.55, zf: 0.22, zb: -0.18, ease: [0.12, 0.14, 0.05, 0.1] },
-    stripe: { y: -6.45, amp: 0.74, phi: 120, w: 0.48 },
-    knee: { y: -7.5, amp: 0.3 },
+    stripe: { y: -6.6, amp: 0.85, phi: 110, w: 0.48 },
+    knee: { y: -7.5, amp: 0.45 },
     blouse: [-8.3, -9.0], cuff: [-9.4, -10.04],
     ease: {
-      S1: [0.24, 0.18, 0.12, 0.1], S2: [0.15, 0.17, 0.14, 0.09], K: [0.08, 0.08, 0.08, 0.05],
-      B1: [0.4, 0.42, 0.38, 0.18], B2: [0.5, 0.52, 0.46, 0.22], B3: [0.07, 0.07, 0.07, 0.06], E: [0.07, 0.07, 0.07, 0.06],
+      S1: [0.24, 0.18, 0.12, 0.04], S2: [0.15, 0.17, 0.14, 0.04], K: [0.08, 0.08, 0.08, 0.03],
+      B1: [0.4, 0.42, 0.38, 0.07], B2: [0.5, 0.52, 0.46, 0.09], B3: [0.04, 0.04, 0.04, 0.03], E: [0.08, 0.08, 0.08, 0.07],
     },
   },
   female: {
@@ -73,12 +73,12 @@ export const DESIGN = {
     waist: -2.88, rim: 0.09, band: 0.22, notch: { top: 0.13, bottom: 0.27, at: 9 }, lip: 0.13,
     hips: [-3.5, -4.05], hipEase: { H1: [0.07, 0.08, 0.1], H2: [0.08, 0.1, 0.16] },
     crotch: { y: -4.55, rise: 0.22, dip: 0.12, front: 0.42, back: 0.5, zf: 0.12, zb: -0.3, ease: [0.09, 0.1, 0.04, 0.08] },
-    stripe: { y: -5.85, amp: 0.8, phi: 120, w: 0.48 },
-    knee: { y: -6.85, amp: 0.35 },
+    stripe: { y: -5.85, amp: 0.95, phi: 120, w: 0.48 },
+    knee: { y: -6.85, amp: 0.45 },
     blouse: [-8.3, -9.05], cuff: [-9.5, -10.22],
     ease: {
-      S1: [0.16, 0.12, 0.08, 0.06], S2: [0.09, 0.11, 0.09, 0.06], K: [0.03, 0.04, 0.03, 0.02],
-      B1: [0.36, 0.38, 0.34, 0.16], B2: [0.46, 0.48, 0.42, 0.2], B3: [0.06, 0.06, 0.06, 0.05], E: [0.06, 0.06, 0.06, 0.05],
+      S1: [0.16, 0.12, 0.08, -0.04], S2: [0.09, 0.11, 0.09, -0.04], K: [0.03, 0.04, 0.03, -0.03],
+      B1: [0.36, 0.38, 0.34, 0.04], B2: [0.46, 0.48, 0.42, 0.05], B3: [0.03, 0.03, 0.03, 0.02], E: [0.07, 0.07, 0.07, 0.06],
     },
   },
 };
@@ -145,7 +145,7 @@ export function buildTrousers(rig, design = DESIGN[rig.who], { stage = 9 } = {})
     S1: (az) => D.stripe.y + tilt(az, D.stripe.amp) + D.stripe.w / 2,
     S2: (az) => D.stripe.y + tilt(az, D.stripe.amp) - D.stripe.w / 2,
     K: (az) => D.knee.y + tilt(az, D.knee.amp),
-    B1: () => D.blouse[0], B2: () => D.blouse[1], Bu: () => D.blouse[1] - 0.55 * (D.blouse[1] - D.cuff[0]), B3: () => D.cuff[0], E: () => D.cuff[1], Ei: () => D.cuff[1] + 0.12,
+    B1: () => D.blouse[0], B2: () => D.blouse[1], Bu: () => D.blouse[1] - 0.55 * (D.blouse[1] - D.cuff[0]), B3: () => D.cuff[0], F: () => D.cuff[0] - 0.1, E: () => D.cuff[1], Ei: () => D.cuff[1] + 0.12,
   };
   // (the blockout: the crotch, the knee and the cuff's foot only, no tilt)
   const rows = stage <= 1 ? ['K', 'E'] : LEG_ROWS;
@@ -159,12 +159,12 @@ export function buildTrousers(rig, design = DESIGN[rig.who], { stage = 9 } = {})
     const win = LAZ.map((az) => {
       const y = yRow[row](az);
       // (the blouse and the cuff as straight walls: each the furthest reach over its pair of rows)
-      return row === 'B2' ? [D.blouse[1] - 0.25, D.blouse[0] + 0.1] : row === 'B3' || row === 'E' || row === 'Ei' ? [D.cuff[1] - 0.05, D.cuff[0] + 0.1] : [y - 0.2, y + 0.2];
+      return row === 'B2' ? [D.blouse[1] - 0.25, D.blouse[0] + 0.1] : row === 'B3' || row === 'F' || row === 'E' || row === 'Ei' ? [D.cuff[1] - 0.05, D.cuff[0] + 0.1] : [y - 0.2, y + 0.2];
     });
     const r0 = ringRadii(SL, c, LAZ, win, (p) => p[0] > 0.04);
     legV[row] = LAZ.map((az, k) => {
       const y = yRow[row](az);
-      const ease = row === 'Ei' ? round4(D.ease.E, az) - 0.06 : row === 'C' ? round4(cr.ease, az) : stage <= 1 ? 0.1 : round4(D.ease[row], az);
+      const ease = row === 'Ei' ? round4(D.ease.E, az) - 0.06 : row === 'F' ? round4(D.ease.E, az) + 0.05 : row === 'C' ? round4(cr.ease, az) : stage <= 1 ? 0.1 : round4(D.ease[row], az);
       const r = r0[k] + D.clear + ease;
       return [c[0] + Math.sin(rad(az)) * r, y, c[1] + Math.cos(rad(az)) * r];
     });
@@ -215,14 +215,14 @@ export function buildTrousers(rig, design = DESIGN[rig.who], { stage = 9 } = {})
     if (rp >= rq + 0.02) return p;
     const s = (rq + 0.02) / rp; return [p[0] * s, p[1], D.z0 + (p[2] - D.z0) * s];
   });
+  // (the waistband's rows each no tighter than the one below it, so it stands as a band)
+  if (stage > 1) for (const [a, b] of [['W1', 'Wt'], ['Wt', 'W0']]) hipV[b] = hipV[b].map((p, k) => { const q = hipV[a][k], ra = Math.hypot(q[0], q[2] - D.z0), rb = Math.hypot(p[0], p[2] - D.z0); if (rb >= ra - 0.01) return p; const s = (ra - 0.01) / rb; return [p[0] * s, p[1], D.z0 + (p[2] - D.z0) * s]; });
   // (the V notch's sides: on each waistband row, a vertex either side of the centre front at notch.at degrees, on the
   // chord from CF to L0 at the row's own height, so the band's foot and the rim's top dip to a narrow V at CF)
   for (const row of hipRows) if (row[0] === 'W' && stage > 1) {
     const V = hipV[row], cf = V[0], l0 = V[1], t = D.notch.at / hipAz[1];
     V.notch = [cf[0] + (l0[0] - cf[0]) * t, l0[1], cf[2] + (l0[2] - cf[2]) * t + 0.01];
   }
-  // (the waistband's rows each no tighter than the one below it, so it stands as a band)
-  if (stage > 1) for (const [a, b] of [['W1', 'Wt'], ['Wt', 'W0']]) hipV[b] = hipV[b].map((p, k) => { const q = hipV[a][k], ra = Math.hypot(q[0], q[2] - D.z0), rb = Math.hypot(p[0], p[2] - D.z0); if (rb >= ra - 0.01) return p; const s = (ra - 0.01) / rb; return [p[0] * s, p[1], D.z0 + (p[2] - D.z0) * s]; });
 
   return meshOfTrousers(rig, D, { legV, hipV, rows: ['C', ...rows], hipRows, stage });
 }
@@ -250,7 +250,7 @@ function meshOfTrousers(rig, D, { legV, hipV, rows, hipRows, stage }) {
     R.hip.C = [ctr[3], ...L, ctr[0], ...[...Rr].reverse()];
   }
   for (const row of rows.slice(1)) {
-    const part = row === 'B3' || row === 'E' || row === 'Ei' ? 'cuff' : row[0] === 'B' ? 'blouse' : 'leg';
+    const part = row === 'B3' || row === 'F' || row === 'E' || row === 'Ei' ? 'cuff' : row[0] === 'B' ? 'blouse' : 'leg';
     R.leg.l[row] = legV[row].map((p) => G.vert(p, part));
     R.leg.r[row] = legV[row].map((p) => G.vert(mir(p), part));
   }
@@ -291,7 +291,7 @@ function meshOfTrousers(rig, D, { legV, hipV, rows, hipRows, stage }) {
   const legMat = { 'S1-S2': 'trim', 'E-Ei': 'inner' };
   for (const s of ['l', 'r']) for (let i = 0; i + 1 < rows.length; i++) {
     const a = rows[i], b = rows[i + 1];
-    band(R.leg[s][a], R.leg[s][b], M(legMat[`${a}-${b}`] ?? 'fabric'), b === 'E' || b === 'Ei' || b === 'B3' ? 'cuff' : 'leg', `${a}-${b}`);
+    band(R.leg[s][a], R.leg[s][b], M(legMat[`${a}-${b}`] ?? 'fabric'), b === 'E' || b === 'Ei' || b === 'B3' || b === 'F' ? 'cuff' : 'leg', `${a}-${b}`);
   }
   orient(G, (p) => [p[0] - Math.sign(p[0]) * 0.9, 0, p[2]]);
   // (orient's closed/open test sees an open piece: face the leg's walls outward from each leg's axis, the hip's from the hip's)
@@ -319,13 +319,19 @@ export function trousersWeights(rig, G, o = {}) {
   const set = (i, list) => { const s = list.reduce((a, [, w]) => a + w, 0); vw[i] = list.filter(([, w]) => w > 0).map(([n, w]) => [at(n), w / s]); };
   const R = G.rows, ctr = R.leg.l.C.slice(6);
   // the crotch's centre line: the pelvis with both hips
-  set(ctr[0], [['pelvis', 0.6], ['hip_l', 0.2], ['hip_r', 0.2]]);
-  set(ctr[3], [['pelvis', 0.6], ['hip_l', 0.2], ['hip_r', 0.2]]);
-  set(ctr[1], [['pelvis', 0.4], ['hip_l', 0.3], ['hip_r', 0.3]]);
-  set(ctr[2], [['pelvis', 0.4], ['hip_l', 0.3], ['hip_r', 0.3]]);
+  const cw = o.crotch ?? { ends: [0.6, 0.2, 0], mid: [0.4, 0.3, 0] };
+  for (const [i, [p, h, t]] of [[ctr[0], cw.ends], [ctr[3], cw.ends], [ctr[1], cw.mid], [ctr[2], cw.mid]]) set(i, [['pelvis', p], ['hip_l', h], ['hip_r', h], ['thigh_l', t], ['thigh_r', t]]);
+  // the crotch row's own columns a side: a share `cRow` on the hip's half turn, the rest as the skin under it
+  const cRow = o.cRow ?? 0;
+  if (cRow > 0) for (const s of ['l', 'r']) for (const i of R.leg[s].C.slice(0, 6)) {
+    const m = new Map(vw[i].map(([b, w]) => [b, w * (1 - cRow)]));
+    m.set(at(`hip_${s}`), (m.get(at(`hip_${s}`)) ?? 0) + cRow);
+    vw[i] = [...m].sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const t = vw[i].reduce((a, [, w]) => a + w, 0); vw[i] = vw[i].map(([b, w]) => [b, w / t]);
+  }
   for (const s of ['l', 'r']) {
     const L = R.leg[s];
-    for (const row of ['B3', 'E', 'Ei']) for (const i of L[row] ?? []) set(i, [[`calf_${s}`, 1]]);
+    for (const row of ['B3', 'F', 'E', 'Ei']) for (const i of L[row] ?? []) set(i, [[`calf_${s}`, 1]]);
     for (const i of [...(L.B2 ?? []), ...(L.Bu ?? [])]) set(i, [[`calf_${s}`, 1]]);
     for (const i of L.B1 ?? []) set(i, [[`calf_${s}`, 0.8], [`knee_${s}`, 0.2]]);
   }

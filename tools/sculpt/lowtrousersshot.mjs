@@ -92,14 +92,15 @@ function volumes(G, P) {
   const R = G.rows, vol = (tris) => tris.reduce((s, [a, b, c]) => s + dot(a, cross(b, c)), 0) / 6;
   const ringTris = (A, Bq) => A.flatMap((_, k) => { const j = (k + 1) % A.length; return [[P[A[k]], P[A[j]], P[Bq[j]]], [P[A[k]], P[Bq[j]], P[Bq[k]]]]; });
   const cap = (A, flip) => { const c = A.reduce((s, i) => s.map((x, j) => x + P[i][j] / A.length), [0, 0, 0]); return A.map((_, k) => { const a = P[A[k]], b = P[A[(k + 1) % A.length]]; return flip ? [c, b, a] : [c, a, b]; }); };
+  // (each piece closed: a band's ring A capped the other way round from its edges, ring B the same way)
   const H = ['C', 'H2', 'H1'];
-  let hip = [];
+  const hip = [];
   for (let i = 0; i + 1 < H.length; i++) hip.push(...ringTris(R.hip[H[i]], R.hip[H[i + 1]]));
-  hip.push(...cap(R.hip[H[H.length - 1]], false), ...cap(R.leg.l.C, true), ...cap(R.leg.r.C, false));
-  // the crotch and the thighs: the crotch row to the stripe's top, each leg, capped at both ends
-  const thigh = [];
-  for (const s of ['l', 'r']) { const L = R.leg[s]; if (!L.S1) continue; thigh.push(...ringTris(L.C, L.S1), ...cap(L.C, s === 'r'), ...cap(L.S1, s === 'l')); }
-  return { hip: Math.abs(vol(hip)), thighs: Math.abs(vol(thigh)) };
+  hip.push(...cap(R.hip.C, true), ...cap(R.hip.H1, false));
+  // the crotch and the thighs: the crotch row to the stripe's top, each leg closed the same way
+  let thighs = 0;
+  for (const s of ['l', 'r']) { const L = R.leg[s]; if (L.S1) thighs += Math.abs(vol([...ringTris(L.C, L.S1), ...cap(L.C, true), ...cap(L.S1, false)])); }
+  return { hip: Math.abs(vol(hip)), thighs };
 }
 
 /* ---- the sheet: five views against the reference --------------------------------------------------------------------- */
