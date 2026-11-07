@@ -106,6 +106,21 @@ export class World {
    */
   private refill: Uint8Array | null = null;
   private refilling = 0;
+  /**
+   * Which `CHUNK` squares hold the island's own land, 1 once it has been read (`Island.readLand`); null on a world
+   * whose every square is its own ground.
+   *
+   * Everywhere else the ground is the generator's guess at the island, and with the fog off that guess was drawn
+   * as the island: reported as lemon trees on Volcano Isle, on the map, that were not there in person. So with the
+   * fog off a square not read is unseen (`Vision.state`) and asked for (`askRead`) rather than drawn from the seed.
+   */
+  private landRead: Uint8Array | null = null;
+  /** Squares asked for since they were last let go (`dropAsks`), so a square is queued once however often it is drawn. */
+  private readAsked: Uint8Array | null = null;
+  /** Squares asked for and not read, by `cy * across + cx`. */
+  readonly readWanted = new Set<number>();
+  /** The tiles read since `takeRead` last asked: a box, every tile (`forgetRead`), or nothing. */
+  private readSince: { x0: number; y0: number; x1: number; y1: number } | 'all' | null = null;
   /** The seed this world was made from, so rock kinds stay consistent. */
   seed = 0;
   /**
@@ -196,6 +211,77 @@ export class World {
     this.grown = 0;
     this.minHeight = 0;
     this.maxHeight = 0;
+  }
+
+  /** Start keeping which squares hold the island's own land: from now, none does until `markRead` says so. */
+  trackRead(): void {
+    const n = Math.ceil(this.w / CHUNK) * Math.ceil(this.h / CHUNK);
+    this.landRead = new Uint8Array(n);
+    this.readAsked = new Uint8Array(n);
+    this.readWanted.clear();
+  }
+
+  /** Stop keeping it: every square is drawn as it stands, which is right for ground that came some other way. */
+  untrackRead(): void {
+    this.landRead = null;
+    this.readAsked = null;
+    this.readWanted.clear();
+    this.readSince = 'all';
+  }
+
+  /** The island's own land for one square has been laid in. */
+  markRead(cx: number, cy: number): void {
+    const r = this.landRead;
+    const across = Math.ceil(this.w / CHUNK);
+    if (!r || cx < 0 || cy < 0 || cx >= across || cy * across + cx >= r.length) return;
+    const c = cy * across + cx;
+    if (r[c]) return;
+    r[c] = 1;
+    this.readWanted.delete(c);
+    const x0 = cx * CHUNK, y0 = cy * CHUNK;
+    const x1 = Math.min(this.w, x0 + CHUNK) - 1, y1 = Math.min(this.h, y0 + CHUNK) - 1;
+    const b = this.readSince;
+    if (b === 'all') return;
+    this.readSince = b ? { x0: Math.min(b.x0, x0), y0: Math.min(b.y0, y0), x1: Math.max(b.x1, x1), y1: Math.max(b.y1, y1) } : { x0, y0, x1, y1 };
+  }
+
+  /** Every square to be read again: what was read has fallen behind the island's history. */
+  forgetRead(): void {
+    if (!this.landRead) return;
+    this.landRead.fill(0);
+    this.readAsked?.fill(0);
+    this.readWanted.clear();
+    this.readSince = 'all';
+  }
+
+  /** Whether the ground under a tile is the island's own, rather than the generator's guess at it. */
+  isRead(x: number, y: number): boolean {
+    const r = this.landRead;
+    return !r || r[((y / CHUNK) | 0) * Math.ceil(this.w / CHUNK) + ((x / CHUNK) | 0)] === 1;
+  }
+
+  /** The square under a tile is wanted and has not been read: once, until it is read or the asks are let go. */
+  askRead(x: number, y: number): void {
+    const a = this.readAsked;
+    if (!a) return;
+    const c = ((y / CHUNK) | 0) * Math.ceil(this.w / CHUNK) + ((x / CHUNK) | 0);
+    if (a[c]) return;
+    a[c] = 1;
+    this.readWanted.add(c);
+  }
+
+  /** Nothing is wanted any more: the fog is back on, and what it shows is read as it is walked. */
+  dropAsks(): void {
+    if (!this.readWanted.size) return;
+    for (const c of this.readWanted) if (this.readAsked) this.readAsked[c] = 0;
+    this.readWanted.clear();
+  }
+
+  /** The tiles read since this was last asked, for anything drawing them: a box, 'all', or null. */
+  takeRead(): { x0: number; y0: number; x1: number; y1: number } | 'all' | null {
+    const b = this.readSince;
+    this.readSince = null;
+    return b;
   }
 
   /** Whether this world is worked out as it goes rather than held whole. */

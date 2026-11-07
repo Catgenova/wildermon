@@ -23,6 +23,7 @@
  * business and answers to `WORLD_PACE`; a database tidying up after itself is
  * nobody's idea of weather.
  */
+import { CHUNK } from '../world/world';
 
 /**
  * How often the clock comes round.
@@ -249,6 +250,17 @@ export const LAND_ASK = 400;
  * the map fills in behind you rather than holding the page.
  */
 export const LAND_NEAR = 192;
+
+/**
+ * Seconds between reads of land asked for with the fog off: a square nobody has read is dark on the map and in the
+ * world until the island's own land for it comes (`World.askRead`), one `LAND_ASK` square at a time, nearest first.
+ * A whole 4096 island is 121 squares of `LAND_STEP`; at one every two seconds the island is asked for no more than it would be by
+ * one body walking.
+ */
+export const LAND_UNFOGGED_EVERY = 2;
+
+/** The side of a square of land read at once after the join, on whole `CHUNK` squares: `LAND_ASK` rounded down. */
+export const LAND_STEP = Math.floor(LAND_ASK / CHUNK) * CHUNK;
 
 /**
  * How many rows of the island's history come down in one request.

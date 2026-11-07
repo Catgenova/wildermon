@@ -24,7 +24,7 @@ import type { StoreLogEntry } from '../game/stores';
 import type { DeedWatch } from '../game/visitors';
 import type { Mark } from '../game/items';
 import type { PathBeat, PathSaid } from '../game/meditation';
-import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, NEAR_WHOLE_EVERY, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
+import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_NEAR, LAND_STEP, LAND_UNFOGGED_EVERY, MOBS_EVERY, MOBS_RANGE, NEAR_WHOLE_EVERY, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
 import type { GuideBook } from '../game/guide';
 import { packFog, unpackFog } from './fogpack';
 import { chartedSquare } from '../game/cartography';
@@ -1745,6 +1745,8 @@ export class Island {
      */
     const you = this.me;
     let read = false;
+    // Which squares hold the island's own land, from the first read on: with the fog off, only those are shown.
+    world.trackRead();
     if (you) {
       this.hooks.progress?.(0, 2, 'near', 'land');
       const [bx0, by0, bx1, by1] = this.nearBox(you.x, you.y);
@@ -1765,6 +1767,8 @@ export class Island {
         }
       }
     }
+    // Ground that came by the old road is the island's as it stands, every square of it.
+    if (!read) world.untrackRead();
     // Whatever has happened since the island read that land — and everything
     // ever, when there was no land to read.
     this.hooks.progress?.(1, 2, read ? 'since' : 'changes', 'land');
@@ -2061,6 +2065,7 @@ export class Island {
     for (let cy = Math.ceil(y0 / CHUNK); cy <= Math.floor((y1 + 1) / CHUNK) - 1; cy++) {
       for (let cx = Math.ceil(x0 / CHUNK); cx <= Math.floor((x1 + 1) / CHUNK) - 1; cx++) {
         this.landCells.add(cy * 1024 + cx);
+        this.world?.markRead(cx, cy);
       }
     }
   }
@@ -2112,6 +2117,7 @@ export class Island {
     const you = this.me;
     if (!you) return;
     this.landCells.clear();
+    this.world?.forgetRead();
     const [bx0, by0, bx1, by1] = this.nearBox(you.x, you.y);
     this.seenChange = await this.readLand(bx0, by0, bx1, by1);
     this.hooks.ground(Math.floor(you.x), Math.floor(you.y));
@@ -2145,7 +2151,7 @@ export class Island {
     if (!w) return;
     const b = w.knownBox;
     if (b.x1 < b.x0 || b.y1 < b.y0) return;
-    const step = Math.floor(LAND_ASK / CHUNK) * CHUNK;
+    const step = LAND_STEP;
     const here = this.me ?? { x: 0, y: 0 };
     const boxes: Array<{ x0: number; y0: number; away: number }> = [];
     for (let y0 = Math.floor(b.y0 / step) * step; y0 <= b.y1; y0 += step) {
@@ -2180,6 +2186,41 @@ export class Island {
         return;
       }
       this.hooks.ground(box.x0, box.y0);
+    }
+  }
+
+  /** When the last square asked for with the fog off was read (`readUnfogged`), in the clock `move` is given. */
+  private lastUnfogged = -Infinity;
+
+  /**
+   * One square of the land the fog-off map and world have asked for (`World.askRead`), every `LAND_UNFOGGED_EVERY`:
+   * the `LAND_STEP` square on `fillLand`'s grid holding the wanted square nearest the body. Until it comes, that ground
+   * is dark rather than the generator's guess at it.
+   */
+  private async readUnfogged(now: number): Promise<void> {
+    const w = this.world;
+    if (!w || !w.readWanted.size || this.reading || now - this.lastUnfogged < LAND_UNFOGGED_EVERY) return;
+    this.lastUnfogged = now;
+    const across = Math.ceil(w.w / CHUNK);
+    const here = this.me ?? { x: 0, y: 0 };
+    let best = -1;
+    let away = Infinity;
+    for (const c of w.readWanted) {
+      const d = Math.hypot((c % across + 0.5) * CHUNK - here.x, (Math.floor(c / across) + 0.5) * CHUNK - here.y);
+      if (d < away) { away = d; best = c; }
+    }
+    if (best < 0) return;
+    const step = LAND_STEP;
+    const x0 = Math.floor(((best % across) * CHUNK) / step) * step;
+    const y0 = Math.floor((Math.floor(best / across) * CHUNK) / step) * step;
+    this.reading = true;
+    try {
+      await this.readLand(x0, y0, Math.min(w.w - 1, x0 + step - 1), Math.min(w.h - 1, y0 + step - 1));
+      this.hooks.ground(x0, y0);
+    } catch {
+      // Not come: still wanted, and asked again in its turn.
+    } finally {
+      this.reading = false;
     }
   }
 
@@ -3453,6 +3494,7 @@ export class Island {
     void this.refreshSwirls(now);
     void this.refreshGateFolk(now);
     void this.keepFog(now);
+    void this.readUnfogged(now);
     void this.keepGuide(now);
     const said = `${x.toFixed(2)},${y.toFixed(2)},${level}`;
 

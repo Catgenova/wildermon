@@ -66,8 +66,8 @@ import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
-import { BURYABLE, BUSH_DEFS, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
-import { REGIONS } from '../../world/regions';
+import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
+import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY } from '../../game/motes';
 import { HEMS_A_FRAME, LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
@@ -135,7 +135,7 @@ import { RELICS } from '../../game/archaeology';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
 import { cropYield, RIPE, seedSays } from '../../game/farming';
 import { SEAT_ELSEWHERE, SEAT_STALE_S } from '../../net/supabase';
-import { HEARTBEAT, IDLE_LOGOUT, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
+import { HEARTBEAT, IDLE_LOGOUT, LAND_STEP, LAND_UNFOGGED_EVERY, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ACT_MANY_MOST, VIA_MAX } from '../../net/island';
 import { SAID_LAG_MS } from '../../net/heardlines';
@@ -4261,6 +4261,11 @@ export const NEWS: News[] = [
       'New: Leach into lye on a barrel of water: every litre in it, one ash a litre, from the pack or stores within reach. Not on wells.',
       `New: Fill with water on a barrel: to the brim at a shore (within ${WATER_AT_HAND} tile), or what the fullest well or fountain within reach holds. Not over another liquid.`,
       'Fixed: Shoe it is on a mount\'s and a draught beast\'s menu (it was on no menu). Leach into lye is on a barrel\'s menu.',
+      `Fixed: wild fruit trees on their islands, ${percent(OWN_FRUIT_SHARE)} of each island's wild fruit trees: ${REGIONS.map((R) => [R, R.trees.filter((t) => ISLAND_FRUIT.includes(t))] as const)
+        .filter(([, own]) => own.length).map(([R, own]) => `${listed(own.map((t) => TREE_DEFS[t].name.toLowerCase()))} on ${R.name}`).join('; ')}. `
+        + 'In place of wild apple and olive trees nobody had touched (was: only on the map with the fog off).',
+      `Fixed: with the fog off, the map and the world show only land read from the island; the rest is dark until read, ${LAND_STEP} × ${LAND_STEP} tiles `
+        + `every ${LAND_UNFOGGED_EVERY} s, nearest first (was: drawn from the seed, without anybody's changes).`,
     ],
   },
   {

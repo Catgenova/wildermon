@@ -21,6 +21,11 @@
  *  - `goldOff`: gold seams anywhere but under the Northeast Tundra's mountain
  *    become what the generator lays there now (iron, as any seam that belongs
  *    to another island does).
+ *  - `fruitHome`: the 18 September move, which was never carried: where the
+ *    generator now grows an island's own fruit (`Region.trees`, `speciesFor`),
+ *    an island founded before it holds the apple or olive the old generator
+ *    grew there. Those trees, on tiles nobody has touched, become the island's
+ *    fruit, keeping their age.
  *
  * Each island a move has done goes into `land_move`, and an island already
  * there is skipped without reading its land, so a deploy can run this every
@@ -33,7 +38,7 @@
 import { execFileSync } from 'node:child_process';
 import { generateAtlasWindow, regionAt } from '../src/world/atlas-world';
 import { REGIONS } from '../src/world/regions';
-import { packTreeData, ROCK_VARIANTS, TileType, TREE_DEFS, treeSpecies, treeVariant } from '../src/world/tiles';
+import { ISLAND_FRUIT, packTreeData, ROCK_VARIANTS, TileType, TREE_DEFS, treeSpecies, treeVariant } from '../src/world/tiles';
 import { readAtlas } from './atlas-node';
 
 /** Rows of land read and written at a time. */
@@ -222,7 +227,57 @@ export function goldOff(sql: Sql, world: World): string {
   return `${world.name}: ${moved} gold seams off the islands that no longer hold gold`;
 }
 
-export const MOVES: Array<[string, (sql: Sql, world: World) => string]> = [[MOVE, move], [CLEAR, clearTrees], [GOLD_MOVE, goldOff]];
+/**
+ * Each island's own fruit, by region: the kinds `speciesFor` holds to it, past the apple, cherry and olive that grow
+ * anywhere. Empty for an island with none.
+ */
+export const OWN_FRUIT: number[][] = REGIONS.map((R) => R.trees.filter((s) => ISLAND_FRUIT.includes(s)));
+/** What the generator of founding day grew where today's grows an island's own fruit: the fruit trees of anywhere. */
+export const FOUNDING_FRUIT = new Set(['Apple', 'Olive'].map((n) => TREE_DEFS.findIndex((t) => t.name === n)));
+
+export const FRUIT_MOVE = '2026-09-18 fruit trees held to their islands';
+export function fruitHome(sql: Sql, world: World): string {
+  const regions = new Set(OWN_FRUIT.map((f, i) => (f.length ? i : -1)).filter((i) => i >= 0));
+  const b = boundsOf(world, regions);
+  let moved = 0;
+  if (b) {
+    const atlas = readAtlas();
+    const S = world.size;
+    const told = touched(sql, world);
+    const w = b.xHi - b.xLo + 1;
+    for (let y0 = b.yLo; y0 <= b.yHi; y0 += BAND) {
+      const h = Math.min(BAND, b.yHi + 1 - y0);
+      const land = readBand(sql, world, y0, h, ['tiles', 'data']);
+      // Only a band with an apple or an olive standing in it is worth working out.
+      let any = false;
+      for (const [, row] of land) {
+        for (let x = b.xLo; x <= b.xHi && !any; x++) if (row.tiles[x] === TileType.Tree && FOUNDING_FRUIT.has(treeSpecies(row.data[x]))) any = true;
+        if (any) break;
+      }
+      if (!any) continue;
+      const win = generateAtlasWindow(world.seed, atlas, b.xLo, y0, w, h, S);
+      const statements: string[] = [];
+      for (const [y, row] of land) {
+        const j = y - y0;
+        const xs: number[] = [], from: number[] = [], to: number[] = [];
+        for (let x = b.xLo; x <= b.xHi; x++) {
+          if (row.tiles[x] !== TileType.Tree || !FOUNDING_FRUIT.has(treeSpecies(row.data[x]))) continue;
+          const k = j * w + (x - b.xLo);
+          if (win.tiles[k] !== TileType.Tree) continue;
+          const now = treeSpecies(win.data[k]);
+          if (!OWN_FRUIT[regionAt(atlas, x, y, S)]?.includes(now) || told.has(y * S + x)) continue;
+          xs.push(x); from.push(row.data[x]); to.push(packTreeData(now, treeVariant(row.data[x])));
+        }
+        if (xs.length) statements.push(`select land_regrow_row(${lit(world.id)}, ${y}, ${arr([])}, ${arr([])}, ${arr(xs)}, ${arr(from)}, ${arr(to)}, ${TileType.Tree})`);
+      }
+      moved += writeBand(sql, statements);
+    }
+  }
+  finish(sql, world, FRUIT_MOVE, 0, moved);
+  return `${world.name}: ${moved} apple and olive trees grown back as their island's own fruit`;
+}
+
+export const MOVES: Array<[string, (sql: Sql, world: World) => string]> = [[MOVE, move], [CLEAR, clearTrees], [GOLD_MOVE, goldOff], [FRUIT_MOVE, fruitHome]];
 
 /** Every move not yet made, on every island that is open. */
 export function moveAll(sql: Sql): void {

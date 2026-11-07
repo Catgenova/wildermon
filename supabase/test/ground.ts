@@ -64,7 +64,10 @@ const marks = {
  *
  * `data` moved on 18 September, when eight fruit trees were held to their
  * islands: every face stayed and the species byte of one tree in fifty
- * changed, which the reconcile compares now as well as the face.
+ * changed, which the reconcile compares now as well as the face. That move
+ * reached the island's own land only on 7 November, through the fruit move
+ * in `tools/move-ground.ts`: until then a fog-off map drew lemons on Volcano
+ * Isle that the island did not have.
  *
  * `rock` and `data` moved on 8 October, when glimmersteel went to West
  * Skerry, the plum to East Isle and the Northeast Tundra was left bare but

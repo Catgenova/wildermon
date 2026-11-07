@@ -4123,6 +4123,31 @@ jobs:
             --outfile=node_modules/.cache/dragonisle.mjs --log-level=error
           node node_modules/.cache/dragonisle.mjs
 
+      - name: Each island's own fruit trees, carried onto an island founded before them
+        if: matrix.shard == 6
+        run: |
+          # Reported: with the fog off the map drew lemons on Volcano Isle, and
+          # walking there found none. The live island's land is from 15 September
+          # and the fruit trees were held to their islands on the 18th; the move
+          # tool's fruit move (tools/move-ground.ts `fruitHome`) grows them there.
+          # Lemons on Volcano Isle only, ages kept, a tile in tile_change and a
+          # planted oak left alone, written down once, a second run a no-op.
+          npx esbuild supabase/test/fruithome.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/fruithome.mjs --log-level=error
+          node --max-old-space-size=4096 node_modules/.cache/fruithome.mjs
+
+      - name: With the fog off, the map and the world show the island and not the seed
+        if: matrix.shard == 6
+        run: |
+          # The same report: the fog-off map drew every square from the seed,
+          # read from the island or not. A square not read is unseen with the
+          # fog off and asked for once; the asks are read a LAND_STEP square at
+          # a time, nearest the body first, LAND_UNFOGGED_EVERY apart, and each
+          # is drawn afresh; read, it shows the island's tree, not the seed's.
+          npx esbuild supabase/test/unfogged.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/unfogged.mjs --log-level=error
+          node --max-old-space-size=4096 node_modules/.cache/unfogged.mjs
+
       - name: A hod carrier brings a wall what the stores hold
         if: matrix.shard == 4
         run: |
