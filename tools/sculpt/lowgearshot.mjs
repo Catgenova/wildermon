@@ -13,7 +13,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildRig, posed, skin, ground, mm, mv, tr, add, sub, mul, unit, cross, dot, axisAngle } from './lowrig.mjs';
-import { shoot, closeBrowser, gearDrawable, bodyDrawable, edgesOf, triEdgesOf, gameScale, socketOf, socketAt, fistOn, reach, placed, cols, colOf, trisOf } from './lowgear.mjs';
+import { shoot, closeBrowser, gearDrawable, bodyDrawable, edgesOf, triEdgesOf, gameScale, socketAt, fistOn, fitFist, reach, placed, cols, colOf, trisOf } from './lowgear.mjs';
 import { buildLongSword, swordLength } from './gear/long_sword.mjs';
 
 const args = process.argv.slice(2);
@@ -93,6 +93,7 @@ if (only.includes('engrave')) {
 
 /* ---- held: the poses --------------------------------------------------------------------------------------------- */
 const deg = Math.PI / 180;
+const FIT = {};
 const frameOf = (x, y) => { const X = unit(x), Y = unit(sub(y, mul(X, dot(y, X)))); return cols(X, Y, cross(X, Y)); };
 /**
  * The sword held by one body: 'one' in the right hand, upright and leant forward in front of the hip; 'two' in both, the
@@ -102,7 +103,7 @@ const frameOf = (x, y) => { const X = unit(x), Y = unit(sub(y, mul(X, dot(y, X))
  */
 export function heldPose(who, how, sw = plain) {
   const rig = rigs[who], sca = sc[who].scale, r = sw.gripR / sca, J = rig.J;
-  const sR = socketOf(rig, 'r', r), sL = socketOf(rig, 'l', r);
+  const fR = (FIT[`${who}r`] ??= fitFist(rig, 'r', r)), fL = (FIT[`${who}l`] ??= fitFist(rig, 'l', r)), sR = fR.socket, sL = fL.socket;
   const mx = (p) => [-p[0], p[1], p[2]];
   const shR = mx(J.shoulder), gap = (sw.grips.main[1] - sw.grips.off[1]) / sca;
   let pose = {}, errs = {};
@@ -131,8 +132,10 @@ export function heldPose(who, how, sw = plain) {
     const a = reach(rig, {}, sR, { o, R: frameOf(x, y) }, { elbowOut: Math.abs(shR[0]) + 0.15 });
     pose = a.pose; errs.right = a.err;
   }
-  pose = fistOn(rig, pose, sR, r * 0.55);
-  if (how === 'two') pose = fistOn(rig, pose, sL, r * 0.55);
+  // the fingers as fitted to the grip (fitFist), the thumbs closed over it
+  const curl = (side, f) => { pose[`fingers_01_${side}`] = [f.curl.fingers_01, 0, 0]; pose[`fingers_02_${side}`] = [f.curl.fingers_02, 0, 0]; };
+  curl('r', fR); pose = fistOn(rig, pose, sR, r * 0.55, { thumbOnly: true });
+  if (how === 'two') { curl('l', fL); pose = fistOn(rig, pose, sL, r * 0.55, { thumbOnly: true }); }
   const F = posed(rig, pose), P = skin(rig, F), at = socketAt(rig, F, sR);
   const Q = placed(sw.G.V, at, sca, sw.grips.main);
   return { pose, P, Q, errs, F, at };
@@ -179,6 +182,29 @@ if (only.includes('held')) {
     col++;
   }
   await shoot(col * cw, 780, fists, `${out}/held-fists.png`);
+}
+
+/* ---- game: the whole body at the game's zoom ------------------------------------------------------------------------- */
+if (only.includes('game')) {
+  // px per game unit up the body: the zoom times the iso's HEIGHT_SCALE (src/render/iso.ts), so a man is 371 px tall at 10;
+  // the review renders' pitch (src/sculpt/gl.ts REVIEW_PITCH), the game's ink round the silhouette (gl.ts LOW_INK)
+  const HEIGHT_SCALE = 2.25, PITCH = 8, inkAt = (z) => Math.min(2, Math.max(1, 0.8 + 0.2 * z));
+  const cells = [];
+  let y = 0;
+  for (const [zoom, yaw] of [[10, -45], [10, 0], [5, -45], [5, 0]]) {
+    const s = zoom * HEIGHT_SCALE, cw = Math.round(9.5 * s), ch = Math.round(19 * s);
+    let x = 0;
+    for (const who of ['male', 'female']) for (const [how] of HOWS) for (const sw of [plain, lit]) {
+      if (how !== 'carry' && sw === lit && zoom === 5) continue;
+      const h = heldOf(who, how, sw);
+      const items = [bodyDrawable(rigs[who], toGame(who, h.P)), swordD(sw, toGame(who, h.Q))];
+      cells.push({ items, cam: { yaw, pitch: PITCH, s, c: [0, 9.2, 0] }, box: [x, y, cw, ch], bg: BG, ink: inkAt(zoom), label: x === 0 ? `Zoom ${zoom}, ${yaw ? 'three-quarter' : 'front'}` : '' });
+      x += cw;
+    }
+    y += ch;
+  }
+  const W = Math.max(...cells.map((c) => c.box[0] + c.box[2]));
+  await shoot(W, y, cells, `${out}/game.png`);
 }
 
 await closeBrowser();
