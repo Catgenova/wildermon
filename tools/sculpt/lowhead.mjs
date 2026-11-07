@@ -3,7 +3,7 @@
 //
 //   node tools/sculpt/lowhead.mjs --who male|female        # prints the triangle counts per part
 //
-// One mesh per head: the head (a ring lattice of 12 columns, mirrored, plus the ears, nose, brows, eyes, lids and lips
+// One mesh per head: the head (hand-authored after the references' wireframes, mirrored, plus the ears, nose, brows, eyes, lids and lips
 // as closed pieces set into it), the neck, and a shoulder stub. Units: the head two tall from the chin's underside
 // (y 0) to the crown (y 2), z forward, x the head's left (the viewer's right in the front view), the ear's centre near
 // z 0. Every polygon keeps its own normal when drawn (flat shading); `polys` keeps the quads for the wireframe.
@@ -45,41 +45,62 @@ function faceRow(front, back) {
 const rowOf = (r) => (Array.isArray(r) ? r : ellRow(r));
 
 /* ---- the two heads ---------------------------------------------------------------------------------------------- */
+// The head is hand-authored after the reference sheets' own front wireframes: one half's vertices by name (x >= 0;
+// the centre line at x 0 is shared), and one list of faces both heads use, mirrored for the other half. Rings, top to
+// bottom: the crown c; t the skull's top; f the temple and the skull's side and back; b the brow; e under the eyes; k the cheekbones
+// and the nose's base; m the mouth with j the jaw's corner; ch the chin with jl the jaw line; u the chin's flat
+// underside; g the neck's top under the jaw; n6, n7 the nape; nm and nf the neck (nf inside the shoulders).
+export const FACES = [
+  // the crown: a flat cap of three facets a side on the top ring a, then a band down to the ring t
+  ['c', 'a0', 'a1'], ['c', 'a1', 'a2'], ['c', 'a2', 'a3'],
+  ['a0', 'a1', 't1', 't0'], ['a1', 'a2', 't2', 't1'], ['a2', 'a3', 't4', 't3', 't2'],
+  // the forehead: one large plane each side of the centre from the skull's top ring to the brow; the temple
+  ['t0', 't1', 'b2', 'b1', 'b0'], ['t1', 'f2', 'b3', 'b2'], ['t1', 't2', 'f3', 'f2'], ['f2', 'b4', 'b3'], ['f2', 'f3', 'b5', 'b4'],
+  // the skull's side and back
+  ['t2', 't3', 'f4', 'f3'], ['t3', 't4', 'f5', 'f4'], ['f3', 'f4', 'b6', 'b5'], ['f4', 'f5', 'b7', 'b6'],
+  // the brow down to under the eyes: the nose's root, the eye's socket (inner, outer), the temple, the side, the back
+  ['b0', 'b1', 'e1', 'e0'], ['b1', 'b2', 'e2', 'e1'], ['b2', 'b3', 'e3', 'e2'], ['b3', 'b4', 'e4', 'e3'], ['b4', 'b5', 'e5', 'e4'], ['b5', 'b6', 'o6', 'e5'], ['b6', 'b7', 'o7', 'o6'],
+  // under the eyes down to the cheekbones: the nose, the cheek under the eye, the cheekbone's top, the side, the back
+  ['e0', 'e1', 'k1', 'k0'], ['e1', 'e2', 'k2', 'k1'], ['e2', 'e3', 'k3', 'k2'], ['e3', 'e4', 'k4', 'k3'], ['e4', 'e5', 'k5', 'k4'], ['e5', 'o6', 'n6', 'k5'], ['o6', 'o7', 'n7', 'n6'],
+  // the cheekbones down to the mouth: the upper lip, the front of the cheek, the cheek's big plane to the jaw's corner
+  ['k0', 'k1', 'm1', 'm0'], ['k1', 'k2', 'm2', 'm1'], ['k2', 'k3', 'j', 'm2'], ['k3', 'k4', 'j'], ['k4', 'k5', 'm5', 'j'],
+  // the mouth down to the chin
+  ['m0', 'm1', 'ch1', 'ch0'], ['m1', 'm2', 'jl', 'ch1'], ['m2', 'j', 'jl'],
+  // the chin's flat underside and the jaw's underside back to the neck
+  ['ch0', 'ch1', 'u1', 'u0'], ['u0', 'u1', 'g1', 'g0'], ['u1', 'ch1', 'jl', 'g1'], ['jl', 'j', 'g2', 'g1'], ['j', 'm5', 'g3', 'g2'], ['m5', 'k5', 'n6', 'g3'],
+];
+export const NECK_FACES = [
+  ['g0', 'g1', 'nm1', 'nm0'], ['g1', 'g2', 'nm2', 'nm1'], ['g2', 'g3', 'nm3', 'nm2'], ['g3', 'n6', 'nm4', 'nm3'], ['n6', 'n7', 'nm5', 'nm4'],
+  ['nm0', 'nm1', 'nf1', 'nf0'], ['nm1', 'nm2', 'nf2', 'nf1'], ['nm2', 'nm3', 'nf3', 'nf2'], ['nm3', 'nm4', 'nf4', 'nf3'], ['nm4', 'nm5', 'nf5', 'nf4'],
+  ['nf0', 'nf1', 'nfc'], ['nf1', 'nf2', 'nfc'], ['nf2', 'nf3', 'nfc'], ['nf3', 'nf4', 'nfc'], ['nf4', 'nf5', 'nfc'],
+];
+
 export const PRESETS = {
   male: {
-    planar: 6,
-    crown: [0, 2.08, 0.04],
-    skull: [
-      { yf: 2.0, yb: 1.97, W: 0.35, F: 0.4, D: 0.38, z0: 0.06, f: [0, 0.5, 0.86, 1], b: [0.86, 0.5, 0] },
-      { yf: 1.84, yb: 1.8, W: 0.55, F: 0.7, D: 0.66, z0: 0.07, f: [0, 0.3, 0.66, 1], b: [0.7, 0.3, 0] },
-      { yf: 1.58, yb: 1.52, W: 0.69, F: 0.79, D: 0.79, z0: 0.08, sideZ: 0.02 },
-    ],
-    face: [
-      // brow ridge
-      { front: [[0, 1.2, 0.98], [0.32, 1.2, 0.94], [0.56, 1.17, 0.73], [0.68, 1.16, 0.12]], back: { yb: 1.2, W: 0.68, D: 0.8, z0: 0.08, mid: true } },
-      // eyes
-      { front: [[0, 1.0, 0.9], [0.32, 0.98, 0.755], [0.51, 0.97, 0.62], [0.67, 0.97, 0.1]], back: { yb: 1.0, W: 0.66, D: 0.75, z0: 0.08 } },
-      // cheekbones; the back's shelf under the skull
-      { front: [[0, 0.72, 0.95], [0.3, 0.75, 0.76], [0.57, 0.77, 0.57], [0.65, 0.8, 0.07]], back: { yb: 0.76, W: 0.6, D: 0.63, z0: 0.07 } },
-      // the mouth's line
-      { front: [[0, 0.3, 0.87], [0.26, 0.33, 0.72], [0.46, 0.45, 0.4], [0.57, 0.6, -0.04]], back: { yb: 0.54, W: 0.53, D: 0.56, z0: 0.05, mid: true } },
-      // the jawline: the chin's flat underside's front edge, back to the jaw's angle and the nape
-      { front: [[0, 0.0, 0.8], [0.18, 0.02, 0.75], [0.4, 0.3, 0.28], [0.52, 0.46, -0.08]], back: { yb: 0.44, W: 0.48, D: 0.53, z0: 0.03 } },
-    ],
-    // the neck's rings: the first under the jaw (the chin's underside between), the last hidden in the shoulders
-    neck: [
-      [[0, 0.03, 0.42], [0.3, 0.08, 0.33], [0.44, 0.22, 0.03], [0.46, 0.3, -0.16], [0.4, 0.33, -0.33], [0.22, 0.35, -0.44], [0, 0.36, -0.47]],
-      { yf: -0.2, yb: 0.0, W: 0.47, F: 0.42, D: 0.45, z0: -0.04, sideZ: -0.06 },
-      { yf: -0.5, yb: -0.35, W: 0.48, F: 0.44, D: 0.46, z0: -0.04, sideZ: -0.06 },
-    ],
-    // the shoulder stub: the collar inside the neck, the shoulders' line, the cut
+    V: {
+      c: [0, 2.09, 0.1],
+      a0: [0, 2.04, 0.42], a1: [0.25, 2.03, 0.24], a2: [0.27, 2.03, -0.14], a3: [0, 2.04, -0.26],
+      t0: [0, 1.86, 0.72], t1: [0.4, 1.85, 0.56], t2: [0.58, 1.88, -0.05], t3: [0.42, 1.88, -0.4], t4: [0, 1.9, -0.44],
+      f2: [0.64, 1.5, 0.48], f3: [0.72, 1.47, -0.05], f4: [0.6, 1.5, -0.5], f5: [0, 1.5, -0.67],
+      b0: [0, 1.22, 0.97], b1: [0.15, 1.22, 0.96], b2: [0.42, 1.22, 0.9], b3: [0.6, 1.2, 0.7], b4: [0.71, 1.18, 0.25], b5: [0.72, 1.16, -0.25], b6: [0.58, 1.18, -0.62], b7: [0, 1.2, -0.72],
+      e0: [0, 0.98, 0.92], e1: [0.13, 0.97, 0.86], e2: [0.32, 0.93, 0.78], e3: [0.52, 0.95, 0.66], e4: [0.67, 0.95, 0.25], e5: [0.69, 0.92, -0.25], o6: [0.56, 0.95, -0.58], o7: [0, 0.98, -0.68],
+      k0: [0, 0.6, 0.95], k1: [0.13, 0.6, 0.9], k2: [0.33, 0.66, 0.82], k3: [0.6, 0.74, 0.55], k4: [0.64, 0.7, 0.2], k5: [0.6, 0.66, -0.25], n6: [0.45, 0.62, -0.5], n7: [0, 0.6, -0.55],
+      m0: [0, 0.3, 0.89], m1: [0.16, 0.3, 0.85], m2: [0.4, 0.36, 0.68], j: [0.56, 0.44, 0.25], m5: [0.55, 0.5, -0.15],
+      ch0: [0, 0, 0.84], ch1: [0.18, 0, 0.8], jl: [0.4, 0.18, 0.55],
+      u0: [0, -0.01, 0.62], u1: [0.19, -0.01, 0.6],
+      g0: [0, 0.05, 0.45], g1: [0.3, 0.1, 0.36], g2: [0.46, 0.28, 0.05], g3: [0.47, 0.42, -0.28],
+      nm0: [0, -0.15, 0.46], nm1: [0.32, -0.12, 0.36], nm2: [0.48, -0.08, 0.02], nm3: [0.46, -0.02, -0.3], nm4: [0.32, 0.02, -0.48], nm5: [0, 0.04, -0.52],
+      nf0: [0, -0.5, 0.42], nf1: [0.3, -0.48, 0.33], nf2: [0.45, -0.45, 0.01], nf3: [0.43, -0.42, -0.28], nf4: [0.3, -0.4, -0.45], nf5: [0, -0.4, -0.49], nfc: [0, -0.46, -0.03],
+    },
+    // the shoulder stub: the collar inside the neck (rising at the back, where the trapezius climbs to the nape), the
+    // shoulders' line, the cut
     stub: [
-      { yf: -0.26, yb: -0.06, W: 0.44, F: 0.39, D: 0.42, z0: -0.04, sideZ: -0.06 },
-      [[0, -0.64, 0.52], [0.45, -0.52, 0.46], [0.82, -0.43, 0.26], [0.91, -0.44, -0.06], [0.8, -0.43, -0.42], [0.42, -0.42, -0.66], [0, -0.5, -0.72]],
+      [[0, -0.18, 0.34], [0.19, -0.17, 0.32], [0.34, -0.12, 0.22], [0.42, -0.08, -0.1], [0.36, 0.1, -0.36], [0.2, 0.3, -0.44], [0, 0.36, -0.46]],
+      [[0, -0.64, 0.52], [0.45, -0.52, 0.46], [0.84, -0.42, 0.26], [0.92, -0.45, -0.1], [0.82, -0.42, -0.5], [0.44, -0.4, -0.8], [0, -0.45, -0.88]],
       [[0, -0.92, 0.6], [0.42, -0.92, 0.5], [0.62, -0.92, 0.28], [0.66, -0.92, -0.06], [0.6, -0.92, -0.36], [0.36, -0.92, -0.5], [0, -0.92, -0.54]],
     ],
-    ear: { c: [0.6, 0.83, -0.02], s: 1.03, gap: 0.05, flare: 0.18, lift: 0.18, thick: 0.14 },
-    nose: { top: 1.13, tip: 0.6, under: 0.54, wTop: 0.07, wBridge: 0.1, wWing: 0.13, out: 0.1, tipOut: 0.14 },
+    ear: { c: [0.62, 0.84, -0.02], s: 1.03, gap: 0.05, flare: 0.18, lift: 0.18, thick: 0.14 },
+    nose: { top: 1.13, tip: 0.6, under: 0.54, wTop: 0.08, wBridge: 0.115, wWing: 0.14, out: 0.1, tipOut: 0.14 },
     brow: { x: [0.12, 0.33, 0.56], yb: [1.12, 1.135, 1.115], h: [0.08, 0.075, 0.05], out: 0.045 },
     eye: { x: 0.31, y: 1.0, w: 0.1, h: 0.085, lid: 0.03, almond: 0 },
     lips: null,
@@ -87,34 +108,29 @@ export const PRESETS = {
   },
 };
 
-/** The female head: the male's system with her proportions. */
+/** The female head: the same vertices and faces, moved to her proportions. */
 PRESETS.female = {
-  planar: 6,
-  // Her head 1.91 tall from her chin (y 0.15) to her crown, her neck the longer for it.
-  crown: [0, 2.06, 0.02],
-  skull: [
-    { yf: 2.0, yb: 1.97, W: 0.28, F: 0.32, D: 0.36, z0: 0.04, f: [0, 0.5, 0.86, 1], b: [0.86, 0.5, 0] },
-    { yf: 1.87, yb: 1.83, W: 0.5, F: 0.64, D: 0.67, z0: 0.05, f: [0, 0.3, 0.66, 1], b: [0.7, 0.3, 0] },
-    { yf: 1.58, yb: 1.54, W: 0.68, F: 0.77, D: 0.82, z0: 0.06, sideZ: 0.02 },
-  ],
-  face: [
-    { front: [[0, 1.22, 0.9], [0.3, 1.22, 0.85], [0.5, 1.2, 0.67], [0.62, 1.2, 0.1]], back: { yb: 1.24, W: 0.66, D: 0.82, z0: 0.06, mid: true } },
-    { front: [[0, 0.98, 0.86], [0.3, 0.96, 0.77], [0.47, 0.95, 0.62], [0.54, 0.95, 0.08]], back: { yb: 1.04, W: 0.6, D: 0.78, z0: 0.06 } },
-    { front: [[0, 0.72, 0.9], [0.26, 0.75, 0.74], [0.47, 0.8, 0.55], [0.53, 0.84, 0.05]], back: { yb: 0.84, W: 0.53, D: 0.66, z0: 0.05 } },
-    { front: [[0, 0.4, 0.83], [0.21, 0.42, 0.68], [0.39, 0.52, 0.42], [0.48, 0.66, -0.04]], back: { yb: 0.66, W: 0.48, D: 0.58, z0: 0.04, mid: true } },
-    { front: [[0, 0.15, 0.8], [0.07, 0.16, 0.77], [0.31, 0.31, 0.4], [0.44, 0.5, -0.08]], back: { yb: 0.56, W: 0.44, D: 0.54, z0: 0.03 } },
-  ],
-  neck: [
-    [[0, 0.16, 0.28], [0.2, 0.19, 0.22], [0.3, 0.24, 0.0], [0.32, 0.34, -0.15], [0.28, 0.38, -0.3], [0.15, 0.4, -0.39], [0, 0.41, -0.42]],
-    { yf: -0.2, yb: -0.05, W: 0.32, F: 0.3, D: 0.36, z0: -0.06, sideZ: -0.05 },
-    { yf: -0.5, yb: -0.4, W: 0.33, F: 0.31, D: 0.37, z0: -0.05, sideZ: -0.05 },
-  ],
+  V: {
+    c: [0, 2.07, 0.06],
+    a0: [0, 2.02, 0.36], a1: [0.27, 2.01, 0.18], a2: [0.29, 2.01, -0.18], a3: [0, 2.02, -0.3],
+    t0: [0, 1.86, 0.65], t1: [0.36, 1.85, 0.5], t2: [0.52, 1.88, -0.08], t3: [0.38, 1.88, -0.42], t4: [0, 1.9, -0.46],
+    f2: [0.6, 1.5, 0.42], f3: [0.69, 1.47, -0.15], f4: [0.56, 1.5, -0.62], f5: [0, 1.5, -0.76],
+    b0: [0, 1.22, 0.9], b1: [0.14, 1.22, 0.89], b2: [0.38, 1.22, 0.84], b3: [0.54, 1.2, 0.66], b4: [0.62, 1.16, 0.22], b5: [0.66, 1.15, -0.3], b6: [0.56, 1.18, -0.68], b7: [0, 1.2, -0.78],
+    e0: [0, 0.97, 0.87], e1: [0.12, 0.96, 0.83], e2: [0.31, 0.93, 0.76], e3: [0.48, 0.95, 0.63], e4: [0.56, 0.93, 0.22], e5: [0.6, 0.9, -0.28], o6: [0.5, 0.95, -0.62], o7: [0, 0.98, -0.7],
+    k0: [0, 0.62, 0.92], k1: [0.11, 0.62, 0.86], k2: [0.3, 0.67, 0.78], k3: [0.5, 0.74, 0.55], k4: [0.55, 0.7, 0.18], k5: [0.5, 0.66, -0.22], n6: [0.36, 0.55, -0.36], n7: [0, 0.55, -0.4],
+    m0: [0, 0.42, 0.86], m1: [0.14, 0.42, 0.82], m2: [0.33, 0.46, 0.66], j: [0.45, 0.5, 0.25], m5: [0.47, 0.55, -0.15],
+    ch0: [0, 0.15, 0.8], ch1: [0.08, 0.15, 0.78], jl: [0.27, 0.3, 0.52],
+    u0: [0, 0.14, 0.66], u1: [0.09, 0.14, 0.64],
+    g0: [0, 0.16, 0.3], g1: [0.2, 0.2, 0.24], g2: [0.31, 0.3, 0.02], g3: [0.33, 0.42, -0.24],
+    nm0: [0, -0.2, 0.28], nm1: [0.21, -0.18, 0.22], nm2: [0.32, -0.14, 0], nm3: [0.31, -0.08, -0.26], nm4: [0.22, -0.04, -0.38], nm5: [0, -0.02, -0.42],
+    nf0: [0, -0.55, 0.26], nf1: [0.2, -0.53, 0.2], nf2: [0.3, -0.5, 0], nf3: [0.29, -0.47, -0.24], nf4: [0.2, -0.45, -0.35], nf5: [0, -0.45, -0.39], nfc: [0, -0.5, -0.06],
+  },
   stub: [
     { yf: -0.3, yb: -0.17, W: 0.3, F: 0.28, D: 0.34, z0: -0.05, sideZ: -0.05 },
     [[0, -0.74, 0.4], [0.4, -0.66, 0.36], [0.74, -0.62, 0.2], [0.83, -0.64, -0.06], [0.72, -0.62, -0.36], [0.38, -0.58, -0.6], [0, -0.62, -0.7]],
     [[0, -0.98, 0.52], [0.34, -0.98, 0.44], [0.52, -0.98, 0.24], [0.55, -0.98, -0.06], [0.5, -0.98, -0.3], [0.3, -0.98, -0.42], [0, -0.98, -0.46]],
   ],
-  ear: { c: [0.52, 0.76, -0.03], s: 0.76, gap: 0.035, flare: 0.18, lift: 0.16, thick: 0.12 },
+  ear: { c: [0.55, 0.76, -0.03], s: 0.76, gap: 0.035, flare: 0.18, lift: 0.16, thick: 0.12 },
   nose: { top: 1.06, tip: 0.6, under: 0.55, wTop: 0.045, wBridge: 0.065, wWing: 0.095, out: 0.09, tipOut: 0.12 },
   brow: { x: [0.13, 0.34, 0.52], yb: [1.18, 1.235, 1.14], h: [0.04, 0.038, 0.024], out: 0.04 },
   eye: { x: 0.32, y: 0.985, w: 0.125, h: 0.105, lid: 0.03, almond: 1 },
@@ -136,67 +152,41 @@ export function buildLowHead(who = 'male') {
     for (let i = 1; i < U - 1; i++) { idx[i] = vert(pts[i]); idx[N - i] = vert(mx(pts[i])); }
     return idx;
   };
-  const colOf = (k) => (k < U ? k : N - k);
-  const band = (a, b, part, regionOf) => {
-    for (let k = 0; k < N; k++) {
-      const k2 = (k + 1) % N;
-      poly([a[k], a[k2], b[k2], b[k]], part, regionOf(colOf(k), colOf(k2)));
-    }
-  };
-  const fan = (r, apex, part, region, reverse) => {
-    for (let k = 0; k < N; k++) { const k2 = (k + 1) % N; poly(reverse ? [r[k2], r[k], apex] : [r[k], r[k2], apex], part, region); }
-  };
+  const band = (a, b, part, region) => { for (let k = 0; k < N; k++) { const k2 = (k + 1) % N; poly([a[k], a[k2], b[k2], b[k]], part, region); } };
+  const fan = (r, apex, part, region) => { for (let k = 0; k < N; k++) poly([r[k], r[(k + 1) % N], apex], part, region); };
 
-  // The head's lattice; the face region the front columns from the brow down.
-  const rows = [...P.skull.map(ellRow), ...P.face.map((r) => faceRow(r.front.map((p) => [...p]), r.back))];
-  // A face row whose back is `mid` lays its back three on the line between its neighbours', so the back of the head
-  // keeps fewer, larger facets than the face.
-  P.face.forEach((r, i) => {
-    if (!r.back.mid) return;
-    const k = P.skull.length + i, prev = rows[k - 1], next = rows[k + 1];
-    for (let c = 4; c < U; c++) {
-      const t = (prev[c][1] - rows[k][c][1]) / ((prev[c][1] - next[c][1]) || 1);
-      rows[k][c] = lerp(prev[c], next[c], Math.min(0.8, Math.max(0.2, t)));
-    }
-  });
-  // The face's quads pressed toward flat: each round moves every face vertex along z (so the front view's outline
-  // stays) by part of its distance from the best plane of each quad it is in, so the planes read large and clean.
-  const nSkull = P.skull.length;
-  for (let it = 0; it < (P.planar ?? 0); it++) {
-    const dz = rows.map((row) => row.map(() => 0)), cnt = rows.map((row) => row.map(() => 0));
-    for (let r = nSkull - 1; r + 1 < rows.length; r++) {
-      for (let c = 0; c < 3; c++) {
-        const q = [[r, c], [r, c + 1], [r + 1, c + 1], [r + 1, c]];
-        const pts = q.map(([i, j]) => rows[i][j]);
-        let n = [0, 0, 0];
-        for (let i = 0; i < 4; i++) { const p0 = pts[i], p1 = pts[(i + 1) % 4]; n = add(n, [(p0[1] - p1[1]) * (p0[2] + p1[2]), (p0[2] - p1[2]) * (p0[0] + p1[0]), (p0[0] - p1[0]) * (p0[1] + p1[1])]); }
-        n = unit(n);
-        if (Math.abs(n[2]) < 0.35) continue;
-        const cen = mul(pts.reduce((a, p) => add(a, p), [0, 0, 0]), 0.25);
-        q.forEach(([i, j], k) => { dz[i][j] += -dot(n, sub(pts[k], cen)) / n[2]; cnt[i][j]++; });
-      }
-    }
-    rows.forEach((row, i) => row.forEach((p, j) => { if (cnt[i][j] && i >= nSkull) p[2] += 0.5 * dz[i][j] / cnt[i][j]; }));
+  // The head and the neck from the hand-authored halves: a centre-line vertex once, the others once a side.
+  const ids = { 1: {}, [-1]: {} };
+  for (const [name, p] of Object.entries(P.V)) {
+    if (p[0] === 0) ids[1][name] = ids[-1][name] = vert([...p]);
+    else { ids[1][name] = vert([...p]); ids[-1][name] = vert(mx(p)); }
   }
-  const rings = rows.map(ring);
-  fan(rings[0], vert(P.crown), 'head', 'skull', true);
-  for (let r = 0; r + 1 < rings.length; r++) band(rings[r], rings[r + 1], 'head', (c, c2) => (r >= nSkull && Math.max(c, c2) <= 3 ? 'face' : 'skull'));
-  // The neck: the chin's underside (counted as head), then the neck's tube, closed at its foot.
-  const neckRows = P.neck.map(rowOf);
-  const neckRings = neckRows.map(ring);
-  band(rings[rings.length - 1], neckRings[0], 'head', (c, c2) => (Math.max(c, c2) <= 2 ? 'face' : 'neck'));
-  for (let r = 0; r + 1 < neckRings.length; r++) band(neckRings[r], neckRings[r + 1], 'neck', () => 'neck');
-  const foot = neckRows[neckRows.length - 1];
-  fan(neckRings[neckRings.length - 1], vert([0, foot.reduce((s, p) => s + p[1], 0) / U, (foot[0][2] + foot[U - 1][2]) / 2]), 'neck', 'neck', false);
+  // Every face wound to look out, away from the head's (or the neck's) axis at its own height.
+  const outward = (v) => {
+    const pts = v.map((i) => verts[i]);
+    const c = mul(pts.reduce((a, p) => add(a, p), [0, 0, 0]), 1 / pts.length);
+    let n = [0, 0, 0];
+    for (let i = 0; i < pts.length; i++) n = add(n, cross(pts[i], pts[(i + 1) % pts.length]));
+    const axis = [0, Math.min(1.9, Math.max(-0.5, c[1])), c[1] > 0.5 ? 0.1 : 0.0];
+    return dot(n, sub(c, axis)) < 0 ? [...v].reverse() : v;
+  };
+  const regionOf = (v) => {
+    const c = mul(v.map((i) => verts[i]).reduce((a, p) => add(a, p), [0, 0, 0]), 1 / v.length);
+    return c[2] > 0.15 && c[1] < 1.25 ? 'face' : 'skull';
+  };
+  for (const s of [1, -1]) {
+    for (const f of FACES) { const v = outward(f.map((n) => ids[s][n])); poly(v, 'head', regionOf(v)); }
+    for (const f of NECK_FACES) poly(outward(f.map((n) => ids[s][n])), 'neck', 'neck');
+  }
 
   // The shoulder stub: its own closed piece, the collar inside the neck.
   const stubRows = P.stub.map(rowOf);
   const stubRings = stubRows.map(ring);
-  for (let r = 0; r + 1 < stubRings.length; r++) band(stubRings[r], stubRings[r + 1], 'shoulders', () => 'neck');
+  for (let r = 0; r + 1 < stubRings.length; r++) band(stubRings[r], stubRings[r + 1], 'shoulders', 'neck');
   const cut = stubRows[stubRows.length - 1];
-  fan(stubRings[stubRings.length - 1], vert([0, cut[0][1], (cut[0][2] + cut[U - 1][2]) / 2]), 'shoulders', 'neck', false);
+  fan(stubRings[stubRings.length - 1], vert([0, cut[0][1], (cut[0][2] + cut[U - 1][2]) / 2]), 'shoulders', 'neck');
 
-  // Where the face's surface is at (x, y): the front-most hit of a ray along -z on the head's lattice.
+  // Where the face's surface is at (x, y): the front-most hit of a ray along -z on the head.
   const lattice = polys.filter((p) => p.part === 'head').flatMap((p) => tris(p.v, verts));
   const surf = (x, y) => {
     let best = -Infinity;
