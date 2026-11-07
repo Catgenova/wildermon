@@ -17,6 +17,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildLowTorso, PRESETS, NECK_FOOT } from './lowtorso.mjs';
+import { PRESETS as HEADS } from './lowhead.mjs';
 import { CAMS_FILE, TORSO_CAMS, TORSO_VIEWS as VIEWS, loadCams, project, rotation } from './lowcam.mjs';
 import { rasterSilhouette, outline, distanceTo, descend } from './lowsil.mjs';
 
@@ -188,6 +189,17 @@ if (stage === 'mesh') {
   }
   // --flat w: a polygon off its own plane costs w per head unit squared; --reg r: each vertex's move from where it
   // started costs r per head unit squared
+  // --foot: the neck's foot (the head's ring nm0..nm5) moves too, to the torso sheet's neck base; it is written back into
+  // the head's own fit (tools/sculpt/lowfit-<who>.json), so head and torso still share it: only the head's neck
+  // changes, down from its jaw
+  const footFree = args.includes('--foot');
+  if (footFree) {
+    preset.foot = Object.fromEntries(NECK_FOOT.map((n) => [n, [...HEADS[who].V[n]]]));
+    for (const n of NECK_FOOT) for (let k = 0; k < 3; k++) {
+      if (k === 0 && preset.foot[n][0] === 0) continue;
+      ps.push({ step: +opt('step', '0.04'), get: () => preset.foot[n][k], set: (x) => { preset.foot[n][k] = x; } });
+    }
+  }
   const flatW = +opt('flat', '200'), reg = +opt('reg', '0');
   const start = structuredClone(preset.V);
   const moved = () => { let t = 0; for (const n of names) for (let k = 0; k < 3; k++) t += (preset.V[n][k] - start[n][k]) ** 2; return t; };
@@ -205,6 +217,12 @@ if (stage === 'mesh') {
   if (shiftPs.length) console.log('shift', shift.map((x) => x.toFixed(3)).join(' '));
   mesh = buildLowTorso(who, preset);
   writeFileSync(join(DIR, `lowtfit-${who}.json`), JSON.stringify({ V: preset.V }, null, 1));
+  if (footFree) {
+    const hf = join(DIR, `lowfit-${who}.json`), head = JSON.parse(readFileSync(hf, 'utf8'));
+    for (const n of NECK_FOOT) head.V[n] = preset.foot[n].map((x) => +x.toFixed(4));
+    writeFileSync(hf, JSON.stringify(head, null, 1));
+    console.log('neck foot written into', hf);
+  }
   if (camPs.length || shiftPs.length) saveCams(cams);
   report('after');
 }

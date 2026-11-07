@@ -222,7 +222,8 @@ export function buildLowTorso(who = 'male', preset = null) {
   const P = preset ?? PRESETS[who];
   if (!P) throw new Error(`no torso ${who}`);
   // the neck's foot is the head's own, exactly
-  const foot = HEADS[who].V;
+  // (P.foot: the ring as the fitter moves it, tools/sculpt/lowtfit.mjs --foot, before it writes it back into the head's)
+  const foot = P.foot ?? HEADS[who].V;
   const V = { ...P.V };
   for (const n of NECK_FOOT) V[n] = [...foot[n]];
   const verts = [], polys = [];
