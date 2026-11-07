@@ -8,7 +8,7 @@
   "bones": 51,
   "control": 35,
   "helpers": 16,
-  "vertices": 917,
+  "vertices": 962,
   "maxInfluences": 4
  },
  "game": {
@@ -59,7 +59,7 @@
     -4.5,
     -4.5
    ],
-   "residualDeg": 46.6
+   "residualDeg": 46
   },
   "restNote": "the figure rig (rest() with these limb angles) whose bones lie as ours at bind: fromGame takes each game bone's turn from bonesOf(this rest)"
  },
@@ -625,7 +625,7 @@
    "parent": "pelvis",
    "kind": "control",
    "head": [
-    0.8625,
+    0.855,
     -5.106,
     -0.025
    ],
@@ -635,17 +635,17 @@
     -0.189
    ],
    "x": [
-    -1,
-    -0.009,
+    -0.9999,
+    -0.0122,
     0
    ],
    "y": [
-    0.009,
-    -0.9976,
+    0.0121,
+    -0.9975,
     -0.0692
    ],
    "z": [
-    0.0006,
+    0.0008,
     -0.0692,
     0.9976
    ],
@@ -1026,7 +1026,7 @@
    "parent": "pelvis",
    "kind": "control",
    "head": [
-    -0.8625,
+    -0.855,
     -5.106,
     -0.025
    ],
@@ -1036,17 +1036,17 @@
     -0.189
    ],
    "x": [
-    -1,
-    0.009,
+    -0.9999,
+    0.0122,
     0
    ],
    "y": [
-    -0.009,
-    -0.9976,
+    -0.0121,
+    -0.9975,
     -0.0692
    ],
    "z": [
-    -0.0006,
+    -0.0008,
     -0.0692,
     0.9976
    ],
@@ -1360,7 +1360,7 @@
    "parent": "pelvis",
    "kind": "helper",
    "head": [
-    0.8625,
+    0.855,
     -5.106,
     -0.025
    ],
@@ -1370,17 +1370,17 @@
     -0.189
    ],
    "x": [
-    -1,
-    -0.009,
+    -0.9999,
+    -0.0122,
     0
    ],
    "y": [
-    0.009,
-    -0.9976,
+    0.0121,
+    -0.9975,
     -0.0692
    ],
    "z": [
-    0.0006,
+    0.0008,
     -0.0692,
     0.9976
    ],
@@ -1640,7 +1640,7 @@
    "parent": "pelvis",
    "kind": "helper",
    "head": [
-    -0.8625,
+    -0.855,
     -5.106,
     -0.025
    ],
@@ -1650,17 +1650,17 @@
     -0.189
    ],
    "x": [
-    -1,
-    0.009,
+    -0.9999,
+    0.0122,
     0
    ],
    "y": [
-    -0.009,
-    -0.9976,
+    -0.0121,
+    -0.9975,
     -0.0692
    ],
    "z": [
-    -0.0006,
+    -0.0008,
     -0.0692,
     0.9976
    ],
@@ -2166,7 +2166,7 @@
   "th3.L":[["hip_l",0.6],["pelvis",0.2],["thigh_l",0.2]],
   "th4.L":[["hip_l",0.6],["pelvis",0.2],["thigh_l",0.2]],
   "th5.L":[["hip_l",0.6],["pelvis",0.2],["thigh_l",0.2]],
-  "th6.R":[["hip_r",0.6],["pelvis",0.2],["thigh_r",0.2]],
+  "th6.L":[["hip_l",0.6],["pelvis",0.2],["thigh_l",0.2]],
   "cx":[["pelvis",0.6],["hip_l",0.2],["hip_r",0.2]],
   "tm0.L":[["thigh_l",1]],
   "tm1.L":[["thigh_l",1]],
@@ -2254,7 +2254,7 @@
   "th3.R":[["hip_r",0.6],["pelvis",0.2],["thigh_r",0.2]],
   "th4.R":[["hip_r",0.6],["pelvis",0.2],["thigh_r",0.2]],
   "th5.R":[["hip_r",0.6],["pelvis",0.2],["thigh_r",0.2]],
-  "th6.L":[["hip_l",0.6],["pelvis",0.2],["thigh_l",0.2]],
+  "th6.R":[["hip_r",0.6],["pelvis",0.2],["thigh_r",0.2]],
   "tm1.R":[["thigh_r",1]],
   "tm0.R":[["thigh_r",1]],
   "tm2.R":[["thigh_r",1]],
@@ -2622,5 +2622,50 @@
   "arm/t2a.L":[["thumb_03_l",1]],
   "arm/t2b.L":[["thumb_03_l",1]],
   "arm/t2c.L":[["thumb_03_l",1]],
-  "arm/t2d.L":[["thumb_03_l",1]]}
+  "arm/t2d.L":[["thumb_03_l",1]],
+  "nk0":[["neck_02",0.3783],["neck_01",0.3784],["spine_03",0.1622],["head",0.0811]],
+  "nk1.L":[["neck_02",0.3783],["neck_01",0.3784],["spine_03",0.1622],["head",0.0811]],
+  "nk2.L":[["neck_01",0.3837],["neck_02",0.375],["head",0.125],["spine_03",0.1163]],
+  "nk3.L":[["neck_01",0.4236],["neck_02",0.375],["head",0.125],["spine_03",0.0764]],
+  "nk4.L":[["neck_01",0.4296],["neck_02",0.35],["head",0.15],["spine_03",0.0704]],
+  "nk4.R":[["neck_01",0.4296],["neck_02",0.35],["head",0.15],["spine_03",0.0704]],
+  "nk3.R":[["neck_01",0.4236],["neck_02",0.375],["head",0.125],["spine_03",0.0764]],
+  "nk2.R":[["neck_01",0.3837],["neck_02",0.375],["head",0.125],["spine_03",0.1163]],
+  "nk1.R":[["neck_02",0.3783],["neck_01",0.3784],["spine_03",0.1622],["head",0.0811]],
+  "arm/ax6.L":[["shoulder_l",0.4249],["clavicle_l",0.3668],["spine_03",0.1824],["spine_02",0.0259]],
+  "arm/ax7.L":[["shoulder_l",0.4599],["clavicle_l",0.4318],["spine_03",0.1083]],
+  "arm/ax0.L":[["shoulder_l",0.49],["clavicle_l",0.456],["spine_03",0.054]],
+  "gf0.L":[["pelvis",0.475],["hip_l",0.425],["thigh_l",0.1]],
+  "gf1.L":[["hip_l",0.5],["pelvis",0.4],["thigh_l",0.1]],
+  "gf2.L":[["hip_l",0.525],["pelvis",0.375],["thigh_l",0.1]],
+  "gf3.L":[["hip_l",0.525],["pelvis",0.375],["thigh_l",0.1]],
+  "gf4.L":[["hip_l",0.5],["pelvis",0.4],["thigh_l",0.1]],
+  "gf5.L":[["pelvis",0.45],["hip_l",0.45],["thigh_l",0.1]],
+  "gf6.L":[["pelvis",0.506],["hip_l",0.384],["thigh_l",0.11]],
+  "gf7.L":[["pelvis",0.56],["hip_l",0.33],["thigh_l",0.11]],
+  "gf8.L":[["pelvis",0.4],["hip_l",0.4],["hip_r",0.1],["thigh_l",0.1]],
+  "gf9.L":[["pelvis",0.6],["hip_l",0.3],["thigh_l",0.1]],
+  "arm/qp0.L":[["knuckles_l",0.65],["fingers_01_l",0.175],["fingers_02_l",0.175]],
+  "arm/qp1.L":[["knuckles_l",0.65],["fingers_01_l",0.175],["fingers_02_l",0.175]],
+  "arm/qp2.L":[["knuckles_l",0.65],["fingers_01_l",0.175],["fingers_02_l",0.175]],
+  "arm/qp3.L":[["knuckles_l",0.65],["fingers_01_l",0.175],["fingers_02_l",0.175]],
+  "arm/qp4.L":[["knuckles_l",0.65],["fingers_01_l",0.175],["fingers_02_l",0.175]],
+  "arm/ax6.R":[["shoulder_r",0.4249],["clavicle_r",0.3668],["spine_03",0.1824],["spine_02",0.0259]],
+  "arm/ax7.R":[["shoulder_r",0.4599],["clavicle_r",0.4318],["spine_03",0.1083]],
+  "arm/ax0.R":[["shoulder_r",0.49],["clavicle_r",0.456],["spine_03",0.054]],
+  "gf0.R":[["pelvis",0.475],["hip_r",0.425],["thigh_r",0.1]],
+  "gf1.R":[["hip_r",0.5],["pelvis",0.4],["thigh_r",0.1]],
+  "gf2.R":[["hip_r",0.525],["pelvis",0.375],["thigh_r",0.1]],
+  "gf3.R":[["hip_r",0.525],["pelvis",0.375],["thigh_r",0.1]],
+  "gf4.R":[["hip_r",0.5],["pelvis",0.4],["thigh_r",0.1]],
+  "gf5.R":[["pelvis",0.45],["hip_r",0.45],["thigh_r",0.1]],
+  "gf6.R":[["pelvis",0.506],["hip_r",0.384],["thigh_r",0.11]],
+  "gf7.R":[["pelvis",0.56],["hip_r",0.33],["thigh_r",0.11]],
+  "gf8.R":[["pelvis",0.4],["hip_r",0.4],["hip_l",0.1],["thigh_r",0.1]],
+  "gf9.R":[["pelvis",0.6],["hip_r",0.3],["thigh_r",0.1]],
+  "arm/qp0.R":[["knuckles_r",0.65],["fingers_01_r",0.175],["fingers_02_r",0.175]],
+  "arm/qp1.R":[["knuckles_r",0.65],["fingers_01_r",0.175],["fingers_02_r",0.175]],
+  "arm/qp2.R":[["knuckles_r",0.65],["fingers_01_r",0.175],["fingers_02_r",0.175]],
+  "arm/qp3.R":[["knuckles_r",0.65],["fingers_01_r",0.175],["fingers_02_r",0.175]],
+  "arm/qp4.R":[["knuckles_r",0.65],["fingers_01_r",0.175],["fingers_02_r",0.175]]}
 }

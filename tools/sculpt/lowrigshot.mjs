@@ -2,8 +2,9 @@
 // close on each joint), the game's own walk and run on it, the weights as heat maps, and per pose the volume kept at
 // each joint and the faces that pass through each other.
 //
-//   node tools/sculpt/lowrigshot.mjs --out <dir> [--only skeleton,poses,close,walk,weights,rest]
-//     writes rig-skeleton.png, rig-poses.png, rig-close.png, rig-walk.png, rig-weights.png, rig-rest-*.png and
+//   node tools/sculpt/lowrigshot.mjs --out <dir> [--only skeleton,poses,close,walk,weights,rest,rings]
+//     writes rig-skeleton.png, rig-poses.png, rig-close.png, rig-walk.png, rig-weights.png, rig-rest-*.png (rings: the rest
+//     without and with the extra loops, rings-before/after/edges.png) and
 //     rig-metrics.json into <dir>
 //
 // Flat shading (one normal per polygon, the heads' shared camera-fixed light, tools/sculpt/lowlight-male.json) as
@@ -78,11 +79,11 @@ const ringIs = (i, rings, side) => { const n = B.names[i].replace(/^arm\//, '');
 // joint regions: the vertices round each joint, the centre the bone whose posed head is the pivot
 const REGIONS = [];
 for (const s of ['l', 'r']) {
-  REGIONS.push({ id: `shoulder_${s}`, piv: `shoulder_${s}`, v: (i) => has(i, [`shoulder_${s}`, `upperarm_twist_${s}`]) || (B.part[i] === 'joint' && ringIs(i, ['ja', 'jb'], s)) });
+  REGIONS.push({ id: `shoulder_${s}`, piv: `shoulder_${s}`, v: (i) => has(i, [`shoulder_${s}`, `upperarm_twist_${s}`]) || (B.part[i] === 'joint' && ringIs(i, ['ja', 'jb', 'ax'], s)) });
   REGIONS.push({ id: `elbow_${s}`, piv: `elbow_${s}`, v: (i) => B.part[i] !== 'torso' && ringIs(i, ['uc', 'ue', 'el', 'fa', 'fb'], s) && B.names[i].startsWith('arm/') });
   REGIONS.push({ id: `wrist_${s}`, piv: `wrist_${s}`, v: (i) => B.names[i].startsWith('arm/') && (ringIs(i, ['fe', 'fg', 'wk', 'wb', 'wt', 'wp', 'sk', 'pa', 'pb', 'pc', 'kb', 'kp', 'ta', 'tb', 'tc', 'td'], s)) });
-  REGIONS.push({ id: `fingers_${s}`, piv: `fingers_01_${s}`, v: (i) => B.names[i].startsWith('arm/') && ringIs(i, ['kb', 'kp', 'mb', 'mp', 'nb', 'np'], s) });
-  REGIONS.push({ id: `hip_${s}`, piv: `hip_${s}`, v: (i) => !B.names[i].startsWith('arm/') && (ringIs(i, ['gl', 'th', 'tm', 'cx', 'bt', 'hw'], s)) });
+  REGIONS.push({ id: `fingers_${s}`, piv: `fingers_01_${s}`, v: (i) => B.names[i].startsWith('arm/') && ringIs(i, ['kb', 'kp', 'qp', 'mb', 'mp', 'nb', 'np'], s) });
+  REGIONS.push({ id: `hip_${s}`, piv: `hip_${s}`, v: (i) => !B.names[i].startsWith('arm/') && (ringIs(i, ['gl', 'gf', 'th', 'tm', 'cx', 'bt', 'hw'], s)) });
   REGIONS.push({ id: `knee_${s}`, piv: `knee_${s}`, v: (i) => !B.names[i].startsWith('arm/') && ringIs(i, ['tm', 'ka', 'kb', 'kc', 'ca'], s) });
   REGIONS.push({ id: `ankle_${s}`, piv: `foot_${s}`, v: (i) => !B.names[i].startsWith('arm/') && ringIs(i, ['cb', 'an', 'fc', 'ft', 'so'], s) });
 }
@@ -171,7 +172,7 @@ return metrics;
 const metrics = makeMetrics(rig);
 
 /* ---- drawing ----------------------------------------------------------------------------------------------------- */
-const TOPO = { polys: B.polys.map((p) => p.v), tris: B.tris.map((t) => [...t.v, t.poly]), mat: B.polys.map((p) => (p.mat === 'brow' ? 1 : p.mat === 'pupil' ? 2 : p.mat === 'lid' ? 1 : 0)) };
+const TOPO = { polys: B.polys.map((p) => p.nv ?? p.v), tris: B.tris.map((t) => [...t.v, t.poly]), mat: B.polys.map((p) => (p.mat === 'brow' ? 1 : p.mat === 'pupil' ? 2 : p.mat === 'lid' ? 1 : 0)) };
 const flat = (P) => P.flat().map((x) => +x.toFixed(5));
 /** A cell: verts, camera { yaw, pitch, s, c (the point at the cell's centre) }, box [x, y, w, h], label, and optional
  * bones (lines), heat (per-vertex weight 0..1). */
@@ -254,6 +255,14 @@ function draw(c) {
     }
     gl.enable(gl.DEPTH_TEST);
   }
+  if (c.edges) {
+    // edges drawn where they are seen (depth-tested, lifted a little toward the eye)
+    gl.uniform1i(U('mode'), 2); gl.disableVertexAttribArray(AL.n); gl.disableVertexAttribArray(AL.m); gl.uniform1f(U('lift'), 0.004);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(c.edges), gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(AL.p, 3, gl.FLOAT, false, 12, 0);
+    gl.uniform3fv(U('linec'), c.edgec ?? [0.2, 1, 0.9]);
+    gl.drawArrays(gl.LINES, 0, c.edges.length / 3); gl.uniform1f(U('lift'), 0);
+  }
 }
 for (const c of window.CELLS) draw(c);
 const ui = document.getElementById('ui');
@@ -297,6 +306,20 @@ if (only.includes('rest')) {
     await shoot(700, 760, [cell(verts, { yaw: 0, s: 50, c: MID }, [0, 0, 350, 760], ''), cell(verts, { yaw: 40, s: 50, c: MID }, [350, 0, 350, 760], '')], join(out, `rig-rest-${name}.png`), [], topo);
   }
   metricsAll.restMoved = moved;
+}
+
+if (only.includes('rings')) {
+  // the body without the extra loops (lowloops.mjs) and with them, at rest: the same surface, so the same pixels but for
+  // the new edges inside flat faces; and the same with the new edges drawn
+  const a = buildArmBody('male', null, { loops: false }), b = buildArmBody('male');
+  const topo = (m) => ({ polys: m.polys.map((p) => p.nv ?? p.v), tris: m.tris.map((t) => [...t.v, t.poly]), mat: m.polys.map((p) => (p.mat === 'brow' ? 1 : p.mat === 'pupil' ? 2 : p.mat === 'lid' ? 1 : 0)) });
+  const isNew = new Set(b.added.map(([i]) => i)), E = [];
+  for (const p of b.polys) p.v.forEach((u, k) => { const w = p.v[(k + 1) % p.v.length]; if (u < w || !p.v.includes(w)) if (isNew.has(u) || isNew.has(w)) E.push(...b.verts[u], ...b.verts[w]); });
+  const views = [[0, 0, 'front', 50, MID], [40, 0, 'three-quarter', 50, MID], [180, 0, 'back', 50, MID], [60, 0, 'neck', 200, [0.5, -0.4, 0]], [30, -10, 'armpit, front', 160, [1.4, -1.5, 0]], [0, -60, 'groin, below', 120, [0, -5.5, 0]], [180, 0, 'gluteal fold', 120, [0.5, -5.3, 0]], [180, 0, 'palm (left)', 330, [2.35, -5.6, 0]]];
+  for (const [tag, m, edges] of [['before', a, null], ['after', b, null], ['edges', b, E]]) {
+    const cells = views.map(([yaw, pitch, lab, s, c], k) => cell(m.verts, { yaw, pitch, s, c }, [(k % 4) * 350, Math.floor(k / 4) * 420, 350, 420], '', edges ? { edges: E.map((x) => +x.toFixed(5)) } : {}));
+    await shoot(1400, 840, cells, join(out, `rings-${tag}.png`), [], topo(m));
+  }
 }
 
 if (only.includes('skeleton')) {

@@ -27,10 +27,8 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { buildArmBody, buildLowArm } from './lowarm.mjs';
-import { buildLowTorso } from './lowtorso.mjs';
-import { buildLowLegs } from './lowlegs.mjs';
-import { PRESETS as HEADS } from './lowhead.mjs';
+import { buildArmBody } from './lowarm.mjs';
+import { nameVerts, loopSpecs } from './lowloops.mjs';
 
 /* ---- vectors, 3x3 rotations (row-major), quaternions [w, x, y, z] ------------------------------------------------ */
 export const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -92,22 +90,18 @@ export function swingTwist(q, a) {
 const sstep = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 
 /* ---- the body with its vertices named ------------------------------------------------------------------------------ */
-const key = (p) => p.map((x) => x.toFixed(6)).join(',');
 const sideOf = (p) => (p[0] > 1e-9 ? '.L' : p[0] < -1e-9 ? '.R' : '');
 
-/** buildArmBody, its vertices named: the parts' own names with .L (x > 0, the body's left) or .R; the head's closed
- * pieces (brows, pupils, lids, ears), which have no names of their own, as brow.L#k etc. in vertex order. */
+/** buildArmBody, its vertices named: the parts' own names with .L (the body's left) or .R (lowloops.mjs nameVerts), the
+ * extra loops' vertices by their own names; the head's closed pieces (brows, pupils, lids, ears), which have no names of
+ * their own, as brow.L#k etc. in vertex order. */
 export function buildNamedBody(who = 'male') {
   const body = buildArmBody(who);
-  const byKey = new Map();
-  const put = (n, p) => { const k = key(p); if (!byKey.has(k)) byKey.set(k, n + sideOf(p)); };
-  const both = (V, pre = '') => { for (const [n, p] of Object.entries(V)) { put(pre + n, p); if (p[0] !== 0) put(pre + n, mx(p)); } };
-  both(HEADS[who].V);
-  both(buildLowTorso(who).V);
-  both(buildLowLegs(who).V);
-  // the arm's names (fc, kb, tb...) are also the legs' and the head's: arm/ before them
-  both(buildLowArm(who, null, { cap: false }).V, 'arm/');
-  const names = body.verts.map((p) => byKey.get(key(p)) ?? null);
+  const names = nameVerts(who, body.verts);
+  for (const [i, n] of body.added ?? []) names[i] = n;
+  // each loop vertex's ring, index and edge: { ring, k, a, b, t }
+  const loops = new Map();
+  for (const L of loopSpecs()) L.pts.forEach(([a, b, t, n], k) => loops.set(n, { ring: L.ring, k: +n.replace(/^.*?(\d+)(\.[LR])?$/, '$1'), a, b, t }));
   const piece = new Array(body.verts.length).fill(null);
   for (const p of body.polys) for (const i of p.v) if (!piece[i]) piece[i] = p.ear ? 'ear' : p.mat !== 'skin' ? p.mat : p.part;
   const count = {};
@@ -121,7 +115,7 @@ export function buildNamedBody(who = 'male') {
   if (index.size !== names.length) { const seen = {}; names.forEach((n, i) => (seen[n] ??= []).push(i)); throw new Error('vertex names are not unique: ' + JSON.stringify(Object.entries(seen).filter(([, l]) => l.length > 1).slice(0, 8).map(([n, l]) => [n, l.map((i) => body.verts[i])]))); }
   const part = new Array(body.verts.length).fill(null);
   for (const p of body.polys) for (const i of p.v) part[i] ??= p.part;
-  return { ...body, tris: TUNE.MEND ? fanTris(body) : body.tris, names, index, part };
+  return { ...body, tris: TUNE.MEND ? fanTris(body) : body.tris, names, index, part, loops: body.added ? loops : new Map() };
 }
 
 /**
@@ -330,6 +324,8 @@ export const TUNE = {
     an: { calf: 0.45, foot: 0.55 },
     fc: { calf: 0.1, foot: 0.9 },
   },
+  // the extra loops (tools/sculpt/lowloops.mjs), by ring and index (or `all`): unset, a loop vertex blends its edge's ends
+  LOOP: {},
   // the crotch's point, shared by both legs; the thigh's top ring's inner points (by the crotch)
   CX: { pelvis: 0.6, hip_l: 0.2, hip_r: 0.2 },
   TH_IN: {},
@@ -376,17 +372,27 @@ export function skinWeights(B, J) {
     return w;
   };
   const { ARM, LEG, GL, HAND_FING, THUMB, ROWF, NEAR: near, NM, NECK } = TUNE;
-  for (let i = 0; i < B.verts.length; i++) {
+  // the extra loops' vertices (lowloops.mjs) after the rest: by default each takes its edge's ends' weights blended at its
+  // place along the edge (so at rest it moves as the surface it was cut into); TUNE.LOOP[ring] over that
+  const loops = B.loops ?? new Map();
+  const dict = (n) => Object.fromEntries(W[n]);
+  const blend = (a, b, t) => { const o = {}; for (const [k, x] of Object.entries(a)) o[k] = (o[k] ?? 0) + x * (1 - t); for (const [k, x] of Object.entries(b)) o[k] = (o[k] ?? 0) + x * t; return o; };
+  const order = B.verts.map((_, i) => i).sort((a, b) => (loops.has(B.names[a]) ? 1 : 0) - (loops.has(B.names[b]) ? 1 : 0));
+  for (const i of order) {
     const name = B.names[i], p = B.verts[i];
     let part = B.part[i];
-    const side = p[0] > 1e-9 ? 'l' : p[0] < -1e-9 ? 'r' : '';
+    const side = name.endsWith('.L') || /\.L#\d+$/.test(name) ? 'l' : name.endsWith('.R') || /\.R#\d+$/.test(name) ? 'r' : '';
     const S = sideBone(side);
     const base = name.replace(/^arm\//, '').replace(/\.[LR]$/, '').replace(/#\d+$/, '');
     const ringOf = base.replace(/\d+[ab]?$/, '');
     let w = null;
     const named = (tab) => Object.fromEntries(Object.entries(tab).map(([k, v]) => [k === 'pelvis' ? k : S(k), v]));
     if (/^(g\d|n6)$/.test(base) && part !== 'neck') part = 'neck';
-    if (ARM[ringOf] && (part === 'joint' || part === 'arm')) w = named(ARM[ringOf]);
+    const lp = loops.get(name);
+    if (lp) {
+      const own = TUNE.LOOP[lp.ring]?.[lp.k] ?? TUNE.LOOP[lp.ring]?.all;
+      w = own ? Object.fromEntries(Object.entries(own).map(([k, v]) => [/^(pelvis|spine_0\d|neck_0\d|head)$/.test(k) ? k : S(k), v])) : blend(dict(lp.a), dict(lp.b), lp.t);
+    } else if (ARM[ringOf] && (part === 'joint' || part === 'arm')) w = named(ARM[ringOf]);
     else if (part === 'arm' || part === 'hand' || part === 'joint') {
       if (['wk', 'wb', 'wt', 'wp'].includes(ringOf)) w = named({ wrist: 1 });
       else if (/^[kmn][bp]$/.test(ringOf)) w = named(HAND_FING[ringOf[0]]);
