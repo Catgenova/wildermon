@@ -83,7 +83,7 @@ export function silhouette(mesh, view, cam, box) {
 // a facet's luminance from its normal in view space and its material's colour.
 const nrm = (v) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
 // The rig's numbers, as lowshot.mjs takes them (its --amb, --key, ... options); `light` stage fits them.
-export const RIG = { amb: 0.57, key: 0.42, warm: 0.32, cool: 2, rim: 0.42, upr: 0.12, cspec: 0.52, kx: -0.15, ky: 1.4, lcz: 0.35, lbz: -0.2, cpow: 8, rpow: 3, down: 0.14, up: 0.06 };
+export const RIG = { amb: 0.57, key: 0.42, warm: 0.32, cool: 2, rim: 0.42, upr: 0.12, cspec: 0.52, kx: -0.15, ky: 1.4, lcz: 0.35, lbz: -0.2, cpow: 8, rpow: 3, down: 0, up: 0.06 };
 // her reference's cool light from the left is broad and weak, his a narrow strong rim (lowshot.mjs's defaults per head)
 if (who === 'female') Object.assign(RIG, { cool: 0.2, cpow: 0.8, ky: 0.7 });
 const BASE = { skin: [0.68, 0.49, 0.41], brow: [0.36, 0.22, 0.15], pupil: [0.21, 0.2, 0.22], lid: [0.36, 0.24, 0.2] };

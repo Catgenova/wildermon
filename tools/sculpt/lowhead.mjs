@@ -32,12 +32,13 @@ export const FACES = [
   // the crown: a flat cap of three facets a side on the top ring a, then a band down to the ring t
   ['c', 'a0', 'a1'], ['c', 'a1', 'a2'], ['c', 'a2', 'a3'],
   ['a0', 'a1', 't1', 't0'], ['a1', 'a2', 't2', 't1'], ['a2', 'a3', 't3', 't2'],
-  // the temple
-  ['t1', 'f2', 'b3', 'b2'], ['t1', 't2', 'f3', 'f2'], ['f2', 'b4', 'b3'], ['f2', 'f3', 'b5', 'b4'],
+  // the temple, from the vertical (t1 down to the brow line at the brow's middle, bm) out, as the references' wireframes
+  ['t1', 'f2', 'b3', 'bm'], ['t1', 't2', 'f3', 'f2'], ['f2', 'b4', 'b3'], ['f2', 'f3', 'b5', 'b4'],
   // the skull's side and back
   ['t2', 't3', 'f4', 'f3'], ['f3', 'f4', 'o6', 'e5', 'b5'],
-  // the brow down to under the eyes: the nose's root, the eye's socket (inner, outer), the temple, the side, the back
-  ['b1', 'b2', 'e2', 'e1'], ['b2', 'b3', 'e3', 'e2'], ['b3', 'b4', 'e4', 'e3'], ['b4', 'b5', 'e5', 'e4'],
+  // the brow line (b2 bm b3, along the brows' top, across the face as the references' wireframes draw it) down to under
+  // the eyes: the nose's root, the eye's socket, the temple, the side, the back
+  ['b1', 'b2', 'e2', 'e1'], ['b2', 'bm', 'e2'], ['bm', 'b3', 'e3', 'e2'], ['b3', 'b4', 'e4', 'e3'], ['b4', 'b5', 'e5', 'e4'],
   // the nose, as the references draw it: its bridge one flat plane from the brow ridge (b0 b1) straight down to the tip's
   // edge (tc tb), a side plane each side back into the cheek, and one underside (the cliff) from that edge back to the
   // face; nothing else at the tip
@@ -54,8 +55,10 @@ export const FACES = [
 // The back of the skull: large facets that span the centre line (no seam down the middle), fanning round the back's
 // bump bk from the crown to the nape; emitted once, a name with ' the other side's vertex.
 export const SPAN_FACES = [
-  // the forehead: one plane across the centre line, from the skull's top ring to the brow
-  ['t0', 't1', 'b2', 'b1', 'b0', "b1'", "b2'", "t1'"],
+  // the forehead: one plane across the centre line, from the skull's top ring and the verticals (t1 bm) down to the brow line (bm b2 gl b2' bm'); below it,
+  // between the brows, the nose's root down to the bridge's top (b1 b0 b1'): a T on the male, a V on the female
+  ['t0', 't1', 'bm', 'b2', 'gl', "b2'", "bm'", "t1'"],
+  ['gl', 'b2', 'b1', 'b0', "b1'", "b2'"],
   ['a3', "t3'", 't3'],
   ['bk', 't3', "t3'"], ['bk', "t3'", "f4'"], ['bk', "f4'", "o6'"], ['bk', 'o6', 'f4'], ['bk', 'f4', 't3'],
   // under the occipital crease (o6 bk o6', at the ears' top, as the references' backs have it) one lower plane to the nape
@@ -82,7 +85,7 @@ export const PRESETS = {
       a0: [0, 2.03, 0.4], a1: [0.23, 2.01, 0.23], a2: [0.21, 2.01, -0.15], a3: [0, 2.03, -0.27],
       t0: [0, 1.86, 0.72], t1: [0.35, 1.85, 0.7], t2: [0.58, 1.88, -0.05], t3: [0.3, 1.88, -0.41],
       f2: [0.64, 1.5, 0.52], f3: [0.73, 1.47, -0.1], f4: [0.39, 1.5, -0.51],
-      b0: [0, 1.22, 0.97], b1: [0.075, 1.22, 0.965], b2: [0.42, 1.22, 0.95], b3: [0.6, 1.2, 0.74], b4: [0.71, 1.18, 0.18], b5: [0.73, 1.16, -0.2],
+      gl: [0, 1.225, 0.85], bm: [0.34, 1.24, 0.83], b0: [0, 1.22, 0.97], b1: [0.075, 1.22, 0.965], b2: [0.42, 1.22, 0.95], b3: [0.6, 1.2, 0.74], b4: [0.71, 1.18, 0.18], b5: [0.73, 1.16, -0.2],
       e1: [0.13, 0.97, 0.86], e2: [0.32, 0.93, 0.78], e3: [0.52, 0.95, 0.66], e4: [0.67, 0.95, 0.25], e5: [0.69, 0.92, -0.25], o6: [0.48, 0.98, -0.68],
       tc: [0, 0.615, 1.105], tb: [0.15, 0.615, 1.095],
       k0: [0, 0.53, 0.95], k1: [0.14, 0.565, 0.92], k2: [0.33, 0.66, 0.82], k3: [0.6, 0.74, 0.55], k4: [0.64, 0.7, 0.2], k5: [0.6, 0.66, -0.25], n6: [0.45, 0.65, -0.52],
@@ -109,7 +112,7 @@ PRESETS.female = {
     a0: [0, 2.02, 0.3], a1: [0.18, 2.0, 0.14], a2: [0.16, 2.0, -0.16], a3: [0, 2.02, -0.26],
     t0: [0, 1.86, 0.65], t1: [0.31, 1.85, 0.63], t2: [0.52, 1.88, -0.08], t3: [0.27, 1.88, -0.41],
     f2: [0.49, 1.5, 0.51], f3: [0.69, 1.47, -0.14], f4: [0.36, 1.5, -0.58],
-    b0: [0, 1.07, 0.915], b1: [0.045, 1.07, 0.91], b2: [0.2, 1.17, 0.87], b3: [0.5, 1.2, 0.7], b4: [0.6, 1.16, 0.2], b5: [0.67, 1.15, -0.24],
+    gl: [0, 1.254, 0.835], bm: [0.36, 1.27, 0.78], b0: [0, 1.07, 0.915], b1: [0.045, 1.07, 0.91], b2: [0.2, 1.17, 0.87], b3: [0.5, 1.2, 0.7], b4: [0.6, 1.16, 0.2], b5: [0.67, 1.15, -0.24],
     e1: [0.12, 0.96, 0.83], e2: [0.31, 0.93, 0.82], e3: [0.48, 0.95, 0.67], e4: [0.575, 0.93, 0.26], e5: [0.6, 0.9, -0.28], o6: [0.43, 0.98, -0.75],
     tc: [0, 0.6, 1.06], tb: [0.105, 0.6, 1.048],
     k0: [0, 0.535, 0.9], k1: [0.11, 0.57, 0.86], k2: [0.3, 0.67, 0.82], k3: [0.47, 0.74, 0.6], k4: [0.545, 0.72, 0.2], k5: [0.5, 0.66, -0.22], n6: [0.36, 0.62, -0.47],
