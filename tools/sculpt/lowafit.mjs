@@ -31,7 +31,7 @@ const K = REF.scale;
 export const ARM_VIEWS = ['front', 'q3', 'profile', 'r3', 'back'];
 export const HAND_VIEWS = ['hback', 'hq3', 'hprofile', 'hr3', 'hpalm'];
 const VIEWS = [...ARM_VIEWS, ...HAND_VIEWS, 'body'];
-export const WEIGHT = { front: 1, q3: 1, profile: 1, r3: 0.6, back: 0.6, hback: 0.5, hq3: 0.5, hprofile: 0.5, hr3: 0.3, hpalm: 0.3, body: +opt('bodyw', '3') };
+export const WEIGHT = { front: 1, q3: 1, profile: 1, r3: 0.7, back: 0.7, hback: 0.5, hq3: 0.5, hprofile: 0.5, hr3: 0.4, hpalm: 0.4, body: +opt('bodyw', '3') };
 // The body reference's own camera: its pixels per head unit and where the chin's underside's middle falls, the scale
 // set by the shoulders' widest (the torso's sd4), measured.
 export const BODY_CAM = { male: { yaw: 0, pitch: 0, roll: 0, s: 128, cx: 433, cy: 322, piv: [0, 0, 0] }, female: { yaw: 0, pitch: 0, roll: 0, s: 124, cx: 437, cy: 328, piv: [0, 0, 0] } };
@@ -175,12 +175,22 @@ function lumps(V) {
         const a = d(k - 1), b = d(k), c = d(k + 1);
         for (let q = 0; q < 3; q++) t += (a[q] - 2 * b[q] + c[q]) ** 2;
       }
-      for (let q = 0; q < 3; q++) t += 0.1 * (C[k - 1][q] - 2 * C[k][q] + C[k + 1][q]) ** 2;
+      for (let q = 0; q < 3; q++) t += (C[k - 1][q] - 2 * C[k][q] + C[k + 1][q]) ** 2;
     }
   }
   return t;
 }
-const SMOOTH = +opt('smooth', '100');
+const SMOOTH = +opt('smooth', '30');
+/** How far the rings have crossed: down the arm each ring's vertex below the one above it on its line, up the cap each
+ * above the one below it (by 0.02 at least), squared and summed. */
+function crossed(V) {
+  const ring = torsoRing(who), at = (r, i) => (r === 'r' ? ring[`r${i}`] : r === 'ct' ? V.ct : V[`${r}${i}`]);
+  let t = 0;
+  const down = ['r', ...TOPO[who].rings], up = [TOPO[who].rings[0], ...TOPO[who].cap, 'ct'];
+  for (let k = 1; k < down.length; k++) for (let i = 0; i < 8; i++) t += Math.max(0, at(down[k], i)[1] - at(down[k - 1], i)[1] + 0.04) ** 2;
+  for (let k = 1; k < up.length; k++) for (let i = 0; i < 8; i++) t += Math.max(0, at(up[k - 1], i)[1] - at(up[k], i)[1] + 0.02) ** 2;
+  return t;
+}
 function folds(m, base) {
   let n = 0;
   for (let i = 0; i < m.tris.length; i++) {
@@ -195,8 +205,8 @@ function folds(m, base) {
 // the wrist and the fingertips; each ring's row; the cap's rows. Per body: the elbow's, the wrist's and the fingertips'
 // rows on the body reference (its pixels), measured.
 const SHEET = {
-  male: { top: 55, ball: 175, elbow: 240, wrist: 405, tip: 515, rows: { ua: 186, ub: 200, uc: 214, ud: 228, el: 242, fa: 272, fb: 308, fc: 345, fd: 385 }, cap: { ca: 150, cb: 118, cc: 88, ct: 66 } },
-  female: { top: 50, ball: 145, elbow: 210, wrist: 332, tip: 422, rows: { ua: 160, ub: 178, uc: 196, el: 212, fa: 238, fb: 265, fc: 293, fd: 318 }, cap: { ca: 122, cb: 88, ct: 60 } },
+  male: { top: 55, ball: 175, elbow: 240, wrist: 405, tip: 515, rows: { ua: 186, ub: 196, uc: 206, ud: 216, ue: 226, el: 242, fa: 258, fb: 278, fc: 300, fd: 322, fe: 345, ff: 365, fg: 387 }, cap: { ca: 150, cb: 118, cc: 88, ct: 66 } },
+  female: { top: 50, ball: 145, elbow: 210, wrist: 332, tip: 422, rows: { ua: 156, ub: 168, uc: 180, ud: 192, ue: 202, el: 212, fa: 226, fb: 242, fc: 260, fd: 278, fe: 296, ff: 314 }, cap: { ca: 124, cb: 96, cc: 70, ct: 56 } },
 };
 const BODY_ROWS = { male: { elbow: 700, wrist: 875, tip: 1052 }, female: { elbow: 670, wrist: 857, tip: 993 } };
 // The hand's vertices on a template measured off the male sheet's hand back and hand profile views (sheet pixels: u
@@ -251,11 +261,17 @@ if (stage === 'init') {
   // the cap: a dome over the torso's ring, level rings as wide and as deep as the sheet's cap at their rows, their
   // centres moved as the cap's middle moves on the sheet
   const nr = [0, 1, 0];
+  // the cap's offsets measured from the arm's top ring (ua), so the ball hangs over the arm as the sheet's does: its outer
+  // side in line with the arm's, its inner side over the torso; its lowest ring the torso's ring widened and raised, so
+  // the ball runs down into the arm without a ledge
+  const ua = mean(V, Array.from({ length: 8 }, (_, i) => `ua${i}`)), [uaa, uab] = rows('front', S.rows.ua), [upa, upb] = rows('profile', S.rows.ua);
+  const RN = Array.from({ length: 8 }, (_, i) => V[`ua${i}`]), ru = ua;
   Object.entries(S.cap).forEach(([name, ys], ci) => {
     const h = (S.ball - ys) / k, [fa, fb] = rows('front', ys), [pa, pb] = rows('profile', ys);
-    const off = [((fa + fb) / 2 - (f0a + f0b) / 2) / k, 0, ((pa + pb) / 2 - (p0a + p0b) / 2) / k];
-    const c = [0, 1, 2].map((q) => r0[q] + nr[q] * h + off[q]);
+    const off = [((fa + fb) / 2 - (uaa + uab) / 2) / k, 0, ((pa + pb) / 2 - (upa + upb) / 2) / k];
+    const c = [ua[0] + off[0], r0[1] + h, ua[2] + off[2]];
     if (name === 'ct') { V.ct = c.map((q) => +q.toFixed(4)); return; }
+    if (ci === 0) { const g = ((fb - fa) / 2 / k) / (Math.max(...RN.map((p) => Math.abs(p[0] - ru[0])))); RN.forEach((p, i) => { V[`${name}${i}`] = [0, 1, 2].map((q) => +((q === 1 ? Math.max(p[1] + 0.1, r0[1] + h * 0.6) : c[q] + (p[q] - ru[q]) * Math.min(g, 1.6))).toFixed(4)); }); return; }
     ringAt(c, (fb - fa) / 2 / k, (pb - pa) / 2 / k).forEach((p, i) => { V[`${name}${i}`] = p.map((q) => +q.toFixed(4)); });
   });
   // the hand: its frame at the wrist (x off the body, z off the sheet's profile), down toward the fingertips as the body
@@ -348,7 +364,7 @@ function report(tag) {
     const wm = e.marks.length ? e.marks.reduce((a, b) => (b.d > a.d ? b : a)) : null;
     rows.push(`${v.padEnd(9)} outline mean ${(e.mean / L).toFixed(1)}% worst ${(e.worst / L).toFixed(1)}%  IoU ${e.iou.toFixed(3)}  ${wm ? `worst landmark ${wm.name} ${(wm.d / L).toFixed(1)}%  (mean ${(e.marks.reduce((a, m) => a + m.d, 0) / e.marks.length / L).toFixed(1)}%, ${e.marks.length})` : ''}`);
   }
-  console.log(`${who} ${tag} (score ${tot.toFixed(1)}, warp ${(1000 * warp(M.arm)).toFixed(1)}e-3, lumps ${(1000 * lumps(preset.V)).toFixed(1)}e-3, folds ${folds(M.arm, base0)}; arm ${AL}px, hand ${HL.toFixed(0)}px, body arm ${BL}px)\n` + rows.join('\n'));
+  console.log(`${who} ${tag} (score ${tot.toFixed(1)}, warp ${(1000 * warp(M.arm)).toFixed(1)}e-3, lumps ${(1000 * lumps(preset.V)).toFixed(1)}e-3, crossed ${(1000 * crossed(preset.V)).toFixed(2)}e-3, folds ${folds(M.arm, base0)}; arm ${AL}px, hand ${HL.toFixed(0)}px, body arm ${BL}px)\n` + rows.join('\n'));
 }
 const score = (vs = only) => vs.reduce((s, v) => s + viewError(M, v, cams[v]).score, 0);
 
@@ -414,7 +430,7 @@ if (stage === 'lattice' || stage === 'hand') {
   for (let k = 0; k < 3; k++) ps.push({ step: 0.04, get: () => Lh.d[k], set: (x) => { Lh.d[k] = x; } }, { step: 0.05, get: () => Lh.r[k], set: (x) => { Lh.r[k] = x; } });
   ps.push({ step: 0.04, get: () => Lh.s, set: (x) => { Lh.s = x; } });
   const camPs = args.includes('--with-camera') ? camParams(only, 1.5) : [];
-  const total = () => { preset.V = applyLattice(P0, Lr, Lh); M = meshes(); return score() + 20 * folds(M.arm, base0) + SMOOTH * lumps(preset.V); };
+  const total = () => { preset.V = applyLattice(P0, Lr, Lh); M = meshes(); return score() + 20 * folds(M.arm, base0) + SMOOTH * lumps(preset.V) + 1e4 * crossed(preset.V); };
   for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...ps, ...camPs], total, 1).toFixed(1));
   total();
   saveV(); if (camPs.length) saveCams(cams);
@@ -431,7 +447,7 @@ if (stage === 'mesh') {
   const start = structuredClone(preset.V);
   const moved = () => { let t = 0; for (const n of names) for (let k = 0; k < 3; k++) t += (preset.V[n][k] - start[n][k]) ** 2; return t; };
   const camPs = args.includes('--with-camera') ? camParams(only, 1) : [];
-  const total = () => { M = meshes(); return score() + 20 * folds(M.arm, base0) + reg * moved() + flatW * warp(M.arm) + SMOOTH * lumps(preset.V); };
+  const total = () => { M = meshes(); return score() + 20 * folds(M.arm, base0) + reg * moved() + flatW * warp(M.arm) + SMOOTH * lumps(preset.V) + 1e4 * crossed(preset.V); };
   for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...ps, ...camPs], total, 1).toFixed(1));
   M = meshes();
   saveV(); if (camPs.length) saveCams(cams);

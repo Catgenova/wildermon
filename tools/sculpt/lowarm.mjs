@@ -11,21 +11,23 @@
 // The arm is a tube of eight-sided rings from that ring (r) down, each ring's vertices round the arm in one order: 0 the
 // front's outer corner, 1 the outer side, 2 the back's outer corner, 3 the back, 4 the back's inner corner, 5 the inner
 // side (the armpit's), 6 the front's inner corner, 7 the front (as the torso's ring runs: da3 da4 da5 db5 dc5 dc4 dc3
-// db3). The upper arm's rings ua ub (uc ud) to the elbow el, the forearm's fa fb fc fd, then the six-sided wrist, the
+// db3). The upper arm's rings ua..ue to the elbow el, the forearm's fa..ff (fg), then the six-sided wrist, the
 // hand pronated as the sheets draw it (the back of the hand forward, the thumb toward the body):
 //   wrist: wk the little finger's side, wb0 wb1 the back's corners, wt the thumb's side, wp1 wp0 the palm's corners;
 //   the knuckle line kb0..kb4 across the back (little finger to index) and kp4..kp0 across the palm; the four-finger
 //   mass in two rows, its middle line mb/mp and its tips nb/np (curled under), closed across the tips; pc the palm's
 //   middle; the thumb's root ta tb tc td (ta tb the back's side, tc td the palm's; tb tc toward the index) and its two
 //   segments t1a..t1d, t2a..t2d, closed at the tip.
-// Above the ring r, the cap (part 'cap', the deltoid's top, rings ca cb (cc) and the point ct) closes the arm when it is
-// shown alone, as the sheets show it; joined to the torso (buildArmBody), the torso's own shoulder replaces it.
+// Shown alone, as the sheets show it, the arm is closed by the cap (part 'cap', the deltoid's ball: rings ca cb (cc) and the
+// point ct) from its first ring ua up; joined to the torso (buildArmBody), the joint (part 'joint', the band from the
+// torso's ring r to ua) takes the cap's place and the torso's own shoulder covers it.
 //
 // Parts: cap, arm, hand. Regions, for the colour-coded arm: deltoid, upper, forearm, hand.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { buildLowTorso, buildLowBody, openEdges } from './lowtorso.mjs';
 import { buildLowHead } from './lowhead.mjs';
+import { buildLowLegs } from './lowlegs.mjs';
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -38,8 +40,8 @@ export const WRIST = ['wk', 'wb0', 'wb1', 'wt', 'wp1', 'wp0'];
 const WRIST_OF = ['wb0', 'wk', 'wp0', 'wp0', 'wp1', 'wt', 'wb1', 'wb1'];
 const KNUCKLE = (p) => [`${p}b0`, `${p}b1`, `${p}b2`, `${p}b3`, `${p}b4`, `${p}p4`, `${p}p3`, `${p}p2`, `${p}p1`, `${p}p0`];
 export const TOPO = {
-  male: { cap: ['ca', 'cb', 'cc'], rings: ['ua', 'ub', 'uc', 'ud', 'el', 'fa', 'fb', 'fc', 'fd'] },
-  female: { cap: ['ca', 'cb'], rings: ['ua', 'ub', 'uc', 'el', 'fa', 'fb', 'fc', 'fd'] },
+  male: { cap: ['ca', 'cb', 'cc'], rings: ['ua', 'ub', 'uc', 'ud', 'ue', 'el', 'fa', 'fb', 'fc', 'fd', 'fe', 'ff', 'fg'] },
+  female: { cap: ['ca', 'cb', 'cc'], rings: ['ua', 'ub', 'uc', 'ud', 'ue', 'el', 'fa', 'fb', 'fc', 'fd', 'fe', 'ff'] },
 };
 const ring8 = (r) => Array.from({ length: 8 }, (_, i) => `${r}${i}`);
 const REGION = (r) => (r === 'r' || r.startsWith('c') ? 'deltoid' : r.startsWith('u') ? 'upper' : 'forearm');
@@ -52,13 +54,15 @@ export function armFaces(who) {
     const j = (i + 1) % A.length, v = [a, A[j], B[j], B[i]].filter((x, k, s) => s.indexOf(x) === k);
     f(v, part, region, `${tag}${i}`);
   });
-  // the cap, shown alone: from the torso's ring up to the point
-  const cap = ['r', ...T.cap];
+  // the cap, shown alone: from the arm's first ring up to the point, over the torso's ring (the ball over the arm as the
+  // sheets draw it; joined, the torso's own shoulder is there)
+  const cap = [T.rings[0], ...T.cap];
   for (let k = 0; k + 1 < cap.length; k++) band(ring8(cap[k]), ring8(cap[k + 1]), 'cap', 'deltoid', `${cap[k + 1]}-`);
   ring8(cap.at(-1)).forEach((a, i) => f([a, `${cap.at(-1)}${(i + 1) % 8}`, 'ct'], 'cap', 'deltoid', `ct-${i}`));
   // the arm's rings
   const rings = ['r', ...T.rings];
-  for (let k = 0; k + 1 < rings.length; k++) band(ring8(rings[k]), ring8(rings[k + 1]), 'arm', REGION(rings[k + 1] === 'el' ? 'ua' : rings[k]), `${rings[k]}-`);
+  // the joint: from the torso's ring to the arm's first ring, on the body only
+  for (let k = 0; k + 1 < rings.length; k++) band(ring8(rings[k]), ring8(rings[k + 1]), k ? 'arm' : 'joint', REGION(rings[k + 1] === 'el' ? 'ua' : rings[k]), `${rings[k]}-`);
   band(ring8(rings.at(-1)), WRIST_OF, 'arm', 'forearm', 'wr-');
   // the hand: the back, the sides and the palm from the wrist to the knuckle line, as the sheets' hand topology
   const h = (v, name) => f(v, 'hand', 'hand', name);
@@ -105,8 +109,8 @@ export function torsoRing(who) {
   return Object.fromEntries(TORSO_RING.map((n, i) => [`r${i}`, mx(t.V[n])]));
 }
 
-/** The right arm (side 1) or the left (side -1), alone: the cap closes it. opts.cap false leaves the cap out (open at
- * the ring, for joining to the torso). */
+/** The right arm (side 1) or the left (side -1), alone: the cap closes it over its first ring. opts.cap false: for the
+ * body, the joint from the torso's ring instead of the cap, open at that ring. */
 export function buildLowArm(who = 'male', preset = null, opts = {}) {
   const P = preset ?? PRESETS[who];
   const side = opts.side ?? 1, withCap = opts.cap ?? true;
@@ -115,7 +119,7 @@ export function buildLowArm(who = 'male', preset = null, opts = {}) {
   for (const [n, p] of Object.entries(V)) { ids[n] = verts.length; verts.push(side > 0 ? [...p] : mx(p)); }
   const polys = [];
   for (const fc of armFaces(who)) {
-    if (!withCap && fc.part === 'cap') continue;
+    if (withCap ? fc.part === 'joint' : fc.part === 'cap') continue;
     for (const n of fc.v) if (!(n in ids)) throw new Error(`arm ${who}: no vertex ${n}`);
     polys.push({ v: fc.v.map((n) => ids[n]), part: fc.part, region: fc.region, mat: 'skin', name: fc.name + (side > 0 ? ':R' : ':L') });
   }
@@ -198,8 +202,8 @@ export function buildHandAlone(who = 'male', preset = null, stub = 0.35) {
   return finish({ verts, polys, V, ids, frame: F });
 }
 
-/** Head, torso and both arms as one body: the torso's arm cuts give way to the arms, the arms' caps to the torso's
- * shoulders. */
+/** Head, torso, legs and both arms as one body: the torso's arm cuts give way to the arms (their joints, not their
+ * caps), its hip cut to the legs (tools/sculpt/lowlegs.mjs). */
 export function buildArmBody(who = 'male', preset = null) {
   const body = buildLowBody(who);
   const verts = [], polys = [], at = new Map();
@@ -217,7 +221,8 @@ export function buildArmBody(who = 'male', preset = null) {
       polys.push({ ...p, v });
     });
   };
-  take(body, (p) => !(p.name ?? '').startsWith('arm cut'));
+  take(body, (p) => !(p.name ?? '').startsWith('arm cut') && p.name !== 'hip cut');
+  take(buildLowLegs(who), () => true);
   for (const side of [1, -1]) take(buildLowArm(who, preset, { side, cap: false }), () => true);
   return finish({ verts, polys });
 }
@@ -261,12 +266,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   for (const who of i < 0 ? ['male', 'female'] : [args[i + 1]]) {
     const m = buildLowArm(who);
     const budget = who === 'male' ? [200, 350] : [180, 320];
+    const j = buildLowArm(who, null, { cap: false }).counts;
     const arm = m.counts.arm + m.counts.cap, hand = m.counts.hand;
-    console.log(who, JSON.stringify(m.counts), `arm with its cap ${arm} (${m.counts.arm} joined; budget ${budget.join('-')}${arm >= budget[0] && arm <= budget[1] ? ', in' : ', OUT'}), hand ${hand} (budget 80-150${hand >= 80 && hand <= 150 ? ', in' : ', OUT'})`);
+    console.log(who, JSON.stringify(m.counts), `arm with its cap ${arm} (${j.arm + j.joint} joined; budget ${budget.join('-')}${arm >= budget[0] && arm <= budget[1] ? ', in' : ', OUT'}), hand ${hand} (budget 80-150${hand >= 80 && hand <= 150 ? ', in' : ', OUT'})`);
     console.log('  arm alone: edges not shared by exactly two faces', openEdges(m).length);
     console.log('  hand alone (the sheets\' hand views): open edges', openEdges(buildHandAlone(who)).length);
     const own = new Set(openEdges(buildLowHead(who)).map(([k]) => k));
     const seam = openEdges(buildArmBody(who)).filter(([k]) => !own.has(k));
-    console.log('  head + torso + both arms: edges not shared by exactly two faces (past the head\'s own open strips)', seam.length);
+    console.log('  head + torso + legs + both arms: edges not shared by exactly two faces (past the head\'s own open strips)', seam.length);
   }
 }
