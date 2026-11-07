@@ -151,7 +151,7 @@ const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform int
   ' vec3 Lk = normalize(vec3(0.15,0.2,0.97)), Lr = normalize(vec3(1.0,0.1,0.1)), Lc = normalize(vec3(-0.7,0.6,0.35));' +
   ' float dk = max(dot(nn,Lk),0.0), dr = max(dot(nn,Lr),0.0), dc = max(dot(nn,Lc),0.0);' +
   ' vec3 L = vec3(0.74 + 0.22*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) + 0.25*dk*vec3(1.0,0.98,0.95) + 0.31*dr*vec3(1.04,0.98,0.86);' +
-  ' vec3 c = (base*L + vec3(0.08,0.38,0.78)*pow(dc,6.0)*(0.3+0.7*base.r/0.68)) * mix(0.3, 1.0, occ);' +
+  ' vec3 c = (base*L + vec3(0.08,0.38,0.78)*pow(dc,6.0)*(0.3+0.7*base.r/0.68)) * mix(0.2, 1.06, occ*occ);' +
   ' gl_FragColor = vec4(c, 1.0); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
