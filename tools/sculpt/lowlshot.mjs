@@ -172,13 +172,16 @@ const torsoKeep = (p) => p.part !== 'neck';
 for (const v of ['front', 'q3', 'profile', 'r3', 'back']) view(sheet, lower, cams[v], { clipY: beltTop, keep: torsoKeep, idsKey: v, box: boxOf(v) });
 for (const v of ['tfront', 'tq3', 'tprofile', 'tr3', 'tback']) view(sheet, lower, cams[v], { clipY: beltTop, keep: torsoKeep, wire: true, idsKey: v, box: boxOf(v) });
 // the leg planes, front and back, where the reference has its panel
-// (one leg and its half of the pelvis, as the panel draws it; placed by hand, the panel's own proportions: sy)
-const PL = female ? { s: 70, sy: 0.41, cy: 592, at: [[1235, 0], [1355, 180]] } : { s: 70, sy: 0.47, cy: 586, at: [[1295, 0], [1428, 180]] };
+// (one leg and its half of the pelvis, as the panel draws it, turned in the picture's plane so the leg stands straight
+// as the panel's does: about the thigh's top, by the angle from the thigh's top to the ankle; placed by hand, the panel's
+// own proportions: sy)
 const half = (p) => p.name.endsWith(':L');
-for (const [cx, yaw] of PL.at) {
-  const legX = 0.8 * (yaw ? -1 : 1);
-  view(sheet, legs, { yaw, pitch: 0, s: PL.s, cx: cx - PL.s * legX, cy: PL.cy }, { sy: PL.sy, mode: 'planes', keep: half, wire: true });
-}
+const ringC = (names) => names.map((n) => legs.V[n]).reduce((a, q) => [a[0] + q[0] / names.length, a[1] + q[1] / names.length], [0, 0]);
+const hip = ringC(Array.from({ length: 8 }, (_, j) => `th${j}`)), ank = ringC(Array.from({ length: 6 }, (_, j) => `an${j}`));
+const th = Math.atan2(ank[0] - hip[0], hip[1] - ank[1]), ct = Math.cos(th), st = Math.sin(th);
+const straight = { ...legs, verts: legs.verts.map(([x, y, z]) => { const dx = x - hip[0], dy = y - hip[1]; return [hip[0] + ct * dx + st * dy, hip[1] - st * dx + ct * dy, z]; }) };
+const PL = female ? { s: 55, sy: 0.52, cy: 592, at: [[1191, 0], [1399, 180]] } : { s: 52, sy: 0.63, cy: 586, at: [[1258, 0], [1469, 180]] };
+for (const [cx, yaw] of PL.at) view(sheet, straight, { yaw, pitch: 0, s: PL.s, cx, cy: PL.cy }, { sy: PL.sy, mode: 'planes', keep: half, wire: true });
 png(sheet, join(out, `sheet-legs-${who}.png`));
 
 // the whole body at the full-body reference's size, through the body view's camera: head, torso and legs

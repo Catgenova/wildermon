@@ -55,19 +55,20 @@ export function halfFaces(P) {
     const r = rows[i], s = rows[i + 1];
     quad(`${r}${j}`, `${r}${j}`, `${r}${j + 1}`, `${s}${j + 1}`, `${s}${j}`, 'pelvis', 'pelvis');
   }
-  // gl down to the thigh's top ring and the crotch: the ring's front to gl1, its outside to gl4, its back to gl7, its
+  // gl down to the thigh's top ring and the crotch (the thigh's region in the planes panel, under the hip line's V): the
+  // ring's front to gl1, its outside to gl4, its back to gl7, its
   // inside to the crotch cx; gl2 and gl5 close in triangles
   const T = (k) => `th${k}`;
-  f('gr0', ['gl0', 'gl1', T(0), T(7)], 'pelvis', 'pelvis');
-  f('gr1', ['gl1', 'gl2', T(1), T(0)], 'pelvis', 'pelvis');
-  f('gr2', ['gl2', 'gl3', T(1)], 'pelvis', 'pelvis');
-  f('gr3', ['gl3', 'gl4', T(2), T(1)], 'pelvis', 'pelvis');
-  f('gr4', ['gl4', 'gl5', T(3), T(2)], 'pelvis', 'pelvis');
-  f('gr5', ['gl5', 'gl6', T(3)], 'pelvis', 'pelvis');
-  f('gr6', ['gl6', 'gl7', T(4), T(3)], 'pelvis', 'pelvis');
-  f('gr7', ['gl7', 'gl8', T(5), T(4)], 'pelvis', 'pelvis');
-  f('gr8', ['gl8', 'cx', T(6), T(5)], 'pelvis', 'pelvis');
-  f('gr9', ['cx', 'gl0', T(7), T(6)], 'pelvis', 'pelvis');
+  f('gr0', ['gl0', 'gl1', T(0), T(7)], 'pelvis', 'thigh');
+  f('gr1', ['gl1', 'gl2', T(1), T(0)], 'pelvis', 'thigh');
+  f('gr2', ['gl2', 'gl3', T(1)], 'pelvis', 'thigh');
+  f('gr3', ['gl3', 'gl4', T(2), T(1)], 'pelvis', 'thigh');
+  f('gr4', ['gl4', 'gl5', T(3), T(2)], 'pelvis', 'thigh');
+  f('gr5', ['gl5', 'gl6', T(3)], 'pelvis', 'thigh');
+  f('gr6', ['gl6', 'gl7', T(4), T(3)], 'pelvis', 'thigh');
+  f('gr7', ['gl7', 'gl8', T(5), T(4)], 'pelvis', 'thigh');
+  f('gr8', ['gl8', 'cx', T(6), T(5)], 'pelvis', 'thigh');
+  f('gr9', ['cx', 'gl0', T(7), T(6)], 'pelvis', 'thigh');
   // the leg's rings
   for (let i = 0; i + 1 < LEG_RINGS.length; i++) for (let j = 0; j < 8; j++) {
     const r = LEG_RINGS[i], s = LEG_RINGS[i + 1], j1 = (j + 1) % 8;
@@ -389,6 +390,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const own = new Set(openEdges(neckOnly).map(([k]) => k));
     const body = buildLowLower(who, m);
     const seam = openEdges(body).filter(([k]) => !own.has(k));
-    console.log('  torso + legs: edges at the seam not shared by exactly two faces', seam.length, '(the neck foot open for the head:', own.size + ')', ' mis-wound edges', misWound(body) - own.size);
+    // mis-wound edges the legs bring (the torso's own, if any, counted apart)
+    const torsoOwn = misWound(neckOnly) - own.size;
+    console.log('  torso + legs: edges at the seam not shared by exactly two faces', seam.length, '(the neck foot open for the head:', own.size + ')', ' mis-wound edges from the legs', misWound(body) - own.size - torsoOwn, torsoOwn ? `(the torso's own: ${torsoOwn})` : '');
   }
 }
