@@ -1,7 +1,7 @@
 import { actOf, beastFrame } from './beasts';
 import { sunAt } from './sun';
 import { gearFrom, wornWire } from '../game/worn';
-import { Camera } from '../engine/camera';
+import { Camera, MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../engine/camera';
 import { emoteAt } from '../game/emotes';
 import { ACTION_BY_ID } from '../game/actions';
 import type { FullscreenCanvas } from '../engine/canvas';
@@ -4036,6 +4036,8 @@ export class Renderer {
    */
   render(dt: number): void {
     const cam = this.camera;
+    // Closer with the sculpted bodies on; turned off, the zoom is brought back under the ceiling without them.
+    cam.closest(this.game.settings.sculpted ? SCULPTED_MAX_ZOOM : MAX_ZOOM);
     const cx = cam.cx, cy = cam.cy;
     const unit = cam.zoom * this.canvas.dpr;
     cam.cx = Math.round(cx * unit) / unit;

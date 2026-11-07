@@ -43,6 +43,7 @@ import { pitchedRoofAt } from './game/storeyview';
 import { warmMasonry } from './render/masonry';
 import { warmMeadow } from './render/meadow';
 import { Renderer, skyWash, sunAt, type Pick } from './render/renderer';
+import { FIGURE_TOP } from './render/figure';
 import { Sound } from './audio/sound';
 import { Music } from './audio/music/music';
 import { tracksFor } from './audio/music/playlist';
@@ -637,7 +638,7 @@ const loop = new GameLoop(
 
     // The camera keeps to you unless it has been dragged off, or told not to.
     if (game.settings.follow && camera.follow) {
-      camera.focus(player.x, player.y, Math.max(-4, game.playerHeight()), dt);
+      camera.focus(player.x, player.y, Math.max(-4, game.playerHeight()) + camera.bodyLift(FIGURE_TOP), dt);
     }
 
     sound.step();
