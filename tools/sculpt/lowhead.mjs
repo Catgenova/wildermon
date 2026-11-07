@@ -242,9 +242,9 @@ export function buildLowHead(who = 'male', preset = null) {
       // The lid: a strip along the pupil's top edge, from past its inner corner to past its outer one; the almond lid
       // thins to a wing that flicks up and out.
       const a = e.almond;
-      const xs = a ? [x0 - 0.035, e.x, x1 + 0.05, x1 + 0.17] : [x0 - 0.035, e.x, x1 + 0.035];
-      const yb = a ? [y1 - 0.03, y1 - 0.012, y1 - 0.0, y1 + 0.065] : [y1 + 0.004, y1 + 0.008, y1 + 0.002];
-      const hh = a ? [0.016, 0.026, 0.024, 0.008] : [0.03, 0.034, 0.026];
+      const xs = a ? [x0 - 0.01, e.x, x1 + 0.03, x1 + 0.15] : [x0 - 0.035, e.x, x1 + 0.035];
+      const yb = a ? [y1 - 0.028, y1 - 0.026, y1 - 0.018, y1 + 0.045] : [y1 + 0.004, y1 + 0.008, y1 + 0.002];
+      const hh = a ? [0.028, 0.042, 0.038, 0.012] : [0.03, 0.034, 0.026];
       // each section stands off the skin along the head's outward direction there, so the wing clears the side of the face
       const off = (x, y, d) => { const p = on(x, y, 0); const o = unit([p[0], 0, p[2] - 0.1]); return add(p, mul(o, d)); };
       const sec = xs.map((x, i) => [off(x, yb[i], e.lid), off(x, yb[i] + hh[i], e.lid * 0.5), off(x, yb[i] + hh[i], -0.03), off(x, yb[i], -0.03)]);

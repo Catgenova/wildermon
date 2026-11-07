@@ -130,7 +130,7 @@ const DATA = {
   gradpos: +opt('gradpos', '1'), // 1: the gradient measured from the head's centre, continuous across a shared edge; 0: from each polygon's centre
   flatBrow: female,
   // the lights' strengths: the ambient, the key from the front right, the warm fill from the right, the cool rim from behind left
-  amb: +opt('amb', '0.57'), key: +opt('key', '0.42'), warm: +opt('warm', '0.32'), cool: +opt('cool', female ? '0.2' : '2'), rim: +opt('rim', '0.42'), upr: +opt('upr', '0.12'), lcz: +opt('lcz', '0.35'), lbz: +opt('lbz', '-0.2'), cpow: +opt('cpow', female ? '0.8' : '8'), rpow: +opt('rpow', '3'), cspec: +opt('cspec', '0.52'), kx: +opt('kx', '-0.15'), ky: +opt('ky', '1.4'), aolo: +opt('aolo', '0.8'), // the gradient over each face toward the key light, per unit of the head (0: none)
+  amb: +opt('amb', '0.57'), key: +opt('key', '0.42'), warm: +opt('warm', '0.32'), cool: +opt('cool', female ? '0.2' : '2'), rim: +opt('rim', '0.42'), upr: +opt('upr', '0.12'), lcz: +opt('lcz', '0.35'), lbz: +opt('lbz', '-0.2'), cpow: +opt('cpow', female ? '0.8' : '8'), rpow: +opt('rpow', '3'), cspec: +opt('cspec', '0.52'), kx: +opt('kx', '-0.15'), ky: +opt('ky', female ? '0.7' : '1.4'), aolo: +opt('aolo', '0.8'), // the gradient over each face toward the key light, per unit of the head (0: none)
   parts, lines, topPitch, normals, counts: mesh.counts,
   pupil: female ? [0.265, 0.25, 0.29] : [0.21, 0.2, 0.22],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
