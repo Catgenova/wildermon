@@ -30,6 +30,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { buildLowTorso, buildLowBody, openEdges } from './lowtorso.mjs';
 import { buildLowHead } from './lowhead.mjs';
 import { buildLowLegs } from './lowlegs.mjs';
+import { addLoops as addHerLoops } from './lowloops-female.mjs';
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -225,8 +226,9 @@ export function buildHandAlone(who = 'male', preset = null, stub = 0.35) {
 }
 
 /** Head, torso, legs and both arms as one body: the torso's arm cuts give way to the arms (their joints, not their
- * caps), its hip cut to the legs (tools/sculpt/lowlegs.mjs). */
-export function buildArmBody(who = 'male', preset = null) {
+ * caps), its hip cut to the legs (tools/sculpt/lowlegs.mjs). The female's has the rig's extra edge loops
+ * (tools/sculpt/lowloops-female.mjs) on the same surface; opts.loops false leaves them out. */
+export function buildArmBody(who = 'male', preset = null, opts = {}) {
   const body = buildLowBody(who);
   const verts = [], polys = [], at = new Map();
   const take = (m, keep) => {
@@ -246,6 +248,7 @@ export function buildArmBody(who = 'male', preset = null) {
   take(body, (p) => !(p.name ?? '').startsWith('arm cut') && p.name !== 'hip cut');
   take(buildLowLegs(who), () => true);
   for (const side of [1, -1]) take(buildLowArm(who, preset, { side, cap: false }), () => true);
+  if (who === 'female' && opts.loops !== false) return addHerLoops({ verts, polys }, who);
   return finish({ verts, polys });
 }
 
