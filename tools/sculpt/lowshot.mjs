@@ -52,7 +52,8 @@ for (const p of mesh.polys) {
 const female = who === 'female';
 const DATA = {
   parts, lines, pitch, counts: mesh.counts,
-  lid: female ? [0.16, 0.12, 0.12] : [0.36, 0.24, 0.2],
+  pupil: female ? [0.2, 0.21, 0.25] : [0.09, 0.09, 0.11],
+  lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
   title: female ? 'Female Head Modeling Guide' : 'Modeling Guide',
   checks: female
     ? ['Stylized low-poly head', 'Feminine proportions', 'Bald (no hair)', 'Soft, tapered jawline', 'Small, angular nose and lips', 'Game-ready topology']
@@ -83,13 +84,13 @@ const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true
 const vs = 'attribute vec3 p; attribute vec3 n; attribute vec3 m; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift;' +
   'varying vec3 vn; varying vec3 vm; void main(){ vec3 q = R*(p - piv); vn = R*n; vm = m;' +
   ' gl_Position = vec4(off + sc*q.xy, -q.z/8.0 - lift, 1.0); }';
-const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform int mode; uniform vec3 lidc; uniform vec3 linec;' +
+const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
   ' vec3 nn = normalize(vn); if (!gl_FrontFacing) nn = -nn;' +
   ' vec3 base = vec3(0.68, 0.49, 0.41);' +
   ' float jit = vm.z - 0.5; base *= 1.0 + jit*0.03; base.r += jit*0.01;' +
   ' if (vm.x > 0.5 && vm.x < 1.5) base = vec3(0.27, 0.17, 0.13);' +
-  ' else if (vm.x > 1.5 && vm.x < 2.5) base = vec3(0.09, 0.09, 0.11);' +
+  ' else if (vm.x > 1.5 && vm.x < 2.5) base = pupc;' +
   ' else if (vm.x > 2.5 && vm.x < 3.5) base = lidc;' +
   ' else if (vm.x > 3.5) base = vec3(0.56, 0.37, 0.36);' +
   ' if (mode == 1) { vec3 rc = vm.y < 0.5 ? vec3(0.62,0.60,0.60) : (vm.y < 1.5 ? vec3(0.82,0.62,0.45) : vec3(0.70,0.52,0.50));' +
@@ -108,7 +109,7 @@ const buf = (arr) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFE
 const B = {}; for (const k in D.parts) B[k] = buf(D.parts[k]);
 const LB = buf(D.lines);
 gl.enable(gl.DEPTH_TEST); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-gl.uniform3fv(U('lidc'), D.lid);
+gl.uniform3fv(U('lidc'), D.lid); gl.uniform3fv(U('pupc'), D.pupil);
 const yaw = (d) => { const a = d * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [c, 0, -s, 0, 1, 0, s, 0, c]; };
 const pitchM = (d) => { const a = d * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [1, 0, 0, 0, c, s, 0, -s, c]; };
 function drawMesh(part) {
