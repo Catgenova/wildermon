@@ -64,14 +64,21 @@ def views(src):
                 pts = list(pts)
                 mid = (min(p[0] for p in pts) + max(p[0] for p in pts)) / 2
                 groups = [pts] if single or max(p[0] for p in pts) - min(p[0] for p in pts) < 40 else [[p for p in pts if p[0] < mid], [p for p in pts if p[0] >= mid]]
-            return [[sum(p[0] for p in g) / len(g), sum(p[1] for p in g) / len(g), len(g)] for g in groups if len(g) > 12]
+            # each blob's centroid, its size, and its two ends (the mean of its leftmost and its rightmost columns)
+            def ends(g):
+                lo, hi = min(p[0] for p in g), max(p[0] for p in g)
+                L = [p for p in g if p[0] <= lo + 1]; R = [p for p in g if p[0] >= hi - 1]
+                return [lo, sum(p[1] for p in L) / len(L), hi, sum(p[1] for p in R) / len(R)]
+            return [[sum(p[0] for p in g) / len(g), sum(p[1] for p in g) / len(g), len(g)] + ends(g) for g in groups if len(g) > 12]
         # pupils: holes in the silhouette, near the background's own colour; brows: dark brown just above them
         pupil = lambda c: c[2] >= c[0] - 3 and 110 < sum(c) < 260 and c[2] - c[1] < 25 and abs(c[0] - c[1]) < 10
         brow = lambda c: c[0] - c[2] > 30 and 55 < c[0] < 140 and c[1] < 100
         eyes = blobs(pupil, lambda x, y: y < y0 + (y1 - y0) * 0.75, comps=True) if name in ('front', 'q3', 'profile', 'bottom') else []
-        # a side view sees one eye whole: keep the rightmost blob (the face looks right)
-        if name in ('q3', 'profile') and eyes:
+        # the profile sees one eye whole: keep the rightmost blob (the face looks right); the three-quarter sees both
+        if name == 'profile' and eyes:
             eyes = [max(eyes, key=lambda e: e[0])]
+        if name == 'q3' and len(eyes) > 2:
+            eyes = sorted(eyes, key=lambda e: -e[2])[:2]
         brows = []
         for e in eyes:
             got = blobs(brow, lambda x, y, e=e: abs(x - e[0]) < 42 and -40 < y - e[1] < -8, single=True)

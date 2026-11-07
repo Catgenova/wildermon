@@ -228,7 +228,17 @@ export function buildLowHead(who = 'male', preset = null) {
     const e = P.eye;
     both((s) => {
       const x0 = e.x - e.w / 2, x1 = e.x + e.w / 2, y0 = e.y - e.h / 2, y1 = e.y + e.h / 2;
-      facePoly([on(x0, y0, 0.022), on(x1, y0, 0.022), on(x1, y1, 0.022), on(x0, y1, 0.022)], s, "pupil");
+      // the pupil a small box standing off the skin along the head's outward direction (e.pop), so the side views see
+      // it as the references draw it; its back sunk into the head
+      {
+        const out = (x, y, d) => { const p = on(x, y, 0); const o = unit([p[0], 0, p[2] - 0.1]); return add(p, mul(o, d)); };
+        const pop = e.pop ?? 0.022;
+        const F = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+        const fr = F.map(([x, y]) => vert(flip(out(x, y, pop), s))), bk = F.map(([x, y]) => vert(flip(out(x, y, -0.02), s)));
+        const o = (v) => poly(s > 0 ? v : [...v].reverse(), 'head', 'face', 'pupil');
+        o(fr);
+        for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; o([bk[i], bk[j], fr[j], fr[i]]); }
+      }
       // The lid: a strip along the pupil's top edge, from past its inner corner to past its outer one; the almond lid
       // thins to a wing that flicks up and out.
       const a = e.almond;

@@ -125,12 +125,12 @@ const CAMS = loadCams(who);
 const DATA = {
   // each view's camera, its rotation column-major for GL
   cams: Object.entries(CAMS).map(([v, c]) => { const r = rotation(c); return { ...c, R: [r[0], r[3], r[6], r[1], r[4], r[7], r[2], r[5], r[8]], parts: PARTS[v] }; }),
-  grad: +opt('grad', '0.25'),
+  grad: +opt('grad', '-0.05'),
   detail: args.includes('--detail'),
   gradpos: +opt('gradpos', '1'), // 1: the gradient measured from the head's centre, continuous across a shared edge; 0: from each polygon's centre
   flatBrow: female,
   // the lights' strengths: the ambient, the key from the front right, the warm fill from the right, the cool rim from behind left
-  amb: +opt('amb', '0.57'), key: +opt('key', '0.42'), warm: +opt('warm', '0.32'), cool: +opt('cool', '1.2'), rim: +opt('rim', '0.6'), upr: +opt('upr', '0.12'), lcz: +opt('lcz', '0.35'), lbz: +opt('lbz', '-0.2'), cpow: +opt('cpow', '2.5'), rpow: +opt('rpow', '3'), cspec: +opt('cspec', '0.4'), kx: +opt('kx', '0.3'), ky: +opt('ky', '0.5'), aolo: +opt('aolo', '0.8'), // the gradient over each face toward the key light, per unit of the head (0: none)
+  amb: +opt('amb', '0.57'), key: +opt('key', '0.42'), warm: +opt('warm', '0.32'), cool: +opt('cool', '1.2'), rim: +opt('rim', '0.42'), upr: +opt('upr', '0.12'), lcz: +opt('lcz', '0.35'), lbz: +opt('lbz', '-0.2'), cpow: +opt('cpow', '2.5'), rpow: +opt('rpow', '3'), cspec: +opt('cspec', '0.52'), kx: +opt('kx', '-0.15'), ky: +opt('ky', '1.4'), aolo: +opt('aolo', '0.8'), // the gradient over each face toward the key light, per unit of the head (0: none)
   parts, lines, topPitch, normals, counts: mesh.counts,
   pupil: female ? [0.2, 0.21, 0.25] : [0.09, 0.09, 0.11],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],

@@ -83,7 +83,7 @@ export function silhouette(mesh, view, cam, box) {
 // a facet's luminance from its normal in view space and its material's colour.
 const nrm = (v) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
 // The rig's numbers, as lowshot.mjs takes them (its --amb, --key, ... options); `light` stage fits them.
-export const RIG = { amb: 0.57, key: 0.42, warm: 0.32, cool: 1.2, rim: 0.6, upr: 0.12, cspec: 0.4, kx: 0.3, ky: 0.5, lcz: 0.35, lbz: -0.2, cpow: 2.5, rpow: 3, down: 0.14, up: 0.06 };
+export const RIG = { amb: 0.57, key: 0.42, warm: 0.32, cool: 1.2, rim: 0.42, upr: 0.12, cspec: 0.52, kx: -0.15, ky: 1.4, lcz: 0.35, lbz: -0.2, cpow: 2.5, rpow: 3, down: 0.14, up: 0.06 };
 const BASE = { skin: [0.68, 0.49, 0.41], brow: [0.36, 0.22, 0.15], pupil: [0.09, 0.09, 0.11], lid: [0.36, 0.24, 0.2] };
 const dotp = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 export function lightLum(n, mat) {
@@ -207,6 +207,18 @@ export function viewError(mesh, view, cam) {
       feat.push({ mat, d });
     }
   }
+  // the brows' ends: the leftmost and the rightmost of each brow on the sheet, ours against the reference's nearest brow
+  if (r.brows.length && r.brows[0].length >= 7) {
+    const side = { 1: [], [-1]: [] };
+    for (const t of mesh.tris) if (t.mat === 'brow') for (const i of t.v) side[mesh.verts[i][0] >= 0 ? 1 : -1].push(project(mesh.verts[i], cam));
+    const ours = [1, -1].map((s) => { const p = side[s]; const mn = Math.min(...p.map((q) => q[0])), mxx = Math.max(...p.map((q) => q[0]));
+      const avg = (L) => [L.reduce((a, q) => a + q[0], 0) / L.length, L.reduce((a, q) => a + q[1], 0) / L.length];
+      const lo = avg(p.filter((q) => q[0] <= mn + 2)), hi = avg(p.filter((q) => q[0] >= mxx - 2)); return { c: [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2], lo, hi, z: Math.max(...p.map((q) => q[2])) }; });
+    for (const f of r.brows) {
+      const o = ours.reduce((a, b) => (Math.hypot(b.c[0] - f[0], b.c[1] - f[1]) < Math.hypot(a.c[0] - f[0], a.c[1] - f[1]) ? b : a));
+      feat.push({ mat: 'bend', d: Math.hypot(o.lo[0] - f[3], o.lo[1] - f[4]) }, { mat: 'bend', d: Math.hypot(o.hi[0] - f[5], o.hi[1] - f[6]) });
+    }
+  }
   // the nose's underside and the chin's, down the front view's centre line: the tip's edge and the chin's front edge
   for (const [mark, name] of [['cliff', 'tc'], ['chin', 'ch0']]) {
     const at = r.marks?.[mark];
@@ -263,6 +275,9 @@ function descend(params, f, rounds = 6) {
 function limit(v, k, x) {
   const d = v === 'r3' && Math.abs(cams[v].yaw - 225) < 45 ? { ...DEFAULT_CAMS[v], yaw: 225 } : DEFAULT_CAMS[v];
   if (k === 'f') return Math.max(2.5, x);
+  // --yawlim view:min:max,...: a view's yaw held within its own window
+  const lim = opt('yawlim', '').split(',').map((t) => t.split(':')).find((t) => t[0] === v);
+  if (k === 'yaw' && lim) return Math.min(+lim[2], Math.max(+lim[1], x));
   if (k === 'yaw') { const r = +opt('yawrange', '20'); return Math.min(d.yaw + r, Math.max(d.yaw - r, x)); }
   if (k === 'pitch') { const r = v === 'top' || v === 'bottom' ? 25 : 12; return Math.min(d.pitch + r, Math.max(d.pitch - r, x)); }
   return x;
@@ -277,18 +292,19 @@ function report(tag) {
   const keep = FW.shade; FW.shade = FW.shade || 1e-9;
   for (const v of VIEWS) {
     const e = viewError(mesh, v, cams[v]);
-    const f = e.feat.length ? e.feat.map((x) => `${({ pupil: 'eye', brow: 'brow', cliff: 'nose', chin: 'chin' })[x.mat]} ${((100 * x.d) / HEAD_H).toFixed(1)}`).join(' ') : '';
+    const f = e.feat.length ? e.feat.map((x) => `${({ pupil: 'eye', brow: 'brow', bend: 'end', cliff: 'nose', chin: 'chin' })[x.mat]} ${((100 * x.d) / HEAD_H).toFixed(1)}`).join(' ') : '';
     rows.push(`${v.padEnd(8)} outline mean ${((100 * e.mean) / HEAD_H).toFixed(1)}% worst ${((100 * e.worst) / HEAD_H).toFixed(1)}%  IoU ${e.iou.toFixed(3)}  shade ${e.shade.toFixed(1)}  ${f ? 'features ' + f + ' (%)' : ''}`);
   }
   FW.shade = keep;
-  console.log(`${who} ${tag}\n` + rows.join('\n'));
+  console.log(`${who} ${tag} (warp ${(1000 * warp(mesh)).toFixed(1)}e-3)\n` + rows.join('\n'));
 }
 
 if (stage === 'camera') {
   FW.w = +opt('fw', '0.1');
   report('before');
   const persp = args.includes('--perspective');
-  for (const v of VIEWS) {
+  // --views a,b: only these views' cameras
+  for (const v of VIEWS.filter((x) => !opt('views', '') || opt('views').split(',').includes(x))) {
     const c = cams[v];
     if (persp && !c.f) c.f = 12;
     const ps = [
@@ -320,13 +336,17 @@ if (stage === 'mesh') {
   // the brows move as a whole, up and down and out and in
   const shift = (key, d) => { preset.brow[key] = preset.brow[key].map((v) => v + d); };
   if (!only.length) for (const key of ['x', 'yb']) { let at = 0; ps.push({ step: 0.02, get: () => at, set: (x) => { shift(key, x - at); at = x; } }); }
+  // --brows: each brow section's x, height and thickness on its own (the brows' ends and arch)
+  if (args.includes('--brows')) for (const key of ['x', 'yb', 'h']) preset.brow[key].forEach((_, i) => ps.push({ step: key === 'h' ? 0.01 : 0.02, get: () => preset.brow[key][i], set: (x) => { preset.brow[key][i] = key === 'h' ? Math.max(0.005, x) : x; } }));
   // --shade w: the shading counts too, w per grey level; --reg r: each vertex's move from where it started costs r per
   // head unit squared, so the planes turn without the head crumpling
   FW.shade = +opt('shade', '0');
   const reg = +opt('reg', '0');
   const start = structuredClone(preset.V);
   const moved = () => { let t = 0; for (const n of names) for (let k = 0; k < 3; k++) t += (preset.V[n][k] - start[n][k]) ** 2; return t; };
-  const total = () => { mesh = buildLowHead(who, preset); mesh.V = preset.V; return VIEWS.reduce((s, v) => s + viewError(mesh, v, cams[v]).score, 0) + 20 * folds(mesh, base0) + reg * moved(); };
+  // --flat w: each polygon of the head's skin off its own plane costs w per head unit squared, so the planes stay flat
+  const flatW = +opt('flat', '0');
+  const total = () => { mesh = buildLowHead(who, preset); mesh.V = preset.V; return VIEWS.reduce((s, v) => s + viewError(mesh, v, cams[v]).score, 0) + 20 * folds(mesh, base0) + reg * moved() + (flatW ? flatW * warp(mesh) : 0); };
   const both = args.includes('--with-camera');
   const camPs = both ? VIEWS.flatMap((v) => ['cx', 'cy', ...(v === 'front' ? [] : ['s']), 'yaw', 'pitch'].map((k) => ({ step: k === 's' ? 2 : 2, get: () => cams[v][k], set: (x) => { cams[v][k] = limit(v, k, x); } }))) : [];
   for (let r = 0; r < +opt('rounds', 3); r++) {
@@ -362,6 +382,20 @@ function deformed(L) {
   for (const n of Object.keys(P.V)) { const q = deform(P.V[n], L); P.V[n] = P.V[n][0] === 0 ? [0, q[1], q[2]] : q; }
   P.ear.c = deform(P.ear.c, L);
   return P;
+}
+/** How far the head's skin polygons of four or more corners are from flat: each corner's squared distance from the
+ * plane through the polygon's centre along its Newell normal, summed. */
+function warp(m) {
+  let t = 0;
+  for (const p of m.polys) {
+    if (p.part !== 'head' || p.mat !== 'skin' || p.ear || p.v.length < 4) continue;
+    const pts = p.v.map((i) => m.verts[i]); let n = [0, 0, 0];
+    for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
+    const l = Math.hypot(...n) || 1; n = n.map((x) => x / l);
+    const c = [0, 1, 2].map((k) => pts.reduce((a, q) => a + q[k], 0) / pts.length);
+    for (const q of pts) t += ((q[0] - c[0]) * n[0] + (q[1] - c[1]) * n[1] + (q[2] - c[2]) * n[2]) ** 2;
+  }
+  return t;
 }
 /** How many of the head's triangles turned over against the hand-built head's. */
 function folds(m, base) {
