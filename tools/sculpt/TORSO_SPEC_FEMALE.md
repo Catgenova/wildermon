@@ -57,3 +57,5 @@ Decisions
   the collarbone (the collarbone's point, the foot's top and the point in one line, as the topology panel's line from
   the collarbone through the breast), so the profile's upper slope is the chest continuing; the sides and the underside
   keep the middle ring that rounds them. The point at her reference's front (213, 184), where its facets meet.
+
+- 2026-11-07: the user approved the female torso ("Chest looks good"). Frozen at d3c98201, like the male.
