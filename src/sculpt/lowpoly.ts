@@ -7,10 +7,14 @@
  * kept; the arms kept off the body, hers turned further out as they swing, the ankles and toes as hinges on the body's
  * own axes, the thumbs closed toward the palm), the helpers driven from those, and the body stood on its lowest sole.
  * Shaded as the review renders shade it: one colour a polygon, from its normal in view space, by the light fitted for
- * that body (`tools/sculpt/lowlight-<who>.json`, written by `tools/sculpt/lowlight.py`), in the look's skin.
+ * that body (`tools/sculpt/lowlight-<who>.json`, written by `tools/sculpt/lowlight.py`), in the look's skin. A hairstyle
+ * made for the low-poly bodies (`tools/sculpt/lowhair.mjs`, `./assets/lowhair.json`: so far 'swept') is drawn with the
+ * body, on the head bone, in three tones of the look's hair colour, the body's scalp under it shaved; any other style draws
+ * no hair yet.
  */
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
+import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
 import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
@@ -31,6 +35,12 @@ interface Asset {
   bones: Bone[]; rest: Pick<Rig, 'arm' | 'elbow' | 'hand' | 'leg' | 'knee'>;
   game: { armIn: number; thumbCurl: number; armSwing?: [number, number]; armSwingAt?: number };
 }
+
+/** A hairstyle on one body (`tools/sculpt/lowhair.mjs` gameHair): its vertices, polygons and triangles (corners, polygon),
+ * each polygon's material (4 the hair, 3 the buzzed sides' patches), each vertex's (bone, weight) pairs, and the body's
+ * polygons drawn shaved. */
+interface HairAsset { verts: number[]; polys: number[][]; mat: number[]; tris: number[]; weights: number[][]; shave: number[] }
+const HAIRS = HAIR_ASSET as unknown as Record<'male' | 'female', Record<string, HairAsset>>;
 
 /* ---- 3x3 rotations (row-major) and quaternions [w, x, y, z], as lowrig.mjs ------------------------------------- */
 const I3: M3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -86,7 +96,7 @@ const angleOf = (q: Q): number => (2 * Math.acos(Math.min(1, Math.abs(q[0]))) * 
 export const WOMAN_OF_MAN = 0.85;
 
 /** One body: its asset, the figure's proportions it is posed with, and its height as a share of the base man's. */
-function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked; bones: (pose: FigurePose) => Float32Array } {
+function lowBody(A: Asset, P: Proportions, share: number, hairs: Record<string, HairAsset>): { baked: (style: string) => Baked; bones: (pose: FigurePose) => Float32Array } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
 
@@ -192,25 +202,40 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
   const toGame = (p: V): V => { const s = scale(), q = mv(T, sub(p, FLOOR)); return [q[0] * s, q[1] * s, q[2] * s]; };
   const vert = (i: number): V => [A.verts[i * 3], A.verts[i * 3 + 1], A.verts[i * 3 + 2]];
 
-  let BAKED: Baked | null = null;
-  /** The body laid out for the GPU: every polygon its own corners, each with the polygon's normal, so it is drawn flat. */
-  function lowBaked(): Baked {
-    if (BAKED) return BAKED;
+  const BAKED = new Map<string, Baked>();
+  /**
+   * The body laid out for the GPU, with the hairstyle's hair if it has one: every polygon its own corners, each with the
+   * polygon's normal, so it is drawn flat. The hair's vertices follow the body's; its polygons take the hair's material
+   * (`M.hairCut`, three tones), the body's shaved polygons the scalp's (`M.hairUnder`).
+   */
+  function lowBaked(style: string): Baked {
+    const hair = hairs[style], key = hair ? style : '';
+    const done = BAKED.get(key);
+    if (done) return done;
     const t0 = performance.now();
-    const MATS = [M.skin, M.hair, M.pupil];
+    const nBody = A.verts.length / 3, nPolys = A.polys.length;
+    const shaved = new Set(hair ? hair.shave : []);
+    // the body and the hair as one list of vertices, polygons ([corners, material, outline]), weights and triangles
+    const allVerts = hair ? A.verts.concat(hair.verts) : A.verts;
+    const allPolys: Array<[number[], number, number[]?]> = A.polys.map(([v, m, nv], pi) => [v, shaved.has(pi) ? 3 : m, nv]);
+    if (hair) hair.polys.forEach((v, j) => allPolys.push([v.map((i) => i + nBody), hair.mat[j]]));
+    const allWeights = hair ? A.weights.concat(hair.weights) : A.weights;
+    const allTris = hair ? A.tris.concat(hair.tris.map((x, k) => (k % 4 === 3 ? x + nPolys : x + nBody))) : A.tris;
+    const at = (i: number): V => [allVerts[i * 3], allVerts[i * 3 + 1], allVerts[i * 3 + 2]];
+    const MATS = [M.skin, M.hair, M.pupil, M.hairUnder, M.hairCut];
     const corner = new Map<string, number>();
     const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
     // Each polygon's weights, its corners' summed, the heaviest four kept: one turn for the face's normal at every corner.
-    const faceWeights = A.polys.map(([v]) => {
+    const faceWeights = allPolys.map(([v]) => {
       const sum = new Map<number, number>();
-      for (const i of v) { const w = A.weights[i]; for (let j = 0; j < w.length; j += 2) sum.set(w[j], (sum.get(w[j]) ?? 0) + w[j + 1]); }
+      for (const i of v) { const w = allWeights[i]; for (let j = 0; j < w.length; j += 2) sum.set(w[j], (sum.get(w[j]) ?? 0) + w[j + 1]); }
       const top = [...sum].sort((a, b) => b[1] - a[1]).slice(0, 4), tot = top.reduce((t, [, w]) => t + w, 0) || 1;
       const out = [0, 0, 0, 0, 0, 0, 0, 0];
       top.forEach(([b, w], j) => { out[j] = b; out[4 + j] = w / tot; });
       return out;
     });
-    const normals = A.polys.map(([v, , nv]) => {
-      const pts = (nv ?? v).map((i) => toGame(vert(i)));
+    const normals = allPolys.map(([v, , nv]) => {
+      const pts = (nv ?? v).map((i) => toGame(at(i)));
       let n: V = [0, 0, 0];
       for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
       const l = Math.hypot(n[0], n[1], n[2]) || 1;
@@ -222,16 +247,17 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
       if (k !== undefined) return k;
       k = verts.length / STRIDE;
       corner.set(key, k);
-      const p = toGame(vert(i)), n = normals[pi], mat = MATS[A.polys[pi][1]] ?? M.skin, w = A.weights[i];
+      const p = toGame(at(i)), n = normals[pi], mat = MATS[allPolys[pi][1]] ?? M.skin, w = allWeights[i];
       const bi = [0, 0, 0, 0], bw = [0, 0, 0, 0];
       for (let j = 0; j < 4 && j * 2 < w.length; j++) { bi[j] = w[j * 2]; bw[j] = w[j * 2 + 1]; }
       verts.push(p[0], p[1], p[2], n[0], n[1], n[2], mat, ...bi, ...bw, mat, -1);
       faceSkin.push(...faceWeights[pi]);
       return k;
     };
-    for (let t = 0; t < A.tris.length; t += 4) { const pi = A.tris[t + 3]; tris.push(idx(A.tris[t], pi), idx(A.tris[t + 1], pi), idx(A.tris[t + 2], pi)); }
-    BAKED = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: BONES.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
-    return BAKED;
+    for (let t = 0; t < allTris.length; t += 4) { const pi = allTris[t + 3]; tris.push(idx(allTris[t], pi), idx(allTris[t + 1], pi), idx(allTris[t + 2], pi)); }
+    const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: BONES.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
+    BAKED.set(key, baked);
+    return baked;
   }
 
   let G_REST: Bones | null = null;
@@ -279,7 +305,7 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
   return { baked: lowBaked, bones: lowBones };
 }
 
-const BODIES = { man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1), woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN) };
+const BODIES = { man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, HAIRS.male), woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, HAIRS.female) };
 
 /** A fitted light's coefficients ([channel][term], nought to 255) as the shader takes them: per term, red, green and blue nought to one. */
 function shOf(fit: { global: number[][] }): Float32Array {
@@ -304,6 +330,11 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const look = pose.look ?? DEFAULT_LOOK;
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
-  const materials = bodyMaterials(look), low: LowLight = { sh: SH[who], tone: toneOf(materials) };
-  return { baked: body.baked(), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
+  const materials = [...bodyMaterials(look)], low: LowLight = { sh: SH[who], tone: toneOf(materials) };
+  // the hairstyle's hair (none drawn for a style not made yet) in three tones of the look's hair colour, its shave the
+  // skin toward that colour
+  const hair = materials[M.hair].colour;
+  materials[M.hairCut] = { colour: hair, ramp: true, noCrease: true };
+  materials[M.hairUnder] = { colour: hair, shave: true };
+  return { baked: body.baked(look.hair), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
 }

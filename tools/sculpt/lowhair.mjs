@@ -22,6 +22,7 @@
 //           SINK into it so the root never shows a gap); the corners' order runs from the head's right to its left.
 //   jitter: the corners above the roots moved by up to this much (head units, where the roll is 0.2 high; less where it
 //           is lower), each its own way (repeatably), so the rolls break into facets.
+//   buzz:  { lean, drop, ahead }: the side faces forward of the shave buzzed as far as a sideburn's line (buzzOf).
 //   shave: the head's own polygons drawn in the shaved tone, as names of their corners (lowhead.mjs FACES, sides
 //           dropped): every polygon whose corners are all in the set.
 //
@@ -29,6 +30,8 @@
 // pieces: [{ id, polys: [first, end) }], shave: [body polygon indices], centre, checks }.
 //
 //   node tools/sculpt/lowhair.mjs [--who male|female] [--style swept]   # counts and checks
+//   node tools/sculpt/lowhair.mjs --asset   # every style on both bodies into src/sculpt/assets/lowhair.json (gameHair)
+import { writeFileSync } from 'node:fs';
 import { buildRig, posed, skin, add, sub, mul, dot, cross, unit, lerp } from './lowrig.mjs';
 import SWEPT from './hairs/swept.mjs';
 import { angOf, carve, outlineDiff } from './lowhairhull.mjs';
@@ -152,9 +155,12 @@ export function buildHair(rig, style = SWEPT, hull = null) {
     pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length] });
   }
   orientOut(verts, polys, pieces);
+  // the buzz: the head's side faces forward of the shave as far as the sideburn's line, as patches just off them
+  if (style.buzz) buzzOf(B, style, verts, polys, k);
   const tris = [];
   polys.forEach((p, pi) => {
     if (p.v.length === 3) tris.push([...p.v, pi]);
+    else if (p.v.length > 4) for (let j = 1; j + 1 < p.v.length; j++) tris.push([p.v[0], p.v[j], p.v[j + 1], pi]);
     else {
       // a quad split along its shorter diagonal, so it folds rather than twists
       const [a, b, c, d] = p.v, dac = Math.hypot(...sub(verts[a], verts[c])), dbd = Math.hypot(...sub(verts[b], verts[d]));
@@ -165,6 +171,50 @@ export function buildHair(rig, style = SWEPT, hull = null) {
   const shave = shaveOf(B, style.shave), scalp = shaveOf(B, style.scalp ?? style.shave);
   return { verts, polys, tris, weights, pieces, shave, scalp, centre: C, k };
 }
+
+/**
+ * The buzzed sides forward of the shaved polygons to the sideburn's edge: the head's own side faces (not shaved, the
+ * ears and the face's parts left out) clipped to behind a near-vertical line from the ear's front top up to the hair
+ * (z under ear front + buzz.lean (y - ear top), y over the ear's top less buzz.drop), each kept part a patch BUZZ off its
+ * face (polygons marked buzz, drawn in the shave's tone; not a closed piece). The head's mesh is left as it is.
+ */
+function buzzOf(B, style, verts, polys, k) {
+  const ear = B.names.map((n, i) => (n && n.startsWith('ear.L') ? B.verts[i] : null)).filter(Boolean);
+  const top = Math.max(...ear.map((p) => p[1])), front = Math.max(...ear.filter((p) => p[1] > top - 0.15).map((p) => p[2]));
+  const { lean = 0.25, drop = 0.03, ahead = 0 } = style.buzz;
+  const planes = [(p) => front + ahead + lean * (p[1] - top) - p[2], (p) => p[1] - (top - drop)];
+  const shaved = new Set(shaveOf(B, style.shave));
+  const clip = (P, f) => {
+    const out = [];
+    P.forEach((a, i) => {
+      const b = P[(i + 1) % P.length], fa = f(a), fb = f(b);
+      if (fa >= 0) out.push(a);
+      if ((fa >= 0) !== (fb >= 0)) out.push(lerp(a, b, fa / (fa - fb)));
+    });
+    return out;
+  };
+  B.polys.forEach((p, pi) => {
+    if (p.part !== 'head' || p.mat !== 'skin' || p.ear || shaved.has(pi)) return;
+    const P0 = (p.nv ?? p.v).map((i) => B.verts[i]);
+    if (P0.every((q) => Math.abs(q[0]) < 0.35)) return;
+    let P = P0;
+    for (const f of planes) P = P.length ? clip(P, f) : P;
+    if (P.length < 3) return;
+    let n = [0, 0, 0];
+    for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; n = add(n, [(a[1] - b[1]) * (a[2] + b[2]), (a[2] - b[2]) * (a[0] + b[0]), (a[0] - b[0]) * (a[1] + b[1])]); }
+    const area = Math.hypot(...n) / 2;
+    if (area < 1e-4) return;
+    n = unit(n);
+    // outward: away from the head's middle
+    const mid = mul(P.reduce((a, q) => add(a, q), [0, 0, 0]), 1 / P.length);
+    if (dot(n, [mid[0], 0, 0]) < 0 && Math.abs(mid[0]) > 0.3) n = mul(n, -1);
+    const base = verts.length;
+    for (const q of P) verts.push(add(q, mul(n, BUZZ * k)));
+    const v = P.map((_, i) => base + i);
+    polys.push({ v: dot(cross(sub(verts[v[1]], verts[v[0]]), sub(verts[v[2]], verts[v[0]])), n) < 0 ? v.reverse() : v, piece: -1, buzz: true });
+  });
+}
+const BUZZ = 0.004;
 
 /** Each piece's faces turned outward: the faces are built wound one way round the piece; all turned over where that
  * way encloses a negative volume. */
@@ -220,7 +270,7 @@ const mvS = (m, v) => [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[
 /** Each piece closed (every edge in two of its faces, the two running it opposite ways). */
 export function openEdges(hair) {
   const E = new Map();
-  for (const p of hair.polys) p.v.forEach((a, j) => { const b = p.v[(j + 1) % p.v.length]; const key = a + ',' + b; E.set(key, (E.get(key) ?? 0) + 1); });
+  for (const p of hair.polys) if (!p.buzz) p.v.forEach((a, j) => { const b = p.v[(j + 1) % p.v.length]; const key = a + ',' + b; E.set(key, (E.get(key) ?? 0) + 1); });
   let open = 0;
   for (const [key, c] of E) { const [a, b] = key.split(','); if (c !== 1 || E.get(b + ',' + a) !== 1) open++; }
   return open;
@@ -251,6 +301,7 @@ export function crossings(rig, hair, P, H) {
   const tb = skinT.map((t) => bb(t.v.map((i) => P[i])));
   const hits = [];
   for (const [a, b, c, pi] of hair.tris) {
+    if (hair.polys[pi].buzz) continue;
     const A = [H[a], H[b], H[c]], ab = bb(A);
     for (let s = 0; s < skinT.length; s++) {
       if (ab.some(([lo, hi], k) => hi < tb[s][k][0] || lo > tb[s][k][1])) continue;
@@ -260,13 +311,41 @@ export function crossings(rig, hair, P, H) {
   return { n: hits.length, hits };
 }
 
+/**
+ * The hair as the game loads it (src/sculpt/lowpoly.ts): per style its vertices (the body's units), its polygons (corners,
+ * each in triangles), each vertex's (bone index, weight) list in the body asset's bone order, and the body's polygons
+ * drawn shaved.
+ */
+export function gameHair(rig, hair) {
+  const r5 = (x) => +x.toFixed(5);
+  return {
+    verts: hair.verts.flat().map(r5),
+    polys: hair.polys.map((p) => p.v),
+    // each polygon's material: 4 the hair, 3 the buzz (the shave's tone)
+    mat: hair.polys.map((p) => (p.buzz ? 3 : 4)),
+    tris: hair.tris.flat(),
+    weights: hair.weights.map((l) => l.flatMap(([bn, w]) => [rig.at.get(bn), +w.toFixed(4)])),
+    shave: hair.shave,
+  };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
   const HULL = carve(opt('style', 'swept'));
-  for (const who of opt('who', 'male,female').split(',')) {
+  if (args.includes('--asset')) {
+    const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
+    for (const who of ['male', 'female']) {
+      const rig = buildRig(who);
+      out[who] = Object.fromEntries(Object.entries(STYLES).map(([id, st]) => [id, gameHair(rig, buildHair(rig, st, carve(id)))]));
+    }
+    const file = new URL('../../src/sculpt/assets/lowhair.json', import.meta.url);
+    writeFileSync(file, JSON.stringify(out));
+    console.log('wrote', file.pathname);
+  }
+  for (const who of opt('who', args.includes('--asset') ? '' : 'male,female').split(',').filter(Boolean)) {
     const rig = buildRig(who), hair = buildHair(rig, STYLES[opt('style', 'swept')], HULL);
     const rest = crossings(rig, hair, rig.B.verts, hair.verts);
     console.log(who, 'tris', hair.tris.length, 'pieces', hair.pieces.map((p) => `${p.id}:${(p.polys[1] - p.polys[0])}`).join(' '), 'open edges', openEdges(hair), 'shaved polys', hair.shave.length, 'crossings at rest', rest.n, JSON.stringify(rest.hits.slice(0, 6).map(([h, s]) => [h, rig.B.polys[s].name])));
-    if (who === 'male') console.log('outline difference against the sheet (mean px):', Object.entries(outlineDiff(hair.tris.map(([a, b, c]) => [hair.verts[a], hair.verts[b], hair.verts[c]]))).map(([v, d]) => `${v} ${d.px}`).join(', '));
+    if (who === 'male') console.log('outline difference against the sheet (mean px):', Object.entries(outlineDiff(hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz).map(([a, b, c]) => [hair.verts[a], hair.verts[b], hair.verts[c]]))).map(([v, d]) => `${v} ${d.px}`).join(', '));
   }
 }

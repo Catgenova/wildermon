@@ -169,8 +169,8 @@ const VIEWS = [['front', 'Front (0°)'], ['q3', 'Three-quarter (45°)'], ['profi
 /** The sheet's main hair tone, the colour the review renders take (the game takes the look's). */
 export const SHEET_HAIR = [104 / 255, 62 / 255, 51 / 255];
 const BROW = [0.22, 0.15, 0.13], PUPIL = [0.08, 0.06, 0.06];
-/** The shaved scalp: the skin toward the hair's colour by this much. */
-export const SHAVE = 0.45;
+/** The shaved scalp: the skin toward the hair's colour by this much (the sheet's buzz is about 0.7 of its skin's value). */
+export const SHAVE = 0.65;
 const mix = (a, b, t) => a.map((x, k) => x + (b[k] - x) * t);
 
 export function bodyMesh(rig, hair, P = rig.B.verts, hairCol = SHEET_HAIR, o = {}) {
@@ -180,7 +180,7 @@ export function bodyMesh(rig, hair, P = rig.B.verts, hairCol = SHEET_HAIR, o = {
   return { who: rig.who, P, polys: B.polys.map((p) => p.nv ?? p.v), tris: B.tris.filter((t) => keep(B.polys[t.poly])).map((t) => [...t.v, t.poly]), col };
 }
 export function hairMesh(rig, hair, H = hair.verts, hairCol = SHEET_HAIR) {
-  return { who: rig.who, P: H, polys: hair.polys.map((p) => p.v), tris: hair.tris, col: hair.polys.map(() => hairCol.map((x) => -x)) };
+  return { who: rig.who, P: H, polys: hair.polys.map((p) => p.v), tris: hair.tris, col: hair.polys.map((p) => (p.buzz ? mix(SKIN, hairCol, SHAVE) : hairCol.map((x) => -x))) };
 }
 const camOf = (c, k = 1) => ({ yaw: -c.yaw, pitch: -c.pitch, s: c.s * k, c: PIV });
 

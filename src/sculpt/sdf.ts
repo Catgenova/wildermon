@@ -48,6 +48,10 @@ export interface Material {
   soft?: boolean;
   /** A small part standing off the body (an ear): the silhouette ink next to it is thin, so it reads as the part and not as its line. */
   thinInk?: boolean;
+  /** A low-poly body's hair (`./lowpoly`): three tones of its colour (the main, a mid and a highlight) by how much of the body's light a facet takes. */
+  ramp?: boolean;
+  /** A low-poly body's shaved scalp (`./lowpoly`): lit as the skin, its colour 0.65 of the way to the hair's (this material's). */
+  shave?: boolean;
   /** No ink inside the silhouette: a mitt's grooves and tips are read by their shading alone. */
   noInk?: boolean;
   /** No ink along a crease between two of its facets (a part standing in front of another is still inked): the face's planes. */
