@@ -57,8 +57,9 @@ export const SPAN_FACES = [
   // the forehead: one plane across the centre line, from the skull's top ring to the brow
   ['t0', 't1', 'b2', 'b1', 'b0', "b1'", "b2'", "t1'"],
   ['a3', "t3'", 't3'],
-  ['bk', 't3', "t3'"], ['bk', "t3'", "f4'"], ['bk', "f4'", "o6'"], ['bk', "o6'", 'o6'], ['bk', 'o6', 'f4'], ['bk', 'f4', 't3'],
-  ['o6', "o6'", "n6'", 'n6'],
+  ['bk', 't3', "t3'"], ['bk', "t3'", "f4'"], ['bk', "f4'", "o6'"], ['bk', 'o6', 'f4'], ['bk', 'f4', 't3'],
+  // under the occipital crease (o6 bk o6', at the ears' top, as the references' backs have it) one lower plane to the nape
+  ['o6', 'bk', "o6'", "n6'", 'n6'],
 ];
 export const SPAN_NECK_FACES = [["n6'", 'n6', 'nm4', 'nm5', "nm4'"]];
 export const NECK_FACES = [
