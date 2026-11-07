@@ -38,6 +38,8 @@ export const SH_TERMS = 19;
 /** Degrees the whole-body review renders' camera looks down (their fitted cameras: the man's 8, the woman's 7.5). */
 const REVIEW_PITCH = 8;
 const DEG = Math.PI / 180;
+/** A low-poly body's outline in screen px at a zoom: a pixel at one, two at the closest. */
+const LOW_INK = (zoom: number): number => Math.min(2, Math.max(1, 0.8 + 0.2 * zoom));
 
 const VS = `#version 300 es
 precision highp float;
@@ -155,7 +157,7 @@ in vec2 aP; out vec2 vUv; void main(){ vUv = aP * 0.5 + 0.5; gl_Position = vec4(
 
 const EDGE_FS = `#version 300 es
 precision highp float;
-in vec2 vUv; uniform sampler2D uCol; uniform sampler2D uNd; uniform sampler2D uId; uniform vec2 uPx; uniform float uInk; uniform float uDepthStep; uniform float uShow; uniform float uNight;
+in vec2 vUv; uniform sampler2D uCol; uniform sampler2D uNd; uniform sampler2D uId; uniform vec2 uPx; uniform float uInk; uniform float uDepthStep; uniform float uShow; uniform float uNight; uniform float uInner;
 out vec4 o;
 vec3 inkOf(vec3 base) { return min(mix(base, vec3(0.157, 0.11, 0.102), 0.62), base * 0.5); }
 void main() {
@@ -164,7 +166,7 @@ void main() {
   vec4 id = texture(uId, vUv);
   // The silhouette: an even band uInk px wide just outside the body, in a dark of the nearest body colour.
   float sil = 0.0; vec3 near = vec3(0.0);
-  if (c.a < 0.5) {
+  if (c.a < 0.5 && uInk > 0.0) {
     float best = 1.0e9;
     for (int d = 0; d < 16; d++) {
       float a = float(d) * 0.3927;
@@ -179,7 +181,7 @@ void main() {
   }
   // Inside: a thinner line where a part stands in front of another (a step away in depth to a pixel beside), or at a sharp crease.
   float inner = 0.0;
-  if (c.a > 0.5) {
+  if (c.a > 0.5 && uInner > 0.5) {
     vec4 A = texture(uNd, vUv + vec2(uPx.x, 0.0)), B = texture(uNd, vUv - vec2(uPx.x, 0.0)), C = texture(uNd, vUv + vec2(0.0, uPx.y)), D = texture(uNd, vUv - vec2(0.0, uPx.y));
     float dz = max(max(A.w - nd.w, B.w - nd.w), max(C.w - nd.w, D.w - nd.w));
     vec3 n0 = nd.xyz * 2.0 - 1.0;
@@ -251,7 +253,7 @@ export function glContext(): Ctx | null {
   const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uXv', 'uYv', 'uZv'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
-  const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight'].map((n) => [n, gl.getUniformLocation(edge, n)]));
+  const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner'].map((n) => [n, gl.getUniformLocation(edge, n)]));
   CTX = { gl, cv, prog, edge, wire, fbo: gl.createFramebuffer()!, tCol: gl.createTexture()!, tNd: gl.createTexture()!, tId: gl.createTexture()!, depth: gl.createRenderbuffer()!, quad, w: 0, h: 0, u, eu, wu };
   return CTX;
 }
@@ -435,8 +437,10 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, C.tId); gl.uniform1i(C.eu.uId, 2);
   gl.uniform2f(C.eu.uPx, 1 / w, 1 / h);
   // The figure's ink: most of a pixel however far out, never more than a few however far in; in device pixels here.
-  const ink = (o.ink ?? Math.min(3.2, Math.max(0.9, 0.55 * zoom))) * dpr;
+  // A low-poly body's: LOW_INK's, round the silhouette only, as its facets carry the form.
+  const ink = (o.ink ?? (low ? LOW_INK(zoom) : Math.min(3.2, Math.max(0.9, 0.55 * zoom)))) * dpr;
   gl.uniform1f(C.eu.uInk, ink);
+  gl.uniform1f(C.eu.uInner, low ? 0 : 1);
   gl.uniform1f(C.eu.uDepthStep, 0.7);
   gl.uniform1f(C.eu.uShow, o.debug === 'edges' ? 1 : 0);
   gl.uniform1f(C.eu.uNight, o.night ?? 0);
