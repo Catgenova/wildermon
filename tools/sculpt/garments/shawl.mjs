@@ -4,7 +4,9 @@
 // Fitted to each low-poly body from the one design (DESIGN, per body), skinned to its rig.
 //
 //   buildShawl(rig) → { verts, polys: [{ v, mat, part, tag }], tris, part, cols, rings, apex, design }
-//   shawlWeights(rig, G) → per vertex [[bone, weight], ...]
+//   shawlWeights(rig, G) → per vertex [[bone, weight], ...] (bone indices: the body's, then the cape's own, G.bones)
+//   shawlBones(rig, design, cols) → the cape's bones (lowgarment.mjs garmentBone), six: cape_l, cape_front_l,
+//   cape_back_l and the right's, driven from the upper arms (59 + 6 = 65 bones, within the renderer's 80)
 //
 // The shape, in columns: N columns round a vertical axis through the neck (azimuth 0 the front, 90 the body's left),
 // each a closed section in its half-plane (radius r from the axis, height y), the rows of every section joined round:
@@ -20,7 +22,7 @@
 // nm0..nm5): down the chest in front, out over the shoulder at the side, down the back behind (DESIGN.roll), each
 // point then pushed out until it clears the body. 20 columns, 14 rings: 600 triangles. Materials: fabric, trim,
 // pattern (the cream between the teeth), inner (the underside and the cowl's inside).
-import { offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, sub, lerp } from '../lowgarment.mjs';
+import { offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, garmentBone, sub, lerp } from '../lowgarment.mjs';
 
 export const MATS = {
   fabric: [0.72, 0.62, 0.56],
@@ -35,7 +37,16 @@ export const MATS = {
  *   cloth's thickness; bevel: how much lower the underside's hem is than the outside's;
  *   hem: the V's point in front, the corners (at the sides), the V's point behind, and how the hem runs between (sin^p);
  *   flare: how far out the hanging cloth leans per unit of drop; soften: how far the shoulder's corner moves toward the
- *   straight line from the cowl to the hem; armLift: the share of the upper arm's turn the hem takes over each arm;
+ *   straight line from the cowl to the hem;
+ *   lift: the cape's bones (shawlBones), each turned by its upper arm's raise θ as g(θ) = a θ + (b - a) max(0, θ - knee),
+ *   at most max (degrees: a share while the arm swings in a walk, catching up as it rises): `side` the one over each
+ *   shoulder (hinged at the cape's top at the side, turned by the arm's raise out to the side, and `also` a share of its
+ *   swing forward and back, either way, at most its max), `front` and `back` the ones over each side of the chest and
+ *   of the back (hinged at the cape's top at azimuth frontAt and backAt, turned by the arm's raise forward and back);
+ *   the cape's share on them: the side's (|sin| of the azimuth from `from` up to 1, to the power 1.5), the front's and
+ *   the back's (cos of the turn from frontAt, backAt, scaled so it is 0 at `reach` from it), all of it at the
+ *   shoulder's corner and below, at the cape's top `top` of the side's and all the front's and back's; `roll`: the
+ *   share of it the cowl's lower roll takes (each ring);
  *   border: the strip under the teeth, the teeth, the line over them (from the hem up, along the cloth);
  *   roll: the cowl's two rolls: lean (their line's normal leaned out from the axis), flat (each roll's height off the
  *   line over its radius along it), at (the upper roll's centre, its length down the body's line from the neck's foot),
@@ -47,7 +58,8 @@ export const MATS = {
  */
 export const DESIGN = {
   male: {
-    z0: -0.12, front: 5, back: 5, OUT: 0.16, IN: 0.05, THICK: 0.11, bevel: 0.09, flare: [0.4, 0.2, 0.4], soften: 0.95, armLift: 0.35,
+    z0: -0.12, front: 5, back: 5, OUT: 0.16, IN: 0.05, THICK: 0.11, bevel: 0.09, flare: [0.4, 0.2, 0.4], soften: 0.95,
+    lift: { side: { a: 0.4, knee: 20, b: 1.3, max: 100, also: { axis: 'x', a: 0.3, max: 12 } }, front: { a: 0.3, knee: 40, b: 2.3, max: 100 }, back: { a: 0.4, knee: 30, b: 1.0, max: 60 }, frontAt: 60, backAt: 140, reach: [40, 40], from: 0.2, top: 0.2, roll: { l2: 0.6, l1: 0.3 } },
     hem: { front: -3.9, corner: -2.5, back: -3.6, p: 1.2 },
     border: [0.08, 0.3, 0.06],
     dip: 0.12,
@@ -55,7 +67,8 @@ export const DESIGN = {
     turns: { d: 165, u1: 95, u2: 15, l1: 50, l2: -25, T0: -115 },
   },
   female: {
-    z0: -0.14, front: 5, back: 5, OUT: 0.14, IN: 0.045, THICK: 0.095, bevel: 0.08, flare: [0.4, 0.15, 0.4], soften: 0.85, armLift: 0.45,
+    z0: -0.14, front: 5, back: 5, OUT: 0.14, IN: 0.045, THICK: 0.095, bevel: 0.08, flare: [0.4, 0.15, 0.4], soften: 0.85,
+    lift: { side: { a: 0.45, knee: 20, b: 1.3, max: 100, also: { axis: 'x', a: 0.3, max: 12 } }, front: { a: 0.3, knee: 40, b: 2.3, max: 100 }, back: { a: 0.4, knee: 30, b: 1.0, max: 60 }, frontAt: 60, backAt: 140, reach: [40, 40], from: 0.2, top: 0.2, roll: { l2: 0.6, l1: 0.3 } },
     hem: { front: -3.25, corner: -2.05, back: -3.0, p: 1.2 },
     border: [0.07, 0.26, 0.05],
     dip: 0.1,
@@ -213,7 +226,30 @@ export function buildShawl(rig, design = DESIGN[rig.who]) {
     const IT = P2.sub(T0, P2.mul(n1, D.THICK));
     cols.push({ deg, F, d, ...q, T0, T1, T2, T3, T4, T5, I5, I1, IT, yH });
   }
-  return meshOfShawl(rig, D, cols, S);
+  const G = meshOfShawl(rig, D, cols, S);
+  G.bones = shawlBones(rig, D, cols);
+  return G;
+}
+
+/**
+ * The cape's bones, two a side on the clavicle, each square to the body and its head on the cape's top
+ * (under the cowl: the cape hinges there): cape_l, cape_r over the shoulders, turned by the arm's raise out to the side;
+ * cape_front_l, cape_front_r over the chest, by its raise forward (DESIGN.lift). So the cape lifts over the arms as they
+ * rise under it.
+ */
+export function shawlBones(rig, D, cols) {
+  const L = D.lift, out = [];
+  const hinge = (deg) => { const c = cols.reduce((m, q) => (Math.abs(((q.deg - deg + 540) % 360) - 180) < Math.abs(((m.deg - deg + 540) % 360) - 180) ? q : m)); return atRY(c.deg, c.T0[0], c.T0[1], D.z0); };
+  for (const s of ['l', 'r']) {
+    // (the frame square to the body: X across it as the upper arm's bend axis points, Y down, Z = X × Y; the turns are
+    // the arm's raise about its own X and Z)
+    const U = rig.bones[rig.at.get(`upperarm_${s}`)], m = s === 'l' ? 1 : -1, x = Math.sign(U.R[0]);
+    const R = [x, 0, 0, 0, -1, 0, 0, 0, -x];
+    out.push(garmentBone(`cape_${s}`, `clavicle_${s}`, hinge(90 * m), R, { from: `upperarm_${s}`, kind: 'lift', axis: 'z', sign: m, ...L.side }));
+    out.push(garmentBone(`cape_front_${s}`, `clavicle_${s}`, hinge(L.frontAt * m), R, { from: `upperarm_${s}`, kind: 'lift', axis: 'x', sign: 1, ...L.front }));
+    out.push(garmentBone(`cape_back_${s}`, `clavicle_${s}`, hinge(L.backAt * m), R, { from: `upperarm_${s}`, kind: 'lift', axis: 'x', sign: -1, ...L.back }));
+  }
+  return out;
 }
 const unit2 = (v) => { const l = Math.hypot(v[0], v[1]) || 1; return [v[0] / l, v[1] / l]; };
 /** Where line p1-p2 meets line p3-p4. */
@@ -272,19 +308,17 @@ function meshOfShawl(rig, D, cols, S) {
 
 /**
  * The shawl's weights from the body: the cowl's from the neck and the chest's top (neck_01, neck_02, spine_03); the
- * cape's from the closest skin, its bones mapped so the cloth hangs from the shoulders (clavicles, spine_03, the shoulder
- * helpers and the upper arm's), the lower spine and the forearm taken up to them.
+ * cape's from the closest skin, its bones mapped to the torso (the clavicles, spine_03: the arms' and the lower spine's
+ * taken up to them), then shared with the cape's own bones (DESIGN.lift) over the arms.
  */
 export function shawlWeights(rig, G, o = {}) {
-  const ARM = o.arm ?? 0.7;
   const cowl = { head: 'neck_02', jaw: 'neck_02', neck_02: 'neck_02', neck_01: 'neck_01' };
   const capeMap = (n) => {
     if (/^(spine_0[12]|pelvis|root)$/.test(n)) return 'spine_03';
     if (/^(head|jaw|neck_02)$/.test(n)) return 'neck_01';
     const m = n.match(/_(l|r)$/), s = m ? m[1] : null;
-    // the arm under the cape lifts it by a share of its own turn (ARM: the upper arm's share, the rest the shoulder
-    // helper's, which turns half the arm's turn)
-    if (s && /^(upperarm|lowerarm|hand|thumb|fingers|elbow|wrist|knuckles)/.test(n)) return [[`upperarm_${s}`, ARM], [`shoulder_${s}`, 1 - ARM]];
+    // the arm under the cape: the cape's own bone takes it (below); the rest hangs from the clavicle
+    if (s && /^(upperarm|lowerarm|hand|thumb|fingers|elbow|wrist|knuckles|shoulder)/.test(n)) return `clavicle_${s}`;
     if (s && /^(thigh|calf|foot|ball|hip|knee|ankle|toes)/.test(n)) return 'spine_03';
     return n;
   };
@@ -301,14 +335,22 @@ export function shawlWeights(rig, G, o = {}) {
   const R = G.rings, N = R.T0.length;
   const mix = (A, Bw, t) => { const o2 = new Map(); for (const [b, w] of A) o2.set(b, (o2.get(b) ?? 0) + w * (1 - t)); for (const [b, w] of Bw) o2.set(b, (o2.get(b) ?? 0) + w * t); return [...o2].sort((x, y) => y[1] - x[1]).slice(0, 4).map(([b, w], _, l) => [b, w / l.reduce((s2, [, x]) => s2 + x, 0)]); };
   const len = (i, j) => Math.hypot(...sub(G.verts[i], G.verts[j]));
-  // the cape's sides hang on the upper arms: over each arm (its share round the side, cos² of the turn from it) the
-  // hem and the border follow the upper arm by LIFT, the shoulder's corner by half that
-  const LIFT = o.lift ?? G.design.armLift ?? 0;
-  if (LIFT > 0) for (let k = 0; k < N; k++) {
-    const deg = G.cols[k].deg, side = Math.sin(deg * Math.PI / 180), s2 = side * side * side * side;
-    const bone = rig.at.get(side > 0 ? 'upperarm_l' : 'upperarm_r');
-    vw[R.T5[k]] = mix(vw[R.T5[k]], [[bone, 1]], LIFT * s2);
-    vw[R.T1[k]] = mix(vw[R.T1[k]], [[bone, 1]], 0.5 * LIFT * s2);
+  // the cape on its bones: the side's share over each arm, the front's and the back's over each side of the chest and the
+  // back (all together at most all of it), from L.top of it at the cape's top to all of it at the shoulder's corner and below
+  const L = G.design.lift, nb = rig.bones.length;
+  for (let k = 0; k < N; k++) {
+    const deg = G.cols[k].deg, sn = Math.sin(deg * Math.PI / 180), side = sn > 0 ? 0 : 1;
+    // (a: degrees from the front; the front's and the back's shares cos of twice the turn from frontAt, backAt, within
+    // 45 of it)
+    const a = Math.abs(((deg + 540) % 360) - 180), near = (at, r) => (Math.abs(a - at) < r ? Math.cos(90 / r * (a - at) * Math.PI / 180) : 0);
+    const W = [Math.max(0, (Math.abs(sn) - L.from) / (1 - L.from)) ** 1.5, near(L.frontAt, L.reach[0]), near(L.backAt, L.reach[1])], t = W[0] + W[1] + W[2];
+    if (t <= 0) continue;
+    const own = W.map((w, j) => [nb + 3 * side + j, w / t]).filter(([, w]) => w > 0), all = Math.min(1, t);
+    vw[R.T0[k]] = mix(vw[R.T0[k]], own, all * (L.top * W[0] + W[1] + W[2]) / t);
+    // (the cowl's lower roll over the hinge goes with it, a share)
+    for (const [key, f] of Object.entries(L.roll ?? {})) vw[R[key][k]] = mix(vw[R[key][k]], own, f * all);
+    vw[R.T1[k]] = mix(vw[R.T1[k]], own, all);
+    vw[R.T5[k]] = mix(vw[R.T5[k]], own, all);
   }
   for (let k = 0; k < N; k++) {
     vw[R.IT[k]] = vw[R.T0[k]]; vw[R.I1[k]] = vw[R.T1[k]]; vw[R.I5[k]] = vw[R.T5[k]];

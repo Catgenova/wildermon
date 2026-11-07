@@ -9,12 +9,14 @@
 //     shawl-poses.png: the test poses (arms out, forward, overhead, head turned, the game's walk and idle), each with the
 //       garment's triangles crossing the body's;
 //     shawl-walk.gif: the game's walk, both bodies, front, three-quarter and side;
-//     shawl-metrics.json: the checks at rest and in every pose, each body.
+//     shawl-metrics.json: the checks at rest and in every pose, each body;
+//     shawl-<who>.json: the garment as the game would load it beside its body (lowgarment.mjs garmentAsset), its own
+//       bones (the cape's) driven from the body's pose.
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr, sym } from './lowrig.mjs';
-import { skinGarment, checks, trisOf } from './lowgarment.mjs';
+import { skinGarment, checks, trisOf, garmentAsset, bonesWith } from './lowgarment.mjs';
 import { buildShawl, shawlWeights, MATS } from './garments/shawl.mjs';
 import { shoot, closeBrowser } from './lowgarmentshot.mjs';
 
@@ -101,6 +103,11 @@ if (only.includes('metrics') || only.includes('poses')) {
     metrics[who] = {};
     for (const e of list) { const d = dress(who, e.pose); const c = checks(G, d.PG, rig.B, d.PB); metrics[who][e.id] = { self: c.self, body: c.body, bodyParts: c.bodyParts, selfParts: c.selfParts }; }
     console.log(who, Object.entries(metrics[who]).map(([k, v]) => `${k}:${v.body}/${v.self}`).join(' '));
+  }
+  for (const who of ['male', 'female']) {
+    const { rig, G } = M[who];
+    writeFileSync(join(out, `shawl-${who}.json`), JSON.stringify(garmentAsset(rig, G, MATS)));
+    metrics[who].bones = { body: rig.bones.length, garment: G.bones.length, total: bonesWith(rig, G).length, names: G.bones.map((b) => b.name) };
   }
   writeFileSync(join(out, 'shawl-metrics.json'), JSON.stringify(metrics, null, 1));
 }

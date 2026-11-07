@@ -9,6 +9,8 @@
 //   the weights: each garment vertex the weights at the closest point of the body's surface, its bones mapped by the
 //   garment's own rule (cloth over the arm hangs from the shoulder, not the forearm), smoothed along the garment's edges
 //   (transferWeights); skinGarment poses it as lowrig.mjs skin() poses the body (linear blend, the rig's bone frames);
+//   a garment's own bones (G.bones: garmentBone, driven from the body's pose like the rig's helpers, garmentFrames),
+//   appended after the body's; garmentAsset, the garment as the game would load it beside its body;
 //   the checks: polygons out of plane, open and non-manifold edges, triangles crossing each other in the garment and
 //   between garment and body (the crossing test of tools/sculpt/lowrigshot.mjs), and how deep body vertices sit inside it.
 //
@@ -247,9 +249,62 @@ export function transferWeights(rig, G, { map = (n) => n, smooth = 2, keep = nul
     return l.map(([n, x]) => [at.get(n), x / s]);
   });
 }
-/** The garment's vertices in a pose (frames from lowrig.mjs posed()), as skin() poses the body. */
+/* ---- the garment's own bones ------------------------------------------------------------------------------------- */
+import { quat, qmat, qpow, swingTwist } from './lowrig.mjs';
+
+const I3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+const mm3 = (a, b) => [0, 1, 2].flatMap((i) => [0, 1, 2].map((j) => a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j]));
+const tr3 = (m) => [m[0], m[3], m[6], m[1], m[4], m[7], m[2], m[5], m[8]];
+/**
+ * The 'lift' drive: the source bone's swing (its local turn less its twist about its own axis, Y); with `axis` ('x'
+ * or 'z', the source's own) only the swing's part about that axis, taken `sign` (+1 or -1) as a raise and nothing when
+ * the other way. Of its angle θ the drive turns g(θ) = a θ + (b - a) max(0, θ - knee), at most max (degrees): a share a
+ * while the source swings little (a walk's arm), catching up past the knee (an arm raised under the cloth). `also`
+ * ({ axis, a, max }) adds a share of the swing about the other axis, either way, at most max (the walk's swing).
+ */
+export function liftOf(Lsrc, { a, knee, b, max, axis = null, sign = 1, also = null }) {
+  const { swing } = swingTwist(quat(Lsrc), [0, 1, 0]), s = swing[0] < 0 ? swing.map((x) => -x) : swing;
+  const g = (th) => Math.min(max, a * th + (b - a) * Math.max(0, th - knee));
+  if (!axis) {
+    const th = 2 * Math.acos(Math.min(1, s[0])) * 180 / Math.PI;
+    return th < 1e-6 ? I3 : qmat(qpow(s, g(th) / th));
+  }
+  // (the swing's part about a local axis, degrees, signed)
+  const about = (ax) => { const k = ax === 'x' ? [1, 0, 0] : [0, 0, 1], { twist } = swingTwist(s, k); return [k, 2 * Math.atan2(twist[1] * k[0] + twist[3] * k[2], twist[0]) * 180 / Math.PI]; };
+  const turn = (k, deg) => { const h = (deg / 2) * Math.PI / 180; return [Math.cos(h), k[0] * Math.sin(h), 0, k[2] * Math.sin(h)]; };
+  const [k, th0] = about(axis), th = sign * th0;
+  let q = th > 1e-6 ? turn(k, sign * g(th)) : [1, 0, 0, 0];
+  // (and a share of the swing about the other axis, either way, at most also.max)
+  if (also) { const [k2, t2] = about(also.axis); q = qmul(turn(k2, Math.max(-also.max, Math.min(also.max, also.a * t2))), q); }
+  return qmat(q);
+}
+const qmul = (p, q) => [p[0] * q[0] - p[1] * q[1] - p[2] * q[2] - p[3] * q[3], p[0] * q[1] + p[1] * q[0] + p[2] * q[3] - p[3] * q[2], p[0] * q[2] - p[1] * q[3] + p[2] * q[0] + p[3] * q[1], p[0] * q[3] + p[1] * q[2] - p[2] * q[1] + p[3] * q[0]];
+/**
+ * A garment bone: parented to a body bone, its head at `head` and its rest frame R (columns X, Y, Z), driven from a
+ * body bone (driver: { from, kind: 'lift', a, knee, b, max }).
+ */
+export const garmentBone = (name, parent, head, R, driver) => ({ name, parent, head, R, kind: 'helper', driver });
+/** The body's frames (lowrig.mjs posed()) with the garment's own bones' appended, each driven from the body's pose. */
+export function garmentFrames(rig, G, frames) {
+  const GB = G.bones ?? [];
+  if (!GB.length || frames.length > rig.bones.length) return frames;
+  const out = frames.slice();
+  for (const b of GB) {
+    const pi = rig.at.get(b.parent), P = rig.bones[pi], pa = frames[pi];
+    const Rrel = mm3(tr3(P.R), b.R), off = [0, 1, 2].map((i) => tr3(P.R).slice(i * 3, i * 3 + 3).reduce((s2, x, j) => s2 + x * (b.head[j] - P.head[j]), 0));
+    const L = b.driver?.kind === 'lift' ? liftOf(frames[rig.at.get(b.driver.from)].L, b.driver) : I3;
+    const W = mm3(pa.W, mm3(Rrel, L)), P2 = add(pa.P, mv(pa.W, off));
+    out.push({ W, P: P2, S: mm3(W, tr3(b.R)), L });
+  }
+  return out;
+}
+/** All the bones a garment's weights index: the body's, then its own. */
+export const bonesWith = (rig, G) => [...rig.bones, ...(G.bones ?? [])];
+
+/** The garment's vertices in a pose (frames from lowrig.mjs posed(); its own bones driven from them), as skin() poses the body. */
 export function skinGarment(rig, frames, G, vw = G.vw) {
-  const { bones } = rig;
+  const bones = bonesWith(rig, G);
+  frames = garmentFrames(rig, G, frames);
   return G.verts.map((v, i) => {
     let x = 0, y = 0, z = 0;
     for (const [bi, w] of vw[i]) {
@@ -331,5 +386,31 @@ export function checks(G, PG, body, PB) {
     body: withBody.length,
     bodyParts: count(withBody.map(([i, j]) => `${G.polys[T[i].poly].tag ?? G.polys[T[i].poly].part}×${body.part?.[body.tris[j].v[0]] ?? '?'}`)),
     selfParts: count(self.map(([i, j]) => [G.polys[T[i].poly].tag, G.polys[T[j].poly].tag].sort().join('×'))),
+  };
+}
+
+/* ---- the game's copy ------------------------------------------------------------------------------------------------ */
+/** The renderer's limit on bones a skinned mesh may use (src/sculpt/gl.ts MAX_BONES). */
+export const MAX_BONES = 80;
+/**
+ * The garment as the game would load it beside its body (src/sculpt/assets/low<who>.json, lowrig.mjs gameAsset): the
+ * vertices (the body's units and axes), the polygons (corners, material index into `mats`), the triangles, each
+ * vertex's (bone, weight) list (bone indices: the body's, then the garment's own from `base` on), and its own bones as
+ * the body's helpers are written (parent `p` and driver `from` the body's bone indices, rest head and frame R, `drive`
+ * and its settings), so the game drives them from the body's pose as lowrig.mjs posed() drives its helpers.
+ */
+export function garmentAsset(rig, G, mats) {
+  const r5 = (x) => +x.toFixed(5), names = Object.keys(mats), all = bonesWith(rig, G);
+  if (all.length > MAX_BONES) throw new Error(`${all.length} bones: over the renderer's ${MAX_BONES}`);
+  return {
+    who: rig.who, base: rig.bones.length, mats: names, colours: names.map((n) => mats[n]),
+    verts: G.verts.flat().map(r5),
+    polys: G.polys.map((p) => [p.v, names.indexOf(p.mat)]),
+    tris: G.tris.flatMap((t) => [...t.v, t.poly]),
+    weights: G.vw.map((l) => l.flatMap(([b, w]) => [b, r5(w)])),
+    bones: (G.bones ?? []).map((b) => {
+      const { from, kind, ...set } = b.driver;
+      return { name: b.name, p: rig.at.get(b.parent), kind: b.kind, head: b.head.map(r5), R: b.R.map(r5), from: rig.at.get(from), drive: kind, ...set };
+    }),
   };
 }
