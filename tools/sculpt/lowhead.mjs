@@ -24,7 +24,7 @@ const mx = (p) => [-p[0], p[1], p[2]];
 // The head is hand-authored after the reference sheets' own front wireframes: one half's vertices by name (x >= 0;
 // the centre line at x 0 is shared), and one list of faces both heads use, mirrored for the other half. Rings, top to
 // bottom: the crown c; t the skull's top; f the temple and the skull's side and back; b the brow; e under the eyes; k the cheekbones
-// and the nose's base; m the mouth with j the jaw's corner; ch the chin with jl the jaw line; u the chin's flat
+// and the nose's base; j the jaw's corner and m5 behind it; ch the chin with jl the jaw line; u the chin's flat
 // underside; g the neck's top under the jaw; n6 the nape; tb tc the nose's tip edge; nm and nf the neck (nf inside the shoulders).
 export const FACES = [
   // the crown: a flat cap of three facets a side on the top ring a, then a band down to the ring t
@@ -42,10 +42,9 @@ export const FACES = [
   ['b0', 'b1', 'tb', 'tc'], ['b1', 'tb', 'k1', 'e1'], ['tc', 'tb', 'k1', 'k0'],
   // under the eyes down to the cheekbones: the nose, the cheek under the eye, the cheekbone's top, the side, the back
   ['e1', 'e2', 'k2', 'k1'], ['e2', 'e3', 'k3', 'k2'], ['e3', 'e4', 'k4', 'k3'], ['e4', 'e5', 'k5', 'k4'], ['e5', 'o6', 'n6', 'k5'],
-  // the cheekbones down to the mouth: the upper lip, the front of the cheek, the cheek's big plane to the jaw's corner
-  ['k0', 'k1', 'm1', 'm0'], ['k1', 'k2', 'm2', 'm1'], ['k2', 'k3', 'j', 'm2'], ['k3', 'k4', 'j'], ['k4', 'k5', 'm5', 'j'],
-  // the mouth down to the chin
-  ['m0', 'm1', 'ch1', 'ch0'], ['m1', 'm2', 'jl', 'ch1'], ['m2', 'j', 'jl'],
+  // the lower face, as the references' wireframes draw it: one strip down the middle from under the nose to the chin,
+  // one large cheek plane each side from the cheekbones down to the jaw line, and the side down to the jaw's corner
+  ['k0', 'k1', 'ch1', 'ch0'], ['k1', 'k2', 'k3', 'j', 'jl', 'ch1'], ['k3', 'k4', 'j'], ['k4', 'k5', 'm5', 'j'],
   // the chin's flat underside and the jaw's underside back to the neck
   ['ch0', 'ch1', 'u1', 'u0'], ['u0', 'u1', 'g1', 'g0'], ['u1', 'ch1', 'jl', 'g1'], ['jl', 'j', 'g2', 'g1'], ['j', 'm5', 'g3', 'g2'], ['m5', 'k5', 'n6', 'g3'],
 ];
@@ -84,7 +83,7 @@ export const PRESETS = {
       e1: [0.13, 0.97, 0.86], e2: [0.32, 0.93, 0.78], e3: [0.52, 0.95, 0.66], e4: [0.67, 0.95, 0.25], e5: [0.69, 0.92, -0.25], o6: [0.48, 0.98, -0.68],
       tc: [0, 0.615, 1.105], tb: [0.15, 0.615, 1.095],
       k0: [0, 0.53, 0.95], k1: [0.14, 0.565, 0.92], k2: [0.33, 0.66, 0.82], k3: [0.6, 0.74, 0.55], k4: [0.64, 0.7, 0.2], k5: [0.6, 0.66, -0.25], n6: [0.45, 0.65, -0.52],
-      m0: [0, 0.3, 0.89], m1: [0.16, 0.3, 0.85], m2: [0.4, 0.36, 0.68], j: [0.56, 0.44, 0.25], m5: [0.55, 0.5, -0.15],
+      j: [0.56, 0.44, 0.25], m5: [0.55, 0.5, -0.15],
       ch0: [0, 0, 0.84], ch1: [0.18, 0, 0.8], jl: [0.4, 0.18, 0.55],
       u0: [0, -0.01, 0.62], u1: [0.19, -0.01, 0.6],
       g0: [0, -0.02, 0.38], g1: [0.33, 0.03, 0.3], g2: [0.524, 0.28, 0.05], g3: [0.536, 0.42, -0.28],
@@ -112,7 +111,7 @@ PRESETS.female = {
     e1: [0.12, 0.96, 0.83], e2: [0.31, 0.93, 0.82], e3: [0.48, 0.95, 0.67], e4: [0.575, 0.93, 0.26], e5: [0.6, 0.9, -0.28], o6: [0.43, 0.98, -0.75],
     tc: [0, 0.6, 1.06], tb: [0.105, 0.6, 1.048],
     k0: [0, 0.535, 0.9], k1: [0.11, 0.57, 0.86], k2: [0.3, 0.67, 0.82], k3: [0.47, 0.74, 0.6], k4: [0.545, 0.72, 0.2], k5: [0.5, 0.66, -0.22], n6: [0.36, 0.62, -0.47],
-    m0: [0.0, 0.4, 0.863], m1: [0.098, 0.4, 0.84], m2: [0.32, 0.45, 0.74], j: [0.42, 0.56, 0.38], m5: [0.48, 0.57, -0.15],
+    j: [0.42, 0.56, 0.38], m5: [0.48, 0.57, -0.15],
     ch0: [0, 0.15, 0.8], ch1: [0.08, 0.15, 0.78], jl: [0.25, 0.29, 0.7],
     u0: [0, 0.14, 0.66], u1: [0.09, 0.14, 0.64],
     g0: [0, 0.15, 0.26], g1: [0.19, 0.19, 0.21], g2: [0.31, 0.3, 0.02], g3: [0.33, 0.42, -0.24],
