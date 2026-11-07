@@ -261,8 +261,9 @@ PRESETS.female = {
     { name: 'teres', cells: ['sd6a', 'da6', 'db6'], region: 'shoulder' },
     // below the shoulder blades the spine a deep groove down the centre line, the cells either side of it apart
   ],
-  // under the arm's cut, where the side turns in to the armpit, and over the buttocks beside the groove: triangles
-  split: ['sd6', 'dc3', 'dc4', 'hi7'],
+  // behind the deltoid, under the arm's cut where the side turns in to the armpit, and over the buttocks beside the
+  // groove: triangles
+  split: ['tr5', 'sd5', 'sd6', 'dc3', 'dc4', 'hi7'],
 };
 
 // The fitted vertices (tools/sculpt/lowtfit.mjs) over the hand-set ones: tools/sculpt/lowtfit-<who>.json, when present.
