@@ -55,7 +55,7 @@ export function bodyMaterials(look: Look): Material[] {
   // ink between two planes (the edge of the hair against the skin is still inked).
   out[M.hairCut] = { colour: hair, noCrease: true };
   // Its planes facing up a lighter warm of the hair's own, and the edge where its thickness shows a dark of it.
-  out[M.hairTop] = { colour: mixHex(hair, '#f2cdb4', 0.3), noCrease: true };
+  out[M.hairTop] = { colour: mixHex(hair, '#f2cdb4', 0.4), noCrease: true };
   out[M.hairUnder] = { colour: mixHex(hair, '#1c100c', 0.45), noCrease: true };
   out[M.lip] = { colour: mixHex(skin, '#a4484a', 0.42) };
   // The undershirt a pastel cream, the trousers a dusty slate-teal, the shoes caramel: the kit's pastel base, no splash yet.

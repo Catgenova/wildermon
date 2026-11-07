@@ -64,7 +64,7 @@ const SHORT = {
   tips: [0, 3, -4, 4, -10, 3, -11, 2, -9, 3, 0],
   // Thickness off the skull in head heights: along the rows from the front, and across the columns, multiplied.
   along: [[0, 0.085], [0.1, 0.16], [0.22, 0.15], [0.36, 0.105], [0.5, 0.072], [0.64, 0.055], [0.78, 0.036], [0.9, 0.024], [1, 0.016]],
-  across: [[-84, 0.2], [-68, 0.5], [-50, 0.82], [-30, 0.9], [-14, 1.0], [18, 1.0], [34, 0.78], [50, 0.48], [66, 0.22], [84, 0.1]],
+  across: [[-84, 0.2], [-68, 0.45], [-50, 0.5], [-30, 0.55], [-14, 1.0], [18, 1.0], [34, 0.78], [50, 0.48], [66, 0.22], [84, 0.1]],
   // Behind the crown the sides are cut closer: the across factor there, blended in from s = 0.3 to 0.6.
   acrossBack: [[-84, 0.12], [-68, 0.28], [-50, 0.6], [-30, 0.85], [0, 1.0], [30, 0.85], [50, 0.6], [68, 0.28], [84, 0.12]],
   // The sweep: on top, each point pushed to the viewer's right by this many times its thickness; the front row forward.
