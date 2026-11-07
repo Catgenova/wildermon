@@ -1,0 +1,664 @@
+{
+ "male": {
+  "front": {
+   "shoulder cap top": [
+    178,
+    67,
+    "ct"
+   ],
+   "deltoid insertion": [
+    158,
+    177,
+    "ca7"
+   ],
+   "elbow outer": [
+    128,
+    235,
+    "el1"
+   ],
+   "elbow inner": [
+    173,
+    255,
+    "el5"
+   ],
+   "forearm widest": [
+    117,
+    300,
+    "fb1"
+   ],
+   "wrist": [
+    158,
+    402,
+    "wt"
+   ],
+   "finger tip": [
+    170,
+    517,
+    [
+     "nb2",
+     "np2"
+    ]
+   ],
+   "knuckle line": [
+    145,
+    466,
+    [
+     "kb1",
+     "kb2",
+     "kb3"
+    ]
+   ],
+   "thumb tip": [
+    188,
+    477,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ]
+  },
+  "q3": {
+   "shoulder cap top": [
+    378,
+    67,
+    "ct"
+   ],
+   "deltoid insertion": [
+    358,
+    177,
+    "ca7"
+   ],
+   "elbow outer": [
+    323,
+    232,
+    "el2"
+   ],
+   "elbow inner": [
+    368,
+    260,
+    "el6"
+   ],
+   "forearm widest": [
+    306,
+    280,
+    "fb2"
+   ],
+   "wrist": [
+    358,
+    402,
+    "wb1"
+   ],
+   "finger tip": [
+    368,
+    517,
+    [
+     "nb2",
+     "np2"
+    ]
+   ],
+   "knuckle line": [
+    348,
+    465,
+    [
+     "kb1",
+     "kb2",
+     "kb3"
+    ]
+   ],
+   "thumb tip": [
+    388,
+    477,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ]
+  },
+  "profile": {
+   "shoulder cap top": [
+    568,
+    67,
+    "ct"
+   ],
+   "deltoid insertion": [
+    573,
+    172,
+    "ca7"
+   ],
+   "elbow outer": [
+    521,
+    225,
+    "el3"
+   ],
+   "elbow inner": [
+    578,
+    245,
+    "el7"
+   ],
+   "forearm widest": [
+    515,
+    292,
+    "fb3"
+   ],
+   "wrist": [
+    540,
+    402,
+    "wp0"
+   ],
+   "finger tip": [
+    558,
+    515,
+    [
+     "nb2",
+     "np2"
+    ]
+   ]
+  },
+  "hback": {
+   "wrist outer": [
+    75,
+    712,
+    "wk"
+   ],
+   "wrist inner": [
+    151,
+    712,
+    "wt"
+   ],
+   "knuckle line": [
+    100,
+    808,
+    [
+     "kb1",
+     "kb2",
+     "kb3"
+    ]
+   ],
+   "little knuckle": [
+    47,
+    802,
+    "kb0"
+   ],
+   "thumb tip": [
+    172,
+    843,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ],
+   "finger tip": [
+    110,
+    905,
+    [
+     "nb2",
+     "np2"
+    ]
+   ]
+  },
+  "hq3": {
+   "wrist outer": [
+    240,
+    712,
+    "wb0"
+   ],
+   "wrist inner": [
+    322,
+    712,
+    "wp1"
+   ],
+   "knuckle line": [
+    265,
+    808,
+    [
+     "kb1",
+     "kb2",
+     "kb3"
+    ]
+   ],
+   "thumb tip": [
+    340,
+    846,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ],
+   "finger tip": [
+    290,
+    905,
+    [
+     "nb2",
+     "np2"
+    ]
+   ]
+  },
+  "hprofile": {
+   "wrist back": [
+    420,
+    712,
+    [
+     "wb0",
+     "wb1"
+    ]
+   ],
+   "wrist palm": [
+    481,
+    712,
+    [
+     "wp0",
+     "wp1"
+    ]
+   ],
+   "knuckle line": [
+    403,
+    802,
+    "kb2"
+   ],
+   "thumb tip": [
+    470,
+    840,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ],
+   "finger tip": [
+    440,
+    902,
+    [
+     "nb2",
+     "np2"
+    ]
+   ]
+  },
+  "body": {
+   "elbow outer": [
+    120,
+    715,
+    "el1"
+   ],
+   "elbow inner": [
+    200,
+    680,
+    "el5"
+   ],
+   "wrist outer": [
+    110,
+    870,
+    "wk"
+   ],
+   "wrist inner": [
+    180,
+    878,
+    "wt"
+   ],
+   "thumb tip": [
+    207,
+    997,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ],
+   "finger tip": [
+    185,
+    1052,
+    [
+     "nb1",
+     "np1",
+     "nb2",
+     "np2"
+    ]
+   ]
+  }
+ },
+ "female": {
+  "front": {
+   "shoulder cap top": [
+    210,
+    65,
+    "ct"
+   ],
+   "deltoid insertion": [
+    183,
+    142,
+    "ca0"
+   ],
+   "elbow outer": [
+    160,
+    237,
+    "el1"
+   ],
+   "elbow inner": [
+    203,
+    220,
+    "el5"
+   ],
+   "forearm widest": [
+    157,
+    250,
+    "fb1"
+   ],
+   "wrist": [
+    183,
+    332,
+    "wt"
+   ],
+   "finger tip": [
+    188,
+    420,
+    [
+     "nb2",
+     "np2"
+    ]
+   ],
+   "knuckle line": [
+    168,
+    377,
+    [
+     "kb1",
+     "kb2",
+     "kb3"
+    ]
+   ],
+   "thumb tip": [
+    200,
+    390,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ]
+  },
+  "q3": {
+   "shoulder cap top": [
+    403,
+    65,
+    "ct"
+   ],
+   "deltoid insertion": [
+    365,
+    142,
+    "ca0"
+   ],
+   "elbow outer": [
+    340,
+    237,
+    "el2"
+   ],
+   "elbow inner": [
+    388,
+    215,
+    "el6"
+   ],
+   "forearm widest": [
+    339,
+    250,
+    "fb2"
+   ],
+   "wrist": [
+    363,
+    332,
+    "wb1"
+   ],
+   "finger tip": [
+    368,
+    420,
+    [
+     "nb2",
+     "np2"
+    ]
+   ],
+   "knuckle line": [
+    348,
+    377,
+    [
+     "kb1",
+     "kb2",
+     "kb3"
+    ]
+   ],
+   "thumb tip": [
+    382,
+    390,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ]
+  },
+  "profile": {
+   "shoulder cap top": [
+    588,
+    62,
+    "ct"
+   ],
+   "deltoid insertion": [
+    590,
+    135,
+    "ca0"
+   ],
+   "elbow outer": [
+    533,
+    240,
+    "el3"
+   ],
+   "elbow inner": [
+    578,
+    210,
+    "el7"
+   ],
+   "forearm widest": [
+    530,
+    245,
+    "fb3"
+   ],
+   "wrist": [
+    530,
+    335,
+    "wp0"
+   ],
+   "finger tip": [
+    553,
+    420,
+    [
+     "nb2",
+     "np2"
+    ]
+   ],
+   "thumb tip": [
+    570,
+    390,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ]
+  },
+  "hback": {
+   "wrist outer": [
+    77,
+    559,
+    "wk"
+   ],
+   "wrist inner": [
+    128,
+    559,
+    "wt"
+   ],
+   "knuckle line": [
+    100,
+    625,
+    [
+     "kb1",
+     "kb2",
+     "kb3"
+    ]
+   ],
+   "little knuckle": [
+    60,
+    618,
+    "kb0"
+   ],
+   "thumb tip": [
+    145,
+    646,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ],
+   "finger tip": [
+    110,
+    685,
+    [
+     "nb2",
+     "np2"
+    ]
+   ]
+  },
+  "hq3": {
+   "wrist outer": [
+    226,
+    559,
+    "wb0"
+   ],
+   "wrist inner": [
+    277,
+    559,
+    "wp1"
+   ],
+   "knuckle line": [
+    233,
+    625,
+    [
+     "kb1",
+     "kb2",
+     "kb3"
+    ]
+   ],
+   "thumb tip": [
+    298,
+    645,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ],
+   "finger tip": [
+    267,
+    683,
+    [
+     "nb2",
+     "np2"
+    ]
+   ]
+  },
+  "hprofile": {
+   "wrist back": [
+    373,
+    559,
+    [
+     "wb0",
+     "wb1"
+    ]
+   ],
+   "wrist palm": [
+    418,
+    559,
+    [
+     "wp0",
+     "wp1"
+    ]
+   ],
+   "knuckle line": [
+    362,
+    618,
+    "kb2"
+   ],
+   "thumb tip": [
+    418,
+    646,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ],
+   "finger tip": [
+    393,
+    685,
+    [
+     "nb2",
+     "np2"
+    ]
+   ]
+  },
+  "body": {
+   "elbow outer": [
+    212,
+    684,
+    "el1"
+   ],
+   "elbow inner": [
+    252,
+    656,
+    "el5"
+   ],
+   "wrist outer": [
+    180,
+    856,
+    "wk"
+   ],
+   "wrist inner": [
+    216,
+    852,
+    "wt"
+   ],
+   "thumb tip": [
+    240,
+    945,
+    [
+     "t2a",
+     "t2b",
+     "t2c",
+     "t2d"
+    ]
+   ],
+   "finger tip": [
+    215,
+    995,
+    [
+     "nb1",
+     "np1",
+     "nb2",
+     "np2"
+    ]
+   ]
+  }
+ }
+}
