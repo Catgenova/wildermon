@@ -5,7 +5,7 @@
 # For each of the seven views (its box on the 1536x1024 sheet below), at half resolution: the head's silhouette (every
 # pixel that is not the background, the holes filled), and the centroids of its pupils (dark slate) and its brows (dark
 # brown), as sheet pixels. Written as JSON: { scale, views: { name: { box, w, h, mask (a string of 0/1 rows), pupils,
-# brows } } }.
+# brows, marks (the front view's nose underside and chin), lum (the luminance, row by row) } } }.
 import json, sys
 from PIL import Image
 
@@ -87,7 +87,10 @@ def views(src):
             if runs:
                 marks['cliff'] = [cx, runs[0]]
                 marks['chin'] = [cx, runs[-1]]
-        out['views'][name] = {'box': [x0, y0, x1, y1], 'w': w, 'h': h, 'mask': mask, 'pupils': eyes, 'brows': brows, 'marks': marks}
+        # the luminance at the mask's resolution, the mean of each 2x2 block
+        Y = lambda c: 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]
+        lum = [[round(sum(Y(px[x0 + i * K + a, y0 + j * K + b]) for a in range(K) for b in range(K)) / (K * K)) for i in range(w)] for j in range(h)]
+        out['views'][name] = {'box': [x0, y0, x1, y1], 'w': w, 'h': h, 'mask': mask, 'pupils': eyes, 'brows': brows, 'marks': marks, 'lum': lum}
     return out
 
 def main(src, dst):

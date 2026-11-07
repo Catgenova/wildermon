@@ -12,7 +12,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildLowHead, PRESETS } from './lowhead.mjs';
-import { CAMS_FILE as CAMS, DEFAULT_CAMS, PARTS, VIEWS, loadCams as camsOf, project } from './lowcam.mjs';
+import { CAMS_FILE as CAMS, DEFAULT_CAMS, PARTS, VIEWS, loadCams as camsOf, project, rotation } from './lowcam.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, d) => { const i = args.indexOf(`--${n}`); return i < 0 ? d : args[i + 1]; };
@@ -27,7 +27,7 @@ const HEAD_H = 2 * 136; // the front view's head height in sheet pixels, for the
 
 // How much the eyes and brows count against the outline: little while the cameras are fitted (the head's own errors
 // would turn them), more once the vertices move.
-const FW = { w: 0.6 };
+const FW = { w: 0.6, shade: 0 };
 /** The triangles a view sees: the parts it shows, cut at its clip plane with the cut's cap. */
 function viewTris(mesh, view, cam) {
   const parts = PARTS[view] ?? ['head', 'neck', 'shoulders'];
@@ -79,6 +79,59 @@ export function silhouette(mesh, view, cam, box) {
   return { m, w, h };
 }
 
+// The light, as tools/sculpt/lowshot.mjs's shader has it at its defaults (no occlusion, no gradient over the face):
+// a facet's luminance from its normal in view space and its material's colour.
+const nrm = (v) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
+const LK = nrm([0.3, 0.5, 0.84]), LR = nrm([1, 0.45, 0.05]), LC = nrm([-0.7, 0.6, 0.35]), LB = nrm([-0.95, 0.25, -0.2]), LU = nrm([0.6, 0.75, 0.3]);
+const BASE = { skin: [0.68, 0.49, 0.41], brow: [0.36, 0.22, 0.15], pupil: [0.09, 0.09, 0.11], lid: [0.36, 0.24, 0.2] };
+const dotp = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+export function lightLum(n, mat) {
+  const base = BASE[mat] ?? BASE.skin, k = 0.3 + (0.7 * base[0]) / 0.68;
+  const dk = Math.max(dotp(n, LK), 0), dr = Math.max(dotp(n, LR), 0), dc = Math.max(dotp(n, LC), 0), du = Math.max(dotp(n, LU), 0);
+  const a = 0.57 + 0.14 * Math.min(n[1], 0) + 0.06 * Math.max(n[1], 0);
+  const L = [a * 1.02 + 0.42 * dk + 0.32 * dr * 1.04 + 0.12 * du * du * 1.08, a * 0.98 + 0.42 * dk * 0.97 + 0.32 * dr * 0.96 + 0.12 * du * du * 0.9, a * 0.94 + 0.42 * dk * 0.92 + 0.32 * dr * 0.84 + 0.12 * du * du * 0.86];
+  const cool = 1.2 * Math.pow(Math.max(dotp(n, LB), 0), 2.5), rim = 0.6 * Math.max(-n[0], 0) * Math.pow(1 - Math.max(n[2], 0), 3), spec = 0.4 * Math.pow(dc, 6);
+  const c = [0, 1, 2].map((i) => (base[i] * L[i] + k * (spec * [0.12, 0.34, 0.6][i] + cool * [0.2, 0.27, 0.36][i] + rim * [0.5, 0.62, 0.85][i])) * 0.97);
+  return 255 * Math.min(1, 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]);
+}
+
+/** The view's shading at the reference's resolution: each pixel the luminance of the nearest facet over it. */
+export function shading(mesh, view, cam, box) {
+  const [x0, y0, x1, y1] = box;
+  const w = Math.floor((x1 - x0) / K), h = Math.floor((y1 - y0) / K);
+  const lum = new Float32Array(w * h).fill(-1), depth = new Float32Array(w * h).fill(-1e9);
+  const parts = PARTS[view] ?? ['head', 'neck', 'shoulders'];
+  const r = rotation(cam);
+  const polyN = mesh.polys.map((p) => {
+    const pts = p.v.map((i) => mesh.verts[i]); let n = [0, 0, 0];
+    for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
+    const v = [r[0] * n[0] + r[1] * n[1] + r[2] * n[2], r[3] * n[0] + r[4] * n[1] + r[5] * n[2], r[6] * n[0] + r[7] * n[1] + r[8] * n[2]];
+    const l = Math.hypot(...v) || 1; const u = v.map((x) => x / l);
+    return u[2] < 0 ? u.map((x) => -x) : u; // a facet seen from behind shades with its normal turned to the viewer
+  });
+  for (const t of mesh.tris) {
+    if (!parts.includes(t.part)) continue;
+    const pts = t.v.map((i) => mesh.verts[i]);
+    if (cam.clip != null && pts.some((p) => p[1] < cam.clip)) continue;
+    const pr = pts.map((q) => { const s = project(q, cam); return [(s[0] - x0) / K - 0.5, (s[1] - y0) / K - 0.5, s[2]]; });
+    const area = (pr[1][0] - pr[0][0]) * (pr[2][1] - pr[0][1]) - (pr[1][1] - pr[0][1]) * (pr[2][0] - pr[0][0]);
+    if (Math.abs(area) < 1e-9) continue;
+    const L = lightLum(polyN[t.poly], t.mat);
+    const minx = Math.max(0, Math.floor(Math.min(pr[0][0], pr[1][0], pr[2][0]))), maxx = Math.min(w - 1, Math.ceil(Math.max(pr[0][0], pr[1][0], pr[2][0])));
+    const miny = Math.max(0, Math.floor(Math.min(pr[0][1], pr[1][1], pr[2][1]))), maxy = Math.min(h - 1, Math.ceil(Math.max(pr[0][1], pr[1][1], pr[2][1])));
+    for (let j = miny; j <= maxy; j++) for (let i = minx; i <= maxx; i++) {
+      const b0 = ((pr[1][0] - i) * (pr[2][1] - j) - (pr[1][1] - j) * (pr[2][0] - i)) / area;
+      const b1 = ((pr[2][0] - i) * (pr[0][1] - j) - (pr[2][1] - j) * (pr[0][0] - i)) / area;
+      const b2 = 1 - b0 - b1;
+      if (b0 < -1e-6 || b1 < -1e-6 || b2 < -1e-6) continue;
+      const z = b0 * pr[0][2] + b1 * pr[1][2] + b2 * pr[2][2];
+      const k = j * w + i;
+      if (z > depth[k]) { depth[k] = z; lum[k] = L; }
+    }
+  }
+  return lum;
+}
+
 /** The outline's pixels (inside, with a neighbour outside, not counting the box's edge). */
 function outline({ m, w, h }) {
   const o = [];
@@ -114,7 +167,9 @@ for (const v of VIEWS) {
   const m = new Uint8Array(r.w * r.h);
   r.mask.forEach((row, j) => { for (let i = 0; i < r.w; i++) m[j * r.w + i] = row[i] === '1' ? 1 : 0; });
   const ol = outline({ m, w: r.w, h: r.h });
-  R[v] = { ...r, m, ol, dt: distanceTo(ol, r.w, r.h) };
+  const lum = new Float32Array(r.w * r.h);
+  if (r.lum) r.lum.forEach((row, j) => row.forEach((x, i) => { lum[j * r.w + i] = x; }));
+  R[v] = { ...r, m, ol, dt: distanceTo(ol, r.w, r.h), lum };
 }
 
 /** The features' centroids (each eye, each brow) on the sheet under a camera; the nearer first. */
@@ -155,7 +210,22 @@ export function viewError(mesh, view, cam) {
     if (at && mesh.V?.[name]) feat.push({ mat: mark, d: Math.abs(project(mesh.V[name], cam)[1] - at[1]) });
   }
   const fmean = feat.length ? feat.reduce((x, f) => x + f.d, 0) / feat.length : 0;
-  return { mean, worst, feat, iou: inter / uni, score: mean + 0.15 * worst + FW.w * fmean };
+  // the shading: the mean luminance difference over the pixels both silhouettes cover (0..255), when it is asked for
+  let shade = 0;
+  if (FW.shade) {
+    // after the best straight-line match of our grey to the reference's (its overall exposure and contrast), so what is
+    // left is where the light and dark planes fall
+    const sh = shading(mesh, view, cam, r.box); const idx = [];
+    for (let k = 0; k < sh.length; k++) if (sh[k] >= 0 && r.m[k]) idx.push(k);
+    if (idx.length > 20) {
+      let sx = 0, sy = 0, sxx = 0, sxy = 0;
+      for (const k of idx) { sx += sh[k]; sy += r.lum[k]; sxx += sh[k] * sh[k]; sxy += sh[k] * r.lum[k]; }
+      const n = idx.length, a = (n * sxy - sx * sy) / Math.max(1e-6, n * sxx - sx * sx), b = (sy - a * sx) / n;
+      let sum = 0; for (const k of idx) sum += Math.abs(a * sh[k] + b - r.lum[k]);
+      shade = sum / n;
+    }
+  }
+  return { mean, worst, feat, iou: inter / uni, shade, score: mean + 0.15 * worst + FW.w * fmean + FW.shade * shade };
 }
 
 const loadCams = () => camsOf(who);
@@ -201,11 +271,13 @@ const cams = loadCams();
 
 function report(tag) {
   const rows = [];
+  const keep = FW.shade; FW.shade = FW.shade || 1e-9;
   for (const v of VIEWS) {
     const e = viewError(mesh, v, cams[v]);
     const f = e.feat.length ? e.feat.map((x) => `${({ pupil: 'eye', brow: 'brow', cliff: 'nose', chin: 'chin' })[x.mat]} ${((100 * x.d) / HEAD_H).toFixed(1)}`).join(' ') : '';
-    rows.push(`${v.padEnd(8)} outline mean ${((100 * e.mean) / HEAD_H).toFixed(1)}% worst ${((100 * e.worst) / HEAD_H).toFixed(1)}%  IoU ${e.iou.toFixed(3)}  ${f ? 'features ' + f + ' (%)' : ''}`);
+    rows.push(`${v.padEnd(8)} outline mean ${((100 * e.mean) / HEAD_H).toFixed(1)}% worst ${((100 * e.worst) / HEAD_H).toFixed(1)}%  IoU ${e.iou.toFixed(3)}  shade ${e.shade.toFixed(1)}  ${f ? 'features ' + f + ' (%)' : ''}`);
   }
+  FW.shade = keep;
   console.log(`${who} ${tag}\n` + rows.join('\n'));
 }
 
@@ -235,7 +307,7 @@ if (stage === 'mesh') {
   const ps = [];
   for (const n of names) for (let k = 0; k < 3; k++) {
     if (k === 0 && preset.V[n][0] === 0) continue; // the centre line stays on it
-    ps.push({ step: 0.04, get: () => preset.V[n][k], set: (x) => { preset.V[n][k] = x; } });
+    ps.push({ step: +opt('step', '0.04'), get: () => preset.V[n][k], set: (x) => { preset.V[n][k] = x; } });
   }
   if (!only.length) {
   for (const k of [0, 1, 2]) ps.push({ step: 0.03, get: () => preset.ear.c[k], set: (x) => { preset.ear.c[k] = x; } });
@@ -245,7 +317,13 @@ if (stage === 'mesh') {
   // the brows move as a whole, up and down and out and in
   const shift = (key, d) => { preset.brow[key] = preset.brow[key].map((v) => v + d); };
   if (!only.length) for (const key of ['x', 'yb']) { let at = 0; ps.push({ step: 0.02, get: () => at, set: (x) => { shift(key, x - at); at = x; } }); }
-  const total = () => { mesh = buildLowHead(who, preset); mesh.V = preset.V; return VIEWS.reduce((s, v) => s + viewError(mesh, v, cams[v]).score, 0) + 20 * folds(mesh, base0); };
+  // --shade w: the shading counts too, w per grey level; --reg r: each vertex's move from where it started costs r per
+  // head unit squared, so the planes turn without the head crumpling
+  FW.shade = +opt('shade', '0');
+  const reg = +opt('reg', '0');
+  const start = structuredClone(preset.V);
+  const moved = () => { let t = 0; for (const n of names) for (let k = 0; k < 3; k++) t += (preset.V[n][k] - start[n][k]) ** 2; return t; };
+  const total = () => { mesh = buildLowHead(who, preset); mesh.V = preset.V; return VIEWS.reduce((s, v) => s + viewError(mesh, v, cams[v]).score, 0) + 20 * folds(mesh, base0) + reg * moved(); };
   const both = args.includes('--with-camera');
   const camPs = both ? VIEWS.flatMap((v) => ['cx', 'cy', ...(v === 'front' ? [] : ['s']), 'yaw', 'pitch'].map((k) => ({ step: k === 's' ? 2 : 2, get: () => cams[v][k], set: (x) => { cams[v][k] = limit(v, k, x); } }))) : [];
   for (let r = 0; r < +opt('rounds', 3); r++) {
@@ -326,3 +404,12 @@ if (stage === 'ffd') {
 }
 
 if (stage === 'report') report('now');
+// --dump dir: each view's modelled shading and the reference's luminance, as .pgm, to check the light model
+if (opt('dump', '')) {
+  for (const v of VIEWS) {
+    const r = R[v]; const sh = shading(mesh, v, cams[v], r.box);
+    const img = (arr) => Buffer.concat([Buffer.from(`P5 ${r.w} ${r.h} 255\n`), Buffer.from(Array.from(arr, (x) => Math.max(0, Math.min(255, Math.round(x)))))]);
+    writeFileSync(join(opt('dump'), `${who}-${v}-ours.pgm`), img(sh.map((x) => (x < 0 ? 0 : x))));
+    writeFileSync(join(opt('dump'), `${who}-${v}-ref.pgm`), img(r.lum));
+  }
+}
