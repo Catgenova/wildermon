@@ -60,11 +60,14 @@ export const SPAN_FACES = [
   ['t0', 't1', 'bm', 'b2', 'gl', "b2'", "bm'", "t1'"],
   ['gl', 'b2', 'b1', 'b0', "b1'", "b2'"],
   ['a3', "t3'", 't3'],
-  // the back of the skull one plane from the skull's top ring (t3 t3') down to the occipital crease (o6 bk o6'), as
-  // the references' back views draw it
-  ['bk', "o6'", "f4'", "t3'", 't3', 'f4', 'o6'],
-  // under the occipital crease (o6 bk o6', at the ears' top, as the references' backs have it) one lower plane to the nape
-  ['o6', 'bk', "o6'", "n6'", 'n6'],
+  // the back of the skull from the skull's top ring (t3 t3') down to the occipital crease (o6 bk o6'), as the
+  // references' back views draw it: a middle plane from the occiput (bk) up to the top ring and one plane each side,
+  // every face meeting bk (bk stands behind the plane of its neighbours: one seven-sided face clipped from bk's own
+  // corner left a fin, o6 bk o6', standing out of the skull)
+  ['bk', "o6'", "f4'", "t3'"], ['bk', "t3'", 't3'], ['bk', 't3', 'f4', 'o6'],
+  // under the occipital crease (o6 bk o6', at the ears' top, as the references' backs have it) down to the nape: a
+  // middle plane and one each side, from bk
+  ['bk', "o6'", "n6'"], ['bk', "n6'", 'n6'], ['bk', 'n6', 'o6'],
 ];
 export const SPAN_NECK_FACES = [["n6'", 'n6', 'nm4', 'nm5', "nm4'"]];
 export const NECK_FACES = [
