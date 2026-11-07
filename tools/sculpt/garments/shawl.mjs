@@ -34,7 +34,8 @@ export const MATS = {
  *   z0: the axis; front, back: columns to a quarter round, in front and behind; OUT, IN: the clearance of the cape's outside and of the cowl's inside; THICK: the
  *   cloth's thickness; bevel: how much lower the underside's hem is than the outside's;
  *   hem: the V's point in front, the corners (at the sides), the V's point behind, and how the hem runs between (sin^p);
- *   flare: how far out the hanging cloth leans per unit of drop;
+ *   flare: how far out the hanging cloth leans per unit of drop; soften: how far the shoulder's corner moves toward the
+ *   straight line from the cowl to the hem; armLift: the share of the upper arm's turn the hem takes over each arm;
  *   border: the strip under the teeth, the teeth, the line over them (from the hem up, along the cloth);
  *   rim: the cowl's inner edge, out from the neck's foot and up from it (its height a V round the front view);
  *   cowl: its points as [length along the body's line from the neck's foot, height off it] (the height leaned out from
@@ -43,14 +44,14 @@ export const MATS = {
  */
 export const DESIGN = {
   male: {
-    z0: -0.12, front: 6, back: 5, OUT: 0.16, IN: 0.05, THICK: 0.11, bevel: 0.09, flare: 0.15, soften: 0.6,
+    z0: -0.12, front: 6, back: 5, OUT: 0.16, IN: 0.05, THICK: 0.11, bevel: 0.09, flare: 0.15, soften: 0.6, armLift: 0.35,
     hem: { front: -3.55, corner: -2.3, back: -3.35, p: 1.2 },
     border: [0.08, 0.3, 0.06],
     rim: { r: [0.5, 0.36, 0.42], up: [-0.15, 0.35, 0.3] },
     vee: ['T0', 'a'], cowl: { T0: [[1.5, 0.15], [1.05, 0.15], [1.5, 0.15]], a: [[1.35, 0.3], [0.92, 0.28], [1.35, 0.3]], b: [[1.0, 0.35], [0.5, 0.35], [0.75, 0.38]], c: [[0.6, 0.55], [0.25, 0.6], [0.3, 0.65]] },
   },
   female: {
-    z0: -0.14, front: 6, back: 5, OUT: 0.14, IN: 0.045, THICK: 0.095, bevel: 0.08, flare: 0.15, soften: 0.4,
+    z0: -0.14, front: 6, back: 5, OUT: 0.14, IN: 0.045, THICK: 0.095, bevel: 0.08, flare: 0.15, soften: 0.4, armLift: 0.45,
     hem: { front: -2.95, corner: -1.85, back: -2.75, p: 1.2 },
     border: [0.07, 0.26, 0.05],
     rim: { r: [0.42, 0.3, 0.36], up: [-0.25, 0.3, 0.12] },
@@ -283,6 +284,15 @@ export function shawlWeights(rig, G, o = {}) {
   const R = G.rings, N = R.T0.length;
   const mix = (A, Bw, t) => { const o2 = new Map(); for (const [b, w] of A) o2.set(b, (o2.get(b) ?? 0) + w * (1 - t)); for (const [b, w] of Bw) o2.set(b, (o2.get(b) ?? 0) + w * t); return [...o2].sort((x, y) => y[1] - x[1]).slice(0, 4).map(([b, w], _, l) => [b, w / l.reduce((s2, [, x]) => s2 + x, 0)]); };
   const len = (i, j) => Math.hypot(...sub(G.verts[i], G.verts[j]));
+  // the cape's sides hang on the upper arms: over each arm (its share round the side, cos² of the turn from it) the
+  // hem and the border follow the upper arm by LIFT, the shoulder's corner by half that
+  const LIFT = o.lift ?? G.design.armLift ?? 0;
+  if (LIFT > 0) for (let k = 0; k < N; k++) {
+    const deg = G.cols[k].deg, side = Math.sin(deg * Math.PI / 180), s2 = side * side * side * side;
+    const bone = rig.at.get(side > 0 ? 'upperarm_l' : 'upperarm_r');
+    vw[R.T5[k]] = mix(vw[R.T5[k]], [[bone, 1]], LIFT * s2);
+    vw[R.T1[k]] = mix(vw[R.T1[k]], [[bone, 1]], 0.5 * LIFT * s2);
+  }
   for (let k = 0; k < N; k++) {
     vw[R.IT[k]] = vw[R.T0[k]]; vw[R.I1[k]] = vw[R.T1[k]]; vw[R.I5[k]] = vw[R.T5[k]];
     const L = len(R.T5[k], R.T1[k]);
