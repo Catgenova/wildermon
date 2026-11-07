@@ -45,9 +45,16 @@ const BREAST_GRID = ['da0', 'da1', 'da2', 'db2', 'dc2', 'dc1', 'dc0', 'db0'];
 const breastRing = (P) => P.breastRing ?? BREAST_GRID;
 /** The breast's middle ring: its foot drawn toward the point (P.dome.mu of the way out from it) and moved by P.dome.d, so
  * each facet between the two rings has two parallel sides and stays flat. */
+// P.dome.e: an offset more, by how far below the point each foot point lies (in the foot's own height, -1 at its top,
+// 1 at its bottom), so the breast's upper slope runs straight to the point and its underside rounds; the facets between
+// the rings are then two triangles each.
 export function domeRing(P, V) {
-  const A = V.db1, { mu, d } = P.dome;
-  return Object.fromEntries(breastRing(P).map((b, k) => [`br${k}`, [0, 1, 2].map((q) => A[q] + mu * (V[b][q] - A[q]) + d[q])]));
+  const A = V.db1, { mu, d, e } = P.dome, ring = breastRing(P);
+  const ys = ring.map((b) => V[b][1]), half = (Math.max(...ys) - Math.min(...ys)) / 2, mid = (Math.max(...ys) + Math.min(...ys)) / 2;
+  return Object.fromEntries(ring.map((b, k) => {
+    const s = e ? (mid - V[b][1]) / half : 0;
+    return [`br${k}`, [0, 1, 2].map((q) => A[q] + mu * (V[b][q] - A[q]) + d[q] + (e ? e[q] * s : 0))];
+  }));
 }
 
 /** The faces of one half, by vertex name: { v: names, part, name }. The grid's cells are keyed by their upper row and
@@ -110,7 +117,8 @@ export function halfFaces(P) {
     }
     for (let k = 0; k < n; k++) {
       const k1 = (k + 1) % n;
-      f(`bq${k}`, [B[k], B[k1], `br${k1}`, `br${k}`], 'torso');
+      if (P.dome?.e) { f(`bq${k}`, [B[k], B[k1], `br${k1}`], 'torso'); f(`bq${k}u`, [B[k], `br${k1}`, `br${k}`], 'torso'); F.get(`bq${k}u`).region = 'chest'; }
+      else f(`bq${k}`, [B[k], B[k1], `br${k1}`, `br${k}`], 'torso');
       f(`bt${k}`, [`br${k}`, `br${k1}`, 'db1'], 'torso');
       F.get(`bq${k}`).region = F.get(`bt${k}`).region = 'chest';
     }
@@ -248,7 +256,7 @@ PRESETS.female = {
   breasts: true,
   // the breast's foot round the patch, the points between the grid's where her reference's outline turns
   breastRing: ['da0', 'bx0', 'da1', 'bx1', 'da2', 'db2', 'bx2', 'dc2', 'dc1', 'bx3', 'dc0', 'db0'],
-  dome: { mu: 0.55, d: [0, -0.03, 0.14] },
+  dome: { mu: 0.735, d: [0.08, 0.02, 0.09], e: [0, -0.02, 0.05] },
   // beside the breast, its foot's outer point to the armpit: triangles from the armpit's corner
   fan: { db2: 'dc3' },
   // the navel: a notch sunk at hi0, in the centre line between the waist's row and the hips' widest
