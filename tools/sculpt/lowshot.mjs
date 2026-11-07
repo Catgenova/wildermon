@@ -6,7 +6,7 @@
 //
 // Flat shading (each triangle its own normal), a cool light from the left, a warm one from the right, a front fill.
 // The top and the bottom views leave the shoulder stub out, as the references do; the bottom view looks up from the
-// front at --pitch degrees (default 45) so the jaw's underside and the neck read.
+// front at --pitch degrees (default 35), the top view down at --top (default 78) so the jaw's underside and the neck read.
 // Uses Playwright's Chromium at /opt/pw-browsers/chromium with software GL.
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync } from 'node:fs';
@@ -18,7 +18,8 @@ const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i 
 const who = opt('who', 'male');
 const out = resolve(opt('out', 'tmp/lowhead'));
 const dsf = +opt('scale', '1');
-const pitch = +opt('pitch', '45');
+const pitch = +opt('pitch', '35');
+const topPitch = +opt('top', '78'); // the top view looks down from a little in front, as the references' does
 const normals = args.includes('--normals'); // a pass of the view-space normals of the skin, for fitting the light to a reference
 mkdirSync(out, { recursive: true });
 
@@ -99,7 +100,7 @@ for (const p of mesh.polys) {
 
 const female = who === 'female';
 const DATA = {
-  parts, lines, pitch, normals, counts: mesh.counts,
+  parts, lines, pitch, topPitch, normals, counts: mesh.counts,
   pupil: female ? [0.2, 0.21, 0.25] : [0.09, 0.09, 0.11],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
   title: female ? 'Female Head Modeling Guide' : 'Modeling Guide',
@@ -140,7 +141,7 @@ const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform int
   ' if (vm.x > 0.5 && vm.x < 1.5) base = vec3(0.27, 0.17, 0.13);' +
   ' else if (vm.x > 1.5 && vm.x < 2.5) base = pupc;' +
   ' else if (vm.x > 2.5 && vm.x < 3.5) base = lidc;' +
-  ' else if (vm.x > 3.5) base = vec3(0.56, 0.37, 0.36);' +
+  ' else if (vm.x > 3.5) base = vec3(0.52, 0.32, 0.32);' +
   ' if (mode == 3) { gl_FragColor = vm.x < 0.5 ? vec4(nn*0.5+0.5, 1.0) : vec4(0.0,0.0,0.0,1.0); return; }' +
   ' if (mode == 1) { vec3 rc = vm.y < 0.5 ? vec3(0.62,0.60,0.60) : (vm.y < 1.5 ? vec3(0.82,0.62,0.45) : vec3(0.70,0.52,0.50));' +
   '   if (vm.x > 0.5) rc = vm.x < 2.5 ? vec3(0.2,0.16,0.15) : rc;' +
@@ -149,7 +150,7 @@ const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform int
   // upper left, planes facing down darker; other materials take it times their colour.
   ' vec3 Lk = normalize(vec3(0.15,0.2,0.97)), Lr = normalize(vec3(1.0,0.1,0.1)), Lc = normalize(vec3(-0.7,0.6,0.35));' +
   ' float dk = max(dot(nn,Lk),0.0), dr = max(dot(nn,Lr),0.0), dc = max(dot(nn,Lc),0.0);' +
-  ' vec3 L = vec3(0.74 + 0.32*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) + 0.25*dk*vec3(1.0,0.98,0.95) + 0.31*dr*vec3(1.04,0.98,0.86);' +
+  ' vec3 L = vec3(0.74 + 0.22*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) + 0.25*dk*vec3(1.0,0.98,0.95) + 0.31*dr*vec3(1.04,0.98,0.86);' +
   ' vec3 c = (base*L + vec3(0.08,0.38,0.78)*pow(dc,6.0)*(0.3+0.7*base.r/0.68)) * mix(0.3, 1.0, occ);' +
   ' gl_FragColor = vec4(c, 1.0); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
@@ -194,10 +195,10 @@ function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoul
 const S = 136;
 const ROW = [['Front (0°)', 0, 172], ['Three-Quarter (45°)', 45, 478], ['Profile (90°)', 90, 780], ['Rear Three-Quarter (135°)', 135, 1085], ['Back (180°)', 180, 1388]];
 for (const [, d, cx] of ROW) view({ R: yaw(d), cx, cy: 184, s: S });
-view({ R: pitchM(90), cx: 180, cy: 735, s: S * 0.98, piv: [0, 1, 0.12], parts: ['head', 'neck'] });
+view({ R: pitchM(D.topPitch), cx: 180, cy: 730, s: S, piv: [0, 1.1, 0.12], parts: ['head', 'neck'] });
 view({ R: pitchM(-D.pitch), cx: 502, cy: 730, s: S * 0.98, piv: [0, 0.75, 0.12], parts: ['head', 'neck'] });
 view({ R: yaw(0), cx: 822, cy: 686, s: S * 0.99, wire: true });
-view({ R: yaw(90), cx: 1395, cy: 685, s: 96, mode: 1, parts: ['head', 'neck'], piv: [0, 1, 0.1] });
+view({ R: yaw(70), cx: 1392, cy: 680, s: 100, mode: 1, parts: ['head', 'neck'], piv: [0, 1, 0.1] });
 
 const ui = document.getElementById('ui');
 const el = (cls, css, html) => { const e = document.createElement('div'); e.className = cls; e.style.cssText = css; if (html != null) e.innerHTML = html; ui.appendChild(e); return e; };
