@@ -4259,6 +4259,7 @@ export const NEWS: News[] = [
       'Changed: brewing is in a barrel only; Start a brew is no longer on wells and fountains.',
       `Changed: lye takes ${LYE_ASH_PER_LITRE} ash a litre of water: a bucket (${BUCKET_LITRES} L) ${lyeAshFor(BUCKET_LITRES)} ashes (was 2).`,
       'New: Leach into lye on a barrel of water: every litre in it, one ash a litre, from the pack or stores within reach. Not on wells.',
+      'New: Fill with water on a barrel: to the brim at a shore (within 1 tile), or what the fullest well or fountain within reach holds. Not over another liquid.',
     ],
   },
   {

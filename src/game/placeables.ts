@@ -68,6 +68,20 @@ export function leachLyeReason(g: Game, f: PlacedFurniture | undefined): string 
   if (have < need) return `Need ${need} × ashes; have ${have}.`;
   return null;
 }
+/** The well a barrel is filled from when there is no shore beside you: the fullest within reach with water in it. The island's `fill_barrel`. */
+const wellFor = (g: Game): PlacedFurniture | undefined => vesselsNear(g, 'water').find((v) => isWell(v));
+
+/** Why this barrel cannot be filled with water, or null. The island's `liquid_refusal` on `fill_barrel`, word for word. */
+export function fillBarrelReason(g: Game, f: PlacedFurniture | undefined): string | null {
+  if (!f) return 'It is gone.';
+  if (!nearPiece(g, f)) return 'Stand next to it.';
+  if (!holdsLiquid(f) || isWell(f)) return 'Not a barrel.';
+  if (isWorking(f)) return 'Still fermenting.';
+  if (litresIn(f) > 0 && f.liquid && f.liquid !== 'water') return `Holds ${LIQUID_NAME[f.liquid]}: empty it first.`;
+  if (liquidCapacity(f) - litresIn(f) < 1) return 'Already full.';
+  if (!g.nearWater() && !wellFor(g)) return 'Need water: shore or well.';
+  return null;
+}
 const isOven = (f: PlacedFurniture): boolean => !!furnitureDef(f.kind).hearth;
 const isBed = (f: PlacedFurniture): boolean => (furnitureDef(f.kind).bed ?? 0) > 0;
 
@@ -806,6 +820,43 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       g.events.emit('crate');
       g.events.emit('world', f.x, f.y);
       g.logMsg(`Lye: ${Number(litres.toFixed(1))} L in the ${furnitureName(f).toLowerCase()}. Ashes: ${ash}.`, 'event');
+    },
+  },
+  {
+    /*
+     * A barrel filled with water where it stands: to the brim from a shore within a tile of you, or else as much as the
+     * fullest well or fountain within reach has (`wellFor`). Asked for: "No logical way to fill a barrel. Allow it to be
+     * filled at a well or water". Not a well, not while it ferments, not over another liquid. The island's `fill_barrel`
+     * in `liquid_refusal` and `perform_liquid`.
+     */
+    id: 'fill_barrel',
+    label: 'Fill with water',
+    verb: 'filling it',
+    stamina: 0.03,
+    baseTime: 6,
+    applies: (t, g) => {
+      const f = pieceOf(g, t);
+      return !!f && holdsLiquid(f) && !isWell(f) && !isWorking(f) && (litresIn(f) <= 0 || f.liquid === 'water')
+        && liquidCapacity(f) - litresIn(f) >= 1;
+    },
+    check: (t, g) => fillBarrelReason(g, pieceOf(g, t)),
+    perform: (t, g) => {
+      const f = pieceOf(g, t);
+      if (!f || fillBarrelReason(g, f)) return;
+      const well = g.nearWater() ? undefined : wellFor(g);
+      const had = litresIn(f);
+      const room = Math.floor(liquidCapacity(f) - had);
+      const n = well ? Math.min(room, Math.floor(litresIn(well))) : room;
+      if (n <= 0 || (well && !drawFrom(g, well, n))) return;
+      f.litres = had + n;
+      f.liquid = 'water';
+      delete f.knack;
+      delete f.dye;
+      delete f.agedFrom;
+      g.events.emit('crate');
+      g.events.emit('world', f.x, f.y);
+      g.logMsg(`Filled: ${n} L water into the ${furnitureName(f).toLowerCase()}, from the ${well ? furnitureName(well).toLowerCase() : 'shore'}. `
+        + `${Math.round(had + n)}/${Math.round(liquidCapacity(f))}.`, 'event');
     },
   },
   {

@@ -703,7 +703,7 @@ import{$S as e,$_ as t,$b as n,$d as r,$i as i,$m as a,$n as o,$s as s,$u as ee,
     </ul>
     <h3>Brewing</h3>
     <ul>
-      <li>Fill a barrel from a well or the shore, stand at it, <b>set a brew going</b>. ${Ji.length} brews:
+      <li>Fill a barrel (right-click it: <b>Fill with water</b>): to the brim at a shore within 1 tile; from a well or fountain within reach, what it holds. Stand at it, <b>set a brew going</b>. ${Ji.length} brews:
       ${A(Ji.map(e=>`<b>${e.name.toLowerCase()}</b>: ${L(e.input,e.count)} + ${e.litres} litres of water, ${I(e.time)}`))}.</li>
       <li>Yield: litres of drink = litres of water.</li>
       <li>While working: cannot be drawn off; cannot be hurried. Then draw into a bucket and drink from that.</li>

@@ -202,6 +202,25 @@ begin
     || (select coalesce(sum(count), 0) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'ash')
     || '|' || ${lastSaid} from placed pl where pl.id = v_bar;
   insert into said select 'L:bucket', count from recipe_input where recipe = 'make_lye' and item = 'ash';
+
+  -- 8. Filled with water: refused over lye and with no water at hand; to the brim at a shore; then from a well.
+  insert into said values ('F:lye', coalesce(act_refusal(w, u, 'fill_barrel', ${furn('v_bar')}), '-'));
+  update placed set liquid = null, litres = 0, since = now() where id = v_bar;
+  insert into said values ('F:dry', coalesce(act_refusal(w, u, 'fill_barrel', ${furn('v_bar')}), '-'));
+  perform land_set_height(w, 12, 12, -5);
+  perform act_perform(w, u, 'fill_barrel', ${furn('v_bar')});
+  insert into said select 'F:shore', pl.liquid || '|' || pl.litres || '|' || ${lastSaid} from placed pl where pl.id = v_bar;
+  insert into said values ('F:full', coalesce(act_refusal(w, u, 'fill_barrel', ${furn('v_bar')}), '-'));
+  v_b := give(w, u, 'barrel', 1, 40);
+  perform act_perform(w, u, 'place_furniture', jsonb_build_object('kind', 'tile', 'itemUid', v_b, 'x', 12, 'y', 15, 'sx', 1, 'sy', 1, 'facing', 's'));
+  select id into v_b from placed where world_id = w and kind = 'furniture' and sub = 'barrel' and id <> v_bar;
+  update placed set litres = 30, since = now() where id = v_well;
+  update player set x = 13.5, y = 15.5 where world_id = w and uid = u;
+  perform act_perform(w, u, 'fill_barrel', ${furn('v_b')});
+  insert into said select 'F:well', pl.liquid || '|' || pl.litres || '|' || (select placed_litres(wl) from placed wl where wl.id = v_well)
+    || '|' || ${lastSaid} from placed pl where pl.id = v_b;
+  insert into said values ('F:wellnot', coalesce(act_refusal(w, u, 'fill_barrel', ${furn('v_well')}), '-'));
+  insert into said values ('F:dried', coalesce(act_refusal(w, u, 'fill_barrel', ${furn('v_b')}), '-'));
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -336,6 +355,27 @@ dice(0.01);
 act('leach_lye').perform(at, g);
 same('L:done', `${bar.liquid}|${bar.litres}|${g.inventory.count('ash')}|${lastHere()}`, 'with 15: the barrel is lye, 13 ashes gone, 2 left');
 same('L:bucket', String(RECIPE_BY_ID.get('make_lye')?.inputs.find((i) => i.item === 'ash')?.count), `a bucket of ${BUCKET_LITRES} litres takes ${BUCKET_LITRES} ashes`);
+
+/* 8. Filled with water (asked for: "No logical way to fill a barrel. Allow it to be filled at a well or water"). */
+same('F:lye', act('fill_barrel').check?.(at, g) ?? '-', 'a barrel of lye');
+check('and the menu does not offer it on lye', !act('fill_barrel').applies(at, g));
+Object.assign(bar, { liquid: undefined, litres: 0 });
+same('F:dry', act('fill_barrel').check?.(at, g) ?? '-', 'an empty barrel with no shore or well beside you');
+w.setHeight(12, 12, -5);
+act('fill_barrel').perform(at, g);
+same('F:shore', `${bar.liquid}|${bar.litres}|${lastHere()}`, 'at a shore: to the brim');
+same('F:full', act('fill_barrel').check?.(at, g) ?? '-', 'a full one');
+const barrel2 = thing('barrel', 40);
+act('place_furniture').perform({ kind: 'tile', x: 12, y: 15, sx: 1, sy: 1, itemUid: barrel2.uid, facing: 's' } as Target, g);
+const bar2 = [...g.furniture.values()].find((p) => p.kind === 'barrel' && p !== bar) as PlacedFurniture;
+well.litres = 30;
+g.putBody(13.5, 15.5, 0);
+const at2 = { kind: 'furniture', id: bar2.id } as Target;
+check('the menu offers it on an empty barrel', act('fill_barrel').applies(at2, g));
+act('fill_barrel').perform(at2, g);
+same('F:well', `${bar2.liquid}|${bar2.litres}|${well.litres}|${lastHere()}`, 'at a well: what the well has, the well drawn dry');
+same('F:wellnot', act('fill_barrel').check?.({ kind: 'furniture', id: well.id } as Target, g) ?? '-', 'a well');
+same('F:dried', act('fill_barrel').check?.(at2, g) ?? '-', 'and with the well dry');
 
 /* ---- what was found ------------------------------------------------------------------------------- */
 

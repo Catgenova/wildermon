@@ -340,7 +340,7 @@ export const TEACHES_NOTHING = new Set<string>([
   'kiln_take_all', 'smelter_take_all', 'store_in_crate', 'store_in_furniture', 'rack_put',
   'take_from_store', 'stow_item', 'empty_bag', 'throw_away', 'equip', 'unequip', 'store_in_pannier',
   // And pouring, which is carrying by another name.
-  'fill_bucket', 'fill_skin', 'empty_bucket', 'empty_vessel', 'pour_into_barrel',
+  'fill_bucket', 'fill_skin', 'empty_bucket', 'empty_vessel', 'pour_into_barrel', 'fill_barrel',
 ]);
 
 /** The order a spadeful is looked for in, which is the order it was written in. */
