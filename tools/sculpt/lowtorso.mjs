@@ -115,6 +115,17 @@ export function halfFaces(P) {
       F.get(`bq${k}`).region = F.get(`bt${k}`).region = 'chest';
     }
   }
+  // P.navel: a notch in the centre line at the vertex 'at', which sinks to its pit, with a point above it ('top'), below it
+  // ('bottom') and to each side ('side'); the cells above and below it ('cells') take them in its place
+  if (P.navel) {
+    const { at, top, bottom, side, cells: [above, below] } = P.navel;
+    const swap = (key, put) => { const face = F.get(key), i = face.v.indexOf(at); face.v.splice(i, 1, ...put); };
+    swap(above, [side, top]);
+    swap(below, [bottom, side]);
+    f('navel top', [top, side, at], 'torso');
+    f('navel bottom', [side, bottom, at], 'torso');
+    F.get('navel top').region = F.get('navel bottom').region = 'abdomen';
+  }
   // the reference's single planes: each group's cells one polygon, round the outline of their union
   for (const { name, cells, region } of P.merge ?? []) {
     const edges = new Map();
@@ -225,6 +236,7 @@ PRESETS.female = {
     db0: [0, -1.33, 0.5], db1: [0.52, -1.27, 0.86], db2: [0.9, -1.39, 0.35], db3: [1.2, -1.33, -0.08], db5: [1.2, -1.33, -0.52], db6: [0.85, -1.35, -0.78], db7: [0.42, -1.35, -0.8], db8: [0, -1.35, -0.78],
     dc0: [0, -1.49, 0.5], dc1: [0.48, -1.83, 0.55], dc2: [0.83, -1.58, 0.32], dc3: [1.04, -1.46, -0.14], dc4: [0.97, -1.52, -0.3], dc5: [1.04, -1.46, -0.46], dc6: [0.8, -1.6, -0.72], dc7: [0.42, -1.8, -0.72], dc8: [0, -1.75, -0.7],
     bx0: [0.13, -1, 0.42], bx1: [0.66, -0.95, 0.33], bx2: [0.82, -1.58, 0.32], bx3: [0.2, -1.69, 0.56],
+    nv0: [0, -2.76, 0.53], nv1: [0.05, -2.89, 0.52], nv2: [0, -2.93, 0.53],
     ra0: [0, -1.975, 0.6], ra1: [0.413, -1.945, 0.549], ra2: [0.6, -1.895, 0.443], ra3: [0.712, -1.875, 0.281], ra4: [0.75, -1.875, 0.02], ra5: [0.705, -1.975, -0.259], ra6: [0.525, -1.975, -0.458], ra7: [0.27, -1.975, -0.544], ra8: [0, -1.975, -0.56],
     rb0: [0, -2.14, 0.56], rb1: [0.363, -2.14, 0.515], rb2: [0.528, -2.14, 0.421], rb3: [0.627, -2.14, 0.276], rb4: [0.66, -2.14, 0.045], rb5: [0.62, -2.14, -0.202], rb6: [0.462, -2.14, -0.379], rb7: [0.238, -2.14, -0.456], rb8: [0, -2.14, -0.47],
     rc0: [0, -2.35, 0.54], rc1: [0.33, -2.35, 0.498], rc2: [0.48, -2.35, 0.41], rc3: [0.57, -2.35, 0.276], rc4: [0.6, -2.35, 0.06], rc5: [0.564, -2.35, -0.171], rc6: [0.42, -2.35, -0.335], rc7: [0.216, -2.35, -0.407], rc8: [0, -2.35, -0.42],
@@ -239,6 +251,8 @@ PRESETS.female = {
   dome: { mu: 0.55, d: [0, -0.03, 0.14] },
   // beside the breast, its foot's outer point to the armpit: triangles from the armpit's corner
   fan: { db2: 'dc3' },
+  // the navel: a notch sunk at hi0, in the centre line between the waist's row and the hips' widest
+  navel: { at: 'hi0', top: 'nv0', bottom: 'nv2', side: 'nv1', cells: ['wa0', 'hi0'] },
   // her reference's single planes
   merge: [
     { name: 'collarbone', cells: ['nb0', 'nb1'], region: 'shoulder' },
