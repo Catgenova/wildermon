@@ -46,3 +46,5 @@ Decisions
 - 2026-11-07, the user's decision: "Less worried about light, we are going to repaint the whole body when done." The
   torso is scored on shape only: outlines, where the facet edges and planes fall, and the landmarks. Lighting is not
   scored and not tuned; the renders use the heads' shared camera-fixed light.
+- 2026-11-07: male torso approved as done by the user. Frozen as in commit 65194921: no further changes to his vertices,
+  faces or cameras; any change to the shared grid or face list for the female is checked against his render pixel for pixel.
