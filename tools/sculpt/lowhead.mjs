@@ -274,9 +274,12 @@ export function buildLowHead(who = 'male', preset = null) {
       // e.ledge (his): the upper lid a ledge across the socket, as his reference draws it: a dark front band from
       // L.x[0] to its last x between the heights L.yb and L.yt, standing L.out off the skin, its top a skin plane sloping
       // up and back into the socket by L.up
-      const xs = L ? L.x : a ? [x0 - 0.01, e.x, x1 + 0.03, x1 + 0.15] : [x0 - 0.035, e.x, x1 + 0.035];
-      const yb = L ? L.yb : a ? [y1 - 0.028, y1 - 0.026, y1 - 0.018, y1 + 0.045] : [y1 + 0.004, y1 + 0.008, y1 + 0.002];
-      const hh = L ? L.yt.map((t, i) => t - L.yb[i]) : a ? [0.028, 0.042, 0.038, 0.012] : [0.03, 0.034, 0.026];
+      // e.line (hers): the almond lid's sections measured off her reference's front view (x, the underside's height yb,
+      // the height h): a point at the inner corner, the band over the pupil, the wing's notch and its tip
+      const W = e.line;
+      const xs = L ? L.x : W ? W.x : a ? [x0 - 0.01, e.x, x1 + 0.03, x1 + 0.15] : [x0 - 0.035, e.x, x1 + 0.035];
+      const yb = L ? L.yb : W ? W.yb : a ? [y1 - 0.028, y1 - 0.026, y1 - 0.018, y1 + 0.045] : [y1 + 0.004, y1 + 0.008, y1 + 0.002];
+      const hh = L ? L.yt.map((t, i) => t - L.yb[i]) : W ? W.h : a ? [0.028, 0.042, 0.038, 0.012] : [0.03, 0.034, 0.026];
       // each section stands off the skin along the head's outward direction there, so the wing clears the side of the face
       const off = (x, y, d) => { const p = on(x, y, 0); const o = unit([p[0], 0, p[2] - 0.1]); return add(p, mul(o, d)); };
       const sec = xs.map((x, i) => L
