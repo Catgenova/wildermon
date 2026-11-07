@@ -46,3 +46,8 @@ Decisions
 - 2026-11-07, the user's decision: "Less worried about light, we are going to repaint the whole body when done." The
   torso is scored on shape only: outlines, where the facet edges and planes fall, and the landmarks. Lighting is not
   scored and not tuned; the renders use the heads' shared camera-fixed light.
+- 2026-11-07, the user's decision: the hip cut's ring (bt0..bt8) widened to the hip width of the full-body reference
+  (measured in head units by the pupil-to-chin span), so the legs continue it without a pinch: half-width 1.10 at
+  y -3.79 (was 0.71), the ring scaled across only, its depth and height kept; the row above it (hw0..hw8) refitted so
+  the planes between stay flat. Here the full-body reference wins over the torso sheet's narrower cut. The fitter holds
+  the ring fixed; the torso sheet's bottom-cut-corner landmarks are dropped.

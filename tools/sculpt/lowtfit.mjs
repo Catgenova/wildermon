@@ -1,7 +1,7 @@
 // Fits the low-poly torso (tools/sculpt/lowtorso.mjs) to its reference sheet as a direct mirror, as tools/sculpt/lowfit.mjs
 // fits the heads: each view's camera, then a coarse mirrored lattice over the torso, then its vertices one by one, so its
 // outline and its landmarks land where the reference's do in all eight views. The neck's foot (the head's nm0..nm5)
-// never moves.
+// and the hip cut's ring (bt0..bt8, which the legs continue) never move.
 //
 //   python3 tools/sculpt/lowmask.py tools/sculpt/ref/torso-lowpoly-male.png /tmp/tref-male.json --torso male   # once
 //   node tools/sculpt/lowtfit.mjs --who male --ref /tmp/tref-male.json --stage camera|lattice|mesh|report [--rounds 3]
@@ -114,6 +114,9 @@ function limit(v, k, x) {
 }
 
 const preset = structuredClone(PRESETS[who]);
+// held where they are: the neck's foot (the head's) and the hip cut's ring bt0..bt8, which the legs continue (the user's
+// decision of 2026-11-07: its width off the full-body references, not the torso sheet)
+const FIXED = (n) => NECK_FOOT.includes(n) || /^bt\d$/.test(n);
 // the fitted vertices, and her breast's ring and dome (tools/sculpt/lowtorso.mjs) with them
 const saveFit = () => writeFileSync(join(DIR, `lowtfit-${who}.json`), JSON.stringify({ V: preset.V, ...(preset.dome ? { dome: preset.dome, breastRing: preset.breastRing } : {}) }, null, 1));
 const base0 = buildLowTorso(who, PRESETS[who]);
@@ -169,7 +172,7 @@ if (stage === 'lattice') {
     for (let q = 0; q < 3; q++) ps.push({ step: 0.06, get: () => n.s[q], set: (x) => { n.s[q] = x; } });
   }
   const P0 = PRESETS[who].V;
-  const apply = () => { for (const n of Object.keys(P0)) { const q = deform(P0[n], L); preset.V[n] = P0[n][0] === 0 ? [0, q[1], q[2]] : q; } mesh = buildLowTorso(who, preset); };
+  const apply = () => { for (const n of Object.keys(P0)) { if (FIXED(n)) continue; const q = deform(P0[n], L); preset.V[n] = P0[n][0] === 0 ? [0, q[1], q[2]] : q; } mesh = buildLowTorso(who, preset); };
   const camPs = args.includes('--with-camera') ? camParams(only, 1.5) : [];
   const total = () => { apply(); return score() + 20 * folds(mesh, base0); };
   for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...ps, ...camPs], total, 1).toFixed(1));
@@ -183,7 +186,7 @@ if (stage === 'mesh') {
   report('before');
   // --names a,b*: only these vertices (a name ending in * every vertex it starts)
   const sel = opt('names', '').split(',').filter(Boolean);
-  const names = Object.keys(preset.V).filter((n) => !NECK_FOOT.includes(n) && (!sel.length || sel.some((o) => n === o || (o.endsWith('*') && n.startsWith(o.slice(0, -1))))));
+  const names = Object.keys(preset.V).filter((n) => !FIXED(n) && (!sel.length || sel.some((o) => n === o || (o.endsWith('*') && n.startsWith(o.slice(0, -1))))));
   const ps = [];
   for (const n of names) for (let k = 0; k < 3; k++) {
     if (k === 0 && preset.V[n][0] === 0) continue; // the centre line stays on it
@@ -216,7 +219,7 @@ if (stage === 'mesh') {
   const shift = [0, 0];
   const shiftPs = args.includes('--shift') ? [1, 2].map((k, q) => ({ step: 0.02, get: () => shift[q], set: (x) => {
     const d = x - shift[q]; shift[q] = x;
-    for (const n of Object.keys(preset.V)) { if (NECK_FOOT.includes(n)) continue; preset.V[n][k] += d; if (start[n]) start[n][k] += d; }
+    for (const n of Object.keys(preset.V)) { if (FIXED(n)) continue; preset.V[n][k] += d; if (start[n]) start[n][k] += d; }
     for (const v of VIEWS) { const c = cams[v], r = rotation(c); c.cx -= c.s * r[k] * d; c.cy += c.s * r[3 + k] * d; }
   } })) : [];
   const total = () => { mesh = buildLowTorso(who, preset); return score() + 20 * folds(mesh, base0) + reg * moved() + flatW * warp(mesh); };

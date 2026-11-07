@@ -41,11 +41,6 @@
     342,
     "hw4'"
    ],
-   "bottom cut corner'": [
-    140,
-    369,
-    "bt4'"
-   ],
    "neck top": [
     190,
     77,
@@ -200,11 +195,6 @@
     191,
     350,
     "hw1"
-   ],
-   "bottom cut corner": [
-    190,
-    369,
-    "bt4"
    ],
    "bottom cut, centre": [
     165,
@@ -461,16 +451,6 @@
     343.3,
     "hw4'"
    ],
-   "bottom cut corner": [
-    1025,
-    363.3,
-    "bt4"
-   ],
-   "bottom cut corner'": [
-    1123.3,
-    363.3,
-    "bt4'"
-   ],
    "trapezius point": [
     1078,
     140,
@@ -621,16 +601,6 @@
     345,
     "hw4'"
    ],
-   "bottom cut corner": [
-    215,
-    382,
-    "bt4"
-   ],
-   "bottom cut corner'": [
-    105,
-    382,
-    "bt4'"
-   ],
    "breast upper outer": [
     230,
     166,
@@ -773,16 +743,6 @@
     1151.7,
     348.7,
     "hw4'"
-   ],
-   "bottom cut corner": [
-    1000,
-    380.3,
-    "bt4"
-   ],
-   "bottom cut corner'": [
-    1143.3,
-    380.3,
-    "bt4'"
    ]
   }
  }
