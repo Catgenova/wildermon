@@ -143,7 +143,7 @@ export function halfFaces(P) {
     F.get('navel top').region = F.get('navel bottom').region = 'abdomen';
   }
   // the reference's single planes: each group's cells one polygon, round the outline of their union
-  for (const { name, cells, region } of P.merge ?? []) {
+  for (const { name, cells, region, at } of P.merge ?? []) {
     const edges = new Map();
     for (const c of cells) {
       const face = F.get(c);
@@ -159,7 +159,10 @@ export function halfFaces(P) {
     const start = next.keys().next().value, loop = [start];
     for (let u = next.get(start); u !== start; u = next.get(u)) { loop.push(u); if (loop.length > next.size) throw new Error(`merge ${name}: open outline`); }
     if (loop.length !== next.size) throw new Error(`merge ${name}: its outline is more than one loop`);
-    F.set(name, { v: loop, part: 'torso', name, region });
+    // at: the group cut into triangles from this corner instead (cells the reference draws apart along other lines)
+    if (!at) { F.set(name, { v: loop, part: 'torso', name, region }); continue; }
+    const i = loop.indexOf(at), v = [...loop.slice(i), ...loop.slice(0, i)];
+    for (let t = 1; t + 1 < v.length; t++) F.set(`${name} ${t}`, { v: [v[0], v[t], v[t + 1]], part: 'torso', name: `${name} ${t}`, region });
   }
   return [...F.values()];
 }
@@ -277,6 +280,9 @@ PRESETS.female = {
     // the shoulder blade's plane down the spine to db8, cut from the plane beside the spine by a diagonal out to its tip (dc7)
     { name: 'shoulder blade', cells: ['tr6', 'tr7', 'sd6b', 'sd7', 'da7', 'db7a'], region: 'shoulder' },
     { name: 'teres', cells: ['sd6a', 'da6', 'db6'], region: 'shoulder' },
+    // under the breast's outer end, where the side turns in to the armpit: triangles from the foot's lower outer point
+    // down to the ribs (the grid's cell there would cross itself, its lower corner ra3 up beside bx2)
+    { name: 'under the breast', cells: ['db2f1', 'dc2'], region: 'abdomen', at: 'bx2' },
     // below the shoulder blades the spine a deep groove down the centre line, the cells either side of it apart
   ],
   // behind the deltoid, under the arm's cut where the side turns in to the armpit, and over the buttocks beside the
