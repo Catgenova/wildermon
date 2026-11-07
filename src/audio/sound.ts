@@ -136,7 +136,7 @@ export const HUSHED: ReadonlySet<string> = new Set([
   'eat', 'drink', 'drink_skin', 'drink_from_vessel', 'sleep', 'study_book', 'study_map', 'read_recipe', 'read_formula', 'open_ferment', 'serve_dish', 'drink_tea',
   // Faith and the paths, which are the two things on this island done by
   // sitting still; and what is given up at the altar, and what it gives back.
-  'pray', 'cast', 'meditate', 'sacrifice', 'absorb_soul',
+  'pray', 'meditate', 'sacrifice', 'absorb_soul',
   // And a prayer said over a patron's statue in the pack, as at an altar (`faith.ts`).
   'pray_statue',
   // Getting on and off things, and being pulled along by one.

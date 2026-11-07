@@ -8921,7 +8921,6 @@ insert into bauble_skill values ('taming', true, false);
 insert into bauble_skill values ('animal_husbandry', true, true);
 insert into bauble_skill values ('butchering', true, true);
 insert into bauble_skill values ('alchemy', true, true);
-insert into bauble_skill values ('prayer', true, false);
 insert into bauble_skill values ('meditation', true, false);
 insert into bauble_skill values ('repair', true, true);
 insert into bauble_skill values ('first_aid', true, true);

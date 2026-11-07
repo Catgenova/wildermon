@@ -4262,6 +4262,7 @@ export const NEWS: News[] = [
     day: '2026-11-06',
     lines: () => [
       'Removed: the altar\'s Call on it casts (Call, Mend, Light of the dawn, Circle of cunning, Fair wind, Bounty), and the two journal goals for Circle of cunning. Blessings already on a tool stay. Praying, favour and patron spells unchanged.',
+      'Removed: Prayer from the minor bauble skills (no action is done with it now); a Prayer bauble already made has no effect.',
     ],
   },
   {
