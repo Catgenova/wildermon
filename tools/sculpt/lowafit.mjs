@@ -428,7 +428,8 @@ if (stage === 'lattice' || stage === 'hand') {
     if (r !== 'ct') { ps.push({ step: 0.05, get: () => q.sx, set: (x) => { q.sx = x; } }, { step: 0.05, get: () => q.sz, set: (x) => { q.sz = x; } }, { step: 0.05, get: () => q.t, set: (x) => { q.t = x; } }); }
   }
   for (let k = 0; k < 3; k++) ps.push({ step: 0.04, get: () => Lh.d[k], set: (x) => { Lh.d[k] = x; } }, { step: 0.05, get: () => Lh.r[k], set: (x) => { Lh.r[k] = x; } });
-  ps.push({ step: 0.04, get: () => Lh.s, set: (x) => { Lh.s = x; } });
+  // --noscale: the hand's size kept (it is the hand views' own, tools/sculpt/lowahand.mjs)
+  if (!args.includes('--noscale')) ps.push({ step: 0.04, get: () => Lh.s, set: (x) => { Lh.s = x; } });
   const camPs = args.includes('--with-camera') ? camParams(only, 1.5) : [];
   const total = () => { preset.V = applyLattice(P0, Lr, Lh); M = meshes(); return score() + 20 * folds(M.arm, base0) + SMOOTH * lumps(preset.V) + 1e4 * crossed(preset.V); };
   for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...ps, ...camPs], total, 1).toFixed(1));

@@ -15,8 +15,9 @@
 // hand pronated as the sheets draw it (the back of the hand forward, the thumb toward the body):
 //   wrist: wk the little finger's side, wb0 wb1 the back's corners, wt the thumb's side, wp1 wp0 the palm's corners;
 //   the knuckle line kb0..kb4 across the back (little finger to index) and kp4..kp0 across the palm; the four-finger
-//   mass in two rows, its middle line mb/mp and its tips nb/np (curled under), closed across the tips; pc the palm's
-//   middle; the thumb's root ta tb tc td (ta tb the back's side, tc td the palm's; tb tc toward the index) and its two
+//   mass in two rows, its middle line mb/mp and its tips nb/np (curled under), closed across the tips; sk the little
+//   finger's side at its widest; the palm's diamond pa (by the wrist), pb (toward the little finger), pc (toward the
+//   index) and td; the thumb's root ta tb tc td (ta tb the back's side, tc td the palm's; tb tc toward the index) and its two
 //   segments t1a..t1d, t2a..t2d, closed at the tip.
 // Shown alone, as the sheets show it, the arm is closed by the cap (part 'cap', the deltoid's ball: rings ca cb (cc) and the
 // point ct) from its first ring ua up; joined to the torso (buildArmBody), the joint (part 'joint', the band from the
@@ -66,17 +67,26 @@ export function armFaces(who) {
   band(ring8(rings.at(-1)), WRIST_OF, 'arm', 'forearm', 'wr-');
   // the hand: the back, the sides and the palm from the wrist to the knuckle line, as the sheets' hand topology
   const h = (v, name) => f(v, 'hand', 'hand', name);
+  // the back (the Hand Topology's back panel): the middle plane between the lines from the wrist's back corners to the
+  // knuckles, the little finger's side plane out to its widest (sk), the thumb's side plane down to the thumb's root
   h(['wb0', 'wb1', 'kb3', 'kb2', 'kb1'], 'back of hand');
-  h(['wk', 'wb0', 'kb1', 'kb0'], 'back, little finger side');
-  h(['wb1', 'wt', 'ta', 'tb', 'kb4', 'kb3'], 'back, thumb side');
+  h(['wk', 'wb0', 'kb1', 'kb0', 'sk'], 'back, little finger side');
+  h(['wb1', 'wt', 'ta', 'tb'], 'back, thumb side');
+  h(['wb1', 'tb', 'kb4', 'kb3'], 'back, by the index');
   h(['wt', 'td', 'ta'], 'thumb root, wrist side');
   h(['tb', 'tc', 'kp4', 'kb4'], 'web');
-  h(['wk', 'kb0', 'kp0'], 'little finger side');
-  h(['wp0', 'wk', 'kp0', 'kp1'], 'palm, little finger side');
-  h(['wt', 'wp1', 'tc', 'td'], 'thumb mound');
-  h(['wp1', 'wp0', 'kp1', 'pc'], 'palm heel');
-  h(['pc', 'kp1', 'kp2', 'kp3'], 'palm');
-  h(['wp1', 'pc', 'kp3', 'kp4', 'tc'], 'palm, thumb side');
+  h(['sk', 'kb0', 'kp0'], 'little finger side');
+  // the palm (the palm panel): a facet at the wrist's thumb corner, the thumb's mound to its root (td), the diamond
+  // pa pb pc td in the middle, the heel from the wrist to pb and sk, the palm's planes to the knuckle line
+  h(['wt', 'wp1', 'pa'], 'thumb mound, wrist');
+  h(['wt', 'pa', 'td'], 'thumb mound');
+  h(['pa', 'pb', 'pc', 'td'], 'palm, middle');
+  h(['wp1', 'wp0', 'pb', 'pa'], 'palm heel');
+  h(['wp0', 'wk', 'sk', 'pb'], 'palm heel, little finger side');
+  h(['pb', 'sk', 'kp0', 'kp1'], 'palm, little finger side');
+  h(['pb', 'kp1', 'kp2', 'kp3', 'pc'], 'palm');
+  h(['pc', 'kp3', 'kp4'], 'palm, by the index');
+  h(['td', 'pc', 'kp4', 'tc'], 'palm, thumb side');
   // the four-finger mass: two rows of four strips, closed across the tips
   band(KNUCKLE('k'), KNUCKLE('m'), 'hand', 'hand', 'fingers ');
   band(KNUCKLE('m'), KNUCKLE('n'), 'hand', 'hand', 'finger tips ');
@@ -172,14 +182,19 @@ function finish(m) {
   return { ...m, tris: triList, counts };
 }
 
-/** The hand's own frame: the wrist ring's centre O; y up the hand (from the knuckle line's middle to O), z out of the
- * back of the hand (from the palm's knuckles to the back's, square to y), x = y × z (toward the thumb). */
+/** The hand's own frame, the wrist's: the wrist ring's centre O; y the ring's normal, up the arm (away from the
+ * knuckles); x across the ring from the little finger's side (wk) to the thumb's (wt), square to y; z = x × y, out of
+ * the back of the hand. So the stub the hand views show runs straight on from the wrist, as the sheets draw it, and the
+ * hand's own vertices can move without turning it. */
 export function handFrame(V) {
   const mean = (names) => [0, 1, 2].map((k) => names.reduce((a, n) => a + V[n][k], 0) / names.length);
-  const O = mean(WRIST), kb = mean(['kb0', 'kb1', 'kb2', 'kb3', 'kb4']), kp = mean(['kp0', 'kp1', 'kp2', 'kp3', 'kp4']);
+  const O = mean(WRIST), kn = mean(['kb2', 'kp2']);
   const unit = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); };
-  const y = unit(sub(O, [0, 1, 2].map((k) => (kb[k] + kp[k]) / 2)));
-  const d = sub(kb, kp), z = unit(sub(d, y.map((q) => q * dot(d, y)))), x = cross(y, z);
+  let n = [0, 0, 0];
+  WRIST.forEach((w, i) => { const a = V[w], b = V[WRIST[(i + 1) % 6]]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; });
+  let y = unit(n);
+  if (dot(y, sub(O, kn)) < 0) y = y.map((q) => -q);
+  const d = sub(V.wt, V.wk), x = unit(sub(d, y.map((q) => q * dot(d, y)))), z = cross(x, y);
   return { O, x, y, z };
 }
 
