@@ -10,6 +10,8 @@
 //           at `n` stations; the first and the last are the clump's tips, single points.
 //     w, h  its width across the skull and its height off it, along the inner stations (the first value at the first
 //           ring after the front tip, the last at the last ring before the back tip; between, evenly).
+//     lip   the front ring's roots stand just off the skin (LIP), so the lock's front edge overhangs; float: every
+//           ring's (a lip along the whole lock, as the fringe's lower edge over the forehead).
 //     ends  [front, back]: how far each tip stands beyond its ring, as a share of the spline's own spacing (1 the
 //           spline's end; less, a blunter end). tipUp: how high each tip stands off the spine, as a share of the
 //           ring's height.
@@ -28,11 +30,14 @@
 //   node tools/sculpt/lowhair.mjs [--who male|female] [--style swept]   # counts and checks
 import { buildRig, posed, skin, add, sub, mul, dot, cross, unit, lerp } from './lowrig.mjs';
 import SWEPT from './hairs/swept.mjs';
+import { angOf, carve, outlineDiff } from './lowhairhull.mjs';
 
 export const STYLES = { swept: SWEPT };
 // (the game's 'undercut', "Shaved sides", may later take this style's shave with a top of its own)
 
 const SINK = 0.04;
+/** A corner's least height off the skin (a lock never thinner), and the gap under a lip's front edge. */
+const MIN_H = 0.03, LIP = 0.015;
 
 /** The skull: the head's skin without the ears, as triangles, and its centre (level with the brow's outer end, midway
  * between the forehead and the back of the skull). */
@@ -68,14 +73,22 @@ function spline(pts, u) {
 const hash = (i, j) => { const x = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return x - Math.floor(x); };
 const at = (arr, u) => { const n = arr.length - 1, x = Math.min(n, Math.max(0, u * n)), i = Math.min(n - 1, Math.floor(x)); return n ? arr[i] + (arr[i + 1] - arr[i]) * (x - i) : arr[0]; };
 
-/** The style's clumps laid on the body's skull. */
-export function buildHair(rig, style = SWEPT) {
+/** The style's clumps laid on the body's skull. With a hull (tools/sculpt/lowhairhull.mjs carve, the sheet's hair
+ * carved from its silhouettes), each corner above the roots stands off the skin by its share of the hull's thickness
+ * there (sec's up, of the hull rather than of h), so the locks fill the sheet's outline and their ridges and grooves
+ * are the section's. */
+export function buildHair(rig, style = SWEPT, hull = null) {
   const B = rig.B, { tris: skull, centre: C } = skullOf(B);
   // the skull's size against the male's, for the clumps' widths and heights
   const P = (n) => B.verts[B.index.get(n)];
   const k = (P('f3.L')[0] + P('t0')[2] - P('bk')[2]) / (0.73 + 0.739 + 0.79);
   const surf = (over, out) => { const d = dirOf(over, out), h = hit(skull, C, d); return { p: add(C, mul(d, h.t)), n: h.n, d }; };
   const verts = [], polys = [], pieces = [];
+  // a point moved along its direction from the skull's centre to `b` of the hull's thickness off the skin there
+  const onHull = (q, b) => {
+    const dq = unit(sub(q, C)), hq = hit(skull, C, dq), [o, u] = angOf(dq);
+    return add(C, mul(dq, hq.t + Math.max(MIN_H * k, b * hull.thick.at(o, u) * k * (style.hullScale ?? 1))));
+  };
   for (const cl of style.clumps) {
     const n = cl.n ?? 9, sec = typeof cl.sec === 'string' ? style[cl.sec] : cl.sec ?? style.sec;
     const first = polys.length, base = verts.length;
@@ -101,7 +114,10 @@ export function buildHair(rig, style = SWEPT) {
         // a tip: drawn in toward its neighbour (ends: 1 the spline's own end, less blunter), raised off the spine
         const e = cl.ends ? cl.ends[i ? 1 : 0] : 1, nb = S[i ? n - 2 : 1];
         const hh = (i ? cl.h[cl.h.length - 1] : cl.h[0]) * k;
-        verts.push(add(lerp(nb, S[i], e), mul(nup, hh * (cl.tipUp ? cl.tipUp[i ? 1 : 0] : 0.4))));
+        const up0 = cl.tipUp ? cl.tipUp[i ? 1 : 0] : 0.4;
+        let q = add(lerp(nb, S[i], e), mul(nup, hh * up0));
+        if (hull) q = onHull(q, Math.max(up0, 0.15));
+        verts.push(q);
         ring.push([verts.length - 1]);
         continue;
       }
@@ -114,8 +130,10 @@ export function buildHair(rig, style = SWEPT) {
         const across = a + tw * b;
         let q = add(add(S[i], mul(side, -across * w)), mul(nup, root ? -above : b * hh));
         // a root on the skin under it, sunk into it
-        if (root) { const dq = unit(sub(q, C)), hq = hit(skull, C, dq); if (hq.t > 0) q = add(C, mul(dq, hq.t - SINK * k)); }
-        else if (style.jitter) q = add(q, [0, 1, 2].map((c) => (hash(pieces.length * 101 + i * 7 + j, c) - 0.5) * 2 * style.jitter * Math.min(1, hh / (0.2 * k)) * k));
+        // (at a lip, the front ring's roots stand just off the skin: the lock's front edge overhangs the forehead)
+        if (root) { const dq = unit(sub(q, C)), hq = hit(skull, C, dq); if (hq.t > 0) q = add(C, mul(dq, hq.t + ((cl.lip && i === 1) || cl.float ? LIP * k : -SINK * k))); }
+        else if (hull) q = onHull(q, b);
+        if (!root && style.jitter) q = add(q, [0, 1, 2].map((c) => (hash(pieces.length * 101 + i * 7 + j, c) - 0.5) * 2 * style.jitter * Math.min(1, hh / (0.2 * k)) * k));
         verts.push(q);
         r.push(verts.length - 1);
       });
@@ -242,9 +260,11 @@ export function crossings(rig, hair, P, H) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
+  const HULL = carve(opt('style', 'swept'));
   for (const who of opt('who', 'male,female').split(',')) {
-    const rig = buildRig(who), hair = buildHair(rig, STYLES[opt('style', 'swept')]);
+    const rig = buildRig(who), hair = buildHair(rig, STYLES[opt('style', 'swept')], HULL);
     const rest = crossings(rig, hair, rig.B.verts, hair.verts);
     console.log(who, 'tris', hair.tris.length, 'pieces', hair.pieces.map((p) => `${p.id}:${(p.polys[1] - p.polys[0])}`).join(' '), 'open edges', openEdges(hair), 'shaved polys', hair.shave.length, 'crossings at rest', rest.n, JSON.stringify(rest.hits.slice(0, 6).map(([h, s]) => [h, rig.B.polys[s].name])));
+    if (who === 'male') console.log('outline difference against the sheet (mean px):', Object.entries(outlineDiff(hair.tris.map(([a, b, c]) => [hair.verts[a], hair.verts[b], hair.verts[c]]))).map(([v, d]) => `${v} ${d.px}`).join(', '));
   }
 }

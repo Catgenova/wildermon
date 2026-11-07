@@ -189,11 +189,12 @@ if (MAIN) {
   const only = opt('only', 'views').split(','), style = STYLES[opt('style', 'swept')];
   const CAMS = JSON.parse(readFileSync(join(DIR, 'lowhaircams.json'), 'utf8'));
   const RIGS = {}, HAIRS = {};
-    const HULL = args.includes('--hull') ? carve(opt('style', 'swept')) : null;
+    // the hull carved from the sheet's silhouettes: the locks' heights (and, with --hull, drawn itself in their place)
+  const HULL = carve(opt('style', 'swept'));
   for (const who of opt('who', 'male,female').split(',')) {
     RIGS[who] = buildRig(who);
     // --hull: the carved hull's outer skin in place of the hair (with the shave of the style)
-    HAIRS[who] = HULL ? { ...hullSurface(HULL, RIGS[who]), shave: buildHair(RIGS[who], style).shave } : buildHair(RIGS[who], style);
+    HAIRS[who] = args.includes('--hull') ? { ...hullSurface(HULL, RIGS[who]), shave: buildHair(RIGS[who], style).shave } : buildHair(RIGS[who], style, HULL);
   }
   const stage = opt('tag', '');
 
