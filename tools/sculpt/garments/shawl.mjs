@@ -58,9 +58,9 @@ export const MATS = {
  */
 export const DESIGN = {
   male: {
-    z0: -0.12, front: 5, back: 5, OUT: 0.16, IN: 0.05, THICK: 0.11, bevel: 0.09, flare: [0.4, 0.2, 0.4], soften: 0.95,
+    z0: -0.12, front: 5, back: 5, OUT: 0.16, IN: 0.05, THICK: 0.11, bevel: 0.09, flare: [0.4, 0.3, 0.4], soften: 1,
     lift: { side: { a: 0.4, knee: 20, b: 1.3, max: 100, also: { axis: 'x', a: 0.3, max: 12 } }, front: { a: 0.3, knee: 40, b: 2.3, max: 100 }, back: { a: 0.4, knee: 30, b: 1.0, max: 60 }, frontAt: 60, backAt: 140, reach: [40, 40], from: 0.2, top: 0.2, roll: { l2: 0.6, l1: 0.3 } },
-    hem: { front: -3.9, corner: -2.5, back: -3.6, p: 1.2 },
+    hem: { front: -3.9, corner: -2.2, back: -3.6, p: 1.2 },
     border: [0.08, 0.3, 0.06],
     dip: 0.12,
     roll: { lean: [0.3, 0.2, 0.3], flat: [0.75, 0.95, 1.1], at: [0.6, 0.45, -0.15], drop: [0.1, 0, 0.3], ru: [0.4, 0.27, 0.5], rl: [0.4, 0.2, 0.4], gap: 1.05, crease: 0.45 },
