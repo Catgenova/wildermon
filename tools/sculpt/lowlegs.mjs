@@ -261,6 +261,7 @@ for (const who of Object.keys(PRESETS)) {
   if (!existsSync(file)) continue;
   const fit = JSON.parse(readFileSync(file, 'utf8'));
   if (fit.R) PRESETS[who].R = { ...PRESETS[who].R, ...fit.R };
+  if (fit.floor != null) PRESETS[who].floor = fit.floor;
   if (fit.D) PRESETS[who].D = { ...PRESETS[who].D, ...fit.D };
   if (fit.V) PRESETS[who].V = fit.V;
 }
