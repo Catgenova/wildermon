@@ -36,7 +36,9 @@ const mx = (p) => [-p[0], p[1], p[2]];
 export const WAIST = Array.from({ length: 9 }, (_, j) => `bt${j}`);
 export const BODY_ROWS = ['gl'];
 export const LEG_RINGS = ['th', 'tm', 'ka', 'kb', 'kc', 'ca', 'cb'];
-const REGION = { th: 'thigh', tm: 'thigh', ka: 'knee', kb: 'knee', kc: 'knee', ca: 'calf', cb: 'calf' };
+/** A preset's own rings (P.rings, when its reference draws more), else LEG_RINGS. */
+const ringsOf = (P) => P.rings ?? LEG_RINGS;
+const REGION = { th: 'thigh', tg: 'thigh', tm: 'thigh', tl: 'thigh', ka: 'knee', kb: 'knee', kc: 'knee', ca: 'calf', cb: 'calf' };
 
 /** The faces of one half, by vertex name: { v, part, name, region }. A cell of the rings is keyed by its upper ring and
  * left column ('tm3' the cell from tm3 down to ka4). P.merge lists groups of faces that are one plane in the reference:
@@ -71,8 +73,9 @@ export function halfFaces(P) {
   f('gr8', ['gl8', 'cx', T(6), T(5)], 'pelvis', 'thigh');
   f('gr9', ['cx', 'gl0', T(7), T(6)], 'pelvis', 'thigh');
   // the leg's rings
-  for (let i = 0; i + 1 < LEG_RINGS.length; i++) for (let j = 0; j < 8; j++) {
-    const r = LEG_RINGS[i], s = LEG_RINGS[i + 1], j1 = (j + 1) % 8;
+  const RINGS = ringsOf(P);
+  for (let i = 0; i + 1 < RINGS.length; i++) for (let j = 0; j < 8; j++) {
+    const r = RINGS[i], s = RINGS[i + 1], j1 = (j + 1) % 8;
     quad(`${r}${j}`, `${r}${j}`, `${r}${j1}`, `${s}${j1}`, `${s}${j}`, 'legs', REGION[r]);
   }
   // the calf's lower ring (eight) down to the ankle (six): its front (0) and back (4) close in triangles
@@ -226,6 +229,9 @@ export const PRESETS = {
     fixed: ['gl.0', 'gl.2', 'tm.0', 'cx.1', 'cx.2', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf', 'foot.wt'],
     split: ['kb0/', 'kb7', 'gr0', 'gr1/'],
     merge: KNEECAP,
+    // two more rings round the thigh: tg under the buttock (at the back the gluteal fold, th's back the buttock's round
+    // underside; the rig's groin and gluteal fold loop), tl half way down to the knee (the thigh's back and side curve)
+    rings: ['th', 'tg', 'tm', 'tl', 'ka', 'kb', 'kc', 'ca', 'cb'],
     // the buttocks as her leg sheet's back view and topology panel draw them: a row across the upper buttock (gm6..gm8,
     // between the hip cut and the hip row, so the profile rounds out from the waist), the hip row the buttock's lower
     // edge, under it the fold's V: from the hip row's side corner (gl5) down to the fold's inner corner (th4), its faces
@@ -237,7 +243,7 @@ export const PRESETS = {
         { name: 'bt6', v: ['bt6', 'bt7', 'gm7', 'gm6'] }, { name: 'bt7', v: ['bt7', 'bt8', 'gm8', 'gm7'] },
         { name: 'gm6', v: ['gm6', 'gm7', 'gl7', 'gl6'] }, { name: 'gm7', v: ['gm7', 'gm8', 'gl8', 'gl7'] },
         { name: 'gr5', v: ['gl5', 'gl6', 'th4'], region: 'thigh' }, { name: 'gr6', v: ['gl6', 'gl7', 'th4'], region: 'thigh' },
-        { name: 'th3', v: ['gl5', 'th4', 'tm4', 'tm3', 'th3'], part: 'legs', region: 'thigh' },
+        { name: 'th3', v: ['gl5', 'th4', 'tg4', 'tg3', 'th3'], part: 'legs', region: 'thigh' },
         { name: 'gr7a', v: ['gl7', 'gl8', 'th4'], region: 'thigh' }, { name: 'gr7b', v: ['gl8', 'th5', 'th4'], region: 'thigh' },
       ],
     }],
@@ -249,7 +255,7 @@ export function ringVerts(P) {
   const R = P.R, V = {};
   Object.assign(V, bodyRow('gl', R.gl[0], R.gl[1], R.gl[2], R.gl[3], 2.6, R.gD ?? P.R.gD));
   V.cx = [0, R.cx[1], R.cx[2]];
-  for (const r of LEG_RINGS) Object.assign(V, legRing(r, R[r][0], R[r][1], R[r][2], R[r][3], R[r][4], 0.72, P.D?.[r] ?? [], R[r][5] ?? 0));
+  for (const r of ringsOf(P)) if (R[r]) Object.assign(V, legRing(r, R[r][0], R[r][1], R[r][2], R[r][3], R[r][4], 0.72, P.D?.[r] ?? [], R[r][5] ?? 0));
   Object.assign(V, ankle(...R.an));
   Object.assign(V, foot({ ...R.foot, floor: P.floor }));
   return V;
@@ -287,7 +293,7 @@ export function buildLowLegs(who = 'male', preset = null) {
     else { verts.push([...p]); ids[1][name] = verts.length - 1; verts.push(mx(p)); ids[-1][name] = verts.length - 1; }
   }
   // the leg's axis at a height (the mean of its ring there), for turning faces outward
-  const ringAt = LEG_RINGS.map((r) => { const pts = Array.from({ length: 8 }, (_, j) => V[`${r}${j}`]); return [pts.reduce((a, q) => a + q[1], 0) / 8, pts.reduce((a, q) => a + q[0], 0) / 8, pts.reduce((a, q) => a + q[2], 0) / 8]; });
+  const ringAt = ringsOf(P).map((r) => { const pts = Array.from({ length: 8 }, (_, j) => V[`${r}${j}`]); return [pts.reduce((a, q) => a + q[1], 0) / 8, pts.reduce((a, q) => a + q[0], 0) / 8, pts.reduce((a, q) => a + q[2], 0) / 8]; });
   const an = Array.from({ length: 6 }, (_, j) => V[`an${j}`]);
   ringAt.push([an[0][1], an.reduce((a, q) => a + q[0], 0) / 6, an.reduce((a, q) => a + q[2], 0) / 6]);
   const axis = (y) => {
