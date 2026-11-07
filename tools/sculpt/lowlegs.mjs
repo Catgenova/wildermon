@@ -15,8 +15,9 @@
 // front (0) round the outside (2) and the back (4) to the inside (6): th the thigh's top (at the inside the crotch, at the
 // back the buttock's lower fold), tm the thigh's middle, ka kb kc the knee (its top, the kneecap's sides, its bottom; the
 // kneecap one plane), ca the calf's widest, cb the calf's lower ring; an the ankle, six sides (0 front
-// inner, 1 front outer, 2 outer, 3 back outer, 4 back inner, 5 inner); ft the block foot's top edge, six round it (0 toe
-// inner, 1 toe outer, 2 ball outer, 3 heel outer, 4 heel inner, 5 ball inner), so its sole edge, flat at the floor.
+// inner, 1 front outer, 2 outer, 3 back outer, 4 back inner, 5 inner); fc the block foot's collar under it (the instep's
+// crease, the heel's top), six as the ankle's; ft the top of the sole band, six round the foot (0 toe inner, 1 toe outer,
+// 2 ball outer, 3 heel outer, 4 heel inner, 5 ball inner), so the sole's edge, flat at the floor.
 //
 // Parts: pelvis, legs (both counted against the triangle budget). Regions, for the planes panel: pelvis, thigh, knee,
 // calf, foot.
@@ -85,12 +86,14 @@ export function halfFaces(P) {
   f('ak6', [C(5), C(6), A(5), A(4)], 'legs', 'calf');
   f('ak7', [C(6), C(7), A(0), A(5)], 'legs', 'calf');
   // the block foot: the ankle down to its top edge, the edge down to the sole
-  f('instep', [A(0), A(1), 'ft1', 'ft0'], 'legs', 'foot');
-  f('foot out front', [A(1), A(2), 'ft2', 'ft1'], 'legs', 'foot');
-  f('foot out back', [A(2), A(3), 'ft3', 'ft2'], 'legs', 'foot');
-  f('heel', [A(3), A(4), 'ft4', 'ft3'], 'legs', 'foot');
-  f('foot in back', [A(4), A(5), 'ft5', 'ft4'], 'legs', 'foot');
-  f('foot in front', [A(5), A(0), 'ft0', 'ft5'], 'legs', 'foot');
+  for (let k = 0; k < 6; k++) { const k1 = (k + 1) % 6; f(`ankle foot${k}`, [A(k), A(k1), `fc${k1}`, `fc${k}`], 'legs', 'foot'); }
+  const Cf = (k) => `fc${k}`;
+  f('instep', [Cf(0), Cf(1), 'ft1', 'ft0'], 'legs', 'foot');
+  f('foot out front', [Cf(1), Cf(2), 'ft2', 'ft1'], 'legs', 'foot');
+  f('foot out back', [Cf(2), Cf(3), 'ft3', 'ft2'], 'legs', 'foot');
+  f('heel', [Cf(3), Cf(4), 'ft4', 'ft3'], 'legs', 'foot');
+  f('foot in back', [Cf(4), Cf(5), 'ft5', 'ft4'], 'legs', 'foot');
+  f('foot in front', [Cf(5), Cf(0), 'ft0', 'ft5'], 'legs', 'foot');
   for (let k = 0; k < 6; k++) { const k1 = (k + 1) % 6; f(`sole edge${k}`, [`ft${k}`, `ft${k1}`, `so${k1}`, `so${k}`], 'legs', 'foot'); }
   f('sole', ['so0', 'so1', 'so2', 'so3', 'so4', 'so5'], 'legs', 'foot');
   for (const { name, cells, region } of P.merge ?? []) {
@@ -146,13 +149,18 @@ function ankle(y, xi, xo, zb, zf) {
 }
 // The block foot: its centre line at x, from the heel's back zh to the toe's front zt, half-widths at the toe, the ball
 // and the heel, the edge's height above the floor at the toe and at the heel, turned out by turn degrees about the ankle.
-function foot({ x, floor, zh, zt, zb, wt, wb, wh, ht, hh, turn = 0 }) {
-  const pts = { ft0: [-wt, ht, zt], ft1: [wt, ht, zt], ft2: [wb, hh, zb], ft3: [wh, hh, zh], ft4: [-wh, hh, zh], ft5: [-wb, hh, zb] };
+function foot({ x, floor, zh, zt, zb, wt, wb, wh, ht, hh, turn = 0, wc = 0.42, hc = 0.72, hcf = 0.6, zcf = 0.1 }) {
+  // the collar (fc): where the block begins under the ankle, the instep's crease at the front, the heel's top at the back
+  const zm = (zcf + zh) / 2, hm = (hc + hcf) / 2;
+  const pts = {
+    fc0: [-0.8 * wc, hcf, zcf], fc1: [0.8 * wc, hcf, zcf], fc2: [wc, hm, zm], fc3: [0.75 * wc, hc, zh], fc4: [-0.75 * wc, hc, zh], fc5: [-wc, hm, zm],
+    ft0: [-wt, ht, zt], ft1: [wt, ht, zt], ft2: [wb, hh, zb], ft3: [wh, hh, zh], ft4: [-wh, hh, zh], ft5: [-wb, hh, zb],
+  };
   const a = (turn * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a), out = {};
   for (const [n, [u, h, z]] of Object.entries(pts)) {
     const X = x + u * c + z * s, Z = -u * s + z * c;
     out[n] = [+X.toFixed(3), +(floor + h).toFixed(3), +Z.toFixed(3)];
-    out[n.replace('ft', 'so')] = [+X.toFixed(3), floor, +Z.toFixed(3)];
+    if (n.startsWith('ft')) out[n.replace('ft', 'so')] = [+X.toFixed(3), floor, +Z.toFixed(3)];
   }
   return out;
 }
@@ -178,7 +186,7 @@ export const PRESETS = {
     D: { th: [0, 0, 0, -0.4, -0.6, -0.45, -0.17, -0.05], kb: [0.12, 0, 0, 0, 0, 0, 0, 0], kc: [-0.12, 0, 0, 0, 0, 0, 0, 0] },
     // the pelvis' front and back under the loincloth (the sheet's views hide them), from the bare topology panel's
     // profile; the foot's block heights from the same panel
-    fixed: ['gl.2', 'gl.3', 'foot.ht', 'foot.hh', 'foot.wh'],
+    fixed: ['gl.2', 'gl.3', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf'],
     split: ['kb0/', 'kb7'],
     merge: [{ name: 'kneecap', cells: ['ka7', 'ka0', 'kb7b', 'kb0a'], region: 'knee' }],
   },
@@ -196,7 +204,7 @@ export const PRESETS = {
       foot: { x: 1.45, zh: -0.92, zt: 0.76, zb: 0.2, wt: 0.33, wb: 0.4, wh: 0.28, ht: 0.32, hh: 0.5, turn: 12 },
     },
     D: { th: [0, 0, 0, -0.4, -0.65, -0.5, -0.15, -0.05], kb: [0.1, 0, 0, 0, 0, 0, 0, 0], kc: [-0.1, 0, 0, 0, 0, 0, 0, 0] },
-    fixed: ['gl.2', 'foot.ht', 'foot.hh', 'foot.wh'],
+    fixed: ['gl.2', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf'],
     split: ['kb0/', 'kb7'],
     merge: [{ name: 'kneecap', cells: ['ka7', 'ka0', 'kb7b', 'kb0a'], region: 'knee' }],
   },
@@ -262,7 +270,7 @@ export function buildLowLegs(who = 'male', preset = null) {
     else if (part === 'pelvis' && !name.startsWith('gr')) ref = sub(c, [0, c[1], -0.05]);
     else if (name.startsWith('gr8') || name.startsWith('gr9')) ref = [Math.sign(c[0]) * 0.2, -1, 0];
     else if (name === 'instep') ref = [0, 1, 0.6];
-    else if (name.startsWith('foot') || name === 'heel' || name.startsWith('sole edge')) {
+    else if (name.startsWith('foot') || name.startsWith('ankle foot') || name === 'heel' || name.startsWith('sole edge')) {
       const fc = mul(['ft0', 'ft1', 'ft2', 'ft3', 'ft4', 'ft5'].map((k) => verts[ids[Math.sign(c[0]) || 1][k]]).reduce((a, p) => add(a, p), [0, 0, 0]), 1 / 6);
       ref = sub(c, [fc[0], c[1] + 0.3, fc[2]]);
     } else { const a = axis(c[1]); ref = sub(c, [Math.sign(c[0]) * a[1], c[1], a[2]]); }
