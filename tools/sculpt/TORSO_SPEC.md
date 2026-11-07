@@ -48,3 +48,8 @@ Decisions
   scored and not tuned; the renders use the heads' shared camera-fixed light.
 - 2026-11-07: male torso approved as done by the user. Frozen as in commit 65194921: no further changes to his vertices,
   faces or cameras; any change to the shared grid or face list for the female is checked against his render pixel for pixel.
+- 2026-11-07, the user's decision: the hip cut's ring (bt0..bt8) widened to the hip width of the full-body reference
+  (measured in head units by the pupil-to-chin span), so the legs continue it without a pinch:
+  half-width 1.14 at y -4.07 (was 0.55), the ring scaled across only, its depth and height kept. The one exception to the
+  freeze: only the ring and the row above it (hw0..hw8, refitted so the planes between stay flat) changed; everything
+  above is unchanged. The fitter holds the ring fixed; the torso sheet's bottom-cut-corner landmarks are dropped.
