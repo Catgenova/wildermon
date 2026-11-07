@@ -79,7 +79,7 @@ export const PRESETS = {
       ss0: [0, -0.66, 0.52], ss1: [0.6, -0.55, 0.4], ss2: [0.92, -0.44, -0.1], ss3: [0.62, -0.42, -0.68], ss4: [0, -0.48, -0.86],
       sb0: [0, -0.92, 0.6], sb1: [0.55, -0.92, 0.42], sb2: [0.66, -0.92, -0.06], sb3: [0.52, -0.92, -0.48], sb4: [0, -0.92, -0.56], sbc: [0, -0.92, 0],
     },
-    ear: { c: [0.6, 0.84, -0.03], zs: 1.18, tilt: 0.2, s: 1.05, gap: 0.03, flare: 0.4, lift: 0.18, thick: 0.14 },
+    ear: { c: [0.6, 0.84, -0.03], zs: 1.35, tilt: 0.2, s: 1.05, gap: 0.03, flare: 0.33, lift: 0.18, thick: 0.14 },
     nose: { top: 1.13, tip: 0.6, under: 0.54, wTop: 0.08, wBridge: 0.115, wWing: 0.14, out: 0.1, tipOut: 0.14 },
     brow: { x: [0.17, 0.32, 0.46, 0.56], yb: [1.155, 1.165, 1.16, 1.15], h: [0.085, 0.085, 0.075, 0.06], out: 0.055 },
     eye: { x: 0.31, y: 1.0, w: 0.11, h: 0.09, lid: 0.03, almond: 0 },
@@ -107,7 +107,7 @@ PRESETS.female = {
     ss0: [0, -0.76, 0.4], ss1: [0.52, -0.66, 0.3], ss2: [0.83, -0.64, -0.08], ss3: [0.52, -0.62, -0.52], ss4: [0, -0.64, -0.7],
     sb0: [0, -0.98, 0.52], sb1: [0.44, -0.98, 0.38], sb2: [0.55, -0.98, -0.06], sb3: [0.42, -0.98, -0.38], sb4: [0, -0.98, -0.46], sbc: [0, -0.98, 0],
   },
-  ear: { c: [0.56, 0.77, -0.03], zs: 1.15, tilt: 0.18, s: 0.88, gap: 0.025, flare: 0.36, lift: 0.16, thick: 0.12 },
+  ear: { c: [0.56, 0.77, -0.03], zs: 1.3, tilt: 0.18, s: 0.88, gap: 0.025, flare: 0.3, lift: 0.16, thick: 0.12 },
   nose: { top: 1.08, tip: 0.75, under: 0.71, wTop: 0.04, wBridge: 0.06, wWing: 0.085, out: 0.08, tipOut: 0.11 },
   brow: { x: [0.18, 0.31, 0.43, 0.54], yb: [1.19, 1.235, 1.235, 1.195], h: [0.045, 0.045, 0.035, 0.022], out: 0.05 },
   eye: { x: 0.345, y: 0.975, w: 0.14, h: 0.13, lid: 0.035, almond: 1 },
@@ -256,11 +256,12 @@ export function buildLowHead(who = 'male') {
     });
   }
 
-  // The ears: a bevelled slab off the head's side, its outline a rounded tall octagon, tilted out at the top and the
-  // back; its outer face flat with a shallow sunk bowl, the bevel round it, a back that meets the head.
+  // The ears: a bevelled slab off the head's side, its outline a rounded C (a round top, a narrower lobe), tilted
+  // back; on its outer face the helix's rim, the antihelix's fold standing inside it, the concha sunk in the middle
+  // and opening forward, a back that meets the head.
   {
     const E = P.ear;
-    const outline = [[0.1, 0.24], [0.02, 0.3], [-0.1, 0.29], [-0.17, 0.18], [-0.185, 0.0], [-0.14, -0.18], [-0.05, -0.28], [0.06, -0.24]];
+    const outline = [[0.1, 0.22], [0.04, 0.29], [-0.05, 0.315], [-0.13, 0.28], [-0.18, 0.18], [-0.19, 0.04], [-0.16, -0.1], [-0.11, -0.22], [-0.04, -0.29], [0.05, -0.25]];
     both((s) => {
       const rim = outline.map(([dz, dy]) => {
         const z = (dz * (E.zs ?? 1) - dy * (E.tilt ?? 0)) * E.s, y = dy * E.s;
@@ -272,22 +273,25 @@ export function buildLowHead(who = 'male') {
       for (let i = 0; i < rim.length; i++) n = add(n, cross(rim[i], rim[(i + 1) % rim.length]));
       n = unit(n);
       if (n[0] < 0) n = mul(n, -1); // the outer face looks out
-      const face = rim.map((p) => add(lerp(c, p, 0.84), mul(n, 0.035 * E.s)));
-      const bowl = rim.map((p, i) => add(lerp(c, p, 0.5), add(mul(n, 0.012 * E.s), [0, 0, 0.03 * E.s])));
+      const cf = add(c, [0, -0.02 * E.s, 0.05 * E.s]); // the concha's centre, toward the front and down: the C opens forward
+      const face = rim.map((p) => add(lerp(c, p, 0.86), mul(n, 0.03 * E.s)));
+      const fold = rim.map((p) => add(lerp(cf, p, 0.6), mul(n, 0.028 * E.s)));
+      const concha = rim.map((p) => add(lerp(cf, p, 0.36), mul(n, 0.0)));
       const back = rim.map((p) => add(lerp(c, p, 0.9), mul(n, -E.thick * E.s)));
-      const R = rim.map((p) => vert(flip(p, s))), F = face.map((p) => vert(flip(p, s))), I = bowl.map((p) => vert(flip(p, s))), Bk = back.map((p) => vert(flip(p, s)));
+      const V = (arr) => arr.map((p) => vert(flip(p, s)));
+      const R = V(rim), F = V(face), A = V(fold), C = V(concha), Bk = V(back);
       const o = (v) => { poly(s > 0 ? v : [...v].reverse(), 'head', 'skull'); polys[polys.length - 1].ear = true; };
       const N = rim.length;
-      // wind every face so its normal looks out along n (the outer face) or away from the slab's middle
       const wind = dot(cross(sub(rim[1], rim[0]), sub(rim[2], rim[0])), n) > 0;
       const w = (v) => (wind ? v : [...v].reverse());
       for (let i = 0; i < N; i++) {
         const j = (i + 1) % N;
-        o(w([R[i], R[j], F[j], F[i]]));   // the bevel
+        o(w([R[i], R[j], F[j], F[i]]));   // the helix's outer bevel
         o(w([Bk[i], Bk[j], R[j], R[i]]));  // the side
-        o(w([F[i], F[j], I[j], I[i]]));   // the face round the bowl
+        o(w([F[i], F[j], A[j], A[i]]));   // the helix's inner slope down to the fold
+        o(w([A[i], A[j], C[j], C[i]]));   // the fold's wall down into the concha
       }
-      o(w([...I]));
+      o(w([...C]));
       o(w([...Bk].reverse()));
     });
   }
