@@ -299,10 +299,11 @@ export function buildLowHead(who = 'male', preset = null) {
   // and opening forward, a back that meets the head.
   {
     const E = P.ear;
-    const outline = [[0.1, 0.22], [0.04, 0.29], [-0.05, 0.315], [-0.13, 0.28], [-0.18, 0.18], [-0.19, 0.04], [-0.16, -0.1], [-0.11, -0.22], [-0.04, -0.29], [0.05, -0.25]];
+    const outline = E.outline ?? [[0.1, 0.22], [0.04, 0.29], [-0.05, 0.315], [-0.13, 0.28], [-0.18, 0.18], [-0.19, 0.04], [-0.16, -0.1], [-0.11, -0.22], [-0.04, -0.29], [0.05, -0.25]];
     both((s) => {
+      // E.outline: the rim's (forward, up) offsets from E.c in head units, as measured off the reference's profile
       const rim = outline.map(([dz, dy]) => {
-        const z = (dz * (E.zs ?? 1) - dy * (E.tilt ?? 0)) * E.s, y = dy * E.s;
+        const z = E.outline ? dz : (dz * (E.zs ?? 1) - dy * (E.tilt ?? 0)) * E.s, y = E.outline ? dy : dy * E.s;
         const out = E.gap + (0.1 * E.s - z) * E.flare + (y + 0.3 * E.s) * E.lift;
         return [E.c[0] + out, E.c[1] + y, E.c[2] + z];
       });
