@@ -41,11 +41,6 @@
     342,
     "hw4'"
    ],
-   "bottom cut corner'": [
-    140,
-    369,
-    "bt4'"
-   ],
    "neck top": [
     190,
     77,
@@ -200,11 +195,6 @@
     191,
     350,
     "hw1"
-   ],
-   "bottom cut corner": [
-    190,
-    369,
-    "bt4"
    ],
    "bottom cut, centre": [
     165,
@@ -461,16 +451,6 @@
     343.3,
     "hw4'"
    ],
-   "bottom cut corner": [
-    1025,
-    363.3,
-    "bt4"
-   ],
-   "bottom cut corner'": [
-    1123.3,
-    363.3,
-    "bt4'"
-   ],
    "trapezius point": [
     1078,
     140,
@@ -544,16 +524,16 @@
    "shoulder widest": [
     270,
     161.7,
-    "sd4"
+    "da4"
    ],
    "shoulder widest'": [
     53.3,
     161.7,
-    "sd4'"
+    "da4'"
    ],
    "breast top": [
-    206.7,
-    150,
+    196,
+    148,
     "da1"
    ],
    "breast point": [
@@ -621,20 +601,20 @@
     345,
     "hw4'"
    ],
-   "bottom cut corner": [
-    215,
-    382,
-    "bt4"
-   ],
-   "bottom cut corner'": [
-    105,
-    382,
-    "bt4'"
-   ],
    "breast upper outer": [
-    224,
-    160,
+    230,
+    166,
     "da2"
+   ],
+   "breast top inner": [
+    169,
+    161,
+    "bx0"
+   ],
+   "breasts meet, top": [
+    161.7,
+    170,
+    "da0"
    ]
   },
   "profile": {
@@ -661,7 +641,7 @@
    "breast lower edge": [
     688.3,
     210,
-    "br5'"
+    "br8'"
    ],
    "arm cut centre": [
     601.7,
@@ -680,7 +660,7 @@
    "waist back": [
     593.3,
     270,
-    "rc8"
+    "rc7"
    ],
    "buttocks": [
     560,
@@ -727,12 +707,12 @@
    "shoulder widest": [
     963.3,
     168.7,
-    "sd4"
+    "da4"
    ],
    "shoulder widest'": [
     1178.3,
     168.7,
-    "sd4'"
+    "da4'"
    ],
    "shoulder blade tip": [
     1038.3,
@@ -763,16 +743,6 @@
     1151.7,
     348.7,
     "hw4'"
-   ],
-   "bottom cut corner": [
-    1000,
-    380.3,
-    "bt4"
-   ],
-   "bottom cut corner'": [
-    1143.3,
-    380.3,
-    "bt4'"
    ]
   }
  }
