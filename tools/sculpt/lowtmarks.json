@@ -513,5 +513,267 @@
     "da4'"
    ]
   }
+ },
+ "female": {
+  "front": {
+   "neck top": [
+    186.7,
+    81.7,
+    "nt2"
+   ],
+   "neck top'": [
+    136.7,
+    81.7,
+    "nt2'"
+   ],
+   "neck base": [
+    163.3,
+    123.3,
+    "nm0"
+   ],
+   "shoulder point": [
+    248.3,
+    125,
+    "tr4"
+   ],
+   "shoulder point'": [
+    73.3,
+    125,
+    "tr4'"
+   ],
+   "shoulder widest": [
+    270,
+    161.7,
+    "sd4"
+   ],
+   "shoulder widest'": [
+    53.3,
+    161.7,
+    "sd4'"
+   ],
+   "breast top": [
+    206.7,
+    150,
+    "da1"
+   ],
+   "breast point": [
+    206.7,
+    175,
+    "db1"
+   ],
+   "breast point'": [
+    123.3,
+    175,
+    "db1'"
+   ],
+   "breast outer": [
+    233.3,
+    185,
+    "db2"
+   ],
+   "breast outer'": [
+    90,
+    185,
+    "db2'"
+   ],
+   "breast lower edge": [
+    200,
+    220,
+    "dc1"
+   ],
+   "breast lower edge'": [
+    130,
+    220,
+    "dc1'"
+   ],
+   "under the breasts, centre": [
+    161.7,
+    193,
+    "dc0"
+   ],
+   "ribcage, centre": [
+    161.7,
+    230,
+    "ra0"
+   ],
+   "waist narrowest": [
+    210,
+    261.7,
+    "rc4"
+   ],
+   "waist narrowest'": [
+    115,
+    261.7,
+    "rc4'"
+   ],
+   "navel": [
+    163.3,
+    305,
+    "hi0"
+   ],
+   "hip widest": [
+    243.3,
+    345,
+    "hw4"
+   ],
+   "hip widest'": [
+    81.7,
+    345,
+    "hw4'"
+   ],
+   "bottom cut corner": [
+    215,
+    382,
+    "bt4"
+   ],
+   "bottom cut corner'": [
+    105,
+    382,
+    "bt4'"
+   ],
+   "breast upper outer": [
+    224,
+    160,
+    "da2"
+   ]
+  },
+  "profile": {
+   "neck top front": [
+    641.7,
+    88.3,
+    "nt0"
+   ],
+   "neck top back": [
+    590,
+    78.3,
+    "nt5"
+   ],
+   "neck base": [
+    645,
+    126.7,
+    "nm0"
+   ],
+   "breast point": [
+    695,
+    180,
+    "db1'"
+   ],
+   "breast lower edge": [
+    688.3,
+    210,
+    "br5'"
+   ],
+   "arm cut centre": [
+    601.7,
+    180,
+    [
+     "da3'",
+     "da4'",
+     "da5'",
+     "db3'",
+     "db5'",
+     "dc3'",
+     "dc4'",
+     "dc5'"
+    ]
+   ],
+   "waist back": [
+    593.3,
+    270,
+    "rc8"
+   ],
+   "buttocks": [
+    560,
+    346.7,
+    "hw8"
+   ],
+   "bottom cut back": [
+    576.7,
+    376.7,
+    "bt8"
+   ],
+   "bottom cut front": [
+    663.3,
+    381.7,
+    "bt0"
+   ],
+   "breast crease": [
+    673.3,
+    216.7,
+    "dc1'"
+   ]
+  },
+  "back": {
+   "neck top": [
+    1045,
+    77,
+    "nt2"
+   ],
+   "neck top'": [
+    1098.3,
+    77,
+    "nt2'"
+   ],
+   "shoulder point": [
+    990,
+    122,
+    "tr4"
+   ],
+   "shoulder point'": [
+    1150,
+    120.3,
+    "tr4'"
+   ],
+   "shoulder widest": [
+    963.3,
+    168.7,
+    "sd4"
+   ],
+   "shoulder widest'": [
+    1178.3,
+    168.7,
+    "sd4'"
+   ],
+   "shoulder blade tip": [
+    1038.3,
+    218.7,
+    "dc7"
+   ],
+   "shoulder blade tip'": [
+    1106.7,
+    218.7,
+    "dc7'"
+   ],
+   "waist narrowest": [
+    1021.7,
+    268.7,
+    "rc4"
+   ],
+   "waist narrowest'": [
+    1120,
+    268.7,
+    "rc4'"
+   ],
+   "buttocks widest": [
+    991.7,
+    348.7,
+    "hw4"
+   ],
+   "buttocks widest'": [
+    1151.7,
+    348.7,
+    "hw4'"
+   ],
+   "bottom cut corner": [
+    1000,
+    380.3,
+    "bt4"
+   ],
+   "bottom cut corner'": [
+    1143.3,
+    380.3,
+    "bt4'"
+   ]
+  }
  }
 }

@@ -17,7 +17,7 @@ VIEWS = ['front', 'q3', 'profile', 'r3', 'back', 'top', 'bottom', 'under']
 # the panels past the views, per sheet: the planes front and back (her side silhouette) and the topology front and back
 PANELS = {
     'male': [(705, 474, 945, 735), (965, 474, 1205, 735), (1018, 786, 1222, 1003), (1222, 786, 1412, 1003)],
-    'female': [(690, 490, 880, 735), (950, 490, 1140, 735), (1050, 770, 1225, 1005), (1255, 770, 1425, 1005)],
+    'female': [(690, 490, 880, 735), (950, 490, 1140, 735), (1050, 784, 1225, 1005), (1255, 784, 1425, 1005)],
 }
 
 def erode(m, n=1):
