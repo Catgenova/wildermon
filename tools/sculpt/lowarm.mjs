@@ -20,8 +20,9 @@
 //   index) and td; the thumb's root ta tb tc td (ta tb the back's side, tc td the palm's; tb tc toward the index) and its two
 //   segments t1a..t1d, t2a..t2d, closed at the tip.
 // Shown alone, as the sheets show it, the arm is closed by the cap (part 'cap', the deltoid's ball: rings ca cb (cc) and the
-// point ct) from its first ring ua up; joined to the torso (buildArmBody), the joint (part 'joint', the band from the
-// torso's ring r to ua) takes the cap's place and the torso's own shoulder covers it.
+// point ct) from its first ring ua up; joined to the torso (buildArmBody), the joint (part 'joint') takes the cap's
+// place: the deltoid's ball as the arm's own, from the torso's ring (cut where the chest, the trapezius and the back
+// meet the deltoid) through ja (over the shoulder's top) and jb (its widest) down to ua.
 //
 // Parts: cap, arm, hand. Regions, for the colour-coded arm: deltoid, upper, forearm, hand.
 
