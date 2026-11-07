@@ -30,8 +30,8 @@ export const FACES = [
   // the crown: a flat cap of three facets a side on the top ring a, then a band down to the ring t
   ['c', 'a0', 'a1'], ['c', 'a1', 'a2'], ['c', 'a2', 'a3'],
   ['a0', 'a1', 't1', 't0'], ['a1', 'a2', 't2', 't1'], ['a2', 'a3', 't3', 't2'],
-  // the forehead: one large plane each side of the centre from the skull's top ring to the brow; the temple
-  ['t0', 't1', 'b2', 'b1', 'b0'], ['t1', 'f2', 'b3', 'b2'], ['t1', 't2', 'f3', 'f2'], ['f2', 'b4', 'b3'], ['f2', 'f3', 'b5', 'b4'],
+  // the temple
+  ['t1', 'f2', 'b3', 'b2'], ['t1', 't2', 'f3', 'f2'], ['f2', 'b4', 'b3'], ['f2', 'f3', 'b5', 'b4'],
   // the skull's side and back
   ['t2', 't3', 'f4', 'f3'], ['f3', 'f4', 'o6', 'e5', 'b5'],
   // the brow down to under the eyes: the nose's root, the eye's socket (inner, outer), the temple, the side, the back
@@ -51,6 +51,8 @@ export const FACES = [
 // The back of the skull: large facets that span the centre line (no seam down the middle), fanning round the back's
 // bump bk from the crown to the nape; emitted once, a name with ' the other side's vertex.
 export const SPAN_FACES = [
+  // the forehead: one plane across the centre line, from the skull's top ring to the brow
+  ['t0', 't1', 'b2', 'b1', 'b0', "b1'", "b2'", "t1'"],
   ['a3', "t3'", 't3'],
   ['bk', 't3', "t3'"], ['bk', "t3'", "f4'"], ['bk', "f4'", "o6'"], ['bk', "o6'", 'o6'], ['bk', 'o6', 'f4'], ['bk', 'f4', 't3'],
   ['o6', "o6'", "n6'", 'n6'],
