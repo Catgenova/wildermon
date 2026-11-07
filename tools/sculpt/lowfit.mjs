@@ -82,15 +82,18 @@ export function silhouette(mesh, view, cam, box) {
 // The light, as tools/sculpt/lowshot.mjs's shader has it at its defaults (no occlusion, no gradient over the face):
 // a facet's luminance from its normal in view space and its material's colour.
 const nrm = (v) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
-const LK = nrm([0.3, 0.5, 0.84]), LR = nrm([1, 0.45, 0.05]), LC = nrm([-0.7, 0.6, 0.35]), LB = nrm([-0.95, 0.25, -0.2]), LU = nrm([0.6, 0.75, 0.3]);
+// The rig's numbers, as lowshot.mjs takes them (its --amb, --key, ... options); `light` stage fits them.
+export const RIG = { amb: 0.57, key: 0.42, warm: 0.32, cool: 1.2, rim: 0.6, upr: 0.12, cspec: 0.4, kx: 0.3, ky: 0.5, lcz: 0.35, lbz: -0.2, cpow: 2.5, rpow: 3, down: 0.14, up: 0.06 };
 const BASE = { skin: [0.68, 0.49, 0.41], brow: [0.36, 0.22, 0.15], pupil: [0.09, 0.09, 0.11], lid: [0.36, 0.24, 0.2] };
 const dotp = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 export function lightLum(n, mat) {
+  const R = RIG;
+  const LK = nrm([R.kx, R.ky, 0.84]), LR = nrm([1, 0.45, 0.05]), LC = nrm([-0.7, 0.6, R.lcz]), LB = nrm([-0.95, 0.25, R.lbz]), LU = nrm([0.6, 0.75, 0.3]);
   const base = BASE[mat] ?? BASE.skin, k = 0.3 + (0.7 * base[0]) / 0.68;
   const dk = Math.max(dotp(n, LK), 0), dr = Math.max(dotp(n, LR), 0), dc = Math.max(dotp(n, LC), 0), du = Math.max(dotp(n, LU), 0);
-  const a = 0.57 + 0.14 * Math.min(n[1], 0) + 0.06 * Math.max(n[1], 0);
-  const L = [a * 1.02 + 0.42 * dk + 0.32 * dr * 1.04 + 0.12 * du * du * 1.08, a * 0.98 + 0.42 * dk * 0.97 + 0.32 * dr * 0.96 + 0.12 * du * du * 0.9, a * 0.94 + 0.42 * dk * 0.92 + 0.32 * dr * 0.84 + 0.12 * du * du * 0.86];
-  const cool = 1.2 * Math.pow(Math.max(dotp(n, LB), 0), 2.5), rim = 0.6 * Math.max(-n[0], 0) * Math.pow(1 - Math.max(n[2], 0), 3), spec = 0.4 * Math.pow(dc, 6);
+  const a = R.amb + R.down * Math.min(n[1], 0) + R.up * Math.max(n[1], 0);
+  const L = [a * 1.02 + R.key * dk + R.warm * dr * 1.04 + R.upr * du * du * 1.08, a * 0.98 + R.key * dk * 0.97 + R.warm * dr * 0.96 + R.upr * du * du * 0.9, a * 0.94 + R.key * dk * 0.92 + R.warm * dr * 0.84 + R.upr * du * du * 0.86];
+  const cool = R.cool * Math.pow(Math.max(dotp(n, LB), 0), R.cpow), rim = R.rim * Math.max(-n[0], 0) * Math.pow(1 - Math.max(n[2], 0), R.rpow), spec = R.cspec * Math.pow(dc, 6);
   const c = [0, 1, 2].map((i) => (base[i] * L[i] + k * (spec * [0.12, 0.34, 0.6][i] + cool * [0.2, 0.27, 0.36][i] + rim * [0.5, 0.62, 0.85][i])) * 0.97);
   return 255 * Math.min(1, 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]);
 }
@@ -260,7 +263,7 @@ function descend(params, f, rounds = 6) {
 function limit(v, k, x) {
   const d = v === 'r3' && Math.abs(cams[v].yaw - 225) < 45 ? { ...DEFAULT_CAMS[v], yaw: 225 } : DEFAULT_CAMS[v];
   if (k === 'f') return Math.max(2.5, x);
-  if (k === 'yaw') return Math.min(d.yaw + 20, Math.max(d.yaw - 20, x));
+  if (k === 'yaw') { const r = +opt('yawrange', '20'); return Math.min(d.yaw + r, Math.max(d.yaw - r, x)); }
   if (k === 'pitch') { const r = v === 'top' || v === 'bottom' ? 25 : 12; return Math.min(d.pitch + r, Math.max(d.pitch - r, x)); }
   return x;
 }
@@ -401,6 +404,18 @@ if (stage === 'ffd') {
   writeFileSync(join(DIR, `lowfit-${who}.json`), JSON.stringify({ V: P.V, ear: P.ear, eye: P.eye, brow: P.brow }, null, 1));
   saveCams(cams);
   report('after');
+}
+
+if (stage === 'light') {
+  // the rig fitted to the reference's luminance in every view (the absolute grey, not only its pattern), the head as it is
+  FW.shade = 1;
+  const abs = (v) => { const r = R[v]; const sh = shading(mesh, v, cams[v], r.box); let s = 0, n = 0; for (let k = 0; k < sh.length; k++) if (sh[k] >= 0 && r.m[k]) { s += Math.abs(sh[k] - r.lum[k]); n++; } return n ? s / n : 0; };
+  const total = () => VIEWS.reduce((s, v) => s + abs(v), 0);
+  console.log('before', VIEWS.map((v) => `${v} ${abs(v).toFixed(1)}`).join('  '));
+  const keys = Object.keys(RIG);
+  descend(keys.map((k) => ({ step: Math.max(0.05, Math.abs(RIG[k]) * 0.2), get: () => RIG[k], set: (x) => { RIG[k] = k.endsWith('pow') ? Math.max(0.5, x) : x; } })), total, +opt('rounds', 6));
+  console.log('after ', VIEWS.map((v) => `${v} ${abs(v).toFixed(1)}`).join('  '));
+  console.log(JSON.stringify(Object.fromEntries(keys.map((k) => [k, +RIG[k].toFixed(3)]))));
 }
 
 if (stage === 'report') report('now');
