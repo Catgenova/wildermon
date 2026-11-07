@@ -21,8 +21,8 @@
 // r0..r2 are the outline (the body's foot outline grown by the margins); r3..r8 are each a ring round a centre (the
 // foot's middle for r3 r4, the leg's axis for r5..r8) at its own height, each column's point the further of its design
 // and the body's reach that way grown by the clearance `clear` (so the body is always inside). The sole's underside is
-// closed; the rim's inside edge is the one open edge (round the leg). Materials: leather, strap, sole, skin (her toes:
-// the body's own skin colour in the game).
+// closed; the rim's inside edge is the one open edge (round the leg). Materials: leather (the shaft and the cuff), tan (the
+// foot), strap, sole, skin (her toes: the body's own skin colour in the game).
 //
 // Heights: the body stands on the boots' soles (the game stands a body on its lowest sole: with the boots on, theirs),
 // so the ground is the body's floor less the sole and `gap`; the cuff's foot at `cuff[0]` and its top at `cuff[1]` head
@@ -34,9 +34,11 @@
 import { meshOf, orient, trisOf, transferWeights, samplesOf, sub, add, mul, dot, unit, lerp } from '../lowgarment.mjs';
 
 export const MATS = {
-  leather: [0.6, 0.38, 0.24],
-  strap: [0.74, 0.64, 0.57],
-  sole: [0.40, 0.25, 0.19],
+  // the cuff and the shaft: tan-brown leather; the foot (toe and heel): a lighter tan; the straps: cream; the sole: dark brown
+  leather: [0.66, 0.42, 0.28],
+  tan: [0.77, 0.51, 0.35],
+  strap: [0.86, 0.76, 0.67],
+  sole: [0.46, 0.29, 0.2],
   // (her bare toes: the body's own skin in the game, src/sculpt/lowpoly.ts; this the skin the light was fitted to)
   skin: [0.68, 0.49, 0.41],
 };
@@ -185,8 +187,8 @@ export function buildBoots(rig, design = DESIGN[rig.who]) {
     band(R.r1, R.r2, 'sole', 'welt');
     // her toes: the columns in front of the forefoot band (front's and ball's columns between them)
     const toes = (k) => (D.open && D.cols[k][0] >= 0.6 && D.cols[(k + 1) % K][0] >= 0.6 ? 'skin' : null);
-    band(R.r2, R.r3, 'leather', 'wall', toes);
-    band(R.r3, R.r4, 'leather', 'over', toes);
+    band(R.r2, R.r3, 'tan', 'wall', toes);
+    band(R.r3, R.r4, 'tan', 'over', toes);
     band(R.r4, R.r5, 'leather', 'shoulder');
     band(R.r5, R.r6, 'leather', 'shaft');
     band(R.r6, R.r6b, 'leather', 'ledge');
