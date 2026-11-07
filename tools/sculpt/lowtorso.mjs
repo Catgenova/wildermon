@@ -16,7 +16,8 @@
 // the side (4) to the back's centre line (8): 1 and 2 the front's planes (the abs' edge, the obliques' line), 3 the front's
 // corner, 5 the back's corner, 6 and 7 the back's planes (the shoulder blades' and the lats' line, the spine's muscles).
 // Cut flat: the neck's top, each arm (one face on rows da db dc, columns 3 to 5, as the sheets draw it), the hips.
-// Her breasts: on rows da db dc, columns 0 to 2, a fan of facets round the point db1 (a middle ring br0..br7).
+// Her breasts: on rows da db dc, columns 0 to 2, a dome of facets round the point db1: its foot on the chest the grid's
+// eight points round the patch with points between (P.breastRing), a middle ring br0.. derived from the foot (P.dome).
 //
 // Parts: torso (counted against the 400-800 triangle budget with the neck), neck. Regions, for the planes panel:
 // shoulder, chest, abdomen, pelvis.
@@ -39,6 +40,15 @@ export const NECK_FOOT = ['nm0', 'nm1', 'nm2', 'nm3', 'nm4', 'nm5'];
 const FOOT_COL = [0, 1, 2, 4, 6, 8];
 const ARM = { rows: ['da', 'db', 'dc'], cols: [3, 4, 5] };
 const BREAST = { rows: ['da', 'db', 'dc'], cols: [0, 1, 2] };
+// The grid's points round the breast's patch, in order round its foot; P.breastRing may add points between them.
+const BREAST_GRID = ['da0', 'da1', 'da2', 'db2', 'dc2', 'dc1', 'dc0', 'db0'];
+const breastRing = (P) => P.breastRing ?? BREAST_GRID;
+/** The breast's middle ring: its foot drawn toward the point (P.dome.mu of the way out from it) and moved by P.dome.d, so
+ * each facet between the two rings has two parallel sides and stays flat. */
+export function domeRing(P, V) {
+  const A = V.db1, { mu, d } = P.dome;
+  return Object.fromEntries(breastRing(P).map((b, k) => [`br${k}`, [0, 1, 2].map((q) => A[q] + mu * (V[b][q] - A[q]) + d[q])]));
+}
 
 /** The faces of one half, by vertex name: { v: names, part, name }. The grid's cells are keyed by their upper row and
  * left column ('da2' the cell from da2 down to db3); the faces from the neck's foot 'nb0'..'nb4' (with 'nb2t' and so
@@ -72,11 +82,37 @@ export function halfFaces(P) {
   // the arm's cut: one flat face
   f('arm', ['da3', 'da4', 'da5', 'db5', 'dc5', 'dc4', 'dc3', 'db3'], 'torso', 'arm cut');
   if (breasts) {
-    const B = ['da0', 'da1', 'da2', 'db2', 'dc2', 'dc1', 'dc0', 'db0'];
-    for (let k = 0; k < 8; k++) {
-      const k1 = (k + 1) % 8;
+    // the breast's foot on the chest (BREAST_RING: the grid's eight points round the patch and the extra points between
+    // them), a middle ring br0.. one to one with it, the point db1
+    const B = breastRing(P), n = B.length;
+    // an extra point lies on the edge between the grid points either side of it: the grid's faces there take it too
+    const grid = new Set(BREAST_GRID);
+    for (let k = 0; k < n; k++) {
+      if (!grid.has(B[k]) || grid.has(B[(k + 1) % n])) continue;
+      const run = [];
+      let e = (k + 1) % n;
+      for (; !grid.has(B[e]); e = (e + 1) % n) run.push(B[e]);
+      const u = B[k], w = B[e];
+      for (const face of F.values()) {
+        const m = face.v.length;
+        for (let i = 0; i < m; i++) {
+          const a = face.v[i], b = face.v[(i + 1) % m];
+          if (a === u && b === w) { face.v.splice(i + 1, 0, ...run); break; }
+          if (a === w && b === u) { face.v.splice(i + 1, 0, ...[...run].reverse()); break; }
+        }
+      }
+    }
+    // P.fan: a cell that takes extra points cut into triangles from one of its corners, { cell: corner }
+    for (const [key, at] of Object.entries(P.fan ?? {})) {
+      const face = F.get(key), i = face.v.indexOf(at), v = [...face.v.slice(i), ...face.v.slice(0, i)];
+      F.delete(key);
+      for (let t = 1; t + 1 < v.length; t++) f(`${key}f${t}`, [v[0], v[t], v[t + 1]], face.part);
+    }
+    for (let k = 0; k < n; k++) {
+      const k1 = (k + 1) % n;
       f(`bq${k}`, [B[k], B[k1], `br${k1}`, `br${k}`], 'torso');
       f(`bt${k}`, [`br${k}`, `br${k1}`, 'db1'], 'torso');
+      F.get(`bq${k}`).region = F.get(`bt${k}`).region = 'chest';
     }
   }
   // the reference's single planes: each group's cells one polygon, round the outline of their union
@@ -188,7 +224,7 @@ PRESETS.female = {
     da0: [0, -1.05, 0.45], da1: [0.56, -0.96, 0.5], da2: [0.83, -0.93, 0.3], da3: [1.36, -1.2, -0.14], da4: [1.43, -1.14, -0.3], da5: [1.36, -1.2, -0.46], da6: [0.85, -1.1, -0.78], da7: [0.4, -1.1, -0.82], da8: [0, -1.1, -0.8],
     db0: [0, -1.33, 0.5], db1: [0.52, -1.27, 0.86], db2: [0.9, -1.39, 0.35], db3: [1.2, -1.33, -0.08], db5: [1.2, -1.33, -0.52], db6: [0.85, -1.35, -0.78], db7: [0.42, -1.35, -0.8], db8: [0, -1.35, -0.78],
     dc0: [0, -1.49, 0.5], dc1: [0.48, -1.83, 0.55], dc2: [0.83, -1.58, 0.32], dc3: [1.04, -1.46, -0.14], dc4: [0.97, -1.52, -0.3], dc5: [1.04, -1.46, -0.46], dc6: [0.8, -1.6, -0.72], dc7: [0.42, -1.8, -0.72], dc8: [0, -1.75, -0.7],
-    br0: [0.234, -1.149, 0.77], br1: [0.542, -1.099, 0.781], br2: [0.691, -1.083, 0.737], br3: [0.729, -1.336, 0.748], br4: [0.691, -1.441, 0.741], br5: [0.498, -1.578, 0.792], br6: [0.234, -1.391, 0.781], br7: [0.234, -1.303, 0.781],
+    bx0: [0.13, -1, 0.42], bx1: [0.66, -0.95, 0.33], bx2: [0.82, -1.58, 0.32], bx3: [0.2, -1.69, 0.56],
     ra0: [0, -1.975, 0.6], ra1: [0.413, -1.945, 0.549], ra2: [0.6, -1.895, 0.443], ra3: [0.712, -1.875, 0.281], ra4: [0.75, -1.875, 0.02], ra5: [0.705, -1.975, -0.259], ra6: [0.525, -1.975, -0.458], ra7: [0.27, -1.975, -0.544], ra8: [0, -1.975, -0.56],
     rb0: [0, -2.14, 0.56], rb1: [0.363, -2.14, 0.515], rb2: [0.528, -2.14, 0.421], rb3: [0.627, -2.14, 0.276], rb4: [0.66, -2.14, 0.045], rb5: [0.62, -2.14, -0.202], rb6: [0.462, -2.14, -0.379], rb7: [0.238, -2.14, -0.456], rb8: [0, -2.14, -0.47],
     rc0: [0, -2.35, 0.54], rc1: [0.33, -2.35, 0.498], rc2: [0.48, -2.35, 0.41], rc3: [0.57, -2.35, 0.276], rc4: [0.6, -2.35, 0.06], rc5: [0.564, -2.35, -0.171], rc6: [0.42, -2.35, -0.335], rc7: [0.216, -2.35, -0.407], rc8: [0, -2.35, -0.42],
@@ -198,6 +234,11 @@ PRESETS.female = {
     bt0: [0, -3.85, 0.45], bt1: [0.38, -3.85, 0.38], bt2: [0.552, -3.85, 0.266], bt3: [0.655, -3.85, 0.115], bt4: [0.69, -3.85, -0.075], bt5: [0.649, -3.85, -0.281], bt6: [0.483, -3.85, -0.473], bt7: [0.248, -3.85, -0.574], bt8: [0, -3.85, -0.6],
   },
   breasts: true,
+  // the breast's foot round the patch, the points between the grid's where her reference's outline turns
+  breastRing: ['da0', 'bx0', 'da1', 'bx1', 'da2', 'db2', 'bx2', 'dc2', 'dc1', 'bx3', 'dc0', 'db0'],
+  dome: { mu: 0.55, d: [0, -0.03, 0.14] },
+  // beside the breast, its foot's outer point to the armpit: triangles from the armpit's corner
+  fan: { db2: 'dc3' },
   // her reference's single planes
   merge: [
     { name: 'collarbone', cells: ['nb0', 'nb1'], region: 'shoulder' },
@@ -215,6 +256,7 @@ for (const who of Object.keys(PRESETS)) {
   if (!existsSync(file)) continue;
   const fit = JSON.parse(readFileSync(file, 'utf8'));
   if (fit.V) PRESETS[who].V = { ...PRESETS[who].V, ...fit.V };
+  for (const k of ['dome', 'breastRing']) if (fit[k]) PRESETS[who][k] = fit[k];
 }
 
 /* ---- the builder ------------------------------------------------------------------------------------------------ */
@@ -226,6 +268,7 @@ export function buildLowTorso(who = 'male', preset = null) {
   const foot = P.foot ?? HEADS[who].V;
   const V = { ...P.V };
   for (const n of NECK_FOOT) V[n] = [...foot[n]];
+  if (P.dome) Object.assign(V, domeRing(P, V));
   const verts = [], polys = [];
   const vert = (p) => { verts.push(p); return verts.length - 1; };
   const ids = { 1: {}, [-1]: {} };

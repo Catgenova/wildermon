@@ -114,6 +114,8 @@ function limit(v, k, x) {
 }
 
 const preset = structuredClone(PRESETS[who]);
+// the fitted vertices, and her breast's ring and dome (tools/sculpt/lowtorso.mjs) with them
+const saveFit = () => writeFileSync(join(DIR, `lowtfit-${who}.json`), JSON.stringify({ V: preset.V, ...(preset.dome ? { dome: preset.dome, breastRing: preset.breastRing } : {}) }, null, 1));
 const base0 = buildLowTorso(who, PRESETS[who]);
 let mesh = buildLowTorso(who, preset);
 
@@ -172,7 +174,7 @@ if (stage === 'lattice') {
   const total = () => { apply(); return score() + 20 * folds(mesh, base0); };
   for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...ps, ...camPs], total, 1).toFixed(1));
   apply();
-  writeFileSync(join(DIR, `lowtfit-${who}.json`), JSON.stringify({ V: preset.V }, null, 1));
+  saveFit();
   if (camPs.length) saveCams(cams);
   report('after');
 }
@@ -200,6 +202,11 @@ if (stage === 'mesh') {
       ps.push({ step: +opt('step', '0.04'), get: () => preset.foot[n][k], set: (x) => { preset.foot[n][k] = x; } });
     }
   }
+  // her breast's middle ring: how far out toward its foot (mu) and how far it stands off (d), unless --names leaves it out
+  if (preset.dome && (!sel.length || sel.includes('dome'))) {
+    ps.push({ step: 0.03, get: () => preset.dome.mu, set: (x) => { preset.dome.mu = Math.min(0.9, Math.max(0.2, x)); } });
+    for (let k = 0; k < 3; k++) ps.push({ step: 0.02, get: () => preset.dome.d[k], set: (x) => { preset.dome.d[k] = x; } });
+  }
   const flatW = +opt('flat', '200'), reg = +opt('reg', '0');
   const start = structuredClone(preset.V);
   const moved = () => { let t = 0; for (const n of names) for (let k = 0; k < 3; k++) t += (preset.V[n][k] - start[n][k]) ** 2; return t; };
@@ -216,7 +223,7 @@ if (stage === 'mesh') {
   for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...shiftPs, ...ps, ...camPs], total, 1).toFixed(1));
   if (shiftPs.length) console.log('shift', shift.map((x) => x.toFixed(3)).join(' '));
   mesh = buildLowTorso(who, preset);
-  writeFileSync(join(DIR, `lowtfit-${who}.json`), JSON.stringify({ V: preset.V }, null, 1));
+  saveFit();
   if (footFree) {
     const hf = join(DIR, `lowfit-${who}.json`), head = JSON.parse(readFileSync(hf, 'utf8'));
     for (const n of NECK_FOOT) head.V[n] = preset.foot[n].map((x) => +x.toFixed(4));

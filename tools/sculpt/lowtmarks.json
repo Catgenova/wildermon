@@ -552,8 +552,8 @@
     "sd4'"
    ],
    "breast top": [
-    206.7,
-    150,
+    196,
+    148,
     "da1"
    ],
    "breast point": [
@@ -632,9 +632,19 @@
     "bt4'"
    ],
    "breast upper outer": [
-    224,
-    160,
+    230,
+    166,
     "da2"
+   ],
+   "breast top inner": [
+    169,
+    161,
+    "bx0"
+   ],
+   "breasts meet, top": [
+    161.7,
+    170,
+    "da0"
    ]
   },
   "profile": {
@@ -661,7 +671,7 @@
    "breast lower edge": [
     688.3,
     210,
-    "br5'"
+    "br8'"
    ],
    "arm cut centre": [
     601.7,
