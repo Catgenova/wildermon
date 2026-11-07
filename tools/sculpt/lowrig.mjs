@@ -718,6 +718,29 @@ export function rigData(rig) {
   };
 }
 
+/**
+ * The rig and its body as the game loads them (src/sculpt/lowpoly.ts): the vertices (the mesh's units and axes), the
+ * polygons (corners, the outline whose normal shades them, the material), each vertex's (bone, weight) list, the bones
+ * (parent, kind, driver, the figure rig's bone, rest head and frame), the sole's vertices, the fitted figure rest and
+ * fromGame's settings.
+ */
+export function gameAsset(rig, rest) {
+  const { B, bones } = rig;
+  const r5 = (x) => +x.toFixed(5);
+  const MAT = { skin: 0, brow: 1, lid: 1, pupil: 2 };
+  return {
+    built: 'node tools/sculpt/lowrig.mjs (tools/sculpt/lowrig.mjs gameAsset)',
+    who: rig.who, floor: rig.J.floor, T,
+    verts: B.verts.flat().map(r5),
+    polys: B.polys.map((p) => (p.nv ? [p.v, MAT[p.mat] ?? 0, p.nv] : [p.v, MAT[p.mat] ?? 0])),
+    tris: B.tris.flatMap((t) => [...t.v, t.poly]),
+    weights: rig.vw.map((l) => l.flatMap(([b, w]) => [b, w])),
+    soles: B.names.map((n, i) => (/^so\d\.[LR]$/.test(n) ? i : -1)).filter((i) => i >= 0),
+    bones: bones.map((b) => ({ name: b.name, p: b.p, kind: b.kind, head: b.head.map(r5), R: b.R.map(r5), ...(b.driver ? { from: b.from, drive: b.driver.kind, f: b.driver.f } : {}), ...(b.game ? { game: b.game } : {}) })),
+    rest, game: { ...TUNE.GAME },
+  };
+}
+
 /** A skinned glTF binary: the body (flat: each triangle its own corners), the skeleton as nodes, the weights. */
 export function glb(rig) {
   const { B, bones, vw } = rig;
@@ -799,6 +822,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const q = (v) => (Array.isArray(v) ? v.map(q) : +v.toFixed(2));
     data.game.rest = { arm: q(r.arm), elbow: q(r.elbow), hand: q(r.hand), leg: q(r.leg), knee: q(r.knee), residualDeg: +(G.fit.cost * 180 / Math.PI).toFixed(1) };
     data.game.restNote = 'the figure rig (rest() with these limb angles) whose bones lie as ours at bind: fromGame takes each game bone\'s turn from bonesOf(this rest)';
+    // the game's copy: src/sculpt/assets/low<who>.json
+    const asset = new URL(`../../src/sculpt/assets/low${who}.json`, import.meta.url);
+    writeFileSync(asset, JSON.stringify(gameAsset(rig, { arm: r.arm, elbow: r.elbow, hand: r.hand, leg: r.leg, knee: r.knee })));
+    console.log('wrote', asset.pathname);
   } catch (e) { console.log('game rig not bundled:', e.message); }
   const W = JSON.stringify(data.weights);
   writeFileSync(file, JSON.stringify({ ...data, weights: '@' }, null, 1).replace('"@"', W.replace(/\],"/g, '],\n  "')) + '\n');

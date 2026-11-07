@@ -20,6 +20,7 @@ import { bandOf, STRIDE } from './bake';
 import type { Band } from './sdf';
 import { drawSculptGL, forgetBuffers, glContext } from './gl';
 import { bakedAt, built, forgetBuilt, proportionsOf, sculptScene, type Built } from './index';
+import { lowScene } from './lowpoly';
 
 /** Looks kept baked at once, and the bytes of bakes kept for them, before the least recently drawn goes. */
 const MAX_LOOKS = 12;
@@ -126,6 +127,11 @@ function pump(): void {
  */
 export function drawSculptLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose): boolean {
   if (!glContext()) return false;
+  // A man: the low-poly male on his own rig (`./lowpoly`), nothing to bake.
+  if ((pose.look ?? DEFAULT_LOOK).gender === 'man') {
+    const t = ctx.getTransform();
+    return drawSculptGL(ctx, sx, sy, zoom, lowScene(pose), { dpr: Math.sqrt(Math.abs(t.a * t.d - t.b * t.c)) || 1 });
+  }
   const now = performance.now();
   const e = entryOf(pose.look ?? DEFAULT_LOOK, now);
   const wanted = bandOf(zoom);
