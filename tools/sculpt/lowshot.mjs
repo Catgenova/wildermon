@@ -6,7 +6,7 @@
 //
 // Flat shading (each triangle its own normal), a cool light from the left, a warm one from the right, a front fill.
 // The top and the bottom views leave the shoulder stub out, as the references do; the bottom view looks up from the
-// front at --pitch degrees (default 40), the top view down at --top (default 86) so the jaw's underside and the neck read.
+// front at --pitch degrees (default 38), the top view down at --top (default 86) so the jaw's underside and the neck read.
 // Uses Playwright's Chromium at /opt/pw-browsers/chromium with software GL.
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync } from 'node:fs';
@@ -18,7 +18,7 @@ const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i 
 const who = opt('who', 'male');
 const out = resolve(opt('out', 'tmp/lowhead'));
 const dsf = +opt('scale', '1');
-const pitch = +opt('pitch', '40');
+const pitch = +opt('pitch', '38');
 const topPitch = +opt('top', '86'); // the top view looks down from a little in front, as the references' does
 const normals = args.includes('--normals'); // a pass of the view-space normals of the skin, for fitting the light to a reference
 mkdirSync(out, { recursive: true });
@@ -125,7 +125,7 @@ const DATA = {
   detail: args.includes('--detail'),
   gradpos: +opt('gradpos', '1'), // 1: the gradient measured from the head's centre, continuous across a shared edge; 0: from each polygon's centre
   flatBrow: female,
-  clip: female ? -0.36 : -0.24, // where the bottom view cuts the shoulders off, as the references' do
+  clip: +opt('clip', female ? '-0.43' : '-0.38'), // the bottom view shows the head and the neck, the neck cut flat just above its foot, as the references' do
   // the lights' strengths: the ambient, the key from the front right, the warm fill from the right, the cool rim from behind left
   amb: +opt('amb', '0.57'), key: +opt('key', '0.42'), warm: +opt('warm', '0.32'), cool: +opt('cool', '1.2'), rim: +opt('rim', '0.6'), upr: +opt('upr', '0.12'), lcz: +opt('lcz', '0.35'), lbz: +opt('lbz', '-0.2'), cpow: +opt('cpow', '2.5'), rpow: +opt('rpow', '3'), cspec: +opt('cspec', '0.4'), kx: +opt('kx', '0.3'), ky: +opt('ky', '0.5'), aolo: +opt('aolo', '0.5'), // the gradient over each face toward the key light, per unit of the head (0: none)
   parts, lines, pitch, topPitch, normals, counts: mesh.counts,
@@ -231,7 +231,7 @@ const S = 136;
 const ROW = [['Front (0°)', 0, 172], ['Three-Quarter (45°)', 45, 478], ['Profile (90°)', 90, 780], ['Rear Three-Quarter (135°)', 135, 1085], ['Back (180°)', 180, 1388]];
 for (const [, d, cx] of ROW) view({ R: yaw(d), cx, cy: 184, s: S });
 view({ R: pitchM(D.topPitch), cx: 180, cy: 730, s: S, piv: [0, 1.1, 0.12], parts: ['head', 'neck'] });
-view({ R: pitchM(-D.pitch), cx: 502, cy: 730, s: S * 0.98, piv: [0, 0.75, 0.12], clip: D.clip });
+view({ R: pitchM(-D.pitch), cx: 502, cy: 712, s: S * 0.98, piv: [0, 0.75, 0.12], clip: D.clip, parts: ['head', 'neck'] });
 view({ R: yaw(0), cx: 822, cy: 686, s: S * 0.99, wire: true });
 view({ R: yaw(-70), cx: 1392, cy: 680, s: 100, mode: 1, parts: ['head', 'neck'], piv: [0, 1, 0.1] });
 
