@@ -9,7 +9,7 @@
 //
 // Regions: 9 the generic shell and clumps (the lilac highlight stamp), 12 a generic clump with the teal, 16 a cut's
 // planes (the hair's own colour, flat-shaded; its stamp, positive, the top's lighter colour on a plane facing up), 17 a
-// cut's edge where its thickness shows (the dark of the hair).
+// cut's part groove and its edge where its thickness shows (the dark of the hair).
 import { facets } from './planar.mjs';
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -42,43 +42,66 @@ function skullAlong(head, o, d) {
   return best;
 }
 
-/* ---- short: the reference picture's cut (docs/aesthetic/14) ---------------------------------------------------------
- * A low-poly cap laid on a grid over the skull: columns run front to back at angles `g` across the head (about the
- * front-back axis through the skull's middle; negative to the viewer's left), rows run side to side at fractions `s` from
- * the front hairline to the nape. The part is the column at g = -30 (his right, the viewer's left): the volume rises off
- * it and is swept over to the viewer's right, highest at the front; the part side is cut short; the sides are trimmed
- * close above the ears; the back tapers to the nape. Each grid cell is two flat triangles, the vertices jittered so the
- * triangles break into slabs; a skirt from the cap's edge into the skull closes it, so the fringe's thickness shows. */
+/* ---- the cut: a cap on a grid, and the styles made with it ------------------------------------------------------------
+ * A low-poly cap laid on a grid over the skull: columns run front to back at angles `cols` across the head (about the
+ * front-back axis through the skull's middle; negative to the viewer's left), rows run side to side at fractions `rows`
+ * from the front hairline to the nape. The part is the column `part` (his right, the viewer's left), with the groove
+ * column after it: the strip between is the part's dark groove as far back as `grooveTo`. The volume rises off the groove
+ * and is swept over to the viewer's right; the sides are trimmed close above the ears; the back tapers to the nape.
+ * Each grid cell is two flat triangles, the vertices jittered so the triangles break into slabs, and `spikes` stand
+ * single points out into tips that break the outline; a skirt from the cap's edge into the skull closes it, so the
+ * fringe's thickness shows. */
 const SHORT = {
   centre: [0, 0.6, -0.06],
-  cols: [-90, -68, -50, -30, -14, 2, 18, 34, 50, 66, 90],
-  part: 3,
   // (The outer columns are the side poles, straight out over the ears, where every row meets: the hairline runs from the
   // temple to the pole and back down to the nape, round nothing.)
-  rows: [0, 0.1, 0.22, 0.36, 0.5, 0.64, 0.78, 0.9, 1],
+  cols: [-90, -66, -46, -30, -21, -2, 20, 42, 64, 90],
+  part: 3,
+  rows: [0, 0.12, 0.28, 0.45, 0.62, 0.8, 1],
+  // The groove's dark strip runs back from the front to this row.
+  grooveTo: 4,
   // The hairline: the front's and the nape's angle (degrees about the across axis from straight ahead, up positive) per
   // column. The fringe sweeps down to the temple on the viewer's right; the part side comes down to the temple too.
   front: [[-84, -6], [-68, -14], [-50, 20], [-30, 37], [0, 40], [30, 36], [50, 16], [68, -12], [84, -6]],
   back: [[-84, 176], [-60, 188], [-30, 198], [0, 206], [30, 198], [60, 188], [84, 176]],
-  // The fringe's points: each front column's hairline lowered (negative) or raised, degrees.
-  tips: [0, 3, -4, 4, -10, 3, -11, 2, -9, 3, 0],
+  // The fringe's points and the nape's: each front column's hairline lowered (negative) or raised, degrees; each nape
+  // column's carried further down the neck (positive) or up.
+  tips: [0, 4, -8, 5, 3, -14, 4, -15, -9, 0],
+  napeTips: [0, -3, 7, -4, 9, -5, 9, -3, 6, 0],
   // Thickness off the skull in head heights: along the rows from the front, and across the columns, multiplied.
-  along: [[0, 0.085], [0.1, 0.16], [0.22, 0.15], [0.36, 0.105], [0.5, 0.072], [0.64, 0.055], [0.78, 0.036], [0.9, 0.024], [1, 0.016]],
-  across: [[-84, 0.2], [-68, 0.45], [-50, 0.5], [-30, 0.55], [-14, 1.0], [18, 1.0], [34, 0.78], [50, 0.48], [66, 0.22], [84, 0.1]],
+  along: [[0, 0.06], [0.12, 0.16], [0.28, 0.145], [0.45, 0.095], [0.62, 0.062], [0.8, 0.036], [1, 0.016]],
+  across: [[-84, 0.2], [-66, 0.45], [-46, 0.5], [-30, 0.42], [-21, 0.9], [-2, 1.0], [20, 1.0], [42, 0.72], [64, 0.3], [84, 0.1]],
   // Behind the crown the sides are cut closer: the across factor there, blended in from s = 0.3 to 0.6.
   acrossBack: [[-84, 0.12], [-68, 0.28], [-50, 0.6], [-30, 0.85], [0, 1.0], [30, 0.85], [50, 0.6], [68, 0.28], [84, 0.12]],
-  // The sweep: on top, each point pushed to the viewer's right by this many times its thickness; the front row forward.
-  sweep: 0.6, lean: 0.025,
+  // The sweep: on top, each point pushed to the viewer's right by this many times its thickness; the front rows forward.
+  sweep: 0.6, lean: 0.025, fringeSweep: 0.06,
   jitter: 0.025, slide: 3,
+  // Tips: [row, column, out, to the viewer's right, down], in head heights: the swept side's slabs over the right temple,
+  // two on the front of the volume, three at the crown and behind it.
+  spikes: [[1, 7, 0.04, 0.05, 0.04], [2, 8, 0.025, 0.03, 0.08], [1, 8, 0.015, 0.02, 0.07], [0, 7, 0.01, 0.03, 0.04], [1, 5, 0.025, 0.02, 0],
+    [3, 2, 0.045, -0.01, 0], [4, 5, 0.05, 0, 0], [4, 7, 0.045, 0.02, 0], [5, 3, 0.03, 0, 0.01], [5, 6, 0.03, 0, 0.01]],
   // How far up a plane faces (the up component of its normal) to take the top's lighter colour.
   topAt: 0.7,
 };
+/** 'side': the same cap combed flat, the part further out and deeper, no tips but the fringe's and the nape's. */
+const SIDE = {
+  ...SHORT,
+  cols: [-90, -70, -54, -42, -33, -12, 12, 38, 62, 90],
+  across: [[-84, 0.18], [-70, 0.35], [-54, 0.38], [-42, 0.3], [-33, 0.85], [-12, 1.0], [12, 1.0], [38, 0.8], [62, 0.34], [84, 0.1]],
+  along: [[0, 0.07], [0.12, 0.12], [0.28, 0.115], [0.45, 0.085], [0.62, 0.06], [0.8, 0.036], [1, 0.016]],
+  tips: [0, 2, -3, 3, 4, -5, 2, -6, -4, 0],
+  napeTips: [0, -2, 4, -2, 5, -3, 5, -2, 4, 0],
+  sweep: 0.9, lean: 0, fringeSweep: 0.03, jitter: 0.015,
+  spikes: [[1, 8, 0.025, 0.04, 0.03]],
+};
 
-export function shortHair(head, f = facets()) {
-  const S = SHORT, H = head.H, c = head.P(S.centre);
+/** A cut: the cap on the grid `S` over the body's head. */
+function cut(head, f, S) {
+  const H = head.H, c = head.P(S.centre);
   const nc = S.cols.length, nr = S.rows.length;
   const rad = (x) => (x * Math.PI) / 180;
   const dirOf = (beta, gamma) => { const b = rad(beta), g = rad(gamma); return [Math.sin(g), Math.cos(g) * Math.sin(b), Math.cos(g) * Math.cos(b)]; };
+  const spike = new Map(S.spikes.map(([i, j, o, r, dn]) => [`${i},${j}`, [o, r, dn]]));
   const outer = [], inner = [];
   for (let i = 0; i < nr; i++) {
     outer.push([]); inner.push([]);
@@ -89,14 +112,12 @@ export function shortHair(head, f = facets()) {
       const edge = i === 0 || i === nr - 1 || j === 0 || j === nc - 1;
       const jit = (k) => (edge ? 0 : (hash(i + 17 * k, j + 31 * k) - 0.5) * 2);
       const g = S.cols[j] + jit(1) * S.slide;
-      const b0 = interp(S.front, g) + S.tips[j], b1 = interp(S.back, g);
+      const b0 = interp(S.front, g) + S.tips[j], b1 = interp(S.back, g) + S.napeTips[j];
       const beta = b0 + (b1 - b0) * s + jit(2) * S.slide;
       const d = dirOf(beta, g);
       const R = skullAlong(head, c, d) || 0.45 * H;
       const k = Math.min(1, Math.max(0, (s - 0.3) / 0.3));
       let t = Math.max(0.016, interp(S.along, s) * (interp(S.across, g) * (1 - k) + interp(S.acrossBack, g) * k));
-      // The part: a crease where the volume leaves the short side.
-      if (j === S.part && i > 0 && i < nr - 1) t *= 0.8;
       const pole = Math.abs(g) >= 90;
       if (pole) t = 0.016;
       const jr = jit(0) * S.jitter * Math.min(1, t / 0.1);
@@ -105,7 +126,13 @@ export function shortHair(head, f = facets()) {
       const up = Math.max(0, d[1]);
       p = add(p, [S.sweep * t * up * H, 0, 0]);
       // The front's lean: the quiff carried forward over the forehead.
-      if (i <= 1 && j >= S.part && !pole) p = add(p, [0, 0, S.lean * H * (i === 0 ? 1 : 0.6)]);
+      if (i <= 1 && j > S.part && !pole) p = add(p, [0, 0, S.lean * H * (i === 0 ? 1 : 0.6)]);
+      // The fringe's points carried over to the viewer's right, so the front's slabs run down and across (less toward the
+      // temple, which stays close).
+      if (i === 0 && j > S.part && !pole) p = add(p, [S.fringeSweep * H * Math.max(0, 1 - Math.abs(g) / 60), 0, 0]);
+      // A tip: the point stood out, over to the viewer's right and down.
+      const sp = spike.get(`${i},${j}`);
+      if (sp) p = add(add(p, mul(d, sp[0] * H)), [sp[1] * H, -sp[2] * H, 0]);
       outer[i].push(p);
       inner[i].push(add(c, mul(d, R - 0.012 * H)));
     }
@@ -131,21 +158,23 @@ export function shortHair(head, f = facets()) {
     const far = outer.map((r) => r[j]).reduce((a, b) => (Math.hypot(...sub(b, c)) > Math.hypot(...sub(a, c)) ? b : a));
     for (let i = 0; i < nr; i++) outer[i][j] = far;
   }
-  // The cap's planes facing up (in the head's frame) take the lighter top colour: a stamp over the whole facet.
+  // The cap's planes facing up (in the head's frame) take the lighter top colour: a stamp over the whole facet. The
+  // part's groove and the cap's cut edge take the dark.
   const R16 = 16, R17 = 17;
-  const plane = (pts) => {
+  const plane = (pts, dark = false) => {
     const before = f.pos.length;
-    f.facet(pts, R16, HEAD, c);
+    f.facet(pts, dark ? R17 : R16, HEAD, c);
     const n = cross(sub(f.pos[before + 1], f.pos[before]), sub(f.pos[before + 2], f.pos[before])), l = Math.hypot(...n) || 1;
     const top = n[1] / l - S.topAt;
-    for (let k = before; k < f.pos.length; k++) f.stamp[k] = top > 0 ? 0.5 : -1;
+    for (let k = before; k < f.pos.length; k++) f.stamp[k] = !dark && top > 0 ? 0.5 : -1;
   };
   f.capFrom = f.tris.length;
   // The cap: two triangles a cell, the diagonal laid along the sweep (from the part outward each way).
   for (let i = 0; i + 1 < nr; i++) for (let j = 0; j + 1 < nc; j++) {
     const a = outer[i][j], b = outer[i][j + 1], d = outer[i + 1][j], e = outer[i + 1][j + 1];
+    const groove = j === S.part && i < S.grooveTo;
     // (Next to a pole the two corners on it are one point: that cell is one triangle.)
-    if (j >= S.part) { if (j + 1 !== nc - 1) plane([a, b, e]); plane([a, e, d]); }
+    if (j >= S.part) { if (j + 1 !== nc - 1) plane([a, b, e], groove); plane([a, e, d], groove); }
     else { if (j !== 0) plane([a, b, d]); plane([b, e, d]); }
   }
   f.capTo = f.tris.length;
@@ -159,6 +188,10 @@ export function shortHair(head, f = facets()) {
   // (The poles' columns are single points: no skirt runs along them.)
   return f;
 }
+/** 'short', the cut in the reference picture (docs/aesthetic/14). */
+export const shortHair = (head, f = facets()) => cut(head, f, SHORT);
+/** 'side', the same cut combed flat with a deeper part further out. */
+export const sideHair = (head, f = facets()) => cut(head, f, SIDE);
 
 /* ---- generic: the design sheet's tousled hair, for every style not made yet ---------------------------------------- */
 
@@ -249,7 +282,7 @@ export function genericHair(head, f = facets()) {
 }
 
 /** The styles made, by HAIRSTYLES id; `generic` for the rest. */
-export const HAIRS = { generic: genericHair, short: shortHair };
+export const HAIRS = { generic: genericHair, short: shortHair, side: sideHair };
 
 /**
  * Where a style's mesh goes inside the head: the points of its triangles (centroids and edge middles) nearer the skull's

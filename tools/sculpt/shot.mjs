@@ -86,7 +86,7 @@ if (only.includes('lineup')) await shoot('lineup', async () => { await window.SC
 if (only.includes('facings')) await shoot(`facings-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 1); window.SCULPT.facings(w, 'walk:0.25', 1); window.SCULPT.facings(w, 'idle:0', 2); window.SCULPT.facings(w, 'walk:0.25', 2); window.SCULPT.facings(w, 'idle:0', 4); window.SCULPT.facings(w, 'walk:0.6', 4); window.SCULPT.facings('figure', 'idle:0', 2); });
 if (only.includes('motion')) await shoot(`motion-${who}`, (w) => { window.SCULPT.strip(w, 1, 2.5); window.SCULPT.strip(w, 3, 2.5); window.SCULPT.strip(w, 6, 2.5); window.SCULPT.strip('figure', 1, 2.5); });
 if (only.includes('hair')) await shoot(`hair-${who}-${hair}`, (w) => window.SCULPT.hair(w));
-if (only.includes('hairq')) await shoot(`hairq-${who}-${hair}`, (w) => window.SCULPT.hair(w, 150, [0, 35, 90, 180], [9, 2], false));
+if (only.includes('hairq')) await shoot(`hairq-${who}-${hair}`, (w) => window.SCULPT.hair(w, 150, [0, 35, 90, 145, 180], [9, 4, 2], false));
 if (only.includes('close')) await shoot(`close-${who}`, (w) => window.SCULPT.close(w, 9));
 if (only.includes('hands')) { await shoot(`hands-${who}`, (w) => window.SCULPT.hands(w, 20)); for (const a of await p.evaluate(() => window.SCULPT.audit())) console.log('audit', JSON.stringify(a)); }
 if (only.includes('trace')) {
