@@ -2,18 +2,18 @@
 // close on each joint), the game's own walk and run on it, the weights as heat maps, and per pose the volume kept at
 // each joint and the faces that pass through each other.
 //
-//   node tools/sculpt/lowrigshot.mjs --out <dir> [--only skeleton,poses,close,walk,weights,rest,rings]
+//   node tools/sculpt/lowrigshot.mjs --out <dir> [--who male|female] [--only skeleton,poses,close,walk,weights,rest,rings]
 //     writes rig-skeleton.png, rig-poses.png, rig-close.png, rig-walk.png, rig-weights.png, rig-rest-*.png (rings: the rest
 //     without and with the extra loops, rings-before/after/edges.png) and
-//     rig-metrics.json into <dir>
+//     rig-metrics.json (with each pose's strict score per joint region, 0 to 10: scoreOf) into <dir>
 //
-// Flat shading (one normal per polygon, the heads' shared camera-fixed light, tools/sculpt/lowlight-male.json) as
+// Flat shading (one normal per polygon, the heads' shared camera-fixed light, tools/sculpt/lowlight-<who>.json) as
 // tools/sculpt/lowarmshot.mjs draws the body; Playwright's Chromium with software GL.
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildArmBody } from './lowarm.mjs';
-import { TUNE, buildRig, posed, skin, ground, sym, axisAngle, mm, mv, tr, sub, add, cross, dot, unit, fromGame, gameRig } from './lowrig.mjs';
+import { TUNE, buildRig, posed, skin, ground, sym, axisAngle, mm, mv, tr, sub, add, cross, dot, unit, fromGame, gameRig, armsOut, tuneOf } from './lowrig.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -24,9 +24,11 @@ const only = MAIN ? opt('only', 'skeleton,poses,close,walk,weights,rest').split(
 const DIR = new URL('.', import.meta.url).pathname;
 
 if (args.includes('--mend')) TUNE.MEND = true;
-const rig = buildRig('male');
+const WHO = MAIN ? opt('who', 'male') : (process.env.RIG_WHO ?? 'male');
+const HER = WHO === 'female';
+const rig = buildRig(WHO);
 const { B, bones, at } = rig;
-const LIGHT = JSON.parse(readFileSync(join(DIR, 'lowlight-male.json'), 'utf8'));
+const LIGHT = JSON.parse(readFileSync(join(DIR, `lowlight-${WHO}.json`), 'utf8'));
 const SH = (() => { const C = LIGHT.global, o = new Array(57).fill(0); for (let k = 0; k < C[0].length; k++) for (let ch = 0; ch < 3; ch++) o[k * 3 + ch] = C[ch][k] / 255; return o; })();
 
 /* ---- poses ------------------------------------------------------------------------------------------------------- */
@@ -52,8 +54,18 @@ export const POSES = [
   { id: 'twist', label: 'Spine twisted', pose: { spine_01: [0, 14, 0], spine_02: [0, 16, 0], spine_03: [0, 14, 0], neck_01: [0, 8, 0] }, ground: true },
   { id: 'headturn', label: 'Head turned 70°', pose: { neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] } },
   { id: 'nod', label: 'Head nod (down 40°)', pose: { neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] } },
+  // the feet: dorsiflexed 30 (toe up), plantarflexed 45, toe-off (the heel up 30, the ball bent 40), tilted 15 (the
+  // left foot rolled in, the right out)
+  { id: 'dorsi', label: 'Feet dorsiflexed 30°', pose: sym({}, 'foot', [30, 0, 0]), ground: true },
+  { id: 'plantar', label: 'Feet plantarflexed 45°', pose: sym({}, 'foot', [-45, 0, 0]), ground: true },
+  { id: 'toeoff', label: 'Toe-off (left)', pose: { foot_l: [-30, 0, 0], ball_l: [40, 0, 0] }, ground: true },
+  { id: 'tilt', label: 'Feet tilted 15°', pose: { foot_l: [0, 15, 0], foot_r: [0, 15, 0] }, ground: true },
   { id: 'fist', label: 'Fist (left) and grip (right)', pose: (() => { const p = symW({}, 'upperarm', X, -40); sym(p, 'lowerarm', [60, 0, 0]); sym(p, 'fingers_01', [80, 0, 0]); sym(p, 'fingers_02', [50, 0, 0]); p.thumb_01_l = [40, 0, -10]; p.thumb_02_l = [25, 0, 0]; p.thumb_03_l = [35, 0, 0]; p.fingers_01_r = [45, 0, 0]; p.fingers_02_r = [35, 0, 0]; p.thumb_01_r = [10, 0, 15]; p.thumb_02_r = [15, 0, 0]; p.thumb_03_r = [20, 0, 0]; return p; })() },
 ];
+
+// her arms kept off her body as the game's walk keeps them (lowrig.mjs armsOut: her arms hang against her sides, so raised
+// forward they are turned out to pass her breasts)
+if (tuneOf(WHO).GAME.armSwing) for (const e of POSES) e.pose = armsOut(rig, e.pose);
 
 /* ---- the game's rig: walk and run -------------------------------------------------------------------------------- */
 let GAME = null;
@@ -63,16 +75,23 @@ export async function game() {
   const at2 = (what, u) => {
     const p = { phase: u * Math.PI * 2, moving: true, facing: 0, swimming: false, working: false, look: g.look };
     if (what === 'run') p.gait = 1;
-    return fromGame(rig, g.bonesOf(g.sculptRig(p).rig, g.MALE, [], g.REST_EXTRAS), g.gRest);
+    return fromGame(rig, g.bonesOf(g.sculptRig(p).rig, g.PROPS, [], g.REST_EXTRAS), g.gRest);
   };
   GAME = { at: at2, fit: g.fit };
   return GAME;
 }
 
 /* ---- metrics ----------------------------------------------------------------------------------------------------- */
+/**
+ * A joint region's strict score in a pose, 0 to 10: ten, less a point for each 2.5% of volume gained or lost past 4%,
+ * a point for each pair of faces newly passing through each other there, two for each face turned over. 8 is the bar:
+ * 9% of volume, or two crossings, or one fold.
+ */
+export const scoreOf = (dv, x, folds) => Math.max(0, +(10 - Math.max(0, Math.abs(dv) - 4) / 2.5 - x - 2 * folds).toFixed(1));
 /** The joint regions' volumes and the faces passing through each other, for a rig: metrics(P) against its rest. */
 export function makeMetrics(rig) {
 const { B, bones } = rig;
+const her = rig.who === 'female';
 const wOf = (i) => rig.vw[i];
 const has = (i, names) => wOf(i).some(([bi, w]) => w > 0.02 && names.includes(bones[bi].name));
 const ringIs = (i, rings, side) => { const n = B.names[i].replace(/^arm\//, ''); const s = n.endsWith('.L') ? 'l' : n.endsWith('.R') ? 'r' : ''; const base = n.replace(/\.[LR]$/, '').replace(/\d+[ab]?$/, ''); return rings.includes(base) && (s === side || s === ''); };
@@ -81,17 +100,22 @@ const REGIONS = [];
 for (const s of ['l', 'r']) {
   REGIONS.push({ id: `shoulder_${s}`, piv: `shoulder_${s}`, v: (i) => has(i, [`shoulder_${s}`, `upperarm_twist_${s}`]) || (B.part[i] === 'joint' && ringIs(i, ['ja', 'jb', 'ax'], s)) });
   REGIONS.push({ id: `elbow_${s}`, piv: `elbow_${s}`, v: (i) => B.part[i] !== 'torso' && ringIs(i, ['uc', 'ue', 'el', 'fa', 'fb'], s) && B.names[i].startsWith('arm/') });
-  REGIONS.push({ id: `wrist_${s}`, piv: `wrist_${s}`, v: (i) => B.names[i].startsWith('arm/') && (ringIs(i, ['fe', 'fg', 'wk', 'wb', 'wt', 'wp', 'sk', 'pa', 'pb', 'pc', 'kb', 'kp', 'ta', 'tb', 'tc', 'td'], s)) });
+  REGIONS.push({ id: `wrist_${s}`, piv: `wrist_${s}`, v: (i) => B.names[i].startsWith('arm/') && (ringIs(i, [...(her ? ['fd', 'ff'] : ['fe', 'fg']), 'wk', 'wb', 'wt', 'wp', 'sk', 'pa', 'pb', 'pc', 'kb', 'kp', 'ta', 'tb', 'tc', 'td'], s)) });
   REGIONS.push({ id: `fingers_${s}`, piv: `fingers_01_${s}`, v: (i) => B.names[i].startsWith('arm/') && ringIs(i, ['kb', 'kp', 'qp', 'mb', 'mp', 'nb', 'np'], s) });
-  REGIONS.push({ id: `hip_${s}`, piv: `hip_${s}`, v: (i) => !B.names[i].startsWith('arm/') && (ringIs(i, ['gl', 'gf', 'th', 'tm', 'cx', 'bt', 'hw'], s)) });
-  REGIONS.push({ id: `knee_${s}`, piv: `knee_${s}`, v: (i) => !B.names[i].startsWith('arm/') && ringIs(i, ['tm', 'ka', 'kb', 'kc', 'ca'], s) });
+  // (her thigh's rings: th, the fold tg, tm, tl over the knee; the buttock's upper row gm)
+  REGIONS.push({ id: `hip_${s}`, piv: `hip_${s}`, v: (i) => !B.names[i].startsWith('arm/') && (ringIs(i, her ? ['gl', 'gm', 'th', 'tg', 'tm', 'cx', 'bt', 'hw'] : ['gl', 'gf', 'th', 'tm', 'cx', 'bt', 'hw'], s)) });
+  REGIONS.push({ id: `knee_${s}`, piv: `knee_${s}`, v: (i) => !B.names[i].startsWith('arm/') && ringIs(i, her ? ['tl', 'ka', 'kb', 'kc', 'ca'] : ['tm', 'ka', 'kb', 'kc', 'ca'], s) });
   REGIONS.push({ id: `ankle_${s}`, piv: `foot_${s}`, v: (i) => !B.names[i].startsWith('arm/') && ringIs(i, ['cb', 'an', 'fc', 'fb', 'ft', 'so'], s) });
 }
 REGIONS.push({ id: 'neck', piv: 'neck_02', v: (i) => has(i, ['neck_01', 'neck_02']) });
+// her breasts: the dome (br, round its point db1) and its foot (bx, the grid's points round the patch)
+if (her) for (const s of ['l', 'r']) REGIONS.push({ id: `breast_${s}`, piv: 'spine_03', v: (i) => !B.names[i].startsWith('arm/') && (ringIs(i, ['br', 'bx'], s) || ['db1', 'da0', 'da1', 'da2', 'db0', 'db2', 'dc0', 'dc1', 'dc2'].some((n) => B.names[i] === `${n}.${s.toUpperCase()}` || B.names[i] === n)) });
 REGIONS.push({ id: 'waist', piv: 'spine_01', v: (i) => !B.names[i].startsWith('arm/') && ['ra', 'rb', 'rc', 'wa', 'hi', 'hw'].some((r) => B.names[i].replace(/\.[LR]$/, '').replace(/\d+$/, '') === r) });
 for (const R of REGIONS) {
   R.set = new Set(B.verts.map((_, i) => i).filter(R.v));
   R.tris = B.tris.map((t, k) => k).filter((k) => B.tris[k].v.every((i) => R.set.has(i)));
+  // the triangles touching it, whose crossings and folds count against it
+  R.touch = new Set(B.tris.map((t, k) => k).filter((k) => B.tris[k].v.some((i) => R.set.has(i))));
 }
 /** The region's volume: its triangles closed by a fan to the centroid of each boundary loop. */
 function volume(R, P) {
@@ -159,13 +183,21 @@ function metrics(P, frames) {
   // faces turned over: a triangle (of more than a sliver's area) whose normal has turned more than 100° from its own
   // bone's turn of it
   let flips = 0;
+  const flipped = [];
   const nrm = (V, t) => cross(sub(V[t.v[1]], V[t.v[0]]), sub(V[t.v[2]], V[t.v[0]]));
-  if (frames) B.tris.forEach((t) => {
+  if (frames) B.tris.forEach((t, k) => {
     const n0 = nrm(REST, t); if (Math.hypot(...n0) < 0.01) return;
     const bi = rig.vw[t.v[0]][0][0], want = mv(frames[bi].S, n0), n1 = nrm(P, t);
-    if (dot(unit(want), unit(n1)) < -0.17) flips++;
+    if (dot(unit(want), unit(n1)) < -0.17) { flips++; flipped.push(k); }
   });
-  return { volume: vol, crossings: x.length, pairs, flips };
+  // per joint region: its new crossings and folds (pairs or faces touching it), and its strict score (scoreOf)
+  const region = {};
+  for (const R of REGIONS) {
+    const c = x.filter((k) => R.touch.has(Math.floor(k / 4096)) || R.touch.has(k % 4096)).length, f = flipped.filter((k) => R.touch.has(k)).length;
+    region[R.id] = { vol: vol[R.id], x: c, folds: f, score: scoreOf(vol[R.id], c, f) };
+  }
+  const tn = (k) => B.tris[k].v.map((i) => B.names[i]).join(' ');
+  return { volume: vol, crossings: x.length, pairs, flips, region, at: { folds: flipped.slice(0, 20).map(tn), crossings: x.slice(0, 30).map((k) => `${tn(Math.floor(k / 4096))} | ${tn(k % 4096)}`) } };
 }
 return metrics;
 }
@@ -293,6 +325,13 @@ function posedVerts(entry) { const f = frameOf(entry.pose), P0 = skin(rig, f), P
 const MID = [0, -4.9, 0];
 const metricsAll = {};
 
+if (only.includes('metrics')) {
+  // the numbers alone, no pictures: every test pose, and the game's walk and run at sixteen keys each
+  for (const e of POSES) { const { f, P } = posedVerts(e); metricsAll[e.id] = metrics(P, f); }
+  const g = await game();
+  for (const what of ['walk', 'run']) for (let k = 0; k < 16; k++) { const f = frameOf(g.at(what, k / 16)); metricsAll[`${what}-${k}`] = metrics(ground(rig, skin(rig, f)), f); }
+}
+
 if (only.includes('rest')) {
   // the rest pose skinned against the body unrigged: the same numbers, so the same pixels
   const f = frameOf({});
@@ -300,8 +339,8 @@ if (only.includes('rest')) {
   const moved = P.filter((p, i) => p.some((x, k) => Math.fround(x) !== Math.fround(B.verts[i][k]))).length;
   console.log('rest: vertices moved by skinning (float32)', moved);
   // the body unrigged as the approved mesh draws it (buildArmBody, its own triangles) against the rig's rest
-  const own = buildArmBody('male');
-  const OWN = { polys: own.polys.map((p) => p.v), tris: own.tris.map((t) => [...t.v, t.poly]), mat: TOPO.mat };
+  const own = buildArmBody(WHO);
+  const OWN = { polys: own.polys.map((p) => p.nv ?? p.v), tris: own.tris.map((t) => [...t.v, t.poly]), mat: TOPO.mat };
   for (const [name, verts, topo] of [['unrigged', own.verts, OWN], ['skinned', P, TOPO]]) {
     await shoot(700, 760, [cell(verts, { yaw: 0, s: 50, c: MID }, [0, 0, 350, 760], ''), cell(verts, { yaw: 40, s: 50, c: MID }, [350, 0, 350, 760], '')], join(out, `rig-rest-${name}.png`), [], topo);
   }
@@ -311,7 +350,7 @@ if (only.includes('rest')) {
 if (only.includes('rings')) {
   // the body without the extra loops (lowloops.mjs) and with them, at rest: the same surface, so the same pixels but for
   // the new edges inside flat faces; and the same with the new edges drawn
-  const a = buildArmBody('male', null, { loops: false }), b = buildArmBody('male');
+  const a = buildArmBody(WHO, null, { loops: false }), b = buildArmBody(WHO);
   const topo = (m) => ({ polys: m.polys.map((p) => p.nv ?? p.v), tris: m.tris.map((t) => [...t.v, t.poly]), mat: m.polys.map((p) => (p.mat === 'brow' ? 1 : p.mat === 'pupil' ? 2 : p.mat === 'lid' ? 1 : 0)) });
   const isNew = new Set(b.added.map(([i]) => i)), E = [];
   for (const p of b.polys) p.v.forEach((u, k) => { const w = p.v[(k + 1) % p.v.length]; if (u < w || !p.v.includes(w)) if (isNew.has(u) || isNew.has(w)) E.push(...b.verts[u], ...b.verts[w]); });
@@ -327,10 +366,11 @@ if (only.includes('skeleton')) {
   const cells = [], s = 52;
   [[0, 'Front'], [90, 'Side (left)'], [40, 'Three-quarter']].forEach(([yaw, lab], k) => cells.push(cell(B.verts, { yaw, s, c: MID }, [k * 420, 40, 420, 800], lab, { bones: boneLines(f) })));
   // close: the hand and the head
-  cells.push(cell(B.verts, { yaw: 0, s: 150, c: [2.25, -5.3, 0] }, [1260, 40, 420, 400], 'Left hand, front', { bones: boneLines(f) }));
-  cells.push(cell(B.verts, { yaw: 90, s: 150, c: [2.25, -5.3, 0] }, [1260, 440, 420, 400], 'Left hand, side', { bones: boneLines(f) }));
+  const hc = HER ? add(rig.J.wrist, [0, -0.55, 0]) : [2.25, -5.3, 0];
+  cells.push(cell(B.verts, { yaw: 0, s: 150, c: hc }, [1260, 40, 420, 400], 'Left hand, front', { bones: boneLines(f) }));
+  cells.push(cell(B.verts, { yaw: 90, s: 150, c: hc }, [1260, 440, 420, 400], 'Left hand, side', { bones: boneLines(f) }));
   const n = rig.bones.length, c = rig.bones.filter((b) => b.kind === 'control').length;
-  await shoot(1680, 840, cells, join(out, 'rig-skeleton.png'), [{ css: 'left:12px;top:8px', html: `Male rig: ${n} bones (${c} posed, ${n - c} driven helpers; yellow centre, blue right, pink left; helpers sit on the joints)` }]);
+  await shoot(1680, 840, cells, join(out, 'rig-skeleton.png'), [{ css: 'left:12px;top:8px', html: `${HER ? 'Female' : 'Male'} rig: ${n} bones (${c} posed, ${n - c} driven helpers; yellow centre, blue right, pink left; helpers sit on the joints)` }]);
 }
 
 if (only.includes('poses')) {
@@ -415,7 +455,10 @@ if (only.includes('walk')) {
 }
 
 if (only.includes('weights')) {
-  const show = [
+  const show = HER ? [
+    ['spine_03', 30], ['clavicle_l', 20], ['shoulder_l', 20], ['spine_02', 30], ['pelvis', 150], ['hip_l', 150],
+    ['hip_l', 30], ['thigh_l', 30], ['knee_l', 30], ['upperarm_twist_l', 30], ['wrist_l', 20], ['thumb_01_l', 20],
+  ] : [
     ['shoulder_l', 0], ['clavicle_l', 0], ['upperarm_twist_l', 30], ['elbow_l', 30], ['lowerarm_twist_02_l', 30], ['wrist_l', 20],
     ['hip_l', 30], ['knee_l', 30], ['spine_02', 30], ['neck_01', 30], ['fingers_02_l', 20], ['thumb_01_l', 20],
   ];
@@ -423,13 +466,25 @@ if (only.includes('weights')) {
   show.forEach(([bn, yaw], k) => {
     const bi = at.get(bn), heat = B.verts.map((_, i) => { const e = rig.vw[i].find(([b]) => b === bi); return e ? +e[1].toFixed(3) : 0; });
     const close = /finger|thumb|wrist/.test(bn);
-    const c = close ? [2.3, -5.2, 0] : bn.startsWith('neck') ? [0, -0.3, 0] : /hip|knee/.test(bn) ? [0.8, -6.2, 0] : bn.startsWith('spine') ? [0, -2.6, 0] : [1.6, -2.4, 0];
-    const s = close ? 160 : bn.startsWith('neck') ? 110 : /hip|knee/.test(bn) ? 50 : bn.startsWith('spine') ? 50 : 62;
-    cells.push(cell(B.verts, { yaw, s, c }, [(k % perRow) * cw, 34 + Math.floor(k / perRow) * chh, cw, chh], bn, { heat }));
+    const hand = J => (HER ? [J.wrist[0], J.wrist[1] - 0.35, J.wrist[2]] : [2.3, -5.2, 0]);
+    const c = close ? hand(rig.J) : bn.startsWith('neck') ? [0, -0.3, 0] : /hip|knee|thigh|pelvis/.test(bn) ? [0.8, -6.2, 0] : bn.startsWith('spine') ? [0, -2.6, 0] : [1.6, -2.4, 0];
+    const s = close ? (HER ? 120 : 160) : bn.startsWith('neck') ? 110 : /hip|knee|thigh|pelvis/.test(bn) ? 50 : bn.startsWith('spine') ? 50 : 62;
+    cells.push(cell(B.verts, { yaw, s, c }, [(k % perRow) * cw, 34 + Math.floor(k / perRow) * chh, cw, chh], `${bn}${yaw > 90 ? ' (back)' : ''}`, { heat }));
   });
   await shoot(cw * perRow, 34 + 2 * chh, cells, join(out, 'rig-weights.png'), [{ css: 'left:12px;top:6px', html: 'Weights per bone: blue 0, green 0.5, yellow 1 (red: all of it)' }]);
 }
 
+// the strict scores: each joint region's lowest over the poses, the game's keys and the walk, and where
+const scored = Object.entries(metricsAll).filter(([, m]) => m && m.region);
+if (scored.length) {
+  const table = {};
+  for (const [pose, m] of scored) for (const [r, v] of Object.entries(m.region)) if (!table[r] || v.score < table[r].score) table[r] = { score: v.score, pose, vol: v.vol, x: v.x, folds: v.folds };
+  metricsAll.scores = table;
+  console.log('region'.padEnd(12), 'min', ' worst pose (vol%, crossings, folds)');
+  for (const [r, v] of Object.entries(table)) console.log(r.padEnd(12), String(v.score).padStart(4), ' ', v.pose, `(${v.vol}%, ${v.x}, ${v.folds})`);
+  const low = scored.flatMap(([pose, m]) => Object.entries(m.region).filter(([, v]) => v.score < 8).map(([r, v]) => `${pose}:${r} ${v.score} (${v.vol}%, ${v.x}, ${v.folds})`));
+  console.log('under 8:', low.length ? low.join('; ') : 'none');
+}
 if (MAIN) writeFileSync(join(out, 'rig-metrics.json'), JSON.stringify(metricsAll, null, 1));
 if (browser) await browser.close();
 export async function closeBrowser() { if (browser) await browser.close(); browser = null; }

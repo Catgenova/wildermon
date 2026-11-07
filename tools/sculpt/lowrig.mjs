@@ -1,10 +1,14 @@
-// The animation rig of the low-poly male body (tools/sculpt/lowarm.mjs buildArmBody: head, torso, legs, both arms):
-// a humanoid skeleton measured from the body's own named rings, skin weights per vertex by name, and the posing and
-// skinning that move it. Written to tools/sculpt/rig-<who>.json (and, with --glb, a skinned glTF for inspection) by
+// The animation rig of the low-poly male and female bodies (tools/sculpt/lowarm.mjs buildArmBody: head, torso, legs,
+// both arms): a humanoid skeleton measured from the body's own named rings, skin weights per vertex by name, and the
+// posing and skinning that move it. Written to tools/sculpt/rig-<who>.json (and, with --glb, a skinned glTF for
+// inspection) by
 //
-//   node tools/sculpt/lowrig.mjs [--who male] [--glb out.glb] [--tmp dir]
-//     re-derives the rig from the current mesh: tools/sculpt/rig-male.json and rig-male.glb (the game's rig is bundled
-//     into --tmp, default tmp/lowrig, to fit its rest to ours)
+//   node tools/sculpt/lowrig.mjs [--who male|female] [--glb out.glb] [--tmp dir]
+//     re-derives the rig from the current mesh: tools/sculpt/rig-<who>.json and rig-<who>.glb, and the game's copy
+//     src/sculpt/assets/low<who>.json (the game's rig is bundled into --tmp, default tmp/lowrig, to fit its rest to ours)
+//
+// Both have the same skeleton (bone names, hierarchy, helpers), each measured off its own rings; his weights' tables are
+// TUNE, hers TUNE_FEMALE (his, with her own rings and shape: tuneOf).
 //
 // The rig is built on the approved mesh, not into it: the mesh's vertices are the bind pose exactly, so the body skinned
 // at rest is the body unrigged (checked here: every skinned vertex equals its rest position in float32).
@@ -29,7 +33,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildArmBody } from './lowarm.mjs';
-import { nameVerts, loopSpecs } from './lowloops.mjs';
+import { nameVerts, loopSpecs as hisLoops } from './lowloops.mjs';
+import { loopSpecs as herLoops } from './lowloops-female.mjs';
+
+/** Each body's own extra loops (his tools/sculpt/lowloops.mjs, hers tools/sculpt/lowloops-female.mjs). */
+const loopSpecs = (who) => (who === 'female' ? herLoops() : hisLoops());
 
 /* ---- vectors, 3x3 rotations (row-major), quaternions [w, x, y, z] ------------------------------------------------ */
 export const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -103,7 +111,7 @@ export function buildNamedBody(who = 'male') {
   // each loop vertex's ring, index and edge: { ring, k, a, b, t }
   const loops = new Map();
   const at0 = new Map(names.map((n, i) => [n, i]));
-  for (const L of loopSpecs()) L.pts.forEach(([a, b, t, n], k) => {
+  for (const L of loopSpecs(who)) L.pts.forEach(([a, b, t, n], k) => {
     const T = typeof t === 'function' ? t((m) => body.verts[at0.get(m)])(a, b) : t;
     loops.set(n, { ring: L.ring, k: +n.replace(/^.*?(\d+)(\.[LR])?$/, '$1'), a, b, t: T });
   });
@@ -120,7 +128,34 @@ export function buildNamedBody(who = 'male') {
   if (index.size !== names.length) { const seen = {}; names.forEach((n, i) => (seen[n] ??= []).push(i)); throw new Error('vertex names are not unique: ' + JSON.stringify(Object.entries(seen).filter(([, l]) => l.length > 1).slice(0, 8).map(([n, l]) => [n, l.map((i) => body.verts[i])]))); }
   const part = new Array(body.verts.length).fill(null);
   for (const p of body.polys) for (const i of p.v) part[i] ??= p.part;
-  return { ...body, tris: TUNE.MEND ? fanTris(body) : body.tris, names, index, part, loops: body.added ? loops : new Map() };
+  const TUNE = tuneOf(who);
+  let tris = TUNE.MEND ? fanTris(body, TUNE.SLIVER) : body.tris;
+  for (const [re, from] of TUNE.MIRROR ?? []) tris = mirrorSide(tris, body, names, index, re, from);
+  return { ...body, who, tris, names, index, part, loops: body.added ? loops : new Map() };
+}
+
+/**
+ * One side's polygons whose corners' names match `re` (without .L or .R) cut into triangles as the other side's (`from`)
+ * are, mirrored (TUNE.MIRROR). Ear-clipping cuts some of her polygons one way on the left and the other on the right: her
+ * right breast's upper edge (sd1 da1 bx1 da2 sd2) is cut with a triangle sd2 bx1 da1 that turns over with the arms
+ * forward, where the left's is a fan from sd1; her left sole is
+ * a fan from the toe's corner (so0) across to the heel's, so the ball bent creases it from toe to heel and the toe block
+ * loses a tenth of its volume, where the right's fan from so5 has the ball's edge (so2-so5); the buttock's side
+ * (gl5 th4 tg4 tg3 th3) is cut on the left with a thin triangle gl5 th3 tg3 that turns over once the thigh is raised.
+ * The sole and the foot's band are flat, so there the surface and every pixel are the same at rest; the buttock's face
+ * is not quite flat, and its left side becomes the right's mirror.
+ */
+function mirrorSide(tris, body, names, index, re, from = '.R') {
+  const R = new RegExp(re), to = from === '.R' ? '.L' : '.R';
+  const foot = (t, s) => t.v.every((i) => (names[i] ?? '').endsWith(s) && R.test(names[i].slice(0, -2)));
+  const out = tris.filter((t) => !foot(t, to));
+  for (const t of tris) {
+    if (!foot(t, from)) continue;
+    const v = t.v.map((i) => index.get(names[i].slice(0, -2) + to)).reverse();
+    const poly = body.polys.findIndex((p) => v.every((i) => p.v.includes(i)));
+    out.push({ ...t, v, poly });
+  }
+  return out;
 }
 
 /**
@@ -131,12 +166,12 @@ export function buildNamedBody(who = 'male') {
  * the segment ac, goes, with its neighbour (a, c, d) in the same polygon, into (a, b, d) and (b, c, d): at rest the same
  * surface to within the sliver's width (39 triangles change; a few antialiased pixels move by 5/255 or less).
  */
-export function fanTris(m) {
+export function fanTris(m, SLIVER = TUNE.SLIVER) {
   let T = m.tris.map((t) => ({ ...t, v: [...t.v] }));
   const area = (t) => Math.hypot(...cross(sub(m.verts[t.v[1]], m.verts[t.v[0]]), sub(m.verts[t.v[2]], m.verts[t.v[0]]))) / 2;
   const longest = (t) => Math.max(...[0, 1, 2].map((k) => Math.hypot(...sub(m.verts[t.v[k]], m.verts[t.v[(k + 1) % 3]]))));
   // a sliver: under TUNE.SLIVER high across its longest edge (and that edge longer than 0.05)
-  const thin = (t) => longest(t) > 0.05 && (2 * area(t)) / longest(t) < TUNE.SLIVER;
+  const thin = (t) => longest(t) > 0.05 && (2 * area(t)) / longest(t) < SLIVER;
   // a sliver is mended against a neighbour that is not one itself; a run of them in a line, from its end inward
   for (let changed = true, guard = 0; changed && guard < 50; guard++) {
     changed = false;
@@ -160,6 +195,7 @@ export function fanTris(m) {
 /* ---- the skeleton ---------------------------------------------------------------------------------------------------- */
 /** The body's joints, measured off its named rings (the left side; the right is its mirror). */
 export function measure(B) {
+  const TUNE = tuneOf(B.who);
   const P = (n) => { const i = B.index.get(n) ?? B.index.get(n.replace(/\.L$/, '')); if (i === undefined) throw new Error(`no vertex ${n}`); return B.verts[i]; };
   const ring = (r, n, s = '.L') => mean(Array.from({ length: n }, (_, k) => P(`${r}${k}${s}`)));
   const A = (n) => P(`arm/${n}`);
@@ -370,12 +406,66 @@ export const TUNE = {
   NECK: { g: { neck_02: 0.8, head: 0.2 }, n6: { neck_02: 0.8, head: 0.2 }, gFront: { neck_02: 0.7, head: 0.15, jaw: 0.15 } },
 };
 
+/** Her weights' tables: his (TUNE) with her own rings and shape (her forearm's four rings fa fb fd ff, her thighs' tg tl,
+ * the buttock's upper row gm, her breasts br bx round db1). */
+export const TUNE_FEMALE = (() => {
+  const t = structuredClone(TUNE);
+  // her forearm's rings lie at fa 0.13, fb 0.27, fd 0.59, ff 0.87 of the way to the wrist (his fc, fe, fg she has not)
+  const { fc, fe, fg, ...arm } = t.ARM;
+  return Object.assign(t, {
+    // her hip's pivot nearer the thigh's middle than his (her top ring's back is the buttock's underside, so its centre
+    // lies far back): 0.25 forward of the ring's centre, not out from it
+    // (her shoulder's pivot 0.1 lower than his, off the deltoid's ball, so her arm overhead keeps the shoulder's volume)
+    // her left sole and buttock's side cut into triangles as her right's, her right breast's upper edge as her left's
+    // (mirrorSide)
+    MIRROR: [['^((so|ft)\\d|gl5|th[34]|tg[34])$', '.R'], ['^(sd[12]|da[12]|bx1)$', '.L']],
+    PIV: { ...t.PIV, hipFwd: 0.25, hipOut: 0, elbowBack: -0.3, shoulder: [0.1, -0.1, 0.15] },
+    // her arms hang against her sides: swung forward or back they are turned out (fromGame, swingOut), by up to 0.15 more
+    // lean forward (past her breasts) and 0.25 back (past her back and buttock), all of it from a 30 degree swing
+    GAME: { ...t.GAME, armSwing: [0.15, 0.25], armSwingAt: 0.5 },
+    // (her elbow's rings either side of the hinge more on its helper than his, so the crease folds in the run)
+    ARM: { ...arm, ue: { upperarm: 0.45, elbow: 0.55 }, fa: { elbow: 0.7, lowerarm: 0.15, lowerarm_twist_01: 0.15 }, fb: { elbow: 0.2, lowerarm: 0.4, lowerarm_twist_01: 0.4 }, fd: { lowerarm_twist_01: 0.23, lowerarm_twist_02: 0.77 }, ff: { lowerarm_twist_02: 0.38, wrist: 0.62 } },
+    // her thigh's extra rings: tg under the buttock (the groin and the gluteal fold), tl over the knee
+    // (the ring under the fold, tm, a little on the hip's helper, and the knee's lower ring half on its helper: so the
+    // groin's crease and the knee's back spread over a ring more as the leg is raised or the knee bent deep)
+    LEG: { ...t.LEG, tg: { hip: 0.3, thigh: 0.7 }, tm: { hip: 0.3, thigh: 0.7 }, tl: { thigh: 1 }, kc: { knee: 0.5, calf: 0.5 } },
+    // by vertex, over LEG: the thigh's top ring and the fold under it at the back (3 4 5, the buttock's round underside
+    // and the gluteal fold) stay more with the pelvis, so the buttock does not swing round with the thigh
+    LEGV: {
+      th3: { pelvis: 0.3, hip: 0.45, thigh: 0.25 }, th4: { pelvis: 0.6, hip: 0.4 }, th5: { pelvis: 0.2, hip: 0.6, thigh: 0.2 },
+      tg3: { hip: 0.45, thigh: 0.55 }, tg4: { pelvis: 0.15, hip: 0.5, thigh: 0.35 }, tg5: { hip: 0.45, thigh: 0.55 },
+      // the groin's crease (the top ring's front, the fold ring's front) more on the pelvis and the hip's helper, so the
+      // thigh raised does not push into the belly
+      th0: { pelvis: 0.35, hip: 0.55, thigh: 0.1 }, th1: { pelvis: 0.3, hip: 0.55, thigh: 0.15 }, th7: { pelvis: 0.35, hip: 0.55, thigh: 0.1 },
+      tg0: { hip: 0.7, thigh: 0.3 }, tg1: { hip: 0.6, thigh: 0.4 }, tg7: { hip: 0.7, thigh: 0.3 },
+    },
+    // the buttock's upper row (gm6..gm8, between the hip cut and the hip row): its share on the hip's helper, as GL
+    GM: { gm6: 0.15, gm7: 0.08, gm8: 0 },
+    // her breasts: the dome (br, round its point db1) and its foot's extra points (bx) ride with the chest (spine_03) and
+    // a little the clavicle: f of the vertex's weight so, clav of that on the clavicle
+    BREAST: { br: { f: 1, clav: 0.08 }, db1: { f: 1, clav: 0.08 }, bx: { f: 0.8, clav: 0.05 } },
+    // the breast's foot beside the armpit (db2, dc2) not on the shoulder's helper, as his pectoral's edge is: raised, the
+    // arm would lift it into the breast's underside
+    NEAR: { ...t.NEAR, db2: 0, dc2: 0 },
+    // the neck's top ring under the jaw and the nape half on the head (her nape's ring point g3 lies on the skull's n6)
+    NECK: { ...t.NECK, g: { neck_02: 0.5, head: 0.5 }, n6: { neck_02: 0.4, head: 0.6 } },
+  });
+})();
+// (trying values: RIG_TUNE='{"PIV":{"hipFwd":0.2}}' merges into her tables, a key's object into its object)
+if (typeof process !== 'undefined' && process.env.RIG_TUNE) {
+  const merge = (o, x) => { for (const [k, v] of Object.entries(x)) if (v && typeof v === 'object' && !Array.isArray(v) && o[k] && typeof o[k] === 'object') merge(o[k], v); else o[k] = v; };
+  merge(TUNE_FEMALE, JSON.parse(process.env.RIG_TUNE));
+}
+/** The weights' tables of a body. */
+export const tuneOf = (who) => (who === 'female' ? TUNE_FEMALE : TUNE);
+
 /**
  * Each vertex's bones, by its name: chain coordinates along the limbs ring by ring (each ring on a joint shared between
  * the bone above, the joint's helper and the bone below), the trunk by height between the spine's pivots, the shoulder
  * girdle by how far out from the neck. At most four, normalised. Returns { [name]: [[bone, w], ...] }.
  */
 export function skinWeights(B, J) {
+  const TUNE = tuneOf(B.who);
   const W = {};
   const sideBone = (side) => (n) => (side ? `${n}_${side}` : n);
   const spine = (y) => {
@@ -430,9 +520,11 @@ export function skinWeights(B, J) {
       else w = named({ hand: 1 });
     } else if (part === 'legs' || part === 'pelvis') {
       if (ringOf === 'th' && TUNE.TH_IN[base]) w = named(TUNE.TH_IN[base]);
+      else if (TUNE.LEGV?.[base]) w = named(TUNE.LEGV[base]);
       else if (LEG[ringOf]) w = named(LEG[ringOf]);
       else if (/^k[abc]$/.test(ringOf.slice(0, 2)) && LEG[ringOf.slice(0, 2)]) w = named(LEG[ringOf.slice(0, 2)]);
       else if (ringOf === 'gl') { const f = GL[base] ?? 0; w = { pelvis: 1 - f, [S('hip')]: f }; }
+      else if (ringOf === 'gm' && TUNE.GM) { const f = TUNE.GM[base] ?? 0; w = side ? { pelvis: 1 - f, [S('hip')]: f } : { pelvis: 1 }; }
       else if (['ft', 'so'].includes(ringOf)) { const k = base.slice(2); w = named(['0', '1'].includes(k) ? TUNE.FOOT.toe : ['2', '5'].includes(k) ? TUNE.FOOT.ball : TUNE.FOOT.heel); }
       else if (base === 'cx') w = { ...TUNE.CX };
       else if (ringOf === 'bt') w = { pelvis: 1 };
@@ -449,6 +541,9 @@ export function skinWeights(B, J) {
         const f = (ROWF[ringOf] ?? 0) * front * sstep(TUNE.ROWX[0], TUNE.ROWX[1], Math.abs(p[0]));
         if (f > 0 && side) move(w, ['spine_03', 'spine_02'], f * 0.85, { [S('clavicle')]: 1 });
         // the arm's cut and the planes round it give a little to the shoulder's helper, the armpit's least
+        // her breasts: onto the chest's bone and a little the clavicle
+        const br = side && TUNE.BREAST ? TUNE.BREAST[base] ?? TUNE.BREAST[ringOf] : null;
+        if (br) w = blend(w, { spine_03: 1 - br.clav, [S('clavicle')]: br.clav }, br.f);
         if (side && near[base]) move(w, ['spine_03', 'spine_02', S('clavicle')], near[base], { [S('shoulder')]: 1 });
       }
     } else if (part === 'neck' || /^(g\d|n6)$/.test(base)) {
@@ -559,6 +654,7 @@ export const T = [-1, 0, 0, 0, 0, 1, 0, 1, 0];
  * thumb_03 follow thumb_01. Helpers are driven from the result as in any pose.
  */
 export function fromGame(rig, gPosed, gRest) {
+  const TUNE = tuneOf(rig.who);
   const D = (g) => { const a = gPosed[g].m, b = gRest[g].m; return mm(tr(T), mm(mm(a, tr(b)), T)); };
   const half = (A, Bm) => mm(A, qmat(qpow(quat(mm(tr(A), Bm)), 0.5)));
   const Wd = {};
@@ -578,8 +674,10 @@ export function fromGame(rig, gPosed, gRest) {
   for (const s of ['l', 'r']) for (const seg of ['upperarm', 'lowerarm']) {
     const b = rig.bones[rig.at.get(`${seg}_${s}`)], w = Wd[b.name];
     if (!w) continue;
-    const r0 = colOf(b.R, 1), side = Math.sign(r0[0]), xmin = Math.min(0.95, Math.abs(r0[0]) * TUNE.GAME.armIn);
-    const v = mv(tr(chest), colOf(w, 1));
+    const r0 = colOf(b.R, 1), side = Math.sign(r0[0]), v = mv(tr(chest), colOf(w, 1));
+    // (and, TUNE.GAME.armSwing, further out as it swings forward or back, seen from the chest (swingOut): her arms hang
+    // against her sides, so swung they would pass into her breasts and her back)
+    const xmin = Math.min(0.95, Math.abs(r0[0]) * TUNE.GAME.armIn + swingOut(TUNE.GAME, v[2]));
     if (side * v[0] >= xmin) continue;
     const k = Math.sqrt((1 - xmin * xmin) / Math.max(1e-9, v[1] * v[1] + v[2] * v[2]));
     const v2 = [side * xmin, v[1] * k, v[2] * k];
@@ -625,6 +723,33 @@ export function fromGame(rig, gPosed, gRest) {
     pose[`thumb_03_${s}`] = euler([a * TUNE.GAME.thumbCurl, 0, 0]);
   }
   return pose;
+}
+
+/** How much further out than at rest an upper arm leans, swung forward (z > 0, seen from the chest) or back: GAME.armSwing
+ * [forward, back], all of it from a swing of GAME.armSwingAt (its sine). */
+const swingOut = (G, z) => { const s = G.armSwing ?? [0, 0]; return s[z > 0 ? 0 : 1] * Math.min(1, Math.abs(z) / (G.armSwingAt ?? 0.5)); };
+
+/**
+ * A local pose with its upper arms kept off the body by fromGame's rule (TUNE.GAME armIn, armSwing): each upper arm, seen
+ * from the chest, turned out until it leans in no further than at rest and, by armSwing, further the further it swings
+ * forward or back. For a pose made by hand (the test poses), so her arms raised forward pass her breasts as in the walk.
+ */
+export function armsOut(rig, pose) {
+  const TUNE = tuneOf(rig.who), out = { ...pose };
+  const F = posed(rig, out), chest = mm(F[rig.at.get('spine_03')].W, tr(rig.bones[rig.at.get('spine_03')].R));
+  for (const s of ['l', 'r']) {
+    const i = rig.at.get(`upperarm_${s}`), b = rig.bones[i], pa = F[b.p];
+    const r0 = colOf(b.R, 1), side = Math.sign(r0[0]), v = mv(tr(chest), colOf(F[i].W, 1));
+    const xmin = Math.min(0.95, Math.abs(r0[0]) * TUNE.GAME.armIn + swingOut(TUNE.GAME, v[2]));
+    if (side * v[0] >= xmin) continue;
+    const k = Math.sqrt((1 - xmin * xmin) / Math.max(1e-9, v[1] * v[1] + v[2] * v[2]));
+    const ax = cross(v, [side * xmin, v[1] * k, v[2] * k]), ang = Math.asin(Math.min(1, Math.hypot(...ax))) * 180 / Math.PI;
+    if (ang < 1e-6) continue;
+    const C = mm(chest, mm(axisAngle(ax, ang), tr(chest))), base = mm(pa.W, b.Rrel);
+    const e = out[b.name], L = !e ? I3 : e.length === 9 ? e : euler(e);
+    out[b.name] = mm(tr(base), mm(C, mm(base, L)));
+  }
+  return out;
 }
 
 /**
@@ -681,19 +806,23 @@ export function fitRest(rig, bonesOf, restRig, P) {
 
 /**
  * The game's figure rig, bundled from its TypeScript (src/render/figure.ts sculptRig, src/sculpt/rig.ts bonesOf) by esbuild
- * into `dir`: { sculptRig, bonesOf, MALE, REST_EXTRAS, look }, and the rest fitted to ours (fitRest) as `fit`.
+ * into `dir`: { sculptRig, bonesOf, MALE (the body's own proportions: FEMALE for her, also as PROPS), REST_EXTRAS, look
+ * (a man's or a woman's) }, and the rest fitted to ours (fitRest) as `fit`.
  */
 export async function gameRig(rig, dir) {
   const { buildSync } = await import('esbuild');
   mkdirSync(dir, { recursive: true });
   const file = resolve(dir, 'game-rig.mjs');
   const repo = resolve(new URL('.', import.meta.url).pathname, '../..');
-  buildSync({ stdin: { contents: "export { sculptRig } from './src/render/figure';\nexport { bonesOf, MALE, REST_EXTRAS } from './src/sculpt/rig';", resolveDir: repo, loader: 'ts' }, bundle: true, format: 'esm', platform: 'node', outfile: file, logLevel: 'warning' });
-  const g = await import(file);
-  const look = { gender: 'man', skin: '#c98a5a', hair: 'bald', hairColour: '#2e2440', eyes: 'dark', beard: 'none', shirt: 'teal', trousers: 'brown' };
+  buildSync({ stdin: { contents: "export { sculptRig } from './src/render/figure';\nexport { bonesOf, MALE, FEMALE, REST_EXTRAS } from './src/sculpt/rig';", resolveDir: repo, loader: 'ts' }, bundle: true, format: 'esm', platform: 'node', outfile: file, logLevel: 'warning' });
+  const g0 = await import(file);
+  // her figure: a woman's look (the figure's walk reads its frame) and the female proportions
+  const female = rig.who === 'female';
+  const g = { ...g0, MALE: female ? g0.FEMALE : g0.MALE, PROPS: female ? g0.FEMALE : g0.MALE };
+  const look = { gender: female ? 'woman' : 'man', skin: '#c98a5a', hair: 'bald', hairColour: '#2e2440', eyes: 'dark', beard: 'none', shirt: 'teal', trousers: 'brown' };
   const base = g.sculptRig({ phase: 0, moving: false, facing: 0, swimming: false, working: false, look }).rest;
-  const fit = fitRest(rig, g.bonesOf, base, g.MALE);
-  return { ...g, look, fit, gRest: g.bonesOf(fit.rest, g.MALE, [], g.REST_EXTRAS) };
+  const fit = fitRest(rig, g.bonesOf, base, g.PROPS);
+  return { ...g, look, fit, gRest: g.bonesOf(fit.rest, g.PROPS, [], g.REST_EXTRAS) };
 }
 
 /* ---- export ------------------------------------------------------------------------------------------------------- */
@@ -737,7 +866,7 @@ export function gameAsset(rig, rest) {
     weights: rig.vw.map((l) => l.flatMap(([b, w]) => [b, w])),
     soles: B.names.map((n, i) => (/^so\d\.[LR]$/.test(n) ? i : -1)).filter((i) => i >= 0),
     bones: bones.map((b) => ({ name: b.name, p: b.p, kind: b.kind, head: b.head.map(r5), R: b.R.map(r5), ...(b.driver ? { from: b.from, drive: b.driver.kind, f: b.driver.f } : {}), ...(b.game ? { game: b.game } : {}) })),
-    rest, game: { ...TUNE.GAME },
+    rest, game: { ...tuneOf(rig.who).GAME },
   };
 }
 
@@ -805,7 +934,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
   const who = opt('who', 'male');
-  if (who !== 'male') throw new Error('the rig is built for the male body only');
   const rig = buildRig(who);
   const data = rigData(rig);
   const file = new URL(`./rig-${who}.json`, import.meta.url);
