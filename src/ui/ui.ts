@@ -3401,6 +3401,8 @@ export class UI {
     push(item('shear'));
     push(item('milk_creature'));
     push(item('tack_creature'));
+    // Shoeing a mount or a draught beast: on its menu, refused in its own words without the shoes or the mallet.
+    push(item('shoe_creature'));
     push(item('mount_creature'));
     push(item('dismount_creature'));
     push(item('untack_creature'));

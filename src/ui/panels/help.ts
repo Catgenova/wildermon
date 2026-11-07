@@ -63,7 +63,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { BARDING_CUT, gearBill, gearSays, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZE_BILL, GEAR_SIZES, GEAR_SLOTS, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
-import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP, HAUL_SKILL } from '../../game/creatures';
+import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP, HAUL_SHOE_SHARE, HAUL_SKILL, SHOE_DAYS, SHOE_PACE, SHOE_STEP, SHOES_PER_MOUNT } from '../../game/creatures';
 import { PERK_STAGE, perkLine, perkSays, ringKeepsOut, STAGE_PERKS } from '../../game/creatures';
 import {
   ALLOY_QL, AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
@@ -2397,6 +2397,9 @@ export function helpText(): string {
       ${CART.vehicle?.needs ?? 0} wildermon move it, ${CART.vehicle?.yokes ?? 0} faster.</li>
       <li><b>Wagon</b>: ${bill('make_wagon', true)}. Holds <b>${WAGON.capacity} things</b>; needs <b>${WAGON.vehicle ? teamSaid(WAGON.vehicle) : ''} yokes</b> filled to move.</li>
       <li><b>Hitch</b> (from its menu, beside it): a tamed wildermon with you or a settlement worker; one in a wildermon crate is let out first. Then <b>take the reins</b>.</li>
+      <li><b>Shoe it</b> (from a mount's or draught beast's menu, beside it, grown): ${SHOES_PER_MOUNT} horseshoes and a mallet in the pack; lasts ${SHOE_DAYS} days.
+      Mount: speed on laid stone +${percent(SHOE_PACE - 1)}, step ${metresFine(SHOE_STEP)} m steeper. Draught beast in the traces, at its share of the team:
+      speed on laid stone +${percent((SHOE_PACE - 1) * HAUL_SHOE_SHARE)}, step ${metresFine(SHOE_STEP * HAUL_SHOE_SHARE)} m steeper.</li>
       <li>Pace (speed multiplier): the team's speed and number, and hunger (a hungry one is slower).</li>
       <li><b>Driving</b> (the driver): team pace +${percent(drivingPace(TRAVEL_TOP_AT / 2) - 1)} at ${TRAVEL_TOP_AT / 2}, +${percent(DRIVING_TOP)} at ${TRAVEL_TOP_AT}; trained per tile entered
       on the seat. A ${SPECIES.seavic.name} pair outruns walking; ${WAGON.vehicle?.needs ?? 0} ${SPECIES.quarra.name}s do not, but shift ${WAGON.capacity ?? 0} bricks.</li>
