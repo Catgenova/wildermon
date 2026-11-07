@@ -1,9 +1,10 @@
 // Sheets of a sculpted body (src/sculpt), drawn by tools/sculpt/page.ts at twice the pixels:
 //
 //   node tools/sculpt/shot.mjs --out /some/dir                 # every sheet: lineup, facings, motion, close, night, debug, stats
-//   node tools/sculpt/shot.mjs --out /some/dir --only lineup,close    # also: design, garment, overlay, live, iou, hands, joins, stats
+//   node tools/sculpt/shot.mjs --out /some/dir --only lineup,close    # also: design, garment, overlay, live, iou, hands, joins, hair (hairq: no walk), stats
 //   node tools/sculpt/shot.mjs --out /some/dir --who female     # the woman (default male; also neither, seven, five)
-//   node tools/sculpt/shot.mjs --out /some/dir --hair bald      # the look's hairstyle: tousled (default) or bald
+//   node tools/sculpt/shot.mjs --out /some/dir --hair bald      # the look's hairstyle: a HAIRSTYLES id (src/game/look.ts), or tousled (default: the generic hair)
+//   node tools/sculpt/shot.mjs --out /some/dir --colour '#5a3a1e'  # the hair's colour (default the design sheet's plum)
 //   node tools/sculpt/shot.mjs --out /some/dir --ink 0          # the ink's width in px on every sheet (0: none), for looking at the shapes alone
 //   node tools/sculpt/shot.mjs --stats                          # the bake's numbers and the cost of a crowd, no sheets
 //
@@ -18,7 +19,8 @@ const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i 
 const flag = (name) => args.includes(`--${name}`);
 const out = resolve(opt('out', 'tmp/sculpt'));
 const who = opt('who', 'male');
-const hair = opt('hair', 'tousled'); // the look's hairstyle: tousled (the sheet's) or bald
+const hair = opt('hair', 'tousled'); // the look's hairstyle: a HAIRSTYLES id, tousled (the generic hair) or bald
+const colour = opt('colour', ''); // the hair's colour, in place of the design sheet's
 const pitch = opt('pitch', ''); // the head's pitch up on the island, degrees, in place of the sculpt's own
 const ink = opt('ink', ''); // the ink's width in screen px for every sheet, in place of the renderer's own (0 for none)
 const only = opt('only', 'compare,lineup,facings,motion,close,night,debug').split(',');
@@ -46,7 +48,7 @@ const b = await chromium.launch({ ...(existsSync(kept) ? { executablePath: kept 
 const p = await b.newPage({ viewport: { width: 2000, height: 1000 }, deviceScaleFactor: 2 });
 p.on('pageerror', (e) => console.log('ERR', e.message));
 p.on('console', (m) => { if (m.type() === 'error' || m.text().startsWith('ERR')) console.log('console', m.text()); });
-await p.setContent(`<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding:4px"></div><script>window.REF=${JSON.stringify(ref)};window.REF8=${JSON.stringify(ref8)};window.REF9=${JSON.stringify(ref9)};window.REF10=${JSON.stringify(ref10)};window.HAIR=${JSON.stringify(hair)};window.INK=${ink === '' ? 'undefined' : +ink};window.PITCH=${pitch === '' ? 'undefined' : +pitch}</script></body></html>`);
+await p.setContent(`<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding:4px"></div><script>window.REF=${JSON.stringify(ref)};window.REF8=${JSON.stringify(ref8)};window.REF9=${JSON.stringify(ref9)};window.REF10=${JSON.stringify(ref10)};window.HAIR=${JSON.stringify(hair)};window.HAIRCOLOUR=${JSON.stringify(colour)};window.INK=${ink === '' ? 'undefined' : +ink};window.PITCH=${pitch === '' ? 'undefined' : +pitch}</script></body></html>`);
 await p.addScriptTag({ content: js });
 await p.waitForFunction('window.READY');
 console.log('gl:', await p.evaluate(() => window.SCULPT.glInfo()));
@@ -83,6 +85,8 @@ if (only.includes('compare') || only.includes('iou')) { await p.evaluate(() => w
 if (only.includes('lineup')) await shoot('lineup', async () => { await window.SCULPT.lineup(6, 'idle:0'); await window.SCULPT.lineup(2.5, 'walk:0.25'); });
 if (only.includes('facings')) await shoot(`facings-${who}`, (w) => { window.SCULPT.facings(w, 'idle:0', 1); window.SCULPT.facings(w, 'walk:0.25', 1); window.SCULPT.facings(w, 'idle:0', 2); window.SCULPT.facings(w, 'walk:0.25', 2); window.SCULPT.facings(w, 'idle:0', 4); window.SCULPT.facings(w, 'walk:0.6', 4); window.SCULPT.facings('figure', 'idle:0', 2); });
 if (only.includes('motion')) await shoot(`motion-${who}`, (w) => { window.SCULPT.strip(w, 1, 2.5); window.SCULPT.strip(w, 3, 2.5); window.SCULPT.strip(w, 6, 2.5); window.SCULPT.strip('figure', 1, 2.5); });
+if (only.includes('hair')) await shoot(`hair-${who}-${hair}`, (w) => window.SCULPT.hair(w));
+if (only.includes('hairq')) await shoot(`hairq-${who}-${hair}`, (w) => window.SCULPT.hair(w, 150, [0, 35, 90, 180], [9, 2], false));
 if (only.includes('close')) await shoot(`close-${who}`, (w) => window.SCULPT.close(w, 9));
 if (only.includes('hands')) { await shoot(`hands-${who}`, (w) => window.SCULPT.hands(w, 20)); for (const a of await p.evaluate(() => window.SCULPT.audit())) console.log('audit', JSON.stringify(a)); }
 if (only.includes('trace')) {

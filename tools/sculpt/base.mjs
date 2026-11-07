@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join, resolve, dirname } from 'node:path';
 import { facets, handFrame, mitt, tracedHead } from './planar.mjs';
+import { clipAudit, HAIRS } from './hair.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
@@ -366,16 +367,14 @@ const region = bodyIds.map((i) => {
   if (/^(head|jaw|eye)/.test(name)) return 1; if (/^(wrist|fing|thumb)/.test(name)) return 2; if (/^(ankle|toe)/.test(name)) return 3; return 0;
 });
 
-/* ---- the head, the hands and the hair the island draws over the base ------------------------------------------------------
- * The planar head and the mitts (`./planar.mjs`), and a shell of hair with the sheet's clumps over it. Built per body in
- * MakeHuman's space (y up, z forward), the same topology for both. Regions: 1 the face's skin, 2 a hand's, 6 an eye, 8 a
- * brow, 9 hair, 12 a hair clump with the teal, 13 a finger groove. `detail` false is the far band's plainer mitt. */
+/* ---- the head and the hands the island draws over the base -------------------------------------------------------------
+ * The planar head and the mitts (`./planar.mjs`). Built per body in MakeHuman's space (y up, z forward), the same topology
+ * for both. Regions: 1 the face's skin, 2 a hand's, 6 an eye, 8 a brow, 13 a finger groove, 14 an ear, 15 under the jaw.
+ * `detail` false is the far band's plainer mitt. The hair is built per style below (`./hair.mjs`). */
 function extras(b, shared, style = 'man', detail = true) {
   const V = b.verts, out = facets();
   const bodyV = obj.groups.body.flatMap((fi) => obj.faces[fi].idx);
   const face = bodyV.filter((i) => V[i][1] > b.eyes[0].c[1] - 1.5);
-  const HEADB = [['head', 1]];
-  const add = (p, region, stamp = -1) => { out.pos.push(p); out.region.push(region); out.stamp.push(stamp); out.bones.push(HEADB); return out.pos.length - 1; };
   const ey = (b.eyes[0].c[1] + b.eyes[1].c[1]) / 2;
   // The head's landmarks: the chin, the crown, the skull's centre and half-depth at the eyes, its half-width above the ears.
   const headV = bodyV.filter((i) => headGroup((topBone.get(i) ?? [''])[0]));
@@ -403,86 +402,8 @@ function extras(b, shared, style = 'man', detail = true) {
     const m = mitt(J, forearm, k, detail, out);
     out.zip(seam(seams[S]), m.wrist.map((p) => out.vert(p, 2, m.bones)), m.axis, m.front);
   }
-  // The hair: a shell of the scalp's own faces pushed out, and over it the sheet's wedges -- a fringe mass swept over the
-  // forehead with pointed tips, side masses over the ears, a tousled top with two cowlicks, a mass down the nape.
-  const hairStart = out.pos.length;
-  const hairline = (p) => (p[2] > 0.3 ? ey + 0.55 : p[2] > -0.3 ? ey + 0.1 : ey + 0.05);
-  // The shell: the traced skull's own facets above the hairline, pushed out from the skull's middle (the same way for
-  // every copy of a vertex, so the shell has no cracks), further on top and at the back than at the hairline.
-  const c0 = [0, ey + 0.15, 0.3];
-  const hash = (i) => { const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
-  for (let t = headStart; t < headEnd; t++) {
-    const tr = out.tris[t];
-    if (!tr.every((i) => out.region[i] === 1 && out.pos[i][1] > hairline(out.pos[i]))) continue;
-    const ids = tr.map((i) => {
-      const p = out.pos[i], d = [p[0] - c0[0], p[1] - c0[1], p[2] - c0[2]], l = Math.hypot(...d) || 1;
-      const edge = p[1] < hairline(p) + 0.2;
-      const h = (edge ? 0.08 : 0.14 + 0.22 * Math.max(0, d[1] / l) + 0.26 * Math.max(0, -d[2] / l)) + 0.04 * hash(Math.round(p[0] * 97 + p[1] * 31 + p[2] * 13));
-      return add([p[0] + (d[0] / l) * h, p[1] + (d[1] / l) * h - (edge ? 0.08 : 0), p[2] + (d[2] / l) * h], 9);
-    });
-    out.tris.push(ids);
-  }
-  // A clump of hair: a lofted flattened teardrop along a curve through three points -- a thick rounded base sunk a
-  // little into the shell, the body standing off the skull, tapering to a point. Its upper face carries a highlight
-  // stamp (region 9 lilac, region 12 teal), positive where the ring faces up and out.
-  const clump = (pts, w0, h0, up, region = 9) => {
-    const P = (t) => [0, 1, 2].map((k) => (1 - t) * (1 - t) * pts[0][k] + 2 * (1 - t) * t * pts[1][k] + t * t * pts[2][k]);
-    const S = 8, M = 10, rings = [];
-    for (let i = 0; i <= S; i++) {
-      const t = i / S, c = P(t), d = [0, 1, 2].map((k) => P(Math.min(1, t + 0.01))[k] - P(Math.max(0, t - 0.01))[k]), dl = Math.hypot(...d) || 1;
-      const tg = d.map((x) => x / dl);
-      let side = [tg[1] * up[2] - tg[2] * up[1], tg[2] * up[0] - tg[0] * up[2], tg[0] * up[1] - tg[1] * up[0]]; const sl = Math.hypot(...side) || 1; side = side.map((x) => x / sl);
-      const u = [side[1] * tg[2] - side[2] * tg[1], side[2] * tg[0] - side[0] * tg[2], side[0] * tg[1] - side[1] * tg[0]];
-      // Rounded at the base (a quarter circle over the first fifth), then tapering to the point.
-      const g = t < 0.2 ? Math.sqrt(1 - (1 - t / 0.2) * (1 - t / 0.2)) : 1 - ((t - 0.2) / 0.8) * ((t - 0.2) / 0.8) * 0.96;
-      const taper = i === S ? 0.02 : Math.max(0.02, g), w = w0 * taper, h = h0 * taper;
-      rings.push(Array.from({ length: M }, (_, j) => {
-        const a = (j / M) * Math.PI * 2, lit = Math.sin(a) - 0.25;
-        return add([c[0] + side[0] * w * Math.cos(a) + u[0] * h * Math.sin(a), c[1] + side[1] * w * Math.cos(a) + u[1] * h * Math.sin(a), c[2] + side[2] * w * Math.cos(a) + u[2] * h * Math.sin(a)], region, lit * 0.3);
-      }));
-    }
-    const p0 = P(0), b = [0, 1, 2].map((k) => p0[k] - (P(0.05)[k] - p0[k]) * 1.5);
-    const cap = add(b, region, -0.3);
-    for (let j = 0; j < M; j++) out.tris.push([cap, rings[0][(j + 1) % M], rings[0][j]]);
-    for (let i = 0; i + 1 < rings.length; i++) for (let j = 0; j < M; j++) { const a = rings[i][j], d = rings[i][(j + 1) % M], e2 = rings[i + 1][j], f2 = rings[i + 1][(j + 1) % M]; out.tris.push([a, d, f2], [a, f2, e2]); }
-  };
-  // The clumps are set by direction from the skull's middle: azimuth from the front (toward the body's left positive),
-  // elevation, and how far out past the skull. The flat of each faces out. Sizes in head widths.
-  const skull = traced.skull.map((p) => { const d = [p[0] - c0[0], p[1] - c0[1], p[2] - c0[2]]; const l = Math.hypot(...d) || 1; return [d[0] / l, d[1] / l, d[2] / l, l]; });
-  const H = (az, el, out, cap = 9) => {
-    const a = (az * Math.PI) / 180, e = (el * Math.PI) / 180, d = [Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)];
-    // The skull's radius along d: the furthest vertex within a narrow cone, widening the cone until one is found.
-    let r = 0; for (const cone of [0.99, 0.975, 0.95, 0.9]) { for (const v of skull) if (v[0] * d[0] + v[1] * d[1] + v[2] * d[2] > cone) r = Math.max(r, v[3]); if (r) break; }
-    r = Math.min(r || 0.9, cap);
-    return [c0[0] + d[0] * (r + out), c0[1] + d[1] * (r + out), c0[2] + d[2] * (r + out)];
-  };
-  const HW = 1.7;
-  const C = (a, b, c, w, h, region) => { const p1 = H(...b); const up = [p1[0] - c0[0], p1[1] - c0[1], p1[2] - c0[2]]; clump([H(...a), p1, H(...c)], w * HW, h * HW, up, region); };
-  // The fringe: three big clumps from the right temple sweeping left across the forehead, tips over the brows (one between
-  // them), and a small clump flicking up off the forehead at the parting. Two of them carry the teal. (A clump's middle
-  // control point pulls its curve only half way, so the middles stand at twice the mass wanted.)
-  C([-70, 24, -0.04], [-42, 24, 0.55], [-16, -1, 0.2], 0.17, 0.06, 12);
-  C([-55, 30, -0.04], [-16, 28, 0.6], [2, -3, 0.2], 0.18, 0.06);
-  C([-35, 36, -0.04], [12, 28, 0.56], [32, 1, 0.22], 0.17, 0.06);
-  C([-45, 40, -0.02], [-54, 60, 0.5], [-76, 70, 0.62], 0.09, 0.04);
-  // The top: four clumps fanning up and back from the front of the crown, the tips splaying apart.
-  C([-30, 46, -0.04], [-42, 80, 0.85], [-122, 44, 0.7], 0.2, 0.075, 12);
-  C([-10, 52, -0.04], [-4, 88, 0.95], [184, 30, 0.75], 0.21, 0.075);
-  C([15, 48, -0.04], [44, 80, 0.85], [118, 50, 0.5], 0.2, 0.075);
-  C([40, 42, -0.04], [72, 70, 0.75], [152, 18, 0.62], 0.2, 0.075);
-  // The sides: two clumps a side sweeping back over the top third of the ear, and one behind it to the nape. The woman's
-  // fall to the jaw and the nape's to the shoulders: the same clumps on longer curves, so the two bodies keep one topology.
-  const L = style === 'woman';
-  for (const sd of [-1, 1]) {
-    C([sd * 40, 36, -0.04], [sd * 78, L ? 8 : 18, 0.34], [sd * 104, L ? -34 : -8, L ? 0.2 : 0.26, 1.15], 0.16, 0.06);
-    C([sd * 60, 30, -0.04], [sd * 96, L ? 0 : 8, 0.32], [sd * 122, L ? -42 : -16, L ? 0.16 : 0.22, 1.15], 0.15, 0.06);
-    C([sd * 118, 40, -0.04], [sd * 132, L ? 0 : 8, 0.56], [sd * 142, L ? -52 : -24, L ? 0.16 : 0.2, L ? 1.3 : 1.0], L ? 0.2 : 0.16, 0.06);
-  }
-  // The nape: three clumps down the neck, the middle one longest.
-  C([150, 32, -0.04], [148, L ? -10 : 0, 0.62], [158, L ? -62 : -26, L ? 0.14 : 0.22, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
-  C([180, 36, -0.04], [180, L ? -12 : -2, 0.66], [180, L ? -72 : -40, L ? 0.14 : 0.16, L ? 1.6 : 1.0], L ? 0.25 : 0.2, 0.07);
-  C([210, 32, -0.04], [212, L ? -10 : 0, 0.62], [202, L ? -62 : -32, L ? 0.14 : 0.26, L ? 1.5 : 1.0], L ? 0.24 : 0.2, 0.06);
-  void hairStart;
+  // The head as the hairstyles need it (`./hair.mjs`): its points, its triangles with their regions, its eyes' height.
+  out.head = { P: traced.P, H: traced.H, skull: traced.skull, ey, style, tris: out.tris.slice(headStart, headEnd).map((t) => [...t.map((i) => out.pos[i]), out.region[t[0]]]) };
   return out;
 }
 const exMan = extras(bodies.man, undefined, 'man', true), exWoman = extras(bodies.woman, undefined, 'woman', true);
@@ -538,12 +459,31 @@ for (const [band, target] of BANDS) {
   });
   console.log(`band ${band}: ${n0 + ex.pos.length} verts, ${tri.length} tris (body ${dec.tris.length})`);
 }
+// The hairstyles: one mesh per style for every band, its vertices its own (numbered from nought), the man's and the
+// woman's on one topology. The bake puts the look's style (or `generic`) after the band's own vertices.
+const hairs = {};
+for (const [id, make] of Object.entries(HAIRS)) {
+  const m = make(exMan.head), w = make(exWoman.head);
+  if (m.pos.length !== w.pos.length || m.tris.length !== w.tris.length) throw new Error(`the ${id} hair differs between the bodies`);
+  const q = (p) => p.map((x) => Math.round(x * 500));
+  const stamp = [];
+  m.stamp.forEach((d, i) => { if (d > -1) stamp.push(i, Math.round(d * 1000)); });
+  hairs[id] = {
+    verts: m.pos.length, tris: m.tris.flat(),
+    man: m.pos.flatMap((p) => q(bodies.man.ours(p))), woman: w.pos.flatMap((p) => q(bodies.woman.ours(p))),
+    region: m.region,
+    bw: m.bones.flatMap((l) => { const out = []; for (let i = 0; i < 4; i++) out.push(l[i] ? slotOf(l[i][0]) : 0, l[i] ? Math.round(l[i][1] * 255) : 0); return out; }),
+    stamp,
+  };
+  const text = JSON.stringify(hairs[id]);
+  console.log(`hair ${id}: ${m.pos.length} verts, ${m.tris.length} tris, ${(text.length / 1024).toFixed(1)} KB, gzip ${(gzipSync(text).length / 1024).toFixed(1)} KB${id === 'generic' ? '' : `; inside the skull: man ${JSON.stringify(clipAudit(exMan.head, m))}, woman ${JSON.stringify(clipAudit(exWoman.head, w))}`}`);
+}
 const asset = {
   licence: 'Base mesh, targets and rig from MakeHuman (makehumancommunity/makehuman), CC0 1.0: see src/sculpt/NOTICE.md',
   height: HEIGHT, bones: BONES,
   frames: { man: bodies.man.frames, woman: bodies.woman.frames },
   proportions: { man: bodies.man.P, woman: bodies.woman.P },
-  bands,
+  bands, hairs,
 };
 for (const f of Object.values(asset.frames)) for (const k of Object.keys(f)) f[k] = f[k].map((x) => +x.toFixed(3));
 mkdirSync(dirname(OUT), { recursive: true });

@@ -14,8 +14,10 @@ import { at, lerpProportions, type Bones, type Proportions } from './rig';
 import type { Band, V3 } from './sdf';
 import type { Wear } from './index';
 
-interface AssetBand { band: number; verts: number; tris: number[]; man: number[]; woman: number[]; region: number[]; bw: number[]; stamp: number[] }
-interface Asset { height: number; bones: string[]; frames: Record<'man' | 'woman', Record<string, number[]>>; proportions: Record<'man' | 'woman', Proportions>; bands: AssetBand[] }
+interface AssetMesh { verts: number; tris: number[]; man: number[]; woman: number[]; region: number[]; bw: number[]; stamp: number[] }
+interface AssetBand extends AssetMesh { band: number }
+/** `hairs`: a mesh per hairstyle made (HAIRSTYLES ids, src/game/look.ts), shared by every band; `generic` for the rest. */
+interface Asset { height: number; bones: string[]; frames: Record<'man' | 'woman', Record<string, number[]>>; proportions: Record<'man' | 'woman', Proportions>; bands: AssetBand[]; hairs: Record<string, AssetMesh> }
 const A = ASSET as unknown as Asset;
 /** The base's height, sole to crown, in units. */
 export const HUMAN_HEIGHT = A.height;
@@ -64,12 +66,15 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
   const arm = (bone: string): boolean => /^(clav|arm|elbow|wrist|fing|index|thumb)/.test(bone);
   const leg = (bone: string): boolean => /^(hip|knee|ankle|toe)/.test(bone);
   return (region, bone, p, irisD) => {
-    // The face, the hands and the hair drawn over the base: an eye's dark rectangle, a brow, hair, the groove between two fingers.
+    // The face, the hands and the hair drawn over the base: an eye's dark rectangle, a brow, the generic hair (its highlight
+    // and teal stamps), a cut's planes, the groove between two fingers.
     if (region === 6) return [M.pupil, M.pupil, -1];
     if (region === 7) return [M.lid, M.lid, -1];
     if (region === 8) return [M.brow, M.brow, -1];
     if (region === 9) return [M.hair, M.hairLight, irisD];
     if (region === 12) return [M.hair, M.hairGlint, irisD];
+    if (region === 16) return [M.hairCut, M.hairTop, irisD];
+    if (region === 17) return [M.hairUnder, M.hairUnder, -1];
     if (region === 13) return [M.crease, M.crease, -1];
     if (region === 1) return [M.face, M.face, -1];
     if (region === 2) return [M.hand, M.hand, -1];
@@ -92,10 +97,27 @@ function dress(wear: Wear, fem: number, P: Proportions, rest: Bones): (region: n
   };
 }
 
-/** The base at a band, carried onto `rest` (our rig at the asset's proportions), in the look's wear, as a bake. */
-export function humanBaked(fem: number, band: Band, rest: Bones, order: string[], wear: Wear, bald = false): Baked {
+/** The band's mesh with the hairstyle's after it: its vertices numbered on from the band's. */
+function withHair(band: AssetBand, hair: AssetMesh | undefined): AssetMesh {
+  if (!hair) return band;
+  const n = band.verts, stamp = band.stamp.slice();
+  for (let i = 0; i < hair.stamp.length; i += 2) stamp.push(hair.stamp[i] + n, hair.stamp[i + 1]);
+  return {
+    verts: n + hair.verts, tris: [...band.tris, ...hair.tris.map((v) => v + n)], man: [...band.man, ...hair.man], woman: [...band.woman, ...hair.woman],
+    region: [...band.region, ...hair.region], bw: [...band.bw, ...hair.bw], stamp,
+  };
+}
+
+/** The hairstyles the asset has a mesh of; the rest draw the generic hair. */
+export const HAIRS_MADE: string[] = Object.keys(A.hairs).filter((id) => id !== 'generic');
+
+/**
+ * The base at a band, carried onto `rest` (our rig at the asset's proportions), in the look's wear, as a bake, with the
+ * hairstyle `hair` (a HAIRSTYLES id; the generic hair for one not made yet; none for null).
+ */
+export function humanBaked(fem: number, band: Band, rest: Bones, order: string[], wear: Wear, hair: string | null = null): Baked {
   const t0 = performance.now();
-  const ab = A.bands[band];
+  const ab = withHair(A.bands[band], hair === null ? undefined : A.hairs[hair] ?? A.hairs.generic);
   const P = humanProportions(fem);
   const n = ab.verts;
   // Each bone's carry: our joint, and the turn from MakeHuman's bone onto ours.
@@ -138,9 +160,6 @@ export function humanBaked(fem: number, band: Band, rest: Bones, order: string[]
       y += w * (c.joint[1] + R[3] * d[0] + R[4] * d[1] + R[5] * d[2]);
       z += w * (c.joint[2] + R[6] * d[0] + R[7] * d[1] + R[8] * d[2]);
     }
-    // Bald (the look's hairstyle, or bare for the reference sheets: the pictures are, and the hair would count against the
-    // overlap) folds the hair's shell and clumps into the head's joint, where they draw nothing.
-    if ((bald || wear === 'shorts') && (ab.region[i] === 9 || ab.region[i] === 12)) { const h = at(rest, 'head'); x = h[0]; y = h[1]; z = h[2]; }
     pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
   }
   // Smooth normals from the carried mesh. The head and the hands share no vertices between facets, so they stay flat.

@@ -30,7 +30,7 @@ const REF8 = (window as unknown as { REF8?: string }).REF8;
 const REF9 = (window as unknown as { REF9?: string }).REF9;
 const REF10 = (window as unknown as { REF10?: string }).REF10;
 // The design sheet's colours: a warm tan and a dark plum-blue, named outright.
-const LOOK = { gender: 'man', skin: '#c98a5a', hair: (window as unknown as { HAIR?: string }).HAIR ?? 'tousled', hairColour: '#2e2440', eyes: 'dark', beard: 'none', shirt: 'teal', trousers: 'brown' } as unknown as Look;
+const LOOK = { gender: 'man', skin: '#c98a5a', hair: (window as unknown as { HAIR?: string }).HAIR ?? 'tousled', hairColour: (window as unknown as { HAIRCOLOUR?: string }).HAIRCOLOUR || '#2e2440', eyes: 'dark', beard: 'none', shirt: 'teal', trousers: 'brown' } as unknown as Look;
 const REF = (window as unknown as { REF?: string }).REF;
 
 function poseOf(facing: number, what: string): FigurePose {
@@ -87,7 +87,9 @@ function row(cells: Array<{ cv: HTMLCanvasElement; label: string }>): void {
 type Who = 'male' | 'female' | 'neither' | 'seven' | 'five' | 'figure';
 /** The studio's look in the body's own gender. */
 const lookOf = (who: Who): Look => ({ ...LOOK, gender: who === 'female' ? 'woman' : who === 'neither' ? 'neither' : 'man' });
-function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean; wear?: Wear; stance?: 'ref' | 'straight' | 'tpose'; view?: View; hands?: HandShape } = {}): void {
+/** The look bald, for the sheets held against the reference pictures, which are. */
+const bareLook = (who: Who): Look => ({ ...lookOf(who), hair: 'bald' });
+function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean; wear?: Wear; stance?: 'ref' | 'straight' | 'tpose'; view?: View; hands?: HandShape; hair?: string } = {}): void {
   try {
     if (who === 'figure') {
       drawFigure(c.g, c.fx, c.fy, zoom, pose);
@@ -95,7 +97,7 @@ function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?:
       return;
     }
     const { INK: ink, PITCH: pitch } = window as unknown as { INK?: number; PITCH?: number };
-    if (!drawSculpt(c.g, c.fx, c.fy, zoom, { ...pose, look: lookOf(who) }, { P: PROPS[who], kind: kindOf(who), dpr: DPR, now: 1, ...(ink === undefined ? {} : { ink }), ...(pitch === undefined ? {} : { pitch }), ...o })) drawFigure(c.g, c.fx, c.fy, zoom, pose);
+    if (!drawSculpt(c.g, c.fx, c.fy, zoom, { ...pose, look: o.hair ? ({ ...lookOf(who), hair: o.hair } as Look) : lookOf(who) }, { P: PROPS[who], kind: kindOf(who), dpr: DPR, now: 1, ...(ink === undefined ? {} : { ink }), ...(pitch === undefined ? {} : { pitch }), ...o })) drawFigure(c.g, c.fx, c.fy, zoom, pose);
   } catch (e) {
     c.g.fillStyle = 'red'; c.g.font = '10px sans-serif';
     c.g.fillText(String(e).slice(0, 80), 2, 12);
@@ -227,7 +229,7 @@ const api = {
       const oc = document.createElement('canvas'); oc.width = W; oc.height = H;
       const og = oc.getContext('2d', { willReadFrequently: true })!;
       og.fillStyle = '#ff00ff'; og.fillRect(0, 0, W, H);
-      const p = { ...poseOf(facing, 'idle:0'), look: lookOf(who) };
+      const p = { ...poseOf(facing, 'idle:0'), look: bareLook(who) };
       drawSculpt(og, cx, bot + 1, zoom, p, { P: PROPS[who], kind: kindOf(who), dpr: 1, now: 1, wear: 'shorts', stance: 'ref', view: levelView((deg * Math.PI) / 180), ink: 0.5 });
       const ox = og.getImageData(0, 0, W, H).data;
       const ours = new Uint8Array(W * H);
@@ -285,7 +287,7 @@ const api = {
     // Ours in the T-pose, each cell wide enough for the arms (the picture over ours, below, stands as the picture does).
     for (const [name, f, deg] of turns) {
       const c = cell(zoom, [-41, 3], deg % 180 === 90 ? [-11, 11] : [-21, 21]);
-      drawOne(c, zoom, who, poseOf(f, 'idle:0'), { wear: 'shorts', stance: 'tpose', view: levelView((deg * Math.PI) / 180) });
+      drawOne(c, zoom, who, poseOf(f, 'idle:0'), { wear: 'shorts', stance: 'tpose', view: levelView((deg * Math.PI) / 180), hair: 'bald' });
       cells.push({ cv: c.cv, label: `ours ${name}, T-pose` });
     }
     if (pic) {
@@ -299,7 +301,7 @@ const api = {
       const w = pic.width / DPR, h = pic.height / DPR;
       const feetY = h * feet;
       for (const [f, x, deg] of [[7, xs[0], -35], [3, xs[1], 145]] as Array<[number, number, number]>) {
-        const p = { ...poseOf(f, 'idle:0'), look: lookOf(who) };
+        const p = { ...poseOf(f, 'idle:0'), look: bareLook(who) };
         if (!drawSculpt(g, w * x, feetY, zoom, p, { P: PROPS[who] ?? MALE, kind: kindOf(who), dpr: DPR, now: 1, wear: 'shorts', stance: 'ref', view: levelView((deg * Math.PI) / 180) })) drawFigure(g, w * x, feetY, zoom, p);
       }
       g.globalAlpha = 0.5;
@@ -310,7 +312,7 @@ const api = {
     const game: Array<{ cv: HTMLCanvasElement; label: string }> = [];
     for (const f of [7, 1, 3, 5]) {
       const c = cell(2, [-41, 3], [-11, 11]);
-      drawOne(c, 2, who, poseOf(f, 'idle:0'), { wear: 'shorts' });
+      drawOne(c, 2, who, poseOf(f, 'idle:0'), { wear: 'shorts', hair: 'bald' });
       game.push({ cv: c.cv, label: `game zoom 2 f${f}, at ease` });
     }
     for (const f of [7, 3]) {
@@ -591,6 +593,45 @@ const api = {
     heading(`${who} right hand, open, from the back, ${px}px wrist to tip`);
     row([{ cv: c.cv, label: 'hand' }]);
     return { wrist: [fx + wrist[0], fy + wrist[1]], tip: [fx + tip[0], fy + tip[1]], w, h };
+  },
+  /**
+   * The hair: the head with the look's hair, level, at `px` pixels chin to crown, turned to each of `turns` (degrees to
+   * screen right: 0 the front, 90 the side, 180 the back); then the island's view of the head at each of `zooms`, all
+   * eight facings, beside the bald head and the generic hair at the smallest zoom; then the head through a walk.
+   */
+  hair(who: Who, px = 150, turns: number[] = [0, 35, 90, 145, 180], zooms: number[] = [9, 4, 2], walk = true): void {
+    const look = lookOf(who), P = PROPS[who];
+    heading(`${who} hair ${look.hair}, level, ${px}px chin to crown, turned ${turns.join(', ')}`);
+    const chinOff = P.chin ?? [0, 0, -P.head * 0.9], crownOff = P.crown ?? [0, 0, P.head];
+    const zoom = px / ((crownOff[2] - chinOff[2]) * HEIGHT_SCALE);
+    const level = turns.map((turn) => {
+      const view = levelView((turn * Math.PI) / 180);
+      const pose: FigurePose = { ...poseOf(0, 'idle:0'), look };
+      const scene = sculptScene(pose, zoom, P, 1, undefined, { wear: 'shorts', stance: 'straight', view, kind: kindOf(who) });
+      const b = built(P, look, 'shorts', kindOf(who));
+      const posed = (name: string, off: V3): V3 => { const i = b.order.indexOf(name) * 12, m = scene.bones, r = b.rest[name], t: V3 = [r.t[0] + r.m[0] * off[0] + r.m[1] * off[1] + r.m[2] * off[2], r.t[1] + r.m[3] * off[0] + r.m[4] * off[1] + r.m[5] * off[2], r.t[2] + r.m[6] * off[0] + r.m[7] * off[1] + r.m[8] * off[2]]; return [m[i] * t[0] + m[i + 1] * t[1] + m[i + 2] * t[2] + m[i + 3], m[i + 4] * t[0] + m[i + 5] * t[1] + m[i + 6] * t[2] + m[i + 7], m[i + 8] * t[0] + m[i + 9] * t[1] + m[i + 10] * t[2] + m[i + 11]]; };
+      const screen = (p: V3): [number, number] => [zoom * (p[0] * view.ex[0] + p[1] * view.ey[0]), zoom * (p[0] * view.ex[1] + p[1] * view.ey[1] - p[2] * HEIGHT_SCALE)];
+      const chin = screen(posed('head', chinOff));
+      const w = Math.ceil(px * 1.2), h = Math.ceil(px * 1.6);
+      const c = cell(zoom, [0, h / zoom], [0, w / zoom]);
+      const fx = w / 2 - chin[0], fy = h - px * 0.25 - chin[1];
+      c.g.fillStyle = '#2a2622'; c.g.fillRect(0, 0, w, h);
+      const { INK: ink } = window as unknown as { INK?: number };
+      drawSculpt(c.g, fx, fy, zoom, pose, { P, kind: kindOf(who), dpr: DPR, now: 1, wear: 'shorts', stance: 'straight', view, ...(ink === undefined ? {} : { ink }) });
+      return { cv: c.cv, label: `turn ${turn}` };
+    });
+    row(level);
+    const head = (z: number): Cell => cell(z, [-42.5, -32], [-6.5, 6.5]);
+    for (const z of zooms) {
+      heading(`${who} hair ${look.hair}, the island's view, zoom ${z}, facings 0-7`);
+      row([0, 1, 2, 3, 4, 5, 6, 7].map((f) => { const c = head(z); drawOne(c, z, who, poseOf(f, 'idle:0'), { wear: 'shorts' }); return { cv: c.cv, label: `f${f}` }; }));
+    }
+    const z0 = zooms[zooms.length - 1];
+    heading(`${who} at zoom ${z0}: bald, the generic hair, ${look.hair}, at facings 0, 1, 3, 5`);
+    row(['bald', 'tousled', look.hair].flatMap((hh) => [0, 1, 3, 5].map((f) => { const c = head(z0); drawOne(c, z0, who, poseOf(f, 'idle:0'), { hair: hh, wear: 'shorts' }); return { cv: c.cv, label: `${hh} f${f}` }; })));
+    if (!walk) return;
+    heading(`${who} hair ${look.hair} through a walk and a run, zoom ${zooms[0]}, facings 1 and 6`);
+    for (const f of [1, 6]) row([...[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875].map((u) => `walk:${u}`), 'run:0.25', 'run:0.75', 'work:0.5', 'wave:0.5', 'talk:0.3'].map((w) => { const c = cell(zooms[0], [-44, -28], [-9, 9]); drawOne(c, zooms[0], who, poseOf(f, w), { wear: 'shorts' }); return { cv: c.cv, label: w }; }));
   },
   /** The bare body's eight facings on the island, at ease, at a zoom. */
   bare(who: Who, zoom: number): void { this.facings(who, 'idle:0', zoom, { wear: 'shorts' }); },

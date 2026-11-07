@@ -166,6 +166,16 @@ const EYE = { man: [0.13, 0.178, 0.53, 0.572], woman: [0.135, 0.191, 0.473, 0.52
 const BROW = { man: { u: [0.075, 0.18, 0.25], top: [0.656, 0.658, 0.652], h: [0.03, 0.03, 0.014] }, woman: { u: [0.085, 0.19, 0.27], top: [0.621, 0.634, 0.62], h: [0.02, 0.02, 0.01] } };
 
 /**
+ * A point in head units ([u, v, z]: u the viewer's right, v up from the chin, z forward, the head one tall) in MakeHuman's
+ * space for the body whose head has landmarks `L`. The woman's face is shorter between the brow and the chin: everything
+ * under the brow line drawn up toward it.
+ */
+export function headPoint(L, style) {
+  const H = L.crown - L.chin, woman = style === 'woman';
+  return ([u, v, z]) => { const vv = woman && v < 0.62 ? 0.62 + (v - 0.62) * 0.97 : v; return [u * H, L.chin + vv * H, L.zc + (z + 0.05) * H]; };
+}
+
+/**
  * The head for one body in MakeHuman's space. `L`: chin and crown heights, the skull's centre depth `zc`; `style` 'man' or
  * 'woman'. The throat ring under the jaw is left open: the caller joins it to the body's own neck.
  * Returns the chin's and the crown's points, for the sheets that hold the head against the picture, and the throat ring.
@@ -173,8 +183,7 @@ const BROW = { man: { u: [0.075, 0.18, 0.25], top: [0.656, 0.658, 0.652], h: [0.
 export function tracedHead(L, style, f) {
   const woman = style === 'woman', col = woman ? 1 : 0;
   const H = L.crown - L.chin;
-  // The woman's face is shorter between the brow and the chin: everything under the brow line drawn up toward it.
-  const P = ([u, v, z]) => { const vv = woman && v < 0.62 ? 0.62 + (v - 0.62) * 0.97 : v; return [u * H, L.chin + vv * H, L.zc + (z + 0.05) * H]; };
+  const P = headPoint(L, style);
   const V = (name) => { const m = name.endsWith("'"); const [u, v, z] = HV[name.slice(0, m ? -1 : undefined)][col]; return P([m ? -u : u, v, z]); };
   const HEAD = [['head', 1]], THR = [['head', 0.5], ['neck', 0.5]];
   const wOf = (name) => (name.startsWith('K') ? THR : HEAD);
@@ -207,7 +216,7 @@ export function tracedHead(L, style, f) {
       f.facet([a, b, c, d], 8, HEAD, (Math.abs(u1) <= corner ? shelfIn : shelfOut).n, true);
     }
   }
-  return { chin: V('CH0'), crown: V('A0'), skull: Object.keys(HV).flatMap((n) => [V(n), V(`${n}'`)]), throat: THROAT.map(V), throatBones: THR };
+  return { P, H, chin: V('CH0'), crown: V('A0'), skull: Object.keys(HV).flatMap((n) => [V(n), V(`${n}'`)]), throat: THROAT.map(V), throatBones: THR };
 }
 const newellOf = (pts) => { let n = [0, 0, 0]; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; n = add(n, [(a[1] - b[1]) * (a[2] + b[2]), (a[2] - b[2]) * (a[0] + b[0]), (a[0] - b[0]) * (a[1] + b[1])]); } return n; };
 

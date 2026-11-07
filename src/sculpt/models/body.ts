@@ -21,7 +21,7 @@ import {
 } from '../sdf';
 
 /** The materials, by index. */
-export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19, face: 20, hand: 21, lid: 22, ear: 23, faceUnder: 24, poncho: 25, gold: 26 } as const;
+export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19, face: 20, hand: 21, lid: 22, ear: 23, faceUnder: 24, poncho: 25, gold: 26, hairCut: 27, hairTop: 28, hairUnder: 29 } as const;
 
 /** What the body wears: the game's undershirt and trousers, or the reference sheet's shorts over bare skin. */
 export type Wear = 'base' | 'shorts';
@@ -51,6 +51,12 @@ export function bodyMaterials(look: Look): Material[] {
   // The hair's highlight shape, a lilac of the hair's own, and the teal that streaks two clumps, as the sheet's palette.
   out[M.hairLight] = { colour: mixHex(hair, '#b69de2', 0.5) };
   out[M.hairGlint] = { colour: mixHex(hair, '#5fb3ae', 0.55) };
+  // A cut's planes (the styles made one by one): the hair's own colour, three tones by the plane's turn to the light, no
+  // ink between two planes (the edge of the hair against the skin is still inked).
+  out[M.hairCut] = { colour: hair, noCrease: true };
+  // Its planes facing up a lighter warm of the hair's own, and the edge where its thickness shows a dark of it.
+  out[M.hairTop] = { colour: mixHex(hair, '#f2cdb4', 0.3), noCrease: true };
+  out[M.hairUnder] = { colour: mixHex(hair, '#1c100c', 0.45), noCrease: true };
   out[M.lip] = { colour: mixHex(skin, '#a4484a', 0.42) };
   // The undershirt a pastel cream, the trousers a dusty slate-teal, the shoes caramel: the kit's pastel base, no splash yet.
   out[M.shirt] = { colour: '#ecdcb8' };
