@@ -25,7 +25,7 @@ const mx = (p) => [-p[0], p[1], p[2]];
 // the centre line at x 0 is shared), and one list of faces both heads use, mirrored for the other half. Rings, top to
 // bottom: the crown c; t the skull's top; f the temple and the skull's side and back; b the brow; e under the eyes; k the cheekbones
 // and the nose's base; m the mouth with j the jaw's corner; ch the chin with jl the jaw line; u the chin's flat
-// underside; g the neck's top under the jaw; n6 the nape; nb nc nt the nose; nm and nf the neck (nf inside the shoulders).
+// underside; g the neck's top under the jaw; n6 the nape; nb nc tb tc the nose; nm and nf the neck (nf inside the shoulders).
 export const FACES = [
   // the crown: a flat cap of three facets a side on the top ring a, then a band down to the ring t
   ['c', 'a0', 'a1'], ['c', 'a1', 'a2'], ['c', 'a2', 'a3'],
@@ -36,9 +36,10 @@ export const FACES = [
   ['t2', 't3', 'f4', 'f3'], ['f3', 'f4', 'o6', 'e5', 'b5'],
   // the brow down to under the eyes: the nose's root, the eye's socket (inner, outer), the temple, the side, the back
   ['b1', 'b2', 'e2', 'e1'], ['b2', 'b3', 'e3', 'e2'], ['b3', 'b4', 'e4', 'e3'], ['b4', 'b5', 'e5', 'e4'],
-  // the nose: one wedge from the brow ridge, its bridge (b0 b1 down to nc nb) one flat plane across the centre line, the
-  // tip nt, a side plane down to the wing k1, the underside back to k0
-  ['b0', 'b1', 'nb', 'nc'], ['nc', 'nb', 'nt'], ['b1', 'nb', 'k1', 'e1'], ['nb', 'k1', 'nt'], ['nt', 'k1', 'k0'],
+  // the nose, as the references draw it: its bridge (b0 b1 down to nc nb) one flat plane from the brow ridge across the
+  // centre line, the tip's small flat front (nc nb down to tc tb), a side plane down to the wing k1, the underside back to
+  // k0; no point at the tip
+  ['b0', 'b1', 'nb', 'nc'], ['nc', 'nb', 'tb', 'tc'], ['b1', 'nb', 'tb', 'k1', 'e1'], ['tc', 'tb', 'k1', 'k0'],
   // under the eyes down to the cheekbones: the nose, the cheek under the eye, the cheekbone's top, the side, the back
   ['e1', 'e2', 'k2', 'k1'], ['e2', 'e3', 'k3', 'k2'], ['e3', 'e4', 'k4', 'k3'], ['e4', 'e5', 'k5', 'k4'], ['e5', 'o6', 'n6', 'k5'],
   // the cheekbones down to the mouth: the upper lip, the front of the cheek, the cheek's big plane to the jaw's corner
@@ -79,9 +80,9 @@ export const PRESETS = {
       a0: [0, 2.03, 0.4], a1: [0.23, 2.01, 0.23], a2: [0.21, 2.01, -0.15], a3: [0, 2.03, -0.27],
       t0: [0, 1.86, 0.72], t1: [0.35, 1.85, 0.7], t2: [0.58, 1.88, -0.05], t3: [0.3, 1.88, -0.41],
       f2: [0.52, 1.5, 0.56], f3: [0.73, 1.47, -0.1], f4: [0.39, 1.5, -0.51],
-      b0: [0, 1.22, 0.97], b1: [0.1, 1.22, 0.965], b2: [0.42, 1.22, 0.95], b3: [0.56, 1.2, 0.74], b4: [0.68, 1.18, 0.22], b5: [0.73, 1.16, -0.2],
+      b0: [0, 1.22, 0.97], b1: [0.075, 1.22, 0.965], b2: [0.42, 1.22, 0.95], b3: [0.56, 1.2, 0.74], b4: [0.68, 1.18, 0.22], b5: [0.73, 1.16, -0.2],
       e1: [0.13, 0.97, 0.86], e2: [0.32, 0.93, 0.78], e3: [0.52, 0.95, 0.66], e4: [0.67, 0.95, 0.25], e5: [0.69, 0.92, -0.25], o6: [0.48, 0.98, -0.6],
-      nc: [0, 0.7, 1.1], nb: [0.115, 0.7, 1.08], nt: [0, 0.6, 1.13],
+      nc: [0, 0.7, 1.1], nb: [0.12, 0.7, 1.08], tc: [0, 0.615, 1.105], tb: [0.15, 0.615, 1.07],
       k0: [0, 0.57, 0.95], k1: [0.14, 0.6, 0.92], k2: [0.33, 0.66, 0.82], k3: [0.6, 0.74, 0.55], k4: [0.64, 0.7, 0.2], k5: [0.6, 0.66, -0.25], n6: [0.45, 0.62, -0.5],
       m0: [0, 0.3, 0.89], m1: [0.16, 0.3, 0.85], m2: [0.4, 0.36, 0.68], j: [0.56, 0.44, 0.25], m5: [0.55, 0.5, -0.15],
       ch0: [0, 0, 0.84], ch1: [0.18, 0, 0.8], jl: [0.4, 0.18, 0.55],
@@ -107,10 +108,10 @@ PRESETS.female = {
     a0: [0, 2.02, 0.3], a1: [0.18, 2.0, 0.14], a2: [0.16, 2.0, -0.16], a3: [0, 2.02, -0.26],
     t0: [0, 1.86, 0.65], t1: [0.31, 1.85, 0.63], t2: [0.52, 1.88, -0.08], t3: [0.27, 1.88, -0.41],
     f2: [0.49, 1.5, 0.51], f3: [0.69, 1.47, -0.14], f4: [0.36, 1.5, -0.58],
-    b0: [0, 1.22, 0.9], b1: [0.075, 1.22, 0.9], b2: [0.38, 1.22, 0.88], b3: [0.5, 1.2, 0.66], b4: [0.6, 1.16, 0.2], b5: [0.67, 1.15, -0.24],
+    b0: [0, 1.22, 0.9], b1: [0.06, 1.22, 0.9], b2: [0.38, 1.22, 0.88], b3: [0.5, 1.2, 0.66], b4: [0.6, 1.16, 0.2], b5: [0.67, 1.15, -0.24],
     e1: [0.12, 0.96, 0.83], e2: [0.31, 0.93, 0.76], e3: [0.48, 0.95, 0.6], e4: [0.575, 0.93, 0.26], e5: [0.6, 0.9, -0.28], o6: [0.43, 0.98, -0.65],
-    nc: [0, 0.83, 0.985], nb: [0.085, 0.83, 0.97], nt: [0, 0.75, 1.02],
-    k0: [0, 0.71, 0.9], k1: [0.1, 0.73, 0.86], k2: [0.3, 0.67, 0.78], k3: [0.47, 0.74, 0.48], k4: [0.545, 0.72, 0.2], k5: [0.5, 0.66, -0.22], n6: [0.36, 0.55, -0.36],
+    nc: [0, 0.72, 1.0], nb: [0.08, 0.72, 0.985], tc: [0, 0.645, 1.0], tb: [0.105, 0.645, 0.975],
+    k0: [0, 0.6, 0.9], k1: [0.11, 0.62, 0.86], k2: [0.3, 0.67, 0.78], k3: [0.47, 0.74, 0.48], k4: [0.545, 0.72, 0.2], k5: [0.5, 0.66, -0.22], n6: [0.36, 0.55, -0.36],
     m0: [0, 0.42, 0.86], m1: [0.15, 0.42, 0.82], m2: [0.35, 0.46, 0.6], j: [0.43, 0.6, 0.22], m5: [0.48, 0.57, -0.15],
     ch0: [0, 0.15, 0.8], ch1: [0.08, 0.15, 0.78], jl: [0.26, 0.29, 0.54],
     u0: [0, 0.14, 0.66], u1: [0.09, 0.14, 0.64],
