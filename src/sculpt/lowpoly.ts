@@ -77,8 +77,11 @@ function swingTwist(q: Q): { swing: Q; twist: Q } {
 }
 const angleOf = (q: Q): number => (2 * Math.acos(Math.min(1, Math.abs(q[0]))) * 180) / Math.PI;
 
-/** One body: its asset, the figure's proportions it is posed with, and how far toward a woman (for its height). */
-function lowBody(A: Asset, P: Proportions, fem: number): { baked: () => Baked; bones: (pose: FigurePose) => Float32Array } {
+/** The low-poly woman's height, sole to crown, as a share of the low-poly man's. */
+export const WOMAN_OF_MAN = 0.85;
+
+/** One body: its asset, the figure's proportions it is posed with, and its height as a share of the base man's. */
+function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked; bones: (pose: FigurePose) => Float32Array } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
 
@@ -170,13 +173,13 @@ function lowBody(A: Asset, P: Proportions, fem: number): { baked: () => Baked; b
 
   /* ---- the body as the GPU draws it ----------------------------------------------------------------------------------- */
   const FLOOR: V = [0, A.floor, 0];
-  /** Mesh units to the figure's: the body's height, sole to crown, as the base man's or woman's. */
+  /** Mesh units to the figure's: the body's height, sole to crown, `share` of the base man's. */
   let SCALE = 0;
   function scale(): number {
     if (!SCALE) {
       let top = -Infinity;
       for (let i = 1; i < A.verts.length; i += 3) top = Math.max(top, A.verts[i]);
-      SCALE = heightOf(humanProportions(fem)) / (top - A.floor);
+      SCALE = (heightOf(humanProportions(0)) * share) / (top - A.floor);
     }
     return SCALE;
   }
@@ -261,7 +264,7 @@ function lowBody(A: Asset, P: Proportions, fem: number): { baked: () => Baked; b
   return { baked: lowBaked, bones: lowBones };
 }
 
-const BODIES = { man: lowBody(MALE_ASSET as unknown as Asset, MALE, 0), woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, 1) };
+const BODIES = { man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1), woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN) };
 
 /** Whether a look is drawn as a low-poly body: a man or a woman (neither keeps the sculpted base). */
 export const hasLowBody = (look: { gender: string }): boolean => look.gender === 'man' || look.gender === 'woman';
