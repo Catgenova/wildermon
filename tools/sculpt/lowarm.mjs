@@ -168,23 +168,34 @@ function finish(m) {
   return { ...m, tris: triList, counts };
 }
 
+/** The hand's own frame: the wrist ring's centre O; y up the hand (from the knuckle line's middle to O), z out of the
+ * back of the hand (from the palm's knuckles to the back's, square to y), x = y × z (toward the thumb). */
+export function handFrame(V) {
+  const mean = (names) => [0, 1, 2].map((k) => names.reduce((a, n) => a + V[n][k], 0) / names.length);
+  const O = mean(WRIST), kb = mean(['kb0', 'kb1', 'kb2', 'kb3', 'kb4']), kp = mean(['kp0', 'kp1', 'kp2', 'kp3', 'kp4']);
+  const unit = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); };
+  const y = unit(sub(O, [0, 1, 2].map((k) => (kb[k] + kp[k]) / 2)));
+  const d = sub(kb, kp), z = unit(sub(d, y.map((q) => q * dot(d, y)))), x = cross(y, z);
+  return { O, x, y, z };
+}
+
 /** The hand alone, as the sheets' hand views show it: the hand and a straight six-sided stub of the wrist, `stub` (head
- * units) up the forearm's line from the wrist's ring, cut flat. */
+ * units) up the hand's own line from the wrist's ring, cut flat; in the hand's own frame (handFrame), as the sheets turn
+ * the hand about its own line. */
 export function buildHandAlone(who = 'male', preset = null, stub = 0.35) {
   const arm = buildLowArm(who, preset, {});
-  const T = TOPO[who];
-  const mean = (names) => [0, 1, 2].map((k) => names.reduce((a, n) => a + arm.V[n][k], 0) / names.length);
-  const o = mean(WRIST), up = mean(ring8(T.rings.at(-1)));
-  const l = Math.hypot(...sub(up, o)), n = sub(up, o).map((x) => (x / l) * stub);
+  const F = handFrame(arm.V), n = F.y.map((q) => q * stub);
+  const local = (p) => { const d = sub(p, F.O); return [dot(d, F.x), dot(d, F.y), dot(d, F.z)]; };
   const verts = [], polys = [], ids = {};
-  const vtx = (name, p) => { ids[name] = verts.length; verts.push(p); };
-  for (const f of armFaces(who)) if (f.part === 'hand') for (const name of f.v) if (!(name in ids)) vtx(name, [...arm.V[name]]);
+  const vtx = (name, p) => { ids[name] = verts.length; verts.push(local(p)); };
+  for (const f of armFaces(who)) if (f.part === 'hand') for (const name of f.v) if (!(name in ids)) vtx(name, arm.V[name]);
   WRIST.forEach((w) => vtx(`s${w}`, [0, 1, 2].map((k) => arm.V[w][k] + n[k])));
   for (const f of armFaces(who)) if (f.part === 'hand') polys.push({ v: f.v.map((x) => ids[x]), part: 'hand', region: 'hand', mat: 'skin', name: f.name });
   WRIST.forEach((w, i) => { const w2 = WRIST[(i + 1) % 6]; polys.push({ v: [ids[w], ids[w2], ids[`s${w2}`], ids[`s${w}`]], part: 'hand', region: 'forearm', mat: 'skin', name: `stub ${i}` }); });
   polys.push({ v: WRIST.map((w) => ids[`s${w}`]), part: 'hand', region: 'forearm', mat: 'skin', name: 'wrist cut' });
   orient(polys, verts);
-  return finish({ verts, polys, V: arm.V, ids });
+  const V = Object.fromEntries(Object.entries(arm.V).map(([k, p]) => [k, local(p)]));
+  return finish({ verts, polys, V, ids, frame: F });
 }
 
 /** Head, torso and both arms as one body: the torso's arm cuts give way to the arms, the arms' caps to the torso's

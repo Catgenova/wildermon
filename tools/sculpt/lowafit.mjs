@@ -31,7 +31,7 @@ const K = REF.scale;
 export const ARM_VIEWS = ['front', 'q3', 'profile', 'r3', 'back'];
 export const HAND_VIEWS = ['hback', 'hq3', 'hprofile', 'hr3', 'hpalm'];
 const VIEWS = [...ARM_VIEWS, ...HAND_VIEWS, 'body'];
-export const WEIGHT = { front: 1, q3: 1, profile: 1, r3: 0.6, back: 0.6, hback: 0.5, hq3: 0.5, hprofile: 0.5, hr3: 0.3, hpalm: 0.3, body: 1.2 };
+export const WEIGHT = { front: 1, q3: 1, profile: 1, r3: 0.6, back: 0.6, hback: 0.5, hq3: 0.5, hprofile: 0.5, hr3: 0.3, hpalm: 0.3, body: +opt('bodyw', '3') };
 // The body reference's own camera: its pixels per head unit and where the chin's underside's middle falls, the scale
 // set by the shoulders' widest (the torso's sd4), measured.
 export const BODY_CAM = { male: { yaw: 0, pitch: 0, roll: 0, s: 128, cx: 433, cy: 322, piv: [0, 0, 0] }, female: { yaw: 0, pitch: 0, roll: 0, s: 124, cx: 437, cy: 328, piv: [0, 0, 0] } };
@@ -140,7 +140,7 @@ export function viewError(M, v, cam) {
   for (const k of ol) { a += r.dt[k]; wa = Math.max(wa, r.dt[k]); }
   for (const k of r.ol) { b += dt[k]; wb = Math.max(wb, dt[k]); }
   const mean_ = ((a / ol.length + b / r.ol.length) / 2) * K, worst = Math.max(wa, wb) * K;
-  const V = M.arm.V;
+  const V = v.startsWith('h') ? M.hand.V : M.arm.V;
   const marks = Object.entries(MARKS[v] ?? {}).map(([name, [x, y, n]]) => { const p = markAt(V, n, cam); return { name, d: Math.hypot(p[0] - x, p[1] - y) }; });
   const mm = marks.length ? marks.reduce((t, m) => t + m.d, 0) / marks.length : 0;
   // in % of the view's length, so the hand's views and the body's count as the arm's do
@@ -160,6 +160,27 @@ export function warp(m) {
   }
   return t;
 }
+/** How lumpy the arm is along its length: each ring's shape (its vertices less its centre) against the mean of the
+ * rings above and below it, squared and summed, and the rings' centres' bends a tenth as much: the arm's rings ua down to
+ * fd, the four-finger mass's three rows (knuckles, middle, tips) and the thumb's three rings. */
+const FINGER = (p) => [`${p}b0`, `${p}b1`, `${p}b2`, `${p}b3`, `${p}b4`, `${p}p4`, `${p}p3`, `${p}p2`, `${p}p1`, `${p}p0`];
+const CHAINS = () => [TOPO[who].rings.map((r) => Array.from({ length: 8 }, (_, i) => `${r}${i}`)), ['k', 'm', 'n'].map(FINGER), [['ta', 'tb', 'tc', 'td'], ['t1a', 't1b', 't1c', 't1d'], ['t2a', 't2b', 't2c', 't2d']]];
+function lumps(V) {
+  let t = 0;
+  for (const ch of CHAINS()) {
+    const C = ch.map((r) => mean(V, r));
+    for (let k = 1; k + 1 < ch.length; k++) {
+      for (let i = 0; i < ch[k].length; i++) {
+        const d = (j) => sub3(V[ch[j][i]], C[j]);
+        const a = d(k - 1), b = d(k), c = d(k + 1);
+        for (let q = 0; q < 3; q++) t += (a[q] - 2 * b[q] + c[q]) ** 2;
+      }
+      for (let q = 0; q < 3; q++) t += 0.1 * (C[k - 1][q] - 2 * C[k][q] + C[k + 1][q]) ** 2;
+    }
+  }
+  return t;
+}
+const SMOOTH = +opt('smooth', '100');
 function folds(m, base) {
   let n = 0;
   for (let i = 0; i < m.tris.length; i++) {
@@ -189,9 +210,9 @@ const HAND_T = {
   mp4: [39, 140, -2], mp3: [17, 142, -6], mp2: [-7, 142, -6], mp1: [-31, 142, -6], mp0: [-55, 140, -2],
   nb0: [-30, 183, 22], nb1: [-12, 188, 24], nb2: [6, 190, 24], nb3: [22, 188, 22], nb4: [34, 183, 20],
   np4: [34, 176, 2], np3: [22, 180, 0], np2: [6, 182, 0], np1: [-12, 180, 0], np0: [-30, 176, 2],
-  ta: [42, 40, 22], tb: [52, 84, 14], tc: [48, 92, -22], td: [38, 46, -28],
-  t1a: [58, 92, 0], t1b: [72, 104, -6], t1c: [66, 110, -32], t1d: [52, 100, -30],
-  t2a: [60, 120, -10], t2b: [70, 126, -14], t2c: [66, 132, -30], t2d: [56, 128, -28],
+  ta: [62, 55, 10], tb: [46, 94, 6], tc: [46, 96, -30], td: [58, 60, -34],
+  t1a: [78, 104, -2], t1b: [48, 110, -2], t1c: [48, 112, -36], t1d: [78, 106, -36],
+  t2a: [74, 126, -6], t2b: [52, 132, -6], t2c: [52, 134, -32], t2d: [74, 128, -32],
   pc: [0, 55, -30],
 };
 if (stage === 'init') {
@@ -264,7 +285,18 @@ if (stage === 'init') {
   process.exit(0);
 }
 
+// --stage handinit: the hand put back on its template (HAND_T) where it hangs now: the wrist's centre, the line to the
+// finger ends' middle, the back of the hand forward; the arm's rings kept
+if (stage === 'handinit') {
+  const V = structuredClone(preset.V), O = mean(V, WRIST), tip = mean(V, ['nb1', 'nb2', 'nb3', 'np1', 'np2', 'np3']);
+  const span = Math.hypot(...sub3(tip, O)), L = span / 185;
+  const v = unit(sub3(tip, O)), w = unit(sub3([0, 0, 1], v.map((x) => x * v[2]))), u = cross3(v, w), sgn = u[0] > 0 ? 1 : -1;
+  for (const [n, [a, b, c]] of Object.entries(HAND_T)) if (!WRIST.includes(n)) V[n] = [0, 1, 2].map((q) => +(O[q] + L * (sgn * a * u[q] + b * v[q] + c * w[q])).toFixed(4));
+  writeFileSync(join(DIR, `lowafit-${who}.json`), JSON.stringify({ V }, null, 1));
+  process.exit(0);
+}
 const cams = loadACams();
+for (const v of HAND_VIEWS) if (cams[v]) cams[v].piv = [0, -0.6, 0];
 // The views' angles held near their labels (a turntable: the arm's five at 0, 45, 90, 135, 180 degrees, the hand's five
 // turned the other way), within YAWR of them, the pitch within 12 degrees and the roll within 8: measured, not
 // assumed, but not free to fit the arm's own errors.
@@ -316,7 +348,7 @@ function report(tag) {
     const wm = e.marks.length ? e.marks.reduce((a, b) => (b.d > a.d ? b : a)) : null;
     rows.push(`${v.padEnd(9)} outline mean ${(e.mean / L).toFixed(1)}% worst ${(e.worst / L).toFixed(1)}%  IoU ${e.iou.toFixed(3)}  ${wm ? `worst landmark ${wm.name} ${(wm.d / L).toFixed(1)}%  (mean ${(e.marks.reduce((a, m) => a + m.d, 0) / e.marks.length / L).toFixed(1)}%, ${e.marks.length})` : ''}`);
   }
-  console.log(`${who} ${tag} (score ${tot.toFixed(1)}, warp ${(1000 * warp(M.arm)).toFixed(1)}e-3, folds ${folds(M.arm, base0)}; arm ${AL}px, hand ${HL.toFixed(0)}px, body arm ${BL}px)\n` + rows.join('\n'));
+  console.log(`${who} ${tag} (score ${tot.toFixed(1)}, warp ${(1000 * warp(M.arm)).toFixed(1)}e-3, lumps ${(1000 * lumps(preset.V)).toFixed(1)}e-3, folds ${folds(M.arm, base0)}; arm ${AL}px, hand ${HL.toFixed(0)}px, body arm ${BL}px)\n` + rows.join('\n'));
 }
 const score = (vs = only) => vs.reduce((s, v) => s + viewError(M, v, cams[v]).score, 0);
 
@@ -382,7 +414,7 @@ if (stage === 'lattice' || stage === 'hand') {
   for (let k = 0; k < 3; k++) ps.push({ step: 0.04, get: () => Lh.d[k], set: (x) => { Lh.d[k] = x; } }, { step: 0.05, get: () => Lh.r[k], set: (x) => { Lh.r[k] = x; } });
   ps.push({ step: 0.04, get: () => Lh.s, set: (x) => { Lh.s = x; } });
   const camPs = args.includes('--with-camera') ? camParams(only, 1.5) : [];
-  const total = () => { preset.V = applyLattice(P0, Lr, Lh); M = meshes(); return score() + 20 * folds(M.arm, base0); };
+  const total = () => { preset.V = applyLattice(P0, Lr, Lh); M = meshes(); return score() + 20 * folds(M.arm, base0) + SMOOTH * lumps(preset.V); };
   for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...ps, ...camPs], total, 1).toFixed(1));
   total();
   saveV(); if (camPs.length) saveCams(cams);
@@ -399,7 +431,7 @@ if (stage === 'mesh') {
   const start = structuredClone(preset.V);
   const moved = () => { let t = 0; for (const n of names) for (let k = 0; k < 3; k++) t += (preset.V[n][k] - start[n][k]) ** 2; return t; };
   const camPs = args.includes('--with-camera') ? camParams(only, 1) : [];
-  const total = () => { M = meshes(); return score() + 20 * folds(M.arm, base0) + reg * moved() + flatW * warp(M.arm); };
+  const total = () => { M = meshes(); return score() + 20 * folds(M.arm, base0) + reg * moved() + flatW * warp(M.arm) + SMOOTH * lumps(preset.V); };
   for (let r = 0; r < +opt('rounds', 3); r++) console.log('sweep', r, descend([...ps, ...camPs], total, 1).toFixed(1));
   M = meshes();
   saveV(); if (camPs.length) saveCams(cams);
@@ -409,6 +441,6 @@ if (stage === 'mesh') {
 if (stage === 'report') report('now');
 if (opt('marks', '')) {
   const out = {};
-  for (const v of VIEWS) out[v] = Object.entries(MARKS[v] ?? {}).map(([name, [x, y, n]]) => ({ name, ref: [x, y], ours: markAt(M.arm.V, n, cams[v]).slice(0, 2) }));
+  for (const v of VIEWS) out[v] = Object.entries(MARKS[v] ?? {}).map(([name, [x, y, n]]) => ({ name, ref: [x, y], ours: markAt(v.startsWith('h') ? M.hand.V : M.arm.V, n, cams[v]).slice(0, 2) }));
   writeFileSync(opt('marks'), JSON.stringify(out));
 }
