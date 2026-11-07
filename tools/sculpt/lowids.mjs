@@ -1,23 +1,14 @@
 // lowids.mjs who out.bin: per view of the top row (front q3 profile r3 back), the id of the polygon nearest the viewer
-// at each sheet pixel (x 0..1536, y 0..360), -1 for none; and out.bin.names.json, each polygon's name. For lowlight.py.
+// at each sheet pixel (x 0..1536, y 0..460, down to the stub's cut), -1 for none; and out.bin.names.json, each polygon's name. For lowlight.py.
 import { writeFileSync } from 'node:fs';
 const W = new URL('.', import.meta.url).href;
-const { buildLowHead, FACES, NECK_FACES, STUB_FACES, SPAN_FACES, SPAN_NECK_FACES } = await import(W + 'lowhead.mjs');
+const { buildLowHead } = await import(W + 'lowhead.mjs');
 const { loadCams, project } = await import(W + 'lowcam.mjs');
 const who = process.argv[2], out = process.argv[3];
 const mesh = buildLowHead(who);
-const names = [];
-for (const s of [1, -1]) {
-  const sd = s > 0 ? 'R' : 'L';
-  for (const f of FACES) names.push(f.join('-') + ':' + sd);
-  for (const f of NECK_FACES) names.push('neck ' + f.join('-') + ':' + sd);
-  for (const f of STUB_FACES) names.push('stub ' + f.join('-') + ':' + sd);
-}
-for (const f of SPAN_FACES) names.push(f.join('-'));
-for (const f of SPAN_NECK_FACES) names.push('neck ' + f.join('-'));
-while (names.length < mesh.polys.length) { const p = mesh.polys[names.length]; names.push((p.ear ? 'ear' : p.mat) + '#' + names.length); }
+const names = mesh.polys.map((p, i) => p.name ?? (p.ear ? 'ear' : p.mat) + '#' + i);
 const cams = loadCams(who);
-const Wd = 1536, H = 360;
+const Wd = 1536, H = 460;
 const views = ['front', 'q3', 'profile', 'r3', 'back'];
 const buf = new Int32Array(views.length * Wd * H).fill(-1);
 views.forEach((v, vi) => {

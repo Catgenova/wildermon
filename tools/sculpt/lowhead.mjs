@@ -52,15 +52,17 @@ export const FACES = [
   // the chin's flat underside and the jaw's underside back to the neck
   ['ch0', 'ch1', 'u1', 'u0'], ['u0', 'u1', 'g1', 'g0'], ['u1', 'ch1', 'jl', 'g1'], ['jl', 'j', 'g2', 'g1'], ['j', 'm5', 'g3', 'g2'], ['m5', 'k5', 'n6', 'g3'],
 ];
-// The back of the skull: large facets that span the centre line (no seam down the middle), fanning round the back's
-// bump bk from the crown to the nape; emitted once, a name with ' the other side's vertex.
+// The back of the skull: large facets that span the centre line (no seam down the middle), from the crown to the nape;
+// emitted once, a name with ' the other side's vertex.
 export const SPAN_FACES = [
   // the forehead: one plane across the centre line, from the skull's top ring and the verticals (t1 bm) down to the brow line (bm b2 gl b2' bm'); below it,
   // between the brows, the nose's root down to the bridge's top (b1 b0 b1'): a T on the male, a V on the female
   ['t0', 't1', 'bm', 'b2', 'gl', "b2'", "bm'", "t1'"],
   ['gl', 'b2', 'b1', 'b0', "b1'", "b2'"],
   ['a3', "t3'", 't3'],
-  ['bk', 't3', "t3'"], ['bk', "t3'", "f4'"], ['bk', "f4'", "o6'"], ['bk', 'o6', 'f4'], ['bk', 'f4', 't3'],
+  // the back of the skull one plane from the skull's top ring (t3 t3') down to the occipital crease (o6 bk o6'), as
+  // the references' back views draw it
+  ['bk', "o6'", "f4'", "t3'", 't3', 'f4', 'o6'],
   // under the occipital crease (o6 bk o6', at the ears' top, as the references' backs have it) one lower plane to the nape
   ['o6', 'bk', "o6'", "n6'", 'n6'],
 ];
@@ -76,6 +78,17 @@ export const STUB_FACES = [
   ['nm0', 'nm1', 'ss1', 'ss0'], ['nm1', 'nm2', 'ss2', 'ss1'], ['nm2', 'nm3', 'nm4', 'ss3', 'ss2'], ['nm4', 'nm5', 'ss4', 'ss3'],
   ['ss0', 'ss1', 'sb1', 'sb0'], ['ss1', 'ss2', 'sb2', 'sb1'], ['ss2', 'ss3', 'sb3', 'sb2'], ['ss3', 'ss4', 'sb4', 'sb3'],
   ['sb0', 'sb1', 'sbc'], ['sb1', 'sb2', 'sbc'], ['sb2', 'sb3', 'sbc'], ['sb3', 'sb4', 'sbc'],
+];
+// The male's stub, as his reference's front wireframe and views draw it: the neck's front strip (nm0 nm1) runs on down
+// as the chest's middle plane to the cut; beside it the chest's plane from the strip's foot and the
+// neck's side (nm2) out to the shoulder's lower corner (so) and down to the cut; over it the shoulder's top from the neck
+// (nm2 nm3) to the shoulder's corner ss2; behind, the trapezius from the nape (nm3 nm4 nm5) to ss3 and ss4; below the
+// shoulder the side and the back down to the cut sb2..sb5. Used when the preset names the vertex so.
+export const STUB_FACES_CHEST = [
+  ['nm0', 'nm1', 'sb1', 'sb0'], ['nm1', 'nm2', 'so', 'sb2', 'sb1'],
+  ['nm2', 'nm3', 'ss2', 'so'], ['nm3', 'nm4', 'ss3', 'ss2'], ['nm4', 'nm5', 'ss4', 'ss3'],
+  ['so', 'ss2', 'sb3', 'sb2'], ['ss2', 'ss3', 'sb4', 'sb3'], ['ss3', 'ss4', 'sb5', 'sb4'],
+  ['sb0', 'sb1', 'sbc'], ['sb1', 'sb2', 'sbc'], ['sb2', 'sb3', 'sbc'], ['sb3', 'sb4', 'sbc'], ['sb4', 'sb5', 'sbc'],
 ];
 
 export const PRESETS = {
@@ -149,7 +162,7 @@ export function buildLowHead(who = 'male', preset = null) {
   if (!P) throw new Error(`no head ${who}`);
   const verts = [], polys = [];
   const vert = (p) => { verts.push(p); return verts.length - 1; };
-  const poly = (v, part, region, mat = 'skin') => polys.push({ v, part, region, mat });
+  const poly = (v, part, region, mat = 'skin', name) => polys.push({ v, part, region, mat, ...(name ? { name } : {}) });
 
   // The head, the neck and the stub from the hand-authored halves: a centre-line vertex once, the others once a side.
   const ids = { 1: {}, [-1]: {} };
@@ -170,14 +183,16 @@ export function buildLowHead(who = 'male', preset = null) {
     const c = mul(v.map((i) => verts[i]).reduce((a, p) => add(a, p), [0, 0, 0]), 1 / v.length);
     return c[2] > 0.15 && c[1] < 1.25 ? 'face' : 'skull';
   };
+  const stub = P.V.so ? STUB_FACES_CHEST : STUB_FACES;
   for (const s of [1, -1]) {
-    for (const f of FACES) { const v = outward(f.map((n) => ids[s][n])); poly(v, 'head', regionOf(v)); }
-    for (const f of NECK_FACES) poly(outward(f.map((n) => ids[s][n])), 'neck', 'neck');
-    for (const f of STUB_FACES) poly(outward(f.map((n) => ids[s][n])), 'shoulders', 'neck');
+    const sd = s > 0 ? 'R' : 'L';
+    for (const f of FACES) { const v = outward(f.map((n) => ids[s][n])); poly(v, 'head', regionOf(v), 'skin', f.join('-') + ':' + sd); }
+    for (const f of NECK_FACES) poly(outward(f.map((n) => ids[s][n])), 'neck', 'neck', 'skin', 'neck ' + f.join('-') + ':' + sd);
+    for (const f of stub) poly(outward(f.map((n) => ids[s][n])), 'shoulders', 'neck', 'skin', 'stub ' + f.join('-') + ':' + sd);
   }
   const span = (n) => (n.endsWith("'") ? ids[-1][n.slice(0, -1)] : ids[1][n]);
-  for (const f of SPAN_FACES) { const v = outward(f.map(span)); poly(v, 'head', 'skull'); }
-  for (const f of SPAN_NECK_FACES) poly(outward(f.map(span)), 'neck', 'neck');
+  for (const f of SPAN_FACES) { const v = outward(f.map(span)); poly(v, 'head', 'skull', 'skin', f.join('-')); }
+  for (const f of SPAN_NECK_FACES) poly(outward(f.map(span)), 'neck', 'neck', 'skin', 'neck ' + f.join('-'));
 
   // Where the face's surface is at (x, y): the front-most hit of a ray along -z on the head.
   const lattice = polys.filter((p) => p.part === 'head').flatMap((p) => tris(p.v, verts));

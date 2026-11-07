@@ -20,7 +20,7 @@ REF = os.path.join(HERE, 'ref', 'head-lowpoly%s.png' % ('' if who == 'male' else
 cams = json.load(open(os.path.join(HERE, 'lowcams.json')))[who]
 ref = np.asarray(Image.open(REF).convert('RGB').resize((1536, 1024)), dtype=float)
 me = np.asarray(Image.open(sheet).convert('RGB').resize((1536, 1024)), dtype=float)
-ids = np.frombuffer(open(idsf, 'rb').read(), dtype=np.int32).reshape(5, 360, 1536)
+ids = np.frombuffer(open(idsf, 'rb').read(), dtype=np.int32); H = ids.size // (5 * 1536); ids = ids.reshape(5, H, 1536)
 names = json.load(open(idsf + '.names.json')); D = json.load(open(dumpf))
 views = ['front', 'q3', 'profile', 'r3', 'back']
 AOLO = float(os.environ.get('AOLO','0.8'))
@@ -41,7 +41,7 @@ def basis(n):
 rows = []
 for vi, v in enumerate(views):
   I = ids[vi]; er = (I >= 0).copy()
-  for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]: er[2:-2, 2:-2] &= (I[2 + dy:358 + dy, 2 + dx:1534 + dx] == I[2:-2, 2:-2])
+  for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]: er[2:-2, 2:-2] &= (I[2 + dy:H - 2 + dy, 2 + dx:1534 + dx] == I[2:-2, 2:-2])
   R = rot(cams[v])
   for p in np.unique(I[er]):
     if D[p]['mat'] != 'skin' or names[p].startswith('ear'): continue
@@ -50,7 +50,7 @@ for vi, v in enumerate(views):
     n = np.array(D[p]['n']) if os.environ.get('HEAD') else R @ np.array(D[p]['n'])
     if (R @ n if os.environ.get('HEAD') else n)[2] < 0: n = -n
     occ = D[p]['ao']; aot = AOLO + (1.06 - AOLO) * occ * occ
-    rows.append(dict(v=v, name=names[p], n=n, ref=ref[:360][m].mean(0), me=me[:360][m].mean(0), k=k, aot=aot, stub=names[p].startswith('stub')))
+    rows.append(dict(v=v, name=names[p], n=n, ref=ref[:H][m].mean(0), me=me[:H][m].mean(0), k=k, aot=aot, stub=names[p].startswith('stub')))
 lum = lambda c: c @ np.array([.299, .587, .114])
 def r2(y, x, w):
   mx, my = np.average(x, weights=w), np.average(y, weights=w)
