@@ -247,7 +247,8 @@ PRESETS.female = {
     { name: 'teres', cells: ['sd6a', 'da6', 'db6'], region: 'shoulder' },
     { name: 'spine', cells: ['dc7', 'ra7', 'rb7'], region: 'chest' },
   ],
-  split: ['sd6'],
+  // under the arm's cut, where the side turns in to the armpit: triangles
+  split: ['sd6', 'dc3', 'dc4'],
 };
 
 // The fitted vertices (tools/sculpt/lowtfit.mjs) over the hand-set ones: tools/sculpt/lowtfit-<who>.json, when present.
