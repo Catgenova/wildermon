@@ -42,11 +42,12 @@ export const FACES = [
   // edge (tc tb), a side plane each side back into the cheek, and one underside (the cliff) from that edge back to the
   // face; nothing else at the tip
   ['b0', 'b1', 'tb', 'tc'], ['b1', 'tb', 'k1', 'e1'], ['tc', 'tb', 'k1', 'k0'],
-  // under the eyes down to the cheekbones: the nose, the cheek under the eye, the cheekbone's top, the side, the back
-  ['e1', 'e2', 'k2', 'k1'], ['e2', 'e3', 'k3', 'k2'], ['e3', 'e4', 'k4', 'k3'], ['e4', 'e5', 'k5', 'k4'], ['e5', 'o6', 'n6', 'k5'],
+  // under the eyes down to the nose's base: the cheek one plane from the nose to the face's side, as the references
+  // draw it; the side plane under the eye; the side; the back
+  ['e1', 'e2', 'e3', 'k3', 'k2', 'k1'], ['e3', 'e4', 'k4', 'k3'], ['e4', 'e5', 'k5', 'k4'], ['e5', 'o6', 'n6', 'k5'],
   // the lower face, as the references' wireframes draw it: one strip down the middle from under the nose to the chin,
   // one large cheek plane each side from the cheekbones down to the jaw line, and the side down to the jaw's corner
-  ['k0', 'k1', 'ch1', 'ch0'], ['k1', 'k2', 'k3', 'j', 'jl', 'ch1'], ['k3', 'k4', 'j'], ['k4', 'k5', 'm5', 'j'],
+  ['k0', 'k1', 'ch1', 'ch0'], ['k1', 'k2', 'k3', 'jl', 'ch1'], ['k3', 'j', 'jl'], ['k3', 'k4', 'j'], ['k4', 'k5', 'm5', 'j'],
   // the chin's flat underside and the jaw's underside back to the neck
   ['ch0', 'ch1', 'u1', 'u0'], ['u0', 'u1', 'g1', 'g0'], ['u1', 'ch1', 'jl', 'g1'], ['jl', 'j', 'g2', 'g1'], ['j', 'm5', 'g3', 'g2'], ['m5', 'k5', 'n6', 'g3'],
 ];
