@@ -1,8 +1,11 @@
 # The low-poly head's light fitted to its reference (tools/sculpt/lowshot.mjs reads the result): per view of the top row,
 # the skin's colour as a function of each facet's normal in view space, real spherical harmonics to the third order and
 # three rims (the cool light from behind on the left, a rim either side), fitted by least squares to the reference's
-# colour over each facet's interior, each view's coefficients drawn toward one set shared by all views (ridge, lam);
-# the occlusion a fixed factor over it (AOLO, as lowshot's). TONE=g,b holds the skin's green and blue over its red at
+# colour over each facet's interior in all five views of the top row at once: one light for every view, fixed to the
+# camera as on a turntable (the references light every view so: a light fixed to the head explains them far worse,
+# HEAD=1 tries it). The occlusion a fixed factor over it (AOLO, as lowshot's). As a diagnostic, each view's own light
+# drawn toward the shared one (ridge, lam) is fitted and reported too (PERVIEW=1 writes it): a facet that needs its
+# view's own light to match is a plane facing the wrong way, to fix in the geometry. TONE=g,b holds the skin's green and blue over its red at
 # these ratios (her skin the male's tone).
 #
 #   node tools/sculpt/lowshot.mjs --who male --out /tmp/l --dump /tmp/l/dump.json --rig
@@ -44,8 +47,8 @@ for vi, v in enumerate(views):
     if D[p]['mat'] != 'skin' or names[p].startswith('ear'): continue
     m = er & (I == p); k = m.sum()
     if k < 30: continue
-    n = R @ np.array(D[p]['n'])
-    if n[2] < 0: n = -n
+    n = np.array(D[p]['n']) if os.environ.get('HEAD') else R @ np.array(D[p]['n'])
+    if (R @ n if os.environ.get('HEAD') else n)[2] < 0: n = -n
     occ = D[p]['ao']; aot = AOLO + (1.06 - AOLO) * occ * occ
     rows.append(dict(v=v, name=names[p], n=n, ref=ref[:360][m].mean(0), me=me[:360][m].mean(0), k=k, aot=aot, stub=names[p].startswith('stub')))
 lum = lambda c: c @ np.array([.299, .587, .114])
@@ -87,6 +90,8 @@ if os.environ.get('TONE'):
   print('tone factors', np.round(f, 3))
   for k in ['global']: out[k] = [[c * f[ch] for c in out[k][ch]] for ch in range(3)]
   for v in out['views']: out['views'][v] = [[c * f[ch] for c in out['views'][v][ch]] for ch in range(3)]
+# one light for every view (the default): the per-view lights are a diagnostic only, PERVIEW=1 writes them
+if os.environ.get('PERVIEW') != '1': out['views'] = {}
 if outf: json.dump(out, open(outf, 'w'))
 Yr = np.array([r['ref'] for r in rows]); w = np.array([r['k'] for r in rows], float)
 print('ref mean rgb', np.average(Yr, axis=0, weights=w).round(1), 'ratio', (np.average(Yr, axis=0, weights=w) / np.average(Yr, axis=0, weights=w)[0]).round(3))

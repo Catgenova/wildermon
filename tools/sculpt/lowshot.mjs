@@ -133,11 +133,11 @@ for (const p of mesh.polys) {
 }
 
 const CAMS = loadCams(who);
-// The light fitted to the reference (tools/sculpt/lowlight-<who>.json, written by tools/sculpt/lowlight.py): per view,
-// the skin's colour as a function of the facet's normal in view space (real spherical harmonics up to the third
-// order, and three rims: the cool light from behind on the left and a rim on either side; one set of coefficients per
-// colour channel, 0..255), over the occlusion and the gradient across the facet.
-// The top and the bottom views, which the fit does not see, take the light shared by all views. --rig: the hand-set rig.
+// The light fitted to the reference (tools/sculpt/lowlight-<who>.json, written by tools/sculpt/lowlight.py): one light
+// for every view, fixed to the camera as on a turntable, the skin's colour as a function of the facet's normal in view
+// space (real spherical harmonics up to the third order, and three rims: the cool light from behind on the left and a
+// rim on either side; one set of coefficients per colour channel, 0..255), over the occlusion and the gradient across
+// the facet. --rig: the hand-set rig.
 const LIGHT_FILE = new URL(`./lowlight-${who}.json`, import.meta.url);
 const LIGHT = !args.includes('--rig') && existsSync(LIGHT_FILE) ? JSON.parse(readFileSync(LIGHT_FILE, 'utf8')) : null;
 const shOf = (v) => {
