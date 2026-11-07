@@ -17,7 +17,7 @@ import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, 
 import { humanProportions } from './human';
 import type { SculptDraw } from './gl';
 import { animate } from './anim';
-import { skeleton, type AnimAsset } from './anim/skeleton';
+import { skeleton, type AnimAsset, type Skeleton } from './anim/skeleton';
 
 type M3 = number[];
 type V = [number, number, number];
@@ -83,7 +83,7 @@ const angleOf = (q: Q): number => (2 * Math.acos(Math.min(1, Math.abs(q[0]))) * 
 export const WOMAN_OF_MAN = 0.85;
 
 /** One body: its asset, the figure's proportions it is posed with, and its height as a share of the base man's. */
-function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked; bones: (pose: FigurePose) => Float32Array } {
+function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked; bones: (pose: FigurePose) => Float32Array; skeleton: Skeleton; figure: (pose: FigurePose) => Array<M3 | undefined> } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
 
@@ -91,8 +91,8 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
   const REL = BONES.map((b) => (b.p >= 0 ? mm(tr(BONES[b.p].R), b.R) : b.R));
   const OFF = BONES.map((b) => (b.p >= 0 ? mv(tr(BONES[b.p].R), sub(b.head, BONES[b.p].head)) : b.head));
   const T = A.T;
-  /** The body as the clip player sees it, the clips authored in the man's bone frames. */
-  const SK = skeleton(A as unknown as AnimAsset, MALE_ASSET as unknown as AnimAsset);
+  /** The body as the clip player sees it, the clips authored in the man's bone frames, its height the game's. */
+  const SK = skeleton(A as unknown as AnimAsset, MALE_ASSET as unknown as AnimAsset, heightOf(humanProportions(0)) * share);
 
   interface Frame { W: M3; P: V }
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
@@ -266,10 +266,15 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
     return out;
   }
 
-  return { baked: lowBaked, bones: lowBones };
+  return { baked: lowBaked, bones: lowBones, skeleton: SK, figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
 }
 
 const BODIES = { man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1), woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN) };
+
+/** A body's skeleton as the clip player poses it in the game (for the authoring tools). */
+export const lowSkeleton = (body: 'man' | 'woman'): Skeleton => BODIES[body].skeleton;
+/** A body's local turns for a pose as the figure's pose maps onto it, with no clip (for the authoring tools to compare). */
+export const lowFigure = (body: 'man' | 'woman', pose: FigurePose): Array<M3 | undefined> => BODIES[body].figure(pose);
 
 /** Whether a look is drawn as a low-poly body: a man or a woman (neither keeps the sculpted base). */
 export const hasLowBody = (look: { gender: string }): boolean => look.gender === 'man' || look.gender === 'woman';

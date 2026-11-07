@@ -7,7 +7,7 @@
  * `poseAt` samples one clip at a time with nothing kept between frames, which is all a loop such as the idle needs; a
  * `ClipPlayer` keeps the layers and their fades for a body drawn frame after frame.
  */
-import { UPPER, eventsBetween, sampleClip, stanceOf, wrap, type Clip } from './clip';
+import { UPPER, eventsBetween, sampleClip, sampleFeet, stanceOf, strideOf, wrap, type Clip } from './clip';
 import { QI, add, qmat, qmul, quat, scl, slerp, type M3, type Q, type V } from './math';
 import type { Plant, Pose, Skeleton } from './skeleton';
 
@@ -37,9 +37,19 @@ export function plantOf(sk: Skeleton, c: Clip): Plant | undefined {
   return p;
 }
 
+/**
+ * Where a clip stands a body's feet at time t: its stance, or for a clip that keys its feet (`Clip.feet`) where they are
+ * keyed from it, over the body's stride.
+ */
+export function plantAt(sk: Skeleton, c: Clip, t: number): Plant | undefined {
+  const base = plantOf(sk, c), feet = sampleFeet(c, t, sk.body);
+  if (!base || !feet) return base;
+  return sk.step(base, feet, strideOf(c, sk.body), c.bodies?.[sk.body]?.feet?.in);
+}
+
 /** A clip at time t on a body, finished: the local turns its draw wants and the body's shift. */
 export function clipLocal(sk: Skeleton, c: Clip, t: number): { local: Array<M3 | undefined>; move: V } {
-  return sk.finish(poseAt(sk, c, t), { plant: plantOf(sk, c), armsOut: c.bodies?.[sk.body]?.armsOut });
+  return sk.finish(poseAt(sk, c, t), { plant: plantAt(sk, c, t), armsOut: c.bodies?.[sk.body]?.armsOut });
 }
 
 /**
@@ -181,7 +191,7 @@ export class ClipPlayer {
     for (const a of this.adds) addPose(p, poseAt(sk, a.clip, a.t), a.w);
     if (this.look[0] || this.look[1]) addPose(p, lookAt(sk, this.look[0], this.look[1]), 1);
     // the feet planted where the clip mostly playing stands them
-    const lead = this.last && fw < 0.5 ? this.last.clip : this.base.clip;
-    return sk.finish(p, { plant: plantOf(sk, lead), armsOut: lead.bodies?.[sk.body]?.armsOut });
+    const lead = this.last && fw < 0.5 ? this.last : this.base;
+    return sk.finish(p, { plant: plantAt(sk, lead.clip, lead.t), armsOut: lead.clip.bodies?.[sk.body]?.armsOut });
   }
 }

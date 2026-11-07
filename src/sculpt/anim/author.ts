@@ -3,17 +3,20 @@
  * `./clip.ts`, a pose is mirrored left for right, and a bone's keys can trail the beat (`lag`: overlapping action, the
  * arms catching up with the hips) or lead it.
  */
-import type { Clip, EaseName, Key } from './clip';
+import type { Clip, EaseName, Foot, FootChannel, FootKeys, Key } from './clip';
 import type { Euler } from './math';
 
-/** A key pose: each bone's turn (bones left out: at rest), and the body's shift in body heights. */
-export interface KeyPose { rot: Record<string, Euler>; move?: Euler }
+/**
+ * A key pose: each bone's turn (bones left out: at rest), the body's shift in body heights, and for a clip that keys its
+ * feet (`Clip.feet`) where each foot is.
+ */
+export interface KeyPose { rot: Record<string, Euler>; move?: Euler; feet?: { l: Foot; r: Foot } }
 /** A key pose on the timeline, how it is reached, and a name for the authoring tool's sheet. */
 export interface Beat {
   t: number; pose: KeyPose; ease?: EaseName; hold?: number; back?: number; name?: string;
   /** A key pose (blocked first) or a breakdown between them (the default), for showing a clip's passes. */
   stage?: 'key' | 'breakdown';
-  /** How some bones (`$move`: the shift) reach this beat instead, by bone. */
+  /** How some bones (`$move`: the shift; `$z_l`, `$lift_l`, `$pitch_l` and the right's: a foot's channels) reach this beat instead, by bone. */
   per?: Record<string, { ease?: EaseName; hold?: number; back?: number }>;
 }
 
@@ -24,11 +27,13 @@ export function mirror(p: KeyPose): KeyPose {
     const m = /_(l|r)$/.exec(bone), to = m ? bone.slice(0, -1) + (m[1] === 'l' ? 'r' : 'l') : bone;
     rot[to] = [e[0], -e[1], -e[2]];
   }
-  return { rot, move: p.move ? [-p.move[0], p.move[1], p.move[2]] : undefined };
+  return { rot, move: p.move ? [-p.move[0], p.move[1], p.move[2]] : undefined, feet: p.feet ? { l: p.feet.r, r: p.feet.l } : undefined };
 }
+/** A beat's per-bone easings mirrored, left for right. */
+export const mirrorPer = (per: Beat['per']): Beat['per'] => per && Object.fromEntries(Object.entries(per).map(([k, e]) => { const m = /_(l|r)$/.exec(k); return [m ? k.slice(0, -1) + (m[1] === 'l' ? 'r' : 'l') : k, e]; }));
 
 /** Poses merged, the later's bones over the earlier's. */
-export const merge = (...ps: KeyPose[]): KeyPose => ({ rot: Object.assign({}, ...ps.map((p) => p.rot)), move: ps.reduce<Euler | undefined>((m, p) => p.move ?? m, undefined) });
+export const merge = (...ps: KeyPose[]): KeyPose => ({ rot: Object.assign({}, ...ps.map((p) => p.rot)), move: ps.reduce<Euler | undefined>((m, p) => p.move ?? m, undefined), feet: ps.reduce<KeyPose['feet']>((f, p) => p.feet ?? f, undefined) });
 
 /**
  * A pose-to-pose clip as it stood at an earlier pass, to show how it was built: `blocking` its key poses only, held
@@ -40,13 +45,14 @@ export function passOf(c: Clip, beats: Beat[], pass: 'blocking' | 'breakdowns' |
   const step = { ease: 'hold' as const, hold: 1 }, stepped = pass !== 'splined';
   const bs = beats.filter((b) => pass !== 'blocking' || b.stage === 'key').map((b) => (stepped ? { ...b, ...step, per: undefined } : b));
   const accents = pass === 'blocking' ? undefined : Object.fromEntries(Object.entries(c.accents ?? {}).map(([k, keys]) => [k, keys.map((key) => (stepped ? { ...key, ...step } : key))]));
-  return { ...c, ...poseToPose(bs, { length: c.length, loop: c.loop }), accents, breath: undefined };
+  const { footKeys, ...k } = poseToPose(bs, { length: c.length, loop: c.loop });
+  return { ...c, ...k, feet: c.feet && footKeys ? { stride: c.feet.stride, ...footKeys } : c.feet, accents, breath: undefined };
 }
 
 /** Key poses as tracks: every bone keyed at every beat, each bone's keys shifted by its `lag` (seconds; a loop wrapped). */
-export function poseToPose(beats: Beat[], o: { length: number; loop: boolean; lag?: Record<string, number> }): { tracks: Record<string, Array<Key<Euler>>>; move: Array<Key<Euler>>; poses: Array<{ t: number; name: string }> } {
+export function poseToPose(beats: Beat[], o: { length: number; loop: boolean; lag?: Record<string, number> }): { tracks: Record<string, Array<Key<Euler>>>; move: Array<Key<Euler>>; poses: Array<{ t: number; name: string }>; footKeys?: { l: FootKeys; r: FootKeys } } {
   const bones = new Set(beats.flatMap((b) => Object.keys(b.pose.rot)));
-  const keyOf = (b: Beat, t: number, v: Euler, bone: string): Key<Euler> => {
+  const keyOf = <T>(b: Beat, t: number, v: T, bone: string): Key<T> => {
     const e = { ease: b.ease, hold: b.hold, back: b.back, ...b.per?.[bone] };
     return { t, v, ...(e.ease ? { ease: e.ease } : {}), ...(e.hold !== undefined ? { hold: e.hold } : {}), ...(e.back !== undefined ? { back: e.back } : {}) };
   };
@@ -56,6 +62,9 @@ export function poseToPose(beats: Beat[], o: { length: number; loop: boolean; la
     const lag = o.lag?.[bone] ?? 0;
     tracks[bone] = beats.map((b) => keyOf(b, +at(b.t + lag).toFixed(4), b.pose.rot[bone] ?? [0, 0, 0], bone)).sort((a, b) => a.t - b.t);
   }
-  const move = beats.map((b) => keyOf(b, b.t, b.pose.move ?? [0, 0, 0], '$move'));
-  return { tracks, move, poses: beats.filter((b) => b.name).map((b) => ({ t: b.t, name: b.name as string })) };
+  const move = beats.map((b) => keyOf<Euler>(b, b.t, b.pose.move ?? [0, 0, 0], '$move'));
+  // the feet, channel by channel, when every beat places them
+  const keyed = beats.every((b) => b.pose.feet);
+  const foot = (s: 'l' | 'r'): FootKeys => Object.fromEntries((['z', 'lift', 'pitch'] as FootChannel[]).map((ch) => [ch, beats.map((b) => keyOf(b, b.t, (b.pose.feet as { l: Foot; r: Foot })[s][ch], `$${ch}_${s}`))])) as FootKeys;
+  return { tracks, move, poses: beats.filter((b) => b.name).map((b) => ({ t: b.t, name: b.name as string })), ...(keyed ? { footKeys: { l: foot('l'), r: foot('r') } } : {}) };
 }

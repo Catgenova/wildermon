@@ -6,16 +6,22 @@
  * figure's pose or to another clip, so nothing jumps; a body drawn once (no id) is posed with nothing kept.
  */
 import type { FigurePose } from '../../render/figure';
-import type { Clip } from './clip';
+import { strideOf, type Clip } from './clip';
 import type { M3, V } from './math';
 import { blendLocal, clipLocal } from './player';
 import type { Skeleton } from './skeleton';
 import { IDLE } from './clips/idle';
+import { WALK } from './clips/walk';
+import { strideAt } from '../../game/player';
+import { UNITS_PER_TILE } from '../../render/iso';
 
-/** The states a body is drawn in that a clip can play: so far, stood doing nothing. */
-export type State = 'idle';
+/** The states a body is drawn in that a clip can play: so far, stood doing nothing, and walking. */
+export type State = 'idle' | 'walk';
 /** The clip each state plays, by state, once it is approved; a state left out keeps the figure's pose. */
-export const CLIPS: Partial<Record<State, Clip>> = { idle: IDLE };
+export const CLIPS: Partial<Record<State, Clip>> = { idle: IDLE, walk: WALK };
+/** The most of the way from a walk to a run (`FigurePose.gait`) still drawn as the walk; faster keeps the figure's pose. */
+const WALK_GAIT = 0.15;
+const TAU = Math.PI * 2;
 
 let ON = true;
 /** Clips played (true, as the game) or every state left to the figure's pose (false: for comparing with it). */
@@ -25,15 +31,30 @@ export function clipsOn(on: boolean): void { ON = on; }
 const FADE = 0.2;
 
 /** The state a pose is in, of those a clip can play. */
-function stateOf(pose: FigurePose): State | undefined {
-  if (!pose.moving && !pose.working && !pose.swimming && !pose.driving && !pose.emote && !pose.cast) return 'idle';
-  return undefined;
+export function stateOf(pose: FigurePose): State | undefined {
+  if (pose.working || pose.swimming || pose.driving || pose.emote || pose.cast) return undefined;
+  if (!pose.moving) return 'idle';
+  return (pose.gait ?? 0) <= WALK_GAIT ? 'walk' : undefined;
 }
 
-/** The clip a pose plays and where in it, or none: the figure's pose is kept. */
-export function clipFor(pose: FigurePose): { clip: Clip; t: number } | undefined {
+/**
+ * Runs of a clip that keys its feet a turn of the game's walk phase, on a body: the game's stride (the ground a turn of the
+ * phase carries the body over, `strideAt`) over the body's own (`strideOf`), so its planted feet keep up with the ground.
+ */
+const runsPerTurn = (c: Clip, body: 'man' | 'woman', gait = 0): number => (strideAt(gait) * UNITS_PER_TILE) / strideOf(c, body);
+/** A walk's time for the game's walk phase on a body, its left heel down a quarter of a run in (as the figure's `walk`). */
+export const walkTime = (c: Clip, phase: number, body: 'man' | 'woman', gait = 0): number => ((((phase / TAU) * runsPerTurn(c, body, gait) - 0.25) % 1) + 1) % 1 * c.length;
+/** The game's walk phase that puts a body at time t of a walk (`walkTime`'s inverse over its first run). */
+export const walkPhase = (c: Clip, t: number, body: 'man' | 'woman', gait = 0): number => ((t / c.length + 0.25) / runsPerTurn(c, body, gait)) * TAU;
+
+/**
+ * The clip a pose plays on a body and where in it, or none: the figure's pose is kept. A walk is played over the ground
+ * the game carries the body over (`walkTime`).
+ */
+export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number } | undefined {
   const s = ON ? stateOf(pose) : undefined, clip = s && CLIPS[s];
   if (!clip) return undefined;
+  if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0) };
   // its time the island's (the figure's phase runs at six a second while it stands), each body its own way into the loop
   return { clip, t: pose.phase / 6 + offsetOf(pose.id) * clip.length };
 }
@@ -56,7 +77,7 @@ const MAX_KEPT = 256;
  * on the rig); faded from what it was drawn with when that changes.
  */
 export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 | undefined>): Local {
-  const c = clipFor(pose);
+  const c = clipFor(pose, sk.body);
   const now: Local = c ? clipLocal(sk, c.clip, c.t) : { local: figure(), move: [0, 0, 0] };
   if (!pose.id) return now;
   const key = `${sk.body}|${pose.id}`, source = c ? c.clip.name : 'figure', ms = performance.now();

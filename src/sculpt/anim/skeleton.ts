@@ -6,21 +6,34 @@
  * The mesh's frame: x the body's left, y up, z forward. The helpers (`kind: 'helper'`) are left to `../lowpoly.ts`
  * `posed`, which drives them from the posed bones as it always has.
  */
-import { add, axisAngle, between, col, cross, dot, euler, I3, mm, mv, quat, qmat, sub, tr, type Euler, type M3, type Q, type V } from './math';
+import { add, axisAngle, between, col, cross, dot, euler, I3, mm, mv, quat, qmat, slerp, sub, tr, type Euler, type M3, type Q, type V } from './math';
+import type { Foot } from './clip';
 
 export interface AnimBone { name: string; p: number; kind: 'control' | 'helper'; head: V; R: M3 }
 export interface AnimAsset {
   who?: string; floor: number; verts: number[]; bones: AnimBone[];
+  /** The vertices of the soles. */
+  soles?: number[];
   game: { armIn: number; armSwing?: [number, number]; armSwingAt?: number };
 }
 export type Body = 'man' | 'woman';
 /** The most of its length a planted leg is stretched to (bone-straight, its knee is the rig's straightest): nearly locked. */
 const REACH = 0.998;
+/** The share of its reach over which a leg in the air straightens softly toward its foot's place (`finish`). */
+const SOFT = 0.08;
 
 /** A pose as the player blends it: each bone's local turn (in the body's own bone frame) and the body's shift, mesh units. */
 export interface Pose { q: Array<Q | undefined>; move: V }
-/** Where the feet are planted: each ankle's place and each foot's turn in the world. */
-export interface Plant { at: [V, V]; W: [M3, M3] }
+/**
+ * Where the feet are planted: each ankle's place and each foot's turn in the world; for a foot rolled up onto its toes,
+ * the toes' turn in the world (kept flat on the ground) and how far they are held to it (1: wholly); and how far each
+ * foot is off the ground (1: in the air, where it is reached for without the hips let down to it).
+ */
+export interface Plant {
+  at: [V, V]; W: [M3, M3];
+  ball?: [{ W: M3; w: number } | undefined, { W: M3; w: number } | undefined];
+  air?: [number, number];
+}
 export interface Frame { W: M3; P: V }
 
 export interface Skeleton {
@@ -39,10 +52,26 @@ export interface Skeleton {
   finish(pose: Pose, o?: { plant?: Plant; armsOut?: number }): { local: Array<M3 | undefined>; move: V };
   /** Where a pose stands its feet. */
   plantOf(pose: Pose): Plant;
+  /** Mesh units to one of the game's (`../../render/iso` UNITS_PER_TILE to a tile): this body's height over its height in the game. */
+  perGame: number;
+  /**
+   * The feet keyed by a clip (`Clip.feet`) from where a stance stands them: each moved forward by `z` strides of `stride`
+   * game units, in toward the middle by `inward` body heights and up by `lift`, and pitched toe up about the back of its
+   * heel or heel up about the ball of the foot (the toes then kept flat while it is on the ground).
+   */
+  step(base: Plant, feet: [Foot, Foot], stride: number, inward?: number): Plant;
 }
 
-/** The skeleton of a body, with the man's (`canon`) bone frames the clips are authored in. */
-export function skeleton(A: AnimAsset, canon: AnimAsset): Skeleton {
+/** Body heights a foot is lifted off the ground over which its toes are let go of it, and it counts as in the air. */
+const TOE_LET_GO: [number, number] = [0.004, 0.05];
+const AIR = 0.01;
+const smooth = (x: number): number => { const u = Math.min(1, Math.max(0, x)); return u * u * (3 - 2 * u); };
+
+/**
+ * The skeleton of a body, with the man's (`canon`) bone frames the clips are authored in, and its height in the game's
+ * units (for a clip that keys its feet over the game's ground).
+ */
+export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skeleton {
   const bones = A.bones, at = new Map(bones.map((b, i) => [b.name, i]));
   const body: Body = A.who === 'female' ? 'woman' : 'man';
   const REL = bones.map((b) => (b.p >= 0 ? mm(tr(bones[b.p].R), b.R) : b.R));
@@ -115,7 +144,7 @@ export function skeleton(A: AnimAsset, canon: AnimAsset): Skeleton {
         const far = dot(u, u) + dot(v, v) + 2 * (dot(u, a) * vpar + Math.hypot(dot(u, vperp), dot(u, cross(a, v))));
         const reach = REACH * Math.sqrt(far);
         const r = sub(o.plant.at[s], H), q = r[1] * r[1] - dot(r, r) + reach * reach;
-        if (dot(r, r) > reach * reach && q >= 0) drop = Math.max(drop, -r[1] - Math.sqrt(q));
+        if (dot(r, r) > reach * reach && q >= 0) drop = Math.max(drop, (1 - (o.plant.air?.[s] ?? 0)) * (-r[1] - Math.sqrt(q)));
       }
       const move: V = [pose.move[0], pose.move[1] - drop, pose.move[2]];
       pose = { q: pose.q, move };
@@ -125,8 +154,15 @@ export function skeleton(A: AnimAsset, canon: AnimAsset): Skeleton {
         const H = F[thigh].P, K = F[calf].P, A0 = F[foot].P;
         const hingeW = mm(F[thigh].W, REL[calf]), a = col(hingeW, 0);
         const u = sub(K, H), v = sub(A0, K), vpar = dot(a, v), vperp = sub(v, [a[0] * vpar, a[1] * vpar, a[2] * vpar]), w = cross(a, v);
-        const D = Math.hypot(...sub(target, H));
-        const c = (D * D - dot(u, u) - dot(v, v)) / 2 - dot(u, a) * vpar, A1 = dot(u, vperp), B1 = dot(u, w), M = Math.hypot(A1, B1);
+        const A1 = dot(u, vperp), B1 = dot(u, w), M = Math.hypot(A1, B1);
+        let D = Math.hypot(...sub(target, H));
+        // a foot in the air reached for softly: the knee straightened ever more slowly as it nears straight, never snapped
+        const air = o.plant.air?.[s] ?? 0;
+        if (air > 0) {
+          const R = REACH * Math.sqrt(dot(u, u) + dot(v, v) + 2 * (dot(u, a) * vpar + M)), R0 = R * (1 - SOFT);
+          if (D > R0) D += air * (R0 + R * SOFT * (1 - Math.exp(-(D - R0) / (R * SOFT))) - D);
+        }
+        const c = (D * D - dot(u, u) - dot(v, v)) / 2 - dot(u, a) * vpar;
         if (M > 1e-9) {
           const phi = Math.atan2(B1, A1), d = Math.acos(Math.max(-1, Math.min(1, c / M)));
           // straight at phi (the farthest the ankle goes); bent forward below it, never back past it
@@ -139,10 +175,48 @@ export function skeleton(A: AnimAsset, canon: AnimAsset): Skeleton {
         F = fk(L, pose.move);
         L[foot] = localFor(F, foot, o.plant.W[s]);
         F = fk(L, pose.move);
+        const toe = o.plant.ball?.[s], bi = FOOT[s].ballBone;
+        if (toe && bi >= 0) {
+          const want = quat(localFor(F, bi, toe.W));
+          L[bi] = qmat(toe.w >= 1 ? want : slerp(quat(L[bi] ?? I3), want, toe.w));
+          F = fk(L, pose.move);
+        }
       }
     }
     return { local: L, move: pose.move };
   }
 
-  return { body, bones, at, height, local, world, fk, finish, plantOf };
+  // each foot's ankle, ball and the back of its heel at rest: the heel the sole's hindmost point on that side
+  const FOOT = LEG.map(({ foot }) => {
+    const ballBone = bones.findIndex((b) => b.p === foot && b.kind === 'control'), ankle = bones[foot].head, ball = ballBone >= 0 ? bones[ballBone].head : ankle;
+    let heel: V = [ankle[0], A.floor, ankle[2]];
+    for (const vi of A.soles ?? []) {
+      const p: V = [A.verts[vi * 3], A.verts[vi * 3 + 1], A.verts[vi * 3 + 2]];
+      if (Math.sign(p[0]) === Math.sign(ankle[0]) && p[2] < heel[2]) heel = p;
+    }
+    return { ankle, ball, heel, ballBone };
+  });
+  const perGame = gameHeight > 0 ? height / gameHeight : 0;
+
+  function step(base: Plant, feet: [Foot, Foot], stride: number, inward = 0): Plant {
+    const out: Plant = { at: [base.at[0], base.at[1]], W: [base.W[0], base.W[1]], ball: [undefined, undefined], air: [0, 0] };
+    for (let s = 0; s < 2; s++) {
+      const f = feet[s], g = FOOT[s], { foot } = LEG[s];
+      // the foot's turn from rest on the ground (about the upright only), and where its ankle is put flat
+      const S = mm(base.W[s], tr(bones[foot].R));
+      const flat = add(base.at[s], [-Math.sign(g.ankle[0]) * inward * height, f.lift * height, f.z * stride * perGame]);
+      // pitched about the back of the heel (toe up) or the ball of the foot (heel up), across the foot
+      const pivot = add(flat, mv(S, sub(f.pitch >= 0 ? g.heel : g.ball, g.ankle)));
+      const P = axisAngle(mv(S, [1, 0, 0]), -f.pitch);
+      out.at[s] = add(pivot, mv(P, sub(flat, pivot)));
+      out.W[s] = mm(P, base.W[s]);
+      // up on the toes on the ground, the toes kept flat on it
+      (out.air as [number, number])[s] = smooth(f.lift / AIR);
+      const w = f.pitch < 0 ? 1 - smooth((f.lift - TOE_LET_GO[0]) / (TOE_LET_GO[1] - TOE_LET_GO[0])) : 0;
+      if (w > 0 && g.ballBone >= 0) (out.ball as NonNullable<Plant['ball']>)[s] = { W: mm(S, bones[g.ballBone].R), w };
+    }
+    return out;
+  }
+
+  return { body, bones, at, height, local, world, fk, finish, plantOf, perGame, step };
 }

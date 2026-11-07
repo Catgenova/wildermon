@@ -36,13 +36,24 @@ export type Mask = 'full' | 'upper' | 'additive';
 export interface Correction {
   /** Turns added to the authored turns, per bone, degrees. */
   add?: Record<string, Euler>;
-  /** Scales on the authored turns, per bone (1: as authored). */
-  scale?: Record<string, number>;
-  /** A scale on the `move` keys. */
-  move?: number;
+  /** Scales on the authored turns, per bone (1: as authored): one for all three, or one each for rx, ry, rz. */
+  scale?: Record<string, number | Euler>;
+  /** A scale on the `move` keys: one for all three, or one each across, up and forward. */
+  move?: number | Euler;
   /** How far the upper arms are kept out from the chest, as `lowpoly.ts` fromGame keeps them: added to the body's own. */
   armsOut?: number;
+  /**
+   * A clip's keyed feet (`Clip.feet`): each foot's line moved in toward the middle by this, body heights; its lift scaled;
+   * and the body's own stride, the game's units a run of the clip.
+   */
+  feet?: { in?: number; lift?: number; stride?: number };
 }
+
+/** A foot's channels as a clip keys them (`Clip.feet`). */
+export type FootChannel = 'z' | 'lift' | 'pitch';
+export type FootKeys = Record<FootChannel, Array<Key<number>>>;
+/** A foot at a moment: forward of where it stands (strides), up off the ground (body heights), toe up (degrees). */
+export interface Foot { z: number; lift: number; pitch: number }
 
 export interface Clip {
   name: string;
@@ -67,6 +78,14 @@ export interface Clip {
   breath?: { count: number; depth: number };
   /** The per-body correction layer: `man`, `woman`. */
   bodies?: Partial<Record<'man' | 'woman', Correction>>;
+  /**
+   * The feet keyed where they go, as a walk on the spot: each foot from where the stance (`plant`) stands it, forward in
+   * strides (the ground a planted foot goes back over in one run of the clip), up in body heights, and pitched toe up about
+   * its heel (or heel up about the ball of the foot) in degrees; the legs bent to reach. `stride` is that ground in the
+   * game's units (a body's own in `Correction.feet.stride`): the clip is played a run to that much ground the game carries
+   * the body over (`./index.ts` clipFor), so a foot keyed back at a steady rate stays where it was put, at any pace.
+   */
+  feet?: { stride: number; l: FootKeys; r: FootKeys };
 }
 
 /** The bones a clip masked `upper` moves: the spine above the waist, the neck, the head and the arms. */
@@ -110,58 +129,75 @@ function backTension(over: number): number {
   return s;
 }
 
-/** A track's value at time t (seconds, already wrapped for a loop). */
-export function sampleKeys(keys: Array<Key<Euler>>, t: number, length: number, loop: boolean): Euler {
-  if (keys.length === 1 || t <= keys[0].t && !loop) return [...keys[0].v] as Euler;
+/** The keys either side of time t (seconds, already wrapped for a loop) and the eased share of the way from one to the other. */
+function segment<T>(keys: Array<Key<T>>, t: number, length: number, loop: boolean): { a: Key<T>; b: Key<T>; w: number } {
+  if (keys.length === 1 || t <= keys[0].t && !loop) return { a: keys[0], b: keys[0], w: 0 };
   let i = keys.length - 1;
   for (let k = 0; k < keys.length; k++) if (keys[k].t > t) { i = k - 1; break; }
-  let a: Key<Euler>, b: Key<Euler>, t0: number, t1: number;
+  let a: Key<T>, b: Key<T>, t0: number, t1: number;
   if (i < 0) {
     // before the first key: in a loop, on the way round from the last
-    if (!loop) return [...keys[0].v] as Euler;
+    if (!loop) return { a: keys[0], b: keys[0], w: 0 };
     a = keys[keys.length - 1]; b = keys[0]; t0 = a.t - length; t1 = b.t;
   } else if (i === keys.length - 1) {
-    if (!loop) return [...keys[i].v] as Euler;
+    if (!loop) return { a: keys[i], b: keys[i], w: 0 };
     a = keys[i]; b = keys[0]; t0 = a.t; t1 = b.t + length;
   } else { a = keys[i]; b = keys[i + 1]; t0 = a.t; t1 = b.t; }
-  const w = eased((t - t0) / Math.max(1e-6, t1 - t0), b);
+  return { a, b, w: eased((t - t0) / Math.max(1e-6, t1 - t0), b) };
+}
+
+/** A track's value at time t (seconds, already wrapped for a loop). */
+export function sampleKeys(keys: Array<Key<Euler>>, t: number, length: number, loop: boolean): Euler {
+  const { a, b, w } = segment(keys, t, length, loop);
   return [a.v[0] + (b.v[0] - a.v[0]) * w, a.v[1] + (b.v[1] - a.v[1]) * w, a.v[2] + (b.v[2] - a.v[2]) * w];
+}
+
+/** One channel's value at time t (already wrapped for a loop), as `sampleKeys`. */
+export function sampleKey(keys: Array<Key<number>>, t: number, length: number, loop: boolean): number {
+  const { a, b, w } = segment(keys, t, length, loop);
+  return a.v + (b.v - a.v) * w;
 }
 
 /** A clip's time wrapped to it: round for a loop, held at the ends for a one-shot. */
 export const wrap = (c: Clip, t: number): number => (c.loop ? ((t % c.length) + c.length) % c.length : Math.min(c.length, Math.max(0, t)));
+
+/** v scaled by k, one number for all three or one each. */
+const scaled = (v: Euler, k: number | Euler | undefined): Euler => (k === undefined ? v : typeof k === 'number' ? [v[0] * k, v[1] * k, v[2] * k] : [v[0] * k[0], v[1] * k[1], v[2] * k[2]]);
 
 /** A clip at time t: each bone's turn (degrees) and the body's shift (body heights), with a body's corrections. */
 export function sampleClip(c: Clip, t: number, body?: 'man' | 'woman'): { rot: Record<string, Euler>; move: Euler } {
   const tt = wrap(c, t), fix = body ? c.bodies?.[body] : undefined;
   const rot: Record<string, Euler> = {};
   for (const [bone, keys] of Object.entries(c.tracks)) {
-    let e = sampleKeys(keys, tt, c.length, c.loop);
-    const k = fix?.scale?.[bone];
-    if (k !== undefined) e = [e[0] * k, e[1] * k, e[2] * k];
-    rot[bone] = e;
+    rot[bone] = scaled(sampleKeys(keys, tt, c.length, c.loop), fix?.scale?.[bone]);
   }
   for (const [bone, keys] of Object.entries(c.accents ?? {})) {
-    let d = sampleKeys(keys, tt, c.length, c.loop);
-    const k = fix?.scale?.[bone];
-    if (k !== undefined) d = [d[0] * k, d[1] * k, d[2] * k];
+    const d = scaled(sampleKeys(keys, tt, c.length, c.loop), fix?.scale?.[bone]);
     const e = rot[bone] ?? [0, 0, 0];
     rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]];
   }
   for (const [bone, d] of Object.entries(fix?.add ?? {})) { const e = rot[bone] ?? [0, 0, 0]; rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]]; }
-  let move: Euler = c.move ? sampleKeys(c.move, tt, c.length, c.loop) : [0, 0, 0];
-  if (fix?.move !== undefined) move = [move[0] * fix.move, move[1] * fix.move, move[2] * fix.move];
-  return { rot, move };
+  return { rot, move: scaled(c.move ? sampleKeys(c.move, tt, c.length, c.loop) : [0, 0, 0], fix?.move) };
 }
 
 /** A clip's stance (`Clip.plant`) for a body, its corrections made: each bone's turn and the body's shift. */
 export function stanceOf(c: Clip, body?: 'man' | 'woman'): { rot: Record<string, Euler>; move: Euler } | undefined {
   if (!c.plant) return undefined;
   const fix = body ? c.bodies?.[body] : undefined, rot: Record<string, Euler> = {};
-  for (const [bone, e] of Object.entries(c.plant.rot)) { const k = fix?.scale?.[bone] ?? 1; rot[bone] = [e[0] * k, e[1] * k, e[2] * k]; }
+  for (const [bone, e] of Object.entries(c.plant.rot)) rot[bone] = scaled(e, fix?.scale?.[bone]);
   for (const [bone, d] of Object.entries(fix?.add ?? {})) { const e = rot[bone] ?? [0, 0, 0]; rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]]; }
-  const m = c.plant.move ?? [0, 0, 0], k = fix?.move ?? 1;
-  return { rot, move: [m[0] * k, m[1] * k, m[2] * k] };
+  return { rot, move: scaled(c.plant.move ?? [0, 0, 0], fix?.move) };
+}
+
+/** The ground a run of a clip that keys its feet covers on a body, the game's units (`Clip.feet`): 0 for one that does not. */
+export const strideOf = (c: Clip, body?: 'man' | 'woman'): number => (body && c.bodies?.[body]?.feet?.stride) || c.feet?.stride || 0;
+
+/** A clip's keyed feet at time t (`Clip.feet`), left and right, with a body's corrections: none if it keys no feet. */
+export function sampleFeet(c: Clip, t: number, body?: 'man' | 'woman'): [Foot, Foot] | undefined {
+  if (!c.feet) return undefined;
+  const tt = wrap(c, t), lift = (body && c.bodies?.[body]?.feet?.lift) ?? 1;
+  const one = (k: FootKeys): Foot => ({ z: sampleKey(k.z, tt, c.length, c.loop), lift: sampleKey(k.lift, tt, c.length, c.loop) * lift, pitch: sampleKey(k.pitch, tt, c.length, c.loop) });
+  return [one(c.feet.l), one(c.feet.r)];
 }
 
 /** The events a clip passes from time a to time b (b after a; a loop's wrap counted). */
