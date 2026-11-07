@@ -1,17 +1,19 @@
 /**
- * The low-poly male body (`tools/sculpt/lowarm.mjs` buildArmBody) on its own rig (`tools/sculpt/lowrig.mjs`), as
- * `lowrig.mjs` writes it to `assets/lowmale.json`: drawn flat (each polygon its own corners and its own normal) by the
- * GPU skinning path (`./gl`), posed from the figure's rig each frame. The figure's bones (`bonesOf`) are taken onto ours
- * as `fromGame` in `lowrig.mjs` takes them (each control bone turned as its figure bone has turned from the fitted rest,
- * our own joints kept; the arms kept off his ribs, the ankles and toes as hinges on his own axes, the thumbs closed toward
- * the palm), the helpers driven from those, and the body stood on its lowest sole.
+ * The low-poly male and female bodies (`tools/sculpt/lowarm.mjs` buildArmBody) on their own rigs
+ * (`tools/sculpt/lowrig.mjs`), as `lowrig.mjs` writes them to `assets/lowmale.json` and `assets/lowfemale.json`: drawn
+ * flat (each polygon its own corners and its own normal) by the GPU skinning path (`./gl`), posed from the figure's rig
+ * each frame. The figure's bones (`bonesOf`, with the body's own proportions) are taken onto ours as `fromGame` in
+ * `lowrig.mjs` takes them (each control bone turned as its figure bone has turned from the fitted rest, our own joints
+ * kept; the arms kept off the body, hers turned further out as they swing, the ankles and toes as hinges on the body's
+ * own axes, the thumbs closed toward the palm), the helpers driven from those, and the body stood on its lowest sole.
  */
-import ASSET from './assets/lowmale.json';
+import MALE_ASSET from './assets/lowmale.json';
+import FEMALE_ASSET from './assets/lowfemale.json';
 import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
 import { DEFAULT_LOOK } from '../game/look';
 import { STRIDE, type Baked } from './bake';
 import { M, bodyMaterials } from './models/body';
-import { bonesOf, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones } from './rig';
+import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, type Proportions } from './rig';
 import { humanProportions } from './human';
 import type { SculptDraw } from './gl';
 
@@ -21,11 +23,9 @@ type Q = [number, number, number, number];
 interface Bone { name: string; p: number; kind: 'control' | 'helper'; head: V; R: M3; from?: number; drive?: 'half' | 'twist' | 'wrist' | 'untwist'; f?: number; game?: string }
 interface Asset {
   floor: number; T: M3; verts: number[]; polys: Array<[number[], number, number[]?]>; tris: number[]; weights: number[][]; soles: number[];
-  bones: Bone[]; rest: Pick<Rig, 'arm' | 'elbow' | 'hand' | 'leg' | 'knee'>; game: { armIn: number; thumbCurl: number };
+  bones: Bone[]; rest: Pick<Rig, 'arm' | 'elbow' | 'hand' | 'leg' | 'knee'>;
+  game: { armIn: number; thumbCurl: number; armSwing?: [number, number]; armSwingAt?: number };
 }
-const A = ASSET as unknown as Asset;
-const BONES = A.bones;
-const AT = new Map(BONES.map((b, i) => [b.name, i]));
 
 /* ---- 3x3 rotations (row-major) and quaternions [w, x, y, z], as lowrig.mjs ------------------------------------- */
 const I3: M3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -77,183 +77,199 @@ function swingTwist(q: Q): { swing: Q; twist: Q } {
 }
 const angleOf = (q: Q): number => (2 * Math.acos(Math.min(1, Math.abs(q[0]))) * 180) / Math.PI;
 
-/* ---- the rig's rest, done once ----------------------------------------------------------------------------------- */
-const REL = BONES.map((b) => (b.p >= 0 ? mm(tr(BONES[b.p].R), b.R) : b.R));
-const OFF = BONES.map((b) => (b.p >= 0 ? mv(tr(BONES[b.p].R), sub(b.head, BONES[b.p].head)) : b.head));
-const T = A.T;
+/** One body: its asset, the figure's proportions it is posed with, and how far toward a woman (for its height). */
+function lowBody(A: Asset, P: Proportions, fem: number): { baked: () => Baked; bones: (pose: FigurePose) => Float32Array } {
+  const BONES = A.bones;
+  const AT = new Map(BONES.map((b, i) => [b.name, i]));
 
-interface Frame { W: M3; P: V }
-/** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
-function posed(local: Array<M3 | undefined>): Frame[] {
-  const out: Frame[] = [];
-  BONES.forEach((b, i) => {
-    let L = local[i] ?? I3;
-    if (b.kind === 'helper' && b.from !== undefined && local[b.from]) {
-      const q = quat(local[b.from] as M3), f = b.f ?? 0.5;
-      if (b.drive === 'half') L = qmat(qpow(q, f));
-      else if (b.drive === 'untwist') L = qmat(qpow(swingTwist(q).twist, -f));
-      else if (b.drive === 'wrist') { const { swing, twist } = swingTwist(q); L = qmat(qmul(qpow(swing, f), twist)); }
-      else if (b.drive === 'twist') { const tw = qmat(qpow(swingTwist(q).twist, f)), Rr = mm(tr(b.R), BONES[b.from].R); L = mm(Rr, mm(tw, tr(Rr))); }
+  /* ---- the rig's rest, done once ----------------------------------------------------------------------------------- */
+  const REL = BONES.map((b) => (b.p >= 0 ? mm(tr(BONES[b.p].R), b.R) : b.R));
+  const OFF = BONES.map((b) => (b.p >= 0 ? mv(tr(BONES[b.p].R), sub(b.head, BONES[b.p].head)) : b.head));
+  const T = A.T;
+
+  interface Frame { W: M3; P: V }
+  /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
+  function posed(local: Array<M3 | undefined>): Frame[] {
+    const out: Frame[] = [];
+    BONES.forEach((b, i) => {
+      let L = local[i] ?? I3;
+      if (b.kind === 'helper' && b.from !== undefined && local[b.from]) {
+        const q = quat(local[b.from] as M3), f = b.f ?? 0.5;
+        if (b.drive === 'half') L = qmat(qpow(q, f));
+        else if (b.drive === 'untwist') L = qmat(qpow(swingTwist(q).twist, -f));
+        else if (b.drive === 'wrist') { const { swing, twist } = swingTwist(q); L = qmat(qmul(qpow(swing, f), twist)); }
+        else if (b.drive === 'twist') { const tw = qmat(qpow(swingTwist(q).twist, f)), Rr = mm(tr(b.R), BONES[b.from].R); L = mm(Rr, mm(tw, tr(Rr))); }
+      }
+      if (b.p < 0) { out.push({ W: mm(b.R, L), P: b.head }); return; }
+      const pa = out[b.p];
+      out.push({ W: mm(pa.W, mm(REL[i], L)), P: add(pa.P, mv(pa.W, OFF[i])) });
+    });
+    return out;
+  }
+
+  /** Our local pose from the figure's bones posed and at the fitted rest, as lowrig.mjs fromGame(). */
+  function fromGame(gPosed: Bones, gRest: Bones): Array<M3 | undefined> {
+    const D = (g: string): M3 => mm(tr(T), mm(mm(gPosed[g].m, tr(gRest[g].m)), T));
+    const half = (a: M3, b: M3): M3 => mm(a, qmat(qpow(quat(mm(tr(a), b)), 0.5)));
+    const Wd: Array<M3 | undefined> = [];
+    BONES.forEach((b, i) => {
+      if (b.kind !== 'control' || !b.game) return;
+      let d: M3;
+      if (b.game === 'neck+head/2') d = half(D('neck'), D('head'));
+      else if (b.game.endsWith('/2')) { const g = b.game.slice(0, -2); d = half(D(g.replace('fing', 'wrist')), D(g)); }
+      else d = D(b.game);
+      Wd[i] = mm(d, b.R);
+    });
+    // the arms kept off the body: turned out, with all below, until they lean in no further than at rest, seen from the chest
+    const chest = D('chest');
+    const below = (i: number): number[] => { const o = [i]; for (let k = 0; k < o.length; k++) BONES.forEach((c, j) => { if (c.p === o[k] && c.kind === 'control') o.push(j); }); return o; };
+    for (const s of ['l', 'r']) for (const seg of ['upperarm', 'lowerarm']) {
+      const i = AT.get(`${seg}_${s}`) as number, b = BONES[i], w = Wd[i];
+      if (!w) continue;
+      const r0 = col(b.R, 1), side = Math.sign(r0[0]), v = mv(tr(chest), col(w, 1));
+      // (hers further out as it swings forward or back, as lowrig.mjs swingOut)
+      const sw = A.game.armSwing ? A.game.armSwing[v[2] > 0 ? 0 : 1] * Math.min(1, Math.abs(v[2]) / (A.game.armSwingAt ?? 0.5)) : 0;
+      const xmin = Math.min(0.95, Math.abs(r0[0]) * A.game.armIn + sw);
+      if (side * v[0] >= xmin) continue;
+      const k = Math.sqrt((1 - xmin * xmin) / Math.max(1e-9, v[1] * v[1] + v[2] * v[2]));
+      const ax = cross(v, [side * xmin, v[1] * k, v[2] * k]), ang = (Math.asin(Math.min(1, Math.hypot(ax[0], ax[1], ax[2]))) * 180) / Math.PI;
+      if (ang < 1e-6) continue;
+      const C = mm(chest, mm(axisAngle(ax, ang), tr(chest)));
+      for (const j of below(i)) if (Wd[j]) Wd[j] = mm(C, Wd[j] as M3);
     }
-    if (b.p < 0) { out.push({ W: mm(b.R, L), P: b.head }); return; }
-    const pa = out[b.p];
-    out.push({ W: mm(pa.W, mm(REL[i], L)), P: add(pa.P, mv(pa.W, OFF[i])) });
-  });
-  return out;
-}
-
-/** Our local pose from the figure's bones posed and at the fitted rest, as lowrig.mjs fromGame(). */
-function fromGame(gPosed: Bones, gRest: Bones): Array<M3 | undefined> {
-  const D = (g: string): M3 => mm(tr(T), mm(mm(gPosed[g].m, tr(gRest[g].m)), T));
-  const half = (a: M3, b: M3): M3 => mm(a, qmat(qpow(quat(mm(tr(a), b)), 0.5)));
-  const Wd: Array<M3 | undefined> = [];
-  BONES.forEach((b, i) => {
-    if (b.kind !== 'control' || !b.game) return;
-    let d: M3;
-    if (b.game === 'neck+head/2') d = half(D('neck'), D('head'));
-    else if (b.game.endsWith('/2')) { const g = b.game.slice(0, -2); d = half(D(g.replace('fing', 'wrist')), D(g)); }
-    else d = D(b.game);
-    Wd[i] = mm(d, b.R);
-  });
-  // the arms kept off the body: turned out, with all below, until they lean in no further than at rest, seen from the chest
-  const chest = D('chest');
-  const below = (i: number): number[] => { const o = [i]; for (let k = 0; k < o.length; k++) BONES.forEach((c, j) => { if (c.p === o[k] && c.kind === 'control') o.push(j); }); return o; };
-  for (const s of ['l', 'r']) for (const seg of ['upperarm', 'lowerarm']) {
-    const i = AT.get(`${seg}_${s}`) as number, b = BONES[i], w = Wd[i];
-    if (!w) continue;
-    const r0 = col(b.R, 1), side = Math.sign(r0[0]), xmin = Math.min(0.95, Math.abs(r0[0]) * A.game.armIn);
-    const v = mv(tr(chest), col(w, 1));
-    if (side * v[0] >= xmin) continue;
-    const k = Math.sqrt((1 - xmin * xmin) / Math.max(1e-9, v[1] * v[1] + v[2] * v[2]));
-    const ax = cross(v, [side * xmin, v[1] * k, v[2] * k]), ang = (Math.asin(Math.min(1, Math.hypot(ax[0], ax[1], ax[2]))) * 180) / Math.PI;
-    if (ang < 1e-6) continue;
-    const C = mm(chest, mm(axisAngle(ax, ang), tr(chest)));
-    for (const j of below(i)) if (Wd[j]) Wd[j] = mm(C, Wd[j] as M3);
-  }
-  // locals, parents first
-  const W: M3[] = [], pose: Array<M3 | undefined> = [];
-  BONES.forEach((b, i) => {
-    if (b.kind !== 'control') return;
-    const base = b.p >= 0 && W[b.p] ? mm(W[b.p], REL[i]) : b.R;
-    const want = Wd[i] ?? base;
-    pose[i] = mm(tr(base), want);
-    W[i] = want;
-  });
-  // the ankles and the balls of the feet as hinges about their own bend axes; the balls only bend up
-  for (const [s, k] of [['l', 0], ['r', 1]] as const) {
-    for (const [bone, g, up] of [[`foot_${s}`, `ankle${k}`, `knee${k}`], [`ball_${s}`, `toe${k}`, `ankle${k}`]]) {
-      if (!gPosed[g] || !gPosed[up]) continue;
-      const i = AT.get(bone) as number, b = BONES[i];
-      const q = quat(mm(D(g), tr(D(up)))), a = angleOf(q), sg = Math.sign(q[0] || 1);
-      const pw = Wd[b.p];
-      const X = mv(pw ? mm(pw, tr(BONES[b.p].R)) : I3, col(b.R, 0));
-      pose[i] = euler((bone.startsWith('ball') ? 1 : Math.sign(dot([q[1] * sg, q[2] * sg, q[3] * sg], X))) * a);
+    // locals, parents first
+    const W: M3[] = [], pose: Array<M3 | undefined> = [];
+    BONES.forEach((b, i) => {
+      if (b.kind !== 'control') return;
+      const base = b.p >= 0 && W[b.p] ? mm(W[b.p], REL[i]) : b.R;
+      const want = Wd[i] ?? base;
+      pose[i] = mm(tr(base), want);
+      W[i] = want;
+    });
+    // the ankles and the balls of the feet as hinges about their own bend axes; the balls only bend up
+    for (const [s, k] of [['l', 0], ['r', 1]] as const) {
+      for (const [bone, g, up] of [[`foot_${s}`, `ankle${k}`, `knee${k}`], [`ball_${s}`, `toe${k}`, `ankle${k}`]]) {
+        if (!gPosed[g] || !gPosed[up]) continue;
+        const i = AT.get(bone) as number, b = BONES[i];
+        const q = quat(mm(D(g), tr(D(up)))), a = angleOf(q), sg = Math.sign(q[0] || 1);
+        const pw = Wd[b.p];
+        const X = mv(pw ? mm(pw, tr(BONES[b.p].R)) : I3, col(b.R, 0));
+        pose[i] = euler((bone.startsWith('ball') ? 1 : Math.sign(dot([q[1] * sg, q[2] * sg, q[3] * sg], X))) * a);
+      }
     }
+    // the thumbs: closed toward the palm by the figure thumb's angle from its hand
+    for (const [s, k] of [['l', 0], ['r', 1]] as const) {
+      if (!gPosed[`thumb${k}`]) continue;
+      const a = angleOf(quat(mm(tr(D(`wrist${k}`)), D(`thumb${k}`))));
+      pose[AT.get(`thumb_01_${s}`) as number] = euler(a);
+      pose[AT.get(`thumb_02_${s}`) as number] = euler(a * A.game.thumbCurl);
+      pose[AT.get(`thumb_03_${s}`) as number] = euler(a * A.game.thumbCurl);
+    }
+    return pose;
   }
-  // the thumbs: closed toward the palm by the figure thumb's angle from its hand
-  for (const [s, k] of [['l', 0], ['r', 1]] as const) {
-    if (!gPosed[`thumb${k}`]) continue;
-    const a = angleOf(quat(mm(tr(D(`wrist${k}`)), D(`thumb${k}`))));
-    pose[AT.get(`thumb_01_${s}`) as number] = euler(a);
-    pose[AT.get(`thumb_02_${s}`) as number] = euler(a * A.game.thumbCurl);
-    pose[AT.get(`thumb_03_${s}`) as number] = euler(a * A.game.thumbCurl);
+
+  /* ---- the body as the GPU draws it ----------------------------------------------------------------------------------- */
+  const FLOOR: V = [0, A.floor, 0];
+  /** Mesh units to the figure's: the body's height, sole to crown, as the base man's or woman's. */
+  let SCALE = 0;
+  function scale(): number {
+    if (!SCALE) {
+      let top = -Infinity;
+      for (let i = 1; i < A.verts.length; i += 3) top = Math.max(top, A.verts[i]);
+      SCALE = heightOf(humanProportions(fem)) / (top - A.floor);
+    }
+    return SCALE;
   }
-  return pose;
-}
+  /** A mesh point in the figure's frame: x the body's right, y forward, z up, the floor at z 0. */
+  const toGame = (p: V): V => { const s = scale(), q = mv(T, sub(p, FLOOR)); return [q[0] * s, q[1] * s, q[2] * s]; };
+  const vert = (i: number): V => [A.verts[i * 3], A.verts[i * 3 + 1], A.verts[i * 3 + 2]];
 
-/* ---- the body as the GPU draws it ----------------------------------------------------------------------------------- */
-const FLOOR: V = [0, A.floor, 0];
-/** Mesh units to the figure's: his height, sole to crown, as the base man's. */
-let SCALE = 0;
-function scale(): number {
-  if (!SCALE) {
-    let top = -Infinity;
-    for (let i = 1; i < A.verts.length; i += 3) top = Math.max(top, A.verts[i]);
-    SCALE = heightOf(humanProportions(0)) / (top - A.floor);
+  let BAKED: Baked | null = null;
+  /** The body laid out for the GPU: every polygon its own corners, each with the polygon's normal, so it is drawn flat. */
+  function lowBaked(): Baked {
+    if (BAKED) return BAKED;
+    const t0 = performance.now();
+    const MATS = [M.skin, M.hair, M.pupil];
+    const corner = new Map<string, number>();
+    const verts: number[] = [], tris: number[] = [];
+    const normals = A.polys.map(([v, , nv]) => {
+      const pts = (nv ?? v).map((i) => toGame(vert(i)));
+      let n: V = [0, 0, 0];
+      for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
+      const l = Math.hypot(n[0], n[1], n[2]) || 1;
+      return [n[0] / l, n[1] / l, n[2] / l] as V;
+    });
+    const idx = (i: number, pi: number): number => {
+      const key = `${pi}:${i}`;
+      let k = corner.get(key);
+      if (k !== undefined) return k;
+      k = verts.length / STRIDE;
+      corner.set(key, k);
+      const p = toGame(vert(i)), n = normals[pi], mat = MATS[A.polys[pi][1]] ?? M.skin, w = A.weights[i];
+      const bi = [0, 0, 0, 0], bw = [0, 0, 0, 0];
+      for (let j = 0; j < 4 && j * 2 < w.length; j++) { bi[j] = w[j * 2]; bw[j] = w[j * 2 + 1]; }
+      verts.push(p[0], p[1], p[2], n[0], n[1], n[2], mat, ...bi, ...bw, mat, -1);
+      return k;
+    };
+    for (let t = 0; t < A.tris.length; t += 4) { const pi = A.tris[t + 3]; tris.push(idx(A.tris[t], pi), idx(A.tris[t + 1], pi), idx(A.tris[t + 2], pi)); }
+    BAKED = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: BONES.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0 };
+    return BAKED;
   }
-  return SCALE;
-}
-/** A mesh point in the figure's frame: x his right, y forward, z up, the floor at z 0. */
-const toGame = (p: V): V => { const s = scale(), q = mv(T, sub(p, FLOOR)); return [q[0] * s, q[1] * s, q[2] * s]; };
-const vert = (i: number): V => [A.verts[i * 3], A.verts[i * 3 + 1], A.verts[i * 3 + 2]];
 
-let BAKED: Baked | null = null;
-/** The body laid out for the GPU: every polygon its own corners, each with the polygon's normal, so it is drawn flat. */
-export function lowBaked(): Baked {
-  if (BAKED) return BAKED;
-  const t0 = performance.now();
-  const MATS = [M.skin, M.hair, M.pupil];
-  const corner = new Map<string, number>();
-  const verts: number[] = [], tris: number[] = [];
-  const normals = A.polys.map(([v, , nv]) => {
-    const pts = (nv ?? v).map((i) => toGame(vert(i)));
-    let n: V = [0, 0, 0];
-    for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
-    const l = Math.hypot(n[0], n[1], n[2]) || 1;
-    return [n[0] / l, n[1] / l, n[2] / l] as V;
-  });
-  const idx = (i: number, pi: number): number => {
-    const key = `${pi}:${i}`;
-    let k = corner.get(key);
-    if (k !== undefined) return k;
-    k = verts.length / STRIDE;
-    corner.set(key, k);
-    const p = toGame(vert(i)), n = normals[pi], mat = MATS[A.polys[pi][1]] ?? M.skin, w = A.weights[i];
-    const bi = [0, 0, 0, 0], bw = [0, 0, 0, 0];
-    for (let j = 0; j < 4 && j * 2 < w.length; j++) { bi[j] = w[j * 2]; bw[j] = w[j * 2 + 1]; }
-    verts.push(p[0], p[1], p[2], n[0], n[1], n[2], mat, ...bi, ...bw, mat, -1);
-    return k;
-  };
-  for (let t = 0; t < A.tris.length; t += 4) { const pi = A.tris[t + 3]; tris.push(idx(A.tris[t], pi), idx(A.tris[t + 1], pi), idx(A.tris[t + 2], pi)); }
-  BAKED = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: BONES.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0 };
-  return BAKED;
-}
-
-let G_REST: Bones | null = null;
-/** The figure's bones at the rest fitted to his (lowrig.mjs fitRest), for the turns the figure's bones make from it. */
-function gameRest(): Bones {
-  if (!G_REST) {
-    const r = { ...sculptRig({ phase: 0, moving: false, facing: 0, swimming: false, working: false, look: DEFAULT_LOOK }).rest, ...structuredClone(A.rest) } as Rig;
-    G_REST = bonesOf(r, MALE, [], REST_EXTRAS);
+  let G_REST: Bones | null = null;
+  /** The figure's bones at the rest fitted to the body's (lowrig.mjs fitRest), for the turns the figure's bones make from it. */
+  function gameRest(): Bones {
+    if (!G_REST) {
+      const r = { ...sculptRig({ phase: 0, moving: false, facing: 0, swimming: false, working: false, look: DEFAULT_LOOK }).rest, ...structuredClone(A.rest) } as Rig;
+      G_REST = bonesOf(r, P, [], REST_EXTRAS);
+    }
+    return G_REST;
   }
-  return G_REST;
-}
 
-/** The figure's rig for a pose: stood doing nothing, the sculpt's own idle (as `sculptScene`); otherwise the figure's. */
-function rigFor(pose: FigurePose): Rig {
-  const figure = sculptRig(pose).rig;
-  const idle = !pose.moving && !pose.working && !pose.swimming && !pose.driving && !pose.emote && !pose.cast;
-  return idle ? relaxedIdle(figure, pose.phase / 6, pose.facing) : figure;
-}
-
-/** The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole. */
-export function lowBones(pose: FigurePose): Float32Array {
-  const local = fromGame(bonesOf(rigFor(pose), MALE, [], REST_EXTRAS), gameRest());
-  const F = posed(local);
-  // each bone's skinning turn and shift in the mesh's frame: v -> S v + t
-  const S = F.map((f, i) => mm(f.W, tr(BONES[i].R)));
-  const t = F.map((f, i) => sub(f.P, mv(S[i], BONES[i].head)));
-  // stood on the lowest sole: the sole's vertices skinned
-  let low = Infinity;
-  for (const vi of A.soles) {
-    const v = vert(vi), w = A.weights[vi];
-    let y = 0;
-    for (let j = 0; j < w.length; j += 2) { const b = w[j]; y += w[j + 1] * (dot([S[b][3], S[b][4], S[b][5]], v) + t[b][1]); }
-    low = Math.min(low, y);
+  /** The figure's rig for a pose: stood doing nothing, the sculpt's own idle (as `sculptScene`); otherwise the figure's. */
+  function rigFor(pose: FigurePose): Rig {
+    const figure = sculptRig(pose).rig;
+    const idle = !pose.moving && !pose.working && !pose.swimming && !pose.driving && !pose.emote && !pose.cast;
+    return idle ? relaxedIdle(figure, pose.phase / 6, pose.facing) : figure;
   }
-  const dy = A.floor - low, s = scale();
-  const out = new Float32Array(BONES.length * 12);
-  BONES.forEach((_, i) => {
-    const Ag = mm(T, mm(S[i], T));
-    const sh = mv(T, add(sub(add(mv(S[i], FLOOR), t[i]), FLOOR), [0, dy, 0]));
-    out.set([Ag[0], Ag[1], Ag[2], sh[0] * s, Ag[3], Ag[4], Ag[5], sh[1] * s, Ag[6], Ag[7], Ag[8], sh[2] * s], i * 12);
-  });
-  return out;
+
+  /** The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole. */
+  function lowBones(pose: FigurePose): Float32Array {
+    const local = fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest());
+    const F = posed(local);
+    // each bone's skinning turn and shift in the mesh's frame: v -> S v + t
+    const S = F.map((f, i) => mm(f.W, tr(BONES[i].R)));
+    const t = F.map((f, i) => sub(f.P, mv(S[i], BONES[i].head)));
+    // stood on the lowest sole: the sole's vertices skinned
+    let low = Infinity;
+    for (const vi of A.soles) {
+      const v = vert(vi), w = A.weights[vi];
+      let y = 0;
+      for (let j = 0; j < w.length; j += 2) { const b = w[j]; y += w[j + 1] * (dot([S[b][3], S[b][4], S[b][5]], v) + t[b][1]); }
+      low = Math.min(low, y);
+    }
+    const dy = A.floor - low, s = scale();
+    const out = new Float32Array(BONES.length * 12);
+    BONES.forEach((_, i) => {
+      const Ag = mm(T, mm(S[i], T));
+      const sh = mv(T, add(sub(add(mv(S[i], FLOOR), t[i]), FLOOR), [0, dy, 0]));
+      out.set([Ag[0], Ag[1], Ag[2], sh[0] * s, Ag[3], Ag[4], Ag[5], sh[1] * s, Ag[6], Ag[7], Ag[8], sh[2] * s], i * 12);
+    });
+    return out;
+  }
+
+  return { baked: lowBaked, bones: lowBones };
 }
 
-/** Everything a draw needs for a pose (`drawSculptGL`). */
+const BODIES = { man: lowBody(MALE_ASSET as unknown as Asset, MALE, 0), woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, 1) };
+
+/** Whether a look is drawn as a low-poly body: a man or a woman (neither keeps the sculpted base). */
+export const hasLowBody = (look: { gender: string }): boolean => look.gender === 'man' || look.gender === 'woman';
+
+/** Everything a draw needs for a pose (`drawSculptGL`): the man's body for a man, the woman's for a woman. */
 export function lowScene(pose: FigurePose): SculptDraw {
   const look = pose.look ?? DEFAULT_LOOK;
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
-  return { baked: lowBaked(), bones: lowBones(pose), materials: bodyMaterials(look), view: viewOf(facing), blink: 0 };
+  const body = BODIES[look.gender === 'woman' ? 'woman' : 'man'];
+  return { baked: body.baked(), bones: body.bones(pose), materials: bodyMaterials(look), view: viewOf(facing), blink: 0 };
 }
