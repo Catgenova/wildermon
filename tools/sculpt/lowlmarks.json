@@ -9,14 +9,6 @@
      "kc0'"
     ]
    ],
-   "kneecap L": [
-    215,
-    214,
-    [
-     "ka0",
-     "kc0"
-    ]
-   ],
    "calf widest R": [
     103,
     246,
@@ -46,6 +38,21 @@
     216,
     302,
     "an5"
+   ],
+   "kneecap top L": [
+    220,
+    188,
+    "ka0"
+   ],
+   "kneecap crease L": [
+    217,
+    209,
+    "kb0"
+   ],
+   "kneecap bottom L": [
+    220,
+    235,
+    "kc0"
    ]
   },
   "q3": {
@@ -57,13 +64,20 @@
      "kc0'"
     ]
    ],
-   "kneecap L": [
-    437,
-    211,
-    [
-     "ka0",
-     "kc0"
-    ]
+   "kneecap top L": [
+    450,
+    175,
+    "ka0"
+   ],
+   "kneecap crease L": [
+    442,
+    203,
+    "kb0"
+   ],
+   "kneecap bottom L": [
+    444,
+    224,
+    "kc0"
    ]
   },
   "profile": {
@@ -76,14 +90,6 @@
     577,
     240,
     "ca4'"
-   ],
-   "kneecap front": [
-    643,
-    192,
-    [
-     "ka0'",
-     "kc0'"
-    ]
    ],
    "ankle back": [
     589,
@@ -116,6 +122,21 @@
      "so0'",
      "so1'"
     ]
+   ],
+   "kneecap top": [
+    640,
+    177,
+    "ka0'"
+   ],
+   "kneecap front": [
+    644,
+    195,
+    "kb0'"
+   ],
+   "kneecap bottom": [
+    633,
+    220,
+    "kc0'"
    ]
   },
   "back": {
@@ -136,22 +157,6 @@
    ]
   },
   "body": {
-   "kneecap R": [
-    322,
-    1215,
-    [
-     "ka0'",
-     "kc0'"
-    ]
-   ],
-   "kneecap L": [
-    550,
-    1215,
-    [
-     "ka0",
-     "kc0"
-    ]
-   ],
    "calf widest R": [
     243,
     1300,
@@ -197,6 +202,34 @@
      "so0",
      "so1"
     ]
+   ],
+   "kneecap top L": [
+    548,
+    1127,
+    "ka0"
+   ],
+   "kneecap crease L": [
+    548,
+    1186,
+    "kb0"
+   ],
+   "kneecap bottom L": [
+    548,
+    1268,
+    "kc0"
+   ],
+   "kneecap outer L": [
+    590,
+    1158,
+    [
+     "ka1",
+     "kb1"
+    ]
+   ],
+   "kneecap inner L": [
+    500,
+    1177,
+    "kb7"
    ]
   },
   "tfront": {
@@ -215,14 +248,6 @@
     [
      "ka0'",
      "kc0'"
-    ]
-   ],
-   "kneecap L": [
-    186,
-    218,
-    [
-     "ka0",
-     "kc0"
     ]
    ],
    "calf widest R": [
@@ -254,6 +279,21 @@
     184,
     312,
     "an5"
+   ],
+   "kneecap top L": [
+    190,
+    199,
+    "ka0"
+   ],
+   "kneecap crease L": [
+    190,
+    218,
+    "kb0"
+   ],
+   "kneecap bottom L": [
+    189,
+    236,
+    "kc0"
    ]
   },
   "profile": {
@@ -266,14 +306,6 @@
     552,
     207,
     "kb4'"
-   ],
-   "kneecap front": [
-    586,
-    205,
-    [
-     "ka0'",
-     "kc0'"
-    ]
    ],
    "calf back": [
     534,
@@ -311,6 +343,21 @@
      "so0'",
      "so1'"
     ]
+   ],
+   "kneecap top": [
+    587,
+    200,
+    "ka0'"
+   ],
+   "kneecap front": [
+    588,
+    218,
+    "kb0'"
+   ],
+   "kneecap bottom": [
+    577,
+    236,
+    "kc0'"
    ]
   },
   "back": {
@@ -337,14 +384,6 @@
     [
      "ka0'",
      "kc0'"
-    ]
-   ],
-   "kneecap L": [
-    550,
-    1150,
-    [
-     "ka0",
-     "kc0"
     ]
    ],
    "calf widest R": [
@@ -392,6 +431,34 @@
      "so0",
      "so1"
     ]
+   ],
+   "kneecap top L": [
+    543,
+    1077,
+    "ka0"
+   ],
+   "kneecap crease L": [
+    552,
+    1137,
+    "kb0"
+   ],
+   "kneecap bottom L": [
+    560,
+    1227,
+    "kc0"
+   ],
+   "kneecap outer L": [
+    587,
+    1113,
+    [
+     "ka1",
+     "kb1"
+    ]
+   ],
+   "kneecap inner L": [
+    506,
+    1128,
+    "kb7"
    ]
   }
  }

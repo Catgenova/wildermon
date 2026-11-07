@@ -64,3 +64,8 @@ Decisions
 - Conflict at the join: the torso's hip cut (half-width 0.55 at y -4.07) is far narrower than the leg sheet's and the
   full-body reference's pelvis there (about 1.1). The torso wins at the join; the user decided (2026-11-07) to widen both
   torsos' bottom ring to the full-body hip width; the legs read the ring from the torso and follow.
+- 2026-11-07: the kneecap is two planes, as the top rows and the full-body front draw it: the upper face (its top edge
+  ka7 ka0 ka1 flat across, down to the crease kb7 kb0 kb1; facing forward and up) and the lower face (the crease down to
+  its point kc0; facing down); together the topology panel's hexagon. Its seven points are placed by hand (lowlfit-*.json
+  V) on landmarks off the sheet's front, three-quarter and profile and the full-body front: its top, crease, bottom point
+  and corners.

@@ -13,8 +13,8 @@
 // side, 8 the back's centre line): at the side the hip line, at the front it runs down the groin to the pubic point (gl0),
 // at the back it crosses the buttocks. Then the crotch point cx on the centre line, and each leg's rings of eight, from the
 // front (0) round the outside (2) and the back (4) to the inside (6): th the thigh's top (at the inside the crotch, at the
-// back the buttock's lower fold), tm the thigh's middle, ka kb kc the knee (its top, the kneecap's sides, its bottom; the
-// kneecap one plane), ca the calf's widest, cb the calf's lower ring; an the ankle, six sides (0 front
+// back the buttock's lower fold), tm the thigh's middle, ka kb kc the knee (its top, the kneecap's crease, its bottom; the
+// kneecap two planes), ca the calf's widest, cb the calf's lower ring; an the ankle, six sides (0 front
 // inner, 1 front outer, 2 outer, 3 back outer, 4 back inner, 5 inner); fc the block foot's collar under it (the instep's
 // crease, the heel's top), six as the ankle's; ft the top of the sole band, six round the foot (0 toe inner, 1 toe outer,
 // 2 ball outer, 3 heel outer, 4 heel inner, 5 ball inner), so the sole's edge, flat at the floor.
@@ -168,6 +168,10 @@ function foot({ x, floor, zh, zt, zb, wt, wb, wh, ht, hh, turn = 0, wc = 0.42, h
 // Each preset: R, the rows as numbers (the fitter's 'rings' stage moves these): gl [y, W, F, B] and its columns' drops
 // gD; each leg ring [y, xi, xo, zb, zf] and its points' drops D.<ring>; the ankle [y, xi, xo, zb, zf]; the foot's numbers;
 // cx the crotch. V (from lowlfit-<who>.json) places single vertices by hand over what R makes.
+// The kneecap as the references' top rows draw it: two planes, the upper one (ka7 ka0 ka1 down to kb1 kb0 kb7, facing
+// forward) and the lower one (kb7 kb0 kb1 down to its point kc0, facing down), the crease between them across the knee;
+// together the topology panels' hexagon.
+const KNEECAP = [{ name: 'kneecap', cells: ['ka7', 'ka0'], region: 'knee' }, { name: 'kneecap low', cells: ['kb7b', 'kb0a'], region: 'knee' }];
 export const PRESETS = {
   // measured off his references: x off the full-body front (ref/body-male.png, 118.4 pixels a unit, the chin's underside
   // at y 320), z off the leg sheet's profile; the rows' heights off his topology panel's front, put at the full-body
@@ -183,12 +187,12 @@ export const PRESETS = {
       an: [-10.75, 0.92, 1.43, -0.62, 0.0],
       foot: { x: 1.25, zh: -0.76, zt: 0.89, zb: 0.25, wt: 0.36, wb: 0.43, wh: 0.3, ht: 0.32, hh: 0.4, turn: 12 },
     },
-    D: { th: [0, 0, 0, -0.4, -0.6, -0.45, -0.17, -0.05], kb: [0.12, 0, 0, 0, 0, 0, 0, 0], kc: [-0.12, 0, 0, 0, 0, 0, 0, 0] },
+    D: { th: [0, 0, 0, -0.4, -0.6, -0.45, -0.17, -0.05], ka: [0, 0, 0, 0, 0, 0, 0, 0], kb: [0.12, 0, 0, 0, 0, 0, 0, 0], kc: [-0.12, 0, 0, 0, 0, 0, 0, 0] },
     // the pelvis' front and back under the loincloth (the sheet's views hide them), from the bare topology panel's
     // profile; the foot's block heights from the same panel
     fixed: ['gl.2', 'gl.3', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf'],
     split: ['kb0/', 'kb7'],
-    merge: [{ name: 'kneecap', cells: ['ka7', 'ka0', 'kb7b', 'kb0a'], region: 'knee' }],
+    merge: KNEECAP,
   },
   // measured as his: x off ref/body-female.png (107 pixels a unit, its hips' top at the torso's hip row, y 700), z off
   // her leg sheet's profile at the full-body heights (the belt's lower edge at -3.93, the floor at -12.83)
@@ -203,10 +207,10 @@ export const PRESETS = {
       an: [-10.95, 1.17, 1.69, -0.82, -0.18],
       foot: { x: 1.45, zh: -0.92, zt: 0.76, zb: 0.2, wt: 0.33, wb: 0.4, wh: 0.28, ht: 0.32, hh: 0.5, turn: 12 },
     },
-    D: { th: [0, 0, 0, -0.4, -0.65, -0.5, -0.15, -0.05], kb: [0.1, 0, 0, 0, 0, 0, 0, 0], kc: [-0.1, 0, 0, 0, 0, 0, 0, 0] },
+    D: { th: [0, 0, 0, -0.4, -0.65, -0.5, -0.15, -0.05], ka: [0, 0, 0, 0, 0, 0, 0, 0], kb: [0.1, 0, 0, 0, 0, 0, 0, 0], kc: [-0.1, 0, 0, 0, 0, 0, 0, 0] },
     fixed: ['gl.2', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf'],
     split: ['kb0/', 'kb7'],
-    merge: [{ name: 'kneecap', cells: ['ka7', 'ka0', 'kb7b', 'kb0a'], region: 'knee' }],
+    merge: KNEECAP,
   },
 };
 

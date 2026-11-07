@@ -43,3 +43,7 @@ Decisions
   stands them apart, which is kept.
 - Conflict at the join: her torso's hip cut (half-width 0.71 at y -3.79) is narrower than her full-body reference's pelvis
   there (about 1.1). The torso wins at the join; the user decided to widen it; the legs follow the torso's ring.
+- 2026-11-07: the kneecap two planes as the male's (tools/sculpt/LEGS_SPEC.md), taller as her full-body front draws it
+  (top to point 1.4 units, the crease a V, its outer corner higher than its inner); its upper face set flat on its
+  least-squares plane. Her sheet's profile puts the kneecap 16-21 pixels lower against the knee's back than the full-body
+  front's proportions allow; the full-body reference wins.
