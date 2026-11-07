@@ -81,7 +81,7 @@ def views(src):
             eyes = sorted(eyes, key=lambda e: -e[2])[:2]
         brows = []
         for e in eyes:
-            got = blobs(brow, lambda x, y, e=e: abs(x - e[0]) < 42 and -40 < y - e[1] < -8, single=True)
+            got = blobs(brow, lambda x, y, e=e: abs(x - e[0]) < 42 and -55 < y - e[1] < -8, single=True)
             if got: brows.append(got[0])
         marks = {}
         if name in ('front', 'bottom') and eyes:

@@ -3,8 +3,8 @@
 //
 //   node tools/sculpt/lowhead.mjs --who male|female        # prints the triangle counts per part
 //
-// One mesh per head: the head (hand-authored after the references' wireframes, mirrored, plus the ears, brows, eyes, lids and the male's mouth line
-// as closed pieces set into it), the neck, and a shoulder stub. Units: the head two tall from the chin's underside
+// One mesh per head: the head (hand-authored after the references' wireframes, mirrored, plus the ears, brows, eyes and lids as closed pieces
+// set into it; no mouth, as the references have none), the neck, and a shoulder stub. Units: the head two tall from the chin's underside
 // (y 0) to the crown (y 2), z forward, x the head's left (the viewer's right in the front view), the ear's centre near
 // z 0. Every polygon keeps its own normal when drawn (flat shading); `polys` keeps the quads for the wireframe.
 //
@@ -99,7 +99,6 @@ export const PRESETS = {
     ear: { c: [0.6, 0.84, -0.03], zs: 1.35, tilt: 0.2, s: 1.05, gap: 0.03, flare: 0.33, lift: 0.18, thick: 0.14 },
     brow: { x: [0.17, 0.32, 0.46, 0.56], yb: [1.155, 1.165, 1.16, 1.15], h: [0.085, 0.085, 0.075, 0.06], out: 0.055 },
     eye: { x: 0.31, y: 1.0, w: 0.11, h: 0.09, lid: 0.03, almond: 0 },
-    mouth: { y: 0.27, w: 0.15, d: 0.008 },
   },
 };
 
@@ -234,7 +233,8 @@ export function buildLowHead(who = 'male', preset = null) {
         const out = (x, y, d) => { const p = on(x, y, 0); const o = unit([p[0], 0, p[2] - 0.1]); return add(p, mul(o, d)); };
         const pop = e.pop ?? 0.022;
         const F = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
-        const fr = F.map(([x, y]) => vert(flip(out(x, y, pop), s))), bk = F.map(([x, y]) => vert(flip(out(x, y, -0.02), s)));
+        // its lower edge stands off less than its upper, so the bottom view sees the pupil's face, not a block
+        const fr = F.map(([x, y]) => vert(flip(out(x, y, y < e.y ? pop * 0.35 : pop), s))), bk = F.map(([x, y]) => vert(flip(out(x, y, -0.02), s)));
         const o = (v) => poly(s > 0 ? v : [...v].reverse(), 'head', 'face', 'pupil');
         o(fr);
         for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; o([bk[i], bk[j], fr[j], fr[i]]); }
@@ -243,7 +243,7 @@ export function buildLowHead(who = 'male', preset = null) {
       // thins to a wing that flicks up and out.
       const a = e.almond;
       const xs = a ? [x0 - 0.035, e.x, x1 + 0.05, x1 + 0.17] : [x0 - 0.035, e.x, x1 + 0.035];
-      const yb = a ? [y1 - 0.03, y1 - 0.012, y1 - 0.0, y1 + 0.065] : [y1 - 0.004, y1, y1 - 0.006];
+      const yb = a ? [y1 - 0.03, y1 - 0.012, y1 - 0.0, y1 + 0.065] : [y1 + 0.004, y1 + 0.008, y1 + 0.002];
       const hh = a ? [0.016, 0.026, 0.024, 0.008] : [0.03, 0.034, 0.026];
       // each section stands off the skin along the head's outward direction there, so the wing clears the side of the face
       const off = (x, y, d) => { const p = on(x, y, 0); const o = unit([p[0], 0, p[2] - 0.1]); return add(p, mul(o, d)); };
@@ -257,20 +257,6 @@ export function buildLowHead(who = 'male', preset = null) {
         o([A[3], B[3], B[0], A[0]]);
       }
       o([...ids[0]].reverse()); o(ids[ids.length - 1]);
-    });
-  }
-
-  // The mouth (the male head): no lips, only a low ledge across the upper lip whose underside makes the mouth's line.
-  if (P.mouth) {
-    const M = P.mouth;
-    const xs = [0, M.w * 0.55, M.w];
-    const T = xs.map((x, i) => on(x, M.y + 0.03 - i * 0.004, 0.0));
-    const F = xs.map((x, i) => on(x, M.y - i * 0.006, i === 2 ? 0.002 : M.d * (i === 0 ? 1 : 0.8)));
-    const B = xs.map((x, i) => on(x, M.y - 0.012 - i * 0.004, -0.002));
-    both((s) => {
-      const o = (v) => poly(s > 0 ? v : [...v].reverse(), 'head', 'face');
-      const t = T.map((p) => vert(flip(p, s))), f = F.map((p) => vert(flip(p, s))), b = B.map((p) => vert(flip(p, s)));
-      for (let i = 0; i < 2; i++) { o([t[i], f[i], f[i + 1], t[i + 1]]); o([f[i], b[i], b[i + 1], f[i + 1]]); }
     });
   }
 
@@ -293,8 +279,9 @@ export function buildLowHead(who = 'male', preset = null) {
       if (n[0] < 0) n = mul(n, -1); // the outer face looks out
       const cf = add(c, [0, -0.02 * E.s, 0.05 * E.s]); // the concha's centre, toward the front and down: the C opens forward
       const face = rim.map((p) => add(lerp(c, p, 0.86), mul(n, 0.03 * E.s)));
-      const fold = rim.map((p) => add(lerp(cf, p, 0.6), mul(n, 0.028 * E.s)));
-      const concha = rim.map((p) => add(lerp(cf, p, 0.36), mul(n, 0.0)));
+      // E.flat: the outer face one flat plane inside the rim's bevel, no fold and no concha, as the references draw it
+      const fold = rim.map((p) => add(lerp(cf, p, 0.6), mul(n, (E.flat ? 0.03 : 0.028) * E.s)));
+      const concha = rim.map((p) => add(lerp(cf, p, 0.36), mul(n, E.flat ? 0.03 * E.s : 0.0)));
       const back = rim.map((p) => add(lerp(c, p, 0.9), mul(n, -E.thick * E.s)));
       const V = (arr) => arr.map((p) => vert(flip(p, s)));
       const R = V(rim), F = V(face), A = V(fold), C = V(concha), Bk = V(back);

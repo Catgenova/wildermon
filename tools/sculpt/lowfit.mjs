@@ -83,8 +83,10 @@ export function silhouette(mesh, view, cam, box) {
 // a facet's luminance from its normal in view space and its material's colour.
 const nrm = (v) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
 // The rig's numbers, as lowshot.mjs takes them (its --amb, --key, ... options); `light` stage fits them.
-export const RIG = { amb: 0.57, key: 0.42, warm: 0.32, cool: 1.2, rim: 0.42, upr: 0.12, cspec: 0.52, kx: -0.15, ky: 1.4, lcz: 0.35, lbz: -0.2, cpow: 2.5, rpow: 3, down: 0.14, up: 0.06 };
-const BASE = { skin: [0.68, 0.49, 0.41], brow: [0.36, 0.22, 0.15], pupil: [0.09, 0.09, 0.11], lid: [0.36, 0.24, 0.2] };
+export const RIG = { amb: 0.57, key: 0.42, warm: 0.32, cool: 2, rim: 0.42, upr: 0.12, cspec: 0.52, kx: -0.15, ky: 1.4, lcz: 0.35, lbz: -0.2, cpow: 8, rpow: 3, down: 0.14, up: 0.06 };
+// her reference's cool light from the left is broad and weak, his a narrow strong rim (lowshot.mjs's defaults per head)
+if (who === 'female') Object.assign(RIG, { cool: 0.2, cpow: 0.8 });
+const BASE = { skin: [0.68, 0.49, 0.41], brow: [0.36, 0.22, 0.15], pupil: [0.21, 0.2, 0.22], lid: [0.36, 0.24, 0.2] };
 const dotp = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 export function lightLum(n, mat) {
   const R = RIG;
@@ -328,14 +330,15 @@ if (stage === 'mesh') {
     if (k === 0 && preset.V[n][0] === 0) continue; // the centre line stays on it
     ps.push({ step: +opt('step', '0.04'), get: () => preset.V[n][k], set: (x) => { preset.V[n][k] = x; } });
   }
-  if (!only.length) {
+  const feats = !only.length || args.includes('--feat'); // --feat: the ears, eyes and brows move too when --names is given
+  if (feats) {
   for (const k of [0, 1, 2]) ps.push({ step: 0.03, get: () => preset.ear.c[k], set: (x) => { preset.ear.c[k] = x; } });
     ps.push({ step: 0.05, get: () => preset.ear.s, set: (x) => { preset.ear.s = x; } });
   }
-  if (!only.length) for (const k of ['x', 'y']) ps.push({ step: 0.02, get: () => preset.eye[k], set: (x) => { preset.eye[k] = x; } });
+  if (feats) for (const k of ['x', 'y']) ps.push({ step: 0.02, get: () => preset.eye[k], set: (x) => { preset.eye[k] = x; } });
   // the brows move as a whole, up and down and out and in
   const shift = (key, d) => { preset.brow[key] = preset.brow[key].map((v) => v + d); };
-  if (!only.length) for (const key of ['x', 'yb']) { let at = 0; ps.push({ step: 0.02, get: () => at, set: (x) => { shift(key, x - at); at = x; } }); }
+  if (feats) for (const key of ['x', 'yb']) { let at = 0; ps.push({ step: 0.02, get: () => at, set: (x) => { shift(key, x - at); at = x; } }); }
   // --brows: each brow section's x, height and thickness on its own (the brows' ends and arch)
   if (args.includes('--brows')) for (const key of ['x', 'yb', 'h']) preset.brow[key].forEach((_, i) => ps.push({ step: key === 'h' ? 0.01 : 0.02, get: () => preset.brow[key][i], set: (x) => { preset.brow[key][i] = key === 'h' ? Math.max(0.005, x) : x; } }));
   // --shade w: the shading counts too, w per grey level; --reg r: each vertex's move from where it started costs r per
