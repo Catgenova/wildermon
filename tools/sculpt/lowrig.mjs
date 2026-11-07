@@ -102,7 +102,11 @@ export function buildNamedBody(who = 'male') {
   for (const [i, n] of body.added ?? []) names[i] = n;
   // each loop vertex's ring, index and edge: { ring, k, a, b, t }
   const loops = new Map();
-  for (const L of loopSpecs()) L.pts.forEach(([a, b, t, n], k) => loops.set(n, { ring: L.ring, k: +n.replace(/^.*?(\d+)(\.[LR])?$/, '$1'), a, b, t }));
+  const at0 = new Map(names.map((n, i) => [n, i]));
+  for (const L of loopSpecs()) L.pts.forEach(([a, b, t, n], k) => {
+    const T = typeof t === 'function' ? t((m) => body.verts[at0.get(m)])(a, b) : t;
+    loops.set(n, { ring: L.ring, k: +n.replace(/^.*?(\d+)(\.[LR])?$/, '$1'), a, b, t: T });
+  });
   const piece = new Array(body.verts.length).fill(null);
   for (const p of body.polys) for (const i of p.v) if (!piece[i]) piece[i] = p.ear ? 'ear' : p.mat !== 'skin' ? p.mat : p.part;
   const count = {};
@@ -208,7 +212,7 @@ export function measure(B) {
   J.knee = [kbc[0], kbc[1], Math.min(...zs) + TUNE.PIV.kneeDepth * (Math.max(...zs) - Math.min(...zs))];
   const an = ring('an', 6), fc = ring('fc', 6);
   J.ankle = [an[0], an[1] + 0.3 * (fc[1] - an[1]), an[2] + 0.15];
-  J.ball = [(P('ft2.L')[0] + P('ft5.L')[0]) / 2, floor + 0.17, (P('ft2.L')[2] + P('ft5.L')[2]) / 2];
+  J.ball = [(P('ft2.L')[0] + P('ft5.L')[0]) / 2, floor + (TUNE.PIV.ballUp ?? 0.17), (P('ft2.L')[2] + P('ft5.L')[2]) / 2];
   J.toe = [(P('ft0.L')[0] + P('ft1.L')[0]) / 2, floor + 0.12, (P('ft0.L')[2] + P('ft1.L')[2]) / 2];
   J.floor = floor;
   return J;
@@ -286,6 +290,8 @@ export function skeleton(J) {
     h(S('fingers_mid'), S('fingers_01'), S('fingers_02'), { from: S('fingers_02'), kind: 'half', f: 0.5 });
     h(S('hip'), 'pelvis', S('thigh'), { from: S('thigh'), kind: 'half', f: 0.5 });
     h(S('knee'), S('thigh'), S('calf'), { from: S('calf'), kind: 'half', f: 0.5 });
+    h(S('ankle'), S('calf'), S('foot'), { from: S('foot'), kind: 'half', f: 0.5 });
+    h(S('toes'), S('foot'), S('ball'), { from: S('ball'), kind: 'half', f: 0.5 });
   }
   for (const x of bones) {
     const Y = unit(sub(x.tail, x.head)), X = unit(cross(Y, x.flex)), Z = cross(X, Y);
@@ -309,7 +315,7 @@ export const TUNE = {
   SLIVER: 0.045,
   // where the measured pivots sit: the elbow from its ring's centre toward its back (el3), the knee's depth from the back,
   // the hip between the body row under the waist (0) and the thigh's top ring (1), and out from the thigh's centre
-  PIV: { elbowBack: -0.15, kneeDepth: 0.3, hipDown: 0.3, hipOut: 0.15, hipFwd: 0.4, shoulder: [0.1, 0, 0.15], palm: 0.85 },
+  PIV: { elbowBack: -0.15, kneeDepth: 0.3, hipDown: 0.3, hipOut: 0.15, hipFwd: 0.4, shoulder: [0.1, 0, 0.15], palm: 0.85, ballUp: 0.3 },
   // the arm's rings: their share along the chain (ring -> {bone: w})
   ARM: {
     ja: { clavicle: 0.3, shoulder: 0.7 },
@@ -334,11 +340,14 @@ export const TUNE = {
     kb: { knee: 1 },
     kc: { knee: 0.3, calf: 0.7 },
     ca: { calf: 1 }, cb: { calf: 1 },
-    an: { calf: 0.45, foot: 0.55 },
-    fc: { calf: 0.1, foot: 0.9 },
+    // the ankle's ring and the foot's collar under it on the ankle's helper (half the foot's turn)
+    an: { calf: 0.3, ankle: 0.7 },
+    fc: { ankle: 0.3, foot: 0.7 },
   },
   // the extra loops (tools/sculpt/lowloops.mjs), by ring and index (or `all`): unset, a loop vertex blends its edge's ends
-  LOOP: { qp: { all: { knuckles: 0.4, fingers_01: 0.6 } }, nk: { all: { neck_01: 0.4, neck_02: 0.6 } } },
+  LOOP: { fb: { all: { toes: 1 } }, qp: { all: { knuckles: 0.4, fingers_01: 0.6 } }, nk: { all: { neck_01: 0.4, neck_02: 0.6 } } },
+  // the block foot's sole band: the toe's corners (ft0 ft1), the ball's (ft2 ft5), the heel's (ft3 ft4)
+  FOOT: { toe: { ball: 1 }, ball: { toes: 1 }, heel: { foot: 1 } },
   // the crotch's point, shared by both legs; the thigh's top ring's inner points (by the crotch)
   CX: { pelvis: 0.6, hip_l: 0.2, hip_r: 0.2 },
   TH_IN: {},
@@ -424,7 +433,7 @@ export function skinWeights(B, J) {
       else if (LEG[ringOf]) w = named(LEG[ringOf]);
       else if (/^k[abc]$/.test(ringOf.slice(0, 2)) && LEG[ringOf.slice(0, 2)]) w = named(LEG[ringOf.slice(0, 2)]);
       else if (ringOf === 'gl') { const f = GL[base] ?? 0; w = { pelvis: 1 - f, [S('hip')]: f }; }
-      else if (['ft', 'so'].includes(ringOf)) w = named(['0', '1'].includes(base.slice(2)) ? { ball: 1 } : { foot: 1 });
+      else if (['ft', 'so'].includes(ringOf)) { const k = base.slice(2); w = named(['0', '1'].includes(k) ? TUNE.FOOT.toe : ['2', '5'].includes(k) ? TUNE.FOOT.ball : TUNE.FOOT.heel); }
       else if (base === 'cx') w = { ...TUNE.CX };
       else if (ringOf === 'bt') w = { pelvis: 1 };
       else throw new Error(`no leg weight for ${name}`);
@@ -588,6 +597,22 @@ export function fromGame(rig, gPosed, gRest) {
     const want = Wd[b.name] ?? base;
     pose[b.name] = mm(tr(base), want);
     W[b.name] = want;
+  }
+  // the feet: the figure's ankle and toe are hinges, square to its shin, and his feet are turned out from his knees, so
+  // their turns taken in the world roll his foot onto its edge as it flexes; each is taken instead as its angle about his
+  // own joint's bend axis (the ankle's from the knee's turn, signed; the ball's from the ankle's)
+  for (const [s, k] of [['l', 0], ['r', 1]]) {
+    for (const [bone, g, up] of [[`foot_${s}`, `ankle${k}`, `knee${k}`], [`ball_${s}`, `toe${k}`, `ankle${k}`]]) {
+      if (!gPosed[g] || !gPosed[up]) continue;
+      const b = rig.bones[rig.at.get(bone)];
+      const q = quat(mm(D(g), tr(D(up)))), a = (2 * Math.acos(Math.min(1, Math.abs(q[0]))) * 180) / Math.PI;
+      const ax = [q[1], q[2], q[3]].map((x) => x * Math.sign(q[0] || 1));
+      // the axis as the shin above it has turned, against the joint's own bend axis there
+      const X = mv(Wd[rig.bones[b.p].name] ? mm(Wd[rig.bones[b.p].name], tr(rig.bones[b.p].R)) : I3, colOf(b.R, 0));
+      // (the ball only ever bends up, as the figure means it to: "bent up as the heel comes off the ground, so the toes
+      // stay down", src/sculpt/rig.ts; its turn in the world comes out the other way on his foot)
+      pose[bone] = euler([(bone.startsWith('ball') ? 1 : Math.sign(dot(ax, X))) * a, 0, 0]);
+    }
   }
   // the thumbs: the figure's thumb lies otherwise than ours, so its turn taken in the world swings ours across the palm;
   // its turn from its hand's, as an angle, closes ours toward the palm instead (thumb_01, and TUNE.GAME.thumbCurl of it on

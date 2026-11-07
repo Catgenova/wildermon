@@ -5,10 +5,10 @@
  "frames": "Y head to tail; X the bend axis (Y × flex); Z = X × Y. Local pose [rx, ry, rz] degrees as Rz·Rx·Ry; +rx carries the tail toward flex. Right side: the left mirrored with X negated (a pose mirrors as [rx, -ry, -rz]).",
  "skinning": "linear blend: v' = Σ w_i (W_i R_iᵀ (v - head_i) + P_i), W_i the posed world rotation, P_i the posed head; helpers driven from their `driver` (half: the source's local turn halved; twist: half the hand's twist about its own axis; wrist: half the swing and all the twist; untwist: the source's twist undone by f).",
  "counts": {
-  "bones": 55,
+  "bones": 59,
   "control": 35,
-  "helpers": 20,
-  "vertices": 962,
+  "helpers": 24,
+  "vertices": 966,
   "maxInfluences": 4
  },
  "game": {
@@ -693,7 +693,7 @@
    ],
    "tail": [
     1.4415,
-    -11.65,
+    -11.52,
     0.4155
    ],
    "x": [
@@ -702,14 +702,14 @@
     0.3942
    ],
    "y": [
-    0.2262,
-    -0.8189,
-    0.5275
+    0.25,
+    -0.7732,
+    0.5828
    ],
    "z": [
-    0.3228,
-    0.5739,
-    0.7526
+    0.3048,
+    0.6342,
+    0.7106
    ],
    "game": "ankle0"
   },
@@ -719,7 +719,7 @@
    "kind": "control",
    "head": [
     1.4415,
-    -11.65,
+    -11.52,
     0.4155
    ],
    "tail": [
@@ -733,14 +733,14 @@
     0.2589
    ],
    "y": [
-    0.2574,
-    -0.1081,
-    0.9602
+    0.2411,
+    -0.3646,
+    0.8994
    ],
    "z": [
-    0.028,
-    0.9941,
-    0.1044
+    0.0944,
+    0.9312,
+    0.3522
    ],
    "game": "toe0"
   },
@@ -1094,7 +1094,7 @@
    ],
    "tail": [
     -1.4415,
-    -11.65,
+    -11.52,
     0.4155
    ],
    "x": [
@@ -1103,14 +1103,14 @@
     -0.3942
    ],
    "y": [
-    -0.2262,
-    -0.8189,
-    0.5275
+    -0.25,
+    -0.7732,
+    0.5828
    ],
    "z": [
-    -0.3228,
-    0.5739,
-    0.7526
+    -0.3048,
+    0.6342,
+    0.7106
    ],
    "game": "ankle1"
   },
@@ -1120,7 +1120,7 @@
    "kind": "control",
    "head": [
     -1.4415,
-    -11.65,
+    -11.52,
     0.4155
    ],
    "tail": [
@@ -1134,14 +1134,14 @@
     -0.2589
    ],
    "y": [
-    -0.2574,
-    -0.1081,
-    0.9602
+    -0.2411,
+    -0.3646,
+    0.8994
    ],
    "z": [
-    -0.028,
-    0.9941,
-    0.1044
+    -0.0944,
+    0.9312,
+    0.3522
    ],
    "game": "toe1"
   },
@@ -1496,6 +1496,76 @@
    }
   },
   {
+   "name": "ankle_l",
+   "parent": "calf_l",
+   "kind": "helper",
+   "head": [
+    1.1947,
+    -10.7565,
+    -0.16
+   ],
+   "tail": [
+    1.4415,
+    -11.52,
+    0.4155
+   ],
+   "x": [
+    -0.919,
+    0,
+    0.3942
+   ],
+   "y": [
+    0.25,
+    -0.7732,
+    0.5828
+   ],
+   "z": [
+    0.3048,
+    0.6342,
+    0.7106
+   ],
+   "driver": {
+    "from": "foot_l",
+    "kind": "half",
+    "f": 0.5
+   }
+  },
+  {
+   "name": "toes_l",
+   "parent": "foot_l",
+   "kind": "helper",
+   "head": [
+    1.4415,
+    -11.52,
+    0.4155
+   ],
+   "tail": [
+    1.5605,
+    -11.7,
+    0.8595
+   ],
+   "x": [
+    -0.9659,
+    0,
+    0.2589
+   ],
+   "y": [
+    0.2411,
+    -0.3646,
+    0.8994
+   ],
+   "z": [
+    0.0944,
+    0.9312,
+    0.3522
+   ],
+   "driver": {
+    "from": "ball_l",
+    "kind": "half",
+    "f": 0.5
+   }
+  },
+  {
    "name": "shoulder_r",
    "parent": "clavicle_r",
    "kind": "helper",
@@ -1841,6 +1911,76 @@
    ],
    "driver": {
     "from": "calf_r",
+    "kind": "half",
+    "f": 0.5
+   }
+  },
+  {
+   "name": "ankle_r",
+   "parent": "calf_r",
+   "kind": "helper",
+   "head": [
+    -1.1947,
+    -10.7565,
+    -0.16
+   ],
+   "tail": [
+    -1.4415,
+    -11.52,
+    0.4155
+   ],
+   "x": [
+    -0.919,
+    0,
+    -0.3942
+   ],
+   "y": [
+    -0.25,
+    -0.7732,
+    0.5828
+   ],
+   "z": [
+    -0.3048,
+    0.6342,
+    0.7106
+   ],
+   "driver": {
+    "from": "foot_r",
+    "kind": "half",
+    "f": 0.5
+   }
+  },
+  {
+   "name": "toes_r",
+   "parent": "foot_r",
+   "kind": "helper",
+   "head": [
+    -1.4415,
+    -11.52,
+    0.4155
+   ],
+   "tail": [
+    -1.5605,
+    -11.7,
+    0.8595
+   ],
+   "x": [
+    -0.9659,
+    0,
+    -0.2589
+   ],
+   "y": [
+    -0.2411,
+    -0.3646,
+    0.8994
+   ],
+   "z": [
+    -0.0944,
+    0.9312,
+    0.3522
+   ],
+   "driver": {
+    "from": "ball_r",
     "kind": "half",
     "f": 0.5
    }
@@ -2355,30 +2495,30 @@
   "cb5.L":[["calf_l",1]],
   "cb6.L":[["calf_l",1]],
   "cb7.L":[["calf_l",1]],
-  "an0.L":[["foot_l",0.55],["calf_l",0.45]],
-  "an1.L":[["foot_l",0.55],["calf_l",0.45]],
-  "an2.L":[["foot_l",0.55],["calf_l",0.45]],
-  "an3.L":[["foot_l",0.55],["calf_l",0.45]],
-  "an4.L":[["foot_l",0.55],["calf_l",0.45]],
-  "an5.L":[["foot_l",0.55],["calf_l",0.45]],
-  "fc0.L":[["foot_l",0.9],["calf_l",0.1]],
-  "fc1.L":[["foot_l",0.9],["calf_l",0.1]],
-  "fc2.L":[["foot_l",0.9],["calf_l",0.1]],
-  "fc3.L":[["foot_l",0.9],["calf_l",0.1]],
-  "fc4.L":[["foot_l",0.9],["calf_l",0.1]],
-  "fc5.L":[["foot_l",0.9],["calf_l",0.1]],
+  "an0.L":[["ankle_l",0.7],["calf_l",0.3]],
+  "an1.L":[["ankle_l",0.7],["calf_l",0.3]],
+  "an2.L":[["ankle_l",0.7],["calf_l",0.3]],
+  "an3.L":[["ankle_l",0.7],["calf_l",0.3]],
+  "an4.L":[["ankle_l",0.7],["calf_l",0.3]],
+  "an5.L":[["ankle_l",0.7],["calf_l",0.3]],
+  "fc0.L":[["foot_l",0.7],["ankle_l",0.3]],
+  "fc1.L":[["foot_l",0.7],["ankle_l",0.3]],
+  "fc2.L":[["foot_l",0.7],["ankle_l",0.3]],
+  "fc3.L":[["foot_l",0.7],["ankle_l",0.3]],
+  "fc4.L":[["foot_l",0.7],["ankle_l",0.3]],
+  "fc5.L":[["foot_l",0.7],["ankle_l",0.3]],
   "ft0.L":[["ball_l",1]],
   "ft1.L":[["ball_l",1]],
-  "ft2.L":[["foot_l",1]],
+  "ft2.L":[["toes_l",1]],
   "ft3.L":[["foot_l",1]],
   "ft4.L":[["foot_l",1]],
-  "ft5.L":[["foot_l",1]],
+  "ft5.L":[["toes_l",1]],
   "so0.L":[["ball_l",1]],
   "so1.L":[["ball_l",1]],
-  "so2.L":[["foot_l",1]],
+  "so2.L":[["toes_l",1]],
   "so3.L":[["foot_l",1]],
   "so4.L":[["foot_l",1]],
-  "so5.L":[["foot_l",1]],
+  "so5.L":[["toes_l",1]],
   "kb0.L":[["knee_l",1]],
   "gl1.R":[["pelvis",0.6],["hip_r",0.4]],
   "gl2.R":[["pelvis",0.5],["hip_r",0.5]],
@@ -2442,30 +2582,30 @@
   "cb5.R":[["calf_r",1]],
   "cb6.R":[["calf_r",1]],
   "cb7.R":[["calf_r",1]],
-  "an0.R":[["foot_r",0.55],["calf_r",0.45]],
-  "an1.R":[["foot_r",0.55],["calf_r",0.45]],
-  "an2.R":[["foot_r",0.55],["calf_r",0.45]],
-  "an3.R":[["foot_r",0.55],["calf_r",0.45]],
-  "an4.R":[["foot_r",0.55],["calf_r",0.45]],
-  "an5.R":[["foot_r",0.55],["calf_r",0.45]],
-  "fc1.R":[["foot_r",0.9],["calf_r",0.1]],
-  "fc0.R":[["foot_r",0.9],["calf_r",0.1]],
-  "fc2.R":[["foot_r",0.9],["calf_r",0.1]],
-  "fc3.R":[["foot_r",0.9],["calf_r",0.1]],
-  "fc4.R":[["foot_r",0.9],["calf_r",0.1]],
-  "fc5.R":[["foot_r",0.9],["calf_r",0.1]],
+  "an0.R":[["ankle_r",0.7],["calf_r",0.3]],
+  "an1.R":[["ankle_r",0.7],["calf_r",0.3]],
+  "an2.R":[["ankle_r",0.7],["calf_r",0.3]],
+  "an3.R":[["ankle_r",0.7],["calf_r",0.3]],
+  "an4.R":[["ankle_r",0.7],["calf_r",0.3]],
+  "an5.R":[["ankle_r",0.7],["calf_r",0.3]],
+  "fc1.R":[["foot_r",0.7],["ankle_r",0.3]],
+  "fc0.R":[["foot_r",0.7],["ankle_r",0.3]],
+  "fc2.R":[["foot_r",0.7],["ankle_r",0.3]],
+  "fc3.R":[["foot_r",0.7],["ankle_r",0.3]],
+  "fc4.R":[["foot_r",0.7],["ankle_r",0.3]],
+  "fc5.R":[["foot_r",0.7],["ankle_r",0.3]],
   "ft1.R":[["ball_r",1]],
   "ft0.R":[["ball_r",1]],
-  "ft2.R":[["foot_r",1]],
+  "ft2.R":[["toes_r",1]],
   "ft3.R":[["foot_r",1]],
   "ft4.R":[["foot_r",1]],
-  "ft5.R":[["foot_r",1]],
+  "ft5.R":[["toes_r",1]],
   "so1.R":[["ball_r",1]],
   "so0.R":[["ball_r",1]],
-  "so2.R":[["foot_r",1]],
+  "so2.R":[["toes_r",1]],
   "so3.R":[["foot_r",1]],
   "so4.R":[["foot_r",1]],
-  "so5.R":[["foot_r",1]],
+  "so5.R":[["toes_r",1]],
   "kb0.R":[["knee_r",1]],
   "arm/ja1.R":[["shoulder_r",0.7],["clavicle_r",0.3]],
   "arm/ja0.R":[["shoulder_r",0.7],["clavicle_r",0.3]],
@@ -2785,6 +2925,8 @@
   "gf7.L":[["pelvis",0.56],["hip_l",0.33],["thigh_l",0.11]],
   "gf8.L":[["pelvis",0.4],["hip_l",0.4],["hip_r",0.1],["thigh_l",0.1]],
   "gf9.L":[["pelvis",0.6],["hip_l",0.3],["thigh_l",0.1]],
+  "fb0.L":[["toes_l",1]],
+  "fb1.L":[["toes_l",1]],
   "arm/qp0.L":[["fingers_01_l",0.6],["knuckles_l",0.4]],
   "arm/qp1.L":[["fingers_01_l",0.6],["knuckles_l",0.4]],
   "arm/qp2.L":[["fingers_01_l",0.6],["knuckles_l",0.4]],
@@ -2803,6 +2945,8 @@
   "gf7.R":[["pelvis",0.56],["hip_r",0.33],["thigh_r",0.11]],
   "gf8.R":[["pelvis",0.4],["hip_r",0.4],["hip_l",0.1],["thigh_r",0.1]],
   "gf9.R":[["pelvis",0.6],["hip_r",0.3],["thigh_r",0.1]],
+  "fb0.R":[["toes_r",1]],
+  "fb1.R":[["toes_r",1]],
   "arm/qp0.R":[["fingers_01_r",0.6],["knuckles_r",0.4]],
   "arm/qp1.R":[["fingers_01_r",0.6],["knuckles_r",0.4]],
   "arm/qp2.R":[["fingers_01_r",0.6],["knuckles_r",0.4]],

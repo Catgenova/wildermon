@@ -85,7 +85,7 @@ for (const s of ['l', 'r']) {
   REGIONS.push({ id: `fingers_${s}`, piv: `fingers_01_${s}`, v: (i) => B.names[i].startsWith('arm/') && ringIs(i, ['kb', 'kp', 'qp', 'mb', 'mp', 'nb', 'np'], s) });
   REGIONS.push({ id: `hip_${s}`, piv: `hip_${s}`, v: (i) => !B.names[i].startsWith('arm/') && (ringIs(i, ['gl', 'gf', 'th', 'tm', 'cx', 'bt', 'hw'], s)) });
   REGIONS.push({ id: `knee_${s}`, piv: `knee_${s}`, v: (i) => !B.names[i].startsWith('arm/') && ringIs(i, ['tm', 'ka', 'kb', 'kc', 'ca'], s) });
-  REGIONS.push({ id: `ankle_${s}`, piv: `foot_${s}`, v: (i) => !B.names[i].startsWith('arm/') && ringIs(i, ['cb', 'an', 'fc', 'ft', 'so'], s) });
+  REGIONS.push({ id: `ankle_${s}`, piv: `foot_${s}`, v: (i) => !B.names[i].startsWith('arm/') && ringIs(i, ['cb', 'an', 'fc', 'fb', 'ft', 'so'], s) });
 }
 REGIONS.push({ id: 'neck', piv: 'neck_02', v: (i) => has(i, ['neck_01', 'neck_02']) });
 REGIONS.push({ id: 'waist', piv: 'spine_01', v: (i) => !B.names[i].startsWith('arm/') && ['ra', 'rb', 'rc', 'wa', 'hi', 'hw'].some((r) => B.names[i].replace(/\.[LR]$/, '').replace(/\d+$/, '') === r) });

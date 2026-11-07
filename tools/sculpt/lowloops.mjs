@@ -12,6 +12,9 @@
 //   gf   the groin and the gluteal fold, per leg: a ring round the thigh's top between the hip row (gl) with the crotch
 //        (cx) and the thigh's top ring (th): gf0 (groin, front) round the outside to gf6 (the gluteal fold, back), gf7
 //        (under the buttock), gf8 (the crotch, inside) and gf9 (front of the crotch)
+//   fb   the ball of each foot, over the instep: from the ball's inner corner (ft5) across the top of the foot (fb0, fb1,
+//        on the edges from the ankle's collar fc0, fc1 to the toe ft0, ft1, where the ball lies along the foot) to its
+//        outer corner (ft2), so the toe block bends at the ball
 //   qp   the knuckles' second ring, palm side, per hand: across the four-finger mass's palm side between the knuckle
 //        line (kp) and the middle line (mp), its ends at the back's outer knuckles (kb0, kb4): arm/qp0..arm/qp4
 //
@@ -60,6 +63,10 @@ export function loopSpecs() {
     const GF = [['gl1', 'th0'], ['gl2', 'th1'], ['gl3', 'th1'], ['gl4', 'th2'], ['gl5', 'th3'], ['gl6', 'th3'], ['gl7', 'th4'], ['gl8', 'th5'], ['cx', 'th6'], ['gl0', 'th7']];
     const C = (n) => (['gl0', 'gl8', 'cx'].includes(n) ? n : S(n));
     L.push({ ring: 'gf', closed: true, pts: GF.map(([a, b], k) => [C(a), S(b), TGF[k], S(`gf${k}`)]) });
+    // the ball of the foot over the instep: from the ball's inner corner (ft5) across the instep to its outer (ft2), where
+    // the ball's corners lie along the foot, so the toe bends there and not at the ankle's collar
+    const atBall = (P) => { const z = (P(S('ft2'))[2] + P(S('ft5'))[2]) / 2; return (a, b) => (z - P(a)[2]) / (P(b)[2] - P(a)[2]); };
+    L.push({ ring: 'fb', closed: false, ends: [S('ft5'), S('ft2')], pts: [[S('fc0'), S('ft0'), atBall, S('fb0')], [S('fc1'), S('ft1'), atBall, S('fb1')]] });
     // the knuckles' palm-side second ring
     L.push({ ring: 'qp', closed: false, ends: [S('arm/kb0'), S('arm/kb4')], pts: [0, 1, 2, 3, 4].map((k) => [S(`arm/kp${k}`), S(`arm/mp${k}`), 0.35, S(`arm/qp${k}`)]) });
   }
@@ -107,7 +114,8 @@ export function addLoops(body, who = 'male') {
     polys.splice(qi, 1, { ...q, v: A, name: `${q.name}/a` }, { ...q, v: Bv, name: `${q.name}/b` });
   };
   for (const L of loopSpecs()) {
-    const ids = L.pts.map(([a, b, t, n]) => splitEdge(id(a), id(b), t, n));
+    const P = (n) => verts[id(n)];
+    const ids = L.pts.map(([a, b, t, n]) => splitEdge(id(a), id(b), typeof t === 'function' ? t(P)(a, b) : t, n));
     const chain = L.closed ? [...ids, ids[0]] : [id(L.ends[0]), ...ids, id(L.ends[1])];
     for (let k = 0; k + 1 < chain.length; k++) cut(chain[k], chain[k + 1], L.ring);
   }
