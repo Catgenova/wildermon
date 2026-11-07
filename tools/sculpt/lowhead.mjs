@@ -228,6 +228,8 @@ export function buildLowHead(who = 'male', preset = null) {
     both((s) => {
       const sec = b.x.map((x, i) => {
         const y0 = b.yb[i], y1 = b.yb[i] + b.h[i];
+        // b.bevel (his): the front face only that share of the height, the top a bevel sloping up and back into the head
+        if (b.bevel) return [off(x, y0, b.out), off(x, y0 + (y1 - y0) * b.bevel, b.out), off(x, y1, 0), off(x, y0, -0.04)];
         return [off(x, y0, b.out), off(x, y1, b.out * 0.7), off(x, y1, -0.04), off(x, y0, -0.04)];
       });
       const ids = sec.map((q) => q.map((p) => vert(flip(p, s))));
@@ -263,7 +265,9 @@ export function buildLowHead(who = 'male', preset = null) {
           rise = Math.max(rise, surf(x0 + (x1 - x0) * u, y0 + (y1 - y0) * v) - zb);
         }
         // its lower edge stands off less than its upper, so the bottom view sees the pupil's face, not a block
-        const fr = F.map(([x, y]) => vert(flip(out(x, y, rise + (y < e.y ? pop * 0.35 : pop)), s))), bk = F.map(([x, y]) => vert(flip(out(x, y, -0.02), s)));
+        // the face pushed straight forward, so it stays square from the front
+        const fwd = (x, y, d) => { const p = on(x, y, 0); return [p[0], p[1], p[2] + d]; };
+        const fr = F.map(([x, y]) => vert(flip(fwd(x, y, rise + (y < e.y ? pop * 0.35 : pop)), s))), bk = F.map(([x, y]) => vert(flip(out(x, y, -0.02), s)));
         const o = (v) => poly(s > 0 ? v : [...v].reverse(), 'head', 'face', 'pupil');
         o(fr);
         for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; o([bk[i], bk[j], fr[j], fr[i]]); }
