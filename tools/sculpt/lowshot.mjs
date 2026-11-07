@@ -10,7 +10,7 @@
 // shoulder stub out, as the references do, and the bottom view cuts the neck flat at its camera's clip.
 // Uses Playwright's Chromium at /opt/pw-browsers/chromium with software GL.
 import { chromium } from 'playwright-core';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildLowHead } from './lowhead.mjs';
 import { loadCams, rotation, PARTS } from './lowcam.mjs';
@@ -93,6 +93,18 @@ mesh.tris.forEach((t, i) => { const e = polyAo.get(t.poly) ?? [0, 0]; e[0] += me
 // light comes from, so a plane keeps one normal (no smoothing across edges, no shared normals) and the reference's soft
 // falloff over it.
 const polyC = mesh.polys.map((p) => { const pts = p.v.map((k) => mesh.verts[k]); return pts.reduce((a, q) => [a[0] + q[0] / pts.length, a[1] + q[1] / pts.length, a[2] + q[2] / pts.length], [0, 0, 0]); });
+// --dump file: each polygon's unit normal (Newell, turned to face out as drawn), occlusion, material and part, for
+// fitting the light to a reference
+if (opt('dump', '')) {
+  const { writeFileSync } = await import('node:fs');
+  const rows = mesh.polys.map((p, pi) => {
+    const t = mesh.tris.findIndex((q) => q.poly === pi); const [a, b, c] = T[t];
+    let n = polyN[pi]; if (dot(n, cross(sub(b, a), sub(c, a))) < 0) n = n.map((v) => -v);
+    const l = Math.hypot(...n) || 1; const [s, k] = polyAo.get(pi);
+    return { n: n.map((v) => v / l), ao: s / k, mat: p.mat, part: p.part, c: polyC[pi] };
+  });
+  writeFileSync(opt('dump'), JSON.stringify(rows));
+}
 const parts = {};
 mesh.tris.forEach((t, i) => {
   const [a, b, c] = T[i];
@@ -121,10 +133,25 @@ for (const p of mesh.polys) {
 }
 
 const CAMS = loadCams(who);
+// The light fitted to the reference (tools/sculpt/lowlight-<who>.json, written by tools/sculpt/lowlight.py): per view,
+// the skin's colour as a function of the facet's normal in view space (real spherical harmonics up to the third
+// order, and three rims: the cool light from behind on the left and a rim on either side; one set of coefficients per
+// colour channel, 0..255), over the occlusion and the gradient across the facet.
+// The top and the bottom views, which the fit does not see, take the light shared by all views. --rig: the hand-set rig.
+const LIGHT_FILE = new URL(`./lowlight-${who}.json`, import.meta.url);
+const LIGHT = !args.includes('--rig') && existsSync(LIGHT_FILE) ? JSON.parse(readFileSync(LIGHT_FILE, 'utf8')) : null;
+const shOf = (v) => {
+  if (!LIGHT) return null;
+  const C = LIGHT.views[v] ?? LIGHT.global; // [3][nb]
+  const out = new Array(57).fill(0);
+  for (let k = 0; k < C[0].length; k++) for (let ch = 0; ch < 3; ch++) out[k * 3 + ch] = C[ch][k] / 255;
+  return out;
+};
 const female = who === 'female';
 const DATA = {
   // each view's camera, its rotation column-major for GL
-  cams: Object.entries(CAMS).map(([v, c]) => { const r = rotation(c); return { ...c, R: [r[0], r[3], r[6], r[1], r[4], r[7], r[2], r[5], r[8]], parts: PARTS[v] }; }),
+  cams: Object.entries(CAMS).map(([v, c]) => { const r = rotation(c); return { ...c, R: [r[0], r[3], r[6], r[1], r[4], r[7], r[2], r[5], r[8]], parts: PARTS[v], sh: shOf(v) }; }),
+  shAll: shOf('global'),
   grad: +opt('grad', female ? '0.05' : '-0.05'),
   detail: args.includes('--detail'),
   gradpos: +opt('gradpos', '1'), // 1: the gradient measured from the head's centre, continuous across a shared edge; 0: from each polygon's centre
@@ -134,6 +161,8 @@ const DATA = {
   parts, lines, topPitch, normals, counts: mesh.counts,
   pupil: female ? [0.265, 0.25, 0.29] : [0.21, 0.2, 0.22],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
+  // his brows as dark against his skin as his reference's (its brow over its lit skin, per channel)
+  brow: female ? [0.36, 0.22, 0.15] : [0.27, 0.17, 0.14],
   title: female ? 'Female Head Modeling Guide' : 'Modeling Guide',
   checks: female
     ? ['Stylized low-poly head', 'Feminine proportions', 'Bald (no hair)', 'Soft, tapered jawline', 'Small, angular nose', 'Game-ready topology']
@@ -164,7 +193,7 @@ const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true
 const vs = '#define GRADPOS ' + D.gradpos.toFixed(1) + '\nattribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift; uniform float persp;' +
   'varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; void main(){ vec3 q = R*(p - piv); vn = R*n; vd = GRADPOS > 0.5 ? q - R*(vec3(0.0, 1.1, 0.0) - piv) : q - R*(s - piv); vm = m; vy = p.y;' +
   ' float k = persp > 0.0 ? persp/(persp - q.z) : 1.0; gl_Position = vec4(off + sc*q.xy*k, -q.z/8.0 - lift, 1.0); }';
-const fs = '#define FLATBROW ' + (D.flatBrow ? '1.0' : '0.0') + '\n#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\n#define RIM ' + D.rim.toFixed(3) + '\n#define UPR ' + D.upr.toFixed(3) + '\n#define LCZ ' + D.lcz.toFixed(3) + '\n#define LBZ ' + D.lbz.toFixed(3) + '\n#define CPOW ' + D.cpow.toFixed(2) + '\n#define RPOW ' + D.rpow.toFixed(2) + '\n#define CSPEC ' + D.cspec.toFixed(3) + '\n#define KX ' + D.kx.toFixed(3) + '\n#define KY ' + D.ky.toFixed(3) + '\n#define AOLO ' + D.aolo.toFixed(3) + '\n#define DOWN ' + D.down.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; uniform float clipY; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
+const fs = '#define FLATBROW ' + (D.flatBrow ? '1.0' : '0.0') + '\n#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\n#define RIM ' + D.rim.toFixed(3) + '\n#define UPR ' + D.upr.toFixed(3) + '\n#define LCZ ' + D.lcz.toFixed(3) + '\n#define LBZ ' + D.lbz.toFixed(3) + '\n#define CPOW ' + D.cpow.toFixed(2) + '\n#define RPOW ' + D.rpow.toFixed(2) + '\n#define CSPEC ' + D.cspec.toFixed(3) + '\n#define KX ' + D.kx.toFixed(3) + '\n#define KY ' + D.ky.toFixed(3) + '\n#define AOLO ' + D.aolo.toFixed(3) + '\n#define DOWN ' + D.down.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; uniform float clipY; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 browc; uniform vec3 linec; uniform vec3 SHC[19]; uniform float useSH;' +
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
   // the bottom view cuts the shoulders off at clipY, and the cut reads as a flat cap: the inside seen through it
   ' if (vy < clipY) discard; if (clipY > -9.0 && vn.z < 0.0) { gl_FragColor = vec4(vec3(0.68, 0.49, 0.41)*vec3(0.78,0.74,0.72), 1.0); return; }' +
@@ -173,7 +202,7 @@ const fs = '#define FLATBROW ' + (D.flatBrow ? '1.0' : '0.0') + '\n#define GRAD 
   ' vec3 Lg = normalize(vec3(0.45,0.55,0.7)); vec3 tg = Lg - nn*dot(nn,Lg); float grad = vm.x < 0.5 ? 1.0 + GRAD*dot(vd, tg) : 1.0;' +
   ' vec3 base = vec3(0.68, 0.49, 0.41);' +
   ' float jit = fract(vm.z) - 0.5, occ = floor(vm.z) / 100.0; base *= 1.0 + jit*0.02; base.r += jit*0.01;' +
-  ' if (vm.x > 0.5 && vm.x < 1.5) base = vec3(0.36, 0.22, 0.15);' +
+  ' if (vm.x > 0.5 && vm.x < 1.5) base = browc;' +
   ' else if (vm.x > 1.5 && vm.x < 2.5) base = pupc;' +
   ' else if (vm.x > 2.5 && vm.x < 3.5) base = lidc;' +
   ' if (mode == 3) { gl_FragColor = vm.x < 0.5 ? vec4(nn*0.5+0.5, 1.0) : vec4(0.0,0.0,0.0,1.0); return; }' +
@@ -186,6 +215,13 @@ const fs = '#define FLATBROW ' + (D.flatBrow ? '1.0' : '0.0') + '\n#define GRAD 
   ' float dk = max(dot(nn,Lk),0.0), dr = max(dot(nn,Lr),0.0), dc = max(dot(nn,Lc),0.0);' +
   ' vec3 L = vec3(AMB + DOWN*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) * vec3(1.02,0.98,0.94) + KEY*dk*vec3(1.0,0.97,0.92) + WARM*dr*vec3(1.04,0.96,0.84) + UPR*pow(max(dot(nn,normalize(vec3(0.6,0.75,0.3))),0.0),2.0)*vec3(1.08,0.9,0.86);' +
   ' L *= grad;' +
+  ' if (useSH > 0.5) { float x = nn.x, y = nn.y, z = nn.z;' +
+  '   vec3 sh = SHC[0] + SHC[1]*x + SHC[2]*y + SHC[3]*z + SHC[4]*x*y + SHC[5]*y*z + SHC[6]*(3.0*z*z-1.0) + SHC[7]*x*z + SHC[8]*(x*x-y*y)' +
+  '     + SHC[9]*y*(3.0*x*x-y*y) + SHC[10]*x*y*z + SHC[11]*y*(5.0*z*z-1.0) + SHC[12]*z*(5.0*z*z-3.0) + SHC[13]*x*(5.0*z*z-1.0) + SHC[14]*z*(x*x-y*y) + SHC[15]*x*(x*x-3.0*y*y)' +
+  '     + SHC[16]*pow(max(dot(nn, normalize(vec3(-0.95,0.25,-0.2))),0.0),8.0) + SHC[17]*max(-x,0.0)*pow(1.0-max(z,0.0),3.0) + SHC[18]*max(x,0.0)*pow(1.0-max(z,0.0),3.0);' +
+  '   vec3 c = max(sh, vec3(0.0)) * grad * (base / vec3(0.68, 0.49, 0.41)) * mix(AOLO, 1.06, occ*occ);' +
+  '   if (FLATBROW > 0.5 && vm.x > 0.5 && vm.x < 1.5) c = base * (0.82 + 0.35*max(nn.y,0.0) + 0.12*dk);' +
+  '   gl_FragColor = vec4(c, 1.0); return; }' +
   ' vec3 c = (base*L + CSPEC*vec3(0.12,0.34,0.6)*pow(dc,6.0)*(0.3+0.7*base.r/0.68) + COOL*vec3(0.2,0.27,0.36)*pow(max(dot(nn,Lb),0.0),CPOW)*(0.3+0.7*base.r/0.68) + RIM*vec3(0.5,0.62,0.85)*max(-nn.x,0.0)*pow(1.0-max(nn.z,0.0),RPOW)*(0.3+0.7*base.r/0.68)) * mix(AOLO, 1.06, occ*occ);' +
   // her brows (FLATBROW) as her reference draws them: an even dark brown, lighter only on the top that faces up
   ' if (FLATBROW > 0.5 && vm.x > 0.5 && vm.x < 1.5) c = base * (0.82 + 0.35*max(nn.y,0.0) + 0.12*dk);' +
@@ -198,7 +234,7 @@ const buf = (arr) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFE
 const B = {}; for (const k in D.parts) B[k] = buf(D.parts[k]);
 const LB = buf(D.lines);
 gl.enable(gl.DEPTH_TEST); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-gl.uniform3fv(U('lidc'), D.lid); gl.uniform3fv(U('pupc'), D.pupil);
+gl.uniform3fv(U('lidc'), D.lid); gl.uniform3fv(U('browc'), D.brow); gl.uniform3fv(U('pupc'), D.pupil);
 const yaw = (d) => { const a = d * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [c, 0, -s, 0, 1, 0, s, 0, c]; };
 const pitchM = (d) => { const a = d * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [1, 0, 0, 0, c, s, 0, -s, c]; };
 function drawMesh(part) {
@@ -209,7 +245,8 @@ function drawMesh(part) {
   gl.drawArrays(gl.TRIANGLES, 0, b.n / 12);
 }
 /** One view: R (column-major mat3) about the pivot, the pivot at (cx, cy) css px, s px per unit. */
-function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoulders'], mode = 0, wire = false, clip = -99, f = 0 }) {
+function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoulders'], mode = 0, wire = false, clip = -99, f = 0, sh = D.shAll }) {
+  gl.uniform1f(U('useSH'), sh ? 1 : 0); if (sh) gl.uniform3fv(U('SHC'), sh);
   gl.uniform1f(U('clipY'), clip); gl.uniform1f(U('persp'), f);
   gl.clear(gl.DEPTH_BUFFER_BIT);
   gl.uniformMatrix3fv(U('R'), false, R); gl.uniform3fv(U('piv'), piv);
@@ -233,7 +270,7 @@ function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoul
 const S = 136;
 const ROW = [['Front (0°)', 0, 172], ['Three-Quarter (45°)', 45, 478], ['Profile (90°)', 90, 780], ['Rear Three-Quarter (135°)', 135, 1085], ['Back (180°)', 180, 1388]];
 // the seven views, each through its own camera fitted to the reference (tools/sculpt/lowcam.mjs, lowfit.mjs)
-for (const c of D.cams) view({ R: c.R, cx: c.cx, cy: c.cy, s: c.s, f: c.f, clip: c.clip ?? -99, ...(c.parts ? { parts: c.parts } : {}) });
+for (const c of D.cams) view({ R: c.R, cx: c.cx, cy: c.cy, s: c.s, f: c.f, clip: c.clip ?? -99, sh: c.sh, ...(c.parts ? { parts: c.parts } : {}) });
 view({ R: yaw(0), cx: 822, cy: 686, s: S * 0.99, wire: true });
 view({ R: yaw(-70), cx: 1392, cy: 680, s: 100, mode: 1, parts: ['head', 'neck'], piv: [0, 1, 0.1] });
 

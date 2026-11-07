@@ -1,0 +1,92 @@
+# The low-poly head's light fitted to its reference (tools/sculpt/lowshot.mjs reads the result): per view of the top row,
+# the skin's colour as a function of each facet's normal in view space, real spherical harmonics to the third order and
+# three rims (the cool light from behind on the left, a rim either side), fitted by least squares to the reference's
+# colour over each facet's interior, each view's coefficients drawn toward one set shared by all views (ridge, lam);
+# the occlusion a fixed factor over it (AOLO, as lowshot's). TONE=g,b holds the skin's green and blue over its red at
+# these ratios (her skin the male's tone).
+#
+#   node tools/sculpt/lowshot.mjs --who male --out /tmp/l --dump /tmp/l/dump.json --rig
+#   node tools/sculpt/lowids.mjs male /tmp/l/ids.bin
+#   python3 tools/sculpt/lowlight.py male /tmp/l/ids.bin /tmp/l/dump.json /tmp/l/sheet-male.png 3 0.1 tools/sculpt/lowlight-male.json
+import sys, json, math, os
+import numpy as np
+from PIL import Image
+who, idsf, dumpf, sheet = sys.argv[1:5]; order = int(sys.argv[5]); lam = float(sys.argv[6]); outf = sys.argv[7] if len(sys.argv) > 7 else None
+HERE = os.path.dirname(os.path.abspath(__file__))
+REF = os.path.join(HERE, 'ref', 'head-lowpoly%s.png' % ('' if who == 'male' else '-female'))
+cams = json.load(open(os.path.join(HERE, 'lowcams.json')))[who]
+ref = np.asarray(Image.open(REF).convert('RGB').resize((1536, 1024)), dtype=float)
+me = np.asarray(Image.open(sheet).convert('RGB').resize((1536, 1024)), dtype=float)
+ids = np.frombuffer(open(idsf, 'rb').read(), dtype=np.int32).reshape(5, 360, 1536)
+names = json.load(open(idsf + '.names.json')); D = json.load(open(dumpf))
+views = ['front', 'q3', 'profile', 'r3', 'back']
+AOLO = float(os.environ.get('AOLO','0.8'))
+
+RIMS = os.environ.get('RIMS','1')=='1'
+def rot(c):
+  a, b = math.radians(c['yaw']), math.radians(c['pitch']); ca, sa, cb, sb = math.cos(a), math.sin(a), math.cos(b), math.sin(b)
+  return np.array([[ca, 0, sa], [sb * sa, cb, -sb * ca], [-cb * sa, sb, cb * ca]])
+def basis(n):
+  x, y, z = n
+  b = [1, x, y, z]
+  if order >= 2: b += [x * y, y * z, 3 * z * z - 1, x * z, x * x - y * y]
+  if order >= 3: b += [y * (3 * x * x - y * y), x * y * z, y * (5 * z * z - 1), z * (5 * z * z - 3), x * (5 * z * z - 1), z * (x * x - y * y), x * (x * x - 3 * y * y)]
+  if order >= 3 and RIMS:
+    l = np.array([-0.95, 0.25, -0.2]); l = l / np.linalg.norm(l)
+    b += [max(0.0, x * l[0] + y * l[1] + z * l[2]) ** 8, max(-x, 0) * (1 - max(z, 0)) ** 3, max(x, 0) * (1 - max(z, 0)) ** 3]
+  return b
+rows = []
+for vi, v in enumerate(views):
+  I = ids[vi]; er = (I >= 0).copy()
+  for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]: er[2:-2, 2:-2] &= (I[2 + dy:358 + dy, 2 + dx:1534 + dx] == I[2:-2, 2:-2])
+  R = rot(cams[v])
+  for p in np.unique(I[er]):
+    if D[p]['mat'] != 'skin' or names[p].startswith('ear'): continue
+    m = er & (I == p); k = m.sum()
+    if k < 30: continue
+    n = R @ np.array(D[p]['n'])
+    if n[2] < 0: n = -n
+    occ = D[p]['ao']; aot = AOLO + (1.06 - AOLO) * occ * occ
+    rows.append(dict(v=v, name=names[p], n=n, ref=ref[:360][m].mean(0), me=me[:360][m].mean(0), k=k, aot=aot, stub=names[p].startswith('stub')))
+lum = lambda c: c @ np.array([.299, .587, .114])
+def r2(y, x, w):
+  mx, my = np.average(x, weights=w), np.average(y, weights=w)
+  sxy = np.sum(w * (x - mx) * (y - my)); return sxy * sxy / (np.sum(w * (x - mx) ** 2) * np.sum(w * (y - my) ** 2))
+def report(tag, pred):
+  out = []; tot = 0
+  for v in views:
+    sel = [i for i, r in enumerate(rows) if r['v'] == v and not r['stub']]
+    y = np.array([lum(rows[i]['ref']) for i in sel]); x = np.array([lum(pred[i]) for i in sel]); w = np.array([rows[i]['k'] for i in sel], float)
+    d = np.average(np.abs(x - np.average(x, weights=w) - y + np.average(y, weights=w)), weights=w); tot += d
+    off = np.average(x - y, weights=w)
+    out.append('%s %.3f/%.1f(%+.0f)' % (v, r2(y, x, w), d, off))
+  print(tag, ' '.join(out), 'dsum %.1f' % tot)
+report('ours', [r['me'] for r in rows])
+A = np.array([basis(r['n']) for r in rows]); W = np.sqrt(np.array([r['k'] for r in rows], float) * np.array([0.5 if r['stub'] else 1 for r in rows]))
+AOT = np.array([r['aot'] for r in rows])
+Y = np.array([r['ref'] for r in rows]) / AOT[:, None]
+Cg, *_ = np.linalg.lstsq(A * W[:, None], Y * W[:, None], rcond=None)
+report('global', (A @ Cg) * AOT[:, None])
+P = np.zeros_like(Y); out = {'order': order, 'aolo': AOLO, 'global': Cg.T.tolist(), 'views': {}}
+nb = A.shape[1]
+for v in views:
+  sel = np.array([i for i, r in enumerate(rows) if r['v'] == v])
+  Aw = A[sel] * W[sel, None]; Yw = Y[sel] * W[sel, None]
+  sc = np.sum(W[sel] ** 2)
+  M = Aw.T @ Aw + lam * sc * np.eye(nb); Cv = np.linalg.solve(M, Aw.T @ Yw + lam * sc * Cg)
+  P[sel] = A[sel] @ Cv; out['views'][v] = Cv.T.tolist()
+  # sanity: the light over the visible hemisphere
+  g = [basis((math.sin(t) * math.cos(f), math.sin(t) * math.sin(f), math.cos(t))) for t in np.linspace(0, 1.45, 12) for f in np.linspace(0, 6.28, 24)]
+  lv = np.array(g) @ Cv
+  if lv.min() < 20 or lv.max() > 300: print('  ', v, 'range', lv.min(0).round(), lv.max(0).round())
+report('perview lam %g' % lam, P * AOT[:, None])
+# TONE=g,b: the skin's green and blue over its red held at these ratios (her skin the male's tone, 2026-11-07)
+if os.environ.get('TONE'):
+  Yr = np.array([r['ref'] for r in rows]); w = np.array([r['k'] for r in rows], float); m = np.average(Yr, axis=0, weights=w)
+  tg, tb = map(float, os.environ['TONE'].split(',')); f = [1, tg / (m[1] / m[0]), tb / (m[2] / m[0])]
+  print('tone factors', np.round(f, 3))
+  for k in ['global']: out[k] = [[c * f[ch] for c in out[k][ch]] for ch in range(3)]
+  for v in out['views']: out['views'][v] = [[c * f[ch] for c in out['views'][v][ch]] for ch in range(3)]
+if outf: json.dump(out, open(outf, 'w'))
+Yr = np.array([r['ref'] for r in rows]); w = np.array([r['k'] for r in rows], float)
+print('ref mean rgb', np.average(Yr, axis=0, weights=w).round(1), 'ratio', (np.average(Yr, axis=0, weights=w) / np.average(Yr, axis=0, weights=w)[0]).round(3))

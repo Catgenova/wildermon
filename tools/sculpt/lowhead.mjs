@@ -101,7 +101,9 @@ export const PRESETS = {
     },
     ear: { c: [0.6, 0.84, -0.03], zs: 1.35, tilt: 0.2, s: 1.05, gap: 0.03, flare: 0.33, lift: 0.18, thick: 0.14 },
     brow: { x: [0.17, 0.32, 0.46, 0.56], yb: [1.155, 1.165, 1.16, 1.15], h: [0.085, 0.085, 0.075, 0.06], out: 0.055 },
-    eye: { x: 0.31, y: 1.0, w: 0.11, h: 0.09, lid: 0.03, almond: 0 },
+    // the pupils and the lid's ledge measured off his reference's front view
+    eye: { x: 0.317, y: 1.02, w: 0.11, h: 0.1, lid: 0.03, almond: 0,
+      ledge: { x: [0.13, 0.22, 0.32, 0.43, 0.53], yb: [1.05, 1.047, 1.047, 1.047, 1.047], yt: [1.12, 1.11, 1.105, 1.105, 1.105], out: 0.05, up: 0.04 } },
   },
 };
 
@@ -236,27 +238,41 @@ export function buildLowHead(who = 'male', preset = null) {
         const out = (x, y, d) => { const p = on(x, y, 0); const o = unit([p[0], 0, p[2] - 0.1]); return add(p, mul(o, d)); };
         const pop = e.pop ?? 0.022;
         const F = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+        // the face clears the skin everywhere over it, not only at its corners (a ridge in the socket under the pupil
+        // would show through it): its stand-off grows by the most the skin rises above the corners' plane
+        const zc = F.map(([x, y]) => surf(x, y));
+        let rise = 0;
+        for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) {
+          const u = i / 8, v = j / 8;
+          const zb = (zc[0] * (1 - u) + zc[1] * u) * (1 - v) + (zc[3] * (1 - u) + zc[2] * u) * v;
+          rise = Math.max(rise, surf(x0 + (x1 - x0) * u, y0 + (y1 - y0) * v) - zb);
+        }
         // its lower edge stands off less than its upper, so the bottom view sees the pupil's face, not a block
-        const fr = F.map(([x, y]) => vert(flip(out(x, y, y < e.y ? pop * 0.35 : pop), s))), bk = F.map(([x, y]) => vert(flip(out(x, y, -0.02), s)));
+        const fr = F.map(([x, y]) => vert(flip(out(x, y, rise + (y < e.y ? pop * 0.35 : pop)), s))), bk = F.map(([x, y]) => vert(flip(out(x, y, -0.02), s)));
         const o = (v) => poly(s > 0 ? v : [...v].reverse(), 'head', 'face', 'pupil');
         o(fr);
         for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; o([bk[i], bk[j], fr[j], fr[i]]); }
       }
       // The lid: a strip along the pupil's top edge, from past its inner corner to past its outer one; the almond lid
       // thins to a wing that flicks up and out.
-      const a = e.almond;
-      const xs = a ? [x0 - 0.01, e.x, x1 + 0.03, x1 + 0.15] : [x0 - 0.035, e.x, x1 + 0.035];
-      const yb = a ? [y1 - 0.028, y1 - 0.026, y1 - 0.018, y1 + 0.045] : [y1 + 0.004, y1 + 0.008, y1 + 0.002];
-      const hh = a ? [0.028, 0.042, 0.038, 0.012] : [0.03, 0.034, 0.026];
+      const a = e.almond, L = e.ledge;
+      // e.ledge (his): the upper lid a ledge across the socket, as his reference draws it: a dark front band from
+      // L.x[0] to its last x between the heights L.yb and L.yt, standing L.out off the skin, its top a skin plane sloping
+      // up and back into the socket by L.up
+      const xs = L ? L.x : a ? [x0 - 0.01, e.x, x1 + 0.03, x1 + 0.15] : [x0 - 0.035, e.x, x1 + 0.035];
+      const yb = L ? L.yb : a ? [y1 - 0.028, y1 - 0.026, y1 - 0.018, y1 + 0.045] : [y1 + 0.004, y1 + 0.008, y1 + 0.002];
+      const hh = L ? L.yt.map((t, i) => t - L.yb[i]) : a ? [0.028, 0.042, 0.038, 0.012] : [0.03, 0.034, 0.026];
       // each section stands off the skin along the head's outward direction there, so the wing clears the side of the face
       const off = (x, y, d) => { const p = on(x, y, 0); const o = unit([p[0], 0, p[2] - 0.1]); return add(p, mul(o, d)); };
-      const sec = xs.map((x, i) => [off(x, yb[i], e.lid), off(x, yb[i] + hh[i], e.lid * 0.5), off(x, yb[i] + hh[i], -0.03), off(x, yb[i], -0.03)]);
+      const sec = xs.map((x, i) => L
+        ? [off(x, yb[i], L.out), off(x, yb[i] + hh[i], L.out * 0.85), off(x, yb[i] + hh[i] + L.up, -0.03), off(x, yb[i], -0.03)]
+        : [off(x, yb[i], e.lid), off(x, yb[i] + hh[i], e.lid * 0.5), off(x, yb[i] + hh[i], -0.03), off(x, yb[i], -0.03)]);
       const ids = sec.map((q) => q.map((p) => vert(flip(p, s))));
-      const o = (v) => poly(s > 0 ? v : [...v].reverse(), 'head', 'face', 'lid');
+      const o = (v, mat = 'lid') => poly(s > 0 ? v : [...v].reverse(), 'head', 'face', mat);
       for (let i = 0; i + 1 < ids.length; i++) {
         const A = ids[i], B = ids[i + 1];
         o([A[0], B[0], B[1], A[1]]);
-        o([A[1], B[1], B[2], A[2]]);
+        o([A[1], B[1], B[2], A[2]], L ? 'skin' : 'lid');
         o([A[3], B[3], B[0], A[0]]);
       }
       o([...ids[0]].reverse()); o(ids[ids.length - 1]);
