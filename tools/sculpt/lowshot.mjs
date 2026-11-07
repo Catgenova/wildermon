@@ -122,6 +122,7 @@ for (const p of mesh.polys) {
 const female = who === 'female';
 const DATA = {
   grad: +opt('grad', '0.4'),
+  clip: female ? -0.36 : -0.24, // where the bottom view cuts the shoulders off, as the references' do
   // the lights' strengths: the ambient, the key from the front right, the warm fill from the right, the cool rim from behind left
   amb: +opt('amb', '0.62'), key: +opt('key', '0.28'), warm: +opt('warm', '0.24'), cool: +opt('cool', '1.2'), // the gradient over each face toward the key light, per unit of the head (0: none)
   parts, lines, pitch, topPitch, normals, counts: mesh.counts,
@@ -155,10 +156,12 @@ const cv = document.getElementById('gl');
 cv.width = 1536 * dpr; cv.height = 1024 * dpr;
 const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true, alpha: true, premultipliedAlpha: false });
 const vs = 'attribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift;' +
-  'varying vec3 vn; varying vec3 vm; varying vec3 vd; void main(){ vec3 q = R*(p - piv); vn = R*n; vd = q - R*(s - piv); vm = m;' +
+  'varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; void main(){ vec3 q = R*(p - piv); vn = R*n; vd = q - R*(s - piv); vm = m; vy = p.y;' +
   ' gl_Position = vec4(off + sc*q.xy, -q.z/8.0 - lift, 1.0); }';
-const fs = '#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
+const fs = '#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; uniform float clipY; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
+  // the bottom view cuts the shoulders off at clipY, and the cut reads as a flat cap: the inside seen through it
+  ' if (vy < clipY) discard; if (clipY > -9.0 && vn.z < 0.0) { gl_FragColor = vec4(vec3(0.68, 0.49, 0.41)*vec3(0.78,0.74,0.72), 1.0); return; }' +
   ' vec3 nn = normalize(vn); if (!gl_FrontFacing) nn = -nn;' +
   // the gradient over the face: toward the key light (upper right, front) along the plane, brighter; a skin facet only
   ' vec3 Lg = normalize(vec3(0.45,0.55,0.7)); vec3 tg = Lg - nn*dot(nn,Lg); float grad = vm.x < 0.5 ? 1.0 + GRAD*dot(vd, tg) : 1.0;' +
@@ -199,7 +202,8 @@ function drawMesh(part) {
   gl.drawArrays(gl.TRIANGLES, 0, b.n / 12);
 }
 /** One view: R (column-major mat3) about the pivot, the pivot at (cx, cy) css px, s px per unit. */
-function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoulders'], mode = 0, wire = false }) {
+function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoulders'], mode = 0, wire = false, clip = -99 }) {
+  gl.uniform1f(U('clipY'), clip);
   gl.clear(gl.DEPTH_BUFFER_BIT);
   gl.uniformMatrix3fv(U('R'), false, R); gl.uniform3fv(U('piv'), piv);
   gl.uniform2f(U('sc'), 2 * s / 1536, 2 * s / 1024); gl.uniform2f(U('off'), cx / 768 - 1, 1 - cy / 512);
@@ -223,7 +227,7 @@ const S = 136;
 const ROW = [['Front (0°)', 0, 172], ['Three-Quarter (45°)', 45, 478], ['Profile (90°)', 90, 780], ['Rear Three-Quarter (135°)', 135, 1085], ['Back (180°)', 180, 1388]];
 for (const [, d, cx] of ROW) view({ R: yaw(d), cx, cy: 184, s: S });
 view({ R: pitchM(D.topPitch), cx: 180, cy: 730, s: S, piv: [0, 1.1, 0.12], parts: ['head', 'neck'] });
-view({ R: pitchM(-D.pitch), cx: 502, cy: 730, s: S * 0.98, piv: [0, 0.75, 0.12], parts: ['head', 'neck'] });
+view({ R: pitchM(-D.pitch), cx: 502, cy: 730, s: S * 0.98, piv: [0, 0.75, 0.12], clip: D.clip });
 view({ R: yaw(0), cx: 822, cy: 686, s: S * 0.99, wire: true });
 view({ R: yaw(-70), cx: 1392, cy: 680, s: 100, mode: 1, parts: ['head', 'neck'], piv: [0, 1, 0.1] });
 
