@@ -143,6 +143,9 @@ begin
   ${refusal('R:none')}
   ${refusal('R:well', 'v_well')}
   ${refusal('R:gone', '-1')}
+  -- And no brew set going in the well itself (asked for: "Brewing should not be an option directly in wells").
+  insert into said values ('B:well', coalesce(act_refusal(w, u, 'start_brew',
+    jsonb_build_object('kind', 'furniture', 'id', v_well, 'brew', 'ale')), '-'));
 
   -- 3. Ale in the barrel as it is: its seconds, what is said, and whether it works so long after.
   ${brew('ale', ALE.count)}
@@ -255,6 +258,10 @@ check(`which is the mote's own refusal: “${WATER_MOTE_NEED}”`, refusalHere()
 same('R:well', refusalHere({ kind: 'furniture', id: well.id } as Target), 'on a well');
 same('R:gone', refusalHere({ kind: 'furniture', id: -1 } as Target), 'on nothing');
 check('and the menu offers it on the barrel, and not on the well', act('set_brew_spring').applies(at, g) && !act('set_brew_spring').applies({ kind: 'furniture', id: well.id } as Target, g));
+// No brew in the well itself, on either side: not offered, and refused in the island's words if asked.
+const wellBrew = { kind: 'furniture', id: well.id, brew: 'ale' } as Target;
+same('B:well', act('start_brew').check?.(wellBrew, g) ?? '-', 'a brew in a well');
+check('and a brew is offered on the barrel, and not on the well', act('start_brew').applies(at, g) && !act('start_brew').applies(wellBrew, g));
 
 /* 3. Ale in the plain barrel. */
 brewHere('ale');
