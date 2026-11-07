@@ -95,7 +95,7 @@ def within():
   return np.maximum(0, -np.linalg.lstsq(xs, ys, rcond=None)[0])
 SHK = (within() if os.environ['SHK'] == 'within' else np.array([[float(t) for t in k.split(',')] for k in os.environ['SHK'].split(';')])) if os.environ.get('SHK') else None
 if SHK is not None: print('shadow k held', SHK.round(1).tolist())
-A = np.array([basis(r['n'], r['mpx'].mean(0)) for r in rows]); W = np.sqrt(np.array([r['k'] for r in rows], float) * np.array([0.5 if r['stub'] else 1 for r in rows]))
+A = np.array([basis(r['n'], r['mpx'].mean(0)) for r in rows]); W = (np.array([r['k'] for r in rows], float) * np.array([0.5 if r['stub'] else 1 for r in rows])) ** float(os.environ.get('WPOW', '0.5'))
 AOT = np.array([r['aot'] for r in rows])
 Y = np.array([r['ref'] for r in rows]) / AOT[:, None]
 if SHK is not None: Y = Y + np.array([r['mpx'].mean(0) @ SHK for r in rows]); A = A[:, :-NS]
