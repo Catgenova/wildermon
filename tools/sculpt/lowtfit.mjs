@@ -204,7 +204,7 @@ if (stage === 'mesh') {
   }
   // her breast's middle ring: how far out toward its foot (mu) and how far it stands off (d), unless --names leaves it out
   if (preset.dome && (!sel.length || sel.includes('dome'))) {
-    ps.push({ step: 0.03, get: () => preset.dome.mu, set: (x) => { preset.dome.mu = Math.min(0.9, Math.max(0.2, x)); } });
+    ps.push({ step: 0.03, get: () => preset.dome.mu, set: (x) => { preset.dome.mu = Math.min(0.9, Math.max(+opt('mumin', '0.2'), x)); } });
     for (let k = 0; k < 3; k++) ps.push({ step: 0.02, get: () => preset.dome.d[k], set: (x) => { preset.dome.d[k] = x; } });
   }
   const flatW = +opt('flat', '200'), reg = +opt('reg', '0');
