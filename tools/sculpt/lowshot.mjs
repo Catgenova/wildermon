@@ -121,10 +121,12 @@ for (const p of mesh.polys) {
 
 const female = who === 'female';
 const DATA = {
-  grad: +opt('grad', '0.4'),
+  grad: +opt('grad', '0.25'),
+  detail: args.includes('--detail'),
+  gradpos: +opt('gradpos', '1'), // 1: the gradient measured from the head's centre, continuous across a shared edge; 0: from each polygon's centre
   clip: female ? -0.36 : -0.24, // where the bottom view cuts the shoulders off, as the references' do
   // the lights' strengths: the ambient, the key from the front right, the warm fill from the right, the cool rim from behind left
-  amb: +opt('amb', '0.57'), key: +opt('key', '0.42'), warm: +opt('warm', '0.32'), cool: +opt('cool', '1.2'), rim: +opt('rim', '0.6'), upr: +opt('upr', '0.12'), cspec: +opt('cspec', '0.4'), kx: +opt('kx', '0.3'), ky: +opt('ky', '0.5'), aolo: +opt('aolo', '0.5'), // the gradient over each face toward the key light, per unit of the head (0: none)
+  amb: +opt('amb', '0.57'), key: +opt('key', '0.42'), warm: +opt('warm', '0.32'), cool: +opt('cool', '1.2'), rim: +opt('rim', '0.6'), upr: +opt('upr', '0.12'), lcz: +opt('lcz', '0.35'), cpow: +opt('cpow', '2.5'), rpow: +opt('rpow', '3'), cspec: +opt('cspec', '0.4'), kx: +opt('kx', '0.3'), ky: +opt('ky', '0.5'), aolo: +opt('aolo', '0.5'), // the gradient over each face toward the key light, per unit of the head (0: none)
   parts, lines, pitch, topPitch, normals, counts: mesh.counts,
   pupil: female ? [0.2, 0.21, 0.25] : [0.09, 0.09, 0.11],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
@@ -155,10 +157,10 @@ const D = window.DATA, dpr = window.devicePixelRatio;
 const cv = document.getElementById('gl');
 cv.width = 1536 * dpr; cv.height = 1024 * dpr;
 const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true, alpha: true, premultipliedAlpha: false });
-const vs = 'attribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift;' +
-  'varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; void main(){ vec3 q = R*(p - piv); vn = R*n; vd = q - R*(s - piv); vm = m; vy = p.y;' +
+const vs = '#define GRADPOS ' + D.gradpos.toFixed(1) + '\nattribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift;' +
+  'varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; void main(){ vec3 q = R*(p - piv); vn = R*n; vd = GRADPOS > 0.5 ? q - R*(vec3(0.0, 1.1, 0.0) - piv) : q - R*(s - piv); vm = m; vy = p.y;' +
   ' gl_Position = vec4(off + sc*q.xy, -q.z/8.0 - lift, 1.0); }';
-const fs = '#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\n#define RIM ' + D.rim.toFixed(3) + '\n#define UPR ' + D.upr.toFixed(3) + '\n#define CSPEC ' + D.cspec.toFixed(3) + '\n#define KX ' + D.kx.toFixed(3) + '\n#define KY ' + D.ky.toFixed(3) + '\n#define AOLO ' + D.aolo.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; uniform float clipY; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
+const fs = '#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\n#define RIM ' + D.rim.toFixed(3) + '\n#define UPR ' + D.upr.toFixed(3) + '\n#define LCZ ' + D.lcz.toFixed(3) + '\n#define CPOW ' + D.cpow.toFixed(2) + '\n#define RPOW ' + D.rpow.toFixed(2) + '\n#define CSPEC ' + D.cspec.toFixed(3) + '\n#define KX ' + D.kx.toFixed(3) + '\n#define KY ' + D.ky.toFixed(3) + '\n#define AOLO ' + D.aolo.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; uniform float clipY; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
   // the bottom view cuts the shoulders off at clipY, and the cut reads as a flat cap: the inside seen through it
   ' if (vy < clipY) discard; if (clipY > -9.0 && vn.z < 0.0) { gl_FragColor = vec4(vec3(0.68, 0.49, 0.41)*vec3(0.78,0.74,0.72), 1.0); return; }' +
@@ -176,11 +178,11 @@ const fs = '#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixe
   '   float l = 0.82 + 0.18*max(dot(nn, normalize(vec3(-0.4,0.5,0.8))),0.0); gl_FragColor = vec4(rc*l,1.0); return; }' +
   // The light, in view space: a warm key from the front and above, a warm fill from the right, a cool rim from the
   // upper left, planes facing down darker; other materials take it times their colour.
-  ' vec3 Lk = normalize(vec3(KX,KY,0.84)), Lr = normalize(vec3(1.0,0.45,0.05)), Lc = normalize(vec3(-0.7,0.6,0.35)), Lb = normalize(vec3(-0.95,0.25,-0.2));' +
+  ' vec3 Lk = normalize(vec3(KX,KY,0.84)), Lr = normalize(vec3(1.0,0.45,0.05)), Lc = normalize(vec3(-0.7,0.6,LCZ)), Lb = normalize(vec3(-0.95,0.25,-0.2));' +
   ' float dk = max(dot(nn,Lk),0.0), dr = max(dot(nn,Lr),0.0), dc = max(dot(nn,Lc),0.0);' +
   ' vec3 L = vec3(AMB + 0.14*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) * vec3(1.02,0.98,0.94) + KEY*dk*vec3(1.0,0.97,0.92) + WARM*dr*vec3(1.04,0.96,0.84) + UPR*pow(max(dot(nn,normalize(vec3(0.6,0.75,0.3))),0.0),2.0)*vec3(1.08,0.9,0.86);' +
   ' L *= grad;' +
-  ' vec3 c = (base*L + CSPEC*vec3(0.12,0.34,0.6)*pow(dc,6.0)*(0.3+0.7*base.r/0.68) + COOL*vec3(0.2,0.27,0.36)*pow(max(dot(nn,Lb),0.0),2.5)*(0.3+0.7*base.r/0.68) + RIM*vec3(0.5,0.62,0.85)*max(-nn.x,0.0)*pow(1.0-max(nn.z,0.0),3.0)*(0.3+0.7*base.r/0.68)) * mix(AOLO, 1.06, occ*occ);' +
+  ' vec3 c = (base*L + CSPEC*vec3(0.12,0.34,0.6)*pow(dc,6.0)*(0.3+0.7*base.r/0.68) + COOL*vec3(0.2,0.27,0.36)*pow(max(dot(nn,Lb),0.0),CPOW)*(0.3+0.7*base.r/0.68) + RIM*vec3(0.5,0.62,0.85)*max(-nn.x,0.0)*pow(1.0-max(nn.z,0.0),RPOW)*(0.3+0.7*base.r/0.68)) * mix(AOLO, 1.06, occ*occ);' +
   ' gl_FragColor = vec4(c, 1.0); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
@@ -244,6 +246,14 @@ el('lg', 'left:1002px;top:880px;font-size:21px', '≈ 350 – 700 triangles');
 el('lg', 'left:1002px;top:914px;font-size:16px;color:#cdb9ab', 'this head ' + D.counts.head + ' · neck ' + D.counts.neck + ' · stub ' + D.counts.shoulders);
 const SW = ['#9e9999', '#d1a07a', '#b48683'];
 D.legend.forEach((t, i) => { el('sw', 'left:1288px;top:' + (840 + i * 37) + 'px;background:' + SW[i]); el('lg', 'left:1346px;top:' + (842 + i * 37) + 'px', t); });
+// --detail: the back, the rear three-quarter and the top, large, each beside its wireframe, on a light background
+if (D.detail) {
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  document.getElementById('sheet').style.background = '#b9c4cc'; document.getElementById('ui').style.display = 'none';
+  const big = 190;
+  [[yaw(180), 200, 300], [yaw(135), 590, 300], [pitchM(D.topPitch), 980, 300], [yaw(90), 1360, 300]].forEach(([R, cx, cy]) => view({ R, cx, cy, s: big, piv: [0, 1.0, 0.05] }));
+  [[yaw(180), 200, 760], [yaw(135), 590, 760], [pitchM(D.topPitch), 980, 760], [yaw(90), 1360, 760]].forEach(([R, cx, cy]) => view({ R, cx, cy, s: big, piv: [0, 1.0, 0.05], wire: true }));
+}
 window.READY = true;
 `;
 
@@ -258,7 +268,7 @@ await p.addScriptTag({ content: RENDER });
 await p.waitForFunction('window.READY');
 await p.evaluate(() => document.fonts.ready);
 if (normals) await p.evaluate(() => { document.getElementById('sheet').style.background = '#000'; document.getElementById('ui').style.display = 'none'; });
-const file = join(out, normals ? `normals-${who}.png` : `sheet-${who}.png`);
+const file = join(out, normals ? `normals-${who}.png` : DATA.detail ? `detail-${who}.png` : `sheet-${who}.png`);
 await p.locator('#sheet').screenshot({ path: file });
 console.log('wrote', file);
 await b.close();

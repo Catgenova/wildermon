@@ -27,3 +27,6 @@ Geometry and materials
 - No hair, facial hair, eyelashes, clothing, accessories, or decorative elements.
 
 Reference sheet layout: front, three-quarter, profile, rear three-quarter and back in one horizontal row; top and bottom views underneath. Orthographic projection, matching head scale and neutral expression in every view. This is a 3D modeling reference, not separately designed portraits: every view must be the same exact mesh.
+
+Decisions
+- 2026-11-07, the user's decision: the top view stays at the same scale as the other views. The reference's larger top view is not counted against the head.

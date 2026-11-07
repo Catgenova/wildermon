@@ -31,3 +31,7 @@ Include a front-facing wireframe overlay illustrating the major facial polygons 
 Visual Presentation: Use the same muted dark-purple background, warm directional lighting, geometric shading, and organized layout as the male reference sheet.
 
 Important: Every angle must represent the exact same model. Preserve the feminine facial proportions without increasing polygon density or introducing realistic anatomical detail. The female and male heads should look like compatible character models from the same video game.
+
+Decisions
+- 2026-11-07, the user's decision: the top view stays at the same scale as the other views. The reference's larger top view is not counted against the head.
+- 2026-11-07, the user's decision: the female head keeps the same skin tone as the male. Her lighting is judged by the contrast and direction of light on her planes, not by overall brightness against her reference.

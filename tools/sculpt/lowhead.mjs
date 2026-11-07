@@ -3,7 +3,7 @@
 //
 //   node tools/sculpt/lowhead.mjs --who male|female        # prints the triangle counts per part
 //
-// One mesh per head: the head (hand-authored after the references' wireframes, mirrored, plus the ears, nose, brows, eyes, lids and the male's mouth line
+// One mesh per head: the head (hand-authored after the references' wireframes, mirrored, plus the ears, brows, eyes, lids and the male's mouth line
 // as closed pieces set into it), the neck, and a shoulder stub. Units: the head two tall from the chin's underside
 // (y 0) to the crown (y 2), z forward, x the head's left (the viewer's right in the front view), the ear's centre near
 // z 0. Every polygon keeps its own normal when drawn (flat shading); `polys` keeps the quads for the wireframe.
@@ -25,19 +25,22 @@ const mx = (p) => [-p[0], p[1], p[2]];
 // the centre line at x 0 is shared), and one list of faces both heads use, mirrored for the other half. Rings, top to
 // bottom: the crown c; t the skull's top; f the temple and the skull's side and back; b the brow; e under the eyes; k the cheekbones
 // and the nose's base; m the mouth with j the jaw's corner; ch the chin with jl the jaw line; u the chin's flat
-// underside; g the neck's top under the jaw; n6, n7 the nape; nm and nf the neck (nf inside the shoulders).
+// underside; g the neck's top under the jaw; n6 the nape; nb nc nt the nose; nm and nf the neck (nf inside the shoulders).
 export const FACES = [
   // the crown: a flat cap of three facets a side on the top ring a, then a band down to the ring t
   ['c', 'a0', 'a1'], ['c', 'a1', 'a2'], ['c', 'a2', 'a3'],
-  ['a0', 'a1', 't1', 't0'], ['a1', 'a2', 't2', 't1'], ['a2', 'a3', 't4', 't3', 't2'],
+  ['a0', 'a1', 't1', 't0'], ['a1', 'a2', 't2', 't1'], ['a2', 'a3', 't3', 't2'],
   // the forehead: one large plane each side of the centre from the skull's top ring to the brow; the temple
   ['t0', 't1', 'b2', 'b1', 'b0'], ['t1', 'f2', 'b3', 'b2'], ['t1', 't2', 'f3', 'f2'], ['f2', 'b4', 'b3'], ['f2', 'f3', 'b5', 'b4'],
   // the skull's side and back
-  ['t2', 't3', 'f4', 'f3'], ['t3', 't4', 'f5', 'f4'], ['f3', 'f4', 'b6', 'b5'], ['f4', 'f5', 'o7', 'b6'],
+  ['t2', 't3', 'f4', 'f3'], ['f3', 'f4', 'o6', 'e5', 'b5'],
   // the brow down to under the eyes: the nose's root, the eye's socket (inner, outer), the temple, the side, the back
-  ['b0', 'b1', 'e1', 'e0'], ['b1', 'b2', 'e2', 'e1'], ['b2', 'b3', 'e3', 'e2'], ['b3', 'b4', 'e4', 'e3'], ['b4', 'b5', 'e5', 'e4'], ['b5', 'b6', 'o6', 'e5'], ['b6', 'o7', 'o6'],
+  ['b1', 'b2', 'e2', 'e1'], ['b2', 'b3', 'e3', 'e2'], ['b3', 'b4', 'e4', 'e3'], ['b4', 'b5', 'e5', 'e4'],
+  // the nose: one wedge from the brow ridge, its bridge (b0 b1 down to nc nb) one flat plane across the centre line, the
+  // tip nt, a side plane down to the wing k1, the underside back to k0
+  ['b0', 'b1', 'nb', 'nc'], ['nc', 'nb', 'nt'], ['b1', 'nb', 'k1', 'e1'], ['nb', 'k1', 'nt'], ['nt', 'k1', 'k0'],
   // under the eyes down to the cheekbones: the nose, the cheek under the eye, the cheekbone's top, the side, the back
-  ['e0', 'e1', 'k1', 'k0'], ['e1', 'e2', 'k2', 'k1'], ['e2', 'e3', 'k3', 'k2'], ['e3', 'e4', 'k4', 'k3'], ['e4', 'e5', 'k5', 'k4'], ['e5', 'o6', 'n6', 'k5'], ['o6', 'o7', 'n7', 'n6'],
+  ['e1', 'e2', 'k2', 'k1'], ['e2', 'e3', 'k3', 'k2'], ['e3', 'e4', 'k4', 'k3'], ['e4', 'e5', 'k5', 'k4'], ['e5', 'o6', 'n6', 'k5'],
   // the cheekbones down to the mouth: the upper lip, the front of the cheek, the cheek's big plane to the jaw's corner
   ['k0', 'k1', 'm1', 'm0'], ['k1', 'k2', 'm2', 'm1'], ['k2', 'k3', 'j', 'm2'], ['k3', 'k4', 'j'], ['k4', 'k5', 'm5', 'j'],
   // the mouth down to the chin
@@ -45,8 +48,16 @@ export const FACES = [
   // the chin's flat underside and the jaw's underside back to the neck
   ['ch0', 'ch1', 'u1', 'u0'], ['u0', 'u1', 'g1', 'g0'], ['u1', 'ch1', 'jl', 'g1'], ['jl', 'j', 'g2', 'g1'], ['j', 'm5', 'g3', 'g2'], ['m5', 'k5', 'n6', 'g3'],
 ];
+// The back of the skull: large facets that span the centre line (no seam down the middle), fanning round the back's
+// bump bk from the crown to the nape; emitted once, a name with ' the other side's vertex.
+export const SPAN_FACES = [
+  ['a3', "t3'", 't3'],
+  ['bk', 't3', "t3'"], ['bk', "t3'", "f4'"], ['bk', "f4'", "o6'"], ['bk', "o6'", 'o6'], ['bk', 'o6', 'f4'], ['bk', 'f4', 't3'],
+  ['o6', "o6'", "n6'", 'n6'],
+];
+export const SPAN_NECK_FACES = [["n6'", 'n6', 'nm4', 'nm5', "nm4'"]];
 export const NECK_FACES = [
-  ['g0', 'g1', 'nm1', 'nm0'], ['g1', 'g2', 'nm2', 'nm1'], ['g2', 'g3', 'nm3', 'nm2'], ['g3', 'n6', 'nm4', 'nm3'], ['n6', 'n7', 'nm5', 'nm4'],
+  ['g0', 'g1', 'nm1', 'nm0'], ['g1', 'g2', 'nm2', 'nm1'], ['g2', 'g3', 'nm3', 'nm2'], ['g3', 'n6', 'nm4', 'nm3'],
   ['nm0', 'nm1', 'nf1', 'nf0'], ['nm1', 'nm2', 'nf2', 'nf1'], ['nm2', 'nm3', 'nf3', 'nf2'], ['nm3', 'nm4', 'nf4', 'nf3'], ['nm4', 'nm5', 'nf5', 'nf4'],
   ['nf0', 'nf1', 'nfc'], ['nf1', 'nf2', 'nfc'], ['nf2', 'nf3', 'nfc'], ['nf3', 'nf4', 'nfc'], ['nf4', 'nf5', 'nfc'],
 ];
@@ -62,13 +73,14 @@ export const STUB_FACES = [
 export const PRESETS = {
   male: {
     V: {
-      c: [0, 2.09, 0.1],
+      c: [0, 2.09, 0.1], bk: [0, 1.38, -0.75],
       a0: [0, 2.03, 0.4], a1: [0.23, 2.01, 0.23], a2: [0.21, 2.01, -0.15], a3: [0, 2.03, -0.27],
-      t0: [0, 1.86, 0.72], t1: [0.35, 1.85, 0.68], t2: [0.58, 1.88, -0.05], t3: [0.3, 1.88, -0.41], t4: [0.0, 1.9, -0.47],
-      f2: [0.52, 1.5, 0.56], f3: [0.73, 1.47, -0.1], f4: [0.39, 1.5, -0.51], f5: [0.0, 1.5, -0.71],
-      b0: [0, 1.22, 0.97], b1: [0.15, 1.22, 0.96], b2: [0.42, 1.22, 0.935], b3: [0.56, 1.2, 0.74], b4: [0.68, 1.18, 0.22], b5: [0.73, 1.16, -0.2], b6: [0.39, 1.18, -0.57], b7: [0, 1.2, -0.72],
-      e0: [0, 0.98, 0.92], e1: [0.13, 0.97, 0.86], e2: [0.32, 0.93, 0.78], e3: [0.52, 0.95, 0.66], e4: [0.67, 0.95, 0.25], e5: [0.69, 0.92, -0.25], o6: [0.48, 1.1, -0.57], o7: [0, 0.94, -0.71],
-      k0: [0, 0.6, 0.95], k1: [0.13, 0.6, 0.9], k2: [0.33, 0.66, 0.82], k3: [0.6, 0.74, 0.55], k4: [0.64, 0.7, 0.2], k5: [0.6, 0.66, -0.25], n6: [0.45, 0.62, -0.5], n7: [0, 0.62, -0.5],
+      t0: [0, 1.86, 0.72], t1: [0.35, 1.85, 0.7], t2: [0.58, 1.88, -0.05], t3: [0.3, 1.88, -0.41],
+      f2: [0.52, 1.5, 0.56], f3: [0.73, 1.47, -0.1], f4: [0.39, 1.5, -0.51],
+      b0: [0, 1.22, 0.97], b1: [0.1, 1.22, 0.965], b2: [0.42, 1.22, 0.95], b3: [0.56, 1.2, 0.74], b4: [0.68, 1.18, 0.22], b5: [0.73, 1.16, -0.2],
+      e1: [0.13, 0.97, 0.86], e2: [0.32, 0.93, 0.78], e3: [0.52, 0.95, 0.66], e4: [0.67, 0.95, 0.25], e5: [0.69, 0.92, -0.25], o6: [0.48, 0.98, -0.6],
+      nc: [0, 0.7, 1.1], nb: [0.115, 0.7, 1.08], nt: [0, 0.6, 1.13],
+      k0: [0, 0.57, 0.95], k1: [0.14, 0.6, 0.92], k2: [0.33, 0.66, 0.82], k3: [0.6, 0.74, 0.55], k4: [0.64, 0.7, 0.2], k5: [0.6, 0.66, -0.25], n6: [0.45, 0.62, -0.5],
       m0: [0, 0.3, 0.89], m1: [0.16, 0.3, 0.85], m2: [0.4, 0.36, 0.68], j: [0.56, 0.44, 0.25], m5: [0.55, 0.5, -0.15],
       ch0: [0, 0, 0.84], ch1: [0.18, 0, 0.8], jl: [0.4, 0.18, 0.55],
       u0: [0, -0.01, 0.62], u1: [0.19, -0.01, 0.6],
@@ -80,7 +92,6 @@ export const PRESETS = {
       sb0: [0, -0.92, 0.6], sb1: [0.55, -0.92, 0.42], sb2: [0.66, -0.92, -0.06], sb3: [0.52, -0.92, -0.48], sb4: [0, -0.92, -0.56], sbc: [0, -0.92, 0],
     },
     ear: { c: [0.6, 0.84, -0.03], zs: 1.35, tilt: 0.2, s: 1.05, gap: 0.03, flare: 0.33, lift: 0.18, thick: 0.14 },
-    nose: { top: 1.13, tip: 0.6, under: 0.54, wTop: 0.08, wBridge: 0.115, wWing: 0.14, out: 0.1, tipOut: 0.14 },
     brow: { x: [0.17, 0.32, 0.46, 0.56], yb: [1.155, 1.165, 1.16, 1.15], h: [0.085, 0.085, 0.075, 0.06], out: 0.055 },
     eye: { x: 0.31, y: 1.0, w: 0.11, h: 0.09, lid: 0.03, almond: 0 },
     mouth: { y: 0.27, w: 0.15, d: 0.008 },
@@ -90,13 +101,14 @@ export const PRESETS = {
 /** The female head: the same vertices and faces, moved to her proportions. */
 PRESETS.female = {
   V: {
-    c: [0, 2.07, 0.06],
+    c: [0, 2.07, 0.06], bk: [0, 1.38, -0.81],
     a0: [0, 2.02, 0.3], a1: [0.18, 2.0, 0.14], a2: [0.16, 2.0, -0.16], a3: [0, 2.02, -0.26],
-    t0: [0, 1.86, 0.65], t1: [0.31, 1.85, 0.61], t2: [0.52, 1.88, -0.08], t3: [0.27, 1.88, -0.41], t4: [0.0, 1.9, -0.49],
-    f2: [0.49, 1.5, 0.51], f3: [0.69, 1.47, -0.14], f4: [0.36, 1.5, -0.58], f5: [0.0, 1.5, -0.82],
-    b0: [0, 1.22, 0.9], b1: [0.14, 1.22, 0.89], b2: [0.38, 1.22, 0.87], b3: [0.5, 1.2, 0.66], b4: [0.6, 1.16, 0.2], b5: [0.67, 1.15, -0.24], b6: [0.36, 1.18, -0.62], b7: [0, 1.2, -0.78],
-    e0: [0, 0.97, 0.87], e1: [0.12, 0.96, 0.83], e2: [0.31, 0.93, 0.76], e3: [0.48, 0.95, 0.6], e4: [0.575, 0.93, 0.26], e5: [0.6, 0.9, -0.28], o6: [0.43, 1.1, -0.62], o7: [0, 0.94, -0.73],
-    k0: [0, 0.62, 0.92], k1: [0.11, 0.62, 0.86], k2: [0.3, 0.67, 0.78], k3: [0.47, 0.74, 0.48], k4: [0.545, 0.72, 0.2], k5: [0.5, 0.66, -0.22], n6: [0.36, 0.55, -0.36], n7: [0, 0.57, -0.38],
+    t0: [0, 1.86, 0.65], t1: [0.31, 1.85, 0.63], t2: [0.52, 1.88, -0.08], t3: [0.27, 1.88, -0.41],
+    f2: [0.49, 1.5, 0.51], f3: [0.69, 1.47, -0.14], f4: [0.36, 1.5, -0.58],
+    b0: [0, 1.22, 0.9], b1: [0.075, 1.22, 0.9], b2: [0.38, 1.22, 0.88], b3: [0.5, 1.2, 0.66], b4: [0.6, 1.16, 0.2], b5: [0.67, 1.15, -0.24],
+    e1: [0.12, 0.96, 0.83], e2: [0.31, 0.93, 0.76], e3: [0.48, 0.95, 0.6], e4: [0.575, 0.93, 0.26], e5: [0.6, 0.9, -0.28], o6: [0.43, 0.98, -0.65],
+    nc: [0, 0.83, 0.985], nb: [0.085, 0.83, 0.97], nt: [0, 0.75, 1.02],
+    k0: [0, 0.71, 0.9], k1: [0.1, 0.73, 0.86], k2: [0.3, 0.67, 0.78], k3: [0.47, 0.74, 0.48], k4: [0.545, 0.72, 0.2], k5: [0.5, 0.66, -0.22], n6: [0.36, 0.55, -0.36],
     m0: [0, 0.42, 0.86], m1: [0.15, 0.42, 0.82], m2: [0.35, 0.46, 0.6], j: [0.43, 0.6, 0.22], m5: [0.48, 0.57, -0.15],
     ch0: [0, 0.15, 0.8], ch1: [0.08, 0.15, 0.78], jl: [0.26, 0.29, 0.54],
     u0: [0, 0.14, 0.66], u1: [0.09, 0.14, 0.64],
@@ -108,7 +120,6 @@ PRESETS.female = {
     sb0: [0, -0.98, 0.52], sb1: [0.44, -0.98, 0.38], sb2: [0.55, -0.98, -0.06], sb3: [0.42, -0.98, -0.38], sb4: [0, -0.98, -0.46], sbc: [0, -0.98, 0],
   },
   ear: { c: [0.56, 0.77, -0.03], zs: 1.3, tilt: 0.18, s: 0.88, gap: 0.025, flare: 0.3, lift: 0.16, thick: 0.12 },
-  nose: { top: 1.08, tip: 0.75, under: 0.71, wTop: 0.04, wBridge: 0.06, wWing: 0.085, out: 0.08, tipOut: 0.11 },
   brow: { x: [0.18, 0.31, 0.43, 0.54], yb: [1.19, 1.235, 1.235, 1.195], h: [0.045, 0.045, 0.035, 0.022], out: 0.05 },
   eye: { x: 0.345, y: 0.975, w: 0.14, h: 0.13, lid: 0.035, almond: 1 },
 };
@@ -145,6 +156,9 @@ export function buildLowHead(who = 'male') {
     for (const f of NECK_FACES) poly(outward(f.map((n) => ids[s][n])), 'neck', 'neck');
     for (const f of STUB_FACES) poly(outward(f.map((n) => ids[s][n])), 'shoulders', 'neck');
   }
+  const span = (n) => (n.endsWith("'") ? ids[-1][n.slice(0, -1)] : ids[1][n]);
+  for (const f of SPAN_FACES) { const v = outward(f.map(span)); poly(v, 'head', 'skull'); }
+  for (const f of SPAN_NECK_FACES) poly(outward(f.map(span)), 'neck', 'neck');
 
   // Where the face's surface is at (x, y): the front-most hit of a ray along -z on the head.
   const lattice = polys.filter((p) => p.part === 'head').flatMap((p) => tris(p.v, verts));
@@ -171,29 +185,6 @@ export function buildLowHead(who = 'male') {
     poly(s > 0 ? ids : [...ids].reverse(), 'head', region, mat);
     return ids;
   };
-
-  // The nose: a wedge, its bridge one plane, the tip a small point, the underside a flat triangle each side.
-  {
-    const n = P.nose;
-    const top = n.top, tip = n.tip, under = n.under;
-    const zt = surf(0, top), zb = surf(0, tip + 0.08);
-    const b0 = [n.wTop, top, zt + 0.015], b1 = [n.wBridge, tip + 0.08, zb + n.out];
-    const t = [0, tip, zb + n.tipOut];
-    const w = [n.wWing, under + 0.04, surf(n.wWing, under + 0.04) - 0.01];
-    const s0 = [0, under, surf(0, under) - 0.005];
-    const root = [n.wBridge + 0.05, (top + tip) / 2 + 0.06, surf(n.wBridge + 0.05, (top + tip) / 2 + 0.06) - 0.03];
-    const B0 = vert(b0), B0m = vert(mx(b0)), B1 = vert(b1), B1m = vert(mx(b1)), T = vert(t);
-    poly([B0m, B0, B1, B1m], 'head', 'face');
-    poly([B1m, B1, T], 'head', 'face');
-    for (const s of [1, -1]) {
-      const W = vert(flip(w, s)), R = vert(flip(root, s)), S = vert(s0);
-      const bb0 = s > 0 ? B0 : B0m, bb1 = s > 0 ? B1 : B1m;
-      const o = (ids) => poly(s > 0 ? ids : [...ids].reverse(), 'head', 'face');
-      o([bb0, R, W, bb1]);
-      o([bb1, W, T]);
-      o([T, W, S]);
-    }
-  }
 
   // The brows: a strip along the brow's points, its front and top and underside, the ends closed; it stands off the head
   // along the head's outward direction there, so the outer end wraps round the temple.
