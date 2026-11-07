@@ -54,6 +54,8 @@ export interface Material {
   noCrease?: boolean;
   /** Cloth over a low-poly body (`./lowpoly`): lit by the body's light, in its own colour over the skin the light was fitted to. */
   cloth?: boolean;
+  /** Gear in hand on a low-poly body (a sword): lit by the body's light by its brightness only, in its own colour, as its review renders. */
+  gear?: boolean;
 }
 
 /** Where a primitive hangs: one of the rig's bones (`./rig`), or a chain link of a sway chain. */

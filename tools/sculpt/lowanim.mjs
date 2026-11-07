@@ -13,6 +13,11 @@
 // earlier pass: its key poses held, then every beat held, then eased; the files are then named <clip>-<pass>-*.
 // --close 0 leaves out the close-up GIF.
 //
+// A clip that grips what is held in both hands (Clip.grip: the swing) is drawn at work, the long sword in hand
+// (--enchanted: lit), its time the go's (FigurePose.act); its metrics add the sword's faces crossing the body's (the blade
+// and guard against all of it, the grip and pommel against all but the hands), how far its point and its lowest point
+// are off the ground, and the arms' faces crossing the head's and the chest's.
+//
 // writes into <dir>:
 //   <clip>-both.gif     both bodies side by side, front, three-quarter and side, at game zoom
 //   <clip>-close.gif    both bodies front and three-quarter, close up
@@ -29,7 +34,7 @@
 import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -39,7 +44,7 @@ const clipName = opt('clip', 'idle');
 const out = resolve(opt('out', `tmp/lowanim/${clipName}`));
 const zoom = +opt('zoom', '5'), close = +opt('close', '11'), fps = +opt('fps', '10');
 let only = opt('only', '').split(',').filter(Boolean);
-const pass = opt('pass', 'polish'), FILE = pass === 'polish' ? clipName : `${clipName}-${pass}`;
+const pass = opt('pass', 'polish'), ENCH = args.includes('--enchanted'), FILE = (pass === 'polish' ? clipName : `${clipName}-${pass}`) + (ENCH ? '-enchanted' : '');
 // the clip as the pass has it, in the page and in node alike
 const PASS = `
 import * as CLIPMOD from './src/sculpt/anim/clips/${clipName}';
@@ -58,7 +63,7 @@ const nodeMod = join(out, `.anim-${process.pid}.mjs`);
 writeFileSync(nodeMod, await bundle(`${PASS}
 export { CLIPS } from './src/sculpt/anim';
 export { clipLocal } from './src/sculpt/anim/player';
-export { lowSkeleton, lowFigure } from './src/sculpt/lowpoly';
+export { lowSkeleton, lowFigure, lowHeld } from './src/sculpt/lowpoly';
 export { DEFAULT_LOOK } from './src/game/look';
 export { BASE_SPEED, CADENCE, strideAt } from './src/game/player';
 export { strideOf } from './src/sculpt/anim/clip';
@@ -78,7 +83,8 @@ const keyTimes = AN.BEATS && pass === 'blocking' ? new Set(AN.BEATS.filter((b) =
 const keys = (clip.poses?.length ? clip.poses : [{ t: 0, name: 'start' }]).filter((k) => !keyTimes || keyTimes.has(k.t));
 
 /* ---- pictures --------------------------------------------------------------------------------------------------- */
-const GW = 112, GH = 236, CW = 240, CH = 520;
+// (a clip that grips a sword: room for the blade over the head and out ahead)
+const GRIP = !!clip.grip, GW = GRIP ? 250 : 112, GH = GRIP ? 330 : 236, CW = GRIP ? Math.round((250 * close) / zoom) : 240, CH = GRIP ? Math.round((330 * close) / zoom) : 520;
 // the side on and the transition: their own frames, at the game's pace
 const SPEED = AN.BASE_SPEED * 40, SIDE_PX = 1.2 * Math.SQRT2;
 const sideFps = 25, sideN = MOVING ? Math.round((3 * clip.length) * sideFps) : 0;
@@ -93,7 +99,9 @@ import { DEFAULT_LOOK } from './src/game/look';
 import { clipsOn } from './src/sculpt/anim';
 import { viewOf } from './src/render/figure';
 import { walkPhase } from './src/sculpt/anim';
-const MOVING = ${MOVING}, LEN = ${clip.length}, TAU = Math.PI * 2;
+const MOVING = ${MOVING}, LEN = ${clip.length}, TAU = Math.PI * 2, GRIP = ${!!clip.grip};
+/** For a clip that grips: at work with the long sword, the go a run of the clip, at clip time t. */
+const work = (t) => (GRIP ? { working: true, job: 'attack_creature', act: { t, length: LEN }, gear: { weapon: { id: 'long_sword', material: 'iron', enchanted: ${ENCH} } } } : {});
 /** The game's phase that puts a body at clip time t: the walk's (index.ts walkPhase, the body's own stride), or six a second stood. */
 const phaseAt = (t, gender) => (MOVING ? walkPhase(ALL[${JSON.stringify(clipName)}], t, gender) : t * 6);
 // the clock the fades between clips are timed by, set by the transition
@@ -143,7 +151,7 @@ window.shot = (t, cells) => {
   let x = 0;
   for (const [gender, facing, z, w, h, on] of cells) {
     clipsOn(on);
-    drawFigure(g, x + w / 2, h - 14, z, { phase: phaseAt(t, gender), moving: MOVING, gait: 0, facing, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender, hair: 'bald', beard: 'none' } });
+    drawFigure(g, x + w / 2, h - 14, z, { phase: phaseAt(t, gender), moving: MOVING, gait: 0, facing, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender, hair: 'bald', beard: 'none' }, ...work(t) });
     x += w;
   }
   clipsOn(true);
@@ -256,7 +264,20 @@ print(json.dumps(res))
 }
 
 /* ---- metrics ---------------------------------------------------------------------------------------------------- */
+/** The long sword's points (its own frame, game units), its faces (its glow's left out) split into the blade and guard and the grip and pommel, and its point. */
+function swordOf() {
+  const A = JSON.parse(readFileSync(join(ROOT, 'src/sculpt/assets/long_sword.json'), 'utf8')), V = [], T = [];
+  for (let i = 0; i < A.verts.length; i += 3) V.push([A.verts[i], A.verts[i + 1], A.verts[i + 2]]);
+  for (let t = 0; t < A.tris.length; t += 4) if (A.tris[t + 3] < A.glowFrom) T.push({ v: [A.tris[t], A.tris[t + 1], A.tris[t + 2]] });
+  // the blade from where it leaves the guard (tools/sculpt/gear/long_sword.mjs: 520 of the sheet's 1469 px up)
+  const from = (520 / 1469) * A.length;
+  const blade = T.filter((t) => t.v.every((i) => V[i][1] > from)), hilt = T.filter((t) => !t.v.every((i) => V[i][1] > from));
+  let tip = 0; V.forEach((p, i) => { if (p[1] > V[tip][1]) tip = i; });
+  return { A, V, blade, hilt, tip };
+}
+let XP = null;
 if (only.includes('metrics')) {
+  XP = (await import('./lowgarment.mjs')).crossPairs;
   const LR = await import('./lowrig.mjs');
   const RS = await import('./lowrigshot.mjs');
   const report = {};
@@ -281,12 +302,19 @@ if (only.includes('metrics')) {
     const hips = rig.B.names.map((n, i) => (!n.startsWith('arm/') && rig.B.verts[i][1] < chestY && rig.B.verts[i][1] > kneeY ? i : -1)).filter((i) => i >= 0);
     let prev = null, slide = 0, sink = 0, dys = [], worstX = 0, worstFold = 0, regions = {}, seam = 0, step = 0, prevLocal = null, firstLocal = null;
     let gone = 0, goneN = 0, clear = Infinity, touching = 0, clearN = 0;
+    // a clip that grips: the long sword in both hands, its blade and guard, its grip and pommel; the body's hands, head and chest
+    const held = clip.grip && !src ? AN.lowHeld(body) : null, SW = held ? swordOf() : null;
+    const tris = rig.B.tris.map((t) => ({ v: t.v })), domTri = (t) => domOf(t.v[0]);
+    const handT = tris.filter((t) => /^(hand|thumb|fingers|knuckles)/.test(domTri(t))), notHandT = tris.filter((t) => !/^(hand|thumb|fingers|knuckles)/.test(domTri(t)));
+    const armT = tris.filter((t) => t.v.every((i) => rig.B.names[i].startsWith('arm/'))), headT = tris.filter((t) => /^(head|jaw|neck)/.test(domTri(t)) && !t.v.some((i) => rig.B.names[i].startsWith('arm/'))), chestT = tris.filter((t) => /^(spine_03|clavicle)/.test(domTri(t)) && !t.v.some((i) => rig.B.names[i].startsWith('arm/')));
+    const sw = { blade: 0, bladeFrames: 0, hilt: 0, tipMin: Infinity, lowMin: Infinity, tipImpact: null, armsHead: 0, armsChest: 0, armsHeadFrames: 0, worstAt: null };
+    const impactT = clip.events?.find((e) => e.name === 'impact')?.t;
     const ang = (a, b) => { if (!a || !b) return 0; const t = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] + a[4] * b[4] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7] + a[8] * b[8] - 1) / 2; return (Math.acos(Math.max(-1, Math.min(1, t))) * 180) / Math.PI; };
     const I = [1, 0, 0, 0, 1, 0, 0, 0, 1];
     const maxStep = (a, b) => { let m = 0; for (let i = 0; i < Math.max(a.local.length, b.local.length); i++) m = Math.max(m, ang(a.local[i] ?? I, b.local[i] ?? I)); return m; };
     for (let k = 0; k <= M; k++) {
       const t = (k / M) * clip.length;
-      const r = src ? { local: AN.lowFigure(body, { phase: (t / clip.length + 0.25) * 2 * Math.PI, moving: true, gait: 0, facing: 2, swimming: false, working: false, look: { ...AN.DEFAULT_LOOK, gender: body } }), move: [0, 0, 0] } : AN.clipLocal(sk, clip, t);
+      const r = src ? { local: AN.lowFigure(body, { phase: (t / clip.length + 0.25) * 2 * Math.PI, moving: true, gait: 0, facing: 2, swimming: false, working: false, look: { ...AN.DEFAULT_LOOK, gender: body } }), move: [0, 0, 0] } : AN.clipLocal(sk, clip, t, held ?? undefined);
       if (k === 0) firstLocal = r;
       if (prevLocal) { const s = maxStep(prevLocal, r); if (k === M) seam = s; else step = Math.max(step, s); }
       prevLocal = r;
@@ -304,6 +332,20 @@ if (only.includes('metrics')) {
         gone -= P[i][2] - prev[i][2]; goneN++;
       }
       prev = P;
+      if (SW) {
+        // the sword where the right fist holds it, stood as the body is (the same shift onto the ground)
+        const g = sk.gripOf(sk.fk(r.local, r.move), held)[1], lead = SW.A.grip.lead;
+        const Q = SW.V.map((p) => { const d = [(p[0] - lead[0]) / held.scale, (p[1] - lead[1]) / held.scale, (p[2] - lead[2]) / held.scale]; return [g.at[0] + g.R[0] * d[0] + g.R[1] * d[1] + g.R[2] * d[2], g.at[1] + g.R[3] * d[0] + g.R[4] * d[1] + g.R[5] * d[2] + dy, g.at[2] + g.R[6] * d[0] + g.R[7] * d[1] + g.R[8] * d[2]]; });
+        const b = XP(Q, SW.blade, P, tris).length, h = XP(Q, SW.hilt, P, notHandT).length;
+        if (b + h > sw.blade + sw.hilt) sw.worstAt = +t.toFixed(3);
+        sw.blade = Math.max(sw.blade, b); sw.hilt = Math.max(sw.hilt, h); if (b) sw.bladeFrames++;
+        const tipY = (Q[SW.tip][1] - floor) * held.scale, lowY = Math.min(...Q.map((q) => q[1])) - floor;
+        sw.tipMin = Math.min(sw.tipMin, tipY); sw.lowMin = Math.min(sw.lowMin, lowY * held.scale);
+        if (impactT !== undefined && Math.abs(t - impactT) < 0.5 / F) sw.tipImpact = +tipY.toFixed(2);
+        if (process.env.DBG) console.log(t.toFixed(3), "at", g.at.map((v) => v.toFixed(2)).join(), "tip", Q[SW.tip].map((v) => v.toFixed(2)).join(), "tipY", tipY.toFixed(2), "dy", dy.toFixed(3), "floor", floor, "b", b, "h", h);
+        const ah = XP(P, armT, P, headT).length, ac = XP(P, armT, P, chestT).length;
+        sw.armsHead = Math.max(sw.armsHead, ah); sw.armsChest = Math.max(sw.armsChest, ac); if (ah) sw.armsHeadFrames++;
+      }
       if (k % 3 === 0) {
         let near = Infinity;
         for (const a of fore) for (const b of hips) { const d = Math.hypot(P[a][0] - P[b][0], P[a][1] - P[b][1], P[a][2] - P[b][2]); if (d < near) near = d; }
@@ -320,10 +362,11 @@ if (only.includes('metrics')) {
       newCrossingsMax: worstX, foldsMax: worstFold, regionsWorst: worst, regions,
       loopSeamDeg: +seam.toFixed(2), maxStepDeg: +step.toFixed(2), silhouette: src ? undefined : sil[body],
       handsToHipsCm: +(clear * cm).toFixed(1), handsTouchShare: +(touching / clearN).toFixed(2),
+      ...(SW ? { sword: { bladeCrossingsMax: sw.blade, bladeCrossingFrames: sw.bladeFrames, hiltCrossingsMax: sw.hilt, worstAt: sw.worstAt, frames: M, tipMinGame: +sw.tipMin.toFixed(2), lowestGame: +sw.lowMin.toFixed(2), tipAtImpactGame: sw.tipImpact, tipAtImpactCm: sw.tipImpact === null ? null : +((sw.tipImpact / held.scale) * cm).toFixed(1) }, armsHeadCrossingsMax: sw.armsHead, armsHeadFrames: sw.armsHeadFrames, armsChestCrossingsMax: sw.armsChest } : {}),
       ...(MOVING ? { strideGame: +((gone / Math.max(1, goneN)) * M / sk.perGame).toFixed(2), strideWanted: +stride.toFixed(2), gameStride: +(AN.strideAt(0) * AN.UNITS_PER_TILE).toFixed(2), runSeconds: +(stride / (AN.BASE_SPEED * AN.UNITS_PER_TILE)).toFixed(3), strideCm: +((gone / Math.max(1, goneN)) * M * cm).toFixed(1) } : {}),
     };
     const s = report[key];
-    console.log(`${clipName} ${key}: slide ${s.slideCmPerFrame} cm/frame (${+F.toFixed(1)} fps${MOVING ? ', against the ground' : ''})${MOVING ? `, stride ${s.strideGame} game units (${s.strideCm} cm; keyed ${s.strideWanted}, the game's own walk ${s.gameStride}; a stride every ${s.runSeconds} s at the game's pace)` : ''}, hands to hips ≥${s.handsToHipsCm} cm (touching ${s.handsTouchShare}), sink ${s.sinkCm} cm, grounding moves ${s.groundingRangeCm} cm, new crossings ≤${s.newCrossingsMax}, folds ≤${s.foldsMax}, seam ${s.loopSeamDeg}° (largest step ${s.maxStepDeg}°), worst regions: ${worst.join('; ')}${s.silhouette ? `, silhouette ${s.silhouette.heightPx[0]}-${s.silhouette.heightPx[1]} px tall, arms clear ${s.silhouette.armsClear}, ≤${s.silhouette.pxMovedMax} px moved` : ''}`);
+    console.log(`${clipName} ${key}: slide ${s.slideCmPerFrame} cm/frame (${+F.toFixed(1)} fps${MOVING ? ', against the ground' : ''})${MOVING ? `, stride ${s.strideGame} game units (${s.strideCm} cm; keyed ${s.strideWanted}, the game's own walk ${s.gameStride}; a stride every ${s.runSeconds} s at the game's pace)` : ''}, hands to hips ≥${s.handsToHipsCm} cm (touching ${s.handsTouchShare}), sink ${s.sinkCm} cm, grounding moves ${s.groundingRangeCm} cm, new crossings ≤${s.newCrossingsMax}, folds ≤${s.foldsMax}, seam ${s.loopSeamDeg}° (largest step ${s.maxStepDeg}°), worst regions: ${worst.join('; ')}${s.sword ? `, sword: blade x ≤${s.sword.bladeCrossingsMax} (${s.sword.bladeCrossingFrames}/${M} frames), grip/pommel x ≤${s.sword.hiltCrossingsMax} (worst at ${s.sword.worstAt}s), point ≥${s.sword.tipMinGame} gu off the ground (at impact ${s.sword.tipAtImpactGame} gu, ${s.sword.tipAtImpactCm} cm), lowest ${s.sword.lowestGame} gu; arms x head ≤${s.armsHeadCrossingsMax} (${s.armsHeadFrames} frames), arms x chest ≤${s.armsChestCrossingsMax}` : ''}${s.silhouette ? `, silhouette ${s.silhouette.heightPx[0]}-${s.silhouette.heightPx[1]} px tall, arms clear ${s.silhouette.armsClear}, ≤${s.silhouette.pxMovedMax} px moved` : ''}`);
   }
   writeFileSync(join(out, `${FILE}-metrics.json`), JSON.stringify(report, null, 1));
   await RS.closeBrowser?.();

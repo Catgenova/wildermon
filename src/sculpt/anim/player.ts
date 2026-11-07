@@ -7,9 +7,9 @@
  * `poseAt` samples one clip at a time with nothing kept between frames, which is all a loop such as the idle needs; a
  * `ClipPlayer` keeps the layers and their fades for a body drawn frame after frame.
  */
-import { UPPER, eventsBetween, sampleClip, sampleFeet, stanceOf, strideOf, wrap, type Clip } from './clip';
+import { UPPER, eventsBetween, fitTime, runsOf, sampleClip, sampleFeet, stanceOf, strideOf, wrap, type Clip } from './clip';
 import { QI, add, qmat, qmul, quat, scl, slerp, type M3, type Q, type V } from './math';
-import type { Plant, Pose, Skeleton } from './skeleton';
+import type { Held, Plant, Pose, Skeleton } from './skeleton';
 
 /** A clip's pose at time t on a skeleton: its turns and shift with the body's corrections, its breathing added. */
 export function poseAt(sk: Skeleton, c: Clip, t: number, o: { breath?: boolean } = {}): Pose {
@@ -47,9 +47,9 @@ export function plantAt(sk: Skeleton, c: Clip, t: number): Plant | undefined {
   return sk.step(base, feet, strideOf(c, sk.body), c.bodies?.[sk.body]?.feet?.in);
 }
 
-/** A clip at time t on a body, finished: the local turns its draw wants and the body's shift. */
-export function clipLocal(sk: Skeleton, c: Clip, t: number): { local: Array<M3 | undefined>; move: V } {
-  return sk.finish(poseAt(sk, c, t), { plant: plantAt(sk, c, t), armsOut: c.bodies?.[sk.body]?.armsOut });
+/** A clip at time t on a body, finished: the local turns its draw wants and the body's shift; `held`, what is in both hands. */
+export function clipLocal(sk: Skeleton, c: Clip, t: number, held?: Held): { local: Array<M3 | undefined>; move: V } {
+  return sk.finish(poseAt(sk, c, t), { plant: plantAt(sk, c, t), armsOut: c.bodies?.[sk.body]?.armsOut, grip: c.grip, held });
 }
 
 /**
@@ -109,8 +109,11 @@ export function blendLocal(a: { local: Array<M3 | undefined>; move: V }, b: { lo
   return { local, move: [a.move[0] + (b.move[0] - a.move[0]) * w, a.move[1] + (b.move[1] - a.move[1]) * w, a.move[2] + (b.move[2] - a.move[2]) * w] };
 }
 
-/** One clip playing: where it is, how fast, and its weight fading toward `to` at `speed` a second. */
-interface Track { clip: Clip; t: number; rate: number; w: number; to: number; speed: number }
+/**
+ * One clip playing: where it is, how fast, and its weight fading toward `to` at `speed` a second; for a clip fitted to an
+ * action (`ClipPlayer.fit`) with spans to stretch, the seconds played and each run's length, its time found from them.
+ */
+interface Track { clip: Clip; t: number; rate: number; w: number; to: number; speed: number; played?: number; run?: number }
 const track = (clip: Clip, t = 0, rate = 1): Track => ({ clip, t, rate, w: 1, to: 1, speed: 0 });
 
 /**
@@ -125,6 +128,8 @@ export class ClipPlayer {
   private upper: Track | null = null;
   private adds: Track[] = [];
   private look: [number, number] = [0, 0];
+  /** What is held in both hands, for a clip that grips it (`Clip.grip`). */
+  held: Held | undefined;
   constructor(readonly sk: Skeleton) {}
 
   /** Plays a clip as the base, faded in over `fade` seconds from whatever played before; `at` its start time. */
@@ -150,16 +155,27 @@ export class ClipPlayer {
   /** Turns the head to look: yaw to the body's left and pitch down, degrees. */
   lookTo(yaw: number, pitch: number): void { this.look = [yaw, pitch]; }
 
-  /** The base clip played to fit an action's length: a one-shot stretched to it, a loop to a whole number of runs in it. */
-  fit(seconds: number): void {
+  /**
+   * The base clip played to fit an action's length: a one-shot stretched to it, a loop to a whole number of runs in it.
+   * A clip with spans to stretch (`Clip.stretch`: its holds) takes the difference up in them, its fast beats played as
+   * keyed (`fitTime`); any other is played faster or slower throughout. `most` caps the runs (1: one blow a go).
+   */
+  fit(seconds: number, most = Infinity): void {
     if (!this.base || seconds <= 0) return;
-    const c = this.base.clip, runs = c.loop ? Math.max(1, Math.round(seconds / c.length)) : 1;
-    this.base.rate = (runs * c.length) / seconds;
+    const b = this.base, c = b.clip, { runs, run } = runsOf(c, seconds, most);
+    if (c.stretch?.length) { b.played = (b.t / c.length) * run; b.run = run; b.rate = 1; return; }
+    b.played = b.run = undefined;
+    b.rate = (runs * c.length) / seconds;
   }
   /** The base loop's rate for a speed: one run of the clip covers `stride` (distance a run of it travels). */
-  matchSpeed(speed: number, stride: number): void { if (this.base) this.base.rate = stride > 0 ? (speed * this.base.clip.length) / stride : 1; }
+  matchSpeed(speed: number, stride: number): void { if (this.base) { this.base.run = this.base.played = undefined; this.base.rate = stride > 0 ? (speed * this.base.clip.length) / stride : 1; } }
   /** The base loop put at a phase of its cycle (0 to 1, as the game's walk phase over a turn). */
-  syncPhase(phase: number): void { if (this.base) this.base.t = (((phase % 1) + 1) % 1) * this.base.clip.length; }
+  syncPhase(phase: number): void {
+    const b = this.base;
+    if (!b) return;
+    const u = ((phase % 1) + 1) % 1;
+    if (b.run) { b.played = u * b.run; b.t = fitTime(b.clip, b.played, b.run); } else b.t = u * b.clip.length;
+  }
 
   /** Steps the clips by dt seconds; the events the base and upper clips crossed. */
   update(dt: number): string[] {
@@ -167,7 +183,8 @@ export class ClipPlayer {
     for (const k of [this.base, this.upper, this.last, ...this.adds]) {
       if (!k) continue;
       const t0 = k.t;
-      k.t += dt * k.rate;
+      if (k.run) { k.played = (k.played ?? 0) + dt; k.t = fitTime(k.clip, k.played, k.run); }
+      else k.t += dt * k.rate;
       if (k === this.base || k === this.upper) ev.push(...eventsBetween(k.clip, t0, k.t));
       if (k.speed) { k.w += Math.sign(k.to - k.w) * Math.min(Math.abs(k.to - k.w), k.speed * dt); if (k.w === k.to) k.speed = 0; }
     }
@@ -192,6 +209,6 @@ export class ClipPlayer {
     if (this.look[0] || this.look[1]) addPose(p, lookAt(sk, this.look[0], this.look[1]), 1);
     // the feet planted where the clip mostly playing stands them
     const lead = this.last && fw < 0.5 ? this.last : this.base;
-    return sk.finish(p, { plant: plantAt(sk, lead.clip, lead.t), armsOut: lead.clip.bodies?.[sk.body]?.armsOut });
+    return sk.finish(p, { plant: plantAt(sk, lead.clip, lead.t), armsOut: lead.clip.bodies?.[sk.body]?.armsOut, grip: lead.clip.grip, held: this.held });
   }
 }

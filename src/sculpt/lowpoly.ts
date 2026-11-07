@@ -14,11 +14,17 @@
  * skinned to the body's bones and its own (the cape's, appended after the body's, each driven from the body's pose by
  * `liftOf`, the 'lift' rule of lowgarment.mjs), lit by the same light in its own colours, inked with the body as one
  * silhouette.
+ *
+ * In both hands while a clip grips it (`./anim` Clip.grip, `heldIn`), the long sword (`assets/long_sword.json`,
+ * `tools/sculpt/lowgear.mjs` gearAsset): laid at rest on the right hand's socket (its grip's lead point at the fist,
+ * its axes the socket's) and skinned wholly to that hand, the left hand put on its grip by the clip player; lit by the
+ * body's light in its own colours, its engraving lit when enchanted (its glow left to the renderer's bloom).
  */
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
 import MALE_SHAWL from './assets/lowshawl-male.json';
 import FEMALE_SHAWL from './assets/lowshawl-female.json';
+import LONG_SWORD from './assets/long_sword.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
 import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
@@ -29,8 +35,8 @@ import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, 
 import { humanProportions } from './human';
 import { SH_TERMS, type LowLight, type SculptDraw } from './gl';
 import type { Material } from './sdf';
-import { animate } from './anim';
-import { skeleton, type AnimAsset, type Skeleton } from './anim/skeleton';
+import { animate, heldIn } from './anim';
+import { skeleton, type AnimAsset, type Held, type Skeleton } from './anim/skeleton';
 
 type M3 = number[];
 type V = [number, number, number];
@@ -58,6 +64,20 @@ export interface GarmentAsset {
   who: string; base: number; mats: string[]; colours: Array<[number, number, number]>;
   verts: number[]; polys: Array<[number[], number]>; tris: number[]; weights: number[][]; bones: GarmentBone[];
 }
+
+/**
+ * A prop held in the hand as `tools/sculpt/lowgear.mjs` gearAsset writes it: vertices in its own frame (game units; y from
+ * the pommel's point to the point), polygons (corners, material) and triangles (three corners and the polygon), the
+ * polygons from `glowFrom` on its glow (drawn only enchanted); its materials plain and enchanted (kind 0 lit, 1 unlit, 2
+ * glow); its grip along y; each body's hand sockets at rest and its game units to a mesh unit.
+ */
+interface PropAsset {
+  id: string; length: number; verts: number[]; polys: Array<[number[], number]>; tris: number[]; glowFrom: number;
+  plain: Array<{ c: string; kind: number }>; enchanted: Array<{ c: string; kind: number }>;
+  grip: { lead: V; second: V };
+  sockets: Record<'male' | 'female', Record<'l' | 'r', { bone: string; o: V; R: M3; curl?: Record<string, [number, number, number]> }>>; scale: Record<'male' | 'female', number>;
+}
+const SWORD = LONG_SWORD as unknown as PropAsset;
 
 /* ---- 3x3 rotations (row-major) and quaternions [w, x, y, z], as lowrig.mjs ------------------------------------- */
 const I3: M3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -166,12 +186,14 @@ export function garmentFrames(body: ReadonlyArray<{ R: M3; head: V }>, own: read
 const hexOf = (c: readonly number[]): string => `#${c.map((x) => Math.round(Math.max(0, Math.min(1, x)) * 255).toString(16).padStart(2, '0')).join('')}`;
 /** Where a garment's materials start among a low-poly body's: after the body's own (`bodyMaterials`, indexed by `M`). */
 const GARMENT_MAT = Object.keys(M).length;
+/** Where the sword's materials start: after the garment's, plain and then enchanted. */
+const SWORD_MAT = GARMENT_MAT + (MALE_SHAWL as unknown as GarmentAsset).colours.length;
 
 /**
  * One body: its asset, the figure's proportions it is posed with, its height as a share of the base man's, and the
  * garment it can wear (its own bones posed with the body's always; drawn when the bake is asked for with it).
  */
-function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset): { baked: (dressed: boolean) => Baked; bones: (pose: FigurePose) => Float32Array; skeleton: Skeleton; figure: (pose: FigurePose) => Array<M3 | undefined> } {
+function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset): { baked: (dressed: boolean, sword?: 'plain' | 'enchanted') => Baked; bones: (pose: FigurePose) => Float32Array; skeleton: Skeleton; held: Held; figure: (pose: FigurePose) => Array<M3 | undefined> } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   if (garment.base !== BONES.length) throw new Error(`garment for ${garment.base} bones on a body of ${BONES.length}`);
@@ -184,6 +206,9 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
   const T = A.T;
   /** The body as the clip player sees it, the clips authored in the man's bone frames, its height the game's. */
   const SK = skeleton(A as unknown as AnimAsset, MALE_ASSET as unknown as AnimAsset, heightOf(humanProportions(0)) * share);
+  /** The sword as this body holds it: its sockets, its grip and its point along it, its scale. */
+  const WHO = (A as unknown as { who?: string }).who === 'female' ? 'female' : 'male';
+  const HELD: Held = { sockets: SWORD.sockets[WHO], lead: SWORD.grip.lead[1], second: SWORD.grip.second[1], tip: SWORD.length, scale: SWORD.scale[WHO] };
 
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
   function posed(local: Array<M3 | undefined>, move: V = [0, 0, 0]): Frame[] {
@@ -281,13 +306,13 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
   const toGame = (p: V): V => { const s = scale(), q = mv(T, sub(p, FLOOR)); return [q[0] * s, q[1] * s, q[2] * s]; };
   const vert = (i: number): V => [A.verts[i * 3], A.verts[i * 3 + 1], A.verts[i * 3 + 2]];
 
-  const BAKED: Partial<Record<'bare' | 'dressed', Baked>> = {};
+  const BAKED: Record<string, Baked> = {};
   /**
    * The body, and the garment over it when `dressed`, laid out for the GPU in one bake: every polygon its own corners,
    * each with the polygon's normal, so it is drawn flat.
    */
-  function lowBaked(dressed: boolean): Baked {
-    const key = dressed ? 'dressed' : 'bare', had = BAKED[key];
+  function lowBaked(dressed: boolean, sword?: 'plain' | 'enchanted'): Baked {
+    const key = `${dressed ? 'dressed' : 'bare'}|${sword ?? ''}`, had = BAKED[key];
     if (had) return had;
     const t0 = performance.now();
     const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
@@ -329,6 +354,15 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
     const MATS = [M.skin, M.hair, M.pupil];
     lay(A.verts, A.polys, A.tris, A.weights, (pi) => MATS[A.polys[pi][1]] ?? M.skin);
     if (dressed) lay(garment.verts, garment.polys, garment.tris, garment.weights, (pi) => GARMENT_MAT + garment.polys[pi][1]);
+    if (sword) {
+      // laid at rest on the right hand's socket, all of it on that hand; its glow's polygons left out
+      const so = SWORD.sockets[WHO].r, hand = AT.get(so.bone) as number, k = 1 / SWORD.scale[WHO], g = SWORD.grip.lead, V3s: number[] = [];
+      for (let i = 0; i < SWORD.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(SWORD.verts[i] - g[0]) * k, (SWORD.verts[i + 1] - g[1]) * k, (SWORD.verts[i + 2] - g[2]) * k])));
+      const T3: number[] = [];
+      for (let t = 0; t < SWORD.tris.length; t += 4) if (SWORD.tris[t + 3] < SWORD.glowFrom) T3.push(SWORD.tris[t], SWORD.tris[t + 1], SWORD.tris[t + 2], SWORD.tris[t + 3]);
+      const off = SWORD_MAT + (sword === 'enchanted' ? SWORD.plain.length : 0);
+      lay(V3s, SWORD.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + SWORD.polys[pi][1]);
+    }
     return (BAKED[key] = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) });
   }
 
@@ -352,7 +386,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
   /** The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole. */
   function lowBones(pose: FigurePose): Float32Array {
     // a clip where the state has one (./anim), else the figure's pose on the rig
-    const { local, move } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()));
+    const { local, move } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), heldIn(pose) === SWORD.id ? HELD : undefined);
     const Fb = posed(local, move), F = [...Fb, ...garmentFrames(BONES, garment.bones, Fb)];
     // each bone's skinning turn and shift in the mesh's frame: v -> S v + t
     const S = F.map((f, i) => mm(f.W, tr(ALL[i].R)));
@@ -375,7 +409,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
     return out;
   }
 
-  return { baked: lowBaked, bones: lowBones, skeleton: SK, figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
+  return { baked: lowBaked, bones: lowBones, skeleton: SK, held: HELD, figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
 }
 
 const BODIES = {
@@ -384,6 +418,8 @@ const BODIES = {
 };
 /** The garment's materials after the body's (both shawls share them), lit by the body's light in their own colours. */
 const GARMENT_MATS: Material[] = (MALE_SHAWL as unknown as GarmentAsset).colours.map((c) => ({ colour: hexOf(c), cloth: true }));
+/** The sword's materials, plain and then enchanted: lit by the body's light by brightness in its own colours, or unlit (and so glowing in the bloom). */
+const SWORD_MATS: Material[] = [...SWORD.plain, ...SWORD.enchanted].map((m) => (m.kind === 0 ? { colour: m.c, gear: true } : { colour: m.c, emissive: true }));
 /** The skin colour the bodies' light was fitted to (`tools/sculpt/lowlight.py`), red, green and blue nought to one: a cloth's colour over it tints the light. */
 const FIT_SKIN: [number, number, number] = [0.68, 0.49, 0.41];
 
@@ -404,6 +440,8 @@ function toneOf(materials: Material[]): [number, number, number] {
 
 /** A body's skeleton as the clip player poses it in the game (for the authoring tools). */
 export const lowSkeleton = (body: 'man' | 'woman'): Skeleton => BODIES[body].skeleton;
+/** The long sword as a body holds it in both hands (for the authoring tools). */
+export const lowHeld = (body: 'man' | 'woman'): Held => BODIES[body].held;
 /** A body's local turns for a pose as the figure's pose maps onto it, with no clip (for the authoring tools to compare). */
 export const lowFigure = (body: 'man' | 'woman', pose: FigurePose): Array<M3 | undefined> => BODIES[body].figure(pose);
 
@@ -424,6 +462,7 @@ function materialsOf(look: Look): Material[] {
   if (!out) {
     out = [...body];
     GARMENT_MATS.forEach((m, k) => { (out as Material[])[GARMENT_MAT + k] = m; });
+    SWORD_MATS.forEach((m, k) => { (out as Material[])[SWORD_MAT + k] = m; });
     if (DRESSED.size > 64) DRESSED.clear();
     DRESSED.set(key, out);
   }
@@ -436,5 +475,6 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
   const materials = materialsOf(look), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
-  return { baked: body.baked(wearsShawl(pose)), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
+  const sword = heldIn(pose) === SWORD.id ? (pose.gear?.weapon?.enchanted ? 'enchanted' : 'plain') : undefined;
+  return { baked: body.baked(wearsShawl(pose), sword), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
 }

@@ -46,7 +46,10 @@ export function passOf(c: Clip, beats: Beat[], pass: 'blocking' | 'breakdowns' |
   const bs = beats.filter((b) => pass !== 'blocking' || b.stage === 'key').map((b) => (stepped ? { ...b, ...step, per: undefined } : b));
   const accents = pass === 'blocking' ? undefined : Object.fromEntries(Object.entries(c.accents ?? {}).map(([k, keys]) => [k, keys.map((key) => (stepped ? { ...key, ...step } : key))]));
   const { footKeys, ...k } = poseToPose(bs, { length: c.length, loop: c.loop });
-  return { ...c, ...k, feet: c.feet && footKeys ? { stride: c.feet.stride, ...footKeys } : c.feet, accents, breath: undefined };
+  // a body's correction tracks as the beats are: only at the passes' beats, stepped where they are
+  const at = new Set(bs.map((b) => b.t));
+  const bodies = c.bodies && Object.fromEntries(Object.entries(c.bodies).map(([who, f]) => [who, f?.tracks ? { ...f, tracks: Object.fromEntries(Object.entries(f.tracks).map(([bone, keys]) => [bone, keys.filter((key) => at.has(key.t)).map((key) => (stepped ? { ...key, ...step } : key))])) } : f]));
+  return { ...c, ...k, feet: c.feet && footKeys ? { stride: c.feet.stride, ...footKeys } : c.feet, accents, bodies, breath: undefined };
 }
 
 /** Key poses as tracks: every bone keyed at every beat, each bone's keys shifted by its `lag` (seconds; a loop wrapped). */

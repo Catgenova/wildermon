@@ -21,9 +21,10 @@ import type { Euler } from './math';
  * - `inOut`: eased out of the last key and into this one (smoothstep);
  * - `hold`: held at the last key for `hold` of the way (0.6 if not given), then popped into this one fast and settled;
  * - `back`: overshoots this key by `back` of the change (0.18 if not given) and settles onto it;
- * - `out`: fast away from the last key, slowing into this one.
+ * - `out`: fast away from the last key, slowing into this one;
+ * - `in`: slow away from the last key, gathering speed into this one (a blow landing).
  */
-export type EaseName = 'linear' | 'inOut' | 'hold' | 'back' | 'out';
+export type EaseName = 'linear' | 'inOut' | 'hold' | 'back' | 'out' | 'in';
 export interface Ease { ease?: EaseName; hold?: number; back?: number }
 
 /** A key: at time `t` seconds, the value, and how it is reached. */
@@ -36,6 +37,8 @@ export type Mask = 'full' | 'upper' | 'additive';
 export interface Correction {
   /** Turns added to the authored turns, per bone, degrees. */
   add?: Record<string, Euler>;
+  /** Turns added over time, per bone, degrees (keyed as the clip's own tracks): a key pose put right for this body alone. */
+  tracks?: Record<string, Array<Key<Euler>>>;
   /** Scales on the authored turns, per bone (1: as authored): one for all three, or one each for rx, ry, rz. */
   scale?: Record<string, number | Euler>;
   /** A scale on the `move` keys: one for all three, or one each across, up and forward. */
@@ -48,6 +51,9 @@ export interface Correction {
    */
   feet?: { in?: number; lift?: number; stride?: number };
 }
+
+/** Both hands on one handle: see `Clip.grip`. */
+export interface Grip { ground?: number }
 
 /** A foot's channels as a clip keys them (`Clip.feet`). */
 export type FootChannel = 'z' | 'lift' | 'pitch';
@@ -86,6 +92,18 @@ export interface Clip {
    * the body over (`./index.ts` clipFor), so a foot keyed back at a steady rate stays where it was put, at any pace.
    */
   feet?: { stride: number; l: FootKeys; r: FootKeys };
+  /**
+   * Both hands on what is held (`./skeleton.ts` finish, its `Held`: the sword's grip, or a handle when nothing says): the
+   * right arm as keyed, its fist the lead (nearer the head or the guard), the left reached onto the grip below it (two-bone
+   * IK, its elbow kept on the side it is keyed on) and closed on it as its socket says. The point kept `ground` game units
+   * off the ground by turning the right wrist up.
+   */
+  grip?: Grip;
+  /**
+   * The spans (seconds, within the clip) that take up the time when a clip is fitted to an action's length (`fitTime`):
+   * the holds, so the fast beats between them keep their speed.
+   */
+  stretch?: Array<[number, number]>;
 }
 
 /** The bones a clip masked `upper` moves: the spine above the waist, the neck, the head and the arms. */
@@ -97,6 +115,7 @@ export function eased(u: number, e: Ease): number {
   switch (e.ease ?? 'inOut') {
     case 'linear': return u;
     case 'out': return 1 - (1 - u) * (1 - u) * (1 - u);
+    case 'in': return u * u;
     case 'hold': {
       const h = e.hold ?? 0.6;
       if (u <= h) return 0;
@@ -176,6 +195,10 @@ export function sampleClip(c: Clip, t: number, body?: 'man' | 'woman'): { rot: R
     const e = rot[bone] ?? [0, 0, 0];
     rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]];
   }
+  for (const [bone, keys] of Object.entries(fix?.tracks ?? {})) {
+    const d = sampleKeys(keys, tt, c.length, c.loop), e = rot[bone] ?? [0, 0, 0];
+    rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]];
+  }
   for (const [bone, d] of Object.entries(fix?.add ?? {})) { const e = rot[bone] ?? [0, 0, 0]; rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]]; }
   return { rot, move: scaled(c.move ? sampleKeys(c.move, tt, c.length, c.loop) : [0, 0, 0], fix?.move) };
 }
@@ -198,6 +221,45 @@ export function sampleFeet(c: Clip, t: number, body?: 'man' | 'woman'): [Foot, F
   const tt = wrap(c, t), lift = (body && c.bodies?.[body]?.feet?.lift) ?? 1;
   const one = (k: FootKeys): Foot => ({ z: sampleKey(k.z, tt, c.length, c.loop), lift: sampleKey(k.lift, tt, c.length, c.loop) * lift, pitch: sampleKey(k.pitch, tt, c.length, c.loop) });
   return [one(c.feet.l), one(c.feet.r)];
+}
+
+/** The shortest a span of `Clip.stretch` is squeezed to (a share of its length) before the rest of the clip is. */
+const SQUEEZE = 0.35;
+/**
+ * A clip's time `played` seconds in when each run of it takes `run` seconds: the spans of `Clip.stretch` lengthened or
+ * shortened to make up the difference, the rest played as keyed; a clip with none, or squeezed past what its spans can
+ * give, scaled evenly. Counted on over runs (a loop's second run from `length`), so events are crossed in order.
+ */
+export function fitTime(c: Clip, played: number, run: number): number {
+  const L = c.length;
+  if (run <= 0) return played;
+  const n = Math.floor(played / run), u = played - n * run;
+  const spans = (c.stretch ?? []).map(([a, b]) => [Math.max(0, Math.min(L, a)), Math.max(0, Math.min(L, b))]).filter(([a, b]) => b > a).sort((x, y) => x[0] - y[0]);
+  const S = spans.reduce((s, [a, b]) => s + b - a, 0);
+  // seconds played per second of the clip: in the spans (k) and out of them (r)
+  let k = run / L, r = run / L;
+  if (S > 0 && S < L) {
+    const extra = run - L;
+    if (extra >= -S * (1 - SQUEEZE)) { k = (S + extra) / S; r = 1; }
+    else { k = SQUEEZE; r = (run - S * SQUEEZE) / (L - S); }
+  }
+  // the clip's pieces in order, in and out of the spans, walked until `u` seconds are played
+  let clip = 0, left = u;
+  const pieces: Array<[number, number]> = [];
+  for (const [a, b] of spans) { if (a > clip) pieces.push([a - clip, r]); pieces.push([b - a, k]); clip = b; }
+  if (clip < L) pieces.push([L - clip, r]);
+  clip = 0;
+  for (const [len, rate] of pieces) {
+    const dur = len * rate;
+    if (left <= dur) return n * L + clip + (rate > 0 ? left / rate : 0);
+    left -= dur; clip += len;
+  }
+  return n * L + L;
+}
+/** The runs of a loop fitted into an action of `seconds`, and each run's length: as many whole runs as come nearest. */
+export function runsOf(c: Clip, seconds: number, most = Infinity): { runs: number; run: number } {
+  const runs = c.loop ? Math.max(1, Math.min(most, Math.round(seconds / c.length))) : 1;
+  return { runs, run: seconds / runs };
 }
 
 /** The events a clip passes from time a to time b (b after a; a loop's wrap counted). */

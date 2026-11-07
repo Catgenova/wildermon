@@ -2357,6 +2357,8 @@ export interface FigurePose {
   look?: Look;
   emote?: string;
   emoteT?: number;
+  /** For a body `working`, where it is in the go of its job and how long a go takes, seconds, when known (a sculpted figure's clip is fitted to it). */
+  act?: { t: number; length: number };
   /**
    * Who this is, for a body drawn frame after frame: with it, going from
    * standing to walking, into the water or down to work is a blend over a
@@ -6380,6 +6382,8 @@ export interface GearPiece {
   material?: string;
   /** The dye's colour, as `#rrggbb`. */
   dye?: string;
+  /** Enchanted: a sculpted figure's sword drawn with its engraving lit. */
+  enchanted?: boolean;
 }
 export type GearSlot = 'head' | 'chest' | 'arms' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel';
 export type GearLook = Partial<Record<GearSlot, GearPiece>>;

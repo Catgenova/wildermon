@@ -6,8 +6,8 @@
  * The mesh's frame: x the body's left, y up, z forward. The helpers (`kind: 'helper'`) are left to `../lowpoly.ts`
  * `posed`, which drives them from the posed bones as it always has.
  */
-import { add, axisAngle, between, col, cross, dot, euler, I3, mm, mv, quat, qmat, slerp, sub, tr, type Euler, type M3, type Q, type V } from './math';
-import type { Foot } from './clip';
+import { add, axisAngle, between, col, cross, dot, euler, I3, len, mm, mv, quat, qmat, scl, slerp, sub, tr, unit, type Euler, type M3, type Q, type V } from './math';
+import type { Foot, Grip } from './clip';
 
 export interface AnimBone { name: string; p: number; kind: 'control' | 'helper'; head: V; R: M3 }
 export interface AnimAsset {
@@ -48,8 +48,13 @@ export interface Skeleton {
   world(bone: number, axis: V, deg: number): Q;
   /** The control bones' world turns and heads for local turns (bone index -> 3x3) and a shift. */
   fk(local: Array<M3 | undefined>, move: V): Frame[];
-  /** The procedural layer on a pose: arms kept out (by `armsOut` more than the body's own), feet planted; locals out. */
-  finish(pose: Pose, o?: { plant?: Plant; armsOut?: number }): { local: Array<M3 | undefined>; move: V };
+  /**
+   * The procedural layer on a pose: arms kept out (by `armsOut` more than the body's own), or for both hands on one
+   * handle (`grip`, `./clip.ts` Clip.grip) the left reached to the right's handle instead; feet planted; locals out.
+   */
+  finish(pose: Pose, o?: { plant?: Plant; armsOut?: number; grip?: Grip; held?: Held }): { local: Array<M3 | undefined>; move: V };
+  /** Where each fist closes on what is held (or a handle): its socket's place and frame, and the grip's way toward the thumb. */
+  gripOf(F: Frame[], held?: Held): Array<{ at: V; R: M3; way: V }>;
   /** Where a pose stands its feet. */
   plantOf(pose: Pose): Plant;
   /** Mesh units to one of the game's (`../../render/iso` UNITS_PER_TILE to a tile): this body's height over its height in the game. */
@@ -65,6 +70,17 @@ export interface Skeleton {
 /** Body heights a foot is lifted off the ground over which its toes are let go of it, and it counts as in the air. */
 const TOE_LET_GO: [number, number] = [0.004, 0.05];
 const AIR = 0.01;
+/** How far in from the roots of the fingers, on the palm's side, a fist closes round a handle: body heights. */
+const PALM = 0.012;
+/** Game units between the fists on a handle when nothing held says. */
+const GAP = 0.76;
+
+/**
+ * A prop held in both hands (`./clip.ts` Clip.grip), as its asset gives it for a body: each hand's socket at rest (mesh
+ * units and axes; R's columns x along the hand toward the knuckles, y along the grip toward the thumb), and along the
+ * prop's own y (game units) the lead (right) fist's place, the other's and its point; game units to a mesh unit.
+ */
+export interface Held { sockets: Record<'l' | 'r', { o: V; R: M3; curl?: Record<string, Euler> }>; lead: number; second: number; tip: number; scale: number }
 const smooth = (x: number): number => { const u = Math.min(1, Math.max(0, x)); return u * u * (3 - 2 * u); };
 
 /**
@@ -105,6 +121,78 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
   const ARM = (['l', 'r'] as const).flatMap((s) => [at.get(`upperarm_${s}`) as number, at.get(`lowerarm_${s}`) as number]);
   const CHEST = at.get('spine_03') as number;
 
+  /*
+   * The hands on a handle: each fist's socket (`Held.sockets`, or where a fist closes by default: across the palm against
+   * the roots of the fingers, toward the thumb), carried by its hand bone.
+   */
+  const HANDS = (['l', 'r'] as const).map((s) => {
+    const upper = at.get(`upperarm_${s}`) as number, lower = at.get(`lowerarm_${s}`) as number, hand = at.get(`hand_${s}`) as number, fing = at.get(`fingers_01_${s}`) as number;
+    const R = bones[hand].R, root = mv(tr(R), sub(bones[fing].head, bones[hand].head));
+    // the default socket in the hand's own frame: x along the hand, y across it toward the thumb (+x of the right hand, -x
+    // of the left), on the palm's side (+z, which the fingers curl toward)
+    const t = s === 'r' ? 1 : -1, x: V = [0, 1, 0], y: V = [t, 0, 0], z = cross(x, y);
+    return { upper, lower, hand, o: [0, root[1], root[2] + PALM * height] as V, R: [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]] };
+  });
+  /** A held prop's sockets in each hand's own frame (they are given at rest, in the mesh's frame), kept per prop. */
+  const SOCKETS = new WeakMap<Held, Array<{ o: V; R: M3 }>>();
+  const socketsOf = (held?: Held): Array<{ o: V; R: M3 }> => {
+    if (!held) return HANDS;
+    let k = SOCKETS.get(held);
+    if (!k) SOCKETS.set(held, (k = HANDS.map((h, j) => { const sk = held.sockets[j ? 'r' : 'l'], Rb = bones[h.hand].R; return { o: mv(tr(Rb), sub(sk.o, bones[h.hand].head)), R: mm(tr(Rb), sk.R) }; })));
+    return k;
+  };
+  function gripOf(F: Frame[], held?: Held): Array<{ at: V; R: M3; way: V }> {
+    const so = socketsOf(held);
+    return HANDS.map((h, j) => { const R = mm(F[h.hand].W, so[j].R); return { at: add(F[h.hand].P, mv(F[h.hand].W, so[j].o)), R, way: col(R, 1) }; });
+  }
+  /**
+   * Both hands on what is held (`Clip.grip`): first the right wrist turned up, about the level line square to the grip, as
+   * far as keeps the point `ground` off the ground; then the left hand put on the grip where its place is, closed on it as
+   * its socket says (the same frame as the right's), the elbow bent about its hinge to reach, the upper arm swung onto it
+   * and turned about the line from the shoulder so the elbow stays on the side it was keyed on.
+   */
+  function twoHands(L: Array<M3 | undefined>, F: Frame[], move: V, grip: Grip, held: Held | undefined, floor: number): Frame[] {
+    const [lh, rh] = HANDS, so = socketsOf(held), scale = held?.scale ?? (perGame ? 1 / perGame : 16.5 / height);
+    // the fists closed on the grip as the prop's sockets say (turns in this body's own bone frames)
+    if (held) for (const side of ['l', 'r'] as const) for (const [b, e] of Object.entries(held.sockets[side].curl ?? {})) { const i = at.get(`${b}_${side}`); if (i !== undefined) L[i] = euler(e); }
+    F = fk(L, move);
+    if (held?.tip) for (let n = 0; n < 4; n++) {
+      const g = gripOf(F, held)[1], tip = (held.tip - held.lead) / scale, lo = floor + (grip.ground ?? 0) / scale;
+      const want = Math.max(-1, Math.min(1, (lo - g.at[1]) / tip));
+      if (g.way[1] >= want - 1e-4) break;
+      const ax = cross(g.way, [0, 1, 0]);
+      if (len(ax) < 1e-6) break;
+      L[rh.hand] = localFor(F, rh.hand, mm(axisAngle(ax, ((Math.asin(want) - Math.asin(Math.max(-1, g.way[1]))) * 180) / Math.PI), F[rh.hand].W));
+      F = fk(L, move);
+    }
+    const g = gripOf(F, held)[1], W = mm(g.R, tr(so[0].R));
+    const want = sub(add(g.at, scl(g.way, -((held ? held.lead - held.second : GAP) / scale))), mv(W, so[0].o));
+    const S = F[lh.upper].P, E0 = F[lh.lower].P;
+    // the elbow: bent about its hinge until the wrist is as far from the shoulder as the place wanted (or straight)
+    const a = col(mm(F[lh.upper].W, REL[lh.lower]), 0), u = sub(F[lh.lower].P, S), v = sub(F[lh.hand].P, F[lh.lower].P);
+    const vpar = dot(a, v), vperp = sub(v, scl(a, vpar)), A1 = dot(u, vperp), B1 = dot(u, cross(a, v)), M = Math.hypot(A1, B1);
+    const D = Math.min(Math.hypot(...sub(want, S)), 0.999 * Math.sqrt(dot(u, u) + dot(v, v) + 2 * (dot(u, a) * vpar + M)));
+    if (M > 1e-9) {
+      const c = (D * D - dot(u, u) - dot(v, v)) / 2 - dot(u, a) * vpar, phi = Math.atan2(B1, A1), d = Math.acos(Math.max(-1, Math.min(1, c / M)));
+      // straight at phi; bent the way the elbow bends (+x), never back past straight
+      L[lh.lower] = mm(axisAngle([1, 0, 0], ((phi + d) * 180) / Math.PI), L[lh.lower] ?? I3);
+      F = fk(L, move);
+    }
+    // the upper arm swung so the wrist is on the line to the place, then turned about that line to put the elbow back
+    // on the side it was keyed on
+    L[lh.upper] = localFor(F, lh.upper, mm(between(sub(F[lh.hand].P, S), sub(want, S)), F[lh.upper].W));
+    F = fk(L, move);
+    const n = unit(sub(want, S)), off = (p: V): V => { const r = sub(p, S); return sub(r, scl(n, dot(r, n))); };
+    const e1 = off(F[lh.lower].P), e0 = off(E0);
+    if (len(e1) > 1e-6 && len(e0) > 1e-6) {
+      const ang = (Math.atan2(dot(n, cross(e1, e0)), dot(e1, e0)) * 180) / Math.PI;
+      L[lh.upper] = localFor(F, lh.upper, mm(axisAngle(n, ang), F[lh.upper].W));
+      F = fk(L, move);
+    }
+    L[lh.hand] = localFor(F, lh.hand, W);
+    return fk(L, move);
+  }
+
   function plantOf(pose: Pose): Plant {
     const F = fk(toLocal(pose), pose.move);
     // each foot laid flat as it stands at rest, only turned about the upright as the stance turns it
@@ -115,13 +203,18 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     return { at: [F[LEG[0].foot].P, F[LEG[1].foot].P], W: [flat(LEG[0].foot), flat(LEG[1].foot)] };
   }
 
-  function finish(pose: Pose, o: { plant?: Plant; armsOut?: number } = {}): { local: Array<M3 | undefined>; move: V } {
+  function finish(pose: Pose, o: { plant?: Plant; armsOut?: number; grip?: Grip; held?: Held } = {}): { local: Array<M3 | undefined>; move: V } {
     const L = toLocal(pose);
     let F = fk(L, pose.move);
+    if (o.grip) {
+      // the ground where the planted feet stand on it (a stance's feet can stand a little off the rest's floor)
+      const up = o.plant ? Math.min(...LEG.map((g, s) => (o.plant as Plant).at[s][1] - bones[g.foot].head[1])) : 0;
+      F = twoHands(L, F, pose.move, o.grip, o.held, A.floor + up);
+    }
     // the arms kept off the body (as lowpoly.ts fromGame): seen from the chest, each upper arm and forearm turned out until
     // it leans in no further than the body's rule allows, further as it swings forward or back
     const chest = mm(F[CHEST].W, tr(bones[CHEST].R));
-    for (const i of ARM) {
+    for (const i of o.grip ? [] : ARM) {
       const b = bones[i], r0 = col(b.R, 1), side = Math.sign(r0[0]), v = mv(tr(chest), col(F[i].W, 1));
       const sw = A.game.armSwing ? A.game.armSwing[v[2] > 0 ? 0 : 1] * Math.min(1, Math.abs(v[2]) / (A.game.armSwingAt ?? 0.5)) : 0;
       const xmin = Math.min(0.95, Math.abs(r0[0]) * A.game.armIn + sw + (o.armsOut ?? 0));
@@ -218,5 +311,5 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     return out;
   }
 
-  return { body, bones, at, height, local, world, fk, finish, plantOf, perGame, step };
+  return { body, bones, at, height, local, world, fk, finish, gripOf, plantOf, perGame, step };
 }
