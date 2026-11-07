@@ -42,7 +42,7 @@ const WRIST_OF = ['wb0', 'wk', 'wp0', 'wp0', 'wp1', 'wt', 'wb1', 'wb1'];
 const KNUCKLE = (p) => [`${p}b0`, `${p}b1`, `${p}b2`, `${p}b3`, `${p}b4`, `${p}p4`, `${p}p3`, `${p}p2`, `${p}p1`, `${p}p0`];
 export const TOPO = {
   male: { cap: ['ca', 'cb', 'cc'], rings: ['ua', 'ub', 'uc', 'ud', 'ue', 'el', 'fa', 'fb', 'fc', 'fd', 'fe', 'ff', 'fg'] },
-  female: { cap: ['ca', 'cb', 'cc'], rings: ['ua', 'ub', 'uc', 'ud', 'ue', 'el', 'fa', 'fb', 'fc', 'fd', 'fe', 'ff'] },
+  female: { cap: ['ca', 'cb', 'cc'], rings: ['ua', 'uc', 'ue', 'el', 'fa', 'fb', 'fd', 'ff'] },
 };
 const ring8 = (r) => Array.from({ length: 8 }, (_, i) => `${r}${i}`);
 const REGION = (r) => (r === 'r' || r.startsWith('c') ? 'deltoid' : r.startsWith('u') ? 'upper' : 'forearm');

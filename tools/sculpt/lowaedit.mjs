@@ -4,7 +4,7 @@
 //     tilts those rings (the factor each) so their side toward the named vertices rises by up to --rise (head units)
 //     and the opposite side stays: y += rise * f * (d + R) / 2R, d the vertex's offset from the ring's centre along
 //     the horizontal direction to the named vertices' mean, R the ring's largest |d|. For the elbow: the sheets'
-//     crease on the inner front side above the point of the elbow on the outer back.
+//     crease on the inner front side above the point of the elbow on the outer back. --half: only the near half rises.
 //   node tools/sculpt/lowaedit.mjs --who female --move el5:0,0.05,0          # moves named vertices by (x, y, z)
 //   node tools/sculpt/lowaedit.mjs --who female --scale fb:1.1,1,1.05        # a ring scaled about its centre (x, y, z)
 //   node tools/sculpt/lowaedit.mjs --who female --turn 0,0,-5                 # the hand with its wrist ring turned about
@@ -26,7 +26,9 @@ if (opt('tilt')) {
     const names = ring(r), c = centre(names), t = centre(to);
     const d0 = [t[0] - c[0], t[2] - c[2]], l = Math.hypot(...d0), u = [d0[0] / l, d0[1] / l];
     const d = names.map((n) => (V[n][0] - c[0]) * u[0] + (V[n][2] - c[2]) * u[1]), R = Math.max(...d.map(Math.abs));
-    names.forEach((n, i) => { V[n][1] = +(V[n][1] + (rise * +f * (d[i] + R)) / (2 * R)).toFixed(4); });
+    // --half: only the side toward the named vertices rises (by d / R), the other half of the ring stays
+    const w = (q) => (args.includes('--half') ? Math.max(0, q / R) : (q + R) / (2 * R));
+    names.forEach((n, i) => { V[n][1] = +(V[n][1] + rise * +f * w(d[i])).toFixed(4); });
   }
 }
 if (opt('move')) for (const s of opt('move').split(' ')) {
