@@ -104,7 +104,7 @@ import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELO
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
 import { FRUITING, fruitingSeasons, fruitsIn } from '../../game/fruiting';
-import { BUCKET_LITRES, FURNITURE, furnitureDef, LIQUID_NAME, type LiquidKind, VESSELS, POND_EVERY, STATION_REACH, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
+import { BUCKET_LITRES, FURNITURE, furnitureDef, LIQUID_NAME, type LiquidKind, VESSELS, POND_EVERY, STATION_REACH, WATER_AT_HAND, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { BUTTER_CHURN, CHURN_BUTTER, MILK_READY, milkLitres, WHEY_FEED } from '../../game/dairy';
 import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
@@ -1588,7 +1588,7 @@ export function helpText(): string {
     </ul>
     <h3>Brewing</h3>
     <ul>
-      <li>Fill a barrel (right-click it: <b>Fill with water</b>): to the brim at a shore within 1 tile; from a well or fountain within reach, what it holds. Stand at it, <b>set a brew going</b>. ${BREWS.length} brews:
+      <li>Fill a barrel (right-click it: <b>Fill with water</b>): to the brim at a shore within ${WATER_AT_HAND} tile; from a well or fountain within reach, what it holds. Stand at it, <b>set a brew going</b>. ${BREWS.length} brews:
       ${listed(BREWS.map((b) => `<b>${b.name.toLowerCase()}</b>: ${countIn(b.input, b.count)} + ${b.litres} litres of water, ${dur(b.time)}`))}.</li>
       <li>Yield: litres of drink = litres of water.</li>
       <li>While working: cannot be drawn off; cannot be hurried. Then draw into a bucket and drink from that.</li>

@@ -30,7 +30,7 @@ import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type 
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
-import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef, pieceShut } from './furniture';
+import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { hiveTakes } from './bees';
 import { crateTheRest, CREATURE_CRATE, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
@@ -6584,8 +6584,8 @@ export class Game {
     if (this.player.level < 0) return false;
     const px = this.player.tileX;
     const py = this.player.tileY;
-    for (let y = py - 1; y <= py + 1; y++) {
-      for (let x = px - 1; x <= px + 1; x++) {
+    for (let y = py - WATER_AT_HAND; y <= py + WATER_AT_HAND; y++) {
+      for (let x = px - WATER_AT_HAND; x <= px + WATER_AT_HAND; x++) {
         if (this.world.inBounds(x, y) && this.world.hasWater(x, y)) return true;
       }
     }

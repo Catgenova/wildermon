@@ -116,7 +116,7 @@ import { WALK_FRAMES } from '../../render/figure';
 import { BEARD_ODDS } from '../../game/look';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
-import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, type PlacedFurniture } from '../../game/furniture';
+import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND, type PlacedFurniture } from '../../game/furniture';
 import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
@@ -4259,7 +4259,7 @@ export const NEWS: News[] = [
       'Changed: brewing is in a barrel only; Start a brew is no longer on wells and fountains.',
       `Changed: lye takes ${LYE_ASH_PER_LITRE} ash a litre of water: a bucket (${BUCKET_LITRES} L) ${lyeAshFor(BUCKET_LITRES)} ashes (was 2).`,
       'New: Leach into lye on a barrel of water: every litre in it, one ash a litre, from the pack or stores within reach. Not on wells.',
-      'New: Fill with water on a barrel: to the brim at a shore (within 1 tile), or what the fullest well or fountain within reach holds. Not over another liquid.',
+      `New: Fill with water on a barrel: to the brim at a shore (within ${WATER_AT_HAND} tile), or what the fullest well or fountain within reach holds. Not over another liquid.`,
       'Fixed: Shoe it is on a mount\'s and a draught beast\'s menu (it was on no menu). Leach into lye is on a barrel\'s menu.',
     ],
   },

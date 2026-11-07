@@ -990,6 +990,8 @@ export const liquidCapacity = (f: PlacedFurniture): number => {
 };
 export const holdsLiquid = (f: PlacedFurniture): boolean => liquidCapacity(f) > 0;
 export const litresIn = (f: PlacedFurniture): number => f.litres ?? 0;
+/** Tiles from where you stand that water counts as at hand: a shore or pond to draw from (`Game.nearWater`, the island's `near_water`). */
+export const WATER_AT_HAND = 1;
 /** A well draws its own water; a barrel only holds what is poured into it. */
 export const isWell = (f: PlacedFurniture): boolean => (furnitureDef(f.kind).well ?? 0) > 0;
 /** Room left in a hive, which takes nothing from anyone's hands: its Vesps fill it (`hiveTakes`). */
