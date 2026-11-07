@@ -45,6 +45,8 @@ export const TOPO = {
   female: { cap: ['ca', 'cb', 'cc'], rings: ['ua', 'uc', 'ue', 'el', 'fa', 'fb', 'fd', 'ff'] },
 };
 const ring8 = (r) => Array.from({ length: 8 }, (_, i) => `${r}${i}`);
+/** The deltoid's rings between the torso's ring and the arm's first, on the body only (the arm alone has its cap). */
+export const JOINT = ['ja', 'jb'];
 const REGION = (r) => (r === 'r' || r.startsWith('c') ? 'deltoid' : r.startsWith('u') ? 'upper' : 'forearm');
 
 /** The faces of the right arm by vertex name: { v, part, region, name }. */
@@ -60,10 +62,14 @@ export function armFaces(who) {
   const cap = [T.rings[0], ...T.cap];
   for (let k = 0; k + 1 < cap.length; k++) band(ring8(cap[k]), ring8(cap[k + 1]), 'cap', 'deltoid', `${cap[k + 1]}-`);
   ring8(cap.at(-1)).forEach((a, i) => f([a, `${cap.at(-1)}${(i + 1) % 8}`, 'ct'], 'cap', 'deltoid', `ct-${i}`));
+  // the joint, on the body only: the deltoid's ball from the torso's ring (the chest's, the trapezius' and the back's edge
+  // round it) through its rings (JOINT: ja over the shoulder's top, jb at its widest) to the arm's first ring
+  const joint = ['r', ...JOINT];
+  for (let k = 0; k + 1 < joint.length; k++) band(ring8(joint[k]), ring8(joint[k + 1]), 'joint', 'deltoid', `${joint[k]}-`);
+  band(ring8(joint.at(-1)), ring8(T.rings[0]), 'joint', 'deltoid', `${joint.at(-1)}-`);
   // the arm's rings
-  const rings = ['r', ...T.rings];
-  // the joint: from the torso's ring to the arm's first ring, on the body only
-  for (let k = 0; k + 1 < rings.length; k++) band(ring8(rings[k]), ring8(rings[k + 1]), k ? 'arm' : 'joint', REGION(rings[k + 1] === 'el' ? 'ua' : rings[k]), `${rings[k]}-`);
+  const rings = T.rings;
+  for (let k = 0; k + 1 < rings.length; k++) band(ring8(rings[k]), ring8(rings[k + 1]), 'arm', REGION(rings[k + 1] === 'el' ? 'ua' : rings[k]), `${rings[k]}-`);
   band(ring8(rings.at(-1)), WRIST_OF, 'arm', 'forearm', 'wr-');
   // the hand: the back, the sides and the palm from the wrist to the knuckle line, as the sheets' hand topology
   const h = (v, name) => f(v, 'hand', 'hand', name);
