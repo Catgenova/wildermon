@@ -148,7 +148,7 @@ export function socketOf(rig, side, r, o = {}) {
     if (Math.abs(dot(d, along)) > 0.12) return;
     depth = Math.max(depth, dot(d, palm));
   });
-  const origin = add(c, mul(palm, depth + r * (o.press ?? 1)));
+  const origin = add(c, mul(palm, o.lift ?? depth + r * (o.press ?? 1)));
   // the frame: x along the hand, y along the grip; tilted about the palm's normal by `tilt` (the grip runs from the heel of
   // the hand on the little finger's side to the index's root)
   const t = (o.tilt ?? 0) * Math.PI / 180;
@@ -163,11 +163,48 @@ export const carried = (rig, frames, bi, p) => add(mv(frames[bi].S, sub(p, rig.b
 export function socketAt(rig, frames, s) { const f = frames[s.bone]; return { o: carried(rig, frames, s.bone, s.o), R: mm(f.S, s.R) }; }
 
 /**
+ * The fist of one side fitted to a grip of radius r (mesh units): where along the hand (`back`, from the knuckle line
+ * toward the wrist) and how far out from the palm (`lift`) the grip's axis sits, and how far the finger bones curl, so
+ * that the palm under the knuckles, the fingers' undersides and their tips all lie on the grip's surface (no deeper than
+ * `skinIn`, no further off than they must) and the tips come round past the grip's far side. Returns { socket, curl:
+ * { fingers_01, fingers_02 }, err } (err: the worst gap or depth, mesh units, over those points).
+ */
+export function fitFist(rig, side, r, skinIn = 0.01) {
+  const { B } = rig, suf = side === 'l' ? '.L' : '.R';
+  const group = (g) => B.names.map((n, i) => (n.startsWith('arm/') && n.endsWith(suf) && n.slice(4).replace(/\d+\.[LR]$/, '') === g ? i : -1)).filter((i) => i >= 0);
+  const KP = group('kp'), MP = group('mp'), NP = group('np'), pts = [...KP, ...MP, ...NP];
+  const skinAt = (F, i) => { let q = [0, 0, 0]; for (const [bi, w] of rig.vw[i]) q = add(q, mul(add(mv(F[bi].S, sub(B.verts[i], rig.bones[bi].head)), F[bi].P), w)); return q; };
+  const curls = [];
+  for (let a = 30; a <= 110; a += 5) for (let b = 20; b <= 110; b += 5) {
+    const F = posed(rig, { [`fingers_01_${side}`]: [a, 0, 0], [`fingers_02_${side}`]: [b, 0, 0] });
+    curls.push({ a, b, P: pts.map((i) => skinAt(F, i)) });
+  }
+  const s0 = socketOf(rig, side, r), ax = colOf(s0.R, 1), toPalm = mul(s0.palm, -1);
+  let best = null;
+  for (let back = 0.1; back <= 0.65; back += 0.05) for (let lift = 0; lift <= 0.6; lift += 0.01) {
+    const s = socketOf(rig, side, r, { back, lift });
+    for (const c of curls) {
+      let e = 0, worst = 0;
+      c.P.forEach((q, j) => {
+        const d = sub(q, s.o), perp = sub(d, mul(ax, dot(d, ax))), gap = Math.hypot(...perp) - r;
+        const g = gap + skinIn;
+        e += g < 0 ? 6 * g * g : g * g;
+        worst = Math.max(worst, Math.abs(g));
+        // the tips round past the far side of the grip from the palm
+        if (j >= KP.length + MP.length) { const w = dot(unit(perp), mul(toPalm, -1)); e += 0.02 * Math.max(0, 0.3 - w) ** 2; }
+      });
+      if (!best || e < best.e) best = { e, worst, back, lift, a: c.a, b: c.b };
+    }
+  }
+  return { socket: socketOf(rig, side, r, { back: best.back, lift: best.lift }), curl: { fingers_01: best.a, fingers_02: best.b }, err: best.worst, back: best.back, lift: best.lift };
+}
+
+/**
  * The fingers and thumb of one side curled onto the grip of the socket (in the pose so far): each finger bone's flex
  * chosen so its tip and its middle joint lie on the grip's surface grown by the finger's half depth `fd`, the thumb
  * closed over it the same way. Returns the pose with those bones set.
  */
-export function fistOn(rig, pose, s, fd) {
+export function fistOn(rig, pose, s, fd, o = {}) {
   const { bones, at } = rig;
   const tipOf = (F, name) => { const i = at.get(name), b = bones[i]; return add(mv(F[i].S, sub(b.tail, b.head)), F[i].P); };
   const err = (p, sk) => {
@@ -187,7 +224,7 @@ export function fistOn(rig, pose, s, fd) {
     names.forEach((n, j) => { out[n] = [bestV[j], 0, 0]; });
     return bestE;
   };
-  best([`fingers_01_${s.side}`, `fingers_02_${s.side}`], ['mid', 'tip'], 0, 120, 6);
+  if (!o.thumbOnly) best([`fingers_01_${s.side}`, `fingers_02_${s.side}`], ['mid', 'tip'], 0, 120, 6);
   best([`thumb_01_${s.side}`, `thumb_02_${s.side}`, `thumb_03_${s.side}`], ['tjoint', 'ttip'], -10, 60, 10);
   return out;
 }
@@ -285,7 +322,13 @@ export async function gearAsset(id, plain, lit, rigs) {
   for (const [who, rig] of Object.entries(rigs)) {
     const sc = await gameScale(rig);
     scale[who] = r5(sc.scale);
-    sockets[who] = Object.fromEntries(['r', 'l'].map((side) => { const s = socketOf(rig, side, plain.grip.radius / sc.scale); return [side, { bone: rig.bones[s.bone].name, o: s.o.map(r5), R: s.R.map(r5) }]; }));
+    sockets[who] = Object.fromEntries(['r', 'l'].map((side) => {
+      const r = plain.grip.radius / sc.scale, f = fitFist(rig, side, r), s = f.socket;
+      // the thumb closed over the grip (fistOn), the fingers as fitted: local turns [rx, ry, rz] in degrees (lowrig.mjs posed)
+      const p = fistOn(rig, { [`fingers_01_${side}`]: [f.curl.fingers_01, 0, 0], [`fingers_02_${side}`]: [f.curl.fingers_02, 0, 0] }, s, 0, { thumbOnly: true });
+      const curl = Object.fromEntries(['fingers_01', 'fingers_02', 'thumb_01', 'thumb_02', 'thumb_03'].map((n) => [n, p[`${n}_${side}`] ?? [0, 0, 0]]));
+      return [side, { bone: rig.bones[s.bone].name, o: s.o.map(r5), R: s.R.map(r5), curl }];
+    }));
   }
   return {
     built: `node tools/sculpt/gear/${id}.mjs (tools/sculpt/lowgear.mjs gearAsset)`, id,
@@ -298,7 +341,7 @@ export async function gearAsset(id, plain, lit, rigs) {
     enchanted: names.map((n) => ({ c: lit.MATS[n].c, kind: kind(lit.MATS[n]) })),
     grip: Object.fromEntries(Object.entries(plain.grip).map(([k, v]) => [k, Array.isArray(v) ? v.map(r5) : r5(v)])),
     sockets, scale,
-    socket: 'o: the grip\'s axis at the fist\'s middle, in the body\'s rest (mesh units and axes); R (row-major, columns x y z): x along the hand toward the knuckles, y along the grip toward the thumb, z = x × y. The prop\'s x, y, z go to R\'s columns, its grip.lead (or grip.second, for the other hand) to o.',
+    socket: 'curl: the fist\'s finger and thumb bones\' local turns [rx, ry, rz] degrees closed on the grip (lowrig.mjs posed). o: the grip\'s axis at the fist\'s middle, in the body\'s rest (mesh units and axes); R (row-major, columns x y z): x along the hand toward the knuckles, y along the grip toward the thumb, z = x × y. The prop\'s x, y, z go to R\'s columns, its grip.lead (or grip.second, for the other hand) to o.',
     counts: { tris: plain.tris, glowTris: lit.all - plain.tris, polys: polys.length },
   };
 }
