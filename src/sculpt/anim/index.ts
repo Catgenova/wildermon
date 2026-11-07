@@ -10,11 +10,12 @@ import type { Clip } from './clip';
 import type { M3, V } from './math';
 import { blendLocal, clipLocal } from './player';
 import type { Skeleton } from './skeleton';
+import { IDLE } from './clips/idle';
 
 /** The states a body is drawn in that a clip can play: so far, stood doing nothing. */
 export type State = 'idle';
 /** The clip each state plays, by state, once it is approved; a state left out keeps the figure's pose. */
-export const CLIPS: Partial<Record<State, Clip>> = {};
+export const CLIPS: Partial<Record<State, Clip>> = { idle: IDLE };
 
 let ON = true;
 /** Clips played (true, as the game) or every state left to the figure's pose (false: for comparing with it). */

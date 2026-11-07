@@ -3,7 +3,7 @@
  * `./clip.ts`, a pose is mirrored left for right, and a bone's keys can trail the beat (`lag`: overlapping action, the
  * arms catching up with the hips) or lead it.
  */
-import type { EaseName, Key } from './clip';
+import type { Clip, EaseName, Key } from './clip';
 import type { Euler } from './math';
 
 /** A key pose: each bone's turn (bones left out: at rest), and the body's shift in body heights. */
@@ -11,6 +11,8 @@ export interface KeyPose { rot: Record<string, Euler>; move?: Euler }
 /** A key pose on the timeline, how it is reached, and a name for the authoring tool's sheet. */
 export interface Beat {
   t: number; pose: KeyPose; ease?: EaseName; hold?: number; back?: number; name?: string;
+  /** A key pose (blocked first) or a breakdown between them (the default), for showing a clip's passes. */
+  stage?: 'key' | 'breakdown';
   /** How some bones (`$move`: the shift) reach this beat instead, by bone. */
   per?: Record<string, { ease?: EaseName; hold?: number; back?: number }>;
 }
@@ -27,6 +29,19 @@ export function mirror(p: KeyPose): KeyPose {
 
 /** Poses merged, the later's bones over the earlier's. */
 export const merge = (...ps: KeyPose[]): KeyPose => ({ rot: Object.assign({}, ...ps.map((p) => p.rot)), move: ps.reduce<Euler | undefined>((m, p) => p.move ?? m, undefined) });
+
+/**
+ * A pose-to-pose clip as it stood at an earlier pass, to show how it was built: `blocking` its key poses only, held
+ * (stepped); `breakdowns` every beat and accent, still stepped; `splined` eased between them; `polish` the clip itself
+ * (the lag, the breathing). The feet stay planted throughout.
+ */
+export function passOf(c: Clip, beats: Beat[], pass: 'blocking' | 'breakdowns' | 'splined' | 'polish'): Clip {
+  if (pass === 'polish') return c;
+  const step = { ease: 'hold' as const, hold: 1 }, stepped = pass !== 'splined';
+  const bs = beats.filter((b) => pass !== 'blocking' || b.stage === 'key').map((b) => (stepped ? { ...b, ...step, per: undefined } : b));
+  const accents = pass === 'blocking' ? undefined : Object.fromEntries(Object.entries(c.accents ?? {}).map(([k, keys]) => [k, keys.map((key) => (stepped ? { ...key, ...step } : key))]));
+  return { ...c, ...poseToPose(bs, { length: c.length, loop: c.loop }), accents, breath: undefined };
+}
 
 /** Key poses as tracks: every bone keyed at every beat, each bone's keys shifted by its `lag` (seconds; a loop wrapped). */
 export function poseToPose(beats: Beat[], o: { length: number; loop: boolean; lag?: Record<string, number> }): { tracks: Record<string, Array<Key<Euler>>>; move: Array<Key<Euler>>; poses: Array<{ t: number; name: string }> } {

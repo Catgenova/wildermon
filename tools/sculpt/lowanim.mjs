@@ -2,6 +2,11 @@
 // "Sculpted figures" switch on, through the GPU skinning path), as tools/sculpt/lowwalk.mjs draws them, and measured.
 //
 //   node tools/sculpt/lowanim.mjs --clip idle --out <dir> [--zoom 5] [--close 11] [--fps 10] [--only gifs,keys,current,metrics]
+//     [--pass blocking|breakdowns|splined|polish]
+//
+// --pass shows a pose-to-pose clip (one whose module exports BEATS, src/sculpt/anim/author.ts passOf) as it stood at an
+// earlier pass: its key poses held, then every beat held, then eased; the files are then named <clip>-<pass>-*.
+// --close 0 leaves out the close-up GIF.
 //
 // writes into <dir>:
 //   <clip>-both.gif     both bodies side by side, front, three-quarter and side, at game zoom
@@ -27,6 +32,15 @@ const clipName = opt('clip', 'idle');
 const out = resolve(opt('out', `tmp/lowanim/${clipName}`));
 const zoom = +opt('zoom', '5'), close = +opt('close', '11'), fps = +opt('fps', '10');
 const only = opt('only', 'gifs,keys,current,metrics').split(',');
+const pass = opt('pass', 'polish'), FILE = pass === 'polish' ? clipName : `${clipName}-${pass}`;
+// the clip as the pass has it, in the page and in node alike
+const PASS = `
+import * as CLIPMOD from './src/sculpt/anim/clips/${clipName}';
+import { passOf } from './src/sculpt/anim/author';
+import { CLIPS as ALL } from './src/sculpt/anim';
+const M = CLIPMOD;
+if (M.BEATS && ${JSON.stringify(pass)} !== 'polish') ALL[${JSON.stringify(clipName)}] = passOf(ALL[${JSON.stringify(clipName)}], M.BEATS, ${JSON.stringify(pass)});
+`;
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
 const LOADERS = { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' };
@@ -34,12 +48,13 @@ const bundle = async (contents, format, platform = 'browser') => (await build({ 
 
 /* ---- the clip and its player, as the game runs them, in node ---------------------------------------------------- */
 const nodeMod = join(out, `.anim-${process.pid}.mjs`);
-writeFileSync(nodeMod, await bundle(`
+writeFileSync(nodeMod, await bundle(`${PASS}
 export { CLIPS } from './src/sculpt/anim';
 export { clipLocal } from './src/sculpt/anim/player';
 export { skeleton } from './src/sculpt/anim/skeleton';
 export { default as MALE } from './src/sculpt/assets/lowmale.json';
 export { default as FEMALE } from './src/sculpt/assets/lowfemale.json';
+export const BEATS = CLIPMOD.BEATS;
 `, 'esm', 'node'));
 const AN = await import(pathToFileURL(nodeMod).href);
 rmSync(nodeMod);
@@ -47,12 +62,13 @@ const clip = AN.CLIPS[clipName];
 if (!clip) throw new Error(`no clip ${clipName}: ${Object.keys(AN.CLIPS).join(', ')}`);
 const N = Math.max(2, Math.round(clip.length * fps));
 const times = Array.from({ length: N }, (_, k) => (k / N) * clip.length);
-const keys = clip.poses?.length ? clip.poses : [{ t: 0, name: 'start' }];
+const keyTimes = AN.BEATS && pass === 'blocking' ? new Set(AN.BEATS.filter((b) => b.stage === 'key').map((b) => b.t)) : null;
+const keys = (clip.poses?.length ? clip.poses : [{ t: 0, name: 'start' }]).filter((k) => !keyTimes || keyTimes.has(k.t));
 
 /* ---- pictures --------------------------------------------------------------------------------------------------- */
 const GW = 112, GH = 236, CW = 240, CH = 520;
 if (only.some((o) => ['gifs', 'keys', 'current'].includes(o))) {
-  const page = `
+  const page = `${PASS}
 import { drawFigure, sculptedFigures } from './src/render/figure';
 import { DEFAULT_LOOK } from './src/game/look';
 import { clipsOn } from './src/sculpt/anim';
@@ -86,18 +102,18 @@ window.shot = (t, cells) => {
   const both = (fs, z, w, h, on = true) => ['man', 'woman'].flatMap((g) => fs.map((f) => [g, f, z, w, h, on]));
   if (only.includes('gifs')) for (let k = 0; k < N; k++) {
     await save(`game-${k}.png`, times[k], both([0, 1, 2], zoom, GW, GH));
-    await save(`close-${k}.png`, times[k], both([0, 1], close, CW, CH));
+    if (close) await save(`close-${k}.png`, times[k], both([0, 1], close, CW, CH));
   }
   if (only.includes('current')) for (let k = 0; k < N; k++) await save(`cur-${k}.png`, times[k], [...both([0, 1], zoom, GW, GH, false), ...both([0, 1], zoom, GW, GH, true)]);
   if (only.includes('keys')) for (let k = 0; k < keys.length; k++) {
     await save(`kg-${k}.png`, keys[k].t, both([0, 1, 2], zoom, GW, CH));
-    await save(`kc-${k}.png`, keys[k].t, both([0, 1, 2], close, CW, CH));
+    if (close) await save(`kc-${k}.png`, keys[k].t, both([0, 1, 2], close, CW, CH));
   }
   await browser.close();
   execFileSync('python3', ['-c', String.raw`
 import sys, os, json
 from PIL import Image, ImageDraw
-d, out, name, N, fps, keys, only = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]), float(sys.argv[5]), json.loads(sys.argv[6]), sys.argv[7].split(',')
+d, out, name, N, fps, keys, only, close = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]), float(sys.argv[5]), json.loads(sys.argv[6]), sys.argv[7].split(','), float(sys.argv[8])
 ms = int(round(1000 / fps))
 def gif(prefix, file, label, scale=1):
   fr = []
@@ -109,19 +125,19 @@ def gif(prefix, file, label, scale=1):
   fr[0].save(f'{out}/{file}', save_all=True, append_images=fr[1:], duration=ms, loop=0, optimize=True)
 if 'gifs' in only:
   gif('game', f'{name}-both.gif', f'{name}: man | woman, front 3/4 side, zoom ${zoom}')
-  gif('close', f'{name}-close.gif', f'{name}: man | woman, front 3/4, zoom ${close}', 0.75)
+  if close: gif('close', f'{name}-close.gif', f'{name}: man | woman, front 3/4, zoom ${close}', 0.75)
 if 'current' in only:
   gif('cur', f'{name}-vs-current.gif', f'left: today (figure.ts mapped) | right: the clip; man, woman front 3/4, zoom ${zoom}')
 if 'keys' in only:
   rows = []
   for k, kp in enumerate(keys):
-    g, c = Image.open(f'{d}/kg-{k}.png').convert('RGB'), Image.open(f'{d}/kc-{k}.png').convert('RGB')
+    g = Image.open(f'{d}/kg-{k}.png').convert('RGB'); c = Image.open(f'{d}/kc-{k}.png').convert('RGB') if close else Image.new('RGB', (0, g.height))
     r = Image.new('RGB', (g.width + c.width, c.height + 20), (47, 41, 43)); r.paste(g, (0, 20)); r.paste(c, (g.width, 20))
     ImageDraw.Draw(r).text((4, 4), f"{kp['name']}  (t {kp['t']}s)   game zoom ${zoom}: man F 3/4 S, woman F 3/4 S  |  close: man F 3/4 S, woman F 3/4 S", fill=(240, 230, 220)); rows.append(r)
   sh = Image.new('RGB', (rows[0].width, sum(r.height for r in rows)), (47, 41, 43)); y = 0
   for r in rows: sh.paste(r, (0, y)); y += r.height
   sh.save(f'{out}/{name}-keys.png')
-`, dir, out, clipName, String(N), String(fps), JSON.stringify(keys), only.join(',')]);
+`, dir, out, FILE, String(N), String(fps), JSON.stringify(keys), only.join(','), String(close)]);
   // the silhouette at game size: the front cells of the game zoom frames
   if (only.includes('gifs')) {
     const sil = JSON.parse(execFileSync('python3', ['-c', String.raw`
@@ -203,7 +219,7 @@ if (only.includes('metrics')) {
     const s = report[body];
     console.log(`${clipName} ${body}: slide ${s.slideCmPerFrame} cm/frame (${F} fps), sink ${s.sinkCm} cm, grounding moves ${s.groundingRangeCm} cm, new crossings ≤${s.newCrossingsMax}, folds ≤${s.foldsMax}, seam ${s.loopSeamDeg}° (largest step ${s.maxStepDeg}°), worst regions: ${worst.join('; ')}${s.silhouette ? `, silhouette ${s.silhouette.heightPx[0]}-${s.silhouette.heightPx[1]} px tall, arms clear ${s.silhouette.armsClear}, ≤${s.silhouette.pxMovedMax} px moved` : ''}`);
   }
-  writeFileSync(join(out, `${clipName}-metrics.json`), JSON.stringify(report, null, 1));
+  writeFileSync(join(out, `${FILE}-metrics.json`), JSON.stringify(report, null, 1));
   await RS.closeBrowser?.();
 }
 rmSync(join(out, '.sil.json'), { force: true });
