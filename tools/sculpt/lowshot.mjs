@@ -1,24 +1,25 @@
 // The low-poly head's modeling reference sheet (tools/sculpt/HEAD_SPEC.md, HEAD_SPEC_FEMALE.md; references in
-// tools/sculpt/ref): the one mesh from tools/sculpt/lowhead.mjs in seven orthographic views, its wireframe over the
-// front, and a profile in its three regions, laid out as the reference sheets are.
+// tools/sculpt/ref): the one mesh from tools/sculpt/lowhead.mjs in seven views, its wireframe over the front, and a
+// profile in its three regions, laid out as the reference sheets are.
 //
 //   node tools/sculpt/lowshot.mjs --who male|female --out /some/dir [--scale 2]     # writes <dir>/sheet-<who>.png
 //
-// Flat shading (each triangle its own normal), a cool light from the left, a warm one from the right, a front fill.
-// The top and the bottom views leave the shoulder stub out, as the references do; the bottom view looks up from the
-// front at --pitch degrees (default 38), the top view down at --top (default 86) so the jaw's underside and the neck read.
+// Each view goes through its own camera, fitted to the reference sheet by tools/sculpt/lowfit.mjs and kept in
+// tools/sculpt/lowcams.json (tools/sculpt/lowcam.mjs). Flat shading (one normal per polygon, a gradient over it toward
+// the key light), a cool light from the left, a warm one from the right. The top and the bottom views leave the
+// shoulder stub out, as the references do, and the bottom view cuts the neck flat at its camera's clip.
 // Uses Playwright's Chromium at /opt/pw-browsers/chromium with software GL.
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildLowHead } from './lowhead.mjs';
+import { loadCams, rotation, PARTS } from './lowcam.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
 const who = opt('who', 'male');
 const out = resolve(opt('out', 'tmp/lowhead'));
 const dsf = +opt('scale', '1');
-const pitch = +opt('pitch', '38');
 const topPitch = +opt('top', '86'); // the top view looks down from a little in front, as the references' does
 const normals = args.includes('--normals'); // a pass of the view-space normals of the skin, for fitting the light to a reference
 mkdirSync(out, { recursive: true });
@@ -120,15 +121,17 @@ for (const p of mesh.polys) {
 }
 
 const female = who === 'female';
+const CAMS = loadCams(who);
 const DATA = {
+  // each view's camera, its rotation column-major for GL
+  cams: Object.entries(CAMS).map(([v, c]) => { const r = rotation(c); return { ...c, R: [r[0], r[3], r[6], r[1], r[4], r[7], r[2], r[5], r[8]], parts: PARTS[v] }; }),
   grad: +opt('grad', '0.25'),
   detail: args.includes('--detail'),
   gradpos: +opt('gradpos', '1'), // 1: the gradient measured from the head's centre, continuous across a shared edge; 0: from each polygon's centre
   flatBrow: female,
-  clip: +opt('clip', female ? '-0.43' : '-0.38'), // the bottom view shows the head and the neck, the neck cut flat just above its foot, as the references' do
   // the lights' strengths: the ambient, the key from the front right, the warm fill from the right, the cool rim from behind left
   amb: +opt('amb', '0.57'), key: +opt('key', '0.42'), warm: +opt('warm', '0.32'), cool: +opt('cool', '1.2'), rim: +opt('rim', '0.6'), upr: +opt('upr', '0.12'), lcz: +opt('lcz', '0.35'), lbz: +opt('lbz', '-0.2'), cpow: +opt('cpow', '2.5'), rpow: +opt('rpow', '3'), cspec: +opt('cspec', '0.4'), kx: +opt('kx', '0.3'), ky: +opt('ky', '0.5'), aolo: +opt('aolo', '0.5'), // the gradient over each face toward the key light, per unit of the head (0: none)
-  parts, lines, pitch, topPitch, normals, counts: mesh.counts,
+  parts, lines, topPitch, normals, counts: mesh.counts,
   pupil: female ? [0.2, 0.21, 0.25] : [0.09, 0.09, 0.11],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
   title: female ? 'Female Head Modeling Guide' : 'Modeling Guide',
@@ -158,9 +161,9 @@ const D = window.DATA, dpr = window.devicePixelRatio;
 const cv = document.getElementById('gl');
 cv.width = 1536 * dpr; cv.height = 1024 * dpr;
 const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true, alpha: true, premultipliedAlpha: false });
-const vs = '#define GRADPOS ' + D.gradpos.toFixed(1) + '\nattribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift;' +
+const vs = '#define GRADPOS ' + D.gradpos.toFixed(1) + '\nattribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift; uniform float persp;' +
   'varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; void main(){ vec3 q = R*(p - piv); vn = R*n; vd = GRADPOS > 0.5 ? q - R*(vec3(0.0, 1.1, 0.0) - piv) : q - R*(s - piv); vm = m; vy = p.y;' +
-  ' gl_Position = vec4(off + sc*q.xy, -q.z/8.0 - lift, 1.0); }';
+  ' float k = persp > 0.0 ? persp/(persp - q.z) : 1.0; gl_Position = vec4(off + sc*q.xy*k, -q.z/8.0 - lift, 1.0); }';
 const fs = '#define FLATBROW ' + (D.flatBrow ? '1.0' : '0.0') + '\n#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\n#define RIM ' + D.rim.toFixed(3) + '\n#define UPR ' + D.upr.toFixed(3) + '\n#define LCZ ' + D.lcz.toFixed(3) + '\n#define LBZ ' + D.lbz.toFixed(3) + '\n#define CPOW ' + D.cpow.toFixed(2) + '\n#define RPOW ' + D.rpow.toFixed(2) + '\n#define CSPEC ' + D.cspec.toFixed(3) + '\n#define KX ' + D.kx.toFixed(3) + '\n#define KY ' + D.ky.toFixed(3) + '\n#define AOLO ' + D.aolo.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; uniform float clipY; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
   // the bottom view cuts the shoulders off at clipY, and the cut reads as a flat cap: the inside seen through it
@@ -206,8 +209,8 @@ function drawMesh(part) {
   gl.drawArrays(gl.TRIANGLES, 0, b.n / 12);
 }
 /** One view: R (column-major mat3) about the pivot, the pivot at (cx, cy) css px, s px per unit. */
-function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoulders'], mode = 0, wire = false, clip = -99 }) {
-  gl.uniform1f(U('clipY'), clip);
+function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoulders'], mode = 0, wire = false, clip = -99, f = 0 }) {
+  gl.uniform1f(U('clipY'), clip); gl.uniform1f(U('persp'), f);
   gl.clear(gl.DEPTH_BUFFER_BIT);
   gl.uniformMatrix3fv(U('R'), false, R); gl.uniform3fv(U('piv'), piv);
   gl.uniform2f(U('sc'), 2 * s / 1536, 2 * s / 1024); gl.uniform2f(U('off'), cx / 768 - 1, 1 - cy / 512);
@@ -229,9 +232,8 @@ function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoul
 }
 const S = 136;
 const ROW = [['Front (0°)', 0, 172], ['Three-Quarter (45°)', 45, 478], ['Profile (90°)', 90, 780], ['Rear Three-Quarter (135°)', 135, 1085], ['Back (180°)', 180, 1388]];
-for (const [, d, cx] of ROW) view({ R: yaw(d), cx, cy: 184, s: S });
-view({ R: pitchM(D.topPitch), cx: 180, cy: 730, s: S, piv: [0, 1.1, 0.12], parts: ['head', 'neck'] });
-view({ R: pitchM(-D.pitch), cx: 502, cy: 712, s: S * 0.98, piv: [0, 0.75, 0.12], clip: D.clip, parts: ['head', 'neck'] });
+// the seven views, each through its own camera fitted to the reference (tools/sculpt/lowcam.mjs, lowfit.mjs)
+for (const c of D.cams) view({ R: c.R, cx: c.cx, cy: c.cy, s: c.s, f: c.f, clip: c.clip ?? -99, ...(c.parts ? { parts: c.parts } : {}) });
 view({ R: yaw(0), cx: 822, cy: 686, s: S * 0.99, wire: true });
 view({ R: yaw(-70), cx: 1392, cy: 680, s: 100, mode: 1, parts: ['head', 'neck'], piv: [0, 1, 0.1] });
 

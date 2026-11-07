@@ -11,6 +11,8 @@
 // Parts: head (counted against the 350-700 triangle budget), neck, shoulders (the stub; left out of the top and the
 // bottom views). Regions, for the proportion diagram: skull, face, neck. Materials: skin, brow, pupil, lid.
 
+import { existsSync, readFileSync } from 'node:fs';
+
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
@@ -128,9 +130,17 @@ PRESETS.female = {
   eye: { x: 0.345, y: 0.975, w: 0.14, h: 0.13, lid: 0.035, almond: 1 },
 };
 
+// The fitted vertices (tools/sculpt/lowfit.mjs) over the hand-set ones: tools/sculpt/lowfit-<who>.json, when present.
+for (const who of Object.keys(PRESETS)) {
+  const file = new URL(`./lowfit-${who}.json`, import.meta.url);
+  if (!existsSync(file)) continue;
+  const fit = JSON.parse(readFileSync(file, 'utf8'));
+  for (const k of ['V', 'ear', 'eye', 'brow']) if (fit[k]) PRESETS[who][k] = { ...PRESETS[who][k], ...fit[k] };
+}
+
 /* ---- the builder ------------------------------------------------------------------------------------------------ */
-export function buildLowHead(who = 'male') {
-  const P = PRESETS[who];
+export function buildLowHead(who = 'male', preset = null) {
+  const P = preset ?? PRESETS[who];
   if (!P) throw new Error(`no head ${who}`);
   const verts = [], polys = [];
   const vert = (p) => { verts.push(p); return verts.length - 1; };
