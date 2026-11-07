@@ -102,10 +102,14 @@ async function sheet(file, wire) {
       if (wire) { body.edges = false; boot.edges = true; boot.edgec = [0.12, 0.07, 0.05]; }
       cells.push({ meshes: [body, boot], cam: { yaw, pitch: -14, s, c }, box: [i * cw, top + (r * 2 + 1) * ch, cw, ch], label: `${who} ${lab}` });
     });
-    texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + r * 2 * ch + 10}px;width:260px;white-space:normal`, html: `<b>${who}</b><br>${G.tris.length} triangles (${G.tris.length / 2} a boot)<br>above: the sheet; below: the model` });
+    // the triangles by part (a boot)
+    const parts = {};
+    for (const t of G.tris) { const p = G.polys[t.poly]; if (G.side[p.v[0]] === 'L') parts[p.tag] = (parts[p.tag] ?? 0) + 1; }
+    texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + r * 2 * ch + (wire ? 250 : 10)}px;width:260px;white-space:normal`, html: `<b>${who}</b><br>${G.tris.length} triangles (${G.tris.length / 2} a boot)<br>above: the sheet; below: the model` + (wire ? '<br><br>a boot, by part:<br>' + Object.entries(parts).map(([k, v]) => `${k} ${v}`).join('<br>') : '') });
   });
+  if (wire) imgs.push({ src: SHEET, size: [1536, 1024], crop: [612, 760, 262, 240], box: [5 * cw, top, 280, 240] });
   texts.push({ css: 'left:10px;top:6px', html: `Boots, ${tag}: the sheet (tools/sculpt/ref/outfit1-boots.png) above each body's row, the model below (the feet set as close as the sheet sets them)` });
-  await shoot(5 * cw + 280, top + 4 * ch, cells, file, { texts, imgs });
+  await shoot(5 * cw + 280, top + 4 * ch + (wire ? 120 : 0), cells, file, { texts, imgs });
 }
 if (only.includes('sheet')) await sheet(join(out, `boots-${tag}-sheet.png`), false);
 if (only.includes('wire')) await sheet(join(out, `boots-${tag}-wire.png`), true);
