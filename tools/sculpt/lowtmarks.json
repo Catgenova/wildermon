@@ -537,13 +537,13 @@
     "da1"
    ],
    "breast point": [
-    206.7,
-    175,
+    213,
+    184,
     "db1"
    ],
    "breast point'": [
-    123.3,
-    175,
+    110.4,
+    184,
     "db1'"
    ],
    "breast outer": [
@@ -635,7 +635,7 @@
    ],
    "breast point": [
     695,
-    180,
+    186,
     "db1'"
    ],
    "breast lower edge": [

@@ -16,8 +16,11 @@
 // the side (4) to the back's centre line (8): 1 and 2 the front's planes (the abs' edge, the obliques' line), 3 the front's
 // corner, 5 the back's corner, 6 and 7 the back's planes (the shoulder blades' and the lats' line, the spine's muscles).
 // Cut flat: the neck's top, each arm (one face on rows da db dc, columns 3 to 5, as the sheets draw it), the hips.
-// Her breasts: on rows da db dc, columns 0 to 2, a dome of facets round the point db1: its foot on the chest the grid's
-// eight points round the patch with points between (P.breastRing), a middle ring br0.. derived from the foot (P.dome).
+// Her breasts: on rows da db dc, columns 0 to 2, facets round the point db1: its foot the grid's eight points round the
+// patch with points between (P.breastRing). Its upper half grows out of the chest: the facets run straight from the foot's
+// upper points (P.dome.flat) to the point, the foot there on the pectoral planes' slope from the collarbone (sd1, da1 and
+// db1 in one line), so the chest continues into the breast; its sides and underside round through a middle ring br..
+// derived from the foot (P.dome).
 //
 // Parts: torso (counted against the 400-800 triangle budget with the neck), neck. Regions, for the planes panel:
 // shoulder, chest, abdomen, pelvis.
@@ -51,9 +54,11 @@ const breastRing = (P) => P.breastRing ?? BREAST_GRID;
 export function domeRing(P, V) {
   const A = V.db1, { mu, d, e } = P.dome, ring = breastRing(P);
   const ys = ring.map((b) => V[b][1]), half = (Math.max(...ys) - Math.min(...ys)) / 2, mid = (Math.max(...ys) + Math.min(...ys)) / 2;
-  return Object.fromEntries(ring.map((b, k) => {
+  const flat = new Set(P.dome.flat ?? []);
+  return Object.fromEntries(ring.flatMap((b, k) => {
+    if (flat.has(b)) return [];
     const s = e ? (mid - V[b][1]) / half : 0;
-    return [`br${k}`, [0, 1, 2].map((q) => A[q] + mu * (V[b][q] - A[q]) + d[q] + (e ? e[q] * s : 0))];
+    return [[`br${k}`, [0, 1, 2].map((q) => A[q] + mu * (V[b][q] - A[q]) + d[q] + (e ? e[q] * s : 0))]];
   }));
 }
 
@@ -115,12 +120,15 @@ export function halfFaces(P) {
       F.delete(key);
       for (let t = 1; t + 1 < v.length; t++) f(`${key}f${t}`, [v[0], v[t], v[t + 1]], face.part);
     }
+    // P.dome.flat: the foot's points with no middle ring point, where the facet runs straight from the foot to the point
+    // (the breast's upper half, the chest's planes continuing into it); a face that loses a corner so is dropped
+    const flat = new Set(P.dome?.flat ?? []), mid = (k) => (flat.has(B[k]) ? B[k] : `br${k}`);
+    const g = (key, v) => { const u = v.filter((x, i) => v.indexOf(x) === i); if (u.length >= 3) { f(key, u, 'torso'); F.get(key).region = 'chest'; } };
     for (let k = 0; k < n; k++) {
       const k1 = (k + 1) % n;
-      if (P.dome?.e) { f(`bq${k}`, [B[k], B[k1], `br${k1}`], 'torso'); f(`bq${k}u`, [B[k], `br${k1}`, `br${k}`], 'torso'); F.get(`bq${k}u`).region = 'chest'; }
-      else f(`bq${k}`, [B[k], B[k1], `br${k1}`, `br${k}`], 'torso');
-      f(`bt${k}`, [`br${k}`, `br${k1}`, 'db1'], 'torso');
-      F.get(`bq${k}`).region = F.get(`bt${k}`).region = 'chest';
+      if (P.dome?.e) { g(`bq${k}`, [B[k], B[k1], mid(k1)]); g(`bq${k}u`, [B[k], mid(k1), mid(k)]); }
+      else g(`bq${k}`, [B[k], B[k1], mid(k1), mid(k)]);
+      g(`bt${k}`, [mid(k), mid(k1), 'db1']);
     }
   }
   // P.navel: a notch in the centre line at the vertex 'at', which sinks to its pit, with a point above it ('top'), below it
@@ -257,8 +265,9 @@ PRESETS.female = {
   // the breast's foot round the patch, the points between the grid's where her reference's outline turns
   breastRing: ['da0', 'bx0', 'da1', 'bx1', 'da2', 'db2', 'bx2', 'dc2', 'dc1', 'bx3', 'dc0', 'db0'],
   dome: { mu: 0.735, d: [0.08, 0.02, 0.09], e: [0, -0.02, 0.05] },
-  // beside the breast, its foot's outer point to the armpit: triangles from the armpit's corner
-  fan: { db2: 'dc3' },
+  // beside the breast, its foot's outer point to the armpit: triangles from the armpit's corner; the pectoral plane by
+  // the sternum in triangles from the foot's inner top point (bx0), so it folds down into the cleavage
+  fan: { db2: 'dc3', sd0: 'bx0' },
   // the navel: a notch sunk at hi0, in the centre line between the waist's row and the hips' widest
   navel: { at: 'hi0', top: 'nv0', bottom: 'nv2', side: 'nv1', cells: ['wa0', 'hi0'] },
   // her reference's single planes
@@ -325,12 +334,30 @@ export function buildLowTorso(who = 'male', preset = null) {
   }
   const span = (n) => (n.endsWith("'") ? ids[-1][n.slice(0, -1)] : ids[1][n]);
   for (const f of spanFaces()) poly(outward(f.v.map(span), f.name), f.part, f.name, regionOf(f.name, who));
+  consistentWinding(polys);
 
   const triList = [];
   polys.forEach((p, pi) => { for (const t of tris(p.v, verts)) triList.push({ v: t, part: p.part, region: p.region, mat: p.mat, poly: pi }); });
   const counts = {};
   for (const t of triList) counts[t.part] = (counts[t.part] ?? 0) + 1;
   return { verts, polys, tris: triList, counts, V, ids };
+}
+
+/** Faces the outward test turns the wrong way (under her breasts, facing down and in): each edge's two faces wound
+ * opposite ways, flipping a face to agree with the majority of its neighbours until none disagree. */
+function consistentWinding(polys) {
+  const dir = new Map();
+  const index = () => { dir.clear(); polys.forEach((p, pi) => p.v.forEach((a, i) => { const k = `${a}>${p.v[(i + 1) % p.v.length]}`; (dir.get(k) ?? dir.set(k, []).get(k)).push(pi); })); };
+  for (let pass = 0; pass < 20; pass++) {
+    index();
+    let flipped = false;
+    polys.forEach((p) => {
+      let same = 0, opp = 0;
+      p.v.forEach((a, i) => { const b = p.v[(i + 1) % p.v.length]; same += (dir.get(`${a}>${b}`)?.length ?? 1) - 1; opp += dir.get(`${b}>${a}`)?.length ?? 0; });
+      if (same > opp) { p.v.reverse(); flipped = true; index(); }
+    });
+    if (!flipped) return;
+  }
 }
 
 /** Each polygon in triangles: a quad split so it folds outward, a larger polygon ear-clipped in its own plane (a merged
