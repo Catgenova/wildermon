@@ -117,7 +117,7 @@ import { BEARD_ODDS } from '../../game/look';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, type PlacedFurniture } from '../../game/furniture';
-import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, TAN_LYE, type Item } from '../../game/items';
+import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
 import { meltLumps } from '../../game/melt';
@@ -4255,7 +4255,11 @@ export const NEWS: News[] = [
   {
     n: 518,
     day: '2026-11-07',
-    lines: () => ['Changed: brewing is in a barrel only; Start a brew is no longer on wells and fountains.'],
+    lines: () => [
+      'Changed: brewing is in a barrel only; Start a brew is no longer on wells and fountains.',
+      `Changed: lye takes ${LYE_ASH_PER_LITRE} ash a litre of water: a bucket (${BUCKET_LITRES} L) ${lyeAshFor(BUCKET_LITRES)} ashes (was 2).`,
+      'New: Leach into lye on a barrel of water: every litre in it, one ash a litre, from the pack or stores within reach. Not on wells.',
+    ],
   },
   {
     n: 517,

@@ -1361,6 +1361,15 @@ export type LiquidKind = 'water' | 'lye' | 'milk' | 'ale' | 'cider' | 'mead' | '
 export const LIQUID_NAME: Record<LiquidKind, string> = { water: 'water', lye: 'lye', milk: 'milk', ale: 'ale', cider: 'cider', mead: 'mead', wine: 'wine', grape_wine: 'grape wine', juice: 'juice', spirit: 'spirit', dye: 'dye', whey: 'whey' };
 /** A bucket holds five litres, whichever way it is going. */
 export const BUCKET_LITRES = 5;
+/**
+ * Ashes leached per litre of water into lye, in a bucket (`make_lye`) or a barrel (`leach_lye`). Asked for: "Making lye
+ * requires 1 unit of ash per L. Allow lye to be made in barrels as well as buckets". The island's `lye_ash_per_litre`.
+ */
+export const LYE_ASH_PER_LITRE = 1;
+/** How hard leaching is, in a bucket or a barrel alike. */
+export const LYE_DIFFICULTY = 14;
+/** Ashes it takes to turn so many litres of water into lye: one a litre, a part litre a whole ash. The island's `private.lye_ash_for`. */
+export const lyeAshFor = (litres: number): number => Math.ceil(litres * LYE_ASH_PER_LITRE - 1e-9);
 /** Which liquid a full vessel is carrying, and which empty vessel it leaves. */
 export const VESSELS: Record<string, { liquid: LiquidKind; empty: string }> = {
   water_bucket: { liquid: 'water', empty: 'bucket' },

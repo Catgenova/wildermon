@@ -6,7 +6,7 @@ import type { Game } from './game';
 import { pressStamp } from './relicuse';
 import { GEAR_RECIPES } from './wildgear';
 import {
-  describeFrom, describeWith, itemDef, litresOf, TAN_LYE, makersMark, markOf, overParts, partsMark, rareInputSaid, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD,
+  BUCKET_LITRES, describeFrom, describeWith, itemDef, litresOf, lyeAshFor, LYE_DIFFICULTY, TAN_LYE, makersMark, markOf, overParts, partsMark, rareInputSaid, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD,
   serveOf, type Item,
 } from './items';
 import { QL_PER_LOOP } from './belt';
@@ -376,7 +376,8 @@ export const RECIPES: Recipe[] = [
   { id: 'make_bodkin_arrows', category: 'Woodwork', result: 'bodkin_arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'arrow_head', count: 3 }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'metal', label: 'Fletch bodkin arrows', verb: 'fletching', baseTime: 10, stamina: 0.03, difficulty: 26, done: '', spareOnFail: true },
   { id: 'make_blunt_arrows', category: 'Woodwork', result: 'blunt_arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'wood', label: 'Fletch blunt arrows', verb: 'fletching', baseTime: 6, stamina: 0.02, difficulty: 6, done: '', spareOnFail: true },
   // Alchemy: ashes leached in water, and what lye is for.
-  { id: 'make_lye', category: 'Alchemy', result: 'lye_bucket', inputs: [{ item: 'water_bucket' }, { item: 'ash', count: 2 }], skill: 'alchemy', label: 'Leach into lye', verb: 'making lye', baseTime: 12, stamina: 0.03, difficulty: 14, done: '', spareOnFail: true },
+  // One ash a litre of the bucket's water (`LYE_ASH_PER_LITRE`); a barrel of water is leached in place (`leach_lye`).
+  { id: 'make_lye', category: 'Alchemy', result: 'lye_bucket', inputs: [{ item: 'water_bucket' }, { item: 'ash', count: lyeAshFor(BUCKET_LITRES) }], skill: 'alchemy', label: 'Leach into lye', verb: 'making lye', baseTime: 12, stamina: 0.03, difficulty: LYE_DIFFICULTY, done: '', spareOnFail: true },
   { id: 'tan_hide', category: 'Alchemy', result: 'leather', inputs: [{ item: 'hide' }, { item: 'lye_bucket', litres: TAN_LYE }], tool: 'carving_knife', skill: 'leatherworking', label: 'Tan in lye', verb: 'tanning a hide', baseTime: 14, stamina: 0.05, difficulty: 16, done: '', spareOnFail: true },
   // Writing: reed beds into paper, and what is written on it.
   // Pressed standing at a paper press, as cloth is woven at a loom (`enchant.ts`).

@@ -10,7 +10,7 @@
  * turns them into rows. What Postgres holds is generated, never hand-edited —
  * the algorithms are ported, the constants are not.
  */
-import { CATEGORY_DECAY, DRINK_LITRES, ITEM_DEFS, LITRE_KG } from '../src/game/items';
+import { CATEGORY_DECAY, DRINK_LITRES, ITEM_DEFS, LITRE_KG, LYE_ASH_PER_LITRE } from '../src/game/items';
 import { BURYABLE, STONE_BEDS, BUSH_DEFS, ROAD_TILES, ROCK_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TREE_ROOM_ONE, TREE_ROOM_TWO, TREE_SEEDS, TREE_SEED_BOTH, TREE_SEED_NONE, TREE_SEED_REACH, TREE_DAWN_UTC } from '../src/world/tiles';
 import { STEPS_BRICKS, STEPS_LEAST, STEPS_MORTAR, STEPS_MOST, STEPS_NAILS, STEPS_PLANKS, STEPS_SLABS, STEPS_TIMBER, STEPS_TWIST, TileType } from '../src/world/tiles';
 import { STEPS_BACK } from '../src/game/steps';
@@ -1792,7 +1792,7 @@ for (const [fn, v] of [
   /* And how long a buy order stands before it lapses and gives back what it still holds. */
   ['order_life', ORDER_LIFE],
   /* Horseshoes: four to a mount, a week on, a share quicker on stone and a step higher. */
-  ['shoes_per_mount', SHOES_PER_MOUNT], ['shoe_days', SHOE_DAYS], ['shoe_pace', SHOE_PACE], ['shoe_step', SHOE_STEP], ['haul_shoe_share', HAUL_SHOE_SHARE],
+  ['shoes_per_mount', SHOES_PER_MOUNT], ['shoe_days', SHOE_DAYS], ['shoe_pace', SHOE_PACE], ['shoe_step', SHOE_STEP], ['haul_shoe_share', HAUL_SHOE_SHARE], ['lye_ash_per_litre', LYE_ASH_PER_LITRE],
   /* The hour, UTC, at which the woods turn over — six in the morning at UTC-7 — and what a tree leaves. */
   ['tree_dawn_utc', TREE_DAWN_UTC], ['tree_seeds', TREE_SEEDS], ['tree_seed_reach', TREE_SEED_REACH],
   ['tree_seed_none', TREE_SEED_NONE], ['tree_seed_both', TREE_SEED_BOTH],

@@ -1597,6 +1597,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('drink_from_vessel', 'Drink', 'drinking', null, null, false, null, 0, 2, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('examine_vessel', 'Examine', 'examining', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('empty_vessel', 'Empty it out', 'emptying it', null, null, false, null, 0.02, 3, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('leach_lye', 'Leach into lye', 'making lye', 'alchemy', null, false, null, 0.03, 12, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pour_into_barrel', 'Pour into the barrel', 'pouring it in', null, null, false, null, 0.01, 2, null, false, true);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('throw_away', 'Trash', 'throwing it out', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('sleep', 'Sleep', 'lying down', null, null, false, null, 0, 4, null, false, false);
@@ -5789,6 +5790,7 @@ create or replace function shoe_days() returns double precision language sql imm
 create or replace function shoe_pace() returns double precision language sql immutable as $fn$ select 1.15::double precision $fn$;
 create or replace function shoe_step() returns double precision language sql immutable as $fn$ select 8::double precision $fn$;
 create or replace function haul_shoe_share() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
+create or replace function lye_ash_per_litre() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
 create or replace function tree_dawn_utc() returns double precision language sql immutable as $fn$ select 13::double precision $fn$;
 create or replace function tree_seeds() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
 create or replace function tree_seed_reach() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
@@ -7997,7 +7999,7 @@ insert into recipe_input (recipe, ord, item, count, litres) values ('make_blunt_
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_blunt_arrows', 1, 'feather', 3, null);
 insert into recipe (id, result, count, tool, station, skill, label, verb, base_time, stamina, difficulty, ql_from_inputs, material, wood, extra, done, fail) values ('make_lye', 'lye_bucket', 1, null, null, 'alchemy', 'Leach into lye', 'making lye', 12, 0.03, 14, false, null, null, null, '', 'Failed: bucket of lye.');
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_lye', 0, 'water_bucket', 1, null);
-insert into recipe_input (recipe, ord, item, count, litres) values ('make_lye', 1, 'ash', 2, null);
+insert into recipe_input (recipe, ord, item, count, litres) values ('make_lye', 1, 'ash', 5, null);
 insert into recipe (id, result, count, tool, station, skill, label, verb, base_time, stamina, difficulty, ql_from_inputs, material, wood, extra, done, fail) values ('tan_hide', 'leather', 1, 'carving_knife', null, 'leatherworking', 'Tan in lye', 'tanning a hide', 14, 0.05, 16, false, null, null, null, '', 'Failed: leather.');
 insert into recipe_input (recipe, ord, item, count, litres) values ('tan_hide', 0, 'hide', 1, null);
 insert into recipe_input (recipe, ord, item, count, litres) values ('tan_hide', 1, 'lye_bucket', 1, 1);

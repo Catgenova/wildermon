@@ -30,7 +30,9 @@ import {
   type PlacedFurniture,
 } from './furniture';
 import type { Game } from './game';
-import { describeWith, itemDef, litresOf, markOf, type Item } from './items';
+import { describeWith, itemDef, litresOf, lyeAshFor, LYE_DIFFICULTY, markOf, type Item } from './items';
+import { damageDrawn, failDamagedSaid } from './faildamage';
+import { tryGain } from './learn';
 import type { CraftStock } from './recipes';
 import { bedRest, SLEEP_SAID, sleepNotYours } from './sleep';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } from './dyestuffs';
@@ -53,6 +55,19 @@ const nearPiece = (g: Game, f: PlacedFurniture, range = 2.4): boolean => {
   const [cx, cy] = furnitureCentre(f);
   return Math.hypot(cx - g.player.x, cy - g.player.y) <= range;
 };
+
+/** Why the water in this barrel cannot be leached into lye, or null. The island's `liquid_refusal` on `leach_lye`, word for word. */
+export function leachLyeReason(g: Game, f: PlacedFurniture | undefined): string | null {
+  if (!f) return 'It is gone.';
+  if (!nearPiece(g, f)) return 'Stand next to it.';
+  if (!holdsLiquid(f) || isWell(f)) return 'Not a barrel.';
+  if (isWorking(f)) return 'Still fermenting.';
+  if (f.liquid !== 'water' || litresIn(f) <= 0) return 'Needs water.';
+  const need = lyeAshFor(litresIn(f));
+  const have = g.stockCount('ash');
+  if (have < need) return `Need ${need} × ashes; have ${have}.`;
+  return null;
+}
 const isOven = (f: PlacedFurniture): boolean => !!furnitureDef(f.kind).hearth;
 const isBed = (f: PlacedFurniture): boolean => (furnitureDef(f.kind).bed ?? 0) > 0;
 
@@ -748,6 +763,49 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       g.events.emit('crate');
       g.events.emit('world', f.x, f.y);
       g.logMsg(`Emptied: ${what} from the ${furnitureName(f).toLowerCase()}.`, 'event');
+    },
+  },
+  {
+    /*
+     * Lye leached in the barrel itself: every litre of water in it, one ash a litre (`lyeAshFor`), out of the pack, a bag
+     * or a store within reach, at the bucket's difficulty. Asked for: "Allow lye to be made in barrels as well as
+     * buckets". Not in a well or a fountain. The island's `leach_lye` in `liquid_refusal` and `perform_liquid`.
+     */
+    id: 'leach_lye',
+    label: 'Leach into lye',
+    verb: 'making lye',
+    skill: 'alchemy',
+    stamina: 0.03,
+    baseTime: 12,
+    applies: (t, g) => {
+      const f = pieceOf(g, t);
+      return !!f && holdsLiquid(f) && !isWell(f) && f.liquid === 'water' && litresIn(f) > 0;
+    },
+    check: (t, g) => leachLyeReason(g, pieceOf(g, t)),
+    perform: (t, g) => {
+      const f = pieceOf(g, t);
+      if (!f || leachLyeReason(g, f)) return;
+      const litres = litresIn(f);
+      const ash = lyeAshFor(litres);
+      const ashQl = g.stockOf((it) => it.id === 'ash')[0]?.item.ql ?? 20;
+      // Failed: the ashes drawn are damaged by their QL (`faildamage.ts`), and the water stays water.
+      if (!g.skillCheck('alchemy', LYE_DIFFICULTY, 0, g.mindEase())) {
+        const hurt = damageDrawn(g.stockOf((it) => it.id === 'ash'), ash);
+        g.gainSkill('alchemy', tryGain(false));
+        g.logMsg(failDamagedSaid('Failed: lye.', hurt), 'event');
+        g.events.emit('crate');
+        g.events.emit('inventory');
+        return;
+      }
+      if (!g.spendStock('ash', ash)) return;
+      f.liquid = 'lye';
+      f.ql = Math.max(1, Math.min(100, (ashQl + g.skills.get('alchemy')) / 2));
+      delete f.knack;
+      delete f.agedFrom;
+      g.gainSkill('alchemy', tryGain(true));
+      g.events.emit('crate');
+      g.events.emit('world', f.x, f.y);
+      g.logMsg(`Lye: ${Number(litres.toFixed(1))} L in the ${furnitureName(f).toLowerCase()}. Ashes: ${ash}.`, 'event');
     },
   },
   {

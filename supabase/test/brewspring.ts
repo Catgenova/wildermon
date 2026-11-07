@@ -22,7 +22,8 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, WATER_MOTE_USES, type ActionDef, type Target } from '../../src/game/actions';
 import { BREW_BY_ID, BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, brewTime, BREWS, isWorking } from '../../src/game/brewing';
 import { furnitureState, type LiquidKind, type PlacedFurniture } from '../../src/game/furniture';
-import { ITEM_DEFS, type Item } from '../../src/game/items';
+import { BUCKET_LITRES, ITEM_DEFS, type Item } from '../../src/game/items';
+import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { WATER_MOTE, WATER_MOTE_NEED } from '../../src/game/motes';
 import { vesselSays } from '../../src/game/placeables';
 import { TileType } from '../../src/world/tiles';
@@ -184,6 +185,23 @@ begin
   -- 6. Mead in it: its ageing stamped at the moment it stops.
   ${brew('mead', MEAD.count)}
   insert into said select 'A:set', pl.liquid || '|' || pl.ferment || '|' || (pl.aged_from = v_now + pl.ferment)::text from placed pl where pl.id = v_bar;
+
+  -- 7. Lye in the barrel: one ash a litre, a part litre a whole ash; refused short, and in the well.
+  update placed set liquid = 'water', litres = 12.5, ql = 40, ferment = 0, knack = null, since = now() where id = v_bar;
+  delete from item where world_id = w and holder = 'player' and def = 'ash';
+  perform give(w, u, 'ash', 12, 30);
+  insert into said values ('L:short', coalesce(act_refusal(w, u, 'leach_lye', ${furn('v_bar')}), '-'));
+  update player set x = 15.5, y = 15.5 where world_id = w and uid = u;
+  insert into said values ('L:well', coalesce(act_refusal(w, u, 'leach_lye', ${furn('v_well')}), '-'));
+  update player set x = 10.5, y = 10.5 where world_id = w and uid = u;
+  perform give(w, u, 'ash', 3, 30);
+  perform pg_temp.dice('0.01');
+  perform act_perform(w, u, 'leach_lye', ${furn('v_bar')});
+  perform pg_temp.nodice();
+  insert into said select 'L:done', pl.liquid || '|' || pl.litres || '|'
+    || (select coalesce(sum(count), 0) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'ash')
+    || '|' || ${lastSaid} from placed pl where pl.id = v_bar;
+  insert into said select 'L:bucket', count from recipe_input where recipe = 'make_lye' and item = 'ash';
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -303,6 +321,21 @@ brewHere('mead');
 check(`mead in the spring works ${MEAD.time * BREW_SPRING_MUL} s and stamps its ageing at the moment it stops, on both sides`,
   isle.get('A:set') === `mead|${MEAD.time * BREW_SPRING_MUL}|true` && bar.ferment === MEAD.time * BREW_SPRING_MUL && bar.agedFrom === NOW + MEAD.time * BREW_SPRING_MUL,
   `${isle.get('A:set')} / ${bar.ferment} ${bar.agedFrom}`);
+
+/* 7. Lye in the barrel (asked for: "Making lye requires 1 unit of ash per L. Allow lye to be made in barrels as well as buckets"). */
+Object.assign(bar, { liquid: 'water', litres: 12.5, ql: 40, ferment: 0 });
+delete bar.knack;
+for (let i = g.inventory.items.length - 1; i >= 0; i--) if (g.inventory.items[i].id === 'ash') g.inventory.items.splice(i, 1);
+thing('ash', 30, 12);
+same('L:short', act('leach_lye').check?.(at, g) ?? '-', '12.5 litres of water want 13 ashes; 12 are refused');
+g.putBody(15.5, 15.5, 0);
+same('L:well', act('leach_lye').check?.({ kind: 'furniture', id: well.id } as Target, g) ?? '-', 'and no lye in a well');
+g.putBody(10.5, 10.5, 0);
+thing('ash', 30, 3);
+dice(0.01);
+act('leach_lye').perform(at, g);
+same('L:done', `${bar.liquid}|${bar.litres}|${g.inventory.count('ash')}|${lastHere()}`, 'with 15: the barrel is lye, 13 ashes gone, 2 left');
+same('L:bucket', String(RECIPE_BY_ID.get('make_lye')?.inputs.find((i) => i.item === 'ash')?.count), `a bucket of ${BUCKET_LITRES} litres takes ${BUCKET_LITRES} ashes`);
 
 /* ---- what was found ------------------------------------------------------------------------------- */
 
