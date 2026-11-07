@@ -30,3 +30,5 @@ Reference sheet layout: front, three-quarter, profile, rear three-quarter and ba
 
 Decisions
 - 2026-11-07, the user's decision: the top view stays at the same scale as the other views. The reference's larger top view is not counted against the head.
+- 2026-11-07, the user's decision: score shape, not light. The head is judged and fitted only on shape against the reference sheet: the outline in every view, where the facet edges and planes fall (the plane layout against the reference's visible plane boundaries and its front wireframe panel), and the features' positions and shapes (eyes, lids, brows, nose, ears, jaw, chin, neck). Differences in lighting no longer count: the reference lights each view differently, which one 3D light cannot reproduce. The renders keep the shared camera-fixed light and its shadows; the light is not tuned further.
+- 2026-11-07, the user's decision: where the bottom view disagrees with the other views, the front, profile and three-quarter views win. The bottom view comes as close as it can without moving anything those views match. The top and rear views are also secondary to the front, profile and three-quarter views.
