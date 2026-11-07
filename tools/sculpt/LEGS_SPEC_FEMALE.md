@@ -61,3 +61,12 @@ Decisions
   buttock's peak at the hip row's back (-1.15), the thigh's top ring's back -1.12, the mid-thigh ring's back in to -0.86
   (was -1.07) and its front out to 0.55 (was 0.41), so the buttock rounds into the thigh and the thigh's front runs
   straight onto the kneecap; the pubic point back to 0.58 (was 0.76, a spike in profile; under the loincloth).
+- 2026-11-07, the user's request ("the front of her waist should come down as a V from her abdomen to between her legs;
+  there is no butt shape or padding yet; it looks like she has a frontbutt"): the hip row's front is the groin's crease,
+  from the hip cut's front corner (gl3 at 1.1, -4.2) down to the pubic point between the legs (gl0 at -5.8), the belly
+  between them narrowing to it and the thigh's front planes beginning at the hip cut, as her full-body front draws them;
+  the pelvis' front recedes in profile (the pubic point 0.33, the crease 0.36, the thigh's top front 0.47; no bulge above
+  the mid-thigh); the crotch between the legs at -6.15, where her full-body front's thighs part. The thigh's front from
+  the crease in triangles (the groin's two faces, P.split gr0, gr1/). At the back the hip row crosses the buttocks at their
+  lowest bulge (-1.25 at -5.1, the cleft inset to -1.06), the thigh's top ring at the back the gluteal fold under them
+  (-0.94 at -5.7, rising to the side), so the faces between face down: the fold her leg sheet's back view draws.
