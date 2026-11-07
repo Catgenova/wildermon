@@ -47,27 +47,28 @@ const rowOf = (r) => (Array.isArray(r) ? r : ellRow(r));
 /* ---- the two heads ---------------------------------------------------------------------------------------------- */
 export const PRESETS = {
   male: {
+    planar: 6,
     crown: [0, 2.08, 0.04],
     skull: [
-      { yf: 2.0, yb: 1.97, W: 0.31, F: 0.36, D: 0.36, z0: 0.06, f: [0, 0.5, 0.86, 1], b: [0.86, 0.5, 0] },
-      { yf: 1.84, yb: 1.8, W: 0.52, F: 0.68, D: 0.65, z0: 0.07, f: [0, 0.3, 0.66, 1], b: [0.7, 0.3, 0] },
-      { yf: 1.52, yb: 1.48, W: 0.69, F: 0.84, D: 0.78, z0: 0.08, sideZ: 0.02 },
+      { yf: 2.0, yb: 1.97, W: 0.35, F: 0.4, D: 0.38, z0: 0.06, f: [0, 0.5, 0.86, 1], b: [0.86, 0.5, 0] },
+      { yf: 1.84, yb: 1.8, W: 0.55, F: 0.7, D: 0.66, z0: 0.07, f: [0, 0.3, 0.66, 1], b: [0.7, 0.3, 0] },
+      { yf: 1.58, yb: 1.52, W: 0.69, F: 0.84, D: 0.79, z0: 0.08, sideZ: 0.02 },
     ],
     face: [
       // brow ridge
       { front: [[0, 1.2, 0.97], [0.32, 1.2, 0.91], [0.56, 1.17, 0.7], [0.68, 1.16, 0.12]], back: { yb: 1.2, W: 0.68, D: 0.8, z0: 0.08 } },
       // eyes
-      { front: [[0, 1.0, 0.9], [0.32, 0.98, 0.79], [0.51, 0.97, 0.63], [0.67, 0.97, 0.1]], back: { yb: 1.0, W: 0.66, D: 0.75, z0: 0.08 } },
+      { front: [[0, 1.0, 0.9], [0.32, 0.98, 0.775], [0.51, 0.97, 0.63], [0.67, 0.97, 0.1]], back: { yb: 1.0, W: 0.66, D: 0.75, z0: 0.08, mid: true } },
       // cheekbones; the back's shelf under the skull
-      { front: [[0, 0.72, 0.95], [0.32, 0.75, 0.8], [0.57, 0.77, 0.57], [0.65, 0.8, 0.07]], back: { yb: 0.76, W: 0.6, D: 0.63, z0: 0.07 } },
+      { front: [[0, 0.72, 0.95], [0.3, 0.75, 0.76], [0.57, 0.77, 0.57], [0.65, 0.8, 0.07]], back: { yb: 0.76, W: 0.6, D: 0.63, z0: 0.07 } },
       // the mouth's line
-      { front: [[0, 0.3, 0.87], [0.26, 0.33, 0.72], [0.46, 0.45, 0.4], [0.57, 0.6, -0.04]], back: { yb: 0.54, W: 0.53, D: 0.56, z0: 0.05 } },
+      { front: [[0, 0.3, 0.87], [0.26, 0.33, 0.72], [0.46, 0.45, 0.4], [0.57, 0.6, -0.04]], back: { yb: 0.54, W: 0.53, D: 0.56, z0: 0.05, mid: true } },
       // the jawline: the chin's flat underside's front edge, back to the jaw's angle and the nape
       { front: [[0, 0.0, 0.8], [0.18, 0.02, 0.75], [0.4, 0.3, 0.28], [0.52, 0.46, -0.08]], back: { yb: 0.44, W: 0.48, D: 0.53, z0: 0.03 } },
     ],
     // the neck's rings: the first under the jaw (the chin's underside between), the last hidden in the shoulders
     neck: [
-      [[0, 0.08, 0.42], [0.3, 0.12, 0.33], [0.44, 0.22, 0.03], [0.46, 0.3, -0.16], [0.4, 0.33, -0.33], [0.22, 0.35, -0.44], [0, 0.36, -0.47]],
+      [[0, 0.03, 0.42], [0.3, 0.08, 0.33], [0.44, 0.22, 0.03], [0.46, 0.3, -0.16], [0.4, 0.33, -0.33], [0.22, 0.35, -0.44], [0, 0.36, -0.47]],
       { yf: -0.2, yb: 0.0, W: 0.47, F: 0.42, D: 0.45, z0: -0.04, sideZ: -0.06 },
       { yf: -0.5, yb: -0.35, W: 0.48, F: 0.44, D: 0.46, z0: -0.04, sideZ: -0.06 },
     ],
@@ -77,7 +78,7 @@ export const PRESETS = {
       [[0, -0.64, 0.52], [0.45, -0.52, 0.46], [0.82, -0.43, 0.26], [0.91, -0.44, -0.06], [0.8, -0.43, -0.42], [0.42, -0.42, -0.66], [0, -0.5, -0.72]],
       [[0, -0.92, 0.6], [0.42, -0.92, 0.5], [0.62, -0.92, 0.28], [0.66, -0.92, -0.06], [0.6, -0.92, -0.36], [0.36, -0.92, -0.5], [0, -0.92, -0.54]],
     ],
-    ear: { c: [0.6, 0.83, -0.02], s: 1.03, gap: 0.08, flare: 0.18, lift: 0.18, thick: 0.14 },
+    ear: { c: [0.6, 0.83, -0.02], s: 1.03, gap: 0.05, flare: 0.18, lift: 0.18, thick: 0.14 },
     nose: { top: 1.13, tip: 0.6, under: 0.54, wTop: 0.07, wBridge: 0.1, wWing: 0.13, out: 0.1, tipOut: 0.14 },
     brow: { x: [0.12, 0.33, 0.56], yb: [1.1, 1.12, 1.11], h: [0.08, 0.08, 0.05], out: 0.05 },
     eye: { x: 0.31, y: 1.0, w: 0.1, h: 0.085, lid: 0.03, almond: 0 },
@@ -88,6 +89,7 @@ export const PRESETS = {
 
 /** The female head: the male's system with her proportions. */
 PRESETS.female = {
+  planar: 6,
   // Her head 1.91 tall from her chin (y 0.15) to her crown, her neck the longer for it.
   crown: [0, 2.06, 0.02],
   skull: [
@@ -97,13 +99,13 @@ PRESETS.female = {
   ],
   face: [
     { front: [[0, 1.22, 0.9], [0.3, 1.22, 0.85], [0.5, 1.2, 0.67], [0.62, 1.2, 0.1]], back: { yb: 1.24, W: 0.66, D: 0.82, z0: 0.06 } },
-    { front: [[0, 0.98, 0.86], [0.3, 0.96, 0.77], [0.47, 0.95, 0.62], [0.54, 0.95, 0.08]], back: { yb: 1.04, W: 0.6, D: 0.78, z0: 0.06 } },
-    { front: [[0, 0.72, 0.9], [0.28, 0.75, 0.77], [0.47, 0.8, 0.55], [0.53, 0.84, 0.05]], back: { yb: 0.84, W: 0.53, D: 0.66, z0: 0.05 } },
-    { front: [[0, 0.4, 0.83], [0.2, 0.42, 0.68], [0.35, 0.53, 0.43], [0.47, 0.66, -0.04]], back: { yb: 0.66, W: 0.48, D: 0.58, z0: 0.04 } },
+    { front: [[0, 0.98, 0.86], [0.3, 0.96, 0.77], [0.47, 0.95, 0.62], [0.54, 0.95, 0.08]], back: { yb: 1.04, W: 0.6, D: 0.78, z0: 0.06, mid: true } },
+    { front: [[0, 0.72, 0.9], [0.26, 0.75, 0.74], [0.47, 0.8, 0.55], [0.53, 0.84, 0.05]], back: { yb: 0.84, W: 0.53, D: 0.66, z0: 0.05 } },
+    { front: [[0, 0.4, 0.83], [0.2, 0.42, 0.68], [0.35, 0.53, 0.43], [0.47, 0.66, -0.04]], back: { yb: 0.66, W: 0.48, D: 0.58, z0: 0.04, mid: true } },
     { front: [[0, 0.15, 0.8], [0.07, 0.16, 0.77], [0.27, 0.32, 0.4], [0.43, 0.5, -0.08]], back: { yb: 0.56, W: 0.44, D: 0.54, z0: 0.03 } },
   ],
   neck: [
-    [[0, 0.08, 0.28], [0.2, 0.12, 0.22], [0.3, 0.24, 0.0], [0.32, 0.34, -0.15], [0.28, 0.38, -0.3], [0.15, 0.4, -0.39], [0, 0.41, -0.42]],
+    [[0, 0.16, 0.28], [0.2, 0.19, 0.22], [0.3, 0.24, 0.0], [0.32, 0.34, -0.15], [0.28, 0.38, -0.3], [0.15, 0.4, -0.39], [0, 0.41, -0.42]],
     { yf: -0.2, yb: -0.05, W: 0.32, F: 0.3, D: 0.36, z0: -0.06, sideZ: -0.05 },
     { yf: -0.5, yb: -0.4, W: 0.33, F: 0.31, D: 0.37, z0: -0.05, sideZ: -0.05 },
   ],
@@ -146,9 +148,37 @@ export function buildLowHead(who = 'male') {
   };
 
   // The head's lattice; the face region the front columns from the brow down.
-  const rows = [...P.skull.map(ellRow), ...P.face.map((r) => faceRow(r.front, r.back))];
-  const rings = rows.map(ring);
+  const rows = [...P.skull.map(ellRow), ...P.face.map((r) => faceRow(r.front.map((p) => [...p]), r.back))];
+  // A face row whose back is `mid` lays its back three on the line between its neighbours', so the back of the head
+  // keeps fewer, larger facets than the face.
+  P.face.forEach((r, i) => {
+    if (!r.back.mid) return;
+    const k = P.skull.length + i, prev = rows[k - 1], next = rows[k + 1];
+    for (let c = 4; c < U; c++) {
+      const t = (prev[c][1] - rows[k][c][1]) / ((prev[c][1] - next[c][1]) || 1);
+      rows[k][c] = lerp(prev[c], next[c], Math.min(0.8, Math.max(0.2, t)));
+    }
+  });
+  // The face's quads pressed toward flat: each round moves every face vertex along z (so the front view's outline
+  // stays) by part of its distance from the best plane of each quad it is in, so the planes read large and clean.
   const nSkull = P.skull.length;
+  for (let it = 0; it < (P.planar ?? 0); it++) {
+    const dz = rows.map((row) => row.map(() => 0)), cnt = rows.map((row) => row.map(() => 0));
+    for (let r = nSkull - 1; r + 1 < rows.length; r++) {
+      for (let c = 0; c < 3; c++) {
+        const q = [[r, c], [r, c + 1], [r + 1, c + 1], [r + 1, c]];
+        const pts = q.map(([i, j]) => rows[i][j]);
+        let n = [0, 0, 0];
+        for (let i = 0; i < 4; i++) { const p0 = pts[i], p1 = pts[(i + 1) % 4]; n = add(n, [(p0[1] - p1[1]) * (p0[2] + p1[2]), (p0[2] - p1[2]) * (p0[0] + p1[0]), (p0[0] - p1[0]) * (p0[1] + p1[1])]); }
+        n = unit(n);
+        if (Math.abs(n[2]) < 0.35) continue;
+        const cen = mul(pts.reduce((a, p) => add(a, p), [0, 0, 0]), 0.25);
+        q.forEach(([i, j], k) => { dz[i][j] += -dot(n, sub(pts[k], cen)) / n[2]; cnt[i][j]++; });
+      }
+    }
+    rows.forEach((row, i) => row.forEach((p, j) => { if (cnt[i][j] && i >= nSkull) p[2] += 0.5 * dz[i][j] / cnt[i][j]; }));
+  }
+  const rings = rows.map(ring);
   fan(rings[0], vert(P.crown), 'head', 'skull', true);
   for (let r = 0; r + 1 < rings.length; r++) band(rings[r], rings[r + 1], 'head', (c, c2) => (r >= nSkull && Math.max(c, c2) <= 3 ? 'face' : 'skull'));
   // The neck: the chin's underside (counted as head), then the neck's tube, closed at its foot.

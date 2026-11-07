@@ -19,6 +19,7 @@ const who = opt('who', 'male');
 const out = resolve(opt('out', 'tmp/lowhead'));
 const dsf = +opt('scale', '1');
 const pitch = +opt('pitch', '45');
+const normals = args.includes('--normals'); // a pass of the view-space normals of the skin, for fitting the light to a reference
 mkdirSync(out, { recursive: true });
 
 const mesh = buildLowHead(who);
@@ -29,12 +30,59 @@ const MAT = { skin: 0, brow: 1, pupil: 2, lid: 3, lip: 4 };
 const REG = { skull: 0, face: 1, neck: 2 };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+// Ambient occlusion per triangle, one value for the whole facet: the share of a cosine-weighted hemisphere of rays
+// from its centre that meet the mesh within 1.2 units (the shadow under the jaw, in the ears' backs, under the brows).
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const T = mesh.tris.map((t) => t.v.map((k) => mesh.verts[k]));
+const PART = mesh.tris.map((t) => t.part);
+const hit = (o, d, skip) => {
+  for (let j = 0; j < T.length; j++) {
+    if (j === skip) continue;
+    // the stub's collar sits inside the neck: neither shadows the other
+    if ((PART[skip] === 'shoulders' && PART[j] === 'neck') || (PART[skip] === 'neck' && PART[j] === 'shoulders')) continue;
+    const [a, b, c] = T[j];
+    const e1 = sub(b, a), e2 = sub(c, a), pv = cross(d, e2), det = dot(e1, pv);
+    if (Math.abs(det) < 1e-9) continue;
+    const inv = 1 / det, tv = sub(o, a), u = dot(tv, pv) * inv;
+    if (u < 0 || u > 1) continue;
+    const qv = cross(tv, e1), v = dot(d, qv) * inv;
+    if (v < 0 || u + v > 1) continue;
+    const t = dot(e2, qv) * inv;
+    if (t > 1e-3 && t < 1.4) return true;
+  }
+  return false;
+};
+// Sky-weighted: a ray's share counts more the higher it points, so the underside of the jaw shades the neck.
+const RAYS = 40;
+const ao = T.map(([a, b, c], i) => {
+  const n0 = cross(sub(b, a), sub(c, a)); const ln = Math.hypot(...n0) || 1; const n = n0.map((v) => v / ln);
+  const cen = [0, 1, 2].map((k) => (a[k] + b[k] + c[k]) / 3);
+  // A facet partly sunk in another piece (an ear's back, the stub's collar) is judged where it is most open.
+  const samples = [cen, ...[a, b, c].map((p) => [0, 1, 2].map((k) => cen[k] * 0.4 + p[k] * 0.6))];
+  const open = (n, at) => {
+    const o = [0, 1, 2].map((k) => at[k] + n[k] * 0.004);
+    const t1 = Math.abs(n[0]) < 0.9 ? cross(n, [1, 0, 0]) : cross(n, [0, 1, 0]); const l1 = Math.hypot(...t1); const u = t1.map((v) => v / l1); const w = cross(n, u);
+    let blocked = 0, all = 0;
+    for (let r = 0; r < RAYS; r++) {
+      const s1 = (r + 0.5) / RAYS, phi = r * 2.399963, rad = Math.sqrt(s1), h = Math.sqrt(1 - s1);
+      const d = [0, 1, 2].map((k) => u[k] * rad * Math.cos(phi) + w[k] * rad * Math.sin(phi) + n[k] * h);
+      const wgt = 0.35 + 0.65 * Math.max(0, d[1]);
+      all += wgt;
+      if (hit(o, d, i)) blocked += wgt;
+    }
+    return 1 - blocked / all;
+  };
+  // The winding does not say which side is outside, so both sides are tried and the opener one is the outside.
+  return Math.max(...samples.flatMap((at) => [open(n, at), open(n.map((v) => -v), at)]));
+});
 const parts = {};
 mesh.tris.forEach((t, i) => {
-  const [a, b, c] = t.v.map((k) => mesh.verts[k]);
+  const [a, b, c] = T[i];
   const n = cross(sub(b, a), sub(c, a)); const l = Math.hypot(...n) || 1;
   const P = (parts[t.part] ??= []);
-  for (const p of [a, b, c]) P.push(p[0], p[1], p[2], n[0] / l, n[1] / l, n[2] / l, MAT[t.mat], REG[t.region], ((t.poly * 2654435761) % 1000) / 1000);
+  // m.z: the occlusion in hundredths, plus the facet's colour jitter as the fraction
+  const mz = Math.round(ao[i] * 100) + ((t.poly * 2654435761) % 1000) / 1001;
+  for (const p of [a, b, c]) P.push(p[0], p[1], p[2], n[0] / l, n[1] / l, n[2] / l, MAT[t.mat], REG[t.region], mz);
 });
 // The wireframe: each polygon's outline once (the quads' diagonals left out), the head and the neck and the stub.
 const seen = new Set(), lines = [];
@@ -51,7 +99,7 @@ for (const p of mesh.polys) {
 
 const female = who === 'female';
 const DATA = {
-  parts, lines, pitch, counts: mesh.counts,
+  parts, lines, pitch, normals, counts: mesh.counts,
   pupil: female ? [0.2, 0.21, 0.25] : [0.09, 0.09, 0.11],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
   title: female ? 'Female Head Modeling Guide' : 'Modeling Guide',
@@ -88,18 +136,21 @@ const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform int
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
   ' vec3 nn = normalize(vn); if (!gl_FrontFacing) nn = -nn;' +
   ' vec3 base = vec3(0.68, 0.49, 0.41);' +
-  ' float jit = vm.z - 0.5; base *= 1.0 + jit*0.03; base.r += jit*0.01;' +
+  ' float jit = fract(vm.z) - 0.5, occ = floor(vm.z) / 100.0; base *= 1.0 + jit*0.03; base.r += jit*0.01;' +
   ' if (vm.x > 0.5 && vm.x < 1.5) base = vec3(0.27, 0.17, 0.13);' +
   ' else if (vm.x > 1.5 && vm.x < 2.5) base = pupc;' +
   ' else if (vm.x > 2.5 && vm.x < 3.5) base = lidc;' +
   ' else if (vm.x > 3.5) base = vec3(0.56, 0.37, 0.36);' +
+  ' if (mode == 3) { gl_FragColor = vm.x < 0.5 ? vec4(nn*0.5+0.5, 1.0) : vec4(0.0,0.0,0.0,1.0); return; }' +
   ' if (mode == 1) { vec3 rc = vm.y < 0.5 ? vec3(0.62,0.60,0.60) : (vm.y < 1.5 ? vec3(0.82,0.62,0.45) : vec3(0.70,0.52,0.50));' +
   '   if (vm.x > 0.5) rc = vm.x < 2.5 ? vec3(0.2,0.16,0.15) : rc;' +
   '   float l = 0.82 + 0.18*max(dot(nn, normalize(vec3(-0.4,0.5,0.8))),0.0); gl_FragColor = vec4(rc*l,1.0); return; }' +
+  // The light, in view space: a warm key from the front and above, a warm fill from the right, a cool rim from the
+  // upper left, planes facing down darker; other materials take it times their colour.
   ' vec3 Lk = normalize(vec3(0.15,0.2,0.97)), Lr = normalize(vec3(1.0,0.1,0.1)), Lc = normalize(vec3(-0.7,0.6,0.35));' +
   ' float dk = max(dot(nn,Lk),0.0), dr = max(dot(nn,Lr),0.0), dc = max(dot(nn,Lc),0.0);' +
-  ' vec3 L = vec3(0.73 + 0.34*nn.y) + 0.25*dk*vec3(1.0,0.98,0.95) + 0.31*dr*vec3(1.04,0.98,0.86);' +
-  ' vec3 c = base*L + vec3(0.08,0.38,0.78)*pow(dc,6.0)*(0.3+0.7*base.r/0.68);' +
+  ' vec3 L = vec3(0.74 + 0.48*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) + 0.25*dk*vec3(1.0,0.98,0.95) + 0.31*dr*vec3(1.04,0.98,0.86);' +
+  ' vec3 c = (base*L + vec3(0.08,0.38,0.78)*pow(dc,6.0)*(0.3+0.7*base.r/0.68)) * mix(0.3, 1.0, occ);' +
   ' gl_FragColor = vec4(c, 1.0); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
@@ -124,11 +175,11 @@ function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoul
   gl.clear(gl.DEPTH_BUFFER_BIT);
   gl.uniformMatrix3fv(U('R'), false, R); gl.uniform3fv(U('piv'), piv);
   gl.uniform2f(U('sc'), 2 * s / 1536, 2 * s / 1024); gl.uniform2f(U('off'), cx / 768 - 1, 1 - cy / 512);
-  gl.uniform1i(U('mode'), mode); gl.uniform1f(U('lift'), 0);
+  gl.uniform1i(U('mode'), D.normals ? 3 : mode); gl.uniform1f(U('lift'), 0);
   gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1);
   for (const p of parts) drawMesh(p);
   gl.disable(gl.POLYGON_OFFSET_FILL);
-  if (wire) {
+  if (wire && !D.normals) {
     gl.uniform1i(U('mode'), 2); gl.uniform3fv(U('linec'), [0.99, 0.93, 0.86]);
     gl.bindBuffer(gl.ARRAY_BUFFER, LB.b);
     gl.disableVertexAttribArray(A.n); gl.disableVertexAttribArray(A.m);
@@ -175,7 +226,8 @@ await p.evaluate((d) => { window.DATA = d; }, DATA);
 await p.addScriptTag({ content: RENDER });
 await p.waitForFunction('window.READY');
 await p.evaluate(() => document.fonts.ready);
-const file = join(out, `sheet-${who}.png`);
+if (normals) await p.evaluate(() => { document.getElementById('sheet').style.background = '#000'; document.getElementById('ui').style.display = 'none'; });
+const file = join(out, normals ? `normals-${who}.png` : `sheet-${who}.png`);
 await p.locator('#sheet').screenshot({ path: file });
 console.log('wrote', file);
 await b.close();
