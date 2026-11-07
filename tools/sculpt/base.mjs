@@ -442,22 +442,27 @@ for (const [band, target] of BANDS) {
   const kept = [...keptSet].sort((a, b) => a - b), newId = new Map(kept.map((v, i) => [v, i]));
   const n0 = kept.length;
   const ex = band === 0 ? exManFar : exMan, exW = band === 0 ? exWomanFar : exWoman;
-  const exManPos = ex.pos.map((p) => bodies.man.ours(p)), exWomanPos = exW.pos.map((p) => bodies.woman.ours(p));
-  // An extra vertex standing for a body vertex is that vertex (the seams' vertices are pinned, so every band keeps them).
-  const exId = (v) => { const id = ex.refs.get(v); if (id === undefined) return v + n0; const c = newId.get(idOf.get(id)); if (c === undefined) throw new Error(`seam vertex ${id} lost`); return c; };
+  // The extra vertices the band keeps: all but the stand-ins for body vertices, which are the body's own (the seams'
+  // vertices are pinned, so every band keeps them) and would otherwise linger with no triangle, weighted to the pelvis
+  // where MakeHuman's rest has them, for the cloth to wrap.
+  const exKeep = ex.pos.map((_, i) => i).filter((i) => !ex.refs.has(i)), exNew = new Map(exKeep.map((v, k) => [v, n0 + k]));
+  const exManPos = exKeep.map((i) => bodies.man.ours(ex.pos[i])), exWomanPos = exKeep.map((i) => bodies.woman.ours(exW.pos[i]));
+  const exId = (v) => { const id = ex.refs.get(v); if (id === undefined) return exNew.get(v); const c = newId.get(idOf.get(id)); if (c === undefined) throw new Error(`seam vertex ${id} lost`); return c; };
   const tri = [...dec.tris.map((t) => t.map((v) => newId.get(v))), ...ex.tris.map((t) => t.map(exId))];
   const q = (p) => p.map((x) => Math.round(x * 500));
   const stamp = [];
-  ex.stamp.forEach((d, i) => { if (d > -1) stamp.push(n0 + i, Math.round(d * 1000)); });
+  exKeep.forEach((i, k) => { const d = ex.stamp[i]; if (d > -1) stamp.push(n0 + k, Math.round(d * 1000)); });
+  const nv = n0 + exKeep.length;
+  if (new Set(tri.flat()).size !== nv) throw new Error(`band ${band}: ${nv - new Set(tri.flat()).size} vertices with no triangle`);
   bands.push({
-    band, verts: n0 + ex.pos.length, tris: tri.flat(),
+    band, verts: nv, tris: tri.flat(),
     man: [...kept.flatMap((v) => q(manPos[v])), ...exManPos.flatMap(q)], woman: [...kept.flatMap((v) => q(womanPos[v])), ...exWomanPos.flatMap(q)],
-    region: [...kept.map((v) => region[v]), ...ex.region],
+    region: [...kept.map((v) => region[v]), ...exKeep.map((i) => ex.region[i])],
     bw: [...kept.flatMap((v) => { const l = top4(bodyIds[v]); const out = []; for (let i = 0; i < 4; i++) out.push(l[i] ? l[i][0] : 0, l[i] ? Math.round(l[i][1] * 255) : 0); return out; }),
-      ...ex.bones.flatMap((l) => { const out = []; for (let i = 0; i < 4; i++) out.push(l[i] ? slotOf(l[i][0]) : 0, l[i] ? Math.round(l[i][1] * 255) : 0); return out; })],
+      ...exKeep.flatMap((i) => { const l = ex.bones[i]; const out = []; for (let j = 0; j < 4; j++) out.push(l[j] ? slotOf(l[j][0]) : 0, l[j] ? Math.round(l[j][1] * 255) : 0); return out; })],
     stamp,
   });
-  console.log(`band ${band}: ${n0 + ex.pos.length} verts, ${tri.length} tris (body ${dec.tris.length})`);
+  console.log(`band ${band}: ${nv} verts, ${tri.length} tris (body ${dec.tris.length})`);
 }
 // The hairstyles: one mesh per style for every band, its vertices its own (numbered from nought), the man's and the
 // woman's on one topology. The bake puts the look's style (or `generic`) after the band's own vertices.
