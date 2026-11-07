@@ -1,0 +1,507 @@
+{
+ "male": {
+  "front": {
+   "neck top'": [
+    134,
+    77,
+    "nt2'"
+   ],
+   "collarbone end'": [
+    111,
+    144,
+    "tr2'"
+   ],
+   "shoulder point'": [
+    59,
+    142.5,
+    "tr4'"
+   ],
+   "shoulder widest'": [
+    38,
+    179,
+    "sd4'"
+   ],
+   "arm cut outer'": [
+    47,
+    215,
+    "da4'"
+   ],
+   "armpit'": [
+    80,
+    214,
+    "dc4'"
+   ],
+   "waist narrowest'": [
+    104,
+    279,
+    "rc4'"
+   ],
+   "hip widest'": [
+    93,
+    342,
+    "hw4'"
+   ],
+   "bottom cut corner'": [
+    140,
+    369,
+    "bt4'"
+   ],
+   "neck top": [
+    190,
+    77,
+    "nt2"
+   ],
+   "neck base": [
+    165.5,
+    134.4,
+    "nm0"
+   ],
+   "pectorals' seam top": [
+    168.5,
+    149,
+    "tr0"
+   ],
+   "pectoral top": [
+    194,
+    146,
+    "tr1"
+   ],
+   "collarbone end": [
+    219,
+    143,
+    "tr2"
+   ],
+   "shoulder top front": [
+    240,
+    142,
+    "tr3"
+   ],
+   "shoulder point": [
+    259,
+    142,
+    "tr4"
+   ],
+   "pectoral outer edge, upper": [
+    229,
+    159,
+    "sd2"
+   ],
+   "shoulder widest": [
+    284,
+    179,
+    "sd4"
+   ],
+   "pectoral outer edge, lower": [
+    240,
+    175,
+    "da2"
+   ],
+   "pectoral front lower edge, centre": [
+    170,
+    205,
+    "db0"
+   ],
+   "pectoral front lower edge": [
+    214,
+    203,
+    "db1"
+   ],
+   "pectoral outer corner": [
+    250,
+    190,
+    "db2"
+   ],
+   "arm cut outer": [
+    281,
+    214,
+    "da4"
+   ],
+   "armpit": [
+    250,
+    215,
+    "dc4"
+   ],
+   "pectoral lower edge, centre": [
+    168.9,
+    209.5,
+    "dc0"
+   ],
+   "pectoral lower edge": [
+    215.6,
+    226.7,
+    "dc1"
+   ],
+   "pectoral crease end": [
+    240,
+    212,
+    "dc2"
+   ],
+   "abs row 1, centre": [
+    169,
+    241,
+    "ra0"
+   ],
+   "abs row 1": [
+    200,
+    246.7,
+    "ra1"
+   ],
+   "serratus": [
+    220,
+    255,
+    "ra2"
+   ],
+   "abs row 2, centre": [
+    169,
+    264.4,
+    "rb0"
+   ],
+   "abs row 2": [
+    195.6,
+    268.9,
+    "rb1"
+   ],
+   "abs row 3, centre": [
+    169,
+    286.7,
+    "rc0"
+   ],
+   "abs row 3": [
+    195.6,
+    288.9,
+    "rc1"
+   ],
+   "waist narrowest": [
+    221,
+    279,
+    "rc4"
+   ],
+   "abs row 4, centre": [
+    169,
+    305,
+    "wa0"
+   ],
+   "abs row 4": [
+    195.6,
+    306,
+    "wa1"
+   ],
+   "oblique": [
+    204.4,
+    304.4,
+    "wa2"
+   ],
+   "lower abs": [
+    193,
+    325,
+    "hi1"
+   ],
+   "inguinal": [
+    215.6,
+    321,
+    "hi2"
+   ],
+   "hip widest": [
+    232,
+    342,
+    "hw4"
+   ],
+   "lower belly": [
+    191,
+    350,
+    "hw1"
+   ],
+   "bottom cut corner": [
+    190,
+    369,
+    "bt4"
+   ],
+   "bottom cut, centre": [
+    165,
+    369,
+    "bt0"
+   ]
+  },
+  "q3": {
+   "neck top'": [
+    383.75,
+    75.6,
+    "nt2'"
+   ],
+   "neck top": [
+    440,
+    81,
+    "nt2"
+   ],
+   "pectorals' seam top": [
+    438,
+    147,
+    "tr0"
+   ],
+   "shoulder point'": [
+    311.9,
+    137.2,
+    "tr4'"
+   ],
+   "shoulder widest'": [
+    297.8,
+    171.6,
+    "sd4'"
+   ],
+   "shoulder widest": [
+    506,
+    181,
+    "sd4"
+   ],
+   "arm cut outer'": [
+    310.3,
+    207.5,
+    "da4'"
+   ],
+   "arm cut outer": [
+    497.8,
+    212,
+    "da4"
+   ],
+   "armpit'": [
+    327.5,
+    210.6,
+    "dc4'"
+   ],
+   "pectoral lower edge, centre": [
+    447.8,
+    199.7,
+    "dc0"
+   ],
+   "pectoral lower edge'": [
+    402.5,
+    216.9,
+    "dc1'"
+   ],
+   "pectoral outer corner'": [
+    360.3,
+    188.75,
+    "dc2'"
+   ],
+   "waist narrowest'": [
+    355.6,
+    273,
+    "rc4'"
+   ],
+   "hip widest'": [
+    340,
+    338.75,
+    "hw4'"
+   ]
+  },
+  "profile": {
+   "neck top front": [
+    640.3,
+    85,
+    "nt0"
+   ],
+   "neck top back": [
+    581,
+    74.7,
+    "nt5"
+   ],
+   "neck base": [
+    636,
+    129.4,
+    "nm0"
+   ],
+   "arm cut centre": [
+    595,
+    193,
+    [
+     "da3'",
+     "da4'",
+     "da5'",
+     "db3'",
+     "db5'",
+     "dc3'",
+     "dc4'",
+     "dc5'"
+    ]
+   ],
+   "arm cut front": [
+    627.8,
+    192,
+    "db3'"
+   ],
+   "arm cut back": [
+    563.8,
+    193,
+    "db5'"
+   ],
+   "arm cut top": [
+    595,
+    177.8,
+    "da4'"
+   ],
+   "arm cut bottom": [
+    595,
+    207.5,
+    "dc4'"
+   ],
+   "pectoral lower edge": [
+    673,
+    212,
+    "dc1'"
+   ],
+   "waist back": [
+    577.8,
+    288.8,
+    "rc8"
+   ],
+   "hip back": [
+    560.6,
+    348,
+    "hw8"
+   ],
+   "bottom cut back": [
+    579,
+    363.75,
+    "bt8"
+   ],
+   "bottom cut front": [
+    660.6,
+    362,
+    "bt0"
+   ]
+  },
+  "back": {
+   "neck top": [
+    1045,
+    76,
+    "nt2"
+   ],
+   "neck top'": [
+    1101.7,
+    76,
+    "nt2'"
+   ],
+   "shoulder point": [
+    970,
+    141.7,
+    "tr4"
+   ],
+   "shoulder point'": [
+    1178.3,
+    141.7,
+    "tr4'"
+   ],
+   "shoulder widest": [
+    948,
+    178.3,
+    "sd4"
+   ],
+   "shoulder widest'": [
+    1199,
+    178.3,
+    "sd4'"
+   ],
+   "arm cut outer": [
+    956.7,
+    213.3,
+    "da4"
+   ],
+   "arm cut outer'": [
+    1191,
+    214,
+    "da4'"
+   ],
+   "armpit": [
+    988,
+    213,
+    "dc4"
+   ],
+   "armpit'": [
+    1161.7,
+    213,
+    "dc4'"
+   ],
+   "shoulder blade top": [
+    1011.7,
+    153.3,
+    "sd6"
+   ],
+   "shoulder blade top'": [
+    1136.7,
+    153.3,
+    "sd6'"
+   ],
+   "shoulder blade tip": [
+    1051.7,
+    210,
+    "dc7"
+   ],
+   "shoulder blade tip'": [
+    1108,
+    210,
+    "dc7'"
+   ],
+   "waist narrowest": [
+    1011.7,
+    276.7,
+    "rc4"
+   ],
+   "waist narrowest'": [
+    1136.7,
+    276.7,
+    "rc4'"
+   ],
+   "hip widest": [
+    1000,
+    343.3,
+    "hw4"
+   ],
+   "hip widest'": [
+    1148.3,
+    343.3,
+    "hw4'"
+   ],
+   "bottom cut corner": [
+    1025,
+    363.3,
+    "bt4"
+   ],
+   "bottom cut corner'": [
+    1123.3,
+    363.3,
+    "bt4'"
+   ],
+   "trapezius point": [
+    1078.3,
+    130,
+    "tr8"
+   ]
+  },
+  "r3": {
+   "arm cut centre": [
+    743.75,
+    196.6,
+    [
+     "da3",
+     "da4",
+     "da5",
+     "db3",
+     "db5",
+     "dc3",
+     "dc4",
+     "dc5"
+    ]
+   ],
+   "shoulder widest'": [
+    920.3,
+    179.4,
+    "sd4'"
+   ],
+   "arm cut outer'": [
+    907.8,
+    212.2,
+    "da4'"
+   ]
+  }
+ }
+}

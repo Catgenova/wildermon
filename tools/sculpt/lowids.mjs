@@ -1,15 +1,18 @@
 // lowids.mjs who out.bin: per view of the top row (front q3 profile r3 back), the id of the polygon nearest the viewer
 // at each sheet pixel (x 0..1536, y 0..460, down to the stub's cut), -1 for none; and out.bin.names.json, each polygon's name. For lowlight.py.
+// lowids.mjs who out.bin --torso: the torso (tools/sculpt/lowtorso.mjs), all eight of its views, over the whole sheet
+// (y 0..1024), for the shape-only comparison (tools/sculpt/lowshape.py).
 import { writeFileSync } from 'node:fs';
 const W = new URL('.', import.meta.url).href;
 const { buildLowHead } = await import(W + 'lowhead.mjs');
-const { loadCams, project } = await import(W + 'lowcam.mjs');
-const who = process.argv[2], out = process.argv[3];
-const mesh = buildLowHead(who);
+const { buildLowTorso } = await import(W + 'lowtorso.mjs');
+const { loadCams, project, TORSO_VIEWS } = await import(W + 'lowcam.mjs');
+const who = process.argv[2], out = process.argv[3], torso = process.argv.includes('--torso');
+const mesh = torso ? buildLowTorso(who) : buildLowHead(who);
 const names = mesh.polys.map((p, i) => p.name ?? (p.ear ? 'ear' : p.mat) + '#' + i);
-const cams = loadCams(who);
-const Wd = 1536, H = 460;
-const views = ['front', 'q3', 'profile', 'r3', 'back'];
+const cams = loadCams(who, torso ? 'torso' : 'head');
+const Wd = 1536, H = torso ? 1024 : 460;
+const views = torso ? TORSO_VIEWS : ['front', 'q3', 'profile', 'r3', 'back'];
 const buf = new Int32Array(views.length * Wd * H).fill(-1);
 views.forEach((v, vi) => {
   const depth = new Float32Array(Wd * H).fill(-1e9);

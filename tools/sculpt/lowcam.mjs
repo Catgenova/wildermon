@@ -21,10 +21,27 @@ export const DEFAULT_CAMS = {
 /** The parts each view shows (the rest show the head, the neck and the shoulders). */
 export const PARTS = { top: ['head', 'neck'] };
 
-export function loadCams(who) {
+// The torsos' sheets (tools/sculpt/lowtorso.mjs): eight views, kept in the same file under 'torso-<who>'. Their pivot
+// is the torso's middle, [0, -2, 0], at sheet pixel (cx, cy); s is sheet pixels per head unit, as the heads'.
+export const TORSO_PIV = [0, -2, 0];
+export const TORSO_VIEWS = ['front', 'q3', 'profile', 'r3', 'back', 'top', 'bottom', 'under'];
+export const TORSO_CAMS = {
+  front: { yaw: 0, pitch: 0, s: 66, cx: 162, cy: 239, f: 0 },
+  q3: { yaw: 35, pitch: 0, s: 66, cx: 400, cy: 239, f: 0 },
+  profile: { yaw: 90, pitch: 0, s: 66, cx: 608, cy: 239, f: 0 },
+  r3: { yaw: 215, pitch: 0, s: 66, cx: 818, cy: 239, f: 0 },
+  back: { yaw: 180, pitch: 0, s: 66, cx: 1073, cy: 239, f: 0 },
+  top: { yaw: 0, pitch: 60, s: 52, cx: 145, cy: 590, f: 0 },
+  bottom: { yaw: 0, pitch: -30, s: 52, cx: 366, cy: 600, f: 0 },
+  under: { yaw: -40, pitch: -30, s: 52, cx: 578, cy: 600, f: 0 },
+};
+
+/** The cameras of a head (kind 'head') or a torso ('torso'), the fitted over the defaults. */
+export function loadCams(who, kind = 'head') {
   const all = existsSync(CAMS_FILE) ? JSON.parse(readFileSync(CAMS_FILE, 'utf8')) : {};
+  const torso = kind === 'torso';
   const c = {};
-  for (const v of VIEWS) c[v] = { ...DEFAULT_CAMS[v], ...(all[who]?.[v] ?? {}) };
+  for (const v of torso ? TORSO_VIEWS : VIEWS) c[v] = { ...(torso ? { ...TORSO_CAMS[v], piv: TORSO_PIV } : DEFAULT_CAMS[v]), ...((torso ? all[`torso-${who}`] : all[who])?.[v] ?? {}) };
   return c;
 }
 
@@ -37,8 +54,8 @@ export function rotation(c) {
 
 /** A point's sheet position and its depth toward the viewer under a camera. */
 export function project(p, c) {
-  const r = rotation(c);
-  const x = p[0] - PIV[0], y = p[1] - PIV[1], z = p[2] - PIV[2];
+  const r = rotation(c), pv = c.piv ?? PIV;
+  const x = p[0] - pv[0], y = p[1] - pv[1], z = p[2] - pv[2];
   const qx = r[0] * x + r[1] * y + r[2] * z, qy = r[3] * x + r[4] * y + r[5] * z, qz = r[6] * x + r[7] * y + r[8] * z;
   const k = c.f ? c.f / (c.f - qz) : 1;
   return [c.cx + c.s * qx * k, c.cy - c.s * qy * k, qz];

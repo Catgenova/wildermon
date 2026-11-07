@@ -1,6 +1,7 @@
 # The reference sheets' silhouettes and features, per view, for tools/sculpt/lowfit.mjs:
 #
 #   python3 tools/sculpt/lowmask.py tools/sculpt/ref/head-lowpoly.png out.json   # and head-lowpoly-female.png
+#   python3 tools/sculpt/lowmask.py tools/sculpt/ref/torso-lowpoly-male.png out.json --torso male
 #
 # For each of the seven views (its box on the 1536x1024 sheet below), at half resolution: the head's silhouette (every
 # pixel that is not the background, the holes filled), and the centroids of its pupils (dark slate) and its brows (dark
@@ -14,15 +15,29 @@ BOXES = {
     'r3': (934, 25, 1238, 455), 'back': (1238, 25, 1530, 455),
     'top': (30, 560, 336, 915), 'bottom': (340, 560, 652, 915),
 }
+# The torso sheets' eight views (tools/sculpt/TORSO_SPEC.md, TORSO_SPEC_FEMALE.md), per sheet: the five of the top row
+# and the three additional angles, each box clear of its neighbours and the labels.
+TORSO_BOXES = {
+    'male': {
+        'front': (28, 73, 290, 378), 'q3': (290, 73, 518, 378), 'profile': (518, 73, 700, 378),
+        'r3': (700, 73, 935, 378), 'back': (935, 73, 1212, 378),
+        'top': (24, 486, 263, 699), 'bottom': (263, 486, 470, 699), 'under': (476, 482, 684, 699),
+    },
+    'female': {
+        'front': (36, 70, 288, 391), 'q3': (288, 70, 529, 391), 'profile': (529, 70, 716, 391),
+        'r3': (716, 62, 946, 391), 'back': (946, 62, 1204, 391),
+        'top': (34, 500, 252, 697), 'bottom': (252, 500, 440, 697), 'under': (440, 498, 640, 697),
+    },
+}
 K = 2  # half resolution
 
-def views(src):
+def views(src, boxes=None):
     im = Image.open(src).convert('RGB')
     if im.size != (1536, 1024):
         im = im.resize((1536, 1024), Image.LANCZOS)
     px = im.load()
     out = {'scale': K, 'views': {}}
-    for name, (x0, y0, x1, y1) in BOXES.items():
+    for name, (x0, y0, x1, y1) in (boxes or BOXES).items():
         w, h = (x1 - x0) // K, (y1 - y0) // K
         # the background's colour
         cs = [px[x, y0 + 2] for x in range(x0, x1, 4)] + [px[x0 + 2, y] for y in range(y0, y1, 4)] + [px[x1 - 3, y] for y in range(y0, y1, 4)]
@@ -73,7 +88,7 @@ def views(src):
         # pupils: holes in the silhouette, near the background's own colour; brows: dark brown just above them
         pupil = lambda c: c[2] >= c[0] - 3 and 110 < sum(c) < 260 and c[2] - c[1] < 25 and abs(c[0] - c[1]) < 10
         brow = lambda c: c[0] - c[2] > 30 and 55 < c[0] < 140 and c[1] < 100
-        eyes = blobs(pupil, lambda x, y: y < y0 + (y1 - y0) * 0.75, comps=True) if name in ('front', 'q3', 'profile', 'bottom') else []
+        eyes = blobs(pupil, lambda x, y: y < y0 + (y1 - y0) * 0.75, comps=True) if boxes is None and name in ('front', 'q3', 'profile', 'bottom') else []
         # the profile sees one eye whole: keep the rightmost blob (the face looks right); the three-quarter sees both
         if name == 'profile' and eyes:
             eyes = [max(eyes, key=lambda e: e[0])]
@@ -115,8 +130,9 @@ def views(src):
         out['views'][name] = {'box': [x0, y0, x1, y1], 'w': w, 'h': h, 'mask': mask, 'pupils': eyes, 'brows': brows, 'marks': marks, 'lum': lum}
     return out
 
-def main(src, dst):
-    json.dump(views(src), open(dst, 'w'))
+def main(src, dst, torso=None):
+    json.dump(views(src, TORSO_BOXES[torso] if torso else None), open(dst, 'w'))
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2])
+    # --torso male|female: the torso sheet's eight views (no eyes or brows to find)
+    main(sys.argv[1], sys.argv[2], sys.argv[sys.argv.index('--torso') + 1] if '--torso' in sys.argv else None)

@@ -10,10 +10,17 @@
 // per view) onto the head and the neck. The top and the bottom views leave the
 // shoulder stub out, as the references do, and the bottom view cuts the neck flat at its camera's clip.
 // Uses Playwright's Chromium at /opt/pw-browsers/chromium with software GL.
+//
+//   node tools/sculpt/lowshot.mjs --torso --who male|female --out /some/dir      # writes <dir>/sheet-torso-<who>.png
+//
+// --torso: the low-poly torso (tools/sculpt/lowtorso.mjs, TORSO_SPEC.md) laid out as its reference sheet: the five views of
+// the top row and the three additional angles through their fitted cameras ('torso-<who>' in lowcams.json), the torso
+// planes front and back in their four regions, the wireframe front and back; the head's light.
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildLowHead } from './lowhead.mjs';
+import { buildLowTorso } from './lowtorso.mjs';
 import { loadCams, rotation, PARTS } from './lowcam.mjs';
 
 const args = process.argv.slice(2);
@@ -25,12 +32,14 @@ const topPitch = +opt('top', '86'); // the top view looks down from a little in 
 const normals = args.includes('--normals'); // a pass of the view-space normals of the skin, for fitting the light to a reference
 mkdirSync(out, { recursive: true });
 
-const mesh = buildLowHead(who);
-console.log(who, 'triangles', JSON.stringify(mesh.counts), `head ${mesh.counts.head} (budget 350-700${mesh.counts.head >= 350 && mesh.counts.head <= 700 ? ', in' : ', OUT'})`);
+const torso = args.includes('--torso');
+const mesh = torso ? buildLowTorso(who) : buildLowHead(who);
+if (torso) console.log(who, 'torso triangles', mesh.tris.length, JSON.stringify(mesh.counts), `(budget 400-800${mesh.tris.length >= 400 && mesh.tris.length <= 800 ? ', in' : ', OUT'})`);
+else console.log(who, 'triangles', JSON.stringify(mesh.counts), `head ${mesh.counts.head} (budget 350-700${mesh.counts.head >= 350 && mesh.counts.head <= 700 ? ', in' : ', OUT'})`);
 
 // Flat buffers per part: each triangle its own three vertices, its normal and its material and region.
 const MAT = { skin: 0, brow: 1, pupil: 2, lid: 3 };
-const REG = { skull: 0, face: 1, neck: 2 };
+const REG = { skull: 0, face: 1, neck: 2, shoulder: 0, chest: 1, abdomen: 2, pelvis: 3 };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 // Ambient occlusion per triangle, one value for the whole facet: the share of a cosine-weighted hemisphere of rays
@@ -136,7 +145,7 @@ for (const p of mesh.polys) {
   }
 }
 
-const CAMS = loadCams(who);
+const CAMS = loadCams(who, torso ? 'torso' : 'head');
 // The light fitted to the reference (tools/sculpt/lowlight-<who>.json, written by tools/sculpt/lowlight.py): one light
 // for every view, fixed to the camera as on a turntable, the skin's colour as a function of the facet's normal in view
 // space (real spherical harmonics up to the third order, and three rims: the cool light from behind on the left and a
@@ -170,7 +179,8 @@ const SHADOW = (() => {
 })();
 const DATA = {
   // each view's camera, its rotation column-major for GL
-  cams: Object.entries(CAMS).map(([v, c]) => { const r = rotation(c); return { ...c, R: [r[0], r[3], r[6], r[1], r[4], r[7], r[2], r[5], r[8]], parts: PARTS[v], sh: shOf(v) }; }),
+  cams: Object.entries(CAMS).map(([v, c]) => { const r = rotation(c); return { ...c, R: [r[0], r[3], r[6], r[1], r[4], r[7], r[2], r[5], r[8]], parts: torso ? ['torso', 'neck'] : PARTS[v], sh: shOf(v) }; }),
+  torso, female,
   shAll: shOf('global'),
   grad: +opt('grad', female ? '0.05' : '-0.05'),
   detail: args.includes('--detail'),
@@ -178,7 +188,7 @@ const DATA = {
   flatBrow: female,
   // the lights' strengths: the ambient, the key from the front right, the warm fill from the right, the cool rim from behind left
   amb: +opt('amb', '0.57'), key: +opt('key', '0.42'), warm: +opt('warm', '0.32'), cool: +opt('cool', female ? '0.2' : '2'), rim: +opt('rim', '0.42'), upr: +opt('upr', '0.12'), lcz: +opt('lcz', '0.35'), lbz: +opt('lbz', '-0.2'), cpow: +opt('cpow', female ? '0.8' : '8'), rpow: +opt('rpow', '3'), cspec: +opt('cspec', '0.52'), kx: +opt('kx', '-0.15'), ky: +opt('ky', female ? '0.7' : '1.4'), aolo: +opt('aolo', '0.8'), down: +opt('down', '0'), // the gradient over each face toward the key light, per unit of the head (0: none)
-  parts, lines, topPitch, normals, counts: mesh.counts, shadow: SHADOW,
+  parts, lines, topPitch, shr: torso ? 3.2 : 2.5, tris: mesh.tris.length, viewNames: Object.keys(CAMS), normals, counts: mesh.counts, shadow: SHADOW,
   pupil: female ? [0.265, 0.25, 0.29] : [0.21, 0.2, 0.22],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
   // his brows as dark against his skin as his reference's (its brow over its lit skin, per channel)
@@ -211,17 +221,17 @@ const cv = document.getElementById('gl');
 cv.width = 1536 * dpr; cv.height = 1024 * dpr;
 const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true, alpha: true, premultipliedAlpha: false });
 const vs = '#define GRADPOS ' + D.gradpos.toFixed(1) + '\nattribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift; uniform float persp;' +
-  'varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; varying vec3 vp; void main(){ vec3 q = R*(p - piv); vn = R*n; vp = p; vd = GRADPOS > 0.5 ? q - R*(vec3(0.0, 1.1, 0.0) - piv) : q - R*(s - piv); vm = m; vy = p.y;' +
+  'varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; varying vec3 vp; void main(){ vec3 q = R*(p - piv); vn = R*n; vp = p; vd = GRADPOS > 0.5 ? q - R*(vec3(0.0, ' + (D.torso ? '-2.0' : '1.1') + ', 0.0) - piv) : q - R*(s - piv); vm = m; vy = p.y;' +
   ' float k = persp > 0.0 ? persp/(persp - q.z) : 1.0; gl_Position = vec4(off + sc*q.xy*k, -q.z/8.0 - lift, 1.0); }';
 const fs = '#define FLATBROW ' + (D.flatBrow ? '1.0' : '0.0') + '\n#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\n#define RIM ' + D.rim.toFixed(3) + '\n#define UPR ' + D.upr.toFixed(3) + '\n#define LCZ ' + D.lcz.toFixed(3) + '\n#define LBZ ' + D.lbz.toFixed(3) + '\n#define CPOW ' + D.cpow.toFixed(2) + '\n#define RPOW ' + D.rpow.toFixed(2) + '\n#define CSPEC ' + D.cspec.toFixed(3) + '\n#define KX ' + D.kx.toFixed(3) + '\n#define KY ' + D.ky.toFixed(3) + '\n#define AOLO ' + D.aolo.toFixed(3) + '\n#define DOWN ' + D.down.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; varying vec3 vp; uniform sampler2D shm; uniform mat3 LM; uniform mat3 RT; uniform vec3 pivU; uniform vec3 Lv; uniform float useShadow; uniform vec3 shK3; uniform float shSoft; uniform float shBias; uniform float shMask; uniform float clipY;' +
   ' float unpack(vec4 c){ return dot(c, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/16581375.0)); }' +
   // the share of the key light blocked at this fragment: its position pushed off the surface along the normal, looked up
   // in the light's depth map over a disc of 16 taps
   // in the light's depth map over a disc of 16 taps, each tap's depth on the facet's own plane (no acne on the slopes)
-  ' float shadowAt(vec3 nn){ vec3 nw = RT*nn; vec3 nl = LM*nw; vec3 pw = vp + nw*shBias; vec3 l = LM*(pw - pivU); vec2 uv = l.xy*' + (1 / 2.5).toFixed(4) + '*0.5 + 0.5; float s = 0.0;' +
+  ' float shadowAt(vec3 nn){ vec3 nw = RT*nn; vec3 nl = LM*nw; vec3 pw = vp + nw*shBias; vec3 l = LM*(pw - pivU); vec2 uv = l.xy*' + (1 / D.shr).toFixed(4) + '*0.5 + 0.5; float s = 0.0;' +
   '   vec2 dz = -nl.xy/max(nl.z, 0.25);' +
   '   for (int i = 0; i < 16; i++) { float a = float(i)*2.399963, r = sqrt((float(i) + 0.5)/16.0); vec2 o = vec2(cos(a), sin(a))*r*shSoft;' +
-  '     float z = (l.z + dot(dz, o) + 4.0)/8.0; float d = unpack(texture2D(shm, uv + o*' + (1 / 2.5).toFixed(4) + '*0.5)); s += d > z + 0.0006 ? 1.0 : 0.0; } return s/16.0; }' +
+  '     float z = (l.z + dot(dz, o) + 4.0)/8.0; float d = unpack(texture2D(shm, uv + o*' + (1 / D.shr).toFixed(4) + '*0.5)); s += d > z + 0.0006 ? 1.0 : 0.0; } return s/16.0; }' +
   ' uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 browc; uniform vec3 linec; uniform vec3 SHC[19]; uniform float useSH;' +
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
   // the bottom view cuts the shoulders off at clipY, and the cut reads as a flat cap: the inside seen through it
@@ -236,6 +246,7 @@ const fs = '#define FLATBROW ' + (D.flatBrow ? '1.0' : '0.0') + '\n#define GRAD 
   ' else if (vm.x > 2.5 && vm.x < 3.5) base = lidc;' +
   ' if (mode == 3) { gl_FragColor = vm.x < 0.5 ? vec4(nn*0.5+0.5, 1.0) : vec4(0.0,0.0,0.0,1.0); return; }' +
   ' if (mode == 1) { float reg = mod(vm.y, 4.0); vec3 rc = reg < 0.5 ? vec3(0.62,0.60,0.60) : (reg < 1.5 ? vec3(0.82,0.62,0.45) : vec3(0.70,0.52,0.50));' +
+  (D.torso ? ' rc = reg < 0.5 ? vec3(0.66,0.64,0.65) : (reg < 1.5 ? vec3(0.91,0.75,0.57) : (reg < 2.5 ? vec3(0.86,0.63,0.50) : vec3(0.78,0.53,0.52)));' : '') +
   '   if (vm.x > 0.5) rc = vm.x < 2.5 ? vec3(0.2,0.16,0.15) : rc;' +
   '   float l = 0.82 + 0.18*max(dot(nn, normalize(vec3(-0.4,0.5,0.8))),0.0); gl_FragColor = vec4(rc*l,1.0); return; }' +
   // the key light's cast shadow: the share of it blocked times the facet's cosine to it
@@ -270,7 +281,7 @@ const LB = buf(D.lines);
 const SHR = 2048;
 let SP = null, shTex = null, shFb = null;
 if (D.shadow) {
-  const dvs = 'attribute vec3 p; uniform mat3 LM; uniform vec3 piv; varying float vz; varying float vy; void main(){ vec3 l = LM*(p - piv); vz = (l.z + 4.0)/8.0; vy = p.y; gl_Position = vec4(l.xy*' + (1 / 2.5).toFixed(4) + ', -l.z/4.0, 1.0); }';
+  const dvs = 'attribute vec3 p; uniform mat3 LM; uniform vec3 piv; varying float vz; varying float vy; void main(){ vec3 l = LM*(p - piv); vz = (l.z + 4.0)/8.0; vy = p.y; gl_Position = vec4(l.xy*' + (1 / D.shr).toFixed(4) + ', -l.z/4.0, 1.0); }';
   const dfs = 'precision highp float; varying float vz; varying float vy; uniform float clipY; void main(){ if (vy < clipY) discard; vec4 e = fract(vz*vec4(1.0, 255.0, 65025.0, 16581375.0)); e -= e.yzww*vec4(1.0/255.0, 1.0/255.0, 1.0/255.0, 0.0); gl_FragColor = e; }';
   SP = gl.createProgram(); gl.attachShader(SP, sh(gl.VERTEX_SHADER, dvs)); gl.attachShader(SP, sh(gl.FRAGMENT_SHADER, dfs)); gl.linkProgram(SP);
   shTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, shTex);
@@ -348,7 +359,9 @@ function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoul
 const S = 136;
 const ROW = [['Front (0°)', 0, 172], ['Three-Quarter (45°)', 45, 478], ['Profile (90°)', 90, 780], ['Rear Three-Quarter (135°)', 135, 1085], ['Back (180°)', 180, 1388]];
 // the seven views, each through its own camera fitted to the reference (tools/sculpt/lowcam.mjs, lowfit.mjs)
-for (const c of D.cams) view({ R: c.R, cx: c.cx, cy: c.cy, s: c.s, f: c.f, clip: c.clip ?? -99, sh: c.sh, ...(c.parts ? { parts: c.parts } : {}) });
+for (const c of D.cams) view({ R: c.R, cx: c.cx, cy: c.cy, s: c.s, f: c.f, clip: c.clip ?? -99, sh: c.sh, ...(c.piv ? { piv: c.piv } : {}), ...(c.parts ? { parts: c.parts } : {}) });
+if (D.torso) torsoPanels();
+else {
 view({ R: yaw(0), cx: 822, cy: 686, s: S * 0.99, wire: true });
 view({ R: yaw(-70), cx: 1392, cy: 680, s: 100, mode: 1, parts: ['head', 'neck'], piv: [0, 1, 0.1] });
 
@@ -366,6 +379,29 @@ el('lg', 'left:1002px;top:880px;font-size:21px', '≈ 350 – 700 triangles');
 el('lg', 'left:1002px;top:914px;font-size:16px;color:#cdb9ab', 'this head ' + D.counts.head + ' · neck ' + D.counts.neck + ' · stub ' + D.counts.shoulders);
 const SW = ['#9e9999', '#d1a07a', '#b48683'];
 D.legend.forEach((t, i) => { el('sw', 'left:1288px;top:' + (840 + i * 37) + 'px;background:' + SW[i]); el('lg', 'left:1346px;top:' + (842 + i * 37) + 'px', t); });
+}
+// The torso's sheet past its eight views, where its reference has them: the planes in their regions front and back
+// (and her side silhouette), the wireframe front and back, the labels.
+function torsoPanels() {
+  const P = [0, -2, 0], F = D.female;
+  const L = F
+    ? { planes: [[785, 0], [1046, 180]], side: [1297, 90], ps: 61, pcy: 616, wire: [[1135, 0], [1341, 180]], ws: 54, wcy: 895, pill: 398, pill2: 700 }
+    : { planes: [[825, 0], [1085, 180]], ps: 57, pcy: 618, wire: [[1119, 0], [1315, 180]], ws: 48, wcy: 903, pill: 384, pill2: 703 };
+  for (const [cx, a] of L.planes) view({ R: yaw(a), cx, cy: L.pcy, s: L.ps, piv: P, mode: 1, parts: ['torso', 'neck'] });
+  if (L.side) view({ R: yaw(L.side[1]), cx: L.side[0], cy: L.pcy, s: L.ps, piv: P, parts: ['torso', 'neck'] });
+  for (const [cx, a] of L.wire) view({ R: yaw(a), cx, cy: L.wcy, s: L.ws, piv: P, wire: true, parts: ['torso', 'neck'] });
+  const ui = document.getElementById('ui');
+  const el = (cls, css, html) => { const e = document.createElement('div'); e.className = cls; e.style.cssText = css; if (html != null) e.innerHTML = html; ui.appendChild(e); return e; };
+  const names = { front: 'Front (0°)', q3: 'Three-Quarter (45°)', profile: 'Profile (90°)', r3: 'Rear Three-Quarter (135°)', back: 'Back (180°)', top: 'Top', bottom: 'Bottom', under: 'Under Three-Quarter' };
+  D.cams.forEach((c, i) => el('pill', 'left:' + c.cx + 'px;top:' + (i < 5 ? L.pill : L.pill2) + 'px;font-size:17px;padding:3px 16px 4px', names[D.viewNames[i]]));
+  el('h', 'left:30px;top:8px;font-size:30px', F ? 'Female Torso Reference' : 'Torso Reference');
+  el('lg', 'left:30px;top:44px', (F ? '(Low-Poly, Stylized)' : '(Male, Stylized Low-Poly)') + ' · ' + D.tris + ' triangles');
+  el('h', 'left:30px;top:452px', 'Additional Angles');
+  el('h', 'left:' + (L.planes[0][0] - 105) + 'px;top:452px;font-size:20px', 'Torso Planes (Front)');
+  el('h', 'left:' + (L.planes[1][0] - 100) + 'px;top:452px;font-size:20px', 'Torso Planes (Back)');
+  if (L.side) el('h', 'left:1210px;top:464px;font-size:20px', 'Side Silhouette');
+  el('h', 'left:' + (L.wire[0][0] - 140) + 'px;top:758px', 'Topology');
+}
 // --detail: the back, the rear three-quarter and the top, large, each beside its wireframe, on a light background
 if (D.detail) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -388,7 +424,7 @@ await p.addScriptTag({ content: RENDER });
 await p.waitForFunction('window.READY');
 await p.evaluate(() => document.fonts.ready);
 if (normals) await p.evaluate(() => { document.getElementById('sheet').style.background = '#000'; document.getElementById('ui').style.display = 'none'; });
-const file = join(out, normals ? `normals-${who}.png` : DATA.detail ? `detail-${who}.png` : `sheet-${who}.png`);
+const file = join(out, normals ? `normals-${who}.png` : DATA.detail ? `detail-${who}.png` : torso ? `sheet-torso-${who}.png` : `sheet-${who}.png`);
 await p.locator('#sheet').screenshot({ path: file });
 console.log('wrote', file);
 await b.close();
