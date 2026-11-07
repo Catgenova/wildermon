@@ -125,7 +125,7 @@ export function buildNamedBody(who = 'male') {
 }
 
 /**
- * The mesh's triangles with its slivers mended (TUNE.MEND, off by default; a proposal, not the approved mesh). Its
+ * The mesh's triangles with its slivers mended (TUNE.MEND, on: a proposal over the approved triangles). Its
  * ear-clipping leaves triangles of three corners nearly in a line (down the abs' centre line: wa0 hi0 hw0, wa0 hw0 bt0,
  * bt0 hw0 hi0; on the pectorals, the deltoids' fronts and the shoulder blades): flat at rest, they open into folds once
  * the rows either side turn by different amounts (the spine twisted or bent sideways). Each such triangle (a, b, c), b on
@@ -300,8 +300,8 @@ export function skeleton(J) {
 /* ---- the weights ----------------------------------------------------------------------------------------------------- */
 /** The weights' tables (rings' shares along their chains), exported so the shot tool can try variants. */
 export const TUNE = {
-  // the mesh's centre-line slivers mended (fanTris): off, so the body at rest draws exactly as approved; see fanTris
-  MEND: false,
+  // the mesh's centre-line slivers mended (fanTris): on (proposed; set false for the approved triangles exactly)
+  MEND: true,
   // where the measured pivots sit: the elbow from its ring's centre toward its back (el3), the knee's depth from the back,
   // the hip between the body row under the waist (0) and the thigh's top ring (1), and out from the thigh's centre
   PIV: { elbowBack: -0.15, kneeDepth: 0.3, hipDown: 0.3, hipOut: 0.15, shoulder: [0.1, 0, 0] },
