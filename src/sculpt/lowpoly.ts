@@ -6,16 +6,21 @@
  * `lowrig.mjs` takes them (each control bone turned as its figure bone has turned from the fitted rest, our own joints
  * kept; the arms kept off the body, hers turned further out as they swing, the ankles and toes as hinges on the body's
  * own axes, the thumbs closed toward the palm), the helpers driven from those, and the body stood on its lowest sole.
+ * Shaded as the review renders shade it: one colour a polygon, from its normal in view space, by the light fitted for
+ * that body (`tools/sculpt/lowlight-<who>.json`, written by `tools/sculpt/lowlight.py`), in the look's skin.
  */
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
+import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
+import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
 import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
 import { DEFAULT_LOOK } from '../game/look';
 import { STRIDE, type Baked } from './bake';
 import { M, bodyMaterials } from './models/body';
 import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, type Proportions } from './rig';
 import { humanProportions } from './human';
-import type { SculptDraw } from './gl';
+import { SH_TERMS, type LowLight, type SculptDraw } from './gl';
+import type { Material } from './sdf';
 
 type M3 = number[];
 type V = [number, number, number];
@@ -194,7 +199,16 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
     const t0 = performance.now();
     const MATS = [M.skin, M.hair, M.pupil];
     const corner = new Map<string, number>();
-    const verts: number[] = [], tris: number[] = [];
+    const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
+    // Each polygon's weights, its corners' summed, the heaviest four kept: one turn for the face's normal at every corner.
+    const faceWeights = A.polys.map(([v]) => {
+      const sum = new Map<number, number>();
+      for (const i of v) { const w = A.weights[i]; for (let j = 0; j < w.length; j += 2) sum.set(w[j], (sum.get(w[j]) ?? 0) + w[j + 1]); }
+      const top = [...sum].sort((a, b) => b[1] - a[1]).slice(0, 4), tot = top.reduce((t, [, w]) => t + w, 0) || 1;
+      const out = [0, 0, 0, 0, 0, 0, 0, 0];
+      top.forEach(([b, w], j) => { out[j] = b; out[4 + j] = w / tot; });
+      return out;
+    });
     const normals = A.polys.map(([v, , nv]) => {
       const pts = (nv ?? v).map((i) => toGame(vert(i)));
       let n: V = [0, 0, 0];
@@ -212,10 +226,11 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
       const bi = [0, 0, 0, 0], bw = [0, 0, 0, 0];
       for (let j = 0; j < 4 && j * 2 < w.length; j++) { bi[j] = w[j * 2]; bw[j] = w[j * 2 + 1]; }
       verts.push(p[0], p[1], p[2], n[0], n[1], n[2], mat, ...bi, ...bw, mat, -1);
+      faceSkin.push(...faceWeights[pi]);
       return k;
     };
     for (let t = 0; t < A.tris.length; t += 4) { const pi = A.tris[t + 3]; tris.push(idx(A.tris[t], pi), idx(A.tris[t + 1], pi), idx(A.tris[t + 2], pi)); }
-    BAKED = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: BONES.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0 };
+    BAKED = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: BONES.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
     return BAKED;
   }
 
@@ -266,6 +281,21 @@ function lowBody(A: Asset, P: Proportions, share: number): { baked: () => Baked;
 
 const BODIES = { man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1), woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN) };
 
+/** A fitted light's coefficients ([channel][term], nought to 255) as the shader takes them: per term, red, green and blue nought to one. */
+function shOf(fit: { global: number[][] }): Float32Array {
+  const out = new Float32Array(SH_TERMS * 3);
+  for (let k = 0; k < SH_TERMS; k++) for (let c = 0; c < 3; c++) out[k * 3 + c] = fit.global[c][k] / 255;
+  return out;
+}
+const SH = { man: shOf(MALE_LIGHT), woman: shOf(FEMALE_LIGHT) };
+const hexRgb = (h: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+/** The look's skin over the default look's, which the light was fitted to the review renders' skin for, per channel. */
+let FITTED: [number, number, number] | null = null;
+function toneOf(materials: Material[]): [number, number, number] {
+  const a = hexRgb(materials[M.skin].colour), b = (FITTED ??= hexRgb(bodyMaterials(DEFAULT_LOOK)[M.skin].colour));
+  return [a[0] / b[0], a[1] / b[1], a[2] / b[2]];
+}
+
 /** Whether a look is drawn as a low-poly body: a man or a woman (neither keeps the sculpted base). */
 export const hasLowBody = (look: { gender: string }): boolean => look.gender === 'man' || look.gender === 'woman';
 
@@ -273,6 +303,7 @@ export const hasLowBody = (look: { gender: string }): boolean => look.gender ===
 export function lowScene(pose: FigurePose): SculptDraw {
   const look = pose.look ?? DEFAULT_LOOK;
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
-  const body = BODIES[look.gender === 'woman' ? 'woman' : 'man'];
-  return { baked: body.baked(), bones: body.bones(pose), materials: bodyMaterials(look), view: viewOf(facing), blink: 0 };
+  const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
+  const materials = bodyMaterials(look), low: LowLight = { sh: SH[who], tone: toneOf(materials) };
+  return { baked: body.baked(), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
 }

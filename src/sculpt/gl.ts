@@ -33,13 +33,19 @@ export interface DrawOpts {
 export const BOX = { left: -42, right: 42, top: -66, bottom: 14 };
 const MAX_BONES = 80;
 const MAX_MATS = 32;
+/** Terms of the review renders' light (`LowLight.sh`). */
+export const SH_TERMS = 19;
+/** Degrees the whole-body review renders' camera looks down (their fitted cameras: the man's 8, the woman's 7.5). */
+const REVIEW_PITCH = 8;
+const DEG = Math.PI / 180;
 
 const VS = `#version 300 es
 precision highp float;
-in vec3 aPos; in vec3 aNrm; in float aMat; in vec4 aBones; in vec4 aW; in vec2 aStamp;
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNrm; layout(location=2) in float aMat; layout(location=3) in vec4 aBones; layout(location=4) in vec4 aW; layout(location=5) in vec2 aStamp;
+layout(location=6) in vec4 aFaceBones; layout(location=7) in vec4 aFaceW;
 uniform vec4 uBones[${MAX_BONES * 3}];
-uniform vec2 uEx, uEy; uniform float uHS; uniform vec3 uT; uniform vec2 uHalf; uniform float uDepth; uniform vec2 uOff;
-out vec3 vNrm; out vec3 vPos; flat out float vMat; flat out float vBone; out float vDepth; flat out float vMatB; out float vStamp;
+uniform vec2 uEx, uEy; uniform float uHS; uniform vec3 uT; uniform vec2 uHalf; uniform float uDepth; uniform vec2 uOff; uniform float uLow;
+out vec3 vNrm; out vec3 vPos; flat out float vMat; flat out float vBone; out float vDepth; flat out float vMatB; out float vStamp; flat out vec3 vFace;
 vec3 skinP(int b, vec3 p) { vec4 q = vec4(p, 1.0); return vec3(dot(uBones[b*3], q), dot(uBones[b*3+1], q), dot(uBones[b*3+2], q)); }
 vec3 skinN(int b, vec3 n) { return vec3(dot(uBones[b*3].xyz, n), dot(uBones[b*3+1].xyz, n), dot(uBones[b*3+2].xyz, n)); }
 void main() {
@@ -49,6 +55,14 @@ void main() {
     int b = int(aBones[i] + 0.5);
     p += w * skinP(b, aPos); n += w * skinN(b, aNrm);
   }
+  // A low-poly body's face normal: the polygon's own, turned by the polygon's weights (the same at all its corners).
+  vec3 fn = vec3(0.0, 0.0, 1.0);
+  if (uLow > 0.5) {
+    fn = vec3(0.0);
+    for (int i = 0; i < 4; i++) { float w = aFaceW[i]; if (w > 0.0) fn += w * skinN(int(aFaceBones[i] + 0.5), aNrm); }
+    fn = normalize(fn);
+  }
+  vFace = fn;
   float sx = p.x * uEx.x + p.y * uEy.x - uOff.x;
   float sy = p.x * uEx.y + p.y * uEy.y - p.z * uHS - uOff.y;
   float d = -dot(p, uT);
@@ -58,16 +72,28 @@ void main() {
 
 const FS = `#version 300 es
 precision highp float;
-in vec3 vNrm; in vec3 vPos; flat in float vMat; flat in float vBone; in float vDepth; flat in float vMatB; in float vStamp;
+in vec3 vNrm; in vec3 vPos; flat in float vMat; flat in float vBone; in float vDepth; flat in float vMatB; in float vStamp; flat in vec3 vFace;
 uniform vec4 uMat[${MAX_MATS}];
 uniform vec3 uL; uniform vec3 uT; uniform float uGrain; uniform float uNight; uniform float uMode; uniform float uFlat; uniform float uBlink;
+uniform float uLow; uniform vec3 uSH[${SH_TERMS}]; uniform vec3 uTone; uniform vec3 uXv, uYv, uZv;
 layout(location=0) out vec4 oCol; layout(location=1) out vec4 oNd; layout(location=2) out vec4 oId;
 vec3 hsv2rgb(vec3 c){ vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0); vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www); return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y); }
 vec3 rgb2hsv(vec3 c){ vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0); vec4 p = c.g < c.b ? vec4(c.bg, K.wz) : vec4(c.gb, K.xy); vec4 q = c.r < p.x ? vec4(p.xyw, c.r) : vec4(c.r, p.yzx); float d = q.x - min(q.w, q.y); float e = 1.0e-10; return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x); }
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// The review renders' light (tools/sculpt/lowlight.py): the skin's colour from the facet's normal in view space (x right,
+// y up, z toward the viewer), real spherical harmonics to the third order and three rims, one coefficient set a channel.
+vec3 lowLight(vec3 v) {
+  float x = v.x, y = v.y, z = v.z, b = pow(1.0 - max(z, 0.0), 3.0);
+  float t[${SH_TERMS}] = float[${SH_TERMS}](1.0, x, y, z, x * y, y * z, 3.0 * z * z - 1.0, x * z, x * x - y * y, y * (3.0 * x * x - y * y), x * y * z,
+    y * (5.0 * z * z - 1.0), z * (5.0 * z * z - 3.0), x * (5.0 * z * z - 1.0), z * (x * x - y * y), x * (x * x - 3.0 * y * y),
+    pow(max(0.0, dot(v, normalize(vec3(-0.95, 0.25, -0.2)))), 8.0), max(-x, 0.0) * b, max(x, 0.0) * b);
+  vec3 c = vec3(0.0);
+  for (int k = 0; k < ${SH_TERMS}; k++) c += t[k] * uSH[k];
+  return max(c, 0.0);
+}
 vec3 hashCol(float i){ return 0.35 + 0.6 * vec3(hash(vec2(i, 1.0)), hash(vec2(i, 7.0)), hash(vec2(i, 13.0))); }
 void main() {
-  vec3 n = normalize(vNrm);
+  vec3 n = uLow > 0.5 ? vFace : normalize(vNrm);
   // The stamp's material where the stamp's distance says inside, its edge one pixel soft across the interpolated distance.
   float fw = max(fwidth(vStamp), 1e-4);
   float inStamp = smoothstep(-fw, fw, vStamp);
@@ -86,6 +112,9 @@ void main() {
     else c = hashCol(vBone);
   } else if (emissive) {
     c = base;
+  } else if (uLow > 0.5) {
+    // A low-poly body as its review renders: one shade a polygon, skin lit by their light in the look's tone, the rest its colour.
+    c = skin ? min(lowLight(vec3(dot(n, uXv), dot(n, uYv), dot(n, uZv))) * uTone, 1.0) : base;
   } else if (uFlat > 0.5) {
     c = base;
   } else {
@@ -219,7 +248,7 @@ export function glContext(): Ctx | null {
   const quad = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink'];
+  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uXv', 'uYv', 'uZv'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
   const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight'].map((n) => [n, gl.getUniformLocation(edge, n)]));
@@ -253,7 +282,7 @@ function size(C: Ctx, w: number, h: number): void {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-interface Buffers { vbo: WebGLBuffer; ibo: WebGLBuffer; lines: WebGLBuffer; nLines: number }
+interface Buffers { vbo: WebGLBuffer; ibo: WebGLBuffer; lines: WebGLBuffer; nLines: number; face: WebGLBuffer | null }
 const BUFFERS = new WeakMap<Baked, Buffers>();
 function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
   let bf = BUFFERS.get(b);
@@ -270,7 +299,13 @@ function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
   }
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lines);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, ln, gl.STATIC_DRAW);
-  bf = { vbo, ibo, lines, nLines: ln.length };
+  let face: WebGLBuffer | null = null;
+  if (b.faceSkin) {
+    face = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, face);
+    gl.bufferData(gl.ARRAY_BUFFER, b.faceSkin, gl.STATIC_DRAW);
+  }
+  bf = { vbo, ibo, lines, nLines: ln.length, face };
   BUFFERS.set(b, bf);
   return bf;
 }
@@ -280,6 +315,7 @@ export function forgetBuffers(b: Baked): void {
   const bf = BUFFERS.get(b);
   if (!bf || !CTX) return;
   CTX.gl.deleteBuffer(bf.vbo); CTX.gl.deleteBuffer(bf.ibo); CTX.gl.deleteBuffer(bf.lines);
+  if (bf.face) CTX.gl.deleteBuffer(bf.face);
   BUFFERS.delete(b);
 }
 
@@ -298,8 +334,17 @@ function matsOf(ms: Material[]): Float32Array {
   return f;
 }
 
+/**
+ * A low-poly body's light, as its review renders (`tools/sculpt/lowlight.py`): per term (`SH_TERMS`) the red, green and
+ * blue coefficients nought to one, and the look's skin over the skin the light was fitted to, per channel.
+ */
+export interface LowLight { sh: Float32Array; tone: [number, number, number] }
 /** What one draw needs: the bake, the pose's skinning frames, the materials and the view. */
-export interface SculptDraw { baked: Baked; bones: Float32Array; materials: Material[]; view: View; /** Lids shut, past a half. */ blink?: number }
+export interface SculptDraw {
+  baked: Baked; bones: Float32Array; materials: Material[]; view: View; /** Lids shut, past a half. */ blink?: number;
+  /** A low-poly body (`./lowpoly`): one shade a polygon (the bake's `faceSkin`) in this light. */
+  low?: LowLight;
+}
 
 /**
  * A body drawn on `ctx` with its feet at (sx, sy) at `zoom`, or false where
@@ -321,6 +366,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.depthFunc(gl.LEQUAL);
   gl.disable(gl.CULL_FACE);
   gl.disable(gl.BLEND);
+  const low = d.low && bf.face ? d.low : undefined;
   const setCommon = (prog: WebGLProgram, u: Record<string, WebGLUniformLocation | null>): void => {
     gl.useProgram(prog);
     gl.uniform4fv(u.uBones, d.bones.length >= MAX_BONES * 12 ? d.bones.subarray(0, MAX_BONES * 12) : padded(d.bones));
@@ -339,6 +385,18 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.uniform1f(u.uMode, o.debug === 'normals' ? 1 : o.debug === 'mats' ? 2 : o.debug === 'bones' ? 3 : 0);
     gl.uniform1f(u.uFlat, o.flat ? 1 : 0);
     gl.uniform1f(u.uBlink, d.blink ?? 0);
+    gl.uniform1f(u.uLow, low ? 1 : 0);
+    if (low) {
+      gl.uniform3fv(u.uSH, low.sh);
+      gl.uniform3f(u.uTone, low.tone[0], low.tone[1], low.tone[2]);
+      // The normal in the review camera's view space: the screen's right, and up and toward the viewer pitched down as
+      // that camera is rather than as the island's, so a face turned as in a review render takes its tone there.
+      const xr = Math.hypot(v.ex[0], v.ey[0]) || 1, hr = Math.hypot(v.T[0], v.T[1]) || 1;
+      const cb = Math.cos(REVIEW_PITCH * DEG), sb = Math.sin(REVIEW_PITCH * DEG), h = [v.T[0] / hr, v.T[1] / hr];
+      gl.uniform3f(u.uXv, v.ex[0] / xr, v.ey[0] / xr, 0);
+      gl.uniform3f(u.uYv, -sb * h[0], -sb * h[1], cb);
+      gl.uniform3f(u.uZv, cb * h[0], cb * h[1], sb);
+    }
   };
   setCommon(C.prog, C.u);
   gl.bindBuffer(gl.ARRAY_BUFFER, bf.vbo);
@@ -347,6 +405,13 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.enableVertexAttribArray(i);
     gl.vertexAttribPointer(i, sz, gl.FLOAT, false, stride, off);
   }
+  if (low && bf.face) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, bf.face);
+    for (const [i, off] of [[6, 0], [7, 16]]) {
+      gl.enableVertexAttribArray(i);
+      gl.vertexAttribPointer(i, 4, gl.FLOAT, false, 32, off);
+    }
+  } else for (const i of [6, 7]) gl.disableVertexAttribArray(i);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bf.ibo);
   gl.drawElements(gl.TRIANGLES, d.baked.nTris * 3, gl.UNSIGNED_INT, 0);
   if (o.debug === 'wire') {
@@ -362,7 +427,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.useProgram(C.edge);
   gl.bindBuffer(gl.ARRAY_BUFFER, C.quad);
-  for (let i = 1; i < 6; i++) gl.disableVertexAttribArray(i);
+  for (let i = 1; i < 8; i++) gl.disableVertexAttribArray(i);
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, C.tCol); gl.uniform1i(C.eu.uCol, 0);
