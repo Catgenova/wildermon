@@ -192,13 +192,13 @@ if (only.includes('game')) {
   const cells = [];
   let y = 0;
   for (const [zoom, yaw] of [[10, -45], [10, 0], [5, -45], [5, 0]]) {
-    const s = zoom * HEIGHT_SCALE, cw = Math.round(9.5 * s), ch = Math.round(19 * s);
+    const s = zoom * HEIGHT_SCALE, cw = Math.round(12 * s), ch = Math.round(21 * s);
     let x = 0;
-    for (const who of ['male', 'female']) for (const [how] of HOWS) for (const sw of [plain, lit]) {
-      if (how !== 'carry' && sw === lit && zoom === 5) continue;
-      const h = heldOf(who, how, sw);
+    // him plain, her enchanted
+    for (const who of ['male', 'female']) for (const [how] of HOWS) {
+      const sw = who === 'female' ? lit : plain, h = heldOf(who, how, sw);
       const items = [bodyDrawable(rigs[who], toGame(who, h.P)), swordD(sw, toGame(who, h.Q))];
-      cells.push({ items, cam: { yaw, pitch: PITCH, s, c: [0, 9.2, 0] }, box: [x, y, cw, ch], bg: BG, ink: inkAt(zoom), label: x === 0 ? `Zoom ${zoom}, ${yaw ? 'three-quarter' : 'front'}` : '' });
+      cells.push({ items, cam: { yaw, pitch: PITCH, s, c: [0, 10, 0] }, box: [x, y, cw, ch], bg: BG, ink: inkAt(zoom), label: x === 0 ? `Zoom ${zoom}, ${yaw ? 'three-quarter' : 'front'}` : '' });
       x += cw;
     }
     y += ch;
