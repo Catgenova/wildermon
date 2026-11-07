@@ -70,3 +70,7 @@ Decisions
   the crease in triangles (the groin's two faces, P.split gr0, gr1/). At the back the hip row crosses the buttocks at their
   lowest bulge (-1.25 at -5.1, the cleft inset to -1.06), the thigh's top ring at the back the gluteal fold under them
   (-0.94 at -5.7, rising to the side), so the faces between face down: the fold her leg sheet's back view draws.
+- 2026-11-07, the user's request ("the peak of the butt a little lower and a little more pronounced, not much"): the hip
+  row across the buttocks lowered about 0.2 and back 0.07 at the peak (gl7 -1.32 at -5.3, the cleft -1.12 at -5.18), the
+  gluteal fold under it moved down with it (th4 -0.98 at -5.88, th5 -5.96, th3 -5.62) so its faces still turn down; the
+  thighs part where they did.
