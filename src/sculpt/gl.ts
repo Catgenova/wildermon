@@ -32,14 +32,23 @@ export interface DrawOpts {
 /** The screen box a body fits in at zoom one, in figure units, as the 2D figure's `STILL_BOX`. */
 export const BOX = { left: -42, right: 42, top: -66, bottom: 14 };
 const MAX_BONES = 80;
-const MAX_MATS = 32;
+/** Materials a draw may use: a low-poly body's own (`bodyMaterials`) and its garment's after them. */
+const MAX_MATS = 40;
+/** Terms of the review renders' light (`LowLight.sh`). */
+export const SH_TERMS = 19;
+/** Degrees the whole-body review renders' camera looks down (their fitted cameras: the man's 8, the woman's 7.5). */
+const REVIEW_PITCH = 8;
+const DEG = Math.PI / 180;
+/** A low-poly body's outline in screen px at a zoom: a pixel at one, two at the closest. */
+const LOW_INK = (zoom: number): number => Math.min(2, Math.max(1, 0.8 + 0.2 * zoom));
 
 const VS = `#version 300 es
 precision highp float;
-in vec3 aPos; in vec3 aNrm; in float aMat; in vec4 aBones; in vec4 aW; in vec2 aStamp;
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNrm; layout(location=2) in float aMat; layout(location=3) in vec4 aBones; layout(location=4) in vec4 aW; layout(location=5) in vec2 aStamp;
+layout(location=6) in vec4 aFaceBones; layout(location=7) in vec4 aFaceW;
 uniform vec4 uBones[${MAX_BONES * 3}];
-uniform vec2 uEx, uEy; uniform float uHS; uniform vec3 uT; uniform vec2 uHalf; uniform float uDepth; uniform vec2 uOff;
-out vec3 vNrm; out vec3 vPos; flat out float vMat; flat out float vBone; out float vDepth; flat out float vMatB; out float vStamp;
+uniform vec2 uEx, uEy; uniform float uHS; uniform vec3 uT; uniform vec2 uHalf; uniform float uDepth; uniform vec2 uOff; uniform float uLow;
+out vec3 vNrm; out vec3 vPos; flat out float vMat; flat out float vBone; out float vDepth; flat out float vMatB; out float vStamp; flat out vec3 vFace;
 vec3 skinP(int b, vec3 p) { vec4 q = vec4(p, 1.0); return vec3(dot(uBones[b*3], q), dot(uBones[b*3+1], q), dot(uBones[b*3+2], q)); }
 vec3 skinN(int b, vec3 n) { return vec3(dot(uBones[b*3].xyz, n), dot(uBones[b*3+1].xyz, n), dot(uBones[b*3+2].xyz, n)); }
 void main() {
@@ -49,6 +58,14 @@ void main() {
     int b = int(aBones[i] + 0.5);
     p += w * skinP(b, aPos); n += w * skinN(b, aNrm);
   }
+  // A low-poly body's face normal: the polygon's own, turned by the polygon's weights (the same at all its corners).
+  vec3 fn = vec3(0.0, 0.0, 1.0);
+  if (uLow > 0.5) {
+    fn = vec3(0.0);
+    for (int i = 0; i < 4; i++) { float w = aFaceW[i]; if (w > 0.0) fn += w * skinN(int(aFaceBones[i] + 0.5), aNrm); }
+    fn = normalize(fn);
+  }
+  vFace = fn;
   float sx = p.x * uEx.x + p.y * uEy.x - uOff.x;
   float sy = p.x * uEx.y + p.y * uEy.y - p.z * uHS - uOff.y;
   float d = -dot(p, uT);
@@ -58,16 +75,28 @@ void main() {
 
 const FS = `#version 300 es
 precision highp float;
-in vec3 vNrm; in vec3 vPos; flat in float vMat; flat in float vBone; in float vDepth; flat in float vMatB; in float vStamp;
+in vec3 vNrm; in vec3 vPos; flat in float vMat; flat in float vBone; in float vDepth; flat in float vMatB; in float vStamp; flat in vec3 vFace;
 uniform vec4 uMat[${MAX_MATS}];
 uniform vec3 uL; uniform vec3 uT; uniform float uGrain; uniform float uNight; uniform float uMode; uniform float uFlat; uniform float uBlink;
+uniform float uLow; uniform vec3 uSH[${SH_TERMS}]; uniform vec3 uTone; uniform vec3 uFit; uniform vec3 uXv, uYv, uZv;
 layout(location=0) out vec4 oCol; layout(location=1) out vec4 oNd; layout(location=2) out vec4 oId;
 vec3 hsv2rgb(vec3 c){ vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0); vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www); return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y); }
 vec3 rgb2hsv(vec3 c){ vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0); vec4 p = c.g < c.b ? vec4(c.bg, K.wz) : vec4(c.gb, K.xy); vec4 q = c.r < p.x ? vec4(p.xyw, c.r) : vec4(c.r, p.yzx); float d = q.x - min(q.w, q.y); float e = 1.0e-10; return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x); }
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// The review renders' light (tools/sculpt/lowlight.py): the skin's colour from the facet's normal in view space (x right,
+// y up, z toward the viewer), real spherical harmonics to the third order and three rims, one coefficient set a channel.
+vec3 lowLight(vec3 v) {
+  float x = v.x, y = v.y, z = v.z, b = pow(1.0 - max(z, 0.0), 3.0);
+  float t[${SH_TERMS}] = float[${SH_TERMS}](1.0, x, y, z, x * y, y * z, 3.0 * z * z - 1.0, x * z, x * x - y * y, y * (3.0 * x * x - y * y), x * y * z,
+    y * (5.0 * z * z - 1.0), z * (5.0 * z * z - 3.0), x * (5.0 * z * z - 1.0), z * (x * x - y * y), x * (x * x - 3.0 * y * y),
+    pow(max(0.0, dot(v, normalize(vec3(-0.95, 0.25, -0.2)))), 8.0), max(-x, 0.0) * b, max(x, 0.0) * b);
+  vec3 c = vec3(0.0);
+  for (int k = 0; k < ${SH_TERMS}; k++) c += t[k] * uSH[k];
+  return max(c, 0.0);
+}
 vec3 hashCol(float i){ return 0.35 + 0.6 * vec3(hash(vec2(i, 1.0)), hash(vec2(i, 7.0)), hash(vec2(i, 13.0))); }
 void main() {
-  vec3 n = normalize(vNrm);
+  vec3 n = uLow > 0.5 ? vFace : normalize(vNrm);
   // The stamp's material where the stamp's distance says inside, its edge one pixel soft across the interpolated distance.
   float fw = max(fwidth(vStamp), 1e-4);
   float inStamp = smoothstep(-fw, fw, vStamp);
@@ -77,7 +106,7 @@ void main() {
   int flags = int(uMat[mi].a + 0.5);
   // Lids shut: the eye's parts take the lid's colour, the first material's a shade darker, and shade as skin.
   if (uBlink > 0.5 && (flags & 8) != 0) { base = uMat[0].rgb * 0.94; flags = 2; }
-  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0;
+  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0, cloth = (flags & 256) != 0;
   float dl = dot(n, uL);
   vec3 c = base;
   if (uMode > 0.5) {
@@ -86,6 +115,11 @@ void main() {
     else c = hashCol(vBone);
   } else if (emissive) {
     c = base;
+  } else if (uLow > 0.5) {
+    // A low-poly body as its review renders: one shade a polygon, skin lit by their light in the look's tone, cloth by the
+    // same light in its own colour over the skin it was fitted to, the rest its colour.
+    vec3 lit = lowLight(vec3(dot(n, uXv), dot(n, uYv), dot(n, uZv)));
+    c = skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : base;
   } else if (uFlat > 0.5) {
     c = base;
   } else {
@@ -126,7 +160,7 @@ in vec2 aP; out vec2 vUv; void main(){ vUv = aP * 0.5 + 0.5; gl_Position = vec4(
 
 const EDGE_FS = `#version 300 es
 precision highp float;
-in vec2 vUv; uniform sampler2D uCol; uniform sampler2D uNd; uniform sampler2D uId; uniform vec2 uPx; uniform float uInk; uniform float uDepthStep; uniform float uShow; uniform float uNight;
+in vec2 vUv; uniform sampler2D uCol; uniform sampler2D uNd; uniform sampler2D uId; uniform vec2 uPx; uniform float uInk; uniform float uDepthStep; uniform float uShow; uniform float uNight; uniform float uInner;
 out vec4 o;
 vec3 inkOf(vec3 base) { return min(mix(base, vec3(0.157, 0.11, 0.102), 0.62), base * 0.5); }
 void main() {
@@ -135,7 +169,7 @@ void main() {
   vec4 id = texture(uId, vUv);
   // The silhouette: an even band uInk px wide just outside the body, in a dark of the nearest body colour.
   float sil = 0.0; vec3 near = vec3(0.0);
-  if (c.a < 0.5) {
+  if (c.a < 0.5 && uInk > 0.0) {
     float best = 1.0e9;
     for (int d = 0; d < 16; d++) {
       float a = float(d) * 0.3927;
@@ -150,7 +184,7 @@ void main() {
   }
   // Inside: a thinner line where a part stands in front of another (a step away in depth to a pixel beside), or at a sharp crease.
   float inner = 0.0;
-  if (c.a > 0.5) {
+  if (c.a > 0.5 && uInner > 0.5) {
     vec4 A = texture(uNd, vUv + vec2(uPx.x, 0.0)), B = texture(uNd, vUv - vec2(uPx.x, 0.0)), C = texture(uNd, vUv + vec2(0.0, uPx.y)), D = texture(uNd, vUv - vec2(0.0, uPx.y));
     float dz = max(max(A.w - nd.w, B.w - nd.w), max(C.w - nd.w, D.w - nd.w));
     vec3 n0 = nd.xyz * 2.0 - 1.0;
@@ -219,10 +253,10 @@ export function glContext(): Ctx | null {
   const quad = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink'];
+  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
-  const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight'].map((n) => [n, gl.getUniformLocation(edge, n)]));
+  const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner'].map((n) => [n, gl.getUniformLocation(edge, n)]));
   CTX = { gl, cv, prog, edge, wire, fbo: gl.createFramebuffer()!, tCol: gl.createTexture()!, tNd: gl.createTexture()!, tId: gl.createTexture()!, depth: gl.createRenderbuffer()!, quad, w: 0, h: 0, u, eu, wu };
   return CTX;
 }
@@ -253,7 +287,7 @@ function size(C: Ctx, w: number, h: number): void {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-interface Buffers { vbo: WebGLBuffer; ibo: WebGLBuffer; lines: WebGLBuffer; nLines: number }
+interface Buffers { vbo: WebGLBuffer; ibo: WebGLBuffer; lines: WebGLBuffer; nLines: number; face: WebGLBuffer | null }
 const BUFFERS = new WeakMap<Baked, Buffers>();
 function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
   let bf = BUFFERS.get(b);
@@ -270,7 +304,13 @@ function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
   }
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lines);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, ln, gl.STATIC_DRAW);
-  bf = { vbo, ibo, lines, nLines: ln.length };
+  let face: WebGLBuffer | null = null;
+  if (b.faceSkin) {
+    face = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, face);
+    gl.bufferData(gl.ARRAY_BUFFER, b.faceSkin, gl.STATIC_DRAW);
+  }
+  bf = { vbo, ibo, lines, nLines: ln.length, face };
   BUFFERS.set(b, bf);
   return bf;
 }
@@ -280,6 +320,7 @@ export function forgetBuffers(b: Baked): void {
   const bf = BUFFERS.get(b);
   if (!bf || !CTX) return;
   CTX.gl.deleteBuffer(bf.vbo); CTX.gl.deleteBuffer(bf.ibo); CTX.gl.deleteBuffer(bf.lines);
+  if (bf.face) CTX.gl.deleteBuffer(bf.face);
   BUFFERS.delete(b);
 }
 
@@ -292,14 +333,28 @@ function matsOf(ms: Material[]): Float32Array {
   ms.forEach((m, i) => {
     if (i >= MAX_MATS) return;
     const c = hexOf(m.colour);
-    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0)], i * 4);
+    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.cloth ? 256 : 0)], i * 4);
   });
   MATS.set(ms, f);
   return f;
 }
 
+/**
+ * A low-poly body's light, as its review renders (`tools/sculpt/lowlight.py`): per term (`SH_TERMS`) the red, green and
+ * blue coefficients nought to one, and the look's skin over the skin the light was fitted to, per channel; a garment's
+ * cloth is lit by the same light in its own colour over that skin.
+ */
+export interface LowLight {
+  sh: Float32Array; tone: [number, number, number];
+  /** The skin the light was fitted to, red, green and blue nought to one: a cloth's colour over it tints the light. */
+  fit: [number, number, number];
+}
 /** What one draw needs: the bake, the pose's skinning frames, the materials and the view. */
-export interface SculptDraw { baked: Baked; bones: Float32Array; materials: Material[]; view: View; /** Lids shut, past a half. */ blink?: number }
+export interface SculptDraw {
+  baked: Baked; bones: Float32Array; materials: Material[]; view: View; /** Lids shut, past a half. */ blink?: number;
+  /** A low-poly body (`./lowpoly`): one shade a polygon (the bake's `faceSkin`) in this light. */
+  low?: LowLight;
+}
 
 /**
  * A body drawn on `ctx` with its feet at (sx, sy) at `zoom`, or false where
@@ -321,6 +376,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.depthFunc(gl.LEQUAL);
   gl.disable(gl.CULL_FACE);
   gl.disable(gl.BLEND);
+  const low = d.low && bf.face ? d.low : undefined;
   const setCommon = (prog: WebGLProgram, u: Record<string, WebGLUniformLocation | null>): void => {
     gl.useProgram(prog);
     gl.uniform4fv(u.uBones, d.bones.length >= MAX_BONES * 12 ? d.bones.subarray(0, MAX_BONES * 12) : padded(d.bones));
@@ -339,6 +395,19 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.uniform1f(u.uMode, o.debug === 'normals' ? 1 : o.debug === 'mats' ? 2 : o.debug === 'bones' ? 3 : 0);
     gl.uniform1f(u.uFlat, o.flat ? 1 : 0);
     gl.uniform1f(u.uBlink, d.blink ?? 0);
+    gl.uniform1f(u.uLow, low ? 1 : 0);
+    if (low) {
+      gl.uniform3fv(u.uSH, low.sh);
+      gl.uniform3f(u.uTone, low.tone[0], low.tone[1], low.tone[2]);
+      gl.uniform3f(u.uFit, low.fit[0], low.fit[1], low.fit[2]);
+      // The normal in the review camera's view space: the screen's right, and up and toward the viewer pitched down as
+      // that camera is rather than as the island's, so a face turned as in a review render takes its tone there.
+      const xr = Math.hypot(v.ex[0], v.ey[0]) || 1, hr = Math.hypot(v.T[0], v.T[1]) || 1;
+      const cb = Math.cos(REVIEW_PITCH * DEG), sb = Math.sin(REVIEW_PITCH * DEG), h = [v.T[0] / hr, v.T[1] / hr];
+      gl.uniform3f(u.uXv, v.ex[0] / xr, v.ey[0] / xr, 0);
+      gl.uniform3f(u.uYv, -sb * h[0], -sb * h[1], cb);
+      gl.uniform3f(u.uZv, cb * h[0], cb * h[1], sb);
+    }
   };
   setCommon(C.prog, C.u);
   gl.bindBuffer(gl.ARRAY_BUFFER, bf.vbo);
@@ -347,6 +416,13 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.enableVertexAttribArray(i);
     gl.vertexAttribPointer(i, sz, gl.FLOAT, false, stride, off);
   }
+  if (low && bf.face) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, bf.face);
+    for (const [i, off] of [[6, 0], [7, 16]]) {
+      gl.enableVertexAttribArray(i);
+      gl.vertexAttribPointer(i, 4, gl.FLOAT, false, 32, off);
+    }
+  } else for (const i of [6, 7]) gl.disableVertexAttribArray(i);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bf.ibo);
   gl.drawElements(gl.TRIANGLES, d.baked.nTris * 3, gl.UNSIGNED_INT, 0);
   if (o.debug === 'wire') {
@@ -362,7 +438,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.useProgram(C.edge);
   gl.bindBuffer(gl.ARRAY_BUFFER, C.quad);
-  for (let i = 1; i < 6; i++) gl.disableVertexAttribArray(i);
+  for (let i = 1; i < 8; i++) gl.disableVertexAttribArray(i);
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, C.tCol); gl.uniform1i(C.eu.uCol, 0);
@@ -370,8 +446,10 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, C.tId); gl.uniform1i(C.eu.uId, 2);
   gl.uniform2f(C.eu.uPx, 1 / w, 1 / h);
   // The figure's ink: most of a pixel however far out, never more than a few however far in; in device pixels here.
-  const ink = (o.ink ?? Math.min(3.2, Math.max(0.9, 0.55 * zoom))) * dpr;
+  // A low-poly body's: LOW_INK's, round the silhouette only, as its facets carry the form.
+  const ink = (o.ink ?? (low ? LOW_INK(zoom) : Math.min(3.2, Math.max(0.9, 0.55 * zoom)))) * dpr;
   gl.uniform1f(C.eu.uInk, ink);
+  gl.uniform1f(C.eu.uInner, low ? 0 : 1);
   gl.uniform1f(C.eu.uDepthStep, 0.7);
   gl.uniform1f(C.eu.uShow, o.debug === 'edges' ? 1 : 0);
   gl.uniform1f(C.eu.uNight, o.night ?? 0);

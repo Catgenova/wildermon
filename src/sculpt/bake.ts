@@ -24,6 +24,8 @@ export interface Baked {
   ms: number;
   grid: [number, number, number];
   cell: number;
+  /** A low-poly body's (`./lowpoly`), per vertex: its polygon's bones (4) and weights (4), the same at every corner of it, that turn the face's normal. */
+  faceSkin?: Float32Array;
 }
 
 /** Floats per vertex. */
